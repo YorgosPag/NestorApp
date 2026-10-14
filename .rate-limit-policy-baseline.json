@@ -5,13 +5,13 @@
     "src/lib/middleware/rate-limit-config.ts"
   ],
   "note": "ΔΕΝ είναι δείκτης υγείας: μετρά (α) διαδρομές που δεν δηλώνουν βαθμίδα ορίου και (β) διαδρομές που δηλώνουν άλλη από όση επιβάλλεται. Η θεραπεία είναι ΔΗΛΩΣΗ στη διαδρομή ή διόρθωση του πίνακα προθεμάτων — ποτέ μικρότερος αριθμός.",
-  "population": 542,
+  "population": 585,
   "tally": {
-    "undeclared": 55,
+    "undeclared": 54,
     "prefix-shadowed-by-declaration": 28,
-    "declared-over-default": 94,
-    "declared-agrees": 263,
-    "declared-via-factory": 102
+    "declared-over-default": 109,
+    "declared-agrees": 290,
+    "declared-via-factory": 104
   },
   "mismatch_by_pair": {
     "STANDARD→SENSITIVE": 11,
@@ -21,8 +21,8 @@
     "STANDARD→HEAVY": 13,
     "STANDARD→HIGH": 1
   },
-  "violation_count": 83,
-  "declaration_count": 102,
+  "violation_count": 82,
+  "declaration_count": 104,
   "violations": [
     "prefix-shadowed-by-declaration::HEAVY→SENSITIVE::/api/admin/role-management/audit-log/export",
     "prefix-shadowed-by-declaration::STANDARD→HEAVY::/api/reports/builder",
@@ -59,7 +59,6 @@
     "undeclared::/api/admin/migrate-accounting-profile",
     "undeclared::/api/admin/migrate-accounting-singletons",
     "undeclared::/api/admin/operator-inbox",
-    "undeclared::/api/admin/seed-floors",
     "undeclared::/api/buildings/seed",
     "undeclared::/api/buildings/trash",
     "undeclared::/api/communications/email/property-share",
@@ -211,6 +210,7 @@
     "defineRoute::/api/procurement/supplier-metrics/comparison",
     "defineRoute::/api/procurement/vendor-invites",
     "entityIdRoute::/api/properties/[id]",
+    "runGuarded::/api/properties/[id]/energy-certificate-import",
     "segmentIdRoute::/api/properties/[id]/showcase/generate"
   ]
 }

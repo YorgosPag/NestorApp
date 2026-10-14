@@ -14,8 +14,11 @@
 import { energyDeclarationPatch } from '../property-energy-patch';
 import { PropertyPatchSchema } from '../property-patch-helpers';
 
-const FULL = { class: 'B+', primaryEnergy: 132.4, co2Emissions: 38.1, issuedOn: '2024-03-12', usefulArea: null, finalEnergy: null, absence: null };
-const UNDECLARED = { class: null, primaryEnergy: null, co2Emissions: null, issuedOn: null, usefulArea: null, finalEnergy: null, absence: null };
+const UNDECLARED = {
+  class: null, primaryEnergy: null, co2Emissions: null, issuedOn: null, usefulArea: null, finalEnergy: null,
+  scope: null, sourceFileId: null, absence: null,
+};
+const FULL = { ...UNDECLARED, class: 'B+', primaryEnergy: 132.4, co2Emissions: 38.1, issuedOn: '2024-03-12' };
 const AT = '2026-10-13T18:00:00.000Z';
 
 describe('Π1 — η πόρτα δέχεται το μπλοκ', () => {
@@ -30,6 +33,12 @@ describe('Π1 — η πόρτα δέχεται το μπλοκ', () => {
     ['υπό έκδοση', { ...UNDECLARED, absence: 'pending' }],
   ])('%s ⇒ περνά', (_label, energy) => {
     expect(PropertyPatchSchema.safeParse({ energy }).success).toBe(true);
+  });
+
+  it('🔴 ο χθεσινός πελάτης (ανοιχτή καρτέλα, μπλοκ ΧΩΡΙΣ `scope`/`sourceFileId`) ⇒ περνά, και η απουσία γράφεται `null` (ADR-777 §8.96)', () => {
+    const { scope: _scope, sourceFileId: _source, ...yesterday } = FULL;
+    const parsed = PropertyPatchSchema.parse({ energy: yesterday });
+    expect(parsed.energy).toEqual(FULL);
   });
 });
 
