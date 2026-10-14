@@ -19,7 +19,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { apiClient } from '@/lib/api/enterprise-api-client';
-import { ApiClientError } from '@/lib/api/api-client-types';
+import { apiErrorBodyOf } from '@/lib/api/api-client-types';
 import { createModuleLogger } from '@/lib/telemetry';
 import { validateCustodyUploadAuth } from '@/services/filesystem/file-mutation-gateway';
 import { uploadEntityFile } from '@/services/filesystem/upload-entity-file';
@@ -66,9 +66,7 @@ const urlOf = (ownerPropertyId: string) =>
 
 /** Ο κωδικός άρνησης από το σώμα του σφάλματος — `undefined` για βλάβη δικτύου/διακομιστή χωρίς σώμα. */
 function wireCodeOf(error: unknown): unknown {
-  if (!(error instanceof ApiClientError)) return undefined;
-  const body = error.errorBody;
-  return typeof body === 'object' && body !== null ? (body as { error?: unknown }).error : undefined;
+  return apiErrorBodyOf(error)?.error;
 }
 
 const codeOf = (error: unknown): SubmitErrorCode => submitErrorCodeOf(wireCodeOf(error));

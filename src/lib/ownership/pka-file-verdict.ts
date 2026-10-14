@@ -8,10 +8,16 @@
  * - ζει στον **φάκελο ΑΥΤΗΣ** της αγγελίας (`entityType` · `entityId === dossierId`)·
  * - είναι **έτοιμο** (`status: ready`) και **PDF**.
  *
- * Ίδιο σχήμα με το `attestation-document-verdict` της εντολής: κριτής πάνω στα δεδομένα, όχι στο I/O.
+ * 🔑 Ο κανόνας ζει στον **κοινό** κριτή (`lib/files/container-file-verdict`, ADR-777 §8.96)· εδώ μένει μόνο το
+ * λεξιλόγιο αρνήσεων του ΠΚΑ, που διαβάζει η οθόνη του.
  */
 
-import { ENTITY_TYPES, FILE_STATUS } from '@/config/domain-constants';
+import { ENTITY_TYPES } from '@/config/domain-constants';
+import {
+  judgeContainerFile,
+  type ContainerFileRef,
+  type ContainerFileRefusal,
+} from '@/lib/files/container-file-verdict';
 
 export const PKA_FILE_REFUSALS = [
   'certificate-missing',
@@ -22,22 +28,18 @@ export const PKA_FILE_REFUSALS = [
 
 export type PkaFileRefusal = (typeof PKA_FILE_REFUSALS)[number];
 
-export interface PkaFileRef {
-  readonly fileId: string;
-  readonly storagePath: string;
-  readonly storagePlacement: unknown;
-}
+export type PkaFileRef = ContainerFileRef;
 
 export type PkaFileVerdict =
   | { readonly kind: 'accepted'; readonly file: PkaFileRef }
   | { readonly kind: 'refused'; readonly reason: PkaFileRefusal };
 
-const PDF_CONTENT_TYPE = 'application/pdf';
-
-function stringField(data: Readonly<Record<string, unknown>>, key: string): string | null {
-  const value = data[key];
-  return typeof value === 'string' && value.length > 0 ? value : null;
-}
+const PKA_REFUSAL: Readonly<Record<ContainerFileRefusal, PkaFileRefusal>> = {
+  'file-missing': 'certificate-missing',
+  'file-not-yours': 'certificate-not-yours',
+  'file-not-ready': 'certificate-not-ready',
+  'file-wrong-type': 'certificate-not-pdf',
+};
 
 /**
  * @param data — το έγγραφο του `files_personal/{fileId}` (ή `null` αν δεν υπάρχει)
@@ -48,21 +50,11 @@ export function judgePkaFile(
   data: Readonly<Record<string, unknown>> | null,
   expected: { readonly uid: string; readonly dossierId: string | null },
 ): PkaFileVerdict {
-  if (data === null) return { kind: 'refused', reason: 'certificate-missing' };
-
-  const owned =
-    stringField(data, 'userId') === expected.uid &&
-    expected.dossierId !== null &&
-    stringField(data, 'entityType') === ENTITY_TYPES.PROPERTY_DOSSIER &&
-    stringField(data, 'entityId') === expected.dossierId;
-  // «Δεν υπάρχει» και «δεν είναι δικό σου» μένουν διακριτά ΜΟΝΟ προς τον ίδιο: το id ήρθε από τη
-  // δική του οθόνη, άρα η διάκριση δεν επιβεβαιώνει ξένη ύπαρξη σε τρίτο.
-  if (!owned) return { kind: 'refused', reason: 'certificate-not-yours' };
-
-  if (stringField(data, 'status') !== FILE_STATUS.READY) return { kind: 'refused', reason: 'certificate-not-ready' };
-  if (stringField(data, 'contentType') !== PDF_CONTENT_TYPE) return { kind: 'refused', reason: 'certificate-not-pdf' };
-
-  const storagePath = stringField(data, 'storagePath');
-  if (storagePath === null) return { kind: 'refused', reason: 'certificate-not-ready' };
-  return { kind: 'accepted', file: { fileId, storagePath, storagePlacement: data.storagePlacement } };
+  const verdict = judgeContainerFile(fileId, data, {
+    owner: { kind: 'personal', userId: expected.uid },
+    entityType: ENTITY_TYPES.PROPERTY_DOSSIER,
+    entityId: expected.dossierId,
+    contentType: 'application/pdf',
+  });
+  return verdict.kind === 'accepted' ? verdict : { kind: 'refused', reason: PKA_REFUSAL[verdict.reason] };
 }

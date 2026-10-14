@@ -8,11 +8,13 @@
 
 import 'server-only';
 
-import { createHash } from 'crypto';
-
 import { isExpectedSigner } from '@/config/trust/pdf-seal-trust';
 import type { PkaFileRef } from '@/lib/ownership/pka-file-verdict';
-import { fileRecordBucket } from '@/server/files/file-record-bucket';
+import {
+  downloadFileRecordBytes,
+  type FileBytesDownload,
+  type FileBytesReader,
+} from '@/server/files/download-file-record-bytes';
 import type { PdfSealVerdict } from '@/server/pdf-seal/pdf-seal.types';
 import type { OwnershipSealSummary } from '@/types/ownership-verification';
 
@@ -22,29 +24,14 @@ import type { OwnershipSealSummary } from '@/types/ownership-verification';
  */
 export const PKA_MAX_BYTES = 10 * 1024 * 1024;
 
-/** Θύρα ανάγνωσης bytes — ο κάδος της θέσης του αρχείου στην παραγωγή, διπλό στα tests. */
-export type PkaBytesReader = (file: PkaFileRef) => Promise<{ readonly size: number; readonly read: () => Promise<Buffer> }>;
+/** Θύρα ανάγνωσης bytes — ο κοινός αναγνώστης του συστήματος αρχείων (`server/files/download-file-record-bytes`). */
+export type PkaBytesReader = FileBytesReader;
 
-const storageReader: PkaBytesReader = async (file) => {
-  const object = fileRecordBucket({ storagePlacement: file.storagePlacement }).file(file.storagePath);
-  const [metadata] = await object.getMetadata();
-  return {
-    size: Number(metadata.size ?? Number.POSITIVE_INFINITY),
-    read: async () => (await object.download())[0],
-  };
-};
-
-export type PkaDownload =
-  | { readonly kind: 'read'; readonly bytes: Buffer; readonly digest: string }
-  | { readonly kind: 'too-large' };
+export type PkaDownload = FileBytesDownload;
 
 /** Τα bytes + το αποτύπωμά τους (`sha256:…`) — το μέγεθος κρίνεται **πριν** κατέβει οτιδήποτε. */
-export async function downloadPka(file: PkaFileRef, reader: PkaBytesReader = storageReader): Promise<PkaDownload> {
-  const handle = await reader(file);
-  if (!(handle.size <= PKA_MAX_BYTES)) return { kind: 'too-large' };
-  const bytes = await handle.read();
-  if (bytes.byteLength > PKA_MAX_BYTES) return { kind: 'too-large' };
-  return { kind: 'read', bytes, digest: `sha256:${createHash('sha256').update(bytes).digest('hex')}` };
+export function downloadPka(file: PkaFileRef, reader?: PkaBytesReader): Promise<PkaDownload> {
+  return downloadFileRecordBytes(file, PKA_MAX_BYTES, reader);
 }
 
 /**
