@@ -68,6 +68,7 @@ const {
   lookupTable,
   harvestPropertyValues,
   leavesUnder,
+  collectExportedTables,
 } = require('./key-tables');
 
 /** `ns:key` — i18next's explicit-namespace form. */
@@ -350,7 +351,40 @@ function extractSurface(content, { file }) {
     ts.forEachChild(node, visit);
   };
   ts.forEachChild(source, visit);
-  return { callTexts, harvest: harvestPropertyValues(source) };
+  return { callTexts, harvest: harvestPropertyValues(source), resolution: describeLocalResolution(source, file) };
+}
+
+/** Ταξινομημένο, χωρίς διπλότυπα — ώστε η σειρά εμφάνισης να μην είναι ποτέ «αλλαγή». */
+const canonicalSet = entries => [...new Set(entries.map(entry => JSON.stringify(entry)))].sort();
+
+/**
+ * 🔴 ADR-744 §29 — Ο ΤΟΠΙΚΑ ΛΥΜΕΝΟΣ ΚΑΡΠΟΣ ΤΟΥ ΑΡΧΕΙΟΥ, ΟΧΙ ΜΟΝΟ Η ΩΜΗ ΕΠΙΦΑΝΕΙΑ ΤΟΥ.
+ *
+ * ΜΕΤΡΗΜΕΝΟ (2026-10-14): τα `callTexts` κρατούν το **κείμενο** της κλήσης, όχι το κλειδί
+ * στο οποίο λύνεται. `const NS = 'a.b'` + `` t(`${NS}.title`) `` — αλλαγή της τιμής του
+ * `NS` μετακινεί το κλειδί και αφήνει το αποτύπωμα **ίδιο** ⇒ το Layer 1 πράσινο πάνω σε
+ * μπαγιάτικο slice, σε **104 από τα 2.505** αρχεία των κλειστοτήτων. Δεύτερη πόρτα της
+ * ίδιας κλάσης: εξαγόμενος πίνακας με τιμές template (ADR-777 §8.39) λύνει κλειδιά
+ * **άλλων** αρχείων, ενώ το `harvest` βλέπει μόνο ωμά literals.
+ *
+ * 🏆 Η ΑΡΧΗ (Bazel `ijar` / Buck2 early cutoff): ο φθηνός έλεγχος κατακερματίζει την
+ * **περίληψη** που επηρεάζει τους εξαρτώμενους — και η περίληψη είναι **σωστή** μόνο αν
+ * καλύπτει **κάθε** τοπική είσοδο της εξόδου. Εδώ δεν απαριθμούμε εισόδους (σταθερές,
+ * εμβέλειες, πίνακες, templates — λίστα που ξεχνά την επόμενη)· κατακερματίζουμε **την
+ * ίδια την έξοδο** της τοπικής επίλυσης, με τον **ίδιο** ταξινομητή που τρέχει ο γεννήτορας.
+ *
+ * ⚠️ ΧΩΡΙΣ ΚΑΜΙΑ ΕΙΣΟΔΟ ΑΠΟ ΑΛΛΟ MODULE (μητρώο σταθερών, πίνακες κλειστότητας, harvest
+ * κελύφους): η πύλη το ξαναϋπολογίζει από **ένα** σταδιοποιημένο αρχείο χωρίς γράφο.
+ * Οι διασταυρούμενες είσοδοι καλύπτονται από το αποτύπωμα του **ιδιοκτήτη** τους.
+ * ⚠️ ΧΩΡΙΣ ΓΡΑΜΜΕΣ: τα `unresolved` φέρουν `line` — εδώ μένουν έξω, αλλιώς κάθε
+ * μετατόπιση γραμμής θα κοκκίνιζε· το κείμενό τους το κρατούν ήδη τα `callTexts`.
+ */
+function describeLocalResolution(source, file) {
+  const own = classifyParsedCalls(source, { file });
+  const tables = [...collectExportedTables(source)]
+    .map(([name, table]) => [name, [...table].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))])
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  return { keys: canonicalSet(own.keys), prefixes: canonicalSet(own.prefixes), tables };
 }
 
 /**
@@ -363,8 +397,12 @@ function extractSurface(content, { file }) {
  *   ever adds keys no locale defines, which are dropped when the slice is cut.
  * @returns {{keys, prefixes, unresolved, defaulted}}
  */
-function classifyTranslateCalls(content, { file, keyConstants, propertyValues, closureConstants }) {
-  const source = parseSource(file, content);
+function classifyTranslateCalls(content, options) {
+  return classifyParsedCalls(parseSource(options.file, content), options);
+}
+
+/** Ο ταξινομητής πάνω σε ήδη αναλυμένο αρχείο — μία ανάλυση ανά αρχείο, όχι δύο (§29). */
+function classifyParsedCalls(source, { keyConstants, propertyValues, closureConstants }) {
   const local = harvestPropertyValues(source);
   const sink = { keys: [], prefixes: [], unresolved: [], defaulted: 0 };
   const ctx = {

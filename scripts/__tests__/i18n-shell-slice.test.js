@@ -347,6 +347,82 @@ describe('Group 6 — the fingerprint must be computable from ONE file', () => {
   });
 });
 
+// ─── Group 6β: the fingerprint covers the file's LOCALLY RESOLVED output (§29) ─
+
+/**
+ * 🔴 ADR-744 §29 — ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ ΤΗΣ ΚΛΑΣΗΣ, ΑΝΑΠΑΡΑΓΜΕΝΟ ΜΕΣΑ ΑΠΟ ΤΗΝ ΠΡΑΓΜΑΤΙΚΗ ΠΥΛΗ.
+ *
+ * Το `05fa9f35` πέρασε πράσινο το Layer 1 με νέα κλειδιά σε διαδρομή. Το §28 έκλεισε
+ * τη μία πόρτα (άλυτος specifier). Εδώ η άλλη, μετρημένη σε 104/2.505 αρχεία
+ * κλειστότητας: αλλαγή **τιμής σταθεράς** μετακινεί τα κλειδιά, όχι το αποτύπωμα.
+ *
+ * ⚠️ Το «πριν» είναι ο ΠΑΡΟΝΟΜΑΣΤΗΣ (Ζ0): με το παλιό σχήμα αποτυπώματος οι δύο εκδοχές
+ * ΣΥΜΠΙΠΤΟΥΝ. Χωρίς αυτό, το Ζ1 θα μπορούσε να είναι κόκκινο για άσχετο λόγο.
+ * ⚠️ Μετάλλαξη ΜΟΝΟ σε προσωρινό fixture — ποτέ επί τόπου σε tracked αρχείο.
+ */
+describe('Group 6β — §29: a constant VALUE that moves keys moves the fingerprint', () => {
+  const { analyseFile } = require(path.join(LIB, 'plan'));
+  const { checkStagedShellFiles } = require(path.resolve(__dirname, '..', 'check-i18n-shell-slice.js'));
+  const ROUTE_MODULE = 'src/routes/EnergyPanel.tsx';
+  const CONTEXT = { excludeConsumers: [], bundles: new Map() };
+  const GATE_CONFIG = { keyConstants: [], excludeConsumers: [] };
+
+  const panel = (prefix, padding = '') =>
+    `import { useTranslation } from 'react-i18next';\n${padding}` +
+    `const KEYS = '${prefix}';\n` +
+    `export function EnergyPanel() {\n  const { t } = useTranslation('listing');\n  return t(\`\${KEYS}.addSource\`);\n}\n`;
+
+  /** Ο ΓΕΝΝΗΤΟΡΑΣ: ίδιος δρόμος με το `plan.js` (`analyseFile` → `fingerprintShellFile`). */
+  function recordAsGenerator(content) {
+    const abs = write(ROUTE_MODULE, content);
+    return fingerprintShellFile(analyseFile(MG.toPosix(tmpRoot), ROUTE_MODULE, graphOf([abs]), CONTEXT));
+  }
+
+  /** Η ΠΥΛΗ: το πραγματικό `checkStagedShellFiles`, πάνω σε manifest με τη γραμμή της διαδρομής. */
+  function gateAfterEdit(recorded, edited) {
+    write(ROUTE_MODULE, edited);
+    const manifest = { shellFiles: {}, routeFiles: { [ROUTE_MODULE]: recorded } };
+    return checkStagedShellFiles(GATE_CONFIG, manifest, [ROUTE_MODULE], tmpRoot);
+  }
+
+  const legacyFingerprint = ({ resolution, ...rest }) => fingerprintShellFile(rest);
+  const surfaceOf = content => ({ importSpecs: [], namespaces: ['listing'], ...extractSurface(content, { file: '/x/p.tsx' }) });
+
+  it('Ζ0 ΠΑΡΟΝΟΜΑΣΤΗΣ: με το ΠΑΛΙΟ σχήμα (χωρίς `resolution`) οι δύο εκδοχές ΣΥΜΠΙΠΤΟΥΝ — η τρύπα, μετρημένη', () => {
+    const before = surfaceOf(panel('energy.form'));
+    const after = surfaceOf(panel('energy.cost'));
+    expect(after.resolution.keys).not.toEqual(before.resolution.keys);   // τα κλειδιά ΜΕΤΑΚΙΝΗΘΗΚΑΝ
+    expect(legacyFingerprint(after)).toBe(legacyFingerprint(before));    // …και το παλιό αποτύπωμα σιωπούσε
+  });
+
+  it('Ζ1 🔴 η ΠΡΑΓΜΑΤΙΚΗ πύλη ΚΟΚΚΙΝΙΖΕΙ και ονομάζει το module διαδρομής', () => {
+    const recorded = recordAsGenerator(panel('energy.form'));
+    const reason = gateAfterEdit(recorded, panel('energy.cost'));
+    expect(reason).toContain(ROUTE_MODULE);
+    expect(reason).toContain('route slice');
+  });
+
+  it('Ζ2 ΚΑΜΙΑ ψευδής συναγερμός: γραμμές, σχόλια και άσχετη σταθερά ΔΕΝ μετακινούν τίποτα', () => {
+    const recorded = recordAsGenerator(panel('energy.form'));
+    const noise = `\n\n// σχόλιο που μετατοπίζει γραμμές\nconst COLOUR = 'red';\n`;
+    expect(gateAfterEdit(recorded, panel('energy.form', noise))).toBeNull();
+  });
+
+  it('Ζ3 η ΔΕΥΤΕΡΗ πόρτα: εξαγόμενος πίνακας με τιμές template — ο ΙΔΙΟΚΤΗΤΗΣ του αλλάζει αποτύπωμα', () => {
+    const table = root => `const K = '${root}';\nexport const ENERGY_KEYS = { title: \`\${K}.title\`, body: \`\${K}.body\` };\n`;
+    const before = surfaceOf(table('listing:energy'));
+    const after = surfaceOf(table('listing:cost'));
+    expect(legacyFingerprint(after)).toBe(legacyFingerprint(before));    // παρονομαστής: ήταν τυφλό
+    expect(fingerprintShellFile(after)).not.toBe(fingerprintShellFile(before));
+  });
+
+  it('Ζ4 ΤΟΠΙΚΟΤΗΤΑ: το `resolution` ΔΕΝ ρωτά μητρώο σταθερών ή άλλο module', () => {
+    // Ένα κλειδί που λύνεται ΜΟΝΟ μέσω του μητρώου μένει έξω — αλλιώς η πύλη (ένα αρχείο,
+    // χωρίς γράφο) δεν θα έφτανε ποτέ στον αριθμό του γεννήτορα.
+    expect(surfaceOf(`t(NOTIFICATION_KEYS.files.uploaded);\n`).resolution.keys).toEqual([]);
+  });
+});
+
 // ─── Group 7: slicing ────────────────────────────────────────────────────────
 
 describe('Group 7 — pruning a namespace down to the keys the shell asks for', () => {

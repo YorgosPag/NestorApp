@@ -144,8 +144,12 @@ function sha256(text) {
  * the shell closure when a module ALREADY in it gains an import edge, so
  * hashing the edges is what lets the cheap layer detect closure growth without
  * rebuilding the 13.877-module graph (~19s).
+ *
+ * 🔴 ADR-744 §29 — `resolution` is the file's LOCALLY RESOLVED output (keys,
+ * prefixes, exported key tables), computed by `extractSurface`. Without it a
+ * changed constant VALUE moved the keys and left this number untouched.
  */
-function fingerprintShellFile({ importSpecs, namespaces, callTexts, harvest }) {
+function fingerprintShellFile({ importSpecs, namespaces, callTexts, harvest, resolution }) {
   const harvested = {};
   for (const [name, values] of harvest || new Map()) harvested[name] = [...values].sort();
   return sha256(stableStringify({
@@ -153,8 +157,12 @@ function fingerprintShellFile({ importSpecs, namespaces, callTexts, harvest }) {
     namespaces: [...namespaces].sort(),
     callTexts: [...(callTexts || [])].sort(),
     harvest: harvested,
+    resolution: resolution || EMPTY_RESOLUTION,
   }));
 }
+
+/** Excluded consumers carry no surface; the same constant on both sides keeps them equal. */
+const EMPTY_RESOLUTION = Object.freeze({ keys: [], prefixes: [], tables: [] });
 
 /**
  * A key with no explicit namespace is requested from EVERY namespace its file
