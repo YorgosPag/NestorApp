@@ -35,7 +35,8 @@
  *                           call AND a changed import edge, which is the only
  *                           way a new module can enter the closure
  *   D. resolution drift     a newly added file that would satisfy a specifier
- *                           the generator recorded as unresolved
+ *                           the generator recorded as unresolved — in the
+ *                           shell OR any declared route closure (ADR-744 §28)
  *
  * What Layer 1 CANNOT see: a re-export chain rewritten OUTSIDE any shell module
  * (barrel B forwards X; X's declaration moves from C to D). No shell file's
@@ -418,7 +419,7 @@ function checkNewlyResolvableSpecs(manifest, stagedFiles, root = PROJECT_ROOT) {
       projectRoot: root, aliases, fileSet: added,
     });
     if (resolved.kind === 'internal') {
-      return `a new file now satisfies '${spec}' (from ${fromRel}), which the shell walk had recorded as unresolved — the closure may have grown.`;
+      return `a new file now satisfies '${spec}' (from ${fromRel}), which the shell or a declared route walk had recorded as unresolved — the closure may have grown.`;
     }
   }
   return null;

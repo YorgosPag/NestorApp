@@ -545,6 +545,90 @@ describe('Ε — οι είσοδοι των διαδρομών έχουν απο
 
 /**
  * =============================================================================
+ * Α4 — Ο ΑΛΥΤΟΣ SPECIFIER ΤΗΣ ΔΙΑΔΡΟΜΗΣ (ADR-744 §28)
+ * =============================================================================
+ *
+ * 🔴 ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ, ΑΥΤΟΥΣΙΟ (ADR-777 §8.95): εισαγωγέας δεσμευμένος **πριν** από το
+ * αρχείο που εισάγει ⇒ ο γεννήτορας-στο-ευρετήριο βλέπει άλυτη εισαγωγή **μέσα σε
+ * διαδρομή** ⇒ το manifest κρατούσε άλυτα **μόνο του κελύφους** ⇒ η άφιξη του αρχείου
+ * δεν ήταν ούτε στο `routeFiles` ούτε στα άλυτα ⇒ `✅ OK`, και slice χωρίς τα κλειδιά.
+ *
+ * ⚠️ ΤΟ Α4.0 ΕΙΝΑΙ Ο ΠΑΡΟΝΟΜΑΣΤΗΣ: με το manifest του **παλιού** σχήματος (μόνο κέλυφος)
+ * ο ΙΔΙΟΣ ελεγκτής πρέπει να σιωπά — αλλιώς το Α4.2 θα μπορούσε να είναι κόκκινο για
+ * άλλο λόγο και να μην αποδεικνύει ότι η θεραπεία είναι **τα δεδομένα**.
+ * =============================================================================
+ */
+describe('Α4 — ο άλυτος specifier ΔΙΑΔΡΟΜΗΣ ταξιδεύει στο manifest (§28)', () => {
+  const os = require('node:os');
+  const P = require('../lib/i18n-shell-slice/plan');
+  const { DEFAULTS } = require('../lib/i18n-shell-slice/config');
+  const { checkNewlyResolvableSpecs } = require('../check-i18n-shell-slice');
+
+  const PAGE = 'src/app/listing/page.tsx';
+  const ARRIVAL = 'src/app/listing/Cost.tsx';
+  let root;
+  const write = (rel, body) => {
+    const file = path.join(root, rel);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, body, 'utf8');
+  };
+
+  /** Το repo **πριν** την άφιξη: ο εισαγωγέας ζητά `./Cost`, που δεν υπάρχει ακόμα. */
+  function manifestsBeforeArrival() {
+    root = fs.mkdtempSync(path.join(os.tmpdir(), 'route-unresolved-'));
+    write('tsconfig.json', JSON.stringify({ compilerOptions: { baseUrl: '.', paths: { '@/*': ['src/*'] } } }));
+    write('src/app/layout.tsx', "import { shell } from './shell';\nexport default function L() { return shell(); }\n");
+    write('src/app/shell.ts', 'export function shell() { return 1; }\n');
+    write(PAGE, "import { Section } from './Section';\nexport default function Page() { return Section(); }\n");
+    write('src/app/listing/Section.tsx', "import { Cost } from './Cost';\nexport function Section() { return Cost(); }\n");
+
+    const graph = P.buildModuleGraph(root);
+    const config = { ...DEFAULTS, keyConstants: [], shellRoots: ['src/app/layout.tsx'], languages: ['el'] };
+    const plan = P.buildShellPlan(root, config, graph);
+    const route = RS.buildRouteSlice(root, config, graph, PAGE, {}, []);
+    const slices = { resources: { el: {} }, matchedKeys: 0, unresolvableKeys: [] };
+    return {
+      route,
+      current: P.buildManifest({ config, plan, artifacts: new Map(), slices, routes: [route] }),
+      shellOnly: P.buildManifest({ config, plan, artifacts: new Map(), slices, routes: [] }),
+    };
+  }
+
+  afterEach(() => {
+    if (root) fs.rmSync(root, { recursive: true, force: true });
+    root = undefined;
+  });
+
+  it('Α4.0 ΠΑΡΟΝΟΜΑΣΤΗΣ: με άλυτα ΜΟΝΟ κελύφους, η άφιξη είναι ΑΟΡΑΤΗ (η τρύπα, μετρημένη)', () => {
+    const { shellOnly } = manifestsBeforeArrival();
+    write(ARRIVAL, 'export function Cost() { return 2; }\n');
+    expect(checkNewlyResolvableSpecs(shellOnly, [ARRIVAL], root)).toBeNull();
+  });
+
+  it('Α4.1: το route slice ΚΟΥΒΑΛΑ τον άλυτο specifier, και το manifest τον κρατά', () => {
+    const { route, current } = manifestsBeforeArrival();
+    const spec = 'src/app/listing/Section.tsx → ./Cost';
+    expect(route.unresolvedSpecs).toEqual([spec]);
+    expect(current.unresolvedSpecs).toContain(spec);
+  });
+
+  it('Α4.2 🔴 η άφιξη του αρχείου ⇒ ο έλεγχος D ΚΟΚΚΙΝΙΖΕΙ και ονομάζει τον εισαγωγέα', () => {
+    const { current } = manifestsBeforeArrival();
+    write(ARRIVAL, 'export function Cost() { return 2; }\n');
+    const message = checkNewlyResolvableSpecs(current, [ARRIVAL], root);
+    expect(message).toMatch(/'\.\/Cost'/);
+    expect(message).toContain('src/app/listing/Section.tsx');
+  });
+
+  it('Α4.3: η ένωση είναι ταξινομημένη και ΧΩΡΙΣ διπλότυπα (ίδιος specifier σε δύο διαδρομές)', () => {
+    const plan = { closure: { unresolvedSpecs: ['b → ./x'] } };
+    const routes = [{ unresolvedSpecs: ['c → ./y', 'b → ./x'] }, { unresolvedSpecs: ['a → ./z'] }, {}];
+    expect(P.unionOfUnresolved(plan, routes)).toEqual(['a → ./z', 'b → ./x', 'c → ./y']);
+  });
+});
+
+/**
+ * =============================================================================
  * Χ — ΤΙ ΠΑΡΑΓΕΙ Η ΠΗΓΗ, **ΟΛΟΚΛΗΡΟ** (ADR-744 §15 Φ4)
  * =============================================================================
  *

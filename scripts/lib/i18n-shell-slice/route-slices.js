@@ -133,6 +133,10 @@ function buildRouteSlice(projectRoot, config, graph, pageFile, shellSlice, whole
     // ΑΟΡΑΤΗ στο Layer 1: το `manifest.shellFiles` δεν το περιέχει, γιατί δεν είναι
     // shell module. Μετρημένο ζωντανά (2026-08-30, ADR-834 του άλλου agent).
     perFile: plan.perFile,
+    // 🔴 ADR-744 §28 — ΚΑΙ ΟΙ ΑΛΥΤΟΙ SPECIFIERS ΤΗΣ ΔΙΑΔΡΟΜΗΣ. Χωρίς αυτούς, εισαγωγή
+    // προς αρχείο που ΔΕΝ υπήρχε όταν τρέχτηκε ο γεννήτορας εξαφανιζόταν σιωπηλά, και
+    // η άφιξη του αρχείου αργότερα ήταν αόρατη στο Layer 1 (μετρημένο: ADR-777 §8.95).
+    unresolvedSpecs: plan.closure.unresolvedSpecs,
     violations: plan.violations,
     // ⚠️ Χρειάζεται για να μη χαρακτηριστεί «νεκρή» μια εγγραφή policy που
     // υπηρετεί **διαδρομή** και όχι το κέλυφος: μια ψεύτικη προειδοποίηση
