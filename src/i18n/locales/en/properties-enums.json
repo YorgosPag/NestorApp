@@ -408,7 +408,78 @@
       "finalEnergyUnit": "kWh/m² per year",
       "addSource": "Add an energy source",
       "addSourcePlaceholder": "Choose a source",
-      "positiveInvalid": "Enter a number above 0 and up to {max}, with at most one decimal."
+      "positiveInvalid": "Enter a number above 0 and up to {max}, with at most one decimal.",
+      "scope": "What the certificate covers",
+      "scopePlaceholder": "Not declared",
+      "scopeHint": "The law also allows a whole-building certificate (joint certification) for a unit. Its per-m² figures then describe the building, and the listing shows no cost estimate for the unit.",
+      "provenance": "These details were filled in from the certificate in the property's Documents. Changing a value by hand removes the link to the document."
+    },
+    "scope": {
+      "unit": "This unit",
+      "building": "The whole building (joint certification)"
+    },
+    "import": {
+      "button": "Fill in from certificate (PDF)",
+      "hint": "The file goes into the property's Documents. You see what we read before anything changes.",
+      "uploading": "Uploading the certificate…",
+      "reading": "Reading the certificate…",
+      "failed": {
+        "fileMissing": "The file was not found. Please upload it again.",
+        "fileNotYours": "The file does not belong to this property's Documents.",
+        "fileNotReady": "The file has not finished uploading. Try again in a moment.",
+        "fileWrongType": "Use the certificate PDF, as downloaded from buildingcert.gr.",
+        "fileTooLarge": "The file is too large for a certificate (up to 10 MB).",
+        "notACertificate": "This PDF does not look like an Energy Performance Certificate. If it is a scan, fill in the fields by hand; the file stayed in Documents.",
+        "uploadFailed": "The file was not uploaded. Check your connection and try again.",
+        "unavailable": "Reading did not finish. Try again; the file stayed in Documents."
+      },
+      "field": {
+        "protocol": "Protocol no.",
+        "securityNumber": "Security no.",
+        "issuedOn": "Issue date",
+        "validUntil": "Valid until",
+        "unitTitle": "Building unit title",
+        "buildingUse": "Use",
+        "totalArea": "Total area",
+        "usefulArea": "Useful area",
+        "referenceEnergy": "Reference building primary energy",
+        "primaryEnergy": "Primary energy",
+        "co2Emissions": "CO₂ emissions",
+        "finalEnergy": "Final energy by source"
+      },
+      "flag": {
+        "buildingSuspected": "The certificate's useful area is much larger than the property's area, so it most likely covers the whole building.",
+        "areaMismatch": "The certificate's useful area ({area} m²) differs noticeably from the property's area. Make sure it is this property's certificate.",
+        "expired": "The certificate expired on {validUntil}. A sale or rental needs a valid certificate.",
+        "olderThanCurrent": "This certificate is older than the details the property already has (issued {currentIssuedOn}).",
+        "incomplete": "Some details could not be read and will stay empty: {fields}."
+      },
+      "review": {
+        "title": "Details from certificate {protocol}",
+        "titleNoProtocol": "Details from the certificate",
+        "description": "Check what we read. Nothing changes until you press \"Apply\". The file is already in Documents.",
+        "classExact": "Energy class {class}: ratio {ratio}, i.e. consumption {ep} against reference building {rr} kWh/m² ({source}).",
+        "classAmbiguous": "The certificate's figures ({ep} against {rr} kWh/m²) are rounded and fall on the boundary between two classes ({source}). Choose the class the arrow shows on the first page of the PDF.",
+        "classUnreadable": "The class cannot be read from the PDF text. Choose the class the arrow shows on its first page.",
+        "scopeLegend": "What does this certificate cover?",
+        "scopeDocument": "On the certificate: \"{title}\" · Use: {use} · Useful area: {area} m²",
+        "changesHeading": "What will apply",
+        "columnField": "Field",
+        "columnCurrent": "Now",
+        "columnNext": "From certificate",
+        "changed": "changes",
+        "empty": "—",
+        "verifyHeading": "Check authenticity",
+        "verifyBody": "Check the certificate in the Energy Inspections Archive (buildingcert.gr, \"Certificate validity check\") with the two numbers.",
+        "verifyLink": "Open buildingcert.gr",
+        "copy": "Copy",
+        "copied": "Copied",
+        "copyLabel": "Copy: {label}",
+        "commitFormSave": "After applying, press \"Save\" to keep the changes.",
+        "commitImmediate": "Applying saves the changes to your listing right away.",
+        "cancel": "Cancel",
+        "apply": "Apply"
+      }
     },
     "source": {
       "electricity": "Electricity",

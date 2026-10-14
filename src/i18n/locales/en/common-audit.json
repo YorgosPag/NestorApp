@@ -644,6 +644,8 @@
         "issuedOn": "Certificate issue date",
         "usefulArea": "Certificate useful area",
         "finalEnergy": "Final energy by source",
+        "scope": "What the certificate covers (unit or building)",
+        "sourceFileId": "Certificate document the details came from",
         "absence": "Reason for no certificate"
       },
       "objectiveValueDeclarations": {

@@ -181,6 +181,7 @@
     "figureUndeclared": "Not declared",
     "undeclared": "No energy class declared",
     "provenance": "From the energy performance certificate, as declared by the advertiser",
+    "scopeBuilding": "Whole-building certificate (joint certification, Law 4122/2013 art. 11 §5): the per-m² figures describe the building.",
     "validity": {
       "valid": "The certificate is valid",
       "expired": "The certificate has expired",
@@ -198,6 +199,7 @@
     "heatingInCommonCharges": "The common charges are declared to include heating; part of this amount may already be paid there.",
     "pricesFrom": "Prices:",
     "undeclared": "The certificate's energy figures have not been declared, so there is no estimate.",
+    "buildingCertificate": "Not estimated: the certificate covers the whole building, and its consumption is not the unit's.",
     "unpriced": "Not estimated: there is no official reference price for {sources}.",
     "stalePrices": "Not estimated: the reference prices are not recent."
   }
