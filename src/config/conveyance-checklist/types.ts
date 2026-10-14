@@ -20,6 +20,8 @@
  * @see ADR-901 — «Οι υποθέσεις μου» (υπόθεση μεταβίβασης)
  */
 
+import type { DocumentKind, DocumentValidityRule } from '@/config/document-validity/document-validity';
+
 // ============================================================================
 // ΚΛΕΙΣΤΑ ΣΥΝΟΛΑ
 // ============================================================================
@@ -89,17 +91,10 @@ type ChecklistRequirement =
   | { readonly kind: 'when'; readonly fact: ConveyanceFactId; readonly equals: boolean };
 
 /**
- * Ισχύς εγγράφου:
- * - `none`       — δεν λήγει (τίτλοι, άδειες, σχέδια)
- * - `days`       — λήγει N ημέρες μετά την έκδοση
- * - `act_day`    — εκδίδεται την ημέρα της πράξης (π.χ. πιστοποιητικό βαρών)
- * - `unverified` — έχει περιορισμένη ισχύ αλλά η διάρκεια **ΔΕΝ** επαληθεύτηκε (Φ0, §11)
+ * Ισχύς εγγράφου — **το ίδιο σχήμα** με τον κατάλογο ισχύος (ADR-915 Φ1): ένα έγγραφο που το ρωτούν κι άλλες διαδικασίες
+ * (π.χ. ΠΕΑ) **παίρνει** τον κανόνα από το `DOCUMENT_KIND_SPECS`, δεν τον ξαναγράφει.
  */
-type ChecklistValidity =
-  | { readonly kind: 'none' }
-  | { readonly kind: 'days'; readonly days: number }
-  | { readonly kind: 'act_day' }
-  | { readonly kind: 'unverified' };
+type ChecklistValidity = DocumentValidityRule;
 
 /** Ένα επίπεδο + τα entry points που ικανοποιούν τη γραμμή σε αυτό (any-of). */
 export interface EvidenceMatcher {
@@ -133,6 +128,12 @@ export interface ChecklistItem {
   /** Ορατό **μόνο** στη δική του πλευρά (έκθεση νομικού ελέγχου — Σ-3). */
   readonly ownSideOnly?: true;
   readonly requirement: ChecklistRequirement;
+  /**
+   * ADR-915 Φ2 — το είδος εγγράφου που **μοιράζονται** κι άλλες διαδικασίες (αγγελία, νομιμότητα). Όταν υπάρχει, η
+   * γραμμή είναι απαίτηση `block` για την ημέρα υπογραφής (`conveyanceRequirements`) και το `validity` **πρέπει** να
+   * είναι ο κανόνας του είδους (άγκυρα). Απόν = έγγραφο που ξέρει μόνο η μεταβίβαση.
+   */
+  readonly documentKind?: DocumentKind;
   readonly validity: ChecklistValidity;
   readonly satisfaction: ChecklistSatisfaction;
   /**

@@ -11,11 +11,9 @@
  * @module config/conveyance-checklist/items-property
  */
 
+import { documentKindSpec } from '@/config/document-validity/document-validity';
 import type { ChecklistItem } from './types';
 import { EVERYONE, SELLER_PRIVATE } from './visibility';
-
-/** ΠΕΑ: 10 έτη (ν.4122/2013). */
-const ENERGY_CERTIFICATE_VALIDITY_DAYS = 3650;
 
 export const PROPERTY_ITEMS: readonly ChecklistItem[] = [
   {
@@ -164,7 +162,8 @@ export const PROPERTY_ITEMS: readonly ChecklistItem[] = [
     provider: 'engineer',
     visibleTo: EVERYONE,
     requirement: { kind: 'mandatory' },
-    validity: { kind: 'unverified' },
+    documentKind: 'building-identity',
+    validity: documentKindSpec('building-identity').rule,
     satisfaction: { kind: 'offline' },
     verifiedAt: null,
   },
@@ -186,7 +185,10 @@ export const PROPERTY_ITEMS: readonly ChecklistItem[] = [
     provider: 'engineer',
     visibleTo: EVERYONE,
     requirement: { kind: 'mandatory' },
-    validity: { kind: 'days', days: ENERGY_CERTIFICATE_VALIDITY_DAYS },
+    // ADR-915 Φ1 — ο ΕΝΑΣ κανόνας του ΠΕΑ (120 μήνες), ίδιος με της αγγελίας· ποτέ ξανά 3650 ημέρες.
+    // ADR-915 Φ2 — το `documentKind` κάνει τη γραμμή **απαίτηση** που βλέπει το «τι σταματά αν λήξει».
+    documentKind: 'energy-certificate',
+    validity: documentKindSpec('energy-certificate').rule,
     satisfaction: {
       kind: 'files',
       matchers: [

@@ -36,6 +36,8 @@
  * **Layering**: leaf — καθαροί τύποι + καθαρές συναρτήσεις, μηδέν I/O, μηδέν ρολόι.
  */
 
+import { documentKindSpec, type DocumentKind } from '@/config/document-validity/document-validity';
+import { ruleExpires } from '@/lib/document-validity/document-expiry';
 import { spaceSetCovers, type SpaceRef } from '@/lib/spaces/space-ref';
 import type { LegalityTier } from './legality-tier';
 
@@ -127,16 +129,33 @@ export interface LegalityClaimKindSpec {
   readonly publication: LegalityPublicationRule;
   readonly valueDisclosure: LegalityValueDisclosure;
   /**
-   * **Λήγει;** — `true` όταν το ίδιο το έγγραφο έχει διάρκεια ισχύος.
+   * **Ποιο έγγραφο τη στηρίζει** (ADR-915 Φ2) — `null` όταν η αξίωση δεν είναι έγγραφο με ισχύ (ο ΑΜΑ είναι αριθμός
+   * μητρώου· η τακτοποίηση δεν λήγει). Από αυτό παράγονται το {@link expires} και οι απαιτήσεις δημοσίευσης
+   * (`publication-requirements.ts`) — ώστε ο πίνακας νομιμότητας να **είναι** ο κατάλογος «ποια διάθεση ζητά ποιο έγγραφο».
+   */
+  readonly documentKind: DocumentKind | null;
+  /**
+   * **Λήγει;** — `true` όταν το ίδιο το έγγραφο έχει διάρκεια ισχύος. **Παράγεται** από το `documentKind` (ADR-915).
    *
-   * 🔴 Δεν είναι υποθετικό: η **βεβαίωση μηχανικού** του άρθρου 83 ισχύει **δύο
-   * μήνες** — δηλαδή μια αξίωση περασμένης ισχύος **δεν είναι** «καμία αξίωση» και
-   * **δεν είναι** έγκυρη αξίωση. Είναι **τρίτη κατάσταση με όνομα**, ίδιος κανόνας με
-   * το `conditional` του ADR-835 §4.7 και το κενό διάστημα του §17.
+   * 🔴 Μια αξίωση περασμένης ισχύος **δεν είναι** «καμία αξίωση» και **δεν είναι** έγκυρη αξίωση. Είναι **τρίτη
+   * κατάσταση με όνομα**, ίδιος κανόνας με το `conditional` του ADR-835 §4.7 και το κενό διάστημα του §17.
+   * ⚠️ Εδώ έγραφε ότι η βεβαίωση του άρθρου 83 ισχύει «δύο μήνες»: **δεν βρέθηκε σε καμία πηγή** (ADR-915 §1) ⇒ ο
+   * κανόνας της είναι `unverified` — λήγει, δεν ξέρουμε πότε ⇒ `expiry-unknown`.
    */
   readonly expires: boolean;
   /** Η διάταξη, αυτολεξεί όπως παραπέμπεται. Δες το σχόλιο του τύπου. */
   readonly statute: string;
+}
+
+/**
+ * Είδος που στηρίζεται σε έγγραφο με ισχύ: το `documentKind` γράφεται **μία** φορά και το `expires` παράγεται από τον
+ * ΕΝΑ κανόνα του (ADR-915) — δεύτερη γραμμένη τιμή θα ήταν ελεύθερη να αποκλίνει.
+ */
+function documentBacked(
+  documentKind: DocumentKind,
+  spec: Omit<LegalityClaimKindSpec, 'documentKind' | 'expires'>,
+): LegalityClaimKindSpec {
+  return { ...spec, documentKind, expires: ruleExpires(documentKindSpec(documentKind).rule) };
 }
 
 /**
@@ -157,17 +176,18 @@ export const LEGALITY_CLAIM_KIND_SPECS: Readonly<
     subjectScope: 'space-set',
     publication: 'blocks-publication',
     valueDisclosure: 'published',
+    documentKind: null,
     expires: false,
     statute: 'άρθρο 46 Ν.4179/2013 · Καν. (ΕΕ) 2024/1028',
   },
-  // ⚠️ `expires: true` — η βεβαίωση του άρθρου 83 ισχύει **δύο μήνες**.
-  'building-identity': {
+  // ⚠️ `expires` **παράγεται** από τον κατάλογο ισχύος (ADR-915 Φ1): ο κανόνας είναι `unverified` — λήγει, αλλά η
+  //    «ισχύς δύο μηνών» που έγραφε εδώ το σχόλιο **δεν βρέθηκε σε καμία πηγή** ⇒ `expiry-unknown`, ποτέ «σε ισχύ».
+  'building-identity': documentBacked('building-identity', {
     subjectScope: 'whole-property',
     publication: 'disclosed-only',
     valueDisclosure: 'withheld',
-    expires: true,
-    statute: 'άρθρο 83 Ν.4495/2017',
-  },
+    statute: documentKindSpec('building-identity').statute,
+  }),
   // 🔴 **ΠΟΤΕ ως προειδοποίηση** (SPEC-777 §24.4): η νόμιμα τακτοποιημένη αυθαιρεσία
   //    είναι η **κανονική** κατάσταση του ελληνικού αποθέματος. Οθόνη που τη δείχνει
   //    ως ελάττωμα λέει ψέματα για την αγορά **και** σπρώχνει τους κατόχους να μη
@@ -176,18 +196,19 @@ export const LEGALITY_CLAIM_KIND_SPECS: Readonly<
     subjectScope: 'whole-property',
     publication: 'disclosed-only',
     valueDisclosure: 'withheld',
+    documentKind: null,
     expires: false,
     statute: 'Ν.4495/2017',
   },
   // 🔑 `'published'`: το άρθρο 12 απαιτεί την **ενεργειακή κατηγορία** σε **κάθε**
   //    εμπορική αγγελία. Δημοσιεύεται η **κατηγορία** (η τιμή), όχι το πιστοποιητικό.
-  'energy-performance': {
+  // ADR-915 Φ1 — `expires` από τον ΕΝΑ κανόνα του ΠΕΑ· το `statute` εδώ είναι η υποχρέωση **αναγραφής** (άρθρο 12), όχι η ισχύς.
+  'energy-performance': documentBacked('energy-certificate', {
     subjectScope: 'whole-property',
     publication: 'disclosed-only',
     valueDisclosure: 'published',
-    expires: true,
     statute: 'άρθρο 12 Ν.4122/2013',
-  },
+  }),
 };
 
 /**

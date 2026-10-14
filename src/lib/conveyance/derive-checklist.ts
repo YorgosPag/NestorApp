@@ -25,8 +25,9 @@
  * @module lib/conveyance/derive-checklist
  */
 
-import { addDaysToDateKey, isDateKey } from '@/lib/calendar/date-key';
 import { EXPIRING_WINDOW_DAYS } from '@/config/conveyance-checklist/catalog';
+import { ruleExpiresOn } from '@/lib/document-validity/document-expiry';
+import { documentStanding, type DocumentStandingState } from '@/lib/document-validity/document-requirement';
 import type { ChecklistItem, ConveyanceFactId, ConveyanceRole } from '@/config/conveyance-checklist/types';
 import type {
   ChecklistItemOverride,
@@ -38,6 +39,7 @@ import type {
   EvidenceFile,
   SealedDelivery,
 } from '@/types/conveyance-case';
+import { conveyanceNeededOn } from './conveyance-requirements';
 import { filesForMatchers } from './evidence-match';
 import type { FactValues } from './derive-facts';
 
@@ -99,19 +101,30 @@ export function visibleRowFiles(
     .filter((row) => row.files.length > 0);
 }
 
-/** Ισχύς αποδεκτής γραμμής ως προς σήμερα ΚΑΙ ως προς την ημέρα υπογραφής (Σ-5). */
+/**
+ * Κατάσταση του κριτή → κατάσταση γραμμής. ⚠️ `expiry-unknown` → `accepted` **όπως πριν τη Φ2**: ο κατάλογος δεν έχει
+ * ακόμη κατάσταση «άγνωστη λήξη» (π.χ. εγκεκριμένη γραμμή με κανόνα `unverified`). Νέα κατάσταση γραμμής αγγίζει
+ * οθόνη, i18n και σύνοψη ⇒ απόφαση της ADR-915 Φ4, όχι παρενέργεια εδώ.
+ */
+const ROW_STATUS_OF: Readonly<Record<DocumentStandingState, ChecklistRowStatus>> = {
+  valid: 'accepted',
+  expiring: 'expiring',
+  expired: 'expired',
+  'expiry-unknown': 'accepted',
+};
+
+/**
+ * Ισχύς αποδεκτής γραμμής ως προς σήμερα ΚΑΙ ως προς την ημέρα υπογραφής (Σ-5). ADR-915: η ημέρα λήξης από τον ΕΝΑ
+ * υπολογισμό (Φ1) και η κρίση από τον ΕΝΑ κριτή (Φ2)· το `validOnSigning` είναι το `validAtNeed` της απαίτησης.
+ */
 function validityOf(item: ChecklistItem, review: ChecklistItemReview, input: DeriveChecklistInput): Validity {
-  if (item.validity.kind !== 'days' || review.issuedOn === null || !isDateKey(review.issuedOn)) {
-    return { status: 'accepted', ...NO_VALIDITY };
-  }
-  const expiresOn = addDaysToDateKey(review.issuedOn, item.validity.days);
-  if (expiresOn === null) return { status: 'accepted', ...NO_VALIDITY };
-  const signing = input.targetSigningDate !== null && isDateKey(input.targetSigningDate) ? input.targetSigningDate : null;
-  const validOnSigning = signing === null ? null : expiresOn >= signing;
-  if (expiresOn < input.today) return { status: 'expired', expiresOn, validOnSigning };
-  const warnFrom = addDaysToDateKey(expiresOn, -EXPIRING_WINDOW_DAYS) ?? expiresOn;
-  const expiring = input.today >= warnFrom || validOnSigning === false;
-  return { status: expiring ? 'expiring' : 'accepted', expiresOn, validOnSigning };
+  const standing = documentStanding({
+    expiresOn: ruleExpiresOn(item.validity, review.issuedOn),
+    asOf: input.today,
+    neededOn: conveyanceNeededOn(input.targetSigningDate),
+    warnWindowDays: EXPIRING_WINDOW_DAYS,
+  });
+  return { status: ROW_STATUS_OF[standing.state], expiresOn: standing.expiresOn, validOnSigning: standing.validAtNeed };
 }
 
 /** Είναι ο έλεγχος ακόμη δεμένος στο νεότερο αρχείο, στην ίδια έκδοση; */

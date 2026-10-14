@@ -21,6 +21,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { localDateOf } from '@/lib/date-local';
 import { cn } from '@/lib/utils';
 import type { ConveyanceCommand } from '@/lib/conveyance/conveyance-commands';
+import { ruleExpires } from '@/lib/document-validity/document-expiry';
 import type { ChecklistRow } from '@/types/conveyance-case';
 import type { RowDialogMode } from './ConveyanceChecklistRow';
 
@@ -36,9 +37,9 @@ const TITLE_KEY: Readonly<Record<RowDialogMode, string>> = {
   not_applicable: 'dialogs.notApplicableTitle',
 };
 
+/** ADR-915 Φ1 — ζητά ημερομηνία έκδοσης κάθε κανόνας περιορισμένης ισχύος (και ο `months` του ΠΕΑ — όχι μόνο `days`). */
 function hasValidity(row: ChecklistRow): boolean {
-  const kind = row.item.validity.kind;
-  return kind === 'days' || kind === 'unverified';
+  return ruleExpires(row.item.validity);
 }
 
 function buildCommand(row: ChecklistRow, mode: RowDialogMode, reason: string, issuedOn: Date | undefined): ConveyanceCommand {
