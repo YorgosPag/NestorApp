@@ -29,15 +29,18 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { normalizeCalendarDay, todayLocalDate } from '@/lib/date-local';
 import {
   ENERGY_CERTIFICATE_ABSENCES,
+  ENERGY_CERTIFICATE_SCOPES,
   MAX_CO2_EMISSIONS,
   MAX_PRIMARY_ENERGY,
   isCo2Emissions,
+  isEnergyCertificateScope,
   isPrimaryEnergy,
   type EnergyCertificate,
   type EnergyCertificatePatch,
 } from '@/lib/energy-certificate/energy-certificate';
 import {
   ENERGY_CERTIFICATE_ABSENCE_KEY,
+  ENERGY_CERTIFICATE_SCOPE_KEY,
   ENERGY_CLASS_LABEL_KEY,
 } from '@/lib/energy-certificate/energy-certificate-keys';
 
@@ -53,33 +56,57 @@ export interface EnergyCertificateFieldsProps {
   readonly disabled: boolean;
   /** Πρόθεμα για τα `id` — δύο στιγμιότυπα στην ίδια σελίδα δεν συγκρούονται. */
   readonly idPrefix: string;
+  /**
+   * «Συμπλήρωση από ΠΕΑ» (ADR-777 §8.96) — το δίνει ο καλών, που ξέρει πού ανεβαίνει το αρχείο. Τα πεδία δεν ξέρουν
+   * ποιο έγγραφο είναι· γι' αυτό υποδοχή και όχι εσωτερικό κουμπί.
+   */
+  readonly importSlot?: React.ReactNode;
 }
 
 const readPrimaryEnergy = figureReaderOf(isPrimaryEnergy);
 const readCo2Emissions = figureReaderOf(isCo2Emissions);
 
-function ClassField({ value, onChange, disabled, idPrefix }: EnergyCertificateFieldsProps) {
-  const { t } = useTranslation([NS]);
-  const selectId = `${idPrefix}-energy-class`;
+/** Μία επιλογή από κλειστό σύνολο, με «καμία» — το κοινό σώμα της κλάσης και της εμβέλειας. */
+interface BlockSelectProps<T extends string> {
+  readonly selectId: string;
+  readonly label: string;
+  readonly placeholder: string;
+  readonly hint?: string;
+  readonly value: T | null;
+  readonly options: readonly T[];
+  readonly optionLabel: (option: T) => string;
+  readonly onPick: (next: string) => void;
+  readonly disabled: boolean;
+}
 
+function BlockSelect<T extends string>(props: BlockSelectProps<T>) {
+  const { selectId, label, placeholder, hint, value, options, optionLabel, onPick, disabled } = props;
   return (
     <div className="flex flex-col gap-1">
-      <Label htmlFor={selectId} className="text-xs text-muted-foreground">{t('properties-enums:energyCertificate.form.class')}</Label>
-      <ClearableSelect
-        id={selectId}
-        value={value.class ?? ''}
-        disabled={disabled}
-        onValueChange={(next) => onChange({ class: isEnergyClass(next) ? next : null })}
-        placeholder={t('properties-enums:energyCertificate.form.classPlaceholder')}
-        clearLabel={t('properties-enums:energyCertificate.form.classPlaceholder')}
-      >
-        {ENERGY_CLASSES.map((energyClass) => (
-          <SelectItem key={energyClass} value={energyClass} className="text-xs">
-            {t(ENERGY_CLASS_LABEL_KEY[energyClass])}
-          </SelectItem>
+      <Label htmlFor={selectId} className="text-xs text-muted-foreground">{label}</Label>
+      <ClearableSelect id={selectId} value={value ?? ''} disabled={disabled} onValueChange={onPick} placeholder={placeholder} clearLabel={placeholder}>
+        {options.map((option) => (
+          <SelectItem key={option} value={option} className="text-xs">{optionLabel(option)}</SelectItem>
         ))}
       </ClearableSelect>
+      {hint !== undefined && <p className="m-0 text-xs text-muted-foreground">{hint}</p>}
     </div>
+  );
+}
+
+function ClassField({ value, onChange, disabled, idPrefix }: EnergyCertificateFieldsProps) {
+  const { t } = useTranslation([NS]);
+  return (
+    <BlockSelect
+      selectId={`${idPrefix}-energy-class`}
+      label={t('properties-enums:energyCertificate.form.class')}
+      placeholder={t('properties-enums:energyCertificate.form.classPlaceholder')}
+      value={value.class}
+      options={ENERGY_CLASSES}
+      optionLabel={(energyClass) => t(ENERGY_CLASS_LABEL_KEY[energyClass])}
+      onPick={(next) => onChange({ class: isEnergyClass(next) ? next : null })}
+      disabled={disabled}
+    />
   );
 }
 
@@ -129,6 +156,34 @@ function CertificateDetails({ value, onChange, disabled, idPrefix }: EnergyCerti
   );
 }
 
+/**
+ * **Τι πιστοποιεί το ΠΕΑ** — τη μονάδα, ή όλο το κτήριο (κοινή πιστοποίηση, ADR-777 §8.96). Ερμηνεία του ανθρώπου:
+ * η αλλαγή της δεν αγγίζει την προέλευση, γιατί δεν αλλάζει καμία τιμή του εγγράφου.
+ */
+function ScopeField({ value, onChange, disabled, idPrefix }: EnergyCertificateFieldsProps) {
+  const { t } = useTranslation([NS]);
+  return (
+    <BlockSelect
+      selectId={`${idPrefix}-energy-scope`}
+      label={t('properties-enums:energyCertificate.form.scope')}
+      placeholder={t('properties-enums:energyCertificate.form.scopePlaceholder')}
+      hint={t('properties-enums:energyCertificate.form.scopeHint')}
+      value={value.scope}
+      options={ENERGY_CERTIFICATE_SCOPES}
+      optionLabel={(scope) => t(ENERGY_CERTIFICATE_SCOPE_KEY[scope])}
+      onPick={(next) => onChange({ scope: isEnergyCertificateScope(next) ? next : null })}
+      disabled={disabled}
+    />
+  );
+}
+
+/** Από ποιο έγγραφο ήρθαν οι τιμές — και τι σπάει τη σύνδεση. */
+function ProvenanceNote({ value }: Pick<EnergyCertificateFieldsProps, 'value'>) {
+  const { t } = useTranslation([NS]);
+  if (value.sourceFileId === null) return null;
+  return <p className="m-0 text-xs text-muted-foreground">{t('properties-enums:energyCertificate.form.provenance')}</p>;
+}
+
 /** «Γιατί δεν έχω κλάση να δηλώσω» — μία απάντηση ή καμία· ζητείται μόνο όταν δεν υπάρχει κλάση. */
 function AbsenceField({ value, onChange, disabled }: EnergyCertificateFieldsProps) {
   const { t } = useTranslation([NS]);
@@ -152,11 +207,14 @@ function AbsenceField({ value, onChange, disabled }: EnergyCertificateFieldsProp
 export function EnergyCertificateFields(props: EnergyCertificateFieldsProps) {
   return (
     <div className="flex flex-col gap-3">
+      {props.importSlot}
       <ClassField {...props} />
       {props.value.class === null ? (
         <AbsenceField {...props} />
       ) : (
         <>
+          <ProvenanceNote value={props.value} />
+          <ScopeField {...props} />
           <CertificateDetails {...props} />
           <FinalEnergyFields {...props} />
         </>
