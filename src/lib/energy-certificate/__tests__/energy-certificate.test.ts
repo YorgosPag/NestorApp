@@ -26,7 +26,14 @@ import {
 } from '../energy-certificate';
 import { energyPerformanceClaimOf, withEnergyPerformanceClaim } from '../energy-certificate-claim';
 import { energyFormSliceOf, energyOfForm, patchedEnergyFormSlice } from '../energy-certificate-form';
-import { ENERGY_CERTIFICATE_ABSENCE_KEY, ENERGY_CLASS_LABEL_KEY } from '../energy-certificate-keys';
+import {
+  ENERGY_CERTIFICATE_ABSENCE_KEY,
+  ENERGY_CERTIFICATE_SCOPE_KEY,
+  ENERGY_CLASS_LABEL_KEY,
+  PEA_FIELD_KEY,
+  PEA_IMPORT_FAILURE_KEY,
+  PEA_WARNING_KEY,
+} from '../energy-certificate-keys';
 
 const FULL: EnergyCertificate = {
   class: 'B+',
@@ -35,6 +42,8 @@ const FULL: EnergyCertificate = {
   issuedOn: '2024-03-12',
   usefulArea: null,
   finalEnergy: null,
+  scope: null,
+  sourceFileId: null,
   absence: null,
 };
 
@@ -150,6 +159,37 @@ describe('Α4 — διόρθωση: μόνο τα κλειδιά που στάλ
   });
 });
 
+describe('Α4β — εμβέλεια και προέλευση (ADR-777 §8.96)', () => {
+  const IMPORTED: EnergyCertificate = { ...FULL, scope: 'unit', sourceFileId: 'file_pea_1' };
+
+  it('διαβάζονται μόνο δίπλα σε κλάση· άγνωστη τιμή ⇒ `null`', () => {
+    expect(readEnergyCertificate(IMPORTED)).toEqual(IMPORTED);
+    expect(readEnergyCertificate({ ...IMPORTED, class: null })).toEqual(UNDECLARED_ENERGY_CERTIFICATE);
+    expect(readEnergyCertificate({ ...IMPORTED, scope: 'apartment', sourceFileId: '../etc' })).toMatchObject({ scope: null, sourceFileId: null });
+  });
+
+  it('🔴 χειροκίνητη αλλαγή τιμής του εγγράφου ΣΒΗΝΕΙ την προέλευση — οι τιμές δεν είναι πια «του ΠΕΑ»', () => {
+    for (const patch of [{ primaryEnergy: 99.9 }, { class: 'C' as const }, { issuedOn: '2020-01-01' }, { usefulArea: 50 }]) {
+      expect(applyEnergyCertificatePatch(IMPORTED, patch).sourceFileId).toBeNull();
+    }
+  });
+
+  it('ίδια τιμή ξαναγραμμένη, ή αλλαγή εμβέλειας (ερμηνεία, όχι τιμή εγγράφου) ⇒ η προέλευση μένει', () => {
+    expect(applyEnergyCertificatePatch(IMPORTED, { primaryEnergy: 132.4 }).sourceFileId).toBe('file_pea_1');
+    expect(applyEnergyCertificatePatch(IMPORTED, { scope: 'building' }).sourceFileId).toBe('file_pea_1');
+  });
+
+  it('διόρθωση που ΦΕΡΕΙ προέλευση (νέο ΠΕΑ) την κρατά, ακόμη κι αν αλλάζει κάθε τιμή', () => {
+    const next = applyEnergyCertificatePatch(IMPORTED, { primaryEnergy: 70.1, sourceFileId: 'file_pea_2' });
+    expect(next).toMatchObject({ primaryEnergy: 70.1, sourceFileId: 'file_pea_2' });
+  });
+
+  it('`sameEnergyCertificate` βλέπει και τα δύο νέα πεδία', () => {
+    expect(sameEnergyCertificate(IMPORTED, { ...IMPORTED, scope: 'building' })).toBe(false);
+    expect(sameEnergyCertificate(IMPORTED, { ...IMPORTED, sourceFileId: 'file_other' })).toBe(false);
+  });
+});
+
 describe('Α5 — ο κριτής «τίθεται η ερώτηση;» ρωτά τον πίνακα της νομιμότητας, δεν έχει δικό του', () => {
   it('πώληση ή μίσθωση κτιρίου ⇒ ναι', () => {
     expect(raisesEnergyCertificateQuestion({ type: 'apartment', offerKinds: ['sell'] })).toBe(true);
@@ -174,8 +214,14 @@ describe('Α6 — το κουτί της δημόσιας αγγελίας', () 
   const sale = { type: 'apartment', offerKinds: ['sell'] };
 
   it('από την πηγή: αριθμοί και λόγος απουσίας· ΟΧΙ κλάση, ΟΧΙ ημερομηνία', () => {
-    expect(listedEnergyCertificateOf(sale, FULL)).toEqual({ primaryEnergy: 132.4, co2Emissions: 38.1, usefulArea: null, finalEnergy: null, absence: null });
-    expect(listedEnergyCertificateOf(sale, undefined)).toEqual({ primaryEnergy: null, co2Emissions: null, usefulArea: null, finalEnergy: null, absence: null });
+    expect(listedEnergyCertificateOf(sale, FULL)).toEqual({ primaryEnergy: 132.4, co2Emissions: 38.1, usefulArea: null, finalEnergy: null, scope: null, absence: null });
+    expect(listedEnergyCertificateOf(sale, undefined)).toEqual({ primaryEnergy: null, co2Emissions: null, usefulArea: null, finalEnergy: null, scope: null, absence: null });
+  });
+
+  it('🔒 η εμβέλεια ταξιδεύει δημόσια· η προέλευση (`sourceFileId`) ΠΟΤΕ', () => {
+    const box = listedEnergyCertificateOf(sale, { ...FULL, scope: 'building', sourceFileId: 'file_abc' });
+    expect(box?.scope).toBe('building');
+    expect(box).not.toHaveProperty('sourceFileId');
   });
 
   it('η ερώτηση δεν τίθεται ⇒ `null`, ό,τι κι αν λέει το έγγραφο', () => {
@@ -286,6 +332,15 @@ describe('Α9 — το ΠΕΑ μέσα στη φόρμα του γραφείου
     const slice = patchedEnergyFormSlice(energyFormSliceOf(FULL), { class: null });
     expect(slice).toEqual(energyFormSliceOf(UNDECLARED_ENERGY_CERTIFICATE));
   });
+
+  it.each(['building', 'unit'] as const)(
+    '🔴 εισαγωγή ΠΕΑ με εμβέλεια «%s» σε κενή φόρμα ⇒ η φόρμα την ΚΡΑΤΑ (ADR-777 §8.96.5)',
+    (scope) => {
+      const patch = { ...FULL, scope, sourceFileId: 'file_pea', absence: null };
+      const slice = patchedEnergyFormSlice(energyFormSliceOf(UNDECLARED_ENERGY_CERTIFICATE), patch);
+      expect(energyOfForm(slice)).toMatchObject({ class: FULL.class, scope, sourceFileId: 'file_pea' });
+    },
+  );
 });
 
 describe('Α10 — κάθε τιμή των λεξιλογίων έχει λέξη, και στις δύο γλώσσες', () => {
@@ -301,6 +356,16 @@ describe('Α10 — κάθε τιμή των λεξιλογίων έχει λέξ
     }
     for (const absence of ENERGY_CERTIFICATE_ABSENCES) {
       expect(typeof resolve(bundle, keyOf(ENERGY_CERTIFICATE_ABSENCE_KEY[absence]))).toBe('string');
+    }
+    // ADR-777 §8.96 — κάθε κλειστό σύνολο της εισαγωγής ΠΕΑ έχει λέξη.
+    const importKeys = [
+      ...Object.values(ENERGY_CERTIFICATE_SCOPE_KEY),
+      ...Object.values(PEA_FIELD_KEY),
+      ...Object.values(PEA_WARNING_KEY),
+      ...Object.values(PEA_IMPORT_FAILURE_KEY),
+    ];
+    for (const key of importKeys) {
+      expect(typeof resolve(bundle, keyOf(key))).toBe('string');
     }
   });
 

@@ -23,7 +23,9 @@ import { z } from 'zod';
 
 import { ENERGY_CLASSES, isEnergyClass, type EnergyClass } from '@/constants/energy-classes';
 import { isLandProperty } from '@/constants/property-classification';
-import { addMonthsUTC, normalizeCalendarDay, normalizeToMillisOrNull, utcDateOf } from '@/lib/date-local';
+import { documentKindSpec } from '@/config/document-validity/document-validity';
+import { normalizeCalendarDay, normalizeToMillisOrNull, utcDateOf } from '@/lib/date-local';
+import { ruleExpiresOn } from '@/lib/document-validity/document-expiry';
 import { raisedClaimKinds } from '@/lib/legality/legality-offer-matrix';
 import { isPlainRecord } from '@/lib/type-guards';
 import { isOfferKind } from '@/types/property-offers';
@@ -41,12 +43,20 @@ import {
 export const ENERGY_CERTIFICATE_ABSENCES = ['pending', 'exempt'] as const;
 export type EnergyCertificateAbsence = (typeof ENERGY_CERTIFICATE_ABSENCES)[number];
 
+/**
+ * **Τι πιστοποιεί το ΠΕΑ** (ADR-777 §8.96): τη **μονάδα**, ή **ολόκληρο το κτήριο** — η κοινή πιστοποίηση του
+ * ν. 4122/2013 άρθ. 11 §5, νόμιμη για πώληση/μίσθωση μονάδας. Στη δεύτερη περίπτωση οι αριθμοί ανά m² είναι **του
+ * κτηρίου** (ίδιο με το GEG §87 της Γερμανίας) — η αγγελία το λέει, και η εκτίμηση κόστους της μονάδας δεν βγαίνει.
+ */
+export const ENERGY_CERTIFICATE_SCOPES = ['unit', 'building'] as const;
+export type EnergyCertificateScope = (typeof ENERGY_CERTIFICATE_SCOPES)[number];
+
+/** Αναγνωριστικό αρχείου του συστήματος αρχείων — μορφή, όχι ύπαρξη (εκείνη κρίνεται στον server). */
+const SOURCE_FILE_ID = /^[A-Za-z0-9_-]{1,128}$/;
+
 /** Άνω όρια λογικής — πάνω από αυτά είναι λάθος πληκτρολόγησης (συνολικά kWh αντί για kWh ανά m²). */
 export const MAX_PRIMARY_ENERGY = 2000;
 export const MAX_CO2_EMISSIONS = 500;
-
-/** Το ΠΕΑ ισχύει δέκα έτη από την έκδοσή του (ν. 4122/2013). */
-const CERTIFICATE_VALIDITY_MONTHS = 120;
 
 export interface EnergyCertificate {
   /** Η ενεργειακή κατηγορία του ΠΕΑ. `null` = δεν δηλώθηκε (δες {@link EnergyCertificate.absence}). */
@@ -61,6 +71,13 @@ export interface EnergyCertificate {
   readonly usefulArea: number | null;
   /** Τελική ενέργεια ανά πηγή (στήλη «Συνολική»), σε σειρά εντύπου. **Μόνο** με κλάση· `null` = δεν δηλώθηκε. */
   readonly finalEnergy: readonly FinalEnergyLine[] | null;
+  /** Μονάδα ή ολόκληρο κτήριο (ADR-777 §8.96). **Μόνο** με κλάση· `null` = δεν δηλώθηκε. */
+  readonly scope: EnergyCertificateScope | null;
+  /**
+   * **Από ποιο έγγραφο ήρθαν οι τιμές** — το ΠΕΑ στα «Έγγραφα» του ακινήτου (ADR-777 §8.96). **Μόνο** με κλάση.
+   * 🔒 Ιδιωτικό: το δημόσιο κουτί δεν το περιλαμβάνει. Σβήνει μόλις αλλάξει χειροκίνητα τιμή που γράφει το έγγραφο.
+   */
+  readonly sourceFileId: string | null;
   /** Γιατί δεν υπάρχει κλάση. **Μόνο** χωρίς κλάση· `null` = δεν απαντήθηκε. */
   readonly absence: EnergyCertificateAbsence | null;
 }
@@ -85,6 +102,8 @@ export const UNDECLARED_ENERGY_CERTIFICATE: EnergyCertificate = {
   issuedOn: null,
   usefulArea: null,
   finalEnergy: null,
+  scope: null,
+  sourceFileId: null,
   absence: null,
 };
 
@@ -108,6 +127,14 @@ export function isCo2Emissions(raw: unknown): raw is number {
 
 function isAbsence(raw: unknown): raw is EnergyCertificateAbsence {
   return ENERGY_CERTIFICATE_ABSENCES.some((absence) => absence === raw);
+}
+
+export function isEnergyCertificateScope(raw: unknown): raw is EnergyCertificateScope {
+  return ENERGY_CERTIFICATE_SCOPES.some((scope) => scope === raw);
+}
+
+function isSourceFileId(raw: unknown): raw is string {
+  return typeof raw === 'string' && SOURCE_FILE_ID.test(raw);
 }
 
 /**
@@ -141,6 +168,8 @@ export function readEnergyCertificate(raw: unknown): EnergyCertificate {
     issuedOn: issuedOnOf(record),
     usefulArea: isUsefulArea(record.usefulArea) ? record.usefulArea : null,
     finalEnergy: readFinalEnergy(record.finalEnergy),
+    scope: isEnergyCertificateScope(record.scope) ? record.scope : null,
+    sourceFileId: isSourceFileId(record.sourceFileId) ? record.sourceFileId : null,
     absence: null,
   };
 }
@@ -151,10 +180,8 @@ export function readEnergyCertificate(raw: unknown): EnergyCertificate {
  * ⚠️ `null` σημαίνει **«δεν ξέρουμε»**, ποτέ «ισχύει»: το κανάλι νομιμότητας το ονομάζει `expiry-unknown`.
  */
 export function certificateValidUntil(issuedOn: string | null): string | null {
-  if (issuedOn === null) return null;
-  const until = addMonthsUTC(issuedOn, CERTIFICATE_VALIDITY_MONTHS);
-  const untilMs = normalizeToMillisOrNull(until);
-  return untilMs === null ? null : utcDateOf(untilMs);
+  // ADR-915 Φ1 — ο ΕΝΑΣ κανόνας και ο ΕΝΑΣ υπολογισμός, ίδιοι με του καταλόγου μεταβίβασης.
+  return ruleExpiresOn(documentKindSpec('energy-certificate').rule, issuedOn);
 }
 
 // ============================================================================
@@ -172,6 +199,10 @@ export const energyCertificateSchema = z
     issuedOn: calendarDaySchema.nullable(),
     usefulArea: usefulAreaSchema.nullable(),
     finalEnergy: finalEnergySchema.nullable(),
+    // ADR-777 §8.96 — ΠΡΟΑΙΡΕΤΙΚΑ επίτηδες (ανεκτικός αναγνώστης): μια ανοιχτή καρτέλα του χθεσινού πελάτη στέλνει
+    // ακέραιο μπλοκ ΧΩΡΙΣ αυτά, και δεν πρέπει να πάρει 400 στην «Αποθήκευση». Η απουσία διαβάζεται `null`.
+    scope: z.enum(ENERGY_CERTIFICATE_SCOPES).nullable().optional(),
+    sourceFileId: z.string().regex(SOURCE_FILE_ID).nullable().optional(),
     absence: z.enum(ENERGY_CERTIFICATE_ABSENCES).nullable(),
   })
   .strict();
@@ -187,23 +218,43 @@ export const energyCertificatePatchSchema = energyCertificateSchema
 
 export type EnergyCertificatePatch = z.infer<typeof energyCertificatePatchSchema>;
 
-/** Η ίδια συνάρτηση στον server και στην αισιόδοξη επικάλυψη της οθόνης — καμία δεύτερη αλήθεια. */
-export function applyEnergyCertificatePatch(
-  current: EnergyCertificate,
-  patch: EnergyCertificatePatch,
-): EnergyCertificate {
-  return readEnergyCertificate({ ...current, ...patch });
-}
-
-/** Ίδια δήλωση; Και τα δύο μπλοκ είναι κανονικοποιημένα ⇒ αρκεί σύγκριση ανά πεδίο. */
-export function sameEnergyCertificate(a: EnergyCertificate, b: EnergyCertificate): boolean {
+/**
+ * Ό,τι **γράφει το έγγραφο** — οι τιμές που η προέλευση εγγυάται. Η `scope` λείπει επίτηδες: είναι ερμηνεία του
+ * ανθρώπου (το έντυπο δεν λέει «κοινή πιστοποίηση»), άρα η αλλαγή της δεν κάνει τις τιμές λιγότερο «του εγγράφου».
+ */
+function sameDocumentFigures(a: EnergyCertificate, b: EnergyCertificate): boolean {
   return (
     a.class === b.class &&
     a.primaryEnergy === b.primaryEnergy &&
     a.co2Emissions === b.co2Emissions &&
     a.issuedOn === b.issuedOn &&
     a.usefulArea === b.usefulArea &&
-    sameFinalEnergy(a.finalEnergy, b.finalEnergy) &&
+    sameFinalEnergy(a.finalEnergy, b.finalEnergy)
+  );
+}
+
+/**
+ * Η ίδια συνάρτηση στον server και στην αισιόδοξη επικάλυψη της οθόνης — καμία δεύτερη αλήθεια.
+ *
+ * 🔑 **Κανόνας προέλευσης** (ADR-777 §8.96): διόρθωση που αλλάζει τιμή του εγγράφου **χωρίς** να φέρει δική της
+ * `sourceFileId` σβήνει την προέλευση — οι τιμές δεν είναι πια «του ΠΕΑ», και το «από ΠΕΑ …» θα ήταν ψέμα. Ζει εδώ,
+ * όχι στην οθόνη, ώστε να ισχύει σε κάθε δρόμο γραφής.
+ */
+export function applyEnergyCertificatePatch(
+  current: EnergyCertificate,
+  patch: EnergyCertificatePatch,
+): EnergyCertificate {
+  const next = readEnergyCertificate({ ...current, ...patch });
+  if (patch.sourceFileId !== undefined || sameDocumentFigures(current, next)) return next;
+  return { ...next, sourceFileId: null };
+}
+
+/** Ίδια δήλωση; Και τα δύο μπλοκ είναι κανονικοποιημένα ⇒ αρκεί σύγκριση ανά πεδίο. */
+export function sameEnergyCertificate(a: EnergyCertificate, b: EnergyCertificate): boolean {
+  return (
+    sameDocumentFigures(a, b) &&
+    a.scope === b.scope &&
+    a.sourceFileId === b.sourceFileId &&
     a.absence === b.absence
   );
 }
@@ -239,11 +290,14 @@ export function raisesEnergyCertificateQuestion({ type, offerKinds }: EnergyCert
  */
 export type ListedEnergyCertificate = Pick<
   EnergyCertificate,
-  'primaryEnergy' | 'co2Emissions' | 'usefulArea' | 'finalEnergy' | 'absence'
+  'primaryEnergy' | 'co2Emissions' | 'usefulArea' | 'finalEnergy' | 'scope' | 'absence'
 >;
 
 /** Το κουτί **όπως το έγραφε η έκδοση 22** του σχήματος — το σχήμα που δίνει ο παγωμένος κρίκος 22. */
 export type ListedEnergyFiguresV22 = Pick<EnergyCertificate, 'primaryEnergy' | 'co2Emissions' | 'absence'>;
+
+/** Το κουτί **όπως το έγραφε η έκδοση 23** — το σχήμα που δίνει ο παγωμένος κρίκος 23 (χωρίς `scope`). */
+export type ListedEnergyFiguresV23 = Omit<ListedEnergyCertificate, 'scope'>;
 
 /**
  * **Το κουτί της δημόσιας αγγελίας**, από το μπλοκ της **πηγής**: `null` ⇔ η ερώτηση δεν τίθεται· αλλιώς ό,τι
@@ -254,8 +308,8 @@ export function listedEnergyCertificateOf(
   raw: unknown,
 ): ListedEnergyCertificate | null {
   if (!raisesEnergyCertificateQuestion(subject)) return null;
-  const { primaryEnergy, co2Emissions, usefulArea, finalEnergy, absence } = readEnergyCertificate(raw);
-  return { primaryEnergy, co2Emissions, usefulArea, finalEnergy, absence };
+  const { primaryEnergy, co2Emissions, usefulArea, finalEnergy, scope, absence } = readEnergyCertificate(raw);
+  return { primaryEnergy, co2Emissions, usefulArea, finalEnergy, scope, absence };
 }
 
 /**
@@ -288,7 +342,7 @@ export function relistedEnergyCertificateOf(
 export function relistedFinalEnergyOf(
   subject: EnergyCertificateSubject,
   stored: unknown,
-): ListedEnergyCertificate | null {
+): ListedEnergyFiguresV23 | null {
   const figures = relistedEnergyCertificateOf(subject, stored);
   if (figures === null) return null;
   const record = isPlainRecord(stored) ? stored : {};
@@ -297,4 +351,15 @@ export function relistedFinalEnergyOf(
     usefulArea: isUsefulArea(record.usefulArea) ? record.usefulArea : null,
     finalEnergy: readFinalEnergy(record.finalEnergy),
   };
+}
+
+/**
+ * **Το κουτί της έκδοσης 24** (ADR-777 §8.96): ό,τι έδινε ο κρίκος 23, **συν** την εμβέλεια του πιστοποιητικού —
+ * `null` («δεν δηλώθηκε») όπου κανείς δεν είχε πού να τη γράψει. Χτίζεται **πάνω** στον παγωμένο κρίκο 23.
+ */
+export function relistedScopeOf(subject: EnergyCertificateSubject, stored: unknown): ListedEnergyCertificate | null {
+  const figures = relistedFinalEnergyOf(subject, stored);
+  if (figures === null) return null;
+  const record = isPlainRecord(stored) ? stored : {};
+  return { ...figures, scope: isEnergyCertificateScope(record.scope) ? record.scope : null };
 }

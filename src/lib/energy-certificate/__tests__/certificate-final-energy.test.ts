@@ -107,6 +107,8 @@ describe('Τ3 — το δημόσιο κουτί και ο κρίκος 23', () 
       co2Emissions: null,
       usefulArea: 84.6,
       finalEnergy: LINES,
+      // ADR-777 §8.96 — η εμβέλεια (μονάδα/κτήριο) ταξιδεύει μαζί· αδήλωτη ⇒ `null`.
+      scope: null,
       absence: null,
     });
     expect(listedEnergyCertificateOf({ type: 'land', offerKinds: ['sell'] }, raw)).toBeNull();
