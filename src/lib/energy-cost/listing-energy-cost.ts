@@ -24,7 +24,7 @@ import type { PublicListing } from '@/types/public-listing';
 
 import {
   ENERGY_SOURCE_PRICING,
-  REFERENCE_PRICE_MAX_AGE_MONTHS,
+  staleAfter,
   type EnergyReferencePrices,
   type ReferencePricePeriod,
 } from './energy-reference-prices';
@@ -61,18 +61,6 @@ export type ListingEnergyCost =
   /** Ο πίνακας τιμών λείπει για μια πηγή ή πάλιωσε. */
   | { readonly kind: 'stale-prices' }
   | EnergyCostEstimate;
-
-/** Η τελευταία ημέρα του εξαμήνου συν το όριο ηλικίας, `YYYY-MM-DD`. `null` σε εξάμηνο που δεν διαβάζεται. */
-function staleAfter(period: string): string | null {
-  const match = /^(\d{4})-S([12])$/.exec(period);
-  if (match === null) return null;
-  const endMonth = match[2] === '1' ? 6 : 12;
-  const months = Number(match[1]) * 12 + endMonth + REFERENCE_PRICE_MAX_AGE_MONTHS;
-  const year = Math.floor((months - 1) / 12);
-  const month = ((months - 1) % 12) + 1;
-  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  return `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-}
 
 /** Τα εξάμηνα μιας πηγής, **μόνο αν ο πίνακας είναι ακόμη φρέσκος** για `today`. */
 function freshPeriodsOf(

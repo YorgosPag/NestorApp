@@ -66,3 +66,22 @@ export const ENERGY_PRICE_SOURCES = [
 
 /** Πόσους μήνες μετά το τέλος του νεότερου εξαμήνου ο πίνακας θεωρείται παλιός — τρία εξάμηνα. */
 export const REFERENCE_PRICE_MAX_AGE_MONTHS = 18;
+
+/**
+ * Η τελευταία ημέρα που ένα εξάμηνο μετρά ως φρέσκο: τέλος του εξαμήνου + `REFERENCE_PRICE_MAX_AGE_MONTHS`,
+ * `YYYY-MM-DD`. `null` σε εξάμηνο που δεν διαβάζεται.
+ *
+ * 🔑 **ΕΝΑ σημείο για το «πότε λήγει»**: το διαβάζουν ο υπολογισμός (`listing-energy-cost.ts`, που σβήνει την
+ * εκτίμηση) **και** η πύλη φρεσκάδας (`energy-price-freshness.ts`, που προειδοποιεί πριν από αυτό). Δύο αντίγραφα
+ * θα μπορούσαν να αποκλίνουν, και τότε η πύλη θα έλεγε «έχεις χρόνο» την ημέρα που η οθόνη έχει ήδη αδειάσει.
+ */
+export function staleAfter(period: string): string | null {
+  const match = /^(\d{4})-S([12])$/.exec(period);
+  if (match === null) return null;
+  const endMonth = match[2] === '1' ? 6 : 12;
+  const months = Number(match[1]) * 12 + endMonth + REFERENCE_PRICE_MAX_AGE_MONTHS;
+  const year = Math.floor((months - 1) / 12);
+  const month = ((months - 1) % 12) + 1;
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+}
