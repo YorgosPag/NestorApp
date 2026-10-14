@@ -119,7 +119,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "c368d5d3ea91c510d1e5a79aba072b27762633788666eb27b2f5cb72452bef48",
+  "inputsSha256": "984fc3ce1abe3ec01a9f9efd22a5c8ea201cda73207d5f9284e0e56d4a359aa2",
   "languages": [
     "el"
   ],
@@ -12492,7 +12492,7 @@
     "src/lib/listings/public-listing-from-document.ts": "d7d0e2d1f57552c9842d5eb462354c600604e6d64f227a3d71c5aeee713660c4",
     "src/lib/listings/public-listing-migrations-02-10.ts": "9e8e6de829d7285c0461bb66881d379e5a7f7de870647718af5ca079e9570c9f",
     "src/lib/listings/public-listing-migrations-11-20.ts": "636571cc88e73a266dc2c9476e4a74722593c591f91ef181f22e390d043ddb34",
-    "src/lib/listings/public-listing-migrations-21-30.ts": "c6b86f0e741c406bb3cf375389ef12c193ff14b47d988af835d4c53e5f0897c1",
+    "src/lib/listings/public-listing-migrations-21-30.ts": "1f44d2f06613dd50379dc1bb148f4c2d293787e07e1acbc66616c8fcb64ef6f9",
     "src/lib/listings/public-listing-schema-types.ts": "3b7cc2bfa2ae5ecc92c05a30a9cc91d1a6ecc586d070a4dbc88a19b66e9ff364",
     "src/lib/listings/public-listing-schema.ts": "b29249ae0fdd6e9265bc2d033f1b262d9243555384c70e159c822710eb836b03",
     "src/lib/listings/public-listing-shape-judges.ts": "5beb00f458bd1f671935af3479bbbd2fee4d11f9dbe096642c8eaa356230153f",

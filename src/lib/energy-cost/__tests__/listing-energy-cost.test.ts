@@ -1,5 +1,5 @@
 /**
- * ADR-777 §8.95 — **η εκτίμηση ετήσιου κόστους ενέργειας**: πέντε καταστάσεις, εύρος από μετρημένες τιμές, και ποτέ
+ * ADR-777 §8.95 — **η εκτίμηση ετήσιου κόστους ενέργειας**: έξι καταστάσεις (§8.96: ΠΕΑ κτηρίου), εύρος από μετρημένες τιμές, και ποτέ
  * ποσό όπου λείπει οτιδήποτε.
  */
 
@@ -25,7 +25,7 @@ const TODAY = '2026-10-13';
 function subject(finalEnergy: readonly FinalEnergyLine[] | null, usefulArea: number | null = 100): EnergyCostSubject {
   return {
     energyClass: 'C',
-    energyCertificate: { primaryEnergy: null, co2Emissions: null, usefulArea, finalEnergy, absence: null },
+    energyCertificate: { primaryEnergy: null, co2Emissions: null, usefulArea, finalEnergy, scope: null, absence: null },
     commonCharges: null,
   };
 }
@@ -57,6 +57,18 @@ describe('Κ1 — πότε ΔΕΝ υπάρχει ποσό, και γιατί', (
 
   it('μόνο ενέργεια περιβάλλοντος, καμία αγοραζόμενη πηγή ⇒ undeclared — μισοαντιγραμμένος πίνακας, όχι «δωρεάν»', () => {
     expect(listingEnergyCost(subject([{ source: 'solar', perSqm: 15 }]), PRICES, TODAY)).toEqual({ kind: 'undeclared' });
+  });
+
+  it('🔴 ΠΕΑ ολόκληρου κτηρίου (ADR-777 §8.96) ⇒ building-certificate: τα kWh/m² είναι του κτηρίου, όχι της μονάδας', () => {
+    const building = subject(ELECTRIC_AND_OIL);
+    const certificate = { ...building.energyCertificate!, scope: 'building' as const };
+    expect(listingEnergyCost({ ...building, energyCertificate: certificate }, PRICES, TODAY)).toEqual({ kind: 'building-certificate' });
+  });
+
+  it('`scope: unit` ή αδήλωτο (`null`, παλιά αγγελία) ⇒ η εκτίμηση βγαίνει όπως πριν', () => {
+    const unit = subject(ELECTRIC_AND_OIL);
+    expect(listingEnergyCost({ ...unit, energyCertificate: { ...unit.energyCertificate!, scope: 'unit' } }, PRICES, TODAY).kind).toBe('estimated');
+    expect(listingEnergyCost(unit, PRICES, TODAY).kind).toBe('estimated');
   });
 });
 

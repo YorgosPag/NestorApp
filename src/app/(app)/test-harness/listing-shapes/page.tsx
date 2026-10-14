@@ -62,7 +62,7 @@ function fixture(id: string, title: string, position: PublicListing['position'])
     // ADR-777 §8.93 — προς πώληση διαμέρισμα ⇒ η ερώτηση τίθεται· τίποτα δηλωμένο.
     commonCharges: { monthlyAmount: null, includes: null },
     // ADR-777 §8.94 — ίδιος κανόνας: η ερώτηση του ΠΕΑ τίθεται· κανένας αριθμός δηλωμένος.
-    energyCertificate: { primaryEnergy: null, co2Emissions: null, usefulArea: null, finalEnergy: null, absence: null },
+    energyCertificate: { primaryEnergy: null, co2Emissions: null, usefulArea: null, finalEnergy: null, scope: null, absence: null },
     coverImage: null, gallery: [], type: 'apartment', areaSqm: 90,
     offerKinds: ['sell'], floor: 2, bedrooms: 2,
     // Α17 (ADR-838) — το εργαστήριο δείχνει **σχήματα θέσης**· η νομιμότητα έχει δικές

@@ -16,7 +16,7 @@
  * πίνακα, πάνω άκρο = στην υψηλότερη. Δεν υπάρχει «±15%» που διάλεξε κάποιος. Το εύρος λέει πόσο κινήθηκαν οι
  * τιμές — **όχι** πόσο διαφέρει ένα νοικοκυριό από το τυπικό· αυτό το λέει η οθόνη με λόγια.
  *
- * 🔑 **Πέντε καταστάσεις, καμία σιωπηλή** — χωρίς επαρκή δεδομένα δεν υπάρχει «0 €», υπάρχει λόγος με όνομα.
+ * 🔑 **Έξι καταστάσεις, καμία σιωπηλή** — χωρίς επαρκή δεδομένα δεν υπάρχει «0 €», υπάρχει λόγος με όνομα.
  */
 
 import type { CertificateEnergySource } from '@/constants/certificate-energy-sources';
@@ -56,6 +56,11 @@ export type ListingEnergyCost =
   | { readonly kind: 'hidden' }
   /** Υπάρχει κλάση, αλλά λείπει η ωφέλιμη επιφάνεια ή ο πίνακας τελικής ενέργειας. */
   | { readonly kind: 'undeclared' }
+  /**
+   * Το ΠΕΑ πιστοποιεί **ολόκληρο το κτήριο** (κοινή πιστοποίηση, ADR-777 §8.96): τα kWh/m² είναι μέσος όρος του
+   * κτηρίου, όχι της μονάδας — καμία εκτίμηση της μονάδας (ίδια πρακτική με τις αγγελίες GEG §87).
+   */
+  | { readonly kind: 'building-certificate' }
   /** Το πιστοποιητικό γράφει πηγή χωρίς επίσημη τιμή καταναλωτή. */
   | { readonly kind: 'unpriced'; readonly sources: readonly CertificateEnergySource[] }
   /** Ο πίνακας τιμών λείπει για μια πηγή ή πάλιωσε. */
@@ -111,6 +116,7 @@ export function listingEnergyCost(
 ): ListingEnergyCost {
   const certificate = listing.energyCertificate;
   if (certificate === null || listing.energyClass === null) return { kind: 'hidden' };
+  if (certificate.scope === 'building') return { kind: 'building-certificate' };
   const { usefulArea, finalEnergy } = certificate;
   if (usefulArea === null || finalEnergy === null) return { kind: 'undeclared' };
 

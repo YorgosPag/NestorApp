@@ -5,7 +5,11 @@
  */
 
 import { listedCommonChargesOf } from '@/lib/common-charges/common-charges';
-import { relistedEnergyCertificateOf, relistedFinalEnergyOf } from '@/lib/energy-certificate/energy-certificate';
+import {
+  relistedEnergyCertificateOf,
+  relistedFinalEnergyOf,
+  relistedScopeOf,
+} from '@/lib/energy-certificate/energy-certificate';
 import type { ListingMigration } from './public-listing-schema-types';
 
 /** Οι κρίκοι `to: 21` … `to: 30`, με τη σειρά που συνέβησαν. Παγωμένοι — δες την κεφαλίδα του `public-listing-schema.ts`. */
@@ -77,6 +81,27 @@ export const LISTING_MIGRATIONS_21_30: readonly ListingMigration[] = [
     apply: (doc) => ({
       ...doc,
       energyCertificate: relistedFinalEnergyOf(
+        { type: doc.type, offerKinds: Array.isArray(doc.offerKinds) ? doc.offerKinds : [] },
+        doc.energyCertificate,
+      ),
+    }),
+  },
+  {
+    to: 24,
+    adr: 'ADR-777 §8.96',
+    adds: ['energyCertificate.scope'],
+    /**
+     * 🔴 **ΤΟ ΚΟΥΤΙ ΤΟΥ ΠΕΑ ΑΠΕΚΤΗΣΕ ΕΜΒΕΛΕΙΑ (μονάδα ή ολόκληρο κτήριο) — ΤΑ ΠΑΛΙΑ ΕΓΓΡΑΦΑ ΔΕΝ ΤΗΝ ΕΧΟΥΝ.**
+     *
+     * 🔑 **Η ΑΛΗΘΕΙΑ ΤΟΥ ΠΑΛΙΟΥ ΕΓΓΡΑΦΟΥ ΕΙΝΑΙ «ΔΕΝ ΔΗΛΩΘΗΚΕ»** (`null`), ποτέ `'unit'`: κανείς δεν είχε πού να πει
+     * ότι το ΠΕΑ ήταν του κτηρίου. Το `'unit'` θα ισχυριζόταν για κάθε αγγελία της βάσης κάτι που δεν δηλώθηκε· και το
+     * `null` κρατά την εκτίμηση κόστους **όπως ήταν** (μόνο το ρητό `'building'` την κρύβει).
+     *
+     * 🔑 **Ό,τι έδινε ο κρίκος 23 μένει αυτούσιο** — χτίζεται πάνω του (`relistedScopeOf`). **Ιδιοδύναμο (Κ3)**.
+     */
+    apply: (doc) => ({
+      ...doc,
+      energyCertificate: relistedScopeOf(
         { type: doc.type, offerKinds: Array.isArray(doc.offerKinds) ? doc.offerKinds : [] },
         doc.energyCertificate,
       ),

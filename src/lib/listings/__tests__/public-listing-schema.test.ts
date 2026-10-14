@@ -591,3 +591,26 @@ describe('Κ14 — κρίκος 23: ωφέλιμη επιφάνεια και τ�
     expect(link.apply(once)).toEqual(once);
   });
 });
+
+describe('Κ15 — κρίκος 24: εμβέλεια του ΠΕΑ, μονάδα ή κτήριο (ADR-777 §8.96)', () => {
+  const link = LISTING_MIGRATIONS_21_30.find((migration) => migration.to === 24)!;
+  const stored = (over: StoredListingDocument): StoredListingDocument => ({ type: 'apartment', offerKinds: ['sell'], ...over });
+  const V23_BOX = { primaryEnergy: 132.4, co2Emissions: 38.1, usefulArea: 84.6, finalEnergy: null, absence: null };
+
+  it('🔴 κουτί έκδοσης 23 ⇒ `scope: null` («δεν δηλώθηκε»), ΠΟΤΕ `unit` — και η εκτίμηση κόστους μένει όπως ήταν', () => {
+    expect(link.apply(stored({ energyClass: 'C', energyCertificate: V23_BOX })).energyCertificate).toEqual({ ...V23_BOX, scope: null });
+  });
+
+  it('🔴 ο κρίκος 23 εξακολουθεί να δίνει ΑΚΡΙΒΩΣ το κουτί της έκδοσης 23 — είναι παγωμένος', () => {
+    const link23 = LISTING_MIGRATIONS_21_30.find((migration) => migration.to === 23)!;
+    expect(Object.keys(link23.apply(stored({})).energyCertificate as object)).not.toContain('scope');
+  });
+
+  it('γη ⇒ null· ιδιοδύναμο· σκουπίδι ⇒ null', () => {
+    expect(link.apply(stored({ type: 'land', energyCertificate: V23_BOX })).energyCertificate).toBeNull();
+    const once = link.apply(stored({ energyCertificate: { ...V23_BOX, scope: 'building' } }));
+    expect(once.energyCertificate).toEqual({ ...V23_BOX, scope: 'building' });
+    expect(link.apply(once)).toEqual(once);
+    expect((link.apply(stored({ energyCertificate: { ...V23_BOX, scope: 'tower' } })).energyCertificate as { scope: unknown }).scope).toBeNull();
+  });
+});

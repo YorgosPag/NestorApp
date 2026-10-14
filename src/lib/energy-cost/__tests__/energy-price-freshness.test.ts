@@ -39,7 +39,7 @@ describe('Φ1 — η λήξη είναι Η ΙΔΙΑ ημέρα με το σβή
   const electric: EnergyCostSubject = {
     energyClass: 'C',
     energyCertificate: {
-      primaryEnergy: null, co2Emissions: null, usefulArea: 100, absence: null,
+      primaryEnergy: null, co2Emissions: null, usefulArea: 100, scope: null, absence: null,
       finalEnergy: [{ source: 'electricity', perSqm: 20 }] as readonly FinalEnergyLine[],
     },
     commonCharges: null,
