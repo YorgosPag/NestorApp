@@ -46,7 +46,6 @@ describe('Π — βαθμονόμηση σε πραγματικό ιστορικ
   });
 
   it('🔴 Π3 — Η ΣΥΓΧΩΝΕΥΣΗ ΔΕΝ ΑΛΛΑΞΕ ΚΑΜΙΑ ΟΡΑΤΗ ΤΙΜΗ (μηδέν οπτική αλλαγή)', () => {
-    const fs = require('node:fs');
     const leaves = (o, pre, acc) => {
       for (const [k, v] of Object.entries(o)) {
         const q = pre ? `${pre}.${k}` : k;
@@ -62,12 +61,17 @@ describe('Π — βαθμονόμηση σε πραγματικό ιστορικ
     //    **μετακόμιση** ως απώλεια.
     const AFTER_ALSO = { 'src/i18n/locales/el/common.json': 'src/i18n/locales/el/common-audit.json',
       'src/i18n/locales/en/common.json': 'src/i18n/locales/en/common-audit.json' };
+    // ⚠️ ΤΟ «ΜΕΤΑ» ΕΙΝΑΙ ΚΑΡΦΩΜΕΝΟ ΣΤΟ COMMIT ΤΗΣ ΣΥΓΧΩΝΕΥΣΗΣ, ΠΟΤΕ `HEAD`: η ερώτηση είναι
+    //    «άλλαξε η ΣΥΓΧΩΝΕΥΣΗ ορατή τιμή;». Σύγκριση με το σημερινό δέντρο = change-detector
+    //    (ίδιο ελάττωμα με το Π4 πριν το 96fec5cd): έσπασε στο 3a7699f1, που μετέτρεψε ΝΟΜΙΜΑ
+    //    τα `datetime.relative.{minutes,hours}Ago[_plural]` σε πληθυντικούς ICU (ADR-867).
+    const MERGED = '0a5c917a';   // ADR-810: η συγχώνευση + η γέννηση του common-audit
     let checked = 0;
     for (const [rel] of HISTORIC) {
       // `JSON.parse` = ΑΚΡΙΒΩΣ ό,τι έβλεπε το i18next τότε (κρατά το τελευταίο).
       const before = leaves(JSON.parse(gitShow(PINNED, rel)), '', new Map());
-      const after = leaves(JSON.parse(fs.readFileSync(`${ROOT}/${rel}`, 'utf8')), '', new Map());
-      if (AFTER_ALSO[rel]) leaves(JSON.parse(fs.readFileSync(`${ROOT}/${AFTER_ALSO[rel]}`, 'utf8')), '', after);
+      const after = leaves(JSON.parse(gitShow(MERGED, rel)), '', new Map());
+      if (AFTER_ALSO[rel]) leaves(JSON.parse(gitShow(MERGED, AFTER_ALSO[rel])), '', after);
       const changed = [...before].filter(([k, v]) => after.get(k) !== v);
       expect(`${rel}: ${changed.length} αλλαγμένες`).toBe(`${rel}: 0 αλλαγμένες`);
       checked += before.size;

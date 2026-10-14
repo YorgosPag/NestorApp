@@ -26,7 +26,7 @@ const os = require('node:os');
 const path = require('node:path');
 
 const { PROJECT_ROOT } = require('../lib/jest-partition/jest-configs');
-const { literalDirectoryPrefixOf } = require('../lib/jest-partition/jest-configs');
+const { literalDirectoryPrefixOf, discoverConfigFiles } = require('../lib/jest-partition/jest-configs');
 const {
   derivedTestPathIgnorePatterns,
   gitIgnoredDirectoryPrefixes,
@@ -153,15 +153,14 @@ describe('Μ0 — η πύλη είναι πράσινη στο ΠΡΑΓΜΑΤΙ�
     expect(census.byState['playwright-owned'].length).toBeGreaterThan(0);
   });
 
-  it('Μ0.4 και τα 5 jest configs έχουν ιδιοκτησία — κανένα δεν είναι νεκρό', () => {
+  it('Μ0.4 ΚΑΘΕ jest config του δίσκου έχει ιδιοκτησία — κανένα δεν είναι νεκρό', () => {
+    // ⚠️ Η ΛΙΣΤΑ ΕΡΧΕΤΑΙ ΑΠΟ ΤΟΝ ΔΙΣΚΟ, ΟΧΙ ΑΠΟ ΤΟ ΧΕΡΙ: η χειρόγραφη εκδοχή (5 ονόματα) έμεινε κόκκινη από το
+    //    cdb7dd2c, που πρόσθεσε ΝΟΜΙΜΑ το `jest.config.firestore-contract.js` — change-detector, όχι φρουρός.
+    //    Η ερώτηση «υπάρχει config που δεν τρέχει κανένα αρχείο;» μένει ακέραιη, και πιάνει και το ΕΠΟΜΕΝΟ config.
     const withFiles = new Set(census.byState['jest-owned'].map((entry) => entry.owners[0]));
-    expect([...withFiles].sort()).toEqual([
-      'jest.config.firestore-rules.js',
-      'jest.config.functions-integration.js',
-      'jest.config.js',
-      'jest.config.service-integration.js',
-      'jest.config.storage-rules.js',
-    ]);
+    const onDisk = discoverConfigFiles();
+    expect(onDisk.length).toBeGreaterThanOrEqual(5);   // ΠΑΡΟΝΟΜΑΣΤΗΣ: η ανακάλυψη όντως βρήκε κάτι
+    expect([...withFiles].sort()).toEqual([...onDisk].sort());
   });
 });
 

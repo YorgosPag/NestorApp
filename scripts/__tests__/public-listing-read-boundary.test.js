@@ -146,8 +146,19 @@ describe('Ν — ο πίνακας των συνόρων', () => {
     const names = BOUNDARIES.map((b) => b.typeName);
     expect(new Set(names).size).toBe(names.length);
 
-    const homes = BOUNDARIES.map((b) => b.custodian);
-    expect(new Set(homes).size).toBe(homes.length);
+    // ⚠️ ΕΝΑ ΣΠΙΤΙ, ΠΟΛΛΟΙ ΤΥΠΟΙ ΕΙΝΑΙ ΝΟΜΙΜΟ (ADR-835 §20 · ADR-884 Κ3α): μια οικογένεια
+    //    εγγράφων (ημερολόγιο διαμονής, περιήγηση) φυλάγεται από ΕΝΑ module. Η παλιά
+    //    απαίτηση «μοναδικό custodian ανά γραμμή» έμεινε κόκκινη από το 80873147 χωρίς να
+    //    προστατεύει τίποτα. Το διπλότυπο που μετρά: ίδιο αρχείο με ΑΛΛΟ όνομα module
+    //    (αντιγραμμένη γραμμή που μισο-άλλαξε), ή ίδια θεραπεία σε δύο τύπους.
+    const moduleOf = new Map();
+    for (const b of BOUNDARIES) {
+      const seen = moduleOf.get(b.custodian) ?? b.module;
+      expect(`${b.typeName}: ${b.module}`).toBe(`${b.typeName}: ${seen}`);
+      moduleOf.set(b.custodian, b.module);
+    }
+    const remedies = BOUNDARIES.map((b) => b.remedy);
+    expect(new Set(remedies).size).toBe(remedies.length);
   });
 
   it('🔴 Ν1 — «as OwnerProperty» σε ΝΕΟ αρχείο ⇒ ΚΟΚΚΙΝΟ', () => {
