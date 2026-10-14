@@ -22,7 +22,7 @@ function baseCase(overrides: Partial<ConveyanceCase> = {}): ConveyanceCase {
 
 const permitFile: EvidenceFile = {
   fileId: 'file_permit', displayName: 'permit.pdf', entityType: 'project', entityId: 'proj_1', purpose: 'permit',
-  source: { kind: 'owned' }, level: 'project', fingerprint: 'file_permit:2:2026-09-01T00:00:00.000Z', createdAt: '2026-09-01T00:00:00Z',
+  source: { kind: 'owned' }, level: 'project', fingerprint: 'file_permit:2:2026-09-01T00:00:00.000Z', createdAt: '2026-09-01T00:00:00Z', documentFacts: null,
 };
 
 const ctx: CommandContext = { actorUid: 'u2', now: '2026-10-02T10:00:00Z', today: '2026-10-02', evidence: [permitFile] };
@@ -55,6 +55,32 @@ describe('applyConveyanceCommand', () => {
     const base = { type: 'review' as const, itemId: 'building_permit', verdict: 'accepted' as const, fileId: 'file_permit', reason: null };
     expect(applyConveyanceCommand(baseCase(), { ...base, issuedOn: '2026-10-03' }, ctx)).toEqual({ ok: false, rejection: 'future_issue_date' });
     expect(applyConveyanceCommand(baseCase(), { ...base, issuedOn: '2026-02-30' }, ctx)).toEqual({ ok: false, rejection: 'invalid_date' });
+  });
+
+  describe('ADR-915 Φ3β — η ημερομηνία δεν αντιλέγει στο ίδιο το έγγραφο', () => {
+    const peaFile = (source: NonNullable<EvidenceFile['documentFacts']>['source']): EvidenceFile => ({
+      ...permitFile, fileId: 'file_pea', entityType: 'property', entityId: 'prop_1', level: 'property', purpose: 'certificate',
+      fingerprint: 'file_pea:0:x', documentFacts: { kind: 'energy-certificate', issuedOn: '2025-01-01', printedValidUntil: null, source },
+    });
+    const review = (issuedOn: string | null, verdict: 'accepted' | 'rejected' = 'accepted') => ({
+      type: 'review' as const, itemId: 'energy_certificate', verdict, fileId: 'file_pea', issuedOn, reason: verdict === 'rejected' ? 'λάθος' : null,
+    });
+    const read = { ...ctx, evidence: [peaFile({ kind: 'document-text', reader: 'pea-text' })] };
+
+    it('⛔ αποδοχή με άλλη ημερομηνία από την ανάγνωση ⇒ issued_on_contradicts_document', () => {
+      expect(applyConveyanceCommand(baseCase(), review('2024-01-01'), read)).toEqual({ ok: false, rejection: 'issued_on_contradicts_document' });
+    });
+
+    it('ίδια ημερομηνία ή καμία ⇒ δεκτή · επιστροφή του εγγράφου ⇒ πάντα δεκτή (η διαφωνία γίνεται έτσι)', () => {
+      expect(applyConveyanceCommand(baseCase(), review('2025-01-01'), read).ok).toBe(true);
+      expect(applyConveyanceCommand(baseCase(), review(null), read).ok).toBe(true);
+      expect(applyConveyanceCommand(baseCase(), review('2024-01-01', 'rejected'), read).ok).toBe(true);
+    });
+
+    it('δήλωση ανθρώπου (`attested`) δεν κλειδώνει — διορθώνεται', () => {
+      const attested = { ...ctx, evidence: [peaFile({ kind: 'attested', via: 'conveyance-review' })] };
+      expect(applyConveyanceCommand(baseCase(), review('2024-01-01'), attested).ok).toBe(true);
+    });
   });
 
   it('άγνωστη γραμμή ⇒ unknown_item', () => {

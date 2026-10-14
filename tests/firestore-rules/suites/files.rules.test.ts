@@ -502,6 +502,62 @@ describe('files.rules — tenant_state_machine pattern', () => {
     });
   });
 
+  // --- ADR-915 Φ3 — τα ΓΕΓΟΝΟΤΑ ΕΓΓΡΑΦΟΥ δεν γράφονται από πελάτη ---------------
+  //
+  // Ίδιο ιδίωμα και ίδιο πρόσωπο με το «measured freeze»: κάθε `expectDeny` αποδίδεται ΜΟΝΟ στη ρήτρα
+  // `documentFactsUnchanged`/`documentFactsBornAbsent`. 🔴 Από την έκδοση υπολογίζεται αν το ΠΕΑ ισχύει την ημέρα της
+  // υπογραφής — ένα `issuedOn` γραμμένο από πελάτη θα «ανανέωνε» ληγμένο έγγραφο με ένα κλικ.
+  describe('document facts freeze — τα γεγονότα εγγράφου τα γράφει μόνο ο γραφέας του διακομιστή (ADR-915 Φ3)', () => {
+    const ADMIN_UID = PERSONA_CLAIMS.same_tenant_admin.uid;
+    const facts = (issuedOn: string) => ({
+      documentFacts: {
+        kind: 'energy-certificate', issuedOn, printedValidUntil: null,
+        source: { kind: 'document-text', reader: 'pea-text' }, recordedBy: ADMIN_UID, recordedAt: '2026-10-14T00:00:00.000Z',
+      },
+    });
+    const RECORDED = facts('2016-07-16');
+    const FORGED = facts('2099-01-01');
+    const fileDoc = (docId: string) =>
+      getContext(env, 'same_tenant_admin').firestore().collection('files').doc(docId);
+
+    it.each(UPDATE_LEGS)('⛔ σκέλος $leg: γραφή/αλλαγή γεγονότων ⇒ ΑΡΝΗΣΗ · το σκέτο φορτίο ⇒ ΕΠΙΤΡΕΠΕΤΑΙ', async ({ leg, seed, base }) => {
+      const index = UPDATE_LEGS.findIndex((l) => l.leg === leg);
+      await seedFile(env, `facts-add-${index}`, { companyId: SAME_TENANT_COMPANY_ID, overrides: { ...seed } });
+      await seedFile(env, `facts-change-${index}`, { companyId: SAME_TENANT_COMPANY_ID, overrides: { ...seed, ...RECORDED } });
+      await expectDeny(fileDoc(`facts-add-${index}`).update({ ...base, ...FORGED }));
+      await expectDeny(fileDoc(`facts-change-${index}`).update({ ...base, ...FORGED }));
+      await expectAllow(fileDoc(`facts-change-${index}`).update(base));
+    });
+
+    it('⛔ ΑΦΑΙΡΕΣΗ των γεγονότων (ολόκληρο `set` χωρίς το κλειδί): ΑΡΝΗΣΗ', async () => {
+      await seedFile(env, 'facts-removed', { companyId: SAME_TENANT_COMPANY_ID, overrides: { ...RECORDED } });
+      let stored: Record<string, unknown> = {};
+      await withSeedContext(env, async (seedCtx) => {
+        stored = (await seedCtx.firestore().collection('files').doc('facts-removed').get()).data() ?? {};
+      });
+      const { documentFacts: _dropped, ...withoutFacts } = stored;
+      await expectDeny(fileDoc('facts-removed').set({ ...withoutFacts, linkedTo: ['property:prop_1'] }));
+      await expectAllow(fileDoc('facts-removed').set({ ...stored, linkedTo: ['property:prop_1'] }));
+    });
+
+    it('⛔ γέννηση με γεγονότα «από κούνια»: ΑΡΝΗΣΗ · ✅ χωρίς', async () => {
+      const born = (docId: string, extra: Record<string, unknown>) => fileDoc(docId).set({
+        fileName: `${docId}.pdf`,
+        mimeType: 'application/pdf',
+        size: 2048,
+        status: 'pending',
+        isDeleted: false,
+        storagePath: `companies/${SAME_TENANT_COMPANY_ID}/files/${docId}.pdf`,
+        createdBy: ADMIN_UID,
+        companyId: SAME_TENANT_COMPANY_ID,
+        cdeReadReach: 'tenant',
+        ...extra,
+      });
+      await expectDeny(born('born-facts', { ...FORGED }));
+      await expectAllow(born('born-no-facts', {}));
+    });
+  });
+
   // --- ADR-845 §7.17 (Α4α) — τα πεδία ΔΗΜΟΣΙΕΥΣΗΣ δεν γράφονται από πελάτη ----
   //
   // Ίδιο ιδίωμα και ίδιο πρόσωπο (`same_tenant_admin`) με τα τρία παγώματα από πάνω: κάθε `expectDeny`

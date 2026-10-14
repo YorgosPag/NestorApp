@@ -16,6 +16,7 @@
 
 import { isDateKey } from '@/lib/calendar/date-key';
 import { getChecklistItem } from '@/config/conveyance-checklist/catalog';
+import { contradictsDocumentText } from '@/lib/document-validity/document-facts';
 import type { AuditFieldChange } from '@/types/audit-trail';
 import type { ChecklistItemOverride, ConveyanceCase, EvidenceFile } from '@/types/conveyance-case';
 import type { CommandRejection, ConveyanceCommand } from './conveyance-commands';
@@ -70,6 +71,14 @@ function resolveReviewedFile(itemId: string, fileId: string | null, evidence: re
   return filesForMatchers(item.satisfaction.matchers, evidence).find((file) => file.fileId === fileId) ?? 'invalid';
 }
 
+/**
+ * ADR-915 Φ3β — αποδοχή με ημερομηνία που **αντιλέγει** σε ό,τι διάβασε ο αναγνώστης από το ίδιο το έγγραφο. Το έγγραφο
+ * δεν διορθώνεται με δήλωση: αν ο ελεγκτής διαφωνεί, **επιστρέφει** το έγγραφο με λόγο (revise & resubmit).
+ */
+function contradictsDocument(itemId: string, file: EvidenceFile | null, issuedOn: string | null): boolean {
+  return contradictsDocumentText(getChecklistItem(itemId)?.documentKind, file?.documentFacts ?? null, issuedOn);
+}
+
 function review(current: ConveyanceCase, command: Extract<ConveyanceCommand, { type: 'review' }>, ctx: CommandContext): CommandResult {
   if (!getChecklistItem(command.itemId)) return reject('unknown_item');
   if (command.verdict === 'rejected' && command.reason === null) return reject('reason_required');
@@ -77,6 +86,9 @@ function review(current: ConveyanceCase, command: Extract<ConveyanceCommand, { t
   if (command.issuedOn !== null && command.issuedOn > ctx.today) return reject('future_issue_date');
   const file = resolveReviewedFile(command.itemId, command.fileId, ctx.evidence);
   if (file === 'invalid') return reject('file_not_evidence');
+  if (command.verdict === 'accepted' && contradictsDocument(command.itemId, file, command.issuedOn)) {
+    return reject('issued_on_contradicts_document');
+  }
   const reviewRecord = {
     verdict: command.verdict, fileId: file?.fileId ?? null, fileFingerprint: file?.fingerprint ?? null,
     issuedOn: command.issuedOn, reason: command.reason, reviewedBy: ctx.actorUid, reviewedAt: ctx.now,

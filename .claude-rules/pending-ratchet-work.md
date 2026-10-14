@@ -4096,12 +4096,11 @@
 - **Fix**: ένα `scripts/lib/text-eol.js` (`toLf` + `toCanonicalText` με BOM/trailing ως ρητές επιλογές) και import στα 6· άγκυρα με CRLF, μοναχικό CR, BOM. ⚠️ Το `slice-build.toLf` είναι είσοδος αποτυπώματος (toolchain digest, §30): η μετακόμιση θέλει αναγέννηση του manifest στο ίδιο commit.
 
 ### 🧾 Λογιστική: υπολογισμοί πάνω σε ΣΕΛΙΔΑ — τα υπόλοιπα μέλη της κατηγορίας (προτεραιότητα ΥΨΗΛΗ — οικονομικά νούμερα, 2026-10-14, ADR-ACC-010 §2.1.1 · N.0.2)
-Οι εγγραφές ημερολογίου έκλεισαν (`collectJournalEntries` + `journal-ledger.ts` + άγκυρα συνόρου). **Ίδια ασθένεια, άλλες οντότητες** (μετρημένο 2026-10-14):
-- `services/reports/bank-reconciliation.ts:86` — `listBankTransactions({ dateRange }, 10000)` + δικό του `REPORT_PAGE_SIZE`: σιωπηλό όριο σε αναφορά, και fallback `{ items: [] }` στο repo (σφάλμα = «καμία κίνηση»).
-- `services/engines/matching-engine.ts:357-370` — υποψήφια αντιστοίχισης: τιμολόγια `unpaid`/`partial` ×100 και εγγραφές χρήσης ×100· η σωστή αντιστοίχιση μπορεί να λείπει απλώς επειδή δεν χώρεσε. Είναι στο κλειστό σύνολο της άγκυρας **με λόγο**· θεραπεία = στένεμα υποψηφίων (ποσό ± ανοχή) αντί για όριο.
-- `reports/profit-and-loss.ts` + `reports/tax-summary.ts` — **δύο** σκληρογραμμένες κλίμακες φόρου (9/22/28/36/44%) έξω από το `tax-config` (`getTaxScaleForYear`)· διαφέρουν από τον `TaxEngine` ανά έτος/μορφή.
-- Λίστες οθόνης (journal / invoices / bank / assets): `hasNext` χωρίς cursor ⇒ η 2η σελίδα **δεν μπορεί** να ζητηθεί.
-**Θεραπεία**: `collect*` ανά οντότητα πάνω στο `processAdminBatch` (πρότυπο: `accounting-repo-journal-ledger.ts`) + επέκταση της άγκυρας συνόρου.
+Έκλεισαν: εγγραφές ημερολογίου (Φάση 1)· τραπεζική συμφωνία, υποψήφια αντιστοίχισης, κλίμακα φόρου αναφορών (Φάση 2). Η άγκυρα συνόρου (`journal/__tests__/journal-ledger-boundary.test.ts`) καλύπτει πλέον `listJournalEntries` · `listBankTransactions` · `listInvoices`. **Μένουν**:
+- `services/balance-service.ts:84,205` — υπόλοιπο πελάτη από `listInvoices(…, 1000)` + fallback `{ items: [] }` (σφάλμα = «υπόλοιπο 0»). Είναι στο κλειστό σύνολο της άγκυρας **ως γνωστό χρέος**. Θεραπεία: `collectInvoices({ customerId, fiscalYear })` πάνω στο `scanLedger` + άγκυρα δεικτών (`recordQueryShape`) + αφαίρεση από το σύνολο.
+- Λίστες οθόνης (journal / invoices / bank / assets): `hasNext` χωρίς cursor ⇒ η 2η σελίδα **δεν μπορεί** να ζητηθεί· και fallback ⇒ σφάλμα = «κενή λίστα» στην οθόνη.
+- `income-by-customer.ts`: σκληρογραμμένο `'Χωρίς Πελάτη'` (N.11).
+- Φόρος 2026: οι μειώσεις του ν.5246/2025 ανά πρόσωπο (ηλικία ≤ 30, τέκνα) δεν μοντελοποιούνται — χρειάζονται στοιχεία φορολογουμένου. Τέλος επιτηδεύματος ελευθέρων επαγγελματιών: καταργήθηκε από το 2025 κατά τον Τύπο — το `tax-config` κρατά 650 € (επαλήθευση με ΦΕΚ πριν από αλλαγή).
 
 ### 🔍 Γραμμές zoom κάτοψης/φύλλου λεπτομέρειας — `disabled`/`title=`/`style=` αντί του κοινού `ViewerToolbarButton` (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-05, ADR-899 §9 θέμα 3 · ADR-187 · N.0.2)
 - **Τι**: το θέμα 3 έκανε το `useZoomPan` τον ΕΝΑ pan/zoom και έβγαλε κοινό κουμπί θεατή (`shared/media/viewer/ViewerToolbarButton`: tooltip, `aria-disabled` που κρατά την εστίαση). Δύο γραμμές zoom μένουν χειρόγραφες:
@@ -4155,6 +4154,12 @@
 - **Πού μένουν** (grep `areas?.gross ||` 2026-10-02): `domain/cards/property/usePropertyCardModel.ts` (`displayAreaOf`) · `features/property-grid/components/PropertyCard.tsx` (×2) · `features/property-hover/components/PropertyQuickView.tsx` · `lib/social-platform-system/sharing-service.ts`.
 - **Θεραπεία**: ανάθεση στο SSoT· προσοχή ότι το SSoT επιστρέφει `null` αντί για `undefined` (`?? undefined` όπου ο καταναλωτής περιμένει `undefined`).
 - **Παρεμπιπτόντως** (ίδια συνεδρία): `tabs/FloorsTabContent.tsx:154` έχει σκληρό `retryLabel="Retry"` (N.11) — η Στάθμευση διορθώθηκε με το υπάρχον `unitStats.retry`.
+
+### 📒 Ημερολόγιο αρχείου: ΚΑΜΙΑ ετικέτα πράξης — όλες εμφανίζονται ωμές (προτεραιότητα ΜΕΣΑΙΑ, 2026-10-14, ADR-915 Φ3α §10 · ADR-191 · N.0.2)
+- **Τι**: το `components/shared/files/AuditLogPanel.tsx` καλεί `t(\`audit.action.${entry.action}\`, entry.action)`, αλλά **κανένα** κλειδί `audit.action.*` δεν υπάρχει στο `locales/{el,en}/files.json` (grep 2026-10-14). Ο άνθρωπος βλέπει `cde_seal` · `hold_place` · `document_facts_record` αντί για κείμενο.
+- **Γιατί δεν το έπιασε πύλη**: η κλήση έχει **ωμή εφεδρεία** (`entry.action`), άρα το CHECK 3.8 δεν βλέπει κλειδί που λείπει. Είναι ακριβώς το σχήμα της πύλης 3.97.
+- **Θεραπεία**: ~38 κλειδιά (ένα ανά `FileAuditAction`) σε el + en, και η κλήση **χωρίς** εφεδρεία. Άγκυρα: κάθε μέλος του τύπου έχει κλειδί και στις δύο γλώσσες (ο `ACTION_ICON_MAP` είναι ήδη `Record<FileAuditAction, …>`, άρα το κλειστό σύνολο υπάρχει).
+- **Μέγεθος**: ~1h, ξένος τομέας (ADR-191) ⇒ όχι επί τόπου.
 
 ### 📅 `addMonthsClampedUtc` — δεύτερη υλοποίηση του `addMonthsUTC` (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-14, ADR-915 Φ1 · N.0.2)
 - **Τι**: `lib/date/calendar-arithmetic.ts` `addMonthsClampedUtc(Date, n)` + `addYearsClampedUtc` κάνουν **το ίδιο ψαλίδισμα** με το κανονικό `lib/date-local.ts` `addMonthsUTC(iso, n)` (31/1+1 ⇒ 28/2), με άλλη υπογραφή (`Date` αντί για ISO).

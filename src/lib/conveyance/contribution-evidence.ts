@@ -23,6 +23,7 @@
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { findEntryPoint } from '@/config/upload-entry-points/queries';
 import type { ConveyanceContribution } from '@/types/conveyance-contribution';
+import type { DocumentFactsView } from '@/lib/document-validity/document-facts';
 import type { EvidenceFile, EvidenceSource, NewerVersion, SealedDelivery } from '@/types/conveyance-case';
 import type { LegalProfessionalRole } from '@/types/legal-contracts';
 import {
@@ -46,6 +47,8 @@ export interface ContributedFileState {
   readonly ownerUid: string;
   /** Έχει bytes (`storagePath`) — η απώλειά τους είναι το μόνο που κάνει μια σταλμένη έκδοση μη ανοίξιμη. */
   readonly hasBytes: boolean;
+  /** ADR-915 Φ3β — τα γεγονότα του αρχείου (προβολή). `null` = «δεν ξέρουμε». */
+  readonly documentFacts: DocumentFactsView | null;
 }
 
 interface ContributionEvidenceInput {
@@ -88,7 +91,7 @@ function sourceOf(c: ConveyanceContribution, audience: AudienceQuestion, input: 
   return { ...base, own: true, newerVersion: input.newerVersions?.get(c.id) ?? null };
 }
 
-function toEvidence({ contribution: c, audience }: DeliveredTransmittal, input: ContributionEvidenceInput): EvidenceFile | null {
+function toEvidence({ contribution: c, audience, file }: DeliveredTransmittal, input: ContributionEvidenceInput): EvidenceFile | null {
   const entryPoint = findEntryPoint(ENTITY_TYPES.CONVEYANCE_CASE, c.entryPointId);
   if (!entryPoint) return null;
   return {
@@ -101,6 +104,7 @@ function toEvidence({ contribution: c, audience }: DeliveredTransmittal, input: 
     level: 'contribution',
     fingerprint: c.file.fingerprint,
     createdAt: c.issuedAt,
+    documentFacts: file.documentFacts,
   };
 }
 
@@ -108,6 +112,7 @@ function toEvidence({ contribution: c, audience }: DeliveredTransmittal, input: 
 interface DeliveredTransmittal {
   readonly contribution: ConveyanceContribution;
   readonly audience: AudienceQuestion;
+  readonly file: ContributedFileState;
 }
 
 type DeliveryInput = Pick<ContributionEvidenceInput, 'contributions' | 'activeContributors' | 'files'>;
@@ -121,7 +126,7 @@ function deliveredTransmittals(input: DeliveryInput): readonly DeliveredTransmit
     const file = input.files.get(contribution.file.fileId);
     if (file === undefined || file.ownerUid !== contribution.authorUid || !file.hasBytes) return [];
     const audience = audienceOfTransmittal(contribution);
-    return audience ? [{ contribution, audience }] : [];
+    return audience ? [{ contribution, audience, file }] : [];
   });
 }
 

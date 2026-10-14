@@ -15,7 +15,7 @@
  */
 
 import { isMinorAmount, type MinorAmount } from '@/lib/money/money';
-import { isRecord } from '@/lib/type-guards';
+import { isOneOf, isRecord } from '@/lib/type-guards';
 import {
   ISO_WEEKDAYS,
   normalizeWeeklyHours,
@@ -40,10 +40,6 @@ import {
 /** Άνω όριο τιμής νύχτας: 100.000 € — πέρα από αυτό είναι λάθος πληκτρολόγησης. */
 export const STAY_NIGHTLY_RATE_MAX_MINOR: MinorAmount = 10_000_000;
 
-function oneOf<T extends number>(values: readonly T[], value: unknown): value is T {
-  return typeof value === 'number' && (values as readonly number[]).includes(value);
-}
-
 /** Ακέραιες νύχτες κανόνα: 1..365. */
 export function isRuleNights(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= STAY_RULE_MAX_NIGHTS;
@@ -67,7 +63,7 @@ function weekdaysFrom(value: unknown): readonly IsoWeekday[] | null {
 }
 
 function advanceNoticeFrom(value: unknown): StayAdvanceNotice | null {
-  if (!isRecord(value) || !oneOf(STAY_ADVANCE_NOTICE_DAYS, value.days)) return null;
+  if (!isRecord(value) || !isOneOf(STAY_ADVANCE_NOTICE_DAYS, value.days)) return null;
   const cutoff = value.sameDayCutoffHour;
   if (cutoff === null) return { days: value.days, sameDayCutoffHour: null };
   // Η αποκοπή έχει νόημα ΜΟΝΟ για «ίδια μέρα».
@@ -93,7 +89,7 @@ function responseHoursFrom(value: unknown): WeeklyHours | null | undefined {
 
 function orphanGapFrom(value: unknown): StayOrphanGapRule | null | undefined {
   if (value === null) return null;
-  if (!isRecord(value) || !oneOf(STAY_ORPHAN_GAP_NIGHTS, value.maxNights)) return undefined;
+  if (!isRecord(value) || !isOneOf(STAY_ORPHAN_GAP_NIGHTS, value.maxNights)) return undefined;
   return { maxNights: value.maxNights };
 }
 
@@ -110,8 +106,8 @@ export function stayRulesFrom(raw: unknown): StayRules | null {
   if (maxNights === undefined || advanceNotice === null || orphanGap === undefined) return null;
   if (responseHours === undefined) return null;
   if (arrivalWeekdays === null || departureWeekdays === null) return null;
-  if (!oneOf(STAY_PREPARATION_NIGHTS, raw.preparationNights)) return null;
-  if (window !== null && !oneOf(STAY_AVAILABILITY_WINDOW_MONTHS, window)) return null;
+  if (!isOneOf(STAY_PREPARATION_NIGHTS, raw.preparationNights)) return null;
+  if (window !== null && !isOneOf(STAY_AVAILABILITY_WINDOW_MONTHS, window)) return null;
   return {
     maxNights,
     advanceNotice,

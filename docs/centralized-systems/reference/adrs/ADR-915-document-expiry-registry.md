@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | 🟡 **ΣΕ ΕΞΕΛΙΞΗ** — Φ1 **υλοποιημένη, uncommitted** (2026-10-14) · Φ2–Φ6 σχεδιασμένες (§5) |
+| **Status** | 🟡 **ΣΕ ΕΞΕΛΙΞΗ** — Φ1 ✅ (`acd424f4`, `a1daefa5`) · Φ2 ✅ (`cc90c484`) · Φ3 ✅ (Φ3α §10.1 · Φ3β-1 μεταβίβαση §10.2 · Φ3β-2 ακίνητο §10.3) · Φ4–Φ6 σχεδιασμένες (§5) |
 | **Date** | 2026-10-14 |
 | **Category** | Documents / Compliance / Conveyance / Listings |
 | **Canonical Location** | `src/config/document-validity/document-validity.ts` (κανόνες) · `src/lib/document-validity/document-expiry.ts` (υπολογισμός) |
@@ -76,9 +76,9 @@
 
 | Φάση | Περιεχόμενο | Κατάσταση |
 |---|---|---|
-| **Φ1** | ΕΝΑΣ κανόνας + ΕΝΑΣ υπολογισμός (§6) | ✅ υλοποιημένη, uncommitted |
-| **Φ2** | Απαιτήσεις «σε ισχύ ΟΤΑΝ χρειάζεται»: `{ documentKind, subject, neededOn, policy: block\|warn, process, statute }` — μεταβίβαση (`targetSigningDate`, `block`), δημοσίευση (`continuous`, `warn`)· το `validOnSigning` γίνεται παράγωγο· `dependentsOf` = «τι σταματά αν λήξει αυτό» | ⏳ |
-| **Φ3** | `FileRecord.documentFacts` (ένας γραφέας, κανόνες + σουίτα 3.16, ιστορικό 3.17)· η εισαγωγή ΠΕΑ γράφει έκδοση + τυπωμένη λήξη στο αρχείο· ο έλεγχος μεταβίβασης προσυμπληρώνει· ανεκτικός αναγνώστης, **καμία** μαζική μετάπτωση | ⏳ |
+| **Φ1** | ΕΝΑΣ κανόνας + ΕΝΑΣ υπολογισμός (§6) | ✅ `acd424f4` + `a1daefa5` |
+| **Φ2** | Απαιτήσεις «σε ισχύ ΟΤΑΝ χρειάζεται»: `{ documentKind, subject, neededOn, policy: block\|warn, process, basis }` — μεταβίβαση (`targetSigningDate`, `block`), δημοσίευση (`continuous`, `warn`)· το `validOnSigning` γίνεται παράγωγο· `dependentsOf` = «τι σταματά αν λήξει αυτό» (§7) | ✅ `cc90c484` |
+| **Φ3** | `FileRecord.documentFacts` (ένας γραφέας, κανόνες + σουίτα 3.16, ιστορικό στο `file_audit_log` — το `files` είναι εκτός 3.17)· η εισαγωγή ΠΕΑ γράφει έκδοση + τυπωμένη λήξη στο αρχείο· ο έλεγχος μεταβίβασης προσυμπληρώνει· ανεκτικός αναγνώστης, **καμία** μαζική μετάπτωση (§10) | ✅ Φ3α (δεδομένα · γραφέας · κανόνες · εισαγωγή ΠΕΑ, §10.1) · Φ3β-1 (μεταβίβαση διαβάζει + έγκριση δηλώνει, §10.2) · Φ3β-2 (ακίνητο: η αξίωση διαβάζει το αρχείο-πηγή, §10.3) |
 | **Φ4** | Μητρώο = παραγόμενη όψη: αποθηκεύεται **μόνο** η `expiresOn` ως πεδίο ευρετηρίου (ντετερμινιστική), η κατάσταση υπολογίζεται στην ανάγνωση· σελίδα στον χώρο εργασίας (φίλτρα: μέσα στον μήνα · μπλοκάρει · άγνωστη · ασυμφωνία) | ⏳ |
 | **Φ5** | Ειδοποιήσεις: γενίκευση του `lib/conveyance/expiry-alerts.ts`, στάδια (`renewalLeadDays` · 30 · 7 · 0 · έληξε), κλιμάκωση (Α2) | ⏳ |
 | **Φ6** | Δημόσια αγγελία (Α1), υπολογισμένη στην προβολή χωρίς επαναπροβολή | ⏳ |
@@ -107,13 +107,216 @@
   εμφανίζεται **όπως πριν**: ο κανόνας έγινε `months` από `days`, και ο έλεγχος γενικεύτηκε ώστε να μην εξαφανιστεί το πεδίο. Αυτό
   δεν το φυλάει καμία άγκυρα component.
 
-## 7. Boy Scout
+## 7. Φ2 — τι υλοποιήθηκε
 
-`lib/date/calendar-arithmetic.ts` `addMonthsClampedUtc` = δεύτερη υλοποίηση του `addMonthsUTC` (ίδιο ψαλίδισμα) ⇒
-`.claude-rules/pending-ratchet-work.md` (δύο ξένοι τομείς).
+**SSoT audit (grep, πριν από κώδικα)**: οι κατάλογοι «ποια διαδικασία ζητά τι» **υπάρχουν ήδη**: ο κατάλογος μεταβίβασης
+(`CONVEYANCE_CHECKLIST`, ADR-901) και ο πίνακας νομιμότητας (`LEGALITY_OFFER_MATRIX` + `LegalityClaimKindSpec.publication`,
+ADR-838). Ένας τρίτος, χειρόγραφος κατάλογος θα μπορούσε να αποκλίνει από αυτούς χωρίς να το πιάσει κανείς. Γι' αυτό η Φ2 **δεν** γράφει απαιτήσεις. Τις
+**παράγει** από αυτούς τους δύο καταλόγους, που συνδέονται με το είδος εγγράφου μέσω `documentKind`.
 
-## 8. Changelog
+- **`lib/document-validity/document-requirement.ts`** (leaf, χωρίς ρολόι):
+  - **Λεξιλόγιο:** `NeededOn` (`on` · `continuous` · `unscheduled`). Το «η μέρα δεν ορίστηκε» είναι `unscheduled` και όχι `null`, γιατί το `null` θα διαβαζόταν «δεν χρειάζεται». Επίσης `RequirementPolicy` (`block` · `warn`) και `RequirementProcessRef` (υπόθεση ή αγγελία, ώστε το «τι σταματά» να δείχνει **συγκεκριμένη** διαδικασία). Τέλος `RequirementBasis` (`checklist-item` · `statute` · `unresolved`): το «γιατί» δεν μένει ποτέ σιωπηλό.
+  - **`documentStanding`** = **ο ΕΝΑΣ κριτής**: `valid` · `expiring` · `expired` · `expiry-unknown`, μαζί με το `validAtNeed`.
+  - **`dependentsOf`** = η ανάποδη όψη: για κάθε απαίτηση `stops` · `unaffected` · `undetermined` και `stopsOn` = λήξη + 1. Πρώτα έρχεται το `block`, μετά η νωρίτερη μέρα· το άγνωστο μπαίνει τελευταίο.
+- **Παραγωγοί**:
+  - `lib/conveyance/conveyance-requirements.ts`: οι γραμμές με `documentKind`, πολιτική `block`, για την ημέρα υπογραφής, με παράθυρο `EXPIRING_WINDOW_DAYS`.
+  - `lib/legality/publication-requirements.ts`: για κελί `raised` η βάση είναι `statute`, για `unresolved` είναι `unresolved`, και το `not-raised` δεν δίνει απαίτηση. Αν μία διάθεση είναι `raised`, αρκεί. Η πολιτική είναι `blocks-publication` → `block`, αλλιώς `warn`, οπότε το **ΠΕΑ βγαίνει `warn`** (Α1). Παράθυρο: `renewalLeadDays`.
+- **Σύνδεση με τους υπάρχοντες καταλόγους**:
+  - `ChecklistItem.documentKind?`: το έχουν οι γραμμές ΠΕΑ και ταυτότητας κτιρίου.
+  - `LegalityClaimKindSpec.documentKind`: το `expires` **παράγεται** πλέον από αυτό μέσω `documentBacked`. Έτσι έφυγαν οι δύο χειρόγραφες κλήσεις.
+  - `deriveChecklist.validityOf` → `documentStanding` μέσω `conveyanceNeededOn`: το `validOnSigning` = `validAtNeed` είναι πλέον **παράγωγο**.
+- **Μένουν χωριστά, με λόγο**:
+  - `mandate-standing.ts`: η εντολή μεσιτείας λήγει σε **στιγμή** (`expiresAt <= now`), όχι σε τελευταία μέρα που μετράει μέσα. Και ο ορίζοντας των 14 ημερών είναι κάδος για την ταξινόμηση κατά προτεραιότητα, όχι απαίτηση κάποιας διαδικασίας.
+  - `isExpiredOn` (`legality-signal.ts`): κανονικοποιεί άγνωστες εισόδους, και η ισοτιμία του με τον κριτή φυλάγεται με άγκυρα.
+- **Άγκυρες**:
+  - Στο `derive-checklist.test.ts` «ισχύς (Σ-5)»: **+6** tests, γραμμένα **πριν** την αλλαγή και πράσινα στον παλιό κώδικα (30/30).
+  - Στο `document-requirement.test.ts`:
+    - ο κριτής και το `dependentsOf`·
+    - οι δύο παραγωγοί σε πραγματικούς καταλόγους·
+    - η **ισοτιμία** με το `isExpiredOn`·
+    - ότι `validity === documentKindSpec(kind).rule` σε ακριβώς 2 γραμμές·
+    - η Α1 και ότι το `leaseShort` δίνει `unresolved`·
+    - το σενάριο «ένα ΠΕΑ, δύο διαδικασίες»: η υπογραφή μπλοκάρεται πρώτη, η αγγελία προειδοποιείται μετά.
+- **Μετρημένο**:
+  - jest **109 σουίτες / 1726 tests** πράσινα: `lib/document-validity` · `lib/conveyance` · `lib/legality` · `lib/energy-certificate` · `config/conveyance-checklist` · `components/sales/conveyance` · `services/conveyance` · `components/listing-detail` · `services/listings`.
+  - **Μεταλλάξεις 4/4 κόκκινες**, και η καθεμία επανήλθε στο ίδιο βήμα:
+    - `>=`→`>` στο `validAtNeed`: 2 κόκκινα.
+    - `stopsOn` χωρίς +1: 2 κόκκινα.
+    - `expiry-unknown`→`expired` στη γραμμή: 3 κόκκινα.
+    - ΠΕΑ αγγελίας → `blocks-publication`: 2 κόκκινα.
+  - `jscpd:diff` καθαρό (9 αρχεία). Το shell slice είναι φρέσκο.
+- **ΔΕΝ μετρήθηκε**: `tsc` (N.17). Και καμία οθόνη, γιατί η Φ2 δεν αλλάζει UI, i18n ή Firestore.
+- **Εύρημα για τη Φ4 (δεν άλλαξε)**: μια εγκεκριμένη γραμμή με κανόνα `unverified` δείχνει `accepted`. Ο κατάλογος δεν έχει κατάσταση «άγνωστη λήξη», ενώ ο κριτής λέει `expiry-unknown`. Η αντιστοίχιση `ROW_STATUS_OF` το κρατά **ρητά** όπως πριν. Μια νέα κατάσταση γραμμής αγγίζει UI, i18n και τη σύνοψη, άρα είναι απόφαση της Φ4.
+
+## 8. Boy Scout
+
+- `lib/date/calendar-arithmetic.ts` `addMonthsClampedUtc` = δεύτερη υλοποίηση του `addMonthsUTC` (ίδιο ψαλίδισμα) ⇒
+  `.claude-rules/pending-ratchet-work.md` (δύο ξένοι τομείς).
+- Φ2: το σχόλιο του `LegalityClaimKindSpec.expires` έγραφε ακόμη «ισχύει **δύο μήνες**» (διαψεύστηκε στην §1) — διορθώθηκε.
+
+## 9. Changelog
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
-| 2026-10-14 | Δημιουργία· έρευνα §2· αποφάσεις Α1–Α5· σχέδιο Φ1–Φ6. **Φ1 υλοποιημένη** (§6), uncommitted. |
+| 2026-10-14 | Δημιουργία· έρευνα §2· αποφάσεις Α1–Α5· σχέδιο Φ1–Φ6. **Φ1 υλοποιημένη** (§6). |
+| 2026-10-14 | **Φ3β-2** (§10.3) — **Φ3 ✅**: η αξίωση `energy-performance` του ακινήτου (γραφείο + ιδιώτης) παίρνει λήξη από τα γεγονότα του `sourceFileId` μέσω `resolvedDocumentExpiry` (Α3 + Α4)· `readContainerDocumentFacts` (ίδιος κριτής με την εισαγωγή)· το ΕΝΑ δοχείο του ΠΕΑ (`energy-certificate-file-scope`, 4 καταναλωτές)· ο ΕΝΑΣ φρουρός `contradictsDocumentText` (μεταβίβαση + ακίνητο)· άρνηση 422 `ENERGY_ISSUED_ON_CONTRADICTS_DOCUMENT` / `invalid-energy-certificate`. |
+| 2026-10-14 | **Φ3β-1** (§10.2): η μεταβίβαση **διαβάζει** τα γεγονότα του αρχείου (`EvidenceFile.documentFacts`, προβολή χωρίς «ποιος/πότε»)· ο κατάλογος παίρνει λήξη από το αρχείο που εγκρίθηκε (`resolvedDocumentExpiry`, Α3 ανά πεδίο + Α4)· ο διάλογος ελέγχου προσυμπληρώνει και κλειδώνει την ανάγνωση, δείχνει την ασυμφωνία· άρνηση `issued_on_contradicts_document`· η αποδοχή δηλώνει `attested` στο αρχείο του μισθωτή. Φ3β-2 (ακίνητο) ⏳. |
+| 2026-10-14 | **Φ3α** (§10): `FileRecord.documentFacts` + ο ΕΝΑΣ γραφέας (`server/files/document-facts-writer`, ιεραρχία `document-text` > `attested`, ποτέ `updatedAt`) + πάγωμα στους κανόνες (`files` · `files_personal`) + άγκυρα δεύτερου γραφέα· η εισαγωγή ΠΕΑ γράφει έκδοση + τυπωμένη λήξη στο αρχείο· `isOneOf` (Boy Scout). Φ3β (καταναλωτές) ⏳. |
+| 2026-10-14 | **Φ2** (§7): `DocumentRequirement` + `documentStanding` (ο ΕΝΑΣ κριτής) + `dependentsOf` (τι σταματά)· παραγωγοί από τον κατάλογο μεταβίβασης και τον πίνακα νομιμότητας· `validOnSigning` παράγωγο. Κώδικας στα `a1daefa5`/`cc90c484`· η τεκμηρίωση ακολουθεί. |
+
+## 10. Φ3 — τα γεγονότα ζουν στο έγγραφο (`FileRecord.documentFacts`)
+
+**SSoT audit (grep, πριν από κώδικα)**:
+
+| Ερώτηση | Εύρημα | Συνέπεια |
+|---|---|---|
+| Ποιος γράφει `files`; | ~15 γραφείς (πελάτης + Admin), **κανένα** γενικό PATCH· οι κανόνες είναι **denylist ανά οικογένεια** (`cdeCustodyKeys` · `holdCustodyKeys` · `measuredKeys` · `publicationCustodyKeys`) | **ακριβές προηγούμενο: `imageDimensions`** (ADR-899 §3.7) — γεγονός για τα bytes, ένας γραφέας διακομιστή, παγωμένο για τον πελάτη. Η Φ3 αντιγράφει **αυτό** το ιδίωμα· **όχι** το σύνορο CDE (η 3.87 φυλάει ορατότητα, όχι γεγονότα εγγράφου) |
+| Ιστορικό; | το `files` είναι **εκτός** 3.17 (`TRACKED_COLLECTION_KEYS`)· τα αρχεία έχουν το `file_audit_log` (`file-audit-admin.service`) | αυθεντικό ίχνος = `{recordedBy, recordedAt, source}` **στο έγγραφο** (δόγμα ADR-862 §5.7)· γραμμή ημερολογίου = προβολή |
+| Εισαγωγή ΠΕΑ | κατέβαζε ήδη τα bytes και διάβαζε `issuedOn` + «Ημερομηνία Ισχύος»· η δεύτερη **πεταγόταν** | εδώ γεννιούνται τα γεγονότα `document-text` |
+| Αντικατάσταση | `material-supersession.ts`: μόνο μοντέλο/κάτοψη, **καμία** για ΠΕΑ | τα γεγονότα ανήκουν στην **έκδοση**· Α5 → Φ4 |
+| Μεταβίβαση | 🔴 αποτύπωμα ελέγχου = `fileId:revision:updatedAt` (`conveyance-evidence.server.ts`) | ο γραφέας **ΠΟΤΕ** δεν αγγίζει `updatedAt`/`revision` — αλλιώς κάθε εγκεκριμένη γραμμή θα γινόταν σιωπηλά «μη τρέχουσα» |
+
+**Έρευνα**:
+- Το ACC/Autodesk Docs **μεταφέρει** το custom attribute στην επόμενη έκδοση. Εμείς **όχι**: νέο ΠΕΑ σημαίνει νέα επιθεώρηση, και η παλιά έκδοση πάνω στο νέο αρχείο θα έβγαζε λάθος λήξη σιωπηλά.
+- Το Procore ζητά τις ημερομηνίες «όπως είναι τυπωμένες». Εμείς τις **διαβάζουμε** από το ίδιο το PDF, και η ανάγνωση **υπερισχύει** της δήλωσης ανθρώπου.
+
+### 10.1 Φ3α — τι υλοποιήθηκε
+
+- **`lib/document-validity/document-facts.ts`** (leaf, χωρίς ρολόι):
+  - `DocumentFacts { kind, issuedOn, printedValidUntil, source, recordedBy, recordedAt }`·
+  - προέλευση `document-text` (κλειστό `DOCUMENT_TEXT_READERS`) **ή** `attested` (κλειστό `DOCUMENT_ATTESTATION_PATHS`)·
+  - `readDocumentFacts` = ο ανεκτικός αναγνώστης· το απόν ή το αλλοιωμένο δίνει `null` («δεν ξέρουμε»), και μια τυπωμένη λήξη πριν από την έκδοση απορρίπτεται μόνη της·
+  - `documentFactsVerdict` = η ιεραρχία: κενό ⇒ write · ίδια ⇒ `already-recorded` · δήλωση πάνω σε ανάγνωση ⇒ `outranked` · ανάγνωση πάνω σε οτιδήποτε ⇒ write·
+  - `documentFactsExpiry` = η γέφυρα προς το `documentExpiry` (Α4), που μέχρι τώρα **δεν είχε κανέναν καλούντα σε παραγωγή**.
+- **`server/files/document-facts-writer.ts`** = **ο ΕΝΑΣ γραφέας** (Admin SDK). Λεπτή συναλλαγή γύρω από την καθαρή κρίση, και `tx.update` **μόνο** του πεδίου. Γράφει γραμμή `document_facts_record` στο βιβλίο του **κατόχου** (εταιρικό ή προσωπικό) μετά τη δέσμευση.
+- **`firestore.rules`**: `documentFactsKeys` / `documentFactsUnchanged` / `documentFactsBornAbsent` δίπλα στα `measured…`. Κλήσεις στη γέννηση και στα δύο σκέλη ενημέρωσης του `files`, και στη γέννηση και την ενημέρωση του `files_personal`.
+- **Εισαγωγή ΠΕΑ** (`energy-certificate-import.service.ts`):
+  - `peaDocumentFacts` γράφει έκδοση + τυπωμένη λήξη στο αρχείο (`document-text`, `recordedBy` = όποιος ζήτησε την ανάγνωση).
+  - Χωρίς αναγνωσμένη έκδοση **δεν** γράφει τίποτα: μια κενή ανάγνωση θα υπερίσχυε της ημερομηνίας που θα δηλώσει ο ελεγκτής.
+  - Η πρόταση και το «δεν γράφει το ακίνητο» μένουν ίδια.
+- **Νέα πράξη ημερολογίου** `document_facts_record` (`types/file-audit.ts`), με εικονίδιο και χρώμα στο `AuditLogPanel`.
+- **Boy Scout**: γενικός φρουρός `isOneOf` στο `lib/type-guards.ts` (κλειστό λεξιλόγιο χωρίς `as`). Αντικατέστησε το ιδιωτικό αριθμητικό `oneOf` του `lib/stay/stay-rules-shape.ts`.
+- **Άγκυρες**:
+  - `document-facts.test.ts`: αναγνώστης (12 μορφές «δεν ξέρουμε»), ιεραρχία, γέφυρα Α4.
+  - `document-facts-writer.test.ts`: **μόνο** το πεδίο, ημερολόγιο στο βιβλίο του κατόχου, ιδεμπότητα, `outranked`, `no-file`.
+  - `document-facts-authority.test.ts`, τρία σκέλη:
+    - Ε1: η λίστα του κανόνα = το όνομα του κώδικα·
+    - Ε2: κανένας δεύτερος γραφέας στο `src/`·
+    - Ε3: αυτοέλεγχος του σαρωτή.
+  - Σουίτες κανόνων: «document facts freeze» στο `files` (κάθε σκέλος, αφαίρεση, γέννηση) και στο `files_personal`.
+- **Μετρημένο**: jest **24 σουίτες / 414 tests** (`lib/document-validity` · `services/energy-certificate` · `lib/stay` · ο γραφέας · η άγκυρα). **Μεταλλάξεις 4/4 κόκκινες**, η καθεμία με επαναφορά στο ίδιο βήμα:
+  - ο γραφέας γράφει `updatedAt`: 1 κόκκινο·
+  - η δήλωση νικά την ανάγνωση: 2 κόκκινα·
+  - ο αναγνώστης δέχεται λήξη πριν από την έκδοση: 1 κόκκινο·
+  - δεύτερος γραφέας σε άλλο αρχείο: 1 κόκκινο.
+- **Δηλωμένα όρια**:
+  - Η Ε2 είναι **άγκυρα jest, όχι πύλη pre-commit**, και δεν βλέπει κλειδί χτισμένο σε μεταβλητή (ίδιο όριο με την 3.17).
+  - Τα γεγονότα γεννιούνται **μόνο** από το κουμπί εισαγωγής. Ένα ΠΕΑ που ανέβηκε αλλιώς δεν τα έχει μέχρι να το εισαγάγει κάποιος ή να το εγκρίνει ελεγκτής (Φ3β). Η προληπτική εξαγωγή στο ανέβασμα είναι για τη Φ4.
+- **Εύρημα (δεν άλλαξε, `pending-ratchet-work.md`)**: το `AuditLogPanel` καλεί `t('audit.action.${action}', action)`, αλλά **κανένα** κλειδί `audit.action.*` δεν υπάρχει στα locales. Όλες οι πράξεις του ημερολογίου εμφανίζονται **ωμές** (`cde_seal`, `hold_place` …), και η ωμή εφεδρεία κρύβει το κενό από το CHECK 3.8.
+
+### 10.2 Φ3β — οι καταναλωτές διαβάζουν
+
+**SSoT audit (grep, πριν από κώδικα)**: τρεις κατασκευαστές `EvidenceFile` (ιδιόκτητα · transmittals · κανένας τρίτος — το
+`conveyance-contributed-file.ts` φτιάχνει `ContributionFile`)· ένας υπολογισμός λήξης γραμμής (`validityOf`)· ένας
+μετασχηματισμός εντολής (`applyConveyanceCommand`, server **και** optimistic)· ένα σημείο μετά τη δέσμευση
+(`applyConveyanceCaseCommand`). Χρησιμοποιήθηκαν τα σύμβολα της Φ3α· **κανένα δίδυμο**.
+
+**Αποφάσεις (απαντήσεις του σχεδίου)**:
+- Το `deriveChecklist` μένει **καθαρό**: τα γεγονότα ταξιδεύουν μέσα στο `EvidenceFile` (ήδη είσοδός του).
+- Η εγγραφή της έγκρισης: **αναμονή μετά τη δέσμευση, απομονωμένη αποτυχία**. Η έγκριση είναι η πράξη· η όψη που
+  επιστρέφει βλέπει τα γεγονότα· αν η εγγραφή αποτύχει, ο κατάλογος έχει εφεδρεία το `review.issuedOn` (χάνεται μόνο η
+  προσυμπλήρωση της επόμενης υπόθεσης). Όχι στην ίδια συναλλαγή: ο γραφέας είναι αυτοτελής, και η συναλλαγή της
+  υπόθεσης θα διεκδικούσε και το έγγραφο του αρχείου.
+- Η `discrepancy` (Α4) φαίνεται **στον διάλογο ελέγχου** — ο ελεγκτής είναι ο αποδέκτης της. Σήμα ανά γραμμή → Φ4.
+- Διαφωνία ελεγκτή με την **ανάγνωση** του εγγράφου: **επιστροφή** του εγγράφου με λόγο, ποτέ αντικατάσταση της
+  ημερομηνίας. Τα Procore/ACC δεν διαβάζουν το PDF, άρα εκεί η ημερομηνία είναι απλώς επεξεργάσιμο πεδίο (από γνώση,
+  όχι νέα έρευνα)· η ροή ελέγχου τους έχει «Revise and Resubmit», και αυτήν ακολουθούμε.
+
+**Τι υλοποιήθηκε**:
+- **`document-facts.ts`** (επέκταση): `resolvedDocumentExpiry(kind, facts, fallbackIssuedOn)` = **η ΜΙΑ γέφυρα
+  καταναλωτών** (Α3 ανά πεδίο: γεγονότα **ίδιου είδους** κερδίζουν, ό,τι δεν ξέρουν το συμπληρώνει ο άνθρωπος)·
+  `DocumentFactsView` + `readDocumentFactsView` (χωρίς `recordedBy`/`recordedAt` — τα τεκμήρια τα βλέπουν και εξωτερικοί,
+  πνεύμα ADR-901 Α18)· `isDocumentText`· ο τύπος `DocumentFactsClaim` μετακόμισε εδώ (leaf) και ο γραφέας τον
+  επανεξάγει.
+- **Τεκμήρια**: `EvidenceFile.documentFacts` — ιδιόκτητα (`conveyance-evidence.server.ts`) και transmittals
+  (`ContributedFileState.documentFacts` στο `conveyance-case-evidence.server.ts` → `contribution-evidence.ts`). Το
+  αποτύπωμα **δεν** αλλάζει ⇒ καμία γραμμή `stale`· ο αναμεταδότης CDC (`evidenceOfFile`) βλέπει διαφορά όταν γραφτούν
+  γεγονότα ⇒ ζωντανή ανανέωση της όψης.
+- **Κατάλογος** (`derive-checklist.ts` `expiresOnOf`): γραμμή με `documentKind` → γεγονότα του αρχείου `review.fileId`
+  → `resolvedDocumentExpiry`· χωρίς `documentKind` ⇒ όπως πριν. Κριτής μένει ο `documentStanding`.
+  ⚠️ **Σκόπιμη αλλαγή**: εγκεκριμένη γραμμή με πληκτρολογημένη ημερομηνία ≠ του αρχείου παίρνει τη λήξη **του αρχείου**,
+  και η εγκεκριμένη χωρίς ημερομηνία δεν είναι πια «άγνωστη» όταν το αρχείο ξέρει.
+- **Διάλογος ελέγχου**: `ConveyanceIssuedOnField` (εξήχθη από το `ConveyanceRowDialog`) — προσυμπλήρωση από
+  `reviewIssuedOnOf` (`lib/conveyance/review-attestation.ts`)· `document-text` ⇒ **μόνο ανάγνωση**· `attested` ⇒
+  επεξεργάσιμο· σημείωση ασυμφωνίας. i18n el+en (`dialogs.issuedOnFromDocument` · `issuedOnFromAttestation` ·
+  `expiryDiscrepancy`).
+- **Φρουρός πυρήνα**: `issued_on_contradicts_document` στο `COMMAND_REJECTIONS` — αποδοχή με ημερομηνία ≠ ανάγνωσης.
+  Καθαρός ⇒ ισχύει server **και** optimistic. Η επιστροφή (`rejected`) δεν φρουρείται: έτσι γίνεται η διαφωνία.
+- **Η έγκριση δηλώνει** (`attestationOfReview` + `attestReviewedDocument`): αποδοχή + ημερομηνία + γραμμή με
+  `documentKind` + αρχείο **`owned`** ⇒ `recordDocumentFacts(… attested via 'conveyance-review')`. 🔒 **Ποτέ** σε
+  transmittal: είναι προσωπικό αρχείο επαγγελματία, και η πράξη του οικοδεσπότη δεν γράφει σε ξένη θεματοφυλακή.
+  Πάνω σε ανάγνωση ⇒ `outranked` από τον γραφέα. Το `review.issuedOn` **μένει** (νομική πράξη του ελεγκτή).
+- **Άγκυρες**: `document-facts.test.ts` Δ4 (Α3/Α4/άλλο είδος/χωρίς γεγονότα) + Δ5 (η προβολή χωρίς «ποιος/πότε») ·
+  `derive-checklist.test.ts` +5 (γραμμένα **πριν**: 3 κόκκινα στον παλιό κώδικα, 2 πράσινα = «όπως πριν») ·
+  `apply-command.test.ts` +3 (φρουρός) · `review-attestation.test.ts` (νέο: πότε δηλώνει, transmittal, προσυμπλήρωση) ·
+  `conveyance-case.service.test.ts` +2 (το αρχείο παίρνει `attested` **χωρίς** αλλαγή `updatedAt`· ανάγνωση ⇒ ανέγγιχτη).
+- **Μετρημένο**: jest **30 σουίτες / 456 tests** (`lib/document-validity` · `lib/conveyance` · `services/conveyance` ·
+  `components/sales/conveyance` · `server/files` · `services/energy-certificate` · `knowledge-base-handler`) — 1 κόκκινο
+  στην πρώτη εκτέλεση: η άγκυρα Ε2 έπιασε `Map.set(…, { documentFacts })` ως γραφή. Η άγκυρα **δεν** χαλαρώθηκε· ο κώδικας
+  αναδιαρθρώθηκε (`contributedFileStateOf`) ⇒ πράσινη. **Μεταλλάξεις 5/5 κόκκινες** (επαναφορά στο ίδιο βήμα): εφεδρεία
+  πριν από τα γεγονότα 2 · αγνόηση τυπωμένης 2 · έγκριση σε transmittal 1 · φρουρός ανενεργός 1 · `recordedBy` στην
+  προβολή 1. `jscpd:diff` καθαρό (13 αρχεία) · CHECK 3.34 φρέσκο.
+  `npm run test:ai-pipeline:all` (N.10, άλλαξε fixture): **80 σουίτες / 1265 tests** πράσινα.
+- **ΔΕΝ μετρήθηκε**: `tsc` (N.17) · ο διάλογος στον browser (κλείδωμα/σημείωση — κανένα test component).
+- **Δηλωμένα όρια**: λάθος ανάγνωση του αναγνώστη **δεν** διορθώνεται από τον ελεγκτή (την είδε άνθρωπος στην
+  προεπισκόπηση εισαγωγής) → Φ4. Η άγκυρα Ε2 είναι κειμενική: `Map.set` με κλειδί `documentFacts` σε απόσταση < 400
+  χαρακτήρων διαβάζεται ως γραφή (ψευδώς θετικό προς την **ασφαλή** πλευρά).
+
+### 10.3 Φ3β-2 — το ΑΚΙΝΗΤΟ διαβάζει τα γεγονότα του ΠΕΑ
+
+**SSoT audit (grep, πριν από κώδικα)**:
+
+| Ερώτηση | Εύρημα | Απόφαση |
+|---|---|---|
+| Γέφυρα λήξης | `resolvedDocumentExpiry` — με `null` γεγονότα ⇒ ίδιο με `ruleExpiresOn` | χρήση· κανένα δίδυμο |
+| Κριτής αρχείου | `judgeContainerFile` απαιτεί **ακριβές** `contentType` | PDF: το `sourceFileId` το βάζει **μόνο** η εισαγωγή (`peaPatchOf`), που δέχεται μόνο PDF |
+| Δοχείο του ΠΕΑ | **inline** στις δύο διαδρομές εισαγωγής, ενώ το `contentType` προστίθεται μέσα στο service | **εξαγωγή** σε ΕΝΑ σημείο, με 4 καταναλωτές |
+| Φρουρός αντίφασης | ο `contradictsDocument` ήταν ιδιωτικός στο `apply-command.ts`, ίδιο κατηγόρημα | **εξαγωγή** σε `contradictsDocumentText` (document-facts.ts)· μεταβίβαση + ακίνητο αναθέτουν |
+| Κανόνας προέλευσης | `applyEnergyCertificatePatch` σβήνει την πηγή στη χειροκίνητη αλλαγή. Ο ιδιώτης το τρέχει στον server. Η φόρμα του γραφείου στέλνει `energy` **μόνο όταν άλλαξε** | ο τίμιος πελάτης δεν φτάνει τον φρουρό· μια άσχετη αποθήκευση δεν αγγίζει την αξίωση |
+| Προβολή | το `legality-signal.ts` υπολογίζει `expired` **στην ανάγνωση** | καμία επαναπροβολή, καμία μετάπτωση |
+
+**Τι υλοποιήθηκε**:
+- **`server/files/document-facts-read.ts`** — `readContainerDocumentFacts(db, scope, fileId)`. Περνά από τον **ίδιο** κριτή με την εισαγωγή. Σε ξένο κάτοχο, άλλο ακίνητο, κάδο, αρχείο που δεν είναι έτοιμο ή άλλο τύπο επιστρέφει `null`: καμία διαρροή λήξης και καμία διάκριση προς τα έξω. Είναι γενικός και δεν ξέρει τι είναι ΠΕΑ.
+- **`server/energy-certificate/energy-certificate-file-scope.ts`** — `PEA_CONTENT_TYPE` · `companyPeaFileScope` · `ownerPeaFileScope` · `peaSourceFacts` (διαβάζει **μόνο** όταν `sourceFileId ≠ null`). Το χρησιμοποιούν οι δύο διαδρομές εισαγωγής, το import service (`EnergyCertificateImportTarget extends ContainerFileScope`) και οι δύο γραφείς.
+- **`energy-certificate-claim.ts`** — `energyPerformanceClaimOf` / `withEnergyPerformanceClaim` δέχονται προαιρετικό `facts`, και `validUntil = resolvedDocumentExpiry('energy-certificate', facts, issuedOn).expiresOn`. Νέο `energyIssuedOnContradicts` (πηγή + `contradictsDocumentText`). Το `tier` μένει `self-declared`.
+- **Γραφείο** — `companyEnergyDeclarationPatch` (`property-energy-patch.ts`, καλείται στο `route.ts`). Σε αντίφαση: **422** `ENERGY_ISSUED_ON_CONTRADICTS_DOCUMENT`, και τίποτα δεν γράφεται.
+- **Ιδιώτης** — `setOwnerPropertyEnergyCertificate`: το `amend` έγινε async και διαβάζει τα γεγονότα εκτός συναλλαγής (αμετάβλητα bytes· σε επανάληψη απλώς ξαναδιαβάζει). Σε αντίφαση επιστρέφει `invalid-energy-certificate`, που γίνεται 422 `INVALID_ENERGY_CERTIFICATE` (`respond.ts`).
+- **Φόρμα / i18n**: καμία αλλαγή. Τον φρουρό τον φτάνει μόνο μπαγιάτικο ή πλαστό σώμα.
+
+**Απαντήσεις στα ανοιχτά του σχεδίου**:
+- **Αξιώσεις πριν τη Φ3β-2**: δεν γίνεται read-repair ούτε μετάπτωση. Ξαναϋπολογίζονται στην επόμενη **δήλωση** ΠΕΑ, γιατί το `assertedAt` είναι η στιγμή της δήλωσης (ADR-838). Όταν τυπωμένη λήξη = κανόνας (το σύνηθες), βγαίνει ίδιο `validUntil`, οπότε το παλιό `assertedAt` μένει.
+- **Γεγονότα γραμμένα ΜΕΤΑ την αποθήκευση** (επανεισαγωγή χωρίς εφαρμογή · `attested` από μεταβίβαση): η αξίωση κρατά την παλιά λήξη ως την επόμενη δήλωση. Αυτό είναι αποδεκτό τώρα. **Εύρημα για τη Φ6**: η σωστή λύση είναι υπολογισμός από τα γεγονότα **στην προβολή**, όχι αποδέκτης που ξαναγράφει ακίνητα.
+- **Έρευνα (λεπτή)**: Rightmove/Zoopla θεωρούν την αγγελία «διαφήμιση» και επισυνάπτουν όποιο EPC ανεβάσει ο πράκτορας. Εργαλεία τρίτων τραβούν από το **EPC Register** και παρακολουθούν τη λήξη. Πιο έξυπνο από την ανάγνωση PDF είναι το **lookup μητρώου** (buildingcert.gr) ⇒ εύρημα για βαθμίδα `registry-verified`, καταγεγραμμένο στο changelog του ADR-838.
+
+**Άγκυρες**:
+- `energy-certificate.test.ts` Α8β: χωρίς γεγονότα ⇒ ακριβώς `certificateValidUntil` σε 5 εκδόσεις · Α4 τυπωμένη νωρίτερη/αργότερη · Α3 χωρίς ημερομηνία · άλλο είδος · ίδιο `assertedAt` · πίνακας φρουρού.
+- `document-facts.test.ts` Δ6: πίνακας 8 περιπτώσεων για το `contradictsDocumentText`.
+- Νέο `document-facts-read.test.ts`: γραφείο 5 αρνήσεις + ανύπαρκτο + χωρίς γεγονότα · ιδιώτης (άλλος χρήστης · χωρίς φάκελο · γραφείου) · `peaSourceFacts` δεν διαβάζει χωρίς πηγή.
+- `property-patch-energy-certificate.test.ts` Π5 (τυπωμένη · ξένη εταιρεία · 422 · χωρίς `energy`).
+- `owner-property-energy-certificate.test.ts` Ε5: τυπωμένη · Α3 ⇒ `declared` · ξένος χρήστης · άρνηση **χωρίς** εγγραφή και χωρίς ίχνος · ο τίμιος πελάτης σβήνει την πηγή.
+- **Boy Scout**: οι Ε1/Ε2 του ίδιου αρχείου ήταν ήδη κόκκινες, μπαγιάτικες από το ADR-777 §8.96 (`scope`/`sourceFileId`), και ευθυγραμμίστηκαν με τη ζωντανή συμπεριφορά.
+
+**Μετρημένο**:
+- jest **59 σουίτες / 895 tests**, με **2 κόκκινα ΑΣΧΕΤΑ**: στο `publication-thumbnail.test.ts` η προβολή σκάει στο `floorplanFileId`, σε τομέα listings/κάτοψης. Κανένα αρχείο της Φ3β-2 δεν είναι στο stack, και το test δεν αγγίχθηκε.
+- **Μεταλλάξεις 4/4 κόκκινες**, η καθεμία με επαναφορά στο ίδιο βήμα:
+  - εφεδρεία πριν από τα γεγονότα: 3 κόκκινα·
+  - ο κριτής παραλείπεται: 6·
+  - `null` = αντίφαση: 1·
+  - ο ιδιώτης γράφει παρά την άρνηση: 1.
+- `jscpd:diff` καθαρό (13 αρχεία).
+
+**ΔΕΝ μετρήθηκε**:
+- `tsc` (N.17).
+- Η διαδρομή `PATCH /api/properties/[id]` από άκρο σε άκρο (δοκιμάστηκε ο βοηθός, όχι το `route.ts`).
+- Ο browser.
+- Τι δείχνει η φόρμα στο 422 (γενικό σφάλμα αποθήκευσης· κανένα μήνυμα με όνομα).

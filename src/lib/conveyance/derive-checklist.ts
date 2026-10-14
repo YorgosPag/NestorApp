@@ -27,6 +27,7 @@
 
 import { EXPIRING_WINDOW_DAYS } from '@/config/conveyance-checklist/catalog';
 import { ruleExpiresOn } from '@/lib/document-validity/document-expiry';
+import { resolvedDocumentExpiry } from '@/lib/document-validity/document-facts';
 import { documentStanding, type DocumentStandingState } from '@/lib/document-validity/document-requirement';
 import type { ChecklistItem, ConveyanceFactId, ConveyanceRole } from '@/config/conveyance-checklist/types';
 import type {
@@ -114,12 +115,22 @@ const ROW_STATUS_OF: Readonly<Record<DocumentStandingState, ChecklistRowStatus>>
 };
 
 /**
+ * Η ημέρα λήξης της εγκεκριμένης γραμμής. ADR-915 Φ3β (Α3): γραμμή με είδος εγγράφου διαβάζει τα γεγονότα **του
+ * αρχείου που εγκρίθηκε** (έκδοση + τυπωμένη λήξη, Α4)· η ημερομηνία του ελεγκτή είναι η εφεδρεία όταν το αρχείο δεν ξέρει.
+ */
+function expiresOnOf(item: ChecklistItem, review: ChecklistItemReview, files: readonly EvidenceFile[]): string | null {
+  if (item.documentKind === undefined) return ruleExpiresOn(item.validity, review.issuedOn);
+  const facts = files.find((file) => file.fileId === review.fileId)?.documentFacts ?? null;
+  return resolvedDocumentExpiry(item.documentKind, facts, review.issuedOn).expiresOn;
+}
+
+/**
  * Ισχύς αποδεκτής γραμμής ως προς σήμερα ΚΑΙ ως προς την ημέρα υπογραφής (Σ-5). ADR-915: η ημέρα λήξης από τον ΕΝΑ
  * υπολογισμό (Φ1) και η κρίση από τον ΕΝΑ κριτή (Φ2)· το `validOnSigning` είναι το `validAtNeed` της απαίτησης.
  */
-function validityOf(item: ChecklistItem, review: ChecklistItemReview, input: DeriveChecklistInput): Validity {
+function validityOf(item: ChecklistItem, review: ChecklistItemReview, files: readonly EvidenceFile[], input: DeriveChecklistInput): Validity {
   const standing = documentStanding({
-    expiresOn: ruleExpiresOn(item.validity, review.issuedOn),
+    expiresOn: expiresOnOf(item, review, files),
     asOf: input.today,
     neededOn: conveyanceNeededOn(input.targetSigningDate),
     warnWindowDays: EXPIRING_WINDOW_DAYS,
@@ -146,7 +157,7 @@ function reviewedStatus(item: ChecklistItem, review: ChecklistItemReview, eviden
     return { status: review.verdict === 'accepted' ? 'stale' : files.length > 0 ? 'uploaded' : absentStatus(sealed), ...NO_VALIDITY };
   }
   if (review.verdict === 'rejected') return { status: 'rejected', ...NO_VALIDITY };
-  return validityOf(item, review, input);
+  return validityOf(item, review, files, input);
 }
 
 function unreviewedStatus(item: ChecklistItem, { files, sealed }: RowEvidence): ChecklistRowStatus {

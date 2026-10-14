@@ -81,7 +81,7 @@ describe('Ε1 — θεματοφυλακή και εγγραφή', () => {
     expect(docOf(db, COLLECTIONS.OWNER_PROPERTIES, property.id)?.energy).toMatchObject({ class: 'B+', primaryEnergy: null });
     const listing = docOf(db, COLLECTIONS.PUBLIC_LISTINGS, property.id);
     expect(listing?.energyClass).toBe('B+');
-    expect(listing?.energyCertificate).toEqual({ primaryEnergy: null, co2Emissions: null, usefulArea: null, finalEnergy: null, absence: null });
+    expect(listing?.energyCertificate).toEqual({ primaryEnergy: null, co2Emissions: null, usefulArea: null, finalEnergy: null, scope: null, absence: null });
   });
 
   it('ξένος ή ανύπαρκτη αγγελία ⇒ `absent` — και τίποτα δεν γράφεται', async () => {
@@ -111,6 +111,8 @@ describe('Ε2 — 🔴 μερική διόρθωση: καμία απάντησ�
       issuedOn: '2023-05-02',
       usefulArea: null,
       finalEnergy: null,
+      scope: null,
+      sourceFileId: null,
       absence: null,
     });
     expect(docOf(db, COLLECTIONS.PUBLIC_LISTINGS, property.id)?.energyCertificate).toEqual({
@@ -118,6 +120,7 @@ describe('Ε2 — 🔴 μερική διόρθωση: καμία απάντησ�
       co2Emissions: 52,
       usefulArea: null,
       finalEnergy: null,
+      scope: null,
       absence: null,
     });
   });
@@ -189,5 +192,72 @@ describe('Ε4 — το ίχνος', () => {
     expect(recordChange).toHaveBeenCalledTimes(1);
     const changes = recordChange.mock.calls[0][0].changes as ReadonlyArray<{ readonly field: string }>;
     expect(changes.map((change) => change.field)).toEqual(['energy.class']);
+  });
+});
+
+describe('Ε5 — ADR-915 Φ3β-2: η δήλωση διαβάζεται απέναντι στο ΠΕΑ του φακέλου', () => {
+  const FILE = {
+    userId: 'user-1', entityType: 'property_dossier', entityId: 'pdos_1', status: 'ready', contentType: 'application/pdf',
+    storagePath: 'people/user-1/x.pdf',
+    documentFacts: {
+      kind: 'energy-certificate', issuedOn: '2023-05-02', printedValidUntil: '2033-04-30',
+      source: { kind: 'document-text', reader: 'pea-text' }, recordedBy: 'user-1', recordedAt: '2026-10-14T09:00:00.000Z',
+    },
+  };
+  const FROM_PEA = { class: 'B' as const, issuedOn: '2023-05-02', sourceFileId: 'file_pea_1' };
+
+  function seededWithFile(file: Record<string, unknown> = FILE) {
+    const property = validOwnerProperty({ dossierId: 'pdos_1' });
+    const db = new FakeFirestore();
+    db.seed(COLLECTIONS.OWNER_PROPERTIES, property.id, property);
+    db.seed(COLLECTIONS.FILES_PERSONAL, 'file_pea_1', file);
+    return { property, db, adminDb: db as unknown as AdminFirestore };
+  }
+  const claimOf = (db: InstanceType<typeof FakeFirestore>, id: string) =>
+    (docOf(db, COLLECTIONS.OWNER_PROPERTIES, id)?.legality as readonly StoredClaim[])[0];
+
+  it('🔴 η αξίωση παίρνει την τυπωμένη λήξη του αρχείου (Α4)', async () => {
+    const { property, db, adminDb } = seededWithFile();
+
+    expect((await setEnergy(adminDb, property.id, FROM_PEA, OWNER)).kind).toBe('saved');
+    expect(claimOf(db, property.id).validUntil).toBe('2033-04-30');
+  });
+
+  it('🔴 Α3: δήλωση χωρίς ημερομηνία, αρχείο που την ξέρει ⇒ ΟΧΙ `expiry-unknown`', async () => {
+    const { property, db, adminDb } = seededWithFile();
+
+    await setEnergy(adminDb, property.id, { ...FROM_PEA, issuedOn: null }, OWNER);
+
+    expect(claimOf(db, property.id).validUntil).toBe('2033-04-30');
+    expect(energySignalOf(docOf(db, COLLECTIONS.PUBLIC_LISTINGS, property.id))?.state).toBe('declared');
+  });
+
+  it('🔒 αρχείο ΑΛΛΟΥ χρήστη ⇒ τα γεγονότα του αγνοούνται', async () => {
+    const { property, db, adminDb } = seededWithFile({ ...FILE, userId: 'user-2' });
+
+    await setEnergy(adminDb, property.id, FROM_PEA, OWNER);
+
+    expect(claimOf(db, property.id).validUntil).toBe('2033-05-02');
+  });
+
+  it('🔴 πλαστό σώμα (πηγή + ημερομηνία ≠ ανάγνωσης) ⇒ άρνηση με όνομα, ΤΙΠΟΤΑ δεν γράφεται', async () => {
+    const { property, db, adminDb } = seededWithFile();
+
+    const result = await setEnergy(adminDb, property.id, { ...FROM_PEA, issuedOn: '2023-05-01' }, OWNER);
+
+    expect(result).toEqual({ kind: 'invalid-energy-certificate', violations: ['issued-on-contradicts-document'] });
+    expect(docOf(db, COLLECTIONS.OWNER_PROPERTIES, property.id)?.energy).toMatchObject({ class: null });
+    expect(recordChange).not.toHaveBeenCalled();
+  });
+
+  it('τίμιος πελάτης που αλλάζει την ημερομηνία ⇒ η πηγή σβήνει, καμία άρνηση', async () => {
+    const { property, db, adminDb } = seededWithFile();
+    await setEnergy(adminDb, property.id, FROM_PEA, OWNER);
+
+    const result = await setEnergy(adminDb, property.id, { issuedOn: '2023-05-01' }, OWNER);
+
+    expect(result.kind).toBe('saved');
+    expect(docOf(db, COLLECTIONS.OWNER_PROPERTIES, property.id)?.energy).toMatchObject({ sourceFileId: null, issuedOn: '2023-05-01' });
+    expect(claimOf(db, property.id).validUntil).toBe('2033-05-01');
   });
 });

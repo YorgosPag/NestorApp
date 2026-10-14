@@ -21,6 +21,7 @@ import type { CaseInvitationSummary, CredentialHint } from '@/types/engagement-i
 import type { ViewFreshness } from '@/types/server-view';
 import type { DeclaredCredential, EngagementConsent, EngagementState, EngagementVerdict } from '@/types/engagement';
 import type { LegalProfessionalRole } from '@/types/legal-contracts';
+import type { DocumentFactsView } from '@/lib/document-validity/document-facts';
 import type {
   ChecklistItem,
   ChecklistProvider,
@@ -190,6 +191,11 @@ export interface EvidenceFile {
   /** `fileId:revision:updatedAt` — αλλάζει σε κάθε νέα έκδοση/αναθεώρηση. */
   readonly fingerprint: string;
   readonly createdAt: string;
+  /**
+   * ADR-915 Φ3β (Α3) — τα γεγονότα **του ίδιου του αρχείου** (έκδοση · τυπωμένη λήξη · προέλευση), ως προβολή χωρίς
+   * «ποιος/πότε». `null` = «δεν ξέρουμε». Η εγγραφή τους **δεν** αλλάζει το `fingerprint` (ο έλεγχος δεν γίνεται `stale`).
+   */
+  readonly documentFacts: DocumentFactsView | null;
 }
 
 const CHECKLIST_ROW_STATUSES = [

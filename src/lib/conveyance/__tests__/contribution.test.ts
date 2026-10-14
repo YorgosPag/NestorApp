@@ -49,7 +49,7 @@ function contribution(role: LegalProfessionalRole, itemId: string, entryPointId:
 }
 
 function filesOf(contributions: readonly ConveyanceContribution[]): ReadonlyMap<string, ContributedFileState> {
-  return new Map(contributions.map((c) => [c.file.fileId, { fileId: c.file.fileId, ownerUid: c.authorUid, hasBytes: true }]));
+  return new Map(contributions.map((c) => [c.file.fileId, { fileId: c.file.fileId, ownerUid: c.authorUid, hasBytes: true, documentFacts: null }]));
 }
 
 const SELLER_REPORT = contribution('seller_lawyer', 'legal_due_diligence_report', 'case-legal-due-diligence');
@@ -99,7 +99,7 @@ describe('Α24 — πρόχειρο δεν γίνεται τεκμήριο', () 
     expect(rowFileIds('host', 'contract_draft', [withdrawn])).toEqual([]);
   });
   it('αρχείο που δεν ανήκει στον συντάκτη ⇒ κανένα τεκμήριο', () => {
-    const files = new Map([[NOTARY_DRAFT.file.fileId, { fileId: NOTARY_DRAFT.file.fileId, ownerUid: 'someone_else', hasBytes: true }]]);
+    const files = new Map([[NOTARY_DRAFT.file.fileId, { fileId: NOTARY_DRAFT.file.fileId, ownerUid: 'someone_else', hasBytes: true, documentFacts: null }]]);
     expect(contributionEvidence({ contributions: [NOTARY_DRAFT], activeContributors: ALL_ACTIVE, files, viewer: 'host', viewerUid: null })).toEqual([]);
   });
   it('συντάκτης που δεν είναι πια ενεργός ⇒ τα δικά του δεν μετράνε', () => {
@@ -258,7 +258,7 @@ describe('Α35 — σφραγισμένη παράδοση: ο οικοδεσπ�
   it('αποσυρμένη ή χωρίς bytes ⇒ ούτε σφράγιση (ίδιοι κανόνες ζωντάνιας με τα τεκμήρια)', () => {
     const withdrawn = { ...BUYER_ID, withdrawnAt: '2026-10-02T00:00:00.000Z', withdrawnBy: UID.buyer_lawyer };
     expect(rowFor('host', 'buyer_identity', [withdrawn]).status).toBe('missing');
-    const noBytes = new Map([[BUYER_ID.file.fileId, { fileId: BUYER_ID.file.fileId, ownerUid: UID.buyer_lawyer, hasBytes: false }]]);
+    const noBytes = new Map([[BUYER_ID.file.fileId, { fileId: BUYER_ID.file.fileId, ownerUid: UID.buyer_lawyer, hasBytes: false, documentFacts: null }]]);
     expect(sealedDeliveries({ contributions: [BUYER_ID], activeContributors: ALL_ACTIVE, files: noBytes, viewer: 'host' })).toEqual([]);
   });
 });

@@ -18,7 +18,7 @@ function item(id: string): ChecklistItem {
 function file(overrides: Partial<EvidenceFile> = {}): EvidenceFile {
   return {
     fileId: 'file_1', displayName: 'permit.pdf', entityType: 'project', entityId: 'proj_1',
-    purpose: 'permit', source: { kind: 'owned' }, level: 'project', fingerprint: 'file_1:0:2026-09-01', createdAt: '2026-09-01T10:00:00Z',
+    purpose: 'permit', source: { kind: 'owned' }, level: 'project', fingerprint: 'file_1:0:2026-09-01', createdAt: '2026-09-01T10:00:00Z', documentFacts: null,
     ...overrides,
   };
 }
@@ -171,6 +171,41 @@ describe('deriveChecklist — ισχύς (Σ-5)', () => {
     };
     const row = deriveChecklist(input({ items: [item('building_identity')], overrides, targetSigningDate: '2026-12-15' })).rows[0];
     expect([row.status, row.expiresOn, row.validOnSigning]).toEqual(['accepted', null, null]);
+  });
+});
+
+describe('deriveChecklist — ισχύς από τα γεγονότα του αρχείου (ADR-915 Φ3β · Α3/Α4)', () => {
+  const READ: NonNullable<EvidenceFile['documentFacts']> = {
+    kind: 'energy-certificate', issuedOn: '2025-01-01', printedValidUntil: null, source: { kind: 'document-text', reader: 'pea-text' },
+  };
+  const energyWith = (documentFacts: EvidenceFile['documentFacts'], issuedOn: string | null) => {
+    const evidence = [file({ level: 'property', entityType: 'property', purpose: 'certificate', documentFacts })];
+    const overrides = {
+      energy_certificate: { review: { verdict: 'accepted' as const, fileId: 'file_1', fileFingerprint: 'file_1:0:2026-09-01', issuedOn, reason: null, reviewedBy: 'u', reviewedAt: 't' } },
+    };
+    return deriveChecklist(input({ items: [item('energy_certificate')], evidence, overrides })).rows[0];
+  };
+
+  it('χωρίς γεγονότα ⇒ ακριβώς όπως πριν (εφεδρεία `review.issuedOn`)', () => {
+    expect(energyWith(null, '2025-01-01').expiresOn).toBe('2035-01-01');
+  });
+
+  it('το αρχείο κερδίζει την ημερομηνία του ελεγκτή (Α3)', () => {
+    const row = energyWith(READ, '2016-01-01');
+    expect([row.status, row.expiresOn]).toEqual(['accepted', '2035-01-01']);
+  });
+
+  it('η εγκεκριμένη χωρίς ημερομηνία παίρνει λήξη από το αρχείο (όχι πια «άγνωστη»)', () => {
+    expect(energyWith(READ, null).expiresOn).toBe('2035-01-01');
+  });
+
+  it('τυπωμένη λήξη νωρίτερα από τον κανόνα ⇒ ισχύει η τυπωμένη (Α4)', () => {
+    const row = energyWith({ ...READ, printedValidUntil: '2026-10-05' }, '2025-01-01');
+    expect([row.status, row.expiresOn]).toEqual(['expiring', '2026-10-05']);
+  });
+
+  it('⛔ γεγονότα άλλου είδους αγνοούνται — μένει η ημερομηνία του ελεγκτή', () => {
+    expect(energyWith({ ...READ, kind: 'building-identity' }, '2016-01-01').status).toBe('expired');
   });
 });
 

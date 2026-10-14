@@ -11,7 +11,6 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { ENTITY_TYPES } from '@/config/domain-constants';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { listingActorOf, withPersonalOrOrgAuth, type ApiActor } from '@/lib/auth/personal-scope-middleware';
 import { utcDateOf } from '@/lib/date-local';
@@ -20,6 +19,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { custodyOf, mayAdminister } from '@/lib/owner-property/listing-custody';
 import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
+import { ownerPeaFileScope } from '@/server/energy-certificate/energy-certificate-file-scope';
 import {
   respondToEnergyCertificateImport,
   type EnergyCertificateImportBody,
@@ -45,21 +45,17 @@ async function handler(request: NextRequest, actor: ApiActor, context?: RouteCon
   const property = ownerPropertyId === '' ? null : await administeredProperty(ownerPropertyId, actor);
   if (property === null) return NextResponse.json({ error: 'NOT_FOUND' }, { status: 404 });
 
-  const personal = custodyOf(property).kind === 'personal';
   return respondToEnergyCertificateImport(request, ownerPropertyId, (fileId) =>
     proposeEnergyCertificateImport(
       getAdminFirestore(),
       fileId,
       {
-        fileCollection: COLLECTIONS.FILES_PERSONAL,
-        container: {
-          owner: { kind: 'personal', userId: actor.ctx.uid },
-          entityType: ENTITY_TYPES.PROPERTY_DOSSIER,
-          entityId: personal ? (property.dossierId ?? null) : null,
-        },
+        // Το ΕΝΑ δοχείο του ΠΕΑ — ίδιο με αυτό από το οποίο ο γραφέας διαβάζει τα γεγονότα (ADR-915 Φ3β-2).
+        ...ownerPeaFileScope(actor.ctx.uid, property),
         current: readEnergyCertificate(property.energy),
         propertyArea: property.areaSqm,
         today: utcDateOf(Date.now()) ?? '',
+        actorUid: actor.ctx.uid,
       },
       { readPdfText: extractPdfText },
     ),

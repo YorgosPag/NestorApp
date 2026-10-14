@@ -16,23 +16,35 @@
  * **Layering**: leaf — καθαρές συναρτήσεις, μηδέν I/O, μηδέν ρολόι (η στιγμή έρχεται από τον καλούντα).
  */
 
+import {
+  contradictsDocumentText,
+  resolvedDocumentExpiry,
+  type DocumentFacts,
+} from '@/lib/document-validity/document-facts';
 import type { LegalityClaim } from '@/lib/legality/legality-claim';
 import { wholePropertySpace } from '@/lib/spaces/space-ref';
 
-import { certificateValidUntil, type EnergyCertificate } from './energy-certificate';
+import type { EnergyCertificate } from './energy-certificate';
+
+/** Ό,τι χρειάζεται η αξίωση από τα γεγονότα του αρχείου-πηγής — χωρίς το «ποιος/πότε». */
+export type EnergySourceFacts = Pick<DocumentFacts, 'kind' | 'issuedOn' | 'printedValidUntil' | 'source'>;
 
 /**
  * Το μπλοκ ως αξίωση — ή `null` όταν δεν υπάρχει κλάση να βεβαιωθεί («υπό έκδοση» και «εξαιρείται» **δεν** είναι
  * αξίωση: λένε γιατί λείπει, δεν βεβαιώνουν κάτι).
  *
- * - `tier: 'self-declared'` — ο αγγελιοδότης το λέει· κανένα έγγραφο δεν ανέβηκε, κανένα μητρώο δεν ρωτήθηκε.
+ * - `tier: 'self-declared'` — ο αγγελιοδότης το λέει· κανένα μητρώο δεν ρωτήθηκε. (Η αναβάθμιση σε βαθμίδα «έγγραφο»
+ *   όταν υπάρχει ανάγνωση είναι εύρημα του ADR-838, όχι απόφαση εδώ.)
  * - `authority: null` — επιτρέπεται **μόνο** σε αυτή τη βαθμίδα (`claimAuthorityIsWellFormed`).
- * - `validUntil: null` όταν η έκδοση είναι άγνωστη ⇒ το κανάλι απαντά `expiry-unknown`, ποτέ «ισχύει».
+ * - `validUntil` (ADR-915 Φ3β-2): **η ΜΙΑ γέφυρα** `resolvedDocumentExpiry` — τα γεγονότα του αρχείου-πηγής
+ *   κερδίζουν ανά πεδίο (Α3) και η τυπωμένη λήξη, αν νωρίτερη, ισχύει (Α4). Χωρίς γεγονότα ⇒ ο κανόνας από την
+ *   πληκτρολογημένη έκδοση, **ακριβώς** όπως πριν. `null` ⇒ `expiry-unknown`, ποτέ «ισχύει».
  */
 export function energyPerformanceClaimOf(
   certificate: EnergyCertificate,
   propertyId: string,
   assertedAt: string,
+  facts: EnergySourceFacts | null = null,
 ): LegalityClaim | null {
   if (certificate.class === null) return null;
   return {
@@ -42,8 +54,17 @@ export function energyPerformanceClaimOf(
     value: certificate.class,
     authority: null,
     assertedAt,
-    validUntil: certificateValidUntil(certificate.issuedOn),
+    validUntil: resolvedDocumentExpiry('energy-certificate', facts, certificate.issuedOn).expiresOn,
   };
+}
+
+/**
+ * **Αντιλέγει το μπλοκ στο έγγραφο από το οποίο λέει ότι ήρθε;** Ο τίμιος πελάτης δεν φτάνει ποτέ εδώ: η χειροκίνητη
+ * αλλαγή ημερομηνίας **σβήνει** το `sourceFileId` (`applyEnergyCertificatePatch`). Τον φτάνει μόνο μπαγιάτικο ή
+ * πλαστό σώμα — που θα έδειχνε ημερομηνία «του ΠΕΑ» την οποία το ΠΕΑ δεν γράφει.
+ */
+export function energyIssuedOnContradicts(certificate: EnergyCertificate, facts: EnergySourceFacts | null): boolean {
+  return certificate.sourceFileId !== null && contradictsDocumentText('energy-certificate', facts, certificate.issuedOn);
 }
 
 /** Το κλειδί της αξίωσης: ό,τι, αν αλλάξει, κάνει τη δήλωση **άλλη** δήλωση. */
@@ -59,17 +80,19 @@ function sameAssertion(claim: LegalityClaim, next: LegalityClaim): boolean {
  * - Ίδια δήλωση ⇒ **κρατιέται η παλιά**, με το παλιό της `assertedAt`: η αποθήκευση άσχετου πεδίου δεν «ξαναδηλώνει»
  *   το πιστοποιητικό σήμερα.
  * - Χωρίς κλάση ⇒ η αυτοδηλωμένη αξίωση φεύγει.
+ * - `facts` = τα γεγονότα του `sourceFileId` (ADR-915 Φ3β-2)· ίδια γεγονότα ⇒ ίδια λήξη ⇒ ίδια δήλωση.
  */
 export function withEnergyPerformanceClaim(
   claims: readonly LegalityClaim[],
   certificate: EnergyCertificate,
   propertyId: string,
   assertedAt: string,
+  facts: EnergySourceFacts | null = null,
 ): readonly LegalityClaim[] {
   const isOwnDeclaration = (claim: LegalityClaim): boolean =>
     claim.kind === 'energy-performance' && claim.tier === 'self-declared';
   const others = claims.filter((claim) => !isOwnDeclaration(claim));
-  const next = energyPerformanceClaimOf(certificate, propertyId, assertedAt);
+  const next = energyPerformanceClaimOf(certificate, propertyId, assertedAt, facts);
   if (next === null) return others;
   const standing = claims.find((claim) => isOwnDeclaration(claim) && sameAssertion(claim, next));
   return [...others, standing ?? next];

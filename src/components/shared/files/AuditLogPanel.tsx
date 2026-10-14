@@ -41,6 +41,7 @@ import {
   Ban,
   MessageSquare,
   Globe,
+  CalendarCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Spinner } from '@/components/ui/spinner';
@@ -104,6 +105,8 @@ const ACTION_ICON_MAP: Record<FileAuditAction, LucideIcon> = {
   cde_withdraw: Ban,
   cde_supersede: Archive,
   version_supersede: Archive,
+  // ADR-915 Φ3 — τα γεγονότα του εγγράφου (έκδοση · τυπωμένη λήξη).
+  document_facts_record: CalendarCheck,
 };
 
 const ACTION_COLOR_MAP: Record<string, string> = {
@@ -142,6 +145,7 @@ const ACTION_COLOR_MAP: Record<string, string> = {
   cde_withdraw: 'text-destructive',
   cde_supersede: 'text-[hsl(var(--text-warning))]',
   version_supersede: 'text-[hsl(var(--text-warning))]',
+  document_facts_record: 'text-[hsl(var(--text-info))]',
 };
 
 // ============================================================================

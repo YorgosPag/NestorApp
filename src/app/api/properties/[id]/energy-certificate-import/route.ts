@@ -3,22 +3,22 @@
  * @related services/energy-certificate/energy-certificate-import.service.ts ·
  *   server/energy-certificate/energy-certificate-import-http.ts (η αδελφή του ιδιώτη μοιράζεται το HTTP)
  *
- * 🔑 **Δεν γράφει τίποτα**: η πρόταση εφαρμόζεται στη φόρμα, και αποθηκεύεται με το κανονικό «Αποθήκευση»
- * (`PATCH /api/properties/[id]`, `property-energy-patch.ts`) — ο ΕΝΑΣ γραφέας του `energy`.
+ * 🔑 **Δεν γράφει το ακίνητο**: η πρόταση εφαρμόζεται στη φόρμα, και αποθηκεύεται με το κανονικό «Αποθήκευση»
+ * (`PATCH /api/properties/[id]`, `property-energy-patch.ts`) — ο ΕΝΑΣ γραφέας του `energy`. Γράφει **μόνο** τα γεγονότα
+ * του ίδιου του PDF πάνω στο αρχείο (`documentFacts`, ADR-915 Φ3).
  * ⚠️ **`intent: 'write'`**: η εισαγωγή υπάρχει για να γραφτεί το μπλοκ· αποσυρμένο ακίνητο ⇒ 409 πριν διαβαστεί byte.
  * ⚠️ **`SENSITIVE`**: κάθε αίτημα κατεβάζει αρχείο και αναλύει PDF — βαρύ έργο ανά κλήση.
  */
 
 import type { NextRequest } from 'next/server';
 
-import { ENTITY_TYPES } from '@/config/domain-constants';
-import { COLLECTIONS } from '@/config/firestore-collections';
 import { runGuarded } from '@/lib/api/guarded-route';
 import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
 import { utcDateOf } from '@/lib/date-local';
 import { readEnergyCertificate } from '@/lib/energy-certificate/energy-certificate';
 import { propertyDisplayArea } from '@/lib/properties/property-display-area';
 import { isPlainRecord } from '@/lib/type-guards';
+import { companyPeaFileScope } from '@/server/energy-certificate/energy-certificate-file-scope';
 import {
   respondToEnergyCertificateImport,
   type EnergyCertificateImportBody,
@@ -43,17 +43,12 @@ export async function POST(request: NextRequest, segment: RouteContext): Promise
           adminDb,
           fileId,
           {
-            fileCollection: COLLECTIONS.FILES,
-            // Ο κάτοχος = η εταιρεία της ΣΥΝΕΔΡΙΑΣ, ακριβώς όπως ανεβάζει η καρτέλα «Έγγραφα»
-            // (`usePropertyFilesTab` → `custody: { companyId }`). Η εμβέλεια στο ακίνητο την κρίνει ήδη ο φρουρός μισθωτή.
-            container: {
-              owner: { kind: 'company', companyId: ctx.companyId },
-              entityType: ENTITY_TYPES.PROPERTY,
-              entityId: id,
-            },
+            // Το ΕΝΑ δοχείο του ΠΕΑ — ίδιο με αυτό από το οποίο ο γραφέας διαβάζει τα γεγονότα (ADR-915 Φ3β-2).
+            ...companyPeaFileScope(ctx.companyId, id),
             current: readEnergyCertificate(record.energy),
             propertyArea: propertyDisplayArea(record),
             today: utcDateOf(Date.now()) ?? '',
+            actorUid: ctx.uid,
           },
           { readPdfText: extractPdfText },
         ),

@@ -18,6 +18,7 @@
 
 import type { FileStoragePlacement } from '@/lib/files/file-storage-placement';
 import type { ImageDimensions } from '@/lib/images/image-dimensions';
+import type { DocumentFacts } from '@/lib/document-validity/document-facts';
 import type {
   EntityType,
   FileDomain,
@@ -423,6 +424,17 @@ export interface FileRecord {
    * `imageDimensionsOf` (`lib/images/image-dimensions`), ποτέ επινοημένη αναλογία.
    */
   imageDimensions?: ImageDimensions;
+
+  /**
+   * **Τα γεγονότα του εγγράφου** — είδος, έκδοση, τυπωμένη λήξη (ADR-915 Φ3 · Α3). Ακίνητο, μεταβίβαση και αγγελία
+   * **διαβάζουν** από εδώ αντί να ξαναρωτούν τον άνθρωπο.
+   *
+   * ⛔ **ΕΝΑΣ γραφέας**: `server/files/document-facts-writer` (Admin SDK)· ο πελάτης **δεν** το γράφει (`firestore.rules`
+   * `documentFactsUnchanged`). Γράφεται **χωρίς** `updatedAt`: το αποτύπωμα του ελέγχου μεταβίβασης το περιέχει.
+   * 🔑 **Ανήκει στην ΕΚΔΟΣΗ** (σε αυτό το `fileId`), **ποτέ** δεν περνά στον διάδοχο — νέο ΠΕΑ = νέες ημερομηνίες.
+   * Απόν ⇒ «δεν ξέρουμε»· διαβάζεται **μόνο** μέσω `readDocumentFacts` (`lib/document-validity/document-facts`).
+   */
+  documentFacts?: DocumentFacts;
 
   /**
    * Download URL from Firebase Storage (populated after upload)

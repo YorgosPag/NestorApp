@@ -19,9 +19,13 @@ import {
   applyEnergyCertificatePatch,
   type EnergyCertificatePatch,
 } from '@/lib/energy-certificate/energy-certificate';
-import { withEnergyPerformanceClaim } from '@/lib/energy-certificate/energy-certificate-claim';
+import {
+  energyIssuedOnContradicts,
+  withEnergyPerformanceClaim,
+} from '@/lib/energy-certificate/energy-certificate-claim';
 import type { ListingActor } from '@/lib/owner-property/listing-custody';
 import { createModuleLogger } from '@/lib/telemetry';
+import { ownerPeaFileScope, peaSourceFacts } from '@/server/energy-certificate/energy-certificate-file-scope';
 import { amendOwnerProperty } from '@/services/owner-property/owner-property-amendment';
 import type { OwnerPropertyWriteResult } from '@/services/owner-property/owner-property-write-result';
 
@@ -39,11 +43,20 @@ export function setOwnerPropertyEnergyCertificate(
     actor,
     logger,
     failureMessage: 'Το ενεργειακό πιστοποιητικό δεν αποθηκεύτηκε',
-    amend: (existing, at) => {
+    // ADR-915 Φ3β-2 — τα γεγονότα του αρχείου-πηγής διαβάζονται ΕΚΤΟΣ συναλλαγής: ανήκουν σε αμετάβλητα bytes, και
+    // σε επανάληψη η ανάγνωση απλώς ξαναγίνεται (καμία παρενέργεια).
+    amend: async (existing, at) => {
       const energy = applyEnergyCertificatePatch(existing.energy, patch);
+      const facts = await peaSourceFacts(adminDb, ownerPeaFileScope(actor.uid, existing), energy);
+      if (energyIssuedOnContradicts(energy, facts)) {
+        return {
+          kind: 'refuse',
+          result: { kind: 'invalid-energy-certificate', violations: ['issued-on-contradicts-document'] },
+        };
+      }
       return {
         kind: 'amend',
-        fields: { energy, legality: withEnergyPerformanceClaim(existing.legality, energy, existing.id, at) },
+        fields: { energy, legality: withEnergyPerformanceClaim(existing.legality, energy, existing.id, at, facts) },
       };
     },
   });

@@ -57,6 +57,15 @@ export function isNonEmptyArray<T = unknown>(value: T[] | readonly T[] | null | 
 }
 
 /**
+ * Type guard: the value is one of a **closed vocabulary** (`as const` tuple) — narrows `unknown` to the literal union
+ * without a cast. The ONE membership guard: stored documents read their enums through this, never `x as T`.
+ * @see ADR-915 Φ3 — extracted from the private numeric `oneOf` of `lib/stay/stay-rules-shape` (N.0.2)
+ */
+export function isOneOf<T extends string | number>(values: readonly T[], value: unknown): value is T {
+  return (typeof value === 'string' || typeof value === 'number') && (values as readonly (string | number)[]).includes(value);
+}
+
+/**
  * Type guard: a JSON **object** — non-null and **not** an array.
  *
  * Stricter than `isRecord`: shape readers of stored/served JSON must not accept `[]` where an object is expected.

@@ -24,7 +24,12 @@ import {
   storedEnergyCertificateSchema,
   type EnergyCertificate,
 } from '../energy-certificate';
-import { energyPerformanceClaimOf, withEnergyPerformanceClaim } from '../energy-certificate-claim';
+import {
+  energyIssuedOnContradicts,
+  energyPerformanceClaimOf,
+  withEnergyPerformanceClaim,
+  type EnergySourceFacts,
+} from '../energy-certificate-claim';
 import { energyFormSliceOf, energyOfForm, patchedEnergyFormSlice } from '../energy-certificate-form';
 import {
   ENERGY_CERTIFICATE_ABSENCE_KEY,
@@ -319,6 +324,67 @@ describe('Α8 — η αξίωση νομιμότητας που γεννά η δ
     const verified: LegalityClaim = { ...other, kind: 'energy-performance', tier: 'registry-verified', value: 'A' };
     const next = withEnergyPerformanceClaim([verified], UNDECLARED_ENERGY_CERTIFICATE, 'prop_1', LATER);
     expect(next).toEqual([verified]);
+  });
+});
+
+describe('Α8β — ADR-915 Φ3β-2: η αξίωση διαβάζει τα γεγονότα του αρχείου-πηγής', () => {
+  const AT = '2026-10-14T09:00:00.000Z';
+  const LATER = '2026-10-20T09:00:00.000Z';
+  const FROM_PEA: EnergyCertificate = { ...FULL, sourceFileId: 'file_pea_1' };
+  const READ = { kind: 'document-text', reader: 'pea-text' } as const;
+  const ATTESTED = { kind: 'attested', via: 'conveyance-review' } as const;
+  const facts = (over: Partial<EnergySourceFacts> = {}): EnergySourceFacts => ({
+    kind: 'energy-certificate', issuedOn: FULL.issuedOn, printedValidUntil: null, source: READ, ...over,
+  });
+  const validUntilOf = (certificate: EnergyCertificate, f: EnergySourceFacts | null) =>
+    energyPerformanceClaimOf(certificate, 'prop_1', AT, f)?.validUntil;
+
+  it.each(['2016-02-29', '2020-01-31', '2024-03-12', '2025-12-31', null])(
+    '⚓ χωρίς γεγονότα ⇒ ΑΚΡΙΒΩΣ όπως πριν (`certificateValidUntil`) — έκδοση %s',
+    (issuedOn) => {
+      const certificate = { ...FULL, issuedOn };
+      expect(validUntilOf(certificate, null)).toBe(certificateValidUntil(issuedOn));
+      expect(energyPerformanceClaimOf(certificate, 'prop_1', AT)?.validUntil).toBe(certificateValidUntil(issuedOn));
+    },
+  );
+
+  it('🔴 Α4: τυπωμένη λήξη ΝΩΡΙΤΕΡΗ από τον κανόνα ⇒ η αξίωση λήγει στην τυπωμένη', () => {
+    expect(validUntilOf(FROM_PEA, facts({ printedValidUntil: '2034-03-01' }))).toBe('2034-03-01');
+  });
+
+  it('τυπωμένη ΑΡΓΟΤΕΡΗ ⇒ ο κανόνας (η νωρίτερη)', () => {
+    expect(validUntilOf(FROM_PEA, facts({ printedValidUntil: '2034-12-31' }))).toBe('2034-03-12');
+  });
+
+  it('🔴 Α3: μπλοκ χωρίς ημερομηνία + αρχείο που την ξέρει ⇒ λήξη από το αρχείο, όχι `expiry-unknown`', () => {
+    expect(validUntilOf({ ...FROM_PEA, issuedOn: null }, facts())).toBe('2034-03-12');
+    expect(validUntilOf({ ...FROM_PEA, issuedOn: null }, facts({ source: ATTESTED }))).toBe('2034-03-12');
+  });
+
+  it('γεγονότα ΑΛΛΟΥ είδους αγνοούνται (ταυτότητα κτιρίου δεν δίνει λήξη σε ΠΕΑ)', () => {
+    expect(validUntilOf(FROM_PEA, facts({ kind: 'building-identity', issuedOn: '2010-01-01' }))).toBe('2034-03-12');
+  });
+
+  it('🔴 ίδια γεγονότα δύο φορές ⇒ ίδια δήλωση, ΜΕ το παλιό `assertedAt`', () => {
+    const f = facts({ printedValidUntil: '2034-03-01' });
+    const first = withEnergyPerformanceClaim([], FROM_PEA, 'prop_1', AT, f);
+    expect(withEnergyPerformanceClaim(first, FROM_PEA, 'prop_1', LATER, f)).toEqual(first);
+  });
+
+  it('νέα τυπωμένη λήξη = νέα δήλωση (νέο `assertedAt`)', () => {
+    const first = withEnergyPerformanceClaim([], FROM_PEA, 'prop_1', AT, null);
+    const next = withEnergyPerformanceClaim(first, FROM_PEA, 'prop_1', LATER, facts({ printedValidUntil: '2034-03-01' }));
+    expect(next[0]).toMatchObject({ validUntil: '2034-03-01', assertedAt: LATER });
+  });
+
+  it('⚓ ο φρουρός: ΜΟΝΟ πηγή + ανάγνωση εγγράφου + δύο διαφορετικές γνωστές ημερομηνίες', () => {
+    expect(energyIssuedOnContradicts(FROM_PEA, facts({ issuedOn: '2024-03-11' }))).toBe(true);
+    expect(energyIssuedOnContradicts(FROM_PEA, facts())).toBe(false);
+    expect(energyIssuedOnContradicts({ ...FROM_PEA, issuedOn: null }, facts())).toBe(false);
+    expect(energyIssuedOnContradicts(FROM_PEA, facts({ issuedOn: null }))).toBe(false);
+    expect(energyIssuedOnContradicts(FROM_PEA, facts({ issuedOn: '2024-03-11', source: ATTESTED }))).toBe(false);
+    expect(energyIssuedOnContradicts(FULL, facts({ issuedOn: '2024-03-11' }))).toBe(false);
+    expect(energyIssuedOnContradicts(FROM_PEA, null)).toBe(false);
   });
 });
 

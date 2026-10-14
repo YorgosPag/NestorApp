@@ -19,6 +19,8 @@ import { readViewRevision } from '../conveyance-view-signal.server';
 jest.mock('@/services/entity-audit.service', () => ({
   EntityAuditService: { recordChange: jest.fn(async () => 'eaud_1') },
 }));
+// ADR-915 Φ3β — το ημερολόγιο αρχείου του γραφέα γεγονότων· εδώ μετράει μόνο το ίδιο το αρχείο.
+jest.mock('@/services/file-audit-admin.service', () => ({ recordFileAudit: jest.fn(async () => undefined) }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { EntityAuditService } = require('@/services/entity-audit.service') as { EntityAuditService: { recordChange: jest.Mock } };
@@ -138,6 +140,40 @@ describe('applyConveyanceCaseCommand', () => {
     // Ιδεμποτές άνοιγμα ⇒ καμία εγγραφή ⇒ κανένα σήμα, και η όψη λέει την τρέχουσα.
     const again = await openConveyanceCase(db(), actor, 'prop_1');
     expect(again.ok && again.value.view.freshness.revision).toBe(2);
+  });
+
+  describe('ADR-915 Φ3β — η έγκριση δηλώνει την έκδοση ΣΤΟ αρχείο', () => {
+    const PEA = {
+      companyId: 'comp_a', entityType: 'property', entityId: 'prop_1', purpose: 'certificate', status: 'ready',
+      lifecycleState: 'active', displayName: 'pea.pdf', createdAt: '2026-09-01T00:00:00Z', updatedAt: '2026-09-01T00:00:00Z',
+    };
+    const acceptPea = (record: Awaited<ReturnType<typeof opened>>, issuedOn: string) => applyConveyanceCaseCommand(db(), actor, record, {
+      expectedVersion: 0,
+      command: { type: 'review', itemId: 'energy_certificate', verdict: 'accepted', fileId: 'file_pea', issuedOn, reason: null },
+    });
+    const storedPea = async () => (await db().collection(COLLECTIONS.FILES).doc('file_pea').get()).data();
+
+    it('αποδοχή ⇒ `attested` στο αρχείο, ΧΩΡΙΣ αλλαγή `updatedAt` · η όψη τη βλέπει', async () => {
+      const record = await opened();
+      fake.seed(COLLECTIONS.FILES, 'file_pea', PEA);
+      const outcome = await acceptPea(record, '2025-01-01');
+      if (!outcome.ok) throw new Error(outcome.failure.kind);
+      expect((await storedPea())?.documentFacts).toMatchObject({
+        kind: 'energy-certificate', issuedOn: '2025-01-01', source: { kind: 'attested', via: 'conveyance-review' }, recordedBy: 'u1',
+      });
+      expect((await storedPea())?.updatedAt).toBe(PEA.updatedAt);
+      const row = outcome.value.checklist.rows.find((r) => r.itemId === 'energy_certificate');
+      expect([row?.status, row?.expiresOn]).toEqual(['accepted', '2035-01-01']);
+    });
+
+    it('🔒 ανάγνωση του εγγράφου υπάρχει ⇒ η δήλωση δεν τη σβήνει (outranked)', async () => {
+      const record = await opened();
+      const read = { kind: 'energy-certificate', issuedOn: '2025-01-01', printedValidUntil: '2035-01-01', source: { kind: 'document-text', reader: 'pea-text' }, recordedBy: 'u0', recordedAt: '2026-09-02T00:00:00.000Z' };
+      fake.seed(COLLECTIONS.FILES, 'file_pea', { ...PEA, documentFacts: read });
+      const outcome = await acceptPea(record, '2025-01-01');
+      if (!outcome.ok) throw new Error(outcome.failure.kind);
+      expect((await storedPea())?.documentFacts).toEqual(read);
+    });
   });
 
   it('readOwnedConveyanceCase: ξένος μισθωτής ⇒ null', async () => {

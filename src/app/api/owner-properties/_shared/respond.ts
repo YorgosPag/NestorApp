@@ -16,7 +16,10 @@
 
 import { NextResponse } from 'next/server';
 
-import type { OwnerPropertyWriteResult } from '@/services/owner-property/owner-property-write-result';
+import type {
+  EnergyCertificateViolation,
+  OwnerPropertyWriteResult,
+} from '@/services/owner-property/owner-property-write-result';
 import type { PublishOutcome } from '@/services/listings/publish-public-listing';
 import type { OwnerProperty } from '@/types/owner-property';
 import type { PlaceRefVerdict } from '@/services/places/public-place-read.service';
@@ -47,7 +50,8 @@ export interface OwnerPropertyErrorResponse {
   readonly violations?:
     | readonly OwnerPropertyInvariant[]
     | readonly MandateInvariant[]
-    | readonly ObjectiveValuePatchViolation[];
+    | readonly ObjectiveValuePatchViolation[]
+    | readonly EnergyCertificateViolation[];
   /** Μονοπάτια πεδίων που δεν διαβάστηκαν καν ως σχήμα. */
   readonly malformed?: readonly string[];
   /**
@@ -83,6 +87,7 @@ export type OwnerPropertyResponse =
  * | `invalid-place-link` | **422** | Ο **δεσμός** δείχνει σε τόπο που δεν υπάρχει. Ίδιος κωδικός με το `invalid`, **τρίτο** σφάλμα: ούτε το ακίνητο ούτε η εντολή — **το «ποιο κτίριο;»**. Η ετυμηγορία ταξιδεύει για να δείξει η οθόνη το σωστό μήνυμα |
  * | `place-link-unverified` | **503** | 🔴 **ΠΟΤΕ 422.** *«Δεν μάθαμε»* ≠ *«δεν υπάρχει»*: ένα 422 εδώ λέει στον άνθρωπο ότι **το κτίριό του δεν υπάρχει** και τον στέλνει να φτιάξει **δεύτερη ταυτότητα** για φυσικό κτίριο που έχει ήδη μία — το ακριβές διπλότυπο που αποτρέπει όλο το επίπεδο Α. Το 503 λέει *«ξαναδοκίμασε, **μην αλλάξεις τίποτα**»*, όπως ήδη κάνουν το `/api/places/resolve` και η πόρτα του επαγγελματία |
  * | `invalid-declarations` | **422** | ADR-898 Φ3β — οι δηλώσεις της αντικειμενικής δεν στέκουν (άδεια στο μέλλον · δρόμος που δεν είναι μέτωπο). Τέταρτο σφάλμα, άλλη οθόνη |
+ * | `invalid-energy-certificate` | **422** | ADR-915 Φ3β-2 — το ΠΕΑ αντιλέγει στο έγγραφο από το οποίο λέει ότι ήρθε. Μόνο μπαγιάτικο/πλαστό σώμα το φτάνει |
  * | `zone-unverified` | **503** | 🔴 **ΠΟΤΕ 422** — «δεν διαβάσαμε τις ζώνες» ≠ «ο δρόμος δεν είναι μέτωπο», ίδιο σκεπτικό με το `place-link-unverified` |
  * | `failed` | **500** | Δεν φτάσαμε στη βάση· ο άνθρωπος δεν έχει τι να διορθώσει |
  */
@@ -114,6 +119,11 @@ export function respondToWrite(
     case 'invalid-declarations':
       return NextResponse.json(
         { error: 'INVALID_DECLARATIONS', violations: result.violations },
+        { status: 422 },
+      );
+    case 'invalid-energy-certificate':
+      return NextResponse.json(
+        { error: 'INVALID_ENERGY_CERTIFICATE', violations: result.violations },
         { status: 422 },
       );
     case 'zone-unverified':

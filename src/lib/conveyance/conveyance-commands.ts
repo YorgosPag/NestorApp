@@ -64,5 +64,7 @@ const COMMAND_REJECTIONS = [
   'reason_required',
   'invalid_date',
   'future_issue_date',
+  /** ADR-915 Φ3β — η ημερομηνία αντιλέγει στην ανάγνωση του ίδιου του εγγράφου (`document-text`). */
+  'issued_on_contradicts_document',
 ] as const;
 export type CommandRejection = (typeof COMMAND_REJECTIONS)[number];

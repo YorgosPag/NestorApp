@@ -21,7 +21,7 @@
 
 import 'server-only';
 
-import type { Firestore } from 'firebase-admin/firestore';
+import type { DocumentData, Firestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { CaseViewerRole } from '@/lib/conveyance/contribution-audience';
@@ -34,6 +34,7 @@ import {
   type ActiveContributor,
   type ContributedFileState,
 } from '@/lib/conveyance/contribution-evidence';
+import { readDocumentFactsView } from '@/lib/document-validity/document-facts';
 import { readStackHead } from '@/services/iso19650/version-stack';
 import type { ConveyanceCase, EvidenceFile, NewerVersion, SealedDelivery } from '@/types/conveyance-case';
 import type { ConveyanceContribution } from '@/types/conveyance-contribution';
@@ -60,6 +61,18 @@ interface ContributedFilesRead {
   readonly superseded: ReadonlySet<string>;
 }
 
+/** Η κατάσταση ενός προσωπικού αρχείου (κάτοχος · bytes · γεγονότα εγγράφου) — ή `null` χωρίς κάτοχο. */
+function contributedFileStateOf(fileId: string, data: DocumentData | undefined): ContributedFileState | null {
+  if (!data || typeof data.userId !== 'string') return null;
+  return {
+    fileId,
+    ownerUid: data.userId,
+    hasBytes: typeof data.storagePath === 'string' && data.storagePath !== '',
+    // ADR-915 Φ3β — μόνο ανάγνωση, μέσω του ΕΝΟΣ ανεκτικού αναγνώστη (προβολή χωρίς «ποιος/πότε»).
+    documentFacts: readDocumentFactsView(data.documentFacts),
+  };
+}
+
 async function contributedFiles(db: Firestore, contributions: readonly ConveyanceContribution[]): Promise<ContributedFilesRead> {
   const fileIds = [...new Set(contributions.map((c) => c.file.fileId))];
   if (fileIds.length === 0) return { states: new Map(), superseded: new Set() };
@@ -68,9 +81,9 @@ async function contributedFiles(db: Firestore, contributions: readonly Conveyanc
   const superseded = new Set<string>();
   for (const snapshot of snapshots) {
     const data = snapshot.data();
-    if (!data || typeof data.userId !== 'string') continue;
-    const hasBytes = typeof data.storagePath === 'string' && data.storagePath !== '';
-    states.set(snapshot.id, { fileId: snapshot.id, ownerUid: data.userId, hasBytes });
+    const state = contributedFileStateOf(snapshot.id, data);
+    if (state === null || !data) continue;
+    states.set(snapshot.id, state);
     if (typeof data.supersededByFileId === 'string' && data.supersededByFileId !== '') superseded.add(snapshot.id);
   }
   return { states, superseded };

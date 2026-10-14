@@ -45,7 +45,7 @@ import {
 } from './property-patch-helpers';
 import { OBJECTIVE_VALUE_BODY_KEY, patchPropertyObjectiveValue } from './property-objective-value-patch';
 import { assertPropertyAnchorWrite } from './property-anchor-guard';
-import { energyDeclarationPatch } from './property-energy-patch';
+import { companyEnergyDeclarationPatch } from './property-energy-patch';
 import { nowISO } from '@/lib/date-local';
 import { asApiError } from '@/lib/api/api-error-types';
 
@@ -139,7 +139,10 @@ export const PATCH = entityIdRoute<ApiSuccessResponse<PropertyMutationResult>>({
 
         // Build sanitised Firestore payload
         // ADR-777 §8.94 — το ΠΕΑ γράφεται μαζί με την αξίωση νομιμότητάς του, και χωρίς να σβήσει το παλιό σχήμα.
-        const energyPatch = energyDeclarationPatch(id, body.energy, existing, nowISO());
+        // ADR-915 Φ3β-2 — η λήξη της αξίωσης από τα γεγονότα του αρχείου-πηγής· αντίφαση με το έγγραφο ⇒ 422.
+        const energyPatch = await companyEnergyDeclarationPatch(
+          adminDb, { companyId: ctx.companyId, propertyId: id }, body.energy, existing, nowISO(),
+        );
         const updateData = { ...buildUpdateData(body, existing), ...energyPatch, ...anchorPatch };
         // ADR-903 §6 — φιλοξενούμενο ⇒ `floor`/`floorKind` από το έγγραφο ορόφου (κερδίζει τον client).
         // Αποσύνδεση από όροφο ⇒ ο αριθμός μένει μόνο αν τον έστειλε ρητά (αυτόνομη μονάδα).

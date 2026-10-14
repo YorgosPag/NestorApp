@@ -221,6 +221,18 @@ describe('files_personal.rules — το προσωπικό αρχείο το α�
       await assertFails(citizen().collection(COLLECTION).doc(DOC_ID).update(forged));
     });
 
+    // 📅 ADR-915 Φ3 — ΙΔΙΑ λίστα γεγονότων εγγράφου με το `match /files` (`documentFactsKeys()`).
+    it('🔑 ο κάτοχος δεν «ανανεώνει» έγγραφο: γέννηση · οριστικοποίηση · αλλαγή γεγονότων → deny', async () => {
+      const forged = { documentFacts: { kind: 'energy-certificate', issuedOn: '2099-01-01', printedValidUntil: null,
+        source: { kind: 'attested', via: 'conveyance-review' }, recordedBy: CITIZEN_UID, recordedAt: '2026-10-14T00:00:00.000Z' } };
+      await assertFails(citizen().collection(COLLECTION).doc('facts').set({ ...personalFilePayload(CITIZEN_UID, 'facts'), ...forged }));
+      await seedPersonalFile(env, 'pending-facts', CITIZEN_UID, { status: 'pending' });
+      await assertFails(citizen().collection(COLLECTION).doc('pending-facts').update({ status: 'ready', ...forged }));
+      await assertSucceeds(citizen().collection(COLLECTION).doc('pending-facts').update({ status: 'ready' }));
+      await seedPersonalFile(env, DOC_ID, CITIZEN_UID, { documentFacts: { ...forged.documentFacts, issuedOn: '2026-07-16' } });
+      await assertFails(citizen().collection(COLLECTION).doc(DOC_ID).update(forged));
+    });
+
     it('🔑 Δ21.1 δεσμευμένο από τον διακομιστή: κάδος ✅ · αποδέσμευση ✗ · οριστική διαγραφή ✗', async () => {
       await seedPersonalFile(env, DOC_ID, CITIZEN_UID, { hold: 'legal', holdPlacedBy: 'uid_legal_manager' });
       const ref = citizen().collection(COLLECTION).doc(DOC_ID);

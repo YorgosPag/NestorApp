@@ -22,6 +22,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { ENTITY_TYPES, FILE_STATUS } from '@/config/domain-constants';
 import type { EvidenceLevel } from '@/config/conveyance-checklist/types';
 import { normalizeToISO } from '@/lib/date-local';
+import { readDocumentFactsView } from '@/lib/document-validity/document-facts';
 import { fileFingerprint } from '@/lib/conveyance/evidence-match';
 import type { ConveyanceCaseParties, ConveyanceCaseSubject, EvidenceFile } from '@/types/conveyance-case';
 import { decideEngagedEvidenceReach } from '@/lib/auth/container-access';
@@ -102,6 +103,8 @@ function toEvidence(fileId: string, data: DocumentData, target: EvidenceTarget, 
     level: target.level,
     fingerprint: fileFingerprint(fileId, revision, normalizeToISO(data.updatedAt)),
     createdAt: normalizeToISO(data.createdAt) ?? '',
+    // ADR-915 Φ3β — μέσω του ΕΝΟΣ ανεκτικού αναγνώστη· παλιό αρχείο χωρίς πεδίο ⇒ `null` («δεν ξέρουμε»).
+    documentFacts: readDocumentFactsView(data.documentFacts),
   };
 }
 

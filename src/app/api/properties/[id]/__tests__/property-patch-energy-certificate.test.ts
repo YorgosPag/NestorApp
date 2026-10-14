@@ -11,7 +11,16 @@
  * να σπάσει τίποτα — το πρώτο θα γραφόταν ανεξέλεγκτο, το δεύτερο θα επέτρεπε «επαληθευμένο από μητρώο» από φόρμα.
  */
 
-import { energyDeclarationPatch } from '../property-energy-patch';
+import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
+
+import { COLLECTIONS } from '@/config/firestore-collections';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
+
+import {
+  ENERGY_ISSUED_ON_CONTRADICTS_DOCUMENT,
+  companyEnergyDeclarationPatch,
+  energyDeclarationPatch,
+} from '../property-energy-patch';
 import { PropertyPatchSchema } from '../property-patch-helpers';
 
 const UNDECLARED = {
@@ -109,5 +118,45 @@ describe('Π4 — τι γράφει η διαδρομή όταν το σώμα �
   it('δύσμορφες αποθηκευμένες αξιώσεις δεν ξαναγράφονται', () => {
     const patch = energyDeclarationPatch('prop_1', UNDECLARED, { legality: [{ kind: 'άγνωστο' }, 'σκουπίδι'] }, AT);
     expect(patch.legality).toEqual([]);
+  });
+});
+
+describe('Π5 — ADR-915 Φ3β-2: η δήλωση διαβάζεται απέναντι στο έγγραφό της', () => {
+  const FROM_PEA = { ...FULL, sourceFileId: 'file_pea_1' };
+  const FILE = {
+    companyId: 'comp_a', entityType: 'property', entityId: 'prop_1', status: 'ready', contentType: 'application/pdf',
+    storagePath: 'companies/comp_a/x.pdf',
+    documentFacts: {
+      kind: 'energy-certificate', issuedOn: '2024-03-12', printedValidUntil: '2034-03-01',
+      source: { kind: 'document-text', reader: 'pea-text' }, recordedBy: 'u1', recordedAt: AT,
+    },
+  };
+  const SCOPE = { companyId: 'comp_a', propertyId: 'prop_1' };
+  const dbWith = (file: Record<string, unknown>) => {
+    const db = new FakeFirestore();
+    db.seed(COLLECTIONS.FILES, 'file_pea_1', file);
+    return db as unknown as AdminFirestore;
+  };
+  const claimOf = (patch: Record<string, unknown>) => (patch.legality as ReadonlyArray<{ validUntil: string | null }>)[0];
+
+  it('🔴 η αξίωση παίρνει την τυπωμένη λήξη του αρχείου (Α4), όχι μόνο τον κανόνα', async () => {
+    const patch = await companyEnergyDeclarationPatch(dbWith(FILE), SCOPE, FROM_PEA, {}, AT);
+    expect(claimOf(patch).validUntil).toBe('2034-03-01');
+    expect(patch.energy).toEqual(FROM_PEA);
+  });
+
+  it('🔒 αρχείο ΞΕΝΗΣ εταιρείας ⇒ τα γεγονότα του αγνοούνται (καμία διαρροή λήξης)', async () => {
+    const patch = await companyEnergyDeclarationPatch(dbWith({ ...FILE, companyId: 'comp_b' }), SCOPE, FROM_PEA, {}, AT);
+    expect(claimOf(patch).validUntil).toBe('2034-03-12');
+  });
+
+  it('🔴 ημερομηνία ≠ ανάγνωσης με δηλωμένη πηγή ⇒ 422 με όνομα', async () => {
+    await expect(
+      companyEnergyDeclarationPatch(dbWith(FILE), SCOPE, { ...FROM_PEA, issuedOn: '2024-03-11' }, {}, AT),
+    ).rejects.toMatchObject({ statusCode: 422, errorCode: ENERGY_ISSUED_ON_CONTRADICTS_DOCUMENT });
+  });
+
+  it('χωρίς `energy` στο σώμα ⇒ τίποτα, καμία ανάγνωση', async () => {
+    expect(await companyEnergyDeclarationPatch(dbWith(FILE), SCOPE, undefined, {}, AT)).toEqual({});
   });
 });

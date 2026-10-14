@@ -21,6 +21,9 @@ import type { MandateInvariant } from '@/types/owner-property-mandate';
 import type { MandateConflict } from '@/lib/mandate/mandate-conflict';
 import type { ObjectiveValuePatchViolation } from '@/lib/objective-value/objective-value-declarations';
 
+/** Γιατί δεν στέκει μια δήλωση ΠΕΑ (ADR-915 Φ3β-2). Κλειστό σύνολο — κάθε κωδικός είναι όνομα, όχι κείμενο. */
+export type EnergyCertificateViolation = 'issued-on-contradicts-document';
+
 // =============================================================================
 // 1. ΤΟ ΑΠΟΤΕΛΕΣΜΑ — ρητές καταστάσεις, ποτέ εξαίρεση ως ροή ελέγχου
 // =============================================================================
@@ -97,6 +100,11 @@ export type OwnerPropertyWriteResult =
    * το `invalid-mandate`).
    */
   | { readonly kind: 'invalid-declarations'; readonly violations: readonly ObjectiveValuePatchViolation[] }
+  /**
+   * **ADR-915 Φ3β-2 — το ΠΕΑ αντιλέγει στο έγγραφο από το οποίο λέει ότι ήρθε** (ημερομηνία έκδοσης ≠ ανάγνωσης).
+   * Τον τίμιο πελάτη δεν τον αφορά — η χειροκίνητη αλλαγή σβήνει την προέλευση. Χωριστό από τα άλλα `invalid-*`.
+   */
+  | { readonly kind: 'invalid-energy-certificate'; readonly violations: readonly EnergyCertificateViolation[] }
   /**
    * 🔴 **ΔΕΝ ΜΑΘΑΜΕ τη ζώνη** — ποτέ «άκυρο». Ίδιο σκεπτικό με το `place-link-unverified`: μια στιγμιαία αστοχία
    * ανάγνωσης των ζωνών δεν επιτρέπεται να πει στον άνθρωπο ότι ο δρόμος του δεν είναι μέτωπο.

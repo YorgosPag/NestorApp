@@ -14,16 +14,20 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DialogActionFooter } from '@/components/ui/dialog-action-footer';
-import { DatePickerField } from '@/components/ui/date-picker-field';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { calendarDateOfDateKey } from '@/lib/calendar/date-key';
 import { localDateOf } from '@/lib/date-local';
 import { cn } from '@/lib/utils';
 import type { ConveyanceCommand } from '@/lib/conveyance/conveyance-commands';
+import { reviewIssuedOnOf, type ReviewIssuedOn } from '@/lib/conveyance/review-attestation';
 import { ruleExpires } from '@/lib/document-validity/document-expiry';
 import type { ChecklistRow } from '@/types/conveyance-case';
 import type { RowDialogMode } from './ConveyanceChecklistRow';
+import { ConveyanceIssuedOnField } from './ConveyanceIssuedOnField';
+
+const NOTHING_KNOWN: ReviewIssuedOn = { issuedOn: null, origin: null, discrepancy: null };
 
 interface ConveyanceRowDialogProps {
   readonly target: { readonly row: ChecklistRow; readonly mode: RowDialogMode } | null;
@@ -54,22 +58,9 @@ function buildCommand(row: ChecklistRow, mode: RowDialogMode, reason: string, is
   };
 }
 
-function IssuedOnField({ value, onChange }: { readonly value: Date | undefined; readonly onChange: (date: Date | undefined) => void }) {
-  const { t } = useTranslation(['conveyance']);
-  const colors = useSemanticColors();
-  return (
-    <fieldset className="space-y-1">
-      <Label htmlFor="conveyance-issued-on">{t('dialogs.issuedOnLabel')}</Label>
-      <DatePickerField
-        id="conveyance-issued-on"
-        value={value}
-        onSelect={onChange}
-        placeholder={t('signing.notSet')}
-        disabledDates={{ after: new Date() }}
-      />
-      <p className={cn('text-xs', colors.text.muted)}>{t('dialogs.issuedOnHint')}</p>
-    </fieldset>
-  );
+/** ADR-915 Φ3β — η αρχική τιμή: ό,τι ξέρει ήδη το αρχείο (`undefined` = κενό πεδίο, όπως πριν). */
+function prefilledIssuedOn(known: ReviewIssuedOn): Date | undefined {
+  return known.issuedOn === null ? undefined : calendarDateOfDateKey(known.issuedOn) ?? undefined;
 }
 
 export function ReasonField({ value, onChange }: { readonly value: string; readonly onChange: (next: string) => void }) {
@@ -112,9 +103,11 @@ export function ConveyanceRowDialog({ target, onClose, onSubmit }: ConveyanceRow
   const [reason, setReason] = useState('');
   const [issuedOn, setIssuedOn] = useState<Date | undefined>(undefined);
 
+  const known = target ? reviewIssuedOnOf(target.row.item, target.row.files[0]) : NOTHING_KNOWN;
+
   useEffect(() => {
     setReason('');
-    setIssuedOn(undefined);
+    setIssuedOn(target ? prefilledIssuedOn(reviewIssuedOnOf(target.row.item, target.row.files[0])) : undefined);
   }, [target]);
 
   if (!target) return null;
@@ -130,7 +123,7 @@ export function ConveyanceRowDialog({ target, onClose, onSubmit }: ConveyanceRow
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent>
         <RowDialogHeader row={row} mode={mode} />
-        {mode === 'accept' && hasValidity(row) && <IssuedOnField value={issuedOn} onChange={setIssuedOn} />}
+        {mode === 'accept' && hasValidity(row) && <ConveyanceIssuedOnField value={issuedOn} onChange={setIssuedOn} known={known} />}
         {needsReason && <ReasonField value={reason} onChange={setReason} />}
         <DialogActionFooter
           cancelLabel={t('actions.cancel')}

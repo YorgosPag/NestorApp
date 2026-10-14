@@ -44,7 +44,7 @@ function row(itemId: string, status: ChecklistRowStatus = 'missing', files: read
 function file(createdAt: string): EvidenceFile {
   return {
     source: { kind: 'owned' }, fileId: 'f1', displayName: 'x.pdf', entityType: 'property', entityId: 'p1', purpose: 'x',
-    level: 'property', fingerprint: 'f1:0:', createdAt,
+    level: 'property', fingerprint: 'f1:0:', createdAt, documentFacts: null,
   };
 }
 

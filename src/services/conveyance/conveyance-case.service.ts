@@ -26,6 +26,8 @@ import { EntityAuditService } from '@/services/entity-audit.service';
 import { nowISO } from '@/lib/date-local';
 import { conveyanceToday, nextConveyanceDayStart } from '@/lib/conveyance/conveyance-calendar';
 import { applyConveyanceCommand } from '@/lib/conveyance/apply-command';
+import { attestationOfReview } from '@/lib/conveyance/review-attestation';
+import { recordDocumentFacts } from '@/server/files/document-facts-writer';
 import { effectiveCaseState, isCaseEditable } from '@/lib/conveyance/case-state';
 import type { ConveyanceCommandRequest, CommandRejection } from '@/lib/conveyance/conveyance-commands';
 import { parseConveyanceCase } from '@/lib/conveyance/conveyance-case-schema';
@@ -234,6 +236,26 @@ function commitCommand(db: Firestore, input: CommandCommit): Promise<ConveyanceO
 }
 
 /**
+ * ADR-915 Φ3β — η έγκριση **δηλώνει** την ημερομηνία έκδοσης στο ίδιο το αρχείο (`attestationOfReview`), μέσω του ΕΝΟΣ
+ * γραφέα. **Μετά** τη δέσμευση και **με αναμονή** (η όψη που επιστρέφει τη βλέπει), αλλά η αποτυχία **δεν** ακυρώνει
+ * την έγκριση: ο κατάλογος έχει εφεδρεία το `review.issuedOn`, άρα χάνεται μόνο η προσυμπλήρωση της επόμενης υπόθεσης.
+ */
+async function attestReviewedDocument(
+  db: Firestore,
+  actor: ConveyanceActor,
+  request: ConveyanceCommandRequest,
+  evidence: readonly EvidenceFile[],
+): Promise<void> {
+  const attestation = attestationOfReview(request.command, evidence, actor.uid);
+  if (attestation === null) return;
+  try {
+    await recordDocumentFacts(db, { fileCollection: COLLECTIONS.FILES, ...attestation });
+  } catch (error) {
+    logger.warn('document facts attestation failed', { fileId: attestation.fileId, error: getErrorMessage(error, 'unknown') });
+  }
+}
+
+/**
  * Εφαρμογή εντολής με CAS: η εντολή δηλώνει την έκδοση που είδε· διαφορά ⇒ `version_conflict`.
  * `initial` = η υπόθεση όπως τη διάβασε ο καλών (`readOwnedConveyanceCase`) — η απόφαση
  * παίρνεται πάντα πάνω στην ξαναδιαβασμένη μέσα στο transaction.
@@ -257,6 +279,7 @@ export async function applyConveyanceCaseCommand(
 
   const action: AuditAction = request.command.type === 'cancel' ? 'status_changed' : 'updated';
   await recordAudit(actor, result.value.next, action, result.value.changes, context.propertyName);
+  await attestReviewedDocument(db, actor, request, evidence);
   // ADR-862 §5.3.3 — η ΚΥΡΙΑ λήξη: κλείσιμο/ακύρωση ⇒ οι συμμετοχές επαγγελματιών παύουν (ιδεμποτές).
   await closeCaseEngagements(db, actor, result.value.next, context.propertyName, Date.now());
   return { ok: true, value: await buildView(db, result.value.next, context, actor, result.value.revision) };
