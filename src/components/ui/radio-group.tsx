@@ -32,13 +32,15 @@ const RadioGroupItem = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Item>
 >(({ className, ...props }, ref) => {
   const iconSizes = useIconSizes();
-  const { radius } = useBorderTokens();
+  // ⚠️ `radiusClass`, ΟΧΙ `radius`: το `radius` είναι η **τιμή** του token (`'9999px'`) — μέσα στο `className` δεν
+  // σημαίνει τίποτα, και το radio αποδιδόταν **τετράγωνο σαν checkbox** (ADR-777 §8.96.5).
+  const { radiusClass } = useBorderTokens();
 
   return (
     <RadioGroupPrimitive.Item
       ref={ref}
       className={cn(
-        `aspect-square ${iconSizes.sm} ${radius.full} border ${control.outline} ${control.checkedOutline} ${control.indicator} ring-offset-background focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50`,
+        `aspect-square ${iconSizes.sm} ${radiusClass.full} border ${control.outline} ${control.checkedOutline} ${control.indicator} ring-offset-background focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50`,
         className
       )}
       {...props}

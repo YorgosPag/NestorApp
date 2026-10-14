@@ -4143,6 +4143,17 @@
 - **Θεραπεία**: ανάθεση στο SSoT· προσοχή ότι το SSoT επιστρέφει `null` αντί για `undefined` (`?? undefined` όπου ο καταναλωτής περιμένει `undefined`).
 - **Παρεμπιπτόντως** (ίδια συνεδρία): `tabs/FloorsTabContent.tsx:154` έχει σκληρό `retryLabel="Retry"` (N.11) — η Στάθμευση διορθώθηκε με το υπάρχον `unitStats.retry`.
 
+### 📅 `addMonthsClampedUtc` — δεύτερη υλοποίηση του `addMonthsUTC` (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-14, ADR-915 Φ1 · N.0.2)
+- **Τι**: `lib/date/calendar-arithmetic.ts` `addMonthsClampedUtc(Date, n)` + `addYearsClampedUtc` κάνουν **το ίδιο ψαλίδισμα** με το κανονικό `lib/date-local.ts` `addMonthsUTC(iso, n)` (31/1+1 ⇒ 28/2), με άλλη υπογραφή (`Date` αντί για ISO).
+- **Καταναλωτές** (grep 2026-10-14): `lib/stay/stay-rules.ts` · `subapps/dxf-viewer/bim/table/table-fill-series-generate.ts` — δύο ξένοι τομείς, γι' αυτό όχι επί τόπου.
+- **Θεραπεία**: το `addMonthsClampedUtc` να αναθέτει στο `addMonthsUTC` (ή το αντίστροφο, με μία υλοποίηση)· άγκυρα 31/1, 29/2, αρνητικοί μήνες **πριν και μετά**.
+
+### ⭕ `useBorderTokens().radius.X` μέσα σε `className` — **τιμή CSS**, όχι κλάση (προτεραιότητα ΜΕΣΑΙΑ, 2026-10-14, ADR-777 §8.96.5 · N.0.2)
+- **Ρίζα**: το `radius` του hook είναι το `coreBorderRadius` (`full: '9999px'`, `lg: '0.75rem'`)· οι κλάσεις είναι στο **`radiusClass`**. Μέσα σε template `className` το `${radius.full}` γίνεται ωμό «9999px» ⇒ **καμία** στρογγύλευση, σιωπηλά.
+- **Διορθώθηκε**: `components/ui/radio-group.tsx` (τα radio ήταν τετράγωνα σαν checkbox σε ΟΛΗ την εφαρμογή) + άγκυρα `components/ui/__tests__/radio-group.test.tsx` (μετάλλαξη 1/1).
+- **Πού μένουν** (grep 2026-10-14, 23 αρχεία): `ui/avatar.tsx` (×2) · `ui/dialog.tsx` (κουμπί κλεισίματος) · `core/FormFields/FormField.tsx` · `email/SendEmailModal.tsx` · `ui/email-sharing/components/TemplateSelector.tsx` · `design-system/primitives/Card/CardIcon.tsx` · `properties/detail/PropertyHeaderGallery.tsx` · `property-grid/components/PropertyCard.tsx` · `property-grid/PropertyGridView.tsx` · 13 στο `subapps/dxf-viewer/` (settings, color, toolbar). ⚠️ Επαλήθευσε ανά σημείο ότι είναι `className` (σε `style={{ borderRadius }}` η τιμή είναι **σωστή**).
+- **Θεραπεία ΚΛΑΣΗΣ, όχι ανά αρχείο**: μετονομασία του `radius` σε `radiusValue` (ή αφαίρεση από το hook) ώστε η κακή χρήση να **μη γράφεται** — και αντικατάσταση με `radiusClass` όπου είναι κλάση. Η αλλαγή είναι οπτική σε κοινά primitives (avatar · dialog) ⇒ ζωντανό κοίταγμα πριν το commit.
+
 ### 🏷️ Κεφαλίδα σελίδας (τίτλος + εισαγωγή) — αντίγραφα έξω από το `PrivatePageHeader` (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-02, ADR-900 · CHECK 3.28)
 - **Τι**: το ίδιο `<header className="flex flex-col gap-2"><h1 className="text-2xl font-semibold text-foreground">…</h1><p className="text-sm text-muted-foreground">…</p></header>` είναι γραμμένο με το χέρι σε πολλές σελίδες.
 - **SSoT**: `src/components/private-space/PrivatePageHeader.tsx` (το ζήτησε η CHECK 3.28 στο commit του ADR-900· το χρησιμοποιούν ήδη `InterestCheckContent` + `MyOwnerPropertiesContent`).
