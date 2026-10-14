@@ -119,7 +119,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "77fc72a08738d6c5e1c0ad4f9e29dd2f2b938f8a11de885f027668f173d85496",
+  "inputsSha256": "c2cda18209ffafa62d6038523ae8bc5c67cce21f647bf40c3e602cb99457619f",
   "languages": [
     "el"
   ],
@@ -12476,6 +12476,7 @@
     "src/lib/properties/price-range.ts": "243a127b0aeaa48f829ed14edaa2dfc485d8af5aab8d1e374f274c392c1205de",
     "src/lib/properties/price-resolver.ts": "d48ed3a525df24f1cf41d250d88530fc80f90ae31f19e236a74ef363bfb9091b",
     "src/lib/properties/price-totals.ts": "102352051aa6994b06076d260a0bc494e2480ce7cef064be1fb6d297005f54b0",
+    "src/lib/properties/property-display-area.ts": "c9aea360260f2c207778ea81418eea420eb37497453e4b7818a91f0ea5fa8773",
     "src/lib/property-dossier/property-dossier-routes.ts": "394c09725958bf26bdd0113a335de1d1b0a42702e78fb887667dbeb4d3b213e5",
     "src/lib/property/attribute-provenance.ts": "d2ab5783e29b6e5c86891013975fdaf3c157e6cbbff7611761bbe8abb3016b6e",
     "src/lib/qr/qr-code.ts": "8635bbc820b650710ae9a54956985446667399c21201dbe43b73f249f563bef5",
@@ -12701,7 +12702,7 @@
     "src/services/listings/public-listing-objective-value.ts": "654f26bd8c1b7150e8861b2bb8967a24b4e6f17c5ca5e7984b1f54ffb3104ad8",
     "src/services/listings/public-listing-position.ts": "2f19789947337595f8d5b4ed2344176a31afcff4c413b6c5feb925e22ddf31a2",
     "src/services/listings/public-listing-projection-types.ts": "1cbb6833d986a38d5d9e0d0960705241d952be6d603fc934c8c8a4b19e600196",
-    "src/services/listings/public-listing-projection.ts": "4bda3eaa393a5eaccd9c1e34bd5fed7fa1a646631a6754209bc5e025e3ce89de",
+    "src/services/listings/public-listing-projection.ts": "e2c2398dd8d58e157df0717d9cdce89f250412ede61248de61012dca58e34659",
     "src/services/listings/public-listing-video-projection.ts": "01ad96917a01ffecd9e2234361b89f311a7f8c504bc6751a60712841a1d5dd2f",
     "src/services/listings/public-shelf-border.ts": "3b7cc2bfa2ae5ecc92c05a30a9cc91d1a6ecc586d070a4dbc88a19b66e9ff364",
     "src/services/listings/public-shelf-bucket.ts": "01bceda126b481b563f0a1225bde884b31ff4c49417c1db62490c4274f2b1858",
@@ -12926,7 +12927,7 @@
     "dynamicBoundaries": 25,
     "matchedKeys": 243,
     "routeBoundaries": 3,
-    "shellFiles": 1217,
+    "shellFiles": 1218,
     "sliceBytes": 735409
   },
   "unresolvableKeys": [

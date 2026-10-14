@@ -529,6 +529,22 @@ describe('Κ5 — τιμή: ωμοί αριθμοί, καμία δεύτερη �
   });
 });
 
+describe('Κ5γ — το εμβαδόν της αγγελίας = το εμβαδόν της οθόνης (ADR-777 §8.96.5, ένα SSoT)', () => {
+  const areaOf = (over: Partial<ProjectableProperty>) =>
+    buildPublicListing({ ...REAL_MAISONETTE, ...over }, NO_PLACE, AT)!.areaSqm;
+
+  it('μικτό, αλλιώς καθαρό, αλλιώς το παλιό `area`', () => {
+    expect(areaOf({})).toBe(95);
+    expect(areaOf({ areas: { net: 80 }, area: undefined })).toBe(80);
+    expect(areaOf({ areas: undefined, area: 70 })).toBe(70);
+  });
+
+  it('🔴 μικτό `0` = «δεν μετρήθηκε» ⇒ το καθαρό, όχι «0 m²» στο κοινό', () => {
+    expect(areaOf({ areas: { gross: 0, net: 80 }, area: 0 })).toBe(80);
+    expect(areaOf({ areas: { gross: 0 }, area: 0 })).toBeNull();
+  });
+});
+
 describe('Κ6 — το null ΕΙΝΑΙ εντολή διαγραφής', () => {
   it('μη δημοσιευμένο ⇒ null, ώστε η απόσυρση να ΣΥΜΒΑΙΝΕΙ αντί να αφήνει ορφανό έγγραφο', () => {
     expect(buildPublicListing({ id: 'p', type: 'apartment', commercialStatus: 'sold' }, NO_PLACE, AT)).toBeNull();

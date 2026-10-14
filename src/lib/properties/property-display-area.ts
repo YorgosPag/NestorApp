@@ -6,15 +6,29 @@
  * κάρτα ακινήτου, πλέγμα, γρήγορη προβολή, κοινοποίηση). Εδώ ζει **μία** φορά (ADR-898 Φ4β — η εξαγωγή XLSX χρειαζόταν
  * πέμπτη)· οι καταναλωτές εκτός καρτέλας κτιρίου περνούν όταν αγγιχτούν (`.claude-rules/pending-ratchet-work.md`).
  *
- * ⚠️ `0` σημαίνει **«δεν μετρήθηκε»**, όχι «μηδέν τετραγωνικά» — γι' αυτό `||` και όχι `??`, ακριβώς όπως η αλυσίδα που
- * αντικαθιστά. Η απουσία επιστρέφεται ως `null`: κενό κελί, ποτέ «0 m²» (και ποτέ μέρος αθροίσματος).
+ * 🔑 **ΜΙΑ σημασιολογία για οθόνη ΚΑΙ δημόσια αγγελία** (ADR-777 §8.96.5, απόφαση Giorgio 2026-10-14): η δεύτερη αλήθεια
+ * `propertyAreaSqmOf` (`gross ?? area`, το `0` υπαρκτό) της προβολής αγγελίας και της εισαγωγής ΠΕΑ **καταργήθηκε** —
+ * το γραφείο έβλεπε ένα εμβαδόν και το κοινό άλλο.
+ *
+ * ⚠️ `0` σημαίνει **«δεν μετρήθηκε»**, όχι «μηδέν τετραγωνικά» — η αλυσίδα προχωρά στο επόμενο. Η απουσία επιστρέφεται ως
+ * `null`: κενό κελί, ποτέ «0 m²» (και ποτέ μέρος αθροίσματος).
+ * ⚠️ **Ανεκτικός αναγνώστης**: καλείται και πάνω σε ωμό έγγραφο Firestore (προβολή · server routes) ⇒ μετρά **μόνο**
+ * θετικός πεπερασμένος αριθμός. Για κάθε έγκυρη τιμή το αποτέλεσμα είναι ταυτόσημο με το `||`· ό,τι άλλο (συμβολοσειρά,
+ * αρνητικό, `Infinity`) θα περνούσε από το `||` αυτούσιο στην οθόνη ή στην αγγελία.
  */
 
+import { isPlainRecord } from '@/lib/type-guards';
+
 export interface DisplayAreaSource {
-  readonly areas?: { readonly gross?: number; readonly net?: number } | null;
-  readonly area?: number | null;
+  readonly areas?: unknown;
+  readonly area?: unknown;
+}
+
+function measuredOrNull(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
 }
 
 export function propertyDisplayArea(source: DisplayAreaSource): number | null {
-  return source.areas?.gross || source.areas?.net || source.area || null;
+  const areas = isPlainRecord(source.areas) ? source.areas : {};
+  return measuredOrNull(areas.gross) ?? measuredOrNull(areas.net) ?? measuredOrNull(source.area);
 }

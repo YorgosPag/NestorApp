@@ -50,6 +50,7 @@ import {
   type CommercialStatus,
 } from '@/constants/commercial-statuses';
 import { projectLegality } from './legality-projection';
+import { propertyDisplayArea } from '@/lib/properties/property-display-area';
 import { OFFER_KINDS, type OfferKind } from '@/types/property-offers';
 import { offerKindsFromLegacyStatus } from '@/lib/offers/derive-commercial-status';
 import { normalizePropertyType } from '@/constants/property-type-aliases';
@@ -410,7 +411,7 @@ export function projectListingShape(
   //    απάντηση στο «τι διατίθεται», ελεύθερη να αποκλίνει (δες `projectStay`).
   const offerKinds = projectedOfferKinds(property);
   // Μία τιμή για το εμφανές εμβαδόν **και** τον έλεγχο αθροίσματος της βάσης ανά όροφο (ADR-898 Φ3β-3β).
-  const areaSqm = numberOrNull(property.areas?.gross) ?? numberOrNull(property.area);
+  const areaSqm = propertyDisplayArea(property);
 
   return {
     id: property.id,
