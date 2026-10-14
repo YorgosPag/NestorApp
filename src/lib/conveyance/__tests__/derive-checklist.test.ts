@@ -138,6 +138,40 @@ describe('deriveChecklist — ισχύς (Σ-5)', () => {
     const row = energy('2025-01-01', { targetSigningDate: '2026-12-15' });
     expect([row.status, row.validOnSigning]).toEqual(['accepted', true]);
   });
+
+  // ADR-915 Φ2 — άγκυρες συμπεριφοράς γραμμένες ΠΡΙΝ το `validityOf` αναθέσει στο `documentStanding`.
+  it('η τελευταία μέρα είναι ΜΕΣΑ: λήγει σήμερα ⇒ `expiring`, όχι `expired`', () => {
+    const row = energy('2016-10-02');
+    expect([row.status, row.expiresOn]).toEqual(['expiring', '2026-10-02']);
+  });
+
+  it('όριο παραθύρου: λήγει σε ακριβώς 7 ημέρες ⇒ `expiring` · σε 8 ⇒ `accepted`', () => {
+    expect(energy('2016-10-09').status).toBe('expiring');
+    expect(energy('2016-10-10').status).toBe('accepted');
+  });
+
+  it('υπογραφή την ημέρα λήξης ⇒ ισχύει (`validOnSigning: true`)', () => {
+    const row = energy('2017-01-01', { targetSigningDate: '2027-01-01' });
+    expect([row.status, row.validOnSigning]).toEqual(['accepted', true]);
+  });
+
+  it('χωρίς ή με αδιάβαστη ημέρα υπογραφής ⇒ `validOnSigning: null`, ποτέ `true`', () => {
+    expect(energy('2025-01-01').validOnSigning).toBeNull();
+    expect(energy('2025-01-01', { targetSigningDate: 'not-a-date' }).validOnSigning).toBeNull();
+  });
+
+  it('ληγμένο ΚΑΙ πριν την υπογραφή ⇒ `expired` με `validOnSigning: false`', () => {
+    const row = energy('2016-01-01', { targetSigningDate: '2026-12-15' });
+    expect([row.status, row.validOnSigning]).toEqual(['expired', false]);
+  });
+
+  it('κανόνας `unverified` εγκεκριμένος ⇒ `accepted` χωρίς ημέρα λήξης (σημερινή συμπεριφορά — ADR-915 Φ2 εύρημα)', () => {
+    const overrides = {
+      building_identity: { review: { verdict: 'accepted' as const, fileId: null, fileFingerprint: null, issuedOn: '2026-09-01', reason: null, reviewedBy: 'u', reviewedAt: 't' } },
+    };
+    const row = deriveChecklist(input({ items: [item('building_identity')], overrides, targetSigningDate: '2026-12-15' })).rows[0];
+    expect([row.status, row.expiresOn, row.validOnSigning]).toEqual(['accepted', null, null]);
+  });
 });
 
 describe('deriveChecklist — ορατότητα & σύνοψη', () => {
