@@ -67,7 +67,10 @@ describe('Φόρμα ακινήτου → κοινόχρηστα (ADR-777 §8.93
 });
 
 describe('Φόρμα ακινήτου → ενεργειακό πιστοποιητικό (ADR-777 §8.94)', () => {
-  const figures = { primaryEnergy: 132.4, co2Emissions: 38.1, issuedOn: '2024-03-12', usefulArea: null, finalEnergy: null, absence: null };
+  const figures = {
+    primaryEnergy: 132.4, co2Emissions: 38.1, issuedOn: '2024-03-12', usefulArea: null, finalEnergy: null,
+    scope: null, sourceFileId: null, absence: null,
+  };
 
   it('Ε1 — καμία αλλαγή ⇒ ΚΑΝΕΝΑ `energy` στο σώμα', () => {
     const updates = buildPropertyUpdatesFromForm({ formData: formOf({}), property: dokimiA, isMultiLevel: false });
@@ -100,7 +103,10 @@ describe('Φόρμα ακινήτου → ενεργειακό πιστοποι�
       property: stored,
       isMultiLevel: false,
     });
-    expect(updates.energy).toEqual({ class: null, primaryEnergy: null, co2Emissions: null, issuedOn: null, usefulArea: null, finalEnergy: null, absence: null });
+    expect(updates.energy).toEqual({
+      class: null, primaryEnergy: null, co2Emissions: null, issuedOn: null, usefulArea: null, finalEnergy: null,
+      scope: null, sourceFileId: null, absence: null,
+    });
   });
 
   it('Ε5 — ίδια δήλωση με το έγγραφο ⇒ δεν ξαναγράφεται (ούτε ίχνος, ούτε νέα αξίωση)', () => {

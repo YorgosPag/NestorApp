@@ -28,6 +28,9 @@ import {
   PROPERTY_CARD_COLORS,
 } from './property-fields-constants';
 import { EnergyCertificateFields } from '@/components/shared/energy-certificate/EnergyCertificateFields';
+import { EnergyCertificateImport } from '@/components/shared/energy-certificate/EnergyCertificateImport';
+import { useCompanyPropertyImportPort } from '@/hooks/energy-certificate/useEnergyCertificateImportPorts';
+import type { EnergyCertificatePatch } from '@/lib/energy-certificate/energy-certificate';
 import { energyOfForm, patchedEnergyFormSlice } from '@/lib/energy-certificate/energy-certificate-form';
 import { OrientationPlausibilityWarning } from '@/components/properties/shared/OrientationPlausibilityWarning';
 import { ConditionPlausibilityWarning } from '@/components/properties/shared/ConditionPlausibilityWarning';
@@ -35,13 +38,13 @@ import { PropertyFieldsDetailCardsRow2 } from './PropertyFieldsDetailCardsRow2';
 import type { PropertyFieldsEditFormProps } from './property-fields-form-types';
 
 type DetailCardsProps = Pick<PropertyFieldsEditFormProps,
-  'formData' | 'setFormData' | 'isEditing' | 'isSoldOrRented' |
+  'property' | 'formData' | 'setFormData' | 'isEditing' | 'isSoldOrRented' |
   'isMultiLevel' | 'activeLevelId' | 'currentLevelData' | 'aggregatedTotals' |
   'toggleArrayItem' | 'updateLevelField' | 't' | 'iconSizes' | 'quick'
 >;
 
 export function PropertyFieldsDetailCards(props: DetailCardsProps) {
-  const { quick, ...row2Props } = props;
+  const { quick, property, ...row2Props } = props;
   const {
     formData, setFormData, isEditing, isSoldOrRented,
     isMultiLevel, activeLevelId, currentLevelData, aggregatedTotals,
@@ -49,6 +52,11 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
   } = row2Props;
   const aggregate = levelAggregateOf(isMultiLevel, activeLevelId, aggregatedTotals);
   const colors = useSemanticColors();
+  // ADR-777 §8.96 — το ΠΕΑ ανεβαίνει στα «Έγγραφα» του ακινήτου και προτείνει τα πεδία· εφαρμόζεται στη φόρμα.
+  const peaImportPort = useCompanyPropertyImportPort(property);
+  const energyCertificate = energyOfForm(formData);
+  const applyEnergyPatch = (patch: EnergyCertificatePatch) =>
+    setFormData(prev => ({ ...prev, ...patchedEnergyFormSlice(prev, patch) }));
 
   return (
     <>
@@ -222,10 +230,19 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
               {/* ADR-777 §8.94 — το ΠΕΑ: τα ΙΔΙΑ πεδία με το «Βελτίωσε την αγγελία σου» του ιδιώτη. Η κλάση μένει στο
                   `formData.energyClass` (τη διαβάζουν πληρότητα και έλεγχοι αληθοφάνειας)· το μπλοκ συντίθεται εδώ. */}
               <EnergyCertificateFields
-                value={energyOfForm(formData)}
-                onChange={(patch) => setFormData(prev => ({ ...prev, ...patchedEnergyFormSlice(prev, patch) }))}
+                value={energyCertificate}
+                onChange={applyEnergyPatch}
                 disabled={!isEditing || isSoldOrRented}
                 idPrefix="unit"
+                importSlot={
+                  <EnergyCertificateImport
+                    port={peaImportPort}
+                    current={energyCertificate}
+                    onApply={applyEnergyPatch}
+                    disabled={!isEditing || isSoldOrRented}
+                    commit="form-save"
+                  />
+                }
               />
             </div>
             <ConditionPlausibilityWarning

@@ -39,7 +39,10 @@ jest.mock('@/services/owner-property/owner-property.service', () => ({
 
 const AT = '2026-10-13T09:00:00.000Z';
 const F = 'properties-enums:energyCertificate.form';
-const WITH_CLASS = { class: 'C' as const, primaryEnergy: null, co2Emissions: null, issuedOn: null, usefulArea: null, finalEnergy: null, absence: null };
+const WITH_CLASS = {
+  class: 'C' as const, primaryEnergy: null, co2Emissions: null, issuedOn: null, usefulArea: null, finalEnergy: null,
+  scope: null, sourceFileId: null, absence: null,
+};
 
 beforeEach(() => {
   pending.length = 0;
@@ -112,6 +115,6 @@ describe('Ε3 — ο καταχωρητής κρεμά την ενότητα μ�
     const owner = validOwnerProperty({ energy: { ...WITH_CLASS, primaryEnergy: 180.5, co2Emissions: 52 } });
     const shape = projectListingShape(projectableFromOwnerProperty(owner, AT), placeKnowledgeFromOwnerProperty(owner, AT), AT);
     expect(shape.energyClass).toBe('C');
-    expect(shape.energyCertificate).toEqual({ primaryEnergy: 180.5, co2Emissions: 52, usefulArea: null, finalEnergy: null, absence: null });
+    expect(shape.energyCertificate).toEqual({ primaryEnergy: 180.5, co2Emissions: 52, usefulArea: null, finalEnergy: null, scope: null, absence: null });
   });
 });

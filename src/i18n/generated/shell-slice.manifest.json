@@ -46,7 +46,7 @@
     "src/i18n/generated/routes/offers__new.el.json": "aa0b568ec96d2aabfb3a2a7268f8ea327ebcf93d020753305aa982999afd8132",
     "src/i18n/generated/routes/offers__offerId.el.json": "657fdbe56a3e1800e20aec4af2f8d258182aa2a42ce0f9915f45abca6859ff52",
     "src/i18n/generated/routes/offers__offerId__calendar.el.json": "9a3202cadc030b777130a2bbada041272f02fbf2d4d38dc66a2ba28ebb793c40",
-    "src/i18n/generated/routes/offers__offerId__improve.el.json": "eff4e0ae8f3778db24d12d7d8e2f75e5bb8cd961276b50dd71bfb2fdd32e0a2e",
+    "src/i18n/generated/routes/offers__offerId__improve.el.json": "917d4da308dfe9b65418e57d882aefcf38bf2aaee96cf915f1590005527ecc49",
     "src/i18n/generated/routes/offers__offerId__tour.el.json": "84643b1347f58873468eede91adc022cdbf69f7863d5185d5533355c3e6944d8",
     "src/i18n/generated/routes/open-source.el.json": "8baf220e88bdc6a0ee04cd0a52a67d8cb4940ca7c4577693695d852b211636ce",
     "src/i18n/generated/routes/privacy-policy.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
@@ -119,7 +119,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "4dc875be3bfc6e089fb61c63a9764c283b376c8c0c1d767f44212bdb52c04d05",
+  "inputsSha256": "c368d5d3ea91c510d1e5a79aba072b27762633788666eb27b2f5cb72452bef48",
   "languages": [
     "el"
   ],
@@ -536,7 +536,7 @@
     "src/components/owner-property/form/use-dossier-focal-point-slot.tsx": "5bdf63ca9ef3cc236c3d25adf5895cdb9db45143e56e03f4bf3192c3440b47cf",
     "src/components/owner-property/improve/CommonChargesImproveSection.tsx": "0cbbce81afb8564d6d1ff89d4cc3d3fa08f24c1617cba4f25410e9b4dcbdd2a2",
     "src/components/owner-property/improve/DeclaredBlockImproveSection.tsx": "fd08318bf31153e234f5d6624cce08b33f680a8e72d35c82979801c9ad6a3305",
-    "src/components/owner-property/improve/EnergyCertificateImproveSection.tsx": "078fa9dcec308b68ba58eaa1a40992510c2d9fd6c4ebff6a20555d1f78ba74e4",
+    "src/components/owner-property/improve/EnergyCertificateImproveSection.tsx": "96fc477f9d66acdb50f92d687c58a8bd1fda74b020f45fe181d25a00e17e2485",
     "src/components/owner-property/improve/ObjectiveValueBeforeAfter.tsx": "e72542bc2c5a667b2cb6d192bc23493fdcb46c6989b7cbee004766be51a92adf",
     "src/components/owner-property/improve/ObjectiveValueImproveQuestion.tsx": "fe57c10be488437fac02adb9976c08da94d36f3ca9f8eda807dd6c8725dda5ce",
     "src/components/owner-property/improve/ObjectiveValueImproveQuestions.tsx": "519172faf281354e621be689072b104a4ff892afdb679b9d3f635d46ef28e811",
@@ -544,7 +544,7 @@
     "src/components/owner-property/improve/ObjectiveValueVisibility.tsx": "cd59bb9fa75d41cf50e0180977341988de1ac99eafb6607d9e3760637740c327",
     "src/components/owner-property/improve/OwnerListingImproveContent.tsx": "d1772482b3e7e84cd5259c6e96b7c3b3291d3940d00ee8159cdbe6031a4c4659",
     "src/components/owner-property/improve/improve-sections.ts": "4f2d56942441393ebebbffa81ac5de11928f63c241210ea88940fa585de16fad",
-    "src/components/owner-property/improve/owner-improve-subject.ts": "0fa37edfeda3039e1ff17ae22814a78722019c7c75edffe7068fcdeb81c0262e",
+    "src/components/owner-property/improve/owner-improve-subject.ts": "5284b0a76a4772780a1a8e70ec7b86cfc104c47855ea4b73fb11af4f0e7e8772",
     "src/components/owner-property/improve/useObjectiveValueImprove.ts": "f597ac55c3855ad51df8f3e4f5c5d107e2843de7aeb829d1ff110dbdf9641384",
     "src/components/owner-property/offer-form-labels.ts": "3d33c23b1817cd65f4bfb1871165abfd3db9bf95669ea46b13daae8446dbd91d",
     "src/components/owner-property/owner-mandate-labels.ts": "27269411268adab356c516d0487b98bf966f00d059e613a4a3f54c50860aa252",
@@ -639,10 +639,12 @@
     "src/components/shared/common-charges/CommonChargesFields.tsx": "1dbee0a687192a354f4b956e5a0839e4a8112cb471a2ef9941230db9a04ab002",
     "src/components/shared/energy-certificate/CertificateFigureField.tsx": "1204232fd0a72e99ad2658938b55b93e444090cead91fdb8928dc39023e00dad",
     "src/components/shared/energy-certificate/EnergyCertificateFields.tsx": "e3eb757827cfb2ccfb67ada8a1932240eae25c2ffcc0bcbda17bcf9b841def76",
+    "src/components/shared/energy-certificate/EnergyCertificateImport.tsx": "14d749ed11f9726ee9f108f9a5f490ad55c7f3f5b06affbd1feb1ce883be4807",
     "src/components/shared/energy-certificate/EnergyClassScale.tsx": "d53c84fcc33c80c59235b36c20c84492506bea8d9e74415a4d9fb126f6622806",
     "src/components/shared/energy-certificate/FinalEnergyFields.tsx": "50d253a16505eb234194ff6881882b74feec4877264009550c447b85e7f7a866",
     "src/components/shared/energy-certificate/energy-class-palette.ts": "1be266b5f70d2937df0bbeeac089085f35e16d5fa7bd49cd27efe054322e4dfc",
     "src/components/shared/esco/esco-label.ts": "aeca36362c2a13ce8143f33c74a73c9df8d5ff510626a58b42635ad3c2bb4597",
+    "src/components/shared/files/FileUploadButton.tsx": "b6b182b697ee71d603f08abdc6f094d5e418ed05b54b78b0fa8dc152b97b309b",
     "src/components/shared/files/hooks/useEntityFiles-purpose-filter.ts": "ba679a0c4a14a5d629e4db06ce4c953c44c1022fa3896016121bb4c87d7fc1dd",
     "src/components/shared/files/hooks/useEntityFiles.ts": "28d9035b5315e529e031f933b538d206db0a018bb1c38052738e84c2b7ee5727",
     "src/components/shared/files/hooks/useEntityFilesRealtime.ts": "ce98bb02c452e93deef52f1a74b46912f00f3a06d97b7df30a0f6abd9a41a1db",
@@ -769,6 +771,7 @@
     "src/config/open-data-sources.ts": "f4badb61510fa06bd2a0fceb4951e7d17263d1f795ffe2db72febc345808d482",
     "src/config/photo-compression-config.ts": "b40f9e7f3f9295117813eb379df192ddb521120e05cc014f6b73e23ce446b44b",
     "src/config/unified-tabs-factory.ts": "7e0a33b1156d6301dd024af9f0ae4cc2354d7f9845763ff59c8fcd0ae98f70e6",
+    "src/config/upload-entry-points/energy-certificate-slot.ts": "22efe52a748e531dafb901f6867cca4beeb0f88c2753da50e014a1a373756c79",
     "src/config/vocabulary/labels/tabs.ts": "79dbe7bee3f85394afc444d71970fe3befb0919e447c6d3c6bf7ebb50c688bef",
     "src/constants/field-completion-weights.ts": "18a5df56dc3ffb9588c2f8efc91f6990fb372efdf8e6d8b4f02b026a3a6ecb77",
     "src/constants/media-completion-thresholds.ts": "ccf553d2af89abb23250e4218c0246af2b137a9290141f97d8967e2ad384f756",
@@ -782,6 +785,8 @@
     "src/hooks/demand/useDemandAnswer.ts": "6507ce26bf0c6e0c4dad6952092b60367be6db778353cd896b2a9be7ec78b0b5",
     "src/hooks/demand/useDemandName.ts": "abf23a95b697167851647c71bdc6546c79c82c2fad64bd3ac749705e43c7fdd3",
     "src/hooks/demand/usePlaceInterest.ts": "0c35f95dba33274d59037e34619638e35cd8ab207fd4a310bb6ac97925575b04",
+    "src/hooks/energy-certificate/useEnergyCertificateImport.ts": "b7c70fa7298724e60ef270d9e47f2ddeae88dbe42b4547b2116ec233b7d89177",
+    "src/hooks/energy-certificate/useEnergyCertificateImportPorts.ts": "8e6214d1838353065adb7f5f1a4736861fb61ef6bb83ed19feb97e97c923d02f",
     "src/hooks/geo/useAdminAreaName.ts": "085f641e8ec05562981fba88a836eea1f7f43957a643295636947b931414b352",
     "src/hooks/geo/useAdminBoundary.ts": "7af639ba46a43c971210e3241ac1d4b348d355df6460d7d8611e2b72764b00e3",
     "src/hooks/geo/usePlaceIdentity.ts": "7f5dc92769c46bbd9c7fc7f9dc0a84b1d477572fcd14817212edac6480b01361",
@@ -826,6 +831,7 @@
     "src/hooks/useCaseFileOpener.ts": "967d6430837ed0067fef44b4b2c9d679fecb909732e30fc2bddf3b60391cfdf0",
     "src/hooks/useCircleAnchorName.ts": "390f1a87542cf49c4eff1e0453ad3d1683081a858632785aa3411175ecd9ddb5",
     "src/hooks/useClickOutside.ts": "9706b56dfd46c276bbacc25b0c9f967b60356cc58b0e596f6e8e630749958911",
+    "src/hooks/useCompanyId.ts": "d0237c3ba6eba5606a4577a486e6d30f04ea545063ba5093773049762fc32779",
     "src/hooks/useContainingArea.ts": "13afd89df370809de15aded686ad7359e3e395555350fc2eea47fb4efa986c44",
     "src/hooks/useDocumentRequests.ts": "28e8f8c128b86c6509091195643af9954926d36ebd5f83ddce32ad0cde7612e2",
     "src/hooks/useEngagedCase.ts": "03dc72895b0e6b652119fa63b7e46978b8f02c7768ec19419ab6c5cab820e08d",
@@ -1131,6 +1137,7 @@
     "src/services/ai-pipeline/shared/greek-text-utils.ts": "28ea0455956007472346eca46c848a45bf439f04609b1888c750c70171070e08",
     "src/services/ai-pipeline/shared/mailgun-sender.ts": "eab9ecdfbb75079a86766e5cfff5b87c2e88603ac557b1c2a7f98ca1eeb006fa",
     "src/services/cad-file-mutation-gateway.ts": "853c9da5ecd70a1dae49c546ae9ac0a1a2fd33bc6e54a10877b043098629969d",
+    "src/services/company-id-resolver.ts": "3b7cc2bfa2ae5ecc92c05a30a9cc91d1a6ecc586d070a4dbc88a19b66e9ff364",
     "src/services/company/sender-identity.ts": "8e665d16c0c25255a8bf9c9e1df1d5f6cea21436ae3e6341b24ee44e862b1db7",
     "src/services/contact/account-contact-resolver.ts": "80574984f25ab63c7f214ed197b2271d8fa463172a498252b3c2de638fa38c4a",
     "src/services/contact/first-contact-admission.ts": "2f519d0a7ddb600a442ed19bddfb03c37229588a6e1eba3c3a193ae0784ae537",
@@ -8702,7 +8709,10 @@
             "autoSave.error",
             "autoSave.retry",
             "autoSave.saved",
-            "autoSave.saving"
+            "autoSave.saving",
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
           ],
           "prefixes": [],
           "whole": false
@@ -8712,7 +8722,10 @@
             "autoSave.error",
             "autoSave.retry",
             "autoSave.saved",
-            "autoSave.saving"
+            "autoSave.saving",
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
           ],
           "prefixes": [],
           "whole": false
@@ -8722,7 +8735,10 @@
             "autoSave.error",
             "autoSave.retry",
             "autoSave.saved",
-            "autoSave.saving"
+            "autoSave.saving",
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
           ],
           "prefixes": [],
           "whole": false
@@ -8732,7 +8748,10 @@
             "autoSave.error",
             "autoSave.retry",
             "autoSave.saved",
-            "autoSave.saving"
+            "autoSave.saving",
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
           ],
           "prefixes": [],
           "whole": false
@@ -8742,7 +8761,10 @@
             "autoSave.error",
             "autoSave.retry",
             "autoSave.saved",
-            "autoSave.saving"
+            "autoSave.saving",
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
           ],
           "prefixes": [],
           "whole": false
@@ -8752,7 +8774,10 @@
             "autoSave.error",
             "autoSave.retry",
             "autoSave.saved",
-            "autoSave.saving"
+            "autoSave.saving",
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
           ],
           "prefixes": [],
           "whole": false
@@ -8762,7 +8787,10 @@
             "autoSave.error",
             "autoSave.retry",
             "autoSave.saved",
-            "autoSave.saving"
+            "autoSave.saving",
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
           ],
           "prefixes": [],
           "whole": false
@@ -8772,7 +8800,10 @@
             "autoSave.error",
             "autoSave.retry",
             "autoSave.saved",
-            "autoSave.saving"
+            "autoSave.saving",
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
           ],
           "prefixes": [],
           "whole": false
@@ -8782,7 +8813,10 @@
             "autoSave.error",
             "autoSave.retry",
             "autoSave.saved",
-            "autoSave.saving"
+            "autoSave.saving",
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
           ],
           "prefixes": [],
           "whole": false
@@ -8792,7 +8826,28 @@
             "autoSave.error",
             "autoSave.retry",
             "autoSave.saved",
-            "autoSave.saving"
+            "autoSave.saving",
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "files": {
+          "keys": [
+            "uploadButton.loading",
+            "uploadButton.selectFile",
+            "validation.invalidFile"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "files-media": {
+          "keys": [
+            "uploadButton.loading",
+            "uploadButton.selectFile",
+            "validation.invalidFile"
           ],
           "prefixes": [],
           "whole": false
@@ -8940,6 +8995,18 @@
             "energyCertificate.form.scopePlaceholder",
             "energyCertificate.form.usefulArea",
             "energyCertificate.form.usefulAreaHint",
+            "energyCertificate.import.button",
+            "energyCertificate.import.failed.fileMissing",
+            "energyCertificate.import.failed.fileNotReady",
+            "energyCertificate.import.failed.fileNotYours",
+            "energyCertificate.import.failed.fileTooLarge",
+            "energyCertificate.import.failed.fileWrongType",
+            "energyCertificate.import.failed.notACertificate",
+            "energyCertificate.import.failed.unavailable",
+            "energyCertificate.import.failed.uploadFailed",
+            "energyCertificate.import.hint",
+            "energyCertificate.import.reading",
+            "energyCertificate.import.uploading",
             "energyCertificate.scope.building",
             "energyCertificate.scope.unit",
             "energyCertificate.source.biomass",
@@ -12940,7 +13007,7 @@
     "matchedKeys": 243,
     "routeBoundaries": 3,
     "shellFiles": 1218,
-    "sliceBytes": 736337
+    "sliceBytes": 738216
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

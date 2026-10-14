@@ -10,6 +10,8 @@
 
 import { useMemo } from 'react';
 
+import { useOwnerPropertyImportPort } from '@/hooks/energy-certificate/useEnergyCertificateImportPorts';
+
 import type { CommonChargesPatch } from '@/lib/common-charges/common-charges';
 import type {
   CommonChargesImproveSubject,
@@ -83,13 +85,16 @@ function useOwnerCommonChargesSubject(property: OwnerProperty): CommonChargesImp
 /** Ο ιδιώτης ως κάτοχος της ενότητας «Ενεργειακό πιστοποιητικό» (ADR-777 §8.94). Ίδια πόρτα, ίδιος κανόνας έκβασης. */
 function useOwnerEnergyCertificateSubject(property: OwnerProperty): EnergyCertificateImproveSubject {
   const { id, energy } = property;
+  // ADR-777 §8.96 — το ΠΕΑ ανεβαίνει στον φάκελο του ακινήτου (στα «Έγγραφά» του) και προτείνει τα πεδία.
+  const importPort = useOwnerPropertyImportPort(property);
   return useMemo(
     () => ({
       certificate: energy,
       revision: property,
       write: (patch: EnergyCertificatePatch) => setOwnerListingEnergyCertificate(id, patch).then(commonChargesOutcomeOf),
+      importPort,
     }),
-    [id, energy, property],
+    [id, energy, property, importPort],
   );
 }
 

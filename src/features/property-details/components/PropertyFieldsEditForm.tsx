@@ -454,6 +454,7 @@ export function PropertyFieldsEditForm({
 
 
       <PropertyFieldsDetailCards
+        property={property}
         formData={formData}
         setFormData={setFormData}
         isEditing={isEditing}

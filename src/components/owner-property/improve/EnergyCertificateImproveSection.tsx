@@ -12,6 +12,7 @@
 import React from 'react';
 
 import { EnergyCertificateFields } from '@/components/shared/energy-certificate/EnergyCertificateFields';
+import { EnergyCertificateImport } from '@/components/shared/energy-certificate/EnergyCertificateImport';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { applyEnergyCertificatePatch, readEnergyCertificate } from '@/lib/energy-certificate/energy-certificate';
 import type { EnergyCertificateImproveSubject } from '@/lib/energy-certificate/energy-certificate-improve-subject';
@@ -32,7 +33,21 @@ export function EnergyCertificateImproveSection({ subject }: { readonly subject:
       read={readEnergyCertificate}
       apply={applyEnergyCertificatePatch}
       renderFields={(certificate, onChange) => (
-        <EnergyCertificateFields value={certificate} onChange={onChange} disabled={false} idPrefix="improve" />
+        <EnergyCertificateFields
+          value={certificate}
+          onChange={onChange}
+          disabled={false}
+          idPrefix="improve"
+          importSlot={
+            <EnergyCertificateImport
+              port={subject.importPort}
+              current={certificate}
+              onApply={onChange}
+              disabled={false}
+              commit="immediate"
+            />
+          }
+        />
       )}
     />
   );
