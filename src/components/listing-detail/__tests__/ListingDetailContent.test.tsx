@@ -175,7 +175,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     // ADR-777 §8.93 — προς πώληση διαμέρισμα ⇒ η ερώτηση ΤΙΘΕΤΑΙ· τίποτα δηλωμένο.
     commonCharges: { monthlyAmount: null, includes: null },
     // ADR-777 §8.94 — ίδιος κανόνας: η ερώτηση του ΠΕΑ ΤΙΘΕΤΑΙ· κανένας αριθμός δηλωμένος.
-    energyCertificate: { primaryEnergy: null, co2Emissions: null, usefulArea: null, finalEnergy: null, absence: null },
+    energyCertificate: { primaryEnergy: null, co2Emissions: null, usefulArea: null, finalEnergy: null, scope: null, absence: null },
     ...over,
   };
 }

@@ -16,7 +16,7 @@
  * | χωρίς κλάση, `pending` | «Το πιστοποιητικό είναι υπό έκδοση» |
  * | χωρίς κλάση, `exempt` | «Το ακίνητο εξαιρείται από την υποχρέωση» |
  * | χωρίς κλάση, τίποτα | «Δεν έχει δηλωθεί» — το κενό έχει όνομα |
- * | με κλάση | κλίμακα · αριθμοί (ή «δεν έχει δηλωθεί» ο καθένας) · ισχύς · «από το ΠΕΑ, κατά δήλωση» |
+ * | με κλάση | κλίμακα · αριθμοί (ή «δεν έχει δηλωθεί» ο καθένας) · «ΠΕΑ κτηρίου» αν ισχύει · ισχύς · «από το ΠΕΑ, κατά δήλωση» |
  *
  * 🔑 **Η ισχύς ΔΕΝ υπολογίζεται εδώ.** Τη λέει το σήμα `'energy-performance'` του `listing.legality` — η **μία**
  * απάντηση στο «ισχύει το ΠΕΑ;», που διαβάζει και η ενότητα «Νομικά». Ακίνητο με παλιά κλάση που κανείς δεν
@@ -140,6 +140,10 @@ export function ListingEnergyCertificate({ listing }: { readonly listing: Public
             />
           </div>
           <Figures certificate={certificate} />
+          {/* ADR-777 §8.96 — κοινή πιστοποίηση (ν. 4122/2013 άρθ. 11 §5): οι αριθμοί είναι του ΚΤΗΡΙΟΥ, και λέγεται (GEG §87). */}
+          {certificate.scope === 'building' && (
+            <p className="m-0 mt-2 text-sm text-foreground">{t('listing-detail:energyCertificate.scopeBuilding')}</p>
+          )}
           {validity !== null && <p className="m-0 mt-2 text-sm text-foreground">{validity}</p>}
           {/* Κανόνας 18: αριθμός χωρίς προέλευση είναι ισχυρισμός — και εδώ η προέλευση είναι διπλή: το ΠΕΑ, όπως το μεταφέρει ο αγγελιοδότης. */}
           <p className="m-0 mt-1 text-xs text-muted-foreground">{t('listing-detail:energyCertificate.provenance')}</p>

@@ -32,7 +32,7 @@ const LINES: readonly FinalEnergyLine[] = [
 function subject(over: Partial<EnergyCostSubject['energyCertificate'] & object> = {}, rest: Partial<EnergyCostSubject> = {}): EnergyCostSubject {
   return {
     energyClass: 'C',
-    energyCertificate: { primaryEnergy: null, co2Emissions: null, usefulArea: 100, finalEnergy: LINES, absence: null, ...over },
+    energyCertificate: { primaryEnergy: null, co2Emissions: null, usefulArea: 100, finalEnergy: LINES, scope: null, absence: null, ...over },
     commonCharges: null,
     ...rest,
   };

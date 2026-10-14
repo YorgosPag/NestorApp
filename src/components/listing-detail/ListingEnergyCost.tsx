@@ -56,6 +56,8 @@ function reasonText(t: Translate, cost: Exclude<EnergyCost, EnergyCostEstimate |
   switch (cost.kind) {
     case 'undeclared':
       return t('listing-detail:energyCost.undeclared');
+    case 'building-certificate':
+      return t('listing-detail:energyCost.buildingCertificate');
     case 'stale-prices':
       return t('listing-detail:energyCost.stalePrices');
     case 'unpriced':

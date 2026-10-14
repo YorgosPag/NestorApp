@@ -21,7 +21,7 @@ jest.mock('@/i18n/hooks/useTranslation', () => {
 });
 
 const L = 'listing-detail:energyCertificate';
-const UNDECLARED_BOX = { primaryEnergy: null, co2Emissions: null, usefulArea: null, finalEnergy: null, absence: null };
+const UNDECLARED_BOX = { primaryEnergy: null, co2Emissions: null, usefulArea: null, finalEnergy: null, scope: null, absence: null };
 
 function energySignal(signal: Omit<LegalitySignal, 'kind'>): readonly LegalitySignal[] {
   return [{ ...signal, kind: 'energy-performance' } as LegalitySignal];
@@ -84,7 +84,7 @@ describe('Ε3 — με κλάση: η κλίμακα', () => {
 
 describe('Ε4 — με κλάση: οι αριθμοί', () => {
   it('και οι δύο με τη μονάδα τους, και η προέλευση', () => {
-    show({ energyClass: 'B', energyCertificate: { primaryEnergy: 132.4, co2Emissions: 38.1, usefulArea: null, finalEnergy: null, absence: null } });
+    show({ energyClass: 'B', energyCertificate: { ...UNDECLARED_BOX, primaryEnergy: 132.4, co2Emissions: 38.1 } });
 
     expect(screen.getByText(/primaryEnergyValue::/)).toHaveTextContent('132');
     expect(screen.getByText(/co2EmissionsValue::/)).toHaveTextContent('38');
@@ -98,7 +98,7 @@ describe('Ε4 — με κλάση: οι αριθμοί', () => {
   });
 
   it('ένας δηλωμένος, ένας όχι ⇒ ο καθένας λέει το δικό του', () => {
-    show({ energyClass: 'B', energyCertificate: { primaryEnergy: 0, co2Emissions: null, usefulArea: null, finalEnergy: null, absence: null } });
+    show({ energyClass: 'B', energyCertificate: { ...UNDECLARED_BOX, primaryEnergy: 0 } });
     expect(screen.getByText(/primaryEnergyValue::/)).toBeInTheDocument();
     expect(screen.getAllByText(`${L}.figureUndeclared`)).toHaveLength(1);
   });
