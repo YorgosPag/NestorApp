@@ -624,7 +624,7 @@ await setDoc(doc(db, COLLECTIONS.ATTENDANCE_EVENTS, eventId), {
 | 50 | `accounting_invoices` | `generateInvoiceAccId()` | `inv` |
 | 51 | `accounting_bank_transactions` | `generateBankTransactionId()` | `btxn` |
 | 52 | `accounting_fixed_assets` | `generateFixedAssetId()` | `fxa` |
-| 53 | `accounting_depreciation_records` | `generateDepreciationId()` | `depr` |
+| 53 | `accounting_depreciation_records` | `generateDeterministicDepreciationRecordId()` | `depr` |
 | 54 | `accounting_efka_payments` | `generateEfkaPaymentId()` | `efka` |
 | 55 | `accounting_expense_documents` | `generateExpenseDocId()` | `exdoc` |
 | 56 | `accounting_import_batches` | `generateImportBatchId()` | `batch` |
@@ -695,7 +695,7 @@ await setDoc(doc(db, COLLECTIONS.ATTENDANCE_EVENTS, eventId), {
 `generatePhotoId` (photo), `generateAttachmentId` (att), `generateFileId` (file), `generateShareId` (share), `generatePendingId` (pending), `generateSubscriptionId` (sub), `generateFolderId` (fldr), `generateCommentId` (cmt), `generateApprovalId` (appr)
 
 #### Accounting (10)
-`generateJournalEntryId` (je), `generateInvoiceAccId` (inv), `generateBankTransactionId` (btxn), `generateFixedAssetId` (fxa), `generateDepreciationId` (depr), `generateEfkaPaymentId` (efka), `generateImportBatchId` (batch), `generateExpenseDocId` (exdoc), `generateApyCertificateId` (apy), `generateCustomCategoryId` (custcat)
+`generateJournalEntryId` (je), `generateInvoiceAccId` (inv), `generateBankTransactionId` (btxn), `generateFixedAssetId` (fxa), `generateDeterministicDepreciationRecordId` (depr), `generateEfkaPaymentId` (efka), `generateImportBatchId` (batch), `generateExpenseDocId` (exdoc), `generateApyCertificateId` (apy), `generateCustomCategoryId` (custcat)
 
 #### Construction (3)
 `generateConstructionPhaseId` (cphase), `generateConstructionTaskId` (ctask), `generateMilestoneId` (mile)

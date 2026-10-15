@@ -21,9 +21,8 @@ const ALLOWED_PAGE_CALLERS: Readonly<Record<string, Readonly<Record<string, stri
   },
   listFixedAssets: {
     'src/app/api/accounting/assets/route.ts': 'η λίστα της οθόνης — σελίδα εξ ορισμού',
-    // ⚠️ ΓΝΩΣΤΟ ΚΕΝΟ, ΔΗΛΩΜΕΝΟ (Φάση 3β): ΥΠΟΛΟΓΙΣΜΟΣ πάνω σε σελίδα — οι αποσβέσεις χρήσης βγαίνουν μόνο για τα
-    // 50 νεότερα ενεργά πάγια. Η διόρθωση (`collectFixedAssets`) αλλάζει ποσά αποσβέσεων ⇒ περιμένει απόφαση Giorgio.
-    'src/subapps/accounting/services/engines/depreciation-engine.ts': 'ΓΝΩΣΤΟ ΚΕΝΟ — βλ. ADR-ACC-010 §2.1.1 Φάση 3β',
+    // Φάση 4 (2026-10-15): το `depreciation-engine` ΒΓΗΚΕ — οι αποσβέσεις χρήσης διαβάζουν `collectFixedAssets`
+    // (πλήρης σάρωση, και εκποιημένα μέσα στη χρήση), όχι τη σελίδα των 50 ενεργών.
   },
   listBankTransactions: {
     'src/app/api/accounting/bank/transactions/route.ts': 'η λίστα της οθόνης — σελίδα εξ ορισμού',

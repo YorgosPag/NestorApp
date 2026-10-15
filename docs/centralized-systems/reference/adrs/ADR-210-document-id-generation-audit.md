@@ -144,7 +144,7 @@
 | `accounting_invoices` | `generateInvoiceAccId()` | `inv_uuid` | `firestore-accounting-repository.ts` |
 | `accounting_bank_transactions` | `generateBankTransactionId()` | `btxn_uuid` | `firestore-accounting-repository.ts` |
 | `accounting_fixed_assets` | `generateFixedAssetId()` | `fxa_uuid` | `firestore-accounting-repository.ts` |
-| `accounting_depreciation_records` | `generateDepreciationId()` | `depr_uuid` | `firestore-accounting-repository.ts` |
+| `accounting_depreciation_records` | `generateDeterministicDepreciationRecordId(companyId, assetId, fiscalYear)` (ντετερμινιστικό, ADR-ACC-010 §2.1.1 Φ4) | `depr_uuid` | `accounting-repo-depreciation.ts` |
 | `accounting_efka_payments` | `generateEfkaPaymentId()` | `efka_uuid` | `firestore-accounting-repository.ts` |
 | `accounting_import_batches` | `generateImportBatchId()` | `batch_uuid` | `firestore-accounting-repository.ts` |
 | `conversations` | `generateConversationId()` | `conv_channel_hash` | `telegram/crm/store.ts` |

@@ -140,15 +140,28 @@ describe('assets POST — manual validation', () => {
     expect((await res.json()).error).toBe('description, category, and acquisitionDate are required');
   });
 
-  it('non-positive cost → 400 exact message', async () => {
-    const res = (await assetsPost(req({ description: 'd', category: 'c', acquisitionDate: '2026-01-01', acquisitionCost: 0 }))) as Envelope;
+  // Φάση 4 (ADR-ACC-010 §2.1.1): η κατηγορία αποφασίζει τον συντελεστή και οι ημερομηνίες τους μήνες απόσβεσης ⇒
+  // ελέγχονται αυστηρά· ο συντελεστής του πελάτη δεν φτάνει ποτέ στη βάση (τον βάζει το repository).
+  const VALID = {
+    description: 'd', category: 'computers', acquisitionDate: '2026-01-01', depreciationStartDate: '2026-01-01',
+    acquisitionCost: 100, residualValue: 0,
+  };
+
+  it.each([
+    ['unknown category', { category: 'c' }, 'category must be one of ASSET_CATEGORIES'],
+    ['impossible start date', { depreciationStartDate: '2026-02-30' }, 'acquisitionDate and depreciationStartDate must be YYYY-MM-DD'],
+    ['non-positive cost', { acquisitionCost: 0 }, 'acquisitionCost must be a positive number'],
+    ['residual above cost', { residualValue: 101 }, 'residualValue must be between 0 and acquisitionCost'],
+  ])('%s → 400 exact message, nothing written', async (_label, override, message) => {
+    const res = (await assetsPost(req({ ...VALID, ...override }))) as Envelope;
     expect(res.status).toBe(400);
-    expect((await res.json()).error).toBe('acquisitionCost must be a positive number');
+    expect((await res.json()).error).toBe(message);
+    expect(repo.createFixedAsset).not.toHaveBeenCalled();
   });
 
   it('valid → 201 { success:true, data:{ assetId } }', async () => {
     repo.createFixedAsset.mockResolvedValue({ id: 'asset_9' });
-    const res = (await assetsPost(req({ description: 'd', category: 'c', acquisitionDate: '2026-01-01', acquisitionCost: 100 }))) as Envelope;
+    const res = (await assetsPost(req(VALID))) as Envelope;
     expect(res.status).toBe(201);
     expect(await res.json()).toEqual({ success: true, data: { assetId: 'asset_9' } });
   });

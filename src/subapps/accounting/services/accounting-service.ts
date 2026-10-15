@@ -17,7 +17,7 @@ import type {
 import type { VATQuarterSummary, VATAnnualSummary } from '../types/vat';
 import type { TaxResult, TaxEstimate, PartnershipTaxResult, EPETaxResult, AETaxResult } from '../types/tax';
 import type { EFKAAnnualSummary, PartnershipEFKASummary, EPEEFKASummary, AEEFKASummary } from '../types/efka';
-import type { DepreciationRecord } from '../types/assets';
+import type { DepreciationRunResult } from '../types/assets';
 import type { CreateJournalEntryInput, JournalEntry } from '../types/journal';
 import type { FiscalQuarter, AccountCategory, PaymentMethod } from '../types/common';
 import { getCategoryByCode } from '../config/account-categories';
@@ -218,9 +218,9 @@ export class AccountingService {
   // ── Depreciation ────────────────────────────────────────────────────────
 
   /**
-   * Εκτέλεση ετήσιων αποσβέσεων (τέλος χρήσης)
+   * Εκτέλεση ετήσιων αποσβέσεων χρήσης που έληξε — πλήρης σάρωση, ιδεμπότητη (ADR-ACC-010 §2.1.1 Φάση 4)
    */
-  async runYearEndDepreciation(fiscalYear: number): Promise<DepreciationRecord[]> {
+  async runYearEndDepreciation(fiscalYear: number): Promise<DepreciationRunResult> {
     return this.depreciationEngine.bookDepreciations(fiscalYear);
   }
 

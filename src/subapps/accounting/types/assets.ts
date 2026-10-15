@@ -8,6 +8,7 @@
  * @compliance CLAUDE.md Enterprise Standards — zero `any`
  */
 
+import type { AccountingAuditEntry } from './accounting-audit';
 
 // ============================================================================
 // ASSET CATEGORY & STATUS
@@ -16,16 +17,17 @@
 /**
  * Κατηγορίες παγίων στοιχείων
  *
- * Κάθε κατηγορία έχει διαφορετικό συντελεστή απόσβεσης (Ν.4172/2013, αρ.24).
+ * Κάθε κατηγορία έχει δικό της συντελεστή απόσβεσης (Ν.4172/2013, αρ.24). Οι συντελεστές ζουν ΜΟΝΟ στο SSoT
+ * `services/config/depreciation-config.ts` — μην τους ξαναγράψεις εδώ ούτε σε σχόλιο.
  */
 export const ASSET_CATEGORIES = [
-  'buildings',               // Κτίρια (4%)
-  'machinery',               // Μηχανήματα (10%)
-  'vehicles',                // Οχήματα (16%)
-  'furniture',               // Έπιπλα & εξοπλισμός (10%)
-  'computers',               // Η/Υ & λογισμικό (20%)
-  'measurement_instruments', // Όργανα μέτρησης (10%)
-  'other',                   // Λοιπά πάγια (10%)
+  'buildings',               // Κτίρια
+  'machinery',               // Μηχανήματα
+  'vehicles',                // Οχήματα
+  'furniture',               // Έπιπλα & εξοπλισμός
+  'computers',               // Η/Υ & λογισμικό
+  'measurement_instruments', // Όργανα μέτρησης
+  'other',                   // Λοιπά πάγια
 ] as const;
 
 export type AssetCategory = (typeof ASSET_CATEGORIES)[number];
@@ -104,12 +106,18 @@ export interface FixedAsset {
   disposalDate: string | null;
 
   // — Απόσβεση —
-  /** Ετήσιος συντελεστής απόσβεσης (%) */
+  /** Ετήσιος συντελεστής απόσβεσης (%) — τον αποφασίζει ο διακομιστής από την κατηγορία (`depreciation-config`). */
   depreciationRate: number;
   /** Μέθοδος απόσβεσης */
   depreciationMethod: 'straight_line';
   /** Ωφέλιμη ζωή σε έτη */
   usefulLifeYears: number;
+  /**
+   * Η νεότερη χρήση με καταχωρημένη απόσβεση. Τα `accumulatedDepreciation` / `netBookValue` είναι η ΠΡΟΒΟΛΗ του
+   * κλεισίματος αυτής της χρήσης· η αλήθεια είναι οι εγγραφές `accounting_depreciation_records`.
+   * Λείπει σε πάγια πριν από τη Φάση 4 (ADR-ACC-010 §2.1.1) = καμία καταχώριση.
+   */
+  lastDepreciatedFiscalYear?: number | null;
 
   // — Τιμολόγιο Αγοράς —
   /** Αριθμός τιμολογίου αγοράς */
@@ -215,11 +223,19 @@ export interface DisposalResult {
 
 /**
  * Input για δημιουργία νέου παγίου
- * Εξαιρεί auto-generated πεδία
+ * Εξαιρεί auto-generated πεδία — και τον συντελεστή: τον αποφασίζει ο διακομιστής από την κατηγορία.
  */
 export type CreateFixedAssetInput = Omit<
   FixedAsset,
-  'assetId' | 'accumulatedDepreciation' | 'netBookValue' | 'fullyDepreciatedDate' | 'disposalDate' | 'createdAt' | 'updatedAt'
+  | 'assetId'
+  | 'accumulatedDepreciation'
+  | 'netBookValue'
+  | 'fullyDepreciatedDate'
+  | 'disposalDate'
+  | 'lastDepreciatedFiscalYear'
+  | 'depreciationRate'
+  | 'createdAt'
+  | 'updatedAt'
 >;
 
 /**
@@ -234,4 +250,55 @@ export interface FixedAssetFilters {
   status?: AssetStatus;
   /** Φορολογικό έτος κτήσης */
   acquisitionYear?: number;
+}
+
+// ============================================================================
+// DEPRECIATION RUN — πλήρης σάρωση + καταχώριση (ADR-ACC-010 §2.1.1 Φάση 4)
+// ============================================================================
+
+/**
+ * Εμβέλεια σάρωσης παγίων για ΥΠΟΛΟΓΙΣΜΟ — `depreciationYear`: όσα άρχισαν να χρησιμοποιούνται ως το τέλος της
+ * χρήσης, ανεξαρτήτως κατάστασης (και όσα εκποιήθηκαν μέσα στη χρήση).
+ */
+export type FixedAssetLedgerScope = { readonly kind: 'depreciationYear'; readonly fiscalYear: number };
+
+/** Ερώτημα σάρωσης παγίων — χωρίς `pageSize`, ώστε το κόψιμο να είναι αδύνατο από τον τύπο. */
+export interface FixedAssetLedgerQuery {
+  readonly scope: FixedAssetLedgerScope;
+}
+
+/**
+ * Αίτημα καταχώρισης της απόσβεσης ΜΙΑΣ χρήσης για ΕΝΑ πάγιο. Το `compute` τρέχει ΜΕΣΑ στη συναλλαγή, πάνω στο
+ * ΦΡΕΣΚΟ έγγραφο του παγίου — ποτέ σε αντίγραφο της σάρωσης που μπορεί να άλλαξε στο μεταξύ.
+ */
+export interface DepreciationPostingRequest {
+  readonly assetId: string;
+  readonly fiscalYear: number;
+  /** `null` = τίποτα προς καταχώριση (π.χ. μηδενική απόσβεση). */
+  readonly compute: (asset: FixedAsset) => DepreciationPosting | null;
+  /** Το ίχνος ελέγχου — γράφεται στην ΙΔΙΑ συναλλαγή με την εγγραφή (το συνθέτει ο audited wrapper). */
+  readonly auditOf?: (record: DepreciationRecord) => readonly AccountingAuditEntry[];
+}
+
+/** Τι γράφεται: η εγγραφή απόσβεσης + η νέα προβολή του παγίου. */
+export interface DepreciationPosting {
+  readonly record: Omit<DepreciationRecord, 'recordId'>;
+  readonly assetProjection: Pick<FixedAsset, 'accumulatedDepreciation' | 'netBookValue' | 'status' | 'fullyDepreciatedDate'>;
+}
+
+/** Αποτέλεσμα καταχώρισης — ιδεμπότητο: η ίδια (πάγιο, χρήση) δεύτερη φορά δίνει `already_posted`. */
+export type DepreciationPostingOutcome =
+  | { readonly kind: 'posted'; readonly record: DepreciationRecord }
+  | { readonly kind: 'already_posted'; readonly record: DepreciationRecord }
+  | { readonly kind: 'nothing_to_post' };
+
+/** Αποτέλεσμα εκτέλεσης αποσβέσεων χρήσης (SAP AFAB / Xero «run depreciation»). */
+export interface DepreciationRunResult {
+  readonly fiscalYear: number;
+  /** Γράφτηκαν ΤΩΡΑ. */
+  readonly posted: readonly DepreciationRecord[];
+  /** Υπήρχαν ήδη από προηγούμενη εκτέλεση — δεν ξαναγράφτηκαν. */
+  readonly alreadyPosted: readonly DepreciationRecord[];
+  /** Σύνολο απόσβεσης της χρήσης (`posted` + `alreadyPosted`) — ίδιο σε κάθε επανεκτέλεση. */
+  readonly totalDepreciation: number;
 }

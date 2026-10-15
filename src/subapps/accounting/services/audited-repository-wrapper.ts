@@ -76,6 +76,7 @@ export function createAuditedRepository(
     getBankAccounts: repo.getBankAccounts.bind(repo),
     getFixedAsset: repo.getFixedAsset.bind(repo),
     listFixedAssets: repo.listFixedAssets.bind(repo),
+    collectFixedAssets: repo.collectFixedAssets.bind(repo),
     getDepreciationRecords: repo.getDepreciationRecords.bind(repo),
     getPartners: repo.getPartners.bind(repo),
     getPartnerEFKAPayments: repo.getPartnerEFKAPayments.bind(repo),
@@ -109,7 +110,6 @@ export function createAuditedRepository(
     createImportBatch: repo.createImportBatch.bind(repo),
     createFiscalPeriods: repo.createFiscalPeriods.bind(repo),
     createFixedAsset: repo.createFixedAsset.bind(repo),
-    createDepreciationRecord: repo.createDepreciationRecord.bind(repo),
     createExpenseDocument: repo.createExpenseDocument.bind(repo),
     createAPYCertificate: repo.createAPYCertificate.bind(repo),
     createCustomCategory: repo.createCustomCategory.bind(repo),
@@ -177,6 +177,21 @@ export function createAuditedRepository(
           `Αντιστοίχιση τραπεζικής κίνησης → ${updates.matchedEntityId ?? 'N/A'}`,
           { matchStatus: updates.matchStatus, matchedEntityId: updates.matchedEntityId ?? null });
       }
+    },
+
+    async postDepreciation(request) {
+      // ADR-ACC-010 §2.1.1 Φ4: the posting and its trace commit in ONE transaction (never one without the other).
+      return repo.postDepreciation({
+        ...request,
+        auditOf: (record) => [
+          ...(request.auditOf?.(record) ?? []),
+          accountingAuditEntryOf({
+            eventType: 'DEPRECIATION_POSTED', entityType: 'fixed_asset', entityId: record.assetId, userId,
+            details: `Απόσβεση χρήσης ${record.fiscalYear}: €${record.annualDepreciation.toFixed(2)}`,
+            metadata: { recordId: record.recordId, fiscalYear: record.fiscalYear, annualDepreciation: record.annualDepreciation },
+          }),
+        ],
+      });
     },
 
     async upsertCustomerBalance(customerId, balance) {

@@ -60,17 +60,23 @@
 
 ### 2.2 Αναλογική Απόσβεση 1ου Έτους
 
-Αν αγοράστηκε μέσα στο έτος, η απόσβεση υπολογίζεται **αναλογικά**:
+Αν αγοράστηκε μέσα στο έτος, η απόσβεση υπολογίζεται **αναλογικά**. Η απόσβεση αρχίζει τον μήνα που
+**ακολουθεί** την έναρξη χρήσης (ΚΦΕ αρ.24 παρ.6 · ΠΟΛ 1073/2015)· ο μήνας της εκποίησης μετρά.
 
 ```
 Αναλογική = (Αξία × Συντελ.) × (μήνες χρήσης / 12)
 
-Παράδειγμα: Laptop 2.000€ αγοράστηκε 1/7/2026
-  Έτος 2026: 2.000 × 20% × (6/12) = 200€
+Παράδειγμα: Laptop 2.000€ σε χρήση 1/7/2026 ⇒ πρώτος μήνας ο Αύγουστος
+  Έτος 2026: 2.000 × 20% × (5/12) = 166,67€
   Έτος 2027: 2.000 × 20% = 400€
   ...
-  Έτος 2031: Υπόλοιπο 200€
+  Έτος 2031: Υπόλοιπο 233,33€
 ```
+
+> **Κώδικας (2026-10-15, ADR-ACC-010 §2.1.1 Φάση 4):** σύμβαση `DEPRECIATION_PERIOD_CONTROL`
+> (`services/config/depreciation-config.ts`, SAP «period control»)· ο υπολογισμός ζει **μόνο** στο
+> `services/engines/depreciation-schedule.ts`. Ως τις 2026-10-15 ο κώδικας μετρούσε και τον μήνα έναρξης (+1 μήνας
+> στην πρώτη χρήση) — η μηχανή δεν εκτελέστηκε ποτέ στην παραγωγή, άρα κανένα καταχωρημένο ποσό δεν επηρεάστηκε.
 
 ### 2.3 Φορολογικοί Συντελεστές (Ν.4172/2013 άρ.24)
 
@@ -83,6 +89,11 @@
 | Η/Υ & Περιφερειακά | 20% | 5 έτη |
 | Λογισμικό (άυλα) | 10% | 10 έτη |
 | Λοιπά πάγια | 10% | 10 έτη |
+
+> **Κώδικας:** η αυθεντία είναι το `ASSET_DEPRECIATION_RATES` (`services/config/depreciation-config.ts`) — 7 κατηγορίες
+> (`buildings` · `machinery` · `vehicles` · `furniture` · `computers` 20% · `measurement_instruments` · `other`)·
+> το «Λογισμικό» του πίνακα **δεν** υπάρχει ως ξεχωριστή κατηγορία. Ο συντελεστής του παγίου **τον αποφασίζει ο
+> διακομιστής** από την κατηγορία (`createFixedAsset`)· ό,τι στείλει ο πελάτης αγνοείται.
 
 ---
 
@@ -567,6 +578,7 @@ Bot: "💻 Ποσό ≥1.500€ — πάγιο στοιχείο.
 | 2026-02-09 | **Phase 2 implemented** — types/assets.ts: AssetCategory (7 types), AssetStatus (4 states), DepreciationRateConfig, FixedAsset (~25 fields), DepreciationRecord, DisposalResult (sale/write_off/donation), CreateFixedAssetInput, FixedAssetFilters. types/interfaces.ts: IDepreciationEngine (calculateAnnual, bookDepreciations, calculateDisposal, forecastDepreciations) | Claude Code |
 | 2026-02-09 | **Phase 3 implemented** — services/config/depreciation-config.ts: `DEPRECIATION_RATES` (7 categories: buildings 4%, machinery 10%, vehicles 16%, furniture 10%, computers 20%, instruments 10%, other 10%), `getDepreciationRate()`, `calculateUsefulLife()`. services/engines/depreciation-engine.ts: `DepreciationEngine implements IDepreciationEngine` — `calculateAnnualDepreciation()` (pro-rata first year, capped at remaining value), `bookDepreciations(fiscalYear)` (fetches active assets, creates records, updates accumulatedDepreciation), `calculateDisposal()` (gain/loss + book value), `forecastDepreciations()` (multi-year projection). Straight-line only per N.4172/2013 | Claude Code |
 | 2026-02-09 | **Phase 4 implemented** — API: `GET/POST /api/accounting/assets`. Hook: `useFixedAssets(filters)`. UI: `AssetsPageContent` (category+status filters + "Add Asset" dialog), `AssetsList` (table: name/category/date/cost/depreciation/netBookValue/status), `AddAssetForm` (dialog: description/category/date/cost/usefulLife/residualValue + auto-set useful life per DEPRECIATION_RATES), `DepreciationSchedule` (card with year-by-year: opening/depreciation/closing values) | Claude Code |
+| 2026-10-15 | **Εκτέλεση αποσβέσεων «όπως οι μεγάλοι» (ADR-ACC-010 §2.1.1 Φάση 4)** — ⚠️ η γραμμή «Phase 3» παραπάνω ανέφερε `services/config/depreciation-config.ts` που **δεν υπήρχε**: οι συντελεστές ζούσαν μόνο στη φόρμα και ο διακομιστής δεχόταν τον συντελεστή του πελάτη. Τώρα: SSoT `depreciation-config.ts` (συντελεστές + `DEPRECIATION_PERIOD_CONTROL`) · καθαρός πίνακας `depreciation-schedule.ts` (υπόλοιπο αρχής από τα στοιχεία του παγίου, όχι από το μεταβλητό πεδίο) · έναρξη τον **επόμενο** μήνα (ΚΦΕ αρ.24 παρ.6) · `bookDepreciations` = πλήρης σάρωση (`collectFixedAssets`), μόνο χρήση που έληξε, `DepreciationRunResult` · ΕΝΑΣ ατομικός, ιδεμπότητος γραφέας `postDepreciation` (ντετερμινιστικό id `depr_` ανά μισθωτή/πάγιο/χρήση, `create` στη συναλλαγή, ίχνος `DEPRECIATION_POSTED` στην ίδια συναλλαγή) · `FixedAsset.lastDepreciatedFiscalYear` · `inactive` εκτός (ΠΟΛ 1073/2015) · εκποιημένο μέσα στη χρήση: ως τον μήνα εκποίησης · `forecastDepreciations` από τον ίδιο πίνακα · +1 δείκτης `(companyId, depreciationStartDate)` | Giorgio + Claude Code |
 
 ---
 

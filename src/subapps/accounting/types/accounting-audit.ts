@@ -35,6 +35,9 @@ export type AccountingAuditEventType =
   | 'BANK_MATCHED'
   | 'BANK_RECONCILED'
   | 'BANK_RECONCILE_UNLOCKED'
+  // ADR-ACC-010 §2.1.1 Φ4: annual depreciation posted for one asset — written in the SAME
+  // transaction as the depreciation record (never a posting without a trace).
+  | 'DEPRECIATION_POSTED'
   // ADR-440: ownership / dividend changes on the company profile
   // (partners / members / shareholders). Material data → audited.
   | 'COMPANY_PROFILE_UPDATED'
@@ -54,7 +57,8 @@ export type AuditEntityType =
   | 'balance'
   | 'period'
   | 'bank_transaction'
-  | 'company_profile';
+  | 'company_profile'
+  | 'fixed_asset';
 
 // ============================================================================
 // AUDIT ENTRY (Q2 — Flat collection + composite indexes)

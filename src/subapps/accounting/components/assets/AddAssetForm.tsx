@@ -30,6 +30,10 @@ import {
 } from '@/components/ui/select';
 import { ASSET_CATEGORIES } from '@/subapps/accounting/types';
 import type { AssetCategory, CreateFixedAssetInput } from '@/subapps/accounting/types';
+import {
+  defaultUsefulLifeYears,
+  depreciationRateFor,
+} from '@/subapps/accounting/services/config/depreciation-config';
 
 // ============================================================================
 // TYPES
@@ -54,16 +58,6 @@ interface FormState {
 // ============================================================================
 // CONSTANTS
 // ============================================================================
-
-const DEPRECIATION_RATES: Record<AssetCategory, number> = {
-  buildings: 4,
-  machinery: 10,
-  vehicles: 16,
-  furniture: 10,
-  computers: 20,
-  measurement_instruments: 10,
-  other: 10,
-};
 
 const INITIAL_FORM_STATE: FormState = {
   description: '',
@@ -95,12 +89,10 @@ export function AddAssetForm({ open, onOpenChange, onSubmit }: AddAssetFormProps
   );
 
   const handleCategoryChange = useCallback((value: AssetCategory) => {
-    const rate = DEPRECIATION_RATES[value];
-    const usefulLife = rate > 0 ? Math.round(100 / rate) : 10;
     setForm((prev) => ({
       ...prev,
       category: value,
-      usefulLifeYears: String(usefulLife),
+      usefulLifeYears: String(defaultUsefulLifeYears(value)),
     }));
     setError(null);
   }, []);
@@ -132,14 +124,13 @@ export function AddAssetForm({ open, onOpenChange, onSubmit }: AddAssetFormProps
         residualValue,
         acquisitionDate: form.acquisitionDate,
         depreciationStartDate: form.acquisitionDate,
-        depreciationRate: DEPRECIATION_RATES[category],
         depreciationMethod: 'straight_line',
         usefulLifeYears,
         purchaseInvoiceNumber: null,
         supplierName: null,
         supplierVatNumber: null,
         notes: form.notes.trim() || null,
-        acquisitionFiscalYear: new Date(form.acquisitionDate).getFullYear(),
+        acquisitionFiscalYear: Number(form.acquisitionDate.substring(0, 4)),
       };
 
       try {
@@ -203,7 +194,7 @@ export function AddAssetForm({ open, onOpenChange, onSubmit }: AddAssetFormProps
               <SelectContent>
                 {ASSET_CATEGORIES.map((cat) => (
                   <SelectItem key={cat} value={cat}>
-                    {t(`assets.categories.${cat}`)} ({DEPRECIATION_RATES[cat]}%)
+                    {t(`assets.categories.${cat}`)} ({depreciationRateFor(cat)}%)
                   </SelectItem>
                 ))}
               </SelectContent>

@@ -4,7 +4,7 @@
  * =============================================================================
  *
  * GET:  List fixed assets with filters (category, status, acquisitionYear)
- * POST: Create a new fixed asset entry
+ * POST: Create a new fixed asset entry — the depreciation rate is decided server-side from the category
  *
  * Auth: withAuth (authenticated users)
  * Rate: standard (60 req/min)
@@ -20,6 +20,7 @@ import { defineRoute, created, badRequest } from '@/lib/api/define-route';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import { ASSET_CATEGORIES, ASSET_STATUSES } from '@/subapps/accounting/types';
 import type { FixedAssetFilters, CreateFixedAssetInput } from '@/subapps/accounting/types';
+import { isDateKey } from '@/lib/calendar/date-key';
 import { MAX_FISCAL_YEAR, MIN_FISCAL_YEAR } from '../_shared/fiscal-year-param';
 import {
   optionalEnumParam,
@@ -64,8 +65,22 @@ export const POST = defineRoute({
       badRequest('description, category, and acquisitionDate are required');
     }
 
+    // Η κατηγορία αποφασίζει τον συντελεστή (SSoT `depreciation-config`) — άγνωστη κατηγορία = κανένας συντελεστής.
+    if (!(ASSET_CATEGORIES as readonly string[]).includes(body.category)) {
+      badRequest('category must be one of ASSET_CATEGORIES');
+    }
+
+    // Ο πίνακας αποσβέσεων μετρά μήνες από αυτές τις ημερομηνίες — άκυρη ημερομηνία = άκυρος υπολογισμός.
+    if (!isDateKey(body.acquisitionDate) || !isDateKey(body.depreciationStartDate)) {
+      badRequest('acquisitionDate and depreciationStartDate must be YYYY-MM-DD');
+    }
+
     if (typeof body.acquisitionCost !== 'number' || body.acquisitionCost <= 0) {
       badRequest('acquisitionCost must be a positive number');
+    }
+
+    if (typeof body.residualValue !== 'number' || body.residualValue < 0 || body.residualValue > body.acquisitionCost) {
+      badRequest('residualValue must be between 0 and acquisitionCost');
     }
 
     const { id } = await repository.createFixedAsset(body);

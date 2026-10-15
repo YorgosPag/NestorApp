@@ -44,7 +44,8 @@ import type {
   CreateFixedAssetInput,
   FixedAssetFilters,
   FixedAsset,
-  DepreciationRecord,
+  FixedAssetLedgerQuery,
+  DepreciationPostingRequest,
 } from '../../types/assets';
 import type { ReceivedExpenseDocument } from '../../types/documents';
 import type { APYCertificate, APYEmailSendRecord } from '../../types/apy-certificate';
@@ -68,6 +69,8 @@ import * as financial from './accounting-repo-financial';
 import * as journalLedger from './accounting-repo-journal-ledger';
 import * as bankLedger from './accounting-repo-bank-ledger';
 import * as invoiceLedger from './accounting-repo-invoice-ledger';
+import * as fixedAssetLedger from './accounting-repo-fixed-asset-ledger';
+import * as depreciation from './accounting-repo-depreciation';
 import * as matchCandidates from './accounting-repo-match-candidates';
 import * as entities from './accounting-repo-entities';
 import * as operations from './accounting-repo-operations';
@@ -211,8 +214,10 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
     operations.updateFixedAsset(this.tenant, assetId, updates);
   listFixedAssets = (filters: FixedAssetFilters, page?: PageRequest) =>
     operations.listFixedAssets(this.tenant, filters, page);
-  createDepreciationRecord = (data: Omit<DepreciationRecord, 'recordId'>) =>
-    operations.createDepreciationRecord(this.tenant, data);
+  collectFixedAssets = (query: FixedAssetLedgerQuery) =>
+    fixedAssetLedger.collectFixedAssets(this.tenant, query);
+  postDepreciation = (request: DepreciationPostingRequest) =>
+    depreciation.postDepreciation(this.tenant, request);
   getDepreciationRecords = (assetId: string, fiscalYear?: number) =>
     operations.getDepreciationRecords(this.tenant, assetId, fiscalYear);
 

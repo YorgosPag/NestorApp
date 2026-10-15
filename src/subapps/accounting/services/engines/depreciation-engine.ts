@@ -1,160 +1,155 @@
 /**
  * @fileoverview Depreciation Engine — Fixed Asset Depreciation Service
- * @description Ετήσιες αποσβέσεις + εκποιήσεις + forecasting
+ * @description Αποσβέσεις χρήσης (πλήρης σάρωση, ιδεμπότητη καταχώριση) + εκποιήσεις + πρόβλεψη
  * @author Claude Code (Anthropic AI) + Giorgos Pagonis
  * @created 2026-02-09
- * @version 1.0.0
+ * @version 2.0.0 — 2026-10-15: ADR-ACC-010 §2.1.1 Φάση 4
  * @see ADR-ACC-007 Fixed Assets & Depreciation
  * @compliance CLAUDE.md Enterprise Standards — zero `any`
+ *
+ * 🔴 Φάση 4 (2026-10-15) — τι άλλαξε και γιατί:
+ *   - διάβαζε τη ΣΕΛΙΔΑ (50 ενεργά) ⇒ τώρα `collectFixedAssets` (όλη η εμβέλεια ή σφάλμα), και όχι μόνο `active`:
+ *     πάγιο που εκποιήθηκε μέσα στη χρήση αποσβένεται ως την εκποίηση·
+ *   - υπόλοιπο αρχής από το μεταβλητό `accumulatedDepreciation` ⇒ τώρα από τον πίνακα αποσβέσεων
+ *     (`depreciation-schedule.ts`): ίδιο πάγιο + ίδια χρήση = ίδιο ποσό, σε όποια σειρά κι όσες φορές·
+ *   - δύο ανεξάρτητες εγγραφές ⇒ τώρα ΕΝΑΣ ατομικός, ιδεμπότητος γραφέας (`repository.postDepreciation`).
  */
 
 import type { IDepreciationEngine, IAccountingRepository } from '../../types/interfaces';
-import type { FixedAsset, DepreciationRecord, DisposalResult } from '../../types/assets';
+import type {
+  FixedAsset,
+  DepreciationPosting,
+  DepreciationPostingOutcome,
+  DepreciationRecord,
+  DepreciationRunResult,
+  DisposalResult,
+} from '../../types/assets';
 import { nowISO } from '@/lib/date-local';
+import { chunkArray } from '@/lib/array-utils';
 import { roundToTwo } from '../../utils/math';
+import { accountingToday } from '../../utils/accounting-day';
+import {
+  depreciationForYear,
+  depreciationScheduleThrough,
+  isFullyDepreciatedAt,
+  type DepreciationYear,
+} from './depreciation-schedule';
 
-// ============================================================================
-// DEPRECIATION ENGINE IMPLEMENTATION
-// ============================================================================
+/** Πόσες καταχωρίσεις (συναλλαγές, μία ανά πάγιο) τρέχουν ταυτόχρονα. */
+const POSTING_CONCURRENCY = 20;
+
+/** Η εκτέλεση αρνήθηκε ΠΡΙΝ γράψει οτιδήποτε. */
+export class DepreciationRunError extends Error {
+  constructor(readonly code: 'FISCAL_YEAR_NOT_ENDED', readonly fiscalYear: number) {
+    super(`Depreciation run refused (${code}) for fiscal year ${fiscalYear}`);
+    this.name = 'DepreciationRunError';
+  }
+}
+
+/**
+ * Συμμετέχει το πάγιο στην εκτέλεση; Το `inactive` (εκτός εκμετάλλευσης) ΟΧΙ — ΠΟΛ 1073/2015: καμία απόσβεση για
+ * όσο είναι εκτός εκμετάλλευσης. ⚠️ Δεν κρατάμε ΔΙΑΣΤΗΜΑΤΑ αδράνειας, άρα η κατάσταση ισχύει για όλη τη χρήση.
+ */
+function participates(asset: FixedAsset): boolean {
+  return asset.status !== 'inactive';
+}
+
+/** Η εγγραφή μιας γραμμής του πίνακα — χωρίς ταυτότητα (την αποφασίζει ο γραφέας). */
+function recordBodyOf(asset: FixedAsset, row: DepreciationYear): Omit<DepreciationRecord, 'recordId'> {
+  return {
+    assetId: asset.assetId,
+    fiscalYear: row.fiscalYear,
+    acquisitionCost: asset.acquisitionCost,
+    openingAccumulatedDepreciation: row.openingAccumulated,
+    annualDepreciation: row.charge,
+    closingAccumulatedDepreciation: row.closingAccumulated,
+    closingNetBookValue: row.closingNetBookValue,
+    appliedRate: asset.depreciationRate,
+    monthsApplied: row.monthsApplied,
+    journalEntryId: null,
+    calculatedAt: nowISO(),
+  };
+}
+
+/** Τι γράφεται για (πάγιο, χρήση) — `null` αν δεν υπάρχει απόσβεση. Καθαρό: τρέχει μέσα στη συναλλαγή. */
+export function depreciationPostingFor(asset: FixedAsset, fiscalYear: number): DepreciationPosting | null {
+  if (!participates(asset)) return null;
+  const row = depreciationForYear(asset, fiscalYear);
+  if (row.charge <= 0) return null;
+  const fully = isFullyDepreciatedAt(asset, row);
+  return {
+    record: recordBodyOf(asset, row),
+    assetProjection: {
+      accumulatedDepreciation: row.closingAccumulated,
+      netBookValue: row.closingNetBookValue,
+      // Μόνο το `active` γίνεται `fully_depreciated` — ένα `disposed` μένει `disposed`.
+      status: fully && asset.status === 'active' ? 'fully_depreciated' : asset.status,
+      fullyDepreciatedDate: fully ? `${fiscalYear}-12-31` : asset.fullyDepreciatedDate,
+    },
+  };
+}
+
+function summarize(fiscalYear: number, outcomes: readonly DepreciationPostingOutcome[]): DepreciationRunResult {
+  const posted: DepreciationRecord[] = [];
+  const alreadyPosted: DepreciationRecord[] = [];
+  for (const outcome of outcomes) {
+    if (outcome.kind === 'posted') posted.push(outcome.record);
+    else if (outcome.kind === 'already_posted') alreadyPosted.push(outcome.record);
+  }
+  const totalDepreciation = roundToTwo(
+    [...posted, ...alreadyPosted].reduce((sum, record) => sum + record.annualDepreciation, 0)
+  );
+  return { fiscalYear, posted, alreadyPosted, totalDepreciation };
+}
 
 /**
  * Depreciation Engine — Υπολογισμός Αποσβέσεων
  *
- * Μέθοδος: Σταθερή (straight line) — η μόνη αποδεκτή από ΚΦΕ.
- * Υπολογισμός: (Αξία κτήσης - Υπολειμματική αξία) × Συντελεστής × (Μήνες/12)
- *
- * Implements IDepreciationEngine interface.
+ * Μέθοδος: Σταθερή (straight line) — η μόνη αποδεκτή από ΚΦΕ. Ο υπολογισμός ζει στο SSoT `depreciation-schedule.ts`.
  */
 export class DepreciationEngine implements IDepreciationEngine {
-  constructor(private readonly repository: IAccountingRepository) {}
+  constructor(
+    private readonly repository: IAccountingRepository,
+    /** Η σημερινή ημέρα λογιστικής (Αθήνα) — ενέσιμη ώστε το «έχει λήξει η χρήση;» να ελέγχεται. */
+    private readonly today: () => string = accountingToday
+  ) {}
 
-  // ── Pure Methods ──────────────────────────────────────────────────────────
-
-  /**
-   * Υπολογισμός ετήσιας απόσβεσης ενός παγίου
-   *
-   * @param asset - Πάγιο στοιχείο
-   * @param fiscalYear - Φορολογικό έτος
-   * @returns DepreciationRecord
-   *
-   * @remarks
-   * - Pro-rata αν το πάγιο αποκτήθηκε μέσα στο έτος
-   * - Δεν υπερβαίνει την αναπόσβεστη αξία (net book value)
-   * - Αγνοεί πάγια που είναι fully_depreciated ή disposed
-   */
+  /** Η απόσβεση μιας χρήσης για ένα πάγιο, από τον πίνακα αποσβέσεων (όχι από μεταβλητά πεδία του παγίου). */
   calculateAnnualDepreciation(asset: FixedAsset, fiscalYear: number): DepreciationRecord {
-    const openingAccumulatedDepreciation = asset.accumulatedDepreciation;
-    const depreciableBase = asset.acquisitionCost - asset.residualValue;
-
-    // Pro-rata: μήνες χρήσης μέσα στο τρέχον φορολογικό έτος
-    const monthsApplied = calculateMonthsInYear(
-      asset.depreciationStartDate,
-      asset.fullyDepreciatedDate,
-      asset.disposalDate,
-      fiscalYear
-    );
-
-    // Ετήσια απόσβεση (αναλογία μηνών)
-    let annualDepreciation = roundToTwo(
-      depreciableBase * (asset.depreciationRate / 100) * (monthsApplied / 12)
-    );
-
-    // Cap: δεν μπορεί να υπερβεί τη remaining αξία
-    const remainingValue = depreciableBase - openingAccumulatedDepreciation;
-    annualDepreciation = Math.min(annualDepreciation, Math.max(0, remainingValue));
-    annualDepreciation = roundToTwo(annualDepreciation);
-
-    const closingAccumulatedDepreciation = roundToTwo(
-      openingAccumulatedDepreciation + annualDepreciation
-    );
-    const closingNetBookValue = roundToTwo(
-      asset.acquisitionCost - closingAccumulatedDepreciation
-    );
-
-    return {
-      recordId: '', // To be set by caller or repository
-      assetId: asset.assetId,
-      fiscalYear,
-      acquisitionCost: asset.acquisitionCost,
-      openingAccumulatedDepreciation,
-      annualDepreciation,
-      closingAccumulatedDepreciation,
-      closingNetBookValue,
-      appliedRate: asset.depreciationRate,
-      monthsApplied,
-      journalEntryId: null,
-      calculatedAt: nowISO(),
-    };
+    return { ...recordBodyOf(asset, depreciationForYear(asset, fiscalYear)), recordId: '' };
   }
 
   /**
-   * Μαζική εκτέλεση αποσβέσεων — τέλος χρήσης
+   * Εκτέλεση αποσβέσεων χρήσης (SAP AFAB / Xero «run depreciation»).
    *
-   * Φέρνει όλα τα ενεργά πάγια, υπολογίζει αποσβέσεις, αποθηκεύει records.
+   * - μόνο για χρήση που ΕΧΕΙ ΛΗΞΕΙ: ετήσια απόσβεση πριν τελειώσει η χρήση θα κατέγραφε μήνες που δεν πέρασαν·
+   * - ΟΛΑ τα πάγια της εμβέλειας (πλήρης σάρωση)· ΜΙΑ ατομική συναλλαγή ανά πάγιο·
+   * - ιδεμπότητη: η επανεκτέλεση ολοκληρώνει μια διακοπείσα εκτέλεση χωρίς να ξαναγράψει ό,τι πέρασε.
    */
-  async bookDepreciations(fiscalYear: number): Promise<DepreciationRecord[]> {
-    // Fetch active assets
-    const assetsResult = await this.repository.listFixedAssets({
-      status: 'active',
-    });
+  async bookDepreciations(fiscalYear: number): Promise<DepreciationRunResult> {
+    if (this.today() <= `${fiscalYear}-12-31`) throw new DepreciationRunError('FISCAL_YEAR_NOT_ENDED', fiscalYear);
 
-    const records: DepreciationRecord[] = [];
+    const assets = await this.repository.collectFixedAssets({ scope: { kind: 'depreciationYear', fiscalYear } });
+    // Προέλεγχος στο αντίγραφο της σάρωσης: αποφεύγει άδειες συναλλαγές. Η ΑΠΟΦΑΣΗ ξαναπαίρνεται μέσα στη συναλλαγή.
+    const candidates = assets.filter((asset) => depreciationPostingFor(asset, fiscalYear) !== null);
 
-    for (const asset of assetsResult.items) {
-      // Αγνόησε πάγια που αγοράστηκαν μετά τη λήξη του φορολογικού έτους
-      if (parseInt(asset.depreciationStartDate.substring(0, 4), 10) > fiscalYear) {
-        continue;
-      }
-
-      const record = this.calculateAnnualDepreciation(asset, fiscalYear);
-
-      // Αγνόησε μηδενικές αποσβέσεις
-      if (record.annualDepreciation <= 0) continue;
-
-      // Αποθήκευση στη βάση
-      const { id } = await this.repository.createDepreciationRecord(record);
-
-      // Ενημέρωση παγίου
-      const newAccumulated = roundToTwo(
-        asset.accumulatedDepreciation + record.annualDepreciation
-      );
-      const newNetBookValue = roundToTwo(asset.acquisitionCost - newAccumulated);
-      const isFullyDepreciated = newNetBookValue <= asset.residualValue;
-
-      await this.repository.updateFixedAsset(asset.assetId, {
-        accumulatedDepreciation: newAccumulated,
-        netBookValue: newNetBookValue,
-        status: isFullyDepreciated ? 'fully_depreciated' : 'active',
-        ...(isFullyDepreciated
-          ? { fullyDepreciatedDate: `${fiscalYear}-12-31` }
-          : {}),
-      });
-
-      records.push({ ...record, recordId: id });
+    const outcomes: DepreciationPostingOutcome[] = [];
+    for (const chunk of chunkArray(candidates, POSTING_CONCURRENCY)) {
+      outcomes.push(...(await Promise.all(chunk.map((asset) => this.repository.postDepreciation({
+        assetId: asset.assetId,
+        fiscalYear,
+        compute: (fresh) => depreciationPostingFor(fresh, fiscalYear),
+      })))));
     }
-
-    return records;
+    return summarize(fiscalYear, outcomes);
   }
 
-  /**
-   * Υπολογισμός αποτελέσματος εκποίησης
-   *
-   * @param asset - Πάγιο στοιχείο
-   * @param salePrice - Τιμή πώλησης (0 = διαγραφή)
-   * @param disposalDate - Ημερομηνία εκποίησης
-   * @returns DisposalResult
-   */
-  calculateDisposal(
-    asset: FixedAsset,
-    salePrice: number,
-    disposalDate: string
-  ): DisposalResult {
+  /** Υπολογισμός αποτελέσματος εκποίησης (0 = διαγραφή). */
+  calculateDisposal(asset: FixedAsset, salePrice: number, disposalDate: string): DisposalResult {
     const netBookValue = asset.netBookValue;
     const gain = roundToTwo(Math.max(0, salePrice - netBookValue));
     const loss = roundToTwo(Math.max(0, netBookValue - salePrice));
-
-    const disposalType: DisposalResult['disposalType'] =
-      salePrice > 0 ? 'sale' : 'write_off';
+    const disposalType: DisposalResult['disposalType'] = salePrice > 0 ? 'sale' : 'write_off';
 
     return {
       assetId: asset.assetId,
@@ -170,91 +165,14 @@ export class DepreciationEngine implements IDepreciationEngine {
   }
 
   /**
-   * Πρόβλεψη μελλοντικών αποσβέσεων (1–5 χρόνια)
-   *
-   * @param asset - Πάγιο στοιχείο (current state)
-   * @param years - Πλήθος ετών πρόβλεψης (max 5)
-   * @returns DepreciationRecord[] (simulated, χωρίς recordId)
+   * Πρόβλεψη αποσβέσεων των επόμενων χρήσεων (έως 5) — από τον ΙΔΙΟ πίνακα με την καταχώριση, ώστε πρόβλεψη και
+   * πραγματικό να μη διαφωνούν ποτέ. Χρήσεις χωρίς απόσβεση (πλήρως αποσβεσμένο / εκποιημένο) παραλείπονται.
    */
   forecastDepreciations(asset: FixedAsset, years: number): DepreciationRecord[] {
-    const maxYears = Math.min(years, 5);
-    const records: DepreciationRecord[] = [];
-
-    // Clone asset state for simulation
-    let simulatedAccumulated = asset.accumulatedDepreciation;
-    const currentYear = new Date().getFullYear();
-
-    for (let i = 0; i < maxYears; i++) {
-      const forecastYear = currentYear + 1 + i;
-      const depreciableBase = asset.acquisitionCost - asset.residualValue;
-      const remainingValue = roundToTwo(depreciableBase - simulatedAccumulated);
-
-      if (remainingValue <= 0) break;
-
-      let annualDepreciation = roundToTwo(
-        depreciableBase * (asset.depreciationRate / 100)
-      );
-      annualDepreciation = Math.min(annualDepreciation, remainingValue);
-      annualDepreciation = roundToTwo(annualDepreciation);
-
-      const closingAccumulated = roundToTwo(simulatedAccumulated + annualDepreciation);
-      const closingNetBookValue = roundToTwo(asset.acquisitionCost - closingAccumulated);
-
-      records.push({
-        recordId: `forecast_${forecastYear}`,
-        assetId: asset.assetId,
-        fiscalYear: forecastYear,
-        acquisitionCost: asset.acquisitionCost,
-        openingAccumulatedDepreciation: simulatedAccumulated,
-        annualDepreciation,
-        closingAccumulatedDepreciation: closingAccumulated,
-        closingNetBookValue,
-        appliedRate: asset.depreciationRate,
-        monthsApplied: 12,
-        journalEntryId: null,
-        calculatedAt: nowISO(),
-      });
-
-      simulatedAccumulated = closingAccumulated;
-    }
-
-    return records;
+    const firstYear = Number(this.today().substring(0, 4)) + 1;
+    const lastYear = firstYear + Math.min(years, 5) - 1;
+    return depreciationScheduleThrough(asset, lastYear)
+      .filter((row) => row.fiscalYear >= firstYear && row.charge > 0)
+      .map((row) => ({ ...recordBodyOf(asset, row), recordId: `forecast_${row.fiscalYear}` }));
   }
 }
-
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
-
-/**
- * Υπολογισμός μηνών που ισχύει η απόσβεση μέσα σε ένα φορολογικό έτος
- */
-function calculateMonthsInYear(
-  startDate: string,
-  fullyDepreciatedDate: string | null,
-  disposalDate: string | null,
-  fiscalYear: number
-): number {
-  const yearStart = `${fiscalYear}-01-01`;
-  const yearEnd = `${fiscalYear}-12-31`;
-
-  // Effective start = max(startDate, yearStart)
-  const effectiveStart = startDate > yearStart ? startDate : yearStart;
-
-  // Effective end = min(fullyDepreciatedDate, disposalDate, yearEnd)
-  let effectiveEnd = yearEnd;
-  if (fullyDepreciatedDate && fullyDepreciatedDate < effectiveEnd) {
-    effectiveEnd = fullyDepreciatedDate;
-  }
-  if (disposalDate && disposalDate < effectiveEnd) {
-    effectiveEnd = disposalDate;
-  }
-
-  if (effectiveStart > effectiveEnd) return 0;
-
-  const startMonth = parseInt(effectiveStart.substring(5, 7), 10);
-  const endMonth = parseInt(effectiveEnd.substring(5, 7), 10);
-
-  return endMonth - startMonth + 1;
-}
-

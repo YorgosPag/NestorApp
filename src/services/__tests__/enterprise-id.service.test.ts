@@ -299,6 +299,9 @@ describe('EnterpriseIdService', () => {
       // ADR-901 §14.8 — ΕΝΑ σήμα ανά όψη: ο listener του client ΥΠΟΛΟΓΙΖΕΙ το id (χωρίς ερώτημα)· τυχαίο id =
       // ο γραφέας και ο listener σε δύο διαφορετικά έγγραφα, δηλαδή καμία ζωντανή ενημέρωση.
       'generateDeterministicConveyanceViewSignalId',
+      // ADR-ACC-010 §2.1.1 Φ4 — ΜΙΑ απόσβεση ανά (μισθωτής, πάγιο, χρήση): η ταυτότητα ΕΙΝΑΙ η ιδεμποτία της
+      // εκτέλεσης αποσβέσεων. Ο τυχαίος `generateDepreciationId` ΚΑΤΑΡΓΗΘΗΚΕ — τυχαίο id = διπλή απόσβεση.
+      'generateDeterministicDepreciationRecordId',
     ];
 
     const WITH_RANDOM_SIBLING = DETERMINISTIC_GENERATORS.filter(
@@ -413,6 +416,9 @@ describe('EnterpriseIdService', () => {
       generateDeterministicAreaMarketSnapshotId: 'amks_a3465a29-77be-4408-8a03-69ee02783a05',
       generateDeterministicAreaMarketSeriesId: 'amsr_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
       generateDeterministicAreaMarketMapId: 'ammp_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
+      // ADR-ACC-010 §2.1.1 Φ4 — τρεις παράμετροι, ένα όρισμα ⇒ σπόρος `'anchor-seed:undefined:undefined'` (ίδιο uuid
+      //    με το `lvsh`). Καταγεγραμμένο από τη μηχανή `deterministicV4Uuid`, 2026-10-15.
+      generateDeterministicDepreciationRecordId: 'depr_e31c49a5-a538-4f0c-8e0c-016178fda0f3',
     };
 
     // Ένας ΝΕΟΣ γεννήτορας δεν μπορεί να μπει σιωπηλά: οφείλει να δηλώσει το

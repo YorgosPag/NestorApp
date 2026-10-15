@@ -64,7 +64,11 @@ import type {
   FixedAsset,
   CreateFixedAssetInput,
   FixedAssetFilters,
+  FixedAssetLedgerQuery,
   DepreciationRecord,
+  DepreciationPostingOutcome,
+  DepreciationPostingRequest,
+  DepreciationRunResult,
   DisposalResult,
 } from './assets';
 import type {
@@ -198,7 +202,13 @@ export interface IAccountingRepository {
   updateFixedAsset(assetId: string, updates: Partial<FixedAsset>): Promise<void>;
   /** ΣΕΛΙΔΑ για την οθόνη. ⚠️ ΟΧΙ για υπολογισμούς (ADR-ACC-010 §2.1.1). */
   listFixedAssets(filters: FixedAssetFilters, page?: PageRequest): Promise<PaginatedResult<FixedAsset>>;
-  createDepreciationRecord(data: Omit<DepreciationRecord, 'recordId'>): Promise<{ id: string }>;
+  /** ΟΛΑ τα πάγια μιας εμβέλειας, για υπολογισμό αποσβέσεων — πετά, ποτέ μερικό (§2.1.1 Φάση 4). */
+  collectFixedAssets(query: FixedAssetLedgerQuery): Promise<FixedAsset[]>;
+  /**
+   * Ο ΕΝΑΣ γραφέας απόσβεσης: εγγραφή (πάγιο, χρήση) + προβολή παγίου + ίχνος, ατομικά· ιδεμπότητος από
+   * ντετερμινιστικό id (§2.1.1 Φάση 4). Το `compute` τρέχει μέσα στη συναλλαγή, πάνω στο φρέσκο πάγιο.
+   */
+  postDepreciation(request: DepreciationPostingRequest): Promise<DepreciationPostingOutcome>;
   getDepreciationRecords(assetId: string, fiscalYear?: number): Promise<DepreciationRecord[]>;
 
   // ── Partners (ADR-ACC-012 OE) — arrays read from profile SSoT (ADR-440) ──
@@ -356,11 +366,14 @@ export interface ITaxEngine {
  * Υπολογισμοί ετήσιων αποσβέσεων + εκποιήσεις.
  */
 export interface IDepreciationEngine {
-  /** Υπολογισμός ετήσιας απόσβεσης ενός παγίου */
+  /** Υπολογισμός ετήσιας απόσβεσης ενός παγίου — από τον πίνακα αποσβέσεων (στοιχεία του παγίου, όχι μεταβλητά πεδία) */
   calculateAnnualDepreciation(asset: FixedAsset, fiscalYear: number): DepreciationRecord;
 
-  /** Μαζική εκτέλεση αποσβέσεων (τέλος χρήσης) */
-  bookDepreciations(fiscalYear: number): Promise<DepreciationRecord[]>;
+  /**
+   * Εκτέλεση αποσβέσεων χρήσης που ΕΧΕΙ ΛΗΞΕΙ — όλα τα πάγια (πλήρης σάρωση), ιδεμπότητα: η επανεκτέλεση
+   * ολοκληρώνει όσα έμειναν και δεν ξαναγράφει όσα πέρασαν (ADR-ACC-010 §2.1.1 Φάση 4).
+   */
+  bookDepreciations(fiscalYear: number): Promise<DepreciationRunResult>;
 
   /** Υπολογισμός αποτελέσματος εκποίησης */
   calculateDisposal(asset: FixedAsset, salePrice: number, disposalDate: string): DisposalResult;

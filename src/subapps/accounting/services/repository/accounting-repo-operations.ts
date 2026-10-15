@@ -14,7 +14,6 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import {
   generateBankTransactionId,
   generateFixedAssetId,
-  generateDepreciationId,
   generateImportBatchId,
 } from '@/services/enterprise-id.service';
 import { FIRST_PAGE, type PageRequest, type PaginatedResult } from '@/lib/pagination';
@@ -32,6 +31,8 @@ import type {
   DepreciationRecord,
 } from '../../types/assets';
 import type { TenantContext } from '../../types/common';
+
+import { depreciationRateFor } from '../config/depreciation-config';
 
 import { sanitizeForFirestore, isoNow } from './firestore-helpers';
 import { readAccountingListPage } from './accounting-repo-list';
@@ -139,10 +140,13 @@ export async function createFixedAsset(
     assetId: id,
     companyId: tenant.companyId,
     createdBy: tenant.userId,
+    // Ο συντελεστής τον αποφασίζει ο διακομιστής από την κατηγορία — ποτέ ό,τι στείλει ο πελάτης (ADR-ACC-010 §2.1.1 Φ4).
+    depreciationRate: depreciationRateFor(data.category),
     accumulatedDepreciation: 0,
     netBookValue: data.acquisitionCost - data.residualValue,
     fullyDepreciatedDate: null,
     disposalDate: null,
+    lastDepreciatedFiscalYear: null,
     createdAt: now,
     updatedAt: now,
   };
@@ -186,25 +190,6 @@ export function listFixedAssets(
   page: PageRequest = FIRST_PAGE
 ): Promise<PaginatedResult<FixedAsset>> {
   return readAccountingListPage(tenant, FIXED_ASSET_LIST, filters, page, (data) => data as FixedAsset);
-}
-
-export async function createDepreciationRecord(
-  tenant: TenantContext,
-  data: Omit<DepreciationRecord, 'recordId'>
-): Promise<{ id: string }> {
-  const id = generateDepreciationId();
-  const doc = sanitizeForFirestore({
-    ...data,
-    companyId: tenant.companyId,
-    createdBy: tenant.userId,
-    recordId: id,
-  } as unknown as Record<string, unknown>);
-
-  await safeFirestoreOperation(async (db) => {
-    await db.collection(COLLECTIONS.ACCOUNTING_DEPRECIATION_RECORDS).doc(id).set(doc);
-  }, undefined);
-
-  return { id };
 }
 
 export async function getDepreciationRecords(
