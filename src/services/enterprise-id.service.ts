@@ -56,7 +56,7 @@ export {
   generateDeterministicDepreciationRecordId, generateDeterministicDepreciationJournalEntryId, generateEfkaPaymentId, generateImportBatchId,
   generateMatchGroupId, generateMatchingRuleId, generateExpenseDocId,
   generateApyCertificateId, generateServicePresetId, generateCustomCategoryId, generateCustomerBalanceId,
-  generateFiscalPeriodId, generateAccountingAuditLogId, generateFeedbackId,
+  generateDeterministicFiscalPeriodId, generateAccountingAuditLogId, generateFeedbackId,
   generatePipelineAuditId, generateEntityAuditId, generateContractId, generateConveyanceCaseId, generateEngagementId, generateEngagementInvitationId,
   generateConveyanceContributionId,
   generateDeterministicConveyanceDocumentRequestId,

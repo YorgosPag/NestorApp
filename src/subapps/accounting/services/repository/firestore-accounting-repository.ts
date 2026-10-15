@@ -54,7 +54,7 @@ import type {
   UpdateCustomCategoryInput,
 } from '../../types/custom-category';
 import type { CustomerBalance, InvoiceLedgerQuery } from '../../types/customer-balance';
-import type { FiscalPeriod } from '../../types/fiscal-period';
+import type { FiscalPeriodDraft, FiscalPeriodTransitionRequest } from '../../types/fiscal-period';
 import type { AccountingAuditEntry, AuditEntryFilters } from '../../types/accounting-audit';
 import type { MatchingConfig } from '../../types/matching-config';
 
@@ -76,6 +76,7 @@ import * as entities from './accounting-repo-entities';
 import * as operations from './accounting-repo-operations';
 import * as documents from './accounting-repo-documents';
 import * as balances from './accounting-repo-balances';
+import * as fiscalPeriods from './accounting-repo-fiscal-periods';
 import * as audit from './accounting-repo-audit';
 import * as config from './accounting-repo-config';
 import * as companySetup from './accounting-repo-company-setup';
@@ -265,15 +266,15 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
   listCustomerBalances = () =>
     balances.listCustomerBalances(this.tenant);
 
-  // ── Balances: Fiscal Periods (Phase 1b) ──────────────────────────────
+  // ── Fiscal Periods ανά μισθωτή (ADR-ACC-010 §2.1.1 Φ6) ─────────────────
   getFiscalPeriod = (periodId: string) =>
-    balances.getFiscalPeriod(this.tenant, periodId);
+    fiscalPeriods.getFiscalPeriod(this.tenant, periodId);
   listFiscalPeriods = (fiscalYear: number) =>
-    balances.listFiscalPeriods(this.tenant, fiscalYear);
-  updateFiscalPeriod = (periodId: string, updates: Partial<FiscalPeriod>) =>
-    balances.updateFiscalPeriod(this.tenant, periodId, updates);
-  createFiscalPeriods = (periods: FiscalPeriod[]) =>
-    balances.createFiscalPeriods(this.tenant, periods);
+    fiscalPeriods.listFiscalPeriods(this.tenant, fiscalYear);
+  transitionFiscalPeriod = (periodId: string, request: FiscalPeriodTransitionRequest) =>
+    fiscalPeriods.transitionFiscalPeriod(this.tenant, periodId, request);
+  createFiscalPeriods = (fiscalYear: number, periods: readonly FiscalPeriodDraft[]) =>
+    fiscalPeriods.createFiscalPeriods(this.tenant, fiscalYear, periods);
 
   // ── Audit Log (Phase 1c — immutable: create + list ONLY) ──────────────
   createAuditEntry = (entry: AccountingAuditEntry) =>

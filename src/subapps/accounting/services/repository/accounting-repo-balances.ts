@@ -1,6 +1,6 @@
 /**
  * @fileoverview Accounting Repository — Balances & Fiscal Periods Domain
- * @description Standalone functions for customer balances and fiscal period CRUD
+ * @description Standalone functions for customer balances (περίοδοι: `accounting-repo-fiscal-periods.ts`, ADR-ACC-010 §2.1.1 Φ6)
  * @author Claude Code (Anthropic AI) + Γιώργος Παγώνης
  * @created 2026-03-29
  * @see DECISIONS-PHASE-1b.md Q1-Q8
@@ -11,7 +11,6 @@ import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 import type { CustomerBalance } from '../../types/customer-balance';
-import type { FiscalPeriod } from '../../types/fiscal-period';
 import type { TenantContext } from '../../types/common';
 
 import { sanitizeForFirestore, isoNow } from './firestore-helpers';
@@ -70,71 +69,4 @@ export async function listCustomerBalances(tenant: TenantContext): Promise<Custo
       .get();
     return snap.docs.map((d) => d.data() as CustomerBalance);
   });
-}
-
-// ============================================================================
-// FISCAL PERIODS
-// ============================================================================
-
-export async function getFiscalPeriod(
-  tenant: TenantContext,
-  periodId: string
-): Promise<FiscalPeriod | null> {
-  return safeFirestoreOperation(async (db) => {
-    const snap = await db
-      .collection(COLLECTIONS.ACCOUNTING_FISCAL_PERIODS)
-      .doc(periodId)
-      .get();
-    if (!snap.exists) return null;
-    return snap.data() as FiscalPeriod;
-  }, null);
-}
-
-export async function listFiscalPeriods(
-  tenant: TenantContext,
-  fiscalYear: number
-): Promise<FiscalPeriod[]> {
-  return safeFirestoreOperation(async (db) => {
-    const snap = await db
-      .collection(COLLECTIONS.ACCOUNTING_FISCAL_PERIODS)
-      .where('companyId', '==', tenant.companyId)
-      .where('fiscalYear', '==', fiscalYear)
-      .orderBy('periodNumber', 'asc')
-      .get();
-    return snap.docs.map((d) => d.data() as FiscalPeriod);
-  }, []);
-}
-
-export async function updateFiscalPeriod(
-  tenant: TenantContext,
-  periodId: string,
-  updates: Partial<FiscalPeriod>
-): Promise<void> {
-  await safeFirestoreOperation(async (db) => {
-    await db
-      .collection(COLLECTIONS.ACCOUNTING_FISCAL_PERIODS)
-      .doc(periodId)
-      .update(
-        sanitizeForFirestore({ ...updates, updatedAt: isoNow() } as Record<string, unknown>)
-      );
-  }, undefined);
-}
-
-export async function createFiscalPeriods(
-  tenant: TenantContext,
-  periods: FiscalPeriod[]
-): Promise<void> {
-  await safeFirestoreOperation(async (db) => {
-    const batch = db.batch();
-    for (const period of periods) {
-      const ref = db
-        .collection(COLLECTIONS.ACCOUNTING_FISCAL_PERIODS)
-        .doc(period.periodId);
-      batch.set(
-        ref,
-        sanitizeForFirestore(period as unknown as Record<string, unknown>)
-      );
-    }
-    await batch.commit();
-  }, undefined);
 }

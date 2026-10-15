@@ -287,7 +287,8 @@ export class EnterpriseIdService extends CompositeKeyIdGenerators {
   generateServicePresetId(): string { return this.generateId(P.SERVICE_PRESET).id; }
   generateCustomCategoryId(): string { return this.generateId(P.CUSTOM_CATEGORY).id; }
   generateCustomerBalanceId(): string { return this.generateId(P.CUSTOMER_BALANCE).id; }
-  generateFiscalPeriodId(): string { return this.generateId(P.FISCAL_PERIOD).id; }
+  /** ADR-ACC-010 §2.1.1 Φ6 — Η ΜΙΑ περίοδος (μισθωτής, κλειδί `YYYY-MM`): ντετερμινιστικό ⇒ κλείσιμο/κλείδωμα ανά μισθωτή (SAP OB52 ανά company code). */
+  generateDeterministicFiscalPeriodId(companyId: string, periodKey: string): string { return this.mintDeterministicV4Id(P.FISCAL_PERIOD, `${companyId}:${periodKey}`); }
   generateAccountingAuditLogId(): string { return this.generateId(P.ACCOUNTING_AUDIT_LOG).id; }
   generateFixedAssetId(): string { return this.generateId(P.FIXED_ASSET).id; }
   /** ADR-ACC-010 §2.1.1 Φ4 — Η ΜΙΑ απόσβεση (μισθωτής, πάγιο, χρήση): ντετερμινιστικό ⇒ η επανεκτέλεση δεν διπλασιάζει. */

@@ -100,7 +100,7 @@ import type {
   UpdateCustomCategoryInput,
 } from './custom-category';
 import type { CustomerBalance, InvoiceLedgerQuery } from './customer-balance';
-import type { FiscalPeriod } from './fiscal-period';
+import type { FiscalPeriod, FiscalPeriodDraft, FiscalPeriodTransitionRequest } from './fiscal-period';
 import type { AccountingAuditEntry, AuditEntryFilters } from './accounting-audit';
 
 // ============================================================================
@@ -262,10 +262,13 @@ export interface IAccountingRepository {
   listCustomerBalances(): Promise<CustomerBalance[]>;
 
   // ── Fiscal Periods (Phase 1b — Q5-Q8) ───────────────────────────────────
+  // ΑΝΑ ΜΙΣΘΩΤΗ (ADR-ACC-010 §2.1.1 Φ6): `periodId` = κλειδί `YYYY-MM` μέσα στον μισθωτή, όχι id εγγράφου.
   getFiscalPeriod(periodId: string): Promise<FiscalPeriod | null>;
   listFiscalPeriods(fiscalYear: number): Promise<FiscalPeriod[]>;
-  updateFiscalPeriod(periodId: string, updates: Partial<FiscalPeriod>): Promise<void>;
-  createFiscalPeriods(periods: FiscalPeriod[]): Promise<void>;
+  /** Μετάβαση κατάστασης — απόφαση + εγγραφή + ίχνος `PERIOD_*` σε ΜΙΑ συναλλαγή. */
+  transitionFiscalPeriod(periodId: string, request: FiscalPeriodTransitionRequest): Promise<FiscalPeriod>;
+  /** Όλες ή καμία — υπάρχουσα χρήση ⇒ `FiscalYearExistsError`, ποτέ αντικατάσταση. */
+  createFiscalPeriods(fiscalYear: number, periods: readonly FiscalPeriodDraft[]): Promise<void>;
 
   // ── Audit Log (Phase 1c — Q1-Q3, immutable: create + list ONLY) ────────
   createAuditEntry(entry: AccountingAuditEntry): Promise<void>;

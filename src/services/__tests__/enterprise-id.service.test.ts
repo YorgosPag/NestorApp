@@ -304,6 +304,9 @@ describe('EnterpriseIdService', () => {
       'generateDeterministicDepreciationRecordId',
       // ADR-ACC-010 §2.1.1 Φ5 — η εγγραφή Ε-Ε μιας αναθεώρησης απόσβεσης: τυχαίο id = διπλό έξοδο στην επανεκτέλεση.
       'generateDeterministicDepreciationJournalEntryId',
+      // ADR-ACC-010 §2.1.1 Φ6 — ΜΙΑ περίοδος ανά (μισθωτής, κλειδί): η ταυτότητα ΕΙΝΑΙ η απομόνωση. Ο τυχαίος
+      // `generateFiscalPeriodId` (χωρίς καλούντα) ΚΑΤΑΡΓΗΘΗΚΕ — τυχαίο id = δεύτερη «2026-12» που κανείς δεν κλειδώνει.
+      'generateDeterministicFiscalPeriodId',
     ];
 
     const WITH_RANDOM_SIBLING = DETERMINISTIC_GENERATORS.filter(
@@ -423,6 +426,8 @@ describe('EnterpriseIdService', () => {
       generateDeterministicDepreciationRecordId: 'depr_e31c49a5-a538-4f0c-8e0c-016178fda0f3',
       // ADR-ACC-010 §2.1.1 Φ5 — δύο παράμετροι, ένα όρισμα ⇒ σπόρος `'anchor-seed:undefined'`.
       generateDeterministicDepreciationJournalEntryId: 'je_aa044400-10b9-4583-865f-97901fb1d075',
+      // ADR-ACC-010 §2.1.1 Φ6 — δύο παράμετροι, ένα όρισμα ⇒ σπόρος `'anchor-seed:undefined'` (ίδιο uuid με το `je_`).
+      generateDeterministicFiscalPeriodId: 'fp_aa044400-10b9-4583-865f-97901fb1d075',
     };
 
     // Ένας ΝΕΟΣ γεννήτορας δεν μπορεί να μπει σιωπηλά: οφείλει να δηλώσει το

@@ -30,10 +30,11 @@ export type FiscalPeriodStatus = 'OPEN' | 'CLOSED' | 'LOCKED';
  * 12 μηνιαίες + 1 adjustment period (Period 13).
  * Period 13 μοιράζεται ημερομηνίες Δεκεμβρίου (manual assignment).
  *
- * Firestore path: `accounting_fiscal_periods/{periodId}`
+ * Firestore path: `accounting_fiscal_periods/{generateDeterministicFiscalPeriodId(companyId, periodId)}` — ΜΙΑ
+ * περίοδος ανά (μισθωτής, κλειδί), όπως οι posting periods του SAP ανά company code (ADR-ACC-010 §2.1.1 Φάση 6).
  */
 export interface FiscalPeriod {
-  /** Μοναδικό ID (format: '2026-01', '2026-13') */
+  /** Το κλειδί της περιόδου ΜΕΣΑ στον μισθωτή ('2026-01', '2026-13') — ΟΧΙ το id του εγγράφου. */
   periodId: string;
   /** Φορολογικό έτος */
   fiscalYear: number;
@@ -61,8 +62,8 @@ export interface FiscalPeriod {
   lockedBy: string | null;
 
   // — Tenant Isolation (Q3/Q7) —
-  /** Company ID for tenant isolation */
-  companyId?: string;
+  /** Ο μισθωτής — το γράφει ΜΟΝΟ ο γραφέας (`createFiscalPeriods`), από το `TenantContext`. */
+  companyId: string;
 
   // — Reopen audit trail (CLOSED → OPEN only) —
   /** Πότε ξανάνοιξε τελευταία φορά (ISO 8601) */
@@ -78,6 +79,36 @@ export interface FiscalPeriod {
   /** Timestamp τελευταίας ενημέρωσης (ISO 8601) */
   updatedAt: string;
 }
+
+/** Περίοδος πριν γραφτεί — τον μισθωτή τον βάζει ο γραφέας, ποτέ ο καλών. */
+export type FiscalPeriodDraft = Omit<FiscalPeriod, 'companyId'>;
+
+// ============================================================================
+// STATE TRANSITIONS (Q5/Q7 — η απόφαση τρέχει ΜΕΣΑ στη συναλλαγή)
+// ============================================================================
+
+/** Τι ζητά ο χρήστης: OPEN→CLOSED · CLOSED→LOCKED · CLOSED→OPEN. */
+export type FiscalPeriodAction = 'close' | 'lock' | 'reopen';
+
+/** Το γεγονός ίχνους κάθε επιτρεπτής μετάβασης. */
+export type FiscalPeriodTransitionEvent = 'PERIOD_CLOSED' | 'PERIOD_LOCKED' | 'PERIOD_REOPENED';
+
+/** Ένα αίτημα μετάβασης — `reason` υποχρεωτικό μόνο στο `reopen` (το επιβάλλει το route). */
+export interface FiscalPeriodTransitionRequest {
+  readonly action: FiscalPeriodAction;
+  readonly userId: string;
+  readonly reason: string | null;
+}
+
+/** Η απόφαση πάνω στη ΦΡΕΣΚΙΑ περίοδο: εφαρμογή (με γεγονός ίχνους) ή άρνηση. */
+export type FiscalPeriodTransitionDecision =
+  | {
+      readonly kind: 'apply';
+      readonly to: FiscalPeriodStatus;
+      readonly updates: Partial<FiscalPeriod>;
+      readonly event: FiscalPeriodTransitionEvent;
+    }
+  | { readonly kind: 'refused' };
 
 // ============================================================================
 // YEAR-END CHECKLIST (Q8 — Entersoft pattern)

@@ -133,7 +133,8 @@ export const generateApyCertificateId = () => enterpriseIdService.generateApyCer
 export const generateServicePresetId = () => enterpriseIdService.generateServicePresetId();
 export const generateCustomCategoryId = () => enterpriseIdService.generateCustomCategoryId();
 export const generateCustomerBalanceId = () => enterpriseIdService.generateCustomerBalanceId();
-export const generateFiscalPeriodId = () => enterpriseIdService.generateFiscalPeriodId();
+export const generateDeterministicFiscalPeriodId = (companyId: string, periodKey: string) =>
+  enterpriseIdService.generateDeterministicFiscalPeriodId(companyId, periodKey);
 export const generateAccountingAuditLogId = () => enterpriseIdService.generateAccountingAuditLogId();
 
 // AI Pipeline & Audit

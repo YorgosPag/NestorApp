@@ -14,3 +14,20 @@ import { athensClockAt } from '@/lib/calendar/weekly-hours';
 export function accountingToday(now: Date = new Date()): string {
   return athensClockAt(now).dateKey;
 }
+
+const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Η λογιστική ημέρα (`YYYY-MM-DD`) μιας ημερομηνίας εγγραφής — ή `null` αν δεν είναι πραγματική ημερομηνία.
+ * Σκέτη ημέρα ⇒ αυτούσια (ΚΑΜΙΑ μετατροπή ζώνης: το `new Date('2026-12-01').getMonth()` δίνει Νοέμβριο σε κάθε
+ * ζώνη δυτικά του UTC)· στιγμή με ώρα ⇒ η ημέρα της ΑΘΗΝΑΣ (`…T23:30:00Z` = 1η του επόμενου μήνα στην Ελλάδα).
+ * Το `2026-02-30` / `2026-13-01` απορρίπτεται — αλλιώς ο «μήνας 13» θα έπεφτε στην περίοδο κλεισίματος.
+ */
+export function accountingDayOf(value: string): string | null {
+  if (DATE_KEY.test(value)) {
+    const probe = new Date(`${value}T00:00:00Z`);
+    return !Number.isNaN(probe.getTime()) && probe.toISOString().slice(0, 10) === value ? value : null;
+  }
+  const instant = new Date(value);
+  return Number.isNaN(instant.getTime()) ? null : accountingToday(instant);
+}
