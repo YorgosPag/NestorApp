@@ -55,6 +55,7 @@ import {
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { AUTH_ROUTES } from '@/lib/routes';
 import { APP_ROUTES } from '@/lib/routes/appRoutes';
+import { PROPERTIES_SCREEN_PATH } from '@/lib/properties/legacy-spaces-address';
 import { ADMIN_ONLY, type CatalogEntry } from './catalog-types';
 
 /** Ένα κλειδί για κάθε «Επισκόπηση» ομάδας (Υ15). */
@@ -63,7 +64,9 @@ const OVERVIEW = 'menu.overview';
 export const MAIN_CATALOG = [
   // «Πίνακας Ελέγχου» — το ορατό κείμενο που έδινε ήδη η αλυσίδα συμπερασμού στο `/dashboard`.
   { kind: 'link', navLabelKey: 'crm.dashboard', icon: Home, href: AUTH_ROUTES.home },
-  { kind: 'link', navLabelKey: 'pages.properties', icon: Library, href: '/properties' },
+  // ADR-840 Σ3 — η ΜΙΑ οθόνη ακινήτων (πλέγμα · λίστα · κάτοψη). Η διαδρομή είναι σταθερά: τη ζητά και η
+  // προειδοποιητική κουκκίδα του sidebar (`app-sidebar.tsx`) — δύο γραμμένα literal θα απέκλιναν σιωπηλά.
+  { kind: 'link', navLabelKey: 'pages.properties', icon: Library, href: PROPERTIES_SCREEN_PATH },
   { kind: 'link', navLabelKey: 'pages.contacts', icon: Users, href: '/contacts' },
   { kind: 'link', navLabelKey: 'sidebar.mandates', icon: FileSignature, href: '/listings/mandates' },
   { kind: 'link', navLabelKey: 'pages.projects', icon: Briefcase, href: '/projects' },
@@ -81,7 +84,8 @@ export const MAIN_CATALOG = [
     icon: Layout,
     items: [
       { kind: 'link', navLabelKey: OVERVIEW, icon: Layout, href: '/spaces' },
-      { kind: 'link', navLabelKey: 'sidebar.properties', icon: NAVIGATION_ENTITIES.property.icon, href: '/spaces/properties' },
+      // ⛔ ADR-840 Σ3 — ΟΧΙ «Ακίνητα» εδώ: το `/spaces/properties` έγινε ανακατεύθυνση στην ΙΔΙΑ οθόνη με το κορυφαίο
+      //    «Ευρετήριο Ακινήτων». Δεύτερη καταχώριση = δύο είσοδοι, αμφίσημη ενεργή κατάσταση.
       { kind: 'link', navLabelKey: 'sidebar.storage', icon: NAVIGATION_ENTITIES.storage.icon, href: '/spaces/storage' },
       { kind: 'link', navLabelKey: 'sidebar.parking', icon: NAVIGATION_ENTITIES.parking.icon, href: '/spaces/parking' },
       { kind: 'link', navLabelKey: 'sidebar.commonAreas', icon: Users, href: '/spaces/common' },

@@ -21,6 +21,8 @@ import { useSidebarState } from "@/hooks/useSidebarState"
 import { useBuildingsNoUnits } from "@/contexts/BuildingsNoUnitsContext"
 import { useTranslation } from "@/i18n/hooks/useTranslation"
 import '@/lib/design-system';
+import { PROPERTIES_SCREEN_PATH } from "@/lib/properties/legacy-spaces-address"
+import type { MenuLink } from "@/types/sidebar"
 
 export function AppSidebar() {
     // 🔴 ADR-744 — ΟΧΙ `useTranslationLazy`. Εκείνος αρχικοποιεί την ετοιμότητά του σε
@@ -48,17 +50,14 @@ export function AppSidebar() {
     const mainMenuItems = React.useMemo(
         () => {
             if (!hasBuildingsWithNoUnits) return jobFilteredMainItems;
-            // ADR-871 §10.6 — η κουκκίδα ανήκει στον ΣΥΝΔΕΣΜΟ «Ακίνητα» των Χώρων· η ομάδα
-            // τη δείχνει μόνη της όταν κάποιο παιδί της την έχει.
+            // ADR-871 §10.6 · ADR-840 Σ3 — η κουκκίδα ανήκει στον ΣΥΝΔΕΣΜΟ της οθόνης ακινήτων, όπου κι αν
+            // κάθεται (κορυφή ή μέσα σε ομάδα — η ομάδα τη δείχνει μόνη της όταν κάποιο παιδί την έχει).
+            // 🔑 Σύγκριση με τη ΣΤΑΘΕΡΑ της διαδρομής, όχι με literal: όταν η οθόνη μετακόμισε από το
+            //    `/spaces/properties`, ένα γραμμένο literal εδώ θα έσβηνε την κουκκίδα ΣΙΩΠΗΛΑ.
+            const flag = (link: MenuLink): MenuLink =>
+                link.href === PROPERTIES_SCREEN_PATH ? { ...link, warningDot: true } : link;
             return jobFilteredMainItems.map(item =>
-                item.kind === 'group'
-                    ? {
-                        ...item,
-                        items: item.items.map(link =>
-                            link.href === '/spaces/properties' ? { ...link, warningDot: true } : link
-                        ),
-                    }
-                    : item
+                item.kind === 'group' ? { ...item, items: item.items.map(flag) } : flag(item)
             );
         },
         [jobFilteredMainItems, hasBuildingsWithNoUnits]

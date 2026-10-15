@@ -230,7 +230,8 @@ export function ListLayout({
         <Card className="flex-1 flex flex-col min-h-0">
           {/* 🏢 ENTERPRISE: 8px padding from centralized tokens */}
           <CardHeader className={`${spacing.padding.sm} shrink-0`}>
-            <CardTitle className="text-base">{t('viewer.availableProperties')}</CardTitle>
+            {/* ADR-840 Σ3 — «Λίστα Ακινήτων», όχι «Διαθέσιμα»: ο πληθυσμός είναι πλέον ΟΛΟ το απόθεμα (Δ1). */}
+            <CardTitle className="text-base">{t('viewer.propertyList')}</CardTitle>
           </CardHeader>
           {/* 🏢 ENTERPRISE: No padding - list items handle their own spacing */}
           <CardContent className={`flex-1 ${spacing.padding.none} overflow-hidden`}>

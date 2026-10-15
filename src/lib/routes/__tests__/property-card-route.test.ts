@@ -158,9 +158,9 @@ describe('ADR-777 §8.30 — η καρτέλα ακινήτου έχει διε�
     // Δύο **διαφορετικά** ερωτήματα, δύο ονομασμένες απαντήσεις. Το ελάττωμα
     // γεννήθηκε ακριβώς επειδή αυτά τα δύο μοιράζονταν μία διατύπωση.
     expect(ENTITY_ROUTES.properties.withId('prop_1')).toBe('/properties/prop_1');
-    expect(ENTITY_ROUTES.properties.inSpaces('prop_1')).toBe(
-      '/spaces/properties?propertyId=prop_1',
-    );
+    // ADR-840 Σ3 — η επιλογή ζει στη ΜΙΑ οθόνη (`?selected=`), η καρτέλα στη διαδρομή.
+    expect(ENTITY_ROUTES.properties.inList('prop_1')).toBe('/properties?view=list&selected=prop_1');
+    expect(ENTITY_ROUTES.properties.create).toBe('/properties?view=list&new=1');
     expect(ENTITY_ROUTES.properties.withTab('prop_1', 'documents')).toBe(
       '/properties/prop_1?tab=documents',
     );

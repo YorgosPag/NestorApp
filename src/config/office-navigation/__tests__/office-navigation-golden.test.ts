@@ -80,6 +80,14 @@ const DECLARED_CHANGES: ReadonlyArray<(tree: GoldenTree, s: Scenario) => void> =
       groupOf(tree, href)?.children?.unshift({ title: 'menu.overview', href });
     }
   },
+  // ADR-840 Σ3 — ΜΙΑ οθόνη ακινήτων ⇒ ΜΙΑ καταχώριση μενού. Το «Χώροι › Ακίνητα» έδειχνε `/spaces/properties`, που
+  //               έγινε ανακατεύθυνση στο `/properties` — δηλαδή στο ΙΔΙΟ μέρος με το κορυφαίο «Ευρετήριο Ακινήτων».
+  //               Δύο καταχωρίσεις για μία οθόνη = αμφίσημη ενεργή κατάσταση. Η κουκκίδα πήγε στην κορυφαία.
+  (tree, s) => {
+    if (s.menu !== 'main') return;
+    const spaces = groupOf(tree, '/spaces');
+    if (spaces?.children) spaces.children = spaces.children.filter((c) => c.href !== '/spaces/properties');
+  },
   // Υ15 — ΕΝΑ κλειδί για κάθε «Επισκόπηση»· το `crm.overview` (ίδιο κείμενο) διαγράφηκε.
   (tree, s) => {
     if (s.menu !== 'main') return;

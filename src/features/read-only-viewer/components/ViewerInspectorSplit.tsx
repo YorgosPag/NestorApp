@@ -3,7 +3,7 @@
 /**
  * @fileoverview **ΘΕΑΤΗΣ | ΕΠΙΘΕΩΡΗΤΗΣ, με συρόμενη διαχωριστική** — ADR-840 Σ3 (§7.8), η λύση του §7.5.
  * @related `@/components/ui/resizable` (ο ΕΝΑΣ wrapper της `react-resizable-panels`) ·
- *   `@/components/ui/resizable-persistence` (**πότε** γράφεται) · `@/components/ui/resizable-column-store` (**τι**/**πού**) ·
+ *   `@/components/ui/resizable-persistence` (**πότε** γράφεται) · `@/components/ui/resizable-column-store` (**τι** · **πού**) ·
  *   πρότυπο: `spatial-tour/viewer/TourViewerSplit.tsx`
  * @module features/read-only-viewer/components/ViewerInspectorSplit
  *
@@ -16,9 +16,12 @@
  * 🔑 **Στη στενή οθόνη ΔΕΝ υπάρχει επιθεωρητής-στήλη** — μόνο CSS: το ορατό panel μόνο του παίρνει όλο το πλάτος
  *   (μοναδικό flex item ⇒ όλος ο ελεύθερος χώρος). Η γεωμετρία **δεν** ρωτά το `useViewportClass` (κανόνας 1 του
  *   `ListLayout`)· οι λεπτομέρειες εκεί ταξιδεύουν στο φύλλο (`ViewerDetailsSheet`).
- * ⚠️ **`max-md:!hidden`, ΟΧΙ `hidden md:flex`**: η `react-resizable-panels@4` γράφει **inline** `display: flex` σε group
- *   **και** panel (μετρημένο στο `dist`), και το inline νικά κάθε κλάση χωρίς `!important` — ένα απλό `hidden` θα
- *   άφηνε τον επιθεωρητή ορατό στο κινητό.
+ * ⚠️ **ΔΥΟ παγίδες της `react-resizable-panels@4`, μετρημένες στο `dist`** — καθεμία θα άφηνε τον επιθεωρητή ορατό
+ *   στο κινητό, με όλα τα tests «πράσινα» αν κοίταζαν μόνο κλάσεις:
+ *   1. γράφει **inline** `display: flex` σε group **και** panel ⇒ το inline νικά κάθε κλάση χωρίς `!important`·
+ *   2. το `className` του `Panel` πηγαίνει σε **εσωτερικό** div — το εξωτερικό (με το πλάτος) δεν παίρνει κλάση.
+ *   ⇒ Η ομάδα (ένα div, παίρνει κλάση) κρύβει τον επιθεωρητή με `max-md:[&>#…]:!hidden`· η σκηνή κρύβεται με την
+ *   ομάδα ολόκληρη.
  */
 
 import type { ReactNode } from 'react';
@@ -46,6 +49,11 @@ export const PROPERTY_INSPECTOR_COLUMN = {
 const STAGE_MIN_WIDTH = 360;
 const STAGE_PANEL_ID = 'property-viewer-stage';
 const INSPECTOR_PANEL_ID = 'property-viewer-inspector';
+/**
+ * Στη στενή οθόνη ο επιθεωρητής **δεν υπάρχει ως στήλη** (ταξιδεύει στο φύλλο). Πάνω στην **ομάδα**, γιατί το
+ * εξωτερικό div του panel δεν δέχεται κλάση (βλ. επικεφαλίδα). Literal, όχι template: το Tailwind σαρώνει κείμενο.
+ */
+export const NARROW_HIDES_INSPECTOR = 'max-md:[&>#property-viewer-inspector]:!hidden';
 
 const inspectorStore = createColumnLayoutStore(STORAGE_KEYS.PROPERTY_INSPECTOR_COLUMN, PROPERTY_INSPECTOR_COLUMN);
 
@@ -65,8 +73,8 @@ export function ViewerInspectorSplit({ stage, inspector, narrowStageVisible }: V
 
   return (
     <ResizablePanelGroup orientation="horizontal" onLayoutChanged={persistence.onLayoutChanged}
-      className={cn('min-h-0 min-w-0 flex-1', !narrowStageVisible && 'max-md:!hidden')}>
-      <ResizablePanel id={STAGE_PANEL_ID} minSize={STAGE_MIN_WIDTH} className="relative min-h-0 min-w-0 flex-col">
+      className={cn('min-h-0 min-w-0 flex-1', NARROW_HIDES_INSPECTOR, !narrowStageVisible && 'max-md:!hidden')}>
+      <ResizablePanel id={STAGE_PANEL_ID} minSize={STAGE_MIN_WIDTH} className="relative flex min-h-0 min-w-0 flex-col">
         {stage}
         <ColumnToggleButton collapsed={collapsed} onToggle={toggle} controls={INSPECTOR_PANEL_ID}
           label={t(collapsed ? 'viewer.inspector.show' : 'viewer.inspector.hide')}
@@ -78,7 +86,7 @@ export function ViewerInspectorSplit({ stage, inspector, narrowStageVisible }: V
         defaultSize={initial.collapsed ? 0 : initial.width} minSize={PROPERTY_INSPECTOR_COLUMN.widthMin}
         maxSize={PROPERTY_INSPECTOR_COLUMN.widthMax} collapsible collapsedSize={0}
         groupResizeBehavior="preserve-pixel-size" onResize={onResize}
-        className="min-h-0 min-w-0 flex-col max-md:!hidden">
+        className="flex min-h-0 min-w-0 flex-col">
         {inspector}
       </ResizablePanel>
     </ResizablePanelGroup>

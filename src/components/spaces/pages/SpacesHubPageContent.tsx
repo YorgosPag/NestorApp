@@ -17,6 +17,7 @@ import {
   Layout,
 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+import { ENTITY_ROUTES } from '@/lib/routes';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -105,7 +106,8 @@ export function SpacesHubPageContent() {
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Link href="/spaces/properties" className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer block`}>
+              {/* ADR-840 Σ3 — η ΜΙΑ οθόνη ακινήτων, στην όψη «λίστα» (το `/spaces/properties` έγινε ανακατεύθυνση). */}
+              <Link href={ENTITY_ROUTES.properties.listView} className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer block`}>
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-primary/10 rounded-lg">
                     {React.createElement(NAVIGATION_ENTITIES.property.icon, { className: `${iconSizes.md} ${NAVIGATION_ENTITIES.property.color}` })}

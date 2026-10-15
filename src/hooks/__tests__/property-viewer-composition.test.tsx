@@ -9,6 +9,9 @@
  *  3. τα μηδενικά `PropertyStats` (γραφόταν 2×: DEFAULT_STATS / emptyStats)
  *  4. ότι ο viewer ΔΕΝ εκθέτει το `handleUpdateProperty` του usePolygonHandlers
  *     αλλά το guarded — σιωπηλή απώλεια σε spread refactor.
+ *
+ * ADR-840 Σ3: η **δεύτερη μηχανή** (`usePublicPropertyViewer`) διαγράφηκε — η ενιαία οθόνη έχει **μία**. Ο editor
+ * έχασε `filters`/`viewMode` (ζουν στη διεύθυνση), άρα η λίστα πεδίων του **μίκρυνε** εδώ, επίτηδες.
  */
 
 import { renderHook, act } from '@testing-library/react';
@@ -16,9 +19,8 @@ import { renderHook, act } from '@testing-library/react';
 import { usePropertyEditor } from '../usePropertyEditor';
 import { usePropertyFilters } from '../usePropertyFilters';
 import { usePropertyViewer } from '../usePropertyViewer';
-import { usePublicPropertyViewer } from '../usePublicPropertyViewer';
 import type { FilterState, Property } from '@/types/property-viewer';
-import type { PropertyStats } from '@/types/property';
+import type { PropertyScreenStats } from '../usePropertyFilters';
 
 // ============================================================================
 // Mocks — lazy deref μέσα στα factories (jest.mock hoisting trap)
@@ -41,10 +43,6 @@ const mockUseAuth = jest.fn(() => ({ user: { globalRole: 'internal_user' }, load
 jest.mock('@/auth/hooks/useAuth', () => ({
   useAuth: () => mockUseAuth(),
 }));
-
-// ⚠️ **Καμία προσομοίωση δημόσιου hook** — ο `usePublicPropertyViewer` έχασε το
-// ανώνυμο σκέλος του (ADR-777 Β2β): διέρρεε ολόκληρο το έγγραφο και, μετρημένα,
-// παρήγαγε **πάντα κενή** λίστα. Πλέον διαβάζει **μόνο** το `useSharedProperties`.
 
 jest.mock('../usePolygonHandlers', () => ({
   usePolygonHandlers: (...args: unknown[]) => mockUsePolygonHandlers(...args),
@@ -83,9 +81,7 @@ const EDITOR_FIELDS = [
   'groups',
   'isConnecting',
   'firstConnectionPoint',
-  'viewMode',
   'showDashboard',
-  'filters',
 ] as const;
 
 const editorSetterOf = (field: string) => `set${field[0].toUpperCase()}${field.slice(1)}`;
@@ -102,10 +98,12 @@ const EXPECTED_EMPTY_FILTERS: FilterState = {
   priceRange: { role: 'sale' },
   areaRange: { min: undefined, max: undefined },
   features: [],
+  // ADR-840 Σ3 — η δεύτερη όψη κατάστασης.
+  operationalStatus: [],
 };
 
 /** Οι ΤΙΜΕΣ των μηδενικών PropertyStats — γραμμένες εδώ ΑΝΕΞΑΡΤΗΤΑ από τον κώδικα. */
-const EXPECTED_ZERO_STATS: PropertyStats = {
+const EXPECTED_ZERO_STATS: PropertyScreenStats = {
   totalProperties: 0,
   availableProperties: 0,
   // ADR-777 §8.60.14.13 — αξία ανά ρόλο, γραμμένη ΑΝΕΞΑΡΤΗΤΑ (όχι `EMPTY_PRICE_TOTALS`).
@@ -128,6 +126,17 @@ const EXPECTED_ZERO_STATS: PropertyStats = {
   maintenanceProperties: 0,
   inspectionProperties: 0,
   draftProperties: 0,
+  // ADR-840 Σ3 — το ΕΝΑ ταμπλό: «στην αγορά» + πληρότητα, πάνω στο φιλτραρισμένο σύνολο.
+  onMarketProperties: 0,
+  coverage: {
+    totalProperties: 0,
+    propertiesWithPhotos: 0,
+    propertiesWithFloorplans: 0,
+    propertiesWithDocuments: 0,
+    photosPercentage: 0,
+    floorplansPercentage: 0,
+    documentsPercentage: 0,
+  },
 };
 
 const makeProperty = (over: Partial<Property> = {}): Property =>
@@ -151,6 +160,8 @@ const polygonOwnUpdateProperty = jest.fn();
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // ADR-840 Σ3 — τα φίλτρα της μηχανής ζουν στη ΔΙΕΥΘΥΝΣΗ: κάθε test ξεκινά από καθαρή.
+  window.history.replaceState(null, '', '/o/ws/properties');
 
   mockUseSharedProperties.mockReturnValue({
     properties: [],
@@ -188,7 +199,7 @@ beforeEach(() => {
 // ============================================================================
 
 describe('usePropertyEditor — field-list contract', () => {
-  it('εκθέτει ακριβώς τα 15 πεδία + τους 15 setters τους, τίποτε άλλο', () => {
+  it('εκθέτει ακριβώς τα 13 πεδία + τους 13 setters τους, τίποτε άλλο', () => {
     const { result } = renderHook(() => usePropertyEditor());
 
     const expectedKeys = [
@@ -212,19 +223,20 @@ describe('usePropertyEditor — field-list contract', () => {
     ['groups', []],
     ['isConnecting', false],
     ['firstConnectionPoint', null],
-    ['viewMode', 'list'],
     ['showDashboard', false],
   ])('αρχική τιμή %s = %p', (field, expected) => {
     const { result } = renderHook(() => usePropertyEditor());
     expect(result.current[field as keyof typeof result.current]).toEqual(expected);
   });
 
-  it('αρχικά filters = το κενό FilterState', () => {
+  /** ⛔ ADR-840 Σ3 — η ΤΡΙΤΗ κατάσταση φίλτρων ζούσε εδώ (`useState`). Αν ξαναμπεί, το §7.7 επιστρέφει. */
+  it('δεν κρατά φίλτρα ούτε όψη — ζουν στη διεύθυνση', () => {
     const { result } = renderHook(() => usePropertyEditor());
-    expect(result.current.filters).toEqual(EXPECTED_EMPTY_FILTERS);
+    expect(result.current).not.toHaveProperty('filters');
+    expect(result.current).not.toHaveProperty('viewMode');
   });
 
-  it.each(EDITOR_FIELDS.filter((f) => f !== 'filters'))('ο setter του %s ενημερώνει την τιμή', (field) => {
+  it.each(EDITOR_FIELDS)('ο setter του %s ενημερώνει την τιμή', (field) => {
     const { result } = renderHook(() => usePropertyEditor());
     const setter = result.current[editorSetterOf(field) as keyof typeof result.current] as (v: unknown) => void;
 
@@ -301,7 +313,7 @@ describe('usePropertyViewer — composition contract', () => {
     expect(typeof result.current[setter as keyof typeof result.current]).toBe('function');
   });
 
-  it.each(EDITOR_FIELDS.filter((f) => f !== 'filters'))(
+  it.each(EDITOR_FIELDS)(
     'ο setter του %s μέσω viewer ενημερώνει την τιμή (ζωντανό wiring, όχι σκέτο σχήμα)',
     (field) => {
       const { result } = renderHook(() => usePropertyViewer());
@@ -320,7 +332,12 @@ describe('usePropertyViewer — composition contract', () => {
     expect(result.current.handleUpdateProperty).not.toBe(polygonOwnUpdateProperty);
   });
 
-  it('τα filters περνούν στο usePropertyFilters (setFilters → φιλτραρισμένο αποτέλεσμα)', () => {
+  it('κενή διεύθυνση ⇒ το κενό FilterState', () => {
+    const { result } = renderHook(() => usePropertyViewer());
+    expect(result.current.filters).toEqual(EXPECTED_EMPTY_FILTERS);
+  });
+
+  it('τα filters (από τη διεύθυνση) περνούν στο usePropertyFilters (updateFilters → φιλτραρισμένο)', async () => {
     mockUseSharedProperties.mockReturnValue({
       properties: [makeProperty({ id: 'u1', name: 'Alpha' }), makeProperty({ id: 'u2', name: 'Beta' })],
       setProperties: jest.fn(),
@@ -332,9 +349,12 @@ describe('usePropertyViewer — composition contract', () => {
     const { result } = renderHook(() => usePropertyViewer());
     expect(result.current.filteredProperties).toHaveLength(2);
 
-    act(() => result.current.setFilters({ ...EXPECTED_EMPTY_FILTERS, searchTerm: 'Alpha' }));
+    act(() => result.current.updateFilters({ searchTerm: 'Alpha' }));
+    // Η ειδοποίηση του `url-query-state` φεύγει σε microtask.
+    await act(async () => { await Promise.resolve(); });
 
     expect(result.current.filteredProperties.map((p) => p.id)).toEqual(['u1']);
+    expect(window.location.search).toBe('?q=Alpha');
   });
 
   it('το isConnecting/firstConnectionPoint του editor φτάνει στο usePolygonHandlers', () => {
@@ -362,45 +382,7 @@ describe('usePropertyViewer — composition contract', () => {
 });
 
 // ============================================================================
-// 4. usePublicPropertyViewer — το δεύτερο αντίγραφο του κενού FilterState
+// ⛔ ADR-840 Σ3 — εδώ ζούσε η ενότητα «4. usePublicPropertyViewer» (κενό FilterState + `isReadOnly` ανά ρόλο).
+//    Η δεύτερη μηχανή διαγράφηκε· η ετυμηγορία ρόλου μετριέται στο `property-edit-capability.test.ts`
+//    (ο ΕΝΑΣ PEP + το μονότονο δάπεδο του `PropertyDetailsContent`), όχι σε δεύτερο αντίγραφο εδώ.
 // ============================================================================
-
-describe('usePublicPropertyViewer — empty-FilterState contract', () => {
-  it('αρχικά filters = το ΙΔΙΟ κενό FilterState με τον authenticated viewer', () => {
-    const { result } = renderHook(() => usePublicPropertyViewer());
-    expect(result.current.filters).toEqual(EXPECTED_EMPTY_FILTERS);
-  });
-
-  /**
-   * 🔴 **Ο ΧΑΡΑΚΤΗΡΙΣΜΟΣ ΑΛΛΑΞΕ ΕΠΙΤΗΔΕΣ** (ADR-840 Α4 / Σ2). Ο έλεγχος έγραφε
-   * `expect(isReadOnly).toBe(true)` και **περνούσε πάντα**, γιατί μετρούσε
-   * **σταθερά** (`usePublicPropertyViewer.ts:326`) — δηλαδή επικύρωνε ακριβώς το
-   * ελάττωμα: το αν μπορείς να επεξεργαστείς εξαρτιόταν από **ποια πόρτα μπήκες**.
-   *
-   * Πλέον μετρά τη **σύνδεση**: ίδιος hook, ίδια δεδομένα, **δύο** άνθρωποι,
-   * **δύο** απαντήσεις. Ένα σκέλος μόνο θα ήταν μισή απόδειξη.
-   */
-  it('ρόλος ΧΩΡΙΣ :update → κλειστή επεξεργασία', () => {
-    mockUseAuth.mockReturnValue({ user: { globalRole: 'internal_user' }, loading: false });
-    const { result } = renderHook(() => usePublicPropertyViewer());
-
-    expect(result.current.isReadOnly).toBe(true);
-  });
-
-  it('ρόλος ΜΕ :update → ανοιχτή επεξεργασία, στην ΙΔΙΑ οθόνη', () => {
-    mockUseAuth.mockReturnValue({ user: { globalRole: 'company_admin' }, loading: false });
-    const { result } = renderHook(() => usePublicPropertyViewer());
-
-    expect(result.current.isReadOnly).toBe(false);
-  });
-
-  it('τα εργαλεία καμβά μένουν κλειστά ανεξαρτήτως ρόλου (δεν έχουν συρματωθεί — Σ3)', () => {
-    mockUseAuth.mockReturnValue({ user: { globalRole: 'company_admin' }, loading: false });
-    const { result } = renderHook(() => usePublicPropertyViewer());
-
-    // ⚠️ Δηλωμένο, όχι σιωπηλό: αυτή η επιφάνεια **δεν έχει** μεταλλάξεις καμβά.
-    // Η ενοποίηση με τον επεξεργάσιμο viewer είναι το Σ3 (ADR-840 §7).
-    expect(result.current.activeTool).toBeNull();
-    expect(result.current.isConnecting).toBe(false);
-  });
-});

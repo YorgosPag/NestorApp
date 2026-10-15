@@ -54,6 +54,11 @@ interface EntityRouteConfig {
     view?: string;
   };
   supportedActions: Array<NavigationContext['action']>;
+  /**
+   * Κλειδιά που η σελίδα-προορισμός χρειάζεται **πάντα** (ADR-840 Σ3: η ενιαία οθόνη ακινήτων ανοίγει στην όψη
+   * «λίστα» — αλλιώς η επιλογή θα έπεφτε σε πλέγμα, που δεν δείχνει επιλογή).
+   */
+  fixedParams?: Readonly<Record<string, string>>;
 }
 
 // ============================================================================
@@ -99,12 +104,16 @@ const ENTITY_ROUTES: Record<NavigableEntityType, EntityRouteConfig> = {
     supportedActions: ['view', 'edit', 'filter', 'select']
   },
   property: {
-    basePath: '/spaces/properties',  // ✅ ΣΩΣΤΟ: Υπάρχει /spaces/properties σελίδα
+    // ADR-840 Σ3 — η ΜΙΑ οθόνη ακινήτων. Το `/spaces/properties` έγινε ανακατεύθυνση.
+    basePath: '/properties',
     parameterKeys: {
-      id: 'propertyId',
+      // 🔑 Η ταυτότητα ΕΙΝΑΙ η επιλογή (`?selected=`, κοινή στις τρεις όψεις)· γι' αυτό ΔΕΝ υπάρχει χωριστό
+      //    `select` — θα έγραφε `selected=true` δίπλα στην ταυτότητα. ⚠️ ΟΧΙ `propertyId`: στο `/properties`
+      //    σημαίνει «άνοιξε την καρτέλα» (ADR-777 §8.30).
+      id: 'selected',
       filter: 'filter',
-      select: 'selected'
     },
+    fixedParams: { view: 'list' },
     supportedActions: ['view', 'edit', 'filter', 'select']
   },
   storage: {
@@ -169,7 +178,8 @@ export class ContextualNavigationService {
     // Build query parameters
     const params = new URLSearchParams();
 
-    // Add entity ID
+    // Add fixed destination keys, then the entity ID
+    for (const [key, value] of Object.entries(config.fixedParams ?? {})) params.append(key, value);
     params.append(config.parameterKeys.id, entityId);
 
     // Add context-based parameters

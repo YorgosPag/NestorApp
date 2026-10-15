@@ -175,36 +175,41 @@ describe('ADR-840 §8.2 — ο φύλακας της γραφής ΔΕΝ ρωτ�
 // =============================================================================
 
 describe('ADR-840 Α4 — καμία σταθερά read-only δεν επέζησε', () => {
+  /**
+   * ADR-840 Σ3 — οι **τρεις** φορείς της σταθεράς (`usePublicPropertyViewer` · `buildViewerProps` ·
+   * `types/publicViewer`) **διαγράφηκαν** μαζί με τη δεύτερη μηχανή. Η άγκυρα φυλάει πλέον ότι δεν ξαναγεννήθηκαν.
+   */
   test.each([
-    ['src/hooks/usePublicPropertyViewer.ts', /isReadOnly:\s*true/],
-    ['src/features/property-management/utils/buildViewerProps.ts', /isReadOnly:\s*true/],
-    ['src/features/property-management/types/publicViewer.ts', /isReadOnly:\s*true;/],
-  ])('%s δεν καρφώνει πια read-only', (file, pattern) => {
-    expect(readCode(file)).not.toMatch(pattern);
+    'src/hooks/usePublicPropertyViewer.ts',
+    'src/features/property-management/utils/buildViewerProps.ts',
+    'src/features/property-management/types/publicViewer.ts',
+  ])('%s δεν υπάρχει πια — η δεύτερη μηχανή δεν ξαναγεννήθηκε', (file) => {
+    expect(fs.existsSync(path.join(repoRoot, file))).toBe(false);
   });
 
   /**
-   * 🔴 **ΑΥΤΗ Η ΑΓΚΥΡΑ ΑΝΤΙΣΤΡΑΦΗΚΕ ΑΠΟ ΤΗ ΖΩΝΤΑΝΗ ΕΠΑΛΗΘΕΥΣΗ** (2026-09-01).
+   * 🔴 **ΑΥΤΗ Η ΑΓΚΥΡΑ ΑΝΤΙΣΤΡΑΦΗΚΕ ΔΥΟ ΦΟΡΕΣ — ΚΑΙ ΤΙΣ ΔΥΟ ΑΠΟ ΤΗΝ ΟΘΟΝΗ.**
    *
-   * Απαιτούσε `isReadOnly={!canEdit}` στο `ListLayout` — και **ήταν λάθος**: στην
-   * οθόνη, η φόρμα επεξεργασίας **δεν χωράει** στη στήλη των ~260px και κόβεται
-   * οριζόντια. Το εμπόδιο είναι **ο χώρος**, όχι η άδεια, και ο σχεδιασμός του
-   * χώρου είναι το **Σ3**.
+   * 2026-09-01 (Σ2): απαιτούσε `isReadOnly={!canEdit}` στο `ListLayout` — η οθόνη το απέρριψε: η φόρμα δεν
+   * χωρούσε στη στήλη των ~260px. Γύρισε σε «σταθερά με δομικό λόγο και δείκτη στο Σ3».
    *
-   * Πλέον η άγκυρα φυλάει το **αντίθετο**: ότι η σταθερά έχει **γραπτό δομικό
-   * λόγο** και **δείκτη στο Σ3**. Σταθερά χωρίς λόγο είναι ακριβώς το ελάττωμα
-   * που έλυσε το Σ2· σταθερά **με** μετρημένο λόγο είναι απόφαση.
+   * 2026-10-15 (Σ3): ο χώρος **δόθηκε** — επιθεωρητής που σέρνεται (`ViewerInspectorSplit`) και φόρμα `auto-fit`
+   * αντί για `md:grid-cols-3` ⇒ η σταθερά **αίρεται**. Η άγκυρα φυλάει πλέον το **ζεύγος**: χωρίς σταθερά
+   * **και** με επιθεωρητή. Το ένα χωρίς το άλλο είναι ακριβώς η βλάβη του §7.5 (ρόλος χωρίς χώρο).
    */
-  test('το `ListLayout` κλειδώνει με ΔΟΜΙΚΟ λόγο, όχι σιωπηλά', () => {
-    const file = 'src/features/read-only-viewer/components/ListLayout.tsx';
+  test('το `ListLayout` ΔΕΝ κλειδώνει με σταθερά — γιατί ο επιθεωρητής έχει χώρο', () => {
+    const code = readCode('src/features/read-only-viewer/components/ListLayout.tsx');
 
-    // Ο δείκτης ζει στα σχόλια — γι' αυτό διαβάζεται το ΠΛΗΡΕΣ αρχείο εδώ.
-    const withComments = fs.readFileSync(path.join(repoRoot, file), 'utf8');
-    expect(withComments).toMatch(/ADR-840 Σ2/);
-    expect(withComments).toMatch(/Σ3/);
+    expect(code).not.toMatch(/<PropertyDetailsPanel[^>]*\bisReadOnly\b/);
+    expect(code).toContain('<ViewerInspectorSplit');
+    // …και δεν ρωτά ρόλο μόνο του: η απόφαση ζει στο δάπεδο του `PropertyDetailsContent`.
+    expect(code).not.toMatch(/usePropertyEditCapability/);
+  });
 
-    // …και ο κώδικας δεν ρωτά ρόλο που δεν μπορεί να τιμήσει (θα ήταν νεκρός).
-    expect(readCode(file)).not.toMatch(/usePropertyEditCapability/);
+  test('η φόρμα δεν ρωτά το πλάτος της ΟΘΟΝΗΣ για τη διάταξή της (ρίζα του §7.5)', () => {
+    expect(readCode('src/features/property-details/PropertyDetailsContent.tsx')).not.toMatch(
+      /\b(?:sm|md|lg|xl):grid-cols-\d/,
+    );
   });
 
   test('το δάπεδο εξουσιοδότησης είναι ΜΟΝΟΤΟΝΟ (το prop μόνο προσθέτει)', () => {
