@@ -1033,14 +1033,13 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     testFile: 'tests/firestore-rules/suites/accounting-efka-payments.rules.test.ts',
     ...roleDualMatrix(),
   },
-  // Pattern C: fiscal periods — Q8 SAP state-machine
+  // Pattern C: fiscal periods — server-only writes (ADR-ACC-010 §2.1.1 Φ6)
   {
     collection: 'accounting_fiscal_periods',
     pattern: 'role_dual',
     testFile: 'tests/firestore-rules/suites/accounting-fiscal-periods.rules.test.ts',
-    // Fiscal period matrix: admin-only create, internal-user update with
-    // state-machine guard, delete forbidden (business invariant).
-    // See `fiscalPeriodMatrix()` in coverage-matrices.ts for full rationale.
+    // Tenant-scoped read; create/update/delete denied for every client (Admin SDK only).
+    // See `fiscalPeriodMatrix()` in coverage-matrices-accounting.ts for full rationale.
     ...fiscalPeriodMatrix(),
   },
   // Pattern D: settings singletons — admin-only write, internal-user read

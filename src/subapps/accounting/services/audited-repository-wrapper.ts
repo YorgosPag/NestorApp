@@ -14,23 +14,9 @@ import type {
   AuditEntityType,
 } from '../types/accounting-audit';
 import type { CompanyProfile } from '../types/company';
-import type { FiscalPeriod } from '../types/fiscal-period';
 import { accountingAuditEntryOf, logAccountingEvent } from './accounting-audit-service';
 import { diffCompanyOwnership } from './audit/company-ownership-audit';
 import { legalNameChangeAudit } from './audit/company-legal-name-audit';
-
-// ============================================================================
-// PERIOD STATUS → EVENT TYPE MAPPING
-// ============================================================================
-
-function periodStatusToEventType(
-  updates: Partial<FiscalPeriod>
-): AccountingAuditEventType | null {
-  if (updates.status === 'CLOSED') return 'PERIOD_CLOSED';
-  if (updates.status === 'LOCKED') return 'PERIOD_LOCKED';
-  if (updates.status === 'OPEN' && updates.reopenedAt) return 'PERIOD_REOPENED';
-  return null;
-}
 
 // ============================================================================
 // AUDITED REPOSITORY WRAPPER (Q7 — automatic, zero developer effort)
@@ -81,6 +67,8 @@ export function createAuditedRepository(
     // ADR-ACC-010 §2.1.1 Φ5: the ONE depreciation writer owns its trace (same transaction) — wrapping it here
     // would trace twice, and a caller WITHOUT this wrapper (every route) would post without a trace.
     postDepreciation: repo.postDepreciation.bind(repo),
+    // ADR-ACC-010 §2.1.1 Φ6: ο γραφέας περιόδων γράφει το ίχνος `PERIOD_*` ΜΕΣΑ στη συναλλαγή της μετάβασης.
+    transitionFiscalPeriod: repo.transitionFiscalPeriod.bind(repo),
     getDepreciationRecords: repo.getDepreciationRecords.bind(repo),
     getPartners: repo.getPartners.bind(repo),
     getPartnerEFKAPayments: repo.getPartnerEFKAPayments.bind(repo),
@@ -190,14 +178,6 @@ export function createAuditedRepository(
         { netBalance: balance.netBalance, fiscalYear: balance.fiscalYear });
     },
 
-    async updateFiscalPeriod(periodId, updates) {
-      await repo.updateFiscalPeriod(periodId, updates);
-      const eventType = periodStatusToEventType(updates);
-      if (eventType) {
-        await logAudit(repo, userId, eventType, 'period', periodId,
-          `Αλλαγή κατάστασης περιόδου → ${updates.status ?? 'unknown'}`);
-      }
-    },
   };
 }
 

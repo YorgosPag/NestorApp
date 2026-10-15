@@ -10,10 +10,12 @@
 import type { IAccountingRepository } from '../types/interfaces';
 import type {
   FiscalPeriod,
+  FiscalPeriodDraft,
   PostingValidationResult,
   YearEndChecklist,
   YearEndChecklistStep,
 } from '../types/fiscal-period';
+import { ADJUSTMENT_PERIOD_NUMBER, FISCAL_PERIODS_PER_YEAR, fiscalPeriodKey, fiscalPeriodKeyForDate } from './fiscal-period-keys';
 import { isoNow } from './repository/firestore-helpers';
 
 // ============================================================================
@@ -40,50 +42,21 @@ const MONTH_LABELS_EL: Record<number, string> = {
 // CREATE FISCAL YEAR (Q8 — Auto-create 13 periods)
 // ============================================================================
 
-/**
- * Δημιουργεί 13 λογιστικές περιόδους για μία χρήση
- *
- * Periods 1-12: Ιανουάριος-Δεκέμβριος
- * Period 13: Adjustment period (μοιράζεται ημερομηνίες Δεκεμβρίου)
- */
-export async function createFiscalYear(
-  repository: IAccountingRepository,
-  fiscalYear: number
-): Promise<FiscalPeriod[]> {
-  // Check if periods already exist
-  const existing = await repository.listFiscalPeriods(fiscalYear);
-  if (existing.length > 0) {
-    throw new Error(`Fiscal year ${fiscalYear} already has ${existing.length} periods`);
-  }
-
-  const now = isoNow();
-  const periods: FiscalPeriod[] = [];
-
-  for (let month = 1; month <= 13; month++) {
-    const periodId = `${fiscalYear}-${String(month).padStart(2, '0')}`;
-    const label = `${MONTH_LABELS_EL[month]} ${fiscalYear}`;
-
-    let startDate: string;
-    let endDate: string;
-
-    if (month <= 12) {
-      startDate = `${fiscalYear}-${String(month).padStart(2, '0')}-01`;
-      // Last day of month
-      const lastDay = new Date(fiscalYear, month, 0).getDate();
-      endDate = `${fiscalYear}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-    } else {
-      // Period 13: shares December dates
-      startDate = `${fiscalYear}-12-01`;
-      endDate = `${fiscalYear}-12-31`;
-    }
-
-    periods.push({
-      periodId,
+/** Οι 13 περίοδοι μιας χρήσης, πριν γραφτούν — 1–12 μήνες, 13 = κλείσιμο (ημερομηνίες Δεκεμβρίου). */
+function fiscalYearPeriodDrafts(fiscalYear: number, now: string): FiscalPeriodDraft[] {
+  return Array.from({ length: FISCAL_PERIODS_PER_YEAR }, (_, i) => {
+    const periodNumber = i + 1;
+    const month = periodNumber === ADJUSTMENT_PERIOD_NUMBER ? 12 : periodNumber;
+    const mm = String(month).padStart(2, '0');
+    // UTC: η τελευταία μέρα του μήνα δεν εξαρτάται από τη ζώνη του διακομιστή.
+    const lastDay = new Date(Date.UTC(fiscalYear, month, 0)).getUTCDate();
+    return {
+      periodId: fiscalPeriodKey(fiscalYear, periodNumber),
       fiscalYear,
-      periodNumber: month,
-      label,
-      startDate,
-      endDate,
+      periodNumber,
+      label: `${MONTH_LABELS_EL[periodNumber]} ${fiscalYear}`,
+      startDate: `${fiscalYear}-${mm}-01`,
+      endDate: `${fiscalYear}-${mm}-${String(lastDay).padStart(2, '0')}`,
       status: 'OPEN',
       closedAt: null,
       closedBy: null,
@@ -94,10 +67,20 @@ export async function createFiscalYear(
       reopenReason: null,
       createdAt: now,
       updatedAt: now,
-    });
-  }
+    };
+  });
+}
 
-  await repository.createFiscalPeriods(periods);
+/**
+ * Δημιουργεί τις 13 περιόδους μιας χρήσης για τον μισθωτή του repository — ΟΛΕΣ ή ΚΑΜΙΑ. Υπάρχουσα χρήση ⇒
+ * `FiscalYearExistsError` από τον γραφέα (μέσα στη συναλλαγή — ποτέ αντικατάσταση κλειδωμένης περιόδου).
+ */
+export async function createFiscalYear(
+  repository: IAccountingRepository,
+  fiscalYear: number
+): Promise<FiscalPeriodDraft[]> {
+  const periods = fiscalYearPeriodDrafts(fiscalYear, isoNow());
+  await repository.createFiscalPeriods(fiscalYear, periods);
   return periods;
 }
 
@@ -115,98 +98,13 @@ export async function getPeriodForDate(
   repository: IAccountingRepository,
   dateStr: string
 ): Promise<FiscalPeriod | null> {
-  const date = new Date(dateStr);
-  const fiscalYear = date.getFullYear();
-  const month = date.getMonth() + 1; // 1-12
-
-  const periodId = `${fiscalYear}-${String(month).padStart(2, '0')}`;
-  return repository.getFiscalPeriod(periodId);
+  const periodId = fiscalPeriodKeyForDate(dateStr);
+  return periodId === null ? null : repository.getFiscalPeriod(periodId);
 }
 
 // ============================================================================
-// STATE TRANSITIONS
+// STATE TRANSITIONS — ΕΝΑΣ γραφέας: `repository.transitionFiscalPeriod` (απόφαση `fiscal-period-transitions.ts`)
 // ============================================================================
-
-/**
- * Κλείσιμο περιόδου: OPEN → CLOSED
- *
- * Μετά υποβολή ΦΠΑ. Αναστρέψιμο (admin μπορεί να reopen).
- */
-export async function closePeriod(
-  repository: IAccountingRepository,
-  periodId: string,
-  userId: string
-): Promise<void> {
-  const period = await repository.getFiscalPeriod(periodId);
-  if (!period) throw new Error(`Period ${periodId} not found`);
-  if (period.status !== 'OPEN') {
-    throw new Error(`Cannot close period ${periodId}: status is ${period.status} (expected OPEN)`);
-  }
-
-  const now = isoNow();
-  await repository.updateFiscalPeriod(periodId, {
-    status: 'CLOSED',
-    closedAt: now,
-    closedBy: userId,
-    updatedAt: now,
-  });
-}
-
-/**
- * Κλείδωμα περιόδου: CLOSED → LOCKED
- *
- * Permanent μετά φορολογική δήλωση (Ε3/Ε1). Κανείς δεν πειράζει.
- */
-export async function lockPeriod(
-  repository: IAccountingRepository,
-  periodId: string,
-  userId: string
-): Promise<void> {
-  const period = await repository.getFiscalPeriod(periodId);
-  if (!period) throw new Error(`Period ${periodId} not found`);
-  if (period.status !== 'CLOSED') {
-    throw new Error(`Cannot lock period ${periodId}: status is ${period.status} (expected CLOSED)`);
-  }
-
-  const now = isoNow();
-  await repository.updateFiscalPeriod(periodId, {
-    status: 'LOCKED',
-    lockedAt: now,
-    lockedBy: userId,
-    updatedAt: now,
-  });
-}
-
-/**
- * Ξανάνοιγμα περιόδου: CLOSED → OPEN (with audit trail)
- *
- * Warning: "Θα χρειαστεί τροποποιητική ΦΠΑ"
- * LOCKED periods CANNOT be reopened.
- */
-export async function reopenPeriod(
-  repository: IAccountingRepository,
-  periodId: string,
-  userId: string,
-  reason: string
-): Promise<void> {
-  const period = await repository.getFiscalPeriod(periodId);
-  if (!period) throw new Error(`Period ${periodId} not found`);
-  if (period.status === 'LOCKED') {
-    throw new Error(`Cannot reopen period ${periodId}: status is LOCKED (permanent)`);
-  }
-  if (period.status === 'OPEN') {
-    throw new Error(`Period ${periodId} is already OPEN`);
-  }
-
-  const now = isoNow();
-  await repository.updateFiscalPeriod(periodId, {
-    status: 'OPEN',
-    reopenedAt: now,
-    reopenedBy: userId,
-    reopenReason: reason,
-    updatedAt: now,
-  });
-}
 
 // ============================================================================
 // POSTING VALIDATION

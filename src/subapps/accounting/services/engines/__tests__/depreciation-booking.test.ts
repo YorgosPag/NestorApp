@@ -154,14 +154,13 @@ describe('Δ5 — προβολή του παγίου', () => {
 describe('Δ6 — κανόνας περιόδου', () => {
   const period = (overrides: Partial<FiscalPeriod> = {}) => ({ periodId: '2025-12', status: 'OPEN', ...overrides }) as FiscalPeriod;
 
+  // Φ6: η περίοδος φτάνει ΗΔΗ ως περίοδος του μισθωτή (διεύθυνση ανά μισθωτή + `ownedOrNull`) — ξένη = `null`.
   it.each([
-    [null, 'comp_a', 'PERIOD_NOT_FOUND'],
-    [period(), 'comp_a', null],
-    [period({ status: 'CLOSED' }), 'comp_a', 'PERIOD_NOT_OPEN'],
-    [period({ status: 'LOCKED' }), null, 'PERIOD_NOT_OPEN'],
-    [period({ companyId: 'comp_b' }), 'comp_a', 'PERIOD_NOT_FOUND'],
-    [period({ companyId: 'comp_b' }), null, null],
-  ] as const)('%o για %s ⇒ %s', (input, companyId, expected) => {
-    expect(postingPeriodBlocker(input as FiscalPeriod | null, companyId)).toBe(expected);
+    [null, 'PERIOD_NOT_FOUND'],
+    [period(), null],
+    [period({ status: 'CLOSED' }), 'PERIOD_NOT_OPEN'],
+    [period({ status: 'LOCKED' }), 'PERIOD_NOT_OPEN'],
+  ] as const)('%o ⇒ %s', (input, expected) => {
+    expect(postingPeriodBlocker(input as FiscalPeriod | null)).toBe(expected);
   });
 });

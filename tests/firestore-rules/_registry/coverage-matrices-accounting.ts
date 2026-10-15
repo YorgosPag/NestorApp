@@ -8,7 +8,7 @@
  *
  * The four patterns here correspond to the four rule shapes found in
  * `firestore.rules` lines 3111–3177 (Pattern C/D/E/F in the accounting block):
- *   - `fiscalPeriodMatrix`        → Pattern C: Q8 SAP state-machine
+ *   - `fiscalPeriodMatrix`        → Pattern C: server-only writes (ADR-ACC-010 Φ6)
  *   - `accountingSingletonMatrix` → Pattern D: settings singletons (admin-write)
  *   - `denyAllMatrix`             → Pattern E: server-only, no client access
  *   - `accountingSystemCalcMatrix`→ Pattern F: system-calculated balances
@@ -35,29 +35,25 @@ import {
 // ---------------------------------------------------------------------------
 
 /**
- * Matrix for `accounting_fiscal_periods` — Q8 SAP-pattern state machine.
+ * Matrix for `accounting_fiscal_periods` — ADR-ACC-010 §2.1.1 Φάση 6: **server-only writes**.
  *
- * Key deltas from `roleDualMatrix()`:
- *   - create: `isCompanyAdminOfCompany(companyId) && companyId==getUserCompanyId()`.
- *     super_admin passes `isCompanyAdminOfCompany` (via `isSuperAdminOnly`) but
- *     fails `getUserCompanyId()=='company-a'` (their claim is 'company-root') →
- *     denied (cross_tenant). same_tenant_user fails `isCompanyAdminOfCompany`
- *     (internal_user role) → denied (insufficient_role).
- *   - update: `isInternalUserOfCompany(companyId) && companyId immutable &&
- *     state-machine gate`. Test seeds an OPEN doc and writes a same-status delta
- *     (`updatedAt`) so every internal-user persona exercises the first arm
- *     (status not changing → allow). super_admin reaches `isInternalUserOfCompany`
- *     via `isSuperAdminOnly()` → allowed.
- *   - delete: `if false` → server_only for all personas.
+ *   - read/list: `canReadAccounting(companyId)` — identical to `roleDualMatrix()`.
+ *   - create/update/delete: `if false` ⇒ `server_only` for EVERY measured persona. Periods are born, closed,
+ *     locked and reopened only through the API (Admin SDK), where the transition is decided INSIDE the
+ *     transaction and the `PERIOD_*` trace is written in the same one (Xero lock dates / SAP OB52).
  *
- * See ADR-298 §4 Phase C.1 (2026-04-13).
+ * Τα κελιά εγγραφής παράγονται από τα κελιά εγγραφής **της βάσης** — ούτε δεύτερη λίστα personas (N.18).
+ * Ως τις 2026-10-15: admin create + internal-user update με μηχανή καταστάσεων στους κανόνες (Q8).
  */
 export function fiscalPeriodMatrix(): CoverageDefinition {
-  return overrideDefinition(roleDualMatrix(), adminCreateNoDeleteCells(), 'fiscalPeriodMatrix');
+  const serverOnlyWrites = roleDualMatrix()
+    .matrix.filter((c) => c.operation === 'create' || c.operation === 'update' || c.operation === 'delete')
+    .map((c) => cell(c.persona, c.operation, 'deny', 'server_only'));
+  return overrideDefinition(roleDualMatrix(), serverOnlyWrites, 'fiscalPeriodMatrix');
 }
 
 /**
- * Κοινή διαφορά του `fiscalPeriodMatrix` και του `accountingSingletonMatrix` από τον
+ * Η διαφορά του `accountingSingletonMatrix` (και, ως τις 2026-10-15, του `fiscalPeriodMatrix`) από τον
  * `roleDualMatrix` — δηλωμένη **ΜΙΑ** φορά (ADR-841 §7 Α23.6: ήταν 4 κλώνοι / 502 tokens).
  *
  *   - create: ο κανόνας ζητά **διαχειριστή** εταιρείας ⇒ `same_tenant_user` (internal_user)

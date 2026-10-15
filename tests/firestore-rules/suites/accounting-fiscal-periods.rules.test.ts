@@ -1,20 +1,13 @@
 /**
  * Firestore Rules — `accounting_fiscal_periods` collection
  *
- * Pattern: fiscal_period (Q8 SAP state-machine).
+ * Pattern: fiscal_period — server-only writes (ADR-ACC-010 §2.1.1 Φάση 6, 2026-10-15).
  *
- * Create gate: `isCompanyAdminOfCompany(companyId) && companyId==getUserCompanyId()`.
- * super_admin passes `isCompanyAdminOfCompany` via `isSuperAdminOnly()` but fails
- * the `getUserCompanyId()=='company-a'` check (claim is 'company-root') → deny (cross_tenant).
- * same_tenant_user is not company_admin → deny (insufficient_role).
- *
- * Update gate: `isInternalUserOfCompany(companyId) && companyId immutable && state machine`.
- * Test writes a `updatedAt` delta on an OPEN period with the same status → first arm of
- * the state machine (status not changing) applies → all internal personas allowed.
- * super_admin reaches `isInternalUserOfCompany` via `isSuperAdminOnly()`.
- *
- * Delete gate: `if false` — fiscal periods are never deleted (business invariant).
- * All personas get server_only reason.
+ * Read/list gate: `canReadAccounting(companyId)` (same as role_dual).
+ * Create / update / delete: `if false` — periods are born, closed, locked and reopened only through
+ * the API (Admin SDK), where the transition and its `PERIOD_*` trace share ONE transaction.
+ * Every write cell is therefore `server_only`. (Until 2026-10-15 the rules held a client-side state
+ * machine that let a company admin reopen a LOCKED period from the browser without a trace.)
  *
  * See ADR-298 §4 Phase C.1 (2026-04-13).
  *
@@ -33,7 +26,7 @@ export const COVERAGE = FIRESTORE_RULES_COVERAGE.find(
   (c) => c.collection === 'accounting_fiscal_periods',
 )!;
 
-describe('accounting_fiscal_periods.rules — fiscal_period (Q8 state-machine)', () => {
+describe('accounting_fiscal_periods.rules — fiscal_period (server-only writes)', () => {
   let env: RulesTestEnvironment;
 
   beforeAll(async () => { env = await initEmulator(); });
@@ -45,10 +38,8 @@ describe('accounting_fiscal_periods.rules — fiscal_period (Q8 state-machine)',
       it(`should ${cell.outcome}${cell.reason ? ` (${cell.reason})` : ''}`, async () => {
         const docId = 'fiscal-period-same-tenant';
 
-        // Seed an OPEN period. Update tests send a status-neutral delta
-        // (only `updatedAt` changes) so the first arm of the state machine
-        // (resource.data.status == request.resource.data.status) permits all
-        // internal-user personas. Delete cells exercise `if false`.
+        // Seed an OPEN period. Even a status-neutral delta (only `updatedAt`) is denied:
+        // every client write exercises `if false`.
         await seedAccountingFiscalPeriod(env, docId);
 
         const ctx = getContext(env, cell.persona);
@@ -56,7 +47,6 @@ describe('accounting_fiscal_periods.rules — fiscal_period (Q8 state-machine)',
         const target: AssertTarget = {
           collection: 'accounting_fiscal_periods',
           docId,
-          // Update delta: same status + updatedAt — exercises state-machine arm 1.
           data: { status: 'OPEN', updatedAt: new Date() },
           createData: {
             name: `FY-2026 ${cell.persona}`,

@@ -14,7 +14,7 @@
  *   - id εγγραφής Ε-Ε = ντετερμινιστικό (εγγραφή, αναθεώρηση) + `create` ⇒ ταυτόχρονη εκτέλεση = σύγκρουση, ποτέ διπλό·
  *   - η ΑΠΟΦΑΣΗ (`request.decide`) τρέχει μέσα στη συναλλαγή πάνω στα ΦΡΕΣΚΑ έγγραφα· «σωστό = καταχωρημένο» ⇒ τίποτα·
  *   - διόρθωση / αναίρεση = ΝΕΑ εγγραφή διαφοράς (SAP repeat run) — η παλιά εγγραφή Ε-Ε δεν αλλάζει ποτέ·
- *   - η περίοδος 12 της χρήσης πρέπει να είναι ΑΝΟΙΧΤΗ τη στιγμή του commit (όχι μόνο όταν ξεκίνησε η εκτέλεση).
+ *   - η περίοδος 12 ΤΟΥ ΜΙΣΘΩΤΗ πρέπει να είναι ΑΝΟΙΧΤΗ τη στιγμή του commit (όχι μόνο όταν ξεκίνησε η εκτέλεση).
  *
  * @see ADR-ACC-010 §2.1.1 (Φάσεις 4–5) · ADR-ACC-007 §5.1
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, max 500 lines
@@ -40,7 +40,6 @@ import type {
   FixedAsset,
 } from '../../types/assets';
 import type { TenantContext } from '../../types/common';
-import type { FiscalPeriod } from '../../types/fiscal-period';
 import type { JournalEntry } from '../../types/journal';
 import {
   depreciationPeriodIdFor,
@@ -50,6 +49,7 @@ import {
 
 import { depreciationAuditEntries } from '../audit/depreciation-audit';
 import { appendAuditEntryInTransaction } from './accounting-repo-audit';
+import { fiscalPeriodRef, ownedFiscalPeriodOf } from './accounting-repo-fiscal-periods';
 import { isoNow, sanitizeForFirestore } from './firestore-helpers';
 
 /** Το πάγιο δεν υπάρχει ή ανήκει σε άλλον μισθωτή — ίδιο σφάλμα και για τα δύο (καμία διαρροή ύπαρξης). */
@@ -89,7 +89,8 @@ async function readForPosting(
   const recordId = generateDeterministicDepreciationRecordId(tenant.companyId, request.assetId, request.fiscalYear);
   const recordRef = db.collection(COLLECTIONS.ACCOUNTING_DEPRECIATION_RECORDS).doc(recordId);
   const assetRef = db.collection(COLLECTIONS.ACCOUNTING_FIXED_ASSETS).doc(request.assetId);
-  const periodRef = db.collection(COLLECTIONS.ACCOUNTING_FISCAL_PERIODS).doc(depreciationPeriodIdFor(request.fiscalYear));
+  const periodId = depreciationPeriodIdFor(request.fiscalYear);
+  const periodRef = fiscalPeriodRef(db, tenant, periodId);
 
   const recordSnap = await transaction.get(recordRef);
   const assetSnap = await transaction.get(assetRef);
@@ -106,7 +107,7 @@ async function readForPosting(
     assetRef,
     current: recordSnap.exists ? (recordSnap.data() as DepreciationRecord) : null,
     asset,
-    periodBlocker: postingPeriodBlocker(periodSnap.exists ? (periodSnap.data() as FiscalPeriod) : null, tenant.companyId),
+    periodBlocker: postingPeriodBlocker(ownedFiscalPeriodOf(periodSnap, tenant, periodId)),
   };
 }
 

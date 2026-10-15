@@ -4860,25 +4860,16 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // ── Pattern C: Fiscal Periods — Q8 SAP pattern ─────────────────────────
-
+    // ── Pattern C: Fiscal Periods — ΜΟΝΟ ο server γράφει (ADR-ACC-010 §2.1.1 Φ6) ─
+    //
+    // 🔒 Κάθε περίοδος ανήκει σε ΕΝΑΝ μισθωτή: docId = generateDeterministicFiscalPeriodId(companyId, 'YYYY-MM')
+    // και `companyId` στο έγγραφο. Γέννηση / κλείσιμο / κλείδωμα / ξανάνοιγμα ΜΟΝΟ μέσω API (Admin SDK): εκεί η
+    // απόφαση μετάβασης τρέχει ΜΕΣΑ στη συναλλαγή και το ίχνος PERIOD_* γράφεται στην ίδια (Xero lock dates / SAP
+    // OB52 = μόνο εξουσιοδοτημένη πράξη). Πριν, διαχειριστής μπορούσε από τον browser να ξανανοίξει ΚΛΕΙΔΩΜΕΝΗ
+    // περίοδο χωρίς ίχνος, και ο κανόνας create δεν έδενε το docId με τον μισθωτή.
     match /accounting_fiscal_periods/{docId} {
       allow read:   if canReadAccounting(resource.data.companyId);
-      allow create: if isCompanyAdminOfCompany(request.resource.data.companyId)
-                    && request.resource.data.companyId == getUserCompanyId();
-      allow update: if isInternalUserOfCompany(resource.data.companyId)
-                    && request.resource.data.companyId == resource.data.companyId
-                    // Q8: lock/reopen → admin only; close (OPEN→CLOSED) → admin+internal
-                    && (
-                         // Status not changing → any internal user can update other fields
-                         resource.data.status == request.resource.data.status
-                         // OPEN → CLOSED: admin + internal_user
-                         || (resource.data.status == 'OPEN' && request.resource.data.status == 'CLOSED')
-                         // CLOSED → LOCKED or LOCKED → OPEN: admin only
-                         || isCompanyAdminOfCompany(resource.data.companyId)
-                       );
-      // Fiscal periods are never deleted
-      allow delete: if false;
+      allow create, update, delete: if false;
     }
 
     // ── Pattern D: Settings Singletons — admin-only write ──────────────────

@@ -155,7 +155,7 @@ function createMockRepository(): jest.Mocked<IAccountingRepository> {
     listCustomerBalances: noop,
     getFiscalPeriod: noop,
     listFiscalPeriods: noop,
-    updateFiscalPeriod: noop,
+    transitionFiscalPeriod: noop,
     createFiscalPeriods: noop,
     createAuditEntry: noop,
     listAuditEntries: noop,

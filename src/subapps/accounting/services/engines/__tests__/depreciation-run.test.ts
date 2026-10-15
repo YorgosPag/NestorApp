@@ -15,12 +15,13 @@
  *   Ε9  Φ5: Xero rollback — αντιλογισμός, μόνο νεότερη χρήση, ξανά-καταχώριση χωρίς διπλό
  *   Ε10 Φ5: περίοδος Δεκεμβρίου κλειστή (και ΚΑΤΑ τη διάρκεια της εκτέλεσης) ⇒ τίποτα στο βιβλίο
  *   Ε11 Φ5: το ίχνος το γράφει Ο ΓΡΑΦΕΑΣ — και χωρίς τον audited wrapper (έτσι καλούν τα routes)
+ *   Ε12 Φ6: η περίοδος είναι ΤΟΥ ΜΙΣΘΩΤΗ — κλειστός Δεκέμβριος άλλου δεν μπλοκάρει· ξένη περίοδος = ανύπαρκτη
  */
 
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { generateDeterministicDepreciationRecordId } from '@/services/enterprise-id.service';
+import { generateDeterministicDepreciationRecordId, generateDeterministicFiscalPeriodId } from '@/services/enterprise-id.service';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 
 import type { DepreciationRecord, FixedAsset } from '../../../types/assets';
@@ -69,9 +70,17 @@ function seedAssets(list: readonly FixedAsset[]): void {
   fake.seedCollection(ASSETS, Object.fromEntries(list.map((a) => [a.assetId, { ...a }])));
 }
 
-function seedPeriods(status: 'OPEN' | 'CLOSED' | 'LOCKED' = 'OPEN'): void {
-  fake.seedCollection(PERIODS, Object.fromEntries([2025, 2026].map((year) =>
-    [`${year}-12`, { periodId: `${year}-12`, fiscalYear: year, status }])));
+type PeriodStatus = 'OPEN' | 'CLOSED' | 'LOCKED';
+
+/** Η διεύθυνση της περιόδου `YYYY-12` του μισθωτή `companyId` (ADR-ACC-010 Φ6). */
+const periodDocId = (year: number, companyId: string = TENANT.companyId) =>
+  generateDeterministicFiscalPeriodId(companyId, `${year}-12`);
+
+const periodDoc = (year: number, status: PeriodStatus, companyId: string = TENANT.companyId) =>
+  ({ periodId: `${year}-12`, fiscalYear: year, status, companyId });
+
+function seedPeriods(status: PeriodStatus = 'OPEN'): void {
+  fake.seedCollection(PERIODS, Object.fromEntries([2025, 2026].map((year) => [periodDocId(year), periodDoc(year, status)])));
 }
 
 function auditedRepository(): IAccountingRepository {
@@ -308,7 +317,7 @@ describe('Ε10 — κλειστή περίοδος', () => {
 
   it('η περίοδος έκλεισε ΚΑΤΑ τη διάρκεια της εκτέλεσης ⇒ η συναλλαγή αρνείται, τίποτα στο βιβλίο', async () => {
     seedAssets([asset('ast_a')]);
-    fake.interfere = () => fake.write(PERIODS, '2025-12', { periodId: '2025-12', fiscalYear: 2025, status: 'CLOSED' });
+    fake.interfere = () => fake.write(PERIODS, periodDocId(2025), periodDoc(2025, 'CLOSED'));
 
     await expect(engineOn().bookDepreciations(2025)).rejects.toBeInstanceOf(DepreciationPeriodClosedError);
     expect([records().length, journal().length, audits().length]).toEqual([0, 0, 0]);
@@ -334,5 +343,24 @@ describe('Ε11 — το ίχνος το γράφει ο γραφέας', () => {
     await engineOn().bookDepreciations(2025);
 
     expect([audits().length, audits('JOURNAL_CREATED').length]).toEqual([1, 1]);
+  });
+});
+
+describe('Ε12 — η περίοδος είναι του μισθωτή (Φ6)', () => {
+  it('κλειστός Δεκέμβριος ΑΛΛΟΥ μισθωτή δεν μπλοκάρει την καταχώριση', async () => {
+    seedAssets([asset('ast_a')]);
+    fake.write(PERIODS, periodDocId(2025, 'comp_b'), periodDoc(2025, 'LOCKED', 'comp_b')); // δίπλα στις ανοιχτές του Α
+
+    const result = await engineOn().bookDepreciations(2025);
+    expect(result.posted).toHaveLength(1);
+    expect(fake.getData(PERIODS, periodDocId(2025, 'comp_b'))).toMatchObject({ status: 'LOCKED' });
+  });
+
+  it('έγγραφο ξένου μισθωτή στη ΔΙΚΗ μου διεύθυνση ⇒ PERIOD_NOT_FOUND, τίποτα στο βιβλίο', async () => {
+    seedAssets([asset('ast_a')]);
+    fake.seedCollection(PERIODS, { [periodDocId(2025)]: periodDoc(2025, 'OPEN', 'comp_b') });
+
+    await expect(engineOn().bookDepreciations(2025)).rejects.toMatchObject({ code: 'PERIOD_NOT_FOUND' });
+    expect([records().length, journal().length]).toEqual([0, 0]);
   });
 });

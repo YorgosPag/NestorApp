@@ -50,9 +50,6 @@ export {
 export {
   createFiscalYear,
   getPeriodForDate,
-  closePeriod,
-  lockPeriod,
-  reopenPeriod,
   validatePostingAllowed,
   getCurrentOpenPeriod,
   getYearEndChecklist,

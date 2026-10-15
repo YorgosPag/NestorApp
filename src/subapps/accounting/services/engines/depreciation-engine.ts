@@ -123,7 +123,7 @@ export class DepreciationEngine implements IDepreciationEngine {
   /** Τι εμποδίζει την εγγραφή — `book` θέλει χρήση που ΕΛΗΞΕ· και τα δύο θέλουν ανοιχτή την περίοδο 12. */
   private async runBlocker(fiscalYear: number, intent: DepreciationIntent): Promise<DepreciationRunBlocker | null> {
     if (intent === 'book' && this.today() <= `${fiscalYear}-12-31`) return 'FISCAL_YEAR_NOT_ENDED';
-    return postingPeriodBlocker(await this.repository.getFiscalPeriod(depreciationPeriodIdFor(fiscalYear)), null);
+    return postingPeriodBlocker(await this.repository.getFiscalPeriod(depreciationPeriodIdFor(fiscalYear)));
   }
 
   /** ΟΛΑ τα πάγια της χρήσης (πλήρης σάρωση) μαζί με ό,τι έχει καταχωρηθεί γι' αυτά. */

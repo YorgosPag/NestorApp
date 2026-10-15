@@ -3,7 +3,7 @@
  * PATCH /api/accounting/fiscal-periods/[periodId] — Close/Lock/Reopen Period
  * =============================================================================
  *
- * Auth: withAuth (authenticated users)
+ * Auth: withAuth — εγγραφές μόνο διοικητικός ρόλος (`ADMINISTRATIVE_ROLES`)
  * Rate: standard (60 req/min)
  *
  * @module api/accounting/fiscal-periods/[periodId]
@@ -15,12 +15,9 @@ import 'server-only';
 
 import { z } from 'zod';
 import { defineRoute, ok, badRequest } from '@/lib/api/define-route';
+import { ADMINISTRATIVE_ROLES } from '@/lib/auth/roles';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
-import {
-  closePeriod,
-  lockPeriod,
-  reopenPeriod,
-} from '@/subapps/accounting/services/fiscal-period-service';
+import { withFiscalPeriodErrors } from '../../_shared/fiscal-period-errors';
 
 const PatchPeriodSchema = z.object({
   action: z.enum(['close', 'lock', 'reopen']),
@@ -31,6 +28,8 @@ const PatchPeriodSchema = z.object({
 
 export const PATCH = defineRoute({
   rateLimit: 'standard',
+  // ADR-ACC-010 §2.1.1 Φ6: άνοιγμα/κλείσιμο/κλείδωμα περιόδων = διοικητική πράξη (Xero: μόνο Adviser · SAP OB52).
+  auth: { requiredGlobalRoles: ADMINISTRATIVE_ROLES },
   fallbackError: 'Failed to update fiscal period',
   handler: async ({ req, auth, params }) => {
     const { periodId } = params;
@@ -41,25 +40,14 @@ export const PATCH = defineRoute({
     }
 
     const { action, reason } = parsed.data;
-    const userId = auth.uid;
+    if (action === 'reopen' && !reason) {
+      badRequest('Reason is required for reopen action');
+    }
     const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
 
-    switch (action) {
-      case 'close':
-        await closePeriod(repository, periodId, userId);
-        break;
-      case 'lock':
-        await lockPeriod(repository, periodId, userId);
-        break;
-      case 'reopen':
-        if (!reason) {
-          badRequest('Reason is required for reopen action');
-        }
-        await reopenPeriod(repository, periodId, userId, reason);
-        break;
-    }
-
-    const updated = await repository.getFiscalPeriod(periodId);
+    // ADR-ACC-010 §2.1.1 Φ6: απόφαση + εγγραφή + ίχνος σε ΜΙΑ συναλλαγή, για την περίοδο ΤΟΥ μισθωτή.
+    const updated = await withFiscalPeriodErrors(() =>
+      repository.transitionFiscalPeriod(periodId, { action, userId: auth.uid, reason: reason ?? null }));
     return ok(updated);
   },
 });
