@@ -89,11 +89,8 @@ export const LazyRoutes = {
       loadingType: 'dashboard', ssr: false,
     },
 
-    // ⚡ ENTERPRISE: Properties Management (ADR-269: Unit → Property)
-    PropertiesManagement: {
-      load: () => import('@/components/properties/UnitsPageContent').then(mod => ({ default: mod.PropertiesManagementContent })),
-      loadingType: 'dashboard', ssr: false,
-    },
+    // ⛔ ADR-840 Σ3 — ΟΧΙ `PropertiesManagement` εδώ: η σελίδα (`UnitsPageContent`) ενώθηκε στη ΜΙΑ οθόνη ακινήτων
+    //    (`components/properties/PropertiesScreen`) και καμία διαδρομή δεν ζητούσε αυτή την τεμπέλικη είσοδο.
 
     // 🏢 ENTERPRISE: File Manager (company-wide file tree view)
     FileManager: {
@@ -182,4 +179,4 @@ export const LazyRoutes = {
 
   // ADR-294 entries (Batch 1-7) — extracted to lazyRoutesAdr294.tsx for SRP
   ...lazyRoutesAdr294,
-} as const;
+} as const;

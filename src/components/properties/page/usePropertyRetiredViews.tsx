@@ -37,6 +37,12 @@ interface UsePropertyRetiredViewsParams {
   activePropertyId: string | null;
   /** Πλήθος ΕΝΕΡΓΩΝ ακινήτων — το σήμα για τον μετρητή του αρχείου. */
   activePropertyCount: number;
+  /**
+   * ADR-840 Α5 — **ο κάδος ρωτά το ΔΙΚΟ του permission** (`:delete`, `usePropertyDeleteCapability`), όχι το `canEdit`.
+   * Η περιήγηση μένει (το API του κάδου ζητά `:view`)· οι **πράξεις** (επαναφορά · οριστική διαγραφή) όχι — ο
+   * διακομιστής θα τις απέρριπτε, και κουμπί που αποτυγχάνει είναι χειρότερο από κουμπί που δεν υπάρχει (§8.1).
+   */
+  canDelete: boolean;
 }
 
 /** Ό,τι απλώνεται στην `PropertiesHeader` — υποσύνολο του κοινού contract, ποτέ δεύτερος τύπος. */
@@ -109,6 +115,7 @@ export function usePropertyRetiredViews({
   forceDataRefresh,
   activePropertyId,
   activePropertyCount,
+  canDelete,
 }: UsePropertyRetiredViewsParams): PropertyRetiredViews {
   // 🗑️ Ο μετρητής του κάδου είναι ζωντανός (πάντα τρέχων, χωρίς κλικ)
   const { trashCount: realtimeTrashCount } = useRealtimePropertiesTrashCount();
@@ -129,7 +136,7 @@ export function usePropertyRetiredViews({
       archiveCount: archive.archiveCount,
     },
     retiredView: selectRetiredView(trash, archive),
-    actionsBar: (
+    actionsBar: canDelete && (
       <RetiredViewActionsBar
         trash={trash}
         archive={archive}

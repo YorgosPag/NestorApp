@@ -3,16 +3,14 @@
 /**
  * 📋 PropertyPageBody
  *
- * Renders the list/grid/retired variants of the properties page main body.
- * Extracted from `UnitsPageContent` to keep the page component under the
- * Google 500-line limit (N.7.1) and to isolate the tri-state rendering
- * (retired view — trash or archive — vs list vs grid) into one SRP unit.
+ * Το σώμα της όψης `list` της ενιαίας οθόνης ακινήτων — και του κάδου/αρχείου, που σκεπάζουν **κάθε** όψη
+ * (ADR-840 Σ3 · ADR-281 · ADR-329 §3.9). Πλέγμα και κάτοψη έχουν δικά τους σώματα (`PropertyCardGrid` ·
+ * `PropertyFloorplanView`)· εδώ ζούσε **τρίτο** πλέγμα (`PropertyGridViewCompatible`), που έφυγε.
  *
  * @module components/properties/page/PropertyPageBody
  */
 
 import { PropertiesSidebar } from '@/components/properties/PropertiesSidebar';
-import { PropertyGridViewCompatible as PropertyGridView } from '@/components/property-viewer/PropertyGrid';
 import { PageLoadingState } from '@/core/states';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -33,10 +31,9 @@ export interface PropertyRetiredView {
 }
 
 interface PropertyPageBodyProps {
-  /** `null` ⇒ η κανονική λίστα/πλέγμα. */
+  /** `null` ⇒ η κανονική λίστα. */
   retiredView: PropertyRetiredView | null;
   searchFilteredProperties: Property[];
-  viewMode: 'list' | 'grid';
   selectedProperty: Property | null;
   selectedPropertyIds: string[];
   isCreatingNewUnit: boolean;
@@ -57,7 +54,7 @@ export function PropertyPageBody(props: PropertyPageBodyProps) {
   const { t } = useTranslation(['properties']);
   const {
     retiredView, searchFilteredProperties,
-    viewMode, selectedProperty, selectedPropertyIds, isCreatingNewUnit,
+    selectedProperty, selectedPropertyIds, isCreatingNewUnit,
     newUnitTemplate, viewerProps, safeFloors, urlTab,
     onSelectProperty, setShowHistoryPanel, onAssignmentSuccess,
     onPropertyCreated, onCancelCreate, onNewProperty, onDeleteProperty,
@@ -85,32 +82,22 @@ export function PropertyPageBody(props: PropertyPageBodyProps) {
     );
   }
 
-  if (viewMode === 'list') {
-    return (
-      <PropertiesSidebar
-        units={searchFilteredProperties}
-        selectedProperty={isCreatingNewUnit ? newUnitTemplate : selectedProperty}
-        onSelectProperty={onSelectProperty}
-        selectedPropertyIds={selectedPropertyIds}
-        viewerProps={viewerProps}
-        floors={safeFloors}
-        setShowHistoryPanel={setShowHistoryPanel}
-        onAssignmentSuccess={onAssignmentSuccess}
-        onNewProperty={onNewProperty}
-        onDeleteProperty={onDeleteProperty}
-        isCreatingNewUnit={isCreatingNewUnit}
-        onPropertyCreated={onPropertyCreated}
-        onCancelCreate={onCancelCreate}
-        defaultTab={urlTab || undefined}
-      />
-    );
-  }
-
   return (
-    <PropertyGridView
-      properties={searchFilteredProperties}
+    <PropertiesSidebar
+      units={searchFilteredProperties}
+      selectedProperty={isCreatingNewUnit ? newUnitTemplate : selectedProperty}
+      onSelectProperty={onSelectProperty}
       selectedPropertyIds={selectedPropertyIds}
-      onSelect={onSelectProperty}
+      viewerProps={viewerProps}
+      floors={safeFloors}
+      setShowHistoryPanel={setShowHistoryPanel}
+      onAssignmentSuccess={onAssignmentSuccess}
+      onNewProperty={onNewProperty}
+      onDeleteProperty={onDeleteProperty}
+      isCreatingNewUnit={isCreatingNewUnit}
+      onPropertyCreated={onPropertyCreated}
+      onCancelCreate={onCancelCreate}
+      defaultTab={urlTab || undefined}
     />
   );
 }

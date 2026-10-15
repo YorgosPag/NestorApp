@@ -104,8 +104,9 @@ export interface PropertyEditCapability {
   readonly pending: boolean;
 }
 
-export function usePropertyEditCapability(): PropertyEditCapability {
-  const gate = useCapability(PROPERTY_EDIT_PERMISSION);
+/** Η ερώτηση προς τον ΕΝΑ PEP, μεταφρασμένη σε «δείξε / μη δείξεις» — κοινή σε κάθε πράξη ακινήτου. */
+function usePropertyActionCapability(permission: PermissionId): { granted: boolean; verdict: CapabilityVerdict; pending: boolean } {
+  const gate = useCapability(permission);
 
   return useMemo(
     () => ({
@@ -113,10 +114,27 @@ export function usePropertyEditCapability(): PropertyEditCapability {
       // άρα η κατεύθυνση είναι «κλειστό → ανοιχτό» και ποτέ το αντίστροφο —
       // κουμπί που εμφανίζεται και μετά εξαφανίζεται είναι χειρότερο από κουμπί
       // που αργεί.
-      canEdit: isGranted(gate.verdict),
+      granted: isGranted(gate.verdict),
       verdict: gate.verdict,
       pending: gate.pending,
     }),
     [gate],
   );
+}
+
+export function usePropertyEditCapability(): PropertyEditCapability {
+  const { granted, verdict, pending } = usePropertyActionCapability(PROPERTY_EDIT_PERMISSION);
+  return useMemo(() => ({ canEdit: granted, verdict, pending }), [granted, verdict, pending]);
+}
+
+/**
+ * **ADR-840 Α5 — ο κάδος ρωτά το ΔΙΚΟ του permission.** Μεταφορά στον κάδο · επαναφορά · οριστική διαγραφή ·
+ * αρχειοθέτηση φυλάσσονται όλες από το `:delete` (`SOFT_DELETE_CONFIG.property`), όχι από το `:update` — σήμερα ο
+ * κατάλογος τα δίνει στους ίδιους ρόλους, αλλά αυτό είναι **σύμπτωση δεδομένων** (§7.4), όχι κανόνας.
+ */
+export const PROPERTY_DELETE_PERMISSION: PermissionId = 'properties:properties:delete';
+
+export function usePropertyDeleteCapability(): { readonly canDelete: boolean; readonly pending: boolean } {
+  const { granted, pending } = usePropertyActionCapability(PROPERTY_DELETE_PERMISSION);
+  return useMemo(() => ({ canDelete: granted, pending }), [granted, pending]);
 }

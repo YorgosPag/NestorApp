@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * @fileoverview **Η προβολή της «Διαθέσιμα Ακίνητα» (πλέγμα ‖ κάτοψη), δεμένη στο URL** — πρότυπο `useListMapView`.
+ * @fileoverview **Η όψη της ενιαίας οθόνης ακινήτων (πλέγμα ‖ λίστα ‖ κάτοψη), δεμένη στο URL** — πρότυπο `useListMapView`.
  * @module hooks/usePropertiesView
  * @see lib/properties/property-filters-url · hooks/list-map/useListMapView · ADR-840 Α2 + §7.7
  *
@@ -30,8 +30,12 @@ export interface PropertiesViewState {
   readonly view: PropertiesView;
   /** Το ακίνητο που ζητήθηκε επιλεγμένο (`?selected=`), ή `null`. */
   readonly selectedId: string | null;
-  /** Αλλάζει προβολή κρατώντας **κάθε** άλλο κλειδί (φίλτρα). `selectedId` ⇒ γράφεται· παραλείπεται ⇒ σβήνεται. */
-  readonly setView: (view: PropertiesView, selectedId?: string) => void;
+  /**
+   * Αλλάζει όψη κρατώντας **κάθε** άλλο κλειδί — φίλτρα **και επιλογή** (ADR-840 Σ3: η επιλογή είναι της οθόνης, όχι
+   * του φακού). `selectedId` ⇒ γράφεται· `null` ⇒ σβήνεται· παραλείπεται ⇒ μένει ό,τι ήταν.
+   * ⚠️ Ως το Σ3 η παράλειψη **έσβηνε** την επιλογή — σωστό όταν κάθε όψη είχε δική της, λάθος στη μία οθόνη.
+   */
+  readonly setView: (view: PropertiesView, selectedId?: string | null) => void;
 }
 
 export function usePropertiesView(): PropertiesViewState {
@@ -39,11 +43,11 @@ export function usePropertiesView(): PropertiesViewState {
   const query = useUrlQuery(useSearchParams()?.toString());
   const params = useMemo(() => new URLSearchParams(query), [query]);
 
-  const setView = useCallback((view: PropertiesView, selectedId?: string) => {
+  const setView = useCallback((view: PropertiesView, selectedId?: string | null) => {
     replaceUrlSearchParams((live) => {
       PROPERTIES_VIEW.write(view, live);
       if (selectedId) live.set(PROPERTIES_SELECTED_PARAM, selectedId);
-      else live.delete(PROPERTIES_SELECTED_PARAM);
+      else if (selectedId === null) live.delete(PROPERTIES_SELECTED_PARAM);
     });
   }, []);
 

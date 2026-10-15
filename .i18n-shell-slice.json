@@ -1653,7 +1653,7 @@
     "FileManager": ["iso19650"],
     "Navigation": ["hierarchy-navigator"],
     "Projects": ["common-audit", "iso19650", "org-structure", "surveyRecord"],
-    "PropertiesManagement": ["common-audit", "iso19650", "model-freshness", "objective-value", "org-structure", "property-market", "surveyRecord"],
+    "Properties": ["common-audit", "iso19650", "model-freshness", "objective-value", "org-structure", "property-market", "surveyRecord"],
     "ReportsBuilder": ["report-builder", "report-builder-domains", "saved-reports"],
     "ReportsCashFlow": ["cash-flow"],
     "SalesAvailableParking": ["common-audit"],
@@ -1667,6 +1667,6 @@
   "lazyRouteMountSeal": {
     "count": 45,
     "at": "2026-10-05",
-    "why": "Πρώτη σφράγιση, ΜΕΤΡΗΜΕΝΗ: 45 ζεύγη σε 22 διαδρομές / 17 namespaces. Τα 44 είναι όσα μέτρησε η §27.2· το 45ο (AccountSecurity → market-contracts) βρέθηκε από την απάντηση στο OpenDataAttribution, που ο κοινός εξαγωγέας δεν έβλεπε. Τα 18 από τα 45 (Buildings 7 · PropertiesManagement 7 · Projects 4) έρχονται από το ίδιο σχήμα — πίνακας που εισάγει στατικά κάθε καρτέλα (buildingMappings / propertiesMappings / projectMappings): ο διαχωρισμός τους είναι η θεραπεία, όχι μεγαλύτερος αριθμός. Στόχος: μόνο ό,τι ζωγραφίζει στο πρώτο καρέ."
+    "why": "Πρώτη σφράγιση, ΜΕΤΡΗΜΕΝΗ: 45 ζεύγη σε 22 διαδρομές / 17 namespaces. Τα 44 είναι όσα μέτρησε η §27.2· το 45ο (AccountSecurity → market-contracts) βρέθηκε από την απάντηση στο OpenDataAttribution, που ο κοινός εξαγωγέας δεν έβλεπε. Τα 18 από τα 45 (Buildings 7 · PropertiesManagement 7 · Projects 4) έρχονται από το ίδιο σχήμα — πίνακας που εισάγει στατικά κάθε καρτέλα (buildingMappings / propertiesMappings / projectMappings): ο διαχωρισμός τους είναι η θεραπεία, όχι μεγαλύτερος αριθμός. Στόχος: μόνο ό,τι ζωγραφίζει στο πρώτο καρέ. — 2026-10-15 (ADR-840 Σ3): τα 7 ζεύγη του PropertiesManagement ΜΕΤΑΚΟΜΙΣΑΝ στο Properties αυτούσια — η λίστα με τον επιθεωρητή έγινε όψη της ΜΙΑΣ οθόνης ακινήτων και η τεμπέλικη είσοδος PropertiesManagement διαγράφηκε (καμία διαδρομή δεν τη ζητούσε). Ίδιο πλήθος (45), καμία νέα λήψη: ίδιο UI, άλλη διαδρομή. Η θεραπεία (τεμπέλικες καρτέλες στο propertiesMappings) μένει ανοιχτή όπως πριν."
   }
 }

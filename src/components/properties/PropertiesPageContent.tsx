@@ -1,15 +1,13 @@
 "use client";
 
 import React, { useEffect } from 'react';
-import dynamic from 'next/dynamic';
 import { useRouter } from '@/lib/workspace/navigation';
 import { useSearchParams } from 'next/navigation';
-import { usePropertiesView } from '@/hooks/usePropertiesView';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Import from canonical location
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
-import { PropertyGridView } from '@/features/property-grid/PropertyGridView';
+import { PropertiesScreen } from '@/components/properties/PropertiesScreen';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
@@ -28,21 +26,9 @@ const LoadingComponent = () => {
   );
 };
 
-// Dynamically import the floorplan viewer with layers (ADR-237: interactive overlays)
-const PropertyFloorplanViewer = dynamic(
-  () => import('@/components/property-management/PropertyManagementPageContent').then(mod => ({ default: mod.PropertyManagementPageContent })),
-  {
-    loading: () => <LoadingComponent />,
-    ssr: false
-  }
-);
-
 export const PropertiesPageContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  // ADR-840 §7.7 — η προβολή από τον ΕΝΑ αναγνώστη (`useUrlQuery`): αλλάζει με `replaceState`, που το
-  // `useSearchParams` δεν βλέπει στον dev.
-  const { view } = usePropertiesView();
   const legacyPropertyId = searchParams.get('propertyId');
 
   /**
@@ -58,8 +44,9 @@ export const PropertiesPageContent = () => {
    * **δείκτης** προς την καρτέλα, με `replace` ώστε το «πίσω» να μην κολλά σε
    * βρόχο ανάμεσα στις δύο διευθύνσεις.
    *
-   * ⚠️ Δεν είναι το ίδιο με το `?propertyId=` του `/spaces/properties`: εκείνο
-   * απαντά *«ποια γραμμή είναι επιλεγμένη»* και μένει ως έχει.
+   * ⚠️ Δεν είναι το ίδιο με το `?propertyId=` του (πρώην) `/spaces/properties`: εκείνο
+   * απαντούσε *«ποια γραμμή είναι επιλεγμένη»* και η ανακατεύθυνσή του το **μεταφράζει**
+   * σε `?selected=` πριν φτάσει εδώ (ADR-840 Σ3) — άρα εδώ φτάνει μόνο η σημασία «καρτέλα».
    */
   useEffect(() => {
     if (legacyPropertyId) {
@@ -71,13 +58,8 @@ export const PropertiesPageContent = () => {
     return <LoadingComponent />;
   }
 
-  // If floorplan view is requested, show the property viewer with layers + interactive overlays
-  if (view === 'floorplan') {
-    return <PropertyFloorplanViewer />;
-  }
-
-  // Otherwise, show the property grid view
-  return <PropertyGridView />;
+  // ADR-840 Σ3 — ΜΙΑ οθόνη· η όψη (πλέγμα ‖ λίστα ‖ κάτοψη) είναι δική της, στο `?view=`.
+  return <PropertiesScreen urlTab={searchParams.get('tab')} />;
 };
 
 export default PropertiesPageContent;
