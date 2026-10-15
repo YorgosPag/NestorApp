@@ -14,9 +14,18 @@ import { DocumentRegistryContent } from '../DocumentRegistryContent';
 import {
   REGISTRY_KEYS,
   REGISTRY_STATE_LABEL_KEYS,
+  REGISTRY_STATE_LOOK,
   TRUNCATED_SOURCE_KEYS,
 } from '../document-registry-labels';
-import { matchesRegistryFilter, REGISTRY_FILTERS, REGISTRY_ROW_STATES } from '@/lib/document-validity/document-registry';
+import {
+  matchesRegistryFilter,
+  REGISTRY_FILTERS,
+  REGISTRY_ROW_STATES,
+  registryRowIdOf,
+  type RegistryRow,
+} from '@/lib/document-validity/document-registry';
+import type { DocumentRequirement } from '@/lib/document-validity/document-requirement';
+import { mandateDetailHref } from '@/lib/mandate/mandate-routes';
 import { listingDetailHref } from '@/lib/listings/listing-routes';
 import { ENTITY_ROUTES } from '@/lib/routes/entityRoutes';
 import type { DocumentRegistryState } from '@/hooks/document-registry/useDocumentRegistry';
@@ -55,22 +64,32 @@ jest.mock('@/components/property-management/dashboard/StatsCard', () => ({
 
 const reload = jest.fn();
 
+/** Ταυτότητα κτιρίου που ζητά μεταβίβαση στο `p1` — συνθετική. */
+const FIXTURE_REQUIREMENT_P1_IDENTITY: DocumentRequirement = {
+  documentKind: 'building-identity', subject: { propertyId: 'p1' }, process: { kind: 'conveyance', caseId: 'case-9' },
+  neededOn: { kind: 'unscheduled' }, policy: 'block', warnWindowDays: 15,
+  basis: { kind: 'checklist-item', itemId: 'building_identity', verifiedAt: null }, presence: 'required', attestation: null,
+};
+
 function renderReady(response = fixtureResponse(), view?: string): void {
   searchParams = new URLSearchParams(view ? { view } : {});
   registryState.mockReturnValue({ view: { state: 'ready', registry: response }, reload });
   render(<DocumentRegistryContent />);
 }
 
-/** Τα αρχεία που δείχνει η οθόνη, με τη σειρά τους (κάθε γραμμή είναι `<article>`). */
+/** Το κείμενο που ΜΟΝΟ αυτή η γραμμή έχει: όνομα αρχείου για έγγραφο · όνομα ακινήτου για κενό (Φ4δ). */
+function signatureOf(row: RegistryRow, response = fixtureResponse()): string {
+  if (row.kind === 'gap') return response.properties[row.gap.propertyId]?.name ?? '?';
+  return response.files[row.document.id]?.name ?? REGISTRY_KEYS.fileUnnamed;
+}
+
+/** Οι γραμμές που δείχνει η οθόνη, με τη σειρά τους (κάθε γραμμή είναι `<article>`). */
 const shownArticles = () => screen.queryAllByRole('article');
 const shownFiles = (): string[] => {
-  const names = fixtureResponse().files;
+  const { rows } = fixtureResponse();
   return shownArticles().map((article) => {
-    const id = FIXTURE_DOCUMENTS.find((document) => {
-      const name = names[document.id]?.name ?? REGISTRY_KEYS.fileUnnamed;
-      return within(article).queryByText(name) !== null;
-    })?.id;
-    return id ?? '?';
+    const row = rows.find((candidate) => within(article).queryByText(signatureOf(candidate)) !== null);
+    return row === undefined ? '?' : registryRowIdOf(row);
   });
 };
 
@@ -84,7 +103,9 @@ describe('κάρτες σύνοψης', () => {
     renderReady(onlyValid);
     const cards = screen.getAllByTestId('tally-card').map((card) => card.textContent);
     expect(cards).toEqual(REGISTRY_ROW_STATES.map((state) =>
-      `${REGISTRY_STATE_LABEL_KEYS[state]}=${onlyValid.tally[state]}:${state === 'valid' ? 'green' : 'gray'}`));
+      `${REGISTRY_STATE_LABEL_KEYS[state]}=${onlyValid.tally[state]}:${onlyValid.tally[state] === 0 ? 'gray' : REGISTRY_STATE_LOOK[state].tone}`));
+    expect(onlyValid.tally.valid).toBe(1);
+    expect(onlyValid.tally.expired).toBe(0);
   });
 });
 
@@ -92,20 +113,21 @@ describe('προβολές — ΑΚΡΙΒΩΣ ό,τι λέει ο ΕΝΑΣ τα�
   it.each(REGISTRY_FILTERS)('%s', (filter) => {
     const response = fixtureResponse();
     renderReady(response, filter);
-    const expected = response.rows.filter((row) => matchesRegistryFilter(row, filter, response.asOf)).map((row) => row.document.id);
+    const expected = response.rows.filter((row) => matchesRegistryFilter(row, filter, response.asOf)).map(registryRowIdOf);
     expect(shownFiles().sort()).toEqual([...expected].sort());
     expect(shownFiles()).not.toContain('f-old');
   });
 
   it('«Όλα» δείχνει και την αντικατεστημένη, με το ποιο την αντικατέστησε', () => {
     renderReady();
-    expect(shownFiles().sort()).toEqual(FIXTURE_DOCUMENTS.map((document) => document.id).sort());
+    expect(shownFiles().sort()).toEqual(fixtureResponse().rows.map(registryRowIdOf).sort());
+    expect(shownFiles()).not.toContain('?');
     expect(screen.getByText(`${REGISTRY_KEYS.supersededBy} ${JSON.stringify({ name: 'synthetic-new.pdf' })}`)).toBeTruthy();
   });
 
   it('άγνωστη παράμετρος ⇒ «Όλα» (ο παλιός σύνδεσμος δεν σπάει)', () => {
     renderReady(fixtureResponse(), 'no-such-view');
-    expect(shownArticles()).toHaveLength(FIXTURE_DOCUMENTS.length);
+    expect(shownArticles()).toHaveLength(fixtureResponse().rows.length);
   });
 
   it('η επιλογή προβολής αλλάζει τη διεύθυνση με `replace`', () => {
@@ -122,8 +144,7 @@ describe('γραμμή', () => {
     const response = fixtureResponse();
     renderReady(response);
     for (const row of response.rows) {
-      const name = response.files[row.document.id]?.name ?? REGISTRY_KEYS.fileUnnamed;
-      expect(within(articleOf(name)).getByText(REGISTRY_STATE_LABEL_KEYS[row.state])).toBeTruthy();
+      expect(within(articleOf(signatureOf(row, response))).getByText(REGISTRY_STATE_LABEL_KEYS[row.state])).toBeTruthy();
     }
   });
 
@@ -158,6 +179,50 @@ describe('γραμμή', () => {
   });
 });
 
+describe('Φ4δ — ό,τι ΛΕΙΠΕΙ', () => {
+  const articleWith = (text: string) => screen.getByText(text).closest('article') as HTMLElement;
+  const withParams = (key: string, params: Record<string, unknown>) => `${key} ${JSON.stringify(params)}`;
+
+  it('κενό σε ακίνητο εταιρείας: «λείπει» · «ποιος το ζητά» · μπλοκάρει · δρόμος στα έγγραφα του ακινήτου', () => {
+    renderReady();
+    const gap = articleWith('Συνθετικό Ζ6');
+    expect(within(gap).getByText(REGISTRY_STATE_LABEL_KEYS.missing)).toBeTruthy();
+    expect(within(gap).getByText(REGISTRY_KEYS.missingDocument)).toBeTruthy();
+    expect(within(gap).getByText(REGISTRY_KEYS.missingHeading)).toBeTruthy();
+    expect(within(gap).queryByText(REGISTRY_KEYS.dependentsHeading)).toBeNull();
+    expect(within(gap).getByText(REGISTRY_KEYS.blockingNow)).toBeTruthy();
+    expect(within(gap).getByText('document-registry:dependents.absent')).toBeTruthy();
+    expect(within(gap).getByText(REGISTRY_KEYS.openDocuments).getAttribute('href')).toBe(ENTITY_ROUTES.properties.withTab('p6', 'documents'));
+  });
+
+  it('κενό σε αγγελία εντολής (Ε10): ΕΝΑΣ σύνδεσμος, προς την ΕΝΤΟΛΗ — όχι προς ακίνητο εταιρείας · `warn` δεν μπλοκάρει', () => {
+    renderReady();
+    const gap = articleWith('Συνθετική εντολή Η7');
+    expect(within(gap).getByText('Συνθετική εντολή Η7').getAttribute('href')).toBe(mandateDetailHref('ownp_7'));
+    expect(within(gap).queryByText(REGISTRY_KEYS.openDocuments)).toBeNull();
+    expect(within(gap).queryByText(REGISTRY_KEYS.blockingNow)).toBeNull();
+  });
+
+  it('έγκριση ελέγχου χωρίς αρχείο (Ε8) ⇒ γραμμή με ρητή λέξη, όχι «λείπει»', () => {
+    const attested = { ...FIXTURE_REQUIREMENT_P1_IDENTITY, attestation: { fileId: null, issuedOn: '2026-09-01' } };
+    renderReady(fixtureResponse({}, [], [attested]));
+    expect(screen.getByText(REGISTRY_KEYS.attested)).toBeTruthy();
+    expect(screen.queryByText(REGISTRY_STATE_LABEL_KEYS.missing)).toBeNull();
+  });
+
+  it('το όριο έχει ΑΡΙΘΜΟ: αγγελίες με το όνομα του γραφείου εκτός θεματοφυλακής', () => {
+    renderReady(fixtureResponse({ unscopedListings: 3 }));
+    expect(screen.getByText(withParams(REGISTRY_KEYS.unscopedListings, { count: 3 }))).toBeTruthy();
+  });
+
+  it('`truncated` ονομάζει και τις νέες πηγές (εντολές · αγγελίες)', () => {
+    renderReady(fixtureResponse({ truncated: true, truncatedSources: ['owner-properties', 'listings'] }));
+    const body = screen.getByText(new RegExp(REGISTRY_KEYS.truncatedBody.replace('.', '\\.'))).textContent ?? '';
+    expect(body).toContain(TRUNCATED_SOURCE_KEYS['owner-properties']);
+    expect(body).toContain(TRUNCATED_SOURCE_KEYS.listings);
+  });
+});
+
 describe('ειλικρίνεια της οθόνης', () => {
   it('`truncated` ⇒ ορατή ειδοποίηση που ονομάζει τις πηγές', () => {
     renderReady(fixtureResponse({ truncated: true, truncatedSources: ['files', 'cases'] }));
@@ -173,7 +238,7 @@ describe('ειλικρίνεια της οθόνης', () => {
   });
 
   it('κενό μητρώο ⇒ κενή κατάσταση με δρόμο προς τα ακίνητα — και οι κάρτες μένουν (μηδενικές)', () => {
-    renderReady(fixtureResponse({}, []));
+    renderReady(fixtureResponse({}, [], []));
     expect(screen.getByText(REGISTRY_KEYS.emptyTitle)).toBeTruthy();
     expect(screen.getByText(REGISTRY_KEYS.emptyAction).getAttribute('href')).toBe(ENTITY_ROUTES.properties.list);
     expect(screen.getAllByTestId('tally-card')).toHaveLength(REGISTRY_ROW_STATES.length);

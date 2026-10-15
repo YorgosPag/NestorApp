@@ -31,7 +31,8 @@ export function RegistryTally({ tally }: { readonly tally: DocumentRegistry['tal
       <h2 id="document-registry-tally" className="m-0 text-sm font-medium text-muted-foreground">
         {t(REGISTRY_KEYS.tallyHeading)}
       </h2>
-      <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 sm:grid-cols-3 lg:grid-cols-5">
+      {/* Έξι καταστάσεις (Φ4δ: + «λείπει») ⇒ 2 · 3 · 6 στήλες: κάθε σειρά γεμάτη, καμία ορφανή κάρτα. */}
+      <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 sm:grid-cols-3 xl:grid-cols-6">
         {REGISTRY_ROW_STATES.map((state) => {
           const look = REGISTRY_STATE_LOOK[state];
           return (

@@ -18,6 +18,7 @@ import {
   CalendarClock,
   CalendarX2,
   CircleHelp,
+  FileX2,
   History,
   type LucideIcon,
 } from 'lucide-react';
@@ -60,6 +61,7 @@ export const REGISTRY_KEYS = {
   propertyUnnamed: `${K}row.propertyUnnamed`,
   document: `${K}row.document`,
   declared: `${K}row.declared`,
+  attested: `${K}row.attested`,
   fileUnnamed: `${K}row.fileUnnamed`,
   expiry: `${K}row.expiry`,
   expiryUnknown: `${K}row.expiryUnknown`,
@@ -70,8 +72,10 @@ export const REGISTRY_KEYS = {
   state: `${K}row.state`,
   supersededBy: `${K}row.supersededBy`,
   openDocuments: `${K}row.openDocuments`,
+  missingDocument: `${K}row.missingDocument`,
   discrepancy: 'conveyance:dialogs.expiryDiscrepancy',
   dependentsHeading: `${K}dependents.heading`,
+  missingHeading: `${K}dependents.missingHeading`,
   dependentsNone: `${K}dependents.none`,
   signingOn: `${K}dependents.signingOn`,
   continuous: `${K}dependents.continuous`,
@@ -85,6 +89,7 @@ export const REGISTRY_KEYS = {
   emptyHint: `${K}empty.hint`,
   emptyAction: `${K}empty.openProperties`,
   scopeNote: `${K}scope.note`,
+  unscopedListings: `${K}scope.unscopedListings`,
 } as const;
 
 /**
@@ -100,6 +105,7 @@ export interface RegistryStateLook {
 
 export const REGISTRY_STATE_LOOK: Readonly<Record<RegistryRowState, RegistryStateLook>> = {
   expired: { icon: CalendarX2, tone: 'red', badge: 'error' },
+  missing: { icon: FileX2, tone: 'red', badge: 'error' },
   expiring: { icon: CalendarClock, tone: 'orange', badge: 'warning' },
   'expiry-unknown': { icon: CircleHelp, tone: 'gray', badge: 'muted' },
   valid: { icon: CalendarCheck2, tone: 'green', badge: 'success' },
@@ -108,6 +114,7 @@ export const REGISTRY_STATE_LOOK: Readonly<Record<RegistryRowState, RegistryStat
 
 export const REGISTRY_STATE_LABEL_KEYS: Readonly<Record<RegistryRowState, string>> = {
   expired: `${K}state.expired`,
+  missing: `${K}state.missing`,
   expiring: `${K}state.expiring`,
   'expiry-unknown': `${K}state.expiry-unknown`,
   valid: `${K}state.valid`,
@@ -116,6 +123,7 @@ export const REGISTRY_STATE_LABEL_KEYS: Readonly<Record<RegistryRowState, string
 
 export const REGISTRY_STATE_HINT_KEYS: Readonly<Record<RegistryRowState, string>> = {
   expired: `${K}stateHint.expired`,
+  missing: `${K}stateHint.missing`,
   expiring: `${K}stateHint.expiring`,
   'expiry-unknown': `${K}stateHint.expiry-unknown`,
   valid: `${K}stateHint.valid`,
@@ -125,6 +133,7 @@ export const REGISTRY_STATE_HINT_KEYS: Readonly<Record<RegistryRowState, string>
 export const REGISTRY_VIEW_LABEL_KEYS: Readonly<Record<RegistryView, string>> = {
   all: `${K}filter.all`,
   'renewal-due': `${K}filter.renewal-due`,
+  missing: `${K}filter.missing`,
   'within-window': `${K}filter.within-window`,
   blocking: `${K}filter.blocking`,
   'expiry-unknown': `${K}filter.expiry-unknown`,
@@ -145,6 +154,7 @@ export const IMPACT_LABEL_KEYS: Readonly<Record<DependentImpact, string>> = {
   stops: `${K}dependents.stops`,
   unaffected: `${K}dependents.unaffected`,
   undetermined: `${K}dependents.undetermined`,
+  absent: `${K}dependents.absent`,
 };
 
 export const POLICY_LABEL_KEYS: Readonly<Record<RequirementPolicy, string>> = {
@@ -156,4 +166,6 @@ export const TRUNCATED_SOURCE_KEYS: Readonly<Record<RegistrySource, string>> = {
   files: `${K}truncated.files`,
   declared: `${K}truncated.declared`,
   cases: `${K}truncated.cases`,
+  'owner-properties': `${K}truncated.owner-properties`,
+  listings: `${K}truncated.listings`,
 };

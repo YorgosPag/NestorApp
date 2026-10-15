@@ -33,7 +33,7 @@
     "src/i18n/generated/routes/o__workspace__cases.el.json": "62e1b3378215c16e66a12632667ad61be33b59cc632e634dde0ffaf9763769d4",
     "src/i18n/generated/routes/o__workspace__cases__engagementId.el.json": "c1979936fe14b4c4bd72777a3595f5dc0431b65a417cd1b642afeca43a2ca2ed",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
-    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "c0dc1246535e2b4cb0a5f30c62732565ce8ad026872ece7a9b428d342fd1064c",
+    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "f4c3c73c2657a788033aa657b60bf976e77094571043ef07b14bba024df91ea9",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "f2b0212cf0909081143453962ba0bfec2a47dc8753dc81a009ee34c12579b137",
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "2753c7edd9c05a17a65b15f3146177db8a27ca727df7b1f77d28fd1724f4fa6f",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "e1c5896ab910b7f5515ef0a3991a4daae3ba7fc776c6291815cfeaddb51e2398",
@@ -182,7 +182,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "ec536ac7cabeb98d043c0f35edb27fddc638a21df627c20e8d033000da4ab25a",
+  "inputsSha256": "68948b79efad712af45c3ed31e6d857b29e43a083583c132cb57a5a6a8a11608",
   "languages": [
     "el"
   ],
@@ -5115,12 +5115,14 @@
         },
         "document-registry": {
           "keys": [
+            "dependents.absent",
             "dependents.block",
             "dependents.blockingNow",
             "dependents.continuous",
             "dependents.conveyance",
             "dependents.heading",
             "dependents.listing-publication",
+            "dependents.missingHeading",
             "dependents.none",
             "dependents.openListing",
             "dependents.openProperty",
@@ -5139,6 +5141,7 @@
             "filter.empty",
             "filter.expiry-unknown",
             "filter.label",
+            "filter.missing",
             "filter.option",
             "filter.renewal-due",
             "filter.within-window",
@@ -5149,6 +5152,7 @@
             "page.asOf",
             "page.lead",
             "page.title",
+            "row.attested",
             "row.daysAgo",
             "row.daysLeft",
             "row.declared",
@@ -5156,6 +5160,7 @@
             "row.expiry",
             "row.expiryUnknown",
             "row.fileUnnamed",
+            "row.missingDocument",
             "row.openDocuments",
             "row.property",
             "row.propertyNone",
@@ -5165,14 +5170,17 @@
             "row.state",
             "row.supersededBy",
             "scope.note",
+            "scope.unscopedListings",
             "state.expired",
             "state.expiring",
             "state.expiry-unknown",
+            "state.missing",
             "state.superseded",
             "state.valid",
             "stateHint.expired",
             "stateHint.expiring",
             "stateHint.expiry-unknown",
+            "stateHint.missing",
             "stateHint.superseded",
             "stateHint.valid",
             "tally.heading",
@@ -5180,6 +5188,8 @@
             "truncated.cases",
             "truncated.declared",
             "truncated.files",
+            "truncated.listings",
+            "truncated.owner-properties",
             "truncated.title"
           ],
           "prefixes": [],
@@ -11893,7 +11903,7 @@
     "matchedKeys": 243,
     "routeBoundaries": 3,
     "shellFiles": 1223,
-    "sliceBytes": 744336
+    "sliceBytes": 745519
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

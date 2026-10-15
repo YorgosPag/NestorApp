@@ -32,7 +32,12 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatDateKey, formatList } from '@/lib/intl-formatting';
 import { ENTITY_ROUTES } from '@/lib/routes/entityRoutes';
 import { Link, useRouter } from '@/lib/workspace/navigation';
-import { REGISTRY_ROW_STATES, REGISTRY_WINDOW_DAYS, type RegistryRow } from '@/lib/document-validity/document-registry';
+import {
+  REGISTRY_ROW_STATES,
+  REGISTRY_WINDOW_DAYS,
+  registryRowIdOf,
+  type RegistryRow,
+} from '@/lib/document-validity/document-registry';
 import {
   documentExpiryHref,
   REGISTRY_VIEW_PARAM,
@@ -44,6 +49,7 @@ import {
 } from '@/lib/document-validity/document-registry-view';
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
 import { documentNameOf, RegistryRowItem } from '@/components/document-registry/RegistryRowItem';
+import { RegistryGapItem } from '@/components/document-registry/RegistryGapItem';
 import { RegistryTally } from '@/components/document-registry/RegistryTally';
 import {
   REGISTRY_KEYS,
@@ -126,9 +132,21 @@ function ViewPicker({ view, onSelect, tally }: ViewPickerProps): React.ReactElem
 /** `id` γραμμής → όνομα εγγράφου: για το «αντικαταστάθηκε από …» χωρίς δεύτερη αναζήτηση ανά γραμμή. */
 function useRowNames(t: Translate, registry: DocumentRegistryResponse): ReadonlyMap<string, string> {
   return useMemo(
-    () => new Map(registry.rows.map((row) => [row.document.id, documentNameOf(t, row.document, registry)])),
+    () => new Map(registry.rows.flatMap((row) =>
+      row.kind === 'document' ? [[row.document.id, documentNameOf(t, row.document, registry)] as const] : [])),
     [t, registry],
   );
+}
+
+/** Έγγραφο ή κενό — ο τύπος της γραμμής διαλέγει το στοιχείο, ποτέ η οθόνη μόνη της. */
+function RowItem({ row, registry, names }: {
+  readonly row: RegistryRow;
+  readonly registry: DocumentRegistryResponse;
+  readonly names: ReadonlyMap<string, string>;
+}): React.ReactElement {
+  if (row.kind === 'gap') return <RegistryGapItem row={row} registry={registry} />;
+  const supersededByName = row.supersededBy === null ? null : (names.get(row.supersededBy) ?? null);
+  return <RegistryRowItem row={row} registry={registry} supersededByName={supersededByName} />;
 }
 
 interface GroupsProps {
@@ -154,12 +172,8 @@ function RegistryGroups({ rows, registry }: GroupsProps): React.ReactElement {
             </h2>
             <ul className="m-0 flex list-none flex-col gap-3 p-0">
               {members.map((row) => (
-                <li key={row.document.id}>
-                  <RegistryRowItem
-                    row={row}
-                    registry={registry}
-                    supersededByName={row.supersededBy === null ? null : (names.get(row.supersededBy) ?? null)}
-                  />
+                <li key={registryRowIdOf(row)}>
+                  <RowItem row={row} registry={registry} names={names} />
                 </li>
               ))}
             </ul>
@@ -220,9 +234,14 @@ export function DocumentRegistryContent(): React.ReactElement {
         ) : null}
       </header>
       <RegistryBody view={view} reload={reload} />
-      {/* 🔑 Τα όρια Δ2/Δ3 λέγονται, δεν κρύβονται: για γραφείο που δουλεύει μόνο με εντολές, κενό χωρίς εξήγηση = σιωπή. */}
-      <footer>
+      {/* 🔑 Τα όρια λέγονται, δεν κρύβονται (Γ1) — και όπου μετριούνται, λέγονται με ΑΡΙΘΜΟ (Φ4δ Ε11). */}
+      <footer className="flex flex-col gap-1">
         <p className="m-0 text-xs text-muted-foreground">{t(REGISTRY_KEYS.scopeNote)}</p>
+        {view.state === 'ready' ? (
+          <p className="m-0 text-xs text-muted-foreground">
+            {t(REGISTRY_KEYS.unscopedListings, { count: view.registry.unscopedListings })}
+          </p>
+        ) : null}
       </footer>
     </section>
   );

@@ -1,7 +1,7 @@
 {
   "page": {
     "title": "Document expiry",
-    "lead": "Every document that expires: what is valid today, when it needs renewal and which process stops if it lapses.",
+    "lead": "Every document that expires — and every one that is missing: what is valid today, when it needs renewal and which process stops.",
     "asOf": "Status as of {date}"
   },
   "load": {
@@ -14,6 +14,7 @@
   },
   "state": {
     "expired": "Expired",
+    "missing": "Missing",
     "expiring": "Renewal due",
     "expiry-unknown": "Expiry unknown",
     "valid": "Valid",
@@ -21,6 +22,7 @@
   },
   "stateHint": {
     "expired": "Its validity has ended.",
+    "missing": "No file, no declaration and no review approval — and a running process requires it.",
     "expiring": "It is within the time its kind needs for renewal.",
     "expiry-unknown": "We do not know until when it is valid — it is not treated as valid.",
     "valid": "Valid and not yet due for renewal.",
@@ -36,6 +38,7 @@
     "within-window": "Expiring within {days} days",
     "blocking": "Blocking",
     "expiry-unknown": "Expiry unknown",
+    "missing": "Missing",
     "discrepancy": "Discrepancy",
     "option": "{label} ({count})",
     "empty": "No documents in this view."
@@ -46,6 +49,7 @@
     "propertyUnnamed": "Unnamed property",
     "document": "Document",
     "declared": "Declared on the property, no file",
+    "attested": "Approved in the conveyance review",
     "fileUnnamed": "Unnamed file",
     "expiry": "Expiry",
     "expiryUnknown": "Unknown — the issue date is missing or the validity of this kind is not verified",
@@ -55,10 +59,12 @@
     "sourcePrinted": "as printed on the document",
     "state": "Status",
     "supersededBy": "Superseded by: {name}",
-    "openDocuments": "Property documents"
+    "openDocuments": "Property documents",
+    "missingDocument": "Not recorded"
   },
   "dependents": {
     "heading": "What stops if it expires",
+    "missingHeading": "Who requires it",
     "none": "No open process needs it today.",
     "conveyance": "Conveyance",
     "listing-publication": "Published listing",
@@ -68,6 +74,7 @@
     "stops": "stops from {date}",
     "unaffected": "not affected",
     "undetermined": "cannot be judged — the expiry is unknown",
+    "absent": "without a valid document as of today",
     "block": "Required by the process",
     "blockingNow": "Blocking now",
     "warn": "Warning — the listing stays published",
@@ -79,7 +86,9 @@
     "body": "These reached the read limit and not everything is shown: {sources}. The counts cover only what was read.",
     "files": "files",
     "declared": "property declarations",
-    "cases": "conveyance cases"
+    "cases": "conveyance cases",
+    "owner-properties": "privately owned properties under a mandate",
+    "listings": "published listings"
   },
   "empty": {
     "title": "No expiring documents found",
@@ -87,6 +96,7 @@
     "openProperties": "Go to properties"
   },
   "scope": {
-    "note": "Privately owned properties under a mandate and project-level energy certificates are not included yet."
+    "note": "Not in the registry: the personal space and documents sent by third parties (transmittals).",
+    "unscopedListings": "{count, plural, =0 {Every listing under the office name was checked.} one {# listing under the office name is not checked: the office is not its custodian.} other {# listings under the office name are not checked: the office is not their custodian.}}"
   }
 }

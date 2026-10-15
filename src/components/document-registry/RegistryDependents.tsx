@@ -82,7 +82,7 @@ function DependentItem({ dependent, state }: DependentProps): React.ReactElement
         {isBlockingDependent(dependent, state) ? <Badge variant="error">{t(REGISTRY_KEYS.blockingNow)}</Badge> : null}
       </p>
       <p className="m-0 text-sm text-muted-foreground">{impactText(t, dependent)}</p>
-      <ProcessLink dependent={dependent} state={state} />
+      <ProcessLink dependent={dependent} />
     </li>
   );
 }
@@ -95,9 +95,13 @@ export function RegistryDependents({
   readonly state: RegistryRowState;
 }): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS, CONVEYANCE_NS, LEGALITY_NS]);
+  // Φ4δ — για ό,τι λείπει η ερώτηση δεν είναι «τι σταματά αν λήξει», αλλά «ποιος το ζητά» (όλα `absent`).
+  // ⚠️ Τριαδικός ΜΕΣΑ στο `t(…)`: ο γεννήτορας του route slice λύνει στατικά μόνο αυτή τη μορφή.
   return (
     <section className="flex flex-col gap-2">
-      <h4 className="m-0 text-sm font-semibold text-foreground">{t(REGISTRY_KEYS.dependentsHeading)}</h4>
+      <h4 className="m-0 text-sm font-semibold text-foreground">
+        {t(state === 'missing' ? REGISTRY_KEYS.missingHeading : REGISTRY_KEYS.dependentsHeading)}
+      </h4>
       {dependents.length === 0 ? (
         <p className="m-0 text-sm text-muted-foreground">{t(REGISTRY_KEYS.dependentsNone)}</p>
       ) : (
