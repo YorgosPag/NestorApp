@@ -925,6 +925,11 @@
     "hostBody": "Some certificates expire soon or will not be valid on the signing day. Renew them in time so the contract is not postponed.",
     "engagedBody": "Some documents relevant to you expire soon or will not be valid on the signing day. Open the case to see which."
   },
+  "documentExpiry": {
+    "title": "{count, plural, one {# document needs action} other {# documents need action}}",
+    "body": "Some documents are due for renewal, close to expiry, expired or missing. Open «Document expiry» to see which.",
+    "blockingBody": "{blocking, plural, one {# of them already blocks a conveyance or listing} other {# of them already block a conveyance or listing}}. Open «Document expiry» to see what stops."
+  },
   "caseDocument": {
     "title": "New document: «{document}» — «{title}»",
     "revisionTitle": "New version: «{document}» — «{title}»",

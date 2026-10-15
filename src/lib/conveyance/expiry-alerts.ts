@@ -19,7 +19,7 @@
  * @module lib/conveyance/expiry-alerts
  */
 
-import { fnv1a32 } from '@/lib/hash/fnv1a';
+import { alertSetDigest } from '@/lib/notifications/alert-set-digest';
 import type { ChecklistRow } from '@/types/conveyance-case';
 
 /** Μία γραμμή που θέλει προσοχή λόγω ισχύος. */
@@ -40,8 +40,7 @@ export function expiryAlertsOf(rows: readonly ChecklistRow[]): ExpiryAlert[] {
 
 /** Το αποτύπωμα του συνόλου — αλλάζει **μόνο** όταν αλλάζει γραμμή, κατάσταση ή ημερομηνία λήξης. */
 export function expiryDigest(alerts: readonly ExpiryAlert[]): string {
-  const material = alerts.map((a) => `${a.itemId}:${a.status}:${a.expiresOn ?? '-'}`).join('|');
-  return fnv1a32(material).toString(16).padStart(8, '0');
+  return alertSetDigest(alerts.map((a) => `${a.itemId}:${a.status}:${a.expiresOn ?? '-'}`));
 }
 
 /** Ντετερμινιστικό: (υπόθεση, παραλήπτης, σύνολο). Ίδιο σύνολο σημαίνει καμία δεύτερη ειδοποίηση. */

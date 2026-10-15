@@ -51,6 +51,7 @@ import { runDemandListingMatchAnnounce } from '@/lib/cron/jobs/demand-listing-ma
 import { runOutboundEmailFlush } from '@/lib/cron/jobs/outbound-email-flush.job';
 import { runEmailIngestion } from '@/lib/cron/jobs/email-ingestion.job';
 import { runConveyanceExpiryAlerts } from '@/lib/cron/jobs/conveyance-expiry-alerts.job';
+import { runDocumentExpiryAlerts } from '@/lib/cron/jobs/document-expiry-alerts.job';
 import { runEngagementInvitationReminder } from '@/lib/cron/jobs/engagement-invitation-reminder.job';
 import { runFilePurge } from '@/lib/cron/jobs/file-purge.job';
 import { runFirebaseAuthConfigDrift } from '@/lib/cron/jobs/firebase-auth-config-drift.job';
@@ -489,6 +490,24 @@ export const CRON_SCHEDULE: readonly CronJobDefinition[] = [
     maxRuntimeMinutes: 10,
     leaseMinutes: 15,
     run: runConveyanceExpiryAlerts,
+  },
+  {
+    slug: 'document-expiry-alerts',
+    path: '/api/cron/document-expiry-alerts',
+    description: 'Μητρώο λήξεων γραφείου: έγγραφα σε νέο στάδιο λήξης, που έληξαν ή που λείπουν (ADR-915 Φ5α)',
+    enabled: true,
+    // 🔑 **Ημερήσια, γιατί η μονάδα της ισχύος είναι η ΗΜΕΡΑ** (ίδιο σκεπτικό με το `conveyance-expiry-alerts`). Η
+    // επανάληψη είναι ακίνδυνη: το ημερολόγιο ακμών κρατά τι ειπώθηκε ανά γραμμή, και το `eventId` φέρει το
+    // αποτύπωμα των ακμών για την περίπτωση που η αποστολή έγινε αλλά το ημερολόγιο δεν γράφτηκε.
+    //
+    // ⚠️ **Πρωί, πριν το γραφείο**, αμέσως μετά τη σάρωση της υπόθεσης. Λεπτό **21**: ελεύθερο από `*/10` ·
+    // `2-59/5` · `4-59/10` · `8-59/15` · `15` · `35` · `19 8`.
+    schedule: '21 8 * * *',
+    timezone: CRON_TIMEZONE,
+    checkinMarginMinutes: 20,
+    maxRuntimeMinutes: 10,
+    leaseMinutes: 15,
+    run: runDocumentExpiryAlerts,
   },
   {
     slug: 'listing-stats-rollup',
