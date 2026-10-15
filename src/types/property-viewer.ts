@@ -333,4 +333,8 @@ export const DEFAULT_FILTERS: FilterState = {
   priceRange: EMPTY_PRICE_RANGE,
   areaRange: { min: undefined, max: undefined },
   features: [],
+  // ADR-840 Σ3 — ΡΗΤΑ στην κενή τιμή: τα φίλτρα ζουν στη διεύθυνση και κάθε αλλαγή ΣΥΓΧΩΝΕΥΕΤΑΙ με τα ζωντανά
+  // (`usePropertyFiltersUrlState`). Ένα πεδίο που λείπει από εδώ θα επιβίωνε του «Καθαρισμός όλων».
+  operationalStatus: [],
+  coverage: undefined,
 };

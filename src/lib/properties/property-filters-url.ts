@@ -180,8 +180,7 @@ export function parsePropertyFilters(params: URLSearchParams): FilterState {
   };
   for (const key of LIST_KEYS) filters[key] = parseFilterArray(params.get(LIST_PARAM[key]));
   filters.status = readClosedList(params, LIST_PARAM.status, isSpaceAvailabilityBucket);
-  const operational = readClosedList(params, OPERATIONAL_STATUS_PARAM, isOperationalStatus);
-  if (operational.length > 0) filters.operationalStatus = operational;
+  filters.operationalStatus = readClosedList(params, OPERATIONAL_STATUS_PARAM, isOperationalStatus);
   const coverage = readCoverage(params);
   if (coverage) filters.coverage = coverage;
   return filters;

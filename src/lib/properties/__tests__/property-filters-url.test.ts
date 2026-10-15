@@ -30,7 +30,8 @@ describe('property-filters-url', () => {
       building: ['bld_1'],
       floor: ['0', '2'],
       propertyType: ['apartment'],
-      status: ['for-sale'],
+      status: ['listed', 'reserved'],
+      operationalStatus: ['ready'],
       features: ['parking'],
       priceRange: { role: 'rent', min: 500, max: 1200 },
       areaRange: { min: 0, max: 95 },
@@ -67,8 +68,35 @@ describe('property-filters-url', () => {
   });
 
   it('άσχετα κλειδιά (προβολή, επιλογή) μένουν ανέπαφα', () => {
-    expect(written({ ...DEFAULT_FILTERS, status: ['for-sale'] }, 'view=floorplan&selected=p1&q=old'))
-      .toBe('view=floorplan&selected=p1&status=for-sale');
+    expect(written({ ...DEFAULT_FILTERS, status: ['listed'] }, 'view=floorplan&selected=p1&q=old'))
+      .toBe('view=floorplan&selected=p1&status=listed');
+  });
+
+  /**
+   * ADR-840 Σ3 — το `status` ήταν ΝΕΚΡΟ: οι πίνακες έδιναν `available` / `ready` / `for-sale`, τιμές που η μηχανή
+   * δεν ταίριαζε ποτέ. Τώρα είναι κουβάδες διάθεσης — κλειστό λεξιλόγιο ⇒ άγνωστη τιμή αγνοείται αντί να δίνει
+   * άδεια λίστα. Παλιός σύνδεσμος ανοίγει ό,τι έδειχνε, συν όσα έκρυβε λάθος.
+   */
+  it('κατάσταση: μόνο κουβάδες διάθεσης / λειτουργικές τιμές — οι παλιές νεκρές αγνοούνται', () => {
+    const parsed = parsePropertyFilters(new URLSearchParams('status=for-sale,listed,ready&opstatus=ready,listed'));
+    expect(parsed.status).toEqual(['listed']);
+    expect(parsed.operationalStatus).toEqual(['ready']);
+  });
+
+  it('πληρότητα: `missing` ⇄ `coverage`, μόνο οι γνωστές σημαίες, κενό ⇒ καμία', () => {
+    const coverage = { missingPhotos: true, missingDocuments: true };
+    expect(written({ ...DEFAULT_FILTERS, coverage })).toBe('missing=photos%2Cdocuments');
+    expect(parsePropertyFilters(new URLSearchParams('missing=photos,documents,videos')).coverage).toEqual(coverage);
+    expect(parsePropertyFilters(new URLSearchParams('missing=videos')).coverage).toBeUndefined();
+    expect(written({ ...DEFAULT_FILTERS, coverage: { missingPhotos: false } }, 'missing=photos')).toBe('');
+  });
+
+  it('«Καθαρισμός όλων» (DEFAULT_FILTERS) σβήνει ΚΑΙ κατάσταση λειτουργίας ΚΑΙ πληρότητα', () => {
+    expect(written({ ...DEFAULT_FILTERS }, 'opstatus=ready&missing=photos&status=listed')).toBe('');
+  });
+
+  it('η όψη: τρεις φακοί — πλέγμα (προεπιλογή, δεν γράφεται) · λίστα · κάτοψη', () => {
+    expect(PROPERTIES_VIEW.parse(new URLSearchParams('view=list'))).toBe('list');
   });
 
   it('η προβολή: πλέγμα = προεπιλογή που σβήνει το κλειδί', () => {

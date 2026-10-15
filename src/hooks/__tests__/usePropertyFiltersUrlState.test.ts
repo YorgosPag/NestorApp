@@ -35,10 +35,10 @@ describe('usePropertyFiltersUrlState', () => {
   beforeEach(() => startAt('/o/ws/properties'));
 
   it('διαβάζει τα φίλτρα από τη διεύθυνση (σύνδεσμος / refresh)', () => {
-    startAt('/o/ws/properties?project=pA&status=for-sale');
+    startAt('/o/ws/properties?project=pA&status=listed');
     const { result } = renderHook(() => usePropertyFiltersUrlState(CATALOG));
     expect(result.current.filters.project).toEqual(['pA']);
-    expect(result.current.filters.status).toEqual(['for-sale']);
+    expect(result.current.filters.status).toEqual(['listed']);
   });
 
   it('η αλλαγή γράφεται στη διεύθυνση, κρατώντας προβολή και fragment', async () => {
@@ -65,11 +65,11 @@ describe('usePropertyFiltersUrlState', () => {
   it('δύο αλλαγές στο ίδιο tick δεν πατούν η μία την άλλη (ζωντανά params, όχι closure)', async () => {
     const { result } = renderHook(() => usePropertyFiltersUrlState(CATALOG));
     act(() => {
-      result.current.updateFilters({ status: ['for-sale'] });
+      result.current.updateFilters({ status: ['listed'] });
       result.current.updateFilters({ propertyType: ['apartment'] });
     });
     await flushUrlNotifications();
-    expect(result.current.filters.status).toEqual(['for-sale']);
+    expect(result.current.filters.status).toEqual(['listed']);
     expect(result.current.filters.propertyType).toEqual(['apartment']);
   });
 
