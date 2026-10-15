@@ -5235,3 +5235,17 @@ Closed via `hostWall.params.sceneUnits ?? 'mm'` frozen-context pattern σε **4 
   **Πώς επαληθεύεται ότι έκλεισε**: `grep -rn "demand-fixtures" src/` δεν επιστρέφει
   εισαγωγή από φάκελο **εκτός** `lib/demand/`, και το `npm run jscpd:diff` στα αγγιγμένα
   μένει καθαρό.
+
+- 🟡 **15/10 — ΤΡΙΑ ΑΡΧΕΙΑ ΤΟΥ CHECK 3.34 ΠΑΝΩ ΑΠΟ ΤΟ ΟΡΙΟ ΤΩΝ 500 ΓΡΑΜΜΩΝ (N.7.1)** *(βρέθηκε στο ADR-744 §31)*
+  - **Τι**: `scripts/lib/i18n-shell-slice/plan.js` **749** · `scripts/check-i18n-shell-slice.js` **659** ·
+    `scripts/lib/i18n-shell-slice/ledger.js` **632**. Το `check-file-sizes.js` εξαιρεί το `scripts/`, άρα **καμία πύλη
+    δεν το βλέπει**. Ο κανόνας του N.7.1 όμως ισχύει.
+  - Στο §31 ο νέος κώδικας μπήκε σε **νέα** modules (`lazy-freshness.js`, `source-cache.js`), ώστε ο ελεγκτής να πάρει
+    μόνο τη σύνδεση. Η διάσπαση των υπαρχόντων είναι **3 αρχεία, refactor >1h** ⇒ πάει εδώ (N.0.2), δεν γίνεται μέσα σε
+    άλλη εργασία.
+  - **Πώς**: `plan.js` → serializers του manifest (`serializeWants`/`RouteWants`/`RouteFiles`/`ConsultedFiles`,
+    `unionOfUnresolved`, `buildManifest`) σε `manifest-build.js`· ελεγκτής → οι έλεγχοι A–D σε `layer-one-checks.js`,
+    με τον ελεγκτή να κρατά CLI + `runLayerOne`/`runFull`.
+  - ⚠️ Κάθε αρχείο του `plan.js`/`ledger.js` ανήκει στο **toolchain** (ADR-744 §30) ⇒ η διάσπαση ζητά αναγέννηση.
+    Κάνε την ερμητικά (HEAD + overlay), όχι πάνω σε ξένη αστάδιοποίητη δουλειά.
+  - **Επαλήθευση**: `wc -l` ≤ 500 και στα τρία · `test:i18n-shell-slice` πράσινο · `--full` ✅.
