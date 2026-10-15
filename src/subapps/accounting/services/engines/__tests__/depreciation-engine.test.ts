@@ -9,8 +9,9 @@
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, Google Presubmit Pattern
  */
 
-import { DepreciationEngine, DepreciationRunError, depreciationPostingFor } from '../depreciation-engine';
-import type { FixedAsset } from '../../../types/assets';
+import { DepreciationEngine, DepreciationRunError } from '../depreciation-engine';
+import type { DepreciationPostedChange, DepreciationRecord, FixedAsset } from '../../../types/assets';
+import type { FiscalPeriod } from '../../../types/fiscal-period';
 import type { IAccountingRepository } from '../../../types/interfaces';
 import { roundToTwo } from '../../../utils/math';
 
@@ -55,7 +56,23 @@ function createMockRepository() {
   return {
     collectFixedAssets: jest.fn<Promise<FixedAsset[]>, Parameters<IAccountingRepository['collectFixedAssets']>>(),
     postDepreciation: jest.fn<ReturnType<IAccountingRepository['postDepreciation']>, Parameters<IAccountingRepository['postDepreciation']>>(),
+    readDepreciationRecords: jest.fn<ReturnType<IAccountingRepository['readDepreciationRecords']>, Parameters<IAccountingRepository['readDepreciationRecords']>>(),
+    getFiscalPeriod: jest.fn<Promise<FiscalPeriod | null>, [string]>(),
   };
+}
+
+/** Καταχωρημένη εγγραφή απόσβεσης 2025 με ποσό `amount`. */
+function recordOf(assetId: string, amount: number): DepreciationRecord {
+  return {
+    recordId: `depr_${assetId}`, assetId, fiscalYear: 2025, acquisitionCost: 10000, openingAccumulatedDepreciation: 0,
+    annualDepreciation: amount, closingAccumulatedDepreciation: amount, closingNetBookValue: 10000 - amount,
+    appliedRate: 10, monthsApplied: 12, journalEntryId: `je_${assetId}`, journalEntryIds: [`je_${assetId}`], revision: 1,
+    calculatedAt: '2026-01-15T00:00:00.000Z',
+  };
+}
+
+function changeOf(assetId: string, amount: number, delta: number, wasPosted: boolean): DepreciationPostedChange {
+  return { intent: 'book', record: recordOf(assetId, amount), delta, journalEntryId: `je_${assetId}`, wasPosted };
 }
 
 const TODAY = '2026-10-15';
@@ -152,46 +169,6 @@ describe('DepreciationEngine', () => {
       expect(result.recordId).toBe('');
       expect(result.journalEntryId).toBeNull();
       expect(Number.isNaN(Date.parse(result.calculatedAt))).toBe(false);
-    });
-  });
-
-  // ==========================================================================
-  // A.1β — depreciationPostingFor (τρέχει ΜΕΣΑ στη συναλλαγή)
-  // ==========================================================================
-
-  describe('depreciationPostingFor', () => {
-    it('ενεργό: εγγραφή + προβολή παγίου στο κλείσιμο της χρήσης', () => {
-      const posting = depreciationPostingFor(createMockAsset(), 2025);
-
-      expect(posting?.record.annualDepreciation).toBe(1000);
-      expect(posting?.assetProjection).toEqual({
-        accumulatedDepreciation: 1000, netBookValue: 9000, status: 'active', fullyDepreciatedDate: null,
-      });
-    });
-
-    it('πλήρης απόσβεση: `active` ⇒ `fully_depreciated` με ημερομηνία το τέλος της χρήσης', () => {
-      const asset = createMockAsset({ acquisitionCost: 25000, depreciationRate: 16, depreciationStartDate: '2018-12-01' });
-
-      expect(depreciationPostingFor(asset, 2025)?.assetProjection).toMatchObject({
-        status: 'fully_depreciated', fullyDepreciatedDate: '2025-12-31', netBookValue: 0,
-      });
-    });
-
-    it('εκποιημένο μέσα στη χρήση: αποσβένεται ως την εκποίηση ΚΑΙ μένει `disposed`', () => {
-      const asset = createMockAsset({ status: 'disposed', disposalDate: '2025-06-30', acquisitionCost: 12000 });
-      const posting = depreciationPostingFor(asset, 2025);
-
-      expect(posting?.record.annualDepreciation).toBe(600);
-      expect(posting?.assetProjection.status).toBe('disposed');
-    });
-
-    it('εκτός εκμετάλλευσης (`inactive`) ⇒ τίποτα (ΠΟΛ 1073/2015)', () => {
-      expect(depreciationPostingFor(createMockAsset({ status: 'inactive' }), 2025)).toBeNull();
-    });
-
-    it('μηδενική απόσβεση (πλήρως αποσβεσμένο / πριν από την έναρξη) ⇒ τίποτα', () => {
-      expect(depreciationPostingFor(createMockAsset({ depreciationStartDate: '2010-12-01' }), 2025)).toBeNull();
-      expect(depreciationPostingFor(createMockAsset({ depreciationStartDate: '2025-12-01' }), 2025)).toBeNull();
     });
   });
 
@@ -350,14 +327,34 @@ describe('DepreciationEngine', () => {
   });
 
   // ==========================================================================
-  // B — bookDepreciations: ορχήστρωση (η πλήρης εκτέλεση: depreciation-run.test.ts)
+  // B — εκτέλεση: ορχήστρωση (η πλήρης εκτέλεση πάνω σε Firestore: depreciation-run.test.ts)
   // ==========================================================================
 
-  describe('bookDepreciations', () => {
+  describe('bookDepreciations / reverseDepreciations', () => {
+    const openPeriod = { periodId: '2025-12', status: 'OPEN' } as FiscalPeriod;
+
+    beforeEach(() => {
+      mockRepo.getFiscalPeriod.mockResolvedValue(openPeriod);
+      mockRepo.readDepreciationRecords.mockResolvedValue(new Map());
+    });
+
     it.each([2026, 2027])('χρήση %i που ΔΕΝ έληξε ⇒ άρνηση ΠΡΙΝ από κάθε ανάγνωση/εγγραφή', async (year) => {
-      await expect(engine.bookDepreciations(year)).rejects.toBeInstanceOf(DepreciationRunError);
+      await expect(engine.bookDepreciations(year)).rejects.toMatchObject({ code: 'FISCAL_YEAR_NOT_ENDED' });
       expect(mockRepo.collectFixedAssets).not.toHaveBeenCalled();
       expect(mockRepo.postDepreciation).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['PERIOD_NOT_FOUND', null],
+      ['PERIOD_NOT_OPEN', { ...openPeriod, status: 'CLOSED' }],
+      ['PERIOD_NOT_OPEN', { ...openPeriod, status: 'LOCKED' }],
+    ] as const)('περίοδος Δεκεμβρίου ⇒ %s, πριν από κάθε ανάγνωση (καταχώριση ΚΑΙ αναίρεση)', async (code, period) => {
+      mockRepo.getFiscalPeriod.mockResolvedValue(period as FiscalPeriod | null);
+
+      await expect(engine.bookDepreciations(2025)).rejects.toMatchObject({ code });
+      await expect(engine.reverseDepreciations(2025)).rejects.toBeInstanceOf(DepreciationRunError);
+      expect(mockRepo.getFiscalPeriod).toHaveBeenCalledWith('2025-12');
+      expect(mockRepo.collectFixedAssets).not.toHaveBeenCalled();
     });
 
     it('πλήρης σάρωση της χρήσης — ποτέ η σελίδα της οθόνης', async () => {
@@ -368,35 +365,45 @@ describe('DepreciationEngine', () => {
       expect(mockRepo.collectFixedAssets).toHaveBeenCalledWith({ scope: { kind: 'depreciationYear', fiscalYear: 2025 } });
     });
 
-    it('μία καταχώριση ανά πάγιο με απόσβεση· το `compute` ξαναπαίρνει την απόφαση πάνω στο ΦΡΕΣΚΟ πάγιο', async () => {
+    it('συναλλαγή ΜΟΝΟ όπου ο προέλεγχος βρίσκει διαφορά· το `decide` ξαναπαίρνει την απόφαση στα ΦΡΕΣΚΑ έγγραφα', async () => {
       mockRepo.collectFixedAssets.mockResolvedValue([
         createMockAsset({ assetId: 'ast_a' }),
         createMockAsset({ assetId: 'ast_inactive', status: 'inactive' }),
         createMockAsset({ assetId: 'ast_done', depreciationStartDate: '2010-12-01' }),
+        createMockAsset({ assetId: 'ast_booked' }),
       ]);
-      mockRepo.postDepreciation.mockResolvedValue({ kind: 'nothing_to_post' });
+      mockRepo.readDepreciationRecords.mockResolvedValue(new Map([['ast_booked', recordOf('ast_booked', 1000)]]));
+      mockRepo.postDepreciation.mockResolvedValue({ kind: 'unchanged', record: null });
 
-      await engine.bookDepreciations(2025);
+      const result = await engine.bookDepreciations(2025);
 
       expect(mockRepo.postDepreciation).toHaveBeenCalledTimes(1);
       const request = mockRepo.postDepreciation.mock.calls[0][0];
       expect([request.assetId, request.fiscalYear]).toEqual(['ast_a', 2025]);
-      // Το πάγιο άλλαξε ανάμεσα σε σάρωση και συναλλαγή (έγινε `inactive`) ⇒ τίποτα δεν γράφεται.
-      expect(request.compute(createMockAsset({ assetId: 'ast_a', status: 'inactive' }))).toBeNull();
+      // Το πάγιο έγινε `inactive` ανάμεσα σε σάρωση και συναλλαγή ⇒ τίποτα δεν γράφεται.
+      expect(request.decide({ asset: createMockAsset({ assetId: 'ast_a', status: 'inactive' }), current: null }))
+        .toEqual({ kind: 'unchanged' });
+      // Το ήδη σωστό μετρά στο σύνολο, χωρίς συναλλαγή.
+      expect(result.unchanged.map((r) => r.assetId)).toEqual(['ast_booked']);
+      expect(result.totalDepreciation).toBe(1000);
     });
 
-    it('σύνοψη: γραμμένα + ήδη γραμμένα, σύνολο = άθροισμα και των δύο', async () => {
-      mockRepo.collectFixedAssets.mockResolvedValue([createMockAsset({ assetId: 'ast_a' }), createMockAsset({ assetId: 'ast_b' })]);
-      const base = engine.calculateAnnualDepreciation(createMockAsset(), 2025);
+    it('σύνοψη: πρώτη καταχώριση / διόρθωση / ήδη σωστό / άρνηση — σύνολο και μεταβολή χωριστά', async () => {
+      mockRepo.collectFixedAssets.mockResolvedValue(['a', 'b', 'c', 'd'].map((id) => createMockAsset({ assetId: id })));
       mockRepo.postDepreciation
-        .mockResolvedValueOnce({ kind: 'posted', record: { ...base, recordId: 'depr_a', annualDepreciation: 1000.1 } })
-        .mockResolvedValueOnce({ kind: 'already_posted', record: { ...base, recordId: 'depr_b', annualDepreciation: 999.2 } });
+        .mockResolvedValueOnce({ kind: 'posted', change: changeOf('a', 1000.1, 1000.1, false) })
+        .mockResolvedValueOnce({ kind: 'posted', change: changeOf('b', 999.2, -0.8, true) })
+        .mockResolvedValueOnce({ kind: 'unchanged', record: recordOf('c', 1000) })
+        .mockResolvedValueOnce({ kind: 'refused', assetId: 'd', reason: 'LATER_YEAR_POSTED' });
 
       const result = await engine.bookDepreciations(2025);
 
-      expect(result.posted.map((r) => r.recordId)).toEqual(['depr_a']);
-      expect(result.alreadyPosted.map((r) => r.recordId)).toEqual(['depr_b']);
-      expect(result.totalDepreciation).toBe(roundToTwo(1000.1 + 999.2));
+      expect(result.posted.map((c) => c.record.assetId)).toEqual(['a']);
+      expect(result.adjusted.map((c) => c.record.assetId)).toEqual(['b']);
+      expect(result.unchanged.map((r) => r.assetId)).toEqual(['c']);
+      expect(result.refused).toEqual([{ assetId: 'd', reason: 'LATER_YEAR_POSTED' }]);
+      expect(result.totalDepreciation).toBe(roundToTwo(1000.1 + 999.2 + 1000));
+      expect(result.bookedDelta).toBe(roundToTwo(1000.1 - 0.8));
     });
 
     it('σφάλμα σάρωσης ⇒ σφάλμα της εκτέλεσης, ποτέ «0 αποσβέσεις»', async () => {
@@ -404,6 +411,41 @@ describe('DepreciationEngine', () => {
 
       await expect(engine.bookDepreciations(2025)).rejects.toThrow('FAILED_PRECONDITION');
       expect(mockRepo.postDepreciation).not.toHaveBeenCalled();
+    });
+  });
+
+  // ==========================================================================
+  // C — previewDepreciations: ΚΑΜΙΑ εγγραφή, πάντα επιτρεπτή
+  // ==========================================================================
+
+  describe('previewDepreciations', () => {
+    it('σωστό / καταχωρημένο / διαφορά ανά πάγιο· παραλείπει όσα δεν έχουν τίποτα· εμπόδιο χωρίς άρνηση', async () => {
+      mockRepo.getFiscalPeriod.mockResolvedValue(null);
+      mockRepo.collectFixedAssets.mockResolvedValue([
+        createMockAsset({ assetId: 'ast_new' }),
+        createMockAsset({ assetId: 'ast_half', acquisitionCost: 12000 }),
+        createMockAsset({ assetId: 'ast_inactive', status: 'inactive' }),
+      ]);
+      mockRepo.readDepreciationRecords.mockResolvedValue(new Map([['ast_half', recordOf('ast_half', 600)]]));
+
+      const preview = await engine.previewDepreciations(2025);
+
+      expect(preview.lines.map((l) => [l.assetId, l.target, l.booked, l.delta]))
+        .toEqual([['ast_new', 1000, 0, 1000], ['ast_half', 1200, 600, 600]]);
+      expect([preview.totalTarget, preview.totalBooked, preview.totalDelta]).toEqual([2200, 600, 1600]);
+      expect(preview.blocker).toBe('PERIOD_NOT_FOUND');
+      expect(preview.hasBooked).toBe(true);
+      expect(mockRepo.postDepreciation).not.toHaveBeenCalled();
+    });
+
+    it('τρέχουσα χρήση ⇒ προεπισκόπηση ΝΑΙ, καταχώριση όχι (`FISCAL_YEAR_NOT_ENDED`)', async () => {
+      mockRepo.collectFixedAssets.mockResolvedValue([createMockAsset()]);
+      mockRepo.readDepreciationRecords.mockResolvedValue(new Map());
+
+      const preview = await engine.previewDepreciations(2026);
+
+      expect(preview.lines).toHaveLength(1);
+      expect(preview.blocker).toBe('FISCAL_YEAR_NOT_ENDED');
     });
   });
 });

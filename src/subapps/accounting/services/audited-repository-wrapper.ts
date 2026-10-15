@@ -77,6 +77,10 @@ export function createAuditedRepository(
     getFixedAsset: repo.getFixedAsset.bind(repo),
     listFixedAssets: repo.listFixedAssets.bind(repo),
     collectFixedAssets: repo.collectFixedAssets.bind(repo),
+    readDepreciationRecords: repo.readDepreciationRecords.bind(repo),
+    // ADR-ACC-010 §2.1.1 Φ5: the ONE depreciation writer owns its trace (same transaction) — wrapping it here
+    // would trace twice, and a caller WITHOUT this wrapper (every route) would post without a trace.
+    postDepreciation: repo.postDepreciation.bind(repo),
     getDepreciationRecords: repo.getDepreciationRecords.bind(repo),
     getPartners: repo.getPartners.bind(repo),
     getPartnerEFKAPayments: repo.getPartnerEFKAPayments.bind(repo),
@@ -177,21 +181,6 @@ export function createAuditedRepository(
           `Αντιστοίχιση τραπεζικής κίνησης → ${updates.matchedEntityId ?? 'N/A'}`,
           { matchStatus: updates.matchStatus, matchedEntityId: updates.matchedEntityId ?? null });
       }
-    },
-
-    async postDepreciation(request) {
-      // ADR-ACC-010 §2.1.1 Φ4: the posting and its trace commit in ONE transaction (never one without the other).
-      return repo.postDepreciation({
-        ...request,
-        auditOf: (record) => [
-          ...(request.auditOf?.(record) ?? []),
-          accountingAuditEntryOf({
-            eventType: 'DEPRECIATION_POSTED', entityType: 'fixed_asset', entityId: record.assetId, userId,
-            details: `Απόσβεση χρήσης ${record.fiscalYear}: €${record.annualDepreciation.toFixed(2)}`,
-            metadata: { recordId: record.recordId, fiscalYear: record.fiscalYear, annualDepreciation: record.annualDepreciation },
-          }),
-        ],
-      });
     },
 
     async upsertCustomerBalance(customerId, balance) {

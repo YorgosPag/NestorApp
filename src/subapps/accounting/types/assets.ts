@@ -8,7 +8,7 @@
  * @compliance CLAUDE.md Enterprise Standards — zero `any`
  */
 
-import type { AccountingAuditEntry } from './accounting-audit';
+import type { CreateJournalEntryInput } from './journal';
 
 // ============================================================================
 // ASSET CATEGORY & STATUS
@@ -118,6 +118,11 @@ export interface FixedAsset {
    * Λείπει σε πάγια πριν από τη Φάση 4 (ADR-ACC-010 §2.1.1) = καμία καταχώριση.
    */
   lastDepreciatedFiscalYear?: number | null;
+  /**
+   * ΟΛΕΣ οι χρήσεις με καταχωρημένη (μη μηδενική) απόσβεση — ADR-ACC-010 §2.1.1 Φ5. Η αναίρεση της νεότερης ξέρει έτσι
+   * σε ποια χρήση γυρίζει η προβολή, χωρίς ερώτημα. Λείπει σε πάγια πριν από τη Φάση 5 ⇒ `[lastDepreciatedFiscalYear]`.
+   */
+  depreciatedFiscalYears?: number[];
 
   // — Τιμολόγιο Αγοράς —
   /** Αριθμός τιμολογίου αγοράς */
@@ -174,8 +179,15 @@ export interface DepreciationRecord {
   appliedRate: number;
   /** Αναλογία μηνών (π.χ. 6/12 αν αγοράστηκε μέσα στο έτος) */
   monthsApplied: number;
-  /** Αντιστοιχεί σε εγγραφή Ε-Ε; (journal entry ID) */
+  /** Η ΝΕΟΤΕΡΗ εγγραφή Ε-Ε (η διαφορά της τελευταίας αναθεώρησης) — `null` πριν καταχωρηθεί στο βιβλίο. */
   journalEntryId: string | null;
+  /**
+   * ΟΛΕΣ οι εγγραφές Ε-Ε της απόσβεσης, με τη σειρά — ADR-ACC-010 §2.1.1 Φ5. Το άθροισμά τους στο βιβλίο ΙΣΟΥΤΑΙ με
+   * το `annualDepreciation` (SAP repeat run: κάθε διόρθωση = ΝΕΑ εγγραφή διαφοράς, ποτέ αλλαγή της παλιάς).
+   */
+  journalEntryIds?: string[];
+  /** Πόσες φορές άλλαξε το καταχωρημένο ποσό (1 = πρώτη καταχώριση). Λείπει πριν από τη Φάση 5 ⇒ 0. */
+  revision?: number;
 
   // — Tenant Isolation (Q3/Q7) —
   /** Company ID for tenant isolation */
@@ -268,37 +280,119 @@ export interface FixedAssetLedgerQuery {
 }
 
 /**
- * Αίτημα καταχώρισης της απόσβεσης ΜΙΑΣ χρήσης για ΕΝΑ πάγιο. Το `compute` τρέχει ΜΕΣΑ στη συναλλαγή, πάνω στο
- * ΦΡΕΣΚΟ έγγραφο του παγίου — ποτέ σε αντίγραφο της σάρωσης που μπορεί να άλλαξε στο μεταξύ.
+ * Τι ζητά η εκτέλεση για (πάγιο, χρήση) — ADR-ACC-010 §2.1.1 Φ5:
+ * - `book`: το καταχωρημένο ποσό να ΣΥΓΚΛΙΝΕΙ στο σωστό του πίνακα αποσβέσεων (πρώτη φορά = όλο, μετά = η διαφορά —
+ *   SAP AFAB repeat run)·
+ * - `reverse`: να συγκλίνει στο 0 (Xero «rollback depreciation») — μόνο για τη ΝΕΟΤΕΡΗ καταχωρημένη χρήση.
+ */
+export type DepreciationIntent = 'book' | 'reverse';
+
+/** Ό,τι διάβασε η συναλλαγή — η απόφαση παίρνεται ΠΑΝΩ σε αυτό, ποτέ σε αντίγραφο της σάρωσης. */
+export interface DepreciationDecisionInput {
+  readonly asset: FixedAsset;
+  readonly current: DepreciationRecord | null;
+}
+
+/** Η εγγραφή Ε-Ε της διαφοράς, χωρίς ταυτότητα και προέλευση (τις βάζει ο γραφέας από (εγγραφή, αναθεώρηση)). */
+export type DepreciationJournalLine = Omit<CreateJournalEntryInput, 'source'>;
+
+/** Η προβολή του παγίου: το κλείσιμο της νεότερης καταχωρημένης χρήσης. */
+export type DepreciationAssetProjection = Required<Pick<
+  FixedAsset,
+  'accumulatedDepreciation' | 'netBookValue' | 'status' | 'fullyDepreciatedDate' | 'lastDepreciatedFiscalYear' | 'depreciatedFiscalYears'
+>>;
+
+/** Λόγος άρνησης ανά πάγιο. */
+export type DepreciationRefusal = 'LATER_YEAR_POSTED';
+
+/** Η απόφαση για (πάγιο, χρήση) — καθαρή συνάρτηση της μηχανής, την εκτελεί ΕΝΑΣ γραφέας. */
+export type DepreciationDecision =
+  /** Καταχωρημένο = σωστό (ή τίποτα και στα δύο) — καμία εγγραφή. */
+  | { readonly kind: 'unchanged' }
+  /** Αναίρεση χρήσης που ΔΕΝ είναι η νεότερη καταχωρημένη: θα άφηνε κενό στη σειρά (Xero: rollback από το τέλος). */
+  | { readonly kind: 'refused'; readonly reason: DepreciationRefusal }
+  | {
+      readonly kind: 'post';
+      /** Η εγγραφή απόσβεσης μετά τη σύγκλιση (ταυτότητα / αναθεώρηση / εγγραφές Ε-Ε τα βάζει ο γραφέας). */
+      readonly record: Omit<DepreciationRecord, 'recordId' | 'journalEntryId' | 'journalEntryIds' | 'revision'>;
+      /** Η εγγραφή της ΔΙΑΦΟΡΑΣ στο βιβλίο (αρνητική = αντιλογισμός). */
+      readonly journal: DepreciationJournalLine;
+      /** Η νέα προβολή του παγίου — `null` = δεν αλλάζει (παλαιότερη χρήση από τη νεότερη καταχωρημένη). */
+      readonly assetProjection: DepreciationAssetProjection | null;
+    };
+
+/** Τι άλλαξε σε μία σύγκλιση — για το ίχνος ελέγχου και το αποτέλεσμα. */
+export interface DepreciationPostedChange {
+  readonly intent: DepreciationIntent;
+  readonly record: DepreciationRecord;
+  /** Η διαφορά που μπήκε στο βιβλίο (αρνητική = αντιλογισμός). */
+  readonly delta: number;
+  readonly journalEntryId: string;
+  /** `true` = υπήρχε ήδη καταχωρημένο ποσό (διόρθωση ή αναίρεση, όχι πρώτη καταχώριση). */
+  readonly wasPosted: boolean;
+}
+
+/**
+ * Αίτημα σύγκλισης της απόσβεσης ΜΙΑΣ χρήσης για ΕΝΑ πάγιο. Το `decide` τρέχει ΜΕΣΑ στη συναλλαγή, πάνω στα ΦΡΕΣΚΑ
+ * έγγραφα — ποτέ σε αντίγραφο της σάρωσης που μπορεί να άλλαξε στο μεταξύ.
  */
 export interface DepreciationPostingRequest {
   readonly assetId: string;
   readonly fiscalYear: number;
-  /** `null` = τίποτα προς καταχώριση (π.χ. μηδενική απόσβεση). */
-  readonly compute: (asset: FixedAsset) => DepreciationPosting | null;
-  /** Το ίχνος ελέγχου — γράφεται στην ΙΔΙΑ συναλλαγή με την εγγραφή (το συνθέτει ο audited wrapper). */
-  readonly auditOf?: (record: DepreciationRecord) => readonly AccountingAuditEntry[];
+  readonly decide: (input: DepreciationDecisionInput) => DepreciationDecision;
 }
 
-/** Τι γράφεται: η εγγραφή απόσβεσης + η νέα προβολή του παγίου. */
-export interface DepreciationPosting {
-  readonly record: Omit<DepreciationRecord, 'recordId'>;
-  readonly assetProjection: Pick<FixedAsset, 'accumulatedDepreciation' | 'netBookValue' | 'status' | 'fullyDepreciatedDate'>;
-}
-
-/** Αποτέλεσμα καταχώρισης — ιδεμπότητο: η ίδια (πάγιο, χρήση) δεύτερη φορά δίνει `already_posted`. */
+/** Αποτέλεσμα σύγκλισης — ιδεμπότητο: η ίδια (πάγιο, χρήση) δεύτερη φορά δίνει `unchanged`. */
 export type DepreciationPostingOutcome =
-  | { readonly kind: 'posted'; readonly record: DepreciationRecord }
-  | { readonly kind: 'already_posted'; readonly record: DepreciationRecord }
-  | { readonly kind: 'nothing_to_post' };
+  | { readonly kind: 'posted'; readonly change: DepreciationPostedChange }
+  | { readonly kind: 'unchanged'; readonly record: DepreciationRecord | null }
+  | { readonly kind: 'refused'; readonly assetId: string; readonly reason: DepreciationRefusal };
 
-/** Αποτέλεσμα εκτέλεσης αποσβέσεων χρήσης (SAP AFAB / Xero «run depreciation»). */
+/** Αποτέλεσμα εκτέλεσης (καταχώρισης ή αναίρεσης) αποσβέσεων χρήσης. */
 export interface DepreciationRunResult {
   readonly fiscalYear: number;
-  /** Γράφτηκαν ΤΩΡΑ. */
-  readonly posted: readonly DepreciationRecord[];
-  /** Υπήρχαν ήδη από προηγούμενη εκτέλεση — δεν ξαναγράφτηκαν. */
-  readonly alreadyPosted: readonly DepreciationRecord[];
-  /** Σύνολο απόσβεσης της χρήσης (`posted` + `alreadyPosted`) — ίδιο σε κάθε επανεκτέλεση. */
+  readonly intent: DepreciationIntent;
+  /** Πρώτη καταχώριση ΤΩΡΑ. */
+  readonly posted: readonly DepreciationPostedChange[];
+  /** Διόρθωση (διαφορά) ή αναίρεση ΤΩΡΑ, πάνω σε ήδη καταχωρημένο ποσό. */
+  readonly adjusted: readonly DepreciationPostedChange[];
+  /** Ήταν ήδη σωστά — δεν γράφτηκε τίποτα. */
+  readonly unchanged: readonly DepreciationRecord[];
+  /** Αρνήθηκαν (π.χ. αναίρεση χρήσης που δεν είναι η νεότερη του παγίου). */
+  readonly refused: readonly { readonly assetId: string; readonly reason: DepreciationRefusal }[];
+  /** Καταχωρημένη απόσβεση της χρήσης ΜΕΤΑ την εκτέλεση — ίδια σε κάθε επανεκτέλεση. */
   readonly totalDepreciation: number;
+  /** Η καθαρή μεταβολή εξόδων που μπήκε στο βιβλίο σε ΑΥΤΗ την εκτέλεση (0 στην επανεκτέλεση). */
+  readonly bookedDelta: number;
+}
+
+/** Μία γραμμή προεπισκόπησης (SAP AFAB test run / Xero «Run depreciation» πριν το Post). */
+export interface DepreciationPreviewLine {
+  readonly assetId: string;
+  readonly description: string;
+  readonly category: AssetCategory;
+  readonly appliedRate: number;
+  readonly monthsApplied: number;
+  /** Το σωστό ποσό της χρήσης κατά τον πίνακα αποσβέσεων. */
+  readonly target: number;
+  /** Ό,τι είναι ήδη καταχωρημένο στο βιβλίο. */
+  readonly booked: number;
+  /** Τι θα μπει στο βιβλίο με την καταχώριση (`target − booked`). */
+  readonly delta: number;
+}
+
+/** Γιατί η καταχώριση / αναίρεση δεν επιτρέπεται (η προεπισκόπηση επιτρέπεται ΠΑΝΤΑ). */
+export type DepreciationRunBlocker = 'FISCAL_YEAR_NOT_ENDED' | 'PERIOD_NOT_FOUND' | 'PERIOD_NOT_OPEN';
+
+/** Προεπισκόπηση — ΚΑΜΙΑ εγγραφή. */
+export interface DepreciationPreview {
+  readonly fiscalYear: number;
+  readonly lines: readonly DepreciationPreviewLine[];
+  readonly totalTarget: number;
+  readonly totalBooked: number;
+  readonly totalDelta: number;
+  /** `null` = η καταχώριση επιτρέπεται. */
+  readonly blocker: DepreciationRunBlocker | null;
+  /** Υπάρχει καταχωρημένο ποσό που μπορεί να αναιρεθεί (αν ο `blocker` το επιτρέπει). */
+  readonly hasBooked: boolean;
 }

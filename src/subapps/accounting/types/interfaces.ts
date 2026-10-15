@@ -68,6 +68,7 @@ import type {
   DepreciationRecord,
   DepreciationPostingOutcome,
   DepreciationPostingRequest,
+  DepreciationPreview,
   DepreciationRunResult,
   DisposalResult,
 } from './assets';
@@ -205,10 +206,12 @@ export interface IAccountingRepository {
   /** ΟΛΑ τα πάγια μιας εμβέλειας, για υπολογισμό αποσβέσεων — πετά, ποτέ μερικό (§2.1.1 Φάση 4). */
   collectFixedAssets(query: FixedAssetLedgerQuery): Promise<FixedAsset[]>;
   /**
-   * Ο ΕΝΑΣ γραφέας απόσβεσης: εγγραφή (πάγιο, χρήση) + προβολή παγίου + ίχνος, ατομικά· ιδεμπότητος από
-   * ντετερμινιστικό id (§2.1.1 Φάση 4). Το `compute` τρέχει μέσα στη συναλλαγή, πάνω στο φρέσκο πάγιο.
+   * Ο ΕΝΑΣ γραφέας απόσβεσης: εγγραφή (πάγιο, χρήση) + εγγραφή Ε-Ε της διαφοράς + προβολή παγίου + ίχνος, ατομικά·
+   * ιδεμπότητος από ντετερμινιστικά id (§2.1.1 Φάσεις 4–5). Το `decide` τρέχει μέσα στη συναλλαγή, στα φρέσκα έγγραφα.
    */
   postDepreciation(request: DepreciationPostingRequest): Promise<DepreciationPostingOutcome>;
+  /** Οι εγγραφές απόσβεσης μιας χρήσης για τα δοσμένα πάγια (κλειδί: assetId) — με ταυτότητα, πετά σε σφάλμα. */
+  readDepreciationRecords(fiscalYear: number, assetIds: readonly string[]): Promise<Map<string, DepreciationRecord>>;
   getDepreciationRecords(assetId: string, fiscalYear?: number): Promise<DepreciationRecord[]>;
 
   // ── Partners (ADR-ACC-012 OE) — arrays read from profile SSoT (ADR-440) ──
@@ -369,11 +372,17 @@ export interface IDepreciationEngine {
   /** Υπολογισμός ετήσιας απόσβεσης ενός παγίου — από τον πίνακα αποσβέσεων (στοιχεία του παγίου, όχι μεταβλητά πεδία) */
   calculateAnnualDepreciation(asset: FixedAsset, fiscalYear: number): DepreciationRecord;
 
+  /** Προεπισκόπηση της εκτέλεσης (SAP test run) — σωστό / καταχωρημένο / διαφορά ανά πάγιο, ΚΑΜΙΑ εγγραφή. */
+  previewDepreciations(fiscalYear: number): Promise<DepreciationPreview>;
+
   /**
-   * Εκτέλεση αποσβέσεων χρήσης που ΕΧΕΙ ΛΗΞΕΙ — όλα τα πάγια (πλήρης σάρωση), ιδεμπότητα: η επανεκτέλεση
-   * ολοκληρώνει όσα έμειναν και δεν ξαναγράφει όσα πέρασαν (ADR-ACC-010 §2.1.1 Φάση 4).
+   * Εκτέλεση αποσβέσεων χρήσης που ΕΧΕΙ ΛΗΞΕΙ — όλα τα πάγια (πλήρης σάρωση)· το καταχωρημένο συγκλίνει στο σωστό
+   * (πρώτη φορά = όλο, μετά = μόνο η διαφορά) και φτάνει στο Βιβλίο Ε-Ε (ADR-ACC-010 §2.1.1 Φάσεις 4–5).
    */
   bookDepreciations(fiscalYear: number): Promise<DepreciationRunResult>;
+
+  /** Αναίρεση της χρήσης (Xero rollback): το καταχωρημένο συγκλίνει στο 0 με αντιλογισμό — μόνο νεότερη χρήση/πάγιο. */
+  reverseDepreciations(fiscalYear: number): Promise<DepreciationRunResult>;
 
   /** Υπολογισμός αποτελέσματος εκποίησης */
   calculateDisposal(asset: FixedAsset, salePrice: number, disposalDate: string): DisposalResult;

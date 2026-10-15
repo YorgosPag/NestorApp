@@ -180,6 +180,13 @@ export interface JournalEntry {
   /** Περίοδος reversal (1-13) */
   reversalPeriod?: number;
 
+  // — Προέλευση (ADR-ACC-010 §2.1.1 Φ5) —
+  /**
+   * Ποιο υποσύστημα γέννησε την εγγραφή. Εγγραφή με προέλευση ΔΕΝ αλλάζει / σβήνεται από τη γενική διαδρομή
+   * (SAP: οι εγγραφές του Asset Accounting διορθώνονται ΜΟΝΟ εκεί) — αλλιώς ο υποκατάλογος και το βιβλίο αποκλίνουν.
+   */
+  source?: JournalEntrySource;
+
   // — Tenant Isolation (Q3/Q7) —
   /** Company ID for tenant isolation */
   companyId?: string;
@@ -190,6 +197,18 @@ export interface JournalEntry {
   createdAt: string;
   /** Timestamp τελευταίας ενημέρωσης (ISO 8601) */
   updatedAt: string;
+}
+
+/**
+ * Η προέλευση μιας εγγραφής Ε-Ε από υποσύστημα. `revision` = ποια αναθεώρηση της απόσβεσης έφερε αυτή τη διαφορά
+ * (SAP repeat run: κάθε διόρθωση είναι ΝΕΑ εγγραφή διαφοράς — η ιστορία δεν ξαναγράφεται ποτέ).
+ */
+export interface JournalEntrySource {
+  readonly kind: 'depreciation';
+  readonly depreciationRecordId: string;
+  readonly assetId: string;
+  readonly fiscalYear: number;
+  readonly revision: number;
 }
 
 // ============================================================================

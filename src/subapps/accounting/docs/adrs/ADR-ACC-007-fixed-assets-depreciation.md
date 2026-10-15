@@ -336,6 +336,11 @@ interface DisposalResult {
 
 ### 5.1 Ετήσια Αποσβέσεις → Journal Entries
 
+> ✅ **Υλοποιήθηκε 2026-10-15 (ADR-ACC-010 §2.1.1 Φάση 5)** — `engines/depreciation-booking.ts`
+> (`depreciationJournalLineFor`). Διαφορές από το σχέδιο κάτω: `sourceType/sourceId` → `source: { kind: 'depreciation',
+> depreciationRecordId, assetId, fiscalYear, revision }` · `paymentMethod: 'non_cash'` · κωδικοί myDATA / Ε3 **από το SSoT
+> κατηγοριών** · περιγραφή = όνομα παγίου · ποσό = η **διαφορά** της αναθεώρησης (SAP repeat run), αρνητικό στον αντιλογισμό.
+
 Στο τέλος κάθε φορολογικού έτους:
 
 ```typescript
@@ -511,6 +516,11 @@ Bot: "💻 Ποσό ≥1.500€ — πάγιο στοιχείο.
 
 ### 10.1 Ετήσια Ροή (Δεκέμβριος)
 
+> ✅ **Υλοποιήθηκε 2026-10-15 (ADR-ACC-010 §2.1.1 Φάση 5)** — «Αποσβέσεις χρήσης» στη σελίδα παγίων: χρήση →
+> προεπισκόπηση (σωστό / καταχωρημένο / διαφορά) → επιβεβαίωση → καταχώριση· και αναίρεση. Καταχώριση **μόνο** για χρήση που
+> έληξε και με **ανοιχτή** την περίοδο 12 (όχι «Δεκέμβριο»). Βήμα [5]: η προβολή του παγίου είναι το κλείσιμο της νεότερης
+> καταχωρημένης χρήσης (όχι `+=`). Υπενθύμιση [1]: **δεν** υλοποιήθηκε.
+
 ```
 [1] Reminder: "Δεκέμβριος — Υπολογισμός αποσβέσεων 2026"
     ↓
@@ -579,6 +589,7 @@ Bot: "💻 Ποσό ≥1.500€ — πάγιο στοιχείο.
 | 2026-02-09 | **Phase 3 implemented** — services/config/depreciation-config.ts: `DEPRECIATION_RATES` (7 categories: buildings 4%, machinery 10%, vehicles 16%, furniture 10%, computers 20%, instruments 10%, other 10%), `getDepreciationRate()`, `calculateUsefulLife()`. services/engines/depreciation-engine.ts: `DepreciationEngine implements IDepreciationEngine` — `calculateAnnualDepreciation()` (pro-rata first year, capped at remaining value), `bookDepreciations(fiscalYear)` (fetches active assets, creates records, updates accumulatedDepreciation), `calculateDisposal()` (gain/loss + book value), `forecastDepreciations()` (multi-year projection). Straight-line only per N.4172/2013 | Claude Code |
 | 2026-02-09 | **Phase 4 implemented** — API: `GET/POST /api/accounting/assets`. Hook: `useFixedAssets(filters)`. UI: `AssetsPageContent` (category+status filters + "Add Asset" dialog), `AssetsList` (table: name/category/date/cost/depreciation/netBookValue/status), `AddAssetForm` (dialog: description/category/date/cost/usefulLife/residualValue + auto-set useful life per DEPRECIATION_RATES), `DepreciationSchedule` (card with year-by-year: opening/depreciation/closing values) | Claude Code |
 | 2026-10-15 | **Εκτέλεση αποσβέσεων «όπως οι μεγάλοι» (ADR-ACC-010 §2.1.1 Φάση 4)** — ⚠️ η γραμμή «Phase 3» παραπάνω ανέφερε `services/config/depreciation-config.ts` που **δεν υπήρχε**: οι συντελεστές ζούσαν μόνο στη φόρμα και ο διακομιστής δεχόταν τον συντελεστή του πελάτη. Τώρα: SSoT `depreciation-config.ts` (συντελεστές + `DEPRECIATION_PERIOD_CONTROL`) · καθαρός πίνακας `depreciation-schedule.ts` (υπόλοιπο αρχής από τα στοιχεία του παγίου, όχι από το μεταβλητό πεδίο) · έναρξη τον **επόμενο** μήνα (ΚΦΕ αρ.24 παρ.6) · `bookDepreciations` = πλήρης σάρωση (`collectFixedAssets`), μόνο χρήση που έληξε, `DepreciationRunResult` · ΕΝΑΣ ατομικός, ιδεμπότητος γραφέας `postDepreciation` (ντετερμινιστικό id `depr_` ανά μισθωτή/πάγιο/χρήση, `create` στη συναλλαγή, ίχνος `DEPRECIATION_POSTED` στην ίδια συναλλαγή) · `FixedAsset.lastDepreciatedFiscalYear` · `inactive` εκτός (ΠΟΛ 1073/2015) · εκποιημένο μέσα στη χρήση: ως τον μήνα εκποίησης · `forecastDepreciations` από τον ίδιο πίνακα · +1 δείκτης `(companyId, depreciationStartDate)` | Giorgio + Claude Code |
+| 2026-10-15 | **Αποσβέσεις → Βιβλίο Ε-Ε (ADR-ACC-010 §2.1.1 Φάση 5)** — routes `GET/POST /api/accounting/assets/depreciation-run` + `POST …/reversal` (διοικητικός ρόλος) · οθόνη τέλους χρήσης (`DepreciationRunDialog`) · εγγραφή Ε-Ε `depreciation` 31/12 ανά πάγιο, στην ΙΔΙΑ συναλλαγή με την απόσβεση · σύγκλιση: SAP repeat run (μόνο η διαφορά) + Xero rollback (αντιλογισμός, μόνο νεότερη χρήση) · `DepreciationRecord.revision` / `journalEntryIds` · `FixedAsset.depreciatedFiscalYears` · περίοδος 12 ανοιχτή · ίχνος από τον γραφέα · κατηγορία `depreciation` μόνο από το υποσύστημα (§12 #2: 1 ανά πάγιο — επιβεβαιώθηκε) | Giorgio + Claude Code |
 
 ---
 

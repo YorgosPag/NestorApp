@@ -52,6 +52,7 @@ export type {
 export type {
   CategoryDefinition,
   JournalEntry,
+  JournalEntrySource,
   JournalEntryFilters,
   CreateJournalEntryInput,
   UpdateJournalEntryInput,
@@ -153,6 +154,10 @@ export type {
   DisposalResult,
   CreateFixedAssetInput,
   FixedAssetFilters,
+  DepreciationPreview,
+  DepreciationPreviewLine,
+  DepreciationRunResult,
+  DepreciationRunBlocker,
 } from './assets';
 
 // ── Bank Reconciliation Types (ADR-ACC-008) ─────────────────────────────────

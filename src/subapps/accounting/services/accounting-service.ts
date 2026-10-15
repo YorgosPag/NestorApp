@@ -17,7 +17,7 @@ import type {
 import type { VATQuarterSummary, VATAnnualSummary } from '../types/vat';
 import type { TaxResult, TaxEstimate, PartnershipTaxResult, EPETaxResult, AETaxResult } from '../types/tax';
 import type { EFKAAnnualSummary, PartnershipEFKASummary, EPEEFKASummary, AEEFKASummary } from '../types/efka';
-import type { DepreciationRunResult } from '../types/assets';
+import type { DepreciationPreview, DepreciationRunResult } from '../types/assets';
 import type { CreateJournalEntryInput, JournalEntry } from '../types/journal';
 import type { FiscalQuarter, AccountCategory, PaymentMethod } from '../types/common';
 import { getCategoryByCode } from '../config/account-categories';
@@ -217,11 +217,22 @@ export class AccountingService {
 
   // ── Depreciation ────────────────────────────────────────────────────────
 
+  /** Προεπισκόπηση αποσβέσεων χρήσης — σωστό / καταχωρημένο / διαφορά ανά πάγιο, καμία εγγραφή (§2.1.1 Φάση 5). */
+  async previewYearEndDepreciation(fiscalYear: number): Promise<DepreciationPreview> {
+    return this.depreciationEngine.previewDepreciations(fiscalYear);
+  }
+
   /**
-   * Εκτέλεση ετήσιων αποσβέσεων χρήσης που έληξε — πλήρης σάρωση, ιδεμπότητη (ADR-ACC-010 §2.1.1 Φάση 4)
+   * Εκτέλεση ετήσιων αποσβέσεων χρήσης που έληξε — πλήρης σάρωση, ιδεμπότητη, καταχώριση στο Βιβλίο Ε-Ε
+   * (ADR-ACC-010 §2.1.1 Φάσεις 4–5)
    */
   async runYearEndDepreciation(fiscalYear: number): Promise<DepreciationRunResult> {
     return this.depreciationEngine.bookDepreciations(fiscalYear);
+  }
+
+  /** Αναίρεση αποσβέσεων χρήσης (Xero rollback) — αντιλογισμός στο Βιβλίο Ε-Ε (§2.1.1 Φάση 5). */
+  async reverseYearEndDepreciation(fiscalYear: number): Promise<DepreciationRunResult> {
+    return this.depreciationEngine.reverseDepreciations(fiscalYear);
   }
 
   // ── Partnership Tax (ADR-ACC-012) ──────────────────────────────────────

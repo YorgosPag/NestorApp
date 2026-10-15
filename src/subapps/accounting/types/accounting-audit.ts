@@ -38,6 +38,10 @@ export type AccountingAuditEventType =
   // ADR-ACC-010 §2.1.1 Φ4: annual depreciation posted for one asset — written in the SAME
   // transaction as the depreciation record (never a posting without a trace).
   | 'DEPRECIATION_POSTED'
+  // ADR-ACC-010 §2.1.1 Φ5: the booked amount converged to a corrected target (SAP repeat run — a NEW
+  // difference entry in the book) · converged to 0 (Xero rollback — a reversing entry).
+  | 'DEPRECIATION_ADJUSTED'
+  | 'DEPRECIATION_REVERSED'
   // ADR-440: ownership / dividend changes on the company profile
   // (partners / members / shareholders). Material data → audited.
   | 'COMPANY_PROFILE_UPDATED'

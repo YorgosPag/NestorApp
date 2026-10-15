@@ -218,6 +218,8 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
     fixedAssetLedger.collectFixedAssets(this.tenant, query);
   postDepreciation = (request: DepreciationPostingRequest) =>
     depreciation.postDepreciation(this.tenant, request);
+  readDepreciationRecords = (fiscalYear: number, assetIds: readonly string[]) =>
+    depreciation.readDepreciationRecords(this.tenant, fiscalYear, assetIds);
   getDepreciationRecords = (assetId: string, fiscalYear?: number) =>
     operations.getDepreciationRecords(this.tenant, assetId, fiscalYear);
 
