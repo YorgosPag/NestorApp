@@ -23,6 +23,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { SOLID_FILL_INK, type SolidFillKey } from '@/design-system/color-bridge';
 import { cn } from '@/lib/utils';
 
 /** Το προεπιλεγμένο κλειδί ανακοίνωσης όταν ο καταναλωτής δεν δίνει σημασιολογικό δικό του. */
@@ -90,18 +91,15 @@ export interface IconCountBadgeProps {
   readonly 'data-testid'?: string;
 }
 
-interface TonePair {
-  /** Κλειδί του `COLOR_BRIDGE.bg` — πάντα `*Solid`, ποτέ `--bg-*` (soft surface). */
-  readonly fill: 'errorSolid' | 'infoSolid' | 'successSolid' | 'warningSolid';
-  /** Κλειδί του `COLOR_BRIDGE.text` — το μετρημένο μελάνι αυτού του γεμίσματος. */
-  readonly ink: 'onSolid' | 'onSolidDark';
-}
-
-const TONE_PAIRS: Readonly<Record<IconCountBadgeTone, TonePair>> = {
-  urgent: { fill: 'errorSolid', ink: 'onSolid' },
-  count: { fill: 'infoSolid', ink: 'onSolid' },
-  success: { fill: 'successSolid', ink: 'onSolidDark' },
-  warning: { fill: 'warningSolid', ink: 'onSolidDark' },
+/**
+ * Τόνος → συμπαγές γέμισμα (`COLOR_BRIDGE.bg`, πάντα `*Solid`, ποτέ `--bg-*`). Το **μελάνι** δεν δηλώνεται εδώ:
+ * το δίνει ο ΕΝΑΣ μετρημένος πίνακας `SOLID_FILL_INK` (ADR-854 §3 · ADR-915 §11.4).
+ */
+const TONE_FILLS: Readonly<Record<IconCountBadgeTone, SolidFillKey>> = {
+  urgent: 'errorSolid',
+  count: 'infoSolid',
+  success: 'successSolid',
+  warning: 'warningSolid',
 };
 
 const SIZE_CLASSES: Readonly<Record<IconCountBadgeSize, string>> = {
@@ -157,7 +155,7 @@ export function IconCountBadge({
   // Η συνθήκη ζει εδώ, όχι σε έξι call sites.
   if (!Number.isFinite(count) || count <= 0) return null;
 
-  const pair = TONE_PAIRS[tone];
+  const fill = TONE_FILLS[tone];
   const announceRef = announce ? resolveAnnounceRef(announce) : null;
 
   return (
@@ -169,8 +167,8 @@ export function IconCountBadge({
           'rounded-full font-medium leading-none tabular-nums',
           PLACEMENT_CLASSES[placement],
           SIZE_CLASSES[size],
-          colors.bg[pair.fill],
-          colors.text[pair.ink],
+          colors.bg[fill],
+          colors.text[SOLID_FILL_INK[fill]],
         )}
         // ⛔ ΣΤΑΘΕΡΑ, ΟΧΙ prop: ο ίδιος ο αριθμός χωρίς συμφραζόμενα («3») δεν λέει
         // τίποτα σε αναγνώστη οθόνης. Το νόημα ζει στο `announce` ή στον γονέα.

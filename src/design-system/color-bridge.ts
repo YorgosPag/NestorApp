@@ -165,14 +165,14 @@ export const COLOR_BRIDGE = {
     // ΣΥΓΚΕΚΡΙΜΕΝΟ μελάνι, όχι με το «προεπιλεγμένο λευκό» — βλ. ADR-854 §3.
     // ⛔ ΜΗΝ το κάνεις `text-foreground`: εκείνο αλλάζει ανά θέμα (σκούρο στο φωτεινό,
     // ΣΧΕΔΟΝ ΛΕΥΚΟ στο σκοτεινό) και θα έσπαγε πάνω σε γέμισμα που κρατά τον τόνο του.
-    // ΓΙΑΤΙ ΕΞΑΙΡΕΙΤΑΙ ΑΠΟ ΤΟ CHECK 3.42: το μελάνι αυτό ΔΕΝ είναι ελεύθερο. Μοναδικός
-    // καταναλωτής το `TONE_PAIRS` του IconCountBadge (ADR-854 §3), που το επιτρέπει ΜΟΝΟ
-    // πάνω σε `successSolid` / `warningSolid`. Και τα δύο ζεύγη μετρήθηκαν ΚΑΙ ΣΤΑ ΔΥΟ
+    // ΓΙΑΤΙ ΕΞΑΙΡΕΙΤΑΙ ΑΠΟ ΤΟ CHECK 3.42: το μελάνι αυτό ΔΕΝ είναι ελεύθερο. Το δίνει ΜΟΝΟ
+    // ο πίνακας `SOLID_FILL_INK` (πιο κάτω· καταναλωτές `IconCountBadge` + `Badge`, ADR-854 §3
+    // · ADR-915 §11.4), και ΜΟΝΟ πάνω σε `successSolid` / `warningSolid`. Και τα δύο ζεύγη μετρήθηκαν ΚΑΙ ΣΤΑ ΔΥΟ
     // θέματα: success 9,14/6,27 (το `--status-success` ΟΝΤΩΣ σκουραίνει στο σκοτεινό,
     // 142 71% 45% → 142 76% 36%) · warning 6,66/6,66 (ίδιο token και στα δύο) ⇒ ≥4,5:1
     // παντού όπου επιτρέπεται. Οι 21 επιφάνειες που καταγγέλλει η πύλη είναι ΑΚΡΙΒΩΣ
     // αυτές που το ζεύγος ΔΕΝ επιτρέπει — τον περιορισμό δεν τον βλέπει, γιατί τα *Solid
-    // είναι css-var. ⚠️ Καταναλωτής εκτός TONE_PAIRS ⇒ ο λόγος γίνεται ΨΕΥΔΗΣ· μέτρα ξανά.
+    // είναι css-var. ⚠️ Καταναλωτής εκτός SOLID_FILL_INK ⇒ ο λόγος γίνεται ΨΕΥΔΗΣ· μέτρα ξανά.
     // theme-exempt: δεσμευμένο μελάνι ζεύγους — μόνο πάνω σε successSolid/warningSolid, μετρημένο 9,14/6,27 και 6,66/6,66 (ADR-854 §3)
     onSolidDark: 'text-black',            // Σταθερό σκούρο μελάνι για ΑΝΟΙΧΤΑ *Solid (success/warning)
 
@@ -417,6 +417,29 @@ export const COLOR_BRIDGE = {
 export type BgColorKey = keyof typeof COLOR_BRIDGE.bg;
 export type TextColorKey = keyof typeof COLOR_BRIDGE.text;
 export type BorderColorKey = keyof typeof COLOR_BRIDGE.border;
+
+/** Τα ΣΥΜΠΑΓΗ γεμίσματα κατάστασης (`--status-*`) — όσα κουβαλούν κείμενο ΠΑΝΩ τους. */
+export type SolidFillKey = 'errorSolid' | 'infoSolid' | 'successSolid' | 'warningSolid' | 'purpleSolid';
+/** Τα δύο μελάνια που επιτρέπονται πάνω σε συμπαγές γέμισμα. */
+export type SolidInkKey = Extract<TextColorKey, 'onSolid' | 'onSolidDark'>;
+
+/**
+ * 🔑 **ΤΟ ΜΕΤΡΗΜΕΝΟ ΜΕΛΑΝΙ ΚΑΘΕ ΣΥΜΠΑΓΟΥΣ ΓΕΜΙΣΜΑΤΟΣ — ΕΝΑ σημείο** (ADR-854 §3 · ADR-915 §11.4).
+ *
+ * Κάθε `*Solid` ζευγαρώνει με **συγκεκριμένο** μελάνι, όχι με «το προεπιλεγμένο λευκό». Μετρημένο σε browser
+ * 2026-10-15, **και στα δύο θέματα** (λευκό / μαύρο): error 4,80 / 4,38 · info 5,17 / 4,06 · purple 5,93 / 3,54 ·
+ * success **3,33 σκοτεινό · 2,30 φωτεινό** / 6,30 · 9,12 · warning **3,16** / 6,65.
+ * ⚠️ Ως τις 2026-10-15 η γνώση ζούσε **μόνο** στο (πρώην) `TONE_PAIRS` του `IconCountBadge`· το κοινό `Badge` έγραφε λευκό σε
+ * success/warning ⇒ σήμα 12px στα 2,30:1 σε κάθε οθόνη που το χρησιμοποιεί (βρέθηκε στο μητρώο λήξεων).
+ * ⛔ Αλλαγή token `--status-*` ⇒ **μέτρα ξανά** αυτόν τον πίνακα.
+ */
+export const SOLID_FILL_INK: Readonly<Record<SolidFillKey, SolidInkKey>> = {
+  errorSolid: 'onSolid',
+  infoSolid: 'onSolid',
+  purpleSolid: 'onSolid',
+  successSolid: 'onSolidDark',
+  warningSolid: 'onSolidDark',
+};
 
 /**
  * 🎯 Bridge Validation Helpers

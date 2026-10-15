@@ -247,7 +247,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "53812544ddc97d8ee88c70b8fa87bd5159e950583891f123c18079caf71e4b29",
+  "inputsSha256": "2f14744815323ec001fee6b0e6f183a32d83cb8a21e41a722269a1c887e70395",
   "languages": [
     "el"
   ],
@@ -12194,7 +12194,7 @@
     "src/components/ui/ShareButton.tsx": "2131ce6e171df6165833d1430c12a788d477f6e0f668b9ff8941a24497a01bcc",
     "src/components/ui/ShareModal.tsx": "c552dc636b28485384e92e20eb1bcc1a7e4bc28609197fb1134cde66e23ad116",
     "src/components/ui/avatar.tsx": "8b0744079f3691ae01114774dfd75b4ae9fcc6bdee13619458b8c8d66c9c5db2",
-    "src/components/ui/badge.tsx": "e387fd56161611080b8791ddff0b1f1d3fa13acb1f88df036e39f9c307ad3850",
+    "src/components/ui/badge.tsx": "2cc181c043fc822f16b77cfbe03d27c724e8f7584e7e5bcfa152b53b4f351b4f",
     "src/components/ui/button.tsx": "e9174cab418958752101248ba60ee1603284955d0fe61a0550b8136ef57d881e",
     "src/components/ui/card.tsx": "f53b2bc3a7765f0f666e90836f1c92e219c9206cad96e596d95546a9eae08264",
     "src/components/ui/channel-sharing/ChannelLinkForm.tsx": "09732a590a764ca061155d4553b5e9a3326d7f3fe6565b5525daf6c940c222d7",
@@ -12359,7 +12359,7 @@
     "src/contexts/WebSocketContext.tsx": "f3974f5535d37243edbca0e490328e948be85e6e8d6d43d1ac5fc7ab1d3d0355",
     "src/contexts/WorkspaceContext.tsx": "0a9ce94deaa4e4ad7f1f6748ed7aa877f6efc5522a70d73ff0e735b150ba21fb",
     "src/core/badges/BadgeFactory.ts": "60fd113283cf6c6d7ba60f303b9315facb222cafbd8c234034f8969d37fb0168",
-    "src/core/badges/IconCountBadge.tsx": "2fb70f201ff556a2b7c5c3eea42908d65338994e85194e5dc5f58472c2ecc5a5",
+    "src/core/badges/IconCountBadge.tsx": "b7fa85301d65a3db179ca0fcb9a79176f70df1bca7651fb31eef7c694f4417fa",
     "src/core/badges/UnifiedBadgeSystem.tsx": "56972964f0e283a7917fcb3a33aaca0a67746c3c35bbec34fb2c32f4b475da41",
     "src/core/badges/badge-label-key.ts": "5909a8964c285d863e5a9780eacfcf98b6bec5ebd4a7f6101ae9a58ab176edc6",
     "src/core/containers/PageContainer.tsx": "8072dd4dad8020e1dcde5747a9f28d6c17dd8a930d38d81665b440c08e75da37",
@@ -12373,7 +12373,7 @@
     "src/core/modals/usePhotoPreviewState.ts": "94c35da67c6b5ca8ddbe8c1de6d3e7541483c10c300729e08f244f17d1e3b8f0",
     "src/core/status/StatusConstants.ts": "9a7fab9ed76192e07e95b5aae686842552a1ea9be4fc750ec407cfe0e94298a3",
     "src/core/types/BadgeTypes.ts": "e9b6e5536ac5c1d6072ba9add175370bf66c245fb2bc7d982b521e9a9b3a95a6",
-    "src/design-system/color-bridge.ts": "f7538e8066ef73513a33ce1cd7a08bdc2b720caa8c2d90b5ada0f32bc74be6d5",
+    "src/design-system/color-bridge.ts": "ccccb56973a1cb151fb1de697729134c9628c27f4e64caac2d2a307caed4b409",
     "src/design-system/components/GridCard/GridCard.types.ts": "86fc8a0854e69a9f44f9f0eff063726e9723de44cd3dddaee4e19eb23583df0f",
     "src/design-system/components/ListCard/ListCard.tsx": "4c55f05b76a96f216f22a282147f882a45fc08d26632af87810566808aa0fed7",
     "src/design-system/components/ListCard/ListCard.types.ts": "7df6d9091e67b84b0a940ea18fe40165d96b1bbdfd7d5fee3f6278b7d2701245",

@@ -5,7 +5,17 @@ import { cn } from "@/lib/utils"
 import { INTERACTIVE_PATTERNS } from "@/components/ui/effects"
 import { useBorderTokens } from '@/hooks/useBorderTokens'
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors'
+import { COLOR_BRIDGE, SOLID_FILL_INK, type SolidFillKey } from '@/design-system/color-bridge'
 import '@/lib/design-system';
+
+type SolidPalette = Pick<typeof COLOR_BRIDGE, 'bg' | 'text'>;
+
+/**
+ * 🔑 Συμπαγές σήμα = γέμισμα **+ το ΜΕΤΡΗΜΕΝΟ μελάνι του** (`SOLID_FILL_INK`, ADR-854 §3 · ADR-915 §11.4).
+ * ⛔ ΟΧΙ `text-white` παντού: success 2,30:1 (φωτεινό) · warning 3,16:1 — μετρημένο σε browser 2026-10-15.
+ */
+const solidClasses = (palette: SolidPalette, fill: SolidFillKey): string =>
+  `border-transparent ${palette.bg[fill]} ${palette.text[SOLID_FILL_INK[fill]]}`;
 
 // 🏢 ENTERPRISE: Dynamic badge variants using centralized border tokens and semantic colors
 // ✅ CENTRALIZED: Single source of truth for ALL badges (Grid view + List view)
@@ -22,18 +32,18 @@ const createBadgeVariants = (borderTokens: ReturnType<typeof useBorderTokens>, c
           `border-transparent ${colors.bg.secondary} ${colors.text.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER || 'hover:opacity-90'}`,
         // ✅ ADR-365 follow-up: SOLID vivid status badges (filled bg + white text)
         destructive:
-          `border-transparent ${colors.bg.errorSolid} ${colors.text.onSolid} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER || 'hover:opacity-90'}`,
+          `${solidClasses(colors, 'errorSolid')} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER || 'hover:opacity-90'}`,
         outline: "text-foreground",
         success:
-          `border-transparent ${colors.bg.successSolid} ${colors.text.onSolid} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER || 'hover:opacity-90'}`,
+          `${solidClasses(colors, 'successSolid')} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER || 'hover:opacity-90'}`,
         warning:
-          `border-transparent ${colors.bg.warningSolid} ${colors.text.onSolid} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER || 'hover:opacity-90'}`,
+          `${solidClasses(colors, 'warningSolid')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER || 'hover:opacity-90'}`,
         info:
-          `border-transparent ${colors.bg.infoSolid} ${colors.text.onSolid} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER || 'hover:opacity-90'}`,
+          `${solidClasses(colors, 'infoSolid')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER || 'hover:opacity-90'}`,
         error:
-          `border-transparent ${colors.bg.errorSolid} ${colors.text.onSolid} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER || 'hover:opacity-90'}`,
+          `${solidClasses(colors, 'errorSolid')} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER || 'hover:opacity-90'}`,
         purple:
-          `border-transparent ${colors.bg.purpleSolid} ${colors.text.onSolid} ${INTERACTIVE_PATTERNS.ACCENT_HOVER || 'hover:opacity-90'}`,
+          `${solidClasses(colors, 'purpleSolid')} ${INTERACTIVE_PATTERNS.ACCENT_HOVER || 'hover:opacity-90'}`,
         light:
           `border-transparent ${colors.bg.muted} ${colors.text.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER || 'hover:opacity-90'}`,
         muted:
@@ -93,14 +103,14 @@ const staticBadgeVariants = cva(
       variant: {
         default: "border-transparent bg-background text-foreground hover:opacity-90",
         secondary: "border-transparent bg-muted text-muted-foreground hover:opacity-90",
-        // ✅ ADR-365 follow-up: SOLID vivid status badges (--status-* fill + white text)
-        destructive: "border-transparent bg-[hsl(var(--status-error))] text-white hover:opacity-90",
+        // ✅ ADR-365 follow-up: SOLID vivid status badges (--status-* fill + το μετρημένο μελάνι, ADR-915 §11.4)
+        destructive: `${solidClasses(COLOR_BRIDGE, 'errorSolid')} hover:opacity-90`,
         outline: "text-foreground",
-        success: "border-transparent bg-[hsl(var(--status-success))] text-white hover:opacity-90",
-        warning: "border-transparent bg-[hsl(var(--status-warning))] text-white hover:opacity-90",
-        info: "border-transparent bg-[hsl(var(--status-info))] text-white hover:opacity-90",
-        error: "border-transparent bg-[hsl(var(--status-error))] text-white hover:opacity-90",
-        purple: "border-transparent bg-[hsl(var(--status-purple))] text-white hover:opacity-90",
+        success: `${solidClasses(COLOR_BRIDGE, 'successSolid')} hover:opacity-90`,
+        warning: `${solidClasses(COLOR_BRIDGE, 'warningSolid')} hover:opacity-90`,
+        info: `${solidClasses(COLOR_BRIDGE, 'infoSolid')} hover:opacity-90`,
+        error: `${solidClasses(COLOR_BRIDGE, 'errorSolid')} hover:opacity-90`,
+        purple: `${solidClasses(COLOR_BRIDGE, 'purpleSolid')} hover:opacity-90`,
         light: "border-transparent bg-muted text-muted-foreground hover:opacity-90",
         muted: "border-transparent bg-muted text-muted-foreground hover:opacity-90",
         subtle: "border-transparent bg-muted text-muted-foreground hover:opacity-90",
