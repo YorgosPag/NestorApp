@@ -105,6 +105,12 @@ const DECLARED_CHANGES: ReadonlyArray<(tree: GoldenTree, s: Scenario) => void> =
     if (s.menu !== 'tools') return;
     groupOf(tree, '/legal-documents')?.children?.push({ title: 'personal.items.myCases', href: '/cases' });
   },
+  // ADR-915 Φ4γ (Ε5) — «Λήξεις εγγράφων»: νέο παιδί της ομάδας `legal`, ΜΕΤΑ τις υποθέσεις. Χωρίς πολιτική
+  //                    (η ανάγνωση φυλάσσεται από `withAuth` + `ctx.companyId`) ⇒ και στα τέσσερα σενάρια.
+  (tree, s) => {
+    if (s.menu !== 'tools') return;
+    groupOf(tree, '/legal-documents')?.children?.push({ title: 'tools.documentExpiry', href: '/document-expiry' });
+  },
 ];
 
 const RESOLVERS = { main: getMainMenuItems, tools: getToolsMenuItems, settings: getSettingsMenuItems } as const;
