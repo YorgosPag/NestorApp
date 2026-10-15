@@ -49,6 +49,15 @@ function ownedBy(data: Readonly<Record<string, unknown>>, owner: ContainerFileOw
     : stringField(data, 'companyId') === owner.companyId;
 }
 
+/**
+ * **Ζωντανό αρχείο**: όχι στον κάδο, ανέβασμα ολοκληρωμένο. Ο ΕΝΑΣ ορισμός — τον ρωτούν ο κριτής δοχείου, ο κριτής
+ * εγγράφου εντολής, η αποστολή τεκμηρίου μεταβίβασης και το μητρώο λήξεων (ADR-915 Φ4β). Ήταν τρία χειρόγραφα
+ * αντίγραφα της ίδιας συνθήκης.
+ */
+export function isLiveFileRecord(data: { readonly isDeleted?: unknown; readonly status?: unknown }): boolean {
+  return data.isDeleted !== true && data.status === FILE_STATUS.READY;
+}
+
 function inContainer(data: Readonly<Record<string, unknown>>, expected: ExpectedContainer): boolean {
   return (
     expected.entityId !== null &&
@@ -71,7 +80,7 @@ export function judgeContainerFile(
 ): ContainerFileVerdict {
   if (data === null || data.isDeleted === true) return { kind: 'refused', reason: 'file-missing' };
   if (!inContainer(data, expected)) return { kind: 'refused', reason: 'file-not-yours' };
-  if (stringField(data, 'status') !== FILE_STATUS.READY) return { kind: 'refused', reason: 'file-not-ready' };
+  if (!isLiveFileRecord(data)) return { kind: 'refused', reason: 'file-not-ready' };
   if (stringField(data, 'contentType') !== expected.contentType) return { kind: 'refused', reason: 'file-wrong-type' };
 
   const storagePath = stringField(data, 'storagePath');

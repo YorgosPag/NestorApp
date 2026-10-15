@@ -117,22 +117,27 @@ function listWorktreeDivergence({ repoRoot }) {
 }
 
 /**
- * Το κείμενο πολλών αρχείων **όπως θα τα έγραφε το `checkout-index`** (φίλτρα + EOL), σε ΕΝΑ spawn:
- * `git cat-file --batch --filters` με είσοδο `:μονοπάτι`. Αρχείο εκτός ευρετηρίου απλώς λείπει.
- * @param {{repoRoot: string, relPaths: string[]}} options
+ * Το κείμενο πολλών blobs του ευρετηρίου, **ωμό** (τα bytes του αντικειμένου), σε ΕΝΑ spawn:
+ * `git cat-file --batch` με είσοδο `<sha>`. Αντικείμενο που λείπει απλώς λείπει.
+ *
+ * ⚠️ ΓΙΑΤΙ ΟΧΙ `--filters`, ΜΕΤΡΗΜΕΝΟ (git 2.54, Windows): το `%(objectsize)` αναφέρει το μέγεθος
+ * του **αφιλτράριστου** blob ενώ εκπέμπει τα **φιλτραρισμένα** bytes (LF→CRLF) ⇒ ο αναλυτής
+ * αποσυγχρονίζεται από το πρώτο αρχείο και κάθε επόμενο κείμενο είναι σκουπίδι (33/33 λάθος).
+ * Ό,τι διαβάζει ο walk (ακμές, ονόματα, namespaces) δεν εξαρτάται από το EOL.
+ * @param {{repoRoot: string, entries: Array<[string, string]>}} options `[μονοπάτι, blob sha]`
  * @returns {Map<string, string>}
  */
-function readIndexTexts({ repoRoot, relPaths }) {
+function readIndexTexts({ repoRoot, entries }) {
   const out = new Map();
-  if (relPaths.length === 0) return out;
-  const result = spawnSync('git', ['cat-file', '--batch', '--filters'], {
-    cwd: repoRoot, input: relPaths.map(rel => `:${rel}\n`).join(''), maxBuffer: MAX_BUFFER * 4,
+  if (entries.length === 0) return out;
+  const result = spawnSync('git', ['cat-file', '--batch'], {
+    cwd: repoRoot, input: entries.map(([, sha]) => `${sha}\n`).join(''), maxBuffer: MAX_BUFFER * 4,
   });
   if (result.error) throw result.error;
   if (result.status !== 0) throw new Error(`git cat-file --batch απέτυχε (${result.status}): ${String(result.stderr).trim()}`);
   const buffer = result.stdout;
   let at = 0;
-  for (const rel of relPaths) {
+  for (const [rel] of entries) {
     const eol = buffer.indexOf(0x0a, at);
     const header = buffer.toString('utf8', at, eol);
     at = eol + 1;

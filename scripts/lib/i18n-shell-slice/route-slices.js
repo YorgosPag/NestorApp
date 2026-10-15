@@ -133,6 +133,8 @@ function buildRouteSlice(projectRoot, config, graph, pageFile, shellSlice, whole
     // ΑΟΡΑΤΗ στο Layer 1: το `manifest.shellFiles` δεν το περιέχει, γιατί δεν είναι
     // shell module. Μετρημένο ζωντανά (2026-08-30, ADR-834 του άλλου agent).
     perFile: plan.perFile,
+    // ADR-744 §31 — και τα barrels που διάβασε ο walk της διαδρομής χωρίς να γίνουν μέλη.
+    consulted: plan.consulted,
     // 🔴 ADR-744 §28 — ΚΑΙ ΟΙ ΑΛΥΤΟΙ SPECIFIERS ΤΗΣ ΔΙΑΔΡΟΜΗΣ. Χωρίς αυτούς, εισαγωγή
     // προς αρχείο που ΔΕΝ υπήρχε όταν τρέχτηκε ο γεννήτορας εξαφανιζόταν σιωπηλά, και
     // η άφιξη του αρχείου αργότερα ήταν αόρατη στο Layer 1 (μετρημένο: ADR-777 §8.95).
@@ -244,7 +246,7 @@ function renderComplete({ projectRoot, config, plan, graph, rendered }) {
   if (lazy !== null) signedOnly.set(lazyArtifactPath(config), renderLazyArtifact(lazy.rows));
   // ADR-744 §30 — οι καθολικές είσοδοι υπολογίστηκαν ΜΙΑ φορά, στο `renderArtifacts`.
   const { globalInputs } = rendered.manifest;
-  const manifest = buildManifest({ config, plan, artifacts, slices: rendered.slices, routes, signedOnly, globalInputs });
+  const manifest = buildManifest({ config, plan, artifacts, slices: rendered.slices, routes, signedOnly, globalInputs, lazy });
 
   return {
     rendered: {

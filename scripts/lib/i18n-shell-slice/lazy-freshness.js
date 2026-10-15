@@ -98,7 +98,16 @@ function describeRowDrift(committed, fresh, provenance) {
  * @param {?string} [args.cacheDir]
  * @returns {{reasons: string[], stats: ?object}} `stats` = `null` όταν δεν χρειάστηκε επανυπολογισμός
  */
-function checkLazyRouteFreshness({ config, stagedFiles, root, sources, cacheDir }) {
+function checkLazyRouteFreshness(args) {
+  try {
+    return judgeFreshness(args);
+  } catch (error) {
+    // Μητρώο που δεν διαβάζεται, λίστα που άλλαξε σχήμα: ΕΥΡΗΜΑ με το μήνυμά του, ποτέ stack trace.
+    return { reasons: [`F. ο χάρτης τεμπέλικων διαδρομών δεν μπορεί να κριθεί — ${error.message}`], stats: null };
+  }
+}
+
+function judgeFreshness({ config, stagedFiles, root, sources, cacheDir }) {
   if (config.lazyRouteRegistries.length === 0) return { reasons: [], stats: null };
   const whole = committedWholeNamespaces(root, config);
   if (!stagedFiles.some(isSourceModule)) return { reasons: LR.judgeLazyArtifact(root, config, whole), stats: null };

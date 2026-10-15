@@ -263,7 +263,7 @@ function buildLazyRouteNamespaces({ projectRoot, config, graph, sources }) {
   for (const entry of entries.filter(candidate => !candidate.ssr)) {
     const target = resolve(entry.spec, MG.toPosix(path.join(projectRoot, entry.registry)));
     if (target.kind !== 'internal') { unresolved.push(entry); continue; }
-    const closure = computeShellClosure(graph, [target.file]);
+    const closure = computeShellClosure(graph, [target.file], { resolve });
     const from = namespacesOfClosure(closure.files, readFile, compat, supported);
     rows[entry.key] = [...from.keys()].sort();
     provenance.set(entry.key, from);

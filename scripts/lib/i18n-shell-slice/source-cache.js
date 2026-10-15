@@ -8,7 +8,7 @@
  *
  * 🔑 ΔΥΟ ΠΗΓΕΣ, ΕΝΑ ΣΧΗΜΑ `{ root, files, readText, keyOf }`:
  *   · **ευρετήριο** (η πύλη `--index`): σύνολο αρχείων = `git ls-files -s` (με blob sha, δωρεάν)·
- *     κείμενο = ο δίσκος όπου ΔΕΝ αποκλίνει από το ευρετήριο, αλλιώς `git cat-file --batch --filters`
+ *     κείμενο = ο δίσκος όπου ΔΕΝ αποκλίνει από το ευρετήριο, αλλιώς το blob (`git cat-file --batch`)
  *     σε ΕΝΑ spawn. Ξένη αστάδιοποίητη δουλειά δεν φτάνει ποτέ στην κρίση (μάθημα 2026-09-27).
  *   · **δίσκος** (Layer 1 χωρίς `--index`, tests): `collectSourceFiles`, κλειδί = git blob sha του κειμένου.
  *
@@ -37,10 +37,14 @@ const path = require('node:path');
 const MG = require('../module-graph');
 const { collectSourceFiles, isAnalysedSourcePath } = require('../module-graph/scan-config');
 const { listIndexEntries, listWorktreeDivergence, readIndexTexts } = require('../git-index-snapshot');
-const { stableStringify, sha256 } = require('./slice-build');
+const { stableStringify, sha256, toLf } = require('./slice-build');
 
-/** Αλλάζει όταν αλλάζει το ΣΧΗΜΑ των records — όχι ο κώδικας (εκείνον τον πιάνει το toolchain digest). */
-const CACHE_SCHEMA = 1;
+/**
+ * Αλλάζει όταν αλλάζει το ΣΧΗΜΑ των records ή όταν μια ΠΗΓΗ αποδείχθηκε λάθος — όχι ο κώδικας του
+ * walk (εκείνον τον πιάνει το toolchain digest). 1→2: το `--filters` έδινε σκουπίδια κάτω από
+ * σωστό blob sha (βλ. `readIndexTexts`) — records με σωστό κλειδί και λάθος περιεχόμενο.
+ */
+const CACHE_SCHEMA = 2;
 const CACHE_REL = path.join('node_modules', '.cache', 'nestor', 'i18n-shell-slice');
 const SOURCE_ROOTS = ['src'];
 
@@ -66,9 +70,12 @@ function createDiskSources(root) {
     root,
     files: collectSourceFiles(root, SOURCE_ROOTS),
     readText,
+    // ⚠️ hash του κειμένου με EOL σε LF: με `core.autocrlf=true` ο δίσκος έχει CRLF και το blob LF.
+    // Χωρίς αυτό, κάθε εναλλαγή δίσκου/ευρετηρίου σάρωνε τα κλειδιά της άλλης (μετρημένο: 1.626 parses
+    // σε «ζεστό» πέρασμα). Επιτρέπεται επειδή κανένα record δεν εξαρτάται από το EOL.
     keyOf(abs) {
       const text = readText(abs);
-      return text === null ? null : `${gitBlobSha(text)} ${abs.slice(prefix.length)}`;
+      return text === null ? null : `${gitBlobSha(toLf(text))} ${abs.slice(prefix.length)}`;
     },
     stats: () => ({ source: 'disk' }),
   };
@@ -83,7 +90,7 @@ function createIndexSources({ repoRoot, root }) {
   const entries = new Map([...listIndexEntries({ repoRoot })]
     .filter(([rel]) => SOURCE_ROOTS.some(dir => rel.startsWith(`${dir}/`)) && isAnalysedSourcePath(rel)));
   const divergent = [...listWorktreeDivergence({ repoRoot })].filter(rel => entries.has(rel));
-  const fromIndex = readIndexTexts({ repoRoot, relPaths: divergent });
+  const fromIndex = readIndexTexts({ repoRoot, entries: divergent.map(rel => [rel, entries.get(rel)]) });
   const relOf = abs => (abs.startsWith(prefix) ? abs.slice(prefix.length) : null);
   const readText = memoize(abs => {
     const rel = relOf(abs);
@@ -118,25 +125,31 @@ function openPack(dir, namespace) {
     } catch { /* αστοχία μνήμης — ξαναχτίζουμε */ }
   }
   const counts = { hits: 0, misses: 0, records: Object.keys(records).length };
+  // Mark-and-sweep: γράφεται ΜΟΝΟ ό,τι άγγιξε αυτό το πέρασμα ⇒ η μνήμη = το σύνολο εργασίας του
+  // walk, ποτέ η ιστορία του repo (κάθε commit θα πρόσθετε records που κανείς δεν ξαναζητά).
+  const touched = new Set();
   let dirty = false;
   return {
     counts,
     read(key, part) {
       const value = key && records[key] ? records[key][part] : undefined;
       counts[value === undefined ? 'misses' : 'hits'] += 1;
+      if (value !== undefined) touched.add(key);
       return value;
     },
     write(key, part, value) {
       if (!key || !file) return;
       records[key] = { ...records[key], [part]: value };
+      touched.add(key);
       dirty = true;
     },
     persist() {
-      if (!dirty || !file) return;
+      if (!file || (!dirty && touched.size === counts.records)) return;
       try {
         fs.mkdirSync(dir, { recursive: true });
         const tmp = `${file}.${process.pid}.tmp`;
-        fs.writeFileSync(tmp, JSON.stringify({ schema: CACHE_SCHEMA, records }));
+        const kept = Object.fromEntries([...touched].sort().map(key => [key, records[key]]));
+        fs.writeFileSync(tmp, JSON.stringify({ schema: CACHE_SCHEMA, records: kept }));
         fs.renameSync(tmp, file);   // ατομικό: παράλληλος πράκτορας βλέπει παλιό ή νέο, ποτέ μισό
         for (const other of fs.readdirSync(dir)) {
           if (other !== path.basename(file) && other.endsWith('.json')) fs.rmSync(path.join(dir, other), { force: true });

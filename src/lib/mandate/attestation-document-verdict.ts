@@ -15,7 +15,8 @@
  * **Layering**: leaf — καθαρή συνάρτηση, καμία Firestore.
  */
 
-import { ENTITY_TYPES, FILE_STATUS } from '@/config/domain-constants';
+import { ENTITY_TYPES } from '@/config/domain-constants';
+import { isLiveFileRecord } from '@/lib/files/container-file-verdict';
 import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 
 /** Ό,τι διαβάζει ο κριτής από το `files/{fileId}` — τίποτε άλλο. */
@@ -60,7 +61,7 @@ export function judgeAttestationDocument(
   if (facts === null) return INVALID;
   if (!isPayloadOwnedByCompany(facts, expected.companyId)) return INVALID;
   if (facts.entityType !== ENTITY_TYPES.OWNER_PROPERTY || facts.entityId !== expected.ownerPropertyId) return INVALID;
-  if (facts.status !== FILE_STATUS.READY || facts.isDeleted === true) return INVALID;
+  if (!isLiveFileRecord(facts)) return INVALID;
   if (typeof facts.storagePath !== 'string' || facts.storagePath.trim() === '') return INVALID;
   return {
     kind: 'attached',

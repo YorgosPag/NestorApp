@@ -84,6 +84,8 @@ const {
 const RS = require('./lib/i18n-shell-slice/route-slices');
 const { TS_PATH_ALIAS_CONFIG, checkGlobalInputs, globalInputPaths } = require('./lib/i18n-shell-slice/global-inputs');
 const { ROUTES_DIR, routeIdFor } = RS;
+const { checkLazyRouteFreshness } = require('./lib/i18n-shell-slice/lazy-freshness');
+const { createIndexSources, CACHE_REL } = require('./lib/i18n-shell-slice/source-cache');
 const { parseModule } = require('./lib/module-graph/parse-module');
 const {
   CANDIDATE_EXTENSIONS,
@@ -364,13 +366,18 @@ function checkStagedShellFiles(config, manifest, stagedFiles, root = PROJECT_ROO
     excludeConsumers: config.excludeConsumers,
   };
   const graph = { modules: new Map(), projectRoot: root };
-  const routeFiles = manifest.routeFiles || {};
+  // ⚠️ ΣΕΙΡΑ = ΠΡΟΤΕΡΑΙΟΤΗΤΑ: ένα αρχείο ζει σε ΕΝΑΝ πίνακα (ο γεννήτορας αφαιρεί τα ήδη γραμμένα).
+  // ADR-744 §31 — `consultedFiles`: barrels που ο walk ΔΙΑΒΑΖΕΙ χωρίς να είναι μέλη (ήταν το δηλωμένο όριο).
+  const tables = [
+    [manifest.shellFiles, 'shell module'],
+    [manifest.routeFiles || {}, 'module a declared route slice is built from'],
+    [manifest.consultedFiles || {}, 'barrel the shell or a route walk reads through'],
+  ];
 
   for (const relFile of stagedFiles) {
-    const inShell = relFile in manifest.shellFiles;
-    const recorded = inShell ? manifest.shellFiles[relFile] : routeFiles[relFile];
-    if (recorded === undefined) continue;
-    const role = inShell ? 'shell module' : 'module a declared route slice is built from';
+    const [table, role] = tables.find(([candidate]) => relFile in candidate) || [];
+    if (table === undefined) continue;
+    const recorded = table[relFile];
     const abs = toPosix(path.join(root, relFile));
     if (!fs.existsSync(abs)) return `${relFile} is a ${role} in the manifest but no longer exists.`;
     try {
@@ -426,11 +433,21 @@ function checkNewlyResolvableSpecs(manifest, stagedFiles, root = PROJECT_ROOT) {
   return null;
 }
 
-function runLayerOne(config, stagedFiles, root = PROJECT_ROOT) {
+/**
+ * @param {object} [lazySources] ADR-744 §31 — `{ sources, cacheDir }` για τον έλεγχο F· η πύλη `--index`
+ *   δίνει την πηγή του ΕΥΡΕΤΗΡΙΟΥ, αλλιώς διαβάζεται ο δίσκος του `root`.
+ */
+function runLayerOne(config, stagedFiles, root = PROJECT_ROOT, lazySources = {}) {
   const manifest = readManifest(config, root);
   if (manifest === null) {
     fail(`${manifestPath(config)} is missing or unreadable — the shell slice has never been generated.`);
     return;
+  }
+  // F. ADR-744 §31 — ο χάρτης τεμπέλικων διαδρομών, ΞΑΝΑΧΤΙΣΜΕΝΟΣ όταν σταδιοποιείται module του `src`.
+  const lazy = checkLazyRouteFreshness({ config, stagedFiles, root, ...lazySources });
+  if (lazy.stats !== null) {
+    const { parses, hits, ms, source } = lazy.stats;
+    console.log(`${DIM}  ↻ CHECK 3.34 F — χάρτης τεμπέλικων διαδρομών ξαναχτίστηκε (${source}): ${parses} parses · ${hits} από μνήμη · ${ms} ms${NC}`);
   }
   // 🔴 ADR-744 §20 (Β2) — ΚΑΜΙΑ ΑΛΥΣΙΔΑ `||`, ΓΙΑ ΤΟΝ ΙΔΙΟ ΛΟΓΟ ΜΕ ΤΟΝ ΓΕΝΝΗΤΟΡΑ.
   // Το `a || b || c` σημαίνει «ο πρώτος που μιλά σκοτώνει τους υπόλοιπους»: όσο ένα
@@ -448,6 +465,7 @@ function runLayerOne(config, stagedFiles, root = PROJECT_ROOT) {
     checkNewlyResolvableSpecs(manifest, stagedFiles, root),
     // E. ADR-744 §30 — οι ΚΑΘΟΛΙΚΕΣ είσοδοι: config · σταθερές · aliases · bundles · toolchain.
     checkGlobalInputs(config, manifest, root),
+    ...lazy.reasons,
   ].filter(reason => reason !== null && reason !== undefined);
 
   if (reasons.length > 0) {
@@ -600,7 +618,11 @@ function runLayerOneOnIndex(workingConfig, stagedFiles) {
     return;
   }
   process.on('exit', snapshot.dispose);
-  runLayerOne(config, stagedFiles, snapshot.root);
+  // F κρίνει κι αυτό το ΕΥΡΕΤΗΡΙΟ: σύνολο αρχείων + κείμενα από το git, μνήμη στο repo (όχι στο στιγμιότυπο).
+  runLayerOne(config, stagedFiles, snapshot.root, {
+    sources: createIndexSources({ repoRoot: PROJECT_ROOT, root: snapshot.root }),
+    cacheDir: path.join(PROJECT_ROOT, CACHE_REL),
+  });
 }
 
 module.exports = {

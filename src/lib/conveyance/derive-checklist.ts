@@ -180,8 +180,8 @@ function newestSealed(itemId: string, sealed: readonly SealedDelivery[]): Sealed
     .reduce<SealedDelivery | null>((newest, delivery) => (newest === null || delivery.deliveredAt > newest.deliveredAt ? delivery : newest), null);
 }
 
-/** Ισχύει η γραμμή; `'unknown'` ⇒ το γεγονός θέλει απάντηση. */
-function applicability(item: ChecklistItem, facts: FactValues): boolean | 'unknown' {
+/** Ισχύει η γραμμή; `'unknown'` ⇒ το γεγονός θέλει απάντηση. Ο ΕΝΑΣ κριτής — τον ρωτά και το μητρώο λήξεων (ADR-915 Φ4β). */
+export function checklistItemApplicability(item: ChecklistItem, facts: FactValues): boolean | 'unknown' {
   if (item.requirement.kind === 'mandatory') return true;
   const value = facts[item.requirement.fact];
   if (value === undefined) return 'unknown';
@@ -196,7 +196,7 @@ function deriveRow(item: ChecklistItem, input: DeriveChecklistInput): ChecklistR
     itemId: item.id, item, section: item.section, provider: item.provider, files, sealed,
     review: override?.review ?? null, notApplicable: override?.notApplicable ?? null,
   };
-  const applies = applicability(item, input.facts);
+  const applies = checklistItemApplicability(item, input.facts);
   if (applies === 'unknown') {
     const fact = item.requirement.kind === 'when' ? item.requirement.fact : null;
     return { ...base, status: 'needs_answer', notApplicableBy: null, pendingFact: fact, ...NO_VALIDITY };

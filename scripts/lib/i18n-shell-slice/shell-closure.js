@@ -49,7 +49,34 @@ const { isEntryFile } = require('../module-graph/scan-config');
 const ROUTE_BOUNDARY = /\/(page|loading|error|not-found|default|template|global-error)\.tsx?$/;
 
 function relPosix(projectRoot, file) {
+  // Γρήγορος δρόμος (ADR-744 §31): κάθε αρχείο του γράφου είναι `toPosix(join(root, rel))`, άρα το
+  // πρόθεμα κόβεται· το `path.relative` σε ΚΑΘΕ ακμή μετρήθηκε ~25% ενός ζεστού περάσματος.
+  const root = MG.toPosix(projectRoot);
+  if (file.startsWith(`${root}/`)) return file.slice(root.length + 1);
   return MG.toPosix(path.relative(projectRoot, file));
+}
+
+const namesOf = (names, render) => (names && names.length > 0 ? ` {${names.map(render).sort().join(',')}}` : '');
+
+/**
+ * ADR-744 §31 — **ό,τι ΔΙΑΒΑΖΕΙ ο walk από αυτό το αρχείο**, ως ταξινομημένες γραμμές· η είσοδος
+ * του αποτυπώματος (`fingerprintShellFile.importSpecs`).
+ *
+ * 🔴 ΤΟ ΨΕΜΑ ΠΟΥ ΔΙΟΡΘΩΝΕΙ: ως τώρα το αποτύπωμα ήταν `kind + spec`. Ο walk όμως πιστώνει ΑΝΑ ΣΥΜΒΟΛΟ
+ * (`creditNamedImport` → `resolveOrigin`, πίσω από barrels): `import {A} from '@/x'` → `{A, B}` μεγάλωνε
+ * την κλειστότητα **χωρίς** να αλλάξει αποτύπωμα. Και ένα barrel απαντά με τις ΤΟΠΙΚΕΣ εξαγωγές του και
+ * τα re-exports του — άρα κι αυτά είναι επιφάνεια. Ό,τι ΔΕΝ διαβάζει ο walk (σώμα, τοπικές χρήσεις,
+ * γραμμές) μένει έξω επίτηδες: αλλιώς κάθε edit θα κοκκίνιζε (μάθημα §31: 44% θόρυβος).
+ */
+function walkSurface(mod) {
+  if (!mod) return [];
+  const lines = [];
+  for (const imp of mod.imports) lines.push(`${imp.kind} ${imp.spec}${namesOf(imp.names, n => n.imported)}`);
+  for (const exp of mod.exports) if (exp.origin === 'local') lines.push(`export ${exp.name}`);
+  for (const re of mod.reExports) {
+    lines.push(`re-export ${re.kind} ${re.spec}${namesOf(re.names, n => `${n.imported}>${n.exported}`)}${re.as ? ` as ${re.as}` : ''}`);
+  }
+  return lines.sort();
 }
 
 /**
@@ -102,17 +129,26 @@ function walkImport(ctx, fromFile, imp) {
 }
 
 /**
- * @param {object} graph            result of MG.buildGraph
+ * @param {object} graph            result of MG.buildGraph (or MG.createOnDemandGraph)
  * @param {string[]} rootFiles      absolute posix paths of the shell entry points
- * @returns {{files: string[], dynamicBoundaries: string[], routeBoundaries: string[], unresolvedSpecs: string[]}}
+ * @param {{resolve?: Function}} [options]  ADR-744 §31 — a resolver SHARED across many closures over
+ *   the same graph. Resolution is a pure function of (spec, fromFile), so sharing changes nothing but
+ *   cost: 83 lazy closures each re-resolving the same edges measured as the bulk of a warm run.
+ * @returns {{files: string[], consulted: string[], dynamicBoundaries: string[], routeBoundaries: string[], unresolvedSpecs: string[]}}
+ *   `consulted` = ADR-744 §31: modules the walk READ (barrels on a `resolveOrigin` chain) without
+ *   them becoming members. A re-export rewritten there changes the closure, so they are inputs too —
+ *   measured: 43 for the shell, 45 for routes, 234 outside every recorded table.
  */
-function computeShellClosure(graph, rootFiles) {
+function computeShellClosure(graph, rootFiles, options = {}) {
   const seen = new Set();
   const queue = [];
+  const read = new Set();
+  // Η ΙΔΙΑ πηγή με όψη που σημειώνει τι διαβάστηκε — ο walk δεν αλλάζει, μόνο παρατηρείται.
+  const observed = { ...graph, modules: { get: file => { read.add(file); return graph.modules.get(file); } } };
   const ctx = {
-    graph,
+    graph: observed,
     projectRoot: graph.projectRoot,
-    resolve: MG.createResolver(graph),
+    resolve: options.resolve || MG.createResolver(graph),
     rootSet: new Set(rootFiles),
     dynamicBoundaries: new Set(),
     routeBoundaries: new Set(),
@@ -128,12 +164,14 @@ function computeShellClosure(graph, rootFiles) {
   }
 
   const sorted = set => [...set].sort();
+  const consulted = [...read].filter(file => !seen.has(file) && graph.modules.get(file) !== undefined);
   return {
     files: sorted([...seen].map(f => relPosix(graph.projectRoot, f))),
+    consulted: sorted(consulted.map(f => relPosix(graph.projectRoot, f))),
     dynamicBoundaries: sorted(ctx.dynamicBoundaries),
     routeBoundaries: sorted(ctx.routeBoundaries),
     unresolvedSpecs: sorted(ctx.unresolvedSpecs),
   };
 }
 
-module.exports = { ROUTE_BOUNDARY, relPosix, creditNamedImport, walkImport, computeShellClosure };
+module.exports = { ROUTE_BOUNDARY, relPosix, walkSurface, creditNamedImport, walkImport, computeShellClosure };

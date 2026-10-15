@@ -223,8 +223,56 @@ interface IAccountingRepository {
 `matching-candidates.test.ts` (ζώνη ⊇ αποδεκτά, αναφορές, κανόνας εισόδου, σφάλμα ≠ κενό, N:M)·
 `report-tax-basis.test.ts` (IAS 34 με ανεξάρτητα υπολογισμένα νούμερα).
 
-**Γνωστό χρέος (εκτός εμβέλειας):** `balance-service` (υπόλοιπο πελάτη από σελίδα 1000) — στο κλειστό σύνολο με λόγο,
-στο `pending-ratchet-work.md`.
+**Φάση 3 (2026-10-15) — υπόλοιπο πελάτη, ηλικίωση, πιστωτικό όριο.** Η διερεύνηση βρήκε πολύ περισσότερα από τη σελίδα:
+
+| Λάθος | Αποτέλεσμα |
+|---|---|
+| `listInvoices({ customerId, fiscalYear }, 1000)` — σύνθετο ερώτημα **χωρίς δείκτη**, με fallback | `FAILED_PRECONDITION` ⇒ «κανένα τιμολόγιο» ⇒ **υπόλοιπο 0 € που γραφόταν** σε κάθε αλλαγή τιμολογίου |
+| έγγραφο `accounting_customer_balances/{customerId}` αλλά υπόλοιπο **ανά χρήση** | κάθε χρήση έσβηνε την άλλη· ο έλεγχος πιστωτικού ορίου διάβαζε όποια γράφτηκε τελευταία |
+| `listCustomerBalances(έτος)` — επίσης **χωρίς δείκτη**, fallback `[]` | λίστα υπολοίπων και αναφορά ηλικίωσης **πάντα κενές** |
+| ακυρωμένο (void) τιμολόγιο μετρούσε | οφειλή που δεν υπάρχει |
+| πιστωτικό με χρήση της ημέρας έκδοσης, επανυπολογισμός στη χρήση του τιμολογίου | πιστωτικό τον Ιανουάριο για τιμολόγιο Δεκεμβρίου: το 2025 μένει χρεωμένο, το 2026 αρνητικό |
+| το αρχικό μένει `unpaid` μετά το πιστωτικό | υπόλοιπο 0 € με ηλικίωση X € στο «>120»· και πιστωτικά/πιστωμένα/ακυρωμένα **υποψήφια αντιστοίχισης** εισπράξεων |
+| μαζική συμφωνία: σελίδα 1.000 + μία σάρωση ανά πελάτη (N+1) | — |
+| `getCustomerBalance` χωρίς έλεγχο `companyId` (Admin SDK) | υπόλοιπο ξένου μισθωτή αναγνώσιμο με γνωστό id |
+| `new Date()` / `todayLocalDate()` στον διακομιστή (UTC) | 00:00–03:00 ώρα Ελλάδας η «σήμερα» ήταν χθες |
+| μήνυμα πιστωτικού ορίου σκληρογραμμένα ελληνικά (N.11)· το `defineRoute` **πετούσε** το `errorCode` | ο πελάτης δεν μπορούσε να μεταφράσει την άρνηση |
+
+**Απόφαση (Giorgio, 2026-10-15: «όπως οι μεγάλοι»)** — SAP FI-AR open items · Xero / QuickBooks aged receivables:
+- **Διαχρονικό, σε ημερομηνία αναφοράς, όχι ανά χρήση.** `CustomerBalance.fiscalYear` → `asOf` (`YYYY-MM-DD`, ημέρα Αθήνας).
+  Ταυτότητα: Σ ηλικίωσης = καθαρό υπόλοιπο = τιμολογήθηκαν − πληρώθηκαν − πιστώθηκαν.
+- **Κατά ημερομηνία από τα πρωτογενή** (πιο έξυπνο από το Xero, που για παλιά ημερομηνία δεν ξαναχτίζει τις
+  πληρωμές): ανοιχτό στις `asOf` = μικτό − πληρωμές ως τις `asOf` − πιστωτικά ως τις `asOf`. Η αναφορά ηλικίωσης
+  ξαναχτίζει έτσι την εικόνα **κάθε** περιόδου σύγκρισης στο τέλος της (ή σήμερα, αν είναι σε εξέλιξη).
+- **Πιστωτικό ⇒ συμψηφισμός με το τιμολόγιό του** μέσω `relatedInvoiceId` (SAP invoice reference / Xero allocation),
+  υπολογιστικά, χωρίς επανεγγραφή φορολογικού παραστατικού· το περίσσευμα = πίστωση υπέρ του πελάτη (αρνητικό στοιχείο,
+  στον κάδο της ημερομηνίας του). Ακυρωμένο = δεν εκδόθηκε.
+- **Πιστωτικό όριο: έκθεση ΖΩΝΤΑΝΑ** από τα παραστατικά (SAP credit exposure)· το αποθηκευμένο δίνει μόνο τις ρυθμίσεις,
+  και η σάρωση γίνεται μόνο όταν υπάρχει ενεργό όριο. Απόρριψη = `POLICY_CREDIT_LIMIT_EXCEEDED` (ADR-284) + δομημένα ποσά.
+- **Η αποθηκευμένη προβολή μετά από εγγραφή δεν ρίχνει το αίτημα** (`refreshCustomerBalance`): το τιμολόγιο υπάρχει
+  ήδη, ένα 500 θα έφερνε επανάληψη ⇒ διπλό τιμολόγιο. Σε σφάλμα δεν γράφεται τίποτα· τη διορθώνει η συμφωνία.
+
+**Υλοποίηση:**
+- `repository/accounting-repo-invoice-ledger.ts` — `collectInvoices({ scope })`, `scope` = `customer` | `receivables`,
+  πάντα με `asOf` (αποκλειστικό όριο = επόμενη ημέρα, ώστε να πιάνεται και πλήρες ISO), πάνω στο `scanLedger`.
+- `receivables/receivables-ledger.ts` — SSoT: `buildOpenItems` · `summarizeReceivables` · `ageOpenItems` (6 κάδοι SAP,
+  ημέρες με `daysBetweenDateKeys`, ανεξάρτητα ζώνης) · `groupInvoicesByCustomer`.
+- `utils/invoice-open-amount.ts` — `isCollectibleInvoice` (όχι πιστωτικό / ακυρωμένο / πιστωμένο): το μοιράζονται το
+  καθολικό απαιτήσεων **και** τα υποψήφια αντιστοίχισης.
+- `utils/accounting-day.ts` — `accountingToday()` (ημέρα Αθήνας)· το χρησιμοποιεί και η βάση φόρου των αναφορών.
+- `balance-service.ts` — `computeCustomerBalance` (χωρίς εγγραφή) · `refreshCustomerBalance` · `reconcileAllBalances`
+  (**μία** σάρωση + ομαδοποίηση, φραγμένη παραλληλία εγγραφών, μηδενισμός πελατών χωρίς πια παραστατικά) ·
+  `checkCreditLimit` (δομημένο, χωρίς κείμενο).
+- `accounting-repo-balances.ts` — χωρίς fallback· έλεγχος μισθωτή στην ανάγνωση· λίστα χωρίς χρήση.
+- `lib/api/define-route.ts` — το `errorCode` του `ApiError` φτάνει πλέον στον πελάτη (ισοτιμία με `ApiErrorHandler`).
+- `InvoiceForm` → `invoice-submit-error.ts` → `translatePolicyError`.
+- +3 δείκτες (βλ. `pending-ratchet-work.md`: deploy **πριν** το push, μετά μία συμφωνία).
+
+**Φύλακες (Φάση 3):** `receivables-ledger.test.ts` (νούμερα υπολογισμένα με το χέρι: διαχρονικό, κατά ημερομηνία,
+void, συμψηφισμός, περίσσευμα πίστωσης, ταυτότητα, όρια κάδων) · `balance-service.test.ts` (σφάλμα ≠ 0, καμία εγγραφή σε
+σφάλμα, μία σάρωση, πιστωτικό όριο) · `invoice-ledger-index.test.ts` (ισοτιμία δεικτών + το παλιό σχήμα **δεν** έχει
+δείκτη + όριο ημέρας) · `define-route.test.ts` (`errorCode` στο σώμα). Το `balance-service` **βγήκε** από το κλειστό
+σύνολο της άγκυρας συνόρου.
 
 ### 2.2 Contact Provider (CRM Integration)
 
@@ -1067,6 +1115,7 @@ class FirestoreAccountingRepository implements IAccountingRepository {
 | 2026-02-09 | **Phase 3 implemented** — All 8 interfaces have concrete implementations: `FirestoreAccountingRepository` (26 methods), `VATEngine`, `TaxEngine`, `DepreciationEngine` (constructor injection), `MatchingEngine`, `CSVImportService`, `MyDataServiceStub`, `DocumentAnalyzerStub`. Factory: `createAccountingServices()` in services/index.ts. Helpers: `sanitizeForFirestore()` (recursive undefined→null). Extended host: `firestore-collections.ts` (+9), `enterprise-id.service.ts` (+8). Portability intact: swap `FirestoreAccountingRepository` → PostgreSQL adapter | Claude Code |
 | 2026-10-14 | **Σελίδα ≠ καθολικό (§2.1.1)** — νέο `collectJournalEntries` + SSoT `journal-ledger.ts`· ΦΠΑ / φόρος / accounting-service / tax dashboard / 6 αναφορές περνούν σε πλήρη σάρωση που πετά σε σφάλμα· `period` επιτέλους εφαρμόζεται· storno χωρίς φίλτρο `status` στις αναφορές· +2 δείκτες· άγκυρες συνόρου + ισοτιμίας δεικτών. §2.1 (εγγραφές) ευθυγραμμίστηκε με τον κώδικα | Giorgio + Claude Code |
 | 2026-10-14 | **Σελίδα ≠ καθολικό, Φάση 2 (§2.1.1)** — κοινό `scanLedger`· `collectBankTransactions` (τραπεζική συμφωνία, αποσύνδεση N:M)· στένεμα υποψηφίων αντιστοίχισης (ζώνη ποσού + αναφορά παραστατικού, κανόνας εισόδου)· φόρος αναφορών κατά IAS 34 ανά νομική μορφή μέσω `TaxEngine`· +3 δείκτες· άγκυρα συνόρου για 3 σελίδες | Giorgio + Claude Code |
+| 2026-10-15 | **Σελίδα ≠ καθολικό, Φάση 3 (§2.1.1)** — υπόλοιπο πελάτη = ανοιχτά στοιχεία ΟΛΩΝ των χρήσεων σε ημερομηνία αναφοράς (SAP FI-AR / Xero / QuickBooks), όχι ανά χρήση· `collectInvoices` + SSoT `receivables-ledger`· πιστωτικό συμψηφίζεται με το τιμολόγιό του, void εκτός· πιστωτικό όριο ζωντανά, απόρριψη με κωδικό πολιτικής· μαζική συμφωνία με μία σάρωση· αναφορά ηλικίωσης από τα πρωτογενή ανά περίοδο· υποψήφια αντιστοίχισης μόνο απαιτήσεις· έλεγχος μισθωτή στο `getCustomerBalance`· `accountingToday()`· `defineRoute` στέλνει `errorCode`· +3 δείκτες | Giorgio + Claude Code |
 
 ---
 

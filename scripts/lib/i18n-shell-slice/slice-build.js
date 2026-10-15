@@ -159,6 +159,12 @@ function digestOf(value) {
  * hashing the edges is what lets the cheap layer detect closure growth without
  * rebuilding the 13.877-module graph (~19s).
  *
+ * 🔴 ADR-744 §31 — «the edges» used to mean `kind + spec` only, and that made the
+ * sentence above false: the walk credits PER SYMBOL, so `{A}` → `{A, B}` grew the
+ * closure under an unchanged fingerprint. `importSpecs` is now `walkSurface(mod)`
+ * (shell-closure.js): imported names, local exports, re-exports — everything the
+ * walk reads from this file, and nothing it does not.
+ *
  * 🔴 ADR-744 §29 — `resolution` is the file's LOCALLY RESOLVED output (keys,
  * prefixes, exported key tables), computed by `extractSurface`. Without it a
  * changed constant VALUE moved the keys and left this number untouched.

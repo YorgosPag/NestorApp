@@ -1,0 +1,212 @@
+/**
+ * @jest-environment node
+ *
+ * @fileoverview **Το μητρώο λήξεων — η ανάγνωση διακομιστή** (ADR-915 Φ4β · §11.3).
+ * @related services/document-registry/document-registry.service.ts
+ *
+ * ⚠️ **Τίποτα δεν πλάθεται εκτός από τη βάση** (ιδίωμα `mandate-catalog.test`): ο πυρήνας, ο ανεκτικός αναγνώστης, ο
+ * κριτής υπόθεσης και οι παραγωγοί απαιτήσεων τρέχουν **αληθινά**. Όλα τα δεδομένα είναι **συνθετικά**.
+ */
+
+import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
+
+import { ENTITY_TYPES, FILE_STATUS } from '@/config/domain-constants';
+import { COLLECTIONS } from '@/config/firestore-collections';
+import { PUBLIC_LISTING_SCHEMA_VERSION } from '@/lib/listings/public-listing-schema';
+import { REGISTRY_ROW_STATES, type RegistryRow } from '@/lib/document-validity/document-registry';
+import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
+import { readDocumentRegistry } from '@/services/document-registry/document-registry.service';
+import { DOCUMENT_REGISTRY_CAPS } from '@/services/document-registry/document-registry.types';
+
+jest.mock('@/lib/telemetry', () => ({
+  createModuleLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }),
+}));
+
+const COMPANY = 'comp_alfa';
+const OTHER = 'comp_beta';
+/** 2026-10-15 στην Ελλάδα. ΠΕΑ 2016-11-01 ⇒ λήγει 2026-11-01 ⇒ μέσα στις 60 ημέρες ανανέωσης. */
+const NOW = new Date('2026-10-15T09:00:00.000Z');
+const ISSUED = '2016-11-01';
+
+type Doc = Record<string, unknown>;
+
+function facts(over: Doc = {}): Doc {
+  return {
+    kind: 'energy-certificate', issuedOn: ISSUED, printedValidUntil: null,
+    source: { kind: 'document-text', reader: 'pea-text' }, recordedBy: 'system:pea-import', recordedAt: '2026-10-01T00:00:00.000Z',
+    ...over,
+  };
+}
+
+function file(over: Doc = {}): Doc {
+  return {
+    companyId: COMPANY, entityType: ENTITY_TYPES.PROPERTY, entityId: 'prop_1', status: FILE_STATUS.READY,
+    isDeleted: false, displayName: 'ΠΕΑ Α1.pdf', documentFacts: facts(), ...over,
+  };
+}
+
+function property(over: Doc = {}, energy: Doc = {}): Doc {
+  return { companyId: COMPANY, name: 'Διαμέρισμα Α1', energy: { class: 'B', issuedOn: ISSUED, sourceFileId: null, ...energy }, ...over };
+}
+
+function openCase(over: Doc = {}): Doc {
+  return {
+    id: 'case_1', companyId: COMPANY,
+    subject: { kind: 'property', propertyId: 'prop_1', buildingId: null, projectId: null, appurtenances: [] },
+    profile: 'resale_private',
+    parties: { seller: { contactId: null, kind: 'person' }, buyers: [] },
+    facts: {}, overrides: {}, storedState: 'open', targetSigningDate: '2026-12-01', catalogVersion: 'v1', version: 1,
+    createdBy: 'user_1', createdAt: '2026-10-01T00:00:00.000Z', updatedAt: '2026-10-01T00:00:00.000Z', cancellation: null,
+    ...over,
+  };
+}
+
+let fake: FakeFirestore;
+const db = (): AdminFirestore => fake as unknown as AdminFirestore;
+const read = () => readDocumentRegistry(db(), COMPANY, NOW);
+const rowOf = (rows: readonly RegistryRow[], id: string): RegistryRow | undefined => rows.find((row) => row.document.id === id);
+
+beforeEach(() => {
+  fake = new FakeFirestore();
+});
+
+describe('εμβέλεια εταιρείας', () => {
+  it('τα έγγραφα, οι δηλώσεις και οι υποθέσεις ξένης εταιρείας δεν φτάνουν ποτέ', async () => {
+    fake.seed(COLLECTIONS.FILES, 'file_x', file({ companyId: OTHER }));
+    fake.seed(COLLECTIONS.PROPERTIES, 'prop_x', property({ companyId: OTHER }));
+    fake.seed(COLLECTIONS.CONVEYANCE_CASES, 'case_x', openCase({ id: 'case_x', companyId: OTHER }));
+    const registry = await read();
+    expect(registry.rows).toEqual([]);
+    expect(registry.properties).toEqual({});
+  });
+
+  it('μετρήσεις με ΟΛΕΣ τις καταστάσεις, και τις μηδενικές', async () => {
+    const registry = await read();
+    expect(Object.keys(registry.tally).sort()).toEqual([...REGISTRY_ROW_STATES].sort());
+    expect(registry.truncated).toBe(false);
+  });
+
+  it('αρχείο που δείχνει ακίνητο ξένης εταιρείας ⇒ καμία σύνδεση, κανένα όνομα', async () => {
+    fake.seed(COLLECTIONS.FILES, 'file_1', file({ entityId: 'prop_x' }));
+    fake.seed(COLLECTIONS.PROPERTIES, 'prop_x', property({ companyId: OTHER, name: 'Ξένο' }));
+    const registry = await read();
+    expect(rowOf(registry.rows, 'file:file_1')?.document.propertyId).toBeNull();
+    expect(registry.properties).toEqual({});
+  });
+});
+
+describe('γραμμές — αρχεία και δηλώσεις (Ε1)', () => {
+  it('αρχείο-πηγή ⇒ μία γραμμή, `pinned`, χωρίς δεύτερη γραμμή δήλωσης', async () => {
+    fake.seed(COLLECTIONS.FILES, 'file_1', file());
+    fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', property({}, { sourceFileId: 'file_1' }));
+    const registry = await read();
+    expect(registry.rows.map((row) => row.document.id)).toEqual(['file:file_1']);
+    expect(registry.rows[0].document).toMatchObject({ propertyId: 'prop_1', pinned: true });
+    expect(registry.rows[0].state).toBe('expiring');
+    expect(registry.files).toEqual({ file_1: { name: 'ΠΕΑ Α1.pdf' } });
+    expect(registry.properties).toEqual({ prop_1: { name: 'Διαμέρισμα Α1' } });
+  });
+
+  it('δήλωση χωρίς αρχείο ⇒ γραμμή `declared`, χωρίς πηγή', async () => {
+    fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', property());
+    const [row] = (await read()).rows;
+    expect(row.document).toMatchObject({ id: 'declared:prop_1:energy-certificate', origin: { kind: 'declared' }, source: null });
+  });
+
+  it('Δ1 — κλάση χωρίς ημερομηνία ⇒ γραμμή `expiry-unknown`, ποτέ σιωπή', async () => {
+    fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', property({}, { issuedOn: null }));
+    const [row] = (await read()).rows;
+    expect(row.state).toBe('expiry-unknown');
+  });
+
+  it('ακίνητο χωρίς κλάση ⇒ καμία γραμμή', async () => {
+    fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', { companyId: COMPANY, name: 'Χωρίς ΠΕΑ', energy: { absence: 'pending' } });
+    expect((await read()).rows).toEqual([]);
+  });
+
+  it('αρχείο-πηγή στον κάδο ⇒ το αρχείο έξω, η δήλωση ΜΕΝΕΙ (δεν εξαφανίζεται μαζί του)', async () => {
+    fake.seed(COLLECTIONS.FILES, 'file_1', file({ isDeleted: true }));
+    fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', property({}, { sourceFileId: 'file_1' }));
+    expect((await read()).rows.map((row) => row.document.id)).toEqual(['declared:prop_1:energy-certificate']);
+  });
+
+  it('μη έτοιμο αρχείο · αλλοιωμένα γεγονότα ⇒ καμία γραμμή (ανεκτικός αναγνώστης)', async () => {
+    fake.seed(COLLECTIONS.FILES, 'file_a', file({ status: 'pending' }));
+    fake.seed(COLLECTIONS.FILES, 'file_b', file({ documentFacts: facts({ source: { kind: 'guess' } }) }));
+    expect((await read()).rows).toEqual([]);
+  });
+
+  it('αρχείο επιπέδου έργου ⇒ γραμμή χωρίς ακίνητο (Δ3, δηλωμένο όριο)', async () => {
+    fake.seed(COLLECTIONS.FILES, 'file_1', file({ entityType: ENTITY_TYPES.PROJECT, entityId: 'proj_1' }));
+    const [row] = (await read()).rows;
+    expect(row.document.propertyId).toBeNull();
+    expect(row.dependents).toEqual([]);
+  });
+
+  it('καμία ταυτότητα ανθρώπου στην απόκριση (`recordedBy` / `recordedAt`)', async () => {
+    fake.seed(COLLECTIONS.FILES, 'file_1', file());
+    expect(JSON.stringify(await read())).not.toMatch(/recordedBy|recordedAt|system:pea-import/);
+  });
+});
+
+describe('«τι σταματά» — απαιτήσεις από υποθέσεις και αγγελίες', () => {
+  beforeEach(() => {
+    fake.seed(COLLECTIONS.FILES, 'file_1', file());
+    fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', property({}, { sourceFileId: 'file_1' }));
+  });
+
+  const processes = async () => (await read()).rows[0].dependents.map((dependent) => dependent.requirement.process);
+
+  it('ανοιχτή υπόθεση με υπογραφή μετά τη λήξη ⇒ η υπογραφή σταματά, και μπλοκάρει', async () => {
+    fake.seed(COLLECTIONS.CONVEYANCE_CASES, 'case_1', openCase());
+    const [row] = (await read()).rows;
+    expect(row.dependents.map((dependent) => dependent.requirement.process)).toEqual([{ kind: 'conveyance', caseId: 'case_1' }]);
+    expect(row.blocking).toBe(true);
+  });
+
+  it('γραμμή «δεν εφαρμόζεται» ⇒ καμία απαίτηση', async () => {
+    const notApplicable = { reason: 'Συνθετικό', markedBy: 'user_1', markedAt: '2026-10-02T00:00:00.000Z' };
+    fake.seed(COLLECTIONS.CONVEYANCE_CASES, 'case_1', openCase({ overrides: { energy_certificate: { notApplicable } } }));
+    expect(await processes()).toEqual([]);
+  });
+
+  it('υπογεγραμμένη (νομική φάση) · κλειστή · ξένη υπόθεση ⇒ καμία απαίτηση', async () => {
+    fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', property({ commercial: { legalPhase: 'final_signed' } }, { sourceFileId: 'file_1' }));
+    fake.seed(COLLECTIONS.CONVEYANCE_CASES, 'case_1', openCase());
+    fake.seed(COLLECTIONS.CONVEYANCE_CASES, 'case_2', openCase({ id: 'case_2', storedState: 'closed' }));
+    fake.seed(COLLECTIONS.CONVEYANCE_CASES, 'case_3', openCase({ id: 'case_3', companyId: OTHER }));
+    expect(await processes()).toEqual([]);
+  });
+
+  it('δημοσιευμένη αγγελία ⇒ η δημοσίευση στο «τι σταματά» (`warn`, Α1)', async () => {
+    fake.seed(COLLECTIONS.PUBLIC_LISTINGS, 'prop_1', { schemaVersion: PUBLIC_LISTING_SCHEMA_VERSION, offerKinds: ['sell'] });
+    const [row] = (await read()).rows;
+    expect(row.dependents.map((dependent) => [dependent.requirement.process, dependent.requirement.policy]))
+      .toEqual([[{ kind: 'listing-publication', listingId: 'prop_1' }, 'warn']]);
+    expect(row.blocking).toBe(false);
+  });
+
+  it('χωρίς αγγελία (αποσυρμένη = σβησμένη) ⇒ τίποτα', async () => {
+    expect(await processes()).toEqual([]);
+  });
+});
+
+describe('όρια που ΛΕΓΟΝΤΑΙ', () => {
+  it('αρχεία πάνω από το όριο ⇒ `truncated` + η πηγή ονομάζεται', async () => {
+    for (let index = 0; index <= DOCUMENT_REGISTRY_CAPS.files; index += 1) {
+      fake.seed(COLLECTIONS.FILES, `file_${String(index).padStart(4, '0')}`, file({ entityType: ENTITY_TYPES.PROJECT, entityId: 'proj_1' }));
+    }
+    const registry = await read();
+    expect(registry.truncated).toBe(true);
+    expect(registry.truncatedSources).toEqual(['files']);
+    expect(registry.rows).toHaveLength(DOCUMENT_REGISTRY_CAPS.files);
+  });
+});
+
+describe('ρολόι', () => {
+  it('μία «σήμερα» της Ελλάδας και η στιγμή που αλλάζει', async () => {
+    const registry = await read();
+    expect(registry.asOf).toBe('2026-10-15');
+    expect(registry.freshUntil).toBe('2026-10-15T21:00:00.000Z');
+  });
+});

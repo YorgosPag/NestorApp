@@ -15,7 +15,8 @@
  * @module services/conveyance/conveyance-contributed-file
  */
 
-import { ENTITY_TYPES, FILE_STATUS } from '@/config/domain-constants';
+import { ENTITY_TYPES } from '@/config/domain-constants';
+import { isLiveFileRecord } from '@/lib/files/container-file-verdict';
 import { fileFingerprint } from '@/lib/conveyance/evidence-match';
 import { normalizeToISO } from '@/lib/date-local';
 import type { ContributionFile } from '@/types/conveyance-contribution';
@@ -46,7 +47,7 @@ function nonEmpty(value: unknown): value is string {
 }
 
 function isSendable(data: SendableFileFields, target: SendableTarget): boolean {
-  if (data.userId !== target.uid || data.isDeleted === true || data.status !== FILE_STATUS.READY) return false;
+  if (data.userId !== target.uid || !isLiveFileRecord(data)) return false;
   if (data.entityType !== ENTITY_TYPES.CONVEYANCE_CASE || data.entityId !== target.caseId || data.purpose !== target.purpose) return false;
   return nonEmpty(data.storagePath);
 }
