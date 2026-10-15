@@ -26,14 +26,10 @@ jest.mock('next/server', () => {
 
 jest.mock('@/lib/middleware/with-rate-limit', () => ({ withStandardRateLimit: <T>(handler: T) => handler }));
 
-const authContext = { uid: 'user_1', companyId: 'comp_alfa', isAuthenticated: true as const };
-const wrapped: unknown[] = [];
-
+// Η διαδρομή καλεί το `withAuth` κατά την εισαγωγή — πριν οριστεί οποιαδήποτε `const` του αρχείου· άρα όλα μέσα στο factory.
 jest.mock('@/lib/auth/middleware', () => ({
-  withAuth: (callback: (...args: unknown[]) => Promise<unknown>) => {
-    wrapped.push(callback);
-    return async (request: unknown) => callback(request, authContext);
-  },
+  withAuth: jest.fn((callback: (...args: unknown[]) => Promise<unknown>) => async (request: unknown) =>
+    callback(request, { uid: 'user_1', companyId: 'comp_alfa', isAuthenticated: true })),
 }));
 
 jest.mock('@/lib/firebaseAdmin', () => ({ getAdminFirestore: () => ({}) }));
@@ -43,13 +39,14 @@ jest.mock('@/services/document-registry/document-registry.service', () => ({
   readDocumentRegistry: (...args: unknown[]) => readRegistry(...args),
 }));
 
+import { withAuth } from '@/lib/auth/middleware';
 import { GET } from '../route';
 
 type Handler = (request: unknown) => Promise<{ status: number }>;
 
 describe('GET /api/document-registry', () => {
   it('περνά από το `withAuth`', () => {
-    expect(wrapped).toHaveLength(1);
+    expect(jest.mocked(withAuth)).toHaveBeenCalledTimes(1);
   });
 
   it('η εμβέλεια = `ctx.companyId` — μια παράμετρος του αιτήματος αγνοείται', async () => {

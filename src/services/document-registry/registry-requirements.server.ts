@@ -32,7 +32,7 @@ import type { RegistryProperty } from './registry-properties.server';
 
 const OPEN: ConveyanceCase['storedState'] = 'open';
 
-export interface OpenCases {
+interface OpenCases {
   readonly cases: readonly ConveyanceCase[];
   readonly truncated: boolean;
 }

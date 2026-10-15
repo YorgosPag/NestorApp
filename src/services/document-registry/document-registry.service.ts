@@ -26,6 +26,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import type { ConveyanceCase } from '@/types/conveyance-case';
 import {
   DOCUMENT_REGISTRY_CAPS,
+  REGISTRY_SOURCES,
   type DocumentRegistryResponse,
   type RegistryLabel,
   type RegistrySource,
@@ -51,7 +52,7 @@ async function readSources(db: AdminFirestore, companyId: string): Promise<Regis
     readOpenCases(db, companyId, DOCUMENT_REGISTRY_CAPS.cases),
   ]);
   const cut: Record<RegistrySource, boolean> = { files: files.truncated, declared: declared.truncated, cases: cases.truncated };
-  const truncatedSources = (Object.keys(cut) as RegistrySource[]).filter((source) => cut[source]);
+  const truncatedSources = REGISTRY_SOURCES.filter((source) => cut[source]);
   if (truncatedSources.length > 0) {
     logger.warn('Το μητρώο λήξεων χτύπησε όριο ανάγνωσης', { data: { companyId, truncatedSources } });
   }

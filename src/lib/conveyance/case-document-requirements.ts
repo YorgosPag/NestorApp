@@ -23,7 +23,7 @@ import { conveyanceRequirements } from './conveyance-requirements';
 import { checklistItemApplicability } from './derive-checklist';
 import type { FactValues } from './derive-facts';
 
-export type CaseRequirementSource = Pick<ConveyanceCase, 'id' | 'profile' | 'overrides' | 'subject' | 'targetSigningDate'>;
+type CaseRequirementSource = Pick<ConveyanceCase, 'id' | 'profile' | 'overrides' | 'subject' | 'targetSigningDate'>;
 
 /**
  * @param facts — τα **επιλυμένα** γεγονότα (`resolveFacts(deriveFacts(…), record.facts)`), ίδια με του καταλόγου.

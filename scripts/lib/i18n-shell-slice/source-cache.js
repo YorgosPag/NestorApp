@@ -159,12 +159,17 @@ function openPack(dir, namespace) {
   };
 }
 
-/** Ο χώρος ονομάτων: ο κώδικας που ΤΡΕΧΕΙ + ό,τι διαβάζουν τα τοπικά γεγονότα (bundles). */
+/**
+ * Ο χώρος ονομάτων: ο κώδικας που ΤΡΕΧΕΙ + ό,τι διαβάζουν τα τοπικά γεγονότα (bundles).
+ * ⚠️ ΚΑΙ αυτό εδώ το αρχείο: ΔΕΝ ανήκει στην κλειστότητα του γεννήτορα (το toolchain digest δεν το
+ * βλέπει), αλλά ορίζει το σχήμα των records — αλλαγή του χωρίς νέο χώρο θα διάβαζε παλιά μορφή.
+ */
 function cacheNamespace(root, config) {
   const GI = require('./global-inputs');
   const inputs = GI.GLOBAL_INPUTS.filter(input => input.id === 'toolchain' || input.id === 'namespaceBundles');
   const digest = GI.computeGlobalInputs(root, config, GI.CODE_ROOT, inputs);
-  return sha256(stableStringify({ schema: CACHE_SCHEMA, digest })).slice(0, 16);
+  const self = sha256(toLf(fs.readFileSync(__filename, 'utf8')));
+  return sha256(stableStringify({ schema: CACHE_SCHEMA, digest, self })).slice(0, 16);
 }
 
 /**

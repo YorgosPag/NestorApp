@@ -37,7 +37,7 @@ export interface RegistryFile {
   readonly name: string | null;
 }
 
-export interface RegistryFiles {
+interface RegistryFiles {
   readonly files: readonly RegistryFile[];
   readonly truncated: boolean;
 }

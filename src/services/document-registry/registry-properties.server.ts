@@ -59,7 +59,7 @@ export async function readCompanyProperties(
   return owned;
 }
 
-export interface DeclaredCertificateProperties {
+interface DeclaredCertificateProperties {
   readonly properties: readonly RegistryProperty[];
   readonly truncated: boolean;
 }

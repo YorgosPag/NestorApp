@@ -309,3 +309,236 @@ describe('Υ — ο χάρτης υπογράφεται από το ΙΔΙΟ man
     expect(none.rendered).toBe(bare);
   });
 });
+
+/**
+ * =============================================================================
+ * Λ — ADR-744 §31: Ο ΧΑΡΤΗΣ ΞΑΝΑΧΤΙΖΕΤΑΙ ΣΤΟ LAYER 1 (on-demand γράφος + μνήμη κατά περιεχόμενο)
+ * =============================================================================
+ *
+ * Κάθε κόκκινο τρέχει μέσα από την ΠΡΑΓΜΑΤΙΚΗ `runLayerOne`, και η απόδειξη ότι το πιάνει ο F (όχι
+ * κάποιος άλλος) είναι η ΜΕΤΑΛΛΑΞΗ σε ΑΝΤΙΓΡΑΦΟ του ελεγκτή όπου ο F σωπαίνει (Λ1). Τίποτα στον
+ * δίσκο του repo δεν αγγίζεται.
+ */
+describe('Λ — §31: ο χάρτης τεμπέλικων διαδρομών ξαναχτίζεται στο Layer 1', () => {
+  const { spawnSync } = require('node:child_process');
+  const MG = require('../lib/module-graph');
+  const { collectSourceFiles, isAnalysedSourcePath } = require('../lib/module-graph/scan-config');
+  const GIT = require('../lib/git-index-snapshot');
+  const GI = require(path.join(LIB, 'global-inputs'));
+  const SC = require(path.join(LIB, 'source-cache'));
+  const LF_PATH = path.join(LIB, 'lazy-freshness');
+  const { computeShellClosure, walkSurface } = require(path.join(LIB, 'shell-closure'));
+  const { fingerprintShellFile, toLf } = require(path.join(LIB, 'slice-build'));
+  const CHECKER = path.resolve(__dirname, '../check-i18n-shell-slice.js');
+  const writeIn = root => (rel, body) => {
+    const file = path.join(root, rel);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, body, 'utf8');
+  };
+
+  const DEEP = 'src/pages/deep.tsx';
+  const BASE = {
+    [REGISTRY]: registry([['A', '@/pages/a']]),
+    'src/pages/a.tsx': uses(`'boot'`, ['Deep', './deep']),
+    [DEEP]: `export function Deep() { return null; }${NL}`,
+  };
+  const DEEP_BETA = `import { useTranslation } from '@/i18n/hook';${NL}export function Deep() { return useTranslation('beta').t('k'); }${NL}`;
+
+  /** Πλήρες δέντρο που περνά ΟΛΟ το Layer 1: config · bundles · ΑΝΤΙΓΡΑΦΟ toolchain · artifacts · manifest. */
+  function gateRepo(files = BASE) {
+    const { root } = miniRepo(files);
+    const write = writeIn(root);
+    write('.i18n-shell-slice.json', JSON.stringify({
+      lazyRouteRegistries: [REGISTRY], lazyRouteMountSeal: SEAL, excludeConsumers: ['src/i18n/'], keyConstants: [],
+    }));
+    write('src/i18n/namespace-bundles.ts', `export const COMMON_NAMESPACES = ['common'] as const;${NL}`);
+    for (const rel of GI.toolchainClosure(GI.CODE_ROOT).files) write(rel, fs.readFileSync(path.join(GI.CODE_ROOT, rel), 'utf8'));
+    const config = loadConfig(root);
+    const lazy = LR.buildLazyRouteNamespaces({ projectRoot: root, config, graph: P.buildModuleGraph(root) });
+    write(LR.artifactPath(config), LR.renderLazyArtifact(lazy.rows));
+    write(`${config.outputDir}/${P.WHOLE_NAME}`, `[]${NL}`);
+    write(`${config.outputDir}/shell-slice.manifest.json`, JSON.stringify({
+      languages: [], artifacts: {}, wants: {}, stats: {}, shellFiles: {}, routeFiles: {}, unresolvedSpecs: [],
+      globalInputs: GI.computeGlobalInputs(root, config, root),
+    }));
+    return { root, write, rows: lazy.rows };
+  }
+
+  /** Η ΠΥΛΗ: `{ red: null | μήνυμα, logs }`. */
+  function gate(root, staged, run = require(CHECKER).runLayerOne) {
+    const errors = [];
+    const logs = [];
+    const exit = jest.spyOn(process, 'exit').mockImplementation(code => { throw new Error(`exit:${code}`); });
+    const error = jest.spyOn(console, 'error').mockImplementation(text => errors.push(String(text)));
+    const log = jest.spyOn(console, 'log').mockImplementation(text => logs.push(String(text)));
+    try {
+      run(loadConfig(root), staged, root, { cacheDir: path.join(root, '.cache') });
+      return { red: null, logs: logs.join('\n') };
+    } catch (thrown) {
+      if (!String(thrown.message).startsWith('exit:')) throw thrown;
+      return { red: errors.join('\n'), logs: logs.join('\n') };
+    } finally {
+      exit.mockRestore(); error.mockRestore(); log.mockRestore();
+    }
+  }
+
+  /** ΑΝΤΙΓΡΑΦΟ του ελεγκτή με τον F ΣΙΩΠΗΛΟ — η εποχή πριν το §31. */
+  function checkerWithoutF() {
+    let run;
+    jest.isolateModules(() => {
+      jest.doMock(LF_PATH, () => ({ ...jest.requireActual(LF_PATH), checkLazyRouteFreshness: () => ({ reasons: [], stats: null }) }));
+      run = require(CHECKER).runLayerOne;
+    });
+    jest.dontMock(LF_PATH);
+    return run;
+  }
+
+  it('Λ0 ΠΑΡΟΝΟΜΑΣΤΗΣ: καθαρό δέντρο ⇒ πράσινο, ΚΑΙ ο F έτρεξε (όχι «πράσινο επειδή δεν κοίταξε»)', () => {
+    const { root, rows } = gateRepo();
+    expect(rows).toEqual({ A: ['boot'] });
+    const run = gate(root, [DEEP]);
+    expect(run.red).toBeNull();
+    expect(run.logs).toContain('CHECK 3.34 F');
+  }, 60_000);
+
+  it('Λ1 🔴 νέο `useTranslation` σε αρχείο ΕΚΤΟΣ κάθε πίνακα ⇒ ΚΟΚΚΙΝΟ με διαδρομή + namespace + αρχείο· χωρίς F (αντίγραφο) πράσινο', () => {
+    const { root, write } = gateRepo();
+    write(DEEP, DEEP_BETA);
+    expect(gate(root, [DEEP], checkerWithoutF()).red).toBeNull();          // η τρύπα, αναπαραγμένη
+    expect(gate(root, [DEEP]).red).toContain(`A: +beta (από ${DEEP})`);  // η θεραπεία
+  }, 60_000);
+
+  it('Λ2 🔴 `{X}` → `{X, Y}` πίσω από barrel: η κλειστότητα μεγαλώνει ⇒ ΚΟΚΚΙΝΟ (ο ΙΔΙΟΣ walk, όχι προσέγγιση)', () => {
+    const page = names => `import { ${names} } from './kit';${NL}import { useTranslation } from '@/i18n/hook';${NL}`
+      + `export default function Page() { return useTranslation('boot').t(String([${names}].length)); }${NL}`;
+    const { root, write } = gateRepo({
+      [REGISTRY]: registry([['A', '@/pages/a']]),
+      'src/pages/a.tsx': page('X'),
+      'src/pages/kit/index.ts': `export { X } from './x';${NL}export { Y } from './y';${NL}`,
+      'src/pages/kit/x.ts': `export const X = 1;${NL}`,
+      'src/pages/kit/y.ts': `import { useTranslation } from '@/i18n/hook';${NL}export const Y = () => useTranslation('beta');${NL}`,
+    });
+    expect(gate(root, ['src/pages/a.tsx']).red).toBeNull();
+    write('src/pages/a.tsx', page('X, Y'));
+    expect(gate(root, ['src/pages/a.tsx']).red).toContain('A: +beta (από src/pages/kit/y.ts)');
+  }, 60_000);
+
+  it('Λ3 ΜΝΗΜΗ: το δεύτερο πέρασμα κάνει 0 parses και κρίνει ΤΑΥΤΟΣΗΜΑ· το record ≡ φρέσκο parse', () => {
+    const { root, write } = gateRepo();
+    const parses = logs => Number(/\(disk\): (\d+) parses/.exec(logs)[1]);
+    expect(parses(gate(root, [DEEP]).logs)).toBeGreaterThan(0);
+    expect(parses(gate(root, [DEEP]).logs)).toBe(0);
+    write(DEEP, DEEP_BETA);
+    const warm = gate(root, [DEEP]);
+    expect(parses(warm.logs)).toBe(1);                                    // ΜΟΝΟ το αλλαγμένο
+    expect(warm.red).toContain(`A: +beta (από ${DEEP})`);
+
+    const sources = SC.createDiskSources(root);
+    const cached = SC.createCachedSources({ sources, cacheDir: path.join(root, '.cache'), namespace: SC.cacheNamespace(root, loadConfig(root)) });
+    const abs = MG.toPosix(path.join(root, 'src/pages/a.tsx'));
+    expect(cached.loadModule(abs, sources.readText)).toEqual(MG.parseGraphModule(abs, sources.readText(abs)));
+  }, 90_000);
+
+  it('Λ4 ON-DEMAND ≡ ΠΡΟΘΥΜΟΣ: ίδιος χάρτης, ίδιες είσοδοι, ίδια άλυτα — και με σταθερά πίσω από barrel', () => {
+    const { root, graph, config } = miniRepo({
+      [REGISTRY]: registry([['A', '@/pages/a'], ['B', '@/pages/b']]),
+      'src/pages/a.tsx': `import { NS } from '@/ns';${NL}import { useTranslation } from '@/i18n/hook';${NL}export default function P() { return useTranslation(NS).t('x'); }${NL}`,
+      'src/ns/index.ts': `export { NS } from './decl';${NL}`,
+      'src/ns/decl.ts': `export const NS = 'alpha';${NL}`,
+      'src/pages/b.tsx': `import { Gone } from './gone';${NL}${uses(`'beta'`)}`,
+      'src/unrelated/far.ts': `export const FAR = 1;${NL}`,
+    });
+    const sources = SC.createDiskSources(root);
+    const onDemand = MG.createOnDemandGraph({ projectRoot: root, aliases: graph.aliases, files: sources.files, readText: sources.readText });
+    const eager = LR.buildLazyRouteNamespaces({ projectRoot: root, config, graph });
+    const lazy = LR.buildLazyRouteNamespaces({ projectRoot: root, config, graph: onDemand, sources });
+    expect(lazy.rows).toEqual(eager.rows);
+    expect(lazy.rows).toEqual({ A: ['alpha'], B: ['beta'] });
+    expect([...lazy.inputs].sort()).toEqual([...eager.inputs].sort());
+    expect(lazy.unresolvedSpecs).toEqual(eager.unresolvedSpecs);
+    expect(lazy.unresolvedSpecs).toEqual(['src/pages/b.tsx → ./gone']);   // §31 τρύπα 3: ΔΕΝ πετιέται πια
+    expect(onDemand.modules.size).toBeLessThan(sources.files.length);    // ΔΕΝ διάβασε τα όλα
+  });
+
+  it('Λ5 🔴 barrel που ο walk ΔΙΑΒΑΖΕΙ χωρίς να είναι μέλος: καταγράφεται, και αλλαγή του ΚΟΚΚΙΝΙΖΕΙ το C', () => {
+    const { root, graph, config } = miniRepo({
+      'src/app/layout.tsx': `import { X } from '../kit';${NL}export default function L() { return X; }${NL}`,
+      'src/kit/index.ts': `export { X } from './x';${NL}`,
+      'src/kit/x.ts': `export const X = 1;${NL}`,
+      'src/kit/x2.ts': `export const X = 2;${NL}`,
+    });
+    const closure = computeShellClosure(graph, [MG.toPosix(path.join(root, 'src/app/layout.tsx'))]);
+    expect(closure.files).toEqual(['src/app/layout.tsx', 'src/kit/x.ts']);
+    expect(closure.consulted).toEqual(['src/kit/index.ts']);
+    const plan = P.buildShellPlan(root, { ...config, shellRoots: ['src/app/layout.tsx'] }, graph);
+    const consultedFiles = P.serializeConsultedFiles(plan, [], [{}, {}]);
+    expect(Object.keys(consultedFiles)).toEqual(['src/kit/index.ts']);
+    expect(P.serializeConsultedFiles(plan, [], [{ 'src/kit/index.ts': 'x' }])).toEqual({});   // ένα αρχείο, ΕΝΑΣ πίνακας
+
+    const { checkStagedShellFiles } = require(CHECKER);
+    const manifest = { shellFiles: {}, routeFiles: {}, consultedFiles };
+    expect(checkStagedShellFiles(config, manifest, ['src/kit/index.ts'], root)).toBeNull();
+    writeIn(root)('src/kit/index.ts', `export { X } from './x2';${NL}`);
+    expect(checkStagedShellFiles(config, manifest, ['src/kit/index.ts'], root)).toContain('barrel the shell or a route walk reads through');
+  });
+
+  it('Λ6 ΑΠΟΤΥΠΩΜΑ = ό,τι διαβάζει ο walk: ονόματα εισαγωγών, εξαγωγές, re-exports ΜΕΤΡΑΝΕ· σώμα και σχόλια ΟΧΙ', () => {
+    const surface = text => walkSurface(MG.parseGraphModule('/x/a.ts', text));
+    const base = `import { A } from './k';${NL}export { R } from './r';${NL}export const L = A;${NL}`;
+    expect(surface(base)).not.toEqual(surface(base.replace('{ A }', '{ A, B }')));
+    expect(surface(base)).not.toEqual(surface(base.replace('{ R }', '{ R as S }')));
+    expect(surface(base)).not.toEqual(surface(base.replace('const L', 'const M')));
+    expect(surface(base)).toEqual(surface(`${base}// σχόλιο${NL}const local = 2 + 2;${NL}`));
+    expect(fingerprintShellFile({ importSpecs: surface(base), namespaces: [] }))
+      .not.toBe(fingerprintShellFile({ importSpecs: surface(base.replace('{ A }', '{ A, B }')), namespaces: [] }));
+  });
+
+  it('Λ7 τα άλυτα των τεμπέλικων κλειστοτήτων μπαίνουν στην ΕΝΩΣΗ του D', () => {
+    const plan = { closure: { unresolvedSpecs: ['s → ./a'] } };
+    expect(P.unionOfUnresolved(plan, [{ unresolvedSpecs: ['r → ./b'] }], { unresolvedSpecs: ['l → ./c'] }))
+      .toEqual(['l → ./c', 'r → ./b', 's → ./a']);
+  });
+
+  it('Λ8 ΕΥΡΕΤΗΡΙΟ: πολλά blobs σε ΕΝΑ batch ≡ `git show`· το αποκλίνον αρχείο διαβάζεται από το ευρετήριο, ΟΧΙ τον δίσκο', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'lazy-git-'));
+    scratchRoots.push(root);
+    const git = (...args) => spawnSync('git', args, { cwd: root, encoding: 'utf8' });
+    git('init', '-q');
+    git('config', 'core.autocrlf', 'true');
+    const write = writeIn(root);
+    // Ο ΠΑΡΟΝΟΜΑΣΤΗΣ ΤΟΥ ΣΦΑΛΜΑΤΟΣ ΠΟΥ ΜΕΤΡΗΘΗΚΕ: CRLF στον δίσκο, ώστε ένα `--filters` να άλλαζε μέγεθος.
+    write('src/a.ts', `export const A = 'α';\r\n`.repeat(3));
+    write('src/b.tsx', `export const B = 1;${NL}`);
+    write('src/c.ts', `// τρίτο\r\n`);
+    git('add', 'src');
+    write('src/b.tsx', `export const B = 'ΔΙΣΚΟΣ';${NL}`);          // αστάδιοποίητη, «ξένη» αλλαγή
+    const entries = GIT.listIndexEntries({ repoRoot: root });
+    expect(entries.size).toBe(3);
+    const texts = GIT.readIndexTexts({ repoRoot: root, entries: [...entries] });
+    for (const [rel] of entries) expect(texts.get(rel)).toBe(git('cat-file', 'blob', entries.get(rel)).stdout);
+    expect([...GIT.listWorktreeDivergence({ repoRoot: root })]).toEqual(['src/b.tsx']);
+    const sources = SC.createIndexSources({ repoRoot: root, root });
+    expect(sources.readText(`${MG.toPosix(root)}/src/b.tsx`)).toBe(`export const B = 1;${NL}`);
+    // Το κλειδί του δίσκου (CRLF) συμπίπτει με το blob (LF) — αλλιώς οι δύο πηγές σάρωναν η μία την άλλη.
+    expect(SC.gitBlobSha(toLf(fs.readFileSync(path.join(root, 'src/a.ts'), 'utf8')))).toBe(entries.get('src/a.ts'));
+  });
+
+  it('Λ9 το κατηγόρημα για μονοπάτια ΕΚΤΟΣ δίσκου ≡ `collectSourceFiles`', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'lazy-scan-'));
+    scratchRoots.push(root);
+    const rels = ['src/a.ts', 'src/b.d.ts', 'src/c.tsx', 'src/d.js', 'src/node_modules/x.ts',
+      'src/subapps/dxf-viewer/archive/y.ts', 'src/deep/build/z.ts', 'src/ok/inner.tsx'];
+    for (const rel of rels) writeIn(root)(rel, `export {};${NL}`);
+    const walked = collectSourceFiles(root, ['src']).map(file => file.slice(MG.toPosix(root).length + 1));
+    expect(walked.length).toBeGreaterThan(0);
+    expect(rels.filter(isAnalysedSourcePath).sort()).toEqual(walked);
+  });
+
+  it('Λ10 χωρίς σταδιοποιημένο module η φθηνή κρίση ΤΡΕΧΕΙ (ήταν γραμμένη αλλά ΑΣΥΝΔΕΤΗ): μητρώο χωρίς γραμμή ⇒ ΚΟΚΚΙΝΟ', () => {
+    const { root, write } = gateRepo();
+    write(REGISTRY, registry([['A', '@/pages/a'], ['B', '@/pages/a']]));
+    const run = gate(root, []);
+    expect(run.red).toContain('B: τεμπέλικη διαδρομή ΧΩΡΙΣ γραμμή');
+    expect(run.logs).not.toContain('CHECK 3.34 F');                      // ο επανυπολογισμός ΔΕΝ έτρεξε
+  }, 60_000);
+});
