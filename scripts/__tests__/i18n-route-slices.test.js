@@ -583,7 +583,8 @@ describe('Α4 — ο άλυτος specifier ΔΙΑΔΡΟΜΗΣ ταξιδεύε�
     write('src/app/listing/Section.tsx', "import { Cost } from './Cost';\nexport function Section() { return Cost(); }\n");
 
     const graph = P.buildModuleGraph(root);
-    const config = { ...DEFAULTS, keyConstants: [], shellRoots: ['src/app/layout.tsx'], languages: ['el'] };
+    // Χωρίς μητρώα τεμπέλικων διαδρομών: το manifest διαβάζει πλέον τα globalInputs (§30), και το fixture δεν έχει `src/utils/lazyRoutes.tsx`.
+    const config = { ...DEFAULTS, keyConstants: [], shellRoots: ['src/app/layout.tsx'], languages: ['el'], lazyRouteRegistries: [] };
     const plan = P.buildShellPlan(root, config, graph);
     const route = RS.buildRouteSlice(root, config, graph, PAGE, {}, []);
     const slices = { resources: { el: {} }, matchedKeys: 0, unresolvableKeys: [] };

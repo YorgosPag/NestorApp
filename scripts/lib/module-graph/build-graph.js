@@ -67,6 +67,7 @@ function buildGraph({ projectRoot, aliases, files, readFile, onParseError }) {
   for (const file of files) {
     let mod;
     try {
+      // ⚠️ Όχι `parseGraphModule`: εδώ τα `identifiers` χρειάζονται ΠΡΩΤΑ για το `foldIdentifiers`.
       mod = parseModule(file, readFile(file));
     } catch (e) {
       unparsed.add(file);
@@ -79,6 +80,53 @@ function buildGraph({ projectRoot, aliases, files, readFile, onParseError }) {
   }
 
   return { projectRoot, aliases, fileSet, modules, identifierOwners, unparsed };
+}
+
+/** Ό,τι κρατά ο πρόθυμος γράφος για ένα module: το record χωρίς τα `identifiers` (βλ. `buildGraph`). */
+function parseGraphModule(file, text) {
+  const { parseModule } = require('./parse-module');
+  const mod = parseModule(file, text);
+  mod.identifiers = null;
+  return mod;
+}
+
+/**
+ * ADR-744 §31 — **ο ίδιος γράφος, χωρίς να διαβαστεί ολόκληρος.**
+ *
+ * Το `buildGraph` κάνει parse σε ΚΑΘΕ αρχείο (~14k, ~19s) επειδή η ζωντάνια ρωτά για όλα.
+ * Ένας walk από ρίζες ρωτά μόνο όσα ΣΥΝΑΝΤΑ (8.564 parses για όλες τις τεμπέλικες διαδρομές,
+ * μετρημένο 2026-10-15). Ίδιο σχήμα με τον πρόθυμο: `fileSet` πλήρες (ο resolver ρωτά «υπάρχει;»
+ * χωρίς parse), και `modules.get` που κάνει parse στη **ζήτηση** — ένα αρχείο, μία φορά.
+ *
+ * ⚠️ Δεν υπάρχει `modules.keys()` / επανάληψη: θα σήμαινε «διάβασε τα όλα», δηλαδή τον πρόθυμο.
+ * Όποιος τη χρειάζεται (`computeLiveness`, `resolveRoots` με μοτίβο) χρησιμοποιεί το `buildGraph`.
+ *
+ * @param {object} args
+ * @param {string[]} args.files        απόλυτα posix μονοπάτια — το σύνολο που ο resolver θεωρεί «υπαρκτό»
+ * @param {(file: string) => ?string} args.readText  κείμενο του αρχείου (δίσκος, ευρετήριο, …)
+ * @param {(file: string, readText: Function) => object} [args.loadModule]  προεπιλογή: parse του κειμένου·
+ *   ο καλών τη δίνει για να παρεμβάλει cache — το αποτέλεσμα ΟΦΕΙΛΕΙ να είναι ίδιο με το `parseGraphModule`
+ */
+function createOnDemandGraph({ projectRoot, aliases, files, readText, loadModule, onParseError }) {
+  const fileSet = new Set(files);
+  const parsed = new Map();
+  const unparsed = new Set();
+  const load = loadModule || ((file, read) => parseGraphModule(file, read(file)));
+  const get = file => {
+    if (parsed.has(file)) return parsed.get(file);
+    if (!fileSet.has(file) || unparsed.has(file)) return undefined;
+    try {
+      const mod = load(file, readText);
+      parsed.set(file, mod);
+      return mod;
+    } catch (e) {
+      unparsed.add(file);
+      if (onParseError) onParseError(file, e);
+      return undefined;
+    }
+  };
+  const modules = { get, has: file => get(file) !== undefined, get size() { return parsed.size; } };
+  return { projectRoot, aliases, fileSet, modules, unparsed, onDemand: true };
 }
 
 function createResolver(graph) {
@@ -273,6 +321,8 @@ module.exports = {
   foldIdentifiers,
   occursInLiveModule,
   buildGraph,
+  parseGraphModule,
+  createOnDemandGraph,
   createResolver,
   resolveOrigin,
   localExportNames,

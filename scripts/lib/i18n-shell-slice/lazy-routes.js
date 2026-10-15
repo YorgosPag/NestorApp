@@ -48,7 +48,7 @@ const {
 const { computeShellClosure } = require('./shell-closure');
 const { parseSource } = require('./key-extract');
 const { stableStringify } = require('./slice-build');
-const { createNamespaceDeclarationReader } = require('./namespace-declarations');
+const { createNamespaceDeclarationReader, readDiskText } = require('./namespace-declarations');
 const {
   LEDGER,
   SEAL,
@@ -186,19 +186,33 @@ function awaitedKeys(entries) {
  * Ό,τι **ονομάζει** ένα αρχείο, με μνήμη ανάμεσα στις διαδρομές (οι κλειστότητες
  * επικαλύπτονται σχεδόν ολόκληρες — χωρίς μνήμη το ίδιο αρχείο διαβάζεται 80 φορές).
  *
+ * @param {object} [sources]  ADR-744 §31 — `{ readText, facts }`: από πού έρχεται το κείμενο, και
+ *   (προαιρετικά) μνήμη με διεύθυνση περιεχομένου για ό,τι είναι **τοπικό στο αρχείο** — βλ. `source-cache.js`
  * @returns {(relFile: string) => {namespaces: string[], opaque: object[]}}
  *   `opaque` = `useTranslation(<κάτι που δεν αποτιμάται στατικά>)` — βλ. `namespace-declarations.js`.
  */
-function createFileNamespaceReader(projectRoot, config, graph) {
-  const readDeclarations = createNamespaceDeclarationReader({ graph, bundles: loadNamespaceBundles(projectRoot) });
+function createFileNamespaceReader(projectRoot, config, graph, sources = {}) {
+  const readText = sources.readText || readDiskText;
+  const readDeclarations = createNamespaceDeclarationReader({ graph, bundles: loadNamespaceBundles(projectRoot), readText });
+  // Τα ΤΟΠΙΚΑ γεγονότα ενός αρχείου (δηλώσεις χωρίς ξένη σταθερά + ρητά `t('ns:…')`) εξαρτώνται μόνο
+  // από το κείμενό του ⇒ αποθηκεύονται κατά περιεχόμενο. Ό,τι ρωτά άλλο module ξαναϋπολογίζεται πάντα.
+  const localFacts = abs => {
+    const remembered = sources.facts ? sources.facts.get(abs) : undefined;
+    if (remembered !== undefined) return remembered;
+    const facts = {
+      declared: readDeclarations(abs),
+      explicit: extractExplicitTCalls(readText(abs)).map(call => call.ns),
+    };
+    if (sources.facts && facts.declared.local) sources.facts.set(abs, facts);
+    return facts;
+  };
   const cache = new Map();
   return relFile => {
     if (cache.has(relFile)) return cache.get(relFile);
     let named = { namespaces: [], opaque: [] };
     if (!config.excludeConsumers.some(prefix => relFile.startsWith(prefix))) {
       const abs = MG.toPosix(path.join(projectRoot, relFile));
-      const declared = readDeclarations(abs);
-      const explicit = extractExplicitTCalls(fs.readFileSync(abs, 'utf8')).map(call => call.ns);
+      const { declared, explicit } = localFacts(abs);
       // Ένα αδιαφανές `useTranslation(prop)` το απαντά ΑΝΘΡΩΠΟΣ, με λόγο — ή κανείς (άρνηση).
       const answer = declared.opaque.length > 0 ? config[OPAQUE_LEDGER][relFile] : undefined;
       named = {
@@ -228,21 +242,24 @@ function namespacesOfClosure(files, readFile, compat, supported) {
 /**
  * Ο χάρτης `κλειδί → namespaces[]`, από τον **ίδιο γράφο** που έχτισε το κέλυφος.
  *
- * @returns {{entries: object[], rows: object, provenance: Map, inputs: Set<string>, unresolved: object[]}}
+ * @returns {{entries: object[], rows: object, provenance: Map, inputs: Set<string>, unresolved: object[], unresolvedSpecs: string[]}}
  *   `unresolved` = εγγραφές των οποίων το `import()` δεν λύθηκε σε αρχείο του έργου —
  *   **επιστρέφονται**, δεν τυπώνονται (ίδια γραμμή διαχωρισμού με το `renderComplete`).
+ *   `unresolvedSpecs` = οι άλυτοι specifiers **μέσα** στις κλειστότητες (ADR-744 §31 — ως τώρα
+ *   πετιόντουσαν, άρα ο έλεγχος D ήταν τυφλός σε αρχείο που έρχεται να τους λύσει).
  */
-function buildLazyRouteNamespaces({ projectRoot, config, graph }) {
+function buildLazyRouteNamespaces({ projectRoot, config, graph, sources }) {
   const entries = readRegistries(projectRoot, config);
   const supported = new Set(readStringArrayConst(projectRoot, LAZY_CONFIG, 'SUPPORTED_NAMESPACES'));
   const compat = loadCompatNamespaces(projectRoot);
-  const readFile = createFileNamespaceReader(projectRoot, config, graph);
+  const readFile = createFileNamespaceReader(projectRoot, config, graph, sources);
   const resolve = MG.createResolver(graph);
 
   const rows = {};
   const provenance = new Map();
   const inputs = new Set();
   const unresolved = [];
+  const unresolvedSpecs = new Set();
   for (const entry of entries.filter(candidate => !candidate.ssr)) {
     const target = resolve(entry.spec, MG.toPosix(path.join(projectRoot, entry.registry)));
     if (target.kind !== 'internal') { unresolved.push(entry); continue; }
@@ -251,6 +268,7 @@ function buildLazyRouteNamespaces({ projectRoot, config, graph }) {
     rows[entry.key] = [...from.keys()].sort();
     provenance.set(entry.key, from);
     closure.files.forEach(file => inputs.add(file));
+    closure.unresolvedSpecs.forEach(spec => unresolvedSpecs.add(spec));
   }
   const opaqueFiles = [...inputs].sort().filter(file => readFile(file).opaque.length > 0);
   const opaque = opaqueFiles
@@ -259,7 +277,7 @@ function buildLazyRouteNamespaces({ projectRoot, config, graph }) {
   // Η ΑΛΛΗ κατεύθυνση: απάντηση σε ερώτηση που δεν τίθεται πια είναι νεκρή ρύθμιση που
   // εξακολουθεί να προσθέτει namespaces — δηλαδή αναμονή που κανείς δεν ζήτησε.
   const deadOpaque = Object.keys(config[OPAQUE_LEDGER]).filter(file => !opaqueFiles.includes(file)).sort();
-  return { entries, rows, provenance, inputs, unresolved, opaque, deadOpaque };
+  return { entries, rows, provenance, inputs, unresolved, unresolvedSpecs: [...unresolvedSpecs].sort(), opaque, deadOpaque };
 }
 
 function renderLazyArtifact(rows) {

@@ -72,6 +72,17 @@ function walk(dir, projectRoot, out) {
   return out;
 }
 
+/**
+ * ADR-744 §31 — το ΙΔΙΟ κριτήριο με το `walk`, για μονοπάτι που ΔΕΝ προέρχεται από τον δίσκο
+ * (π.χ. `git ls-files`). Ο `walk` κλαδεύει φακέλους για ταχύτητα· εδώ ρωτιέται κάθε πρόγονος.
+ * Άγκυρα: ισοδυναμία με το `collectSourceFiles` στο πραγματικό δέντρο.
+ */
+function isAnalysedSourcePath(relPosix) {
+  const segments = relPosix.split('/');
+  if (segments.slice(0, -1).some(segment => IGNORED_DIR_NAMES.has(segment))) return false;
+  return isSourceFile(segments[segments.length - 1]) && !isIgnored(relPosix);
+}
+
 /** @returns absolute posix paths of every source file in the analysed roots. */
 function collectSourceFiles(projectRoot, roots = ['src', 'packages']) {
   const out = [];
@@ -95,6 +106,7 @@ module.exports = {
   APP_ENTRY_BASENAMES,
   isIgnored,
   isSourceFile,
+  isAnalysedSourcePath,
   walk,
   collectSourceFiles,
   isEntryFile,

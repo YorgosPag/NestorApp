@@ -89,4 +89,61 @@ function readIndexText({ repoRoot, relPath }) {
   return result.status === 0 ? result.stdout : null;
 }
 
-module.exports = { materializeIndex, writeIndexBlob, readIndexText };
+/**
+ * ADR-744 §31 — `μονοπάτι → blob sha` για κάθε εγγραφή του ευρετηρίου (stage 0). **Δωρεάν**
+ * διεύθυνση περιεχομένου: το git έχει ήδη κατακερματίσει κάθε αρχείο που θα μπει στο commit.
+ * @param {{repoRoot: string}} options
+ * @returns {Map<string, string>}
+ */
+function listIndexEntries({ repoRoot }) {
+  const entries = new Map();
+  for (const record of runGit(repoRoot, ['ls-files', '-s', '-z']).split('\0')) {
+    const tab = record.indexOf('\t');
+    if (tab < 0) continue;
+    const [, sha, stage] = record.slice(0, tab).split(' ');
+    if (stage === '0') entries.set(record.slice(tab + 1), sha);
+  }
+  return entries;
+}
+
+/**
+ * Τα αρχεία των οποίων το working tree **αποκλίνει** από το ευρετήριο (αλλαγμένα ή σβησμένα,
+ * αστάδιοποίητα). Για όλα τα υπόλοιπα, ο δίσκος ΕΙΝΑΙ το ευρετήριο — διαβάζεται χωρίς spawn.
+ * @param {{repoRoot: string}} options
+ * @returns {Set<string>}
+ */
+function listWorktreeDivergence({ repoRoot }) {
+  return new Set(runGit(repoRoot, ['diff', '--name-only', '-z', '--no-renames']).split('\0').filter(Boolean));
+}
+
+/**
+ * Το κείμενο πολλών αρχείων **όπως θα τα έγραφε το `checkout-index`** (φίλτρα + EOL), σε ΕΝΑ spawn:
+ * `git cat-file --batch --filters` με είσοδο `:μονοπάτι`. Αρχείο εκτός ευρετηρίου απλώς λείπει.
+ * @param {{repoRoot: string, relPaths: string[]}} options
+ * @returns {Map<string, string>}
+ */
+function readIndexTexts({ repoRoot, relPaths }) {
+  const out = new Map();
+  if (relPaths.length === 0) return out;
+  const result = spawnSync('git', ['cat-file', '--batch', '--filters'], {
+    cwd: repoRoot, input: relPaths.map(rel => `:${rel}\n`).join(''), maxBuffer: MAX_BUFFER * 4,
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) throw new Error(`git cat-file --batch απέτυχε (${result.status}): ${String(result.stderr).trim()}`);
+  const buffer = result.stdout;
+  let at = 0;
+  for (const rel of relPaths) {
+    const eol = buffer.indexOf(0x0a, at);
+    const header = buffer.toString('utf8', at, eol);
+    at = eol + 1;
+    if (header.endsWith(' missing')) continue;
+    const size = Number(header.slice(header.lastIndexOf(' ') + 1));
+    out.set(rel, buffer.toString('utf8', at, at + size));
+    at += size + 1;   // + το LF που κλείνει κάθε αντικείμενο
+  }
+  return out;
+}
+
+module.exports = {
+  materializeIndex, writeIndexBlob, readIndexText, listIndexEntries, listWorktreeDivergence, readIndexTexts,
+};

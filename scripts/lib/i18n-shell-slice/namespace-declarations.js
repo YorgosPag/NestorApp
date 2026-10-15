@@ -137,35 +137,45 @@ function readCalls(ctx, abs) {
   return { namespaces, opaque };
 }
 
+/** Ο δίσκος, με την ίδια σύμβαση με κάθε `readText`: απόν αρχείο ⇒ `null`, ποτέ `throw`. */
+function readDiskText(abs) {
+  return fs.existsSync(abs) ? fs.readFileSync(abs, 'utf8') : null;
+}
+
 /**
  * @param {object} args
  * @param {object} args.graph  ο γράφος module — για τις εισαγωγές και τις αλυσίδες re-export
  * @param {Map<string,string[]>} args.bundles  `loadNamespaceBundles()` (ό,τι ξέρει ήδη ο κοινός εξαγωγέας)
- * @returns {(absFile: string) => {namespaces: string[], opaque: Array<{line: number, text: string}>}}
+ * @param {(abs: string) => ?string} [args.readText]  ADR-744 §31: από πού έρχεται το κείμενο (δίσκος ή
+ *   ευρετήριο) — ποτέ `fs` απευθείας, αλλιώς η πύλη `--index` θα διάβαζε ξένη αστάδιοποίητη δουλειά
+ * @returns {(absFile: string) => {namespaces: string[], opaque: Array<{line: number, text: string}>, local: boolean}}
+ *   `local` = η απάντηση βγήκε από **αυτό μόνο** το αρχείο (καμία σταθερά άλλου module) ⇒ επιτρέπεται
+ *   να αποθηκευτεί με κλειδί το περιεχόμενό του. Αλλιώς εξαρτάται και από άλλα αρχεία.
  */
-function createNamespaceDeclarationReader({ graph, bundles }) {
+function createNamespaceDeclarationReader({ graph, bundles, readText = readDiskText }) {
   const sources = new Map();
   const ctx = {
     graph,
     resolve: MG.createResolver(graph),
     parse(abs) {
       if (!sources.has(abs)) {
-        sources.set(abs, fs.existsSync(abs) ? parseSource(abs, fs.readFileSync(abs, 'utf8')) : null);
+        const text = readText(abs);
+        sources.set(abs, text === null ? null : parseSource(abs, text));
       }
       return sources.get(abs);
     },
   };
 
   return absFile => {
-    const text = stripComments(fs.readFileSync(absFile, 'utf8'));
+    const text = stripComments(readText(absFile));
     const plain = extractNamespaces(text, bundles);
     const seenByExtractor = PLAIN_CALLS.reduce((sum, pattern) => sum + count(text, pattern), 0);
     // Όλες οι κλήσεις είναι μορφές που ο κοινός εξαγωγέας διαβάζει ολόκληρες ⇒ καμία
     // ανάγκη για AST (η συντριπτική πλειονότητα των ~8.000 αρχείων μιας κλειστότητας).
-    if (count(text, ANY_CALL) === seenByExtractor) return { namespaces: plain, opaque: [] };
+    if (count(text, ANY_CALL) === seenByExtractor) return { namespaces: plain, opaque: [], local: true };
     const resolved = readCalls(ctx, absFile);
-    return { namespaces: [...new Set([...plain, ...resolved.namespaces])], opaque: resolved.opaque };
+    return { namespaces: [...new Set([...plain, ...resolved.namespaces])], opaque: resolved.opaque, local: false };
   };
 }
 
-module.exports = { createNamespaceDeclarationReader };
+module.exports = { createNamespaceDeclarationReader, readDiskText };
