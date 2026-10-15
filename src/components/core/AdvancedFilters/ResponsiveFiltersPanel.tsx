@@ -21,6 +21,8 @@ interface ResponsiveFiltersPanelProps<T extends GenericFilterState> {
   onFiltersChange: (filters: T) => void;
   /** Το mobile panel αποδίδεται μόνο όταν ο χρήστης πατήσει το κουμπί φίλτρων. */
   showMobile: boolean;
+  /** Η κενή τιμή του «Καθαρισμός όλων» — η zero value του τύπου (π.χ. `DEFAULT_FILTERS`). */
+  defaultFilters?: T;
 }
 
 export function ResponsiveFiltersPanel<T extends GenericFilterState>({
@@ -28,11 +30,12 @@ export function ResponsiveFiltersPanel<T extends GenericFilterState>({
   filters,
   onFiltersChange,
   showMobile,
+  defaultFilters,
 }: ResponsiveFiltersPanelProps<T>) {
   return (
     <>
       <div className="hidden md:block -mt-1">
-        <AdvancedFiltersPanel config={config} filters={filters} onFiltersChange={onFiltersChange} />
+        <AdvancedFiltersPanel config={config} filters={filters} onFiltersChange={onFiltersChange} defaultFilters={defaultFilters} />
       </div>
 
       {showMobile && (
@@ -41,6 +44,7 @@ export function ResponsiveFiltersPanel<T extends GenericFilterState>({
             config={config}
             filters={filters}
             onFiltersChange={onFiltersChange}
+            defaultFilters={defaultFilters}
             defaultOpen
           />
         </div>

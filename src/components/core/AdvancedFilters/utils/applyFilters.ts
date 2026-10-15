@@ -282,45 +282,6 @@ export function applyFilters<T extends FilterableEntity>(
   });
 }
 
-// ============================================================================
-// LEGACY COMPATIBILITY EXPORTS
-// For backward compatibility with existing code
-// ============================================================================
-
-/**
- * @deprecated Use applyFilters from @/components/core/AdvancedFilters/utils/applyFilters
- * Legacy property-specific filter function
- */
-export function applyPropertyFilters(
-  properties: FilterableEntity[],
-  filters: { propertyType: string[] },
-  searchTerm: string,
-  ranges: { priceRange: { min: string; max: string }; areaRange: { min: string; max: string } }
-): FilterableEntity[] {
-  const { priceRange, areaRange } = ranges;
-
-  return properties.filter((property) => {
-    // Type filter
-    const propertyType = getEntityField(property, 'type');
-    if (filters.propertyType.length > 0 && !filters.propertyType.includes(propertyType as string)) {
-      return false;
-    }
-
-    // Search term
-    if (searchTerm && !matchesSearchTerm(property, searchTerm, ['name'])) {
-      return false;
-    }
-
-    // Price range
-    const priceValue = getEntityField(property, 'price');
-    if (priceRange.min && typeof priceValue === 'number' && priceValue < parseInt(priceRange.min)) return false;
-    if (priceRange.max && typeof priceValue === 'number' && priceValue > parseInt(priceRange.max)) return false;
-
-    // Area range
-    const areaValue = getEntityField(property, 'area');
-    if (areaRange.min && typeof areaValue === 'number' && areaValue < parseInt(areaRange.min)) return false;
-    if (areaRange.max && typeof areaValue === 'number' && areaValue > parseInt(areaRange.max)) return false;
-
-    return true;
-  });
-}
+// ⛔ ADR-840 Σ3 — εδώ ζούσε το `@deprecated` `applyPropertyFilters`: έκρινε τιμή **χωρίς μονάδα** (`property.price`
+//    ως σκέτο αριθμό — το σφάλμα του ADR-777 Α6) και ο τελευταίος καταναλωτής του (`usePropertyGridFilters`) έφυγε.
+//    Ο κριτής των ακινήτων είναι ο `usePropertyFilters` (τιμή ΜΕ μονάδα: `matchesPriceRange`).

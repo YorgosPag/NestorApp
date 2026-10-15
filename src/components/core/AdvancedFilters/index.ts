@@ -8,7 +8,7 @@ export { AdvancedFiltersPanel } from './AdvancedFiltersPanel';
 // Responsive desktop/mobile split του panel — SSoT για σελίδες-λίστες
 export { ResponsiveFiltersPanel } from './ResponsiveFiltersPanel';
 export { FilterField } from './FilterField';
-export { useGenericFilters, usePropertyGridFilters } from './useGenericFilters';
+export { useGenericFilters } from './useGenericFilters';
 
 // ADR-051: Type-safe hook return types
 export type { UseGenericFiltersReturn } from './useGenericFilters';
@@ -131,7 +131,6 @@ export type {
 
 export {
   applyFilters,
-  applyPropertyFilters,
   matchesSearchTerm,
   matchesNumericRange,
   matchesDateFromToRange,
