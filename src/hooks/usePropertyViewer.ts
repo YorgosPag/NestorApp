@@ -6,9 +6,8 @@ import { usePropertyState } from './usePropertyState';
 import { usePropertyEditor } from './usePropertyEditor';
 import { usePropertyFilters } from './usePropertyFilters';
 import { usePolygonHandlers } from './usePolygonHandlers';
-import { DEFAULT_FILTERS } from '@/types/property-viewer';
 import type { Property } from '@/types/property-viewer';
-import { DEFAULT_PROPERTY_STATS } from '@/types/property';
+import { usePropertyFiltersUrlState } from '@/hooks/usePropertyFiltersUrlState';
 import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
 import { outcomeOrThrow } from '@/hooks/impact-guard/guard-result';
 import { useNotifications } from '@/providers/NotificationProvider';
@@ -124,8 +123,10 @@ export function usePropertyViewer() {
   // την ξανάγραφε 2 ακόμη φορές (και κάθε νέο πεδίο θα ήθελε 3 edits αντί για 1).
   const editor = usePropertyEditor();
 
-  // 3. Filtering Logic
-  const { filteredProperties, stats } = usePropertyFilters(properties, editor.filters);
+  // 3. Filtering Logic — ADR-840 Σ3: τα φίλτρα είναι Η ΔΙΕΥΘΥΝΣΗ (ήταν `useState` στον `usePropertyEditor`).
+  //    Ο καταρράκτης έργο → κτίριο → όροφος (§7.6) κρίνεται μέσα στον hook, άρα και για φίλτρα από σύνδεσμο.
+  const { filters, updateFilters } = usePropertyFiltersUrlState(properties);
+  const { filteredProperties, stats } = usePropertyFilters(properties, filters);
 
   // 4. Polygon Action Handlers
   const {
@@ -205,11 +206,14 @@ export function usePropertyViewer() {
 
     // from usePropertyEditor (ΟΛΑ τα πεδία του — η λίστα ζει εκεί, όχι εδώ)
     ...editor,
-    filters: editor.filters || DEFAULT_FILTERS,
 
-    // from usePropertyFilters
-    filteredProperties: filteredProperties || [],
-    stats: stats || DEFAULT_PROPERTY_STATS,
+    // from the address (ADR-840 §7.7 · Σ3)
+    filters,
+    updateFilters,
+
+    // from usePropertyFilters — στατιστικά ΠΑΝΩ ΣΤΟ ΦΙΛΤΡΑΡΙΣΜΕΝΟ σύνολο (το ένα ταμπλό)
+    filteredProperties,
+    stats,
 
     // from usePolygonHandlers
     handlePolygonCreated,

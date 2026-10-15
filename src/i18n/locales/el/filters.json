@@ -388,6 +388,13 @@
     "pool": "Πισίνα"
   },
   "availability": "Διαθεσιμότητα",
+  "propertyAvailability": {
+    "listed": "Στην αγορά",
+    "reserved": "Κρατημένα",
+    "sold": "Πωλημένα",
+    "rented": "Ενοικιασμένα",
+    "unavailable": "Εκτός αγοράς"
+  },
   "spaceAvailability": {
     "ariaLabel": "Φίλτρο διάθεσης",
     "all": "Όλες",

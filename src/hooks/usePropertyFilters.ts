@@ -16,6 +16,25 @@ import { EMPTY_PRICE_RANGE, matchesPriceRange } from '@/lib/properties/price-ran
 import { totalPriceByRole } from '@/lib/properties/price-totals';
 import { tallyBy } from '@/utils/collection-utils';
 import { countDistinctBuildings, matchesPropertyLocation } from '@/lib/properties/property-location';
+import { matchesAnySpaceAvailability, spaceAvailabilityBucket } from '@/lib/spaces/space-availability';
+import { resolveSpaceStatuses } from '@/lib/spaces/space-status-split';
+import { computeCoverageStats, type CoverageStats } from '@/lib/properties/coverage-stats';
+
+/**
+ * Τα στατιστικά της οθόνης ακινήτων — **πάνω στο φιλτραρισμένο σύνολο** (ADR-840 Σ3: το ταμπλό μετρά ό,τι βλέπεις,
+ * πρότυπο Linear / Power BI cross-filter). Λειτουργικά + εμπορικά (`priceTotals` ανά ρόλο) + πληρότητα, σε ΕΝΑ σημείο.
+ */
+export interface PropertyScreenStats extends PropertyStats {
+  /** Πόσα από τα ορατά είναι **στην αγορά** (κουβάς `listed`) — η κάρτα που ανοίγει/κλείνει το `?status=listed`. */
+  onMarketProperties: number;
+  coverage: CoverageStats;
+}
+
+export const EMPTY_PROPERTY_SCREEN_STATS: PropertyScreenStats = {
+  ...DEFAULT_PROPERTY_STATS,
+  onMarketProperties: 0,
+  coverage: computeCoverageStats([]),
+};
 
 
 /**
@@ -43,7 +62,7 @@ export function usePropertyFilters(
 ) {
   const { filteredProperties, stats } = useMemo(() => {
     if (!properties || !filters) {
-      return { filteredProperties: [], stats: DEFAULT_PROPERTY_STATS };
+      return { filteredProperties: [], stats: EMPTY_PROPERTY_SCREEN_STATS };
     }
 
     // 🏢 ENTERPRISE (local_4.log): Pre-filter to exclude storage units
@@ -64,6 +83,7 @@ export function usePropertyFilters(
       areaRange = { min: undefined, max: undefined },
       features = [],
       coverage = {},
+      operationalStatus = [],
     } = filters;
 
     // 🏢 ADR-051: Use centralized filter utilities
@@ -81,7 +101,11 @@ export function usePropertyFilters(
 
       // 🏢 CENTRALIZED: Array filters using matchesArrayFilter
       const typeMatch = matchesArrayFilter(property.type, propertyType);
-      const statusMatch = matchesArrayFilter(property.status, status);
+      // ADR-840 Σ3 — ΔΥΟ όψεις κατάστασης, ίδιοι κριτές με θέσεις/αποθήκες (ADR-777 §8.60.20). Ως τότε εδώ
+      // `matchesArrayFilter(property.status, status)` με τιμές `ready`/`available` που το πεδίο δεν έχει ΠΟΤΕ.
+      const statusMatch = matchesAnySpaceAvailability(property, status);
+      const operationalMatch = operationalStatus.length === 0
+        || operationalStatus.includes(resolveSpaceStatuses(property).operationalStatus ?? '');
 
       // 🏢 CENTRALIZED: Range filters
       // ADR-777 Α6 + §8.60.14.14 — the price range carries its UNIT: only an amount in
@@ -114,14 +138,15 @@ export function usePropertyFilters(
         return photosCondition && floorplansCondition && documentsCondition;
       })();
 
-      return searchMatch && locationMatch && typeMatch && statusMatch && priceMatch && areaMatch && featuresMatch && coverageMatch;
+      return searchMatch && locationMatch && typeMatch && statusMatch && operationalMatch && priceMatch && areaMatch
+        && featuresMatch && coverageMatch;
     });
     
     // ADR-777 Α5/Α6 + §8.60.14.13 — the totals read the price SSoT, PER ROLE: a sale
     // price, a monthly rent and a nightly rate are three units, never one sum.
 
     // 🎯 DOMAIN SEPARATION: Stats use operationalStatus where available
-    const calculatedStats: PropertyStats = {
+    const calculatedStats: PropertyScreenStats = {
       totalProperties: filtered.length,
       // availableProperties = operationalStatus 'ready' (Physical readiness)
       availableProperties: filtered.filter(p => p.operationalStatus === 'ready').length,
@@ -140,6 +165,8 @@ export function usePropertyFilters(
       maintenanceProperties: filtered.filter(p => p.operationalStatus === 'maintenance').length,
       inspectionProperties: filtered.filter(p => p.operationalStatus === 'inspection').length,
       draftProperties: filtered.filter(p => p.operationalStatus === 'draft').length,
+      onMarketProperties: filtered.filter((p) => spaceAvailabilityBucket(p) === 'listed').length,
+      coverage: computeCoverageStats(filtered),
     };
 
     return { filteredProperties: filtered, stats: calculatedStats };

@@ -4,8 +4,7 @@
 import { useState } from 'react';
 import type { Suggestion } from '@/types/suggestions';
 import type { Connection, PropertyGroup } from '@/types/connections';
-import type { FilterState, Property } from '@/types/property-viewer';
-import { DEFAULT_FILTERS } from '@/types/property-viewer';
+import type { Property } from '@/types/property-viewer';
 
 // 🏢 ENTERPRISE: Tool type for property editor
 type EditorTool = string | null;
@@ -23,9 +22,10 @@ export function usePropertyEditor() {
   const [groups, setGroups] = useState<PropertyGroup[]>([]);
   const [isConnecting, setIsConnecting] = useState(false);
   const [firstConnectionPoint, setFirstConnectionPoint] = useState<Property | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [showDashboard, setShowDashboard] = useState(false);
-  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
+  // ⛔ ADR-840 Σ3 — ΟΧΙ `filters` / `viewMode` εδώ. Ήταν η **τρίτη** κατάσταση φίλτρων της εφαρμογής (`useState`
+  //    ⇒ χανόταν σε refresh / «πίσω» / σύνδεσμο). Ζουν πλέον στη διεύθυνση: `usePropertyFiltersUrlState` ·
+  //    `usePropertiesView`. Μην τα ξαναβάλεις — δεύτερο αντίγραφο είναι ακριβώς η βλάβη του §7.7.
 
   return {
     activeTool, 
@@ -52,11 +52,7 @@ export function usePropertyEditor() {
     setIsConnecting,
     firstConnectionPoint, 
     setFirstConnectionPoint,
-    viewMode, 
-    setViewMode,
     showDashboard, 
     setShowDashboard,
-    filters, 
-    setFilters,
   };
 }

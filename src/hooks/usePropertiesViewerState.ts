@@ -1,17 +1,15 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { usePropertyViewer } from '@/hooks/usePropertyViewer';
+import { usePropertiesView } from '@/hooks/usePropertiesView';
+import { usePropertySelectionUrlSync } from '@/hooks/usePropertySelectionUrlSync';
 import { useAuth } from '@/hooks/useAuth';
 import { ContactsService } from '@/services/contacts.service';
 import { createModuleLogger } from '@/lib/telemetry';
-import { tallyBy } from '@/utils/collection-utils';
 import type { Connection } from '@/types/connections';
 import type { FilterState, Property } from '@/types/property-viewer';
-import { DEFAULT_FILTERS } from '@/types/property-viewer';
 import { resolveViewedProperty } from './property-viewer-selection';
-import { countDistinctBuildings, reconcileLocationSelection } from '@/lib/properties/property-location';
 
 const logger = createModuleLogger('usePropertiesViewerState');
 
@@ -19,9 +17,9 @@ const noop = () => {};
 
 /**
  * @param explicitPropertyId — **Ποιο ακίνητο είναι επιλεγμένο, όταν το ξέρει ο
- * καλών.** Η δεξιά στήλη του `/spaces/properties` το μαθαίνει από το ερώτημα
- * (`?propertyId=`)· η σελίδα `/properties/[id]` το ξέρει από τη **διαδρομή**, όπου
- * δεν υπάρχει ερώτημα να διαβαστεί (ADR-777 §8.30).
+ * καλών.** Η ενιαία οθόνη `/properties` το μαθαίνει από τη διεύθυνση
+ * (`?selected=`, αμφίδρομα — `usePropertySelectionUrlSync`, ADR-840 Σ3)· η σελίδα
+ * `/properties/[id]` το ξέρει από τη **διαδρομή** (ADR-777 §8.30).
  *
  * 🔑 **Παραμετροποιείται η ΠΗΓΗ της απάντησης, όχι η μηχανή.** Ένας δεύτερος
  * φορτωτής ακινήτου θα ήταν **δεύτερη μετάφραση** των ίδιων εγγράφων σε `Property`
@@ -29,14 +27,13 @@ const noop = () => {};
  * μεταφράσεις μπορούν να δείξουν **διαφορετικά πράγματα για το ίδιο ακίνητο**, και
  * **και οι δύο να φαίνονται σωστές**.
  *
- * ⚠️ Το ρητό όρισμα **νικά** το ερώτημα και δεν πέφτει πίσω σε αυτό: μια σελίδα
+ * ⚠️ Το ρητό όρισμα **νικά** τη διεύθυνση και δεν πέφτει πίσω σε αυτή: μια σελίδα
  * που ξέρει ταυτότητα από τη διαδρομή της δεν επιτρέπεται να αλλάξει θέμα επειδή
- * κάποιος κόλλησε `?propertyId=` στη διεύθυνση.
+ * κάποιος κόλλησε `?selected=` — και **δεν γράφει** ποτέ στη διεύθυνση.
  */
 export function usePropertiesViewerState(explicitPropertyId?: string | null) {
-  const searchParams = useSearchParams();
-  const queryPropertyId = searchParams.get('propertyId');
-  const propertyIdFromUrl = explicitPropertyId !== undefined ? explicitPropertyId : queryPropertyId;
+  const { selectedId: urlSelectedId } = usePropertiesView();
+  const routeOwnsIdentity = explicitPropertyId !== undefined;
 
   const {
     properties,
@@ -79,8 +76,9 @@ export function usePropertiesViewerState(explicitPropertyId?: string | null) {
     firstConnectionPoint,
     setFirstConnectionPoint,
     filters,
-    setFilters,
+    updateFilters,
     filteredProperties,
+    stats,
     isLoading,
     hasAnswered,
     forceDataRefresh,
@@ -94,7 +92,6 @@ export function usePropertiesViewerState(explicitPropertyId?: string | null) {
     PropertyDeletionDialogs,
   } = usePropertyViewer();
 
-  const [viewMode, setViewMode] = useState<'list' | 'grid' | 'byType' | 'byStatus'>('list');
   const [allContactIds, setAllContactIds] = useState<string[]>([]);
   const { user: authUser, loading: authLoading } = useAuth();
 
@@ -126,23 +123,33 @@ export function usePropertiesViewerState(explicitPropertyId?: string | null) {
     return () => { cancelled = true; };
   }, [authLoading, authUser]);
 
+  // Η ΔΙΑΔΡΟΜΗ ξέρει την ταυτότητα (`/properties/[id]`) ⇒ επιλέγεται αυτή, χωρίς καμία επαφή με τη διεύθυνση.
   useEffect(() => {
-    if (!propertyIdFromUrl || properties.length === 0 || !setSelectedProperties) {
+    if (!routeOwnsIdentity || !explicitPropertyId || properties.length === 0 || !setSelectedProperties) {
       return;
     }
 
-    const propertyExists = properties.some((property) => property.id === propertyIdFromUrl);
-    if (!propertyExists) {
-      logger.warn('Property not found in properties', { propertyId: propertyIdFromUrl });
+    const property = properties.find((item) => item.id === explicitPropertyId);
+    if (!property) {
+      logger.warn('Property not found in properties', { propertyId: explicitPropertyId });
       return;
     }
 
-    setSelectedProperties([propertyIdFromUrl]);
-    const property = properties.find((item) => item.id === propertyIdFromUrl);
-    if (property?.floorId && onSelectFloor) {
+    setSelectedProperties([explicitPropertyId]);
+    if (property.floorId && onSelectFloor) {
       onSelectFloor(property.floorId);
     }
-  }, [onSelectFloor, properties, propertyIdFromUrl, setSelectedProperties]);
+  }, [routeOwnsIdentity, explicitPropertyId, onSelectFloor, properties, setSelectedProperties]);
+
+  // Η ενιαία οθόνη: η επιλογή ⇄ `?selected=` (ADR-840 Σ3) — «πίσω» από την καρτέλα επιστρέφει στο ίδιο ακίνητο.
+  usePropertySelectionUrlSync({
+    enabled: !routeOwnsIdentity,
+    urlSelectedId,
+    selectedIds: Array.isArray(selectedPropertyIds) ? selectedPropertyIds : [],
+    properties: Array.isArray(properties) ? properties : [],
+    select: setSelectedProperties,
+    onSelectFloor,
+  });
 
   const safeProperties = Array.isArray(properties) ? properties : [];
   const safeFilteredProperties = Array.isArray(filteredProperties) ? filteredProperties : [];
@@ -235,54 +242,13 @@ export function usePropertiesViewerState(explicitPropertyId?: string | null) {
     }
   };
 
-  const dashboardStats = useMemo(() => ({
-    totalProperties: safeProperties.length,
-    totalArea: safeProperties.reduce((sum, property) => sum + (property.area || 0), 0),
-    uniqueBuildings: countDistinctBuildings(safeProperties),
-    availableProperties: safeProperties.filter((property) => property.operationalStatus === 'ready').length,
-    underConstructionProperties: safeProperties.filter((property) => property.operationalStatus === 'under-construction').length,
-    maintenanceProperties: safeProperties.filter((property) => property.operationalStatus === 'maintenance').length,
-    inspectionProperties: safeProperties.filter((property) => property.operationalStatus === 'inspection').length,
-    draftProperties: safeProperties.filter((property) => property.operationalStatus === 'draft').length,
-    propertiesByStatus: tallyBy(safeProperties, (property) => property.operationalStatus || 'draft'),
-    propertiesByType: tallyBy(safeProperties, (property) => property.type),
-    // ADR-903: κλειδί = ο ΑΡΙΘΜΟΣ (δεδομένο)· η ετικέτα αποδίδεται στο `DetailsCard` (`useFloorLabel`).
-    propertiesByFloor: tallyBy(safeProperties, (property) => String(property.floor ?? '—')),
-    totalStorageUnits: 0,
-    availableStorageUnits: 0,
-    coverage: (() => {
-      const totalProperties = safeProperties.length;
-      const propertiesWithPhotos = safeProperties.filter((property) => property.propertyCoverage?.hasPhotos === true).length;
-      const propertiesWithFloorplans = safeProperties.filter((property) => property.propertyCoverage?.hasFloorplans === true).length;
-      const propertiesWithDocuments = safeProperties.filter((property) => property.propertyCoverage?.hasDocuments === true).length;
+  // ADR-840 Σ3 — ΕΝΑ ταμπλό, που μετρά ό,τι ΒΛΕΠΕΙΣ: τα στατιστικά της μηχανής, πάνω στο φιλτραρισμένο σύνολο.
+  //    Εδώ ζούσε δεύτερος υπολογισμός (όλο το απόθεμα, αγνοώντας τα φίλτρα) + αντίγραφο της πληρότητας.
+  const dashboardStats = stats;
 
-      return {
-        totalProperties,
-        propertiesWithPhotos,
-        propertiesWithFloorplans,
-        propertiesWithDocuments,
-        photosPercentage: totalProperties > 0 ? Math.round((propertiesWithPhotos / totalProperties) * 100) : 0,
-        floorplansPercentage: totalProperties > 0 ? Math.round((propertiesWithFloorplans / totalProperties) * 100) : 0,
-        documentsPercentage: totalProperties > 0 ? Math.round((propertiesWithDocuments / totalProperties) * 100) : 0,
-      };
-    })(),
-  }), [safeProperties]);
-
-  const handleFiltersChange = (newFilters: Partial<FilterState> | Record<string, unknown>) => {
-    logger.info('Filters change', {
-      hasAreaRange: typeof newFilters === 'object' && newFilters !== null && 'areaRange' in newFilters,
-    });
-
-    if (setFilters) {
-      setFilters((previous: FilterState) => {
-        // ADR-840 §7.6 — καταρράκτης έργο → κτίριο → όροφος (ίδιος κανόνας με τη «Διαθέσιμα Ακίνητα»).
-        const updated = reconcileLocationSelection({ ...previous, ...newFilters } as FilterState, safeProperties);
-        logger.info('Updated filters', {
-          updatedAreaRange: updated.areaRange,
-        });
-        return updated;
-      });
-    }
+  // Ο καταρράκτης (§7.6) και η γραφή `replace` ζουν στον `usePropertyFiltersUrlState`.
+  const handleFiltersChange = (newFilters: Partial<FilterState>) => {
+    updateFilters(newFilters);
   };
 
   return {
@@ -311,8 +277,6 @@ export function usePropertiesViewerState(explicitPropertyId?: string | null) {
     floors: safeFloors,
     activeTool: activeTool || null,
     setActiveTool: setActiveTool || noop,
-    viewMode,
-    setViewMode,
     showGrid: Boolean(showGrid),
     setShowGrid: setShowGrid || noop,
     snapToGrid: Boolean(snapToGrid),
@@ -337,7 +301,7 @@ export function usePropertiesViewerState(explicitPropertyId?: string | null) {
     setIsConnecting: setIsConnecting || noop,
     firstConnectionPoint: firstConnectionPoint || null,
     setFirstConnectionPoint: setFirstConnectionPoint || noop,
-    filters: filters || DEFAULT_FILTERS,
+    filters,
     handleFiltersChange,
     filteredProperties: safeFilteredProperties,
     dashboardStats,

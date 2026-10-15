@@ -19,10 +19,18 @@ import { COMMON_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 import { SPACE_AVAILABILITY_BUCKETS } from '@/lib/spaces/space-availability';
 import type { FilterFieldConfig, FilterOption } from '../types';
 
+/**
+ * Το λεξιλόγιο ετικετών διάθεσης. **Ίδιοι κουβάδες**, άλλο γένος: «Κρατημένες» (θέσεις, αποθήκες) · «Κρατημένα»
+ * (ακίνητα — ADR-840 Σ3). Οι τιμές είναι ΙΔΙΕΣ, άρα και το URL και ο κριτής (`matchesAnySpaceAvailability`).
+ */
+export type AvailabilityLabelSet = 'spaceAvailability' | 'propertyAvailability';
+
+function availabilityOptions(labels: AvailabilityLabelSet): readonly FilterOption[] {
+  return SPACE_AVAILABILITY_BUCKETS.map((bucket) => ({ value: bucket, label: `filters.${labels}.${bucket}` }));
+}
+
 /** Διάθεση χώρου — οι κουβάδες του `commercialStatus` (χωρίς το «όλοι»). */
-export const SPACE_AVAILABILITY_FILTER_OPTIONS: readonly FilterOption[] = SPACE_AVAILABILITY_BUCKETS.map(
-  (bucket) => ({ value: bucket, label: `filters.spaceAvailability.${bucket}` }),
-);
+export const SPACE_AVAILABILITY_FILTER_OPTIONS: readonly FilterOption[] = availabilityOptions('spaceAvailability');
 
 /** Λειτουργική κατάσταση — ίδιο λεξιλόγιο και ίδιες ετικέτες για ακίνητα και χώρους. */
 export const OPERATIONAL_STATUS_FILTER_OPTIONS: readonly FilterOption[] = OPERATIONAL_STATUSES.map(
@@ -38,8 +46,12 @@ const ALL_STATUSES_OPTION: FilterOption = { value: 'all', label: COMMON_FILTER_L
  * δίδυμα που το `jscpd:diff` (CHECK 3.28) έπιασε αμέσως.
  *
  * @param statusAriaLabel — το κλειδί προσβασιμότητας του χώρου για την όψη διάθεσης
+ * @param labels — το γένος των ετικετών (ακίνητα: `propertyAvailability`, ADR-840 Σ3)
  */
-export function spaceStatusFilterFields(statusAriaLabel: string): FilterFieldConfig[] {
+export function spaceStatusFilterFields(
+  statusAriaLabel: string,
+  labels: AvailabilityLabelSet = 'spaceAvailability',
+): FilterFieldConfig[] {
   return [
     {
       id: 'status',
@@ -48,7 +60,7 @@ export function spaceStatusFilterFields(statusAriaLabel: string): FilterFieldCon
       placeholder: 'filters.common.selectStatus',
       ariaLabel: statusAriaLabel,
       width: 1,
-      options: [ALL_STATUSES_OPTION, ...SPACE_AVAILABILITY_FILTER_OPTIONS],
+      options: [ALL_STATUSES_OPTION, ...availabilityOptions(labels)],
     },
     {
       id: 'operationalStatus',

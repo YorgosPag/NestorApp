@@ -284,6 +284,10 @@ export interface FilterState extends GenericFilterState {
   /** Όροφοι ως `String(level)` — το ισόγειο είναι `'0'`. */
   floor: string[];
   propertyType: string[];
+  /**
+   * **Διάθεση** — κουβάδες του `commercialStatus` (`listed` · `reserved` · `sold` · `rented` · `unavailable`), ο ΕΝΑΣ
+   * κριτής `matchesAnySpaceAvailability` (ADR-777 §8.60.20). `listed` = το παλιό «Διαθέσιμα Ακίνητα» ως **όψη**.
+   */
   status: string[];
   /**
    * Εύρος τιμής **με τη μονάδα του** (ADR-777 §8.60.14.14): ποτέ «έως 1.000» χωρίς να λέει
@@ -305,6 +309,13 @@ export interface FilterState extends GenericFilterState {
     /** Show only units missing documents */
     missingDocuments?: boolean;
   };
+
+  /**
+   * **Λειτουργική κατάσταση** (`OPERATIONAL_STATUSES`: πρόχειρο · υπό κατασκευή · επιθεώρηση · έτοιμο · συντήρηση) —
+   * η δεύτερη όψη κατάστασης, ίδια με θέσεις/αποθήκες (ADR-777 §8.60.20). ADR-840 Σ3: ως τότε ο πίνακας της λίστας
+   * έδινε αυτές τις τιμές **στο `status`**, και η μηχανή τις σύγκρινε με το εμπορικό πεδίο ⇒ φίλτρο νεκρό.
+   */
+  operationalStatus?: string[];
 }
 
 /**

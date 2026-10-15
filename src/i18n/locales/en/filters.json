@@ -388,6 +388,13 @@
     "pool": "Pool"
   },
   "availability": "Availability",
+  "propertyAvailability": {
+    "listed": "On the market",
+    "reserved": "Reserved",
+    "sold": "Sold",
+    "rented": "Rented",
+    "unavailable": "Off market"
+  },
   "spaceAvailability": {
     "ariaLabel": "Availability filter",
     "all": "All",

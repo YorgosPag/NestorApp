@@ -13,7 +13,11 @@ import {
   totalPriceByRole,
   type PriceTotalsByRole,
 } from '@/lib/properties/price-totals';
-import { useEntityStats, countBy, rate } from './useEntityStats';
+import { useEntityStats, countBy } from './useEntityStats';
+import { computeCoverageStats, type CoverageStats } from '@/lib/properties/coverage-stats';
+
+/** Ο τύπος ζει πλέον δίπλα στον ΕΝΑ υπολογισμό (ADR-840 Σ3)· επανεξάγεται για τους υπάρχοντες εισαγωγείς. */
+export type { CoverageStats };
 
 /**
  * Minimal shape required by usePropertiesStats — compatible with Property.
@@ -25,20 +29,6 @@ interface PropertyStatsInput extends PricedPropertyLike {
   area?: number;
   type?: string;
   propertyCoverage?: { hasPhotos?: boolean; hasFloorplans?: boolean; hasDocuments?: boolean };
-}
-
-/**
- * Property documentation coverage stats
- * Used for Πληρότητα dashboard card
- */
-export interface CoverageStats {
-  totalProperties: number;
-  propertiesWithPhotos: number;
-  propertiesWithFloorplans: number;
-  propertiesWithDocuments: number;
-  photosPercentage: number;
-  floorplansPercentage: number;
-  documentsPercentage: number;
 }
 
 export interface PropertiesStats {
@@ -80,25 +70,12 @@ export function usePropertiesStats(properties: PropertyStatsInput[]): Properties
         averageArea: 0,
         propertiesByStatus: {},
         propertiesByType: {},
-        coverage: {
-          totalProperties: 0,
-          propertiesWithPhotos: 0,
-          propertiesWithFloorplans: 0,
-          propertiesWithDocuments: 0,
-          photosPercentage: 0,
-          floorplansPercentage: 0,
-          documentsPercentage: 0,
-        },
+        coverage: computeCoverageStats([]),
       };
     }
 
     const availableProperties = countBy(properties, u => !!u.status && AVAILABLE_STATUSES.includes(u.status));
     const soldProperties = countBy(properties, u => !!u.status && SOLD_STATUSES.includes(u.status));
-
-    // Coverage stats (backward compatible: missing propertyCoverage → false)
-    const propertiesWithPhotos = countBy(properties, u => u.propertyCoverage?.hasPhotos === true);
-    const propertiesWithFloorplans = countBy(properties, u => u.propertyCoverage?.hasFloorplans === true);
-    const propertiesWithDocuments = countBy(properties, u => u.propertyCoverage?.hasDocuments === true);
 
     return {
       totalProperties: total,
@@ -109,15 +86,8 @@ export function usePropertiesStats(properties: PropertyStatsInput[]): Properties
       averageArea: base.averageArea,
       propertiesByStatus: base.byStatus,
       propertiesByType: base.byType,
-      coverage: {
-        totalProperties: total,
-        propertiesWithPhotos,
-        propertiesWithFloorplans,
-        propertiesWithDocuments,
-        photosPercentage: rate(propertiesWithPhotos, total),
-        floorplansPercentage: rate(propertiesWithFloorplans, total),
-        documentsPercentage: rate(propertiesWithDocuments, total),
-      },
+      // Ο ΕΝΑΣ υπολογισμός πληρότητας (ADR-840 Σ3) — ακίνητο χωρίς `propertyCoverage` μετρά ως «λείπει».
+      coverage: computeCoverageStats(properties),
     };
   }, [base, properties]);
 

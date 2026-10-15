@@ -7,8 +7,8 @@ import {
   PROPERTY_FEATURE_FILTERS,
   propertyTypeFilterField,
 } from './property-filter-fields';
-import { COMMON_FILTER_LABELS, FL, FT, PROPERTY_FILTER_LABELS, SP, UNIFIED_STATUS_FILTER_LABELS } from './shared';
-import { OPERATIONAL_STATUS_FILTER_OPTIONS } from './unit-status-filter-options';
+import { FL, FT, PROPERTY_FILTER_LABELS, SP } from './shared';
+import { OPERATIONAL_STATUS_FILTER_OPTIONS, spaceStatusFilterFields } from './unit-status-filter-options';
 
 export const propertyListFiltersConfig: FilterPanelConfig = {
   title: FT.units,
@@ -110,23 +110,13 @@ export const propertyFiltersConfig: FilterPanelConfig = {
             { value: "office", label: "properties.types.office" },
           ],
         },
-        {
-          id: "status",
-          type: "select",
-          label: FL.status,
-          placeholder: SP.status_placeholder,
-          ariaLabel: "Property status filter",
-          width: 1,
-          options: [
-            { value: "all", label: COMMON_FILTER_LABELS.ALL_STATUSES },
-            {
-              value: "available",
-              label: UNIFIED_STATUS_FILTER_LABELS.AVAILABLE,
-            },
-            { value: "reserved", label: UNIFIED_STATUS_FILTER_LABELS.RESERVED },
-            { value: "sold", label: UNIFIED_STATUS_FILTER_LABELS.SOLD },
-          ],
-        },
+        /*
+         * ADR-840 Σ3 — **ΔΥΟ όψεις κατάστασης**, οι ίδιες με θέσεις/αποθήκες (ADR-777 §8.60.20): «Διάθεση» (κουβάδες
+         * του `commercialStatus`) + «Λειτουργία». Εδώ ζούσε select με `available`/`reserved`/`sold` — τιμές που το
+         * `property.status` δεν έχει ΠΟΤΕ (`for-sale`…) ⇒ το φίλτρο δεν έπιανε τίποτα. Ο πίνακας της παλιάς λίστας είχε
+         * το συμμετρικό λάθος (λειτουργικές τιμές στο εμπορικό πεδίο).
+         */
+        ...spaceStatusFilterFields("filters.spaceAvailability.ariaLabel", "propertyAvailability"),
       ],
     },
     {
