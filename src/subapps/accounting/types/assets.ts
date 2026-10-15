@@ -8,7 +8,6 @@
  * @compliance CLAUDE.md Enterprise Standards — zero `any`
  */
 
-import type { PeriodRange } from './common';
 
 // ============================================================================
 // ASSET CATEGORY & STATUS
@@ -19,14 +18,17 @@ import type { PeriodRange } from './common';
  *
  * Κάθε κατηγορία έχει διαφορετικό συντελεστή απόσβεσης (Ν.4172/2013, αρ.24).
  */
-export type AssetCategory =
-  | 'buildings'               // Κτίρια (4%)
-  | 'machinery'               // Μηχανήματα (10%)
-  | 'vehicles'                // Οχήματα (16%)
-  | 'furniture'               // Έπιπλα & εξοπλισμός (10%)
-  | 'computers'               // Η/Υ & λογισμικό (20%)
-  | 'measurement_instruments' // Όργανα μέτρησης (10%)
-  | 'other';                  // Λοιπά πάγια (10%)
+export const ASSET_CATEGORIES = [
+  'buildings',               // Κτίρια (4%)
+  'machinery',               // Μηχανήματα (10%)
+  'vehicles',                // Οχήματα (16%)
+  'furniture',               // Έπιπλα & εξοπλισμός (10%)
+  'computers',               // Η/Υ & λογισμικό (20%)
+  'measurement_instruments', // Όργανα μέτρησης (10%)
+  'other',                   // Λοιπά πάγια (10%)
+] as const;
+
+export type AssetCategory = (typeof ASSET_CATEGORIES)[number];
 
 /**
  * Κατάσταση παγίου
@@ -36,7 +38,9 @@ export type AssetCategory =
  * - `disposed`: Πωλήθηκε ή διαγράφτηκε
  * - `inactive`: Αδρανές (δεν χρησιμοποιείται αλλά δεν πωλήθηκε)
  */
-export type AssetStatus = 'active' | 'fully_depreciated' | 'disposed' | 'inactive';
+export const ASSET_STATUSES = ['active', 'fully_depreciated', 'disposed', 'inactive'] as const;
+
+export type AssetStatus = (typeof ASSET_STATUSES)[number];
 
 // ============================================================================
 // DEPRECIATION RATE CONFIG
@@ -218,7 +222,11 @@ export type CreateFixedAssetInput = Omit<
   'assetId' | 'accumulatedDepreciation' | 'netBookValue' | 'fullyDepreciatedDate' | 'disposalDate' | 'createdAt' | 'updatedAt'
 >;
 
-/** Φίλτρα αναζήτησης παγίων */
+/**
+ * Φίλτρα της ΣΕΛΙΔΑΣ οθόνης παγίων. Οι υποστηριζόμενοι συνδυασμοί (κλειστό σύνολο, ο καθένας με δείκτη) ζουν στο
+ * `FIXED_ASSET_LIST` (`services/repository/accounting-list-specs.ts`).
+ * ⚠️ `acquisitionDateRange` / `searchText` αφαιρέθηκαν (2026-10-15): δηλώνονταν, ΔΕΝ εφαρμόζονταν.
+ */
 export interface FixedAssetFilters {
   /** Κατηγορία */
   category?: AssetCategory;
@@ -226,8 +234,4 @@ export interface FixedAssetFilters {
   status?: AssetStatus;
   /** Φορολογικό έτος κτήσης */
   acquisitionYear?: number;
-  /** Εύρος ημερομηνιών κτήσης */
-  acquisitionDateRange?: PeriodRange;
-  /** Αναζήτηση κειμένου (περιγραφή, προμηθευτής) */
-  searchText?: string;
 }

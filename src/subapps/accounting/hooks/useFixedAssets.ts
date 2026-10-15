@@ -1,28 +1,28 @@
 /**
  * @fileoverview Accounting Subapp — useFixedAssets Hook
- * @description Client-side hook για πάγια στοιχεία με φίλτρα και δημιουργία
+ * @description Η ΣΕΛΙΔΑ του μητρώου παγίων με δρομέα (ADR-ACC-010 §2.1.1 Φάση 3β) πάνω στο κοινό
+ *   `useCursorPagedList`, και η δημιουργία παγίου.
+ *   🔴 Ως 2026-10-15 διάβαζε `data.assets` — πεδίο που η διαδρομή δεν έστελνε ποτέ (`{ data: { items } }`) ⇒ το
+ *   μητρώο έδειχνε ΠΑΝΤΑ «κανένα πάγιο».
  * @author Claude Code (Anthropic AI) + Γιώργος Παγώνης
- * @created 2026-02-09
- * @version 1.0.0
+ * @created 2026-02-10
+ * @version 2.0.0
  * @see ADR-ACC-007 Fixed Assets & Depreciation
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, no inline styles
  */
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useCursorPagedList, type CachedFirstPage, type UseCursorPagedListReturn } from '@/hooks/useCursorPagedList';
 import { API_ROUTES } from '@/config/domain-constants';
-import type {
-  FixedAsset,
-  AssetCategory,
-  AssetStatus,
-  CreateFixedAssetInput,
-} from '@/subapps/accounting/types';
+import { apiClient } from '@/lib/api/enterprise-api-client';
+import { createStaleCache } from '@/lib/stale-cache';
+import type { FixedAsset, AssetCategory, AssetStatus, CreateFixedAssetInput } from '@/subapps/accounting/types';
 
-// ============================================================================
-// TYPES
-// ============================================================================
+// ADR-300: Module-level cache — survives React unmount/remount (navigation)
+const fixedAssetsCache = createStaleCache<CachedFirstPage<FixedAsset>>('accounting-fixed-assets');
 
 interface UseFixedAssetsOptions {
   /** Φίλτρο κατηγορίας */
@@ -31,118 +31,34 @@ interface UseFixedAssetsOptions {
   status?: AssetStatus;
   /** Φορολογικό έτος κτήσης */
   acquisitionYear?: number;
-  /** Αυτόματο fetch κατά το mount (default: true) */
-  autoFetch?: boolean;
 }
 
-interface UseFixedAssetsReturn {
-  /** Λίστα παγίων */
-  assets: FixedAsset[];
-  /** Κατάσταση φόρτωσης */
-  loading: boolean;
-  /** Μήνυμα σφάλματος */
-  error: string | null;
-  /** Ανανέωση δεδομένων */
-  refetch: () => Promise<void>;
-  /** Δημιουργία νέου παγίου */
-  createAsset: (data: CreateFixedAssetInput) => Promise<{ id: string } | null>;
+interface UseFixedAssetsReturn extends UseCursorPagedListReturn<FixedAsset> {
+  /** Δημιουργία παγίου. Αποτυχία ⇒ ΠΕΤΑ (ο διάλογος δείχνει το σφάλμα). */
+  createAsset: (data: CreateFixedAssetInput) => Promise<{ id: string }>;
 }
-
-// ============================================================================
-// HOOK
-// ============================================================================
 
 export function useFixedAssets(options: UseFixedAssetsOptions = {}): UseFixedAssetsReturn {
-  const { category, status, acquisitionYear, autoFetch = true } = options;
+  const { category, status, acquisitionYear } = options;
   const { user } = useAuth();
+  const params = useMemo(() => ({ category, status, acquisitionYear }), [category, status, acquisitionYear]);
 
-  const [assets, setAssets] = useState<FixedAsset[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const getAuthHeaders = useCallback(async (): Promise<HeadersInit> => {
-    if (!user) return {};
-    const token = await user.getIdToken();
-    return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
-  }, [user]);
-
-  const buildQueryString = useCallback((): string => {
-    const params = new URLSearchParams();
-    if (category) params.set('category', category);
-    if (status) params.set('status', status);
-    if (acquisitionYear !== undefined) params.set('acquisitionYear', String(acquisitionYear));
-    const qs = params.toString();
-    return qs ? `?${qs}` : '';
-  }, [category, status, acquisitionYear]);
-
-  const fetchAssets = useCallback(async (): Promise<void> => {
-    if (!user) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      const headers = await getAuthHeaders();
-      const queryString = buildQueryString();
-      const response = await fetch(`${API_ROUTES.ACCOUNTING.FIXED_ASSETS}${queryString}`, { headers });
-
-      if (!response.ok) {
-        const errorData: { error?: string } = await response.json();
-        throw new Error(errorData.error ?? `HTTP ${response.status}`);
-      }
-
-      const data: { assets: FixedAsset[] } = await response.json();
-      setAssets(data.assets ?? []);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'accounting.errors.fixedAssetsLoadFailed';
-      setError(message);
-      setAssets([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [user, getAuthHeaders, buildQueryString]);
+  const list = useCursorPagedList<FixedAsset>({
+    url: API_ROUTES.ACCOUNTING.FIXED_ASSETS,
+    params,
+    enabled: user !== null,
+    cache: fixedAssetsCache,
+  });
+  const { refetch } = list;
 
   const createAsset = useCallback(
-    async (data: CreateFixedAssetInput): Promise<{ id: string } | null> => {
-      if (!user) return null;
-
-      try {
-        setError(null);
-        const headers = await getAuthHeaders();
-        const response = await fetch(API_ROUTES.ACCOUNTING.FIXED_ASSETS, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(data),
-        });
-
-        if (!response.ok) {
-          const errorData: { error?: string } = await response.json();
-          throw new Error(errorData.error ?? `HTTP ${response.status}`);
-        }
-
-        const result: { id: string } = await response.json();
-        await fetchAssets();
-        return result;
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'accounting.errors.fixedAssetCreateFailed';
-        setError(message);
-        return null;
-      }
+    async (data: CreateFixedAssetInput): Promise<{ id: string }> => {
+      const { assetId } = await apiClient.post<{ assetId: string }>(API_ROUTES.ACCOUNTING.FIXED_ASSETS, data);
+      await refetch();
+      return { id: assetId };
     },
-    [user, getAuthHeaders, fetchAssets],
+    [refetch],
   );
 
-  useEffect(() => {
-    if (autoFetch && user) {
-      fetchAssets();
-    }
-  }, [autoFetch, user, fetchAssets]);
-
-  return {
-    assets,
-    loading,
-    error,
-    refetch: fetchAssets,
-    createAsset,
-  };
+  return { ...list, createAsset };
 }

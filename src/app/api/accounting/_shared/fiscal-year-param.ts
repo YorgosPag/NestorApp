@@ -14,6 +14,10 @@ import 'server-only';
 import type { NextRequest } from 'next/server';
 import { badRequest } from '@/lib/api/define-route';
 
+/** Τα όρια ενός έγκυρου έτους χρήσης στο query — ένα σημείο για κάθε διαδρομή. */
+export const MIN_FISCAL_YEAR = 2000;
+export const MAX_FISCAL_YEAR = 2100;
+
 /**
  * Resolve the `fiscalYear` query param, defaulting to the current calendar year.
  * Throws a 400 `{ success:false, error:'Invalid fiscalYear' }` when the param is
@@ -36,8 +40,8 @@ export function resolveFiscalYearParam(req: NextRequest): number {
 export function resolveYearInRange(req: NextRequest, param: string, label: string): number {
   const raw = new URL(req.url).searchParams.get(param);
   const year = raw ? parseInt(raw, 10) : new Date().getFullYear();
-  if (Number.isNaN(year) || year < 2000 || year > 2100) {
-    badRequest(`${label} must be a valid year (2000-2100)`);
+  if (Number.isNaN(year) || year < MIN_FISCAL_YEAR || year > MAX_FISCAL_YEAR) {
+    badRequest(`${label} must be a valid year (${MIN_FISCAL_YEAR}-${MAX_FISCAL_YEAR})`);
   }
   return year;
 }

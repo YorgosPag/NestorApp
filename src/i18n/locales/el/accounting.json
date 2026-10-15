@@ -225,16 +225,16 @@
     "statuses": {
       "active": "Ενεργό",
       "fully_depreciated": "Πλήρως Αποσβεσμένο",
-      "disposed": "Εκποιηθέν"
+      "disposed": "Εκποιηθέν",
+      "inactive": "Αδρανές"
     },
     "categories": {
-      "computer_equipment": "Εξοπλισμός Η/Υ",
-      "office_equipment": "Εξοπλισμός Γραφείου",
-      "vehicles": "Οχήματα",
+      "buildings": "Κτίρια",
       "machinery": "Μηχανήματα",
-      "software": "Λογισμικό",
-      "furniture": "Έπιπλα",
-      "tools": "Εργαλεία",
+      "vehicles": "Οχήματα",
+      "furniture": "Έπιπλα & Εξοπλισμός",
+      "computers": "Η/Υ & Λογισμικό",
+      "measurement_instruments": "Όργανα Μέτρησης",
       "other": "Λοιπά"
     },
     "requiredFields": "Τα πεδία με * είναι υποχρεωτικά",
@@ -285,6 +285,7 @@
     }
   },
   "reports": {
+    "noCustomer": "Χωρίς Πελάτη",
     "title": "Αναφορές & Φόρος",
     "description": "Οικονομικές αναφορές και εκτιμήσεις φόρου",
     "vatReport": "Αναφορά ΦΠΑ",
@@ -461,6 +462,17 @@
     "noData": "Δεν υπάρχουν δεδομένα",
     "error": "Προέκυψε σφάλμα",
     "retry": "Ξαναδοκιμή",
+    "pagedList": {
+      "loadMore": "Φόρτωση περισσότερων",
+      "loadingMore": "Φόρτωση…",
+      "shown": "Εμφανίζονται {count} εγγραφές",
+      "loadMoreFailed": "Οι επόμενες εγγραφές δεν φορτώθηκαν.",
+      "errors": {
+        "generic": "Η λίστα δεν φορτώθηκε. Δοκιμάστε ξανά.",
+        "invalidPageToken": "Η λίστα άλλαξε στο μεταξύ. Ανανεώστε για να συνεχίσετε.",
+        "unsupportedFilter": "Αυτός ο συνδυασμός φίλτρων δεν υποστηρίζεται."
+      }
+    },
     "currency": "EUR",
     "paymentMethods": {
       "cash": "Μετρητά",

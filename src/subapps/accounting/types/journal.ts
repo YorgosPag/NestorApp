@@ -196,18 +196,19 @@ export interface JournalEntry {
 // JOURNAL ENTRY FILTERS
 // ============================================================================
 
-/** Φίλτρα αναζήτησης για εγγραφές Ε-Ε */
+/**
+ * Φίλτρα της ΣΕΛΙΔΑΣ οθόνης για εγγραφές Ε-Ε. Οι υποστηριζόμενοι συνδυασμοί (κλειστό σύνολο, ο καθένας με
+ * δείκτη) ζουν στο `JOURNAL_LIST` (`services/repository/accounting-list-specs.ts`).
+ * ⚠️ `category` / `paymentMethod` αφαιρέθηκαν (2026-10-15): κανένας δείκτης δεν τα κάλυπτε ⇒ `FAILED_PRECONDITION`
+ * ⇒ «κενή λίστα». Το «χρησιμοποιείται η κατηγορία;» είναι πλέον `hasJournalEntriesInCategory`.
+ */
 export interface JournalEntryFilters {
   /** Φίλτρο τύπου (income/expense) */
   type?: EntryType;
-  /** Φίλτρο κατηγορίας */
-  category?: AccountCategory;
   /** Φορολογικό έτος */
   fiscalYear?: number;
   /** Τρίμηνο */
   quarter?: FiscalQuarter;
-  /** Τρόπος πληρωμής */
-  paymentMethod?: PaymentMethod;
   /** Φίλτρο επαφής */
   contactId?: string;
 }

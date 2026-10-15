@@ -9,12 +9,11 @@
 
 import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { FIELDS } from '@/config/firestore-field-constants';
 import {
   generateJournalEntryId,
   generateInvoiceAccId,
 } from '@/services/enterprise-id.service';
-import type { PaginatedResult } from '@/lib/pagination';
+import { FIRST_PAGE, type PageRequest, type PaginatedResult } from '@/lib/pagination';
 
 import type {
   JournalEntry,
@@ -36,6 +35,8 @@ import type { TenantContext } from '../../types/common';
 
 import { sanitizeForFirestore, isoNow } from './firestore-helpers';
 import { accountingDocId } from './accounting-doc-ids';
+import { readAccountingListPage } from './accounting-repo-list';
+import { INVOICE_LIST, JOURNAL_LIST } from './accounting-list-specs';
 
 // ============================================================================
 // JOURNAL ENTRIES
@@ -103,34 +104,32 @@ export async function deleteJournalEntry(tenant: TenantContext, entryId: string)
   }, undefined);
 }
 
-export async function listJournalEntries(
+/** ΣΕΛΙΔΑ οθόνης (ADR-ACC-010 §2.1.1 Φάση 3β) — δρομέας keyset, πετά σε σφάλμα, ποτέ «κενή λίστα». */
+export function listJournalEntries(
   tenant: TenantContext,
   filters: JournalEntryFilters,
-  pageSize: number = 50
+  page: PageRequest = FIRST_PAGE
 ): Promise<PaginatedResult<JournalEntry>> {
+  return readAccountingListPage(tenant, JOURNAL_LIST, filters, page, (data) =>
+    applyJournalDefaults(data as JournalEntry));
+}
+
+/**
+ * «Αναφέρει κάποια εγγραφή αυτή την κατηγορία;» — ερώτημα ύπαρξης, όχι σελίδα. Μόνο ισότητες χωρίς ταξινόμηση
+ * ⇒ ο Firestore το εξυπηρετεί με συγχώνευση μονοπεδιακών δεικτών. ΧΩΡΙΣ fallback: ένα «όχι» από σφάλμα θα
+ * οδηγούσε σε ΟΡΙΣΤΙΚΗ διαγραφή κατηγορίας που χρησιμοποιείται.
+ */
+export function hasJournalEntriesInCategory(tenant: TenantContext, categoryCode: string): Promise<boolean> {
   return safeFirestoreOperation(async (db) => {
-    let query: FirebaseFirestore.Query = db.collection(COLLECTIONS.ACCOUNTING_JOURNAL_ENTRIES);
-
-    query = query.where('companyId', '==', tenant.companyId);
-    if (filters.type) query = query.where(FIELDS.TYPE, '==', filters.type);
-    if (filters.category) query = query.where('category', '==', filters.category);
-    if (filters.fiscalYear) query = query.where('fiscalYear', '==', filters.fiscalYear);
-    if (filters.quarter) query = query.where('quarter', '==', filters.quarter);
-    if (filters.paymentMethod) query = query.where('paymentMethod', '==', filters.paymentMethod);
-    if (filters.contactId) query = query.where(FIELDS.CONTACT_ID, '==', filters.contactId);
-
-    query = query.orderBy('date', 'desc').limit(pageSize);
-
-    const snap = await query.get();
-    const items = snap.docs.map((d) => applyJournalDefaults(d.data() as JournalEntry));
-
-    return {
-      items,
-      hasNext: items.length === pageSize,
-      totalShown: items.length,
-      pageSize,
-    };
-  }, { items: [], hasNext: false, totalShown: 0, pageSize });
+    const snap = await db
+      .collection(COLLECTIONS.ACCOUNTING_JOURNAL_ENTRIES)
+      .where('companyId', '==', tenant.companyId)
+      .where('category', '==', categoryCode)
+      .select()
+      .limit(1)
+      .get();
+    return !snap.empty;
+  });
 }
 
 export async function getJournalEntryByInvoiceId(
@@ -218,34 +217,13 @@ export async function updateInvoice(
   }, undefined);
 }
 
-export async function listInvoices(
+/** ΣΕΛΙΔΑ οθόνης (ADR-ACC-010 §2.1.1 Φάση 3β) — δρομέας keyset, πετά σε σφάλμα, ποτέ «κενή λίστα». */
+export function listInvoices(
   tenant: TenantContext,
   filters: InvoiceFilters,
-  pageSize: number = 50
+  page: PageRequest = FIRST_PAGE
 ): Promise<PaginatedResult<Invoice>> {
-  return safeFirestoreOperation(async (db) => {
-    let query: FirebaseFirestore.Query = db.collection(COLLECTIONS.ACCOUNTING_INVOICES);
-
-    query = query.where('companyId', '==', tenant.companyId);
-    if (filters.type) query = query.where(FIELDS.TYPE, '==', filters.type);
-    if (filters.paymentStatus) query = query.where('paymentStatus', '==', filters.paymentStatus);
-    if (filters.fiscalYear) query = query.where('fiscalYear', '==', filters.fiscalYear);
-    if (filters.customerId) query = query.where('customer.contactId', '==', filters.customerId);
-    if (filters.projectId) query = query.where(FIELDS.PROJECT_ID, '==', filters.projectId);
-    if (filters.propertyId) query = query.where(FIELDS.PROPERTY_ID, '==', filters.propertyId);
-
-    query = query.orderBy('issueDate', 'desc').limit(pageSize);
-
-    const snap = await query.get();
-    const items = snap.docs.map((d) => d.data() as Invoice);
-
-    return {
-      items,
-      hasNext: items.length === pageSize,
-      totalShown: items.length,
-      pageSize,
-    };
-  }, { items: [], hasNext: false, totalShown: 0, pageSize });
+  return readAccountingListPage(tenant, INVOICE_LIST, filters, page, (data) => data as Invoice);
 }
 
 export async function getInvoiceSeries(tenant: TenantContext): Promise<InvoiceSeries[]> {

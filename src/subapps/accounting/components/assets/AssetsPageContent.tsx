@@ -20,14 +20,15 @@ import {
   BarChart3,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { PageLoadingState, PageErrorState } from '@/core/states';
-import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
-import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters/AdvancedFiltersPanel';
 import type { FilterPanelConfig, GenericFilterState } from '@/components/core/AdvancedFilters/types';
+import { ASSET_CATEGORIES, ASSET_STATUSES } from '@/subapps/accounting/types';
 import type { AssetCategory, AssetStatus, CreateFixedAssetInput } from '@/subapps/accounting/types';
 import { formatAccountingCurrency } from '../../utils/format';
 import { AccountingPageHeader } from '../shared/AccountingPageHeader';
+import { PagedListSection } from '../shared/PagedListSection';
+import { AccountingListBody } from '../shared/AccountingListBody';
+import { useAccountingFilterPanel } from '../../hooks/useAccountingFilterPanel';
 import { useFixedAssets } from '../../hooks/useFixedAssets';
 import { AssetsList } from './AssetsList';
 import { AddAssetForm } from './AddAssetForm';
@@ -72,16 +73,11 @@ function buildFilterConfig(t: (key: string) => string): FilterPanelConfig {
             label: 'filterLabels.category',
             ariaLabel: 'Asset category',
             width: 1,
+            // Από τη ΡΙΖΑ του λεξιλογίου: ως 2026-10-15 το φίλτρο είχε δικό του σύνολο (computer_equipment, tools…)
+            // που η φόρμα δεν αποθήκευε ποτέ ⇒ κάθε επιλογή έφερνε «κανένα πάγιο».
             options: [
               { value: 'all', label: t('filterOptions.allCategories') },
-              { value: 'computer_equipment', label: t('assets.categories.computer_equipment') },
-              { value: 'office_equipment', label: t('assets.categories.office_equipment') },
-              { value: 'vehicles', label: t('assets.categories.vehicles') },
-              { value: 'machinery', label: t('assets.categories.machinery') },
-              { value: 'software', label: t('assets.categories.software') },
-              { value: 'furniture', label: t('assets.categories.furniture') },
-              { value: 'tools', label: t('assets.categories.tools') },
-              { value: 'other', label: t('assets.categories.other') },
+              ...ASSET_CATEGORIES.map((category) => ({ value: category, label: t(`assets.categories.${category}`) })),
             ],
           },
           {
@@ -92,9 +88,7 @@ function buildFilterConfig(t: (key: string) => string): FilterPanelConfig {
             width: 1,
             options: [
               { value: 'all', label: t('filterOptions.allStatuses') },
-              { value: 'active', label: t('assets.statuses.active') },
-              { value: 'fully_depreciated', label: t('assets.statuses.fully_depreciated') },
-              { value: 'disposed', label: t('assets.statuses.disposed') },
+              ...ASSET_STATUSES.map((status) => ({ value: status, label: t(`assets.statuses.${status}`) })),
             ],
           },
         ],
@@ -111,23 +105,23 @@ export function AssetsPageContent() {
   const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
-  const [filters, setFilters] = useState<AssetFilterState>({ ...DEFAULT_FILTERS });
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [showDashboard, setShowDashboard] = useState(true);
 
   const filterConfig = useMemo(() => buildFilterConfig(t), [t]);
+  const { filters, filterPanel } = useAccountingFilterPanel<AssetFilterState>(DEFAULT_FILTERS, filterConfig);
 
-  const { assets, loading, error, refetch, createAsset } = useFixedAssets({
+  const assetList = useFixedAssets({
     category: filters.category !== 'all' ? (filters.category as AssetCategory) : undefined,
     status: filters.status !== 'all' ? (filters.status as AssetStatus) : undefined,
   });
 
+  const { items: assets, loading, refetch, createAsset } = assetList;
+
   const handleCreateAsset = useCallback(
     async (data: CreateFixedAssetInput) => {
       const result = await createAsset(data);
-      if (result) {
-        setAddDialogOpen(false);
-      }
+      setAddDialogOpen(false);
       return result;
     },
     [createAsset],
@@ -188,42 +182,30 @@ export function AssetsPageContent() {
         ]}
       />
 
-      {/* Stats Dashboard */}
-      {showDashboard && <UnifiedDashboard stats={dashboardStats} columns={4} />}
-
-      {/* Filters */}
-      <AdvancedFiltersPanel
-        config={filterConfig}
-        filters={filters}
-        onFiltersChange={setFilters}
-        defaultFilters={DEFAULT_FILTERS}
-      />
-
-      {/* Content */}
-      <section className="p-6">
-        {loading ? (
-          <PageLoadingState icon={HardDrive} message={t('assets.loading')} layout="contained" />
-        ) : error ? (
-          <PageErrorState
-            title={t('assets.loadError')}
-            message={error}
-            onRetry={refetch}
-            retryLabel={t('common.retry')}
-            layout="contained"
-          />
-        ) : assets.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-lg font-medium text-foreground mb-1">{t('assets.noAssets')}</p>
-            <p className={cn("mb-4", colors.text.muted)}>{t('assets.noAssetsDescription')}</p>
-            <Button onClick={() => setAddDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t('assets.addAsset')}
-            </Button>
-          </div>
-        ) : (
-          <AssetsList assets={assets} onRefresh={refetch} />
-        )}
-      </section>
+      <AccountingListBody
+        showDashboard={showDashboard}
+        stats={dashboardStats}
+        filterPanel={filterPanel}
+      >
+        <PagedListSection
+          list={assetList}
+          icon={HardDrive}
+          loadingKey="assets.loading"
+          loadErrorKey="assets.loadError"
+          empty={
+            <div className="text-center py-12">
+              <p className="text-lg font-medium text-foreground mb-1">{t('assets.noAssets')}</p>
+              <p className={cn("mb-4", colors.text.muted)}>{t('assets.noAssetsDescription')}</p>
+              <Button onClick={() => setAddDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                {t('assets.addAsset')}
+              </Button>
+            </div>
+          }
+        >
+          {(items) => <AssetsList assets={items} onRefresh={refetch} />}
+        </PagedListSection>
+      </AccountingListBody>
 
       {/* Add Asset Dialog */}
       <AddAssetForm

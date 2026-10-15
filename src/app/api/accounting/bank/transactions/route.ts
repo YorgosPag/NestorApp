@@ -17,22 +17,24 @@
 import 'server-only';
 
 import { z } from 'zod';
-import { defineRoute, ok, created } from '@/lib/api/define-route';
+import { defineRoute, created } from '@/lib/api/define-route';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
-import type {
-  BankTransactionFilters,
-  BankTransaction,
-  TransactionDirection,
-  MatchStatus,
-} from '@/subapps/accounting/types';
-import { readListContext } from '../../_shared/list-request-context';
+import { MATCH_STATUSES, TRANSACTION_DIRECTIONS } from '@/subapps/accounting/types';
+import type { BankTransactionFilters, BankTransaction } from '@/subapps/accounting/types';
+import {
+  optionalEnumParam,
+  optionalIdParam,
+  readListContext,
+  readPageRequest,
+  respondWithPage,
+} from '../../_shared/list-request-context';
 
 // ── Zod Schema (Q5 — SAP BAPI / Stripe pattern) ──────────────────────────
 
 const CreateBankTransactionSchema = z.object({
   accountId: z.string().min(1).max(128),
   valueDate: z.string().min(10).max(30),
-  direction: z.enum(['credit', 'debit']),
+  direction: z.enum(TRANSACTION_DIRECTIONS),
   amount: z.number().positive().max(999_999_999),
   currency: z.string().length(3).default('EUR'),
   bankDescription: z.string().max(500).optional(),
@@ -51,30 +53,13 @@ export const GET = defineRoute({
   handler: async ({ req, auth }) => {
     const { repository, searchParams } = readListContext(req, auth);
 
-    const filters: BankTransactionFilters = {};
+    const filters: BankTransactionFilters = {
+      accountId: optionalIdParam(searchParams, 'accountId'),
+      direction: optionalEnumParam(searchParams, 'direction', TRANSACTION_DIRECTIONS),
+      matchStatus: optionalEnumParam(searchParams, 'matchStatus', MATCH_STATUSES),
+    };
 
-    const accountId = searchParams.get('accountId');
-    if (accountId) {
-      filters.accountId = accountId;
-    }
-
-    const direction = searchParams.get('direction');
-    if (direction === 'credit' || direction === 'debit') {
-      filters.direction = direction as TransactionDirection;
-    }
-
-    const matchStatus = searchParams.get('matchStatus');
-    if (matchStatus) {
-      filters.matchStatus = matchStatus as MatchStatus;
-    }
-
-    const pageSize = searchParams.get('pageSize');
-    const result = await repository.listBankTransactions(
-      filters,
-      pageSize ? parseInt(pageSize, 10) : undefined
-    );
-
-    return ok(result);
+    return respondWithPage(() => repository.listBankTransactions(filters, readPageRequest(searchParams)));
   },
 });
 

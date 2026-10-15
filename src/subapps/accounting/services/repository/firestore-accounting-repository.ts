@@ -13,6 +13,8 @@
  * @compliance CLAUDE.md Enterprise Standards — zero `any`
  */
 
+import type { PageRequest } from '@/lib/pagination';
+
 import type { CompanySetupSaveOptions, IAccountingRepository } from '../../types/interfaces';
 import type { CompanySetupInput } from '../../types/company';
 import type { TenantContext } from '../../types/common';
@@ -105,8 +107,10 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
     financial.updateJournalEntry(this.tenant, entryId, updates);
   deleteJournalEntry = (entryId: string) =>
     financial.deleteJournalEntry(this.tenant, entryId);
-  listJournalEntries = (filters: JournalEntryFilters, pageSize?: number) =>
-    financial.listJournalEntries(this.tenant, filters, pageSize);
+  listJournalEntries = (filters: JournalEntryFilters, page?: PageRequest) =>
+    financial.listJournalEntries(this.tenant, filters, page);
+  hasJournalEntriesInCategory = (categoryCode: string) =>
+    financial.hasJournalEntriesInCategory(this.tenant, categoryCode);
   collectJournalEntries = (query: JournalLedgerQuery) =>
     journalLedger.collectJournalEntries(this.tenant, query);
   getJournalEntryByInvoiceId = (invoiceId: string) =>
@@ -119,8 +123,8 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
     financial.getInvoice(this.tenant, invoiceId);
   updateInvoice = (invoiceId: string, updates: UpdateInvoiceInput) =>
     financial.updateInvoice(this.tenant, invoiceId, updates);
-  listInvoices = (filters: InvoiceFilters, pageSize?: number) =>
-    financial.listInvoices(this.tenant, filters, pageSize);
+  listInvoices = (filters: InvoiceFilters, page?: PageRequest) =>
+    financial.listInvoices(this.tenant, filters, page);
   collectInvoices = (query: InvoiceLedgerQuery) =>
     invoiceLedger.collectInvoices(this.tenant, query);
   getNextInvoiceNumber = (seriesCode: string) =>
@@ -181,8 +185,8 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
     operations.getBankTransaction(this.tenant, transactionId);
   updateBankTransaction = (transactionId: string, updates: Partial<BankTransaction>) =>
     operations.updateBankTransaction(this.tenant, transactionId, updates);
-  listBankTransactions = (filters: BankTransactionFilters, pageSize?: number) =>
-    operations.listBankTransactions(this.tenant, filters, pageSize);
+  listBankTransactions = (filters: BankTransactionFilters, page?: PageRequest) =>
+    operations.listBankTransactions(this.tenant, filters, page);
   collectBankTransactions = (query: BankLedgerQuery) =>
     bankLedger.collectBankTransactions(this.tenant, query);
 
@@ -205,8 +209,8 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
     operations.getFixedAsset(this.tenant, assetId);
   updateFixedAsset = (assetId: string, updates: Partial<FixedAsset>) =>
     operations.updateFixedAsset(this.tenant, assetId, updates);
-  listFixedAssets = (filters: FixedAssetFilters, pageSize?: number) =>
-    operations.listFixedAssets(this.tenant, filters, pageSize);
+  listFixedAssets = (filters: FixedAssetFilters, page?: PageRequest) =>
+    operations.listFixedAssets(this.tenant, filters, page);
   createDepreciationRecord = (data: Omit<DepreciationRecord, 'recordId'>) =>
     operations.createDepreciationRecord(this.tenant, data);
   getDepreciationRecords = (assetId: string, fiscalYear?: number) =>

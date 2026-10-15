@@ -66,6 +66,7 @@ var repo = {
   updateCustomCategory: jest.fn(async () => undefined),
   deleteCustomCategory: jest.fn(async () => undefined),
   listJournalEntries: jest.fn(async () => ({ items: [] })),
+  hasJournalEntriesInCategory: jest.fn(async () => false),
   // documents
   listExpenseDocuments: jest.fn(async () => []),
   createExpenseDocument: jest.fn(),
@@ -199,6 +200,7 @@ beforeEach(() => {
   repo.getCompanySetup.mockResolvedValue(null);
   repo.getCustomerBalance.mockResolvedValue(null);
   repo.listJournalEntries.mockResolvedValue({ items: [] });
+  repo.hasJournalEntriesInCategory.mockResolvedValue(false);
 });
 
 describe('categories POST/GET', () => {
@@ -225,7 +227,7 @@ describe('categories/[id] DELETE — soft/hard extra fields', () => {
 
   it('in use → 200 soft_deleted + message', async () => {
     repo.getCustomCategory.mockResolvedValue({ code: 'custom_1' });
-    repo.listJournalEntries.mockResolvedValue({ items: [{ id: 'je' }] });
+    repo.hasJournalEntriesInCategory.mockResolvedValue(true);
     const res = (await catDelete(req(), seg)) as Envelope;
     expect(res.status).toBe(200);
     const payload = await res.json();
@@ -238,11 +240,12 @@ describe('categories/[id] DELETE — soft/hard extra fields', () => {
 
   it('unused → 200 hard_deleted + message', async () => {
     repo.getCustomCategory.mockResolvedValue({ code: 'custom_1' });
-    repo.listJournalEntries.mockResolvedValue({ items: [] });
+    repo.hasJournalEntriesInCategory.mockResolvedValue(false);
     const res = (await catDelete(req(), seg)) as Envelope;
     expect(res.status).toBe(200);
     const payload = await res.json();
     expect(payload.action).toBe('hard_deleted');
+    expect(repo.hasJournalEntriesInCategory).toHaveBeenCalledWith('custom_1');
     expect(repo.deleteCustomCategory).toHaveBeenCalledWith('cc_1');
   });
 

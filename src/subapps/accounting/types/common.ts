@@ -40,8 +40,11 @@ export interface TenantContext {
 // ENTRY TYPE
 // ============================================================================
 
+/** Τύποι εγγραφής — ρίζα του λεξιλογίου (ο τύπος παράγεται από εδώ, ώστε ο έλεγχος εισόδου να μην έχει αντίγραφο). */
+export const ENTRY_TYPES = ['income', 'expense'] as const;
+
 /** Τύπος εγγραφής: Έσοδο ή Έξοδο */
-export type EntryType = 'income' | 'expense';
+export type EntryType = (typeof ENTRY_TYPES)[number];
 
 // ============================================================================
 // INCOME CATEGORIES (ADR-ACC-001 §4.1 — 5 κατηγορίες)

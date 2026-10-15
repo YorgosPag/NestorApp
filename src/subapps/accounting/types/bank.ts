@@ -15,8 +15,11 @@ import type { PeriodRange } from './common';
 // TRANSACTION DIRECTION & MATCH STATUS
 // ============================================================================
 
+/** Κατευθύνσεις συναλλαγής — ρίζα του λεξιλογίου. */
+export const TRANSACTION_DIRECTIONS = ['credit', 'debit'] as const;
+
 /** Κατεύθυνση συναλλαγής */
-export type TransactionDirection = 'credit' | 'debit';
+export type TransactionDirection = (typeof TRANSACTION_DIRECTIONS)[number];
 
 /**
  * Κατάσταση αντιστοίχισης
@@ -26,7 +29,9 @@ export type TransactionDirection = 'credit' | 'debit';
  * - `manual_matched`: Χειροκίνητη αντιστοίχιση
  * - `excluded`: Εξαιρέθηκε (π.χ. μεταφορά μεταξύ λογαριασμών)
  */
-export type MatchStatus = 'unmatched' | 'auto_matched' | 'manual_matched' | 'excluded' | 'reconciled';
+export const MATCH_STATUSES = ['unmatched', 'auto_matched', 'manual_matched', 'excluded', 'reconciled'] as const;
+
+export type MatchStatus = (typeof MATCH_STATUSES)[number];
 
 // ============================================================================
 // BANK ACCOUNT CONFIG

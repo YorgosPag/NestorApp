@@ -9,7 +9,7 @@
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, no inline styles, semantic HTML
  */
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from '@/lib/workspace/navigation';
 import { useSearchParams } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
@@ -21,26 +21,22 @@ import {
   Send,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { PageLoadingState, PageErrorState } from '@/core/states';
-import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
-import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters/AdvancedFiltersPanel';
 import type { FilterPanelConfig, GenericFilterState } from '@/components/core/AdvancedFilters/types';
-import { useAuth } from '@/hooks/useAuth';
-import { API_ROUTES } from '@/config/domain-constants';
-import type { Invoice } from '@/subapps/accounting/types';
+import type { InvoicePaymentStatus, InvoiceType } from '@/subapps/accounting/types';
+import { useInvoices } from '../../hooks/useInvoices';
 import { formatAccountingCurrency } from '../../utils/format';
 import { AccountingPageHeader } from '../shared/AccountingPageHeader';
+import { PagedListSection } from '../shared/PagedListSection';
+import { buildFiscalYearFilterField, currentFiscalYearValue } from '../shared/accounting-filter-fields';
+import { AccountingListBody } from '../shared/AccountingListBody';
+import { useAccountingFilterPanel } from '../../hooks/useAccountingFilterPanel';
 import { InvoicesTable } from './InvoicesTable';
 import { InvoiceDetails } from './details/InvoiceDetails';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { createStaleCache } from '@/lib/stale-cache';
 
 import { cn } from '@/lib/utils';
-
-// ADR-300: Module-level cache — survives React unmount/remount (navigation)
-const invoicesCache = createStaleCache<Invoice[]>('accounting-invoices');
 
 // ============================================================================
 // TYPES
@@ -57,7 +53,7 @@ interface InvoiceFilterState extends GenericFilterState {
 // ============================================================================
 
 const DEFAULT_FILTERS: InvoiceFilterState = {
-  fiscalYear: String(new Date().getFullYear()),
+  fiscalYear: currentFiscalYearValue(),
   type: 'all',
   paymentStatus: 'all',
 };
@@ -74,18 +70,7 @@ function buildFilterConfig(t: (key: string) => string): FilterPanelConfig {
       {
         id: 'invoices-main',
         fields: [
-          {
-            id: 'fiscalYear',
-            type: 'select',
-            label: 'filterLabels.fiscalYear',
-            ariaLabel: 'Fiscal year',
-            width: 1,
-            options: [
-              { value: String(new Date().getFullYear()), label: String(new Date().getFullYear()) },
-              { value: String(new Date().getFullYear() - 1), label: String(new Date().getFullYear() - 1) },
-              { value: String(new Date().getFullYear() - 2), label: String(new Date().getFullYear() - 2) },
-            ],
-          },
+          buildFiscalYearFilterField(),
           {
             id: 'type',
             type: 'select',
@@ -129,61 +114,21 @@ export function InvoicesPageContent() {
   const colors = useSemanticColors();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
 
   // Detail view — ?view=invoiceId
   const viewInvoiceId = searchParams.get('view');
 
-  // ADR-300: Seed from module-level cache → zero flash on re-navigation
-  const initialKey = `${DEFAULT_FILTERS.fiscalYear}-${DEFAULT_FILTERS.type}-${DEFAULT_FILTERS.paymentStatus}`;
-  const [invoices, setInvoices] = useState<Invoice[]>(invoicesCache.get(initialKey) ?? []);
-  const [loading, setLoading] = useState(!invoicesCache.hasLoaded(initialKey));
-  const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState<InvoiceFilterState>({ ...DEFAULT_FILTERS });
   const [showDashboard, setShowDashboard] = useState(true);
 
   const filterConfig = useMemo(() => buildFilterConfig(t), [t]);
+  const { filters, filterPanel } = useAccountingFilterPanel<InvoiceFilterState>(DEFAULT_FILTERS, filterConfig);
 
-  const fetchInvoices = useCallback(async () => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-    // ADR-300: Only show spinner on first load — not on re-navigation
-    const cacheKey = `${filters.fiscalYear}-${filters.type}-${filters.paymentStatus}`;
-    if (!invoicesCache.hasLoaded(cacheKey)) setLoading(true);
-    setError(null);
-
-    try {
-      const token = await user.getIdToken();
-      const params = new URLSearchParams();
-      params.set('fiscalYear', filters.fiscalYear);
-      if (filters.type && filters.type !== 'all') params.set('type', filters.type);
-      if (filters.paymentStatus && filters.paymentStatus !== 'all') params.set('paymentStatus', filters.paymentStatus);
-
-      const res = await fetch(`${API_ROUTES.ACCOUNTING.INVOICES.LIST}?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
-      }
-
-      const json = await res.json();
-      // ADR-300: Write to module-level cache so next remount skips spinner
-      const items: Invoice[] = json.data?.items ?? [];
-      invoicesCache.set(items, cacheKey);
-      setInvoices(items);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  }, [user, filters]);
-
-  useEffect(() => {
-    fetchInvoices();
-  }, [fetchInvoices]);
+  const invoiceList = useInvoices({
+    fiscalYear: Number(filters.fiscalYear),
+    type: filters.type !== 'all' ? (filters.type as InvoiceType) : undefined,
+    paymentStatus: filters.paymentStatus !== 'all' ? (filters.paymentStatus as InvoicePaymentStatus) : undefined,
+  });
+  const { items: invoices, loading, refetch } = invoiceList;
 
   // Compute dashboard stats from loaded invoices
   const dashboardStats: DashboardStat[] = useMemo(() => {
@@ -260,42 +205,30 @@ export function InvoicesPageContent() {
         ]}
       />
 
-      {/* Stats Dashboard */}
-      {showDashboard && <UnifiedDashboard stats={dashboardStats} columns={4} />}
-
-      {/* Filters */}
-      <AdvancedFiltersPanel
-        config={filterConfig}
-        filters={filters}
-        onFiltersChange={setFilters}
-        defaultFilters={DEFAULT_FILTERS}
-      />
-
-      {/* Content */}
-      <section className="p-6">
-        {loading ? (
-          <PageLoadingState icon={Receipt} message={t('invoices.loading')} layout="contained" />
-        ) : error ? (
-          <PageErrorState
-            title={t('invoices.loadError')}
-            message={error}
-            onRetry={fetchInvoices}
-            retryLabel={t('common.retry')}
-            layout="contained"
-          />
-        ) : invoices.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-lg font-medium text-foreground mb-1">{t('invoices.noInvoices')}</p>
-            <p className={cn("mb-4", colors.text.muted)}>{t('invoices.noInvoicesDescription')}</p>
-            <Button onClick={() => router.push('/accounting/invoices/new')}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t('invoices.newInvoice')}
-            </Button>
-          </div>
-        ) : (
-          <InvoicesTable invoices={invoices} onRefresh={fetchInvoices} />
-        )}
-      </section>
+      <AccountingListBody
+        showDashboard={showDashboard}
+        stats={dashboardStats}
+        filterPanel={filterPanel}
+      >
+        <PagedListSection
+          list={invoiceList}
+          icon={Receipt}
+          loadingKey="invoices.loading"
+          loadErrorKey="invoices.loadError"
+          empty={
+            <div className="text-center py-12">
+              <p className="text-lg font-medium text-foreground mb-1">{t('invoices.noInvoices')}</p>
+              <p className={cn("mb-4", colors.text.muted)}>{t('invoices.noInvoicesDescription')}</p>
+              <Button onClick={() => router.push('/accounting/invoices/new')}>
+                <Plus className="mr-2 h-4 w-4" />
+                {t('invoices.newInvoice')}
+              </Button>
+            </div>
+          }
+        >
+          {(items) => <InvoicesTable invoices={items} onRefresh={refetch} />}
+        </PagedListSection>
+      </AccountingListBody>
     </main>
   );
 }

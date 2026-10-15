@@ -14,7 +14,6 @@ import type {
   MyDataDocumentStatus,
   MyDataIncomeType,
   PaymentMethod,
-  PeriodRange,
 } from './common';
 
 // ============================================================================
@@ -32,14 +31,22 @@ import type {
  * - `service_invoice_eu`: ΤΠΥ Ενδοκοινοτικό (myDATA 2.2) — Phase 2+
  * - `service_invoice_3rd`: ΤΠΥ Τρίτες Χώρες (myDATA 2.3) — Phase 2+
  */
-export type InvoiceType =
-  | 'service_invoice'
-  | 'sales_invoice'
-  | 'retail_receipt'
-  | 'service_receipt'
-  | 'credit_invoice'
-  | 'service_invoice_eu'
-  | 'service_invoice_3rd';
+export const INVOICE_TYPES = [
+  'service_invoice',
+  'sales_invoice',
+  'retail_receipt',
+  'service_receipt',
+  'credit_invoice',
+  'service_invoice_eu',
+  'service_invoice_3rd',
+] as const;
+
+export type InvoiceType = (typeof INVOICE_TYPES)[number];
+
+/** Καταστάσεις πληρωμής παραστατικού — ρίζα του λεξιλογίου. */
+export const INVOICE_PAYMENT_STATUSES = ['unpaid', 'partial', 'paid'] as const;
+
+export type InvoicePaymentStatus = (typeof INVOICE_PAYMENT_STATUSES)[number];
 
 // ============================================================================
 // CANCELLATION REASON (Phase 1a — AUDIT A-1, ΑΑΔΕ compliance)
@@ -283,7 +290,7 @@ export interface Invoice {
   /** Τρόπος πληρωμής */
   paymentMethod: PaymentMethod;
   /** Κατάσταση πληρωμής */
-  paymentStatus: 'unpaid' | 'partial' | 'paid';
+  paymentStatus: InvoicePaymentStatus;
   /** Καταχωρημένες πληρωμές */
   payments: InvoicePayment[];
   /** Σύνολο πληρωμών */
@@ -388,24 +395,19 @@ export interface InvoiceSeries {
 // INVOICE FILTERS
 // ============================================================================
 
-/** Φίλτρα αναζήτησης τιμολογίων */
+/**
+ * Φίλτρα της ΣΕΛΙΔΑΣ οθόνης τιμολογίων. Οι υποστηριζόμενοι συνδυασμοί (κλειστό σύνολο, ο καθένας με δείκτη) ζουν
+ * στο `INVOICE_LIST` (`services/repository/accounting-list-specs.ts`).
+ * ⚠️ `mydataStatus` / `issueDateRange` / `searchText` αφαιρέθηκαν (2026-10-15): δηλώνονταν, ΔΕΝ εφαρμόζονταν·
+ * `customerId` / `projectId`: κανένας καλών, κανένας δείκτης. Για τα τιμολόγια πελάτη: `collectInvoices`.
+ */
 export interface InvoiceFilters {
   /** Τύπος παραστατικού */
   type?: InvoiceType;
   /** Κατάσταση πληρωμής */
-  paymentStatus?: 'unpaid' | 'partial' | 'paid';
-  /** Κατάσταση myDATA */
-  mydataStatus?: MyDataDocumentStatus;
-  /** Εύρος ημερομηνιών έκδοσης */
-  issueDateRange?: PeriodRange;
+  paymentStatus?: InvoicePaymentStatus;
   /** Φορολογικό έτος */
   fiscalYear?: number;
-  /** Αναζήτηση πελάτη (contactId) */
-  customerId?: string;
-  /** Αναζήτηση κειμένου */
-  searchText?: string;
-  /** Αναζήτηση project */
-  projectId?: string;
   /** Φιλτράρισμα ανά property (πωλήσεις ακινήτων — ADR-198) */
   propertyId?: string;
 }

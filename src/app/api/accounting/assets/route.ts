@@ -16,14 +16,18 @@
 
 import 'server-only';
 
-import { defineRoute, ok, created, badRequest } from '@/lib/api/define-route';
+import { defineRoute, created, badRequest } from '@/lib/api/define-route';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
-import type {
-  FixedAssetFilters,
-  CreateFixedAssetInput,
-  AssetCategory,
-  AssetStatus,
-} from '@/subapps/accounting/types';
+import { ASSET_CATEGORIES, ASSET_STATUSES } from '@/subapps/accounting/types';
+import type { FixedAssetFilters, CreateFixedAssetInput } from '@/subapps/accounting/types';
+import { MAX_FISCAL_YEAR, MIN_FISCAL_YEAR } from '../_shared/fiscal-year-param';
+import {
+  optionalEnumParam,
+  optionalIntParam,
+  readListContext,
+  readPageRequest,
+  respondWithPage,
+} from '../_shared/list-request-context';
 
 // =============================================================================
 // GET — List Fixed Assets
@@ -33,33 +37,15 @@ export const GET = defineRoute({
   rateLimit: 'standard',
   fallbackError: 'Failed to list fixed assets',
   handler: async ({ req, auth }) => {
-    const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
-    const { searchParams } = new URL(req.url);
+    const { repository, searchParams } = readListContext(req, auth);
 
-    const filters: FixedAssetFilters = {};
+    const filters: FixedAssetFilters = {
+      category: optionalEnumParam(searchParams, 'category', ASSET_CATEGORIES),
+      status: optionalEnumParam(searchParams, 'status', ASSET_STATUSES),
+      acquisitionYear: optionalIntParam(searchParams, 'acquisitionYear', MIN_FISCAL_YEAR, MAX_FISCAL_YEAR),
+    };
 
-    const category = searchParams.get('category');
-    if (category) {
-      filters.category = category as AssetCategory;
-    }
-
-    const status = searchParams.get('status');
-    if (status) {
-      filters.status = status as AssetStatus;
-    }
-
-    const acquisitionYear = searchParams.get('acquisitionYear');
-    if (acquisitionYear) {
-      filters.acquisitionYear = parseInt(acquisitionYear, 10);
-    }
-
-    const pageSize = searchParams.get('pageSize');
-    const result = await repository.listFixedAssets(
-      filters,
-      pageSize ? parseInt(pageSize, 10) : undefined
-    );
-
-    return ok(result);
+    return respondWithPage(() => repository.listFixedAssets(filters, readPageRequest(searchParams)));
   },
 });
 

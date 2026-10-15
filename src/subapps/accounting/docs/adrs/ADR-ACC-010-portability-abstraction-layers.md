@@ -70,7 +70,7 @@ interface IAccountingRepository {
   deleteJournalEntry(entryId: string): Promise<void>;
 
   /** ΣΕΛΙΔΑ για την οθόνη. ⚠️ ΟΧΙ για υπολογισμούς (βλ. §2.1.1). */
-  listJournalEntries(filters: JournalEntryFilters, pageSize?: number): Promise<PaginatedResult<JournalEntry>>;
+  listJournalEntries(filters: JournalEntryFilters, page?: PageRequest): Promise<PaginatedResult<JournalEntry>>;  // §2.1.1 Φάση 3β: δρομέας
 
   /** ΟΛΕΣ οι εγγραφές μιας εμβέλειας, για υπολογισμό — πετά, ποτέ μερικό (§2.1.1). */
   collectJournalEntries(query: JournalLedgerQuery): Promise<JournalEntry[]>;
@@ -273,6 +273,65 @@ void, συμψηφισμός, περίσσευμα πίστωσης, ταυτό�
 σφάλμα, μία σάρωση, πιστωτικό όριο) · `invoice-ledger-index.test.ts` (ισοτιμία δεικτών + το παλιό σχήμα **δεν** έχει
 δείκτη + όριο ημέρας) · `define-route.test.ts` (`errorCode` στο σώμα). Το `balance-service` **βγήκε** από το κλειστό
 σύνολο της άγκυρας συνόρου.
+
+**Φάση 3β (2026-10-15) — σελιδοποίηση των λιστών οθόνης.** Οι λίστες ημερολογίου / τιμολογίων / τράπεζας / παγίων
+επέστρεφαν `hasNext` **χωρίς δρομέα**, άρα η 2η σελίδα δεν ζητιόταν ποτέ. Η διερεύνηση βρήκε κι άλλα:
+
+| Λάθος | Αποτέλεσμα |
+|---|---|
+| `safeFirestoreOperation(…, { items: [] })` στις 4 λίστες | σφάλμα (π.χ. δείκτης) ⇒ «κανένα τιμολόγιο / καμία κίνηση» χωρίς μήνυμα |
+| οθόνη τιμολογίων «έτος + τύπος» / «έτος + κατάσταση πληρωμής», κάρτα πώλησης `propertyId`: **χωρίς δείκτη** | `FAILED_PRECONDITION` ⇒ κενή λίστα, σιωπηλά |
+| `hasNext = (μήκος === pageSize)` | ψεύτικη «επόμενη» όταν το σύνολο ήταν ακριβώς πολλαπλάσιο |
+| `categories/[id]` DELETE: «χρησιμοποιείται;» από τη σελίδα, φίλτρο `category` **χωρίς δείκτη**, με fallback | «αχρησιμοποίητη» ⇒ **οριστική διαγραφή** κατηγορίας σε χρήση |
+| `useFixedAssets` διάβαζε `data.assets` (η διαδρομή στέλνει `data.items`) | το μητρώο παγίων έδειχνε **πάντα** «κανένα πάγιο» |
+| φίλτρο κατηγορίας παγίων με δικό του λεξιλόγιο (`computer_equipment`, `tools`…)· η φόρμα αποθήκευε άλλο (`buildings`, `computers`…) χωρίς μεταφράσεις | κάθε επιλογή φίλτρου ⇒ κενό· ωμά κλειδιά στη λίστα |
+| φίλτρο τράπεζας `matched` / `manual` (δεν υπάρχουν: `auto_matched` / `manual_matched`) | «καμία κίνηση» |
+| τρίμηνο ημερολογίου στελνόταν `Q1` ⇒ `parseInt` = `NaN` ⇒ αγνοούνταν | «Q1» έδειχνε όλο το έτος |
+| φίλτρα δηλωμένα αλλά ανεφάρμοστα (`mydataStatus`, `issueDateRange`, `searchText`, `acquisitionDateRange`, `category`/`paymentMethod` ημερολογίου) | η λίστα διαφήμιζε φίλτρα που δεν εφάρμοζε |
+| συμφωνία: φίλτρο «χωρίς αντιστοίχιση» **στον πελάτη**, πάνω στις 50 νεότερες | παλιότερες ανοιχτές κινήσεις αόρατες |
+| `income-by-customer`: `'Χωρίς Πελάτη'` σκληρογραμμένο στον διακομιστή (N.11) | ελληνικά και στα αγγλικά |
+
+**Αποφάσεις** (Google AIP-158 / AIP-160 · Stripe `starting_after` + `has_more` · Firestore keyset):
+- **Δρομέας keyset, όχι offset και όχι `startAfter(snapshot)`**: SSoT `lib/admin-keyset-page.ts` (`readKeysetPage`).
+  Ταξινόμηση `(πεδίο, __name__)` στην ίδια φορά — tie-breaker ώστε εγγραφές ίδιας ημερομηνίας να μη χάνονται /
+  διπλασιάζονται· ο δείκτης `(…, πεδίο ↓)` καλύπτει σιωπηρά το `__name__ ↓` ⇒ **κανένας** δείκτης για το tie-breaker.
+  Ο δρομέας κρατά **τιμές** (όχι έγγραφο): καμία επιπλέον ανάγνωση, επιβιώνει σε διαγραφή της γραμμής.
+  `limit + 1` ⇒ `hasNext` μετρημένο. Αδιαφανές token μέσω του υπάρχοντος `lib/api/page-token.ts`.
+- **Ο δρομέας δένεται στο ερώτημα** (AIP-158): αποτύπωμα (sha256 της κανονικής JSON φίλτρων + ταξινόμησης). Token
+  άλλων φίλτρων / χαλασμένο ⇒ 400 `INVALID_PAGE_TOKEN`, ποτέ «πρώτη σελίδα» σιωπηλά.
+- **Κλειστό σύνολο συνδυασμών φίλτρων ανά λίστα** (AIP-160: η υπηρεσία δηλώνει τι φιλτράρει):
+  `repository/accounting-list-specs.ts` — όσοι συνδυασμοί ζητά το UI, όχι το καρτεσιανό γινόμενο. Εκτός συνόλου ⇒
+  400 `UNSUPPORTED_LIST_FILTER`, **πριν** από τη βάση. Μηχανή: `repository/accounting-repo-list.ts`
+  (`buildListQuery` · `readAccountingListPage`) — **χωρίς** fallback.
+- **Είσοδος αυστηρή**: `_shared/list-request-context.ts` — `readPageRequest` (`pageSize` 1..200, αλλιώς 400) ·
+  `optionalEnumParam` / `optionalIntParam` / `optionalFiscalYearParam` / `optionalQuarterParam` (400, όχι τυφλό `as`) ·
+  `respondWithPage` (αρνήσεις ⇒ 400 με `errorCode`). Τα λεξιλόγια έγιναν **ρίζες** σε χρόνο εκτέλεσης
+  (`ENTRY_TYPES`, `INVOICE_TYPES`, `INVOICE_PAYMENT_STATUSES`, `TRANSACTION_DIRECTIONS`, `MATCH_STATUSES`,
+  `ASSET_CATEGORIES`, `ASSET_STATUSES` — ο τύπος παράγεται από τον πίνακα)· το `VALID_INVOICE_TYPES` της διαδρομής καταργήθηκε.
+- **Πελάτης**: SSoT `hooks/useCursorPagedList.ts` («φόρτωση περισσότερων», append) — ταυτότητα = endpoint + φίλτρα ·
+  απάντηση παλιάς ταυτότητας πετιέται · ένα «περισσότερα» τη φορά · ADR-300 cache πρώτης σελίδας · ρητό
+  `error { status, code }`. Τα `useJournalEntries` / `useBankTransactions` / `useFixedAssets` / νέο `useInvoices` είναι
+  λεπτά περιτυλίγματα. UI: `components/shared/PagedListSection.tsx` (φόρτωση → σφάλμα → κενό → γραμμές) +
+  `PagedListFooter.tsx` (`pagedListErrorKey`: κωδικός → i18n). Η συμφωνία στέλνει το φίλτρο κατάστασης στον διακομιστή.
+- `hasJournalEntriesInCategory` — ερώτημα ύπαρξης (μόνο ισότητες ⇒ συγχώνευση μονοπεδιακών δεικτών), χωρίς fallback.
+- `CustomerIncomeRow.customerName: string | null` — `null` = χωρίς πελάτη· η ετικέτα στην απόδοση (`reports.noCustomer`).
+- +6 δείκτες (τιμολόγια ×4, τράπεζα ×1, πάγια ×1) — deploy **πριν** το push.
+
+**Φύλακες (Φάση 3β):** `lib/__tests__/admin-keyset-page.test.ts` (όλες οι σελίδες = όλες οι εγγραφές για 6 μεγέθη,
+με ισοπαλία στο όριο · `hasNext` μετρημένο · ξένος / χαλασμένος δρομέας) · `accounting-list-index.test.ts` (κάθε
+δηλωμένος συνδυασμός ⇒ δείκτης, εκτελώντας τον πραγματικό `buildListQuery`· κανένα νεκρό φίλτρο) ·
+`accounting-repo-list.test.ts` (αρνήσεις πριν από τη βάση · σφάλμα ≠ κενό) · `hooks/__tests__/useCursorPagedList.test.tsx`
+(αγώνας φίλτρων · διπλό «περισσότερα» · σφάλμα ρητό · κανένας βρόχος). Η άγκυρα συνόρου απέκτησε `listFixedAssets`·
+το `categories/[id]` **βγήκε**.
+
+**⚠️ Γνωστά κενά, δηλωμένα (θέλουν απόφαση — αλλάζουν νούμερα):**
+- `depreciation-engine.bookDepreciations` υπολογίζει από τη **σελίδα** ενεργών παγίων (50) — καταγεγραμμένο στην
+  άγκυρα συνόρου ως γνωστό κενό. Διόρθωση: `collectFixedAssets` πάνω στο `scanLedger`.
+- Οι **κάρτες σύνοψης** των σελίδων (σύνολα εσόδων/εξόδων, ανεξόφλητο υπόλοιπο, αξία παγίων…) και το
+  `AccountingDashboard` αθροίζουν **τις γραμμές που έχουν φορτωθεί**, όχι το σύνολο του φίλτρου. Πρακτική Xero /
+  QuickBooks: σύνοψη από άθροισμα στον διακομιστή, ανεξάρτητη από τη σελίδα.
+- `CreateAPYCertificateDialog` διαβάζει `data.invoices` (πεδίο που δεν υπάρχει) και στέλνει `vatNumber` (φίλτρο που δεν
+  υπάρχει) ⇒ «κανένα επιλέξιμο τιμολόγιο». Μετά τη Φάση 3β η διαδρομή απαντά 400 αντί για «όλα».
 
 ### 2.2 Contact Provider (CRM Integration)
 
@@ -1116,6 +1175,8 @@ class FirestoreAccountingRepository implements IAccountingRepository {
 | 2026-10-14 | **Σελίδα ≠ καθολικό (§2.1.1)** — νέο `collectJournalEntries` + SSoT `journal-ledger.ts`· ΦΠΑ / φόρος / accounting-service / tax dashboard / 6 αναφορές περνούν σε πλήρη σάρωση που πετά σε σφάλμα· `period` επιτέλους εφαρμόζεται· storno χωρίς φίλτρο `status` στις αναφορές· +2 δείκτες· άγκυρες συνόρου + ισοτιμίας δεικτών. §2.1 (εγγραφές) ευθυγραμμίστηκε με τον κώδικα | Giorgio + Claude Code |
 | 2026-10-14 | **Σελίδα ≠ καθολικό, Φάση 2 (§2.1.1)** — κοινό `scanLedger`· `collectBankTransactions` (τραπεζική συμφωνία, αποσύνδεση N:M)· στένεμα υποψηφίων αντιστοίχισης (ζώνη ποσού + αναφορά παραστατικού, κανόνας εισόδου)· φόρος αναφορών κατά IAS 34 ανά νομική μορφή μέσω `TaxEngine`· +3 δείκτες· άγκυρα συνόρου για 3 σελίδες | Giorgio + Claude Code |
 | 2026-10-15 | **Σελίδα ≠ καθολικό, Φάση 3 (§2.1.1)** — υπόλοιπο πελάτη = ανοιχτά στοιχεία ΟΛΩΝ των χρήσεων σε ημερομηνία αναφοράς (SAP FI-AR / Xero / QuickBooks), όχι ανά χρήση· `collectInvoices` + SSoT `receivables-ledger`· πιστωτικό συμψηφίζεται με το τιμολόγιό του, void εκτός· πιστωτικό όριο ζωντανά, απόρριψη με κωδικό πολιτικής· μαζική συμφωνία με μία σάρωση· αναφορά ηλικίωσης από τα πρωτογενή ανά περίοδο· υποψήφια αντιστοίχισης μόνο απαιτήσεις· έλεγχος μισθωτή στο `getCustomerBalance`· `accountingToday()`· `defineRoute` στέλνει `errorCode`· +3 δείκτες | Giorgio + Claude Code |
+
+| 2026-10-15 | **Σελίδα ≠ καθολικό, Φάση 3β (§2.1.1)** — δρομέας keyset (`lib/admin-keyset-page.ts`, AIP-158, tie-breaker `__name__`, δεμένος στα φίλτρα) για ημερολόγιο / τιμολόγια / τράπεζα / πάγια· κλειστό σύνολο συνδυασμών φίλτρων (`accounting-list-specs.ts`, AIP-160) με άγκυρα δεικτών· χωρίς fallback (σφάλμα ≠ κενό)· αυστηρή είσοδος + λεξιλόγια-ρίζες· `useCursorPagedList` + `PagedListSection`· `hasJournalEntriesInCategory`· διορθώσεις: πάγια `data.assets`, λεξιλόγιο κατηγοριών παγίων, φίλτρο τράπεζας, τρίμηνο `Q1`, συμφωνία με φίλτρο στον διακομιστή, `Χωρίς Πελάτη` (N.11)· κοινό σώμα σελίδας λίστας (`AccountingListBody` + `useAccountingFilterPanel`) και πεδίο φίλτρου χρήσης (`accounting-filter-fields.ts`) αντί για δίδυμα σε 4 σελίδες (CHECK 3.28)· +6 δείκτες | Giorgio + Claude Code |
 
 ---
 

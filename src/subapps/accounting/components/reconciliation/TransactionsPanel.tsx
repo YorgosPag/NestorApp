@@ -9,6 +9,7 @@
 
 'use client';
 
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
@@ -41,6 +42,10 @@ interface TransactionsPanelProps {
   onCheckToggle: (id: string) => void;
   onCheckAll: () => void;
   onStatusFilterChange: (status: StatusFilter) => void;
+  /** Αποτυχία της πρώτης σελίδας — δείχνεται ΑΝΤΙ για «καμία κίνηση» (ADR-ACC-010 §2.1.1 Φάση 3β). */
+  loadError?: ReactNode;
+  /** «Φόρτωση περισσότερων» κάτω από τον πίνακα. */
+  footer?: ReactNode;
 }
 
 // ============================================================================
@@ -69,6 +74,8 @@ export function TransactionsPanel({
   onCheckToggle,
   onCheckAll,
   onStatusFilterChange,
+  loadError,
+  footer,
 }: TransactionsPanelProps) {
   const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
 
@@ -112,6 +119,8 @@ export function TransactionsPanel({
           <div className="flex items-center justify-center h-32">
             <Spinner />
           </div>
+        ) : loadError ? (
+          loadError
         ) : filtered.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center p-6">
             {t('reconciliation.noTransactions')}
@@ -147,6 +156,7 @@ export function TransactionsPanel({
             </TableBody>
           </Table>
         )}
+        {!loading && !loadError && footer}
       </div>
     </section>
   );

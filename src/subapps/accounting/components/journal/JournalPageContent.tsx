@@ -20,13 +20,14 @@ import {
   FileText,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { PageLoadingState, PageErrorState } from '@/core/states';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters/AdvancedFiltersPanel';
 import type { FilterPanelConfig, GenericFilterState } from '@/components/core/AdvancedFilters/types';
 import { formatAccountingCurrency } from '../../utils/format';
 import { AccountingPageHeader } from '../shared/AccountingPageHeader';
+import { PagedListSection } from '../shared/PagedListSection';
+import { buildFiscalYearFilterField, currentFiscalYearValue } from '../shared/accounting-filter-fields';
 import { useJournalEntries } from '../../hooks/useJournalEntries';
 import type { EntryType, FiscalQuarter } from '@/subapps/accounting/types';
 import { JournalEntriesTable } from './JournalEntriesTable';
@@ -51,7 +52,7 @@ interface JournalFilterState extends GenericFilterState {
 // ============================================================================
 
 const DEFAULT_FILTERS: JournalFilterState = {
-  fiscalYear: String(new Date().getFullYear()),
+  fiscalYear: currentFiscalYearValue(),
   type: 'all',
   quarter: 'all',
 };
@@ -68,18 +69,7 @@ function buildFilterConfig(t: (key: string) => string): FilterPanelConfig {
       {
         id: 'journal-main',
         fields: [
-          {
-            id: 'fiscalYear',
-            type: 'select',
-            label: 'filterLabels.fiscalYear',
-            ariaLabel: 'Fiscal year',
-            width: 1,
-            options: [
-              { value: String(new Date().getFullYear()), label: String(new Date().getFullYear()) },
-              { value: String(new Date().getFullYear() - 1), label: String(new Date().getFullYear() - 1) },
-              { value: String(new Date().getFullYear() - 2), label: String(new Date().getFullYear() - 2) },
-            ],
-          },
+          buildFiscalYearFilterField(),
           {
             id: 'type',
             type: 'select',
@@ -112,6 +102,17 @@ function buildFilterConfig(t: (key: string) => string): FilterPanelConfig {
   };
 }
 
+/** Τιμή φίλτρου τριμήνου ('Q1'..'Q4' | 'all') → τρίμηνο της διαδρομής (1..4). */
+function quarterOfFilter(value: string | undefined): FiscalQuarter | undefined {
+  switch (value) {
+    case 'Q1': return 1;
+    case 'Q2': return 2;
+    case 'Q3': return 3;
+    case 'Q4': return 4;
+    default: return undefined;
+  }
+}
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -126,14 +127,14 @@ export function JournalPageContent() {
 
   const filterConfig = useMemo(() => buildFilterConfig(t), [t]);
 
-  // Build hook options from filter state
-  const hookOptions = {
+  // Build hook options from filter state. Το τρίμηνο του φίλτρου είναι 'Q1'..'Q4'· η διαδρομή θέλει 1..4 — ως
+  // 2026-10-15 στελνόταν 'Q1', γινόταν NaN και το φίλτρο αγνοούνταν σιωπηλά (όλο το έτος ως «Q1»).
+  const journalList = useJournalEntries({
     fiscalYear: Number(filters.fiscalYear),
-    ...(filters.type && filters.type !== 'all' ? { type: filters.type as EntryType } : {}),
-    ...(filters.quarter && filters.quarter !== 'all' ? { quarter: filters.quarter as unknown as FiscalQuarter } : {}),
-  };
-
-  const { entries, loading, error, refetch } = useJournalEntries(hookOptions);
+    type: filters.type && filters.type !== 'all' ? (filters.type as EntryType) : undefined,
+    quarter: quarterOfFilter(filters.quarter),
+  });
+  const { items: entries, loading, refetch } = journalList;
 
   const handleFormSuccess = useCallback(() => {
     setShowForm(false);
@@ -224,27 +225,25 @@ export function JournalPageContent() {
       <section className="p-6">
         {showForm ? (
           <JournalEntryForm onSuccess={handleFormSuccess} onCancel={handleFormCancel} />
-        ) : loading ? (
-          <PageLoadingState icon={BookOpen} message={t('journal.loading')} layout="contained" />
-        ) : error ? (
-          <PageErrorState
-            title={t('journal.loadError')}
-            message={error}
-            onRetry={refetch}
-            retryLabel={t('common.retry')}
-            layout="contained"
-          />
-        ) : entries.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-lg font-medium text-foreground mb-1">{t('journal.noEntries')}</p>
-            <p className={cn("mb-4", colors.text.muted)}>{t('journal.noEntriesDescription')}</p>
-            <Button onClick={() => setShowForm(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t('journal.newEntry')}
-            </Button>
-          </div>
         ) : (
-          <JournalEntriesTable entries={entries} />
+          <PagedListSection
+            list={journalList}
+            icon={BookOpen}
+            loadingKey="journal.loading"
+            loadErrorKey="journal.loadError"
+            empty={
+              <div className="text-center py-12">
+                <p className="text-lg font-medium text-foreground mb-1">{t('journal.noEntries')}</p>
+                <p className={cn("mb-4", colors.text.muted)}>{t('journal.noEntriesDescription')}</p>
+                <Button onClick={() => setShowForm(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t('journal.newEntry')}
+                </Button>
+              </div>
+            }
+          >
+            {(items) => <JournalEntriesTable entries={items} />}
+          </PagedListSection>
         )}
       </section>
     </main>

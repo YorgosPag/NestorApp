@@ -3,7 +3,7 @@
  * GET + POST /api/accounting/journal — List & Create Journal Entries
  * =============================================================================
  *
- * GET:  List journal entries with filters (type, category, fiscalYear, quarter, paymentMethod, contactId)
+ * GET:  One page of journal entries (cursor, ADR-ACC-010 §2.1.1) — filters type, fiscalYear, quarter, contactId
  * POST: Create a new journal entry (income or expense)
  *
  * Auth: withAuth (authenticated users)
@@ -18,18 +18,20 @@ import 'server-only';
 
 import { z } from 'zod';
 import { NextResponse } from 'next/server';
-import { defineRoute, ok, created } from '@/lib/api/define-route';
+import { defineRoute, created } from '@/lib/api/define-route';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import { validatePostingAllowed } from '@/subapps/accounting/services';
-import type {
-  JournalEntryFilters,
-  EntryType,
-  AccountCategory,
-  FiscalQuarter,
-  PaymentMethod,
-  CreateJournalEntryInput,
-} from '@/subapps/accounting/types';
-import { readListContext } from '../_shared/list-request-context';
+import { ENTRY_TYPES } from '@/subapps/accounting/types';
+import type { JournalEntryFilters, CreateJournalEntryInput } from '@/subapps/accounting/types';
+import {
+  optionalEnumParam,
+  optionalFiscalYearParam,
+  optionalIdParam,
+  optionalQuarterParam,
+  readListContext,
+  readPageRequest,
+  respondWithPage,
+} from '../_shared/list-request-context';
 import { journalEntryOptionalFields } from '../_shared/journal-entry-fields';
 
 const CreateJournalEntrySchema = z.object({
@@ -51,48 +53,14 @@ export const GET = defineRoute({
   handler: async ({ req, auth }) => {
     const { repository, searchParams } = readListContext(req, auth);
 
-    const filters: JournalEntryFilters = {};
+    const filters: JournalEntryFilters = {
+      type: optionalEnumParam(searchParams, 'type', ENTRY_TYPES),
+      fiscalYear: optionalFiscalYearParam(searchParams),
+      quarter: optionalQuarterParam(searchParams),
+      contactId: optionalIdParam(searchParams, 'contactId'),
+    };
 
-    const type = searchParams.get('type');
-    if (type === 'income' || type === 'expense') {
-      filters.type = type as EntryType;
-    }
-
-    const category = searchParams.get('category');
-    if (category) {
-      filters.category = category as AccountCategory;
-    }
-
-    const fiscalYear = searchParams.get('fiscalYear');
-    if (fiscalYear) {
-      filters.fiscalYear = parseInt(fiscalYear, 10);
-    }
-
-    const quarter = searchParams.get('quarter');
-    if (quarter) {
-      const q = parseInt(quarter, 10);
-      if (q >= 1 && q <= 4) {
-        filters.quarter = q as FiscalQuarter;
-      }
-    }
-
-    const paymentMethod = searchParams.get('paymentMethod');
-    if (paymentMethod) {
-      filters.paymentMethod = paymentMethod as PaymentMethod;
-    }
-
-    const contactId = searchParams.get('contactId');
-    if (contactId) {
-      filters.contactId = contactId;
-    }
-
-    const pageSize = searchParams.get('pageSize');
-    const result = await repository.listJournalEntries(
-      filters,
-      pageSize ? parseInt(pageSize, 10) : undefined
-    );
-
-    return ok(result);
+    return respondWithPage(() => repository.listJournalEntries(filters, readPageRequest(searchParams)));
   },
 });
 

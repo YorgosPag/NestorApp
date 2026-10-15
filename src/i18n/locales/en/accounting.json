@@ -225,16 +225,16 @@
     "statuses": {
       "active": "Active",
       "fully_depreciated": "Fully Depreciated",
-      "disposed": "Disposed"
+      "disposed": "Disposed",
+      "inactive": "Inactive"
     },
     "categories": {
-      "computer_equipment": "Computer Equipment",
-      "office_equipment": "Office Equipment",
-      "vehicles": "Vehicles",
+      "buildings": "Buildings",
       "machinery": "Machinery",
-      "software": "Software",
-      "furniture": "Furniture",
-      "tools": "Tools",
+      "vehicles": "Vehicles",
+      "furniture": "Furniture & Equipment",
+      "computers": "Computers & Software",
+      "measurement_instruments": "Measurement Instruments",
       "other": "Other"
     },
     "requiredFields": "Required fields",
@@ -285,6 +285,7 @@
     }
   },
   "reports": {
+    "noCustomer": "No customer",
     "title": "Reports & Tax",
     "description": "Financial reports and tax estimates",
     "vatReport": "VAT Report",
@@ -461,6 +462,17 @@
     "noData": "No data available",
     "error": "An error occurred",
     "retry": "Retry",
+    "pagedList": {
+      "loadMore": "Load more",
+      "loadingMore": "Loading…",
+      "shown": "Showing {count} records",
+      "loadMoreFailed": "The next records could not be loaded.",
+      "errors": {
+        "generic": "The list could not be loaded. Please try again.",
+        "invalidPageToken": "The list changed in the meantime. Refresh to continue.",
+        "unsupportedFilter": "This filter combination is not supported."
+      }
+    },
     "currency": "EUR",
     "paymentMethods": {
       "cash": "Cash",

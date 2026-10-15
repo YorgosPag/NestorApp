@@ -16,7 +16,14 @@ import { listRepoSourceFiles, readRepoCode } from '@/test-utils/read-source';
 const ALLOWED_PAGE_CALLERS: Readonly<Record<string, Readonly<Record<string, string>>>> = {
   listJournalEntries: {
     'src/app/api/accounting/journal/route.ts': 'η λίστα της οθόνης — σελίδα εξ ορισμού',
-    'src/app/api/accounting/categories/[id]/route.ts': 'έλεγχος ύπαρξης (pageSize 1): «χρησιμοποιείται η κατηγορία;»',
+    // Φάση 3β (2026-10-15): το `categories/[id]` ΒΓΗΚΕ — «χρησιμοποιείται η κατηγορία;» = `hasJournalEntriesInCategory`
+    // (η σελίδα είχε fallback «κενό» και κανέναν δείκτη ⇒ οριστική διαγραφή κατηγορίας σε χρήση).
+  },
+  listFixedAssets: {
+    'src/app/api/accounting/assets/route.ts': 'η λίστα της οθόνης — σελίδα εξ ορισμού',
+    // ⚠️ ΓΝΩΣΤΟ ΚΕΝΟ, ΔΗΛΩΜΕΝΟ (Φάση 3β): ΥΠΟΛΟΓΙΣΜΟΣ πάνω σε σελίδα — οι αποσβέσεις χρήσης βγαίνουν μόνο για τα
+    // 50 νεότερα ενεργά πάγια. Η διόρθωση (`collectFixedAssets`) αλλάζει ποσά αποσβέσεων ⇒ περιμένει απόφαση Giorgio.
+    'src/subapps/accounting/services/engines/depreciation-engine.ts': 'ΓΝΩΣΤΟ ΚΕΝΟ — βλ. ADR-ACC-010 §2.1.1 Φάση 3β',
   },
   listBankTransactions: {
     'src/app/api/accounting/bank/transactions/route.ts': 'η λίστα της οθόνης — σελίδα εξ ορισμού',
@@ -34,6 +41,7 @@ const PLUMBING = new Set([
   'src/subapps/accounting/services/repository/accounting-repo-operations.ts',
   'src/subapps/accounting/services/repository/firestore-accounting-repository.ts',
   'src/subapps/accounting/services/audited-repository-wrapper.ts',
+  'src/subapps/accounting/services/repository/accounting-repo-list.ts',
 ]);
 
 const SOURCES = listRepoSourceFiles('src')

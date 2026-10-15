@@ -19,6 +19,7 @@ import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { createStaleCache } from '@/lib/stale-cache';
+import type { PaginatedResult } from '@/lib/pagination';
 
 const propertyTransactionChainCache = createStaleCache<InvoiceSummary[]>('property-transaction-chain');
 
@@ -40,13 +41,8 @@ interface InvoiceSummary {
   paymentStatus: string;
 }
 
-/** apiClient.get() αυτόματα unwraps canonical { success, data } → επιστρέφει μόνο data */
-interface InvoiceListResponse {
-  items: InvoiceSummary[];
-  hasNext: boolean;
-  totalShown: number;
-  pageSize: number;
-}
+/** apiClient.get() αυτόματα unwraps canonical { success, data } → επιστρέφει μόνο data (SSoT `PaginatedResult`). */
+type InvoiceListResponse = PaginatedResult<InvoiceSummary>;
 
 // =============================================================================
 // HELPERS

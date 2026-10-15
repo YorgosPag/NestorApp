@@ -11,14 +11,13 @@
 
 import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { FIELDS } from '@/config/firestore-field-constants';
 import {
   generateBankTransactionId,
   generateFixedAssetId,
   generateDepreciationId,
   generateImportBatchId,
 } from '@/services/enterprise-id.service';
-import type { PaginatedResult } from '@/lib/pagination';
+import { FIRST_PAGE, type PageRequest, type PaginatedResult } from '@/lib/pagination';
 
 import type {
   BankTransaction,
@@ -35,6 +34,8 @@ import type {
 import type { TenantContext } from '../../types/common';
 
 import { sanitizeForFirestore, isoNow } from './firestore-helpers';
+import { readAccountingListPage } from './accounting-repo-list';
+import { BANK_TRANSACTION_LIST, FIXED_ASSET_LIST } from './accounting-list-specs';
 
 // ============================================================================
 // BANK TRANSACTIONS
@@ -85,31 +86,13 @@ export async function updateBankTransaction(
   }, undefined);
 }
 
-export async function listBankTransactions(
+/** ΣΕΛΙΔΑ οθόνης (ADR-ACC-010 §2.1.1 Φάση 3β) — δρομέας keyset, πετά σε σφάλμα, ποτέ «κενή λίστα». */
+export function listBankTransactions(
   tenant: TenantContext,
   filters: BankTransactionFilters,
-  pageSize: number = 50
+  page: PageRequest = FIRST_PAGE
 ): Promise<PaginatedResult<BankTransaction>> {
-  return safeFirestoreOperation(async (db) => {
-    let query: FirebaseFirestore.Query = db.collection(COLLECTIONS.ACCOUNTING_BANK_TRANSACTIONS);
-
-    query = query.where('companyId', '==', tenant.companyId);
-    if (filters.accountId) query = query.where('accountId', '==', filters.accountId);
-    if (filters.direction) query = query.where('direction', '==', filters.direction);
-    if (filters.matchStatus) query = query.where('matchStatus', '==', filters.matchStatus);
-
-    query = query.orderBy('transactionDate', 'desc').limit(pageSize);
-
-    const snap = await query.get();
-    const items = snap.docs.map((d) => d.data() as BankTransaction);
-
-    return {
-      items,
-      hasNext: items.length === pageSize,
-      totalShown: items.length,
-      pageSize,
-    };
-  }, { items: [], hasNext: false, totalShown: 0, pageSize });
+  return readAccountingListPage(tenant, BANK_TRANSACTION_LIST, filters, page, (data) => data as BankTransaction);
 }
 
 export async function getBankAccounts(tenant: TenantContext): Promise<BankAccountConfig[]> {
@@ -196,31 +179,13 @@ export async function updateFixedAsset(
   }, undefined);
 }
 
-export async function listFixedAssets(
+/** ΣΕΛΙΔΑ οθόνης (ADR-ACC-010 §2.1.1 Φάση 3β) — δρομέας keyset, πετά σε σφάλμα, ποτέ «κενή λίστα». */
+export function listFixedAssets(
   tenant: TenantContext,
   filters: FixedAssetFilters,
-  pageSize: number = 50
+  page: PageRequest = FIRST_PAGE
 ): Promise<PaginatedResult<FixedAsset>> {
-  return safeFirestoreOperation(async (db) => {
-    let query: FirebaseFirestore.Query = db.collection(COLLECTIONS.ACCOUNTING_FIXED_ASSETS);
-
-    query = query.where('companyId', '==', tenant.companyId);
-    if (filters.category) query = query.where('category', '==', filters.category);
-    if (filters.status) query = query.where(FIELDS.STATUS, '==', filters.status);
-    if (filters.acquisitionYear) query = query.where('acquisitionFiscalYear', '==', filters.acquisitionYear);
-
-    query = query.orderBy('acquisitionDate', 'desc').limit(pageSize);
-
-    const snap = await query.get();
-    const items = snap.docs.map((d) => d.data() as FixedAsset);
-
-    return {
-      items,
-      hasNext: items.length === pageSize,
-      totalShown: items.length,
-      pageSize,
-    };
-  }, { items: [], hasNext: false, totalShown: 0, pageSize });
+  return readAccountingListPage(tenant, FIXED_ASSET_LIST, filters, page, (data) => data as FixedAsset);
 }
 
 export async function createDepreciationRecord(

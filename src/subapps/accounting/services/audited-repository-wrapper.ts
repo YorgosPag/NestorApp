@@ -55,6 +55,7 @@ export function createAuditedRepository(
     getCompanySetup: repo.getCompanySetup.bind(repo),
     getJournalEntry: repo.getJournalEntry.bind(repo),
     listJournalEntries: repo.listJournalEntries.bind(repo),
+    hasJournalEntriesInCategory: repo.hasJournalEntriesInCategory.bind(repo),
     collectJournalEntries: repo.collectJournalEntries.bind(repo),
     getJournalEntryByInvoiceId: repo.getJournalEntryByInvoiceId.bind(repo),
     getInvoice: repo.getInvoice.bind(repo),

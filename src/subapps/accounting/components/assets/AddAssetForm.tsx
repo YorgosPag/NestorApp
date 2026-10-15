@@ -28,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ASSET_CATEGORIES } from '@/subapps/accounting/types';
 import type { AssetCategory, CreateFixedAssetInput } from '@/subapps/accounting/types';
 
 // ============================================================================
@@ -53,16 +54,6 @@ interface FormState {
 // ============================================================================
 // CONSTANTS
 // ============================================================================
-
-const ASSET_CATEGORIES: AssetCategory[] = [
-  'buildings',
-  'machinery',
-  'vehicles',
-  'furniture',
-  'computers',
-  'measurement_instruments',
-  'other',
-];
 
 const DEPRECIATION_RATES: Record<AssetCategory, number> = {
   buildings: 4,

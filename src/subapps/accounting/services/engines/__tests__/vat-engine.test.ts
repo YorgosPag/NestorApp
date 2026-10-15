@@ -163,12 +163,12 @@ function createMockRepository(): jest.Mocked<IAccountingRepository> {
 
 /** Helper: empty PaginatedResult */
 function emptyPaginatedResult() {
-  return { items: [], hasNext: false, totalShown: 0, pageSize: 50 };
+  return { items: [], hasNext: false, nextCursor: null, pageSize: 50 };
 }
 
 /** Helper: PaginatedResult with items */
 function paginatedResult(items: JournalEntry[]) {
-  return { items, hasNext: false, totalShown: items.length, pageSize: 50 };
+  return { items, hasNext: false, nextCursor: null, pageSize: 50 };
 }
 
 // ============================================================================

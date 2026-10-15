@@ -19,14 +19,14 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { PageLoadingState, PageErrorState } from '@/core/states';
-import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
-import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters/AdvancedFiltersPanel';
 import type { FilterPanelConfig, GenericFilterState } from '@/components/core/AdvancedFilters/types';
 import type { TransactionDirection, MatchStatus } from '@/subapps/accounting/types';
 import { formatAccountingCurrency } from '../../utils/format';
 import { AccountingPageHeader } from '../shared/AccountingPageHeader';
+import { PagedListSection } from '../shared/PagedListSection';
+import { AccountingListBody } from '../shared/AccountingListBody';
+import { useAccountingFilterPanel } from '../../hooks/useAccountingFilterPanel';
 import { useBankTransactions } from '../../hooks/useBankTransactions';
 import { useBankMatching } from '../../hooks/useBankMatching';
 import { TransactionsList } from './TransactionsList';
@@ -88,8 +88,10 @@ function buildFilterConfig(t: (key: string) => string): FilterPanelConfig {
             options: [
               { value: 'all', label: t('filterOptions.allStatuses') },
               { value: 'unmatched', label: t('bank.statuses.unmatched') },
-              { value: 'matched', label: t('bank.statuses.matched') },
-              { value: 'manual', label: t('bank.statuses.manual') },
+              // Τιμές του λεξιλογίου `MatchStatus`: ως 2026-10-15 έστελνε 'matched' / 'manual', που δεν
+              // αποθηκεύονται ποτέ ⇒ «καμία κίνηση» σιωπηλά.
+              { value: 'auto_matched', label: t('bank.statuses.matched') },
+              { value: 'manual_matched', label: t('bank.statuses.manual') },
               { value: 'excluded', label: t('bank.statuses.excluded') },
             ],
           },
@@ -107,12 +109,12 @@ export function BankPageContent() {
   const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
-  const [filters, setFilters] = useState<BankFilterState>({ ...DEFAULT_FILTERS });
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [showDashboard, setShowDashboard] = useState(true);
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
 
   const filterConfig = useMemo(() => buildFilterConfig(t), [t]);
+  const { filters, filterPanel } = useAccountingFilterPanel<BankFilterState>(DEFAULT_FILTERS, filterConfig);
 
   const {
     candidates,
@@ -122,10 +124,11 @@ export function BankPageContent() {
     clearCandidates,
   } = useBankMatching();
 
-  const { transactions, loading, error, refetch, importTransactions } = useBankTransactions({
+  const bankList = useBankTransactions({
     direction: filters.direction !== 'all' ? (filters.direction as TransactionDirection) : undefined,
     matchStatus: filters.matchStatus !== 'all' ? (filters.matchStatus as MatchStatus) : undefined,
   });
+  const { items: transactions, loading, refetch, importTransactions } = bankList;
 
   const handleImportSuccess = useCallback(async () => {
     setImportDialogOpen(false);
@@ -209,58 +212,46 @@ export function BankPageContent() {
         ]}
       />
 
-      {/* Stats Dashboard */}
-      {showDashboard && <UnifiedDashboard stats={dashboardStats} columns={4} />}
+      <AccountingListBody
+        showDashboard={showDashboard}
+        stats={dashboardStats}
+        filterPanel={filterPanel}
+      >
+        <PagedListSection
+          list={bankList}
+          icon={Landmark}
+          loadingKey="bank.loading"
+          loadErrorKey="bank.loadError"
+          empty={
+            <div className="text-center py-12">
+              <p className="text-lg font-medium text-foreground mb-1">
+                {t('bank.noTransactions')}
+              </p>
+              <p className={cn("mb-4", colors.text.muted)}>
+                {t('bank.noTransactionsDescription')}
+              </p>
+              <Button onClick={() => setImportDialogOpen(true)}>
+                <Upload className="mr-2 h-4 w-4" />
+                {t('bank.importCSV')}
+              </Button>
+            </div>
+          }
+        >
+          {(items) => <TransactionsList transactions={items} onRefresh={refetch} />}
+        </PagedListSection>
 
-      {/* Filters */}
-      <AdvancedFiltersPanel
-        config={filterConfig}
-        filters={filters}
-        onFiltersChange={setFilters}
-        defaultFilters={DEFAULT_FILTERS}
-      />
-
-      {/* Content */}
-      <section className="p-6">
-        {loading ? (
-          <PageLoadingState icon={Landmark} message={t('bank.loading')} layout="contained" />
-        ) : error ? (
-          <PageErrorState
-            title={t('bank.loadError')}
-            message={error}
-            onRetry={refetch}
-            retryLabel={t('common.retry')}
-            layout="contained"
+        {/* Smart Matching Panel — side-by-side candidates (πάνω στις κινήσεις που έχουν φορτωθεί) */}
+        {transactions.length > 0 && (
+          <MatchingPanel
+            transactions={transactions}
+            candidates={candidates}
+            loadingCandidates={loadingCandidates}
+            selectedTransactionId={selectedTransactionId}
+            onSelectTransaction={handleSelectTransaction}
+            onMatch={handleMatch}
           />
-        ) : transactions.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-lg font-medium text-foreground mb-1">
-              {t('bank.noTransactions')}
-            </p>
-            <p className={cn("mb-4", colors.text.muted)}>
-              {t('bank.noTransactionsDescription')}
-            </p>
-            <Button onClick={() => setImportDialogOpen(true)}>
-              <Upload className="mr-2 h-4 w-4" />
-              {t('bank.importCSV')}
-            </Button>
-          </div>
-        ) : (
-          <>
-            <TransactionsList transactions={transactions} onRefresh={refetch} />
-
-            {/* Smart Matching Panel — side-by-side candidates */}
-            <MatchingPanel
-              transactions={transactions}
-              candidates={candidates}
-              loadingCandidates={loadingCandidates}
-              selectedTransactionId={selectedTransactionId}
-              onSelectTransaction={handleSelectTransaction}
-              onMatch={handleMatch}
-            />
-          </>
         )}
-      </section>
+      </AccountingListBody>
 
       {/* Import CSV Dialog */}
       <ImportCSVDialog

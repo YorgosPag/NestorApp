@@ -8,6 +8,8 @@
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, max 500 lines
  */
 
+import i18next from 'i18next';
+
 import type {
   ReportType,
   ReportDataMap,
@@ -344,7 +346,7 @@ function flattenCashFlow(data: CashFlowData): FlatTableData {
 function flattenIncomeByCustomer(data: IncomeByCustomerData): FlatTableData {
   const headers = ['Customer', 'Amount', 'Invoices', '% of Total'];
   const rows: CellValue[][] = data.customers.current.map((c) => [
-    c.customerName,
+    c.customerName ?? i18next.t('reports.noCustomer', { ns: 'accounting' }),
     c.totalNetAmount,
     c.invoiceCount,
     c.percentage,

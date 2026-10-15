@@ -48,6 +48,7 @@ function createMockRepository(): MockRepository {
     updateJournalEntry: jest.fn(),
     deleteJournalEntry: jest.fn(),
     listJournalEntries: jest.fn(),
+    hasJournalEntriesInCategory: jest.fn(),
     // One ledger scan consumes the historic "income page, then expense page" fixture pair.
     collectJournalEntries: jest.fn(async () => {
       const income = await ledgerPages();

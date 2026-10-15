@@ -17,7 +17,10 @@ import {
   ResizableHandle,
 } from '@/components/ui/resizable';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { useTranslation } from 'react-i18next';
+import { PageErrorState } from '@/core/states';
 import { AccountingPageHeader } from '../shared/AccountingPageHeader';
+import { PagedListFooter, pagedListErrorKey } from '../shared/PagedListFooter';
 import { TransactionsPanel } from './TransactionsPanel';
 import { CandidatesPanel } from './CandidatesPanel';
 import { BatchActionsToolbar } from './BatchActionsToolbar';
@@ -31,6 +34,7 @@ import type { MatchStatus, MatchableEntityType, MatchedEntityRef } from '@/subap
 type StatusFilter = MatchStatus | 'all';
 
 export function ReconciliationPageContent() {
+  const { t } = useTranslation('accounting');
   // ── State ──────────────────────────────────────────────────────────────────
   const [selectedTxnId, setSelectedTxnId] = useState<string | null>(null);
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
@@ -38,7 +42,10 @@ export function ReconciliationPageContent() {
   const [showDashboard, setShowDashboard] = useState(false);
 
   // ── Data hooks ──────────────────────────────────────────────────────────────
-  const { transactions, loading: txnsLoading, refetch: refetchTxns } = useBankTransactions();
+  // Το φίλτρο κατάστασης πάει στον ΔΙΑΚΟΜΙΣΤΗ (Xero «Reconcile»): «χωρίς αντιστοίχιση» = ΟΛΕΣ οι ανοιχτές κινήσεις,
+  // σε σελίδες — όχι οι ανοιχτές ανάμεσα στις 50 νεότερες (ADR-ACC-010 §2.1.1 Φάση 3β).
+  const txnList = useBankTransactions({ matchStatus: statusFilter === 'all' ? undefined : statusFilter });
+  const { items: transactions, loading: txnsLoading, refetch: refetchTxns } = txnList;
   const { candidates, groups, loading: candidatesLoading } = useMatchCandidates(selectedTxnId);
   const { matchSingle, matchGroup, matchBatch, excludeTransaction, matching, batchProgress } = useMatchActions();
   const { config, saving, saveConfig } = useMatchingConfig();
@@ -170,6 +177,26 @@ export function ReconciliationPageContent() {
               onCheckToggle={handleCheckToggle}
               onCheckAll={handleCheckAll}
               onStatusFilterChange={setStatusFilter}
+              loadError={
+                txnList.error && transactions.length === 0 ? (
+                  <PageErrorState
+                    title={t('bank.loadError')}
+                    message={t(pagedListErrorKey(txnList.error))}
+                    onRetry={() => void refetchTxns()}
+                    retryLabel={t('common.retry')}
+                    layout="contained"
+                  />
+                ) : undefined
+              }
+              footer={
+                <PagedListFooter
+                  shownCount={transactions.length}
+                  hasMore={txnList.hasMore}
+                  loadingMore={txnList.loadingMore}
+                  error={txnList.error}
+                  onLoadMore={() => void txnList.loadMore()}
+                />
+              }
             />
           </ResizablePanel>
 

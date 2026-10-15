@@ -67,7 +67,8 @@ function aggregateByCustomer(entries: JournalEntry[]): CustomerIncomeRow[] {
   for (const [customerId, { first, total, count }] of groupNetAmount(entries, (e) => e.contactId ?? null)) {
     rows.push({
       customerId,
-      customerName: first.contactName ?? 'Χωρίς Πελάτη',
+      // `null` = χωρίς πελάτη — ΔΕΔΟΜΕΝΟ, όχι κείμενο: η ετικέτα μπαίνει στο επίπεδο απόδοσης (N.11).
+      customerName: first.contactName ?? null,
       totalNetAmount: total,
       invoiceCount: count,
       percentage: shareOf(total, grandTotal),

@@ -271,7 +271,8 @@ export interface CashFlowData {
 
 export interface CustomerIncomeRow {
   customerId: string | null;
-  customerName: string;
+  /** `null` ⇔ εγγραφές χωρίς πελάτη· η ετικέτα («Χωρίς Πελάτη») μπαίνει στην απόδοση (`reports.noCustomer`). */
+  customerName: string | null;
   totalNetAmount: number;
   invoiceCount: number;
   /** Percentage of total income */

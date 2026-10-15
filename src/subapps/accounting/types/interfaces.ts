@@ -11,7 +11,7 @@
 
 import type { Transaction } from 'firebase-admin/firestore';
 
-import type { PaginatedResult } from '@/lib/pagination';
+import type { PageRequest, PaginatedResult } from '@/lib/pagination';
 
 // ── Company Profile Types ────────────────────────────────────────────────────
 import type { CompanyProfile, CompanyProfileFieldMask, CompanySetupInput } from './company';
@@ -147,7 +147,9 @@ export interface IAccountingRepository {
   updateJournalEntry(entryId: string, updates: UpdateJournalEntryInput): Promise<void>;
   deleteJournalEntry(entryId: string): Promise<void>;
   /** ΣΕΛΙΔΑ για την οθόνη. ⚠️ ΟΧΙ για υπολογισμούς — βλ. `collectJournalEntries`. */
-  listJournalEntries(filters: JournalEntryFilters, pageSize?: number): Promise<PaginatedResult<JournalEntry>>;
+  listJournalEntries(filters: JournalEntryFilters, page?: PageRequest): Promise<PaginatedResult<JournalEntry>>;
+  /** «Αναφέρει κάποια εγγραφή την κατηγορία;» — ύπαρξη, όχι σελίδα· πετά σε σφάλμα (ποτέ «όχι» από σφάλμα). */
+  hasJournalEntriesInCategory(categoryCode: string): Promise<boolean>;
   /** ΟΛΕΣ οι εγγραφές της εμβέλειας, για υπολογισμό· πετά σε σφάλμα ή υπέρβαση ορίου, ποτέ μερικό. */
   collectJournalEntries(query: JournalLedgerQuery): Promise<JournalEntry[]>;
   getJournalEntryByInvoiceId(invoiceId: string): Promise<JournalEntry | null>;
@@ -157,7 +159,7 @@ export interface IAccountingRepository {
   getInvoice(invoiceId: string): Promise<Invoice | null>;
   updateInvoice(invoiceId: string, updates: UpdateInvoiceInput): Promise<void>;
   /** ΣΕΛΙΔΑ για την οθόνη. ⚠️ ΟΧΙ για υπολογισμούς — βλ. `collectInvoices` (ADR-ACC-010 §2.1.1). */
-  listInvoices(filters: InvoiceFilters, pageSize?: number): Promise<PaginatedResult<Invoice>>;
+  listInvoices(filters: InvoiceFilters, page?: PageRequest): Promise<PaginatedResult<Invoice>>;
   /** ΟΛΑ τα παραστατικά ως το `asOf` (πελάτη ή εταιρείας), για υπολογισμό απαιτήσεων — πετά, ποτέ μερικό. */
   collectInvoices(query: InvoiceLedgerQuery): Promise<Invoice[]>;
   getNextInvoiceNumber(seriesCode: string): Promise<number>;
@@ -176,7 +178,7 @@ export interface IAccountingRepository {
   getBankTransaction(transactionId: string): Promise<BankTransaction | null>;
   updateBankTransaction(transactionId: string, updates: Partial<BankTransaction>): Promise<void>;
   /** ΣΕΛΙΔΑ για την οθόνη. ⚠️ ΟΧΙ για υπολογισμούς (ADR-ACC-010 §2.1.1). */
-  listBankTransactions(filters: BankTransactionFilters, pageSize?: number): Promise<PaginatedResult<BankTransaction>>;
+  listBankTransactions(filters: BankTransactionFilters, page?: PageRequest): Promise<PaginatedResult<BankTransaction>>;
   /** ΟΛΕΣ οι κινήσεις μιας εμβέλειας, για υπολογισμό — πετά, ποτέ μερικό (§2.1.1). */
   collectBankTransactions(query: BankLedgerQuery): Promise<BankTransaction[]>;
 
@@ -194,7 +196,8 @@ export interface IAccountingRepository {
   createFixedAsset(data: CreateFixedAssetInput): Promise<{ id: string }>;
   getFixedAsset(assetId: string): Promise<FixedAsset | null>;
   updateFixedAsset(assetId: string, updates: Partial<FixedAsset>): Promise<void>;
-  listFixedAssets(filters: FixedAssetFilters, pageSize?: number): Promise<PaginatedResult<FixedAsset>>;
+  /** ΣΕΛΙΔΑ για την οθόνη. ⚠️ ΟΧΙ για υπολογισμούς (ADR-ACC-010 §2.1.1). */
+  listFixedAssets(filters: FixedAssetFilters, page?: PageRequest): Promise<PaginatedResult<FixedAsset>>;
   createDepreciationRecord(data: Omit<DepreciationRecord, 'recordId'>): Promise<{ id: string }>;
   getDepreciationRecords(assetId: string, fiscalYear?: number): Promise<DepreciationRecord[]>;
 

@@ -105,9 +105,9 @@ export const DELETE = defineRoute({
     const { id } = params;
     const { repository, existing } = await loadCategoryOr404(auth, id);
 
-    // Check usage: does any journal entry reference this category code?
-    const entriesPage = await repository.listJournalEntries({ category: existing.code }, 1);
-    const isUsed = entriesPage.items.length > 0;
+    // Check usage: does any journal entry reference this category code? Ερώτημα ύπαρξης, ΟΧΙ σελίδα της οθόνης:
+    // η σελίδα είχε fallback «κενό» και κανέναν δείκτη ⇒ «αχρησιμοποίητη» ⇒ ΟΡΙΣΤΙΚΗ διαγραφή (ADR-ACC-010 §2.1.1).
+    const isUsed = await repository.hasJournalEntriesInCategory(existing.code);
 
     if (isUsed) {
       // Soft delete — deactivate only, preserve referential integrity

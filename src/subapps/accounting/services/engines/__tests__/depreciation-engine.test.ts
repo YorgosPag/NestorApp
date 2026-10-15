@@ -721,7 +721,7 @@ describe('DepreciationEngine', () => {
       mockRepo.listFixedAssets.mockResolvedValue({
         items: [asset1, asset2],
         hasNext: false,
-        totalShown: 2,
+        nextCursor: null,
         pageSize: 20,
       });
       mockRepo.createDepreciationRecord
@@ -751,7 +751,7 @@ describe('DepreciationEngine', () => {
       mockRepo.listFixedAssets.mockResolvedValue({
         items: [asset],
         hasNext: false,
-        totalShown: 1,
+        nextCursor: null,
         pageSize: 20,
       });
       mockRepo.createDepreciationRecord.mockResolvedValue({ id: 'dep_single' });
@@ -777,7 +777,7 @@ describe('DepreciationEngine', () => {
       mockRepo.listFixedAssets.mockResolvedValue({
         items: [asset],
         hasNext: false,
-        totalShown: 1,
+        nextCursor: null,
         pageSize: 20,
       });
       mockRepo.createDepreciationRecord.mockResolvedValue({ id: 'dep_x' });
@@ -804,7 +804,7 @@ describe('DepreciationEngine', () => {
       mockRepo.listFixedAssets.mockResolvedValue({
         items: [asset],
         hasNext: false,
-        totalShown: 1,
+        nextCursor: null,
         pageSize: 20,
       });
       mockRepo.createDepreciationRecord.mockResolvedValue({ id: 'dep_final' });
@@ -829,7 +829,7 @@ describe('DepreciationEngine', () => {
       mockRepo.listFixedAssets.mockResolvedValue({
         items: [futureAsset],
         hasNext: false,
-        totalShown: 1,
+        nextCursor: null,
         pageSize: 20,
       });
 
@@ -852,7 +852,7 @@ describe('DepreciationEngine', () => {
       mockRepo.listFixedAssets.mockResolvedValue({
         items: [fullyDepreciatedAsset],
         hasNext: false,
-        totalShown: 1,
+        nextCursor: null,
         pageSize: 20,
       });
 
@@ -866,7 +866,7 @@ describe('DepreciationEngine', () => {
       mockRepo.listFixedAssets.mockResolvedValue({
         items: [],
         hasNext: false,
-        totalShown: 0,
+        nextCursor: null,
         pageSize: 20,
       });
 
@@ -879,7 +879,7 @@ describe('DepreciationEngine', () => {
       mockRepo.listFixedAssets.mockResolvedValue({
         items: [],
         hasNext: false,
-        totalShown: 0,
+        nextCursor: null,
         pageSize: 20,
       });
 

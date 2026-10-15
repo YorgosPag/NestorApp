@@ -18,7 +18,7 @@ import 'server-only';
 
 import { z } from 'zod';
 import { NextResponse } from 'next/server';
-import { defineRoute, ok, created } from '@/lib/api/define-route';
+import { defineRoute, created } from '@/lib/api/define-route';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import {
   validatePostingAllowed,
@@ -29,17 +29,20 @@ import {
 } from '@/subapps/accounting/services';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { POLICY_ERROR_CODES } from '@/lib/policy/policy-error-codes';
-import type { InvoiceFilters, InvoiceType, CreateInvoiceInput, CreditCheckResult } from '@/subapps/accounting/types';
-import { readListContext } from '../_shared/list-request-context';
-
-const VALID_INVOICE_TYPES = [
-  'service_invoice', 'sales_invoice', 'retail_receipt',
-  'service_receipt', 'credit_invoice', 'service_invoice_eu', 'service_invoice_3rd',
-] as const;
+import { INVOICE_PAYMENT_STATUSES, INVOICE_TYPES } from '@/subapps/accounting/types';
+import type { InvoiceFilters, CreateInvoiceInput, CreditCheckResult } from '@/subapps/accounting/types';
+import {
+  optionalEnumParam,
+  optionalFiscalYearParam,
+  optionalIdParam,
+  readListContext,
+  readPageRequest,
+  respondWithPage,
+} from '../_shared/list-request-context';
 
 const CreateInvoiceSchema = z.object({
   series: z.string().min(1).max(20),
-  type: z.enum(VALID_INVOICE_TYPES),
+  type: z.enum(INVOICE_TYPES),
   issueDate: z.string().min(10).max(30),
   dueDate: z.string().max(30).nullable().optional(),
   contactId: z.string().max(128).nullable().optional(),
@@ -58,45 +61,14 @@ export const GET = defineRoute({
   handler: async ({ req, auth }) => {
     const { repository, searchParams } = readListContext(req, auth);
 
-    const filters: InvoiceFilters = {};
+    const filters: InvoiceFilters = {
+      type: optionalEnumParam(searchParams, 'type', INVOICE_TYPES),
+      paymentStatus: optionalEnumParam(searchParams, 'paymentStatus', INVOICE_PAYMENT_STATUSES),
+      fiscalYear: optionalFiscalYearParam(searchParams),
+      propertyId: optionalIdParam(searchParams, 'propertyId'),
+    };
 
-    const type = searchParams.get('type');
-    if (type) {
-      filters.type = type as InvoiceType;
-    }
-
-    const paymentStatus = searchParams.get('paymentStatus');
-    if (paymentStatus === 'unpaid' || paymentStatus === 'partial' || paymentStatus === 'paid') {
-      filters.paymentStatus = paymentStatus;
-    }
-
-    const fiscalYear = searchParams.get('fiscalYear');
-    if (fiscalYear) {
-      filters.fiscalYear = parseInt(fiscalYear, 10);
-    }
-
-    const customerId = searchParams.get('customerId');
-    if (customerId) {
-      filters.customerId = customerId;
-    }
-
-    const projectId = searchParams.get('projectId');
-    if (projectId) {
-      filters.projectId = projectId;
-    }
-
-    const propertyId = searchParams.get('propertyId');
-    if (propertyId) {
-      filters.propertyId = propertyId;
-    }
-
-    const pageSize = searchParams.get('pageSize');
-    const result = await repository.listInvoices(
-      filters,
-      pageSize ? parseInt(pageSize, 10) : undefined
-    );
-
-    return ok(result);
+    return respondWithPage(() => repository.listInvoices(filters, readPageRequest(searchParams)));
   },
 });
 

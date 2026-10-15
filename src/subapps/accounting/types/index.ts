@@ -183,6 +183,13 @@ export type {
 } from './matching-config';
 export { DEFAULT_MATCHING_CONFIG } from './matching-config';
 
+// ── Λεξιλόγια — ρίζες σε χρόνο εκτέλεσης (έλεγχος εισόδου φίλτρων λίστας, ADR-ACC-010 §2.1.1 Φάση 3β) ──
+export { ENTRY_TYPES } from './common';
+export { INVOICE_TYPES, INVOICE_PAYMENT_STATUSES } from './invoice';
+export type { InvoicePaymentStatus } from './invoice';
+export { ASSET_CATEGORIES, ASSET_STATUSES } from './assets';
+export { TRANSACTION_DIRECTIONS, MATCH_STATUSES } from './bank';
+
 // ── Matching Rules Types (Phase 2b — Rule Learning) ─────────────────────────
 export type {
   RuleStatus,
