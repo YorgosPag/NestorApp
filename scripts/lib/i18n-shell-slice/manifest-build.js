@@ -95,6 +95,14 @@ function serializeRouteWants(routes) {
  * μπορούσε να αποκλίνει. Μένει μόνο η λίστα ΜΕΛΩΝ του κελύφους (`shellMembers`), επειδή είναι
  * ΕΞΟΔΟΣ: τη διαβάζει το CHECK 3.51. ⚠️ Νέο όνομα επίτηδες — `Object.keys` σε πίνακα θα έδινε
  * σιωπηλά δείκτες σε όποιον έμεινε στο παλιό σχήμα.
+ *
+ * 🔴 ADR-744 §32.12 — ΚΑΙ Η ΤΟΠΟΛΟΓΙΑ ΒΓΗΚΕ (`shellMembers`, `boundaries`, `stats.shellFiles/
+ * dynamicBoundaries/routeBoundaries`). ΜΕΤΡΗΜΕΝΟ: 25 από τα 45 σωστά κόκκινα του G (200 commits) άλλαζαν
+ * ΜΟΝΟ αυτά — καμία γραμμή που ταξιδεύει στον browser. Τα μέλη τα διάβαζε μόνο το CHECK 3.51 Layer 1
+ * (το Layer 2 του ήδη τα ξαναϋπολογίζει)· τα όρια και οι μετρητές μόνο γραμμές log. Δεσμευμένο παράγωγο
+ * που δεν ταξιδεύει = cache εισόδου πύλης μέσα στο VCS (Bazel: οι έξοδοι ΠΟΤΕ στο VCS, η τοπολογία
+ * είναι `query`). Τα μέλη τα δίνει πλέον το `shell-members.js`, από τον ίδιο walk, με επαληθεύσιμο ίχνος.
+ * Μένουν όσα ΕΧΟΥΝ καταναλωτή-πύλη ή runtime: `wants` (+ `from` για την απογραφή), `matchedKeys`, artifacts.
  */
 function buildManifest({ config, plan, artifacts, slices, routes = [], signedOnly = new Map(), globalInputs = {} }) {
   const body = {
@@ -105,14 +113,10 @@ function buildManifest({ config, plan, artifacts, slices, routes = [], signedOnl
     guaranteedNamespaces: Object.keys(config.guaranteedNamespaces).sort(),
     namespaces: Object.keys(slices.resources[config.languages[0]] || {}).sort(),
     stats: {
-      shellFiles: plan.closure.files.length,
-      dynamicBoundaries: plan.closure.dynamicBoundaries.length,
-      routeBoundaries: plan.closure.routeBoundaries.length,
       matchedKeys: slices.matchedKeys,
       sliceBytes: [...artifacts.values()].reduce((sum, text) => sum + Buffer.byteLength(text, 'utf8'), 0),
     },
     artifacts: Object.fromEntries([...artifacts, ...signedOnly].map(([file, text]) => [file, sha256(text)])),
-    boundaries: { dynamic: plan.closure.dynamicBoundaries, route: plan.closure.routeBoundaries },
     // Shell keys no locale defines, in any namespace the call site declares.
     // Reported, never fatal: CHECK 3.8 owns missing keys, this gate owns freshness.
     unresolvableKeys: slices.unresolvableKeys,
@@ -120,8 +124,6 @@ function buildManifest({ config, plan, artifacts, slices, routes = [], signedOnl
     // ADR-744 §20 (Β2β) — τα `wants` ΚΑΘΕ δηλωμένης διαδρομής, ώστε το Layer 1 να
     // μπορεί να ρωτήσει «είναι ακόμη αυτό που λένε τα locales;» χωρίς γράφο.
     routes: serializeRouteWants(routes),
-    // ADR-744 §32.11 — τα μέλη του κελύφους, ΕΞΟΔΟΣ της κλειστότητας (CHECK 3.51 · προβολή του G).
-    shellMembers: [...plan.perFile.keys()].sort(),
     // 🔴 ADR-744 §30 — και οι ΚΑΘΟΛΙΚΕΣ είσοδοι (config · σταθερές · aliases · toolchain), ώστε
     // το `inputsSha256` να είναι ΟΝΤΩΣ αποτύπωμα εισόδων — ως τώρα σφράγιζε μόνο τις ανά αρχείο.
     globalInputs,
@@ -138,6 +140,8 @@ function buildManifest({ config, plan, artifacts, slices, routes = [], signedOnl
  * που απέρριψε το §31.1. Άρα εδώ μπαίνει ΚΑΘΕ πεδίο που παράγει η κλειστότητα του κελύφους, ΕΚΤΟΣ:
  *   · `globalInputs` (έλεγχος E) · `sliceBytes` / `inputsSha256` (παράγωγα των παραπάνω + των διαδρομών).
  * ⚠️ ΜΙΑ συνάρτηση για τις δύο πλευρές (φρέσκο και δεσμευμένο): δύο προβολές θα απέκλιναν.
+ * ADR-744 §32.12 — μέλη/όρια/μετρητές τοπολογίας δεν είναι πια στο manifest, άρα ούτε εδώ: η προβολή
+ * μένει ΑΚΡΙΒΩΣ ό,τι σφραγίζει το Layer 2, τίποτα παραπάνω (ένα πεδίο εδώ που δεν γράφεται = μόνιμο `null`).
  *
  * @param {object} manifest
  * @param {string[]} artifactPaths  τα artifacts του κελύφους (slices ανά γλώσσα + `whole`)
@@ -149,16 +153,9 @@ function shellProjection(manifest, artifactPaths) {
     shellRoots: manifest.shellRoots,
     guaranteedNamespaces: manifest.guaranteedNamespaces,
     namespaces: manifest.namespaces,
-    stats: {
-      shellFiles: stats.shellFiles,
-      dynamicBoundaries: stats.dynamicBoundaries,
-      routeBoundaries: stats.routeBoundaries,
-      matchedKeys: stats.matchedKeys,
-    },
-    boundaries: manifest.boundaries,
+    stats: { matchedKeys: stats.matchedKeys },
     unresolvableKeys: manifest.unresolvableKeys,
     wants: manifest.wants,
-    members: manifest.shellMembers || [],
     artifacts: Object.fromEntries(artifactPaths.map(rel => [rel, (manifest.artifacts || {})[rel] ?? null])),
   };
 }

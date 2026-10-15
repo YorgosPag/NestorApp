@@ -486,7 +486,7 @@ describe('Ν — το ορφανό artifact μπλοκάρει ΤΗΝ ΠΥΛΗ, 
  * ΚΑΜΙΑ μετάλλαξη tracked αρχείου, όπως έκανε το παλιό Ε3). Εδώ μένει το συμβόλαιο του manifest.
  * =============================================================================
  */
-describe('Ε — οι πίνακες εισόδων αποσύρθηκαν· μένουν τα μέλη (§32.11)', () => {
+describe('Ε — οι πίνακες εισόδων αποσύρθηκαν (§32.11)· και η τοπολογία (§32.12)', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(REPO, 'src/i18n/generated/shell-slice.manifest.json'), 'utf8'));
 
   it('Ε0: κανένας πίνακας εισόδων στο manifest (`shellFiles`/`routeFiles`/`consultedFiles`/`unresolvedSpecs`)', () => {
@@ -495,10 +495,15 @@ describe('Ε — οι πίνακες εισόδων αποσύρθηκαν· μ�
     }
   });
 
-  it('Ε1 ΠΑΡΟΝΟΜΑΣΤΗΣ: τα μέλη ταξιδεύουν ως ΤΑΞΙΝΟΜΗΜΕΝΗ λίστα, ίση σε πλήθος με το `stats.shellFiles`', () => {
-    expect(Array.isArray(manifest.shellMembers)).toBe(true);
-    expect(manifest.shellMembers.length).toBe(manifest.stats.shellFiles);
-    expect(manifest.shellMembers).toEqual([...manifest.shellMembers].sort());
+  // ADR-744 §32.12 — και η ΤΟΠΟΛΟΓΙΑ βγήκε: 25/45 κόκκινα του G άλλαζαν μόνο αυτήν. Τα μέλη τα δίνει
+  // το `shell-members.js` (άγκυρες Ξ13–Ξ16)· ο ΠΑΡΟΝΟΜΑΣΤΗΣ είναι ότι μένει ό,τι ταξιδεύει.
+  it('Ε1: καμία τοπολογία στο manifest (`shellMembers`/`boundaries`/μετρητές)· μένουν `wants` + `matchedKeys`', () => {
+    for (const retired of ['shellMembers', 'boundaries']) {
+      expect({ retired, present: retired in manifest }).toEqual({ retired, present: false });
+    }
+    expect(Object.keys(manifest.stats).sort()).toEqual(['matchedKeys', 'sliceBytes']);
+    expect(Object.keys(manifest.wants).length).toBeGreaterThan(0);
+    expect(manifest.stats.matchedKeys).toBeGreaterThan(0);
   });
 
   it('Ε2: κάθε δηλωμένη διαδρομή έχει γραμμή στο manifest (η ΕΞΟΔΟΣ που κρίνει ο G)', () => {

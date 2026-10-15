@@ -84,8 +84,6 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const { bootstrap } = require('./lib/i18n-shell-slice/cli');
-const { loadConfig } = require('./lib/i18n-shell-slice/config');
-const { materializeIndex } = require('./lib/git-index-snapshot');
 const {
   buildModuleGraph,
   buildShellPlan,
@@ -93,7 +91,7 @@ const {
   manifestPath,
 } = require('./lib/i18n-shell-slice/plan');
 const RS = require('./lib/i18n-shell-slice/route-slices');
-const { checkGlobalInputs, globalInputPaths } = require('./lib/i18n-shell-slice/global-inputs');
+const { checkGlobalInputs, materializeGlobalInputs } = require('./lib/i18n-shell-slice/global-inputs');
 const { checkLazyRouteFreshness } = require('./lib/i18n-shell-slice/lazy-freshness');
 const { checkIncrementalFreshness } = require('./lib/i18n-shell-slice/incremental-freshness');
 const { createLayerOnePass } = require('./lib/i18n-shell-slice/layer-one-pass');
@@ -189,7 +187,7 @@ function runLayerOne(config, stagedFiles, root = PROJECT_ROOT, lazySources = {})
   }
   console.log(
     `${GREEN}  ✅ CHECK 3.34 OK — shell slice matches ${Object.keys(manifest.wants).length} namespace(s) / ` +
-    `${manifest.stats.matchedKeys} keys ${DIM}(${manifest.stats.sliceBytes} bytes, ${manifest.stats.shellFiles} shell modules)${NC}`
+    `${manifest.stats.matchedKeys} keys ${DIM}(${manifest.stats.sliceBytes} bytes)${NC}`
   );
 }
 
@@ -242,7 +240,7 @@ function runFull(config) {
   }
 
   console.log(
-    `${GREEN}✅ CHECK 3.34 OK (full) — ${rendered.manifest.stats.shellFiles} shell modules, ` +
+    `${GREEN}✅ CHECK 3.34 OK (full) — ${plan.closure.files.length} shell modules, ` +
     `${rendered.manifest.namespaces.length} namespaces, ${rendered.manifest.stats.sliceBytes} bytes${NC}`
   );
 }
@@ -311,28 +309,18 @@ function main() {
 function runLayerOneOnIndex(workingConfig, stagedFiles) {
   // 🔑 ADR-744 §30 — τα αρχεία των καθολικών εισόδων έρχονται από το ΜΗΤΡΩΟ, όχι από χειρόγραφη
   // λίστα εδώ (ήταν: config · tsconfig · keyConstants — χωρίς bundles, μητρώα, toolchain).
-  const baseSpecs = [
-    path.posix.dirname(workingConfig.localesDir),
-    workingConfig.outputDir,
-    ...stagedFiles,
-  ];
-  let specs = [...baseSpecs, ...globalInputPaths(PROJECT_ROOT, workingConfig, PROJECT_ROOT)];
-  let snapshot = materializeIndex({ repoRoot: PROJECT_ROOT, pathspecs: specs });
-  let config;
+  let materialized;
   try {
-    config = loadConfig(snapshot.root);
-    // Δεύτερο πέρασμα: το config του ΕΥΡΕΤΗΡΙΟΥ μπορεί να δηλώνει αρχείο που το config του δίσκου δεν ξέρει.
-    const missing = globalInputPaths(snapshot.root, config, PROJECT_ROOT).filter(file => !specs.includes(file));
-    if (missing.length > 0) {
-      snapshot.dispose();
-      specs = [...specs, ...missing];
-      snapshot = materializeIndex({ repoRoot: PROJECT_ROOT, pathspecs: specs });
-    }
+    materialized = materializeGlobalInputs({
+      repoRoot: PROJECT_ROOT,
+      workingConfig,
+      extraSpecs: [path.posix.dirname(workingConfig.localesDir), workingConfig.outputDir, ...stagedFiles],
+    });
   } catch (error) {
-    snapshot.dispose();
     fail(error.message, 'fix .i18n-shell-slice.json');
     return;
   }
+  const { snapshot, config } = materialized;
   process.on('exit', snapshot.dispose);
   // F κρίνει κι αυτό το ΕΥΡΕΤΗΡΙΟ: σύνολο αρχείων + κείμενα από το git, μνήμη στο repo (όχι στο στιγμιότυπο).
   runLayerOne(config, stagedFiles, snapshot.root, {

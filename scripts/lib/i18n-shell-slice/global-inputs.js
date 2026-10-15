@@ -329,6 +329,33 @@ function globalInputPaths(root, config, toolRoot, inputs = GLOBAL_INPUTS) {
   return [...new Set(inputs.flatMap(input => input.paths(context)))].sort();
 }
 
+/**
+ * Το στιγμιότυπο ΕΥΡΕΤΗΡΙΟΥ με κάθε καθολική είσοδο + `extraSpecs`, και το config του ευρετηρίου.
+ * Ένα σημείο για CHECK 3.34 και 3.51 (ADR-744 §32.12 — ήταν δύο χειρόγραφες λίστες, και του 3.51 δεν
+ * είχε bundles/toolchain). Δεύτερο πέρασμα: το config του ΕΥΡΕΤΗΡΙΟΥ μπορεί να δηλώνει αρχείο που το
+ * config του δίσκου δεν ξέρει. Σφάλμα ⇒ το στιγμιότυπο σβήνεται και το σφάλμα ανεβαίνει.
+ * @returns {{snapshot: {root: string, dispose: Function}, config: object}}
+ */
+function materializeGlobalInputs({ repoRoot, workingConfig, extraSpecs }) {
+  const { loadConfig } = require('./config');
+  const { materializeIndex } = require('../git-index-snapshot');
+  let specs = [...extraSpecs, ...globalInputPaths(repoRoot, workingConfig, repoRoot)];
+  let snapshot = materializeIndex({ repoRoot, pathspecs: specs });
+  try {
+    const config = loadConfig(snapshot.root);
+    const missing = globalInputPaths(snapshot.root, config, repoRoot).filter(file => !specs.includes(file));
+    if (missing.length > 0) {
+      snapshot.dispose();
+      specs = [...specs, ...missing];
+      snapshot = materializeIndex({ repoRoot, pathspecs: specs });
+    }
+    return { snapshot, config };
+  } catch (error) {
+    snapshot.dispose();
+    throw error;
+  }
+}
+
 /** @returns {string[]} `είσοδος:τμήμα (αλλαγμένο|νέο|αφαιρέθηκε)`, ταξινομημένα */
 function diffGlobalInputs(recorded, current) {
   const changes = [];
@@ -378,6 +405,7 @@ module.exports = {
   toolchainClosure,
   computeGlobalInputs,
   globalInputPaths,
+  materializeGlobalInputs,
   diffGlobalInputs,
   checkGlobalInputs,
 };

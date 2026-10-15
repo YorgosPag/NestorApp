@@ -461,7 +461,7 @@ describe('Group 6γ — §30: config · σταθερές · aliases · bundles �
     }
     const config = loadConfig(tmpRoot);
     const manifest = {
-      languages: [], artifacts: {}, wants: {}, stats: {}, shellMembers: [],
+      languages: [], artifacts: {}, wants: {}, stats: {},
       globalInputs: GI.computeGlobalInputs(tmpRoot, config, tmpRoot),   // ο δρόμος του γεννήτορα
     };
     writeJson(`${config.outputDir}/shell-slice.manifest.json`, manifest);
@@ -927,14 +927,12 @@ describe('Group 12 — the committed slice is sane', () => {
     expect(Object.keys(JSON.parse(fs.readFileSync(slicePath, 'utf8')))).toContain('common');
   });
 
-  it('the manifest records the shell MEMBERS (a list — ADR-744 §32.11), and no input tables', () => {
+  it('the manifest records neither input tables (ADR-744 §32.11) nor shell TOPOLOGY (§32.12)', () => {
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-    expect(Array.isArray(manifest.shellMembers)).toBe(true);
-    expect(manifest.shellMembers.length).toBe(manifest.stats.shellFiles);
-    expect(manifest.shellMembers).toContain('src/app/layout.tsx');
-    for (const retired of ['shellFiles', 'routeFiles', 'consultedFiles', 'unresolvedSpecs']) {
+    for (const retired of ['shellFiles', 'routeFiles', 'consultedFiles', 'unresolvedSpecs', 'shellMembers', 'boundaries']) {
       expect(manifest).not.toHaveProperty(retired);
     }
+    expect(manifest.stats).not.toHaveProperty('shellFiles');
   });
 });
 

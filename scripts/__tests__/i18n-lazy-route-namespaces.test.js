@@ -361,7 +361,7 @@ describe('Λ — §31: ο χάρτης τεμπέλικων διαδρομών �
     write(LR.artifactPath(config), LR.renderLazyArtifact(lazy.rows));
     write(`${config.outputDir}/${P.WHOLE_NAME}`, `[]${NL}`);
     write(`${config.outputDir}/shell-slice.manifest.json`, JSON.stringify({
-      languages: [], artifacts: {}, wants: {}, stats: {}, shellMembers: [],
+      languages: [], artifacts: {}, wants: {}, stats: {},
       globalInputs: GI.computeGlobalInputs(root, config, root),
     }));
     return { root, write, rows: lazy.rows };
@@ -781,5 +781,72 @@ describe('Ξ — §32: ο G ξαναϋπολογίζει ΜΟΝΟ ό,τι άγγ
     const result = judge(repo, [TABS]);
     expect(result.reasons).toHaveLength(1);
     expect(result.reasons[0]).toContain('beta: +more −title');
+  }, 90_000);
+
+  // ── §32.12: η τοπολογία βγήκε από το manifest — τα μέλη τα δίνει ο walk, με ΕΠΑΛΗΘΕΥΣΙΜΟ ίχνος.
+  const SM = require(path.join(LIB, 'shell-members'));
+  /** Τα μέλη του κελύφους ΟΠΩΣ τα ρωτά το CHECK 3.51 `--index`: πηγή = ευρετήριο. */
+  function membersOn(repo, cacheDir) {
+    git(repo.root, 'add', '-A');
+    const sources = SC.createIndexSources({ repoRoot: repo.root, root: repo.root });
+    return SM.shellMembersFor({ root: repo.root, config: repo.config, sources, cacheDir });
+  }
+
+  it('Ξ13 ✅ ΤΟΠΟΛΟΓΙΑ: νέα ακμή ΧΩΡΙΣ i18n στο κέλυφος ⇒ τα μέλη αλλάζουν, ο G κρίνει το κέλυφος ΚΑΙ μένει πράσινος', () => {
+    const repo = committedRepo();
+    expect(repo.manifest).not.toHaveProperty('shellMembers');
+    expect(repo.manifest).not.toHaveProperty('boundaries');
+    const before = membersOn(repo, null).members;
+    repo.write('src/shell/util.ts', `export const id = x => x;${NL}`);
+    repo.write(NAV, translated('Nav', 'alpha', 'nav', `import { id } from './util';${NL}`));
+    const result = judge(repo, [NAV, 'src/shell/util.ts']);
+    expect(result.stats).toEqual(expect.objectContaining({ shell: true }));                       // κρίθηκε…
+    expect(result.reasons).toEqual([]);                                                          // …και δεν είναι πια κόκκινο
+    expect(membersOn(repo, null).members).toEqual([...before, 'src/shell/util.ts'].sort());       // ενώ η τοπολογία ΑΛΛΑΞΕ
+  }, 90_000);
+
+  it('Ξ14 ΙΧΝΟΣ: δεύτερη ερώτηση ⇒ 0 walk, ίδια μέλη· αλλαγή σε μέλος ⇒ walk που ΟΝΟΜΑΖΕΙ το αρχείο', () => {
+    const repo = committedRepo();
+    const cacheDir = path.join(repo.root, '.cache');
+    const cold = membersOn(repo, cacheDir);
+    expect(cold).toEqual(expect.objectContaining({ walked: true, reason: 'κανένα ίχνος' }));
+    const warm = membersOn(repo, cacheDir);
+    expect(warm.walked).toBe(false);
+    expect(warm.members).toEqual(cold.members);
+    repo.write(NAV, `// σχόλιο${NL}${translated('Nav', 'alpha', 'nav')}`);
+    const edited = membersOn(repo, cacheDir);
+    expect(edited.walked).toBe(true);
+    expect(edited.reason).toContain(NAV);
+    expect(edited.members).toEqual(cold.members);
+    expect(membersOn(repo, cacheDir).walked).toBe(false);                                        // γράφτηκε νέο ίχνος
+  }, 90_000);
+
+  it('Ξ15 🔴 ΑΡΝΗΤΙΚΗ ΕΞΑΡΤΗΣΗ: νέο αρχείο λύνει άλυτη εισαγωγή του κελύφους ⇒ ίχνος ΑΚΥΡΟ· χωρίς τα «όχι» θα ίσχυε (μπαγιάτικο)', () => {
+    const GONE = 'src/shell/gone.tsx';
+    const repo = committedRepo({ [NAV]: translated('Nav', 'alpha', 'nav', `import { Gone } from './gone';${NL}`) });
+    const cacheDir = path.join(repo.root, '.cache');
+    expect(membersOn(repo, cacheDir).members).not.toContain(GONE);
+    repo.write(GONE, translated('Gone', 'alpha', 'extra'));
+    git(repo.root, 'add', '-A');
+    const trace = JSON.parse(fs.readFileSync(SM.traceFileOf(cacheDir), 'utf8'));
+    const sources = SC.createIndexSources({ repoRoot: repo.root, root: repo.root });
+    const args = { key: trace.key, root: repo.root, config: repo.config, sources };
+    expect(SM.verifyTrace({ ...trace, absent: [] }, args)).toBeNull();                           // η τρύπα, αναπαραγμένη
+    const after = membersOn(repo, cacheDir);
+    expect(after.walked).toBe(true);
+    expect(after.reason).toContain('src/shell/gone');
+    expect(after.members).toContain(GONE);
+  }, 90_000);
+
+  it('Ξ16 🔴 ΡΙΖΕΣ ΜΟΤΙΒΟΥ: νέο `layout.tsx` που ΚΑΝΕΙΣ δεν εισάγει ⇒ ίχνος ΑΚΥΡΟ (κανένας resolver δεν το ρώτησε)', () => {
+    const repo = committedRepo();
+    const patterned = { ...repo, config: { ...repo.config, shellRoots: ['src/app/**/layout.tsx'] } };
+    const cacheDir = path.join(repo.root, '.cache');
+    expect(membersOn(patterned, cacheDir).walked).toBe(true);
+    expect(membersOn(patterned, cacheDir).walked).toBe(false);
+    repo.write('src/app/x/layout.tsx', translated('X', 'alpha', 'extra'));
+    const after = membersOn(patterned, cacheDir);
+    expect(after.reason).toBe('άλλαξαν οι υποψήφιες ρίζες');
+    expect(after.members).toContain('src/app/x/layout.tsx');
   }, 90_000);
 });

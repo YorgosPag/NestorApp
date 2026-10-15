@@ -110,6 +110,14 @@ function createIndexSources({ repoRoot, root }) {
   };
 }
 
+/** Ατομική εγγραφή: παράλληλος πράκτορας / νήμα του hook βλέπει παλιό ή νέο, ποτέ μισό. Σφάλμα ⇒ ρίχνει. */
+function writeFileAtomic(file, text) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const tmp = `${file}.${process.pid}.tmp`;
+  fs.writeFileSync(tmp, text);
+  fs.renameSync(tmp, file);
+}
+
 /**
  * Μία «συσκευασία» ανά χώρο ονομάτων: `{ schema, records: { κλειδί: { mod?, facts? } } }`.
  * Ένα αρχείο αντί για χιλιάδες (Windows: το άνοιγμα αρχείου είναι το ακριβό, όχι τα bytes).
@@ -145,11 +153,8 @@ function openPack(dir, namespace) {
     persist() {
       if (!file || (!dirty && touched.size === counts.records)) return;
       try {
-        fs.mkdirSync(dir, { recursive: true });
-        const tmp = `${file}.${process.pid}.tmp`;
         const kept = Object.fromEntries([...touched].sort().map(key => [key, records[key]]));
-        fs.writeFileSync(tmp, JSON.stringify({ schema: CACHE_SCHEMA, records: kept }));
-        fs.renameSync(tmp, file);   // ατομικό: παράλληλος πράκτορας βλέπει παλιό ή νέο, ποτέ μισό
+        writeFileAtomic(file, JSON.stringify({ schema: CACHE_SCHEMA, records: kept }));
         for (const other of fs.readdirSync(dir)) {
           if (other !== path.basename(file) && other.endsWith('.json')) fs.rmSync(path.join(dir, other), { force: true });
         }
@@ -305,6 +310,7 @@ module.exports = {
   CACHE_SCHEMA,
   CACHE_REL,
   gitBlobSha,
+  writeFileAtomic,
   createDiskSources,
   createIndexSources,
   openPack,

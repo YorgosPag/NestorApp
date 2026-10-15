@@ -137,8 +137,10 @@ function reportViolations(violations) {
 
 function reportPlan(plan, rendered, config, explain, routeUnusedPolicy = []) {
   const { stats } = rendered.manifest;
+  // ADR-744 §32.12 — η τοπολογία δεν σφραγίζεται πια στο manifest· τυπώνεται από το σχέδιο αυτής της εκτέλεσης.
+  const { closure } = plan;
   console.log(`${GREEN}ADR-744 shell slice${NC}`);
-  console.log(`  shell closure   : ${stats.shellFiles} modules  ${DIM}(cut at ${stats.dynamicBoundaries} dynamic + ${stats.routeBoundaries} route boundaries)${NC}`);
+  console.log(`  shell closure   : ${closure.files.length} modules  ${DIM}(cut at ${closure.dynamicBoundaries.length} dynamic + ${closure.routeBoundaries.length} route boundaries)${NC}`);
   console.log(`  namespaces      : ${rendered.manifest.namespaces.length}  ${DIM}${rendered.manifest.namespaces.join(', ')}${NC}`);
   console.log(`  keys sliced     : ${stats.matchedKeys}`);
   console.log(`  languages       : ${config.languages.join(', ')}`);

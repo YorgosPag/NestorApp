@@ -32,8 +32,9 @@
  *
  * ΔΥΟ ΣΤΡΩΜΑΤΑ
  * ------------
- *   Layer 1 (pre-commit) — Κ1 στα σταδιοποιημένα · Κ2 από το **manifest**
- *                          (`shellMembers`), **χωρίς γράφο**. Μετρημένο **~1,5s**.
+ *   Layer 1 (pre-commit) — Κ1 στα σταδιοποιημένα · Κ2 στα μέλη του κελύφους **του
+ *                          ευρετηρίου**, από επαληθεύσιμο ίχνος του walk (ADR-744 §32.12·
+ *                          ως τότε από το `shellMembers` του manifest).
  *   Layer 2 (CI, `--all`) — Κ1 σε όλο το `src/` · Κ2 με **ανακατασκευή γράφου**
  *                          (~20s), γιατί το manifest μπορεί να είναι μπαγιάτικο
  *                          και ένα νέο layout αλλάζει την κλειστότητα.
@@ -57,7 +58,9 @@ const path = require('node:path');
 const K1 = require('./lib/i18n-ssr/readiness-ast');
 const K2 = require('./lib/i18n-ssr/answerability');
 const { loadConfig } = require('./lib/i18n-shell-slice/config');
-const { materializeIndex, readIndexText } = require('./lib/git-index-snapshot');
+const { materializeIndex } = require('./lib/git-index-snapshot');
+const { materializeGlobalInputs } = require('./lib/i18n-shell-slice/global-inputs');
+const { createIndexSources } = require('./lib/i18n-shell-slice/source-cache');
 
 const CHECK = 'CHECK 3.51 (ADR-781)';
 const BS = String.fromCharCode(92);
@@ -103,26 +106,34 @@ function measureK1(files, root = PROJECT_ROOT) {
 }
 
 /**
- * Τα μέλη του κελύφους, όπως τα γράφει το CHECK 3.34 (ADR-744 §32.11: λίστα `shellMembers` — ως
- * τότε τα κλειδιά του map αποτυπωμάτων `shellFiles`, που αποσύρθηκε). ⚠️ ΠΙΝΑΚΑΣ, όχι map:
- * `Object.keys` εδώ θα έδινε σιωπηλά δείκτες ('0', '1', …) ⇒ Κ2 πάνω σε κανένα αρχείο.
+ * Τα μέλη του κελύφους για το δέντρο της ρίζας. ADR-744 §32.12 — **ΔΕΝ** διαβάζονται πια από το manifest
+ * (εκεί άλλαζαν σε 25/45 κόκκινα του CHECK 3.34 χωρίς κανένα κλειδί): τα δίνει ο ΙΔΙΟΣ walk του γεννήτορα,
+ * με επαληθεύσιμο ίχνος στη μνήμη της πύλης (`shell-members.js`) — ζεστό ⇒ 0 walk, και πάντα του
+ * δέντρου που κρίνεται, όχι του τελευταίου που αναγεννήθηκε.
+ * ⛔ Fail-closed: μηδέν μέλη ⇒ σφάλμα, ποτέ Κ2 πάνω σε κανένα αρχείο.
+ *
+ * @param {object} [sources] η πηγή του δέντρου· προεπιλογή ο δίσκος της ρίζας
+ * @param {string} [cacheRoot] πού ζει η μνήμη· προεπιλογή η ρίζα (μίνι-repo των tests ⇒ ποτέ η μνήμη του repo)
  */
-function shellMembersOf(manifest) {
-  return Array.isArray(manifest.shellMembers) ? manifest.shellMembers : [];
+function shellMembersOf(root, config, sources, cacheRoot = root) {
+  const SM = require('./lib/i18n-shell-slice/shell-members');
+  const SC = require('./lib/i18n-shell-slice/source-cache');
+  const { members } = SM.shellMembersFor({
+    root, config, sources: sources || SC.createDiskSources(root), cacheDir: path.join(cacheRoot, SC.CACHE_REL),
+  });
+  if (members.length === 0) throw new Error('η κλειστότητα του κελύφους βγήκε κενή — έλεγξε τα shellRoots του .i18n-shell-slice.json');
+  return members;
 }
 
-function measureK2({ full }, root = PROJECT_ROOT) {
+/** @param {{full: boolean, closureFiles?: string[]}} options `closureFiles` = ήδη γνωστά μέλη (`--index`) */
+function measureK2({ full, closureFiles }, root = PROJECT_ROOT) {
   const posixRoot = root.split(BS).join('/');
   const config = loadConfig(posixRoot);
   const slice = readGenerated('shell-slice.el.json', root);
 
   if (!full) {
-    const manifest = readGenerated('shell-slice.manifest.json', root);
-    const closureFiles = shellMembersOf(manifest);
-    if (closureFiles.length === 0) {
-      throw new Error('το manifest δεν έχει shellMembers — τρέξε: npm run generate:i18n-shell-slice');
-    }
-    return K2.measureAnswerability({ projectRoot: posixRoot, config, slice, closureFiles });
+    const members = closureFiles || shellMembersOf(posixRoot, config);
+    return K2.measureAnswerability({ projectRoot: posixRoot, config, slice, closureFiles: members });
   }
 
   // Layer 2 — η κλειστότητα ξαναχτίζεται από τον γράφο, γιατί ένα ΝΕΟ layout
@@ -132,7 +143,7 @@ function measureK2({ full }, root = PROJECT_ROOT) {
   return K2.measureAnswerability({ projectRoot: posixRoot, config, slice, graph });
 }
 
-function measure(args, root = PROJECT_ROOT) {
+function measure(args, root = PROJECT_ROOT, { closureFiles } = {}) {
   const full = args.includes('--all') || args.includes('--full');
   const staged = args.filter((arg) => !arg.startsWith('--')).map((arg) => arg.split(BS).join('/'));
 
@@ -141,7 +152,7 @@ function measure(args, root = PROJECT_ROOT) {
     : staged.filter((file) => /^src\/.*\.tsx?$/.test(file) && !/\.d\.ts$/.test(file));
 
   const k1 = measureK1(k1Files, root);
-  const k2 = measureK2({ full }, root);
+  const k2 = measureK2({ full, closureFiles }, root);
 
   return {
     full,
@@ -153,25 +164,23 @@ function measure(args, root = PROJECT_ROOT) {
 /**
  * 🔴 **Κρίνε το COMMIT, όχι τον δίσκο** (2026-09-27, ίδια αιτία με CHECK 3.33/3.34 `--index`): σε δέντρο με
  * παράλληλους πράκτορες, ένα ξένο αστάδιοποίητο shell module με νέο κλειδί έκανε κόκκινο commit που δεν το
- * περιείχε. Υλοποιείται ΜΟΝΟ ό,τι διαβάζει το Layer 1: η κλειστότητα του manifest **του ευρετηρίου** ·
- * `src/i18n` · config · key constants · τα σταδιοποιημένα. Το `--full` μένει στον δίσκο (CI).
+ * περιείχε. Υλοποιείται ΜΟΝΟ ό,τι διαβάζει το Layer 1: καθολικές είσοδοι (το ΙΔΙΟ σημείο με το 3.34) ·
+ * `src/i18n` · τα σταδιοποιημένα · και — ΑΦΟΥ τα βρει ο walk πάνω στο ευρετήριο (ADR-744 §32.12) — τα
+ * μέλη του κελύφους. Το `--full` μένει στον δίσκο (CI).
  */
 function measureOnIndex(args) {
-  const config = loadConfig(PROJECT_ROOT);
-  const manifestText = readIndexText({
-    repoRoot: PROJECT_ROOT, relPath: `${config.outputDir}/shell-slice.manifest.json`,
-  });
-  const closureFiles = manifestText === null ? [] : shellMembersOf(JSON.parse(manifestText));
+  const workingConfig = loadConfig(PROJECT_ROOT);
   const staged = args.filter((arg) => !arg.startsWith('--')).map((arg) => arg.split(BS).join('/'));
-  const snapshot = materializeIndex({
+  const { snapshot, config } = materializeGlobalInputs({
     repoRoot: PROJECT_ROOT,
-    pathspecs: [
-      '.i18n-shell-slice.json', 'tsconfig.base.json', path.posix.dirname(config.localesDir), config.outputDir,
-      ...config.keyConstants.map((entry) => entry.file), ...closureFiles, ...staged,
-    ],
+    workingConfig,
+    extraSpecs: [path.posix.dirname(workingConfig.localesDir), workingConfig.outputDir, ...staged],
   });
   try {
-    return measure(args.filter((arg) => arg !== '--index'), snapshot.root);
+    const sources = createIndexSources({ repoRoot: PROJECT_ROOT, root: snapshot.root });
+    const closureFiles = shellMembersOf(snapshot.root, config, sources, PROJECT_ROOT);
+    materializeIndex({ repoRoot: PROJECT_ROOT, pathspecs: closureFiles, into: snapshot.root });
+    return measure(args.filter((arg) => arg !== '--index'), snapshot.root, { closureFiles });
   } finally {
     snapshot.dispose();
   }

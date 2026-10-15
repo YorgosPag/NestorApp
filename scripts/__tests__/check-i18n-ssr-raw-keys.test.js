@@ -78,12 +78,24 @@ const SLICE = JSON.parse(readLive('src/i18n/generated/shell-slice.el.json'));
 const WHOLE = new Set(JSON.parse(readLive('src/i18n/generated/shell-slice.whole.json')));
 const MANIFEST = JSON.parse(readLive('src/i18n/generated/shell-slice.manifest.json'));
 
+// ADR-744 §32.12 — τα μέλη δεν ζουν πια στο manifest: ο ΙΔΙΟΣ walk με την πύλη, ΧΩΡΙΣ μνήμη (`cacheDir: null`)
+// — ποτέ η μνήμη του repo σε test. Μία φορά για όλο το αρχείο (walk ~5–15 s).
+let liveMembers = null;
+function shellMembersLive() {
+  if (liveMembers === null) {
+    const { shellMembersFor } = require('../lib/i18n-shell-slice/shell-members');
+    const { createDiskSources } = require('../lib/i18n-shell-slice/source-cache');
+    liveMembers = shellMembersFor({ root: POSIX_ROOT, config: CONFIG, sources: createDiskSources(POSIX_ROOT), cacheDir: null });
+  }
+  return liveMembers;
+}
+
 const measureK2Live = () =>
   K2.measureAnswerability({
     projectRoot: POSIX_ROOT,
     config: CONFIG,
     slice: SLICE,
-    closureFiles: MANIFEST.shellMembers,
+    closureFiles: shellMembersLive().members,
   });
 
 // ===========================================================================
@@ -113,25 +125,24 @@ describe('Μ0 — το ζωντανό δέντρο είναι ΠΡΑΣΙΝΟ κ�
     expect(total).toBe(measured.records.length);
   });
 
-  // ADR-744 §32.11 — τα μέλη ταξιδεύουν ως ΠΙΝΑΚΑΣ `shellMembers`. Ένα manifest στο παλιό σχήμα
-  // (map `shellFiles`) πρέπει να ΚΟΚΚΙΝΙΖΕΙ, όχι να δώσει Κ2 πάνω σε μηδέν αρχεία ⇒ «πράσινο».
-  test('Μ0.4 — Layer 1: `shellMembers` = τα μέλη· το παλιό σχήμα ΔΕΝ περνά σιωπηλά', () => {
+  // ADR-744 §32.12 — τα μέλη τα δίνει ο walk (με ίχνος), όχι το manifest. Δύο σκέλη: ο walk βλέπει το
+  // κέλυφος (παρονομαστής), και κλειστότητα που δεν μπορεί να υπολογιστεί ΚΟΚΚΙΝΙΖΕΙ — ποτέ Κ2 πάνω σε
+  // μηδέν αρχεία ⇒ «πράσινο».
+  test('Μ0.4 — Layer 1: τα μέλη από τον walk· χωρίς κέλυφος ⇒ σφάλμα, ΟΧΙ σιωπηλό πράσινο', () => {
     const { measureK2 } = require('../check-i18n-ssr-raw-keys');
-    expect(MANIFEST.shellMembers.length).toBeGreaterThan(100);
-    expect(MANIFEST.shellMembers).toContain('src/app/layout.tsx');
+    const { members, walked } = shellMembersLive();
+    expect(walked).toBe(true);                                       // χωρίς μνήμη: ΠΑΝΤΑ walk
+    expect(members.length).toBeGreaterThan(100);
+    expect(members).toContain('src/app/layout.tsx');
+    expect(MANIFEST).not.toHaveProperty('shellMembers');             // η τοπολογία βγήκε από το manifest
     const generated = 'src/i18n/generated';
-    const oldSchema = miniRepo(['.i18n-shell-slice.json', `${generated}/shell-slice.el.json`, `${generated}/shell-slice.manifest.json`], {
-      [`${generated}/shell-slice.manifest.json`]: (text) => {
-        const { shellMembers, ...rest } = JSON.parse(text);
-        return JSON.stringify({ ...rest, shellFiles: Object.fromEntries(shellMembers.map((rel) => [rel, 'x'])) });
-      },
-    });
+    const noShell = miniRepo(['.i18n-shell-slice.json', 'tsconfig.base.json', `${generated}/shell-slice.el.json`]);
     try {
-      expect(() => measureK2({ full: false }, oldSchema)).toThrow('shellMembers');
+      expect(() => measureK2({ full: false }, noShell)).toThrow(/shell root/);
     } finally {
-      fs.rmSync(oldSchema, { recursive: true, force: true });
+      fs.rmSync(noShell, { recursive: true, force: true });
     }
-  });
+  }, 120_000);
 });
 
 // ===========================================================================

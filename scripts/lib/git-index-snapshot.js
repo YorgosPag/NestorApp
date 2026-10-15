@@ -37,10 +37,13 @@ function runGit(repoRoot, args, input) {
 }
 
 /**
- * @param {{repoRoot: string, pathspecs: string[]}} options pathspecs = αρχεία ή φάκελοι, σχετικοί με τη ρίζα
+ * @param {{repoRoot: string, pathspecs: string[], into?: string}} options pathspecs = αρχεία ή φάκελοι,
+ *   σχετικοί με τη ρίζα. `into` = ΥΠΑΡΧΟΝ στιγμιότυπο που συμπληρώνεται (ADR-744 §32.12: το CHECK 3.51
+ *   μαθαίνει ποια modules χρειάζεται μόνο ΑΦΟΥ διαβάσει config/aliases από το ίδιο στιγμιότυπο)· τότε το
+ *   `dispose` δεν σβήνει τίποτα — ανήκει σε όποιον το δημιούργησε.
  * @returns {{root: string, files: string[], dispose: () => void}}
  */
-function materializeIndex({ repoRoot, pathspecs }) {
+function materializeIndex({ repoRoot, pathspecs, into }) {
   // ⚠️ Τα pathspecs ΔΕΝ περνούν ως ορίσματα: ~900 αρχεία κλειστότητας (CHECK 3.51) = ENAMETOOLONG στα Windows.
   // Μία `ls-files` για όλο το ευρετήριο (~30k, μετρημένο <1s) και φίλτρο εδώ: ακριβές αρχείο ή πρόθεμα φακέλου.
   const exact = new Set(pathspecs.map(spec => spec.replace(/\\/g, '/').replace(/\/+$/, '')));
@@ -53,8 +56,8 @@ function materializeIndex({ repoRoot, pathspecs }) {
   const files = exact.size === 0
     ? []
     : runGit(repoRoot, ['ls-files', '-z', '--cached']).split('\0').filter(f => f && (exact.has(f) || underSpec(f)));
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'git-index-snapshot-'));
-  const dispose = () => fs.rmSync(root, { recursive: true, force: true });
+  const root = into || fs.mkdtempSync(path.join(os.tmpdir(), 'git-index-snapshot-'));
+  const dispose = into ? () => {} : () => fs.rmSync(root, { recursive: true, force: true });
   try {
     if (files.length > 0) {
       const prefix = `${root.replace(/\\/g, '/')}/`;
