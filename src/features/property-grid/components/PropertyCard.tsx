@@ -24,6 +24,10 @@ import {
   buildCardPriceText,
   buildPropertyStatusBadge,
 } from '@/domain/cards/property/property-card-shared';
+// 🏢 SSoT: είδος ακινήτου → ετικέτα, από τον ΕΝΑ πίνακα κλειδιών (ADR-145)
+import { getPropertyTypeLabel } from '@/components/building-management/tabs/property-tab-constants';
+// 🏢 SSoT: πλοήγηση ΜΟΝΟ μέσα από το σύνορο του χώρου (CHECK 3.61, ADR-787)
+import { Link } from '@/lib/workspace/navigation';
 // 🏢 ENTERPRISE: Use canonical Property type from property-viewer
 import type { Property } from '@/types/property-viewer';
 import '@/lib/design-system';
@@ -42,7 +46,7 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
   const priceText = buildCardPriceText(price, t);
 
   return (
-    <article className={`w-full flex flex-col ${colors.bg.primary} ${radius.xl} shadow-md ring-1 ${colors.border.muted} overflow-hidden group cursor-pointer ${COMPLEX_HOVER_EFFECTS.FEATURE_CARD}`} itemScope itemType="https://schema.org/RealEstateProperty">
+    <article className={`relative w-full flex flex-col ${colors.bg.primary} ${radius.xl} shadow-md ring-1 ${colors.border.muted} overflow-hidden group cursor-pointer ${COMPLEX_HOVER_EFFECTS.FEATURE_CARD}`} itemScope itemType="https://schema.org/RealEstateProperty">
       <header className={`relative h-48 overflow-hidden ${colors.bg.muted}`}> {/* ✅ ENTERPRISE: Better contrast in dark mode (was secondary) */}
         <img
           src={thumbnailUrl ?? getPropertyImage(property)}
@@ -62,7 +66,20 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
       <main className="p-5">
         <header className="flex justify-between items-start mb-2">
           <section aria-label={t('card.aria.propertyInfo')}>
-            <h2 className={`text-lg font-bold ${colors.text.primary}`} itemProp="name">{property.name}</h2>
+            <h2 className={`text-lg font-bold ${colors.text.primary}`} itemProp="name">
+              {/*
+                ADR-777 §8.30 — **η κάρτα είναι σύνδεσμος προς την καρτέλα του ακινήτου** (μοτίβο Zillow/Idealista:
+                «stretched link»). Ο σύνδεσμος είναι ΕΝΑΣ πραγματικός `<a>` στον τίτλο — άρα Ctrl/μεσαίο κλικ = νέα
+                καρτέλα, και ο αναγνώστης οθόνης ακούει το όνομα — και το `::after` του απλώνεται σε όλο το `<article>`
+                (γι' αυτό εκείνο είναι `relative`). Πριν, η κάρτα φορούσε `cursor-pointer` χωρίς κανέναν χειριστή.
+              */}
+              <Link
+                href={`/properties/${property.id}`}
+                className="after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring"
+              >
+                {property.name}
+              </Link>
+            </h2>
             <p className={`text-sm ${colors.text.muted} flex items-center gap-1 mt-1`}>
               {/* 🏢 ENTERPRISE: Using centralized building icon/color */}
               <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.building.color)} />
@@ -71,7 +88,7 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
           </section>
           <CommonBadge
             status="category"
-            customLabel={property.type}
+            customLabel={getPropertyTypeLabel(property.type, t)}
             className="text-xs truncate max-w-[90px]"
           />
         </header>
@@ -138,20 +155,28 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
           </section>
         )}
 
-        <footer className="flex gap-2" aria-label={t('card.aria.propertyActions')}>
+        {/* `relative z-10`: οι ενέργειες στέκονται ΠΑΝΩ από το `::after` του τίτλου — αλλιώς το κλικ θα πήγαινε στην καρτέλα. */}
+        <footer className="relative z-10 flex gap-2" aria-label={t('card.aria.propertyActions')}>
           <button
+            type="button"
             onClick={() => onViewFloorPlan(property.id)}
             className={`flex-1 px-4 py-2 bg-primary text-primary-foreground ${radius.lg} flex items-center justify-center gap-2 text-sm font-medium ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
           > {/* ✅ ENTERPRISE: Fixed contrast - using primary colors for proper visibility */}
             <Eye className={iconSizes.sm} />
             {t('card.viewFloorPlan')}
           </button>
-          <button
-            className={`px-4 py-2 border ${colors.border.muted} ${radius.lg} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
-            aria-label={t('card.aria.moreDetails')}
+          {/*
+            Το βέλος ήταν `<button>` ΧΩΡΙΣ χειριστή. Τώρα είναι ο ΙΔΙΟΣ σύνδεσμος με τον τίτλο — όχι δεύτερος
+            σύνδεσμος προς τον ίδιο προορισμό (διπλή στάση στο Tab), αλλά ορατή υπόσχεση: κλικ ⇒ καρτέλα.
+          */}
+          <Link
+            href={`/properties/${property.id}`}
+            tabIndex={-1}
+            aria-hidden="true"
+            className={`flex items-center px-4 py-2 border ${colors.border.muted} ${radius.lg} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
           >
             <ArrowRight className={`${iconSizes.sm} ${colors.text.muted}`} />
-          </button>
+          </Link>
         </footer>
       </main>
     </article>

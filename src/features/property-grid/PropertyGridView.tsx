@@ -110,6 +110,11 @@ export function PropertyGridView() {
     router.push(`/properties?view=floorplan&selected=${propertyId}`);
   };
 
+  // ADR-777 §8.30 — η κάρτα (πλέγμα ή λίστα) ανοίγει την καρτέλα του ακινήτου.
+  const handleOpenProperty = (propertyId: string) => {
+    router.push(`/properties/${propertyId}`);
+  };
+
   const handleViewAllFloorPlan = () => {
     router.push('/properties?view=floorplan');
   };
@@ -217,7 +222,7 @@ export function PropertyGridView() {
                 <li key={property.id} className="w-full min-w-0 overflow-hidden">
                   {viewMode === 'grid'
                     ? <PropertyCard property={property} onViewFloorPlan={handleViewFloorPlan} />
-                    : <PropertyListCard property={property} onViewFloorPlan={handleViewFloorPlan} />
+                    : <PropertyListCard property={property} onViewFloorPlan={handleViewFloorPlan} onSelect={() => handleOpenProperty(property.id)} />
                   }
                 </li>
               ))}

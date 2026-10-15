@@ -21,6 +21,7 @@ import type { GridCardBadge, GridCardBadgeVariant } from '@/design-system/compon
 import { formatNumber } from '@/lib/intl-utils';
 import { useFloorLabel } from '@/hooks/useFloorLabel';
 import { buildCardSubtitle } from '@/domain/cards/shared/card-subtitle';
+import { getPropertyTypeLabel } from '@/components/building-management/tabs/property-tab-constants';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Property } from '@/types/property-viewer';
 import { ENTITY_TYPES } from '@/config/domain-constants';
@@ -154,7 +155,7 @@ export function usePropertyGridModel(property: Property, showCommercialPrices = 
   return {
     entityType: ENTITY_TYPES.PROPERTY,
     title: name,
-    subtitle: buildCardSubtitle(t(`types.${property.type}`, { defaultValue: property.type }), property.code),
+    subtitle: buildCardSubtitle(getPropertyTypeLabel(property.type, t), property.code),
     badges,
     stats,
     ariaLabel: t('card.ariaLabel', { name }),
@@ -212,7 +213,7 @@ export function usePropertyListModel(property: Property): CardViewModel {
   const subtitle = useMemo(() => {
     const parts: string[] = [];
     if (property.type) {
-      const typeLabel = t(`types.${property.type}`, { ns: 'properties', defaultValue: property.type });
+      const typeLabel = getPropertyTypeLabel(property.type, t);
       parts.push(buildCardSubtitle(typeLabel, property.code));
     }
     if (property.project) parts.push(property.project);
