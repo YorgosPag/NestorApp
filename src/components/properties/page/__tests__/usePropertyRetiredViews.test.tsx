@@ -52,7 +52,7 @@ jest.mock('@/components/properties/trash/PropertyTrashDialogs', () => ({ Propert
 const setSelectedProperties = jest.fn();
 const forceDataRefresh = jest.fn();
 
-function renderViews(activePropertyCount = 10) {
+function renderViews(activePropertyCount = 10, canDelete = true) {
   return renderHook(
     ({ count }: { count: number }) =>
       usePropertyRetiredViews({
@@ -61,10 +61,31 @@ function renderViews(activePropertyCount = 10) {
         forceDataRefresh,
         activePropertyId: null,
         activePropertyCount: count,
+        canDelete,
       }),
     { initialProps: { count: activePropertyCount } },
   );
 }
+
+/**
+ * ADR-840 Α5 — ο κάδος ρωτά το ΔΙΚΟ του permission (`:delete`). Η περιήγηση μένει (το API ζητά `:view`)· οι
+ * πράξεις (επαναφορά · οριστική διαγραφή) όχι.
+ * ⛔ MUTATION: γύρισε το `canDelete && (…)` σε σκέτο `(…)` ⇒ κόκκινο.
+ */
+describe('Α5 — οι πράξεις του κάδου ρωτούν το `:delete`', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('χωρίς `:delete` ⇒ καμία μπάρα πράξεων — η εναλλαγή κάδου μένει', () => {
+    const { result } = renderViews(10, false);
+    expect(result.current.actionsBar).toBeFalsy();
+    expect(typeof result.current.headerProps.onToggleTrash).toBe('function');
+  });
+
+  it('με `:delete` ⇒ η μπάρα υπάρχει', () => {
+    const { result } = renderViews(10, true);
+    expect(result.current.actionsBar).toBeTruthy();
+  });
+});
 
 beforeEach(() => jest.clearAllMocks());
 

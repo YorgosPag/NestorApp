@@ -2,7 +2,7 @@
 
 /**
  * @fileoverview **ΣΤΗΛΗ ΠΟΥ ΣΕΡΝΕΤΑΙ ΚΑΙ ΚΡΥΒΕΤΑΙ** — η μηχανική + το κουμπί, κοινά σε κάθε «σκηνή | στήλη».
- * @related `./resizable` · `./resizable-persistence` (**πότε** γράφεται) · `./resizable-column-store` (**τι**/**πού**) ·
+ * @related `./resizable` · `./resizable-persistence` (**πότε** γράφεται) · `./resizable-column-store` (**τι** · **πού**) ·
  *   καταναλωτές: `spatial-tour/viewer/TourViewerSplit` (ADR-884) · `read-only-viewer/components/ViewerInspectorSplit`
  *   (ADR-840 Σ3)
  * @module components/ui/collapsible-column

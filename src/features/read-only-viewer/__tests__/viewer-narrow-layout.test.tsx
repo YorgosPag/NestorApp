@@ -19,6 +19,7 @@ import { join } from 'node:path';
 import { fireEvent, render } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { MOBILE_BREAKPOINT } from '@/constants/layout';
 import {
   VIEWER_DETAIL_HISTORY_KEY,
@@ -111,24 +112,45 @@ jest.mock('../components/ReadOnlyMediaViewer', () => ({
 
 // eslint-disable-next-line import/first -- τα mocks οφείλουν να δηλωθούν πριν την εισαγωγή
 import { ListLayout } from '../components/ListLayout';
+// eslint-disable-next-line import/first
+import { NARROW_HIDES_INSPECTOR } from '../components/ViewerInspectorSplit';
 
 const PROPERTY = { id: 'p1', name: 'Διαμέρισμα Α1', floorId: 'f1' } as never;
 
 function mount(viewport: 'measuring' | 'narrow' | 'wide', selectedIds: string[], onSelect = jest.fn()) {
+  // Η εφαρμογή παρέχει `TooltipProvider` καθολικά· ο επιθεωρητής (ADR-840 Σ3) έχει κουμπί με tooltip.
   const view = render(
-    <ListLayout
-      isLoading={false}
-      filteredProperties={[PROPERTY]}
-      selectedPropertyIds={selectedIds}
-      handlePolygonSelect={onSelect}
-      hoveredPropertyId={null}
-      viewport={viewport}
-      viewerProps={{ properties: [PROPERTY], onSelectFloor: jest.fn() }}
-    />
+    <TooltipProvider>
+      <ListLayout
+        isLoading={false}
+        filteredProperties={[PROPERTY]}
+        selectedPropertyIds={selectedIds}
+        handlePolygonSelect={onSelect}
+        hoveredPropertyId={null}
+        viewport={viewport}
+        viewerProps={{ properties: [PROPERTY], onSelectFloor: jest.fn() }}
+      />
+    </TooltipProvider>
   );
   const root = view.container.querySelector<HTMLElement>(`[${VIEWER_PANE_ATTRIBUTE}]`);
   if (!root) throw new Error('Το δοχείο των πάνελ δεν αποδόθηκε.');
-  return { view, root, onSelect, panes: Array.from(root.children) as HTMLElement[] };
+  return { view, root, onSelect, panes: panesOf(root) };
+}
+
+/**
+ * Τα **τρία** πάνελ: λίστα · προβολέας · λεπτομέρειες. ADR-840 Σ3: προβολέας και λεπτομέρειες ζουν πλέον σε
+ * **συρόμενη ομάδα** (`ViewerInspectorSplit`) — ο προβολέας είναι η ομάδα (κρύβεται ολόκληρη στη στενή χωρίς
+ * επιλογή), οι λεπτομέρειες το panel του επιθεωρητή.
+ */
+function panesOf(root: HTMLElement): HTMLElement[] {
+  const [list, group] = Array.from(root.children) as HTMLElement[];
+  const inspector = group?.querySelector<HTMLElement>(':scope > #property-viewer-inspector');
+  if (!list || !group || !inspector) throw new Error('Λείπει πάνελ από τη διάταξη.');
+  // ⚠️ Το εξωτερικό div του panel ΔΕΝ δέχεται κλάση (react-resizable-panels@4): η δήλωση «κρυφό στη στενή» ζει
+  //    στην ΟΜΑΔΑ (`NARROW_HIDES_INSPECTOR`). Την αποδίδουμε στο panel ώστε οι άγκυρες να ρωτούν το ίδιο ερώτημα.
+  const declaredHere = group.className.includes(NARROW_HIDES_INSPECTOR) ? 'max-md:!hidden' : '';
+  const details = { className: `${inspector.className} ${declaredHere}` } as HTMLElement;
+  return [list, group, details];
 }
 
 /**
@@ -137,8 +159,14 @@ function mount(viewport: 'measuring' | 'narrow' | 'wide', selectedIds: string[],
  * σημαίνει «υπάρχει `md:flex`». Ο περιηγητής κάνει το υπόλοιπο, και το απέδειξε η ζωντανή
  * μέτρηση.
  */
-const visibleInNarrow = (el: HTMLElement): boolean => !/\bhidden\b/.test(el.className);
-const returnsAtMd = (el: HTMLElement): boolean => el.className.includes('md:flex');
+/** Κρυφό στη στενή = ΔΙΚΗ του κλάση `hidden` ή `max-md:!hidden` — όχι variant που κρύβει **παιδί** του. */
+const visibleInNarrow = (el: HTMLElement): boolean => !/(?:^|\s)(?:hidden|max-md:!hidden)(?=\s|$)/.test(el.className);
+/**
+ * ⚠️ ADR-840 Σ3 — τα panels της `react-resizable-panels` φέρουν **inline** `display: flex`, που νικά κάθε κλάση χωρίς
+ * `!important`· γι' αυτό κρύβονται με `max-md:!hidden` (κρυφό **μόνο** κάτω από το `md` ⇒ επανέρχεται στο `md`).
+ */
+const returnsAtMd = (el: HTMLElement): boolean =>
+  el.className.includes('md:flex') || /(?:^|\s)max-md:!hidden(?=\s|$)/.test(el.className);
 
 describe('Θ — Ένας αριθμός, και κανένα δεύτερο κατώφλι', () => {
   it('Θ1: το `md` του Tailwind ΕΙΝΑΙ το MOBILE_BREAKPOINT', () => {
@@ -244,9 +272,11 @@ describe('Θ — Ένα πάνελ τη φορά στη στενή· τρία σ
     expect(visibleInNarrow(media)).toBe(true);
     for (const side of [list, details]) {
       expect(visibleInNarrow(side)).toBe(false);
-      // Οι δύο πλευρές είναι **ακριβώς** αυτές που καθήλωναν 720 px.
-      expect(side.className).toMatch(/w-\[360px\]/);
     }
+    // Η λίστα κρατά τα 360 px της στην ευρεία· οι λεπτομέρειες ΔΕΝ καθηλώνονται πια (ADR-840 Σ3 — §7.5: εκεί
+    // κοβόταν η φόρμα). Είναι επιθεωρητής που σέρνεται, και στη στενή δεν υπάρχει καθόλου ως στήλη.
+    expect(list.className).toMatch(/w-\[360px\]/);
+    expect(details.className).not.toMatch(/w-\[\d+px\]/);
   });
 
   it('Θ9: στην ευρεία και τα τρία πάνελ μένουν, ό,τι κι αν είναι επιλεγμένο', () => {

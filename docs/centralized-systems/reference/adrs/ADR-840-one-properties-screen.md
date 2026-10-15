@@ -1,6 +1,6 @@
 # ADR-840 — ΜΙΑ ΟΘΟΝΗ ΑΚΙΝΗΤΩΝ: η **δυνατότητα** δεν είναι **διαδρομή**
 
-> **Κατάσταση**: 🟡 Αποφασισμένο — **Σ1 + Σ2 εκτελέστηκαν** (φίλτρα έργου/κτιρίου/ορόφου **επισκευάστηκαν** 2026-10-15, §7.6 · **ΜΙΑ κατάσταση φίλτρων, στη διεύθυνση**, §7.7)· **Σ3 εκκρεμεί** (§7)
+> **Κατάσταση**: 🟢 Εκτελέστηκε — **Σ1 + Σ2 + Σ3** (φίλτρα έργου/κτιρίου/ορόφου **επισκευάστηκαν** 2026-10-15, §7.6 · **ΜΙΑ κατάσταση φίλτρων, στη διεύθυνση**, §7.7 · **ΜΙΑ οθόνη, τρεις φακοί**, §7.8)
 > **Πεδίο**: ο **χώρος εργασίας** (`/o/[workspace]`) — όχι η δημόσια αγορά
 > **Γεννήθηκε από**: ερώτηση Giorgio 2026-09-01 — *«μήπως πρέπει να υπάρχει ένας και μόνο χώρος;»*
 > **Αναφορές**: ADR-777 §7 · §8.30 (η καρτέλα ακινήτου) · ADR-749 (μία μηχανή, μία αλήθεια) ·
@@ -149,9 +149,9 @@ hooks/usePublicPropertyViewer.ts:326        isReadOnly: true,
 | **Σ0** | Αυτό το έγγραφο — η απόφαση | 2 *(ADR + index)* | ✅ **2026-09-01** |
 | **Σ1** | Ευθυγράμμιση φίλτρων: πίνακας → `FilterState`· διαγραφή `PropertyFilterState` + του χειρόγραφου μεταφραστή | **7** *(εκτ. ~4-5)* | ✅ **2026-09-01** |
 | **Σ2** | Η επεξεργασία από τον **ρόλο**· −**5** σταθερές `read-only`· δάπεδο εξουσιοδότησης στο σημείο σύγκλισης | **6** πηγής + **3** test *(εκτ. ~4)* | ✅ **2026-09-01** |
-| **Σ3** | Μία οθόνη με τρεις προβολές· μετακόμιση κάδου· navigation· ανακατεύθυνση `/spaces/properties` | ~6-8 | ⬜ **κώδικας μηδέν** |
+| **Σ3** | Μία οθόνη με τρεις προβολές· μετακόμιση κάδου· navigation· ανακατεύθυνση `/spaces/properties` | ~6-8 *(πραγματικά: 13 νέα · ~30 τροποποιημένα · 19 διαγραμμένα)* | ✅ **2026-10-15** (§7.8) |
 
-**Το Σ3 δεν έχει ξεκινήσει.** Η κατάσταση ζει **σε αυτόν τον πίνακα και μόνο**.
+Η κατάσταση ζει **σε αυτόν τον πίνακα και μόνο**.
 
 > 🔵 **2026-09-01 — η συνεδρία Σ3 εκτράπηκε ΠΡΙΝ τον κώδικα, και σωστά.** Ο Giorgio ρώτησε αν
 > η `/o/[ws]/properties` είναι *«η σελίδα όπου όλοι οι χρήστες του διαδικτύου βλέπουν τα
@@ -165,7 +165,10 @@ hooks/usePublicPropertyViewer.ts:326        isReadOnly: true,
 > η οθόνη #4 **δεν** γίνεται δημόσια)*. Το Σ3 μένει **ακέραιο και ανεξάρτητο**, μαζί με το
 > εμπόδιό του (§7.5: η δίστηλη φόρμα δεν χωρά στα `w-[360px]` του `ListLayout.tsx:304`).
 
-### 7.1 Ποιος δείχνει σήμερα στο `/spaces/properties` *(το Σ3 τα χρωστά όλα)*
+### 7.1 Ποιος έδειχνε στο `/spaces/properties` *(✅ όλα ακολούθησαν — §7.8)*
+
+> ⚠️ **ΔΙΟΡΘΩΣΗ 2026-10-15**: το `config/smart-navigation-factory.ts` **δεν υπάρχει πια** — ο κατάλογος μενού είναι
+> το `config/office-navigation/catalog-main.ts` (ADR-871). Οι αριθμοί γραμμών παρακάτω είναι της 2026-09-01.
 
 `config/smart-navigation-factory.ts:470` (υπο-στοιχείο του «Χώροι») · `:782` (χαρτογράφηση) ·
 `lib/routes/entityRoutes.ts:52` (`inSpaces`) · `services/navigation/ContextualNavigationService.ts:102`
@@ -406,11 +409,127 @@ params (δύο αλλαγές στο ίδιο tick δεν πατούν η μία
 φίλτρα με `useSearchParams` (τυφλό σε `replaceState` στον dev — μόνο ως τιμή ενυδάτωσης)· (γ) γυρίσεις το δίχτυ σε
 `redirect()` — χάνεται το fragment· (δ) αλλάξεις όνομα κλειδιού χωρίς ψευδώνυμο ανάγνωσης.
 
-**Δηλωμένα ανοιχτά:** (1) οι **8** σελίδες `o/[workspace]/*/[id]/page.tsx` που κάνουν `redirect()` σε `?xId=` έχουν την ίδια
+**Δηλωμένα ανοιχτά** *(ενημέρωση Σ3: τα (2) και (4) ✅ έκλεισαν· το (3) ✅ για `status` + `opstatus`, που είναι κλειστά λεξιλόγια — §7.8)*: (1) οι **8** σελίδες `o/[workspace]/*/[id]/page.tsx` που κάνουν `redirect()` σε `?xId=` έχουν την ίδια
 κλάση (fragment) ⇒ migrate-on-touch στο `ArrivalRedirect`. (2) Το `/spaces/properties` κρατά **τρίτη** κατάσταση
 (`usePropertiesViewerState`) ⇒ λύνεται από το **Σ3** (μία οθόνη)· ο `usePropertyFiltersUrlState` είναι ήδη γενικός ως προς
 τον κατάλογο. (3) Τιμές `type` / `status` / `features` δεν επικυρώνονται έναντι καταλόγου — άγνωστη τιμή φιλτράρει «τίποτα»,
 όπως ακριβώς η ίδια επιλογή στο πάνελ. (4) Η τοπική `viewMode` λίστα/πλέγμα (`usePropertyGridFilters`) μένει τοπική.
+
+### 7.8 ✅ Σ3 — ΜΙΑ οθόνη, τρεις φακοί *(2026-10-15)*
+
+**Πριν:** δύο σελίδες, **δύο μηχανές** (`usePublicPropertyViewer` · `usePropertiesViewerState`), **τρία** πλέγματα
+(`PropertyGridView` · `property-viewer/PropertyGrid` · `GridLayout`), **τρεις** τοπικές `viewMode`, **δύο** ταμπλό,
+**τρίτη** κατάσταση φίλτρων (`useState` στον `usePropertyEditor`) + δεύτερο κουτί αναζήτησης (`searchTerm` της
+κεφαλίδας, που έψαχνε **άλλα** πεδία από το πάνελ).
+
+**Μετά:**
+
+```
+/o/[ws]/properties → PropertiesPageContent → PropertiesScreen          (ο ΕΝΑΣ κάτοχος)
+  usePropertiesScreen ── usePropertiesViewerState  ← Η ΜΙΑ μηχανή (επεξεργασία, διάλογοι)
+                     │     filters  = usePropertyFiltersUrlState (διεύθυνση)
+                     │     selected = usePropertySelectionUrlSync (διεύθυνση, αμφίδρομα)
+                     ├── usePropertyRetiredViews(canDelete)   ← κάδος/αρχείο, πράξεις μόνο με `:delete`
+                     └── usePropertyCreation                  ← `?new=1` από την καρτέλα
+  PropertiesHeader (3 εικονίδια = ?view · ταμπλό · φίλτρα · κάδος · αρχείο · αναζήτηση = `q`)
+  PropertyPageDashboard (ΕΝΑ, πάνω σε ό,τι ΒΛΕΠΕΙΣ) · ResponsiveFiltersPanel (propertyFiltersConfig)
+  grid → PropertyCardGrid · list → PropertyPageBody (PropertiesSidebar) · floorplan → PropertyFloorplanView (lazy)
+/o/[ws]/spaces/properties → ArrivalRedirect(legacySpacesPropertiesQuery)   ← μόνιμη ανακατεύθυνση
+```
+
+#### Αποφάσεις (ο Giorgio ανέθεσε: «ό,τι κάνουν οι μεγάλοι — ή καλύτερο»)
+
+| # | Απόφαση | Πρότυπο | Γιατί όχι η εναλλακτική |
+|---|---|---|---|
+| Δ1 | **Πληθυσμός = ΟΛΟ το απόθεμα**· «Διαθέσιμα» = **φίλτρο** (`?status=listed`), όχι πληθυσμός οθόνης | Revit / ArchiCAD schedules (το μοντέλο είναι όλο, τα φίλτρα στενεύουν) · πάνελ επαγγελματία Zillow / Idealista (όλες οι αγγελίες, και ανενεργές, με κατάσταση) | Με την πύλη πωλήσεων ως πληθυσμό, η λίστα επεξεργασίας θα **έκρυβε** ό,τι δεν έχει ακόμη τιμή — δηλαδή ακριβώς ό,τι χρειάζεται δουλειά |
+| Δ2 | **ΕΝΑ ταμπλό που μετρά ό,τι ΒΛΕΠΕΙΣ** (στατιστικά της μηχανής πάνω στο φιλτραρισμένο σύνολο): λειτουργικά + αξία/μέση τιμή **ανά ρόλο** + πληρότητα· κάθε φιλτράρουσα κάρτα γράφει στη διεύθυνση και είναι **εναλλαγή** | Linear (μετρητές της τρέχουσας όψης) · Power BI cross-filter | Δύο ταμπλό = το ίδιο κουμπί δείχνει διαφορετικό πράγμα ανά φακό. Και τίποτα δεν χάθηκε (Α5): το εμπορικό σκέλος ήρθε μαζί |
+| Δ3 | **Προεπιλογή = πλέγμα**· `PROPERTIES_VIEWS = grid · list · floorplan` | — | Κάθε σελιδοδείκτης `/properties` και `?view=floorplan` ανοίγει ό,τι άνοιγε |
+| Δ4 | **Η επιλογή είναι της ΟΘΟΝΗΣ** (`?selected=`, αμφίδρομα, `replace`): ίδιο ακίνητο σε κάθε φακό· «πίσω» από την καρτέλα επιστρέφει σε αυτό | Figma (`node-id` στο URL) | Τοπική επιλογή ανά φακό = η βλάβη του §7.7 σε άλλο πεδίο |
+| Δ5 | **§7.5 — επιθεωρητής που σέρνεται + φόρμα που αναδιπλώνεται** | Επιθεωρητής Figma · παλέτα Properties του Revit · side-peek της Notion (ρυθμίζεται ανά όψη: side · center · full page) | Πλατύτερη **σταθερή** στήλη θα έλυνε ένα πλάτος οθόνης και θα έσπαγε άλλο· drawer θα έκρυβε την κάτοψη ακριβώς όταν τη χρειάζεσαι |
+
+**Πηγές**: [Notion — Open pages as side peek / center peek / full page](https://www.notion.com/releases/2022-07-20) ·
+[Linear — Peek preview](https://linear.app/docs/peek.md) · ADR-724 §5.2 (px, όχι ποσοστά — Revit · VS Code) ·
+ADR-884 Φ2στ-γ (η στήλη κατόψεων της περιήγησης, Zillow 3D Home).
+
+#### 🔴 Τα ευρήματα που δεν ήταν στο σχέδιο
+
+1. **Το φίλτρο «Κατάσταση» ήταν ΝΕΚΡΟ και στις δύο οθόνες.** Ο πίνακας της λίστας έδινε **λειτουργικές** τιμές
+   (`ready`…) και ο πίνακας του πλέγματος `available`/`reserved`/`sold` — η μηχανή τα σύγκρινε με το **εμπορικό**
+   `status` (`for-sale`…) ⇒ μηδέν ταίριασμα. Και η κάρτα «Έτοιμα» του ταμπλό έγραφε `status: ['ready']` (ίδιο λάθος),
+   ταυτοποιώντας την κάρτα **από τον μεταφρασμένο τίτλο της**. Διόρθωση με **υπάρχον** SSoT: οι **δύο** όψεις
+   κατάστασης των θέσεων/αποθηκών (ADR-777 §8.60.20) — «Διάθεση» (`matchesAnySpaceAvailability`, κουβάδες του
+   `commercialStatus`) + «Λειτουργία» (`opstatus`). Ετικέτες σε ουδέτερο γένος (`filters.propertyAvailability.*`)·
+   ο κατασκευαστής `spaceStatusFilterFields` πήρε παράμετρο λεξιλογίου αντί για δεύτερο αντίγραφο.
+2. **Το `setView` ΕΣΒΗΝΕ την επιλογή** όταν δεν του δινόταν ταυτότητα — σωστό με δύο σελίδες, λάθος στη μία.
+   Πλέον: παράλειψη = κράτα, `null` = καθάρισε.
+3. **Η `react-resizable-panels@4` έχει ΔΥΟ παγίδες** (μετρημένες στο `dist`): inline `display:flex` σε group **και**
+   panel, και το `className` του `Panel` πάει σε **εσωτερικό** div. Ένα `hidden md:flex` θα άφηνε τον επιθεωρητή
+   ορατό στο κινητό, με πράσινα tests που κοιτούν κλάσεις. ⇒ `max-md:[&>#property-viewer-inspector]:!hidden`
+   **πάνω στην ομάδα** (`NARROW_HIDES_INSPECTOR`). Το έπιασε η άγκυρα `viewer-narrow-layout` (Θ6–Θ8).
+4. **Τα σχόλιά μου έκλειναν το JSDoc**: `**τι**/**πού**` περιέχει `*/`. Το έπιασε ο μεταγλωττιστής της σουίτας.
+5. **Το «Καθαρισμός όλων» δεν θα καθάριζε** κατάσταση λειτουργίας και πληρότητα: οι αλλαγές **συγχωνεύονται** με τα
+   ζωντανά φίλτρα, και το `DEFAULT_FILTERS` δεν είχε τα δύο πεδία ⇒ δηλώθηκαν ρητά (`operationalStatus: []` ·
+   `coverage: undefined`).
+6. **Το `?new=1` έμενε στη διεύθυνση** μετά τη δημιουργία ⇒ refresh/«πίσω» ξανάνοιγε κενή φόρμα. Πλέον σβήνεται
+   μόλις τιμηθεί.
+
+#### Τι μετακόμισε, τι αφαιρέθηκε
+
+| Αρχείο | Τι |
+|---|---|
+| **`components/properties/PropertiesScreen.tsx`** · **`page/usePropertiesScreen.ts`** | 🆕 η μία οθόνη + η σύνθεσή της |
+| **`page/usePropertyCreation.ts`** · **`page/PropertyFloorplanView.tsx`** · **`features/property-grid/PropertyCardGrid.tsx`** | 🆕 εξήχθησαν από `UnitsPageContent` · `PropertyManagementPageContent` · `PropertyGridView` |
+| **`hooks/usePropertySelectionUrlSync.ts`** | 🆕 επιλογή ⇄ `?selected=` — κάθε κατεύθυνση ακούει **μόνο τη δική της** πηγή (καμία ανάδραση) |
+| **`lib/properties/legacy-spaces-address.ts`** | 🆕 μετάφραση της παλιάς διεύθυνσης: `propertyId`/`unitId` → `selected`, καμία όψη → `view=list` |
+| **`lib/properties/coverage-stats.ts`** | 🆕 η πληρότητα — ήταν **δύο** αντίγραφα (`usePropertiesStats` · `usePropertiesViewerState`) |
+| **`features/read-only-viewer/components/ViewerInspectorSplit.tsx`** | 🆕 θεατής \| επιθεωρητής (360–880 px, μνήμη ανά συσκευή, διπλό κλικ = επαναφορά, σύμπτυξη) |
+| **`components/ui/collapsible-column.tsx`** · **`resizable-column-store.ts`** | 🆕 εξήχθησαν από την περιήγηση (ADR-884) — δεύτερος καταναλωτής ⇒ ένα σημείο (CHECK 3.28) |
+| `core/headers/…/view-mode-icons.ts` | 🆕 `Record<ViewMode, …>` — ήταν δύο χάρτες με σιωπηλή εφεδρεία `|| List`· `ViewMode` + `floorplan` |
+| `hooks/usePropertyEditor.ts` | −`filters` · −`viewMode` (η τρίτη κατάσταση) |
+| `hooks/usePropertyViewer.ts` · `usePropertiesViewerState.ts` | φίλτρα/επιλογή από τη διεύθυνση· −δεύτερος υπολογισμός ταμπλό |
+| `hooks/usePropertyFilters.ts` | δύο όψεις κατάστασης· `PropertyScreenStats` (+στην αγορά, +πληρότητα) |
+| `hooks/usePropertyEditCapability.ts` | +`usePropertyDeleteCapability` (Α5) — ίδιος PEP, χωρίς δίδυμο |
+| `features/property-details/PropertyDetailsContent.tsx` | πάνω σειρά: `md:grid-cols-3` → `auto-fit minmax` (**η ρίζα** του §7.5) |
+| `features/read-only-viewer/components/ListLayout.tsx` | −σκληρό `isReadOnly` (αποφασίζει ο ρόλος, μονότονο δάπεδο) · επιθεωρητής |
+| `app/(app)/o/[workspace]/spaces/properties/page.tsx` | σελίδα → `ArrivalRedirect` (κρατά query **και** `#`)· −`error.tsx` |
+| `config/office-navigation/catalog-main.ts` · `app-sidebar.tsx` | −«Χώροι › Ακίνητα» (δεύτερη είσοδος στην ίδια οθόνη)· κουκκίδα στο «Ευρετήριο Ακινήτων» μέσω **σταθεράς** (ADR-871) |
+| `lib/routes/entityRoutes.ts` | `inSpaces` → `inList` · `listView` · `create` → `/properties?view=list&new=1` |
+| `services/navigation/ContextualNavigationService.ts` | `/properties`, `id: 'selected'`, `fixedParams: { view: 'list' }` |
+| `components/spaces/pages/SpacesHubPageContent.tsx` | κάρτα → `ENTITY_ROUTES.properties.listView` |
+| ⛔ **διαγράφηκαν** | `UnitsPageContent` · `PropertyManagementPageContent` · `property-management/page/PropertiesHeader` · `PropertyGridView` · **`usePublicPropertyViewer`** · `useViewerProps` · `buildViewerProps` · `types/publicViewer` · `useUrlPreselect` · `ReadOnlyPropertyViewerLayout` · `GridLayout` · `read-only-viewer/index.ts` · `PropertiesViewSwitchButton` · `property-viewer/PropertyGrid` · `PropertyDashboard` · `usePropertyGridFilters` · `applyPropertyFilters` (`@deprecated`, τιμή χωρίς μονάδα) · τεμπέλικη είσοδος `PropertiesManagement` |
+| `.i18n-shell-slice.json` | τα 7 ζεύγη `PropertiesManagement` → `Properties` (ίδιο πλήθος, 45) |
+
+#### ⚠️ ΜΗΝ
+
+- **ΜΗΝ** ξαναβάλεις `useState` φίλτρων, όψης ή επιλογής σε component της οθόνης — η διεύθυνση **είναι** η κατάσταση.
+- **ΜΗΝ** διαβάσεις `?propertyId=` ως επιλογή στο `/properties`: εκεί σημαίνει «καρτέλα». Ψευδώνυμο επιλογής υπάρχει
+  **μόνο** μέσα στην ανακατεύθυνση (`LEGACY_SPACES_SELECTED_PARAMS`).
+- **ΜΗΝ** κρύψεις panel της `react-resizable-panels` με κλάση στο ίδιο το `Panel` — δεν φτάνει στο εξωτερικό div.
+- **ΜΗΝ** ξαναβάλεις `isReadOnly` στο `ListLayout` «για σιγουριά»· αν η φόρμα κόβεται σε κάποιο πλάτος, η θεραπεία είναι
+  η διάταξή της (`auto-fit`), όχι το κλείδωμα του δικαιούχου.
+- **ΜΗΝ** δώσεις κουμπί κάδου/διαγραφής με `canEdit`: η ερώτηση είναι `:delete` (`usePropertyDeleteCapability`).
+
+#### Επαλήθευση
+
+**jest** (στοχευμένα): `property-filters-url` · `usePropertyFiltersUrlState` · `legacy-spaces-address` (5, 🆕) ·
+`usePropertySelectionUrlSync` (9, 🆕) · `property-location-filters` (μεταφέρθηκε στη μία μηχανή + διάθεση/λειτουργία/
+πληρότητα) · `property-viewer-composition` · `property-edit-capability` (η άγκυρα του `ListLayout` **αντιστράφηκε
+δεύτερη φορά**: απαιτεί πλέον **καμία** σταθερά **και** επιθεωρητή) · `usePropertyRetiredViews` (+Α5) ·
+`viewer-narrow-layout` (21) · `catalog-grid-ssot` · `office-navigation` (golden + integrity) · `property-card-route` ·
+όλη η `spatial-tour` (η εξαγωγή της στήλης). **Μετάλλαξη** δηλωμένη στα νέα tests (κριτής κατάστασης · εξαρτήσεις του
+συγχρονισμού · `canDelete`). `jscpd:diff` σε 37 αρχεία → **καθαρό**. ⚠️ Το `catalog-grid-ssot` Κ9 μένει κόκκινο
+**προϋπάρχον** (3 αρχεία εκτός Σ3: `shell-surface-prose-lists.test` · `owner-property-stats-pending` · `listing-card-frame`).
+
+**Οθόνη**: δες τον πίνακα ζωντανής επαλήθευσης παρακάτω.
+
+#### Δηλωμένα ανοιχτά
+
+1. Οι **τεμπέλικες καρτέλες** του `propertiesMappings` (τα 7 ζεύγη αναμονής του ADR-744 §27) — μετακόμισαν, δεν θεραπεύτηκαν.
+2. Τα **8** `o/[workspace]/*/[id]/page.tsx` που κάνουν `redirect()` σε `?xId=` (§7.7 #1) — δεν αγγίχτηκαν.
+3. Το `gridPatterns.cards.single` έμεινε χωρίς καταναλωτή ακινήτων (η «λίστα καρτών» αντικαταστάθηκε από την όψη `list`).
+4. Το `.i18n-ssr-oracle-baseline.json` έχει γραμμές για το `/o/alpha-techniki/spaces/properties` — η διαδρομή είναι
+   πλέον ανακατεύθυνση· ανανεώνεται με τον επόμενο κύκλο του oracle (CHECK 3.51, απαιτεί dev server).
+5. Η **παρουσίαση του λόγου** «γιατί μόνο προβολή» (§8.1 #4) — ο μηχανισμός (`verdict`) υπάρχει, η μπάρα όχι ακόμη.
 
 ### 7.4 ⛔ Τι ΔΕΝ έκανε το Σ2, και γιατί — δηλωμένα, όχι σιωπηλά
 
@@ -639,6 +758,7 @@ return { canEdit: isGranted(gate.verdict), verdict: gate.verdict, pending: gate.
 
 | Ημερομηνία | Τι |
 |---|---|
+| **2026-10-15** | ✅ **Σ3 — ΜΙΑ οθόνη ακινήτων, τρεις φακοί** (§7.8). `PropertiesScreen` πάνω στη **μία** μηχανή (`usePropertiesViewerState`) με φίλτρα **και επιλογή** στη διεύθυνση· `?view=` = πλέγμα · λίστα · κάτοψη· **ένα** ταμπλό που μετρά ό,τι βλέπεις (λειτουργικά + αξία ανά ρόλο + πληρότητα)· πληθυσμός = όλο το απόθεμα, «Διαθέσιμα» = φίλτρο. `/spaces/properties` → **μόνιμη** ανακατεύθυνση που μεταφράζει `propertyId` → `selected` και κρατά `#`. **§7.5 λύθηκε στη ρίζα**: επιθεωρητής που σέρνεται (Figma/Revit/Notion) + πάνω σειρά της φόρμας `auto-fit` αντί για `md:grid-cols-3` ⇒ −σκληρό `isReadOnly`. **Α5**: ο κάδος ρωτά `:delete` (`usePropertyDeleteCapability`). Ευρήματα: το φίλτρο «Κατάσταση» ήταν **νεκρό** και στις δύο οθόνες (⇒ οι δύο όψεις κατάστασης των χώρων)· το `setView` έσβηνε την επιλογή· δύο παγίδες της `react-resizable-panels@4` (inline `display` · `className` σε εσωτερικό div). −19 αρχεία (δεύτερη μηχανή, τρία πλέγματα, δύο σελίδες). Κουκκίδα sidebar στο «Ευρετήριο Ακινήτων» μέσω σταθεράς (ADR-871). |
 | **2026-10-15** | 🔴 **ΜΙΑ κατάσταση φίλτρων, στη διεύθυνση + το δίχτυ κρατά το fragment** (§7.7). Μετρήθηκε πρώτα: το «`?view=floorplan` χάνεται» **δεν** αναπαράχθηκε· αναπαράχθηκε η κλάση του — το δίχτυ `[...unprefixed]` έχανε το `#…` (`redirect()` = 200 κάτω από το `loading.tsx`) ⇒ `arrival-address` + `ArrivalRedirect`. Φίλτρα: `useState` ανά προβολή ⇒ **παράγωγα από το URL** (`property-filters-url` · `usePropertyFiltersUrlState`) πάνω στα υπάρχοντα `url-query-state`/`useUrlQuery`/`multi-value`/`rangeParams` (ίδια ονόματα τιμής με τη δημόσια αναζήτηση)· εναλλαγή προβολής `replace` αντί για `push` (`usePropertiesView`) + «Προβολή σε Πλέγμα» στην κάτοψη (`PropertiesViewSwitchButton`, ένα κουμπί για τις δύο). Boy-scout: `enum-param` (από `list-map-view`) · `priceAxisOfRole` · `useUrlQuery(serverQuery?)` · `"floor-2"` → `null`. 4 νέες σουίτες + 1 ενημερωμένη (**37** tests στις 5)· μετάλλαξη ⇒ **5** κόκκινα. |
 | **2026-10-15** | 🔴 **Φίλτρα Έργο/Κτίριο/Όροφος: άδεια ΚΑΙ νεκρά — διορθώθηκαν** (§7.6). Επιλογές από ψευδοκάτοπτρα `project`/`building` που δεν υπάρχουν στο Firestore· καμία εφαρμογή στη «Διαθέσιμα Ακίνητα»· εφαρμογή με όνομα στο `/spaces/properties`. Τώρα: **ΕΝΑΣ κριτής** `lib/properties/property-location.ts` (ταυτότητα, καταρράκτης, ισόγειο `'0'`) σε **δύο** μηχανές · **ΕΝΑΣ επιλυτής** `useHierarchyNames` πάνω στο υπάρχον `NavigationContext` (SSoT audit: κανένας προϋπάρχων) · `FilterOption.verbatim` · κάρτες «Έργο • Κτίριο • Όροφος» χωρίς κενά · `countDistinctBuildings` (3 αντίγραφα). 25 tests, μετάλλαξη ⇒ 3 κόκκινα. Το ✅ του §7.5 διορθώθηκε. Μένουν ~20 αναγνώστες των ψευδοκατόπτρων → pending-ratchet. |
 | **2026-09-01** | 🔵 **Το Σ3 ΔΕΝ ξεκίνησε — και η εκτροπή ήταν σωστή** (§7). Ερώτημα Giorgio *«είναι αυτή η δημόσια οθόνη;»* ⇒ **όχι**, με **τρεις** φρουρούς *(`o/[workspace]/layout.tsx:70,107` · ADR-787 §5.3γ)*. **Αιτία της σύγχυσης εντοπίστηκε**: μετονομασία **σημασίας** χωρίς μετονομασία **αρχείου**, 2026-08-10. Χαρτογραφήθηκαν **4** οθόνες, **περπατήθηκαν και οι 4 ανώνυμα**. Το ερώτημα άνοιξε σε αρχιτεκτονική πλατφόρμας ⇒ **[ADR-841](./ADR-841-public-listing-body-and-platform-verticals.md)**. Τα δύο έγγραφα είναι **ορθογώνια**· το Σ3 και το εμπόδιό του (§7.5) μένουν **ακέραια**. |

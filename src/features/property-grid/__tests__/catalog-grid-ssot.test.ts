@@ -43,12 +43,14 @@ import { gridPatterns } from '@/styles/design-tokens';
 const REPO_ROOT = resolve(__dirname, '..', '..', '..', '..');
 const SRC = join(REPO_ROOT, 'src');
 
-/** Ο SSoT και οι τέσσερις κατάλογοι που τον καταναλώνουν. */
+/**
+ * Ο SSoT και οι κατάλογοι που τον καταναλώνουν. ADR-840 Σ3: τα ακίνητα είχαν **δύο** πλέγματα
+ * (`PropertyGridView` · `property-viewer/PropertyGrid`) — ενώθηκαν στο **ένα** `PropertyCardGrid`.
+ */
 const CATALOGS = [
-  'src/features/property-grid/PropertyGridView.tsx',
+  'src/features/property-grid/PropertyCardGrid.tsx',
   'src/components/space-management/ParkingPage/ParkingGridView.tsx',
   'src/components/space-management/StoragesPage/StorageGridView.tsx',
-  'src/components/property-viewer/PropertyGrid.tsx',
 ] as const;
 
 /**
@@ -252,10 +254,14 @@ describe('Κ5 · κανένας κατάλογος δεν δηλώνει δικ�
 describe('Κ6 · δύο ερωτήματα, δύο μηχανισμοί', () => {
   const view = () => withoutComments(read(CATALOGS[0]));
 
-  it('Κ6 · το «ποια κάρτα;» το απαντά το viewMode — κατάσταση τομέα', () => {
-    expect(view()).toMatch(
-      /viewMode === 'grid'\s*\?\s*gridPatterns\.cards\.media\s*:\s*gridPatterns\.cards\.single/,
-    );
+  /**
+   * ADR-840 Σ3 — το «ποια κάρτα;» το απαντά πλέον η **όψη της οθόνης** (`?view=`), όχι τοπικό `viewMode`: η όψη
+   * `grid` είναι **πάντα** κάρτες πολυμέσων, και η «λίστα» είναι η πραγματική όψη `list` (κατάλογος + επιθεωρητής).
+   * Ήταν `viewMode === 'grid' ? cards.media : cards.single` — τρίτη, τοπική κατάσταση όψης (§7.7 ανοιχτό #4).
+   */
+  it('Κ6 · το «ποια κάρτα;» το απαντά η ΟΨΗ της οθόνης, όχι τοπικό viewMode', () => {
+    expect(view()).toContain('gridPatterns.cards.media');
+    expect(view()).not.toMatch(/viewMode/);
   });
 
   it('Κ6β · το «πόσες στήλες;» ΔΕΝ περνά από μέτρηση JavaScript', () => {
@@ -271,7 +277,7 @@ describe('Κ6 · δύο ερωτήματα, δύο μηχανισμοί', () => 
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe('Κ7 · η δηλωμένη αυθεντία έχει καταναλωτές', () => {
-  it('Κ7 · και οι τέσσερις αρχικοί κατάλογοι τη ρωτούν', () => {
+  it('Κ7 · κάθε αρχικός κατάλογος τη ρωτά', () => {
     // Ένας φρουρός που δεν τον καλεί κανείς είναι σχόλιο (ADR-749 §5 — 606 αδρανείς).
     const consumers = CATALOGS.filter((rel) => read(rel).includes('gridPatterns.cards'));
     expect(consumers).toHaveLength(CATALOGS.length);
