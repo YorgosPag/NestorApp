@@ -40,7 +40,7 @@ const path = require('node:path');
 
 const MG = require('../module-graph');
 const GI = require('./global-inputs');
-const P = require('./plan');
+const { resolveRoots, rootPatternCandidates } = require('./shell-roots');
 const SC = require('./source-cache');
 const { computeShellClosure } = require('./shell-closure');
 const { createLayerOnePass } = require('./layer-one-pass');
@@ -93,7 +93,7 @@ function walkShell(root, config, graph) {
   const probes = new Map();
   const reads = new Set();
   const observed = observedGraph(graph, probes, reads);
-  const roots = P.resolveRoots(root, config, observed);
+  const roots = resolveRoots(root, config, observed);
   const closure = computeShellClosure(observed, roots, { resolve: MG.createResolver(observed) });
   return { members: closure.files, probes, reads };
 }
@@ -106,7 +106,7 @@ function recordTrace({ key, root, config, sources, walk }) {
     schema: TRACE_SCHEMA,
     key,
     members: walk.members,
-    roots: P.rootPatternCandidates(root, config, sources.files).map(rel),
+    roots: rootPatternCandidates(root, config, sources.files).map(rel),
     present: byPresence(true),
     absent: byPresence(false),
     reads: Object.fromEntries([...walk.reads].map(abs => [rel(abs), sources.keyOf(abs) ?? null]).sort(([a], [b]) => (a < b ? -1 : 1))),
@@ -119,7 +119,7 @@ function verifyTrace(trace, { key, root, config, sources }) {
   if (trace.key !== key) return 'άλλαξε καθολική είσοδος (toolchain · config · aliases)';
   const prefix = prefixOf(root);
   const files = new Set(sources.files);
-  const roots = P.rootPatternCandidates(root, config, sources.files).map(abs => relTo(prefix, abs));
+  const roots = rootPatternCandidates(root, config, sources.files).map(abs => relTo(prefix, abs));
   if (stableStringify(roots) !== stableStringify(trace.roots)) return 'άλλαξαν οι υποψήφιες ρίζες';
   const flipped = trace.present.find(rel => !files.has(prefix + rel)) || trace.absent.find(rel => files.has(prefix + rel));
   if (flipped !== undefined) return `άλλαξε η ύπαρξη του ${flipped}`;
