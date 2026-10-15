@@ -23,6 +23,7 @@ import { defineRoute, ok, badRequest, notFound, httpError } from '@/lib/api/defi
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import type { UpdateJournalEntryInput } from '@/subapps/accounting/types';
 import { journalEntryOptionalFields } from '../../_shared/journal-entry-fields';
+import { assertNotSubsystemOwned } from '../../_shared/journal-subsystem-guard';
 
 const UpdateJournalEntrySchema = z.object({
   date: z.string().max(30).optional(),
@@ -75,6 +76,9 @@ export const PATCH = defineRoute({
       notFound('Journal entry not found');
     }
 
+    // ADR-ACC-010 §2.1.1 Φ5: a subsystem entry (depreciation) changes ONLY through its subsystem.
+    assertNotSubsystemOwned(existing);
+
     // Phase 1a: Immutability guard — reversed/reversal entries are locked
     if (existing.status === 'REVERSED') {
       httpError(403, 'Cannot edit a reversed journal entry. It has been superseded by a reversal entry.');
@@ -109,6 +113,9 @@ export const DELETE = defineRoute({
     if (!existing) {
       notFound('Journal entry not found');
     }
+
+    // ADR-ACC-010 §2.1.1 Φ5: a subsystem entry (depreciation) is removed ONLY by its subsystem (reversal).
+    assertNotSubsystemOwned(existing);
 
     // Phase 1a: Immutability guard — reversed/reversal entries cannot be deleted
     if (existing.status === 'REVERSED' || existing.isReversal) {

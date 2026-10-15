@@ -163,6 +163,8 @@
     "defineRoute::/api/accounting/apy-certificates",
     "defineRoute::/api/accounting/apy-certificates/[id]",
     "defineRoute::/api/accounting/assets",
+    "defineRoute::/api/accounting/assets/depreciation-run",
+    "defineRoute::/api/accounting/assets/depreciation-run/reversal",
     "defineRoute::/api/accounting/balances",
     "defineRoute::/api/accounting/balances/[customerId]",
     "defineRoute::/api/accounting/bank/match",

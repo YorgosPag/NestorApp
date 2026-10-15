@@ -252,7 +252,52 @@
     "year": "Year",
     "openingValue": "Opening value",
     "depreciation": "Depreciation",
-    "closingValue": "Closing value"
+    "closingValue": "Closing value",
+    "depreciationRun": {
+      "open": "Year-end depreciation",
+      "title": "Year-end depreciation",
+      "description": "Preview and post the annual depreciation to the Income-Expense Book (expense dated 31/12).",
+      "fiscalYear": "Fiscal year",
+      "loading": "Calculating depreciation...",
+      "empty": "No asset has depreciation in this fiscal year.",
+      "tableCaption": "Depreciation for fiscal year {year}",
+      "ratePercent": "{rate}%",
+      "total": "Total",
+      "upToDate": "All depreciation for the year is posted — no difference.",
+      "book": "Post to the Income-Expense Book",
+      "reverse": "Reverse fiscal year",
+      "cancel": "Cancel",
+      "columns": {
+        "asset": "Asset",
+        "category": "Category",
+        "rate": "Rate",
+        "months": "Months",
+        "target": "Depreciation",
+        "booked": "Posted",
+        "delta": "To post"
+      },
+      "confirmBook": {
+        "title": "Post depreciation",
+        "body": "Depreciation expense of {amount} will be posted to the Income-Expense Book dated 31/12. It reduces the taxable income of the year.",
+        "action": "Post"
+      },
+      "confirmReverse": {
+        "title": "Reverse year-end depreciation",
+        "body": "Depreciation of {amount} will be reversed with a new entry in the Income-Expense Book. The original entries stay in the history.",
+        "action": "Reverse"
+      },
+      "result": {
+        "booked": "Posted {count} entries · expense change {amount}.",
+        "refused": "{count} assets were skipped: a later fiscal year is already posted."
+      },
+      "errors": {
+        "FISCAL_YEAR_NOT_ENDED": "The fiscal year has not ended yet — posting is possible after 31/12.",
+        "PERIOD_NOT_FOUND": "The December accounting period of this year does not exist. Create the fiscal year first.",
+        "PERIOD_NOT_OPEN": "The December period of this year is closed or locked.",
+        "INVALID_DEPRECIATION_TERMS": "An asset's data does not allow a depreciation calculation. Check its dates.",
+        "UNKNOWN": "The action failed. Please try again."
+      }
+    }
   },
   "documents": {
     "title": "AI Documents",
@@ -480,7 +525,8 @@
       "card": "Card",
       "check": "Check",
       "credit": "Credit",
-      "mixed": "Mixed"
+      "mixed": "Mixed",
+      "non_cash": "No payment (accounting entry)"
     },
     "vatRates": {
       "standard": "Standard 24%",

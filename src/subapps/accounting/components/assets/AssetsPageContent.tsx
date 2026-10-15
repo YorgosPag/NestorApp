@@ -18,6 +18,7 @@ import {
   DollarSign,
   TrendingDown,
   BarChart3,
+  CalendarCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
@@ -32,6 +33,7 @@ import { useAccountingFilterPanel } from '../../hooks/useAccountingFilterPanel';
 import { useFixedAssets } from '../../hooks/useFixedAssets';
 import { AssetsList } from './AssetsList';
 import { AddAssetForm } from './AddAssetForm';
+import { DepreciationRunDialog } from './DepreciationRunDialog';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -106,6 +108,7 @@ export function AssetsPageContent() {
   const colors = useSemanticColors();
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [depreciationOpen, setDepreciationOpen] = useState(false);
   const [showDashboard, setShowDashboard] = useState(true);
 
   const filterConfig = useMemo(() => buildFilterConfig(t), [t]);
@@ -175,6 +178,10 @@ export function AssetsPageContent() {
         showDashboard={showDashboard}
         onDashboardToggle={() => setShowDashboard(!showDashboard)}
         actions={[
+          <Button key="depreciation-run" variant="outline" onClick={() => setDepreciationOpen(true)}>
+            <CalendarCheck className="mr-2 h-4 w-4" />
+            {t('assets.depreciationRun.open')}
+          </Button>,
           <Button key="add-asset" onClick={() => setAddDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             {t('assets.addAsset')}
@@ -213,6 +220,9 @@ export function AssetsPageContent() {
         onOpenChange={setAddDialogOpen}
         onSubmit={handleCreateAsset}
       />
+
+      {/* Αποσβέσεις χρήσης — ADR-ACC-010 §2.1.1 Φάση 5 */}
+      <DepreciationRunDialog open={depreciationOpen} onOpenChange={setDepreciationOpen} onPosted={refetch} />
     </main>
   );
 }

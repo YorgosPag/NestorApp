@@ -150,7 +150,7 @@
     "src/lib/telemetry/index.ts": "b66ca906c523f2859797f64b9c0c173cf045330b3a4700df3cad4557d6a76270",
     "src/lib/validation/vat-validation.ts": "a28672442807334c69721770ae3bcd9a8d94fa6bfaffb4d6d160e6ac8f2b936e",
     "src/services/demand/place-interest.service.ts": "6005ba9b11ce9688a0fc7055d61f1407e856ca7124788e4e7194e0ccbbe3812f",
-    "src/services/enterprise-id.service.ts": "304d84e26876f804eb641bd71530e63655790dadf88f8424e52711457b3fcfdb",
+    "src/services/enterprise-id.service.ts": "063d6ef7059e09afbe4be089c018a4eaa6ffd2dd6ef79180d0b51393a30c6ea1",
     "src/services/file-record/index.ts": "59fd772bfc129ad4bda1bff073bf4e73abc8dff84d912092fa901daf1d61b542",
     "src/services/firestore/index.ts": "866723667cbb7e47c00f8d2ad51389026ddd4af92c5c46b364b723e40d81287e",
     "src/services/iso19650/container-transition-policy.ts": "b1980d08b0ea20350147ea70d311f309275fcbef146ebaa90b3aae56c9ebbda6",
@@ -247,7 +247,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "6fada177ff1cfbe6455e77cfafbd81fb3179315f90facd8adab0ebb1e6fa4c22",
+  "inputsSha256": "1ecc6d46dac1ab421d52b57d682b6fb3c3867a2c4bbdcde942588f3a99637f2c",
   "languages": [
     "el"
   ],
@@ -12978,7 +12978,7 @@
     "src/services/enterprise-id-class.ts": "2c7a90c04543cd5d5ccd27d134c9dd02dd2ca1773d9a28be5b9b4f0be040a959",
     "src/services/enterprise-id-composite-key-generators.ts": "91ae78d061a21e22dcb200c4a007ab7787a9f6b61b5663bfb4e7ed2036347801",
     "src/services/enterprise-id-composite-keys.ts": "a8a131c70b43262895020b6f2cdb4fd14df34396b5dd6324e88a24842f33f82c",
-    "src/services/enterprise-id-convenience.ts": "6467545e7e58b677f51a548ef7ad29c7835f4fe182e46046731b592ebd94e678",
+    "src/services/enterprise-id-convenience.ts": "d7f5c1754d0497f9a9dcae5ec9c141e181b6f1a8b2d1ef7d133445bc4c59eb0d",
     "src/services/enterprise-id-deterministic.ts": "4be46facc3c445a928579de5de96127f22a00a28f0657421659233854c6aa8b4",
     "src/services/enterprise-id-listing-stats-generators.ts": "b0e816d6d5e9f58a8f1a1c9c4d253e3029577e6c445fb4112c37c77aa62063f0",
     "src/services/enterprise-id-network-generators.ts": "2df9370ab6e54229965206079b9a204564201ed8867a2dfa74f899d2a8a9009a",

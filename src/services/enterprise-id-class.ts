@@ -292,6 +292,8 @@ export class EnterpriseIdService extends CompositeKeyIdGenerators {
   generateFixedAssetId(): string { return this.generateId(P.FIXED_ASSET).id; }
   /** ADR-ACC-010 §2.1.1 Φ4 — Η ΜΙΑ απόσβεση (μισθωτής, πάγιο, χρήση): ντετερμινιστικό ⇒ η επανεκτέλεση δεν διπλασιάζει. */
   generateDeterministicDepreciationRecordId(companyId: string, assetId: string, fiscalYear: number): string { return this.mintDeterministicV4Id(P.DEPRECIATION, `${companyId}:${assetId}:${fiscalYear}`); }
+  /** ADR-ACC-010 §2.1.1 Φ5 — Η εγγραφή Ε-Ε της αναθεώρησης `revision` μιας απόσβεσης: ντετερμινιστικό ⇒ η επανεκτέλεση δεν διπλασιάζει έξοδο. */
+  generateDeterministicDepreciationJournalEntryId(depreciationRecordId: string, revision: number): string { return this.mintDeterministicV4Id(P.JOURNAL_ENTRY, `${depreciationRecordId}:${revision}`); }
   generateEfkaPaymentId(): string { return this.generateId(P.EFKA_PAYMENT).id; }
   generateImportBatchId(): string { return this.generateId(P.IMPORT_BATCH).id; }
   generateMatchGroupId(): string { return this.generateId(P.MATCH_GROUP).id; }

@@ -122,6 +122,8 @@ export const generateBankTransactionId = () => enterpriseIdService.generateBankT
 export const generateFixedAssetId = () => enterpriseIdService.generateFixedAssetId();
 export const generateDeterministicDepreciationRecordId = (companyId: string, assetId: string, fiscalYear: number) =>
   enterpriseIdService.generateDeterministicDepreciationRecordId(companyId, assetId, fiscalYear);
+export const generateDeterministicDepreciationJournalEntryId = (depreciationRecordId: string, revision: number) =>
+  enterpriseIdService.generateDeterministicDepreciationJournalEntryId(depreciationRecordId, revision);
 export const generateEfkaPaymentId = () => enterpriseIdService.generateEfkaPaymentId();
 export const generateImportBatchId = () => enterpriseIdService.generateImportBatchId();
 export const generateMatchGroupId = () => enterpriseIdService.generateMatchGroupId();

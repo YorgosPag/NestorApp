@@ -302,6 +302,8 @@ describe('EnterpriseIdService', () => {
       // ADR-ACC-010 §2.1.1 Φ4 — ΜΙΑ απόσβεση ανά (μισθωτής, πάγιο, χρήση): η ταυτότητα ΕΙΝΑΙ η ιδεμποτία της
       // εκτέλεσης αποσβέσεων. Ο τυχαίος `generateDepreciationId` ΚΑΤΑΡΓΗΘΗΚΕ — τυχαίο id = διπλή απόσβεση.
       'generateDeterministicDepreciationRecordId',
+      // ADR-ACC-010 §2.1.1 Φ5 — η εγγραφή Ε-Ε μιας αναθεώρησης απόσβεσης: τυχαίο id = διπλό έξοδο στην επανεκτέλεση.
+      'generateDeterministicDepreciationJournalEntryId',
     ];
 
     const WITH_RANDOM_SIBLING = DETERMINISTIC_GENERATORS.filter(
@@ -419,6 +421,8 @@ describe('EnterpriseIdService', () => {
       // ADR-ACC-010 §2.1.1 Φ4 — τρεις παράμετροι, ένα όρισμα ⇒ σπόρος `'anchor-seed:undefined:undefined'` (ίδιο uuid
       //    με το `lvsh`). Καταγεγραμμένο από τη μηχανή `deterministicV4Uuid`, 2026-10-15.
       generateDeterministicDepreciationRecordId: 'depr_e31c49a5-a538-4f0c-8e0c-016178fda0f3',
+      // ADR-ACC-010 §2.1.1 Φ5 — δύο παράμετροι, ένα όρισμα ⇒ σπόρος `'anchor-seed:undefined'`.
+      generateDeterministicDepreciationJournalEntryId: 'je_aa044400-10b9-4583-865f-97901fb1d075',
     };
 
     // Ένας ΝΕΟΣ γεννήτορας δεν μπορεί να μπει σιωπηλά: οφείλει να δηλώσει το

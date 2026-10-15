@@ -53,7 +53,7 @@ export {
   generateTemplateId, generateOperationId, generateBoqItemId, generateBoqCategoryId,
   generateBoqPriceListId, generateBoqTemplateId, generateJournalEntryId,
   generateInvoiceAccId, generateBankTransactionId, generateFixedAssetId,
-  generateDeterministicDepreciationRecordId, generateEfkaPaymentId, generateImportBatchId,
+  generateDeterministicDepreciationRecordId, generateDeterministicDepreciationJournalEntryId, generateEfkaPaymentId, generateImportBatchId,
   generateMatchGroupId, generateMatchingRuleId, generateExpenseDocId,
   generateApyCertificateId, generateServicePresetId, generateCustomCategoryId, generateCustomerBalanceId,
   generateFiscalPeriodId, generateAccountingAuditLogId, generateFeedbackId,
