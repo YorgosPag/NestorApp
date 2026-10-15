@@ -9,6 +9,7 @@
 import { createModuleLogger } from '@/lib/telemetry';
 import { getCurrentLocale } from './intl-utils';
 import { deadlineDaysLeft, MS_PER_DAY } from './date-local';
+import { calendarDateOfDateKey } from './calendar/date-key';
 
 const logger = createModuleLogger('intl-formatting');
 
@@ -30,6 +31,18 @@ export const formatDate = (date: Date | string | number, options?: Intl.DateTime
   };
 
   return new Intl.DateTimeFormat(locale, { ...defaultOptions, ...options }).format(dateObj);
+};
+
+/**
+ * Μορφοποίηση **ημερομηνίας-κλειδιού** (`YYYY-MM-DD`, ημέρα ημερολογίου χωρίς ώρα) — ADR-915 Φ4γ.
+ *
+ * ⚠️ Το `formatDate('2026-07-16')` περνά από `new Date(string)`, που διαβάζει το κλειδί ως **μεσάνυχτα UTC**: σε ζώνη
+ *    δυτικά του Greenwich βγαίνει η **προηγούμενη** μέρα. Εδώ η μέρα χτίζεται ως **τοπική** (`calendarDateOfDateKey`),
+ *    οπότε το κλειδί και η εμφάνιση είναι πάντα η ίδια μέρα. Άκυρο κλειδί ⇒ επιστρέφεται αυτούσιο (ποτέ «Invalid Date»).
+ */
+export const formatDateKey = (key: string): string => {
+  const date = calendarDateOfDateKey(key);
+  return date === null ? key : formatDate(date);
 };
 
 /**

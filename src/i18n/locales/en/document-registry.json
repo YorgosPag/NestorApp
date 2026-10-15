@@ -1,0 +1,92 @@
+{
+  "page": {
+    "title": "Document expiry",
+    "lead": "Every document that expires: what is valid today, when it needs renewal and which process stops if it lapses.",
+    "asOf": "Status as of {date}"
+  },
+  "load": {
+    "loading": "Loading the registry…",
+    "error": "The registry could not be loaded.",
+    "retry": "Try again"
+  },
+  "tally": {
+    "heading": "Summary by status"
+  },
+  "state": {
+    "expired": "Expired",
+    "expiring": "Renewal due",
+    "expiry-unknown": "Expiry unknown",
+    "valid": "Valid",
+    "superseded": "Superseded"
+  },
+  "stateHint": {
+    "expired": "Its validity has ended.",
+    "expiring": "It is within the time its kind needs for renewal.",
+    "expiry-unknown": "We do not know until when it is valid — it is not treated as valid.",
+    "valid": "Valid and not yet due for renewal.",
+    "superseded": "A newer document of the same kind replaced it."
+  },
+  "group": {
+    "count": "{count, plural, one {# document} other {# documents}}"
+  },
+  "filter": {
+    "label": "View",
+    "all": "All",
+    "renewal-due": "Renewal due",
+    "within-window": "Expiring within {days} days",
+    "blocking": "Blocking",
+    "expiry-unknown": "Expiry unknown",
+    "discrepancy": "Discrepancy",
+    "option": "{label} ({count})",
+    "empty": "No documents in this view."
+  },
+  "row": {
+    "property": "Property",
+    "propertyNone": "Not linked to a property",
+    "propertyUnnamed": "Unnamed property",
+    "document": "Document",
+    "declared": "Declared on the property, no file",
+    "fileUnnamed": "Unnamed file",
+    "expiry": "Expiry",
+    "expiryUnknown": "Unknown — the issue date is missing or the validity of this kind is not verified",
+    "daysLeft": "{count, plural, =0 {expires today} one {in # day} other {in # days}}",
+    "daysAgo": "{count, plural, one {# day ago} other {# days ago}}",
+    "sourceRule": "from the rule for this kind",
+    "sourcePrinted": "as printed on the document",
+    "state": "Status",
+    "supersededBy": "Superseded by: {name}",
+    "openDocuments": "Property documents"
+  },
+  "dependents": {
+    "heading": "What stops if it expires",
+    "none": "No open process needs it today.",
+    "conveyance": "Conveyance",
+    "listing-publication": "Published listing",
+    "signingOn": "signing {date}",
+    "continuous": "for as long as it stays published",
+    "unscheduled": "no signing date set",
+    "stops": "stops from {date}",
+    "unaffected": "not affected",
+    "undetermined": "cannot be judged — the expiry is unknown",
+    "block": "Required by the process",
+    "blockingNow": "Blocking now",
+    "warn": "Warning — the listing stays published",
+    "openProperty": "Open property",
+    "openListing": "Open listing"
+  },
+  "truncated": {
+    "title": "The registry is incomplete",
+    "body": "These reached the read limit and not everything is shown: {sources}. The counts cover only what was read.",
+    "files": "files",
+    "declared": "property declarations",
+    "cases": "conveyance cases"
+  },
+  "empty": {
+    "title": "No expiring documents found",
+    "hint": "Import the energy certificate from the property's “Documents” tab — the issue and expiry dates are read from the document itself.",
+    "openProperties": "Go to properties"
+  },
+  "scope": {
+    "note": "Privately owned properties under a mandate and project-level energy certificates are not included yet."
+  }
+}

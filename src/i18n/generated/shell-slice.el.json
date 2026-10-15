@@ -3620,6 +3620,7 @@
       }
     },
     "tools": {
+      "documentExpiry": "Λήξεις εγγράφων",
       "dxf": "Πίνακας DXF",
       "fileManager": "Διαχείριση Αρχείων",
       "geoCanvas": "Σύστημα Geo-Canvas",
