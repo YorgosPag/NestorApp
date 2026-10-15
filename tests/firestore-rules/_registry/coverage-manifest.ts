@@ -310,6 +310,15 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
+    // ADR-915 Φ5α — το ημερολόγιο ακμών του μητρώου λήξεων. `deny_all`: εγγραφή από πελάτη θα «έλεγε» ένα στάδιο
+    // που δεν ειπώθηκε ποτέ, δηλαδή θα φίμωνε την ειδοποίηση. Ο πειρασμός είναι του ιδιοκτήτη («μα είναι το ΔΙΚΟ
+    // μου γραφείο») — γι' αυτό η σουίτα σπέρνει έγγραφο του ΙΔΙΟΥ μισθωτή.
+    collection: 'document_expiry_alert_ledgers',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/document-expiry-alert-ledgers.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     // ADR-901 §14.8 — σήμα αλλαγής ανά ΟΨΗ (μόνο `revision`). `admin_write_only`: γράφει μόνο ο server (μέσα στη
     // συναλλαγή της πράξης)· `get` ο ΚΑΤΟΧΟΣ — `companyId` (όψη οικοδεσπότη, ο πίνακας) ή `uid` (όψη συμμετοχής,
     // άγκυρες της σουίτας)· `list` κανείς (ο χρονισμός ως πληροφορία).

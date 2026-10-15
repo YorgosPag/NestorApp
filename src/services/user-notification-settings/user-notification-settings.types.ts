@@ -238,6 +238,11 @@ export interface PropertiesNotificationSettings {
    */
   caseExpiryAlerts: boolean;
   /**
+   * 📅 ADR-915 Φ5α — «**έγγραφο του γραφείου** μπήκε σε νέο στάδιο λήξης, έληξε ή λείπει» (μητρώο λήξεων). Ένα μήνυμα
+   * ανά νέο στάδιο ανά έγγραφο, ποτέ το ίδιο δύο φορές.
+   */
+  documentExpiryAlerts: boolean;
+  /**
    * 📤 ADR-901 Φ4.4 — «**νέο έγγραφο** στην υπόθεση» (transmittal επαγγελματία) — μόνο σε όσους ανήκουν στο
    * ακροατήριο του ρόλου του συντάκτη (οικοδεσπότης · επαγγελματίες).
    */
@@ -489,6 +494,7 @@ export const DEFAULT_PROPERTIES_SETTINGS: PropertiesNotificationSettings = {
   caseEngagementChanged: true,
   caseEngagementAnswered: true,
   caseExpiryAlerts: true,
+  documentExpiryAlerts: true,
   caseDocumentTransmitted: true,
   caseDocumentRequests: true,
 };

@@ -161,6 +161,7 @@
           "caseEngagementChanged": "Offers and access changes for conveyance cases (required)",
           "caseEngagementAnswered": "Professionals' answers on my conveyance cases",
           "caseExpiryAlerts": "Expiring documents in my conveyance cases",
+          "documentExpiryAlerts": "Office documents that are expiring, expired or missing",
           "caseDocumentTransmitted": "New documents from lawyers and the notary in my conveyance cases",
           "caseDocumentRequests": "Document requests waiting on me in my conveyance cases",
           "ownershipVerificationDecided": "My ownership verification was decided"

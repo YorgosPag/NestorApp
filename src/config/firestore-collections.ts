@@ -970,6 +970,9 @@ export const COLLECTIONS = {
   CONVEYANCE_DOCUMENT_REQUESTS: process.env.NEXT_PUBLIC_CONVEYANCE_DOCUMENT_REQUESTS_COLLECTION || 'conveyance_document_requests',
   // ADR-901 §14.8 — σήμα αλλαγής ανά ΟΨΗ (αριθμός, κανένα περιεχόμενο)· get μόνο από το ακροατήριο της όψης, γράφει μόνο ο server.
   CONVEYANCE_VIEW_SIGNALS: process.env.NEXT_PUBLIC_CONVEYANCE_VIEW_SIGNALS_COLLECTION || 'conveyance_view_signals',
+  // ADR-915 Φ5α — ημερολόγιο ακμών του μητρώου λήξεων: τι ΕΧΕΙ ΗΔΗ ειπωθεί ανά γραμμή. Κλειδί `companyId`·
+  // ένας γραφέας (η σάρωση), deny-all και στις δύο πλευρές — ο πελάτης δεν έχει τίποτα να δει ή να πει εδώ.
+  DOCUMENT_EXPIRY_ALERT_LEDGERS: process.env.NEXT_PUBLIC_DOCUMENT_EXPIRY_ALERT_LEDGERS_COLLECTION || 'document_expiry_alert_ledgers',
   BROKERAGE_AGREEMENTS: process.env.NEXT_PUBLIC_BROKERAGE_AGREEMENTS_COLLECTION || 'brokerage_agreements',
   COMMISSION_RECORDS: process.env.NEXT_PUBLIC_COMMISSION_RECORDS_COLLECTION || 'commission_records',
 

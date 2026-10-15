@@ -161,6 +161,12 @@ export const NOTIFICATION_EVENT_TYPES = {
   PROPERTIES_CASE_EXPIRY_HOST: 'properties.caseExpiryHost',
   PROPERTIES_CASE_EXPIRY_ENGAGED: 'properties.caseExpiryEngaged',
   /**
+   * ADR-915 Φ5α — **το μητρώο λήξεων του γραφείου**: έγγραφο που μπήκε σε **νέο** στάδιο (ώρα ανανέωσης · 30 · 7 ·
+   * σήμερα · έληξε) ή που **λείπει**. Ένα μήνυμα ανά νέο στάδιο ανά έγγραφο (ημερολόγιο ακμών), μία σύνοψη ανά
+   * παραλήπτη, προσγείωση στην ακριβή προβολή του μητρώου. Προτίμηση: `documentExpiryAlerts`.
+   */
+  PROPERTIES_DOCUMENT_EXPIRY: 'properties.documentExpiry',
+  /**
    * ADR-901 Φ4.4 — **νέο έγγραφο στην υπόθεση** (transmittal επαγγελματία), **μόνο** σε όσους ανήκουν στο ακροατήριο του
    * ρόλου του συντάκτη. Δύο τύποι για ντετερμινιστικό προορισμό· **μία** προτίμηση: `caseDocumentTransmitted`.
    */
@@ -423,6 +429,13 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_EXPIRY_ENGAGED]: {
     category: 'properties',
     settingKey: 'caseExpiryAlerts',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.WARNING,
+  },
+  // ADR-915 Φ5α — το μητρώο λήξεων: ΠΡΟΕΙΔΟΠΟΙΗΣΗ (έγγραφο που λήγει, έληξε ή λείπει, πριν σταματήσει διαδικασία).
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_DOCUMENT_EXPIRY]: {
+    category: 'properties',
+    settingKey: 'documentExpiryAlerts',
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.WARNING,
   },
