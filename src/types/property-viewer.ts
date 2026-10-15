@@ -49,6 +49,11 @@ export interface Property {
     code?: string;
     name: string;
     type: string;
+    /**
+     * ⚠️ **ΚΑΤΟΠΤΡΟ ΠΟΥ ΔΕΝ ΓΡΑΦΕΤΑΙ** (ADR-840 §7.6, μετρημένο 2026-10-15): το έγγραφο Firestore έχει
+     * μόνο `buildingId`. Ποτέ για φίλτρο ή εμφάνιση — όνομα μέσω `useHierarchyNames().buildingName(buildingId)`.
+     * Η μετάβαση των ~20 αναγνωστών: `.claude-rules/pending-ratchet-work.md`.
+     */
     building: string;
     floor: number;
 
@@ -99,6 +104,7 @@ export interface Property {
     area?: number;
     /** Χιλιοστά ιδιοκτησίας — read-only, from ownership table */
     millesimalShares?: number | null;
+    /** ⚠️ **ΚΑΤΟΠΤΡΟ ΠΟΥ ΔΕΝ ΓΡΑΦΕΤΑΙ** — ίδιο με το `building`: όνομα μέσω `useHierarchyNames().projectName(projectId)`. */
     project: string;
     /** ADR-284 Batch 7: Firestore ID of the parent Project (required by server policy). */
     projectId?: string;
@@ -271,8 +277,11 @@ export interface ExtendedPropertyDetails extends Property {
  */
 export interface FilterState extends GenericFilterState {
   searchTerm: string;
+  /** **Ταυτότητες** έργων (`projectId`), όχι ονόματα — κρίνει ο `matchesPropertyLocation` (ADR-840 §7.6). */
   project: string[];
+  /** **Ταυτότητες** κτιρίων (`buildingId`) — εξαρτώνται από το `project` (καταρράκτης). */
   building: string[];
+  /** Όροφοι ως `String(level)` — το ισόγειο είναι `'0'`. */
   floor: string[];
   propertyType: string[];
   status: string[];

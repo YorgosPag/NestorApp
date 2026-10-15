@@ -11,6 +11,7 @@ import type { Connection } from '@/types/connections';
 import type { FilterState, Property } from '@/types/property-viewer';
 import { DEFAULT_FILTERS } from '@/types/property-viewer';
 import { resolveViewedProperty } from './property-viewer-selection';
+import { countDistinctBuildings, reconcileLocationSelection } from '@/lib/properties/property-location';
 
 const logger = createModuleLogger('usePropertiesViewerState');
 
@@ -237,7 +238,7 @@ export function usePropertiesViewerState(explicitPropertyId?: string | null) {
   const dashboardStats = useMemo(() => ({
     totalProperties: safeProperties.length,
     totalArea: safeProperties.reduce((sum, property) => sum + (property.area || 0), 0),
-    uniqueBuildings: [...new Set(safeProperties.map((property) => property.building))].length,
+    uniqueBuildings: countDistinctBuildings(safeProperties),
     availableProperties: safeProperties.filter((property) => property.operationalStatus === 'ready').length,
     underConstructionProperties: safeProperties.filter((property) => property.operationalStatus === 'under-construction').length,
     maintenanceProperties: safeProperties.filter((property) => property.operationalStatus === 'maintenance').length,
@@ -274,7 +275,8 @@ export function usePropertiesViewerState(explicitPropertyId?: string | null) {
 
     if (setFilters) {
       setFilters((previous: FilterState) => {
-        const updated = { ...previous, ...newFilters } as FilterState;
+        // ADR-840 §7.6 — καταρράκτης έργο → κτίριο → όροφος (ίδιος κανόνας με τη «Διαθέσιμα Ακίνητα»).
+        const updated = reconcileLocationSelection({ ...previous, ...newFilters } as FilterState, safeProperties);
         logger.info('Updated filters', {
           updatedAreaRange: updated.areaRange,
         });

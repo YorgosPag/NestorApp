@@ -5,7 +5,7 @@ import { useSharedProperties } from '@/contexts/SharedPropertiesProvider';
 import { usePropertyEditCapability } from '@/hooks/usePropertyEditCapability';
 import type { Property } from '@/types/property-viewer';
 import type { FilterState } from '@/types/property-viewer';
-import { DEFAULT_FILTERS } from '@/types/property-viewer';
+import { usePropertyFiltersUrlState } from '@/hooks/usePropertyFiltersUrlState';
 import { tallyBy } from '@/utils/collection-utils';
 import {
   isDisplayableInSalesDashboard,
@@ -13,6 +13,10 @@ import {
 } from '@/constants/commercial-statuses';
 import { isPriceRangeActive, matchesPriceRange } from '@/lib/properties/price-range';
 import { totalPriceByRole } from '@/lib/properties/price-totals';
+import {
+  countDistinctBuildings,
+  matchesPropertyLocation,
+} from '@/lib/properties/property-location';
 
 // ============================================================================
 // 🏢 PUBLIC VIEWING ELIGIBILITY — SSoT gate (ADR-287 Batch 18)
@@ -77,11 +81,13 @@ export function usePublicPropertyViewer() {
   // Local state για UI controls
   const [selectedPropertyIds, setSelectedPropertyIds] = useState<string[]>([]);
   const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
-  const [selectedFloorId, setSelectedFloorId] = useState<string | null>("floor-2");
+  // ADR-840 §7.7 — ξεκινά ΧΩΡΙΣ όροφο. Ήταν σκληρό `"floor-2"`: ταυτότητα που δεν υπάρχει πουθενά, άρα
+  // `currentFloor` πάντα `null` ως την πρώτη επιλογή — μόνο που έμοιαζε με προεπιλογή. Τον όροφο τον ορίζει το
+  // `?selected=` (`useUrlPreselect`) ή ο άνθρωπος.
+  const [selectedFloorId, setSelectedFloorId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [showDashboard, setShowDashboard] = useState(false);
   const [scale, setScale] = useState(1);
-  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
 
   // Φιλτράρουμε properties για public view μέσω SSoT gate.
   // ADR-287 Batch 18: ενιαίος κανόνας εμφάνισης σε public vetrina & sales dashboards.
@@ -115,6 +121,13 @@ export function usePublicPropertyViewer() {
     });
   }, [allProperties]);
 
+  /**
+   * 🔴 ADR-840 §7.7 — **ΜΙΑ κατάσταση φίλτρων: η διεύθυνση.** Ήταν `useState<FilterState>` εδώ μέσα· κάθε προβολή
+   * (πλέγμα · κάτοψη) καλεί αυτόν τον hook **ξεχωριστά**, άρα κάθε προβολή είχε δικά της φίλτρα και η εναλλαγή
+   * (unmount) τα έσβηνε — ούτε refresh, ούτε «πίσω», ούτε σύνδεσμος. Ο καταρράκτης (§7.6) κρίνεται μέσα στον hook.
+   */
+  const { filters, updateFilters } = usePropertyFiltersUrlState(publicProperties);
+
   // Apply filters to public properties
   const filteredProperties = useMemo(() => {
     let filtered = publicProperties;
@@ -142,6 +155,11 @@ export function usePublicPropertyViewer() {
         filters.status.includes(property.status)
       );
     }
+
+    // ADR-840 §7.6 — έργο / κτίριο / όροφος, με ΤΑΥΤΟΤΗΤΑ, από τον ΕΝΑ κριτή (κοινό με το
+    // `usePropertyFilters`). Ως τις 2026-10-15 εδώ δεν υπήρχε καμία εφαρμογή: η επιλογή στο
+    // dropdown έφτανε στην κατάσταση και δεν άλλαζε τίποτα στη λίστα.
+    filtered = filtered.filter((property) => matchesPropertyLocation(property, filters));
 
     // Price range filter — ADR-777 Α6 + §8.60.14.14: the range carries its UNIT, and only
     // an amount IN THAT ROLE is judged (`matchesPriceRange`). Until 2026-09-18 this read
@@ -204,7 +222,7 @@ export function usePublicPropertyViewer() {
         )
       ).length,
       soldStorageUnits: 0, // Δεν εμφανίζουμε sold
-      uniqueBuildings: [...new Set(availableProps.map(p => p.building))].length,
+      uniqueBuildings: countDistinctBuildings(availableProps),
       reserved: availableProps.filter(p => p.status === 'reserved').length,
     };
   }, [publicProperties]);
@@ -242,8 +260,11 @@ export function usePublicPropertyViewer() {
     setSelectedFloorId(floorId);
   };
 
+  // ADR-840 §7.6 — ο καταρράκτης έργο → κτίριο → όροφος: αλλαγή έργου καθαρίζει κτίριο/όροφο
+  // που δεν ανήκουν πια σε αυτό (ιδεμποτές· ίδιο αντικείμενο όταν τίποτα δεν αλλάζει).
+  //    Ο καταρράκτης ζει πλέον στον `usePropertyFiltersUrlState` — κρίνεται ΚΑΙ για φίλτρα από σύνδεσμο.
   const handleFiltersChange = (newFilters: Partial<FilterState>) => {
-    setFilters(prev => ({ ...prev, ...newFilters }));
+    updateFilters(newFilters);
   };
 
   // Read-only polygon select handler

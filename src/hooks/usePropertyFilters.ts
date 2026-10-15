@@ -15,6 +15,7 @@ import {
 import { EMPTY_PRICE_RANGE, matchesPriceRange } from '@/lib/properties/price-range';
 import { totalPriceByRole } from '@/lib/properties/price-totals';
 import { tallyBy } from '@/utils/collection-utils';
+import { countDistinctBuildings, matchesPropertyLocation } from '@/lib/properties/property-location';
 
 
 /**
@@ -73,10 +74,12 @@ export function usePropertyFilters(
       // 🏢 CENTRALIZED: Search match using matchesSearchTerm
       const searchMatch = matchesSearchTerm(entity, searchTerm, ['name', 'description']);
 
+      // ADR-840 §7.6 — έργο / κτίριο / όροφος με ΤΑΥΤΟΤΗΤΑ, από τον ΕΝΑ κριτή (κοινό με το
+      // `usePublicPropertyViewer`). Ως τις 2026-10-15 σύγκρινε `property.project`/`.building` —
+      // ονόματα που δεν υπάρχουν στο έγγραφο ⇒ κάθε επιλογή έργου άδειαζε τη λίστα.
+      const locationMatch = matchesPropertyLocation(property, { project, building, floor });
+
       // 🏢 CENTRALIZED: Array filters using matchesArrayFilter
-      const projectMatch = matchesArrayFilter(property.project, project);
-      const buildingMatch = matchesArrayFilter(property.building, building);
-      const floorMatch = matchesArrayFilter(String(property.floor), floor);
       const typeMatch = matchesArrayFilter(property.type, propertyType);
       const statusMatch = matchesArrayFilter(property.status, status);
 
@@ -111,7 +114,7 @@ export function usePropertyFilters(
         return photosCondition && floorplansCondition && documentsCondition;
       })();
 
-      return searchMatch && projectMatch && buildingMatch && floorMatch && typeMatch && statusMatch && priceMatch && areaMatch && featuresMatch && coverageMatch;
+      return searchMatch && locationMatch && typeMatch && statusMatch && priceMatch && areaMatch && featuresMatch && coverageMatch;
     });
     
     // ADR-777 Α5/Α6 + §8.60.14.13 — the totals read the price SSoT, PER ROLE: a sale
@@ -131,7 +134,7 @@ export function usePropertyFilters(
       propertiesByFloor: tallyBy(filtered, p => String(p.floor ?? '—')),
       totalStorageUnits: 0, // storageUnits not available in this Property type
       availableStorageUnits: 0,
-      uniqueBuildings: [...new Set(filtered.map(p => p.building))].length,
+      uniqueBuildings: countDistinctBuildings(filtered),
       // Operational status metrics
       underConstructionProperties: filtered.filter(p => p.operationalStatus === 'under-construction').length,
       maintenanceProperties: filtered.filter(p => p.operationalStatus === 'maintenance').length,

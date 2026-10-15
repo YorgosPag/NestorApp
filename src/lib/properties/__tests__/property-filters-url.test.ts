@@ -1,0 +1,81 @@
+/**
+ * @fileoverview ADR-840 §7.7 — η σύμβαση «διεύθυνση ⇄ φίλτρα ακινήτων». Τα ονόματα είναι δημόσιο συμβόλαιο:
+ * αν κάποιο αλλάξει, αυτά τα tests κοκκινίζουν **πριν** σπάσουν οι κοινοποιημένοι σύνδεσμοι.
+ */
+
+import {
+  PROPERTIES_VIEW,
+  parsePropertyFilters,
+  writePropertyFilters,
+} from '../property-filters-url';
+import { DEFAULT_FILTERS, type FilterState } from '@/types/property-viewer';
+
+const written = (filters: FilterState, start = ''): string => {
+  const params = new URLSearchParams(start);
+  writePropertyFilters(filters, params);
+  return params.toString();
+};
+
+describe('property-filters-url', () => {
+  it('κενά φίλτρα ⇒ κενή διεύθυνση (ένα URL για την ίδια οθόνη)', () => {
+    expect(written(DEFAULT_FILTERS)).toBe('');
+    expect(parsePropertyFilters(new URLSearchParams(''))).toEqual(DEFAULT_FILTERS);
+  });
+
+  it('round-trip: ό,τι γράφεται διαβάζεται ίδιο', () => {
+    const filters: FilterState = {
+      ...DEFAULT_FILTERS,
+      searchTerm: 'δύο λέξεις ',
+      project: ['proj_a', 'proj_b'],
+      building: ['bld_1'],
+      floor: ['0', '2'],
+      propertyType: ['apartment'],
+      status: ['for-sale'],
+      features: ['parking'],
+      priceRange: { role: 'rent', min: 500, max: 1200 },
+      areaRange: { min: 0, max: 95 },
+    };
+    expect(parsePropertyFilters(new URLSearchParams(written(filters)))).toEqual(filters);
+  });
+
+  it('η μονάδα της τιμής ζει στο ΟΝΟΜΑ — τα ίδια ονόματα με τη δημόσια αναζήτηση', () => {
+    expect(written({ ...DEFAULT_FILTERS, priceRange: { role: 'sale', max: 250000 } })).toBe('psalemax=250000');
+    expect(written({ ...DEFAULT_FILTERS, priceRange: { role: 'nightly', min: 40 } })).toBe('pnightmin=40');
+    expect(written({ ...DEFAULT_FILTERS, areaRange: { min: 50, max: undefined } })).toBe('amin=50');
+  });
+
+  it('αλλαγή μονάδας σβήνει το εύρος της παλιάς (ποτέ δύο μονάδες στη γραμμή)', () => {
+    expect(written({ ...DEFAULT_FILTERS, priceRange: { role: 'rent', max: 900 } }, 'psalemin=100')).toBe('prentmax=900');
+  });
+
+  it('μονάδα ΧΩΡΙΣ όρια επιβιώνει (`punit`)· η προεπιλεγμένη δεν γράφεται', () => {
+    const params = written({ ...DEFAULT_FILTERS, priceRange: { role: 'rent' } });
+    expect(params).toBe('punit=rent');
+    expect(parsePropertyFilters(new URLSearchParams(params)).priceRange).toEqual({ role: 'rent' });
+    expect(written({ ...DEFAULT_FILTERS, priceRange: { role: 'sale' } })).toBe('');
+  });
+
+  it('το `0` είναι τιμή, όχι απουσία', () => {
+    expect(parsePropertyFilters(new URLSearchParams('amin=0')).areaRange).toEqual({ min: 0, max: undefined });
+  });
+
+  it('σκουπίδια αγνοούνται — ποτέ δεν σκάει η οθόνη', () => {
+    const parsed = parsePropertyFilters(new URLSearchParams('amin=abc&psalemax=&punit=yen&project=,,'));
+    expect(parsed.areaRange).toEqual({ min: undefined, max: undefined });
+    expect(parsed.priceRange).toEqual(DEFAULT_FILTERS.priceRange);
+    expect(parsed.project).toEqual([]);
+  });
+
+  it('άσχετα κλειδιά (προβολή, επιλογή) μένουν ανέπαφα', () => {
+    expect(written({ ...DEFAULT_FILTERS, status: ['for-sale'] }, 'view=floorplan&selected=p1&q=old'))
+      .toBe('view=floorplan&selected=p1&status=for-sale');
+  });
+
+  it('η προβολή: πλέγμα = προεπιλογή που σβήνει το κλειδί', () => {
+    expect(PROPERTIES_VIEW.parse(new URLSearchParams('view=floorplan'))).toBe('floorplan');
+    expect(PROPERTIES_VIEW.parse(new URLSearchParams('view=3d'))).toBe('grid');
+    const params = new URLSearchParams('view=floorplan&project=a');
+    PROPERTIES_VIEW.write('grid', params);
+    expect(params.toString()).toBe('project=a');
+  });
+});

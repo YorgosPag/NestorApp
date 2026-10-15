@@ -28,7 +28,24 @@ import {
   subscribeToUrlQuery,
 } from '@/lib/url-query-state';
 
-/** Το τρέχον query string (με `?`, ή κενό). Κενό στον server — η τιμή έρχεται μετά την ενυδάτωση. */
-export function useUrlQuery(): string {
-  return useSyncExternalStore(subscribeToUrlQuery, getUrlQuerySnapshot, getServerUrlQuerySnapshot);
+/**
+ * Το τρέχον query string (με `?`, ή κενό). Κενό στον server — η τιμή έρχεται μετά την ενυδάτωση.
+ *
+ * @param serverQuery 🔑 ADR-840 §7.7 — το query του **αιτήματος**, όταν ο καταναλωτής το έχει (`useSearchParams()`).
+ *   Χωρίς αυτό, μια σελίδα που **αποφασίζει τι αποδίδει** από τη διεύθυνση (προβολή · φίλτρα) ζωγραφίζει στην
+ *   ενυδάτωση την κενή κατάσταση και μετά την πραγματική: πλέγμα που γίνεται κάτοψη, λίστα που φιλτράρεται μετά.
+ *   Μόνο για τον server/την ενυδάτωση· στη συνέχεια διαβάζεται πάντα η ζωντανή διεύθυνση.
+ */
+export function useUrlQuery(serverQuery?: string): string {
+  return useSyncExternalStore(
+    subscribeToUrlQuery,
+    getUrlQuerySnapshot,
+    serverQuery === undefined ? getServerUrlQuerySnapshot : () => withQuestionMark(serverQuery),
+  );
+}
+
+/** Ίδια μορφή με το `location.search`: `?…` ή κενό — αλλιώς ο server και ο πελάτης θα διαφωνούσαν στην ενυδάτωση. */
+function withQuestionMark(query: string): string {
+  if (!query || query === '?') return '';
+  return query.startsWith('?') ? query : `?${query}`;
 }
