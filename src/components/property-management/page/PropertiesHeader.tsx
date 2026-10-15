@@ -25,6 +25,7 @@ import type { ListGridHeaderProps } from '@/core/headers';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { NavigationBreadcrumb } from '@/components/navigation/components/NavigationBreadcrumb';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { PropertiesViewSwitchButton } from '@/components/properties/PropertiesViewSwitchButton';
 import '@/lib/design-system';
 
 /** Λίστα/πλέγμα χωρίς κάδο — το κοινό contract + ό,τι είναι όντως δικό της. */
@@ -52,12 +53,16 @@ export function PropertiesHeader({
     ? t('grid.header.found', { count: availableCount })
     : t('header.subtitle');
 
-  const customActions = buildHeaderCustomActions({
-    showFilters,
-    setShowFilters,
-    filtersAriaLabel: tCommon('actions.toggleFilters'),
-    // Αυτή η σελίδα δεν έχει κάδο — χωρίς `onToggleTrash` το κουμπί δεν αποδίδεται.
-  });
+  const customActions = [
+    ...buildHeaderCustomActions({
+      showFilters,
+      setShowFilters,
+      filtersAriaLabel: tCommon('actions.toggleFilters'),
+      // Αυτή η σελίδα δεν έχει κάδο — χωρίς `onToggleTrash` το κουμπί δεν αποδίδεται.
+    }),
+    // ADR-840 §7.7 — ο δρόμος πίσω στο πλέγμα, με τα ΙΔΙΑ φίλτρα (ως τώρα μόνο το «πίσω» του browser).
+    <PropertiesViewSwitchButton key="view-grid" to="grid" />,
+  ];
 
   return (
     <PageHeader
@@ -81,7 +86,7 @@ export function PropertiesHeader({
         viewMode,
         onViewModeChange: (mode) => { if (isListGridViewMode(mode)) setViewMode(mode); },
         viewModes: LIST_GRID_VIEW_MODES,
-        customActions: customActions.length > 0 ? customActions : undefined
+        customActions
       }}
     />
   );

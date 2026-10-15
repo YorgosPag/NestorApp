@@ -28,6 +28,9 @@
  *
  * ⚠️ Το `redirect()` του Next είναι **307**· το `permanentRedirect()` είναι 308.
  * ⛔ **ΜΗΝ το αλλάξεις σε `permanentRedirect`.**
+ * 🔵 ADR-840 §7.7 (2026-10-15): ο συνδεδεμένος κλάδος δεν καλεί πια `redirect()` — αποδίδει `ArrivalRedirect`
+ *    (ανακατεύθυνση πελάτη, `replace`, **με** το fragment). Ήταν ήδη πελάτη: κάτω από το `(app)/loading.tsx` η
+ *    απάντηση είναι 200, όχι 307. Το επιχείρημα «ποτέ μόνιμη» ισχύει ακέραιο — μια `replace` δεν cache-άρεται.
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * 🔴 ΔΥΟ ΦΡΟΥΡΟΙ, ΑΛΛΙΩΣ ΤΟ ΔΙΧΤΥ ΓΙΝΕΤΑΙ ΤΟ ΠΡΟΒΛΗΜΑ
@@ -45,25 +48,15 @@ import { readPageIdentity } from '@/server/auth/page-identity';
 import { loginHref } from '@/lib/routes/return-path';
 import { workspaceDestinationFor } from '@/lib/workspace/workspace-destination';
 import { isInsideWorkspace } from '@/lib/workspace/workspace-scope';
+// ⚠️ Το ερώτημα **επιβιώνει** (`/contacts?filter=…` χωρίς το φίλτρο προσγειώνεται σε λάθος οθόνη) — και από
+//    το ADR-840 §7.7 **και το fragment**: ο κανόνας ζει στο `arrival-address`, όχι εδώ.
+import { arrivalQuery } from '@/lib/workspace/arrival-address';
+import { ArrivalRedirect } from '@/lib/workspace/ArrivalRedirect';
 
 interface UnprefixedPageProps {
   /** ⚠️ Next.js 15: `params` και `searchParams` είναι **Promise**. */
   readonly params: Promise<{ readonly unprefixed: readonly string[] }>;
   readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
-}
-
-/**
- * ⚠️ Το ερώτημα **επιβιώνει**: ένα `/contacts?filter=…` που χάνει το φίλτρο του
- * προσγειώνεται σε λάθος οθόνη και ο άνθρωπος δεν έχει τρόπο να καταλάβει γιατί.
- */
-function rebuildQuery(searchParams: Record<string, string | string[] | undefined>): string {
-  const query = new URLSearchParams();
-  for (const [key, value] of Object.entries(searchParams)) {
-    if (Array.isArray(value)) for (const v of value) query.append(key, v);
-    else if (value !== undefined) query.append(key, value);
-  }
-  const serialized = query.toString();
-  return serialized ? `?${serialized}` : '';
 }
 
 export default async function UnprefixedCatchAll({ params, searchParams }: UnprefixedPageProps) {
@@ -74,7 +67,7 @@ export default async function UnprefixedCatchAll({ params, searchParams }: Unpre
   // συνόλου, άρα η ήδη προθεματισμένη διεύθυνση απαντιέται από τον ΙΔΙΟ κανόνα).
   if (!isInsideWorkspace(path)) notFound();
 
-  const query = rebuildQuery(await searchParams);
+  const query = arrivalQuery(await searchParams);
 
   // 🔑 ADR-848 — ο ανώνυμος γυρνά **ΕΔΩ** μετά τη σύνδεση, όχι στο ταμπλό του. Πριν,
   //    ο σελιδοδείκτης `/listings/abc` κατέληγε στο `/dashboard` και ο άνθρωπος
@@ -87,5 +80,10 @@ export default async function UnprefixedCatchAll({ params, searchParams }: Unpre
   //    σύνδεσμος του email (`/n/{id}`, ADR-848) χρειάστηκε την ίδια απάντηση.
   //    ⛔ **ΜΗΝ ξαναγράψεις εδώ κατασκευή διεύθυνσης** — το ιστορικό των δύο ADR
   //    (νεκρός κλάδος ιδιώτη · τριαδική που μάντευε) ζει πλέον δίπλα στον κώδικα.
-  redirect(`${await workspaceDestinationFor(identity, path)}${query}`);
+  //
+  // 🔴 ADR-840 §7.7 — ΟΧΙ `redirect()` ΕΔΩ. Κάτω από το `(app)/loading.tsx` το streaming έχει ήδη ξεκινήσει: η
+  //    απάντηση είναι 200 και η ανακατεύθυνση την εκτελεί ο πελάτης, με URL **χωρίς** fragment (ο server δεν το
+  //    βλέπει ποτέ). Μετρημένο: `/properties?view=floorplan#frag` ⇒ `/o/<χώρος>/properties?view=floorplan`.
+  //    Ο server χτίζει τον προορισμό· το `#…` το προσθέτει ο πελάτης (`ArrivalRedirect`).
+  return <ArrivalRedirect to={`${await workspaceDestinationFor(identity, path)}${query}`} />;
 }

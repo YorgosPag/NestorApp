@@ -9,6 +9,8 @@
  * πρώτη αλλαγή — π.χ. αν το ένα άρχιζε να γράφει `view=list` και το άλλο όχι.
  */
 
+import { urlEnumParam } from '@/lib/url-filters/enum-param';
+
 /** Οι προβολές. Η `list` είναι η προεπιλογή και **δεν** γράφεται στο URL. */
 export const LIST_MAP_VIEWS = ['list', 'map'] as const;
 export type ListMapView = (typeof LIST_MAP_VIEWS)[number];
@@ -16,18 +18,20 @@ export type ListMapView = (typeof LIST_MAP_VIEWS)[number];
 /** Το κλειδί του query string: το ίδιο όνομα που χρησιμοποιούν τα portals (`view=map`). */
 export const LIST_MAP_VIEW_PARAM = 'view';
 
-export function isListMapView(value: unknown): value is ListMapView {
-  return typeof value === 'string' && (LIST_MAP_VIEWS as readonly string[]).includes(value);
-}
+/**
+ * 🔑 ADR-840 §7.7 — ο κανόνας «κλειστό σύνολο · προεπιλογή που σβήνει το κλειδί» ζει πλέον στο
+ *    `lib/url-filters/enum-param` (δεύτερος καταναλωτής: η προβολή της «Διαθέσιμα Ακίνητα»).
+ */
+const LIST_MAP_VIEW = urlEnumParam<ListMapView>({
+  param: LIST_MAP_VIEW_PARAM,
+  values: LIST_MAP_VIEWS,
+  fallback: 'list',
+});
+
+export const isListMapView = LIST_MAP_VIEW.is;
 
 /** Ανάγνωση. Άγνωστη ή απούσα τιμή ⇒ `list`, ποτέ σφάλμα (ο σύνδεσμος μπορεί να είναι παλιός). */
-export function parseListMapView(params: URLSearchParams): ListMapView {
-  const raw = params.get(LIST_MAP_VIEW_PARAM);
-  return isListMapView(raw) ? raw : 'list';
-}
+export const parseListMapView = LIST_MAP_VIEW.parse;
 
 /** Γραφή. Η προεπιλογή **σβήνει** το κλειδί: ένα URL, μία μορφή για την ίδια οθόνη. */
-export function writeListMapView(view: ListMapView, params: URLSearchParams): void {
-  if (view === 'list') params.delete(LIST_MAP_VIEW_PARAM);
-  else params.set(LIST_MAP_VIEW_PARAM, view);
-}
+export const writeListMapView = LIST_MAP_VIEW.write;

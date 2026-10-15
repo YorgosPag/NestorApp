@@ -17,6 +17,11 @@ export type FilterFieldType =
 export interface FilterOption {
   value: string;
   label: string;
+  /**
+   * Η ετικέτα είναι **δεδομένο** (όνομα έργου/κτιρίου, ήδη αποδοσμένος όροφος), όχι κλειδί i18n
+   * (ADR-840 §7.6). Χωρίς τη σημαία, όνομα με τελεία («Κτίριο Α.Ε.») θα ερμηνευόταν ως κλειδί.
+   */
+  verbatim?: boolean;
 }
 
 export interface FilterFieldConfig {

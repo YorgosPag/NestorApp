@@ -13,8 +13,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-// 🏢 ENTERPRISE: Centralized floor label formatting (Ισόγειο, Υπόγειο, κλπ.)
-import { useFloorLabel } from '@/hooks/useFloorLabel';
+// ADR-840 §7.6 — «Έργο • Κτίριο • Όροφος» από ταυτότητες (ονόματα + ετικέτα ορόφου, χωρίς κενά τμήματα)
+import { usePropertyLocationLine } from '@/hooks/usePropertyLocationLine';
 // 🏢 SSoT: WHICH price to show is decided once, in the resolver (ADR-777 Α6)
 import { resolveDisplayPrice } from '@/lib/properties/price-resolver';
 // 🏢 SSoT: το σήμα κατάστασης ανέβηκε στο shared module όταν απέκτησε δεύτερο
@@ -39,14 +39,14 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
   const thumbnailUrl = usePropertyThumbnail(property);
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer', 'trash']);
-  const floorLabel = useFloorLabel();
+  const locationLine = usePropertyLocationLine();
   const statusBadge = buildPropertyStatusBadge(property, t);
   const price = resolveDisplayPrice(property);
   // ADR-777 Α21: η διατύπωση κάθε ποσού ζει δίπλα στον κανόνα που το επιλέγει.
   const priceText = buildCardPriceText(price, t);
 
   return (
-    <article className={`relative w-full flex flex-col ${colors.bg.primary} ${radius.xl} shadow-md ring-1 ${colors.border.muted} overflow-hidden group cursor-pointer ${COMPLEX_HOVER_EFFECTS.FEATURE_CARD}`} itemScope itemType="https://schema.org/RealEstateProperty">
+    <article className={`relative w-full h-full flex flex-col ${colors.bg.primary} ${radius.xl} shadow-md ring-1 ${colors.border.muted} overflow-hidden group cursor-pointer ${COMPLEX_HOVER_EFFECTS.FEATURE_CARD}`} itemScope itemType="https://schema.org/RealEstateProperty">
       <header className={`relative h-48 overflow-hidden ${colors.bg.muted}`}> {/* ✅ ENTERPRISE: Better contrast in dark mode (was secondary) */}
         <img
           src={thumbnailUrl ?? getPropertyImage(property)}
@@ -63,10 +63,11 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
         */}
       </header>
 
-      <main className="p-5">
-        <header className="flex justify-between items-start mb-2">
-          <section aria-label={t('card.aria.propertyInfo')}>
-            <h2 className={`text-lg font-bold ${colors.text.primary}`} itemProp="name">
+      {/* `flex-1 flex flex-col` + `mt-auto` στο footer: οι ενέργειες καρφώνονται στη ΒΑΣΗ της κάρτας, άρα στέκονται στην ίδια γραμμή σε όλη τη σειρά του πλέγματος, όσο κι αν αναδιπλώνεται ο τίτλος (μοτίβο Idealista/Airbnb). */}
+      <main className="flex flex-1 flex-col p-5">
+        <header className="flex justify-between items-start gap-2 mb-2">
+          <section className="min-w-0" aria-label={t('card.aria.propertyInfo')}>
+            <h2 className={`text-lg font-bold leading-tight line-clamp-2 min-h-[2lh] ${colors.text.primary}`} itemProp="name">
               {/*
                 ADR-777 §8.30 — **η κάρτα είναι σύνδεσμος προς την καρτέλα του ακινήτου** (μοτίβο Zillow/Idealista:
                 «stretched link»). Ο σύνδεσμος είναι ΕΝΑΣ πραγματικός `<a>` στον τίτλο — άρα Ctrl/μεσαίο κλικ = νέα
@@ -83,13 +84,14 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
             <p className={`text-sm ${colors.text.muted} flex items-center gap-1 mt-1`}>
               {/* 🏢 ENTERPRISE: Using centralized building icon/color */}
               <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.building.color)} />
-              <span itemProp="location">{property.project} • {property.building} • {floorLabel(property.floor)}</span>
+              {/* ADR-840 §7.6 — ονόματα από ΤΑΥΤΟΤΗΤΑ (ο ένας επιλυτής)· τα `project`/`building` δεν υπάρχουν στο έγγραφο ⇒ ήταν «• • 1ος». */}
+              <span itemProp="location">{locationLine(property)}</span>
             </p>
           </section>
           <CommonBadge
             status="category"
             customLabel={getPropertyTypeLabel(property.type, t)}
-            className="text-xs truncate max-w-[90px]"
+            className="shrink-0 text-xs truncate max-w-[90px]"
           />
         </header>
 
@@ -156,7 +158,7 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
         )}
 
         {/* `relative z-10`: οι ενέργειες στέκονται ΠΑΝΩ από το `::after` του τίτλου — αλλιώς το κλικ θα πήγαινε στην καρτέλα. */}
-        <footer className="relative z-10 flex gap-2" aria-label={t('card.aria.propertyActions')}>
+        <footer className="relative z-10 mt-auto flex gap-2" aria-label={t('card.aria.propertyActions')}>
           <button
             type="button"
             onClick={() => onViewFloorPlan(property.id)}

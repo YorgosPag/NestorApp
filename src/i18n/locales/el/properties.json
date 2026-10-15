@@ -163,6 +163,8 @@
     "allFloors": "Όλοι οι Όροφοι",
     "allBuildings": "Όλα τα Κτίρια",
     "allProjects": "Όλα τα Έργα",
+    "unknownProject": "Άγνωστο έργο",
+    "unknownBuilding": "Άγνωστο κτίριο",
     "types": {
       "apartment": "Διαμέρισμα",
       "studio": "Στούντιο",
@@ -291,7 +293,8 @@
       "list": "Λίστα"
     },
     "actions": {
-      "viewFloorPlan": "Προβολή σε Κάτοψη"
+      "viewFloorPlan": "Προβολή σε Κάτοψη",
+      "viewGrid": "Προβολή σε Πλέγμα"
     },
     "cta": {
       "title": "Θέλετε να δείτε τα ακίνητα στην κάτοψη του ορόφου;",

@@ -23,6 +23,8 @@ import { PageContainer } from '@/core/containers';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { NavigationBreadcrumb } from '@/components/navigation/components/NavigationBreadcrumb';
 import { usePublicPropertyViewer } from '@/hooks/usePublicPropertyViewer';
+import { usePropertiesView } from '@/hooks/usePropertiesView';
+import { PropertiesViewSwitchButton } from '@/components/properties/PropertiesViewSwitchButton';
 import { PageHeader } from '@/core/headers';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -47,6 +49,7 @@ import '@/lib/design-system';
 
 export function PropertyGridView() {
   const router = useRouter();
+  const { setView } = usePropertiesView();
   const { properties, filteredProperties: engineFiltered, filters, handleFiltersChange, dashboardStats, isLoading } = usePublicPropertyViewer();
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
@@ -64,7 +67,7 @@ export function PropertyGridView() {
    * `PropertyManagementPageContent`, και επειδή ο τύπος του πίνακα δεν είχε `project`
    * ούτε `building`, **αυτά τα δύο φίλτρα δεν έφταναν ποτέ στη μηχανή** (ADR-840 §4.1).
    */
-  const filtersConfig = usePropertyFiltersConfig(properties, propertyFiltersConfig);
+  const filtersConfig = usePropertyFiltersConfig(properties, propertyFiltersConfig, filters);
 
   /*
     🔴 ADR-777 §8.60.14.14 — η λίστα ΠΕΡΝΑ ΠΡΩΤΑ ΑΠΟ ΤΗ ΜΗΧΑΝΗ. Ως τις 2026-09-18 το πλέγμα
@@ -106,8 +109,10 @@ export function PropertyGridView() {
     },
   ], [dashboardStats, availableProperties.length, t]);
 
+  // 🔴 ADR-840 §7.7 — αλλαγή ΠΡΟΒΟΛΗΣ, όχι πλοήγηση: ήταν `router.push('/properties?view=floorplan…')`, νέα εγγραφή
+  //    ιστορικού ΧΩΡΙΣ τα φίλτρα. Τώρα τα φίλτρα μένουν στη διεύθυνση και η κάτοψη τα διαβάζει από εκεί.
   const handleViewFloorPlan = (propertyId: string) => {
-    router.push(`/properties?view=floorplan&selected=${propertyId}`);
+    setView('floorplan', propertyId);
   };
 
   // ADR-777 §8.30 — η κάρτα (πλέγμα ή λίστα) ανοίγει την καρτέλα του ακινήτου.
@@ -116,7 +121,7 @@ export function PropertyGridView() {
   };
 
   const handleViewAllFloorPlan = () => {
-    router.push('/properties?view=floorplan');
+    setView('floorplan');
   };
 
   // Stale-while-revalidate: show loading only on first visit before data arrives.
@@ -154,16 +159,8 @@ export function PropertyGridView() {
             viewMode: viewMode as CoreViewMode,
             onViewModeChange: (mode) => setViewMode(mode as 'list' | 'grid'),
             viewModes: ['list', 'grid'] as CoreViewMode[],
-            customActions: [
-              <button
-                key="floorplan"
-                onClick={handleViewAllFloorPlan}
-                className={`px-4 py-2 ${colors.bg.gradient} ${colors.text.inverse} ${radius.lg} transition-all flex items-center gap-2 font-medium h-8 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
-              >
-                <MapPin className={iconSizes.sm} />
-                {t('grid.actions.viewFloorPlan')}
-              </button>
-            ]
+            // ADR-840 §7.7 — το ΕΝΑ κουμπί εναλλαγής (κοινό με την κάτοψη, που κάνει το αντίστροφο).
+            customActions: [<PropertiesViewSwitchButton key="floorplan" to="floorplan" />]
           }}
         />
       </header>

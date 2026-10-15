@@ -1106,6 +1106,9 @@ export const API_ROUTES = {
       SEND_EMAIL: (id: string) => `/api/accounting/apy-certificates/${id}/send-email` as const,
     },
     FIXED_ASSETS: '/api/accounting/assets',
+    // ADR-ACC-010 §2.1.1 Φ5 — αποσβέσεις χρήσης: GET προεπισκόπηση · POST καταχώριση · POST αναίρεση
+    DEPRECIATION_RUN: '/api/accounting/assets/depreciation-run',
+    DEPRECIATION_REVERSAL: '/api/accounting/assets/depreciation-run/reversal',
     EFKA: { SUMMARY: '/api/accounting/efka/summary' },
   },
 

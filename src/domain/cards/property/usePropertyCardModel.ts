@@ -20,6 +20,8 @@ import type { StatItem } from '@/design-system';
 import type { GridCardBadge, GridCardBadgeVariant } from '@/design-system/components/GridCard/GridCard.types';
 import { formatNumber } from '@/lib/intl-utils';
 import { useFloorLabel } from '@/hooks/useFloorLabel';
+import { useHierarchyNames } from '@/components/navigation/core/hooks/useHierarchyNames';
+import { joinLocationParts } from '@/lib/properties/property-location';
 import { buildCardSubtitle } from '@/domain/cards/shared/card-subtitle';
 import { getPropertyTypeLabel } from '@/components/building-management/tabs/property-tab-constants';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -65,13 +67,17 @@ const LIST_STATUS_LABEL_KEYS: Record<string, string> = {
 // 🏢 STAT BUILDERS (per-view differences preserved)
 // =============================================================================
 
-function buildingStat(property: Property, t: TFn): StatItem | null {
-  if (!property.building) return null;
+/**
+ * ADR-840 §7.6 — το όνομα κτιρίου έρχεται **λυμένο από ταυτότητα** (`useHierarchyNames`). Ως τις 2026-10-15
+ * διάβαζε `property.building`, πεδίο που δεν υπάρχει στο έγγραφο ⇒ η γραμμή «Κτίριο» δεν εμφανιζόταν ποτέ.
+ */
+function buildingStat(buildingName: string | null, t: TFn): StatItem | null {
+  if (!buildingName) return null;
   return {
     icon: NAVIGATION_ENTITIES.building.icon,
     iconColor: NAVIGATION_ENTITIES.building.color,
     label: t('card.stats.building'),
-    value: property.building,
+    value: buildingName,
   };
 }
 
@@ -86,12 +92,13 @@ function displayAreaOf(property: Property): number | undefined {
 export function usePropertyGridModel(property: Property, showCommercialPrices = false): CardViewModel {
   const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer', 'trash']);
   const floorLabel = useFloorLabel();
+  const { buildingName } = useHierarchyNames();
 
   const stats = useMemo<StatItem[]>(() => {
     const items: StatItem[] = [];
     const displayArea = displayAreaOf(property);
 
-    const b = buildingStat(property, t);
+    const b = buildingStat(buildingName(property.buildingId), t);
     if (b) items.push(b);
 
     if (property.floor !== undefined && property.floor !== null) {
@@ -143,7 +150,7 @@ export function usePropertyGridModel(property: Property, showCommercialPrices = 
     }
 
     return items;
-  }, [property, showCommercialPrices, t, floorLabel]);
+  }, [property, showCommercialPrices, t, floorLabel, buildingName]);
 
   const badges = useMemo<GridCardBadge[]>(() => {
     // Αδήλωτη ⇒ «Έτοιμο», όπως πάντα έκανε η κάρτα ακινήτου (αμετάβλητη συμπεριφορά).
@@ -169,11 +176,12 @@ export function usePropertyGridModel(property: Property, showCommercialPrices = 
 export function usePropertyListModel(property: Property): CardViewModel {
   const { t } = useTranslation(['properties', 'properties-viewer', 'properties-enums', 'properties-detail', 'trash']);
   const floorLabel = useFloorLabel();
+  const { projectName, buildingName } = useHierarchyNames();
 
   const stats = useMemo<StatItem[]>(() => {
     const items: StatItem[] = [];
 
-    const b = buildingStat(property, t);
+    const b = buildingStat(buildingName(property.buildingId), t);
     if (b) items.push(b);
 
     if (property.floor !== undefined) {
@@ -198,7 +206,7 @@ export function usePropertyListModel(property: Property): CardViewModel {
     items.push(...buildPropertyPriceStats(property, t));
 
     return items;
-  }, [property, t, floorLabel]);
+  }, [property, t, floorLabel, buildingName]);
 
   const badges = useMemo<GridCardBadge[]>(() => {
     const status = property.operationalStatus || property.status || 'ready';
@@ -216,9 +224,10 @@ export function usePropertyListModel(property: Property): CardViewModel {
       const typeLabel = getPropertyTypeLabel(property.type, t);
       parts.push(buildCardSubtitle(typeLabel, property.code));
     }
-    if (property.project) parts.push(property.project);
-    return parts.join(' • ') || undefined;
-  }, [property.type, property.code, property.project, t]);
+    // ADR-840 §7.6 — το έργο λυμένο από ταυτότητα (το `property.project` δεν υπάρχει στο έγγραφο).
+    parts.push(projectName(property.projectId) ?? '');
+    return joinLocationParts(parts) || undefined;
+  }, [property.type, property.code, property.projectId, projectName, t]);
 
   const name = property.name || property.id;
   return {

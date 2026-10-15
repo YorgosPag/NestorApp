@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search } from "lucide-react";
-import type { FilterFieldConfig } from './types';
+import type { FilterFieldConfig, FilterOption } from './types';
 import { PriceRangeFilterField } from './PriceRangeFilterField';
 import type { RolePriceRange } from '@/lib/properties/price-range';
 import { PROPERTY_AREA_RANGE_PRESETS } from './configs';
@@ -64,6 +64,9 @@ export function FilterField({ config, value, onValueChange, onRangeChange, i18nN
   // έχει δύο αναγνώστες με **διαφορετική** γνώση: τώρα υπάρχει **ένα** σπίτι.
   const translateLabel = (label: string | undefined): string =>
     translateFilterLabel(t, label);
+  // ADR-840 §7.6 — ετικέτα-δεδομένο (όνομα έργου/κτιρίου) αποδίδεται αυτούσια, ποτέ ως κλειδί.
+  const optionLabel = (option: FilterOption): string =>
+    option.verbatim ? option.label : translateLabel(option.label);
   const getColumnSpan = (width?: number) => {
     switch (width) {
       case 1: return 'col-span-1';
@@ -321,7 +324,7 @@ export function FilterField({ config, value, onValueChange, onRangeChange, i18nN
             <SelectContent>
               {config.options?.map(option => (
                 <SelectItem key={option.value} value={option.value}>
-                  {translateLabel(option.label)}
+                  {optionLabel(option)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -357,7 +360,7 @@ export function FilterField({ config, value, onValueChange, onRangeChange, i18nN
               <SelectItem value="all">{t('filters:all')}</SelectItem>
               {config.options?.map(option => (
                 <SelectItem key={option.value} value={option.value}>
-                  {translateLabel(option.label)} {Array.isArray(value) && value.includes(option.value) ? '✓' : ''}
+                  {optionLabel(option)} {Array.isArray(value) && value.includes(option.value) ? '✓' : ''}
                 </SelectItem>
               ))}
             </SelectContent>

@@ -16,7 +16,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { usePropertiesView } from '@/hooks/usePropertiesView';
 import { Building2, Home, DollarSign, Maximize } from 'lucide-react';
 import { usePublicPropertyViewer } from '@/hooks/usePublicPropertyViewer';
 import { PropertiesHeader } from './page/PropertiesHeader';
@@ -28,6 +28,7 @@ import { usePropertyFiltersConfig } from '@/components/core/AdvancedFilters/hook
 import { DEFAULT_FILTERS } from '@/types/property-viewer';
 import { useUrlPreselect } from '@/features/property-management/hooks/useUrlPreselect';
 import { useViewerProps } from '@/features/property-management/hooks/useViewerProps';
+import { useBreadcrumbSync } from '@/components/navigation/core/hooks/useBreadcrumbSync';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { priceTotalsView } from '@/lib/listings/listing-price-label';
 // 🏢 ENTERPRISE: Semantic colors for consistent styling
@@ -35,8 +36,9 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
 
 export function PropertyManagementPageContent() {
-  const searchParams = useSearchParams();
-  const selectedId = searchParams.get('selected');
+  // ADR-840 §7.7 — `?selected=` από τον ΕΝΑ αναγνώστη: το πλέγμα το γράφει με `replaceState` (αλλαγή προβολής),
+  // που το `useSearchParams` δεν βλέπει στον dev.
+  const { selectedId } = usePropertiesView();
   const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const colors = useSemanticColors();
 
@@ -50,7 +52,7 @@ export function PropertyManagementPageContent() {
    * ADR-840 Σ1 — **ΜΙΑ κατάσταση φίλτρων.** Δες το δίδυμο σχόλιο στο `PropertyGridView`:
    * ο μεταφραστής των επτά πεδίων ζούσε **αυτούσιος** και στα δύο αρχεία.
    */
-  const filtersConfig = usePropertyFiltersConfig(hookState.properties, propertyFiltersConfig);
+  const filtersConfig = usePropertyFiltersConfig(hookState.properties, propertyFiltersConfig, hookState.filters);
 
   // URL preselection
   useUrlPreselect({
@@ -59,6 +61,16 @@ export function PropertyManagementPageContent() {
     onSelectFloor: hookState.onSelectFloor,
     setSelectedProperties: hookState.setSelectedProperties,
   });
+
+  // ADR-016 — η ΙΔΙΑ συγχρόνιση breadcrumb με τη «Διαχείριση Ακινήτων» (`UnitsPageContent`): εταιρεία → έργο →
+  // κτίριο → ακίνητο, από το hierarchy API. Χωρίς αυτήν η κεφαλίδα περνούσε `<NavigationBreadcrumb />` αλλά το
+  // NavigationContext έμενε άδειο ⇒ το breadcrumb δεν αποδιδόταν ποτέ σε αυτή την όψη.
+  const viewedProperty = hookState.selectedProperty;
+  useBreadcrumbSync(
+    viewedProperty
+      ? { type: 'property', id: viewedProperty.id, name: viewedProperty.name }
+      : null
+  );
 
   // Viewer props builder
   const viewerProps = useViewerProps(hookState);

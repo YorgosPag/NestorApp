@@ -161,6 +161,20 @@ export function priceRoleOfSeek(seek: PricedDemandSeek): PriceRole {
   return PRICE_AXIS_CLASS[priceAxisOfSeek(seek)];
 }
 
+/**
+ * **Ο άξονας που ρωτά ΑΥΤΗ τη μονάδα** — το {@link PRICE_AXIS_CLASS} ανάποδα, **παραγόμενο**, όχι ξαναγραμμένο.
+ *
+ * 🔑 ADR-840 §7.7: το εύρος τιμής των εσωτερικών οθονών (`RolePriceRange`) γράφεται στη διεύθυνση με το **ίδιο**
+ *    όνομα που έχει η ίδια ερώτηση στη δημόσια αναζήτηση (`psale` · `prent` · `pnight`) — η μονάδα ζει στο όνομα.
+ *    Δεύτερος χειρόγραφος πίνακας ρόλος → άξονας θα απέκλινε στον πρώτο νέο ρόλο.
+ */
+export function priceAxisOfRole(role: PriceRole): PriceAxisKey {
+  const axis = (Object.keys(PRICE_AXIS_CLASS) as PriceAxisKey[]).find((key) => PRICE_AXIS_CLASS[key] === role);
+  // `PRICE_AXIS_CLASS` καλύπτει κάθε ρόλο (κλειδωμένο από το `satisfies` + `PRICE_ROLE_ORDER`)· η ρίψη είναι αδύνατη.
+  if (axis === undefined) throw new Error(`[listing-criterion-reading] no price axis for role "${role}"`);
+  return axis;
+}
+
 // =============================================================================
 // 2. ΟΙ ΑΡΙΘΜΗΤΙΚΟΙ ΑΞΟΝΕΣ
 // =============================================================================

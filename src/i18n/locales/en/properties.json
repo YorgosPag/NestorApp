@@ -163,6 +163,8 @@
     "allFloors": "All Floors",
     "allBuildings": "All Buildings",
     "allProjects": "All Projects",
+    "unknownProject": "Unknown project",
+    "unknownBuilding": "Unknown building",
     "types": {
       "apartment": "Apartment",
       "studio": "Studio",
@@ -291,7 +293,8 @@
       "list": "List"
     },
     "actions": {
-      "viewFloorPlan": "View Floor Plan"
+      "viewFloorPlan": "View Floor Plan",
+      "viewGrid": "View Grid"
     },
     "cta": {
       "title": "Want to see the properties on the floor plan?",

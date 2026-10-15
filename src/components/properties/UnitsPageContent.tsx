@@ -103,7 +103,7 @@ export function PropertiesManagementContent() {
   } = usePropertiesViewerState();
 
   // 🔧 BUGFIX: Load dynamic filter options from properties data
-  const dynamicFilterConfig = usePropertyFiltersConfig(properties);
+  const dynamicFilterConfig = usePropertyFiltersConfig(properties, undefined, filters);
 
   // 🏢 ENTERPRISE: Inline new unit creation state (replaces AddUnitDialog modal)
   const [isCreatingNewUnit, setIsCreatingNewUnit] = useState(false);

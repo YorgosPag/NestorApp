@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from '@/lib/workspace/navigation';
 import { useSearchParams } from 'next/navigation';
+import { usePropertiesView } from '@/hooks/usePropertiesView';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Import from canonical location
@@ -39,7 +40,9 @@ const PropertyFloorplanViewer = dynamic(
 export const PropertiesPageContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const viewParam = searchParams.get('view');
+  // ADR-840 §7.7 — η προβολή από τον ΕΝΑ αναγνώστη (`useUrlQuery`): αλλάζει με `replaceState`, που το
+  // `useSearchParams` δεν βλέπει στον dev.
+  const { view } = usePropertiesView();
   const legacyPropertyId = searchParams.get('propertyId');
 
   /**
@@ -69,7 +72,7 @@ export const PropertiesPageContent = () => {
   }
 
   // If floorplan view is requested, show the property viewer with layers + interactive overlays
-  if (viewParam === 'floorplan') {
+  if (view === 'floorplan') {
     return <PropertyFloorplanViewer />;
   }
 
