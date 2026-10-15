@@ -50,6 +50,11 @@ export interface DocumentKindSpec {
   readonly renewalLeadDays: number | null;
   /** Πότε επαλήθευσε τον κανόνα επαγγελματίας. `null` = από δευτερογενείς πηγές — το UI το δηλώνει. */
   readonly verifiedAt: string | null;
+  /**
+   * Ο νόμος απαιτεί η **αγγελία** να αναγράφει αυτό το έγγραφο ⇒ αγγελία **χωρίς** αυτό = «λείπει» (ADR-915 Φ4δ Ε7).
+   * `null` = η αγγελία μπορεί να το δείξει, δεν οφείλει — η απουσία του δεν είναι κενό. Διάταξη αυτολεξεί (εξαίρεση N.11).
+   */
+  readonly advertisingDisclosure: { readonly statute: string } | null;
 }
 
 export const DOCUMENT_KIND_SPECS: Readonly<Record<DocumentKind, DocumentKindSpec>> = {
@@ -60,6 +65,9 @@ export const DOCUMENT_KIND_SPECS: Readonly<Record<DocumentKind, DocumentKindSpec
     statute: 'ν.4122/2013 · ν.4409/2016',
     renewalLeadDays: 60,
     verifiedAt: null,
+    // Η ενεργειακή κατηγορία αναγράφεται σε ΚΑΘΕ εμπορική αγγελία πώλησης/μίσθωσης (ΥΠΕΝ, από 1/1/2021· έρευνα
+    // 2026-10-15). Το άρθρο 12 αντικαταστάθηκε από το άρθρο 65 ν.4685/2020 — η αρίθμηση παραγράφου ΔΕΝ επαληθεύτηκε.
+    advertisingDisclosure: { statute: 'ν.4122/2013 άρθρο 12 (άρθρο 65 ν.4685/2020)' },
   },
   // 🔴 Η «ισχύς δύο μηνών» της βεβαίωσης του άρθρου 83 ΔΕΝ βρέθηκε σε καμία πηγή (έρευνα 2026-10-14) ⇒ `unverified`,
   //    όχι επινοημένη διάρκεια. Το «λήγει» μένει αληθές: η απάντηση νομιμότητας λέει `expiry-unknown`.
@@ -68,6 +76,8 @@ export const DOCUMENT_KIND_SPECS: Readonly<Record<DocumentKind, DocumentKindSpec
     statute: 'άρθρο 83 Ν.4495/2017',
     renewalLeadDays: null,
     verifiedAt: null,
+    // `disclosed-only` στη νομιμότητα (ADR-777 §7 #4): ζητείται στη μεταβίβαση, όχι στην αγγελία.
+    advertisingDisclosure: null,
   },
 };
 

@@ -9,8 +9,12 @@
 
 import type { DocumentRegistry } from '@/lib/document-validity/document-registry';
 
-/** Οι πηγές που διαβάζονται με ερώτημα — άρα έχουν όριο. */
-export const REGISTRY_SOURCES = ['files', 'declared', 'cases'] as const;
+/**
+ * Οι πηγές που διαβάζονται με ερώτημα — άρα έχουν όριο. Φ4δ: `owner-properties` (ακίνητα ιδιωτών υπό θεματοφυλακή του
+ * γραφείου, Ε10) · `listings` (οι αγγελίες με το όνομα του γραφείου — βρίσκονται **και** όταν το ακίνητο δεν έχει
+ * κανένα έγγραφο, Ε11).
+ */
+export const REGISTRY_SOURCES = ['files', 'declared', 'cases', 'owner-properties', 'listings'] as const;
 export type RegistrySource = (typeof REGISTRY_SOURCES)[number];
 
 /** Βαλβίδα ασφαλείας ανά πηγή, όχι σελιδοποίηση. Η υπόθεση = ίδιο μέγεθος με τη σάρωση λήξεων (`EXPIRY_SWEEP_LIMIT`). */
@@ -18,7 +22,12 @@ export const DOCUMENT_REGISTRY_CAPS: Readonly<Record<RegistrySource, number>> = 
   files: 500,
   declared: 500,
   cases: 200,
+  'owner-properties': 500,
+  listings: 500,
 };
+
+/** Σε ποιο **είδος** ακινήτου δείχνει το όνομα — αποφασίζει τη διεύθυνση της οθόνης (ακίνητο εταιρείας · εντολή). */
+export type RegistryPropertyScope = 'property' | 'owner-property';
 
 /** Μέγεθος ομάδας `getAll` — δεν βρέθηκε τεκμηριωμένο όριο· αμυντικό (ADR-915 §11.3). */
 export const REGISTRY_GET_ALL_CHUNK = 100;
@@ -26,6 +35,10 @@ export const REGISTRY_GET_ALL_CHUNK = 100;
 /** Ό,τι χρειάζεται η οθόνη για να **ονομάσει** μια γραμμή ή το «τι σταματά» της — ποτέ ταυτότητα ανθρώπου. */
 export interface RegistryLabel {
   readonly name: string | null;
+}
+
+export interface RegistryPropertyLabel extends RegistryLabel {
+  readonly scope: RegistryPropertyScope;
 }
 
 export interface DocumentRegistryResponse extends DocumentRegistry {
@@ -36,8 +49,13 @@ export interface DocumentRegistryResponse extends DocumentRegistry {
   /** `true` όταν **κάποια** πηγή χτύπησε το όριο. **Ποτέ σιωπηλό.** */
   readonly truncated: boolean;
   readonly truncatedSources: readonly RegistrySource[];
-  /** Ονόματα ακινήτων (γραμμή · υπόθεση · αγγελία δένονται όλα σε ακίνητο). */
-  readonly properties: Readonly<Record<string, RegistryLabel>>;
+  /**
+   * Αγγελίες με το όνομα του γραφείου (`agencyId`) που **δεν** αντιστοιχούν σε ακίνητο ή εντολή υπό τη θεματοφυλακή του
+   * — δεν ελέγχονται, και **μετριούνται** (Ε11): το όριο έχει αριθμό, όχι γενική φράση.
+   */
+  readonly unscopedListings: number;
+  /** Ονόματα ακινήτων (γραμμή · υπόθεση · αγγελία δένονται όλα σε ακίνητο), με το είδος τους. */
+  readonly properties: Readonly<Record<string, RegistryPropertyLabel>>;
   /** Ονόματα αρχείων (`displayName`). */
   readonly files: Readonly<Record<string, RegistryLabel>>;
 }

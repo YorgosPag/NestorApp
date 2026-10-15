@@ -10,6 +10,8 @@
  * 🔑 **Ένα ρολόι**: η «σήμερα» της Ελλάδας (`conveyanceToday`) για όλες τις γραμμές, και η στιγμή που αλλάζει
  *    (`freshUntil`) — η οθόνη ξαναρωτά τότε αντί για polling (ADR-901 §14.8).
  * 🔑 **Κανένα φίλτρο διακομιστή**: η οθόνη φιλτράρει με `matchesRegistryFilter` — ένας ταξινομητής.
+ * 🔑 **Φ4δ**: πέντε πηγές (αρχεία · δηλώσεις · υποθέσεις · εντολές υπό θεματοφυλακή · αγγελίες με το όνομα του γραφείου),
+ *    ώστε ο πυρήνας να βλέπει **και** τις απαιτήσεις χωρίς έγγραφο — το «λείπει». Εκτός εμβέλειας ⇒ `unscopedListings`.
  * 🔒 **Εμβέλεια**: το `companyId` έρχεται από το `ctx` του `withAuth`, **ποτέ** από το αίτημα. Κάθε ερώτημα το ονομάζει
  *    στατικά (CHECK 3.10/3.35)· κάθε ακίνητο ελέγχεται ότι είναι της εταιρείας πριν δώσει «τι σταματά» ή όνομα.
  * ⚠️ **Κανένας σύνθετος δείκτης**: ισότητες + `in`, μετρημένα ζωντανά (§11.3). Ταξινόμηση στη μνήμη (επείγον =
@@ -24,39 +26,75 @@ import { conveyanceToday, nextConveyanceDayStart } from '@/lib/conveyance/convey
 import { documentRegistry } from '@/lib/document-validity/document-registry';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { ConveyanceCase } from '@/types/conveyance-case';
+import type { PublicListing } from '@/types/public-listing';
 import {
   DOCUMENT_REGISTRY_CAPS,
   REGISTRY_SOURCES,
   type DocumentRegistryResponse,
   type RegistryLabel,
+  type RegistryPropertyLabel,
   type RegistrySource,
 } from './document-registry.types';
 import { readRegistryFiles, registryDocumentsOf, type RegistryFile } from './registry-documents.server';
+import { listingRequirementsOf, readAgencyListings, readListingsById } from './registry-listings.server';
+import { readOfficeOwnerProperties } from './registry-owner-properties.server';
 import { readCompanyProperties, readDeclaredCertificateProperties, type RegistryProperty } from './registry-properties.server';
-import { listingRequirements, openCaseRequirements, readOpenCases } from './registry-requirements.server';
+import { openCaseRequirements, readOpenCases } from './registry-requirements.server';
 
 const logger = createModuleLogger('document-registry.service');
 
-/** Ό,τι διάβασαν τα τρία ερωτήματα, μαζί με όποια πηγή κόπηκε. */
+/** Ό,τι διάβασαν τα πέντε ερωτήματα, μαζί με όποια πηγή κόπηκε. */
 interface RegistrySources {
   readonly files: readonly RegistryFile[];
   readonly declared: readonly RegistryProperty[];
   readonly cases: readonly ConveyanceCase[];
+  /** Ακίνητα ιδιωτών υπό θεματοφυλακή του γραφείου (Φ4δ Ε10). */
+  readonly owners: readonly RegistryProperty[];
+  /** Αγγελίες με το όνομα του γραφείου (Φ4δ Ε11). */
+  readonly listings: readonly PublicListing[];
   readonly truncatedSources: readonly RegistrySource[];
 }
 
 async function readSources(db: AdminFirestore, companyId: string): Promise<RegistrySources> {
-  const [files, declared, cases] = await Promise.all([
+  const [files, declared, cases, owners, listings] = await Promise.all([
     readRegistryFiles(db, companyId, DOCUMENT_REGISTRY_CAPS.files),
     readDeclaredCertificateProperties(db, companyId, DOCUMENT_REGISTRY_CAPS.declared),
     readOpenCases(db, companyId, DOCUMENT_REGISTRY_CAPS.cases),
+    readOfficeOwnerProperties(db, companyId, DOCUMENT_REGISTRY_CAPS['owner-properties']),
+    readAgencyListings(db, companyId, DOCUMENT_REGISTRY_CAPS.listings),
   ]);
-  const cut: Record<RegistrySource, boolean> = { files: files.truncated, declared: declared.truncated, cases: cases.truncated };
+  const cut: Record<RegistrySource, boolean> = {
+    files: files.truncated, declared: declared.truncated, cases: cases.truncated,
+    'owner-properties': owners.truncated, listings: listings.truncated,
+  };
   const truncatedSources = REGISTRY_SOURCES.filter((source) => cut[source]);
   if (truncatedSources.length > 0) {
     logger.warn('Το μητρώο λήξεων χτύπησε όριο ανάγνωσης', { data: { companyId, truncatedSources } });
   }
-  return { files: files.files, declared: declared.properties, cases: cases.cases, truncatedSources };
+  return {
+    files: files.files, declared: declared.properties, cases: cases.cases,
+    owners: owners.properties, listings: listings.listings, truncatedSources,
+  };
+}
+
+/** Τα ακίνητα εταιρείας που πρέπει να διαβαστούν: όσα ονομάζουν αρχεία, υποθέσεις και αγγελίες (όχι εντολές). */
+function wantedPropertyIds(sources: RegistrySources): readonly string[] {
+  const owners = new Set(sources.owners.map((owner) => owner.id));
+  return [
+    ...sources.files.map((file) => file.propertyId).filter((id): id is string => id !== null),
+    ...sources.cases.map((record) => record.subject.propertyId),
+    ...sources.listings.map((listing) => listing.id).filter((id) => !owners.has(id)),
+  ];
+}
+
+/**
+ * Οι αγγελίες: όσες έχουν το όνομα του γραφείου ∪ όσες βρίσκονται από τα ήδη γνωστά ακίνητα (παλιές προβολές με
+ * `agencyId: null` — μέχρι να ξαναπροβληθούν). Καμία διπλή ανάγνωση.
+ */
+async function readListings(db: AdminFirestore, sources: RegistrySources, known: readonly string[]): Promise<readonly PublicListing[]> {
+  const found = new Set(sources.listings.map((listing) => listing.id));
+  const more = await readListingsById(db, known.filter((id) => !found.has(id)));
+  return [...sources.listings, ...more];
 }
 
 /** Δηλωμένα ακίνητα (ήδη διαβασμένα) + όσα ονομάζουν αρχεία και υποθέσεις — ένα `getAll` για τα υπόλοιπα. */
@@ -72,12 +110,16 @@ async function readProperties(
   return new Map([...known, ...fetched]);
 }
 
-function labelsOf<T>(items: readonly T[], idOf: (item: T) => string, nameOf: (item: T) => string | null): Record<string, RegistryLabel> {
-  return Object.fromEntries(items.map((item) => [idOf(item), { name: nameOf(item) }]));
+function fileLabelsOf(files: readonly RegistryFile[]): Record<string, RegistryLabel> {
+  return Object.fromEntries(files.map((file) => [file.fileId, { name: file.name }]));
+}
+
+function propertyLabelsOf(subjects: ReadonlyMap<string, RegistryProperty>): Record<string, RegistryPropertyLabel> {
+  return Object.fromEntries([...subjects.values()].map((p) => [p.id, { name: p.name, scope: p.scope }]));
 }
 
 /**
- * **Το μητρώο λήξεων της εταιρείας.**
+ * **Το μητρώο λήξεων της εταιρείας** — ακίνητα εταιρείας **και** ακίνητα ιδιωτών υπό θεματοφυλακή του γραφείου.
  *
  * @param companyId — **από το `ctx.companyId`**, ποτέ από το αίτημα
  * @param now — **ένα** ρολόι για όλες τις γραμμές
@@ -85,25 +127,20 @@ function labelsOf<T>(items: readonly T[], idOf: (item: T) => string, nameOf: (it
 export async function readDocumentRegistry(db: AdminFirestore, companyId: string, now: Date): Promise<DocumentRegistryResponse> {
   const asOf = conveyanceToday(now);
   const sources = await readSources(db, companyId);
-  const wanted = [
-    ...sources.files.map((file) => file.propertyId).filter((id): id is string => id !== null),
-    ...sources.cases.map((record) => record.subject.propertyId),
-  ];
-  const properties = await readProperties(db, companyId, sources.declared, wanted);
-  const documents = registryDocumentsOf(sources.files, sources.declared, properties);
-  const documentPropertyIds = documents.map((document) => document.propertyId).filter((id): id is string => id !== null);
-  const requirements = [
-    ...openCaseRequirements(sources.cases, properties),
-    ...(await listingRequirements(db, documentPropertyIds)),
-  ];
-  const registry = documentRegistry({ documents, requirements, asOf });
+  const properties = await readProperties(db, companyId, sources.declared, wantedPropertyIds(sources));
+  // Ό,τι είναι «του γραφείου»: ακίνητο εταιρείας (κρίθηκε στο `readCompanyProperties`) ή εντολή υπό θεματοφυλακή του.
+  const subjects = new Map<string, RegistryProperty>([...properties, ...sources.owners.map((owner) => [owner.id, owner] as const)]);
+  const documents = registryDocumentsOf(sources.files, [...sources.declared, ...sources.owners], properties);
+  const listings = listingRequirementsOf(await readListings(db, sources, [...subjects.keys()]), new Set(subjects.keys()));
+  const requirements = [...openCaseRequirements(sources.cases, properties), ...listings.requirements];
   return {
-    ...registry,
+    ...documentRegistry({ documents, requirements, asOf }),
     asOf,
     freshUntil: nextConveyanceDayStart(now).toISOString(),
     truncated: sources.truncatedSources.length > 0,
     truncatedSources: sources.truncatedSources,
-    properties: labelsOf([...properties.values()], (property) => property.id, (property) => property.name),
-    files: labelsOf<RegistryFile>(sources.files, (file) => file.fileId, (file) => file.name),
+    unscopedListings: listings.unscoped,
+    properties: propertyLabelsOf(subjects),
+    files: fileLabelsOf(sources.files),
   };
 }

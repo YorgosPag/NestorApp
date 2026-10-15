@@ -9,10 +9,13 @@ import { isExpiredOn } from '@/lib/legality/legality-signal';
 import { publicationRequirements } from '@/lib/legality/publication-requirements';
 import { ruleExpiresOn } from '../document-expiry';
 import {
+  absentDependentsOf,
   dependentsOf,
   documentStanding,
+  requirementCoveredBy,
   type DocumentRequirement,
   type NeededOn,
+  type TrackedDocument,
 } from '../document-requirement';
 
 const continuous: NeededOn = { kind: 'continuous' };
@@ -66,11 +69,12 @@ function requirement(overrides: Partial<DocumentRequirement>): DocumentRequireme
   return {
     documentKind: 'energy-certificate', subject: { propertyId: PROPERTY },
     process: { kind: 'listing-publication', listingId: 'lst_1' }, neededOn: continuous, policy: 'warn',
-    warnWindowDays: 0, basis: { kind: 'statute', statute: 's' }, ...overrides,
+    warnWindowDays: 0, basis: { kind: 'statute', statute: 's' }, presence: 'tracked', attestation: null, ...overrides,
   };
 }
 
-const pea = (expiresOn: string | null) => ({ kind: 'energy-certificate' as const, subject: { propertyId: PROPERTY }, expiresOn });
+const pea = (expiresOn: string | null): TrackedDocument =>
+  ({ kind: 'energy-certificate', subject: { propertyId: PROPERTY }, fileId: null, expiresOn });
 
 describe('dependentsOf — τι σταματά αν λήξει αυτό', () => {
   it('`continuous` ⇒ `stops` από την επομένη της λήξης', () => {
@@ -106,6 +110,30 @@ describe('dependentsOf — τι σταματά αν λήξει αυτό', () => 
   });
 });
 
+describe('Φ4δ — ο ΕΝΑΣ κριτής κάλυψης (Ε9) και το «λείπει» (Ε7)', () => {
+  const project = (fileId: string): TrackedDocument => ({ kind: 'energy-certificate', subject: null, fileId, expiresOn: '2030-01-01' });
+  const signing = (fileId: string | null) => requirement({
+    process: { kind: 'conveyance', caseId: 'c1' }, policy: 'block', neededOn: on('2031-01-01'),
+    attestation: fileId === null ? null : { fileId, issuedOn: '2020-01-01' },
+  });
+
+  it('ΠΕΑ επιπέδου έργου: καλύπτει ΜΟΝΟ την υπόθεση που ενέκρινε ρητά αυτό το αρχείο', () => {
+    expect(requirementCoveredBy(project('f-project'), signing('f-project'))).toBe(true);
+    expect(requirementCoveredBy(project('f-project'), signing('f-other'))).toBe(false);
+    expect(requirementCoveredBy(project('f-project'), signing(null))).toBe(false);
+    expect(dependentsOf(project('f-project'), [signing('f-project')])[0]).toMatchObject({ impact: 'stops', stopsOn: '2030-01-02' });
+  });
+
+  it('έγκριση άλλου είδους δεν δένει, ακόμη και με ίδιο αρχείο', () => {
+    expect(requirementCoveredBy(project('f-project'), { ...signing('f-project'), documentKind: 'building-identity' })).toBe(false);
+  });
+
+  it('`absent`: κάθε απαίτηση χωρίς έγγραφο, `block` πρώτα, χωρίς μέρα διακοπής', () => {
+    const order = absentDependentsOf([requirement({}), signing(null)]);
+    expect(order.map((d) => [d.requirement.policy, d.impact, d.stopsOn])).toEqual([['block', 'absent', null], ['warn', 'absent', null]]);
+  });
+});
+
 describe('παραγωγοί — οι υπάρχοντες κατάλογοι ΕΙΝΑΙ οι απαιτήσεις', () => {
   const conveyance = conveyanceRequirements({ items: CONVEYANCE_CHECKLIST, caseId: 'case_1', propertyId: PROPERTY, targetSigningDate: '2026-12-15' });
 
@@ -138,6 +166,18 @@ describe('παραγωγοί — οι υπάρχοντες κατάλογοι Ε
   it('βραχυχρόνια: το ΠΕΑ δηλώνεται ως ανοιχτή ερώτηση · ο ΑΜΑ δεν είναι έγγραφο με ισχύ', () => {
     const short = publicationRequirements({ listingId: 'l', propertyId: PROPERTY, offerKinds: ['leaseShort'] });
     expect(short.map((r) => [r.documentKind, r.basis.kind])).toEqual([['energy-certificate', 'unresolved']]);
+  });
+
+  it('Φ4δ Ε7: «λείπει» μόνο όπου ο νόμος θέλει το έγγραφο ΣΤΗΝ αγγελία — ΠΕΑ ναι · ταυτότητα κτιρίου όχι · ανοιχτή ερώτηση όχι', () => {
+    const presence = (offerKinds: Parameters<typeof publicationRequirements>[0]['offerKinds']) =>
+      publicationRequirements({ listingId: 'l', propertyId: PROPERTY, offerKinds }).map((r) => [r.documentKind, r.presence, r.attestation]);
+    expect(presence(['sell'])).toEqual(expect.arrayContaining([['energy-certificate', 'required', null]]));
+    expect(presence(['sell']).filter(([kind]) => kind === 'building-identity').every(([, p]) => p === 'tracked')).toBe(true);
+    expect(presence(['leaseShort'])).toEqual([['energy-certificate', 'tracked', null]]);
+  });
+
+  it('Φ4δ: ο σκέτος κατάλογος (χωρίς γεγονότα υπόθεσης) δεν ισχυρίζεται «λείπει»', () => {
+    expect(conveyance.every((r) => r.presence === 'tracked' && r.attestation === null)).toBe(true);
   });
 
   it('μία διάθεση `raised` αρκεί πάνω από μία `unresolved`', () => {

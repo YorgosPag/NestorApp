@@ -2,7 +2,7 @@
  * ADR-915 Φ4γ — οι ΠΡΟΒΟΛΕΣ της σελίδας: πάνω στον ΕΝΑ ταξινομητή, με το `asOf` της απόκρισης. Συνθετικά δεδομένα.
  */
 
-import { matchesRegistryFilter, REGISTRY_FILTERS } from '../document-registry';
+import { matchesRegistryFilter, REGISTRY_FILTERS, registryRowIdOf, type RegistryRow } from '../document-registry';
 import {
   documentExpiryHref,
   REGISTRY_VIEWS,
@@ -14,7 +14,7 @@ import { DOCUMENT_EXPIRY_ROUTE } from '../document-registry-routes';
 import { FIXTURE_AS_OF, fixtureResponse } from './registry-fixture';
 
 const { rows } = fixtureResponse();
-const ids = (list: ReadonlyArray<{ readonly document: { readonly id: string } }>) => list.map((row) => row.document.id);
+const ids = (list: readonly RegistryRow[]): string[] => list.map(registryRowIdOf);
 
 describe('κάθε προβολή = ΑΚΡΙΒΩΣ ό,τι λέει ο `matchesRegistryFilter` (κανένας δεύτερος ταξινομητής)', () => {
   it.each(REGISTRY_FILTERS)('%s', (filter) => {

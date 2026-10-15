@@ -18,7 +18,12 @@
 import { isDateKey } from '@/lib/calendar/date-key';
 import { EXPIRING_WINDOW_DAYS } from '@/config/conveyance-checklist/catalog';
 import type { ChecklistItem } from '@/config/conveyance-checklist/types';
-import type { DocumentRequirement, NeededOn } from '@/lib/document-validity/document-requirement';
+import type {
+  DocumentRequirement,
+  NeededOn,
+  RequirementAttestation,
+  RequirementPresence,
+} from '@/lib/document-validity/document-requirement';
 
 /** Η μέρα που η μεταβίβαση χρειάζεται τα έγγραφα: η υπογραφή — ή «δεν ορίστηκε ακόμη», ποτέ «δεν χρειάζεται». */
 export function conveyanceNeededOn(targetSigningDate: string | null): NeededOn {
@@ -32,6 +37,13 @@ export interface ConveyanceRequirementsInput {
   readonly caseId: string;
   readonly propertyId: string;
   readonly targetSigningDate: string | null;
+  /**
+   * ADR-915 Φ4δ — λέγεται η απουσία της γραμμής; Το κρίνει ο καλών που ξέρει τα γεγονότα της υπόθεσης. **Χωρίς** κριτή ⇒
+   * `tracked`: ο σκέτος κατάλογος δεν ξέρει αν η γραμμή εφαρμόζεται, άρα δεν ισχυρίζεται «λείπει».
+   */
+  readonly presenceOf?: (item: ChecklistItem) => RequirementPresence;
+  /** ADR-915 Φ4δ — ο εγκεκριμένος έλεγχος της γραμμής, αν υπάρχει. Χωρίς κριτή ⇒ `null`. */
+  readonly attestationOf?: (item: ChecklistItem) => RequirementAttestation | null;
 }
 
 /** Οι απαιτήσεις μίας υπόθεσης — μία ανά γραμμή με `documentKind`. */
@@ -45,5 +57,7 @@ export function conveyanceRequirements(input: ConveyanceRequirementsInput): read
     policy: 'block',
     warnWindowDays: EXPIRING_WINDOW_DAYS,
     basis: { kind: 'checklist-item', itemId: item.id, verifiedAt: item.verifiedAt },
+    presence: input.presenceOf?.(item) ?? 'tracked',
+    attestation: input.attestationOf?.(item) ?? null,
   }]));
 }

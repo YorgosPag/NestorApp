@@ -19,6 +19,11 @@
  * ως πηγή (`pinned`), αλλιώς η νεότερη έκδοση. Τα υπόλοιπα είναι `superseded` — **ποτέ** «έληξε»: η αντικατάσταση είναι
  * ανανέωση. Κανένα αποθηκευμένο `supersededByFileId` για ΠΕΑ, άρα καμία μετάπτωση.
  *
+ * 🔑 **Φ4δ — το μητρώο λέει και ό,τι ΛΕΙΠΕΙ** (Ε7, ιδέα Street «Listings with no EPC»): απαίτηση `required` χωρίς
+ * κάτοχο (`document-registry-holders`) γίνεται γραμμή `missing` — μία ανά (ακίνητο, είδος), στην **ίδια** λίστα, στο
+ * **ίδιο** `tally`, από τον **ίδιο** ταξινομητή. Ακίνητο **χωρίς** απαίτηση δεν «λείπει» τίποτα: η υποχρέωση γεννιέται
+ * με τη διαδικασία (πώληση · μίσθωση · αγγελία), όχι με την ύπαρξη του ακινήτου.
+ *
  * **Layering**: leaf — καθαρές συναρτήσεις, μηδέν I/O, **μηδέν ρολόι** (το `asOf` το δίνει ο καλών).
  *
  * @module lib/document-validity/document-registry
@@ -29,32 +34,45 @@ import { documentKindSpec, type DocumentKind } from '@/config/document-validity/
 import type { DocumentExpiry } from '@/lib/document-validity/document-expiry';
 import { documentFactsExpiry, type DocumentFactsSource } from '@/lib/document-validity/document-facts';
 import {
+  attestedDocumentsOf,
+  registryGroupKeyOf,
+  requirementHolders,
+  trackedDocumentOf,
+} from '@/lib/document-validity/document-registry-holders';
+import {
+  absentDependentsOf,
   dependentsOf,
   documentStanding,
   type DocumentDependent,
   type DocumentRequirement,
-  type DocumentStandingState,
 } from '@/lib/document-validity/document-requirement';
 
 // =============================================================================
 // 1. ΤΟ ΛΕΞΙΛΟΓΙΟ
 // =============================================================================
 
-/** Οι καταστάσεις γραμμής, **στη σειρά επείγοντος**. Το `superseded` είναι πάντα τελευταίο. */
-export const REGISTRY_ROW_STATES = ['expired', 'expiring', 'expiry-unknown', 'valid', 'superseded'] as const;
-export type RegistryRowState = DocumentStandingState | 'superseded';
+/**
+ * Οι καταστάσεις γραμμής, **στη σειρά επείγοντος**. Το `missing` αμέσως μετά το `expired`: και τα δύο σημαίνουν «η
+ * διαδικασία είναι ΗΔΗ χωρίς έγκυρο έγγραφο». Το `superseded` είναι πάντα τελευταίο.
+ */
+export const REGISTRY_ROW_STATES = ['expired', 'missing', 'expiring', 'expiry-unknown', 'valid', 'superseded'] as const;
+export type RegistryRowState = (typeof REGISTRY_ROW_STATES)[number];
 
 /** Τα φίλτρα του μητρώου. Κλειστό σύνολο. */
-export const REGISTRY_FILTERS = ['renewal-due', 'within-window', 'blocking', 'expiry-unknown', 'discrepancy'] as const;
+export const REGISTRY_FILTERS = ['renewal-due', 'missing', 'within-window', 'blocking', 'expiry-unknown', 'discrepancy'] as const;
 export type RegistryFilter = (typeof REGISTRY_FILTERS)[number];
 
 /** Κυλιόμενο παράθυρο του φίλτρου `within-window` (ημέρες από σήμερα, μέσα). */
 export const REGISTRY_WINDOW_DAYS = 30;
 
-/** Από πού ήρθε η γραμμή: αρχείο με γεγονότα, ή δήλωση στο ακίνητο **χωρίς** αρχείο (Α3 εφεδρεία). */
+/**
+ * Από πού ήρθε η γραμμή: αρχείο με γεγονότα · δήλωση στο ακίνητο **χωρίς** αρχείο (Α3 εφεδρεία) · έγκριση επαγγελματία
+ * στον έλεγχο μιας υπόθεσης, όταν το έγγραφο δεν είναι αλλιώς γνωστό (Φ4δ Ε8 — `fileId: null` = εκτός πλατφόρμας).
+ */
 export type RegistryDocumentOrigin =
   | { readonly kind: 'file'; readonly fileId: string }
-  | { readonly kind: 'declared' };
+  | { readonly kind: 'declared' }
+  | { readonly kind: 'attested'; readonly caseId: string; readonly fileId: string | null };
 
 /** Ένα έγγραφο όπως το συνέλεξε ο αναγνώστης — ήδη μέσα από τον ανεκτικό αναγνώστη, ποτέ ωμό. */
 export interface RegistryDocument {
@@ -72,9 +90,11 @@ export interface RegistryDocument {
   readonly pinned: boolean;
 }
 
-export interface RegistryRow {
+/** Γραμμή **εγγράφου** που υπάρχει. */
+export interface RegistryDocumentRow {
+  readonly kind: 'document';
   readonly document: RegistryDocument;
-  readonly state: RegistryRowState;
+  readonly state: Exclude<RegistryRowState, 'missing'>;
   readonly expiry: DocumentExpiry;
   /** Η γραμμή που την αντικατέστησε — μόνο όταν `state === 'superseded'`. */
   readonly supersededBy: string | null;
@@ -82,6 +102,32 @@ export interface RegistryRow {
   readonly dependents: readonly DocumentDependent[];
   /** Μπλοκάρει **ήδη** διαδικασία `block` (βλ. {@link isBlockingDependent}). */
   readonly blocking: boolean;
+}
+
+/** Ό,τι λείπει: ένα είδος εγγράφου για ένα ακίνητο. **Όχι** έγγραφο — δεν έχει λήξη, πηγή ή αρχείο. */
+export interface RegistryGap {
+  /** Σταθερή ταυτότητα (`missing:<propertyId>:<kind>`). */
+  readonly id: string;
+  readonly kind: DocumentKind;
+  readonly propertyId: string;
+}
+
+/** Γραμμή **κενού** (Φ4δ Ε7): απαίτηση `required` που κανένα έγγραφο δεν κρατά. */
+export interface RegistryGapRow {
+  readonly kind: 'gap';
+  readonly gap: RegistryGap;
+  readonly state: 'missing';
+  /** Ποιες διαδικασίες το ζητούν — όλες `absent`. */
+  readonly dependents: readonly DocumentDependent[];
+  readonly blocking: boolean;
+}
+
+/** Μία γραμμή του μητρώου — έγγραφο ή κενό. Ο τύπος κάνει αδύνατη μια «λήξη» σε έγγραφο που δεν υπάρχει. */
+export type RegistryRow = RegistryDocumentRow | RegistryGapRow;
+
+/** Η σταθερή ταυτότητα κάθε γραμμής (κλειδί λίστας · «αντικαταστάθηκε από»). */
+export function registryRowIdOf(row: RegistryRow): string {
+  return row.kind === 'gap' ? row.gap.id : row.document.id;
 }
 
 export interface DocumentRegistry {
@@ -101,9 +147,6 @@ export interface DocumentRegistryInput {
 // 2. Α5 — ΠΟΙΟ ΕΙΝΑΙ ΤΟ ΤΡΕΧΟΝ
 // =============================================================================
 
-const groupKeyOf = (document: RegistryDocument): string =>
-  document.propertyId === null ? `solo:${document.id}` : `${document.propertyId}:${document.kind}`;
-
 /** `pinned` πρώτα · μετά η νεότερη έκδοση (άγνωστη τελευταία) · μετά η ταυτότητα (σταθερή σειρά). */
 function byCurrency(a: RegistryDocument, b: RegistryDocument): number {
   if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
@@ -115,7 +158,7 @@ function byCurrency(a: RegistryDocument, b: RegistryDocument): number {
 function currentOfEach(documents: readonly RegistryDocument[]): ReadonlyMap<string, string> {
   const groups = new Map<string, RegistryDocument[]>();
   for (const document of documents) {
-    const key = groupKeyOf(document);
+    const key = registryGroupKeyOf(document);
     groups.set(key, [...(groups.get(key) ?? []), document]);
   }
   const current = new Map<string, string>();
@@ -131,44 +174,62 @@ function currentOfEach(documents: readonly RegistryDocument[]): ReadonlyMap<stri
 // =============================================================================
 
 /**
- * **Μπλοκάρει ήδη;** — απαίτηση `block` που **θα** σταματήσει, και:
- *  - η μέρα της είναι συγκεκριμένη (`on`: η λήξη πέφτει πριν την υπογραφή — πρόβλημα **τώρα**), ή
- *  - είναι διαρκής και το έγγραφο έληξε ή μπήκε στο παράθυρο ανανέωσης.
+ * **Μπλοκάρει ήδη;** — απαίτηση `block`, και:
+ *  - το έγγραφο **λείπει** (`absent`: η διαδικασία είναι ήδη χωρίς έγκυρο — όπως το «έληξε»), ή
+ *  - **θα** σταματήσει και η μέρα της είναι συγκεκριμένη (`on`: η λήξη πέφτει πριν την υπογραφή — πρόβλημα **τώρα**), ή
+ *  - **θα** σταματήσει, είναι διαρκής, και το έγγραφο έληξε ή μπήκε στο παράθυρο ανανέωσης.
  * Διαρκής απαίτηση πάνω σε έγγραφο που ισχύει ως το 2036 «θα σταματήσει» — αλλά δεν μπλοκάρει τίποτα σήμερα.
  */
 export function isBlockingDependent(dependent: DocumentDependent, state: RegistryRowState): boolean {
-  if (dependent.requirement.policy !== 'block' || dependent.impact !== 'stops') return false;
+  if (dependent.requirement.policy !== 'block') return false;
+  if (dependent.impact === 'absent') return true;
+  if (dependent.impact !== 'stops') return false;
   return dependent.requirement.neededOn.kind === 'on' || state === 'expired' || state === 'expiring';
 }
 
 function rowOf(
   document: RegistryDocument,
   currentId: string,
-  requirements: readonly DocumentRequirement[],
+  held: readonly DocumentRequirement[],
   asOf: string,
-): RegistryRow {
+): RegistryDocumentRow {
   const expiry = documentFactsExpiry(document);
   if (currentId !== document.id) {
-    return { document, state: 'superseded', expiry, supersededBy: currentId, dependents: [], blocking: false };
+    return { kind: 'document', document, state: 'superseded', expiry, supersededBy: currentId, dependents: [], blocking: false };
   }
   const warnWindowDays = documentKindSpec(document.kind).renewalLeadDays ?? 0;
   const { state } = documentStanding({ expiresOn: expiry.expiresOn, asOf, neededOn: { kind: 'continuous' }, warnWindowDays });
-  const dependents = document.propertyId === null
-    ? []
-    : dependentsOf({ kind: document.kind, subject: { propertyId: document.propertyId }, expiresOn: expiry.expiresOn }, requirements);
+  const dependents = dependentsOf(trackedDocumentOf(document, expiry.expiresOn), held);
   const blocking = dependents.some((dependent) => isBlockingDependent(dependent, state));
-  return { document, state, expiry, supersededBy: null, dependents, blocking };
+  return { kind: 'document', document, state, expiry, supersededBy: null, dependents, blocking };
+}
+
+/** Τα κενά: απαιτήσεις `required` χωρίς κάτοχο, μία γραμμή ανά (ακίνητο, είδος). Οι `tracked` δεν ισχυρίζονται «λείπει». */
+function gapRowsOf(unheld: readonly DocumentRequirement[]): readonly RegistryGapRow[] {
+  const groups = new Map<string, DocumentRequirement[]>();
+  for (const requirement of unheld) {
+    if (requirement.presence !== 'required') continue;
+    const key = `${requirement.subject.propertyId}:${requirement.documentKind}`;
+    groups.set(key, [...(groups.get(key) ?? []), requirement]);
+  }
+  return [...groups.entries()].map(([key, members]): RegistryGapRow => {
+    const dependents = absentDependentsOf(members);
+    const gap: RegistryGap = { id: `missing:${key}`, kind: members[0].documentKind, propertyId: members[0].subject.propertyId };
+    return { kind: 'gap', gap, state: 'missing', dependents, blocking: dependents.some((d) => isBlockingDependent(d, 'missing')) };
+  });
 }
 
 const STATE_RANK = new Map<RegistryRowState, number>(REGISTRY_ROW_STATES.map((state, index) => [state, index]));
+const NO_EXPIRY = '9999-99-99';
 
-/** Κατάσταση · μπλοκάρει πρώτα · νωρίτερη λήξη (άγνωστη τελευταία) · ταυτότητα. */
+/** Κατάσταση · μπλοκάρει πρώτα · νωρίτερη λήξη (άγνωστη και κενό τελευταία) · ταυτότητα. */
 function byUrgency(a: RegistryRow, b: RegistryRow): number {
   const state = (STATE_RANK.get(a.state) ?? 0) - (STATE_RANK.get(b.state) ?? 0);
   if (state !== 0) return state;
   if (a.blocking !== b.blocking) return a.blocking ? -1 : 1;
-  const expiry = (a.expiry.expiresOn ?? '9999-99-99').localeCompare(b.expiry.expiresOn ?? '9999-99-99');
-  return expiry !== 0 ? expiry : a.document.id.localeCompare(b.document.id);
+  const expiresOf = (row: RegistryRow): string => (row.kind === 'gap' ? NO_EXPIRY : (row.expiry.expiresOn ?? NO_EXPIRY));
+  const expiry = expiresOf(a).localeCompare(expiresOf(b));
+  return expiry !== 0 ? expiry : registryRowIdOf(a).localeCompare(registryRowIdOf(b));
 }
 
 function tallyOf(rows: readonly RegistryRow[]): Record<RegistryRowState, number> {
@@ -177,12 +238,17 @@ function tallyOf(rows: readonly RegistryRow[]): Record<RegistryRowState, number>
   return tally;
 }
 
-/** **Το μητρώο** — μία γραμμή ανά έγγραφο, στη σειρά επείγοντος, με τις μετρήσεις του. */
+/**
+ * **Το μητρώο** — μία γραμμή ανά έγγραφο (αρχείο · δήλωση · έγκριση ελέγχου) **και** μία ανά κενό, στη σειρά
+ * επείγοντος, με τις μετρήσεις του. Κάθε απαίτηση μετρά κάτω από **ακριβώς μία** γραμμή.
+ */
 export function documentRegistry({ documents, requirements, asOf }: DocumentRegistryInput): DocumentRegistry {
-  const current = currentOfEach(documents);
-  const rows = documents
-    .map((document) => rowOf(document, current.get(document.id) ?? document.id, requirements, asOf))
-    .sort(byUrgency);
+  const all = [...documents, ...attestedDocumentsOf(documents, requirements)];
+  const current = currentOfEach(all);
+  const { held, unheld } = requirementHolders(all, current, requirements);
+  const documentRows = all.map((document) =>
+    rowOf(document, current.get(document.id) ?? document.id, held.get(document.id) ?? [], asOf));
+  const rows = [...documentRows, ...gapRowsOf(unheld)].sort(byUrgency);
   return { rows, tally: tallyOf(rows) };
 }
 
@@ -195,11 +261,16 @@ function withinWindow(expiresOn: string | null, asOf: string): boolean {
   return expiresOn !== null && until !== null && expiresOn >= asOf && expiresOn <= until;
 }
 
-/** Ταιριάζει η γραμμή στο φίλτρο; Αντικατεστημένη γραμμή **δεν** ταιριάζει σε κανένα — δεν ζητά τίποτα από κανέναν. */
+/**
+ * Ταιριάζει η γραμμή στο φίλτρο; Αντικατεστημένη γραμμή **δεν** ταιριάζει σε κανένα — δεν ζητά τίποτα από κανέναν.
+ * Το κενό ταιριάζει **μόνο** στο «λείπουν» και στο «μπλοκάρουν»: δεν έχει λήξη για να «λήγει» ή να «ασυμφωνεί».
+ */
 export function matchesRegistryFilter(row: RegistryRow, filter: RegistryFilter, asOf: string): boolean {
+  if (row.kind === 'gap') return filter === 'missing' || (filter === 'blocking' && row.blocking);
   if (row.state === 'superseded') return false;
   switch (filter) {
     case 'renewal-due': return row.state === 'expiring' || row.state === 'expired';
+    case 'missing': return false;
     case 'within-window': return withinWindow(row.expiry.expiresOn, asOf);
     case 'blocking': return row.blocking;
     case 'expiry-unknown': return row.state === 'expiry-unknown';

@@ -23,12 +23,14 @@ import { ENERGY_CLASSES } from '@/constants/energy-classes';
 import { chunkArray } from '@/lib/array-utils';
 import { readEnergyCertificate, type EnergyCertificate } from '@/lib/energy-certificate/energy-certificate';
 import { trimmedStringOrNull } from '@/lib/type-guards';
-import { REGISTRY_GET_ALL_CHUNK } from './document-registry.types';
+import { REGISTRY_GET_ALL_CHUNK, type RegistryPropertyScope } from './document-registry.types';
 
 type DocData = Readonly<Record<string, unknown>>;
 
 export interface RegistryProperty {
   readonly id: string;
+  /** Ακίνητο εταιρείας (`properties`) ή ακίνητο ιδιώτη υπό θεματοφυλακή του γραφείου (`owner_properties`, Φ4δ Ε10). */
+  readonly scope: RegistryPropertyScope;
   readonly name: string | null;
   readonly certificate: EnergyCertificate;
   /** Το ωμό έγγραφο — για τον κοινό μετασχηματισμό της υπόθεσης (`subjectContextOf`). */
@@ -39,7 +41,7 @@ export interface RegistryProperty {
 const ENERGY_FIELD = 'energy';
 
 function registryPropertyOf(id: string, data: DocData): RegistryProperty {
-  return { id, name: trimmedStringOrNull(data.name), certificate: readEnergyCertificate(data[ENERGY_FIELD]), data };
+  return { id, scope: 'property', name: trimmedStringOrNull(data.name), certificate: readEnergyCertificate(data[ENERGY_FIELD]), data };
 }
 
 /** Τα ακίνητα με αυτές τις ταυτότητες **που ανήκουν στην εταιρεία**. */

@@ -46,6 +46,9 @@ function requirementFor(
 ): DocumentRequirement | null {
   const basis = basisAcross(input.offerKinds, kind);
   if (basis === null) return null;
+  // ADR-915 Φ4δ Ε7 — «λείπει» μόνο όπου ο ΝΟΜΟΣ θέλει το έγγραφο στην αγγελία (`advertisingDisclosure`) ΚΑΙ η διάθεση
+  // το θέτει. Ανοιχτή ερώτηση (`unresolved`) ⇒ ποτέ: δεν ισχυριζόμαστε υποχρέωση που δεν ξέρουμε ότι υπάρχει.
+  const presence = basis.kind === 'statute' && documentKindSpec(documentKind).advertisingDisclosure !== null ? 'required' : 'tracked';
   return {
     documentKind,
     subject: { propertyId: input.propertyId },
@@ -55,6 +58,9 @@ function requirementFor(
     // Για διαδικασία που τρέχει διαρκώς, «λήγει» = «ώρα να ξεκινήσει η ανανέωση» (ADR-915 Φ5 · `renewalLeadDays`).
     warnWindowDays: documentKindSpec(documentKind).renewalLeadDays ?? 0,
     basis,
+    presence,
+    // Η αγγελία δεν έχει έλεγχο επαγγελματία: το έγγραφο το βρίσκει μόνο το ακίνητο (αρχείο ή δήλωση).
+    attestation: null,
   };
 }
 

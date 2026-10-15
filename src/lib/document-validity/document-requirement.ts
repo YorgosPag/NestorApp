@@ -68,6 +68,25 @@ export interface RequirementSubject {
   readonly propertyId: string;
 }
 
+/**
+ * **Λέγεται η απουσία του;** (ADR-915 Φ4δ Ε7)
+ * - `required` — η διαδικασία **οφείλει** να το έχει: χωρίς έγγραφο, το μητρώο γράφει «λείπει».
+ * - `tracked`  — παρακολουθείται **η ισχύς του, αν υπάρχει**. Άγνωστο γεγονός ή ανοιχτή νομική ερώτηση: «λείπει» από
+ *                άγνοια θα ήταν ισχυρισμός που δεν στέκει.
+ */
+export type RequirementPresence = 'required' | 'tracked';
+
+/**
+ * **Ο επαγγελματίας ενέκρινε έγγραφο γι' αυτή την απαίτηση** (ADR-915 Φ4δ Ε8) — ο έλεγχος της γραμμής του καταλόγου
+ * (`review.verdict === 'accepted'`). `fileId: null` = παραλαβή εκτός πλατφόρμας (γραμμές `offline`, π.χ. ταυτότητα
+ * κτιρίου). Είναι **έγγραφο που υπάρχει**, άρα ποτέ «λείπει»· και το `fileId` δένει ρητά αρχείο χωρίς ακίνητο (Δ3).
+ */
+export interface RequirementAttestation {
+  readonly fileId: string | null;
+  /** Η ημερομηνία έκδοσης που δήλωσε ο ελεγκτής (`YYYY-MM-DD`) — η εφεδρεία του καταλόγου όταν το αρχείο δεν ξέρει. */
+  readonly issuedOn: string | null;
+}
+
 /** Μία δήλωση: «αυτή η διαδικασία θέλει αυτό το έγγραφο, για αυτό το ακίνητο, σε ισχύ τότε». */
 export interface DocumentRequirement {
   readonly documentKind: DocumentKind;
@@ -78,6 +97,9 @@ export interface DocumentRequirement {
   /** Πόσες μέρες πριν τη λήξη η κατάσταση γίνεται `expiring` για **αυτή** τη διαδικασία. */
   readonly warnWindowDays: number;
   readonly basis: RequirementBasis;
+  readonly presence: RequirementPresence;
+  /** `null` = κανείς επαγγελματίας δεν ενέκρινε έγγραφο γι' αυτή την απαίτηση (ή η διαδικασία δεν έχει έλεγχο). */
+  readonly attestation: RequirementAttestation | null;
 }
 
 // =============================================================================
@@ -129,7 +151,10 @@ export function documentStanding({ expiresOn, asOf, neededOn, warnWindowDays }: 
 /** Ένα συγκεκριμένο έγγραφο, όπως το ξέρει ο καλών. */
 export interface TrackedDocument {
   readonly kind: DocumentKind;
-  readonly subject: RequirementSubject;
+  /** `null` = το έγγραφο δεν δένεται σε ακίνητο (π.χ. ΠΕΑ επιπέδου έργου, Δ3). */
+  readonly subject: RequirementSubject | null;
+  /** Το αρχείο του — για τον **ρητό** δεσμό μιας βεβαίωσης ({@link RequirementAttestation}). */
+  readonly fileId: string | null;
   readonly expiresOn: string | null;
 }
 
@@ -137,8 +162,9 @@ export interface TrackedDocument {
  * - `stops`        — η διαδικασία **θα** βρεθεί χωρίς έγκυρο έγγραφο (από το `stopsOn`)
  * - `unaffected`   — το έγγραφο καλύπτει τη μέρα που χρειάζεται
  * - `undetermined` — η λήξη ή η μέρα δεν είναι γνωστή. **Ποτέ** «ανεπηρέαστο» από άγνοια.
+ * - `absent`       — **δεν υπάρχει** έγγραφο: η διαδικασία είναι ήδη χωρίς έγκυρο (ADR-915 Φ4δ Ε7).
  */
-export type DependentImpact = 'stops' | 'unaffected' | 'undetermined';
+export type DependentImpact = 'stops' | 'unaffected' | 'undetermined' | 'absent';
 
 export interface DocumentDependent {
   readonly requirement: DocumentRequirement;
@@ -170,16 +196,34 @@ function byUrgency(a: DocumentDependent, b: DocumentDependent): number {
 }
 
 /**
- * **Αν λήξει αυτό το έγγραφο, τι σταματά;** — οι απαιτήσεις **του ίδιου είδους, για το ίδιο ακίνητο**, η καθεμία με
- * τον αντίκτυπό της. Χωρίς ρολόι: η απάντηση αφορά τη λήξη του εγγράφου, όχι το σήμερα.
+ * **Καλύπτει αυτό το έγγραφο αυτή την απαίτηση;** — ο ΕΝΑΣ κριτής (ADR-915 Φ4δ Ε9): ίδιο είδος, και
+ *  - ο επαγγελματίας ενέκρινε **αυτό** το αρχείο γι' αυτήν (ρητός δεσμός — ο μόνος δρόμος για έγγραφο χωρίς ακίνητο), ή
+ *  - το έγγραφο είναι του **ίδιου ακινήτου**.
+ * Το σιωπηρό «αρχείο έργου ⇒ όλα τα ακίνητά του» **δεν** υπάρχει: ένα έργο έχει πολλά κτίρια.
+ */
+export function requirementCoveredBy(document: TrackedDocument, requirement: DocumentRequirement): boolean {
+  if (requirement.documentKind !== document.kind) return false;
+  if (document.fileId !== null && requirement.attestation?.fileId === document.fileId) return true;
+  return document.subject !== null && requirement.subject.propertyId === document.subject.propertyId;
+}
+
+/**
+ * **Αν λήξει αυτό το έγγραφο, τι σταματά;** — οι απαιτήσεις που **καλύπτει** ({@link requirementCoveredBy}), η καθεμία
+ * με τον αντίκτυπό της. Χωρίς ρολόι: η απάντηση αφορά τη λήξη του εγγράφου, όχι το σήμερα.
  */
 export function dependentsOf(
   document: TrackedDocument,
   requirements: readonly DocumentRequirement[],
 ): readonly DocumentDependent[] {
   return requirements
-    .filter((requirement) => requirement.documentKind === document.kind)
-    .filter((requirement) => requirement.subject.propertyId === document.subject.propertyId)
+    .filter((requirement) => requirementCoveredBy(document, requirement))
     .map((requirement) => dependentOf(document, requirement))
+    .sort(byUrgency);
+}
+
+/** **Τι σταματά επειδή ΛΕΙΠΕΙ** — κάθε απαίτηση χωρίς έγγραφο είναι ήδη χωρίς έγκυρο (`absent`), στη σειρά επείγοντος. */
+export function absentDependentsOf(requirements: readonly DocumentRequirement[]): readonly DocumentDependent[] {
+  return requirements
+    .map((requirement): DocumentDependent => ({ requirement, impact: 'absent', stopsOn: null }))
     .sort(byUrgency);
 }

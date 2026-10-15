@@ -13,7 +13,12 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { ENTITY_TYPES, FILE_STATUS } from '@/config/domain-constants';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { PUBLIC_LISTING_SCHEMA_VERSION } from '@/lib/listings/public-listing-schema';
-import { REGISTRY_ROW_STATES, type RegistryRow } from '@/lib/document-validity/document-registry';
+import {
+  REGISTRY_ROW_STATES,
+  registryRowIdOf,
+  type RegistryDocumentRow,
+  type RegistryRow,
+} from '@/lib/document-validity/document-registry';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { readDocumentRegistry } from '@/services/document-registry/document-registry.service';
 import { DOCUMENT_REGISTRY_CAPS } from '@/services/document-registry/document-registry.types';
@@ -64,7 +69,11 @@ function openCase(over: Doc = {}): Doc {
 let fake: FakeFirestore;
 const db = (): AdminFirestore => fake as unknown as AdminFirestore;
 const read = () => readDocumentRegistry(db(), COMPANY, NOW);
-const rowOf = (rows: readonly RegistryRow[], id: string): RegistryRow | undefined => rows.find((row) => row.document.id === id);
+const rowOf = (rows: readonly RegistryRow[], id: string): RegistryDocumentRow | undefined =>
+  rows.find((row): row is RegistryDocumentRow => row.kind === 'document' && row.document.id === id);
+const ids = (rows: readonly RegistryRow[]): string[] => rows.map(registryRowIdOf);
+const documentsOnly = (rows: readonly RegistryRow[]): RegistryDocumentRow[] =>
+  rows.filter((row): row is RegistryDocumentRow => row.kind === 'document');
 
 beforeEach(() => {
   fake = new FakeFirestore();
@@ -100,16 +109,16 @@ describe('γραμμές — αρχεία και δηλώσεις (Ε1)', () => 
     fake.seed(COLLECTIONS.FILES, 'file_1', file());
     fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', property({}, { sourceFileId: 'file_1' }));
     const registry = await read();
-    expect(registry.rows.map((row) => row.document.id)).toEqual(['file:file_1']);
-    expect(registry.rows[0].document).toMatchObject({ propertyId: 'prop_1', pinned: true });
+    expect(ids(registry.rows)).toEqual(['file:file_1']);
+    expect(rowOf(registry.rows, 'file:file_1')?.document).toMatchObject({ propertyId: 'prop_1', pinned: true });
     expect(registry.rows[0].state).toBe('expiring');
     expect(registry.files).toEqual({ file_1: { name: 'ΠΕΑ Α1.pdf' } });
-    expect(registry.properties).toEqual({ prop_1: { name: 'Διαμέρισμα Α1' } });
+    expect(registry.properties).toEqual({ prop_1: { name: 'Διαμέρισμα Α1', scope: 'property' } });
   });
 
   it('δήλωση χωρίς αρχείο ⇒ γραμμή `declared`, χωρίς πηγή', async () => {
     fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', property());
-    const [row] = (await read()).rows;
+    const [row] = documentsOnly((await read()).rows);
     expect(row.document).toMatchObject({ id: 'declared:prop_1:energy-certificate', origin: { kind: 'declared' }, source: null });
   });
 
@@ -127,7 +136,7 @@ describe('γραμμές — αρχεία και δηλώσεις (Ε1)', () => 
   it('αρχείο-πηγή στον κάδο ⇒ το αρχείο έξω, η δήλωση ΜΕΝΕΙ (δεν εξαφανίζεται μαζί του)', async () => {
     fake.seed(COLLECTIONS.FILES, 'file_1', file({ isDeleted: true }));
     fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', property({}, { sourceFileId: 'file_1' }));
-    expect((await read()).rows.map((row) => row.document.id)).toEqual(['declared:prop_1:energy-certificate']);
+    expect(ids((await read()).rows)).toEqual(['declared:prop_1:energy-certificate']);
   });
 
   it('μη έτοιμο αρχείο · αλλοιωμένα γεγονότα ⇒ καμία γραμμή (ανεκτικός αναγνώστης)', async () => {
@@ -136,9 +145,9 @@ describe('γραμμές — αρχεία και δηλώσεις (Ε1)', () => 
     expect((await read()).rows).toEqual([]);
   });
 
-  it('αρχείο επιπέδου έργου ⇒ γραμμή χωρίς ακίνητο (Δ3, δηλωμένο όριο)', async () => {
+  it('αρχείο επιπέδου έργου χωρίς έγκριση σε υπόθεση ⇒ γραμμή χωρίς ακίνητο και χωρίς «τι σταματά»', async () => {
     fake.seed(COLLECTIONS.FILES, 'file_1', file({ entityType: ENTITY_TYPES.PROJECT, entityId: 'proj_1' }));
-    const [row] = (await read()).rows;
+    const [row] = documentsOnly((await read()).rows);
     expect(row.document.propertyId).toBeNull();
     expect(row.dependents).toEqual([]);
   });
@@ -155,11 +164,13 @@ describe('«τι σταματά» — απαιτήσεις από υποθέσε
     fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', property({}, { sourceFileId: 'file_1' }));
   });
 
-  const processes = async () => (await read()).rows[0].dependents.map((dependent) => dependent.requirement.process);
+  /** Η γραμμή του ΠΕΑ — η υπόθεση γεννά ΚΑΙ κενό ταυτότητας κτιρίου (Φ4δ), άρα όχι `rows[0]`. */
+  const peaRow = async () => rowOf((await read()).rows, 'file:file_1') as RegistryDocumentRow;
+  const processes = async () => (await peaRow()).dependents.map((dependent) => dependent.requirement.process);
 
   it('ανοιχτή υπόθεση με υπογραφή μετά τη λήξη ⇒ η υπογραφή σταματά, και μπλοκάρει', async () => {
     fake.seed(COLLECTIONS.CONVEYANCE_CASES, 'case_1', openCase());
-    const [row] = (await read()).rows;
+    const row = await peaRow();
     expect(row.dependents.map((dependent) => dependent.requirement.process)).toEqual([{ kind: 'conveyance', caseId: 'case_1' }]);
     expect(row.blocking).toBe(true);
   });
@@ -180,7 +191,7 @@ describe('«τι σταματά» — απαιτήσεις από υποθέσε
 
   it('δημοσιευμένη αγγελία ⇒ η δημοσίευση στο «τι σταματά» (`warn`, Α1)', async () => {
     fake.seed(COLLECTIONS.PUBLIC_LISTINGS, 'prop_1', { schemaVersion: PUBLIC_LISTING_SCHEMA_VERSION, offerKinds: ['sell'] });
-    const [row] = (await read()).rows;
+    const row = await peaRow();
     expect(row.dependents.map((dependent) => [dependent.requirement.process, dependent.requirement.policy]))
       .toEqual([[{ kind: 'listing-publication', listingId: 'prop_1' }, 'warn']]);
     expect(row.blocking).toBe(false);
@@ -188,6 +199,89 @@ describe('«τι σταματά» — απαιτήσεις από υποθέσε
 
   it('χωρίς αγγελία (αποσυρμένη = σβησμένη) ⇒ τίποτα', async () => {
     expect(await processes()).toEqual([]);
+  });
+});
+
+// =============================================================================
+// Φ4δ — ό,τι ΛΕΙΠΕΙ · εντολές (Ε10) · αγγελίες χωρίς έγγραφο (Ε11) · έγκριση (Ε8) · έργο (Ε9)
+// =============================================================================
+
+const listing = (over: Doc = {}): Doc => ({ schemaVersion: PUBLIC_LISTING_SCHEMA_VERSION, offerKinds: ['sell'], agencyId: COMPANY, ...over });
+const owner = (over: Doc = {}): Doc => ({ authorUserId: 'user_9', authorCompanyId: COMPANY, title: 'Εντολή Β3', ...over });
+const gap = (rows: readonly RegistryRow[], propertyId: string, kind = 'energy-certificate') =>
+  rows.find((row) => row.kind === 'gap' && row.gap.propertyId === propertyId && row.gap.kind === kind);
+const accepted = (fileId: string | null, issuedOn: string | null) =>
+  ({ review: { verdict: 'accepted', fileId, fileFingerprint: null, issuedOn, reason: null, reviewedBy: 'user_2', reviewedAt: '2026-10-05T00:00:00.000Z' } });
+
+describe('Φ4δ Ε7 — «λείπει» από τις απαιτήσεις', () => {
+  it('ανοιχτή υπόθεση σε ακίνητο ΧΩΡΙΣ κανένα ΠΕΑ ⇒ κενό που μπλοκάρει (και ταυτότητας κτιρίου)', async () => {
+    fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', { companyId: COMPANY, name: 'Χωρίς ΠΕΑ' });
+    fake.seed(COLLECTIONS.CONVEYANCE_CASES, 'case_1', openCase());
+    const registry = await read();
+    expect(gap(registry.rows, 'prop_1')).toMatchObject({ state: 'missing', blocking: true });
+    expect(gap(registry.rows, 'prop_1', 'building-identity')).toBeDefined();
+    expect(registry.tally.missing).toBe(2);
+    expect(registry.properties.prop_1).toEqual({ name: 'Χωρίς ΠΕΑ', scope: 'property' });
+  });
+
+  it('αγγελία με το όνομα του γραφείου σε ακίνητο ΧΩΡΙΣ κανένα έγγραφο ⇒ βρίσκεται, και λείπει το ΠΕΑ (`warn`)', async () => {
+    fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', { companyId: COMPANY, name: 'Δημοσιευμένο' });
+    fake.seed(COLLECTIONS.PUBLIC_LISTINGS, 'prop_1', listing());
+    const registry = await read();
+    expect(ids(registry.rows)).toEqual(['missing:prop_1:energy-certificate']);
+    expect(registry.rows[0]).toMatchObject({ blocking: false });
+    expect(registry.unscopedListings).toBe(0);
+  });
+
+  it('η ταυτότητα κτιρίου ΔΕΝ «λείπει» από αγγελία — ο νόμος δεν τη ζητά εκεί', async () => {
+    fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', property());
+    fake.seed(COLLECTIONS.PUBLIC_LISTINGS, 'prop_1', listing());
+    expect((await read()).rows.some((row) => row.kind === 'gap')).toBe(false);
+  });
+});
+
+describe('Φ4δ Ε10 — ακίνητα ιδιωτών υπό θεματοφυλακή του γραφείου', () => {
+  it('δηλωμένο ΠΕΑ εντολής ⇒ γραμμή, με όνομα και είδος «εντολή»', async () => {
+    fake.seed(COLLECTIONS.OWNER_PROPERTIES, 'ownp_1', owner({ energy: { class: 'C', issuedOn: ISSUED } }));
+    const registry = await read();
+    expect(ids(registry.rows)).toEqual(['declared:ownp_1:energy-certificate']);
+    expect(registry.properties).toEqual({ ownp_1: { name: 'Εντολή Β3', scope: 'owner-property' } });
+  });
+
+  it('αγγελία εντολής χωρίς ΠΕΑ ⇒ κενό στην εντολή', async () => {
+    fake.seed(COLLECTIONS.OWNER_PROPERTIES, 'ownp_1', owner());
+    fake.seed(COLLECTIONS.PUBLIC_LISTINGS, 'ownp_1', listing({ agencyId: null }));
+    expect(ids((await read()).rows)).toEqual(['missing:ownp_1:energy-certificate']);
+  });
+
+  it('εντολή ΑΛΛΟΥ γραφείου ή ιδιώτη χωρίς γραφείο ⇒ ποτέ μέσα· η αγγελία με το όνομά μας ΜΕΤΡΙΕΤΑΙ', async () => {
+    fake.seed(COLLECTIONS.OWNER_PROPERTIES, 'ownp_x', owner({ authorCompanyId: OTHER, energy: { class: 'C', issuedOn: ISSUED } }));
+    fake.seed(COLLECTIONS.OWNER_PROPERTIES, 'ownp_y', owner({ authorCompanyId: null, energy: { class: 'C', issuedOn: ISSUED } }));
+    fake.seed(COLLECTIONS.PUBLIC_LISTINGS, 'ownp_x', listing());
+    const registry = await read();
+    expect(registry.rows).toEqual([]);
+    expect(registry.properties).toEqual({});
+    expect(registry.unscopedListings).toBe(1);
+  });
+});
+
+describe('Φ4δ Ε8 · Ε9 — η έγκριση του επαγγελματία', () => {
+  it('ταυτότητα κτιρίου εγκεκριμένη εκτός πλατφόρμας ⇒ γραμμή `attested`, κανένα κενό ταυτότητας', async () => {
+    fake.seed(COLLECTIONS.FILES, 'file_1', file());
+    fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', property({}, { sourceFileId: 'file_1' }));
+    fake.seed(COLLECTIONS.CONVEYANCE_CASES, 'case_1', openCase({ overrides: { building_identity: accepted(null, '2026-09-20') } }));
+    const registry = await read();
+    expect(gap(registry.rows, 'prop_1', 'building-identity')).toBeUndefined();
+    expect(rowOf(registry.rows, 'attested:case_1:building-identity')?.document.origin).toEqual({ kind: 'attested', caseId: 'case_1', fileId: null });
+  });
+
+  it('Δ3 — ΠΕΑ έργου εγκεκριμένο στην υπόθεση ⇒ η γραμμή του έργου κρατά την υπόθεση, το ακίνητο δεν «λείπει»', async () => {
+    fake.seed(COLLECTIONS.FILES, 'file_p', file({ entityType: ENTITY_TYPES.PROJECT, entityId: 'proj_1' }));
+    fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', { companyId: COMPANY, name: 'Χωρίς δικό του ΠΕΑ' });
+    fake.seed(COLLECTIONS.CONVEYANCE_CASES, 'case_1', openCase({ overrides: { energy_certificate: accepted('file_p', ISSUED) } }));
+    const registry = await read();
+    expect(gap(registry.rows, 'prop_1')).toBeUndefined();
+    expect(rowOf(registry.rows, 'file:file_p')?.dependents.map((d) => d.requirement.process)).toEqual([{ kind: 'conveyance', caseId: 'case_1' }]);
   });
 });
 
