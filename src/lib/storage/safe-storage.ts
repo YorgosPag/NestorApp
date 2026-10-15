@@ -78,6 +78,10 @@ export const STORAGE_KEYS = {
   // θυμούνται px). Σχήμα με έκδοση στο όνομα — `components/spatial-tour/viewer/tour-viewer-layout-store.ts`.
   TOUR_PLAN_COLUMN: 'nestor:tour-plan-column:v1',
 
+  // ADR-840 Σ3 (§7.8) — το πλάτος του επιθεωρητή της κάτοψης ακινήτων, ανά **συσκευή** (ιδιότητα της οθόνης, όχι του
+  // ακινήτου — px όπως τα CAD). Σχήμα: `components/ui/resizable-column-store.ts`.
+  PROPERTY_INSPECTOR_COLUMN: 'nestor:property-inspector-column:v1',
+
   // ADR-894 — η εγγραφή συνεδρίας **αυτού του browser** (prefix — append uid). localStorage και όχι
   // sessionStorage, επίτηδες: μία εγγραφή ανά **συσκευή** (Google «Your devices»), όχι μία ανά καρτέλα —
   // το sessionStorage γεννούσε νέα συνεδρία (και αίτημα τοποθεσίας) σε κάθε καρτέλα.

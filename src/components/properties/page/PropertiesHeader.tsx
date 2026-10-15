@@ -1,31 +1,32 @@
 'use client';
 
 /**
- * 🏢 ENTERPRISE PropertiesHeader with i18n support
- * ZERO HARDCODED STRINGS - All labels from centralized translations
+ * 🏢 Η ΚΕΦΑΛΙΔΑ της ενιαίας οθόνης ακινήτων (ADR-840 Σ3).
  *
- * Τα κουμπιά φίλτρων/κάδου έρχονται από το `buildHeaderCustomActions`
- * (SSoT, ADR-584 / N.18) — ΜΗΝ τα ξαναγράψεις inline εδώ.
+ * - **Τρεις όψεις** (πλέγμα · λίστα · κάτοψη) — η τιμή ζει στη διεύθυνση (`?view=`, `usePropertiesView`), όχι εδώ.
+ * - **Αναζήτηση** = το φίλτρο `searchTerm` (`?q=`). Ήταν δεύτερο, τοπικό `useState` της παλιάς λίστας, που έψαχνε
+ *   **άλλα** πεδία από το πάνελ φίλτρων: δύο κουτιά αναζήτησης στην ίδια οθόνη, με διαφορετικές απαντήσεις.
+ * - Τα κουμπιά φίλτρων/κάδου/αρχείου έρχονται από το `buildHeaderCustomActions` (SSoT, ADR-584 / N.18) — ΜΗΝ τα
+ *   ξαναγράψεις inline εδώ.
  */
 
 import React from 'react';
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
-import {
-  PageHeader,
-  buildHeaderCustomActions,
-  LIST_GRID_VIEW_MODES,
-  isListGridViewMode,
-} from '@/core/headers';
-import type { ListGridViewMode, ListPageHeaderProps } from '@/core/headers';
+import { PageHeader, buildHeaderCustomActions } from '@/core/headers';
+import type { ListPageHeaderProps } from '@/core/headers';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
-// 🏢 ENTERPRISE: Breadcrumb from centralized navigation
 import { NavigationBreadcrumb } from '@/components/navigation/components/NavigationBreadcrumb';
-// 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { PROPERTIES_VIEW, PROPERTIES_VIEWS, type PropertiesView } from '@/lib/properties/property-filters-url';
 import '@/lib/design-system';
 
-/** Λίστα/πλέγμα + κάδος + αρχείο (ADR-329 §3.9) — το κοινό contract, χωρίς επανάληψη. */
-type PropertiesHeaderProps = ListPageHeaderProps<ListGridViewMode>;
+/** Οι τρεις όψεις + κάδος + αρχείο (ADR-329 §3.9) — το κοινό contract, χωρίς επανάληψη. */
+interface PropertiesHeaderProps extends ListPageHeaderProps<PropertiesView> {
+  /** Πόσα ακίνητα δείχνει η οθόνη τώρα (μετά τα φίλτρα) — ο υπότιτλος. */
+  visibleCount: number;
+}
+
+const HEADER_VIEW_MODES: PropertiesView[] = [...PROPERTIES_VIEWS];
 
 export function PropertiesHeader({
   viewMode,
@@ -42,8 +43,8 @@ export function PropertiesHeader({
   showArchive,
   onToggleArchive,
   archiveCount,
+  visibleCount,
 }: PropertiesHeaderProps) {
-  // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const { t: tViewer } = useTranslation('properties-viewer');
   const { t: tCommon } = useTranslation(COMMON_NAMESPACES);
@@ -60,28 +61,27 @@ export function PropertiesHeader({
       title={{
         icon: NAVIGATION_ENTITIES.property.icon,
         title: t('header.title'),
-        subtitle: t('header.subtitle')
+        subtitle: t('grid.header.found', { count: visibleCount }),
       }}
-      // 🏢 ENTERPRISE: Breadcrumb για ιεραρχική πλοήγηση
       breadcrumb={<NavigationBreadcrumb />}
       search={{
         value: searchTerm,
         onChange: setSearchTerm,
-        placeholder: t('header.searchPlaceholder')
+        placeholder: t('grid.search.placeholder'),
       }}
       actions={{
         showDashboard,
         onDashboardToggle: () => setShowDashboard(!showDashboard),
         viewMode,
-        // Κάδος/αρχείο σκεπάζουν τη λίστα: καμία όψη δεν δείχνει πατημένη, και το κλικ σε όψη γυρίζει πίσω.
+        // Κάδος/αρχείο σκεπάζουν την οθόνη: καμία όψη δεν δείχνει πατημένη, και το κλικ σε όψη γυρίζει πίσω.
         viewModeSuspended: retiredViewOpen,
         onViewModeChange: (mode) => {
-          if (!isListGridViewMode(mode)) return;
+          if (!PROPERTIES_VIEW.is(mode)) return;
           if (showTrash) onToggleTrash?.();
           if (showArchive) onToggleArchive?.();
           setViewMode(mode);
         },
-        viewModes: LIST_GRID_VIEW_MODES,
+        viewModes: HEADER_VIEW_MODES,
         customActions: buildHeaderCustomActions({
           showFilters,
           setShowFilters,

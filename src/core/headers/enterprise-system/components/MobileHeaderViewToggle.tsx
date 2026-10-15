@@ -11,14 +11,9 @@ import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import {
-  List,
-  LayoutGrid,
-  Filter,
-  BarChart3
-} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { HeaderViewToggleProps, ViewMode } from '../types';
+import { VIEW_MODE_ICON_COMPONENTS } from './view-mode-icons';
 import { HEADER_THEME } from '../constants';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: Centralized spacing tokens
@@ -36,15 +31,7 @@ export const MobileHeaderViewToggle: React.FC<HeaderViewToggleProps> = ({
   const spacing = useSpacingTokens();
   const { t } = useTranslation(COMMON_NAMESPACES);
 
-  const getViewIcon = (mode: ViewMode) => {
-    const iconMap = {
-      list: List,
-      grid: LayoutGrid,
-      byType: Filter,
-      byStatus: BarChart3
-    };
-    return iconMap[mode] || List;
-  };
+  const getViewIcon = (mode: ViewMode) => VIEW_MODE_ICON_COMPONENTS[mode];
 
   const getViewLabel = (mode: ViewMode) => {
     return t(`viewMode.mobile.${mode}`);

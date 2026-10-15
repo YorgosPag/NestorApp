@@ -315,8 +315,14 @@ export function PropertyDetailsContent({
       {/* Building Link + Floor/MultiLevel + Linked Spaces — top row */}
       {/* ADR-284 Batch 7: Hidden when creating new unit — NewUnitHierarchySection handles Project/Building/Floor selection */}
       {/* ADR-284 Family B: Hidden for standalone units (villa, detached_house) — direct Project parent, no Building/Floor */}
+      {/*
+        🔴 ADR-840 Σ3 (§7.8) — `auto-fit minmax`, ΟΧΙ `md:grid-cols-3`: το `md` ρωτά το πλάτος της ΟΘΟΝΗΣ, ενώ αυτή η
+        φόρμα ζει σε στήλες που αποφασίζει η διάταξη (επιθεωρητής 360–880 px, λίστα ~840 px, φύλλο). Σε οθόνη ≥ md
+        μέσα σε στήλη 360 px έδινε τρεις στήλες των ~110 px — η ρίζα του κοψίματος του §7.5. Ίδιος κανόνας με το
+        `PropertyFieldsEditForm` / `PropertyFieldsDetailCards` (ΟΧΙ `@container` — βλ. `components/ui/header-bar.tsx`).
+      */}
       {!isReadOnly && !isCreatingNewUnit && !isStandalone && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,12rem),1fr))] gap-2">
           <PropertyEntityLinks
             propertyId={resolvedProperty?.id ?? ''}
             currentProjectId={resolvedProperty?.projectId}

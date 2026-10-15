@@ -641,11 +641,13 @@
   "viewMode": {
     "list": "List",
     "grid": "Grid",
+    "floorplan": "Floor plan",
     "byType": "By Type",
     "byStatus": "By Status",
     "mobile": {
       "list": "List view",
       "grid": "Grid view",
+      "floorplan": "Floor plan view",
       "byType": "Group by type",
       "byStatus": "Group by status"
     }

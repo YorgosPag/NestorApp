@@ -19,7 +19,8 @@ import type { CompactToolbarProps } from '@/components/core/CompactToolbar/types
 // 🎯 CORE HEADER TYPES - ENTERPRISE PATTERNS
 // ============================================================================
 
-export type ViewMode = 'list' | 'grid' | 'byType' | 'byStatus';
+/** `floorplan` — ADR-840 Σ3: η κάτοψη είναι ΟΨΗ της οθόνης ακινήτων, όχι δεύτερη σελίδα. */
+export type ViewMode = 'list' | 'grid' | 'floorplan' | 'byType' | 'byStatus';
 
 export type HeaderVariant = 'sticky' | 'static' | 'floating' | 'sticky-rounded';
 

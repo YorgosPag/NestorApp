@@ -21,14 +21,16 @@ import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import type { ViewMode } from '../types';
 
 // Η ΜΙΑ δήλωση των ενεργειών κεφαλίδας — το `PageHeader` την εισάγει, δεν την ξαναγράφει.
 export interface UnifiedHeaderActionsProps {
   showDashboard?: boolean;
   onDashboardToggle?: () => void;
-  viewMode?: 'list' | 'grid' | 'byType' | 'byStatus';
-  onViewModeChange?: (mode: 'list' | 'grid' | 'byType' | 'byStatus') => void;
-  viewModes?: ('list' | 'grid' | 'byType' | 'byStatus')[];
+  // Το ΕΝΑ `ViewMode` — ήταν ο ίδιος union γραμμένος εδώ inline τρεις φορές (ADR-840 Σ3 το βρήκε προσθέτοντας «κάτοψη»).
+  viewMode?: ViewMode;
+  onViewModeChange?: (mode: ViewMode) => void;
+  viewModes?: ViewMode[];
   /**
    * Μια άλλη προβολή σκεπάζει τη λίστα/πλέγμα (κάδος · αρχείο): κανένα κουμπί όψης δεν δείχνει
    * πατημένο. Το κλικ εξακολουθεί να φτάνει στο `onViewModeChange` — ο καλών κλείνει την προβολή.

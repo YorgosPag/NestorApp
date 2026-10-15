@@ -28,6 +28,7 @@ import { ReadOnlyMediaViewer, parseMediaTabParam } from './ReadOnlyMediaViewer';
 import { useMediaTabParam } from '@/components/shared/media/viewer/useMediaTabParam';
 import { ViewerDetailsSheet } from './ViewerDetailsSheet';
 import { ViewerNarrowBar } from './ViewerNarrowBar';
+import { ViewerInspectorSplit } from './ViewerInspectorSplit';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
@@ -186,39 +187,25 @@ export function ListLayout({
    * χειρότερα, δύο σημεία που θα αποκλίνουν σιωπηλά.
    */
   /**
-   * 🔴 **ADR-840 Σ2 — Ο ΛΟΓΟΣ ΕΙΝΑΙ ΔΟΜΙΚΟΣ, ΟΧΙ ΔΙΕΥΘΥΝΣΙΑΚΟΣ. ΜΕΤΡΗΘΗΚΕ ΣΤΗΝ ΟΘΟΝΗ.**
+   * ✅ **ADR-840 Σ3 (§7.8) — ΤΟ ΣΚΛΗΡΟ `isReadOnly` ΑΙΡΕΘΗΚΕ, ΓΙΑΤΙ Ο ΧΩΡΟΣ ΔΟΘΗΚΕ.**
    *
-   * Εδώ ζούσε **γυμνό** `isReadOnly` (δηλαδή σταθερά `true`), και το Σ2 το γύρισε σε
-   * `!canEdit`. **Η ζωντανή επαλήθευση το απέρριψε** (2026-09-01, `/properties?view=floorplan`
-   * ως `super_admin`): αυτή η στήλη είναι **~260px** και το `PropertyDetailsContent` σε
-   * κατάσταση επεξεργασίας φέρνει τη **δίστηλη φόρμα** — «Ταυτότητα Μονάδας» + «Εμβαδά» +
-   * «Πληρότητα καταχώρησης». Το αποτέλεσμα **κόπηκε οριζόντια**: «Συνδεδε…», «Απόκρυ…»,
-   * «ΚΡΙΣ…», και η στήλη «Εμβαδά» έμεινε **μισή έξω από την οθόνη**.
+   * Ως το Σ3 εδώ ζούσε γυμνό `isReadOnly`, με **δομικό** λόγο μετρημένο στην οθόνη (§7.5): η στήλη ήταν καρφωμένη
+   * `w-[360px]` και η δίστηλη φόρμα επεξεργασίας **κοβόταν** («Συνδεδε…», «Εμβαδά» μισή έξω). Δύο αλλαγές έλυσαν τη
+   * **ρίζα**, όχι το σύμπτωμα:
+   *  1. η στήλη έγινε **επιθεωρητής που σέρνεται** (`ViewerInspectorSplit` — Figma / Revit / Notion side-peek)·
+   *  2. η πάνω σειρά της φόρμας είχε `md:grid-cols-3` — σημείο θλάσης **οθόνης**, όχι **στήλης** — και έγινε
+   *     `auto-fit minmax` (`PropertyDetailsContent`): η φόρμα είναι σωστή σε **κάθε** πλάτος.
    *
-   * 🔑 **Η στήλη δεν φιλοξενεί φόρμα — και αυτό ΔΕΝ είναι ερώτημα αδείας.** Η ίδια φόρμα,
-   * στο ίδιο commit, με τον ίδιο ρόλο, αποδίδει **άψογα** στο `/spaces/properties` (δύο
-   * άνετες στήλες, ~840px). Άρα το εμπόδιο είναι **ο χώρος**, και ο σχεδιασμός του χώρου
-   * είναι το **Σ3** (ADR-840 Α1/Α2: μία οθόνη, τρεις προβολές).
+   * Τώρα αποφασίζει **ο ρόλος**, στο μονότονο δάπεδο του `PropertyDetailsContent` (*ceilings only subtract*).
+   * ⛔ ΜΗΝ το ξαναβάλεις «για σιγουριά»: κλειδώνει **δικαιούχο** χωρίς λόγο — η βλάβη που διόρθωσε το Σ2.
    *
-   * ✅ **ΚΑΙ ΕΙΝΑΙ ΝΟΜΙΜΗ ΧΡΗΣΗ ΤΟΥ ΚΑΝΟΝΑ, ΟΧΙ ΥΠΟΧΩΡΗΣΗ**: το δάπεδο του
-   * `PropertyDetailsContent` είναι **μονότονο** — ο καλών μπορεί μόνο να **κλειδώσει
-   * παραπάνω**, ποτέ να ξεκλειδώσει (*ceilings only subtract*). Αυτή η επιφάνεια κλειδώνει
-   * επειδή **δεν έχει πού να γράψει**, ακριβώς η περίπτωση που ο κανόνας προβλέπει.
-   * Ο ρόλος εξακολουθεί να κρίνει — απλώς εδώ η απάντηση **δεν φτάνει ποτέ να μετρήσει**.
-   *
-   * ⛔ **ΜΗΝ το γυρίσεις σε `!canEdit` πριν το Σ3 δώσει πλάτος στη στήλη.** Το δοκιμάσαμε·
-   *    το είδαμε σπασμένο. Η άγκυρα `property-edit-capability.test.ts` απαιτεί αυτόν τον
-   *    δείκτη να υπάρχει, ώστε η επόμενη συνεδρία να μη νομίσει ότι **ξεχάστηκε**.
-   *
-   * ⚠️ Το `isReadOnly` του πάνελ οδηγεί **και τη διάταξη** (ADR-258D: flex με καρφωμένο
-   * υποσέλιδο αντί για `ScrollArea`) — δεν είναι μόνο άδεια, είναι και μορφή.
+   * ⚠️ Το πάνελ γράφεται **μία** φορά και τοποθετείται σε **δύο** θέσεις — στήλη στην ευρεία, φύλλο στη στενή.
    */
   const detailsPanel = (
     <PropertyDetailsPanel
       propertyIds={selectedPropertyIds}
       onSelectFloor={handleSelectFloor}
       properties={properties}
-      isReadOnly
     />
   );
 
@@ -262,88 +249,85 @@ export function ListLayout({
       </div>
 
       {/*
-        ΠΡΟΒΟΛΕΑΣ ΜΕΣΩΝ — το κύριο περιεχόμενο. 🔴 Στη στενή οθόνη ήταν `flex-1` ανάμεσα σε δύο
-        `shrink-0` των 360 px, δηλαδή **ακριβώς 0 px**: αποδιδόταν με περιεχόμενο και ήταν
-        αόρατος (μετρημένο ζωντανά στα 515 px). Πλέον στη στενή είτε **λείπει** είτε έχει
-        **ολόκληρο** το πλάτος — ποτέ μηδέν.
+        ΠΡΟΒΟΛΕΑΣ ΜΕΣΩΝ | ΕΠΙΘΕΩΡΗΤΗΣ — ADR-840 Σ3: ο επιθεωρητής **σέρνεται** (ήταν καρφωμένος 360 px, §7.5). 🔴 Στη
+        στενή οθόνη ο προβολέας είτε **λείπει** είτε έχει **ολόκληρο** το πλάτος — ποτέ μηδέν (ήταν `flex-1` ανάμεσα σε
+        δύο `shrink-0` των 360 px: ακριβώς 0 px, μετρημένο στα 515 px). Ο επιθεωρητής εκεί ταξιδεύει στο φύλλο παρακάτω
+        (Material 3, Supporting Pane).
       */}
-      <div
-        className={cn(
-          'flex-1 flex-col min-h-0 min-w-0 relative',
-          hasSelection ? 'flex' : 'hidden md:flex'
-        )}
-      >
-        <ViewerNarrowBar
-          title={selectedProperty?.name}
-          onBack={backToList}
-          onShowDetails={() => setDetailsRequested(true)}
-        />
+      <ViewerInspectorSplit
+        narrowStageVisible={hasSelection}
+        stage={(
+          <section className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <ViewerNarrowBar
+              title={selectedProperty?.name}
+              onBack={backToList}
+              onShowDetails={() => setDetailsRequested(true)}
+            />
 
-        {showPropertyHoverInfo && (
-          <PropertyStatusLegend
-            properties={filteredProperties}
-            className="absolute bottom-2 left-2 z-10"
-          />
-        )}
-        <ReadOnlyMediaViewer
-          propertyId={selectedPropertyIds[0] ?? null}
-          propertyName={selectedProperty?.name}
-          floorId={selectedProperty?.floorId ?? null}
-          buildingId={selectedProperty?.buildingId ?? null}
-          floorNumber={selectedProperty?.floor ?? null}
-          companyId={selectedCompanyId}
-          levels={selectedProperty?.levels}
-          levelsSettled={hasSelection}
-          onHoverOverlay={onHoverProperty}
-          onClickOverlay={(propertyId) => handlePolygonSelect(propertyId, false)}
-          highlightedOverlayUnitId={hoveredPropertyId}
-          propertyLabels={propertyLabels}
-        />
-      </div>
-
-      {/*
-        ΛΕΠΤΟΜΕΡΕΙΕΣ — στήλη **μόνο** στην ευρεία. Στη στενή το ίδιο περιεχόμενο ταξιδεύει στο
-        φύλλο πυθμένα παρακάτω (Material 3, Supporting Pane).
-      */}
-      <div className={cn('hidden w-[360px] shrink-0 md:flex md:flex-col', layout.listGapResponsive)}>
-        {/* 🏢 ADR-258D: Επιλεγμένο Ακίνητο — equal height with Γρήγορη Προβολή */}
-        <Card className="flex-1 flex flex-col min-h-0">
-          <CardHeader className={`${spacing.padding.sm} shrink-0`}>
-            <CardTitle className="text-sm">{t('viewer.propertyDetails')}</CardTitle>
-          </CardHeader>
-          {/* 🏢 ENTERPRISE: No padding - ScrollArea fills to edges (same pattern as Διαθέσιμα Ακίνητα) */}
-          <CardContent className={`flex-1 ${spacing.padding.none} overflow-hidden`}>
-            {detailsPanel}
-          </CardContent>
-        </Card>
-        {/*
-          🏢 ENTERPRISE: Πληροφορίες Ακινήτου - Only visible on floorplan tab.
-
-          🔶 **ΔΕΝ ΤΑΞΙΔΕΥΕΙ ΣΤΟ ΦΥΛΛΟ, ΚΑΙ Ο ΛΟΓΟΣ ΕΙΝΑΙ ΜΕΤΡΗΜΕΝΟΣ.** Χωρίς δείκτη, αυτή η
-          κάρτα ζωγραφίζει εικονίδιο **ποντικιού** και ζητά *«περάστε το ποντίκι πάνω από
-          ακίνητο»*. Σε συσκευή αφής δεν υπάρχει `hover`, άρα θα ήταν **μόνιμα** σε αυτή την
-          κατάσταση: οδηγία για υλικό που ο άνθρωπος δεν έχει.
-
-          ⚠️ Το ειλικρινές κριτήριο είναι η **ικανότητα δείκτη**, όχι το πλάτος — ένα στενό
-          παράθυρο σε desktop **έχει** ποντίκι. Το repo σήμερα δεν ρωτά πουθενά `hover: hover`,
-          και μια πρόχειρη σύμπτυξη «στενό = αφή» θα ήταν ακριβώς το λάθος που γέννησε το
-          `useViewportClass`. Μένει **δηλωμένο ανοιχτό** (SPEC-777D §26.8.5), όχι σιωπηλό.
-        */}
-        {showPropertyHoverInfo && (
-          <Card className="flex-1 flex flex-col min-h-0">
-            {/* 🏢 ADR-258D: Γρήγορη Προβολή — equal height with Επιλεγμένο Ακίνητο */}
-            <CardHeader className={`${spacing.padding.sm} shrink-0`}>
-              <CardTitle className="text-sm">{t('viewer.propertyInfo')}</CardTitle>
-            </CardHeader>
-            <CardContent className={`flex-1 ${spacing.padding.none} overflow-hidden`}>
-              <PropertyHoverInfo
-                propertyId={hoveredPropertyId}
+            {showPropertyHoverInfo && (
+              <PropertyStatusLegend
                 properties={filteredProperties}
+                className="absolute bottom-2 left-2 z-10"
               />
-            </CardContent>
-          </Card>
+            )}
+            <ReadOnlyMediaViewer
+              propertyId={selectedPropertyIds[0] ?? null}
+              propertyName={selectedProperty?.name}
+              floorId={selectedProperty?.floorId ?? null}
+              buildingId={selectedProperty?.buildingId ?? null}
+              floorNumber={selectedProperty?.floor ?? null}
+              companyId={selectedCompanyId}
+              levels={selectedProperty?.levels}
+              levelsSettled={hasSelection}
+              onHoverOverlay={onHoverProperty}
+              onClickOverlay={(propertyId) => handlePolygonSelect(propertyId, false)}
+              highlightedOverlayUnitId={hoveredPropertyId}
+              propertyLabels={propertyLabels}
+            />
+          </section>
         )}
-      </div>
+        inspector={(
+          <aside className={cn('flex min-h-0 flex-1 flex-col', layout.listGapResponsive)} aria-label={t('viewer.propertyDetails')}>
+            {/* 🏢 ADR-258D: Επιλεγμένο Ακίνητο — equal height with Γρήγορη Προβολή */}
+            <Card className="flex-1 flex flex-col min-h-0">
+              <CardHeader className={`${spacing.padding.sm} shrink-0`}>
+                <CardTitle className="text-sm">{t('viewer.propertyDetails')}</CardTitle>
+              </CardHeader>
+              {/* 🏢 ENTERPRISE: No padding - ScrollArea fills to edges (same pattern as Διαθέσιμα Ακίνητα) */}
+              <CardContent className={`flex-1 ${spacing.padding.none} overflow-hidden`}>
+                {detailsPanel}
+              </CardContent>
+            </Card>
+            {/*
+              🏢 ENTERPRISE: Πληροφορίες Ακινήτου - Only visible on floorplan tab.
+
+              🔶 **ΔΕΝ ΤΑΞΙΔΕΥΕΙ ΣΤΟ ΦΥΛΛΟ, ΚΑΙ Ο ΛΟΓΟΣ ΕΙΝΑΙ ΜΕΤΡΗΜΕΝΟΣ.** Χωρίς δείκτη, αυτή η
+              κάρτα ζωγραφίζει εικονίδιο **ποντικιού** και ζητά *«περάστε το ποντίκι πάνω από
+              ακίνητο»*. Σε συσκευή αφής δεν υπάρχει `hover`, άρα θα ήταν **μόνιμα** σε αυτή την
+              κατάσταση: οδηγία για υλικό που ο άνθρωπος δεν έχει.
+
+              ⚠️ Το ειλικρινές κριτήριο είναι η **ικανότητα δείκτη**, όχι το πλάτος — ένα στενό
+              παράθυρο σε desktop **έχει** ποντίκι. Το repo σήμερα δεν ρωτά πουθενά `hover: hover`,
+              και μια πρόχειρη σύμπτυξη «στενό = αφή» θα ήταν ακριβώς το λάθος που γέννησε το
+              `useViewportClass`. Μένει **δηλωμένο ανοιχτό** (SPEC-777D §26.8.5), όχι σιωπηλό.
+            */}
+            {showPropertyHoverInfo && (
+              <Card className="flex-1 flex flex-col min-h-0">
+                {/* 🏢 ADR-258D: Γρήγορη Προβολή — equal height with Επιλεγμένο Ακίνητο */}
+                <CardHeader className={`${spacing.padding.sm} shrink-0`}>
+                  <CardTitle className="text-sm">{t('viewer.propertyInfo')}</CardTitle>
+                </CardHeader>
+                <CardContent className={`flex-1 ${spacing.padding.none} overflow-hidden`}>
+                  <PropertyHoverInfo
+                    propertyId={hoveredPropertyId}
+                    properties={filteredProperties}
+                  />
+                </CardContent>
+              </Card>
+            )}
+          </aside>
+        )}
+      />
 
       {/*
         ΤΟ ΒΟΗΘΗΤΙΚΟ ΠΑΝΕΛ ΣΤΗ ΣΤΕΝΗ ΟΘΟΝΗ. Το `hasSelection` στη συνθήκη **δεν** είναι

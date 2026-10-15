@@ -47,6 +47,11 @@
       "readOnly": "Read-Only"
     },
     "availableProperties": "Available Properties",
+    "inspector": {
+      "resize": "Resize details",
+      "hide": "Hide details",
+      "show": "Show details"
+    },
     "propertyDetails": "Selected Property",
     "propertyInfo": "Quick View",
     "propertyList": "Property List",

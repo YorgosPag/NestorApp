@@ -109,6 +109,7 @@ export const DEFAULT_HEADER_PROPS = {
 export const VIEW_MODE_ICONS = {
   list: 'List',
   grid: 'LayoutGrid',
+  floorplan: 'MapPin',
   byType: 'Filter',
   byStatus: 'BarChart3'
 } as const;
@@ -117,6 +118,7 @@ export const VIEW_MODE_ICONS = {
 export const VIEW_MODE_LABELS = {
   get list() { return i18n.t('viewMode.list', { ns: 'common' }); },
   get grid() { return i18n.t('viewMode.grid', { ns: 'common' }); },
+  get floorplan() { return i18n.t('viewMode.floorplan', { ns: 'common' }); },
   get byType() { return i18n.t('viewMode.byType', { ns: 'common' }); },
   get byStatus() { return i18n.t('viewMode.byStatus', { ns: 'common' }); }
 };
@@ -125,6 +127,7 @@ export const VIEW_MODE_LABELS = {
 const VIEW_MODE_MOBILE_LABELS = {
   get list() { return i18n.t('viewMode.mobile.list', { ns: 'common' }); },
   get grid() { return i18n.t('viewMode.mobile.grid', { ns: 'common' }); },
+  get floorplan() { return i18n.t('viewMode.mobile.floorplan', { ns: 'common' }); },
   get byType() { return i18n.t('viewMode.mobile.byType', { ns: 'common' }); },
   get byStatus() { return i18n.t('viewMode.mobile.byStatus', { ns: 'common' }); }
 };

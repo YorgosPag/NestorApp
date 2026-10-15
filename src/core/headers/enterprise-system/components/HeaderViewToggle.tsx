@@ -10,15 +10,10 @@
 import React from 'react';
 import { ToggleButton } from '@/components/ui/toggle-button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import {
-  List,
-  LayoutGrid,
-  Filter,
-  BarChart3
-} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { HeaderViewToggleProps, ViewMode } from '../types';
+import { VIEW_MODE_ICON_COMPONENTS } from './view-mode-icons';
 import { HEADER_THEME, VIEW_MODE_CONFIG } from '../constants';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
@@ -33,15 +28,7 @@ export const HeaderViewToggle: React.FC<HeaderViewToggleProps> = ({
 }) => {
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
-  const getViewIcon = (mode: ViewMode) => {
-    const iconMap = {
-      list: List,
-      grid: LayoutGrid,
-      byType: Filter,
-      byStatus: BarChart3
-    };
-    return iconMap[mode] || List;
-  };
+  const getViewIcon = (mode: ViewMode) => VIEW_MODE_ICON_COMPONENTS[mode];
 
   const getViewLabel = (mode: ViewMode) => {
     return VIEW_MODE_CONFIG.labels[mode] || mode;

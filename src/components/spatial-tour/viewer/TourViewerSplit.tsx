@@ -16,19 +16,16 @@
  *   (`useTourPanoramaInput`), όχι σε `window` — δεν χρειάζεται φύλακας (αντίθετα με τον DXF viewer, ADR-724 §5.2.1).
  */
 
-import { type ReactNode, useCallback, useRef, useState } from 'react';
-import { PanelRightClose, PanelRightOpen } from 'lucide-react';
+import type { ReactNode } from 'react';
 
-import { Button } from '@/components/ui/button';
+import { ColumnToggleButton, useCollapsibleColumn } from '@/components/ui/collapsible-column';
 import {
-  THIN_SEPARATOR_CLASS, ResizableHandle, ResizablePanel, ResizablePanelGroup, usePanelRef, type PanelSize,
+  THIN_SEPARATOR_CLASS, ResizableHandle, ResizablePanel, ResizablePanelGroup,
 } from '@/components/ui/resizable';
-import { usePanelWidthPersistence } from '@/components/ui/resizable-persistence';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import { SPATIAL_TOUR_NS } from '../spatial-tour-namespace';
-import { TOUR_PLAN_COLUMN, readTourPlanColumn, writeTourPlanColumn } from './tour-viewer-layout-store';
+import { TOUR_PLAN_COLUMN, tourPlanColumnStore } from './tour-viewer-layout-store';
 import { TOUR_VIEWER_KEYS } from './tour-viewer-labels';
 
 /** Σταθερά για πάντα — ταυτότητες των panels στη βιβλιοθήκη. */
@@ -45,54 +42,17 @@ export interface TourViewerSplitProps {
   readonly column: ReactNode;
 }
 
-function ColumnToggle({ collapsed, onToggle }: { readonly collapsed: boolean; readonly onToggle: () => void }) {
-  const { t } = useTranslation(SPATIAL_TOUR_NS);
-  const label = t(collapsed ? TOUR_VIEWER_KEYS.planColumnShow : TOUR_VIEWER_KEYS.planColumnHide);
-  const Icon = collapsed ? PanelRightOpen : PanelRightClose;
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button type="button" size="icon" variant="secondary" className="absolute bottom-3 right-3 h-9 w-9 shadow"
-          onClick={onToggle} aria-label={label} aria-expanded={!collapsed} aria-controls={COLUMN_PANEL_ID}>
-          <Icon aria-hidden className="h-4 w-4" />
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent>{label}</TooltipContent>
-    </Tooltip>
-  );
-}
-
 export function TourViewerSplit({ stage, column }: TourViewerSplitProps) {
   const { t } = useTranslation(SPATIAL_TOUR_NS);
-  // Διαβάζεται ΜΙΑ φορά: το `defaultSize` είναι αρχική τιμή — και στόχος του διπλού κλικ («επαναφορά στο αποθηκευμένο»).
-  const [initial] = useState(readTourPlanColumn);
-  const [collapsed, setCollapsed] = useState(initial.collapsed);
-  const collapsedNow = useRef(initial.collapsed);
-  const panel = usePanelRef();
-  const persistence = usePanelWidthPersistence(writeTourPlanColumn, initial.width);
-
-  // ~60/δευτ. κατά το σύρσιμο: μόνο `ref`· render **μόνο** όταν αλλάζει το «κρυμμένη;» (για το κουμπί).
-  const onResize = useCallback((size: PanelSize) => {
-    persistence.onResize(size);
-    const now = size.inPixels < 1;
-    if (now === collapsedNow.current) return;
-    collapsedNow.current = now;
-    setCollapsed(now);
-  }, [persistence]);
-
-  const toggle = useCallback(() => {
-    const handle = panel.current;
-    if (handle === null) return;
-    if (handle.isCollapsed()) handle.resize(readTourPlanColumn().width);
-    else handle.collapse();
-    persistence.persistSoon();
-  }, [panel, persistence]);
+  // Η μηχανική (πλάτος · απόκρυψη · εγγραφή) είναι κοινή με τον επιθεωρητή ακινήτων — `useCollapsibleColumn`.
+  const { initial, collapsed, panel, persistence, onResize, toggle } = useCollapsibleColumn(tourPlanColumnStore);
 
   return (
     <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1" onLayoutChanged={persistence.onLayoutChanged}>
       <ResizablePanel id={STAGE_PANEL_ID} minSize={STAGE_MIN_WIDTH} className="relative flex min-w-0 flex-col">
         {stage}
-        <ColumnToggle collapsed={collapsed} onToggle={toggle} />
+        <ColumnToggleButton collapsed={collapsed} onToggle={toggle} controls={COLUMN_PANEL_ID}
+          label={t(collapsed ? TOUR_VIEWER_KEYS.planColumnShow : TOUR_VIEWER_KEYS.planColumnHide)} className="bottom-3 right-3 h-9 w-9" />
       </ResizablePanel>
       <ResizableHandle aria-label={t(TOUR_VIEWER_KEYS.resizeColumn)} className={THIN_SEPARATOR_CLASS} {...persistence.separatorProps} />
       <ResizablePanel id={COLUMN_PANEL_ID} panelRef={panel} elementRef={persistence.elementRef}
