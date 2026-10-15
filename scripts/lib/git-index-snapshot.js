@@ -149,6 +149,33 @@ function readIndexTexts({ repoRoot, entries }) {
   return out;
 }
 
+/**
+ * ADR-744 §32 Β2 — `μονοπάτι → blob sha` **ενός commit** (π.χ. `HEAD`, ο γονέας αυτού που φτιάχνεται),
+ * περιορισμένο στα `paths`. Μονοπάτι που δεν υπάρχει στο commit (νέο αρχείο) απλώς λείπει.
+ * ⚠️ Τα μονοπάτια ΔΕΝ περνούν ως ορίσματα (ENAMETOOLONG, βλ. `materializeIndex`): ΕΝΑ `ls-tree -r`
+ * για όλο το δέντρο και φίλτρο εδώ. ⚠️ Repo χωρίς commit ⇒ `null` («δεν υπάρχει γονέας»), όχι σφάλμα.
+ * @param {{repoRoot: string, rev?: string, paths: Iterable<string>}} options
+ * @returns {?Map<string, string>}
+ */
+function listTreeEntries({ repoRoot, rev = 'HEAD', paths }) {
+  const wanted = new Set(paths);
+  const result = spawnSync('git', ['ls-tree', '-r', '-z', '--full-tree', rev], {
+    cwd: repoRoot, encoding: 'utf8', maxBuffer: MAX_BUFFER, stdio: ['pipe', 'pipe', 'pipe'],
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) return null;
+  const entries = new Map();
+  for (const record of result.stdout.split('\0')) {
+    const tab = record.indexOf('\t');
+    if (tab < 0) continue;
+    const rel = record.slice(tab + 1);
+    const [, type, sha] = record.slice(0, tab).split(' ');
+    if (type === 'blob' && wanted.has(rel)) entries.set(rel, sha);
+  }
+  return entries;
+}
+
 module.exports = {
   materializeIndex, writeIndexBlob, readIndexText, listIndexEntries, listWorktreeDivergence, readIndexTexts,
+  listTreeEntries,
 };

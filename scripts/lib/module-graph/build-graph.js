@@ -79,7 +79,8 @@ function buildGraph({ projectRoot, aliases, files, readFile, onParseError }) {
     modules.set(file, mod);
   }
 
-  return { projectRoot, aliases, fileSet, modules, identifierOwners, unparsed };
+  // ADR-744 §32 Β1 — `readText`: από πού διαβάστηκε το κείμενο, για όσους αναλύουν πέρα από το record.
+  return { projectRoot, aliases, fileSet, modules, identifierOwners, unparsed, readText: readFile };
 }
 
 /** Ό,τι κρατά ο πρόθυμος γράφος για ένα module: το record χωρίς τα `identifiers` (βλ. `buildGraph`). */
@@ -126,7 +127,7 @@ function createOnDemandGraph({ projectRoot, aliases, files, readText, loadModule
     }
   };
   const modules = { get, has: file => get(file) !== undefined, get size() { return parsed.size; } };
-  return { projectRoot, aliases, fileSet, modules, unparsed, onDemand: true };
+  return { projectRoot, aliases, fileSet, modules, unparsed, readText, onDemand: true };
 }
 
 function createResolver(graph) {

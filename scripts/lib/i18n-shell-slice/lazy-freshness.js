@@ -31,14 +31,13 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const MG = require('../module-graph');
-const { isAnalysedSourcePath } = require('../module-graph/scan-config');
-const { TS_PATH_ALIAS_CONFIG } = require('./global-inputs');
 const { WHOLE_NAME } = require('./plan');
 const LR = require('./lazy-routes');
 const SC = require('./source-cache');
+const { createLayerOnePass } = require('./layer-one-pass');
 
-const isSourceModule = rel => rel.startsWith('src/') && isAnalysedSourcePath(rel);
+// ADR-744 §32 — ΕΝΑ κατηγόρημα με τις πηγές (ήταν γραμμένο εδώ δεύτερη φορά).
+const isSourceModule = SC.isWalkedSource;
 
 function readJson(file) {
   if (!fs.existsSync(file)) return { missing: true };
@@ -56,22 +55,14 @@ function committedWholeNamespaces(root, config) {
 }
 
 /**
- * Ο χάρτης, από το μηδέν, με τον ΙΔΙΟ walker του γεννήτορα.
+ * Ο χάρτης, από το μηδέν, με τον ΙΔΙΟ walker του γεννήτορα, πάνω στο ΚΟΙΝΟ πέρασμα (`layer-one-pass.js`).
+ * ⚠️ ΔΕΝ κάνει `persist`: η μνήμη ανήκει στο πέρασμα (ο G τη συνεχίζει), και τη γράφει ο ιδιοκτήτης του.
  * @returns {{lazy: object, stats: object}}
  */
-function rebuildLazyMap({ root, config, sources, cacheDir }) {
-  const cached = SC.createCachedSources({ sources, cacheDir, namespace: SC.cacheNamespace(root, config) });
-  const graph = MG.createOnDemandGraph({
-    projectRoot: root,
-    aliases: MG.readTsPathAliases(root, TS_PATH_ALIAS_CONFIG),
-    files: cached.files,
-    readText: cached.readText,
-    loadModule: cached.loadModule,
-    onParseError: () => {},
-  });
-  const lazy = LR.buildLazyRouteNamespaces({ projectRoot: root, config, graph, sources: cached });
-  cached.persist();
-  return { lazy, stats: { ...cached.stats(), modules: graph.modules.size } };
+function rebuildLazyMap({ root, config, pass }) {
+  const { graph, sources } = pass.commit();
+  const lazy = LR.buildLazyRouteNamespaces({ projectRoot: root, config, graph, sources });
+  return { lazy, stats: pass.stats() };
 }
 
 /** Ανά διαδρομή: ποιο namespace μπήκε (και **ποιο αρχείο** το ονομάζει) ή βγήκε. */
@@ -94,20 +85,23 @@ function describeRowDrift(committed, fresh, provenance) {
  * @param {object} args
  * @param {string[]} args.stagedFiles
  * @param {string} args.root      από πού διαβάζονται config, registries, artifacts (δίσκος ή στιγμιότυπο)
- * @param {object} [args.sources] `createIndexSources` για την πύλη `--index`· προεπιλογή ο δίσκος του `root`
- * @param {?string} [args.cacheDir]
+ * @param {object} [args.pass]    ADR-744 §32 — το ΚΟΙΝΟ πέρασμα του `runLayerOne`· χωρίς αυτό ανοίγει δικό
+ *   του από `sources`/`cacheDir` και το γράφει στο τέλος (κλήση εκτός ελεγκτή)
  * @returns {{reasons: string[], stats: ?object}} `stats` = `null` όταν δεν χρειάστηκε επανυπολογισμός
  */
 function checkLazyRouteFreshness(args) {
+  const pass = args.pass || createLayerOnePass(args);
   try {
-    return judgeFreshness(args);
+    return judgeFreshness({ ...args, pass });
   } catch (error) {
     // Μητρώο που δεν διαβάζεται, λίστα που άλλαξε σχήμα: ΕΥΡΗΜΑ με το μήνυμά του, ποτέ stack trace.
     return { reasons: [`F. ο χάρτης τεμπέλικων διαδρομών δεν μπορεί να κριθεί — ${error.message}`], stats: null };
+  } finally {
+    if (!args.pass) pass.persist();
   }
 }
 
-function judgeFreshness({ config, stagedFiles, root, sources, cacheDir }) {
+function judgeFreshness({ config, stagedFiles, root, pass }) {
   if (config.lazyRouteRegistries.length === 0) return { reasons: [], stats: null };
   const whole = committedWholeNamespaces(root, config);
   if (!stagedFiles.some(isSourceModule)) return { reasons: LR.judgeLazyArtifact(root, config, whole), stats: null };
@@ -118,9 +112,7 @@ function judgeFreshness({ config, stagedFiles, root, sources, cacheDir }) {
   if (committed.invalid) return { reasons: [`${artifact} is not valid JSON.`], stats: null };
 
   const started = Date.now();
-  const { lazy, stats } = rebuildLazyMap({
-    root, config, sources: sources || SC.createDiskSources(root), cacheDir: cacheDir === undefined ? path.join(root, SC.CACHE_REL) : cacheDir,
-  });
+  const { lazy, stats } = rebuildLazyMap({ root, config, pass });
   const reasons = [];
   if (LR.renderLazyArtifact(committed.value) !== LR.renderLazyArtifact(lazy.rows)) {
     const drift = describeRowDrift(committed.value, lazy.rows, lazy.provenance);

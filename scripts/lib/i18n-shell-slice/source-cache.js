@@ -36,7 +36,7 @@ const path = require('node:path');
 
 const MG = require('../module-graph');
 const { collectSourceFiles, isAnalysedSourcePath } = require('../module-graph/scan-config');
-const { listIndexEntries, listWorktreeDivergence, readIndexTexts } = require('../git-index-snapshot');
+const { listIndexEntries, listTreeEntries, listWorktreeDivergence, readIndexTexts } = require('../git-index-snapshot');
 const { stableStringify, sha256, toLf } = require('./slice-build');
 
 /**
@@ -87,8 +87,7 @@ function createDiskSources(root) {
  */
 function createIndexSources({ repoRoot, root }) {
   const prefix = `${MG.toPosix(root)}/`;
-  const entries = new Map([...listIndexEntries({ repoRoot })]
-    .filter(([rel]) => SOURCE_ROOTS.some(dir => rel.startsWith(`${dir}/`)) && isAnalysedSourcePath(rel)));
+  const entries = new Map([...listIndexEntries({ repoRoot })].filter(([rel]) => isWalkedSource(rel)));
   const divergent = [...listWorktreeDivergence({ repoRoot })].filter(rel => entries.has(rel));
   const fromIndex = readIndexTexts({ repoRoot, entries: divergent.map(rel => [rel, entries.get(rel)]) });
   const relOf = abs => (abs.startsWith(prefix) ? abs.slice(prefix.length) : null);
@@ -181,12 +180,20 @@ function cacheNamespace(root, config) {
  */
 function createCachedSources({ sources, cacheDir, namespace }) {
   const pack = openPack(process.env.I18N_SHELL_SLICE_NO_CACHE === '1' ? null : cacheDir, namespace);
-  let parses = 0;
+  return cachedView(sources, pack, { parses: 0 });
+}
+
+/**
+ * Μία πηγή πάνω σε μία συσκευασία. ADR-744 §32 Β2 — `view(άλλη πηγή)` δίνει **δεύτερη** όψη (ο γονέας)
+ * πάνω στην **ΙΔΙΑ** συσκευασία: δύο `openPack` στο ίδιο πέρασμα θα έσβηναν το ένα το άλλο στο
+ * `persist` (mark-and-sweep: γράφεται μόνο ό,τι άγγιξε ΑΥΤΟ το αντικείμενο).
+ */
+function cachedView(sources, pack, counter) {
   const loadModule = (file, readText) => {
     const key = sources.keyOf(file);
     const stored = pack.read(key, 'mod');
     if (stored !== undefined) return { ...stored, file };
-    parses += 1;
+    counter.parses += 1;
     const mod = MG.parseGraphModule(file, readText(file));
     const portable = { ...mod };
     delete portable.file;   // το μονοπάτι του στιγμιότυπου αλλάζει σε κάθε τρέξιμο
@@ -203,8 +210,94 @@ function createCachedSources({ sources, cacheDir, namespace }) {
     loadModule,
     facts,
     persist: () => pack.persist(),
-    stats: () => ({ ...sources.stats(), parses, ...pack.counts }),
+    stats: () => ({ ...sources.stats(), parses: counter.parses, ...pack.counts }),
+    view: other => cachedView(other, pack, counter),
   };
+}
+
+/** `src/…` module που αναλύει ο walk — το κριτήριο του `collectSourceFiles` για μονοπάτια εκτός δίσκου. */
+const isWalkedSource = rel => SOURCE_ROOTS.some(dir => rel.startsWith(`${dir}/`)) && isAnalysedSourcePath(rel);
+
+/**
+ * ADR-744 §32 Β2 — **Ο ΓΟΝΕΑΣ ΤΟΥ COMMIT, ΧΩΡΙΣ ΔΕΥΤΕΡΟ ΣΤΙΓΜΙΟΤΥΠΟ.**
+ *
+ * 🔑 Το δέντρο του `HEAD` είναι το δέντρο του ευρετηρίου **εκτός από τα σταδιοποιημένα**· άρα ο γονέας
+ * είναι επικάλυψη της πηγής του commit μόνο σε αυτά (ένα `ls-tree` + ΕΝΑ `cat-file --batch`): όσα
+ * προστέθηκαν βγαίνουν, όσα σβήστηκαν ξαναμπαίνουν, κλειδί = το blob του HEAD. Για κάθε άλλο αρχείο
+ * τα κλειδιά συμπίπτουν ⇒ η μνήμη απαντά και για τις δύο καταστάσεις χωρίς δεύτερο parse.
+ * ⚠️ Repo χωρίς commit (ή φάκελος χωρίς git) ⇒ `null`: ο καλών θεωρεί κάθε σταδιοποιημένο αλλαγμένο.
+ *
+ * @param {object} args
+ * @param {object} args.sources   η πηγή του commit (`createIndexSources` | `createDiskSources`)
+ * @param {string} args.repoRoot  από πού ρωτάμε το git
+ * @param {string[]} args.staged  σχετικά μονοπάτια — μόνο τα modules του `src` μετράνε
+ * @returns {?object} ίδιο σχήμα με τις άλλες πηγές
+ */
+function createParentSources({ sources, repoRoot, staged }) {
+  const touched = new Set(staged.filter(isWalkedSource));
+  const head = listTreeEntries({ repoRoot, paths: touched });
+  if (head === null) return null;
+  const texts = readIndexTexts({ repoRoot, entries: [...head] });
+  const prefix = `${MG.toPosix(sources.root)}/`;
+  const relOf = abs => (abs.startsWith(prefix) ? abs.slice(prefix.length) : null);
+  const kept = sources.files.filter(abs => !touched.has(relOf(abs)));
+  return {
+    root: sources.root,
+    files: [...kept, ...[...head.keys()].map(rel => `${prefix}${rel}`)].sort(),
+    readText: abs => (touched.has(relOf(abs)) ? (texts.get(relOf(abs)) ?? null) : sources.readText(abs)),
+    keyOf(abs) {
+      const rel = relOf(abs);
+      if (!touched.has(rel)) return sources.keyOf(abs);
+      return head.has(rel) ? `${head.get(rel)} ${rel}` : null;
+    },
+    stats: () => ({ source: 'parent', staged: touched.size }),
+  };
+}
+
+/**
+ * ADR-744 §32 Β1 — **ΜΙΑ ανάλυση ανά αρχείο ανά πέρασμα**, κατά περιεχόμενο.
+ *
+ * 🔴 ΜΕΤΡΗΜΕΝΟ (§32.2): το κέλυφος + 67 διαδρομές ξανάλυναν το ΙΔΙΟ αρχείο σε κάθε κλειστότητα —
+ * `extractSurface` 26.307 κλήσεις σε 2.568 αρχεία, τρία `createSourceFile` ανά κλήση. Το κόστος
+ * ΔΕΝ ήταν ο γράφος (1–4 s), ήταν η επανάληψη: 184–240 s → ~55–60 s με έξοδο byte-ίδια.
+ *
+ * 🔑 ΚΛΕΙΔΙ = (αρχείο, μέρος) + **ταυτότητα της εισόδου** (`entry.input === input`): ίδιο κείμενο ⇒ ίδια
+ * τιμή, γιατί κάθε μέρος είναι **καθαρή** συνάρτηση του κειμένου του (σχήμα Salsa: memo εισόδου → εξόδου).
+ * Άλλο κείμενο ⇒ ξαναϋπολογίζεται· ποτέ μπαγιάτικη τιμή, ακόμη κι αν ο δίσκος αλλάξει μέσα στο πέρασμα.
+ * ⚠️ Μόνο στη μνήμη, με διάρκεια ζωής **του γράφου** (`analysisFor`): ASTs δεν σειριοποιούνται, και η
+ * μόνιμη μνήμη (`openPack`) κρατά μόνο τοπικά γεγονότα. ⚠️ Οι τιμές είναι κοινές ⇒ **μόνο ανάγνωση**.
+ */
+function createAnalysisMemo() {
+  const entries = new Map();
+  const counts = { hits: 0, misses: 0 };
+  return {
+    counts,
+    once(file, part, input, compute) {
+      const key = `${part}\0${file}`;
+      const entry = entries.get(key);
+      if (entry !== undefined && entry.input === input) { counts.hits += 1; return entry.value; }
+      counts.misses += 1;
+      const value = compute();
+      entries.set(key, { input, value });
+      return value;
+    },
+  };
+}
+
+/** Χωρίς μνήμη: ο ΙΔΙΟΣ κώδικας, κάθε κλήση υπολογίζει (γράφοι-δοκιμών, `checkStagedShellFiles`). */
+const NO_ANALYSIS_MEMO = Object.freeze({ counts: Object.freeze({ hits: 0, misses: 0 }), once: (file, part, input, compute) => compute() });
+
+const analysisMemos = new WeakMap();
+
+/** Το memo **αυτού** του γράφου — ένα για κέλυφος + όλες τις διαδρομές του ίδιου περάσματος. */
+function analysisFor(graph) {
+  if (!graph || typeof graph !== 'object') return NO_ANALYSIS_MEMO;
+  let memo = analysisMemos.get(graph);
+  if (memo === undefined) {
+    memo = createAnalysisMemo();
+    analysisMemos.set(graph, memo);
+  }
+  return memo;
 }
 
 module.exports = {
@@ -216,4 +309,9 @@ module.exports = {
   openPack,
   cacheNamespace,
   createCachedSources,
+  createParentSources,
+  isWalkedSource,
+  createAnalysisMemo,
+  NO_ANALYSIS_MEMO,
+  analysisFor,
 };

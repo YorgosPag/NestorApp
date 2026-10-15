@@ -44,6 +44,14 @@
  *                           with the committed artifact (lazy-freshness.js).
  *                           Red only when the OUTPUT changes. Otherwise the
  *                           graph-free judgement (`judgeLazyArtifact`) runs.
+ *   G. shell + routes       ADR-744 §32 — incremental, with early cutoff on the
+ *                           COMMITTED output (incremental-freshness.js): parent
+ *                           (HEAD) vs commit fingerprint per staged module →
+ *                           closures that read it in EITHER state (same walk) →
+ *                           rebuild only those → red only if the manifest's
+ *                           projection or the artifact differs. Shares ONE pass
+ *                           (sources + cache + graphs) with F. Additive for now:
+ *                           C stays until mutation + replay prove G covers it.
  *
  * What Layer 1 used to be blind to, and how each closed (ADR-744 §31):
  *   · a re-export rewritten in a barrel the walk READS but that is not a member
@@ -83,6 +91,8 @@ const {
 const RS = require('./lib/i18n-shell-slice/route-slices');
 const { checkGlobalInputs, globalInputPaths } = require('./lib/i18n-shell-slice/global-inputs');
 const { checkLazyRouteFreshness } = require('./lib/i18n-shell-slice/lazy-freshness');
+const { checkIncrementalFreshness } = require('./lib/i18n-shell-slice/incremental-freshness');
+const { createLayerOnePass } = require('./lib/i18n-shell-slice/layer-one-pass');
 const { createIndexSources, CACHE_REL } = require('./lib/i18n-shell-slice/source-cache');
 // N.7.1 — οι έλεγχοι A–D ζουν στο δικό τους module· επανεξάγονται παρακάτω για τα tests.
 const LayerOneChecks = require('./lib/i18n-shell-slice/layer-one-checks');
@@ -138,12 +148,22 @@ function runLayerOne(config, stagedFiles, root = PROJECT_ROOT, lazySources = {})
     fail(`${manifestPath(config)} is missing or unreadable — the shell slice has never been generated.`);
     return;
   }
+  // ADR-744 §32 — ΕΝΑ πέρασμα (πηγές + μνήμη + γράφοι) για F και G· γράφεται ΠΡΙΝ από κάθε `fail` (exit).
+  const pass = createLayerOnePass({ root, config, stagedFiles, ...lazySources });
   // F. ADR-744 §31 — ο χάρτης τεμπέλικων διαδρομών, ΞΑΝΑΧΤΙΣΜΕΝΟΣ όταν σταδιοποιείται module του `src`.
-  const lazy = checkLazyRouteFreshness({ config, stagedFiles, root, ...lazySources });
+  const lazy = checkLazyRouteFreshness({ config, stagedFiles, root, pass });
   if (lazy.stats !== null) {
     const { parses, hits, ms, source } = lazy.stats;
     console.log(`${DIM}  ↻ CHECK 3.34 F — χάρτης τεμπέλικων διαδρομών ξαναχτίστηκε (${source}): ${parses} parses · ${hits} από μνήμη · ${ms} ms${NC}`);
   }
+  // G. ADR-744 §32 — κέλυφος + διαδρομές, επαυξητικά, με cutoff στη δεσμευμένη έξοδο.
+  const incremental = checkIncrementalFreshness({ manifest, pass });
+  if (incremental.stats !== null) {
+    const { staged, changed, shell, routes, walkMs, ms } = incremental.stats;
+    const scope = changed === 0 ? 'καμία αλλαγή επιφάνειας' : `κέλυφος ${shell ? 'ναι' : 'όχι'} · διαδρομές ${routes} · walk ${walkMs} ms`;
+    console.log(`${DIM}  ↻ CHECK 3.34 G — ${changed}/${staged} αλλαγμένα modules · ${scope} · ${ms} ms${NC}`);
+  }
+  pass.persist();
   // 🔴 ADR-744 §20 (Β2) — ΚΑΜΙΑ ΑΛΥΣΙΔΑ `||`, ΓΙΑ ΤΟΝ ΙΔΙΟ ΛΟΓΟ ΜΕ ΤΟΝ ΓΕΝΝΗΤΟΡΑ.
   // Το `a || b || c` σημαίνει «ο πρώτος που μιλά σκοτώνει τους υπόλοιπους»: όσο ένα
   // artifact ήταν χειρόγραφα πειραγμένο, **κανείς** δεν μάθαινε ποτέ ότι ταυτόχρονα
@@ -161,6 +181,7 @@ function runLayerOne(config, stagedFiles, root = PROJECT_ROOT, lazySources = {})
     // E. ADR-744 §30 — οι ΚΑΘΟΛΙΚΕΣ είσοδοι: config · σταθερές · aliases · bundles · toolchain.
     checkGlobalInputs(config, manifest, root),
     ...lazy.reasons,
+    ...incremental.reasons,
   ].filter(reason => reason !== null && reason !== undefined);
 
   if (reasons.length > 0) {
@@ -317,6 +338,7 @@ function runLayerOneOnIndex(workingConfig, stagedFiles) {
   runLayerOne(config, stagedFiles, snapshot.root, {
     sources: createIndexSources({ repoRoot: PROJECT_ROOT, root: snapshot.root }),
     cacheDir: path.join(PROJECT_ROOT, CACHE_REL),
+    repoRoot: PROJECT_ROOT,   // G: ο γονέας (`HEAD`) ρωτιέται από το repo, όχι από το στιγμιότυπο
   });
 }
 

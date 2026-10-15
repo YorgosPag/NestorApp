@@ -470,4 +470,6 @@ module.exports = {
   isTranslateCall,
   collectTranslateAliases,
   classifyTranslateCalls,
+  // ADR-744 §32 Β1 — ο ταξινομητής πάνω σε AST που ήδη έχει το memo του περάσματος.
+  classifyParsedCalls,
 };

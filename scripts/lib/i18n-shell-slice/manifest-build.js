@@ -206,6 +206,50 @@ function buildManifest({ config, plan, artifacts, slices, routes = [], signedOnl
   return { ...body, inputsSha256: sha256(stableStringify(body)) };
 }
 
+/**
+ * 🔴 ADR-744 §32 Β5 — **Η ΕΞΟΔΟΣ ΤΟΥ ΚΕΛΥΦΟΥΣ, ΟΠΩΣ ΤΗ ΓΡΑΦΕΙ ΤΟ MANIFEST** — ό,τι συγκρίνει το early cutoff.
+ *
+ * Το Layer 2 συγκρίνει το manifest byte-προς-byte, και το manifest ΔΕΝ είναι μόνο slices: γράφει και
+ * γεγονότα κλειστότητας (μέλη, όρια, μετρητές, προέλευση). Αν το G έκρινε μόνο slice + `wants`, μια νέα
+ * ακμή χωρίς νέο κλειδί θα έδινε πράσινο pre-commit και **κόκκινο CI** — το «μόνιμο κόκκινο στο Layer 2»
+ * που απέρριψε το §31.1. Άρα εδώ μπαίνει ΚΑΘΕ πεδίο που παράγει η κλειστότητα του κελύφους, ΕΚΤΟΣ:
+ *   · τις **τιμές** των πινάκων αποτυπωμάτων (`shellFiles`/`routeFiles`/`consultedFiles`) — είσοδοι, όχι έξοδος·
+ *   · `unresolvedSpecs` — ένωση ΟΛΩΝ των κλειστοτήτων, δεν κρίνεται τμηματικά (Β6: αποσύρεται μαζί με το D)·
+ *   · `globalInputs` (έλεγχος E) · `sliceBytes` / `inputsSha256` (παράγωγα των παραπάνω + των διαδρομών).
+ * ⚠️ ΜΙΑ συνάρτηση για τις δύο πλευρές (φρέσκο και δεσμευμένο): δύο προβολές θα απέκλιναν.
+ *
+ * @param {object} manifest
+ * @param {string[]} artifactPaths  τα artifacts του κελύφους (slices ανά γλώσσα + `whole`)
+ */
+function shellProjection(manifest, artifactPaths) {
+  const stats = manifest.stats || {};
+  return {
+    languages: manifest.languages,
+    shellRoots: manifest.shellRoots,
+    guaranteedNamespaces: manifest.guaranteedNamespaces,
+    namespaces: manifest.namespaces,
+    stats: {
+      shellFiles: stats.shellFiles,
+      dynamicBoundaries: stats.dynamicBoundaries,
+      routeBoundaries: stats.routeBoundaries,
+      matchedKeys: stats.matchedKeys,
+    },
+    boundaries: manifest.boundaries,
+    unresolvableKeys: manifest.unresolvableKeys,
+    wants: manifest.wants,
+    members: Object.keys(manifest.shellFiles || {}).sort(),
+    artifacts: Object.fromEntries(artifactPaths.map(rel => [rel, (manifest.artifacts || {})[rel] ?? null])),
+  };
+}
+
+/** Η έξοδος **μίας** διαδρομής στο manifest: η γραμμή της + το sha του artifact της. */
+function routeProjection(manifest, id, artifactPath) {
+  return {
+    route: (manifest.routes || {})[id] ?? null,
+    artifact: (manifest.artifacts || {})[artifactPath] ?? null,
+  };
+}
+
 module.exports = {
   serializeWants,
   hydrateWants,
@@ -214,4 +258,6 @@ module.exports = {
   serializeConsultedFiles,
   unionOfUnresolved,
   buildManifest,
+  shellProjection,
+  routeProjection,
 };

@@ -346,10 +346,13 @@ describe('Λ — §31: ο χάρτης τεμπέλικων διαδρομών �
 
   /** Πλήρες δέντρο που περνά ΟΛΟ το Layer 1: config · bundles · ΑΝΤΙΓΡΑΦΟ toolchain · artifacts · manifest. */
   function gateRepo(files = BASE) {
-    const { root } = miniRepo(files);
+    // ADR-744 §32 — ΚΕΛΥΦΟΣ ΠΟΥ ΥΠΑΡΧΕΙ: ο G λύνει τις ρίζες του (ένα δέντρο χωρίς ρίζα κελύφους θα έριχνε
+    // και τον γεννήτορα — ήταν ανέφικτο fixture που πριν κανείς δεν ρωτούσε).
+    const { root } = miniRepo({ 'src/app/layout.tsx': `export default function Layout() { return null; }${NL}`, ...files });
     const write = writeIn(root);
     write('.i18n-shell-slice.json', JSON.stringify({
       lazyRouteRegistries: [REGISTRY], lazyRouteMountSeal: SEAL, excludeConsumers: ['src/i18n/'], keyConstants: [],
+      shellRoots: ['src/app/layout.tsx'],
     }));
     write('src/i18n/namespace-bundles.ts', `export const COMMON_NAMESPACES = ['common'] as const;${NL}`);
     for (const rel of GI.toolchainClosure(GI.CODE_ROOT).files) write(rel, fs.readFileSync(path.join(GI.CODE_ROOT, rel), 'utf8'));
@@ -540,5 +543,179 @@ describe('Λ — §31: ο χάρτης τεμπέλικων διαδρομών �
     const run = gate(root, []);
     expect(run.red).toContain('B: τεμπέλικη διαδρομή ΧΩΡΙΣ γραμμή');
     expect(run.logs).not.toContain('CHECK 3.34 F');                      // ο επανυπολογισμός ΔΕΝ έτρεξε
+  }, 60_000);
+});
+
+/**
+ * =============================================================================
+ * Ξ — ADR-744 §32: ΚΕΛΥΦΟΣ + ΔΙΑΔΡΟΜΕΣ ΕΠΑΥΞΗΤΙΚΑ, ΜΕ CUTOFF ΣΤΗ ΔΕΣΜΕΥΜΕΝΗ ΕΞΟΔΟ (έλεγχος G)
+ * =============================================================================
+ *
+ * Μίνι-repo με ΑΛΗΘΙΝΟ git: γεννιέται με τον γεννήτορα, δεσμεύεται, και κάθε άγκυρα σταδιοποιεί μία
+ * αλλαγή — ο G κρίνει γονέα (`HEAD`) απέναντι σε ευρετήριο, όπως στο hook. Οι μεταλλάξεις γίνονται σε
+ * ΑΝΤΙΓΡΑΦΟ (`jest.isolateModules`), ποτέ σε αρχείο του repo.
+ */
+describe('Ξ — §32: ο G ξαναϋπολογίζει ΜΟΝΟ ό,τι άγγιξε η αλλαγή, και κοκκινίζει ΜΟΝΟ όταν αλλάζει η έξοδος', () => {
+  const { spawnSync } = require('node:child_process');
+  const SC = require(path.join(LIB, 'source-cache'));
+  const { createLayerOnePass } = require(path.join(LIB, 'layer-one-pass'));
+  const IF_PATH = path.join(LIB, 'incremental-freshness');
+  const CP_PATH = path.join(LIB, 'closure-participation');
+  const IF = require(IF_PATH);
+
+  const PAGE = 'src/app/r/page.tsx';
+  const SECTION = 'src/app/r/Section.tsx';
+  const NAV = 'src/shell/Nav.tsx';
+  const KIT = 'src/kit/index.ts';
+  const CARD = 'src/kit/card.tsx';
+  const translated = (name, ns, key, extra = '') => `${extra}import { useTranslation } from '@/i18n/hook';${NL}`
+    + `export function ${name}() { const { t } = useTranslation('${ns}'); return t('${key}'); }${NL}`;
+  const section = (keys, extra = '') => `${extra}import { Card } from '@/kit';${NL}import { useTranslation } from '@/i18n/hook';${NL}`
+    + `export function Section() { const { t } = useTranslation('beta'); Card(); return [${keys.map(k => `t('${k}')`).join(', ')}]; }${NL}`;
+  const BASE_FILES = {
+    'src/app/layout.tsx': `import { Nav } from '../shell/Nav';${NL}export default function Layout() { return Nav(); }${NL}`,
+    [NAV]: translated('Nav', 'alpha', 'nav'),
+    [PAGE]: `import { Section } from './Section';${NL}export default function Page() { return Section(); }${NL}`,
+    [SECTION]: section(['title']),
+    [KIT]: `export { Card } from './card';${NL}`,
+    [CARD]: translated('Card', 'beta', 'card'),
+    'src/kit/card2.tsx': translated('Card', 'beta', 'card2'),
+    'src/i18n/locales/el/alpha.json': JSON.stringify({ nav: 'Nav', extra: 'E' }),
+    'src/i18n/locales/el/beta.json': JSON.stringify({ title: 'T', card: 'C', card2: 'C2', more: 'M' }),
+  };
+
+  function git(root, ...args) {
+    const result = spawnSync('git', ['-c', 'user.email=g@x', '-c', 'user.name=g', '-c', 'core.autocrlf=false', ...args], { cwd: root, encoding: 'utf8' });
+    if (result.status !== 0) throw new Error(`git ${args.join(' ')}: ${result.stderr}`);
+    return result.stdout;
+  }
+
+  /** Γεννημένο ΚΑΙ δεσμευμένο δέντρο: `{ root, write, config, manifest }`. */
+  function committedRepo() {
+    const config = {
+      ...DEFAULTS, keyConstants: [], shellRoots: ['src/app/layout.tsx'], extraShellRoots: [], languages: ['el'],
+      lazyRouteRegistries: [], guaranteedNamespaces: {}, excludeConsumers: ['src/i18n/'], routeSlices: { [PAGE]: {} },
+    };
+    const { root } = miniRepo(BASE_FILES, config);
+    const write = writeTo(root);
+    const graph = P.buildModuleGraph(root);
+    const plan = P.buildShellPlan(root, config, graph);
+    const complete = RS.renderComplete({ projectRoot: root, config, plan, graph, rendered: P.renderArtifacts(root, config, plan) });
+    for (const [rel, text] of complete.rendered.artifacts) write(rel, text);
+    git(root, 'init', '-q');
+    git(root, 'add', '-A');
+    git(root, 'commit', '-q', '-m', 'base');
+    return { root, write, config, manifest: complete.rendered.manifest };
+  }
+
+  /** Σταδιοποιεί και κρίνει ΟΠΩΣ το hook: πηγή = ευρετήριο, γονέας = `HEAD`. */
+  function judge({ root, config, manifest }, staged, { check = IF.checkIncrementalFreshness, cacheDir = null } = {}) {
+    git(root, 'add', '-A');   // μίνι-repo: όλο το δέντρο (ένα σβησμένο μονοπάτι δεν ταιριάζει πια σε pathspec)
+    const pass = createLayerOnePass({
+      root, config, stagedFiles: staged, sources: SC.createIndexSources({ repoRoot: root, root }), cacheDir, repoRoot: root,
+    });
+    const result = check({ manifest, pass });
+    pass.persist();
+    return { ...result, pass };
+  }
+
+  function writeTo(root) {
+    return (rel, body) => {
+      const file = path.join(root, rel);
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, body, 'utf8');
+    };
+  }
+
+  it('Ξ0 ΠΑΡΟΝΟΜΑΣΤΗΣ: σχόλιο/σώμα ⇒ ίδιο αποτύπωμα γονέα/commit ⇒ 0 αλλαγμένα, πράσινο, χωρίς walk', () => {
+    const repo = committedRepo();
+    repo.write(SECTION, `// μόνο σχόλιο${NL}${section(['title'])}`);
+    const result = judge(repo, [SECTION]);
+    expect(result.reasons).toEqual([]);
+    expect(result.stats).toEqual(expect.objectContaining({ staged: 1, changed: 0 }));
+  }, 60_000);
+
+  it('Ξ1 🔴 νέο κλειδί ΜΟΝΟ σε διαδρομή ⇒ ΚΟΚΚΙΝΟ με διεύθυνση + κλειδί· το κέλυφος ΔΕΝ ξαναχτίζεται', () => {
+    const repo = committedRepo();
+    repo.write(SECTION, section(['title', 'more']));
+    const result = judge(repo, [SECTION]);
+    expect(result.stats).toEqual(expect.objectContaining({ changed: 1, shell: false, routes: 1 }));
+    expect(result.reasons).toHaveLength(1);
+    expect(result.reasons[0]).toContain('G. /r:');
+    expect(result.reasons[0]).toContain('beta: +more');
+  }, 60_000);
+
+  it('Ξ2 ✅ CUTOFF: νέα ακμή χωρίς i18n σε διαδρομή ⇒ ο C κοκκινίζει (ο θόρυβος του §32.1), ο G ΠΡΑΣΙΝΟΣ', () => {
+    const repo = committedRepo();
+    repo.write('src/app/r/util.ts', `export const id = x => x;${NL}`);
+    repo.write(SECTION, section(['title'], `import { id } from './util';${NL}`));
+    const staged = [SECTION, 'src/app/r/util.ts'];
+    const { checkStagedShellFiles } = require(path.resolve(__dirname, '../check-i18n-shell-slice.js'));
+    expect(checkStagedShellFiles(repo.config, repo.manifest, [SECTION], repo.root)).not.toBeNull();   // το ψευδές κόκκινο
+    const result = judge(repo, staged);
+    expect(result.stats).toEqual(expect.objectContaining({ changed: 2, routes: 1 }));             // κρίθηκε…
+    expect(result.reasons).toEqual([]);                                                          // …και η έξοδος είναι ίδια
+  }, 60_000);
+
+  it('Ξ3 🔴 κέλυφος που άλλαξε ⇒ ΚΟΚΚΙΝΟ «κέλυφος», και καμία διαδρομή δεν χτίζεται (κλιμακωτό cutoff)', () => {
+    const repo = committedRepo();
+    repo.write(NAV, translated('Nav', 'alpha', 'extra'));
+    const result = judge(repo, [NAV]);
+    expect(result.stats).toEqual(expect.objectContaining({ changed: 1, shell: true }));
+    expect(result.reasons).toHaveLength(1);
+    expect(result.reasons[0]).toContain('G. κέλυφος');
+    expect(result.reasons[0]).toContain('alpha: +extra −nav');
+  }, 60_000);
+
+  it('Ξ4 🔴 ΔΙΑΓΡΑΦΗ: το σβησμένο είναι μέλος ΜΟΝΟ στον γονέα ⇒ ΚΟΚΚΙΝΟ· μετάλλαξη «μόνο το commit» (αντίγραφο) ⇒ πράσινο', () => {
+    const repo = committedRepo();
+    fs.rmSync(path.join(repo.root, CARD));
+    const onlyCommit = () => {
+      let check;
+      jest.isolateModules(() => {
+        const real = jest.requireActual(CP_PATH);
+        jest.doMock(CP_PATH, () => ({ ...real, affectedClosures: args => real.affectedClosures({ ...args, graphs: args.graphs.slice(0, 1) }) }));
+        check = require(IF_PATH).checkIncrementalFreshness;
+      });
+      jest.dontMock(CP_PATH);
+      return check;
+    };
+    expect(judge(repo, [CARD], { check: onlyCommit() }).reasons).toEqual([]);                  // η τρύπα, αναπαραγμένη
+    const result = judge(repo, [CARD]);
+    expect(result.reasons).toHaveLength(1);
+    expect(result.reasons[0]).toContain('beta: −card');                                         // η θεραπεία
+  }, 90_000);
+
+  it('Ξ5 🔴 barrel που ο walk ΔΙΑΒΑΖΕΙ (consulted): re-export σε άλλο αρχείο ⇒ ΚΟΚΚΙΝΟ με +card2 −card', () => {
+    const repo = committedRepo();
+    repo.write(KIT, `export { Card } from './card2';${NL}`);
+    const result = judge(repo, [KIT]);
+    expect(result.stats).toEqual(expect.objectContaining({ changed: 1, routes: 1 }));
+    expect(result.reasons[0]).toContain('beta: +card2 −card');
+  }, 60_000);
+
+  it('Ξ6 ΜΙΑ συσκευασία μνήμης για γονέα + commit: ένα αρχείο, και το δεύτερο πέρασμα κάνει 0 parses', () => {
+    const repo = committedRepo();
+    const cacheDir = path.join(repo.root, '.cache');
+    repo.write(SECTION, section(['title', 'more']));
+    expect(judge(repo, [SECTION], { cacheDir }).pass.stats().parses).toBeGreaterThan(0);
+    expect(fs.readdirSync(cacheDir).filter(name => name.endsWith('.json'))).toHaveLength(1);
+    const warm = judge(repo, [SECTION], { cacheDir });
+    expect(warm.pass.stats().parses).toBe(0);                                                    // και οι ΔΥΟ καταστάσεις από μνήμη
+    expect(warm.reasons[0]).toContain('beta: +more');                                            // ίδια κρίση
+  }, 90_000);
+
+  it('Ξ7 MEMO ≡ ΦΡΕΣΚΟ: ίδια επιφάνεια με και χωρίς memo· κέλυφος + διαδρομή στον ΙΔΙΟ γράφο αναλύουν μία φορά', () => {
+    const { root, config } = committedRepo();
+    const graph = P.buildModuleGraph(root);
+    const memo = SC.analysisFor(graph);
+    const withMemo = P.analyseFile(root, SECTION, graph, P.planContext(root, config, graph));
+    const fresh = P.analyseFile(root, SECTION, graph, { ...P.planContext(root, config, graph), analysis: SC.NO_ANALYSIS_MEMO });
+    expect(withMemo).toEqual(fresh);
+    P.buildShellPlan(root, { ...config, shellRoots: [PAGE] }, graph);
+    const misses = memo.counts.misses;
+    P.buildShellPlan(root, { ...config, shellRoots: [PAGE] }, graph);
+    expect(memo.counts.misses).toBe(misses);                                                     // δεύτερη κλειστότητα: 0 αναλύσεις
+    expect(memo.counts.hits).toBeGreaterThan(0);
   }, 60_000);
 });
