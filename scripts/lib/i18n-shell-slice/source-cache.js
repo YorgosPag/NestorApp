@@ -231,11 +231,12 @@ const isWalkedSource = rel => SOURCE_ROOTS.some(dir => rel.startsWith(`${dir}/`)
  * @param {object} args.sources   η πηγή του commit (`createIndexSources` | `createDiskSources`)
  * @param {string} args.repoRoot  από πού ρωτάμε το git
  * @param {string[]} args.staged  σχετικά μονοπάτια — μόνο τα modules του `src` μετράνε
+ * @param {string} [args.rev]     ο γονέας· `HEAD` στο hook, `<c>^` στην αναπαραγωγή ιστορικού (§32.11)
  * @returns {?object} ίδιο σχήμα με τις άλλες πηγές
  */
-function createParentSources({ sources, repoRoot, staged }) {
+function createParentSources({ sources, repoRoot, staged, rev = 'HEAD' }) {
   const touched = new Set(staged.filter(isWalkedSource));
-  const head = listTreeEntries({ repoRoot, paths: touched });
+  const head = listTreeEntries({ repoRoot, rev, paths: touched });
   if (head === null) return null;
   const texts = readIndexTexts({ repoRoot, entries: [...head] });
   const prefix = `${MG.toPosix(sources.root)}/`;
@@ -284,7 +285,7 @@ function createAnalysisMemo() {
   };
 }
 
-/** Χωρίς μνήμη: ο ΙΔΙΟΣ κώδικας, κάθε κλήση υπολογίζει (γράφοι-δοκιμών, `checkStagedShellFiles`). */
+/** Χωρίς μνήμη: ο ΙΔΙΟΣ κώδικας, κάθε κλήση υπολογίζει (γράφοι-δοκιμών, γράφος χωρίς ταυτότητα). */
 const NO_ANALYSIS_MEMO = Object.freeze({ counts: Object.freeze({ hits: 0, misses: 0 }), once: (file, part, input, compute) => compute() });
 
 const analysisMemos = new WeakMap();

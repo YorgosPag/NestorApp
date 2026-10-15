@@ -83,7 +83,7 @@ const measureK2Live = () =>
     projectRoot: POSIX_ROOT,
     config: CONFIG,
     slice: SLICE,
-    closureFiles: Object.keys(MANIFEST.shellFiles),
+    closureFiles: MANIFEST.shellMembers,
   });
 
 // ===========================================================================
@@ -111,6 +111,26 @@ describe('Μ0 — το ζωντανό δέντρο είναι ΠΡΑΣΙΝΟ κ�
     const census = K2.assertClosedK2(measured.records);
     const total = Object.values(census).reduce((a, b) => a + b, 0);
     expect(total).toBe(measured.records.length);
+  });
+
+  // ADR-744 §32.11 — τα μέλη ταξιδεύουν ως ΠΙΝΑΚΑΣ `shellMembers`. Ένα manifest στο παλιό σχήμα
+  // (map `shellFiles`) πρέπει να ΚΟΚΚΙΝΙΖΕΙ, όχι να δώσει Κ2 πάνω σε μηδέν αρχεία ⇒ «πράσινο».
+  test('Μ0.4 — Layer 1: `shellMembers` = τα μέλη· το παλιό σχήμα ΔΕΝ περνά σιωπηλά', () => {
+    const { measureK2 } = require('../check-i18n-ssr-raw-keys');
+    expect(MANIFEST.shellMembers.length).toBeGreaterThan(100);
+    expect(MANIFEST.shellMembers).toContain('src/app/layout.tsx');
+    const generated = 'src/i18n/generated';
+    const oldSchema = miniRepo(['.i18n-shell-slice.json', `${generated}/shell-slice.el.json`, `${generated}/shell-slice.manifest.json`], {
+      [`${generated}/shell-slice.manifest.json`]: (text) => {
+        const { shellMembers, ...rest } = JSON.parse(text);
+        return JSON.stringify({ ...rest, shellFiles: Object.fromEntries(shellMembers.map((rel) => [rel, 'x'])) });
+      },
+    });
+    try {
+      expect(() => measureK2({ full: false }, oldSchema)).toThrow('shellMembers');
+    } finally {
+      fs.rmSync(oldSchema, { recursive: true, force: true });
+    }
   });
 });
 

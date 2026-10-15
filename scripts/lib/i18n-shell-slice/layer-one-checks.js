@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * CHECK 3.34 — οι έλεγχοι A–D του Layer 1 (ADR-744), χωρίς γράφο module.
+ * CHECK 3.34 — οι έλεγχοι A–B του Layer 1 (ADR-744), χωρίς γράφο module.
  *
  * Βγήκαν από το `scripts/check-i18n-shell-slice.js` (N.7.1). Ο ελεγκτής κρατά CLI +
  * `runLayerOne` / `runLayerOneOnIndex` / `runFull` και τους επανεξάγει, γιατί τα tests κάνουν
@@ -13,10 +13,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const { analyseFile, hydrateWants, makeNamespaceReader } = require('./plan');
-const { buildSlices, stableStringify, sha256, fingerprintShellFile } = require('./slice-build');
-const { loadNamespaceBundles } = require('../i18n-namespace-extract');
-const { loadKeyConstants } = require('./key-extract');
+const { hydrateWants, makeNamespaceReader } = require('./plan');
+const { buildSlices, stableStringify, sha256 } = require('./slice-build');
 const { auditLedger, describeFailures, auditRouteLedger, describeRouteFailures } = require('./ledger');
 const {
   auditShellCensus,
@@ -24,14 +22,8 @@ const {
   describeCensusGrowth,
 } = require('./shell-census');
 const RS = require('./route-slices');
-const { CODE_ROOT: PROJECT_ROOT, TS_PATH_ALIAS_CONFIG } = require('./global-inputs');
-const { parseModule } = require('../module-graph/parse-module');
-const {
-  CANDIDATE_EXTENSIONS,
-  readTsPathAliases,
-  resolveSpecifier,
-  toPosix,
-} = require('../module-graph/resolve-specifier');
+const { CODE_ROOT: PROJECT_ROOT } = require('./global-inputs');
+const { toPosix } = require('../module-graph/resolve-specifier');
 
 const { ROUTES_DIR, routeIdFor } = RS;
 
@@ -253,95 +245,11 @@ function checkRouteLocaleDrift(config, manifest, root = PROJECT_ROOT) {
   return null;
 }
 
-/**
- * C. a staged **input** whose i18n surface or import edges moved.
- *
- * 🔴 ADR-744 §21 — ΩΣ ΤΙΣ 2026-08-30 ΡΩΤΟΥΣΕ ΜΟΝΟ ΤΟ `shellFiles`, ΚΑΙ ΤΟ ΠΛΗΡΩΣΑΜΕ.
- * Μετρημένο ζωντανά: το `MandateCatalogContent.tsx` άλλαξε ανάμεσα στο `generate` και
- * στο `commit`, **δύο** route artifacts βγήκαν εκτός συγχρονισμού, και εδώ το `continue`
- * το προσπέρασε **σιωπηλά** — γιατί δεν είναι shell module. Το Layer 1 δεν είχε
- * **καμία** εγγραφή για τις **509** εισόδους των κλειστοτήτων διαδρομών.
- *
- * 🏆 Η ΑΡΧΗ ΤΟΥ BAZEL: παραγόμενο = **δηλωμένο σύνολο εισόδων**, κατακερματισμένο.
- * Αλλάζει είσοδος ⇒ μπαγιάτικη έξοδος, **εξ ορισμού**. Το είχαμε — για τις μισές.
- *
- * ⚠️ ΔΥΟ ΠΙΝΑΚΕΣ, ΜΙΑ ΑΠΑΝΤΗΣΗ ΑΝΑ ΑΡΧΕΙΟ: το `routeFiles` **δεν** επαναλαμβάνει όσα
- * είναι ήδη κέλυφος (220 από τα 509), γιατί το αποτύπωμα είναι **τοπικό στο αρχείο** —
- * διπλή εγγραφή θα ήταν διπλότυπο που μπορεί να **αποκλίνει**.
- */
-function checkStagedShellFiles(config, manifest, stagedFiles, root = PROJECT_ROOT) {
-  const context = {
-    bundles: loadNamespaceBundles(root),
-    keyConstants: loadKeyConstants(root, config.keyConstants),
-    excludeConsumers: config.excludeConsumers,
-  };
-  const graph = { modules: new Map(), projectRoot: root };
-  // ⚠️ ΣΕΙΡΑ = ΠΡΟΤΕΡΑΙΟΤΗΤΑ: ένα αρχείο ζει σε ΕΝΑΝ πίνακα (ο γεννήτορας αφαιρεί τα ήδη γραμμένα).
-  // ADR-744 §31 — `consultedFiles`: barrels που ο walk ΔΙΑΒΑΖΕΙ χωρίς να είναι μέλη (ήταν το δηλωμένο όριο).
-  const tables = [
-    [manifest.shellFiles, 'shell module'],
-    [manifest.routeFiles || {}, 'module a declared route slice is built from'],
-    [manifest.consultedFiles || {}, 'barrel the shell or a route walk reads through'],
-  ];
-
-  for (const relFile of stagedFiles) {
-    const [table, role] = tables.find(([candidate]) => relFile in candidate) || [];
-    if (table === undefined) continue;
-    const recorded = table[relFile];
-    const abs = toPosix(path.join(root, relFile));
-    if (!fs.existsSync(abs)) return `${relFile} is a ${role} in the manifest but no longer exists.`;
-    try {
-      graph.modules.set(abs, parseModule(abs, fs.readFileSync(abs, 'utf8')));
-    } catch {
-      return `${relFile} could not be parsed; the shell slice cannot be judged.`;
-    }
-    const analysis = analyseFile(root, relFile, graph, context);
-    if (fingerprintShellFile(analysis) !== recorded) {
-      return `${relFile} is a ${role} and its i18n surface or its imports changed — the slice may no longer cover it.`;
-    }
-  }
-  return null;
-}
-
-/**
- * D. a new file that makes a previously-unresolved specifier resolve.
- *
- * 🔴 **ΜΟΝΟ ΑΡΧΕΙΑ ΠΟΥ ΜΠΟΡΟΥΝ ΝΑ ΜΠΟΥΝ ΣΤΗΝ ΚΛΕΙΣΤΟΤΗΤΑ, ΚΑΙ ΓΙΑΤΙ.** Η πρώτη γραφή
- * έχτιζε το `fileSet` από **ΟΛΑ** τα σταδιοποιημένα, και το `probe()` δέχεται άμεσο
- * hit χωρίς κατάληξη ⇒ κάθε `src/i18n/locales/<γλ>/<ns>.json` «ικανοποιούσε» τον
- * ομώνυμο specifier του `namespace-loaders.ts`. **Μετρημένο**: από τα **222**
- * `unresolvedSpecs` του manifest, τα **216** είναι ακριβώς αυτά τα locale JSON.
- * Δηλαδή η πύλη κοκκίνιζε σε **κάθε commit που αγγίζει μετάφραση** — και το
- * `--regenerate` **δεν** το θεράπευε, γιατί ο walk τα ξαναγράφει άλυτα κάθε φορά.
- *
- * 🔑 **Η ρίζα δεν είναι η λίστα, είναι η ΕΡΩΤΗΣΗ.** Το κριτήριο ρωτά *«μεγάλωσε η
- * κλειστότητα;»*, και η κλειστότητα ακολουθεί **modules** — το
- * `CANDIDATE_EXTENSIONS` του resolver **δεν έχει `.json`**. Άρα ένα αρχείο δεδομένων
- * είναι **δομικά ανίκανο** να τη μεγαλώσει, όσο νέο κι αν είναι: το ψευδώς θετικό δεν
- * ήταν οριακή περίπτωση αλλά **η μόνη περίπτωση** που πυροδοτούσε.
- *
- * ⚠️ **ΜΗΝ το «διορθώσεις» βγάζοντας τα locales από τη σκανδάλη του hook** — εκεί
- * μπαίνουν επίτηδες, για **άλλο** κριτήριο (locale drift, Α/Β). Το στενό σημείο είναι
- * εδώ, και μόνο εδώ.
- */
-function checkNewlyResolvableSpecs(manifest, stagedFiles, root = PROJECT_ROOT) {
-  if (manifest.unresolvedSpecs.length === 0 || stagedFiles.length === 0) return null;
-  const modules = stagedFiles.filter(f => CANDIDATE_EXTENSIONS.some(ext => f.endsWith(ext)));
-  if (modules.length === 0) return null;
-  const added = new Set(modules.map(f => toPosix(path.join(root, f))));
-  const aliases = readTsPathAliases(root, TS_PATH_ALIAS_CONFIG);
-  for (const entry of manifest.unresolvedSpecs) {
-    const [fromRel, spec] = entry.split(' → ');
-    if (!spec) continue;
-    const resolved = resolveSpecifier(spec, toPosix(path.join(root, fromRel)), {
-      projectRoot: root, aliases, fileSet: added,
-    });
-    if (resolved.kind === 'internal') {
-      return `a new file now satisfies '${spec}' (from ${fromRel}), which the shell or a declared route walk had recorded as unresolved — the closure may have grown.`;
-    }
-  }
-  return null;
-}
+// 🔴 ADR-744 §32.11 (Β6) — οι έλεγχοι C (`checkStagedShellFiles`, πίνακες αποτυπωμάτων εισόδων) και
+// D (`checkNewlyResolvableSpecs`, άλυτοι specifiers) ΑΠΟΣΥΡΘΗΚΑΝ. Τους αντικαθιστά ο G
+// (`incremental-freshness.js`): σκανδάλη = αποτύπωμα γονέα ≠ commit, συμμετοχή = κλειστότητα γονέα Ή
+// commit, απόφαση = early cutoff στην προβολή του manifest. Μετρημένο σε 200 commits: C+D 40/84 ψευδώς
+// θετικά (47,6%) και ΕΝΑ μπαγιάτικο manifest που άφησε να περάσει (`05fa9f35`)· G 0/45, 0 ψευδώς αρνητικά.
 
 module.exports = {
   normalize,
@@ -351,6 +259,4 @@ module.exports = {
   checkShellCensus,
   checkLocaleDrift,
   checkRouteLocaleDrift,
-  checkStagedShellFiles,
-  checkNewlyResolvableSpecs,
 };

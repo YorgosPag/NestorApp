@@ -30,13 +30,14 @@
  *                           locale files and compare ⇒ EXACT, not an
  *                           approximation, because the key set is the
  *                           generator's own output
- *   C. shell surface drift  re-fingerprint every staged file that the manifest
- *                           lists as a shell module ⇒ catches a changed t()
- *                           call AND a changed import edge, which is the only
- *                           way a new module can enter the closure
- *   D. resolution drift     a newly added file that would satisfy a specifier
- *                           the generator recorded as unresolved — in the
- *                           shell, any declared route OR lazy closure (§28, §31)
+ *   C, D — RETIRED (ADR-744 §32.11). C re-fingerprinted staged files against
+ *                           tables of inputs written into the manifest; D looked
+ *                           for new files satisfying recorded unresolved
+ *                           specifiers. Both asked "did an INPUT move?", so both
+ *                           were red on every edit that left the output alone:
+ *                           40 of 84 reds false in a 200-commit replay — and C
+ *                           still let a stale manifest through (`05fa9f35`).
+ *                           G asks the output, and replaced them (0 of 45).
  *   E. global inputs        config · constants · aliases · bundles · toolchain (§30)
  *   F. lazy-route map       ADR-744 §31 — when a `src` module is staged, REBUILD
  *                           the lazy-route map with an on-demand graph over the
@@ -50,15 +51,18 @@
  *                           closures that read it in EITHER state (same walk) →
  *                           rebuild only those → red only if the manifest's
  *                           projection or the artifact differs. Shares ONE pass
- *                           (sources + cache + graphs) with F. Additive for now:
- *                           C stays until mutation + replay prove G covers it.
+ *                           (sources + cache + graphs) with F. Proven by the
+ *                           mutation anchors Ξ0–Ξ12 and a 200-commit replay
+ *                           (§32.11) before C and D were retired.
  *
- * What Layer 1 used to be blind to, and how each closed (ADR-744 §31):
+ * What Layer 1 used to be blind to, and how each closed (ADR-744 §31, §32):
  *   · a re-export rewritten in a barrel the walk READS but that is not a member
- *     → `manifest.consultedFiles` for the shell/route walks (63 barrels); the
- *       lazy walks' barrels (234 outside every table, measured) → check F
+ *     → G walks the barrel in parent AND commit, so it participates (Ξ); the
+ *       lazy walks' barrels → check F
  *   · `import {A}` → `{A, B}` under an unchanged `kind + spec` fingerprint
- *     → the fingerprint is now `walkSurface(mod)` (names, exports, re-exports)
+ *     → the fingerprint is `walkSurface(mod)` (names, exports, re-exports) — Ξ10
+ *   · a new file that makes an unresolved import resolve → it participates in
+ *     the commit's closure, so G rebuilds it (Ξ11) — no stored list needed
  *   · anything inside the 8.329-file lazy closures → check F
  * Layer 2 still exists — `--full` rebuilds the eager graph and regenerates from
  * scratch, in CI on every PR (.github/workflows/i18n-shell-slice.yml). Stating
@@ -94,7 +98,7 @@ const { checkLazyRouteFreshness } = require('./lib/i18n-shell-slice/lazy-freshne
 const { checkIncrementalFreshness } = require('./lib/i18n-shell-slice/incremental-freshness');
 const { createLayerOnePass } = require('./lib/i18n-shell-slice/layer-one-pass');
 const { createIndexSources, CACHE_REL } = require('./lib/i18n-shell-slice/source-cache');
-// N.7.1 — οι έλεγχοι A–D ζουν στο δικό τους module· επανεξάγονται παρακάτω για τα tests.
+// N.7.1 — οι έλεγχοι A–B ζουν στο δικό τους module· επανεξάγονται παρακάτω για τα tests.
 const LayerOneChecks = require('./lib/i18n-shell-slice/layer-one-checks');
 const {
   normalize,
@@ -104,8 +108,6 @@ const {
   checkShellCensus,
   checkLocaleDrift,
   checkRouteLocaleDrift,
-  checkStagedShellFiles,
-  checkNewlyResolvableSpecs,
 } = LayerOneChecks;
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
@@ -176,8 +178,6 @@ function runLayerOne(config, stagedFiles, root = PROJECT_ROOT, lazySources = {})
     ...checkShellCensus(config, manifest, root),
     checkLocaleDrift(config, manifest, root),
     checkRouteLocaleDrift(config, manifest, root),
-    checkStagedShellFiles(config, manifest, stagedFiles, root),
-    checkNewlyResolvableSpecs(manifest, stagedFiles, root),
     // E. ADR-744 §30 — οι ΚΑΘΟΛΙΚΕΣ είσοδοι: config · σταθερές · aliases · bundles · toolchain.
     checkGlobalInputs(config, manifest, root),
     ...lazy.reasons,

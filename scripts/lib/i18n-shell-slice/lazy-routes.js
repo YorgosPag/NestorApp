@@ -242,11 +242,11 @@ function namespacesOfClosure(files, readFile, compat, supported) {
 /**
  * Ο χάρτης `κλειδί → namespaces[]`, από τον **ίδιο γράφο** που έχτισε το κέλυφος.
  *
- * @returns {{entries: object[], rows: object, provenance: Map, inputs: Set<string>, unresolved: object[], unresolvedSpecs: string[]}}
+ * @returns {{entries: object[], rows: object, provenance: Map, inputs: Set<string>, unresolved: object[]}}
  *   `unresolved` = εγγραφές των οποίων το `import()` δεν λύθηκε σε αρχείο του έργου —
  *   **επιστρέφονται**, δεν τυπώνονται (ίδια γραμμή διαχωρισμού με το `renderComplete`).
- *   `unresolvedSpecs` = οι άλυτοι specifiers **μέσα** στις κλειστότητες (ADR-744 §31 — ως τώρα
- *   πετιόντουσαν, άρα ο έλεγχος D ήταν τυφλός σε αρχείο που έρχεται να τους λύσει).
+ *   (ADR-744 §32.11: τα `unresolvedSpecs` των κλειστοτήτων δεν επιστρέφονται πια — τα ζητούσε
+ *   μόνο ο αποσυρμένος D· αρχείο που λύνει άλυτη εισαγωγή το βλέπει ο F, που ξαναχτίζει τον χάρτη.)
  */
 function buildLazyRouteNamespaces({ projectRoot, config, graph, sources }) {
   const entries = readRegistries(projectRoot, config);
@@ -259,7 +259,6 @@ function buildLazyRouteNamespaces({ projectRoot, config, graph, sources }) {
   const provenance = new Map();
   const inputs = new Set();
   const unresolved = [];
-  const unresolvedSpecs = new Set();
   for (const entry of entries.filter(candidate => !candidate.ssr)) {
     const target = resolve(entry.spec, MG.toPosix(path.join(projectRoot, entry.registry)));
     if (target.kind !== 'internal') { unresolved.push(entry); continue; }
@@ -268,7 +267,6 @@ function buildLazyRouteNamespaces({ projectRoot, config, graph, sources }) {
     rows[entry.key] = [...from.keys()].sort();
     provenance.set(entry.key, from);
     closure.files.forEach(file => inputs.add(file));
-    closure.unresolvedSpecs.forEach(spec => unresolvedSpecs.add(spec));
   }
   const opaqueFiles = [...inputs].sort().filter(file => readFile(file).opaque.length > 0);
   const opaque = opaqueFiles
@@ -277,7 +275,7 @@ function buildLazyRouteNamespaces({ projectRoot, config, graph, sources }) {
   // Η ΑΛΛΗ κατεύθυνση: απάντηση σε ερώτηση που δεν τίθεται πια είναι νεκρή ρύθμιση που
   // εξακολουθεί να προσθέτει namespaces — δηλαδή αναμονή που κανείς δεν ζήτησε.
   const deadOpaque = Object.keys(config[OPAQUE_LEDGER]).filter(file => !opaqueFiles.includes(file)).sort();
-  return { entries, rows, provenance, inputs, unresolved, unresolvedSpecs: [...unresolvedSpecs].sort(), opaque, deadOpaque };
+  return { entries, rows, provenance, inputs, unresolved, opaque, deadOpaque };
 }
 
 function renderLazyArtifact(rows) {

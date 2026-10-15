@@ -472,97 +472,64 @@ describe('Ν — το ορφανό artifact μπλοκάρει ΤΗΝ ΠΥΛΗ, 
 
 /**
  * =============================================================================
- * Ε — ΟΙ ΕΙΣΟΔΟΙ ΤΩΝ ΔΙΑΔΡΟΜΩΝ ΕΧΟΥΝ ΑΠΟΤΥΠΩΜΑΤΑ (ADR-744 §21)
+ * Ε — ΟΙ ΠΙΝΑΚΕΣ ΕΙΣΟΔΩΝ ΑΠΟΣΥΡΘΗΚΑΝ (ADR-744 §21 → §32.11)
  * =============================================================================
  *
- * 🔴 ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ, ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ (2026-08-30). Το working tree μοιράζεται με
- * δεύτερο πράκτορα. Το `MandateCatalogContent.tsx` άλλαξε **ανάμεσα** στο `generate`
- * και στο `commit`, **δύο** route artifacts βγήκαν εκτός συγχρονισμού — και το Layer 1
- * **δεν είπε τίποτα**, γιατί το αρχείο δεν είναι shell module και το
- * `manifest.shellFiles` δεν το περιείχε. Οι **509** είσοδοι των κλειστοτήτων διαδρομών
- * δεν είχαν **καμία** εγγραφή.
+ * 🔴 ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ ΤΟΥ §21 (2026-08-30): το `MandateCatalogContent.tsx` άλλαξε ανάμεσα στο
+ * `generate` και στο `commit`, δύο route artifacts βγήκαν εκτός συγχρονισμού και το Layer 1 δεν
+ * είπε τίποτα — δεν ήταν shell module. Η θεραπεία τότε ήταν πίνακας `routeFiles` με αποτυπώματα.
  *
- * 🏆 Η αρχή είναι του **Bazel** — παραγόμενο = **δηλωμένο σύνολο εισόδων**,
- * κατακερματισμένο· αλλάζει είσοδος ⇒ μπαγιάτικη έξοδος **εξ ορισμού**. Την είχαμε ήδη
- * για το κέλυφος, και **μόνο** γι' αυτό.
+ * 🏆 §32.11: ο πίνακας ρωτούσε «άλλαξε είσοδος;» ⇒ κόκκινο και όταν η ΕΞΟΔΟΣ έμενε ίδια (το παλιό
+ * Ε3 έγραφε `import … from 'react'` σε module διαδρομής και απαιτούσε κόκκινο: ψευδώς θετικό, κανένα
+ * κλειδί δεν κινείται). Ο G ξαναβρίσκει τη συμμετοχή από τον walk γονέα + commit και κρίνει την
+ * έξοδο. Οι άγκυρες του G είναι τα Ξ0–Ξ12 (`i18n-lazy-route-namespaces.test.js`, μίνι-repo git —
+ * ΚΑΜΙΑ μετάλλαξη tracked αρχείου, όπως έκανε το παλιό Ε3). Εδώ μένει το συμβόλαιο του manifest.
  * =============================================================================
  */
-describe('Ε — οι είσοδοι των διαδρομών έχουν αποτυπώματα (§21)', () => {
-  const { spawnSync } = require('node:child_process');
-  const CHECKER = path.join(REPO, 'scripts/check-i18n-shell-slice.js');
+describe('Ε — οι πίνακες εισόδων αποσύρθηκαν· μένουν τα μέλη (§32.11)', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(REPO, 'src/i18n/generated/shell-slice.manifest.json'), 'utf8'));
 
-  it('Ε0 ΠΑΡΟΝΟΜΑΣΤΗΣ: το `routeFiles` ΥΠΑΡΧΕΙ και δεν είναι κενό', () => {
-    // Χωρίς αυτό, τα Ε1-Ε3 θα ήταν πράσινα επειδή **δεν κοίταξαν τίποτα**.
-    expect(Object.keys(manifest.routeFiles || {}).length).toBeGreaterThan(0);
+  it('Ε0: κανένας πίνακας εισόδων στο manifest (`shellFiles`/`routeFiles`/`consultedFiles`/`unresolvedSpecs`)', () => {
+    for (const retired of ['shellFiles', 'routeFiles', 'consultedFiles', 'unresolvedSpecs']) {
+      expect({ retired, present: retired in manifest }).toEqual({ retired, present: false });
+    }
   });
 
-  it('Ε1: ΚΑΜΙΑ επικάλυψη με το `shellFiles` — ένα αρχείο, ΜΙΑ απάντηση', () => {
-    // Το αποτύπωμα είναι ΤΟΠΙΚΟ στο αρχείο, άρα διπλή εγγραφή είναι διπλότυπο που
-    // μπορεί να ΑΠΟΚΛΙΝΕΙ — και τότε ποια κερδίζει το κρίνει η σειρά ανάγνωσης.
-    const overlap = Object.keys(manifest.routeFiles).filter(file => file in manifest.shellFiles);
-    expect(overlap).toEqual([]);
+  it('Ε1 ΠΑΡΟΝΟΜΑΣΤΗΣ: τα μέλη ταξιδεύουν ως ΤΑΞΙΝΟΜΗΜΕΝΗ λίστα, ίση σε πλήθος με το `stats.shellFiles`', () => {
+    expect(Array.isArray(manifest.shellMembers)).toBe(true);
+    expect(manifest.shellMembers.length).toBe(manifest.stats.shellFiles);
+    expect(manifest.shellMembers).toEqual([...manifest.shellMembers].sort());
   });
 
-  it('Ε2: κάθε δηλωμένη διαδρομή έχει ΤΟΥΛΑΧΙΣΤΟΝ μία είσοδο σε έναν από τους δύο πίνακες', () => {
-    // Διαδρομή χωρίς καμία αποτυπωμένη είσοδο σημαίνει «κανείς δεν φυλάει την πηγή της».
-    const known = new Set([...Object.keys(manifest.shellFiles), ...Object.keys(manifest.routeFiles)]);
+  it('Ε2: κάθε δηλωμένη διαδρομή έχει γραμμή στο manifest (η ΕΞΟΔΟΣ που κρίνει ο G)', () => {
+    expect(Object.keys(manifest.routes).length).toBeGreaterThan(0);
     for (const [id, entry] of Object.entries(manifest.routes)) {
-      expect({ id, covered: known.has(entry.page) }).toEqual({ id, covered: true });
+      expect({ id, page: typeof entry.page, wants: typeof entry.wants }).toEqual({ id, page: 'string', wants: 'object' });
     }
   });
-
-  /**
-   * ⚠️ ΤΟ Ε0-Ε2 ΚΟΙΤΑΖΟΥΝ ΔΕΔΟΜΕΝΑ. Αν κάποιος βγάλει το `routeFiles` από την ερώτηση
-   * του `checkStagedShellFiles`, μένουν **ΠΡΑΣΙΝΑ** και η πύλη ξαναγίνεται τυφλή. Γι'
-   * αυτό εδώ τρέχει το **ΠΡΑΓΜΑΤΙΚΟ CLI** και κρίνεται ο κωδικός εξόδου του.
-   */
-  it('Ε3 🔴 ΜΕΤΑΛΛΑΞΗ: αλλαγή σε module ΔΙΑΔΡΟΜΗΣ ⇒ Layer 1 ΚΟΚΚΙΝΟ (ήταν σιωπηλό)', () => {
-    // Το θύμα διαβάζεται ΑΠΟ ΤΟ MANIFEST, ποτέ καρφωμένο: μια χειρόγραφη διαδρομή εδώ
-    // θα σάπιζε τη μέρα που το αρχείο μετακομίσει, και η άγκυρα θα γινόταν διακοσμητική.
-    const victim = Object.keys(manifest.routeFiles).find(file => /\.tsx?$/.test(file));
-    expect(victim).toBeDefined();
-
-    const abs = path.join(REPO, victim);
-    const original = fs.readFileSync(abs, 'utf8');
-    const run = () => spawnSync(process.execPath, [CHECKER, victim], { cwd: REPO, encoding: 'utf8' });
-    try {
-      expect(run().status).toBe(0);                       // ο παρονομαστής
-
-      // Νέα ακμή εισαγωγής = αλλαγή στο `importSpecs`, δηλαδή στο ΙΔΙΟ το αποτύπωμα.
-      fs.writeFileSync(abs, `import { useMemo as __probe } from 'react';\n${original}`, 'utf8');
-      const red = run();
-      expect(red.status).toBe(1);
-      expect(`${red.stdout}${red.stderr}`).toContain(victim);
-    } finally {
-      // 🛡️ Επαναφορά ΠΑΝΤΑ, byte-ίδια, από μνήμη. ΠΟΤΕ `git checkout`: το δέντρο είναι
-      // κοινό με άλλον πράκτορα και ένα checkout θα έσβηνε ΞΕΝΗ δουλειά.
-      fs.writeFileSync(abs, original, 'utf8');
-    }
-    expect(fs.readFileSync(abs, 'utf8')).toBe(original);
-  }, 60_000);
 });
 
 /**
  * =============================================================================
- * Α4 — Ο ΑΛΥΤΟΣ SPECIFIER ΤΗΣ ΔΙΑΔΡΟΜΗΣ (ADR-744 §28)
+ * Α4 — Ο ΑΛΥΤΟΣ SPECIFIER ΤΗΣ ΔΙΑΔΡΟΜΗΣ (ADR-744 §28 → §32.11)
  * =============================================================================
  *
  * 🔴 ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ, ΑΥΤΟΥΣΙΟ (ADR-777 §8.95): εισαγωγέας δεσμευμένος **πριν** από το
  * αρχείο που εισάγει ⇒ ο γεννήτορας-στο-ευρετήριο βλέπει άλυτη εισαγωγή **μέσα σε
- * διαδρομή** ⇒ το manifest κρατούσε άλυτα **μόνο του κελύφους** ⇒ η άφιξη του αρχείου
- * δεν ήταν ούτε στο `routeFiles` ούτε στα άλυτα ⇒ `✅ OK`, και slice χωρίς τα κλειδιά.
+ * διαδρομή** ⇒ η άφιξη του αρχείου ήταν αόρατη ⇒ `✅ OK`, και slice χωρίς τα κλειδιά.
+ * Το §28 το έκλεισε με λίστα `unresolvedSpecs` (έλεγχος D)· το §32.11 την απέσυρε: το αρχείο
+ * που φτάνει είναι ΜΕΛΟΣ της κλειστότητας του commit, άρα ο G τη συμπεριλαμβάνει — χωρίς λίστα.
  *
- * ⚠️ ΤΟ Α4.0 ΕΙΝΑΙ Ο ΠΑΡΟΝΟΜΑΣΤΗΣ: με το manifest του **παλιού** σχήματος (μόνο κέλυφος)
- * ο ΙΔΙΟΣ ελεγκτής πρέπει να σιωπά — αλλιώς το Α4.2 θα μπορούσε να είναι κόκκινο για
- * άλλο λόγο και να μην αποδεικνύει ότι η θεραπεία είναι **τα δεδομένα**.
+ * ⚠️ ΤΟ Α4.0 ΕΙΝΑΙ Ο ΠΑΡΟΝΟΜΑΣΤΗΣ: με ΜΟΝΟ τον γονέα η άφιξη δεν συμμετέχει πουθενά — αν το Α4.1
+ * ήταν πράσινο για άλλο λόγο, δεν θα απεδείκνυε ότι η θεραπεία είναι «ΚΑΙ η κατάσταση του commit».
+ * Από άκρη σε άκρη μέσα από την πύλη (με κλειδί που φτάνει): Ξ11.
  * =============================================================================
  */
-describe('Α4 — ο άλυτος specifier ΔΙΑΔΡΟΜΗΣ ταξιδεύει στο manifest (§28)', () => {
+describe('Α4 — η άφιξη αρχείου που λύνει άλυτο specifier ΔΙΑΔΡΟΜΗΣ συμμετέχει (§28 → §32.11)', () => {
   const os = require('node:os');
   const P = require('../lib/i18n-shell-slice/plan');
   const { DEFAULTS } = require('../lib/i18n-shell-slice/config');
-  const { checkNewlyResolvableSpecs } = require('../check-i18n-shell-slice');
+  const { affectedClosures } = require('../lib/i18n-shell-slice/closure-participation');
 
   const PAGE = 'src/app/listing/page.tsx';
   const ARRIVAL = 'src/app/listing/Cost.tsx';
@@ -573,26 +540,21 @@ describe('Α4 — ο άλυτος specifier ΔΙΑΔΡΟΜΗΣ ταξιδεύε�
     fs.writeFileSync(file, body, 'utf8');
   };
 
-  /** Το repo **πριν** την άφιξη: ο εισαγωγέας ζητά `./Cost`, που δεν υπάρχει ακόμα. */
-  function manifestsBeforeArrival() {
+  /** Ο γονέας (ο εισαγωγέας ζητά `./Cost`, που δεν υπάρχει ακόμα) και το commit (το αρχείο ήρθε). */
+  function parentAndCommit() {
     root = fs.mkdtempSync(path.join(os.tmpdir(), 'route-unresolved-'));
     write('tsconfig.json', JSON.stringify({ compilerOptions: { baseUrl: '.', paths: { '@/*': ['src/*'] } } }));
     write('src/app/layout.tsx', "import { shell } from './shell';\nexport default function L() { return shell(); }\n");
     write('src/app/shell.ts', 'export function shell() { return 1; }\n');
     write(PAGE, "import { Section } from './Section';\nexport default function Page() { return Section(); }\n");
     write('src/app/listing/Section.tsx', "import { Cost } from './Cost';\nexport function Section() { return Cost(); }\n");
-
-    const graph = P.buildModuleGraph(root);
-    // Χωρίς μητρώα τεμπέλικων διαδρομών: το manifest διαβάζει πλέον τα globalInputs (§30), και το fixture δεν έχει `src/utils/lazyRoutes.tsx`.
-    const config = { ...DEFAULTS, keyConstants: [], shellRoots: ['src/app/layout.tsx'], languages: ['el'], lazyRouteRegistries: [] };
-    const plan = P.buildShellPlan(root, config, graph);
-    const route = RS.buildRouteSlice(root, config, graph, PAGE, {}, []);
-    const slices = { resources: { el: {} }, matchedKeys: 0, unresolvableKeys: [] };
-    return {
-      route,
-      current: P.buildManifest({ config, plan, artifacts: new Map(), slices, routes: [route] }),
-      shellOnly: P.buildManifest({ config, plan, artifacts: new Map(), slices, routes: [] }),
+    const config = {
+      ...DEFAULTS, keyConstants: [], shellRoots: ['src/app/layout.tsx'], languages: ['el'], lazyRouteRegistries: [],
+      routeSlices: { [PAGE]: {} },
     };
+    const parent = P.buildModuleGraph(root);
+    write(ARRIVAL, 'export function Cost() { return 2; }\n');
+    return { config, parent, commit: P.buildModuleGraph(root) };
   }
 
   afterEach(() => {
@@ -600,31 +562,15 @@ describe('Α4 — ο άλυτος specifier ΔΙΑΔΡΟΜΗΣ ταξιδεύε�
     root = undefined;
   });
 
-  it('Α4.0 ΠΑΡΟΝΟΜΑΣΤΗΣ: με άλυτα ΜΟΝΟ κελύφους, η άφιξη είναι ΑΟΡΑΤΗ (η τρύπα, μετρημένη)', () => {
-    const { shellOnly } = manifestsBeforeArrival();
-    write(ARRIVAL, 'export function Cost() { return 2; }\n');
-    expect(checkNewlyResolvableSpecs(shellOnly, [ARRIVAL], root)).toBeNull();
+  it('Α4.0 ΠΑΡΟΝΟΜΑΣΤΗΣ: στον ΓΟΝΕΑ η άφιξη δεν συμμετέχει σε καμία κλειστότητα (η τρύπα, μετρημένη)', () => {
+    const { config, parent } = parentAndCommit();
+    expect(affectedClosures({ root, config, graphs: [parent], changed: [ARRIVAL] })).toEqual(expect.objectContaining({ shell: false, routes: [] }));
   });
 
-  it('Α4.1: το route slice ΚΟΥΒΑΛΑ τον άλυτο specifier, και το manifest τον κρατά', () => {
-    const { route, current } = manifestsBeforeArrival();
-    const spec = 'src/app/listing/Section.tsx → ./Cost';
-    expect(route.unresolvedSpecs).toEqual([spec]);
-    expect(current.unresolvedSpecs).toContain(spec);
-  });
-
-  it('Α4.2 🔴 η άφιξη του αρχείου ⇒ ο έλεγχος D ΚΟΚΚΙΝΙΖΕΙ και ονομάζει τον εισαγωγέα', () => {
-    const { current } = manifestsBeforeArrival();
-    write(ARRIVAL, 'export function Cost() { return 2; }\n');
-    const message = checkNewlyResolvableSpecs(current, [ARRIVAL], root);
-    expect(message).toMatch(/'\.\/Cost'/);
-    expect(message).toContain('src/app/listing/Section.tsx');
-  });
-
-  it('Α4.3: η ένωση είναι ταξινομημένη και ΧΩΡΙΣ διπλότυπα (ίδιος specifier σε δύο διαδρομές)', () => {
-    const plan = { closure: { unresolvedSpecs: ['b → ./x'] } };
-    const routes = [{ unresolvedSpecs: ['c → ./y', 'b → ./x'] }, { unresolvedSpecs: ['a → ./z'] }, {}];
-    expect(P.unionOfUnresolved(plan, routes)).toEqual(['a → ./z', 'b → ./x', 'c → ./y']);
+  it('Α4.1 🔴 γονέας Ή commit ⇒ η διαδρομή του εισαγωγέα ΕΠΗΡΕΑΖΕΤΑΙ, το κέλυφος ΟΧΙ', () => {
+    const { config, parent, commit } = parentAndCommit();
+    const affected = affectedClosures({ root, config, graphs: [commit, parent], changed: [ARRIVAL] });
+    expect(affected).toEqual(expect.objectContaining({ shell: false, routes: [PAGE] }));
   });
 });
 

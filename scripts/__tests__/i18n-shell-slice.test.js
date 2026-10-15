@@ -74,7 +74,6 @@ const { bootstrap } = require(path.join(LIB, 'cli'));
 const {
   normalize,
   checkArtifactIntegrity,
-  checkNewlyResolvableSpecs,
   parseArgs,
 } = require(path.resolve(__dirname, '..', 'check-i18n-shell-slice.js'));
 const MG = require(path.resolve(__dirname, '..', 'lib', 'module-graph'));
@@ -362,27 +361,22 @@ describe('Group 6 — the fingerprint must be computable from ONE file', () => {
  */
 describe('Group 6β — §29: a constant VALUE that moves keys moves the fingerprint', () => {
   const { analyseFile } = require(path.join(LIB, 'plan'));
-  const { checkStagedShellFiles } = require(path.resolve(__dirname, '..', 'check-i18n-shell-slice.js'));
   const ROUTE_MODULE = 'src/routes/EnergyPanel.tsx';
   const CONTEXT = { excludeConsumers: [], bundles: new Map() };
-  const GATE_CONFIG = { keyConstants: [], excludeConsumers: [] };
 
   const panel = (prefix, padding = '') =>
     `import { useTranslation } from 'react-i18next';\n${padding}` +
     `const KEYS = '${prefix}';\n` +
     `export function EnergyPanel() {\n  const { t } = useTranslation('listing');\n  return t(\`\${KEYS}.addSource\`);\n}\n`;
 
-  /** Ο ΓΕΝΝΗΤΟΡΑΣ: ίδιος δρόμος με το `plan.js` (`analyseFile` → `fingerprintShellFile`). */
+  /**
+   * Ο ΓΕΝΝΗΤΟΡΑΣ και η ΣΚΑΝΔΑΛΗ του G: ίδιος δρόμος (`analyseFile` → `fingerprintShellFile`).
+   * ADR-744 §32.11 — ως τότε το Ζ1/Ζ2 περνούσαν από τον αποσυρμένο C (πίνακας `routeFiles`)· ο G
+   * συγκρίνει το ΙΔΙΟ αποτύπωμα γονέα ↔ commit, και το Ξ8 το τρέχει από άκρη σε άκρη μέσα από την πύλη.
+   */
   function recordAsGenerator(content) {
     const abs = write(ROUTE_MODULE, content);
     return fingerprintShellFile(analyseFile(MG.toPosix(tmpRoot), ROUTE_MODULE, graphOf([abs]), CONTEXT));
-  }
-
-  /** Η ΠΥΛΗ: το πραγματικό `checkStagedShellFiles`, πάνω σε manifest με τη γραμμή της διαδρομής. */
-  function gateAfterEdit(recorded, edited) {
-    write(ROUTE_MODULE, edited);
-    const manifest = { shellFiles: {}, routeFiles: { [ROUTE_MODULE]: recorded } };
-    return checkStagedShellFiles(GATE_CONFIG, manifest, [ROUTE_MODULE], tmpRoot);
   }
 
   const legacyFingerprint = ({ resolution, ...rest }) => fingerprintShellFile(rest);
@@ -395,17 +389,15 @@ describe('Group 6β — §29: a constant VALUE that moves keys moves the fingerp
     expect(legacyFingerprint(after)).toBe(legacyFingerprint(before));    // …και το παλιό αποτύπωμα σιωπούσε
   });
 
-  it('Ζ1 🔴 η ΠΡΑΓΜΑΤΙΚΗ πύλη ΚΟΚΚΙΝΙΖΕΙ και ονομάζει το module διαδρομής', () => {
+  it('Ζ1 🔴 το αποτύπωμα του γεννήτορα (= σκανδάλη του G) ΚΙΝΕΙΤΑΙ όταν η τιμή της σταθεράς μετακινεί κλειδιά', () => {
     const recorded = recordAsGenerator(panel('energy.form'));
-    const reason = gateAfterEdit(recorded, panel('energy.cost'));
-    expect(reason).toContain(ROUTE_MODULE);
-    expect(reason).toContain('route slice');
+    expect(recordAsGenerator(panel('energy.cost'))).not.toBe(recorded);
   });
 
   it('Ζ2 ΚΑΜΙΑ ψευδής συναγερμός: γραμμές, σχόλια και άσχετη σταθερά ΔΕΝ μετακινούν τίποτα', () => {
     const recorded = recordAsGenerator(panel('energy.form'));
     const noise = `\n\n// σχόλιο που μετατοπίζει γραμμές\nconst COLOUR = 'red';\n`;
-    expect(gateAfterEdit(recorded, panel('energy.form', noise))).toBeNull();
+    expect(recordAsGenerator(panel('energy.form', noise))).toBe(recorded);
   });
 
   it('Ζ3 η ΔΕΥΤΕΡΗ πόρτα: εξαγόμενος πίνακας με τιμές template — ο ΙΔΙΟΚΤΗΤΗΣ του αλλάζει αποτύπωμα', () => {
@@ -439,7 +431,7 @@ describe('Group 6β — §29: a constant VALUE that moves keys moves the fingerp
  * 🔴 ADR-744 §30 — Η ΚΛΑΣΗ «ΚΑΘΟΛΙΚΗ ΕΙΣΟΔΟΣ ΑΛΛΑΖΕΙ ΤΑ `wants`, ΤΟ LAYER 1 ΣΙΩΠΑ».
  *
  * Κάθε πόρτα τρέχει μέσα από την ΠΡΑΓΜΑΤΙΚΗ `runLayerOne`, πάνω σε δέντρο-fixture όπου ΟΛΟΙ οι
- * άλλοι έλεγχοι (A–D) είναι πράσινοι — ώστε το κόκκινο να μπορεί να το προκαλέσει ΜΟΝΟ ο E.
+ * άλλοι έλεγχοι (A, B) είναι πράσινοι — ώστε το κόκκινο να μπορεί να το προκαλέσει ΜΟΝΟ ο E.
  * Το toolchain του fixture είναι ΑΝΤΙΓΡΑΦΟ των πραγματικών modules (μετάλλαξη εκεί, ποτέ επί τόπου).
  * Η0 = ο παρονομαστής: αντίγραφο του ελεγκτή ΧΩΡΙΣ τον E (στη μνήμη) ⇒ η ίδια αλλαγή περνά πράσινη.
  */
@@ -469,7 +461,7 @@ describe('Group 6γ — §30: config · σταθερές · aliases · bundles �
     }
     const config = loadConfig(tmpRoot);
     const manifest = {
-      languages: [], artifacts: {}, wants: {}, stats: {}, shellFiles: {}, routeFiles: {}, unresolvedSpecs: [],
+      languages: [], artifacts: {}, wants: {}, stats: {}, shellMembers: [],
       globalInputs: GI.computeGlobalInputs(tmpRoot, config, tmpRoot),   // ο δρόμος του γεννήτορα
     };
     writeJson(`${config.outputDir}/shell-slice.manifest.json`, manifest);
@@ -935,10 +927,14 @@ describe('Group 12 — the committed slice is sane', () => {
     expect(Object.keys(JSON.parse(fs.readFileSync(slicePath, 'utf8')))).toContain('common');
   });
 
-  it('the manifest records the shell modules the cheap gate re-fingerprints', () => {
+  it('the manifest records the shell MEMBERS (a list — ADR-744 §32.11), and no input tables', () => {
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-    expect(Object.keys(manifest.shellFiles).length).toBeGreaterThan(100);
-    expect(manifest.shellFiles['src/app/layout.tsx']).toMatch(/^[0-9a-f]{64}$/);
+    expect(Array.isArray(manifest.shellMembers)).toBe(true);
+    expect(manifest.shellMembers.length).toBe(manifest.stats.shellFiles);
+    expect(manifest.shellMembers).toContain('src/app/layout.tsx');
+    for (const retired of ['shellFiles', 'routeFiles', 'consultedFiles', 'unresolvedSpecs']) {
+      expect(manifest).not.toHaveProperty(retired);
+    }
   });
 });
 
@@ -1629,33 +1625,17 @@ describe('Group 17 — η απογραφή του κελύφους: ποιος �
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Group Δ — ΤΟ ΚΡΙΤΗΡΙΟ «ΝΕΟ ΑΡΧΕΙΟ ΜΕΓΑΛΩΣΕ ΤΗΝ ΚΛΕΙΣΤΟΤΗΤΑ» (Layer 1, D)
+// Group Δ — «ΝΕΟ ΑΡΧΕΙΟ ΜΕΓΑΛΩΣΕ ΤΗΝ ΚΛΕΙΣΤΟΤΗΤΑ»
 //
-// 🔴 ΓΕΝΝΗΘΗΚΕ ΧΩΡΙΣ ΑΓΚΥΡΑ, ΚΑΙ ΤΟ ΠΛΗΡΩΣΕ ΑΜΕΣΩΣ. Το κριτήριο D ήταν το μόνο του
-// Layer 1 χωρίς test, και κοκκίνιζε σε **κάθε** commit που άγγιζε μετάφραση: το
-// `probe()` δέχεται άμεσο hit χωρίς κατάληξη, άρα τα 216 locale JSON του manifest
-// «ικανοποιούσαν» τους ομώνυμους specifiers του `namespace-loaders.ts`.
-//
-// ⚠️ ΤΟ Δ2 ΕΙΝΑΙ ΤΟ ΜΙΣΟ ΠΟΥ ΜΕΤΡΑΕΙ. Χωρίς αυτό, η θεραπεία θα μπορούσε να είναι
-// «γύρνα πάντα null» — μια πύλη πράσινη και ανενεργή, το σχήμα που κυνηγά όλο το ADR.
+// ADR-744 §32.11 — ο έλεγχος D (λίστα `unresolvedSpecs` στο manifest) ΑΠΟΣΥΡΘΗΚΕ. Το αρχείο που
+// λύνει άλυτη εισαγωγή συμμετέχει στην κλειστότητα του COMMIT, άρα ο G την ξαναχτίζει: η άγκυρα
+// είναι το Ξ11 (`i18n-lazy-route-namespaces.test.js`), με μετάλλαξη «συμμετοχή μόνο στον γονέα».
+// Μένει εδώ η ρίζα που έκανε τον D να κοκκινίζει σε κάθε μετάφραση — ισχύει και για τον G.
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('Group Δ — νέα αρχεία που λύνουν άλυτους specifiers', () => {
-  const loaderSpec = 'src/i18n/namespace-loaders.ts → ./locales/el/common-shared.json';
-
-  it('Δ1 — ένα locale JSON ΔΕΝ μεγαλώνει την κλειστότητα: ο walk δεν ακολουθεί .json', () => {
-    const manifest = { unresolvedSpecs: [loaderSpec] };
-    expect(checkNewlyResolvableSpecs(manifest, ['src/i18n/locales/el/common-shared.json'])).toBeNull();
-  });
-
-  it('Δ2 — ένα MODULE που λύνει άλυτο specifier ΕΞΑΚΟΛΟΥΘΕΙ να κοκκινίζει', () => {
-    const manifest = { unresolvedSpecs: ['src/i18n/namespace-loaders.ts → ./freshly-added-helper'] };
-    const message = checkNewlyResolvableSpecs(manifest, ['src/i18n/freshly-added-helper.ts']);
-    expect(message).toMatch(/freshly-added-helper/);
-  });
-
   it('Δ3 — η ρίζα είναι γραμμένη στον resolver: το .json δεν είναι υποψήφια κατάληξη', () => {
-    // Αν κάποιος προσθέσει το '.json' εδώ, το Δ1 γίνεται ψέμα — και θα το δει.
+    // Αν κάποιος προσθέσει το '.json' εδώ, κάθε locale JSON γίνεται μέλος κλειστότητας — και θα το δει.
     expect(MG.CANDIDATE_EXTENSIONS).not.toContain('.json');
   });
 });

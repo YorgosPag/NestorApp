@@ -33,7 +33,7 @@
  * ΔΥΟ ΣΤΡΩΜΑΤΑ
  * ------------
  *   Layer 1 (pre-commit) — Κ1 στα σταδιοποιημένα · Κ2 από το **manifest**
- *                          (`shellFiles`), **χωρίς γράφο**. Μετρημένο **~1,5s**.
+ *                          (`shellMembers`), **χωρίς γράφο**. Μετρημένο **~1,5s**.
  *   Layer 2 (CI, `--all`) — Κ1 σε όλο το `src/` · Κ2 με **ανακατασκευή γράφου**
  *                          (~20s), γιατί το manifest μπορεί να είναι μπαγιάτικο
  *                          και ένα νέο layout αλλάζει την κλειστότητα.
@@ -102,6 +102,15 @@ function measureK1(files, root = PROJECT_ROOT) {
   });
 }
 
+/**
+ * Τα μέλη του κελύφους, όπως τα γράφει το CHECK 3.34 (ADR-744 §32.11: λίστα `shellMembers` — ως
+ * τότε τα κλειδιά του map αποτυπωμάτων `shellFiles`, που αποσύρθηκε). ⚠️ ΠΙΝΑΚΑΣ, όχι map:
+ * `Object.keys` εδώ θα έδινε σιωπηλά δείκτες ('0', '1', …) ⇒ Κ2 πάνω σε κανένα αρχείο.
+ */
+function shellMembersOf(manifest) {
+  return Array.isArray(manifest.shellMembers) ? manifest.shellMembers : [];
+}
+
 function measureK2({ full }, root = PROJECT_ROOT) {
   const posixRoot = root.split(BS).join('/');
   const config = loadConfig(posixRoot);
@@ -109,9 +118,9 @@ function measureK2({ full }, root = PROJECT_ROOT) {
 
   if (!full) {
     const manifest = readGenerated('shell-slice.manifest.json', root);
-    const closureFiles = Object.keys(manifest.shellFiles || {});
+    const closureFiles = shellMembersOf(manifest);
     if (closureFiles.length === 0) {
-      throw new Error('το manifest δεν έχει shellFiles — τρέξε: npm run generate:i18n-shell-slice');
+      throw new Error('το manifest δεν έχει shellMembers — τρέξε: npm run generate:i18n-shell-slice');
     }
     return K2.measureAnswerability({ projectRoot: posixRoot, config, slice, closureFiles });
   }
@@ -152,7 +161,7 @@ function measureOnIndex(args) {
   const manifestText = readIndexText({
     repoRoot: PROJECT_ROOT, relPath: `${config.outputDir}/shell-slice.manifest.json`,
   });
-  const closureFiles = manifestText === null ? [] : Object.keys(JSON.parse(manifestText).shellFiles || {});
+  const closureFiles = manifestText === null ? [] : shellMembersOf(JSON.parse(manifestText));
   const staged = args.filter((arg) => !arg.startsWith('--')).map((arg) => arg.split(BS).join('/'));
   const snapshot = materializeIndex({
     repoRoot: PROJECT_ROOT,

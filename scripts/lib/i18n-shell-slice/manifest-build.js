@@ -83,90 +83,20 @@ function serializeRouteWants(routes) {
 }
 
 /**
- * 🔴 ADR-744 §21 — **ΤΟ ΤΕΛΕΥΤΑΙΟ ΣΥΝΟΛΟ ΕΙΣΟΔΩΝ ΠΟΥ ΚΑΝΕΙΣ ΔΕΝ ΚΑΤΑΚΕΡΜΑΤΙΖΕ.**
- *
- * ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ (2026-08-30, μετρημένο ζωντανά): το `MandateCatalogContent.tsx` άλλαξε
- * ανάμεσα στο `generate` και στο `commit` — και **δύο** route artifacts βγήκαν εκτός
- * συγχρονισμού **χωρίς καμία πύλη να μιλήσει στο pre-commit**. Αιτία: το αρχείο **δεν
- * είναι shell module**, άρα δεν υπάρχει στο `manifest.shellFiles`, άρα το
- * `checkStagedShellFiles` το προσπερνούσε με `continue`.
- *
- * 🏆 Η ΑΡΧΗ ΕΙΝΑΙ ΤΟΥ **BAZEL**, ΚΑΙ ΤΗΝ ΕΦΑΡΜΟΖΑΜΕ ΣΤΑ ΜΙΣΑ: ένα παραγόμενο αρχείο
- * είναι **action με δηλωμένο σύνολο εισόδων**· αν αλλάξει είσοδος, η έξοδος είναι
- * μπαγιάτικη **εξ ορισμού** — κανείς δεν χρειάζεται να θυμηθεί τίποτα. Το
- * `manifest.shellFiles` **ήταν ήδη** αυτή η ιδέα, αλλά μόνο για τις **502** εισόδους του
- * κελύφους· οι **509** της ένωσης των κλειστοτήτων διαδρομών δεν είχαν **καμία**.
- *
- * 🔑 **Η ΕΝΩΣΗ, ΟΧΙ ΑΝΑ ΔΙΑΔΡΟΜΗ — ΜΕΤΡΗΜΕΝΗ ΑΠΟΦΑΣΗ**: το αποτύπωμα είναι **τοπικό στο
- * αρχείο** (`fingerprintShellFile` βλέπει εισαγωγές + επιφάνεια i18n του ΙΔΙΟΥ αρχείου),
- * οπότε η ανά-διαδρομή επανάληψη αγοράζει **μόνο ωραιότερο μήνυμα**: 3.156 ζεύγη έναντι
- * 289 εγγραφών, δηλαδή manifest **+164%** αντί **+15%**. Απορρίφθηκε με τη μέτρηση.
- *
- * ⚠️ ΑΦΑΙΡΟΥΝΤΑΙ ΟΣΑ ΕΙΝΑΙ ΗΔΗ ΚΕΛΥΦΟΣ (220 από τα 509): ίδιο αρχείο ⇒ **ίδιο**
- * αποτύπωμα, άρα δεύτερη εγγραφή θα ήταν διπλότυπο που μπορεί να **αποκλίνει**.
- * Ο ελεγκτής ρωτά πρώτα το `shellFiles` και μετά αυτό — ένα αρχείο, μία απάντηση.
- */
-function serializeRouteFiles(routes, shellFiles) {
-  const out = {};
-  for (const route of routes) {
-    for (const [relFile, analysis] of route.perFile || []) {
-      if (relFile in shellFiles) continue;
-      out[relFile] = analysis.fingerprint;
-    }
-  }
-  return Object.fromEntries(Object.keys(out).sort().map(file => [file, out[file]]));
-}
-
-/**
- * 🔴 ADR-744 §31 — τα barrels που ο walk του κελύφους ή μιας διαδρομής **ΔΙΑΒΑΖΕΙ** (`resolveOrigin`)
- * αλλά δεν γίνονται μέλη. Αλλαγή re-export εκεί αλλάζει την κλειστότητα χωρίς καμία εγγραφή —
- * το docstring του ελεγκτή το δήλωνε ως όριο του Layer 1· μετρήθηκε (234) και κλείνει εδώ.
- * ⚠️ Χωριστός πίνακας, ΟΧΙ μέσα στο `shellFiles`: εκείνο σημαίνει «μέλος του κελύφους» για άλλες
- * πύλες· ένα barrel που απλώς προωθεί δεν είναι μέλος. Ίδιο αρχείο σε δύο πίνακες ⇒ μένει στον πρώτο.
- */
-function serializeConsultedFiles(plan, routes, recorded) {
-  const out = {};
-  for (const source of [plan, ...routes]) {
-    for (const [relFile, analysis] of source.consulted || []) {
-      if (!recorded.some(table => relFile in table)) out[relFile] = analysis.fingerprint;
-    }
-  }
-  return Object.fromEntries(Object.keys(out).sort().map(file => [file, out[file]]));
-}
-
-/**
- * 🔴 ADR-744 §28 — οι άλυτοι specifiers **ΚΑΘΕ** κλειστότητας που παράγει artifact.
- *
- * ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ (ADR-777 §8.95, 2026-10-13): το `e11193d8` δέσμευσε
- * `import { ListingEnergyCost } from './ListingEnergyCost'` **πριν** δεσμευτεί το αρχείο.
- * Ο γεννήτορας-στο-ευρετήριο είδε άλυτη εισαγωγή στη διαδρομή `listing/[id]` και την
- * **πέταξε** — εδώ ταξίδευαν μόνο του κελύφους. Όταν το αρχείο ήρθε (`05fa9f35`), δεν ήταν
- * ούτε στο `routeFiles` ούτε στα άλυτα ⇒ το Layer 1 είπε `✅ OK` πάνω σε route slice χωρίς
- * τα κλειδιά του, και πήγε έτσι στην παραγωγή.
- *
- * ⚠️ ΕΝΩΣΗ, ΟΧΙ ΑΝΑ ΔΙΑΔΡΟΜΗ: η ερώτηση του D είναι «λύνει νέο αρχείο κάποιον άλυτο
- * specifier;» — η απάντηση δεν εξαρτάται από το ποια διαδρομή τον είχε (ίδια λογική με
- * το `serializeRouteFiles`).
- */
-function unionOfUnresolved(plan, routes, lazy = null) {
-  const all = new Set(plan.closure.unresolvedSpecs);
-  for (const route of routes) for (const spec of route.unresolvedSpecs || []) all.add(spec);
-  // ADR-744 §31 — ΚΑΙ οι τεμπέλικες κλειστότητες: ίδια ερώτηση, τρίτο σύνολο (ως τώρα πετιόταν).
-  for (const spec of (lazy && lazy.unresolvedSpecs) || []) all.add(spec);
-  return [...all].sort();
-}
-
-/**
  * @param {Map<string,string>} [args.signedOnly] artifacts που **υπογράφονται** αλλά δεν
  *   είναι slice (ADR-744 §27: ο χάρτης τεμπέλικων διαδρομών). Χωριστά από το `artifacts`
  *   επειδή το `stats.sliceBytes` μετρά **κείμενο που ταξιδεύει** — ένας πίνακας ονομάτων
  *   μέσα του θα έκανε τον αριθμό να λέει κάτι που δεν μετρά.
+ *
+ * 🔴 ADR-744 §32.11 (Β6) — ΟΙ ΠΙΝΑΚΕΣ ΕΙΣΟΔΩΝ ΑΠΟΣΥΡΘΗΚΑΝ: `shellFiles` (map αποτυπωμάτων),
+ * `routeFiles`, `consultedFiles` (§21/§31) και `unresolvedSpecs` (§28) υπήρχαν μόνο για τους
+ * ελέγχους C/D, που ρωτούσαν «άλλαξε είσοδος;». Ο G ρωτά την ΕΞΟΔΟ (early cutoff) και ξαναβρίσκει
+ * τις εισόδους από τον ίδιο τον walk γονέα + commit, άρα η καταγραφή τους εδώ ήταν διπλότυπο που
+ * μπορούσε να αποκλίνει. Μένει μόνο η λίστα ΜΕΛΩΝ του κελύφους (`shellMembers`), επειδή είναι
+ * ΕΞΟΔΟΣ: τη διαβάζει το CHECK 3.51. ⚠️ Νέο όνομα επίτηδες — `Object.keys` σε πίνακα θα έδινε
+ * σιωπηλά δείκτες σε όποιον έμεινε στο παλιό σχήμα.
  */
-function buildManifest({ config, plan, artifacts, slices, routes = [], signedOnly = new Map(), globalInputs = {}, lazy = null }) {
-  const shellFiles = {};
-  for (const [file, analysis] of plan.perFile) shellFiles[file] = analysis.fingerprint;
-  const routeFiles = serializeRouteFiles(routes, shellFiles);
-
+function buildManifest({ config, plan, artifacts, slices, routes = [], signedOnly = new Map(), globalInputs = {} }) {
   const body = {
     generator: 'scripts/generate-i18n-shell-slice.js',
     adr: 'ADR-744',
@@ -183,9 +113,6 @@ function buildManifest({ config, plan, artifacts, slices, routes = [], signedOnl
     },
     artifacts: Object.fromEntries([...artifacts, ...signedOnly].map(([file, text]) => [file, sha256(text)])),
     boundaries: { dynamic: plan.closure.dynamicBoundaries, route: plan.closure.routeBoundaries },
-    // 🔴 ADR-744 §28 — Η ΕΝΩΣΗ κελύφους + διαδρομών, ΟΧΙ μόνο το κέλυφος. Ίδιο σχήμα με
-    // το §21 στο ΑΛΛΟ σύνολο: ο έλεγχος D ρωτούσε σωστά, αλλά για τα μισά δεδομένα.
-    unresolvedSpecs: unionOfUnresolved(plan, routes, lazy),
     // Shell keys no locale defines, in any namespace the call site declares.
     // Reported, never fatal: CHECK 3.8 owns missing keys, this gate owns freshness.
     unresolvableKeys: slices.unresolvableKeys,
@@ -193,12 +120,8 @@ function buildManifest({ config, plan, artifacts, slices, routes = [], signedOnl
     // ADR-744 §20 (Β2β) — τα `wants` ΚΑΘΕ δηλωμένης διαδρομής, ώστε το Layer 1 να
     // μπορεί να ρωτήσει «είναι ακόμη αυτό που λένε τα locales;» χωρίς γράφο.
     routes: serializeRouteWants(routes),
-    shellFiles,
-    // ADR-744 §21 — και τα αποτυπώματα των ΠΗΓΩΝ τους, ώστε να μπορεί να ρωτήσει
-    // «άλλαξε module που τροφοδοτεί διαδρομή;» — το κενό που άφησε το §20.
-    routeFiles,
-    // ADR-744 §31 — και τα barrels που οι walks ΔΙΑΒΑΖΟΥΝ χωρίς να είναι μέλη (βλ. `serializeConsultedFiles`).
-    consultedFiles: serializeConsultedFiles(plan, routes, [shellFiles, routeFiles]),
+    // ADR-744 §32.11 — τα μέλη του κελύφους, ΕΞΟΔΟΣ της κλειστότητας (CHECK 3.51 · προβολή του G).
+    shellMembers: [...plan.perFile.keys()].sort(),
     // 🔴 ADR-744 §30 — και οι ΚΑΘΟΛΙΚΕΣ είσοδοι (config · σταθερές · aliases · toolchain), ώστε
     // το `inputsSha256` να είναι ΟΝΤΩΣ αποτύπωμα εισόδων — ως τώρα σφράγιζε μόνο τις ανά αρχείο.
     globalInputs,
@@ -213,8 +136,6 @@ function buildManifest({ config, plan, artifacts, slices, routes = [], signedOnl
  * γεγονότα κλειστότητας (μέλη, όρια, μετρητές, προέλευση). Αν το G έκρινε μόνο slice + `wants`, μια νέα
  * ακμή χωρίς νέο κλειδί θα έδινε πράσινο pre-commit και **κόκκινο CI** — το «μόνιμο κόκκινο στο Layer 2»
  * που απέρριψε το §31.1. Άρα εδώ μπαίνει ΚΑΘΕ πεδίο που παράγει η κλειστότητα του κελύφους, ΕΚΤΟΣ:
- *   · τις **τιμές** των πινάκων αποτυπωμάτων (`shellFiles`/`routeFiles`/`consultedFiles`) — είσοδοι, όχι έξοδος·
- *   · `unresolvedSpecs` — ένωση ΟΛΩΝ των κλειστοτήτων, δεν κρίνεται τμηματικά (Β6: αποσύρεται μαζί με το D)·
  *   · `globalInputs` (έλεγχος E) · `sliceBytes` / `inputsSha256` (παράγωγα των παραπάνω + των διαδρομών).
  * ⚠️ ΜΙΑ συνάρτηση για τις δύο πλευρές (φρέσκο και δεσμευμένο): δύο προβολές θα απέκλιναν.
  *
@@ -237,7 +158,7 @@ function shellProjection(manifest, artifactPaths) {
     boundaries: manifest.boundaries,
     unresolvableKeys: manifest.unresolvableKeys,
     wants: manifest.wants,
-    members: Object.keys(manifest.shellFiles || {}).sort(),
+    members: manifest.shellMembers || [],
     artifacts: Object.fromEntries(artifactPaths.map(rel => [rel, (manifest.artifacts || {})[rel] ?? null])),
   };
 }
@@ -254,9 +175,6 @@ module.exports = {
   serializeWants,
   hydrateWants,
   serializeRouteWants,
-  serializeRouteFiles,
-  serializeConsultedFiles,
-  unionOfUnresolved,
   buildManifest,
   shellProjection,
   routeProjection,

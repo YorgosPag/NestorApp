@@ -46,8 +46,9 @@ function openGraph(root, cached) {
  * @param {object} [args.sources]   `createIndexSources` (η πύλη `--index`)· προεπιλογή ο δίσκος του `root`
  * @param {?string} [args.cacheDir] `null` ⇒ καμία μνήμη· προεπιλογή `<root>/node_modules/.cache/…`
  * @param {string} [args.repoRoot]  από πού ρωτάμε το git για τον γονέα· προεπιλογή το `root`
+ * @param {string} [args.parentRev] ο γονέας· προεπιλογή `HEAD` (το hook)· `<c>^` στην αναπαραγωγή (§32.11)
  */
-function createLayerOnePass({ root, config, stagedFiles, sources, cacheDir, repoRoot }) {
+function createLayerOnePass({ root, config, stagedFiles, sources, cacheDir, repoRoot, parentRev }) {
   let opened = null;
   const open = () => {
     if (opened === null) {
@@ -71,7 +72,7 @@ function createLayerOnePass({ root, config, stagedFiles, sources, cacheDir, repo
     parent() {
       const state = open();
       if (state.parent === undefined) {
-        const parentSources = SC.createParentSources({ sources: state.base, repoRoot: repoRoot || root, staged: stagedFiles });
+        const parentSources = SC.createParentSources({ sources: state.base, repoRoot: repoRoot || root, staged: stagedFiles, rev: parentRev });
         state.parent = parentSources === null ? null : openGraph(root, state.cached.view(parentSources));
       }
       return state.parent;

@@ -127,18 +127,8 @@ function buildRouteSlice(projectRoot, config, graph, pageFile, shellSlice, whole
     // πώς να ξανακλαδέψει τη διαδρομή από τα locales, και μια μπαγιάτικη μετάφραση
     // περνά κάθε commit (μετρημένο: `✅ OK` πάνω σε artifact χωρίς 20 κλειδιά).
     wants: plan.wants,
-    // 🔴 ADR-744 §21 — ΤΑ ΑΠΟΤΥΠΩΜΑΤΑ ΤΩΝ ΕΙΣΟΔΩΝ ΤΗΣ ΔΙΑΔΡΟΜΗΣ. Το `perFile` ΕΧΕΙ ΗΔΗ
-    // υπολογισμένο `fingerprint` ανά αρχείο (plan.js) — απλώς **δεν ταξίδευε ποτέ**.
-    // Χωρίς αυτό, αλλαγή σε module κλειστότητας διαδρομής (π.χ. προσθήκη `t()`) είναι
-    // ΑΟΡΑΤΗ στο Layer 1: το `manifest.shellFiles` δεν το περιέχει, γιατί δεν είναι
-    // shell module. Μετρημένο ζωντανά (2026-08-30, ADR-834 του άλλου agent).
-    perFile: plan.perFile,
-    // ADR-744 §31 — και τα barrels που διάβασε ο walk της διαδρομής χωρίς να γίνουν μέλη.
-    consulted: plan.consulted,
-    // 🔴 ADR-744 §28 — ΚΑΙ ΟΙ ΑΛΥΤΟΙ SPECIFIERS ΤΗΣ ΔΙΑΔΡΟΜΗΣ. Χωρίς αυτούς, εισαγωγή
-    // προς αρχείο που ΔΕΝ υπήρχε όταν τρέχτηκε ο γεννήτορας εξαφανιζόταν σιωπηλά, και
-    // η άφιξη του αρχείου αργότερα ήταν αόρατη στο Layer 1 (μετρημένο: ADR-777 §8.95).
-    unresolvedSpecs: plan.closure.unresolvedSpecs,
+    // ADR-744 §32.11 — `perFile`/`consulted`/`unresolvedSpecs` ΔΕΝ ταξιδεύουν πια: τροφοδοτούσαν
+    // μόνο τους πίνακες εισόδων του manifest (C/D). Ο G ξαναβρίσκει τις εισόδους από τον walk.
     violations: plan.violations,
     // ⚠️ Χρειάζεται για να μη χαρακτηριστεί «νεκρή» μια εγγραφή policy που
     // υπηρετεί **διαδρομή** και όχι το κέλυφος: μια ψεύτικη προειδοποίηση
@@ -246,7 +236,7 @@ function renderComplete({ projectRoot, config, plan, graph, rendered }) {
   if (lazy !== null) signedOnly.set(lazyArtifactPath(config), renderLazyArtifact(lazy.rows));
   // ADR-744 §30 — οι καθολικές είσοδοι υπολογίστηκαν ΜΙΑ φορά, στο `renderArtifacts`.
   const { globalInputs } = rendered.manifest;
-  const manifest = buildManifest({ config, plan, artifacts, slices: rendered.slices, routes, signedOnly, globalInputs, lazy });
+  const manifest = buildManifest({ config, plan, artifacts, slices: rendered.slices, routes, signedOnly, globalInputs });
 
   return {
     rendered: {

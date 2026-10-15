@@ -361,7 +361,7 @@ describe('Λ — §31: ο χάρτης τεμπέλικων διαδρομών �
     write(LR.artifactPath(config), LR.renderLazyArtifact(lazy.rows));
     write(`${config.outputDir}/${P.WHOLE_NAME}`, `[]${NL}`);
     write(`${config.outputDir}/shell-slice.manifest.json`, JSON.stringify({
-      languages: [], artifacts: {}, wants: {}, stats: {}, shellFiles: {}, routeFiles: {}, unresolvedSpecs: [],
+      languages: [], artifacts: {}, wants: {}, stats: {}, shellMembers: [],
       globalInputs: GI.computeGlobalInputs(root, config, root),
     }));
     return { root, write, rows: lazy.rows };
@@ -442,7 +442,7 @@ describe('Λ — §31: ο χάρτης τεμπέλικων διαδρομών �
     expect(cached.loadModule(abs, sources.readText)).toEqual(MG.parseGraphModule(abs, sources.readText(abs)));
   }, 90_000);
 
-  it('Λ4 ON-DEMAND ≡ ΠΡΟΘΥΜΟΣ: ίδιος χάρτης, ίδιες είσοδοι, ίδια άλυτα — και με σταθερά πίσω από barrel', () => {
+  it('Λ4 ON-DEMAND ≡ ΠΡΟΘΥΜΟΣ: ίδιος χάρτης, ίδιες είσοδοι — και με σταθερά πίσω από barrel και άλυτη εισαγωγή', () => {
     const { root, graph, config } = miniRepo({
       [REGISTRY]: registry([['A', '@/pages/a'], ['B', '@/pages/b']]),
       'src/pages/a.tsx': `import { NS } from '@/ns';${NL}import { useTranslation } from '@/i18n/hook';${NL}export default function P() { return useTranslation(NS).t('x'); }${NL}`,
@@ -458,31 +458,21 @@ describe('Λ — §31: ο χάρτης τεμπέλικων διαδρομών �
     expect(lazy.rows).toEqual(eager.rows);
     expect(lazy.rows).toEqual({ A: ['alpha'], B: ['beta'] });
     expect([...lazy.inputs].sort()).toEqual([...eager.inputs].sort());
-    expect(lazy.unresolvedSpecs).toEqual(eager.unresolvedSpecs);
-    expect(lazy.unresolvedSpecs).toEqual(['src/pages/b.tsx → ./gone']);   // §31 τρύπα 3: ΔΕΝ πετιέται πια
     expect(onDemand.modules.size).toBeLessThan(sources.files.length);    // ΔΕΝ διάβασε τα όλα
   });
 
-  it('Λ5 🔴 barrel που ο walk ΔΙΑΒΑΖΕΙ χωρίς να είναι μέλος: καταγράφεται, και αλλαγή του ΚΟΚΚΙΝΙΖΕΙ το C', () => {
-    const { root, graph, config } = miniRepo({
+  // ADR-744 §32.11 — ο πίνακας `consultedFiles` και ο C αποσύρθηκαν: η συμμετοχή του G διαβάζει
+  // `closure.files ∪ closure.consulted` (closure-participation.js) και το Ξ5 κρίνει την αλλαγή του
+  // barrel από άκρη σε άκρη. Εδώ μένει το ΔΕΔΟΜΕΝΟ πάνω στο οποίο στέκεται: ο walk ΔΗΛΩΝΕΙ το barrel.
+  it('Λ5 barrel που ο walk ΔΙΑΒΑΖΕΙ χωρίς να είναι μέλος: δηλώνεται στο `consulted` (η συμμετοχή του G το βλέπει — Ξ5)', () => {
+    const { root, graph } = miniRepo({
       'src/app/layout.tsx': `import { X } from '../kit';${NL}export default function L() { return X; }${NL}`,
       'src/kit/index.ts': `export { X } from './x';${NL}`,
       'src/kit/x.ts': `export const X = 1;${NL}`,
-      'src/kit/x2.ts': `export const X = 2;${NL}`,
     });
     const closure = computeShellClosure(graph, [MG.toPosix(path.join(root, 'src/app/layout.tsx'))]);
     expect(closure.files).toEqual(['src/app/layout.tsx', 'src/kit/x.ts']);
     expect(closure.consulted).toEqual(['src/kit/index.ts']);
-    const plan = P.buildShellPlan(root, { ...config, shellRoots: ['src/app/layout.tsx'] }, graph);
-    const consultedFiles = P.serializeConsultedFiles(plan, [], [{}, {}]);
-    expect(Object.keys(consultedFiles)).toEqual(['src/kit/index.ts']);
-    expect(P.serializeConsultedFiles(plan, [], [{ 'src/kit/index.ts': 'x' }])).toEqual({});   // ένα αρχείο, ΕΝΑΣ πίνακας
-
-    const { checkStagedShellFiles } = require(CHECKER);
-    const manifest = { shellFiles: {}, routeFiles: {}, consultedFiles };
-    expect(checkStagedShellFiles(config, manifest, ['src/kit/index.ts'], root)).toBeNull();
-    writeIn(root)('src/kit/index.ts', `export { X } from './x2';${NL}`);
-    expect(checkStagedShellFiles(config, manifest, ['src/kit/index.ts'], root)).toContain('barrel the shell or a route walk reads through');
   });
 
   it('Λ6 ΑΠΟΤΥΠΩΜΑ = ό,τι διαβάζει ο walk: ονόματα εισαγωγών, εξαγωγές, re-exports ΜΕΤΡΑΝΕ· σώμα και σχόλια ΟΧΙ', () => {
@@ -494,12 +484,6 @@ describe('Λ — §31: ο χάρτης τεμπέλικων διαδρομών �
     expect(surface(base)).toEqual(surface(`${base}// σχόλιο${NL}const local = 2 + 2;${NL}`));
     expect(fingerprintShellFile({ importSpecs: surface(base), namespaces: [] }))
       .not.toBe(fingerprintShellFile({ importSpecs: surface(base.replace('{ A }', '{ A, B }')), namespaces: [] }));
-  });
-
-  it('Λ7 τα άλυτα των τεμπέλικων κλειστοτήτων μπαίνουν στην ΕΝΩΣΗ του D', () => {
-    const plan = { closure: { unresolvedSpecs: ['s → ./a'] } };
-    expect(P.unionOfUnresolved(plan, [{ unresolvedSpecs: ['r → ./b'] }], { unresolvedSpecs: ['l → ./c'] }))
-      .toEqual(['l → ./c', 'r → ./b', 's → ./a']);
   });
 
   it('Λ8 ΕΥΡΕΤΗΡΙΟ: πολλά blobs σε ΕΝΑ batch ≡ `git show`· το αποκλίνον αρχείο διαβάζεται από το ευρετήριο, ΟΧΙ τον δίσκο', () => {
@@ -561,6 +545,7 @@ describe('Ξ — §32: ο G ξαναϋπολογίζει ΜΟΝΟ ό,τι άγγ
   const { createLayerOnePass } = require(path.join(LIB, 'layer-one-pass'));
   const IF_PATH = path.join(LIB, 'incremental-freshness');
   const CP_PATH = path.join(LIB, 'closure-participation');
+  const SB_PATH = path.join(LIB, 'slice-build');
   const IF = require(IF_PATH);
 
   const PAGE = 'src/app/r/page.tsx';
@@ -590,13 +575,13 @@ describe('Ξ — §32: ο G ξαναϋπολογίζει ΜΟΝΟ ό,τι άγγ
     return result.stdout;
   }
 
-  /** Γεννημένο ΚΑΙ δεσμευμένο δέντρο: `{ root, write, config, manifest }`. */
-  function committedRepo() {
+  /** Γεννημένο ΚΑΙ δεσμευμένο δέντρο: `{ root, write, config, manifest }`· `files` υπερισχύουν της βάσης. */
+  function committedRepo(files = {}) {
     const config = {
       ...DEFAULTS, keyConstants: [], shellRoots: ['src/app/layout.tsx'], extraShellRoots: [], languages: ['el'],
       lazyRouteRegistries: [], guaranteedNamespaces: {}, excludeConsumers: ['src/i18n/'], routeSlices: { [PAGE]: {} },
     };
-    const { root } = miniRepo(BASE_FILES, config);
+    const { root } = miniRepo({ ...BASE_FILES, ...files }, config);
     const write = writeTo(root);
     const graph = P.buildModuleGraph(root);
     const plan = P.buildShellPlan(root, config, graph);
@@ -618,6 +603,28 @@ describe('Ξ — §32: ο G ξαναϋπολογίζει ΜΟΝΟ ό,τι άγγ
     pass.persist();
     return { ...result, pass };
   }
+
+  /** ΑΝΤΙΓΡΑΦΟ του G με ένα module μεταλλαγμένο (`patch(real)` ⇒ ό,τι αλλάζει)· ποτέ αρχείο του repo. */
+  function mutatedCheck(modulePath, patch) {
+    let check;
+    jest.isolateModules(() => {
+      const real = jest.requireActual(modulePath);
+      jest.doMock(modulePath, () => ({ ...real, ...patch(real) }));
+      check = require(IF_PATH).checkIncrementalFreshness;
+    });
+    jest.dontMock(modulePath);
+    return check;
+  }
+
+  /** Μετάλλαξη της συμμετοχής: ο walk κοιτά μόνο ό,τι κρατά το `pick(graphs)` (`[commit, γονέας]`). */
+  const participationIn = pick => mutatedCheck(CP_PATH, real => ({
+    affectedClosures: args => real.affectedClosures({ ...args, graphs: pick(args.graphs) }),
+  }));
+
+  /** Μετάλλαξη του αποτυπώματος: ο G «ξεχνά» ένα πεδίο της επιφάνειας (`omit(analysis)` ⇒ ό,τι μένει). */
+  const fingerprintWithout = omit => mutatedCheck(SB_PATH, real => ({
+    fingerprintShellFile: analysis => real.fingerprintShellFile({ ...analysis, ...omit(analysis) }),
+  }));
 
   function writeTo(root) {
     return (rel, body) => {
@@ -645,13 +652,12 @@ describe('Ξ — §32: ο G ξαναϋπολογίζει ΜΟΝΟ ό,τι άγγ
     expect(result.reasons[0]).toContain('beta: +more');
   }, 60_000);
 
-  it('Ξ2 ✅ CUTOFF: νέα ακμή χωρίς i18n σε διαδρομή ⇒ ο C κοκκινίζει (ο θόρυβος του §32.1), ο G ΠΡΑΣΙΝΟΣ', () => {
+  // ADR-744 §32.11 — εδώ ως τότε ο αποσυρμένος C ΚΟΚΚΙΝΙΖΕ (ο θόρυβος του §32.1, 40/84 στην αναπαραγωγή).
+  it('Ξ2 ✅ CUTOFF: νέα ακμή χωρίς i18n σε διαδρομή ⇒ κρίνεται, και ο G ΠΡΑΣΙΝΟΣ (η έξοδος ίδια)', () => {
     const repo = committedRepo();
     repo.write('src/app/r/util.ts', `export const id = x => x;${NL}`);
     repo.write(SECTION, section(['title'], `import { id } from './util';${NL}`));
     const staged = [SECTION, 'src/app/r/util.ts'];
-    const { checkStagedShellFiles } = require(path.resolve(__dirname, '../check-i18n-shell-slice.js'));
-    expect(checkStagedShellFiles(repo.config, repo.manifest, [SECTION], repo.root)).not.toBeNull();   // το ψευδές κόκκινο
     const result = judge(repo, staged);
     expect(result.stats).toEqual(expect.objectContaining({ changed: 2, routes: 1 }));             // κρίθηκε…
     expect(result.reasons).toEqual([]);                                                          // …και η έξοδος είναι ίδια
@@ -670,17 +676,8 @@ describe('Ξ — §32: ο G ξαναϋπολογίζει ΜΟΝΟ ό,τι άγγ
   it('Ξ4 🔴 ΔΙΑΓΡΑΦΗ: το σβησμένο είναι μέλος ΜΟΝΟ στον γονέα ⇒ ΚΟΚΚΙΝΟ· μετάλλαξη «μόνο το commit» (αντίγραφο) ⇒ πράσινο', () => {
     const repo = committedRepo();
     fs.rmSync(path.join(repo.root, CARD));
-    const onlyCommit = () => {
-      let check;
-      jest.isolateModules(() => {
-        const real = jest.requireActual(CP_PATH);
-        jest.doMock(CP_PATH, () => ({ ...real, affectedClosures: args => real.affectedClosures({ ...args, graphs: args.graphs.slice(0, 1) }) }));
-        check = require(IF_PATH).checkIncrementalFreshness;
-      });
-      jest.dontMock(CP_PATH);
-      return check;
-    };
-    expect(judge(repo, [CARD], { check: onlyCommit() }).reasons).toEqual([]);                  // η τρύπα, αναπαραγμένη
+    const onlyCommit = participationIn(graphs => graphs.slice(0, 1));
+    expect(judge(repo, [CARD], { check: onlyCommit }).reasons).toEqual([]);                    // η τρύπα, αναπαραγμένη
     const result = judge(repo, [CARD]);
     expect(result.reasons).toHaveLength(1);
     expect(result.reasons[0]).toContain('beta: −card');                                         // η θεραπεία
@@ -718,4 +715,71 @@ describe('Ξ — §32: ο G ξαναϋπολογίζει ΜΟΝΟ ό,τι άγγ
     expect(memo.counts.misses).toBe(misses);                                                     // δεύτερη κλειστότητα: 0 αναλύσεις
     expect(memo.counts.hits).toBeGreaterThan(0);
   }, 60_000);
+
+  // ── Β6 (§32.11): οι κλάσεις που έπιαναν ο C/D και δεν είχαν άγκυρα για τον G. Καθεμία: G κόκκινο,
+  //    και ο G με το ΕΝΑ πεδίο που την πιάνει ΣΒΗΣΜΕΝΟ (αντίγραφο) ⇒ πράσινο — άρα το πεδίο είναι φέρον.
+  const BETA_SEC = { 'src/i18n/locales/el/beta.json': JSON.stringify({ title: 'T', card: 'C', more: 'M', sec: { x: 'X' }, sec2: { x: 'Y' } }) };
+  const sectionBody = (head, ret) => `import { Card } from '@/kit';${NL}import { useTranslation } from '@/i18n/hook';${NL}${head}`
+    + `export function Section() { const { t } = useTranslation('beta'); Card(); return ${ret}; }${NL}`;
+
+  it('Ξ8 🔴 ΣΤΑΘΕΡΑ (§29): `const NS` + `` t(`${NS}.x`) `` — ίδιο κείμενο κλήσης, άλλο κλειδί ⇒ ΚΟΚΚΙΝΟ· χωρίς `resolution` πράσινο', () => {
+    const withNs = ns => sectionBody(`const NS = '${ns}';${NL}`, '[t(`${NS}.x`)]');
+    const repo = committedRepo({ ...BETA_SEC, [SECTION]: withNs('sec') });
+    repo.write(SECTION, withNs('sec2'));
+    expect(judge(repo, [SECTION], { check: fingerprintWithout(() => ({ resolution: undefined })) }).reasons).toEqual([]);
+    const result = judge(repo, [SECTION]);
+    expect(result.reasons).toHaveLength(1);
+    expect(result.reasons[0]).toContain('beta: +sec2.x −sec.x');
+  }, 90_000);
+
+  it('Ξ9 🔴 ΕΞΑΓΟΜΕΝΟΣ ΠΙΝΑΚΑΣ (ADR-777 §8.39): template στον ιδιοκτήτη λύνει κλειδί ΑΛΛΟΥ αρχείου ⇒ ΚΟΚΚΙΝΟ· χωρίς `tables` πράσινο', () => {
+    const KEYS = 'src/app/r/keys.ts';
+    const table = base => `const BASE = '${base}';${NL}export const KEYS = { label: \`\${BASE}.x\` };${NL}`;
+    const repo = committedRepo({
+      ...BETA_SEC, [KEYS]: table('sec'), [SECTION]: sectionBody(`import { KEYS } from './keys';${NL}`, '[t(KEYS.label)]'),
+    });
+    repo.write(KEYS, table('sec2'));
+    // Το harvest ΔΕΝ βλέπει template με αντικατάσταση ⇒ μόνο το `tables` κουβαλά την αλλαγή.
+    const noTables = fingerprintWithout(({ resolution }) => ({ resolution: resolution && { ...resolution, tables: [] } }));
+    expect(judge(repo, [KEYS], { check: noTables }).reasons).toEqual([]);
+    const result = judge(repo, [KEYS]);
+    expect(result.reasons).toHaveLength(1);
+    expect(result.reasons[0]).toContain('beta: +sec2.x −sec.x');
+  }, 90_000);
+
+  it('Ξ10 🔴 `{Card}` → `{Card, Extra}` πίσω από barrel (§31 τρύπα 1): η κλειστότητα μεγαλώνει ⇒ ΚΟΚΚΙΝΟ· χωρίς ονόματα πράσινο', () => {
+    const repo = committedRepo({
+      [KIT]: `export { Card } from './card';${NL}export { Extra } from './extra';${NL}`,
+      'src/kit/extra.tsx': translated('Extra', 'beta', 'more'),
+    });
+    repo.write(SECTION, section(['title']).replace('{ Card }', '{ Card, Extra }'));
+    const nameless = fingerprintWithout(({ importSpecs }) => ({ importSpecs: importSpecs.map(line => line.replace(/\{.*\}/, '')) }));
+    expect(judge(repo, [SECTION], { check: nameless }).reasons).toEqual([]);
+    const result = judge(repo, [SECTION]);
+    expect(result.reasons).toHaveLength(1);
+    expect(result.reasons[0]).toContain('beta: +more');
+  }, 90_000);
+
+  it('Ξ11 🔴 ΝΕΟ ΑΡΧΕΙΟ ΛΥΝΕΙ ΑΛΥΤΟ (ADR-777 §8.95 — ο D): μέλος ΜΟΝΟ στο commit ⇒ ΚΟΚΚΙΝΟ· συμμετοχή μόνο στον γονέα πράσινο', () => {
+    const GONE = 'src/app/r/gone.tsx';
+    const repo = committedRepo({ [SECTION]: section(['title'], `import { Gone } from './gone';${NL}`) });
+    repo.write(GONE, translated('Gone', 'beta', 'more'));
+    expect(judge(repo, [GONE], { check: participationIn(graphs => graphs.slice(1)) }).reasons).toEqual([]);
+    const result = judge(repo, [GONE]);
+    expect(result.reasons).toHaveLength(1);
+    expect(result.reasons[0]).toContain('beta: +more');
+  }, 90_000);
+
+  it('Ξ12 🔴 HARVEST (πρότυπο `RouteTabs`): το literal ζει σε ΑΛΛΟ module από το `t()` ⇒ ΚΟΚΚΙΝΟ· χωρίς `harvest` πράσινο', () => {
+    const TABS = 'src/app/r/tabs.ts';
+    const tabs = key => `export const TABS = [{ href: '/r', labelKey: '${key}' }];${NL}`;
+    const repo = committedRepo({
+      [TABS]: tabs('title'), [SECTION]: sectionBody(`import { TABS } from './tabs';${NL}`, 'TABS.map(tab => t(tab.labelKey))'),
+    });
+    repo.write(TABS, tabs('more'));
+    expect(judge(repo, [TABS], { check: fingerprintWithout(() => ({ harvest: new Map() })) }).reasons).toEqual([]);
+    const result = judge(repo, [TABS]);
+    expect(result.reasons).toHaveLength(1);
+    expect(result.reasons[0]).toContain('beta: +more −title');
+  }, 90_000);
 });
