@@ -438,10 +438,74 @@ repository σε verified fake: 120 πάγια, επανεκτέλεση = 0 νέ
 **⚠️ Ανοιχτά (μετά τη Φάση 5):**
 - **Πρόβλεψη φόρου τρέχουσας χρήσης** (`estimateTax`) χωρίς προγραμματισμένες αποσβέσεις ως την εκτέλεση ⇒ πρόβλεψη υψηλότερη
   από τον τελικό φόρο. Οι μεγάλοι διαφωνούν (SAP προβλέπει, QuickBooks όχι) — **απόφαση Giorgio** (αλλάζει νούμερο φόρου).
-- **Περίοδοι χωρίς μισθωτή**: `createFiscalPeriods` γράφει id `YYYY-MM` **χωρίς** `companyId` ⇒ οι περίοδοι μοιράζονται
-  ανάμεσα σε μισθωτές (υπήρχε πριν από τη Φάση 5· `pending-ratchet-work.md`). Ο κανόνας περιόδου απορρίπτει ήδη **δηλωμένα**
-  ξένη περίοδο.
+- ~~**Περίοδοι χωρίς μισθωτή**~~ — **έκλεισε στη Φάση 6** (παρακάτω).
 - Ροή εκποίησης · διαστήματα αδράνειας · `getDepreciationRecords` (χωρίς φίλτρο μισθωτή, fallback `[]`, χωρίς καλούντα).
+
+**Φάση 6 (2026-10-15) — λογιστικές περίοδοι ΑΝΑ ΜΙΣΘΩΤΗ.** Το κενό ήταν μεγαλύτερο από όσο έγραφε η Φάση 5. Μετρημένο στον
+κώδικα (0 περίοδοι στη βάση ⇒ μετάπτωση κενή):
+
+| # | Λάθος | Συνέπεια |
+|---|---|---|
+| 1 | id εγγράφου = `YYYY-MM`, **χωρίς** `companyId` στο έγγραφο | κλείσιμο / κλείδωμα ενός μισθωτή ίσχυε για **όλους** (τιμολόγια, Ε-Ε, τράπεζα, αποσβέσεις) |
+| 2 | `getFiscalPeriod` χωρίς έλεγχο μισθωτή | ο μισθωτής Β διάβαζε / έκλεινε την περίοδο του Α |
+| 3 | `listFiscalPeriods` φίλτραρε `companyId` σε έγγραφα **χωρίς** `companyId` (και χωρίς δείκτη) | λίστα **πάντα κενή** ⇒ ο έλεγχος «υπάρχει ήδη χρήση;» δεν έπιανε ποτέ |
+| 4 | `createFiscalPeriods` = `batch.set` | δεύτερο `POST` της ίδιας χρήσης ξανάγραφε **κλειδωμένες** περιόδους ως `OPEN` |
+| 5 | μετάβαση = ανάγνωση **έξω** από συναλλαγή + τυφλό `update`· ίχνος **μετά** και μόνο από τον wrapper (τα routes δεν τον χρησιμοποιούν) | κλείδωμα + ξανάνοιγμα ταυτόχρονα ⇒ ξεκλείδωτη κλειδωμένη· μετάβαση **χωρίς** ίχνος |
+| 6 | κανόνες: διαχειριστής έγραφε από τον browser κάθε μετάβαση (και LOCKED → OPEN)· το `create` δεν έδενε το docId με τον μισθωτή | παράκαμψη της μηχανής καταστάσεων και του ίχνους |
+| 7 | routes `POST` / `PATCH` χωρίς ρόλο | κάθε συνδεδεμένος κλείδωνε / ξανάνοιγε περιόδους |
+| 8 | `getPeriodForDate` με `new Date(dateStr).getMonth()` | ζώνη διακομιστή: `…T23:30Z` στις 30/11 = Δεκέμβριος στην Αθήνα, Νοέμβριος στον διακομιστή· `2026-13-01` ⇒ περίοδος κλεισίματος |
+
+**Αποφάσεις (σαφής πρακτική — SAP OB52 posting periods ανά company code · Xero / QuickBooks lock date ανά οργανισμό, μόνο
+Adviser / admin):**
+- **Κλειδί ≠ διεύθυνση.** `periodId` μένει το επιχειρηματικό κλειδί `YYYY-MM` (`01–12`, `13` = κλείσιμο) **μέσα** στον μισθωτή
+  — το βλέπουν API (`/fiscal-periods/2026-12`) και ίχνος. Διεύθυνση εγγράφου = `generateDeterministicFiscalPeriodId(companyId,
+  κλειδί)` (`fp_`, χρυσό id, `DETERMINISTIC_ONLY`· ο τυχαίος `generateFiscalPeriodId`, χωρίς καλούντα, **καταργήθηκε**).
+  `FiscalPeriod.companyId` **υποχρεωτικό**· το γράφει **μόνο** ο γραφέας από το `TenantContext` (`FiscalPeriodDraft` = χωρίς).
+- **SSoT κλειδιού**: `services/fiscal-period-keys.ts` (`fiscalPeriodKey`, `fiscalPeriodKeysOf`, `fiscalPeriodKeyForDate`) —
+  ήταν γραμμένο σε τρία σημεία. Ημέρα εγγραφής: `accountingDayOf` (`utils/accounting-day.ts`): σκέτη ημέρα αυτούσια
+  (επικυρωμένη ημερολογιακά), στιγμή με ώρα = ημέρα **Αθήνας**.
+- **ΕΝΑΣ γραφέας**: `repository/accounting-repo-fiscal-periods.ts` (έφυγε από το `accounting-repo-balances.ts`):
+  - `getFiscalPeriod` = διεύθυνση του μισθωτή + `ownedOrNull` (δεύτερη ζώνη: ξένο / κενό / απόν `companyId` = ανύπαρκτο)·
+  - `listFiscalPeriods` = `getAll` των 13 γνωστών διευθύνσεων — **κανένα ερώτημα, κανένας δείκτης** (CHECK 3.91: −1 σημείο
+    στη baseline)· σφάλμα = σφάλμα, ποτέ `[]`·
+  - `createFiscalPeriods(fiscalYear, drafts)` = συναλλαγή: έστω **μία** υπάρχουσα ⇒ `FiscalYearExistsError`, αλλιώς `create`
+    όλων — ποτέ αντικατάσταση·
+  - `transitionFiscalPeriod(periodId, { action, userId, reason })` **αντικαθιστά** το `updateFiscalPeriod`: η απόφαση
+    (`services/fiscal-period-transitions.ts`, ο **ένας** πίνακας OPEN→CLOSED · CLOSED→LOCKED · CLOSED→OPEN) τρέχει **μέσα**
+    στη συναλλαγή πάνω στη φρέσκια περίοδο· εγγραφή + ίχνος `PERIOD_CLOSED` / `PERIOD_LOCKED` / `PERIOD_REOPENED`
+    (`metadata: { from, to, reason }`) στην **ίδια**. Ο audited wrapper απλώς περνά την κλήση (όπως το `postDepreciation`).
+    `closePeriod` / `lockPeriod` / `reopenPeriod` **καταργήθηκαν** (το route καλεί τον γραφέα)· ο wrapper έχασε το
+    `periodStatusToEventType`.
+- **Σφάλματα με κωδικό** (`api/accounting/_shared/fiscal-period-errors.ts`): 404 `FISCAL_PERIOD_NOT_FOUND` (ανύπαρκτη **ή** ξένη —
+  ίδια απάντηση) · 409 `FISCAL_PERIOD_INVALID_TRANSITION` · 409 `FISCAL_YEAR_EXISTS`. Πριν: σκέτο `Error` ⇒ 500.
+- **Ρόλος**: `POST /fiscal-periods` και `PATCH /fiscal-periods/[periodId]` ⇒ `requiredGlobalRoles: ADMINISTRATIVE_ROLES` (Xero:
+  lock dates μόνο Adviser). Ανάγνωση: κάθε συνδεδεμένος του μισθωτή. Όρια έτους δημιουργίας από το SSoT `fiscal-year-param`
+  (2000–2100· ήταν 2020–2100 γραμμένο τοπικά).
+- **Κανόνες Firestore**: `read` = `canReadAccounting(companyId)`· `create, update, delete` = `if false` (μόνο Admin SDK).
+  Μήτρα `fiscalPeriodMatrix()` = `roleDualMatrix()` με **όλα** τα κελιά εγγραφής `server_only` (παράγονται από τη βάση, N.18).
+- **Καλούντες αμετάβλητοι στην υπογραφή**: `validatePostingAllowed` / `getPeriodForDate` (τιμολόγια, Βιβλίο Ε-Ε, τράπεζα
+  `bank/match`, αντιλογισμός `reversal-service`) παίρνουν τον μισθωτή από το repository ⇒ απομονώνονται **αυτόματα**.
+- **Αποσβέσεις**: `depreciationPeriodIdFor` = `fiscalPeriodKey(χρήση, 12)`· ο γραφέας διαβάζει την περίοδο από
+  `fiscalPeriodRef` + `ownedFiscalPeriodOf` μέσα στη συναλλαγή· `postingPeriodBlocker(period)` με **ένα** όρισμα (έφυγε η
+  σημασιολογία «περίοδος χωρίς `companyId` = χωρίς έλεγχο»).
+
+**Τι αλλάζει στα νούμερα:** **τίποτα** — αλλάζει **ποιος** κλειδώνει ποια περίοδο. Μετρημένο 2026-10-15: 0 περίοδοι στη βάση ⇒
+καμία μετάπτωση, κανένας νέος δείκτης για deploy.
+
+**Φύλακες (Φάση 6):** `fiscal-periods-tenant.test.ts` (Π1 δύο μισθωτές = δύο «2026-12» · Π2 κλείδωμα Α ≠ Β, ο Β δεν βλέπει /
+κλείνει την περίοδο του Α · Π3 λίστα 13 με σειρά και ημερομηνίες · Π4 δεύτερη δημιουργία ⇒ άρνηση, η κλειδωμένη μένει, ούτε
+μία νέα · Π5 ξένο / κενό / απόν `companyId` στη δική μου διεύθυνση · Π6 μεταβάσεις + ίχνος, άκυρες ⇒ τίποτα, κλείδωμα **κατά**
+το ξανάνοιγμα ⇒ άρνηση · Π7 ημερομηνία ⇒ περίοδος, ζώνη Αθήνας, άκυρες) · `depreciation-run.test.ts` (+Ε12: κλειστή περίοδος
+**άλλου** μισθωτή δεν μπλοκάρει· ξένο έγγραφο στη δική μου διεύθυνση = `PERIOD_NOT_FOUND`) · `adr603-batch.route.test.ts` (403
+χωρίς διοικητικό ρόλο, 404/409 με κωδικό) · χρυσό id `fp_`. **Μεταλλάξεις 11/11 κόκκινες** (id χωρίς μισθωτή · χωρίς
+`ownedOrNull` · δημιουργία χωρίς έλεγχο ύπαρξης · έγγραφο χωρίς `companyId` · μετάβαση χωρίς ίχνος · μετάβαση από κάθε
+κατάσταση · ημέρα χωρίς επικύρωση · ημέρα UTC αντί Αθήνας · αποσβέσεις με καθολική διεύθυνση · `PATCH` / `POST` χωρίς ρόλο).
+
+**⚠️ Ανοιχτά (μετά τη Φάση 6):**
+- Τα μηνύματα `reason` του `validatePostingAllowed` (και οι ετικέτες μηνών του `createFiscalYear`) είναι ελληνικό κείμενο στον
+  κώδικα που φεύγει στο API (N.11) — προϋπήρχε· θέλει κωδικούς άρνησης + i18n στον πελάτη.
+- Η περίοδος 13 (κλείσιμο) δεν έχει ακόμη ρητή ανάθεση εγγραφής (`getPeriodForDate` δίνει πάντα 1–12, σωστά).
+- Η σουίτα κανόνων (`accounting-fiscal-periods.rules.test.ts`) τρέχει μόνο στο CI (emulator) — **δεν** εκτελέστηκε τοπικά.
 
 ### 2.2 Contact Provider (CRM Integration)
 
@@ -1289,6 +1353,7 @@ class FirestoreAccountingRepository implements IAccountingRepository {
 | 2026-10-15 | **Σελίδα ≠ καθολικό, Φάση 4 (§2.1.1)** — αποσβέσεις χρήσης: `collectFixedAssets` (πλήρης σάρωση, και εκποιημένα μέσα στη χρήση)· πίνακας αποσβέσεων από τα στοιχεία του παγίου (`depreciation-schedule.ts`)· έναρξη τον επόμενο μήνα (ΚΦΕ αρ.24 παρ.6)· ΕΝΑΣ ατομικός, ιδεμπότητος γραφέας `postDepreciation` (ντετερμινιστικό id, ίχνος στην ίδια συναλλαγή)· μόνο χρήση που έληξε· SSoT συντελεστών `depreciation-config.ts`, συντελεστής από τον διακομιστή· +1 δείκτης | Giorgio + Claude Code |
 | 2026-10-15 | **Σελίδα ≠ καθολικό, Φάση 3β (§2.1.1)** — δρομέας keyset (`lib/admin-keyset-page.ts`, AIP-158, tie-breaker `__name__`, δεμένος στα φίλτρα) για ημερολόγιο / τιμολόγια / τράπεζα / πάγια· κλειστό σύνολο συνδυασμών φίλτρων (`accounting-list-specs.ts`, AIP-160) με άγκυρα δεικτών· χωρίς fallback (σφάλμα ≠ κενό)· αυστηρή είσοδος + λεξιλόγια-ρίζες· `useCursorPagedList` + `PagedListSection`· `hasJournalEntriesInCategory`· διορθώσεις: πάγια `data.assets`, λεξιλόγιο κατηγοριών παγίων, φίλτρο τράπεζας, τρίμηνο `Q1`, συμφωνία με φίλτρο στον διακομιστή, `Χωρίς Πελάτη` (N.11)· κοινό σώμα σελίδας λίστας (`AccountingListBody` + `useAccountingFilterPanel`) και πεδίο φίλτρου χρήσης (`accounting-filter-fields.ts`) αντί για δίδυμα σε 4 σελίδες (CHECK 3.28)· +6 δείκτες | Giorgio + Claude Code |
 | 2026-10-15 | **Σελίδα ≠ καθολικό, Φάση 5 (§2.1.1)** — οι αποσβέσεις τρέχουν και φτάνουν στα έξοδα: routes προεπισκόπησης / καταχώρισης / αναίρεσης (διοικητικός ρόλος, sensitive) + οθόνη τέλους χρήσης· εγγραφή Ε-Ε 31/12 ανά πάγιο στην ΙΔΙΑ συναλλαγή με την απόσβεση (ντετερμινιστικό id ανά αναθεώρηση)· σύγκλιση = SAP repeat run (μόνο η διαφορά) + Xero rollback (αντιλογισμός, μόνο νεότερη χρήση)· περίοδος 12 ανοιχτή και μέσα στη συναλλαγή· ίχνος από τον γραφέα (όχι από τον wrapper)· φρουρός Βιβλίου Ε-Ε για εγγραφές υποσυστήματος· `non_cash` | Giorgio + Claude Code |
+| 2026-10-15 | **Σελίδα ≠ καθολικό, Φάση 6 (§2.1.1)** — λογιστικές περίοδοι ανά μισθωτή (SAP OB52 ανά company code · Xero lock date ανά οργανισμό): διεύθυνση `generateDeterministicFiscalPeriodId(companyId, YYYY-MM)` + `companyId` στο έγγραφο· ανάγνωση με `ownedOrNull`· λίστα με `getAll` (−1 σημείο χωρίς δείκτη)· δημιουργία όλες-ή-καμία (`FiscalYearExistsError`)· `transitionFiscalPeriod` = απόφαση + εγγραφή + ίχνος `PERIOD_*` σε μία συναλλαγή (αντικαθιστά `updateFiscalPeriod` / `closePeriod` / `lockPeriod` / `reopenPeriod`)· κανόνες: εγγραφές μόνο από τον server· routes εγγραφής με διοικητικό ρόλο, 404/409 με κωδικό· ημέρα εγγραφής = ημέρα Αθήνας· κανένα νούμερο δεν αλλάζει | Giorgio + Claude Code |
 
 ---
 
