@@ -3,7 +3,7 @@
  *
  * Contract verified:
  *  - Envelope byte-identical to the migrated routes: ok/created/{success:true[,data]},
- *    error envelope {success:false,error[,...details]} with the thrown status.
+ *    error envelope {success:false,error[,errorCode][,...details]} with the thrown status.
  *  - Auth context (companyId/uid), awaited dynamic params, and parsed schema body
  *    are delivered to the handler.
  *  - Schema validation failure → 400 via safeParseBody (unchanged shape).
@@ -75,6 +75,7 @@ jest.mock('@/lib/telemetry/Logger', () => ({
 import { z } from 'zod';
 import type { NextRequest } from 'next/server';
 import { defineRoute, ok, created, conflict, notFound, badRequest } from '../define-route';
+import { ApiError } from '../api-error-types';
 
 interface Envelope {
   status: number;
@@ -165,6 +166,24 @@ describe('defineRoute — error envelopes', () => {
       success: false,
       error: 'Already exists',
       existingCertificateId: 'apy_9',
+    });
+    expect(errorLog).not.toHaveBeenCalled();
+  });
+
+  it('ApiError με errorCode → ο κωδικός ΦΤΑΝΕΙ στον πελάτη (ισοτιμία με ApiErrorHandler, ADR-284 / ADR-ACC-010 §2.1.1)', async () => {
+    const POST = defineRoute({
+      rateLimit: 'standard',
+      handler: async () => {
+        throw new ApiError(422, 'Credit limit exceeded', 'POLICY_CREDIT_LIMIT_EXCEEDED', { creditLimit: 100 });
+      },
+    });
+    const res = (await POST(makeReq({}, 'POST'))) as Envelope;
+    expect(res.status).toBe(422);
+    expect(await res.json()).toEqual({
+      success: false,
+      error: 'Credit limit exceeded',
+      errorCode: 'POLICY_CREDIT_LIMIT_EXCEEDED',
+      creditLimit: 100,
     });
     expect(errorLog).not.toHaveBeenCalled();
   });

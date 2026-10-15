@@ -122,11 +122,11 @@ jest.mock('@/subapps/accounting/services/create-accounting-services', () => ({
 }));
 
 var svcExtras = {
-  updateCustomerBalance: jest.fn(async () => undefined),
+  refreshCustomerBalance: jest.fn(async () => true),
 };
 
 jest.mock('@/subapps/accounting/services', () => ({
-  updateCustomerBalance: (...a: unknown[]) => svcExtras.updateCustomerBalance(...a),
+  refreshCustomerBalance: (...a: unknown[]) => svcExtras.refreshCustomerBalance(...a),
 }));
 
 var reversal = {

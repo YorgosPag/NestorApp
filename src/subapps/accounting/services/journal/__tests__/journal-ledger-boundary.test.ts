@@ -23,8 +23,7 @@ const ALLOWED_PAGE_CALLERS: Readonly<Record<string, Readonly<Record<string, stri
   },
   listInvoices: {
     'src/app/api/accounting/invoices/route.ts': 'η λίστα της οθόνης — σελίδα εξ ορισμού',
-    'src/subapps/accounting/services/balance-service.ts':
-      '⚠️ ΓΝΩΣΤΟ ΧΡΕΟΣ: υπόλοιπο πελάτη από σελίδα 1000 — `.claude-rules/pending-ratchet-work.md` (🧾 Λογιστική)',
+    // Φάση 3 (2026-10-15): το `balance-service` ΒΓΗΚΕ — υπόλοιπο / ηλικίωση / πιστωτικό όριο μέσω `collectInvoices`.
   },
 };
 

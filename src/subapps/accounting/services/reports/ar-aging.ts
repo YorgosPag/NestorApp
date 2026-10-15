@@ -1,13 +1,20 @@
 /**
  * @fileoverview AR Aging Report Generator (Phase 2c)
- * @description Ηλικίωση Απαιτήσεων — leverages Phase 1b CustomerBalance aging buckets
+ * @description Ηλικίωση Απαιτήσεων — ανοιχτά στοιχεία ΟΛΩΝ των χρήσεων στο τέλος κάθε περιόδου σύγκρισης
  * @author Claude Code (Anthropic AI) + Γιώργος Παγώνης
  * @created 2026-03-30
  * @see DECISIONS-PHASE-2.md Q6 (Report #3)
+ * @see ADR-ACC-010 §2.1.1 (Φάση 3, 2026-10-15)
  * @compliance CLAUDE.md Enterprise Standards — zero `any`
+ *
+ * 🔴 Ως 2026-10-15 διάβαζε `listCustomerBalances(έτος)` ×3: ερώτημα ΧΩΡΙΣ δείκτη (σφάλμα ⇒ fallback ⇒ αναφορά
+ *   ΠΑΝΤΑ κενή), πάνω σε έγγραφα όπου κάθε χρήση έσβηνε την άλλη. Τώρα: ΜΙΑ σάρωση των παραστατικών ως την πιο
+ *   πρόσφατη ημερομηνία αναφοράς, και η εικόνα ΚΑΘΕ περιόδου ξαναχτίζεται από τα πρωτογενή «όπως ήταν τότε»
+ *   (πληρωμές και πιστωτικά ως εκείνη την ημέρα) — αυτό που η «as at» αναφορά του Xero δεν κάνει.
  */
 
-import type { CustomerBalance, AgingBuckets } from '../../types/customer-balance';
+import type { AgingBuckets } from '../../types/customer-balance';
+import type { Invoice } from '../../types/invoice';
 import type {
   ReportGeneratorDeps,
   ResolvedPeriods,
@@ -17,28 +24,32 @@ import type {
 } from '../../types/reports';
 import { buildComparative, buildNumericComparative } from './comparative-engine';
 import { nowISO } from '@/lib/date-local';
+import { accountingToday } from '../../utils/accounting-day';
+import { roundToTwo } from '../../utils/math';
+import {
+  groupInvoicesByCustomer,
+  sumAgingBuckets,
+  summarizeReceivables,
+} from '../receivables/receivables-ledger';
 
 /** Generate AR Aging report with comparative analysis */
 export async function generateARAgingReport(
   deps: ReportGeneratorDeps,
   periods: ResolvedPeriods
 ): Promise<ReportResult<ARAgingData>> {
-  const currentYear = extractFiscalYear(periods.current.from);
-  const previousYear = extractFiscalYear(periods.previousPeriod.from);
-  const yoyYear = extractFiscalYear(periods.yearOverYear.from);
+  const today = deps.asOf ?? accountingToday();
+  const asOf = {
+    current: agingDateOf(periods.current.to, today),
+    previous: agingDateOf(periods.previousPeriod.to, today),
+    yoy: agingDateOf(periods.yearOverYear.to, today),
+  };
+  const latest = [asOf.current, asOf.previous, asOf.yoy].reduce((a, b) => (a > b ? a : b));
+  const invoices = await deps.repository.collectInvoices({ scope: { kind: 'receivables', asOf: latest } });
+  const { byCustomer } = groupInvoicesByCustomer(invoices);
 
-  const [currentBalances, previousBalances, yoyBalances] = await Promise.all([
-    deps.repository.listCustomerBalances(currentYear),
-    deps.repository.listCustomerBalances(previousYear),
-    deps.repository.listCustomerBalances(yoyYear),
-  ]);
-
-  const current = mapToAgingRows(currentBalances);
-  const previous = mapToAgingRows(previousBalances);
-  const yoy = mapToAgingRows(yoyBalances);
-
-  const sumOutstanding = (rows: ARAgingCustomerRow[]) =>
-    rows.reduce((sum, r) => sum + r.totalOutstanding, 0);
+  const current = agingRowsAsOf(byCustomer, asOf.current);
+  const previous = agingRowsAsOf(byCustomer, asOf.previous);
+  const yoy = agingRowsAsOf(byCustomer, asOf.yoy);
 
   return {
     reportType: 'ar_aging',
@@ -46,17 +57,8 @@ export async function generateARAgingReport(
     period: periods,
     data: {
       customers: buildComparative(current, previous, yoy, sumOutstanding),
-      totals: buildComparative(
-        sumAgingBuckets(currentBalances),
-        sumAgingBuckets(previousBalances),
-        sumAgingBuckets(yoyBalances),
-        totalFromBuckets
-      ),
-      totalOutstanding: buildNumericComparative(
-        sumOutstanding(current),
-        sumOutstanding(previous),
-        sumOutstanding(yoy)
-      ),
+      totals: buildComparative(totalsOf(current), totalsOf(previous), totalsOf(yoy), totalFromBuckets),
+      totalOutstanding: buildNumericComparative(sumOutstanding(current), sumOutstanding(previous), sumOutstanding(yoy)),
     },
   };
 }
@@ -65,40 +67,38 @@ export async function generateARAgingReport(
 // INTERNAL HELPERS
 // ============================================================================
 
-function mapToAgingRows(balances: CustomerBalance[]): ARAgingCustomerRow[] {
-  return balances
-    .filter((b) => b.netBalance > 0)
-    .map((b) => ({
-      customerId: b.customerId,
-      customerName: b.customerName,
-      aging: b.aging,
-      totalOutstanding: b.netBalance,
-      invoiceCount: b.invoiceCount,
-    }))
-    .sort((a, b) => b.totalOutstanding - a.totalOutstanding);
+/** Η ηλικίωση μιας περιόδου μετριέται στο τέλος της — όχι στο μέλλον (περίοδος σε εξέλιξη ⇒ σήμερα). */
+function agingDateOf(periodEnd: string, today: string): string {
+  const end = periodEnd.slice(0, 10);
+  return end < today ? end : today;
 }
 
-function sumAgingBuckets(balances: CustomerBalance[]): AgingBuckets {
-  const totals: AgingBuckets = {
-    current: 0, days1_30: 0, days31_60: 0,
-    days61_90: 0, days91_120: 0, days120plus: 0,
-  };
-  for (const b of balances) {
-    totals.current += b.aging.current;
-    totals.days1_30 += b.aging.days1_30;
-    totals.days31_60 += b.aging.days31_60;
-    totals.days61_90 += b.aging.days61_90;
-    totals.days91_120 += b.aging.days91_120;
-    totals.days120plus += b.aging.days120plus;
+/** Οι πελάτες που ΜΑΣ ΟΦΕΙΛΟΥΝ στις `asOf`, μεγαλύτερη οφειλή πρώτη. */
+function agingRowsAsOf(byCustomer: ReadonlyMap<string, Invoice[]>, asOf: string): ARAgingCustomerRow[] {
+  const rows: ARAgingCustomerRow[] = [];
+  for (const [customerId, invoices] of byCustomer) {
+    const position = summarizeReceivables(customerId, invoices, asOf);
+    if (position.netBalance <= 0) continue;
+    rows.push({
+      customerId,
+      customerName: position.customerName,
+      aging: position.aging,
+      totalOutstanding: position.netBalance,
+      invoiceCount: position.invoiceCount,
+    });
   }
-  return totals;
+  return rows.sort((a, b) => b.totalOutstanding - a.totalOutstanding);
+}
+
+function sumOutstanding(rows: readonly ARAgingCustomerRow[]): number {
+  return roundToTwo(rows.reduce((sum, r) => sum + r.totalOutstanding, 0));
+}
+
+function totalsOf(rows: readonly ARAgingCustomerRow[]): AgingBuckets {
+  return sumAgingBuckets(rows.map((r) => r.aging));
 }
 
 function totalFromBuckets(buckets: AgingBuckets): number {
-  return buckets.current + buckets.days1_30 + buckets.days31_60
-    + buckets.days61_90 + buckets.days91_120 + buckets.days120plus;
-}
-
-function extractFiscalYear(dateStr: string): number {
-  return new Date(dateStr).getFullYear();
+  return roundToTwo(buckets.current + buckets.days1_30 + buckets.days31_60
+    + buckets.days61_90 + buckets.days91_120 + buckets.days120plus);
 }

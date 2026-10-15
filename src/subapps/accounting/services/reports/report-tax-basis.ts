@@ -20,7 +20,7 @@ import type { PeriodRange } from '../../types/common';
 import type { ITaxEngine } from '../../types/interfaces';
 import type { ReportGeneratorDeps } from '../../types/reports';
 import type { JournalEntry } from '../../types/journal';
-import { todayLocalDate } from '@/lib/date-local';
+import { accountingToday } from '../../utils/accounting-day';
 import { roundToTwo } from '../../utils/math';
 import { loadLedger, sumNetAmount, type JournalLedger } from '../journal/journal-ledger';
 import { TaxEngine } from '../engines/tax-engine';
@@ -93,7 +93,7 @@ async function loadYearTaxContext(
  */
 export function createPeriodTaxBasisLoader(deps: ReportGeneratorDeps): PeriodTaxBasisLoader {
   const engine = deps.taxEngine ?? new TaxEngine(deps.repository);
-  const asOf = deps.asOf ?? todayLocalDate();
+  const asOf = deps.asOf ?? accountingToday();
   const years = new Map<number, Promise<YearTaxContext>>();
   const yearContext = (fiscalYear: number) => {
     let context = years.get(fiscalYear);

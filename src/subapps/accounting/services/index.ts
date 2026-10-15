@@ -40,11 +40,10 @@ export {
 
 // ── Balance Service (standalone functions — no TDZ risk) ─────────────────
 export {
-  calculateAgingBuckets,
-  recalculateCustomerBalance,
-  updateCustomerBalance,
-  reconcileAllBalances,
+  computeCustomerBalance,
+  refreshCustomerBalance,
   checkCreditLimit,
+  hasActiveCreditLimit,
 } from './balance-service';
 
 // ── Fiscal Period Service (standalone functions — no TDZ risk) ───────────

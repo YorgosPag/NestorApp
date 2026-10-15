@@ -116,14 +116,18 @@ jest.mock('@/subapps/accounting/services/create-accounting-services', () => ({
 
 var svcExtras = {
   validatePostingAllowed: jest.fn(async () => ({ allowed: true, reason: null })),
-  checkCreditLimit: jest.fn(() => ({ allowed: true, warning: null })),
-  updateCustomerBalance: jest.fn(async () => undefined),
+  checkCreditLimit: jest.fn(() => ({ allowed: true, exceedsLimit: false })),
+  computeCustomerBalance: jest.fn(async () => ({ netBalance: 0 })),
+  hasActiveCreditLimit: jest.fn((b: { creditLimit?: number | null } | null) => !!b && b.creditLimit != null),
+  refreshCustomerBalance: jest.fn(async () => true),
 };
 
 jest.mock('@/subapps/accounting/services', () => ({
   validatePostingAllowed: (...a: unknown[]) => svcExtras.validatePostingAllowed(...a),
   checkCreditLimit: (...a: unknown[]) => svcExtras.checkCreditLimit(...a),
-  updateCustomerBalance: (...a: unknown[]) => svcExtras.updateCustomerBalance(...a),
+  computeCustomerBalance: (...a: unknown[]) => svcExtras.computeCustomerBalance(...a),
+  hasActiveCreditLimit: (b: { creditLimit?: number | null } | null) => svcExtras.hasActiveCreditLimit(b),
+  refreshCustomerBalance: (...a: unknown[]) => svcExtras.refreshCustomerBalance(...a),
 }));
 
 jest.mock('@/subapps/accounting/services/repository/firestore-helpers', () => ({
@@ -191,7 +195,7 @@ function req(body?: unknown, url = 'https://app.test/api/accounting/x'): NextReq
 beforeEach(() => {
   jest.clearAllMocks();
   svcExtras.validatePostingAllowed.mockResolvedValue({ allowed: true, reason: null });
-  svcExtras.checkCreditLimit.mockReturnValue({ allowed: true, warning: null });
+  svcExtras.checkCreditLimit.mockReturnValue({ allowed: true, exceedsLimit: false });
   repo.getCompanySetup.mockResolvedValue(null);
   repo.getCustomerBalance.mockResolvedValue(null);
   repo.listJournalEntries.mockResolvedValue({ items: [] });
@@ -430,14 +434,19 @@ describe('bank/transactions + invoices — created shapes', () => {
     });
   });
 
-  it('invoices POST credit exceeded → 422 warning', async () => {
-    repo.getCustomerBalance.mockResolvedValue({ creditLimit: 100 });
-    svcExtras.checkCreditLimit.mockReturnValue({ allowed: false, warning: 'Credit exceeded' });
+  it('invoices POST credit exceeded → 422 με κωδικό πολιτικής + δομημένα ποσά (όχι σκληρό κείμενο)', async () => {
+    const creditCheck = { allowed: false, exceedsLimit: true, exposure: 0, projectedExposure: 500, availableCredit: 100 };
+    repo.getCustomerBalance.mockResolvedValue({ creditLimit: 100, creditHoldRule: 'auto' });
+    svcExtras.checkCreditLimit.mockReturnValue(creditCheck);
     const res = (await invPost(req({
       series: 'A', type: 'service_invoice', issueDate: '2026-01-01', contactId: 'cust_1',
       lineItems: [{ grossAmount: 500 }],
     }))) as Envelope;
     expect(res.status).toBe(422);
-    expect(await res.json()).toEqual({ success: false, error: 'Credit exceeded' });
+    expect(await res.json()).toMatchObject({
+      success: false, errorCode: 'POLICY_CREDIT_LIMIT_EXCEEDED', creditCheck, creditLimit: 100,
+    });
+    expect(svcExtras.computeCustomerBalance).toHaveBeenCalledWith(repo, 'cust_1');
+    expect(repo.createInvoice).not.toHaveBeenCalled();
   });
 });

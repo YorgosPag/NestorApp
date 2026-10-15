@@ -195,18 +195,19 @@ describe('fiscal-periods POST — flatten() details shape preserved', () => {
   });
 });
 
-describe('resolveFiscalYearParam SSoT (balances + fiscal-periods GET)', () => {
-  it('balances GET defaults fiscalYear + returns items/total shape', async () => {
+describe('balances GET (ανοιχτά στοιχεία όλων των χρήσεων) + fiscal-periods GET', () => {
+  it('balances GET → items/total χωρίς χρήση (ADR-ACC-010 §2.1.1 Φάση 3)', async () => {
     repo.listCustomerBalances.mockResolvedValue([{ id: 'b1' }]);
     const res = (await balGet(req())) as Envelope;
     expect(res.status).toBe(200);
     const payload = await res.json();
     expect(payload.success).toBe(true);
-    expect((payload.data as { total: number }).total).toBe(1);
+    expect(payload.data).toEqual({ items: [{ id: 'b1' }], total: 1 });
+    expect(repo.listCustomerBalances).toHaveBeenCalledWith();
   });
 
-  it('balances GET invalid fiscalYear → 400 Invalid fiscalYear', async () => {
-    const res = (await balGet(req(undefined, 'https://app.test/api/accounting/balances?fiscalYear=abc'))) as Envelope;
+  it('fiscal-periods GET invalid fiscalYear → 400 Invalid fiscalYear (SSoT resolveFiscalYearParam)', async () => {
+    const res = (await fpGet(req(undefined, 'https://app.test/api/accounting/fiscal-periods?fiscalYear=abc'))) as Envelope;
     expect(res.status).toBe(400);
     expect((await res.json()).error).toBe('Invalid fiscalYear');
   });

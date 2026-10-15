@@ -94,7 +94,7 @@ import type {
   CreateCustomCategoryInput,
   UpdateCustomCategoryInput,
 } from './custom-category';
-import type { CustomerBalance } from './customer-balance';
+import type { CustomerBalance, InvoiceLedgerQuery } from './customer-balance';
 import type { FiscalPeriod } from './fiscal-period';
 import type { AccountingAuditEntry, AuditEntryFilters } from './accounting-audit';
 
@@ -156,7 +156,10 @@ export interface IAccountingRepository {
   createInvoice(data: CreateInvoiceInput): Promise<{ id: string; number: number }>;
   getInvoice(invoiceId: string): Promise<Invoice | null>;
   updateInvoice(invoiceId: string, updates: UpdateInvoiceInput): Promise<void>;
+  /** ΣΕΛΙΔΑ για την οθόνη. ⚠️ ΟΧΙ για υπολογισμούς — βλ. `collectInvoices` (ADR-ACC-010 §2.1.1). */
   listInvoices(filters: InvoiceFilters, pageSize?: number): Promise<PaginatedResult<Invoice>>;
+  /** ΟΛΑ τα παραστατικά ως το `asOf` (πελάτη ή εταιρείας), για υπολογισμό απαιτήσεων — πετά, ποτέ μερικό. */
+  collectInvoices(query: InvoiceLedgerQuery): Promise<Invoice[]>;
   getNextInvoiceNumber(seriesCode: string): Promise<number>;
   getInvoiceSeries(): Promise<InvoiceSeries[]>;
 
@@ -240,7 +243,7 @@ export interface IAccountingRepository {
   // ── Customer Balances (Phase 1b — Q1-Q4) ────────────────────────────────
   getCustomerBalance(customerId: string): Promise<CustomerBalance | null>;
   upsertCustomerBalance(customerId: string, balance: CustomerBalance): Promise<void>;
-  listCustomerBalances(fiscalYear: number): Promise<CustomerBalance[]>;
+  listCustomerBalances(): Promise<CustomerBalance[]>;
 
   // ── Fiscal Periods (Phase 1b — Q5-Q8) ───────────────────────────────────
   getFiscalPeriod(periodId: string): Promise<FiscalPeriod | null>;

@@ -33,6 +33,9 @@ import type {
   MyDataIncomeType,
 } from '@/subapps/accounting/types';
 import { nowISO } from '@/lib/date-local';
+import { useTranslation as usePolicyTranslation } from '@/i18n/hooks/useTranslation';
+import { POLICY_ERROR_NAMESPACES } from '@/lib/policy/policy-error-translator';
+import { invoiceSubmitErrorMessage } from './invoice-submit-error';
 
 interface InvoiceFormProps {
   onSuccess: (invoiceId: string) => void;
@@ -146,6 +149,7 @@ function buildFormStateFromInvoice(invoice: Invoice): InvoiceFormState {
 
 export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: InvoiceFormProps) {
   const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t: tPolicy } = usePolicyTranslation([...POLICY_ERROR_NAMESPACES]);
   const { user } = useAuth();
   const { presets } = useServicePresets();
   const { profile: companyProfile } = useCompanySetup();
@@ -298,7 +302,7 @@ export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: Invo
 
       if (!res.ok) {
         const errJson = await res.json().catch(() => null);
-        throw new Error(errJson?.error ?? `HTTP ${res.status}`);
+        throw new Error(invoiceSubmitErrorMessage(errJson, res.status, tPolicy));
       }
 
       const result = await res.json();
@@ -311,7 +315,7 @@ export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: Invo
     } finally {
       setSubmitting(false);
     }
-  }, [user, form, totals, t, onSuccess, editMode, initialData, companyProfile]);
+  }, [user, form, totals, t, tPolicy, onSuccess, editMode, initialData, companyProfile]);
 
   return (
     <div className="space-y-6">

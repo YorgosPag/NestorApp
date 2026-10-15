@@ -23,10 +23,13 @@ import { createAccountingServices } from '@/subapps/accounting/services/create-a
 import {
   validatePostingAllowed,
   checkCreditLimit,
-  updateCustomerBalance,
+  computeCustomerBalance,
+  hasActiveCreditLimit,
+  refreshCustomerBalance,
 } from '@/subapps/accounting/services';
-import { getFiscalYearFromDate } from '@/subapps/accounting/services/repository/firestore-helpers';
-import type { InvoiceFilters, InvoiceType, CreateInvoiceInput } from '@/subapps/accounting/types';
+import { ApiError } from '@/lib/api/ApiErrorHandler';
+import { POLICY_ERROR_CODES } from '@/lib/policy/policy-error-codes';
+import type { InvoiceFilters, InvoiceType, CreateInvoiceInput, CreditCheckResult } from '@/subapps/accounting/types';
 import { readListContext } from '../_shared/list-request-context';
 
 const VALID_INVOICE_TYPES = [
@@ -119,23 +122,25 @@ export const POST = defineRoute({
 
     // ── Hook 1b: Credit limit check (Q4 — SAP KNKK pattern) ──────────
     const contactId = body.contactId;
-    let creditWarning: string | null = null;
+    let creditWarning: CreditCheckResult | null = null;
     if (contactId) {
-      const balance = await repository.getCustomerBalance(contactId);
-      if (balance) {
+      // Η αποθηκευμένη εγγραφή δίνει ΜΟΝΟ τις ρυθμίσεις πίστωσης· η έκθεση υπολογίζεται ΖΩΝΤΑΝΑ από τα
+      // παραστατικά όλων των χρήσεων (SAP credit exposure) — ποτέ από μια προβολή που μπορεί να έχει μείνει πίσω.
+      const settings = await repository.getCustomerBalance(contactId);
+      if (hasActiveCreditLimit(settings)) {
         const grossAmount = body.lineItems?.reduce(
           (sum: number, li: Record<string, unknown>) =>
             sum + (typeof li.grossAmount === 'number' ? li.grossAmount : 0),
           0
         ) ?? 0;
-        const creditCheck = checkCreditLimit(balance, grossAmount);
+        const creditCheck = checkCreditLimit(await computeCustomerBalance(repository, contactId), grossAmount);
         if (!creditCheck.allowed) {
-          return NextResponse.json(
-            { success: false, error: creditCheck.warning },
-            { status: 422 }
-          );
+          throw new ApiError(422, 'Credit limit exceeded', POLICY_ERROR_CODES.CREDIT_LIMIT_EXCEEDED, {
+            creditCheck,
+            creditLimit: settings.creditLimit,
+          });
         }
-        creditWarning = creditCheck.warning;
+        creditWarning = creditCheck.exceedsLimit ? creditCheck : null;
       }
     }
 
@@ -146,9 +151,9 @@ export const POST = defineRoute({
     const journalEntry = await service.createJournalEntryFromInvoice(id);
 
     // ── Hook 1c: Update customer balance (Q4 — synchronous, Q6) ───────
+    // Το τιμολόγιο ΥΠΑΡΧΕΙ ήδη: η ανανέωση της προβολής δεν ρίχνει το αίτημα (αλλιώς επανάληψη = διπλό τιμολόγιο).
     if (contactId) {
-      const fiscalYear = getFiscalYearFromDate(body.issueDate);
-      await updateCustomerBalance(repository, contactId, fiscalYear);
+      await refreshCustomerBalance(repository, contactId);
     }
 
     return created({

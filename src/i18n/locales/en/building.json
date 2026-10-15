@@ -238,7 +238,8 @@
     "duplicateCode": "The code already exists. Please try again.",
     "spaceLinkedToUnit": "This space is attached to a unit. Remove it from the unit first (unit page → {section}), then unlink it from the building.",
     "spaceBuildingOtherProject": "That building belongs to another project. A space can only move to a building of its own project; to change project, unlink it from its building first, then link it again.",
-    "propertyProjectBoundary": "This unit belongs to its project. It can only be placed in a building of the same project, and its project cannot be changed from here."
+    "propertyProjectBoundary": "This unit belongs to its project. It can only be placed in a building of the same project, and its project cannot be changed from here.",
+    "creditLimitExceeded": "Credit limit exceeded: with this invoice the customer would owe {projected}, while their limit is {limit}. Collect open invoices first or change the limit."
   },
   "recoveries": {
     "createCompany": {

@@ -24,8 +24,7 @@ import {
   reverseJournalEntryForCancelledInvoice,
   createCreditNoteForInvoice,
 } from '@/subapps/accounting/services/reversal-service';
-import { updateCustomerBalance } from '@/subapps/accounting/services';
-import { getFiscalYearFromDate } from '@/subapps/accounting/services/repository/firestore-helpers';
+import { refreshCustomerBalance } from '@/subapps/accounting/services';
 import type { MyDataDocumentStatus, UpdateInvoiceInput, CancellationReasonCode } from '@/subapps/accounting/types';
 import { safeJsonBody } from '@/lib/validation/shared-schemas';
 import {
@@ -90,8 +89,7 @@ export const PATCH = defineRoute({
     const affectsBalance = !!(body.payments || body.lineItems);
     const contactId = existing.customer?.contactId;
     if (affectsBalance && contactId) {
-      const fiscalYear = getFiscalYearFromDate(existing.issueDate);
-      await updateCustomerBalance(repository, contactId, fiscalYear);
+      await refreshCustomerBalance(repository, contactId);
     }
 
     await logAuditEvent(auth, 'data_updated', id, 'invoice', {
@@ -154,8 +152,7 @@ export const DELETE = defineRoute({
       // ── Hook 2: Update balance after void (Q4 — synchronous) ────────
       const voidContactId = existing.customer?.contactId;
       if (voidContactId) {
-        const fiscalYear = getFiscalYearFromDate(existing.issueDate);
-        await updateCustomerBalance(repository, voidContactId, fiscalYear);
+        await refreshCustomerBalance(repository, voidContactId);
       }
 
       await logFinancialTransition(auth, 'invoice', id, currentStatus, 'cancelled').catch(() => {/* non-blocking */});
@@ -177,8 +174,7 @@ export const DELETE = defineRoute({
       // ── Hook 2: Update balance after credit note (Q4 — synchronous) ─
       const cnContactId = existing.customer?.contactId;
       if (cnContactId) {
-        const fiscalYear = getFiscalYearFromDate(existing.issueDate);
-        await updateCustomerBalance(repository, cnContactId, fiscalYear);
+        await refreshCustomerBalance(repository, cnContactId);
       }
 
       await logFinancialTransition(auth, 'invoice', id, currentStatus, 'credit_note_issued').catch(() => {/* non-blocking */});

@@ -241,10 +241,17 @@ function toErrorResponse(
   // Expected business errors (404/409/400/403…) — NOT logged, details spread.
   // ADR-702: classification is shared with ApiErrorHandler so a route's status
   // does not depend on which wrapper it was built with.
+  // `errorCode` (ADR-284 policy codes) reaches the client exactly as with ApiErrorHandler — without it a client
+  // cannot translate the refusal (N.11) and shows the raw server text. Absent code ⇒ envelope byte-identical.
   const apiError = asApiError(error);
   if (apiError) {
     return NextResponse.json(
-      { success: false, error: apiError.message, ...(apiError.details ?? {}) },
+      {
+        success: false,
+        error: apiError.message,
+        ...(apiError.errorCode ? { errorCode: apiError.errorCode } : {}),
+        ...(apiError.details ?? {}),
+      },
       { status: apiError.statusCode },
     );
   }

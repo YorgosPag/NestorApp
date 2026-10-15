@@ -4,226 +4,150 @@
  * @author Claude Code (Anthropic AI) + Γιώργος Παγώνης
  * @created 2026-03-29
  * @see DECISIONS-PHASE-1b.md Q1-Q4
+ * @see ADR-ACC-010 §2.1.1 (Φάση 3, 2026-10-15) — ανοιχτά στοιχεία όλων των χρήσεων σε ημερομηνία αναφοράς
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, max 500 lines
+ *
+ * 🔴 Ως 2026-10-15 το υπόλοιπο ήταν «ανά χρήση» από τη ΣΕΛΙΔΑ `listInvoices(…, 1000)`, με ερώτημα χωρίς δείκτη
+ *   (σφάλμα ⇒ «κανένα τιμολόγιο» ⇒ υπόλοιπο 0 € που ΓΡΑΦΟΤΑΝ), σε έγγραφο με κλειδί μόνο τον πελάτη (κάθε
+ *   χρήση έσβηνε την άλλη), μετρώντας ακυρωμένα τιμολόγια και αφήνοντας το πιστωτικό σε άλλη χρήση από το
+ *   τιμολόγιό του. Ο υπολογισμός ζει πλέον στο SSoT `receivables/receivables-ledger.ts`.
  */
+
+import { chunkArray } from '@/lib/array-utils';
+import { getErrorMessage } from '@/lib/error-utils';
+import { createModuleLogger } from '@/lib/telemetry/Logger';
 
 import type { IAccountingRepository } from '../types/interfaces';
-import type { Invoice } from '../types/invoice';
-import type {
-  CustomerBalance,
-  AgingBuckets,
-  CreditCheckResult,
-} from '../types/customer-balance';
+import type { CustomerBalance, CreditCheckResult, ReceivablesPosition } from '../types/customer-balance';
+import { accountingToday } from '../utils/accounting-day';
+import { roundToTwo } from '../utils/math';
 import { isoNow } from './repository/firestore-helpers';
+import { groupInvoicesByCustomer, summarizeReceivables } from './receivables/receivables-ledger';
 
-// ============================================================================
-// AGING BUCKET CALCULATION (Q2 — SAP S/4HANA 6-bucket)
-// ============================================================================
+type BalanceRepository = Pick<
+  IAccountingRepository,
+  'collectInvoices' | 'getCustomerBalance' | 'upsertCustomerBalance' | 'listCustomerBalances'
+>;
 
-/**
- * Υπολογίζει aging buckets από λίστα ανοιχτών τιμολογίων
- *
- * Κάθε τιμολόγιο κατατάσσεται σε bucket βάσει ημερών καθυστέρησης
- * από τo dueDate (ή issueDate αν dueDate = null).
- */
-export function calculateAgingBuckets(
-  invoices: Invoice[],
-  referenceDate: Date = new Date()
-): AgingBuckets {
-  const buckets: AgingBuckets = {
-    current: 0,
-    days1_30: 0,
-    days31_60: 0,
-    days61_90: 0,
-    days91_120: 0,
-    days120plus: 0,
-  };
+const logger = createModuleLogger('CUSTOMER_BALANCE');
 
-  for (const inv of invoices) {
-    if (inv.paymentStatus === 'paid') continue;
+/** Υπέρβαση πάνω από 1 λεπτό ⇒ διόρθωση (το αποθηκευμένο είχε αποκλίνει από τα παραστατικά). */
+const RECONCILE_TOLERANCE = 0.01;
 
-    const dueDate = new Date(inv.dueDate ?? inv.issueDate);
-    const daysOverdue = Math.floor(
-      (referenceDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)
-    );
-    const balance = inv.balanceDue;
-
-    if (daysOverdue <= 0) {
-      buckets.current += balance;
-    } else if (daysOverdue <= 30) {
-      buckets.days1_30 += balance;
-    } else if (daysOverdue <= 60) {
-      buckets.days31_60 += balance;
-    } else if (daysOverdue <= 90) {
-      buckets.days61_90 += balance;
-    } else if (daysOverdue <= 120) {
-      buckets.days91_120 += balance;
-    } else {
-      buckets.days120plus += balance;
-    }
-  }
-
-  return buckets;
-}
-
-// ============================================================================
-// FULL RECALCULATION FROM SOURCE DOCUMENTS
-// ============================================================================
-
-/**
- * Πλήρης επανυπολογισμός balance ενός πελάτη από invoices
- *
- * Χρησιμοποιείται για reconciliation — ξαναϋπολογίζει τα πάντα
- * από τα source documents (invoices collection).
- */
-export async function recalculateCustomerBalance(
-  repository: IAccountingRepository,
-  customerId: string,
-  fiscalYear: number
-): Promise<CustomerBalance> {
-  const { items: invoices } = await repository.listInvoices(
-    { customerId, fiscalYear },
-    1000
-  );
-
-  const now = new Date();
-  let totalInvoiced = 0;
-  let totalPaid = 0;
-  let totalCreditNotes = 0;
-  let disputedBalance = 0;
-  let overdueBalance = 0;
-  let invoiceCount = 0;
-  let lastInvoiceDate: string | null = null;
-  let lastPaymentDate: string | null = null;
-
-  const openInvoices: Invoice[] = [];
-
-  for (const inv of invoices) {
-    if (inv.type === 'credit_invoice') {
-      totalCreditNotes += inv.totalGrossAmount;
-      continue;
-    }
-
-    totalInvoiced += inv.totalGrossAmount;
-    totalPaid += inv.totalPaid;
-
-    if (inv.isDisputed) {
-      disputedBalance += inv.balanceDue;
-    }
-
-    if (inv.paymentStatus !== 'paid') {
-      invoiceCount++;
-      openInvoices.push(inv);
-
-      const dueDate = new Date(inv.dueDate ?? inv.issueDate);
-      if (dueDate < now) {
-        overdueBalance += inv.balanceDue;
-      }
-    }
-
-    if (!lastInvoiceDate || inv.issueDate > lastInvoiceDate) {
-      lastInvoiceDate = inv.issueDate;
-    }
-
-    for (const payment of inv.payments) {
-      if (!lastPaymentDate || payment.date > lastPaymentDate) {
-        lastPaymentDate = payment.date;
-      }
-    }
-  }
-
-  const aging = calculateAgingBuckets(openInvoices, now);
-  const netBalance = totalInvoiced - totalPaid - totalCreditNotes;
-
-  // Fetch existing balance for credit management fields (preserve settings)
-  const existing = await repository.getCustomerBalance(customerId);
-
-  const balance: CustomerBalance = {
-    customerId,
-    customerName: existing?.customerName ?? invoices[0]?.customer?.name ?? '',
-    totalInvoiced,
-    totalPaid,
-    totalCreditNotes,
-    netBalance,
-    overdueBalance,
-    aging,
-    disputedBalance,
+/** Θέση από τα παραστατικά + οι ρυθμίσεις πίστωσης του αποθηκευμένου (δεν τις παράγει ο υπολογισμός). */
+function mergeWithCreditSettings(
+  position: ReceivablesPosition,
+  existing: CustomerBalance | null
+): CustomerBalance {
+  return {
+    ...position,
+    customerName: position.customerName || existing?.customerName || '',
     creditLimit: existing?.creditLimit ?? null,
     creditHoldRule: existing?.creditHoldRule ?? 'off',
     creditHoldActive: existing?.creditHoldActive ?? false,
     riskClass: existing?.riskClass ?? 'low',
     nextReviewDate: existing?.nextReviewDate ?? null,
-    lastInvoiceDate,
-    lastPaymentDate,
-    invoiceCount,
-    fiscalYear,
     updatedAt: isoNow(),
   };
+}
 
+// ============================================================================
+// COMPUTE (read-only) / RECALCULATE (compute + store)
+// ============================================================================
+
+/**
+ * Το υπόλοιπο του πελάτη στις `asOf` (προεπιλογή: σήμερα, Αθήνα) από ΟΛΑ τα παραστατικά του — χωρίς εγγραφή.
+ * Πετά αν η σάρωση αποτύχει: ποτέ «0» από σφάλμα.
+ */
+export async function computeCustomerBalance(
+  repository: Pick<BalanceRepository, 'collectInvoices' | 'getCustomerBalance'>,
+  customerId: string,
+  asOf: string = accountingToday()
+): Promise<CustomerBalance> {
+  const [invoices, existing] = await Promise.all([
+    repository.collectInvoices({ scope: { kind: 'customer', customerId, asOf } }),
+    repository.getCustomerBalance(customerId),
+  ]);
+  return mergeWithCreditSettings(summarizeReceivables(customerId, invoices, asOf), existing);
+}
+
+/**
+ * Ενημέρωση μετά από αλλαγή τιμολογίου / πληρωμής / πιστωτικού (Q4 — σύγχρονα): πλήρης επανυπολογισμός από τα
+ * παραστατικά και αποθήκευση. Σε σφάλμα ΔΕΝ γράφει τίποτα — το αποθηκευμένο μένει ως είχε ως την επόμενη συμφωνία.
+ */
+async function updateCustomerBalance(
+  repository: BalanceRepository,
+  customerId: string
+): Promise<CustomerBalance> {
+  const balance = await computeCustomerBalance(repository, customerId);
   await repository.upsertCustomerBalance(customerId, balance);
   return balance;
 }
 
-// ============================================================================
-// EVENT-DRIVEN UPDATE (called after invoice/payment/credit note changes)
-// ============================================================================
-
 /**
- * Ενημέρωση balance μετά από αλλαγή invoice/payment
- *
- * Shortcut: recalculates from scratch (safe, ~1 query).
- * Για μεγάλους πελάτες με 1000+ invoices, μπορεί να βελτιστοποιηθεί
- * με incremental updates στο μέλλον.
+ * Ανανέωση της αποθηκευμένης προβολής ΜΕΤΑ από ήδη επιτυχημένη εγγραφή παραστατικού (routes). Δεν ρίχνει ποτέ
+ * το αίτημα: το παραστατικό υπάρχει ήδη, και ένα 500 εδώ θα έφερνε επανάληψη από τον πελάτη ⇒ ΔΙΠΛΟ τιμολόγιο.
+ * Σε σφάλμα: καταγραφή, το αποθηκευμένο μένει ως είχε (ΔΕΝ γράφεται «0»), και το διορθώνει η συμφωνία.
+ * Ο έλεγχος πιστωτικού ορίου δεν εξαρτάται από αυτό — υπολογίζεται ζωντανά (`computeCustomerBalance`).
  */
-export async function updateCustomerBalance(
-  repository: IAccountingRepository,
-  customerId: string,
-  fiscalYear: number
-): Promise<CustomerBalance> {
-  return recalculateCustomerBalance(repository, customerId, fiscalYear);
+export async function refreshCustomerBalance(repository: BalanceRepository, customerId: string): Promise<boolean> {
+  try {
+    await updateCustomerBalance(repository, customerId);
+    return true;
+  } catch (error) {
+    logger.error('Customer balance refresh failed — stored balance left unchanged until reconciliation', {
+      customerId,
+      error: getErrorMessage(error),
+    });
+    return false;
+  }
 }
 
 // ============================================================================
-// BATCH RECONCILIATION
+// BATCH RECONCILIATION — ΜΙΑ σάρωση, ομαδοποίηση ανά πελάτη
 // ============================================================================
 
+export interface ReconcileResult {
+  readonly reconciled: number;
+  readonly corrected: number;
+  /** Παραστατικά χωρίς `customer.contactId` — δεν αποδίδονται σε λογαριασμό πελάτη. */
+  readonly unattributedInvoices: number;
+  readonly asOf: string;
+}
+
 /**
- * Batch reconciliation — επανυπολογίζει ΟΛΟΥΣ τους πελάτες
- *
- * @returns Αριθμός πελατών που reconciled + τυχόν auto-corrections
+ * Επανυπολογίζει ΟΛΟΥΣ τους πελάτες από μία σάρωση των παραστατικών της εταιρείας (όχι μία ανά πελάτη).
+ * Πελάτης με αποθηκευμένο υπόλοιπο αλλά χωρίς πια παραστατικά (π.χ. όλα ακυρώθηκαν) μηδενίζεται.
  */
 export async function reconcileAllBalances(
-  repository: IAccountingRepository,
-  fiscalYear: number
-): Promise<{ reconciled: number; corrected: number }> {
-  const existingBalances = await repository.listCustomerBalances(fiscalYear);
+  repository: BalanceRepository,
+  asOf: string = accountingToday()
+): Promise<ReconcileResult> {
+  const [invoices, stored] = await Promise.all([
+    repository.collectInvoices({ scope: { kind: 'receivables', asOf } }),
+    repository.listCustomerBalances(),
+  ]);
+  const { byCustomer, unattributed } = groupInvoicesByCustomer(invoices);
+  const storedById = new Map(stored.map((b) => [b.customerId, b]));
+  const customerIds = new Set([...byCustomer.keys(), ...storedById.keys()]);
 
-  // Collect unique customerIds from existing balances
-  const customerIds = new Set(existingBalances.map((b) => b.customerId));
+  const updates = [...customerIds].map((customerId) => {
+    const before = storedById.get(customerId) ?? null;
+    const position = summarizeReceivables(customerId, byCustomer.get(customerId) ?? [], asOf);
+    return { customerId, before, after: mergeWithCreditSettings(position, before) };
+  });
+  await writeInChunks(updates, ({ customerId, after }) => repository.upsertCustomerBalance(customerId, after));
+  const corrected = updates.filter(
+    ({ before, after }) => before !== null && Math.abs(before.netBalance - after.netBalance) > RECONCILE_TOLERANCE
+  ).length;
+  return { reconciled: updates.length, corrected, unattributedInvoices: unattributed, asOf };
+}
 
-  // Also scan invoices for customers without a balance record
-  const { items: invoices } = await repository.listInvoices({ fiscalYear }, 1000);
-  for (const inv of invoices) {
-    if (inv.customer.contactId) {
-      customerIds.add(inv.customer.contactId);
-    }
-  }
+/** Παράλληλες εγγραφές με φραγμένο πλήθος — ούτε μία-μία (αργό), ούτε όλες μαζί (κατακλυσμός). */
+const WRITE_CONCURRENCY = 20;
 
-  let reconciled = 0;
-  let corrected = 0;
-
-  for (const customerId of customerIds) {
-    const before = existingBalances.find((b) => b.customerId === customerId);
-    const after = await recalculateCustomerBalance(repository, customerId, fiscalYear);
-
-    reconciled++;
-
-    if (before && Math.abs(before.netBalance - after.netBalance) > 0.01) {
-      corrected++;
-    }
-  }
-
-  return { reconciled, corrected };
+async function writeInChunks<T>(items: T[], write: (item: T) => Promise<void>): Promise<void> {
+  for (const chunk of chunkArray(items, WRITE_CONCURRENCY)) await Promise.all(chunk.map(write));
 }
 
 // ============================================================================
@@ -231,59 +155,31 @@ export async function reconcileAllBalances(
 // ============================================================================
 
 /**
- * Έλεγχος πιστωτικού ορίου πριν έκδοση νέου τιμολογίου
+ * Έλεγχος πιστωτικού ορίου πριν την έκδοση νέου τιμολογίου.
  *
- * Exposure formula: exposure = currentBalance (open AR)
+ * Exposure = ανοιχτές απαιτήσεις ΟΛΩΝ των χρήσεων (SAP credit exposure), όχι της τρέχουσας χρήσης.
  * Check: exposure + newInvoiceAmount > creditLimit
+ * - auto → μπλοκ (API 422) · manual → προειδοποίηση · off → κανένας έλεγχος
  *
- * Behavior:
- * - auto → Block τιμολογίου + API 422 + UI warning
- * - manual → Warning μόνο
- * - off → Κανένας έλεγχος
+ * Επιστρέφει δομημένο αποτέλεσμα· το κείμενο το αποδίδει ο παραλήπτης (N.11).
  */
-export function checkCreditLimit(
-  balance: CustomerBalance,
-  newInvoiceAmount: number
-): CreditCheckResult {
-  // No credit limit → always allowed
-  if (balance.creditLimit === null || balance.creditHoldRule === 'off') {
-    return {
-      allowed: true,
-      warning: null,
-      exposure: balance.netBalance,
-      availableCredit: null,
-    };
-  }
-
+export function checkCreditLimit(balance: CustomerBalance, newInvoiceAmount: number): CreditCheckResult {
   const exposure = balance.netBalance;
-  const projectedExposure = exposure + newInvoiceAmount;
-  const availableCredit = balance.creditLimit - exposure;
+  const projectedExposure = roundToTwo(exposure + newInvoiceAmount);
+  if (balance.creditLimit === null || balance.creditHoldRule === 'off') {
+    return { allowed: true, exceedsLimit: false, exposure, projectedExposure, availableCredit: null };
+  }
   const exceedsLimit = projectedExposure > balance.creditLimit;
-
-  if (!exceedsLimit) {
-    return {
-      allowed: true,
-      warning: null,
-      exposure,
-      availableCredit,
-    };
-  }
-
-  // Exceeds limit
-  if (balance.creditHoldRule === 'auto') {
-    return {
-      allowed: false,
-      warning: `Υπέρβαση πιστωτικού ορίου: €${projectedExposure.toFixed(2)} > €${balance.creditLimit.toFixed(2)}`,
-      exposure,
-      availableCredit,
-    };
-  }
-
-  // manual → warning only
   return {
-    allowed: true,
-    warning: `Προσοχή: υπέρβαση πιστωτικού ορίου (€${projectedExposure.toFixed(2)} > €${balance.creditLimit.toFixed(2)})`,
+    allowed: !(exceedsLimit && balance.creditHoldRule === 'auto'),
+    exceedsLimit,
     exposure,
-    availableCredit,
+    projectedExposure,
+    availableCredit: roundToTwo(balance.creditLimit - exposure),
   };
+}
+
+/** Χρειάζεται ο έλεγχος σάρωση; Μόνο αν ο πελάτης έχει ενεργό όριο — αλλιώς δεν πληρώνουμε ανάγνωση. */
+export function hasActiveCreditLimit(balance: CustomerBalance | null): balance is CustomerBalance {
+  return balance !== null && balance.creditLimit !== null && balance.creditHoldRule !== 'off';
 }

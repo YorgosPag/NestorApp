@@ -20,3 +20,25 @@ export function invoiceOpenAmountField(invoice: Pick<Invoice, 'balanceDue'>): In
 export function invoiceOpenAmount(invoice: Pick<Invoice, 'balanceDue' | 'totalGrossAmount'>): number {
   return invoice[invoiceOpenAmountField(invoice)];
 }
+
+// ============================================================================
+// ΠΟΙΑ ΠΑΡΑΣΤΑΤΙΚΑ ΕΙΝΑΙ ΑΠΑΙΤΗΣΗ (ADR-ACC-010 §2.1.1 Φάση 3)
+// ============================================================================
+
+export function isCreditNote(invoice: Pick<Invoice, 'type'>): boolean {
+  return invoice.type === 'credit_invoice';
+}
+
+/** Πρόχειρο/απορριφθέν που ακυρώθηκε (`void`) — νομικά δεν εκδόθηκε· δεν μετρά πουθενά. */
+export function isVoidedInvoice(invoice: Pick<Invoice, 'mydata'>): boolean {
+  return invoice.mydata?.status === 'cancelled';
+}
+
+/**
+ * Μπορεί μια ΕΙΣΠΡΑΞΗ να εξοφλεί αυτό το παραστατικό; Όχι πιστωτικό (εκεί τα χρήματα πάνε ΠΡΟΣ τον πελάτη), όχι
+ * ακυρωμένο, όχι πιστωμένο (το πιστωτικό ακυρώνει ολόκληρο το τιμολόγιο — `reversal-service`). Ως 2026-10-15 και
+ * τα τρία έμπαιναν στα υποψήφια αντιστοίχισης, γιατί κρατούσαν `paymentStatus: 'unpaid'` με `balanceDue > 0`.
+ */
+export function isCollectibleInvoice(invoice: Pick<Invoice, 'type' | 'mydata' | 'creditNoteInvoiceId'>): boolean {
+  return !isCreditNote(invoice) && !isVoidedInvoice(invoice) && !invoice.creditNoteInvoiceId;
+}

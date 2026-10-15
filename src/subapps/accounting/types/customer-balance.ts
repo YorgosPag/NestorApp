@@ -51,6 +51,10 @@ export type RiskClass = 'low' | 'medium' | 'high' | 'critical';
  *
  * Updated event-driven on invoice/payment/credit note changes.
  * Periodically reconciled from source documents.
+ *
+ * 🔑 Σημασιολογία (ADR-ACC-010 §2.1.1 Φάση 3, 2026-10-15): **ανοιχτά στοιχεία όλων των χρήσεων σε ημερομηνία
+ * αναφοράς** (`asOf`) — SAP FI-AR open items / Xero & QuickBooks aged receivables. ΟΧΙ ανά χρήση: ένα απλήρωτο
+ * τιμολόγιο του Δεκεμβρίου οφείλεται και τον Ιανουάριο. Ταυτότητα: Σ `aging` = `netBalance`.
  */
 export interface CustomerBalance {
   /** Firestore contact ID */
@@ -59,13 +63,13 @@ export interface CustomerBalance {
   customerName: string;
 
   // — Aggregated Totals —
-  /** Σύνολο εκδοθέντων τιμολογίων */
+  /** Σύνολο εκδοθέντων τιμολογίων ως το `asOf` (χωρίς ακυρωμένα) */
   totalInvoiced: number;
-  /** Σύνολο πληρωμών */
+  /** Σύνολο πληρωμών ως το `asOf` */
   totalPaid: number;
-  /** Σύνολο πιστωτικών */
+  /** Σύνολο πιστωτικών ως το `asOf`, καθαρό από επιστροφές χρημάτων */
   totalCreditNotes: number;
-  /** Καθαρό υπόλοιπο (totalInvoiced - totalPaid - totalCreditNotes) */
+  /** Καθαρό υπόλοιπο = Σ ανοιχτών στοιχείων (= totalInvoiced − totalPaid − totalCreditNotes) */
   netBalance: number;
   /** Ληξιπρόθεσμο υπόλοιπο */
   overdueBalance: number;
@@ -103,24 +107,50 @@ export interface CustomerBalance {
   companyId?: string;
 
   // — Metadata —
-  /** Φορολογικό έτος */
-  fiscalYear: number;
+  /** Ημερομηνία αναφοράς (`YYYY-MM-DD`, ημέρα Αθήνας) στην οποία ισχύουν τα ποσά */
+  asOf: string;
   /** Timestamp ενημέρωσης (ISO 8601) */
   updatedAt: string;
+}
+
+/** Η θέση απαιτήσεων ενός πελάτη, όπως βγαίνει από τα πρωτογενή παραστατικά (χωρίς ρυθμίσεις πίστωσης). */
+export type ReceivablesPosition = Pick<
+  CustomerBalance,
+  | 'customerId' | 'customerName' | 'totalInvoiced' | 'totalPaid' | 'totalCreditNotes' | 'netBalance'
+  | 'overdueBalance' | 'aging' | 'disputedBalance' | 'lastInvoiceDate' | 'lastPaymentDate' | 'invoiceCount' | 'asOf'
+>;
+
+// ============================================================================
+// INVOICE LEDGER SCAN (ADR-ACC-010 §2.1.1 — Φάση 3)
+// ============================================================================
+
+/**
+ * Εμβέλεια πλήρους σάρωσης τιμολογίων για ΥΠΟΛΟΓΙΣΜΟ απαιτήσεων: όλα τα παραστατικά που εκδόθηκαν ως και το
+ * `asOf` — ενός πελάτη ή όλης της εταιρείας. Χωρίς `fiscalYear`: οι απαιτήσεις είναι διαχρονικές.
+ */
+export type InvoiceLedgerScope =
+  | { readonly kind: 'customer'; readonly customerId: string; readonly asOf: string }
+  | { readonly kind: 'receivables'; readonly asOf: string };
+
+/** Ερώτημα σάρωσης τιμολογίων — χωρίς `pageSize`, ώστε το κόψιμο να είναι αδύνατο από τον τύπο. */
+export interface InvoiceLedgerQuery {
+  readonly scope: InvoiceLedgerScope;
 }
 
 // ============================================================================
 // CREDIT CHECK RESULT
 // ============================================================================
 
-/** Αποτέλεσμα ελέγχου πιστωτικού ορίου */
+/** Αποτέλεσμα ελέγχου πιστωτικού ορίου — δομημένο· το κείμενο το αποδίδει ο παραλήπτης (N.11). */
 export interface CreditCheckResult {
   /** Επιτρέπεται η έκδοση; */
   allowed: boolean;
-  /** Μήνυμα warning (ακόμα κι αν allowed) */
-  warning: string | null;
-  /** Τρέχουσα έκθεση (current AR balance) */
+  /** `true` όταν η έκθεση μετά την έκδοση ξεπερνά το όριο (μπλοκ σε `auto`, προειδοποίηση σε `manual`) */
+  exceedsLimit: boolean;
+  /** Τρέχουσα έκθεση (ανοιχτές απαιτήσεις όλων των χρήσεων) */
   exposure: number;
-  /** Διαθέσιμη πίστωση (creditLimit - netBalance) */
+  /** Έκθεση μετά το νέο παραστατικό */
+  projectedExposure: number;
+  /** Διαθέσιμη πίστωση (creditLimit - exposure) */
   availableCredit: number | null;
 }

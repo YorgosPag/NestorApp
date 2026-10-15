@@ -50,7 +50,7 @@ import type {
   CreateCustomCategoryInput,
   UpdateCustomCategoryInput,
 } from '../../types/custom-category';
-import type { CustomerBalance } from '../../types/customer-balance';
+import type { CustomerBalance, InvoiceLedgerQuery } from '../../types/customer-balance';
 import type { FiscalPeriod } from '../../types/fiscal-period';
 import type { AccountingAuditEntry, AuditEntryFilters } from '../../types/accounting-audit';
 import type { MatchingConfig } from '../../types/matching-config';
@@ -65,6 +65,7 @@ import {
 import * as financial from './accounting-repo-financial';
 import * as journalLedger from './accounting-repo-journal-ledger';
 import * as bankLedger from './accounting-repo-bank-ledger';
+import * as invoiceLedger from './accounting-repo-invoice-ledger';
 import * as matchCandidates from './accounting-repo-match-candidates';
 import * as entities from './accounting-repo-entities';
 import * as operations from './accounting-repo-operations';
@@ -120,6 +121,8 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
     financial.updateInvoice(this.tenant, invoiceId, updates);
   listInvoices = (filters: InvoiceFilters, pageSize?: number) =>
     financial.listInvoices(this.tenant, filters, pageSize);
+  collectInvoices = (query: InvoiceLedgerQuery) =>
+    invoiceLedger.collectInvoices(this.tenant, query);
   getNextInvoiceNumber = (seriesCode: string) =>
     financial.getNextInvoiceNumber(this.tenant, seriesCode);
   getInvoiceSeries = () =>
@@ -248,8 +251,8 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
     balances.getCustomerBalance(this.tenant, customerId);
   upsertCustomerBalance = (customerId: string, balance: CustomerBalance) =>
     balances.upsertCustomerBalance(this.tenant, customerId, balance);
-  listCustomerBalances = (fiscalYear: number) =>
-    balances.listCustomerBalances(this.tenant, fiscalYear);
+  listCustomerBalances = () =>
+    balances.listCustomerBalances(this.tenant);
 
   // ── Balances: Fiscal Periods (Phase 1b) ──────────────────────────────
   getFiscalPeriod = (periodId: string) =>

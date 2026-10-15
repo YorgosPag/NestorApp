@@ -58,6 +58,9 @@ export const POLICY_ERROR_CODES = {
   SPACE_BUILDING_OTHER_PROJECT: 'POLICY_SPACE_BUILDING_OTHER_PROJECT',
   /** ADR-898 §21.6 Ε6-α: το έργο είναι το όριο της μονάδας — ούτε αλλαγή έργου, ούτε κτίριο άλλου έργου. */
   PROPERTY_PROJECT_BOUNDARY: 'POLICY_PROPERTY_PROJECT_BOUNDARY',
+
+  /** ADR-ACC-010 §2.1.1 Φάση 3: έκθεση πελάτη (ανοιχτές απαιτήσεις όλων των χρήσεων) + νέο τιμολόγιο > όριο, κανόνας `auto`. */
+  CREDIT_LIMIT_EXCEEDED: 'POLICY_CREDIT_LIMIT_EXCEEDED',
 } as const;
 
 export type PolicyErrorCode =

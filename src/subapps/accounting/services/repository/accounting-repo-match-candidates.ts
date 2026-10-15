@@ -11,6 +11,9 @@
  *   (`amountBandFor`), πλήρης σάρωση της ζώνης (SSoT `scanLedger`, όριο που πετά) — συν απευθείας εύρεση κατά
  *   αριθμό παραστατικού που αναγράφεται στο κείμενο της τράπεζας (εκεί που το Xero, κατά τους χρήστες του, σιωπά).
  *
+ * Μόνο ΑΠΑΙΤΗΣΕΙΣ (`isCollectibleInvoice`, Φάση 3): όχι πιστωτικά, όχι ακυρωμένα, όχι πιστωμένα — κρατούν `unpaid`
+ *   με `balanceDue > 0`, άρα το φίλτρο κατάστασης μόνο του τα άφηνε να «εξοφληθούν» από μια είσπραξη.
+ *
  * @see ADR-ACC-010 §2.1.1 · ADR-ACC-008 Bank Reconciliation
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, max 500 lines
  */
@@ -25,7 +28,11 @@ import type { AmountBand, InvoiceReference } from '../../types/bank';
 import type { Invoice } from '../../types/invoice';
 import type { JournalEntry } from '../../types/journal';
 import type { TenantContext } from '../../types/common';
-import { invoiceOpenAmountField, type InvoiceOpenAmountField } from '../../utils/invoice-open-amount';
+import {
+  invoiceOpenAmountField,
+  isCollectibleInvoice,
+  type InvoiceOpenAmountField,
+} from '../../utils/invoice-open-amount';
 
 import { applyJournalDefaults } from './accounting-repo-financial';
 import { scanLedger } from './accounting-repo-scan';
@@ -83,7 +90,8 @@ export async function collectOpenInvoicesByAmount(tenant: TenantContext, band: A
         scope: band,
         build: (db) => buildOpenInvoiceBandQuery(db.collection(COLLECTIONS.ACCOUNTING_INVOICES), tenant.companyId, field, band),
         map: (data) => data as Invoice,
-      }).then((invoices) => invoices.filter((invoice) => invoiceOpenAmountField(invoice) === field))
+      }).then((invoices) =>
+        invoices.filter((invoice) => isCollectibleInvoice(invoice) && invoiceOpenAmountField(invoice) === field))
     )
   );
   return perField.flat();
@@ -125,6 +133,6 @@ export async function findOpenInvoicesByReference(
     const open = new Set<string>(OPEN_PAYMENT_STATUSES);
     return snaps
       .flatMap((snap) => snap.docs.map((doc) => doc.data() as Invoice))
-      .filter((invoice) => open.has(invoice.paymentStatus));
+      .filter((invoice) => open.has(invoice.paymentStatus) && isCollectibleInvoice(invoice));
   });
 }
