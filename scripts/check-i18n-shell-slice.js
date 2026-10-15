@@ -36,15 +36,26 @@
  *                           way a new module can enter the closure
  *   D. resolution drift     a newly added file that would satisfy a specifier
  *                           the generator recorded as unresolved — in the
- *                           shell OR any declared route closure (ADR-744 §28)
+ *                           shell, any declared route OR lazy closure (§28, §31)
+ *   E. global inputs        config · constants · aliases · bundles · toolchain (§30)
+ *   F. lazy-route map       ADR-744 §31 — when a `src` module is staged, REBUILD
+ *                           the lazy-route map with an on-demand graph over the
+ *                           index + a content-addressed local cache, and compare
+ *                           with the committed artifact (lazy-freshness.js).
+ *                           Red only when the OUTPUT changes. Otherwise the
+ *                           graph-free judgement (`judgeLazyArtifact`) runs.
  *
- * What Layer 1 CANNOT see: a re-export chain rewritten OUTSIDE any shell module
- * (barrel B forwards X; X's declaration moves from C to D). No shell file's
- * bytes change, yet the closure does. That is real, it is rare, and it is why
- * Layer 2 exists — `--full` rebuilds the graph and regenerates from scratch,
- * run in CI on every PR (.github/workflows/i18n-governance.yml). Stating the
- * gap is the point; a gate that implies coverage it does not have is worse than
- * one that does not exist.
+ * What Layer 1 used to be blind to, and how each closed (ADR-744 §31):
+ *   · a re-export rewritten in a barrel the walk READS but that is not a member
+ *     → `manifest.consultedFiles` for the shell/route walks (63 barrels); the
+ *       lazy walks' barrels (234 outside every table, measured) → check F
+ *   · `import {A}` → `{A, B}` under an unchanged `kind + spec` fingerprint
+ *     → the fingerprint is now `walkSurface(mod)` (names, exports, re-exports)
+ *   · anything inside the 8.329-file lazy closures → check F
+ * Layer 2 still exists — `--full` rebuilds the eager graph and regenerates from
+ * scratch, in CI on every PR (.github/workflows/i18n-shell-slice.yml). Stating
+ * what is covered is the point; a gate that implies coverage it does not have
+ * is worse than one that does not exist.
  *
  * CLI:
  *   node scripts/check-i18n-shell-slice.js [staged files…]   # Layer 1
