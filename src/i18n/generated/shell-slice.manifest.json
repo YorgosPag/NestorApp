@@ -210,9 +210,12 @@
       "scripts/lib/i18n-shell-slice/key-tables.js": "aba6069f1ba2adbc3d696f1171d0967f5fd740c56b2e1866c08576737325ae45",
       "scripts/lib/i18n-shell-slice/lazy-route-census.js": "cc3aaa9baac27cf34cff7c8b62fdeda4f4bb223ff276b581aa1325dd365744b8",
       "scripts/lib/i18n-shell-slice/lazy-routes.js": "059168fba4ecc9ffd392bd786214e9f12553d0385360577bfc96e66baf50a31b",
-      "scripts/lib/i18n-shell-slice/ledger.js": "127d2abc6a174205a0d4302563b280cb7a251ac366a605f5aa41e841bbcfd313",
+      "scripts/lib/i18n-shell-slice/ledger.js": "365f9a9bf4f706fb56b83a7ba5a79665f7063dd45c6f7c26b9a0677c68fa5d77",
+      "scripts/lib/i18n-shell-slice/manifest-build.js": "fa853c79c89f4cb082887415e1b0f23ce384953fc1a5696ffe975813c5976943",
       "scripts/lib/i18n-shell-slice/namespace-declarations.js": "5c1b5259f46a9990026495e640fbd79af8adc08d64742a7de885c477174f64ca",
-      "scripts/lib/i18n-shell-slice/plan.js": "1b32c02e55b6077bada1e081891968b4e204b9a183c3654785cf314b22690c0a",
+      "scripts/lib/i18n-shell-slice/namespace-inheritance.js": "f0436e307217d76da0d186bfa1c03fd26b813418a64991f3d5377eb579315b97",
+      "scripts/lib/i18n-shell-slice/plan.js": "4d63e4a44333e267534c5a7c957f6bb85119c26dd4f9be242290c32c6d82f5f2",
+      "scripts/lib/i18n-shell-slice/route-ledger.js": "0524a5165f6a17dec08b86b1cf2b3c44ed6e7fff4ce6809cfdc34506928f1be8",
       "scripts/lib/i18n-shell-slice/route-slices.js": "288e3b342a9b26abe0f3dd6d59e7bac0428fb2f40bd8af4e191e15938854143b",
       "scripts/lib/i18n-shell-slice/shell-census.js": "c79cafa20782b69fae3f6f7e3abfbb66d617548a90e3113b5f145d50172506a8",
       "scripts/lib/i18n-shell-slice/shell-closure.js": "7ddd227deec17a85f63dc68fa962490adb62fbc27ec3648b9f65fedb121c7191",
@@ -241,7 +244,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "2859cd32a48788127d29f9e94f9ee7540499f85a85c89c1db53126cee7baecd4",
+  "inputsSha256": "9cd1a20b54d8b405eba9281e181c60156fd1f018297277001c65108729f1aad2",
   "languages": [
     "el"
   ],
