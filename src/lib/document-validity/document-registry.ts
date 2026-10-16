@@ -130,6 +130,11 @@ export function registryRowIdOf(row: RegistryRow): string {
   return row.kind === 'gap' ? row.gap.id : row.document.id;
 }
 
+/** Το ακίνητο της γραμμής (`null` για έγγραφο που δεν δένεται σε ακίνητο) — ADR-915 Φ5β: η αλυσίδα υπευθυνότητας ρωτά εδώ. */
+export function registryRowPropertyIdOf(row: RegistryRow): string | null {
+  return row.kind === 'gap' ? row.gap.propertyId : row.document.propertyId;
+}
+
 export interface DocumentRegistry {
   readonly rows: readonly RegistryRow[];
   /** Πόσες σε κάθε κατάσταση — **όλες, και οι μηδενικές** («κοίταξα, 0» ≠ «δεν υπάρχει έλεγχος»). */

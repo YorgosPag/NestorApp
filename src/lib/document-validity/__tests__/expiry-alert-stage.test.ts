@@ -96,24 +96,24 @@ describe('advancedExpiryAlerts — ακμή, όχι στάθμη', () => {
   });
 
   it('πιο επείγον στάδιο ⇒ ακμή ΜΟΝΟ γι\' αυτή τη γραμμή', () => {
-    const ledger: AlertLedger = { a: { stage: 'd30', expiresOn: '2026-10-20' }, b: { stage: 'd30', expiresOn: '2026-11-01' } };
+    const ledger: AlertLedger = { a: { stage: 'd30', expiresOn: '2026-10-20', escalated: false }, b: { stage: 'd30', expiresOn: '2026-11-01', escalated: false } };
     expect(advancedExpiryAlerts(current(), ledger).map((a) => `${a.rowId}:${a.stage}`)).toEqual(['a:d7']);
   });
 
   it('ανανέωση (άλλη λήξη) ⇒ ξαναρχίζει, ακόμη κι αν το στάδιο είναι «χαμηλότερο»', () => {
-    const ledger: AlertLedger = { a: { stage: 'expired', expiresOn: '2026-01-01' }, b: { stage: 'd30', expiresOn: '2026-11-01' } };
+    const ledger: AlertLedger = { a: { stage: 'expired', expiresOn: '2026-01-01', escalated: false }, b: { stage: 'd30', expiresOn: '2026-11-01', escalated: false } };
     expect(advancedExpiryAlerts(current(), ledger).map((a) => a.rowId)).toEqual(['a']);
   });
 
   it('ποτέ προς τα πίσω: ειπωμένο πιο επείγον στάδιο με ίδια λήξη ⇒ σιωπή', () => {
-    const ledger: AlertLedger = { a: { stage: 'd0', expiresOn: '2026-10-20' }, b: { stage: 'd30', expiresOn: '2026-11-01' } };
+    const ledger: AlertLedger = { a: { stage: 'd0', expiresOn: '2026-10-20', escalated: false }, b: { stage: 'd30', expiresOn: '2026-11-01', escalated: false } };
     expect(advancedExpiryAlerts(current(), ledger)).toEqual([]);
   });
 });
 
 describe('nextAlertLedger — ό,τι ειπώθηκε, και τίποτα που δεν διαβάστηκε', () => {
   const current = () => currentExpiryAlerts(rowsOf([doc('a', '2026-10-20')]), AS_OF);
-  const stale: AlertLedger = { gone: { stage: 'd30', expiresOn: '2026-11-01' } };
+  const stale: AlertLedger = { gone: { stage: 'd30', expiresOn: '2026-11-01', escalated: false } };
 
   it('πλήρες μητρώο ⇒ ακριβώς το σήμερα (γραμμή που έφυγε ξεχνιέται)', () => {
     expect(Object.keys(nextAlertLedger(current(), stale, true))).toEqual(['a']);
@@ -126,7 +126,7 @@ describe('nextAlertLedger — ό,τι ειπώθηκε, και τίποτα πο
   it('alertLedgersEqual — ίδιο ⇔ ίδιες γραμμές, στάδια και λήξεις', () => {
     const ledger = nextAlertLedger(current(), {}, true);
     expect(alertLedgersEqual(ledger, nextAlertLedger(current(), {}, true))).toBe(true);
-    expect(alertLedgersEqual(ledger, { a: { stage: 'd30', expiresOn: '2026-10-20' } })).toBe(false);
+    expect(alertLedgersEqual(ledger, { a: { stage: 'd30', expiresOn: '2026-10-20', escalated: false } })).toBe(false);
     expect(alertLedgersEqual(ledger, {})).toBe(false);
   });
 });
@@ -150,5 +150,32 @@ describe('expiryAlertLandingView — η στενότερη προβολή που
 
   it('μείγμα που καμία στενή προβολή δεν χωρά ⇒ «Όλα» (ποτέ προβολή που κρύβει γραμμή της ειδοποίησης)', () => {
     expect(expiryAlertLandingView(rowsOf([doc('a', '2026-10-20')], [GAP_BLOCK]), AS_OF)).toBe('all');
+  });
+});
+
+describe('nextAlertLedger — η κλιμάκωση δένεται με τη ΛΗΞΗ (ADR-915 Φ5β)', () => {
+  const current = () => currentExpiryAlerts(rowsOf([doc('a', '2026-10-01')]), AS_OF);
+
+  it('κλιμακώθηκε σήμερα ⇒ `escalated` γράφεται', () => {
+    expect(nextAlertLedger(current(), {}, true, new Set(['a'])).a.escalated).toBe(true);
+  });
+
+  it('δεν κλιμακώθηκε (π.χ. καμία διοίκηση) ⇒ `escalated: false` — αύριο ξαναδοκιμάζει', () => {
+    expect(nextAlertLedger(current(), {}, true).a.escalated).toBe(false);
+  });
+
+  it('ήδη κλιμακωμένη, ίδια λήξη ⇒ μένει κλιμακωμένη χωρίς να ξαναειπωθεί', () => {
+    const ledger: AlertLedger = { a: { stage: 'expired', expiresOn: '2026-10-01', escalated: true } };
+    expect(nextAlertLedger(current(), ledger, true).a.escalated).toBe(true);
+  });
+
+  it('🔑 ανανέωση (άλλη λήξη) ⇒ η κλιμάκωση ξαναρχίζει', () => {
+    const ledger: AlertLedger = { a: { stage: 'expired', expiresOn: '2025-10-01', escalated: true } };
+    expect(nextAlertLedger(current(), ledger, true).a.escalated).toBe(false);
+  });
+
+  it('alertLedgersEqual βλέπει και την κλιμάκωση', () => {
+    const ledger = nextAlertLedger(current(), {}, true);
+    expect(alertLedgersEqual(ledger, nextAlertLedger(current(), {}, true, new Set(['a'])))).toBe(false);
   });
 });

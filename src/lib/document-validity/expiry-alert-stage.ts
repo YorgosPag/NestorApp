@@ -56,6 +56,8 @@ export interface ExpiryAlert {
 export interface AlertLedgerEntry {
   readonly stage: ExpiryAlertStage;
   readonly expiresOn: string | null;
+  /** ADR-915 Φ5β — η **αυτή** λήξη έχει ήδη κλιμακωθεί στη διοίκηση (δεύτερος άξονας ακμής, `expiry-alert-routing`). */
+  readonly escalated: boolean;
 }
 
 /** Γραμμή → τελευταίο στάδιο που ανακοινώθηκε. */
@@ -111,8 +113,18 @@ export function advancedExpiryAlerts(current: readonly ExpiryAlert[], ledger: Al
  * επιστροφή να ξαναειπωθεί). Κομμένο μητρώο (`truncated`) ⇒ **συγχώνευση**: μια γραμμή που απλώς δεν διαβάστηκε
  * σήμερα δεν «ξεχνιέται» — αλλιώς αύριο θα ξαναστελνόταν ως νέα.
  */
-export function nextAlertLedger(current: readonly ExpiryAlert[], ledger: AlertLedger, complete: boolean): AlertLedger {
-  const today = Object.fromEntries(current.map((a) => [a.rowId, { stage: a.stage, expiresOn: a.expiresOn }]));
+export function nextAlertLedger(
+  current: readonly ExpiryAlert[],
+  ledger: AlertLedger,
+  complete: boolean,
+  escalatedNow: ReadonlySet<string> = new Set(),
+): AlertLedger {
+  const today = Object.fromEntries(current.map((a): [string, AlertLedgerEntry] => {
+    const said = ledger[a.rowId];
+    // Η κλιμάκωση μένει δεμένη με τη ΛΗΞΗ: ανανέωση (άλλη `expiresOn`) ⇒ ξαναρχίζει, όπως το στάδιο.
+    const kept = said !== undefined && said.expiresOn === a.expiresOn && said.escalated;
+    return [a.rowId, { stage: a.stage, expiresOn: a.expiresOn, escalated: kept || escalatedNow.has(a.rowId) }];
+  }));
   return complete ? today : { ...ledger, ...today };
 }
 
@@ -120,7 +132,8 @@ export function nextAlertLedger(current: readonly ExpiryAlert[], ledger: AlertLe
 export function alertLedgersEqual(a: AlertLedger, b: AlertLedger): boolean {
   const keys = Object.keys(a);
   if (keys.length !== Object.keys(b).length) return false;
-  return keys.every((key) => b[key] !== undefined && b[key].stage === a[key].stage && b[key].expiresOn === a[key].expiresOn);
+  return keys.every((key) => b[key] !== undefined && b[key].stage === a[key].stage
+    && b[key].expiresOn === a[key].expiresOn && b[key].escalated === a[key].escalated);
 }
 
 /** Το αποτύπωμα των ακμών — μπαίνει στο `eventId`, ώστε μια επανάληψη πριν γραφτεί το ημερολόγιο να μη διπλασιάσει. */
