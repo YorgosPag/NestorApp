@@ -1680,7 +1680,23 @@
       "coverageAgreementConsequence": "Anyone searching for a professional there will no longer find you. The listings themselves stay visible — nothing is hidden.",
       "coverageAgreementUnknown": "{count, plural, one {For 1 of your properties we do not know precisely enough where it is, so we did not judge it.} other {For # of your properties we do not know precisely enough where they are, so we did not judge them.}}",
       "coverageAgreementExtendRadius": "Extend to {km} km",
-      "coverageAgreementNoAutoFix": "Add their areas to the declaration above so you appear there."
+      "coverageAgreementNoAutoFix": "Add their areas to the declaration above so you appear there.",
+      "licencesLabel": "Licences",
+      "licencesHint": "Licences you hold in addition to your occupation. People looking for who can issue a document — e.g. an energy certificate — find you through them.",
+      "licenceHold": "I hold a licence: {licence}",
+      "licencesTitle": "Licences",
+      "licencesLead": "Licences you hold in addition to your occupation — e.g. energy inspector. They appear on your showcase, and people looking for who can issue a document find you through them.",
+      "licencesDoor": "Licences",
+      "licencesDoorNone": "No licence declared.",
+      "licencesDoorCount": "{count, plural, one {# declared licence} other {# declared licences}}",
+      "licencesSave": "Save licences",
+      "licencesSaved": "Licences saved.",
+      "licencesNeedsShowcase": "Publish the showcase first — licences appear inside it.",
+      "licenceRejection": {
+        "licence-number-missing": "Enter the licence's registration number — without it nobody can check it.",
+        "licence-duplicate": "The same licence was declared twice.",
+        "licences-without-showcase": "Publish the showcase first — licences appear inside it."
+      }
     },
     "directory": {
       "title": "Professionals",
@@ -1773,7 +1789,11 @@
         "label": "Professionals view",
         "list": "List",
         "map": "Map"
-      }
+      },
+      "issuerChip": "Can issue: {document}",
+      "issuerCriterionLicence": "Only those who declared a number in the {registry} are shown. We do not check it — every card links to the registry.",
+      "issuerCriterionOccupation": "Shown: those declaring an occupation with signing rights: {qualifications}. The registration number, where declared, appears on each card.",
+      "issuerCriterionAuthority": "This document is issued by a public authority — no professional is needed."
     },
     "credibility": {
       "occupationLabel": "Speciality",
@@ -1790,6 +1810,10 @@
         "authorityMismatch": "The number stated belongs to a different authority than the one keeping the register for this showcase's profession ({expected}).",
         "registryAbsentYetDeclared": "We know of no register for this showcase's profession. The number was stated by the professional.",
         "classificationUnreadable": "We could not read the classification of this profession."
+      },
+      "licence": {
+        "lookup": "Check in the registry",
+        "lookupHint": "Opens the registry's public page in a new tab, so you can check the number yourself."
       }
     },
     "mark": {
@@ -2205,6 +2229,15 @@
     "regionalAuthority": {
       "name": "Regional Unit Development Directorate",
       "abbreviation": "Reg."
+    },
+    "ypen": {
+      "name": "Energy Inspectors Registry (Ministry of Environment)",
+      "abbreviation": "YPEN"
+    }
+  },
+  "licences": {
+    "energyInspector": {
+      "name": "Energy inspector"
     }
   },
   "listing": {

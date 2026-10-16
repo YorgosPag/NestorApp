@@ -33,13 +33,14 @@
     "src/i18n/generated/routes/o__workspace__cases.el.json": "62e1b3378215c16e66a12632667ad61be33b59cc632e634dde0ffaf9763769d4",
     "src/i18n/generated/routes/o__workspace__cases__engagementId.el.json": "553c4f1fa748136eb4247f4f0d14244369b7b76b0011c200f3ec6da42d783103",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
-    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "0c766fa456aae3e0429a14812f7da954e60c59871ace6dadcbc70c416e5ca68f",
+    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "89bc44768d48f1d7f9ad3c83f27af2c15b2b0fcf62cf1a9632a2042894f746f9",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "f2b0212cf0909081143453962ba0bfec2a47dc8753dc81a009ee34c12579b137",
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "2753c7edd9c05a17a65b15f3146177db8a27ca727df7b1f77d28fd1724f4fa6f",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "e1c5896ab910b7f5515ef0a3991a4daae3ba7fc776c6291815cfeaddb51e2398",
     "src/i18n/generated/routes/o__workspace__listings__mandates__requests.el.json": "3b685808152db56cfc0ce4d50912bcd6166e986921ebb92e601cbef9936c0a0b",
-    "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "4dc3664a2345ff04af6724e2c707c8331a188c04299d44468946225700290e35",
+    "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "b8f81ef88aea5123177a6d2615b8fb5710c05ef5d29acb3e1c1740d3ef955bfa",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__card.el.json": "df1448a2bb4c85fc26bfbdcc903c7df7d53eaecd1d97fdc03e01a17528acfbae",
+    "src/i18n/generated/routes/o__workspace__settings__agency-profile__licences.el.json": "4d278756a2478fd10c23a48c12efa636c218d8189a4e3f2607c84d9ae6738dc9",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__registry.el.json": "c31ac607e41ec524cd78d412c71f24c321d5922d87c07166cd544a39ef06b213",
     "src/i18n/generated/routes/o__workspace__settings__brokerage.el.json": "debcbb4f81b54b13b2fd4218a808c207f838bf54216be5fd94a25a0133328d2b",
     "src/i18n/generated/routes/offers.el.json": "9bb55581ec319b22e1ed3f0c129711b788413d1e8ba9a2e0173802e2d5a4e817",
@@ -56,7 +57,7 @@
     "src/i18n/generated/routes/private-marketing-disclosure.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
     "src/i18n/generated/routes/private-marketing-disclosure__versions.el.json": "b5985d2511b93344b355342677c84641c2bc629c80ca0b367778c17afd7800b7",
     "src/i18n/generated/routes/private-marketing-disclosure__versions__version.el.json": "0b0f52262c8ead9f7c4c7a282fee6c540b128f8a9a5c78716d351fd4681a6db4",
-    "src/i18n/generated/routes/pro.el.json": "af09422c52220d2587b71866ad67c86d2ef0877ccf4b922e9603ccf1bad3dcb9",
+    "src/i18n/generated/routes/pro.el.json": "5759baa239221365f8c0998839d36c2c76e2d88a2e1d65ca8ce9255955880f5a",
     "src/i18n/generated/routes/pro__alias.el.json": "cab418d4b3c11cb463da7952d60e292c0f6cd99c64341b0b4e668dc79ebb646b",
     "src/i18n/generated/routes/profile.el.json": "24b5f25a2e330998e650126e7fb3ffc0452c89fcda2946634f21bd02b5b7dd95",
     "src/i18n/generated/routes/saved-listings.el.json": "7b13b8c74093929134a72cfd029aa8f474840f42c4a734f86b3b50181fa86eac",
@@ -70,7 +71,7 @@
     "src/i18n/generated/routes/tour-invite__token.el.json": "aeec8bc36081f1b5a8c49674c18a1a367f5d97d69bad1124f15f0a1349d110cf",
     "src/i18n/generated/routes/vendor__quote.el.json": "413f934a43a5be908bb20d0c0c0c92d312922631921b3363e9c49b3200b7a7ae",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "e55651e9ae0079fe71f07e2b04e0ac2d05cf7ecbc42d834f2031ffaa018dab1f",
+    "src/i18n/generated/shell-slice.el.json": "dde11d460ec83c2ee87cf42fd233b3a5300e85088d821902459f5fe752d4ec59",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "generator": "scripts/generate-i18n-shell-slice.js",
@@ -86,7 +87,7 @@
       "lazyRouteRegistries": "70bded58e6a83e4d2e5e3d2c594b8cfe466e0dfe7d73fa2d4e9e97fce23ad110",
       "localesDir": "a7045bc6e57a2ccd3b4834f975b27f55d6b1b2ace4e9df3ac06ebeced4b9590d",
       "outputDir": "3912195b17692b5eaf099bb5accb2bcf870fd0f9f4bd626e02929a8fa741d7ba",
-      "routeSlices": "c7b304c8d23a0060cd0503861b12e5921df5521e8ae3dd2921290e43e67a42f1",
+      "routeSlices": "e9a5409471615fa9289d30943fb3a460c8fd2691f2fe4aa3c2cc77b24761eab9",
       "shellRoots": "6303336d888ef26b0205f00bf8f48b03205413ebe5b4f41d2b0918b0be4394a0"
     },
     "keyConstants": {
@@ -149,7 +150,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "c488fc6d91b8275dd8a39d304230e97ca0fb0db446c148c34580827642abe83e",
+  "inputsSha256": "da8033ff6b457164d8efb4ae25029cb0deadde1f1c25f5962ae2475f8c077727",
   "languages": [
     "el"
   ],
@@ -5130,11 +5131,9 @@
             "issuer.qualification.civil-engineer",
             "issuer.qualification.civil-engineer-tei",
             "issuer.qualification.civil-sub-engineer",
-            "issuer.qualification.energy-inspector-registered",
             "issuer.qualification.spatial-planner",
             "issuer.qualification.surveyor-engineer",
             "issuer.registered",
-            "issuer.registry.ypen-energy-inspectors",
             "issuer.selfService",
             "load.error",
             "load.loading",
@@ -5189,6 +5188,14 @@
         "legality": {
           "keys": [
             "kind.building-identity"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "property-market": {
+          "keys": [
+            "licences.energyInspector.name",
+            "registries.ypen.name"
           ],
           "prefixes": [],
           "whole": false
@@ -5840,6 +5847,9 @@
             "mandate.showcase.coverageSearchEmpty",
             "mandate.showcase.failed",
             "mandate.showcase.lead",
+            "mandate.showcase.licencesDoor",
+            "mandate.showcase.licencesDoorCount",
+            "mandate.showcase.licencesDoorNone",
             "mandate.showcase.linkCopied",
             "mandate.showcase.mark.adviceLogo",
             "mandate.showcase.mark.advicePortrait",
@@ -5933,7 +5943,9 @@
             "registries.regionalAuthority.abbreviation",
             "registries.regionalAuthority.name",
             "registries.tee.abbreviation",
-            "registries.tee.name"
+            "registries.tee.name",
+            "registries.ypen.abbreviation",
+            "registries.ypen.name"
           ],
           "prefixes": [
             "mandate.showcase.coverageModeAreas",
@@ -6219,6 +6231,50 @@
             "place.modeHint",
             "place.rejection"
           ],
+          "whole": false
+        }
+      }
+    },
+    "o__workspace__settings__agency-profile__licences": {
+      "page": "src/app/(app)/o/[workspace]/settings/agency-profile/licences/page.tsx",
+      "wants": {
+        "property-market": {
+          "keys": [
+            "licences.energyInspector.name",
+            "mandate.showcase.cardBackToShowcase",
+            "mandate.showcase.cardSaving",
+            "mandate.showcase.failed",
+            "mandate.showcase.licenceHold",
+            "mandate.showcase.licenceRejection.licence-duplicate",
+            "mandate.showcase.licenceRejection.licence-number-missing",
+            "mandate.showcase.licenceRejection.licences-without-showcase",
+            "mandate.showcase.licencesHint",
+            "mandate.showcase.licencesLabel",
+            "mandate.showcase.licencesLead",
+            "mandate.showcase.licencesNeedsShowcase",
+            "mandate.showcase.licencesSave",
+            "mandate.showcase.licencesSaved",
+            "mandate.showcase.licencesTitle",
+            "mandate.showcase.registryHint",
+            "mandate.showcase.registryLabel",
+            "mandate.showcase.registryPlaceholder",
+            "mandate.showcase.temporarilyUnavailable",
+            "registries.barAssociation.abbreviation",
+            "registries.barAssociation.name",
+            "registries.gemi.abbreviation",
+            "registries.gemi.name",
+            "registries.notaryAssociation.abbreviation",
+            "registries.notaryAssociation.name",
+            "registries.oee.abbreviation",
+            "registries.oee.name",
+            "registries.regionalAuthority.abbreviation",
+            "registries.regionalAuthority.name",
+            "registries.tee.abbreviation",
+            "registries.tee.name",
+            "registries.ypen.abbreviation",
+            "registries.ypen.name"
+          ],
+          "prefixes": [],
           "whole": false
         }
       }
@@ -8424,12 +8480,44 @@
           "prefixes": [],
           "whole": false
         },
+        "conveyance": {
+          "keys": [
+            "items.energy_certificate.label",
+            "items.seller_enfia_certificate.label",
+            "items.seller_insurance_clearance.label",
+            "items.seller_tax_clearance.label"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "document-registry": {
+          "keys": [
+            "issuer.qualification.architect",
+            "issuer.qualification.civil-engineer",
+            "issuer.qualification.civil-engineer-tei",
+            "issuer.qualification.civil-sub-engineer",
+            "issuer.qualification.spatial-planner",
+            "issuer.qualification.surveyor-engineer"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "legality": {
+          "keys": [
+            "kind.building-identity"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "property-market": {
           "keys": [
+            "licences.energyInspector.name",
             "mandate.credibility.claim.chapter",
             "mandate.credibility.claim.declared",
             "mandate.credibility.claim.national",
             "mandate.credibility.claim.verified",
+            "mandate.credibility.licence.lookup",
+            "mandate.credibility.licence.lookupHint",
             "mandate.credibility.note.authorityMismatch",
             "mandate.credibility.note.classificationUnreadable",
             "mandate.credibility.note.registryAbsentByNature",
@@ -8453,6 +8541,10 @@
             "mandate.directory.emptyAfterFilterHint",
             "mandate.directory.emptyHint",
             "mandate.directory.failed",
+            "mandate.directory.issuerChip",
+            "mandate.directory.issuerCriterionAuthority",
+            "mandate.directory.issuerCriterionLicence",
+            "mandate.directory.issuerCriterionOccupation",
             "mandate.directory.lead",
             "mandate.directory.loading",
             "mandate.directory.map.loading",
@@ -8508,7 +8600,9 @@
             "registries.regionalAuthority.abbreviation",
             "registries.regionalAuthority.name",
             "registries.tee.abbreviation",
-            "registries.tee.name"
+            "registries.tee.name",
+            "registries.ypen.abbreviation",
+            "registries.ypen.name"
           ],
           "prefixes": [
             "mandate.directory.areaHint",
@@ -8671,10 +8765,13 @@
           "keys": [
             "contact.first.cta",
             "contact.first.ctaPro",
+            "licences.energyInspector.name",
             "mandate.credibility.claim.chapter",
             "mandate.credibility.claim.declared",
             "mandate.credibility.claim.national",
             "mandate.credibility.claim.verified",
+            "mandate.credibility.licence.lookup",
+            "mandate.credibility.licence.lookupHint",
             "mandate.credibility.note.authorityMismatch",
             "mandate.credibility.note.classificationUnreadable",
             "mandate.credibility.note.registryAbsentByNature",
@@ -8776,7 +8873,9 @@
             "registries.regionalAuthority.abbreviation",
             "registries.regionalAuthority.name",
             "registries.tee.abbreviation",
-            "registries.tee.name"
+            "registries.tee.name",
+            "registries.ypen.abbreviation",
+            "registries.ypen.name"
           ],
           "prefixes": [
             "mandate.mark"
@@ -9973,10 +10072,13 @@
             "interestCheck.entry.hint",
             "interestCheck.entry.label",
             "interestCheck.submit",
+            "licences.energyInspector.name",
             "mandate.credibility.claim.chapter",
             "mandate.credibility.claim.declared",
             "mandate.credibility.claim.national",
             "mandate.credibility.claim.verified",
+            "mandate.credibility.licence.lookup",
+            "mandate.credibility.licence.lookupHint",
             "mandate.credibility.note.authorityMismatch",
             "mandate.credibility.note.classificationUnreadable",
             "mandate.credibility.note.registryAbsentByNature",
@@ -10027,7 +10129,9 @@
             "registries.regionalAuthority.abbreviation",
             "registries.regionalAuthority.name",
             "registries.tee.abbreviation",
-            "registries.tee.name"
+            "registries.tee.name",
+            "registries.ypen.abbreviation",
+            "registries.ypen.name"
           ],
           "prefixes": [
             "mandate.directory.coverageIntersects",
@@ -10674,8 +10778,8 @@
     "src/components/search/GlobalSearchDialog.tsx"
   ],
   "stats": {
-    "matchedKeys": 243,
-    "sliceBytes": 748264
+    "matchedKeys": 248,
+    "sliceBytes": 753142
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -15899,6 +16003,7 @@
         "src/components/job/JobSuggestion.tsx",
         "src/components/mandate/AgencyCard.tsx",
         "src/components/mandate/CredibilityStatement.tsx",
+        "src/components/mandate/LicenceStatement.tsx",
         "src/components/mandate/OccupationSelect.tsx",
         "src/components/mandate/ShowcaseMarkView.tsx",
         "src/components/mandate/useOccupationFamilyChoices.ts",
@@ -15961,10 +16066,13 @@
         "jobs.procurement.label",
         "jobs.site.label",
         "landingHeroes",
+        "licences.energyInspector.name",
         "mandate.credibility.claim.chapter",
         "mandate.credibility.claim.declared",
         "mandate.credibility.claim.national",
         "mandate.credibility.claim.verified",
+        "mandate.credibility.licence.lookup",
+        "mandate.credibility.licence.lookupHint",
         "mandate.credibility.note.authorityMismatch",
         "mandate.credibility.note.classificationUnreadable",
         "mandate.credibility.note.registryAbsentByNature",
@@ -16064,6 +16172,8 @@
         "registries.regionalAuthority.name",
         "registries.tee.abbreviation",
         "registries.tee.name",
+        "registries.ypen.abbreviation",
+        "registries.ypen.name",
         "roleManagement",
         "searchBackfill",
         "setup",

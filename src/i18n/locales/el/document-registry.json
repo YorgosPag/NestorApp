@@ -74,11 +74,7 @@
       "surveyor-engineer": "Αγρονόμος τοπογράφος μηχανικός",
       "spatial-planner": "Μηχανικός χωροταξίας-πολεοδομίας",
       "civil-sub-engineer": "Πολιτικός υπομηχανικός",
-      "civil-engineer-tei": "Πολιτικός μηχανικός ΤΕΙ",
-      "energy-inspector-registered": "Ενεργειακός επιθεωρητής"
-    },
-    "registry": {
-      "ypen-energy-inspectors": "Μητρώο Ενεργειακών Επιθεωρητών του ΥΠΕΝ"
+      "civil-engineer-tei": "Πολιτικός μηχανικός ΤΕΙ"
     },
     "authority": {
       "aade": "ΑΑΔΕ (myAADE)",

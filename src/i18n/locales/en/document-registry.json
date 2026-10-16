@@ -74,11 +74,7 @@
       "surveyor-engineer": "Surveying engineer",
       "spatial-planner": "Spatial planning engineer",
       "civil-sub-engineer": "Civil sub-engineer",
-      "civil-engineer-tei": "Civil engineer (TEI)",
-      "energy-inspector-registered": "Energy inspector"
-    },
-    "registry": {
-      "ypen-energy-inspectors": "Energy Inspectors Registry of the Ministry of Environment"
+      "civil-engineer-tei": "Civil engineer (TEI)"
     },
     "authority": {
       "aade": "AADE (myAADE)",
