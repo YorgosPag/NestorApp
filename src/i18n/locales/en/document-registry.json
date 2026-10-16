@@ -34,7 +34,7 @@
   "filter": {
     "label": "View",
     "all": "All",
-    "renewal-due": "Renewal due",
+    "renewal-due": "Need renewal",
     "within-window": "Expiring within {days} days",
     "blocking": "Blocking",
     "expiry-unknown": "Expiry unknown",

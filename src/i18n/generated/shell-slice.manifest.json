@@ -33,7 +33,7 @@
     "src/i18n/generated/routes/o__workspace__cases.el.json": "62e1b3378215c16e66a12632667ad61be33b59cc632e634dde0ffaf9763769d4",
     "src/i18n/generated/routes/o__workspace__cases__engagementId.el.json": "c1979936fe14b4c4bd72777a3595f5dc0431b65a417cd1b642afeca43a2ca2ed",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
-    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "f4c3c73c2657a788033aa657b60bf976e77094571043ef07b14bba024df91ea9",
+    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "a20b7da9b6339cbd378b83879fb689c5e6de5fcb2c3c36bc0ffd87b2b636c3ae",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "f2b0212cf0909081143453962ba0bfec2a47dc8753dc81a009ee34c12579b137",
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "2753c7edd9c05a17a65b15f3146177db8a27ca727df7b1f77d28fd1724f4fa6f",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "e1c5896ab910b7f5515ef0a3991a4daae3ba7fc776c6291815cfeaddb51e2398",
@@ -149,7 +149,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "6dbe34c549d76673f10d9307cbc5e394c15adbdf18ce5ad06f98d1a49b15b9c8",
+  "inputsSha256": "f139467b169a9c7f4aded8fcc93baeff8d6f47c011cee88c0c2387cfbb405a06",
   "languages": [
     "el"
   ],
@@ -10643,7 +10643,7 @@
   ],
   "stats": {
     "matchedKeys": 243,
-    "sliceBytes": 746046
+    "sliceBytes": 746060
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

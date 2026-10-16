@@ -34,7 +34,7 @@
   "filter": {
     "label": "Προβολή",
     "all": "Όλα",
-    "renewal-due": "Ώρα ανανέωσης",
+    "renewal-due": "Χρειάζονται ανανέωση",
     "within-window": "Λήγουν σε {days} ημέρες",
     "blocking": "Μπλοκάρουν",
     "expiry-unknown": "Άγνωστη λήξη",

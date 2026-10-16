@@ -43,7 +43,7 @@
       "label": "Προβολή",
       "missing": "Λείπουν",
       "option": "{label} ({count})",
-      "renewal-due": "Ώρα ανανέωσης",
+      "renewal-due": "Χρειάζονται ανανέωση",
       "within-window": "Λήγουν σε {days} ημέρες"
     },
     "group": {

@@ -55,10 +55,14 @@ jest.mock('@/lib/workspace/navigation', () => ({
 let searchParams = new URLSearchParams();
 jest.mock('next/navigation', () => ({ useSearchParams: () => searchParams }));
 
-// Η κάρτα αποδίδεται ως τίτλος + τιμή + τόνος: εδώ ελέγχεται ΤΙ δείχνει, όχι το στυλ της.
+// Η κάρτα αποδίδεται ως τίτλος + τιμή + τόνος, και ως εναλλαγή: εδώ ελέγχεται ΤΙ δείχνει και ΤΙ κάνει, όχι το στυλ.
 jest.mock('@/components/property-management/dashboard/StatsCard', () => ({
-  StatsCard: ({ title, value, color }: { title: string; value: number; color: string }) => (
-    <p data-testid="tally-card">{`${title}=${value}:${color}`}</p>
+  StatsCard: ({ title, value, color, onClick, pressed }: {
+    title: string; value: number; color: string; onClick?: () => void; pressed?: boolean;
+  }) => (
+    <button type="button" data-testid="tally-card" data-title={title} aria-pressed={pressed} onClick={onClick}>
+      {`${title}=${value}:${color}`}
+    </button>
   ),
 }));
 
@@ -134,6 +138,39 @@ describe('προβολές — ΑΚΡΙΒΩΣ ό,τι λέει ο ΕΝΑΣ τα�
     renderReady();
     fireEvent.click(screen.getByRole('radio', { name: new RegExp(REGISTRY_KEYS.filterOption.replace('.', '\\.') + '.*blocking') }));
     expect(replace).toHaveBeenCalledWith('/document-expiry?view=blocking', { scroll: false });
+  });
+});
+
+describe('κάρτα = φίλτρο κατάστασης', () => {
+  const card = (state: (typeof REGISTRY_ROW_STATES)[number]): HTMLElement =>
+    screen.getAllByTestId('tally-card').find((element) => element.dataset.title === REGISTRY_STATE_LABEL_KEYS[state])!;
+
+  it.each(REGISTRY_ROW_STATES)('η κάρτα «%s» ανοίγει την προβολή της με `replace`', (state) => {
+    renderReady();
+    fireEvent.click(card(state));
+    expect(replace).toHaveBeenCalledWith(`/document-expiry?view=${state}`, { scroll: false });
+  });
+
+  it.each(REGISTRY_ROW_STATES)('προβολή «%s» ⇒ η κάρτα της πατημένη, οι γραμμές = ΑΚΡΙΒΩΣ της κατάστασης', (state) => {
+    renderReady(fixtureResponse(), state);
+    for (const other of REGISTRY_ROW_STATES) {
+      expect(card(other).getAttribute('aria-pressed')).toBe(String(other === state));
+    }
+    const expected = fixtureResponse().rows.filter((row) => row.state === state).map(registryRowIdOf);
+    expect(shownFiles().sort()).toEqual(expected.sort());
+  });
+
+  it('ξαναπατημένη κάρτα ⇒ «Όλα» (χωρίς παράμετρο)', () => {
+    renderReady(fixtureResponse(), 'expired');
+    fireEvent.click(card('expired'));
+    expect(replace).toHaveBeenCalledWith('/document-expiry', { scroll: false });
+  });
+
+  it('ο αριθμός της κάρτας = οι γραμμές που ανοίγει (η ίδια πηγή: η κατάσταση του διακομιστή)', () => {
+    const response = fixtureResponse();
+    for (const state of REGISTRY_ROW_STATES) {
+      expect(response.rows.filter((row) => row.state === state)).toHaveLength(response.tally[state]);
+    }
   });
 });
 

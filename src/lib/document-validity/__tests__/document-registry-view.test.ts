@@ -2,10 +2,18 @@
  * ADR-915 Φ4γ — οι ΠΡΟΒΟΛΕΣ της σελίδας: πάνω στον ΕΝΑ ταξινομητή, με το `asOf` της απόκρισης. Συνθετικά δεδομένα.
  */
 
-import { matchesRegistryFilter, REGISTRY_FILTERS, registryRowIdOf, type RegistryRow } from '../document-registry';
+import {
+  matchesRegistryFilter,
+  REGISTRY_FILTERS,
+  REGISTRY_ROW_STATES,
+  registryRowIdOf,
+  type RegistryRow,
+} from '../document-registry';
 import {
   documentExpiryHref,
+  REGISTRY_PICKER_VIEWS,
   REGISTRY_VIEWS,
+  toggledRegistryView,
   registryViewOf,
   registryViewTally,
   rowsOfRegistryView,
@@ -43,6 +51,27 @@ describe('κάθε προβολή = ΑΚΡΙΒΩΣ ό,τι λέει ο `matchesR
     const withinLater = ids(rowsOfRegistryView(rows, 'within-window', later));
     expect(withinLater).toEqual(ids(rows.filter((row) => matchesRegistryFilter(row, 'within-window', later))));
     expect(withinLater).not.toEqual(withinNow);
+  });
+});
+
+describe('προβολή κατάστασης (η κάρτα σύνοψης ως φίλτρο)', () => {
+  it('ΚΑΘΕ κατάσταση είναι προβολή — νέα κατάσταση χωρίς προβολή κοκκινίζει εδώ', () => {
+    for (const state of REGISTRY_ROW_STATES) expect(registryViewOf(state)).toBe(state);
+  });
+
+  it.each(REGISTRY_ROW_STATES)('«%s» = ΑΚΡΙΒΩΣ οι γραμμές με αυτή την κατάσταση (ίδια πηγή με τον αριθμό της κάρτας)', (state) => {
+    expect(ids(rowsOfRegistryView(rows, state, FIXTURE_AS_OF))).toEqual(ids(rows.filter((row) => row.state === state)));
+  });
+
+  it('τα τσιπ ΔΕΝ πολλαπλασιάζονται: ο επιλογέας κρατά «Όλα» + τα φίλτρα', () => {
+    expect([...REGISTRY_PICKER_VIEWS]).toEqual(['all', ...REGISTRY_FILTERS]);
+  });
+
+  it('εναλλαγή: άλλη κάρτα ⇒ η προβολή της· η ίδια ⇒ «Όλα»', () => {
+    expect(toggledRegistryView('all', 'expired')).toBe('expired');
+    expect(toggledRegistryView('blocking', 'valid')).toBe('valid');
+    expect(toggledRegistryView('expired', 'expired')).toBe('all');
+    expect(toggledRegistryView('missing', 'missing')).toBe('all');
   });
 });
 

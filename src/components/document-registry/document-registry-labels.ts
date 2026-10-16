@@ -25,7 +25,7 @@ import {
 
 import type { DocumentKind } from '@/config/document-validity/document-validity';
 import type { RegistryRowState } from '@/lib/document-validity/document-registry';
-import type { RegistryView } from '@/lib/document-validity/document-registry-view';
+import type { RegistryPickerView } from '@/lib/document-validity/document-registry-view';
 import type {
   DependentImpact,
   DocumentProcess,
@@ -130,7 +130,7 @@ export const REGISTRY_STATE_HINT_KEYS: Readonly<Record<RegistryRowState, string>
   superseded: `${K}stateHint.superseded`,
 };
 
-export const REGISTRY_VIEW_LABEL_KEYS: Readonly<Record<RegistryView, string>> = {
+export const REGISTRY_VIEW_LABEL_KEYS: Readonly<Record<RegistryPickerView, string>> = {
   all: `${K}filter.all`,
   'renewal-due': `${K}filter.renewal-due`,
   missing: `${K}filter.missing`,

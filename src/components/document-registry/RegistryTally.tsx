@@ -8,6 +8,8 @@
  * 🔴 **Η μηδενική κάρτα ΔΕΝ κρύβεται**: «κοίταξα, 0 έληξαν» είναι πληροφορία· μια κάρτα που λείπει διαβάζεται «δεν
  *    υπάρχει τέτοιος έλεγχος». Η σειρά είναι η σειρά επείγοντος του πυρήνα (`REGISTRY_ROW_STATES`).
  * 🔑 Τιμές **μόνο** από το `tally` του διακομιστή — η οθόνη δεν ξαναμετρά.
+ * 🔑 **Κάθε κάρτα είναι εναλλαγή φίλτρου** (ADR-840 §7.8 · `aria-pressed`): ανοίγει την προβολή της κατάστασής της,
+ *    ξαναπατημένη γυρνά στο «Όλα». Η κατάσταση ζει **μία** φορά, στη διεύθυνση — κάρτες και επιλογέας τη διαβάζουν.
  */
 
 import React from 'react';
@@ -15,6 +17,7 @@ import React from 'react';
 import { StatsCard } from '@/components/property-management/dashboard/StatsCard';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { REGISTRY_ROW_STATES, type DocumentRegistry } from '@/lib/document-validity/document-registry';
+import { toggledRegistryView, type RegistryView } from '@/lib/document-validity/document-registry-view';
 import {
   REGISTRY_KEYS,
   CONVEYANCE_NS,
@@ -24,7 +27,14 @@ import {
   REGISTRY_STATE_LOOK,
 } from '@/components/document-registry/document-registry-labels';
 
-export function RegistryTally({ tally }: { readonly tally: DocumentRegistry['tally'] }): React.ReactElement {
+interface RegistryTallyProps {
+  readonly tally: DocumentRegistry['tally'];
+  /** Η τρέχουσα προβολή — η κάρτα της ίδιας κατάστασης δείχνεται πατημένη. */
+  readonly view: RegistryView;
+  readonly onSelect: (next: RegistryView) => void;
+}
+
+export function RegistryTally({ tally, view, onSelect }: RegistryTallyProps): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS, CONVEYANCE_NS, LEGALITY_NS]);
   return (
     <section aria-labelledby="document-registry-tally" className="flex flex-col gap-2">
@@ -42,6 +52,8 @@ export function RegistryTally({ tally }: { readonly tally: DocumentRegistry['tal
                 value={tally[state]}
                 icon={look.icon}
                 color={tally[state] === 0 ? 'gray' : look.tone}
+                pressed={view === state}
+                onClick={() => onSelect(toggledRegistryView(view, state))}
               />
             </li>
           );

@@ -40,11 +40,12 @@ import {
 } from '@/lib/document-validity/document-registry';
 import {
   documentExpiryHref,
+  REGISTRY_PICKER_VIEWS,
   REGISTRY_VIEW_PARAM,
-  REGISTRY_VIEWS,
   registryViewOf,
   registryViewTally,
   rowsOfRegistryView,
+  type RegistryPickerView,
   type RegistryView,
 } from '@/lib/document-validity/document-registry-view';
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
@@ -105,7 +106,7 @@ function EmptyState(): React.ReactElement {
   );
 }
 
-function viewLabel(t: Translate, view: RegistryView, count: number): string {
+function viewLabel(t: Translate, view: RegistryPickerView, count: number): string {
   const label = t(REGISTRY_VIEW_LABEL_KEYS[view], { days: REGISTRY_WINDOW_DAYS });
   return t(REGISTRY_KEYS.filterOption, { label, count });
 }
@@ -119,8 +120,9 @@ interface ViewPickerProps {
 function ViewPicker({ view, onSelect, tally }: ViewPickerProps): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS, CONVEYANCE_NS, LEGALITY_NS]);
   return (
+    // Προβολή κατάστασης (από κάρτα) ⇒ κανένα τσιπ πατημένο — την πατημένη τη δείχνει η κάρτα.
     <SegmentedControl value={view} onValueChange={onSelect} aria-label={t(REGISTRY_KEYS.filterLabel)}>
-      {REGISTRY_VIEWS.map((option) => (
+      {REGISTRY_PICKER_VIEWS.map((option) => (
         <SegmentedControlItem key={option} value={option} size="sm">
           {viewLabel(t, option, tally[option])}
         </SegmentedControlItem>
@@ -191,7 +193,7 @@ function ReadyBody({ registry }: { readonly registry: DocumentRegistryResponse }
   return (
     <>
       <TruncatedNotice registry={registry} />
-      <RegistryTally tally={registry.tally} />
+      <RegistryTally tally={registry.tally} view={view} onSelect={select} />
       {registry.rows.length === 0 ? (
         <EmptyState />
       ) : (
