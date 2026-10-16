@@ -320,7 +320,11 @@ Email §5.6 → /case-invite/[token]   (μία σελίδα ΑΝΑ ΕΙΔΟΣ �
 `is_new_build` · `seller_is_legal_entity` · `existing_building_with_manager` (από το προφίλ) · `has_antiparochi`
 (οικοπεδούχοι έργου) · `is_unit_in_multi_owner_building` (τύπος ακινήτου, `STANDALONE_UNIT_TYPES`) ·
 `has_appurtenances` (`linkedSpaces.includedInSale`) — και ρωτώνται: `has_unauthorized_works` · `seller_by_proxy` ·
-`buyer_has_mortgage` · `first_home_exemption` · `special_zone`. Ρητή απάντηση **υπερισχύει** του παραγόμενου.
+`buyer_has_mortgage` · `first_home_exemption` · `special_zone` · `seller_insurance_liable` (ADR-915 §16). Ρητή απάντηση
+**υπερισχύει** του παραγόμενου — **όχι** όμως της **συνεπαγωγής νόμου** (`config/conveyance-checklist/fact-entailments.ts`,
+`FACT_ENTAILMENTS` με `statute`): `applyFactEntailments` τρέχει τελευταίο σε `deriveFacts` **και** `resolveFacts`
+(νόμος > απάντηση > παραγόμενο)· το πάνελ τη δείχνει «Από τον νόμο», κλειδωμένη. Σήμερα: `seller_is_legal_entity ⇒
+seller_insurance_liable` (ΥΑ 15435/913/2020 άρθρο 1 περ. 6 α').
 
 **Καταστάσεις** (`lib/conveyance/derive-checklist.ts` — ΕΝΑΣ πυρήνας για server **και** client):
 `needs_answer` · `missing` · `uploaded` · **`stale`** · **`rejected`** · `accepted` · `expiring` · `expired` ·
@@ -677,6 +681,7 @@ Email §5.6 → /case-invite/[token]   (μία σελίδα ΑΝΑ ΕΙΔΟΣ �
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| 2026-10-16 | 🟡 **ΕΦΚΑ και για φυσικό πρόσωπο + συνεπαγωγές νόμου (ADR-915 §16, uncommitted).** Νέο γεγονός `seller_insurance_liable` («είναι ή ήταν» υπόχρεος εισφορών · εταίρος/διαχειριστής · υπόχρεος εισφορών οικοδομικού έργου 20ετίας — ΥΑ 15435/913/2020 άρθρο 1 περ. 6)· η `seller_insurance_clearance` γίνεται `when('seller_insurance_liable')`. Νέος πίνακας `FACT_ENTAILMENTS` + `applyFactEntailments`/`factEntailedBy` στο `derive-facts.ts`: νομικό πρόσωπο (παραγόμενο **ή** απαντημένο) ⇒ υπόχρεος, αμετάκλητα. `ConveyanceFactsPanel`: επιλυμένη τιμή, «Από τον νόμο», prop `record` → `answers`. `CONVEYANCE_CATALOG_VERSION` 0.4.0. |
 | 2026-10-16 | 🟡 **Φορολογική · ΕΦΚΑ · ΕΝΦΙΑ με τυπωμένη λήξη (ADR-915 §14, uncommitted).** Οι γραμμές `seller_tax_clearance` · `seller_insurance_clearance` · `seller_enfia_certificate` δηλώνουν `documentKind` (`sellerTrackedDocument`) ⇒ απαιτήσεις `block` υπογραφής + γραμμές μητρώου. Η εντολή `review` δέχεται `validUntil` (τυπωμένη λήξη) → `ChecklistItemReview.printedValidUntil`· νέα άρνηση `validity_before_issue`. `ChecklistRow` += `expiryIsFloor` («τουλάχιστον έως») + `issueFrom` («εκδώστε από X»). Ο διάλογος ελέγχου δείχνει `ConveyanceValidUntilField` μόνο για κανόνα `printed`. |
 | 2026-10-16 | 🟡 **ΤΑΠ εκτός καταλόγου + βεβαίωση άρθρου 83 = 2 μήνες (ADR-915 §13, uncommitted).** Η γραμμή `municipal_clearance` αφαιρέθηκε από το `items-property.ts` και από τις διαδικασίες `final_contract` / `property_transfer` του `catalog.ts`: η βεβαίωση μη οφειλής ΤΑΠ καταργήθηκε με άρθρο 33 παρ. 1 Ν.5076/2023 (13.12.2023). Αποθηκευμένες αποκλίσεις παλιών υποθέσεων → `getChecklistItem` `undefined` (ήδη χειριζόμενο). Η `building_identity` παίρνει πλέον `months: 2` από τον κατάλογο ισχύος ⇒ εγκεκριμένη βεβαίωση που λήγει πριν την υπογραφή δίνει `validOnSigning: false`. |
 | 2026-10-15 | 🟡 **Ο κατάλογος γίνεται πηγή του μητρώου λήξεων (ADR-915 Φ4β §11.3, uncommitted).** Ο κριτής εφαρμοσιμότητας του `deriveChecklist` **εξάγεται** ως `checklistItemApplicability` (ίδια συνάρτηση, κανένα δίδυμο)· νέα καθαρή `caseDocumentRequirements(record, facts)` (`lib/conveyance/case-document-requirements.ts`): γραμμές του προφίλ **μείον** `notApplicable` **μείον** όσες ο κριτής κρίνει ανεφάρμοστες — το άγνωστο γεγονός **κρατά** την απαίτηση. Η συμπεριφορά του καταλόγου **δεν** άλλαξε. Boy Scout: το «ζωντανό αρχείο» (όχι κάδος + `READY`) της αποστολής τεκμηρίου (`conveyance-contributed-file`) → `isLiveFileRecord`. |
