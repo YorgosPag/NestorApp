@@ -6,6 +6,10 @@
  * Displays 3 coverage metrics (photos/floorplans/documents) with click-to-filter
  * functionality for "missing X" workflow.
  *
+ * 🔑 ADR-840 §7.8 — κάθε μετρική είναι **εναλλαγή** του `?missing=`: η πατημένη λέγεται με `aria-pressed` και
+ * περίγραμμα (όχι μόνο χρώμα), και ενεργοποιείται και από πληκτρολόγιο (`actionable-card`). Ως τότε ήταν **τρία**
+ * αντιγραμμένα μπλοκ, με `role="button"` χωρίς Enter/Space και χωρίς ένδειξη ότι το φίλτρο είναι ενεργό.
+ *
  * @fileoverview Enterprise coverage card using canonical StatsCard patterns
  * @enterprise ADR-031 - Single authority για coverage statistics
  * @since PR1.2 - Coverage/Completeness card implementation
@@ -21,7 +25,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 
 // 🏢 ENTERPRISE: Icons from Lucide (consistent with app standards)
-import { FileImage, FileText, FolderOpen, TrendingUp } from 'lucide-react';
+import { FileImage, FileText, FolderOpen, TrendingUp, type LucideIcon } from 'lucide-react';
 
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -30,9 +34,14 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { CoverageStats } from '@/hooks/usePropertiesStats';
 import '@/lib/design-system';
 
+import { ACTIONABLE_CARD_CLASS, PRESSED_CARD_CLASS, actionableCardProps } from './actionable-card';
+
 // =============================================================================
 // 🏢 TYPES
 // =============================================================================
+
+/** Οι τρεις σημαίες «λείπει» — ίδια ονόματα με το `FilterState['coverage']`. */
+export type MissingCoverageFlag = 'missingPhotos' | 'missingFloorplans' | 'missingDocuments';
 
 export interface CoverageCardProps {
   /** Coverage statistics from usePropertiesStats */
@@ -43,27 +52,65 @@ export interface CoverageCardProps {
   onMissingFloorplansClick?: () => void;
   /** Click handler for "missing documents" filter */
   onMissingDocumentsClick?: () => void;
+  /** Ποια φίλτρα «λείπει» είναι ενεργά — η κατάσταση των εναλλαγών. Χωρίς αυτό οι μετρικές είναι απλές πράξεις. */
+  activeMissing?: Partial<Record<MissingCoverageFlag, boolean>>;
   /** Additional className */
   className?: string;
 }
 
+interface CoverageMetricProps {
+  readonly icon: LucideIcon;
+  readonly iconClass: string;
+  readonly label: string;
+  readonly percentage: number;
+  readonly withCount: number;
+  readonly total: number;
+  readonly onActivate?: () => void;
+  readonly pressed?: boolean;
+}
+
 // =============================================================================
-// 🏢 COMPONENT
+// 🏢 COMPONENTS
 // =============================================================================
+
+function CoverageMetric({ icon: Icon, iconClass, label, percentage, withCount, total, onActivate, pressed }: CoverageMetricProps) {
+  const { t } = useTranslation(['properties', 'common', 'common-navigation']);
+  const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
+  const missing = total - withCount;
+
+  return (
+    <article
+      className={`p-3 rounded-lg border transition-all duration-200 ${
+        onActivate ? `${ACTIONABLE_CARD_CLASS} ${INTERACTIVE_PATTERNS.CARD_ENHANCED}` : ''
+      } ${pressed ? PRESSED_CARD_CLASS : ''} ${colors.bg.surface} hover:bg-accent/10`}
+      {...actionableCardProps(onActivate, pressed)}
+      aria-label={onActivate ? t('page.dashboard.coverage.clickToFilterMissing', { type: label }) : undefined}
+    >
+      <header className="flex items-center justify-between mb-2">
+        <Icon className={`${iconSizes.md} ${iconClass}`} />
+        <span className={`text-2xl font-bold ${colors.text.primary}`}>{percentage}%</span>
+      </header>
+      <p className={`text-xs font-medium ${colors.text.primary}`}>{label}</p>
+      <p className={`text-xs ${colors.text.muted}`}>
+        {withCount}/{total} {t('navigation.units', { ns: 'common' })}
+      </p>
+      {missing > 0 && (
+        <p className={`text-xs ${colors.text.warning}`}>{t('page.dashboard.coverage.missing', { count: missing })}</p>
+      )}
+    </article>
+  );
+}
 
 /**
  * 🏢 CoverageCard Component
- *
- * Enterprise coverage card showing unit documentation completeness.
- * Composed from same primitives as StatsCard with click-to-filter functionality.
  *
  * @example
  * ```tsx
  * <CoverageCard
  *   coverage={stats.coverage}
- *   onMissingPhotosClick={() => setFilter({ coverage: { missingPhotos: true }})}
- *   onMissingFloorplansClick={() => setFilter({ coverage: { missingFloorplans: true }})}
- *   onMissingDocumentsClick={() => setFilter({ coverage: { missingDocuments: true }})}
+ *   activeMissing={filters.coverage}
+ *   onMissingPhotosClick={() => toggle('missingPhotos')}
  * />
  * ```
  */
@@ -72,162 +119,46 @@ export function CoverageCard({
   onMissingPhotosClick,
   onMissingFloorplansClick,
   onMissingDocumentsClick,
+  activeMissing,
   className,
 }: CoverageCardProps) {
-  const { t } = useTranslation(['properties', 'properties-viewer', 'properties-enums', 'properties-detail', 'common', 'common-validation', 'common-status', 'common-shared', 'common-sales', 'common-photos', 'common-navigation', 'common-empty-states', 'common-actions', 'common-account']);
+  const { t } = useTranslation(['properties', 'common', 'common-navigation']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();
+  // `undefined` όταν ο καλών δεν δηλώνει κατάσταση ⇒ καμία `aria-pressed` (πράξη, όχι εναλλαγή).
+  const pressedOf = (flag: MissingCoverageFlag) => (activeMissing ? activeMissing[flag] === true : undefined);
 
-  // ==========================================================================
-  // 🏢 COMPUTED VALUES
-  // ==========================================================================
-
-  /** Calculate missing counts for actionable metrics */
-  const missingPhotos = coverage.totalProperties - coverage.propertiesWithPhotos;
-  const missingFloorplans = coverage.totalProperties - coverage.propertiesWithFloorplans;
-  const missingDocuments = coverage.totalProperties - coverage.propertiesWithDocuments;
-
-  // ==========================================================================
-  // 🏢 RENDER
-  // ==========================================================================
+  const metrics: ReadonlyArray<CoverageMetricProps & { readonly flag: MissingCoverageFlag }> = [
+    {
+      flag: 'missingPhotos', icon: FileImage, iconClass: colors.text.info, label: t('page.dashboard.coverage.photos'),
+      percentage: coverage.photosPercentage, withCount: coverage.propertiesWithPhotos, total: coverage.totalProperties,
+      onActivate: onMissingPhotosClick, pressed: pressedOf('missingPhotos'),
+    },
+    {
+      flag: 'missingFloorplans', icon: FolderOpen, iconClass: colors.text.success, label: t('page.dashboard.coverage.floorplans'),
+      percentage: coverage.floorplansPercentage, withCount: coverage.propertiesWithFloorplans, total: coverage.totalProperties,
+      onActivate: onMissingFloorplansClick, pressed: pressedOf('missingFloorplans'),
+    },
+    {
+      flag: 'missingDocuments', icon: FileText, iconClass: colors.text.purple, label: t('page.dashboard.coverage.documents'),
+      percentage: coverage.documentsPercentage, withCount: coverage.propertiesWithDocuments, total: coverage.totalProperties,
+      onActivate: onMissingDocumentsClick, pressed: pressedOf('missingDocuments'),
+    },
+  ];
 
   return (
     <Card className={`lg:col-span-2 ${className || ''}`}>
       <CardHeader className={`${spacing.padding.sm} pb-2`}>
-        <HeaderBar
-          wrap={false}
-          actions={
-            <TrendingUp className={`${iconSizes.sm} ${colors.text.muted}`} />
-          }
-        >
-          <CardTitle className="text-sm font-medium">
-            {t('page.dashboard.coverage.title')}
-          </CardTitle>
+        <HeaderBar wrap={false} actions={<TrendingUp className={`${iconSizes.sm} ${colors.text.muted}`} />}>
+          <CardTitle className="text-sm font-medium">{t('page.dashboard.coverage.title')}</CardTitle>
         </HeaderBar>
       </CardHeader>
 
       <CardContent className={`${spacing.padding.sm} pt-0`}>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-          {/* Photos Coverage */}
-          <div
-            className={`p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
-              onMissingPhotosClick ? INTERACTIVE_PATTERNS.CARD_ENHANCED : ''
-            } ${colors.bg.surface} hover:bg-accent/10`}
-            onClick={onMissingPhotosClick}
-            role={onMissingPhotosClick ? 'button' : undefined}
-            tabIndex={onMissingPhotosClick ? 0 : undefined}
-            aria-label={
-              onMissingPhotosClick
-                ? t('page.dashboard.coverage.clickToFilterMissing', {
-                    type: t('page.dashboard.coverage.photos')
-                  })
-                : undefined
-            }
-          >
-            <div className="flex items-center justify-between mb-2">
-              <FileImage className={`${iconSizes.md} ${colors.text.info}`} />
-              <span className={`text-2xl font-bold ${colors.text.primary}`}>
-                {coverage.photosPercentage}%
-              </span>
-            </div>
-            <div className="space-y-1">
-              <p className={`text-xs font-medium ${colors.text.primary}`}>
-                {t('page.dashboard.coverage.photos')}
-              </p>
-              <p className={`text-xs ${colors.text.muted}`}>
-                {coverage.propertiesWithPhotos}/{coverage.totalProperties} {t('navigation.units', { ns: 'common' })}
-              </p>
-              {missingPhotos > 0 && (
-                <p className={`text-xs ${colors.text.warning}`}>
-                  {t('page.dashboard.coverage.missing', {
-                    count: missingPhotos
-                  })}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Floorplans Coverage */}
-          <div
-            className={`p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
-              onMissingFloorplansClick ? INTERACTIVE_PATTERNS.CARD_ENHANCED : ''
-            } ${colors.bg.surface} hover:bg-accent/10`}
-            onClick={onMissingFloorplansClick}
-            role={onMissingFloorplansClick ? 'button' : undefined}
-            tabIndex={onMissingFloorplansClick ? 0 : undefined}
-            aria-label={
-              onMissingFloorplansClick
-                ? t('page.dashboard.coverage.clickToFilterMissing', {
-                    type: t('page.dashboard.coverage.floorplans')
-                  })
-                : undefined
-            }
-          >
-            <div className="flex items-center justify-between mb-2">
-              <FolderOpen className={`${iconSizes.md} ${colors.text.success}`} />
-              <span className={`text-2xl font-bold ${colors.text.primary}`}>
-                {coverage.floorplansPercentage}%
-              </span>
-            </div>
-            <div className="space-y-1">
-              <p className={`text-xs font-medium ${colors.text.primary}`}>
-                {t('page.dashboard.coverage.floorplans')}
-              </p>
-              <p className={`text-xs ${colors.text.muted}`}>
-                {coverage.propertiesWithFloorplans}/{coverage.totalProperties} {t('navigation.units', { ns: 'common' })}
-              </p>
-              {missingFloorplans > 0 && (
-                <p className={`text-xs ${colors.text.warning}`}>
-                  {t('page.dashboard.coverage.missing', {
-                    count: missingFloorplans
-                  })}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Documents Coverage */}
-          <div
-            className={`p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
-              onMissingDocumentsClick ? INTERACTIVE_PATTERNS.CARD_ENHANCED : ''
-            } ${colors.bg.surface} hover:bg-accent/10`}
-            onClick={onMissingDocumentsClick}
-            role={onMissingDocumentsClick ? 'button' : undefined}
-            tabIndex={onMissingDocumentsClick ? 0 : undefined}
-            aria-label={
-              onMissingDocumentsClick
-                ? t('page.dashboard.coverage.clickToFilterMissing', {
-                    type: t('page.dashboard.coverage.documents')
-                  })
-                : undefined
-            }
-          >
-            <div className="flex items-center justify-between mb-2">
-              <FileText className={`${iconSizes.md} ${colors.text.purple}`} />
-              <span className={`text-2xl font-bold ${colors.text.primary}`}>
-                {coverage.documentsPercentage}%
-              </span>
-            </div>
-            <div className="space-y-1">
-              <p className={`text-xs font-medium ${colors.text.primary}`}>
-                {t('page.dashboard.coverage.documents')}
-              </p>
-              <p className={`text-xs ${colors.text.muted}`}>
-                {coverage.propertiesWithDocuments}/{coverage.totalProperties} {t('navigation.units', { ns: 'common' })}
-              </p>
-              {missingDocuments > 0 && (
-                <p className={`text-xs ${colors.text.warning}`}>
-                  {t('page.dashboard.coverage.missing', {
-                    count: missingDocuments
-                  })}
-                </p>
-              )}
-            </div>
-          </div>
-
-        </div>
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {metrics.map(({ flag, ...metric }) => <CoverageMetric key={flag} {...metric} />)}
+        </section>
       </CardContent>
     </Card>
   );

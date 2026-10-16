@@ -4,6 +4,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { ACTIONABLE_CARD_CLASS, PRESSED_CARD_CLASS, actionableCardProps } from './actionable-card';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -39,9 +40,14 @@ interface StatsCardProps {
      * `value`: ποσά άλλης μονάδας δεν γίνονται ένας αριθμός. Το παράγει **μόνο** το `priceTotalsView`.
      */
     priceBreakdown?: readonly PriceTotalsRow[];
+    /**
+     * Η κάρτα είναι **εναλλαγή φίλτρου** και αυτή είναι η κατάστασή της (ADR-840 §7.8). `undefined` ⇒ δεν είναι
+     * εναλλαγή. Λέγεται με `aria-pressed` **και** με παχύτερο περίγραμμα τονισμού — ποτέ μόνο με χρώμα (ADR-771).
+     */
+    pressed?: boolean;
 }
 
-export function StatsCard({ title, value, icon: Icon, color, onClick, loading, description, priceBreakdown }: StatsCardProps) {
+export function StatsCard({ title, value, icon: Icon, color, onClick, loading, description, priceBreakdown, pressed }: StatsCardProps) {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -68,8 +74,8 @@ export function StatsCard({ title, value, icon: Icon, color, onClick, loading, d
 
     return (
         <Card
-            className={`${quick.card} ${colors.bg.card} ${toneClass} ${onClick ? `cursor-pointer ${INTERACTIVE_PATTERNS.CARD_ENHANCED}` : ''} min-w-0 max-w-full overflow-hidden`}
-            onClick={onClick}
+            className={`${quick.card} ${colors.bg.card} ${toneClass} ${onClick ? `${ACTIONABLE_CARD_CLASS} ${INTERACTIVE_PATTERNS.CARD_ENHANCED}` : ''} ${pressed ? PRESSED_CARD_CLASS : ''} min-w-0 max-w-full overflow-hidden`}
+            {...actionableCardProps(onClick, pressed)}
         >
             <CardContent className={`${spacing.padding.sm} min-w-0`}>
                 <div className="flex items-center justify-between min-w-0 max-w-full">

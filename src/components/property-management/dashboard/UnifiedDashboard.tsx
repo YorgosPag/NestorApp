@@ -22,6 +22,13 @@ interface DashboardStat {
     label: string;
   };
   loading?: boolean;
+  /**
+   * Η **δική της** πράξη της κάρτας (ADR-840 §7.8). Όταν το ταμπλό δηλώνει πράξεις ανά κάρτα, οι **υπόλοιπες** μένουν
+   * πληροφοριακές — χωρίς δείκτη, χωρίς στάση στο Tab. Προηγείται του `onCardClick`.
+   */
+  onActivate?: () => void;
+  /** Κατάσταση εναλλαγής φίλτρου — δες `StatsCard.pressed`. */
+  pressed?: boolean;
 }
 
 interface UnifiedDashboardProps {
@@ -96,7 +103,8 @@ export function UnifiedDashboard({
             description={stat.description}
             priceBreakdown={stat.priceBreakdown}
             loading={stat.loading}
-            onClick={onCardClick ? () => onCardClick(stat, index) : undefined}
+            pressed={stat.pressed}
+            onClick={stat.onActivate ?? (onCardClick ? () => onCardClick(stat, index) : undefined)}
           />
         ))}
       </div>
