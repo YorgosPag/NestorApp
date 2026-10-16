@@ -9,7 +9,7 @@
  *
  * Auth: GET κάθε συνδεδεμένος· POST μόνο διοικητικός ρόλος (αλλάζει νούμερα φόρου — Xero: μόνο Adviser).
  * Rate: GET standard · POST sensitive.
- * Errors: 409 `FISCAL_YEAR_NOT_ENDED` / `PERIOD_NOT_FOUND` / `PERIOD_NOT_OPEN` · 422 `INVALID_DEPRECIATION_TERMS`.
+ * Errors: 409 `FISCAL_YEAR_NOT_ENDED` / `PERIOD_NOT_FOUND` / `PERIOD_CLOSED` / `PERIOD_LOCKED` · 422 `INVALID_DEPRECIATION_TERMS`.
  *
  * @module api/accounting/assets/depreciation-run
  * @enterprise ADR-ACC-010 §2.1.1 Φάση 5 · ADR-ACC-007 §10 · ADR-603

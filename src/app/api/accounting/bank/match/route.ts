@@ -20,6 +20,7 @@ import { defineRoute, ok } from '@/lib/api/define-route';
 import type { AuthContext } from '@/lib/auth';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import { validatePostingAllowed } from '@/subapps/accounting/services/fiscal-period-service';
+import { postingDenialDetailsOf } from '../../_shared/fiscal-period-errors';
 import { logAccountingEvent } from '@/subapps/accounting/services/accounting-audit-service';
 import {
   MatchRequestSchema,
@@ -142,14 +143,9 @@ async function handleSingleMatch(
   // 6. Fiscal period check (Q6)
   const periodCheck = await validatePostingAllowed(repository, transaction.transactionDate);
   if (!periodCheck.allowed) {
-    const code = periodCheck.periodStatus === 'LOCKED' ? 'PERIOD_LOCKED' as const
-      : periodCheck.periodStatus === 'CLOSED' ? 'PERIOD_CLOSED' as const
-      : 'PERIOD_NOT_FOUND' as const;
     return problemResponse(
-      createBankMatchError(code,
-        periodCheck.reason ?? 'Η λογιστική περίοδος δεν επιτρέπει αλλαγές',
-        403,
-        { periodId: periodCheck.periodId, periodStatus: periodCheck.periodStatus })
+      createBankMatchError(periodCheck.denial, `Posting refused: ${periodCheck.denial}`, 409,
+        postingDenialDetailsOf(periodCheck))
     );
   }
 
@@ -233,11 +229,8 @@ async function handleGroupMatch(
     const periodCheck = await validatePostingAllowed(repository, txn.transactionDate);
     if (!periodCheck.allowed) {
       return problemResponse(
-        createBankMatchError(
-          periodCheck.periodStatus === 'LOCKED' ? 'PERIOD_LOCKED' : 'PERIOD_CLOSED',
-          `${periodCheck.reason} (συναλλαγή: ${txnId})`,
-          403,
-          { transactionId: txnId, periodId: periodCheck.periodId })
+        createBankMatchError(periodCheck.denial, `Posting refused: ${periodCheck.denial} (transaction ${txnId})`, 409,
+          { transactionId: txnId, ...postingDenialDetailsOf(periodCheck) })
       );
     }
   }

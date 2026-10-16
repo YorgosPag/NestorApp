@@ -4,7 +4,7 @@
  * Proves each defineRoute-migrated route (batch-2) is BYTE-IDENTICAL to its
  * previous inline handler: same envelopes, status codes, validation messages,
  * and the contract-risky shapes — through the REAL factory + REAL safeParseBody:
- *   - 422 passthrough of `validatePostingAllowed.reason` / credit-limit warning
+ *   - 409 + `errorCode` of a `validatePostingAllowed` denial (ADR-ACC-010 §2.1.1 Φ7) / credit-limit warning
  *     (journal POST, invoices POST)
  *   - 403 immutability guards (journal/[id] PATCH + DELETE)
  *   - top-level extra fields: `action` (categories/[id] DELETE), `entityType`
@@ -116,7 +116,7 @@ jest.mock('@/subapps/accounting/services/create-accounting-services', () => ({
 }));
 
 var svcExtras = {
-  validatePostingAllowed: jest.fn(async () => ({ allowed: true, reason: null })),
+  validatePostingAllowed: jest.fn(async () => ({ allowed: true, periodId: '2026-01', periodStatus: 'OPEN' })),
   checkCreditLimit: jest.fn(() => ({ allowed: true, exceedsLimit: false })),
   computeCustomerBalance: jest.fn(async () => ({ netBalance: 0 })),
   hasActiveCreditLimit: jest.fn((b: { creditLimit?: number | null } | null) => !!b && b.creditLimit != null),
@@ -195,7 +195,7 @@ function req(body?: unknown, url = 'https://app.test/api/accounting/x'): NextReq
 
 beforeEach(() => {
   jest.clearAllMocks();
-  svcExtras.validatePostingAllowed.mockResolvedValue({ allowed: true, reason: null });
+  svcExtras.validatePostingAllowed.mockResolvedValue({ allowed: true, periodId: '2026-01', periodStatus: 'OPEN' });
   svcExtras.checkCreditLimit.mockReturnValue({ allowed: true, exceedsLimit: false });
   repo.getCompanySetup.mockResolvedValue(null);
   repo.getCustomerBalance.mockResolvedValue(null);
@@ -281,14 +281,26 @@ describe('documents', () => {
   });
 });
 
-describe('journal POST — 422 validatePostingAllowed passthrough', () => {
-  it('posting blocked → 422 with reason', async () => {
-    svcExtras.validatePostingAllowed.mockResolvedValue({ allowed: false, reason: 'Period CLOSED' });
+/** Μια άρνηση περιόδου όπως τη δίνει το `validatePostingAllowed` — κωδικός + δομημένα στοιχεία, κανένα κείμενο. */
+const deniedPosting = (denial: 'PERIOD_CLOSED' | 'PERIOD_LOCKED' | 'PERIOD_NOT_FOUND') => ({
+  allowed: false, denial, postingDate: '2026-01-01',
+  periodId: denial === 'PERIOD_NOT_FOUND' ? null : '2026-01',
+  periodStatus: denial === 'PERIOD_NOT_FOUND' ? null : denial.slice('PERIOD_'.length),
+  fiscalYear: denial === 'PERIOD_NOT_FOUND' ? null : 2026,
+  periodNumber: denial === 'PERIOD_NOT_FOUND' ? null : 1,
+});
+
+describe('journal POST — 409 + errorCode άρνησης περιόδου (Φ7)', () => {
+  it.each(['PERIOD_CLOSED', 'PERIOD_LOCKED', 'PERIOD_NOT_FOUND'] as const)('%s ⇒ 409, ίδιος κωδικός, δομημένα στοιχεία, καμία εγγραφή', async (denial) => {
+    svcExtras.validatePostingAllowed.mockResolvedValue(deniedPosting(denial));
     const res = (await journalPost(req({
       date: '2026-01-01', type: 'income', category: 'c', description: 'd', netAmount: 100,
     }))) as Envelope;
-    expect(res.status).toBe(422);
-    expect(await res.json()).toEqual({ success: false, error: 'Period CLOSED' });
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body).toMatchObject({ success: false, errorCode: denial, postingDate: '2026-01-01' });
+    expect(body.periodNumber).toBe(deniedPosting(denial).periodNumber);
+    expect(repo.createJournalEntry).not.toHaveBeenCalled();
   });
 
   it('allowed → 201 { data:{ entryId } }', async () => {
@@ -415,13 +427,14 @@ describe('bank/transactions + invoices — created shapes', () => {
     expect(await res.json()).toEqual({ success: true, data: { transactionId: 'bt_1' } });
   });
 
-  it('invoices POST blocked posting → 422 reason', async () => {
-    svcExtras.validatePostingAllowed.mockResolvedValue({ allowed: false, reason: 'Locked period' });
+  it('invoices POST blocked posting → 409 + errorCode, κανένα τιμολόγιο', async () => {
+    svcExtras.validatePostingAllowed.mockResolvedValue(deniedPosting('PERIOD_LOCKED'));
     const res = (await invPost(req({
       series: 'A', type: 'service_invoice', issueDate: '2026-01-01',
     }))) as Envelope;
-    expect(res.status).toBe(422);
-    expect(await res.json()).toEqual({ success: false, error: 'Locked period' });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ success: false, errorCode: 'PERIOD_LOCKED', fiscalYear: 2026, periodNumber: 1 });
+    expect(repo.createInvoice).not.toHaveBeenCalled();
   });
 
   it('invoices POST valid (no contact) → 201 { data:{ invoiceId, number, journalEntryId, creditWarning } }', async () => {

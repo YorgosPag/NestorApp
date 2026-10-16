@@ -8,7 +8,7 @@
  * με ανοιχτή την περίοδο 12. Ιδεμπότητη: δεύτερη αναίρεση = τίποτα.
  *
  * Auth: μόνο διοικητικός ρόλος (αλλάζει νούμερα φόρου). Rate: sensitive.
- * Errors: 409 `PERIOD_NOT_FOUND` / `PERIOD_NOT_OPEN` · 422 `INVALID_DEPRECIATION_TERMS`.
+ * Errors: 409 `PERIOD_NOT_FOUND` / `PERIOD_CLOSED` / `PERIOD_LOCKED` · 422 `INVALID_DEPRECIATION_TERMS`.
  *
  * @module api/accounting/assets/depreciation-run/reversal
  * @enterprise ADR-ACC-010 §2.1.1 Φάση 5 · ADR-603

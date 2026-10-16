@@ -17,7 +17,6 @@
 import 'server-only';
 
 import { z } from 'zod';
-import { NextResponse } from 'next/server';
 import { defineRoute, created } from '@/lib/api/define-route';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import {
@@ -28,6 +27,7 @@ import {
   refreshCustomerBalance,
 } from '@/subapps/accounting/services';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
+import { assertPostingAllowed } from '../_shared/fiscal-period-errors';
 import { POLICY_ERROR_CODES } from '@/lib/policy/policy-error-codes';
 import { INVOICE_PAYMENT_STATUSES, INVOICE_TYPES } from '@/subapps/accounting/types';
 import type { InvoiceFilters, CreateInvoiceInput, CreditCheckResult } from '@/subapps/accounting/types';
@@ -84,13 +84,7 @@ export const POST = defineRoute({
     const { service, repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
 
     // ── Hook 1a: Validate posting allowed (Q4 — fiscal period check) ──
-    const postingCheck = await validatePostingAllowed(repository, body.issueDate);
-    if (!postingCheck.allowed) {
-      return NextResponse.json(
-        { success: false, error: postingCheck.reason },
-        { status: 422 }
-      );
-    }
+    assertPostingAllowed(await validatePostingAllowed(repository, body.issueDate));
 
     // ── Hook 1b: Credit limit check (Q4 — SAP KNKK pattern) ──────────
     const contactId = body.contactId;

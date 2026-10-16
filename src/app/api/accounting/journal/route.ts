@@ -17,10 +17,10 @@
 import 'server-only';
 
 import { z } from 'zod';
-import { NextResponse } from 'next/server';
 import { defineRoute, created } from '@/lib/api/define-route';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import { validatePostingAllowed } from '@/subapps/accounting/services';
+import { assertPostingAllowed } from '../_shared/fiscal-period-errors';
 import { ENTRY_TYPES } from '@/subapps/accounting/types';
 import type { JournalEntryFilters, CreateJournalEntryInput } from '@/subapps/accounting/types';
 import {
@@ -80,13 +80,7 @@ export const POST = defineRoute({
     assertManualPostingAllowed(body);
 
     // ── Hook 4: Validate posting allowed (Q4 — fiscal period check) ───
-    const postingCheck = await validatePostingAllowed(repository, body.date);
-    if (!postingCheck.allowed) {
-      return NextResponse.json(
-        { success: false, error: postingCheck.reason },
-        { status: 422 }
-      );
-    }
+    assertPostingAllowed(await validatePostingAllowed(repository, body.date));
 
     const { id } = await repository.createJournalEntry(body as unknown as CreateJournalEntryInput);
 
