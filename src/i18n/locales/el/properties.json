@@ -163,8 +163,6 @@
     "allFloors": "Όλοι οι Όροφοι",
     "allBuildings": "Όλα τα Κτίρια",
     "allProjects": "Όλα τα Έργα",
-    "unknownProject": "Άγνωστο έργο",
-    "unknownBuilding": "Άγνωστο κτίριο",
     "types": {
       "apartment": "Διαμέρισμα",
       "studio": "Στούντιο",

@@ -163,8 +163,6 @@
     "allFloors": "All Floors",
     "allBuildings": "All Buildings",
     "allProjects": "All Projects",
-    "unknownProject": "Unknown project",
-    "unknownBuilding": "Unknown building",
     "types": {
       "apartment": "Apartment",
       "studio": "Studio",

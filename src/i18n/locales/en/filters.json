@@ -35,6 +35,8 @@
   "allRiskLevels": "All Risk Levels",
   "allComplexities": "All Complexities",
   "allBuildings": "All Buildings",
+  "unknownProject": "Unknown project",
+  "unknownBuilding": "Unknown building",
   "allLevels": "All Levels",
   "common": {
     "search": "Search",

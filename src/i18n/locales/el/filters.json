@@ -35,6 +35,8 @@
   "allRiskLevels": "Όλα τα Επίπεδα Κινδύνου",
   "allComplexities": "Όλες οι Πολυπλοκότητες",
   "allBuildings": "Όλα τα Κτίρια",
+  "unknownProject": "Άγνωστο έργο",
+  "unknownBuilding": "Άγνωστο κτίριο",
   "allLevels": "Όλα τα Επίπεδα",
   "common": {
     "search": "Αναζήτηση",
