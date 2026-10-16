@@ -10,9 +10,15 @@
  * | `coveringIssueFrom`: επιστρέφει την υποψήφια χωρίς επαλήθευση | Κ2 (31 Μαρτίου) |
  */
 
-import { DOCUMENT_KIND_SPECS, documentKindSpec } from '@/config/document-validity/document-validity';
+import {
+  DOCUMENT_KIND_SPECS,
+  ENFIA_CENTRAL_ISSUANCE,
+  ENFIA_CENTRAL_ISSUANCE_EXPECTED_BY,
+  documentKindSpec,
+} from '@/config/document-validity/document-validity';
+import { conveyanceToday } from '@/lib/conveyance/conveyance-calendar';
 import { documentExpiry, ruleExpires, ruleExpiresOn } from '@/lib/document-validity/document-expiry';
-import { boundExpiresOn, coveringIssueFrom } from '@/lib/document-validity/validity-bounds';
+import { boundExpiresOn, coveringIssueFrom, enfiaCentralIssuanceCoverage } from '@/lib/document-validity/validity-bounds';
 
 const TAX = documentKindSpec('tax-clearance').rule;
 const INSURANCE = documentKindSpec('insurance-clearance').rule;
@@ -33,7 +39,36 @@ describe('Β — τα όρια', () => {
   it('Β3 κύκλος ΕΝΦΙΑ: πριν την κεντρική ⇒ η παραμονή της · από αυτήν ⇒ 31/12 · άγνωστο έτος ⇒ null', () => {
     expect(boundExpiresOn({ kind: 'enfia-cycle' }, '2026-02-01')).toBe('2026-03-14');
     expect(boundExpiresOn({ kind: 'enfia-cycle' }, '2026-03-15')).toBe('2026-12-31');
-    expect(boundExpiresOn({ kind: 'enfia-cycle' }, '2025-06-01')).toBeNull();
+    expect(boundExpiresOn({ kind: 'enfia-cycle' }, '2023-06-01')).toBeNull();
+  });
+
+  it('Β3α κεντρικές εκδόσεις 2024/2025 (δελτία ΑΑΔΕ) — η παραμονή είναι το κατώτατο', () => {
+    expect(boundExpiresOn({ kind: 'enfia-cycle' }, '2024-04-06')).toBe('2024-04-06');
+    expect(boundExpiresOn({ kind: 'enfia-cycle' }, '2024-04-07')).toBe('2024-12-31');
+    expect(boundExpiresOn({ kind: 'enfia-cycle' }, '2025-01-10')).toBe('2025-03-08');
+    expect(boundExpiresOn({ kind: 'enfia-cycle' }, '2025-03-09')).toBe('2025-12-31');
+  });
+});
+
+describe('§17 — φρουρός του πίνακα κεντρικών εκδόσεων ΕΝΦΙΑ', () => {
+  it('γνωστό έτος ⇒ known · άγνωστο έως τέλος Απριλίου ⇒ awaiting · μετά ⇒ missing', () => {
+    expect(enfiaCentralIssuanceCoverage('2026-01-05')).toBe('known');
+    expect(enfiaCentralIssuanceCoverage('2023-04-30')).toBe('awaiting');
+    expect(enfiaCentralIssuanceCoverage('2023-05-01')).toBe('missing');
+    expect(enfiaCentralIssuanceCoverage('2026-02-30')).toBeNull();
+  });
+
+  it('κάθε γραμμή είναι ημερομηνία του ΙΔΙΟΥ έτους, όχι μετά την αναμενόμενη', () => {
+    const wrong = Object.entries(ENFIA_CENTRAL_ISSUANCE).filter(
+      ([year, date]) => !date.startsWith(`${year}-`) || date.slice(5) > ENFIA_CENTRAL_ISSUANCE_EXPECTED_BY,
+    );
+    expect(wrong).toEqual([]);
+  });
+
+  // ⚠️ ΖΩΝΤΑΝΗ άγκυρα — ρωτά το ΣΗΜΕΡΙΝΟ ρολόι, ΣΚΟΠΙΜΑ: από 1η Μαΐου ενός έτους χωρίς γραμμή κοκκινίζει, μαζί με το
+  // σφάλμα που γράφει κάθε μέρα το cron `document-expiry-alerts`. Διόρθωση = νέα γραμμή ΜΕ ΠΗΓΗ ΑΑΔΕ, ποτέ μαντεψιά.
+  it('το τρέχον έτος δεν λείπει από τον πίνακα', () => {
+    expect(enfiaCentralIssuanceCoverage(conveyanceToday())).not.toBe('missing');
   });
 
   it('Β4 χωρίς ή με άκυρη έκδοση ⇒ null («δεν ξέρουμε»)', () => {
@@ -76,8 +111,8 @@ describe('Π — κανόνας `printed`: η τυπωμένη λήξη είνα
   });
 
   it('Π7 ΕΝΦΙΑ σε έτος χωρίς γνωστή κεντρική έκδοση ⇒ άγνωστη χωρίς τυπωμένη, όχι μαντεψιά', () => {
-    expect(documentExpiry({ rule: ENFIA, issuedOn: '2025-06-01' })).toEqual({ expiresOn: null, source: null, discrepancy: null });
-    expect(documentExpiry({ rule: ENFIA, issuedOn: '2025-06-01', printedValidUntil: '2025-12-31' }).expiresOn).toBe('2025-12-31');
+    expect(documentExpiry({ rule: ENFIA, issuedOn: '2023-06-01' })).toEqual({ expiresOn: null, source: null, discrepancy: null });
+    expect(documentExpiry({ rule: ENFIA, issuedOn: '2023-06-01', printedValidUntil: '2023-12-31' }).expiresOn).toBe('2023-12-31');
   });
 
   it('Π8 κάθε `printed` λήγει (`ruleExpires`) — το ζητά ο διάλογος ελέγχου', () => {

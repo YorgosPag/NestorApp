@@ -18,6 +18,7 @@ import { addDaysToDateKey, isDateKey } from '@/lib/calendar/date-key';
 import { addMonthsUTC, normalizeToMillisOrNull, utcDateOf } from '@/lib/date-local';
 import {
   ENFIA_CENTRAL_ISSUANCE,
+  ENFIA_CENTRAL_ISSUANCE_EXPECTED_BY,
   type DocumentValidityRule,
   type ValidityBound,
 } from '@/config/document-validity/document-validity';
@@ -48,6 +49,19 @@ function enfiaCycleEndOf(key: string): string | null {
   const central = ENFIA_CENTRAL_ISSUANCE[yearMonthOf(key).year];
   if (central === undefined) return null;
   return key < central ? addDaysToDateKey(central, -1) : endOfYearOf(key);
+}
+
+/**
+ * Ξέρουμε την κεντρική έκδοση ΕΝΦΙΑ του έτους της `today`;
+ * - `known`    — υπάρχει γραμμή στο `ENFIA_CENTRAL_ISSUANCE`
+ * - `awaiting` — δεν υπάρχει, αλλά είναι ακόμη νωρίς (έως `ENFIA_CENTRAL_ISSUANCE_EXPECTED_BY`)
+ * - `missing`  — δεν υπάρχει και θα έπρεπε ⇒ τα πιστοποιητικά του έτους δείχνουν σιωπηλά «άγνωστη λήξη» (ADR-915 §17)
+ * `null` όταν η `today` δεν είναι ημερομηνία.
+ */
+export function enfiaCentralIssuanceCoverage(today: string): 'known' | 'awaiting' | 'missing' | null {
+  if (!isDateKey(today)) return null;
+  if (ENFIA_CENTRAL_ISSUANCE[yearMonthOf(today).year] !== undefined) return 'known';
+  return today.slice(5) <= ENFIA_CENTRAL_ISSUANCE_EXPECTED_BY ? 'awaiting' : 'missing';
 }
 
 /** Η τελευταία ημέρα ισχύος κατά το όριο — `null` όταν η έκδοση δεν διαβάζεται ή το όριο δεν είναι γνωστό. */
