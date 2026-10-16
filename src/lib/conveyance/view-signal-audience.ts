@@ -28,6 +28,7 @@ import type { CaseActorRole } from '@/types/conveyance-case';
 import type { LegalProfessionalRole } from '@/types/legal-contracts';
 import { reachesViewer, sentOnBehalf, type AudienceItem, type CaseViewerRole } from './contribution-audience';
 import { viewerSeesItem } from './derive-checklist';
+import { partyRowsAudience } from './case-rows';
 import { viewSignalSeed, type CaseViewKey, type EngagementCaseView, type HostCaseView } from './view-signal-key';
 
 /** Ένας ενεργός επαγγελματίας της υπόθεσης — η όψη του **και** ο ρόλος που κρίνει τι βλέπει. */
@@ -95,6 +96,11 @@ export function changeOfCommand(command: ConveyanceCommand): CaseChange {
     case 'set_target_signing_date':
     case 'cancel':
       return { kind: 'case-wide' };
+    // ADR-915 §23 — άλλα πρόσωπα ⇒ άλλες γραμμές προσώπου: τις βλέπει ο οικοδεσπότης (και το πάνελ γεγονότων) και όσοι
+    // βλέπουν γραμμές πωλητή. Ποτέ η πλευρά του αγοραστή (Α4 — το «πόσοι πουλάνε» δεν της ανήκει).
+    case 'add_sellers':
+    case 'remove_seller':
+      return { kind: 'scoped', roles: ['host', ...partyRowsAudience('seller')] };
     case 'mark_not_applicable':
     case 'review':
     case 'clear_override': {

@@ -16,6 +16,7 @@
 import { z } from 'zod';
 import { CONVEYANCE_FACT_IDS } from '@/config/conveyance-checklist/types';
 import { REVIEW_VERDICTS } from '@/types/conveyance-case';
+import { MAX_CASE_SELLERS } from './case-parties';
 
 const MAX_REASON_LENGTH = 1000;
 const MAX_ID_LENGTH = 200;
@@ -53,6 +54,18 @@ const conveyanceCommandSchema = z.discriminatedUnion('type', [
   }),
   z.object({ type: z.literal('clear_override'), itemId: itemIdSchema }),
   z.object({ type: z.literal('set_target_signing_date'), date: dateKeySchema.nullable() }),
+  /**
+   * ADR-915 §23 — συμμεταβιβάζοντες: **μόνο** επαφές. Φυσικό/νομικό πρόσωπο και ιδιότητα τα παράγει ο server από την
+   * επαφή και το έργο (`sellerCandidateOf`) — ο client δεν τα δηλώνει. Πολλές μαζί = **μία** πράξη (μία έκδοση, ένα
+   * ίχνος): «Πρόσθεσε τους οικοπεδούχους» δεν είναι τρεις διαδοχικές συγκρούσεις CAS.
+   */
+  z.object({
+    type: z.literal('add_sellers'),
+    contactIds: z.array(z.string().min(1).max(MAX_ID_LENGTH)).min(1).max(MAX_CASE_SELLERS)
+      .refine((ids) => new Set(ids).size === ids.length, { message: 'duplicate contactIds' }),
+  }),
+  /** ADR-915 §23 — αφαίρεση συμμεταβιβάζοντος (`ConveyanceSellerParty.key`). Τα δεδομένα του **μένουν** (επαναφορά). */
+  z.object({ type: z.literal('remove_seller'), partyKey: z.string().min(1).max(MAX_ID_LENGTH) }),
   z.object({ type: z.literal('cancel'), reason: reasonSchema }),
 ]);
 
@@ -75,6 +88,17 @@ const COMMAND_REJECTIONS = [
   'party_required',
   /** ADR-915 §22 — γεγονός της υπόθεσης με πρόσωπο: η απάντηση δεν θα μετρούσε πουθενά. */
   'party_not_applicable',
+  /**
+   * ADR-915 §23 — η επαφή δεν μπορεί να γίνει πωλητής: άγνωστη, **ξένη** (ADR-742 — ξένη ≡ ανύπαρκτη, καμία μαρτυρία
+   * ύπαρξης), υπηρεσία, αρχειοθετημένη/διαγραμμένη.
+   */
+  'seller_not_eligible',
+  /** ADR-915 §23 — η επαφή είναι ήδη **αγοραστής** της ίδιας υπόθεσης: κανείς δεν μεταβιβάζει στον εαυτό του. */
+  'seller_is_buyer',
+  /** ADR-915 §23 — η εταιρεία του έργου (`principal`) δεν αφαιρείται: χωρίς αυτήν δεν υπάρχει πώληση του έργου. */
+  'principal_not_removable',
+  /** ADR-915 §23 — πάνω από `MAX_CASE_SELLERS` μεταβιβάζοντες. */
+  'too_many_sellers',
   'file_not_evidence',
   'reason_required',
   'invalid_date',

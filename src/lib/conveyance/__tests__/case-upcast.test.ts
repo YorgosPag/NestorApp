@@ -33,7 +33,7 @@ function legacyStored(sellerContactId: string | null = 'cont_co'): Record<string
 describe('upcastStoredCase — παλιό σχήμα ⇒ σχήμα §22', () => {
   it('ο μοναδικός `seller` γίνεται λίστα ενός, με κλειδί την επαφή του', () => {
     const parsed = parseConveyanceCase(legacyStored());
-    expect(parsed?.parties).toEqual({ sellers: [{ key: 'cont_co', contactId: 'cont_co', kind: 'legal_entity' }], buyers: [{ contactId: 'cont_b' }] });
+    expect(parsed?.parties).toEqual({ sellers: [{ key: 'cont_co', contactId: 'cont_co', kind: 'legal_entity', capacity: 'principal' }], buyers: [{ contactId: 'cont_b' }] });
   });
 
   it('οι απαντήσεις σε γεγονότα προσώπου πάνε στο πρόσωπο· της υπόθεσης μένουν', () => {
@@ -69,14 +69,14 @@ describe('upcastStoredCase — παλιό σχήμα ⇒ σχήμα §22', () =>
 });
 
 describe('εντολές σε γεγονότα προσώπου', () => {
-  const COMPANY = sellerParty('cont_co', 'legal_entity');
-  const PERSON = sellerParty('cont_p', 'person');
+  const COMPANY = sellerParty('cont_co', 'legal_entity', 'principal');
+  const PERSON = sellerParty('cont_p', 'person', 'other');
   const purpose = findEntryPoint('contact', 'tax-clearance')?.purpose ?? 'missing-entry-point';
   const companyTax: EvidenceFile = {
     source: { kind: 'owned' }, fileId: 'f_co', displayName: 'f.pdf', entityType: 'contact', entityId: 'cont_co', purpose,
     level: 'seller_contact', fingerprint: 'f_co:0:t', createdAt: '2026-10-01T00:00:00Z', documentFacts: null,
   };
-  const ctx: CommandContext = { actorUid: 'u2', now: '2026-10-16T10:00:00Z', today: '2026-10-16', evidence: [companyTax] };
+  const ctx: CommandContext = { actorUid: 'u2', now: '2026-10-16T10:00:00Z', today: '2026-10-16', evidence: [companyTax], sellerCandidates: new Map() };
   const record = (() => {
     const parsed = parseConveyanceCase(legacyStored());
     if (parsed === null) throw new Error('fixture');

@@ -18,9 +18,9 @@
  * @module lib/conveyance/case-rows
  */
 
-import { getChecklistItem, itemsForProfile } from '@/config/conveyance-checklist/catalog';
+import { CONVEYANCE_CHECKLIST, getChecklistItem, itemsForProfile } from '@/config/conveyance-checklist/catalog';
 import { parseRowKey, rowKeyOf } from '@/config/conveyance-checklist/row-key';
-import { isPartyFact, type ChecklistItem, type ConveyancePartyRole, type EvidenceLevel } from '@/config/conveyance-checklist/types';
+import { isPartyFact, type ChecklistItem, type ConveyancePartyRole, type ConveyanceRole, type EvidenceLevel } from '@/config/conveyance-checklist/types';
 import type { ConveyanceCase, ConveyanceCaseParties, ConveyanceSellerParty, EvidenceFile } from '@/types/conveyance-case';
 import { resolveFacts, resolvePartyFacts, type FactValues } from './derive-facts';
 import { filesForMatchers } from './evidence-match';
@@ -58,6 +58,16 @@ function partiesOfRole<P>(parties: PartiesShape<P>, role: ConveyancePartyRole): 
 function rowsOfItem(item: ChecklistItem, parties: ConveyanceCaseParties): readonly CaseRow[] {
   if (item.partyRole === undefined) return [{ key: item.id, item, party: null }];
   return partiesOfRole(parties, item.partyRole).map((party) => ({ key: rowKeyOf(item.id, party.key), item, party }));
+}
+
+/**
+ * ADR-915 §23 — ποιοι ρόλοι βλέπουν **κάποια** γραμμή προσώπου του ρόλου: η ένωση των `visibleTo` των γραμμών-προτύπων
+ * του καταλόγου. Αλλαγή στα πρόσωπα (προσθήκη/αφαίρεση) αλλάζει γραμμές **μόνο** σε αυτούς — ποτέ γραμμένη λίστα που
+ * θα ξέφευγε από τον κατάλογο.
+ */
+export function partyRowsAudience(role: ConveyancePartyRole): readonly ConveyanceRole[] {
+  const roles = new Set(CONVEYANCE_CHECKLIST.filter((item) => item.partyRole === role).flatMap((item) => item.visibleTo));
+  return [...roles];
 }
 
 /** Οι γραμμές από δοσμένες γραμμές καταλόγου — με τη σειρά του καταλόγου, τα πρόσωπα με τη σειρά της υπόθεσης. */
@@ -119,7 +129,7 @@ export interface CaseFacts {
  */
 export function resolveCaseFacts(derived: FactValues, record: Pick<ConveyanceCase, 'facts' | 'partyFacts' | 'parties'>): CaseFacts {
   const parties: Record<string, FactValues> = {};
-  for (const party of record.parties.sellers) parties[party.key] = resolvePartyFacts(party, record.partyFacts);
+  for (const party of record.parties.sellers) parties[party.key] = resolvePartyFacts(party, record);
   return { case: withoutPartyFacts(resolveFacts(derived, record.facts)), parties };
 }
 

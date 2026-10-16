@@ -9,7 +9,7 @@
 
 import { z } from 'zod';
 import { CONVEYANCE_FACT_IDS, CONVEYANCE_PARTY_FACT_IDS, CONVEYANCE_PROFILES } from '@/config/conveyance-checklist/types';
-import { REVIEW_VERDICTS, STORED_CASE_STATES, type ConveyanceCase } from '@/types/conveyance-case';
+import { CONVEYANCE_SELLER_CAPACITIES, REVIEW_VERDICTS, STORED_CASE_STATES, type ConveyanceCase } from '@/types/conveyance-case';
 import { upcastStoredCase } from './case-upcast';
 
 const factAnswerSchema = z.object({
@@ -46,7 +46,14 @@ const conveyanceCaseSchema = z.object({
   profile: z.enum(CONVEYANCE_PROFILES),
   parties: z.object({
     // ADR-915 §22 — λίστα προσώπων· το παλιό `seller` μεταφράζεται από το `upcastStoredCase` πριν φτάσει εδώ.
-    sellers: z.array(z.object({ key: z.string().min(1), contactId: z.string().nullable(), kind: z.enum(['person', 'legal_entity']) })),
+    sellers: z.array(z.object({
+      key: z.string().min(1),
+      contactId: z.string().nullable(),
+      kind: z.enum(['person', 'legal_entity']),
+      // ADR-915 §23 — πριν από την §23 ο ΜΟΝΟΣ δρόμος που έγραφε πωλητή ήταν η εταιρεία του έργου ⇒ η απουσία σημαίνει
+      // `principal` με βεβαιότητα, όχι μαντεψιά (schema evolution στην ανάγνωση, όπως η §22 Ε3).
+      capacity: z.enum(CONVEYANCE_SELLER_CAPACITIES).default('principal'),
+    })),
     buyers: z.array(z.object({ contactId: z.string() })),
   }),
   facts: z.record(z.enum(CONVEYANCE_FACT_IDS), factAnswerSchema),

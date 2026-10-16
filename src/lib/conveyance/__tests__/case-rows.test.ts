@@ -16,8 +16,8 @@ import { canonicalRowKey, caseRows, resolveCaseFacts, resolveCaseRow, rowFiles, 
 import { caseDocumentRequirements } from '../case-document-requirements';
 import { deriveCaseChecklist } from '../case-checklist';
 
-const COMPANY = sellerParty('cont_co', 'legal_entity');
-const PERSON = sellerParty('cont_p', 'person');
+const COMPANY = sellerParty('cont_co', 'legal_entity', 'principal');
+const PERSON = sellerParty('cont_p', 'person', 'other');
 
 function caseOf(sellers: readonly ConveyanceSellerParty[], over: Partial<ConveyanceCase> = {}): ConveyanceCase {
   return {
@@ -103,7 +103,7 @@ describe('αρχεία της γραμμής (`rowFiles`)', () => {
   });
 
   it('πωλητής χωρίς επαφή ⇒ κανένα προσωπικό αρχείο (ποτέ «του πρώτου που βρέθηκε»)', () => {
-    const unknown = caseOf([sellerParty(null, 'legal_entity')]);
+    const unknown = caseOf([sellerParty(null, 'legal_entity', 'principal')]);
     expect(rowFiles(rowOf(unknown, 'seller_tax_clearance@seller'), evidence)).toEqual([]);
   });
 });

@@ -18,6 +18,7 @@ import { isStandaloneUnitType, LAND_PROPERTY_TYPES } from '@/constants/property-
 import type { ConveyanceFactId, ConveyanceProfile } from '@/config/conveyance-checklist/types';
 import { FACT_ENTAILMENTS } from '@/config/conveyance-checklist/fact-entailments';
 import type { ConveyanceFactAnswer, ConveyancePartyFactAnswers, ConveyanceSellerParty } from '@/types/conveyance-case';
+import { hasPrincipalSeller } from './case-parties';
 
 export type FactValues = Readonly<Partial<Record<ConveyanceFactId, boolean>>>;
 
@@ -94,15 +95,27 @@ export function resolveFacts(
  * ADR-915 §22 — γεγονότα **ενός προσώπου** που παράγονται από τα δεδομένα: φυσικό ή νομικό πρόσωπο είναι γνωστό από
  * το ίδιο το πρόσωπο, άρα **δεν** ρωτιέται. (Πριν από την §22 παραγόταν από το προφίλ — «νεόδμητο ⇒ εταιρεία» — που
  * έλεγε ψέματα για κάθε συμπωλητή-ιδιώτη.)
+ *
+ * §23 — και η **ιδιότητα**: οικοπεδούχος του έργου ⇒ `seller_is_landowner`· οικοπεδούχος **με** τον εργολάβο
+ * συμβαλλόμενο (`principal` στους μεταβιβάζοντες) ⇒ η φορολογική ενημερότητα προσκομίζεται από τον εργολάβο (Α.1002/2019).
+ * Παραγόμενο, όχι νόμος: το «υπάρχει προσύμφωνο εργολαβίας;» το ξέρει ο άνθρωπος, που μπορεί να το διορθώσει.
  */
-export function derivePartyFacts(party: Pick<ConveyanceSellerParty, 'kind'>): FactValues {
-  return applyFactEntailments({ seller_is_legal_entity: party.kind === 'legal_entity' });
+export function derivePartyFacts(
+  party: Pick<ConveyanceSellerParty, 'kind' | 'capacity'>,
+  sellers: readonly Pick<ConveyanceSellerParty, 'capacity'>[],
+): FactValues {
+  const isLandowner = party.capacity === 'landowner';
+  return applyFactEntailments({
+    seller_is_legal_entity: party.kind === 'legal_entity',
+    seller_is_landowner: isLandowner,
+    seller_tax_clearance_by_contractor: isLandowner && hasPrincipalSeller(sellers),
+  });
 }
 
 /** Οι τελικές τιμές ενός προσώπου — η **ίδια** επίλυση με της υπόθεσης (νόμος > απάντηση > παραγόμενο). */
 export function resolvePartyFacts(
   party: ConveyanceSellerParty,
-  answers: ConveyancePartyFactAnswers,
+  record: { readonly parties: { readonly sellers: readonly ConveyanceSellerParty[] }; readonly partyFacts: ConveyancePartyFactAnswers },
 ): FactValues {
-  return resolveFacts(derivePartyFacts(party), answers[party.key] ?? {});
+  return resolveFacts(derivePartyFacts(party, record.parties.sellers), record.partyFacts[party.key] ?? {});
 }

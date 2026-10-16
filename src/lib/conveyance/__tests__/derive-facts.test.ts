@@ -22,9 +22,9 @@ const answer = (value: boolean): ConveyanceFactAnswer => ({ value, answeredBy: '
 
 /** ADR-915 §22 — τα γεγονότα ΕΝΟΣ πωλητή: από το ίδιο το πρόσωπο + τις δικές του απαντήσεις. */
 function sellerFacts(kind: ConveyancePartyKind, answers: Partial<Record<'seller_insurance_liable' | 'seller_by_proxy', boolean>> = {}): FactValues {
-  const party = sellerParty('cont_p', kind);
+  const party = sellerParty('cont_p', kind, 'other');
   const own = Object.fromEntries(Object.entries(answers).map(([factId, value]) => [factId, answer(value)]));
-  return resolvePartyFacts(party, { [party.key]: own });
+  return resolvePartyFacts(party, { parties: { sellers: [party] }, partyFacts: { [party.key]: own } });
 }
 
 function insuranceRowStatus(facts: FactValues): string {
@@ -37,7 +37,7 @@ function insuranceRowStatus(facts: FactValues): string {
 
 describe('seller_insurance_liable — συνεπαγωγή από νομικό πρόσωπο', () => {
   it('νομικό πρόσωπο ⇒ υπόχρεος, χωρίς ερώτηση — παράγεται από το ΠΡΟΣΩΠΟ, όχι από το προφίλ (ADR-915 §22)', () => {
-    expect(derivePartyFacts({ kind: 'legal_entity' })).toMatchObject({ seller_is_legal_entity: true, seller_insurance_liable: true });
+    expect(derivePartyFacts({ kind: 'legal_entity', capacity: 'principal' }, [])).toMatchObject({ seller_is_legal_entity: true, seller_insurance_liable: true });
     expect(deriveFacts(COMPANY).seller_is_legal_entity).toBeUndefined();
   });
 

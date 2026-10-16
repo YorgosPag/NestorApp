@@ -14,7 +14,7 @@ function baseCase(overrides: Partial<ConveyanceCase> = {}): ConveyanceCase {
     id: 'cvc_1', companyId: 'comp_a',
     subject: { kind: 'property', propertyId: 'prop_1', buildingId: 'bld_1', projectId: 'proj_1', appurtenances: [] },
     profile: 'new_build_company',
-    parties: { sellers: [sellerParty('cont_s', 'legal_entity')], buyers: [{ contactId: 'cont_b' }] },
+    parties: { sellers: [sellerParty('cont_s', 'legal_entity', 'principal')], buyers: [{ contactId: 'cont_b' }] },
     facts: {}, partyFacts: {}, overrides: {}, storedState: 'open', targetSigningDate: null, catalogVersion: '0.1.0',
     version: 3, createdBy: 'u1', createdAt: 't0', updatedAt: 't0', cancellation: null,
     ...overrides,
@@ -26,7 +26,7 @@ const permitFile: EvidenceFile = {
   source: { kind: 'owned' }, level: 'project', fingerprint: 'file_permit:2:2026-09-01T00:00:00.000Z', createdAt: '2026-09-01T00:00:00Z', documentFacts: null,
 };
 
-const ctx: CommandContext = { actorUid: 'u2', now: '2026-10-02T10:00:00Z', today: '2026-10-02', evidence: [permitFile] };
+const ctx: CommandContext = { actorUid: 'u2', now: '2026-10-02T10:00:00Z', today: '2026-10-02', evidence: [permitFile], sellerCandidates: new Map() };
 
 describe('applyConveyanceCommand', () => {
   it('review: ο έλεγχος δένεται στο αποτύπωμα που βρήκε ο server', () => {

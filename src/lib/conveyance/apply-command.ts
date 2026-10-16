@@ -17,10 +17,11 @@
 import { isDateKey } from '@/lib/calendar/date-key';
 import { isPartyFact, type ConveyancePartyFactId } from '@/config/conveyance-checklist/types';
 import { contradictsDocumentText } from '@/lib/document-validity/document-facts';
-import type { AuditFieldChange } from '@/types/audit-trail';
 import type { ChecklistItemOverride, ConveyanceCase, EvidenceFile } from '@/types/conveyance-case';
 import type { CommandRejection, ConveyanceCommand } from './conveyance-commands';
 import { resolveCaseRow, rowFiles, type CaseRow } from './case-rows';
+import { change, reject, type CommandResult } from './command-result';
+import { addSellers, removeSeller, type SellerCandidates } from './case-party-commands';
 
 export interface CommandContext {
   readonly actorUid: string;
@@ -29,16 +30,11 @@ export interface CommandContext {
   /** Σήμερα, `YYYY-MM-DD` — όριο για ημερομηνία έκδοσης. */
   readonly today: string;
   readonly evidence: readonly EvidenceFile[];
-}
-
-type CommandResult =
-  | { readonly ok: true; readonly next: ConveyanceCase; readonly changes: readonly AuditFieldChange[] }
-  | { readonly ok: false; readonly rejection: CommandRejection };
-
-const reject = (rejection: CommandRejection): CommandResult => ({ ok: false, rejection });
-
-function change(field: string, oldValue: AuditFieldChange['oldValue'], newValue: AuditFieldChange['newValue']): AuditFieldChange {
-  return { field, oldValue, newValue };
+  /**
+   * ADR-915 §23 — οι επαφές του `add_sellers`, **ήδη κριμένες** (`sellerCandidateOf`): ο server από τις επαφές που
+   * διάβασε ο ίδιος, ο client από τον επιλογέα. Όποια λείπει ⇒ `seller_not_eligible`. Οι άλλες εντολές δεν το διαβάζουν.
+   */
+  readonly sellerCandidates: SellerCandidates;
 }
 
 function withOverride(current: ConveyanceCase, itemId: string, override: ChecklistItemOverride | null): ConveyanceCase {
@@ -151,6 +147,8 @@ export function applyConveyanceCommand(current: ConveyanceCase, command: Conveya
     case 'mark_not_applicable': return markNotApplicable(current, command, ctx);
     case 'review': return review(current, command, ctx);
     case 'clear_override': return clearOverride(current, command.itemId);
+    case 'add_sellers': return addSellers(current, command, ctx.sellerCandidates);
+    case 'remove_seller': return removeSeller(current, command);
     case 'set_target_signing_date':
       if (command.date !== null && !isDateKey(command.date)) return reject('invalid_date');
       return {
