@@ -40,26 +40,26 @@ interface PropertyPageDashboardProps {
   onFiltersChange: (change: Partial<FilterState>) => void;
 }
 
-interface DashboardCard {
-  stat: DashboardStat;
-  /** Η κάρτα φιλτράρει· χωρίς αυτό είναι πληροφοριακή. */
-  onActivate?: () => void;
-}
-
-function useDashboardCards({ stats, filters, onFiltersChange }: PropertyPageDashboardProps): DashboardCard[] {
+/**
+ * 🔑 Μόνο η κάρτα που **φιλτράρει** έχει πράξη (`onActivate`) και κατάσταση (`pressed`): οι πληροφοριακές δεν
+ * δείχνουν δείκτη ούτε σταματούν το Tab. Ως τώρα **όλες** ήταν «κλικαρίσιμες» και η ενεργή φαινόταν μόνο από το
+ * χρώμα (πράσινο → indigo) — αόρατη σε αναγνώστη οθόνης και σε αχρωματοψία (ADR-771).
+ */
+function useDashboardCards({ stats, filters, onFiltersChange }: PropertyPageDashboardProps): DashboardStat[] {
   const { t } = useTranslation(['properties', 'common', 'filters']);
-  return useMemo(() => {
+  return useMemo<DashboardStat[]>(() => {
     const listedOnly = filters.status.length === 1 && filters.status[0] === LISTED_BUCKET;
     return [
-      { stat: { title: t('dashboard.stats.totalProperties'), value: stats.totalProperties, icon: NAVIGATION_ENTITIES.property.icon, color: 'blue' } },
+      { title: t('dashboard.stats.totalProperties'), value: stats.totalProperties, icon: NAVIGATION_ENTITIES.property.icon, color: 'blue' },
       {
-        stat: { title: t('filters:propertyAvailability.listed'), value: stats.onMarketProperties, icon: TrendingUp, color: listedOnly ? 'indigo' : 'green' },
+        title: t('filters:propertyAvailability.listed'), value: stats.onMarketProperties, icon: TrendingUp, color: 'green',
+        pressed: listedOnly,
         onActivate: () => onFiltersChange({ status: listedOnly ? [] : [LISTED_BUCKET] }),
       },
-      { stat: { title: t('dashboard.stats.totalValue'), ...priceTotalsView(t, stats.priceTotals, 'total'), icon: NAVIGATION_ENTITIES.price.icon, color: 'cyan' } },
-      { stat: { title: t('dashboard.stats.averagePrice'), ...priceTotalsView(t, stats.priceTotals, 'average'), icon: NAVIGATION_ENTITIES.price.icon, color: 'orange' } },
-      { stat: { title: t('page.dashboard.totalArea'), value: `${Math.round(stats.totalArea)} m²`, icon: Maximize, color: 'purple' } },
-      { stat: { title: t('page.dashboard.uniqueBuildings'), value: stats.uniqueBuildings, icon: NAVIGATION_ENTITIES.building.icon, color: 'pink' } },
+      { title: t('dashboard.stats.totalValue'), ...priceTotalsView(t, stats.priceTotals, 'total'), icon: NAVIGATION_ENTITIES.price.icon, color: 'cyan' },
+      { title: t('dashboard.stats.averagePrice'), ...priceTotalsView(t, stats.priceTotals, 'average'), icon: NAVIGATION_ENTITIES.price.icon, color: 'orange' },
+      { title: t('page.dashboard.totalArea'), value: `${Math.round(stats.totalArea)} m²`, icon: Maximize, color: 'purple' },
+      { title: t('page.dashboard.uniqueBuildings'), value: stats.uniqueBuildings, icon: NAVIGATION_ENTITIES.building.icon, color: 'pink' },
     ];
   }, [filters.status, onFiltersChange, stats, t]);
 }
@@ -78,9 +78,8 @@ export function PropertyPageDashboard(props: PropertyPageDashboardProps) {
 
   return (
     <UnifiedDashboard
-      stats={cards.map((card) => card.stat)}
+      stats={cards}
       columns={6}
-      onCardClick={(_stat, index) => cards[index]?.onActivate?.()}
       additionalContainers={
         <>
           <StatusCard statsByStatus={stats.propertiesByStatus} getStatusLabel={getStatusLabel} />
@@ -88,6 +87,7 @@ export function PropertyPageDashboard(props: PropertyPageDashboardProps) {
           <DetailsCard title={t('page.dashboard.floorDistribution')} icon={MapPin} data={stats.propertiesByFloor} isFloorData />
           <CoverageCard
             coverage={stats.coverage}
+            activeMissing={filters.coverage ?? {}}
             onMissingPhotosClick={toggleCoverage('missingPhotos')}
             onMissingFloorplansClick={toggleCoverage('missingFloorplans')}
             onMissingDocumentsClick={toggleCoverage('missingDocuments')}

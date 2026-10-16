@@ -76,10 +76,19 @@ export interface PropertyPageStateInput {
  * αναγνώστη· και όταν ένα αποσυρμένο επανέλθει (από εδώ ή από αλλού), ο κατάλογος το αποκτά και η
  * καρτέλα ξεκλειδώνει μόνη της, όσο μπαγιάτικο κι αν είναι το στιγμιότυπο της απόσυρσης.
  */
+/**
+ * **«Δεν απάντησε ακόμη ο κατάλογος»** — η ΜΙΑ ερώτηση πριν από κάθε «άδειο» ή «δεν βρέθηκε». Τη ρωτούν η καρτέλα
+ * **και** η οθόνη ακινήτων (ADR-840 §7.8): εκεί ο φρουρός κοιτούσε μόνο το `loading`, και το πρώτο καρέ έδειχνε
+ * «Ακίνητα (0)» + «Δημιουργία Μονάδας» — ή «Δεν βρέθηκαν ακίνητα» στο πλέγμα — σε ακίνητα που απλώς δεν είχαν φτάσει.
+ */
+export function isCatalogPending(input: Pick<PropertyPageStateInput, 'loading' | 'hasAnswered'>): boolean {
+  return input.loading || !input.hasAnswered;
+}
+
 export function derivePropertyPageState(
   input: PropertyPageStateInput,
 ): PropertyPageState {
-  if (input.loading || !input.hasAnswered) {
+  if (isCatalogPending(input)) {
     return { kind: 'loading' };
   }
 

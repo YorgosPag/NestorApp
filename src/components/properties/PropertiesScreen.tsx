@@ -22,6 +22,7 @@ import { PageLoadingState } from '@/core/states';
 import { PropertyCardGrid } from '@/features/property-grid/PropertyCardGrid';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { DEFAULT_FILTERS } from '@/types/property-viewer';
+import { isCatalogPending } from './detail/property-page-state';
 import { PropertiesHeader } from './page/PropertiesHeader';
 import { PropertyPageBody } from './page/PropertyPageBody';
 import { PropertyPageDashboard } from './page/PropertyPageDashboard';
@@ -96,7 +97,8 @@ export function PropertiesScreen({ urlTab = null }: { urlTab?: string | null }) 
   const { engine, view, setView, creation, retired } = screen;
 
   // ADR-229 — φρουρός φόρτωσης δεδομένων· όχι κατά τη δημιουργία (θα έσβηνε φόρμα στη μέση της συμπλήρωσης).
-  if (engine.loading && !creation.isCreating && engine.properties.length === 0) {
+  // ADR-777 §8.30 — «δεν απάντησε» ≠ «άδειο»: το `loading` μόνο του είναι `false` και ΠΡΙΝ ρωτήσει κανείς.
+  if (isCatalogPending(engine) && !creation.isCreating && engine.properties.length === 0) {
     return (
       <PageContainer ariaLabel={t('page.pageLabel')}>
         <PageLoadingState icon={NAVIGATION_ENTITIES.property.icon} message={t('page.loading')} layout="contained" />
