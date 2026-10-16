@@ -213,9 +213,9 @@ describe('ADR-905 §6 — αρχείο: σήμα ⇔ η προβολή της ό
 describe('ADR-905 §6.2 — η όψη είναι ο ΚΑΤΑΛΟΓΟΣ: σήμα μόνο για αρχείο σε γραμμή που βλέπει ο θεατής', () => {
   /** Ό,τι ανεβαίνει ως «Άλλο Έγγραφο» / φωτογραφία: τεκμήριο για τον συλλέκτη, σε **καμία** γραμμή. */
   const offRow = (extra: Record<string, unknown> = {}) => propertyFile({ purpose: 'generic', ...extra });
-  /** Βεβαίωση ΤΑΠ στην επαφή του πωλητή — γραμμή `municipal_clearance`, `SELLER_PRIVATE`. */
+  /** Φορολογική ενημερότητα στην επαφή του πωλητή — γραμμή `seller_tax_clearance`, `SELLER_PRIVATE`. */
   const sellerPrivate = (extra: Record<string, unknown> = {}) =>
-    propertyFile({ entityType: 'contact', entityId: 'cont_s', purpose: 'municipal-tap', ...extra });
+    propertyFile({ entityType: 'contact', entityId: 'cont_s', purpose: 'tax-clearance', ...extra });
 
   it('αρχείο εκτός γραμμής: δημιουργία · επεξεργασία (νέο updatedAt) · διαγραφή ⇒ ΚΑΝΕΝΑ σήμα, ούτε στον οικοδεσπότη', async () => {
     const record = await openCase();

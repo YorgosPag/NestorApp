@@ -13,7 +13,7 @@
 
 import { documentKindSpec } from '@/config/document-validity/document-validity';
 import type { ChecklistItem } from './types';
-import { EVERYONE, SELLER_PRIVATE } from './visibility';
+import { EVERYONE } from './visibility';
 
 export const PROPERTY_ITEMS: readonly ChecklistItem[] = [
   {
@@ -209,17 +209,10 @@ export const PROPERTY_ITEMS: readonly ChecklistItem[] = [
     satisfaction: { kind: 'offline' },
     verifiedAt: null,
   },
-  {
-    id: 'municipal_clearance',
-    section: 'property',
-    labelKey: 'items.municipal_clearance.label',
-    provider: 'seller',
-    visibleTo: SELLER_PRIVATE,
-    requirement: { kind: 'mandatory' },
-    validity: { kind: 'unverified' },
-    satisfaction: { kind: 'files', matchers: [{ level: 'seller_contact', entryPointIds: ['municipal-tap'] }] },
-    verifiedAt: null,
-  },
+  // ⛔ ΟΧΙ γραμμή `municipal_clearance` (βεβαίωση μη οφειλής ΤΑΠ): καταργήθηκε με το άρθρο 33 παρ. 1 Ν.5076/2023
+  //    από 13.12.2023 — τυχόν οφειλή ΤΑΠ βεβαιώνεται στον δικαιοπάροχο, χωρίς βεβαίωση (ADR-915 §13). Αποθηκευμένη
+  //    απόκλιση παλιών υποθέσεων πέφτει στο `getChecklistItem → undefined`. Το σημείο ανεβάσματος `municipal-tap`
+  //    μένει για το αρχείο παλιών βεβαιώσεων.
   {
     id: 'special_zone_clearances',
     section: 'property',

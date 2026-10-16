@@ -57,9 +57,13 @@ describe('κατάσταση — ο ΙΔΙΟΣ κριτής, παράθυρο = 
     expect(only(pea('c', '2016-12-15')).state).toBe('valid');
   });
 
-  it('χωρίς έκδοση ή με κανόνα `unverified` ⇒ `expiry-unknown`, ποτέ `valid`', () => {
+  it('χωρίς έκδοση ⇒ `expiry-unknown`, ποτέ `valid`', () => {
     expect(only(pea('a', null)).state).toBe('expiry-unknown');
-    expect(only(pea('b', '2026-01-01', { kind: 'building-identity' })).state).toBe('expiry-unknown');
+  });
+
+  it('βεβαίωση άρθρου 83: 2 μήνες από την υπογραφή (παρ. 6 — ADR-915 §13), όχι πια `expiry-unknown`', () => {
+    const row = only(pea('b', '2026-01-01', { kind: 'building-identity' }));
+    expect([row.state, row.expiry.expiresOn]).toEqual(['expired', '2026-03-01']);
   });
 
   it('Α4: η τυπωμένη νωρίτερη κερδίζει, και η ασυμφωνία ταξιδεύει στη γραμμή', () => {
@@ -238,11 +242,11 @@ describe('Φ4δ Ε7 — «λείπει»: απαίτηση `required` χωρίς
 describe('Φ4δ Ε8 — η έγκριση επαγγελματία είναι έγγραφο (ποτέ ψευδές «λείπει»)', () => {
   const approved = (fileId: string | null, issuedOn: string | null) => ({ attestation: { fileId, issuedOn } });
 
-  it('ταυτότητα κτιρίου εγκεκριμένη ΕΚΤΟΣ πλατφόρμας ⇒ γραμμή `attested` (άγνωστη λήξη), κανένα κενό', () => {
+  it('ταυτότητα κτιρίου εγκεκριμένη ΕΚΤΟΣ πλατφόρμας ⇒ γραμμή `attested` με λήξη από την έκδοση του ελεγκτή, κανένα κενό', () => {
     const { rows } = registry([], [caseOn('c1', 'p1', { documentKind: 'building-identity', ...approved(null, '2026-09-01') })]);
     expect(rows).toHaveLength(1);
     expect(asDocument(rows[0]).document).toMatchObject({ id: 'attested:c1:building-identity', origin: { kind: 'attested', caseId: 'c1', fileId: null } });
-    expect(rows[0].state).toBe('expiry-unknown');
+    expect([rows[0].state, asDocument(rows[0]).expiry.expiresOn]).toEqual(['valid', '2026-11-01']);
   });
 
   it('ΠΕΑ εγκεκριμένο με αρχείο που το μητρώο δεν διάβασε ⇒ γραμμή με την έκδοση του ελεγκτή', () => {

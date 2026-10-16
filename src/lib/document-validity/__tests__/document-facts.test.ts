@@ -125,7 +125,7 @@ describe('Δ4 — Α3: το αρχείο κερδίζει, ανά πεδίο (η
   });
 
   it('⛔ γεγονότα ΑΛΛΟΥ είδους αγνοούνται — μένει η εφεδρεία', () => {
-    expect(resolvedDocumentExpiry('building-identity', fromText, '2026-07-16')).toEqual({ expiresOn: null, source: null, discrepancy: null });
+    expect(resolvedDocumentExpiry('building-identity', fromText, '2026-07-16')).toEqual({ expiresOn: '2026-09-16', source: 'rule', discrepancy: null });
   });
 
   it('χωρίς γεγονότα ⇒ ακριβώς ο κανόνας με την εφεδρεία (όπως πριν τη Φ3β)', () => {

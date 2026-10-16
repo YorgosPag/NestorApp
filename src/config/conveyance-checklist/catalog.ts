@@ -39,7 +39,7 @@ const ITEMS_BY_ID: ReadonlyMap<string, ChecklistItem> = new Map(
 
 /** Γραμμές που ΔΕΝ ανήκουν σε κάθε προφίλ (οι υπόλοιπες ελέγχονται από τα γεγονότα). */
 const PROFILE_EXCLUSIONS: Readonly<Record<ConveyanceProfile, readonly string[]>> = {
-  // Νεόδμητο: δεν υπάρχει διαχειριστής ούτε ΤΑΠ προηγούμενου ιδιοκτήτη για τα κοινόχρηστα.
+  // Νεόδμητο: δεν υπάρχει διαχειριστής για τα κοινόχρηστα.
   new_build_company: ['building_manager_certificate'],
   // Ιδιώτης: δεν υπάρχει αλυσίδα συμβολαίων ADR-230 (εξοφλητήριο εργολάβου) ούτε αντιπαροχή.
   resale_private: ['payoff_receipt', 'antiparochi_contract'],
@@ -53,7 +53,6 @@ export const CONVEYANCE_PROCEDURES: readonly ConveyanceProcedure[] = [
     itemIds: [
       'title_deed', 'topographic_plan', 'building_permit', 'engineer_legality_certificate',
       'energy_certificate', 'cadastral_extract', 'seller_tax_clearance', 'seller_enfia_certificate',
-      'municipal_clearance',
     ],
   },
   {
@@ -75,7 +74,7 @@ export const CONVEYANCE_PROCEDURES: readonly ConveyanceProcedure[] = [
     id: 'property_transfer',
     category: 'transfer',
     keywords: ['μεταβίβαση', 'εξόφληση', 'εξοφλητήριο', 'κτηματολόγιο', 'τελική μεταβίβαση'],
-    itemIds: ['payoff_receipt', 'final_contract', 'cadastral_extract', 'municipal_clearance'],
+    itemIds: ['payoff_receipt', 'final_contract', 'cadastral_extract'],
   },
 ];
 

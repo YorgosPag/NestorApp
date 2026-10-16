@@ -165,12 +165,12 @@ describe('deriveChecklist — ισχύς (Σ-5)', () => {
     expect([row.status, row.validOnSigning]).toEqual(['expired', false]);
   });
 
-  it('κανόνας `unverified` εγκεκριμένος ⇒ `accepted` χωρίς ημέρα λήξης (σημερινή συμπεριφορά — ADR-915 Φ2 εύρημα)', () => {
+  it('βεβαίωση άρθρου 83 εγκεκριμένη: λήγει 2 μήνες μετά την υπογραφή της ⇒ ΔΕΝ φτάνει ως την υπογραφή (ADR-915 §13)', () => {
     const overrides = {
       building_identity: { review: { verdict: 'accepted' as const, fileId: null, fileFingerprint: null, issuedOn: '2026-09-01', reason: null, reviewedBy: 'u', reviewedAt: 't' } },
     };
     const row = deriveChecklist(input({ items: [item('building_identity')], overrides, targetSigningDate: '2026-12-15' })).rows[0];
-    expect([row.status, row.expiresOn, row.validOnSigning]).toEqual(['accepted', null, null]);
+    expect([row.status, row.expiresOn, row.validOnSigning]).toEqual(['expiring', '2026-11-01', false]);
   });
 });
 
