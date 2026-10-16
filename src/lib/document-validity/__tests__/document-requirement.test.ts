@@ -12,6 +12,7 @@ import {
   absentDependentsOf,
   dependentsOf,
   documentStanding,
+  isNeededDayUnknown,
   requirementCoveredBy,
   type DocumentRequirement,
   type NeededOn,
@@ -91,6 +92,15 @@ describe('dependentsOf — τι σταματά αν λήξει αυτό', () => 
   it('άγνωστη λήξη ή άγνωστη μέρα ⇒ `undetermined`, ποτέ `unaffected`', () => {
     expect(dependentsOf(pea(null), [requirement({})])[0].impact).toBe('undetermined');
     expect(dependentsOf(pea('2030-01-01'), [requirement({ neededOn: { kind: 'unscheduled' } })])[0].impact).toBe('undetermined');
+  });
+
+  it('ADR-915 §15 — `isNeededDayUnknown`: η αιτία «άγνωστη μέρα», ίδια για κριτή και ετικέτα', () => {
+    expect(isNeededDayUnknown({ kind: 'unscheduled' })).toBe(true);
+    expect(isNeededDayUnknown(on('15/12/2026'))).toBe(true);
+    expect(isNeededDayUnknown(on('2026-12-15'))).toBe(false);
+    expect(isNeededDayUnknown(continuous)).toBe(false);
+    // γνωστή λήξη + αδιάβαστη μέρα ⇒ ο κριτής λέει `undetermined` ΕΞΑΙΤΙΑΣ της μέρας
+    expect(dependentsOf(pea('2030-01-01'), [requirement({ neededOn: on('15/12/2026') })])[0].impact).toBe('undetermined');
   });
 
   it('μόνο το ίδιο είδος ΚΑΙ το ίδιο ακίνητο', () => {

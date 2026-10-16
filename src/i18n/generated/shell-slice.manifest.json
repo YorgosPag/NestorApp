@@ -33,7 +33,7 @@
     "src/i18n/generated/routes/o__workspace__cases.el.json": "62e1b3378215c16e66a12632667ad61be33b59cc632e634dde0ffaf9763769d4",
     "src/i18n/generated/routes/o__workspace__cases__engagementId.el.json": "553c4f1fa748136eb4247f4f0d14244369b7b76b0011c200f3ec6da42d783103",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
-    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "6c6f733191dbc0db2c974c7aa3ef3e57eaccd1925d89939b34c5a38786f238d7",
+    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "75cc996af816e981e83fb25371655fd0c1339056e0881b96b87a2558d6ccb6e3",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "f2b0212cf0909081143453962ba0bfec2a47dc8753dc81a009ee34c12579b137",
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "2753c7edd9c05a17a65b15f3146177db8a27ca727df7b1f77d28fd1724f4fa6f",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "e1c5896ab910b7f5515ef0a3991a4daae3ba7fc776c6291815cfeaddb51e2398",
@@ -149,7 +149,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "2c7b797437cd36f336ba0a3e4b32e366d68c67da9432fb3629dc285477615ab7",
+  "inputsSha256": "9f684044efcac0fb6976624825ed626f2534ec819251b3951dc318279b0929ab",
   "languages": [
     "el"
   ],
@@ -5103,6 +5103,7 @@
             "dependents.stops",
             "dependents.unaffected",
             "dependents.undetermined",
+            "dependents.undeterminedDay",
             "dependents.unscheduled",
             "dependents.warn",
             "empty.hint",
@@ -10658,7 +10659,7 @@
   ],
   "stats": {
     "matchedKeys": 243,
-    "sliceBytes": 746866
+    "sliceBytes": 746984
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

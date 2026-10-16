@@ -40,6 +40,14 @@ export type NeededOn =
   | { readonly kind: 'continuous' }
   | { readonly kind: 'unscheduled' };
 
+/**
+ * Η μέρα πράξης που **δεν ξέρουμε**: δεν ορίστηκε ακόμη, ή είναι αδιάβαστη. Ένας κανόνας για όσους ρωτούν, ώστε ο
+ * κριτής και η ετικέτα «γιατί δεν κρίνεται» να μη διαφωνούν (ADR-915 §15).
+ */
+export function isNeededDayUnknown(neededOn: NeededOn): boolean {
+  return neededOn.kind === 'unscheduled' || (neededOn.kind === 'on' && !isDateKey(neededOn.day));
+}
+
 /** `block` = η διαδικασία δεν προχωρά· `warn` = προχωρά, και το λέει (ADR-915 Α1: η αγγελία μένει, γράφει «έληξε»). */
 export type RequirementPolicy = 'block' | 'warn';
 
@@ -129,7 +137,7 @@ export interface DocumentStandingInput {
 /** Ισχύει τη μέρα που χρειάζεται; Η τελευταία μέρα είναι μέσα (`>=`). */
 function validAtNeedOf(expiresOn: string, asOf: string, neededOn: NeededOn): boolean | null {
   if (neededOn.kind === 'continuous') return expiresOn >= asOf;
-  if (neededOn.kind === 'unscheduled' || !isDateKey(neededOn.day)) return null;
+  if (neededOn.kind === 'unscheduled' || isNeededDayUnknown(neededOn)) return null;
   return expiresOn >= neededOn.day;
 }
 
@@ -178,7 +186,7 @@ export interface DocumentDependent {
 function impactOf(expiresOn: string | null, neededOn: NeededOn): DependentImpact {
   if (expiresOn === null || !isDateKey(expiresOn)) return 'undetermined';
   if (neededOn.kind === 'continuous') return 'stops';
-  if (neededOn.kind === 'unscheduled' || !isDateKey(neededOn.day)) return 'undetermined';
+  if (neededOn.kind === 'unscheduled' || isNeededDayUnknown(neededOn)) return 'undetermined';
   return expiresOn < neededOn.day ? 'stops' : 'unaffected';
 }
 

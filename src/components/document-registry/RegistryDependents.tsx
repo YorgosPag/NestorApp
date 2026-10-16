@@ -24,7 +24,7 @@ import { listingDetailHref } from '@/lib/listings/listing-routes';
 import { ENTITY_ROUTES } from '@/lib/routes/entityRoutes';
 import { Link } from '@/lib/workspace/navigation';
 import { isBlockingDependent, type RegistryRowState } from '@/lib/document-validity/document-registry';
-import type { DocumentDependent, NeededOn } from '@/lib/document-validity/document-requirement';
+import { isNeededDayUnknown, type DocumentDependent, type NeededOn } from '@/lib/document-validity/document-requirement';
 import {
   IMPACT_LABEL_KEYS,
   POLICY_LABEL_KEYS,
@@ -46,10 +46,15 @@ function neededOnText(t: Translate, neededOn: NeededOn): string {
   }
 }
 
+/** Η αιτία του «δεν κρίνεται» λέγεται όπως είναι: άγνωστη μέρα υπογραφής ≠ άγνωστη λήξη (ADR-915 §15). */
 function impactText(t: Translate, dependent: DocumentDependent): string {
-  return dependent.impact === 'stops' && dependent.stopsOn !== null
-    ? t(IMPACT_LABEL_KEYS.stops, { date: formatDateKey(dependent.stopsOn) })
-    : t(IMPACT_LABEL_KEYS[dependent.impact]);
+  if (dependent.impact === 'stops' && dependent.stopsOn !== null) {
+    return t(IMPACT_LABEL_KEYS.stops, { date: formatDateKey(dependent.stopsOn) });
+  }
+  if (dependent.impact === 'undetermined' && isNeededDayUnknown(dependent.requirement.neededOn)) {
+    return t(REGISTRY_KEYS.undeterminedDay);
+  }
+  return t(IMPACT_LABEL_KEYS[dependent.impact]);
 }
 
 /** Ο σύνδεσμος της διαδικασίας — **μόνο** από τα μητρώα διαδρομών, μέσα από το σύνορο πλοήγησης (CHECK 3.61). */

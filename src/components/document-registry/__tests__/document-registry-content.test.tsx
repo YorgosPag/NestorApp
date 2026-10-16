@@ -305,3 +305,27 @@ describe('ειλικρίνεια της οθόνης', () => {
     expect(screen.queryAllByTestId('tally-card')).toHaveLength(0);
   });
 });
+
+describe('ADR-915 §15 — «δεν κρίνεται» λέει την ΑΛΗΘΙΝΗ αιτία', () => {
+  const articleOf = (text: string) => screen.getByText(text).closest('article') as HTMLElement;
+  const conveyanceOn = (propertyId: string, caseId: string, neededOn: DocumentRequirement['neededOn']): DocumentRequirement => ({
+    documentKind: 'energy-certificate', subject: { propertyId }, process: { kind: 'conveyance', caseId },
+    neededOn, policy: 'block', warnWindowDays: 15,
+    basis: { kind: 'checklist-item', itemId: 'energy_certificate', verifiedAt: null }, presence: 'required', attestation: null,
+  });
+  const documents = FIXTURE_DOCUMENTS.filter((document) => document.id === 'f-valid' || document.id === 'f-unknown');
+
+  it('γνωστή λήξη, υπογραφή χωρίς μέρα ⇒ «δεν ορίστηκε η μέρα υπογραφής», ΟΧΙ «η λήξη είναι άγνωστη»', () => {
+    renderReady(fixtureResponse({}, documents, [conveyanceOn('p4', 'case-u', { kind: 'unscheduled' })]));
+    const row = articleOf('synthetic-new.pdf');
+    expect(within(row).getByText(REGISTRY_KEYS.undeterminedDay)).toBeTruthy();
+    expect(within(row).queryByText('document-registry:dependents.undetermined')).toBeNull();
+  });
+
+  it('άγνωστη λήξη, γνωστή μέρα ⇒ «η λήξη είναι άγνωστη»', () => {
+    renderReady(fixtureResponse({}, documents, [conveyanceOn('p3', 'case-k', { kind: 'on', day: '2027-03-01' })]));
+    const row = articleOf(REGISTRY_KEYS.fileUnnamed);
+    expect(within(row).getByText('document-registry:dependents.undetermined')).toBeTruthy();
+    expect(within(row).queryByText(REGISTRY_KEYS.undeterminedDay)).toBeNull();
+  });
+});

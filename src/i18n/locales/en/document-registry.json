@@ -75,6 +75,7 @@
     "stops": "stops from {date}",
     "unaffected": "not affected",
     "undetermined": "cannot be judged — the expiry is unknown",
+    "undeterminedDay": "cannot be judged — no signing date has been set",
     "absent": "without a valid document as of today",
     "block": "Required by the process",
     "blockingNow": "Blocking now",

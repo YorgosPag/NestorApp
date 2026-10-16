@@ -79,6 +79,8 @@ export const REGISTRY_KEYS = {
   signingOn: `${K}dependents.signingOn`,
   continuous: `${K}dependents.continuous`,
   unscheduled: `${K}dependents.unscheduled`,
+  /** `undetermined` επειδή λείπει η **μέρα**, όχι η λήξη — το `IMPACT_LABEL_KEYS.undetermined` λέει «η λήξη». */
+  undeterminedDay: `${K}dependents.undeterminedDay`,
   blockingNow: `${K}dependents.blockingNow`,
   openProperty: `${K}dependents.openProperty`,
   openListing: `${K}dependents.openListing`,
