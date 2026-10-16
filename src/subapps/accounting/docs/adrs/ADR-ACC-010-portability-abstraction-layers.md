@@ -502,10 +502,61 @@ Adviser / admin):**
 κατάσταση · ημέρα χωρίς επικύρωση · ημέρα UTC αντί Αθήνας · αποσβέσεις με καθολική διεύθυνση · `PATCH` / `POST` χωρίς ρόλο).
 
 **⚠️ Ανοιχτά (μετά τη Φάση 6):**
-- Τα μηνύματα `reason` του `validatePostingAllowed` (και οι ετικέτες μηνών του `createFiscalYear`) είναι ελληνικό κείμενο στον
-  κώδικα που φεύγει στο API (N.11) — προϋπήρχε· θέλει κωδικούς άρνησης + i18n στον πελάτη.
+- ~~Τα μηνύματα `reason` του `validatePostingAllowed` / ετικέτες μηνών του `createFiscalYear` σε ελληνικό κείμενο~~ — **έκλεισε
+  στη Φάση 7** (παρακάτω).
 - Η περίοδος 13 (κλείσιμο) δεν έχει ακόμη ρητή ανάθεση εγγραφής (`getPeriodForDate` δίνει πάντα 1–12, σωστά).
 - Η σουίτα κανόνων (`accounting-fiscal-periods.rules.test.ts`) τρέχει μόνο στο CI (emulator) — **δεν** εκτελέστηκε τοπικά.
+
+**Φάση 7 (2026-10-16) — η άρνηση καταχώρησης είναι ΚΩΔΙΚΟΣ, όχι πρόταση.** Ως τώρα το `validatePostingAllowed` επέστρεφε έτοιμη
+ελληνική πρόταση με την ετικέτα μήνα που είχε **αποθηκεύσει** η περίοδος («Η περίοδος Μάρτιος 2026 είναι κλεισμένη…»), και τα
+routes την έστελναν ωμή: Ε-Ε / τιμολόγια 422 `{ error: <ελληνικά> }`, τράπεζα 403 με δικό της κωδικό ξαναϋπολογισμένο από το
+`periodStatus`. Μετρημένα **τρία λεξιλόγια** για την ίδια ερώτηση: κείμενο (Ε-Ε/τιμολόγια) · `PERIOD_CLOSED/LOCKED/NOT_FOUND`
+(τράπεζα) · `PERIOD_NOT_FOUND/PERIOD_NOT_OPEN` (αποσβέσεις). 🔴 **Σφάλμα που βρέθηκε**: το ομαδικό ταίριασμα τράπεζας έστελνε
+`PERIOD_CLOSED` και για περίοδο που **δεν υπάρχει** (ο τριαδικός τελεστής είχε μόνο δύο κλάδους).
+
+Πρακτική Xero / QuickBooks / Stripe: σταθερός κωδικός από τον server, δομημένα στοιχεία, κείμενο **μόνο** στον πελάτη.
+- **ΕΝΑ λεξιλόγιο**: `POSTING_PERIOD_DENIALS = PERIOD_NOT_FOUND | PERIOD_CLOSED | PERIOD_LOCKED` (`types/fiscal-period.ts`). Το
+  `BANK_PERIOD_00x` του `bank-match-errors` δένεται σε αυτό με `satisfies` (όχι αντίγραφο)· το `DepreciationRunBlocker` =
+  `FISCAL_YEAR_NOT_ENDED | PostingPeriodDenial` — το `PERIOD_NOT_OPEN` **καταργήθηκε** (η αναίρεση/καταχώριση λέει πλέον *ποιο*
+  από τα δύο: κλεισμένη ⇒ ξανανοίγεται, κλειδωμένη ⇒ οριστικό — διαφορετική ενέργεια για τον άνθρωπο).
+- **ΕΝΑΣ κανόνας**: `postingPeriodDenialOf(period)` (`fiscal-period-transitions.ts`, συνολικός `Record` ανά κατάσταση ⇒ νέα
+  κατάσταση = σφάλμα τύπου). Τον καλούν `validatePostingAllowed`, ο προέλεγχος της μηχανής αποσβέσεων **και** ο γραφέας μέσα στη
+  συναλλαγή (`postingPeriodBlocker` διαγράφηκε).
+- **Αποτέλεσμα** = discriminated union: `{ allowed: true, periodId, periodStatus: 'OPEN' }` |
+  `{ allowed: false, denial, postingDate, periodId, periodStatus, fiscalYear, periodNumber }` — κανένα `reason`.
+- **HTTP**: `assertPostingAllowed` (`_shared/fiscal-period-errors.ts`) ⇒ `ApiError(409, <τεχνικό>, denial, details)`. **409, όχι
+  422**: το αίτημα είναι σωστό, η **κατάσταση** της περιόδου το αρνείται — ίδια σύμβαση με μεταβάσεις (Φ6) και αποσβέσεις (Φ5).
+  Η τράπεζα κρατά το RFC 9457 σχήμα της, με `code = denial` και `meta = postingDenialDetailsOf(…)`· 403 → 409 για τον ίδιο λόγο.
+- **Πελάτης**: `utils/posting-period-denial.ts` — `postingPeriodDenialMessage(body, t)` ⇒ `accounting:fiscalPeriods.postingDenials.<κωδικός>`
+  (el + en), ή `null` για να συνεχίσει ο καλών (πιστωτικό όριο κ.λπ.). Συνδεδεμένο σε `JournalEntryForm` και
+  `invoice-submit-error` (που παίρνει πλέον δύο μεταφραστές: πολιτικής + λογιστικής).
+- **Ετικέτα περιόδου**: παράγεται από `fiscalYear` + `periodNumber`, **δεν αποθηκεύεται**. Μήνας = `formatCalendarMonth` (CLDR,
+  ονομαστική «Μάρτιος 2026» — ο απλός `{ month: 'long' }` δίνει γενική «Μαρτίου»)· η 13η = `fiscalPeriods.adjustmentPeriod`.
+  Το πεδίο `FiscalPeriod.label` **αφαιρέθηκε** από τον τύπο και από τη γέννηση: ελέγχθηκε ότι τον διάβαζε **μόνο** το
+  `validatePostingAllowed` (κανένας πελάτης του `GET /fiscal-periods`). Έγγραφα που τυχόν το έχουν το κρατούν ως άχρηστο πεδίο.
+
+**Φύλακες (Φάση 7):** `fiscal-periods-tenant.test.ts` Π8 (OPEN/CLOSED/LOCKED/χωρίς χρήση ⇒ ακριβές αποτέλεσμα· καμία
+αποθηκευμένη ετικέτα) · `adr603-batch2` (Ε-Ε: 409 + `errorCode` για **κάθε** κωδικό, καμία εγγραφή· τιμολόγιο: 409, κανένα
+τιμολόγιο) · `adr603-batch3` (τράπεζα μονό: κάθε κωδικός · ομαδικό: `PERIOD_NOT_FOUND`, όχι `PERIOD_CLOSED`) ·
+`depreciation-booking` Δ6 / `depreciation-engine` / `depreciation-run` Ε10 / `depreciation-run.route` / `useDepreciationRun`
+(CLOSED ≠ LOCKED) · `posting-period-denial.test.ts` (κάθε κωδικός έχει el+en · CLDR ονομαστική · 13η · `null` για ξένους
+κωδικούς). **Μεταλλάξεις 8/8 κόκκινες** (CLOSED→LOCKED · LOCKED→CLOSED · NOT_FOUND→CLOSED στον κανόνα · route με σταθερό
+CLOSED · με σταθερό LOCKED · χωρίς details · τράπεζα μονό · τράπεζα ομαδικό).
+
+**Παράπλευρο (CHECK 3.28):** οι δύο φόρμες είχαν **δίδυμο** πόδι (σφάλμα + Άκυρο + Υποβολή) — υιοθέτησαν το SSoT `FormActions`
+και έγιναν σημασιολογικό `<form>`. ⚠️ Το `FormActions` υποβάλλει με Enter (ADR-598)· σε φόρμα που **καταχωρεί** παραστατικό αυτό
+θα εξέδιδε τιμολόγιο με αύξοντα αριθμό από ένα Enter στην ποσότητα. Xero / QuickBooks δεν αποθηκεύουν με Enter στον editor ⇒
+νέο `submitOnlyExplicitly` στο SSoT `form-keyboard.ts` (§3): Enter σε πεδίο = τίποτα, Ctrl/⌘+Enter = ρητή υποβολή
+(`form-keyboard.test.tsx`).
+
+**Τι αλλάζει στα νούμερα:** **τίποτα** — ίδιες αρνήσεις, ίδιες περίοδοι· αλλάζει μόνο **πώς** λέγονται.
+
+**⚠️ Ανοιχτά (μετά τη Φάση 7):**
+- Τα `label` του `getYearEndChecklist` (6 βήματα) είναι ακόμη ελληνικό κείμενο στον κώδικα (N.11) — ίδια θεραπεία (κλειδί ανά `step`).
+- Τα υπόλοιπα `detail` του `bank/match` (`TRANSACTION_NOT_FOUND`, `ALREADY_MATCHED`, `VERSION_CONFLICT`, ποσό) είναι ελληνικά· ο
+  πελάτης τράπεζας δεν υπάρχει ακόμη — όταν γραφτεί, μεταφράζει τον `code`, όχι το `detail`.
+- Οι τύποι i18n (`src/types/i18n.ts`, CHECK 3.33) παράγονται **από το ευρετήριο**: `npm run generate:i18n-types:index` **μετά** το
+  stage των locales, τη στιγμή του commit.
 
 ### 2.2 Contact Provider (CRM Integration)
 
@@ -1354,6 +1405,7 @@ class FirestoreAccountingRepository implements IAccountingRepository {
 | 2026-10-15 | **Σελίδα ≠ καθολικό, Φάση 3β (§2.1.1)** — δρομέας keyset (`lib/admin-keyset-page.ts`, AIP-158, tie-breaker `__name__`, δεμένος στα φίλτρα) για ημερολόγιο / τιμολόγια / τράπεζα / πάγια· κλειστό σύνολο συνδυασμών φίλτρων (`accounting-list-specs.ts`, AIP-160) με άγκυρα δεικτών· χωρίς fallback (σφάλμα ≠ κενό)· αυστηρή είσοδος + λεξιλόγια-ρίζες· `useCursorPagedList` + `PagedListSection`· `hasJournalEntriesInCategory`· διορθώσεις: πάγια `data.assets`, λεξιλόγιο κατηγοριών παγίων, φίλτρο τράπεζας, τρίμηνο `Q1`, συμφωνία με φίλτρο στον διακομιστή, `Χωρίς Πελάτη` (N.11)· κοινό σώμα σελίδας λίστας (`AccountingListBody` + `useAccountingFilterPanel`) και πεδίο φίλτρου χρήσης (`accounting-filter-fields.ts`) αντί για δίδυμα σε 4 σελίδες (CHECK 3.28)· +6 δείκτες | Giorgio + Claude Code |
 | 2026-10-15 | **Σελίδα ≠ καθολικό, Φάση 5 (§2.1.1)** — οι αποσβέσεις τρέχουν και φτάνουν στα έξοδα: routes προεπισκόπησης / καταχώρισης / αναίρεσης (διοικητικός ρόλος, sensitive) + οθόνη τέλους χρήσης· εγγραφή Ε-Ε 31/12 ανά πάγιο στην ΙΔΙΑ συναλλαγή με την απόσβεση (ντετερμινιστικό id ανά αναθεώρηση)· σύγκλιση = SAP repeat run (μόνο η διαφορά) + Xero rollback (αντιλογισμός, μόνο νεότερη χρήση)· περίοδος 12 ανοιχτή και μέσα στη συναλλαγή· ίχνος από τον γραφέα (όχι από τον wrapper)· φρουρός Βιβλίου Ε-Ε για εγγραφές υποσυστήματος· `non_cash` | Giorgio + Claude Code |
 | 2026-10-15 | **Σελίδα ≠ καθολικό, Φάση 6 (§2.1.1)** — λογιστικές περίοδοι ανά μισθωτή (SAP OB52 ανά company code · Xero lock date ανά οργανισμό): διεύθυνση `generateDeterministicFiscalPeriodId(companyId, YYYY-MM)` + `companyId` στο έγγραφο· ανάγνωση με `ownedOrNull`· λίστα με `getAll` (−1 σημείο χωρίς δείκτη)· δημιουργία όλες-ή-καμία (`FiscalYearExistsError`)· `transitionFiscalPeriod` = απόφαση + εγγραφή + ίχνος `PERIOD_*` σε μία συναλλαγή (αντικαθιστά `updateFiscalPeriod` / `closePeriod` / `lockPeriod` / `reopenPeriod`)· κανόνες: εγγραφές μόνο από τον server· routes εγγραφής με διοικητικό ρόλο, 404/409 με κωδικό· ημέρα εγγραφής = ημέρα Αθήνας· κανένα νούμερο δεν αλλάζει | Giorgio + Claude Code |
+| 2026-10-16 | **Σελίδα ≠ καθολικό, Φάση 7 (§2.1.1)** — άρνηση καταχώρησης = κωδικός: ΕΝΑ λεξιλόγιο `POSTING_PERIOD_DENIALS` (τράπεζα με `satisfies`, αποσβέσεις χωρίς `PERIOD_NOT_OPEN`)· ΕΝΑΣ κανόνας `postingPeriodDenialOf`· `ApiError(409, …, denial, details)` αντί για 422 με ελληνικό κείμενο· μήνυμα + ετικέτα περιόδου στον πελάτη (CLDR, el+en)· `FiscalPeriod.label` αφαιρέθηκε· διόρθωση: ομαδικό ταίριασμα τράπεζας έλεγε `PERIOD_CLOSED` για ανύπαρκτη περίοδο· φόρμες Ε-Ε/τιμολογίου → `FormActions` + `submitOnlyExplicitly`· κανένα νούμερο δεν αλλάζει | Giorgio + Claude Code |
 
 ---
 
