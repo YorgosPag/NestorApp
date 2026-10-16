@@ -10,11 +10,11 @@
 import { translatePolicyError, type TranslatorFn } from '@/lib/policy/policy-error-translator';
 
 import { formatAccountingCurrency } from '../../../utils/format';
+import { postingPeriodDenialMessage, type PostingDenialBody } from '../../../utils/posting-period-denial';
 
 /** Ο φάκελος σφάλματος του API, όσο τον χρειάζεται η φόρμα. */
-export interface InvoiceSubmitErrorBody {
+export interface InvoiceSubmitErrorBody extends PostingDenialBody {
   readonly error?: string;
-  readonly errorCode?: string;
   readonly creditCheck?: { readonly projectedExposure: number };
   readonly creditLimit?: number | null;
 }
@@ -28,9 +28,16 @@ function creditParamsOf(body: InvoiceSubmitErrorBody): Record<string, string> | 
   };
 }
 
-/** Γνωστή άρνηση πολιτικής ⇒ μεταφρασμένη· αλλιώς το μήνυμα του server (ή ο κωδικός HTTP). */
-export function invoiceSubmitErrorMessage(body: InvoiceSubmitErrorBody | null, status: number, t: TranslatorFn): string {
+/** Οι δύο μεταφραστές της φόρμας: μηνύματα πολιτικής (`POLICY_ERROR_NAMESPACES`) και λογιστικής (περίοδοι). */
+export interface InvoiceSubmitTranslators {
+  readonly policy: TranslatorFn;
+  readonly accounting: TranslatorFn;
+}
+
+/** Άρνηση περιόδου ή γνωστή άρνηση πολιτικής ⇒ μεταφρασμένη· αλλιώς το μήνυμα του server (ή ο κωδικός HTTP). */
+export function invoiceSubmitErrorMessage(body: InvoiceSubmitErrorBody | null, status: number, t: InvoiceSubmitTranslators): string {
   const fallback = body?.error ?? `HTTP ${status}`;
   if (!body) return fallback;
-  return translatePolicyError(body.errorCode, t, fallback, creditParamsOf(body));
+  return postingPeriodDenialMessage(body, t.accounting)
+    ?? translatePolicyError(body.errorCode, t.policy, fallback, creditParamsOf(body));
 }

@@ -126,6 +126,14 @@
 
 ## 7. Changelog
 
+- **2026-10-16** — **`ui/form/form-keyboard` §3: `submitOnlyExplicitly`** (ADR-ACC-010 §2.1.1 Φάση 7). Οι φόρμες Ε-Ε και τιμολογίου
+  υιοθέτησαν το `FormActions` (είχαν δίδυμο πόδι — CHECK 3.28) και έγιναν `<form>`· το «(η)» όμως κάνει το Enter σε πεδίο
+  **υποβολή**, και εκεί αυτό εκδίδει παραστατικό με αύξοντα αριθμό. Xero / QuickBooks δεν αποθηκεύουν με Enter στον editor
+  τιμολογίου ⇒ `onKeyDown={submitOnlyExplicitly}` στο `<form>`: Enter σε `<input>` = τίποτα, Ctrl/⌘+Enter = ρητή υποβολή,
+  textarea / κουμπιά / IME ανέγγιχτα. Η προεπιλογή του «(η)» **δεν αλλάζει** — ο φύλακας είναι επιλογή της φόρμας που καταχωρεί.
+  Άγκυρα `form-keyboard.test.tsx` (κοιτά το `defaultPrevented` του `keydown` — το `pressEnterToSubmit` δεν θα έβλεπε την
+  ακύρωση)· μετάλλαξη 1/1.
+
 - **2026-09-16** — **G13 / CHECK 12: ΜΗΧΑΝΗ ΠΟΛΙΤΙΚΗΣ ΑΔΕΙΩΝ — η πύλη έβλεπε 12% του γράφου, και το ψευδές της μήνυμα έκρυβε άλλη αιτία.**
 
   🔴 **Η ΡΙΖΑ ΤΟΥ ΣΦΑΛΜΑΤΟΣ (μετρημένη, A/B 3/3)**: «license-checker produced no output» **δεν** οφειλόταν στο σχετικό `core.hooksPath`. Ένα commit script όριζε μεταβλητή shell **`TMP`**· στο Git Bash το `TMP` είναι **εξαγόμενη** μεταβλητή Windows, και το `git.exe` τη δίνει στους hooks ως **`TMPDIR`** ⇒ `TMPDIR=<αρχείο>` ⇒ `mktemp` απέτυχε ⇒ `> ""` ⇒ exit 1, με το `2>/dev/null` να πετά την αιτία. Το εργαλείο **δεν ξεκίνησε ποτέ**. Μετονομασία `TMP`→`IDX` ⇒ ❌→✅. Κανόνας: `.claude-rules/feedback_tmp_env_var_git_bash.md`.

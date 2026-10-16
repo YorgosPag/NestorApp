@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,7 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
+import { FormActions } from '@/components/ui/form/FormActions';
+import { submitOnlyExplicitly } from '@/components/ui/form/form-keyboard';
 import { useAuth } from '@/hooks/useAuth';
 import { API_ROUTES } from '@/config/domain-constants';
 import { PaymentMethodSelector } from '../../shared/PaymentMethodSelector';
@@ -149,6 +149,7 @@ function buildFormStateFromInvoice(invoice: Invoice): InvoiceFormState {
 
 export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: InvoiceFormProps) {
   const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const formId = useId();
   const { t: tPolicy } = usePolicyTranslation([...POLICY_ERROR_NAMESPACES]);
   const { user } = useAuth();
   const { presets } = useServicePresets();
@@ -302,7 +303,7 @@ export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: Invo
 
       if (!res.ok) {
         const errJson = await res.json().catch(() => null);
-        throw new Error(invoiceSubmitErrorMessage(errJson, res.status, tPolicy));
+        throw new Error(invoiceSubmitErrorMessage(errJson, res.status, { policy: tPolicy, accounting: t }));
       }
 
       const result = await res.json();
@@ -318,7 +319,10 @@ export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: Invo
   }, [user, form, totals, t, tPolicy, onSuccess, editMode, initialData, companyProfile]);
 
   return (
-    <div className="space-y-6">
+    <form id={formId} className="space-y-6"
+      onKeyDown={submitOnlyExplicitly}
+      onSubmit={(event) => { event.preventDefault(); void handleSubmit(); }}
+    >
       {/* Invoice Type & Series */}
       <Card>
         <CardHeader>
@@ -470,20 +474,14 @@ export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: Invo
         </CardContent>
       </Card>
 
-      {/* Actions */}
-      {error && (
-        <p className="text-sm text-destructive">{error}</p>
-      )}
-
-      <footer className="flex justify-end gap-3">
-        <Button variant="outline" onClick={onCancel} disabled={submitting}>
-          {t('forms.cancel')}
-        </Button>
-        <Button onClick={handleSubmit} disabled={submitting}>
-          {submitting ? <Spinner size="small" className="mr-2" /> : null}
-          {editMode ? t('invoices.updateInvoice') : t('forms.create')}
-        </Button>
-      </footer>
-    </div>
+      <FormActions
+        formId={formId}
+        submitLabel={editMode ? t('invoices.updateInvoice') : t('forms.create')}
+        cancelLabel={t('forms.cancel')}
+        onCancel={onCancel}
+        submitting={submitting}
+        error={error}
+      />
+    </form>
   );
 }

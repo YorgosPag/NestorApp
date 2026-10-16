@@ -10,10 +10,10 @@
 
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useId } from 'react';
 import { useTranslation } from 'react-i18next';
+import { postingPeriodDenialMessage, type PostingDenialBody } from '../../utils/posting-period-denial';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,7 +25,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Spinner } from '@/components/ui/spinner';
+import { FormActions } from '@/components/ui/form/FormActions';
+import { submitOnlyExplicitly } from '@/components/ui/form/form-keyboard';
 import { useAuth } from '@/hooks/useAuth';
 import { API_ROUTES } from '@/config/domain-constants';
 import { VATRateSelector } from '../shared/VATRateSelector';
@@ -83,6 +84,7 @@ function getQuarterFromDate(dateStr: string): FiscalQuarter {
 
 export function JournalEntryForm({ onSuccess, onCancel }: JournalEntryFormProps) {
   const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const formId = useId();
   const colors = useSemanticColors();
   const { user } = useAuth();
 
@@ -178,8 +180,8 @@ export function JournalEntryForm({ onSuccess, onCancel }: JournalEntryFormProps)
       });
 
       if (!res.ok) {
-        const errJson: { error?: string } | null = await res.json().catch(() => null);
-        throw new Error(errJson?.error ?? `HTTP ${res.status}`);
+        const errJson: (PostingDenialBody & { error?: string }) | null = await res.json().catch(() => null);
+        throw new Error(postingPeriodDenialMessage(errJson, t) ?? errJson?.error ?? `HTTP ${res.status}`);
       }
 
       onSuccess();
@@ -191,7 +193,10 @@ export function JournalEntryForm({ onSuccess, onCancel }: JournalEntryFormProps)
   }, [user, form, calculations, t, onSuccess]);
 
   return (
-    <section className="space-y-6" aria-label={t('journal.newEntry')}>
+    <form id={formId} className="space-y-6" aria-label={t('journal.newEntry')}
+      onKeyDown={submitOnlyExplicitly}
+      onSubmit={(event) => { event.preventDefault(); void handleSubmit(); }}
+    >
       {/* Type, Date & Category */}
       <Card>
         <CardHeader>
@@ -330,20 +335,14 @@ export function JournalEntryForm({ onSuccess, onCancel }: JournalEntryFormProps)
         </CardContent>
       </Card>
 
-      {/* Error + Actions */}
-      {error && (
-        <p className="text-sm text-destructive" role="alert">{error}</p>
-      )}
-
-      <footer className="flex justify-end gap-3">
-        <Button variant="outline" onClick={onCancel} disabled={submitting}>
-          {t('forms.cancel')}
-        </Button>
-        <Button onClick={handleSubmit} disabled={submitting}>
-          {submitting ? <Spinner size="small" className="mr-2" /> : null}
-          {t('forms.create')}
-        </Button>
-      </footer>
-    </section>
+      <FormActions
+        formId={formId}
+        submitLabel={t('forms.create')}
+        cancelLabel={t('forms.cancel')}
+        onCancel={onCancel}
+        submitting={submitting}
+        error={error}
+      />
+    </form>
   );
 }
