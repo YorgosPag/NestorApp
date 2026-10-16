@@ -125,7 +125,11 @@ export function effectiveActTeam(
   return slot.team ?? { responsibleUid: birth.responsibleUid, memberUids: [birth.responsibleUid] };
 }
 
-function actTeamRef(adminDb: AdminFirestore, actSeed: string): DocumentReference {
+/**
+ * Το έγγραφο ομάδας μιας πράξης από τον σπόρο της — ντετερμινιστικό. Εξάγεται για **αναγνώστες** εκτός συναλλαγής
+ * (ADR-915 Φ5β: «ποιος είναι υπεύθυνος για την εντολή;»)· ο ΕΝΑΣ γραφέας μένει εδώ (CHECK 3.89).
+ */
+export function actTeamRef(adminDb: AdminFirestore, actSeed: string): DocumentReference {
   return actTeamRefById(adminDb, generateDeterministicNetworkActTeamId(actSeed));
 }
 

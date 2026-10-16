@@ -20,8 +20,17 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { normalizeMembership } from '@/lib/auth/workspace-membership';
 import { ADMINISTRATIVE_ROLES } from '@/lib/auth/roles';
 import { workspaceMembersCollection } from '@/lib/workspace/workspace-member-ref';
+import type { WorkspaceMembership } from '@/types/workspace-membership';
 
 const ADMIN_ROLES: readonly string[] = ADMINISTRATIVE_ROLES;
+
+/**
+ * **Το ΕΝΑ κατηγόρημα** «μιλά αυτό το μέλος για το γραφείο;» — ενεργό **και** με ρόλο διοίκησης. Εξάγεται ώστε όποιος
+ * έχει ήδη τη λίστα μελών (π.χ. η αλυσίδα υπευθυνότητας του ADR-915 Φ5β) να μη γράψει δεύτερη ερμηνεία.
+ */
+export function isActiveWorkspaceAdministrator(member: Pick<WorkspaceMembership, 'status' | 'globalRole'>): boolean {
+  return member.status === 'active' && ADMIN_ROLES.includes(member.globalRole);
+}
 
 /**
  * **Τα `uid` των ενεργών μελών με ρόλο διοίκησης.** Κενός πίνακας = κανένας (όχι βλάβη)· η βλάβη **πετά**, και την
@@ -31,6 +40,6 @@ export async function activeWorkspaceAdministrators(db: Firestore, companyId: st
   const members = await workspaceMembersCollection(db, companyId).get();
   return members.docs.flatMap((doc) => {
     const member = normalizeMembership(doc.id, doc.data());
-    return member.status === 'active' && ADMIN_ROLES.includes(member.globalRole) ? [member.uid] : [];
+    return isActiveWorkspaceAdministrator(member) ? [member.uid] : [];
   });
 }

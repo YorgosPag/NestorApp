@@ -530,6 +530,10 @@
       "report_creator": {
         "name": "Report Creator",
         "description": "Create and view reports"
+      },
+      "document_manager": {
+        "name": "Document Manager",
+        "description": "Receives the office's document expiry alerts when a property has no responsible person of its own"
       }
     },
     "permissionNames": {

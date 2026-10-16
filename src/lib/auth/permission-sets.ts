@@ -34,6 +34,9 @@ export interface PermissionSetDefinition {
 // PREDEFINED PERMISSION SETS
 // =============================================================================
 
+/** ADR-915 Φ5β — το σύνολο «υπεύθυνος εγγράφων»· ένα όνομα για τον κατάλογο και για την αλυσίδα υπευθυνότητας. */
+export const DOCUMENT_MANAGER_SET_ID = 'document_manager';
+
 /**
  * Predefined permission sets.
  * These can be assigned to project members as add-ons to their base role.
@@ -137,6 +140,15 @@ export const PERMISSION_SETS: Record<string, PermissionSetDefinition> = {
       'reports:reports:view',
       'reports:reports:create'
     ]
+  },
+
+  // ADR-915 Φ5β — «υπεύθυνος εγγράφων» του γραφείου: ο κρίκος 3 της αλυσίδας υπευθυνότητας των λήξεων.
+  // Πρότυπο Procore «Is an Insurance Manager of the company?» — σημαία ΔΡΟΜΟΛΟΓΗΣΗΣ, όχι προνόμιο: εκεί η σημαία
+  // δεν δίνει δικαίωμα επεξεργασίας (το ζητούν χωριστά τα δικαιώματα του Directory), εδώ το ίδιο ⇒ `permissions: []`.
+  [DOCUMENT_MANAGER_SET_ID]: {
+    name: 'Document Manager',
+    description: 'Receives document expiry alerts for the office',
+    permissions: []
   }
 };
 
