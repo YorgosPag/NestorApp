@@ -24,7 +24,8 @@ import { FIELDS } from '@/config/firestore-field-constants';
 import { custodyOf } from '@/lib/owner-property/listing-custody';
 import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import { trimmedStringOrNull } from '@/lib/type-guards';
-import type { OwnerProperty } from '@/types/owner-property';
+import type { GeoPoint } from '@/types/geo/coordinates';
+import type { OwnerProperty, OwnerPropertyPlace } from '@/types/owner-property';
 import type { RegistryProperty } from './registry-properties.server';
 
 interface OfficeOwnerProperties {
@@ -38,8 +39,23 @@ function inOfficeCustody(property: OwnerProperty, companyId: string): boolean {
   return custody.kind === 'company' && custody.companyId === companyId;
 }
 
+/**
+ * Το δηλωμένο σημείο — ή `null`. ⚠️ Ο αναγνώστης (`ownerPropertyFromDocument`) περνά το `place` **ωμό**: έγγραφο πριν
+ * την Α5 (θέση = υποχρεωτικό ερώτημα) δεν το έχει, ό,τι κι αν λέει ο τύπος — άρα φράχτης εδώ, όχι σφάλμα στο μητρώο.
+ */
+function declaredPointOf(place: OwnerPropertyPlace | undefined): GeoPoint | null {
+  return place !== undefined && place.kind === 'declared' ? place.point : null;
+}
+
 function registryOwnerPropertyOf(property: OwnerProperty, data: Readonly<Record<string, unknown>>): RegistryProperty {
-  return { id: property.id, scope: 'owner-property', name: trimmedStringOrNull(property.title), certificate: property.energy, data };
+  return {
+    id: property.id,
+    scope: 'owner-property',
+    name: trimmedStringOrNull(property.title),
+    certificate: property.energy,
+    declaredPoint: declaredPointOf(property.place),
+    data,
+  };
 }
 
 /** Τα ακίνητα ιδιωτών υπό θεματοφυλακή **αυτού** του γραφείου — με ή χωρίς εντολή σε ισχύ. */

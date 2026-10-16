@@ -23,6 +23,7 @@ import { ENERGY_CLASSES } from '@/constants/energy-classes';
 import { chunkArray } from '@/lib/array-utils';
 import { readEnergyCertificate, type EnergyCertificate } from '@/lib/energy-certificate/energy-certificate';
 import { trimmedStringOrNull } from '@/lib/type-guards';
+import type { GeoPoint } from '@/types/geo/coordinates';
 import { REGISTRY_GET_ALL_CHUNK, type RegistryPropertyScope } from './document-registry.types';
 
 type DocData = Readonly<Record<string, unknown>>;
@@ -33,6 +34,12 @@ export interface RegistryProperty {
   readonly scope: RegistryPropertyScope;
   readonly name: string | null;
   readonly certificate: EnergyCertificate;
+  /**
+   * Το σημείο που **δήλωσε** ο ιδιώτης για το ακίνητό του (`OwnerProperty.place`, κλάδος `declared`) — για την περιοχή
+   * του «Βρες επαγγελματία» (ADR-915 §24). `null` για ακίνητο εταιρείας: εκείνο βρίσκει θέση από κτίριο/έργο, και
+   * μόνο όταν χρειαστεί (`registry-property-area.server.ts`).
+   */
+  readonly declaredPoint: GeoPoint | null;
   /** Το ωμό έγγραφο — για τον κοινό μετασχηματισμό της υπόθεσης (`subjectContextOf`). */
   readonly data: DocData;
 }
@@ -41,7 +48,14 @@ export interface RegistryProperty {
 const ENERGY_FIELD = 'energy';
 
 function registryPropertyOf(id: string, data: DocData): RegistryProperty {
-  return { id, scope: 'property', name: trimmedStringOrNull(data.name), certificate: readEnergyCertificate(data[ENERGY_FIELD]), data };
+  return {
+    id,
+    scope: 'property',
+    name: trimmedStringOrNull(data.name),
+    certificate: readEnergyCertificate(data[ENERGY_FIELD]),
+    declaredPoint: null,
+    data,
+  };
 }
 
 /** Τα ακίνητα με αυτές τις ταυτότητες **που ανήκουν στην εταιρεία**. */

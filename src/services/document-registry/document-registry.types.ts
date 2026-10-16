@@ -39,6 +39,12 @@ export interface RegistryLabel {
 
 export interface RegistryPropertyLabel extends RegistryLabel {
   readonly scope: RegistryPropertyScope;
+  /**
+   * Ο **δήμος** του ακινήτου (ταυτότητα ADR-883, `municipality:<κωδ.>`) για το «Βρες επαγγελματία» (ADR-915 §24).
+   * Υπολογίζεται **μόνο** για ακίνητα με γραμμή που το δείχνει. `null` = δεν ρωτήθηκε ή δεν αποδεικνύεται — **ποτέ**
+   * «πουθενά»: ο κατάλογος ανοίγει τότε χωρίς περιοχή.
+   */
+  readonly areaId: string | null;
 }
 
 export interface DocumentRegistryResponse extends DocumentRegistry {

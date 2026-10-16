@@ -63,7 +63,7 @@ describe('openConveyanceCase', () => {
     expect(outcome.value.view.derivedFacts).toMatchObject({ has_appurtenances: true, has_antiparochi: false });
     // ADR-915 §22 — «νομικό πρόσωπο» είναι γεγονός του ΠΡΟΣΩΠΟΥ (από το ίδιο), όχι της υπόθεσης.
     expect(outcome.value.view.derivedFacts).not.toHaveProperty('seller_is_legal_entity');
-    expect(outcome.value.view.conveyanceCase.parties.sellers).toEqual([{ key: 'cont_s', contactId: 'cont_s', kind: 'legal_entity' }]);
+    expect(outcome.value.view.conveyanceCase.parties.sellers).toEqual([{ key: 'cont_s', contactId: 'cont_s', kind: 'legal_entity', capacity: 'principal' }]);
     expect(EntityAuditService.recordChange).toHaveBeenCalledWith(expect.objectContaining({ entityType: 'conveyance_case', action: 'created', companyId: 'comp_a' }));
   });
 

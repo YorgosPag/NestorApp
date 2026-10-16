@@ -18,7 +18,7 @@ const SUBJECT: ConveyanceCaseSubject = { kind: 'property', propertyId: 'prop_1',
 
 describe('συλλογή τεκμηρίων — κάθε πωλητής', () => {
   const parties: ConveyanceCaseParties = {
-    sellers: [sellerParty('cont_a', 'legal_entity'), sellerParty('cont_b', 'person'), sellerParty(null, 'person')],
+    sellers: [sellerParty('cont_a', 'legal_entity', 'principal'), sellerParty('cont_b', 'person', 'other'), sellerParty(null, 'person', 'other')],
     buyers: [],
   };
 
@@ -47,12 +47,12 @@ describe('αιτήματα εγγράφων — παλιό κλειδί γραμ
   }
 
   it('ένας πωλητής ⇒ το αίτημα δένεται στη γραμμή του · της υπόθεσης δεν αγγίζεται', async () => {
-    await expect(readWith({ sellers: [sellerParty('cont_a', 'legal_entity')], buyers: [] }))
+    await expect(readWith({ sellers: [sellerParty('cont_a', 'legal_entity', 'principal')], buyers: [] }))
       .resolves.toEqual(['seller_enfia_certificate@cont_a', 'title_deed']);
   });
 
   it('δύο πωλητές ⇒ μένει ως έχει (ποτέ μαντεψιά ανάμεσα σε συμπωλητές)', async () => {
-    await expect(readWith({ sellers: [sellerParty('cont_a', 'legal_entity'), sellerParty('cont_b', 'person')], buyers: [] }))
+    await expect(readWith({ sellers: [sellerParty('cont_a', 'legal_entity', 'principal'), sellerParty('cont_b', 'person', 'other')], buyers: [] }))
       .resolves.toEqual(['seller_enfia_certificate', 'title_deed']);
   });
 });

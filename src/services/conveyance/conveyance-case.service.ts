@@ -38,7 +38,10 @@ import type { ConveyanceCase, ConveyanceCaseView, EvidenceFile } from '@/types/c
 import { collectCaseEvidence, HOST_EVIDENCE_VIEWER } from './conveyance-case-evidence.server';
 import { caseDependencyKeys } from './conveyance-evidence.server';
 import { documentRequestPanel } from './conveyance-document-request-panel.server';
+import { readCasePartyLabels } from './conveyance-party-labels.server';
 import { loadConveyanceSubject, type ConveyanceSubjectContext } from './conveyance-subject.server';
+import { sellerCandidatesFor } from './conveyance-seller-candidates.server';
+import type { SellerCandidates } from '@/lib/conveyance/case-party-commands';
 import { closeCaseEngagements } from './conveyance-engagement-host.service';
 import { readCaseViewers, readViewRevision, readViewRevisionInTx, signalCaseChangeInTx, signalViewsInTx } from './conveyance-view-signal.server';
 import { changeOfCommand, type CaseViewers } from '@/lib/conveyance/view-signal-audience';
@@ -69,14 +72,18 @@ const fail = <T>(failure: ConveyanceFailure): ConveyanceOutcome<T> => ({ ok: fal
  * έγγραφο» (παραλήπτες ανά γραμμή + τα αιτήματα της πλευράς του οικοδεσπότη), για **αυτόν** τον άνθρωπο του χώρου.
  */
 async function buildView(db: Firestore, record: ConveyanceCase, context: ConveyanceSubjectContext, actor: ConveyanceActor, revision: number): Promise<ConveyanceCaseView> {
-  const { files: evidence, sealed: sealedDeliveries } = await collectCaseEvidence(db, record, HOST_EVIDENCE_VIEWER);
+  // §23.10 — ο οικοδεσπότης βλέπει όλα τα πρόσωπα· τα ονόματα ζωντανά από τις επαφές, παράλληλα με τα τεκμήρια.
+  const [{ files: evidence, sealed: sealedDeliveries }, parties] = await Promise.all([
+    collectCaseEvidence(db, record, HOST_EVIDENCE_VIEWER),
+    readCasePartyLabels(db, actor.companyId, record.parties.sellers),
+  ]);
   const derivedFacts = deriveFacts(context.factSources);
   const checklist = deriveCaseChecklist({ record, derivedFacts, evidence, sealed: sealedDeliveries, today: conveyanceToday(), viewer: 'host' });
   const state = effectiveCaseState(record.storedState, context.legalPhase);
   const party = { role: 'host', uid: actor.uid } as const;
   const documentRequests = await documentRequestPanel(db, { record, state, party, rows: checklist.rows, nowMs: Date.now() });
   const freshness = { revision, freshUntil: nextConveyanceDayStart().toISOString() };
-  return { conveyanceCase: record, state, derivedFacts, evidence, sealedDeliveries, checklist, documentRequests, freshness };
+  return { conveyanceCase: record, state, derivedFacts, evidence, sealedDeliveries, checklist, parties, documentRequests, freshness };
 }
 
 /**
@@ -211,6 +218,8 @@ interface CommandCommit {
   readonly context: ConveyanceSubjectContext;
   readonly evidence: readonly EvidenceFile[];
   readonly viewers: CaseViewers;
+  /** ADR-915 §23 — οι επαφές του `add_sellers`, κριμένες από τον server (κενό για κάθε άλλη εντολή). */
+  readonly sellerCandidates: SellerCandidates;
 }
 
 /** Η συναλλαγή της εντολής: CAS → κρίση → εγγραφή **και** σήμα των όψεων που τη βλέπουν (§14.8), μαζί. */
@@ -226,7 +235,9 @@ function commitCommand(db: Firestore, input: CommandCommit): Promise<ConveyanceO
       return fail({ kind: 'rejected', rejection: 'not_editable' });
     }
     const now = nowISO();
-    const applied = applyConveyanceCommand(current, request.command, { actorUid: actor.uid, now, today: conveyanceToday(), evidence: input.evidence });
+    const applied = applyConveyanceCommand(current, request.command, {
+      actorUid: actor.uid, now, today: conveyanceToday(), evidence: input.evidence, sellerCandidates: input.sellerCandidates,
+    });
     if (!applied.ok) return fail({ kind: 'rejected', rejection: applied.rejection });
     const next: ConveyanceCase = { ...applied.next, version: current.version + 1, updatedAt: now };
     tx.set(ref, persistedCase(next));
@@ -271,11 +282,12 @@ export async function applyConveyanceCaseCommand(
   if (!context) return fail({ kind: 'property_not_found' });
   // Ίδιος δρόμος με την όψη ⇒ ο οικοδεσπότης ελέγχει (αποδέχεται/επιστρέφει) και ό,τι του **στάλθηκε** (Φ4.4).
   // Μόνο τα **τεκμήρια**: η σφραγισμένη παράδοση δεν ελέγχεται (Α35 — δεν έχει αρχείο να ελεγχθεί).
-  const [{ files: evidence }, viewers] = await Promise.all([
+  const [{ files: evidence }, viewers, sellerCandidates] = await Promise.all([
     collectCaseEvidence(db, initial, HOST_EVIDENCE_VIEWER),
     readCaseViewers(db, initial, Date.now()),
+    sellerCandidatesFor(db, actor.companyId, request.command, context.sellerSources),
   ]);
-  const result = await commitCommand(db, { actor, initial, request, context, evidence, viewers });
+  const result = await commitCommand(db, { actor, initial, request, context, evidence, viewers, sellerCandidates });
   if (!result.ok) return result;
 
   const action: AuditAction = request.command.type === 'cancel' ? 'status_changed' : 'updated';

@@ -113,7 +113,7 @@ describe('γραμμές — αρχεία και δηλώσεις (Ε1)', () => 
     expect(rowOf(registry.rows, 'file:file_1')?.document).toMatchObject({ propertyId: 'prop_1', pinned: true });
     expect(registry.rows[0].state).toBe('expiring');
     expect(registry.files).toEqual({ file_1: { name: 'ΠΕΑ Α1.pdf' } });
-    expect(registry.properties).toEqual({ prop_1: { name: 'Διαμέρισμα Α1', scope: 'property' } });
+    expect(registry.properties).toEqual({ prop_1: { name: 'Διαμέρισμα Α1', scope: 'property', areaId: null } });
   });
 
   it('δήλωση χωρίς αρχείο ⇒ γραμμή `declared`, χωρίς πηγή', async () => {
@@ -227,12 +227,12 @@ describe('Φ4δ Ε7 — «λείπει» από τις απαιτήσεις', ()
       'building-identity', 'energy-certificate', 'enfia-certificate', 'tax-clearance',
     ]);
     expect(registry.tally.missing).toBe(4);
-    expect(registry.properties.prop_1).toEqual({ name: 'Χωρίς ΠΕΑ', scope: 'property' });
+    expect(registry.properties.prop_1).toEqual({ name: 'Χωρίς ΠΕΑ', scope: 'property', areaId: null });
   });
 
   it('ADR-915 §22 — πωλητής ΝΟΜΙΚΟ πρόσωπο ⇒ και η ΕΦΚΑ λείπει (από τον νόμο, χωρίς ερώτηση)', async () => {
     fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', { companyId: COMPANY, name: 'Εταιρικός πωλητής' });
-    fake.seed(COLLECTIONS.CONVEYANCE_CASES, 'case_1', openCase({ parties: { sellers: [{ key: 'cont_co', contactId: 'cont_co', kind: 'legal_entity' }], buyers: [] } }));
+    fake.seed(COLLECTIONS.CONVEYANCE_CASES, 'case_1', openCase({ parties: { sellers: [{ key: 'cont_co', contactId: 'cont_co', kind: 'legal_entity', capacity: 'principal' }], buyers: [] } }));
     const registry = await read();
     expect(registry.rows.flatMap((row) => (row.kind === 'gap' ? [row.gap.kind] : []))).toContain('insurance-clearance');
     expect(registry.tally.missing).toBe(5);
@@ -259,7 +259,7 @@ describe('Φ4δ Ε10 — ακίνητα ιδιωτών υπό θεματοφυλ
     fake.seed(COLLECTIONS.OWNER_PROPERTIES, 'ownp_1', owner({ energy: { class: 'C', issuedOn: ISSUED } }));
     const registry = await read();
     expect(ids(registry.rows)).toEqual(['declared:ownp_1:energy-certificate']);
-    expect(registry.properties).toEqual({ ownp_1: { name: 'Εντολή Β3', scope: 'owner-property' } });
+    expect(registry.properties).toEqual({ ownp_1: { name: 'Εντολή Β3', scope: 'owner-property', areaId: null } });
   });
 
   it('αγγελία εντολής χωρίς ΠΕΑ ⇒ κενό στην εντολή', async () => {

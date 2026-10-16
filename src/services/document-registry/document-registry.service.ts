@@ -23,7 +23,8 @@ import 'server-only';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { conveyanceToday, nextConveyanceDayStart } from '@/lib/conveyance/conveyance-calendar';
-import { documentRegistry } from '@/lib/document-validity/document-registry';
+import { documentRegistry, registryRowKindOf, registryRowPropertyIdOf, type DocumentRegistry } from '@/lib/document-validity/document-registry';
+import { needsProfessionalSearch } from '@/lib/document-validity/document-next-step';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { ConveyanceCase } from '@/types/conveyance-case';
 import type { PublicListing } from '@/types/public-listing';
@@ -38,6 +39,7 @@ import {
 import { readRegistryFiles, registryDocumentsOf, type RegistryFile } from './registry-documents.server';
 import { listingRequirementsOf, readAgencyListings, readListingsById } from './registry-listings.server';
 import { readOfficeOwnerProperties } from './registry-owner-properties.server';
+import { readRegistryPropertyAreas } from './registry-property-area.server';
 import { readCompanyProperties, readDeclaredCertificateProperties, type RegistryProperty } from './registry-properties.server';
 import { openCaseRequirements, readOpenCases } from './registry-requirements.server';
 
@@ -114,8 +116,20 @@ function fileLabelsOf(files: readonly RegistryFile[]): Record<string, RegistryLa
   return Object.fromEntries(files.map((file) => [file.fileId, { name: file.name }]));
 }
 
-function propertyLabelsOf(subjects: ReadonlyMap<string, RegistryProperty>): Record<string, RegistryPropertyLabel> {
-  return Object.fromEntries([...subjects.values()].map((p) => [p.id, { name: p.name, scope: p.scope }]));
+function propertyLabelsOf(
+  subjects: ReadonlyMap<string, RegistryProperty>,
+  areas: ReadonlyMap<string, string | null>,
+): Record<string, RegistryPropertyLabel> {
+  return Object.fromEntries([...subjects.values()].map((p) => [p.id, { name: p.name, scope: p.scope, areaId: areas.get(p.id) ?? null }]));
+}
+
+/** Τα ακίνητα που θα δείξουν «Βρες επαγγελματία» — ο ΙΔΙΟΣ πυρήνας με την οθόνη (`needsProfessionalSearch`, ADR-915 §24). */
+function professionalSearchPropertyIds(rows: DocumentRegistry['rows']): ReadonlySet<string> {
+  const ids = rows.flatMap((row) => {
+    const propertyId = registryRowPropertyIdOf(row);
+    return propertyId !== null && needsProfessionalSearch(registryRowKindOf(row), row.state) ? [propertyId] : [];
+  });
+  return new Set(ids);
 }
 
 /**
@@ -131,16 +145,20 @@ export async function readDocumentRegistry(db: AdminFirestore, companyId: string
   // Ό,τι είναι «του γραφείου»: ακίνητο εταιρείας (κρίθηκε στο `readCompanyProperties`) ή εντολή υπό θεματοφυλακή του.
   const subjects = new Map<string, RegistryProperty>([...properties, ...sources.owners.map((owner) => [owner.id, owner] as const)]);
   const documents = registryDocumentsOf(sources.files, [...sources.declared, ...sources.owners], properties);
-  const listings = listingRequirementsOf(await readListings(db, sources, [...subjects.keys()]), new Set(subjects.keys()));
+  const allListings = await readListings(db, sources, [...subjects.keys()]);
+  const listings = listingRequirementsOf(allListings, new Set(subjects.keys()));
   const requirements = [...openCaseRequirements(sources.cases, properties), ...listings.requirements];
+  const registry = documentRegistry({ documents, requirements, asOf });
+  const wanted = professionalSearchPropertyIds(registry.rows);
+  const areas = await readRegistryPropertyAreas(db, { wanted, subjects, listings: allListings, now });
   return {
-    ...documentRegistry({ documents, requirements, asOf }),
+    ...registry,
     asOf,
     freshUntil: nextConveyanceDayStart(now).toISOString(),
     truncated: sources.truncatedSources.length > 0,
     truncatedSources: sources.truncatedSources,
     unscopedListings: listings.unscoped,
-    properties: propertyLabelsOf(subjects),
+    properties: propertyLabelsOf(subjects, areas),
     files: fileLabelsOf(sources.files),
   };
 }

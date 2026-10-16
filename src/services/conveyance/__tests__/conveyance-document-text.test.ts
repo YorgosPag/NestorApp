@@ -24,7 +24,7 @@ import { readCaseRowDocumentText } from '../conveyance-document-text.server';
 const RECORD: ConveyanceCase = {
   id: 'cvc_1', companyId: 'c1', profile: 'new_build_company',
   subject: { kind: 'property', propertyId: 'prop_1', buildingId: null, projectId: null, appurtenances: [] },
-  parties: { sellers: [sellerParty('cont_s', 'legal_entity'), sellerParty('cont_other', 'person')], buyers: [] },
+  parties: { sellers: [sellerParty('cont_s', 'legal_entity', 'principal'), sellerParty('cont_other', 'person', 'other')], buyers: [] },
   facts: {}, partyFacts: {}, overrides: {}, storedState: 'open', targetSigningDate: null, catalogVersion: '0.5.0',
   version: 1, createdBy: 'u1', createdAt: 't0', updatedAt: 't0', cancellation: null,
 };

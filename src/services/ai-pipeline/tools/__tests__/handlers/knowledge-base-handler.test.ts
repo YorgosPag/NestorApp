@@ -22,7 +22,7 @@ jest.mock('@/services/conveyance/conveyance-subject.server', () => ({
     propertyName: 'Δ3',
     projectId: 'proj_001',
     subject: { kind: 'property', propertyId, buildingId: 'bld_001', projectId: 'proj_001', appurtenances: [] },
-    parties: { sellers: [{ key: 'cont_seller', contactId: 'cont_seller', kind: 'legal_entity' }], buyers: [{ contactId: 'cont_001' }] },
+    parties: { sellers: [{ key: 'cont_seller', contactId: 'cont_seller', kind: 'legal_entity', capacity: 'principal' }], buyers: [{ contactId: 'cont_001' }] },
     factSources: { profile: 'new_build_company', propertyType: 'apartment', appurtenanceCount: 0, landownerCount: 0 },
     legalPhase: null,
   })),

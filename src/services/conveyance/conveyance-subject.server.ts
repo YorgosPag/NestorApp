@@ -24,7 +24,7 @@ import { normalizePropertyType } from '@/constants/property-type-aliases';
 import { isLegalPhase, type LegalPhase } from '@/constants/legal-phases';
 import type { ConveyanceProfile } from '@/config/conveyance-checklist/types';
 import type { FactSources } from '@/lib/conveyance/derive-facts';
-import { sellerParty } from '@/lib/conveyance/case-parties';
+import { sellerParty, type SellerCapacitySources } from '@/lib/conveyance/case-parties';
 import type {
   ConveyanceAppurtenanceRef,
   ConveyanceCaseParties,
@@ -38,6 +38,11 @@ export interface ConveyanceSubjectContext {
   readonly parties: ConveyanceCaseParties;
   readonly factSources: FactSources;
   readonly legalPhase: LegalPhase | null;
+  /**
+   * ADR-915 §23 — ό,τι χρειάζεται η **παραγωγή ιδιότητας** ενός νέου πωλητή (`sellerCandidateOf`): η εταιρεία του έργου
+   * και οι οικοπεδούχοι του. Δεν είναι μέρος της υπόθεσης — η υπόθεση κρατά στιγμιότυπο στο `parties`.
+   */
+  readonly sellerSources: SellerCapacitySources;
 }
 
 /** Η εταιρεία μισθωτής πουλά ακίνητα των έργων της ⇒ πάντα νεόδμητο-εταιρικό (ADR-901 §5.11). */
@@ -88,7 +93,9 @@ async function readProject(db: Firestore, projectId: string | null, companyId: s
 export function subjectContextOf(propertyId: string, property: DocData, project: DocData | null): ConveyanceSubjectContext {
   const projectId = stringOrNull(property.projectId);
   const appurtenances = appurtenancesOf(property);
-  const landowners = project && Array.isArray(project.landownerContactIds) ? project.landownerContactIds.length : null;
+  const landownerContactIds = landownerContactIdsOf(project);
+  const landowners = project && Array.isArray(project.landownerContactIds) ? landownerContactIds.length : null;
+  const principalContactId = stringOrNull(project?.linkedCompanyId);
   const rawPhase = asRecord(property.commercial).legalPhase;
   const legalPhase = isLegalPhase(rawPhase) ? rawPhase : null;
 
@@ -99,7 +106,7 @@ export function subjectContextOf(propertyId: string, property: DocData, project:
     parties: {
       // Η νομική οντότητα του έργου (ADR-232) — νομικό πρόσωπο εξ ορισμού. Συμπωλητές (π.χ. οικοπεδούχοι, Α.1008/2021
       // άρθρο 3 παρ. 8) δεν συνάγονται σιωπηλά: «συμβάλλονται στο συμβόλαιο;» είναι ερώτηση νόμου (ADR-915 §22).
-      sellers: [sellerParty(stringOrNull(project?.linkedCompanyId), 'legal_entity')],
+      sellers: [sellerParty(principalContactId, 'legal_entity', 'principal')],
       buyers: buyersOf(property),
     },
     factSources: {
@@ -109,7 +116,14 @@ export function subjectContextOf(propertyId: string, property: DocData, project:
       landownerCount: landowners,
     },
     legalPhase,
+    sellerSources: { principalContactId, landownerContactIds },
   };
+}
+
+/** Οι οικοπεδούχοι του έργου (`project.landownerContactIds`, ADR-244) — μόνο έγκυρα ids, χωρίς διπλά. */
+function landownerContactIdsOf(project: DocData | null): readonly string[] {
+  const raw = project && Array.isArray(project.landownerContactIds) ? project.landownerContactIds : [];
+  return [...new Set(raw.map(stringOrNull).filter((id): id is string => id !== null))];
 }
 
 /**
