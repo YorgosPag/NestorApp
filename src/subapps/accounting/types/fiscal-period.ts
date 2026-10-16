@@ -40,8 +40,6 @@ export interface FiscalPeriod {
   fiscalYear: number;
   /** Αριθμός περιόδου (1-13) */
   periodNumber: number;
-  /** Ετικέτα UI (π.χ. 'Ιανουάριος 2026', 'Περίοδος Κλεισίματος 2026') */
-  label: string;
   /** Ημερομηνία έναρξης (ISO 8601) */
   startDate: string;
   /** Ημερομηνία λήξης (ISO 8601) */
@@ -140,14 +138,31 @@ export interface YearEndChecklist {
 // POSTING VALIDATION RESULT
 // ============================================================================
 
-/** Αποτέλεσμα ελέγχου αν επιτρέπεται καταχώρηση */
-export interface PostingValidationResult {
-  /** Επιτρέπεται; */
-  allowed: boolean;
-  /** Λόγος απόρριψης (αν δεν επιτρέπεται) */
-  reason: string | null;
-  /** ID περιόδου που αφορά */
-  periodId: string | null;
-  /** Κατάσταση περιόδου */
-  periodStatus: FiscalPeriodStatus | null;
-}
+/**
+ * Γιατί μια περίοδος ΑΡΝΕΙΤΑΙ εγγραφή — ΕΝΑ λεξιλόγιο για κάθε σημείο καταχώρησης (Ε-Ε, τιμολόγια, τράπεζα,
+ * αποσβέσεις — ADR-ACC-010 §2.1.1 Φάση 7). Ο server στέλνει τον κωδικό· το κείμενο το αποδίδει ο πελάτης (N.11,
+ * πρακτική Xero/Stripe: σταθερός κωδικός, μήνυμα στη γλώσσα του χρήστη).
+ */
+export const POSTING_PERIOD_DENIALS = ['PERIOD_NOT_FOUND', 'PERIOD_CLOSED', 'PERIOD_LOCKED'] as const;
+export type PostingPeriodDenial = typeof POSTING_PERIOD_DENIALS[number];
+
+/**
+ * Αποτέλεσμα ελέγχου καταχώρησης. Η άρνηση κουβαλά ΔΟΜΗΜΕΝΑ στοιχεία (χρήση + αριθμός περιόδου), ποτέ κείμενο: η
+ * ετικέτα της περιόδου παράγεται στον πελάτη από αυτά.
+ */
+export type PostingValidationResult =
+  | {
+      readonly allowed: true;
+      readonly periodId: string;
+      readonly periodStatus: 'OPEN';
+    }
+  | {
+      readonly allowed: false;
+      readonly denial: PostingPeriodDenial;
+      /** Η ημερομηνία που ζητήθηκε (`YYYY-MM-DD`) — το μόνο στοιχείο όταν δεν υπάρχει περίοδος. */
+      readonly postingDate: string;
+      readonly periodId: string | null;
+      readonly periodStatus: FiscalPeriodStatus | null;
+      readonly fiscalYear: number | null;
+      readonly periodNumber: number | null;
+    };

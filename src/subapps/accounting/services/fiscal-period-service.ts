@@ -11,32 +11,14 @@ import type { IAccountingRepository } from '../types/interfaces';
 import type {
   FiscalPeriod,
   FiscalPeriodDraft,
+  PostingPeriodDenial,
   PostingValidationResult,
   YearEndChecklist,
   YearEndChecklistStep,
 } from '../types/fiscal-period';
 import { ADJUSTMENT_PERIOD_NUMBER, FISCAL_PERIODS_PER_YEAR, fiscalPeriodKey, fiscalPeriodKeyForDate } from './fiscal-period-keys';
+import { postingPeriodDenialOf } from './fiscal-period-transitions';
 import { isoNow } from './repository/firestore-helpers';
-
-// ============================================================================
-// GREEK MONTH LABELS
-// ============================================================================
-
-const MONTH_LABELS_EL: Record<number, string> = {
-  1: 'Ιανουάριος',
-  2: 'Φεβρουάριος',
-  3: 'Μάρτιος',
-  4: 'Απρίλιος',
-  5: 'Μάιος',
-  6: 'Ιούνιος',
-  7: 'Ιούλιος',
-  8: 'Αύγουστος',
-  9: 'Σεπτέμβριος',
-  10: 'Οκτώβριος',
-  11: 'Νοέμβριος',
-  12: 'Δεκέμβριος',
-  13: 'Περίοδος Κλεισίματος',
-};
 
 // ============================================================================
 // CREATE FISCAL YEAR (Q8 — Auto-create 13 periods)
@@ -54,7 +36,6 @@ function fiscalYearPeriodDrafts(fiscalYear: number, now: string): FiscalPeriodDr
       periodId: fiscalPeriodKey(fiscalYear, periodNumber),
       fiscalYear,
       periodNumber,
-      label: `${MONTH_LABELS_EL[periodNumber]} ${fiscalYear}`,
       startDate: `${fiscalYear}-${mm}-01`,
       endDate: `${fiscalYear}-${mm}-${String(lastDay).padStart(2, '0')}`,
       status: 'OPEN',
@@ -111,48 +92,30 @@ export async function getPeriodForDate(
 // ============================================================================
 
 /**
- * Ελέγχει αν επιτρέπεται καταχώρηση σε μία ημερομηνία
- *
- * Χρησιμοποιείται πριν δημιουργία journal entry / invoice.
+ * Επιτρέπεται καταχώρηση σε μία ημερομηνία; Πριν από κάθε εγγραφή Ε-Ε / τιμολόγιο / αντιστοίχιση τράπεζας.
+ * Η άρνηση είναι ΚΩΔΙΚΟΣ + δομημένα στοιχεία (ADR-ACC-010 §2.1.1 Φ7) — το κείμενο το αποδίδει ο πελάτης.
  */
 export async function validatePostingAllowed(
   repository: IAccountingRepository,
   dateStr: string
 ): Promise<PostingValidationResult> {
   const period = await getPeriodForDate(repository, dateStr);
+  if (period === null) return deniedPosting('PERIOD_NOT_FOUND', dateStr, null);
+  const denial = postingPeriodDenialOf(period);
+  return denial === null
+    ? { allowed: true, periodId: period.periodId, periodStatus: 'OPEN' }
+    : deniedPosting(denial, dateStr, period);
+}
 
-  if (!period) {
-    return {
-      allowed: false,
-      reason: `Δεν βρέθηκε λογιστική περίοδος για ${dateStr}. Δημιουργήστε πρώτα τη χρήση.`,
-      periodId: null,
-      periodStatus: null,
-    };
-  }
-
-  if (period.status === 'CLOSED') {
-    return {
-      allowed: false,
-      reason: `Η περίοδος ${period.label} είναι κλεισμένη. Ανοίξτε τη περίοδο ή καταχωρήστε στην τρέχουσα.`,
-      periodId: period.periodId,
-      periodStatus: 'CLOSED',
-    };
-  }
-
-  if (period.status === 'LOCKED') {
-    return {
-      allowed: false,
-      reason: `Η περίοδος ${period.label} είναι κλειδωμένη οριστικά. Καταχωρήστε στην τρέχουσα ανοιχτή περίοδο.`,
-      periodId: period.periodId,
-      periodStatus: 'LOCKED',
-    };
-  }
-
+function deniedPosting(denial: PostingPeriodDenial, postingDate: string, period: FiscalPeriod | null): PostingValidationResult {
   return {
-    allowed: true,
-    reason: null,
-    periodId: period.periodId,
-    periodStatus: 'OPEN',
+    allowed: false,
+    denial,
+    postingDate,
+    periodId: period?.periodId ?? null,
+    periodStatus: period?.status ?? null,
+    fiscalYear: period?.fiscalYear ?? null,
+    periodNumber: period?.periodNumber ?? null,
   };
 }
 

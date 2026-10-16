@@ -9,6 +9,7 @@
  */
 
 import type { CreateJournalEntryInput } from './journal';
+import type { PostingPeriodDenial } from './fiscal-period';
 
 // ============================================================================
 // ASSET CATEGORY & STATUS
@@ -381,8 +382,11 @@ export interface DepreciationPreviewLine {
   readonly delta: number;
 }
 
-/** Γιατί η καταχώριση / αναίρεση δεν επιτρέπεται (η προεπισκόπηση επιτρέπεται ΠΑΝΤΑ). */
-export type DepreciationRunBlocker = 'FISCAL_YEAR_NOT_ENDED' | 'PERIOD_NOT_FOUND' | 'PERIOD_NOT_OPEN';
+/**
+ * Γιατί η καταχώριση / αναίρεση δεν επιτρέπεται (η προεπισκόπηση επιτρέπεται ΠΑΝΤΑ). Η περίοδος αρνείται με ΤΟ
+ * λεξιλόγιο καταχώρησης (`POSTING_PERIOD_DENIALS`, ADR-ACC-010 §2.1.1 Φ7) — όχι με δικό της `PERIOD_NOT_OPEN`.
+ */
+export type DepreciationRunBlocker = 'FISCAL_YEAR_NOT_ENDED' | PostingPeriodDenial;
 
 /** Προεπισκόπηση — ΚΑΜΙΑ εγγραφή. */
 export interface DepreciationPreview {

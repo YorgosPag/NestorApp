@@ -1,5 +1,5 @@
 /**
- * @fileoverview Λογιστικές περίοδοι — η ΑΠΟΦΑΣΗ μετάβασης κατάστασης (καθαρή, χωρίς I/O)
+ * @fileoverview Λογιστικές περίοδοι — οι ΑΠΟΦΑΣΕΙΣ κατάστασης (καθαρές, χωρίς I/O): μετάβαση + «δέχεται εγγραφή;»
  * @description OPEN → CLOSED → LOCKED, με CLOSED → OPEN μόνο για όποια δεν κλειδώθηκε (Entersoft / SAP OB52).
  *   Την εκτελεί ΕΝΑΣ γραφέας (`repository/accounting-repo-fiscal-periods.ts`) ΜΕΣΑ στη συναλλαγή, πάνω στη φρέσκια
  *   περίοδο: «κλείδωμα» και «ξανάνοιγμα» την ίδια στιγμή ⇒ η μία από τις δύο αρνείται, ποτέ ξεκλείδωτη κλειδωμένη.
@@ -16,7 +16,23 @@ import type {
   FiscalPeriodTransitionDecision,
   FiscalPeriodTransitionEvent,
   FiscalPeriodTransitionRequest,
+  PostingPeriodDenial,
 } from '../types/fiscal-period';
+
+/** Η άρνηση κάθε κατάστασης που ΔΕΝ δέχεται εγγραφή — συνολική (`Record`): νέα κατάσταση ⇒ σφάλμα τύπου εδώ. */
+const DENIAL_OF_STATUS: Readonly<Record<FiscalPeriodStatus, PostingPeriodDenial | null>> = {
+  OPEN: null,
+  CLOSED: 'PERIOD_CLOSED',
+  LOCKED: 'PERIOD_LOCKED',
+};
+
+/**
+ * Δέχεται η περίοδος εγγραφή; ΕΝΑΣ κανόνας για Ε-Ε, τιμολόγια, τράπεζα και αποσβέσεις (ADR-ACC-010 §2.1.1 Φ7). Η
+ * περίοδος φτάνει ΗΔΗ ως περίοδος του μισθωτή — ξένη ή ανύπαρκτη = `null` ⇒ `PERIOD_NOT_FOUND`.
+ */
+export function postingPeriodDenialOf(period: Pick<FiscalPeriod, 'status'> | null): PostingPeriodDenial | null {
+  return period === null ? 'PERIOD_NOT_FOUND' : DENIAL_OF_STATUS[period.status];
+}
 
 interface TransitionRule {
   readonly from: FiscalPeriodStatus;

@@ -11,6 +11,7 @@
  *   Π5  ξένο έγγραφο στη ΔΙΚΗ μου διεύθυνση = ανύπαρκτο (δεύτερη ζώνη: `ownedOrNull`)
  *   Π6  μετάβαση: απόφαση πάνω στη ΦΡΕΣΚΙΑ περίοδο + ίχνος στην ΙΔΙΑ συναλλαγή· κλείδωμα ΚΑΤΑ το ξανάνοιγμα ⇒ άρνηση
  *   Π7  ημερομηνία ⇒ περίοδος χωρίς ζώνη διακομιστή (στιγμή με ώρα = ημέρα Αθήνας· άκυρη ⇒ καμία περίοδος)
+ *   Π8  άρνηση καταχώρησης = κωδικός `POSTING_PERIOD_DENIALS` + χρήση/αριθμός περιόδου, χωρίς ετικέτα σε γλώσσα (Φ7)
  */
 
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
@@ -192,5 +193,30 @@ describe('Π7 — ημερομηνία ⇒ περίοδος', () => {
   it.each(['2026-13-01', '2026-02-30', 'not-a-date'])('%s ⇒ καμία περίοδος (ποτέ η περίοδος κλεισίματος)', async (date) => {
     expect(await getPeriodForDate(repoOf(A), date)).toBeNull();
     expect(await validatePostingAllowed(repoOf(A), date)).toMatchObject({ allowed: false, periodId: null });
+  });
+});
+
+describe('Π8 — άρνηση καταχώρησης = ΚΩΔΙΚΟΣ + δομημένα στοιχεία, ποτέ κείμενο (Φ7)', () => {
+  it('ανοιχτή ⇒ επιτρέπεται· κλεισμένη ⇒ PERIOD_CLOSED· κλειδωμένη ⇒ PERIOD_LOCKED· χωρίς χρήση ⇒ PERIOD_NOT_FOUND', async () => {
+    await createFiscalYear(repoOf(A), 2026);
+    await transition(A, '2026-03', 'close');
+    await transition(A, '2026-04', 'close');
+    await transition(A, '2026-04', 'lock');
+
+    expect(await validatePostingAllowed(repoOf(A), '2026-02-10')).toEqual({ allowed: true, periodId: '2026-02', periodStatus: 'OPEN' });
+    expect(await validatePostingAllowed(repoOf(A), '2026-03-10')).toEqual({
+      allowed: false, denial: 'PERIOD_CLOSED', postingDate: '2026-03-10',
+      periodId: '2026-03', periodStatus: 'CLOSED', fiscalYear: 2026, periodNumber: 3,
+    });
+    expect(await validatePostingAllowed(repoOf(A), '2026-04-10')).toMatchObject({ denial: 'PERIOD_LOCKED', periodNumber: 4 });
+    expect(await validatePostingAllowed(repoOf(A), '2027-01-10')).toEqual({
+      allowed: false, denial: 'PERIOD_NOT_FOUND', postingDate: '2027-01-10',
+      periodId: null, periodStatus: null, fiscalYear: null, periodNumber: null,
+    });
+  });
+
+  it('η περίοδος ΔΕΝ αποθηκεύει ετικέτα σε γλώσσα — την παράγει ο πελάτης από το `periodNumber`', async () => {
+    await createFiscalYear(repoOf(A), 2026);
+    expect(fake.getData(PERIODS, docIdOf(A.companyId, '2026-01'))).not.toHaveProperty('label');
   });
 });
