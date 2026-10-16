@@ -12,10 +12,10 @@
 import { getCategoryByCode } from '../../../config/account-categories';
 import type { DepreciationDecision, DepreciationRecord, FixedAsset } from '../../../types/assets';
 import type { FiscalPeriod } from '../../../types/fiscal-period';
+import { postingPeriodDenialOf } from '../../fiscal-period-transitions';
 import {
   assetProjectionAt,
   decideDepreciation,
-  postingPeriodBlocker,
 } from '../depreciation-booking';
 
 /** 10.000 € μηχάνημα 10%, έναρξη 10/12/2024 ⇒ 1.000 € ανά πλήρη χρήση από το 2025. */
@@ -158,9 +158,9 @@ describe('Δ6 — κανόνας περιόδου', () => {
   it.each([
     [null, 'PERIOD_NOT_FOUND'],
     [period(), null],
-    [period({ status: 'CLOSED' }), 'PERIOD_NOT_OPEN'],
-    [period({ status: 'LOCKED' }), 'PERIOD_NOT_OPEN'],
+    [period({ status: 'CLOSED' }), 'PERIOD_CLOSED'],
+    [period({ status: 'LOCKED' }), 'PERIOD_LOCKED'],
   ] as const)('%o ⇒ %s', (input, expected) => {
-    expect(postingPeriodBlocker(input as FiscalPeriod | null)).toBe(expected);
+    expect(postingPeriodDenialOf(input as FiscalPeriod | null)).toBe(expected);
   });
 });

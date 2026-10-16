@@ -21,17 +21,13 @@ import type {
   DepreciationIntent,
   DepreciationJournalLine,
   DepreciationRecord,
-  DepreciationRunBlocker,
   FixedAsset,
 } from '../../types/assets';
-import type { FiscalPeriod } from '../../types/fiscal-period';
 import { getCategoryByCode } from '../../config/account-categories';
 import { fiscalPeriodKey } from '../fiscal-period-keys';
 import { nowISO } from '@/lib/date-local';
 import { roundToTwo } from '../../utils/math';
 import { depreciationForYear, isFullyDepreciatedAt, type DepreciationYear } from './depreciation-schedule';
-
-export type DepreciationPeriodBlocker = Extract<DepreciationRunBlocker, 'PERIOD_NOT_FOUND' | 'PERIOD_NOT_OPEN'>;
 
 /** Ο Δεκέμβριος — οι αποσβέσεις γράφονται στις 31/12 της χρήσης. */
 const DEPRECIATION_PERIOD_NUMBER = 12;
@@ -39,16 +35,6 @@ const DEPRECIATION_PERIOD_NUMBER = 12;
 /** Η περίοδος όπου γράφονται οι αποσβέσεις μιας χρήσης — Δεκέμβριος (εγγραφή 31/12, ADR-ACC-007 §5.1). */
 export function depreciationPeriodIdFor(fiscalYear: number): string {
   return fiscalPeriodKey(fiscalYear, DEPRECIATION_PERIOD_NUMBER);
-}
-
-/**
- * Δέχεται η περίοδος εγγραφές; ΕΝΑΣ κανόνας για τον προέλεγχο της μηχανής και τον γραφέα μέσα στη συναλλαγή.
- * Η περίοδος φτάνει ΗΔΗ ως περίοδος του μισθωτή (διεύθυνση ανά μισθωτή + `ownedOrNull`, ADR-ACC-010 §2.1.1 Φ6) —
- * ξένη ή ανύπαρκτη = `null`.
- */
-export function postingPeriodBlocker(period: FiscalPeriod | null): DepreciationPeriodBlocker | null {
-  if (period === null) return 'PERIOD_NOT_FOUND';
-  return period.status === 'OPEN' ? null : 'PERIOD_NOT_OPEN';
 }
 
 /**

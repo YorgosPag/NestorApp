@@ -41,11 +41,9 @@ import type {
 } from '../../types/assets';
 import type { TenantContext } from '../../types/common';
 import type { JournalEntry } from '../../types/journal';
-import {
-  depreciationPeriodIdFor,
-  postingPeriodBlocker,
-  type DepreciationPeriodBlocker,
-} from '../engines/depreciation-booking';
+import type { PostingPeriodDenial } from '../../types/fiscal-period';
+import { depreciationPeriodIdFor } from '../engines/depreciation-booking';
+import { postingPeriodDenialOf } from '../fiscal-period-transitions';
 
 import { depreciationAuditEntries } from '../audit/depreciation-audit';
 import { appendAuditEntryInTransaction } from './accounting-repo-audit';
@@ -65,7 +63,7 @@ const RECORD_READ_BATCH = 100;
 
 /** Η περίοδος 12 της χρήσης δεν δέχεται εγγραφές τη στιγμή του commit (SAP: posting period closed). */
 export class DepreciationPeriodClosedError extends Error {
-  constructor(readonly code: DepreciationPeriodBlocker, readonly periodId: string) {
+  constructor(readonly code: PostingPeriodDenial, readonly periodId: string) {
     super(`Depreciation posting refused (${code}) for period ${periodId}`);
     this.name = 'DepreciationPeriodClosedError';
   }
@@ -76,7 +74,7 @@ interface PostingReads {
   readonly assetRef: DocumentReference;
   readonly current: DepreciationRecord | null;
   readonly asset: FixedAsset;
-  readonly periodBlocker: DepreciationPeriodBlocker | null;
+  readonly periodBlocker: PostingPeriodDenial | null;
 }
 
 /** ΟΛΕΣ οι αναγνώσεις ΠΡΙΝ από κάθε εγγραφή (κανόνας συναλλαγών Firestore). */
@@ -107,7 +105,7 @@ async function readForPosting(
     assetRef,
     current: recordSnap.exists ? (recordSnap.data() as DepreciationRecord) : null,
     asset,
-    periodBlocker: postingPeriodBlocker(ownedFiscalPeriodOf(periodSnap, tenant, periodId)),
+    periodBlocker: postingPeriodDenialOf(ownedFiscalPeriodOf(periodSnap, tenant, periodId)),
   };
 }
 

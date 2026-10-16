@@ -346,8 +346,8 @@ describe('DepreciationEngine', () => {
 
     it.each([
       ['PERIOD_NOT_FOUND', null],
-      ['PERIOD_NOT_OPEN', { ...openPeriod, status: 'CLOSED' }],
-      ['PERIOD_NOT_OPEN', { ...openPeriod, status: 'LOCKED' }],
+      ['PERIOD_CLOSED', { ...openPeriod, status: 'CLOSED' }],
+      ['PERIOD_LOCKED', { ...openPeriod, status: 'LOCKED' }],
     ] as const)('περίοδος Δεκεμβρίου ⇒ %s, πριν από κάθε ανάγνωση (καταχώριση ΚΑΙ αναίρεση)', async (code, period) => {
       mockRepo.getFiscalPeriod.mockResolvedValue(period as FiscalPeriod | null);
 

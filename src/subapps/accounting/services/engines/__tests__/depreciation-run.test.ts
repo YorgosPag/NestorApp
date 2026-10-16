@@ -311,7 +311,7 @@ describe('Ε10 — κλειστή περίοδος', () => {
     seedAssets([asset('ast_a')]);
     seedPeriods(status);
 
-    await expect(engineOn().bookDepreciations(2025)).rejects.toMatchObject({ code: 'PERIOD_NOT_OPEN' });
+    await expect(engineOn().bookDepreciations(2025)).rejects.toMatchObject({ code: `PERIOD_${status}` });
     expect(fake.writeLog()).toEqual([]);
   });
 

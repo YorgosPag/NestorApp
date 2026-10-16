@@ -7,6 +7,8 @@
  * @compliance RFC 9457 Problem Details for HTTP APIs
  */
 
+import type { PostingPeriodDenial } from '../../types/fiscal-period';
+
 // ============================================================================
 // ERROR CODE PREFIXES
 // ============================================================================
@@ -39,10 +41,10 @@ export const BANK_ERROR_CODES = {
   // Concurrency
   BANK_CONC_001: 'VERSION_CONFLICT',
 
-  // Fiscal Period
-  BANK_PERIOD_001: 'PERIOD_CLOSED',
-  BANK_PERIOD_002: 'PERIOD_LOCKED',
-  BANK_PERIOD_003: 'PERIOD_NOT_FOUND',
+  // Fiscal Period — ΤΟ λεξιλόγιο άρνησης καταχώρησης (`POSTING_PERIOD_DENIALS`), όχι δεύτερο (ADR-ACC-010 §2.1.1 Φ7)
+  BANK_PERIOD_001: 'PERIOD_CLOSED' satisfies PostingPeriodDenial,
+  BANK_PERIOD_002: 'PERIOD_LOCKED' satisfies PostingPeriodDenial,
+  BANK_PERIOD_003: 'PERIOD_NOT_FOUND' satisfies PostingPeriodDenial,
 
   // Reconciliation
   BANK_RECON_001: 'NOT_MATCHED',
