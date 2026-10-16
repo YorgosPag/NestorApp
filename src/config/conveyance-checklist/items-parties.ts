@@ -19,6 +19,7 @@
 
 import type { ChecklistItem, ChecklistProvider, ConveyanceFactId } from './types';
 import { documentKindSpec, type DocumentKind } from '@/config/document-validity/document-validity';
+import { checklistProviderOfKind } from './document-kind-provider';
 import { onBehalfEntryPointId } from '@/config/upload-entry-points/entries-conveyance-case';
 import { BUYER_PRIVATE, SELLER_PRIVATE } from './visibility';
 
@@ -48,10 +49,15 @@ function sellerDocument(id: string, entryPointIds: readonly string[], requiremen
 /**
  * Έγγραφο πωλητή που **παρακολουθεί το μητρώο λήξεων** (ADR-915 §14): ο κανόνας ισχύος **παίρνεται** από τον ΕΝΑ
  * κατάλογο (`documentKindSpec`), ποτέ δεύτερη γραμμένη τιμή· το `documentKind` κάνει τη γραμμή απαίτηση `block` της
- * υπογραφής (`conveyanceRequirements`) και γραμμή του μητρώου (`caseDocumentRequirements`).
+ * υπογραφής (`conveyanceRequirements`) και γραμμή του μητρώου (`caseDocumentRequirements`). Και ο πάροχος **παράγεται**
+ * από τον εκδότη/υπόχρεο του είδους (ADR-915 §18) — ποτέ δεύτερη γραμμένη τιμή.
  */
 function sellerTrackedDocument(id: string, entryPointIds: readonly string[], requirement: Requirement, kind: DocumentKind): ChecklistItem {
-  return { ...sellerDocument(id, entryPointIds, requirement, documentKindSpec(kind).rule), documentKind: kind };
+  return {
+    ...sellerDocument(id, entryPointIds, requirement, documentKindSpec(kind).rule),
+    provider: checklistProviderOfKind(kind),
+    documentKind: kind,
+  };
 }
 
 /**

@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import type { RegistryDocument, RegistryDocumentRow } from '@/lib/document-validity/document-registry';
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
 import { RegistryDependents } from '@/components/document-registry/RegistryDependents';
+import { RegistryIssuerValue } from '@/components/document-registry/RegistryIssuerValue';
 import { RegistryPropertyValue } from '@/components/document-registry/RegistryPropertyValue';
 import { RegistryRowHeader } from '@/components/document-registry/RegistryRowHeader';
 import {
@@ -106,6 +107,7 @@ export function RegistryRowItem({ row, registry, supersededByName }: RegistryRow
         <ExpiryValue row={row} asOf={registry.asOf} />
         <dt className="text-sm text-muted-foreground">{t(REGISTRY_KEYS.state)}</dt>
         <dd className="m-0 text-sm text-muted-foreground">{t(REGISTRY_STATE_HINT_KEYS[row.state])}</dd>
+        {superseded ? null : <RegistryIssuerValue kind={row.document.kind} />}
       </dl>
       {superseded && supersededByName !== null ? (
         <p className="m-0 text-sm text-muted-foreground">{t(REGISTRY_KEYS.supersededBy, { name: supersededByName })}</p>

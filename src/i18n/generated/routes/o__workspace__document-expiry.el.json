@@ -59,6 +59,34 @@
     "group": {
       "count": "{count, plural, one {# έγγραφο} other {# έγγραφα}}"
     },
+    "issuer": {
+      "appointedBy": {
+        "owner": "Τον ορίζει ο ιδιοκτήτης"
+      },
+      "authority": {
+        "aade": "ΑΑΔΕ (myAADE)",
+        "efka": "e-ΕΦΚΑ"
+      },
+      "heading": "Εκδίδει",
+      "obligor": {
+        "owner": "Ο ιδιοκτήτης"
+      },
+      "obligorHeading": "Το φέρνει",
+      "qualification": {
+        "architect": "Αρχιτέκτων μηχανικός",
+        "civil-engineer": "Πολιτικός μηχανικός",
+        "civil-engineer-tei": "Πολιτικός μηχανικός ΤΕΙ",
+        "civil-sub-engineer": "Πολιτικός υπομηχανικός",
+        "energy-inspector-registered": "Ενεργειακός επιθεωρητής",
+        "spatial-planner": "Μηχανικός χωροταξίας-πολεοδομίας",
+        "surveyor-engineer": "Αγρονόμος τοπογράφος μηχανικός"
+      },
+      "registered": "{qualification}, εγγεγραμμένος στο {registry}",
+      "registry": {
+        "ypen-energy-inspectors": "Μητρώο Ενεργειακών Επιθεωρητών του ΥΠΕΝ"
+      },
+      "selfService": "{authority} — ηλεκτρονικά, χωρίς επαγγελματία"
+    },
     "load": {
       "error": "Το μητρώο δεν φορτώθηκε.",
       "loading": "Φόρτωση μητρώου…",

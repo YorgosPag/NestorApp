@@ -63,6 +63,34 @@
     "missingDocument": "Not recorded",
     "sourceFloor": "at least — the printed expiry has not been entered"
   },
+  "issuer": {
+    "heading": "Issued by",
+    "obligorHeading": "Provided by",
+    "registered": "{qualification}, listed in the {registry}",
+    "selfService": "{authority} — online, no professional needed",
+    "qualification": {
+      "civil-engineer": "Civil engineer",
+      "architect": "Architect engineer",
+      "surveyor-engineer": "Surveying engineer",
+      "spatial-planner": "Spatial planning engineer",
+      "civil-sub-engineer": "Civil sub-engineer",
+      "civil-engineer-tei": "Civil engineer (TEI)",
+      "energy-inspector-registered": "Energy inspector"
+    },
+    "registry": {
+      "ypen-energy-inspectors": "Energy Inspectors Registry of the Ministry of Environment"
+    },
+    "authority": {
+      "aade": "AADE (myAADE)",
+      "efka": "e-EFKA"
+    },
+    "obligor": {
+      "owner": "The owner"
+    },
+    "appointedBy": {
+      "owner": "Appointed by the owner"
+    }
+  },
   "dependents": {
     "heading": "What stops if it expires",
     "missingHeading": "Who requires it",

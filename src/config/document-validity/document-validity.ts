@@ -21,6 +21,8 @@
  * @see ADR-915 — Μητρώο λήξεων εγγράφων + αλυσίδα απαιτήσεων
  */
 
+import type { DocumentIssuer, DocumentObligor } from '@/config/document-validity/document-issuers';
+
 /**
  * Κανόνας ισχύος ενός είδους εγγράφου:
  * - `none`       — δεν λήγει (τίτλοι, άδειες, σχέδια)
@@ -103,6 +105,10 @@ export interface DocumentKindSpec {
    * `null` = η αγγελία μπορεί να το δείξει, δεν οφείλει — η απουσία του δεν είναι κενό. Διάταξη αυτολεξεί (εξαίρεση N.11).
    */
   readonly advertisingDisclosure: { readonly statute: string } | null;
+  /** Ποιος το **εκδίδει** — προσόν, όχι επάγγελμα (ADR-915 §18, `document-issuers.ts`). */
+  readonly issuer: DocumentIssuer;
+  /** Ποιος **οφείλει να το φέρει** — ουδέτερα ως προς τη διαδικασία (στη μεταβίβαση: ο πωλητής). */
+  readonly obligor: DocumentObligor;
 }
 
 export const DOCUMENT_KIND_SPECS: Readonly<Record<DocumentKind, DocumentKindSpec>> = {
@@ -116,6 +122,15 @@ export const DOCUMENT_KIND_SPECS: Readonly<Record<DocumentKind, DocumentKindSpec
     // Η ενεργειακή κατηγορία αναγράφεται σε ΚΑΘΕ εμπορική αγγελία πώλησης/μίσθωσης (ΥΠΕΝ, από 1/1/2021· έρευνα
     // 2026-10-15). Το άρθρο 12 αντικαταστάθηκε από το άρθρο 65 ν.4685/2020 — η αρίθμηση παραγράφου ΔΕΝ επαληθεύτηκε.
     advertisingDisclosure: { statute: 'ν.4122/2013 άρθρο 12 (άρθρο 65 ν.4685/2020)' },
+    // Εκδίδει ενεργειακός επιθεωρητής εγγεγραμμένος στο Μητρώο της ΕΥΕΠΕΝ (buildingcert.gr) — έρευνα 2026-10-16, §18.
+    issuer: {
+      kind: 'professional',
+      qualifications: ['energy-inspector-registered'],
+      appointedBy: 'owner',
+      statute: 'ν.4122/2013 (Μητρώο Ενεργειακών Επιθεωρητών)',
+      verifiedAt: null,
+    },
+    obligor: 'owner',
   },
   // Άρθρο 83 παρ. 6 Ν.4495/2017, αυτολεξεί: «Οι ανωτέρω βεβαιώσεις των μηχανικών έχουν ισχύ δύο (2) μηνών από την
   // υπογραφή τους» (έρευνα 2026-10-16, ADR-915 §13). ⚠️ Η έρευνα της 2026-10-14 δεν το είχε βρει και ο κανόνας ήταν
@@ -128,6 +143,19 @@ export const DOCUMENT_KIND_SPECS: Readonly<Record<DocumentKind, DocumentKindSpec
     verifiedAt: null,
     // `disclosed-only` στη νομιμότητα (ADR-777 §7 #4): ζητείται στη μεταβίβαση, όχι στην αγγελία.
     advertisingDisclosure: null,
+    // Απόφαση Δ.Ε. ΤΕΕ (ειδικότητες της ομάδας έργου για το Πιστοποιητικό Πληρότητας, που περιλαμβάνει τη βεβαίωση του
+    // άρθρου 83 παρ. 1): Πολιτικός · Αρχιτέκτων · Αγρονόμος Τοπογράφος · Χωροταξίας-Πολεοδομίας · Πολιτικός
+    // Υπομηχανικός · Πτυχ. Πολιτικός ΤΕΙ/ΑΤΕΙ. Ο εξουσιοδοτημένος μηχανικός ορίζεται από τον ιδιοκτήτη (έρευνα 2026-10-16).
+    issuer: {
+      kind: 'professional',
+      qualifications: [
+        'civil-engineer', 'architect', 'surveyor-engineer', 'spatial-planner', 'civil-sub-engineer', 'civil-engineer-tei',
+      ],
+      appointedBy: 'owner',
+      statute: 'άρθρο 83 παρ. 1 Ν.4495/2017 · απόφαση Δ.Ε. ΤΕΕ',
+      verifiedAt: null,
+    },
+    obligor: 'owner',
   },
   // Τα τρία παρακάτω εκδίδονται ηλεκτρονικά (myAADE · e-ΕΦΚΑ) την ίδια μέρα ⇒ η ανανέωση θέλει μέρες, όχι εβδομάδες:
   // `renewalLeadDays: 7` = εκτίμηση πρακτικής, όχι διάταξη. Πηγές = κωδικοποιημένα κείμενα, όχι ΦΕΚ ⇒ `verifiedAt: null`.
@@ -140,6 +168,8 @@ export const DOCUMENT_KIND_SPECS: Readonly<Record<DocumentKind, DocumentKindSpec
     renewalLeadDays: 7,
     verifiedAt: null,
     advertisingDisclosure: null,
+    issuer: { kind: 'authority', authority: 'aade', channel: 'online-self-service' },
+    obligor: 'owner',
   },
   // ΑΑΕ: 6 μήνες χωρίς οφειλή · 2 μήνες με ρύθμιση που τηρείται · έως το τέλος του μήνα έκδοσης με αρρύθμιστη οφειλή ή
   // βεβαίωση οφειλής (ΥΑ 15435/913/2020 άρθρο 6 παρ. 1 α΄–γ΄, ΦΕΚ Β' 1559 — αυτολεξεί, ADR-915 §16) ⇒ το τέλος του μήνα
@@ -150,6 +180,8 @@ export const DOCUMENT_KIND_SPECS: Readonly<Record<DocumentKind, DocumentKindSpec
     renewalLeadDays: 7,
     verifiedAt: null,
     advertisingDisclosure: null,
+    issuer: { kind: 'authority', authority: 'efka', channel: 'online-self-service' },
+    obligor: 'owner',
   },
   // Έως την πρώτη κεντρική έκδοση ΕΝΦΙΑ του έτους (αν εκδόθηκε πριν από αυτήν) · αλλιώς ως 31/12 του έτους έκδοσης
   // (Α.1085/2023 άρθρο 1 παρ. 6). ⚠️ Αποβιώσαντες / νομικά πρόσωπα σε διακοπή (Α.1082/2024): ισχύει ως τη μνημόνευση
@@ -160,6 +192,8 @@ export const DOCUMENT_KIND_SPECS: Readonly<Record<DocumentKind, DocumentKindSpec
     renewalLeadDays: 7,
     verifiedAt: null,
     advertisingDisclosure: null,
+    issuer: { kind: 'authority', authority: 'aade', channel: 'online-self-service' },
+    obligor: 'owner',
   },
 };
 

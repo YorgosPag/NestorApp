@@ -28,8 +28,16 @@ import {
 } from '@/config/document-validity/document-validity';
 import { documentExpiry, type DocumentExpiry } from '@/lib/document-validity/document-expiry';
 
-/** Οι αναγνώστες κειμένου που γράφουν γεγονότα. Κλειστό σύνολο — νέος αναγνώστης = νέα γραμμή εδώ. */
-export const DOCUMENT_TEXT_READERS = ['pea-text'] as const;
+/**
+ * Οι αναγνώστες κειμένου που γράφουν γεγονότα. Κλειστό σύνολο — νέος αναγνώστης = νέα γραμμή εδώ. Οι τρεις
+ * τελευταίοι = `CLEARANCE_TEXT_READERS` (`clearance-text.ts`, ADR-915 §19· άγκυρα: κανείς δεν λείπει από εδώ).
+ */
+export const DOCUMENT_TEXT_READERS = [
+  'pea-text',
+  'aade-tax-clearance-text',
+  'efka-insurance-clearance-text',
+  'aade-enfia-certificate-text',
+] as const;
 export type DocumentTextReader = (typeof DOCUMENT_TEXT_READERS)[number];
 
 /** Οι διαδρομές από τις οποίες δηλώνει άνθρωπος. Κλειστό σύνολο. */

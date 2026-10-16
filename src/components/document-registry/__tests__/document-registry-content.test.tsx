@@ -11,7 +11,14 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import React from 'react';
 
 import { DocumentRegistryContent } from '../DocumentRegistryContent';
+import { RegistryIssuerValue } from '../RegistryIssuerValue';
 import {
+  APPOINTED_BY_LABEL_KEYS,
+  ISSUER_AUTHORITY_LABEL_KEYS,
+  ISSUER_KEYS,
+  ISSUER_QUALIFICATION_LABEL_KEYS,
+  ISSUER_REGISTRY_LABEL_KEYS,
+  OBLIGOR_LABEL_KEYS,
   REGISTRY_KEYS,
   REGISTRY_STATE_LABEL_KEYS,
   REGISTRY_STATE_LOOK,
@@ -327,5 +334,38 @@ describe('ADR-915 §15 — «δεν κρίνεται» λέει την ΑΛΗΘ�
     const row = articleOf(REGISTRY_KEYS.fileUnnamed);
     expect(within(row).getByText('document-registry:dependents.undetermined')).toBeTruthy();
     expect(within(row).queryByText(REGISTRY_KEYS.undeterminedDay)).toBeNull();
+  });
+});
+
+describe('ADR-915 §18 — «Εκδίδει · Το φέρνει»', () => {
+  it('κενό: η γραμμή λέει ποιος το εκδίδει και ποιος το φέρνει', () => {
+    renderReady();
+    const gap = screen.getByText('Συνθετικό Ζ6').closest('article') as HTMLElement;
+    expect(within(gap).getByText(ISSUER_KEYS.heading)).toBeTruthy();
+    expect(within(gap).getByText(ISSUER_KEYS.obligorHeading)).toBeTruthy();
+    expect(within(gap).getByText(OBLIGOR_LABEL_KEYS.owner)).toBeTruthy();
+  });
+
+  it('ΠΕΑ ⇒ προσόν με ΜΗΤΡΩΟ + «τον ορίζει ο ιδιοκτήτης» · φορολογική ⇒ ΑΑΔΕ ηλεκτρονικά, χωρίς «ορίζει»', () => {
+    const { container } = render(
+      <dl>
+        <RegistryIssuerValue kind="energy-certificate" />
+      </dl>,
+    );
+    const registered = `${ISSUER_KEYS.registered} ${JSON.stringify({
+      qualification: ISSUER_QUALIFICATION_LABEL_KEYS['energy-inspector-registered'],
+      registry: ISSUER_REGISTRY_LABEL_KEYS['ypen-energy-inspectors'],
+    })}`;
+    expect(within(container).getByText(registered)).toBeTruthy();
+    expect(within(container).getByText(APPOINTED_BY_LABEL_KEYS.owner)).toBeTruthy();
+
+    const tax = render(
+      <dl>
+        <RegistryIssuerValue kind="tax-clearance" />
+      </dl>,
+    );
+    const selfService = `${ISSUER_KEYS.selfService} ${JSON.stringify({ authority: ISSUER_AUTHORITY_LABEL_KEYS.aade })}`;
+    expect(within(tax.container).getByText(selfService)).toBeTruthy();
+    expect(within(tax.container).queryByText(APPOINTED_BY_LABEL_KEYS.owner)).toBeNull();
   });
 });

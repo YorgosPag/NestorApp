@@ -7,6 +7,7 @@ import elConveyance from '@/i18n/locales/el/conveyance.json';
 import enConveyance from '@/i18n/locales/en/conveyance.json';
 import { CONVEYANCE_CHECKLIST, CONVEYANCE_PROCEDURES, itemsForProfile } from '@/config/conveyance-checklist/catalog';
 import { CONVEYANCE_FACT_IDS, CONVEYANCE_PROFILES } from '@/config/conveyance-checklist/types';
+import { checklistProviderOfKind } from '@/config/conveyance-checklist/document-kind-provider';
 import { LEVEL_ENTITY_TYPES } from '@/lib/conveyance/evidence-match';
 import { findEntryPoint } from '@/config/upload-entry-points/queries';
 import { lookupLocaleString } from '@/i18n/locale-key-lookup';
@@ -81,5 +82,25 @@ describe('ADR-901 κατάλογος — άγκυρες', () => {
 
   it('κάθε προφίλ έχει μη κενό κατάλογο', () => {
     for (const profile of CONVEYANCE_PROFILES) expect(itemsForProfile(profile).length).toBeGreaterThan(0);
+  });
+
+  it('ADR-915 §18: γραμμή με documentKind ⇒ ο πάροχος ΠΑΡΑΓΕΤΑΙ από τον εκδότη/υπόχρεο του είδους', () => {
+    const drift = CONVEYANCE_CHECKLIST.filter(
+      (item) => item.documentKind !== undefined && item.provider !== checklistProviderOfKind(item.documentKind),
+    );
+    expect(drift.map((item) => item.id)).toEqual([]);
+  });
+
+  it('ADR-915 §18 (χαρακτηρισμός): επαγγελματίας ⇒ μηχανικός · αρχή με αυτοεξυπηρέτηση ⇒ ο πωλητής', () => {
+    const tracked = Object.fromEntries(
+      CONVEYANCE_CHECKLIST.filter((item) => item.documentKind !== undefined).map((item) => [item.id, item.provider]),
+    );
+    expect(tracked).toEqual({
+      building_identity: 'engineer',
+      energy_certificate: 'engineer',
+      seller_enfia_certificate: 'seller',
+      seller_tax_clearance: 'seller',
+      seller_insurance_clearance: 'seller',
+    });
   });
 });

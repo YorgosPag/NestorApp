@@ -1,0 +1,66 @@
+'use client';
+
+/**
+ * @fileoverview **«Εκδίδει · Το φέρνει»** — δύο ζεύγη `<dt>/<dd>` μιας γραμμής του μητρώου (ADR-915 §18).
+ * @related config/document-validity/document-issuers.ts (το λεξιλόγιο) · RegistryRowItem.tsx · RegistryGapItem.tsx
+ * @module components/document-registry/RegistryIssuerValue
+ *
+ * 🔑 **Μία πηγή για δύο γραμμές**: το έγγραφο που υπάρχει και το έγγραφο που λείπει ρωτούν την ίδια απάντηση του
+ *    καταλόγου — ένα component, όχι δίδυμα.
+ * 🔑 **Προσόν, όχι επάγγελμα**: το ΠΕΑ λέει «Ενεργειακός επιθεωρητής, εγγεγραμμένος στο Μητρώο…», όχι «Μηχανικός».
+ * 🔑 Τα προσόντα ενώνονται με `formatList(…, 'disjunction')` («Α, Β ή Γ»): αρκεί **ένας** από αυτούς.
+ */
+
+import React from 'react';
+
+import { ISSUER_QUALIFICATION_SPECS, type DocumentIssuer, type IssuerQualification } from '@/config/document-validity/document-issuers';
+import { documentKindSpec, type DocumentKind } from '@/config/document-validity/document-validity';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { formatList } from '@/lib/intl-formatting';
+import {
+  APPOINTED_BY_LABEL_KEYS,
+  ISSUER_AUTHORITY_LABEL_KEYS,
+  ISSUER_KEYS,
+  ISSUER_QUALIFICATION_LABEL_KEYS,
+  ISSUER_REGISTRY_LABEL_KEYS,
+  OBLIGOR_LABEL_KEYS,
+  REGISTRY_NS,
+} from '@/components/document-registry/document-registry-labels';
+
+type Translate = ReturnType<typeof useTranslation>['t'];
+
+function qualificationText(t: Translate, qualification: IssuerQualification): string {
+  const label = t(ISSUER_QUALIFICATION_LABEL_KEYS[qualification]);
+  const { registry } = ISSUER_QUALIFICATION_SPECS[qualification];
+  return registry === null ? label : t(ISSUER_KEYS.registered, { qualification: label, registry: t(ISSUER_REGISTRY_LABEL_KEYS[registry]) });
+}
+
+function IssuerValue({ issuer }: { readonly issuer: DocumentIssuer }): React.ReactElement {
+  const { t } = useTranslation([REGISTRY_NS]);
+  if (issuer.kind === 'authority') {
+    return (
+      <dd className="m-0 text-sm text-foreground">
+        {t(ISSUER_KEYS.selfService, { authority: t(ISSUER_AUTHORITY_LABEL_KEYS[issuer.authority]) })}
+      </dd>
+    );
+  }
+  return (
+    <dd className="m-0 flex flex-col gap-0.5 text-sm text-foreground">
+      <span>{formatList(issuer.qualifications.map((q) => qualificationText(t, q)), 'disjunction')}</span>
+      <span className="text-xs text-muted-foreground">{t(APPOINTED_BY_LABEL_KEYS[issuer.appointedBy])}</span>
+    </dd>
+  );
+}
+
+export function RegistryIssuerValue({ kind }: { readonly kind: DocumentKind }): React.ReactElement {
+  const { t } = useTranslation([REGISTRY_NS]);
+  const { issuer, obligor } = documentKindSpec(kind);
+  return (
+    <>
+      <dt className="text-sm text-muted-foreground">{t(ISSUER_KEYS.heading)}</dt>
+      <IssuerValue issuer={issuer} />
+      <dt className="text-sm text-muted-foreground">{t(ISSUER_KEYS.obligorHeading)}</dt>
+      <dd className="m-0 text-sm text-foreground">{t(OBLIGOR_LABEL_KEYS[obligor])}</dd>
+    </>
+  );
+}

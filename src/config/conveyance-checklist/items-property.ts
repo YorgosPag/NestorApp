@@ -12,6 +12,7 @@
  */
 
 import { documentKindSpec } from '@/config/document-validity/document-validity';
+import { checklistProviderOfKind } from './document-kind-provider';
 import type { ChecklistItem } from './types';
 import { EVERYONE } from './visibility';
 
@@ -159,7 +160,7 @@ export const PROPERTY_ITEMS: readonly ChecklistItem[] = [
     id: 'building_identity',
     section: 'property',
     labelKey: 'items.building_identity.label',
-    provider: 'engineer',
+    provider: checklistProviderOfKind('building-identity'),
     visibleTo: EVERYONE,
     requirement: { kind: 'mandatory' },
     documentKind: 'building-identity',
@@ -182,7 +183,8 @@ export const PROPERTY_ITEMS: readonly ChecklistItem[] = [
     id: 'energy_certificate',
     section: 'property',
     labelKey: 'items.energy_certificate.label',
-    provider: 'engineer',
+    // ADR-915 §18 — ο πάροχος παράγεται από τον εκδότη του είδους (επαγγελματίας ⇒ `engineer`).
+    provider: checklistProviderOfKind('energy-certificate'),
     visibleTo: EVERYONE,
     requirement: { kind: 'mandatory' },
     // ADR-915 Φ1 — ο ΕΝΑΣ κανόνας του ΠΕΑ (120 μήνες), ίδιος με της αγγελίας· ποτέ ξανά 3650 ημέρες.

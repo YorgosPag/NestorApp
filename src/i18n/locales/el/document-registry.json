@@ -63,6 +63,34 @@
     "missingDocument": "Δεν έχει καταγραφεί",
     "sourceFloor": "τουλάχιστον — η τυπωμένη λήξη δεν έχει δηλωθεί"
   },
+  "issuer": {
+    "heading": "Εκδίδει",
+    "obligorHeading": "Το φέρνει",
+    "registered": "{qualification}, εγγεγραμμένος στο {registry}",
+    "selfService": "{authority} — ηλεκτρονικά, χωρίς επαγγελματία",
+    "qualification": {
+      "civil-engineer": "Πολιτικός μηχανικός",
+      "architect": "Αρχιτέκτων μηχανικός",
+      "surveyor-engineer": "Αγρονόμος τοπογράφος μηχανικός",
+      "spatial-planner": "Μηχανικός χωροταξίας-πολεοδομίας",
+      "civil-sub-engineer": "Πολιτικός υπομηχανικός",
+      "civil-engineer-tei": "Πολιτικός μηχανικός ΤΕΙ",
+      "energy-inspector-registered": "Ενεργειακός επιθεωρητής"
+    },
+    "registry": {
+      "ypen-energy-inspectors": "Μητρώο Ενεργειακών Επιθεωρητών του ΥΠΕΝ"
+    },
+    "authority": {
+      "aade": "ΑΑΔΕ (myAADE)",
+      "efka": "e-ΕΦΚΑ"
+    },
+    "obligor": {
+      "owner": "Ο ιδιοκτήτης"
+    },
+    "appointedBy": {
+      "owner": "Τον ορίζει ο ιδιοκτήτης"
+    }
+  },
   "dependents": {
     "heading": "Τι σταματά αν λήξει",
     "missingHeading": "Ποιος το ζητά",

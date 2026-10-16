@@ -23,6 +23,12 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
+import type {
+  DocumentObligor,
+  IssuerAuthority,
+  IssuerQualification,
+  IssuerRegistry,
+} from '@/config/document-validity/document-issuers';
 import type { DocumentKind } from '@/config/document-validity/document-validity';
 import type { ExpirySource } from '@/lib/document-validity/document-expiry';
 import type { RegistryRowState } from '@/lib/document-validity/document-registry';
@@ -148,6 +154,42 @@ export const DOCUMENT_KIND_LABEL_KEYS: Readonly<Record<DocumentKind, string>> = 
   'tax-clearance': 'conveyance:items.seller_tax_clearance.label',
   'insurance-clearance': 'conveyance:items.seller_insurance_clearance.label',
   'enfia-certificate': 'conveyance:items.seller_enfia_certificate.label',
+};
+
+/** ADR-915 §18 — «Εκδίδει / Το φέρνει»: κάθε χάρτης δεμένος στο κλειστό σύνολο του `document-issuers.ts`. */
+export const ISSUER_KEYS = {
+  heading: `${K}issuer.heading`,
+  obligorHeading: `${K}issuer.obligorHeading`,
+  registered: `${K}issuer.registered`,
+  selfService: `${K}issuer.selfService`,
+} as const;
+
+export const ISSUER_QUALIFICATION_LABEL_KEYS: Readonly<Record<IssuerQualification, string>> = {
+  'civil-engineer': `${K}issuer.qualification.civil-engineer`,
+  architect: `${K}issuer.qualification.architect`,
+  'surveyor-engineer': `${K}issuer.qualification.surveyor-engineer`,
+  'spatial-planner': `${K}issuer.qualification.spatial-planner`,
+  'civil-sub-engineer': `${K}issuer.qualification.civil-sub-engineer`,
+  'civil-engineer-tei': `${K}issuer.qualification.civil-engineer-tei`,
+  'energy-inspector-registered': `${K}issuer.qualification.energy-inspector-registered`,
+};
+
+export const ISSUER_REGISTRY_LABEL_KEYS: Readonly<Record<IssuerRegistry, string>> = {
+  'ypen-energy-inspectors': `${K}issuer.registry.ypen-energy-inspectors`,
+};
+
+export const ISSUER_AUTHORITY_LABEL_KEYS: Readonly<Record<IssuerAuthority, string>> = {
+  aade: `${K}issuer.authority.aade`,
+  efka: `${K}issuer.authority.efka`,
+};
+
+export const OBLIGOR_LABEL_KEYS: Readonly<Record<DocumentObligor, string>> = {
+  owner: `${K}issuer.obligor.owner`,
+};
+
+/** «Τον ορίζει …» — πλήρης πρόταση ανά υπόχρεο (ποτέ συναρμολόγηση άρθρου/πτώσης από κομμάτια). */
+export const APPOINTED_BY_LABEL_KEYS: Readonly<Record<DocumentObligor, string>> = {
+  owner: `${K}issuer.appointedBy.owner`,
 };
 
 /** ADR-915 §14 — από πού ήρθε η λήξη· `floor` = το εγγυημένο κατώτατο («τουλάχιστον έως»), όχι η πραγματική λήξη. */
