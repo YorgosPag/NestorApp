@@ -1010,6 +1010,8 @@ export const API_ROUTES = {
     CASE_FILE: (id: string, fileId: string) => `/api/conveyance-cases/${id}/files/${fileId}` as const,
     // ADR-901 Φ4.5 — «Ζήτησε έγγραφο»: ο οικοδεσπότης ζητά γραμμές του καταλόγου από όποιον τις οφείλει.
     DOCUMENT_REQUESTS: (id: string) => `/api/conveyance-cases/${id}/document-requests` as const,
+    // ADR-915 §20 — «Ανάγνωση από το έγγραφο»: ο οικοδεσπότης ζητά ανάγνωση του αρχείου που ελέγχει.
+    DOCUMENT_TEXT: (id: string) => `/api/conveyance-cases/${id}/document-text` as const,
   },
 
   // ── ADR-862 Φ1 · ADR-901 Φ2 — «Οι υποθέσεις μου» (ο επαγγελματίας, μέσω της συμμετοχής του) ──

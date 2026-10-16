@@ -89,7 +89,8 @@ function CaseBody({ view, canManage, onCommand, onChanged }: CaseBodyProps) {
   const onOpenDialog = useCallback((row: ChecklistRow, mode: RowDialogMode) => setDialog({ row, mode }), []);
   const onClear = useCallback((row: ChecklistRow) => onCommand({ type: 'clear_override', itemId: row.itemId }), [onCommand]);
   const onAnswer = useCallback(
-    (factId: ConveyanceFactId, value: boolean | null) => onCommand({ type: 'answer_fact', factId, value }),
+    (factId: ConveyanceFactId, value: boolean | null, partyKey: string | null) =>
+      onCommand(partyKey === null ? { type: 'answer_fact', factId, value } : { type: 'answer_fact', factId, value, partyKey }),
     [onCommand],
   );
   const fileTarget = useMemo(() => ({ kind: 'host' as const, caseId: view.conveyanceCase.id }), [view.conveyanceCase.id]);
@@ -101,7 +102,7 @@ function CaseBody({ view, canManage, onCommand, onChanged }: CaseBodyProps) {
       {/* ADR-901 Φ2 — οι επαγγελματίες μπαίνουν ΜΟΝΟ με συμμετοχή· η ενότητα ζει όσο υπάρχει υπόθεση. */}
       <ConveyanceProfessionalsAccess caseId={view.conveyanceCase.id} canManage={canManage} viewRevision={view.freshness.revision} />
       {requests && <ConveyanceRequestAllBar requestable={requests.requestable} targets={view.documentRequests.targets} onConfirm={requests.requestAll} />}
-      <ConveyanceFactsPanel answers={view.conveyanceCase.facts} rows={view.checklist.rows} derivedFacts={view.derivedFacts} canEdit={editable} onAnswer={onAnswer} />
+      <ConveyanceFactsPanel record={view.conveyanceCase} rows={view.checklist.rows} derivedFacts={view.derivedFacts} canEdit={editable} onAnswer={onAnswer} />
       {CHECKLIST_SECTIONS.map((section) => (
         <ConveyanceChecklistSection
           key={section}
@@ -114,7 +115,7 @@ function CaseBody({ view, canManage, onCommand, onChanged }: CaseBodyProps) {
           request={requests?.rowRequest}
         />
       ))}
-      <ConveyanceRowDialog target={dialog} onClose={() => setDialog(null)} onSubmit={onCommand} />
+      <ConveyanceRowDialog caseId={view.conveyanceCase.id} target={dialog} onClose={() => setDialog(null)} onSubmit={onCommand} />
       {previewDialog}
     </section>
   );

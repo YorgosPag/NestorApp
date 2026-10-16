@@ -8,6 +8,8 @@ import type { ChecklistItem } from '@/config/conveyance-checklist/types';
 import { findEntryPoint } from '@/config/upload-entry-points/queries';
 import type { ChecklistItemOverride, EvidenceFile } from '@/types/conveyance-case';
 import { deriveChecklist, type DeriveChecklistInput } from '../derive-checklist';
+import type { FactValues } from '../derive-facts';
+import { sellerRowKey, testFacts, testRows } from '../__fixtures__/case-rows-fixture';
 
 function item(id: string): ChecklistItem {
   const found = getChecklistItem(id);
@@ -23,14 +25,20 @@ function file(overrides: Partial<EvidenceFile> = {}): EvidenceFile {
   };
 }
 
-function input(overrides: Partial<DeriveChecklistInput> = {}): DeriveChecklistInput {
+/** Γραμμές καταλόγου + επίπεδα γεγονότα ⇒ η είσοδος της παραγωγής, μέσα από τον ίδιο επιλυτή (`testRows`/`testFacts`). */
+type TestInput = Omit<Partial<DeriveChecklistInput>, 'rows' | 'facts'> & {
+  readonly items?: readonly ChecklistItem[];
+  readonly facts?: FactValues;
+};
+
+function input({ items = [item('building_permit')], facts = {}, ...rest }: TestInput = {}): DeriveChecklistInput {
   return {
-    items: [item('building_permit')], facts: {}, overrides: {}, evidence: [], sealed: [],
-    today: '2026-10-02', targetSigningDate: null, viewer: 'host', ...overrides,
+    rows: testRows(items), facts: testFacts(facts), overrides: {}, evidence: [], sealed: [],
+    today: '2026-10-02', targetSigningDate: null, viewer: 'host', ...rest,
   };
 }
 
-function statusOf(overrides: Partial<DeriveChecklistInput>): string {
+function statusOf(overrides: TestInput): string {
   return deriveChecklist(input(overrides)).rows[0].status;
 }
 
@@ -113,7 +121,7 @@ describe('deriveChecklist — καταστάσεις', () => {
 });
 
 describe('deriveChecklist — ισχύς (Σ-5)', () => {
-  const energy = (issuedOn: string, extra: Partial<DeriveChecklistInput> = {}) => {
+  const energy = (issuedOn: string, extra: TestInput = {}) => {
     const evidence = [file({ level: 'property', entityType: 'property', purpose: 'certificate' })];
     const overrides = {
       energy_certificate: { review: { verdict: 'accepted' as const, fileId: 'file_1', fileFingerprint: 'file_1:0:2026-09-01', issuedOn, printedValidUntil: null, reason: null, reviewedBy: 'u', reviewedAt: 't' } },
@@ -211,14 +219,14 @@ describe('deriveChecklist — ισχύς από τα γεγονότα του α�
 
 describe('ADR-915 §14 — τυπωμένη λήξη · «τουλάχιστον έως» · «εκδώστε από»', () => {
   const taxReview = (printedValidUntil: string | null) => ({
-    seller_tax_clearance: {
+    [sellerRowKey('seller_tax_clearance')]: {
       review: {
         verdict: 'accepted' as const, fileId: null, fileFingerprint: null, issuedOn: '2026-09-20', printedValidUntil,
         reason: null, reviewedBy: 'u', reviewedAt: 't',
       },
     },
   });
-  const taxRow = (overrides: Partial<DeriveChecklistInput>) =>
+  const taxRow = (overrides: TestInput) =>
     deriveChecklist(input({ items: [item('seller_tax_clearance')], ...overrides })).rows[0];
 
   it('χωρίς τυπωμένη ⇒ το κατώτατο (1 μήνας), σημαδεμένο «τουλάχιστον»', () => {
@@ -251,14 +259,14 @@ describe('deriveChecklist — ορατότητα & σύνοψη', () => {
     }));
     expect(summary).toEqual({
       applicable: 2, complete: 1, awaitingReview: 1, missing: 0, rejected: 0, expiring: 0, expired: 0,
-      openQuestions: ['seller_by_proxy', 'buyer_has_mortgage'],
+      openQuestions: [{ factId: 'seller_by_proxy', partyKey: 'cont_seller' }, { factId: 'buyer_has_mortgage', partyKey: null }],
     });
   });
 });
 
 describe('Α35 — σφραγισμένη παράδοση (Π2)', () => {
   const sealed = { itemId: 'buyer_identity', deliveredAt: '2026-10-03T09:00:00Z', authorRole: 'buyer_lawyer' } as const;
-  const buyerRow = (overrides: Partial<DeriveChecklistInput> = {}) =>
+  const buyerRow = (overrides: TestInput = {}) =>
     deriveChecklist(input({ items: [item('buyer_identity')], sealed: [sealed], ...overrides })).rows[0];
 
   it('χωρίς ορατό αρχείο ⇒ `delivered_sealed`, με την παράδοση στη γραμμή · μετρά στα ολοκληρωμένα', () => {

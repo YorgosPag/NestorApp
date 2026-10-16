@@ -62,6 +62,7 @@ import { isShowcaseMarkKind } from '@/lib/agency/showcase-mark-kind';
 import { readPlace, readWebsite, text } from '@/lib/agency/showcase-read-primitives';
 import { readLocations } from '@/lib/agency/showcase-read-locations';
 import { readLegalIdentity } from '@/lib/agency/showcase-read-legal-identity';
+import { readShowcaseLicences } from '@/lib/agency/showcase-licence';
 import type { ProfessionalAttestation } from '@/types/professional-identity';
 import { readProfessionalAttestation } from '@/lib/professional/professional-attestation';
 
@@ -192,6 +193,8 @@ export function readShowcase(raw: unknown, companyId: string): ShowcaseRead {
       alias,
       displayName,
       credentials,
+      // ⚠️ ADR-915 §21 — παλιό έγγραφο χωρίς άδειες ⇒ `[]` = «δεν δήλωσε καμία» (αληθές· δες `readShowcaseLicences`).
+      licences: readShowcaseLicences(source.licences),
       place: readPlace(source.place),
       position: readPosition(source.position),
       coverage: readCoverage(source.coverage),

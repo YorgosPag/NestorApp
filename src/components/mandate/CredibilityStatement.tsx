@@ -109,8 +109,11 @@ export function CredibilityStatement({
  * 🔴 **Η ΔΕΥΤΕΡΗ ΓΡΑΜΜΗ ΕΙΝΑΙ Ο ΛΟΓΟΣ ΠΟΥ ΥΠΑΡΧΕΙ ΤΟ ΣΧΗΜΑ.** Χωρίς αυτήν, το
  * «ΔΣΘ 1234» διαβάζεται ως **επιβεβαίωση** — και ο επισκέπτης υποθέτει το
  * χειρότερο για εμάς: ότι το ελέγξαμε.
+ *
+ * 🔑 **Εξάγεται** (ADR-915 §21): η άδεια της βιτρίνας (`LicenceStatement`) λέει τον ίδιο ισχυρισμό με τις ίδιες
+ * λέξεις — μία πρόταση για το ίδιο γεγονός, ποτέ δεύτερη.
  */
-function ClaimLines({ claim }: { readonly claim: CredibilityClaim }): React.JSX.Element {
+export function ClaimLines({ claim }: { readonly claim: CredibilityClaim }): React.JSX.Element {
   const { t } = useTranslation([AGENCY_PUBLIC_NS]);
   const { registration } = claim;
   const authorityName = t(REGISTRY_AUTHORITY_PRESENTATION[registration.authority].nameKey);

@@ -60,7 +60,10 @@ describe('openConveyanceCase', () => {
     expect(outcome.value.created).toBe(true);
     expect(rows.find((row) => row.itemId === 'building_permit')?.status).toBe('uploaded');
     expect(rows.find((row) => row.itemId === 'title_deed')?.status).toBe('missing'); // ο κάδος δεν μετράει
-    expect(outcome.value.view.derivedFacts).toMatchObject({ seller_is_legal_entity: true, has_appurtenances: true, has_antiparochi: false });
+    expect(outcome.value.view.derivedFacts).toMatchObject({ has_appurtenances: true, has_antiparochi: false });
+    // ADR-915 §22 — «νομικό πρόσωπο» είναι γεγονός του ΠΡΟΣΩΠΟΥ (από το ίδιο), όχι της υπόθεσης.
+    expect(outcome.value.view.derivedFacts).not.toHaveProperty('seller_is_legal_entity');
+    expect(outcome.value.view.conveyanceCase.parties.sellers).toEqual([{ key: 'cont_s', contactId: 'cont_s', kind: 'legal_entity' }]);
     expect(EntityAuditService.recordChange).toHaveBeenCalledWith(expect.objectContaining({ entityType: 'conveyance_case', action: 'created', companyId: 'comp_a' }));
   });
 

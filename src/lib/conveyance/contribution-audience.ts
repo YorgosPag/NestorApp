@@ -24,7 +24,7 @@
  * @module lib/conveyance/contribution-audience
  */
 
-import { getChecklistItem } from '@/config/conveyance-checklist/catalog';
+import { checklistItemOfRowKey } from '@/config/conveyance-checklist/row-key';
 import { fulfilmentOf } from '@/config/engagement-policy';
 import type { ChecklistItem, ConveyanceRole } from '@/config/conveyance-checklist/types';
 import type { LegalProfessionalRole } from '@/types/legal-contracts';
@@ -71,7 +71,7 @@ function contributionAudience(question: AudienceQuestion): readonly CaseViewerRo
  * ⇒ `null` και ο καλών κλείνει (fail-closed): κανένα όνομα, κανένα τεκμήριο.
  */
 export function audienceOfTransmittal(transmittal: { readonly authorRole: LegalProfessionalRole; readonly checklistItemId: string }): AudienceQuestion | null {
-  const item = getChecklistItem(transmittal.checklistItemId);
+  const item = checklistItemOfRowKey(transmittal.checklistItemId);
   return item ? { authorRole: transmittal.authorRole, item } : null;
 }
 

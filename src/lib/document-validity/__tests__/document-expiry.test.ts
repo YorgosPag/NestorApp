@@ -9,6 +9,7 @@
 import { getChecklistItem } from '@/config/conveyance-checklist/catalog';
 import { DOCUMENT_KINDS, documentKindSpec } from '@/config/document-validity/document-validity';
 import { deriveChecklist } from '@/lib/conveyance/derive-checklist';
+import { testFacts, testRows } from '@/lib/conveyance/__fixtures__/case-rows-fixture';
 import { certificateValidUntil } from '@/lib/energy-certificate/energy-certificate';
 import { legalityKindSpec } from '@/lib/legality/legality-claim';
 import { documentExpiry, ruleExpires, ruleExpiresOn } from '../document-expiry';
@@ -21,7 +22,7 @@ function conveyanceExpiresOn(issuedOn: string): string | null {
   if (!item) throw new Error('energy_certificate missing from catalog');
   const review = { verdict: 'accepted' as const, fileId: null, fileFingerprint: null, issuedOn, printedValidUntil: null, reason: null, reviewedBy: 'u', reviewedAt: 't' };
   const { rows } = deriveChecklist({
-    items: [item], facts: {}, overrides: { energy_certificate: { review } }, evidence: [], sealed: [],
+    rows: testRows([item]), facts: testFacts({}), overrides: { energy_certificate: { review } }, evidence: [], sealed: [],
     today: '2026-10-14', targetSigningDate: null, viewer: 'host',
   });
   return rows[0].expiresOn;

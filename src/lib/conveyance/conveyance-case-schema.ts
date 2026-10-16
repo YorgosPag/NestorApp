@@ -8,8 +8,9 @@
  */
 
 import { z } from 'zod';
-import { CONVEYANCE_FACT_IDS, CONVEYANCE_PROFILES } from '@/config/conveyance-checklist/types';
+import { CONVEYANCE_FACT_IDS, CONVEYANCE_PARTY_FACT_IDS, CONVEYANCE_PROFILES } from '@/config/conveyance-checklist/types';
 import { REVIEW_VERDICTS, STORED_CASE_STATES, type ConveyanceCase } from '@/types/conveyance-case';
+import { upcastStoredCase } from './case-upcast';
 
 const factAnswerSchema = z.object({
   value: z.boolean(),
@@ -44,10 +45,12 @@ const conveyanceCaseSchema = z.object({
   }),
   profile: z.enum(CONVEYANCE_PROFILES),
   parties: z.object({
-    seller: z.object({ contactId: z.string().nullable(), kind: z.enum(['person', 'legal_entity']) }),
+    // ADR-915 §22 — λίστα προσώπων· το παλιό `seller` μεταφράζεται από το `upcastStoredCase` πριν φτάσει εδώ.
+    sellers: z.array(z.object({ key: z.string().min(1), contactId: z.string().nullable(), kind: z.enum(['person', 'legal_entity']) })),
     buyers: z.array(z.object({ contactId: z.string() })),
   }),
   facts: z.record(z.enum(CONVEYANCE_FACT_IDS), factAnswerSchema),
+  partyFacts: z.record(z.string(), z.record(z.enum(CONVEYANCE_PARTY_FACT_IDS), factAnswerSchema)),
   overrides: z.record(z.string(), overrideSchema),
   storedState: z.enum(STORED_CASE_STATES),
   targetSigningDate: z.string().nullable(),
@@ -59,8 +62,11 @@ const conveyanceCaseSchema = z.object({
   cancellation: z.object({ reason: z.string(), by: z.string(), at: z.string() }).nullable(),
 });
 
-/** `null` ⇒ το έγγραφο δεν έχει το σχήμα της υπόθεσης. */
+/**
+ * `null` ⇒ το έγγραφο δεν έχει το σχήμα της υπόθεσης. Παλιά έγγραφα (ένας `seller`, ADR-915 §22) μεταφράζονται
+ * **πριν** από την επικύρωση (`upcastStoredCase`) — η πρώτη εγγραφή ολόκληρου εγγράφου τα αποθηκεύει στο νέο σχήμα.
+ */
 export function parseConveyanceCase(data: unknown): ConveyanceCase | null {
-  const result = conveyanceCaseSchema.safeParse(data);
+  const result = conveyanceCaseSchema.safeParse(upcastStoredCase(data));
   return result.success ? result.data : null;
 }

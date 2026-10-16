@@ -19,7 +19,7 @@
  * @module lib/conveyance/review-attestation
  */
 
-import { getChecklistItem } from '@/config/conveyance-checklist/catalog';
+import { checklistItemOfRowKey } from '@/config/conveyance-checklist/row-key';
 import type { ChecklistItem } from '@/config/conveyance-checklist/types';
 import type { ExpiryDiscrepancy } from '@/lib/document-validity/document-expiry';
 import {
@@ -73,7 +73,7 @@ export function attestationOfReview(
   if (command.type !== 'review' || command.verdict !== 'accepted') return null;
   const printedValidUntil = command.validUntil ?? null;
   if ((command.issuedOn === null && printedValidUntil === null) || command.fileId === null) return null;
-  const kind = getChecklistItem(command.itemId)?.documentKind;
+  const kind = checklistItemOfRowKey(command.itemId)?.documentKind;
   const file = evidence.find((candidate) => candidate.fileId === command.fileId);
   if (kind === undefined || file === undefined || file.source.kind !== 'owned') return null;
   return {

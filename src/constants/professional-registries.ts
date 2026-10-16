@@ -92,6 +92,16 @@ export const REGISTRY_AUTHORITIES = [
    * από κανέναν** *(Α9.1)*.
    */
   'regional-authority',
+  /**
+   * **ΕΥΕΠΕΝ / ΥΠΕΝ — Μητρώο Ενεργειακών Επιθεωρητών** *(ν.4122/2013, buildingcert.gr)*.
+   *
+   * 🔑 **ΜΗΤΡΩΟ ΑΔΕΙΑΣ, ΟΧΙ ΕΠΑΓΓΕΛΜΑΤΟΣ** *(ADR-915 §21)*: ο επιθεωρητής είναι μηχανικός
+   * *(αριθμός ΤΕΕ)* με **επιπλέον** άδεια. Άρα δεν αντιστοιχεί σε κωδικό ISCO — ίδια
+   * περίπτωση με το ΓΕΜΗ, και γι' αυτό ακριβώς το λεξιλόγιο εδώ **δεν** δένεται στην
+   * ταξινομία. Ο καταναλωτής του είναι το `config/professional-licences.ts`.
+   * **Ένα** μητρώο πανελλαδικά, με αύξοντα αριθμό ⇒ `national`.
+   */
+  'ypen',
 ] as const;
 
 /** Κάθε αρχή που ξέρει το σύστημα. */
@@ -113,6 +123,8 @@ export const REGISTRY_AUTHORITY_SCOPE = {
   'notary-association': 'chapter',
   // Ανά Περιφερειακή Ενότητα (ν.3982/2011) — δες τη ρίζα.
   'regional-authority': 'chapter',
+  // Ένα Μητρώο Ενεργειακών Επιθεωρητών για όλη τη χώρα (ΕΥΕΠΕΝ).
+  ypen: 'national',
 } as const satisfies Readonly<Record<RegistryAuthorityId, 'national' | 'chapter'>>;
 
 /**
@@ -195,6 +207,7 @@ export const REGISTRY_AUTHORITY_PRESENTATION: Readonly<
     nameKey: `${R}.regionalAuthority.name`,
     abbreviationKey: `${R}.regionalAuthority.abbreviation`,
   },
+  ypen: { nameKey: `${R}.ypen.name`, abbreviationKey: `${R}.ypen.abbreviation` },
 } as const;
 
 // =============================================================================

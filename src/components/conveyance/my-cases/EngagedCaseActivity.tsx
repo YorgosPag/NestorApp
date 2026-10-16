@@ -12,7 +12,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { getChecklistItem } from '@/config/conveyance-checklist/catalog';
+import { checklistItemOfRowKey } from '@/config/conveyance-checklist/row-key';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { fetchEngagedCaseActivity } from '@/services/conveyance/conveyance-engagement-gateway';
 import { formatDateTime } from '@/lib/intl-utils';
@@ -47,7 +47,7 @@ const ACTIVITY_KIND_KEY: Readonly<Record<CaseActivityItem['kind'], string>> = {
 /** Το όνομα του εγγράφου: το αρχείο, ή — για αιτήματα (Φ4.5) — η γραμμή του καταλόγου στη γλώσσα του θεατή. */
 function documentLabel(item: CaseActivityItem, t: (key: string) => string): string {
   if (item.documentName) return item.documentName;
-  const labelKey = item.itemId ? getChecklistItem(item.itemId)?.labelKey : undefined;
+  const labelKey = item.itemId ? checklistItemOfRowKey(item.itemId)?.labelKey : undefined;
   return labelKey ? t(labelKey) : t('engagement.case.activity.unnamed');
 }
 

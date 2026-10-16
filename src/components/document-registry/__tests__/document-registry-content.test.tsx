@@ -17,7 +17,7 @@ import {
   ISSUER_AUTHORITY_LABEL_KEYS,
   ISSUER_KEYS,
   ISSUER_QUALIFICATION_LABEL_KEYS,
-  ISSUER_REGISTRY_LABEL_KEYS,
+  LICENCE_REGISTRY_LABEL_KEYS,
   OBLIGOR_LABEL_KEYS,
   REGISTRY_KEYS,
   REGISTRY_STATE_LABEL_KEYS,
@@ -354,7 +354,7 @@ describe('ADR-915 §18 — «Εκδίδει · Το φέρνει»', () => {
     );
     const registered = `${ISSUER_KEYS.registered} ${JSON.stringify({
       qualification: ISSUER_QUALIFICATION_LABEL_KEYS['energy-inspector-registered'],
-      registry: ISSUER_REGISTRY_LABEL_KEYS['ypen-energy-inspectors'],
+      registry: LICENCE_REGISTRY_LABEL_KEYS['energy-inspector'],
     })}`;
     expect(within(container).getByText(registered)).toBeTruthy();
     expect(within(container).getByText(APPOINTED_BY_LABEL_KEYS.owner)).toBeTruthy();

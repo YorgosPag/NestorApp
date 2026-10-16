@@ -109,6 +109,12 @@ export function readDocumentFacts(raw: unknown): DocumentFacts | null {
 /** Τι κάνει ο γραφέας. `outranked` = υπάρχει ήδη ανάγνωση του εγγράφου, και η δήλωση ανθρώπου **δεν** την αντικαθιστά. */
 export type DocumentFactsVerdict = 'write' | 'already-recorded' | 'outranked';
 
+/**
+ * Η έκβαση του ΕΝΟΣ γραφέα (`recordDocumentFacts`) — εδώ, ώστε να τη διαβάζει και ο client (ADR-915 §20).
+ * `no-file` = το αρχείο δεν υπάρχει (πια) · `not-this-object` = η εγγραφή δείχνει πλέον άλλα bytes — τίποτα δεν γράφτηκε.
+ */
+export type RecordDocumentFactsOutcome = DocumentFactsVerdict | 'no-file' | 'not-this-object';
+
 const sameSource = (a: DocumentFactsSource, b: DocumentFactsSource): boolean =>
   a.kind === 'document-text' && b.kind === 'document-text'
     ? a.reader === b.reader

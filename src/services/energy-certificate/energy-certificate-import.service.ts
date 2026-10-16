@@ -32,13 +32,15 @@ import type { PeaImportOutcome } from '@/lib/energy-certificate/pea-import-outco
 import { peaProposalOf } from '@/lib/energy-certificate/pea-proposal';
 import { readPeaText } from '@/lib/energy-certificate/pea-text';
 import type { PeaReading } from '@/lib/energy-certificate/pea-text';
+import { peaTextFacts } from '@/lib/document-validity/document-text-facts';
 import { judgeContainerFile } from '@/lib/files/container-file-verdict';
 import type { ContainerFileScope } from '@/server/files/document-facts-read';
-import { recordDocumentFacts, type DocumentFactsClaim, type RecordDocumentFactsInput, type RecordDocumentFactsOutcome } from '@/server/files/document-facts-writer';
-import { downloadFileRecordBytes, type FileBytesReader } from '@/server/files/download-file-record-bytes';
+import { recordDocumentFacts, type DocumentFactsClaim } from '@/server/files/document-facts-writer';
+import { DOCUMENT_TEXT_MAX_BYTES, downloadFileRecordBytes } from '@/server/files/download-file-record-bytes';
+import type { DocumentTextDeps } from '@/server/files/document-text-reading';
 
-/** Το ΠΕΑ είναι δύο σελίδες κειμένου· 10 MB κόβει το PDF-βόμβα, όπως στο ΠΚΑ. */
-export const PEA_MAX_BYTES = 10 * 1024 * 1024;
+/** Το ΠΕΑ είναι δύο σελίδες κειμένου· 10 MB κόβει το PDF-βόμβα — το ΕΝΑ όριο κάθε ανάγνωσης κειμένου εγγράφου. */
+export const PEA_MAX_BYTES = DOCUMENT_TEXT_MAX_BYTES;
 /** Το έντυπο έχει δύο σελίδες· διαβάζονται λίγες παραπάνω για ανοχή, ποτέ ολόκληρο ένα λάθος PDF εκατό σελίδων. */
 const PEA_MAX_PAGES = 4;
 
@@ -51,23 +53,16 @@ export interface EnergyCertificateImportTarget extends ContainerFileScope {
   readonly actorUid: string;
 }
 
-export interface EnergyCertificateImportDeps {
-  readonly readPdfText: (pdf: Buffer, options: { readonly maxPages: number }) => Promise<string[]>;
-  readonly readBytes?: FileBytesReader;
-  /** Ο ΕΝΑΣ γραφέας γεγονότων εγγράφου — αντικαθίσταται μόνο σε test. */
-  readonly recordFacts?: (db: AdminFirestore, input: RecordDocumentFactsInput) => Promise<RecordDocumentFactsOutcome>;
-}
+/** Οι θύρες κάθε ανάγνωσης κειμένου εγγράφου — **οι ίδιες** με την ανάγνωση στο ανέβασμα (ADR-915 §20). */
+export type EnergyCertificateImportDeps = DocumentTextDeps;
 
-/** Ό,τι διάβασε ο αναγνώστης ΠΕΑ, ως γεγονότα εγγράφου — ή `null` όταν η έκδοση δεν διαβάστηκε. */
+/**
+ * Ό,τι διάβασε ο αναγνώστης ΠΕΑ, ως γεγονότα εγγράφου — ή `null` όταν η έκδοση δεν διαβάστηκε. Η μετάφραση ζει
+ * **μία** φορά (`peaTextFacts`, ADR-915 §20) — την ίδια χρησιμοποιεί η ανάγνωση στο ανέβασμα.
+ */
 export function peaDocumentFacts(reading: PeaReading, actorUid: string): DocumentFactsClaim | null {
-  if (reading.issuedOn === null) return null;
-  return {
-    kind: 'energy-certificate',
-    issuedOn: reading.issuedOn,
-    printedValidUntil: reading.validUntil,
-    source: { kind: 'document-text', reader: 'pea-text' },
-    recordedBy: actorUid,
-  };
+  const facts = peaTextFacts(reading);
+  return facts === null ? null : { ...facts, recordedBy: actorUid };
 }
 
 /** Ένα ανεβασμένο ΠΕΑ → η πρόταση για το μπλοκ, ή άρνηση με όνομα. */

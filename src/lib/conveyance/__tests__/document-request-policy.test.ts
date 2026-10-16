@@ -16,6 +16,7 @@ import { getChecklistItem, itemsForProfile } from '@/config/conveyance-checklist
 import { CONVEYANCE_PROFILES, type ChecklistItem } from '@/config/conveyance-checklist/types';
 import { contributionEntryPointIds, judgeContribution } from '../contribution-policy';
 import { deriveChecklist } from '../derive-checklist';
+import { testFacts, testRows } from '../__fixtures__/case-rows-fixture';
 import { DOCUMENT_REQUEST_BATCH_MAX } from '@/config/engagement-policy';
 import type { ChecklistRow, ChecklistRowStatus, ConveyanceCaseState, EvidenceFile } from '@/types/conveyance-case';
 import type { DocumentRequestView } from '@/types/conveyance-document-request';
@@ -64,7 +65,7 @@ function canFulfil(recipient: 'host' | LegalProfessionalRole, item: ChecklistIte
 /** Η γραμμή όπως είναι όταν **ισχύει** και δεν έχει ακόμη τίποτα — κατάσταση από τον ΠΡΑΓΜΑΤΙΚΟ πυρήνα, όχι επινοημένη. */
 function owedRow(item: ChecklistItem): ChecklistRow {
   const facts = item.requirement.kind === 'when' ? { [item.requirement.fact]: item.requirement.equals } : {};
-  return deriveChecklist({ items: [item], facts, overrides: {}, evidence: [], sealed: [], today: '2026-10-03', targetSigningDate: null, viewer: 'host' }).rows[0];
+  return deriveChecklist({ rows: testRows([item]), facts: testFacts(facts), overrides: {}, evidence: [], sealed: [], today: '2026-10-03', targetSigningDate: null, viewer: 'host' }).rows[0];
 }
 
 const judge = (itemId: string, requester: Parameters<typeof requestTargetOf>[0]['requester'], active = ALL_ROLES, state: ConveyanceCaseState = 'open') =>

@@ -18,7 +18,8 @@ import { FIELDS } from '@/config/firestore-field-constants';
 import { caseDocumentRequirements } from '@/lib/conveyance/case-document-requirements';
 import { effectiveCaseState } from '@/lib/conveyance/case-state';
 import { parseConveyanceCase } from '@/lib/conveyance/conveyance-case-schema';
-import { deriveFacts, resolveFacts } from '@/lib/conveyance/derive-facts';
+import { resolveCaseFacts } from '@/lib/conveyance/case-rows';
+import { deriveFacts } from '@/lib/conveyance/derive-facts';
 import type { DocumentRequirement } from '@/lib/document-validity/document-requirement';
 import { subjectContextOf } from '@/services/conveyance/conveyance-subject.server';
 import type { ConveyanceCase } from '@/types/conveyance-case';
@@ -56,7 +57,7 @@ function caseRequirementsOf(record: ConveyanceCase, properties: ReadonlyMap<stri
   if (property === undefined) return [];
   const context = subjectContextOf(property.id, property.data, null);
   if (effectiveCaseState(record.storedState, context.legalPhase) !== 'open') return [];
-  return caseDocumentRequirements(record, resolveFacts(deriveFacts(context.factSources), record.facts));
+  return caseDocumentRequirements(record, resolveCaseFacts(deriveFacts(context.factSources), record));
 }
 
 export function openCaseRequirements(

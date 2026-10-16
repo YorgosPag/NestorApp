@@ -112,6 +112,11 @@ export const DIRECTORY_KEYS = {
   whereChipCircleNamed: `${D}.whereChipCircleNamed`,
   /** 🔑 **Περιέχει το ΟΡΑΤΟ κείμενο** — WCAG 2.5.3 · δες `components/ui/filter-chip`. */
   whereChipRemove: `${D}.whereChipRemove`,
+  /** ADR-915 §21 — «ποιος μπορεί να εκδώσει αυτό το έγγραφο» (`DocumentIssuerFilter`) + το κριτήριο, ρητά. */
+  issuerChip: `${D}.issuerChip`,
+  issuerCriterionLicence: `${D}.issuerCriterionLicence`,
+  issuerCriterionOccupation: `${D}.issuerCriterionOccupation`,
+  issuerCriterionAuthority: `${D}.issuerCriterionAuthority`,
   /**
    * **Το προσβάσιμο όνομα της περιοχής «τι φιλτράρω τώρα»**.
    *
@@ -224,6 +229,9 @@ export const CREDIBILITY_KEYS = {
   claimChapter: `${C}.claim.chapter`,
   claimDeclared: `${C}.claim.declared`,
   claimVerified: `${C}.claim.verified`,
+  /** ADR-915 §21 — ο σύνδεσμος προς το δημόσιο μητρώο της άδειας: ο επισκέπτης ελέγχει τον αριθμό ο ίδιος. */
+  licenceLookup: `${C}.licence.lookup`,
+  licenceLookupHint: `${C}.licence.lookupHint`,
 } as const;
 
 /**

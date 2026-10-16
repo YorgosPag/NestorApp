@@ -50,6 +50,7 @@ import { Link } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { PublicShowcase } from '@/types/agency-profile';
 import { CredibilityStatement } from './CredibilityStatement';
+import { LicenceStatement } from './LicenceStatement';
 import { AGENCY_PUBLIC_NS, DIRECTORY_KEYS } from './agency-directory-labels';
 import { agencyProfileRoute } from './agency-directory-route';
 import { ShowcaseMarkView, showcaseMarkSubjectOf } from './ShowcaseMarkView';
@@ -198,6 +199,10 @@ export function AgencyCard({
           */}
           {profile.credentials.map((credential) => (
             <CredibilityStatement key={credential.occupation.escoUri} credential={credential} />
+          ))}
+          {/* ADR-915 §21 — άδειες ΕΠΙΠΛΕΟΝ του επαγγέλματος (π.χ. ενεργειακός επιθεωρητής), με τον δρόμο ελέγχου. */}
+          {profile.licences.map((licence) => (
+            <LicenceStatement key={licence.licence} licence={licence} />
           ))}
           {/*
             🏆 **Η ΔΗΛΩΣΗ ΕΙΝΑΙ ΟΡΑΤΗ — ΚΑΙ ΕΔΩ ΞΕΠΕΡΝΑΜΕ ΤΟΥΣ ΜΕΓΑΛΟΥΣ** (ADR-846).

@@ -151,6 +151,7 @@ function newCase(actor: ConveyanceActor, context: ConveyanceSubjectContext, now:
     profile: context.factSources.profile,
     parties: context.parties,
     facts: {},
+    partyFacts: {},
     overrides: {},
     storedState: 'open',
     targetSigningDate: null,

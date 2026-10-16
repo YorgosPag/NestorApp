@@ -263,6 +263,9 @@ export async function publishShowcase(
       const keptLocations = existing?.outcome === 'showcase' ? existing.showcase.locations : [];
       // 🔴 Α21.17 — **ΤΕΤΑΡΤΟΣ** καταναλωτής: η ιστοσελίδα γράφεται από την πράξη της κάρτας, άρα μεταφέρεται.
       const keptWebsite = existing?.outcome === 'showcase' ? existing.showcase.website : null;
+      // 🔴 ADR-915 §21 — **ΠΕΜΠΤΟΣ** καταναλωτής: οι άδειες είναι δική τους πράξη (`showcase-licence-custody`), η
+      //    οθόνη της βιτρίνας δεν τις στέλνει, και το `set` είναι χωρίς `merge` ⇒ χωρίς μεταφορά θα σβήνονταν.
+      const keptLicences = existing?.outcome === 'showcase' ? existing.showcase.licences : [];
 
       // 🏆 ADR-841 §7 Α23 — **ΟΝΟΜΑ, ΝΟΜΙΚΗ ΤΑΥΤΟΤΗΤΑ ΚΑΙ ΔΙΑΠΙΣΤΕΥΤΗΡΙΑ, ΑΠΟ ΜΙΑ ΚΡΙΣΗ.** Προφίλ και
       //    αντίγραφο ΓΕΜΗ διαβάζονται **εδώ**, ώστε μια μετονομασία που προλαβαίνει να ξανατρέξει τη
@@ -279,6 +282,7 @@ export async function publishShowcase(
         alias: declaration.alias.trim(),
         displayName: formed.displayName,
         credentials: formed.credentials,
+          licences: keptLicences,
         legalIdentity: formed.legalIdentity,
         place: declaration.place,
         position: declaration.position,

@@ -8,6 +8,7 @@ import { conveyanceRequirements } from '@/lib/conveyance/conveyance-requirements
 import { isExpiredOn } from '@/lib/legality/legality-signal';
 import { publicationRequirements } from '@/lib/legality/publication-requirements';
 import { ruleExpiresOn } from '../document-expiry';
+import { testRows } from '@/lib/conveyance/__fixtures__/case-rows-fixture';
 import {
   absentDependentsOf,
   dependentsOf,
@@ -145,7 +146,7 @@ describe('Φ4δ — ο ΕΝΑΣ κριτής κάλυψης (Ε9) και το «
 });
 
 describe('παραγωγοί — οι υπάρχοντες κατάλογοι ΕΙΝΑΙ οι απαιτήσεις', () => {
-  const conveyance = conveyanceRequirements({ items: CONVEYANCE_CHECKLIST, caseId: 'case_1', propertyId: PROPERTY, targetSigningDate: '2026-12-15' });
+  const conveyance = conveyanceRequirements({ rows: testRows(CONVEYANCE_CHECKLIST), caseId: 'case_1', propertyId: PROPERTY, targetSigningDate: '2026-12-15' });
 
   it('μεταβίβαση: ακριβώς οι γραμμές με `documentKind`, `block`, για την υπογραφή', () => {
     expect(conveyance.map((r) => [r.documentKind, r.policy, r.neededOn, r.warnWindowDays])).toEqual([
@@ -159,7 +160,7 @@ describe('παραγωγοί — οι υπάρχοντες κατάλογοι Ε
   });
 
   it('μεταβίβαση χωρίς ημέρα υπογραφής ⇒ `unscheduled`, όχι «δεν χρειάζεται»', () => {
-    const undated = conveyanceRequirements({ items: CONVEYANCE_CHECKLIST, caseId: 'c', propertyId: PROPERTY, targetSigningDate: null });
+    const undated = conveyanceRequirements({ rows: testRows(CONVEYANCE_CHECKLIST), caseId: 'c', propertyId: PROPERTY, targetSigningDate: null });
     expect(undated.map((r) => r.neededOn.kind)).toEqual(Array(5).fill('unscheduled'));
   });
 

@@ -133,6 +133,12 @@ export const AGENCY_SHOWCASE_CARD_ROUTE = `${AGENCY_SHOWCASE_ROUTE}/card` as con
 export const AGENCY_SHOWCASE_REGISTRY_ROUTE = `${AGENCY_SHOWCASE_ROUTE}/registry` as const;
 
 /**
+ * **ΟΙ ΑΔΕΙΕΣ** — υποσελίδα της βιτρίνας (ADR-915 §21): άδειες ΕΠΙΠΛΕΟΝ του επαγγέλματος (π.χ. ενεργειακός
+ * επιθεωρητής ΥΠΕΝ). Δική τους πράξη και δικό τους route slice, όπως η κάρτα (LinkedIn «Licenses & certifications»).
+ */
+export const AGENCY_SHOWCASE_LICENCES_ROUTE = `${AGENCY_SHOWCASE_ROUTE}/licences` as const;
+
+/**
  * **ΤΑ ΣΤΟΙΧΕΙΑ ΤΗΣ ΕΤΑΙΡΕΙΑΣ** (ADR-439 · ADR-841 §7 Α21.19) — εκεί στέλνει η κάρτα όποιον δεν έχει δηλώσει
  * ακόμη διεύθυνση και κανάλια, αντί να του ζητήσει να τα γράψει δεύτερη φορά.
  *

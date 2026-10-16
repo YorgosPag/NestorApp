@@ -26,7 +26,8 @@ import 'server-only';
 
 import type { Firestore } from 'firebase-admin/firestore';
 
-import { getChecklistItem, itemsForProfile } from '@/config/conveyance-checklist/catalog';
+import { checklistItemOfRowKey } from '@/config/conveyance-checklist/row-key';
+import { resolveCaseRow } from '@/lib/conveyance/case-rows';
 import type { ChecklistItem } from '@/config/conveyance-checklist/types';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -85,10 +86,12 @@ export type WithdrawContributionOutcome =
   | { readonly ok: true; readonly kind: 'withdrawn' | 'already-withdrawn'; readonly contribution: ConveyanceContribution }
   | Rejection;
 
-/** Η γραμμή — **μόνο** αν ανήκει στο προφίλ της υπόθεσης (ποτέ γραμμή άλλου καταλόγου από το σύρμα). */
+/**
+ * Η γραμμή — **μόνο** αν ανήκει σε αυτή την υπόθεση (ποτέ γραμμή άλλου καταλόγου από το σύρμα· ADR-915 §22: ούτε
+ * γραμμή προσώπου που δεν είναι μέρος της υπόθεσης). Ο ΕΝΑΣ επιλυτής γραμμών (`resolveCaseRow`).
+ */
 function itemOfCase(access: EngagedCaseAccess, itemId: string): ChecklistItem | null {
-  const item = getChecklistItem(itemId);
-  return item && itemsForProfile(access.record.profile).includes(item) ? item : null;
+  return resolveCaseRow(access.record, itemId)?.item ?? null;
 }
 
 function caseStateOf(access: EngagedCaseAccess) {
@@ -207,7 +210,7 @@ async function writeWithdraw(db: Firestore, access: EngagedCaseAccess, request: 
     if (current.withdrawnAt !== null) return { kind: 'already-withdrawn' as const, contribution: current };
     const withdrawn = { ...current, withdrawnAt: new Date(request.nowMs).toISOString(), withdrawnBy: request.uid };
     tx.update(ref, { withdrawnAt: withdrawn.withdrawnAt, withdrawnBy: withdrawn.withdrawnBy });
-    const item = getChecklistItem(current.checklistItemId);
+    const item = checklistItemOfRowKey(current.checklistItemId);
     // Γραμμή που δεν υπάρχει πια στον κατάλογο ⇒ μόνο ο συντάκτης (fail-closed, όπως το `audienceOfTransmittal`).
     if (item) signalCaseChangeInTx(tx, db, { kind: 'transmittal', authorRole: current.authorRole, item }, viewers);
     else signalViewsInTx(tx, db, [engagementViewOf(access.engagement)]);

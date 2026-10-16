@@ -23,8 +23,10 @@ import { cn } from '@/lib/utils';
 import type { ConveyanceCommand } from '@/lib/conveyance/conveyance-commands';
 import { reviewIssuedOnOf, type ReviewIssuedOn } from '@/lib/conveyance/review-attestation';
 import { ruleExpires } from '@/lib/document-validity/document-expiry';
+import type { DocumentTextFacts } from '@/lib/document-validity/document-text-facts';
 import type { ChecklistRow } from '@/types/conveyance-case';
 import type { RowDialogMode } from './ConveyanceChecklistRow';
+import { ConveyanceDocumentTextAction } from './ConveyanceDocumentTextAction';
 import { ConveyanceIssuedOnField } from './ConveyanceIssuedOnField';
 import { ConveyanceValidUntilField } from './ConveyanceValidUntilField';
 
@@ -40,6 +42,8 @@ interface DeclaredDates {
 const NO_DATES: DeclaredDates = { issuedOn: undefined, validUntil: undefined };
 
 interface ConveyanceRowDialogProps {
+  /** ADR-915 §20 — η υπόθεση, για την «Ανάγνωση από το έγγραφο». */
+  readonly caseId: string;
   readonly target: { readonly row: ChecklistRow; readonly mode: RowDialogMode } | null;
   readonly onClose: () => void;
   readonly onSubmit: (command: ConveyanceCommand) => void;
@@ -121,16 +125,19 @@ function RowDialogHeader({ row, mode }: { readonly row: ChecklistRow; readonly m
 }
 
 interface AcceptDateFieldsProps {
+  readonly caseId: string;
   readonly row: ChecklistRow;
   readonly known: ReviewIssuedOn;
   readonly dates: DeclaredDates;
   readonly onChange: (update: (current: DeclaredDates) => DeclaredDates) => void;
+  readonly onRead: (facts: DocumentTextFacts) => void;
 }
 
 /** Οι ημερομηνίες της αποδοχής: έκδοση (κάθε κανόνας που λήγει) + τυπωμένη λήξη (μόνο `printed`, ADR-915 §14). */
-function AcceptDateFields({ row, known, dates, onChange }: AcceptDateFieldsProps) {
+function AcceptDateFields({ caseId, row, known, dates, onChange, onRead }: AcceptDateFieldsProps) {
   return (
     <>
+      {hasValidity(row) && <ConveyanceDocumentTextAction key={row.files[0]?.fingerprint ?? row.itemId} caseId={caseId} row={row} known={known} onRead={onRead} />}
       {hasValidity(row) && (
         <ConveyanceIssuedOnField value={dates.issuedOn} onChange={(issuedOn) => onChange((d) => ({ ...d, issuedOn }))} known={known} />
       )}
@@ -147,16 +154,36 @@ function AcceptDateFields({ row, known, dates, onChange }: AcceptDateFieldsProps
   );
 }
 
-export function ConveyanceRowDialog({ target, onClose, onSubmit }: ConveyanceRowDialogProps) {
+/**
+ * ADR-915 §20 — ό,τι ξέρει ο διάλογος για το αρχείο: τα γεγονότα της όψης, ή — μόλις ο άνθρωπος ζητήσει «Ανάγνωση από
+ * το έγγραφο» — ό,τι διαβάστηκε **τώρα** (η όψη θα το φέρει κι αυτή μέσω CDC, αλλά ο άνθρωπος δεν περιμένει).
+ */
+function useReviewDates(target: ConveyanceRowDialogProps['target']) {
+  const [dates, setDates] = useState<DeclaredDates>(NO_DATES);
+  const [readFacts, setReadFacts] = useState<DocumentTextFacts | null>(null);
+  const file = target?.row.files[0];
+  const reviewed = file && readFacts ? { ...file, documentFacts: readFacts } : file;
+  const known = target ? reviewIssuedOnOf(target.row.item, reviewed) : NOTHING_KNOWN;
+
+  useEffect(() => {
+    setReadFacts(null);
+    setDates(target ? prefilledDates(reviewIssuedOnOf(target.row.item, target.row.files[0])) : NO_DATES);
+  }, [target]);
+
+  const onRead = (facts: DocumentTextFacts) => {
+    setReadFacts(facts);
+    if (target && file) setDates(prefilledDates(reviewIssuedOnOf(target.row.item, { ...file, documentFacts: facts })));
+  };
+  return { known, dates, setDates, onRead };
+}
+
+export function ConveyanceRowDialog({ caseId, target, onClose, onSubmit }: ConveyanceRowDialogProps) {
   const { t } = useTranslation(['conveyance']);
   const [reason, setReason] = useState('');
-  const [dates, setDates] = useState<DeclaredDates>(NO_DATES);
-
-  const known = target ? reviewIssuedOnOf(target.row.item, target.row.files[0]) : NOTHING_KNOWN;
+  const { known, dates, setDates, onRead } = useReviewDates(target);
 
   useEffect(() => {
     setReason('');
-    setDates(target ? prefilledDates(reviewIssuedOnOf(target.row.item, target.row.files[0])) : NO_DATES);
   }, [target]);
 
   if (!target) return null;
@@ -172,7 +199,7 @@ export function ConveyanceRowDialog({ target, onClose, onSubmit }: ConveyanceRow
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent>
         <RowDialogHeader row={row} mode={mode} />
-        {mode === 'accept' && <AcceptDateFields row={row} known={known} dates={dates} onChange={setDates} />}
+        {mode === 'accept' && <AcceptDateFields caseId={caseId} row={row} known={known} dates={dates} onChange={setDates} onRead={onRead} />}
         {needsReason && <ReasonField value={reason} onChange={setReason} />}
         <DialogActionFooter
           cancelLabel={t('actions.cancel')}

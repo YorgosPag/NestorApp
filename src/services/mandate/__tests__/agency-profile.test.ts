@@ -103,8 +103,7 @@ function declaration(
     alias: 'mesitiko-pagoni',
     // 🔑 Α23 — επιλογή, όχι κείμενο: το όνομα λύνεται από το προφίλ που στήνει το `db()`.
     legal: LEGAL_NAME_CHOICE,
-    credentials,
-    place: null,
+    credentials,    place: null,
     position: null,
     // ⛔ **ΚΑΝΕΝΑ `mark` ΕΔΩ ΠΙΑ** (ADR-841 §7 Α21.8): έγινε **δική του πράξη**, γιατί η
     //    οθόνη **δεν είχε από πού** να ξαναστείλει το ιδιωτικό μονοπάτι — διαβάζει πίσω

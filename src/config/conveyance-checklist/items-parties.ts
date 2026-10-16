@@ -31,13 +31,20 @@ const NO_EXPIRY: Validity = { kind: 'none' };
 const UNVERIFIED: Validity = { kind: 'unverified' };
 const when = (fact: ConveyanceFactId, equals = true): Requirement => ({ kind: 'when', fact, equals });
 
-/** Έγγραφο πωλητή: πάντα από την επαφή του πωλητή, ορατό μόνο στην πλευρά του + συμβολαιογράφο. */
+/**
+ * Έγγραφο πωλητή: πάντα από την επαφή του πωλητή, ορατό μόνο στην πλευρά του + συμβολαιογράφο.
+ *
+ * 🔑 ADR-915 §22 — **ένα ανά συμπωλητή** (`partyRole: 'seller'`): ο νόμος ζητά τα προσωπικά έγγραφα από κάθε
+ *    συμβαλλόμενο (Α.1008/2021 άρθρο 1 παρ. 1 · άρθρο 3 παρ. 8 — «ο οικοπεδούχος ή/και ο εργολάβος»), άρα κάθε πρόσωπο
+ *    έχει τη δική του γραμμή, τα δικά του αρχεία (της **δικής του** επαφής) και τα δικά του γεγονότα.
+ */
 function sellerDocument(id: string, entryPointIds: readonly string[], requirement: Requirement, validity: Validity): ChecklistItem {
   return {
     id,
     section: 'seller',
     labelKey: `items.${id}.label`,
     provider: 'seller',
+    partyRole: 'seller',
     visibleTo: SELLER_PRIVATE,
     requirement,
     validity,

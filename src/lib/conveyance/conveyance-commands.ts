@@ -30,6 +30,11 @@ const conveyanceCommandSchema = z.discriminatedUnion('type', [
     factId: z.enum(CONVEYANCE_FACT_IDS),
     /** `null` = απόσυρση απάντησης (επιστροφή στο παραγόμενο). */
     value: z.boolean().nullable(),
+    /**
+     * ADR-915 §22 — **ποιου** προσώπου, για γεγονός προσώπου (`isPartyFact`): υποχρεωτικό εκεί, απαγορευμένο αλλού
+     * (`party_required` / `party_not_applicable`). Το `ConveyanceSellerParty.key`.
+     */
+    partyKey: z.string().min(1).max(MAX_ID_LENGTH).optional(),
   }),
   z.object({ type: z.literal('mark_not_applicable'), itemId: itemIdSchema, reason: reasonSchema }),
   z.object({
@@ -64,7 +69,12 @@ export type ConveyanceCommandRequest = z.infer<typeof conveyanceCommandRequestSc
 /** Γιατί απορρίφθηκε μια εντολή — κλειστό σύνολο, ο route το μεταφράζει σε HTTP. */
 const COMMAND_REJECTIONS = [
   'not_editable',
+  /** Άγνωστη γραμμή — ή γραμμή προσώπου που δεν είναι (πια) μέρος της υπόθεσης (ADR-915 §22). */
   'unknown_item',
+  /** ADR-915 §22 — γεγονός προσώπου χωρίς πρόσωπο, ή με πρόσωπο που δεν είναι μέρος της υπόθεσης. */
+  'party_required',
+  /** ADR-915 §22 — γεγονός της υπόθεσης με πρόσωπο: η απάντηση δεν θα μετρούσε πουθενά. */
+  'party_not_applicable',
   'file_not_evidence',
   'reason_required',
   'invalid_date',

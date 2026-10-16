@@ -23,6 +23,7 @@
  */
 
 import type { AgencyProfileRejection } from '@/services/mandate/agency-profile-verdict';
+import type { ShowcaseLicenceRejection } from '@/lib/agency/showcase-licence';
 import type { ShowcaseMarkKind } from '@/lib/agency/showcase-mark-kind';
 import type { CoverageOutlineDefect } from '@/lib/agency/coverage-outline';
 import type { WeeklyHoursDefect } from '@/lib/calendar/weekly-hours';
@@ -62,6 +63,19 @@ export const SHOWCASE_KEYS = {
   registryLabel: `${K}.registryLabel`,
   registryHint: `${K}.registryHint`,
   registryPlaceholder: `${K}.registryPlaceholder`,
+  /** ADR-915 §21 — άδειες επιπλέον του επαγγέλματος (`ShowcaseLicenceField`). */
+  licencesLabel: `${K}.licencesLabel`,
+  licencesHint: `${K}.licencesHint`,
+  licenceHold: `${K}.licenceHold`,
+  /** Η υποσελίδα «Άδειες» και η πόρτα της (ADR-915 §21 — δική τους πράξη, όπως η κάρτα). */
+  licencesTitle: `${K}.licencesTitle`,
+  licencesLead: `${K}.licencesLead`,
+  licencesDoor: `${K}.licencesDoor`,
+  licencesDoorNone: `${K}.licencesDoorNone`,
+  licencesDoorCount: `${K}.licencesDoorCount`,
+  licencesSave: `${K}.licencesSave`,
+  licencesSaved: `${K}.licencesSaved`,
+  licencesNeedsShowcase: `${K}.licencesNeedsShowcase`,
   chapterLabel: `${K}.chapterLabel`,
   chapterHint: `${K}.chapterHint`,
   chapterPlaceholder: `${K}.chapterPlaceholder`,
@@ -251,6 +265,16 @@ export const SHOWCASE_MARK_ADVICE_KEYS: Record<ShowcaseMarkKind, string> = {
  *
  * 🔴 `Record<…>` πάνω στο **κλειστό σύνολο** — δες το σκεπτικό στην κορυφή.
  */
+/**
+ * ADR-915 §21 — οι αρνήσεις της πράξης «άδειες»: **χωριστός** πίνακας, γιατί τον ζητά **μόνο** η υποσελίδα «Άδειες» —
+ * στον ενιαίο πίνακα θα ταξίδευαν στο route slice της φόρμας της βιτρίνας (CHECK 3.34 Κ2).
+ */
+export const SHOWCASE_LICENCE_REJECTION_KEYS: Record<ShowcaseLicenceRejection, string> = {
+  'licence-number-missing': `${K}.licenceRejection.licence-number-missing`,
+  'licence-duplicate': `${K}.licenceRejection.licence-duplicate`,
+  'licences-without-showcase': `${K}.licenceRejection.licences-without-showcase`,
+};
+
 export const SHOWCASE_REJECTION_KEYS: Record<AgencyProfileRejection, string> = {
   'agency-profile-alias-missing': `${K}.rejection.agency-profile-alias-missing`,
   'agency-profile-name-missing': `${K}.rejection.agency-profile-name-missing`,

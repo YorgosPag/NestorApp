@@ -27,8 +27,8 @@ import type {
   DocumentObligor,
   IssuerAuthority,
   IssuerQualification,
-  IssuerRegistry,
 } from '@/config/document-validity/document-issuers';
+import type { ProfessionalLicence } from '@/config/professional-licences';
 import type { DocumentKind } from '@/config/document-validity/document-validity';
 import type { ExpirySource } from '@/lib/document-validity/document-expiry';
 import type { RegistryRowState } from '@/lib/document-validity/document-registry';
@@ -48,6 +48,8 @@ export const REGISTRY_NS = 'document-registry';
  *     γεννήτορας του route slice διαβάζει στατικά το όρισμα — ένα spread θα άφηνε τα κλειδιά «χωρίς namespace». */
 export const CONVEYANCE_NS = 'conveyance';
 export const LEGALITY_NS = 'legality';
+/** ADR-915 §21 — το όνομα της **άδειας** και της **αρχής** της ζουν μία φορά, στο namespace της βιτρίνας (`property-market`). */
+export const PROPERTY_MARKET_NS = 'property-market';
 
 const K = 'document-registry:';
 
@@ -171,11 +173,17 @@ export const ISSUER_QUALIFICATION_LABEL_KEYS: Readonly<Record<IssuerQualificatio
   'spatial-planner': `${K}issuer.qualification.spatial-planner`,
   'civil-sub-engineer': `${K}issuer.qualification.civil-sub-engineer`,
   'civil-engineer-tei': `${K}issuer.qualification.civil-engineer-tei`,
-  'energy-inspector-registered': `${K}issuer.qualification.energy-inspector-registered`,
+  // Προσόν-άδεια ⇒ το ΟΝΟΜΑ ΤΗΣ ΑΔΕΙΑΣ, ένα κλειδί (`PROFESSIONAL_LICENCE_SPECS.nameKey` — άγκυρα ισότητας στο test).
+  'energy-inspector-registered': 'property-market:licences.energyInspector.name',
 };
 
-export const ISSUER_REGISTRY_LABEL_KEYS: Readonly<Record<IssuerRegistry, string>> = {
-  'ypen-energy-inspectors': `${K}issuer.registry.ypen-energy-inspectors`,
+/**
+ * Σε ποιο μητρώο είναι γραμμένη κάθε άδεια — το όνομα της ΑΡΧΗΣ (`REGISTRY_AUTHORITY_PRESENTATION[authority].nameKey`).
+ * ⚠️ Κυριολεκτικό κλειδί και όχι αναφορά: ο τεμαχιστής του CHECK 3.34 λύνει `t(TABLE[x])` μόνο για πίνακα του ίδιου
+ *    module· η ισότητα με την πηγή κλειδώνεται με άγκυρα.
+ */
+export const LICENCE_REGISTRY_LABEL_KEYS: Readonly<Record<ProfessionalLicence, string>> = {
+  'energy-inspector': 'property-market:registries.ypen.name',
 };
 
 export const ISSUER_AUTHORITY_LABEL_KEYS: Readonly<Record<IssuerAuthority, string>> = {

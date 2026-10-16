@@ -27,6 +27,7 @@ import {
 } from '../contribution-evidence';
 import { contributableItemIds, judgeContribution } from '../contribution-policy';
 import { deriveChecklist } from '../derive-checklist';
+import { testFacts, testRows } from '../__fixtures__/case-rows-fixture';
 
 function item(id: string): ChecklistItem {
   const found = getChecklistItem(id);
@@ -61,7 +62,7 @@ const ALL = [SELLER_REPORT, BUYER_REPORT, NOTARY_DRAFT];
 function rowFileIds(viewer: CaseViewerRole, itemId: string, contributions: readonly ConveyanceContribution[] = ALL): readonly string[] {
   const evidence = contributionEvidence({ contributions, activeContributors: ALL_ACTIVE, files: filesOf(contributions), viewer, viewerUid: null });
   const checklist = deriveChecklist({
-    items: [item(itemId)], facts: {}, overrides: {}, evidence, sealed: [], today: '2026-10-03', targetSigningDate: null, viewer,
+    rows: testRows([item(itemId)]), facts: testFacts({}), overrides: {}, evidence, sealed: [], today: '2026-10-03', targetSigningDate: null, viewer,
   });
   return checklist.rows[0]?.files.map((f) => f.fileId) ?? [];
 }
@@ -89,7 +90,7 @@ describe('Α23 — ακροατήριο από τον ρόλο του συντά
 describe('Α24 — πρόχειρο δεν γίνεται τεκμήριο', () => {
   it('χωρίς αποστολή: η γραμμή του συμβολαιογράφου μένει `notary_side`, όχι `uploaded`', () => {
     const checklist = deriveChecklist({
-      items: [item('contract_draft')], facts: {}, overrides: {}, sealed: [], today: '2026-10-03', targetSigningDate: null, viewer: 'host',
+      rows: testRows([item('contract_draft')]), facts: testFacts({}), overrides: {}, sealed: [], today: '2026-10-03', targetSigningDate: null, viewer: 'host',
       evidence: contributionEvidence({ contributions: [], activeContributors: ALL_ACTIVE, files: new Map(), viewer: 'host', viewerUid: null }),
     });
     expect(checklist.rows[0].status).toBe('notary_side');
@@ -192,7 +193,7 @@ const BUYER_ID = contribution('buyer_lawyer', 'buyer_identity', onBehalfEntryPoi
 function rowFor(viewer: CaseViewerRole, itemId: string, contributions: readonly ConveyanceContribution[]) {
   const delivery = { contributions, activeContributors: ALL_ACTIVE, files: filesOf(contributions), viewer };
   const checklist = deriveChecklist({
-    items: [item(itemId)], facts: {}, overrides: {}, today: '2026-10-03', targetSigningDate: null, viewer,
+    rows: testRows([item(itemId)]), facts: testFacts({}), overrides: {}, today: '2026-10-03', targetSigningDate: null, viewer,
     evidence: contributionEvidence({ ...delivery, viewerUid: null }),
     sealed: sealedDeliveries(delivery),
   });

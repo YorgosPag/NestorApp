@@ -4,11 +4,18 @@
  */
 
 import { PROJECT_ROLE_BRIDGE } from '@/config/profession-bridge.config';
+import { PROFESSIONAL_LICENCE_SPECS } from '@/config/professional-licences';
+import { REGISTRY_AUTHORITY_PRESENTATION } from '@/constants/professional-registries';
+import {
+  ISSUER_QUALIFICATION_LABEL_KEYS,
+  LICENCE_REGISTRY_LABEL_KEYS,
+} from '@/components/document-registry/document-registry-labels';
 import {
   ISSUER_QUALIFICATIONS,
   ISSUER_QUALIFICATION_SPECS,
 } from '@/config/document-validity/document-issuers';
 import { DOCUMENT_KINDS, documentKindSpec } from '@/config/document-validity/document-validity';
+import { escoDocIdOf, ESCO_OCCUPATION_URI_PREFIX } from '@/lib/esco/esco-uri';
 
 describe('ADR-915 §18 — εκδότες εγγράφων', () => {
   it('κάθε επαγγελματικός εκδότης έχει ≥1 προσόν, χωρίς διπλά, και ISO ή null επαλήθευση', () => {
@@ -22,20 +29,25 @@ describe('ADR-915 §18 — εκδότες εγγράφων', () => {
     expect(bad).toEqual([]);
   });
 
-  it('κάθε μη-null URI ESCO είναι ήδη επαληθευμένο στη γέφυρα ρόλων (κανένας επινοημένος κωδικός)', () => {
-    const verified = new Set(Object.values(PROJECT_ROLE_BRIDGE).map((entry) => entry.escoUri).filter(Boolean));
-    const invented = ISSUER_QUALIFICATIONS.filter((q) => {
-      const uri = ISSUER_QUALIFICATION_SPECS[q].escoUri;
-      return uri !== null && !verified.has(uri);
+  it('κάθε URI ESCO είναι πραγματικό occupation URI, χωρίς διπλά ανάμεσα σε προσόντα (κανένας επινοημένος κωδικός)', () => {
+    const uris = ISSUER_QUALIFICATIONS.flatMap((q) => {
+      const spec = ISSUER_QUALIFICATION_SPECS[q];
+      return spec.kind === 'occupation' ? spec.escoUris : [];
     });
-    expect(invented).toEqual([]);
+    expect(uris.filter((uri) => !uri.startsWith(ESCO_OCCUPATION_URI_PREFIX) || escoDocIdOf(uri) === null)).toEqual([]);
+    expect(new Set(uris).size).toBe(uris.length);
   });
 
-  it('το ΠΕΑ το εκδίδει ΜΟΝΟ προσόν με εγγραφή σε μητρώο (προσόν ≠ επάγγελμα)', () => {
+  it('τα προσόντα-ειδικότητες που εισάγονται από τη γέφυρα ρόλων ΣΥΜΦΩΝΟΥΝ μαζί της', () => {
+    const civil = ISSUER_QUALIFICATION_SPECS['civil-engineer'];
+    expect(civil).toEqual({ kind: 'occupation', escoUris: [PROJECT_ROLE_BRIDGE.structural_engineer.escoUri] });
+  });
+
+  it('το ΠΕΑ το εκδίδει ΜΟΝΟ προσόν-άδεια (άδεια ≠ επάγγελμα, ADR-915 §21)', () => {
     const { issuer } = documentKindSpec('energy-certificate');
     expect(issuer.kind).toBe('professional');
     if (issuer.kind !== 'professional') return;
-    expect(issuer.qualifications.every((q) => ISSUER_QUALIFICATION_SPECS[q].registry !== null)).toBe(true);
+    expect(issuer.qualifications.map((q) => ISSUER_QUALIFICATION_SPECS[q])).toEqual([{ kind: 'licence', licence: 'energy-inspector' }]);
   });
 
   it('χαρακτηρισμός: ΑΑΔΕ για φορολογική/ΕΝΦΙΑ · ΕΦΚΑ για ασφαλιστική · υπόχρεος πάντα ο ιδιοκτήτης', () => {
@@ -57,7 +69,19 @@ describe('ADR-915 §18 — εκδότες εγγράφων', () => {
   it('ο μηχανολόγος ΔΕΝ υπογράφει βεβαίωση άρθρου 83 (απόφαση Δ.Ε. ΤΕΕ)', () => {
     const { issuer } = documentKindSpec('building-identity');
     if (issuer.kind !== 'professional') throw new Error('expected professional issuer');
-    const mechanical = PROJECT_ROLE_BRIDGE.mechanical_engineer.escoUri;
-    expect(issuer.qualifications.some((q) => ISSUER_QUALIFICATION_SPECS[q].escoUri === mechanical)).toBe(false);
+    const mechanical = PROJECT_ROLE_BRIDGE.mechanical_engineer.escoUri ?? '';
+    const accepts = issuer.qualifications.some((q) => {
+      const spec = ISSUER_QUALIFICATION_SPECS[q];
+      return spec.kind === 'occupation' && spec.escoUris.includes(mechanical);
+    });
+    expect(accepts).toBe(false);
+  });
+});
+
+describe('ADR-915 §21 — οι ετικέτες των αδειών ΔΕΝ ξαναγράφονται', () => {
+  it('το κλειδί του προσόντος-άδειας και του μητρώου του = τα κλειδιά της πηγής (άδεια · αρχή)', () => {
+    const spec = PROFESSIONAL_LICENCE_SPECS['energy-inspector'];
+    expect(ISSUER_QUALIFICATION_LABEL_KEYS['energy-inspector-registered']).toBe(spec.nameKey);
+    expect(LICENCE_REGISTRY_LABEL_KEYS['energy-inspector']).toBe(REGISTRY_AUTHORITY_PRESENTATION[spec.authority].nameKey);
   });
 });

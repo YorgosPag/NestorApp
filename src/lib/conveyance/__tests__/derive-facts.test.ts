@@ -7,44 +7,53 @@
 
 import { getChecklistItem } from '@/config/conveyance-checklist/catalog';
 import { FACT_ENTAILMENTS } from '@/config/conveyance-checklist/fact-entailments';
-import type { ConveyanceFactId } from '@/config/conveyance-checklist/types';
-import type { ConveyanceFactAnswer } from '@/types/conveyance-case';
+import { isPartyFact, type ConveyanceFactId } from '@/config/conveyance-checklist/types';
+import type { ConveyanceFactAnswer, ConveyancePartyKind } from '@/types/conveyance-case';
+import { sellerParty } from '../case-parties';
 import { deriveChecklist } from '../derive-checklist';
-import { applyFactEntailments, deriveFacts, factEntailedBy, resolveFacts, type FactSources, type FactValues } from '../derive-facts';
+import {
+  applyFactEntailments, deriveFacts, derivePartyFacts, factEntailedBy, resolvePartyFacts, type FactSources, type FactValues,
+} from '../derive-facts';
+import { testFacts, testRows } from '../__fixtures__/case-rows-fixture';
 
 const COMPANY: FactSources = { profile: 'new_build_company', propertyType: 'apartment', appurtenanceCount: 0, landownerCount: 0 };
 
 const answer = (value: boolean): ConveyanceFactAnswer => ({ value, answeredBy: 'u1', answeredAt: '2026-10-16T10:00:00Z' });
 
+/** ADR-915 §22 — τα γεγονότα ΕΝΟΣ πωλητή: από το ίδιο το πρόσωπο + τις δικές του απαντήσεις. */
+function sellerFacts(kind: ConveyancePartyKind, answers: Partial<Record<'seller_insurance_liable' | 'seller_by_proxy', boolean>> = {}): FactValues {
+  const party = sellerParty('cont_p', kind);
+  const own = Object.fromEntries(Object.entries(answers).map(([factId, value]) => [factId, answer(value)]));
+  return resolvePartyFacts(party, { [party.key]: own });
+}
+
 function insuranceRowStatus(facts: FactValues): string {
   const item = getChecklistItem('seller_insurance_clearance');
   if (!item) throw new Error('missing catalog item seller_insurance_clearance');
   return deriveChecklist({
-    items: [item], facts, overrides: {}, evidence: [], sealed: [], today: '2026-10-16', targetSigningDate: null, viewer: 'host',
+    rows: testRows([item]), facts: testFacts(facts), overrides: {}, evidence: [], sealed: [], today: '2026-10-16', targetSigningDate: null, viewer: 'host',
   }).rows[0].status;
 }
 
 describe('seller_insurance_liable — συνεπαγωγή από νομικό πρόσωπο', () => {
-  it('παραγόμενο νομικό πρόσωπο (εργολάβος) ⇒ υπόχρεος, χωρίς ερώτηση', () => {
-    expect(deriveFacts(COMPANY)).toMatchObject({ seller_is_legal_entity: true, seller_insurance_liable: true });
-  });
-
-  it('ΑΠΑΝΤΗΜΕΝΟ νομικό πρόσωπο ⇒ υπόχρεος (η συνεπαγωγή εφαρμόζεται μετά τις απαντήσεις)', () => {
-    expect(resolveFacts({}, { seller_is_legal_entity: answer(true) }).seller_insurance_liable).toBe(true);
+  it('νομικό πρόσωπο ⇒ υπόχρεος, χωρίς ερώτηση — παράγεται από το ΠΡΟΣΩΠΟ, όχι από το προφίλ (ADR-915 §22)', () => {
+    expect(derivePartyFacts({ kind: 'legal_entity' })).toMatchObject({ seller_is_legal_entity: true, seller_insurance_liable: true });
+    expect(deriveFacts(COMPANY).seller_is_legal_entity).toBeUndefined();
   });
 
   it('η ρητή απάντηση «όχι» ΔΕΝ ανατρέπει τον νόμο για νομικό πρόσωπο', () => {
-    const resolved = resolveFacts(deriveFacts(COMPANY), { seller_insurance_liable: answer(false) });
+    const resolved = sellerFacts('legal_entity', { seller_insurance_liable: false });
     expect(resolved.seller_insurance_liable).toBe(true);
     expect(factEntailedBy(resolved, 'seller_insurance_liable')).toBe('seller_is_legal_entity');
   });
 
   it('φυσικό πρόσωπο: τίποτα δεν συνάγεται — η απάντηση αποφασίζει', () => {
-    const asked = resolveFacts({}, { seller_is_legal_entity: answer(false) });
+    const asked = sellerFacts('person');
+    expect(asked).toMatchObject({ seller_is_legal_entity: false });
     expect(asked.seller_insurance_liable).toBeUndefined();
     expect(factEntailedBy(asked, 'seller_insurance_liable')).toBeNull();
-    expect(resolveFacts({}, { seller_is_legal_entity: answer(false), seller_insurance_liable: answer(true) }).seller_insurance_liable).toBe(true);
-    expect(resolveFacts({}, { seller_is_legal_entity: answer(false), seller_insurance_liable: answer(false) }).seller_insurance_liable).toBe(false);
+    expect(sellerFacts('person', { seller_insurance_liable: true }).seller_insurance_liable).toBe(true);
+    expect(sellerFacts('person', { seller_insurance_liable: false }).seller_insurance_liable).toBe(false);
   });
 
   it('ιδεμπότητη: δεύτερη εφαρμογή = ίδιο αποτέλεσμα', () => {
@@ -55,19 +64,19 @@ describe('seller_insurance_liable — συνεπαγωγή από νομικό �
 
 describe('ασφαλιστική ενημερότητα στον κατάλογο', () => {
   it('φυσικό πρόσωπο που ΗΤΑΝ επαγγελματίας ⇒ η γραμμή ζητείται', () => {
-    expect(insuranceRowStatus(resolveFacts({}, { seller_is_legal_entity: answer(false), seller_insurance_liable: answer(true) }))).toBe('missing');
+    expect(insuranceRowStatus(sellerFacts('person', { seller_insurance_liable: true }))).toBe('missing');
   });
 
   it('φυσικό πρόσωπο χωρίς καμία ιδιότητα (άρθρο 2 αρ. 7) ⇒ δεν εφαρμόζεται', () => {
-    expect(insuranceRowStatus(resolveFacts({}, { seller_is_legal_entity: answer(false), seller_insurance_liable: answer(false) }))).toBe('not_applicable');
+    expect(insuranceRowStatus(sellerFacts('person', { seller_insurance_liable: false }))).toBe('not_applicable');
   });
 
   it('φυσικό πρόσωπο, αναπάντητο ⇒ ερώτηση (ποτέ σιωπηλό «δεν χρειάζεται»)', () => {
-    expect(insuranceRowStatus(resolveFacts({}, { seller_is_legal_entity: answer(false) }))).toBe('needs_answer');
+    expect(insuranceRowStatus(sellerFacts('person'))).toBe('needs_answer');
   });
 
   it('νομικό πρόσωπο ⇒ ζητείται, ό,τι κι αν απαντήθηκε στην ερώτηση ιδιοτήτων', () => {
-    expect(insuranceRowStatus(resolveFacts(deriveFacts(COMPANY), { seller_insurance_liable: answer(false) }))).toBe('missing');
+    expect(insuranceRowStatus(sellerFacts('legal_entity', { seller_insurance_liable: false }))).toBe('missing');
   });
 });
 
@@ -75,6 +84,11 @@ describe('FACT_ENTAILMENTS — άγκυρες του πίνακα', () => {
   it('κάθε συνεπαγωγή έχει πηγή', () => {
     expect(FACT_ENTAILMENTS.filter((rule) => rule.statute.trim() === '')).toEqual([]);
   });
+
+  it('ADR-915 §22 — καμία συνεπαγωγή δεν διασχίζει επίπεδα (υπόθεση ↔ πρόσωπο): εφαρμόζονται ανά πλαίσιο', () => {
+    expect(FACT_ENTAILMENTS.filter(({ when, then }) => isPartyFact(when.fact) !== isPartyFact(then.fact))).toEqual([]);
+  });
+
 
   it('καμία συνεπαγωγή δεν αντιφάσκει με άλλη (ίδιο συμπέρασμα, αντίθετη τιμή)', () => {
     const values = new Map<ConveyanceFactId, boolean>();

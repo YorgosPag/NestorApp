@@ -49,10 +49,12 @@ import {
 import { AGENCY_PUBLIC_NS, DIRECTORY_KEYS } from './agency-directory-labels';
 import { AreaCombobox } from './AreaCombobox';
 import { MyPropertyFilter } from './MyPropertyFilter';
+import { DocumentIssuerFilter } from './DocumentIssuerFilter';
 import { OccupationQuickFilters } from './OccupationQuickFilters';
 import { OccupationSelect } from './OccupationSelect';
 import { useOccupationFamilyChoices } from './useOccupationFamilyChoices';
 import type { OccupationFamilyTallies } from '@/lib/agency/occupation-family-tallies';
+import { readOccupationQuery } from '@/lib/agency/occupation-query';
 import {
   isAdministrativeWhere,
   type OccupationOption,
@@ -113,9 +115,60 @@ export function AgencyDirectoryFilters({
   const families = useOccupationFamilyChoices(familyTallies);
   const scopeHintId = React.useId();
   const setOccupation = (occupation: string | null): void => onChange({ ...filters, occupation });
+  // ADR-915 §21 — ερώτημα «ποιος μπορεί να εκδώσει» ⇒ το τσιπ του εγγράφου ΑΝΤΙΚΑΘΙΣΤΑ τα χειριστήρια ειδικότητας.
+  const query = filters.occupation === null ? null : readOccupationQuery(filters.occupation);
 
   return (
     <section className="flex flex-wrap items-end gap-3">
+      {query?.kind === 'document' ? (
+        <DocumentIssuerFilter documentKind={query.documentKind} onClear={() => setOccupation(null)} />
+      ) : (
+        <OccupationControls
+          value={filters.occupation}
+          options={options}
+          locale={locale}
+          families={families}
+          scopeHintId={scopeHintId}
+          pending={pending}
+          onChange={setOccupation}
+        />
+      )}
+
+      <WhereControl filters={filters} onChange={onChange} voice={whereVoice} />
+
+      {/* 🔑 **Φ4 — η αφαίρεση είναι ΜΙΑ ενέργεια.** Φίλτρο που δεν ξεκλειδώνει με
+          ένα πάτημα είναι φίλτρο που ο άνθρωπος **δεν** θα δοκιμάσει. */}
+      {onClear !== null && (
+        <Button type="button" variant="outline" size="sm" onClick={onClear}>
+          {t(DIRECTORY_KEYS.clearFilters)}
+        </Button>
+      )}
+    </section>
+  );
+}
+
+/** Τα χειριστήρια **ειδικότητας** (τσιπ οικογενειών · dropdown · δήλωση εμβέλειας λίστας) — εξήχθησαν όταν το ερώτημα
+ *  «ποιος μπορεί να εκδώσει» (ADR-915 §21) έγινε εναλλακτική τους, όχι συμπλήρωμα. */
+function OccupationControls({
+  value,
+  options,
+  locale,
+  families,
+  scopeHintId,
+  pending,
+  onChange,
+}: {
+  readonly value: string | null;
+  readonly options: AgencyDirectoryFiltersProps['options'];
+  readonly locale: AgencyDirectoryFiltersProps['locale'];
+  readonly families: ReturnType<typeof useOccupationFamilyChoices>;
+  readonly scopeHintId: string;
+  readonly pending: boolean;
+  readonly onChange: (occupation: string | null) => void;
+}): React.ReactElement {
+  const { t } = useTranslation([AGENCY_PUBLIC_NS]);
+  return (
+    <>
       {/*
         🔴 **ΤΟ ΧΕΙΡΙΣΤΗΡΙΟ ΕΦΥΓΕ ΑΠΟ ΕΔΩ (ADR-841 §7 Α4.5)** — και δεν είναι
         αναδιοργάνωση: η **ρίζα** το ζήτησε ως **δεύτερος** αναγνώστης, όταν το tab
@@ -126,18 +179,18 @@ export function AgencyDirectoryFilters({
       */}
       {/* ADR-896 §8 — γρήγορες ειδικότητες: ΙΔΙΑ τιμή, ΙΔΙΟ φίλτρο με το dropdown από κάτω. */}
       <OccupationQuickFilters
-        value={filters.occupation}
+        value={value}
         choices={families}
         emptyHintId={scopeHintId}
-        onChange={setOccupation}
+        onChange={onChange}
       />
 
       <OccupationSelect
-        value={filters.occupation}
+        value={value}
         options={options}
         locale={locale}
         families={families}
-        onChange={setOccupation}
+        onChange={onChange}
       />
 
       {/*
@@ -172,17 +225,7 @@ export function AgencyDirectoryFilters({
       >
         {t(DIRECTORY_KEYS.occupationScopeHint, { count: options.length })}
       </p>
-
-      <WhereControl filters={filters} onChange={onChange} voice={whereVoice} />
-
-      {/* 🔑 **Φ4 — η αφαίρεση είναι ΜΙΑ ενέργεια.** Φίλτρο που δεν ξεκλειδώνει με
-          ένα πάτημα είναι φίλτρο που ο άνθρωπος **δεν** θα δοκιμάσει. */}
-      {onClear !== null && (
-        <Button type="button" variant="outline" size="sm" onClick={onClear}>
-          {t(DIRECTORY_KEYS.clearFilters)}
-        </Button>
-      )}
-    </section>
+    </>
   );
 }
 

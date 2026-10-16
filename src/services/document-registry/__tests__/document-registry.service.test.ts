@@ -220,12 +220,22 @@ describe('Φ4δ Ε7 — «λείπει» από τις απαιτήσεις', ()
     const registry = await read();
     expect(gap(registry.rows, 'prop_1')).toMatchObject({ state: 'missing', blocking: true });
     expect(gap(registry.rows, 'prop_1', 'building-identity')).toBeDefined();
-    // ADR-915 §14: και τα τρία έγγραφα του πωλητή· η ΕΦΚΑ γιατί το ακίνητο χωρίς δεδομένα παράγεται νεόδμητο ⇒ νομικό πρόσωπο.
+    // ADR-915 §14 · §22: ο πωλητής εδώ είναι ΦΥΣΙΚΟ πρόσωπο ⇒ ΕΝΦΙΑ + φορολογική «λείπουν»· η ΕΦΚΑ εξαρτάται από την
+    // απάντηση «είναι ή ήταν υπόχρεος;» ⇒ παρακολουθείται, ΟΧΙ «λείπει». (Πριν την §22 το προφίλ «νεόδμητο» έκανε κάθε
+    // πωλητή νομικό πρόσωπο, και το μητρώο ισχυριζόταν έλλειψη ΕΦΚΑ για ιδιώτη.)
     expect(registry.rows.flatMap((row) => (row.kind === 'gap' ? [row.gap.kind] : []))).toEqual([
-      'building-identity', 'energy-certificate', 'enfia-certificate', 'insurance-clearance', 'tax-clearance',
+      'building-identity', 'energy-certificate', 'enfia-certificate', 'tax-clearance',
     ]);
-    expect(registry.tally.missing).toBe(5);
+    expect(registry.tally.missing).toBe(4);
     expect(registry.properties.prop_1).toEqual({ name: 'Χωρίς ΠΕΑ', scope: 'property' });
+  });
+
+  it('ADR-915 §22 — πωλητής ΝΟΜΙΚΟ πρόσωπο ⇒ και η ΕΦΚΑ λείπει (από τον νόμο, χωρίς ερώτηση)', async () => {
+    fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', { companyId: COMPANY, name: 'Εταιρικός πωλητής' });
+    fake.seed(COLLECTIONS.CONVEYANCE_CASES, 'case_1', openCase({ parties: { sellers: [{ key: 'cont_co', contactId: 'cont_co', kind: 'legal_entity' }], buyers: [] } }));
+    const registry = await read();
+    expect(registry.rows.flatMap((row) => (row.kind === 'gap' ? [row.gap.kind] : []))).toContain('insurance-clearance');
+    expect(registry.tally.missing).toBe(5);
   });
 
   it('αγγελία με το όνομα του γραφείου σε ακίνητο ΧΩΡΙΣ κανένα έγγραφο ⇒ βρίσκεται, και λείπει το ΠΕΑ (`warn`)', async () => {

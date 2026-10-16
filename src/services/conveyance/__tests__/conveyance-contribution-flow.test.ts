@@ -508,11 +508,11 @@ describe('ADR-901 Φ4.5 — «Ζήτησε έγγραφο» (Α29 · Α30 · Α3
     const record = await openCase();
     await engage(record, 'notary');
     jest.clearAllMocks();
-    const outcome = await hostRequests(record, ['contract_draft', 'final_contract', 'seller_enfia_certificate', 'buyer_payment_proofs']);
+    const outcome = await hostRequests(record, ['contract_draft', 'final_contract', 'seller_enfia_certificate@cont_s', 'buyer_payment_proofs']);
     expect(outcome).toEqual({ ok: true, items: [
       { itemId: 'contract_draft', kind: 'requested', recipient: 'notary' },
       { itemId: 'final_contract', kind: 'requested', recipient: 'notary' },
-      { itemId: 'seller_enfia_certificate', kind: 'refused', refusal: 'self-provider' },
+      { itemId: 'seller_enfia_certificate@cont_s', kind: 'refused', refusal: 'self-provider' },
       { itemId: 'buyer_payment_proofs', kind: 'refused', refusal: 'no-recipient' },
     ] });
     expect(announceDocumentRequest).toHaveBeenCalledTimes(1);

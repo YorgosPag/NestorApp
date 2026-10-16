@@ -2,6 +2,16 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **16/10 — ΤΑ POST-FINALIZE HOOKS ΜΑΛΛΟΝ ΔΕΝ ΤΡΕΧΟΥΝ ΠΟΤΕ ΓΙΑ ΑΝΕΒΑΣΜΑΤΑ ΑΠΟ BROWSER** *(ADR-915 §20.8, εύρημα audit — ΔΕΝ επαληθεύτηκε)*
+
+  **Τι:** `FileRecordService.finalizeFileRecord` (`services/file-record.service.ts`) τρέχει **στον browser** και καλεί
+  `triggerPostFinalizeHooks` (`services/file-record-post-finalize-hooks.ts`), που επιστρέφει αμέσως όταν
+  `typeof window !== 'undefined'`. Άρα ο εμπλουτισμός ISO 19650 (ADR-373) και το DXF auto-process (ADR-312 Φ7.1)
+  **μάλλον** δεν τρέχουν για κανένα ανέβασμα από browser — το ADR-899 §3.7 γράφει ήδη ότι «τα server hooks δεν τρέχουν».
+  **Πρώτα:** επαλήθευση (ένα ανεβασμένο DXF κάτοψης: γεννήθηκε επεξεργασία; ένα αρχείο: γράφτηκε `iso19650Source`;).
+  **Αν ισχύει, θεραπεία:** το πρότυπο του ADR-915 §20 — καταναλωτής του CDC των αρχείων (ADR-905 §6) ή Storage
+  `onFinalize` (ADR-899), όχι hook στον client. **Μέγεθος:** άγνωστο ως την επαλήθευση ⇒ απόφαση Giorgio.
+
 - 🟡 **13/10 — ΔΥΟ ΑΓΩΓΟΙ ΑΝΕΒΑΣΜΑΤΟΣ ΑΝΤΙΓΡΑΦΟΥΝ ΤΑ ΙΔΙΑ ΠΕΔΙΑ ΜΕ ΤΟ ΧΕΡΙ** *(ADR-914 §8.24, εύρημα κατά τη διόρθωση της §2.20)*
 
   **Τι:** `uploadFileWithPolicy` (`services/filesystem/upload-orchestrator-gateway.ts`, ADR-292) και `uploadEntityFile`

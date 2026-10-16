@@ -22,8 +22,9 @@ import {
   ISSUER_AUTHORITY_LABEL_KEYS,
   ISSUER_KEYS,
   ISSUER_QUALIFICATION_LABEL_KEYS,
-  ISSUER_REGISTRY_LABEL_KEYS,
+  LICENCE_REGISTRY_LABEL_KEYS,
   OBLIGOR_LABEL_KEYS,
+  PROPERTY_MARKET_NS,
   REGISTRY_NS,
 } from '@/components/document-registry/document-registry-labels';
 
@@ -31,12 +32,13 @@ type Translate = ReturnType<typeof useTranslation>['t'];
 
 function qualificationText(t: Translate, qualification: IssuerQualification): string {
   const label = t(ISSUER_QUALIFICATION_LABEL_KEYS[qualification]);
-  const { registry } = ISSUER_QUALIFICATION_SPECS[qualification];
-  return registry === null ? label : t(ISSUER_KEYS.registered, { qualification: label, registry: t(ISSUER_REGISTRY_LABEL_KEYS[registry]) });
+  const spec = ISSUER_QUALIFICATION_SPECS[qualification];
+  if (spec.kind === 'occupation') return label;
+  return t(ISSUER_KEYS.registered, { qualification: label, registry: t(LICENCE_REGISTRY_LABEL_KEYS[spec.licence]) });
 }
 
 function IssuerValue({ issuer }: { readonly issuer: DocumentIssuer }): React.ReactElement {
-  const { t } = useTranslation([REGISTRY_NS]);
+  const { t } = useTranslation([REGISTRY_NS, PROPERTY_MARKET_NS]);
   if (issuer.kind === 'authority') {
     return (
       <dd className="m-0 text-sm text-foreground">

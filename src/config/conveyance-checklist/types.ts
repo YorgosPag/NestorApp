@@ -85,6 +85,31 @@ export const CONVEYANCE_FACT_IDS = [
 ] as const;
 export type ConveyanceFactId = (typeof CONVEYANCE_FACT_IDS)[number];
 
+/**
+ * ADR-915 §22 — ρόλοι που έχουν **πολλά πρόσωπα** σε μία υπόθεση, το καθένα με τα δικά του έγγραφα. Ο νόμος ζητά τα
+ * προσωπικά έγγραφα **ανά συμβαλλόμενο** (Α.1008/2021 άρθρο 1 παρ. 1: το πιστοποιητικό ΕΝΦΙΑ «προσκομίζεται από όλους
+ * τους φορολογουμένους που συμβάλλονται στο ίδιο συμβολαιογραφικό έγγραφο»), άρα μία γραμμή ανά πρόσωπο.
+ */
+export const CONVEYANCE_PARTY_ROLES = ['seller'] as const;
+export type ConveyancePartyRole = (typeof CONVEYANCE_PARTY_ROLES)[number];
+
+/**
+ * ADR-915 §22 — γεγονότα που αφορούν **ένα πρόσωπο**, όχι την υπόθεση: δύο συμπωλητές μπορεί να είναι ο ένας εταιρεία
+ * κι ο άλλος ιδιώτης, ο ένας υπόχρεος ΕΦΚΑ κι ο άλλος όχι, ο ένας με πληρεξούσιο κι ο άλλος αυτοπροσώπως. Ζουν στο ίδιο
+ * λεξιλόγιο (`CONVEYANCE_FACT_IDS`) ώστε το `ChecklistRequirement` να μένει ένα· η απάντηση όμως αποθηκεύεται ανά πρόσωπο.
+ */
+export const CONVEYANCE_PARTY_FACT_IDS = [
+  'seller_is_legal_entity',
+  'seller_insurance_liable',
+  'seller_by_proxy',
+] as const satisfies readonly ConveyanceFactId[];
+export type ConveyancePartyFactId = (typeof CONVEYANCE_PARTY_FACT_IDS)[number];
+
+/** Αφορά το γεγονός ένα πρόσωπο (και όχι την υπόθεση); */
+export function isPartyFact(factId: string): factId is ConveyancePartyFactId {
+  return (CONVEYANCE_PARTY_FACT_IDS as readonly string[]).includes(factId);
+}
+
 // ============================================================================
 // ΣΧΗΜΑ ΓΡΑΜΜΗΣ
 // ============================================================================
@@ -127,6 +152,11 @@ export interface ChecklistItem {
   /** Κλειδί i18n στο namespace `conveyance` (`items.<id>.label`). */
   readonly labelKey: string;
   readonly provider: ChecklistProvider;
+  /**
+   * ADR-915 §22 — η γραμμή είναι **πρότυπο ανά πρόσωπο** του ρόλου: μία γραμμή για κάθε συμπωλητή, με δικά του αρχεία,
+   * δικά του γεγονότα και δικό του έλεγχο (`case-rows.ts`). Απόν = μία γραμμή για όλη την υπόθεση.
+   */
+  readonly partyRole?: ConveyancePartyRole;
   /** Ποιοι ρόλοι βλέπουν τη γραμμή και τα αρχεία της (ελαχιστοποίηση, ADR-901 §5.10). */
   readonly visibleTo: readonly ConveyanceRole[];
   /** Ορατό **μόνο** στη δική του πλευρά (έκθεση νομικού ελέγχου — Σ-3). */

@@ -113,6 +113,8 @@ export function showcaseFixture(overrides: Partial<PublicShowcase> = {}): Public
     alias: 'a',
     displayName: 'Α',
     credentials: [BROKER_CREDENTIAL],
+    // ADR-915 §21 — καμία άδεια: η συνηθισμένη αλήθεια.
+    licences: [],
     place: null,
     position: null,
     coverage: null,

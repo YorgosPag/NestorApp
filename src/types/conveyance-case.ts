@@ -27,6 +27,7 @@ import type {
   ChecklistProvider,
   ChecklistSection,
   ConveyanceFactId,
+  ConveyancePartyFactId,
   ConveyanceProfile,
   EvidenceLevel,
 } from '@/config/conveyance-checklist/types';
@@ -109,11 +110,34 @@ export interface ConveyanceCaseSubject {
   readonly appurtenances: readonly ConveyanceAppurtenanceRef[];
 }
 
+/** Φυσικό ή νομικό πρόσωπο — από αυτό **παράγεται** το γεγονός `seller_is_legal_entity` του προσώπου (ADR-915 §22). */
+export type ConveyancePartyKind = 'person' | 'legal_entity';
+
+/**
+ * ADR-915 §22 — ένας πωλητής (συμμεταβιβάζων) της υπόθεσης.
+ *
+ * `key` = η **σταθερή** ταυτότητα του προσώπου μέσα στην υπόθεση: οι γραμμές του (`itemId@key`) και τα γεγονότα του
+ * (`partyFacts[key]`) δένονται σε αυτό, ποτέ στη θέση του στη λίστα. Είναι το `contactId` (`sellerParty`) ⇒ η ίδια
+ * επαφή δύο φορές = **ένα** πρόσωπο (ιδεμπότητα).
+ */
+export interface ConveyanceSellerParty {
+  readonly key: string;
+  /** Η επαφή του — εκεί ζουν τα προσωπικά του έγγραφα (`seller_contact`). `null` = άγνωστη (καμία εύρεση αρχείων). */
+  readonly contactId: string | null;
+  readonly kind: ConveyancePartyKind;
+}
+
 export interface ConveyanceCaseParties {
-  /** Εταιρεία-πωλητής: η επαφή της νομικής οντότητας του έργου (`project.linkedCompanyId`). */
-  readonly seller: { readonly contactId: string | null; readonly kind: 'person' | 'legal_entity' };
+  /**
+   * ADR-915 §22 — **όλοι** οι μεταβιβάζοντες. Ο πρώτος είναι η εταιρεία του έργου (`project.linkedCompanyId`, ADR-232).
+   * Παλιά έγγραφα με ένα `seller` διαβάζονται ως λίστα ενός (`upcastStoredCase`).
+   */
+  readonly sellers: readonly ConveyanceSellerParty[];
   readonly buyers: readonly { readonly contactId: string }[];
 }
+
+/** ADR-915 §22 — οι ρητές απαντήσεις στα γεγονότα **ενός προσώπου**, ανά `ConveyanceSellerParty.key`. */
+export type ConveyancePartyFactAnswers = Readonly<Record<string, Readonly<Partial<Record<ConveyancePartyFactId, ConveyanceFactAnswer>>>>>;
 
 export interface ConveyanceCase {
   readonly id: string;
@@ -121,7 +145,11 @@ export interface ConveyanceCase {
   readonly subject: ConveyanceCaseSubject;
   readonly profile: ConveyanceProfile;
   readonly parties: ConveyanceCaseParties;
+  /** Ρητές απαντήσεις σε γεγονότα **της υπόθεσης** (όχι προσώπου — εκείνα ζουν στο `partyFacts`). */
   readonly facts: Readonly<Partial<Record<ConveyanceFactId, ConveyanceFactAnswer>>>;
+  /** ADR-915 §22 — ρητές απαντήσεις σε γεγονότα **προσώπου** (`CONVEYANCE_PARTY_FACT_IDS`). */
+  readonly partyFacts: ConveyancePartyFactAnswers;
+  /** Ανά **κλειδί γραμμής** (`rowKeyOf`) — σκέτο `itemId` για γραμμή της υπόθεσης, `itemId@key` για γραμμή προσώπου. */
   readonly overrides: Readonly<Record<string, ChecklistItemOverride>>;
   readonly storedState: StoredCaseState;
   /** Προγραμματισμένη ημέρα υπογραφής (YYYY-MM-DD) — «θα ισχύει τότε;» (Σ-5). */
@@ -220,8 +248,14 @@ const CHECKLIST_ROW_STATUSES = [
 export type ChecklistRowStatus = (typeof CHECKLIST_ROW_STATUSES)[number];
 
 export interface ChecklistRow {
+  /**
+   * Η **ταυτότητα της γραμμής** (`rowKeyOf`): ίδια με το `item.id` για γραμμή της υπόθεσης, `item.id@key` για γραμμή
+   * προσώπου (ADR-915 §22). Αυτό στέλνουν οι εντολές, τα αιτήματα και οι αποστολές.
+   */
   readonly itemId: string;
   readonly item: ChecklistItem;
+  /** ADR-915 §22 — το πρόσωπο της γραμμής· `null` = γραμμή της υπόθεσης. */
+  readonly party: ConveyanceSellerParty | null;
   readonly section: ChecklistSection;
   readonly provider: ChecklistProvider;
   readonly status: ChecklistRowStatus;
@@ -262,8 +296,14 @@ export interface ChecklistSummary {
   readonly rejected: number;
   readonly expiring: number;
   readonly expired: number;
-  /** Γεγονότα που ΔΕΝ παράγονται από τα δεδομένα και δεν έχουν απαντηθεί. */
-  readonly openQuestions: readonly ConveyanceFactId[];
+  /** Γεγονότα που ΔΕΝ παράγονται από τα δεδομένα και δεν έχουν απαντηθεί — ένα ανά (γεγονός, πρόσωπο). */
+  readonly openQuestions: readonly OpenQuestion[];
+}
+
+/** ADR-915 §22 — μια ανοιχτή ερώτηση: το γεγονός, και **ποιου** προσώπου (`null` = της υπόθεσης). */
+export interface OpenQuestion {
+  readonly factId: ConveyanceFactId;
+  readonly partyKey: string | null;
 }
 
 export interface DerivedChecklist {

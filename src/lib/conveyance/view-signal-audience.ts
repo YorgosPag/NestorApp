@@ -22,7 +22,7 @@
  * @module lib/conveyance/view-signal-audience
  */
 
-import { getChecklistItem } from '@/config/conveyance-checklist/catalog';
+import { checklistItemOfRowKey } from '@/config/conveyance-checklist/row-key';
 import type { ConveyanceCommand } from './conveyance-commands';
 import type { CaseActorRole } from '@/types/conveyance-case';
 import type { LegalProfessionalRole } from '@/types/legal-contracts';
@@ -98,7 +98,7 @@ export function changeOfCommand(command: ConveyanceCommand): CaseChange {
     case 'mark_not_applicable':
     case 'review':
     case 'clear_override': {
-      const item = getChecklistItem(command.itemId);
+      const item = checklistItemOfRowKey(command.itemId);
       return item ? { kind: 'item', item } : { kind: 'scoped', roles: ['host'] };
     }
   }

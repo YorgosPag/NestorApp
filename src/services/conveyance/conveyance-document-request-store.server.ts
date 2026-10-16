@@ -14,6 +14,7 @@ import 'server-only';
 import type { Firestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { canonicalRowKey } from '@/lib/conveyance/case-rows';
 import { parseDocumentRequest } from '@/lib/conveyance/document-request-schema';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { ConveyanceCase } from '@/types/conveyance-case';
@@ -28,7 +29,7 @@ export function documentRequestsCollection(db: Firestore) {
 /** Όλα τα αιτήματα της υπόθεσης, ή `null` αν η ανάγνωση απέτυχε («δεν ξέρω» ≠ «κανένα»). */
 export async function readCaseDocumentRequests(
   db: Firestore,
-  record: Pick<ConveyanceCase, 'id' | 'companyId'>,
+  record: Pick<ConveyanceCase, 'id' | 'companyId' | 'parties'>,
 ): Promise<ConveyanceDocumentRequest[] | null> {
   try {
     const snapshot = await documentRequestsCollection(db)
@@ -38,7 +39,8 @@ export async function readCaseDocumentRequests(
     return snapshot.docs.flatMap((doc) => {
       const parsed = parseDocumentRequest(doc.data());
       if (!parsed) logger.warn('Μη αναγνώσιμο αίτημα εγγράφου — παραλείφθηκε', { requestId: doc.id });
-      return parsed ? [parsed] : [];
+      // ADR-915 §22 — αίτημα σε γραμμή πωλητή πριν από τις γραμμές ανά πρόσωπο ⇒ ανήκει στον μοναδικό πωλητή.
+      return parsed ? [{ ...parsed, checklistItemId: canonicalRowKey(parsed.checklistItemId, record.parties) }] : [];
     });
   } catch (error) {
     logger.error('Τα αιτήματα εγγράφων δεν διαβάστηκαν', { caseId: record.id, error: error instanceof Error ? error.message : String(error) });

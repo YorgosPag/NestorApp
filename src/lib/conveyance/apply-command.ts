@@ -15,12 +15,12 @@
  */
 
 import { isDateKey } from '@/lib/calendar/date-key';
-import { getChecklistItem } from '@/config/conveyance-checklist/catalog';
+import { isPartyFact, type ConveyancePartyFactId } from '@/config/conveyance-checklist/types';
 import { contradictsDocumentText } from '@/lib/document-validity/document-facts';
 import type { AuditFieldChange } from '@/types/audit-trail';
 import type { ChecklistItemOverride, ConveyanceCase, EvidenceFile } from '@/types/conveyance-case';
 import type { CommandRejection, ConveyanceCommand } from './conveyance-commands';
-import { filesForMatchers } from './evidence-match';
+import { resolveCaseRow, rowFiles, type CaseRow } from './case-rows';
 
 export interface CommandContext {
   readonly actorUid: string;
@@ -48,7 +48,12 @@ function withOverride(current: ConveyanceCase, itemId: string, override: Checkli
   return { ...current, overrides };
 }
 
-function answerFact(current: ConveyanceCase, command: Extract<ConveyanceCommand, { type: 'answer_fact' }>, ctx: CommandContext): CommandResult {
+type AnswerFact = Extract<ConveyanceCommand, { type: 'answer_fact' }>;
+
+function answerFact(current: ConveyanceCase, command: AnswerFact, ctx: CommandContext): CommandResult {
+  const { factId } = command;
+  if (isPartyFact(factId)) return answerPartyFact(current, { ...command, factId }, ctx);
+  if (command.partyKey !== undefined) return reject('party_not_applicable');
   const facts = { ...current.facts };
   const before = facts[command.factId]?.value ?? null;
   if (command.value === null) delete facts[command.factId];
@@ -56,28 +61,46 @@ function answerFact(current: ConveyanceCase, command: Extract<ConveyanceCommand,
   return { ok: true, next: { ...current, facts }, changes: [change(`facts.${command.factId}`, before, command.value)] };
 }
 
+/**
+ * ADR-915 §22 — απάντηση σε γεγονός **ενός προσώπου**: γράφεται στο `partyFacts[key]`, ποτέ στο κοινό `facts` (το
+ * «πληρεξούσιο;» του Α δεν απαντά για τον Β). Πρόσωπο εκτός υπόθεσης ⇒ άρνηση, όχι «ορφανή» απάντηση.
+ */
+function answerPartyFact(current: ConveyanceCase, command: AnswerFact & { readonly factId: ConveyancePartyFactId }, ctx: CommandContext): CommandResult {
+  const { partyKey, factId } = command;
+  if (partyKey === undefined || !current.parties.sellers.some((party) => party.key === partyKey)) return reject('party_required');
+  const own = { ...current.partyFacts[partyKey] };
+  const before = own[factId]?.value ?? null;
+  if (command.value === null) delete own[factId];
+  else own[factId] = { value: command.value, answeredBy: ctx.actorUid, answeredAt: ctx.now };
+  const partyFacts = { ...current.partyFacts, [partyKey]: own };
+  if (Object.keys(own).length === 0) delete partyFacts[partyKey];
+  return { ok: true, next: { ...current, partyFacts }, changes: [change(`partyFacts.${partyKey}.${factId}`, before, command.value)] };
+}
+
 function markNotApplicable(current: ConveyanceCase, command: Extract<ConveyanceCommand, { type: 'mark_not_applicable' }>, ctx: CommandContext): CommandResult {
-  if (!getChecklistItem(command.itemId)) return reject('unknown_item');
+  if (!resolveCaseRow(current, command.itemId)) return reject('unknown_item');
   const notApplicable = { reason: command.reason, markedBy: ctx.actorUid, markedAt: ctx.now };
   const next = withOverride(current, command.itemId, { ...current.overrides[command.itemId], notApplicable });
   return { ok: true, next, changes: [change(`checklist.${command.itemId}.notApplicable`, null, command.reason)] };
 }
 
-/** Το αρχείο που ελέγχεται πρέπει να είναι τεκμήριο ΑΥΤΗΣ της γραμμής — το αποτύπωμα το βάζει ο server. */
-function resolveReviewedFile(itemId: string, fileId: string | null, evidence: readonly EvidenceFile[]): EvidenceFile | null | 'invalid' {
+/**
+ * Το αρχείο που ελέγχεται πρέπει να είναι τεκμήριο ΑΥΤΗΣ της γραμμής — το αποτύπωμα το βάζει ο server. ADR-915 §22:
+ * για γραμμή προσώπου, **του** προσώπου (η ΕΝΦΙΑ του Α δεν εγκρίνεται στη γραμμή του Β).
+ */
+function resolveReviewedFile(row: CaseRow, fileId: string | null, evidence: readonly EvidenceFile[]): EvidenceFile | null | 'invalid' {
   if (fileId === null) return null;
-  const item = getChecklistItem(itemId);
-  if (!item || item.satisfaction.kind !== 'files') return 'invalid';
-  return filesForMatchers(item.satisfaction.matchers, evidence).find((file) => file.fileId === fileId) ?? 'invalid';
+  if (row.item.satisfaction.kind !== 'files') return 'invalid';
+  return rowFiles(row, evidence).find((file) => file.fileId === fileId) ?? 'invalid';
 }
 
 /**
  * ADR-915 Φ3β — αποδοχή με ημερομηνία που **αντιλέγει** σε ό,τι διάβασε ο αναγνώστης από το ίδιο το έγγραφο. Το έγγραφο
  * δεν διορθώνεται με δήλωση: αν ο ελεγκτής διαφωνεί, **επιστρέφει** το έγγραφο με λόγο (revise & resubmit).
  */
-function contradictsDocument(itemId: string, file: EvidenceFile | null, declared: DeclaredDates): boolean {
+function contradictsDocument(row: CaseRow, file: EvidenceFile | null, declared: DeclaredDates): boolean {
   const facts = file?.documentFacts ?? null;
-  return contradictsDocumentText(getChecklistItem(itemId)?.documentKind, facts, declared.issuedOn, declared.printedValidUntil);
+  return contradictsDocumentText(row.item.documentKind, facts, declared.issuedOn, declared.printedValidUntil);
 }
 
 interface DeclaredDates {
@@ -96,13 +119,14 @@ function declaredDatesOf(command: Extract<ConveyanceCommand, { type: 'review' }>
 }
 
 function review(current: ConveyanceCase, command: Extract<ConveyanceCommand, { type: 'review' }>, ctx: CommandContext): CommandResult {
-  if (!getChecklistItem(command.itemId)) return reject('unknown_item');
+  const row = resolveCaseRow(current, command.itemId);
+  if (!row) return reject('unknown_item');
   if (command.verdict === 'rejected' && command.reason === null) return reject('reason_required');
   const declared = declaredDatesOf(command, ctx.today);
   if (typeof declared === 'string') return reject(declared);
-  const file = resolveReviewedFile(command.itemId, command.fileId, ctx.evidence);
+  const file = resolveReviewedFile(row, command.fileId, ctx.evidence);
   if (file === 'invalid') return reject('file_not_evidence');
-  if (command.verdict === 'accepted' && contradictsDocument(command.itemId, file, declared)) {
+  if (command.verdict === 'accepted' && contradictsDocument(row, file, declared)) {
     return reject('issued_on_contradicts_document');
   }
   const reviewRecord = {

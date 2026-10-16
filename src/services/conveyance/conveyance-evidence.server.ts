@@ -46,7 +46,10 @@ export function evidenceTargets(subject: ConveyanceCaseSubject, parties: Conveya
   for (const a of subject.appurtenances) targets.push({ level: 'appurtenance', entityType: a.entityType, entityId: a.entityId });
   if (subject.buildingId) targets.push({ level: 'building', entityType: ENTITY_TYPES.BUILDING, entityId: subject.buildingId });
   if (subject.projectId) targets.push({ level: 'project', entityType: ENTITY_TYPES.PROJECT, entityId: subject.projectId });
-  if (parties.seller.contactId) targets.push({ level: 'seller_contact', entityType: ENTITY_TYPES.CONTACT, entityId: parties.seller.contactId });
+  // ADR-915 §22 — κάθε συμπωλητής: τα αρχεία της επαφής του· σε ποια γραμμή πέφτουν το αποφασίζει το `rowFiles`.
+  for (const seller of parties.sellers) {
+    if (seller.contactId) targets.push({ level: 'seller_contact', entityType: ENTITY_TYPES.CONTACT, entityId: seller.contactId });
+  }
   for (const buyer of parties.buyers) targets.push({ level: 'buyer_contact', entityType: ENTITY_TYPES.CONTACT, entityId: buyer.contactId });
   return targets;
 }

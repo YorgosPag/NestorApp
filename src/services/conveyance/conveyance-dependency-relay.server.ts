@@ -21,7 +21,7 @@ import 'server-only';
 
 import type { DocumentData, Firestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { itemsForProfile } from '@/config/conveyance-checklist/catalog';
+import { caseRows } from '@/lib/conveyance/case-rows';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { ownedOrNull } from '@/lib/auth/tenant-ownership';
 import { parseConveyanceCase } from '@/lib/conveyance/conveyance-case-schema';
@@ -111,8 +111,8 @@ function sameJson(a: unknown, b: unknown): boolean {
  */
 function fileChangedFor(record: ConveyanceCase, event: DependencyChangeEvent, viewer: CaseEvidenceViewer): boolean {
   const targets = evidenceTargets(record.subject, record.parties);
-  const items = itemsForProfile(record.profile);
-  const project = (doc: Doc) => visibleRowFiles(items, viewer.role, evidenceOfFile(record.companyId, event.docId, doc, targets, viewer.audience));
+  const rows = caseRows(record);
+  const project = (doc: Doc) => visibleRowFiles(rows, viewer.role, evidenceOfFile(record.companyId, event.docId, doc, targets, viewer.audience));
   return !sameJson(project(docOf(event.before)), project(docOf(event.after)));
 }
 

@@ -11,6 +11,7 @@ import 'server-only';
 import { isExpectedSigner } from '@/config/trust/pdf-seal-trust';
 import type { PkaFileRef } from '@/lib/ownership/pka-file-verdict';
 import {
+  DOCUMENT_TEXT_MAX_BYTES,
   downloadFileRecordBytes,
   type FileBytesDownload,
   type FileBytesReader,
@@ -22,7 +23,7 @@ import type { OwnershipSealSummary } from '@/types/ownership-verification';
  * Ανώτατο μέγεθος ΠΚΑ. Το πιστοποιητικό είναι λίγες σελίδες κειμένου (δεκάδες–εκατοντάδες KB)· 10 MB
  * αφήνει περιθώριο για ενσωματωμένο διάγραμμα, ενώ κόβει την κατάχρηση (PDF-βόμβα στον αναλυτή).
  */
-export const PKA_MAX_BYTES = 10 * 1024 * 1024;
+export const PKA_MAX_BYTES = DOCUMENT_TEXT_MAX_BYTES;
 
 /** Θύρα ανάγνωσης bytes — ο κοινός αναγνώστης του συστήματος αρχείων (`server/files/download-file-record-bytes`). */
 export type PkaBytesReader = FileBytesReader;

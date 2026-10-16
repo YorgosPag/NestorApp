@@ -94,4 +94,20 @@ describe('Γ1 — η εγγραφή', () => {
     expect(updates).toEqual([]);
     expect(mockRecordFileAudit).not.toHaveBeenCalled();
   });
+
+  // ADR-915 §20 — φραγμός bytes: η ανάγνωση περιγράφει το αντικείμενο που κατέβηκε, όχι ό,τι δείχνει η εγγραφή τώρα.
+  it('η εγγραφή δείχνει πλέον άλλο αντικείμενο ⇒ not-this-object, τίποτα δεν γράφεται', async () => {
+    const { db, updates } = dbWith({ companyId: 'c1', storagePath: 'companies/c1/files/f1-v2.pdf' });
+    const guarded = { ...input, expectedStoragePath: 'companies/c1/files/f1.pdf' };
+    await expect(recordDocumentFacts(db, guarded, () => NOW)).resolves.toBe('not-this-object');
+    expect(updates).toEqual([]);
+    expect(mockRecordFileAudit).not.toHaveBeenCalled();
+  });
+
+  it('ίδιο αντικείμενο ⇒ ο φραγμός περνά', async () => {
+    const { db, updates } = dbWith({ companyId: 'c1', storagePath: 'companies/c1/files/f1.pdf' });
+    const guarded = { ...input, expectedStoragePath: 'companies/c1/files/f1.pdf' };
+    await expect(recordDocumentFacts(db, guarded, () => NOW)).resolves.toBe('write');
+    expect(updates).toHaveLength(1);
+  });
 });

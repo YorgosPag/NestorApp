@@ -55,6 +55,15 @@ function matcherKeys(matcher: EvidenceMatcher): readonly string[] {
   return keys;
 }
 
+/**
+ * Δέχεται κάποιος από τους matchers ένα αρχείο `(entityType, purpose)` — σε **οποιοδήποτε** επίπεδο; Για ερωτήσεις
+ * χωρίς υπόθεση (ADR-915 §20: «τι έγγραφο είναι αυτό το αρχείο;»), όπου το επίπεδο δεν είναι γνωστό. Ίδια κλειδιά με
+ * το `filesForMatchers` — κανένα δεύτερο λεξιλόγιο αντιστοίχισης.
+ */
+export function matchersAcceptFile(matchers: readonly EvidenceMatcher[], entityType: string, purpose: string): boolean {
+  return matchers.some((matcher) => matcherKeys(matcher).includes(matchKey(matcher.level, entityType, purpose)));
+}
+
 /** Τα αρχεία που ικανοποιούν τους matchers μιας γραμμής — νεότερο πρώτο. */
 export function filesForMatchers(
   matchers: readonly EvidenceMatcher[],

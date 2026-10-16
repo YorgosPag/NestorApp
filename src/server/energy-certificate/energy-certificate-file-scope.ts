@@ -22,9 +22,10 @@ import type { DocumentFacts } from '@/lib/document-validity/document-facts';
 import type { EnergyCertificate } from '@/lib/energy-certificate/energy-certificate';
 import { custodyOf } from '@/lib/owner-property/listing-custody';
 import { readContainerDocumentFacts, type ContainerFileScope } from '@/server/files/document-facts-read';
+import { PDF_CONTENT_TYPE } from '@/server/files/download-file-record-bytes';
 import type { OwnerProperty } from '@/types/owner-property';
 
-export const PEA_CONTENT_TYPE = 'application/pdf';
+export const PEA_CONTENT_TYPE = PDF_CONTENT_TYPE;
 
 /**
  * Ακίνητο του γραφείου: τα «Έγγραφα» του ακινήτου. Ο κάτοχος = η εταιρεία της **συνεδρίας**, ακριβώς όπως ανεβάζει

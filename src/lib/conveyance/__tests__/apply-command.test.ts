@@ -7,14 +7,15 @@ import type { ConveyanceCase, EvidenceFile } from '@/types/conveyance-case';
 import { applyConveyanceCommand, type CommandContext } from '../apply-command';
 import { effectiveCaseState, isCaseEditable } from '../case-state';
 import { conveyanceCommandRequestSchema } from '../conveyance-commands';
+import { sellerParty } from '../case-parties';
 
 function baseCase(overrides: Partial<ConveyanceCase> = {}): ConveyanceCase {
   return {
     id: 'cvc_1', companyId: 'comp_a',
     subject: { kind: 'property', propertyId: 'prop_1', buildingId: 'bld_1', projectId: 'proj_1', appurtenances: [] },
     profile: 'new_build_company',
-    parties: { seller: { contactId: 'cont_s', kind: 'legal_entity' }, buyers: [{ contactId: 'cont_b' }] },
-    facts: {}, overrides: {}, storedState: 'open', targetSigningDate: null, catalogVersion: '0.1.0',
+    parties: { sellers: [sellerParty('cont_s', 'legal_entity')], buyers: [{ contactId: 'cont_b' }] },
+    facts: {}, partyFacts: {}, overrides: {}, storedState: 'open', targetSigningDate: null, catalogVersion: '0.1.0',
     version: 3, createdBy: 'u1', createdAt: 't0', updatedAt: 't0', cancellation: null,
     ...overrides,
   };
@@ -90,19 +91,19 @@ describe('applyConveyanceCommand', () => {
     };
     const taxCtx = { ...ctx, evidence: [taxFile] };
     const accept = (issuedOn: string | null, validUntil?: string | null) => ({
-      type: 'review' as const, itemId: 'seller_tax_clearance', verdict: 'accepted' as const, fileId: 'file_tax', issuedOn, validUntil, reason: null,
+      type: 'review' as const, itemId: 'seller_tax_clearance@cont_s', verdict: 'accepted' as const, fileId: 'file_tax', issuedOn, validUntil, reason: null,
     });
 
     it('αποθηκεύεται στον έλεγχο της γραμμής, δίπλα στην έκδοση', () => {
       const result = applyConveyanceCommand(baseCase(), accept('2026-09-20', '2026-11-20'), taxCtx);
       if (!result.ok) throw new Error(result.rejection);
-      expect(result.next.overrides.seller_tax_clearance?.review).toMatchObject({ issuedOn: '2026-09-20', printedValidUntil: '2026-11-20' });
+      expect(result.next.overrides['seller_tax_clearance@cont_s']?.review).toMatchObject({ issuedOn: '2026-09-20', printedValidUntil: '2026-11-20' });
     });
 
     it('παλιός client χωρίς `validUntil` ⇒ `null`, ποτέ σφάλμα', () => {
       const result = applyConveyanceCommand(baseCase(), accept('2026-09-20'), taxCtx);
       if (!result.ok) throw new Error(result.rejection);
-      expect(result.next.overrides.seller_tax_clearance?.review?.printedValidUntil).toBeNull();
+      expect(result.next.overrides['seller_tax_clearance@cont_s']?.review?.printedValidUntil).toBeNull();
     });
 
     it('⛔ λήξη ΠΡΙΝ από την έκδοση ⇒ validity_before_issue · ανύπαρκτη ⇒ invalid_date', () => {
@@ -117,10 +118,10 @@ describe('applyConveyanceCommand', () => {
   });
 
   it('answer_fact: null αποσύρει την απάντηση (επιστροφή στο παραγόμενο)', () => {
-    const answered = baseCase({ facts: { seller_by_proxy: { value: true, answeredBy: 'u', answeredAt: 't' } } });
-    const result = applyConveyanceCommand(answered, { type: 'answer_fact', factId: 'seller_by_proxy', value: null }, ctx);
+    const answered = baseCase({ facts: { buyer_has_mortgage: { value: true, answeredBy: 'u', answeredAt: 't' } } });
+    const result = applyConveyanceCommand(answered, { type: 'answer_fact', factId: 'buyer_has_mortgage', value: null }, ctx);
     if (!result.ok) throw new Error(result.rejection);
-    expect(result.next.facts.seller_by_proxy).toBeUndefined();
+    expect(result.next.facts.buyer_has_mortgage).toBeUndefined();
   });
 
   it('cancel: η υπόθεση κλείνει με λόγο · μετά ΚΑΜΙΑ εντολή (not_editable)', () => {

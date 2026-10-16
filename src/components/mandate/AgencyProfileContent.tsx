@@ -63,6 +63,7 @@ import { ListingCard } from '@/components/search-results/ListingCard';
 import { usePublicAgency } from '@/services/realtime/hooks/usePublicAgencies';
 import { CredibilityStatement } from './CredibilityStatement';
 import { LegalIdentityStatement } from './LegalIdentityStatement';
+import { LicenceStatement } from './LicenceStatement';
 import { credentialsBesideLegalIdentity } from '@/lib/agency/showcase-legal-presentation';
 import {
   usePublicAgencyListings,
@@ -385,6 +386,9 @@ function ShowcaseView({
         {profile.legalIdentity === null ? null : <LegalIdentityStatement identity={profile.legalIdentity} />}
         {credentialsBesideLegalIdentity(profile.credentials, profile.legalIdentity).map((credential) => (
           <CredibilityStatement key={credential.occupation.escoUri} credential={credential} />
+        ))}
+        {profile.licences.map((licence) => (
+          <LicenceStatement key={licence.licence} licence={licence} />
         ))}
         <PlaceFact profile={profile} />
         {/* Α21.17 — η επικοινωνία ΨΗΛΑ (απόφαση Giorgio): ιστοσελίδα, εμφάνιση καναλιών, αποθήκευση επαφής. */}

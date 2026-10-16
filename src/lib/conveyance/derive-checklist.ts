@@ -30,7 +30,7 @@ import { ruleExpiresOn, type DocumentExpiry } from '@/lib/document-validity/docu
 import { resolvedDocumentExpiry } from '@/lib/document-validity/document-facts';
 import { coveringIssueFrom } from '@/lib/document-validity/validity-bounds';
 import { documentStanding, type DocumentStandingState } from '@/lib/document-validity/document-requirement';
-import type { ChecklistItem, ConveyanceFactId, ConveyanceRole } from '@/config/conveyance-checklist/types';
+import type { ChecklistItem, ConveyanceRole } from '@/config/conveyance-checklist/types';
 import type {
   ChecklistItemOverride,
   ChecklistItemReview,
@@ -39,15 +39,18 @@ import type {
   ChecklistSummary,
   DerivedChecklist,
   EvidenceFile,
+  OpenQuestion,
   SealedDelivery,
 } from '@/types/conveyance-case';
 import { conveyanceNeededOn } from './conveyance-requirements';
-import { filesForMatchers } from './evidence-match';
+import { rowFacts, rowFiles, type CaseFacts, type CaseRow } from './case-rows';
 import type { FactValues } from './derive-facts';
 
 export interface DeriveChecklistInput {
-  readonly items: readonly ChecklistItem[];
-  readonly facts: FactValues;
+  /** ADR-915 §22 — οι γραμμές της υπόθεσης (κατάλογος × πρόσωπα, `caseRowsOf`). */
+  readonly rows: readonly CaseRow[];
+  /** Τα επιλυμένα γεγονότα της υπόθεσης και κάθε προσώπου (`resolveCaseFacts`). */
+  readonly facts: CaseFacts;
   readonly overrides: Readonly<Record<string, ChecklistItemOverride>>;
   readonly evidence: readonly EvidenceFile[];
   /** Π2 — παραδόσεις που ο θεατής **δεν** βλέπει, σε γραμμές που βλέπει (`sealedDeliveries`). */
@@ -78,10 +81,6 @@ export function viewerSeesItem(viewer: ConveyanceRole | 'host', item: Pick<Check
   return viewer === 'host' || item.visibleTo.includes(viewer);
 }
 
-function itemFiles(item: ChecklistItem, evidence: readonly EvidenceFile[]): readonly EvidenceFile[] {
-  return item.satisfaction.kind === 'files' ? filesForMatchers(item.satisfaction.matchers, evidence) : [];
-}
-
 /** Τα αρχεία μίας γραμμής που βλέπει ο θεατής. */
 export interface VisibleRowFiles {
   readonly itemId: string;
@@ -94,13 +93,13 @@ export interface VisibleRowFiles {
  * δεν πέφτει σε καμία γραμμή του θεατή δεν εμφανίζεται εδώ· άρα ούτε η αλλαγή του είναι αλλαγή της όψης του.
  */
 export function visibleRowFiles(
-  items: readonly ChecklistItem[],
+  rows: readonly CaseRow[],
   viewer: ConveyanceRole | 'host',
   evidence: readonly EvidenceFile[],
 ): readonly VisibleRowFiles[] {
-  return items
-    .filter((item) => viewerSeesItem(viewer, item))
-    .map((item) => ({ itemId: item.id, files: itemFiles(item, evidence) }))
+  return rows
+    .filter((row) => viewerSeesItem(viewer, row.item))
+    .map((row) => ({ itemId: row.key, files: rowFiles(row, evidence) }))
     .filter((row) => row.files.length > 0);
 }
 
@@ -196,16 +195,17 @@ export function checklistItemApplicability(item: ChecklistItem, facts: FactValue
   return value === item.requirement.equals;
 }
 
-function deriveRow(item: ChecklistItem, input: DeriveChecklistInput): ChecklistRow {
-  const override = input.overrides[item.id];
-  const files = itemFiles(item, input.evidence);
-  const sealed = newestSealed(item.id, input.sealed);
+function deriveRow(row: CaseRow, input: DeriveChecklistInput): ChecklistRow {
+  const { item } = row;
+  const override = input.overrides[row.key];
+  const files = rowFiles(row, input.evidence);
+  const sealed = newestSealed(row.key, input.sealed);
   const base: Base = {
-    itemId: item.id, item, section: item.section, provider: item.provider, files, sealed,
+    itemId: row.key, item, party: row.party, section: item.section, provider: item.provider, files, sealed,
     review: override?.review ?? null, notApplicable: override?.notApplicable ?? null,
     issueFrom: input.targetSigningDate === null ? null : coveringIssueFrom(item.validity, input.targetSigningDate),
   };
-  const applies = checklistItemApplicability(item, input.facts);
+  const applies = checklistItemApplicability(item, rowFacts(row, input.facts));
   if (applies === 'unknown') {
     const fact = item.requirement.kind === 'when' ? item.requirement.fact : null;
     return { ...base, status: 'needs_answer', notApplicableBy: null, pendingFact: fact, ...NO_VALIDITY };
@@ -226,9 +226,6 @@ function countOf(rows: readonly ChecklistRow[], ...statuses: ChecklistRowStatus[
 
 /** Η σύνοψη — ο ΕΝΑΣ αριθμός που διαβάζουν καρτέλα, AI και (Φ3) email (Σ-2). */
 export function summarizeChecklist(rows: readonly ChecklistRow[]): ChecklistSummary {
-  const openQuestions = [...new Set(
-    rows.map((row) => row.pendingFact).filter((fact): fact is ConveyanceFactId => fact !== null),
-  )];
   return {
     applicable: rows.length - countOf(rows, 'not_applicable', 'needs_answer'),
     complete: countOf(rows, 'accepted', 'notary_side', 'delivered_sealed'),
@@ -237,13 +234,24 @@ export function summarizeChecklist(rows: readonly ChecklistRow[]): ChecklistSumm
     rejected: countOf(rows, 'rejected'),
     expiring: countOf(rows, 'expiring'),
     expired: countOf(rows, 'expired'),
-    openQuestions,
+    openQuestions: openQuestionsOf(rows),
   };
 }
 
+/** ADR-915 §22 — μία ερώτηση ανά (γεγονός, πρόσωπο): το «πληρεξούσιο;» του Α δεν απαντά για τον Β. */
+function openQuestionsOf(rows: readonly ChecklistRow[]): readonly OpenQuestion[] {
+  const questions = new Map<string, OpenQuestion>();
+  for (const row of rows) {
+    if (row.pendingFact === null) continue;
+    const partyKey = row.party?.key ?? null;
+    questions.set(`${partyKey ?? ''}|${row.pendingFact}`, { factId: row.pendingFact, partyKey });
+  }
+  return [...questions.values()];
+}
+
 export function deriveChecklist(input: DeriveChecklistInput): DerivedChecklist {
-  const rows = input.items
-    .filter((item) => viewerSeesItem(input.viewer, item))
-    .map((item) => deriveRow(item, input));
+  const rows = input.rows
+    .filter((row) => viewerSeesItem(input.viewer, row.item))
+    .map((row) => deriveRow(row, input));
   return { rows, summary: summarizeChecklist(rows) };
 }

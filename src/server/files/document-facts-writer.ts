@@ -28,7 +28,7 @@ import {
   readDocumentFacts,
   type DocumentFacts,
   type DocumentFactsClaim,
-  type DocumentFactsVerdict,
+  type RecordDocumentFactsOutcome,
 } from '@/lib/document-validity/document-facts';
 import { fileCustodyOf } from '@/lib/files/file-custody';
 import { custodyOnly, type CustodyScope } from '@/lib/workspace/custody-scope';
@@ -41,10 +41,15 @@ export interface RecordDocumentFactsInput {
   readonly fileCollection: string;
   readonly fileId: string;
   readonly claim: DocumentFactsClaim;
+  /**
+   * ADR-915 §20 — **φραγμός bytes**: τα γεγονότα γράφονται μόνο αν η εγγραφή δείχνει **ακόμη** το αντικείμενο που
+   * διαβάστηκε. Νέα έκδοση ανάμεσα στη λήψη και τη συναλλαγή ⇒ `not-this-object` (ίδιο ιδίωμα με τις διαστάσεις
+   * εικόνας, ADR-899 §3.7): η νέα έκδοση φέρνει δική της ανάγνωση. Χωρίς τιμή (δήλωση ανθρώπου) ⇒ κανένας φραγμός.
+   */
+  readonly expectedStoragePath?: string;
 }
 
-/** `no-file` = το αρχείο δεν υπάρχει (πια) — τίποτα δεν γράφτηκε. */
-export type RecordDocumentFactsOutcome = DocumentFactsVerdict | 'no-file';
+export type { RecordDocumentFactsOutcome };
 
 interface Committed {
   readonly verdict: RecordDocumentFactsOutcome;
@@ -57,6 +62,9 @@ async function commitFacts(db: AdminFirestore, input: RecordDocumentFactsInput, 
     const snap = await tx.get(ref);
     const data = snap.exists ? snap.data() : undefined;
     if (data === undefined) return { verdict: 'no-file', custody: null };
+    if (input.expectedStoragePath !== undefined && data.storagePath !== input.expectedStoragePath) {
+      return { verdict: 'not-this-object', custody: null };
+    }
     const verdict = documentFactsVerdict(readDocumentFacts(data[DOCUMENT_FACTS_FIELD]), facts);
     // 🔴 ΜΟΝΟ το πεδίο — κανένα `updatedAt` (βλ. κεφαλίδα).
     if (verdict === 'write') tx.update(ref, { [DOCUMENT_FACTS_FIELD]: facts });

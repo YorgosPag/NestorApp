@@ -48,6 +48,22 @@ export interface ShowcaseCredentialWire {
   readonly registrationChapter?: string;
 }
 
+/**
+ * **Μια άδεια, όπως τη στέλνει ο φυλλομετρητής** *(ADR-915 §21)*.
+ *
+ * ⚠️ **Καμία `authority`**: την ορίζει η **άδεια** (`PROFESSIONAL_LICENCE_SPECS`) — ίδιο ιδίωμα με το credential.
+ * 🔒 Ο αριθμός είναι **υποχρεωτικός**: άδεια χωρίς αριθμό ο γραφέας την απορρίπτει ονομαστικά.
+ */
+export interface ShowcaseLicenceWire {
+  readonly licence: string;
+  readonly registrationNumber: string;
+}
+
+/** **Ό,τι στέλνει η υποσελίδα «Άδειες»** — ολόκληρη η λίστα· κενή = «δεν έχω καμία». */
+export interface ShowcaseLicencesWire {
+  readonly licences: readonly ShowcaseLicenceWire[];
+}
+
 /** **Ό,τι στέλνει η οθόνη «Θέλω να με βρίσκουν»**, και τίποτα άλλο. */
 /**
  * **Το σήμα, όπως το στέλνει ο φυλλομετρητής** (ADR-841 §7 Α21, Στάδιο 2).
@@ -80,6 +96,10 @@ export interface ShowcaseWireDeclaration {
   readonly seatDisclosure?: SeatDisclosure | null;
   /** ≥1 — το επιβάλλει ο **γραφέας**, ονομαστικά, ποτέ το σχήμα (ένας κριτής ανά ερώτημα). */
   readonly credentials: readonly ShowcaseCredentialWire[];
+  /**
+   * ⛔ **ΚΑΜΙΑ ΑΔΕΙΑ ΕΔΩ** (ADR-915 §21): οι άδειες είναι **δική τους πράξη** (`PUT /api/agency-profile/licences`,
+   * υποσελίδα «Άδειες»), και η δημοσίευση τις **διατηρεί** — ίδιο σχήμα με την κάρτα και το σήμα.
+   */
   /**
    * **Ο δεσμός με τον τόπο** — και **μόνο** αυτός.
    *

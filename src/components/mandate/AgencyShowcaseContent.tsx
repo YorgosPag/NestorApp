@@ -45,6 +45,7 @@ import {
   ShowcaseCredentialField,
   type ShowcaseCredentialDraft,
 } from '@/components/mandate/ShowcaseCredentialField';
+import { declarationOf } from '@/components/mandate/showcase-declaration';
 import {
   COVERAGE_OUTLINE_DEFECT_KEYS,
   OUTLINE_DEFECT_NS,
@@ -56,6 +57,7 @@ import { COVERAGE_MAX_OUTER_KM, COVERAGE_MAX_VERTICES } from '@/types/agency-cov
 import { ShowcaseMarkField } from '@/components/mandate/ShowcaseMarkField';
 import { ShowcaseCardDoor } from '@/components/mandate/ShowcaseCardDoor';
 import { ShowcaseRegistryDoor } from '@/components/mandate/ShowcaseRegistryDoor';
+import { ShowcaseLicencesDoor } from '@/components/mandate/ShowcaseLicencesDoor';
 import { ShowcaseWithdrawButton } from '@/components/mandate/ShowcaseWithdrawButton';
 import {
   BROKERAGE_DENY_NS,
@@ -64,7 +66,6 @@ import {
 } from '@/lib/auth/brokerage-authority';
 import { isCapabilityActive } from '@/types/organization-capability';
 import { useAgencyShowcase, type ShowcaseFailure } from '@/hooks/mandate/useAgencyShowcase';
-import type { ShowcaseWireDeclaration } from '@/lib/agency/showcase-wire';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { pickBilingualLabel, resolveEscoLang } from '@/components/shared/esco/esco-label';
 import type { EscoLanguage } from '@/types/contacts/esco-types';
@@ -316,6 +317,7 @@ export function AgencyShowcaseContent(): React.ReactElement {
       {/* 🏆 ADR-841 §7 Α21.16 — Η ΚΑΡΤΑ: **δική της πράξη σε δική της υποσελίδα** (GBP · GitHub ·
           LinkedIn: κάθε ενότητα με δικό της «Αποθήκευση»). Εδώ μόνο η πόρτα. */}
       <ShowcaseCardDoor published={published !== null} />
+      <ShowcaseLicencesDoor published={published} />
       {/* 🏆 ADR-841 §7 Α23.9 Φέτα Β — «Στοιχεία ΓΕΜΗ»: υποσελίδα· η πόρτα λέει την ΚΑΤΑΣΤΑΣΗ (κλειστή/επαληθευμένη). */}
       <ShowcaseRegistryDoor published={published} />
 
@@ -414,40 +416,6 @@ function PlaceSection({
       <PlaceIdentityField chosen={place} onChosen={onChosen} target="land" />
     </section>
   );
-}
-
-/**
- * **Τι φεύγει στο σύρμα** — και **μόνο ταξινομημένες** ειδικότητες.
- *
- * 🔴 Μια ειδικότητα χωρίς `escoUri` *(ελεύθερο κείμενο)* **δεν μπαίνει σε κανένα
- * φίλτρο**, και η διαδρομή θα την απέρριπτε ούτως ή άλλως. Το φιλτράρισμα εδώ
- * δεν είναι σιωπηλή απόρριψη: ο **επιλογέας το λέει ήδη στον άνθρωπο**, δίπλα
- * στο πεδίο, **πριν** πατήσει *(`occupationUnclassified`)*.
- *
- * ⛔ **Κανένα `position`**: τη γεωμετρία την παράγει ο **διακομιστής** από τη γη.
- * Δες `lib/agency/showcase-wire.ts`.
- */
-function declarationOf(
-  alias: string,
-  credentials: readonly ShowcaseCredentialDraft[],
-  place: PlaceRef | null,
-  coverage: DeclaredCoverage | null,
-): ShowcaseWireDeclaration {
-  return {
-    alias,
-    // ⚠️ ADR-841 §7 Α23 Φ3.1 — προσωρινή επιλογή· η οθόνη επιλογής ονόματος/έδρας έρχεται στη Φ3.3.
-    publicName: { kind: 'legal-name' },
-    seatDisclosure: null,
-    credentials: credentials
-      .filter((draft): draft is ShowcaseCredentialDraft & { escoUri: string } => draft.escoUri !== null)
-      .map((draft) => ({
-        escoUri: draft.escoUri,
-        registrationNumber: draft.registrationNumber,
-        registrationChapter: draft.registrationChapter,
-      })),
-    place,
-    coverage,
-  };
 }
 
 /**

@@ -17,7 +17,7 @@
 import { isStandaloneUnitType, LAND_PROPERTY_TYPES } from '@/constants/property-types';
 import type { ConveyanceFactId, ConveyanceProfile } from '@/config/conveyance-checklist/types';
 import { FACT_ENTAILMENTS } from '@/config/conveyance-checklist/fact-entailments';
-import type { ConveyanceFactAnswer } from '@/types/conveyance-case';
+import type { ConveyanceFactAnswer, ConveyancePartyFactAnswers, ConveyanceSellerParty } from '@/types/conveyance-case';
 
 export type FactValues = Readonly<Partial<Record<ConveyanceFactId, boolean>>>;
 
@@ -46,7 +46,6 @@ export function deriveFacts(sources: FactSources): FactValues {
     is_unit_in_multi_owner_building: multiOwnerBuildingOf(sources.propertyType),
   };
   if (isNewBuild) {
-    facts.seller_is_legal_entity = true;
     facts.existing_building_with_manager = false;
     if (sources.landownerCount !== null) facts.has_antiparochi = sources.landownerCount > 0;
   }
@@ -89,4 +88,21 @@ export function resolveFacts(
     if (answer) resolved[factId] = answer.value;
   }
   return applyFactEntailments(resolved);
+}
+
+/**
+ * ADR-915 §22 — γεγονότα **ενός προσώπου** που παράγονται από τα δεδομένα: φυσικό ή νομικό πρόσωπο είναι γνωστό από
+ * το ίδιο το πρόσωπο, άρα **δεν** ρωτιέται. (Πριν από την §22 παραγόταν από το προφίλ — «νεόδμητο ⇒ εταιρεία» — που
+ * έλεγε ψέματα για κάθε συμπωλητή-ιδιώτη.)
+ */
+export function derivePartyFacts(party: Pick<ConveyanceSellerParty, 'kind'>): FactValues {
+  return applyFactEntailments({ seller_is_legal_entity: party.kind === 'legal_entity' });
+}
+
+/** Οι τελικές τιμές ενός προσώπου — η **ίδια** επίλυση με της υπόθεσης (νόμος > απάντηση > παραγόμενο). */
+export function resolvePartyFacts(
+  party: ConveyanceSellerParty,
+  answers: ConveyancePartyFactAnswers,
+): FactValues {
+  return resolveFacts(derivePartyFacts(party), answers[party.key] ?? {});
 }

@@ -11,8 +11,10 @@
  *    μητρώο** ΥΠΕΝ/ΕΥΕΠΕΝ (buildingcert.gr)· τη βεβαίωση του άρθρου 83 δεν τη βγάζει κάθε μηχανικός αλλά οι ειδικότητες
  *    που όρισε η Δ.Ε. του ΤΕΕ (ο μηχανολόγος **δεν** είναι μέσα). Ένας κατάλογος «βρες μηχανικό» φιλτραρισμένος με
  *    επάγγελμα θα έδειχνε ανθρώπους που **δεν μπορούν** να το υπογράψουν — γι' αυτό το λεξιλόγιο είναι προσόντα.
- * ⛔ **Κανένας επινοημένος κωδικός ESCO** (ίδιος κανόνας με το `occupation-families.ts`): URI μόνο όσα ήδη επαλήθευσε η
- *    γέφυρα ρόλων (`PROJECT_ROLE_BRIDGE`, εισάγονται)· τα υπόλοιπα `null` με λόγο — ποτέ σιωπηλή παράλειψη.
+ * ⛔ **Κανένας επινοημένος κωδικός ESCO** (ίδιος κανόνας με το `occupation-families.ts`): URI μόνο όσα επαλήθευσε η
+ *    γέφυρα ρόλων (`PROJECT_ROLE_BRIDGE`, εισάγονται) ή το `system/esco_cache` (με ημερομηνία δίπλα)· τίτλος χωρίς
+ *    ισοδύναμο = κενός πίνακας με λόγο — ποτέ σιωπηλή παράλειψη.
+ * 🔑 **Άδεια ≠ επάγγελμα** (ADR-915 §21): ο ενεργειακός επιθεωρητής αποδεικνύεται με άδεια (`professional-licences.ts`).
  * ⛔ **Καμία ετικέτα εδώ**: οι λέξεις ζουν στα locales (`document-registry.json`, N.11).
  *
  * @module config/document-validity/document-issuers
@@ -20,6 +22,8 @@
  */
 
 import { PROJECT_ROLE_BRIDGE } from '@/config/profession-bridge.config';
+import type { ProfessionalLicence } from '@/config/professional-licences';
+import { escoOccupationUri } from '@/lib/esco/esco-uri';
 
 /**
  * Ποιος **οφείλει** να φέρει το έγγραφο, ουδέτερα ως προς τη διαδικασία: στη μεταβίβαση ο ιδιοκτήτης είναι ο πωλητής,
@@ -40,28 +44,42 @@ export const ISSUER_QUALIFICATIONS = [
 ] as const;
 export type IssuerQualification = (typeof ISSUER_QUALIFICATIONS)[number];
 
-/** Μητρώα όπου η **εγγραφή** είναι το ίδιο το προσόν. */
-export type IssuerRegistry = 'ypen-energy-inspectors';
+/**
+ * Πώς **αποδεικνύεται** ένα προσόν στη βιτρίνα του επαγγελματία (ADR-915 §21):
+ * - `occupation` — ειδικότητα: **κάποιο** από τα URI ESCO στα `credentials` (any-of). Κενός πίνακας = ο τίτλος δεν έχει
+ *                  ισοδύναμο στο ESCO ⇒ **δεν** αναζητείται, και αυτό είναι δηλωμένο, όχι σιωπηλό.
+ * - `licence`    — άδεια **επιπλέον** του επαγγέλματος (`config/professional-licences.ts`), δηλωμένη με αριθμό μητρώου.
+ */
+export type IssuerQualificationSpec =
+  | { readonly kind: 'occupation'; readonly escoUris: readonly string[] }
+  | { readonly kind: 'licence'; readonly licence: ProfessionalLicence };
 
-export interface IssuerQualificationSpec {
-  /** ESCO occupation URI — **μόνο** επαληθευμένο (εισάγεται από τη γέφυρα ρόλων). `null` = δεν υπάρχει/δεν επαληθεύτηκε. */
-  readonly escoUri: string | null;
-  /** Το μητρώο στο οποίο πρέπει να είναι εγγεγραμμένος. `null` = αρκεί η ειδικότητα με δικαίωμα υπογραφής. */
-  readonly registry: IssuerRegistry | null;
+/** Το URI που ήδη επαλήθευσε η γέφυρα ρόλων — **εισάγεται**, δεν ξαναγράφεται. */
+function bridgedUris(role: 'structural_engineer' | 'architect' | 'surveyor'): readonly string[] {
+  const uri = PROJECT_ROLE_BRIDGE[role].escoUri;
+  return uri === null ? [] : [uri];
 }
 
 export const ISSUER_QUALIFICATION_SPECS: Readonly<Record<IssuerQualification, IssuerQualificationSpec>> = {
-  'civil-engineer': { escoUri: PROJECT_ROLE_BRIDGE.structural_engineer.escoUri, registry: null },
-  architect: { escoUri: PROJECT_ROLE_BRIDGE.architect.escoUri, registry: null },
-  'surveyor-engineer': { escoUri: PROJECT_ROLE_BRIDGE.surveyor.escoUri, registry: null },
-  // Το ESCO έχει «πολεοδόμο» (2164), αλλά το URI δεν επαληθεύτηκε στο `system/esco_cache` ⇒ `null`, όχι μαντεψιά.
-  'spatial-planner': { escoUri: null, registry: null },
-  // Ελληνικοί τίτλοι σπουδών (υπομηχανικός · πτυχιούχος ΤΕΙ/ΑΤΕΙ) χωρίς ισοδύναμο στο ESCO.
-  'civil-sub-engineer': { escoUri: null, registry: null },
-  'civil-engineer-tei': { escoUri: null, registry: null },
-  // Ο ενεργειακός επιθεωρητής δεν έχει URI ESCO (γέφυρα ρόλων: `energy_inspector.escoUri === null`)· το προσόν του είναι
-  // η εγγραφή στο Μητρώο Ενεργειακών Επιθεωρητών της ΕΥΕΠΕΝ (buildingcert.gr).
-  'energy-inspector-registered': { escoUri: PROJECT_ROLE_BRIDGE.energy_inspector.escoUri, registry: 'ypen-energy-inspectors' },
+  'civil-engineer': { kind: 'occupation', escoUris: bridgedUris('structural_engineer') },
+  architect: { kind: 'occupation', escoUris: bridgedUris('architect') },
+  'surveyor-engineer': { kind: 'occupation', escoUris: bridgedUris('surveyor') },
+  // «Μηχανικός Χωροταξίας, Πολεοδομίας και Ανάπτυξης» = δύο επαγγέλματα ESCO (ISCO 2164), επαληθευμένα στο
+  // `system/esco_cache/occupations` 2026-10-16: «μηχανικός χωροταξίας και ανάπτυξης» · «μηχανικός πολεοδομίας».
+  // ⛔ ΟΧΙ ο «συγκοινωνιολόγος μηχανικός» (ίδιο ISCO, άλλη ειδικότητα — εκτός απόφασης ΤΕΕ).
+  'spatial-planner': {
+    kind: 'occupation',
+    escoUris: [
+      escoOccupationUri('44508e7b-f56b-4bfb-9cd6-879838aecd94'),
+      escoOccupationUri('e14548c8-c2b9-4ef8-8670-d5967d7ad804'),
+    ],
+  },
+  // Ελληνικοί τίτλοι σπουδών (υπομηχανικός · πτυχιούχος ΤΕΙ/ΑΤΕΙ) χωρίς ισοδύναμο στο ESCO ⇒ δεν αναζητούνται.
+  'civil-sub-engineer': { kind: 'occupation', escoUris: [] },
+  'civil-engineer-tei': { kind: 'occupation', escoUris: [] },
+  // Ο ενεργειακός επιθεωρητής είναι μηχανικός με ΕΠΙΠΛΕΟΝ άδεια του Μητρώου της ΕΥΕΠΕΝ (buildingcert.gr) — άδεια, όχι
+  // επάγγελμα (ADR-915 §21).
+  'energy-inspector-registered': { kind: 'licence', licence: 'energy-inspector' },
 };
 
 /** Δημόσιες αρχές που εκδίδουν έγγραφα του μητρώου. */

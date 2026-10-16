@@ -24,6 +24,7 @@ import { normalizePropertyType } from '@/constants/property-type-aliases';
 import { isLegalPhase, type LegalPhase } from '@/constants/legal-phases';
 import type { ConveyanceProfile } from '@/config/conveyance-checklist/types';
 import type { FactSources } from '@/lib/conveyance/derive-facts';
+import { sellerParty } from '@/lib/conveyance/case-parties';
 import type {
   ConveyanceAppurtenanceRef,
   ConveyanceCaseParties,
@@ -96,7 +97,9 @@ export function subjectContextOf(propertyId: string, property: DocData, project:
     projectId,
     subject: { kind: 'property', propertyId, buildingId: stringOrNull(property.buildingId), projectId, appurtenances },
     parties: {
-      seller: { contactId: stringOrNull(project?.linkedCompanyId), kind: 'legal_entity' },
+      // Η νομική οντότητα του έργου (ADR-232) — νομικό πρόσωπο εξ ορισμού. Συμπωλητές (π.χ. οικοπεδούχοι, Α.1008/2021
+      // άρθρο 3 παρ. 8) δεν συνάγονται σιωπηλά: «συμβάλλονται στο συμβόλαιο;» είναι ερώτηση νόμου (ADR-915 §22).
+      sellers: [sellerParty(stringOrNull(project?.linkedCompanyId), 'legal_entity')],
       buyers: buyersOf(property),
     },
     factSources: {

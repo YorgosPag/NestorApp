@@ -58,6 +58,7 @@ import type { DeclaredCoverage } from '@/types/agency-coverage';
 import type { GeoCircle, GeoPoint } from '@/types/geo/coordinates';
 import type { PlaceRef } from '@/types/geo/public-place';
 import type { EscoBilingualText } from '@/types/contacts/esco-types';
+import type { ProfessionalLicence } from '@/config/professional-licences';
 import type { ProfessionalAttestation } from '@/types/professional-identity';
 import type { ListingImage } from '@/types/public-listing';
 import type { ShowcaseMarkKind } from '@/lib/agency/showcase-mark-kind';
@@ -180,6 +181,19 @@ export type ShowcaseCredential =
 type RegulatedAttestation = Exclude<ProfessionalAttestation, { state: 'unknown' }>;
 
 /**
+ * **Μια άδεια ΕΠΙΠΛΕΟΝ του επαγγέλματος** *(ADR-915 §21 — π.χ. ενεργειακός επιθεωρητής ΥΠΕΝ)*.
+ *
+ * 🔑 **Άδεια ≠ επάγγελμα**: ο επιθεωρητής είναι μηχανικός *(στα `credentials`)* με **επιπλέον** άδεια· δεν έχει
+ * κωδικό ISCO — όπως το Houzz κρατά το «Verified License» χωριστά από την κατηγορία.
+ * 🔒 **Χωρίς `unknown`**: άδεια χωρίς αριθμό μητρώου είναι **μη εκφράσιμη** — ο ισχυρισμός «είμαι επιθεωρητής» χωρίς
+ * αριθμό δεν διαψεύδεται από κανέναν (ADR-841 Α9.2). Η αρχή **παράγεται** από την άδεια (`PROFESSIONAL_LICENCE_SPECS`).
+ */
+export interface ShowcaseLicence {
+  readonly licence: ProfessionalLicence;
+  readonly attestation: RegulatedAttestation;
+}
+
+/**
  * **Η βιτρίνα.** Κλειδί εγγράφου: το `companyId`.
  *
  * ⚠️ **ΤΟ ΟΝΟΜΑ ΑΛΛΑΞΕ ΣΤΗ Φ6-Β, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ**: ήταν `AgencyProfile`
@@ -258,6 +272,11 @@ export interface PublicShowcase {
    * **έναν** γραφέα)* — το φυλά ο γραφέας, με **ονομασμένη** απόρριψη.
    */
   readonly credentials: readonly ShowcaseCredential[];
+  /**
+   * **ΑΔΕΙΕΣ ΕΠΙΠΛΕΟΝ ΤΟΥ ΕΠΑΓΓΕΛΜΑΤΟΣ** *(ADR-915 §21)*. Κενός = δεν δήλωσε καμία — **νόμιμο και συνηθισμένο**.
+   * Τις ρωτά ο κατάλογος `/pro` όταν η αναζήτηση είναι «ποιος μπορεί να εκδώσει αυτό το έγγραφο;».
+   */
+  readonly licences: readonly ShowcaseLicence[];
   /**
    * Πού δραστηριοποιείται — **ΑΝΑΦΟΡΑ** στη γη, ώστε το {@link position} να είναι
    * επισκευάσιμο *(Α1.6)*.
