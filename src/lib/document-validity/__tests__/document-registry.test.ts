@@ -240,7 +240,7 @@ describe('Φ4δ Ε7 — «λείπει»: απαίτηση `required` χωρίς
 });
 
 describe('Φ4δ Ε8 — η έγκριση επαγγελματία είναι έγγραφο (ποτέ ψευδές «λείπει»)', () => {
-  const approved = (fileId: string | null, issuedOn: string | null) => ({ attestation: { fileId, issuedOn } });
+  const approved = (fileId: string | null, issuedOn: string | null) => ({ attestation: { fileId, issuedOn, printedValidUntil: null } });
 
   it('ταυτότητα κτιρίου εγκεκριμένη ΕΚΤΟΣ πλατφόρμας ⇒ γραμμή `attested` με λήξη από την έκδοση του ελεγκτή, κανένα κενό', () => {
     const { rows } = registry([], [caseOn('c1', 'p1', { documentKind: 'building-identity', ...approved(null, '2026-09-01') })]);
@@ -268,7 +268,7 @@ describe('Φ4δ Ε8 — η έγκριση επαγγελματία είναι έ
 
 describe('Φ4δ Ε9 — Δ3: ΠΕΑ επιπέδου έργου, ένας κάτοχος ανά απαίτηση', () => {
   const projectPea = pea('f-project', '2016-01-10', { propertyId: null });
-  const bound = (caseId: string, propertyId: string) => caseOn(caseId, propertyId, { attestation: { fileId: 'f-project', issuedOn: null } });
+  const bound = (caseId: string, propertyId: string) => caseOn(caseId, propertyId, { attestation: { fileId: 'f-project', issuedOn: null, printedValidUntil: null } });
 
   it('ένα αρχείο έργου ⇒ ΜΙΑ γραμμή που κρατά τις υποθέσεις που το ενέκριναν, όσα ακίνητα κι αν αφορούν', () => {
     const { rows, tally } = registry([projectPea], [bound('c1', 'p1'), bound('c2', 'p2')]);
@@ -292,7 +292,7 @@ describe('Φ4δ Ε9 — Δ3: ΠΕΑ επιπέδου έργου, ένας κάτ
 
   it('εγκεκριμένο αρχείο ακινήτου που αντικαταστάθηκε (Α5) ⇒ την υπόθεση την κουβαλά το τρέχον, ποτέ κανείς', () => {
     const old = pea('old', '2014-01-01');
-    const { rows } = registry([old, pea('new', '2024-01-01')], [caseOn('c1', 'p1', { attestation: { fileId: 'old', issuedOn: null } })]);
+    const { rows } = registry([old, pea('new', '2024-01-01')], [caseOn('c1', 'p1', { attestation: { fileId: 'old', issuedOn: null, printedValidUntil: null } })]);
     expect(asDocument(byId(rows, 'new')).dependents).toHaveLength(1);
     expect(asDocument(byId(rows, 'old')).dependents).toEqual([]);
   });

@@ -66,14 +66,39 @@ interface ConveyanceChecklistRowProps extends ChecklistRowHandlers {
   readonly row: ChecklistRow;
 }
 
+/** Καταστάσεις όπου χρειάζεται (νέα) έκδοση — εκεί έχει νόημα το «εκδώστε από X» (ADR-915 §14). */
+const NEEDS_ISSUE: ReadonlySet<ChecklistRow['status']> = new Set(['missing', 'rejected', 'expired', 'expiring', 'stale']);
+
+/**
+ * ADR-915 §14 — «εκδώστε από X και μετά»: η νωρίτερη έκδοση που εγγυημένα καλύπτει την υπογραφή. Ποτέ σε γραμμή
+ * που ήδη καλύπτει την υπογραφή — εκεί θα ήταν θόρυβος.
+ */
+function IssueFromHint({ row }: { readonly row: ChecklistRow }) {
+  const { t } = useTranslation(['conveyance']);
+  const colors = useSemanticColors();
+  if (row.issueFrom === null || (!NEEDS_ISSUE.has(row.status) && row.validOnSigning !== false)) return null;
+  return <p className={cn('text-xs', colors.text.muted)}>{t('row.issueFrom', { date: formatDate(row.issueFrom) })}</p>;
+}
+
+function RowExpiry({ row }: { readonly row: ChecklistRow }) {
+  const { t } = useTranslation(['conveyance']);
+  const colors = useSemanticColors();
+  if (row.validOnSigning === false) {
+    return <p className={cn('text-xs font-medium', colors.text.error)}>{t('row.invalidOnSigning')}</p>;
+  }
+  if (!row.expiresOn) return null;
+  const key = row.expiryIsFloor ? 'row.expiresAtLeast' : 'row.expiresOn';
+  return <p className={cn('text-xs', colors.text.muted)}>{t(key, { date: formatDate(row.expiresOn) })}</p>;
+}
+
 function RowValidity({ row }: { readonly row: ChecklistRow }) {
   const { t } = useTranslation(['conveyance']);
   const colors = useSemanticColors();
   const validity = row.item.validity;
-  if (row.validOnSigning === false) {
-    return <p className={cn('text-xs font-medium', colors.text.error)}>{t('row.invalidOnSigning')}</p>;
+  if (row.validOnSigning === false || row.expiresOn) {
+    return <><RowExpiry row={row} /><IssueFromHint row={row} /></>;
   }
-  if (row.expiresOn) return <p className={cn('text-xs', colors.text.muted)}>{t('row.expiresOn', { date: formatDate(row.expiresOn) })}</p>;
+  if (row.issueFrom !== null && NEEDS_ISSUE.has(row.status)) return <IssueFromHint row={row} />;
   if (validity.kind === 'act_day') return <p className={cn('text-xs', colors.text.muted)}>{t('row.actDay')}</p>;
   if (validity.kind === 'unverified' && row.status !== 'not_applicable') {
     return <p className={cn('text-xs', colors.text.muted)}>{t('row.validityUnverified')}</p>;

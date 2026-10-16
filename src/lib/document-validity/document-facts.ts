@@ -148,19 +148,20 @@ export function documentFactsExpiry(facts: ExpiryFacts): DocumentExpiry {
 
 /**
  * **Α3 — το αρχείο κερδίζει, ανά πεδίο.** Γεγονότα **του ίδιου είδους** δίνουν έκδοση και τυπωμένη λήξη· ό,τι δεν
- * ξέρουν (`issuedOn: null`) το συμπληρώνει η ημερομηνία που πληκτρολόγησε άνθρωπος. Γεγονότα άλλου είδους **αγνοούνται**
- * (ένα ΠΕΑ δεν δίνει λήξη σε ταυτότητα κτιρίου). Η ΜΙΑ γέφυρα για μεταβίβαση και ακίνητο.
+ * ξέρουν (`null`) το συμπληρώνει ό,τι πληκτρολόγησε άνθρωπος (έκδοση · και, ADR-915 §14, τυπωμένη λήξη). Γεγονότα άλλου
+ * είδους **αγνοούνται** (ένα ΠΕΑ δεν δίνει λήξη σε ταυτότητα κτιρίου). Η ΜΙΑ γέφυρα για μεταβίβαση, ακίνητο και μητρώο.
  */
 export function resolvedDocumentExpiry(
   kind: DocumentKind,
   facts: ExpiryFacts | null,
   fallbackIssuedOn: string | null,
+  fallbackPrintedValidUntil: string | null = null,
 ): DocumentExpiry {
   const own = facts !== null && facts.kind === kind ? facts : null;
   return documentFactsExpiry({
     kind,
     issuedOn: own?.issuedOn ?? fallbackIssuedOn,
-    printedValidUntil: own?.printedValidUntil ?? null,
+    printedValidUntil: own?.printedValidUntil ?? fallbackPrintedValidUntil,
   });
 }
 
@@ -189,18 +190,23 @@ export function isDocumentText(facts: Pick<DocumentFacts, 'source'> | null): boo
   return facts !== null && facts.source.kind === 'document-text';
 }
 
+/** Ένα δηλωμένο πεδίο αντιλέγει σε ό,τι διάβασε ο αναγνώστης; `null` σε οποιαδήποτε πλευρά = σιωπή, όχι αντίφαση. */
+const differs = (read: string | null, declared: string | null): boolean =>
+  read !== null && declared !== null && read !== declared;
+
 /**
- * **Αντιλέγει η δηλωμένη ημερομηνία έκδοσης σε ό,τι διάβασε ο αναγνώστης από το ΙΔΙΟ το έγγραφο;** Ο ΕΝΑΣ φρουρός
- * για μεταβίβαση (έγκριση ελεγκτή) και ακίνητο (δήλωση ΠΕΑ).
+ * **Αντιλέγει η δήλωση σε ό,τι διάβασε ο αναγνώστης από το ΙΔΙΟ το έγγραφο;** Ο ΕΝΑΣ φρουρός για μεταβίβαση (έγκριση
+ * ελεγκτή) και ακίνητο (δήλωση ΠΕΑ) — για την ημερομηνία έκδοσης **και** (ADR-915 §14) για την τυπωμένη λήξη.
  *
- * ⚠️ `declaredIssuedOn: null` = «δεν ξέρω», **όχι** αντίφαση — η λήξη τη συμπληρώνει από το αρχείο (Α3 ανά πεδίο).
+ * ⚠️ Δηλωμένο `null` = «δεν ξέρω», **όχι** αντίφαση — η λήξη το συμπληρώνει από το αρχείο (Α3 ανά πεδίο).
  * ⚠️ Δήλωση ανθρώπου (`attested`) δεν «αντιλέγει»: δύο άνθρωποι διαφωνούν, το έγγραφο δεν μίλησε.
  */
 export function contradictsDocumentText(
   kind: DocumentKind | undefined,
-  facts: Pick<DocumentFacts, 'kind' | 'issuedOn' | 'source'> | null,
+  facts: Pick<DocumentFacts, 'kind' | 'issuedOn' | 'source'> & Partial<Pick<DocumentFacts, 'printedValidUntil'>> | null,
   declaredIssuedOn: string | null,
+  declaredPrintedValidUntil: string | null = null,
 ): boolean {
-  if (declaredIssuedOn === null || facts === null || !isDocumentText(facts) || facts.issuedOn === null) return false;
-  return facts.kind === kind && facts.issuedOn !== declaredIssuedOn;
+  if (facts === null || !isDocumentText(facts) || facts.kind !== kind) return false;
+  return differs(facts.issuedOn, declaredIssuedOn) || differs(facts.printedValidUntil ?? null, declaredPrintedValidUntil);
 }

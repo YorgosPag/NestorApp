@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 
 import type { DocumentKind } from '@/config/document-validity/document-validity';
+import type { ExpirySource } from '@/lib/document-validity/document-expiry';
 import type { RegistryRowState } from '@/lib/document-validity/document-registry';
 import type { RegistryPickerView } from '@/lib/document-validity/document-registry-view';
 import type {
@@ -67,8 +68,6 @@ export const REGISTRY_KEYS = {
   expiryUnknown: `${K}row.expiryUnknown`,
   daysLeft: `${K}row.daysLeft`,
   daysAgo: `${K}row.daysAgo`,
-  sourceRule: `${K}row.sourceRule`,
-  sourcePrinted: `${K}row.sourcePrinted`,
   state: `${K}row.state`,
   supersededBy: `${K}row.supersededBy`,
   openDocuments: `${K}row.openDocuments`,
@@ -143,6 +142,17 @@ export const REGISTRY_VIEW_LABEL_KEYS: Readonly<Record<RegistryPickerView, strin
 export const DOCUMENT_KIND_LABEL_KEYS: Readonly<Record<DocumentKind, string>> = {
   'energy-certificate': 'conveyance:items.energy_certificate.label',
   'building-identity': 'legality:kind.building-identity',
+  // ADR-915 §14 — ίδια ονόματα με τις γραμμές του καταλόγου μεταβίβασης: ένα κλειδί, μία ετικέτα.
+  'tax-clearance': 'conveyance:items.seller_tax_clearance.label',
+  'insurance-clearance': 'conveyance:items.seller_insurance_clearance.label',
+  'enfia-certificate': 'conveyance:items.seller_enfia_certificate.label',
+};
+
+/** ADR-915 §14 — από πού ήρθε η λήξη· `floor` = το εγγυημένο κατώτατο («τουλάχιστον έως»), όχι η πραγματική λήξη. */
+export const EXPIRY_SOURCE_LABEL_KEYS: Readonly<Record<ExpirySource, string>> = {
+  rule: `${K}row.sourceRule`,
+  printed: `${K}row.sourcePrinted`,
+  floor: `${K}row.sourceFloor`,
 };
 
 export const PROCESS_LABEL_KEYS: Readonly<Record<DocumentProcess, string>> = {

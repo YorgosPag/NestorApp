@@ -70,6 +70,11 @@ export interface ChecklistItemReview {
   readonly fileFingerprint: string | null;
   /** Ημερομηνία έκδοσης του εγγράφου (YYYY-MM-DD) — βάση της ισχύος (ADR-901 §2 Ε-Δ). */
   readonly issuedOn: string | null;
+  /**
+   * ADR-915 §14 — η λήξη όπως είναι **τυπωμένη** στο έγγραφο (YYYY-MM-DD), όταν τη δήλωσε ο ελεγκτής. Για είδη με κανόνα
+   * `printed` (φορολογική · ΕΦΚΑ · ΕΝΦΙΑ) είναι η αλήθεια, μέσα στα νόμιμα όρια. Παλιά έγγραφα ⇒ `null`.
+   */
+  readonly printedValidUntil: string | null;
   /** Λόγος επιστροφής (υποχρεωτικός όταν `rejected`). */
   readonly reason: string | null;
   readonly reviewedBy: string;
@@ -232,8 +237,18 @@ export interface ChecklistRow {
   readonly pendingFact: ConveyanceFactId | null;
   /** Λήξη ισχύος (YYYY-MM-DD) — μόνο όταν είναι υπολογίσιμη. */
   readonly expiresOn: string | null;
+  /**
+   * ADR-915 §14 — το `expiresOn` είναι το **κατώτατο** που εγγυάται ο νόμος (κανόνας `printed` χωρίς τυπωμένη λήξη):
+   * η διεπαφή λέει «τουλάχιστον έως», ποτέ «λήγει».
+   */
+  readonly expiryIsFloor: boolean;
   /** Θα ισχύει την ημέρα υπογραφής; `null` = άγνωστο (χωρίς ημερομηνία ή χωρίς λήξη). */
   readonly validOnSigning: boolean | null;
+  /**
+   * ADR-915 §14 — «εκδώστε από X και μετά»: η νωρίτερη ημέρα έκδοσης που **εγγυημένα** καλύπτει την ημέρα υπογραφής
+   * (`coveringIssueFrom`). `null` = χωρίς ημέρα υπογραφής ή κανόνας χωρίς εγγύηση.
+   */
+  readonly issueFrom: string | null;
 }
 
 export interface ChecklistSummary {

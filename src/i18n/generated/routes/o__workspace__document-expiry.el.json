@@ -6,6 +6,15 @@
     "items": {
       "energy_certificate": {
         "label": "Πιστοποιητικό Ενεργειακής Απόδοσης (ΠΕΑ)"
+      },
+      "seller_enfia_certificate": {
+        "label": "Πιστοποιητικό ΕΝΦΙΑ πωλητή"
+      },
+      "seller_insurance_clearance": {
+        "label": "Ασφαλιστική ενημερότητα πωλητή (e-ΕΦΚΑ)"
+      },
+      "seller_tax_clearance": {
+        "label": "Φορολογική ενημερότητα πωλητή"
       }
     }
   },
@@ -73,6 +82,7 @@
       "property": "Ακίνητο",
       "propertyNone": "Δεν συνδέεται με ακίνητο",
       "propertyUnnamed": "Ακίνητο χωρίς όνομα",
+      "sourceFloor": "τουλάχιστον — η τυπωμένη λήξη δεν έχει δηλωθεί",
       "sourcePrinted": "όπως είναι τυπωμένη στο έγγραφο",
       "sourceRule": "από τον κανόνα του είδους",
       "state": "Κατάσταση",

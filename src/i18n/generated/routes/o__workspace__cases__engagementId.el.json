@@ -140,9 +140,6 @@
       "legal_due_diligence_report": {
         "label": "Έκθεση νομικού ελέγχου"
       },
-      "municipal_clearance": {
-        "label": "Βεβαίωση ΤΑΠ δήμου και ηλεκτροδότησης"
-      },
       "payoff_receipt": {
         "label": "Εξοφλητήριο"
       },
@@ -236,8 +233,10 @@
     },
     "row": {
       "actDay": "Εκδίδεται την ημέρα της πράξης",
+      "expiresAtLeast": "Ισχύει τουλάχιστον έως {date}",
       "expiresOn": "Λήγει {date}",
       "invalidOnSigning": "Δεν θα ισχύει την ημέρα υπογραφής",
+      "issueFrom": "Για να ισχύει στην υπογραφή, εκδώστε το από {date} και μετά",
       "notApplicableByFact": "Δεν εφαρμόζεται σε αυτή τη μεταβίβαση",
       "notApplicableReason": "Δεν εφαρμόζεται: {reason}",
       "offlineHint": "Δεν ανεβαίνει ακόμη στην πλατφόρμα — επιβεβαιώστε την παραλαβή του.",

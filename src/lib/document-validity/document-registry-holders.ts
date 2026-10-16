@@ -65,7 +65,7 @@ function attestedDocumentOf(requirement: DocumentRequirement, caseId: string): R
     propertyId: requirement.subject.propertyId,
     origin: { kind: 'attested', caseId, fileId: attestation?.fileId ?? null },
     issuedOn: attestation?.issuedOn ?? null,
-    printedValidUntil: null,
+    printedValidUntil: attestation?.printedValidUntil ?? null,
     source: null,
     pinned: false,
   };

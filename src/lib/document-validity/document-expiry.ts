@@ -21,8 +21,8 @@
  */
 
 import { addDaysToDateKey, daysBetweenDateKeys, isDateKey } from '@/lib/calendar/date-key';
-import { addMonthsUTC, normalizeToMillisOrNull, utcDateOf } from '@/lib/date-local';
 import type { DocumentValidityRule } from '@/config/document-validity/document-validity';
+import { addMonthsToDateKey, boundExpiresOn, printedBoundsOf } from '@/lib/document-validity/validity-bounds';
 
 /** Ανοχή ασυμφωνίας: μία μέρα (στρογγυλοποίηση εκδότη «έως και» vs «έως»). Πέρα από αυτή, το λέμε. */
 const DISCREPANCY_TOLERANCE_DAYS = 1;
@@ -32,23 +32,27 @@ const DISCREPANCY_TOLERANCE_DAYS = 1;
  * Είναι το `expires` του `LegalityClaimKindSpec`, **παραγόμενο** αντί για γραμμένο δεύτερη φορά.
  */
 export function ruleExpires(rule: DocumentValidityRule): boolean {
-  return rule.kind === 'months' || rule.kind === 'days' || rule.kind === 'unverified';
+  return rule.kind === 'months' || rule.kind === 'days' || rule.kind === 'unverified' || rule.kind === 'printed';
 }
 
 /**
  * Η τελευταία ημέρα ισχύος κατά τον **κανόνα** — `YYYY-MM-DD`, ή `null` όταν ο κανόνας δεν δίνει ημερομηνία
  * (`none` · `act_day` · `unverified`) ή η έκδοση δεν διαβάζεται. `null` σημαίνει «δεν ξέρουμε», **ποτέ** «ισχύει».
+ * Για `printed` είναι το **κατώτατο** — το μόνο που εγγυάται ο νόμος χωρίς την τυπωμένη λήξη.
  */
 export function ruleExpiresOn(rule: DocumentValidityRule, issuedOn: string | null): string | null {
   if (issuedOn === null || !isDateKey(issuedOn)) return null;
   if (rule.kind === 'days') return addDaysToDateKey(issuedOn, rule.days);
-  if (rule.kind !== 'months') return null;
-  const untilMs = normalizeToMillisOrNull(addMonthsUTC(issuedOn, rule.months));
-  return untilMs === null ? null : utcDateOf(untilMs);
+  if (rule.kind === 'months') return addMonthsToDateKey(issuedOn, rule.months);
+  if (rule.kind === 'printed') return rule.floor === null ? null : boundExpiresOn(rule.floor, issuedOn);
+  return null;
 }
 
-/** Από πού ήρθε η ημέρα λήξης. */
-export type ExpirySource = 'rule' | 'printed';
+/**
+ * Από πού ήρθε η ημέρα λήξης. `floor` = το **κατώτατο** ενός κανόνα `printed` χωρίς τυπωμένη λήξη: η ημέρα είναι
+ * εγγυημένη, όχι η πραγματική — η διεπαφή λέει «τουλάχιστον έως», ποτέ «λήγει».
+ */
+export type ExpirySource = 'rule' | 'printed' | 'floor';
 
 export interface ExpiryDiscrepancy {
   readonly rule: string;
@@ -75,10 +79,34 @@ function discrepancyOf(rule: string, printed: string): ExpiryDiscrepancy | null 
   return gap !== null && Math.abs(gap) > DISCREPANCY_TOLERANCE_DAYS ? { rule, printed } : null;
 }
 
+const UNKNOWN_EXPIRY: DocumentExpiry = { expiresOn: null, source: null, discrepancy: null };
+
+/**
+ * `printed` — η τυπωμένη λήξη **είναι** η αλήθεια, μέσα στα νόμιμα όρια (ADR-915 §14):
+ *   χωρίς τυπωμένη                ⇒ το κατώτατο (`floor`), ή άγνωστη
+ *   πάνω από το ανώτατο            ⇒ το ανώτατο + ασυμφωνία   (ποτέ «σε ισχύ» πέρα από τον νόμο)
+ *   κάτω από το κατώτατο           ⇒ η τυπωμένη + ασυμφωνία   (η νωρίτερη κερδίζει, Α4)
+ *   μέσα στα όρια                  ⇒ η τυπωμένη, χωρίς ασυμφωνία (η διάρκεια εξαρτάται από ό,τι ξέρει μόνο το έγγραφο)
+ */
+function printedRuleExpiry(
+  rule: Extract<DocumentValidityRule, { kind: 'printed' }>,
+  issuedOn: string | null,
+  printed: string | null,
+): DocumentExpiry {
+  const { floor, ceiling } = printedBoundsOf(rule, issuedOn) ?? { floor: null, ceiling: null };
+  if (printed === null) return floor === null ? UNKNOWN_EXPIRY : { expiresOn: floor, source: 'floor', discrepancy: null };
+  if (ceiling !== null && printed > ceiling) {
+    return { expiresOn: ceiling, source: 'rule', discrepancy: discrepancyOf(ceiling, printed) };
+  }
+  const belowFloor = floor !== null && printed < floor ? discrepancyOf(floor, printed) : null;
+  return { expiresOn: printed, source: 'printed', discrepancy: belowFloor };
+}
+
 /** Η ισχύουσα λήξη: η **νωρίτερη** από κανόνα και έγγραφο, με την προέλευσή της και την ασυμφωνία τους. */
 export function documentExpiry({ rule, issuedOn, printedValidUntil = null }: DocumentExpiryInput): DocumentExpiry {
-  const fromRule = ruleExpiresOn(rule, issuedOn);
   const printed = printedValidUntil !== null && isDateKey(printedValidUntil) ? printedValidUntil : null;
+  if (rule.kind === 'printed') return printedRuleExpiry(rule, issuedOn, printed);
+  const fromRule = ruleExpiresOn(rule, issuedOn);
   if (rule.kind === 'none') return { expiresOn: null, source: null, discrepancy: null };
   if (fromRule === null && printed === null) return { expiresOn: null, source: null, discrepancy: null };
   if (fromRule === null) return { expiresOn: printed, source: 'printed', discrepancy: null };

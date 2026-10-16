@@ -24,6 +24,12 @@ describe('attestationOfReview', () => {
     });
   });
 
+  it('ADR-915 §14 — η τυπωμένη λήξη ταξιδεύει στο αρχείο· και μόνη της (χωρίς έκδοση) είναι δήλωση', () => {
+    const TAX: EvidenceFile = { ...PEA, fileId: 'file_tax', entityType: 'contact', entityId: 'cont_s', level: 'seller_contact', purpose: 'tax-clearance' };
+    const command = accept({ itemId: 'seller_tax_clearance', fileId: 'file_tax', issuedOn: null, validUntil: '2026-11-20' });
+    expect(attestationOfReview(command, [TAX], 'u1')?.claim).toMatchObject({ kind: 'tax-clearance', issuedOn: null, printedValidUntil: '2026-11-20' });
+  });
+
   it.each([
     ['επιστροφή', accept({ verdict: 'rejected', reason: 'x' })],
     ['χωρίς ημερομηνία', accept({ issuedOn: null })],
@@ -46,7 +52,7 @@ describe('reviewIssuedOnOf — η προσυμπλήρωση του διαλόγ
   const READ = { kind: 'energy-certificate', issuedOn: '2025-01-01', printedValidUntil: null, source: { kind: 'document-text', reader: 'pea-text' } } as const;
 
   it('ανάγνωση του εγγράφου ⇒ κλειδωμένη τιμή (`document-text`)', () => {
-    expect(reviewIssuedOnOf(ENERGY, withFacts(READ))).toEqual({ issuedOn: '2025-01-01', origin: 'document-text', discrepancy: null });
+    expect(reviewIssuedOnOf(ENERGY, withFacts(READ))).toEqual({ issuedOn: '2025-01-01', printedValidUntil: null, origin: 'document-text', discrepancy: null });
   });
 
   it('δήλωση προηγούμενου ελέγχου ⇒ `attested` (επεξεργάσιμη)', () => {
@@ -62,6 +68,6 @@ describe('reviewIssuedOnOf — η προσυμπλήρωση του διαλόγ
     ['αρχείο χωρίς γεγονότα', withFacts(null)],
     ['γεγονότα άλλου είδους', withFacts({ ...READ, kind: 'building-identity' })],
   ])('%s ⇒ τίποτα γνωστό (κενό πεδίο, όπως πριν)', (_label, file) => {
-    expect(reviewIssuedOnOf(ENERGY, file)).toEqual({ issuedOn: null, origin: null, discrepancy: null });
+    expect(reviewIssuedOnOf(ENERGY, file)).toEqual({ issuedOn: null, printedValidUntil: null, origin: null, discrepancy: null });
   });
 });

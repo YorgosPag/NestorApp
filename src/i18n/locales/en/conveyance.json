@@ -100,7 +100,9 @@
     "transmittalHint": "Sent through the case — {provider}",
     "onBehalfHint": "Sent through the case by: {role}, on behalf of the client",
     "onBehalfOrUploadHint": "Sent through the case by: {role}, on behalf of the client — or uploaded in the “Documents” tab of the {level}",
-    "sealed": "Delivered {date} · by: {role}, on behalf of the client — confidential, not shown to you"
+    "sealed": "Delivered {date} · by: {role}, on behalf of the client — confidential, not shown to you",
+    "expiresAtLeast": "Valid at least until {date}",
+    "issueFrom": "To be valid at signing, issue it on or after {date}"
   },
   "levels": {
     "property": "property",
@@ -134,7 +136,12 @@
     "reasonLabel": "Reason",
     "reasonRequired": "A reason is required.",
     "notApplicableTitle": "Document not applicable",
-    "notApplicableDescription": "The reason will be visible to everyone working on the case."
+    "notApplicableDescription": "The reason will be visible to everyone working on the case.",
+    "validUntilLabel": "Valid until (as printed)",
+    "validUntilHint": "Enter the expiry date printed on the document. If left empty, the minimum validity guaranteed by law applies.",
+    "validUntilRange": "For this issue date the law gives an expiry between {floor} and {ceiling}, depending on the document.",
+    "validUntilRangeCeiling": "For this issue date the law gives an expiry no later than {ceiling}.",
+    "validUntilOutOfRange": "Expiry {printed} is outside the legal bounds ({rule}). The earlier date applies; check the document."
   },
   "facts": {
     "title": "Questions about the conveyance",
@@ -169,7 +176,6 @@
     "engineer_legality_certificate": { "label": "Engineer's certificate (art. 83 L.4495/2017) / legalisation of unauthorized works" },
     "energy_certificate": { "label": "Energy Performance Certificate (EPC)" },
     "building_manager_certificate": { "label": "Building manager's certificate of no shared-expense debt" },
-    "municipal_clearance": { "label": "Municipal property-tax (TAP) and electricity certificate" },
     "special_zone_clearances": { "label": "Special-zone clearances (forest, border, land-improvement)" },
     "seller_identity": { "label": "Seller ID and tax number" },
     "seller_corporate_documents": { "label": "Articles of association, GEMI certificate and company representation" },

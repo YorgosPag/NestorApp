@@ -27,6 +27,7 @@ import { RegistryPropertyValue } from '@/components/document-registry/RegistryPr
 import { RegistryRowHeader } from '@/components/document-registry/RegistryRowHeader';
 import {
   REGISTRY_KEYS,
+  EXPIRY_SOURCE_LABEL_KEYS,
   CONVEYANCE_NS,
   LEGALITY_NS,
   REGISTRY_NS,
@@ -68,7 +69,7 @@ function ExpiryValue({ row, asOf }: { readonly row: RegistryDocumentRow; readonl
       </span>
       {source !== null ? (
         <span className="text-xs text-muted-foreground">
-          {t(source === 'printed' ? REGISTRY_KEYS.sourcePrinted : REGISTRY_KEYS.sourceRule)}
+          {t(EXPIRY_SOURCE_LABEL_KEYS[source])}
         </span>
       ) : null}
       {discrepancy !== null ? (

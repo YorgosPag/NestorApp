@@ -141,17 +141,21 @@ describe('παραγωγοί — οι υπάρχοντες κατάλογοι Ε
     expect(conveyance.map((r) => [r.documentKind, r.policy, r.neededOn, r.warnWindowDays])).toEqual([
       ['building-identity', 'block', on('2026-12-15'), EXPIRING_WINDOW_DAYS],
       ['energy-certificate', 'block', on('2026-12-15'), EXPIRING_WINDOW_DAYS],
+      // ADR-915 §14 — τα τρία έγγραφα του πωλητή με τυπωμένη λήξη.
+      ['enfia-certificate', 'block', on('2026-12-15'), EXPIRING_WINDOW_DAYS],
+      ['tax-clearance', 'block', on('2026-12-15'), EXPIRING_WINDOW_DAYS],
+      ['insurance-clearance', 'block', on('2026-12-15'), EXPIRING_WINDOW_DAYS],
     ]);
   });
 
   it('μεταβίβαση χωρίς ημέρα υπογραφής ⇒ `unscheduled`, όχι «δεν χρειάζεται»', () => {
     const undated = conveyanceRequirements({ items: CONVEYANCE_CHECKLIST, caseId: 'c', propertyId: PROPERTY, targetSigningDate: null });
-    expect(undated.map((r) => r.neededOn.kind)).toEqual(['unscheduled', 'unscheduled']);
+    expect(undated.map((r) => r.neededOn.kind)).toEqual(Array(5).fill('unscheduled'));
   });
 
   it('κάθε γραμμή με `documentKind` παίρνει τον κανόνα ΤΟΥ είδους (καμία δεύτερη πηγή)', () => {
     const bound = CONVEYANCE_CHECKLIST.flatMap((i) => (i.documentKind === undefined ? [] : [[i.validity, i.documentKind] as const]));
-    expect(bound).toHaveLength(2);
+    expect(bound).toHaveLength(5);
     for (const [validity, kind] of bound) expect(validity).toBe(documentKindSpec(kind).rule);
   });
 

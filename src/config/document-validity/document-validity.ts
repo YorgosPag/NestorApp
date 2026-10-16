@@ -10,8 +10,9 @@
  * αγγελία έλεγε «ισχύει ως 2036-07-16» και η μεταβίβαση «ως 2036-07-13»: **τρεις μέρες** όπου το ίδιο έγγραφο ήταν σε
  * ισχύ στη μία οθόνη και ληγμένο στην άλλη. Ο νόμος μετρά **έτη** ⇒ μήνες ημερολογίου, ποτέ ημέρες.
  *
- * 🔑 **Μόνο είδη που ρωτούν ΠΕΡΙΣΣΟΤΕΡΕΣ από μία διαδικασίες ζουν εδώ** (αγγελία + μεταβίβαση + νομιμότητα). Ένα έγγραφο
- * που το ξέρει μόνο ο κατάλογος μεταβίβασης κρατά τον κανόνα στη γραμμή του — ίδιο σχήμα (`DocumentValidityRule`), μία πηγή.
+ * 🔑 **Εδώ ζουν τα είδη που παρακολουθεί το μητρώο λήξεων** (σελίδα, ειδοποιήσεις, «τι σταματά») — όσα ρωτούν
+ * περισσότερες διαδικασίες (αγγελία + μεταβίβαση + νομιμότητα) **και** όσα έχουν τεκμηριωμένη διάρκεια (ADR-915 §14).
+ * Ένα έγγραφο χωρίς τεκμηριωμένη διάρκεια κρατά τον κανόνα στη γραμμή του καταλόγου — ίδιο σχήμα, μία πηγή.
  *
  * ⚠️ **`unverified` ΔΕΝ είναι «δεν λήγει»**: σημαίνει «έχει περιορισμένη ισχύ, αλλά τη διάρκεια δεν την επαληθεύσαμε με
  * πηγή». Η απάντηση νομιμότητας το λέει `expiry-unknown`, ποτέ «σε ισχύ».
@@ -27,16 +28,50 @@
  * - `days`       — λήγει N ημέρες μετά την έκδοση (ο νόμος λέει «ημέρες»)
  * - `act_day`    — εκδίδεται την ημέρα της πράξης (π.χ. πιστοποιητικό βαρών)
  * - `unverified` — περιορισμένη ισχύς, διάρκεια **ΜΗ** επαληθευμένη
+ * - `printed`    — η λήξη είναι **τυπωμένη στο έγγραφο** και εξαρτάται από ό,τι μόνο εκείνο ξέρει (οφειλές, κύκλος
+ *                  ΕΝΦΙΑ)· ο νόμος δίνει **όρια**: `floor` = εγγυημένη ελάχιστη (`null` = καμία εγγύηση), `ceiling` =
+ *                  ανώτατη. Πρακτική Procore/ACC (η ημερομηνία ζει στο έγγραφο) + έλεγχος ορίων (ADR-915 §14).
  */
 export type DocumentValidityRule =
   | { readonly kind: 'none' }
   | { readonly kind: 'months'; readonly months: number }
   | { readonly kind: 'days'; readonly days: number }
   | { readonly kind: 'act_day' }
-  | { readonly kind: 'unverified' };
+  | { readonly kind: 'unverified' }
+  | { readonly kind: 'printed'; readonly floor: ValidityBound | null; readonly ceiling: ValidityBound };
 
-/** Τα είδη εγγράφων που μοιράζονται διαδικασίες. Κλειστό σύνολο — νέο είδος δεν μεταγλωττίζεται χωρίς κανόνα με πηγή. */
-export const DOCUMENT_KINDS = ['energy-certificate', 'building-identity'] as const;
+/**
+ * Ένα νόμιμο όριο λήξης, μετρημένο από την έκδοση:
+ * - `months`       — N μήνες ημερολογίου
+ * - `end-of-month` — η τελευταία ημέρα του μήνα έκδοσης
+ * - `end-of-year`  — 31/12 του έτους έκδοσης
+ * - `enfia-cycle`  — έκδοση **πριν** την πρώτη κεντρική έκδοση ΕΝΦΙΑ του έτους ⇒ η παραμονή της· μετά ⇒ 31/12· έτος
+ *                    χωρίς γνωστή κεντρική έκδοση ({@link ENFIA_CENTRAL_ISSUANCE}) ⇒ άγνωστο, ποτέ μαντεψιά
+ */
+export type ValidityBound =
+  | { readonly kind: 'months'; readonly months: number }
+  | { readonly kind: 'end-of-month' }
+  | { readonly kind: 'end-of-year' }
+  | { readonly kind: 'enfia-cycle' };
+
+/**
+ * Η **πρώτη κεντρική έκδοση** της πράξης προσδιορισμού ΕΝΦΙΑ ανά έτος (Α.1085/2023 άρθρο 1 παρ. 6α: το πιστοποιητικό
+ * που εκδόθηκε πριν από αυτήν ισχύει **μέχρι** αυτήν). Δεδομένα με πηγή — έτος χωρίς γραμμή = «δεν ξέρουμε».
+ * ⚠️ Το «μέχρι την ημερομηνία» δεν λέει αν η ημέρα της έκδοσης είναι μέσα ⇒ το κατώτατο κρατά την **παραμονή**.
+ */
+export const ENFIA_CENTRAL_ISSUANCE: Readonly<Record<number, string>> = {
+  // ΑΑΔΕ, δελτίο τύπου 15.03.2026 «Αναρτήθηκαν τα εκκαθαριστικά ΕΝΦΙΑ 2026» (aade.gr/sites/default/files/2026-03/dt_15.03.2026.pdf)
+  2026: '2026-03-15',
+};
+
+/** Τα είδη εγγράφων που παρακολουθεί το μητρώο λήξεων. Κλειστό σύνολο — νέο είδος δεν μεταγλωττίζεται χωρίς κανόνα με πηγή. */
+export const DOCUMENT_KINDS = [
+  'energy-certificate',
+  'building-identity',
+  'tax-clearance',
+  'insurance-clearance',
+  'enfia-certificate',
+] as const;
 export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
 
 export interface DocumentKindSpec {
@@ -75,9 +110,41 @@ export const DOCUMENT_KIND_SPECS: Readonly<Record<DocumentKind, DocumentKindSpec
   'building-identity': {
     rule: { kind: 'months', months: 2 },
     statute: 'άρθρο 83 παρ. 6 Ν.4495/2017',
-    renewalLeadDays: null,
+    // Εκτίμηση πρακτικής (νέα αυτοψία + υπογραφή μηχανικού), ΟΧΙ διάταξη — απόφαση Giorgio 2026-10-16 (ADR-915 §13).
+    renewalLeadDays: 14,
     verifiedAt: null,
     // `disclosed-only` στη νομιμότητα (ADR-777 §7 #4): ζητείται στη μεταβίβαση, όχι στην αγγελία.
+    advertisingDisclosure: null,
+  },
+  // Τα τρία παρακάτω εκδίδονται ηλεκτρονικά (myAADE · e-ΕΦΚΑ) την ίδια μέρα ⇒ η ανανέωση θέλει μέρες, όχι εβδομάδες:
+  // `renewalLeadDays: 7` = εκτίμηση πρακτικής, όχι διάταξη. Πηγές = κωδικοποιημένα κείμενα, όχι ΦΕΚ ⇒ `verifiedAt: null`.
+  // Η αγγελία δεν τα αναγράφει ⇒ `advertisingDisclosure: null`.
+  //
+  // 2 μήνες χωρίς βεβαιωμένες οφειλές · 1 μήνας με μη ληξιπρόθεσμες / σε αναστολή / σε ρύθμιση (Α.1162/2023 άρθρο 5).
+  'tax-clearance': {
+    rule: { kind: 'printed', floor: { kind: 'months', months: 1 }, ceiling: { kind: 'months', months: 2 } },
+    statute: 'άρθρο 12 Ν.4987/2022 · Α.1162/2023 άρθρο 5',
+    renewalLeadDays: 7,
+    verifiedAt: null,
+    advertisingDisclosure: null,
+  },
+  // ΑΑΕ: 6 μήνες χωρίς οφειλή · 2 μήνες με ρύθμιση που τηρείται· η Βεβαίωση Οφειλής που επέχει θέση ΑΑΕ ισχύει ως το
+  // τέλος του μήνα έκδοσης (Εγκύκλιος e-ΕΦΚΑ 27/2022) ⇒ αυτό είναι το εγγυημένο κατώτατο.
+  'insurance-clearance': {
+    rule: { kind: 'printed', floor: { kind: 'end-of-month' }, ceiling: { kind: 'months', months: 6 } },
+    statute: 'Εγκύκλιος e-ΕΦΚΑ 27/2022 · άρθρο 56 Ν.4940/2022',
+    renewalLeadDays: 7,
+    verifiedAt: null,
+    advertisingDisclosure: null,
+  },
+  // Έως την πρώτη κεντρική έκδοση ΕΝΦΙΑ του έτους (αν εκδόθηκε πριν από αυτήν) · αλλιώς ως 31/12 του έτους έκδοσης
+  // (Α.1085/2023 άρθρο 1 παρ. 6). ⚠️ Αποβιώσαντες / νομικά πρόσωπα σε διακοπή (Α.1082/2024): ισχύει ως τη μνημόνευση
+  // σε συμβόλαιο, όποια ημερομηνία κι αν τυπώνει — ο ελεγκτής το βλέπει ως ασυμφωνία, δεν κρύβεται.
+  'enfia-certificate': {
+    rule: { kind: 'printed', floor: { kind: 'enfia-cycle' }, ceiling: { kind: 'end-of-year' } },
+    statute: 'ν.5036/2023 · Α.1085/2023 άρθρο 1 παρ. 6',
+    renewalLeadDays: 7,
+    verifiedAt: null,
     advertisingDisclosure: null,
   },
 };

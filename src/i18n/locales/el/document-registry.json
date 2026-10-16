@@ -60,7 +60,8 @@
     "state": "Κατάσταση",
     "supersededBy": "Αντικαταστάθηκε από: {name}",
     "openDocuments": "Έγγραφα ακινήτου",
-    "missingDocument": "Δεν έχει καταγραφεί"
+    "missingDocument": "Δεν έχει καταγραφεί",
+    "sourceFloor": "τουλάχιστον — η τυπωμένη λήξη δεν έχει δηλωθεί"
   },
   "dependents": {
     "heading": "Τι σταματά αν λήξει",

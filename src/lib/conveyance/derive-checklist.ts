@@ -26,8 +26,9 @@
  */
 
 import { EXPIRING_WINDOW_DAYS } from '@/config/conveyance-checklist/catalog';
-import { ruleExpiresOn } from '@/lib/document-validity/document-expiry';
+import { ruleExpiresOn, type DocumentExpiry } from '@/lib/document-validity/document-expiry';
 import { resolvedDocumentExpiry } from '@/lib/document-validity/document-facts';
+import { coveringIssueFrom } from '@/lib/document-validity/validity-bounds';
 import { documentStanding, type DocumentStandingState } from '@/lib/document-validity/document-requirement';
 import type { ChecklistItem, ConveyanceFactId, ConveyanceRole } from '@/config/conveyance-checklist/types';
 import type {
@@ -58,15 +59,16 @@ export interface DeriveChecklistInput {
   readonly viewer: ConveyanceRole | 'host';
 }
 
-type Base = Omit<ChecklistRow, 'status' | 'expiresOn' | 'validOnSigning' | 'notApplicableBy' | 'pendingFact'>;
+type Base = Omit<ChecklistRow, 'status' | 'expiresOn' | 'expiryIsFloor' | 'validOnSigning' | 'notApplicableBy' | 'pendingFact'>;
 
 interface Validity {
   readonly status: ChecklistRowStatus;
   readonly expiresOn: string | null;
+  readonly expiryIsFloor: boolean;
   readonly validOnSigning: boolean | null;
 }
 
-const NO_VALIDITY = { expiresOn: null, validOnSigning: null } as const;
+const NO_VALIDITY = { expiresOn: null, expiryIsFloor: false, validOnSigning: null } as const;
 
 /**
  * Βλέπει ο θεατής τη γραμμή; Ο οικοδεσπότης βλέπει **όλο** τον κατάλογο· κάθε ρόλος μόνο το `visibleTo` (Α4). Η ΜΙΑ
@@ -118,10 +120,10 @@ const ROW_STATUS_OF: Readonly<Record<DocumentStandingState, ChecklistRowStatus>>
  * Η ημέρα λήξης της εγκεκριμένης γραμμής. ADR-915 Φ3β (Α3): γραμμή με είδος εγγράφου διαβάζει τα γεγονότα **του
  * αρχείου που εγκρίθηκε** (έκδοση + τυπωμένη λήξη, Α4)· η ημερομηνία του ελεγκτή είναι η εφεδρεία όταν το αρχείο δεν ξέρει.
  */
-function expiresOnOf(item: ChecklistItem, review: ChecklistItemReview, files: readonly EvidenceFile[]): string | null {
-  if (item.documentKind === undefined) return ruleExpiresOn(item.validity, review.issuedOn);
+function expiryOf(item: ChecklistItem, review: ChecklistItemReview, files: readonly EvidenceFile[]): Pick<DocumentExpiry, 'expiresOn' | 'source'> {
+  if (item.documentKind === undefined) return { expiresOn: ruleExpiresOn(item.validity, review.issuedOn), source: 'rule' };
   const facts = files.find((file) => file.fileId === review.fileId)?.documentFacts ?? null;
-  return resolvedDocumentExpiry(item.documentKind, facts, review.issuedOn).expiresOn;
+  return resolvedDocumentExpiry(item.documentKind, facts, review.issuedOn, review.printedValidUntil ?? null);
 }
 
 /**
@@ -129,13 +131,19 @@ function expiresOnOf(item: ChecklistItem, review: ChecklistItemReview, files: re
  * υπολογισμό (Φ1) και η κρίση από τον ΕΝΑ κριτή (Φ2)· το `validOnSigning` είναι το `validAtNeed` της απαίτησης.
  */
 function validityOf(item: ChecklistItem, review: ChecklistItemReview, files: readonly EvidenceFile[], input: DeriveChecklistInput): Validity {
+  const expiry = expiryOf(item, review, files);
   const standing = documentStanding({
-    expiresOn: expiresOnOf(item, review, files),
+    expiresOn: expiry.expiresOn,
     asOf: input.today,
     neededOn: conveyanceNeededOn(input.targetSigningDate),
     warnWindowDays: EXPIRING_WINDOW_DAYS,
   });
-  return { status: ROW_STATUS_OF[standing.state], expiresOn: standing.expiresOn, validOnSigning: standing.validAtNeed };
+  return {
+    status: ROW_STATUS_OF[standing.state],
+    expiresOn: standing.expiresOn,
+    expiryIsFloor: standing.expiresOn !== null && expiry.source === 'floor',
+    validOnSigning: standing.validAtNeed,
+  };
 }
 
 /** Είναι ο έλεγχος ακόμη δεμένος στο νεότερο αρχείο, στην ίδια έκδοση; */
@@ -195,6 +203,7 @@ function deriveRow(item: ChecklistItem, input: DeriveChecklistInput): ChecklistR
   const base: Base = {
     itemId: item.id, item, section: item.section, provider: item.provider, files, sealed,
     review: override?.review ?? null, notApplicable: override?.notApplicable ?? null,
+    issueFrom: input.targetSigningDate === null ? null : coveringIssueFrom(item.validity, input.targetSigningDate),
   };
   const applies = checklistItemApplicability(item, input.facts);
   if (applies === 'unknown') {

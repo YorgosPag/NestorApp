@@ -39,6 +39,11 @@ const conveyanceCommandSchema = z.discriminatedUnion('type', [
     /** `null` = επιβεβαίωση παραλαβής εκτός πλατφόρμας (γραμμές χωρίς αρχεία). */
     fileId: z.string().min(1).max(MAX_ID_LENGTH).nullable(),
     issuedOn: dateKeySchema.nullable(),
+    /**
+     * ADR-915 §14 — η λήξη **όπως είναι τυπωμένη** στο έγγραφο (`YYYY-MM-DD`). Προαιρετική: παλιοί clients δεν τη
+     * στέλνουν, και τα είδη με κανόνα από τη διάρκεια (ΠΕΑ) δεν τη χρειάζονται.
+     */
+    validUntil: dateKeySchema.nullable().optional(),
     reason: reasonSchema.nullable(),
   }),
   z.object({ type: z.literal('clear_override'), itemId: itemIdSchema }),
@@ -66,5 +71,7 @@ const COMMAND_REJECTIONS = [
   'future_issue_date',
   /** ADR-915 Φ3β — η ημερομηνία αντιλέγει στην ανάγνωση του ίδιου του εγγράφου (`document-text`). */
   'issued_on_contradicts_document',
+  /** ADR-915 §14 — τυπωμένη λήξη **πριν** από την έκδοση: αδύνατη, ποτέ μαντεψιά για το ποια είναι λάθος. */
+  'validity_before_issue',
 ] as const;
 export type CommandRejection = (typeof COMMAND_REJECTIONS)[number];

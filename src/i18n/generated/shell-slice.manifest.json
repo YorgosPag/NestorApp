@@ -17,7 +17,7 @@
     "src/i18n/generated/routes/dossiers__dossierId.el.json": "ce0d6f7456040ae6e78100d1d0c9015dc21cd705b3212e0c48fad7fcff141315",
     "src/i18n/generated/routes/email__preferences__token.el.json": "0d0862385c6105dfae438ca5e8c1a4b74810b1fad2d9445305cfa66e588ea321",
     "src/i18n/generated/routes/engagements.el.json": "62e1b3378215c16e66a12632667ad61be33b59cc632e634dde0ffaf9763769d4",
-    "src/i18n/generated/routes/engagements__engagementId.el.json": "c1979936fe14b4c4bd72777a3595f5dc0431b65a417cd1b642afeca43a2ca2ed",
+    "src/i18n/generated/routes/engagements__engagementId.el.json": "553c4f1fa748136eb4247f4f0d14244369b7b76b0011c200f3ec6da42d783103",
     "src/i18n/generated/routes/ergaleia__antikeimeniki-axia.el.json": "f430b58d8427830f6f00eb4b807237852b5845a01ae9baf2b0500b42be47ffef",
     "src/i18n/generated/routes/hours-question__token.el.json": "86ba92b35d6e4e4ba43e09267d5749b0ae21774b4dba41d9a4989d48872d0a72",
     "src/i18n/generated/routes/interest-check.el.json": "d0002364331595d2870077e92bf3218896f97dbb2ee2924845b755f5b98fdc94",
@@ -31,9 +31,9 @@
     "src/i18n/generated/routes/mandate__token.el.json": "8f964d1e521a28640ad5bee71fccf8e89541697902528a2db4bf3dca4dfea96a",
     "src/i18n/generated/routes/n__notificationId.el.json": "54c30325c22b7621417b7afaddaee9ae92de5fc24ee61a784ca6ecfc66d74da5",
     "src/i18n/generated/routes/o__workspace__cases.el.json": "62e1b3378215c16e66a12632667ad61be33b59cc632e634dde0ffaf9763769d4",
-    "src/i18n/generated/routes/o__workspace__cases__engagementId.el.json": "c1979936fe14b4c4bd72777a3595f5dc0431b65a417cd1b642afeca43a2ca2ed",
+    "src/i18n/generated/routes/o__workspace__cases__engagementId.el.json": "553c4f1fa748136eb4247f4f0d14244369b7b76b0011c200f3ec6da42d783103",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
-    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "a20b7da9b6339cbd378b83879fb689c5e6de5fcb2c3c36bc0ffd87b2b636c3ae",
+    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "6c6f733191dbc0db2c974c7aa3ef3e57eaccd1925d89939b34c5a38786f238d7",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "f2b0212cf0909081143453962ba0bfec2a47dc8753dc81a009ee34c12579b137",
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "2753c7edd9c05a17a65b15f3146177db8a27ca727df7b1f77d28fd1724f4fa6f",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "e1c5896ab910b7f5515ef0a3991a4daae3ba7fc776c6291815cfeaddb51e2398",
@@ -149,7 +149,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "f9441e0d0c955dbe3be0c4cb7859f0da43041c7f171564be38b6a2a40a1fa158",
+  "inputsSha256": "297cbd753abf8c01b5c4d342e2dc9db4b4efb992361d8e069c78c53340d80ebf",
   "languages": [
     "el"
   ],
@@ -2819,8 +2819,10 @@
             "requests.requesting",
             "requests.sent",
             "row.actDay",
+            "row.expiresAtLeast",
             "row.expiresOn",
             "row.invalidOnSigning",
+            "row.issueFrom",
             "row.notApplicableByFact",
             "row.notApplicableReason",
             "row.offlineHint",
@@ -4938,8 +4940,10 @@
             "requests.requesting",
             "requests.sent",
             "row.actDay",
+            "row.expiresAtLeast",
             "row.expiresOn",
             "row.invalidOnSigning",
+            "row.issueFrom",
             "row.notApplicableByFact",
             "row.notApplicableReason",
             "row.offlineHint",
@@ -5074,7 +5078,10 @@
         "conveyance": {
           "keys": [
             "dialogs.expiryDiscrepancy",
-            "items.energy_certificate.label"
+            "items.energy_certificate.label",
+            "items.seller_enfia_certificate.label",
+            "items.seller_insurance_clearance.label",
+            "items.seller_tax_clearance.label"
           ],
           "prefixes": [],
           "whole": false
@@ -5131,6 +5138,7 @@
             "row.property",
             "row.propertyNone",
             "row.propertyUnnamed",
+            "row.sourceFloor",
             "row.sourcePrinted",
             "row.sourceRule",
             "row.state",
@@ -10641,7 +10649,7 @@
   ],
   "stats": {
     "matchedKeys": 243,
-    "sliceBytes": 746060
+    "sliceBytes": 746683
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

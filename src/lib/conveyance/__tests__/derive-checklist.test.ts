@@ -37,7 +37,7 @@ function statusOf(overrides: Partial<DeriveChecklistInput>): string {
 const accepted = (extra: Partial<NonNullable<ChecklistItemOverride['review']>> = {}): Record<string, ChecklistItemOverride> => ({
   building_permit: {
     review: {
-      verdict: 'accepted', fileId: 'file_1', fileFingerprint: 'file_1:0:2026-09-01', issuedOn: null,
+      verdict: 'accepted', fileId: 'file_1', fileFingerprint: 'file_1:0:2026-09-01', issuedOn: null, printedValidUntil: null,
       reason: null, reviewedBy: 'u1', reviewedAt: '2026-09-02T00:00:00Z', ...extra,
     },
   },
@@ -106,7 +106,7 @@ describe('deriveChecklist — καταστάσεις', () => {
 
   it('offline: επιβεβαίωση παραλαβής χωρίς αρχείο ⇒ accepted', () => {
     const overrides = {
-      building_identity: { review: { verdict: 'accepted' as const, fileId: null, fileFingerprint: null, issuedOn: null, reason: null, reviewedBy: 'u', reviewedAt: 't' } },
+      building_identity: { review: { verdict: 'accepted' as const, fileId: null, fileFingerprint: null, issuedOn: null, printedValidUntil: null, reason: null, reviewedBy: 'u', reviewedAt: 't' } },
     };
     expect(statusOf({ items: [item('building_identity')], overrides })).toBe('accepted');
   });
@@ -116,7 +116,7 @@ describe('deriveChecklist — ισχύς (Σ-5)', () => {
   const energy = (issuedOn: string, extra: Partial<DeriveChecklistInput> = {}) => {
     const evidence = [file({ level: 'property', entityType: 'property', purpose: 'certificate' })];
     const overrides = {
-      energy_certificate: { review: { verdict: 'accepted' as const, fileId: 'file_1', fileFingerprint: 'file_1:0:2026-09-01', issuedOn, reason: null, reviewedBy: 'u', reviewedAt: 't' } },
+      energy_certificate: { review: { verdict: 'accepted' as const, fileId: 'file_1', fileFingerprint: 'file_1:0:2026-09-01', issuedOn, printedValidUntil: null, reason: null, reviewedBy: 'u', reviewedAt: 't' } },
     };
     return deriveChecklist(input({ items: [item('energy_certificate')], evidence, overrides, ...extra })).rows[0];
   };
@@ -167,7 +167,7 @@ describe('deriveChecklist — ισχύς (Σ-5)', () => {
 
   it('βεβαίωση άρθρου 83 εγκεκριμένη: λήγει 2 μήνες μετά την υπογραφή της ⇒ ΔΕΝ φτάνει ως την υπογραφή (ADR-915 §13)', () => {
     const overrides = {
-      building_identity: { review: { verdict: 'accepted' as const, fileId: null, fileFingerprint: null, issuedOn: '2026-09-01', reason: null, reviewedBy: 'u', reviewedAt: 't' } },
+      building_identity: { review: { verdict: 'accepted' as const, fileId: null, fileFingerprint: null, issuedOn: '2026-09-01', printedValidUntil: null, reason: null, reviewedBy: 'u', reviewedAt: 't' } },
     };
     const row = deriveChecklist(input({ items: [item('building_identity')], overrides, targetSigningDate: '2026-12-15' })).rows[0];
     expect([row.status, row.expiresOn, row.validOnSigning]).toEqual(['expiring', '2026-11-01', false]);
@@ -181,7 +181,7 @@ describe('deriveChecklist — ισχύς από τα γεγονότα του α�
   const energyWith = (documentFacts: EvidenceFile['documentFacts'], issuedOn: string | null) => {
     const evidence = [file({ level: 'property', entityType: 'property', purpose: 'certificate', documentFacts })];
     const overrides = {
-      energy_certificate: { review: { verdict: 'accepted' as const, fileId: 'file_1', fileFingerprint: 'file_1:0:2026-09-01', issuedOn, reason: null, reviewedBy: 'u', reviewedAt: 't' } },
+      energy_certificate: { review: { verdict: 'accepted' as const, fileId: 'file_1', fileFingerprint: 'file_1:0:2026-09-01', issuedOn, printedValidUntil: null, reason: null, reviewedBy: 'u', reviewedAt: 't' } },
     };
     return deriveChecklist(input({ items: [item('energy_certificate')], evidence, overrides })).rows[0];
   };
@@ -206,6 +206,35 @@ describe('deriveChecklist — ισχύς από τα γεγονότα του α�
 
   it('⛔ γεγονότα άλλου είδους αγνοούνται — μένει η ημερομηνία του ελεγκτή', () => {
     expect(energyWith({ ...READ, kind: 'building-identity' }, '2016-01-01').status).toBe('expired');
+  });
+});
+
+describe('ADR-915 §14 — τυπωμένη λήξη · «τουλάχιστον έως» · «εκδώστε από»', () => {
+  const taxReview = (printedValidUntil: string | null) => ({
+    seller_tax_clearance: {
+      review: {
+        verdict: 'accepted' as const, fileId: null, fileFingerprint: null, issuedOn: '2026-09-20', printedValidUntil,
+        reason: null, reviewedBy: 'u', reviewedAt: 't',
+      },
+    },
+  });
+  const taxRow = (overrides: Partial<DeriveChecklistInput>) =>
+    deriveChecklist(input({ items: [item('seller_tax_clearance')], ...overrides })).rows[0];
+
+  it('χωρίς τυπωμένη ⇒ το κατώτατο (1 μήνας), σημαδεμένο «τουλάχιστον»', () => {
+    const row = taxRow({ overrides: taxReview(null) });
+    expect([row.status, row.expiresOn, row.expiryIsFloor]).toEqual(['accepted', '2026-10-20', true]);
+  });
+
+  it('με τυπωμένη μέσα στα όρια ⇒ αυτή, ΧΩΡΙΣ «τουλάχιστον»', () => {
+    const row = taxRow({ overrides: taxReview('2026-11-20') });
+    expect([row.expiresOn, row.expiryIsFloor]).toEqual(['2026-11-20', false]);
+  });
+
+  it('«εκδώστε από»: η νωρίτερη έκδοση που καλύπτει την υπογραφή · χωρίς υπογραφή ή εγγύηση ⇒ null', () => {
+    expect(taxRow({ targetSigningDate: '2026-12-15' }).issueFrom).toBe('2026-11-15');
+    expect(taxRow({}).issueFrom).toBeNull();
+    expect(deriveChecklist(input({ targetSigningDate: '2026-12-15' })).rows[0].issueFrom).toBeNull();
   });
 });
 

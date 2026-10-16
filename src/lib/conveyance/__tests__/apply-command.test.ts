@@ -83,6 +83,34 @@ describe('applyConveyanceCommand', () => {
     });
   });
 
+  describe('ADR-915 §14 — η τυπωμένη λήξη της δήλωσης', () => {
+    const taxFile: EvidenceFile = {
+      ...permitFile, fileId: 'file_tax', entityType: 'contact', entityId: 'cont_s', level: 'seller_contact', purpose: 'tax-clearance',
+      fingerprint: 'file_tax:0:x',
+    };
+    const taxCtx = { ...ctx, evidence: [taxFile] };
+    const accept = (issuedOn: string | null, validUntil?: string | null) => ({
+      type: 'review' as const, itemId: 'seller_tax_clearance', verdict: 'accepted' as const, fileId: 'file_tax', issuedOn, validUntil, reason: null,
+    });
+
+    it('αποθηκεύεται στον έλεγχο της γραμμής, δίπλα στην έκδοση', () => {
+      const result = applyConveyanceCommand(baseCase(), accept('2026-09-20', '2026-11-20'), taxCtx);
+      if (!result.ok) throw new Error(result.rejection);
+      expect(result.next.overrides.seller_tax_clearance?.review).toMatchObject({ issuedOn: '2026-09-20', printedValidUntil: '2026-11-20' });
+    });
+
+    it('παλιός client χωρίς `validUntil` ⇒ `null`, ποτέ σφάλμα', () => {
+      const result = applyConveyanceCommand(baseCase(), accept('2026-09-20'), taxCtx);
+      if (!result.ok) throw new Error(result.rejection);
+      expect(result.next.overrides.seller_tax_clearance?.review?.printedValidUntil).toBeNull();
+    });
+
+    it('⛔ λήξη ΠΡΙΝ από την έκδοση ⇒ validity_before_issue · ανύπαρκτη ⇒ invalid_date', () => {
+      expect(applyConveyanceCommand(baseCase(), accept('2026-09-20', '2026-09-19'), taxCtx)).toEqual({ ok: false, rejection: 'validity_before_issue' });
+      expect(applyConveyanceCommand(baseCase(), accept('2026-09-20', '2026-11-31'), taxCtx)).toEqual({ ok: false, rejection: 'invalid_date' });
+    });
+  });
+
   it('άγνωστη γραμμή ⇒ unknown_item', () => {
     expect(applyConveyanceCommand(baseCase(), { type: 'mark_not_applicable', itemId: 'nope', reason: 'x' }, ctx))
       .toEqual({ ok: false, rejection: 'unknown_item' });

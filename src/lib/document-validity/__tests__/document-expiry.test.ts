@@ -19,7 +19,7 @@ const PEA = documentKindSpec('energy-certificate').rule;
 function conveyanceExpiresOn(issuedOn: string): string | null {
   const item = getChecklistItem('energy_certificate');
   if (!item) throw new Error('energy_certificate missing from catalog');
-  const review = { verdict: 'accepted' as const, fileId: null, fileFingerprint: null, issuedOn, reason: null, reviewedBy: 'u', reviewedAt: 't' };
+  const review = { verdict: 'accepted' as const, fileId: null, fileFingerprint: null, issuedOn, printedValidUntil: null, reason: null, reviewedBy: 'u', reviewedAt: 't' };
   const { rows } = deriveChecklist({
     items: [item], facts: {}, overrides: { energy_certificate: { review } }, evidence: [], sealed: [],
     today: '2026-10-14', targetSigningDate: null, viewer: 'host',

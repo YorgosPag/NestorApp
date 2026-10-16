@@ -85,6 +85,8 @@ export interface RequirementAttestation {
   readonly fileId: string | null;
   /** Η ημερομηνία έκδοσης που δήλωσε ο ελεγκτής (`YYYY-MM-DD`) — η εφεδρεία του καταλόγου όταν το αρχείο δεν ξέρει. */
   readonly issuedOn: string | null;
+  /** Η τυπωμένη λήξη που δήλωσε ο ελεγκτής (ADR-915 §14) — ίδια εφεδρεία, για τα είδη με κανόνα `printed`. */
+  readonly printedValidUntil: string | null;
 }
 
 /** Μία δήλωση: «αυτή η διαδικασία θέλει αυτό το έγγραφο, για αυτό το ακίνητο, σε ισχύ τότε». */

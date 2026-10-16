@@ -30,17 +30,19 @@ import {
 import type { EvidenceFile } from '@/types/conveyance-case';
 import type { ConveyanceCommand } from './conveyance-commands';
 
-/** Ό,τι ξέρει ήδη το αρχείο για την ημερομηνία έκδοσης — η προσυμπλήρωση του διαλόγου ελέγχου. */
+/** Ό,τι ξέρει ήδη το αρχείο για τις ημερομηνίες του — η προσυμπλήρωση του διαλόγου ελέγχου. */
 export interface ReviewIssuedOn {
   /** `YYYY-MM-DD` ή `null` = το αρχείο δεν ξέρει. */
   readonly issuedOn: string | null;
+  /** Η τυπωμένη λήξη (ADR-915 §14) — `null` = το αρχείο δεν ξέρει. Ίδιο κλείδωμα με την έκδοση (`origin`). */
+  readonly printedValidUntil: string | null;
   /** `document-text` ⇒ **κλειδωμένο** (η διαφωνία γίνεται με επιστροφή)· `attested` ⇒ επεξεργάσιμο. */
   readonly origin: 'document-text' | 'attested' | null;
   /** Α4 — τυπωμένη λήξη ≠ κανόνας: ο ελεγκτής είναι ο αποδέκτης της. */
   readonly discrepancy: ExpiryDiscrepancy | null;
 }
 
-const UNKNOWN: ReviewIssuedOn = { issuedOn: null, origin: null, discrepancy: null };
+const UNKNOWN: ReviewIssuedOn = { issuedOn: null, printedValidUntil: null, origin: null, discrepancy: null };
 
 /**
  * Το **αρχείο που ελέγχεται** (το νεότερο της γραμμής) → τι προσυμπληρώνει ο διάλογος. Γεγονότα άλλου είδους
@@ -51,6 +53,7 @@ export function reviewIssuedOnOf(item: Pick<ChecklistItem, 'documentKind'>, file
   if (facts === null || facts.kind !== item.documentKind) return UNKNOWN;
   return {
     issuedOn: facts.issuedOn,
+    printedValidUntil: facts.printedValidUntil,
     origin: isDocumentText(facts) ? 'document-text' : 'attested',
     discrepancy: documentFactsExpiry(facts).discrepancy,
   };
@@ -68,7 +71,8 @@ export function attestationOfReview(
   actorUid: string,
 ): ReviewAttestation | null {
   if (command.type !== 'review' || command.verdict !== 'accepted') return null;
-  if (command.issuedOn === null || command.fileId === null) return null;
+  const printedValidUntil = command.validUntil ?? null;
+  if ((command.issuedOn === null && printedValidUntil === null) || command.fileId === null) return null;
   const kind = getChecklistItem(command.itemId)?.documentKind;
   const file = evidence.find((candidate) => candidate.fileId === command.fileId);
   if (kind === undefined || file === undefined || file.source.kind !== 'owned') return null;
@@ -77,7 +81,7 @@ export function attestationOfReview(
     claim: {
       kind,
       issuedOn: command.issuedOn,
-      printedValidUntil: null,
+      printedValidUntil,
       source: { kind: 'attested', via: 'conveyance-review' },
       recordedBy: actorUid,
     },

@@ -37,7 +37,7 @@ function row(itemId: string, status: ChecklistRowStatus = 'missing', files: read
   if (!item) throw new Error(`missing catalog item ${itemId}`);
   return {
     itemId, item, section: item.section, provider: item.provider, status, files, sealed: null,
-    review: null, notApplicable: null, notApplicableBy: null, pendingFact: null, expiresOn: null, validOnSigning: null,
+    review: null, notApplicable: null, notApplicableBy: null, pendingFact: null, expiresOn: null, expiryIsFloor: false, validOnSigning: null, issueFrom: null,
   };
 }
 

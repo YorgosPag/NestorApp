@@ -18,6 +18,7 @@
  */
 
 import type { ChecklistItem, ChecklistProvider, ConveyanceFactId } from './types';
+import { documentKindSpec, type DocumentKind } from '@/config/document-validity/document-validity';
 import { onBehalfEntryPointId } from '@/config/upload-entry-points/entries-conveyance-case';
 import { BUYER_PRIVATE, SELLER_PRIVATE } from './visibility';
 
@@ -42,6 +43,15 @@ function sellerDocument(id: string, entryPointIds: readonly string[], requiremen
     satisfaction: { kind: 'files', matchers: [{ level: 'seller_contact', entryPointIds }] },
     verifiedAt: null,
   };
+}
+
+/**
+ * Έγγραφο πωλητή που **παρακολουθεί το μητρώο λήξεων** (ADR-915 §14): ο κανόνας ισχύος **παίρνεται** από τον ΕΝΑ
+ * κατάλογο (`documentKindSpec`), ποτέ δεύτερη γραμμένη τιμή· το `documentKind` κάνει τη γραμμή απαίτηση `block` της
+ * υπογραφής (`conveyanceRequirements`) και γραμμή του μητρώου (`caseDocumentRequirements`).
+ */
+function sellerTrackedDocument(id: string, entryPointIds: readonly string[], requirement: Requirement, kind: DocumentKind): ChecklistItem {
+  return { ...sellerDocument(id, entryPointIds, requirement, documentKindSpec(kind).rule), documentKind: kind };
 }
 
 /**
@@ -79,10 +89,10 @@ function buyerDocument(
 export const SELLER_ITEMS: readonly ChecklistItem[] = [
   sellerDocument('seller_identity', ['id-card', 'tax-id'], when('seller_is_legal_entity', false), NO_EXPIRY),
   sellerDocument('seller_corporate_documents', ['articles-of-association', 'gemi-certificate'], when('seller_is_legal_entity'), UNVERIFIED),
-  sellerDocument('seller_enfia_certificate', ['enfia-certificate', 'owner-enfia'], MANDATORY, UNVERIFIED),
+  sellerTrackedDocument('seller_enfia_certificate', ['enfia-certificate', 'owner-enfia'], MANDATORY, 'enfia-certificate'),
   sellerDocument('seller_e9', ['e9-declaration', 'owner-e9'], MANDATORY, UNVERIFIED),
-  sellerDocument('seller_tax_clearance', ['tax-clearance'], MANDATORY, UNVERIFIED),
-  sellerDocument('seller_insurance_clearance', ['insurance-clearance'], when('seller_is_legal_entity'), UNVERIFIED),
+  sellerTrackedDocument('seller_tax_clearance', ['tax-clearance'], MANDATORY, 'tax-clearance'),
+  sellerTrackedDocument('seller_insurance_clearance', ['insurance-clearance'], when('seller_is_legal_entity'), 'insurance-clearance'),
   sellerDocument('seller_power_of_attorney', ['power-of-attorney'], when('seller_by_proxy'), NO_EXPIRY),
 ];
 

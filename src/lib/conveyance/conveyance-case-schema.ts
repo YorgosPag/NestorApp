@@ -24,6 +24,8 @@ const overrideSchema = z.object({
     fileId: z.string().nullable(),
     fileFingerprint: z.string().nullable(),
     issuedOn: z.string().nullable(),
+    // ADR-915 §14 — υποθέσεις πριν την §14 δεν έχουν το πεδίο ⇒ `null` («δεν δηλώθηκε»), καμία μετάπτωση.
+    printedValidUntil: z.string().nullable().default(null),
     reason: z.string().nullable(),
     reviewedBy: z.string(),
     reviewedAt: z.string(),

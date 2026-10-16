@@ -241,7 +241,7 @@ describe('Φ4δ — ό,τι ΛΕΙΠΕΙ', () => {
   });
 
   it('έγκριση ελέγχου χωρίς αρχείο (Ε8) ⇒ γραμμή με ρητή λέξη, όχι «λείπει»', () => {
-    const attested = { ...FIXTURE_REQUIREMENT_P1_IDENTITY, attestation: { fileId: null, issuedOn: '2026-09-01' } };
+    const attested = { ...FIXTURE_REQUIREMENT_P1_IDENTITY, attestation: { fileId: null, issuedOn: '2026-09-01', printedValidUntil: null } };
     renderReady(fixtureResponse({}, [], [attested]));
     expect(screen.getByText(REGISTRY_KEYS.attested)).toBeTruthy();
     expect(screen.queryByText(REGISTRY_STATE_LABEL_KEYS.missing)).toBeNull();

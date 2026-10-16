@@ -75,23 +75,40 @@ function resolveReviewedFile(itemId: string, fileId: string | null, evidence: re
  * ADR-915 Φ3β — αποδοχή με ημερομηνία που **αντιλέγει** σε ό,τι διάβασε ο αναγνώστης από το ίδιο το έγγραφο. Το έγγραφο
  * δεν διορθώνεται με δήλωση: αν ο ελεγκτής διαφωνεί, **επιστρέφει** το έγγραφο με λόγο (revise & resubmit).
  */
-function contradictsDocument(itemId: string, file: EvidenceFile | null, issuedOn: string | null): boolean {
-  return contradictsDocumentText(getChecklistItem(itemId)?.documentKind, file?.documentFacts ?? null, issuedOn);
+function contradictsDocument(itemId: string, file: EvidenceFile | null, declared: DeclaredDates): boolean {
+  const facts = file?.documentFacts ?? null;
+  return contradictsDocumentText(getChecklistItem(itemId)?.documentKind, facts, declared.issuedOn, declared.printedValidUntil);
+}
+
+interface DeclaredDates {
+  readonly issuedOn: string | null;
+  readonly printedValidUntil: string | null;
+}
+
+/** Οι ημερομηνίες της δήλωσης — ή ο λόγος άρνησης. Η τυπωμένη λήξη **πριν** από την έκδοση είναι αδύνατη. */
+function declaredDatesOf(command: Extract<ConveyanceCommand, { type: 'review' }>, today: string): DeclaredDates | CommandRejection {
+  const printedValidUntil = command.validUntil ?? null;
+  if (command.issuedOn !== null && !isDateKey(command.issuedOn)) return 'invalid_date';
+  if (printedValidUntil !== null && !isDateKey(printedValidUntil)) return 'invalid_date';
+  if (command.issuedOn !== null && command.issuedOn > today) return 'future_issue_date';
+  if (printedValidUntil !== null && command.issuedOn !== null && printedValidUntil < command.issuedOn) return 'validity_before_issue';
+  return { issuedOn: command.issuedOn, printedValidUntil };
 }
 
 function review(current: ConveyanceCase, command: Extract<ConveyanceCommand, { type: 'review' }>, ctx: CommandContext): CommandResult {
   if (!getChecklistItem(command.itemId)) return reject('unknown_item');
   if (command.verdict === 'rejected' && command.reason === null) return reject('reason_required');
-  if (command.issuedOn !== null && !isDateKey(command.issuedOn)) return reject('invalid_date');
-  if (command.issuedOn !== null && command.issuedOn > ctx.today) return reject('future_issue_date');
+  const declared = declaredDatesOf(command, ctx.today);
+  if (typeof declared === 'string') return reject(declared);
   const file = resolveReviewedFile(command.itemId, command.fileId, ctx.evidence);
   if (file === 'invalid') return reject('file_not_evidence');
-  if (command.verdict === 'accepted' && contradictsDocument(command.itemId, file, command.issuedOn)) {
+  if (command.verdict === 'accepted' && contradictsDocument(command.itemId, file, declared)) {
     return reject('issued_on_contradicts_document');
   }
   const reviewRecord = {
     verdict: command.verdict, fileId: file?.fileId ?? null, fileFingerprint: file?.fingerprint ?? null,
-    issuedOn: command.issuedOn, reason: command.reason, reviewedBy: ctx.actorUid, reviewedAt: ctx.now,
+    issuedOn: declared.issuedOn, printedValidUntil: declared.printedValidUntil,
+    reason: command.reason, reviewedBy: ctx.actorUid, reviewedAt: ctx.now,
   };
   const before = current.overrides[command.itemId]?.review?.verdict ?? null;
   const next = withOverride(current, command.itemId, { ...current.overrides[command.itemId], review: reviewRecord });

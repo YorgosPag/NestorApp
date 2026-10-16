@@ -211,7 +211,7 @@ const owner = (over: Doc = {}): Doc => ({ authorUserId: 'user_9', authorCompanyI
 const gap = (rows: readonly RegistryRow[], propertyId: string, kind = 'energy-certificate') =>
   rows.find((row) => row.kind === 'gap' && row.gap.propertyId === propertyId && row.gap.kind === kind);
 const accepted = (fileId: string | null, issuedOn: string | null) =>
-  ({ review: { verdict: 'accepted', fileId, fileFingerprint: null, issuedOn, reason: null, reviewedBy: 'user_2', reviewedAt: '2026-10-05T00:00:00.000Z' } });
+  ({ review: { verdict: 'accepted', fileId, fileFingerprint: null, issuedOn, printedValidUntil: null, reason: null, reviewedBy: 'user_2', reviewedAt: '2026-10-05T00:00:00.000Z' } });
 
 describe('Φ4δ Ε7 — «λείπει» από τις απαιτήσεις', () => {
   it('ανοιχτή υπόθεση σε ακίνητο ΧΩΡΙΣ κανένα ΠΕΑ ⇒ κενό που μπλοκάρει (και ταυτότητας κτιρίου)', async () => {
@@ -220,7 +220,11 @@ describe('Φ4δ Ε7 — «λείπει» από τις απαιτήσεις', ()
     const registry = await read();
     expect(gap(registry.rows, 'prop_1')).toMatchObject({ state: 'missing', blocking: true });
     expect(gap(registry.rows, 'prop_1', 'building-identity')).toBeDefined();
-    expect(registry.tally.missing).toBe(2);
+    // ADR-915 §14: και τα τρία έγγραφα του πωλητή· η ΕΦΚΑ γιατί το ακίνητο χωρίς δεδομένα παράγεται νεόδμητο ⇒ νομικό πρόσωπο.
+    expect(registry.rows.flatMap((row) => (row.kind === 'gap' ? [row.gap.kind] : []))).toEqual([
+      'building-identity', 'energy-certificate', 'enfia-certificate', 'insurance-clearance', 'tax-clearance',
+    ]);
+    expect(registry.tally.missing).toBe(5);
     expect(registry.properties.prop_1).toEqual({ name: 'Χωρίς ΠΕΑ', scope: 'property' });
   });
 

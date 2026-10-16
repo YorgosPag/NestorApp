@@ -33,7 +33,8 @@ type CaseRequirementSource = Pick<ConveyanceCase, 'id' | 'profile' | 'overrides'
  */
 function attestationOf(record: CaseRequirementSource, item: ChecklistItem): RequirementAttestation | null {
   const review = record.overrides[item.id]?.review;
-  return review?.verdict === 'accepted' ? { fileId: review.fileId, issuedOn: review.issuedOn } : null;
+  if (review?.verdict !== 'accepted') return null;
+  return { fileId: review.fileId, issuedOn: review.issuedOn, printedValidUntil: review.printedValidUntil ?? null };
 }
 
 /**

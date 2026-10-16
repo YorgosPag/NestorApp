@@ -40,7 +40,7 @@ describe('Δ1 — ο ανεκτικός αναγνώστης', () => {
     ['απόν (κάθε αρχείο πριν τη Φ3)', undefined],
     ['null', null],
     ['πίνακας', [fromText]],
-    ['άγνωστο είδος', { ...fromText, kind: 'tax-clearance' }],
+    ['άγνωστο είδος', { ...fromText, kind: 'title-deed' }],
     ['άγνωστη προέλευση', { ...fromText, source: { kind: 'ai-guess' } }],
     ['άγνωστος αναγνώστης', { ...fromText, source: { kind: 'document-text', reader: 'ocr' } }],
     ['άγνωστη διαδρομή δήλωσης', { ...fromText, source: { kind: 'attested', via: 'email' } }],
