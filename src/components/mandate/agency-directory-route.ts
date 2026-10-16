@@ -25,6 +25,9 @@
  * **οποιαδήποτε** πλευρά μπορεί να ρωτήσει.
  */
 
+import type { DocumentKind } from '@/config/document-validity/document-validity';
+import { documentToken } from '@/lib/agency/occupation-query';
+import { serializeShowcaseFilters } from '@/lib/agency/showcase-filter';
 import { typedHref } from '@/lib/workspace/route-worlds';
 
 /**
@@ -52,6 +55,23 @@ export const AGENCY_DIRECTORY_ROUTE = '/pro' as const;
 export function agencyDirectoryHref(query?: string | null) {
   if (query && query.length > 0) return typedHref(`${AGENCY_DIRECTORY_ROUTE}?${query}` as const);
   return typedHref(AGENCY_DIRECTORY_ROUTE);
+}
+
+/**
+ * **«Βρες επαγγελματία που μπορεί να το εκδώσει»** — ο κατάλογος φιλτραρισμένος στο **έγγραφο** και, όταν
+ * αποδεικνύεται, στην **περιοχή του ακινήτου** (ADR-915 §24 · Zillow/Houzz «find a pro», ήδη στενεμένο).
+ *
+ * 🔑 **Κανένα όνομα παραμέτρου εδώ**: η διεύθυνση γράφεται από τον **ίδιο** σειριοποιητή που τη διαβάζει
+ *    (`serializeShowcaseFilters` ⇄ `parseShowcaseFilters`) και το διακριτικό του εγγράφου από τον ίδιο κριτή
+ *    (`documentToken`). Άγκυρα κύκλου στο `document-next-step.test.ts`.
+ * ⚠️ `adminId === null` = «η περιοχή δεν αποδεικνύεται» ⇒ ο κατάλογος **χωρίς** περιοχή, ποτέ μαντεψιά.
+ */
+export function documentIssuerSearchHref(kind: DocumentKind, adminId: string | null) {
+  const query = serializeShowcaseFilters({
+    occupation: documentToken(kind),
+    where: adminId === null ? null : { adminId },
+  });
+  return agencyDirectoryHref(query.toString());
 }
 
 /**

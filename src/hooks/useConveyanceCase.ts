@@ -25,6 +25,7 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import { ApiClientError } from '@/lib/api/enterprise-api-client';
 import { getErrorMessage } from '@/lib/error-utils';
 import { applyConveyanceCommand } from '@/lib/conveyance/apply-command';
+import type { SellerCandidates } from '@/lib/conveyance/case-party-commands';
 import { deriveCaseChecklist } from '@/lib/conveyance/case-checklist';
 import { conveyanceToday } from '@/lib/conveyance/conveyance-calendar';
 import type { CommandRejection, ConveyanceCommand } from '@/lib/conveyance/conveyance-commands';
@@ -48,20 +49,30 @@ export type ConveyanceCommandOutcome =
   | { readonly ok: false; readonly reason: 'conflict' | 'error'; readonly message: string | null }
   | { readonly ok: false; readonly reason: 'rejected'; readonly rejection: CommandRejection };
 
+export interface ConveyanceRunOptions {
+  readonly sellerCandidates?: SellerCandidates;
+}
+
+const NO_CANDIDATES: SellerCandidates = new Map();
+
 interface UseConveyanceCaseReturn {
   readonly view: ConveyanceCaseView | null;
   readonly loading: boolean;
   readonly error: string | null;
   readonly opening: boolean;
   readonly openCase: () => Promise<void>;
-  readonly run: (command: ConveyanceCommand) => Promise<ConveyanceCommandOutcome>;
+  /**
+   * ADR-915 §23 — `options.sellerCandidates`: οι επαφές του `add_sellers` κριμένες από τον επιλογέα (`sellerCandidateOf`),
+   * **μόνο** για το optimistic· ο server τις ξανακρίνει από τη βάση και η δική του απάντηση είναι η τελική.
+   */
+  readonly run: (command: ConveyanceCommand, options?: ConveyanceRunOptions) => Promise<ConveyanceCommandOutcome>;
   readonly reload: () => Promise<void>;
 }
 
 /** Η εικόνα μετά την εντολή, χωρίς να ρωτηθεί ο server — ή η απόρριψη του πυρήνα. */
-function optimisticView(view: ConveyanceCaseView, command: ConveyanceCommand, actorUid: string): ConveyanceCaseView | CommandRejection {
+function optimisticView(view: ConveyanceCaseView, command: ConveyanceCommand, actorUid: string, sellerCandidates: SellerCandidates): ConveyanceCaseView | CommandRejection {
   const today = conveyanceToday();
-  const applied = applyConveyanceCommand(view.conveyanceCase, command, { actorUid, now: nowISO(), today, evidence: view.evidence });
+  const applied = applyConveyanceCommand(view.conveyanceCase, command, { actorUid, now: nowISO(), today, evidence: view.evidence, sellerCandidates });
   if (!applied.ok) return applied.rejection;
   const record = applied.next;
   const checklist = deriveCaseChecklist({ record, derivedFacts: view.derivedFacts, evidence: view.evidence, sealed: view.sealedDeliveries, today, viewer: 'host' });
@@ -187,10 +198,10 @@ function useCommandRunner(store: CaseStore, reload: () => Promise<void>, pending
     }
   }, [confirmed, show, accept, reload]);
 
-  return useCallback(async (command: ConveyanceCommand): Promise<ConveyanceCommandOutcome> => {
+  return useCallback(async (command: ConveyanceCommand, options?: ConveyanceRunOptions): Promise<ConveyanceCommandOutcome> => {
     const current = shown.current;
     if (!current) return { ok: false, reason: 'error', message: null };
-    const optimistic = optimisticView(current, command, user?.uid ?? '');
+    const optimistic = optimisticView(current, command, user?.uid ?? '', options?.sellerCandidates ?? NO_CANDIDATES);
     if (typeof optimistic === 'string') return { ok: false, reason: 'rejected', rejection: optimistic };
     show(optimistic);
     pending.current += 1;

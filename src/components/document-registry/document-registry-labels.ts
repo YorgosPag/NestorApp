@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 
 import type {
+  AuthorityService,
   DocumentObligor,
   IssuerAuthority,
   IssuerQualification,
@@ -198,6 +199,24 @@ export const OBLIGOR_LABEL_KEYS: Readonly<Record<DocumentObligor, string>> = {
 /** «Τον ορίζει …» — πλήρης πρόταση ανά υπόχρεο (ποτέ συναρμολόγηση άρθρου/πτώσης από κομμάτια). */
 export const APPOINTED_BY_LABEL_KEYS: Readonly<Record<DocumentObligor, string>> = {
   owner: `${K}issuer.appointedBy.owner`,
+};
+
+/** ADR-915 §24 — «Επόμενο βήμα»: ενέργειες που παράγονται από τον εκδότη (`document-next-step.ts`). */
+export const NEXT_STEP_KEYS = {
+  heading: `${K}nextStep.heading`,
+  findProfessional: `${K}nextStep.findProfessional`,
+  findProfessionalNear: `${K}nextStep.findProfessionalNear`,
+  findProfessionalAnywhere: `${K}nextStep.findProfessionalAnywhere`,
+  selfService: `${K}nextStep.selfService`,
+  selfServiceHint: `${K}nextStep.selfServiceHint`,
+  opensInNewTab: `${K}nextStep.opensInNewTab`,
+} as const;
+
+/** Η διαδρομή μέσα στην πύλη της αρχής — μία ανά υπηρεσία· η πηγή της ζει στο `AUTHORITY_SERVICE_SPECS.pathSource`. */
+export const SELF_SERVICE_PATH_KEYS: Readonly<Record<AuthorityService, string>> = {
+  'aade-tax-clearance': `${K}nextStep.path.aade-tax-clearance`,
+  'aade-enfia-certificate': `${K}nextStep.path.aade-enfia-certificate`,
+  'efka-insurance-clearance': `${K}nextStep.path.efka-insurance-clearance`,
 };
 
 /** ADR-915 §14 — από πού ήρθε η λήξη· `floor` = το εγγυημένο κατώτατο («τουλάχιστον έως»), όχι η πραγματική λήξη. */

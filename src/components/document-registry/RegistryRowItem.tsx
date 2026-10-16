@@ -24,6 +24,7 @@ import type { RegistryDocument, RegistryDocumentRow } from '@/lib/document-valid
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
 import { RegistryDependents } from '@/components/document-registry/RegistryDependents';
 import { RegistryIssuerValue } from '@/components/document-registry/RegistryIssuerValue';
+import { RegistryNextStep } from '@/components/document-registry/RegistryNextStep';
 import { RegistryPropertyValue } from '@/components/document-registry/RegistryPropertyValue';
 import { RegistryRowHeader } from '@/components/document-registry/RegistryRowHeader';
 import {
@@ -48,6 +49,11 @@ export function documentNameOf(t: Translate, document: RegistryDocument, names: 
     case 'attested': return t(REGISTRY_KEYS.attested);
     case 'file': return names.files[document.origin.fileId]?.name ?? t(REGISTRY_KEYS.fileUnnamed);
   }
+}
+
+/** Ο δήμος του ακινήτου της γραμμής — `null` όταν δεν ρωτήθηκε ή δεν αποδεικνύεται (ADR-915 §24). */
+export function areaIdOf(propertyId: string | null, names: Pick<DocumentRegistryResponse, 'properties'>): string | null {
+  return propertyId === null ? null : names.properties[propertyId]?.areaId ?? null;
 }
 
 /** «σε 12 ημέρες» / «πριν από 3 ημέρες» — από το `asOf` της απόκρισης. */
@@ -112,6 +118,9 @@ export function RegistryRowItem({ row, registry, supersededByName }: RegistryRow
       {superseded && supersededByName !== null ? (
         <p className="m-0 text-sm text-muted-foreground">{t(REGISTRY_KEYS.supersededBy, { name: supersededByName })}</p>
       ) : null}
+      {superseded ? null : (
+        <RegistryNextStep kind={row.document.kind} state={row.state} areaId={areaIdOf(row.document.propertyId, registry)} />
+      )}
       {superseded ? null : <RegistryDependents dependents={row.dependents} state={row.state} />}
     </article>
   );

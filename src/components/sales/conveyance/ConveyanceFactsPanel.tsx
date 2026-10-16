@@ -22,6 +22,7 @@ import { CONVEYANCE_FACT_IDS, isPartyFact, type ConveyanceFactId } from '@/confi
 import type { ChecklistRow, ConveyanceCase, ConveyanceFactAnswer } from '@/types/conveyance-case';
 import { derivePartyFacts, factEntailedBy, type FactValues } from '@/lib/conveyance/derive-facts';
 import { resolveCaseFacts } from '@/lib/conveyance/case-rows';
+import { usePartyName } from '@/components/conveyance/shared/CasePartyLabels';
 
 type FactAnswers = Readonly<Partial<Record<ConveyanceFactId, ConveyanceFactAnswer>>>;
 
@@ -93,7 +94,7 @@ function factScopes({ record, rows, derivedFacts }: Pick<ConveyanceFactsPanelPro
   };
   const partyScopes = record.parties.sellers.map((party): FactScope => ({
     partyKey: party.key, factIds: factsAskedBy(rows.filter((row) => row.party?.key === party.key)).filter(isPartyFact),
-    resolved: facts.parties[party.key] ?? {}, derived: derivePartyFacts(party), answers: record.partyFacts[party.key] ?? {},
+    resolved: facts.parties[party.key] ?? {}, derived: derivePartyFacts(party, record.parties.sellers), answers: record.partyFacts[party.key] ?? {},
   }));
   return [caseScope, ...partyScopes].filter((scope) => scope.factIds.length > 0);
 }
@@ -101,11 +102,10 @@ function factScopes({ record, rows, derivedFacts }: Pick<ConveyanceFactsPanelPro
 export function ConveyanceFactsPanel({ record, rows, derivedFacts, canEdit, onAnswer }: ConveyanceFactsPanelProps) {
   const { t } = useTranslation(['conveyance']);
   const colors = useSemanticColors();
+  // §23.10 — «ποιος;» από τον ΕΝΑ πάροχο: όνομα, αλλιώς «Πωλητής N»· με έναν πωλητή `null` (η όψη όπως πριν από την §22).
+  const partyName = usePartyName();
   const scopes = factScopes({ record, rows, derivedFacts });
   if (scopes.length === 0) return null;
-  // Με έναν πωλητή δεν χρειάζεται «ποιος»: η όψη μένει όπως πριν από την §22.
-  const sellerIndex = (partyKey: string) => record.parties.sellers.findIndex((party) => party.key === partyKey) + 1;
-  const named = record.parties.sellers.length > 1;
   return (
     <section className="rounded-lg border bg-card p-3" aria-labelledby="conveyance-facts-title">
       <header className="mb-1">
@@ -113,17 +113,28 @@ export function ConveyanceFactsPanel({ record, rows, derivedFacts, canEdit, onAn
         <p className={cn('text-xs', colors.text.muted)}>{t('facts.hint')}</p>
       </header>
       {scopes.map((scope) => (
-        <section key={scope.partyKey ?? 'case'} aria-label={scope.partyKey !== null && named ? t('facts.sellerHeading', { index: sellerIndex(scope.partyKey) }) : undefined}>
-          {scope.partyKey !== null && named && (
-            <h4 className={cn('mt-2 text-xs font-semibold', colors.text.secondary)}>{t('facts.sellerHeading', { index: sellerIndex(scope.partyKey) })}</h4>
-          )}
-          <ul className="divide-y">
-            {scope.factIds.map((factId) => (
-              <FactRow key={factId} factId={factId} scope={scope} canEdit={canEdit} onAnswer={onAnswer} />
-            ))}
-          </ul>
-        </section>
+        <FactScopeSection key={scope.partyKey ?? 'case'} scope={scope} heading={partyName(scope.partyKey)} canEdit={canEdit} onAnswer={onAnswer} />
       ))}
+    </section>
+  );
+}
+
+interface FactScopeSectionProps extends Pick<ConveyanceFactsPanelProps, 'canEdit' | 'onAnswer'> {
+  readonly scope: FactScope;
+  /** «Ποιος» — `null` για την υπόθεση ή όταν υπάρχει ένα μόνο πρόσωπο. */
+  readonly heading: string | null;
+}
+
+function FactScopeSection({ scope, heading, canEdit, onAnswer }: FactScopeSectionProps) {
+  const colors = useSemanticColors();
+  return (
+    <section aria-label={heading ?? undefined}>
+      {heading !== null && <h4 className={cn('mt-2 text-xs font-semibold', colors.text.secondary)}>{heading}</h4>}
+      <ul className="divide-y">
+        {scope.factIds.map((factId) => (
+          <FactRow key={factId} factId={factId} scope={scope} canEdit={canEdit} onAnswer={onAnswer} />
+        ))}
+      </ul>
     </section>
   );
 }

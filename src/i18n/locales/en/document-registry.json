@@ -87,6 +87,20 @@
       "owner": "Appointed by the owner"
     }
   },
+  "nextStep": {
+    "heading": "Next step",
+    "findProfessional": "Find a professional",
+    "findProfessionalNear": "In the property's area — only those who can issue it.",
+    "findProfessionalAnywhere": "The property's area is not known: the directory opens for all of Greece — pick an area there.",
+    "selfService": "Issue it on {authority}",
+    "selfServiceHint": "Online, the same day, with the obligor's Taxisnet credentials.",
+    "opensInNewTab": "Opens the official page in a new tab",
+    "path": {
+      "aade-tax-clearance": "Applications → Tax Services → Tax clearance → Issue certificate",
+      "aade-enfia-certificate": "“Property register (E9/ENFIA)” application → ENFIA certificate",
+      "efka-insurance-clearance": "Online service “Social security clearance certificate”"
+    }
+  },
   "dependents": {
     "heading": "What stops if it expires",
     "missingHeading": "Who requires it",

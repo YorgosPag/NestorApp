@@ -33,7 +33,7 @@
     "src/i18n/generated/routes/o__workspace__cases.el.json": "62e1b3378215c16e66a12632667ad61be33b59cc632e634dde0ffaf9763769d4",
     "src/i18n/generated/routes/o__workspace__cases__engagementId.el.json": "553c4f1fa748136eb4247f4f0d14244369b7b76b0011c200f3ec6da42d783103",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
-    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "89bc44768d48f1d7f9ad3c83f27af2c15b2b0fcf62cf1a9632a2042894f746f9",
+    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "feec89d6bf81cb3635d54b5f21fc868b72e1609b4cdf9e224c2faffa5e4ae7cc",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "f2b0212cf0909081143453962ba0bfec2a47dc8753dc81a009ee34c12579b137",
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "2753c7edd9c05a17a65b15f3146177db8a27ca727df7b1f77d28fd1724f4fa6f",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "e1c5896ab910b7f5515ef0a3991a4daae3ba7fc776c6291815cfeaddb51e2398",
@@ -150,7 +150,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "da8033ff6b457164d8efb4ae25029cb0deadde1f1c25f5962ae2475f8c077727",
+  "inputsSha256": "db98459c5b10562a4266282a6d09e7ad560f2224553b9c6f81c8fd72f3de2d24",
   "languages": [
     "el"
   ],
@@ -5138,6 +5138,16 @@
             "load.error",
             "load.loading",
             "load.retry",
+            "nextStep.findProfessional",
+            "nextStep.findProfessionalAnywhere",
+            "nextStep.findProfessionalNear",
+            "nextStep.heading",
+            "nextStep.opensInNewTab",
+            "nextStep.path.aade-enfia-certificate",
+            "nextStep.path.aade-tax-clearance",
+            "nextStep.path.efka-insurance-clearance",
+            "nextStep.selfService",
+            "nextStep.selfServiceHint",
             "page.asOf",
             "page.lead",
             "page.title",
@@ -10779,7 +10789,7 @@
   ],
   "stats": {
     "matchedKeys": 248,
-    "sliceBytes": 753142
+    "sliceBytes": 754465
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

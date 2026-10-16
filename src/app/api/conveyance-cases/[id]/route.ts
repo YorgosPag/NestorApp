@@ -2,7 +2,8 @@
  * ADR-901 Φ1 — Εντολή πάνω σε υπόθεση μεταβίβασης.
  *
  * PATCH /api/conveyance-cases/{id} { expectedVersion, command }
- *   command ∈ answer_fact · mark_not_applicable · review · clear_override · set_target_signing_date · cancel
+ *   command ∈ answer_fact · mark_not_applicable · review · clear_override · set_target_signing_date · cancel ·
+ *             add_sellers · remove_seller (ADR-915 §23 — ο server κρίνει τις επαφές, ποτέ ο client)
  *
  * - CAS: `expectedVersion` ≠ τρέχουσα ⇒ **409** (ο client ξαναφορτώνει — καμία σιωπηλή αντικατάσταση)
  * - Πάγωμα: υπογεγραμμένη/κλειστή υπόθεση ⇒ **409** (ADR-901 Ε-6)

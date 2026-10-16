@@ -12,18 +12,23 @@ import React from 'react';
 
 import { DocumentRegistryContent } from '../DocumentRegistryContent';
 import { RegistryIssuerValue } from '../RegistryIssuerValue';
+import { RegistryNextStep } from '../RegistryNextStep';
 import {
   APPOINTED_BY_LABEL_KEYS,
   ISSUER_AUTHORITY_LABEL_KEYS,
   ISSUER_KEYS,
   ISSUER_QUALIFICATION_LABEL_KEYS,
   LICENCE_REGISTRY_LABEL_KEYS,
+  NEXT_STEP_KEYS,
   OBLIGOR_LABEL_KEYS,
   REGISTRY_KEYS,
   REGISTRY_STATE_LABEL_KEYS,
   REGISTRY_STATE_LOOK,
+  SELF_SERVICE_PATH_KEYS,
   TRUNCATED_SOURCE_KEYS,
 } from '../document-registry-labels';
+import { documentIssuerSearchHref } from '@/components/mandate/agency-directory-route';
+import { AUTHORITY_SERVICE_SPECS } from '@/config/document-validity/document-issuers';
 import {
   matchesRegistryFilter,
   REGISTRY_FILTERS,
@@ -37,6 +42,7 @@ import { listingDetailHref } from '@/lib/listings/listing-routes';
 import { ENTITY_ROUTES } from '@/lib/routes/entityRoutes';
 import type { DocumentRegistryState } from '@/hooks/document-registry/useDocumentRegistry';
 import {
+  FIXTURE_AREA_ID,
   FIXTURE_AS_OF,
   FIXTURE_DOCUMENTS,
   fixtureResponse,
@@ -367,5 +373,43 @@ describe('ADR-915 §18 — «Εκδίδει · Το φέρνει»', () => {
     const selfService = `${ISSUER_KEYS.selfService} ${JSON.stringify({ authority: ISSUER_AUTHORITY_LABEL_KEYS.aade })}`;
     expect(within(tax.container).getByText(selfService)).toBeTruthy();
     expect(within(tax.container).queryByText(APPOINTED_BY_LABEL_KEYS.owner)).toBeNull();
+  });
+});
+
+describe('ADR-915 §24 — «Επόμενο βήμα» μέσα στη γραμμή', () => {
+  const articleOf = (name: string) => screen.getByText(name).closest('article') as HTMLElement;
+
+  it('ΠΕΑ που έληξε ⇒ «Βρες επαγγελματία» στον κατάλογο φιλτραρισμένο σε έγγραφο ΚΑΙ δήμο', () => {
+    renderReady();
+    const row = articleOf('Συνθετικό Α1');
+    const link = within(row).getByRole('link', { name: NEXT_STEP_KEYS.findProfessional });
+    expect(link.getAttribute('href')).toBe(documentIssuerSearchHref('energy-certificate', FIXTURE_AREA_ID));
+    expect(link.getAttribute('href')).toBe('/pro?occupation=document%3Aenergy-certificate&area=municipality%3A0501');
+    expect(within(row).getByText(NEXT_STEP_KEYS.findProfessionalNear)).toBeTruthy();
+  });
+
+  it('κενό χωρίς αποδεδειγμένο δήμο ⇒ κατάλογος ΧΩΡΙΣ περιοχή, και η οθόνη το λέει', () => {
+    renderReady();
+    const gap = articleOf('Συνθετικό Ζ6');
+    const link = within(gap).getByRole('link', { name: NEXT_STEP_KEYS.findProfessional });
+    expect(link.getAttribute('href')).toBe('/pro?occupation=document%3Aenergy-certificate');
+    expect(within(gap).getByText(NEXT_STEP_KEYS.findProfessionalAnywhere)).toBeTruthy();
+  });
+
+  it('έγκυρο ή άγνωστης λήξης ⇒ καμία μπάρα «Επόμενο βήμα»', () => {
+    renderReady();
+    expect(within(articleOf('synthetic-new.pdf')).queryByText(NEXT_STEP_KEYS.heading)).toBeNull();
+    expect(within(articleOf(REGISTRY_KEYS.fileUnnamed)).queryByText(NEXT_STEP_KEYS.heading)).toBeNull();
+  });
+
+  it('φορολογική που έληξε ⇒ «Έκδοση από ΑΑΔΕ» στην επίσημη είσοδο, νέα καρτέλα, διαδρομή — ΚΑΝΕΝΑ «Βρες»', () => {
+    render(<RegistryNextStep kind="tax-clearance" state="expired" areaId={FIXTURE_AREA_ID} />);
+    const name = `${NEXT_STEP_KEYS.selfService} ${JSON.stringify({ authority: ISSUER_AUTHORITY_LABEL_KEYS.aade })}`;
+    const link = screen.getByRole('link', { name });
+    expect(link.getAttribute('href')).toBe(AUTHORITY_SERVICE_SPECS['aade-tax-clearance'].entryUrl);
+    expect(link.getAttribute('target')).toBe('_blank');
+    expect(link.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(screen.getByText(SELF_SERVICE_PATH_KEYS['aade-tax-clearance'])).toBeTruthy();
+    expect(screen.queryByText(NEXT_STEP_KEYS.findProfessional)).toBeNull();
   });
 });

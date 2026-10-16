@@ -159,6 +159,10 @@
     "validUntilRangeCeiling": "For this issue date the law gives an expiry no later than {ceiling}.",
     "validUntilOutOfRange": "Expiry {printed} is outside the legal bounds ({rule}). The earlier date applies; check the document."
   },
+  "parties": {
+    "sellerOrdinal": "Seller {index}",
+    "rowLabel": "{item} · {party}"
+  },
   "facts": {
     "title": "Questions about the conveyance",
     "hint": "The answers decide which documents are needed. Anything known from the data is not asked.",
@@ -166,7 +170,6 @@
     "no": "No",
     "derived": "From the data",
     "entailed": "Required by law",
-    "sellerHeading": "Seller {index}",
     "is_new_build": { "question": "Is it a newly built property sold by the developer?" },
     "seller_is_legal_entity": { "question": "Is the seller a legal entity (company)?" },
     "seller_insurance_liable": { "question": "Is or was the seller ever liable for social insurance contributions (self-employed, farmer, employer), a partner or manager of a company, or liable for contributions on a building project permitted in the last 20 years?" },
@@ -176,6 +179,8 @@
     "existing_building_with_manager": { "question": "Is there a building manager with shared expenses?" },
     "has_unauthorized_works": { "question": "Are there unauthorized works or legalisations requiring an engineer's certificate?" },
     "seller_by_proxy": { "question": "Will the seller be represented by power of attorney?" },
+    "seller_is_landowner": { "question": "Is the seller a landowner of the project (land-for-flats exchange)?" },
+    "seller_tax_clearance_by_contractor": { "question": "Does the contractor present the landowner's tax clearance (transfer of land shares under a construction pre-contract, with the contractor as party — A.1002/2019)?" },
     "buyer_has_mortgage": { "question": "Is the buyer financing with a mortgage?" },
     "first_home_exemption": { "question": "Is the buyer claiming the first-home exemption?" },
     "special_zone": { "question": "Is it in a forest, border or other special zone?" }

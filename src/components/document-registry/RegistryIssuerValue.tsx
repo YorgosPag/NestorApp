@@ -13,7 +13,12 @@
 
 import React from 'react';
 
-import { ISSUER_QUALIFICATION_SPECS, type DocumentIssuer, type IssuerQualification } from '@/config/document-validity/document-issuers';
+import {
+  ISSUER_QUALIFICATION_SPECS,
+  issuerAuthorityOf,
+  type DocumentIssuer,
+  type IssuerQualification,
+} from '@/config/document-validity/document-issuers';
 import { documentKindSpec, type DocumentKind } from '@/config/document-validity/document-validity';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatList } from '@/lib/intl-formatting';
@@ -42,7 +47,7 @@ function IssuerValue({ issuer }: { readonly issuer: DocumentIssuer }): React.Rea
   if (issuer.kind === 'authority') {
     return (
       <dd className="m-0 text-sm text-foreground">
-        {t(ISSUER_KEYS.selfService, { authority: t(ISSUER_AUTHORITY_LABEL_KEYS[issuer.authority]) })}
+        {t(ISSUER_KEYS.selfService, { authority: t(ISSUER_AUTHORITY_LABEL_KEYS[issuerAuthorityOf(issuer)]) })}
       </dd>
     );
   }
