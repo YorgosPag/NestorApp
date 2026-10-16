@@ -144,7 +144,8 @@ describe('Ρ3 — αρνήσεις με κωδικό', () => {
   it.each([
     [new DepreciationRunError('FISCAL_YEAR_NOT_ENDED', 2025), 409, 'FISCAL_YEAR_NOT_ENDED'],
     [new DepreciationRunError('PERIOD_NOT_FOUND', 2025), 409, 'PERIOD_NOT_FOUND'],
-    [new DepreciationPeriodClosedError('PERIOD_NOT_OPEN', '2025-12'), 409, 'PERIOD_NOT_OPEN'],
+    [new DepreciationPeriodClosedError('PERIOD_CLOSED', '2025-12'), 409, 'PERIOD_CLOSED'],
+    [new DepreciationPeriodClosedError('PERIOD_LOCKED', '2025-12'), 409, 'PERIOD_LOCKED'],
     [new InvalidDepreciationTermsError('depreciationStartDate', 'x'), 422, 'INVALID_DEPRECIATION_TERMS'],
   ])('%s ⇒ %i %s', async (error, status, errorCode) => {
     service.runYearEndDepreciation.mockRejectedValue(error);

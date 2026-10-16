@@ -51,14 +51,14 @@ it('Υ2 — καταχώριση: POST με τη χρήση, ανανέωση μ
 
 it('Υ3 — άρνηση: ο κωδικός μένει ορατός και μετά την ανανέωση· καμία ανανέωση μητρώου', async () => {
   const onPosted = jest.fn();
-  mockPost.mockRejectedValue(new ApiClientError('closed', 409, 'PERIOD_NOT_OPEN'));
+  mockPost.mockRejectedValue(new ApiClientError('closed', 409, 'PERIOD_CLOSED'));
   const { result } = renderHook(() => useDepreciationRun(2025, onPosted));
   await waitFor(() => expect(result.current.preview).not.toBeNull());
 
   await act(() => result.current.book());
 
   expect(mockGet).toHaveBeenCalledTimes(2);
-  expect(result.current.errorCode).toBe('PERIOD_NOT_OPEN');
+  expect(result.current.errorCode).toBe('PERIOD_CLOSED');
   expect(onPosted).not.toHaveBeenCalled();
 });
 

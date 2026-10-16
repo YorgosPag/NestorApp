@@ -148,7 +148,7 @@ jest.mock('@/subapps/accounting/services/repository/firestore-helpers', () => ({
 }));
 
 var bankExtras = {
-  validatePostingAllowed: jest.fn(async () => ({ allowed: true, periodId: 'p1', periodStatus: 'OPEN', reason: null })),
+  validatePostingAllowed: jest.fn(async () => ({ allowed: true, periodId: 'p1', periodStatus: 'OPEN' })),
   logAccountingEvent: jest.fn(async () => undefined),
 };
 
@@ -241,7 +241,7 @@ beforeEach(() => {
   authCtx.globalRole = 'company_admin';
   authCtx.email = 'g@example.com';
   repo.getCompanySetup.mockResolvedValue(null);
-  bankExtras.validatePostingAllowed.mockResolvedValue({ allowed: true, periodId: 'p1', periodStatus: 'OPEN', reason: null });
+  bankExtras.validatePostingAllowed.mockResolvedValue({ allowed: true, periodId: 'p1', periodStatus: 'OPEN' });
   mailgun.result = { success: true, messageId: 'mg_1', error: null };
   orgResolver.result = null;
 });
@@ -417,6 +417,36 @@ describe('bank/match — POST', () => {
     const res = (await matchPost(req(single))) as Envelope;
     expect(res.status).toBe(409);
     expect(((await res.json()).error as Record<string, unknown>).code).toBe('ALREADY_MATCHED');
+  });
+
+  // ADR-ACC-010 §2.1.1 Φ7: ο κωδικός είναι ΤΟ `denial` του `validatePostingAllowed` — όχι εκ νέου απόφαση από το
+  // `periodStatus`. Ως 2026-10-16 το ομαδικό ταίριασμα έλεγε `PERIOD_CLOSED` και για περίοδο που ΔΕΝ υπάρχει.
+  const denied = (denial: 'PERIOD_CLOSED' | 'PERIOD_LOCKED' | 'PERIOD_NOT_FOUND') => ({
+    allowed: false, denial, postingDate: '2026-01-05', periodId: null, periodStatus: null, fiscalYear: null, periodNumber: null,
+  });
+  const unmatched = { matchStatus: 'unmatched', direction: 'credit', amount: 100, version: 0, transactionDate: '2026-01-05' };
+
+  it.each(['PERIOD_CLOSED', 'PERIOD_LOCKED', 'PERIOD_NOT_FOUND'] as const)('μονό: άρνηση περιόδου %s ⇒ 409 με τον ΙΔΙΟ κωδικό, κανένα ταίριασμα', async (denial) => {
+    repo.getBankTransaction.mockResolvedValue(unmatched);
+    bankExtras.validatePostingAllowed.mockResolvedValue(denied(denial));
+    const res = (await matchPost(req(single))) as Envelope;
+    expect(res.status).toBe(409);
+    const err = (await res.json()).error as Record<string, unknown>;
+    expect(err.code).toBe(denial);
+    expect(err.meta).toMatchObject({ postingDate: '2026-01-05' });
+    expect(repo.updateBankTransaction).not.toHaveBeenCalled();
+  });
+
+  it('ομαδικό: ανύπαρκτη περίοδος ⇒ PERIOD_NOT_FOUND (όχι PERIOD_CLOSED)', async () => {
+    repo.getBankTransaction.mockResolvedValue(unmatched);
+    bankExtras.validatePostingAllowed.mockResolvedValue(denied('PERIOD_NOT_FOUND'));
+    const res = (await matchPost(req({
+      transactionIds: ['t1'], entityRefs: [{ entityId: 'e1', entityType: 'invoice', amount: 100 }],
+    }))) as Envelope;
+    expect(res.status).toBe(409);
+    const err = (await res.json()).error as Record<string, unknown>;
+    expect(err.code).toBe('PERIOD_NOT_FOUND');
+    expect(err.meta).toMatchObject({ transactionId: 't1' });
   });
 
   it('success → 200 { data:{ ...result, version } }', async () => {

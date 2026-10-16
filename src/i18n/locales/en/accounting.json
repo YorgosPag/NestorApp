@@ -293,7 +293,8 @@
       "errors": {
         "FISCAL_YEAR_NOT_ENDED": "The fiscal year has not ended yet — posting is possible after 31/12.",
         "PERIOD_NOT_FOUND": "The December accounting period of this year does not exist. Create the fiscal year first.",
-        "PERIOD_NOT_OPEN": "The December period of this year is closed or locked.",
+        "PERIOD_CLOSED": "The December period of this year is closed. Reopen it to continue.",
+        "PERIOD_LOCKED": "The December period of this year is permanently locked.",
         "INVALID_DEPRECIATION_TERMS": "An asset's data does not allow a depreciation calculation. Check its dates.",
         "UNKNOWN": "The action failed. Please try again."
       }
@@ -950,5 +951,13 @@
   },
   "installmentsPaid": "Installments paid",
   "installmentNumber": "Installment number",
-  "withholdingRate": "Withholding tax"
+  "withholdingRate": "Withholding tax",
+  "fiscalPeriods": {
+    "adjustmentPeriod": "Closing period {year}",
+    "postingDenials": {
+      "PERIOD_NOT_FOUND": "There is no accounting period for {date}. Create the fiscal year first.",
+      "PERIOD_CLOSED": "The period {period} is closed. Reopen it or post to the current period.",
+      "PERIOD_LOCKED": "The period {period} is permanently locked. Post to the current open period."
+    }
+  }
 }

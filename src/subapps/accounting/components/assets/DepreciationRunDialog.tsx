@@ -35,6 +35,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import type { DepreciationPreview, DepreciationRunResult } from '@/subapps/accounting/types';
 import { formatAccountingCurrency } from '../../utils/format';
 import { accountingToday } from '../../utils/accounting-day';
+import { isPostingPeriodDenial } from '../../utils/posting-period-denial';
 import { useDepreciationRun } from '../../hooks/useDepreciationRun';
 import { DepreciationPreviewTable } from './DepreciationPreviewTable';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -148,8 +149,8 @@ export function DepreciationRunDialog({ open, onOpenChange, onPosted }: Deprecia
   const { preview, loading, running } = run;
 
   const canBook = preview !== null && preview.blocker === null && preview.totalDelta !== 0 && !running;
-  const canReverse = preview !== null && preview.hasBooked && preview.blocker !== 'PERIOD_NOT_OPEN'
-    && preview.blocker !== 'PERIOD_NOT_FOUND' && !running;
+  // Η αναίρεση θέλει ΜΟΝΟ ανοιχτή περίοδο — όχι χρήση που έληξε (`FISCAL_YEAR_NOT_ENDED` την αφήνει).
+  const canReverse = preview !== null && preview.hasBooked && !isPostingPeriodDenial(preview.blocker) && !running;
   const confirmAmount = formatAccountingCurrency(pending === 'reverse' ? preview?.totalBooked ?? 0 : preview?.totalDelta ?? 0);
   const confirm = () => {
     const action = pending;
