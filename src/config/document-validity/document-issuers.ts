@@ -87,11 +87,54 @@ export const ISSUER_AUTHORITIES = ['aade', 'efka'] as const;
 export type IssuerAuthority = (typeof ISSUER_AUTHORITIES)[number];
 
 /**
+ * Οι **ψηφιακές υπηρεσίες** από όπου ο υπόχρεος εκδίδει μόνος του ένα έγγραφο (ADR-915 §24 — «Πώς εκδίδεται»).
+ * Μία ανά έγγραφο, όχι ανά αρχή: η ΑΑΔΕ βγάζει τη φορολογική ενημερότητα και το πιστοποιητικό ΕΝΦΙΑ από **άλλη**
+ * εφαρμογή του myAADE. Η διαδρομή μέσα στην πύλη ζει στα locales (N.11)· εδώ μόνο αρχή, είσοδος και πηγή.
+ */
+export const AUTHORITY_SERVICES = ['aade-tax-clearance', 'aade-enfia-certificate', 'efka-insurance-clearance'] as const;
+export type AuthorityService = (typeof AUTHORITY_SERVICES)[number];
+
+export interface AuthorityServiceSpec {
+  readonly authority: IssuerAuthority;
+  /**
+   * Η **επίσημη** είσοδος — ποτέ βαθύς σύνδεσμος σε εφαρμογή που αλλάζει όνομα. ⚠️ Η ΑΑΔΕ γράφει στις οδηγίες
+   * ασφαλείας της: σύνδεση στο myAADE **μόνο** από το `myaade.gov.gr` ή το `www.aade.gr` — άρα αυτό δείχνουμε.
+   */
+  readonly entryUrl: string;
+  /** Πότε ελέγχθηκε ότι η είσοδος απαντά (HTTP 200) και η διαδρομή ισχύει. */
+  readonly verifiedAt: string;
+  /** Από πού προέρχεται η διαδρομή του locale — πηγή, όχι κείμενο διεπαφής (εξαίρεση N.11, όπως το `statute`). */
+  readonly pathSource: string;
+}
+
+export const AUTHORITY_SERVICE_SPECS: Readonly<Record<AuthorityService, AuthorityServiceSpec>> = {
+  'aade-tax-clearance': {
+    authority: 'aade',
+    entryUrl: 'https://myaade.gov.gr',
+    verifiedAt: '2026-10-16',
+    pathSource: 'ΑΑΔΕ, βίντεο οδηγιών (iefimerida.gr 15/05/2024): Εφαρμογές → Φορολογικές Υπηρεσίες → Ενημερότητα',
+  },
+  'aade-enfia-certificate': {
+    authority: 'aade',
+    entryUrl: 'https://myaade.gov.gr',
+    verifiedAt: '2026-10-16',
+    pathSource: 'ΑΑΔΕ, δελτίο τύπου 31.05.2023 (ν.5036/2023): myAADE · Περιουσιολόγιο (Ε9/ΕΝΦΙΑ)',
+  },
+  'efka-insurance-clearance': {
+    authority: 'efka',
+    entryUrl: 'https://www.e-efka.gov.gr/el/elektronikes-yperesies/apodeiktiko-asphalistikes-enemerotetas',
+    verifiedAt: '2026-10-16',
+    pathSource: 'e-ΕΦΚΑ, σελίδα ηλεκτρονικής υπηρεσίας: σύνδεση με κωδικούς Taxisnet',
+  },
+};
+
+/**
  * Ποιος **εκδίδει** ένα είδος εγγράφου:
  * - `professional` — επαγγελματίας με **ένα από** τα προσόντα (any-of)· τον **ορίζει** ο `appointedBy` (π.χ. «ο
  *                    εξουσιοδοτημένος μηχανικός ορίζεται από τον ιδιοκτήτη»). `statute` = η πηγή της λίστας, αυτολεξεί.
- * - `authority`    — δημόσια αρχή· `online-self-service` ⇒ το παίρνει ο ίδιος ο υπόχρεος, την ίδια μέρα, χωρίς
- *                    επαγγελματία (μπορεί να βοηθήσει λογιστής — Στάδιο 2, όχι προσόν).
+ * - `authority`    — δημόσια αρχή, μέσα από **μία** ψηφιακή υπηρεσία ({@link AUTHORITY_SERVICE_SPECS}): το παίρνει ο ίδιος
+ *                    ο υπόχρεος, την ίδια μέρα, χωρίς επαγγελματία. Η αρχή **παράγεται** από την υπηρεσία
+ *                    ({@link issuerAuthorityOf}) — δύο πεδία θα μπορούσαν να διαφωνήσουν.
  */
 export type DocumentIssuer =
   | {
@@ -101,4 +144,9 @@ export type DocumentIssuer =
       readonly statute: string;
       readonly verifiedAt: string | null;
     }
-  | { readonly kind: 'authority'; readonly authority: IssuerAuthority; readonly channel: 'online-self-service' };
+  | { readonly kind: 'authority'; readonly service: AuthorityService };
+
+/** Η αρχή ενός εκδότη-αρχής — από την υπηρεσία του, η μία πηγή. */
+export function issuerAuthorityOf(issuer: Extract<DocumentIssuer, { kind: 'authority' }>): IssuerAuthority {
+  return AUTHORITY_SERVICE_SPECS[issuer.service].authority;
+}

@@ -11,8 +11,11 @@ import {
   LICENCE_REGISTRY_LABEL_KEYS,
 } from '@/components/document-registry/document-registry-labels';
 import {
+  AUTHORITY_SERVICES,
+  AUTHORITY_SERVICE_SPECS,
   ISSUER_QUALIFICATIONS,
   ISSUER_QUALIFICATION_SPECS,
+  issuerAuthorityOf,
 } from '@/config/document-validity/document-issuers';
 import { DOCUMENT_KINDS, documentKindSpec } from '@/config/document-validity/document-validity';
 import { escoDocIdOf, ESCO_OCCUPATION_URI_PREFIX } from '@/lib/esco/esco-uri';
@@ -54,7 +57,7 @@ describe('ADR-915 §18 — εκδότες εγγράφων', () => {
     const issuers = Object.fromEntries(
       DOCUMENT_KINDS.map((kind) => {
         const { issuer, obligor } = documentKindSpec(kind);
-        return [kind, `${issuer.kind === 'authority' ? issuer.authority : 'professional'}/${obligor}`];
+        return [kind, `${issuer.kind === 'authority' ? issuerAuthorityOf(issuer) : 'professional'}/${obligor}`];
       }),
     );
     expect(issuers).toEqual({
@@ -83,5 +86,20 @@ describe('ADR-915 §21 — οι ετικέτες των αδειών ΔΕΝ ξα
     const spec = PROFESSIONAL_LICENCE_SPECS['energy-inspector'];
     expect(ISSUER_QUALIFICATION_LABEL_KEYS['energy-inspector-registered']).toBe(spec.nameKey);
     expect(LICENCE_REGISTRY_LABEL_KEYS['energy-inspector']).toBe(REGISTRY_AUTHORITY_PRESENTATION[spec.authority].nameKey);
+  });
+
+  it('§23 — κάθε υπηρεσία αυτοεξυπηρέτησης χρησιμοποιείται, δείχνει επίσημη είσοδο https (gov.gr) και έχει ημερομηνία', () => {
+    const used = new Set(DOCUMENT_KINDS.flatMap((kind) => {
+      const { issuer } = documentKindSpec(kind);
+      return issuer.kind === 'authority' ? [issuer.service] : [];
+    }));
+    expect([...used].sort()).toEqual([...AUTHORITY_SERVICES].sort());
+    const bad = AUTHORITY_SERVICES.filter((service) => {
+      const { entryUrl, verifiedAt, pathSource } = AUTHORITY_SERVICE_SPECS[service];
+      const host = new URL(entryUrl).hostname;
+      return !entryUrl.startsWith('https://') || !host.endsWith('.gov.gr')
+        || Number.isNaN(Date.parse(verifiedAt)) || pathSource.trim() === '';
+    });
+    expect(bad).toEqual([]);
   });
 });

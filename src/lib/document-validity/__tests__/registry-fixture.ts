@@ -68,11 +68,17 @@ export const FIXTURE_REQUIREMENTS: readonly DocumentRequirement[] = [
   },
 ];
 
+/** Συνθετικός δήμος (μορφή ADR-883) για το «Βρες επαγγελματία» της γραμμής p1. */
+export const FIXTURE_AREA_ID = 'municipality:0501';
+
 const NAMES: Pick<DocumentRegistryResponse, 'properties' | 'files'> = {
   properties: {
-    p1: { name: 'Συνθετικό Α1', scope: 'property' }, p2: { name: 'Συνθετικό Β2', scope: 'property' }, p3: { name: null, scope: 'property' },
-    p4: { name: 'Συνθετικό Δ4', scope: 'property' }, p5: { name: 'Συνθετικό Ε5', scope: 'property' }, p6: { name: 'Συνθετικό Ζ6', scope: 'property' },
-    ownp_7: { name: 'Συνθετική εντολή Η7', scope: 'owner-property' },
+    // ADR-915 §24 — μόνο το p1 έχει αποδεδειγμένο δήμο: το κενό p6 δείχνει τον κατάλογο ΧΩΡΙΣ περιοχή.
+    p1: { name: 'Συνθετικό Α1', scope: 'property', areaId: FIXTURE_AREA_ID },
+    p2: { name: 'Συνθετικό Β2', scope: 'property', areaId: null }, p3: { name: null, scope: 'property', areaId: null },
+    p4: { name: 'Συνθετικό Δ4', scope: 'property', areaId: null }, p5: { name: 'Συνθετικό Ε5', scope: 'property', areaId: null },
+    p6: { name: 'Συνθετικό Ζ6', scope: 'property', areaId: null },
+    ownp_7: { name: 'Συνθετική εντολή Η7', scope: 'owner-property', areaId: null },
   },
   files: {
     'f-expired': { name: 'synthetic-expired.pdf' }, 'f-expiring': { name: 'synthetic-expiring.pdf' }, 'f-soon': { name: 'synthetic-soon.pdf' },

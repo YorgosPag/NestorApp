@@ -28,4 +28,12 @@ export const FACT_ENTAILMENTS: readonly FactEntailment[] = [
     then: { fact: 'seller_insurance_liable', value: true },
     statute: 'ΥΑ 15435/913/2020 άρθρο 1 περ. 6 α΄',
   },
+  // ADR-915 §23 — η απαλλαγή δίνεται **μόνο** στον οικοπεδούχο: «Σε περίπτωση προσυμφώνου μεταβίβασης ποσοστών εξ
+  // αδιαιρέτου οικοπέδου στο πλαίσιο εργολαβικής σύμβασης […] το αποδεικτικό ενημερότητας προσκομίζεται από τον
+  // εργολάβο» (ΦΕΚ Β' 20/14-1-2019). Όποιος δεν είναι οικοπεδούχος φέρνει τη δική του.
+  {
+    when: { fact: 'seller_is_landowner', equals: false },
+    then: { fact: 'seller_tax_clearance_by_contractor', value: false },
+    statute: 'Α.1002/2019 · ν. 4174/2013 άρθρο 12 παρ. 9',
+  },
 ];

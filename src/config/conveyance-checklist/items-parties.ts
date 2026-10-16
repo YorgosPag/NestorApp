@@ -35,7 +35,8 @@ const when = (fact: ConveyanceFactId, equals = true): Requirement => ({ kind: 'w
  * Έγγραφο πωλητή: πάντα από την επαφή του πωλητή, ορατό μόνο στην πλευρά του + συμβολαιογράφο.
  *
  * 🔑 ADR-915 §22 — **ένα ανά συμπωλητή** (`partyRole: 'seller'`): ο νόμος ζητά τα προσωπικά έγγραφα από κάθε
- *    συμβαλλόμενο (Α.1008/2021 άρθρο 1 παρ. 1 · άρθρο 3 παρ. 8 — «ο οικοπεδούχος ή/και ο εργολάβος»), άρα κάθε πρόσωπο
+ *    συμβαλλόμενο (Α.1106/2021 άρθρο 1 παρ. 1 · άρθρο 3 παρ. 8 — «ο οικοπεδούχος ή/και ο εργολάβος»· η Α.1106/2021
+ *    κωδικοποίησε και αντικατέστησε την Α.1008/2021, ADR-915 §23), άρα κάθε πρόσωπο
  *    έχει τη δική του γραμμή, τα δικά του αρχεία (της **δικής του** επαφής) και τα δικά του γεγονότα.
  */
 function sellerDocument(id: string, entryPointIds: readonly string[], requirement: Requirement, validity: Validity): ChecklistItem {
@@ -104,7 +105,9 @@ export const SELLER_ITEMS: readonly ChecklistItem[] = [
   sellerDocument('seller_corporate_documents', ['articles-of-association', 'gemi-certificate'], when('seller_is_legal_entity'), UNVERIFIED),
   sellerTrackedDocument('seller_enfia_certificate', ['enfia-certificate', 'owner-enfia'], MANDATORY, 'enfia-certificate'),
   sellerDocument('seller_e9', ['e9-declaration', 'owner-e9'], MANDATORY, UNVERIFIED),
-  sellerTrackedDocument('seller_tax_clearance', ['tax-clearance'], MANDATORY, 'tax-clearance'),
+  // ADR-915 §23 — ο οικοπεδούχος με τον εργολάβο συμβαλλόμενο δεν φέρνει δική του: «προσκομίζεται από τον εργολάβο»
+  // (Α.1002/2019). Ο εργολάβος έχει ήδη τη δική του γραμμή ως `principal`.
+  sellerTrackedDocument('seller_tax_clearance', ['tax-clearance'], when('seller_tax_clearance_by_contractor', false), 'tax-clearance'),
   sellerTrackedDocument('seller_insurance_clearance', ['insurance-clearance'], when('seller_insurance_liable'), 'insurance-clearance'),
   sellerDocument('seller_power_of_attorney', ['power-of-attorney'], when('seller_by_proxy'), NO_EXPIRY),
 ];

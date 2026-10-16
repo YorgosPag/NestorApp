@@ -168,7 +168,7 @@ export const DOCUMENT_KIND_SPECS: Readonly<Record<DocumentKind, DocumentKindSpec
     renewalLeadDays: 7,
     verifiedAt: null,
     advertisingDisclosure: null,
-    issuer: { kind: 'authority', authority: 'aade', channel: 'online-self-service' },
+    issuer: { kind: 'authority', service: 'aade-tax-clearance' },
     obligor: 'owner',
   },
   // ΑΑΕ: 6 μήνες χωρίς οφειλή · 2 μήνες με ρύθμιση που τηρείται · έως το τέλος του μήνα έκδοσης με αρρύθμιστη οφειλή ή
@@ -180,7 +180,7 @@ export const DOCUMENT_KIND_SPECS: Readonly<Record<DocumentKind, DocumentKindSpec
     renewalLeadDays: 7,
     verifiedAt: null,
     advertisingDisclosure: null,
-    issuer: { kind: 'authority', authority: 'efka', channel: 'online-self-service' },
+    issuer: { kind: 'authority', service: 'efka-insurance-clearance' },
     obligor: 'owner',
   },
   // Έως την πρώτη κεντρική έκδοση ΕΝΦΙΑ του έτους (αν εκδόθηκε πριν από αυτήν) · αλλιώς ως 31/12 του έτους έκδοσης
@@ -192,7 +192,7 @@ export const DOCUMENT_KIND_SPECS: Readonly<Record<DocumentKind, DocumentKindSpec
     renewalLeadDays: 7,
     verifiedAt: null,
     advertisingDisclosure: null,
-    issuer: { kind: 'authority', authority: 'aade', channel: 'online-self-service' },
+    issuer: { kind: 'authority', service: 'aade-enfia-certificate' },
     obligor: 'owner',
   },
 };

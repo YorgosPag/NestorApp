@@ -79,6 +79,12 @@ export const CONVEYANCE_FACT_IDS = [
   'existing_building_with_manager',
   'has_unauthorized_works',
   'seller_by_proxy',
+  // ADR-915 §23 — ο μεταβιβάζων είναι οικοπεδούχος του έργου (παράγεται από την ιδιότητά του, `capacity`).
+  'seller_is_landowner',
+  // ADR-915 §23 — Α.1002/2019 (ν. 4174/2013 άρθρο 12 παρ. 9): οικοπεδούχος σε μεταβίβαση ποσοστών κατ' εκτέλεση
+  // προσυμφώνου εργολαβικής σύμβασης, με τον εργολάβο συμβαλλόμενο «ως εν τοις πράγμασι μεταβιβάζοντα» ⇒ «το
+  // αποδεικτικό ενημερότητας προσκομίζεται από τον εργολάβο».
+  'seller_tax_clearance_by_contractor',
   'buyer_has_mortgage',
   'first_home_exemption',
   'special_zone',
@@ -87,8 +93,9 @@ export type ConveyanceFactId = (typeof CONVEYANCE_FACT_IDS)[number];
 
 /**
  * ADR-915 §22 — ρόλοι που έχουν **πολλά πρόσωπα** σε μία υπόθεση, το καθένα με τα δικά του έγγραφα. Ο νόμος ζητά τα
- * προσωπικά έγγραφα **ανά συμβαλλόμενο** (Α.1008/2021 άρθρο 1 παρ. 1: το πιστοποιητικό ΕΝΦΙΑ «προσκομίζεται από όλους
- * τους φορολογουμένους που συμβάλλονται στο ίδιο συμβολαιογραφικό έγγραφο»), άρα μία γραμμή ανά πρόσωπο.
+ * προσωπικά έγγραφα **ανά συμβαλλόμενο** (Α.1106/2021 άρθρο 1 παρ. 1 — κωδικοποίησε και αντικατέστησε την Α.1008/2021:
+ * το πιστοποιητικό ΕΝΦΙΑ «προσκομίζεται από όλους τους φορολογουμένους που συμβάλλονται στο ίδιο συμβολαιογραφικό
+ * έγγραφο»), άρα μία γραμμή ανά πρόσωπο.
  */
 export const CONVEYANCE_PARTY_ROLES = ['seller'] as const;
 export type ConveyancePartyRole = (typeof CONVEYANCE_PARTY_ROLES)[number];
@@ -102,6 +109,8 @@ export const CONVEYANCE_PARTY_FACT_IDS = [
   'seller_is_legal_entity',
   'seller_insurance_liable',
   'seller_by_proxy',
+  'seller_is_landowner',
+  'seller_tax_clearance_by_contractor',
 ] as const satisfies readonly ConveyanceFactId[];
 export type ConveyancePartyFactId = (typeof CONVEYANCE_PARTY_FACT_IDS)[number];
 

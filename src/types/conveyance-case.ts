@@ -125,7 +125,19 @@ export interface ConveyanceSellerParty {
   /** Η επαφή του — εκεί ζουν τα προσωπικά του έγγραφα (`seller_contact`). `null` = άγνωστη (καμία εύρεση αρχείων). */
   readonly contactId: string | null;
   readonly kind: ConveyancePartyKind;
+  /** ADR-915 §23 — με ποια ιδιότητα συμβάλλεται· την **παράγει ο server**, ποτέ δεν τη δηλώνει ο client. */
+  readonly capacity: ConveyanceSellerCapacity;
 }
+
+/**
+ * ADR-915 §23 — η ιδιότητα ενός μεταβιβάζοντος, όπως τη διαβάζει ο νόμος:
+ * - `principal` — η εταιρεία του έργου (`project.linkedCompanyId`): ο εργολάβος/κύριος της πώλησης. **Δεν** αφαιρείται.
+ * - `landowner` — οικοπεδούχος του έργου που συμβάλλεται (Α.1106/2021 άρθρο 3 παρ. 8 — «από τον οικοπεδούχο […] σε τρίτο
+ *   πρόσωπο που αυτός θα υποδείξει»)· από αυτό **παράγεται** η απαλλαγή της Α.1002/2019 (φορολογική από τον εργολάβο).
+ * - `other` — κάθε άλλος συμμεταβιβάζων (π.χ. συνιδιοκτήτης).
+ */
+export const CONVEYANCE_SELLER_CAPACITIES = ['principal', 'landowner', 'other'] as const;
+export type ConveyanceSellerCapacity = (typeof CONVEYANCE_SELLER_CAPACITIES)[number];
 
 export interface ConveyanceCaseParties {
   /**

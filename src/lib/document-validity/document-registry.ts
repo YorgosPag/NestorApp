@@ -135,6 +135,11 @@ export function registryRowPropertyIdOf(row: RegistryRow): string | null {
   return row.kind === 'gap' ? row.gap.propertyId : row.document.propertyId;
 }
 
+/** Το είδος εγγράφου της γραμμής — ό,τι λείπει ή ό,τι υπάρχει (ADR-915 §24: το «Επόμενο βήμα» ρωτά εδώ). */
+export function registryRowKindOf(row: RegistryRow): DocumentKind {
+  return row.kind === 'gap' ? row.gap.kind : row.document.kind;
+}
+
 export interface DocumentRegistry {
   readonly rows: readonly RegistryRow[];
   /** Πόσες σε κάθε κατάσταση — **όλες, και οι μηδενικές** («κοίταξα, 0» ≠ «δεν υπάρχει έλεγχος»). */
