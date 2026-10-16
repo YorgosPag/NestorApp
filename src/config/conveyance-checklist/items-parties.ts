@@ -92,7 +92,7 @@ export const SELLER_ITEMS: readonly ChecklistItem[] = [
   sellerTrackedDocument('seller_enfia_certificate', ['enfia-certificate', 'owner-enfia'], MANDATORY, 'enfia-certificate'),
   sellerDocument('seller_e9', ['e9-declaration', 'owner-e9'], MANDATORY, UNVERIFIED),
   sellerTrackedDocument('seller_tax_clearance', ['tax-clearance'], MANDATORY, 'tax-clearance'),
-  sellerTrackedDocument('seller_insurance_clearance', ['insurance-clearance'], when('seller_is_legal_entity'), 'insurance-clearance'),
+  sellerTrackedDocument('seller_insurance_clearance', ['insurance-clearance'], when('seller_insurance_liable'), 'insurance-clearance'),
   sellerDocument('seller_power_of_attorney', ['power-of-attorney'], when('seller_by_proxy'), NO_EXPIRY),
 ];
 

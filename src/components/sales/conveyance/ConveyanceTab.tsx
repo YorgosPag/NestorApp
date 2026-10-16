@@ -101,7 +101,7 @@ function CaseBody({ view, canManage, onCommand, onChanged }: CaseBodyProps) {
       {/* ADR-901 Φ2 — οι επαγγελματίες μπαίνουν ΜΟΝΟ με συμμετοχή· η ενότητα ζει όσο υπάρχει υπόθεση. */}
       <ConveyanceProfessionalsAccess caseId={view.conveyanceCase.id} canManage={canManage} viewRevision={view.freshness.revision} />
       {requests && <ConveyanceRequestAllBar requestable={requests.requestable} targets={view.documentRequests.targets} onConfirm={requests.requestAll} />}
-      <ConveyanceFactsPanel record={view.conveyanceCase} rows={view.checklist.rows} derivedFacts={view.derivedFacts} canEdit={editable} onAnswer={onAnswer} />
+      <ConveyanceFactsPanel answers={view.conveyanceCase.facts} rows={view.checklist.rows} derivedFacts={view.derivedFacts} canEdit={editable} onAnswer={onAnswer} />
       {CHECKLIST_SECTIONS.map((section) => (
         <ConveyanceChecklistSection
           key={section}

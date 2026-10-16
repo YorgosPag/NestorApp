@@ -128,11 +128,12 @@ export const DOCUMENT_KIND_SPECS: Readonly<Record<DocumentKind, DocumentKindSpec
     verifiedAt: null,
     advertisingDisclosure: null,
   },
-  // ΑΑΕ: 6 μήνες χωρίς οφειλή · 2 μήνες με ρύθμιση που τηρείται· η Βεβαίωση Οφειλής που επέχει θέση ΑΑΕ ισχύει ως το
-  // τέλος του μήνα έκδοσης (Εγκύκλιος e-ΕΦΚΑ 27/2022) ⇒ αυτό είναι το εγγυημένο κατώτατο.
+  // ΑΑΕ: 6 μήνες χωρίς οφειλή · 2 μήνες με ρύθμιση που τηρείται · έως το τέλος του μήνα έκδοσης με αρρύθμιστη οφειλή ή
+  // βεβαίωση οφειλής (ΥΑ 15435/913/2020 άρθρο 6 παρ. 1 α΄–γ΄, ΦΕΚ Β' 1559 — αυτολεξεί, ADR-915 §16) ⇒ το τέλος του μήνα
+  // είναι το εγγυημένο κατώτατο. Ποιος τη χρειάζεται: γεγονός `seller_insurance_liable` (άρθρο 1 περ. 6 · άρθρο 2 αρ. 7).
   'insurance-clearance': {
     rule: { kind: 'printed', floor: { kind: 'end-of-month' }, ceiling: { kind: 'months', months: 6 } },
-    statute: 'Εγκύκλιος e-ΕΦΚΑ 27/2022 · άρθρο 56 Ν.4940/2022',
+    statute: 'ΥΑ 15435/913/2020 άρθρο 6 · άρθρο 25 Ν.4611/2019',
     renewalLeadDays: 7,
     verifiedAt: null,
     advertisingDisclosure: null,

@@ -6,7 +6,8 @@
  * 🔑 Ποτέ δεν ρωτάμε ό,τι ήδη ξέρουν τα δεδομένα (σχήμα TurboTax: ερωτήσεις μόνο για
  *    το άγνωστο). Τα παραγόμενα γεγονότα βγαίνουν από το προφίλ, τον τύπο ακινήτου, τα
  *    παρακολουθήματα και τους οικοπεδούχους του έργου (αντιπαροχή, ADR-901 §2 Ε-ΣΤ).
- *    Ρητή απάντηση στην υπόθεση **υπερισχύει** του παραγόμενου.
+ *    Ρητή απάντηση στην υπόθεση **υπερισχύει** του παραγόμενου — όχι όμως της συνεπαγωγής που ορίζει ο νόμος
+ *    (`FACT_ENTAILMENTS`): αυτή εφαρμόζεται **τελευταία**, και στα δύο βήματα.
  *
  * **Layering**: leaf — καθαρές συναρτήσεις.
  *
@@ -15,6 +16,7 @@
 
 import { isStandaloneUnitType, LAND_PROPERTY_TYPES } from '@/constants/property-types';
 import type { ConveyanceFactId, ConveyanceProfile } from '@/config/conveyance-checklist/types';
+import { FACT_ENTAILMENTS } from '@/config/conveyance-checklist/fact-entailments';
 import type { ConveyanceFactAnswer } from '@/types/conveyance-case';
 
 export type FactValues = Readonly<Partial<Record<ConveyanceFactId, boolean>>>;
@@ -48,12 +50,36 @@ export function deriveFacts(sources: FactSources): FactValues {
     facts.existing_building_with_manager = false;
     if (sources.landownerCount !== null) facts.has_antiparochi = sources.landownerCount > 0;
   }
-  return Object.fromEntries(
+  return applyFactEntailments(Object.fromEntries(
     Object.entries(facts).filter(([, value]) => value !== undefined),
-  ) as FactValues;
+  ) as FactValues);
 }
 
-/** Τελικές τιμές: ρητή απάντηση > παραγόμενο. */
+/**
+ * Η προϋπόθεση που **επιβάλλει** την τιμή του γεγονότος (`null` = καμία) — ό,τι δείχνει η διεπαφή ως «από τον νόμο».
+ * Ελέγχεται πάνω σε **επιλυμένες** τιμές.
+ */
+export function factEntailedBy(facts: FactValues, factId: ConveyanceFactId): ConveyanceFactId | null {
+  const rule = FACT_ENTAILMENTS.find((entailment) => entailment.then.fact === factId && facts[entailment.when.fact] === entailment.when.equals);
+  return rule?.when.fact ?? null;
+}
+
+/** Εφαρμόζει τις συνεπαγωγές ως σταθερό σημείο (αλυσίδες κλείνουν σε ≤ πλήθος κανόνων περάσματα). Ιδεμπότητη. */
+export function applyFactEntailments(facts: FactValues): FactValues {
+  const next: Partial<Record<ConveyanceFactId, boolean>> = { ...facts };
+  for (let pass = 0; pass < FACT_ENTAILMENTS.length; pass++) {
+    let changed = false;
+    for (const { when, then } of FACT_ENTAILMENTS) {
+      if (next[when.fact] !== when.equals || next[then.fact] === then.value) continue;
+      next[then.fact] = then.value;
+      changed = true;
+    }
+    if (!changed) break;
+  }
+  return next;
+}
+
+/** Τελικές τιμές: συνεπαγωγή νόμου > ρητή απάντηση > παραγόμενο. */
 export function resolveFacts(
   derived: FactValues,
   answers: Readonly<Partial<Record<ConveyanceFactId, ConveyanceFactAnswer>>>,
@@ -62,5 +88,5 @@ export function resolveFacts(
   for (const [factId, answer] of Object.entries(answers) as [ConveyanceFactId, ConveyanceFactAnswer | undefined][]) {
     if (answer) resolved[factId] = answer.value;
   }
-  return resolved;
+  return applyFactEntailments(resolved);
 }

@@ -64,11 +64,15 @@ export type EvidenceLevel = (typeof EVIDENCE_LEVELS)[number];
 /**
  * Γεγονότα της υπόθεσης που ενεργοποιούν γραμμές υπό όρους. Όσα **παράγονται**
  * από τα δεδομένα δεν ρωτώνται ποτέ (`src/lib/conveyance/derive-facts.ts`)·
- * τα υπόλοιπα γίνονται ερωτήσεις προς τον χρήστη.
+ * τα υπόλοιπα γίνονται ερωτήσεις προς τον χρήστη. Όσα ορίζει ο νόμος από άλλο γεγονός δεν ανατρέπονται
+ * (`fact-entailments.ts`).
  */
 export const CONVEYANCE_FACT_IDS = [
   'is_new_build',
   'seller_is_legal_entity',
+  // ΥΑ 15435/913/2020 άρθρο 1 περ. 6: ο πωλητής «είναι ή ήταν» υπόχρεος εισφορών · εταίρος/διαχειριστής · υπόχρεος
+  // εισφορών οικοδομικού έργου με άδεια της τελευταίας εικοσαετίας ⇒ θέλει ασφαλιστική ενημερότητα (ADR-915 §16).
+  'seller_insurance_liable',
   'has_antiparochi',
   'is_unit_in_multi_owner_building',
   'has_appurtenances',
