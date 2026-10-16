@@ -30,6 +30,7 @@ const workspace = require('../lib/one-version/workspace.js');
 const { BLOCKING, LEDGER_STATES, sweep } = require('../lib/one-version/gate.js');
 const cli = require('../check-one-version.js');
 const ciTools = require('../lib/one-version/ci-tools.js');
+const singletons = require('../lib/one-version/singletons.js');
 
 const CI_OWNER = ciTools.CI_TOOLS['firebase-tools'].owner;
 const CI_AUTHORITY = ciTools.CI_TOOLS['firebase-tools'].authority;
@@ -69,7 +70,7 @@ function lockFrom(importersBlock) {
   return `lockfileVersion: '9.0'\n\n${importersBlock}\npackages:\n\n  some-pkg@1.0.0: {}\n`;
 }
 
-const NO_EXCEPTIONS = JSON.stringify({ sharedDependencies: {} }, null, 2);
+const NO_EXCEPTIONS = JSON.stringify({ sharedDependencies: {}, singletons: {} }, null, 2);
 const LONG_REASON = 'δοκιμαστικός λόγος, αρκετά μακρύς ώστε να περάσει το υποχρεωτικό κατώφλι της πύλης';
 
 /** Μία αντικατάσταση· αν δεν ταίριαξε, σφάλμα — ποτέ σιωπηλά μισό σενάριο. */
@@ -269,14 +270,14 @@ describe('Μ — μεταλλάξεις στις εισόδους', () => {
 
   it('Μ8: δήλωση εξαίρεσης που δεν εξαιρεί τίποτα ⇒ orphan-declaration', () => {
     const root = miniRepo({
-      '.one-version.json': JSON.stringify({ sharedDependencies: { zod: { reason: LONG_REASON } } }, null, 2),
+      '.one-version.json': JSON.stringify({ sharedDependencies: { zod: { reason: LONG_REASON } }, singletons: {} }, null, 2),
     });
     expect(idsOf(sweep(root), S.ORPHAN_DECLARATION)).toContain('zod');
   });
 
   it('Μ9: δήλωση χωρίς ουσιαστικό λόγο ⇒ reasonless-declaration', () => {
     const root = miniRepo({
-      '.one-version.json': JSON.stringify({ sharedDependencies: { zod: { reason: 'γιατί ναι' } } }, null, 2),
+      '.one-version.json': JSON.stringify({ sharedDependencies: { zod: { reason: 'γιατί ναι' } }, singletons: {} }, null, 2),
     });
     expect(idsOf(sweep(root), S.REASONLESS_DECLARATION)).toContain('zod');
   });
@@ -343,7 +344,7 @@ describe('Κ — κριτήριο', () => {
 
     const declared = sweep(miniRepo({
       ...edits,
-      '.one-version.json': JSON.stringify({ sharedDependencies: { zod: { reason: LONG_REASON } } }, null, 2),
+      '.one-version.json': JSON.stringify({ sharedDependencies: { zod: { reason: LONG_REASON } }, singletons: {} }, null, 2),
     }));
     expect(idsOf(declared, S.REDECLARED)).not.toContain('zod');
     expect(idsOf(declared, S.DECLARED_SHARED)).toContain('zod');
@@ -488,5 +489,84 @@ describe('ΣΤ — εργαλεία CI', () => {
 
   it('ΣΤ10: η σκανδάλη — αλλαγή σε workflow/action/αυθεντία ΞΥΠΝΑ την πύλη', () => {
     for (const f of ['.github/workflows/x.yml', `${CI_OWNER}`, CI_AUTHORITY]) expect(cli.affects(f)).toBe(true);
+  });
+});
+
+// =============================================================================
+// Ζ — ΚΑΤΟΧΟΙ ΚΑΘΟΛΙΚΗΣ ΣΤΟΙΒΑΣ: μία έκδοση σε ΟΛΟ τον γράφο (ADR-915 §15)
+// =============================================================================
+
+describe('Ζ — κάτοχοι καθολικής στοίβας', () => {
+  /** ⚠️ ΚΑΡΦΩΜΕΝΟ: το τελευταίο commit ΠΡΙΝ τα `pnpm.overrides` των κατόχων (ποτέ `HEAD`). */
+  const PRE_SINGLETON_FIX = '7336a6c4';
+  const REAL_SINGLETONS = () => contract.loadSingletons(REPO_ROOT);
+  const REAL_LOCK = () => fs.readFileSync(path.join(REPO_ROOT, 'pnpm-lock.yaml'), 'utf8');
+
+  /** Κρίνει ΜΟΝΟ το κατάστιχο Ζ πάνω σε ένα lockfile — ορθογώνιο στα Α-ΣΤ. */
+  function judge(lockText, set) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'onever-z-'));
+    fs.writeFileSync(path.join(root, 'pnpm-lock.yaml'), lockText);
+    const rows = [];
+    singletons.judgeSingletons(root, set, (state, id, detail) => rows.push({ state, id, detail }));
+    return rows;
+  }
+  const idsIn = (rows, state) => rows.filter((r) => r.state === state).map((r) => r.id).sort();
+  const aria = (reason = LONG_REASON) => ({ 'aria-hidden': { holds: 'counterMap', reason } });
+
+  it('Ζ1: το ΠΡΑΓΜΑΤΙΚΟ δέντρο — πέντε κάτοχοι, μία έκδοση ο καθένας', () => {
+    const rows = judge(REAL_LOCK(), REAL_SINGLETONS());
+    expect(rows).toHaveLength(5);
+    expect(idsIn(rows, S.SINGLETON_ONE)).toEqual(Object.keys(REAL_SINGLETONS()).sort());
+  });
+
+  it('Ζ2: 🔴 ΒΑΘΜΟΝΟΜΗΣΗ — το lockfile ΠΡΙΝ τη διόρθωση κοκκινίζει ΑΚΡΙΒΩΣ στους τρεις του Radix', () => {
+    const rows = judge(gitShow(PRE_SINGLETON_FIX, 'pnpm-lock.yaml'), REAL_SINGLETONS());
+    expect(idsIn(rows, S.SINGLETON_SPLIT)).toEqual([
+      '@radix-ui/react-dismissable-layer', '@radix-ui/react-focus-guards', '@radix-ui/react-focus-scope',
+    ]);
+    expect(rows.find((r) => r.id === '@radix-ui/react-dismissable-layer').detail).toMatch(/1\.1\.11 και 1\.1\.15/);
+    // Ο ΠΑΡΟΝΟΜΑΣΤΗΣ: οι δύο που ήταν ήδη μοναδικοί ΔΕΝ γίνονται ψευδώς κόκκινοι.
+    expect(idsIn(rows, S.SINGLETON_ONE)).toEqual(['aria-hidden', 'react-remove-scroll']);
+  });
+
+  it('Ζ3: μετάλλαξη — δεύτερη έκδοση του aria-hidden στο μπλοκ packages ⇒ singleton-split', () => {
+    const lock = replaceOnce(REAL_LOCK(), /\n {2}aria-hidden@1\.2\.6:\n/, '\n  aria-hidden@1.2.6:\n\n  aria-hidden@1.1.3:\n');
+    expect(idsIn(judge(lock, aria()), S.SINGLETON_SPLIT)).toEqual(['aria-hidden']);
+  });
+
+  it('Ζ4: δηλωμένος κάτοχος που ΔΕΝ υπάρχει στον γράφο ⇒ singleton-absent (ποτέ σιωπηλό πράσινο)', () => {
+    const rows = judge(REAL_LOCK(), { 'aria-hiden': { holds: 'counterMap', reason: LONG_REASON } });
+    expect(idsIn(rows, S.SINGLETON_ABSENT)).toEqual(['aria-hiden']);
+  });
+
+  it('Ζ5: χωρίς «holds» ή με κοντό λόγο ⇒ singleton-reasonless', () => {
+    expect(idsIn(judge(REAL_LOCK(), aria('κοντός')), S.SINGLETON_REASONLESS)).toEqual(['aria-hidden']);
+    const noHolds = judge(REAL_LOCK(), { 'aria-hidden': { reason: LONG_REASON } });
+    expect(idsIn(noHolds, S.SINGLETON_REASONLESS)).toEqual(['aria-hidden']);
+  });
+
+  it('Ζ6: το `@` της εμβέλειας ΔΕΝ είναι διαχωριστικό · άγνωστο κλειδί ⇒ throw ΜΕ το περιεχόμενο', () => {
+    expect(singletons.splitKey('@radix-ui/react-focus-scope@1.1.12')).toEqual({ name: '@radix-ui/react-focus-scope', version: '1.1.12' });
+    expect(() => singletons.splitKey('@radix-ui/react-focus-scope')).toThrow(/χωρίς έκδοση/);
+    const broken = replaceOnce(REAL_LOCK(), /\n {2}aria-hidden@1\.2\.6:\n/, '\n  ??? σπασμένο\n  aria-hidden@1.2.6:\n');
+    expect(() => judge(broken, aria())).toThrow(/σπασμένο/);
+  });
+
+  it('Ζ7: FAIL-CLOSED — `.one-version.json` χωρίς "singletons" ⇒ σφάλμα, ΠΟΤΕ σιωπηλό {}', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'onever-z7-'));
+    fs.writeFileSync(path.join(root, '.one-version.json'), JSON.stringify({ sharedDependencies: {} }));
+    expect(() => contract.loadSingletons(root)).toThrow(/singletons/);
+  });
+
+  it('Ζ8: Η ΜΗΧΑΝΗ ΤΗΣ ΔΙΟΡΘΩΣΗΣ — κάθε κάτοχος του Radix καρφώνεται στο pnpm.overrides στην ΙΔΙΑ έκδοση με το lockfile', () => {
+    const overrides = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8')).pnpm.overrides;
+    const versions = singletons.resolvedVersions(REPO_ROOT);
+    for (const name of Object.keys(REAL_SINGLETONS()).filter((n) => n.startsWith('@radix-ui/'))) {
+      expect({ name, pin: overrides[name] }).toEqual({ name, pin: [...versions.get(name)][0] });
+    }
+  });
+
+  it('Ζ9: η σκανδάλη — ο κώδικας του κατάστιχου ΞΥΠΝΑ την πύλη', () => {
+    expect(cli.affects(path.join('scripts', 'lib', 'one-version', 'singletons.js'))).toBe(true);
   });
 });

@@ -1394,11 +1394,14 @@
   "common": {
     "a11y": {
       "addFavorite": "Προσθήκη στα αγαπημένα",
+      "calendarNavigation": "Πλοήγηση ημερολογίου",
       "cardActions": "Ενέργειες κάρτας",
       "chooseDate": "Επιλογή ημερομηνίας",
       "chooseTime": "Επιλογή ώρας",
       "escKey": "ESC",
       "moreInfo": "Περισσότερες πληροφορίες",
+      "nextMonth": "Επόμενος μήνας",
+      "previousMonth": "Προηγούμενος μήνας",
       "removeFavorite": "Αφαίρεση από αγαπημένα"
     },
     "accessDenied": {

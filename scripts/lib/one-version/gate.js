@@ -7,10 +7,11 @@
 
 'use strict';
 
-const { GATE_STATES: S, MIN_REASON_LENGTH, isDistributable, loadDeclarations } = require('./contract.js');
+const { GATE_STATES: S, MIN_REASON_LENGTH, isDistributable, loadDeclarations, loadSingletons } = require('./contract.js');
 const { readLockfile, bareVersion } = require('./lockfile.js');
 const { readWorkspace, declaredDependencies } = require('./workspace.js');
 const { judgeCiTools } = require('./ci-tools.js');
+const { judgeSingletons } = require('./singletons.js');
 
 const BLOCKING = Object.freeze([
   S.VERSION_SPLIT, S.REDECLARED,
@@ -19,6 +20,7 @@ const BLOCKING = Object.freeze([
   S.UNREFERENCED_CATALOG,
   S.ORPHAN_DECLARATION, S.REASONLESS_DECLARATION,
   S.CI_TOOL_BYPASS, S.CI_TOOL_VERSION_LITERAL, S.CI_TOOL_OWNER_BROKEN,
+  S.SINGLETON_SPLIT, S.SINGLETON_ABSENT, S.SINGLETON_REASONLESS,
 ]);
 
 const tallyOf = (states) => Object.fromEntries(states.map((s) => [s, 0]));
@@ -144,6 +146,7 @@ const LEDGER_STATES = Object.freeze({
   catalog: [S.UNREFERENCED_CATALOG, S.CATALOG_REFERENCED],
   exceptions: [S.ORPHAN_DECLARATION, S.REASONLESS_DECLARATION, S.DECLARATION_USED],
   ciTools: [S.CI_TOOL_BYPASS, S.CI_TOOL_VERSION_LITERAL, S.CI_TOOL_OWNER_BROKEN, S.CI_TOOL_OWNER, S.CI_TOOL_VIA_OWNER],
+  singletons: [S.SINGLETON_SPLIT, S.SINGLETON_ABSENT, S.SINGLETON_REASONLESS, S.SINGLETON_ONE],
 });
 
 function sweep(repoRoot) {
@@ -167,6 +170,7 @@ function sweep(repoRoot) {
   judgeCatalog(members, catalog, pushTo('catalog'));
   judgeExceptions(declarations, used, pushTo('exceptions'));
   judgeCiTools(repoRoot, pushTo('ciTools'));
+  judgeSingletons(repoRoot, loadSingletons(repoRoot), pushTo('singletons'));
 
   for (const [name, states] of Object.entries(LEDGER_STATES)) {
     ledgers[name].population = states.reduce((n, s) => n + ledgers[name].tally[s], 0);

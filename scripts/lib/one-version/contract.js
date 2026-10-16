@@ -70,6 +70,16 @@ const GATE_STATES = Object.freeze({
   CI_TOOL_OWNER: 'ci-tool-owner',
   /** ✅ Workflow που ζητά τον ιδιοκτήτη. */
   CI_TOOL_VIA_OWNER: 'ci-tool-via-owner',
+
+  // ── Ζ · ΚΑΤΟΧΟΙ ΚΑΘΟΛΙΚΗΣ ΣΤΟΙΒΑΣ (ADR-915 §15) — σε ΟΛΟ τον γράφο, όχι μόνο άμεσες ──
+  /** ⛔ Κάτοχος κατάστασης επιπέδου module επιλύθηκε σε >1 έκδοση ⇒ δύο στοίβες. */
+  SINGLETON_SPLIT: 'singleton-split',
+  /** ⛔ Δηλωμένος κάτοχος που δεν υπάρχει στο lockfile — τυπογραφικό ή νεκρή δήλωση. */
+  SINGLETON_ABSENT: 'singleton-absent',
+  /** ⛔ Δήλωση κατόχου χωρίς τη μεταβλητή που τον κάνει μοναδικό, ή χωρίς λόγο. */
+  SINGLETON_REASONLESS: 'singleton-reasonless',
+  /** ✅ Μία επιλυμένη έκδοση. */
+  SINGLETON_ONE: 'singleton-one',
 });
 
 /**
@@ -120,7 +130,17 @@ function loadDeclarations(repoRoot) {
   return raw.sharedDependencies;
 }
 
+/** Ζ — το κλειστό σύνολο κατόχων καθολικής στοίβας. Fail-closed όπως το `loadDeclarations`. */
+function loadSingletons(repoRoot) {
+  const raw = JSON.parse(fs.readFileSync(path.join(repoRoot, DECLARATIONS_FILE), 'utf8'));
+  if (!raw || typeof raw.singletons !== 'object' || raw.singletons === null || Array.isArray(raw.singletons)) {
+    throw new Error(`${DECLARATIONS_FILE}: περίμενα αντικείμενο "singletons" (κάτοχοι καθολικής στοίβας).`);
+  }
+  return raw.singletons;
+}
+
 module.exports = {
+  loadSingletons,
   DECLARATIONS_FILE,
   MIN_REASON_LENGTH,
   GATE_STATES,

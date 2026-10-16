@@ -95,6 +95,7 @@ const LEDGER_TITLES = {
   catalog: 'Δ · ΚΑΤΑΛΟΓΟΣ',
   exceptions: 'Ε · ΕΞΑΙΡΕΣΕΙΣ',
   ciTools: 'ΣΤ · ΕΡΓΑΛΕΙΑ CI',
+  singletons: 'Ζ · ΚΑΤΟΧΟΙ ΚΑΘΟΛΙΚΗΣ ΣΤΟΙΒΑΣ',
 };
 
 const ADVICE = [
@@ -108,6 +109,9 @@ const ADVICE = [
   '  ci-tool-bypass         → σβήσε την inline εγκατάσταση· γράψε uses: ./.github/actions/setup-firebase-emulators.',
   '  ci-tool-version-literal→ σβήσε την έκδοση από το .github/· η αυθεντία είναι το FIREBASE_TOOLS_VERSION.',
   '  ci-tool-owner-broken   → η αυθεντία/ο ιδιοκτήτης δεν συνδέονται πια — scripts/lib/one-version/ci-tools.js.',
+  '  singleton-split        → κάρφωσε ΜΙΑ έκδοση του κατόχου στο pnpm.overrides και τρέξε pnpm install.',
+  '  singleton-absent       → ο κάτοχος έφυγε από τον γράφο: σβήσε τη γραμμή του από το "singletons".',
+  '  singleton-reasonless   → γράψε "holds" (η μεταβλητή επιπέδου module) και "reason".',
   '',
   'Αν ΔΥΟ εσωτερικά μέλη ΠΡΕΠΕΙ να δηλώνουν το ίδιο πακέτο, δήλωσέ το στο',
   '.one-version.json — ο λόγος είναι ΥΠΟΧΡΕΩΤΙΚΟΣ.',

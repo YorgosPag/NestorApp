@@ -7,6 +7,7 @@ import { DayPicker } from "react-day-picker"
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 import { useDateFnsLocale } from "@/i18n/date-fns-locale"
+import { useTranslation } from "@/i18n/hooks/useTranslation"
 import { COLOR_BRIDGE } from "@/design-system/color-bridge"
 import '@/lib/design-system';
 
@@ -16,19 +17,38 @@ const SELECTED_DAY = `!${COLOR_BRIDGE.selectionControl.fill} !${COLOR_BRIDGE.sel
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>
 
+/**
+ * ADR-915 §15 — οι ετικέτες πλοήγησης. Το locale του date-fns μεταφράζει μέρες και μήνες (`labelDayButton`,
+ * `labelGrid`), **όχι** τα κουμπιά: χωρίς αυτό ο αναγνώστης οθόνης έλεγε «Go to the Next Month» στα ελληνικά.
+ */
+function useNavigationLabels(): NonNullable<CalendarProps['labels']> {
+  const { t } = useTranslation('common');
+  return React.useMemo(
+    () => ({
+      labelPrevious: () => t('a11y.previousMonth'),
+      labelNext: () => t('a11y.nextMonth'),
+      labelNav: () => t('a11y.calendarNavigation'),
+    }),
+    [t],
+  );
+}
+
 function Calendar({
   className,
   classNames,
   showOutsideDays = true,
   locale,
+  labels,
   ...props
 }: CalendarProps) {
   const currentLocale = useDateFnsLocale();
   const resolvedLocale = locale ?? currentLocale;
+  const navigationLabels = useNavigationLabels();
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
       locale={resolvedLocale}
+      labels={{ ...navigationLabels, ...labels }}
       className={cn("p-3", className)}
       classNames={{
         // react-day-picker v9 — uses <table> structure, NOT flex divs

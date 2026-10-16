@@ -185,8 +185,18 @@ viewer**, **όπως το `polygon-clipping`**», με έλεγχο αδείας
 | **Γ · ΜΕΛΗ** | ⛔ `unlisted-manifest` · ⛔ `orphan-importer` · ⛔ `lockfile-desync` · ✅ `in-census` |
 | **Δ · ΚΑΤΑΛΟΓΟΣ** | ⛔ `unreferenced-catalog-entry` · ✅ `catalog-referenced` |
 | **Ε · ΕΞΑΙΡΕΣΕΙΣ** | ⛔ `orphan-declaration` · ⛔ `reasonless-declaration` · ✅ `declaration-used` |
+| **ΣΤ · ΕΡΓΑΛΕΙΑ CI** (ADR-875 §12) | ⛔ `ci-tool-bypass` · ⛔ `ci-tool-version-literal` · ⛔ `ci-tool-owner-broken` · ✅ `ci-tool-owner` · ✅ `ci-tool-via-owner` |
+| **Ζ · ΚΑΤΟΧΟΙ ΚΑΘΟΛΙΚΗΣ ΣΤΟΙΒΑΣ** (ADR-915 §15) | ⛔ `singleton-split` · ⛔ `singleton-absent` · ⛔ `singleton-reasonless` · ✅ `singleton-one` |
+
+*(Ο τίτλος «πέντε κατάστιχα» είναι ιστορικός· σήμερα είναι επτά. Πρώτο το ΣΤ, που δεν είχε γραφτεί εδώ μέχρι 2026-10-16.)*
 
 **Γιατί το καθένα υπάρχει:**
+
+* `singleton-split` — **η μόνη εξαίρεση στο «μόνο άμεσες εξαρτήσεις»**. Πακέτα με κατάσταση επιπέδου module
+  (στοίβα στρώσεων, στοίβα εστίασης, μετρητές `aria-hidden`/κλειδώματος κύλισης) κρίνονται σε **όλο** τον γράφο.
+  Δύο αντίγραφα του module σημαίνουν δύο στοίβες. Κλειστό σύνολο στο `.one-version.json` → `singletons`, με
+  `holds` + `reason`. Γεννήθηκε από το περιστατικό ADR-915 §15: κάθε Popover μέσα σε Dialog ήταν ακλίκ για
+  τρεις μήνες.
 
 * `overridden-declaration` — ένα manifest δεν επιτρέπεται να λέει κάτι που η pnpm ξαναγράφει.
   Είναι ο κανόνας που θα είχε πιάσει το `react: ^18.3.1` **την πρώτη μέρα**.
@@ -282,6 +292,15 @@ CHECK 3.48 · 3.55 · 3.61).
 ---
 
 ## 9. Changelog
+
+* **2026-10-16** — **Κατάστιχο Ζ · ΚΑΤΟΧΟΙ ΚΑΘΟΛΙΚΗΣ ΣΤΟΙΒΑΣ (ADR-915 §15).** Το lockfile είχε `react-dismissable-layer`
+  1.1.11 (Dialog/Select/Menu) **και** 1.1.15 (Popover/Tooltip), επίσης `focus-scope` 1.1.7/1.1.12 και `focus-guards`
+  1.1.3/1.1.4, από το `e956d51b` (2026-07-10). Αποτέλεσμα: κάθε Popover μέσα σε Dialog ακλίκ (κληρονομούσε το
+  `pointer-events:none` του body). Διόρθωση: `pnpm.overrides` για τους τρεις (1.1.15 · 1.1.12 · 1.1.4), lockfile
+  +12/−90. Νέο module `scripts/lib/one-version/singletons.js` (αναγνώστης του μπλοκ `packages:`, fail-closed)·
+  `loadSingletons` στο `contract.js`· 5 κάτοχοι με `holds` + `reason`. Άγκυρες **Ζ1-Ζ9**: βαθμονόμηση στο καρφωμένο
+  `7336a6c4` (κόκκινο ακριβώς στους 3 του Radix, οι 2 άλλοι πράσινοι)· μεταλλάξεις **4/4** (μία ισοδύναμη
+  απορρίφθηκε). Ο πίνακας του §6.1 πήρε και το ΣΤ, που έλειπε.
 
 * **2026-09-23** — **Κατάστιχο ΣΤ · ΕΡΓΑΛΕΙΑ CI (ADR-875 §12).** Μετρήθηκαν **τρεις** εκδόσεις του
   `firebase-tools` (deployer 15.13.0 · χρησμός 15.30.2 · 4 ροές χωρίς έκδοση). Σύγκλιση στο **υπάρχον** SSoT

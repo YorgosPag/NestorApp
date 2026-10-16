@@ -711,7 +711,10 @@
     "escKey": "ESC",
     "moreInfo": "Περισσότερες πληροφορίες",
     "chooseDate": "Επιλογή ημερομηνίας",
-    "chooseTime": "Επιλογή ώρας"
+    "chooseTime": "Επιλογή ώρας",
+    "previousMonth": "Προηγούμενος μήνας",
+    "nextMonth": "Επόμενος μήνας",
+    "calendarNavigation": "Πλοήγηση ημερολογίου"
   },
   "deletionGuard": {
     "blocked": "Η διαγραφή δεν είναι δυνατή",

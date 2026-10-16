@@ -711,7 +711,10 @@
     "escKey": "ESC",
     "moreInfo": "More information",
     "chooseDate": "Choose date",
-    "chooseTime": "Choose time"
+    "chooseTime": "Choose time",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "calendarNavigation": "Calendar navigation"
   },
   "deletionGuard": {
     "blocked": "Deletion is not allowed",

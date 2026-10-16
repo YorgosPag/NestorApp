@@ -24,5 +24,36 @@
     "lockfile) εξακολουθεί να ισχύει ΚΑΙ εκεί — belt-and-suspenders, με άγκυρα Κ9."
   ],
 
-  "sharedDependencies": {}
+  "sharedDependencies": {},
+
+  "$singletons": [
+    "Ζ · ΚΑΤΟΧΟΙ ΚΑΘΟΛΙΚΗΣ ΣΤΟΙΒΑΣ (ADR-915 §15). Πακέτα που κρατούν κατάσταση ΣΕ ΕΠΙΠΕΔΟ MODULE:",
+    "δύο εκδόσεις στον γράφο = δύο στοίβες = ο ένας καταναλωτής δεν βλέπει τον άλλον. Κρίνονται σε",
+    "ΟΛΟ το μπλοκ packages: του lockfile, όχι μόνο στις άμεσες εξαρτήσεις. «holds» = η μεταβλητή",
+    "που τα κάνει μοναδικά (ελέγξιμη με grep στο dist τους). Η μία έκδοση καρφώνεται στο",
+    "pnpm.overrides· η πύλη φυλάει το αποτέλεσμα, όχι την πρόθεση."
+  ],
+
+  "singletons": {
+    "@radix-ui/react-dismissable-layer": {
+      "holds": "DismissableLayerContext (default: layers Set + layersWithOutsidePointerEventsDisabled)",
+      "reason": "Περιστατικό 2026-10-16: Dialog→1.1.11, Popover→1.1.15 ⇒ το popover μέσα σε διάλογο κρατούσε το pointer-events:none του body — κάθε ημερολόγιο σε διάλογο ακλίκ από 2026-07-10."
+    },
+    "@radix-ui/react-focus-scope": {
+      "holds": "focusScopesStack",
+      "reason": "Δύο στοίβες εστίασης: το trap του διαλόγου δεν ξέρει για το ένθετο popover και του κλέβει την εστίαση ⇒ το popover κλείνει (μετρημένο στο jsdom 2026-10-16)."
+    },
+    "@radix-ui/react-focus-guards": {
+      "holds": "count (πόσα focus guards είναι ενεργά)",
+      "reason": "Ο μετρητής αποφασίζει πότε σβήνονται οι φρουροί εστίασης από το body· δύο μετρητές ⇒ φρουροί που μένουν ή φεύγουν πριν την ώρα τους."
+    },
+    "aria-hidden": {
+      "holds": "counterMap · uncontrolledNodes · lockCount",
+      "reason": "Το hideOthers των modals μετρά ανά κόμβο πόσες στρώσεις τον κρύβουν· δύο μετρητές ⇒ περιεχόμενο που μένει aria-hidden μετά το κλείσιμο του διαλόγου."
+    },
+    "react-remove-scroll": {
+      "holds": "lockStack (SideEffect)",
+      "reason": "Η στοίβα κλειδώματος κύλισης αποφασίζει ποιο ένθετο layer κυλά· δύο στοίβες ⇒ λίστα μέσα σε popover-σε-διάλογο που δεν κυλά ή σελίδα που μένει κλειδωμένη."
+    }
+  }
 }
