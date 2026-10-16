@@ -26,8 +26,22 @@ jest.mock('../registry-expiry-notifier', () => ({ announceRegistryExpiry: (notic
 
 const ADMINS: Record<string, readonly string[]> = { comp_a: ['u_a1', 'u_a2'], comp_b: ['u_b1'] };
 let admins: Record<string, readonly string[]> = ADMINS;
-jest.mock('@/lib/workspace/workspace-administrators', () => ({
-  activeWorkspaceAdministrators: async (_db: unknown, companyId: string) => [...(admins[companyId] ?? [])],
+type Facts = Record<string, { explicitUid: string | null; projectUids: readonly string[] }>;
+let propertyFacts: Record<string, Facts> = {};
+let documentManagers: Record<string, readonly string[]> = {};
+// Φ5β: η σάρωση ρωτά τα γεγονότα της αλυσίδας· ο ΚΡΙΤΗΣ (`expiry-alert-routing`) μένει αληθινός.
+jest.mock('../registry-responsibility.server', () => ({
+  readOfficeResponsibility: async (_db: unknown, companyId: string) => {
+    const properties = propertyFacts[companyId] ?? {};
+    const named = Object.values(properties).flatMap((p) => [p.explicitUid ?? '', ...p.projectUids]);
+    const people = [...(admins[companyId] ?? []), ...(documentManagers[companyId] ?? []), ...named].filter((uid) => uid !== '');
+    return {
+      activeUids: new Set(people),
+      documentManagers: [...(documentManagers[companyId] ?? [])],
+      administrators: [...(admins[companyId] ?? [])],
+      properties,
+    };
+  },
 }));
 
 let registries: Record<string, DocumentRegistryResponse> = {};
@@ -52,6 +66,8 @@ beforeEach(() => {
   fake.seed(COLLECTIONS.COMPANIES, 'comp_a', { name: 'Α' });
   registries = { comp_a: fixtureResponse() };
   admins = ADMINS;
+  propertyFacts = {};
+  documentManagers = {};
   delivery = 'sent';
   announce.mockClear();
 });
@@ -134,5 +150,63 @@ describe('sweepRegistryExpiryAlerts', () => {
   it('προσγείωση: μείγμα λήξεων και κενών ⇒ «Όλα» (καμία προβολή δεν κρύβει γραμμή της σύνοψης)', async () => {
     await sweep();
     expect(announce.mock.calls[0][0].view).toBe('all');
+  });
+});
+
+describe('sweepRegistryExpiryAlerts — αλυσίδα υπευθυνότητας + κλιμάκωση (ADR-915 Φ5β)', () => {
+  const rowsByRecipient = () => Object.fromEntries(announce.mock.calls.map(([n]) => [n.recipientUid, n.alerts.map((a) => a.rowId)]));
+
+  beforeEach(() => {
+    propertyFacts = { comp_a: { p1: { explicitUid: 'u_resp', projectUids: [] } } };
+    documentManagers = { comp_a: ['u_doc'] };
+  });
+
+  it('🔑 ο καθένας παίρνει ΜΟΝΟ τις δικές του γραμμές· η διοίκηση μόνο ό,τι έληξε ή μπλοκάρει', async () => {
+    await sweep();
+    expect(rowsByRecipient()).toEqual({
+      u_resp: ['f-expired'],
+      u_doc: ['f-expiring', 'f-soon', 'missing:ownp_7:energy-certificate', 'missing:p6:energy-certificate'],
+      u_a1: ['f-expired', 'f-expiring', 'missing:p6:energy-certificate'],
+      u_a2: ['f-expired', 'f-expiring', 'missing:p6:energy-certificate'],
+    });
+  });
+
+  it('η κλιμάκωση γράφεται στο ημερολόγιο ⇒ δεύτερη σάρωση ΣΙΩΠΗ', async () => {
+    await sweep();
+    const escalated = (ledgerOf('comp_a')?.rows as { rowId: string; escalated: boolean }[])
+      .filter((row) => row.escalated).map((row) => row.rowId);
+    expect(escalated).toEqual(['f-expired', 'f-expiring', 'missing:p6:energy-certificate']);
+    announce.mockClear();
+    await sweep();
+    expect(announce).not.toHaveBeenCalled();
+  });
+
+  it('ημερολόγιο της Φ5α (χωρίς `escalated`) ⇒ το ήδη ληγμένο ΔΕΝ ξαναπάει στη διοίκηση· ό,τι μπλοκάρει πάει μία φορά', async () => {
+    await sweep();
+    const legacy = (ledgerOf('comp_a')?.rows as Record<string, unknown>[]).map(({ escalated: _dropped, ...row }) => row);
+    fake.seed(COLLECTIONS.DOCUMENT_EXPIRY_ALERT_LEDGERS, 'comp_a', { companyId: 'comp_a', asOf: '2026-10-15', rows: legacy });
+    announce.mockClear();
+    await sweep();
+    expect(rowsByRecipient()).toEqual({
+      u_a1: ['f-expiring', 'missing:p6:energy-certificate'],
+      u_a2: ['f-expiring', 'missing:p6:energy-certificate'],
+    });
+  });
+
+  it('🔴 κάποιες γραμμές χωρίς ΚΑΝΕΝΑΝ παραλήπτη ⇒ όσοι μπορούν μαθαίνουν, αλλά το ημερολόγιο ΔΕΝ προχωρά', async () => {
+    admins = {};
+    documentManagers = {};
+    const report = await sweep();
+    expect(Object.keys(rowsByRecipient())).toEqual(['u_resp']);
+    expect(report.skipped).toBe(1);
+    expect(ledgerOf('comp_a')).toBeUndefined();
+  });
+
+  it('🔴 καμία διοίκηση αλλά υπάρχει υπεύθυνος ⇒ ο υπεύθυνος μαθαίνει, η κλιμάκωση μένει εκκρεμής', async () => {
+    admins = {};
+    await sweep();
+    expect(Object.keys(rowsByRecipient()).sort()).toEqual(['u_doc', 'u_resp']);
+    const rows = ledgerOf('comp_a')?.rows as { escalated: boolean }[];
+    expect(rows.every((row) => !row.escalated)).toBe(true);
   });
 });

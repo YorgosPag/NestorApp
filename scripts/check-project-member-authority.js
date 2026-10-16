@@ -46,6 +46,7 @@ const READERS = {
   'src/lib/auth/project-member-read.ts': 'ο ΕΝΑΣ αναγνώστης (κριτής ορατότητας)',
   'src/services/iso19650/container-custody.ts': 'η ομάδα του αιτούντος στην είσοδο στο CDE',
   'src/app/api/admin/role-management/project-members/route.ts': 'ο κατάλογος μελών του διαχειριστή (GET)',
+  'src/services/document-registry/registry-responsibility.server.ts': 'οι υπεύθυνοι έργου στην αλυσίδα ειδοποιήσεων λήξεων (ADR-915 Φ5β · μόνο ανάγνωση)',
 };
 const POLICY_CONSUMERS = [BIRTH, BACKFILL];
 

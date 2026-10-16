@@ -7,6 +7,10 @@
  * αναγνώστης με τη σελίδα, καμία δεύτερη πηγή), κόβεται σε στάδια, συγκρίνεται με το ημερολόγιο ακμών, και **μόνο** οι
  * γραμμές που πέρασαν σε νέο στάδιο φεύγουν — μία σύνοψη ανά παραλήπτη.
  *
+ * Φ5β (§12.4): ο παραλήπτης βγαίνει από την **αλυσίδα υπευθυνότητας** (`expiry-alert-routing`) — ρητός υπεύθυνος ·
+ * ομάδα έργου · υπεύθυνοι εγγράφων · διαχειριστές — και ό,τι έληξε ή μπλοκάρει **κλιμακώνεται** και στη διοίκηση,
+ * μία φορά. Ο καθένας παίρνει **μόνο** τις δικές του γραμμές.
+ *
  * | Περίπτωση | Ημερολόγιο |
  * |---|---|
  * | καμία ακμή | γράφεται **μόνο** αν άλλαξε (π.χ. ανανέωση που έβγαλε γραμμή από στάδιο) |
@@ -25,7 +29,7 @@ import 'server-only';
 import type { Firestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { registryRowIdOf } from '@/lib/document-validity/document-registry';
+import { registryRowIdOf, registryRowPropertyIdOf } from '@/lib/document-validity/document-registry';
 import {
   advancedExpiryAlerts,
   alertLedgersEqual,
@@ -34,12 +38,17 @@ import {
   nextAlertLedger,
   type ExpiryAlert,
 } from '@/lib/document-validity/expiry-alert-stage';
+import {
+  escalationEdges,
+  routeExpiryAlerts,
+  type ExpiryRoutingPlan,
+} from '@/lib/document-validity/expiry-alert-routing';
 import { createModuleLogger } from '@/lib/telemetry';
-import { activeWorkspaceAdministrators } from '@/lib/workspace/workspace-administrators';
 import { readDocumentRegistry } from './document-registry.service';
 import type { DocumentRegistryResponse } from './document-registry.types';
 import { readAlertLedger, writeAlertLedger } from './registry-alert-ledger.server';
-import { announceRegistryExpiry } from './registry-expiry-notifier';
+import { announceRegistryExpiry, type RegistryNoticeDelivery } from './registry-expiry-notifier';
+import { readOfficeResponsibility } from './registry-responsibility.server';
 
 const logger = createModuleLogger('registry-expiry-alerts');
 
@@ -69,15 +78,27 @@ interface CompanyContext {
   readonly registry: DocumentRegistryResponse;
 }
 
-/** Στέλνει τις ακμές· `null` = κανένας παραλήπτης. */
-async function deliver(context: CompanyContext, fresh: readonly ExpiryAlert[]): Promise<readonly string[] | null> {
-  const recipients = await activeWorkspaceAdministrators(context.db, context.companyId);
-  if (recipients.length === 0) return null;
-  const freshIds = new Set(fresh.map((alert) => alert.rowId));
-  const rows = context.registry.rows.filter((row) => freshIds.has(registryRowIdOf(row)));
-  const view = expiryAlertLandingView(rows, context.registry.asOf);
-  return Promise.all(recipients.map((recipientUid) =>
-    announceRegistryExpiry({ companyId: context.companyId, recipientUid, alerts: fresh, view })));
+/** Η στενότερη προβολή που χωρά **τις γραμμές αυτού του παραλήπτη** — όχι όλου του γραφείου. */
+function landingOf(registry: DocumentRegistryResponse, alerts: readonly ExpiryAlert[]) {
+  const ids = new Set(alerts.map((alert) => alert.rowId));
+  return expiryAlertLandingView(registry.rows.filter((row) => ids.has(registryRowIdOf(row))), registry.asOf);
+}
+
+/** Το σχέδιο: ποιος μαθαίνει ποια ακμή, μέσα από την αλυσίδα υπευθυνότητας (Φ5β). */
+async function planFor(context: CompanyContext, fresh: readonly ExpiryAlert[], escalations: readonly ExpiryAlert[]) {
+  const office = await readOfficeResponsibility(context.db, context.companyId, context.registry.properties);
+  const propertyOf = new Map(context.registry.rows.map((row) => [registryRowIdOf(row), registryRowPropertyIdOf(row)]));
+  return routeExpiryAlerts({ fresh, escalations, office, propertyOfRow: (rowId) => propertyOf.get(rowId) ?? null });
+}
+
+/** Στέλνει μία σύνοψη ανά παραλήπτη, με **μόνο** τις δικές του γραμμές. */
+function deliver(context: CompanyContext, plan: ExpiryRoutingPlan): Promise<RegistryNoticeDelivery[]> {
+  return Promise.all(plan.digests.map((digest) => announceRegistryExpiry({
+    companyId: context.companyId,
+    recipientUid: digest.recipientUid,
+    alerts: digest.alerts,
+    view: landingOf(context.registry, digest.alerts),
+  })));
 }
 
 async function sweepCompany(db: Firestore, companyId: string, nowMs: number): Promise<CompanyOutcome> {
@@ -86,15 +107,21 @@ async function sweepCompany(db: Firestore, companyId: string, nowMs: number): Pr
   const current = currentExpiryAlerts(registry.rows, registry.asOf);
   const ledger = await readAlertLedger(db, companyId);
   const fresh = advancedExpiryAlerts(current, ledger);
-  const next = nextAlertLedger(current, ledger, !incomplete);
-  if (fresh.length === 0) {
+  const escalations = escalationEdges(current, ledger);
+  if (fresh.length === 0 && escalations.length === 0) {
+    const next = nextAlertLedger(current, ledger, !incomplete);
     if (!alertLedgersEqual(next, ledger)) await writeAlertLedger(db, companyId, next, registry.asOf, nowMs);
     return { kind: 'quiet', incomplete };
   }
-  const deliveries = await deliver({ db, companyId, registry }, fresh);
-  if (deliveries === null) return { kind: 'skipped', incomplete };
+  const context = { db, companyId, registry };
+  const plan = await planFor(context, fresh, escalations);
+  if (plan.digests.length === 0) return { kind: 'skipped', incomplete };
+  const deliveries = await deliver(context, plan);
   if (deliveries.includes('failed')) return { kind: 'failed', incomplete };
-  await writeAlertLedger(db, companyId, next, registry.asOf, nowMs);
+  // Ακμή που ΚΑΝΕΙΣ δεν μπορεί να μάθει ⇒ το ημερολόγιο δεν προχωρά (θα ειπωθεί όταν υπάρξει παραλήπτης)·
+  // ό,τι στάλθηκε σήμερα δεν διπλασιάζεται αύριο: ίδιο αποτύπωμα ανά παραλήπτη ⇒ ίδιο `eventId`.
+  if (plan.unroutable.length > 0) return { kind: 'skipped', incomplete };
+  await writeAlertLedger(db, companyId, nextAlertLedger(current, ledger, !incomplete, new Set(plan.escalated)), registry.asOf, nowMs);
   return { kind: 'notified', sent: deliveries.filter((delivery) => delivery === 'sent').length, incomplete };
 }
 
