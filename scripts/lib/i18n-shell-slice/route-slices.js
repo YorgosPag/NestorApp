@@ -35,7 +35,7 @@
 const path = require('node:path');
 
 const MG = require('../module-graph');
-const { buildShellPlan, renderArtifacts, buildManifest, sliceName } = require('./plan');
+const { buildShellPlan, renderSlices, buildManifest, sliceName } = require('./plan');
 const { stableStringify } = require('./slice-build');
 const {
   buildLazyRouteNamespaces,
@@ -113,7 +113,8 @@ function buildRouteSlice(projectRoot, config, graph, pageFile, shellSlice, whole
     guaranteedNamespaces: {},
   };
   const plan = buildShellPlan(projectRoot, routeConfig, graph);
-  const rendered = renderArtifacts(projectRoot, routeConfig, plan);
+  // ADR-744 §32.13 — μόνο slices: οι καθολικές είσοδοι είναι του περάσματος (μία φορά, στο κέλυφος).
+  const rendered = renderSlices(projectRoot, routeConfig, plan);
   const [language] = config.languages;
   const full = rendered.slices.resources[language] || {};
 

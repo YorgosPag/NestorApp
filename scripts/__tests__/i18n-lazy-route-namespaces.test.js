@@ -849,4 +849,109 @@ describe('Ξ — §32: ο G ξαναϋπολογίζει ΜΟΝΟ ό,τι άγγ
     expect(after.reason).toBe('άλλαξαν οι υποψήφιες ρίζες');
     expect(after.members).toContain('src/app/x/layout.tsx');
   }, 90_000);
+
+  // ── §32.13 (Β7): ο ταξινομητής με μνήμη ΙΧΝΟΥΣ ΑΝΑΓΝΩΣΕΩΝ, και οι καθολικές είσοδοι ΜΙΑ φορά ανά πέρασμα.
+  it('Ξ17 ΙΧΝΟΣ ΑΝΑΓΝΩΣΕΩΝ: άλλαξε ό,τι ΔΕΝ διαβάστηκε ⇒ hit· ό,τι διαβάστηκε (και το «όχι», και η σειρά) ⇒ ξαναϋπολογισμός', () => {
+    const memo = SC.createAnalysisMemo();
+    let runs = 0;
+    const compute = env => { runs += 1; return [...(env.harvest.get('labelKey') || []), env.tables.get('KEYS') ? 'T' : '-']; };
+    const at = (harvest, tables = new Map(), text = 'κείμενο') => memo.onceTraced('/f.ts', 'classified', text, { harvest, tables }, compute);
+    const harvest = (values, other = 'x') => new Map([['labelKey', new Set(values)], ['other', new Set([other])]]);
+    expect(at(harvest(['a']))).toEqual(['a', '-']);
+    expect(at(harvest(['a'], 'y'))).toEqual(['a', '-']);                                          // ΜΗ διαβασμένο ⇒ hit
+    expect(runs).toBe(1);
+    expect(at(harvest(['a']), new Map([['KEYS', new Map([['x', 'k.x']])]]))).toEqual(['a', 'T']); // το «όχι» έγινε «ναι»
+    expect(at(harvest(['b', 'a']), new Map([['KEYS', new Map([['x', 'k.x']])]]))).toEqual(['b', 'a', 'T']);
+    expect(at(harvest(['a', 'b']), new Map([['KEYS', new Map([['x', 'k.x']])]]))).toEqual(['a', 'b', 'T']); // ίδια μέλη, άλλη σειρά
+    expect(at(harvest(['a', 'b']), new Map([['KEYS', new Map([['x', 'k.y']])]]))).toEqual(['a', 'b', 'T']); // βαθιά τιμή
+    expect(memo.counts).toEqual({ hits: 1, misses: 5, stale: 4 });
+    expect(at(harvest(['a', 'b']), new Map([['KEYS', new Map([['x', 'k.y']])]]), 'άλλο')).toEqual(['a', 'b', 'T']);
+    expect(memo.counts.stale).toBe(4);                                                           // άλλο κείμενο = miss, όχι stale
+    // ΣΤΕΝΗ ΕΠΙΦΑΝΕΙΑ: ανάγνωση έξω από `get` δεν ξεφεύγει σιωπηλά από το ίχνος — ρίχνει.
+    expect(() => memo.onceTraced('/g.ts', 'classified', 'κ', { harvest: new Map() }, env => env.harvest.has('x'))).toThrow(TypeError);
+  });
+
+  /**
+   * Ένα αρχείο, ΔΥΟ κλειστότητες στον ΙΔΙΟ γράφο, που απαντούν αλλιώς σε ΜΙΑ ΜΟΝΟ από τις τρεις αναζητήσεις του
+   * ταξινομητή (`vary`): `propertyValues` (harvest `labelKey`) · `closureConstants` (`KEYS`) · `keyConstants` (`REG`).
+   * ⚠️ ΜΙΑ ανά σενάριο, επίτηδες: αν διέφεραν όλες, η καταγραφή των ΑΛΛΩΝ θα ακύρωνε το ίχνος και θα έκρυβε
+   * τη μετάλλαξη (μετρημένο: η πρώτη εκδοχή αυτής της άγκυρας ήταν πράσινη πάνω στη μετάλλαξη).
+   */
+  const VARIES = { propertyValues: ['title', 'more'], closureConstants: ['sec.x', 'sec2.x'], keyConstants: ['reg.a', 'reg.b'] };
+  function twoClosures(vary) {
+    const pick = (lookup, dir) => VARIES[lookup][lookup === vary && dir === 'b' ? 1 : 0];
+    const page = `import { Section } from '../../shared/Section';${NL}import { TABS } from './tabs';${NL}`
+      + `import { KEYS } from './keys';${NL}export default function Page() { return Section({ tabs: TABS, k: KEYS }); }${NL}`;
+    const side = dir => ({
+      [`src/app/${dir}/page.tsx`]: page,
+      [`src/app/${dir}/tabs.ts`]: `export const TABS = [{ href: '/${dir}', labelKey: '${pick('propertyValues', dir)}' }];${NL}`,
+      [`src/app/${dir}/keys.ts`]: `export const KEYS = { label: '${pick('closureConstants', dir)}' };${NL}`,
+      [`src/reg/${dir}.ts`]: `export const REG = { label: '${pick('keyConstants', dir)}' };${NL}`,
+    });
+    const { root, graph, config } = miniRepo({
+      'src/shared/Section.tsx': `import { useTranslation } from '@/i18n/hook';${NL}export function Section({ tabs }) { const { t } = useTranslation('beta'); `
+        + `return [...tabs.map(tab => t(tab.labelKey)), t(KEYS.label), t(REG.label)]; }${NL}`,
+      ...side('a'),
+      ...side('b'),
+    }, { lazyRouteRegistries: [], excludeConsumers: ['src/i18n/'] });
+    const configOf = dir => ({ ...config, shellRoots: [`src/app/${dir}/page.tsx`], extraShellRoots: [], keyConstants: [{ file: `src/reg/${dir}.ts`, exportName: 'REG' }] });
+    return { root, graph, configOf };
+  }
+  const betaKeys = plan => [...plan.wants.get('beta').keys].sort();
+
+  it.each(Object.keys(VARIES))('Ξ18 🔴 MEMO ≡ ΦΡΕΣΚΟ όταν διαφέρει ΜΟΝΟ το `%s`· μετάλλαξη (αντίγραφο) που δεν το καταγράφει ⇒ μπαγιάτικη τιμή', (lookup) => {
+    const [before, after] = VARIES[lookup];
+    const { root, graph, configOf } = twoClosures(lookup);
+    const fresh = betaKeys(P.buildShellPlan(root, configOf('b'), P.buildModuleGraph(root)));
+    expect(fresh).toContain(after);                                                              // η αλήθεια
+    expect(betaKeys(P.buildShellPlan(root, configOf('a'), graph))).toContain(before);
+    const memo = SC.analysisFor(graph);
+    const stale = memo.counts.stale;
+    expect(betaKeys(P.buildShellPlan(root, configOf('b'), graph))).toEqual(fresh);               // ΙΔΙΟΣ γράφος, ίδια αλήθεια
+    expect(memo.counts.stale).toBe(stale + 1);                                                   // …επειδή το ίχνος το έπιασε (ΜΟΝΟ εκεί)
+    const Pm = planForgetting(lookup);
+    const shared = Pm.buildModuleGraph(root);
+    Pm.buildShellPlan(root, configOf('a'), shared);
+    const leaked = betaKeys(Pm.buildShellPlan(root, configOf('b'), shared));
+    expect(leaked).toContain(before);                                                            // η τρύπα, αναπαραγμένη
+    expect(leaked).not.toContain(after);
+  }, 90_000);
+
+  /** ΑΝΤΙΓΡΑΦΟ του `plan` πάνω σε μνήμη που ΔΕΝ βλέπει την αναζήτηση `lookup` (περνά ωμή, χωρίς καταγραφή). */
+  function planForgetting(lookup) {
+    const SC_PATH = path.join(LIB, 'source-cache');
+    let mutated;
+    jest.isolateModules(() => {
+      const real = jest.requireActual(SC_PATH);
+      const forgetful = memo => ({
+        ...memo,
+        onceTraced: (file, part, input, lookups, compute) => {
+          const { [lookup]: hidden, ...seen } = lookups;
+          return memo.onceTraced(file, part, input, seen, observed => compute({ ...observed, [lookup]: hidden }));
+        },
+      });
+      jest.doMock(SC_PATH, () => ({ ...real, analysisFor: graph => forgetful(real.analysisFor(graph)) }));
+      mutated = require(path.join(LIB, 'plan'));
+    });
+    jest.dontMock(SC_PATH);
+    return mutated;
+  }
+
+  it('Ξ19 ΟΙ ΚΑΘΟΛΙΚΕΣ ΕΙΣΟΔΟΙ ΕΙΝΑΙ ΤΟΥ ΠΕΡΑΣΜΑΤΟΣ: η διαδρομή ΔΕΝ τις υπολογίζει· το κέλυφος ΜΙΑ φορά', () => {
+    const GI_PATH = path.join(LIB, 'global-inputs');
+    const { root, graph, configOf } = twoClosures();
+    let calls = 0;
+    let isolated;
+    jest.isolateModules(() => {
+      const real = jest.requireActual(GI_PATH);
+      jest.doMock(GI_PATH, () => ({ ...real, computeGlobalInputs: (...args) => { calls += 1; return real.computeGlobalInputs(...args); } }));
+      isolated = { P: require(path.join(LIB, 'plan')), RS: require(path.join(LIB, 'route-slices')) };
+    });
+    jest.dontMock(GI_PATH);
+    const config = configOf('a');
+    isolated.RS.buildRouteSlice(root, config, graph, 'src/app/b/page.tsx', {}, []);
+    expect(calls).toBe(0);
+    isolated.P.renderArtifacts(root, config, isolated.P.buildShellPlan(root, config, graph));
+    expect(calls).toBe(1);
+  }, 60_000);
 });

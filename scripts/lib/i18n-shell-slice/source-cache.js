@@ -272,10 +272,11 @@ function createParentSources({ sources, repoRoot, staged, rev = 'HEAD' }) {
  * Άλλο κείμενο ⇒ ξαναϋπολογίζεται· ποτέ μπαγιάτικη τιμή, ακόμη κι αν ο δίσκος αλλάξει μέσα στο πέρασμα.
  * ⚠️ Μόνο στη μνήμη, με διάρκεια ζωής **του γράφου** (`analysisFor`): ASTs δεν σειριοποιούνται, και η
  * μόνιμη μνήμη (`openPack`) κρατά μόνο τοπικά γεγονότα. ⚠️ Οι τιμές είναι κοινές ⇒ **μόνο ανάγνωση**.
+ * `onceTraced` — το ίδιο για υπολογισμό που διαβάζει ΚΑΙ περιβάλλον: βλ. {@link observeLookups} (§32.13).
  */
 function createAnalysisMemo() {
   const entries = new Map();
-  const counts = { hits: 0, misses: 0 };
+  const counts = { hits: 0, misses: 0, stale: 0 };
   return {
     counts,
     once(file, part, input, compute) {
@@ -287,11 +288,85 @@ function createAnalysisMemo() {
       entries.set(key, { input, value });
       return value;
     },
+    onceTraced(file, part, input, lookups, compute) {
+      const key = `${part}\0${file}`;
+      const entry = entries.get(key);
+      if (entry !== undefined && entry.input === input) {
+        if (staleRead(entry.reads, lookups) === null) { counts.hits += 1; return entry.value; }
+        counts.stale += 1;
+      }
+      counts.misses += 1;
+      const reads = new Map();
+      const value = compute(observeLookups(lookups, reads));
+      entries.set(key, { input, value, reads: [...reads.values()] });
+      return value;
+    },
   };
 }
 
+/**
+ * ADR-744 §32.13 (Β7) — **ΜΝΗΜΗ ΜΕ ΙΧΝΟΣ ΑΝΑΓΝΩΣΕΩΝ**, για ό,τι ΔΕΝ είναι καθαρή συνάρτηση του κειμένου του.
+ *
+ * 🔴 ΜΕΤΡΗΜΕΝΟ (§32.13): ο ταξινομητής (`classifyParsedCalls`) έτρεχε 25.740 φορές για 2.525 (αρχείο,
+ * κείμενο) — 13,5 s γεννήτορα, 12,0 s G — γιατί διαβάζει ΚΑΙ το περιβάλλον της κλειστότητας (harvest,
+ * πίνακες, μητρώο) και το `once` δεν μπορεί να το βάλει στο κλειδί. 98,6% των κλήσεων δεν διαβάζουν
+ * ΤΙΠΟΤΑ από αυτό· οι υπόλοιπες λίγα ονόματα (max 69).
+ *
+ * 🏆 ΤΟ ΣΧΗΜΑ — Salsa (rust-analyzer) / «verifying trace» του Shake: ο υπολογισμός βλέπει το περιβάλλον
+ * ΜΟΝΟ μέσα από όψεις `{ get }` που καταγράφουν `(αναζήτηση, όνομα, αποτύπωμα τιμής)` — ΚΑΙ τα αρνητικά
+ * (`undefined`), όπως τα `absent` του `shell-members.js`. Ίδιο κείμενο + κάθε καταγεγραμμένη ανάγνωση δίνει
+ * το ίδιο αποτύπωμα ⇒ η αποθηκευμένη τιμή· αλλιώς ξαναϋπολογισμός και νέο ίχνος. Η επαλήθευση κοστίζει
+ * όσο οι αναγνώσεις, όχι όσο το περιβάλλον: ο harvest του κελύφους αλλάζει σε ΚΑΘΕ κλειστότητα, αλλά
+ * ένα αρχείο ρωτά δύο ονόματα του.
+ *
+ * ⚠️ ΣΤΕΝΗ ΕΠΙΦΑΝΕΙΑ ΕΠΙΤΗΔΕΣ: η όψη έχει ΜΟΝΟ `get`. Κώδικας που θα διάβαζε αλλιώς (`has`, `size`,
+ * iteration) ρίχνει, αντί να ξεφύγει σιωπηλά από το ίχνος — εκεί θα ήταν μπαγιάτικη τιμή.
+ * ⚠️ Αποτύπωμα με ΣΕΙΡΑ: η σειρά ενός Set/Map φτάνει στην έξοδο, άρα «ίδια μέλη, άλλη σειρά» = άλλη τιμή.
+ * ⚠️ Αποτύπωμα την ώρα της ανάγνωσης (όχι αναφορά): μια δομή που άλλαξε επί τόπου δεν περνά για ίδια.
+ */
+function observeLookups(lookups, reads) {
+  const observed = {};
+  for (const [lookup, table] of Object.entries(lookups)) {
+    observed[lookup] = Object.freeze({
+      get(name) {
+        const value = table ? table.get(name) : undefined;
+        const at = `${lookup}\0${name}`;
+        if (!reads.has(at)) reads.set(at, [lookup, name, valueDigest(value)]);
+        return value;
+      },
+    });
+  }
+  return observed;
+}
+
+/** `null` = κάθε ανάγνωση του ίχνους δίνει ίδια τιμή· αλλιώς η ΠΡΩΤΗ που άλλαξε (σχήμα `verifyTrace`). */
+function staleRead(reads, lookups) {
+  for (const [lookup, name, digest] of reads) {
+    const table = lookups[lookup];
+    if (valueDigest(table ? table.get(name) : undefined) !== digest) return `${lookup}.${name}`;
+  }
+  return null;
+}
+
+/** Αποτύπωμα τιμής, με σειρά: `undefined` · πρωτογενές · Map · Set · πίνακας (σε βάθος). */
+function valueDigest(value) {
+  return JSON.stringify(canonicalValue(value));
+}
+
+function canonicalValue(value) {
+  if (value === undefined) return ['undefined'];
+  if (value instanceof Map) return ['Map', [...value].map(([key, item]) => [canonicalValue(key), canonicalValue(item)])];
+  if (value instanceof Set) return ['Set', [...value].map(canonicalValue)];
+  if (Array.isArray(value)) return ['Array', value.map(canonicalValue)];
+  return value;
+}
+
 /** Χωρίς μνήμη: ο ΙΔΙΟΣ κώδικας, κάθε κλήση υπολογίζει (γράφοι-δοκιμών, γράφος χωρίς ταυτότητα). */
-const NO_ANALYSIS_MEMO = Object.freeze({ counts: Object.freeze({ hits: 0, misses: 0 }), once: (file, part, input, compute) => compute() });
+const NO_ANALYSIS_MEMO = Object.freeze({
+  counts: Object.freeze({ hits: 0, misses: 0, stale: 0 }),
+  once: (file, part, input, compute) => compute(),
+  onceTraced: (file, part, input, lookups, compute) => compute(lookups),
+});
 
 const analysisMemos = new WeakMap();
 

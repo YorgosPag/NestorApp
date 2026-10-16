@@ -117,16 +117,21 @@ function analyseFile(projectRoot, relFile, graph, context) {
   };
 }
 
+/** Η τιμή της μνήμης μοιράζεται σε κλειστότητες ⇒ μετάλλαξη ρίχνει, αντί να μολύνει την επόμενη. */
+function freezeClassified(sink) {
+  for (const list of [sink.keys, sink.prefixes, sink.unresolved]) list.forEach(Object.freeze);
+  return Object.freeze({ ...sink, keys: Object.freeze(sink.keys), prefixes: Object.freeze(sink.prefixes), unresolved: Object.freeze(sink.unresolved) });
+}
+
 /** PHASE B — resolution, which may consult literals anywhere in the shell. */
 function resolveFileKeys(surface, context) {
   if (surface.excluded) return { keys: [], prefixes: [], unresolved: [] };
   const memo = context.analysis || NO_ANALYSIS_MEMO;
-  // ⚠️ ΔΕΝ αποθηκεύεται: εξαρτάται από harvest + πίνακες ΤΗΣ ΚΛΕΙΣΤΟΤΗΤΑΣ (§32.5 #7, Βήμα 3).
-  const classified = classifyParsedCalls(parsedSource(surface, memo), {
-    keyConstants: context.keyConstants,
-    propertyValues: context.shellHarvest,
-    closureConstants: context.closureConstants,
-  });
+  // ADR-744 §32.13 — εξαρτάται από harvest + πίνακες ΤΗΣ ΚΛΕΙΣΤΟΤΗΤΑΣ ⇒ μνήμη με ίχνος αναγνώσεων:
+  // ίδιο κείμενο + ίδιες απαντήσεις σε ό,τι ΡΩΤΗΣΕ ⇒ ίδια τιμή (κοινή, άρα παγωμένη).
+  const lookups = { keyConstants: context.keyConstants, propertyValues: context.shellHarvest, closureConstants: context.closureConstants };
+  const classified = memo.onceTraced(surface.abs, 'classified', surface.source, lookups,
+    observed => freezeClassified(classifyParsedCalls(parsedSource(surface, memo), observed)));
   const tCalls = memo.once(surface.abs, 'tCalls', surface.source, () => extractTCalls(surface.source));
   const literals = tCalls.map(({ key }) => ({ ns: null, key }));
   return {
@@ -398,8 +403,13 @@ function wholeNamespaces(plan, slices, language) {
   return shipped.filter(namespace => plan.wants.get(namespace)?.whole === true).sort();
 }
 
-/** @returns {{artifacts: Map<string, string>, manifest: object, manifestText: string}} */
-function renderArtifacts(projectRoot, config, plan) {
+/**
+ * Τα slices ενός σχεδίου, ΧΩΡΙΣ manifest. ADR-744 §32.13 — η διαδρομή χρειάζεται ΜΟΝΟ αυτά: το
+ * `renderArtifacts` ανά διαδρομή ξαναϋπολόγιζε το digest των καθολικών εισόδων (toolchain κ.λπ.) 68 φορές
+ * ανά πέρασμα για να το πετάξει — 9,4 s γεννήτορα, 7–9 s G. Οι είσοδοι είναι του ΠΕΡΑΣΜΑΤΟΣ, όχι της διαδρομής.
+ * @returns {{artifacts: Map<string, string>, slices: object}}
+ */
+function renderSlices(projectRoot, config, plan) {
   const slices = buildSlices({
     wants: plan.wants,
     languages: config.languages,
@@ -417,7 +427,12 @@ function renderArtifacts(projectRoot, config, plan) {
     MG.toPosix(path.join(config.outputDir, WHOLE_NAME)),
     stableStringify(wholeNamespaces(plan, slices, primaryLanguage)),
   );
+  return { artifacts, slices };
+}
 
+/** @returns {{artifacts: Map<string, string>, manifest: object, manifestText: string}} */
+function renderArtifacts(projectRoot, config, plan) {
+  const { artifacts, slices } = renderSlices(projectRoot, config, plan);
   const globalInputs = computeGlobalInputs(projectRoot, config);
   const manifest = buildManifest({ config, plan, artifacts, slices, globalInputs });
   return { artifacts, manifest, manifestText: stableStringify(manifest), slices };
@@ -447,6 +462,7 @@ module.exports = {
   buildShellPlan,
   deadPolicyEntries,
   makeNamespaceReader,
+  renderSlices,
   renderArtifacts,
   ...ManifestBuild,
   ...NamespaceInheritance,
