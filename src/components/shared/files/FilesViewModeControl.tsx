@@ -8,8 +8,10 @@
  *   Το δέντρο (και η εναλλαγή επιχειρησιακή/τεχνική όψη) είναι εργαλείο υπολογιστή: στα 358px δεν χωρά βάθος φακέλων.
  * 🔑 **Drive / Dropbox mobile**: ΕΝΑ κουμπί που δείχνει **την άλλη** προβολή (λίστα ⇄ πλέγμα). Η ετικέτα λέει τι θα
  *   γίνει με το πάτημα, όχι τι ισχύει τώρα (Material: «icon button that toggles» · WAI-ARIA: όνομα = ενέργεια).
- * 🔑 Αν το κινητό βρει την προβολή «δέντρο» (επιλέχθηκε σε υπολογιστή και μετά στένεψε το παράθυρο), το κουμπί οδηγεί
- *   στη λίστα· η προβολή δεν αλλάζει μόνη της κάτω από τον άνθρωπο.
+ * 🔴 **Δεύτερο στιγμιότυπο, ίδια μέρα**: το δέντρο επιλέχθηκε σε υπολογιστή, το παράθυρο στένεψε ⇒ στα 390px
+ *   δέντρο **και** προεπισκόπηση δίπλα-δίπλα, ονόματα «Ε.», «Δι…». Το «η προβολή δεν αλλάζει μόνη της» ήταν λάθος.
+ * 🔑 **Δείχνεται ≠ προτιμάται** (`useShownViewMode`): στο στενό το δέντρο **δείχνεται** ως λίστα, η προτίμηση μένει
+ *   ανέγγιχτη και επιστρέφει μόλις φαρδύνει η οθόνη (Drive: η διάταξη ακολουθεί τη συσκευή, η επιλογή τον άνθρωπο).
  * 🔑 **CSS, όχι μέτρηση**: είναι θέμα **ορατότητας**, όχι δομής — άρα `md:` (= `MOBILE_BREAKPOINT`, το ίδιο 768), σωστό
  *   από το πρώτο καρέ του διακομιστή, χωρίς αναλαμπή σε υπολογιστή. Η μέτρηση (`useViewportClass`) μένει εκεί όπου
  *   κάτι **μετακομίζει** (η κάτω μπάρα).
@@ -20,11 +22,17 @@ import { Code, Eye, Grid3X3, Image as ImageIcon, List, Network, type LucideIcon 
 import { Button } from '@/components/ui/button';
 import { ToggleButton } from '@/components/ui/toggle-button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useViewportClass } from '@/hooks/media/useViewportClass';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export type FilesViewMode = 'list' | 'tree' | 'gallery';
 export type FilesTreeViewMode = 'business' | 'technical';
+
+/** Η προβολή που **δείχνεται**: στο στενό το δέντρο γίνεται λίστα· η αποθηκευμένη προτίμηση δεν αγγίζεται. */
+export function useShownViewMode(viewMode: FilesViewMode): FilesViewMode {
+  return useViewportClass() === 'narrow' && viewMode === 'tree' ? 'list' : viewMode;
+}
 
 export interface FilesViewModeControlProps {
   readonly viewMode: FilesViewMode;
@@ -90,8 +98,8 @@ export function FilesViewModeControl({
   const list: ModeOption<FilesViewMode> = { value: 'list', icon: List, label: t('manager.viewList'), tooltip: t('manager.viewList') };
 
   const tree: ModeOption<FilesViewMode> = { value: 'tree', icon: Network, label: t('manager.viewTree'), tooltip: t('manager.viewTree') };
-  // Στο κινητό: ΕΝΑ κουμπί προς την άλλη προβολή (από «δέντρο» ⇒ λίστα).
-  const next = viewMode === 'list' ? gallery : list;
+  // Στο κινητό: ΕΝΑ κουμπί προς την άλλη προβολή από αυτήν που ΔΕΙΧΝΕΤΑΙ.
+  const next = useShownViewMode(viewMode) === 'list' ? gallery : list;
   const NextIcon = next.icon;
   return (
     <>

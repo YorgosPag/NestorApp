@@ -64,6 +64,7 @@ jest.mock('../AddCaptureMenu', () => ({ AddCaptureMenu: () => <div data-testid="
 import { EntityFilesContent, type EntityFilesContentProps } from '../EntityFilesContent';
 import { EntityFilesToolbar } from '../EntityFilesToolbar';
 import { LifecycleFileRow } from '../LifecycleListFrame';
+import { mockViewport } from '@/test-utils/viewport';
 
 const WRITE_HANDLERS = ['onDelete', 'onRename', 'onDescriptionUpdate', 'onUnlink', 'onToggleSelect', 'onClassified'] as const;
 
@@ -127,6 +128,7 @@ const under = (status: string, node: React.ReactNode) =>
 const lastListProps = () => listProps.mock.calls[listProps.mock.calls.length - 1][0];
 
 beforeEach(() => listProps.mockReset());
+beforeEach(() => mockViewport(false));
 
 describe('Φ1 — EntityFilesContent', () => {
   it.each(['archived', 'deleted'])('🔴 `%s` ⇒ ΚΑΝΕΝΑΣ χειριστής γραφής δεν φτάνει στη λίστα, και η ζώνη ανεβάσματος δεν ανοίγει', (status) => {

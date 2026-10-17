@@ -117,8 +117,9 @@ function FilesTabSwitcher({ activeTab, onTabChange, fileCount }: Pick<EntityFile
     { id: 'trash', icon: Trash2, label: t('trash.tabLabel') },
   ];
   return (
-    // Στο κινητό πιάνει όλο το πλάτος· από `sm` γυρίζει στο φυσικό του.
-    <div className="grid w-full grid-cols-3 gap-1 rounded-md border p-1 sm:inline-grid sm:w-auto" role="tablist" aria-label={t('manager.filesTitle')}>
+    // Στο κινητό πιάνει όλο το πλάτος· από `sm` γυρίζει στο φυσικό του. `flex-auto`, ΟΧΙ τρεις ίσες στήλες: το ίσο
+    // μοίρασμα έκοβε «Αρχεία 48» και «Αρχειοθήκη» ενώ στο «Κάδος» περίσσευε χώρος (στιγμιότυπο 2026-10-17, 390px).
+    <div className="flex w-full gap-1 rounded-md border p-1 sm:inline-flex sm:w-auto" role="tablist" aria-label={t('manager.filesTitle')}>
       {fileTabs.map(({ id, icon: Icon, label }) => (
         <ToggleButton
           key={id}
@@ -129,9 +130,10 @@ function FilesTabSwitcher({ activeTab, onTabChange, fileCount }: Pick<EntityFile
           onClick={() => onTabChange(id)}
           role="tab"
           aria-controls={`${id}-panel`}
-          className="min-w-0 justify-center px-2"
+          className="min-w-0 flex-auto justify-center px-2"
         >
-          <Icon className={`${iconSizes.sm} mr-1 shrink-0`} aria-hidden="true" />
+          {/* Στο κινητό η ετικέτα λέει ήδη τα πάντα· το εικονίδιο θα της έπαιρνε τον χώρο (Drive: κείμενο μόνο). */}
+          <Icon className={`${iconSizes.sm} mr-1 shrink-0 max-md:hidden`} aria-hidden="true" />
           <span className="truncate">{label}</span>
           {/* Το πλήθος του τίτλου που στο κινητό κρύβεται — εδώ, στη θέση που μένει. */}
           {id === 'files' && fileCount > 0 && (

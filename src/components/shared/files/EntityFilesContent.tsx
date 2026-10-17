@@ -6,8 +6,7 @@
  * Presentational component for the main content area:
  * - Batch actions bar
  * - Upload zone with entry point selector
- * - Search input
- * - Split-panel layout (file views + preview panel)
+ * - File views + preview (`FilesPreviewSplit`: split on desktop, full-screen sheet on mobile)
  * - Gallery / List / Tree view dispatch
  * - Trash view
  * - Storage footer
@@ -30,8 +29,6 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { NESTED_IN_DETAILS_FLUSH_SECTION } from '@/core/containers/DetailsContainer';
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
-import { FilePreviewPanel } from '@/components/file-manager/FilePreviewPanel';
 import { BatchActionsBar } from '@/components/file-manager/BatchActionsBar';
 import { FileTileSummary } from './FileTileSummary';
 import type { EntityType, FileCategory } from '@/config/domain-constants';
@@ -43,6 +40,8 @@ import type { PersonaType } from '@/types/contacts/personas';
 import type { UploadEntryPoint, FloorInfo } from '@/config/upload-entry-points';
 import { getAvailableGroups, selectOfferedEntryPoints } from '@/config/upload-entry-points';
 import { FilesList } from './FilesList';
+import { FilesPreviewSplit } from './FilesPreviewSplit';
+import { useShownViewMode } from './FilesViewModeControl';
 import { GroupedFilesList } from './GroupedFilesList';
 import { GroupedFilesByDomainCategoryList } from './GroupedFilesByDomainCategoryList';
 import { FilePathTree } from './FilePathTree';
@@ -345,27 +344,14 @@ function FilesTabContent(props: EntityFilesContentProps) {
         </p>
       )}
 
-      {/* Split-panel layout — file list + inline preview */}
-      <ResizablePanelGroup orientation="horizontal" className="min-h-[400px] rounded-lg">
-        <ResizablePanel defaultSize={props.selectedFile ? 45 : 100} minSize={30}>
-          <FileViewDispatch {...props} iconSizes={iconSizes} />
-        </ResizablePanel>
-
-        {props.selectedFile && (
-          <>
-            <ResizableHandle withHandle />
-            <ResizablePanel defaultSize={55} minSize={30}>
-              <FilePreviewPanel
-                file={props.selectedFile}
-                onClose={() => props.onSelectFile(null)}
-                companyId={props.custody?.companyId}
-                currentUserId={props.currentUserId}
-                onRefresh={() => { /* refetch handled by parent */ }}
-              />
-            </ResizablePanel>
-          </>
-        )}
-      </ResizablePanelGroup>
+      {/* Λίστα + προεπισκόπηση: δίπλα-δίπλα σε υπολογιστή, πλήρης οθόνη στο κινητό (ADR-912 §12.15). */}
+      <FilesPreviewSplit
+        list={<FileViewDispatch {...props} iconSizes={iconSizes} />}
+        selectedFile={props.selectedFile}
+        onClose={() => props.onSelectFile(null)}
+        companyId={props.custody?.companyId}
+        currentUserId={props.currentUserId}
+      />
 
       {/* Storage info */}
       {props.totalStorageBytes > 0 && (
@@ -382,11 +368,12 @@ function FilesTabContent(props: EntityFilesContentProps) {
 // ============================================================================
 
 function FileViewDispatch(props: EntityFilesContentProps & { iconSizes: ReturnType<typeof useIconSizes> }) {
-  if (props.viewMode === 'gallery') {
+  const viewMode = useShownViewMode(props.viewMode);
+  if (viewMode === 'gallery') {
     return <GalleryView {...props} />;
   }
 
-  if (props.viewMode === 'list') {
+  if (viewMode === 'list') {
     const sharedListProps = {
       files: props.filteredFiles,
       loading: props.loading,

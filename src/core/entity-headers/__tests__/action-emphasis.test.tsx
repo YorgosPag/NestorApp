@@ -15,6 +15,7 @@ import userEvent from '@testing-library/user-event';
 import { Home } from 'lucide-react';
 
 import { RecordActionBarProvider } from '@/core/layouts/record-action-bar';
+import { mockViewport } from '@/test-utils/viewport';
 import { createEntityAction, presentEntityActions } from '../entity-action-presets';
 import { EntityDetailsHeader } from '../UnifiedEntityHeaderSystem';
 import type { EntityHeaderAction } from '../UnifiedEntityHeaderSystem';
@@ -70,20 +71,6 @@ describe('Υ7β — η γραμμή ενεργειών της κεφαλίδας
     expect(screen.getByRole('menuitem', { name: 'Κάδος' }).className).toContain('text-destructive');
   });
 });
-
-/** `matchMedia` για την ερώτηση του `useViewportClass` (στενή = κάτω από 768px). */
-function mockViewport(narrow: boolean): void {
-  Object.defineProperty(window, 'matchMedia', {
-    configurable: true,
-    writable: true,
-    value: (query: string) => ({
-      matches: narrow,
-      media: query,
-      addEventListener: noop,
-      removeEventListener: noop,
-    }),
-  });
-}
 
 describe('Υ7γ — σελίδα εγγραφής (`media`): κάτω μπάρα σε στενή οθόνη', () => {
   afterEach(() => {

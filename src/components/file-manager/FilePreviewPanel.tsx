@@ -77,6 +77,11 @@ interface FilePreviewPanelProps {
   onRefresh?: () => void;
   /** Optional class */
   className?: string;
+  /**
+   * Ο ξενιστής δείχνει ήδη όνομα και κλείσιμο (το φύλλο πλήρους οθόνης του κινητού, ADR-912 §12.15) ⇒ η κεφαλίδα
+   * κρατά μόνο τις ενέργειες. Αλλιώς δύο τίτλοι και δύο ✕ το ένα κάτω από το άλλο.
+   */
+  titledByHost?: boolean;
 }
 
 function getPreviewIcon(previewType: PreviewType) {
@@ -94,7 +99,7 @@ function getPreviewIcon(previewType: PreviewType) {
 // MAIN COMPONENT
 // ============================================================================
 
-export function FilePreviewPanel({ file, onClose, companyId, currentUserId, currentUserName, onRefresh, className }: FilePreviewPanelProps) {
+export function FilePreviewPanel({ file, onClose, companyId, currentUserId, currentUserName, onRefresh, className, titledByHost = false }: FilePreviewPanelProps) {
   const colors = useSemanticColors();
   const { t } = useTranslation(['files', 'files-media', 'iso19650']);
   const [showVersions, setShowVersions] = useState(false);
@@ -155,18 +160,22 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
     <section className={cn('flex flex-col h-full bg-card', className)}>
       {/* Header */}
       <header className="flex items-center gap-2 px-3 py-2 border-b bg-muted/30 min-h-[44px]">
-        <PreviewIcon className={cn("h-4 w-4 flex-shrink-0", colors.text.muted)} />
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="text-sm font-medium truncate flex-1">
-              {displayName}
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>{displayName}</TooltipContent>
-        </Tooltip>
+        {!titledByHost && (
+          <>
+            <PreviewIcon className={cn("h-4 w-4 flex-shrink-0", colors.text.muted)} />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-sm font-medium truncate flex-1">
+                  {displayName}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>{displayName}</TooltipContent>
+            </Tooltip>
+          </>
+        )}
 
         {/* Actions */}
-        <nav className="flex items-center gap-1 flex-shrink-0">
+        <nav className="ml-auto flex items-center gap-1 flex-shrink-0">
           {fileUrl && (
             <>
               {/* ADR-866 §2.6.9 — η λήψη περνά από τον διακομιστή και για προσωπικό αρχείο
@@ -304,14 +313,16 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
               <TooltipContent>{t('iso19650:labels.sectionTitle')}</TooltipContent>
             </Tooltip>
           )}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" onClick={onClose} className="h-7 w-7 p-0">
-                <X className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t('common.cancel')}</TooltipContent>
-          </Tooltip>
+          {!titledByHost && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="sm" onClick={onClose} className="h-7 w-7 p-0">
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('common.cancel')}</TooltipContent>
+            </Tooltip>
+          )}
         </nav>
       </header>
 

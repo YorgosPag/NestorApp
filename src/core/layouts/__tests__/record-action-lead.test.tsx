@@ -19,6 +19,7 @@ import { EntityDetailsHeader } from '@/core/entity-headers/UnifiedEntityHeaderSy
 import type { EntityHeaderAction } from '@/core/entity-headers/UnifiedEntityHeaderSystem';
 import { RecordActionBarProvider, RecordActionLead } from '../record-action-bar';
 import { TabActivityProvider } from '../tab-activity';
+import { mockViewport } from '@/test-utils/viewport';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -29,14 +30,6 @@ const EDIT = createEntityAction('edit', 'Επεξεργασία', noop);
 const TRASH = createEntityAction('trash', 'Κάδος', noop);
 const SAVE = createEntityAction('save', 'Αποθήκευση', noop);
 const CANCEL = createEntityAction('cancel', 'Ακύρωση', noop);
-
-function mockViewport(narrow: boolean): void {
-  Object.defineProperty(window, 'matchMedia', {
-    configurable: true,
-    writable: true,
-    value: (query: string) => ({ matches: narrow, media: query, addEventListener: noop, removeEventListener: noop }),
-  });
-}
 
 interface PageProps {
   readonly actions?: readonly EntityHeaderAction[];

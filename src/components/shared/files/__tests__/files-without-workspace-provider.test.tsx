@@ -20,6 +20,7 @@ import fs from 'fs';
 import path from 'path';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import { mockViewport } from '@/test-utils/viewport';
 
 const workspaceCalls = jest.fn<void, []>();
 let insideProvider = false;
@@ -72,6 +73,7 @@ function toolbar(showWorkspace: boolean) {
   );
 }
 
+beforeEach(() => mockViewport(false));
 beforeEach(() => {
   workspaceCalls.mockReset();
   insideProvider = false;

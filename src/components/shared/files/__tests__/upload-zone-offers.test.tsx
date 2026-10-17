@@ -28,6 +28,7 @@ import { render, screen } from '@testing-library/react';
 import type { EntityType } from '@/config/domain-constants';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { EntityFilesContent, type EntityFilesContentProps } from '../EntityFilesContent';
+import { mockViewport } from '@/test-utils/viewport';
 
 function renderZone(entityType: EntityType, allowedEntryPointIds?: string[]) {
   const noop = jest.fn();
@@ -43,6 +44,8 @@ function renderZone(entityType: EntityType, allowedEntryPointIds?: string[]) {
   } as unknown as EntityFilesContentProps;
   render(<TooltipProvider><EntityFilesContent {...props} /></TooltipProvider>);
 }
+
+beforeEach(() => mockViewport(false));
 
 describe('Α38.1δ — ζώνη ανεβάσματος: τύποι ή ρητό «δεν δέχεται»', () => {
   it('καρτέλα χωρίς τύπους ⇒ ρητό μήνυμα, ΟΧΙ «επιλέξτε πρώτα τύπο»', () => {
