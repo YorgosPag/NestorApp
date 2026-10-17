@@ -27,6 +27,7 @@ import { DialogActionFooter } from '@/components/ui/dialog-action-footer';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/auth/hooks/useAuth';
+import { useChecklistRowLabel } from '@/components/conveyance/shared/CasePartyLabels';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { findEntryPoint } from '@/config/upload-entry-points/queries';
 import type { UploadEntryPoint } from '@/config/upload-entry-points/types';
@@ -103,6 +104,7 @@ function TransmitForm({ row, caseId, uid, entryPoint, sending, onCancel, onSend 
 export default function TransmitDocumentDialog(props: TransmitDocumentDialogProps) {
   const { t } = useTranslation(['conveyance']);
   const { user } = useAuth();
+  const rowLabel = useChecklistRowLabel();
   const { row, onCancel } = props;
   const entryPointId = row ? contributionEntryPointIds(row.item)[0] : undefined;
   const entryPoint = entryPointId ? findEntryPoint(ENTITY_TYPES.CONVEYANCE_CASE, entryPointId) : undefined;
@@ -111,7 +113,7 @@ export default function TransmitDocumentDialog(props: TransmitDocumentDialogProp
     <Dialog open onOpenChange={(open) => { if (!open) onCancel(); }}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t('transmittal.dialog.title', { item: t(row.item.labelKey) })}</DialogTitle>
+          <DialogTitle>{t('transmittal.dialog.title', { item: rowLabel(row) })}</DialogTitle>
           {/* Π2 — ίδια κρίση με τον server: έγγραφο εντολέα πηγαίνει στην κλάση της ενότητας (`visibleTo`), όχι στην πλευρά. */}
           <DialogDescription>
             {sentOnBehalf(row.item) ? t(`sectionHints.${row.section}`) : t(`transmittal.audience.${props.role}`)}

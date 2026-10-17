@@ -30,6 +30,7 @@ import type { ChecklistRow, EvidenceFile } from '@/types/conveyance-case';
 import { STATUS_PRESENTATION } from './conveyance-presentation';
 import { RowRequestAction, type RowRequest } from './ConveyanceRowRequest';
 import { fulfilmentOf } from '@/config/engagement-policy';
+import { useChecklistRowLabel } from '@/components/conveyance/shared/CasePartyLabels';
 import { sentOnBehalf } from '@/lib/conveyance/contribution-audience';
 import {
   isWithdrawing,
@@ -182,7 +183,7 @@ function RowFiles({ row, onOpenFile, transmittal }: Pick<ConveyanceChecklistRowP
 function RowActions({ row, onOpenDialog, onClear }: Pick<ConveyanceChecklistRowProps, 'row' | 'onOpenDialog' | 'onClear'>) {
   const { t } = useTranslation(['conveyance']);
   const iconSizes = useIconSizes();
-  const label = t(row.item.labelKey);
+  const label = useChecklistRowLabel()(row);
   const reviewable = row.status !== 'not_applicable' && row.status !== 'needs_answer' && row.status !== 'delivered_sealed';
   const hasOverride = row.review !== null || row.notApplicable !== null;
   const acceptLabel = row.files.length > 0 ? t('actions.accept') : t('actions.confirmReceived');
@@ -209,13 +210,14 @@ export function ConveyanceChecklistRow({ row, canEdit, onOpenDialog, onClear, on
   const { t } = useTranslation(['conveyance']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  const rowLabel = useChecklistRowLabel();
   const presentation = STATUS_PRESENTATION[row.status];
   const StatusIcon = presentation.icon;
   return (
     <article className="flex items-start gap-3 py-2">
       <section className="min-w-0 flex-1 space-y-1">
         <header className="flex flex-wrap items-center gap-2">
-          <h4 className="text-sm font-medium">{t(row.item.labelKey)}</h4>
+          <h4 className="text-sm font-medium">{rowLabel(row)}</h4>
           <Badge variant={presentation.variant} className="gap-1">
             <StatusIcon className={iconSizes.xs} aria-hidden="true" />
             {t(`status.${row.status}`)}

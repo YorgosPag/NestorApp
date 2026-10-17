@@ -12,7 +12,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { checklistItemOfRowKey } from '@/config/conveyance-checklist/row-key';
+import { useRowKeyLabel } from '@/components/conveyance/shared/CasePartyLabels';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { fetchEngagedCaseActivity } from '@/services/conveyance/conveyance-engagement-gateway';
 import { formatDateTime } from '@/lib/intl-utils';
@@ -44,21 +44,24 @@ const ACTIVITY_KIND_KEY: Readonly<Record<CaseActivityItem['kind'], string>> = {
   'request-received': 'engagement.case.activity.request-received',
 };
 
-/** Το όνομα του εγγράφου: το αρχείο, ή — για αιτήματα (Φ4.5) — η γραμμή του καταλόγου στη γλώσσα του θεατή. */
-function documentLabel(item: CaseActivityItem, t: (key: string) => string): string {
+/**
+ * Το όνομα του εγγράφου: το αρχείο, ή — για αιτήματα (Φ4.5) — η γραμμή του καταλόγου στη γλώσσα του θεατή, με το
+ * πρόσωπό της (ADR-915 §23.10) **μόνο** αν ο θεατής βλέπει τη γραμμή.
+ */
+function documentLabel(item: CaseActivityItem, rowKeyLabel: (rowKey: string) => string | null, t: (key: string) => string): string {
   if (item.documentName) return item.documentName;
-  const labelKey = item.itemId ? checklistItemOfRowKey(item.itemId)?.labelKey : undefined;
-  return labelKey ? t(labelKey) : t('engagement.case.activity.unnamed');
+  return (item.itemId ? rowKeyLabel(item.itemId) : null) ?? t('engagement.case.activity.unnamed');
 }
 
 function ActivityLine({ item }: { readonly item: CaseActivityItem }) {
   const { t } = useTranslation(['conveyance']);
+  const rowKeyLabel = useRowKeyLabel();
   const colors = useSemanticColors();
   const who = item.byViewer
     ? t('engagement.case.activity.you')
     : item.actorRole ? t(`engagement.roles.${item.actorRole}`) : t('engagement.case.activity.someone');
   const recipient = item.actorRole ? t(`engagement.roles.${item.actorRole}`) : '';
-  const what = t(ACTIVITY_KIND_KEY[item.kind], { name: documentLabel(item, t), recipient });
+  const what = t(ACTIVITY_KIND_KEY[item.kind], { name: documentLabel(item, rowKeyLabel, t), recipient });
   return (
     <li className="flex flex-wrap items-baseline justify-between gap-x-3 border-b border-border py-2 text-sm last:border-b-0">
       <span className="text-foreground">{who} · {what}</span>

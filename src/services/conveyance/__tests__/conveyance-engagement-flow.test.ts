@@ -10,7 +10,7 @@
 import type { Firestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
-import { openConveyanceCase, type ConveyanceActor } from '../conveyance-case.service';
+import { applyConveyanceCaseCommand, openConveyanceCase, type ConveyanceActor } from '../conveyance-case.service';
 import { endCaseEngagement, listCaseProfessionalSlots, offerCaseEngagement } from '../conveyance-engagement-host.service';
 import { getEngagedCaseView, listMyCases, respondToCaseEngagement } from '../conveyance-engagement-access.service';
 import type { ConveyanceCase } from '@/types/conveyance-case';
@@ -561,5 +561,48 @@ describe('ADR-901 §15 (Γ2) — η υπόθεση φαίνεται ΣΤΟ ΓΡ�
       expect(await shownIn(LAW)).toEqual([id]);
       expect(mockOwnWorkspaces).toHaveBeenCalledTimes(1);
     });
+  });
+});
+
+describe('ADR-915 §23.10 — ονόματα πωλητών στον επαγγελματία: ΜΟΝΟ όσων βλέπει ήδη τις γραμμές', () => {
+  /** Δύο μεταβιβάζοντες: η εταιρεία του έργου + οικοπεδούχος. Συνθετικά ονόματα — κανένα πραγματικό. */
+  async function caseWithTwoSellers(): Promise<ConveyanceCase> {
+    fake.seed(COLLECTIONS.PROJECTS, 'proj_1', { companyId: 'comp_a', linkedCompanyId: 'cont_s', landownerContactIds: ['cont_lo'] });
+    fake.seed(COLLECTIONS.CONTACTS, 'cont_s', { companyId: 'comp_a', type: 'company', status: 'active', companyName: 'Test Builder SA' });
+    fake.seed(COLLECTIONS.CONTACTS, 'cont_lo', { companyId: 'comp_a', type: 'individual', status: 'active', firstName: 'Test', lastName: 'Landowner' });
+    const record = await openCase();
+    const added = await applyConveyanceCaseCommand(db(), host, record, { expectedVersion: record.version, command: { type: 'add_sellers', contactIds: ['cont_lo'] } });
+    if (!added.ok) throw new Error(added.failure.kind);
+    return added.value.conveyanceCase;
+  }
+
+  async function viewAs(record: ConveyanceCase, role: 'seller_lawyer' | 'buyer_lawyer', uid: string) {
+    const attestedBasis = role === 'buyer_lawyer' ? 'preliminary_contract' : null;
+    await offerCaseEngagement(db(), host, record, { role, attestedBasis, nowMs: NOW });
+    const id = await engagementIdOf(record, role);
+    await respondToCaseEngagement(db(), { uid, email: null, active: null }, id, ACCEPT, NOW);
+    const outcome = await getEngagedCaseView(db(), personally(uid), id, NOW);
+    if (!outcome.ok) throw new Error(outcome.rejection);
+    return outcome.view;
+  }
+
+  it('δικηγόρος ΠΩΛΗΤΗ ⇒ τα ονόματα και των δύο, ζωντανά από τις επαφές, με τη σειρά της υπόθεσης', async () => {
+    const view = await viewAs(await caseWithTwoSellers(), 'seller_lawyer', 'u_sl');
+    expect(view.parties).toEqual([
+      { key: 'cont_s', ordinal: 1, name: 'Test Builder SA' },
+      { key: 'cont_lo', ordinal: 2, name: 'Test Landowner' },
+    ]);
+  });
+
+  it('δικηγόρος ΑΓΟΡΑΣΤΗ ⇒ ΚΑΝΕΝΑ όνομα πωλητή: η πύλη της γραμμής κρίνει και το όνομα', async () => {
+    // Μετάλλαξη: ονόματα από ΟΛΑ τα πρόσωπα της υπόθεσης αντί για τα ορατά ⇒ η πλευρά του αγοραστή μαθαίνει τους πωλητές.
+    const view = await viewAs(await caseWithTwoSellers(), 'buyer_lawyer', 'u_bl');
+    expect(view.checklist.rows.some((row) => row.party !== null)).toBe(false);
+    expect(view.parties).toEqual([]);
+  });
+
+  it('ένας πωλητής ⇒ καμία ετικέτα (η όψη όπως πριν από την §22)', async () => {
+    const view = await viewAs(await openCase(), 'seller_lawyer', 'u_sl');
+    expect(view.parties).toEqual([]);
   });
 });

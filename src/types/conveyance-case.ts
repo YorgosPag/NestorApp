@@ -130,6 +130,18 @@ export interface ConveyanceSellerParty {
 }
 
 /**
+ * ADR-915 §23.10 — ένα πρόσωπο της υπόθεσης **όπως το βλέπει αυτός ο θεατής**: σειρά και όνομα, τίποτε άλλο.
+ * ⚠️ `name` κενό ⇒ **λείπει το όνομα**, όχι το πρόσωπο· η οθόνη λέει «Πωλητής N» (N.11). Το όνομα διαβάζεται
+ * **ζωντανά** από την επαφή σε κάθε όψη — ποτέ αντίγραφο στην υπόθεση (πρότυπο `ActingOffice`).
+ */
+export interface CasePartyLabel {
+  readonly key: string;
+  /** 1-based θέση ανάμεσα στα πρόσωπα που **βλέπει** ο θεατής — ποτέ μαρτυρία για όσα δεν βλέπει. */
+  readonly ordinal: number;
+  readonly name: string;
+}
+
+/**
  * ADR-915 §23 — η ιδιότητα ενός μεταβιβάζοντος, όπως τη διαβάζει ο νόμος:
  * - `principal` — η εταιρεία του έργου (`project.linkedCompanyId`): ο εργολάβος/κύριος της πώλησης. **Δεν** αφαιρείται.
  * - `landowner` — οικοπεδούχος του έργου που συμβάλλεται (Α.1106/2021 άρθρο 3 παρ. 8 — «από τον οικοπεδούχο […] σε τρίτο
@@ -334,6 +346,8 @@ export interface ConveyanceCaseView {
   /** Π2 — οι σφραγισμένες παραδόσεις (ταξιδεύουν μαζί με τα τεκμήρια για τον **ίδιο** optimistic πυρήνα). */
   readonly sealedDeliveries: readonly SealedDelivery[];
   readonly checklist: DerivedChecklist;
+  /** ADR-915 §23.10 — τα πρόσωπα με ονόματα (κενή λίστα όταν δεν χρειάζεται «ποιος»: ≤ 1 πρόσωπο). */
+  readonly parties: readonly CasePartyLabel[];
   /** ADR-901 Φ4.5 — «Ζήτησε έγγραφο»: παραλήπτες ανά γραμμή + τα αιτήματα που αφορούν τον οικοδεσπότη. */
   readonly documentRequests: CaseDocumentRequests;
   /** ADR-901 §14.8 — αναθεώρηση του σήματος της όψης + πότε μπαγιατεύει μόνη της. */
@@ -401,6 +415,11 @@ export interface EngagedCaseView {
   readonly checklist: DerivedChecklist;
   /** ADR-901 Φ4 — όσοι συμμετέχουν **τώρα** (μαζί με τον θεατή), με τη δηλωμένη ιδιότητά τους. */
   readonly participants: readonly CaseParticipantView[];
+  /**
+   * ADR-915 §23.10 — **μόνο** τα πρόσωπα των γραμμών που ήδη βλέπει (ίδια πύλη με τον κατάλογο, ΓΚΠΔ 5(1)(γ) · 25(2)):
+   * ο αγοραστής και ο δικηγόρος του δεν έχουν γραμμές πωλητή ⇒ κανένα όνομα πωλητή.
+   */
+  readonly parties: readonly CasePartyLabel[];
   /** ADR-901 Φ4.5 — «Ζήτησε έγγραφο»: παραλήπτες ανά γραμμή + τα αιτήματα όπου ο θεατής είναι αιτών/παραλήπτης. */
   readonly documentRequests: CaseDocumentRequests;
   /** ADR-901 §14.8 — αναθεώρηση του σήματος της όψης + πότε μπαγιατεύει μόνη της (και η λήξη της συμμετοχής). */

@@ -25,6 +25,7 @@ import { reviewIssuedOnOf, type ReviewIssuedOn } from '@/lib/conveyance/review-a
 import { ruleExpires } from '@/lib/document-validity/document-expiry';
 import type { DocumentTextFacts } from '@/lib/document-validity/document-text-facts';
 import type { ChecklistRow } from '@/types/conveyance-case';
+import { useChecklistRowLabel } from '@/components/conveyance/shared/CasePartyLabels';
 import type { RowDialogMode } from './ConveyanceChecklistRow';
 import { ConveyanceDocumentTextAction } from './ConveyanceDocumentTextAction';
 import { ConveyanceIssuedOnField } from './ConveyanceIssuedOnField';
@@ -109,13 +110,14 @@ const MODE_HINT_KEY: Readonly<Partial<Record<RowDialogMode, string>>> = {
 function RowDialogHeader({ row, mode }: { readonly row: ChecklistRow; readonly mode: RowDialogMode }) {
   const { t } = useTranslation(['conveyance']);
   const colors = useSemanticColors();
+  const rowLabel = useChecklistRowLabel();
   const hintKey = MODE_HINT_KEY[mode];
   return (
     <>
       <DialogHeader>
         <DialogTitle>{t(TITLE_KEY[mode])}</DialogTitle>
         <DialogDescription>
-          {t(row.item.labelKey)}
+          {rowLabel(row)}
           {mode === 'accept' && row.files[0] ? ` — ${row.files[0].displayName}` : ''}
         </DialogDescription>
       </DialogHeader>

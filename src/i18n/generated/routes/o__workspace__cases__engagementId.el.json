@@ -198,6 +198,10 @@
       "property": "ακινήτου",
       "seller_contact": "πωλητή"
     },
+    "parties": {
+      "rowLabel": "{item} · {party}",
+      "sellerOrdinal": "Πωλητής {index}"
+    },
     "providers": {
       "authority": "Δημόσια αρχή",
       "bank": "Τράπεζα",

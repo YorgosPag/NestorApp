@@ -41,6 +41,8 @@ import { actingViews, placeEngagement, resolveActingFor, type ActingRejection, t
 import { contactCredentialHint } from './conveyance-professional.server';
 import { documentRequestPanel } from './conveyance-document-request-panel.server';
 import { listCaseParticipants } from './conveyance-case-participants.server';
+import { readCasePartyLabels } from './conveyance-party-labels.server';
+import { visiblePartyKeys, visibleSellers } from '@/lib/conveyance/party-labels';
 import { loadConveyanceSubject, type ConveyanceSubjectContext } from './conveyance-subject.server';
 import { announceEngagementAnswered } from './conveyance-engagement-notifier';
 import { answerChanges, engagementKeyOf, recordEngagementAudit } from './conveyance-engagement-support';
@@ -342,28 +344,38 @@ export async function getEngagedCaseView(db: Firestore, viewer: CaseViewer, enga
   const revision = await readViewRevision(db, { kind: 'engagement', engagementId, uid });
   const resolution = await resolveEngagedCase(db, uid, engagementId, nowMs);
   if (!resolution.ok) return resolution;
-  const { engagement, record, context } = resolution.access;
+  const { engagement } = resolution.access;
   // §15.15 — το σπίτι είναι το γραφείο όπου ανήκει ΑΚΟΜΗ, αλλιώς ο προσωπικός του: ποτέ ανακατεύθυνση σε χώρο που θα απαντήσει 404.
   const placement = await actingViews(viewer).placement(engagement);
   if (placement.outcome === 'unknown') return { ok: false, rejection: 'unknown' };
   if (!isShownInWorkspace(engagement, placement.home, viewer.viewed)) return { ok: false, rejection: 'elsewhere', home: placement.home };
+  return { ok: true, view: await engagedViewOf(db, resolution.access, revision, nowMs) };
+}
+
+/** Η όψη μιας **ήδη κριμένης** πρόσβασης: ό,τι εξαρτάται από τις γραμμές του θεατή διαβάζεται παράλληλα, μετά από αυτές. */
+async function engagedViewOf(db: Firestore, access: EngagedCaseAccess, revision: number, nowMs: number): Promise<EngagedCaseView> {
+  const { engagement, record, context } = access;
   const state = effectiveCaseState(record.storedState, context.legalPhase);
-  const checklist = await engagedChecklistOf(db, resolution.access);
-  const party = { role: engagement.role, uid } as const;
+  const checklist = await engagedChecklistOf(db, access);
+  const party = { role: engagement.role, uid: engagement.uid } as const;
+  const [participants, documentRequests, parties] = await Promise.all([
+    listCaseParticipants(db, engagement, nowMs),
+    // Φ4.5 — «Ζήτησε έγγραφο»: ο ΙΔΙΟΣ κριτής με τον γραφέα, πάνω στις γραμμές που ήδη βλέπει.
+    documentRequestPanel(db, { record, state, party, rows: checklist.rows, nowMs }),
+    // ADR-915 §23.10 — ονόματα ΜΟΝΟ των προσώπων των γραμμών που ήδη βλέπει: η ίδια πύλη κρίνει γραμμή και όνομα.
+    readCasePartyLabels(db, engagement.hostCompanyId, visibleSellers(record.parties.sellers, visiblePartyKeys(checklist.rows))),
+  ]);
   return {
-    ok: true,
-    view: {
-      engagementId: engagement.id,
-      role: engagement.role,
-      caseId: record.id,
-      state,
-      propertyName: context.propertyName,
-      targetSigningDate: record.targetSigningDate,
-      checklist,
-      participants: await listCaseParticipants(db, engagement, nowMs),
-      // Φ4.5 — «Ζήτησε έγγραφο»: ο ΙΔΙΟΣ κριτής με τον γραφέα, πάνω στις γραμμές που ήδη βλέπει.
-      documentRequests: await documentRequestPanel(db, { record, state, party, rows: checklist.rows, nowMs }),
-      freshness: { revision, freshUntil: engagedFreshUntil(engagement, nowMs) },
-    },
+    engagementId: engagement.id,
+    role: engagement.role,
+    caseId: record.id,
+    state,
+    propertyName: context.propertyName,
+    targetSigningDate: record.targetSigningDate,
+    checklist,
+    participants,
+    parties,
+    documentRequests,
+    freshness: { revision, freshUntil: engagedFreshUntil(engagement, nowMs) },
   };
 }

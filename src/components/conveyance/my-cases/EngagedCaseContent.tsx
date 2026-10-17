@@ -37,6 +37,7 @@ import type { EngagedCaseView } from '@/types/conveyance-case';
 import { EngagedCaseChecklist } from './EngagedCaseChecklist';
 import { EngagedCaseActivity } from './EngagedCaseActivity';
 import { EngagedCaseParticipants } from './EngagedCaseParticipants';
+import { CasePartyLabelsProvider } from '@/components/conveyance/shared/CasePartyLabels';
 
 function CaseParticipantsTab({ view }: { readonly view: EngagedCaseView }) {
   return (
@@ -60,11 +61,12 @@ function CaseView({ view, onChanged }: { readonly view: EngagedCaseView; readonl
     { id: 'checklist', label: t('engagement.case.tabs.checklist'), icon: ClipboardList, content: <EngagedCaseChecklist view={view} onChanged={onChanged} /> },
     { id: 'participants', label: t('engagement.case.tabs.participants'), icon: Users, content: <CaseParticipantsTab view={view} /> },
   ];
+  // ADR-915 §23.10 — οι ετικέτες έρχονται ήδη κομμένες στα πρόσωπα των γραμμών του θεατή (κατάλογος + ίχνος).
   return (
-    <>
+    <CasePartyLabelsProvider labels={view.parties}>
       <PrivatePageHeader title={view.propertyName ?? t('engagement.myCases.untitled')} lead={facts.join(' · ')} />
       <StateTabs tabs={tabs} defaultTab="checklist" />
-    </>
+    </CasePartyLabelsProvider>
   );
 }
 

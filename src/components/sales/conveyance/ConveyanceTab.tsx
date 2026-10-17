@@ -39,6 +39,7 @@ import type { ConveyanceCommand } from '@/lib/conveyance/conveyance-commands';
 import type { ChecklistRow, ConveyanceCaseView } from '@/types/conveyance-case';
 import type { Property } from '@/types/property';
 import { useCaseFileOpening } from '@/components/conveyance/shared/CaseFileOpening';
+import { HostCasePartyLabelsProvider } from '@/components/conveyance/shared/CasePartyLabels';
 import { ConveyanceCaseHeader } from './ConveyanceCaseHeader';
 import { ConveyanceChecklistSection } from './ConveyanceChecklistSection';
 import type { RowDialogMode } from './ConveyanceChecklistRow';
@@ -97,27 +98,29 @@ function CaseBody({ view, canManage, onCommand, onChanged }: CaseBodyProps) {
   const { openFile, previewDialog } = useCaseFileOpening(fileTarget);
   const requests = useHostRequests(view, canManage, onChanged);
   return (
-    <section className="space-y-3 p-3">
-      <ConveyanceCaseHeader view={view} canEdit={canManage} onCommand={onCommand} />
-      {/* ADR-901 Φ2 — οι επαγγελματίες μπαίνουν ΜΟΝΟ με συμμετοχή· η ενότητα ζει όσο υπάρχει υπόθεση. */}
-      <ConveyanceProfessionalsAccess caseId={view.conveyanceCase.id} canManage={canManage} viewRevision={view.freshness.revision} />
-      {requests && <ConveyanceRequestAllBar requestable={requests.requestable} targets={view.documentRequests.targets} onConfirm={requests.requestAll} />}
-      <ConveyanceFactsPanel record={view.conveyanceCase} rows={view.checklist.rows} derivedFacts={view.derivedFacts} canEdit={editable} onAnswer={onAnswer} />
-      {CHECKLIST_SECTIONS.map((section) => (
-        <ConveyanceChecklistSection
-          key={section}
-          section={section}
-          rows={view.checklist.rows.filter((row) => row.section === section)}
-          canEdit={editable}
-          onOpenDialog={onOpenDialog}
-          onClear={onClear}
-          onOpenFile={openFile}
-          request={requests?.rowRequest}
-        />
-      ))}
-      <ConveyanceRowDialog caseId={view.conveyanceCase.id} target={dialog} onClose={() => setDialog(null)} onSubmit={onCommand} />
-      {previewDialog}
-    </section>
+    <HostCasePartyLabelsProvider sellers={view.conveyanceCase.parties.sellers} labels={view.parties}>
+      <section className="space-y-3 p-3">
+        <ConveyanceCaseHeader view={view} canEdit={canManage} onCommand={onCommand} />
+        {/* ADR-901 Φ2 — οι επαγγελματίες μπαίνουν ΜΟΝΟ με συμμετοχή· η ενότητα ζει όσο υπάρχει υπόθεση. */}
+        <ConveyanceProfessionalsAccess caseId={view.conveyanceCase.id} canManage={canManage} viewRevision={view.freshness.revision} />
+        {requests && <ConveyanceRequestAllBar requestable={requests.requestable} targets={view.documentRequests.targets} onConfirm={requests.requestAll} />}
+        <ConveyanceFactsPanel record={view.conveyanceCase} rows={view.checklist.rows} derivedFacts={view.derivedFacts} canEdit={editable} onAnswer={onAnswer} />
+        {CHECKLIST_SECTIONS.map((section) => (
+          <ConveyanceChecklistSection
+            key={section}
+            section={section}
+            rows={view.checklist.rows.filter((row) => row.section === section)}
+            canEdit={editable}
+            onOpenDialog={onOpenDialog}
+            onClear={onClear}
+            onOpenFile={openFile}
+            request={requests?.rowRequest}
+          />
+        ))}
+        <ConveyanceRowDialog caseId={view.conveyanceCase.id} target={dialog} onClose={() => setDialog(null)} onSubmit={onCommand} />
+        {previewDialog}
+      </section>
+    </HostCasePartyLabelsProvider>
   );
 }
 
