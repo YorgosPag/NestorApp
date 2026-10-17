@@ -14,7 +14,9 @@
 import { ApiClientError, apiClient } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
-import type { IssuanceAssignmentBody } from '@/lib/document-validity/issuance-request';
+import type { IssuanceAssignmentBody, IssuanceSendBody } from '@/lib/document-validity/issuance-request';
+import type { IssuanceDelivery } from '@/lib/document-validity/issuance-assignment';
+import type { IssuancePreview } from '@/types/issuance-invitation';
 
 const logger = createModuleLogger('document-registry.client');
 
@@ -71,4 +73,29 @@ export const ISSUANCE_ASSIGNMENTS_URL = `${DOCUMENT_REGISTRY_URL}/issuance-assig
 /** **Μία πράξη** στην ανάθεση (πρόταση · απόφαση · ενημέρωση · απάντηση · ακύρωση). */
 export async function saveIssuanceAction(request: IssuanceAssignmentBody): Promise<ObligorDesignationSave> {
   return putRegistryAction(ISSUANCE_ASSIGNMENTS_URL, request, 'Η πράξη ανάθεσης δεν αποθηκεύτηκε', { action: request.action });
+}
+
+/** ADR-915 §28 — προεπισκόπηση και αποστολή μηνύματος με σύνδεσμο: ΕΝΑ σημείο για τη διαδρομή. */
+export const ISSUANCE_MESSAGES_URL = `${ISSUANCE_ASSIGNMENTS_URL}/messages`;
+
+export type IssuanceMessageResult<T> = { readonly kind: 'ok'; readonly data: T } | { readonly kind: 'failed'; readonly code: string | null };
+
+async function postIssuanceMessage<T>(body: IssuanceSendBody & { readonly intent: 'preview' | 'send' }): Promise<IssuanceMessageResult<T>> {
+  try {
+    return { kind: 'ok', data: await apiClient.post<T>(ISSUANCE_MESSAGES_URL, body) };
+  } catch (cause) {
+    const code = cause instanceof ApiClientError ? cause.errorCode ?? null : null;
+    logger.error('Το μήνυμα ανάθεσης δεν ολοκληρώθηκε', { error: cause instanceof Error ? cause.message : String(cause), code, intent: body.intent });
+    return { kind: 'failed', code };
+  }
+}
+
+/** Η προεπισκόπηση — **καμία** εγγραφή στον διακομιστή. */
+export function previewIssuanceMessage(body: IssuanceSendBody): Promise<IssuanceMessageResult<{ readonly preview: IssuancePreview }>> {
+  return postIssuanceMessage({ ...body, intent: 'preview' });
+}
+
+/** Η αποστολή — **ένα** πάτημα του ανθρώπου, ποτέ αυτόματα (§18.5). */
+export function sendIssuanceMessage(body: IssuanceSendBody): Promise<IssuanceMessageResult<{ readonly stage: string; readonly delivery: IssuanceDelivery }>> {
+  return postIssuanceMessage({ ...body, intent: 'send' });
 }

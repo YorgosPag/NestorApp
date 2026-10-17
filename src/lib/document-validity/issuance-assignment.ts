@@ -62,15 +62,66 @@ export interface IssuanceCredential {
   readonly registryNumber: string | null;
 }
 
-export interface IssuanceDecision {
+/**
+ * **Η βάση της απόφασης** (§28 Η-Β2) — παράγεται από **ποιος** έπραξε, ποτέ από το αίτημα:
+ * - `recorded-instruction` — το γραφείο κατέγραψε εντολή που πήρε (κανάλι + ποιος κατέγραψε)·
+ * - `owner-link-approval` — ο ίδιος ο υπεύθυνος πάτησε τον σύνδεσμο του **τρέχοντος** αιτήματος (το token αποδεικνύει το mailbox).
+ */
+export type IssuanceDecisionBasis =
+  | { readonly basis: 'recorded-instruction'; readonly channel: InstructionChannel; readonly recordedByUid: string }
+  | { readonly basis: 'owner-link-approval'; readonly invitationId: string };
+
+export type IssuanceDecision = IssuanceDecisionBasis & {
   readonly outcome: 'approved' | 'rejected';
   /** Ο υπεύθυνος ιδιοκτήτης (§26) **τη στιγμή της απόφασης** — παράγεται στον διακομιστή, ποτέ από τον πελάτη. */
   readonly ownerContactId: string;
-  readonly basis: 'recorded-instruction';
-  readonly channel: InstructionChannel;
   readonly note: string | null;
-  readonly recordedByUid: string;
   readonly at: string;
+};
+
+/** Η βάση της απάντησης του επαγγελματία — καταγραφή του γραφείου ή ο σύνδεσμος του **τρέχοντος** μηνύματος. */
+export type IssuanceResponseBasis =
+  | { readonly basis: 'recorded'; readonly recordedByUid: string }
+  | { readonly basis: 'professional-link'; readonly invitationId: string };
+
+export type IssuanceResponse = IssuanceResponseBasis & {
+  readonly outcome: 'accepted' | 'declined';
+  readonly note: string | null;
+  readonly at: string;
+};
+
+/**
+ * Τι απέγινε ένα email — **ποτέ** «παραδόθηκε» (το `200` του παρόχου σημαίνει «μπήκε σε ουρά»). Ίδιες λέξεις με το
+ * `InvitationNoticeOutcome` του αποστολέα (ο server το ελέγχει με `satisfies`).
+ */
+export const ISSUANCE_DELIVERY_OUTCOMES = ['accepted', 'failed', 'unaddressable'] as const;
+export type IssuanceDeliveryOutcome = (typeof ISSUANCE_DELIVERY_OUTCOMES)[number];
+
+/** Η παράδοση ενός μηνύματος (§28 Η-Β9) — **τηλεμετρία**, όχι στάδιο. Συνιδιοκτήτες: μόνο στο αίτημα έγκρισης. */
+export interface IssuanceDelivery {
+  readonly recipient: IssuanceDeliveryOutcome;
+  readonly coOwners: Readonly<Record<string, IssuanceDeliveryOutcome>>;
+}
+
+/** Το αίτημα έγκρισης με σύνδεσμο προς τον υπεύθυνο (§28 Η-Β1) — **μόνο αυτό** το `invitationId` αποφασίζει. */
+export interface IssuanceApprovalRequest {
+  readonly invitationId: string;
+  readonly ownerContactId: string;
+  readonly note: string | null;
+  readonly at: string;
+  readonly byUid: string;
+  /** `null` = το email δεν έχει ακόμη κριθεί (ή η αναφορά του χάθηκε). */
+  readonly delivery: IssuanceDelivery | null;
+}
+
+export interface IssuanceNotice {
+  readonly channel: NoticeChannel;
+  readonly at: string;
+  readonly byUid: string;
+  /** Το μήνυμα με σύνδεσμο (§28) — `null` = ενημέρωση εκτός εφαρμογής, που απλώς καταγράφηκε. */
+  readonly invitationId: string | null;
+  readonly note: string | null;
+  readonly delivery: IssuanceDelivery | null;
 }
 
 /** Τα γεγονότα μιας ανάθεσης — ό,τι αποθηκεύεται πέρα από την ταυτότητα. */
@@ -79,9 +130,10 @@ export interface IssuanceAssignmentRecord {
   readonly credential: IssuanceCredential;
   readonly proposedAt: string;
   readonly proposedByUid: string;
+  readonly approvalRequest: IssuanceApprovalRequest | null;
   readonly decision: IssuanceDecision | null;
-  readonly notice: { readonly channel: NoticeChannel; readonly at: string; readonly byUid: string } | null;
-  readonly response: { readonly outcome: 'accepted' | 'declined'; readonly at: string; readonly recordedByUid: string } | null;
+  readonly notice: IssuanceNotice | null;
+  readonly response: IssuanceResponse | null;
   readonly cancellation: { readonly at: string; readonly byUid: string } | null;
 }
 
@@ -150,43 +202,63 @@ export function canProposeIssuance(state: IssuanceState): boolean {
 
 export type IssuanceAction =
   | { readonly kind: 'propose'; readonly professionalContactId: string; readonly credential: IssuanceCredential }
+  /** §28 — στάλθηκε σύνδεσμος έγκρισης στον υπεύθυνο. Ίδιο στάδιο· νέο αίτημα ⇒ ο προηγούμενος σύνδεσμος πεθαίνει. */
+  | { readonly kind: 'request-approval'; readonly invitationId: string; readonly ownerContactId: string; readonly note: string | null }
   | {
       readonly kind: 'decide';
       readonly outcome: 'approved' | 'rejected';
-      readonly channel: InstructionChannel;
+      /** Το κανάλι της **καταγραφής** του γραφείου· `null` ⇔ αποφασίζει ο ίδιος με σύνδεσμο. */
+      readonly channel: InstructionChannel | null;
       readonly note: string | null;
       /** Ο υπεύθυνος — από τον κριτή του διακομιστή (ή, αισιόδοξα, ό,τι είδε η οθόνη). */
       readonly ownerContactId: string;
     }
-  | { readonly kind: 'notify'; readonly channel: NoticeChannel }
-  | { readonly kind: 'respond'; readonly outcome: 'accepted' | 'declined' }
+  /** `invitationId` ≠ `null` ⇔ στάλθηκε μήνυμα με σύνδεσμο (επιτρέπεται και ξανά, από `sent`). */
+  | { readonly kind: 'notify'; readonly channel: NoticeChannel; readonly invitationId: string | null; readonly note: string | null }
+  | { readonly kind: 'respond'; readonly outcome: 'accepted' | 'declined'; readonly note: string | null }
   | { readonly kind: 'cancel' };
 
 export type IssuanceActionKind = IssuanceAction['kind'];
 
 /** Από ποια στάδια επιτρέπεται κάθε πράξη (η πρόταση κρίνεται χωριστά, {@link canProposeIssuance}). */
 const ALLOWED_FROM: Readonly<Record<Exclude<IssuanceActionKind, 'propose'>, readonly IssuanceStage[]>> = {
+  'request-approval': ['proposed'],
   decide: ['proposed'],
-  notify: ['ownerApproved'],
+  notify: ['ownerApproved', 'sent'],
   respond: ['sent'],
   cancel: ['proposed', 'ownerApproved', 'sent', 'accepted', 'declined'],
 };
 
-export interface IssuanceActor {
-  readonly uid: string;
-  readonly nowIso: string;
-}
+/** Ποιες πράξεις μπορεί να κάνει **ο σύνδεσμος** — όλες οι άλλες ανήκουν στο γραφείο (§28 Η-Β2). */
+const LINK_ACTIONS: ReadonlySet<IssuanceActionKind> = new Set(['decide', 'respond']);
+
+/**
+ * **Ποιος πράττει** (§28 Η-Β2): άνθρωπος του γραφείου (`uid`) ή ο κάτοχος ενός συνδέσμου (`invitationId`). Η βάση της
+ * απόφασης/απάντησης **παράγεται** από εδώ — ένα αίτημα δεν μπορεί να δηλώσει «με σύνδεσμο» χωρίς σύνδεσμο.
+ */
+export type IssuanceActor =
+  | { readonly kind: 'office'; readonly uid: string; readonly nowIso: string }
+  | { readonly kind: 'link'; readonly invitationId: string; readonly nowIso: string };
+
+/**
+ * - `transition-refused` — η πράξη δεν επιτρέπεται από αυτό το στάδιο·
+ * - `unqualified` — το προσόν δεν υπογράφει αυτό το είδος·
+ * - `actor-refused` — **αυτός** ο actor δεν κάνει αυτή την πράξη: γραφείο χωρίς κανάλι καταγραφής, σύνδεσμος για πράξη
+ *   του γραφείου, ή σύνδεσμος που **δεν** είναι του τρέχοντος αιτήματος (παλιός, αντικατεστημένος, άλλου ακροατηρίου).
+ */
+export type IssuanceRefusalReason = 'transition-refused' | 'unqualified' | 'actor-refused';
 
 export type IssuanceReduction =
   | { readonly ok: true; readonly record: IssuanceAssignmentRecord; readonly changed: boolean }
-  | { readonly ok: false; readonly refusal: 'transition-refused' | 'unqualified' };
+  | { readonly ok: false; readonly refusal: IssuanceRefusalReason };
 
-function proposed(action: Extract<IssuanceAction, { kind: 'propose' }>, actor: IssuanceActor): IssuanceAssignmentRecord {
+function proposed(action: Extract<IssuanceAction, { kind: 'propose' }>, uid: string, nowIso: string): IssuanceAssignmentRecord {
   return {
     professionalContactId: action.professionalContactId,
     credential: action.credential,
-    proposedAt: actor.nowIso,
-    proposedByUid: actor.uid,
+    proposedAt: nowIso,
+    proposedByUid: uid,
+    approvalRequest: null,
     decision: null,
     notice: null,
     response: null,
@@ -202,19 +274,77 @@ function sameProposal(state: IssuanceState, action: Extract<IssuanceAction, { ki
     && credential.registryNumber === action.credential.registryNumber;
 }
 
-function advanced(record: IssuanceAssignmentRecord, action: Exclude<IssuanceAction, { kind: 'propose' }>, actor: IssuanceActor): IssuanceAssignmentRecord {
-  switch (action.kind) {
-    case 'decide': return {
-      ...record,
-      decision: {
-        outcome: action.outcome, ownerContactId: action.ownerContactId, basis: 'recorded-instruction',
-        channel: action.channel, note: action.note, recordedByUid: actor.uid, at: actor.nowIso,
-      },
-    };
-    case 'notify': return { ...record, notice: { channel: action.channel, at: actor.nowIso, byUid: actor.uid } };
-    case 'respond': return { ...record, response: { outcome: action.outcome, at: actor.nowIso, recordedByUid: actor.uid } };
-    case 'cancel': return { ...record, cancellation: { at: actor.nowIso, byUid: actor.uid } };
+type AdvancingAction = Exclude<IssuanceAction, { kind: 'propose' }>;
+
+/**
+ * Η βάση της απόφασης — **από τον actor**. Ο σύνδεσμος αποφασίζει μόνο αν είναι ο σύνδεσμος του **τρέχοντος** αιτήματος
+ * και για τον υπεύθυνο **στον οποίο στάλθηκε** (§28 Η-Β1): νέο αίτημα ή νέα πρόταση ⇒ ο παλιός πεθαίνει από κατασκευή.
+ * `null` ⇒ `actor-refused`.
+ */
+function decisionBasisOf(record: IssuanceAssignmentRecord, action: Extract<AdvancingAction, { kind: 'decide' }>, actor: IssuanceActor): IssuanceDecisionBasis | null {
+  if (actor.kind === 'office') {
+    return action.channel === null ? null : { basis: 'recorded-instruction', channel: action.channel, recordedByUid: actor.uid };
   }
+  const request = record.approvalRequest;
+  const current = action.channel === null && request !== null
+    && request.invitationId === actor.invitationId && request.ownerContactId === action.ownerContactId;
+  return current ? { basis: 'owner-link-approval', invitationId: actor.invitationId } : null;
+}
+
+/** Η βάση της απάντησης — ο σύνδεσμος απαντά μόνο αν είναι του **τρέχοντος** μηνύματος προς τον επαγγελματία. */
+function responseBasisOf(record: IssuanceAssignmentRecord, actor: IssuanceActor): IssuanceResponseBasis | null {
+  if (actor.kind === 'office') return { basis: 'recorded', recordedByUid: actor.uid };
+  return record.notice?.invitationId === actor.invitationId ? { basis: 'professional-link', invitationId: actor.invitationId } : null;
+}
+
+/** Οι πράξεις που κάνει **μόνο** το γραφείο — ο έλεγχος actor έγινε ήδη. */
+function officeAdvanced(record: IssuanceAssignmentRecord, action: Exclude<AdvancingAction, { kind: 'decide' | 'respond' }>, uid: string, at: string): IssuanceAssignmentRecord {
+  switch (action.kind) {
+    case 'request-approval': return {
+      ...record,
+      approvalRequest: { invitationId: action.invitationId, ownerContactId: action.ownerContactId, note: action.note, at, byUid: uid, delivery: null },
+    };
+    case 'notify': return {
+      ...record,
+      notice: { channel: action.channel, at, byUid: uid, invitationId: action.invitationId, note: action.note, delivery: null },
+    };
+    case 'cancel': return { ...record, cancellation: { at, byUid: uid } };
+  }
+}
+
+function advanced(record: IssuanceAssignmentRecord, stage: IssuanceStage, action: AdvancingAction, actor: IssuanceActor): IssuanceReduction {
+  if (action.kind === 'decide') {
+    const basis = decisionBasisOf(record, action, actor);
+    if (basis === null) return { ok: false, refusal: 'actor-refused' };
+    const decision: IssuanceDecision = { ...basis, outcome: action.outcome, ownerContactId: action.ownerContactId, note: action.note, at: actor.nowIso };
+    return { ok: true, record: { ...record, decision }, changed: true };
+  }
+  if (action.kind === 'respond') {
+    const basis = responseBasisOf(record, actor);
+    if (basis === null) return { ok: false, refusal: 'actor-refused' };
+    return { ok: true, record: { ...record, response: { ...basis, outcome: action.outcome, note: action.note, at: actor.nowIso } }, changed: true };
+  }
+  // Ξανά ενημέρωση από `sent` έχει νόημα μόνο ως **νέο μήνυμα** (χαμένο email)· μια δεύτερη «σημείωση τηλεφώνου» όχι.
+  if (action.kind === 'notify' && stage === 'sent' && action.invitationId === null) return { ok: false, refusal: 'transition-refused' };
+  if (actor.kind !== 'office') return { ok: false, refusal: 'actor-refused' };
+  return { ok: true, record: officeAdvanced(record, action, actor.uid, actor.nowIso), changed: true };
+}
+
+/**
+ * **Η παράδοση ενός μηνύματος** (§28 Η-Β9) — γράφεται **μόνο** στο μήνυμα που τη γέννησε: αν στο μεταξύ στάλθηκε νέο
+ * (άλλο `invitationId`), η παλιά αναφορά **δεν** σκεπάζει τη νέα ⇒ `null`. Τηλεμετρία, όχι στάδιο: δεν περνά από τον μειωτή.
+ */
+export function withIssuanceDelivery(record: IssuanceAssignmentRecord, invitationId: string, delivery: IssuanceDelivery): IssuanceAssignmentRecord | null {
+  if (record.approvalRequest?.invitationId === invitationId) return { ...record, approvalRequest: { ...record.approvalRequest, delivery } };
+  if (record.notice?.invitationId === invitationId) return { ...record, notice: { ...record.notice, delivery } };
+  return null;
+}
+
+/** Ποιο ακροατήριο έχει **σήμερα** τον λόγο με αυτόν τον σύνδεσμο — `null` = κανένα (παλιός, αντικατεστημένος). */
+export function currentLinkAudience(record: IssuanceAssignmentRecord, invitationId: string): 'owner' | 'professional' | null {
+  if (record.approvalRequest?.invitationId === invitationId) return 'owner';
+  if (record.notice?.invitationId === invitationId) return 'professional';
+  return null;
 }
 
 /** Μπορεί αυτό το προσόν να υπογράψει αυτό το είδος; — any-of του εκδότη (ο μηχανολόγος **δεν** υπογράφει ταυτότητα). */
@@ -236,97 +366,18 @@ export function reduceIssuance(
 ): IssuanceReduction {
   const state = issuanceStateOf(current, latestIssuedOn);
   if (action.kind === 'propose') {
+    if (actor.kind !== 'office') return { ok: false, refusal: 'actor-refused' };
     if (!qualifiesFor(kind, action.credential.qualification)) return { ok: false, refusal: 'unqualified' };
     if (sameProposal(state, action) && current !== null) return { ok: true, record: current, changed: false };
     if (!canProposeIssuance(state)) return { ok: false, refusal: 'transition-refused' };
-    return { ok: true, record: proposed(action, actor), changed: true };
+    return { ok: true, record: proposed(action, actor.uid, actor.nowIso), changed: true };
   }
+  // «Ποιος» πριν από «από πού»: ο σύνδεσμος δεν κάνει πράξη του γραφείου, σε **κανένα** στάδιο.
+  if (actor.kind === 'link' && !LINK_ACTIONS.has(action.kind)) return { ok: false, refusal: 'actor-refused' };
   if (state.kind !== 'open' || !ALLOWED_FROM[action.kind].includes(state.stage)) {
     return { ok: false, refusal: 'transition-refused' };
   }
-  return { ok: true, record: advanced(state.record, action, actor), changed: true };
-}
-
-// ---------------------------------------------------------------------------
-// Οι υποψήφιοι — «Ανάθεση σε γνωστό»
-// ---------------------------------------------------------------------------
-
-/** Μία ανάθεση του γραφείου στο παρελθόν ή τώρα — ό,τι χρειάζεται η κατάταξη. */
-export interface IssuanceRosterEntry {
-  readonly propertyId: string;
-  readonly documentKind: DocumentKind;
-  readonly record: IssuanceAssignmentRecord;
-}
-
-export type CandidateReason =
-  | { readonly kind: 'same-property'; readonly documentKind: DocumentKind }
-  | { readonly kind: 'previously-assigned'; readonly count: number; readonly lastAt: string };
-
-export interface IssuanceCandidate {
-  readonly contactId: string;
-  readonly reasons: readonly CandidateReason[];
-  /** Το προσόν που **ήδη** δήλωσε το γραφείο και επαρκεί για αυτό το είδος — `null` ⇒ θέλει δήλωση. */
-  readonly credential: IssuanceCredential | null;
-}
-
-/** Πόσοι υποψήφιοι φτάνουν στην οθόνη — οι υπόλοιποι βρίσκονται με την αναζήτηση επαφής. */
-export const ISSUANCE_CANDIDATES_SHOWN = 5;
-
-/** Μόνο όσα ο ιδιοκτήτης **ενέκρινε** μετρούν ως «ξανά» — μια απορριφθείσα πρόταση δεν είναι εμπειρία. */
-function wasApproved(record: IssuanceAssignmentRecord): boolean {
-  return record.decision?.outcome === 'approved';
-}
-
-interface CandidateTally {
-  sameProperty: DocumentKind | null;
-  count: number;
-  lastAt: string;
-  credential: IssuanceCredential | null;
-}
-
-function tallyOf(entries: readonly IssuanceRosterEntry[], kind: DocumentKind, propertyId: string): Map<string, CandidateTally> {
-  const tally = new Map<string, CandidateTally>();
-  for (const { record, documentKind, propertyId: entryProperty } of entries) {
-    const id = record.professionalContactId;
-    const fits = qualifiesFor(kind, record.credential.qualification) ? record.credential : null;
-    const entry = tally.get(id) ?? { sameProperty: null, count: 0, lastAt: '', credential: null };
-    if (entryProperty === propertyId && documentKind !== kind) entry.sameProperty = documentKind;
-    if (documentKind === kind) {
-      entry.count += 1;
-      if (record.proposedAt > entry.lastAt) entry.lastAt = record.proposedAt;
-    }
-    entry.credential = entry.credential ?? fits;
-    tally.set(id, entry);
-  }
-  return tally;
-}
-
-function reasonsOf(entry: CandidateTally): CandidateReason[] {
-  const reasons: CandidateReason[] = [];
-  if (entry.sameProperty !== null) reasons.push({ kind: 'same-property', documentKind: entry.sameProperty });
-  if (entry.count > 0) reasons.push({ kind: 'previously-assigned', count: entry.count, lastAt: entry.lastAt });
-  return reasons;
-}
-
-/**
- * **Ποιους ξέρει ήδη το γραφείο** για αυτό το έγγραφο, με τη σειρά που θα τους πρότεινε ένας έμπειρος συνεργάτης:
- * 1. όποιος βγάζει το **άλλο** έγγραφο του **ίδιου** ακινήτου (ένας μηχανικός για ΠΕΑ + ταυτότητα — §18.5)·
- * 2. όσοι έχουν ξαναπάρει **αυτό** το είδος με έγκριση ιδιοκτήτη (περισσότερες φορές, πιο πρόσφατα)·
- * και λέει **γιατί** τον καθένα. Εξαιρείται όποιος μόλις αρνήθηκε **αυτή** την ανάθεση.
- */
-export function rankIssuanceCandidates(
-  roster: readonly IssuanceRosterEntry[],
-  target: { readonly kind: DocumentKind; readonly propertyId: string; readonly excludeContactId: string | null },
-): readonly IssuanceCandidate[] {
-  const approved = roster.filter((entry) => wasApproved(entry.record));
-  const tally = tallyOf(approved, target.kind, target.propertyId);
-  return [...tally]
-    .filter(([id, entry]) => id !== target.excludeContactId && (entry.sameProperty !== null || entry.count > 0))
-    .sort(([, a], [, b]) => Number(b.sameProperty !== null) - Number(a.sameProperty !== null)
-      || b.count - a.count
-      || b.lastAt.localeCompare(a.lastAt))
-    .slice(0, ISSUANCE_CANDIDATES_SHOWN)
-    .map(([contactId, entry]) => ({ contactId, reasons: reasonsOf(entry), credential: entry.credential }));
+  return advanced(state.record, state.stage, action, actor);
 }
 
 /** Η ΜΙΑ ταυτότητα γραμμής ανάθεσης (ακίνητο, είδος) — κλειδί της απόκρισης και της αισιόδοξης εμφάνισης. */

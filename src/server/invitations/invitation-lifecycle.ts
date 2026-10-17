@@ -53,36 +53,55 @@ const LIVE_INVITATION_SCAN_LIMIT = 20;
  */
 export async function writeInvitationWithSupersede(
   db: Firestore,
-  input: {
-    readonly collection: CollectionReference;
-    readonly invitation: InvitationRecordCore;
-    readonly liveQuery: Query;
-    readonly actorUid: string;
-    readonly nowValue: string;
-    readonly observe?: InvitationTxObserver;
-  },
+  input: InvitationSupersedeInput & { readonly observe?: InvitationTxObserver },
 ): Promise<number> {
   return db.runTransaction(async (tx: Transaction) => {
-    const live = await tx.get(input.liveQuery.limit(LIVE_INVITATION_SCAN_LIMIT));
-
-    // ⚠️ Η κατάσταση ξαναδιαβάζεται **fail-closed** και δεν εμπιστευόμαστε το `where`:
-    //    ένα έγγραφο με χαλασμένο `state` δεν πρέπει να μετρηθεί ως ζωντανό.
-    const stale = live.docs.filter(
-      (doc) => readStoredInvitationState((doc.data() as InvitationDocumentCore).state) === 'pending',
-    );
-
-    for (const doc of stale) {
-      tx.update(input.collection.doc(doc.id), {
-        state: 'revoked',
-        resolvedAt: input.nowValue,
-        resolvedByUid: input.actorUid,
-      });
-    }
-
-    tx.set(input.collection.doc(input.invitation.id), input.invitation);
+    const staged = await stageInvitationWithSupersede(tx, input);
+    staged.commit();
     input.observe?.(tx);
-    return stale.length;
+    return staged.supersededCount;
   });
+}
+
+export interface InvitationSupersedeInput {
+  readonly collection: CollectionReference;
+  readonly invitation: InvitationRecordCore;
+  readonly liveQuery: Query;
+  readonly actorUid: string;
+  readonly nowValue: string;
+}
+
+/**
+ * **Η ίδια έκδοση-με-supersede, ΜΕΣΑ σε συναλλαγή του καλούντα** (ADR-915 §28 Η-Β4): για είδος που πρέπει να γράψει
+ * **και** τη δική του κατάσταση ατομικά με την πρόσκληση (π.χ. «η ανάθεση θυμάται ποιο `invitationId` είναι το
+ * τρέχον»). Οι αναγνώσεις γίνονται **εδώ**· το `commit()` γράφει, και ο καλών το καλεί **μετά** από κάθε δική του
+ * ανάγνωση (το Firestore απαιτεί όλες τις αναγνώσεις πριν από κάθε γραφή).
+ */
+export async function stageInvitationWithSupersede(
+  tx: Transaction,
+  input: InvitationSupersedeInput,
+): Promise<{ readonly supersededCount: number; commit(): void }> {
+  const live = await tx.get(input.liveQuery.limit(LIVE_INVITATION_SCAN_LIMIT));
+
+  // ⚠️ Η κατάσταση ξαναδιαβάζεται **fail-closed** και δεν εμπιστευόμαστε το `where`:
+  //    ένα έγγραφο με χαλασμένο `state` δεν πρέπει να μετρηθεί ως ζωντανό.
+  const stale = live.docs.filter(
+    (doc) => readStoredInvitationState((doc.data() as InvitationDocumentCore).state) === 'pending',
+  );
+
+  return {
+    supersededCount: stale.length,
+    commit: () => {
+      for (const doc of stale) {
+        tx.update(input.collection.doc(doc.id), {
+          state: 'revoked',
+          resolvedAt: input.nowValue,
+          resolvedByUid: input.actorUid,
+        });
+      }
+      tx.set(input.collection.doc(input.invitation.id), input.invitation);
+    },
+  };
 }
 
 // =============================================================================

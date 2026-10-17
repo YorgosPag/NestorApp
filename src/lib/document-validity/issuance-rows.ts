@@ -24,11 +24,13 @@ import {
 import {
   issuanceKeyOf,
   issuanceStateOf,
-  rankIssuanceCandidates,
   type IssuanceAssignmentRecord,
+} from './issuance-assignment';
+import {
+  rankIssuanceCandidates,
   type IssuanceCandidate,
   type IssuanceRosterEntry,
-} from './issuance-assignment';
+} from './issuance-candidates';
 
 /** Η ανάθεση μιας γραμμής «Ανάθεσης» — τα **γεγονότα** ωμά· η οθόνη κρίνει με τον ίδιο πυρήνα (`issuanceStateOf`). */
 export interface RowIssuance {

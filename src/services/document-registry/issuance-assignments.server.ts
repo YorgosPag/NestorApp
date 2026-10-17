@@ -15,7 +15,7 @@
 
 import 'server-only';
 
-import type { Firestore } from 'firebase-admin/firestore';
+import type { DocumentReference, Firestore, Transaction } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { DocumentKind } from '@/config/document-validity/document-validity';
@@ -24,11 +24,16 @@ import {
   issuanceStateOf,
   reduceIssuance,
   visibleIssuanceStage,
+  withIssuanceDelivery,
   type IssuanceAction,
+  type IssuanceActor,
+  type IssuanceDelivery,
+  type IssuanceRefusalReason,
   type IssuanceAssignmentRecord,
-  type IssuanceRosterEntry,
   type IssuanceStage,
 } from '@/lib/document-validity/issuance-assignment';
+import type { IssuanceRosterEntry } from '@/lib/document-validity/issuance-candidates';
+import { isOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { createModuleLogger } from '@/lib/telemetry';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { DOCUMENT_REGISTRY_CAPS, type RegistryPropertyScope } from './document-registry.types';
@@ -48,9 +53,21 @@ export const ISSUANCE_ROSTER_CAP = DOCUMENT_REGISTRY_CAPS['issuance-assignments'
  * Το πεδίο του ιστορικού ανά είδος — `null` για είδη αρχής (δεν ανατίθενται). Τα ονόματα ζουν στο
  * `common-audit:audit.fields.*` και οι τιμές σταδίου στον κατάλογο `document-registry:issuance.stage`.
  */
-export const ISSUANCE_AUDIT_FIELDS: Readonly<Record<DocumentKind, { readonly stage: string; readonly professional: string } | null>> = {
-  'energy-certificate': { stage: 'energyCertificateIssuanceStage', professional: 'energyCertificateIssuer' },
-  'building-identity': { stage: 'buildingIdentityIssuanceStage', professional: 'buildingIdentityIssuer' },
+/** Τα πεδία του ιστορικού **ενός** είδους (ονόματα στο `common-audit:audit.fields.*`). */
+export interface IssuanceAuditFields {
+  readonly stage: string;
+  readonly professional: string;
+  /** §28 — σε ποιον υπεύθυνο στάλθηκε σύνδεσμος έγκρισης (επαφή + όνομα της στιγμής). */
+  readonly approvalRequest: string;
+}
+
+export const ISSUANCE_AUDIT_FIELDS: Readonly<Record<DocumentKind, IssuanceAuditFields | null>> = {
+  'energy-certificate': {
+    stage: 'energyCertificateIssuanceStage', professional: 'energyCertificateIssuer', approvalRequest: 'energyCertificateIssuanceApprovalRequest',
+  },
+  'building-identity': {
+    stage: 'buildingIdentityIssuanceStage', professional: 'buildingIdentityIssuer', approvalRequest: 'buildingIdentityIssuanceApprovalRequest',
+  },
   'tax-clearance': null,
   'insurance-clearance': null,
   'enfia-certificate': null,
@@ -79,16 +96,21 @@ export async function readIssuanceRoster(db: Firestore, companyId: string): Prom
   return { entries, truncated: snapshot.size >= ISSUANCE_ROSTER_CAP };
 }
 
+/**
+ * **Ποιος γράφει** (§28 Η-Β2). Το γραφείο φέρνει τη CAS «ό,τι είδε ο άνθρωπος» (`expectedStage`)· ο σύνδεσμος **δεν**
+ * φέρνει στάδιο — η CAS του είναι η **δέσμευση** στο τρέχον αίτημα, που την κρίνει ο μειωτής (`actor-refused`).
+ */
+export type IssuanceWriter =
+  | { readonly kind: 'office'; readonly uid: string; readonly name: string | null; readonly expectedStage: IssuanceStage | null }
+  | { readonly kind: 'link'; readonly invitationId: string; readonly name: string | null };
+
 export interface IssuanceWrite {
   readonly companyId: string;
-  readonly actorUid: string;
-  readonly actorName: string | null;
+  readonly writer: IssuanceWriter;
   readonly property: { readonly id: string; readonly scope: RegistryPropertyScope; readonly name: string | null };
   readonly documentKind: DocumentKind;
   /** Το νεότερο έγγραφο του είδους στο ακίνητο (`issuedOn`) — ολοκληρωμένη ανάθεση ≡ καμία. */
   readonly latestIssuedOn: string | null;
-  /** Το στάδιο που **είδε** ο άνθρωπος (`null` = καμία ενεργή ανάθεση) — η CAS. */
-  readonly expectedStage: IssuanceStage | null;
   readonly action: IssuanceAction;
   /** Ονόματα επαφών τη στιγμή της αλλαγής — ετικέτες του ιστορικού. */
   readonly names: Readonly<Record<string, string | null>>;
@@ -96,8 +118,8 @@ export interface IssuanceWrite {
 }
 
 export type IssuanceWriteOutcome =
-  | { readonly ok: true; readonly outcome: 'changed' | 'unchanged'; readonly stage: IssuanceStage }
-  | { readonly ok: false; readonly refusal: 'stale' | 'transition-refused' | 'unqualified' };
+  | { readonly ok: true; readonly outcome: 'changed' | 'unchanged'; readonly stage: IssuanceStage; readonly record: IssuanceAssignmentRecord }
+  | { readonly ok: false; readonly refusal: 'stale' | IssuanceRefusalReason };
 
 interface Transition {
   readonly previous: IssuanceAssignmentRecord | null;
@@ -106,31 +128,50 @@ interface Transition {
   readonly nextStage: IssuanceStage;
 }
 
-function auditChangesOf(fields: { readonly stage: string; readonly professional: string }, t: Transition, names: IssuanceWrite['names']) {
-  const changes = [{ field: fields.stage, oldValue: t.previousStage, newValue: t.nextStage }];
+interface AuditChange {
+  readonly field: string;
+  readonly oldValue: string | null;
+  readonly newValue: string | null;
+  readonly oldValueLabel?: string | null;
+  readonly newValueLabel?: string | null;
+}
+
+/** Μια αλλαγή επαφής στο ιστορικό — ταυτότητα + το όνομα **της στιγμής**. */
+function contactChange(field: string, before: string | null, after: string, names: IssuanceWrite['names']): AuditChange {
+  return { field, oldValue: before, newValue: after, oldValueLabel: before === null ? null : names[before] ?? null, newValueLabel: names[after] ?? null };
+}
+
+function auditChangesOf(fields: IssuanceAuditFields, t: Transition, names: IssuanceWrite['names']): AuditChange[] {
+  // Το στάδιο γράφεται **μόνο** όταν άλλαξε: ένα αίτημα έγκρισης αφήνει το `proposed` ίδιο — «proposed → proposed» είναι θόρυβος.
+  const changes: AuditChange[] = t.previousStage === t.nextStage ? [] : [{ field: fields.stage, oldValue: t.previousStage, newValue: t.nextStage }];
   const before = t.previous?.professionalContactId ?? null;
   const after = t.next.professionalContactId;
-  if (before === after) return changes;
-  return [...changes, {
-    field: fields.professional,
-    oldValue: before,
-    newValue: after,
-    oldValueLabel: before === null ? null : names[before] ?? null,
-    newValueLabel: names[after] ?? null,
-  }];
+  if (before !== after) changes.push(contactChange(fields.professional, before, after, names));
+  const request = t.next.approvalRequest;
+  if (request !== null && request.invitationId !== t.previous?.approvalRequest?.invitationId) {
+    changes.push(contactChange(fields.approvalRequest, t.previous?.approvalRequest?.ownerContactId ?? null, request.ownerContactId, names));
+  }
+  return changes;
+}
+
+/** Ποιος φαίνεται στο ιστορικό — ο άνθρωπος του γραφείου, ή ο σύνδεσμος (με το όνομα του αποδέκτη του). */
+function performerOf(writer: IssuanceWriter): string {
+  return writer.kind === 'office' ? writer.uid : `issuance-link:${writer.invitationId}`;
 }
 
 async function recordIssuanceAudit(write: IssuanceWrite, transition: Transition): Promise<void> {
   const fields = ISSUANCE_AUDIT_FIELDS[write.documentKind];
   if (fields === null) return;
+  const changes = auditChangesOf(fields, transition, write.names);
+  if (changes.length === 0) return;
   await EntityAuditService.recordChange({
     entityType: write.property.scope === 'property' ? 'property' : 'owner_property',
     entityId: write.property.id,
     entityName: write.property.name,
     action: 'updated',
-    changes: auditChangesOf(fields, transition, write.names),
-    performedBy: write.actorUid,
-    performedByName: write.actorName,
+    changes,
+    performedBy: performerOf(write.writer),
+    performedByName: write.writer.name,
     companyId: write.companyId,
   });
 }
@@ -147,25 +188,98 @@ function storedOf(write: IssuanceWrite, id: string, record: IssuanceAssignmentRe
   };
 }
 
+function assignmentRefOf(db: Firestore, companyId: string, propertyId: string, kind: DocumentKind): DocumentReference {
+  return assignmentsCollection(db).doc(issuanceAssignmentIdOf(companyId, propertyId, kind));
+}
+
+/** Η ανάθεση του μισθωτή μέσα στη συναλλαγή — ξένη ή χαλασμένη ≡ καμία. */
+async function readInTx(tx: Transaction, ref: DocumentReference, companyId: string): Promise<IssuanceAssignmentRecord | null> {
+  const stored = parseIssuanceAssignment((await tx.get(ref)).data());
+  return stored !== null && stored.companyId === companyId ? issuanceRecordOf(stored) : null;
+}
+
 /**
- * Εφαρμόζει **μία** πράξη στην ανάθεση (γραφείο, ακίνητο, είδος). Ανάγνωση, CAS, κρίση και εγγραφή στην **ίδια**
- * συναλλαγή· ίδια πρόταση ξανά ⇒ `unchanged`, κανένα ίχνος. Το ιστορικό γράφεται **μετά** την επιτυχία.
+ * Μια πράξη **έτοιμη να γραφτεί** μέσα σε συναλλαγή που ανήκει στον καλούντα (§28 Η-Β4): οι αναγνώσεις έγιναν, η κρίση
+ * έγινε· το `commit()` γράφει (καλείται **μετά** από κάθε άλλη ανάγνωση της συναλλαγής), το `audit()` **μετά** τη συναλλαγή.
+ */
+export interface StagedIssuanceWrite {
+  readonly outcome: IssuanceWriteOutcome;
+  commit(): void;
+  audit(): Promise<void>;
+}
+
+const NOTHING_TO_WRITE = { commit: (): void => undefined, audit: async (): Promise<void> => undefined };
+
+/** Η CAS του γραφείου — ο σύνδεσμος δεσμεύεται αλλού (στον μειωτή, στο τρέχον αίτημα). */
+function casHolds(writer: IssuanceWriter, previousStage: IssuanceStage | null): boolean {
+  return writer.kind === 'link' || previousStage === writer.expectedStage;
+}
+
+function actorOf(writer: IssuanceWriter, nowIso: string): IssuanceActor {
+  return writer.kind === 'office' ? { kind: 'office', uid: writer.uid, nowIso } : { kind: 'link', invitationId: writer.invitationId, nowIso };
+}
+
+/**
+ * **Η ΜΙΑ κρίση-και-γραφή** κάθε πράξης ανάθεσης: ανάγνωση → CAS → **ο ίδιος** μειωτής. Τη χρησιμοποιούν η πράξη του
+ * γραφείου, η αποστολή με σύνδεσμο (μαζί με την πρόσκληση, στην ίδια συναλλαγή) και η απάντηση από σύνδεσμο.
+ */
+export async function stageIssuanceAction(tx: Transaction, db: Firestore, write: IssuanceWrite): Promise<StagedIssuanceWrite> {
+  const ref = assignmentRefOf(db, write.companyId, write.property.id, write.documentKind);
+  const previous = await readInTx(tx, ref, write.companyId);
+  const previousStage = visibleIssuanceStage(issuanceStateOf(previous, write.latestIssuedOn));
+  if (!casHolds(write.writer, previousStage)) return { outcome: { ok: false, refusal: 'stale' }, ...NOTHING_TO_WRITE };
+  const reduced = reduceIssuance(write.documentKind, previous, write.latestIssuedOn, write.action, actorOf(write.writer, write.nowIso));
+  if (!reduced.ok) return { outcome: reduced, ...NOTHING_TO_WRITE };
+  // Το ΠΡΑΓΜΑΤΙΚΟ στάδιο (και κλειστό: `ownerRejected` · `cancelled`) — όχι το ορατό, που για κλειστό είναι `null`.
+  const nextStage = issuanceStageOf(reduced.record);
+  const outcome: IssuanceWriteOutcome = { ok: true, outcome: reduced.changed ? 'changed' : 'unchanged', stage: nextStage, record: reduced.record };
+  if (!reduced.changed) return { outcome, ...NOTHING_TO_WRITE };
+  const transition: Transition = { previous, next: reduced.record, previousStage, nextStage };
+  return {
+    outcome,
+    commit: () => { tx.set(ref, storedOf(write, ref.id, reduced.record)); },
+    audit: () => recordIssuanceAudit(write, transition),
+  };
+}
+
+/**
+ * Εφαρμόζει **μία** πράξη στην ανάθεση (γραφείο, ακίνητο, είδος), σε δική της συναλλαγή· ίδια πρόταση ξανά ⇒
+ * `unchanged`, κανένα ίχνος. Το ιστορικό γράφεται **μετά** την επιτυχία.
  */
 export async function writeIssuanceAction(db: Firestore, write: IssuanceWrite): Promise<IssuanceWriteOutcome> {
-  const ref = assignmentsCollection(db).doc(issuanceAssignmentIdOf(write.companyId, write.property.id, write.documentKind));
-  const result = await db.runTransaction(async (tx) => {
-    const stored = parseIssuanceAssignment((await tx.get(ref)).data());
-    const previous = stored !== null && stored.companyId === write.companyId ? issuanceRecordOf(stored) : null;
-    const previousStage = visibleIssuanceStage(issuanceStateOf(previous, write.latestIssuedOn));
-    if (previousStage !== write.expectedStage) return { ok: false as const, refusal: 'stale' as const };
-    const reduced = reduceIssuance(write.documentKind, previous, write.latestIssuedOn, write.action, { uid: write.actorUid, nowIso: write.nowIso });
-    if (!reduced.ok) return reduced;
-    // Το ΠΡΑΓΜΑΤΙΚΟ στάδιο (και κλειστό: `ownerRejected` · `cancelled`) — όχι το ορατό, που για κλειστό είναι `null`.
-    const nextStage = issuanceStageOf(reduced.record);
-    if (reduced.changed) tx.set(ref, storedOf(write, ref.id, reduced.record));
-    return { ok: true as const, changed: reduced.changed, transition: { previous, next: reduced.record, previousStage, nextStage } };
+  const staged = await db.runTransaction(async (tx) => {
+    const next = await stageIssuanceAction(tx, db, write);
+    next.commit();
+    return next;
   });
-  if (!result.ok) return result;
-  if (result.changed) await recordIssuanceAudit(write, result.transition);
-  return { ok: true, outcome: result.changed ? 'changed' : 'unchanged', stage: result.transition.nextStage };
+  await staged.audit();
+  return staged.outcome;
+}
+
+/**
+ * **Η παράδοση ενός μηνύματος** (§28 Η-Β9) — στο μήνυμα που τη γέννησε και μόνο (`withIssuanceDelivery`). Τηλεμετρία:
+ * δεν αλλάζει στάδιο, δεν γράφει ιστορικό, **δεν πετά** (η πράξη έχει ήδη γίνει).
+ */
+export async function recordIssuanceDelivery(
+  db: Firestore,
+  target: { readonly companyId: string; readonly propertyId: string; readonly documentKind: DocumentKind; readonly invitationId: string },
+  delivery: IssuanceDelivery,
+): Promise<boolean> {
+  const ref = assignmentRefOf(db, target.companyId, target.propertyId, target.documentKind);
+  try {
+    return await db.runTransaction(async (tx) => {
+      const stored = parseIssuanceAssignment((await tx.get(ref)).data());
+      if (stored === null || !isOwnedByCompany(stored, target.companyId)) return false;
+      const next = withIssuanceDelivery(issuanceRecordOf(stored), target.invitationId, delivery);
+      if (next === null) return false;
+      tx.set(ref, { ...stored, ...next });
+      return true;
+    });
+  } catch (error) {
+    logger.warn('Η παράδοση του μηνύματος ανάθεσης δεν καταγράφηκε', {
+      invitationId: target.invitationId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
 }

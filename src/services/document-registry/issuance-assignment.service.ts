@@ -38,7 +38,7 @@ export interface IssuanceRequester {
  * - `unavailable`         — ο κατάλογος αναθέσεων δεν διαβάστηκε τώρα
  * - `contact-unavailable` — ο επαγγελματίας δεν είναι επαφή του γραφείου
  * - `lead-undesignated` · `lead-changed` — η απόφαση δεν έχει (πια) τον ίδιο υπεύθυνο
- * - `stale` · `transition-refused` · `unqualified` — από τον γραφέα / τον μειωτή
+ * - `stale` · `transition-refused` · `unqualified` · `actor-refused` — από τον γραφέα / τον μειωτή
  */
 export type IssuanceRefusal =
   | 'absent' | 'unavailable' | 'contact-unavailable' | 'lead-undesignated' | 'lead-changed'
@@ -55,9 +55,22 @@ const refused = (refusal: IssuanceRefusal): Refused => ({ ok: false, refusal });
  */
 function leadRefusalOf(body: IssuanceAssignmentBody, registry: DocumentRegistryResponse): Refused | null {
   if (body.action !== 'decide') return null;
-  const lead = registry.properties[body.propertyId]?.obligorLead ?? null;
-  if (lead === null || lead.kind !== 'designated') return refused('lead-undesignated');
-  return lead.contactId === body.expectedOwnerContactId ? null : refused('lead-changed');
+  const refusal = leadRefusalFor(registry, body.propertyId, body.expectedOwnerContactId);
+  return refusal === null ? null : refused(refusal);
+}
+
+/**
+ * **Ο ΕΝΑΣ κριτής του υπευθύνου** (§26 · §27 Η4 · §28): υπάρχει ρητός/παραγόμενος υπεύθυνος, **και** είναι αυτός που είδε
+ * ο άνθρωπος. Τον μοιράζονται η καταγραφή απόφασης και η αποστολή συνδέσμου έγκρισης — ποτέ δύο ορισμοί του «ποιος».
+ */
+export function leadRefusalFor(
+  registry: DocumentRegistryResponse,
+  propertyId: string,
+  expectedOwnerContactId: string | null,
+): 'lead-undesignated' | 'lead-changed' | null {
+  const lead = registry.properties[propertyId]?.obligorLead ?? null;
+  if (lead === null || lead.kind !== 'designated') return 'lead-undesignated';
+  return lead.contactId === expectedOwnerContactId ? null : 'lead-changed';
 }
 
 /** Ονόματα για το ιστορικό: όσα ξέρει το μητρώο + ο νέος επαγγελματίας (ελεγμένος ως επαφή του μισθωτή). */
@@ -81,12 +94,10 @@ export async function actOnIssuanceAssignment(db: Firestore, actor: IssuanceRequ
   if (names === null) return refused('contact-unavailable');
   return writeIssuanceAction(db, {
     companyId: actor.companyId,
-    actorUid: actor.uid,
-    actorName: actor.name,
+    writer: { kind: 'office', uid: actor.uid, name: actor.name, expectedStage: body.expectedStage },
     property: { id: body.propertyId, scope: label.scope, name: label.name },
     documentKind: body.documentKind,
     latestIssuedOn: issuance.latestIssuedOn,
-    expectedStage: body.expectedStage,
     action: issuanceActionOf(body),
     names,
     nowIso: now.toISOString(),

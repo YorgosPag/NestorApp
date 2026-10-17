@@ -77,21 +77,39 @@ const SMALL = `font-size:13px;color:${BRAND.grayLight};line-height:1.6;`;
 const stripTags = (html: string): string => html.replace(/<[^>]+>/g, '');
 
 /** **Το email της πρόσκλησης** — HTML + απλό κείμενο στην **ίδια** σειρά. */
+/** Επικεφαλίδα · εισαγωγή · στοιχεία — η κοινή αρχή **κάθε** μηνύματος αυτού του σκελετού, στη σειρά ασφαλείας. */
+function leadHtml(content: Pick<InvitationEmailContent, 'heading' | 'intro' | 'details'>): string {
+  return `<h2 style="margin:0 0 12px;font-size:20px;color:${BRAND.navyDark};">${escapeHtml(content.heading)}</h2>`
+    + `<p style="margin:0 0 12px;${PARAGRAPH}">${content.intro.html}</p>`
+    + content.details.map((line, i, all) => `<p style="margin:0 0 ${i === all.length - 1 ? 8 : 4}px;${PARAGRAPH}">${line.html}</p>`).join('');
+}
+
+function leadText(content: Pick<InvitationEmailContent, 'heading' | 'intro' | 'details'>): string[] {
+  return [content.heading, '', content.intro.text, ...content.details.map((line) => line.text), ''];
+}
+
 export function composeInvitationEmail(content: InvitationEmailContent): ConfirmationEmailResult {
   const { core } = content;
   const bound = core.boundToAddress(`<strong>${escapeHtml(core.onlyWord)}</strong>`);
   const contentHtml =
     `<div style="margin:0 0 24px;">`
-    + `<h2 style="margin:0 0 12px;font-size:20px;color:${BRAND.navyDark};">${escapeHtml(content.heading)}</h2>`
-    + `<p style="margin:0 0 12px;${PARAGRAPH}">${content.intro.html}</p>`
-    + content.details.map((line, i, all) => `<p style="margin:0 0 ${i === all.length - 1 ? 8 : 4}px;${PARAGRAPH}">${line.html}</p>`).join('')
+    + leadHtml(content)
     + renderShareCta(content.link, core.cta)
     + `<p style="margin:16px 0 0;${SMALL}">${bound}</p>`
     + `<p style="margin:8px 0 0;${SMALL}">${escapeHtml(core.footnote)}</p>`
     + `</div>`;
   const text = [
-    content.heading, '', content.intro.text, ...content.details.map((line) => line.text), '',
-    `${core.cta}: ${content.link}`, '', stripTags(core.boundToAddress(core.onlyWord)), core.footnote,
+    ...leadText(content), `${core.cta}: ${content.link}`, '', stripTags(core.boundToAddress(core.onlyWord)), core.footnote,
   ].join('\n');
+  return { subject: brandedSubject(content.subject), html: wrapInAppFrame(contentHtml, content.language), text };
+}
+
+/**
+ * **Ενημέρωση χωρίς πράξη** (ADR-915 §28 Η-Β8) — ίδιος σκελετός και σειρά, **χωρίς** κουμπί και χωρίς σύνδεσμο: ο
+ * παραλήπτης μαθαίνει, δεν αποφασίζει. Η υποσημείωση λέει **γιατί** το λαμβάνει (διαφάνεια, GDPR άρθρο 14).
+ */
+export function composeNoticeEmail(content: Omit<InvitationEmailContent, 'link' | 'core'> & { readonly footnote: string }): ConfirmationEmailResult {
+  const contentHtml = `<div style="margin:0 0 24px;">${leadHtml(content)}<p style="margin:16px 0 0;${SMALL}">${escapeHtml(content.footnote)}</p></div>`;
+  const text = [...leadText(content), content.footnote].join('\n');
   return { subject: brandedSubject(content.subject), html: wrapInAppFrame(contentHtml, content.language), text };
 }
