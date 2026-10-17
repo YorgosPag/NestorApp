@@ -1,0 +1,71 @@
+{
+  "page": {
+    "loading": "Loading the request…",
+    "for": "For: {name}",
+    "notYou": "If this is not you, do not answer — let the office know.",
+    "noteLabel": "Comment to the office (optional)",
+    "recordedOnly": "Your answer is recorded and the office is informed. No account is created and nothing is signed on your behalf.",
+    "sending": "Recording…"
+  },
+  "owner": {
+    "heading": "Your decision is needed",
+    "intro": "The office proposes a professional to issue the document. The decision is yours, as the owner responsible for the property’s documents.",
+    "approve": "I approve",
+    "reject": "I do not approve"
+  },
+  "professional": {
+    "heading": "Document issuance request",
+    "intro": "The office, with the owner’s approval, asks you to issue the document. Tell us whether you take it on.",
+    "accept": "I accept",
+    "decline": "I decline"
+  },
+  "facts": {
+    "office": "Office",
+    "property": "Property",
+    "document": "Document",
+    "professional": "Professional",
+    "credential": "Qualification (as declared by the office)",
+    "credentialWithNumber": "{qualification} · registry no. {number}",
+    "verifyRegistry": "Check the registry",
+    "note": "Note from the office",
+    "expires": "The link expires on",
+    "unnamed": "—"
+  },
+  "done": {
+    "approved": "We recorded your approval.",
+    "rejected": "We recorded that you do not approve.",
+    "accepted": "We recorded that you accept.",
+    "declined": "We recorded that you decline.",
+    "officeTold": "The office has been informed. You can close this page."
+  },
+  "failure": {
+    "invalid": {
+      "title": "This link is not recognised",
+      "body": "Open the link exactly as it arrived in your email, or ask the office for a new one."
+    },
+    "missing": {
+      "title": "The link is missing",
+      "body": "This page only opens from the link in your email."
+    },
+    "expired": {
+      "title": "The link has expired",
+      "body": "Links are valid for 7 days. Ask the office to send it again."
+    },
+    "used": {
+      "title": "You have already answered",
+      "body": "Your answer has been recorded. To change it, contact the office."
+    },
+    "superseded": {
+      "title": "This link is no longer valid",
+      "body": "The request changed in the meantime (a new send, a new proposal or an answer that was recorded). If it still concerns you, you will receive a new message."
+    },
+    "leadChanged": {
+      "title": "The responsible owner has changed",
+      "body": "Another owner now holds the decision. The office will send them a new message."
+    },
+    "server": {
+      "title": "Something went wrong",
+      "body": "Nothing was recorded. Please try again shortly."
+    }
+  }
+}

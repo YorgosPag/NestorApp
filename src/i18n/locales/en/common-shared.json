@@ -973,5 +973,13 @@
     "title": "Unsaved changes",
     "body": "Do you want to save your changes before leaving?",
     "save": "Save"
+  },
+  "documentIssuanceAnswered": {
+    "approved": "Assignment approved — «{title}»",
+    "rejected": "Assignment not approved — «{title}»",
+    "accepted": "The professional accepted — «{title}»",
+    "declined": "The professional declined — «{title}»",
+    "body": "Answer from {name} through the link. Open «Document expiry» for the next step.",
+    "bodyUnnamed": "Answer through the link. Open «Document expiry» for the next step."
   }
 }

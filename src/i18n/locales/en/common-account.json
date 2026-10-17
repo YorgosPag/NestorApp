@@ -164,7 +164,8 @@
           "documentExpiryAlerts": "Office documents that are expiring, expired or missing",
           "caseDocumentTransmitted": "New documents from lawyers and the notary in my conveyance cases",
           "caseDocumentRequests": "Document requests waiting on me in my conveyance cases",
-          "ownershipVerificationDecided": "My ownership verification was decided"
+          "ownershipVerificationDecided": "My ownership verification was decided",
+          "documentIssuanceAnswers": "Owner and professional answers to document issuance assignments"
         },
         "tasks": {
           "title": "Tasks",

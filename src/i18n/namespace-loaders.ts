@@ -131,6 +131,7 @@ function getElLoader(namespace: Namespace): NamespaceLoader | null {
     case 'org-structure': return () => import('./locales/el/org-structure.json');
     case 'quotes': return () => import('./locales/el/quotes.json');
     case 'vendor-portal': return () => import('./locales/el/vendor-portal.json');
+    case 'document-request': return () => import('./locales/el/document-request.json');
     case 'onboarding': return () => import('./locales/el/onboarding.json');
     case 'settings': return () => import('./locales/el/settings.json');
     case 'textToolbar': return () => import('./locales/el/textToolbar.json');
@@ -266,6 +267,7 @@ function getEnLoader(namespace: Namespace): NamespaceLoader | null {
     case 'org-structure': return () => import('./locales/en/org-structure.json');
     case 'quotes': return () => import('./locales/en/quotes.json');
     case 'vendor-portal': return () => import('./locales/en/vendor-portal.json');
+    case 'document-request': return () => import('./locales/en/document-request.json');
     case 'onboarding': return () => import('./locales/en/onboarding.json');
     case 'settings': return () => import('./locales/en/settings.json');
     case 'textToolbar': return () => import('./locales/en/textToolbar.json');

@@ -276,7 +276,43 @@
       "leadUndesignated": "No responsible owner is designated — designate one first.",
       "leadChanged": "The responsible owner changed in the meantime. Review and record again.",
       "stale": "The assignment changed in the meantime — see its current state.",
-      "transitionRefused": "This action is not allowed at this stage of the assignment."
+      "transitionRefused": "This action is not allowed at this stage of the assignment.",
+      "actorRefused": "The action was not accepted — please start again.",
+      "noEmail": "The recipient has no email in their contact. Add one, or record the answer manually.",
+      "coOwnerUnknown": "One of the selected co-owners can no longer be informed. Reopen the dialog.",
+      "linksUnavailable": "Links are unavailable right now — nothing was sent."
+    },
+    "send": {
+      "ownerTrigger": "Send for approval",
+      "ownerResend": "Resend for approval",
+      "professionalTrigger": "Send to the professional",
+      "professionalResend": "Resend to the professional",
+      "ownerTitle": "Send for approval to the responsible owner",
+      "professionalTitle": "Send the assignment to the professional",
+      "ownerDescription": "{name} will receive an email with a personal link to approve or reject, without an account. The link expires in 7 days.",
+      "professionalDescription": "{name} will receive an email with a personal link to accept or decline, without an account. The link expires in 7 days.",
+      "noteLabel": "Note in the message (optional)",
+      "coOwnersLegend": "Inform co-owners (a separate message to each, without a decision link)",
+      "noEmail": "no email",
+      "previewHeading": "Preview",
+      "to": "To: {name} <{email}>",
+      "coOwnerPreview": "The message to the co-owners",
+      "loading": "Preparing the preview…",
+      "never": "Nothing is sent until you press “Send”. The personal link is added at the moment of sending; if you resend, the previous one stops working.",
+      "submit": "Send",
+      "sending": "Sending…",
+      "sent": "The message was accepted for sending.",
+      "notDelivered": "The send was recorded, but the email did not go out. Resend, or record the answer manually."
+    },
+    "history": {
+      "requestedApproval": "Sent for approval to {name} on {date}",
+      "informed": "{count, plural, one {# co-owner informed} other {# co-owners informed}}",
+      "notDelivered": "The email did not go out — resend.",
+      "decidedByLink": "{name} decided through the link on {date}",
+      "noticedByLink": "Sent to the professional with a link on {date}",
+      "acceptedByLink": "The professional accepted through the link on {date}",
+      "declinedByLink": "The professional declined through the link on {date}",
+      "responseNote": "Comment: “{note}”"
     }
   }
 }

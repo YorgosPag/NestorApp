@@ -151,6 +151,7 @@ export const SUPPORTED_NAMESPACES = [
   'org-structure',          // 🏢 Tenant organisation structure / departments / routing (ADR-326)
   'quotes',                 // 🏢 Quotes & RFQ management (ADR-327)
   'vendor-portal',          // 🏢 Public vendor portal (ADR-327 §7)
+  'document-request',       // ✉️ Σύνδεσμος ανάθεσης έκδοσης χωρίς λογαριασμό (ADR-915 §28)
   'onboarding',             // 🏢 New tenant onboarding wizard (ADR-326 Phase 8)
   'settings',               // 🏢 App settings pages (shortcuts, etc.)
   'textToolbar',            // 🏢 DXF text toolbar / Properties panel (ADR-344)

@@ -661,7 +661,9 @@
       "energyCertificateIssuanceStage": "EPC issuance assignment — stage",
       "energyCertificateIssuer": "EPC issuance assignment — professional",
       "buildingIdentityIssuanceStage": "Building identity assignment — stage",
-      "buildingIdentityIssuer": "Building identity assignment — professional"
+      "buildingIdentityIssuer": "Building identity assignment — professional",
+      "energyCertificateIssuanceApprovalRequest": "Energy certificate issuance — approval requested from",
+      "buildingIdentityIssuanceApprovalRequest": "Building identity issuance — approval requested from"
     },
     "retiredFieldNotice": "This field no longer exists in the registry — showing the name recorded at the time of the change."
   }
