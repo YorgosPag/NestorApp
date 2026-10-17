@@ -8,6 +8,7 @@
 
 import { documentRegistry, type RegistryDocument } from '@/lib/document-validity/document-registry';
 import type { DocumentRequirement } from '@/lib/document-validity/document-requirement';
+import type { ObligorLead } from '@/lib/document-validity/obligor-lead';
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
 
 export const FIXTURE_AS_OF = '2026-10-15';
@@ -71,21 +72,30 @@ export const FIXTURE_REQUIREMENTS: readonly DocumentRequirement[] = [
 /** Συνθετικός δήμος (μορφή ADR-883) για το «Βρες επαγγελματία» της γραμμής p1. */
 export const FIXTURE_AREA_ID = 'municipality:0501';
 
+/** ADR-915 §26 — ένας ιδιοκτήτης ⇒ αυτός ο υπεύθυνος. */
+export function sole(contactId: string): ObligorLead {
+  return { kind: 'designated', contactId, basis: 'sole', sharePct: null, staleContactId: null };
+}
+
+const NO_LEAD = { obligorLead: null, ownerShares: {} } as const;
+
 const NAMES: Pick<DocumentRegistryResponse, 'properties' | 'files' | 'people'> = {
   properties: {
     // ADR-915 §24 — μόνο το p1 έχει αποδεδειγμένο δήμο: το κενό p6 δείχνει τον κατάλογο ΧΩΡΙΣ περιοχή.
-    p1: { name: 'Συνθετικό Α1', scope: 'property', areaId: FIXTURE_AREA_ID, ownerContactIds: ['cont_alpha'] },
+    p1: { name: 'Συνθετικό Α1', scope: 'property', areaId: FIXTURE_AREA_ID, ownerContactIds: ['cont_alpha'], obligorLead: sole('cont_alpha'), ownerShares: {} },
     // ADR-915 §25 — p2: ρωτήθηκε, κανείς · p3/p4/p5: δεν ρωτήθηκε (μόνο ο ρόλος).
-    p2: { name: 'Συνθετικό Β2', scope: 'property', areaId: null, ownerContactIds: [] },
-    p3: { name: null, scope: 'property', areaId: null, ownerContactIds: null },
-    p4: { name: 'Συνθετικό Δ4', scope: 'property', areaId: null, ownerContactIds: null },
-    p5: { name: 'Συνθετικό Ε5', scope: 'property', areaId: null, ownerContactIds: null },
+    p2: { name: 'Συνθετικό Β2', scope: 'property', areaId: null, ownerContactIds: [], ...NO_LEAD },
+    p3: { name: null, scope: 'property', areaId: null, ownerContactIds: null, ...NO_LEAD },
+    p4: { name: 'Συνθετικό Δ4', scope: 'property', areaId: null, ownerContactIds: null, ...NO_LEAD },
+    p5: { name: 'Συνθετικό Ε5', scope: 'property', areaId: null, ownerContactIds: null, ...NO_LEAD },
     // p6: πέντε ιδιοκτήτες — μη διαθέσιμη επαφή · χωρίς όνομα · με όνομα, και «+2 ακόμη».
     p6: {
       name: 'Συνθετικό Ζ6', scope: 'property', areaId: null,
       ownerContactIds: ['cont_gone', 'cont_unnamed', 'cont_alpha', 'cont_gamma', 'cont_delta'],
+      // ADR-915 §26 — κανένα μερίδιο, κανένας κύριος πωλητής ⇒ κανείς υπεύθυνος (ποτέ «ο πρώτος της λίστας»).
+      obligorLead: { kind: 'undesignated', reason: 'unknown-shares', staleContactId: null }, ownerShares: {},
     },
-    ownp_7: { name: 'Συνθετική εντολή Η7', scope: 'owner-property', areaId: null, ownerContactIds: ['cont_client'] },
+    ownp_7: { name: 'Συνθετική εντολή Η7', scope: 'owner-property', areaId: null, ownerContactIds: ['cont_client'], obligorLead: sole('cont_client'), ownerShares: {} },
   },
   files: {
     'f-expired': { name: 'synthetic-expired.pdf' }, 'f-expiring': { name: 'synthetic-expiring.pdf' }, 'f-soon': { name: 'synthetic-soon.pdf' },

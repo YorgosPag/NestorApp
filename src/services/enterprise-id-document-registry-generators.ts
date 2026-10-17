@@ -1,0 +1,26 @@
+/**
+ * ENTERPRISE ID — ΟΙ ΤΑΥΤΟΤΗΤΕΣ ΤΟΥ ΜΗΤΡΩΟΥ ΛΗΞΕΩΝ ΕΓΓΡΑΦΩΝ (ADR-915)
+ *
+ * Νέος κρίκος της αλυσίδας (βλ. `enterprise-id-composite-key-generators.ts`) — όχι γραμμή στο
+ * `enterprise-id-class.ts`, που βρίσκεται **ακριβώς** στο όριο των 500 γραμμών (N.7.1): **διάσπαση ανά
+ * τομέα, όχι κόψιμο**, όπως κάθε προηγούμενος κρίκος.
+ *
+ * ⚠️ Η μηχανή (`mintDeterministicV4Id`) μένει στην `EnterpriseIdService`· εδώ μόνο **ονοματοδοσία**.
+ *
+ * @module services/enterprise-id-document-registry-generators
+ */
+
+import { ENTERPRISE_ID_PREFIXES } from './enterprise-id-prefixes';
+import { AreaMarketIdGenerators } from './enterprise-id-area-market-generators';
+
+const P = ENTERPRISE_ID_PREFIXES;
+
+export abstract class DocumentRegistryIdGenerators extends AreaMarketIdGenerators {
+  /**
+   * ADR-915 §26 — **ΕΝΑΣ** ρητός υπεύθυνος ανά (γραφείο, ακίνητο): ορισμός = `set`, επαναφορά = `delete`, πάντα το
+   * **ίδιο** έγγραφο — ιδεμποτές από κατασκευή, και κανένα ερώτημα για να βρεθεί.
+   */
+  generateDeterministicDocumentObligorDesignationId(seed: string): string {
+    return this.mintDeterministicV4Id(P.DOCUMENT_OBLIGOR_DESIGNATION, seed);
+  }
+}

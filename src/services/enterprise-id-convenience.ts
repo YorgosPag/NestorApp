@@ -150,6 +150,8 @@ export const generateDeterministicConveyanceDocumentRequestId = (seed: string) =
   enterpriseIdService.generateDeterministicConveyanceDocumentRequestId(seed);
 export const generateDeterministicConveyanceViewSignalId = (seed: string) =>
   enterpriseIdService.generateDeterministicConveyanceViewSignalId(seed);
+export const generateDeterministicDocumentObligorDesignationId = (seed: string) =>
+  enterpriseIdService.generateDeterministicDocumentObligorDesignationId(seed);
 export const generatePipelineQueueId = () => enterpriseIdService.generatePipelineQueueId();
 export const generateVoiceCommandId = () => enterpriseIdService.generateVoiceCommandId();
 export const generateBrokerageId = () => enterpriseIdService.generateBrokerageId();

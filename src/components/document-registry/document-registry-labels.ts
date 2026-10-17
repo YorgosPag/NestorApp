@@ -33,6 +33,7 @@ import type { ProfessionalLicence } from '@/config/professional-licences';
 import type { DocumentKind } from '@/config/document-validity/document-validity';
 import type { ExpirySource } from '@/lib/document-validity/document-expiry';
 import type { RegistryRowState } from '@/lib/document-validity/document-registry';
+import type { ObligorLeadBasis, ObligorUndesignatedReason } from '@/lib/document-validity/obligor-lead';
 import type { RegistryPickerView } from '@/lib/document-validity/document-registry-view';
 import type {
   DependentImpact,
@@ -205,6 +206,60 @@ export const OBLIGOR_LABEL_KEYS: Readonly<Record<DocumentObligor, string>> = {
 /** «Τον ορίζει …» — πλήρης πρόταση ανά υπόχρεο (ποτέ συναρμολόγηση άρθρου/πτώσης από κομμάτια). */
 export const APPOINTED_BY_LABEL_KEYS: Readonly<Record<DocumentObligor, string>> = {
   owner: `${K}issuer.appointedBy.owner`,
+};
+
+/** ADR-915 §26 — ο ΕΝΑΣ υπεύθυνος των εγγράφων ακινήτου με πολλούς ιδιοκτήτες (`obligor-lead.ts`). */
+export const LEAD_KEYS = {
+  role: `${K}issuer.lead.role`,
+  stale: `${K}issuer.lead.stale`,
+  coOwners: `${K}issuer.lead.coOwners`,
+  coOwnersHeading: `${K}issuer.lead.coOwnersHeading`,
+  onePerProperty: `${K}issuer.lead.onePerProperty`,
+  onePerPropertyUndesignated: `${K}issuer.lead.onePerPropertyUndesignated`,
+  saving: `${K}issuer.lead.saving`,
+} as const;
+
+/** Γιατί αυτός — δεμένο στο κλειστό σύνολο `OBLIGOR_LEAD_BASES`. */
+export const LEAD_BASIS_KEYS: Readonly<Record<ObligorLeadBasis, string>> = {
+  explicit: `${K}issuer.lead.basis.explicit`,
+  sole: `${K}issuer.lead.basis.sole`,
+  'majority-share': `${K}issuer.lead.basis.majority-share`,
+  'contract-principal': `${K}issuer.lead.basis.contract-principal`,
+};
+
+/** Γιατί κανείς — δεμένο στο κλειστό σύνολο `OBLIGOR_UNDESIGNATED_REASONS`. */
+export const LEAD_UNDESIGNATED_KEYS: Readonly<Record<ObligorUndesignatedReason, string>> = {
+  'no-majority': `${K}issuer.lead.undesignated.no-majority`,
+  'unknown-shares': `${K}issuer.lead.undesignated.unknown-shares`,
+};
+
+/** ADR-915 §26 — ο διάλογος «Ορισμός υπευθύνου». */
+export const LEAD_PICKER_KEYS = {
+  set: `${K}leadPicker.set`,
+  change: `${K}leadPicker.change`,
+  title: `${K}leadPicker.title`,
+  description: `${K}leadPicker.description`,
+  legend: `${K}leadPicker.legend`,
+  automatic: `${K}leadPicker.automatic`,
+  automaticHint: `${K}leadPicker.automaticHint`,
+  share: `${K}leadPicker.share`,
+  cancel: `${K}leadPicker.cancel`,
+  save: `${K}leadPicker.save`,
+  saving: `${K}leadPicker.saving`,
+} as const;
+
+/**
+ * Άρνηση του διακομιστή → μήνυμα (`REFUSAL_STATUS` του route). Άγνωστος κωδικός / δίκτυο ⇒ `failed`.
+ * ⚠️ Τα κλειδιά-κωδικοί είναι ίδιοι με του route — η ισότητα κλειδώνεται με άγκυρα στο test.
+ */
+export const LEAD_PICKER_REFUSAL_CODES = ['NOT_AN_OWNER', 'OWNERS_UNKNOWN', 'NOT_FOUND'] as const;
+export type LeadPickerRefusalCode = (typeof LEAD_PICKER_REFUSAL_CODES)[number];
+
+export const LEAD_PICKER_ERROR_KEYS: Readonly<Record<LeadPickerRefusalCode | 'failed', string>> = {
+  failed: `${K}leadPicker.error.failed`,
+  NOT_AN_OWNER: `${K}leadPicker.error.notAnOwner`,
+  OWNERS_UNKNOWN: `${K}leadPicker.error.ownersUnknown`,
+  NOT_FOUND: `${K}leadPicker.error.notFound`,
 };
 
 /** ADR-915 §24 — «Επόμενο βήμα»: ενέργειες που παράγονται από τον εκδότη (`document-next-step.ts`). */

@@ -45,7 +45,7 @@ import {
 import { readRegistryFiles, registryDocumentsOf, type RegistryFile } from './registry-documents.server';
 import { listingRequirementsOf, readAgencyListings, readListingsById } from './registry-listings.server';
 import { readOfficeOwnerProperties } from './registry-owner-properties.server';
-import { readRegistryOwners } from './registry-owners.server';
+import { readRegistryOwners, type RegistryOwners } from './registry-owners.server';
 import { readRegistryPropertyAreas } from './registry-property-area.server';
 import { readCompanyProperties, readDeclaredCertificateProperties, type RegistryProperty } from './registry-properties.server';
 import { openCaseRequirements, readOpenCases } from './registry-requirements.server';
@@ -126,10 +126,15 @@ function fileLabelsOf(files: readonly RegistryFile[]): Record<string, RegistryLa
 function propertyLabelsOf(
   subjects: ReadonlyMap<string, RegistryProperty>,
   areas: ReadonlyMap<string, string | null>,
-  owners: ReadonlyMap<string, readonly string[]>,
+  owners: Pick<RegistryOwners, 'owners' | 'leads' | 'shares'>,
 ): Record<string, RegistryPropertyLabel> {
   return Object.fromEntries([...subjects.values()].map((p) => [p.id, {
-    name: p.name, scope: p.scope, areaId: areas.get(p.id) ?? null, ownerContactIds: owners.get(p.id) ?? null,
+    name: p.name,
+    scope: p.scope,
+    areaId: areas.get(p.id) ?? null,
+    ownerContactIds: owners.owners.get(p.id) ?? null,
+    obligorLead: owners.leads.get(p.id) ?? null,
+    ownerShares: owners.shares.get(p.id) ?? {},
   }]));
 }
 
@@ -188,7 +193,7 @@ export async function readDocumentRegistry(db: AdminFirestore, companyId: string
     truncated: sources.truncatedSources.length > 0,
     truncatedSources: sources.truncatedSources,
     unscopedListings: listings.unscoped,
-    properties: propertyLabelsOf(subjects, areas, owners.owners),
+    properties: propertyLabelsOf(subjects, areas, owners),
     files: fileLabelsOf(sources.files),
     people: owners.people,
   };

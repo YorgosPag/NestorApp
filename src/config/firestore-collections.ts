@@ -973,6 +973,9 @@ export const COLLECTIONS = {
   // ADR-915 Φ5α — ημερολόγιο ακμών του μητρώου λήξεων: τι ΕΧΕΙ ΗΔΗ ειπωθεί ανά γραμμή. Κλειδί `companyId`·
   // ένας γραφέας (η σάρωση), deny-all και στις δύο πλευρές — ο πελάτης δεν έχει τίποτα να δει ή να πει εδώ.
   DOCUMENT_EXPIRY_ALERT_LEDGERS: process.env.NEXT_PUBLIC_DOCUMENT_EXPIRY_ALERT_LEDGERS_COLLECTION || 'document_expiry_alert_ledgers',
+  // ADR-915 §26 — ο ΡΗΤΟΣ υπεύθυνος (επαφή) των εγγράφων ακινήτου με πολλούς ιδιοκτήτες: ΕΝΑ έγγραφο ανά (γραφείο,
+  // ακίνητο), ντετερμινιστικό. Χωριστό δοχείο, όχι πεδίο του ακινήτου (θα πυροδοτούσε το CDC, ADR-905)· deny-all, μόνο server.
+  DOCUMENT_OBLIGOR_DESIGNATIONS: process.env.NEXT_PUBLIC_DOCUMENT_OBLIGOR_DESIGNATIONS_COLLECTION || 'document_obligor_designations',
   BROKERAGE_AGREEMENTS: process.env.NEXT_PUBLIC_BROKERAGE_AGREEMENTS_COLLECTION || 'brokerage_agreements',
   COMMISSION_RECORDS: process.env.NEXT_PUBLIC_COMMISSION_RECORDS_COLLECTION || 'commission_records',
 

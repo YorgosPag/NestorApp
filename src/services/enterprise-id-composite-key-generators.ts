@@ -23,6 +23,8 @@
  *     ↑ extends
  *   AreaMarketIdGenerators       (ADR-890 §5.2 — σύνοψη αγοράς ανά περιοχή)
  *     ↑ extends
+ *   DocumentRegistryIdGenerators (ADR-915 §26 — μητρώο λήξεων εγγράφων)
+ *     ↑ extends
  *   CompositeKeyIdGenerators     (this file)
  *     ↑ extends
  *   EnterpriseIdService          (owns the engine: retry loop, cache, stats)
@@ -54,9 +56,9 @@ import {
   isValidEnterpriseId,
   parseEnterpriseId,
 } from './enterprise-id-parse';
-import { AreaMarketIdGenerators } from './enterprise-id-area-market-generators';
+import { DocumentRegistryIdGenerators } from './enterprise-id-document-registry-generators';
 
-export abstract class CompositeKeyIdGenerators extends AreaMarketIdGenerators {
+export abstract class CompositeKeyIdGenerators extends DocumentRegistryIdGenerators {
   // --- Deterministic Composite Key Generators ---
   // Public surface only; the pure builders live in `./enterprise-id-composite-keys`
   // (N.7.1 — καμία κατάσταση εδώ: ο βρόχος επανάληψης, η μνήμη και τα στατιστικά

@@ -319,6 +319,15 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
+    // ADR-915 §26 — ο ρητός υπεύθυνος εγγράφων ακινήτου. `deny_all`: εγγραφή από πελάτη θα όριζε υπεύθυνο έναν
+    // μη ιδιοκτήτη χωρίς ιστορικό (ο έλεγχος «είναι ιδιοκτήτης;» ζει μόνο στο API). Η σουίτα σπέρνει έγγραφο του
+    // ΙΔΙΟΥ μισθωτή — εκεί είναι ο πειρασμός του χαλαρώματος.
+    collection: 'document_obligor_designations',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/document-obligor-designations.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     // ADR-901 §14.8 — σήμα αλλαγής ανά ΟΨΗ (μόνο `revision`). `admin_write_only`: γράφει μόνο ο server (μέσα στη
     // συναλλαγή της πράξης)· `get` ο ΚΑΤΟΧΟΣ — `companyId` (όψη οικοδεσπότη, ο πίνακας) ή `uid` (όψη συμμετοχής,
     // άγκυρες της σουίτας)· `list` κανείς (ο χρονισμός ως πληροφορία).

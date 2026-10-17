@@ -54,13 +54,24 @@ export interface CompanyPropertyOwnership {
 }
 
 /**
+ * ADR-915 §26 — **ποια πηγή** απάντησε: ο υπεύθυνος (`obligor-lead.ts`) ρωτά μερίδια **μόνο** στους αγοραστές
+ * (`commercial.owners[].ownershipPct`) και κύριο πωλητή **μόνο** στους μεταβιβάζοντες.
+ */
+export type CompanyOwnersSource = 'buyers' | 'sellers' | 'project-company';
+
+export interface CompanyPropertyOwners {
+  readonly source: CompanyOwnersSource;
+  readonly contactIds: readonly string[];
+}
+
+/**
  * Ακίνητο εταιρείας: πρώτα όποιος **έγινε** ιδιοκτήτης (αγοραστές μετά το οριστικό), μετά όσοι **μεταβιβάζουν** τώρα,
  * μετά η εταιρεία του έργου. Αγοραστές πριν την υπογραφή **δεν** είναι ιδιοκτήτες.
  */
-export function companyPropertyOwners(ownership: CompanyPropertyOwnership): readonly string[] {
+export function companyPropertyOwners(ownership: CompanyPropertyOwnership): CompanyPropertyOwners {
   const buyers = distinctContactIds(ownership.buyerContactIds);
-  if (isFinalContractSigned(ownership.legalPhase) && buyers.length > 0) return buyers;
+  if (isFinalContractSigned(ownership.legalPhase) && buyers.length > 0) return { source: 'buyers', contactIds: buyers };
   const sellers = distinctContactIds(ownership.sellerContactIds);
-  if (sellers.length > 0) return sellers;
-  return distinctContactIds([ownership.projectCompanyContactId]);
+  if (sellers.length > 0) return { source: 'sellers', contactIds: sellers };
+  return { source: 'project-company', contactIds: distinctContactIds([ownership.projectCompanyContactId]) };
 }

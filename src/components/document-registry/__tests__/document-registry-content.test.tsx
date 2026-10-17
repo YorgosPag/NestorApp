@@ -17,6 +17,7 @@ import {
   APPOINTED_BY_LABEL_KEYS,
   ISSUER_AUTHORITY_LABEL_KEYS,
   ISSUER_KEYS,
+  LEAD_KEYS,
   ISSUER_QUALIFICATION_LABEL_KEYS,
   LICENCE_REGISTRY_LABEL_KEYS,
   NEXT_STEP_KEYS,
@@ -48,10 +49,14 @@ import {
   fixtureResponse,
 } from '@/lib/document-validity/__tests__/registry-fixture';
 
-const registryState = jest.fn<{ view: DocumentRegistryState; reload: () => void }, []>();
+const registryState = jest.fn<{ view: DocumentRegistryState; reload: () => void; revalidate?: () => Promise<void> }, []>();
 jest.mock('@/hooks/document-registry/useDocumentRegistry', () => ({
   useDocumentRegistry: () => registryState(),
 }));
+
+// ADR-915 §26 — ο ορισμός υπευθύνου: δικαίωμα (εργονομία) + μηνύματα. Ασκούνται στο `registry-obligor-lead.test.tsx`.
+jest.mock('@/auth/hooks/useCapability', () => ({ useCapability: () => ({ verdict: 'granted-by-role' }) }));
+jest.mock('@/providers/NotificationProvider', () => ({ useNotifications: () => ({ error: jest.fn(), success: jest.fn() }) }));
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({
@@ -396,10 +401,10 @@ describe('ADR-915 §25 — «Το φέρνει: Ο ιδιοκτήτης · <πο
     expect(within(unknown).queryByRole('list')).toBeNull();
   });
 
-  it('πολλοί ιδιοκτήτες (και σε κενό) ⇒ οι 3 πρώτοι + «+2 ακόμη»· μη διαθέσιμη επαφή χωρίς σύνδεσμο· χωρίς όνομα το λέει', () => {
+  it('πολλοί ιδιοκτήτες (και σε κενό) ⇒ «Συνιδιοκτήτες» (§26): οι 3 πρώτοι + «+2 ακόμη»· μη διαθέσιμη χωρίς σύνδεσμο', () => {
     renderReady();
     const cell = obligorCell(articleOf('Συνθετικό Ζ6'));
-    const list = within(cell).getByRole('list', { name: ISSUER_KEYS.obligorPeople });
+    const list = within(cell).getByRole('list', { name: LEAD_KEYS.coOwners });
     expect(within(list).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
       ISSUER_KEYS.obligorUnavailable, ISSUER_KEYS.obligorUnnamed, 'Συνθετικός Άλφα', `${ISSUER_KEYS.obligorMore} {"count":2}`,
     ]);

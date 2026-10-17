@@ -22,6 +22,7 @@ import {
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { readDocumentRegistry } from '@/services/document-registry/document-registry.service';
 import { DOCUMENT_REGISTRY_CAPS } from '@/services/document-registry/document-registry.types';
+import { obligorDesignationIdOf } from '@/services/document-registry/obligor-designation-schema';
 
 jest.mock('@/lib/telemetry', () => ({
   createModuleLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }),
@@ -113,7 +114,7 @@ describe('γραμμές — αρχεία και δηλώσεις (Ε1)', () => 
     expect(rowOf(registry.rows, 'file:file_1')?.document).toMatchObject({ propertyId: 'prop_1', pinned: true });
     expect(registry.rows[0].state).toBe('expiring');
     expect(registry.files).toEqual({ file_1: { name: 'ΠΕΑ Α1.pdf' } });
-    expect(registry.properties).toEqual({ prop_1: { name: 'Διαμέρισμα Α1', scope: 'property', areaId: null, ownerContactIds: [] } });
+    expect(registry.properties).toEqual({ prop_1: { name: 'Διαμέρισμα Α1', scope: 'property', areaId: null, ownerContactIds: [], obligorLead: null, ownerShares: {} } });
   });
 
   it('δήλωση χωρίς αρχείο ⇒ γραμμή `declared`, χωρίς πηγή', async () => {
@@ -227,7 +228,7 @@ describe('Φ4δ Ε7 — «λείπει» από τις απαιτήσεις', ()
       'building-identity', 'energy-certificate', 'enfia-certificate', 'tax-clearance',
     ]);
     expect(registry.tally.missing).toBe(4);
-    expect(registry.properties.prop_1).toEqual({ name: 'Χωρίς ΠΕΑ', scope: 'property', areaId: null, ownerContactIds: [] });
+    expect(registry.properties.prop_1).toEqual({ name: 'Χωρίς ΠΕΑ', scope: 'property', areaId: null, ownerContactIds: [], obligorLead: null, ownerShares: {} });
   });
 
   it('ADR-915 §22 — πωλητής ΝΟΜΙΚΟ πρόσωπο ⇒ και η ΕΦΚΑ λείπει (από τον νόμο, χωρίς ερώτηση)', async () => {
@@ -259,7 +260,7 @@ describe('Φ4δ Ε10 — ακίνητα ιδιωτών υπό θεματοφυλ
     fake.seed(COLLECTIONS.OWNER_PROPERTIES, 'ownp_1', owner({ energy: { class: 'C', issuedOn: ISSUED } }));
     const registry = await read();
     expect(ids(registry.rows)).toEqual(['declared:ownp_1:energy-certificate']);
-    expect(registry.properties).toEqual({ ownp_1: { name: 'Εντολή Β3', scope: 'owner-property', areaId: null, ownerContactIds: [] } });
+    expect(registry.properties).toEqual({ ownp_1: { name: 'Εντολή Β3', scope: 'owner-property', areaId: null, ownerContactIds: [], obligorLead: null, ownerShares: {} } });
   });
 
   it('αγγελία εντολής χωρίς ΠΕΑ ⇒ κενό στην εντολή', async () => {
@@ -406,5 +407,72 @@ describe('ADR-915 §25 (5γ) — μία γραμμή ανά ΠΡΟΣΩΠΟ, με
     const registry = await read();
     expect(rowOf(registry.rows, 'file:file_c')?.document).toMatchObject({ propertyId: null, party: { key: 'cont_a', contactId: 'cont_a' } });
     expect(registry.people).toEqual({ cont_a: { name: 'Άλφα Συνθετικός' } });
+  });
+});
+
+describe('ADR-915 §26 — ΕΝΑΣ υπεύθυνος για τα έγγραφα ακινήτου με πολλούς ιδιοκτήτες', () => {
+  const person = (firstName: string): Doc => ({ companyId: COMPANY, type: 'individual', firstName, lastName: 'Συνθετικός' });
+  const buyers = (shares: Record<string, number>) => ({
+    legalPhase: 'final_signed', owners: Object.entries(shares).map(([contactId, ownershipPct]) => ({ contactId, ownershipPct })),
+  });
+  const designate = (contactId: string, companyId = COMPANY) => fake.seed(COLLECTIONS.DOCUMENT_OBLIGOR_DESIGNATIONS, obligorDesignationIdOf(COMPANY, 'prop_1'), {
+    id: obligorDesignationIdOf(COMPANY, 'prop_1'), companyId, propertyId: 'prop_1', scope: 'property', contactId,
+    designatedByUid: 'user_1', designatedAt: '2026-10-17T09:00:00.000Z',
+  });
+
+  beforeEach(() => {
+    ['cont_a', 'cont_b', 'cont_sold'].forEach((id, i) => fake.seed(COLLECTIONS.CONTACTS, id, person(['Άλφα', 'Βήτα', 'Πωλημένος'][i])));
+  });
+
+  it('αγοραστές 60/40 ⇒ ο υπεύθυνος είναι ο 60% (ΑΚ 789), και τα μερίδια ταξιδεύουν για τον διάλογο', async () => {
+    fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', property({ commercial: buyers({ cont_b: 40, cont_a: 60 }) }));
+    const label = (await read()).properties.prop_1;
+    expect(label.obligorLead).toEqual({ kind: 'designated', contactId: 'cont_a', basis: 'majority-share', sharePct: 60, staleContactId: null });
+    expect(label.ownerShares).toEqual({ cont_b: 40, cont_a: 60 });
+  });
+
+  it('ρητή επιλογή του γραφείου ΝΙΚΑ την πλειοψηφία', async () => {
+    fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', property({ commercial: buyers({ cont_a: 60, cont_b: 40 }) }));
+    designate('cont_b');
+    expect((await read()).properties.prop_1.obligorLead).toMatchObject({ contactId: 'cont_b', basis: 'explicit' });
+  });
+
+  it('ρητή επιλογή ΠΡΩΗΝ ιδιοκτήτη ⇒ δεν μετρά, ΛΕΓΕΤΑΙ, και ονομάζεται', async () => {
+    fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', property({ commercial: buyers({ cont_a: 50, cont_b: 50 }) }));
+    designate('cont_sold');
+    const registry = await read();
+    expect(registry.properties.prop_1.obligorLead).toEqual({ kind: 'undesignated', reason: 'no-majority', staleContactId: 'cont_sold' });
+    expect(registry.people.cont_sold).toEqual({ name: 'Πωλημένος Συνθετικός' });
+  });
+
+  it('ορισμός με ΞΕΝΟ `companyId` ⇒ ανύπαρκτος', async () => {
+    fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', property({ commercial: buyers({ cont_a: 60, cont_b: 40 }) }));
+    designate('cont_b', OTHER);
+    expect((await read()).properties.prop_1.obligorLead).toMatchObject({ contactId: 'cont_a', basis: 'majority-share' });
+  });
+
+  it('ανοιχτή υπόθεση: εργολάβος + οικοπεδούχος ⇒ ο ΚΥΡΙΟΣ μεταβιβάζων, χωρίς μερίδια', async () => {
+    const seller = (contactId: string, capacity: string) => ({ key: contactId, contactId, kind: 'person', capacity });
+    fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', { companyId: COMPANY, name: 'Αντιπαροχή' });
+    fake.seed(COLLECTIONS.CONVEYANCE_CASES, 'case_1', openCase({
+      parties: { sellers: [seller('cont_b', 'landowner'), seller('cont_a', 'principal')], buyers: [] },
+    }));
+    const label = (await read()).properties.prop_1;
+    expect(label.obligorLead).toMatchObject({ kind: 'designated', contactId: 'cont_a', basis: 'contract-principal' });
+    expect(label.ownerShares).toEqual({});
+  });
+
+  it('🔴 μερίδια ΜΕΛΛΟΝΤΙΚΩΝ αγοραστών (προσύμφωνο) ΔΕΝ κρίνουν τους μεταβιβάζοντες — ούτε φαίνονται δίπλα τους', async () => {
+    const seller = (contactId: string, capacity: string) => ({ key: contactId, contactId, kind: 'person', capacity });
+    fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', property({
+      commercial: { legalPhase: 'preliminary_signed', owners: [{ contactId: 'cont_a', ownershipPct: 70 }, { contactId: 'cont_b', ownershipPct: 30 }] },
+    }));
+    fake.seed(COLLECTIONS.CONVEYANCE_CASES, 'case_1', openCase({
+      parties: { sellers: [seller('cont_a', 'landowner'), seller('cont_b', 'other')], buyers: [] },
+    }));
+    const label = (await read()).properties.prop_1;
+    expect(label.ownerContactIds).toEqual(['cont_a', 'cont_b']);
+    expect(label.obligorLead).toEqual({ kind: 'undesignated', reason: 'unknown-shares', staleContactId: null });
+    expect(label.ownerShares).toEqual({});
   });
 });

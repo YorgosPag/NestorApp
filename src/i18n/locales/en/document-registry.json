@@ -90,6 +90,25 @@
     },
     "appointedBy": {
       "owner": "Appointed by the owner"
+    },
+    "lead": {
+      "role": "responsible — {basis}",
+      "basis": {
+        "explicit": "set by the office",
+        "sole": "sole owner",
+        "majority-share": "majority share ({share})",
+        "contract-principal": "principal seller of the case"
+      },
+      "undesignated": {
+        "no-majority": "No responsible owner set — nobody holds a majority share",
+        "unknown-shares": "No responsible owner set — the shares are not known"
+      },
+      "stale": "The choice “{name}” no longer applies: not an owner",
+      "coOwners": "Co-owners",
+      "onePerProperty": "One document for the whole property — request it only from the responsible owner.",
+      "onePerPropertyUndesignated": "One document for the whole property — set a responsible owner so you ask only one person.",
+      "saving": "Saving…",
+      "coOwnersHeading": "Co-owners:"
     }
   },
   "nextStep": {
@@ -143,5 +162,24 @@
   "scope": {
     "note": "Not in the registry: the personal space and documents sent by third parties (transmittals).",
     "unscopedListings": "{count, plural, =0 {Every listing under the office name was checked.} one {# listing under the office name is not checked: the office is not its custodian.} other {# listings under the office name are not checked: the office is not their custodian.}}"
+  },
+  "leadPicker": {
+    "set": "Set responsible owner",
+    "change": "Change responsible owner",
+    "title": "Responsible owner for property documents",
+    "description": "One owner takes care of the energy certificate and building identity for the whole property. The others remain co-owners.",
+    "legend": "Who is responsible",
+    "automatic": "Automatic choice",
+    "automaticHint": "Majority share or principal seller, when there is one — otherwise nobody.",
+    "share": "share {share}",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving…",
+    "error": {
+      "failed": "The responsible owner was not saved. Please try again.",
+      "notAnOwner": "This contact is no longer an owner of the property.",
+      "ownersUnknown": "The owners could not be read right now — please try again shortly.",
+      "notFound": "The property was not found in the office registry."
+    }
   }
 }

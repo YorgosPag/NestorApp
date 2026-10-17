@@ -299,6 +299,9 @@ describe('EnterpriseIdService', () => {
       // ADR-901 §14.8 — ΕΝΑ σήμα ανά όψη: ο listener του client ΥΠΟΛΟΓΙΖΕΙ το id (χωρίς ερώτημα)· τυχαίο id =
       // ο γραφέας και ο listener σε δύο διαφορετικά έγγραφα, δηλαδή καμία ζωντανή ενημέρωση.
       'generateDeterministicConveyanceViewSignalId',
+      // ADR-915 §26 — ΕΝΑΣ ρητός υπεύθυνος ανά (γραφείο, ακίνητο): τυχαίο id = δεύτερος «υπεύθυνος» για το ίδιο
+      // ακίνητο, και η επαναφορά (`delete`) θα έσβηνε μόνο τον έναν.
+      'generateDeterministicDocumentObligorDesignationId',
       // ADR-ACC-010 §2.1.1 Φ4 — ΜΙΑ απόσβεση ανά (μισθωτής, πάγιο, χρήση): η ταυτότητα ΕΙΝΑΙ η ιδεμποτία της
       // εκτέλεσης αποσβέσεων. Ο τυχαίος `generateDepreciationId` ΚΑΤΑΡΓΗΘΗΚΕ — τυχαίο id = διπλή απόσβεση.
       'generateDeterministicDepreciationRecordId',
@@ -375,6 +378,7 @@ describe('EnterpriseIdService', () => {
       generateDeterministicConveyanceDocumentRequestId: 'cdr_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
       // ADR-901 §14.8 — ΕΝΑ σήμα ανά όψη.
       generateDeterministicConveyanceViewSignalId: 'cvs_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
+      generateDeterministicDocumentObligorDesignationId: 'dobd_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
       // ADR-853 Ε3 Φάση 2 — τέσσερις παράμετροι, ο `call()` δίνει μία (σπόρος `anchor-seed:undefined:…`,
       //    ίδιο σκεπτικό με το `wacr`): το συμβόλαιο είναι «ίδιος σπόρος ⇒ ίδιο id, διαχρονικά».
       generateDeterministicIdempotencyRecordId: 'idr_4ad60692-1f51-41af-8816-c25429d2e5f9',

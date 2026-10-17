@@ -9,6 +9,9 @@ import {
   type CompanyPropertyOwnership,
 } from '@/lib/document-validity/registry-owners';
 
+/** Μόνο οι επαφές — η πηγή ελέγχεται ρητά στο `πηγή` παρακάτω. */
+const owners = (ownership: CompanyPropertyOwnership) => companyPropertyOwners(ownership).contactIds;
+
 const BASE: CompanyPropertyOwnership = {
   legalPhase: null, buyerContactIds: [], sellerContactIds: [], projectCompanyContactId: 'cont_company',
 };
@@ -32,25 +35,31 @@ describe('ακίνητο ιδιώτη υπό εντολή', () => {
 
 describe('ακίνητο εταιρείας', () => {
   it('μετά το οριστικό ⇒ οι αγοραστές, όχι η εταιρεία ούτε οι πωλητές', () => {
-    expect(companyPropertyOwners({ ...BASE, legalPhase: 'final_signed', buyerContactIds: ['cont_buyer'], sellerContactIds: ['cont_s'] }))
+    expect(owners({ ...BASE, legalPhase: 'final_signed', buyerContactIds: ['cont_buyer'], sellerContactIds: ['cont_s'] }))
       .toEqual(['cont_buyer']);
-    expect(companyPropertyOwners({ ...BASE, legalPhase: 'payoff_completed', buyerContactIds: ['cont_buyer'] })).toEqual(['cont_buyer']);
+    expect(owners({ ...BASE, legalPhase: 'payoff_completed', buyerContactIds: ['cont_buyer'] })).toEqual(['cont_buyer']);
   });
 
   it('αγοραστές ΠΡΙΝ το οριστικό (προσύμφωνο) ⇒ ΔΕΝ είναι ιδιοκτήτες', () => {
-    expect(companyPropertyOwners({ ...BASE, legalPhase: 'preliminary_signed', buyerContactIds: ['cont_buyer'] })).toEqual(['cont_company']);
+    expect(owners({ ...BASE, legalPhase: 'preliminary_signed', buyerContactIds: ['cont_buyer'] })).toEqual(['cont_company']);
   });
 
   it('ανοιχτή υπόθεση ⇒ οι μεταβιβάζοντες (μαζί οι συμπωλητές), όχι μόνο η εταιρεία του έργου', () => {
-    expect(companyPropertyOwners({ ...BASE, sellerContactIds: ['cont_company', 'cont_landowner', null] }))
+    expect(owners({ ...BASE, sellerContactIds: ['cont_company', 'cont_landowner', null] }))
       .toEqual(['cont_company', 'cont_landowner']);
   });
 
   it('οριστικό χωρίς καταγεγραμμένους αγοραστές ⇒ ΔΕΝ εφευρίσκεται ιδιοκτήτης: πέφτει στην επόμενη πηγή', () => {
-    expect(companyPropertyOwners({ ...BASE, legalPhase: 'final_signed' })).toEqual(['cont_company']);
+    expect(owners({ ...BASE, legalPhase: 'final_signed' })).toEqual(['cont_company']);
   });
 
   it('τίποτα γνωστό ⇒ `[]` («δεν έχει οριστεί»), ποτέ μαντεψιά', () => {
-    expect(companyPropertyOwners({ ...BASE, projectCompanyContactId: null, sellerContactIds: [null] })).toEqual([]);
+    expect(owners({ ...BASE, projectCompanyContactId: null, sellerContactIds: [null] })).toEqual([]);
+  });
+
+  it('ADR-915 §26 — λέει ΠΟΙΑ πηγή απάντησε (μερίδια μόνο στους αγοραστές, κύριος πωλητής μόνο στους μεταβιβάζοντες)', () => {
+    expect(companyPropertyOwners({ ...BASE, legalPhase: 'final_signed', buyerContactIds: ['cont_b'] }).source).toBe('buyers');
+    expect(companyPropertyOwners({ ...BASE, sellerContactIds: ['cont_s'] }).source).toBe('sellers');
+    expect(companyPropertyOwners(BASE).source).toBe('project-company');
   });
 });

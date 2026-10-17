@@ -8,6 +8,7 @@
  */
 
 import type { DocumentRegistry } from '@/lib/document-validity/document-registry';
+import type { ObligorLead } from '@/lib/document-validity/obligor-lead';
 
 /**
  * Οι πηγές που διαβάζονται με ερώτημα — άρα έχουν όριο. Φ4δ: `owner-properties` (ακίνητα ιδιωτών υπό θεματοφυλακή του
@@ -27,7 +28,8 @@ export const DOCUMENT_REGISTRY_CAPS: Readonly<Record<RegistrySource, number>> = 
 };
 
 /** Σε ποιο **είδος** ακινήτου δείχνει το όνομα — αποφασίζει τη διεύθυνση της οθόνης (ακίνητο εταιρείας · εντολή). */
-export type RegistryPropertyScope = 'property' | 'owner-property';
+export const REGISTRY_PROPERTY_SCOPES = ['property', 'owner-property'] as const;
+export type RegistryPropertyScope = (typeof REGISTRY_PROPERTY_SCOPES)[number];
 
 /** Μέγεθος ομάδας `getAll` — δεν βρέθηκε τεκμηριωμένο όριο· αμυντικό (ADR-915 §11.3). */
 export const REGISTRY_GET_ALL_CHUNK = 100;
@@ -54,6 +56,13 @@ export interface RegistryPropertyLabel extends RegistryLabel {
    * τρέχουσα γραμμή το ονομάζει) ή η ανάγνωση απέτυχε — η οθόνη δείχνει **μόνο** τον ρόλο, χωρίς ισχυρισμό.
    */
   readonly ownerContactIds: readonly string[] | null;
+  /**
+   * ADR-915 §26 — **ο υπεύθυνος** των εγγράφων ακινήτου (`obligorLeadOf`): ρητή επιλογή · μοναδικός · πλειοψηφία
+   * μεριδίων (ΑΚ 789) · κύριος μεταβιβάζων — ή **γιατί** δεν ορίζεται. `null` = δεν ρωτήθηκε / κανείς ιδιοκτήτης.
+   */
+  readonly obligorLead: ObligorLead | null;
+  /** §26 — επαφή → μερίδιο %, **μόνο** όταν τα μερίδια είναι γνωστά (αγοραστές)· αλλιώς `{}`. */
+  readonly ownerShares: Readonly<Record<string, number>>;
 }
 
 export interface DocumentRegistryResponse extends DocumentRegistry {

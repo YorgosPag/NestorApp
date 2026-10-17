@@ -33,7 +33,7 @@
     "src/i18n/generated/routes/o__workspace__cases.el.json": "62e1b3378215c16e66a12632667ad61be33b59cc632e634dde0ffaf9763769d4",
     "src/i18n/generated/routes/o__workspace__cases__engagementId.el.json": "cb0565009bf6f7bec16cd93768e557804df81971abe3c5a23b7c050e9eb91ec3",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
-    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "8bc752a4cefdc97741b29f0b5186ddb43afd1b07f2386d84ff6c09737af88156",
+    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "5c3ac252f53d786becf1e3496de1f6e1bfb940e8cbd9f62977aae081e62c718a",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "f2b0212cf0909081143453962ba0bfec2a47dc8753dc81a009ee34c12579b137",
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "2753c7edd9c05a17a65b15f3146177db8a27ca727df7b1f77d28fd1724f4fa6f",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "e1c5896ab910b7f5515ef0a3991a4daae3ba7fc776c6291815cfeaddb51e2398",
@@ -150,7 +150,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "47a1f2fd35d097d1d937a167eecfe134d1618ad754d549221bc0f0ec7ffe46ca",
+  "inputsSha256": "73a60bb4a82e0d6bead12f80f557727a31a4307ce7053eb30ec4c414d552b179",
   "languages": [
     "el"
   ],
@@ -5063,6 +5063,9 @@
       "wants": {
         "common": {
           "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm",
             "priceAmount.nightly",
             "priceAmount.rent",
             "priceAmount.sale",
@@ -5076,6 +5079,87 @@
             "priceSection.unpriced",
             "priceStanding.offMarket",
             "priceStanding.retired"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-account": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-actions": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-empty-states": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-navigation": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-photos": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-sales": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-shared": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-status": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-validation": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.close",
+            "buttons.confirm"
           ],
           "prefixes": [],
           "whole": false
@@ -5129,6 +5213,19 @@
             "issuer.authority.aade",
             "issuer.authority.efka",
             "issuer.heading",
+            "issuer.lead.basis.contract-principal",
+            "issuer.lead.basis.explicit",
+            "issuer.lead.basis.majority-share",
+            "issuer.lead.basis.sole",
+            "issuer.lead.coOwners",
+            "issuer.lead.coOwnersHeading",
+            "issuer.lead.onePerProperty",
+            "issuer.lead.onePerPropertyUndesignated",
+            "issuer.lead.role",
+            "issuer.lead.saving",
+            "issuer.lead.stale",
+            "issuer.lead.undesignated.no-majority",
+            "issuer.lead.undesignated.unknown-shares",
             "issuer.obligor.owner",
             "issuer.obligorHeading",
             "issuer.obligorMore",
@@ -5144,6 +5241,21 @@
             "issuer.qualification.surveyor-engineer",
             "issuer.registered",
             "issuer.selfService",
+            "leadPicker.automatic",
+            "leadPicker.automaticHint",
+            "leadPicker.cancel",
+            "leadPicker.change",
+            "leadPicker.description",
+            "leadPicker.error.failed",
+            "leadPicker.error.notAnOwner",
+            "leadPicker.error.notFound",
+            "leadPicker.error.ownersUnknown",
+            "leadPicker.legend",
+            "leadPicker.save",
+            "leadPicker.saving",
+            "leadPicker.set",
+            "leadPicker.share",
+            "leadPicker.title",
             "load.error",
             "load.loading",
             "load.retry",
@@ -10798,7 +10910,7 @@
   ],
   "stats": {
     "matchedKeys": 248,
-    "sliceBytes": 755047
+    "sliceBytes": 757742
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

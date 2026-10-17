@@ -86,10 +86,11 @@ describe('Ζ — το ζωντανό δέντρο', () => {
   // 2026-10-16: +1 (`9bf4ba32` ADR-910 — `floor_stack_locks`: read/write `if false`) −2 (`720e2ef5` ADR-ACC-010 §2.1.1 Φ6 —
   // `accounting_fiscal_periods`: τα create/update/delete του πελάτη ενώθηκαν σε ΕΝΑ `if false`· οι μεταβάσεις πέρασαν στο API,
   // το read με `canReadAccounting` έμεινε) +2 (`4ed7d455` ADR-915 Φ5α — `document_expiry_alert_ledgers`: read/write `if false`) ⇒ 776.
-  it('Ζ 🔑 0 ευρήματα — ΚΑΙ ο πληθυσμός είναι αυτός που μετρήθηκε (776 + 71 allow)', () => {
+  // 2026-10-17: +2 (ADR-915 §26 — `document_obligor_designations`: read/write `if false`) ⇒ 778.
+  it('Ζ 🔑 0 ευρήματα — ΚΑΙ ο πληθυσμός είναι αυτός που μετρήθηκε (778 + 71 allow)', () => {
     const result = sweep(ROOT);
     expect(result.violations).toEqual([]);
-    expect(result.perFile.map((f) => f.allows)).toEqual([776, 71]);
+    expect(result.perFile.map((f) => f.allows)).toEqual([778, 71]);
     expect(result.tally[GATE_STATES.COVERED]).toBeGreaterThan(600);
     expect(result.claimName).toBe('revokedSignIns');
   });

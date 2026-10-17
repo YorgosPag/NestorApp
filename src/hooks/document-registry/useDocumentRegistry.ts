@@ -42,6 +42,11 @@ export interface DocumentRegistryApi {
   readonly view: DocumentRegistryState;
   /** Ρητή ξαναφόρτωση (κουμπί «Δοκιμάστε ξανά») — σταθερή αναφορά. */
   readonly reload: () => void;
+  /**
+   * ADR-915 §26 — ξαναδιάβασμα **στο παρασκήνιο** μετά από πράξη της ίδιας οθόνης (π.χ. ορισμός υπευθύνου): τα δεδομένα
+   * μένουν ορατά, χωρίς «φορτώνει» (το `reload` θα έσβηνε τη σελίδα), με την ίδια μονοτονική αποδοχή.
+   */
+  readonly revalidate: () => Promise<void>;
 }
 
 /** Η νεότερη απάντηση που δέχτηκε το παρασκήνιο, **δεμένη** στη φόρτωση πάνω στην οποία ήρθε. */
@@ -59,8 +64,11 @@ function acceptFresher(prev: Fresher | null, base: DocumentRegistryResponse, nex
   return next.asOf >= shown.asOf ? { base, next } : prev;
 }
 
-/** Stale-while-revalidate πάνω στη φόρτωση `base`. Επιστρέφει ό,τι πρέπει να δείχνει η οθόνη. */
-function useBackgroundRefresh(base: DocumentRegistryResponse | null): DocumentRegistryResponse | null {
+/** Stale-while-revalidate πάνω στη φόρτωση `base`. Επιστρέφει ό,τι πρέπει να δείχνει η οθόνη, και την ανανέωση. */
+function useBackgroundRefresh(base: DocumentRegistryResponse | null): {
+  readonly shown: DocumentRegistryResponse | null;
+  readonly revalidate: () => Promise<void>;
+} {
   const [fresher, setFresher] = useState<Fresher | null>(null);
   const shown = shownOf(fresher, base);
 
@@ -79,14 +87,15 @@ function useBackgroundRefresh(base: DocumentRegistryResponse | null): DocumentRe
     label: 'document-registry',
   });
 
-  return shown;
+  const revalidate = useCallback(async () => { await fetch(); }, [fetch]);
+  return { shown, revalidate };
 }
 
 export function useDocumentRegistry(): DocumentRegistryApi {
   const { value: loaded, reload } = useIdentityGatedResource<RegistryLoad>(fetchDocumentRegistry, UNAUTHENTICATED);
-  const shown = useBackgroundRefresh(loaded?.kind === 'ready' ? loaded.registry : null);
+  const { shown, revalidate } = useBackgroundRefresh(loaded?.kind === 'ready' ? loaded.registry : null);
 
-  if (loaded === null) return { view: { state: 'loading' }, reload };
-  if (shown === null) return { view: { state: 'failed' }, reload };
-  return { view: { state: 'ready', registry: shown }, reload };
+  if (loaded === null) return { view: { state: 'loading' }, reload, revalidate };
+  if (shown === null) return { view: { state: 'failed' }, reload, revalidate };
+  return { view: { state: 'ready', registry: shown }, reload, revalidate };
 }

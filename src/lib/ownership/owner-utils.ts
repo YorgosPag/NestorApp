@@ -8,6 +8,7 @@
  * @enterprise ADR-244 (Multi-Buyer Co-Ownership)
  */
 
+import { isFiniteNumber, isRecord, trimmedStringOrNull } from '@/lib/type-guards';
 import type { PropertyOwnerEntry } from '@/types/ownership-table';
 
 // ============================================================================
@@ -85,6 +86,30 @@ export function formatOwnerNames(owners: readonly Pick<PropertyOwnerEntry, 'name
  */
 export function getPrimaryBuyerContactId(owners: readonly PropertyOwnerEntry[]): string | null {
   return owners[0]?.contactId ?? null;
+}
+
+// ============================================================================
+// STORED (RAW) OWNERS — the ONE reader of `commercial.owners` as it lies in Firestore
+// ============================================================================
+
+/** A stored owner as far as it can be trusted: `ownershipPct` `null` = not a finite number (never guessed). */
+export interface StoredOwnerShare {
+  readonly contactId: string;
+  readonly ownershipPct: number | null;
+}
+
+/**
+ * Parse raw `commercial.owners` (untyped Firestore data) — entries without a contact are dropped, order is kept.
+ * ADR-915 §26: the registry reads shares (ΑΚ 789 majority) and the conveyance subject reads contacts from HERE.
+ */
+export function readStoredOwners(rawOwners: unknown): readonly StoredOwnerShare[] {
+  if (!Array.isArray(rawOwners)) return [];
+  return rawOwners.flatMap((raw): StoredOwnerShare[] => {
+    if (!isRecord(raw)) return [];
+    const contactId = trimmedStringOrNull(raw.contactId);
+    if (contactId === null) return [];
+    return [{ contactId, ownershipPct: isFiniteNumber(raw.ownershipPct) ? raw.ownershipPct : null }];
+  });
 }
 
 // ============================================================================

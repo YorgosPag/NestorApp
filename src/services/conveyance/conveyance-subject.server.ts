@@ -25,6 +25,7 @@ import { isLegalPhase, type LegalPhase } from '@/constants/legal-phases';
 import type { ConveyanceProfile } from '@/config/conveyance-checklist/types';
 import type { FactSources } from '@/lib/conveyance/derive-facts';
 import { sellerParty, type SellerCapacitySources } from '@/lib/conveyance/case-parties';
+import { readStoredOwners } from '@/lib/ownership/owner-utils';
 import type {
   ConveyanceAppurtenanceRef,
   ConveyanceCaseParties,
@@ -72,12 +73,7 @@ function appurtenancesOf(property: DocData): ConveyanceAppurtenanceRef[] {
 }
 
 function buyersOf(property: DocData): ConveyanceCaseParties['buyers'] {
-  const owners = asRecord(property.commercial).owners;
-  if (!Array.isArray(owners)) return [];
-  return owners
-    .map((owner) => stringOrNull(asRecord(owner).contactId))
-    .filter((contactId): contactId is string => contactId !== null)
-    .map((contactId) => ({ contactId }));
+  return readStoredOwners(asRecord(property.commercial).owners).map(({ contactId }) => ({ contactId }));
 }
 
 async function readProject(db: Firestore, projectId: string | null, companyId: string): Promise<DocData | null> {

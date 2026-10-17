@@ -27,7 +27,10 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { SegmentedControl, SegmentedControlItem } from '@/components/ui/segmented-control';
-import { useDocumentRegistry, type DocumentRegistryState } from '@/hooks/document-registry/useDocumentRegistry';
+import { useCapability } from '@/auth/hooks/useCapability';
+import { useDocumentRegistry, type DocumentRegistryApi, type DocumentRegistryState } from '@/hooks/document-registry/useDocumentRegistry';
+import { useObligorDesignation } from '@/hooks/document-registry/useObligorDesignation';
+import { isGranted } from '@/types/capability-authority';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatDateKey, formatList } from '@/lib/intl-formatting';
 import { ENTITY_ROUTES } from '@/lib/routes/entityRoutes';
@@ -51,6 +54,7 @@ import {
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
 import { documentNameOf, RegistryRowItem } from '@/components/document-registry/RegistryRowItem';
 import { RegistryGapItem } from '@/components/document-registry/RegistryGapItem';
+import { ObligorDesignationProvider } from '@/components/document-registry/obligor-designation-context';
 import { RegistryTally } from '@/components/document-registry/RegistryTally';
 import {
   REGISTRY_KEYS,
@@ -186,12 +190,26 @@ function RegistryGroups({ rows, registry }: GroupsProps): React.ReactElement {
   );
 }
 
-function ReadyBody({ registry }: { readonly registry: DocumentRegistryResponse }): React.ReactElement {
+interface ReadyBodyProps {
+  readonly registry: DocumentRegistryResponse;
+  readonly revalidate: () => Promise<void>;
+}
+
+/** ADR-915 §26 — ο ορισμός υπευθύνου: αισιόδοξο μητρώο + οι ενέργειες για όποια γραμμή τις ζητήσει. */
+function useDesignatedRegistry({ registry: loaded, revalidate }: ReadyBodyProps) {
+  const canDesignate = isGranted(useCapability('properties:properties:update').verdict);
+  const { registry, designate, pending } = useObligorDesignation(loaded, revalidate);
+  const actions = useMemo(() => ({ designate, pending, canDesignate }), [designate, pending, canDesignate]);
+  return { registry, actions };
+}
+
+function ReadyBody(props: ReadyBodyProps): React.ReactElement {
+  const { registry, actions } = useDesignatedRegistry(props);
   const [view, select] = useRegistryView();
   const tally = useMemo(() => registryViewTally(registry.rows, registry.asOf), [registry]);
   const rows = useMemo(() => rowsOfRegistryView(registry.rows, view, registry.asOf), [registry, view]);
   return (
-    <>
+    <ObligorDesignationProvider value={actions}>
       <TruncatedNotice registry={registry} />
       <RegistryTally tally={registry.tally} view={view} onSelect={select} />
       {registry.rows.length === 0 ? (
@@ -202,12 +220,12 @@ function ReadyBody({ registry }: { readonly registry: DocumentRegistryResponse }
           <RegistryGroups rows={rows} registry={registry} />
         </>
       )}
-    </>
+    </ObligorDesignationProvider>
   );
 }
 
 /** Τρεις καταστάσεις φόρτωσης, ρητά. Η αποτυχία δίνει **κουμπί**, όχι μόνο μήνυμα. */
-function RegistryBody({ view, reload }: { readonly view: DocumentRegistryState; readonly reload: () => void }): React.ReactElement {
+function RegistryBody({ view, reload, revalidate }: Pick<DocumentRegistryApi, 'reload' | 'revalidate'> & { readonly view: DocumentRegistryState }): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS, CONVEYANCE_NS, LEGALITY_NS]);
   if (view.state === 'loading') return <p className="m-0 text-muted-foreground">{t(REGISTRY_KEYS.loading)}</p>;
   if (view.state === 'failed') {
@@ -218,12 +236,12 @@ function RegistryBody({ view, reload }: { readonly view: DocumentRegistryState; 
       </section>
     );
   }
-  return <ReadyBody registry={view.registry} />;
+  return <ReadyBody registry={view.registry} revalidate={revalidate} />;
 }
 
 export function DocumentRegistryContent(): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS, CONVEYANCE_NS, LEGALITY_NS]);
-  const { view, reload } = useDocumentRegistry();
+  const { view, reload, revalidate } = useDocumentRegistry();
   return (
     <section className="flex w-full flex-col gap-6">
       <header className="flex flex-col gap-1">
@@ -235,7 +253,7 @@ export function DocumentRegistryContent(): React.ReactElement {
           </p>
         ) : null}
       </header>
-      <RegistryBody view={view} reload={reload} />
+      <RegistryBody view={view} reload={reload} revalidate={revalidate} />
       {/* 🔑 Τα όρια λέγονται, δεν κρύβονται (Γ1) — και όπου μετριούνται, λέγονται με ΑΡΙΘΜΟ (Φ4δ Ε11). */}
       <footer className="flex flex-col gap-1">
         <p className="m-0 text-xs text-muted-foreground">{t(REGISTRY_KEYS.scopeNote)}</p>

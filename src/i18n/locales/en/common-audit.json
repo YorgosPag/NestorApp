@@ -656,7 +656,8 @@
         "permitDate": "Building permit date",
         "hasCentralHeating": "Central heating",
         "hasElevator": "Elevator"
-      }
+      },
+      "documentObligorLead": "Responsible owner for property documents"
     },
     "retiredFieldNotice": "This field no longer exists in the registry — showing the name recorded at the time of the change."
   }

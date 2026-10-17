@@ -10,8 +10,8 @@
  * 🔑 **Προσόν, όχι επάγγελμα**: το ΠΕΑ λέει «Ενεργειακός επιθεωρητής, εγγεγραμμένος στο Μητρώο…», όχι «Μηχανικός».
  * 🔑 Τα προσόντα ενώνονται με `formatList(…, 'disjunction')` («Α, Β ή Γ»): αρκεί **ένας** από αυτούς.
  * 🔑 ADR-915 §25 — **ο ρόλος ΚΑΙ ο άνθρωπος**: «Ο ιδιοκτήτης» λέει τον κανόνα του είδους, το όνομα ποιος είναι σε αυτό
- *    το ακίνητο. Κανένα από τα δύο δεν αντικαθιστά το άλλο. Τα ονόματα σε `<ul>` (όχι συρραφή με κόμμα): κάθε ένα
- *    σύνδεσμος, και καμία στίξη να μεταφραστεί.
+ *    το ακίνητο. Κανένα από τα δύο δεν αντικαθιστά το άλλο. Οι άνθρωποι (και, με πολλούς ιδιοκτήτες, ο **υπεύθυνος** —
+ *    §26) ζουν στο `RegistryObligorPeople.tsx`.
  */
 
 import React from 'react';
@@ -25,9 +25,8 @@ import {
 import { documentKindSpec, type DocumentKind } from '@/config/document-validity/document-validity';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatList } from '@/lib/intl-formatting';
-import { ENTITY_ROUTES } from '@/lib/routes/entityRoutes';
-import { Link } from '@/lib/workspace/navigation';
-import type { RegistryObligorPerson, RegistryObligors } from '@/components/document-registry/registry-obligors';
+import type { RegistryObligors } from '@/components/document-registry/registry-obligors';
+import { ObligorPeople } from '@/components/document-registry/RegistryObligorPeople';
 import {
   APPOINTED_BY_LABEL_KEYS,
   ISSUER_AUTHORITY_LABEL_KEYS,
@@ -62,31 +61,6 @@ function IssuerValue({ issuer }: { readonly issuer: DocumentIssuer }): React.Rea
       <span>{formatList(issuer.qualifications.map((q) => qualificationText(t, q)), 'disjunction')}</span>
       <span className="text-xs text-muted-foreground">{t(APPOINTED_BY_LABEL_KEYS[issuer.appointedBy])}</span>
     </dd>
-  );
-}
-
-const LINK = 'underline underline-offset-4';
-
-function ObligorPerson({ person }: { readonly person: RegistryObligorPerson }): React.ReactElement {
-  const { t } = useTranslation([REGISTRY_NS]);
-  if (!person.reachable) return <span className="text-muted-foreground">{t(ISSUER_KEYS.obligorUnavailable)}</span>;
-  return (
-    <Link href={ENTITY_ROUTES.contacts.withId(person.contactId)} className={`text-foreground ${LINK}`}>
-      {person.name ?? t(ISSUER_KEYS.obligorUnnamed)}
-    </Link>
-  );
-}
-
-/** ADR-915 §25 — **ποιος**, δίπλα στον ρόλο: σύνδεσμος στην επαφή · «+N ακόμη» · «δεν έχει οριστεί» · ή τίποτα (άγνωστο). */
-function ObligorPeople({ obligors }: { readonly obligors: RegistryObligors }): React.ReactElement | null {
-  const { t } = useTranslation([REGISTRY_NS]);
-  if (obligors.kind === 'unknown') return null;
-  if (obligors.kind === 'none') return <span className="text-muted-foreground">{t(ISSUER_KEYS.obligorNone)}</span>;
-  return (
-    <ul aria-label={t(ISSUER_KEYS.obligorPeople)} className="m-0 inline-flex list-none flex-wrap gap-x-3 p-0">
-      {obligors.shown.map((person) => <li key={person.contactId}><ObligorPerson person={person} /></li>)}
-      {obligors.more > 0 ? <li className="text-muted-foreground">{t(ISSUER_KEYS.obligorMore, { count: obligors.more })}</li> : null}
-    </ul>
   );
 }
 

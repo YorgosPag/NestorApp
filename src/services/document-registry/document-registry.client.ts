@@ -11,7 +11,7 @@
  * ⚠️ Ο `apiClient` πετά σε μη-2xx — εδώ μεταφράζεται σε **ρητή ένωση**, ώστε η οθόνη να μην πιάνει εξαιρέσεις.
  */
 
-import { apiClient } from '@/lib/api/enterprise-api-client';
+import { ApiClientError, apiClient } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
 
@@ -33,5 +33,25 @@ export async function fetchDocumentRegistry(): Promise<RegistryLoad> {
     const message = cause instanceof Error ? cause.message : String(cause);
     logger.error('Το μητρώο λήξεων δεν φορτώθηκε', { error: message });
     return { kind: 'failed', message };
+  }
+}
+
+/** ADR-915 §26 — ο ρητός υπεύθυνος εγγράφων ακινήτου: ΕΝΑ σημείο για τη διαδρομή. */
+export const OBLIGOR_DESIGNATIONS_URL = `${DOCUMENT_REGISTRY_URL}/obligor-designations`;
+
+/** Τι έγινε με τον ορισμό, όπως το βλέπει η οθόνη — `code` = ο κωδικός άρνησης του διακομιστή, αν υπάρχει. */
+export type ObligorDesignationSave =
+  | { readonly kind: 'saved' }
+  | { readonly kind: 'failed'; readonly code: string | null };
+
+/** **Όρισε** (ή, με `null`, επανάφερε στην αυτόματη επιλογή) τον υπεύθυνο του ακινήτου. */
+export async function saveObligorDesignation(propertyId: string, contactId: string | null): Promise<ObligorDesignationSave> {
+  try {
+    await apiClient.put(OBLIGOR_DESIGNATIONS_URL, { propertyId, contactId });
+    return { kind: 'saved' };
+  } catch (cause) {
+    const code = cause instanceof ApiClientError ? cause.errorCode ?? null : null;
+    logger.error('Ο υπεύθυνος του ακινήτου δεν ορίστηκε', { error: cause instanceof Error ? cause.message : String(cause), code });
+    return { kind: 'failed', code };
   }
 }
