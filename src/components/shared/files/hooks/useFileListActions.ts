@@ -52,7 +52,7 @@ export interface UseFileListActionsReturn {
   deleteConfirmOpen: boolean;
   setDeleteConfirmOpen: (open: boolean) => void;
   deleteLoading: boolean;
-  handleDeleteClick: (fileId: string, event: React.MouseEvent) => void;
+  handleDeleteClick: (fileId: string, event?: React.SyntheticEvent) => void;
   handleDeleteConfirm: () => Promise<void>;
   deleteBlockedOpen: boolean;
   setDeleteBlockedOpen: (open: boolean) => void;
@@ -60,9 +60,9 @@ export interface UseFileListActionsReturn {
   unlinkConfirmOpen: boolean;
   setUnlinkConfirmOpen: (open: boolean) => void;
   unlinkLoading: boolean;
-  handleUnlinkClick: (fileId: string, event: React.MouseEvent) => void;
+  handleUnlinkClick: (fileId: string, event?: React.SyntheticEvent) => void;
   handleUnlinkConfirm: () => Promise<void>;
-  handleLinkClick: (file: FileRecord, event: React.MouseEvent) => void;
+  handleLinkClick: (file: FileRecord, event?: React.SyntheticEvent) => void;
   handleView: (file: FileRecord, event: React.MouseEvent) => void;
   handleDownload: (file: FileRecord, event: React.MouseEvent) => void;
 }
@@ -168,8 +168,8 @@ export function useFileListActions({
     }
   }, []);
 
-  const handleDeleteClick = useCallback((fileId: string, event: React.MouseEvent) => {
-    event.stopPropagation();
+  const handleDeleteClick = useCallback((fileId: string, event?: React.SyntheticEvent) => {
+    event?.stopPropagation();
     if (!onDelete || !currentUserId) return;
     setFileToDelete(fileId);
     setDeleteConfirmOpen(true);
@@ -201,8 +201,8 @@ export function useFileListActions({
     }
   }, [fileToDelete, onDelete, t, fileNotifications]);
 
-  const handleUnlinkClick = useCallback((fileId: string, event: React.MouseEvent) => {
-    event.stopPropagation();
+  const handleUnlinkClick = useCallback((fileId: string, event?: React.SyntheticEvent) => {
+    event?.stopPropagation();
     if (!onUnlink) return;
     setFileToUnlink(fileId);
     setUnlinkConfirmOpen(true);
@@ -225,8 +225,8 @@ export function useFileListActions({
     }
   }, [fileToUnlink, onUnlink, fileNotifications]);
 
-  const handleLinkClick = useCallback((file: FileRecord, event: React.MouseEvent) => {
-    event.stopPropagation();
+  const handleLinkClick = useCallback((file: FileRecord, event?: React.SyntheticEvent) => {
+    event?.stopPropagation();
     onLink?.(file);
   }, [onLink]);
 

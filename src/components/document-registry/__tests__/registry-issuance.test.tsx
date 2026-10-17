@@ -16,6 +16,7 @@ import { NEXT_STEP_KEYS } from '../document-registry-labels';
 import {
   BALL_IN_COURT_KEYS,
   DECISION_KEYS,
+  DELIVERY_HISTORY_KEYS,
   ISSUANCE_ERROR_KEYS,
   ISSUANCE_KEYS,
   ISSUANCE_STAGE_KEYS,
@@ -23,12 +24,8 @@ import {
   PROPOSE_KEYS,
   SEND_KEYS,
 } from '../issuance-labels';
-import {
-  reduceIssuance,
-  withIssuanceDelivery,
-  type IssuanceAction,
-  type IssuanceAssignmentRecord,
-} from '@/lib/document-validity/issuance-assignment';
+import { reduceIssuance, type IssuanceAction, type IssuanceAssignmentRecord } from '@/lib/document-validity/issuance-assignment';
+import { withIssuanceDelivery } from '@/lib/document-validity/issuance-delivery';
 import type { IssuanceRosterEntry } from '@/lib/document-validity/issuance-candidates';
 import type { ObligorLead } from '@/lib/document-validity/obligor-lead';
 import { FIXTURE_DOCUMENTS, FIXTURE_REQUIREMENTS, fixtureResponse } from '@/lib/document-validity/__tests__/registry-fixture';
@@ -275,6 +272,26 @@ describe('ADR-915 §28 — αποστολή με σύνδεσμο: πρόχει�
     render(<DocumentRegistryContent />);
     expect(within(article()).getByText(LINK_HISTORY_KEYS.notDelivered)).toBeTruthy();
     expect(within(article()).getByRole('button', { name: SEND_KEYS.ownerResend })).toBeTruthy();
+  });
+
+  it('§30 — γεγονότα του παρόχου: «παραδόθηκε» ήσυχα · «επέστρεψε» / «ανεπιθύμητο» ως συναγερμός · επιστροφή συνιδιοκτήτη ΔΕΝ μετρά', () => {
+    const requested = recordOf([PROPOSE, REQUEST]);
+    const cases = [
+      [{ recipient: 'delivered', coOwners: { cont_beta: 'delivered' } }, DELIVERY_HISTORY_KEYS.delivered, false],
+      [{ recipient: 'bounced', coOwners: { cont_beta: 'bounced' } }, DELIVERY_HISTORY_KEYS.bounced, true],
+      [{ recipient: 'complained', coOwners: {} }, DELIVERY_HISTORY_KEYS.complained, true],
+    ] as const;
+    for (const [delivery, key, alarm] of cases) {
+      const record = withIssuanceDelivery(requested, 'diin_1', delivery) ?? requested;
+      registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record }]);
+      const { unmount } = render(<DocumentRegistryContent />);
+      expect(within(article()).getByText(key).className.includes('text-destructive')).toBe(alarm);
+      expect(within(article()).queryByText(LINK_HISTORY_KEYS.notDelivered)).toBeNull();
+      // «Ενημερώθηκαν Ν»: όποιος έλαβε το μήνυμα μετρά· όποιου επέστρεψε, όχι.
+      const informed = within(article()).queryByText(`${LINK_HISTORY_KEYS.informed} ${JSON.stringify({ count: '1' })}`);
+      expect(informed !== null).toBe(delivery.coOwners.cont_beta === 'delivered');
+      unmount();
+    }
   });
 });
 

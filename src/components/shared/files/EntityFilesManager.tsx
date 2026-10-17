@@ -36,6 +36,7 @@ import React, { useCallback, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { FullscreenOverlay } from '@/core/containers/FullscreenOverlay';
+import { NESTED_IN_DETAILS_FLUSH } from '@/core/containers/DetailsContainer';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
@@ -170,6 +171,7 @@ export function EntityFilesManager({
   const [linkModalFile, setLinkModalFile] = useState<FileRecord | null>(null);
   const [selectedFile, setSelectedFile] = useState<FileRecord | null>(null);
   const { confirm, dialogProps } = useConfirmDialog();
+  const liveList = fileListIsLive(displayStyle, scopePolicy?.readScopes);
 
   // =========================================================================
   // DATA FETCHING
@@ -193,7 +195,7 @@ export function EntityFilesManager({
     scopes: scopePolicy?.readScopes,
     levelFloorId,
     autoFetch: true,
-    realtime: fileListIsLive(displayStyle, scopePolicy?.readScopes),
+    realtime: liveList,
   });
 
   // =========================================================================
@@ -382,7 +384,8 @@ export function EntityFilesManager({
       fullscreenClassName="rounded-none"
       ariaLabel={t('manager.filesTitle')}
     >
-      <Card className={cn('w-full', fullscreen.isFullscreen && 'h-full flex flex-col rounded-none border-0')}>
+      {/* Μέσα στην κάρτα λεπτομερειών, στο κινητό, η κάρτα αρχείων γίνεται επίπεδη (ADR-912 §12.14). */}
+      <Card className={cn('w-full', NESTED_IN_DETAILS_FLUSH, fullscreen.isFullscreen && 'h-full flex flex-col rounded-none border-0')}>
         <EntityFilesToolbar
           activeTab={activeTab}
           onTabChange={setActiveTab}
@@ -399,6 +402,9 @@ export function EntityFilesManager({
           onRefresh={() => refetch()}
           fullscreen={fullscreen}
           fileCount={files.length}
+          liveList={liveList}
+          searchTerm={searchTerm}
+          onSearchTermChange={setSearchTerm}
           showWorkspace={officeActions}
         />
 
@@ -429,7 +435,6 @@ export function EntityFilesManager({
           loading={loading}
           error={error}
           searchTerm={searchTerm}
-          onSearchTermChange={setSearchTerm}
           viewMode={viewMode}
           treeViewMode={treeViewMode}
           displayStyle={displayStyle}

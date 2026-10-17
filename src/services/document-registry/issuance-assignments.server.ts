@@ -23,16 +23,23 @@ import {
   issuanceStageOf,
   issuanceStateOf,
   reduceIssuance,
+  messageOf,
   visibleIssuanceStage,
-  withIssuanceDelivery,
   type IssuanceAction,
   type IssuanceActor,
-  type IssuanceDelivery,
   type IssuanceRefusalReason,
   type IssuanceAssignmentRecord,
   type IssuanceStage,
   type LinkVerification,
 } from '@/lib/document-validity/issuance-assignment';
+import {
+  withIssuanceDelivery,
+  withObservedDelivery,
+  type DeliverySlot,
+  type IssuanceDelivery,
+  type IssuanceDeliveryOutcome,
+  type ObservedDeliveryOutcome,
+} from '@/lib/document-validity/issuance-delivery';
 import type { IssuanceRosterEntry } from '@/lib/document-validity/issuance-candidates';
 import { isOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -284,4 +291,44 @@ export async function recordIssuanceDelivery(
     });
     return false;
   }
+}
+
+/** Το αποτέλεσμα ενός γεγονότος παράδοσης του παρόχου (§30) — η τιμή **της θέσης**, πριν και μετά την αναδίπλωση. */
+export type IssuanceObservationOutcome =
+  | { readonly kind: 'recorded'; readonly previous: IssuanceDeliveryOutcome | undefined; readonly next: IssuanceDeliveryOutcome; readonly record: IssuanceAssignmentRecord }
+  /** Η ανάθεση δεν υπάρχει πια ή το μήνυμα αντικαταστάθηκε — το γεγονός δεν αφορά κανέναν. */
+  | { readonly kind: 'stale' }
+  /** Το γεγονός πρόλαβε την αναφορά του αποστολέα — ο πάροχος θα το ξαναστείλει. */
+  | { readonly kind: 'not-reported' };
+
+function slotValueOf(record: IssuanceAssignmentRecord, invitationId: string, slot: DeliverySlot): IssuanceDeliveryOutcome | undefined {
+  const delivery = messageOf(record, invitationId)?.delivery ?? null;
+  if (delivery === null) return undefined;
+  return slot.kind === 'recipient' ? delivery.recipient : delivery.coOwners[slot.contactId];
+}
+
+/**
+ * **Γεγονός παράδοσης του παρόχου** (§30 Η-Δ2) — ο ΙΔΙΟΣ γραφέας, η ΙΔΙΑ αναδίπλωση με την αναφορά του αποστολέα. Ιδεμποτής:
+ * το ίδιο γεγονός δεύτερη φορά ⇒ `previous === next`, καμία εγγραφή. ⚠️ **Πετά** σε βλάβη βάσης: ο webhook απαντά 5xx και
+ * ο πάροχος ξαναστέλνει — αντίθετα από το `recordIssuanceDelivery`, εδώ η επανάληψη **είναι** η θεραπεία.
+ */
+export async function recordIssuanceObservation(
+  db: Firestore,
+  target: { readonly companyId: string; readonly propertyId: string; readonly documentKind: DocumentKind; readonly invitationId: string },
+  slot: DeliverySlot,
+  outcome: ObservedDeliveryOutcome,
+): Promise<IssuanceObservationOutcome> {
+  const ref = assignmentRefOf(db, target.companyId, target.propertyId, target.documentKind);
+  return db.runTransaction(async (tx): Promise<IssuanceObservationOutcome> => {
+    const stored = parseIssuanceAssignment((await tx.get(ref)).data());
+    if (stored === null || !isOwnedByCompany(stored, target.companyId)) return { kind: 'stale' };
+    const record = issuanceRecordOf(stored);
+    if (messageOf(record, target.invitationId) === null) return { kind: 'stale' };
+    const next = withObservedDelivery(record, target.invitationId, slot, outcome);
+    if (next === null) return { kind: 'not-reported' };
+    const previous = slotValueOf(record, target.invitationId, slot);
+    const after = slotValueOf(next, target.invitationId, slot) ?? outcome;
+    if (previous !== after) tx.set(ref, { ...stored, ...next });
+    return { kind: 'recorded', previous, next: after, record: next };
+  });
 }

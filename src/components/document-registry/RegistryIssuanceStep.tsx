@@ -26,12 +26,12 @@ import type {
   IssuanceApprovalRequest,
   IssuanceAssignmentRecord,
   IssuanceDecision,
-  IssuanceDelivery,
   IssuanceNotice,
   IssuanceResponse,
   IssuanceStage,
   LinkVerification,
 } from '@/lib/document-validity/issuance-assignment';
+import type { IssuanceDelivery } from '@/lib/document-validity/issuance-delivery';
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
 import { useIssuanceAssignmentActions } from '@/components/document-registry/issuance-assignment-context';
 import { issuanceTargetOf, type RegistryIssuanceView } from '@/components/document-registry/registry-issuance';
@@ -48,6 +48,9 @@ import { ISSUER_KEYS, NEXT_STEP_KEYS, PROPERTY_MARKET_NS, qualificationText, REG
 import {
   BALL_IN_COURT_KEYS,
   CHANNEL_KEYS,
+  DELIVERY_ALARM,
+  DELIVERY_HISTORY_KEYS,
+  DELIVERY_REACHED,
   ISSUANCE_KEYS,
   ISSUANCE_STAGE_KEYS,
   LINK_HISTORY_KEYS,
@@ -102,9 +105,15 @@ function BallInCourtLine({ state, view, registry }: { readonly state: OpenState;
   );
 }
 
-/** «Δεν έφυγε» — μόνο όταν **ξέρουμε** ότι ο πάροχος δεν το δέχτηκε· `null` (δεν κρίθηκε) δεν λέει τίποτα. */
-function notDelivered(delivery: IssuanceDelivery | null): boolean {
-  return delivery !== null && delivery.recipient !== 'accepted';
+/**
+ * Η γραμμή παράδοσης του παραλήπτη (§30) — «παραδόθηκε» · «επέστρεψε» · «δεν έφυγε» — από **έναν** χάρτη
+ * (`DELIVERY_HISTORY_KEYS`). `null` (δεν κρίθηκε ακόμη) ή `accepted` (μόνο ουρά) δεν λένε τίποτα.
+ */
+function deliveryLine(t: Translate, key: string, delivery: IssuanceDelivery | null): React.ReactNode {
+  const outcome = delivery?.recipient ?? 'accepted';
+  if (outcome === 'accepted') return null;
+  const tone = DELIVERY_ALARM[outcome] ? 'text-destructive' : 'text-muted-foreground';
+  return <li key={key} className={tone}>{t(DELIVERY_HISTORY_KEYS[outcome])}</li>;
 }
 
 /** §29 — «με κωδικό πρόσβασης»: η γραμμή που λέει ότι ο σύνδεσμος ζητά και τον κωδικό του δεύτερου καναλιού. */
@@ -113,7 +122,7 @@ function codeLine(t: Translate, key: string, verification: LinkVerification | nu
 }
 
 function informedCount(delivery: IssuanceDelivery | null): number {
-  return delivery === null ? 0 : Object.values(delivery.coOwners).filter((outcome) => outcome === 'accepted').length;
+  return delivery === null ? 0 : Object.values(delivery.coOwners).filter((outcome) => DELIVERY_REACHED[outcome]).length;
 }
 
 /** §28 — το αίτημα έγκρισης με σύνδεσμο: σε ποιον, πότε, ποιοι ενημερώθηκαν, και αν **δεν** έφυγε. */
@@ -123,7 +132,7 @@ function requestLines(t: Translate, request: IssuanceApprovalRequest, registry: 
     <li key="request">{t(LINK_HISTORY_KEYS.requestedApproval, { name: nameOf(t, request.ownerContactId, registry), date: formatDate(request.at) })}</li>,
     codeLine(t, 'request-code', request.verification),
     count > 0 ? <li key="informed">{t(LINK_HISTORY_KEYS.informed, { count: String(count) })}</li> : null,
-    notDelivered(request.delivery) ? <li key="request-failed" className="text-destructive">{t(LINK_HISTORY_KEYS.notDelivered)}</li> : null,
+    deliveryLine(t, 'request-delivery', request.delivery),
   ];
 }
 
@@ -145,7 +154,7 @@ function noticeLines(t: Translate, notice: IssuanceNotice): React.ReactNode[] {
   return [
     <li key="notice">{line}</li>,
     codeLine(t, 'notice-code', notice.verification),
-    notDelivered(notice.delivery) ? <li key="notice-failed" className="text-destructive">{t(LINK_HISTORY_KEYS.notDelivered)}</li> : null,
+    deliveryLine(t, 'notice-delivery', notice.delivery),
   ];
 }
 

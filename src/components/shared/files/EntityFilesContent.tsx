@@ -29,7 +29,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { SearchInput } from '@/components/ui/search';
+import { NESTED_IN_DETAILS_FLUSH_SECTION } from '@/core/containers/DetailsContainer';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { FilePreviewPanel } from '@/components/file-manager/FilePreviewPanel';
 import { BatchActionsBar } from '@/components/file-manager/BatchActionsBar';
@@ -105,7 +105,6 @@ export interface EntityFilesContentProps {
   loading: boolean;
   error: Error | null;
   searchTerm: string;
-  onSearchTermChange: (term: string) => void;
   // View state
   viewMode: 'list' | 'tree' | 'gallery';
   treeViewMode: 'business' | 'technical';
@@ -172,7 +171,7 @@ export function EntityFilesContent(rawProps: EntityFilesContentProps) {
   const props = locked ? withoutWriteActions(rawProps) : rawProps;
 
   return (
-    <CardContent className={cn('space-y-2', props.isFullscreen && 'flex-1 min-h-0 overflow-auto')}>
+    <CardContent className={cn('space-y-2', NESTED_IN_DETAILS_FLUSH_SECTION, props.isFullscreen && 'flex-1 min-h-0 overflow-auto')}>
       {/* Upload Pipeline (conditional) - Only show on files tab */}
       {props.activeTab === 'files' && props.showUploadZone && (
         <UploadZoneSection {...props} />
@@ -230,8 +229,14 @@ function UploadZoneSection({
     entityType, contactType, activePersonas, allowedEntryPointIds,
     categoryFilter: entryPointCategoryFilter, excludeCategories: entryPointExcludeCategories,
   }).length === 0;
+  // Στο κινητό η εντολή ήρθε από την κάτω μπάρα (ADR-912 §12.14) — η ζώνη ανοίγει ψηλά, ίσως εκτός οθόνης.
+  // `nearest`: αν φαίνεται ήδη (υπολογιστής, κουμπί από πάνω της), δεν κινείται τίποτα.
+  const zoneRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    zoneRef.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+  }, []);
   return (
-    <div className="relative space-y-2 p-2 bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20">
+    <div ref={zoneRef} className="relative space-y-2 p-2 bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20">
       <Button
         variant="ghost"
         size="sm"
@@ -333,24 +338,11 @@ function FilesTabContent(props: EntityFilesContentProps) {
         </div>
       )}
 
-      {/* File Search (Google Drive/Dropbox/OneDrive pattern) */}
-      {props.files.length > 0 && (
-        <div className="flex items-center gap-4">
-          <div className="flex-1 max-w-md">
-            <SearchInput
-              value={props.searchTerm}
-              onChange={props.onSearchTermChange}
-              placeholder={t('search.placeholder')}
-              debounceMs={300}
-              showClearButton
-            />
-          </div>
-          {props.searchTerm && (
-            <span className={cn("text-sm", colors.text.muted)}>
-              {t('search.results', { count: props.filteredFiles.length, total: props.files.length })}
-            </span>
-          )}
-        </div>
+      {/* Η αναζήτηση ζει στην εργαλειοθήκη (ADR-912 §12.14)· εδώ μένει μόνο το πόσα βρέθηκαν. */}
+      {props.searchTerm && (
+        <p role="status" className={cn("m-0 text-sm", colors.text.muted)}>
+          {t('search.results', { count: props.filteredFiles.length, total: props.files.length })}
+        </p>
       )}
 
       {/* Split-panel layout — file list + inline preview */}

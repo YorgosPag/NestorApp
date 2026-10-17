@@ -983,6 +983,9 @@
     "bodyUnnamed": "Answer through the link. Open «Document expiry» for the next step.",
     "locked": "Link locked — “{title}”",
     "lockedBody": "A wrong code was entered 5 times on the link sent to {name}. If it was not them, someone else has the link; send again from “Document expiry”.",
-    "lockedBodyUnnamed": "A wrong code was entered 5 times on the link. Send again from “Document expiry”."
+    "lockedBodyUnnamed": "A wrong code was entered 5 times on the link. Send again from “Document expiry”.",
+    "bounced": "Email bounced — “{title}”",
+    "bouncedBody": "The email with the link to {name} was not delivered. Check the contact’s address and send again from “Document expiry”.",
+    "bouncedBodyUnnamed": "The email with the link was not delivered. Check the contact’s address and send again from “Document expiry”."
   }
 }

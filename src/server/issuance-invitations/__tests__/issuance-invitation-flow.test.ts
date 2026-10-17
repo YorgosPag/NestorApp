@@ -16,6 +16,9 @@ import { issuanceAssignmentIdOf } from '@/services/document-registry/issuance-as
 import { actOnIssuanceAssignment } from '@/services/document-registry/issuance-assignment.service';
 import { answerIssuanceLink, unlockIssuanceLink, viewIssuanceLink } from '@/server/issuance-invitations/issuance-invitation-answer';
 import { previewIssuanceMessage, sendIssuanceMessage } from '@/server/issuance-invitations/issuance-invitation-send';
+import { applyIssuanceDeliveryEvent, IssuanceDeliveryNotReportedError } from '@/server/issuance-invitations/issuance-delivery-events';
+import { announceDeliveryEvent } from '@/server/comms/email-delivery/delivery-event-consumers';
+import type { EmailDeliveryEvent } from '@/types/email-delivery';
 
 jest.mock('@/lib/telemetry', () => ({
   createModuleLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }),
@@ -60,7 +63,7 @@ const { deliverInvitationEmail } = require('@/server/invitations/invitation-noti
 const { dispatchNotification } = require('@/server/notifications/notification-orchestrator') as { dispatchNotification: jest.Mock };
 /* eslint-enable @typescript-eslint/no-require-imports */
 
-interface Sent { readonly to: string; readonly kind: string; readonly subject: string; readonly text: string }
+interface Sent { readonly to: string; readonly kind: string; readonly subject: string; readonly text: string; readonly correlation?: { readonly purpose: string; readonly ref: string } }
 
 const COMPANY = 'comp_alfa';
 const NOW = new Date('2026-10-17T09:00:00.000Z');
@@ -110,9 +113,9 @@ beforeEach(async () => {
   fake = new FakeFirestore();
   sent = [];
   delivery = 'accepted';
-  deliverInvitationEmail.mockReset().mockImplementation(async (d: { inviteeEmail: string; kind: string; compose: (l: string) => Promise<{ subject: string; text: string } | null> }) => {
+  deliverInvitationEmail.mockReset().mockImplementation(async (d: Pick<Sent, 'kind' | 'correlation'> & { inviteeEmail: string; compose: (l: string) => Promise<{ subject: string; text: string } | null> }) => {
     const email = await d.compose('el');
-    if (email !== null) sent.push({ to: d.inviteeEmail, kind: d.kind, subject: email.subject, text: email.text });
+    if (email !== null) sent.push({ to: d.inviteeEmail, kind: d.kind, subject: email.subject, text: email.text, correlation: d.correlation });
     return delivery;
   });
   dispatchNotification.mockClear();
@@ -370,5 +373,157 @@ describe('ADR-915 §29 — κωδικός πρόσβασης σε δεύτερο
     const second = await sendWithCode();
     if (first.code === second.code) return; // 1 στο 10⁶ — δεν αποδεικνύει τίποτα, ούτε διαψεύδει
     expect(await unlockIssuanceLink(db(), second.token, first.code, LATER)).toMatchObject({ kind: 'refused', reason: 'code-wrong' });
+  });
+});
+
+describe('ADR-915 §30 — απόδειξη απάντησης στη διεύθυνση του συνδέσμου', () => {
+  const receipts = () => sent.filter((message) => message.kind === 'document-issuance-receipt');
+
+  async function ownerToken(overrides: Partial<IssuanceSendBody> = {}): Promise<{ readonly token: string; readonly code: string | null }> {
+    const result = await sendIssuanceMessage(db(), OFFICE, body({ informContactIds: [], ...overrides }), NOW);
+    const message = sent.filter((candidate) => candidate.kind === 'document-issuance').at(-1);
+    if (!result.ok || message === undefined) throw new Error('not sent');
+    return { token: tokenIn(message), code: result.accessCode };
+  }
+
+  it('«Εγκρίνω» ⇒ ΜΙΑ απόδειξη στη διεύθυνση της πρόσκλησης: τι, πότε, πώς, «δεν ήσασταν εσείς;» — χωρίς σύνδεσμο', async () => {
+    const { token } = await ownerToken();
+    await answerIssuanceLink(db(), token, { answer: 'approve', note: null, accessCode: null }, LATER);
+    expect(receipts().map((message) => message.to)).toEqual(['alfa@example.test']);
+    const [receipt] = receipts();
+    expect(receipt?.subject).toContain('Καταγράψαμε την απάντησή σας');
+    expect(receipt?.text).toContain('Εγκρίνατε την ανάθεση');
+    expect(receipt?.text).toContain('Επιθεωρητής Συνθετικός');
+    expect(receipt?.text).toContain('Δεν ήσασταν εσείς;');
+    expect(receipt?.text).toContain('Γραφείο Άλφα');
+    expect(receipt?.text).toContain('Με τον σύνδεσμο που στάλθηκε σε αυτή τη διεύθυνση');
+    expect(receipt?.text).not.toContain('document-request');
+    expect(receipt?.text).not.toContain('#t=');
+  });
+
+  it('🔴 δεύτερο κλικ (`already-used`) ⇒ καμία δεύτερη απόδειξη· λάθος απάντηση (`answer-mismatch`) ⇒ καμία', async () => {
+    const { token } = await ownerToken();
+    expect(await answerIssuanceLink(db(), token, { answer: 'accept', note: null, accessCode: null }, LATER)).toMatchObject({ kind: 'refused' });
+    expect(receipts()).toEqual([]);
+    await answerIssuanceLink(db(), token, { answer: 'reject', note: null, accessCode: null }, LATER);
+    await answerIssuanceLink(db(), token, { answer: 'reject', note: null, accessCode: null }, LATER);
+    expect(receipts()).toHaveLength(1);
+    expect(receipts()[0]?.text).toContain('Δεν εγκρίνατε');
+  });
+
+  it('με κωδικό ⇒ «με τον κωδικό πρόσβασης» — ο ίδιος ο κωδικός ΠΟΤΕ στην απόδειξη', async () => {
+    const { token, code } = await ownerToken({ requireAccessCode: true });
+    if (code === null) throw new Error('no code');
+    await answerIssuanceLink(db(), token, { answer: 'approve', note: null, accessCode: code }, LATER);
+    expect(receipts()[0]?.text).toContain('Με τον σύνδεσμο και τον κωδικό πρόσβασης');
+    expect(receipts()[0]?.text).not.toContain(code);
+  });
+
+  it('ο επαγγελματίας αρνείται με σχόλιο ⇒ η απόδειξη πάει σε ΕΚΕΙΝΟΝ και του επιστρέφει το σχόλιό του', async () => {
+    await actOnIssuanceAssignment(db(), OFFICE, {
+      action: 'decide', ...TARGET, expectedStage: 'proposed', outcome: 'approved', channel: 'phone', note: null, expectedOwnerContactId: 'cont_a',
+    }, NOW);
+    await sendIssuanceMessage(db(), OFFICE, body({ audience: 'professional', expectedStage: 'ownerApproved', expectedOwnerContactId: null, informContactIds: [] }), NOW);
+    const message = sent.find((candidate) => candidate.to === 'pro@example.test');
+    if (message === undefined) throw new Error('not sent');
+    await answerIssuanceLink(db(), tokenIn(message), { answer: 'decline', note: 'Εκτός περιοχής.', accessCode: null }, LATER);
+    expect(receipts().map((receipt) => receipt.to)).toEqual(['pro@example.test']);
+    expect(receipts()[0]?.text).toContain('Αρνηθήκατε την έκδοση');
+    expect(receipts()[0]?.text).toContain('Εκτός περιοχής.');
+  });
+});
+
+describe('ADR-915 §30 — γεγονότα παράδοσης του παρόχου (Mailgun) πάνω στο ΙΔΙΟ μήνυμα', () => {
+  let eventSeq = 0;
+  function event(kind: EmailDeliveryEvent['kind'], ref: string | null, recipient = 'alfa@example.test'): EmailDeliveryEvent {
+    eventSeq += 1;
+    return {
+      provider: 'mailgun', providerEventId: `evt_${eventSeq}`, occurredAt: LATER.toISOString(), recipient, kind,
+      evidence: kind === 'failed' ? 'mailbox-absent' : null, providerReason: null, smtpCode: null, enhancedCode: null,
+      providerMessageId: null, purpose: 'document-issuance-invitation', ref,
+    };
+  }
+  const requestDelivery = () => (assignment() as { approvalRequest: { delivery: unknown } }).approvalRequest.delivery;
+  const bounceNotices = () => dispatchNotification.mock.calls.filter(([notice]) => String(notice.eventId).endsWith(':bounced'));
+
+  async function sendForApproval(): Promise<string> {
+    await sendIssuanceMessage(db(), OFFICE, body(), NOW);
+    const id = invitations()[0]?.id;
+    if (typeof id !== 'string') throw new Error('not sent');
+    return id;
+  }
+
+  it('κάθε μήνυμα ταξιδεύει με συσχέτιση ΤΑΥΤΟΤΗΤΑΣ (ποτέ token, ποτέ διεύθυνση) — παραλήπτης και συνιδιοκτήτης σε ΔΙΚΗ τους θέση', async () => {
+    const id = await sendForApproval();
+    expect(sent.map((message) => message.correlation)).toEqual([
+      { purpose: 'document-issuance-invitation', ref: id },
+      { purpose: 'document-issuance-invitation', ref: `${id}/cont_b` },
+    ]);
+    expect(await applyIssuanceDeliveryEvent(db(), event('delivered', id))).toBe('recorded');
+    expect(await applyIssuanceDeliveryEvent(db(), event('failed', `${id}/cont_b`, 'vita@example.test'))).toBe('recorded');
+    expect(requestDelivery()).toEqual({ recipient: 'delivered', coOwners: { cont_b: 'bounced' } });
+    expect(bounceNotices()).toEqual([]);
+  });
+
+  it('🔴 ιδεμποτής + ανεξάρτητος από τη σειρά: επιστροφή μετά το «παραδόθηκε» μένει, ένα καθυστερημένο «παραδόθηκε» δεν τη σβήνει', async () => {
+    const id = await sendForApproval();
+    const delivered = event('delivered', id);
+    expect(await applyIssuanceDeliveryEvent(db(), delivered)).toBe('recorded');
+    expect(await applyIssuanceDeliveryEvent(db(), delivered)).toBe('unchanged');
+    expect(await applyIssuanceDeliveryEvent(db(), event('failed', id))).toBe('recorded');
+    expect(await applyIssuanceDeliveryEvent(db(), event('delivered', id))).toBe('unchanged');
+    expect(requestDelivery()).toMatchObject({ recipient: 'bounced' });
+  });
+
+  it('επιστροφή στον παραλήπτη ⇒ ειδοποίηση στο γραφείο, με ΔΙΚΟ της ντετερμινιστικό κλειδί· η επανάληψη ζητά το ΙΔΙΟ κλειδί', async () => {
+    const id = await sendForApproval();
+    const bounce = event('failed', id);
+    await applyIssuanceDeliveryEvent(db(), bounce);
+    await applyIssuanceDeliveryEvent(db(), bounce);
+    const keys = bounceNotices().map(([notice]) => notice.eventId);
+    expect(keys).toEqual([`document-issuance:${issuanceAssignmentIdOf(COMPANY, 'prop_1', 'energy-certificate')}:${id}:user_1:bounced`, keys[0]]);
+    expect(bounceNotices()[0]?.[0]).toMatchObject({ titleKey: 'documentIssuanceAnswered.bounced', bodyKey: 'documentIssuanceAnswered.bouncedBody', recipientId: 'user_1' });
+  });
+
+  it('ο αποστολέας είπε «δεν έφυγε» αλλά ο πάροχος το παρέδωσε ⇒ κερδίζει η αλήθεια του παρόχου', async () => {
+    delivery = 'failed';
+    const id = await sendForApproval();
+    await applyIssuanceDeliveryEvent(db(), event('delivered', id));
+    expect(requestDelivery()).toMatchObject({ recipient: 'delivered' });
+  });
+
+  it('🔴 αγώνας: το γεγονός ΠΡΟΛΑΒΑΙΝΕΙ την αναφορά του αποστολέα ⇒ πετά (ο πάροχος ξαναστέλνει) — καμία επινοημένη τιμή', async () => {
+    const early: Promise<unknown>[] = [];
+    const base = deliverInvitationEmail.getMockImplementation();
+    deliverInvitationEmail.mockImplementation(async (d: { invitationId: string; kind: string }) => {
+      if (d.kind === 'document-issuance') early.push(applyIssuanceDeliveryEvent(db(), event('delivered', d.invitationId)).catch((error: unknown) => error));
+      return base?.(d);
+    });
+    const id = await sendForApproval();
+    expect(await early[0]).toBeInstanceOf(IssuanceDeliveryNotReportedError);
+    expect(requestDelivery()).toEqual({ recipient: 'accepted', coOwners: { cont_b: 'accepted' } });
+    expect(await applyIssuanceDeliveryEvent(db(), event('delivered', id))).toBe('recorded');
+    expect(requestDelivery()).toMatchObject({ recipient: 'delivered' });
+  });
+
+  it('παλιό μήνυμα (επαναποστολή) ⇒ `stale`· ξένη διεύθυνση ή ξένο σχήμα ⇒ `ignored` — τίποτα δεν γράφεται', async () => {
+    const old = await sendForApproval();
+    await sendIssuanceMessage(db(), OFFICE, body({ informContactIds: [] }), LATER);
+    expect(await applyIssuanceDeliveryEvent(db(), event('failed', old))).toBe('stale');
+    const current = invitations().find((invitation) => invitation.id !== old)?.id;
+    if (typeof current !== 'string') throw new Error('not resent');
+    expect(await applyIssuanceDeliveryEvent(db(), event('failed', current, 'intruder@example.test'))).toBe('ignored');
+    for (const ref of [null, '', `${current}/`, `${current}/a/b`]) expect(await applyIssuanceDeliveryEvent(db(), event('failed', ref))).toBe('ignored');
+    expect(await applyIssuanceDeliveryEvent(db(), event('deferred', current))).toBe('ignored');
+    expect(requestDelivery()).toEqual({ recipient: 'accepted', coOwners: {} });
+    expect(bounceNotices()).toEqual([]);
+  });
+
+  it('το μητρώο καταναλωτών δρομολογεί ΚΑΤΑ ΣΚΟΠΟ — χωρίς σκοπό ή ref, κανείς', async () => {
+    const id = await sendForApproval();
+    await announceDeliveryEvent(db(), { ...event('delivered', id), purpose: null });
+    expect(requestDelivery()).toMatchObject({ recipient: 'accepted' });
+    await announceDeliveryEvent(db(), event('delivered', id));
+    expect(requestDelivery()).toMatchObject({ recipient: 'delivered' });
   });
 });

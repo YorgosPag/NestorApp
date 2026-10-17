@@ -4,7 +4,8 @@
  * @related lib/communications/mailgun-webhook/mailgun-signature.ts (η πύλη) ·
  *   lib/communications/email-delivery/mailgun-event-read.ts (η ανάγνωση) ·
  *   server/comms/email-delivery/email-delivery-ledger.ts (το ημερολόγιο) ·
- *   server/comms/email-delivery/mailbox-absent-consumers.ts (οι συνέπειες)
+ *   server/comms/email-delivery/mailbox-absent-consumers.ts (οι συνέπειες ανά διεύθυνση) ·
+ *   server/comms/email-delivery/delivery-event-consumers.ts (ο ιδιοκτήτης του μηνύματος, ανά σκοπό — ADR-915 §30)
  * @module app/api/communications/webhooks/mailgun/events/route
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -38,6 +39,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withWebhookRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { recordEmailDeliveryEvent } from '@/server/comms/email-delivery/email-delivery-ledger';
+import { announceDeliveryEvent } from '@/server/comms/email-delivery/delivery-event-consumers';
 import { absenceOf, announceMailboxAbsent } from '@/server/comms/email-delivery/mailbox-absent-consumers';
 
 const logger = createModuleLogger('MAILGUN_EVENTS_WEBHOOK');
@@ -71,6 +73,8 @@ async function handleMailgunEvent(request: NextRequest): Promise<Response> {
     if (absence !== null && isStandingEvidence(record.standing, event.providerEventId)) {
       await announceMailboxAbsent(adminDb, absence);
     }
+    // Και στο `duplicate`: ο καταναλωτής είναι ιδεμποτής, και μια αποτυχία του σε προηγούμενη παράδοση διορθώνεται εδώ.
+    await announceDeliveryEvent(adminDb, event);
     return NextResponse.json({ ok: true, outcome: record.outcome });
   } catch (error) {
     logger.error('Το συμβάν δεν ολοκληρώθηκε — ο πάροχος θα ξαναστείλει', {

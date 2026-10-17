@@ -8,11 +8,11 @@ import {
   currentLinkAudience,
   issuanceStageOf,
   reduceIssuance,
-  withIssuanceDelivery,
   type IssuanceAction,
   type IssuanceActor,
   type IssuanceAssignmentRecord,
 } from '@/lib/document-validity/issuance-assignment';
+import { withIssuanceDelivery } from '@/lib/document-validity/issuance-delivery';
 
 const NOW = '2026-10-17T09:00:00.000Z';
 const OFFICE: IssuanceActor = { kind: 'office', uid: 'uid_agent', nowIso: NOW };

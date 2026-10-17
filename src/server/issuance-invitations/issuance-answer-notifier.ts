@@ -36,8 +36,10 @@ const noticeT = createBundleTranslate({ 'common-shared': elShared }, 'common-sha
 /**
  * Τι έγινε στον σύνδεσμο: μία απάντηση, ή (§29) **κλείδωμα** μετά από 5 λάθος κωδικούς — όπως το Adobe Sign ειδοποιεί τον
  * αποστολέα. Ίδιο γεγονός, ίδια προτίμηση (`documentIssuanceAnswers`): «κίνηση στον σύνδεσμο που έστειλα».
+ * §30 — ή (`delivery-failed`) **το email επέστρεψε**: ο πάροχος δεν μπόρεσε να το παραδώσει (DocuSign «Envelope delivery to a
+ * recipient fails»). Ο σύνδεσμος δεν θα απαντηθεί ποτέ — το γραφείο πρέπει να το μάθει χωρίς να κοιτάξει.
  */
-export type IssuanceLinkEvent = IssuanceLinkAnswer | 'code-locked';
+export type IssuanceLinkEvent = IssuanceLinkAnswer | 'code-locked' | 'delivery-failed';
 
 const TITLE_KEYS: Readonly<Record<IssuanceLinkEvent, string>> = {
   approve: 'documentIssuanceAnswered.approved',
@@ -45,7 +47,21 @@ const TITLE_KEYS: Readonly<Record<IssuanceLinkEvent, string>> = {
   accept: 'documentIssuanceAnswered.accepted',
   decline: 'documentIssuanceAnswered.declined',
   'code-locked': 'documentIssuanceAnswered.locked',
+  'delivery-failed': 'documentIssuanceAnswered.bounced',
 };
+
+/** Το σώμα κάθε γεγονότος — με όνομα του αποδέκτη, ή χωρίς (επαφή χωρίς όνομα). */
+const BODY_KEYS: Readonly<Record<IssuanceLinkEvent, { readonly named: string; readonly unnamed: string }>> = {
+  approve: { named: 'documentIssuanceAnswered.body', unnamed: 'documentIssuanceAnswered.bodyUnnamed' },
+  reject: { named: 'documentIssuanceAnswered.body', unnamed: 'documentIssuanceAnswered.bodyUnnamed' },
+  accept: { named: 'documentIssuanceAnswered.body', unnamed: 'documentIssuanceAnswered.bodyUnnamed' },
+  decline: { named: 'documentIssuanceAnswered.body', unnamed: 'documentIssuanceAnswered.bodyUnnamed' },
+  'code-locked': { named: 'documentIssuanceAnswered.lockedBody', unnamed: 'documentIssuanceAnswered.lockedBodyUnnamed' },
+  'delivery-failed': { named: 'documentIssuanceAnswered.bouncedBody', unnamed: 'documentIssuanceAnswered.bouncedBodyUnnamed' },
+};
+
+/** Γεγονότα του ίδιου συνδέσμου που **δεν** είναι η απάντηση — δικό τους κλειδί, αλλιώς το ένα θα έσβηνε το άλλο ως διπλότυπο. */
+const EVENT_ID_SUFFIX: Readonly<Partial<Record<IssuanceLinkEvent, string>>> = { 'code-locked': ':locked', 'delivery-failed': ':bounced' };
 
 export interface IssuanceAnswerNotice {
   readonly companyId: string;
@@ -62,16 +78,13 @@ export interface IssuanceAnswerNotice {
 export function issuanceAnswerEventId(assignmentId: string, invitationId: string, recipientUid: string, event: IssuanceLinkEvent): string {
   // Το κλείδωμα και η απάντηση είναι **δύο** γεγονότα του ίδιου συνδέσμου — ίδιο κλειδί θα έσβηνε το ένα ως διπλότυπο.
   const base = `document-issuance:${assignmentId}:${invitationId}:${recipientUid}`;
-  return event === 'code-locked' ? `${base}:locked` : base;
+  return `${base}${EVENT_ID_SUFFIX[event] ?? ''}`;
 }
 
 function copyOf(notice: IssuanceAnswerNotice) {
   const titleKey = TITLE_KEYS[notice.answer];
   const titleParams = { title: notice.propertyName ?? notice.assignmentId };
-  const locked = notice.answer === 'code-locked';
-  const bodyKey = notice.respondentName === null
-    ? (locked ? 'documentIssuanceAnswered.lockedBodyUnnamed' : 'documentIssuanceAnswered.bodyUnnamed')
-    : (locked ? 'documentIssuanceAnswered.lockedBody' : 'documentIssuanceAnswered.body');
+  const bodyKey = notice.respondentName === null ? BODY_KEYS[notice.answer].unnamed : BODY_KEYS[notice.answer].named;
   const bodyParams = notice.respondentName === null ? undefined : { name: notice.respondentName };
   return {
     title: noticeT(titleKey, titleParams),

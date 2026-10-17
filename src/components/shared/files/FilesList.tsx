@@ -14,16 +14,17 @@
 
 import React from 'react';
 import { getStatusColor } from '@/lib/design-system';
-import { FileText, Eye, Trash2, Calendar, HardDrive, Link2, Unlink, Pencil, Check, X, RotateCcw } from 'lucide-react';
+import { FileText, Calendar, HardDrive, Link2, Check, X, RotateCcw } from 'lucide-react';
 import type { FileRecord } from '@/types/file-record';
 import type { FileRecordWithLinkStatus } from './hooks/useEntityFiles';
 import { FileThumbnail } from './FileThumbnail';
+import { FileRowActions } from './FileRowActions';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { INTERACTIVE_PATTERNS, FORM_BUTTON_EFFECTS } from '@/components/ui/effects';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFileDisplayName } from '@/hooks/useFileDisplayName';
@@ -167,7 +168,7 @@ export function FilesList({
       {files.map((file) => (
         <article
           key={file.id}
-          className={`flex items-center justify-between p-2 bg-card ${quick.card} border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} cursor-pointer`}
+          className={`group flex items-center justify-between gap-2 p-2 bg-card ${quick.card} border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} cursor-pointer`}
           aria-label={`${t('list.file')}: ${translateDisplayName(file)}`}
           onClick={() => onView?.(file)}
           role="button"
@@ -188,7 +189,7 @@ export function FilesList({
                 checked={selectedIds?.has(file.id) ?? false}
                 onChange={() => onToggleSelect(file.id)}
                 className="h-4 w-4 rounded border-border accent-control-accent cursor-pointer"
-                aria-label={`Select ${translateDisplayName(file)}`}
+                aria-label={t('list.selectFile', { name: translateDisplayName(file) })}
               />
             </label>
           )}
@@ -278,7 +279,7 @@ export function FilesList({
                 {/* AI classification state badge */}
                 {file.ingestion?.state === 'classifying' && (
                   <span className={`animate-pulse px-1.5 py-0.5 rounded text-[10px] font-medium leading-none ${getStatusColor('pending', 'bg')}/15 ${getStatusColor('pending', 'text')}`}>
-                    {t('list.classifying', 'Ανάλυση...')}
+                    {t('list.classifying')}
                   </span>
                 )}
                 {file.ingestion?.state === 'classification_failed' && (
@@ -367,52 +368,16 @@ export function FilesList({
             </div>
           </div>
 
-          {/* Actions */}
-          <nav className="flex items-center space-x-1" role="toolbar" aria-label={t('list.fileActions')}>
-            {onRename && !file.isLinkedFile && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); actions.handleRenameStart(file); }} aria-label={t('list.renameFile')}>
-                    <Pencil className={iconSizes.sm} aria-hidden="true" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t('list.renameFile')}</TooltipContent>
-              </Tooltip>
-            )}
-
-            {showLinkAction && onLink && !file.isLinkedFile && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" onClick={(e) => actions.handleLinkClick(file, e)} className={getStatusColor('pending', 'text')} aria-label={linkFileLabel}>
-                    <Link2 className={iconSizes.sm} aria-hidden="true" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{linkFileLabel}</TooltipContent>
-              </Tooltip>
-            )}
-
-            {file.isLinkedFile && onUnlink && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" onClick={(e) => actions.handleUnlinkClick(file.id, e)} className="text-[hsl(var(--text-warning))]" aria-label={unlinkFileLabel}>
-                    <Unlink className={iconSizes.sm} aria-hidden="true" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{unlinkFileLabel}</TooltipContent>
-              </Tooltip>
-            )}
-
-            {onDelete && currentUserId && !file.isLinkedFile && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" onClick={(e) => actions.handleDeleteClick(file.id, e)} className={`text-destructive ${FORM_BUTTON_EFFECTS.DESTRUCTIVE}`} aria-label={t('list.deleteFile')}>
-                    <Trash2 className={iconSizes.sm} aria-hidden="true" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t('list.deleteFile')}</TooltipContent>
-              </Tooltip>
-            )}
-          </nav>
+          {/* Ενέργειες: γρήγορα κουμπιά όπου υπάρχει δείκτης, «⋮» παντού, ο κάδος μόνο στο μενού (ADR-912 §12.14). */}
+          <FileRowActions
+            fileName={translateDisplayName(file)}
+            onRename={onRename && !file.isLinkedFile ? () => actions.handleRenameStart(file) : undefined}
+            onLink={showLinkAction && onLink && !file.isLinkedFile ? () => actions.handleLinkClick(file) : undefined}
+            linkLabel={linkFileLabel}
+            onUnlink={file.isLinkedFile && onUnlink ? () => actions.handleUnlinkClick(file.id) : undefined}
+            unlinkLabel={unlinkFileLabel}
+            onDelete={onDelete && currentUserId && !file.isLinkedFile ? () => actions.handleDeleteClick(file.id) : undefined}
+          />
         </article>
       ))}
 

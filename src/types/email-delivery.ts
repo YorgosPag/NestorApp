@@ -66,7 +66,11 @@ export const EMAIL_DELIVERY_VARIABLES = {
 } as const;
 
 /** Γιατί στάλθηκε — κλειστό σύνολο, ώστε ο δέκτης να μη μαντεύει από κείμενο. */
-export const EMAIL_DELIVERY_PURPOSES = ['showcase-email-confirmation'] as const;
+export const EMAIL_DELIVERY_PURPOSES = [
+  'showcase-email-confirmation',
+  /** ADR-915 §30 — μήνυμα ανάθεσης έκδοσης (αίτημα έγκρισης · επαγγελματίας · συνιδιοκτήτης). `ref` = `<invitationId>[/<contactId>]`. */
+  'document-issuance-invitation',
+] as const;
 export type EmailDeliveryPurpose = (typeof EMAIL_DELIVERY_PURPOSES)[number];
 
 export interface EmailDeliveryCorrelation {

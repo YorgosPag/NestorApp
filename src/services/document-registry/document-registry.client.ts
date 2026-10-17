@@ -15,7 +15,7 @@ import { ApiClientError, apiClient, isClientRefusal } from '@/lib/api/enterprise
 import { createModuleLogger } from '@/lib/telemetry';
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
 import type { IssuanceAssignmentBody, IssuanceSendBody } from '@/lib/document-validity/issuance-request';
-import type { IssuanceDelivery } from '@/lib/document-validity/issuance-assignment';
+import type { IssuanceDelivery } from '@/lib/document-validity/issuance-delivery';
 import type { IssuancePreview } from '@/types/issuance-invitation';
 
 const logger = createModuleLogger('document-registry.client');

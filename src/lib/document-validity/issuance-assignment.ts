@@ -35,6 +35,8 @@ import type { IssuerQualification } from '@/config/document-validity/document-is
 import { documentKindSpec, type DocumentKind } from '@/config/document-validity/document-validity';
 import { conveyanceToday } from '@/lib/conveyance/conveyance-calendar';
 
+import type { IssuanceDelivery } from './issuance-delivery';
+
 export const ISSUANCE_STAGES = [
   'proposed', 'ownerApproved', 'ownerRejected', 'sent', 'accepted', 'declined', 'cancelled',
 ] as const;
@@ -101,19 +103,6 @@ export type IssuanceResponse = IssuanceResponseBasis & {
   readonly note: string | null;
   readonly at: string;
 };
-
-/**
- * Τι απέγινε ένα email — **ποτέ** «παραδόθηκε» (το `200` του παρόχου σημαίνει «μπήκε σε ουρά»). Ίδιες λέξεις με το
- * `InvitationNoticeOutcome` του αποστολέα (ο server το ελέγχει με `satisfies`).
- */
-export const ISSUANCE_DELIVERY_OUTCOMES = ['accepted', 'failed', 'unaddressable'] as const;
-export type IssuanceDeliveryOutcome = (typeof ISSUANCE_DELIVERY_OUTCOMES)[number];
-
-/** Η παράδοση ενός μηνύματος (§28 Η-Β9) — **τηλεμετρία**, όχι στάδιο. Συνιδιοκτήτες: μόνο στο αίτημα έγκρισης. */
-export interface IssuanceDelivery {
-  readonly recipient: IssuanceDeliveryOutcome;
-  readonly coOwners: Readonly<Record<string, IssuanceDeliveryOutcome>>;
-}
 
 /** Το αίτημα έγκρισης με σύνδεσμο προς τον υπεύθυνο (§28 Η-Β1) — **μόνο αυτό** το `invitationId` αποφασίζει. */
 export interface IssuanceApprovalRequest {
@@ -359,13 +348,10 @@ function advanced(record: IssuanceAssignmentRecord, stage: IssuanceStage, action
   return { ok: true, record: officeAdvanced(record, action, actor.uid, actor.nowIso), changed: true };
 }
 
-/**
- * **Η παράδοση ενός μηνύματος** (§28 Η-Β9) — γράφεται **μόνο** στο μήνυμα που τη γέννησε: αν στο μεταξύ στάλθηκε νέο
- * (άλλο `invitationId`), η παλιά αναφορά **δεν** σκεπάζει τη νέα ⇒ `null`. Τηλεμετρία, όχι στάδιο: δεν περνά από τον μειωτή.
- */
-export function withIssuanceDelivery(record: IssuanceAssignmentRecord, invitationId: string, delivery: IssuanceDelivery): IssuanceAssignmentRecord | null {
-  if (record.approvalRequest?.invitationId === invitationId) return { ...record, approvalRequest: { ...record.approvalRequest, delivery } };
-  if (record.notice?.invitationId === invitationId) return { ...record, notice: { ...record.notice, delivery } };
+/** Το μήνυμα με αυτό το `invitationId` — αίτημα έγκρισης ή μήνυμα στον επαγγελματία· `null` = κανένα τρέχον. */
+export function messageOf(record: IssuanceAssignmentRecord, invitationId: string): IssuanceApprovalRequest | IssuanceNotice | null {
+  if (record.approvalRequest?.invitationId === invitationId) return record.approvalRequest;
+  if (record.notice?.invitationId === invitationId) return record.notice;
   return null;
 }
 

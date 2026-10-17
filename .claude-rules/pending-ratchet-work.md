@@ -4100,6 +4100,12 @@
 
 ## Pending tasks (priority order)
 
+### 🪟 Κάρτα μέσα στην κάρτα λεπτομερειών — οι υπόλοιπες καρτέλες εκτός αρχείων (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-17, ADR-912 §12.14 · N.0.2)
+- **SSoT**: `NESTED_IN_DETAILS_FLUSH` / `NESTED_IN_DETAILS_FLUSH_SECTION` (`core/containers/DetailsContainer.tsx`). Στο κινητό, μέσα σε `[data-details-flush]`, η κάρτα χάνει πλαίσιο, σκιά, φόντο και `px`.
+- **Εφαρμόστηκε ΜΟΝΟ** στην κάρτα του `EntityFilesManager` (όλες οι καρτέλες αρχείων).
+- **Μένουν**: όσες καρτέλες μέσα στο `DetailsContainer` ζωγραφίζουν δική τους `<Card>` (π.χ. Πληροφορίες / Αγγελία / Αντικειμενική ακινήτου, καρτέλες κτιρίου και έργου). Εύρεση: `grep -rln "<Card" src/features/properties-sidebar src/components/building-management/tabs src/components/projects/tabs`.
+- **Πώς**: `className={cn(…, NESTED_IN_DETAILS_FLUSH)}` στην `Card` και `NESTED_IN_DETAILS_FLUSH_SECTION` στα `CardHeader` / `CardContent`. ⛔ Όχι αρνητικά περιθώρια (CHECK 3.63).
+
 ### 🏷️ `Property.project` / `.building` — ψευδοκάτοπτρα που ΔΕΝ γράφονται, ~20 αναγνώστες· + ~12 χειρόγραφα `projects.find(...)?.name` (προτεραιότητα ΜΕΣΑΙΑ, 2026-10-15, ADR-840 §7.6 · N.0.2)
 
 - **Τι**: ο τύπος `src/types/property-viewer.ts` δηλώνει `project: string` / `building: string` ως **υποχρεωτικά**, αλλά το έγγραφο Firestore έχει **μόνο** `projectId` / `buildingId` (μετρημένο σε `properties/prop_a0000001-…`). Κάθε αναγνώστης τους δείχνει **κενό** σιωπηλά. Τα φίλτρα + οι κάρτες της «Διαθέσιμα Ακίνητα» διορθώθηκαν (ADR-840 §7.6)· μένουν οι υπόλοιποι.
@@ -4158,6 +4164,9 @@
   (ADR-682 §5.5). Απόφαση Giorgio: (α) νέο variant `action` στο `Button` που διαβάζει το SSoT, με μετανάστευση ανά οθόνη μόνο για την
   **κύρια** ενέργεια (μία ανά οθόνη, ADR-770 §18) ή (β) `default` → `action.primary` συνολικά (οπτική αλλαγή σε όλη την εφαρμογή).
 - **Πύλη**: καμία σήμερα δεν το πιάνει (το 3.38 κοιτά `text-primary`, όχι γέμισμα κουμπιού). Υποψήφιο ratchet: `bg-primary` σε στοιχείο-κουμπί.
+- ⚠️ **ΔΥΟ γεμίσματα κύριας ενέργειας πλέον (2026-10-17, ADR-912 §12.13–§12.14)**: εκτός από το `COLOR_BRIDGE.action.primary` (μονόχρωμο),
+  το `ENTITY_ACTION_PRIMARY_FILL` (`core/entity-headers/entity-action-presets.ts`, το μπλε της εφαρμογής) το φορούν οι κεφαλίδες οντοτήτων
+  και το `AddCaptureMenu`. Η απόφαση (α)/(β) πρέπει να ενοποιήσει **και αυτά τα δύο** σε ΕΝΑ SSoT. Απόφαση Giorgio: ποιο χρώμα κρατάμε.
 
 ### 🖼️ `downloadUrl` → `fileDisplayUrl` / `preview` — οι υπόλοιποι αναγνώστες URL αρχείου (προτεραιότητα ΜΕΣΑΙΑ, 2026-10-01, ADR-899 · ADR-862 Φ0 Β8)
 - **SSoT**: `lib/files/file-display-url.ts` (`fileDisplayUrlOf` → `url` + `preview` από την κλίμακα 320…2560). Πέρασαν ήδη:

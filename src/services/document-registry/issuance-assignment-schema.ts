@@ -17,13 +17,13 @@ import { ISSUER_QUALIFICATIONS } from '@/config/document-validity/document-issue
 import { DOCUMENT_KINDS, type DocumentKind } from '@/config/document-validity/document-validity';
 import {
   INSTRUCTION_CHANNELS,
-  ISSUANCE_DELIVERY_OUTCOMES,
   ISSUANCE_NOTE_MAX,
   LINK_VERIFICATIONS,
   NOTICE_CHANNELS,
   REGISTRY_NUMBER_MAX,
   type IssuanceAssignmentRecord,
 } from '@/lib/document-validity/issuance-assignment';
+import { ISSUANCE_DELIVERY_OUTCOMES } from '@/lib/document-validity/issuance-delivery';
 import { generateDeterministicDocumentIssuanceAssignmentId } from '@/services/enterprise-id.service';
 import { REGISTRY_PROPERTY_SCOPES, type RegistryPropertyScope } from './document-registry.types';
 

@@ -11,6 +11,7 @@
  */
 
 import type { HumanLanguage } from '@/i18n/languages';
+import type { IssuanceLinkAnswer } from '@/lib/document-validity/issuance-request';
 
 import type { InvitationEmailCoreWording } from './invitation-email-shared';
 
@@ -45,6 +46,23 @@ export interface IssuanceEmailWording {
     readonly label: string;
     readonly howTo: string;
     readonly boundToAddress: (onlyHtml: string) => string;
+  };
+  /**
+   * §30 — **η απόδειξη απάντησης**, στη διεύθυνση όπου στάλθηκε ο σύνδεσμος (πρότυπο DocuSign «Completed» + ειδοποίηση
+   * ασφαλείας «δεν ήσασταν εσείς;»). Λέει **τι** καταγράφηκε, **πότε** και **πώς** αποδείχθηκε η ταυτότητα· ποτέ σύνδεσμο.
+   */
+  readonly receipt: {
+    readonly subject: (document: string, property: string) => string;
+    readonly heading: string;
+    readonly intro: Readonly<Record<IssuanceLinkAnswer, (document: string, property: string, professional: string) => string>>;
+    readonly recordedAtLabel: string;
+    readonly verifiedLabel: string;
+    readonly verifiedByCode: string;
+    readonly verifiedByLink: string;
+    readonly commentLabel: string;
+    readonly notYouLabel: string;
+    readonly notYou: (office: string) => string;
+    readonly footnote: string;
   };
   readonly noteLabel: string;
   readonly unnamedOffice: string;
@@ -103,6 +121,28 @@ export const ISSUANCE_EMAIL_TEXTS: Readonly<Record<HumanLanguage, IssuanceEmailW
       boundToAddress: (onlyHtml) =>
         `Ο σύνδεσμος είναι προσωπικός και ισχύει ${onlyHtml} για αυτό το αίτημα, μαζί με τον κωδικό που σας είπε το γραφείο — μην τον προωθήσετε.`,
     },
+    receipt: {
+      subject: (document, property) => `Καταγράψαμε την απάντησή σας: ${document} — ${property}`,
+      heading: 'Καταγράψαμε την απάντησή σας',
+      intro: {
+        approve: (document, property, professional) =>
+          `Εγκρίνατε την ανάθεση του εγγράφου «${document}» για το ακίνητο ${property}. Επαγγελματίας: ${professional}.`,
+        reject: (document, property, professional) =>
+          `Δεν εγκρίνατε την ανάθεση του εγγράφου «${document}» για το ακίνητο ${property}. Επαγγελματίας: ${professional}.`,
+        accept: (document, property) => `Αναλάβατε την έκδοση του εγγράφου «${document}» για το ακίνητο ${property}.`,
+        decline: (document, property) => `Αρνηθήκατε την έκδοση του εγγράφου «${document}» για το ακίνητο ${property}.`,
+      },
+      recordedAtLabel: 'Καταγράφηκε στις',
+      verifiedLabel: 'Ταυτοποίηση',
+      verifiedByCode: 'Με τον σύνδεσμο και τον κωδικό πρόσβασης',
+      verifiedByLink: 'Με τον σύνδεσμο που στάλθηκε σε αυτή τη διεύθυνση',
+      commentLabel: 'Το σχόλιό σας',
+      notYouLabel: 'Δεν ήσασταν εσείς;',
+      notYou: (office) => `Επικοινωνήστε αμέσως με το γραφείο που σας έστειλε το αίτημα (${office}).`,
+      footnote:
+        'Λαμβάνετε αυτή την επιβεβαίωση επειδή δόθηκε απάντηση με τον σύνδεσμο που στάλθηκε σε αυτή τη διεύθυνση. '
+        + 'Είναι ενημερωτικό μήνυμα· δεν χρειάζεται καμία ενέργεια.',
+    },
     noteLabel: 'Σημείωση του γραφείου',
     unnamedOffice: 'Το γραφείο',
     unnamedProperty: 'σας',
@@ -156,6 +196,28 @@ export const ISSUANCE_EMAIL_TEXTS: Readonly<Record<HumanLanguage, IssuanceEmailW
       howTo: 'You will be asked for a 6-digit code, which the office tells you by phone. It is never sent by email.',
       boundToAddress: (onlyHtml) =>
         `This link is personal and works ${onlyHtml} for this request, together with the code the office gave you — do not forward it.`,
+    },
+    receipt: {
+      subject: (document, property) => `We recorded your answer: ${document} — ${property}`,
+      heading: 'We recorded your answer',
+      intro: {
+        approve: (document, property, professional) =>
+          `You approved the assignment of the document “${document}” for the property ${property}. Professional: ${professional}.`,
+        reject: (document, property, professional) =>
+          `You did not approve the assignment of the document “${document}” for the property ${property}. Professional: ${professional}.`,
+        accept: (document, property) => `You accepted to issue the document “${document}” for the property ${property}.`,
+        decline: (document, property) => `You declined to issue the document “${document}” for the property ${property}.`,
+      },
+      recordedAtLabel: 'Recorded on',
+      verifiedLabel: 'Identity check',
+      verifiedByCode: 'With the link and the access code',
+      verifiedByLink: 'With the link sent to this address',
+      commentLabel: 'Your comment',
+      notYouLabel: 'Was this not you?',
+      notYou: (office) => `Contact the office that sent you the request (${office}) right away.`,
+      footnote:
+        'You are receiving this confirmation because an answer was given with the link sent to this address. '
+        + 'It is for your information; no action is needed.',
     },
     noteLabel: 'Note from the office',
     unnamedOffice: 'The office',

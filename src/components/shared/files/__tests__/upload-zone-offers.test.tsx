@@ -35,7 +35,7 @@ function renderZone(entityType: EntityType, allowedEntryPointIds?: string[]) {
     activeTab: 'files', isFullscreen: false, showUploadZone: true, onCloseUploadZone: noop,
     selectedEntryPoint: null, onSelectEntryPoint: noop, customTitle: '', onCustomTitleChange: noop,
     entityType, allowedEntryPointIds, onUpload: jest.fn(), acceptedTypes: '*', maxFileSize: 1, uploading: false,
-    files: [], filteredFiles: [], loading: false, error: null, searchTerm: '', onSearchTermChange: noop,
+    files: [], filteredFiles: [], loading: false, error: null, searchTerm: '',
     viewMode: 'gallery', treeViewMode: 'business', displayStyle: 'media-gallery',
     onDelete: jest.fn(), onRename: noop, onDescriptionUpdate: noop, onView: noop, onDownload: jest.fn(),
     onUnlink: jest.fn(), enableBuildingLink: false, currentUserId: 'uid', selectedIds: new Set<string>(),

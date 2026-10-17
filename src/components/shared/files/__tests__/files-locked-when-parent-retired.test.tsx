@@ -90,7 +90,6 @@ function contentProps(): EntityFilesContentProps {
     loading: false,
     error: null,
     searchTerm: '',
-    onSearchTermChange: jest.fn(),
     viewMode: 'list',
     treeViewMode: 'business',
     displayStyle: 'standard',
@@ -170,6 +169,9 @@ describe('Φ2 — EntityFilesToolbar', () => {
       onRefresh={() => undefined}
       fullscreen={{ isFullscreen: false, toggle: () => undefined }}
       fileCount={0}
+      liveList={false}
+      searchTerm=""
+      onSearchTermChange={() => undefined}
       showWorkspace={false}
     />
   );

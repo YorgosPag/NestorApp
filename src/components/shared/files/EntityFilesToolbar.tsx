@@ -1,11 +1,19 @@
 /**
  * =============================================================================
- * EntityFilesToolbar — Toolbar for file management (tabs, views, actions)
+ * EntityFilesToolbar — Toolbar for file management (tabs, search, views, actions)
  * =============================================================================
  *
  * Presentational component for the EntityFilesManager toolbar.
- * Contains: Files/Trash tabs, view mode toggles, tree view mode toggle,
- * AddCaptureMenu, refresh button, fullscreen toggle.
+ * Contains: Files/Archive/Trash tabs, search, view mode, AddCaptureMenu, refresh, fullscreen.
+ *
+ * 🔑 **ΔΥΟ γραμμές στο κινητό** (ADR-912 §12.14 — στιγμιότυπο Giorgio 2026-10-17: 11 χειριστήρια σε 4 γραμμές, ~230px
+ *   πριν από το πρώτο αρχείο). Drive / Dropbox mobile: [Αρχεία | Αρχειοθήκη | Κάδος] · [αναζήτηση ⊞].
+ *   - Ο τίτλος «Αρχεία (n)» φεύγει: η καρτέλα της σελίδας και η υπο-καρτέλα λένε ήδη «Αρχεία», και ο χώρος φαίνεται
+ *     στο κέλυφος. Το πλήθος μένει, μέσα στην υπο-καρτέλα.
+ *   - Η πλήρης οθόνη φεύγει (ADR-241: στο κινητό η επιφάνεια είναι ήδη πλήρης). Η ανανέωση φεύγει **μόνο** όταν η λίστα
+ *     είναι ζωντανή — αλλιώς είναι ο μόνος τρόπος να δεις νέο αρχείο.
+ *   - Το «+ Προσθήκη Αρχείων» πάει στην κάτω μπάρα της σελίδας εγγραφής (`RecordActionLead`), όπου υπάρχει.
+ *   Σε υπολογιστή ΟΛΑ μένουν. Η ορατότητα είναι CSS (`md:` = `MOBILE_BREAKPOINT`), σωστή από το πρώτο καρέ.
  *
  * Extracted from EntityFilesManager for Google SRP compliance.
  *
@@ -16,15 +24,15 @@
 'use client';
 
 import React from 'react';
-import {
-  FileText, RefreshCw, List, Network, Eye, Code,
-  Grid3X3, Image as ImageIcon, Maximize2, Minimize2, Trash2, Archive,
-} from 'lucide-react';
+import { FileText, RefreshCw, Maximize2, Minimize2, Trash2, Archive } from 'lucide-react';
 import { CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { SearchInput } from '@/components/ui/search';
 import { ToggleButton } from '@/components/ui/toggle-button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
+import { NESTED_IN_DETAILS_FLUSH_SECTION } from '@/core/containers/DetailsContainer';
+import { RecordActionLead } from '@/core/layouts/record-action-bar';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useRetiredKind } from '@/lib/firestore/retired-record-context';
@@ -33,6 +41,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { FileCategory } from '@/config/domain-constants';
 import type { CaptureMetadata } from '@/config/upload-entry-points';
 import { AddCaptureMenu } from './AddCaptureMenu';
+import { FilesViewModeControl, type FilesTreeViewMode, type FilesViewMode } from './FilesViewModeControl';
 
 // ============================================================================
 // TYPES
@@ -41,10 +50,10 @@ import { AddCaptureMenu } from './AddCaptureMenu';
 export interface EntityFilesToolbarProps {
   activeTab: 'files' | 'archived' | 'trash';
   onTabChange: (tab: 'files' | 'archived' | 'trash') => void;
-  viewMode: 'list' | 'tree' | 'gallery';
-  onViewModeChange: (mode: 'list' | 'tree' | 'gallery') => void;
-  treeViewMode: 'business' | 'technical';
-  onTreeViewModeChange: (mode: 'business' | 'technical') => void;
+  viewMode: FilesViewMode;
+  onViewModeChange: (mode: FilesViewMode) => void;
+  treeViewMode: FilesTreeViewMode;
+  onTreeViewModeChange: (mode: FilesTreeViewMode) => void;
   displayStyle: 'standard' | 'media-gallery' | 'floorplan-gallery';
   category: FileCategory;
   /**
@@ -58,6 +67,10 @@ export interface EntityFilesToolbarProps {
   onRefresh: () => void;
   fullscreen: { isFullscreen: boolean; toggle: () => void };
   fileCount: number;
+  /** Η λίστα ενημερώνεται μόνη της (`fileListIsLive`) ⇒ στο κινητό η ανανέωση δεν χρειάζεται. */
+  liveList: boolean;
+  searchTerm: string;
+  onSearchTermChange: (term: string) => void;
   /**
    * Δείξε «Ανήκει σε: <χώρος>» — **μόνο** για εταιρική θεματοφυλακή (ADR-866 Φ1.2, §2.9.3 Κ2).
    * ⚠️ Σημαία και όχι έτοιμο όνομα: το όνομα το διαβάζει το {@link ActiveWorkspaceLabel}, ώστε το `useWorkspace`
@@ -91,224 +104,160 @@ function ActiveWorkspaceLabel(): React.ReactElement | null {
 // COMPONENT
 // ============================================================================
 
-export function EntityFilesToolbar({
-  activeTab,
-  onTabChange,
-  viewMode,
-  onViewModeChange,
-  treeViewMode,
-  onTreeViewModeChange,
-  displayStyle,
-  category,
-  onOpenUploadZone,
-  onCapture,
-  uploading,
-  loading,
-  onRefresh,
-  fullscreen,
-  fileCount,
-  showWorkspace,
-}: EntityFilesToolbarProps) {
+type FilesTab = EntityFilesToolbarProps['activeTab'];
+
+/** Αρχεία | Αρχειοθήκη | Κάδος — ΜΙΑ γραμμή, ίσες στήλες (Procore/BIM360 · ADR-912 §12.13). */
+function FilesTabSwitcher({ activeTab, onTabChange, fileCount }: Pick<EntityFilesToolbarProps, 'activeTab' | 'onTabChange' | 'fileCount'>) {
   const iconSizes = useIconSizes();
   const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
-  // Αποσυρμένη μητρική εγγραφή (ADR-329 §3.9): ούτε ανέβασμα ούτε λήψη από κάμερα — το μενού δεν ζωγραφίζεται.
-  const canAdd = useRetiredKind() === null;
-  const fileTabs: ReadonlyArray<{ id: EntityFilesToolbarProps['activeTab']; icon: typeof FileText; label: string }> = [
+  const fileTabs: ReadonlyArray<{ id: FilesTab; icon: typeof FileText; label: string }> = [
     { id: 'files', icon: FileText, label: t('manager.filesTitle') },
     { id: 'archived', icon: Archive, label: t('archived.title') },
     { id: 'trash', icon: Trash2, label: t('trash.tabLabel') },
   ];
+  return (
+    // Στο κινητό πιάνει όλο το πλάτος· από `sm` γυρίζει στο φυσικό του.
+    <div className="grid w-full grid-cols-3 gap-1 rounded-md border p-1 sm:inline-grid sm:w-auto" role="tablist" aria-label={t('manager.filesTitle')}>
+      {fileTabs.map(({ id, icon: Icon, label }) => (
+        <ToggleButton
+          key={id}
+          pressed={activeTab === id}
+          variant="ghost"
+          semantics="selected"
+          size="sm"
+          onClick={() => onTabChange(id)}
+          role="tab"
+          aria-controls={`${id}-panel`}
+          className="min-w-0 justify-center px-2"
+        >
+          <Icon className={`${iconSizes.sm} mr-1 shrink-0`} aria-hidden="true" />
+          <span className="truncate">{label}</span>
+          {/* Το πλήθος του τίτλου που στο κινητό κρύβεται — εδώ, στη θέση που μένει. */}
+          {id === 'files' && fileCount > 0 && (
+            <span className={cn('ml-1 shrink-0 text-xs md:hidden', colors.text.muted)}>{fileCount}</span>
+          )}
+        </ToggleButton>
+      ))}
+    </div>
+  );
+}
+
+/** Εικονίδιο-κουμπί με tooltip — ανανέωση, πλήρης οθόνη. */
+function ToolbarIconButton({ label, tooltip, className, children, ...button }: React.ComponentProps<typeof Button> & {
+  readonly label: string;
+  readonly tooltip: string;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button variant="outline" size="sm" aria-label={label} className={cn('shrink-0', className)} {...button}>
+          {children}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{tooltip}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+/** Γραμμή 2: αναζήτηση σε όλο το διαθέσιμο πλάτος + τα εργαλεία της λίστας. */
+function FilesToolRow(props: EntityFilesToolbarProps) {
+  const { fullscreen } = props;
+  const iconSizes = useIconSizes();
+  const { t } = useTranslation(['files', 'files-media']);
+  // Αποσυρμένη μητρική εγγραφή (ADR-329 §3.9): ούτε ανέβασμα ούτε λήψη από κάμερα — το μενού δεν ζωγραφίζεται.
+  const canAdd = useRetiredKind() === null;
+  const onFiles = props.activeTab === 'files';
+  return (
+    <div className="flex items-center gap-2">
+      {/* File Search (Google Drive/Dropbox/OneDrive pattern) */}
+      {onFiles && props.fileCount > 0 && (
+        <search className="min-w-0 flex-1 sm:max-w-md">
+          <SearchInput
+            value={props.searchTerm}
+            onChange={props.onSearchTermChange}
+            placeholder={t('search.placeholder')}
+            debounceMs={300}
+            showClearButton
+          />
+        </search>
+      )}
+      <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-2">
+        {onFiles && (
+          <FilesViewModeControl
+            viewMode={props.viewMode}
+            onViewModeChange={props.onViewModeChange}
+            treeViewMode={props.treeViewMode}
+            onTreeViewModeChange={props.onTreeViewModeChange}
+            displayStyle={props.displayStyle}
+          />
+        )}
+        {onFiles && canAdd && (
+          <RecordActionLead>
+            <AddCaptureMenu
+              category={props.category}
+              onUploadClick={props.onOpenUploadZone}
+              onCapture={props.onCapture}
+              disabled={props.uploading}
+              loading={props.uploading}
+            />
+          </RecordActionLead>
+        )}
+        {onFiles && (
+          <ToolbarIconButton
+            label={t('manager.refresh')}
+            tooltip={t('manager.refreshTooltip')}
+            onClick={props.onRefresh}
+            disabled={props.loading || props.uploading}
+            className={cn(props.liveList && 'max-md:hidden')}
+          >
+            <RefreshCw className={cn(iconSizes.sm, props.loading && 'animate-spin')} aria-hidden="true" />
+          </ToolbarIconButton>
+        )}
+        {/* Πλήρης οθόνη (ADR-241) — στο κινητό η επιφάνεια είναι ήδη πλήρης. */}
+        <ToolbarIconButton
+          label={fullscreen.isFullscreen ? t('manager.exitFullscreen') : t('manager.fullscreen')}
+          tooltip={fullscreen.isFullscreen ? t('manager.exitFullscreenTooltip') : t('manager.fullscreenTooltip')}
+          onClick={fullscreen.toggle}
+          aria-pressed={fullscreen.isFullscreen}
+          className="max-md:hidden"
+        >
+          {fullscreen.isFullscreen
+            ? <Minimize2 className={iconSizes.sm} aria-hidden="true" />
+            : <Maximize2 className={iconSizes.sm} aria-hidden="true" />}
+        </ToolbarIconButton>
+      </div>
+    </div>
+  );
+}
+
+export function EntityFilesToolbar(props: EntityFilesToolbarProps) {
+  const iconSizes = useIconSizes();
+  const { t } = useTranslation(['files', 'files-media']);
+  const colors = useSemanticColors();
 
   return (
-    <CardHeader>
-      <nav className="flex flex-wrap items-center justify-between gap-2" role="toolbar" aria-label={t('manager.fileManagementTools')}>
-        <div className="flex flex-col gap-1">
-          <CardTitle className="flex items-center gap-2">
-            <FileText className={iconSizes.md} aria-hidden="true" />
-            {t('manager.filesTitle')}
-            {fileCount > 0 && (
-              <span className={cn("text-sm font-normal", colors.text.muted)}>
-                ({fileCount})
-              </span>
-            )}
-          </CardTitle>
+    <CardHeader className={NESTED_IN_DETAILS_FLUSH_SECTION}>
+      <nav className="flex flex-col gap-2" role="toolbar" aria-label={t('manager.fileManagementTools')}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-col gap-1 max-md:hidden">
+            <CardTitle className="flex items-center gap-2">
+              <FileText className={iconSizes.md} aria-hidden="true" />
+              {t('manager.filesTitle')}
+              {props.fileCount > 0 && (
+                <span className={cn("text-sm font-normal", colors.text.muted)}>
+                  ({props.fileCount})
+                </span>
+              )}
+            </CardTitle>
 
-          {showWorkspace && <ActiveWorkspaceLabel />}
-        </div>
-
-        <div className="flex w-full flex-wrap gap-2 sm:w-auto">
-          {/*
-            Tab switcher (Procore/BIM360 pattern). 🔑 **ΜΙΑ γραμμή, ίσες στήλες** (ADR-912 §12.13, 390px 2026-10-17):
-            ως `flex-wrap` το «Κάδος Ανακύκλωσης» κατέβαινε σε δεύτερη γραμμή και το segmented control έσπαγε στα δύο.
-            Στο κινητό πιάνει όλο το πλάτος (τα υπόλοιπα εργαλεία κατεβαίνουν από κάτω)· από `sm` γυρίζει στο φυσικό του.
-          */}
-          <div
-            className="grid w-full grid-cols-3 gap-1 rounded-md border p-1 sm:inline-grid sm:w-auto"
-            role="tablist"
-            aria-label={t('manager.filesTitle')}
-          >
-            {fileTabs.map(({ id, icon: Icon, label }) => (
-              <ToggleButton
-                key={id}
-                pressed={activeTab === id}
-                variant="ghost"
-                semantics="selected"
-                size="sm"
-                onClick={() => onTabChange(id)}
-                role="tab"
-                aria-controls={`${id}-panel`}
-                className="min-w-0 justify-center px-2"
-              >
-                <Icon className={`${iconSizes.sm} mr-1 shrink-0`} aria-hidden="true" />
-                <span className="truncate">{label}</span>
-              </ToggleButton>
-            ))}
+            {props.showWorkspace && <ActiveWorkspaceLabel />}
           </div>
 
-          {/* View toggle buttons - Only show when on files tab */}
-          {activeTab === 'files' && (
-            <>
-              <div className="flex gap-1 border rounded-md p-1" role="group" aria-label="View mode">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <ToggleButton
-                      pressed={viewMode === 'gallery'}
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onViewModeChange('gallery')}
-                      aria-label={t('manager.viewGallery')}
-                      className="px-2"
-                    >
-                      {displayStyle === 'floorplan-gallery'
-                        ? <ImageIcon className={iconSizes.sm} aria-hidden="true" />
-                        : <Grid3X3 className={iconSizes.sm} aria-hidden="true" />
-                      }
-                    </ToggleButton>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('manager.viewGalleryTooltip')}</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <ToggleButton
-                      pressed={viewMode === 'list'}
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onViewModeChange('list')}
-                      aria-label={t('manager.viewList')}
-                      className="px-2"
-                    >
-                      <List className={iconSizes.sm} aria-hidden="true" />
-                    </ToggleButton>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('manager.viewList')}</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <ToggleButton
-                      pressed={viewMode === 'tree'}
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onViewModeChange('tree')}
-                      aria-label={t('manager.viewTree')}
-                      className="px-2"
-                    >
-                      <Network className={iconSizes.sm} aria-hidden="true" />
-                    </ToggleButton>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('manager.viewTree')}</TooltipContent>
-                </Tooltip>
-              </div>
-
-              {/* Tree view mode toggle (Business vs Technical) */}
-              {viewMode === 'tree' && (
-                <div className="flex gap-1 border rounded-md p-1" role="group" aria-label="Tree view mode">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <ToggleButton
-                        pressed={treeViewMode === 'business'}
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onTreeViewModeChange('business')}
-                        aria-label={t('manager.businessView')}
-                        className="px-2"
-                      >
-                        <Eye className={iconSizes.sm} aria-hidden="true" />
-                      </ToggleButton>
-                    </TooltipTrigger>
-                    <TooltipContent>{t('manager.businessViewTooltip')}</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <ToggleButton
-                        pressed={treeViewMode === 'technical'}
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onTreeViewModeChange('technical')}
-                        aria-label={t('manager.technicalView')}
-                        className="px-2"
-                      >
-                        <Code className={iconSizes.sm} aria-hidden="true" />
-                      </ToggleButton>
-                    </TooltipTrigger>
-                    <TooltipContent>{t('manager.technicalViewTooltip')}</TooltipContent>
-                  </Tooltip>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Add/Capture Menu + Refresh - Only on files tab */}
-          {activeTab === 'files' && (
-            <>
-              {canAdd && (
-                <AddCaptureMenu
-                  category={category}
-                  onUploadClick={onOpenUploadZone}
-                  onCapture={onCapture}
-                  disabled={uploading}
-                  loading={uploading}
-                />
-              )}
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onRefresh}
-                    disabled={loading || uploading}
-                    aria-label={t('manager.refresh')}
-                  >
-                    <RefreshCw className={`${iconSizes.sm} ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t('manager.refreshTooltip')}</TooltipContent>
-              </Tooltip>
-            </>
-          )}
-
-          {/* Fullscreen toggle (ADR-241) */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={fullscreen.toggle}
-                aria-label={fullscreen.isFullscreen ? t('manager.exitFullscreen') : t('manager.fullscreen')}
-                aria-pressed={fullscreen.isFullscreen}
-              >
-                {fullscreen.isFullscreen
-                  ? <Minimize2 className={iconSizes.sm} aria-hidden="true" />
-                  : <Maximize2 className={iconSizes.sm} aria-hidden="true" />
-                }
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {fullscreen.isFullscreen ? t('manager.exitFullscreenTooltip') : t('manager.fullscreenTooltip')}
-            </TooltipContent>
-          </Tooltip>
+          <FilesTabSwitcher activeTab={props.activeTab} onTabChange={props.onTabChange} fileCount={props.fileCount} />
         </div>
+
+        <FilesToolRow {...props} />
       </nav>
     </CardHeader>
   );

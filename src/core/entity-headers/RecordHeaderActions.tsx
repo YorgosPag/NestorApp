@@ -9,8 +9,11 @@
  *   συσκευής** (ζώνη αντίχειρα), όχι του πλάτους της κεφαλίδας. Ίδιο κατώφλι με όλη την εφαρμογή (`useViewportClass`).
  * 🔑 **`measuring` ⇒ καμία ενέργεια για ένα καρέ**: αν ζωγραφίζαμε επιτόπου και μετά μετακομίζαμε στην μπάρα, σε κάθε
  *   κινητό το περιεχόμενο θα πηδούσε ~130px προς τα πάνω. Ένα καρέ χωρίς κουμπιά δεν μετακινεί τίποτα.
+ * 🔑 **Η καρτέλα έχει την κύρια ενέργεια ⇒ η κεφαλίδα συμπτύσσεται στο «⋯»** (ADR-912 §12.14): στα «Έγγραφα» η μπάρα
+ *   λέει [⋯][+ Προσθήκη Αρχείων] και η «Επεξεργασία» ζει στο μενού. ΕΝΑ κύριο ανά μπάρα — ο κανόνας του §12.13.
+ *   ⚠️ Εξαίρεση: ανοιχτή συνεδρία επεξεργασίας (ενέργεια `dismisses`) — η «Αποθήκευση» δεν κρύβεται ποτέ.
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
 import { useRecordActionBar, type RecordActionBarSlot } from '@/core/layouts/record-action-bar';
@@ -37,12 +40,29 @@ function InlineRecordActions({ actions }: RecordHeaderActionsProps) {
   );
 }
 
+/** Η καρτέλα κρατά το κύριο: όλες οι ενέργειες της κεφαλίδας στο «⋯», οι καταστροφικές κάτω από διαχωριστικό. */
+function CollapsedRecordActions({ actions }: RecordHeaderActionsProps) {
+  const { inline, menuOnly } = React.useMemo(() => presentEntityActions(actions), [actions]);
+  return <ActionOverflowMenu actions={inline} destructive={menuOnly} />;
+}
+
 function RecordActionsWithBar({ actions, bar }: RecordHeaderActionsProps & { readonly bar: RecordActionBarSlot }) {
   const viewport = useViewportClass();
+  const session = actions.some((action) => action.dismisses);
+  const { claimSession } = bar;
+  useEffect(() => {
+    claimSession(session);
+    return () => claimSession(false);
+  }, [session, claimSession]);
+
   if (viewport === 'measuring') return null;
   if (viewport === 'wide') return <InlineRecordActions actions={actions} />;
   // Στενή οθόνη, μπάρα που δεν στήθηκε ακόμη ⇒ περιμένουμε (ο ξενιστής είναι κατάσταση, θα ξαναζωγραφίσει).
-  return bar.host ? createPortal(<EntityHeaderActions actions={actions} keepPrimary />, bar.host) : null;
+  if (!bar.host) return null;
+  const docked = bar.leadClaimed && !session
+    ? <CollapsedRecordActions actions={actions} />
+    : <EntityHeaderActions actions={actions} keepPrimary />;
+  return createPortal(docked, bar.host);
 }
 
 export function RecordHeaderActions({ actions }: RecordHeaderActionsProps) {

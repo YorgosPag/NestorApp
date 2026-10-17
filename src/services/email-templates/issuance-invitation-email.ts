@@ -1,6 +1,6 @@
 /**
  * @fileoverview ADR-915 §28 — **τα μηνύματα της ανάθεσης έκδοσης**: έγκριση (υπεύθυνος) · ανάθεση (επαγγελματίας) ·
- *   ενημέρωση (συνιδιοκτήτης). Ο **ίδιος** συνθέτης χτίζει την προεπισκόπηση και το μήνυμα που φεύγει (§28 Η-Β7).
+ *   ενημέρωση (συνιδιοκτήτης) · §30 απόδειξη απάντησης. Ο **ίδιος** συνθέτης χτίζει την προεπισκόπηση και το μήνυμα που φεύγει (§28 Η-Β7).
  * @related issuance-invitation-email-texts.ts (τα λόγια) · invitation-email-shared.ts (ο σκελετός) ·
  *   server/issuance-invitations/issuance-invitation-send.ts (ο καλών)
  * @module services/email-templates/issuance-invitation-email
@@ -25,8 +25,9 @@ import enConveyance from '@/i18n/locales/en/conveyance.json';
 import enRegistry from '@/i18n/locales/en/document-registry.json';
 import enLegality from '@/i18n/locales/en/legality.json';
 import enMarket from '@/i18n/locales/en/property-market.json';
-import type { IssuanceCredential } from '@/lib/document-validity/issuance-assignment';
-import { formatOperatorDate } from '@/lib/operator-time-format';
+import type { IssuanceCredential, LinkVerification } from '@/lib/document-validity/issuance-assignment';
+import type { IssuanceLinkAnswer } from '@/lib/document-validity/issuance-request';
+import { formatOperatorDate, formatOperatorDateTime } from '@/lib/operator-time-format';
 
 import { escapeHtml } from './base-email-template';
 import type { ConfirmationEmailResult } from './confirmation-email-shared';
@@ -54,7 +55,12 @@ export type IssuanceEmailInput =
   /** `accessCode` (§29): ο σύνδεσμος ζητά και κωδικό — το email λέει **πώς** τον παίρνει, ποτέ τον ίδιο. */
   | { readonly kind: 'approval'; readonly language: unknown; readonly facts: IssuanceEmailFacts; readonly coOwnerNames: readonly string[]; readonly expiresAt: string; readonly link: string; readonly accessCode: boolean }
   | { readonly kind: 'professional'; readonly language: unknown; readonly facts: IssuanceEmailFacts; readonly expiresAt: string; readonly link: string; readonly accessCode: boolean }
-  | { readonly kind: 'co-owner'; readonly language: unknown; readonly facts: IssuanceEmailFacts; readonly leadName: string | null };
+  | { readonly kind: 'co-owner'; readonly language: unknown; readonly facts: IssuanceEmailFacts; readonly leadName: string | null }
+  /** §30 — η απόδειξη απάντησης: τι, πότε, πώς αποδείχθηκε· `comment` = το σχόλιο του ίδιου (κείμενο ανθρώπου, escaped). */
+  | {
+    readonly kind: 'receipt'; readonly language: unknown; readonly facts: IssuanceEmailFacts; readonly answer: IssuanceLinkAnswer;
+    readonly answeredAt: string; readonly verifiedBy: LinkVerification; readonly comment: string | null;
+  };
 
 interface Named {
   readonly language: HumanLanguage;
@@ -113,10 +119,27 @@ function approvalDetails(named: Named, input: Extract<IssuanceEmailInput, { kind
   ];
 }
 
+/** §30 — η απόδειξη: χωρίς κουμπί και χωρίς σύνδεσμο (τίποτα να «πατηθεί» από όποιον κι αν τη διαβάσει). */
+function receiptEmail(named: Named, input: Extract<IssuanceEmailInput, { kind: 'receipt' }>): ConfirmationEmailResult {
+  const { w, language, office, property, document, professional } = named;
+  return composeNoticeEmail({
+    language, subject: w.receipt.subject(document, property), heading: w.receipt.heading,
+    intro: lineOf(w.receipt.intro[input.answer], [document, property, professional]),
+    details: [
+      invitationDetailLine(w.receipt.recordedAtLabel, formatOperatorDateTime(input.answeredAt, language)),
+      invitationDetailLine(w.receipt.verifiedLabel, input.verifiedBy === 'access-code' ? w.receipt.verifiedByCode : w.receipt.verifiedByLink),
+      ...(input.comment === null ? [] : [invitationDetailLine(w.receipt.commentLabel, input.comment)]),
+      invitationDetailLine(w.receipt.notYouLabel, w.receipt.notYou(office)),
+    ],
+    footnote: w.receipt.footnote,
+  });
+}
+
 /** **Το μήνυμα, στη γλώσσα του παραλήπτη.** Ο σύνδεσμος έρχεται έτοιμος (απόλυτος) από τον καλούντα. */
 export function buildIssuanceEmail(input: IssuanceEmailInput): ConfirmationEmailResult {
   const named = namedOf(input);
   const { w, language, office, property, document, professional } = named;
+  if (input.kind === 'receipt') return receiptEmail(named, input);
   if (input.kind === 'co-owner') {
     const lead = input.leadName?.trim() || w.unnamedPerson;
     return composeNoticeEmail({

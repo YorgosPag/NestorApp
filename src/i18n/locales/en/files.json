@@ -218,7 +218,9 @@
     "filesTab": "Files",
     "trashTab": "Trash",
     "noSearchResults": "No files match your search",
-    "testError": "Test Error (Dev Only)"
+    "testError": "Test Error (Dev Only)",
+    "viewModeGroup": "View mode",
+    "treeViewModeGroup": "Tree view mode"
   },
   "stats": {
     "totalFiles": "Total Files",
@@ -264,7 +266,8 @@
       "building": "building",
       "project": "project",
       "unit": "unit",
-      "floor": "floor"
+      "floor": "floor",
+      "property": "property"
     },
     "linkedFromProject": "Linked",
     "unlinkConfirm": "Do you want to unlink this file? It will no longer appear here.",
@@ -282,7 +285,8 @@
     "openInNewTab": "Open in new tab",
     "classifying": "Classifying",
     "classificationFailed": "Classification failed",
-    "retryClassification": "Retry classification"
+    "retryClassification": "Retry classification",
+    "selectFile": "Select {name}"
   },
   "documentType": {
     "invoice": "Invoice",

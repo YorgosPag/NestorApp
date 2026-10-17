@@ -62,6 +62,24 @@ const IN_SHEET_FLUSH = [
   '[[data-details-sheet]>&]:shadow-none',
 ].join(' ');
 
+/**
+ * **Κάρτα ΜΕΣΑ στην κάρτα λεπτομερειών ⇒ επίπεδη στο κινητό** (ADR-912 §3 · §12.14) — το ίδιο σήμα `data-details-flush`,
+ * ένα επίπεδο βαθύτερα. Στα 390px η `Card` του διαχειριστή αρχείων μέσα στο `DetailsContainer` έδειχνε δύο πλαίσια και
+ * δύο φορές `p-6` (~48px από τα 358) — εκεί όπου οι υπο-καρτέλες κόβονταν («Αρχειο…»). Material 3: *«μην εμφωλεύεις
+ * κάρτες»* · iOS grouped lists: στο compact το περιεχόμενο πάει άκρη-άκρη.
+ * 🔑 `max-md` = το **ίδιο** 768 (`MOBILE_BREAKPOINT`) — όχι δεύτερο κατώφλι. Σε υπολογιστή η κάρτα μένει κάρτα.
+ * ⚠️ Χωρίς αρνητικά περιθώρια (βλ. παραπάνω, και CHECK 3.63): σβήνει το **δικό της** πλαίσιο και κενό, τίποτα άλλο.
+ */
+export const NESTED_IN_DETAILS_FLUSH = [
+  'max-md:[[data-details-flush]_&]:rounded-none',
+  'max-md:[[data-details-flush]_&]:border-0',
+  'max-md:[[data-details-flush]_&]:shadow-none',
+  'max-md:[[data-details-flush]_&]:bg-transparent',
+].join(' ');
+
+/** Το οριζόντιο κενό των τμημάτων (`CardHeader` · `CardContent`) της εμφωλευμένης κάρτας — φεύγει μαζί με το πλαίσιο. */
+export const NESTED_IN_DETAILS_FLUSH_SECTION = 'max-md:[[data-details-flush]_&]:px-0';
+
 /** Generic selected item interface */
 interface SelectedItemBase {
   id?: string;

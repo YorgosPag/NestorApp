@@ -64,6 +64,9 @@ function toolbar(showWorkspace: boolean) {
       onRefresh={() => undefined}
       fullscreen={{ isFullscreen: false, toggle: () => undefined }}
       fileCount={0}
+      liveList={false}
+      searchTerm=""
+      onSearchTermChange={() => undefined}
       showWorkspace={showWorkspace}
     />
   );
@@ -113,7 +116,10 @@ describe('Α39.4 — EntityFilesManager: η εντολή ανοίγει · η π
   });
 
   it('ζωντανή ή όχι λίστα ⇒ `fileListIsLive(displayStyle, scopePolicy?.readScopes)` — κανένα χειρόγραφο κριτήριο (Β5)', () => {
-    expect(source).toMatch(/realtime: fileListIsLive\(displayStyle, scopePolicy\?\.readScopes\)/);
+    // ΕΝΑ κριτήριο, δύο αναγνώστες (ADR-912 §12.14): η ανάγνωση **και** η ανανέωση της εργαλειοθήκης.
+    expect(source).toMatch(/const liveList = fileListIsLive\(displayStyle, scopePolicy\?\.readScopes\);/);
+    expect(source).toMatch(/realtime: liveList,/);
+    expect(source).toMatch(/liveList=\{liveList\}/);
     expect(source).not.toMatch(/realtime: displayStyle ===/);
   });
 });

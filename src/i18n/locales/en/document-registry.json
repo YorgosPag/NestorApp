@@ -321,7 +321,10 @@
       "declinedByLink": "The professional declined through the link on {date}",
       "responseNote": "Comment: “{note}”",
       "withAccessCode": "With an access code",
-      "verifiedByCode": "Confirmed with the access code"
+      "verifiedByCode": "Confirmed with the access code",
+      "delivered": "Delivered to the mailbox",
+      "bounced": "The email bounced — check the contact’s address and send again.",
+      "complained": "The recipient marked it as spam — contact them by phone."
     }
   }
 }

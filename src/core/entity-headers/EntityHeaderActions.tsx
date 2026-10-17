@@ -15,7 +15,7 @@
  *   **μόνο** στο μενού, κάτω από διαχωριστικό και με χρώμα κινδύνου. Ο κανόνας ζει στο `presentEntityActions`.
  */
 import React from 'react';
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, MoreVertical } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -111,16 +111,32 @@ interface ActionOverflowMenuProps {
   readonly actions: readonly EntityHeaderAction[];
   /** Καταστροφικές: ζουν μόνο εδώ, στο τέλος, κάτω από διαχωριστικό (Polaris · Material menus). */
   readonly destructive?: readonly EntityHeaderAction[];
+  /**
+   * `toolbar` (προεπιλογή) = «⋯» με περίγραμμα, δίπλα σε κουμπιά. `row` = «⋮» χωρίς περίγραμμα, στο τέλος μιας γραμμής
+   * λίστας (Drive · Dropbox · Material lists) — ίδιο μενού, ίδιος κανόνας, άλλη θέση.
+   */
+  readonly appearance?: 'toolbar' | 'row';
+  /** Ετικέτα του κουμπιού· απούσα ⇒ «Περισσότερες ενέργειες». Στη γραμμή λίστας λέει **ποιανού** (WCAG 2.4.6). */
+  readonly label?: string;
 }
 
-function ActionMenuItems({ actions, className }: { readonly actions: readonly EntityHeaderAction[]; readonly className?: string }) {
+interface ActionMenuItemsProps {
+  readonly actions: readonly EntityHeaderAction[];
+  readonly className?: string;
+  readonly onClaimFocus: () => void;
+}
+
+function ActionMenuItems({ actions, className, onClaimFocus }: ActionMenuItemsProps) {
   return (
     <>
       {actions.map((action, index) => (
         <DropdownMenuItem
           key={index}
           disabled={action.disabled || action.pending}
-          onClick={action.onClick}
+          onClick={() => {
+            if (action.claimsFocus) onClaimFocus();
+            action.onClick();
+          }}
           className={className}
         >
           <ActionContent {...action} />
@@ -130,30 +146,44 @@ function ActionMenuItems({ actions, className }: { readonly actions: readonly En
   );
 }
 
-export function ActionOverflowMenu({ actions, destructive = [] }: ActionOverflowMenuProps) {
+export function ActionOverflowMenu({
+  actions,
+  destructive = [],
+  appearance = 'toolbar',
+  label,
+}: ActionOverflowMenuProps) {
   const { t } = useTranslation('common-actions');
   const iconSizes = useIconSizes();
   // Ενέργεια που τρέχει μέσα στο κλειστό μενού δεν φαίνεται από πουθενά ⇒ το λέει το ίδιο το κουμπί του μενού.
   const busy = [...actions, ...destructive].some((action) => action.pending);
+  const MoreIcon = appearance === 'row' ? MoreVertical : MoreHorizontal;
+  // Ενέργεια με `claimsFocus` (επιτόπια μετονομασία) ⇒ στο κλείσιμο η εστίαση ΔΕΝ γυρίζει στο κουμπί: αλλιώς το Radix
+  // την κλέβει από το πεδίο που μόλις άνοιξε. Escape / κλικ έξω ⇒ γυρίζει κανονικά (WAI-ARIA menu button).
+  const focusClaimed = React.useRef(false);
+  const claimFocus = React.useCallback(() => { focusClaimed.current = true; }, []);
+  const onCloseAutoFocus = React.useCallback((event: Event) => {
+    if (focusClaimed.current) event.preventDefault();
+    focusClaimed.current = false;
+  }, []);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
           type="button"
-          variant="outline"
+          variant={appearance === 'row' ? 'ghost' : 'outline'}
           size="sm"
           className="h-8 w-8 shrink-0 p-0"
-          aria-label={t('actions.more')}
+          aria-label={label ?? t('actions.more')}
           aria-busy={busy || undefined}
           {...MORE_MARK}
         >
-          {busy ? <Spinner size="small" color="inherit" /> : <MoreHorizontal className={iconSizes.sm} />}
+          {busy ? <Spinner size="small" color="inherit" /> : <MoreIcon className={iconSizes.sm} />}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <ActionMenuItems actions={actions} />
+      <DropdownMenuContent align="end" onCloseAutoFocus={onCloseAutoFocus}>
+        <ActionMenuItems actions={actions} onClaimFocus={claimFocus} />
         {actions.length > 0 && destructive.length > 0 && <DropdownMenuSeparator />}
-        <ActionMenuItems actions={destructive} className={DESTRUCTIVE_MENU_ITEM} />
+        <ActionMenuItems actions={destructive} className={DESTRUCTIVE_MENU_ITEM} onClaimFocus={claimFocus} />
       </DropdownMenuContent>
     </DropdownMenu>
   );

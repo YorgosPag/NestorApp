@@ -118,7 +118,8 @@ describe('Υ7γ — σελίδα εγγραφής (`media`): κάτω μπάρα
     const { container } = mountRecordPage();
 
     expect(await screen.findByRole('button', { name: 'Επεξεργασία' })).toBeInTheDocument();
-    expect(container.querySelector('[data-record-action-bar]')?.childElementCount).toBe(0);
+    expect(container.querySelector('[data-record-action-bar-record]')?.childElementCount).toBe(0);
+    expect(container.querySelector('[data-record-action-bar-lead]')?.childElementCount).toBe(0);
     expect(screen.queryByRole('button', { name: 'Κάδος' })).toBeNull();
   });
 

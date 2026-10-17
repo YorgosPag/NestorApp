@@ -15,7 +15,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { ISSUANCE_SEND_REFUSAL_CODES, SEND_ERROR_KEYS, SEND_KEYS } from '@/components/document-registry/issuance-labels';
+import { DELIVERY_REACHED, ISSUANCE_SEND_REFUSAL_CODES, SEND_ERROR_KEYS, SEND_KEYS } from '@/components/document-registry/issuance-labels';
 import { REGISTRY_NS } from '@/components/document-registry/document-registry-labels';
 import { issuanceTargetOf, type RegistryIssuanceView } from '@/components/document-registry/registry-issuance';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -118,7 +118,7 @@ export function useIssuanceSend({ view, audience, leadId, revalidate, onSent }: 
     const result = await sendIssuanceMessage(body);
     setSending(false);
     if (result.kind === 'failed') { notifications.error(t(SEND_ERROR_KEYS[errorRowOf(result.code)])); await revalidate(); return; }
-    const delivered = result.data.delivery.recipient === 'accepted';
+    const delivered = DELIVERY_REACHED[result.data.delivery.recipient];
     if (delivered) notifications.success(t(SEND_KEYS.sent));
     else notifications.warning(t(SEND_KEYS.notDelivered));
     // Με κωδικό, ο διάλογος μένει ανοιχτός για να τον δει ο άνθρωπος — μία φορά· χωρίς, κλείνει όπως πριν. `typeof`, όχι

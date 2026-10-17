@@ -12,6 +12,7 @@ import type {
   InstructionChannel,
   IssuanceStage,
 } from '@/lib/document-validity/issuance-assignment';
+import type { IssuanceDeliveryOutcome } from '@/lib/document-validity/issuance-delivery';
 
 const K = 'document-registry:';
 
@@ -190,3 +191,26 @@ export const LINK_HISTORY_KEYS = {
   withAccessCode: `${K}issuance.history.withAccessCode`,
   verifiedByCode: `${K}issuance.history.verifiedByCode`,
 } as const;
+
+/**
+ * §30 — **τι λέει το ιστορικό για την παράδοση στον παραλήπτη**, ανά τιμή του κλειστού λεξιλογίου. `null` = τίποτα πέρα
+ * από το «στάλθηκε» (το `accepted` — «μπήκε σε ουρά» — δεν έχει γραμμή: δεν υπόσχεται τίποτα). Χάρτης «τιμή → κλειδί», ώστε ο
+ * γεννήτορας του route slice να τον λύνει στατικά.
+ */
+export const DELIVERY_HISTORY_KEYS: Readonly<Record<Exclude<IssuanceDeliveryOutcome, 'accepted'>, string>> = {
+  delivered: `${K}issuance.history.delivered`,
+  failed: `${K}issuance.history.notDelivered`,
+  unaddressable: `${K}issuance.history.notDelivered`,
+  bounced: `${K}issuance.history.bounced`,
+  complained: `${K}issuance.history.complained`,
+};
+
+/** Ζητά ενέργεια από τον άνθρωπο; — η λέξη το λέει, το χρώμα απλώς το τονίζει. */
+export const DELIVERY_ALARM: Readonly<Record<IssuanceDeliveryOutcome, boolean>> = {
+  accepted: false, delivered: false, failed: true, unaddressable: true, bounced: true, complained: true,
+};
+
+/** Έφτασε το μήνυμα σε άνθρωπο; — για το «ενημερώθηκαν Ν συνιδιοκτήτες». Το `complained` **σημαίνει** ότι το έλαβε. */
+export const DELIVERY_REACHED: Readonly<Record<IssuanceDeliveryOutcome, boolean>> = {
+  accepted: true, delivered: true, complained: true, failed: false, unaddressable: false, bounced: false,
+};

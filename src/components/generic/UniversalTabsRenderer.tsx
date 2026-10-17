@@ -12,6 +12,7 @@ import { getIconComponent } from './utils/IconMapping';
 import { entityIdOf, type UniversalTabConfig } from './universal-tabs-config';
 import { floorplanViewerTabProps } from './floorplan-viewer-tab-props';
 import PlaceholderTab from '../building-management/tabs/PlaceholderTab';
+import { TabActivityProvider } from '@/core/layouts/tab-activity';
 
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -53,7 +54,8 @@ function LazyTabContent({ tabId, activeTab, children }: LazyTabContentProps) {
     return null;
   }
 
-  return <>{children}</>;
+  // Προσαρτημένη ≠ ορατή: ό,τι προβάλλει έξω από την καρτέλα (κάτω μπάρα εγγραφής) ρωτά εδώ (ADR-912 §12.14).
+  return <TabActivityProvider value={tabId === activeTab}>{children}</TabActivityProvider>;
 }
 
 // Το σχήμα ρύθμισης ζει στο `universal-tabs-config` (N.7.1)· επανεξάγεται για τα υπάρχοντα imports.

@@ -59,6 +59,7 @@ import {
   type CaptureMetadata,
   getCaptureSourcesForCategory,
 } from '@/config/upload-entry-points';
+import { ENTITY_ACTION_PRIMARY_FILL } from '@/core/entity-headers/entity-action-presets';
 import { useAddCaptureHandlers } from './useAddCaptureHandlers';
 import { CameraCaptureDialog } from './CameraCaptureDialog';
 import '@/lib/design-system';
@@ -299,12 +300,15 @@ export function AddCaptureMenu({
   // RENDER
   // =========================================================================
 
+  // Η ΜΙΑ κύρια ενέργεια της εργαλειοθήκης (και της κάτω μπάρας, ADR-912 §12.14) — το ΙΔΙΟ γέμισμα με το κύριο της
+  // κεφαλίδας (`EntityActionButton`): σκέτο `bg-primary` ≡ `--card` στο σκοτεινό θέμα (ADR-770), χανόταν στην κάρτα.
   const triggerButton = (
     <Button
       variant="default"
       size="sm"
       disabled={disabled || loading}
       aria-label={buttonLabel || t('manager.addFiles')}
+      className={ENTITY_ACTION_PRIMARY_FILL}
     >
       {loading ? (
         <Spinner size="small" color="inherit" className="mr-2" />

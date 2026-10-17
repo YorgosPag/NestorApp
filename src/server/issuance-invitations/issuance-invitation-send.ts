@@ -18,7 +18,8 @@ import 'server-only';
 
 import type { Firestore } from 'firebase-admin/firestore';
 
-import type { IssuanceAction, IssuanceDelivery, IssuanceDeliveryOutcome, IssuanceStage } from '@/lib/document-validity/issuance-assignment';
+import type { IssuanceAction, IssuanceStage } from '@/lib/document-validity/issuance-assignment';
+import type { DeliverySlot, IssuanceDelivery, IssuanceDeliveryOutcome } from '@/lib/document-validity/issuance-delivery';
 import { documentRequestLocation, DOCUMENT_REQUEST_PATH } from '@/lib/document-validity/document-request-link';
 import type { IssuanceSendBody } from '@/lib/document-validity/issuance-request';
 import { publicUrl } from '@/lib/http/public-origin';
@@ -34,6 +35,7 @@ import {
 import { buildIssuanceEmail } from '@/services/email-templates/issuance-invitation-email';
 import type { IssuanceInvitation, IssuancePreview } from '@/types/issuance-invitation';
 
+import { issuanceDeliveryCorrelation } from './issuance-delivery-ref';
 import { draftIssuanceMessage, type DraftPerson, type DraftRefusal, type IssuanceSendDraft } from './issuance-invitation-draft';
 import { issuanceInvitationsCollection, liveIssuanceInvitationsQuery, mintIssuanceInvitation } from './issuance-invitation-kind';
 
@@ -134,12 +136,14 @@ async function commitSend(db: Firestore, sender: IssuanceSender, body: IssuanceS
   return staged.outcome;
 }
 
-async function deliverTo(person: DraftPerson & { readonly email: string }, invitation: IssuanceInvitation, compose: (language: unknown) => ReturnType<typeof buildIssuanceEmail> | null, kind: string) {
+async function deliverTo(person: DraftPerson & { readonly email: string }, invitation: IssuanceInvitation, compose: (language: unknown) => ReturnType<typeof buildIssuanceEmail> | null, slot: DeliverySlot) {
   const outcome = await deliverInvitationEmail({
     invitationId: invitation.id,
-    kind,
+    kind: slot.kind === 'recipient' ? 'document-issuance' : 'document-issuance-notice',
     inviteeEmail: person.email,
     inviterUid: invitation.invitedByUid,
+    // §30 — τα γεγονότα του παρόχου (delivered · bounced) γυρίζουν στο ΙΔΙΟ μήνυμα, στη ΣΩΣΤΗ θέση.
+    correlation: issuanceDeliveryCorrelation(invitation.id, slot),
     compose: async (language) => compose(language),
   });
   return deliveryOutcomeOf(outcome);
@@ -149,9 +153,9 @@ async function deliverTo(person: DraftPerson & { readonly email: string }, invit
 async function deliverAll(draft: IssuanceSendDraft, invitation: IssuanceInvitation, token: string): Promise<IssuanceDelivery> {
   const link = publicUrl(documentRequestLocation(token));
   const withCode = invitation.accessCode !== null;
-  const recipient = await deliverTo(draft.recipient, invitation, (language) => (link === null ? null : recipientEmailOf(draft, language, link, invitation.expiresAt, withCode)), 'document-issuance');
+  const recipient = await deliverTo(draft.recipient, invitation, (language) => (link === null ? null : recipientEmailOf(draft, language, link, invitation.expiresAt, withCode)), { kind: 'recipient' });
   const coOwners = await Promise.all(draft.informed.flatMap((person) => (person.email === null ? [] : [
-    deliverTo({ ...person, email: person.email }, invitation, (language) => coOwnerEmailOf(draft, language), 'document-issuance-notice')
+    deliverTo({ ...person, email: person.email }, invitation, (language) => coOwnerEmailOf(draft, language), { kind: 'co-owner', contactId: person.contactId })
       .then((outcome) => [person.contactId, outcome] as const),
   ])));
   return { recipient, coOwners: Object.fromEntries(coOwners) };

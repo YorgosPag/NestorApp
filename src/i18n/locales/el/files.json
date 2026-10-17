@@ -218,7 +218,9 @@
     "filesTab": "Αρχεία",
     "trashTab": "Κάδος",
     "noSearchResults": "Δεν βρέθηκαν αρχεία με αυτά τα κριτήρια",
-    "testError": "Δοκιμαστικό Σφάλμα (Μόνο Dev)"
+    "testError": "Δοκιμαστικό Σφάλμα (Μόνο Dev)",
+    "viewModeGroup": "Προβολή",
+    "treeViewModeGroup": "Όψη δέντρου"
   },
   "stats": {
     "totalFiles": "Σύνολο Αρχείων",
@@ -264,7 +266,8 @@
       "building": "κτίριο",
       "project": "έργο",
       "unit": "μονάδα",
-      "floor": "όροφο"
+      "floor": "όροφο",
+      "property": "ακίνητο"
     },
     "linkedFromProject": "Συνδεδεμένο",
     "unlinkConfirm": "Θέλετε να αποσυνδέσετε αυτό το αρχείο; Δεν θα εμφανίζεται πλέον εδώ.",
@@ -282,7 +285,8 @@
     "openInNewTab": "Άνοιγμα σε νέα καρτέλα",
     "classifying": "Κατηγοριοποίηση...",
     "classificationFailed": "Αποτυχία κατηγοριοποίησης",
-    "retryClassification": "Επανάληψη κατηγοριοποίησης"
+    "retryClassification": "Επανάληψη κατηγοριοποίησης",
+    "selectFile": "Επιλογή: {name}"
   },
   "documentType": {
     "invoice": "Τιμολόγιο",

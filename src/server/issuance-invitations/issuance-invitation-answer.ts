@@ -14,6 +14,7 @@ import 'server-only';
  * ⚠️ **Καμία εγγραφή στην όψη**, εκτός από το «ανοίχτηκε» (ένδειξη, μη μπλοκάρον, μετά την απάντηση).
  * 🔑 **§29 — κωδικός σε δεύτερο κανάλι**: σύνδεσμος με κωδικό δείχνει πριν από αυτόν μόνο την πύλη (σε ποιον · ποιο γραφείο)·
  *    το ξεκλείδωμα και η απάντηση κρίνουν τον κωδικό **κάθε φορά** (`issuance-link-access.ts`), και ο μειωτής ξανακρίνει.
+ * 🔑 **§30 — απόδειξη**: κάθε απάντηση φέρνει email στη διεύθυνση του συνδέσμου (`issuance-answer-receipt.ts`).
  */
 
 import type { Firestore } from 'firebase-admin/firestore';
@@ -42,10 +43,12 @@ import { readInvitationByToken } from '@/server/invitations/invitation-redeem';
 import { readDocumentRegistry } from '@/services/document-registry/document-registry.service';
 import type { DocumentRegistryResponse, RegistryPropertyLabel } from '@/services/document-registry/document-registry.types';
 import { stageIssuanceAction, type StagedIssuanceWrite } from '@/services/document-registry/issuance-assignments.server';
+import type { IssuanceEmailFacts } from '@/services/email-templates/issuance-invitation-email';
 import type { InvitationCoreRefusal, InvitationDocumentCore } from '@/types/invitation-core';
 import type { IssuanceInvitation, IssuanceLinkLanding, IssuanceLinkRefusal, IssuanceLinkView } from '@/types/issuance-invitation';
 
 import { announceIssuanceAnswer, type IssuanceLinkEvent } from './issuance-answer-notifier';
+import { sendIssuanceAnswerReceipt } from './issuance-answer-receipt';
 import { ISSUANCE_INVITATION_LOCATOR, issuanceInvitationsCollection, parseIssuanceInvitation } from './issuance-invitation-kind';
 import { checkIssuanceAccessCode, isIssuanceLinkLocked, issuanceGateViewOf, type IssuanceAccessCheck } from './issuance-link-access';
 
@@ -156,6 +159,22 @@ async function announceToOffice(link: ResolvedLink, event: IssuanceLinkEvent): P
   });
 }
 
+/** Τα στοιχεία της απόδειξης — από τον **ίδιο** αναγνώστη με την όψη, ποτέ από το αίτημα του πελάτη. */
+async function receiptFactsOf(link: ResolvedLink): Promise<IssuanceEmailFacts> {
+  const { invitation, registry, record } = link;
+  return {
+    officeName: await officeNameOf(link), propertyLabel: link.label.name, documentKind: invitation.documentKind,
+    professionalName: registry.people[record.professionalContactId]?.name ?? null, credential: record.credential, note: null,
+  };
+}
+
+/** §30 — η απόδειξη στη διεύθυνση του συνδέσμου. Μετά το commit, ποτέ δεν πετά. */
+async function sendReceipt(link: ResolvedLink, answer: IssuanceLinkAnswerBody, verifiedBy: LinkVerification, answeredAt: string): Promise<void> {
+  await sendIssuanceAnswerReceipt({
+    invitation: link.invitation, facts: await receiptFactsOf(link), answer: answer.answer, comment: answer.note, verifiedBy, answeredAt,
+  });
+}
+
 /** Ο κωδικός **για αυτή την πράξη** — άρνηση ⇒ λέγεται με τις προσπάθειες που μένουν· κλείδωμα ⇒ ειδοποίηση, μία φορά. */
 async function guardAccess(db: Firestore, link: ResolvedLink, attempt: string | null, nowIso: string): Promise<IssuanceAccessCheck> {
   const check = await checkIssuanceAccessCode(db, link.invitation, attempt, nowIso);
@@ -228,6 +247,7 @@ export async function answerIssuanceLink(db: Firestore, token: string, answer: I
   }
   if (outcome.kind === 'refused') return outcome;
   await outcome.effect.audit();
-  await announceToOffice(link, answer.answer);
+  // Δύο αποδέκτες, μία πράξη: το γραφείο μαθαίνει την απάντηση· η διεύθυνση του συνδέσμου παίρνει την απόδειξη (§30).
+  await Promise.all([announceToOffice(link, answer.answer), sendReceipt(link, answer, check.verifiedBy, now.toISOString())]);
   return { kind: 'answered', answer: answer.answer };
 }

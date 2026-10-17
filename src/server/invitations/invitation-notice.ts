@@ -25,6 +25,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { loadDeclaredEmailLanguage } from '@/server/notifications/user-notification-settings-store';
 import { sendReplyViaMailgun } from '@/services/ai-pipeline/shared/mailgun-sender';
 import type { ConfirmationEmailResult } from '@/services/email-templates/confirmation-email-shared';
+import type { EmailDeliveryCorrelation } from '@/types/email-delivery';
 
 import type { HumanLanguage } from '@/i18n/languages';
 
@@ -80,6 +81,11 @@ export interface InvitationDelivery {
   readonly kind: string;
   readonly inviteeEmail: string;
   readonly inviterUid: string;
+  /**
+   * Τι ταξιδεύει με το μήνυμα και γυρίζει στα γεγονότα παράδοσης του παρόχου (ADR-841 §7 Α21.20) — `undefined` = κανείς
+   * δεν ακούει. ⚠️ Ποτέ το token: το `ref` ζει στα logs του παρόχου.
+   */
+  readonly correlation?: EmailDeliveryCorrelation;
   /** **Το email του είδους**, στη γλώσσα του παραλήπτη — `null` ⇒ χωρίς δημόσια διεύθυνση (`unaddressable`). */
   compose(language: HumanLanguage | null): Promise<ConfirmationEmailResult | null>;
 }
@@ -95,7 +101,7 @@ export async function deliverInvitationEmail(delivery: InvitationDelivery): Prom
       return 'unaddressable';
     }
     const sent = await sendReplyViaMailgun({
-      to: delivery.inviteeEmail, subject: email.subject, textBody: email.text, htmlBody: email.html,
+      to: delivery.inviteeEmail, subject: email.subject, textBody: email.text, htmlBody: email.html, correlation: delivery.correlation,
     });
     if (!sent.success) {
       logger.error('Το email πρόσκλησης δεν έγινε δεκτό από τον πάροχο', { ...trace, error: sent.error });
