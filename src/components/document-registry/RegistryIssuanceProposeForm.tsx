@@ -28,21 +28,18 @@ import { ISSUER_QUALIFICATION_SPECS, type IssuerQualification } from '@/config/d
 import { documentKindSpec, type DocumentKind } from '@/config/document-validity/document-validity';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { conveyanceToday } from '@/lib/conveyance/conveyance-calendar';
-import {
-  REGISTRY_NUMBER_MAX,
-  type CandidateReason,
-  type IssuanceCandidate,
-} from '@/lib/document-validity/issuance-assignment';
+import { REGISTRY_NUMBER_MAX } from '@/lib/document-validity/issuance-assignment';
+import type { CandidateReason, IssuanceCandidate } from '@/lib/document-validity/issuance-candidates';
 import { formatDateKey } from '@/lib/intl-formatting';
 import { isOneOf } from '@/lib/type-guards';
 import { useIssuanceAssignmentActions } from '@/components/document-registry/issuance-assignment-context';
 import { issuanceTargetOf, type RegistryIssuanceView } from '@/components/document-registry/registry-issuance';
-import { qualificationText } from '@/components/document-registry/RegistryIssuerValue';
 import {
   CONVEYANCE_NS,
   DOCUMENT_KIND_LABEL_KEYS,
   LEGALITY_NS,
   PROPERTY_MARKET_NS,
+  qualificationText,
   REGISTRY_NS,
 } from '@/components/document-registry/document-registry-labels';
 import { ISSUANCE_KEYS, PROPOSE_KEYS } from '@/components/document-registry/issuance-labels';

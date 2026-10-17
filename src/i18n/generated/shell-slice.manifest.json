@@ -33,7 +33,7 @@
     "src/i18n/generated/routes/o__workspace__cases.el.json": "62e1b3378215c16e66a12632667ad61be33b59cc632e634dde0ffaf9763769d4",
     "src/i18n/generated/routes/o__workspace__cases__engagementId.el.json": "cb0565009bf6f7bec16cd93768e557804df81971abe3c5a23b7c050e9eb91ec3",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
-    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "aa089c7f69ca5f4ca65d3105c7affe1e26dafcf6237ac2e935df8dd977da326c",
+    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "ab37b252c1cb74e816fa306f54be901a04539c1147dd7801d99930262f09327f",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "f2b0212cf0909081143453962ba0bfec2a47dc8753dc81a009ee34c12579b137",
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "2753c7edd9c05a17a65b15f3146177db8a27ca727df7b1f77d28fd1724f4fa6f",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "e1c5896ab910b7f5515ef0a3991a4daae3ba7fc776c6291815cfeaddb51e2398",
@@ -57,7 +57,7 @@
     "src/i18n/generated/routes/private-marketing-disclosure.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
     "src/i18n/generated/routes/private-marketing-disclosure__versions.el.json": "b5985d2511b93344b355342677c84641c2bc629c80ca0b367778c17afd7800b7",
     "src/i18n/generated/routes/private-marketing-disclosure__versions__version.el.json": "0b0f52262c8ead9f7c4c7a282fee6c540b128f8a9a5c78716d351fd4681a6db4",
-    "src/i18n/generated/routes/pro.el.json": "5759baa239221365f8c0998839d36c2c76e2d88a2e1d65ca8ce9255955880f5a",
+    "src/i18n/generated/routes/pro.el.json": "d1d4932857451b3c7be47daca9086652a5b9b8fdb2b1db9368e4e44fbc9591ce",
     "src/i18n/generated/routes/pro__alias.el.json": "cab418d4b3c11cb463da7952d60e292c0f6cd99c64341b0b4e668dc79ebb646b",
     "src/i18n/generated/routes/profile.el.json": "24b5f25a2e330998e650126e7fb3ffc0452c89fcda2946634f21bd02b5b7dd95",
     "src/i18n/generated/routes/saved-listings.el.json": "7b13b8c74093929134a72cfd029aa8f474840f42c4a734f86b3b50181fa86eac",
@@ -150,7 +150,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "fd2af1e7880b8ae7c540000b54bfeca88814a0031e32dde0fe50cc3f1e412529",
+  "inputsSha256": "605818f3b4a20c8e0280e6deedbcf01bf8c179c1d0768bfcb04f591e9a0ff7c8",
   "languages": [
     "el"
   ],
@@ -5232,6 +5232,7 @@
             "issuance.decision.description",
             "issuance.decision.needsLead",
             "issuance.decision.title",
+            "issuance.error.actorRefused",
             "issuance.error.contactUnavailable",
             "issuance.error.failed",
             "issuance.error.leadChanged",
@@ -5242,6 +5243,14 @@
             "issuance.error.unavailable",
             "issuance.error.unqualified",
             "issuance.heading",
+            "issuance.history.acceptedByLink",
+            "issuance.history.decidedByLink",
+            "issuance.history.declinedByLink",
+            "issuance.history.informed",
+            "issuance.history.notDelivered",
+            "issuance.history.noticedByLink",
+            "issuance.history.requestedApproval",
+            "issuance.history.responseNote",
             "issuance.lastClosed",
             "issuance.lastFulfilled",
             "issuance.notice.description",
@@ -5256,6 +5265,12 @@
             "issuance.proposeOther",
             "issuance.proposedOn",
             "issuance.saving",
+            "issuance.send.ownerResend",
+            "issuance.send.ownerTitle",
+            "issuance.send.ownerTrigger",
+            "issuance.send.professionalResend",
+            "issuance.send.professionalTitle",
+            "issuance.send.professionalTrigger",
             "issuance.stage.accepted",
             "issuance.stage.cancelled",
             "issuance.stage.declined",
@@ -8685,7 +8700,8 @@
             "issuer.qualification.civil-engineer-tei",
             "issuer.qualification.civil-sub-engineer",
             "issuer.qualification.spatial-planner",
-            "issuer.qualification.surveyor-engineer"
+            "issuer.qualification.surveyor-engineer",
+            "issuer.registered"
           ],
           "prefixes": [],
           "whole": false
@@ -10967,7 +10983,7 @@
   ],
   "stats": {
     "matchedKeys": 248,
-    "sliceBytes": 763654
+    "sliceBytes": 765331
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

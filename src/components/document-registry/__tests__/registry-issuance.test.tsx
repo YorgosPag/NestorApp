@@ -7,7 +7,7 @@
  *    αναθέσεων (μέσα από το fixture)· ψεύτικα μόνο το δίκτυο, το δικαίωμα και τα μηνύματα.
  */
 
-import { act, render, screen, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 
@@ -19,14 +19,17 @@ import {
   ISSUANCE_ERROR_KEYS,
   ISSUANCE_KEYS,
   ISSUANCE_STAGE_KEYS,
+  LINK_HISTORY_KEYS,
   PROPOSE_KEYS,
+  SEND_KEYS,
 } from '../issuance-labels';
 import {
   reduceIssuance,
+  withIssuanceDelivery,
   type IssuanceAction,
   type IssuanceAssignmentRecord,
-  type IssuanceRosterEntry,
 } from '@/lib/document-validity/issuance-assignment';
+import type { IssuanceRosterEntry } from '@/lib/document-validity/issuance-candidates';
 import type { ObligorLead } from '@/lib/document-validity/obligor-lead';
 import { FIXTURE_DOCUMENTS, FIXTURE_REQUIREMENTS, fixtureResponse } from '@/lib/document-validity/__tests__/registry-fixture';
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
@@ -39,9 +42,13 @@ jest.mock('@/hooks/document-registry/useDocumentRegistry', () => ({
 }));
 
 const save = jest.fn(async (..._args: unknown[]): Promise<ObligorDesignationSave> => ({ kind: 'saved' }));
+const preview = jest.fn();
+const send = jest.fn();
 jest.mock('@/services/document-registry/document-registry.client', () => ({
   saveObligorDesignation: jest.fn(),
   saveIssuanceAction: (...args: unknown[]) => save(...args),
+  previewIssuanceMessage: (...args: unknown[]) => preview(...args),
+  sendIssuanceMessage: (...args: unknown[]) => send(...args),
 }));
 // Η αναζήτηση επαφής φέρνει υπηρεσίες Firebase — εδώ αρκεί ότι ΔΕΝ χρειάζεται όταν υπάρχει γνωστός.
 jest.mock('@/components/contacts/relationships/ContactSearchManager', () => ({ ContactSearchManager: () => null }));
@@ -50,7 +57,11 @@ let verdict = 'granted-by-role';
 jest.mock('@/auth/hooks/useCapability', () => ({ useCapability: () => ({ verdict }) }));
 
 const notifyError = jest.fn();
-jest.mock('@/providers/NotificationProvider', () => ({ useNotifications: () => ({ error: notifyError, success: jest.fn() }) }));
+const notifySuccess = jest.fn();
+const notifyWarning = jest.fn();
+jest.mock('@/providers/NotificationProvider', () => ({
+  useNotifications: () => ({ error: notifyError, success: notifySuccess, warning: notifyWarning }),
+}));
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({
@@ -64,7 +75,7 @@ jest.mock('@/lib/workspace/navigation', () => ({
 }));
 jest.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams() }));
 
-const ACTOR = { uid: 'uid_agent', nowIso: '2026-10-10T09:00:00.000Z' };
+const ACTOR = { kind: 'office', uid: 'uid_agent', nowIso: '2026-10-10T09:00:00.000Z' } as const;
 const INSPECTOR = { qualification: 'energy-inspector-registered', registryNumber: null } as const;
 const MAJORITY: ObligorLead = { kind: 'designated', contactId: 'cont_alpha', basis: 'majority-share', sharePct: 60, staleContactId: null };
 
@@ -78,7 +89,7 @@ function recordOf(actions: readonly IssuanceAction[]): IssuanceAssignmentRecord 
 
 const PROPOSE: IssuanceAction = { kind: 'propose', professionalContactId: 'cont_client', credential: INSPECTOR };
 const APPROVE: IssuanceAction = { kind: 'decide', outcome: 'approved', channel: 'phone', note: null, ownerContactId: 'cont_alpha' };
-const ACCEPTED = [PROPOSE, APPROVE, { kind: 'notify', channel: 'phone' }, { kind: 'respond', outcome: 'accepted' }] as IssuanceAction[];
+const ACCEPTED = [PROPOSE, APPROVE, { kind: 'notify', channel: 'phone', invitationId: null, note: null }, { kind: 'respond', outcome: 'accepted', note: null }] as IssuanceAction[];
 
 /** Το p6 (κενό ΠΕΑ) με υπεύθυνο, και ο κατάλογος του γραφείου. */
 function withRoster(roster: readonly IssuanceRosterEntry[], lead: ObligorLead = MAJORITY): DocumentRegistryResponse {
@@ -207,5 +218,62 @@ describe('ADR-915 §27 — πράξεις από την οθόνη', () => {
     expect(save).toHaveBeenCalledWith(expect.objectContaining({
       action: 'decide', expectedStage: 'proposed', outcome: 'approved', expectedOwnerContactId: 'cont_alpha', note: null,
     }));
+  });
+});
+
+describe('ADR-915 §28 — αποστολή με σύνδεσμο: πρόχειρο → προεπισκόπηση → ΕΝΑ πάτημα', () => {
+  const REQUEST: IssuanceAction = { kind: 'request-approval', invitationId: 'diin_1', ownerContactId: 'cont_alpha', note: null };
+  const PREVIEW = {
+    audience: 'owner', recipient: { contactId: 'cont_alpha', name: 'Άλφα', email: 'alfa@example.test' },
+    subject: 'Θέμα προεπισκόπησης', text: 'Κείμενο προεπισκόπησης',
+    coOwners: [{ contactId: 'cont_beta', name: 'Βήτα', reachable: true }, { contactId: 'cont_gamma', name: 'Γάμμα', reachable: false }],
+    coOwnerMessage: null,
+  };
+
+  beforeEach(() => {
+    preview.mockReset().mockResolvedValue({ kind: 'ok', data: { preview: PREVIEW } });
+    send.mockReset().mockResolvedValue({ kind: 'ok', data: { stage: 'proposed', delivery: { recipient: 'accepted', coOwners: {} } } });
+    notifySuccess.mockClear();
+    notifyWarning.mockClear();
+  });
+
+  async function openSend(): Promise<HTMLElement> {
+    registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record: recordOf([PROPOSE]) }]);
+    render(<DocumentRegistryContent />);
+    await userEvent.setup().click(within(article()).getByRole('button', { name: SEND_KEYS.ownerTrigger }));
+    return screen.findByRole('dialog');
+  }
+
+  it('🔴 ΤΙΠΟΤΑ δεν φεύγει πριν το πάτημα: ο διάλογος δείχνει την προεπισκόπηση του διακομιστή, όχι αποστολή', async () => {
+    const dialog = await openSend();
+    expect(await within(dialog).findByText('Θέμα προεπισκόπησης', {}, { timeout: 2000 })).toBeTruthy();
+    expect(preview).toHaveBeenCalledWith(expect.objectContaining({ audience: 'owner', expectedStage: 'proposed', expectedOwnerContactId: 'cont_alpha' }));
+    expect(send).not.toHaveBeenCalled();
+    expect(within(dialog).getByText(SEND_KEYS.never)).toBeTruthy();
+  });
+
+  it('συνιδιοκτήτες: προεπιλογή ΝΑΙ μόνο όσοι έχουν email· ένα πάτημα ⇒ ΜΙΑ αποστολή με ό,τι προεπισκοπήθηκε', async () => {
+    const dialog = await openSend();
+    await within(dialog).findByText('Θέμα προεπισκόπησης', {}, { timeout: 2000 });
+    const [beta, gamma] = within(dialog).getAllByRole('checkbox');
+    expect(gamma?.hasAttribute('disabled')).toBe(true);
+    expect(beta?.getAttribute('aria-checked')).toBe('true');
+    // Η προεπιλογή άλλαξε το πρόχειρο ⇒ νέα προεπισκόπηση· το κουμπί ανοίγει ΜΟΝΟ όταν είναι για το τρέχον πρόχειρο.
+    const submit = within(dialog).getByRole('button', { name: SEND_KEYS.submit });
+    await waitFor(() => expect(submit.hasAttribute('disabled')).toBe(false), { timeout: 2000 });
+    expect(preview).toHaveBeenLastCalledWith(expect.objectContaining({ informContactIds: ['cont_beta'] }));
+    await userEvent.setup().click(submit);
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({ audience: 'owner', informContactIds: ['cont_beta'] }));
+    expect(notifySuccess).toHaveBeenCalledWith(SEND_KEYS.sent);
+  });
+
+  it('το email δεν έφυγε ⇒ η γραμμή το ΛΕΕΙ («δεν έφυγε — ξαναστείλτε»), και το κουμπί γίνεται «Ξαναστείλτε»', () => {
+    const requested = recordOf([PROPOSE, REQUEST]);
+    const failed = withIssuanceDelivery(requested, 'diin_1', { recipient: 'failed', coOwners: {} });
+    registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record: failed ?? requested }]);
+    render(<DocumentRegistryContent />);
+    expect(within(article()).getByText(LINK_HISTORY_KEYS.notDelivered)).toBeTruthy();
+    expect(within(article()).getByRole('button', { name: SEND_KEYS.ownerResend })).toBeTruthy();
   });
 });

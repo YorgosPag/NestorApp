@@ -10,7 +10,8 @@
  *    όριο της κλειστότητας του route slice (CHECK 3.34), όχι νέα σφράγιση.
  * 🔑 **Η απόφαση είναι του ΥΠΕΥΘΥΝΟΥ** (§26), και ο διάλογος τον **ονομάζει**: «καταγράφετε την απόφαση του Χ». Χωρίς
  *    υπεύθυνο, ο διάλογος **δεν** δίνει φόρμα — λέει «ορίστε πρώτα υπεύθυνο» (ένας για όλο το ακίνητο, ΑΚ 789).
- * 🔑 **Καταγραφή, όχι αποστολή**: κανένας διάλογος δεν στέλνει μήνυμα — το λέει ρητά (§18.5: ποτέ αυτόματη αποστολή).
+ * 🔑 **Καταγραφή ή αποστολή — ποτέ σιωπηλά**: οι διάλογοι καταγραφής δεν στέλνουν τίποτα και το λένε· ο διάλογος αποστολής
+ *    (§28) δείχνει **πρώτα** την προεπισκόπηση και στέλνει μόνο με το πάτημα (§18.5: ποτέ αυτόματη αποστολή).
  */
 
 import dynamic from 'next/dynamic';
@@ -34,17 +35,21 @@ import {
   ISSUANCE_KEYS,
   NOTICE_KEYS,
   PROPOSE_KEYS,
+  SEND_KEYS,
 } from '@/components/document-registry/issuance-labels';
+import type { IssuanceAudience } from '@/lib/document-validity/issuance-request';
 
 const DecisionForm = dynamic(() => import('./RegistryIssuanceDecisionForms').then((mod) => mod.DecisionForm), { ssr: false });
 const NoticeForm = dynamic(() => import('./RegistryIssuanceDecisionForms').then((mod) => mod.NoticeForm), { ssr: false });
 const ProposeForm = dynamic(() => import('./RegistryIssuanceProposeForm').then((mod) => mod.ProposeForm), { ssr: false });
+const SendForm = dynamic(() => import('./RegistryIssuanceSendForm').then((mod) => mod.SendForm), { ssr: false });
 
 export interface IssuanceDialogShellProps {
   readonly trigger: string;
   readonly triggerVariant?: 'outline' | 'ghost';
   readonly title: string;
-  readonly description: string;
+  /** `null` ⇒ την περιγραφή τη δίνει η ίδια η φόρμα (όριο `next/dynamic`, §28) — πάντα μέσα στο `DialogContent`. */
+  readonly description: string | null;
   /** Η φόρμα — φτιάχνεται **μόνο** όσο ο διάλογος είναι ανοιχτός ⇒ κάθε άνοιγμα ξεκινά καθαρό. */
   readonly children: (close: () => void) => React.ReactNode;
 }
@@ -58,7 +63,7 @@ function IssuanceDialogShell({ trigger, triggerVariant = 'outline', title, descr
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
-            <DialogDescription>{description}</DialogDescription>
+            {description === null ? null : <DialogDescription>{description}</DialogDescription>}
           </DialogHeader>
           {open ? children(() => setOpen(false)) : null}
         </DialogContent>
@@ -126,6 +131,41 @@ export function IssuanceCancelDialog({ view }: { readonly view: RegistryIssuance
           onConfirm={() => { close(); actions?.act({ action: 'cancel', ...issuanceTargetOf(view) }); }}
         />
       )}
+    </IssuanceDialogShell>
+  );
+}
+
+export interface IssuanceSendDialogProps {
+  readonly view: RegistryIssuanceView;
+  readonly audience: IssuanceAudience;
+  /** Ο παραλήπτης όπως τον βλέπει ο άνθρωπος — υπεύθυνος (έγκριση) ή επαγγελματίας. */
+  readonly recipientName: string;
+  /** Μόνο για έγκριση: ο υπεύθυνος για τη CAS (`lead-changed`). */
+  readonly leadId: string | null;
+  /** Υπάρχει ήδη μήνυμα με σύνδεσμο ⇒ «Ξαναστείλτε» (ο προηγούμενος σύνδεσμος πεθαίνει). */
+  readonly resend: boolean;
+}
+
+type Translate = ReturnType<typeof useTranslation>['t'];
+
+/**
+ * Κάθε λέξη με **κυριολεκτικό** κλειδί — ο τεμαχιστής του route slice τις λύνει στατικά (CHECK 3.34). Η περιγραφή **δεν**
+ * είναι εδώ: τη δίνει η φόρμα (`next/dynamic`), γιατί φαίνεται μόνο με ανοιχτό διάλογο.
+ */
+function sendTexts(t: Translate, audience: IssuanceAudience, resend: boolean) {
+  if (audience === 'owner') {
+    return { trigger: resend ? t(SEND_KEYS.ownerResend) : t(SEND_KEYS.ownerTrigger), title: t(SEND_KEYS.ownerTitle) };
+  }
+  return { trigger: resend ? t(SEND_KEYS.professionalResend) : t(SEND_KEYS.professionalTrigger), title: t(SEND_KEYS.professionalTitle) };
+}
+
+/** §28 — «Αποστολή για έγκριση» / «Αποστολή στον επαγγελματία»: πρόχειρο → προεπισκόπηση → ένα πάτημα. */
+export function IssuanceSendDialog({ view, audience, recipientName, leadId, resend }: IssuanceSendDialogProps): React.ReactElement {
+  const { t } = useTranslation([REGISTRY_NS]);
+  const texts = sendTexts(t, audience, resend);
+  return (
+    <IssuanceDialogShell trigger={texts.trigger} title={texts.title} description={null}>
+      {(close) => <SendForm view={view} audience={audience} leadId={leadId} recipientName={recipientName} close={close} />}
     </IssuanceDialogShell>
   );
 }

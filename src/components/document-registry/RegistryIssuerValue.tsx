@@ -16,12 +16,7 @@
 
 import React from 'react';
 
-import {
-  ISSUER_QUALIFICATION_SPECS,
-  issuerAuthorityOf,
-  type DocumentIssuer,
-  type IssuerQualification,
-} from '@/config/document-validity/document-issuers';
+import { issuerAuthorityOf, type DocumentIssuer } from '@/config/document-validity/document-issuers';
 import { documentKindSpec, type DocumentKind } from '@/config/document-validity/document-validity';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatList } from '@/lib/intl-formatting';
@@ -31,22 +26,12 @@ import {
   APPOINTED_BY_LABEL_KEYS,
   ISSUER_AUTHORITY_LABEL_KEYS,
   ISSUER_KEYS,
-  ISSUER_QUALIFICATION_LABEL_KEYS,
-  LICENCE_REGISTRY_LABEL_KEYS,
   OBLIGOR_LABEL_KEYS,
   PROPERTY_MARKET_NS,
+  qualificationText,
   REGISTRY_NS,
 } from '@/components/document-registry/document-registry-labels';
 
-type Translate = ReturnType<typeof useTranslation>['t'];
-
-/** Το όνομα ενός προσόντος — με το μητρώο, όταν είναι άδεια. §27: και ο διάλογος ανάθεσης (ένα σημείο). */
-export function qualificationText(t: Translate, qualification: IssuerQualification): string {
-  const label = t(ISSUER_QUALIFICATION_LABEL_KEYS[qualification]);
-  const spec = ISSUER_QUALIFICATION_SPECS[qualification];
-  if (spec.kind === 'occupation') return label;
-  return t(ISSUER_KEYS.registered, { qualification: label, registry: t(LICENCE_REGISTRY_LABEL_KEYS[spec.licence]) });
-}
 
 function IssuerValue({ issuer }: { readonly issuer: DocumentIssuer }): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS, PROPERTY_MARKET_NS]);

@@ -38,7 +38,8 @@
         "civil-sub-engineer": "Πολιτικός υπομηχανικός",
         "spatial-planner": "Μηχανικός χωροταξίας-πολεοδομίας",
         "surveyor-engineer": "Αγρονόμος τοπογράφος μηχανικός"
-      }
+      },
+      "registered": "{qualification}, εγγεγραμμένος στο {registry}"
     }
   },
   "legality": {

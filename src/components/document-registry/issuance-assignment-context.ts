@@ -18,6 +18,8 @@ export interface IssuanceAssignmentActions {
   readonly pending: ReadonlySet<string>;
   /** Εργονομία, όχι ασφάλεια (ADR-801): ο διακομιστής κρίνει ξανά το `properties:properties:update`. */
   readonly canAct: boolean;
+  /** §28 — ξαναδιάβασε το μητρώο (μετά από αποστολή με σύνδεσμο: η πράξη δεν είναι αισιόδοξη, το αποτέλεσμα τη λέει). */
+  readonly revalidate: () => Promise<void>;
 }
 
 const IssuanceAssignmentContext = createContext<IssuanceAssignmentActions | null>(null);

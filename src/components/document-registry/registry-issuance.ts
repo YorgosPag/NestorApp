@@ -23,9 +23,9 @@ import {
   issuanceStateOf,
   reduceIssuance,
   visibleIssuanceStage,
-  type IssuanceCandidate,
   type IssuanceState,
 } from '@/lib/document-validity/issuance-assignment';
+import type { IssuanceCandidate } from '@/lib/document-validity/issuance-candidates';
 import type { ObligorLead } from '@/lib/document-validity/obligor-lead';
 import { issuanceActionOf, type IssuanceAssignmentBody } from '@/lib/document-validity/issuance-request';
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
@@ -79,7 +79,7 @@ export function withPendingIssuance(
     const issuance = registry.issuance[key];
     if (issuance === undefined) return [];
     const reduced = reduceIssuance(request.documentKind, issuance.record, issuance.latestIssuedOn, issuanceActionOf(request), {
-      uid: OPTIMISTIC_ACTOR_UID, nowIso,
+      kind: 'office', uid: OPTIMISTIC_ACTOR_UID, nowIso,
     });
     return reduced.ok ? [[key, { ...issuance, record: reduced.record }] as const] : [];
   });

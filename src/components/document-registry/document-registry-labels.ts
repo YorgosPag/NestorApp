@@ -23,11 +23,12 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-import type {
-  AuthorityService,
-  DocumentObligor,
-  IssuerAuthority,
-  IssuerQualification,
+import {
+  ISSUER_QUALIFICATION_SPECS,
+  type AuthorityService,
+  type DocumentObligor,
+  type IssuerAuthority,
+  type IssuerQualification,
 } from '@/config/document-validity/document-issuers';
 import type { ProfessionalLicence } from '@/config/professional-licences';
 import type { DocumentKind } from '@/config/document-validity/document-validity';
@@ -193,6 +194,20 @@ export const ISSUER_QUALIFICATION_LABEL_KEYS: Readonly<Record<IssuerQualificatio
 export const LICENCE_REGISTRY_LABEL_KEYS: Readonly<Record<ProfessionalLicence, string>> = {
   'energy-inspector': 'property-market:registries.ypen.name',
 };
+
+/** Ένας μεταφραστής, όποιος κι αν είναι — το `t` της οθόνης ή το `createBundleTranslate` του διακομιστή (email, §28). */
+export type LabelTranslate = (key: string, params?: Record<string, string>) => string;
+
+/**
+ * Το όνομα ενός προσόντος — με το μητρώο, όταν είναι άδεια. Ένα σημείο για τη γραμμή «Ποιος το εκδίδει», τον διάλογο
+ * ανάθεσης (§27) **και** το email προς τον ιδιοκτήτη (§28): ό,τι λέει η οθόνη, το λέει και το μήνυμα.
+ */
+export function qualificationText(t: LabelTranslate, qualification: IssuerQualification): string {
+  const label = t(ISSUER_QUALIFICATION_LABEL_KEYS[qualification]);
+  const spec = ISSUER_QUALIFICATION_SPECS[qualification];
+  if (spec.kind === 'occupation') return label;
+  return t(ISSUER_KEYS.registered, { qualification: label, registry: t(LICENCE_REGISTRY_LABEL_KEYS[spec.licence]) });
+}
 
 export const ISSUER_AUTHORITY_LABEL_KEYS: Readonly<Record<IssuerAuthority, string>> = {
   aade: `${K}issuer.authority.aade`,

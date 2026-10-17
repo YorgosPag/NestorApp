@@ -22,39 +22,49 @@ import { ISSUER_QUALIFICATION_SPECS } from '@/config/document-validity/document-
 import { PROFESSIONAL_LICENCE_SPECS } from '@/config/professional-licences';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatDate } from '@/lib/intl-formatting';
-import type { IssuanceAssignmentRecord, IssuanceStage } from '@/lib/document-validity/issuance-assignment';
+import type {
+  IssuanceApprovalRequest,
+  IssuanceAssignmentRecord,
+  IssuanceDecision,
+  IssuanceDelivery,
+  IssuanceNotice,
+  IssuanceResponse,
+  IssuanceStage,
+} from '@/lib/document-validity/issuance-assignment';
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
 import { useIssuanceAssignmentActions } from '@/components/document-registry/issuance-assignment-context';
 import { issuanceTargetOf, type RegistryIssuanceView } from '@/components/document-registry/registry-issuance';
 import { registryPersonOf } from '@/components/document-registry/registry-obligors';
 import { ObligorPerson } from '@/components/document-registry/RegistryObligorPeople';
-import { qualificationText } from '@/components/document-registry/RegistryIssuerValue';
 import {
   IssuanceCancelDialog,
   IssuanceDecisionDialog,
   IssuanceNoticeDialog,
   IssuanceProposeDialog,
+  IssuanceSendDialog,
 } from '@/components/document-registry/RegistryIssuanceDialogs';
-import { ISSUER_KEYS, NEXT_STEP_KEYS, PROPERTY_MARKET_NS, REGISTRY_NS } from '@/components/document-registry/document-registry-labels';
+import { ISSUER_KEYS, NEXT_STEP_KEYS, PROPERTY_MARKET_NS, qualificationText, REGISTRY_NS } from '@/components/document-registry/document-registry-labels';
 import {
   BALL_IN_COURT_KEYS,
   CHANNEL_KEYS,
   ISSUANCE_KEYS,
   ISSUANCE_STAGE_KEYS,
+  LINK_HISTORY_KEYS,
 } from '@/components/document-registry/issuance-labels';
 
 type Names = Pick<DocumentRegistryResponse, 'people'>;
+type Translate = ReturnType<typeof useTranslation>['t'];
 type OpenState = Extract<RegistryIssuanceView['state'], { kind: 'open' }>;
 
 /** Το όνομα μιας επαφής για **φράση** (διάλογοι) — ποτέ κενό. */
-function nameOf(t: ReturnType<typeof useTranslation>['t'], contactId: string, registry: Names): string {
+function nameOf(t: Translate, contactId: string, registry: Names): string {
   const person = registryPersonOf(contactId, registry);
   if (!person.reachable) return t(ISSUER_KEYS.obligorUnavailable);
   return person.name ?? t(ISSUER_KEYS.obligorUnnamed);
 }
 
 /** Τα ονόματα των υποψηφίων — **μόνο** όσοι είναι ακόμη επαφές του μισθωτή (ξένη ≡ ανύπαρκτη). */
-function candidateNames(t: ReturnType<typeof useTranslation>['t'], view: RegistryIssuanceView, registry: Names): Record<string, string> {
+function candidateNames(t: Translate, view: RegistryIssuanceView, registry: Names): Record<string, string> {
   return Object.fromEntries(view.candidates
     .filter((candidate) => registryPersonOf(candidate.contactId, registry).reachable)
     .map((candidate) => [candidate.contactId, nameOf(t, candidate.contactId, registry)] as const));
@@ -91,17 +101,63 @@ function BallInCourtLine({ state, view, registry }: { readonly state: OpenState;
   );
 }
 
-/** Τι έγινε ως τώρα — πρόταση · απόφαση · ενημέρωση, με ημερομηνία και κανάλι. */
+/** «Δεν έφυγε» — μόνο όταν **ξέρουμε** ότι ο πάροχος δεν το δέχτηκε· `null` (δεν κρίθηκε) δεν λέει τίποτα. */
+function notDelivered(delivery: IssuanceDelivery | null): boolean {
+  return delivery !== null && delivery.recipient !== 'accepted';
+}
+
+function informedCount(delivery: IssuanceDelivery | null): number {
+  return delivery === null ? 0 : Object.values(delivery.coOwners).filter((outcome) => outcome === 'accepted').length;
+}
+
+/** §28 — το αίτημα έγκρισης με σύνδεσμο: σε ποιον, πότε, ποιοι ενημερώθηκαν, και αν **δεν** έφυγε. */
+function requestLines(t: Translate, request: IssuanceApprovalRequest, registry: Names): React.ReactNode[] {
+  const count = informedCount(request.delivery);
+  return [
+    <li key="request">{t(LINK_HISTORY_KEYS.requestedApproval, { name: nameOf(t, request.ownerContactId, registry), date: formatDate(request.at) })}</li>,
+    count > 0 ? <li key="informed">{t(LINK_HISTORY_KEYS.informed, { count: String(count) })}</li> : null,
+    notDelivered(request.delivery) ? <li key="request-failed" className="text-destructive">{t(LINK_HISTORY_KEYS.notDelivered)}</li> : null,
+  ];
+}
+
+function decisionLine(t: Translate, decision: IssuanceDecision, registry: Names): React.ReactNode {
+  const name = nameOf(t, decision.ownerContactId, registry);
+  return decision.basis === 'owner-link-approval'
+    ? <li>{t(LINK_HISTORY_KEYS.decidedByLink, { name, date: formatDate(decision.at) })}</li>
+    : <li>{t(ISSUANCE_KEYS.decided, { name, channel: t(CHANNEL_KEYS[decision.channel]), date: formatDate(decision.at) })}</li>;
+}
+
+function noticeLines(t: Translate, notice: IssuanceNotice): React.ReactNode[] {
+  const line = notice.invitationId === null
+    ? t(ISSUANCE_KEYS.noticed, { channel: t(CHANNEL_KEYS[notice.channel]), date: formatDate(notice.at) })
+    : t(LINK_HISTORY_KEYS.noticedByLink, { date: formatDate(notice.at) });
+  return [
+    <li key="notice">{line}</li>,
+    notDelivered(notice.delivery) ? <li key="notice-failed" className="text-destructive">{t(LINK_HISTORY_KEYS.notDelivered)}</li> : null,
+  ];
+}
+
+/** Μόνο η απάντηση **με σύνδεσμο** γράφει γραμμή — η καταγραφή του γραφείου φαίνεται ήδη στο στάδιο. */
+function responseLines(t: Translate, response: IssuanceResponse): React.ReactNode[] {
+  if (response.basis !== 'professional-link') return [];
+  const date = formatDate(response.at);
+  return [
+    <li key="response">{response.outcome === 'accepted' ? t(LINK_HISTORY_KEYS.acceptedByLink, { date }) : t(LINK_HISTORY_KEYS.declinedByLink, { date })}</li>,
+    response.note === null ? null : <li key="response-note">{t(LINK_HISTORY_KEYS.responseNote, { note: response.note })}</li>,
+  ];
+}
+
+/** Τι έγινε ως τώρα — πρόταση · αίτημα · απόφαση · ενημέρωση · απάντηση, με ημερομηνία, κανάλι και βάση. */
 function HistoryLines({ record, registry }: { readonly record: IssuanceAssignmentRecord; readonly registry: Names }): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS]);
-  const { decision, notice } = record;
+  const { approvalRequest, decision, notice, response } = record;
   return (
     <ul className="m-0 flex list-none flex-col gap-0.5 p-0 text-xs text-muted-foreground">
       <li>{t(ISSUANCE_KEYS.proposedOn, { date: formatDate(record.proposedAt) })}</li>
-      {decision === null ? null : (
-        <li>{t(ISSUANCE_KEYS.decided, { name: nameOf(t, decision.ownerContactId, registry), channel: t(CHANNEL_KEYS[decision.channel]), date: formatDate(decision.at) })}</li>
-      )}
-      {notice === null ? null : <li>{t(ISSUANCE_KEYS.noticed, { channel: t(CHANNEL_KEYS[notice.channel]), date: formatDate(notice.at) })}</li>}
+      {approvalRequest === null ? null : requestLines(t, approvalRequest, registry)}
+      {decision === null ? null : decisionLine(t, decision, registry)}
+      {notice === null ? null : noticeLines(t, notice)}
+      {response === null ? null : responseLines(t, response)}
     </ul>
   );
 }
@@ -122,7 +178,13 @@ function StageActions({ view, stage, record, registry }: ActionsProps): React.Re
   const respond = (outcome: 'accepted' | 'declined') => actions?.act({ action: 'respond', ...issuanceTargetOf(view), outcome });
   return (
     <div className="flex flex-wrap gap-2">
+      {stage === 'proposed' && lead !== null ? (
+        <IssuanceSendDialog view={view} audience="owner" recipientName={lead.name} leadId={lead.contactId} resend={record.approvalRequest !== null} />
+      ) : null}
       {stage === 'proposed' ? <IssuanceDecisionDialog view={view} professionalName={professionalName} lead={lead} /> : null}
+      {stage === 'ownerApproved' || (stage === 'sent' && (record.notice?.invitationId ?? null) !== null) ? (
+        <IssuanceSendDialog view={view} audience="professional" recipientName={professionalName} leadId={null} resend={stage === 'sent'} />
+      ) : null}
       {stage === 'ownerApproved' ? <IssuanceNoticeDialog view={view} professionalName={professionalName} /> : null}
       {stage === 'sent' ? (
         <>

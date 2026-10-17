@@ -113,7 +113,7 @@ export const CANCEL_KEYS = {
  */
 export const ISSUANCE_REFUSAL_CODES = [
   'NOT_FOUND', 'ASSIGNMENTS_UNAVAILABLE', 'CONTACT_UNAVAILABLE', 'UNQUALIFIED',
-  'LEAD_UNDESIGNATED', 'LEAD_CHANGED', 'STALE', 'TRANSITION_REFUSED',
+  'LEAD_UNDESIGNATED', 'LEAD_CHANGED', 'STALE', 'TRANSITION_REFUSED', 'ACTOR_REFUSED',
 ] as const;
 export type IssuanceRefusalCode = (typeof ISSUANCE_REFUSAL_CODES)[number];
 
@@ -127,4 +127,56 @@ export const ISSUANCE_ERROR_KEYS: Readonly<Record<IssuanceRefusalCode | 'failed'
   LEAD_CHANGED: `${K}issuance.error.leadChanged`,
   STALE: `${K}issuance.error.stale`,
   TRANSITION_REFUSED: `${K}issuance.error.transitionRefused`,
+  ACTOR_REFUSED: `${K}issuance.error.actorRefused`,
 };
+
+/**
+ * §28 — οι αρνήσεις της **αποστολής** (`messages/issuance-send-refusals.ts`): οι κοινοί κωδικοί + τρεις δικοί της.
+ * ⚠️ Χωριστός πίνακας επίτηδες: τον καλεί **μόνο** η φόρμα αποστολής (`next/dynamic`), άρα οι λέξεις του δεν βαραίνουν
+ *    το πρώτο καρέ της σελίδας λήξεων (CHECK 3.34 — ο τεμαχιστής μετρά ανά κλήση `t(ΠΙΝΑΚΑΣ[…])`).
+ */
+export const ISSUANCE_SEND_REFUSAL_CODES = [...ISSUANCE_REFUSAL_CODES, 'NO_EMAIL', 'CO_OWNER_UNKNOWN', 'LINKS_UNAVAILABLE'] as const;
+export type IssuanceSendRefusalCode = (typeof ISSUANCE_SEND_REFUSAL_CODES)[number];
+
+export const SEND_ERROR_KEYS: Readonly<Record<IssuanceSendRefusalCode | 'failed', string>> = {
+  ...ISSUANCE_ERROR_KEYS,
+  NO_EMAIL: `${K}issuance.error.noEmail`,
+  CO_OWNER_UNKNOWN: `${K}issuance.error.coOwnerUnknown`,
+  LINKS_UNAVAILABLE: `${K}issuance.error.linksUnavailable`,
+};
+
+/** §28 — πρόχειρο · προεπισκόπηση · αποστολή με σύνδεσμο. */
+export const SEND_KEYS = {
+  ownerTrigger: `${K}issuance.send.ownerTrigger`,
+  ownerResend: `${K}issuance.send.ownerResend`,
+  professionalTrigger: `${K}issuance.send.professionalTrigger`,
+  professionalResend: `${K}issuance.send.professionalResend`,
+  ownerTitle: `${K}issuance.send.ownerTitle`,
+  professionalTitle: `${K}issuance.send.professionalTitle`,
+  ownerDescription: `${K}issuance.send.ownerDescription`,
+  professionalDescription: `${K}issuance.send.professionalDescription`,
+  noteLabel: `${K}issuance.send.noteLabel`,
+  coOwnersLegend: `${K}issuance.send.coOwnersLegend`,
+  noEmail: `${K}issuance.send.noEmail`,
+  previewHeading: `${K}issuance.send.previewHeading`,
+  to: `${K}issuance.send.to`,
+  coOwnerPreview: `${K}issuance.send.coOwnerPreview`,
+  loading: `${K}issuance.send.loading`,
+  never: `${K}issuance.send.never`,
+  submit: `${K}issuance.send.submit`,
+  sending: `${K}issuance.send.sending`,
+  sent: `${K}issuance.send.sent`,
+  notDelivered: `${K}issuance.send.notDelivered`,
+} as const;
+
+/** §28 — οι γραμμές ιστορικού των μηνυμάτων με σύνδεσμο και των απαντήσεων. */
+export const LINK_HISTORY_KEYS = {
+  requestedApproval: `${K}issuance.history.requestedApproval`,
+  informed: `${K}issuance.history.informed`,
+  notDelivered: `${K}issuance.history.notDelivered`,
+  decidedByLink: `${K}issuance.history.decidedByLink`,
+  noticedByLink: `${K}issuance.history.noticedByLink`,
+  acceptedByLink: `${K}issuance.history.acceptedByLink`,
+  declinedByLink: `${K}issuance.history.declinedByLink`,
+  responseNote: `${K}issuance.history.responseNote`,
+} as const;

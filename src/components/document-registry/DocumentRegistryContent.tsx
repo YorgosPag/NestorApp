@@ -208,8 +208,8 @@ function useDesignatedRegistry({ registry: loaded, revalidate }: ReadyBodyProps)
   const { designate, pending } = designation;
   const actions = useMemo(() => ({ designate, pending, canDesignate }), [designate, pending, canDesignate]);
   const issuanceActions = useMemo(
-    () => ({ act: issuance.act, pending: issuance.pending, canAct: canDesignate }),
-    [issuance.act, issuance.pending, canDesignate],
+    () => ({ act: issuance.act, pending: issuance.pending, canAct: canDesignate, revalidate }),
+    [issuance.act, issuance.pending, canDesignate, revalidate],
   );
   return { registry: issuance.registry, actions, issuanceActions };
 }
