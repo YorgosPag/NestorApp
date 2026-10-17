@@ -8,7 +8,7 @@
 
 import { documentRegistry, type RegistryDocument } from '@/lib/document-validity/document-registry';
 import type { DocumentRequirement } from '@/lib/document-validity/document-requirement';
-import type { IssuanceRosterEntry } from '@/lib/document-validity/issuance-assignment';
+import type { IssuanceRosterEntry } from '@/lib/document-validity/issuance-candidates';
 import { issuanceOfRows } from '@/lib/document-validity/issuance-rows';
 import type { ObligorLead } from '@/lib/document-validity/obligor-lead';
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';

@@ -36,6 +36,8 @@ const ISSUANCE_REFUSAL_STATUS: Readonly<Record<IssuanceRefusal, readonly [number
   'lead-changed': [409, 'LEAD_CHANGED'],
   stale: [409, 'STALE'],
   'transition-refused': [409, 'TRANSITION_REFUSED'],
+  // §28 — π.χ. καταγραφή απόφασης χωρίς κανάλι· δομικά ανέφικτο από τη φόρμα, άρα σφάλμα του πελάτη.
+  'actor-refused': [422, 'ACTOR_REFUSED'],
 };
 
 async function issuanceHandler(request: NextRequest, ctx: AuthContext) {

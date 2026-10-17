@@ -3,31 +3,17 @@
 /**
  * **Ο σύνδεσμος της πύλης, από το fragment** (ADR-876 §5 · W3C TAG *Capability URLs*).
  *
- * Ο σύνδεσμος του email είναι `/vendor/quote#t=<διαπιστευτήριο>[&intent=decline]`. Ο browser
- * **δεν στέλνει ποτέ** το `#…` στον server — ούτε σε access log, ούτε σε `Referer`, ούτε στα
- * Safe Links που «πατούν» τον σύνδεσμο πριν τον άνθρωπο. Εδώ:
- *
- *  1. διαβάζεται **μία** φορά (γραμματική: `readVendorPortalFragment`, δίπλα στον κατασκευαστή)·
- *  2. **σβήνεται** από τη γραμμή διευθύνσεων **και** από το ιστορικό (`history.replaceState`):
- *     στιγμιότυπο οθόνης ή αντιγραφή της διεύθυνσης δεν κουβαλούν πια το διαπιστευτήριο·
- *  3. κρατιέται στο `sessionStorage` της **καρτέλας**, ώστε η ανανέωση της σελίδας να δουλεύει·
- *     σβήνει όταν κλείσει η καρτέλα. Κάθε πρόσβαση σε try/catch: ιδιωτικό παράθυρο ή μπλοκαρισμένα
- *     δεδομένα ⇒ απλώς καμία επιβίωση σε reload, ποτέ σφάλμα.
- *  4. **και σε `hashchange`** (ADR-876 §5 Σ18): δεύτερος σύνδεσμος επικολλημένος στην ΙΔΙΑ καρτέλα
- *     είναι πλοήγηση στο ίδιο έγγραφο — χωρίς mount. Επαληθευμένο στον browser: η σελίδα έδειχνε
- *     την ΠΡΟΗΓΟΥΜΕΝΗ πρόσκληση και το νέο `#t=` έμενε ορατό στη γραμμή διευθύνσεων.
+ * Ο σύνδεσμος του email είναι `/vendor/quote#t=<διαπιστευτήριο>[&intent=decline]`. Ο browser **δεν στέλνει ποτέ** το
+ * `#…` στον server. Ο μηχανισμός (μία ανάγνωση · σβήσιμο από διεύθυνση και ιστορικό · `sessionStorage` της καρτέλας ·
+ * `hashchange`) ζει πλέον στο **κοινό** `useFragmentCredential` (ADR-915 §28, με την άφιξη της δεύτερης πύλης)· εδώ
+ * μένει μόνο ό,τι είναι της πύλης προμηθευτή: το κλειδί της καρτέλας και η πρόθεση.
  *
  * @module app/(auth)/vendor/quote/useVendorPortalLink
  */
 
-import { useEffect, useState } from 'react';
+import { useFragmentCredential } from '@/lib/tokens/useFragmentCredential';
 
-import { clearUrlFragment } from '@/lib/url-query-state';
-
-import {
-  readVendorPortalFragment,
-  type VendorPortalIntent,
-} from '@/subapps/procurement/services/vendor-portal-links';
+import { vendorPortalIntentOf, type VendorPortalIntent } from '@/subapps/procurement/services/vendor-portal-links';
 
 const STORAGE_KEY = 'nestor.vendor-portal.link';
 
@@ -36,45 +22,7 @@ export type VendorPortalLinkState =
   | { readonly phase: 'missing' }
   | { readonly phase: 'ready'; readonly token: string; readonly intent: VendorPortalIntent | null };
 
-function remember(token: string): void {
-  try {
-    window.sessionStorage.setItem(STORAGE_KEY, token);
-  } catch {
-    // Χωρίς αποθήκευση: η σελίδα δουλεύει, απλώς δεν επιβιώνει σε reload.
-  }
-}
-
-function recall(): string | null {
-  try {
-    return window.sessionStorage.getItem(STORAGE_KEY);
-  } catch {
-    return null;
-  }
-}
-
 export function useVendorPortalLink(): VendorPortalLinkState {
-  const [state, setState] = useState<VendorPortalLinkState>({ phase: 'reading' });
-
-  useEffect(() => {
-    const adopt = (): void => {
-      const fragment = readVendorPortalFragment(window.location.hash);
-      if (window.location.hash) clearUrlFragment();
-      if (fragment.token) {
-        remember(fragment.token);
-        setState({ phase: 'ready', token: fragment.token, intent: fragment.intent });
-        return;
-      }
-      // Κενό fragment μετά από `hashchange` (π.χ. το δικό μας σβήσιμο) ⇒ ό,τι ήδη ισχύει μένει.
-      setState((current) => {
-        if (current.phase === 'ready') return current;
-        const stored = recall();
-        return stored ? { phase: 'ready', token: stored, intent: null } : { phase: 'missing' };
-      });
-    };
-    adopt();
-    window.addEventListener('hashchange', adopt);
-    return () => window.removeEventListener('hashchange', adopt);
-  }, []);
-
-  return state;
+  const link = useFragmentCredential(STORAGE_KEY, vendorPortalIntentOf);
+  return link.phase === 'ready' ? { phase: 'ready', token: link.token, intent: link.extras } : link;
 }

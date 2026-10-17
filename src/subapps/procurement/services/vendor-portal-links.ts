@@ -24,6 +24,7 @@
  */
 
 import { requirePublicOrigin } from '@/lib/http/public-origin';
+import { credentialFragmentLocation, readCredentialFragment } from '@/lib/tokens/credential-fragment';
 
 /** Η πράξη που χάνεται όταν δεν ξέρουμε ποιοι είμαστε — μπαίνει στο μήνυμα του σφάλματος. */
 const VENDOR_PORTAL_PURPOSE = 'ο σύνδεσμος της πύλης προμηθευτή δεν μπορεί να χτιστεί.';
@@ -31,8 +32,7 @@ const VENDOR_PORTAL_PURPOSE = 'ο σύνδεσμος της πύλης προμ�
 /** Η διαδρομή της πύλης — **χωρίς** διαπιστευτήριο. Το token ζει μόνο στο fragment. */
 export const VENDOR_PORTAL_PATH = '/vendor/quote';
 
-/** Τα κλειδιά του fragment — κατασκευαστής και αναγνώστης δένονται στα ίδια ονόματα. */
-const FRAGMENT_TOKEN_KEY = 't';
+/** Το κλειδί της πρόθεσης στο fragment — το διαπιστευτήριο το ονομάζει η κοινή γραμματική (`credential-fragment`). */
 const FRAGMENT_INTENT_KEY = 'intent';
 
 /**
@@ -49,9 +49,7 @@ export type VendorPortalIntent = (typeof VENDOR_PORTAL_INTENTS)[number];
  * (`/vendor/quote/<token>`) αποσύρθηκε στη Φ7 — ΜΙΑ μορφή διεύθυνσης.
  */
 function vendorPortalLocation(token: string, intent: VendorPortalIntent | null): string {
-  const fragment = new URLSearchParams({ [FRAGMENT_TOKEN_KEY]: token });
-  if (intent) fragment.set(FRAGMENT_INTENT_KEY, intent);
-  return `${VENDOR_PORTAL_PATH}#${fragment.toString()}`;
+  return credentialFragmentLocation(VENDOR_PORTAL_PATH, token, intent ? { [FRAGMENT_INTENT_KEY]: intent } : {});
 }
 
 function portalLink(token: string, intent: VendorPortalIntent | null): string {
@@ -94,11 +92,11 @@ export interface VendorPortalFragment {
 
 /** `#t=…&intent=…` → {token, intent}. Σκουπίδι ή απουσία ⇒ `null` (όπως το `?answer=`). */
 export function readVendorPortalFragment(hash: string): VendorPortalFragment {
-  const params = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash);
-  const token = params.get(FRAGMENT_TOKEN_KEY);
-  const intent = params.get(FRAGMENT_INTENT_KEY);
-  return {
-    token: token && token.length > 0 ? token : null,
-    intent: asVendorPortalIntent(intent),
-  };
+  const { token, params } = readCredentialFragment(hash);
+  return { token, intent: vendorPortalIntentOf(params) };
+}
+
+/** Η πρόθεση από τα επιπλέον πεδία του fragment — ο αναλυτής που δίνει η πύλη στο `useFragmentCredential`. */
+export function vendorPortalIntentOf(params: URLSearchParams): VendorPortalIntent | null {
+  return asVendorPortalIntent(params.get(FRAGMENT_INTENT_KEY));
 }

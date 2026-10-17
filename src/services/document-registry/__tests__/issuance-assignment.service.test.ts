@@ -67,7 +67,7 @@ beforeEach(() => {
 
 describe('actOnIssuanceAssignment — πρόταση', () => {
   it('γράφει την πρόταση, το μητρώο τη διαβάζει πίσω, και το ιστορικό λέει «— → προτάθηκε» + «— → Επιθεωρητής»', async () => {
-    expect(await act(PROPOSE)).toEqual({ ok: true, outcome: 'changed', stage: 'proposed' });
+    expect(await act(PROPOSE)).toMatchObject({ ok: true, outcome: 'changed', stage: 'proposed' });
     expect(stored()).toMatchObject({
       companyId: COMPANY, propertyId: 'prop_1', scope: 'property', documentKind: 'energy-certificate',
       professionalContactId: 'cont_pro', credential: { qualification: 'energy-inspector-registered', registryNumber: 'ΥΠΕΝ-7' },
@@ -89,7 +89,7 @@ describe('actOnIssuanceAssignment — πρόταση', () => {
   it('η ΙΔΙΑ πρόταση ξανά ⇒ `unchanged`, κανένα δεύτερο ίχνος', async () => {
     await act(PROPOSE);
     EntityAuditService.recordChange.mockClear();
-    expect(await act({ ...PROPOSE, expectedStage: 'proposed' })).toEqual({ ok: true, outcome: 'unchanged', stage: 'proposed' });
+    expect(await act({ ...PROPOSE, expectedStage: 'proposed' })).toMatchObject({ ok: true, outcome: 'unchanged', stage: 'proposed' });
     expect(EntityAuditService.recordChange).not.toHaveBeenCalled();
   });
 
@@ -116,7 +116,7 @@ describe('actOnIssuanceAssignment — πρόταση', () => {
 describe('actOnIssuanceAssignment — απόφαση του ΥΠΕΥΘΥΝΟΥ', () => {
   it('πλειοψηφία 60% ⇒ ο Άλφα αποφασίζει· η απόφαση γράφει ΑΥΤΟΝ (από τον κριτή), κανάλι, ώρα', async () => {
     await act(PROPOSE);
-    expect(await act(DECIDE)).toEqual({ ok: true, outcome: 'changed', stage: 'ownerApproved' });
+    expect(await act(DECIDE)).toMatchObject({ ok: true, outcome: 'changed', stage: 'ownerApproved' });
     expect(stored()).toMatchObject({
       decision: { outcome: 'approved', ownerContactId: 'cont_a', basis: 'recorded-instruction', channel: 'phone', recordedByUid: 'user_1' },
     });

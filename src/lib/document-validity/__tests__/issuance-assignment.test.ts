@@ -10,14 +10,13 @@ import {
   issuanceStageOf,
   issuanceStateOf,
   qualifiesFor,
-  rankIssuanceCandidates,
   reduceIssuance,
   type IssuanceAction,
   type IssuanceAssignmentRecord,
-  type IssuanceRosterEntry,
 } from '@/lib/document-validity/issuance-assignment';
+import { rankIssuanceCandidates, type IssuanceRosterEntry } from '@/lib/document-validity/issuance-candidates';
 
-const ACTOR = { uid: 'uid_agent', nowIso: '2026-10-17T09:00:00.000Z' };
+const ACTOR = { kind: 'office', uid: 'uid_agent', nowIso: '2026-10-17T09:00:00.000Z' } as const;
 const INSPECTOR = { qualification: 'energy-inspector-registered', registryNumber: 'ΥΠΕΝ-123' } as const;
 const PROPOSE: IssuanceAction = { kind: 'propose', professionalContactId: 'cont_pro', credential: INSPECTOR };
 const APPROVE: IssuanceAction = { kind: 'decide', outcome: 'approved', channel: 'phone', note: null, ownerContactId: 'cont_lead' };
@@ -35,7 +34,7 @@ function run(actions: readonly IssuanceAction[], latestIssuedOn: string | null =
 
 describe('ADR-915 §27 — ο μειωτής', () => {
   it('ο πλήρης δρόμος: πρόταση → απόφαση → ενημέρωση → αποδοχή, και η μπάλα αλλάζει χέρια', () => {
-    const steps: IssuanceAction[] = [PROPOSE, APPROVE, { kind: 'notify', channel: 'email' }, { kind: 'respond', outcome: 'accepted' }];
+    const steps: IssuanceAction[] = [PROPOSE, APPROVE, { kind: 'notify', channel: 'email', invitationId: null, note: null }, { kind: 'respond', outcome: 'accepted', note: null }];
     const seen = steps.map((_, index) => {
       const stage = issuanceStageOf(run(steps.slice(0, index + 1)));
       return [stage, ballInCourtOf(stage)];
@@ -50,7 +49,7 @@ describe('ADR-915 §27 — ο μειωτής', () => {
 
   it('🔴 «Ανατέθηκε» ΜΟΝΟ με απόφαση: χωρίς απόφαση ο επαγγελματίας δεν ενημερώνεται, ούτε απαντά', () => {
     const proposed = run([PROPOSE]);
-    for (const action of [{ kind: 'notify', channel: 'phone' }, { kind: 'respond', outcome: 'accepted' }] as const) {
+    for (const action of [{ kind: 'notify', channel: 'phone', invitationId: null, note: null }, { kind: 'respond', outcome: 'accepted', note: null }] as const) {
       expect(reduceIssuance('energy-certificate', proposed, null, action, ACTOR)).toEqual({ ok: false, refusal: 'transition-refused' });
     }
   });
@@ -70,7 +69,7 @@ describe('ADR-915 §27 — ο μειωτής', () => {
 
   it('🔴 «ποτέ δύο»: μετά την έγκριση νέα πρόταση ΑΡΝΕΙΤΑΙ — πριν, αντικαθιστά (και η απόφαση ξεκινά από την αρχή)', () => {
     const other: IssuanceAction = { ...PROPOSE, professionalContactId: 'cont_other' } as IssuanceAction;
-    for (const committed of [[PROPOSE, APPROVE], [PROPOSE, APPROVE, { kind: 'notify', channel: 'phone' }]] as IssuanceAction[][]) {
+    for (const committed of [[PROPOSE, APPROVE], [PROPOSE, APPROVE, { kind: 'notify', channel: 'phone', invitationId: null, note: null }]] as IssuanceAction[][]) {
       expect(reduceIssuance('energy-certificate', run(committed), null, other, ACTOR)).toEqual({ ok: false, refusal: 'transition-refused' });
     }
     const replaced = reduceIssuance('energy-certificate', run([PROPOSE]), null, other, ACTOR);
@@ -79,7 +78,7 @@ describe('ADR-915 §27 — ο μειωτής', () => {
   });
 
   it('αρνήθηκε ⇒ η μπάλα στο γραφείο, και νέα πρόταση επιτρέπεται', () => {
-    const declined = run([PROPOSE, APPROVE, { kind: 'notify', channel: 'phone' }, { kind: 'respond', outcome: 'declined' }]);
+    const declined = run([PROPOSE, APPROVE, { kind: 'notify', channel: 'phone', invitationId: null, note: null }, { kind: 'respond', outcome: 'declined', note: null }]);
     const state = issuanceStateOf(declined, null);
     expect(state.kind === 'open' && [state.stage, state.ballInCourt]).toEqual(['declined', 'office']);
     expect(canProposeIssuance(state)).toBe(true);
@@ -96,7 +95,7 @@ describe('ADR-915 §27 — ο μειωτής', () => {
   });
 
   it('η ολοκλήρωση ΠΑΡΑΓΕΤΑΙ: έγγραφο εκδομένο από την ημέρα της πρότασης ⇒ καμία ενεργή ανάθεση', () => {
-    const accepted = run([PROPOSE, APPROVE, { kind: 'notify', channel: 'phone' }, { kind: 'respond', outcome: 'accepted' }]);
+    const accepted = run([PROPOSE, APPROVE, { kind: 'notify', channel: 'phone', invitationId: null, note: null }, { kind: 'respond', outcome: 'accepted', note: null }]);
     expect(issuanceStateOf(accepted, '2026-10-16').kind).toBe('open');
     expect(issuanceStateOf(accepted, '2026-10-17')).toEqual({ kind: 'none', last: accepted, fulfilled: true });
     // Μετά την ολοκλήρωση καμία πράξη πάνω στον παλιό κύκλο — μόνο νέα πρόταση.

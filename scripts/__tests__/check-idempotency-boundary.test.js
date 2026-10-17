@@ -21,6 +21,8 @@ export function withAuth(handler, options) {
 const PERSONAL = `export function withPersonalOrOrgAuth(handler) { return (r) => runIdempotently(r, u, undefined, () => handler(r)); }`;
 // ADR-876 §5 — η δημόσια πόρτα της πύλης προμηθευτή: τρίτη ρίζα (principal = ο σύνδεσμος).
 const VENDOR_DOOR = `export function withVendorLinkDoor(options, handler) { return (r) => runIdempotently(r, link, options.idempotency, () => handler(r)); }`;
+// ADR-915 §28 — η δημόσια πόρτα του συνδέσμου ανάθεσης έκδοσης: ίδιο σχήμα (principal = ο σύνδεσμος).
+const ISSUANCE_DOOR = `export function withIssuanceLinkDoor(options, handler) { return (r) => runIdempotently(r, link, options.idempotency, () => handler(r)); }`;
 const INTERNAL_DOOR = `export function withSignedInternalWebhook(options, handler) { return (r) => runIdempotently(r, src, options.idempotency, () => handler(r)); }`;
 
 function tree(files) {
@@ -29,6 +31,7 @@ function tree(files) {
     'src/lib/auth/middleware.ts': MIDDLEWARE,
     'src/lib/auth/personal-scope-middleware.ts': PERSONAL,
     'src/server/vendor-portal/vendor-link-door.ts': VENDOR_DOOR,
+    'src/server/issuance-invitations/issuance-link-door.ts': ISSUANCE_DOOR,
     'src/server/internal-webhooks/signed-webhook-door.ts': INTERNAL_DOOR,
     ...files,
   };
