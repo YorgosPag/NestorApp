@@ -657,7 +657,11 @@
         "hasCentralHeating": "Central heating",
         "hasElevator": "Elevator"
       },
-      "documentObligorLead": "Responsible owner for property documents"
+      "documentObligorLead": "Responsible owner for property documents",
+      "energyCertificateIssuanceStage": "EPC issuance assignment — stage",
+      "energyCertificateIssuer": "EPC issuance assignment — professional",
+      "buildingIdentityIssuanceStage": "Building identity assignment — stage",
+      "buildingIdentityIssuer": "Building identity assignment — professional"
     },
     "retiredFieldNotice": "This field no longer exists in the registry — showing the name recorded at the time of the change."
   }

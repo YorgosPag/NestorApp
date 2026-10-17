@@ -27,6 +27,7 @@ import { RegistryIssuerValue } from '@/components/document-registry/RegistryIssu
 import { RegistryNextStep } from '@/components/document-registry/RegistryNextStep';
 import { RegistryPropertyValue } from '@/components/document-registry/RegistryPropertyValue';
 import { RegistryRowHeader } from '@/components/document-registry/RegistryRowHeader';
+import { registryIssuanceOf } from '@/components/document-registry/registry-issuance';
 import { registryObligorsOf } from '@/components/document-registry/registry-obligors';
 import {
   REGISTRY_KEYS,
@@ -122,7 +123,10 @@ export function RegistryRowItem({ row, registry, supersededByName }: RegistryRow
         <p className="m-0 text-sm text-muted-foreground">{t(REGISTRY_KEYS.supersededBy, { name: supersededByName })}</p>
       ) : null}
       {superseded ? null : (
-        <RegistryNextStep kind={row.document.kind} state={row.state} areaId={areaIdOf(row.document.propertyId, registry)} />
+        <RegistryNextStep
+          kind={row.document.kind} state={row.state} areaId={areaIdOf(row.document.propertyId, registry)}
+          issuance={registryIssuanceOf(row, registry)} registry={registry}
+        />
       )}
       {superseded ? null : <RegistryDependents dependents={row.dependents} state={row.state} />}
     </article>

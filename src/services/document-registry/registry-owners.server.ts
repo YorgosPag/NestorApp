@@ -50,7 +50,10 @@ export interface RegistryOwnersQuestion {
   readonly subjects: ReadonlyMap<string, RegistryProperty>;
   /** Οι ανοιχτές υποθέσεις που διάβασε ήδη το μητρώο. */
   readonly cases: readonly ConveyanceCase[];
-  /** 5γ — οι επαφές των γραμμών **ανά πρόσωπο** (ενημερότητες · ΕΝΦΙΑ): ονομάζονται μαζί με τους ιδιοκτήτες. */
+  /**
+   * Επαφές που **ονομάζονται** χωρίς να κρίνονται ιδιοκτήτες: 5γ — τα πρόσωπα των γραμμών (ενημερότητες · ΕΝΦΙΑ)· §27 —
+   * οι επαγγελματίες των αναθέσεων και οι υποψήφιοι. Μία ανάγνωση, ένας έλεγχος μισθωτή.
+   */
   readonly partyContactIds: readonly string[];
 }
 

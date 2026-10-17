@@ -310,4 +310,5 @@ export const TRUNCATED_SOURCE_KEYS: Readonly<Record<RegistrySource, string>> = {
   cases: `${K}truncated.cases`,
   'owner-properties': `${K}truncated.owner-properties`,
   listings: `${K}truncated.listings`,
+  'issuance-assignments': `${K}truncated.issuance-assignments`,
 };

@@ -8,14 +8,15 @@
  */
 
 import type { DocumentRegistry } from '@/lib/document-validity/document-registry';
+import type { RowIssuance } from '@/lib/document-validity/issuance-rows';
 import type { ObligorLead } from '@/lib/document-validity/obligor-lead';
 
 /**
  * Οι πηγές που διαβάζονται με ερώτημα — άρα έχουν όριο. Φ4δ: `owner-properties` (ακίνητα ιδιωτών υπό θεματοφυλακή του
  * γραφείου, Ε10) · `listings` (οι αγγελίες με το όνομα του γραφείου — βρίσκονται **και** όταν το ακίνητο δεν έχει
- * κανένα έγγραφο, Ε11).
+ * κανένα έγγραφο, Ε11). §27: `issuance-assignments` (οι αναθέσεις έκδοσης του γραφείου — τρέχουσες **και** «ξανά»).
  */
-export const REGISTRY_SOURCES = ['files', 'declared', 'cases', 'owner-properties', 'listings'] as const;
+export const REGISTRY_SOURCES = ['files', 'declared', 'cases', 'owner-properties', 'listings', 'issuance-assignments'] as const;
 export type RegistrySource = (typeof REGISTRY_SOURCES)[number];
 
 /** Βαλβίδα ασφαλείας ανά πηγή, όχι σελιδοποίηση. Η υπόθεση = ίδιο μέγεθος με τη σάρωση λήξεων (`EXPIRY_SWEEP_LIMIT`). */
@@ -25,6 +26,7 @@ export const DOCUMENT_REGISTRY_CAPS: Readonly<Record<RegistrySource, number>> = 
   cases: 200,
   'owner-properties': 500,
   listings: 500,
+  'issuance-assignments': 500,
 };
 
 /** Σε ποιο **είδος** ακινήτου δείχνει το όνομα — αποφασίζει τη διεύθυνση της οθόνης (ακίνητο εταιρείας · εντολή). */
@@ -87,4 +89,11 @@ export interface DocumentRegistryResponse extends DocumentRegistry {
    * γραμμή. Επαφή που λείπει από εδώ (ξένη ≡ ανύπαρκτη, ADR-742) **δεν** δείχνεται ως σύνδεσμος.
    */
   readonly people: Readonly<Record<string, RegistryLabel>>;
+  /** §27 — ανάθεση ανά γραμμή «Ανάθεσης» (κλειδί `issuanceKeyOf(ακίνητο, είδος)`· μόνο όσες τη δείχνουν). */
+  readonly issuance: Readonly<Record<string, RowIssuance>>;
+  /**
+   * §27 — `false` = ο κατάλογος αναθέσεων **δεν** διαβάστηκε ⇒ η οθόνη κρύβει την «Ανάθεση» αντί να πει «καμία» (ένα
+   * ψεύτικο «δεν ανατέθηκε» θα έφερνε δεύτερο ΠΕΑ).
+   */
+  readonly issuanceKnown: boolean;
 }

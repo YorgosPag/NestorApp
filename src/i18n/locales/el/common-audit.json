@@ -657,7 +657,11 @@
         "hasCentralHeating": "Κεντρική θέρμανση",
         "hasElevator": "Ανελκυστήρας"
       },
-      "documentObligorLead": "Υπεύθυνος εγγράφων ακινήτου"
+      "documentObligorLead": "Υπεύθυνος εγγράφων ακινήτου",
+      "energyCertificateIssuanceStage": "Ανάθεση έκδοσης ΠΕΑ — στάδιο",
+      "energyCertificateIssuer": "Ανάθεση έκδοσης ΠΕΑ — επαγγελματίας",
+      "buildingIdentityIssuanceStage": "Ανάθεση ταυτότητας κτιρίου — στάδιο",
+      "buildingIdentityIssuer": "Ανάθεση ταυτότητας κτιρίου — επαγγελματίας"
     },
     "retiredFieldNotice": "Το πεδίο δεν υπάρχει πλέον στο μητρώο — εμφανίζεται το όνομα που είχε καταγραφεί τη στιγμή της αλλαγής."
   }

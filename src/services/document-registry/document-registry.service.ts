@@ -45,7 +45,8 @@ import {
 import { readRegistryFiles, registryDocumentsOf, type RegistryFile } from './registry-documents.server';
 import { listingRequirementsOf, readAgencyListings, readListingsById } from './registry-listings.server';
 import { readOfficeOwnerProperties } from './registry-owner-properties.server';
-import { readRegistryOwners, type RegistryOwners } from './registry-owners.server';
+import { readRegistryIssuance, type RegistryIssuanceReading } from './registry-issuance.server';
+import { readRegistryOwners, type RegistryOwners, type RegistryOwnersQuestion } from './registry-owners.server';
 import { readRegistryPropertyAreas } from './registry-property-area.server';
 import { readCompanyProperties, readDeclaredCertificateProperties, type RegistryProperty } from './registry-properties.server';
 import { openCaseRequirements, readOpenCases } from './registry-requirements.server';
@@ -75,6 +76,8 @@ async function readSources(db: AdminFirestore, companyId: string): Promise<Regis
   const cut: Record<RegistrySource, boolean> = {
     files: files.truncated, declared: declared.truncated, cases: cases.truncated,
     'owner-properties': owners.truncated, listings: listings.truncated,
+    // §27 — ο κατάλογος αναθέσεων διαβάζεται ΜΕΤΑ τις γραμμές (μόνο όπου δείχνεται «Ανάθεση»)· το όριό του μπαίνει εκεί.
+    'issuance-assignments': false,
   };
   const truncatedSources = REGISTRY_SOURCES.filter((source) => cut[source]);
   if (truncatedSources.length > 0) {
@@ -180,21 +183,41 @@ export async function readDocumentRegistry(db: AdminFirestore, companyId: string
   const listings = listingRequirementsOf(allListings, new Set(subjects.keys()));
   const requirements = [...openCaseRequirements(sources.cases, properties), ...listings.requirements];
   const registry = documentRegistry({ documents, requirements, asOf });
-  const [areas, owners] = await Promise.all([
+  const [areas, { owners, issuance }] = await Promise.all([
     readRegistryPropertyAreas(db, { wanted: professionalSearchPropertyIds(registry.rows), subjects, listings: allListings, now }),
-    readRegistryOwners(db, companyId, {
-      wanted: obligorPropertyIds(registry.rows), subjects, cases: sources.cases, partyContactIds: partyContactIdsOf(registry.rows),
-    }),
+    readOwnersAndIssuance(db, companyId, registry.rows, { subjects, cases: sources.cases }),
   ]);
+  const truncatedSources = issuance.truncated ? [...sources.truncatedSources, 'issuance-assignments' as const] : sources.truncatedSources;
   return {
     ...registry,
     asOf,
     freshUntil: nextConveyanceDayStart(now).toISOString(),
-    truncated: sources.truncatedSources.length > 0,
-    truncatedSources: sources.truncatedSources,
+    truncated: truncatedSources.length > 0,
+    truncatedSources,
     unscopedListings: listings.unscoped,
     properties: propertyLabelsOf(subjects, areas, owners),
     files: fileLabelsOf(sources.files),
     people: owners.people,
+    issuance: issuance.issuance,
+    issuanceKnown: issuance.known,
   };
+}
+
+/**
+ * §27 — πρώτα οι αναθέσεις (ένα ερώτημα), μετά οι ιδιοκτήτες: οι επαγγελματίες και οι υποψήφιοι **ονομάζονται** στην
+ * ΙΔΙΑ ανάγνωση επαφών με τους ιδιοκτήτες (ίδιος έλεγχος μισθωτή — ξένη ≡ ανύπαρκτη).
+ */
+async function readOwnersAndIssuance(
+  db: AdminFirestore,
+  companyId: string,
+  rows: DocumentRegistry['rows'],
+  known: Pick<RegistryOwnersQuestion, 'subjects' | 'cases'>,
+): Promise<{ readonly owners: RegistryOwners; readonly issuance: RegistryIssuanceReading }> {
+  const issuance = await readRegistryIssuance(db, companyId, rows);
+  const owners = await readRegistryOwners(db, companyId, {
+    ...known,
+    wanted: obligorPropertyIds(rows),
+    partyContactIds: [...partyContactIdsOf(rows), ...issuance.contactIds],
+  });
+  return { owners, issuance };
 }

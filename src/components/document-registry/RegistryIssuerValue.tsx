@@ -40,7 +40,8 @@ import {
 
 type Translate = ReturnType<typeof useTranslation>['t'];
 
-function qualificationText(t: Translate, qualification: IssuerQualification): string {
+/** Το όνομα ενός προσόντος — με το μητρώο, όταν είναι άδεια. §27: και ο διάλογος ανάθεσης (ένα σημείο). */
+export function qualificationText(t: Translate, qualification: IssuerQualification): string {
   const label = t(ISSUER_QUALIFICATION_LABEL_KEYS[qualification]);
   const spec = ISSUER_QUALIFICATION_SPECS[qualification];
   if (spec.kind === 'occupation') return label;

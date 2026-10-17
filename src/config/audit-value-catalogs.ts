@@ -122,6 +122,10 @@ export const AUDIT_VALUE_CATALOGS: Readonly<Record<string, AuditCatalogRef>> = {
   // είναι η εγγραφή στην οποία δείχνει το `PROPERTY_TRACKED_FIELDS.status.enumCatalog`, και ζει εδώ
   // για να την ελέγχει η πύλη 3.14 (ύπαρξη · ισοτιμία el/en · μόνο camelCase).
   propertyStatus: { ns: 'properties-enums', path: 'status' },
+
+  // ── Property: ADR-915 §27 — στάδιο ανάθεσης έκδοσης (ένα πεδίο ανά είδος, ίδιος κατάλογος σταδίων)
+  energyCertificateIssuanceStage: { ns: 'document-registry', path: 'issuance.stage' },
+  buildingIdentityIssuanceStage: { ns: 'document-registry', path: 'issuance.stage' },
 } as const;
 
 /** Type-safe lookup. Returns `undefined` for fields without a registered catalog. */

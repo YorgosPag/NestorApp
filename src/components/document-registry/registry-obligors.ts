@@ -71,7 +71,8 @@ const UNKNOWN: RegistryObligors = { kind: 'unknown' };
 
 type Names = Pick<DocumentRegistryResponse, 'properties' | 'people'>;
 
-function personOf(contactId: string, registry: Names): RegistryObligorPerson {
+/** Μία επαφή όπως την ονομάζει η οθόνη — ξένη ή διαγραμμένη ⇒ `reachable: false` (§27: και ο επαγγελματίας). */
+export function registryPersonOf(contactId: string, registry: Pick<DocumentRegistryResponse, 'people'>): RegistryObligorPerson {
   const label = registry.people[contactId];
   return { contactId, name: label?.name ?? null, reachable: label !== undefined };
 }
@@ -82,13 +83,13 @@ function listed(people: readonly RegistryObligorPerson[]): Pick<Extract<Registry
 
 function peopleOf(contactIds: readonly string[], registry: Names): RegistryObligors {
   if (contactIds.length === 0) return { kind: 'none' };
-  return { kind: 'people', ...listed(contactIds.map((id) => personOf(id, registry))), lead: null, choice: null };
+  return { kind: 'people', ...listed(contactIds.map((id) => registryPersonOf(id, registry))), lead: null, choice: null };
 }
 
 function leadOf(lead: ObligorLead, registry: Names): RegistryObligorLead {
-  const stale = lead.staleContactId === null ? null : personOf(lead.staleContactId, registry);
+  const stale = lead.staleContactId === null ? null : registryPersonOf(lead.staleContactId, registry);
   if (lead.kind === 'undesignated') return { kind: 'undesignated', reason: lead.reason, stale };
-  return { kind: 'designated', person: personOf(lead.contactId, registry), basis: lead.basis, sharePct: lead.sharePct, stale };
+  return { kind: 'designated', person: registryPersonOf(lead.contactId, registry), basis: lead.basis, sharePct: lead.sharePct, stale };
 }
 
 /** Πολλοί ιδιοκτήτες ⇒ ο υπεύθυνος πρώτος, ξεχωριστά· οι υπόλοιποι ως συνιδιοκτήτες. */
@@ -97,7 +98,7 @@ function coOwnedOf(propertyId: string, owners: readonly string[], lead: ObligorL
   const leadId = view.kind === 'designated' ? view.person.contactId : null;
   const choice: RegistryObligorChoice = {
     propertyId,
-    owners: owners.map((id) => personOf(id, registry)),
+    owners: owners.map((id) => registryPersonOf(id, registry)),
     shares: registry.properties[propertyId]?.ownerShares ?? {},
     explicitContactId: lead.kind === 'designated' && lead.basis === 'explicit' ? lead.contactId : null,
   };

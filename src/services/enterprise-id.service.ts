@@ -62,6 +62,7 @@ export {
   generateDeterministicConveyanceDocumentRequestId,
   generateDeterministicConveyanceViewSignalId,
   generateDeterministicDocumentObligorDesignationId,
+  generateDeterministicDocumentIssuanceAssignmentId,
   generatePipelineQueueId, generateVoiceCommandId, generateBrokerageId, generateMandateRequestId,
   generatePrivateMarketingEventId,
   generateMandateEvidenceId,

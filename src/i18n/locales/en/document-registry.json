@@ -152,7 +152,8 @@
     "declared": "property declarations",
     "cases": "conveyance cases",
     "owner-properties": "privately owned properties under a mandate",
-    "listings": "published listings"
+    "listings": "published listings",
+    "issuance-assignments": "issuance assignments"
   },
   "empty": {
     "title": "No expiring documents found",
@@ -180,6 +181,102 @@
       "notAnOwner": "This contact is no longer an owner of the property.",
       "ownersUnknown": "The owners could not be read right now — please try again shortly.",
       "notFound": "The property was not found in the office registry."
+    }
+  },
+  "issuance": {
+    "heading": "Issuance assignment",
+    "assign": "Assign to a professional",
+    "assignHint": "To a professional the office already knows. The office proposes; the owner decides.",
+    "proposeOther": "Propose another professional",
+    "unavailable": "Assignments could not be read right now — refresh the page before assigning, so that two documents are not issued.",
+    "professional": "Professional",
+    "professionalUnavailable": "contact no longer available",
+    "credential": "{qualification} — declared by the office",
+    "credentialWithNumber": "{qualification} · registry no. {number} — declared by the office",
+    "verifyRegistry": "Check in the registry",
+    "ballInCourt": "Ball in court: {party}",
+    "proposedOn": "Proposed on {date}",
+    "decided": "Owner decision: {name} · {channel} · {date}",
+    "noticed": "Notified {channel} on {date}",
+    "lastFulfilled": "The previous document was assigned to {name} and issued.",
+    "lastClosed": "The previous proposal ({name}) closed without an assignment.",
+    "saving": "Saving…",
+    "action": {
+      "recordDecision": "Record owner decision",
+      "markNotified": "Professional notified",
+      "accepted": "Accepted",
+      "declined": "Declined",
+      "cancel": "Cancel assignment"
+    },
+    "stage": {
+      "proposed": "Proposed — awaiting the owner's decision",
+      "ownerApproved": "Approved by the owner — notify the professional",
+      "ownerRejected": "The owner did not approve",
+      "sent": "Professional notified — awaiting reply",
+      "accepted": "Assigned — awaiting the new document",
+      "declined": "The professional declined — propose someone else",
+      "cancelled": "Cancelled"
+    },
+    "party": {
+      "owner": "the owner",
+      "office": "the office",
+      "professional": "the professional"
+    },
+    "channel": {
+      "in-person": "in person",
+      "phone": "by phone",
+      "email": "by email",
+      "written": "in writing (signed)"
+    },
+    "propose": {
+      "title": "Issuance assignment: {document}",
+      "description": "The owner appoints the professional. The office proposes — nothing is sent to anyone before the owner's decision is recorded.",
+      "knownLegend": "Known professionals",
+      "noKnown": "No known professional for this document yet — pick a contact or find a professional.",
+      "sameProperty": "Also assigned {document} for this property",
+      "previously": "{count, plural, one {# assignment} other {# assignments}} approved by owners · latest {date}",
+      "otherContact": "Another contact",
+      "searchPlaceholder": "Search contacts…",
+      "qualificationLabel": "Qualification for this document",
+      "qualificationPlaceholder": "Select a qualification",
+      "registryNumberLabel": "Registry number (optional)",
+      "declared": "The office declares the qualification — the app does not verify it. Only the qualifications the law allows for this document are listed.",
+      "submit": "Propose",
+      "cancel": "Cancel"
+    },
+    "decision": {
+      "title": "Owner decision",
+      "description": "You are recording the decision of the responsible owner ({name}). The app sends no message to anyone.",
+      "needsLead": "Designate a responsible owner first: the decision for a whole-property document belongs to one person.",
+      "outcomeLegend": "The decision",
+      "approved": "Approves {name}",
+      "rejected": "Does not approve",
+      "channelLegend": "How the instruction was given",
+      "noteLabel": "Note (optional)",
+      "submit": "Record"
+    },
+    "notice": {
+      "title": "Notify the professional",
+      "description": "Record how {name} was notified. The app sends no message.",
+      "channelLegend": "How they were notified",
+      "submit": "Record"
+    },
+    "cancelDialog": {
+      "title": "Cancel assignment",
+      "description": "The assignment closes and is recorded in the property history. If the professional was already notified, let them know too.",
+      "confirm": "Cancel assignment",
+      "keep": "Back"
+    },
+    "error": {
+      "failed": "The assignment was not saved. Please try again.",
+      "notFound": "The document no longer needs an assignment, or the property is not in the office's registry.",
+      "unavailable": "Assignments could not be read right now — please try again shortly.",
+      "contactUnavailable": "The contact is not available to the office.",
+      "unqualified": "This qualification cannot issue this document.",
+      "leadUndesignated": "No responsible owner is designated — designate one first.",
+      "leadChanged": "The responsible owner changed in the meantime. Review and record again.",
+      "stale": "The assignment changed in the meantime — see its current state.",
+      "transitionRefused": "This action is not allowed at this stage of the assignment."
     }
   }
 }

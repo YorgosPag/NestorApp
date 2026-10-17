@@ -14,6 +14,7 @@
 import { ApiClientError, apiClient } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
+import type { IssuanceAssignmentBody } from '@/lib/document-validity/issuance-request';
 
 const logger = createModuleLogger('document-registry.client');
 
@@ -44,14 +45,30 @@ export type ObligorDesignationSave =
   | { readonly kind: 'saved' }
   | { readonly kind: 'failed'; readonly code: string | null };
 
-/** **Όρισε** (ή, με `null`, επανάφερε στην αυτόματη επιλογή) τον υπεύθυνο του ακινήτου. */
-export async function saveObligorDesignation(propertyId: string, contactId: string | null): Promise<ObligorDesignationSave> {
+/**
+ * Μία εγγραφή του μητρώου (§26 · §27): ο `apiClient` πετά σε μη-2xx — εδώ γίνεται **ρητή ένωση** με τον κωδικό άρνησης,
+ * ώστε η οθόνη να διαλέξει μήνυμα χωρίς να πιάνει εξαιρέσεις. Ένα σημείο για όλες τις πράξεις.
+ */
+async function putRegistryAction(url: string, body: object, failure: string, context: Record<string, string>): Promise<ObligorDesignationSave> {
   try {
-    await apiClient.put(OBLIGOR_DESIGNATIONS_URL, { propertyId, contactId });
+    await apiClient.put(url, body);
     return { kind: 'saved' };
   } catch (cause) {
     const code = cause instanceof ApiClientError ? cause.errorCode ?? null : null;
-    logger.error('Ο υπεύθυνος του ακινήτου δεν ορίστηκε', { error: cause instanceof Error ? cause.message : String(cause), code });
+    logger.error(failure, { error: cause instanceof Error ? cause.message : String(cause), code, ...context });
     return { kind: 'failed', code };
   }
+}
+
+/** **Όρισε** (ή, με `null`, επανάφερε στην αυτόματη επιλογή) τον υπεύθυνο του ακινήτου. */
+export async function saveObligorDesignation(propertyId: string, contactId: string | null): Promise<ObligorDesignationSave> {
+  return putRegistryAction(OBLIGOR_DESIGNATIONS_URL, { propertyId, contactId }, 'Ο υπεύθυνος του ακινήτου δεν ορίστηκε', {});
+}
+
+/** ADR-915 §27 — η ανάθεση έκδοσης: ΕΝΑ σημείο για τη διαδρομή. */
+export const ISSUANCE_ASSIGNMENTS_URL = `${DOCUMENT_REGISTRY_URL}/issuance-assignments`;
+
+/** **Μία πράξη** στην ανάθεση (πρόταση · απόφαση · ενημέρωση · απάντηση · ακύρωση). */
+export async function saveIssuanceAction(request: IssuanceAssignmentBody): Promise<ObligorDesignationSave> {
+  return putRegistryAction(ISSUANCE_ASSIGNMENTS_URL, request, 'Η πράξη ανάθεσης δεν αποθηκεύτηκε', { action: request.action });
 }

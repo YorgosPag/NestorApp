@@ -23,6 +23,7 @@ import { RegistryNextStep } from '@/components/document-registry/RegistryNextSte
 import { RegistryPropertyValue } from '@/components/document-registry/RegistryPropertyValue';
 import { areaIdOf } from '@/components/document-registry/RegistryRowItem';
 import { RegistryRowHeader } from '@/components/document-registry/RegistryRowHeader';
+import { registryIssuanceOf } from '@/components/document-registry/registry-issuance';
 import { registryObligorsOf } from '@/components/document-registry/registry-obligors';
 import {
   CONVEYANCE_NS,
@@ -53,7 +54,10 @@ export function RegistryGapItem({ row, registry }: RegistryGapItemProps): React.
         <dd className="m-0 text-sm text-muted-foreground">{t(REGISTRY_STATE_HINT_KEYS[row.state])}</dd>
         <RegistryIssuerValue kind={gap.kind} obligors={registryObligorsOf(row, registry)} />
       </dl>
-      <RegistryNextStep kind={gap.kind} state={row.state} areaId={areaIdOf(gap.propertyId, registry)} />
+      <RegistryNextStep
+        kind={gap.kind} state={row.state} areaId={areaIdOf(gap.propertyId, registry)}
+        issuance={registryIssuanceOf(row, registry)} registry={registry}
+      />
       <RegistryDependents dependents={row.dependents} state={row.state} />
     </article>
   );

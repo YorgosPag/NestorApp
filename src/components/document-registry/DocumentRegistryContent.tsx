@@ -29,6 +29,7 @@ import { Card } from '@/components/ui/card';
 import { SegmentedControl, SegmentedControlItem } from '@/components/ui/segmented-control';
 import { useCapability } from '@/auth/hooks/useCapability';
 import { useDocumentRegistry, type DocumentRegistryApi, type DocumentRegistryState } from '@/hooks/document-registry/useDocumentRegistry';
+import { useIssuanceAssignment } from '@/hooks/document-registry/useIssuanceAssignment';
 import { useObligorDesignation } from '@/hooks/document-registry/useObligorDesignation';
 import { isGranted } from '@/types/capability-authority';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -54,6 +55,7 @@ import {
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
 import { documentNameOf, RegistryRowItem } from '@/components/document-registry/RegistryRowItem';
 import { RegistryGapItem } from '@/components/document-registry/RegistryGapItem';
+import { IssuanceAssignmentProvider } from '@/components/document-registry/issuance-assignment-context';
 import { ObligorDesignationProvider } from '@/components/document-registry/obligor-designation-context';
 import { RegistryTally } from '@/components/document-registry/RegistryTally';
 import {
@@ -195,31 +197,42 @@ interface ReadyBodyProps {
   readonly revalidate: () => Promise<void>;
 }
 
-/** ADR-915 §26 — ο ορισμός υπευθύνου: αισιόδοξο μητρώο + οι ενέργειες για όποια γραμμή τις ζητήσει. */
+/**
+ * ADR-915 §26 + §27 — ο ορισμός υπευθύνου και η ανάθεση έκδοσης: αισιόδοξο μητρώο (η μία προβολή πάνω στην άλλη) + οι
+ * ενέργειες για όποια γραμμή τις ζητήσει. Ένα δικαίωμα και για τα δύο: αλλάζουν γεγονός του ακινήτου.
+ */
 function useDesignatedRegistry({ registry: loaded, revalidate }: ReadyBodyProps) {
   const canDesignate = isGranted(useCapability('properties:properties:update').verdict);
-  const { registry, designate, pending } = useObligorDesignation(loaded, revalidate);
+  const designation = useObligorDesignation(loaded, revalidate);
+  const issuance = useIssuanceAssignment(designation.registry, revalidate);
+  const { designate, pending } = designation;
   const actions = useMemo(() => ({ designate, pending, canDesignate }), [designate, pending, canDesignate]);
-  return { registry, actions };
+  const issuanceActions = useMemo(
+    () => ({ act: issuance.act, pending: issuance.pending, canAct: canDesignate }),
+    [issuance.act, issuance.pending, canDesignate],
+  );
+  return { registry: issuance.registry, actions, issuanceActions };
 }
 
 function ReadyBody(props: ReadyBodyProps): React.ReactElement {
-  const { registry, actions } = useDesignatedRegistry(props);
+  const { registry, actions, issuanceActions } = useDesignatedRegistry(props);
   const [view, select] = useRegistryView();
   const tally = useMemo(() => registryViewTally(registry.rows, registry.asOf), [registry]);
   const rows = useMemo(() => rowsOfRegistryView(registry.rows, view, registry.asOf), [registry, view]);
   return (
     <ObligorDesignationProvider value={actions}>
-      <TruncatedNotice registry={registry} />
-      <RegistryTally tally={registry.tally} view={view} onSelect={select} />
-      {registry.rows.length === 0 ? (
-        <EmptyState />
-      ) : (
-        <>
-          <ViewPicker view={view} onSelect={select} tally={tally} />
-          <RegistryGroups rows={rows} registry={registry} />
-        </>
-      )}
+      <IssuanceAssignmentProvider value={issuanceActions}>
+        <TruncatedNotice registry={registry} />
+        <RegistryTally tally={registry.tally} view={view} onSelect={select} />
+        {registry.rows.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <>
+            <ViewPicker view={view} onSelect={select} tally={tally} />
+            <RegistryGroups rows={rows} registry={registry} />
+          </>
+        )}
+      </IssuanceAssignmentProvider>
     </ObligorDesignationProvider>
   );
 }

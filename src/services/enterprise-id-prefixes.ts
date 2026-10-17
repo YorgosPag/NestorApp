@@ -451,6 +451,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   CONVEYANCE_DOCUMENT_REQUEST: 'cdr', // ADR-901 Φ4.5 — «Ζήτησε έγγραφο»· ΕΝΑ ανά (υπόθεση, γραμμή, αιτών, ημέρα) — ντετερμινιστικό
   CONVEYANCE_VIEW_SIGNAL: 'cvs', // ADR-901 §14.8 — σήμα αλλαγής ΜΙΑΣ όψης (οικοδεσπότης ή συμμετοχή) — ντετερμινιστικό
   DOCUMENT_OBLIGOR_DESIGNATION: 'dobd', // ADR-915 §26 — ρητός υπεύθυνος εγγράφων ακινήτου· ΕΝΑΣ ανά (γραφείο, ακίνητο) — ντετερμινιστικό
+  DOCUMENT_ISSUANCE_ASSIGNMENT: 'dias', // ADR-915 §27 — ανάθεση έκδοσης σε επαγγελματία· ΜΙΑ ανά (γραφείο, ακίνητο, είδος) — ντετερμινιστικό
   PIPELINE_QUEUE: 'pq',
   BROKERAGE: 'brk',
   COMMISSION: 'com',

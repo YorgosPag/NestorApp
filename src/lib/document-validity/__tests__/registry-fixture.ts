@@ -8,6 +8,8 @@
 
 import { documentRegistry, type RegistryDocument } from '@/lib/document-validity/document-registry';
 import type { DocumentRequirement } from '@/lib/document-validity/document-requirement';
+import type { IssuanceRosterEntry } from '@/lib/document-validity/issuance-assignment';
+import { issuanceOfRows } from '@/lib/document-validity/issuance-rows';
 import type { ObligorLead } from '@/lib/document-validity/obligor-lead';
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
 
@@ -113,10 +115,14 @@ export function fixtureResponse(
   overrides: Partial<DocumentRegistryResponse> = {},
   documents: readonly RegistryDocument[] = FIXTURE_DOCUMENTS,
   requirements: readonly DocumentRequirement[] = FIXTURE_REQUIREMENTS,
+  roster: readonly IssuanceRosterEntry[] = [],
 ): DocumentRegistryResponse {
   const core = documentRegistry({ documents, requirements, asOf: FIXTURE_AS_OF });
   return {
     ...core, asOf: FIXTURE_AS_OF, freshUntil: '2026-10-15T21:00:00.000Z',
-    truncated: false, truncatedSources: [], unscopedListings: 0, ...NAMES, ...overrides,
+    truncated: false, truncatedSources: [], unscopedListings: 0, ...NAMES,
+    // §27 — οι αναθέσεις από τον ΑΛΗΘΙΝΟ συναρμολογητή (κενός κατάλογος ⇒ «καμία ανάθεση» σε κάθε γραμμή «Ανάθεσης»).
+    issuance: issuanceOfRows(core.rows, roster).issuance, issuanceKnown: true,
+    ...overrides,
   };
 }

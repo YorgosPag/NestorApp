@@ -12,6 +12,7 @@
  * 🏆 **Πέρα από το Zillow/Houzz «find a pro»**: ο κατάλογος ανοίγει ήδη φιλτραρισμένος στο **προσόν** που μπορεί να
  *    υπογράψει το έγγραφο (όχι στο επάγγελμα) **και** στον δήμο του ακινήτου — και όταν ο δήμος δεν αποδεικνύεται, το
  *    λέει αντί να μαντέψει.
+ * 🔑 ADR-915 §27 — **πρώτα** «Ανάθεση σε επαγγελματία» (γνωστός · πρόταση · απόφαση ιδιοκτήτη · μπάλα), **μετά** «Βρες».
  * ⚠️ Εξωτερική πύλη ⇒ `target="_blank"` + `rel="noopener noreferrer"` + δήλωση για τους αναγνώστες οθόνης (ίδιο ιδίωμα
  *    με το `LicenceStatement`). Εσωτερικός σύνδεσμος ⇒ **μόνο** από το σύνορο πλοήγησης (CHECK 3.61).
  */
@@ -26,6 +27,10 @@ import type { DocumentKind } from '@/config/document-validity/document-validity'
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { documentNextSteps, type DocumentNextStep } from '@/lib/document-validity/document-next-step';
 import type { RegistryRowState } from '@/lib/document-validity/document-registry';
+import { canProposeIssuance } from '@/lib/document-validity/issuance-assignment';
+import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
+import type { RegistryIssuanceView } from '@/components/document-registry/registry-issuance';
+import { RegistryIssuanceStep } from '@/components/document-registry/RegistryIssuanceStep';
 import { Link } from '@/lib/workspace/navigation';
 import {
   ISSUER_AUTHORITY_LABEL_KEYS,
@@ -69,10 +74,32 @@ function SelfServiceStep({ service }: { readonly service: AuthorityService }) {
   );
 }
 
-function StepItem({ step, areaId }: { readonly step: DocumentNextStep; readonly areaId: string | null }) {
-  return step.kind === 'find-professional'
-    ? <FindProfessionalStep kind={step.documentKind} areaId={areaId} />
-    : <SelfServiceStep service={step.service} />;
+type Issuance = RegistryIssuanceView | 'unavailable' | null;
+type People = Pick<DocumentRegistryResponse, 'people'>;
+
+interface StepItemProps {
+  readonly step: DocumentNextStep;
+  readonly areaId: string | null;
+  readonly issuance: Issuance;
+  readonly registry: People;
+}
+
+function StepItem({ step, areaId, issuance, registry }: StepItemProps) {
+  switch (step.kind) {
+    // Γραμμή προσώπου ή άλλη επιφάνεια ⇒ καμία ανάθεση εδώ (`null`): μένει μόνο το «Βρες».
+    case 'assign-professional': return issuance === null ? null : <RegistryIssuanceStep view={issuance} registry={registry} />;
+    case 'find-professional': return <FindProfessionalStep kind={step.documentKind} areaId={areaId} />;
+    case 'self-service': return <SelfServiceStep service={step.service} />;
+  }
+}
+
+/**
+ * ADR-915 §27 — **μία** ενεργή ανάθεση ανά (ακίνητο, είδος): όταν έχει δεσμευτεί επαγγελματίας (εγκρίθηκε · ενημερώθηκε
+ * · αποδέχτηκε), το «Βρες» **φεύγει** — δεύτερος επαγγελματίας θα σήμαινε δεύτερο ΠΕΑ.
+ */
+function visibleSteps(steps: readonly DocumentNextStep[], issuance: Issuance): readonly DocumentNextStep[] {
+  const committed = issuance !== null && issuance !== 'unavailable' && !canProposeIssuance(issuance.state);
+  return committed ? steps.filter((step) => step.kind !== 'find-professional') : steps;
 }
 
 export interface RegistryNextStepProps {
@@ -80,19 +107,25 @@ export interface RegistryNextStepProps {
   readonly state: RegistryRowState;
   /** Ο δήμος του ακινήτου (`RegistryPropertyLabel.areaId`) — `null` = δεν αποδεικνύεται. */
   readonly areaId: string | null;
+  /** §27 — η ανάθεση της γραμμής (`registryIssuanceOf`)· `null` = η γραμμή δεν ανατίθεται (πρόσωπο · άλλη επιφάνεια). */
+  readonly issuance?: Issuance;
+  /** §27 — τα ονόματα επαφών της απόκρισης (επαγγελματίες · υπεύθυνος). */
+  readonly registry?: People;
 }
 
-export function RegistryNextStep({ kind, state, areaId }: RegistryNextStepProps): React.ReactElement | null {
+const NO_PEOPLE: People = { people: {} };
+
+export function RegistryNextStep({ kind, state, areaId, issuance = null, registry = NO_PEOPLE }: RegistryNextStepProps): React.ReactElement | null {
   const { t } = useTranslation([REGISTRY_NS]);
   const headingId = React.useId();
-  const steps = documentNextSteps(kind, state);
+  const steps = visibleSteps(documentNextSteps(kind, state), issuance);
   if (steps.length === 0) return null;
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-2">
       <h4 id={headingId} className="m-0 text-sm font-semibold text-foreground">{t(NEXT_STEP_KEYS.heading)}</h4>
       <ul className="m-0 flex list-none flex-col gap-3 p-0">
         {steps.map((step) => (
-          <StepItem key={step.kind} step={step} areaId={areaId} />
+          <StepItem key={step.kind} step={step} areaId={areaId} issuance={issuance} registry={registry} />
         ))}
       </ul>
     </section>

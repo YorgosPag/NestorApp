@@ -23,4 +23,12 @@ export abstract class DocumentRegistryIdGenerators extends AreaMarketIdGenerator
   generateDeterministicDocumentObligorDesignationId(seed: string): string {
     return this.mintDeterministicV4Id(P.DOCUMENT_OBLIGOR_DESIGNATION, seed);
   }
+
+  /**
+   * ADR-915 §27 — **ΜΙΑ** ανάθεση έκδοσης ανά (γραφείο, ακίνητο, είδος εγγράφου): νέος κύκλος ξαναγράφει το **ίδιο**
+   * έγγραφο ⇒ δύο ταυτόχρονες προτάσεις δεν γεννούν ποτέ δύο αναθέσεις (άρα ούτε δύο ΠΕΑ).
+   */
+  generateDeterministicDocumentIssuanceAssignmentId(seed: string): string {
+    return this.mintDeterministicV4Id(P.DOCUMENT_ISSUANCE_ASSIGNMENT, seed);
+  }
 }

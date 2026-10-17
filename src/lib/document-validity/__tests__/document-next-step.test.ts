@@ -1,6 +1,7 @@
 /**
- * ADR-915 §24 — άγκυρες του «Επόμενου βήματος»: οι ενέργειες παράγονται από τον εκδότη, εμφανίζονται μόνο όταν
- * χρειάζεται νέο έγγραφο, και ο σύνδεσμος του καταλόγου γράφεται/διαβάζεται από τον ΙΔΙΟ σειριοποιητή.
+ * ADR-915 §24 · §27 — άγκυρες του «Επόμενου βήματος»: οι ενέργειες παράγονται από τον εκδότη, εμφανίζονται μόνο όταν
+ * χρειάζεται νέο έγγραφο, και ο σύνδεσμος του καταλόγου γράφεται/διαβάζεται από τον ΙΔΙΟ σειριοποιητή. §27: για
+ * επαγγελματία η «Ανάθεση» έρχεται **πρώτη**, το «Βρες» δεύτερο.
  */
 
 import { documentIssuerSearchHref } from '@/components/mandate/agency-directory-route';
@@ -10,6 +11,7 @@ import { parseShowcaseFilters } from '@/lib/agency/showcase-filter';
 import { REGISTRY_ROW_STATES } from '@/lib/document-validity/document-registry';
 import {
   documentNextSteps,
+  needsIssuanceAssignment,
   needsProfessionalSearch,
   NEXT_STEP_STATES,
 } from '@/lib/document-validity/document-next-step';
@@ -17,9 +19,10 @@ import {
 const AREA = 'municipality:0501';
 
 describe('ADR-915 §24 — «Επόμενο βήμα»', () => {
-  it('κάθε είδος, σε κάθε κατάσταση που θέλει νέο έγγραφο, έχει ΑΚΡΙΒΩΣ μία ενέργεια', () => {
+  it('κάθε είδος, σε κάθε κατάσταση που θέλει νέο έγγραφο: επαγγελματίας ⇒ ΔΥΟ ενέργειες · αρχή ⇒ ΜΙΑ', () => {
+    const expected = (kind: (typeof DOCUMENT_KINDS)[number]) => (documentKindSpec(kind).issuer.kind === 'professional' ? 2 : 1);
     const bad = DOCUMENT_KINDS.flatMap((kind) =>
-      NEXT_STEP_STATES.filter((state) => documentNextSteps(kind, state).length !== 1).map((state) => `${kind}/${state}`));
+      NEXT_STEP_STATES.filter((state) => documentNextSteps(kind, state).length !== expected(kind)).map((state) => `${kind}/${state}`));
     expect(bad).toEqual([]);
   });
 
@@ -30,17 +33,26 @@ describe('ADR-915 §24 — «Επόμενο βήμα»', () => {
     expect(bad).toEqual([]);
   });
 
-  it('η ενέργεια ΠΑΡΑΓΕΤΑΙ από τον εκδότη: επαγγελματίας ⇒ «Βρες» · αρχή ⇒ η υπηρεσία της', () => {
-    const steps = Object.fromEntries(DOCUMENT_KINDS.map((kind) => [kind, documentNextSteps(kind, 'expired')[0]]));
+  it('οι ενέργειες ΠΑΡΑΓΟΝΤΑΙ από τον εκδότη: επαγγελματίας ⇒ «Ανάθεση» ΠΡΩΤΑ, μετά «Βρες» · αρχή ⇒ η υπηρεσία της', () => {
+    const steps = Object.fromEntries(DOCUMENT_KINDS.map((kind) => [kind, documentNextSteps(kind, 'expired')]));
     expect(steps).toEqual({
-      'energy-certificate': { kind: 'find-professional', documentKind: 'energy-certificate' },
-      'building-identity': { kind: 'find-professional', documentKind: 'building-identity' },
-      'tax-clearance': { kind: 'self-service', service: 'aade-tax-clearance' },
-      'insurance-clearance': { kind: 'self-service', service: 'efka-insurance-clearance' },
-      'enfia-certificate': { kind: 'self-service', service: 'aade-enfia-certificate' },
+      'energy-certificate': [
+        { kind: 'assign-professional', documentKind: 'energy-certificate' },
+        { kind: 'find-professional', documentKind: 'energy-certificate' },
+      ],
+      'building-identity': [
+        { kind: 'assign-professional', documentKind: 'building-identity' },
+        { kind: 'find-professional', documentKind: 'building-identity' },
+      ],
+      'tax-clearance': [{ kind: 'self-service', service: 'aade-tax-clearance' }],
+      'insurance-clearance': [{ kind: 'self-service', service: 'efka-insurance-clearance' }],
+      'enfia-certificate': [{ kind: 'self-service', service: 'aade-enfia-certificate' }],
     });
     const professional = DOCUMENT_KINDS.filter((kind) => documentKindSpec(kind).issuer.kind === 'professional');
     expect(DOCUMENT_KINDS.filter((kind) => needsProfessionalSearch(kind, 'missing'))).toEqual(professional);
+    // §27 — ο διακομιστής διαβάζει αναθέσεις ΑΚΡΙΒΩΣ όπου η οθόνη δείχνει «Ανάθεση».
+    expect(DOCUMENT_KINDS.filter((kind) => needsIssuanceAssignment(kind, 'missing'))).toEqual(professional);
+    expect(DOCUMENT_KINDS.filter((kind) => needsIssuanceAssignment(kind, 'valid'))).toEqual([]);
   });
 
   it('κύκλος διεύθυνσης: ό,τι γράφει το «Βρες» το διαβάζει ο κατάλογος ως {έγγραφο, δήμος}', () => {
