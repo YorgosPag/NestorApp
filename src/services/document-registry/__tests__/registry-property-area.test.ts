@@ -25,7 +25,7 @@ const POINT = { lat: 40.63, lng: 22.94 };
 
 function property(id: string, scope: RegistryProperty['scope'], extra: Partial<RegistryProperty> = {}): RegistryProperty {
   return {
-    id, scope, name: null, declaredPoint: null, data: {},
+    id, scope, name: null, declaredPoint: null, mandateClientContactIds: [], data: {},
     certificate: { kind: 'none' } as unknown as RegistryProperty['certificate'], ...extra,
   };
 }

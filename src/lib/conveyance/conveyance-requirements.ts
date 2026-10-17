@@ -55,7 +55,8 @@ export function conveyanceRequirements(input: ConveyanceRequirementsInput): read
   const neededOn = conveyanceNeededOn(input.targetSigningDate);
   return input.rows.flatMap((row): DocumentRequirement[] => (row.item.documentKind === undefined ? [] : [{
     documentKind: row.item.documentKind,
-    subject: { propertyId: input.propertyId },
+    // ADR-915 §25 (5γ) — η γραμμή προσώπου κουβαλά το πρόσωπό της ως το τέλος: κάτοχος · κενό · «Το φέρνει».
+    subject: { propertyId: input.propertyId, party: row.party === null ? null : { key: row.party.key, contactId: row.party.contactId } },
     process: { kind: 'conveyance', caseId: input.caseId },
     neededOn,
     policy: 'block',

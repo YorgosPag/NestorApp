@@ -21,6 +21,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
+import { mandatedPropertyOwners } from '@/lib/document-validity/registry-owners';
 import { custodyOf } from '@/lib/owner-property/listing-custody';
 import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import { trimmedStringOrNull } from '@/lib/type-guards';
@@ -54,6 +55,7 @@ function registryOwnerPropertyOf(property: OwnerProperty, data: Readonly<Record<
     name: trimmedStringOrNull(property.title),
     certificate: property.energy,
     declaredPoint: declaredPointOf(property.place),
+    mandateClientContactIds: mandatedPropertyOwners(property.mandates),
     data,
   };
 }

@@ -83,7 +83,7 @@ const reload = jest.fn();
 
 /** Ταυτότητα κτιρίου που ζητά μεταβίβαση στο `p1` — συνθετική. */
 const FIXTURE_REQUIREMENT_P1_IDENTITY: DocumentRequirement = {
-  documentKind: 'building-identity', subject: { propertyId: 'p1' }, process: { kind: 'conveyance', caseId: 'case-9' },
+  documentKind: 'building-identity', subject: { propertyId: 'p1', party: null }, process: { kind: 'conveyance', caseId: 'case-9' },
   neededOn: { kind: 'unscheduled' }, policy: 'block', warnWindowDays: 15,
   basis: { kind: 'checklist-item', itemId: 'building_identity', verifiedAt: null }, presence: 'required', attestation: null,
 };
@@ -322,7 +322,7 @@ describe('ειλικρίνεια της οθόνης', () => {
 describe('ADR-915 §15 — «δεν κρίνεται» λέει την ΑΛΗΘΙΝΗ αιτία', () => {
   const articleOf = (text: string) => screen.getByText(text).closest('article') as HTMLElement;
   const conveyanceOn = (propertyId: string, caseId: string, neededOn: DocumentRequirement['neededOn']): DocumentRequirement => ({
-    documentKind: 'energy-certificate', subject: { propertyId }, process: { kind: 'conveyance', caseId },
+    documentKind: 'energy-certificate', subject: { propertyId, party: null }, process: { kind: 'conveyance', caseId },
     neededOn, policy: 'block', warnWindowDays: 15,
     basis: { kind: 'checklist-item', itemId: 'energy_certificate', verifiedAt: null }, presence: 'required', attestation: null,
   });
@@ -355,7 +355,7 @@ describe('ADR-915 §18 — «Εκδίδει · Το φέρνει»', () => {
   it('ΠΕΑ ⇒ προσόν με ΜΗΤΡΩΟ + «τον ορίζει ο ιδιοκτήτης» · φορολογική ⇒ ΑΑΔΕ ηλεκτρονικά, χωρίς «ορίζει»', () => {
     const { container } = render(
       <dl>
-        <RegistryIssuerValue kind="energy-certificate" />
+        <RegistryIssuerValue kind="energy-certificate" obligors={{ kind: 'unknown' }} />
       </dl>,
     );
     const registered = `${ISSUER_KEYS.registered} ${JSON.stringify({
@@ -367,12 +367,58 @@ describe('ADR-915 §18 — «Εκδίδει · Το φέρνει»', () => {
 
     const tax = render(
       <dl>
-        <RegistryIssuerValue kind="tax-clearance" />
+        <RegistryIssuerValue kind="tax-clearance" obligors={{ kind: 'unknown' }} />
       </dl>,
     );
     const selfService = `${ISSUER_KEYS.selfService} ${JSON.stringify({ authority: ISSUER_AUTHORITY_LABEL_KEYS.aade })}`;
     expect(within(tax.container).getByText(selfService)).toBeTruthy();
     expect(within(tax.container).queryByText(APPOINTED_BY_LABEL_KEYS.owner)).toBeNull();
+  });
+});
+
+describe('ADR-915 §25 — «Το φέρνει: Ο ιδιοκτήτης · <ποιος>»', () => {
+  const articleOf = (name: string) => screen.getByText(name).closest('article') as HTMLElement;
+  const obligorCell = (article: HTMLElement) => within(article).getByText(OBLIGOR_LABEL_KEYS.owner).closest('dd') as HTMLElement;
+
+  it('ο ρόλος ΚΑΙ ο άνθρωπος: το όνομα είναι σύνδεσμος στην κάρτα της επαφής', () => {
+    renderReady();
+    const cell = obligorCell(articleOf('Συνθετικό Α1'));
+    const link = within(cell).getByRole('link', { name: 'Συνθετικός Άλφα' });
+    expect(link.getAttribute('href')).toBe(ENTITY_ROUTES.contacts.withId('cont_alpha'));
+    expect(within(cell).getByText(OBLIGOR_LABEL_KEYS.owner)).toBeTruthy();
+  });
+
+  it('ρωτήθηκε και κανείς δεν ορίστηκε ⇒ το λέει· ΔΕΝ ρωτήθηκε ⇒ μόνο ο ρόλος, κανένας ισχυρισμός', () => {
+    renderReady();
+    expect(within(obligorCell(articleOf('Συνθετικό Β2'))).getByText(ISSUER_KEYS.obligorNone)).toBeTruthy();
+    const unknown = obligorCell(articleOf('synthetic-new.pdf'));
+    expect(within(unknown).queryByText(ISSUER_KEYS.obligorNone)).toBeNull();
+    expect(within(unknown).queryByRole('list')).toBeNull();
+  });
+
+  it('πολλοί ιδιοκτήτες (και σε κενό) ⇒ οι 3 πρώτοι + «+2 ακόμη»· μη διαθέσιμη επαφή χωρίς σύνδεσμο· χωρίς όνομα το λέει', () => {
+    renderReady();
+    const cell = obligorCell(articleOf('Συνθετικό Ζ6'));
+    const list = within(cell).getByRole('list', { name: ISSUER_KEYS.obligorPeople });
+    expect(within(list).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      ISSUER_KEYS.obligorUnavailable, ISSUER_KEYS.obligorUnnamed, 'Συνθετικός Άλφα', `${ISSUER_KEYS.obligorMore} {"count":2}`,
+    ]);
+    expect(within(list).getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
+      ENTITY_ROUTES.contacts.withId('cont_unnamed'), ENTITY_ROUTES.contacts.withId('cont_alpha'),
+    ]);
+  });
+
+  it('εντολή ιδιώτη ⇒ ο πελάτης της εντολής', () => {
+    renderReady();
+    const cell = obligorCell(articleOf('Συνθετική εντολή Η7'));
+    expect(within(cell).getByRole('link', { name: 'Συνθετική Πελάτισσα' }).getAttribute('href'))
+      .toBe(ENTITY_ROUTES.contacts.withId('cont_client'));
+  });
+
+  it('αντικατεστημένη γραμμή ⇒ κανένα «Το φέρνει» (δεν ζητά τίποτα από κανέναν)', () => {
+    renderReady();
+    const old = articleOf('synthetic-old.pdf');
+    expect(within(old).queryByText(ISSUER_KEYS.obligorHeading)).toBeNull();
   });
 });
 
@@ -411,5 +457,27 @@ describe('ADR-915 §24 — «Επόμενο βήμα» μέσα στη γραμ�
     expect(link.getAttribute('rel')).toBe('noopener noreferrer');
     expect(screen.getByText(SELF_SERVICE_PATH_KEYS['aade-tax-clearance'])).toBeTruthy();
     expect(screen.queryByText(NEXT_STEP_KEYS.findProfessional)).toBeNull();
+  });
+});
+
+describe('ADR-915 §25 (5γ) — γραμμή ΠΡΟΣΩΠΟΥ: «Το φέρνει» λέει ΑΥΤΟ το πρόσωπο', () => {
+  const taxOf = (key: string, contactId: string | null): DocumentRequirement => ({
+    documentKind: 'tax-clearance', subject: { propertyId: 'p1', party: { key, contactId } }, process: { kind: 'conveyance', caseId: 'case-7' },
+    neededOn: { kind: 'unscheduled' }, policy: 'block', warnWindowDays: 15,
+    basis: { kind: 'checklist-item', itemId: `seller_tax_clearance@${key}`, verifiedAt: null }, presence: 'required', attestation: null,
+  });
+
+  it('δύο κενά φορολογικής στο ίδιο ακίνητο ⇒ το καθένα με το ΔΙΚΟ του όνομα — όχι τους ιδιοκτήτες του ακινήτου', () => {
+    renderReady(fixtureResponse({}, [], [taxOf('cont_gamma', 'cont_gamma'), taxOf('cont_delta', 'cont_delta')]));
+    const cells = screen.getAllByText(OBLIGOR_LABEL_KEYS.owner).map((label) => label.closest('dd') as HTMLElement);
+    expect(cells.map((cell) => within(cell).getAllByRole('link').map((link) => link.textContent)).sort())
+      .toEqual([['Συνθετικός Γάμμα'], ['Συνθετικός Δέλτα']]);
+  });
+
+  it('πωλητής χωρίς επαφή ⇒ «δεν έχει οριστεί», ποτέ οι ιδιοκτήτες του ακινήτου στη θέση του', () => {
+    renderReady(fixtureResponse({}, [], [taxOf('seller', null)]));
+    const cell = screen.getByText(OBLIGOR_LABEL_KEYS.owner).closest('dd') as HTMLElement;
+    expect(within(cell).getByText(ISSUER_KEYS.obligorNone)).toBeTruthy();
+    expect(within(cell).queryByRole('link')).toBeNull();
   });
 });

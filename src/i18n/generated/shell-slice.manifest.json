@@ -33,7 +33,7 @@
     "src/i18n/generated/routes/o__workspace__cases.el.json": "62e1b3378215c16e66a12632667ad61be33b59cc632e634dde0ffaf9763769d4",
     "src/i18n/generated/routes/o__workspace__cases__engagementId.el.json": "cb0565009bf6f7bec16cd93768e557804df81971abe3c5a23b7c050e9eb91ec3",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
-    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "feec89d6bf81cb3635d54b5f21fc868b72e1609b4cdf9e224c2faffa5e4ae7cc",
+    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "8bc752a4cefdc97741b29f0b5186ddb43afd1b07f2386d84ff6c09737af88156",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "f2b0212cf0909081143453962ba0bfec2a47dc8753dc81a009ee34c12579b137",
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "2753c7edd9c05a17a65b15f3146177db8a27ca727df7b1f77d28fd1724f4fa6f",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "e1c5896ab910b7f5515ef0a3991a4daae3ba7fc776c6291815cfeaddb51e2398",
@@ -150,7 +150,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "ff776968d0e676c0f41f2b63f4bc77ca636a0eb9c0574c2c05f6ef4f9ef50113",
+  "inputsSha256": "47a1f2fd35d097d1d937a167eecfe134d1618ad754d549221bc0f0ec7ffe46ca",
   "languages": [
     "el"
   ],
@@ -5131,6 +5131,11 @@
             "issuer.heading",
             "issuer.obligor.owner",
             "issuer.obligorHeading",
+            "issuer.obligorMore",
+            "issuer.obligorNone",
+            "issuer.obligorPeople",
+            "issuer.obligorUnavailable",
+            "issuer.obligorUnnamed",
             "issuer.qualification.architect",
             "issuer.qualification.civil-engineer",
             "issuer.qualification.civil-engineer-tei",
@@ -10793,7 +10798,7 @@
   ],
   "stats": {
     "matchedKeys": 248,
-    "sliceBytes": 754687
+    "sliceBytes": 755047
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

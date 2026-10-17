@@ -68,6 +68,11 @@
     "obligorHeading": "Το φέρνει",
     "registered": "{qualification}, εγγεγραμμένος στο {registry}",
     "selfService": "{authority} — ηλεκτρονικά, χωρίς επαγγελματία",
+    "obligorPeople": "Ποιος είναι",
+    "obligorNone": "δεν έχει οριστεί ιδιοκτήτης",
+    "obligorUnnamed": "Επαφή χωρίς όνομα",
+    "obligorUnavailable": "επαφή που δεν είναι πια διαθέσιμη",
+    "obligorMore": "{count, plural, one {+# ακόμη} other {+# ακόμη}}",
     "qualification": {
       "civil-engineer": "Πολιτικός μηχανικός",
       "architect": "Αρχιτέκτων μηχανικός",

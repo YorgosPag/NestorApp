@@ -40,6 +40,11 @@ export interface RegistryProperty {
    * μόνο όταν χρειαστεί (`registry-property-area.server.ts`).
    */
   readonly declaredPoint: GeoPoint | null;
+  /**
+   * ADR-915 §25 — οι πελάτες των εντολών (`clientContactId`) ακινήτου ιδιώτη: **ποιος** είναι ο ιδιοκτήτης. Κενό για
+   * ακίνητο εταιρείας — εκείνο κρίνεται από το έργο και την υπόθεση (`registry-owners.server.ts`).
+   */
+  readonly mandateClientContactIds: readonly string[];
   /** Το ωμό έγγραφο — για τον κοινό μετασχηματισμό της υπόθεσης (`subjectContextOf`). */
   readonly data: DocData;
 }
@@ -54,6 +59,7 @@ function registryPropertyOf(id: string, data: DocData): RegistryProperty {
     name: trimmedStringOrNull(data.name),
     certificate: readEnergyCertificate(data[ENERGY_FIELD]),
     declaredPoint: null,
+    mandateClientContactIds: [],
     data,
   };
 }

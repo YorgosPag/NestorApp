@@ -165,6 +165,12 @@ export const ISSUER_KEYS = {
   obligorHeading: `${K}issuer.obligorHeading`,
   registered: `${K}issuer.registered`,
   selfService: `${K}issuer.selfService`,
+  /** ADR-915 §25 — «Το φέρνει: Ο ιδιοκτήτης · <όνομα>»: οι καταστάσεις του ονόματος (`registry-obligors.ts`). */
+  obligorPeople: `${K}issuer.obligorPeople`,
+  obligorNone: `${K}issuer.obligorNone`,
+  obligorUnnamed: `${K}issuer.obligorUnnamed`,
+  obligorUnavailable: `${K}issuer.obligorUnavailable`,
+  obligorMore: `${K}issuer.obligorMore`,
 } as const;
 
 export const ISSUER_QUALIFICATION_LABEL_KEYS: Readonly<Record<IssuerQualification, string>> = {

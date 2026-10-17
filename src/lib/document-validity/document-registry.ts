@@ -43,8 +43,10 @@ import {
   absentDependentsOf,
   dependentsOf,
   documentStanding,
+  withPartySuffix,
   type DocumentDependent,
   type DocumentRequirement,
+  type RequirementParty,
 } from '@/lib/document-validity/document-requirement';
 
 // =============================================================================
@@ -81,6 +83,12 @@ export interface RegistryDocument {
   readonly kind: DocumentKind;
   /** `null` = το έγγραφο δεν δένεται σε ακίνητο ⇒ κανένα «τι σταματά», καμία αντικατάσταση. */
   readonly propertyId: string | null;
+  /**
+   * ADR-915 §25 (5γ) — **ποιανού** είναι το έγγραφο, όταν είναι ανά πρόσωπο: αρχείο στην κάρτα επαφής · έγκριση σε
+   * γραμμή πωλητή. `null` = έγγραφο του ακινήτου (ή χωρίς γνωστό πρόσωπο). Χωρίζει ομάδες: η ενημερότητα του Α
+   * **δεν** αντικαθιστά του Β.
+   */
+  readonly party: RequirementParty | null;
   readonly origin: RegistryDocumentOrigin;
   readonly issuedOn: string | null;
   readonly printedValidUntil: string | null;
@@ -106,10 +114,12 @@ export interface RegistryDocumentRow {
 
 /** Ό,τι λείπει: ένα είδος εγγράφου για ένα ακίνητο. **Όχι** έγγραφο — δεν έχει λήξη, πηγή ή αρχείο. */
 export interface RegistryGap {
-  /** Σταθερή ταυτότητα (`missing:<propertyId>:<kind>`). */
+  /** Σταθερή ταυτότητα (`missing:<propertyId>:<kind>` — και `@<πρόσωπο>` για έγγραφο ανά πρόσωπο, §25). */
   readonly id: string;
   readonly kind: DocumentKind;
   readonly propertyId: string;
+  /** ADR-915 §25 (5γ) — ποιανού λείπει· `null` = λείπει από το ακίνητο. */
+  readonly party: RequirementParty | null;
 }
 
 /** Γραμμή **κενού** (Φ4δ Ε7): απαίτηση `required` που κανένα έγγραφο δεν κρατά. */
@@ -133,6 +143,11 @@ export function registryRowIdOf(row: RegistryRow): string {
 /** Το ακίνητο της γραμμής (`null` για έγγραφο που δεν δένεται σε ακίνητο) — ADR-915 Φ5β: η αλυσίδα υπευθυνότητας ρωτά εδώ. */
 export function registryRowPropertyIdOf(row: RegistryRow): string | null {
   return row.kind === 'gap' ? row.gap.propertyId : row.document.propertyId;
+}
+
+/** Το πρόσωπο της γραμμής (`null` = του ακινήτου) — ADR-915 §25: το «Το φέρνει» ρωτά εδώ. */
+export function registryRowPartyOf(row: RegistryRow): RequirementParty | null {
+  return row.kind === 'gap' ? row.gap.party : row.document.party;
 }
 
 /** Το είδος εγγράφου της γραμμής — ό,τι λείπει ή ό,τι υπάρχει (ADR-915 §24: το «Επόμενο βήμα» ρωτά εδώ). */
@@ -214,17 +229,22 @@ function rowOf(
   return { kind: 'document', document, state, expiry, supersededBy: null, dependents, blocking };
 }
 
-/** Τα κενά: απαιτήσεις `required` χωρίς κάτοχο, μία γραμμή ανά (ακίνητο, είδος). Οι `tracked` δεν ισχυρίζονται «λείπει». */
+/**
+ * Τα κενά: απαιτήσεις `required` χωρίς κάτοχο, μία γραμμή ανά (ακίνητο, είδος, **πρόσωπο** — §25). Οι `tracked` δεν
+ * ισχυρίζονται «λείπει». Δύο συμπωλητές χωρίς φορολογική = **δύο** κενά, το καθένα με το όνομά του.
+ */
 function gapRowsOf(unheld: readonly DocumentRequirement[]): readonly RegistryGapRow[] {
   const groups = new Map<string, DocumentRequirement[]>();
   for (const requirement of unheld) {
     if (requirement.presence !== 'required') continue;
-    const key = `${requirement.subject.propertyId}:${requirement.documentKind}`;
+    const { propertyId, party } = requirement.subject;
+    const key = withPartySuffix(`${propertyId}:${requirement.documentKind}`, party);
     groups.set(key, [...(groups.get(key) ?? []), requirement]);
   }
   return [...groups.entries()].map(([key, members]): RegistryGapRow => {
     const dependents = absentDependentsOf(members);
-    const gap: RegistryGap = { id: `missing:${key}`, kind: members[0].documentKind, propertyId: members[0].subject.propertyId };
+    const { propertyId, party } = members[0].subject;
+    const gap: RegistryGap = { id: `missing:${key}`, kind: members[0].documentKind, propertyId, party };
     return { kind: 'gap', gap, state: 'missing', dependents, blocking: dependents.some((d) => isBlockingDependent(d, 'missing')) };
   });
 }

@@ -14,6 +14,10 @@
  *  - **Ε9 — ο κάτοχος**: ανάμεσα στα **τρέχοντα** έγγραφα (Α5) που την καλύπτουν (`requirementCoveredBy`, ο ΕΝΑΣ
  *    κριτής), νικά το αρχείο που ενέκρινε ρητά ο επαγγελματίας — αυτό κρίνει και ο κατάλογος της υπόθεσης. Έτσι ένα ΠΕΑ
  *    επιπέδου **έργου** (Δ3) κρατά τις υποθέσεις που το ενέκριναν, σε **μία** γραμμή, όσα ακίνητα κι αν αφορούν.
+ *  - **§25 (5γ) — ανά πρόσωπο**: η ομάδα της Α5 είναι (ακίνητο, είδος, **πρόσωπο**)· η ενημερότητα του Α κρατά **μόνο**
+ *    τη γραμμή του Α. Έγγραφο **χωρίς** πρόσωπο (αρχείο στο ακίνητο) κρατά απαίτηση προσώπου **μόνο** όταν δεν υπάρχει
+ *    αμφισημία — ένα πρόσωπο για αυτό το (ακίνητο, είδος). Με δύο συμπωλητές: κανένα, και φαίνεται «λείπει» και στους
+ *    δύο, αντί να «καλύψει» κάποιον στην τύχη (ίδιο δόγμα με §22.6 Ε4).
  *
  * **Layering**: leaf — καθαρές συναρτήσεις, μηδέν I/O, μηδέν ρολόι. Μόνο **τύποι** από το `document-registry` (κανένας
  * κύκλος εκτέλεσης).
@@ -25,13 +29,20 @@ import type { DocumentKind } from '@/config/document-validity/document-validity'
 import type { RegistryDocument } from '@/lib/document-validity/document-registry';
 import {
   requirementCoveredBy,
+  withPartySuffix,
   type DocumentRequirement,
+  type RequirementParty,
   type TrackedDocument,
 } from '@/lib/document-validity/document-requirement';
 
-/** Η ομάδα της Α5: (ακίνητο, είδος) — έγγραφο χωρίς ακίνητο είναι μόνο του. */
-export function registryGroupKeyOf(document: Pick<RegistryDocument, 'id' | 'kind' | 'propertyId'>): string {
-  return document.propertyId === null ? `solo:${document.id}` : `${document.propertyId}:${document.kind}`;
+/** Η ομάδα (ακίνητο, είδος) **χωρίς** πρόσωπο — η βάση κάθε κλειδιού ομάδας. */
+const groupBaseOf = (propertyId: string, kind: DocumentKind): string => `${propertyId}:${kind}`;
+
+/** Η ομάδα της Α5: (ακίνητο, είδος, πρόσωπο) — έγγραφο χωρίς ακίνητο είναι μόνο του. */
+export function registryGroupKeyOf(document: Pick<RegistryDocument, 'id' | 'kind' | 'propertyId' | 'party'>): string {
+  return document.propertyId === null
+    ? `solo:${document.id}`
+    : withPartySuffix(groupBaseOf(document.propertyId, document.kind), document.party);
 }
 
 /** Το αρχείο του εγγράφου, αν έχει — για τον ρητό δεσμό της βεβαίωσης. */
@@ -43,7 +54,7 @@ export function registryFileIdOf(document: RegistryDocument): string | null {
 export function trackedDocumentOf(document: RegistryDocument, expiresOn: string | null): TrackedDocument {
   return {
     kind: document.kind,
-    subject: document.propertyId === null ? null : { propertyId: document.propertyId },
+    subject: document.propertyId === null ? null : { propertyId: document.propertyId, party: document.party },
     fileId: registryFileIdOf(document),
     expiresOn,
   };
@@ -53,16 +64,25 @@ export function trackedDocumentOf(document: RegistryDocument, expiresOn: string 
 // Ε8 — ΒΕΒΑΙΩΣΕΙΣ ΠΟΥ ΔΕΝ ΕΙΝΑΙ ΑΚΟΜΗ ΓΡΑΜΜΗ
 // =============================================================================
 
-/** «Το ίδιο έγγραφο»: ίδιο ακίνητο, ίδιο είδος, ίδια ημερομηνία έκδοσης. Χωρίς έκδοση δεν ταυτοποιείται. */
-const sameDocumentKey = (propertyId: string, kind: DocumentKind, issuedOn: string | null): string | null =>
-  issuedOn === null ? null : `${propertyId}:${kind}:${issuedOn}`;
+/**
+ * «Το ίδιο έγγραφο»: ίδιο ακίνητο, ίδιο είδος, **ίδιο πρόσωπο** (§25), ίδια ημερομηνία έκδοσης. Χωρίς έκδοση δεν
+ * ταυτοποιείται. Χωρίς το πρόσωπο, δύο συμπωλητές με ενημερότητα της ίδιας μέρας θα γίνονταν **μία** γραμμή.
+ */
+const sameDocumentKey = (
+  propertyId: string,
+  kind: DocumentKind,
+  party: RequirementParty | null,
+  issuedOn: string | null,
+): string | null => (issuedOn === null ? null : `${withPartySuffix(groupBaseOf(propertyId, kind), party)}:${issuedOn}`);
 
 function attestedDocumentOf(requirement: DocumentRequirement, caseId: string): RegistryDocument {
   const attestation = requirement.attestation;
   return {
-    id: `attested:${caseId}:${requirement.documentKind}`,
+    // §25 — με το πρόσωπο: δύο συμπωλητές στην ίδια υπόθεση είναι δύο γραμμές, όχι μία ταυτότητα που συγκρούεται.
+    id: withPartySuffix(`attested:${caseId}:${requirement.documentKind}`, requirement.subject.party),
     kind: requirement.documentKind,
     propertyId: requirement.subject.propertyId,
+    party: requirement.subject.party,
     origin: { kind: 'attested', caseId, fileId: attestation?.fileId ?? null },
     issuedOn: attestation?.issuedOn ?? null,
     printedValidUntil: attestation?.printedValidUntil ?? null,
@@ -80,13 +100,14 @@ export function attestedDocumentsOf(
   requirements: readonly DocumentRequirement[],
 ): readonly RegistryDocument[] {
   const fileIds = new Set(documents.map(registryFileIdOf).filter((id): id is string => id !== null));
-  const known = new Set(documents.map((d) => (d.propertyId === null ? null : sameDocumentKey(d.propertyId, d.kind, d.issuedOn))));
+  const known = new Set(documents.map((d) => (d.propertyId === null ? null : sameDocumentKey(d.propertyId, d.kind, d.party, d.issuedOn))));
   const attested: RegistryDocument[] = [];
   for (const requirement of requirements) {
     const { attestation, process } = requirement;
     if (attestation === null || process.kind !== 'conveyance') continue;
     if (attestation.fileId !== null && fileIds.has(attestation.fileId)) continue;
-    const key = sameDocumentKey(requirement.subject.propertyId, requirement.documentKind, attestation.issuedOn);
+    const { propertyId, party } = requirement.subject;
+    const key = sameDocumentKey(propertyId, requirement.documentKind, party, attestation.issuedOn);
     if (key !== null && known.has(key)) continue;
     attested.push(attestedDocumentOf(requirement, process.caseId));
     // Δύο υποθέσεις που ενέκριναν το ΙΔΙΟ αρχείο ή το ίδιο έγγραφο ⇒ μία γραμμή· η δεύτερη το βρίσκει ως κάτοχο.
@@ -107,16 +128,35 @@ export interface RequirementHolders {
   readonly unheld: readonly DocumentRequirement[];
 }
 
-/** Ο κάτοχος: ανάμεσα στους υποψήφιους που **καλύπτουν** την απαίτηση, πρώτα το ρητά εγκεκριμένο αρχείο. */
-function holderOf(
-  requirement: DocumentRequirement,
-  byFile: ReadonlyMap<string, RegistryDocument>,
-  byGroup: ReadonlyMap<string, RegistryDocument>,
-): RegistryDocument | undefined {
+/** (ακίνητο, είδος) → πόσα **διαφορετικά** πρόσωπα το ζητούν — η αμφισημία του εγγράφου χωρίς πρόσωπο (§25). */
+function partiesPerGroup(requirements: readonly DocumentRequirement[]): ReadonlyMap<string, number> {
+  const parties = new Map<string, Set<string>>();
+  for (const { subject, documentKind } of requirements) {
+    if (subject.party === null) continue;
+    const base = groupBaseOf(subject.propertyId, documentKind);
+    parties.set(base, (parties.get(base) ?? new Set<string>()).add(subject.party.key));
+  }
+  return new Map([...parties].map(([base, keys]) => [base, keys.size]));
+}
+
+interface HolderIndex {
+  readonly byFile: ReadonlyMap<string, RegistryDocument>;
+  readonly byGroup: ReadonlyMap<string, RegistryDocument>;
+  readonly parties: ReadonlyMap<string, number>;
+}
+
+/**
+ * Ο κάτοχος: ανάμεσα στους υποψήφιους που **καλύπτουν** την απαίτηση, πρώτα το ρητά εγκεκριμένο αρχείο, μετά το
+ * έγγραφο **του ίδιου προσώπου**, τελευταίο το έγγραφο χωρίς πρόσωπο — μόνο όταν το πρόσωπο είναι **ένα** (§25).
+ */
+function holderOf(requirement: DocumentRequirement, { byFile, byGroup, parties }: HolderIndex): RegistryDocument | undefined {
   const fileId = requirement.attestation?.fileId ?? null;
+  const base = groupBaseOf(requirement.subject.propertyId, requirement.documentKind);
+  const unambiguous = requirement.subject.party === null || parties.get(base) === 1;
   const candidates = [
     fileId === null ? undefined : byFile.get(fileId),
-    byGroup.get(`${requirement.subject.propertyId}:${requirement.documentKind}`),
+    byGroup.get(withPartySuffix(base, requirement.subject.party)),
+    unambiguous ? byGroup.get(base) : undefined,
   ];
   return candidates.find((candidate): candidate is RegistryDocument =>
     candidate !== undefined && requirementCoveredBy(trackedDocumentOf(candidate, null), requirement));
@@ -134,10 +174,11 @@ export function requirementHolders(
   const live = documents.filter((document) => (current.get(document.id) ?? document.id) === document.id);
   const byFile = new Map(live.flatMap((d) => { const id = registryFileIdOf(d); return id === null ? [] : [[id, d] as const]; }));
   const byGroup = new Map(live.filter((d) => d.propertyId !== null).map((d) => [registryGroupKeyOf(d), d] as const));
+  const index: HolderIndex = { byFile, byGroup, parties: partiesPerGroup(requirements) };
   const held = new Map<string, DocumentRequirement[]>();
   const unheld: DocumentRequirement[] = [];
   for (const requirement of requirements) {
-    const holder = holderOf(requirement, byFile, byGroup);
+    const holder = holderOf(requirement, index);
     if (holder === undefined) unheld.push(requirement);
     else held.set(holder.id, [...(held.get(holder.id) ?? []), requirement]);
   }

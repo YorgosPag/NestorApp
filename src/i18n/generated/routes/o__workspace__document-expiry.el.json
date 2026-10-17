@@ -72,6 +72,11 @@
         "owner": "Ο ιδιοκτήτης"
       },
       "obligorHeading": "Το φέρνει",
+      "obligorMore": "{count, plural, one {+# ακόμη} other {+# ακόμη}}",
+      "obligorNone": "δεν έχει οριστεί ιδιοκτήτης",
+      "obligorPeople": "Ποιος είναι",
+      "obligorUnavailable": "επαφή που δεν είναι πια διαθέσιμη",
+      "obligorUnnamed": "Επαφή χωρίς όνομα",
       "qualification": {
         "architect": "Αρχιτέκτων μηχανικός",
         "civil-engineer": "Πολιτικός μηχανικός",

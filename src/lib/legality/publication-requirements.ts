@@ -51,7 +51,7 @@ function requirementFor(
   const presence = basis.kind === 'statute' && documentKindSpec(documentKind).advertisingDisclosure !== null ? 'required' : 'tracked';
   return {
     documentKind,
-    subject: { propertyId: input.propertyId },
+    subject: { propertyId: input.propertyId, party: null },
     process: { kind: 'listing-publication', listingId: input.listingId },
     neededOn: { kind: 'continuous' },
     policy: legalityKindSpec(kind).publication === 'blocks-publication' ? 'block' : 'warn',

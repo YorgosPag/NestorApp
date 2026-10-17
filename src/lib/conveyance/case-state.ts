@@ -15,8 +15,11 @@ import type { ConveyanceCaseState, StoredCaseState } from '@/types/conveyance-ca
 
 const FINAL_SIGNED_INDEX = LEGAL_PHASES.indexOf('final_signed');
 
-/** Έχει υπογραφεί το οριστικό; (κάθε φάση από `final_signed` και μετά) */
-function isFinalContractSigned(legalPhase: LegalPhase | null | undefined): boolean {
+/**
+ * Έχει υπογραφεί το οριστικό; (κάθε φάση από `final_signed` και μετά) — και η **κυριότητα** πέρασε στους αγοραστές
+ * (ADR-915 §25: το μητρώο ρωτά εδώ ποιος είναι πια ο ιδιοκτήτης, όχι δεύτερο κατώφλι φάσης).
+ */
+export function isFinalContractSigned(legalPhase: LegalPhase | null | undefined): boolean {
   if (!legalPhase) return false;
   return LEGAL_PHASES.indexOf(legalPhase) >= FINAL_SIGNED_INDEX;
 }

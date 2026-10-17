@@ -32,7 +32,10 @@ export type RegistryPropertyScope = 'property' | 'owner-property';
 /** Μέγεθος ομάδας `getAll` — δεν βρέθηκε τεκμηριωμένο όριο· αμυντικό (ADR-915 §11.3). */
 export const REGISTRY_GET_ALL_CHUNK = 100;
 
-/** Ό,τι χρειάζεται η οθόνη για να **ονομάσει** μια γραμμή ή το «τι σταματά» της — ποτέ ταυτότητα ανθρώπου. */
+/**
+ * Ό,τι χρειάζεται η οθόνη για να **ονομάσει** κάτι: ακίνητο · αρχείο · και — ADR-915 §25 — τον άνθρωπο που φέρνει το
+ * έγγραφο. Μόνο το **όνομα**: ποτέ τηλέφωνο, email ή άλλο πεδίο επαφής (5(1)(γ) — η κάρτα επαφής είναι ένα πάτημα μακριά).
+ */
 export interface RegistryLabel {
   readonly name: string | null;
 }
@@ -45,6 +48,12 @@ export interface RegistryPropertyLabel extends RegistryLabel {
    * «πουθενά»: ο κατάλογος ανοίγει τότε χωρίς περιοχή.
    */
   readonly areaId: string | null;
+  /**
+   * ADR-915 §25 — **ποιος** είναι ο ιδιοκτήτης (επαφές, `registry-owners.ts`): απαντά στο «Το φέρνει» κάθε γραμμής του
+   * ακινήτου. `[]` = ρωτήθηκε και **δεν** ορίστηκε — η οθόνη το λέει, ποτέ σιωπηλό κενό. `null` = δεν ρωτήθηκε (καμία
+   * τρέχουσα γραμμή το ονομάζει) ή η ανάγνωση απέτυχε — η οθόνη δείχνει **μόνο** τον ρόλο, χωρίς ισχυρισμό.
+   */
+  readonly ownerContactIds: readonly string[] | null;
 }
 
 export interface DocumentRegistryResponse extends DocumentRegistry {
@@ -64,4 +73,9 @@ export interface DocumentRegistryResponse extends DocumentRegistry {
   readonly properties: Readonly<Record<string, RegistryPropertyLabel>>;
   /** Ονόματα αρχείων (`displayName`). */
   readonly files: Readonly<Record<string, RegistryLabel>>;
+  /**
+   * ADR-915 §25 — ονόματα επαφών (`cont_*` → όνομα), διαβασμένα **ζωντανά** με έλεγχο μισθωτή. Μόνο όσες ονομάζει κάποια
+   * γραμμή. Επαφή που λείπει από εδώ (ξένη ≡ ανύπαρκτη, ADR-742) **δεν** δείχνεται ως σύνδεσμος.
+   */
+  readonly people: Readonly<Record<string, RegistryLabel>>;
 }

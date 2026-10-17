@@ -24,7 +24,7 @@ const READ = { kind: 'document-text', reader: 'pea-text' } as const;
 
 function doc(id: string, until: string | null, extra: Partial<RegistryDocument> = {}): RegistryDocument {
   return {
-    id, kind: 'energy-certificate', propertyId: `p-${id}`, origin: { kind: 'file', fileId: id },
+    id, kind: 'energy-certificate', propertyId: `p-${id}`, party: null, origin: { kind: 'file', fileId: id },
     issuedOn: null, printedValidUntil: until, source: READ, pinned: false, ...extra,
   };
 }
@@ -36,7 +36,7 @@ function rowsOf(documents: readonly RegistryDocument[], requirements: readonly D
 const stageOf = (until: string | null) => expiryAlertStageOf(rowsOf([doc('f', until)])[0], AS_OF);
 
 const GAP_BLOCK: DocumentRequirement = {
-  documentKind: 'energy-certificate', subject: { propertyId: 'p-gap' }, process: { kind: 'conveyance', caseId: 'case-1' },
+  documentKind: 'energy-certificate', subject: { propertyId: 'p-gap', party: null }, process: { kind: 'conveyance', caseId: 'case-1' },
   neededOn: { kind: 'unscheduled' }, policy: 'block', warnWindowDays: 15,
   basis: { kind: 'checklist-item', itemId: 'energy_certificate', verifiedAt: null }, presence: 'required', attestation: null,
 };

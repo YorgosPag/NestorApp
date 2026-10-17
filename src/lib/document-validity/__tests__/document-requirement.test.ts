@@ -69,14 +69,14 @@ const PROPERTY = 'prop_synthetic_1';
 
 function requirement(overrides: Partial<DocumentRequirement>): DocumentRequirement {
   return {
-    documentKind: 'energy-certificate', subject: { propertyId: PROPERTY },
+    documentKind: 'energy-certificate', subject: { propertyId: PROPERTY, party: null },
     process: { kind: 'listing-publication', listingId: 'lst_1' }, neededOn: continuous, policy: 'warn',
     warnWindowDays: 0, basis: { kind: 'statute', statute: 's' }, presence: 'tracked', attestation: null, ...overrides,
   };
 }
 
 const pea = (expiresOn: string | null): TrackedDocument =>
-  ({ kind: 'energy-certificate', subject: { propertyId: PROPERTY }, fileId: null, expiresOn });
+  ({ kind: 'energy-certificate', subject: { propertyId: PROPERTY, party: null }, fileId: null, expiresOn });
 
 describe('dependentsOf — τι σταματά αν λήξει αυτό', () => {
   it('`continuous` ⇒ `stops` από την επομένη της λήξης', () => {
@@ -107,7 +107,7 @@ describe('dependentsOf — τι σταματά αν λήξει αυτό', () => 
   it('μόνο το ίδιο είδος ΚΑΙ το ίδιο ακίνητο', () => {
     const others = [
       requirement({ documentKind: 'building-identity' }),
-      requirement({ subject: { propertyId: 'prop_synthetic_2' } }),
+      requirement({ subject: { propertyId: 'prop_synthetic_2', party: null } }),
     ];
     expect(dependentsOf(pea('2030-01-01'), others)).toEqual([]);
   });

@@ -23,7 +23,13 @@ import 'server-only';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { conveyanceToday, nextConveyanceDayStart } from '@/lib/conveyance/conveyance-calendar';
-import { documentRegistry, registryRowKindOf, registryRowPropertyIdOf, type DocumentRegistry } from '@/lib/document-validity/document-registry';
+import {
+  documentRegistry,
+  registryRowKindOf,
+  registryRowPartyOf,
+  registryRowPropertyIdOf,
+  type DocumentRegistry,
+} from '@/lib/document-validity/document-registry';
 import { needsProfessionalSearch } from '@/lib/document-validity/document-next-step';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { ConveyanceCase } from '@/types/conveyance-case';
@@ -39,6 +45,7 @@ import {
 import { readRegistryFiles, registryDocumentsOf, type RegistryFile } from './registry-documents.server';
 import { listingRequirementsOf, readAgencyListings, readListingsById } from './registry-listings.server';
 import { readOfficeOwnerProperties } from './registry-owner-properties.server';
+import { readRegistryOwners } from './registry-owners.server';
 import { readRegistryPropertyAreas } from './registry-property-area.server';
 import { readCompanyProperties, readDeclaredCertificateProperties, type RegistryProperty } from './registry-properties.server';
 import { openCaseRequirements, readOpenCases } from './registry-requirements.server';
@@ -119,8 +126,27 @@ function fileLabelsOf(files: readonly RegistryFile[]): Record<string, RegistryLa
 function propertyLabelsOf(
   subjects: ReadonlyMap<string, RegistryProperty>,
   areas: ReadonlyMap<string, string | null>,
+  owners: ReadonlyMap<string, readonly string[]>,
 ): Record<string, RegistryPropertyLabel> {
-  return Object.fromEntries([...subjects.values()].map((p) => [p.id, { name: p.name, scope: p.scope, areaId: areas.get(p.id) ?? null }]));
+  return Object.fromEntries([...subjects.values()].map((p) => [p.id, {
+    name: p.name, scope: p.scope, areaId: areas.get(p.id) ?? null, ownerContactIds: owners.get(p.id) ?? null,
+  }]));
+}
+
+/**
+ * ADR-915 §25 — τα ακίνητα που δείχνουν «Το φέρνει»: όσα έχουν γραμμή. ⚠️ Χωρίς φίλτρο «όχι αντικατεστημένη»: η
+ * αντικατεστημένη έχει **πάντα** τρέχουσα στο ίδιο ακίνητο (Α5 — ίδια ομάδα), άρα το φίλτρο ήταν ισοδύναμη μετάλλαξη.
+ */
+function obligorPropertyIds(rows: DocumentRegistry['rows']): ReadonlySet<string> {
+  return new Set(rows.map(registryRowPropertyIdOf).filter((id): id is string => id !== null));
+}
+
+/** ADR-915 §25 (5γ) — οι επαφές των γραμμών ανά πρόσωπο: το «Το φέρνει» τους λέει **αυτό** το πρόσωπο. */
+function partyContactIdsOf(rows: DocumentRegistry['rows']): readonly string[] {
+  return rows.flatMap((row) => {
+    const contactId = registryRowPartyOf(row)?.contactId ?? null;
+    return contactId === null ? [] : [contactId];
+  });
 }
 
 /** Τα ακίνητα που θα δείξουν «Βρες επαγγελματία» — ο ΙΔΙΟΣ πυρήνας με την οθόνη (`needsProfessionalSearch`, ADR-915 §24). */
@@ -149,8 +175,12 @@ export async function readDocumentRegistry(db: AdminFirestore, companyId: string
   const listings = listingRequirementsOf(allListings, new Set(subjects.keys()));
   const requirements = [...openCaseRequirements(sources.cases, properties), ...listings.requirements];
   const registry = documentRegistry({ documents, requirements, asOf });
-  const wanted = professionalSearchPropertyIds(registry.rows);
-  const areas = await readRegistryPropertyAreas(db, { wanted, subjects, listings: allListings, now });
+  const [areas, owners] = await Promise.all([
+    readRegistryPropertyAreas(db, { wanted: professionalSearchPropertyIds(registry.rows), subjects, listings: allListings, now }),
+    readRegistryOwners(db, companyId, {
+      wanted: obligorPropertyIds(registry.rows), subjects, cases: sources.cases, partyContactIds: partyContactIdsOf(registry.rows),
+    }),
+  ]);
   return {
     ...registry,
     asOf,
@@ -158,7 +188,8 @@ export async function readDocumentRegistry(db: AdminFirestore, companyId: string
     truncated: sources.truncatedSources.length > 0,
     truncatedSources: sources.truncatedSources,
     unscopedListings: listings.unscoped,
-    properties: propertyLabelsOf(subjects, areas),
+    properties: propertyLabelsOf(subjects, areas, owners.owners),
     files: fileLabelsOf(sources.files),
+    people: owners.people,
   };
 }

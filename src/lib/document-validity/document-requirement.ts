@@ -71,9 +71,27 @@ export type RequirementBasis =
   | { readonly kind: 'statute'; readonly statute: string }
   | { readonly kind: 'unresolved'; readonly question: string };
 
+/**
+ * ADR-915 §25 (5γ) — το **πρόσωπο** που αφορά το έγγραφο, όταν εκδίδεται ανά πρόσωπο (φορολογική · ασφαλιστική · ΕΝΦΙΑ:
+ * §22.2). Το `key` είναι η ταυτότητα του προσώπου στη διαδικασία (στη μεταβίβαση: `sellerKeyOf` = η επαφή του), ώστε
+ * δύο συμπωλητές να είναι **δύο** απαιτήσεις, **δύο** κάτοχοι, **δύο** γραμμές — ποτέ μία που «καλύπτει» και τους δύο.
+ */
+export interface RequirementParty {
+  readonly key: string;
+  /** Η επαφή του προσώπου — `null` όταν ο πωλητής δεν έχει (ακόμη) επαφή (`UNIDENTIFIED_SELLER_KEY`). */
+  readonly contactId: string | null;
+}
+
 /** Το ακίνητο που αφορά το έγγραφο (ΠΕΑ και ταυτότητα κτιρίου είναι αξιώσεις `whole-property`, ADR-838). */
 export interface RequirementSubject {
   readonly propertyId: string;
+  /** `null` = έγγραφο **του ακινήτου** (ΠΕΑ · ταυτότητα)· αλλιώς το πρόσωπο που το φέρνει (§25). */
+  readonly party: RequirementParty | null;
+}
+
+/** Η μία σύνθεση «ομάδα + πρόσωπο» — κάθε ταυτότητα γραμμής/ομάδας που ξεχωρίζει πρόσωπα περνά από εδώ. */
+export function withPartySuffix(base: string, party: RequirementParty | null): string {
+  return party === null ? base : `${base}@${party.key}`;
 }
 
 /**
@@ -210,11 +228,18 @@ function byUrgency(a: DocumentDependent, b: DocumentDependent): number {
  *  - ο επαγγελματίας ενέκρινε **αυτό** το αρχείο γι' αυτήν (ρητός δεσμός — ο μόνος δρόμος για έγγραφο χωρίς ακίνητο), ή
  *  - το έγγραφο είναι του **ίδιου ακινήτου**.
  * Το σιωπηρό «αρχείο έργου ⇒ όλα τα ακίνητά του» **δεν** υπάρχει: ένα έργο έχει πολλά κτίρια.
+ *
+ * §25 (5γ) — **και του ίδιου προσώπου**: έγγραφο του Α **ποτέ** δεν καλύπτει απαίτηση του Β. Έγγραφο **χωρίς** πρόσωπο
+ * (π.χ. αρχείο ανεβασμένο στο ακίνητο) καλύπτει εδώ· το αν είναι **αμφίσημο** (δύο πρόσωπα το ίδιο είδος) το κρίνει ο
+ * κάτοχος (`document-registry-holders`), που βλέπει όλες τις απαιτήσεις — ποτέ μαντεψιά ανάμεσα σε συμπωλητές.
  */
 export function requirementCoveredBy(document: TrackedDocument, requirement: DocumentRequirement): boolean {
   if (requirement.documentKind !== document.kind) return false;
   if (document.fileId !== null && requirement.attestation?.fileId === document.fileId) return true;
-  return document.subject !== null && requirement.subject.propertyId === document.subject.propertyId;
+  if (document.subject === null || requirement.subject.propertyId !== document.subject.propertyId) return false;
+  const documentParty = document.subject.party;
+  if (documentParty === null) return true;
+  return requirement.subject.party !== null && requirement.subject.party.key === documentParty.key;
 }
 
 /**

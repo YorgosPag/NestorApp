@@ -22,18 +22,18 @@ const READ = { kind: 'document-text', reader: 'pea-text' } as const;
 
 function pea(id: string, issuedOn: string | null, extra: Partial<RegistryDocument> = {}): RegistryDocument {
   return {
-    id, kind: 'energy-certificate', propertyId: 'p1', origin: { kind: 'file', fileId: id },
+    id, kind: 'energy-certificate', propertyId: 'p1', party: null, origin: { kind: 'file', fileId: id },
     issuedOn, printedValidUntil: null, source: READ, pinned: false, ...extra,
   };
 }
 
 const signing = (day: string, propertyId = 'p1'): DocumentRequirement => ({
-  documentKind: 'energy-certificate', subject: { propertyId }, process: { kind: 'conveyance', caseId: 'c1' },
+  documentKind: 'energy-certificate', subject: { propertyId, party: null }, process: { kind: 'conveyance', caseId: 'c1' },
   neededOn: { kind: 'on', day }, policy: 'block', warnWindowDays: 15,
   basis: { kind: 'checklist-item', itemId: 'energy_certificate', verifiedAt: null }, presence: 'required', attestation: null,
 });
 const listing = (policy: 'block' | 'warn' = 'warn'): DocumentRequirement => ({
-  documentKind: 'energy-certificate', subject: { propertyId: 'p1' }, process: { kind: 'listing-publication', listingId: 'p1' },
+  documentKind: 'energy-certificate', subject: { propertyId: 'p1', party: null }, process: { kind: 'listing-publication', listingId: 'p1' },
   neededOn: { kind: 'continuous' }, policy, warnWindowDays: 60, basis: { kind: 'statute', statute: 'ν.4122/2013' },
   presence: 'required', attestation: null,
 });

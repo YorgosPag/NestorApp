@@ -113,7 +113,7 @@ describe('γραμμές — αρχεία και δηλώσεις (Ε1)', () => 
     expect(rowOf(registry.rows, 'file:file_1')?.document).toMatchObject({ propertyId: 'prop_1', pinned: true });
     expect(registry.rows[0].state).toBe('expiring');
     expect(registry.files).toEqual({ file_1: { name: 'ΠΕΑ Α1.pdf' } });
-    expect(registry.properties).toEqual({ prop_1: { name: 'Διαμέρισμα Α1', scope: 'property', areaId: null } });
+    expect(registry.properties).toEqual({ prop_1: { name: 'Διαμέρισμα Α1', scope: 'property', areaId: null, ownerContactIds: [] } });
   });
 
   it('δήλωση χωρίς αρχείο ⇒ γραμμή `declared`, χωρίς πηγή', async () => {
@@ -227,7 +227,7 @@ describe('Φ4δ Ε7 — «λείπει» από τις απαιτήσεις', ()
       'building-identity', 'energy-certificate', 'enfia-certificate', 'tax-clearance',
     ]);
     expect(registry.tally.missing).toBe(4);
-    expect(registry.properties.prop_1).toEqual({ name: 'Χωρίς ΠΕΑ', scope: 'property', areaId: null });
+    expect(registry.properties.prop_1).toEqual({ name: 'Χωρίς ΠΕΑ', scope: 'property', areaId: null, ownerContactIds: [] });
   });
 
   it('ADR-915 §22 — πωλητής ΝΟΜΙΚΟ πρόσωπο ⇒ και η ΕΦΚΑ λείπει (από τον νόμο, χωρίς ερώτηση)', async () => {
@@ -259,7 +259,7 @@ describe('Φ4δ Ε10 — ακίνητα ιδιωτών υπό θεματοφυλ
     fake.seed(COLLECTIONS.OWNER_PROPERTIES, 'ownp_1', owner({ energy: { class: 'C', issuedOn: ISSUED } }));
     const registry = await read();
     expect(ids(registry.rows)).toEqual(['declared:ownp_1:energy-certificate']);
-    expect(registry.properties).toEqual({ ownp_1: { name: 'Εντολή Β3', scope: 'owner-property', areaId: null } });
+    expect(registry.properties).toEqual({ ownp_1: { name: 'Εντολή Β3', scope: 'owner-property', areaId: null, ownerContactIds: [] } });
   });
 
   it('αγγελία εντολής χωρίς ΠΕΑ ⇒ κενό στην εντολή', async () => {
@@ -316,5 +316,95 @@ describe('ρολόι', () => {
     const registry = await read();
     expect(registry.asOf).toBe('2026-10-15');
     expect(registry.freshUntil).toBe('2026-10-15T21:00:00.000Z');
+  });
+});
+
+describe('ADR-915 §25 — «Το φέρνει»: ΠΟΙΟΣ είναι ο ιδιοκτήτης, και πώς λέγεται (ζωντανά)', () => {
+  const person = (firstName: string, over: Doc = {}): Doc => ({ companyId: COMPANY, type: 'individual', firstName, lastName: 'Συνθετικός', ...over });
+  const mandate = (clientContactId: string): Doc => ({ kind: 'brokered', clientContactId, confirmation: 'confirmed', confirmedByUserId: null });
+
+  it('εντολή ⇒ οι πελάτες των εντολών, χωρίς διπλά· ΞΕΝΗ επαφή ⇒ καμία λέξη γι αυτήν', async () => {
+    fake.seed(COLLECTIONS.OWNER_PROPERTIES, 'ownp_1', owner({
+      energy: { class: 'C', issuedOn: ISSUED }, mandates: [mandate('cont_a'), mandate('cont_a'), mandate('cont_x')],
+    }));
+    fake.seed(COLLECTIONS.CONTACTS, 'cont_a', person('Άλφα'));
+    fake.seed(COLLECTIONS.CONTACTS, 'cont_x', person('Ξένος', { companyId: OTHER }));
+    const registry = await read();
+    expect(registry.properties.ownp_1.ownerContactIds).toEqual(['cont_a', 'cont_x']);
+    expect(registry.people).toEqual({ cont_a: { name: 'Άλφα Συνθετικός' } });
+  });
+
+  it('ακίνητο ΧΩΡΙΣ τρέχουσα γραμμή ⇒ «δεν ρωτήθηκε» (`null`, όχι «κανείς»), και καμία επαφή δεν διαβάζεται', async () => {
+    fake.seed(COLLECTIONS.OWNER_PROPERTIES, 'ownp_1', owner({ mandates: [mandate('cont_a')] }));
+    fake.seed(COLLECTIONS.CONTACTS, 'cont_a', person('Άλφα'));
+    const registry = await read();
+    expect(registry.rows).toEqual([]);
+    expect(registry.properties.ownp_1.ownerContactIds).toBeNull();
+    expect(registry.people).toEqual({});
+  });
+
+  it('ακίνητο εταιρείας χωρίς υπόθεση ⇒ η νομική οντότητα του έργου (`linkedCompanyId`)', async () => {
+    fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', property({ projectId: 'proj_1' }));
+    fake.seed(COLLECTIONS.PROJECTS, 'proj_1', { companyId: COMPANY, linkedCompanyId: 'cont_co' });
+    fake.seed(COLLECTIONS.CONTACTS, 'cont_co', { companyId: COMPANY, type: 'company', companyName: 'Συνθετική ΑΕ' });
+    const registry = await read();
+    expect(registry.properties.prop_1.ownerContactIds).toEqual(['cont_co']);
+    expect(registry.people).toEqual({ cont_co: { name: 'Συνθετική ΑΕ' } });
+  });
+
+  it('έργο ΞΕΝΗΣ εταιρείας ⇒ η εταιρεία του δεν διαβάζεται ως ιδιοκτήτης', async () => {
+    fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', property({ projectId: 'proj_x' }));
+    fake.seed(COLLECTIONS.PROJECTS, 'proj_x', { companyId: OTHER, linkedCompanyId: 'cont_co' });
+    expect((await read()).properties.prop_1.ownerContactIds).toEqual([]);
+  });
+
+  it('ανοιχτή υπόθεση ⇒ ο μεταβιβάζων της υπόθεσης, όχι η εταιρεία του έργου', async () => {
+    fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', property({ projectId: 'proj_1' }));
+    fake.seed(COLLECTIONS.PROJECTS, 'proj_1', { companyId: COMPANY, linkedCompanyId: 'cont_co' });
+    fake.seed(COLLECTIONS.CONVEYANCE_CASES, 'case_1', openCase({ parties: { seller: { contactId: 'cont_s', kind: 'person' }, buyers: [] } }));
+    fake.seed(COLLECTIONS.CONTACTS, 'cont_s', person('Σίγμα'));
+    const registry = await read();
+    expect(registry.properties.prop_1.ownerContactIds).toEqual(['cont_s']);
+    expect(registry.people).toEqual({ cont_s: { name: 'Σίγμα Συνθετικός' } });
+  });
+
+  it('μετά το οριστικό ⇒ οι αγοραστές (`commercial.owners`)· πριν από αυτό ⇒ ΟΧΙ', async () => {
+    const commercial = (legalPhase: string) => ({ legalPhase, owners: [{ contactId: 'cont_b', ownershipPct: 100 }] });
+    fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', property({ commercial: commercial('final_signed') }));
+    fake.seed(COLLECTIONS.PROPERTIES, 'prop_2', property({ name: 'Β', commercial: commercial('preliminary_signed') }));
+    const registry = await read();
+    expect(registry.properties.prop_1.ownerContactIds).toEqual(['cont_b']);
+    expect(registry.properties.prop_2.ownerContactIds).toEqual([]);
+  });
+});
+
+describe('ADR-915 §25 (5γ) — μία γραμμή ανά ΠΡΟΣΩΠΟ, με το όνομά του', () => {
+  const seller = (contactId: string, capacity: string) => ({ key: contactId, contactId, kind: 'person', capacity });
+  const person = (firstName: string): Doc => ({ companyId: COMPANY, type: 'individual', firstName, lastName: 'Συνθετικός' });
+
+  it('δύο συμπωλητές ⇒ ΔΥΟ κενά φορολογικής και ΔΥΟ ΕΝΦΙΑ, και τα δύο ονόματα στο `people`', async () => {
+    fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', { companyId: COMPANY, name: 'Με δύο πωλητές' });
+    fake.seed(COLLECTIONS.CONVEYANCE_CASES, 'case_1', openCase({
+      parties: { sellers: [seller('cont_a', 'principal'), seller('cont_b', 'other')], buyers: [] },
+    }));
+    fake.seed(COLLECTIONS.CONTACTS, 'cont_a', person('Άλφα'));
+    fake.seed(COLLECTIONS.CONTACTS, 'cont_b', person('Βήτα'));
+    const registry = await read();
+    const gapIds = registry.rows.filter((row) => row.kind === 'gap').map(registryRowIdOf);
+    expect(gapIds).toEqual(expect.arrayContaining([
+      'missing:prop_1:tax-clearance@cont_a', 'missing:prop_1:tax-clearance@cont_b',
+      'missing:prop_1:enfia-certificate@cont_a', 'missing:prop_1:enfia-certificate@cont_b',
+    ]));
+    // Το ΠΕΑ είναι του ΑΚΙΝΗΤΟΥ: ένα κενό, χωρίς πρόσωπο.
+    expect(gapIds.filter((id) => id.startsWith('missing:prop_1:energy-certificate'))).toEqual(['missing:prop_1:energy-certificate']);
+    expect(registry.people).toEqual({ cont_a: { name: 'Άλφα Συνθετικός' }, cont_b: { name: 'Βήτα Συνθετικός' } });
+  });
+
+  it('αρχείο στην κάρτα ΕΠΑΦΗΣ ⇒ έγγραφο αυτού του προσώπου (χωρίς ακίνητο)', async () => {
+    fake.seed(COLLECTIONS.FILES, 'file_c', file({ entityType: ENTITY_TYPES.CONTACT, entityId: 'cont_a' }));
+    fake.seed(COLLECTIONS.CONTACTS, 'cont_a', person('Άλφα'));
+    const registry = await read();
+    expect(rowOf(registry.rows, 'file:file_c')?.document).toMatchObject({ propertyId: null, party: { key: 'cont_a', contactId: 'cont_a' } });
+    expect(registry.people).toEqual({ cont_a: { name: 'Άλφα Συνθετικός' } });
   });
 });

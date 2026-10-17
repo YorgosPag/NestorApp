@@ -36,6 +36,11 @@ export interface RegistryFile {
   readonly facts: DocumentFacts;
   /** `entityId` όταν το αρχείο ζει σε ακίνητο — αλλιώς `null`. */
   readonly propertyId: string | null;
+  /**
+   * ADR-915 §25 (5γ) — `entityId` όταν το αρχείο ζει στην κάρτα **επαφής**: εκεί ανεβαίνουν τα έγγραφα ανά πρόσωπο
+   * (επίπεδο `seller_contact`, §22.4). Αλλιώς `null`.
+   */
+  readonly contactId: string | null;
   readonly name: string | null;
 }
 
@@ -49,7 +54,8 @@ function registryFileOf(fileId: string, data: Readonly<Record<string, unknown>>)
   const facts = readDocumentFacts(data[DOCUMENT_FACTS_FIELD]);
   if (facts === null) return null;
   const propertyId = data.entityType === ENTITY_TYPES.PROPERTY ? trimmedStringOrNull(data.entityId) : null;
-  return { fileId, facts, propertyId, name: trimmedStringOrNull(data.displayName) };
+  const contactId = data.entityType === ENTITY_TYPES.CONTACT ? trimmedStringOrNull(data.entityId) : null;
+  return { fileId, facts, propertyId, contactId, name: trimmedStringOrNull(data.displayName) };
 }
 
 /** Τα ζωντανά αρχεία της εταιρείας με γεγονότα εγγράφου. Ισότητα + `in`: χωρίς σύνθετο δείκτη (μετρημένο, §11.3). */
@@ -76,6 +82,8 @@ function fileDocumentOf(file: RegistryFile, properties: ReadonlyMap<string, Regi
     id: `file:${file.fileId}`,
     kind: file.facts.kind,
     propertyId: property?.id ?? null,
+    // Το πρόσωπο ταυτίζεται με την επαφή του — ίδιο κλειδί με τον πωλητή της υπόθεσης (`sellerKeyOf`).
+    party: file.contactId === null ? null : { key: file.contactId, contactId: file.contactId },
     origin: { kind: 'file', fileId: file.fileId },
     issuedOn: file.facts.issuedOn,
     printedValidUntil: file.facts.printedValidUntil,
@@ -93,6 +101,7 @@ function declaredDocumentOf(property: RegistryProperty, fileIds: ReadonlySet<str
     id: `declared:${property.id}:energy-certificate`,
     kind: 'energy-certificate',
     propertyId: property.id,
+    party: null,
     origin: { kind: 'declared' },
     issuedOn: certificate.issuedOn,
     printedValidUntil: null,

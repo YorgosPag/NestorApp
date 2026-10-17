@@ -27,6 +27,7 @@ import { RegistryIssuerValue } from '@/components/document-registry/RegistryIssu
 import { RegistryNextStep } from '@/components/document-registry/RegistryNextStep';
 import { RegistryPropertyValue } from '@/components/document-registry/RegistryPropertyValue';
 import { RegistryRowHeader } from '@/components/document-registry/RegistryRowHeader';
+import { registryObligorsOf } from '@/components/document-registry/registry-obligors';
 import {
   REGISTRY_KEYS,
   EXPIRY_SOURCE_LABEL_KEYS,
@@ -113,7 +114,9 @@ export function RegistryRowItem({ row, registry, supersededByName }: RegistryRow
         <ExpiryValue row={row} asOf={registry.asOf} />
         <dt className="text-sm text-muted-foreground">{t(REGISTRY_KEYS.state)}</dt>
         <dd className="m-0 text-sm text-muted-foreground">{t(REGISTRY_STATE_HINT_KEYS[row.state])}</dd>
-        {superseded ? null : <RegistryIssuerValue kind={row.document.kind} />}
+        {superseded ? null : (
+          <RegistryIssuerValue kind={row.document.kind} obligors={registryObligorsOf(row, registry)} />
+        )}
       </dl>
       {superseded && supersededByName !== null ? (
         <p className="m-0 text-sm text-muted-foreground">{t(REGISTRY_KEYS.supersededBy, { name: supersededByName })}</p>

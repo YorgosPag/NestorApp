@@ -68,6 +68,11 @@
     "obligorHeading": "Provided by",
     "registered": "{qualification}, listed in the {registry}",
     "selfService": "{authority} — online, no professional needed",
+    "obligorPeople": "Who",
+    "obligorNone": "no owner on record",
+    "obligorUnnamed": "Unnamed contact",
+    "obligorUnavailable": "contact no longer available",
+    "obligorMore": "{count, plural, one {+# more} other {+# more}}",
     "qualification": {
       "civil-engineer": "Civil engineer",
       "architect": "Architect engineer",
