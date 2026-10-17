@@ -13,6 +13,7 @@
     "src/i18n/generated/routes/demands.el.json": "3c41547e2fe76dd07a2d8df26d28a52173cfbf1092d0bc182c78c567bd2dc8a7",
     "src/i18n/generated/routes/demands__demandId.el.json": "7d95c157ece8087fe485acdbdcba5f422d82828388ea5a9e5c11963e27005681",
     "src/i18n/generated/routes/demands__new.el.json": "c390254b9260d785611e1122559f64ed7b8c58a105b7ac65b82473967b293008",
+    "src/i18n/generated/routes/document-request.el.json": "0c3f285decbfc7c42600933951d2811efe3282c50bcd91655a01a5d0b2013872",
     "src/i18n/generated/routes/dossiers.el.json": "c57b6e5a4e4bf7a5348bb016115953d9fa3d612426865ddd7e86b824e70faa0a",
     "src/i18n/generated/routes/dossiers__dossierId.el.json": "ce0d6f7456040ae6e78100d1d0c9015dc21cd705b3212e0c48fad7fcff141315",
     "src/i18n/generated/routes/email__preferences__token.el.json": "b8eb64c11ff6698391ff1c979e04c414958183f8b946f7a9c62ce9d8d33da32a",
@@ -87,7 +88,7 @@
       "lazyRouteRegistries": "70bded58e6a83e4d2e5e3d2c594b8cfe466e0dfe7d73fa2d4e9e97fce23ad110",
       "localesDir": "a7045bc6e57a2ccd3b4834f975b27f55d6b1b2ace4e9df3ac06ebeced4b9590d",
       "outputDir": "3912195b17692b5eaf099bb5accb2bcf870fd0f9f4bd626e02929a8fa741d7ba",
-      "routeSlices": "e9a5409471615fa9289d30943fb3a460c8fd2691f2fe4aa3c2cc77b24761eab9",
+      "routeSlices": "2e44c4014fc47b616dd6c4d5fcfcef7f31679a89d53a2e11c3294c9e49f7ab8b",
       "shellRoots": "6303336d888ef26b0205f00bf8f48b03205413ebe5b4f41d2b0918b0be4394a0"
     },
     "keyConstants": {
@@ -150,7 +151,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "605818f3b4a20c8e0280e6deedbcf01bf8c179c1d0768bfcb04f591e9a0ff7c8",
+  "inputsSha256": "52247e50972db0ac2fc46b37aaab595cbf7b82bc8d191acc49642ebe937b3c05",
   "languages": [
     "el"
   ],
@@ -1814,6 +1815,127 @@
             "place.modeHint",
             "place.rejection"
           ],
+          "whole": false
+        }
+      }
+    },
+    "document-request": {
+      "page": "src/app/(auth)/document-request/page.tsx",
+      "wants": {
+        "common": {
+          "keys": [
+            "priceAmount.nightly",
+            "priceAmount.rent",
+            "priceAmount.sale",
+            "priceAmount.stayTotal",
+            "pricePerArea.nightly",
+            "pricePerArea.rent",
+            "pricePerArea.sale",
+            "priceSection.nightly",
+            "priceSection.rent",
+            "priceSection.sale",
+            "priceSection.unpriced",
+            "priceStanding.offMarket",
+            "priceStanding.retired"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "conveyance": {
+          "keys": [
+            "items.energy_certificate.label",
+            "items.seller_enfia_certificate.label",
+            "items.seller_insurance_clearance.label",
+            "items.seller_tax_clearance.label"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "document-registry": {
+          "keys": [
+            "issuer.qualification.architect",
+            "issuer.qualification.civil-engineer",
+            "issuer.qualification.civil-engineer-tei",
+            "issuer.qualification.civil-sub-engineer",
+            "issuer.qualification.spatial-planner",
+            "issuer.qualification.surveyor-engineer",
+            "issuer.registered"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "document-request": {
+          "keys": [
+            "done.accepted",
+            "done.approved",
+            "done.declined",
+            "done.officeTold",
+            "done.rejected",
+            "facts.credential",
+            "facts.credentialWithNumber",
+            "facts.document",
+            "facts.expires",
+            "facts.note",
+            "facts.office",
+            "facts.professional",
+            "facts.property",
+            "facts.unnamed",
+            "facts.verifyRegistry",
+            "failure.expired.body",
+            "failure.expired.title",
+            "failure.invalid.body",
+            "failure.invalid.title",
+            "failure.leadChanged.body",
+            "failure.leadChanged.title",
+            "failure.missing.body",
+            "failure.missing.title",
+            "failure.server.body",
+            "failure.server.title",
+            "failure.superseded.body",
+            "failure.superseded.title",
+            "failure.used.body",
+            "failure.used.title",
+            "owner.approve",
+            "owner.heading",
+            "owner.intro",
+            "owner.reject",
+            "page.for",
+            "page.loading",
+            "page.notYou",
+            "page.noteLabel",
+            "page.recordedOnly",
+            "page.sending",
+            "professional.accept",
+            "professional.decline",
+            "professional.heading",
+            "professional.intro"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "legality": {
+          "keys": [
+            "kind.building-identity"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "property-market": {
+          "keys": [
+            "licences.energyInspector.name",
+            "registries.ypen.name"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "search-results": {
+          "keys": [
+            "listing.priceMissing.nightlyRateMissing",
+            "listing.priceMissing.notListed",
+            "listing.priceMissing.rentPriceMissing",
+            "listing.priceMissing.salePriceMissing"
+          ],
+          "prefixes": [],
           "whole": false
         }
       }
@@ -10983,7 +11105,7 @@
   ],
   "stats": {
     "matchedKeys": 248,
-    "sliceBytes": 765331
+    "sliceBytes": 770967
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
