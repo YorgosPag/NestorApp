@@ -318,3 +318,12 @@ export function apiErrorBodyOf(cause: unknown): Record<string, unknown> | null {
 
   return errorBody as Record<string, unknown>;
 }
+
+/**
+ * **Άρνηση του διακομιστή (4xx), όχι βλάβη.** Ο ΕΝΑΣ ορισμός για το «ποιο επίπεδο log»: ένα ονομασμένο «όχι» (π.χ.
+ * `NO_EMAIL`) είναι **αναμενόμενη** έκβαση που η οθόνη το λέει στον άνθρωπο· σε `error` θα άνοιγε το overlay του dev
+ * server και θα φούσκωνε την τηλεμετρία βλαβών (ADR-915 §29.1, εύρημα σε browser).
+ */
+export function isClientRefusal(cause: unknown): cause is ApiClientError {
+  return ApiClientError.isApiClientError(cause) && cause.statusCode >= 400 && cause.statusCode < 500;
+}

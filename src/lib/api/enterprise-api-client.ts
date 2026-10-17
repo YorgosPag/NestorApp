@@ -52,6 +52,7 @@ export {
   //    που τον παρέκαμπταν ο καθένας με δικό του δομικό cast.
   apiErrorBodyOf,
   errorFieldsFrom,
+  isClientRefusal,
 } from './api-client-types';
 
 import type {
@@ -67,6 +68,7 @@ import {
   shouldSerializeBodyAsJson,
   hasContentTypeHeader,
   errorFieldsFrom,
+  isClientRefusal,
 } from './api-client-types';
 
 const logger = createModuleLogger('enterprise-api-client');
@@ -477,7 +479,7 @@ export class EnterpriseApiClient {
 
   private logError(context: RequestContext, error: Error): void {
     const duration = Date.now() - context.startTime;
-    const isClientError = error instanceof ApiClientError && error.statusCode >= 400 && error.statusCode < 500;
+    const isClientError = isClientRefusal(error);
     const logMethod = isClientError ? 'warn' : 'error';
     // Include the server's technical `details` so 500s are diagnosable from the console,
     // not just the generic `error` message.

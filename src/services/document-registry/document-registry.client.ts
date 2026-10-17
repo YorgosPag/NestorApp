@@ -11,7 +11,7 @@
  * ⚠️ Ο `apiClient` πετά σε μη-2xx — εδώ μεταφράζεται σε **ρητή ένωση**, ώστε η οθόνη να μην πιάνει εξαιρέσεις.
  */
 
-import { ApiClientError, apiClient } from '@/lib/api/enterprise-api-client';
+import { ApiClientError, apiClient, isClientRefusal } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
 import type { IssuanceAssignmentBody, IssuanceSendBody } from '@/lib/document-validity/issuance-request';
@@ -48,6 +48,18 @@ export type ObligorDesignationSave =
   | { readonly kind: 'failed'; readonly code: string | null };
 
 /**
+ * Ο κωδικός άρνησης + **ένα** log στο σωστό επίπεδο: ονομασμένη άρνηση (4xx, π.χ. `NO_EMAIL`) ⇒ `warn` — την λέει η οθόνη·
+ * βλάβη (5xx · δίκτυο) ⇒ `error`. Το κριτήριο είναι του `apiClient` (`isClientRefusal`), όχι δεύτερο εδώ.
+ */
+function logActionFailure(failure: string, cause: unknown, context: Record<string, string>): string | null {
+  const code = cause instanceof ApiClientError ? cause.errorCode ?? null : null;
+  const meta = { error: cause instanceof Error ? cause.message : String(cause), code, ...context };
+  if (isClientRefusal(cause)) logger.warn(failure, meta);
+  else logger.error(failure, meta);
+  return code;
+}
+
+/**
  * Μία εγγραφή του μητρώου (§26 · §27): ο `apiClient` πετά σε μη-2xx — εδώ γίνεται **ρητή ένωση** με τον κωδικό άρνησης,
  * ώστε η οθόνη να διαλέξει μήνυμα χωρίς να πιάνει εξαιρέσεις. Ένα σημείο για όλες τις πράξεις.
  */
@@ -56,9 +68,7 @@ async function putRegistryAction(url: string, body: object, failure: string, con
     await apiClient.put(url, body);
     return { kind: 'saved' };
   } catch (cause) {
-    const code = cause instanceof ApiClientError ? cause.errorCode ?? null : null;
-    logger.error(failure, { error: cause instanceof Error ? cause.message : String(cause), code, ...context });
-    return { kind: 'failed', code };
+    return { kind: 'failed', code: logActionFailure(failure, cause, context) };
   }
 }
 
@@ -84,9 +94,7 @@ async function postIssuanceMessage<T>(body: IssuanceSendBody & { readonly intent
   try {
     return { kind: 'ok', data: await apiClient.post<T>(ISSUANCE_MESSAGES_URL, body) };
   } catch (cause) {
-    const code = cause instanceof ApiClientError ? cause.errorCode ?? null : null;
-    logger.error('Το μήνυμα ανάθεσης δεν ολοκληρώθηκε', { error: cause instanceof Error ? cause.message : String(cause), code, intent: body.intent });
-    return { kind: 'failed', code };
+    return { kind: 'failed', code: logActionFailure('Το μήνυμα ανάθεσης δεν ολοκληρώθηκε', cause, { intent: body.intent }) };
   }
 }
 
