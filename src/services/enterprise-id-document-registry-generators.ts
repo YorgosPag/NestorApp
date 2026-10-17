@@ -31,4 +31,12 @@ export abstract class DocumentRegistryIdGenerators extends AreaMarketIdGenerator
   generateDeterministicDocumentIssuanceAssignmentId(seed: string): string {
     return this.mintDeterministicV4Id(P.DOCUMENT_ISSUANCE_ASSIGNMENT, seed);
   }
+
+  /**
+   * ADR-915 §28 — ο **σύνδεσμος** της ανάθεσης (έγκριση ιδιοκτήτη · απάντηση επαγγελματία). Τυχαίο, όχι ντετερμινιστικό:
+   * επαναποστολή = **νέο** id, και η ανάθεση θυμάται ποιο είναι το τρέχον (ο παλιός πεθαίνει από κατασκευή).
+   */
+  generateDocumentIssuanceInvitationId(): string {
+    return this.generateId(P.DOCUMENT_ISSUANCE_INVITATION).id;
+  }
 }

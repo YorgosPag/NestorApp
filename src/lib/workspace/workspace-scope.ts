@@ -215,6 +215,10 @@ export const OUTSIDE_WORKSPACE: Readonly<Record<string, string>> = {
   'hours-question':
     'Η ΕΡΩΤΗΣΗ ΩΡΑΡΙΟΥ ΑΡΓΙΩΝ (ADR-841 Α21.21, `/hours-question/<token>`, route group `(auth)`) — ' +
     'ίδιος λόγος με το `card-email`, ίδιο εύρημα (`3660f40d`, ADR-876).',
+  'document-request':
+    'Ο ΣΥΝΔΕΣΜΟΣ ΤΗΣ ΑΝΑΘΕΣΗΣ ΕΚΔΟΣΗΣ (ADR-915 §28, `/document-request#t=<σύνδεσμος>`, route group `(auth)`). ' +
+    'Ο υπεύθυνος ιδιοκτήτης (έγκριση) και ο επαγγελματίας (αποδοχή) φτάνουν από email ΧΩΡΙΣ λογαριασμό — η άδεια ' +
+    'είναι ο σύνδεσμος (`issuance-invitation-kind`), όχι η ιδιότητα μέλους (ίδιο σχήμα με το `vendor`).',
   share: 'ΔΙΑΜΟΙΡΑΣΜΟΣ ΜΕ ΣΥΝΔΕΣΜΟ (ADR-698/699) — ο παραλήπτης δεν είναι μέλος.',
   shared:
     'Η ΑΛΛΗ ΠΛΕΥΡΑ ΤΟΥ ΔΙΑΜΟΙΡΑΣΜΟΥ — ό,τι μοιράστηκε ΜΑΖΙ ΜΟΥ, από οποιονδήποτε χώρο. ' +

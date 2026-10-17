@@ -57,6 +57,61 @@ export const issuanceAssignmentBody = z.discriminatedUnion('action', [
 
 export type IssuanceAssignmentBody = z.infer<typeof issuanceAssignmentBody>;
 
+// ---------------------------------------------------------------------------
+// §28 — αποστολή με σύνδεσμο (γραφείο) · απάντηση από σύνδεσμο (χωρίς λογαριασμό)
+// ---------------------------------------------------------------------------
+
+/** Σε ποιον πάει το μήνυμα: ο **υπεύθυνος** ιδιοκτήτης (έγκριση) ή ο επαγγελματίας (ανάθεση). */
+export const ISSUANCE_AUDIENCES = ['owner', 'professional'] as const;
+export type IssuanceAudience = (typeof ISSUANCE_AUDIENCES)[number];
+
+/**
+ * Το πρόχειρο — ό,τι διαλέγει ο άνθρωπος πριν πατήσει «Αποστολή». Η προεπισκόπηση και η αποστολή διαβάζουν το **ίδιο**
+ * σώμα, άρα ό,τι είδε είναι ό,τι φεύγει. `informContactIds`: οι συνιδιοκτήτες που θα ενημερωθούν (μόνο για `owner`).
+ */
+export const issuanceSendBody = z.object({
+  ...target,
+  audience: z.enum(ISSUANCE_AUDIENCES),
+  note: optionalText(ISSUANCE_NOTE_MAX),
+  /** Μόνο για `owner`: ο υπεύθυνος που **είδε** ο άνθρωπος (ίδια CAS με την απόφαση). */
+  expectedOwnerContactId: z.string().trim().min(1).nullable(),
+  informContactIds: z.array(z.string().trim().min(1)).max(20),
+});
+
+export type IssuanceSendBody = z.infer<typeof issuanceSendBody>;
+
+/** Οι απαντήσεις της σελίδας-συνδέσμου — το ακροατήριο κρίνεται από το **έγγραφο**, όχι από το αίτημα. */
+export const ISSUANCE_LINK_ANSWERS = ['approve', 'reject', 'accept', 'decline'] as const;
+export type IssuanceLinkAnswer = (typeof ISSUANCE_LINK_ANSWERS)[number];
+
+export const issuanceLinkAnswerBody = z.object({
+  answer: z.enum(ISSUANCE_LINK_ANSWERS),
+  note: optionalText(ISSUANCE_NOTE_MAX),
+});
+
+export type IssuanceLinkAnswerBody = z.infer<typeof issuanceLinkAnswerBody>;
+
+/** Ποιο ακροατήριο δίνει κάθε απάντηση — ιδιοκτήτης εγκρίνει/αρνείται, επαγγελματίας αποδέχεται/αρνείται. */
+export const LINK_ANSWER_AUDIENCE: Readonly<Record<IssuanceLinkAnswer, IssuanceAudience>> = {
+  approve: 'owner',
+  reject: 'owner',
+  accept: 'professional',
+  decline: 'professional',
+};
+
+/**
+ * Η απάντηση του συνδέσμου → η πράξη του **ίδιου** μειωτή. Ο υπεύθυνος είναι αυτός **στον οποίο στάλθηκε** το αίτημα
+ * (ο μειωτής το ξανακρίνει)· `channel: null` = αποφασίζει ο ίδιος, όχι καταγραφή.
+ */
+export function linkAnswerActionOf(answer: IssuanceLinkAnswerBody, ownerContactId: string): IssuanceAction {
+  switch (answer.answer) {
+    case 'approve': return { kind: 'decide', outcome: 'approved', channel: null, note: answer.note, ownerContactId };
+    case 'reject': return { kind: 'decide', outcome: 'rejected', channel: null, note: answer.note, ownerContactId };
+    case 'accept': return { kind: 'respond', outcome: 'accepted', note: answer.note };
+    case 'decline': return { kind: 'respond', outcome: 'declined', note: answer.note };
+  }
+}
+
 /** Το αίτημα → η πράξη του μειωτή. */
 export function issuanceActionOf(request: IssuanceAssignmentBody): IssuanceAction {
   switch (request.action) {
@@ -68,8 +123,9 @@ export function issuanceActionOf(request: IssuanceAssignmentBody): IssuanceActio
     case 'decide': return {
       kind: 'decide', outcome: request.outcome, channel: request.channel, note: request.note, ownerContactId: request.expectedOwnerContactId,
     };
-    case 'notify': return { kind: 'notify', channel: request.channel };
-    case 'respond': return { kind: 'respond', outcome: request.outcome };
+    // Καταγραφή του γραφείου: χωρίς μήνυμα της εφαρμογής (το μήνυμα με σύνδεσμο το γράφει η αποστολή, §28).
+    case 'notify': return { kind: 'notify', channel: request.channel, invitationId: null, note: null };
+    case 'respond': return { kind: 'respond', outcome: request.outcome, note: null };
     case 'cancel': return { kind: 'cancel' };
   }
 }
