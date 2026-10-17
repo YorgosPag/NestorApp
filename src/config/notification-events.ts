@@ -167,6 +167,12 @@ export const NOTIFICATION_EVENT_TYPES = {
    */
   PROPERTIES_DOCUMENT_EXPIRY: 'properties.documentExpiry',
   /**
+   * ADR-915 §28 — **απάντησαν στον σύνδεσμο της ανάθεσης έκδοσης**: ο υπεύθυνος ιδιοκτήτης ενέκρινε/αρνήθηκε ή ο
+   * επαγγελματίας αποδέχτηκε/αρνήθηκε. Προς όποιον πρότεινε και όποιον έστειλε· μία ανά σύνδεσμο (μίας χρήσης).
+   * Προτίμηση: `documentIssuanceAnswers`.
+   */
+  PROPERTIES_DOCUMENT_ISSUANCE_ANSWERED: 'properties.documentIssuanceAnswered',
+  /**
    * ADR-901 Φ4.4 — **νέο έγγραφο στην υπόθεση** (transmittal επαγγελματία), **μόνο** σε όσους ανήκουν στο ακροατήριο του
    * ρόλου του συντάκτη. Δύο τύποι για ντετερμινιστικό προορισμό· **μία** προτίμηση: `caseDocumentTransmitted`.
    */
@@ -438,6 +444,13 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
     settingKey: 'documentExpiryAlerts',
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.WARNING,
+  },
+  // ADR-915 §28 — απάντηση στον σύνδεσμο ανάθεσης: ΠΛΗΡΟΦΟΡΙΑ (η μπάλα ήρθε στο γραφείο ή στον επαγγελματία).
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_DOCUMENT_ISSUANCE_ANSWERED]: {
+    category: 'properties',
+    settingKey: 'documentIssuanceAnswers',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
   },
   // ADR-901 Φ4.4 — νέο έγγραφο από επαγγελματία: ΠΛΗΡΟΦΟΡΙΑ (κάτι νέο να δεις, τίποτα δεν σπάει).
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_DOCUMENT_HOST]: {

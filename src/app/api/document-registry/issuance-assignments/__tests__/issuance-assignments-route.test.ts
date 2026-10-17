@@ -60,6 +60,7 @@ const REFUSALS = [
   ['lead-changed', 409, 'LEAD_CHANGED'],
   ['stale', 409, 'STALE'],
   ['transition-refused', 409, 'TRANSITION_REFUSED'],
+  ['actor-refused', 422, 'ACTOR_REFUSED'],
 ] as const;
 
 describe('PUT /api/document-registry/issuance-assignments', () => {

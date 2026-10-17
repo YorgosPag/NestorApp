@@ -34,6 +34,7 @@ const ASSIGNMENT = {
   credential: { qualification: 'energy-inspector-registered', registryNumber: null },
   proposedAt: '2026-10-17T09:00:00.000Z',
   proposedByUid: 'uid_seed_0001',
+  approvalRequest: null,
   decision: null,
   notice: null,
   response: null,

@@ -243,6 +243,11 @@ export interface PropertiesNotificationSettings {
    */
   documentExpiryAlerts: boolean;
   /**
+   * ✉️ ADR-915 §28 — «**απάντησαν** στον σύνδεσμο της ανάθεσης έκδοσης» (έγκριση ιδιοκτήτη · αποδοχή επαγγελματία).
+   * Μία ειδοποίηση ανά απάντηση, σε όποιον πρότεινε και όποιον έστειλε.
+   */
+  documentIssuanceAnswers: boolean;
+  /**
    * 📤 ADR-901 Φ4.4 — «**νέο έγγραφο** στην υπόθεση» (transmittal επαγγελματία) — μόνο σε όσους ανήκουν στο
    * ακροατήριο του ρόλου του συντάκτη (οικοδεσπότης · επαγγελματίες).
    */
@@ -495,6 +500,7 @@ export const DEFAULT_PROPERTIES_SETTINGS: PropertiesNotificationSettings = {
   caseEngagementAnswered: true,
   caseExpiryAlerts: true,
   documentExpiryAlerts: true,
+  documentIssuanceAnswers: true,
   caseDocumentTransmitted: true,
   caseDocumentRequests: true,
 };
