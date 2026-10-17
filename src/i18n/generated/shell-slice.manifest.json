@@ -13,7 +13,7 @@
     "src/i18n/generated/routes/demands.el.json": "3c41547e2fe76dd07a2d8df26d28a52173cfbf1092d0bc182c78c567bd2dc8a7",
     "src/i18n/generated/routes/demands__demandId.el.json": "7d95c157ece8087fe485acdbdcba5f422d82828388ea5a9e5c11963e27005681",
     "src/i18n/generated/routes/demands__new.el.json": "c390254b9260d785611e1122559f64ed7b8c58a105b7ac65b82473967b293008",
-    "src/i18n/generated/routes/document-request.el.json": "0c3f285decbfc7c42600933951d2811efe3282c50bcd91655a01a5d0b2013872",
+    "src/i18n/generated/routes/document-request.el.json": "cbc03a4f39db4c9d0342bf077f97f6f1caa8a2dd5af9ada54d8853d5ef217393",
     "src/i18n/generated/routes/dossiers.el.json": "c57b6e5a4e4bf7a5348bb016115953d9fa3d612426865ddd7e86b824e70faa0a",
     "src/i18n/generated/routes/dossiers__dossierId.el.json": "ce0d6f7456040ae6e78100d1d0c9015dc21cd705b3212e0c48fad7fcff141315",
     "src/i18n/generated/routes/email__preferences__token.el.json": "b8eb64c11ff6698391ff1c979e04c414958183f8b946f7a9c62ce9d8d33da32a",
@@ -34,7 +34,7 @@
     "src/i18n/generated/routes/o__workspace__cases.el.json": "62e1b3378215c16e66a12632667ad61be33b59cc632e634dde0ffaf9763769d4",
     "src/i18n/generated/routes/o__workspace__cases__engagementId.el.json": "cb0565009bf6f7bec16cd93768e557804df81971abe3c5a23b7c050e9eb91ec3",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
-    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "ab37b252c1cb74e816fa306f54be901a04539c1147dd7801d99930262f09327f",
+    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "f8734432629123ec3e26ff61092adc5e6e6c345ff5675d94263c66f319f097f2",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "f2b0212cf0909081143453962ba0bfec2a47dc8753dc81a009ee34c12579b137",
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "2753c7edd9c05a17a65b15f3146177db8a27ca727df7b1f77d28fd1724f4fa6f",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "e1c5896ab910b7f5515ef0a3991a4daae3ba7fc776c6291815cfeaddb51e2398",
@@ -151,7 +151,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "52247e50972db0ac2fc46b37aaab595cbf7b82bc8d191acc49642ebe937b3c05",
+  "inputsSha256": "071bb76ed63671e6ffb6f35b57838c12c69d9f903c1d0a453ca9e691be08ad35",
   "languages": [
     "el"
   ],
@@ -1866,6 +1866,15 @@
         },
         "document-request": {
           "keys": [
+            "code.checking",
+            "code.heading",
+            "code.intro",
+            "code.introUnnamed",
+            "code.label",
+            "code.noCode",
+            "code.submit",
+            "code.wrong",
+            "code.wrongLast",
             "done.accepted",
             "done.approved",
             "done.declined",
@@ -1887,6 +1896,8 @@
             "failure.invalid.title",
             "failure.leadChanged.body",
             "failure.leadChanged.title",
+            "failure.locked.body",
+            "failure.locked.title",
             "failure.missing.body",
             "failure.missing.title",
             "failure.server.body",
@@ -5373,6 +5384,8 @@
             "issuance.history.noticedByLink",
             "issuance.history.requestedApproval",
             "issuance.history.responseNote",
+            "issuance.history.verifiedByCode",
+            "issuance.history.withAccessCode",
             "issuance.lastClosed",
             "issuance.lastFulfilled",
             "issuance.notice.description",
@@ -11105,7 +11118,7 @@
   ],
   "stats": {
     "matchedKeys": 248,
-    "sliceBytes": 770967
+    "sliceBytes": 772566
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

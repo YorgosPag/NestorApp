@@ -114,6 +114,11 @@ export function EntityFilesToolbar({
   const colors = useSemanticColors();
   // Αποσυρμένη μητρική εγγραφή (ADR-329 §3.9): ούτε ανέβασμα ούτε λήψη από κάμερα — το μενού δεν ζωγραφίζεται.
   const canAdd = useRetiredKind() === null;
+  const fileTabs: ReadonlyArray<{ id: EntityFilesToolbarProps['activeTab']; icon: typeof FileText; label: string }> = [
+    { id: 'files', icon: FileText, label: t('manager.filesTitle') },
+    { id: 'archived', icon: Archive, label: t('archived.title') },
+    { id: 'trash', icon: Trash2, label: t('trash.tabLabel') },
+  ];
 
   return (
     <CardHeader>
@@ -132,48 +137,33 @@ export function EntityFilesToolbar({
           {showWorkspace && <ActiveWorkspaceLabel />}
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {/* Tab switcher (Procore/BIM360 pattern) */}
-          <div className="flex flex-wrap gap-1 border rounded-md p-1" role="tablist" aria-label={t('manager.filesTitle')}>
-            <ToggleButton
-              pressed={activeTab === 'files'}
-              variant="ghost"
-              semantics="selected"
-              size="sm"
-              onClick={() => onTabChange('files')}
-              role="tab"
-              aria-controls="files-panel"
-              className="px-2"
-            >
-              <FileText className={`${iconSizes.sm} mr-1`} aria-hidden="true" />
-              {t('manager.filesTitle')}
-            </ToggleButton>
-            <ToggleButton
-              pressed={activeTab === 'archived'}
-              variant="ghost"
-              semantics="selected"
-              size="sm"
-              onClick={() => onTabChange('archived')}
-              role="tab"
-              aria-controls="archived-panel"
-              className="px-2"
-            >
-              <Archive className={`${iconSizes.sm} mr-1`} aria-hidden="true" />
-              {t('archived.title')}
-            </ToggleButton>
-            <ToggleButton
-              pressed={activeTab === 'trash'}
-              variant="ghost"
-              semantics="selected"
-              size="sm"
-              onClick={() => onTabChange('trash')}
-              role="tab"
-              aria-controls="trash-panel"
-              className="px-2"
-            >
-              <Trash2 className={`${iconSizes.sm} mr-1`} aria-hidden="true" />
-              {t('trash.title')}
-            </ToggleButton>
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+          {/*
+            Tab switcher (Procore/BIM360 pattern). 🔑 **ΜΙΑ γραμμή, ίσες στήλες** (ADR-912 §12.13, 390px 2026-10-17):
+            ως `flex-wrap` το «Κάδος Ανακύκλωσης» κατέβαινε σε δεύτερη γραμμή και το segmented control έσπαγε στα δύο.
+            Στο κινητό πιάνει όλο το πλάτος (τα υπόλοιπα εργαλεία κατεβαίνουν από κάτω)· από `sm` γυρίζει στο φυσικό του.
+          */}
+          <div
+            className="grid w-full grid-cols-3 gap-1 rounded-md border p-1 sm:inline-grid sm:w-auto"
+            role="tablist"
+            aria-label={t('manager.filesTitle')}
+          >
+            {fileTabs.map(({ id, icon: Icon, label }) => (
+              <ToggleButton
+                key={id}
+                pressed={activeTab === id}
+                variant="ghost"
+                semantics="selected"
+                size="sm"
+                onClick={() => onTabChange(id)}
+                role="tab"
+                aria-controls={`${id}-panel`}
+                className="min-w-0 justify-center px-2"
+              >
+                <Icon className={`${iconSizes.sm} mr-1 shrink-0`} aria-hidden="true" />
+                <span className="truncate">{label}</span>
+              </ToggleButton>
+            ))}
           </div>
 
           {/* View toggle buttons - Only show when on files tab */}

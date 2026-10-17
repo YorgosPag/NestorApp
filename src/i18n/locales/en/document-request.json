@@ -66,6 +66,21 @@
     "server": {
       "title": "Something went wrong",
       "body": "Nothing was recorded. Please try again shortly."
+    },
+    "locked": {
+      "title": "This link is locked",
+      "body": "A wrong code was entered too many times. For your security the link no longer accepts an answer; the office has been told and can send you a new one."
     }
+  },
+  "code": {
+    "heading": "Access code",
+    "intro": "For your security: {office} gave you a 6-digit code by phone. Enter it to see the request.",
+    "introUnnamed": "For your security, the office gave you a 6-digit code by phone. Enter it to see the request.",
+    "label": "6-digit code",
+    "submit": "Continue",
+    "checking": "Checking…",
+    "wrong": "That code is not correct. {remaining} attempts left.",
+    "wrongLast": "That code is not correct. 1 attempt left — after that the link locks.",
+    "noCode": "No code? Call the office — it is never sent by email."
   }
 }

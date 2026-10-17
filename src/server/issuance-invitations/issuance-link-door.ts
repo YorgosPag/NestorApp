@@ -45,13 +45,19 @@ const STATUS: Readonly<Record<LinkRefusal | DoorFailure, number>> = {
   superseded: 410,
   'lead-changed': 409,
   'answer-mismatch': 400,
+  // §29 — ο κωδικός: λείπει · λάθος (μετρά) · κλείδωσε (μόνιμα για αυτόν τον σύνδεσμο — το γραφείο ξαναστέλνει).
+  'code-required': 401,
+  'code-wrong': 403,
+  'code-locked': 423,
   'missing-link': 401,
   unavailable: 503,
   'server-error': 500,
 };
 
-export function issuanceLinkFailure(reason: LinkRefusal | DoorFailure): NextResponse {
-  return NextResponse.json({ success: false, error: reason }, { status: STATUS[reason] });
+/** `remaining` (§29) — οι προσπάθειες κωδικού που μένουν, για να το πει η σελίδα· ποτέ σε άλλη άρνηση. */
+export function issuanceLinkFailure(reason: LinkRefusal | DoorFailure, remaining?: number): NextResponse {
+  const body = remaining === undefined ? { success: false, error: reason } : { success: false, error: reason, remaining };
+  return NextResponse.json(body, { status: STATUS[reason] });
 }
 
 export type IssuanceLinkHandler = (request: NextRequest, token: string) => Promise<NextResponse>;

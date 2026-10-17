@@ -13,7 +13,7 @@
 import type { IssuerQualification } from '@/config/document-validity/document-issuers';
 import type { DocumentKind } from '@/config/document-validity/document-validity';
 import type { IssuanceAudience } from '@/lib/document-validity/issuance-request';
-import type { InvitationRecordCore } from '@/types/invitation-core';
+import type { InvitationRecordCore, StoredAccessCode } from '@/types/invitation-core';
 
 export interface IssuanceInvitation extends InvitationRecordCore {
   /** Το γραφείο που έστειλε — μισθωτής της ανάθεσης. */
@@ -26,6 +26,8 @@ export interface IssuanceInvitation extends InvitationRecordCore {
   readonly audience: IssuanceAudience;
   /** Η επαφή του γραφείου στην οποία στάλθηκε. */
   readonly contactId: string;
+  /** §29 — ο κωδικός του δεύτερου καναλιού (HMAC + μετρητής)· `null` = ο σύνδεσμος αρκεί. */
+  readonly accessCode: StoredAccessCode | null;
 }
 
 /**
@@ -50,12 +52,29 @@ export interface IssuanceLinkView {
 }
 
 /**
+ * **Τι δείχνει ο σύνδεσμος ΠΡΙΝ από τον κωδικό** (§29): μόνο σε ποιον απευθύνεται και ποιο γραφείο ζητά — όπως το
+ * DocuSign, που κρύβει το έγγραφο μέχρι το access code. Ακίνητο, έγγραφο, επαγγελματίας, σημείωση: μόνο μετά.
+ */
+export interface IssuanceLinkGateView {
+  readonly audience: IssuanceAudience;
+  readonly recipientName: string | null;
+  readonly officeName: string | null;
+  readonly attemptsLeft: number;
+}
+
+/** Η απάντηση του `GET /api/issuance-link`: ανοιχτή όψη (σύνδεσμος χωρίς κωδικό) ή η πύλη του κωδικού. */
+export type IssuanceLinkLanding =
+  | { readonly access: 'open'; readonly view: IssuanceLinkView }
+  | { readonly access: 'code-required'; readonly gate: IssuanceLinkGateView };
+
+/**
  * Οι αρνήσεις του συνδέσμου πέρα από τις κοινές της πρόσκλησης:
  * - `superseded` — ο σύνδεσμος δεν είναι πια ο τρέχων (νέα αποστολή · νέα πρόταση · ακύρωση · απαντήθηκε από το γραφείο)·
  * - `lead-changed` — ο υπεύθυνος ιδιοκτήτης άλλαξε από την αποστολή·
- * - `answer-mismatch` — απάντηση άλλου ακροατηρίου (π.χ. «αποδέχομαι» σε σύνδεσμο έγκρισης).
+ * - `answer-mismatch` — απάντηση άλλου ακροατηρίου (π.χ. «αποδέχομαι» σε σύνδεσμο έγκρισης)·
+ * - `code-required` · `code-wrong` · `code-locked` — §29: λείπει ο κωδικός · λάθος (μετρά) · κλείδωσε μετά από 5 λάθη.
  */
-export const ISSUANCE_LINK_REFUSALS = ['superseded', 'lead-changed', 'answer-mismatch'] as const;
+export const ISSUANCE_LINK_REFUSALS = ['superseded', 'lead-changed', 'answer-mismatch', 'code-required', 'code-wrong', 'code-locked'] as const;
 export type IssuanceLinkRefusal = (typeof ISSUANCE_LINK_REFUSALS)[number];
 
 /** Ό,τι βλέπει το γραφείο πριν πατήσει «Αποστολή» (§28 Η-Β7) — ο **ίδιος** συνθέτης με το μήνυμα που φεύγει. */

@@ -8,11 +8,13 @@
  *
  * 🔑 Ο server **δεν** βλέπει ποτέ το διαπιστευτήριο (ζει στο `#…`): η σελίδα φορτώνει εδώ, μία φορά, από το
  *    `GET /api/issuance-link` — την **ίδια** πόρτα με την απάντηση.
+ * 🔑 §29 — σύνδεσμος με κωδικό ⇒ πρώτα το βήμα του κωδικού (μόνο «Για» · γραφείο), μετά η κάρτα· ο κωδικός μένει στη
+ *    μνήμη της σελίδας και συνοδεύει την απάντηση.
  * 🔑 Κάθε άρνηση **λέγεται με όνομα** — «έληξε», «αντικαταστάθηκε από νεότερο», «απαντήθηκε ήδη» είναι τρία
  *    διαφορετικά πράγματα για τον άνθρωπο, όχι ένα «άκυρος σύνδεσμος».
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { AuthCardSection } from '@/components/ui/auth-card-section';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -22,9 +24,10 @@ import routeSlice from '@/i18n/generated/routes/document-request.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
 import { DOCUMENT_REQUEST_STORAGE_KEY, noDocumentRequestExtras } from '@/lib/document-validity/document-request-link';
 import { useFragmentCredential } from '@/lib/tokens/useFragmentCredential';
-import type { IssuanceLinkView } from '@/types/issuance-invitation';
+import type { IssuanceLinkLanding, IssuanceLinkView } from '@/types/issuance-invitation';
 
 import { DocumentRequestCard } from './DocumentRequestCard';
+import { DocumentRequestCodeStep } from './DocumentRequestCodeStep';
 import { DocumentRequestFailureState } from './DocumentRequestFailureState';
 import { fetchDocumentRequest, type DocumentRequestFailure } from './document-request-api';
 
@@ -33,7 +36,7 @@ registerRouteSlice(routeSlice);
 type LoadState =
   | { readonly phase: 'loading' }
   | { readonly phase: 'failed'; readonly failure: DocumentRequestFailure }
-  | { readonly phase: 'ready'; readonly view: IssuanceLinkView };
+  | { readonly phase: 'ready'; readonly landing: IssuanceLinkLanding };
 
 /** Η όψη **μαζί με τον σύνδεσμο που τη φόρτωσε** — άλλος σύνδεσμος ⇒ ποτέ η παλιά όψη (ADR-876 §5 Σ18). */
 function useRequestView(token: string | null): LoadState {
@@ -43,7 +46,7 @@ function useRequestView(token: string | null): LoadState {
     let cancelled = false;
     void fetchDocumentRequest(token).then((outcome) => {
       if (cancelled) return;
-      setLoaded({ token, state: outcome.ok ? { phase: 'ready', view: outcome.data } : { phase: 'failed', failure: outcome.failure } });
+      setLoaded({ token, state: outcome.ok ? { phase: 'ready', landing: outcome.data } : { phase: 'failed', failure: outcome.failure } });
     });
     return () => { cancelled = true; };
   }, [token]);
@@ -59,12 +62,28 @@ function Loading() {
   );
 }
 
+/** Η όψη που ξεκλείδωσε ο κωδικός (§29) — **με** τον σύνδεσμο που την ξεκλείδωσε: άλλος σύνδεσμος ⇒ ποτέ η παλιά. */
+interface Unlocked {
+  readonly token: string;
+  readonly view: IssuanceLinkView;
+  readonly accessCode: string;
+}
+
 export function DocumentRequestGate() {
   const link = useFragmentCredential(DOCUMENT_REQUEST_STORAGE_KEY, noDocumentRequestExtras);
   const token = link.phase === 'ready' ? link.token : null;
   const load = useRequestView(token);
+  const [unlocked, setUnlocked] = useState<Unlocked | null>(null);
+  const onUnlocked = useCallback((view: IssuanceLinkView, accessCode: string) => {
+    if (token !== null) setUnlocked({ token, view, accessCode });
+  }, [token]);
   if (link.phase === 'missing') return <DocumentRequestFailureState failure="missing-link" />;
   if (link.phase === 'reading' || load.phase === 'loading') return <Loading />;
   if (load.phase === 'failed') return <DocumentRequestFailureState failure={load.failure} />;
-  return <DocumentRequestCard key={link.token} token={link.token} view={load.view} />;
+  const { landing } = load;
+  if (landing.access === 'open') return <DocumentRequestCard key={link.token} token={link.token} view={landing.view} accessCode={null} />;
+  if (unlocked !== null && unlocked.token === link.token) {
+    return <DocumentRequestCard key={link.token} token={link.token} view={unlocked.view} accessCode={unlocked.accessCode} />;
+  }
+  return <DocumentRequestCodeStep key={link.token} token={link.token} gate={landing.gate} onUnlocked={onUnlocked} />;
 }

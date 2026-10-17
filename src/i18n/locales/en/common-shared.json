@@ -980,6 +980,9 @@
     "accepted": "The professional accepted — «{title}»",
     "declined": "The professional declined — «{title}»",
     "body": "Answer from {name} through the link. Open «Document expiry» for the next step.",
-    "bodyUnnamed": "Answer through the link. Open «Document expiry» for the next step."
+    "bodyUnnamed": "Answer through the link. Open «Document expiry» for the next step.",
+    "locked": "Link locked — “{title}”",
+    "lockedBody": "A wrong code was entered 5 times on the link sent to {name}. If it was not them, someone else has the link; send again from “Document expiry”.",
+    "lockedBodyUnnamed": "A wrong code was entered 5 times on the link. Send again from “Document expiry”."
   }
 }

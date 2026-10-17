@@ -50,6 +50,15 @@ export interface IssuanceSendApi {
   readonly preview: PreviewState;
   readonly sending: boolean;
   readonly send: () => Promise<void>;
+  /** §29 — ο σύνδεσμος ζητά και κωδικό (DocuSign «Access Code»)· ενεργό από προεπιλογή. */
+  readonly requireAccessCode: boolean;
+  readonly setRequireAccessCode: (value: boolean) => void;
+  /**
+   * §29 — ο κωδικός που μόλις εκδόθηκε, για να τον πει ο άνθρωπος τηλεφωνικά. Ζει **μόνο** εδώ, στη μνήμη του διαλόγου·
+   * ο διάλογος δεν κλείνει μέχρι το `finish()`, γιατί δεν θα ξαναεμφανιστεί.
+   */
+  readonly issuedCode: string | null;
+  readonly finish: () => void;
 }
 
 interface SendTarget {
@@ -89,9 +98,12 @@ export function useIssuanceSend({ view, audience, leadId, revalidate, onSent }: 
   const [note, setNote] = useState('');
   const [informed, setInformed] = useState<ReadonlySet<string> | null>(null);
   const [sending, setSending] = useState(false);
+  const [requireAccessCode, setRequireAccessCode] = useState(true);
+  const [issuedCode, setIssuedCode] = useState<string | null>(null);
   const body = useMemo<IssuanceSendBody>(() => ({
     ...issuanceTargetOf(view), audience, note: note.trim() || null, expectedOwnerContactId: leadId, informContactIds: [...(informed ?? [])],
-  }), [view, audience, note, leadId, informed]);
+    requireAccessCode,
+  }), [view, audience, note, leadId, informed, requireAccessCode]);
   const adoptDefaults = useCallback((preview: IssuancePreview) => {
     setInformed((current) => current ?? new Set(preview.coOwners.filter((person) => person.reachable).map((person) => person.contactId)));
   }, []);
@@ -109,8 +121,16 @@ export function useIssuanceSend({ view, audience, leadId, revalidate, onSent }: 
     const delivered = result.data.delivery.recipient === 'accepted';
     if (delivered) notifications.success(t(SEND_KEYS.sent));
     else notifications.warning(t(SEND_KEYS.notDelivered));
-    onSent();
+    // Με κωδικό, ο διάλογος μένει ανοιχτός για να τον δει ο άνθρωπος — μία φορά· χωρίς, κλείνει όπως πριν. `typeof`, όχι
+    // `!== null`: απάντηση παλαιότερου διακομιστή (χωρίς πεδίο) δεν πρέπει να δείξει «κωδικό» `undefined`.
+    const issued = result.data.accessCode;
+    if (typeof issued === 'string') setIssuedCode(issued);
+    else onSent();
     await revalidate();
   }, [body, notifications, onSent, revalidate, t]);
-  return { note, setNote, informed: informed ?? new Set(), toggleInformed, preview, sending, send };
+  const finish = useCallback(() => { setIssuedCode(null); onSent(); }, [onSent]);
+  return {
+    note, setNote, informed: informed ?? new Set(), toggleInformed, preview, sending, send,
+    requireAccessCode, setRequireAccessCode, issuedCode, finish,
+  };
 }

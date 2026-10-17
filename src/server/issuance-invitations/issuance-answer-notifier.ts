@@ -33,18 +33,25 @@ const FEATURE = 'document-issuance';
 const noticeT = createBundleTranslate({ 'common-shared': elShared }, 'common-shared', 'el');
 
 /** 🔑 Κυριολεκτικά κλειδιά (ζουν στο `common-shared`) — έτσι τα βλέπει η άγκυρα προσβασιμότητας τίτλων. */
-const TITLE_KEYS: Readonly<Record<IssuanceLinkAnswer, string>> = {
+/**
+ * Τι έγινε στον σύνδεσμο: μία απάντηση, ή (§29) **κλείδωμα** μετά από 5 λάθος κωδικούς — όπως το Adobe Sign ειδοποιεί τον
+ * αποστολέα. Ίδιο γεγονός, ίδια προτίμηση (`documentIssuanceAnswers`): «κίνηση στον σύνδεσμο που έστειλα».
+ */
+export type IssuanceLinkEvent = IssuanceLinkAnswer | 'code-locked';
+
+const TITLE_KEYS: Readonly<Record<IssuanceLinkEvent, string>> = {
   approve: 'documentIssuanceAnswered.approved',
   reject: 'documentIssuanceAnswered.rejected',
   accept: 'documentIssuanceAnswered.accepted',
   decline: 'documentIssuanceAnswered.declined',
+  'code-locked': 'documentIssuanceAnswered.locked',
 };
 
 export interface IssuanceAnswerNotice {
   readonly companyId: string;
   readonly assignmentId: string;
   readonly invitationId: string;
-  readonly answer: IssuanceLinkAnswer;
+  readonly answer: IssuanceLinkEvent;
   /** Όποιος πρότεινε και όποιος έστειλε — μπορεί να είναι ο ίδιος άνθρωπος. */
   readonly recipientUids: readonly string[];
   readonly propertyName: string | null;
@@ -52,14 +59,19 @@ export interface IssuanceAnswerNotice {
 }
 
 /** Ντετερμινιστικό: (ανάθεση, σύνδεσμος, παραλήπτης). */
-export function issuanceAnswerEventId(assignmentId: string, invitationId: string, recipientUid: string): string {
-  return `document-issuance:${assignmentId}:${invitationId}:${recipientUid}`;
+export function issuanceAnswerEventId(assignmentId: string, invitationId: string, recipientUid: string, event: IssuanceLinkEvent): string {
+  // Το κλείδωμα και η απάντηση είναι **δύο** γεγονότα του ίδιου συνδέσμου — ίδιο κλειδί θα έσβηνε το ένα ως διπλότυπο.
+  const base = `document-issuance:${assignmentId}:${invitationId}:${recipientUid}`;
+  return event === 'code-locked' ? `${base}:locked` : base;
 }
 
 function copyOf(notice: IssuanceAnswerNotice) {
   const titleKey = TITLE_KEYS[notice.answer];
   const titleParams = { title: notice.propertyName ?? notice.assignmentId };
-  const bodyKey = notice.respondentName === null ? 'documentIssuanceAnswered.bodyUnnamed' : 'documentIssuanceAnswered.body';
+  const locked = notice.answer === 'code-locked';
+  const bodyKey = notice.respondentName === null
+    ? (locked ? 'documentIssuanceAnswered.lockedBodyUnnamed' : 'documentIssuanceAnswered.bodyUnnamed')
+    : (locked ? 'documentIssuanceAnswered.lockedBody' : 'documentIssuanceAnswered.body');
   const bodyParams = notice.respondentName === null ? undefined : { name: notice.respondentName };
   return {
     title: noticeT(titleKey, titleParams),
@@ -72,7 +84,7 @@ function copyOf(notice: IssuanceAnswerNotice) {
 }
 
 async function announceTo(notice: IssuanceAnswerNotice, recipientUid: string): Promise<'sent' | 'skipped' | 'failed'> {
-  const eventId = issuanceAnswerEventId(notice.assignmentId, notice.invitationId, recipientUid);
+  const eventId = issuanceAnswerEventId(notice.assignmentId, notice.invitationId, recipientUid, notice.answer);
   try {
     const result = await dispatchNotification({
       eventType: NOTIFICATION_EVENT_TYPES.PROPERTIES_DOCUMENT_ISSUANCE_ANSWERED,

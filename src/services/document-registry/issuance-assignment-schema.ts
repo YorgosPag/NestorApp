@@ -19,6 +19,7 @@ import {
   INSTRUCTION_CHANNELS,
   ISSUANCE_DELIVERY_OUTCOMES,
   ISSUANCE_NOTE_MAX,
+  LINK_VERIFICATIONS,
   NOTICE_CHANNELS,
   REGISTRY_NUMBER_MAX,
   type IssuanceAssignmentRecord,
@@ -40,16 +41,18 @@ const nonEmpty = z.string().min(1);
 const note = z.string().max(ISSUANCE_NOTE_MAX).nullable();
 const delivery = z.enum(ISSUANCE_DELIVERY_OUTCOMES);
 const deliverySchema = z.object({ recipient: delivery, coOwners: z.record(z.string(), delivery) }).nullable();
+/** §29 — έγγραφα του §28 δεν έγραφαν επαλήθευση: διαβάζονται ως «μόνο σύνδεσμος», που ήταν και η αλήθεια τους. */
+const verification = z.enum(LINK_VERIFICATIONS).default('link');
 
 /** §28 Η-Β2 — η βάση είναι **ένωση**: καταγραφή του γραφείου ή ο ίδιος ο υπεύθυνος με σύνδεσμο. Τίποτα ενδιάμεσο. */
 const decisionSchema = z.discriminatedUnion('basis', [
   z.object({ basis: z.literal('recorded-instruction'), channel: z.enum(INSTRUCTION_CHANNELS), recordedByUid: nonEmpty }),
-  z.object({ basis: z.literal('owner-link-approval'), invitationId: nonEmpty }),
+  z.object({ basis: z.literal('owner-link-approval'), invitationId: nonEmpty, verifiedBy: verification }),
 ]).and(z.object({ outcome: z.enum(['approved', 'rejected']), ownerContactId: nonEmpty, note, at: nonEmpty }));
 
 const responseSchema = z.discriminatedUnion('basis', [
   z.object({ basis: z.literal('recorded'), recordedByUid: nonEmpty }),
-  z.object({ basis: z.literal('professional-link'), invitationId: nonEmpty }),
+  z.object({ basis: z.literal('professional-link'), invitationId: nonEmpty, verifiedBy: verification }),
 ]).and(z.object({ outcome: z.enum(['accepted', 'declined']), note, at: nonEmpty }));
 
 const assignmentSchema = z.object({
@@ -66,11 +69,12 @@ const assignmentSchema = z.object({
   proposedAt: nonEmpty,
   proposedByUid: nonEmpty,
   approvalRequest: z.object({
-    invitationId: nonEmpty, ownerContactId: nonEmpty, note, at: nonEmpty, byUid: nonEmpty, delivery: deliverySchema,
+    invitationId: nonEmpty, ownerContactId: nonEmpty, note, at: nonEmpty, byUid: nonEmpty, verification, delivery: deliverySchema,
   }).nullable(),
   decision: decisionSchema.nullable(),
   notice: z.object({
-    channel: z.enum(NOTICE_CHANNELS), at: nonEmpty, byUid: nonEmpty, invitationId: nonEmpty.nullable(), note, delivery: deliverySchema,
+    channel: z.enum(NOTICE_CHANNELS), at: nonEmpty, byUid: nonEmpty, invitationId: nonEmpty.nullable(),
+    verification: z.enum(LINK_VERIFICATIONS).nullable().default(null), note, delivery: deliverySchema,
   }).nullable(),
   response: responseSchema.nullable(),
   cancellation: z.object({ byUid: nonEmpty, at: nonEmpty }).nullable(),

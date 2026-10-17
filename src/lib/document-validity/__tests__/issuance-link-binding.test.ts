@@ -16,15 +16,15 @@ import {
 
 const NOW = '2026-10-17T09:00:00.000Z';
 const OFFICE: IssuanceActor = { kind: 'office', uid: 'uid_agent', nowIso: NOW };
-const link = (invitationId: string): IssuanceActor => ({ kind: 'link', invitationId, nowIso: NOW });
+const link = (invitationId: string): IssuanceActor => ({ kind: 'link', invitationId, verifiedBy: 'link', nowIso: NOW });
 
 const PROPOSE: IssuanceAction = {
   kind: 'propose', professionalContactId: 'cont_pro', credential: { qualification: 'energy-inspector-registered', registryNumber: null },
 };
-const REQUEST = (invitationId: string): IssuanceAction => ({ kind: 'request-approval', invitationId, ownerContactId: 'cont_lead', note: 'σημείωση' });
+const REQUEST = (invitationId: string): IssuanceAction => ({ kind: 'request-approval', invitationId, ownerContactId: 'cont_lead', note: 'σημείωση', verification: 'link' });
 const LINK_APPROVE: IssuanceAction = { kind: 'decide', outcome: 'approved', channel: null, note: null, ownerContactId: 'cont_lead' };
 const OFFICE_APPROVE: IssuanceAction = { kind: 'decide', outcome: 'approved', channel: 'phone', note: null, ownerContactId: 'cont_lead' };
-const SEND = (invitationId: string | null): IssuanceAction => ({ kind: 'notify', channel: invitationId === null ? 'phone' : 'email', invitationId, note: null });
+const SEND = (invitationId: string | null): IssuanceAction => ({ kind: 'notify', channel: invitationId === null ? 'phone' : 'email', invitationId, note: null, verification: invitationId === null ? null : 'link' });
 const LINK_ACCEPT: IssuanceAction = { kind: 'respond', outcome: 'accepted', note: 'αναλαμβάνω' };
 
 function step(record: IssuanceAssignmentRecord | null, action: IssuanceAction, actor: IssuanceActor = OFFICE) {
@@ -46,14 +46,14 @@ describe('ADR-915 §28 — αίτημα έγκρισης με σύνδεσμο',
   it('το αίτημα ΔΕΝ αλλάζει στάδιο ούτε μπάλα: «αναμένει απόφαση», και θυμάται ΠΟΙΟΣ σύνδεσμος, σε ΠΟΙΟΝ', () => {
     const record = run([[PROPOSE], [REQUEST('diin_1')]]);
     expect(issuanceStageOf(record)).toBe('proposed');
-    expect(record.approvalRequest).toEqual({ invitationId: 'diin_1', ownerContactId: 'cont_lead', note: 'σημείωση', at: NOW, byUid: 'uid_agent', delivery: null });
+    expect(record.approvalRequest).toEqual({ invitationId: 'diin_1', ownerContactId: 'cont_lead', note: 'σημείωση', at: NOW, byUid: 'uid_agent', verification: 'link', delivery: null });
     expect(currentLinkAudience(record, 'diin_1')).toBe('owner');
   });
 
   it('ο υπεύθυνος αποφασίζει με τον σύνδεσμο ⇒ βάση `owner-link-approval` + `invitationId` — ΠΟΤΕ uid γραφείου', () => {
     const reduced = step(run([[PROPOSE], [REQUEST('diin_1')]]), LINK_APPROVE, link('diin_1'));
     expect(reduced.ok && reduced.record.decision).toEqual({
-      basis: 'owner-link-approval', invitationId: 'diin_1', outcome: 'approved', ownerContactId: 'cont_lead', note: null, at: NOW,
+      basis: 'owner-link-approval', invitationId: 'diin_1', verifiedBy: 'link', outcome: 'approved', ownerContactId: 'cont_lead', note: null, at: NOW,
     });
   });
 
@@ -101,7 +101,7 @@ describe('ADR-915 §28 — μήνυμα στον επαγγελματία με �
 
   it('αποδέχεται με τον σύνδεσμο του ΤΡΕΧΟΝΤΟΣ μηνύματος ⇒ βάση `professional-link` + η σημείωσή του', () => {
     const reduced = step(run([[PROPOSE], [OFFICE_APPROVE], [SEND('diin_p1')]]), LINK_ACCEPT, link('diin_p1'));
-    expect(reduced.ok && reduced.record.response).toEqual({ basis: 'professional-link', invitationId: 'diin_p1', outcome: 'accepted', note: 'αναλαμβάνω', at: NOW });
+    expect(reduced.ok && reduced.record.response).toEqual({ basis: 'professional-link', invitationId: 'diin_p1', verifiedBy: 'link', outcome: 'accepted', note: 'αναλαμβάνω', at: NOW });
   });
 
   it('🔴 ενημέρωση εκτός εφαρμογής (τηλέφωνο) ⇒ ΚΑΝΕΝΑΣ σύνδεσμος δεν απαντά', () => {
@@ -139,5 +139,38 @@ describe('ADR-915 §28 Η-Β9 — η παράδοση γράφεται ΜΟΝΟ 
     const sent = run([[PROPOSE], [OFFICE_APPROVE], [SEND('diin_p1')]]);
     const delivered = withIssuanceDelivery(sent, 'diin_p1', delivery);
     expect(delivered && issuanceStageOf(delivered)).toBe('sent');
+  });
+});
+
+describe('ADR-915 §29 — ο μειωτής απαιτεί ό,τι ζήτησε το αίτημα (κωδικός πρόσβασης)', () => {
+  const withCode = (invitationId: string): IssuanceActor => ({ kind: 'link', invitationId, verifiedBy: 'access-code', nowIso: NOW });
+  const REQUEST_CODE = (invitationId: string): IssuanceAction => ({
+    kind: 'request-approval', invitationId, ownerContactId: 'cont_lead', note: null, verification: 'access-code',
+  });
+
+  it('🔴 αίτημα με κωδικό + σύνδεσμος ΧΩΡΙΣ αποδεδειγμένο κωδικό ⇒ `actor-refused` (ακόμη κι αν η πόρτα ξεχάσει)', () => {
+    const requested = run([[PROPOSE], [REQUEST_CODE('diin_1')]]);
+    expect(step(requested, LINK_APPROVE, link('diin_1'))).toEqual({ ok: false, refusal: 'actor-refused' });
+  });
+
+  it('με αποδεδειγμένο κωδικό ⇒ απόφαση με `verifiedBy: access-code`', () => {
+    const requested = run([[PROPOSE], [REQUEST_CODE('diin_1')]]);
+    const reduced = step(requested, LINK_APPROVE, withCode('diin_1'));
+    expect(reduced.ok && reduced.record.decision).toMatchObject({ basis: 'owner-link-approval', verifiedBy: 'access-code' });
+  });
+
+  it('αίτημα ΧΩΡΙΣ κωδικό: και ο κωδικός το καλύπτει (το ισχυρότερο καλύπτει το ασθενέστερο)', () => {
+    const requested = run([[PROPOSE], [REQUEST('diin_1')]]);
+    expect(step(requested, LINK_APPROVE, withCode('diin_1'))).toMatchObject({ ok: true });
+  });
+
+  it('🔴 επαγγελματίας: μήνυμα με κωδικό ⇒ απάντηση χωρίς κωδικό αρνείται· η ενημέρωση τηλεφώνου ΔΕΝ γράφει «ζητήθηκε κωδικός»', () => {
+    const approved = run([[PROPOSE], [OFFICE_APPROVE]]);
+    const sentWithCode = step(approved, { kind: 'notify', channel: 'email', invitationId: 'diin_p1', note: null, verification: 'access-code' });
+    if (!sentWithCode.ok) throw new Error('not sent');
+    expect(step(sentWithCode.record, LINK_ACCEPT, link('diin_p1'))).toEqual({ ok: false, refusal: 'actor-refused' });
+    expect(step(sentWithCode.record, LINK_ACCEPT, withCode('diin_p1'))).toMatchObject({ ok: true });
+    const phoned = step(approved, { kind: 'notify', channel: 'phone', invitationId: null, note: null, verification: 'access-code' });
+    expect(phoned.ok && phoned.record.notice?.verification).toBeNull();
   });
 });

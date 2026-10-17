@@ -55,7 +55,8 @@ export type SendRefusal = DraftRefusal | 'secret-missing' | Extract<IssuanceWrit
 export type PreviewResult = { readonly ok: true; readonly preview: IssuancePreview } | { readonly ok: false; readonly refusal: DraftRefusal };
 
 export type SendResult =
-  | { readonly ok: true; readonly stage: IssuanceStage; readonly delivery: IssuanceDelivery }
+  /** `accessCode` (§29): ο ωμός κωδικός, **μία** φορά, για να τον πει το γραφείο τηλεφωνικά — `null` = δεν ζητήθηκε. */
+  | { readonly ok: true; readonly stage: IssuanceStage; readonly delivery: IssuanceDelivery; readonly accessCode: string | null }
   | { readonly ok: false; readonly refusal: SendRefusal };
 
 function coOwnerNames(draft: IssuanceSendDraft): string[] {
@@ -63,10 +64,10 @@ function coOwnerNames(draft: IssuanceSendDraft): string[] {
 }
 
 /** Το μήνυμα προς τον παραλήπτη — `link` απόλυτο (αποστολή) ή η διαδρομή χωρίς κλειδί (προεπισκόπηση). */
-function recipientEmailOf(draft: IssuanceSendDraft, language: unknown, link: string, expiresAt: string) {
+function recipientEmailOf(draft: IssuanceSendDraft, language: unknown, link: string, expiresAt: string, accessCode: boolean) {
   return draft.audience === 'owner'
-    ? buildIssuanceEmail({ kind: 'approval', language, facts: draft.facts, coOwnerNames: coOwnerNames(draft), expiresAt, link })
-    : buildIssuanceEmail({ kind: 'professional', language, facts: draft.facts, expiresAt, link });
+    ? buildIssuanceEmail({ kind: 'approval', language, facts: draft.facts, coOwnerNames: coOwnerNames(draft), expiresAt, link, accessCode })
+    : buildIssuanceEmail({ kind: 'professional', language, facts: draft.facts, expiresAt, link, accessCode });
 }
 
 function coOwnerEmailOf(draft: IssuanceSendDraft, language: unknown) {
@@ -81,7 +82,7 @@ export async function previewIssuanceMessage(db: Firestore, sender: IssuanceSend
   const placeholderLink = publicUrl(DOCUMENT_REQUEST_PATH) ?? DOCUMENT_REQUEST_PATH;
   // Η λήξη που **θα** πάρει ο σύνδεσμος αν σταλεί τώρα — ο ίδιος κανόνας με την έκδοση.
   const expiresAt = new Date(defaultInvitationExpiryMs(now.toISOString())).toISOString();
-  const email = recipientEmailOf(draft, 'el', placeholderLink, expiresAt);
+  const email = recipientEmailOf(draft, 'el', placeholderLink, expiresAt, body.requireAccessCode);
   const notice = draft.informed.length === 0 ? null : coOwnerEmailOf(draft, 'el');
   return {
     ok: true,
@@ -96,10 +97,12 @@ export async function previewIssuanceMessage(db: Firestore, sender: IssuanceSend
   };
 }
 
-function actionOf(draft: IssuanceSendDraft, invitationId: string, note: string | null): IssuanceAction {
+function actionOf(draft: IssuanceSendDraft, invitation: IssuanceInvitation, note: string | null): IssuanceAction {
+  // §29 — το αίτημα γράφει τι **ζητά**· ο μειωτής αρνείται αργότερα απάντηση που δεν το απέδειξε.
+  const verification = invitation.accessCode === null ? 'link' : 'access-code';
   return draft.audience === 'owner'
-    ? { kind: 'request-approval', invitationId, ownerContactId: draft.recipient.contactId, note }
-    : { kind: 'notify', channel: 'email', invitationId, note };
+    ? { kind: 'request-approval', invitationId: invitation.id, ownerContactId: draft.recipient.contactId, note, verification }
+    : { kind: 'notify', channel: 'email', invitationId: invitation.id, note, verification };
 }
 
 /** Ανάθεση + πρόσκληση σε **μία** συναλλαγή — ή καμία από τις δύο. */
@@ -111,7 +114,7 @@ async function commitSend(db: Firestore, sender: IssuanceSender, body: IssuanceS
       property: draft.property,
       documentKind: body.documentKind,
       latestIssuedOn: draft.latestIssuedOn,
-      action: actionOf(draft, invitation.id, body.note),
+      action: actionOf(draft, invitation, body.note),
       names: draft.names,
       nowIso: invitation.createdAt,
     });
@@ -145,7 +148,8 @@ async function deliverTo(person: DraftPerson & { readonly email: string }, invit
 /** Τα email — **μετά** το commit· κάθε συνιδιοκτήτης χωριστά. Ποτέ δεν πετά. */
 async function deliverAll(draft: IssuanceSendDraft, invitation: IssuanceInvitation, token: string): Promise<IssuanceDelivery> {
   const link = publicUrl(documentRequestLocation(token));
-  const recipient = await deliverTo(draft.recipient, invitation, (language) => (link === null ? null : recipientEmailOf(draft, language, link, invitation.expiresAt)), 'document-issuance');
+  const withCode = invitation.accessCode !== null;
+  const recipient = await deliverTo(draft.recipient, invitation, (language) => (link === null ? null : recipientEmailOf(draft, language, link, invitation.expiresAt, withCode)), 'document-issuance');
   const coOwners = await Promise.all(draft.informed.flatMap((person) => (person.email === null ? [] : [
     deliverTo({ ...person, email: person.email }, invitation, (language) => coOwnerEmailOf(draft, language), 'document-issuance-notice')
       .then((outcome) => [person.contactId, outcome] as const),
@@ -163,6 +167,7 @@ export async function sendIssuanceMessage(db: Firestore, sender: IssuanceSender,
     minted = await mintIssuanceInvitation({
       companyId: sender.companyId, propertyId: body.propertyId, documentKind: body.documentKind, assignmentId: draft.assignmentId,
       audience: draft.audience, contactId: draft.recipient.contactId, email: draft.recipient.email, actorUid: sender.uid, nowValue: now.toISOString(),
+      requireAccessCode: body.requireAccessCode,
     });
   } catch {
     logger.error('Λείπει το μυστικό των συνδέσμων ανάθεσης — ΔΕΝ στάλθηκε τίποτα');
@@ -172,5 +177,5 @@ export async function sendIssuanceMessage(db: Firestore, sender: IssuanceSender,
   if (!outcome.ok) return outcome;
   const delivery = await deliverAll(draft, minted.invitation, minted.token);
   await recordIssuanceDelivery(db, { companyId: sender.companyId, propertyId: body.propertyId, documentKind: body.documentKind, invitationId: minted.invitation.id }, delivery);
-  return { ok: true, stage: outcome.stage, delivery };
+  return { ok: true, stage: outcome.stage, delivery, accessCode: minted.accessCode };
 }

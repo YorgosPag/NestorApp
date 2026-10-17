@@ -305,6 +305,14 @@ describe('BaseTabs — narrow container rail (ADR-912 §2)', () => {
     expect(Array.from(tablist.children).filter((el) => el.getAttribute('role') === 'tab')).toHaveLength(2);
   });
 
+  it('🔴 every tab in the rail SHOWS its label — not only the active one (ADR-912 §2.2, revised 2026-10-17)', () => {
+    mockContainerClass = 'narrow';
+    render(<BaseTabs tabs={fixtureTabs} value="actions" onValueChange={jest.fn()} />);
+    // Η ανενεργή καρτέλα: πριν ήταν `sr-only` (μόνο εικονίδιο) — στη λωρίδα που κυλά, το όνομα φαίνεται.
+    expect(screen.getByText('Επικοινωνία')).not.toHaveClass('sr-only');
+    expect(screen.getByText('Ενέργειες')).not.toHaveClass('sr-only');
+  });
+
   it('keeps tabs operable in the rail: click still changes the value', async () => {
     mockContainerClass = 'narrow';
     const handle = jest.fn();

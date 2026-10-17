@@ -42,7 +42,8 @@ async function messageHandler(request: NextRequest, ctx: AuthContext) {
     const [status, code] = ISSUANCE_SEND_REFUSAL_STATUS[result.refusal];
     throw new ApiError(status, 'Issuance message refused', code);
   }
-  return apiSuccess('preview' in result ? { preview: result.preview } : { stage: result.stage, delivery: result.delivery });
+  // §29 — ο κωδικός πρόσβασης φεύγει **μόνο** εδώ, μία φορά, προς το γραφείο που θα τον πει τηλεφωνικά.
+  return apiSuccess('preview' in result ? { preview: result.preview } : { stage: result.stage, delivery: result.delivery, accessCode: result.accessCode });
 }
 
 export const POST = withStandardRateLimit(withAuth(messageHandler, { permissions: 'properties:properties:update' }));

@@ -37,6 +37,15 @@ export interface IssuanceEmailWording {
     readonly intro: (office: string, professional: string, document: string, property: string, lead: string) => string;
     readonly footnote: string;
   };
+  /**
+   * §29 — ο σύνδεσμος ζητά **και** κωδικό: πώς τον παίρνει ο άνθρωπος (ποτέ ο ίδιος ο κωδικός — το email είναι το **πρώτο**
+   * κανάλι), και η γραμμή προώθησης αλλάζει: με κωδικό, «όποιος τον έχει απαντά» δεν ισχύει πια.
+   */
+  readonly accessCode: {
+    readonly label: string;
+    readonly howTo: string;
+    readonly boundToAddress: (onlyHtml: string) => string;
+  };
   readonly noteLabel: string;
   readonly unnamedOffice: string;
   readonly unnamedProperty: string;
@@ -88,6 +97,12 @@ export const ISSUANCE_EMAIL_TEXTS: Readonly<Record<HumanLanguage, IssuanceEmailW
         'Λαμβάνετε αυτό το μήνυμα επειδή το γραφείο σάς έχει καταχωρίσει ως συνιδιοκτήτη. Δεν χρειάζεται καμία ενέργεια· '
         + 'για αντίρρηση, επικοινωνήστε με το γραφείο ή με τον υπεύθυνο ιδιοκτήτη.',
     },
+    accessCode: {
+      label: 'Κωδικός πρόσβασης',
+      howTo: 'Θα σας ζητηθεί 6ψήφιος κωδικός, που σας λέει το γραφείο τηλεφωνικά. Δεν στέλνεται ποτέ με email.',
+      boundToAddress: (onlyHtml) =>
+        `Ο σύνδεσμος είναι προσωπικός και ισχύει ${onlyHtml} για αυτό το αίτημα, μαζί με τον κωδικό που σας είπε το γραφείο — μην τον προωθήσετε.`,
+    },
     noteLabel: 'Σημείωση του γραφείου',
     unnamedOffice: 'Το γραφείο',
     unnamedProperty: 'σας',
@@ -135,6 +150,12 @@ export const ISSUANCE_EMAIL_TEXTS: Readonly<Record<HumanLanguage, IssuanceEmailW
       footnote:
         'You are receiving this because the office has recorded you as a co-owner. No action is needed; '
         + 'to object, contact the office or the responsible owner.',
+    },
+    accessCode: {
+      label: 'Access code',
+      howTo: 'You will be asked for a 6-digit code, which the office tells you by phone. It is never sent by email.',
+      boundToAddress: (onlyHtml) =>
+        `This link is personal and works ${onlyHtml} for this request, together with the code the office gave you — do not forward it.`,
     },
     noteLabel: 'Note from the office',
     unnamedOffice: 'The office',

@@ -101,3 +101,20 @@ export type InvitationDocumentCore = Omit<InvitationRecordCore, 'state' | 'mailb
   readonly state: string;
   readonly mailboxProvenAt?: string | null;
 };
+
+/**
+ * **Ο κωδικός πρόσβασης ενός συνδέσμου χωρίς λογαριασμό** (ADR-915 §29) — δεύτερος παράγοντας σε δεύτερο κανάλι.
+ * Αποθηκεύεται **μόνο** το HMAC (με το μυστικό του είδους, δεμένο στο `invitationId`) και ο μετρητής αποτυχιών.
+ * Ο πυρήνας που τον κρίνει: `server/invitations/invitation-access-code.ts`.
+ */
+export const ACCESS_CODE_CHANNELS = ['office-relay'] as const;
+export type AccessCodeChannel = (typeof ACCESS_CODE_CHANNELS)[number];
+
+export interface StoredAccessCode {
+  readonly verifier: string;
+  /** Από πού τον μαθαίνει ο άνθρωπος — σήμερα το γραφείο τηλεφωνικά (DocuSign «Access Code»). */
+  readonly channel: AccessCodeChannel;
+  readonly failures: number;
+  /** Πότε κλείδωσε (5ο λάθος) — μόνιμο για αυτή την πρόσκληση· το γραφείο ξαναστέλνει. */
+  readonly lockedAt: string | null;
+}

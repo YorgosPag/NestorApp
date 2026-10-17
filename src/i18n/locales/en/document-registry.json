@@ -302,7 +302,14 @@
       "submit": "Send",
       "sending": "Sending…",
       "sent": "The message was accepted for sending.",
-      "notDelivered": "The send was recorded, but the email did not go out. Resend, or record the answer manually."
+      "notDelivered": "The send was recorded, but the email did not go out. Resend, or record the answer manually.",
+      "accessCodeLabel": "Require an access code (recommended)",
+      "accessCodeHint": "The link will also ask for a 6-digit code that you give by phone, so a forwarded email is not enough for someone else to answer.",
+      "codeHeading": "Access code for “{name}”",
+      "codeBody": "Give it by phone — not by email. It will not be shown again; if it is lost, send again (the previous link stops working). After 5 wrong codes the link locks and you are notified.",
+      "codeCopy": "Copy code",
+      "codeCopied": "Copied",
+      "codeDone": "Done"
     },
     "history": {
       "requestedApproval": "Sent for approval to {name} on {date}",
@@ -312,7 +319,9 @@
       "noticedByLink": "Sent to the professional with a link on {date}",
       "acceptedByLink": "The professional accepted through the link on {date}",
       "declinedByLink": "The professional declined through the link on {date}",
-      "responseNote": "Comment: “{note}”"
+      "responseNote": "Comment: “{note}”",
+      "withAccessCode": "With an access code",
+      "verifiedByCode": "Confirmed with the access code"
     }
   }
 }

@@ -51,8 +51,9 @@ export interface IssuanceEmailFacts {
 }
 
 export type IssuanceEmailInput =
-  | { readonly kind: 'approval'; readonly language: unknown; readonly facts: IssuanceEmailFacts; readonly coOwnerNames: readonly string[]; readonly expiresAt: string; readonly link: string }
-  | { readonly kind: 'professional'; readonly language: unknown; readonly facts: IssuanceEmailFacts; readonly expiresAt: string; readonly link: string }
+  /** `accessCode` (§29): ο σύνδεσμος ζητά και κωδικό — το email λέει **πώς** τον παίρνει, ποτέ τον ίδιο. */
+  | { readonly kind: 'approval'; readonly language: unknown; readonly facts: IssuanceEmailFacts; readonly coOwnerNames: readonly string[]; readonly expiresAt: string; readonly link: string; readonly accessCode: boolean }
+  | { readonly kind: 'professional'; readonly language: unknown; readonly facts: IssuanceEmailFacts; readonly expiresAt: string; readonly link: string; readonly accessCode: boolean }
   | { readonly kind: 'co-owner'; readonly language: unknown; readonly facts: IssuanceEmailFacts; readonly leadName: string | null };
 
 interface Named {
@@ -87,6 +88,16 @@ function noteLine(named: Named, note: string | null): InvitationEmailLine[] {
   return note === null ? [] : [invitationDetailLine(named.w.noteLabel, note)];
 }
 
+/** §29 — η γραμμή «πώς παίρνω τον κωδικό», τελευταία πριν το κουμπί. */
+function accessCodeLines(named: Named, accessCode: boolean): InvitationEmailLine[] {
+  return accessCode ? [invitationDetailLine(named.w.accessCode.label, named.w.accessCode.howTo)] : [];
+}
+
+/** Η γραμμή προώθησης του σκελετού — με κωδικό, «όποιος τον έχει απαντά» θα ήταν ψέμα. */
+function coreOf<T extends { readonly boundToAddress: (onlyHtml: string) => string }>(named: Named, wording: T, accessCode: boolean): T {
+  return accessCode ? { ...wording, boundToAddress: named.w.accessCode.boundToAddress } : wording;
+}
+
 function approvalDetails(named: Named, input: Extract<IssuanceEmailInput, { kind: 'approval' }>): InvitationEmailLine[] {
   const { w, language } = named;
   const { credential } = input.facts;
@@ -98,6 +109,7 @@ function approvalDetails(named: Named, input: Extract<IssuanceEmailInput, { kind
     ...noteLine(named, input.facts.note),
     ...(input.coOwnerNames.length === 0 ? [] : [invitationDetailLine(w.approval.coOwnersLabel, input.coOwnerNames.join(', '))]),
     invitationDetailLine(w.approval.expiresLabel, formatOperatorDate(input.expiresAt, language)),
+    ...accessCodeLines(named, input.accessCode),
   ];
 }
 
@@ -117,13 +129,17 @@ export function buildIssuanceEmail(input: IssuanceEmailInput): ConfirmationEmail
     return composeInvitationEmail({
       language, subject: w.approval.subject(document, property), heading: w.approval.heading,
       intro: lineOf(w.approval.intro, [office, professional, document, property]),
-      details: approvalDetails(named, input), link: input.link, core: w.approval,
+      details: approvalDetails(named, input), link: input.link, core: coreOf(named, w.approval, input.accessCode),
     });
   }
   return composeInvitationEmail({
     language, subject: w.professional.subject(document, property), heading: w.professional.heading,
     intro: lineOf(w.professional.intro, [office, document, property]),
-    details: [...noteLine(named, input.facts.note), invitationDetailLine(w.professional.expiresLabel, formatOperatorDate(input.expiresAt, language))],
-    link: input.link, core: w.professional,
+    details: [
+      ...noteLine(named, input.facts.note),
+      invitationDetailLine(w.professional.expiresLabel, formatOperatorDate(input.expiresAt, language)),
+      ...accessCodeLines(named, input.accessCode),
+    ],
+    link: input.link, core: coreOf(named, w.professional, input.accessCode),
   });
 }

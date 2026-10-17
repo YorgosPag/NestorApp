@@ -344,6 +344,7 @@
   },
   "trash": {
     "title": "Trash",
+    "tabLabel": "Trash",
     "description": "Files deleted in the last 30 days",
     "emptyTrash": "Empty Trash",
     "emptyTrashConfirm": "Are you sure? This will permanently delete all files.",

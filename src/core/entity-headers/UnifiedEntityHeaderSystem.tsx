@@ -12,7 +12,8 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { LucideIcon } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useDetailsSheetActions, type DetailsSheetActionsSlot } from '@/core/layouts/details-sheet-actions';
-import { EntityActionButton, EntityHeaderActions } from './EntityHeaderActions';
+import { EntityHeaderActions } from './EntityHeaderActions';
+import { RecordHeaderActions } from './RecordHeaderActions';
 import { orderEntityActions } from './entity-action-presets';
 import { cn } from '@/lib/utils';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
@@ -32,11 +33,20 @@ export interface EntityHeaderBadge {
   className?: string;
 }
 
+/**
+ * **Έμφαση ενέργειας** (ADR-912 §12.13): `primary` = το ΕΝΑ γεμάτο κουμπί της γραμμής (το πρώτο, αν δηλωθούν πολλά) ·
+ * `secondary` = ουδέτερο κουμπί · `destructive` = ζει **μόνο** στο μενού «⋯», με χρώμα κινδύνου.
+ */
+export type EntityActionEmphasis = 'primary' | 'secondary' | 'destructive';
+
 export interface EntityHeaderAction {
   label: string;
   onClick: () => void;
   icon?: LucideIcon;
+  /** Ρητή όψη κουμπιού — υπερισχύει της έμφασης. Σπάνια· η έμφαση είναι ο κανόνας. */
   variant?: 'default' | 'outline' | 'ghost';
+  /** Το γεμίζει το `createEntityAction` από τον τύπο. Απούσα ⇒ `secondary`. */
+  emphasis?: EntityActionEmphasis;
   className?: string;
   disabled?: boolean;
   /**
@@ -289,12 +299,9 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
         </div>
 
         {/* Right side: Actions */}
+        {/* Με `media` (σελίδα εγγραφής): επιτόπου σε φαρδιά οθόνη, κάτω μπάρα σε στενή (ADR-912 §12.13). */}
         {orderedActions.length > 0 && (media ? (
-          <div className="flex flex-wrap gap-2 max-w-full">
-            {orderedActions.map((action, index) => (
-              <EntityActionButton key={index} action={action} />
-            ))}
-          </div>
+          <RecordHeaderActions actions={orderedActions} />
         ) : (
           <EntityHeaderActions actions={orderedActions} />
         ))}

@@ -30,6 +30,7 @@ import type {
   IssuanceNotice,
   IssuanceResponse,
   IssuanceStage,
+  LinkVerification,
 } from '@/lib/document-validity/issuance-assignment';
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
 import { useIssuanceAssignmentActions } from '@/components/document-registry/issuance-assignment-context';
@@ -106,6 +107,11 @@ function notDelivered(delivery: IssuanceDelivery | null): boolean {
   return delivery !== null && delivery.recipient !== 'accepted';
 }
 
+/** §29 — «με κωδικό πρόσβασης»: η γραμμή που λέει ότι ο σύνδεσμος ζητά και τον κωδικό του δεύτερου καναλιού. */
+function codeLine(t: Translate, key: string, verification: LinkVerification | null): React.ReactNode {
+  return verification === 'access-code' ? <li key={key}>{t(LINK_HISTORY_KEYS.withAccessCode)}</li> : null;
+}
+
 function informedCount(delivery: IssuanceDelivery | null): number {
   return delivery === null ? 0 : Object.values(delivery.coOwners).filter((outcome) => outcome === 'accepted').length;
 }
@@ -115,16 +121,21 @@ function requestLines(t: Translate, request: IssuanceApprovalRequest, registry: 
   const count = informedCount(request.delivery);
   return [
     <li key="request">{t(LINK_HISTORY_KEYS.requestedApproval, { name: nameOf(t, request.ownerContactId, registry), date: formatDate(request.at) })}</li>,
+    codeLine(t, 'request-code', request.verification),
     count > 0 ? <li key="informed">{t(LINK_HISTORY_KEYS.informed, { count: String(count) })}</li> : null,
     notDelivered(request.delivery) ? <li key="request-failed" className="text-destructive">{t(LINK_HISTORY_KEYS.notDelivered)}</li> : null,
   ];
 }
 
-function decisionLine(t: Translate, decision: IssuanceDecision, registry: Names): React.ReactNode {
+function decisionLines(t: Translate, decision: IssuanceDecision, registry: Names): React.ReactNode[] {
   const name = nameOf(t, decision.ownerContactId, registry);
-  return decision.basis === 'owner-link-approval'
-    ? <li>{t(LINK_HISTORY_KEYS.decidedByLink, { name, date: formatDate(decision.at) })}</li>
-    : <li>{t(ISSUANCE_KEYS.decided, { name, channel: t(CHANNEL_KEYS[decision.channel]), date: formatDate(decision.at) })}</li>;
+  if (decision.basis !== 'owner-link-approval') {
+    return [<li key="decision">{t(ISSUANCE_KEYS.decided, { name, channel: t(CHANNEL_KEYS[decision.channel]), date: formatDate(decision.at) })}</li>];
+  }
+  return [
+    <li key="decision">{t(LINK_HISTORY_KEYS.decidedByLink, { name, date: formatDate(decision.at) })}</li>,
+    decision.verifiedBy === 'access-code' ? <li key="decision-code">{t(LINK_HISTORY_KEYS.verifiedByCode)}</li> : null,
+  ];
 }
 
 function noticeLines(t: Translate, notice: IssuanceNotice): React.ReactNode[] {
@@ -133,6 +144,7 @@ function noticeLines(t: Translate, notice: IssuanceNotice): React.ReactNode[] {
     : t(LINK_HISTORY_KEYS.noticedByLink, { date: formatDate(notice.at) });
   return [
     <li key="notice">{line}</li>,
+    codeLine(t, 'notice-code', notice.verification),
     notDelivered(notice.delivery) ? <li key="notice-failed" className="text-destructive">{t(LINK_HISTORY_KEYS.notDelivered)}</li> : null,
   ];
 }
@@ -143,6 +155,7 @@ function responseLines(t: Translate, response: IssuanceResponse): React.ReactNod
   const date = formatDate(response.at);
   return [
     <li key="response">{response.outcome === 'accepted' ? t(LINK_HISTORY_KEYS.acceptedByLink, { date }) : t(LINK_HISTORY_KEYS.declinedByLink, { date })}</li>,
+    response.verifiedBy === 'access-code' ? <li key="response-code">{t(LINK_HISTORY_KEYS.verifiedByCode)}</li> : null,
     response.note === null ? null : <li key="response-note">{t(LINK_HISTORY_KEYS.responseNote, { note: response.note })}</li>,
   ];
 }
@@ -155,7 +168,7 @@ function HistoryLines({ record, registry }: { readonly record: IssuanceAssignmen
     <ul className="m-0 flex list-none flex-col gap-0.5 p-0 text-xs text-muted-foreground">
       <li>{t(ISSUANCE_KEYS.proposedOn, { date: formatDate(record.proposedAt) })}</li>
       {approvalRequest === null ? null : requestLines(t, approvalRequest, registry)}
-      {decision === null ? null : decisionLine(t, decision, registry)}
+      {decision === null ? null : decisionLines(t, decision, registry)}
       {notice === null ? null : noticeLines(t, notice)}
       {response === null ? null : responseLines(t, response)}
     </ul>

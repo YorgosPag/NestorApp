@@ -2,7 +2,8 @@
  * @fileoverview `POST /api/issuance-link/answer` — **η απάντηση** με τον σύνδεσμο ανάθεσης (ADR-915 §28), χωρίς λογαριασμό.
  * @related server/issuance-invitations/issuance-link-door.ts (η πόρτα) · issuance-invitation-answer.ts (η πράξη)
  *
- * `Authorization: Bearer <σύνδεσμος>` · `{ answer: 'approve' | 'reject' | 'accept' | 'decline', note }` → `{ answer }`.
+ * `Authorization: Bearer <σύνδεσμος>` · `{ answer: 'approve' | 'reject' | 'accept' | 'decline', note, accessCode }` → `{ answer }`.
+ * - §29: σύνδεσμος με κωδικό ⇒ ο κωδικός κρίνεται **ξανά** εδώ (καμία «ξεκλείδωτη» συνεδρία).
  * - Το ακροατήριο (ιδιοκτήτης / επαγγελματίας) κρίνεται από τον **σύνδεσμο**, ποτέ από το σώμα (`answer-mismatch`).
  * - Δύο κλικ ⇒ ένα αποτέλεσμα (`already-used`)· σύνορο ιδεμποτίας ανά σύνδεσμο (πόρτα).
  */
@@ -20,7 +21,7 @@ async function answerHandler(request: NextRequest, token: string): Promise<NextR
   if (!parsed.success) return issuanceLinkFailure('answer-mismatch');
   const outcome = await answerIssuanceLink(getAdminFirestore(), token, parsed.data, new Date());
   if (outcome.kind === 'unavailable') return issuanceLinkFailure('unavailable');
-  if (outcome.kind === 'refused') return issuanceLinkFailure(outcome.reason);
+  if (outcome.kind === 'refused') return issuanceLinkFailure(outcome.reason, outcome.remaining);
   return NextResponse.json({ success: true, data: { answer: outcome.answer } });
 }
 

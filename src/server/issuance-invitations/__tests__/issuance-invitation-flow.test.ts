@@ -10,11 +10,11 @@
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import type { IssuanceSendBody } from '@/lib/document-validity/issuance-request';
+import { issuanceSendBody, type IssuanceSendBody } from '@/lib/document-validity/issuance-request';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { issuanceAssignmentIdOf } from '@/services/document-registry/issuance-assignment-schema';
 import { actOnIssuanceAssignment } from '@/services/document-registry/issuance-assignment.service';
-import { answerIssuanceLink, viewIssuanceLink } from '@/server/issuance-invitations/issuance-invitation-answer';
+import { answerIssuanceLink, unlockIssuanceLink, viewIssuanceLink } from '@/server/issuance-invitations/issuance-invitation-answer';
 import { previewIssuanceMessage, sendIssuanceMessage } from '@/server/issuance-invitations/issuance-invitation-send';
 
 jest.mock('@/lib/telemetry', () => ({
@@ -35,6 +35,22 @@ jest.mock('@/server/invitations/invitation-token', () => {
       beforeMint = null;
       if (hook !== null) await hook();
       return actual.mintInvitationToken(...args);
+    },
+  };
+});
+
+/** §29 — άγκιστρο ΑΝΑΜΕΣΑ στον έλεγχο του κωδικού και τη σφράγιση (σενάριο αγώνα του κλειδώματος). */
+let afterAccessCheck: (() => Promise<void>) | null = null;
+jest.mock('@/server/issuance-invitations/issuance-link-access', () => {
+  const actual = jest.requireActual('@/server/issuance-invitations/issuance-link-access');
+  return {
+    ...actual,
+    checkIssuanceAccessCode: async (...args: Parameters<typeof actual.checkIssuanceAccessCode>) => {
+      const verdict = await actual.checkIssuanceAccessCode(...args);
+      const hook = afterAccessCheck;
+      afterAccessCheck = null;
+      if (hook !== null) await hook();
+      return verdict;
     },
   };
 });
@@ -83,7 +99,8 @@ function tokenIn(message: Sent): string {
 function body(overrides: Partial<IssuanceSendBody> = {}): IssuanceSendBody {
   return {
     ...TARGET, expectedStage: 'proposed', audience: 'owner', note: 'Παρακαλούμε μέχρι την Παρασκευή.',
-    expectedOwnerContactId: 'cont_a', informContactIds: ['cont_b'], ...overrides,
+    // Οι σενάριοι του §28 = σύνδεσμος χωρίς κωδικό· το §29 τον ζητά ρητά (`requireAccessCode: true`).
+    expectedOwnerContactId: 'cont_a', informContactIds: ['cont_b'], requireAccessCode: false, ...overrides,
   };
 }
 
@@ -147,7 +164,7 @@ describe('ADR-915 §28 — πρόχειρο και προεπισκόπηση', 
 describe('ADR-915 §28 — αποστολή για έγκριση', () => {
   it('ΜΙΑ συναλλαγή: η ανάθεση θυμάται τον σύνδεσμο που γράφτηκε· το email φεύγει μετά, ένα ανά πρόσωπο, ποτέ cc', async () => {
     const result = await sendIssuanceMessage(db(), OFFICE, body(), NOW);
-    expect(result).toEqual({ ok: true, stage: 'proposed', delivery: { recipient: 'accepted', coOwners: { cont_b: 'accepted' } } });
+    expect(result).toEqual({ ok: true, stage: 'proposed', delivery: { recipient: 'accepted', coOwners: { cont_b: 'accepted' } }, accessCode: null });
     const [invitation] = invitations();
     expect(invitation).toMatchObject({ state: 'pending', audience: 'owner', contactId: 'cont_a', inviteeEmail: 'alfa@example.test', companyId: COMPANY });
     expect(assignment()).toMatchObject({
@@ -164,7 +181,7 @@ describe('ADR-915 §28 — αποστολή για έγκριση', () => {
   it('το email δεν έφυγε ⇒ η πράξη ΜΕΝΕΙ (ο σύνδεσμος υπάρχει) και η αποτυχία ΛΕΓΕΤΑΙ', async () => {
     delivery = 'failed';
     const result = await sendIssuanceMessage(db(), OFFICE, body({ informContactIds: [] }), NOW);
-    expect(result).toEqual({ ok: true, stage: 'proposed', delivery: { recipient: 'failed', coOwners: {} } });
+    expect(result).toEqual({ ok: true, stage: 'proposed', delivery: { recipient: 'failed', coOwners: {} }, accessCode: null });
     expect(assignment()).toMatchObject({ approvalRequest: { delivery: { recipient: 'failed' } } });
   });
 
@@ -197,18 +214,18 @@ describe('ADR-915 §28 — ο σύνδεσμος, από την πλευρά τ�
     const view = await viewIssuanceLink(db(), token, LATER);
     expect(view.kind).toBe('view');
     if (view.kind !== 'view') return;
-    expect(view.view).toMatchObject({
+    expect(view.landing).toMatchObject({ access: 'open', view: {
       audience: 'owner', recipientName: 'Άλφα Συνθετικός', officeName: 'Γραφείο Άλφα', documentKind: 'energy-certificate',
       professional: { name: 'Επιθεωρητής Συνθετικός', qualification: 'energy-inspector-registered', registryNumber: 'ΥΠΕΝ-7' },
       note: 'Παρακαλούμε μέχρι την Παρασκευή.',
-    });
+    } });
     expect(invitations()[0]).toMatchObject({ state: 'pending', openedAt: null });
     expect(assignment()).toMatchObject({ decision: null });
   });
 
   it('«Εγκρίνω» ⇒ απόφαση με βάση τον σύνδεσμο, σφραγισμένη πρόσκληση, ειδοποίηση στο γραφείο — δεύτερο κλικ ⇒ `already-used`', async () => {
     const token = await sendAndToken();
-    expect(await answerIssuanceLink(db(), token, { answer: 'approve', note: null }, LATER)).toEqual({ kind: 'answered', answer: 'approve' });
+    expect(await answerIssuanceLink(db(), token, { answer: 'approve', note: null, accessCode: null }, LATER)).toEqual({ kind: 'answered', answer: 'approve' });
     const [invitation] = invitations();
     expect(assignment()).toMatchObject({ decision: { basis: 'owner-link-approval', invitationId: invitation?.id, ownerContactId: 'cont_a', outcome: 'approved' } });
     expect(invitation).toMatchObject({ state: 'accepted', resolvedByUid: null });
@@ -217,19 +234,19 @@ describe('ADR-915 §28 — ο σύνδεσμος, από την πλευρά τ�
       eventType: 'properties.documentIssuanceAnswered', recipientId: 'user_1', tenantId: COMPANY,
       eventId: `document-issuance:${issuanceAssignmentIdOf(COMPANY, 'prop_1', 'energy-certificate')}:${invitation?.id}:user_1`,
     });
-    expect(await answerIssuanceLink(db(), token, { answer: 'approve', note: null }, LATER)).toEqual({ kind: 'refused', reason: 'already-used' });
+    expect(await answerIssuanceLink(db(), token, { answer: 'approve', note: null, accessCode: null }, LATER)).toEqual({ kind: 'refused', reason: 'already-used' });
   });
 
   it('🔴 «Αναλαμβάνω» σε σύνδεσμο έγκρισης ⇒ `answer-mismatch`, τίποτα δεν γράφεται', async () => {
     const token = await sendAndToken();
-    expect(await answerIssuanceLink(db(), token, { answer: 'accept', note: null }, LATER)).toEqual({ kind: 'refused', reason: 'answer-mismatch' });
+    expect(await answerIssuanceLink(db(), token, { answer: 'accept', note: null, accessCode: null }, LATER)).toEqual({ kind: 'refused', reason: 'answer-mismatch' });
     expect(invitations()[0]).toMatchObject({ state: 'pending' });
   });
 
   it('🔴 επαναποστολή ⇒ ο ΠΑΛΙΟΣ σύνδεσμος δεν απαντά πια — ανακλήθηκε ΚΑΙ δεν είναι ο τρέχων', async () => {
     const old = await sendAndToken();
     await sendIssuanceMessage(db(), OFFICE, body({ informContactIds: [] }), LATER);
-    expect(await answerIssuanceLink(db(), old, { answer: 'approve', note: null }, LATER)).toMatchObject({ kind: 'refused' });
+    expect(await answerIssuanceLink(db(), old, { answer: 'approve', note: null, accessCode: null }, LATER)).toMatchObject({ kind: 'refused' });
     expect(assignment()).toMatchObject({ decision: null });
   });
 
@@ -237,7 +254,7 @@ describe('ADR-915 §28 — ο σύνδεσμος, από την πλευρά τ�
     const token = await sendAndToken();
     seedProperty([['cont_a', 40], ['cont_b', 60]]);
     expect(await viewIssuanceLink(db(), token, LATER)).toEqual({ kind: 'refused', reason: 'lead-changed' });
-    expect(await answerIssuanceLink(db(), token, { answer: 'approve', note: null }, LATER)).toEqual({ kind: 'refused', reason: 'lead-changed' });
+    expect(await answerIssuanceLink(db(), token, { answer: 'approve', note: null, accessCode: null }, LATER)).toEqual({ kind: 'refused', reason: 'lead-changed' });
   });
 
   it('η καταγραφή του γραφείου κλείνει τον σύνδεσμο ⇒ `superseded`', async () => {
@@ -245,7 +262,7 @@ describe('ADR-915 §28 — ο σύνδεσμος, από την πλευρά τ�
     await actOnIssuanceAssignment(db(), OFFICE, {
       action: 'decide', ...TARGET, expectedStage: 'proposed', outcome: 'approved', channel: 'phone', note: null, expectedOwnerContactId: 'cont_a',
     }, LATER);
-    expect(await answerIssuanceLink(db(), token, { answer: 'reject', note: null }, LATER)).toEqual({ kind: 'refused', reason: 'superseded' });
+    expect(await answerIssuanceLink(db(), token, { answer: 'reject', note: null, accessCode: null }, LATER)).toEqual({ kind: 'refused', reason: 'superseded' });
   });
 });
 
@@ -259,7 +276,99 @@ describe('ADR-915 §28 — ο σύνδεσμος, από την πλευρά τ�
     const message = sent.find((candidate) => candidate.to === 'pro@example.test');
     if (message === undefined) throw new Error('not sent');
     const token = tokenIn(message);
-    expect(await answerIssuanceLink(db(), token, { answer: 'decline', note: 'Εκτός περιοχής.' }, LATER)).toEqual({ kind: 'answered', answer: 'decline' });
+    expect(await answerIssuanceLink(db(), token, { answer: 'decline', note: 'Εκτός περιοχής.', accessCode: null }, LATER)).toEqual({ kind: 'answered', answer: 'decline' });
     expect(assignment()).toMatchObject({ response: { basis: 'professional-link', outcome: 'declined', note: 'Εκτός περιοχής.' } });
+  });
+});
+
+describe('ADR-915 §29 — κωδικός πρόσβασης σε δεύτερο κανάλι', () => {
+  async function sendWithCode(overrides: Partial<IssuanceSendBody> = {}): Promise<{ readonly token: string; readonly code: string }> {
+    const result = await sendIssuanceMessage(db(), OFFICE, body({ requireAccessCode: true, informContactIds: [], ...overrides }), NOW);
+    if (!result.ok || result.accessCode === null) throw new Error('not sent with code');
+    const message = sent.filter((candidate) => candidate.kind === 'document-issuance').at(-1);
+    if (message === undefined) throw new Error('not sent');
+    return { token: tokenIn(message), code: result.accessCode };
+  }
+  const wrongOf = (code: string): string => (code === '000000' ? '111111' : '000000');
+  const storedCode = () => (invitations().at(-1) as { accessCode: { failures: number; lockedAt: string | null; verifier: string } }).accessCode;
+
+  it('η αποστολή δίνει τον κωδικό ΜΙΑ φορά στο γραφείο· στη βάση μόνο HMAC· το email λέει «θα σας τον πουν», ΠΟΤΕ τον κωδικό', async () => {
+    const { code } = await sendWithCode();
+    expect(code).toMatch(/^\d{6}$/);
+    expect(storedCode()).toMatchObject({ channel: 'office-relay', failures: 0, lockedAt: null });
+    expect(storedCode().verifier).not.toContain(code);
+    expect(assignment()).toMatchObject({ approvalRequest: { verification: 'access-code' } });
+    const email = sent.find((candidate) => candidate.kind === 'document-issuance');
+    expect(email?.text).toContain('6ψήφιος κωδικός');
+    expect(email?.text).not.toContain(code);
+  });
+
+  it('η όψη πριν τον κωδικό: μόνο «Για» και γραφείο — τίποτα για ακίνητο, έγγραφο, επαγγελματία· καμία προσπάθεια δεν χρεώνεται', async () => {
+    const { token } = await sendWithCode();
+    const view = await viewIssuanceLink(db(), token, LATER);
+    expect(view).toMatchObject({ kind: 'view', landing: { access: 'code-required' } });
+    if (view.kind !== 'view' || view.landing.access !== 'code-required') return;
+    expect(view.landing.gate).toEqual({ audience: 'owner', recipientName: 'Άλφα Συνθετικός', officeName: 'Γραφείο Άλφα', attemptsLeft: 5 });
+    expect(storedCode().failures).toBe(0);
+  });
+
+  it('λάθος κωδικός ⇒ `code-wrong` + προσπάθειες που μένουν· σωστός (και με κενό υπαγόρευσης) ⇒ πλήρης όψη', async () => {
+    const { token, code } = await sendWithCode();
+    expect(await unlockIssuanceLink(db(), token, wrongOf(code), LATER)).toEqual({ kind: 'refused', reason: 'code-wrong', remaining: 4 });
+    const spoken = `${code.slice(0, 3)} ${code.slice(3)}`;
+    expect(await unlockIssuanceLink(db(), token, spoken, LATER)).toMatchObject({ kind: 'view', view: { documentKind: 'energy-certificate' } });
+    expect(storedCode().failures).toBe(1);
+  });
+
+  it('🔴 απάντηση ΧΩΡΙΣ κωδικό ⇒ `code-required`, τίποτα δεν γράφεται· ΜΕ κωδικό ⇒ απόφαση `verifiedBy: access-code`', async () => {
+    const { token, code } = await sendWithCode();
+    expect(await answerIssuanceLink(db(), token, { answer: 'approve', note: null, accessCode: null }, LATER)).toEqual({ kind: 'refused', reason: 'code-required', remaining: 5 });
+    expect(assignment()).toMatchObject({ decision: null });
+    expect(await answerIssuanceLink(db(), token, { answer: 'approve', note: null, accessCode: code }, LATER)).toEqual({ kind: 'answered', answer: 'approve' });
+    expect(assignment()).toMatchObject({ decision: { basis: 'owner-link-approval', verifiedBy: 'access-code', outcome: 'approved' } });
+  });
+
+  it('🔴 5ο λάθος ⇒ μόνιμο κλείδωμα + ΜΙΑ ειδοποίηση στο γραφείο· μετά ούτε ο σωστός κωδικός, ούτε η όψη', async () => {
+    const { token, code } = await sendWithCode();
+    for (const remaining of [4, 3, 2, 1]) {
+      expect(await unlockIssuanceLink(db(), token, wrongOf(code), LATER)).toEqual({ kind: 'refused', reason: 'code-wrong', remaining });
+    }
+    expect(await unlockIssuanceLink(db(), token, wrongOf(code), LATER)).toEqual({ kind: 'refused', reason: 'code-locked', remaining: 0 });
+    expect(dispatchNotification).toHaveBeenCalledTimes(1);
+    expect(dispatchNotification.mock.calls[0]?.[0]).toMatchObject({ titleKey: 'documentIssuanceAnswered.locked', eventId: expect.stringMatching(/:locked$/) });
+    expect(await answerIssuanceLink(db(), token, { answer: 'approve', note: null, accessCode: code }, LATER)).toEqual({ kind: 'refused', reason: 'code-locked', remaining: 0 });
+    expect(await viewIssuanceLink(db(), token, LATER)).toEqual({ kind: 'refused', reason: 'code-locked', remaining: 0 });
+    expect(dispatchNotification).toHaveBeenCalledTimes(1);
+    expect(assignment()).toMatchObject({ decision: null });
+  });
+
+  it('🔴 ασφαλής προεπιλογή: σώμα χωρίς `requireAccessCode` (παλιός πελάτης) ⇒ ΖΗΤΑ κωδικό', () => {
+    const { requireAccessCode: _omitted, ...legacy } = body();
+    expect(issuanceSendBody.parse(legacy).requireAccessCode).toBe(true);
+  });
+
+  it('🔴 αγώνας: ο σύνδεσμος κλείδωσε ΑΝΑΜΕΣΑ στον έλεγχο και τη σφράγιση ⇒ καμία απάντηση (ο φραγμός μέσα στη συναλλαγή)', async () => {
+    const { token, code } = await sendWithCode();
+    afterAccessCheck = async () => {
+      const [invitation] = invitations() as { id: string; accessCode: Record<string, unknown> }[];
+      if (invitation === undefined) throw new Error('no invitation');
+      await fake.collection(COLLECTIONS.DOCUMENT_ISSUANCE_INVITATIONS).doc(invitation.id).update({ accessCode: { ...invitation.accessCode, lockedAt: NOW.toISOString() } });
+    };
+    expect(await answerIssuanceLink(db(), token, { answer: 'approve', note: null, accessCode: code }, LATER)).toMatchObject({ kind: 'refused', reason: 'code-locked' });
+    expect(assignment()).toMatchObject({ decision: null });
+    expect(invitations()[0]).toMatchObject({ state: 'pending' });
+  });
+
+  it('🔴 αγώνας: δύο ταυτόχρονα λάθη ⇒ ΔΥΟ αποτυχίες (καμία δεν «ξεχνιέται»)', async () => {
+    const { token, code } = await sendWithCode();
+    await Promise.all([unlockIssuanceLink(db(), token, wrongOf(code), LATER), unlockIssuanceLink(db(), token, wrongOf(code), LATER)]);
+    expect(storedCode().failures).toBe(2);
+  });
+
+  it('🔴 ο κωδικός είναι δεμένος στο αίτημα: ο κωδικός της ΠΑΛΙΑΣ αποστολής δεν ανοίγει τη νέα', async () => {
+    const first = await sendWithCode();
+    const second = await sendWithCode();
+    if (first.code === second.code) return; // 1 στο 10⁶ — δεν αποδεικνύει τίποτα, ούτε διαψεύδει
+    expect(await unlockIssuanceLink(db(), second.token, first.code, LATER)).toMatchObject({ kind: 'refused', reason: 'code-wrong' });
   });
 });

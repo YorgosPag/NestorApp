@@ -32,7 +32,7 @@
  */
 
 import React from 'react';
-import { Link, useRouter } from '@/lib/workspace/navigation';
+import { Link } from '@/lib/workspace/navigation';
 import { useSearchParams } from 'next/navigation';
 
 import { PropertyDetailSurface } from '@/features/property-detail-surface/PropertyDetailSurface';
@@ -40,6 +40,7 @@ import { usePropertiesViewerState } from '@/hooks/usePropertiesViewerState';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import { PageErrorState, StaticPageLoading } from '@/core/states';
+import { RecordActionBarProvider } from '@/core/layouts/record-action-bar';
 import { PropertyReinstateAction } from '@/components/properties/trash/PropertyReinstateAction';
 import { useRetiredPropertyRecord } from '@/hooks/useRetiredPropertyRecord';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -72,8 +73,6 @@ export function PropertyDetailPageContent({
   // `SharedPropertiesProvider` ζει στο `(app)/layout.tsx` — άρα η καρτέλα δεν
   // πληρώνει δεύτερη ανάγνωση, ούτε γεννά δεύτερη μετάφραση.
   const viewer = usePropertiesViewerState(propertyId);
-  // Πλοήγηση **από το σύνορο** (CHECK 3.61) — η καρτέλα στέλνει στη ροή δημιουργίας της λίστας.
-  const router = useRouter();
 
   // 🔑 Η απόφαση ζει σε **καθαρή συνάρτηση** και όχι εδώ, γιατί η πρώτη της
   // γραφή ήταν σιωπηλά λάθος και το βρήκε **ζωντανή μέτρηση**, όχι test. Δες
@@ -120,6 +119,8 @@ export function PropertyDetailPageContent({
   // ADR-797: το εξωτερικό κενό ανηκει στο κελυφος — το p-4 εφυγε (CHECK 3.63).
   return (
     <main className="flex min-h-0 flex-1 flex-col gap-4">
+      {/* Η κάτω μπάρα ενεργειών κάθεται στο ΤΕΛΟΣ της σελίδας (ADR-912 §12.13): στενή οθόνη ⇒ εκεί οι ενέργειες. */}
+      <RecordActionBarProvider>
       {/*
         🔴 **ΟΣΟ ΔΕΝ ΞΕΡΟΥΜΕ, Η ΣΕΛΙΔΑ ΔΕΝ ΛΕΕΙ ΤΙΠΟΤΑ — ΚΑΙ ΕΙΝΑΙ ΜΕΤΡΗΣΗ.**
 
@@ -213,10 +214,12 @@ export function PropertyDetailPageContent({
                 ήταν **νεκρά κουμπιά**, χωρίς σφάλμα και χωρίς ένδειξη. Ο δομικός φρουρός ζει
                 πλέον στην κεφαλίδα (ενέργεια χωρίς χειριστή δεν ζωγραφίζεται)· εδώ μπαίνουν
                 οι **υπάρχοντες** χειριστές — καμία νέα ροή.
-                ⚠️ Η δημιουργία ζει στη λίστα (`handleNewUnitInline`): η καρτέλα τη **ζητά**.
+                ⚠️ Η δημιουργία ζει στη λίστα (`handleNewUnitInline`).
+                🔑 **ΚΑΝΕΝΑ «Νέο Ακίνητο» ΕΔΩ** (ADR-777 §8.87.11, 2026-10-17): η σελίδα εγγραφής προσφέρει πράξεις
+                πάνω σε **αυτή** την εγγραφή (Salesforce record page · Zillow listing). Η δημιουργία ανήκει στη λίστα,
+                όπου ήδη ζει· εδώ έπιανε θέση στη ζώνη του αντίχειρα χωρίς να αφορά το ακίνητο που κοιτάς.
               */
               // 🗄️ Αποσυρμένο: χειριστής που λείπει ⇒ κουμπί που δεν ζωγραφίζεται (ίδιος κανόνας με τη λίστα).
-              onNewProperty={state.kind === 'found' ? () => router.push(ENTITY_ROUTES.properties.create) : undefined}
               onDeleteProperty={state.kind === 'found' ? () => viewer.handleDelete(state.property.id) : undefined}
               // Η σελίδα δεν έχει μπάρα αρχείου/κάδου από πάνω: η επαναφορά ζει δίπλα στην εξήγησή της.
               retiredAction={state.kind === 'retired' ? <PropertyReinstateAction property={state.property} /> : undefined}
@@ -228,6 +231,7 @@ export function PropertyDetailPageContent({
           </section>
         </>
       )}
+      </RecordActionBarProvider>
     </main>
   );
 }

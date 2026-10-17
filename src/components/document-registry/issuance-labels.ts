@@ -167,6 +167,14 @@ export const SEND_KEYS = {
   sending: `${K}issuance.send.sending`,
   sent: `${K}issuance.send.sent`,
   notDelivered: `${K}issuance.send.notDelivered`,
+  // §29 — κωδικός πρόσβασης σε δεύτερο κανάλι (το γραφείο τον λέει τηλεφωνικά).
+  accessCodeLabel: `${K}issuance.send.accessCodeLabel`,
+  accessCodeHint: `${K}issuance.send.accessCodeHint`,
+  codeHeading: `${K}issuance.send.codeHeading`,
+  codeBody: `${K}issuance.send.codeBody`,
+  codeCopy: `${K}issuance.send.codeCopy`,
+  codeCopied: `${K}issuance.send.codeCopied`,
+  codeDone: `${K}issuance.send.codeDone`,
 } as const;
 
 /** §28 — οι γραμμές ιστορικού των μηνυμάτων με σύνδεσμο και των απαντήσεων. */
@@ -179,4 +187,6 @@ export const LINK_HISTORY_KEYS = {
   acceptedByLink: `${K}issuance.history.acceptedByLink`,
   declinedByLink: `${K}issuance.history.declinedByLink`,
   responseNote: `${K}issuance.history.responseNote`,
+  withAccessCode: `${K}issuance.history.withAccessCode`,
+  verifiedByCode: `${K}issuance.history.verifiedByCode`,
 } as const;

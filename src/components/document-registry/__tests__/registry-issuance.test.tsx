@@ -89,7 +89,7 @@ function recordOf(actions: readonly IssuanceAction[]): IssuanceAssignmentRecord 
 
 const PROPOSE: IssuanceAction = { kind: 'propose', professionalContactId: 'cont_client', credential: INSPECTOR };
 const APPROVE: IssuanceAction = { kind: 'decide', outcome: 'approved', channel: 'phone', note: null, ownerContactId: 'cont_alpha' };
-const ACCEPTED = [PROPOSE, APPROVE, { kind: 'notify', channel: 'phone', invitationId: null, note: null }, { kind: 'respond', outcome: 'accepted', note: null }] as IssuanceAction[];
+const ACCEPTED = [PROPOSE, APPROVE, { kind: 'notify', channel: 'phone', invitationId: null, note: null, verification: null }, { kind: 'respond', outcome: 'accepted', note: null }] as IssuanceAction[];
 
 /** Το p6 (κενό ΠΕΑ) με υπεύθυνο, και ο κατάλογος του γραφείου. */
 function withRoster(roster: readonly IssuanceRosterEntry[], lead: ObligorLead = MAJORITY): DocumentRegistryResponse {
@@ -222,7 +222,7 @@ describe('ADR-915 §27 — πράξεις από την οθόνη', () => {
 });
 
 describe('ADR-915 §28 — αποστολή με σύνδεσμο: πρόχειρο → προεπισκόπηση → ΕΝΑ πάτημα', () => {
-  const REQUEST: IssuanceAction = { kind: 'request-approval', invitationId: 'diin_1', ownerContactId: 'cont_alpha', note: null };
+  const REQUEST: IssuanceAction = { kind: 'request-approval', invitationId: 'diin_1', ownerContactId: 'cont_alpha', note: null, verification: 'link' };
   const PREVIEW = {
     audience: 'owner', recipient: { contactId: 'cont_alpha', name: 'Άλφα', email: 'alfa@example.test' },
     subject: 'Θέμα προεπισκόπησης', text: 'Κείμενο προεπισκόπησης',
@@ -232,7 +232,7 @@ describe('ADR-915 §28 — αποστολή με σύνδεσμο: πρόχει�
 
   beforeEach(() => {
     preview.mockReset().mockResolvedValue({ kind: 'ok', data: { preview: PREVIEW } });
-    send.mockReset().mockResolvedValue({ kind: 'ok', data: { stage: 'proposed', delivery: { recipient: 'accepted', coOwners: {} } } });
+    send.mockReset().mockResolvedValue({ kind: 'ok', data: { stage: 'proposed', delivery: { recipient: 'accepted', coOwners: {} }, accessCode: null } });
     notifySuccess.mockClear();
     notifyWarning.mockClear();
   });
@@ -275,5 +275,68 @@ describe('ADR-915 §28 — αποστολή με σύνδεσμο: πρόχει�
     render(<DocumentRegistryContent />);
     expect(within(article()).getByText(LINK_HISTORY_KEYS.notDelivered)).toBeTruthy();
     expect(within(article()).getByRole('button', { name: SEND_KEYS.ownerResend })).toBeTruthy();
+  });
+});
+
+describe('ADR-915 §29 — κωδικός πρόσβασης: ο διακόπτης, η ΜΙΑ εμφάνιση, οι γραμμές ιστορικού', () => {
+  const PREVIEW = {
+    audience: 'owner', recipient: { contactId: 'cont_alpha', name: 'Άλφα', email: 'alfa@example.test' },
+    subject: 'Θέμα προεπισκόπησης', text: 'Κείμενο προεπισκόπησης', coOwners: [], coOwnerMessage: null,
+  };
+
+  beforeEach(() => {
+    preview.mockReset().mockResolvedValue({ kind: 'ok', data: { preview: PREVIEW } });
+    send.mockReset().mockResolvedValue({ kind: 'ok', data: { stage: 'proposed', delivery: { recipient: 'accepted', coOwners: {} }, accessCode: '042917' } });
+  });
+
+  async function openSend(): Promise<HTMLElement> {
+    registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record: recordOf([PROPOSE]) }]);
+    render(<DocumentRegistryContent />);
+    await userEvent.setup().click(within(article()).getByRole('button', { name: SEND_KEYS.ownerTrigger }));
+    return screen.findByRole('dialog');
+  }
+
+  async function submitWhenReady(dialog: HTMLElement): Promise<void> {
+    await within(dialog).findByText('Θέμα προεπισκόπησης', {}, { timeout: 2000 });
+    const submit = within(dialog).getByRole('button', { name: SEND_KEYS.submit });
+    await waitFor(() => expect(submit.hasAttribute('disabled')).toBe(false), { timeout: 2000 });
+    await userEvent.setup().click(submit);
+  }
+
+  it('🔴 ενεργός από προεπιλογή: η προεπισκόπηση και η αποστολή ζητούν κωδικό', async () => {
+    const dialog = await openSend();
+    expect(within(dialog).getByRole('switch', { name: SEND_KEYS.accessCodeLabel }).getAttribute('aria-checked')).toBe('true');
+    await submitWhenReady(dialog);
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({ requireAccessCode: true }));
+  });
+
+  it('μετά την αποστολή ο κωδικός φαίνεται ΜΙΑ φορά, σε ομάδες υπαγόρευσης — ο διάλογος ΔΕΝ κλείνει μόνος του', async () => {
+    const dialog = await openSend();
+    await submitWhenReady(dialog);
+    expect(await within(dialog).findByText('042 917')).toBeTruthy();
+    expect(within(dialog).getByRole('button', { name: SEND_KEYS.codeCopy })).toBeTruthy();
+    await userEvent.setup().click(within(dialog).getByRole('button', { name: SEND_KEYS.codeDone }));
+    await waitFor(() => expect(screen.queryByText('042 917')).toBeNull());
+  });
+
+  it('διακόπτης κλειστός ⇒ αποστολή χωρίς κωδικό', async () => {
+    send.mockResolvedValue({ kind: 'ok', data: { stage: 'proposed', delivery: { recipient: 'accepted', coOwners: {} }, accessCode: null } });
+    const dialog = await openSend();
+    await userEvent.setup().click(within(dialog).getByRole('switch', { name: SEND_KEYS.accessCodeLabel }));
+    await waitFor(() => expect(preview).toHaveBeenLastCalledWith(expect.objectContaining({ requireAccessCode: false })), { timeout: 2000 });
+    await submitWhenReady(dialog);
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({ requireAccessCode: false }));
+  });
+
+  it('ιστορικό: «με κωδικό πρόσβασης» στο αίτημα· «επιβεβαιώθηκε με τον κωδικό» στην απόφαση', () => {
+    const requested = recordOf([PROPOSE, { kind: 'request-approval', invitationId: 'diin_1', ownerContactId: 'cont_alpha', note: null, verification: 'access-code' }]);
+    const decided: IssuanceAssignmentRecord = {
+      ...requested,
+      decision: { basis: 'owner-link-approval', invitationId: 'diin_1', verifiedBy: 'access-code', outcome: 'approved', ownerContactId: 'cont_alpha', note: null, at: '2026-10-11T09:00:00.000Z' },
+    };
+    registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record: decided }]);
+    render(<DocumentRegistryContent />);
+    expect(within(article()).getByText(LINK_HISTORY_KEYS.withAccessCode)).toBeTruthy();
+    expect(within(article()).getByText(LINK_HISTORY_KEYS.verifiedByCode)).toBeTruthy();
   });
 });

@@ -37,9 +37,11 @@ export type ActionOverflow = PriorityOverflow<HTMLDivElement>;
  * Το δοχείο πρέπει να έχει πλάτος **ανεξάρτητο από το πόσες ενέργειες κρύβονται** (οι κρυμμένες μένουν στη ροή,
  * αόρατες) — αλλιώς, μόλις κρυφτεί μία, το δοχείο στενεύει και ο χώρος που ξαναβρέθηκε δεν φαίνεται ποτέ.
  */
-export function useActionOverflow(count: number, keepPrimary = false): ActionOverflow {
+export function useActionOverflow(count: number, keepPrimary = false, menuAlways = false): ActionOverflow {
   return usePriorityOverflow<HTMLDivElement>(
     count,
     keepPrimary ? ENTITY_ACTION_OVERFLOW_KEEP_PRIMARY : ENTITY_ACTION_OVERFLOW,
+    // Ενέργειες που ζουν ΜΟΝΟ στο μενού (καταστροφικές) ⇒ το «⋯» υπάρχει ούτως ή άλλως και ο χώρος του κρατιέται.
+    menuAlways,
   );
 }

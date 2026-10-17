@@ -18,6 +18,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { DOCUMENT_KINDS, type DocumentKind } from '@/config/document-validity/document-validity';
 import { normaliseChannelEmail } from '@/lib/contact/channel-email';
 import { ISSUANCE_AUDIENCES, type IssuanceAudience } from '@/lib/document-validity/issuance-request';
+import { mintAccessCode, storedAccessCodeSchema } from '@/server/invitations/invitation-access-code';
 import type { InvitationLocator } from '@/server/invitations/invitation-redeem';
 import { defaultInvitationExpiryMs, mintInvitationToken } from '@/server/invitations/invitation-token';
 import { generateDocumentIssuanceInvitationId } from '@/services/enterprise-id.service';
@@ -51,6 +52,8 @@ const invitationSchema = z.object({
   assignmentId: nonEmpty,
   audience: z.enum(ISSUANCE_AUDIENCES),
   contactId: nonEmpty,
+  /** §29 — ο κωδικός του δεύτερου καναλιού (μόνο HMAC + μετρητής)· `null` = ο σύνδεσμος αρκεί. */
+  accessCode: storedAccessCodeSchema.nullable().default(null),
 });
 
 /** Ωμό έγγραφο → σύνδεσμος, fail-closed: ό,τι δεν καταλαβαίνουμε **δεν** απαντά τίποτα. */
@@ -89,13 +92,24 @@ export interface IssuanceInvitationDraft {
   readonly email: string;
   readonly actorUid: string;
   readonly nowValue: string;
+  /** §29 — ζητά ο σύνδεσμος και κωδικό που λέει το γραφείο; */
+  readonly requireAccessCode: boolean;
 }
 
 /** **Νέος σύνδεσμος** — το έγγραφο + το ωμό token (ωμό **μόνο** στο email). Πετά αν λείπει το μυστικό. */
-export async function mintIssuanceInvitation(draft: IssuanceInvitationDraft): Promise<{ readonly invitation: IssuanceInvitation; readonly token: string }> {
+export interface MintedIssuanceInvitation {
+  readonly invitation: IssuanceInvitation;
+  readonly token: string;
+  /** Ο ωμός κωδικός — **μόνο** για την απάντηση προς το γραφείο, μία φορά· ποτέ σε log, email ή βάση. */
+  readonly accessCode: string | null;
+}
+
+export async function mintIssuanceInvitation(draft: IssuanceInvitationDraft): Promise<MintedIssuanceInvitation> {
   const id = generateDocumentIssuanceInvitationId();
   const expiresAtMs = defaultInvitationExpiryMs(draft.nowValue);
   const { token, nonceHash } = await mintInvitationToken(ISSUANCE_INVITE_SECRET_ENV, { id, expiresAtMs, locator: [] });
+  // Το ίδιο μυστικό με τον σύνδεσμο: λείπει ⇒ πετά **πριν** από κάθε εγγραφή (ο καλών λέει `secret-missing`).
+  const code = draft.requireAccessCode ? mintAccessCode(ISSUANCE_INVITE_SECRET_ENV, id) : null;
   const invitation: IssuanceInvitation = {
     id,
     inviteeEmail: normaliseChannelEmail(draft.email),
@@ -114,6 +128,7 @@ export async function mintIssuanceInvitation(draft: IssuanceInvitationDraft): Pr
     assignmentId: draft.assignmentId,
     audience: draft.audience,
     contactId: draft.contactId,
+    accessCode: code?.stored ?? null,
   };
-  return { invitation, token };
+  return { invitation, token, accessCode: code?.code ?? null };
 }

@@ -25,6 +25,10 @@ const FAILURE_TITLE_KEYS: Readonly<Record<DocumentRequestFailure, string>> = {
   superseded: 'document-request:failure.superseded.title',
   'lead-changed': 'document-request:failure.leadChanged.title',
   'answer-mismatch': 'document-request:failure.server.title',
+  // §29 — λείπει/λάθος κωδικός **εδώ** σημαίνει ότι η απάντηση δεν πέρασε από το βήμα του κωδικού: «δεν καταγράφηκε τίποτα».
+  'code-required': 'document-request:failure.server.title',
+  'code-wrong': 'document-request:failure.server.title',
+  'code-locked': 'document-request:failure.locked.title',
   unavailable: 'document-request:failure.server.title',
   'server-error': 'document-request:failure.server.title',
 };
@@ -41,6 +45,9 @@ const FAILURE_BODY_KEYS: Readonly<Record<DocumentRequestFailure, string>> = {
   superseded: 'document-request:failure.superseded.body',
   'lead-changed': 'document-request:failure.leadChanged.body',
   'answer-mismatch': 'document-request:failure.server.body',
+  'code-required': 'document-request:failure.server.body',
+  'code-wrong': 'document-request:failure.server.body',
+  'code-locked': 'document-request:failure.locked.body',
   unavailable: 'document-request:failure.server.body',
   'server-error': 'document-request:failure.server.body',
 };

@@ -12,6 +12,8 @@ import 'server-only';
  *    Η όψη το λέει πριν πατήσει ο άνθρωπος· η συναλλαγή το **ξανακρίνει** μέσω του μειωτή (`actor-refused`).
  * 🔑 **Ο υπεύθυνος ξανακρίνεται**: αν άλλαξε από την αποστολή (§26), ο παλιός δεν αποφασίζει πια (`lead-changed`).
  * ⚠️ **Καμία εγγραφή στην όψη**, εκτός από το «ανοίχτηκε» (ένδειξη, μη μπλοκάρον, μετά την απάντηση).
+ * 🔑 **§29 — κωδικός σε δεύτερο κανάλι**: σύνδεσμος με κωδικό δείχνει πριν από αυτόν μόνο την πύλη (σε ποιον · ποιο γραφείο)·
+ *    το ξεκλείδωμα και η απάντηση κρίνουν τον κωδικό **κάθε φορά** (`issuance-link-access.ts`), και ο μειωτής ξανακρίνει.
  */
 
 import type { Firestore } from 'firebase-admin/firestore';
@@ -22,6 +24,7 @@ import {
   issuanceStateOf,
   type IssuanceAssignmentRecord,
   type IssuanceStage,
+  type LinkVerification,
 } from '@/lib/document-validity/issuance-assignment';
 import {
   LINK_ANSWER_AUDIENCE,
@@ -40,10 +43,11 @@ import { readDocumentRegistry } from '@/services/document-registry/document-regi
 import type { DocumentRegistryResponse, RegistryPropertyLabel } from '@/services/document-registry/document-registry.types';
 import { stageIssuanceAction, type StagedIssuanceWrite } from '@/services/document-registry/issuance-assignments.server';
 import type { InvitationCoreRefusal, InvitationDocumentCore } from '@/types/invitation-core';
-import type { IssuanceInvitation, IssuanceLinkRefusal, IssuanceLinkView } from '@/types/issuance-invitation';
+import type { IssuanceInvitation, IssuanceLinkLanding, IssuanceLinkRefusal, IssuanceLinkView } from '@/types/issuance-invitation';
 
-import { announceIssuanceAnswer } from './issuance-answer-notifier';
+import { announceIssuanceAnswer, type IssuanceLinkEvent } from './issuance-answer-notifier';
 import { ISSUANCE_INVITATION_LOCATOR, issuanceInvitationsCollection, parseIssuanceInvitation } from './issuance-invitation-kind';
+import { checkIssuanceAccessCode, isIssuanceLinkLocked, issuanceGateViewOf, type IssuanceAccessCheck } from './issuance-link-access';
 
 const logger = createModuleLogger('issuance-invitation-answer');
 
@@ -52,6 +56,9 @@ const ANSWERABLE_FROM: Readonly<Record<IssuanceAudience, IssuanceStage>> = { own
 
 export type LinkRefusal = InvitationCoreRefusal | IssuanceLinkRefusal;
 type LinkUnavailable = 'secret-missing' | 'invitation-corrupt';
+
+/** Μια άρνηση προς τη σελίδα — `remaining` μόνο στις αρνήσεις κωδικού (§29: «απομένουν Ν προσπάθειες»). */
+export type LinkRefused = { readonly kind: 'refused'; readonly reason: LinkRefusal; readonly remaining?: number };
 
 interface ResolvedLink {
   readonly invitation: IssuanceInvitation;
@@ -89,13 +96,21 @@ async function resolveLink(db: Firestore, token: string, now: Date): Promise<Res
   return { ok: true, link: { invitation, registry, label, record: issuance.record, latestIssuedOn: issuance.latestIssuedOn } };
 }
 
+function officeNameOf(link: ResolvedLink): Promise<string | null> {
+  return readWorkspaceName(link.invitation.companyId).then(trimmedStringOrNull, () => null);
+}
+
+function recipientNameOf(link: ResolvedLink): string | null {
+  return link.registry.people[link.invitation.contactId]?.name ?? null;
+}
+
 async function viewOf(link: ResolvedLink): Promise<IssuanceLinkView> {
   const { invitation, registry, record } = link;
-  const officeName = trimmedStringOrNull(await readWorkspaceName(invitation.companyId).catch(() => ''));
+  const officeName = await officeNameOf(link);
   const request = invitation.audience === 'owner' ? record.approvalRequest : record.notice;
   return {
     audience: invitation.audience,
-    recipientName: registry.people[invitation.contactId]?.name ?? null,
+    recipientName: recipientNameOf(link),
     officeName,
     propertyLabel: link.label.name,
     documentKind: invitation.documentKind,
@@ -108,29 +123,75 @@ async function viewOf(link: ResolvedLink): Promise<IssuanceLinkView> {
 }
 
 export type LinkViewOutcome =
-  | { readonly kind: 'view'; readonly view: IssuanceLinkView; readonly markOpened: () => Promise<void> }
-  | { readonly kind: 'refused'; readonly reason: LinkRefusal }
+  | { readonly kind: 'view'; readonly landing: IssuanceLinkLanding; readonly markOpened: () => Promise<void> }
+  | LinkRefused
   | { readonly kind: 'unavailable' };
 
-/** **Η όψη — ΧΩΡΙΣ πράξη.** Τα Safe Links ανοίγουν τη σελίδα πριν τον άνθρωπο· εδώ δεν γράφεται τίποτα. */
+/**
+ * **Η όψη — ΧΩΡΙΣ πράξη.** Τα Safe Links ανοίγουν τη σελίδα πριν τον άνθρωπο· εδώ δεν γράφεται τίποτα (ούτε προσπάθεια
+ * κωδικού). Σύνδεσμος με κωδικό ⇒ μόνο η πύλη· κλειδωμένος ⇒ το λέει.
+ */
 export async function viewIssuanceLink(db: Firestore, token: string, now: Date): Promise<LinkViewOutcome> {
   const resolved = await resolveLink(db, token, now);
   if (!resolved.ok) return 'refusal' in resolved ? { kind: 'refused', reason: resolved.refusal } : { kind: 'unavailable' };
   const { link } = resolved;
+  if (isIssuanceLinkLocked(link.invitation)) return { kind: 'refused', reason: 'code-locked', remaining: 0 };
   const ref = issuanceInvitationsCollection(db).doc(link.invitation.id);
-  return { kind: 'view', view: await viewOf(link), markOpened: () => markInvitationOpenedAt(db, ref, nowISO()) };
+  const landing: IssuanceLinkLanding = link.invitation.accessCode === null
+    ? { access: 'open', view: await viewOf(link) }
+    : { access: 'code-required', gate: issuanceGateViewOf(link.invitation, recipientNameOf(link), await officeNameOf(link)) };
+  return { kind: 'view', landing, markOpened: () => markInvitationOpenedAt(db, ref, nowISO()) };
+}
+
+function recipientUidsOf(link: ResolvedLink): readonly string[] {
+  const sentBy = link.invitation.audience === 'owner' ? link.record.approvalRequest?.byUid : link.record.notice?.byUid;
+  return [link.record.proposedByUid, ...(sentBy === undefined ? [] : [sentBy])];
+}
+
+/** Η ειδοποίηση του γραφείου — απάντηση, ή κλείδωμα του κωδικού (§29, πρακτική Adobe Sign). Μετά το commit, ποτέ δεν πετά. */
+async function announceToOffice(link: ResolvedLink, event: IssuanceLinkEvent): Promise<void> {
+  await announceIssuanceAnswer({
+    companyId: link.invitation.companyId, assignmentId: link.invitation.assignmentId, invitationId: link.invitation.id,
+    answer: event, recipientUids: recipientUidsOf(link), propertyName: link.label.name, respondentName: recipientNameOf(link),
+  });
+}
+
+/** Ο κωδικός **για αυτή την πράξη** — άρνηση ⇒ λέγεται με τις προσπάθειες που μένουν· κλείδωμα ⇒ ειδοποίηση, μία φορά. */
+async function guardAccess(db: Firestore, link: ResolvedLink, attempt: string | null, nowIso: string): Promise<IssuanceAccessCheck> {
+  const check = await checkIssuanceAccessCode(db, link.invitation, attempt, nowIso);
+  if (!check.ok && check.lockedNow) {
+    logger.warn('Ο σύνδεσμος ανάθεσης κλείδωσε μετά από επαναλαμβανόμενους λάθος κωδικούς', { invitationId: link.invitation.id });
+    await announceToOffice(link, 'code-locked');
+  }
+  return check;
+}
+
+export type LinkUnlockOutcome =
+  | { readonly kind: 'view'; readonly view: IssuanceLinkView }
+  | LinkRefused
+  | { readonly kind: 'unavailable' };
+
+/** **Το ξεκλείδωμα** (§29) — μία προσπάθεια κωδικού ⇒ η πλήρης όψη. Καμία πράξη στην ανάθεση. */
+export async function unlockIssuanceLink(db: Firestore, token: string, accessCode: string, now: Date): Promise<LinkUnlockOutcome> {
+  const resolved = await resolveLink(db, token, now);
+  if (!resolved.ok) return 'refusal' in resolved ? { kind: 'refused', reason: resolved.refusal } : { kind: 'unavailable' };
+  const check = await guardAccess(db, resolved.link, accessCode, now.toISOString());
+  if (!check.ok) return { kind: 'refused', reason: check.refusal, remaining: check.remaining };
+  return { kind: 'view', view: await viewOf(resolved.link) };
 }
 
 /** Το είδος για την κλειδαριά: η απάντηση γράφεται με τον **ίδιο** γραφέα, μέσα στη **ίδια** συναλλαγή με τη σφράγιση. */
-function linkKind(db: Firestore, link: ResolvedLink, answer: IssuanceLinkAnswerBody, nowIso: string): InvitationLinkKind<InvitationDocumentCore, IssuanceInvitation, LinkRefusal, LinkUnavailable, StagedIssuanceWrite> {
+function linkKind(db: Firestore, link: ResolvedLink, answer: IssuanceLinkAnswerBody, verifiedBy: LinkVerification, nowIso: string): InvitationLinkKind<InvitationDocumentCore, IssuanceInvitation, LinkRefusal, LinkUnavailable, StagedIssuanceWrite> {
   return {
     ...ISSUANCE_INVITATION_LOCATOR,
     secretMissing: 'secret-missing',
     recordOf: (stored) => parseIssuanceInvitation(stored, link.invitation.id),
     async onResolve(tx, { record: invitation }) {
+      // §29 — δεύτερος φραγμός, μέσα στη συναλλαγή: κλείδωμα ανάμεσα στον έλεγχο και τη σφράγιση ⇒ καμία απάντηση.
+      if (isIssuanceLinkLocked(invitation)) return { kind: 'refused', reason: 'code-locked' };
       const staged = await stageIssuanceAction(tx, db, {
         companyId: invitation.companyId,
-        writer: { kind: 'link', invitationId: invitation.id, name: link.registry.people[invitation.contactId]?.name ?? null },
+        writer: { kind: 'link', invitationId: invitation.id, name: link.registry.people[invitation.contactId]?.name ?? null, verifiedBy },
         property: { id: invitation.propertyId, scope: link.label.scope, name: link.label.name },
         documentKind: invitation.documentKind,
         latestIssuedOn: link.latestIssuedOn,
@@ -147,13 +208,8 @@ function linkKind(db: Firestore, link: ResolvedLink, answer: IssuanceLinkAnswerB
 
 export type LinkAnswerOutcome =
   | { readonly kind: 'answered'; readonly answer: IssuanceLinkAnswerBody['answer'] }
-  | { readonly kind: 'refused'; readonly reason: LinkRefusal }
+  | LinkRefused
   | { readonly kind: 'unavailable' };
-
-function recipientUidsOf(link: ResolvedLink): readonly string[] {
-  const sentBy = link.invitation.audience === 'owner' ? link.record.approvalRequest?.byUid : link.record.notice?.byUid;
-  return [link.record.proposedByUid, ...(sentBy === undefined ? [] : [sentBy])];
-}
 
 /** **Η απάντηση** — μόνο από POST. Ένα κλικ ⇒ ένα αποτέλεσμα· δύο κλικ ⇒ `already-used`. */
 export async function answerIssuanceLink(db: Firestore, token: string, answer: IssuanceLinkAnswerBody, now: Date): Promise<LinkAnswerOutcome> {
@@ -161,18 +217,17 @@ export async function answerIssuanceLink(db: Firestore, token: string, answer: I
   if (!resolved.ok) return 'refusal' in resolved ? { kind: 'refused', reason: resolved.refusal } : { kind: 'unavailable' };
   const { link } = resolved;
   if (LINK_ANSWER_AUDIENCE[answer.answer] !== link.invitation.audience) return { kind: 'refused', reason: 'answer-mismatch' };
+  const check = await guardAccess(db, link, answer.accessCode, now.toISOString());
+  if (!check.ok) return { kind: 'refused', reason: check.refusal, remaining: check.remaining };
   const target = answer.answer === 'approve' || answer.answer === 'accept' ? 'accepted' : 'declined';
-  const outcome = await redeemInvitationByLink(db, linkKind(db, link, answer, now.toISOString()), { token, target, nowValue: now.toISOString() });
+  const kind = linkKind(db, link, answer, check.verifiedBy, now.toISOString());
+  const outcome = await redeemInvitationByLink(db, kind, { token, target, nowValue: now.toISOString() });
   if (outcome.kind === 'unavailable') {
     logger.error('Ο σύνδεσμος ανάθεσης δεν εξαργυρώθηκε', { invitationId: link.invitation.id, reason: outcome.reason });
     return { kind: 'unavailable' };
   }
   if (outcome.kind === 'refused') return outcome;
   await outcome.effect.audit();
-  await announceIssuanceAnswer({
-    companyId: link.invitation.companyId, assignmentId: link.invitation.assignmentId, invitationId: link.invitation.id,
-    answer: answer.answer, recipientUids: recipientUidsOf(link), propertyName: link.label.name,
-    respondentName: link.registry.people[link.invitation.contactId]?.name ?? null,
-  });
+  await announceToOffice(link, answer.answer);
   return { kind: 'answered', answer: answer.answer };
 }

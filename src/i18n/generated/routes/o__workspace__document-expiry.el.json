@@ -111,7 +111,9 @@
         "notDelivered": "Το email δεν έφυγε — ξαναστείλτε.",
         "noticedByLink": "Στάλθηκε στον επαγγελματία με σύνδεσμο στις {date}",
         "requestedApproval": "Στάλθηκε για έγκριση στον/στην {name} στις {date}",
-        "responseNote": "Σχόλιο: «{note}»"
+        "responseNote": "Σχόλιο: «{note}»",
+        "verifiedByCode": "Επιβεβαιώθηκε με τον κωδικό πρόσβασης",
+        "withAccessCode": "Με κωδικό πρόσβασης"
       },
       "lastClosed": "Η προηγούμενη πρόταση ({name}) έκλεισε χωρίς ανάθεση.",
       "lastFulfilled": "Το προηγούμενο έγγραφο ανατέθηκε στον/στην {name} και εκδόθηκε.",

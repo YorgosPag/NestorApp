@@ -56,6 +56,18 @@ export type BallInCourtParty = (typeof BALL_IN_COURT_PARTIES)[number];
 export const ISSUANCE_NOTE_MAX = 500;
 export const REGISTRY_NUMBER_MAX = 40;
 
+/**
+ * **Τι ζητά ένας σύνδεσμος για να πράξει** (§29): `link` = ο σύνδεσμος αρκεί (§28) · `access-code` = και ο κωδικός που
+ * είπε το γραφείο σε **δεύτερο** κανάλι. Το αίτημα γράφει τι **ζητήθηκε**· η βάση της απόφασης τι **αποδείχθηκε**.
+ */
+export const LINK_VERIFICATIONS = ['link', 'access-code'] as const;
+export type LinkVerification = (typeof LINK_VERIFICATIONS)[number];
+
+/** Αρκεί αυτό που αποδείχθηκε για αυτό που ζητήθηκε; — ο κωδικός καλύπτει και το «μόνο σύνδεσμος», όχι το αντίστροφο. */
+export function linkVerificationSatisfies(required: LinkVerification, proven: LinkVerification): boolean {
+  return required === 'link' || proven === 'access-code';
+}
+
 /** Το δηλωμένο προσόν του επαγγελματία για **αυτό** το έγγραφο — δηλωμένο, όχι επαληθευμένο (το λέει η οθόνη). */
 export interface IssuanceCredential {
   readonly qualification: IssuerQualification;
@@ -69,7 +81,7 @@ export interface IssuanceCredential {
  */
 export type IssuanceDecisionBasis =
   | { readonly basis: 'recorded-instruction'; readonly channel: InstructionChannel; readonly recordedByUid: string }
-  | { readonly basis: 'owner-link-approval'; readonly invitationId: string };
+  | { readonly basis: 'owner-link-approval'; readonly invitationId: string; readonly verifiedBy: LinkVerification };
 
 export type IssuanceDecision = IssuanceDecisionBasis & {
   readonly outcome: 'approved' | 'rejected';
@@ -82,7 +94,7 @@ export type IssuanceDecision = IssuanceDecisionBasis & {
 /** Η βάση της απάντησης του επαγγελματία — καταγραφή του γραφείου ή ο σύνδεσμος του **τρέχοντος** μηνύματος. */
 export type IssuanceResponseBasis =
   | { readonly basis: 'recorded'; readonly recordedByUid: string }
-  | { readonly basis: 'professional-link'; readonly invitationId: string };
+  | { readonly basis: 'professional-link'; readonly invitationId: string; readonly verifiedBy: LinkVerification };
 
 export type IssuanceResponse = IssuanceResponseBasis & {
   readonly outcome: 'accepted' | 'declined';
@@ -110,6 +122,8 @@ export interface IssuanceApprovalRequest {
   readonly note: string | null;
   readonly at: string;
   readonly byUid: string;
+  /** Τι ζητά ο σύνδεσμος για να αποφασίσει (§29) — ο μειωτής αρνείται απόφαση που δεν το απέδειξε. */
+  readonly verification: LinkVerification;
   /** `null` = το email δεν έχει ακόμη κριθεί (ή η αναφορά του χάθηκε). */
   readonly delivery: IssuanceDelivery | null;
 }
@@ -120,6 +134,8 @@ export interface IssuanceNotice {
   readonly byUid: string;
   /** Το μήνυμα με σύνδεσμο (§28) — `null` = ενημέρωση εκτός εφαρμογής, που απλώς καταγράφηκε. */
   readonly invitationId: string | null;
+  /** Τι ζητά ο σύνδεσμος (§29) — `null` ⇔ δεν υπάρχει σύνδεσμος. */
+  readonly verification: LinkVerification | null;
   readonly note: string | null;
   readonly delivery: IssuanceDelivery | null;
 }
@@ -203,7 +219,7 @@ export function canProposeIssuance(state: IssuanceState): boolean {
 export type IssuanceAction =
   | { readonly kind: 'propose'; readonly professionalContactId: string; readonly credential: IssuanceCredential }
   /** §28 — στάλθηκε σύνδεσμος έγκρισης στον υπεύθυνο. Ίδιο στάδιο· νέο αίτημα ⇒ ο προηγούμενος σύνδεσμος πεθαίνει. */
-  | { readonly kind: 'request-approval'; readonly invitationId: string; readonly ownerContactId: string; readonly note: string | null }
+  | { readonly kind: 'request-approval'; readonly invitationId: string; readonly ownerContactId: string; readonly note: string | null; readonly verification: LinkVerification }
   | {
       readonly kind: 'decide';
       readonly outcome: 'approved' | 'rejected';
@@ -214,7 +230,7 @@ export type IssuanceAction =
       readonly ownerContactId: string;
     }
   /** `invitationId` ≠ `null` ⇔ στάλθηκε μήνυμα με σύνδεσμο (επιτρέπεται και ξανά, από `sent`). */
-  | { readonly kind: 'notify'; readonly channel: NoticeChannel; readonly invitationId: string | null; readonly note: string | null }
+  | { readonly kind: 'notify'; readonly channel: NoticeChannel; readonly invitationId: string | null; readonly note: string | null; readonly verification: LinkVerification | null }
   | { readonly kind: 'respond'; readonly outcome: 'accepted' | 'declined'; readonly note: string | null }
   | { readonly kind: 'cancel' };
 
@@ -238,7 +254,8 @@ const LINK_ACTIONS: ReadonlySet<IssuanceActionKind> = new Set(['decide', 'respon
  */
 export type IssuanceActor =
   | { readonly kind: 'office'; readonly uid: string; readonly nowIso: string }
-  | { readonly kind: 'link'; readonly invitationId: string; readonly nowIso: string };
+  /** `verifiedBy` = τι **απέδειξε** ο κάτοχος (§29): μόνο τον σύνδεσμο, ή και τον κωδικό του δεύτερου καναλιού. */
+  | { readonly kind: 'link'; readonly invitationId: string; readonly verifiedBy: LinkVerification; readonly nowIso: string };
 
 /**
  * - `transition-refused` — η πράξη δεν επιτρέπεται από αυτό το στάδιο·
@@ -286,15 +303,20 @@ function decisionBasisOf(record: IssuanceAssignmentRecord, action: Extract<Advan
     return action.channel === null ? null : { basis: 'recorded-instruction', channel: action.channel, recordedByUid: actor.uid };
   }
   const request = record.approvalRequest;
+  // §29: ο σύνδεσμος του τρέχοντος αιτήματος **και** ό,τι ζήτησε το αίτημα — ο μειωτής, όχι η πόρτα, είναι η αυθεντία.
   const current = action.channel === null && request !== null
-    && request.invitationId === actor.invitationId && request.ownerContactId === action.ownerContactId;
-  return current ? { basis: 'owner-link-approval', invitationId: actor.invitationId } : null;
+    && request.invitationId === actor.invitationId && request.ownerContactId === action.ownerContactId
+    && linkVerificationSatisfies(request.verification, actor.verifiedBy);
+  return current ? { basis: 'owner-link-approval', invitationId: actor.invitationId, verifiedBy: actor.verifiedBy } : null;
 }
 
 /** Η βάση της απάντησης — ο σύνδεσμος απαντά μόνο αν είναι του **τρέχοντος** μηνύματος προς τον επαγγελματία. */
 function responseBasisOf(record: IssuanceAssignmentRecord, actor: IssuanceActor): IssuanceResponseBasis | null {
   if (actor.kind === 'office') return { basis: 'recorded', recordedByUid: actor.uid };
-  return record.notice?.invitationId === actor.invitationId ? { basis: 'professional-link', invitationId: actor.invitationId } : null;
+  const notice = record.notice;
+  const current = notice !== null && notice.invitationId === actor.invitationId
+    && linkVerificationSatisfies(notice.verification ?? 'link', actor.verifiedBy);
+  return current ? { basis: 'professional-link', invitationId: actor.invitationId, verifiedBy: actor.verifiedBy } : null;
 }
 
 /** Οι πράξεις που κάνει **μόνο** το γραφείο — ο έλεγχος actor έγινε ήδη. */
@@ -302,11 +324,18 @@ function officeAdvanced(record: IssuanceAssignmentRecord, action: Exclude<Advanc
   switch (action.kind) {
     case 'request-approval': return {
       ...record,
-      approvalRequest: { invitationId: action.invitationId, ownerContactId: action.ownerContactId, note: action.note, at, byUid: uid, delivery: null },
+      approvalRequest: {
+        invitationId: action.invitationId, ownerContactId: action.ownerContactId, note: action.note, at, byUid: uid,
+        verification: action.verification, delivery: null,
+      },
     };
     case 'notify': return {
       ...record,
-      notice: { channel: action.channel, at, byUid: uid, invitationId: action.invitationId, note: action.note, delivery: null },
+      notice: {
+        channel: action.channel, at, byUid: uid, invitationId: action.invitationId, note: action.note,
+        // Χωρίς σύνδεσμο δεν υπάρχει τι να επαληθευτεί — ποτέ «ζητήθηκε κωδικός» για ενημέρωση τηλεφώνου.
+        verification: action.invitationId === null ? null : action.verification ?? 'link', delivery: null,
+      },
     };
     case 'cancel': return { ...record, cancellation: { at, byUid: uid } };
   }

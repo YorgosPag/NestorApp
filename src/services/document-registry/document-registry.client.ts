@@ -104,6 +104,6 @@ export function previewIssuanceMessage(body: IssuanceSendBody): Promise<Issuance
 }
 
 /** Η αποστολή — **ένα** πάτημα του ανθρώπου, ποτέ αυτόματα (§18.5). */
-export function sendIssuanceMessage(body: IssuanceSendBody): Promise<IssuanceMessageResult<{ readonly stage: string; readonly delivery: IssuanceDelivery }>> {
+export function sendIssuanceMessage(body: IssuanceSendBody): Promise<IssuanceMessageResult<{ readonly stage: string; readonly delivery: IssuanceDelivery; readonly accessCode: string | null }>> {
   return postIssuanceMessage({ ...body, intent: 'send' });
 }

@@ -11,6 +11,8 @@
  *   (η στήλη του πλέγματος στο `EntityDetailsHeader`) και υποχωρούν **οι ενέργειες**.
  * 🔑 **Οι κρυμμένες μένουν στη ροή, αόρατες**: έτσι το πλάτος του δοχείου δεν εξαρτάται από το πόσες κρύφτηκαν, και
  *   ο χώρος που ξαναβρίσκεται **φαίνεται** (βλ. `useActionOverflow`). Κανένα διπλό κουμπί στο DOM.
+ * 🔑 **Έμφαση, όχι χρώμα ανά τύπο** (ADR-912 §12.13): ΕΝΑ γεμάτο κουμπί, τα υπόλοιπα `outline`, οι καταστροφικές
+ *   **μόνο** στο μενού, κάτω από διαχωριστικό και με χρώμα κινδύνου. Ο κανόνας ζει στο `presentEntityActions`.
  */
 import React from 'react';
 import { MoreHorizontal } from 'lucide-react';
@@ -20,6 +22,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Spinner } from '@/components/ui/spinner';
@@ -29,6 +32,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 
 import { ENTITY_ACTION_ATTR, ENTITY_ACTION_MORE_ATTR, useActionOverflow } from './action-overflow';
+import { ENTITY_ACTION_PRIMARY_FILL, presentEntityActions } from './entity-action-presets';
 import type { EntityHeaderAction } from './UnifiedEntityHeaderSystem';
 
 const ACTION_MARK = { [ENTITY_ACTION_ATTR]: '' };
@@ -43,6 +47,14 @@ const ORDER_FROM_RIGHT = [
   'order-7', 'order-8', 'order-9', 'order-10', 'order-11', 'order-12',
 ] as const;
 const MAX_VISIBLE_ACTIONS = ORDER_FROM_RIGHT.length - 1;
+
+/** Χρώμα κινδύνου στη γραμμή του μενού — ίδιο ιδίωμα με την «Αποσύνδεση» του μενού χρήστη. */
+const DESTRUCTIVE_MENU_ITEM = 'text-destructive focus:bg-destructive/10 focus:text-destructive';
+
+/** Η όψη του κουμπιού: ρητή `variant` υπερισχύει· αλλιώς η κύρια γεμίζει και όλες οι άλλες είναι `outline`. */
+function buttonVariantOf(action: EntityHeaderAction): NonNullable<EntityHeaderAction['variant']> {
+  return action.variant ?? (action.emphasis === 'primary' ? 'default' : 'outline');
+}
 
 /** Εικονίδιο (ή δείκτης όσο τρέχει) + ετικέτα — ίδια όψη στο κουμπί και στη γραμμή του μενού. */
 function ActionContent({ icon: Icon, label, pending, pendingLabel }: EntityHeaderAction) {
@@ -68,18 +80,25 @@ interface EntityActionButtonProps {
 
 export function EntityActionButton({ action, className, overflowed = false }: EntityActionButtonProps) {
   const spacing = useSpacingTokens();
-  const { variant = 'default', onClick, disabled, pending } = action;
+  const { onClick, disabled, pending } = action;
   return (
     <Button
       type="button"
-      variant={variant}
+      variant={buttonVariantOf(action)}
       size="sm"
       onClick={onClick}
       disabled={disabled || pending}
       aria-busy={pending}
       aria-hidden={overflowed || undefined}
       tabIndex={overflowed ? -1 : undefined}
-      className={cn('h-8', spacing.padding.x.sm, action.className, overflowed && 'invisible', className)}
+      className={cn(
+        'h-8',
+        spacing.padding.x.sm,
+        !action.variant && action.emphasis === 'primary' && ENTITY_ACTION_PRIMARY_FILL,
+        action.className,
+        overflowed && 'invisible',
+        className,
+      )}
       {...ACTION_MARK}
     >
       <ActionContent {...action} />
@@ -87,11 +106,35 @@ export function EntityActionButton({ action, className, overflowed = false }: En
   );
 }
 
-function ActionOverflowMenu({ actions }: { readonly actions: readonly EntityHeaderAction[] }) {
+interface ActionOverflowMenuProps {
+  /** Ενέργειες που δεν χώρεσαν στη γραμμή — στη σειρά τους. */
+  readonly actions: readonly EntityHeaderAction[];
+  /** Καταστροφικές: ζουν μόνο εδώ, στο τέλος, κάτω από διαχωριστικό (Polaris · Material menus). */
+  readonly destructive?: readonly EntityHeaderAction[];
+}
+
+function ActionMenuItems({ actions, className }: { readonly actions: readonly EntityHeaderAction[]; readonly className?: string }) {
+  return (
+    <>
+      {actions.map((action, index) => (
+        <DropdownMenuItem
+          key={index}
+          disabled={action.disabled || action.pending}
+          onClick={action.onClick}
+          className={className}
+        >
+          <ActionContent {...action} />
+        </DropdownMenuItem>
+      ))}
+    </>
+  );
+}
+
+export function ActionOverflowMenu({ actions, destructive = [] }: ActionOverflowMenuProps) {
   const { t } = useTranslation('common-actions');
   const iconSizes = useIconSizes();
   // Ενέργεια που τρέχει μέσα στο κλειστό μενού δεν φαίνεται από πουθενά ⇒ το λέει το ίδιο το κουμπί του μενού.
-  const busy = actions.some((action) => action.pending);
+  const busy = [...actions, ...destructive].some((action) => action.pending);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -108,15 +151,9 @@ function ActionOverflowMenu({ actions }: { readonly actions: readonly EntityHead
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {actions.map((action, index) => (
-          <DropdownMenuItem
-            key={index}
-            disabled={action.disabled || action.pending}
-            onClick={action.onClick}
-          >
-            <ActionContent {...action} />
-          </DropdownMenuItem>
-        ))}
+        <ActionMenuItems actions={actions} />
+        {actions.length > 0 && destructive.length > 0 && <DropdownMenuSeparator />}
+        <ActionMenuItems actions={destructive} className={DESTRUCTIVE_MENU_ITEM} />
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -132,8 +169,9 @@ interface EntityHeaderActionsProps {
   readonly keepPrimary?: boolean;
 }
 
-export function EntityHeaderActions({ actions, keepPrimary = false }: EntityHeaderActionsProps) {
-  const { containerRef, visibleCount } = useActionOverflow(actions.length, keepPrimary);
+export function EntityHeaderActions({ actions: declared, keepPrimary = false }: EntityHeaderActionsProps) {
+  const { inline: actions, menuOnly } = React.useMemo(() => presentEntityActions(declared), [declared]);
+  const { containerRef, visibleCount } = useActionOverflow(actions.length, keepPrimary, menuOnly.length > 0);
   const shown = Math.min(visibleCount, MAX_VISIBLE_ACTIONS);
   const overflowed = actions.slice(shown);
 
@@ -151,7 +189,9 @@ export function EntityHeaderActions({ actions, keepPrimary = false }: EntityHead
           />
         );
       })}
-      {overflowed.length > 0 && <ActionOverflowMenu actions={overflowed} />}
+      {(overflowed.length > 0 || menuOnly.length > 0) && (
+        <ActionOverflowMenu actions={overflowed} destructive={menuOnly} />
+      )}
     </div>
   );
 }

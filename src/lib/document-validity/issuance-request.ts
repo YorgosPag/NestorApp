@@ -76,6 +76,11 @@ export const issuanceSendBody = z.object({
   /** Μόνο για `owner`: ο υπεύθυνος που **είδε** ο άνθρωπος (ίδια CAS με την απόφαση). */
   expectedOwnerContactId: z.string().trim().min(1).nullable(),
   informContactIds: z.array(z.string().trim().min(1)).max(20),
+  /**
+   * §29 — ο σύνδεσμος ζητά **και** κωδικό που λέει το γραφείο τηλεφωνικά (DocuSign «Access Code»). Λείπει ⇒ `true`:
+   * η ασφαλής επιλογή είναι η προεπιλογή, και ένας παλιός πελάτης δεν στέλνει «σιωπηλά» σύνδεσμο χωρίς κωδικό.
+   */
+  requireAccessCode: z.boolean().default(true),
 });
 
 export type IssuanceSendBody = z.infer<typeof issuanceSendBody>;
@@ -84,12 +89,22 @@ export type IssuanceSendBody = z.infer<typeof issuanceSendBody>;
 export const ISSUANCE_LINK_ANSWERS = ['approve', 'reject', 'accept', 'decline'] as const;
 export type IssuanceLinkAnswer = (typeof ISSUANCE_LINK_ANSWERS)[number];
 
+/** Ό,τι πληκτρολόγησε ο άνθρωπος — η κανονικοποίηση (μόνο ψηφία) και η κρίση γίνονται στον διακομιστή. */
+const typedAccessCode = z.string().max(32);
+
 export const issuanceLinkAnswerBody = z.object({
   answer: z.enum(ISSUANCE_LINK_ANSWERS),
   note: optionalText(ISSUANCE_NOTE_MAX),
+  /** §29 — ο κωδικός, **ξανά** με την απάντηση: η πόρτα δεν κρατά «ξεκλείδωτη» συνεδρία, κρίνει κάθε πράξη. */
+  accessCode: typedAccessCode.nullable().default(null),
 });
 
 export type IssuanceLinkAnswerBody = z.infer<typeof issuanceLinkAnswerBody>;
+
+/** §29 — «ξεκλείδωσε την όψη»: μία προσπάθεια κωδικού, που μετρά στο όριο όπως και η απάντηση. */
+export const issuanceLinkUnlockBody = z.object({ accessCode: typedAccessCode });
+
+export type IssuanceLinkUnlockBody = z.infer<typeof issuanceLinkUnlockBody>;
 
 /** Ποιο ακροατήριο δίνει κάθε απάντηση — ιδιοκτήτης εγκρίνει/αρνείται, επαγγελματίας αποδέχεται/αρνείται. */
 export const LINK_ANSWER_AUDIENCE: Readonly<Record<IssuanceLinkAnswer, IssuanceAudience>> = {
@@ -124,7 +139,7 @@ export function issuanceActionOf(request: IssuanceAssignmentBody): IssuanceActio
       kind: 'decide', outcome: request.outcome, channel: request.channel, note: request.note, ownerContactId: request.expectedOwnerContactId,
     };
     // Καταγραφή του γραφείου: χωρίς μήνυμα της εφαρμογής (το μήνυμα με σύνδεσμο το γράφει η αποστολή, §28).
-    case 'notify': return { kind: 'notify', channel: request.channel, invitationId: null, note: null };
+    case 'notify': return { kind: 'notify', channel: request.channel, invitationId: null, note: null, verification: null };
     case 'respond': return { kind: 'respond', outcome: request.outcome, note: null };
     case 'cancel': return { kind: 'cancel' };
   }

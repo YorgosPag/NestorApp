@@ -107,7 +107,8 @@ function RequestFacts({ view }: { readonly view: IssuanceLinkView }) {
 
 type Phase = { readonly kind: 'idle' } | { readonly kind: 'sending' } | { readonly kind: 'done'; readonly answer: IssuanceLinkAnswer } | { readonly kind: 'failed'; readonly failure: DocumentRequestFailure };
 
-export function DocumentRequestCard({ token, view }: { readonly token: string; readonly view: IssuanceLinkView }) {
+/** `accessCode` (§29): ο κωδικός που ξεκλείδωσε την όψη — ξανακρίνεται με την απάντηση· `null` = ο σύνδεσμος αρκεί. */
+export function DocumentRequestCard({ token, view, accessCode }: { readonly token: string; readonly view: IssuanceLinkView; readonly accessCode: string | null }) {
   const { t } = useTranslation(['document-request']);
   const [note, setNote] = useState('');
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
@@ -115,7 +116,7 @@ export function DocumentRequestCard({ token, view }: { readonly token: string; r
   const texts = audienceTexts(t, view);
   const answer = async (choice: IssuanceLinkAnswer) => {
     setPhase({ kind: 'sending' });
-    const outcome = await answerDocumentRequest(token, { answer: choice, note: note.trim() || null });
+    const outcome = await answerDocumentRequest(token, { answer: choice, note: note.trim() || null, accessCode });
     setPhase(outcome.ok ? { kind: 'done', answer: outcome.data.answer } : { kind: 'failed', failure: outcome.failure });
   };
   if (phase.kind === 'failed') return <DocumentRequestFailureState failure={phase.failure} />;

@@ -97,7 +97,8 @@ function TabLink({ href, disabled, className, children }: TabLinkProps) {
 }
 
 /**
- * Η ετικέτα μιας καρτέλας (ADR-912 §2.2). Κάτω από `sm` φαίνεται **μόνο της ενεργής** — αλλά δεν κρύβεται ποτέ
+ * Η ετικέτα μιας καρτέλας (ADR-912 §2.2) **στη φαρδιά λωρίδα** (`TabsList`, αναδιπλούμενη)· στη στενή (`TabsRail`) οι
+ * ετικέτες φαίνονται πάντα. Κάτω από `sm` φαίνεται **μόνο της ενεργής** — αλλά δεν κρύβεται ποτέ
  * από την υποβοηθητική τεχνολογία: `sr-only`, όχι `hidden`. Με `hidden` κάθε καρτέλα-εικονίδιο ήταν κουμπί
  * **χωρίς όνομα** σε κάθε κινητό (WCAG 4.1.2).
  *
@@ -184,8 +185,11 @@ export function BaseTabs({
 
   warnOnContentConflict(tabs, children);
 
+  // 🔑 Στη λωρίδα που κυλά, ΚΑΘΕ καρτέλα λέει το όνομά της (Material 3 *scrollable tabs*, ADR-912 §2.2 αναθεώρηση
+  //    2026-10-17): τα σκέτα εικονίδια (σπίτι · χάρτης · κάμερα · βίντεο · υδρόγειος) έβαζαν τον άνθρωπο να μαντεύει,
+  //    ενώ η κύλιση έλυνε ήδη το πρόβλημα χώρου που τα εικονίδια υποτίθεται ότι έλυναν.
   const items = (
-    <TabStripItems tabs={tabs} triggerTheme={themeConfig?.tabTrigger} alwaysShowLabels={alwaysShowLabels} />
+    <TabStripItems tabs={tabs} triggerTheme={themeConfig?.tabTrigger} alwaysShowLabels={alwaysShowLabels || isRail} />
   );
 
   return (

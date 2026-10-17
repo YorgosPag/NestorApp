@@ -12,6 +12,7 @@
  * **λιγότερο** — ορατή απουσία — αντί για κουμπί που κοροϊδεύει τον άνθρωπο.
  *
  * ⚠️ Η «Επεξεργασία» και η «Επίδειξη» **μένουν πάντα**: τις τροφοδοτεί η ίδια η επιφάνεια.
+ * 🔑 Ο κάδος είναι **καταστροφική** ενέργεια ⇒ ζει **μόνο** στο μενού «⋯» (ADR-912 §12.13), ποτέ σε κουμπί.
  */
 
 /* global describe, it, expect, jest */
@@ -35,6 +36,13 @@ const PROPERTY = { id: 'prop_1', name: 'Δοκιμή' } as unknown as Property;
 
 const NEW_ACTION = /navigation\.actions\.newUnit\.label/;
 const DELETE_ACTION = /navigation\.actions\.delete\.label/;
+const MORE = { name: 'actions.more' } as const;
+
+/** Ο κάδος ζει στο «⋯»: ανοίγει το μενού και επιστρέφει τη γραμμή του. */
+async function openDeleteItem(): Promise<HTMLElement> {
+  await userEvent.click(screen.getByRole('button', MORE));
+  return screen.getByRole('menuitem', { name: DELETE_ACTION });
+}
 
 describe('Υ — οι ενέργειες της κεφαλίδας ακινήτου', () => {
   it('🔴 Υ1 — ΧΩΡΙΣ χειριστές: τα δύο κουμπιά ΔΕΝ υπάρχουν καθόλου', () => {
@@ -59,7 +67,9 @@ describe('Υ — οι ενέργειες της κεφαλίδας ακινήτ�
     );
 
     await userEvent.click(screen.getByRole('button', { name: NEW_ACTION }));
-    await userEvent.click(screen.getByRole('button', { name: DELETE_ACTION }));
+    // Καταστροφική ⇒ ΠΟΤΕ κουμπί δίπλα στις άλλες· μόνο γραμμή του μενού.
+    expect(screen.queryByRole('button', { name: DELETE_ACTION })).toBeNull();
+    await userEvent.click(await openDeleteItem());
 
     expect(onNewProperty).toHaveBeenCalledTimes(1);
     expect(onDeleteProperty).toHaveBeenCalledTimes(1);
@@ -93,7 +103,7 @@ describe('Υ4 — `identity="full"`: κεφαλίδα σελίδας εγγρα�
     expect(await screen.findByTestId('identity-gallery')).toBeInTheDocument();
     expect(screen.getByText('properties-detail:card.stats.price')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /navigation\.actions\.edit\.label/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: DELETE_ACTION })).toBeInTheDocument();
+    expect(await openDeleteItem()).toBeInTheDocument();
     // Στο κινητό είναι ο ΜΟΝΟΣ τίτλος της σελίδας: κανένα περιτύλιγμα που την κρύβει κάτω από `md`.
     expect(container.querySelector('.hidden')).toBeNull();
   });
@@ -188,10 +198,10 @@ describe('Υ3 — αποσυρμένο ακίνητο', () => {
     expect(screen.queryByRole('button', { name: /buildingSelector\.save/ })).toBeNull();
   });
 
-  it('✅ ζωντανό ακίνητο μέσα στον ίδιο πάροχο ⇒ τα κουμπιά γραφής υπάρχουν', () => {
+  it('✅ ζωντανό ακίνητο μέσα στον ίδιο πάροχο ⇒ τα κουμπιά γραφής υπάρχουν', async () => {
     mountRetired('for-sale');
 
     expect(screen.getByRole('button', { name: /navigation\.actions\.edit\.label/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: DELETE_ACTION })).toBeInTheDocument();
+    expect(await openDeleteItem()).toBeInTheDocument();
   });
 });

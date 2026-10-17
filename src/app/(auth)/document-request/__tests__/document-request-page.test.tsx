@@ -30,9 +30,17 @@ function respond(status: number, json: unknown): Response {
   return { ok: status < 400, status, json: async () => json } as Response;
 }
 
-function mockNetwork(view: Response, answer: Response = respond(200, { success: true, data: { answer: 'approve' } })): void {
+/** Η όψη χωρίς κωδικό (§28) — η απάντηση του GET είναι «landing» (§29). */
+const OPEN = { access: 'open', view: VIEW };
+
+function mockNetwork(
+  view: Response,
+  answer: Response = respond(200, { success: true, data: { answer: 'approve' } }),
+  unlock: (body: { accessCode: string }) => Response = () => respond(500, { success: false, error: 'server-error' }),
+): void {
   global.fetch = jest.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init: init ?? {} });
+    if (String(url).endsWith('/unlock')) return unlock(JSON.parse(String(init?.body)) as { accessCode: string });
     return String(url).endsWith('/answer') ? answer : view;
   }) as typeof fetch;
 }
@@ -45,7 +53,7 @@ beforeEach(() => {
 
 describe('ADR-915 §28 — /document-request', () => {
   it('🔴 το διαπιστευτήριο φεύγει από τη διεύθυνση και ταξιδεύει ΜΟΝΟ σε κεφαλίδα — η όψη δεν κάνει πράξη', async () => {
-    mockNetwork(respond(200, { success: true, data: VIEW }));
+    mockNetwork(respond(200, { success: true, data: OPEN }));
     render(<DocumentRequestGate />);
     expect(await screen.findByText('document-request:owner.heading')).toBeTruthy();
     expect(window.location.hash).toBe('');
@@ -57,7 +65,7 @@ describe('ADR-915 §28 — /document-request', () => {
   });
 
   it('«Εγκρίνω» ⇒ ΜΙΑ απάντηση, με κλειδί ιδεμποτίας και την απάντηση του ακροατηρίου του συνδέσμου', async () => {
-    mockNetwork(respond(200, { success: true, data: VIEW }));
+    mockNetwork(respond(200, { success: true, data: OPEN }));
     render(<DocumentRequestGate />);
     await userEvent.setup().click(await screen.findByRole('button', { name: 'document-request:owner.approve' }));
     expect(await screen.findByText('document-request:done.approved')).toBeTruthy();
@@ -66,11 +74,11 @@ describe('ADR-915 §28 — /document-request', () => {
     const headers = answers[0]?.init.headers as Record<string, string>;
     expect(headers.Authorization).toBe('Bearer tok.secret-1');
     expect(headers['Idempotency-Key']).toEqual(expect.any(String));
-    expect(JSON.parse(String(answers[0]?.init.body))).toEqual({ answer: 'approve', note: null });
+    expect(JSON.parse(String(answers[0]?.init.body))).toEqual({ answer: 'approve', note: null, accessCode: null });
   });
 
   it('ο επαγγελματίας βλέπει «Αναλαμβάνω / Δεν αναλαμβάνω» — και ΟΧΙ τα κουμπιά του ιδιοκτήτη', async () => {
-    mockNetwork(respond(200, { success: true, data: { ...VIEW, audience: 'professional', professional: null } }));
+    mockNetwork(respond(200, { success: true, data: { access: 'open', view: { ...VIEW, audience: 'professional', professional: null } } }));
     render(<DocumentRequestGate />);
     expect(await screen.findByRole('button', { name: 'document-request:professional.accept' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'document-request:owner.approve' })).toBeNull();
@@ -94,9 +102,55 @@ describe('ADR-915 §28 — /document-request', () => {
 
   it('χωρίς σύνδεσμο ⇒ «λείπει ο σύνδεσμος», ΚΑΝΕΝΑ αίτημα δικτύου', async () => {
     window.history.replaceState(null, '', '/document-request');
-    mockNetwork(respond(200, { success: true, data: VIEW }));
+    mockNetwork(respond(200, { success: true, data: OPEN }));
     render(<DocumentRequestGate />);
     expect(await screen.findByText('document-request:failure.missing.title')).toBeTruthy();
     expect(calls).toHaveLength(0);
+  });
+});
+
+describe('ADR-915 §29 — /document-request με κωδικό πρόσβασης', () => {
+  const GATE = { access: 'code-required', gate: { audience: 'owner', recipientName: 'Άλφα Συνθετικός', officeName: 'Γραφείο Άλφα', attemptsLeft: 5 } };
+  const unlockWith = (code: string) => (body: { accessCode: string }) => (body.accessCode === code
+    ? respond(200, { success: true, data: { view: VIEW } })
+    : respond(403, { success: false, error: 'code-wrong', remaining: 4 }));
+
+  it('🔴 πριν τον κωδικό: μόνο «Για» και γραφείο — ΚΑΝΕΝΑ στοιχείο ακινήτου ή επαγγελματία, κανένα κουμπί απάντησης', async () => {
+    mockNetwork(respond(200, { success: true, data: GATE }));
+    render(<DocumentRequestGate />);
+    expect(await screen.findByText('document-request:code.heading')).toBeTruthy();
+    expect(screen.getByText(`document-request:code.intro ${JSON.stringify({ office: 'Γραφείο Άλφα' })}`)).toBeTruthy();
+    expect(screen.queryByText('Διαμέρισμα Α1')).toBeNull();
+    expect(screen.queryByText('Επιθεωρητής Συνθετικός')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'document-request:owner.approve' })).toBeNull();
+    const input = screen.getByLabelText('document-request:code.label');
+    expect(input.getAttribute('autocomplete')).toBe('one-time-code');
+    expect(input.getAttribute('inputmode')).toBe('numeric');
+  });
+
+  it('λάθος ⇒ «απομένουν Ν» ανακοινώνεται· σωστός ⇒ η κάρτα, και η απάντηση φέρει τον κωδικό — ΠΟΤΕ σε URL ή storage', async () => {
+    mockNetwork(respond(200, { success: true, data: GATE }), undefined, unlockWith('042917'));
+    const user = userEvent.setup();
+    render(<DocumentRequestGate />);
+    const input = await screen.findByLabelText('document-request:code.label');
+    await user.type(input, '111111');
+    await user.click(screen.getByRole('button', { name: 'document-request:code.submit' }));
+    expect((await screen.findByRole('alert')).textContent).toBe(`document-request:code.wrong ${JSON.stringify({ remaining: 4 })}`);
+    await user.type(screen.getByLabelText('document-request:code.label'), '042 917');
+    await user.click(screen.getByRole('button', { name: 'document-request:code.submit' }));
+    await user.click(await screen.findByRole('button', { name: 'document-request:owner.approve' }));
+    expect(await screen.findByText('document-request:done.approved')).toBeTruthy();
+    const answer = calls.find((call) => call.url.endsWith('/answer'));
+    expect(JSON.parse(String(answer?.init.body))).toEqual({ answer: 'approve', note: null, accessCode: '042917' });
+    expect(window.location.href).not.toContain('042917');
+    expect(JSON.stringify({ ...window.sessionStorage })).not.toContain('042917');
+    expect(JSON.stringify({ ...window.localStorage })).not.toContain('042917');
+  });
+
+  it('κλειδωμένος σύνδεσμος ⇒ «κλειδώθηκε», κανένα πεδίο κωδικού', async () => {
+    mockNetwork(respond(423, { success: false, error: 'code-locked', remaining: 0 }));
+    render(<DocumentRequestGate />);
+    expect(await screen.findByText('document-request:failure.locked.title')).toBeTruthy();
+    expect(screen.queryByLabelText('document-request:code.label')).toBeNull();
   });
 });

@@ -31,6 +31,7 @@ import {
   type IssuanceRefusalReason,
   type IssuanceAssignmentRecord,
   type IssuanceStage,
+  type LinkVerification,
 } from '@/lib/document-validity/issuance-assignment';
 import type { IssuanceRosterEntry } from '@/lib/document-validity/issuance-candidates';
 import { isOwnedByCompany } from '@/lib/auth/tenant-ownership';
@@ -102,7 +103,8 @@ export async function readIssuanceRoster(db: Firestore, companyId: string): Prom
  */
 export type IssuanceWriter =
   | { readonly kind: 'office'; readonly uid: string; readonly name: string | null; readonly expectedStage: IssuanceStage | null }
-  | { readonly kind: 'link'; readonly invitationId: string; readonly name: string | null };
+  /** `verifiedBy` (§29) — τι απέδειξε ο κάτοχος· ο μειωτής το συγκρίνει με ό,τι ζήτησε το αίτημα. */
+  | { readonly kind: 'link'; readonly invitationId: string; readonly name: string | null; readonly verifiedBy: LinkVerification };
 
 export interface IssuanceWrite {
   readonly companyId: string;
@@ -216,7 +218,7 @@ function casHolds(writer: IssuanceWriter, previousStage: IssuanceStage | null): 
 }
 
 function actorOf(writer: IssuanceWriter, nowIso: string): IssuanceActor {
-  return writer.kind === 'office' ? { kind: 'office', uid: writer.uid, nowIso } : { kind: 'link', invitationId: writer.invitationId, nowIso };
+  return writer.kind === 'office' ? { kind: 'office', uid: writer.uid, nowIso } : { kind: 'link', invitationId: writer.invitationId, verifiedBy: writer.verifiedBy, nowIso };
 }
 
 /**
