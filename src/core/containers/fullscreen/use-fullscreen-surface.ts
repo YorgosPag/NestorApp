@@ -28,7 +28,7 @@ import { useEffect, useLayoutEffect, useRef } from 'react';
 
 import { pushEscapeLayer } from '@/lib/a11y/escape-layers';
 import { canRestoreFocusTo, captureFocusOpener } from '@/lib/a11y/focus-return';
-import { inertOutside } from '@/lib/a11y/inert-outside';
+import { enterModalSurface } from '@/lib/a11y/modal-surface';
 import { isTextEntryTarget } from '@/lib/a11y/keyboard-scope';
 
 /** Ο δηλωμένος ιδιοκτήτης των πατημάτων Escape που χειρίζεται η επιφάνεια (ADR-364 — έλεγχος). */
@@ -60,21 +60,6 @@ export function useFullscreenOpener(isFullscreen: boolean): ElementRef {
   return openerRef;
 }
 
-let scrollLocks = 0;
-
-/** Κλείδωμα κύλισης του `body` με μέτρηση αναφορών — δύο επιφάνειες δεν ξεκλειδώνουν η μία την άλλη. */
-function lockBodyScroll(): () => void {
-  scrollLocks += 1;
-  document.body.classList.add('overflow-hidden');
-  let released = false;
-  return () => {
-    if (released) return;
-    released = true;
-    scrollLocks = Math.max(0, scrollLocks - 1);
-    if (scrollLocks === 0) document.body.classList.remove('overflow-hidden');
-  };
-}
-
 function isTextEntryInside(surface: HTMLElement | null, target: EventTarget | null): boolean {
   return surface !== null && target instanceof Node && surface.contains(target) && isTextEntryTarget(target);
 }
@@ -103,13 +88,7 @@ function useSurfaceModality({ isFullscreen, ready, surfaceRef }: FullscreenSurfa
   useLayoutEffect(() => {
     const surface = surfaceRef.current;
     if (!isFullscreen || !ready || !surface) return undefined;
-    const releaseInert = inertOutside([surface]);
-    const releaseScroll = lockBodyScroll();
-    if (!surface.contains(document.activeElement)) surface.focus({ preventScroll: true });
-    return () => {
-      releaseInert();
-      releaseScroll();
-    };
+    return enterModalSurface(surface);
   }, [isFullscreen, ready, surfaceRef]);
 }
 

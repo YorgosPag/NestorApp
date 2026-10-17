@@ -49,6 +49,15 @@ describe('FilesPreviewSplit — ένας θεατής, στη θέση που χ
     expect(screen.getByTestId('list')).toBeInTheDocument();
   });
 
+  it('στενό: το φύλλο ζει στο `body` (κανένας πρόγονος με `backdrop-filter` δεν το στριμώχνει) και πάνω από την κάτω μπάρα', () => {
+    mockViewport(true);
+    const { container } = renderSplit(FILE);
+    const sheet = screen.getByRole('heading', { name: 'Συμβόλαιο.pdf' }).closest('.fixed');
+    expect(sheet?.parentElement).toBe(document.body);
+    expect(container.contains(sheet)).toBe(false);
+    expect(sheet?.className).toContain('z-[var(--z-index-transient-stack)]');
+  });
+
   it('φαρδύ: ο θεατής είναι δεύτερη στήλη με δικό του τίτλο — κανένα φύλλο', () => {
     mockViewport(false);
     renderSplit(FILE);
