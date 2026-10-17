@@ -87,6 +87,16 @@ interface StoredInvitationCheck {
 }
 
 /**
+ * Δείχνει το nonce σε **αυτό** το έγγραφο; — το αρχικό ή ένα που επανεκδόθηκε (ADR-915 §31). Συγκρίνει **όλα** σε σταθερό
+ * χρόνο, χωρίς βραχυκύκλωμα: ο χρόνος δεν λέει ποιος από τους συνδέσμους ταίριαξε, ούτε πόσοι υπάρχουν.
+ */
+function nonceMatches(nonceHash: string, stored: InvitationDocumentCore): boolean {
+  let matched = equalsInConstantTime(nonceHash, stored.nonceHash);
+  for (const reissued of stored.reissuedNonceHashes ?? []) matched = equalsInConstantTime(nonceHash, reissued) || matched;
+  return matched;
+}
+
+/**
  * **Γιατί αυτό το έγγραφο ΔΕΝ εξαργυρώνεται;** — ή `null` αν εξαργυρώνεται.
  *
  * 🔑 **Ένας ορισμός για την όψη, τον προέλεγχο και τη συναλλαγή** — και για **κάθε** είδος πρόσκλησης.
@@ -108,7 +118,7 @@ export function refusalOfStoredInvitation(
 
   // 🔴 Η υπογραφή αποδεικνύει ότι **εμείς** φτιάξαμε το κείμενο, **όχι** ότι δείχνει σε
   //    αυτό το έγγραφο. Το nonce είναι εκείνο που το δένει.
-  if (!equalsInConstantTime(check.nonceHash, stored.nonceHash)) return 'link-invalid';
+  if (!nonceMatches(check.nonceHash, stored)) return 'link-invalid';
 
   // 🔴 Η ΔΕΣΜΕΥΣΗ ΣΤΟΝ ΠΑΡΑΛΗΠΤΗ (§7.5) — εδώ σπάει το προωθημένο email.
   if (check.recipientEmail !== null && !sameChannelEmail(check.recipientEmail, stored.inviteeEmail)) {

@@ -1,6 +1,6 @@
 /**
  * @fileoverview ADR-915 §28 — **τα μηνύματα της ανάθεσης έκδοσης**: έγκριση (υπεύθυνος) · ανάθεση (επαγγελματίας) ·
- *   ενημέρωση (συνιδιοκτήτης) · §30 απόδειξη απάντησης. Ο **ίδιος** συνθέτης χτίζει την προεπισκόπηση και το μήνυμα που φεύγει (§28 Η-Β7).
+ *   ενημέρωση (συνιδιοκτήτης) · §30 απόδειξη απάντησης · §31 υπενθύμιση (το **ίδιο** μήνυμα, με δικό του θέμα). Ο **ίδιος** συνθέτης χτίζει την προεπισκόπηση και το μήνυμα που φεύγει (§28 Η-Β7).
  * @related issuance-invitation-email-texts.ts (τα λόγια) · invitation-email-shared.ts (ο σκελετός) ·
  *   server/issuance-invitations/issuance-invitation-send.ts (ο καλών)
  * @module services/email-templates/issuance-invitation-email
@@ -19,10 +19,12 @@ import { createBundleTranslate, type BundleTranslate } from '@/i18n/bundle-trans
 import { resolveHumanLanguage, type HumanLanguage } from '@/i18n/languages';
 import elConveyance from '@/i18n/locales/el/conveyance.json';
 import elRegistry from '@/i18n/locales/el/document-registry.json';
+import elRequest from '@/i18n/locales/el/document-request.json';
 import elLegality from '@/i18n/locales/el/legality.json';
 import elMarket from '@/i18n/locales/el/property-market.json';
 import enConveyance from '@/i18n/locales/en/conveyance.json';
 import enRegistry from '@/i18n/locales/en/document-registry.json';
+import enRequest from '@/i18n/locales/en/document-request.json';
 import enLegality from '@/i18n/locales/en/legality.json';
 import enMarket from '@/i18n/locales/en/property-market.json';
 import type { IssuanceCredential, LinkVerification } from '@/lib/document-validity/issuance-assignment';
@@ -36,9 +38,15 @@ import { ISSUANCE_EMAIL_TEXTS, type IssuanceEmailWording } from './issuance-invi
 
 /** Οι ονομασίες, ανά γλώσσα, από τα **ίδια** locale της οθόνης. */
 const LABELS: Readonly<Record<HumanLanguage, BundleTranslate>> = {
-  el: createBundleTranslate({ [REGISTRY_NS]: elRegistry, conveyance: elConveyance, legality: elLegality, 'property-market': elMarket }, REGISTRY_NS, 'el'),
-  en: createBundleTranslate({ [REGISTRY_NS]: enRegistry, conveyance: enConveyance, legality: enLegality, 'property-market': enMarket }, REGISTRY_NS, 'en'),
+  el: createBundleTranslate({ [REGISTRY_NS]: elRegistry, conveyance: elConveyance, legality: elLegality, 'property-market': elMarket, 'document-request': elRequest }, REGISTRY_NS, 'el'),
+  en: createBundleTranslate({ [REGISTRY_NS]: enRegistry, conveyance: enConveyance, legality: enLegality, 'property-market': enMarket, 'document-request': enRequest }, REGISTRY_NS, 'en'),
 };
+
+/** §31 — το κουμπί άρνησης της σελίδας-συνδέσμου, από το **ίδιο** locale: η υπενθύμιση λέει ό,τι θα δει ο άνθρωπος. */
+const DECLINE_BUTTON_KEYS = {
+  approval: 'document-request:owner.reject',
+  professional: 'document-request:professional.decline',
+} as const;
 
 /** Ό,τι λέει **κάθε** μήνυμα της ανάθεσης — διαβασμένο από τον διακομιστή, ποτέ από το αίτημα. */
 export interface IssuanceEmailFacts {
@@ -51,10 +59,13 @@ export interface IssuanceEmailFacts {
   readonly note: string | null;
 }
 
+/** §31 — το μήνυμα είναι **υπενθύμιση** του αιτήματος που έφυγε στις `firstSentAt`· `null` = το ίδιο το αίτημα. */
+export type IssuanceEmailReminder = { readonly firstSentAt: string } | null;
+
 export type IssuanceEmailInput =
   /** `accessCode` (§29): ο σύνδεσμος ζητά και κωδικό — το email λέει **πώς** τον παίρνει, ποτέ τον ίδιο. */
-  | { readonly kind: 'approval'; readonly language: unknown; readonly facts: IssuanceEmailFacts; readonly coOwnerNames: readonly string[]; readonly expiresAt: string; readonly link: string; readonly accessCode: boolean }
-  | { readonly kind: 'professional'; readonly language: unknown; readonly facts: IssuanceEmailFacts; readonly expiresAt: string; readonly link: string; readonly accessCode: boolean }
+  | { readonly kind: 'approval'; readonly language: unknown; readonly facts: IssuanceEmailFacts; readonly coOwnerNames: readonly string[]; readonly expiresAt: string; readonly link: string; readonly accessCode: boolean; readonly reminder: IssuanceEmailReminder }
+  | { readonly kind: 'professional'; readonly language: unknown; readonly facts: IssuanceEmailFacts; readonly expiresAt: string; readonly link: string; readonly accessCode: boolean; readonly reminder: IssuanceEmailReminder }
   | { readonly kind: 'co-owner'; readonly language: unknown; readonly facts: IssuanceEmailFacts; readonly leadName: string | null }
   /** §30 — η απόδειξη απάντησης: τι, πότε, πώς αποδείχθηκε· `comment` = το σχόλιο του ίδιου (κείμενο ανθρώπου, escaped). */
   | {
@@ -94,9 +105,29 @@ function noteLine(named: Named, note: string | null): InvitationEmailLine[] {
   return note === null ? [] : [invitationDetailLine(named.w.noteLabel, note)];
 }
 
-/** §29 — η γραμμή «πώς παίρνω τον κωδικό», τελευταία πριν το κουμπί. */
-function accessCodeLines(named: Named, accessCode: boolean): InvitationEmailLine[] {
-  return accessCode ? [invitationDetailLine(named.w.accessCode.label, named.w.accessCode.howTo)] : [];
+/** §29 — η γραμμή «πώς παίρνω τον κωδικό», τελευταία πριν το κουμπί. §31: στην υπενθύμιση «αυτόν που σας είπε το γραφείο». */
+function accessCodeLines(named: Named, accessCode: boolean, reminder: IssuanceEmailReminder): InvitationEmailLine[] {
+  if (!accessCode) return [];
+  return [invitationDetailLine(named.w.accessCode.label, reminder === null ? named.w.accessCode.howTo : named.w.reminder.accessCodeHowTo)];
+}
+
+type LinkEmailKind = keyof typeof DECLINE_BUTTON_KEYS;
+
+/** §31 — πρώτη γραμμή της υπενθύμισης: πότε στάλθηκε το αίτημα. */
+function reminderLead(named: Named, reminder: IssuanceEmailReminder): InvitationEmailLine[] {
+  return reminder === null ? [] : [invitationDetailLine(named.w.reminder.sentLabel, formatOperatorDate(reminder.firstSentAt, named.language))];
+}
+
+/** §31 — τελευταία γραμμή της υπενθύμισης: πώς σταματούν (με την ετικέτα του κουμπιού της σελίδας). */
+function reminderStop(named: Named, kind: LinkEmailKind, reminder: IssuanceEmailReminder): InvitationEmailLine[] {
+  if (reminder === null) return [];
+  const button = LABELS[named.language](DECLINE_BUTTON_KEYS[kind]);
+  return [invitationDetailLine(named.w.reminder.stopLabel, named.w.reminder.stop(button))];
+}
+
+/** §31 — θέμα και επικεφαλίδα: η υπενθύμιση **λέει** ότι είναι υπενθύμιση, από το θέμα κιόλας. */
+function framingOf(named: Named, kind: LinkEmailKind, subject: string, heading: string, reminder: IssuanceEmailReminder): { readonly subject: string; readonly heading: string } {
+  return reminder === null ? { subject, heading } : { subject: named.w.reminder.subject(subject), heading: named.w.reminder.heading[kind] };
 }
 
 /** Η γραμμή προώθησης του σκελετού — με κωδικό, «όποιος τον έχει απαντά» θα ήταν ψέμα. */
@@ -110,12 +141,14 @@ function approvalDetails(named: Named, input: Extract<IssuanceEmailInput, { kind
   const qualification = qualificationText(LABELS[language], credential.qualification);
   const credentialText = credential.registryNumber === null ? qualification : w.approval.registryNumber(qualification, credential.registryNumber);
   return [
+    ...reminderLead(named, input.reminder),
     invitationDetailLine(w.approval.professionalLabel, named.professional),
     invitationDetailLine(w.approval.credentialLabel, credentialText),
     ...noteLine(named, input.facts.note),
     ...(input.coOwnerNames.length === 0 ? [] : [invitationDetailLine(w.approval.coOwnersLabel, input.coOwnerNames.join(', '))]),
     invitationDetailLine(w.approval.expiresLabel, formatOperatorDate(input.expiresAt, language)),
-    ...accessCodeLines(named, input.accessCode),
+    ...accessCodeLines(named, input.accessCode, input.reminder),
+    ...reminderStop(named, 'approval', input.reminder),
   ];
 }
 
@@ -150,18 +183,20 @@ export function buildIssuanceEmail(input: IssuanceEmailInput): ConfirmationEmail
   }
   if (input.kind === 'approval') {
     return composeInvitationEmail({
-      language, subject: w.approval.subject(document, property), heading: w.approval.heading,
+      language, ...framingOf(named, 'approval', w.approval.subject(document, property), w.approval.heading, input.reminder),
       intro: lineOf(w.approval.intro, [office, professional, document, property]),
       details: approvalDetails(named, input), link: input.link, core: coreOf(named, w.approval, input.accessCode),
     });
   }
   return composeInvitationEmail({
-    language, subject: w.professional.subject(document, property), heading: w.professional.heading,
+    language, ...framingOf(named, 'professional', w.professional.subject(document, property), w.professional.heading, input.reminder),
     intro: lineOf(w.professional.intro, [office, document, property]),
     details: [
+      ...reminderLead(named, input.reminder),
       ...noteLine(named, input.facts.note),
       invitationDetailLine(w.professional.expiresLabel, formatOperatorDate(input.expiresAt, language)),
-      ...accessCodeLines(named, input.accessCode),
+      ...accessCodeLines(named, input.accessCode, input.reminder),
+      ...reminderStop(named, 'professional', input.reminder),
     ],
     link: input.link, core: coreOf(named, w.professional, input.accessCode),
   });

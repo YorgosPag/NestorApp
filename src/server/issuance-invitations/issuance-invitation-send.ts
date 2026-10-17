@@ -12,7 +12,8 @@ import 'server-only';
  * 🔴 **Μία συναλλαγή για ανάθεση και πρόσκληση**: η ανάθεση θυμάται το `invitationId` **μόνο** αν η πρόσκληση γράφτηκε, και
  *    το αντίστροφο. Χωρίς αυτό, ένα σφάλμα ανάμεσα θα άφηνε ανάθεση που «περιμένει» σύνδεσμο που δεν υπάρχει.
  * 🔴 **Το email φεύγει ΜΟΝΟ μετά το commit** — ποτέ μήνυμα για αίτημα που δεν καταγράφηκε. Καμία αυτόματη αποστολή: τη
- *    διαδρομή την καλεί **μόνο** το κουμπί «Αποστολή» του γραφείου (§18.5).
+ *    διαδρομή την καλεί **μόνο** το κουμπί «Αποστολή» του γραφείου (§18.5). Οι υπενθυμίσεις (§31) ακολουθούν **αυτό** το
+ *    μήνυμα, ποτέ δεν το αντικαθιστούν (`issuance-invitation-reminder.ts`).
  * 🔒 **Συνιδιοκτήτες: ένα μήνυμα ανά πρόσωπο, ποτέ cc**, χωρίς σύνδεσμο πράξης — κανείς δεν βλέπει το email του άλλου.
  */
 
@@ -68,8 +69,8 @@ function coOwnerNames(draft: IssuanceSendDraft): string[] {
 /** Το μήνυμα προς τον παραλήπτη — `link` απόλυτο (αποστολή) ή η διαδρομή χωρίς κλειδί (προεπισκόπηση). */
 function recipientEmailOf(draft: IssuanceSendDraft, language: unknown, link: string, expiresAt: string, accessCode: boolean) {
   return draft.audience === 'owner'
-    ? buildIssuanceEmail({ kind: 'approval', language, facts: draft.facts, coOwnerNames: coOwnerNames(draft), expiresAt, link, accessCode })
-    : buildIssuanceEmail({ kind: 'professional', language, facts: draft.facts, expiresAt, link, accessCode });
+    ? buildIssuanceEmail({ kind: 'approval', language, facts: draft.facts, coOwnerNames: coOwnerNames(draft), expiresAt, link, accessCode, reminder: null })
+    : buildIssuanceEmail({ kind: 'professional', language, facts: draft.facts, expiresAt, link, accessCode, reminder: null });
 }
 
 function coOwnerEmailOf(draft: IssuanceSendDraft, language: unknown) {
@@ -180,6 +181,8 @@ export async function sendIssuanceMessage(db: Firestore, sender: IssuanceSender,
   const outcome = await commitSend(db, sender, body, draft, minted.invitation);
   if (!outcome.ok) return outcome;
   const delivery = await deliverAll(draft, minted.invitation, minted.token);
-  await recordIssuanceDelivery(db, { companyId: sender.companyId, propertyId: body.propertyId, documentKind: body.documentKind, invitationId: minted.invitation.id }, delivery);
+  // §31 — οι υπενθυμίσεις ξεκινούν στην ίδια εγγραφή με την παράδοση, και μόνο αν το μήνυμα έφυγε (ο γραφέας το κρίνει).
+  const reminders = body.sendReminders ? { expiresAt: minted.invitation.expiresAt } : null;
+  await recordIssuanceDelivery(db, { companyId: sender.companyId, propertyId: body.propertyId, documentKind: body.documentKind, invitationId: minted.invitation.id }, delivery, reminders);
   return { ok: true, stage: outcome.stage, delivery, accessCode: minted.accessCode };
 }

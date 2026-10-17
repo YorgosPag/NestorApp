@@ -28,7 +28,7 @@ import type { RegistryIssuanceView } from '@/components/document-registry/regist
 import { ISSUER_KEYS, REGISTRY_NS } from '@/components/document-registry/document-registry-labels';
 import { PROPOSE_KEYS, SEND_ERROR_KEYS, SEND_KEYS } from '@/components/document-registry/issuance-labels';
 import { useIssuanceSend, type IssuanceSendApi } from '@/hooks/document-registry/useIssuanceSend';
-import { AccessCodeToggle, IssuedAccessCode } from '@/components/document-registry/RegistryIssuanceAccessCode';
+import { AccessCodeToggle, IssuedAccessCode, RemindersToggle } from '@/components/document-registry/RegistryIssuanceAccessCode';
 
 function CoOwnerChoices({ preview, api }: { readonly preview: IssuancePreview; readonly api: IssuanceSendApi }): React.ReactElement | null {
   const { t } = useTranslation([REGISTRY_NS]);
@@ -101,6 +101,7 @@ export function SendForm({ view, audience, leadId, recipientName, close }: SendF
       <Label htmlFor={noteId} className="text-sm font-medium">{t(SEND_KEYS.noteLabel)}</Label>
       <Textarea id={noteId} value={api.note} maxLength={ISSUANCE_NOTE_MAX} onChange={(event) => api.setNote(event.target.value)} />
       <AccessCodeToggle checked={api.requireAccessCode} onChange={api.setRequireAccessCode} />
+      <RemindersToggle checked={api.sendReminders} onChange={api.setSendReminders} />
       {preview.phase === 'ready' ? <CoOwnerChoices preview={preview.preview} api={api} /> : null}
       {preview.phase === 'loading' ? <p role="status" className="m-0 text-xs text-muted-foreground">{t(SEND_KEYS.loading)}</p> : null}
       {preview.phase === 'failed' ? <p role="alert" className="m-0 text-sm text-destructive">{t(SEND_ERROR_KEYS[preview.errorRow])}</p> : null}

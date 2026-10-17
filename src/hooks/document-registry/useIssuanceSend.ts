@@ -52,6 +52,9 @@ export interface IssuanceSendApi {
   readonly send: () => Promise<void>;
   /** §29 — ο σύνδεσμος ζητά και κωδικό (DocuSign «Access Code»)· ενεργό από προεπιλογή. */
   readonly requireAccessCode: boolean;
+  /** §31 — αυτόματες υπενθυμίσεις αν δεν απαντήσει· προεπιλογή ενεργές (DocuSign · Adobe Sign). */
+  readonly sendReminders: boolean;
+  readonly setSendReminders: (value: boolean) => void;
   readonly setRequireAccessCode: (value: boolean) => void;
   /**
    * §29 — ο κωδικός που μόλις εκδόθηκε, για να τον πει ο άνθρωπος τηλεφωνικά. Ζει **μόνο** εδώ, στη μνήμη του διαλόγου·
@@ -99,11 +102,12 @@ export function useIssuanceSend({ view, audience, leadId, revalidate, onSent }: 
   const [informed, setInformed] = useState<ReadonlySet<string> | null>(null);
   const [sending, setSending] = useState(false);
   const [requireAccessCode, setRequireAccessCode] = useState(true);
+  const [sendReminders, setSendReminders] = useState(true);
   const [issuedCode, setIssuedCode] = useState<string | null>(null);
   const body = useMemo<IssuanceSendBody>(() => ({
     ...issuanceTargetOf(view), audience, note: note.trim() || null, expectedOwnerContactId: leadId, informContactIds: [...(informed ?? [])],
-    requireAccessCode,
-  }), [view, audience, note, leadId, informed, requireAccessCode]);
+    requireAccessCode, sendReminders,
+  }), [view, audience, note, leadId, informed, requireAccessCode, sendReminders]);
   const adoptDefaults = useCallback((preview: IssuancePreview) => {
     setInformed((current) => current ?? new Set(preview.coOwners.filter((person) => person.reachable).map((person) => person.contactId)));
   }, []);
@@ -131,6 +135,6 @@ export function useIssuanceSend({ view, audience, leadId, revalidate, onSent }: 
   const finish = useCallback(() => { setIssuedCode(null); onSent(); }, [onSent]);
   return {
     note, setNote, informed: informed ?? new Set(), toggleInformed, preview, sending, send,
-    requireAccessCode, setRequireAccessCode, issuedCode, finish,
+    requireAccessCode, setRequireAccessCode, sendReminders, setSendReminders, issuedCode, finish,
   };
 }

@@ -309,7 +309,9 @@
       "codeBody": "Give it by phone — not by email. It will not be shown again; if it is lost, send again (the previous link stops working). After 5 wrong codes the link locks and you are notified.",
       "codeCopy": "Copy code",
       "codeCopied": "Copied",
-      "codeDone": "Done"
+      "codeDone": "Done",
+      "remindersLabel": "Automatic reminders if there is no answer",
+      "remindersHint": "A reminder {days, plural, one {# day} other {# days}} later and on the day before the link expires, during office hours. The access code is never re-sent. They stop as soon as there is an answer or if the email bounces."
     },
     "history": {
       "requestedApproval": "Sent for approval to {name} on {date}",
@@ -324,7 +326,9 @@
       "verifiedByCode": "Confirmed with the access code",
       "delivered": "Delivered to the mailbox",
       "bounced": "The email bounced — check the contact’s address and send again.",
-      "complained": "The recipient marked it as spam — contact them by phone."
+      "complained": "The recipient marked it as spam — contact them by phone.",
+      "reminderSent": "Reminder sent on {date}",
+      "reminderNext": "Next reminder: {date}"
     }
   }
 }

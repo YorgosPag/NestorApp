@@ -113,6 +113,8 @@
         "informed": "{count, plural, one {Ενημερώθηκε # συνιδιοκτήτης} other {Ενημερώθηκαν # συνιδιοκτήτες}}",
         "notDelivered": "Το email δεν έφυγε — ξαναστείλτε.",
         "noticedByLink": "Στάλθηκε στον επαγγελματία με σύνδεσμο στις {date}",
+        "reminderNext": "Επόμενη υπενθύμιση: {date}",
+        "reminderSent": "Στάλθηκε υπενθύμιση στις {date}",
         "requestedApproval": "Στάλθηκε για έγκριση στον/στην {name} στις {date}",
         "responseNote": "Σχόλιο: «{note}»",
         "verifiedByCode": "Επιβεβαιώθηκε με τον κωδικό πρόσβασης",

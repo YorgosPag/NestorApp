@@ -43,6 +43,8 @@ const delivery = z.enum(ISSUANCE_DELIVERY_OUTCOMES);
 const deliverySchema = z.object({ recipient: delivery, coOwners: z.record(z.string(), delivery) }).nullable();
 /** §29 — έγγραφα του §28 δεν έγραφαν επαλήθευση: διαβάζονται ως «μόνο σύνδεσμος», που ήταν και η αλήθεια τους. */
 const verification = z.enum(LINK_VERIFICATIONS).default('link');
+/** §31 — έγγραφα του §28–§30 δεν έγραφαν υπενθυμίσεις: διαβάζονται ως «καμία», που ήταν και η αλήθεια τους. */
+const remindersSchema = z.object({ dueAt: nonEmpty.nullable(), sentAt: z.array(nonEmpty) }).nullable().default(null);
 
 /** §28 Η-Β2 — η βάση είναι **ένωση**: καταγραφή του γραφείου ή ο ίδιος ο υπεύθυνος με σύνδεσμο. Τίποτα ενδιάμεσο. */
 const decisionSchema = z.discriminatedUnion('basis', [
@@ -70,11 +72,13 @@ const assignmentSchema = z.object({
   proposedByUid: nonEmpty,
   approvalRequest: z.object({
     invitationId: nonEmpty, ownerContactId: nonEmpty, note, at: nonEmpty, byUid: nonEmpty, verification, delivery: deliverySchema,
+    reminders: remindersSchema,
   }).nullable(),
   decision: decisionSchema.nullable(),
   notice: z.object({
     channel: z.enum(NOTICE_CHANNELS), at: nonEmpty, byUid: nonEmpty, invitationId: nonEmpty.nullable(),
     verification: z.enum(LINK_VERIFICATIONS).nullable().default(null), note, delivery: deliverySchema,
+    reminders: remindersSchema,
   }).nullable(),
   response: responseSchema.nullable(),
   cancellation: z.object({ byUid: nonEmpty, at: nonEmpty }).nullable(),

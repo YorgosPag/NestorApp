@@ -41,6 +41,11 @@ import {
   type ObservedDeliveryOutcome,
 } from '@/lib/document-validity/issuance-delivery';
 import type { IssuanceRosterEntry } from '@/lib/document-validity/issuance-candidates';
+import {
+  planIssuanceReminders,
+  withIssuanceReminderSent,
+  withIssuanceRemindersRetired,
+} from '@/lib/document-validity/issuance-reminder';
 import { isOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { createModuleLogger } from '@/lib/telemetry';
 import { EntityAuditService } from '@/services/entity-audit.service';
@@ -265,24 +270,46 @@ export async function writeIssuanceAction(db: Firestore, write: IssuanceWrite): 
   return staged.outcome;
 }
 
+/** Ποιο μήνυμα — η ανάθεση (γραφείο, ακίνητο, είδος) και το `invitationId` που τη γέννησε. */
+export interface IssuanceMessageTarget {
+  readonly companyId: string;
+  readonly propertyId: string;
+  readonly documentKind: DocumentKind;
+  readonly invitationId: string;
+}
+
 /**
- * **Η παράδοση ενός μηνύματος** (§28 Η-Β9) — στο μήνυμα που τη γέννησε και μόνο (`withIssuanceDelivery`). Τηλεμετρία:
- * δεν αλλάζει στάδιο, δεν γράφει ιστορικό, **δεν πετά** (η πράξη έχει ήδη γίνει).
+ * **Η τηλεμετρία ενός μηνύματος** (παράδοση §30 · υπενθυμίσεις §31), σε συναλλαγή — ο ΙΔΙΟΣ δρόμος για όλες. Δεν περνά από
+ * τον μειωτή και **δεν** γράφει ιστορικό: δεν αλλάζει στάδιο ούτε μπάλα. `update` ⇒ `null` = τίποτα να γραφτεί. Πετά σε βλάβη.
+ */
+async function updateMessageTelemetry(db: Firestore, target: IssuanceMessageTarget, update: (record: IssuanceAssignmentRecord) => IssuanceAssignmentRecord | null): Promise<boolean> {
+  const ref = assignmentRefOf(db, target.companyId, target.propertyId, target.documentKind);
+  return db.runTransaction(async (tx) => {
+    const stored = parseIssuanceAssignment((await tx.get(ref)).data());
+    if (stored === null || !isOwnedByCompany(stored, target.companyId)) return false;
+    const next = update(issuanceRecordOf(stored));
+    if (next === null) return false;
+    tx.set(ref, { ...stored, ...next });
+    return true;
+  });
+}
+
+/**
+ * **Η παράδοση** (§28 Η-Β9) — μόνο στο μήνυμα που τη γέννησε (CAS στο `invitationId`). Τηλεμετρία, όχι στάδιο. Ποτέ δεν
+ * πετά: τα email έχουν ήδη φύγει. §31 — `reminders` ⇒ το πρόγραμμα υπενθυμίσεων ξεκινά **στην ίδια** εγγραφή, και **μόνο**
+ * αν ο αποστολέας λέει ότι το μήνυμα έφυγε (`planIssuanceReminders`): ποτέ υπενθύμιση για email που δεν ταξίδεψε.
  */
 export async function recordIssuanceDelivery(
   db: Firestore,
-  target: { readonly companyId: string; readonly propertyId: string; readonly documentKind: DocumentKind; readonly invitationId: string },
+  target: IssuanceMessageTarget,
   delivery: IssuanceDelivery,
+  reminders: { readonly expiresAt: string } | null = null,
 ): Promise<boolean> {
-  const ref = assignmentRefOf(db, target.companyId, target.propertyId, target.documentKind);
   try {
-    return await db.runTransaction(async (tx) => {
-      const stored = parseIssuanceAssignment((await tx.get(ref)).data());
-      if (stored === null || !isOwnedByCompany(stored, target.companyId)) return false;
-      const next = withIssuanceDelivery(issuanceRecordOf(stored), target.invitationId, delivery);
-      if (next === null) return false;
-      tx.set(ref, { ...stored, ...next });
-      return true;
+    return await updateMessageTelemetry(db, target, (record) => {
+      const delivered = withIssuanceDelivery(record, target.invitationId, delivery);
+      if (delivered === null || reminders === null) return delivered;
+      return planIssuanceReminders(delivered, target.invitationId, reminders.expiresAt) ?? delivered;
     });
   } catch (error) {
     logger.warn('Η παράδοση του μηνύματος ανάθεσης δεν καταγράφηκε', {
@@ -293,7 +320,39 @@ export async function recordIssuanceDelivery(
   }
 }
 
-/** Το αποτέλεσμα ενός γεγονότος παράδοσης του παρόχου (§30) — η τιμή **της θέσης**, πριν και μετά την αναδίπλωση. */
+/** §31 — τι απέγινε μια υπενθύμιση: έφυγε (το επόμενο από το ίδιο πρόγραμμα) ή το πρόγραμμα αποσύρεται. */
+export type IssuanceReminderChange =
+  | { readonly kind: 'sent'; readonly dueAt: string; readonly sentAt: string; readonly expiresAt: string }
+  | { readonly kind: 'retired'; readonly dueAt: string };
+
+/**
+ * **Μία υπενθύμιση καταγράφεται** (§31) — CAS στο `dueAt` που κρίθηκε: αν στο μεταξύ στάλθηκε νέο μήνυμα ή άλλαξε το
+ * πρόγραμμα, δεν γράφεται τίποτα (`false`). ⚠️ **Πετά** σε βλάβη: η σάρωση το μετρά ως αποτυχία, και η επόμενη ξανακρίνει.
+ */
+export function recordIssuanceReminder(db: Firestore, target: IssuanceMessageTarget, change: IssuanceReminderChange): Promise<boolean> {
+  return updateMessageTelemetry(db, target, (record) => (change.kind === 'sent'
+    ? withIssuanceReminderSent(record, target.invitationId, change)
+    : withIssuanceRemindersRetired(record, target.invitationId, change.dueAt)));
+}
+
+/** Τα πεδία ερωτήματος της σάρωσης — ένα ανά είδος μηνύματος· ένα πεδίο, εύρος ⇒ αυτόματος δείκτης, κανένας σύνθετος. */
+const REMINDER_DUE_FIELDS = ['approvalRequest.reminders.dueAt', 'notice.reminders.dueAt'] as const;
+
+/**
+ * **Ποιες αναθέσεις οφείλουν υπενθύμιση** (§31) — σε **όλα** τα γραφεία: η σάρωση είναι του συστήματος, όχι χρήστη. Κάθε
+ * έγγραφο κρίνεται ξανά με το **δικό** του `companyId` από τον καλούντα. Φραγμένο ανά πεδίο (`limit`)· `truncated` το λέει.
+ */
+export async function readDueIssuanceReminders(db: Firestore, nowIso: string, limit: number): Promise<{ readonly assignments: readonly DocumentIssuanceAssignment[]; readonly truncated: boolean }> {
+  const snapshots = await Promise.all(REMINDER_DUE_FIELDS.map((field) => assignmentsCollection(db).where(field, '<=', nowIso).limit(limit).get()));
+  const byId = new Map<string, DocumentIssuanceAssignment>();
+  for (const doc of snapshots.flatMap((snapshot) => snapshot.docs)) {
+    const assignment = parseIssuanceAssignment(doc.data());
+    if (assignment === null) logger.warn('Μη αναγνώσιμη ανάθεση έκδοσης στη σάρωση υπενθυμίσεων', { assignmentId: doc.id });
+    else byId.set(assignment.id, assignment);
+  }
+  return { assignments: [...byId.values()], truncated: snapshots.some((snapshot) => snapshot.size >= limit) };
+}
+
 export type IssuanceObservationOutcome =
   | { readonly kind: 'recorded'; readonly previous: IssuanceDeliveryOutcome | undefined; readonly next: IssuanceDeliveryOutcome; readonly record: IssuanceAssignmentRecord }
   /** Η ανάθεση δεν υπάρχει πια ή το μήνυμα αντικαταστάθηκε — το γεγονός δεν αφορά κανέναν. */

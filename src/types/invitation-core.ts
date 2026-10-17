@@ -80,6 +80,12 @@ export interface InvitationRecordCore {
   readonly invitedByUid: string;
   /** **ΜΟΝΟ** το `sha256` του nonce — διαρροή της βάσης δεν δίνει χρησιμοποιήσιμη πρόσκληση. */
   readonly nonceHash: string;
+  /**
+   * ADR-915 §31 — τα `sha256` των συνδέσμων που **επανεκδόθηκαν** για την **ίδια** πρόσκληση (υπενθύμιση). Ο ωμός σύνδεσμος
+   * δεν αποθηκεύεται ποτέ, άρα μια υπενθύμιση φέρνει νέο· ο σύνδεσμος του πρώτου email **συνεχίζει** να δουλεύει (DocuSign).
+   * Μίας χρήσης **αθροιστικά**: η πρόσκληση κλείνει στην πρώτη απάντηση, από όποιον σύνδεσμο κι αν ήρθε. Λείπει ⇒ κανένας.
+   */
+  readonly reissuedNonceHashes?: readonly string[];
   readonly state: InvitationState;
   readonly createdAt: string;
   readonly expiresAt: string;

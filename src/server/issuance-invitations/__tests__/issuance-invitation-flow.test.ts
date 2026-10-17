@@ -103,7 +103,8 @@ function body(overrides: Partial<IssuanceSendBody> = {}): IssuanceSendBody {
   return {
     ...TARGET, expectedStage: 'proposed', audience: 'owner', note: 'Παρακαλούμε μέχρι την Παρασκευή.',
     // Οι σενάριοι του §28 = σύνδεσμος χωρίς κωδικό· το §29 τον ζητά ρητά (`requireAccessCode: true`).
-    expectedOwnerContactId: 'cont_a', informContactIds: ['cont_b'], requireAccessCode: false, ...overrides,
+    // §31 — οι υπενθυμίσεις έχουν δική τους σουίτα (`issuance-invitation-reminder.test.ts`).
+    expectedOwnerContactId: 'cont_a', informContactIds: ['cont_b'], requireAccessCode: false, sendReminders: false, ...overrides,
   };
 }
 

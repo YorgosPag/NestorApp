@@ -53,6 +53,7 @@ import { runEmailIngestion } from '@/lib/cron/jobs/email-ingestion.job';
 import { runConveyanceExpiryAlerts } from '@/lib/cron/jobs/conveyance-expiry-alerts.job';
 import { runDocumentExpiryAlerts } from '@/lib/cron/jobs/document-expiry-alerts.job';
 import { runEngagementInvitationReminder } from '@/lib/cron/jobs/engagement-invitation-reminder.job';
+import { runIssuanceInvitationReminder } from '@/lib/cron/jobs/issuance-invitation-reminder.job';
 import { runFilePurge } from '@/lib/cron/jobs/file-purge.job';
 import { runFirebaseAuthConfigDrift } from '@/lib/cron/jobs/firebase-auth-config-drift.job';
 import { runFirstContactInvitationExpiry } from '@/lib/cron/jobs/first-contact-invitation-expiry.job';
@@ -508,6 +509,25 @@ export const CRON_SCHEDULE: readonly CronJobDefinition[] = [
     maxRuntimeMinutes: 10,
     leaseMinutes: 15,
     run: runDocumentExpiryAlerts,
+  },
+  {
+    slug: 'issuance-invitation-reminder',
+    path: '/api/cron/issuance-invitation-reminder',
+    description: 'Υπενθύμιση στον παραλήπτη συνδέσμου ανάθεσης έκδοσης που δεν απάντησε (ADR-915 §31)',
+    enabled: true,
+    // 🔑 **Ωριαία, μόνο σε ώρες γραφείου** (Δευ–Παρ 09:33–18:33, Αθήνα): η προθεσμία γράφεται στο μήνυμα (72 ώρες μετά ·
+    // την παραμονή της λήξης), άρα η υπενθύμιση φτάνει περίπου την ώρα που το γραφείο έστειλε το αίτημα — όπως το Adobe
+    // Sign, που μετρά από την παράδοση. Ημερήσια σάρωση θα τις μάζευε όλες στο ίδιο πρωινό λεπτό. Η επανάληψη είναι
+    // ακίνδυνη (CAS στο `dueAt`)· η σάρωση **ξαναελέγχει** τις ώρες (`ISSUANCE_REMINDER_POLICY.officeHours`), γιατί ένα
+    // catch-up μετά από επανεκκίνηση δεν τις ξέρει.
+    //
+    // ⚠️ Λεπτό **33**: ελεύθερο από `*/10` · `2-59/5` · `4-59/10` · `8-59/15` · `15` · `35` και τα ημερήσια.
+    schedule: '33 9-18 * * 1-5',
+    timezone: CRON_TIMEZONE,
+    checkinMarginMinutes: 20,
+    maxRuntimeMinutes: 10,
+    leaseMinutes: 15,
+    run: runIssuanceInvitationReminder,
   },
   {
     slug: 'listing-stats-rollup',

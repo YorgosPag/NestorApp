@@ -64,6 +64,20 @@ export interface IssuanceEmailWording {
     readonly notYou: (office: string) => string;
     readonly footnote: string;
   };
+  /**
+   * §31 — **η υπενθύμιση** (DocuSign / Adobe Sign «Reminder»): το **ίδιο** μήνυμα, με θέμα που λέει ότι είναι υπενθύμιση,
+   * πότε στάλθηκε το αίτημα, και πώς σταματούν οι υπενθυμίσεις (GDPR άρθρο 21 — ο άνθρωπος λέει «όχι» με μία κίνηση).
+   * 🔒 Ο κωδικός πρόσβασης **ποτέ** — δεν τον έχουμε (μόνο HMAC), και το email είναι το πρώτο κανάλι.
+   */
+  readonly reminder: {
+    readonly subject: (original: string) => string;
+    readonly heading: Readonly<Record<'approval' | 'professional', string>>;
+    readonly sentLabel: string;
+    readonly accessCodeHowTo: string;
+    readonly stopLabel: string;
+    /** `button` = η ετικέτα του κουμπιού άρνησης **από το locale της σελίδας** — ό,τι διαβάζει, αυτό βλέπει. */
+    readonly stop: (button: string) => string;
+  };
   readonly noteLabel: string;
   readonly unnamedOffice: string;
   readonly unnamedProperty: string;
@@ -143,6 +157,14 @@ export const ISSUANCE_EMAIL_TEXTS: Readonly<Record<HumanLanguage, IssuanceEmailW
         'Λαμβάνετε αυτή την επιβεβαίωση επειδή δόθηκε απάντηση με τον σύνδεσμο που στάλθηκε σε αυτή τη διεύθυνση. '
         + 'Είναι ενημερωτικό μήνυμα· δεν χρειάζεται καμία ενέργεια.',
     },
+    reminder: {
+      subject: (original) => `Υπενθύμιση: ${original}`,
+      heading: { approval: 'Περιμένουμε ακόμη την απόφασή σας', professional: 'Περιμένουμε ακόμη την απάντησή σας' },
+      sentLabel: 'Το αίτημα στάλθηκε στις',
+      accessCodeHowTo: 'Χρησιμοποιήστε τον κωδικό που σας είπε το γραφείο. Αν τον χάσατε, ζητήστε από το γραφείο να ξαναστείλει το αίτημα.',
+      stopLabel: 'Δεν θέλετε άλλες υπενθυμίσεις;',
+      stop: (button) => `Πατήστε «${button}» στον σύνδεσμο ή ενημερώστε το γραφείο — οι υπενθυμίσεις σταματούν αμέσως.`,
+    },
     noteLabel: 'Σημείωση του γραφείου',
     unnamedOffice: 'Το γραφείο',
     unnamedProperty: 'σας',
@@ -218,6 +240,14 @@ export const ISSUANCE_EMAIL_TEXTS: Readonly<Record<HumanLanguage, IssuanceEmailW
       footnote:
         'You are receiving this confirmation because an answer was given with the link sent to this address. '
         + 'It is for your information; no action is needed.',
+    },
+    reminder: {
+      subject: (original) => `Reminder: ${original}`,
+      heading: { approval: 'We are still waiting for your decision', professional: 'We are still waiting for your answer' },
+      sentLabel: 'The request was sent on',
+      accessCodeHowTo: 'Use the code the office gave you. If you lost it, ask the office to send the request again.',
+      stopLabel: 'No more reminders?',
+      stop: (button) => `Choose “${button}” on the link or tell the office — the reminders stop right away.`,
     },
     noteLabel: 'Note from the office',
     unnamedOffice: 'The office',

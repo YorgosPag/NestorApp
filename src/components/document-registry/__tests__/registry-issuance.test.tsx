@@ -26,6 +26,7 @@ import {
 } from '../issuance-labels';
 import { reduceIssuance, type IssuanceAction, type IssuanceAssignmentRecord } from '@/lib/document-validity/issuance-assignment';
 import { withIssuanceDelivery } from '@/lib/document-validity/issuance-delivery';
+import { planIssuanceReminders, withIssuanceReminderSent } from '@/lib/document-validity/issuance-reminder';
 import type { IssuanceRosterEntry } from '@/lib/document-validity/issuance-candidates';
 import type { ObligorLead } from '@/lib/document-validity/obligor-lead';
 import { FIXTURE_DOCUMENTS, FIXTURE_REQUIREMENTS, fixtureResponse } from '@/lib/document-validity/__tests__/registry-fixture';
@@ -355,5 +356,78 @@ describe('ADR-915 §29 — κωδικός πρόσβασης: ο διακόπτ�
     render(<DocumentRegistryContent />);
     expect(within(article()).getByText(LINK_HISTORY_KEYS.withAccessCode)).toBeTruthy();
     expect(within(article()).getByText(LINK_HISTORY_KEYS.verifiedByCode)).toBeTruthy();
+  });
+});
+
+describe('ADR-915 §31 — αυτόματες υπενθυμίσεις: ο διακόπτης και οι γραμμές ιστορικού', () => {
+  const PREVIEW = {
+    audience: 'owner', recipient: { contactId: 'cont_alpha', name: 'Άλφα', email: 'alfa@example.test' },
+    subject: 'Θέμα προεπισκόπησης', text: 'Κείμενο προεπισκόπησης', coOwners: [], coOwnerMessage: null,
+  };
+  /** Το αίτημα στάλθηκε `ACTOR.nowIso` (10/10) ⇒ ο σύνδεσμος λήγει 7 ημέρες μετά. */
+  const EXPIRES = '2026-10-17T09:00:00.000Z';
+  const REQUEST: IssuanceAction = { kind: 'request-approval', invitationId: 'diin_1', ownerContactId: 'cont_alpha', note: null, verification: 'link' };
+
+  beforeEach(() => {
+    preview.mockReset().mockResolvedValue({ kind: 'ok', data: { preview: PREVIEW } });
+    send.mockReset().mockResolvedValue({ kind: 'ok', data: { stage: 'proposed', delivery: { recipient: 'accepted', coOwners: {} }, accessCode: null } });
+  });
+
+  async function openSend(): Promise<HTMLElement> {
+    registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record: recordOf([PROPOSE]) }]);
+    render(<DocumentRegistryContent />);
+    await userEvent.setup().click(within(article()).getByRole('button', { name: SEND_KEYS.ownerTrigger }));
+    return screen.findByRole('dialog');
+  }
+
+  async function submitWhenReady(dialog: HTMLElement): Promise<void> {
+    await within(dialog).findByText('Θέμα προεπισκόπησης', {}, { timeout: 2000 });
+    const submit = within(dialog).getByRole('button', { name: SEND_KEYS.submit });
+    await waitFor(() => expect(submit.hasAttribute('disabled')).toBe(false), { timeout: 2000 });
+    await userEvent.setup().click(submit);
+  }
+
+  /** Αίτημα που έφυγε, με πρόγραμμα, και (προαιρετικά) μία υπενθύμιση που ήδη στάλθηκε. */
+  function requestWithReminders(sentOne: boolean): IssuanceAssignmentRecord {
+    const requested = recordOf([PROPOSE, REQUEST]);
+    const delivered = withIssuanceDelivery(requested, 'diin_1', { recipient: 'accepted', coOwners: {} }) ?? requested;
+    const planned = planIssuanceReminders(delivered, 'diin_1', EXPIRES) ?? delivered;
+    const dueAt = planned.approvalRequest?.reminders?.dueAt ?? '';
+    return sentOne ? withIssuanceReminderSent(planned, 'diin_1', { dueAt, sentAt: dueAt, expiresAt: EXPIRES }) ?? planned : planned;
+  }
+
+  const startsWith = (key: string) => (content: string) => content.startsWith(key);
+
+  it('🔴 ενεργές από προεπιλογή, οι ημέρες από την ΠΟΛΙΤΙΚΗ — η αποστολή τις ζητά', async () => {
+    const dialog = await openSend();
+    expect(within(dialog).getByRole('switch', { name: SEND_KEYS.remindersLabel }).getAttribute('aria-checked')).toBe('true');
+    expect(within(dialog).getByText(`${SEND_KEYS.remindersHint} ${JSON.stringify({ days: 3 })}`)).toBeTruthy();
+    await submitWhenReady(dialog);
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({ sendReminders: true }));
+  });
+
+  it('διακόπτης κλειστός ⇒ αποστολή χωρίς υπενθυμίσεις', async () => {
+    const dialog = await openSend();
+    await userEvent.setup().click(within(dialog).getByRole('switch', { name: SEND_KEYS.remindersLabel }));
+    await waitFor(() => expect(preview).toHaveBeenLastCalledWith(expect.objectContaining({ sendReminders: false })), { timeout: 2000 });
+    await submitWhenReady(dialog);
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({ sendReminders: false }));
+  });
+
+  it('ιστορικό: «στάλθηκε υπενθύμιση» για όσες έφυγαν + «επόμενη» ΜΟΝΟ όσο περιμένουμε απάντηση', () => {
+    registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record: requestWithReminders(true) }]);
+    const { unmount } = render(<DocumentRegistryContent />);
+    expect(within(article()).getAllByText(startsWith(LINK_HISTORY_KEYS.reminderSent))).toHaveLength(1);
+    expect(within(article()).getAllByText(startsWith(LINK_HISTORY_KEYS.reminderNext))).toHaveLength(1);
+    unmount();
+
+    const answered: IssuanceAssignmentRecord = {
+      ...requestWithReminders(true),
+      decision: { basis: 'owner-link-approval', invitationId: 'diin_1', verifiedBy: 'link', outcome: 'approved', ownerContactId: 'cont_alpha', note: null, at: '2026-10-11T09:00:00.000Z' },
+    };
+    registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record: answered }]);
+    render(<DocumentRegistryContent />);
+    expect(within(article()).getAllByText(startsWith(LINK_HISTORY_KEYS.reminderSent))).toHaveLength(1);
+    expect(within(article()).queryByText(startsWith(LINK_HISTORY_KEYS.reminderNext))).toBeNull();
   });
 });

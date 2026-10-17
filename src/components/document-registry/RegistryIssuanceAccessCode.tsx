@@ -3,6 +3,7 @@
 /**
  * @fileoverview ADR-915 §29 — **ο κωδικός πρόσβασης από την πλευρά του γραφείου**: ο διακόπτης «Ζήτα κωδικό» στο πρόχειρο,
  *   και η **μία** εμφάνιση του κωδικού μετά την αποστολή, για να τον πει ο άνθρωπος τηλεφωνικά (DocuSign «Access Code»).
+ *   §31 — ο αδελφός διακόπτης «Αυτόματες υπενθυμίσεις», στον ίδιο σκελετό.
  * @related RegistryIssuanceSendForm.tsx (ο καλών, `next/dynamic`) · hooks/document-registry/useIssuanceSend.ts (η κατάσταση)
  * @module components/document-registry/RegistryIssuanceAccessCode
  *
@@ -22,25 +23,46 @@ import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { REGISTRY_NS } from '@/components/document-registry/document-registry-labels';
 import { SEND_KEYS } from '@/components/document-registry/issuance-labels';
+import { ISSUANCE_REMINDER_POLICY } from '@/lib/document-validity/issuance-reminder';
 
 /** «123456» → «123 456»: η μορφή της υπαγόρευσης. */
 function groupedCode(code: string): string {
   return code.replace(/(\d{3})(?=\d)/g, '$1 ');
 }
 
-export function AccessCodeToggle({ checked, onChange }: { readonly checked: boolean; readonly onChange: (value: boolean) => void }): React.ReactElement {
-  const { t } = useTranslation([REGISTRY_NS]);
+interface SendOptionProps {
+  readonly checked: boolean;
+  readonly onChange: (value: boolean) => void;
+}
+
+/**
+ * **Μία επιλογή της αποστολής** — διακόπτης με ετικέτα και εξήγηση (κωδικός §29 · υπενθυμίσεις §31). Οι λέξεις έρχονται
+ * **μεταφρασμένες** από τον καλούντα, με κυριολεκτικά κλειδιά (ο γεννήτορας του route slice τα λύνει στατικά, CHECK 3.34).
+ */
+function SendOptionSwitch({ checked, onChange, label, hint }: SendOptionProps & { readonly label: string; readonly hint: string }): React.ReactElement {
   const switchId = useId();
   const hintId = useId();
   return (
     <section className="flex items-start gap-3">
       <Switch id={switchId} checked={checked} onCheckedChange={onChange} aria-describedby={hintId} />
       <span className="flex flex-col gap-1">
-        <Label htmlFor={switchId} className="text-sm font-medium">{t(SEND_KEYS.accessCodeLabel)}</Label>
-        <span id={hintId} className="text-xs text-muted-foreground">{t(SEND_KEYS.accessCodeHint)}</span>
+        <Label htmlFor={switchId} className="text-sm font-medium">{label}</Label>
+        <span id={hintId} className="text-xs text-muted-foreground">{hint}</span>
       </span>
     </section>
   );
+}
+
+export function AccessCodeToggle(props: SendOptionProps): React.ReactElement {
+  const { t } = useTranslation([REGISTRY_NS]);
+  return <SendOptionSwitch {...props} label={t(SEND_KEYS.accessCodeLabel)} hint={t(SEND_KEYS.accessCodeHint)} />;
+}
+
+/** §31 — «αυτόματες υπενθυμίσεις»: οι ημέρες έρχονται από την **πολιτική**, όχι από το κείμενο. */
+export function RemindersToggle(props: SendOptionProps): React.ReactElement {
+  const { t } = useTranslation([REGISTRY_NS]);
+  const days = ISSUANCE_REMINDER_POLICY.firstAfterHours / 24;
+  return <SendOptionSwitch {...props} label={t(SEND_KEYS.remindersLabel)} hint={t(SEND_KEYS.remindersHint, { days })} />;
 }
 
 export function IssuedAccessCode({ code, recipientName, onDone }: { readonly code: string; readonly recipientName: string; readonly onDone: () => void }): React.ReactElement {

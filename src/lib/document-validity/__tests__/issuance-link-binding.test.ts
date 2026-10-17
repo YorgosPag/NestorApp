@@ -46,7 +46,7 @@ describe('ADR-915 §28 — αίτημα έγκρισης με σύνδεσμο',
   it('το αίτημα ΔΕΝ αλλάζει στάδιο ούτε μπάλα: «αναμένει απόφαση», και θυμάται ΠΟΙΟΣ σύνδεσμος, σε ΠΟΙΟΝ', () => {
     const record = run([[PROPOSE], [REQUEST('diin_1')]]);
     expect(issuanceStageOf(record)).toBe('proposed');
-    expect(record.approvalRequest).toEqual({ invitationId: 'diin_1', ownerContactId: 'cont_lead', note: 'σημείωση', at: NOW, byUid: 'uid_agent', verification: 'link', delivery: null });
+    expect(record.approvalRequest).toEqual({ invitationId: 'diin_1', ownerContactId: 'cont_lead', note: 'σημείωση', at: NOW, byUid: 'uid_agent', verification: 'link', delivery: null, reminders: null });
     expect(currentLinkAudience(record, 'diin_1')).toBe('owner');
   });
 

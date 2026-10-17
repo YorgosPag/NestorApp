@@ -32,6 +32,7 @@ import type {
   LinkVerification,
 } from '@/lib/document-validity/issuance-assignment';
 import type { IssuanceDelivery } from '@/lib/document-validity/issuance-delivery';
+import type { IssuanceReminders } from '@/lib/document-validity/issuance-reminder';
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
 import { useIssuanceAssignmentActions } from '@/components/document-registry/issuance-assignment-context';
 import { issuanceTargetOf, type RegistryIssuanceView } from '@/components/document-registry/registry-issuance';
@@ -121,18 +122,30 @@ function codeLine(t: Translate, key: string, verification: LinkVerification | nu
   return verification === 'access-code' ? <li key={key}>{t(LINK_HISTORY_KEYS.withAccessCode)}</li> : null;
 }
 
+/**
+ * §31 — οι υπενθυμίσεις του μηνύματος: μία γραμμή ανά υπενθύμιση που έφυγε, και η επόμενη **μόνο** όσο περιμένουμε ακόμη
+ * απάντηση (`awaiting`) — μετά την απάντηση, ένα «επόμενη» που η σάρωση θα αποσύρει θα ήταν ψέμα στην οθόνη.
+ */
+function reminderLines(t: Translate, key: string, reminders: IssuanceReminders | null, awaiting: boolean): React.ReactNode[] {
+  if (reminders === null) return [];
+  const sent = reminders.sentAt.map((at, index) => <li key={`${key}-${index}`}>{t(LINK_HISTORY_KEYS.reminderSent, { date: formatDate(at) })}</li>);
+  const next = awaiting && reminders.dueAt !== null ? <li key={`${key}-next`}>{t(LINK_HISTORY_KEYS.reminderNext, { date: formatDate(reminders.dueAt) })}</li> : null;
+  return [...sent, next];
+}
+
 function informedCount(delivery: IssuanceDelivery | null): number {
   return delivery === null ? 0 : Object.values(delivery.coOwners).filter((outcome) => DELIVERY_REACHED[outcome]).length;
 }
 
 /** §28 — το αίτημα έγκρισης με σύνδεσμο: σε ποιον, πότε, ποιοι ενημερώθηκαν, και αν **δεν** έφυγε. */
-function requestLines(t: Translate, request: IssuanceApprovalRequest, registry: Names): React.ReactNode[] {
+function requestLines(t: Translate, request: IssuanceApprovalRequest, registry: Names, awaiting: boolean): React.ReactNode[] {
   const count = informedCount(request.delivery);
   return [
     <li key="request">{t(LINK_HISTORY_KEYS.requestedApproval, { name: nameOf(t, request.ownerContactId, registry), date: formatDate(request.at) })}</li>,
     codeLine(t, 'request-code', request.verification),
     count > 0 ? <li key="informed">{t(LINK_HISTORY_KEYS.informed, { count: String(count) })}</li> : null,
     deliveryLine(t, 'request-delivery', request.delivery),
+    ...reminderLines(t, 'request-reminder', request.reminders, awaiting),
   ];
 }
 
@@ -147,7 +160,7 @@ function decisionLines(t: Translate, decision: IssuanceDecision, registry: Names
   ];
 }
 
-function noticeLines(t: Translate, notice: IssuanceNotice): React.ReactNode[] {
+function noticeLines(t: Translate, notice: IssuanceNotice, awaiting: boolean): React.ReactNode[] {
   const line = notice.invitationId === null
     ? t(ISSUANCE_KEYS.noticed, { channel: t(CHANNEL_KEYS[notice.channel]), date: formatDate(notice.at) })
     : t(LINK_HISTORY_KEYS.noticedByLink, { date: formatDate(notice.at) });
@@ -155,6 +168,7 @@ function noticeLines(t: Translate, notice: IssuanceNotice): React.ReactNode[] {
     <li key="notice">{line}</li>,
     codeLine(t, 'notice-code', notice.verification),
     deliveryLine(t, 'notice-delivery', notice.delivery),
+    ...reminderLines(t, 'notice-reminder', notice.reminders, awaiting),
   ];
 }
 
@@ -172,13 +186,14 @@ function responseLines(t: Translate, response: IssuanceResponse): React.ReactNod
 /** Τι έγινε ως τώρα — πρόταση · αίτημα · απόφαση · ενημέρωση · απάντηση, με ημερομηνία, κανάλι και βάση. */
 function HistoryLines({ record, registry }: { readonly record: IssuanceAssignmentRecord; readonly registry: Names }): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS]);
-  const { approvalRequest, decision, notice, response } = record;
+  const { approvalRequest, decision, notice, response, cancellation } = record;
+  const open = cancellation === null;
   return (
     <ul className="m-0 flex list-none flex-col gap-0.5 p-0 text-xs text-muted-foreground">
       <li>{t(ISSUANCE_KEYS.proposedOn, { date: formatDate(record.proposedAt) })}</li>
-      {approvalRequest === null ? null : requestLines(t, approvalRequest, registry)}
+      {approvalRequest === null ? null : requestLines(t, approvalRequest, registry, open && decision === null)}
       {decision === null ? null : decisionLines(t, decision, registry)}
-      {notice === null ? null : noticeLines(t, notice)}
+      {notice === null ? null : noticeLines(t, notice, open && response === null)}
       {response === null ? null : responseLines(t, response)}
     </ul>
   );

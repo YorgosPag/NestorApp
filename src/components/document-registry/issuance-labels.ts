@@ -176,6 +176,9 @@ export const SEND_KEYS = {
   codeCopy: `${K}issuance.send.codeCopy`,
   codeCopied: `${K}issuance.send.codeCopied`,
   codeDone: `${K}issuance.send.codeDone`,
+  // §31 — αυτόματες υπενθυμίσεις (72 ώρες μετά · την παραμονή της λήξης).
+  remindersLabel: `${K}issuance.send.remindersLabel`,
+  remindersHint: `${K}issuance.send.remindersHint`,
 } as const;
 
 /** §28 — οι γραμμές ιστορικού των μηνυμάτων με σύνδεσμο και των απαντήσεων. */
@@ -190,6 +193,8 @@ export const LINK_HISTORY_KEYS = {
   responseNote: `${K}issuance.history.responseNote`,
   withAccessCode: `${K}issuance.history.withAccessCode`,
   verifiedByCode: `${K}issuance.history.verifiedByCode`,
+  reminderSent: `${K}issuance.history.reminderSent`,
+  reminderNext: `${K}issuance.history.reminderNext`,
 } as const;
 
 /**

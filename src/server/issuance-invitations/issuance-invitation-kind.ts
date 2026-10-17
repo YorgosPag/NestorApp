@@ -34,6 +34,12 @@ export function issuanceInvitationsCollection(db: Firestore) {
 
 const nonEmpty = z.string().min(1);
 
+/**
+ * §31 — πόσοι σύνδεσμοι μπορούν να επανεκδοθούν για **μία** πρόσκληση: δύο υπενθυμίσεις + περιθώριο για αποστολή που
+ * ο πάροχος αρνήθηκε και ξαναδοκιμάστηκε. Φραγμένο, ώστε κανένα σφάλμα να μη γεννά απεριόριστους ζωντανούς συνδέσμους.
+ */
+export const ISSUANCE_LINK_REISSUE_CAP = 4;
+
 const invitationSchema = z.object({
   id: nonEmpty,
   inviteeEmail: nonEmpty,
@@ -54,6 +60,8 @@ const invitationSchema = z.object({
   contactId: nonEmpty,
   /** §29 — ο κωδικός του δεύτερου καναλιού (μόνο HMAC + μετρητής)· `null` = ο σύνδεσμος αρκεί. */
   accessCode: storedAccessCodeSchema.nullable().default(null),
+  /** §31 — σύνδεσμοι που επανεκδόθηκαν (υπενθυμίσεις)· τα έγγραφα του §28–§30 διαβάζονται ως «κανένας». */
+  reissuedNonceHashes: z.array(nonEmpty).max(ISSUANCE_LINK_REISSUE_CAP).default([]),
 });
 
 /** Ωμό έγγραφο → σύνδεσμος, fail-closed: ό,τι δεν καταλαβαίνουμε **δεν** απαντά τίποτα. */
@@ -129,6 +137,42 @@ export async function mintIssuanceInvitation(draft: IssuanceInvitationDraft): Pr
     audience: draft.audience,
     contactId: draft.contactId,
     accessCode: code?.stored ?? null,
+    reissuedNonceHashes: [],
   };
   return { invitation, token, accessCode: code?.code ?? null };
+}
+
+/** Κλειδωμένος σύνδεσμος (§29, 5 λάθη κωδικού) — η όψη το λέει χωρίς να ζητήσει κωδικό, και καμία υπενθύμιση δεν τον ξανανοίγει. */
+export function isIssuanceLinkLocked(invitation: IssuanceInvitation): boolean {
+  return invitation.accessCode !== null && invitation.accessCode.lockedAt !== null;
+}
+
+/** Γιατί **δεν** επανεκδίδεται σύνδεσμος — η πρόσκληση δεν ζει πια, ή εξαντλήθηκε το όριο. */
+export type IssuanceReissueRefusal = 'not-pending' | 'locked' | 'expired' | 'cap-reached' | 'missing';
+
+export type IssuanceReissue =
+  | { readonly ok: true; readonly invitation: IssuanceInvitation; readonly token: string }
+  | { readonly ok: false; readonly refusal: IssuanceReissueRefusal };
+
+/**
+ * **Νέος σύνδεσμος για την ΙΔΙΑ πρόσκληση** (§31) — ίδιο `invitationId`, **ίδια** λήξη, άρα **ίδιος** κωδικός πρόσβασης
+ * (HMAC δεμένο στο id) και **ίδιος** μετρητής αποτυχιών. Σε συναλλαγή: γράφεται **πριν** φύγει το email, αλλιώς ο σύνδεσμος
+ * της υπενθύμισης δεν θα δούλευε. Πετά μόνο αν λείπει το μυστικό (ο καλών δεν στέλνει τίποτα).
+ */
+export async function reissueIssuanceInvitationLink(db: Firestore, invitationId: string, nowIso: string): Promise<IssuanceReissue> {
+  const ref = issuanceInvitationsCollection(db).doc(invitationId);
+  return db.runTransaction(async (tx): Promise<IssuanceReissue> => {
+    const invitation = parseIssuanceInvitation((await tx.get(ref)).data(), invitationId);
+    if (invitation === null) return { ok: false, refusal: 'missing' };
+    if (invitation.state !== 'pending') return { ok: false, refusal: 'not-pending' };
+    if (isIssuanceLinkLocked(invitation)) return { ok: false, refusal: 'locked' };
+    if (Date.parse(invitation.expiresAt) <= Date.parse(nowIso)) return { ok: false, refusal: 'expired' };
+    const reissued = invitation.reissuedNonceHashes ?? [];
+    if (reissued.length >= ISSUANCE_LINK_REISSUE_CAP) return { ok: false, refusal: 'cap-reached' };
+    const { token, nonceHash } = await mintInvitationToken(ISSUANCE_INVITE_SECRET_ENV, {
+      id: invitation.id, expiresAtMs: Date.parse(invitation.expiresAt), locator: [],
+    });
+    tx.update(ref, { reissuedNonceHashes: [...reissued, nonceHash] });
+    return { ok: true, invitation, token };
+  });
 }

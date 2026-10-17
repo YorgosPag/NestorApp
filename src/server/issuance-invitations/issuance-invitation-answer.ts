@@ -49,8 +49,8 @@ import type { IssuanceInvitation, IssuanceLinkLanding, IssuanceLinkRefusal, Issu
 
 import { announceIssuanceAnswer, type IssuanceLinkEvent } from './issuance-answer-notifier';
 import { sendIssuanceAnswerReceipt } from './issuance-answer-receipt';
-import { ISSUANCE_INVITATION_LOCATOR, issuanceInvitationsCollection, parseIssuanceInvitation } from './issuance-invitation-kind';
-import { checkIssuanceAccessCode, isIssuanceLinkLocked, issuanceGateViewOf, type IssuanceAccessCheck } from './issuance-link-access';
+import { ISSUANCE_INVITATION_LOCATOR, isIssuanceLinkLocked, issuanceInvitationsCollection, parseIssuanceInvitation } from './issuance-invitation-kind';
+import { checkIssuanceAccessCode, issuanceGateViewOf, type IssuanceAccessCheck } from './issuance-link-access';
 
 const logger = createModuleLogger('issuance-invitation-answer');
 
@@ -63,7 +63,7 @@ type LinkUnavailable = 'secret-missing' | 'invitation-corrupt';
 /** Μια άρνηση προς τη σελίδα — `remaining` μόνο στις αρνήσεις κωδικού (§29: «απομένουν Ν προσπάθειες»). */
 export type LinkRefused = { readonly kind: 'refused'; readonly reason: LinkRefusal; readonly remaining?: number };
 
-interface ResolvedLink {
+export interface ResolvedLink {
   readonly invitation: IssuanceInvitation;
   readonly registry: DocumentRegistryResponse;
   readonly label: RegistryPropertyLabel;
@@ -71,7 +71,7 @@ interface ResolvedLink {
   readonly latestIssuedOn: string | null;
 }
 
-type Resolution = { readonly ok: true; readonly link: ResolvedLink } | { readonly ok: false; readonly refusal: LinkRefusal } | { readonly ok: false; readonly unavailable: LinkUnavailable };
+export type Resolution = { readonly ok: true; readonly link: ResolvedLink } | { readonly ok: false; readonly refusal: LinkRefusal } | { readonly ok: false; readonly unavailable: LinkUnavailable };
 
 /** Ισχύει ακόμη; — τρέχων σύνδεσμος, σωστό στάδιο, και (για έγκριση) ο ίδιος υπεύθυνος. */
 function stillCurrent(invitation: IssuanceInvitation, label: RegistryPropertyLabel, record: IssuanceAssignmentRecord | null, latestIssuedOn: string | null): IssuanceLinkRefusal | null {
@@ -83,13 +83,11 @@ function stillCurrent(invitation: IssuanceInvitation, label: RegistryPropertyLab
   return lead?.kind === 'designated' && lead.contactId === invitation.contactId ? null : 'lead-changed';
 }
 
-/** Token → σύνδεσμος → η ανάθεση **όπως τη βλέπει η οθόνη του γραφείου** (ο ίδιος αναγνώστης). */
-async function resolveLink(db: Firestore, token: string, now: Date): Promise<Resolution> {
-  const found = await readInvitationByToken(db, ISSUANCE_INVITATION_LOCATOR, { token, nowValue: now.toISOString(), recipientEmail: null });
-  if (found.kind === 'secret-missing') return { ok: false, unavailable: 'secret-missing' };
-  if (found.kind === 'refused') return { ok: false, refusal: found.reason };
-  const invitation = parseIssuanceInvitation(found.stored, found.invitationId);
-  if (invitation === null) return { ok: false, unavailable: 'invitation-corrupt' };
+/**
+ * Σύνδεσμος → η ανάθεση **όπως τη βλέπει η οθόνη του γραφείου** (ο ίδιος αναγνώστης) — και αν ο σύνδεσμος ισχύει ακόμη.
+ * §31: η **ίδια** κρίση αποφασίζει και αν αξίζει υπενθύμιση — καμία υπενθύμιση για σύνδεσμο που η σελίδα θα αρνιόταν.
+ */
+export async function resolveIssuanceInvitation(db: Firestore, invitation: IssuanceInvitation, now: Date): Promise<Resolution> {
   const registry = await readDocumentRegistry(db, invitation.companyId, now);
   const issuance = registry.issuance[issuanceKeyOf(invitation.propertyId, invitation.documentKind)];
   const label = registry.properties[invitation.propertyId];
@@ -99,7 +97,17 @@ async function resolveLink(db: Firestore, token: string, now: Date): Promise<Res
   return { ok: true, link: { invitation, registry, label, record: issuance.record, latestIssuedOn: issuance.latestIssuedOn } };
 }
 
-function officeNameOf(link: ResolvedLink): Promise<string | null> {
+/** Token → σύνδεσμος → η ανάθεση. */
+async function resolveLink(db: Firestore, token: string, now: Date): Promise<Resolution> {
+  const found = await readInvitationByToken(db, ISSUANCE_INVITATION_LOCATOR, { token, nowValue: now.toISOString(), recipientEmail: null });
+  if (found.kind === 'secret-missing') return { ok: false, unavailable: 'secret-missing' };
+  if (found.kind === 'refused') return { ok: false, refusal: found.reason };
+  const invitation = parseIssuanceInvitation(found.stored, found.invitationId);
+  if (invitation === null) return { ok: false, unavailable: 'invitation-corrupt' };
+  return resolveIssuanceInvitation(db, invitation, now);
+}
+
+export function officeNameOf(link: ResolvedLink): Promise<string | null> {
   return readWorkspaceName(link.invitation.companyId).then(trimmedStringOrNull, () => null);
 }
 
@@ -159,19 +167,22 @@ async function announceToOffice(link: ResolvedLink, event: IssuanceLinkEvent): P
   });
 }
 
-/** Τα στοιχεία της απόδειξης — από τον **ίδιο** αναγνώστη με την όψη, ποτέ από το αίτημα του πελάτη. */
-async function receiptFactsOf(link: ResolvedLink): Promise<IssuanceEmailFacts> {
+/**
+ * Τα στοιχεία ενός email της ανάθεσης — από τον **ίδιο** αναγνώστη με την όψη, ποτέ από το αίτημα του πελάτη. `note` = η
+ * σημείωση του γραφείου (υπενθύμιση §31: η **ίδια** με το αρχικό μήνυμα) ή `null` (απόδειξη §30).
+ */
+export async function issuanceEmailFactsOf(link: ResolvedLink, note: string | null): Promise<IssuanceEmailFacts> {
   const { invitation, registry, record } = link;
   return {
     officeName: await officeNameOf(link), propertyLabel: link.label.name, documentKind: invitation.documentKind,
-    professionalName: registry.people[record.professionalContactId]?.name ?? null, credential: record.credential, note: null,
+    professionalName: registry.people[record.professionalContactId]?.name ?? null, credential: record.credential, note,
   };
 }
 
 /** §30 — η απόδειξη στη διεύθυνση του συνδέσμου. Μετά το commit, ποτέ δεν πετά. */
 async function sendReceipt(link: ResolvedLink, answer: IssuanceLinkAnswerBody, verifiedBy: LinkVerification, answeredAt: string): Promise<void> {
   await sendIssuanceAnswerReceipt({
-    invitation: link.invitation, facts: await receiptFactsOf(link), answer: answer.answer, comment: answer.note, verifiedBy, answeredAt,
+    invitation: link.invitation, facts: await issuanceEmailFactsOf(link, null), answer: answer.answer, comment: answer.note, verifiedBy, answeredAt,
   });
 }
 

@@ -81,6 +81,11 @@ export const issuanceSendBody = z.object({
    * η ασφαλής επιλογή είναι η προεπιλογή, και ένας παλιός πελάτης δεν στέλνει «σιωπηλά» σύνδεσμο χωρίς κωδικό.
    */
   requireAccessCode: z.boolean().default(true),
+  /**
+   * §31 — αυτόματες υπενθυμίσεις αν δεν απαντήσει (72 ώρες μετά · την παραμονή της λήξης). Προεπιλογή ενεργές, όπως στο
+   * DocuSign και το Adobe Sign· ξεκινούν **μόνο** αν το μήνυμα του γραφείου έφυγε — ποτέ αυτόματη πρώτη αποστολή.
+   */
+  sendReminders: z.boolean().default(true),
 });
 
 export type IssuanceSendBody = z.infer<typeof issuanceSendBody>;

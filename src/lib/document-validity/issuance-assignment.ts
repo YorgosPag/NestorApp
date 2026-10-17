@@ -36,6 +36,7 @@ import { documentKindSpec, type DocumentKind } from '@/config/document-validity/
 import { conveyanceToday } from '@/lib/conveyance/conveyance-calendar';
 
 import type { IssuanceDelivery } from './issuance-delivery';
+import type { IssuanceReminders } from './issuance-reminder';
 
 export const ISSUANCE_STAGES = [
   'proposed', 'ownerApproved', 'ownerRejected', 'sent', 'accepted', 'declined', 'cancelled',
@@ -115,6 +116,8 @@ export interface IssuanceApprovalRequest {
   readonly verification: LinkVerification;
   /** `null` = το email δεν έχει ακόμη κριθεί (ή η αναφορά του χάθηκε). */
   readonly delivery: IssuanceDelivery | null;
+  /** §31 — οι υπενθυμίσεις του μηνύματος· `null` = καμία (δεν ζητήθηκαν, ή το μήνυμα δεν έφυγε). */
+  readonly reminders: IssuanceReminders | null;
 }
 
 export interface IssuanceNotice {
@@ -127,6 +130,8 @@ export interface IssuanceNotice {
   readonly verification: LinkVerification | null;
   readonly note: string | null;
   readonly delivery: IssuanceDelivery | null;
+  /** §31 — οι υπενθυμίσεις· `null` = καμία (ενημέρωση εκτός εφαρμογής · δεν ζητήθηκαν · το μήνυμα δεν έφυγε). */
+  readonly reminders: IssuanceReminders | null;
 }
 
 /** Τα γεγονότα μιας ανάθεσης — ό,τι αποθηκεύεται πέρα από την ταυτότητα. */
@@ -315,7 +320,7 @@ function officeAdvanced(record: IssuanceAssignmentRecord, action: Exclude<Advanc
       ...record,
       approvalRequest: {
         invitationId: action.invitationId, ownerContactId: action.ownerContactId, note: action.note, at, byUid: uid,
-        verification: action.verification, delivery: null,
+        verification: action.verification, delivery: null, reminders: null,
       },
     };
     case 'notify': return {
@@ -323,7 +328,7 @@ function officeAdvanced(record: IssuanceAssignmentRecord, action: Exclude<Advanc
       notice: {
         channel: action.channel, at, byUid: uid, invitationId: action.invitationId, note: action.note,
         // Χωρίς σύνδεσμο δεν υπάρχει τι να επαληθευτεί — ποτέ «ζητήθηκε κωδικός» για ενημέρωση τηλεφώνου.
-        verification: action.invitationId === null ? null : action.verification ?? 'link', delivery: null,
+        verification: action.invitationId === null ? null : action.verification ?? 'link', delivery: null, reminders: null,
       },
     };
     case 'cancel': return { ...record, cancellation: { at, byUid: uid } };
@@ -352,6 +357,27 @@ function advanced(record: IssuanceAssignmentRecord, stage: IssuanceStage, action
 export function messageOf(record: IssuanceAssignmentRecord, invitationId: string): IssuanceApprovalRequest | IssuanceNotice | null {
   if (record.approvalRequest?.invitationId === invitationId) return record.approvalRequest;
   if (record.notice?.invitationId === invitationId) return record.notice;
+  return null;
+}
+
+/**
+ * **Άλλαξε το μήνυμα με αυτό το `invitationId`** — αίτημα έγκρισης ή μήνυμα στον επαγγελματία. Η τηλεμετρία του μηνύματος
+ * (παράδοση §30 · υπενθυμίσεις §31) γράφεται **μόνο** στο μήνυμα που τη γέννησε: αν στο μεταξύ στάλθηκε νέο, ή το `update`
+ * αρνηθεί (`null`), δεν γράφεται τίποτα ⇒ `null`.
+ */
+export function withMessage(
+  record: IssuanceAssignmentRecord,
+  invitationId: string,
+  update: <M extends IssuanceApprovalRequest | IssuanceNotice>(message: M) => M | null,
+): IssuanceAssignmentRecord | null {
+  if (record.approvalRequest?.invitationId === invitationId) {
+    const approvalRequest = update(record.approvalRequest);
+    return approvalRequest === null ? null : { ...record, approvalRequest };
+  }
+  if (record.notice?.invitationId === invitationId) {
+    const notice = update(record.notice);
+    return notice === null ? null : { ...record, notice };
+  }
   return null;
 }
 

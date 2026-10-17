@@ -10,7 +10,7 @@
  * **Layering**: leaf — καθαρές συναρτήσεις, μηδέν I/O.
  */
 
-import { messageOf, type IssuanceAssignmentRecord } from './issuance-assignment';
+import { withMessage, type IssuanceAssignmentRecord } from './issuance-assignment';
 
 /**
  * Τι απέγινε ένα email. Δύο πηγές, μία λίστα:
@@ -58,9 +58,12 @@ export interface IssuanceDelivery {
  * §30 — **αναδίπλωση** ανά θέση (`foldDeliveryOutcome`): ένα `delivered` που πρόλαβε την αναφορά του αποστολέα δεν σβήνεται.
  */
 export function withIssuanceDelivery(record: IssuanceAssignmentRecord, invitationId: string, delivery: IssuanceDelivery): IssuanceAssignmentRecord | null {
-  return withMessageDelivery(record, invitationId, (current) => (current === null ? delivery : {
-    recipient: foldDeliveryOutcome(current.recipient, delivery.recipient),
-    coOwners: foldCoOwners(current.coOwners, delivery.coOwners),
+  return withMessage(record, invitationId, (message) => ({
+    ...message,
+    delivery: message.delivery === null ? delivery : {
+      recipient: foldDeliveryOutcome(message.delivery.recipient, delivery.recipient),
+      coOwners: foldCoOwners(message.delivery.coOwners, delivery.coOwners),
+    },
   }));
 }
 
@@ -73,23 +76,18 @@ export type DeliverySlot = { readonly kind: 'recipient' } | { readonly kind: 'co
  * ⚠️ Χωρίς αναφορά αποστολέα **δεν** επινοούμε τιμή για την άλλη θέση — ο καλών ζητά από τον πάροχο να ξαναστείλει.
  */
 export function withObservedDelivery(record: IssuanceAssignmentRecord, invitationId: string, slot: DeliverySlot, outcome: ObservedDeliveryOutcome): IssuanceAssignmentRecord | null {
-  const current = messageOf(record, invitationId)?.delivery ?? null;
-  if (current === null) return null;
-  const next: IssuanceDelivery = slot.kind === 'recipient'
-    ? { ...current, recipient: foldDeliveryOutcome(current.recipient, outcome) }
-    : { ...current, coOwners: { ...current.coOwners, [slot.contactId]: foldDeliveryOutcome(current.coOwners[slot.contactId], outcome) } };
-  return withMessageDelivery(record, invitationId, () => next);
+  return withMessage(record, invitationId, (message) => {
+    const current = message.delivery;
+    if (current === null) return null;
+    const delivery: IssuanceDelivery = slot.kind === 'recipient'
+      ? { ...current, recipient: foldDeliveryOutcome(current.recipient, outcome) }
+      : { ...current, coOwners: { ...current.coOwners, [slot.contactId]: foldDeliveryOutcome(current.coOwners[slot.contactId], outcome) } };
+    return { ...message, delivery };
+  });
 }
 
 function foldCoOwners(current: IssuanceDelivery['coOwners'], incoming: IssuanceDelivery['coOwners']): IssuanceDelivery['coOwners'] {
   const merged: Record<string, IssuanceDeliveryOutcome> = { ...current };
   for (const [contactId, outcome] of Object.entries(incoming)) merged[contactId] = foldDeliveryOutcome(current[contactId], outcome);
   return merged;
-}
-
-/** Η παράδοση **του** μηνύματος με αυτό το `invitationId` — αίτημα έγκρισης ή μήνυμα στον επαγγελματία. */
-function withMessageDelivery(record: IssuanceAssignmentRecord, invitationId: string, update: (current: IssuanceDelivery | null) => IssuanceDelivery | null): IssuanceAssignmentRecord | null {
-  if (record.approvalRequest?.invitationId === invitationId) return { ...record, approvalRequest: { ...record.approvalRequest, delivery: update(record.approvalRequest.delivery) } };
-  if (record.notice?.invitationId === invitationId) return { ...record, notice: { ...record.notice, delivery: update(record.notice.delivery) } };
-  return null;
 }

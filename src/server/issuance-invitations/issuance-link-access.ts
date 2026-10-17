@@ -19,7 +19,7 @@ import type { LinkVerification } from '@/lib/document-validity/issuance-assignme
 import { ACCESS_CODE_MAX_FAILURES, normaliseAccessCode, stageAccessCodeAttempt } from '@/server/invitations/invitation-access-code';
 import type { IssuanceInvitation, IssuanceLinkGateView } from '@/types/issuance-invitation';
 
-import { ISSUANCE_INVITE_SECRET_ENV, issuanceInvitationsCollection, parseIssuanceInvitation } from './issuance-invitation-kind';
+import { ISSUANCE_INVITE_SECRET_ENV, isIssuanceLinkLocked, issuanceInvitationsCollection, parseIssuanceInvitation } from './issuance-invitation-kind';
 
 export type AccessCodeRefusal = 'code-required' | 'code-wrong' | 'code-locked';
 
@@ -31,11 +31,6 @@ export type IssuanceAccessCheck =
 function attemptsLeft(invitation: IssuanceInvitation): number {
   const code = invitation.accessCode;
   return code === null || code.lockedAt !== null ? 0 : ACCESS_CODE_MAX_FAILURES - code.failures;
-}
-
-/** Κλειδωμένος σύνδεσμος — η όψη το λέει **χωρίς** να ζητήσει κωδικό (καμία προσπάθεια να καταναλωθεί). */
-export function isIssuanceLinkLocked(invitation: IssuanceInvitation): boolean {
-  return invitation.accessCode !== null && invitation.accessCode.lockedAt !== null;
 }
 
 /**
