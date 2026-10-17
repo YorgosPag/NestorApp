@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ISSUER_QUALIFICATION_SPECS } from '@/config/document-validity/document-issuers';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { PROFESSIONAL_LICENCE_SPECS } from '@/config/professional-licences';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ISSUANCE_NOTE_MAX } from '@/lib/document-validity/issuance-assignment';
@@ -140,7 +141,8 @@ export function DocumentRequestCard({ token, view }: { readonly token: string; r
       <Textarea id={noteId} value={note} maxLength={ISSUANCE_NOTE_MAX} onChange={(event) => setNote(event.target.value)} disabled={sending} />
       <p className="m-0 text-xs text-muted-foreground">{t('document-request:page.recordedOnly')}</p>
       <footer className="flex flex-wrap gap-2">
-        <Button type="button" onClick={() => { void answer(texts.answers[0]); }} disabled={sending}>{texts.yes}</Button>
+        {/* ADR-770 §18.6: `variant="default"` = `bg-primary` ≡ `--card` στο σκοτεινό ⇒ το «ναι» δεν ξεχώριζε (ADR-915 §29.1). */}
+        <Button type="button" className={COLOR_BRIDGE.action.primary} onClick={() => { void answer(texts.answers[0]); }} disabled={sending}>{texts.yes}</Button>
         <Button type="button" variant="outline" onClick={() => { void answer(texts.answers[1]); }} disabled={sending}>{texts.no}</Button>
       </footer>
       {sending ? <p role="status" className="m-0 text-xs text-muted-foreground">{t('document-request:page.sending')}</p> : null}
