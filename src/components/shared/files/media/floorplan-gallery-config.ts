@@ -31,6 +31,13 @@ export interface FloorplanGalleryProps {
   emptyMessage?: string;
   /** Custom className */
   className?: string;
+  /**
+   * **Ποιος κατέχει το ύψος της κάτοψης** — ίδιο λεξιλόγιο με το `MediaViewerLayout` (ADR-912 §12.17).
+   * - `flow` (προεπιλογή): ο γονιός δεν δίνει ύψος ⇒ η κάτοψη κρατά δάπεδο 500px (καρτέλα αρχείων, σελίδα-έγγραφο).
+   * - `fill`: ο γονιός δίνει ύψος (θεατής μέσων) ⇒ η κάτοψη γεμίζει **ό,τι υπάρχει**. 🔴 Με δάπεδο 500px σε χώρο 280px
+   *   (κινητό 390×844) ο καμβάς ήταν 500px, κομμένος από τον πρόγονο: το σχέδιο κεντραριζόταν **133px** χαμηλότερα.
+   */
+  layout?: 'flow' | 'fill';
   /** Initial file index */
   initialIndex?: number;
   /** Polygon overlays to render on top of DXF floorplans (ADR-237 / SPEC-237B) */

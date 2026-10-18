@@ -20,6 +20,7 @@ import { MoreHorizontal, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -129,19 +130,23 @@ interface ActionMenuItemsProps {
 function ActionMenuItems({ actions, className, onClaimFocus }: ActionMenuItemsProps) {
   return (
     <>
-      {actions.map((action, index) => (
-        <DropdownMenuItem
-          key={index}
-          disabled={action.disabled || action.pending}
-          onClick={() => {
-            if (action.claimsFocus) onClaimFocus();
-            action.onClick();
-          }}
-          className={className}
-        >
-          <ActionContent {...action} />
-        </DropdownMenuItem>
-      ))}
+      {actions.map((action, index) => {
+        const run = () => {
+          if (action.claimsFocus) onClaimFocus();
+          action.onClick();
+        };
+        const disabled = action.disabled || action.pending;
+        // Διακόπτης ⇒ `menuitemcheckbox`: η κατάσταση διαβάζεται από τον αναγνώστη οθόνης και φαίνεται με σημάδι.
+        return action.pressed === undefined ? (
+          <DropdownMenuItem key={index} disabled={disabled} onClick={run} className={className}>
+            <ActionContent {...action} />
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuCheckboxItem key={index} disabled={disabled} checked={action.pressed} onCheckedChange={run} className={className}>
+            <ActionContent {...action} />
+          </DropdownMenuCheckboxItem>
+        );
+      })}
     </>
   );
 }

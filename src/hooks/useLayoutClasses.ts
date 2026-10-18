@@ -86,6 +86,12 @@ export interface UseLayoutClassesReturn {
   readonly listGapResponsive: string;
   /** "px-1 py-2 sm:px-2 sm:py-2" - List container padding */
   readonly listPaddingResponsive: string;
+  /**
+   * "p-0 sm:p-0 md:px-2 md:py-2" — ADR-912 §12.17: η λεπτομέρεια σε στενή οθόνη είναι δική της οθόνη, χωρίς πλαίσιο
+   * γύρω από τον καμβά· από `md` και πάνω ίδιο με το `listPaddingResponsive`. Δίνεται ΑΝΤΙ γι' αυτό (το `sm:p-0`
+   * ακυρώνει ρητά το `sm:` του, μέσω `twMerge`).
+   */
+  readonly listPaddingDetailFlush: string;
   /** "px-1 pt-2 sm:px-2 sm:pt-2" - Advanced filters panel padding */
   readonly filterPaddingResponsive: string;
   /** "gap-1 sm:gap-2" - Gap between list and details (responsive 4px→8px) */
@@ -291,6 +297,7 @@ export function useLayoutClasses(): UseLayoutClassesReturn {
     // 🏢 ENTERPRISE: Responsive spacing for list pages (8px desktop, 4px mobile)
     listGapResponsive: "gap-1 sm:gap-2",               // List container gap between list and details
     listPaddingResponsive: "px-1 py-2 sm:px-2 sm:py-2", // List container padding
+    listPaddingDetailFlush: "p-0 sm:p-0 md:px-2 md:py-2", // ADR-912 §12.17 — στενή λεπτομέρεια χωρίς πλαίσιο
     filterPaddingResponsive: "px-1 pt-2 sm:px-2 sm:pt-2", // Advanced filters panel padding
     listItemsGap: "gap-1 sm:gap-2",                    // Gap between list and details (responsive 4px→8px)
 

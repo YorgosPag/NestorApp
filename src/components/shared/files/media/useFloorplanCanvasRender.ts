@@ -11,8 +11,9 @@
  * @enterprise SPEC-237D
  */
 
-import { useEffect, useRef, useSyncExternalStore, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type RefObject } from 'react';
 import type { PanOffset } from '@/hooks/useZoomPan';
+import { useElementSize } from '@/hooks/media/useElementSize';
 // ADR-370 v2 / ADR-654 — async material-image / procedural decode signals a redraw
 // through this SSoT store; the read-only canvas has no frame scheduler of its own, so
 // it repaints by treating the asset-ready version as an effect dependency.
@@ -86,6 +87,14 @@ export function useFloorplanCanvasRender(params: FloorplanCanvasRenderParams): v
   const readyRef = useRef(false);
   useEffect(() => { if (!enabled) readyRef.current = false; }, [enabled]);
 
+  // ADR-912 §12.17 — «προσαρμογή στην οθόνη» = προσαρμογή στο κουτί που ΥΠΑΡΧΕΙ ΤΩΡΑ. Οι renderers διαβάζουν το μέγεθος
+  // του γονιού τη στιγμή του βαψίματος· χωρίς παρατηρητή, κουτί που άλλαξε μετά (διάταξη που κάθεται, στροφή κινητού,
+  // διαχωριστική) έμενε με τον παλιό καμβά τεντωμένο από το CSS. Ο γονιός λύνεται από τον ΙΔΙΟ τον καμβά (μπαίνει στο
+  // DOM μόνο όταν υπάρξει περιεχόμενο), άρα ο ΕΝΑΣ παρατηρητής (`useElementSize`) ξαναστήνεται όταν αλλάξει στοιχείο.
+  const [viewport, setViewport] = useState<HTMLElement | null>(null);
+  const viewportRef = useMemo(() => ({ current: viewport }), [viewport]);
+  const viewportSize = useElementSize(viewportRef, 1);
+
   useEffect(() => {
     if (!enabled) return;
     const hasContent = (isDxf && loadedScene) || (isRaster && rasterImage && rasterBounds);
@@ -94,6 +103,7 @@ export function useFloorplanCanvasRender(params: FloorplanCanvasRenderParams): v
     const doRender = () => {
       const canvas = canvasRef.current;
       if (!canvas) return;
+      setViewport(canvas.parentElement);
       if (isDxf && loadedScene) {
         if (currentBounds) {
           // Same `currentBounds` (computeActualBounds) the overlay pass uses → the
@@ -130,6 +140,6 @@ export function useFloorplanCanvasRender(params: FloorplanCanvasRenderParams): v
   }, [
     canvasRef, enabled, isDxf, loadedScene, isRaster, rasterImage, rasterBounds,
     currentBounds, zoom, panOffset, drawingMode, inkColor, overlays, highlightedUnitId,
-    getOverlayLabel, firstRenderDelay, bimEntities, imageAssetVersion,
+    getOverlayLabel, firstRenderDelay, bimEntities, imageAssetVersion, viewportSize,
   ]);
 }
