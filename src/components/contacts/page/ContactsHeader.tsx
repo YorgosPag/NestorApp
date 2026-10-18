@@ -34,6 +34,8 @@ interface ContactsHeaderProps {
   onToggleTrash?: () => void;
   /** Breadcrumb element to display inside PageHeader */
   breadcrumb?: React.ReactNode;
+  /** Νέα επαφή από την κεφαλίδα — μόνο στο πλέγμα (η λίστα έχει δικό της κουμπί στο toolbar) */
+  onNewContact?: () => void;
 }
 
 // 🏢 ENTERPRISE: Search removed from header - using unified search in AdvancedFiltersPanel
@@ -48,6 +50,7 @@ export function ContactsHeader({
   trashCount = 0,
   onToggleTrash,
   breadcrumb,
+  onNewContact,
 }: ContactsHeaderProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
@@ -73,6 +76,9 @@ export function ContactsHeader({
         viewMode,
         onViewModeChange: (mode) => { if (isListGridViewMode(mode)) setViewMode(mode); },
         viewModes: LIST_GRID_VIEW_MODES,
+        addButton: viewMode === 'grid' && onNewContact
+          ? { label: t('header.newContact', { ns: 'contacts-core' }), onClick: onNewContact }
+          : undefined,
         customActions: [
           // 🗑️ Trash toggle button
           ...(onToggleTrash ? [

@@ -145,6 +145,8 @@ export function ContactsPageContent() {
         trashCount={trashCount}
         onToggleTrash={handleToggleTrash}
         breadcrumb={<ModuleBreadcrumb />}
+        // Η δημιουργία ζει στο split layout της λίστας — από το πλέγμα περνάμε εκεί.
+        onNewContact={showTrash ? undefined : () => { setViewMode('list'); handleNewContact(); }}
       />
 
       <ContactFilterIndicator
