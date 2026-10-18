@@ -17,8 +17,7 @@ import { DialogActionFooter } from '@/components/ui/dialog-action-footer';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { calendarDateOfDateKey } from '@/lib/calendar/date-key';
-import { localDateOf } from '@/lib/date-local';
+import { dateKeyOfPicker, pickerDateOfKey } from '@/lib/calendar/date-key';
 import { cn } from '@/lib/utils';
 import type { ConveyanceCommand } from '@/lib/conveyance/conveyance-commands';
 import { reviewIssuedOnOf, type ReviewIssuedOn } from '@/lib/conveyance/review-attestation';
@@ -67,7 +66,7 @@ function hasPrintedValidity(row: ChecklistRow): boolean {
 }
 
 const dateKeyOrNull = (accepting: boolean, date: Date | undefined): string | null =>
-  accepting && date ? localDateOf(date) : null;
+  accepting ? dateKeyOfPicker(date) : null;
 
 function buildCommand(row: ChecklistRow, mode: RowDialogMode, reason: string, dates: DeclaredDates): ConveyanceCommand {
   if (mode === 'not_applicable') return { type: 'mark_not_applicable', itemId: row.itemId, reason };
@@ -83,11 +82,9 @@ function buildCommand(row: ChecklistRow, mode: RowDialogMode, reason: string, da
   };
 }
 
-const dateOfKey = (key: string | null): Date | undefined => (key === null ? undefined : calendarDateOfDateKey(key) ?? undefined);
-
 /** ADR-915 Φ3β · §14 — οι αρχικές τιμές: ό,τι ξέρει ήδη το αρχείο (`undefined` = κενό πεδίο, όπως πριν). */
 function prefilledDates(known: ReviewIssuedOn): DeclaredDates {
-  return { issuedOn: dateOfKey(known.issuedOn), validUntil: dateOfKey(known.printedValidUntil) };
+  return { issuedOn: pickerDateOfKey(known.issuedOn), validUntil: pickerDateOfKey(known.printedValidUntil) };
 }
 
 export function ReasonField({ value, onChange }: { readonly value: string; readonly onChange: (next: string) => void }) {

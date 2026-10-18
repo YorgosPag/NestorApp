@@ -22,7 +22,9 @@ import { formatDateKey } from '@/lib/intl-formatting';
 import { cn } from '@/lib/utils';
 import type { RegistryDocument, RegistryDocumentRow } from '@/lib/document-validity/document-registry';
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
+import { factsDeclarationOf } from '@/lib/document-validity/facts-declaration';
 import { RegistryDependents } from '@/components/document-registry/RegistryDependents';
+import { RegistryFactsDeclaration } from '@/components/document-registry/RegistryFactsDeclaration';
 import { RegistryIssuerValue } from '@/components/document-registry/RegistryIssuerValue';
 import { RegistryNextStep } from '@/components/document-registry/RegistryNextStep';
 import { RegistryPropertyValue } from '@/components/document-registry/RegistryPropertyValue';
@@ -68,7 +70,11 @@ function relativeText(t: Translate, expiresOn: string, asOf: string): string | n
 function ExpiryValue({ row, asOf }: { readonly row: RegistryDocumentRow; readonly asOf: string }): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS, CONVEYANCE_NS, LEGALITY_NS]);
   const { expiresOn, source, discrepancy } = row.expiry;
-  if (expiresOn === null) return <dd className="m-0 text-sm text-foreground">{t(REGISTRY_KEYS.expiryUnknown)}</dd>;
+  if (expiresOn === null) {
+    // ADR-915 §33 — «δεν δηλώθηκε» ≠ «άγνωστη λήξη»: το πρώτο λύνεται με ένα πάτημα δίπλα.
+    const undeclared = factsDeclarationOf(row.document) === 'declare';
+    return <dd className="m-0 text-sm text-foreground">{t(undeclared ? REGISTRY_KEYS.undeclared : REGISTRY_KEYS.expiryUnknown)}</dd>;
+  }
   const relative = relativeText(t, expiresOn, asOf);
   return (
     <dd className="m-0 flex flex-col gap-0.5 text-sm text-foreground">
@@ -122,6 +128,8 @@ export function RegistryRowItem({ row, registry, supersededByName }: RegistryRow
       {superseded && supersededByName !== null ? (
         <p className="m-0 text-sm text-muted-foreground">{t(REGISTRY_KEYS.supersededBy, { name: supersededByName })}</p>
       ) : null}
+      {/* §33 Δ4 — και σε αντικατεστημένη: ένα νέο αρχείο χωρίς ημερομηνίες χάνει τη θέση του μέχρι να δηλωθούν. */}
+      <RegistryFactsDeclaration document={row.document} registry={registry} />
       {superseded ? null : (
         <RegistryNextStep
           kind={row.document.kind} state={row.state} areaId={areaIdOf(row.document.propertyId, registry)}

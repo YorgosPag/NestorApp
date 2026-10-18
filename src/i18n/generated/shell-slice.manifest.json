@@ -34,7 +34,7 @@
     "src/i18n/generated/routes/o__workspace__cases.el.json": "62e1b3378215c16e66a12632667ad61be33b59cc632e634dde0ffaf9763769d4",
     "src/i18n/generated/routes/o__workspace__cases__engagementId.el.json": "cb0565009bf6f7bec16cd93768e557804df81971abe3c5a23b7c050e9eb91ec3",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
-    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "101aa425972b64bfe53c097072038d8c84c881abb622b5e7297675d93ec0f5ff",
+    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "e4eac6bfc39e99d64d1520dce01697c4c7d28502e7089b0a6dadcf2550fd81fe",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "f2b0212cf0909081143453962ba0bfec2a47dc8753dc81a009ee34c12579b137",
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "2753c7edd9c05a17a65b15f3146177db8a27ca727df7b1f77d28fd1724f4fa6f",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "e1c5896ab910b7f5515ef0a3991a4daae3ba7fc776c6291815cfeaddb51e2398",
@@ -151,7 +151,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "b4236db11bdaad82cb80b099ec546c579b6d6b4af041d3853b4467ee25d64912",
+  "inputsSha256": "9d9f20f355adb2fc04c1856292c54fd6b46bcc5fb571168533f855643efac439",
   "languages": [
     "el"
   ],
@@ -5342,6 +5342,10 @@
             "empty.hint",
             "empty.openProperties",
             "empty.title",
+            "factsDeclaration.correct",
+            "factsDeclaration.declare",
+            "factsDeclaration.description",
+            "factsDeclaration.title",
             "filter.all",
             "filter.blocking",
             "filter.discrepancy",
@@ -5513,6 +5517,7 @@
             "row.sourceRule",
             "row.state",
             "row.supersededBy",
+            "row.undeclared",
             "scope.note",
             "scope.unscopedListings",
             "state.expired",
@@ -11138,7 +11143,7 @@
   ],
   "stats": {
     "matchedKeys": 248,
-    "sliceBytes": 773864
+    "sliceBytes": 774446
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

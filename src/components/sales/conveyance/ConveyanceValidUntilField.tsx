@@ -19,9 +19,9 @@ import { DatePickerField } from '@/components/ui/date-picker-field';
 import { Label } from '@/components/ui/label';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { formatDate } from '@/lib/intl-utils';
-import { localDateOf } from '@/lib/date-local';
+import { dateKeyOfPicker } from '@/lib/calendar/date-key';
 import { cn } from '@/lib/utils';
-import type { DocumentValidityRule } from '@/config/document-validity/document-validity';
+import type { DocumentClassification, DocumentValidityRule } from '@/config/document-validity/document-validity';
 import { documentExpiry } from '@/lib/document-validity/document-expiry';
 import { printedBoundsOf, type PrintedBounds } from '@/lib/document-validity/validity-bounds';
 
@@ -32,9 +32,12 @@ interface ConveyanceValidUntilFieldProps {
   readonly onChange: (date: Date | undefined) => void;
   /** Διαβάστηκε από το ίδιο το έγγραφο ⇒ μόνο ανάγνωση (ίδιο δόγμα με την ημερομηνία έκδοσης). */
   readonly locked: boolean;
+  /**
+   * ADR-915 §33 — η κατηγορία που δηλώνεται στο **ίδιο** έγγραφο (ΥΔΕ Α/Β/Γ): το ανώτατο εξαρτάται από αυτήν. Απουσία
+   * ⇒ `null` = το μέγιστο του καθεστώτος (ADR-915 §32 Υ4) — ό,τι έκανε το πεδίο πριν.
+   */
+  readonly classification?: DocumentClassification | null;
 }
-
-const keyOf = (date: Date | undefined): string | null => (date ? localDateOf(date) : null);
 
 /** Η υπόδειξη: το νόμιμο εύρος για αυτή την έκδοση, ή η γενική οδηγία όταν η έκδοση δεν δηλώθηκε ακόμη. */
 function useBoundsHint(bounds: PrintedBounds | null): string {
@@ -44,13 +47,13 @@ function useBoundsHint(bounds: PrintedBounds | null): string {
   return t('dialogs.validUntilRange', { floor: formatDate(bounds.floor), ceiling: formatDate(bounds.ceiling) });
 }
 
-export function ConveyanceValidUntilField({ rule, issuedOn, value, onChange, locked }: ConveyanceValidUntilFieldProps) {
+export function ConveyanceValidUntilField({ rule, issuedOn, value, onChange, locked, classification = null }: ConveyanceValidUntilFieldProps) {
   const { t } = useTranslation(['conveyance']);
   const colors = useSemanticColors();
-  const issuedKey = keyOf(issuedOn);
-  const bounds = printedBoundsOf(rule, issuedKey);
+  const issuedKey = dateKeyOfPicker(issuedOn);
+  const bounds = printedBoundsOf(rule, issuedKey, classification);
   const hint = useBoundsHint(bounds);
-  const discrepancy = documentExpiry({ rule, issuedOn: issuedKey, printedValidUntil: keyOf(value) }).discrepancy;
+  const discrepancy = documentExpiry({ rule, issuedOn: issuedKey, printedValidUntil: dateKeyOfPicker(value), classification }).discrepancy;
   return (
     <fieldset className="space-y-1">
       <Label htmlFor="conveyance-valid-until">{t('dialogs.validUntilLabel')}</Label>
