@@ -113,8 +113,8 @@ describe('γραμμές — αρχεία και δηλώσεις (Ε1)', () => 
     expect(ids(registry.rows)).toEqual(['file:file_1']);
     expect(rowOf(registry.rows, 'file:file_1')?.document).toMatchObject({ propertyId: 'prop_1', pinned: true });
     expect(registry.rows[0].state).toBe('expiring');
-    expect(registry.files).toEqual({ file_1: { name: 'ΠΕΑ Α1.pdf' } });
-    expect(registry.properties).toEqual({ prop_1: { name: 'Διαμέρισμα Α1', scope: 'property', areaId: null, ownerContactIds: [], obligorLead: null, ownerShares: {} } });
+    expect(registry.files).toEqual({ file_1: { name: 'ΠΕΑ Α1.pdf', storagePath: null } });
+    expect(registry.properties).toEqual({ prop_1: { name: 'Διαμέρισμα Α1', scope: 'property', areaId: null, ownerContactIds: [], obligorLead: null, ownerShares: {}, propertyClass: null } });
   });
 
   it('δήλωση χωρίς αρχείο ⇒ γραμμή `declared`, χωρίς πηγή', async () => {
@@ -228,7 +228,7 @@ describe('Φ4δ Ε7 — «λείπει» από τις απαιτήσεις', ()
       'building-identity', 'energy-certificate', 'enfia-certificate', 'tax-clearance',
     ]);
     expect(registry.tally.missing).toBe(4);
-    expect(registry.properties.prop_1).toEqual({ name: 'Χωρίς ΠΕΑ', scope: 'property', areaId: null, ownerContactIds: [], obligorLead: null, ownerShares: {} });
+    expect(registry.properties.prop_1).toEqual({ name: 'Χωρίς ΠΕΑ', scope: 'property', areaId: null, ownerContactIds: [], obligorLead: null, ownerShares: {}, propertyClass: null });
   });
 
   it('ADR-915 §22 — πωλητής ΝΟΜΙΚΟ πρόσωπο ⇒ και η ΕΦΚΑ λείπει (από τον νόμο, χωρίς ερώτηση)', async () => {
@@ -260,7 +260,7 @@ describe('Φ4δ Ε10 — ακίνητα ιδιωτών υπό θεματοφυλ
     fake.seed(COLLECTIONS.OWNER_PROPERTIES, 'ownp_1', owner({ energy: { class: 'C', issuedOn: ISSUED } }));
     const registry = await read();
     expect(ids(registry.rows)).toEqual(['declared:ownp_1:energy-certificate']);
-    expect(registry.properties).toEqual({ ownp_1: { name: 'Εντολή Β3', scope: 'owner-property', areaId: null, ownerContactIds: [], obligorLead: null, ownerShares: {} } });
+    expect(registry.properties).toEqual({ ownp_1: { name: 'Εντολή Β3', scope: 'owner-property', areaId: null, ownerContactIds: [], obligorLead: null, ownerShares: {}, propertyClass: null } });
   });
 
   it('αγγελία εντολής χωρίς ΠΕΑ ⇒ κενό στην εντολή', async () => {
@@ -474,5 +474,59 @@ describe('ADR-915 §26 — ΕΝΑΣ υπεύθυνος για τα έγγραφ�
     expect(label.ownerContactIds).toEqual(['cont_a', 'cont_b']);
     expect(label.obligorLead).toEqual({ kind: 'undesignated', reason: 'unknown-shares', staleContactId: null });
     expect(label.ownerShares).toEqual({});
+  });
+});
+
+describe('ADR-915 §33 — αρχεία ΧΩΡΙΣ στοιχεία σε θέση που υπόσχεται είδος', () => {
+  /** Ανεβασμένη ΥΔΕ στο ακίνητο — χωρίς αναγνώστη κειμένου (§32 Υ10) ⇒ κανένα γεγονός. */
+  const yde = (over: Doc = {}): Doc =>
+    file({ purpose: 'yde-declaration', displayName: 'ΥΔΕ Α1.pdf', storagePath: 'companies/comp_alfa/yde-a1.pdf', documentFacts: undefined, ...over });
+
+  it('ΥΔΕ ακινήτου χωρίς γεγονότα ⇒ γραμμή `expiry-unknown`, χωρίς πηγή, με το αντικείμενο για το CAS', async () => {
+    fake.seed(COLLECTIONS.FILES, 'file_y', yde());
+    fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', { companyId: COMPANY, name: 'Διαμέρισμα Α1', type: 'apartment' });
+    const registry = await read();
+    expect(ids(registry.rows)).toEqual(['file:file_y']);
+    expect(rowOf(registry.rows, 'file:file_y')?.document).toMatchObject({ kind: 'electrical-installation', propertyId: 'prop_1', source: null });
+    expect(registry.rows[0].state).toBe('expiry-unknown');
+    expect(registry.files.file_y).toEqual({ name: 'ΥΔΕ Α1.pdf', storagePath: 'companies/comp_alfa/yde-a1.pdf' });
+    expect(registry.properties.prop_1.propertyClass).toBe('residential');
+  });
+
+  it('⛔ ξένη εταιρεία · κάδος · ΥΔΕ στην ΕΠΑΦΗ (αρχείο του ηλεκτρολόγου) ⇒ καμία γραμμή', async () => {
+    fake.seed(COLLECTIONS.FILES, 'file_x', yde({ companyId: OTHER }));
+    fake.seed(COLLECTIONS.FILES, 'file_d', yde({ isDeleted: true }));
+    fake.seed(COLLECTIONS.FILES, 'file_c', yde({ entityType: ENTITY_TYPES.CONTACT, entityId: 'cont_e' }));
+    expect((await read()).rows).toEqual([]);
+  });
+
+  it('⛔ γενική θέση «Πιστοποιητικό» χωρίς γεγονότα ⇒ ΚΑΜΙΑ γραμμή ΠΕΑ (φιλοξενεί, δεν υπόσχεται)', async () => {
+    fake.seed(COLLECTIONS.FILES, 'file_g', file({ purpose: 'certificate', documentFacts: undefined }));
+    expect((await read()).rows).toEqual([]);
+  });
+
+  it('ΥΔΕ που ΤΩΡΑ έχει γεγονότα ⇒ μία γραμμή (από τα γεγονότα), ποτέ και δεύτερη «χωρίς στοιχεία»', async () => {
+    const declared = facts({ kind: 'electrical-installation', issuedOn: '2022-03-01', printedValidUntil: '2032-03-01', classification: 'A', source: { kind: 'attested', via: 'registry-declaration' } });
+    fake.seed(COLLECTIONS.FILES, 'file_y', yde({ documentFacts: declared }));
+    const registry = await read();
+    expect(ids(registry.rows)).toEqual(['file:file_y']);
+    expect(registry.rows[0].state).toBe('valid');
+  });
+
+  it('Δ5 — ΠΕΑ έργου χωρίς γεγονότα που ονομάζει η δήλωση του ακινήτου ⇒ υποχωρεί: μένει η δήλωση ΜΕ την ημερομηνία', async () => {
+    fake.seed(COLLECTIONS.FILES, 'file_p', file({ entityType: ENTITY_TYPES.PROJECT, entityId: 'proj_1', purpose: 'study-energy-cert', documentFacts: undefined }));
+    fake.seed(COLLECTIONS.PROPERTIES, 'prop_1', property({}, { sourceFileId: 'file_p' }));
+    const registry = await read();
+    expect(ids(registry.rows)).toEqual(['declared:prop_1:energy-certificate']);
+    expect(rowOf(registry.rows, 'declared:prop_1:energy-certificate')?.document.issuedOn).toBe(ISSUED);
+  });
+
+  it('όριο ⇒ `truncatedSources: [undeclared-files]` — ποτέ σιωπηλό', async () => {
+    for (let index = 0; index <= DOCUMENT_REGISTRY_CAPS['undeclared-files']; index += 1) {
+      fake.seed(COLLECTIONS.FILES, `file_${String(index).padStart(4, '0')}`, yde({ entityType: ENTITY_TYPES.CONTACT, entityId: 'cont_e' }));
+    }
+    const registry = await read();
+    expect(registry.truncatedSources).toEqual(['undeclared-files']);
+    expect(registry.rows).toEqual([]);
   });
 });

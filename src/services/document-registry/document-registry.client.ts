@@ -14,6 +14,7 @@
 import { ApiClientError, apiClient, isClientRefusal } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
+import type { FactsDeclarationBody } from '@/lib/document-validity/facts-declaration';
 import type { IssuanceAssignmentBody, IssuanceSendBody } from '@/lib/document-validity/issuance-request';
 import type { IssuanceDelivery } from '@/lib/document-validity/issuance-delivery';
 import type { IssuancePreview } from '@/types/issuance-invitation';
@@ -75,6 +76,14 @@ async function putRegistryAction(url: string, body: object, failure: string, con
 /** **Όρισε** (ή, με `null`, επανάφερε στην αυτόματη επιλογή) τον υπεύθυνο του ακινήτου. */
 export async function saveObligorDesignation(propertyId: string, contactId: string | null): Promise<ObligorDesignationSave> {
   return putRegistryAction(OBLIGOR_DESIGNATIONS_URL, { propertyId, contactId }, 'Ο υπεύθυνος του ακινήτου δεν ορίστηκε', {});
+}
+
+/** ADR-915 §33 — «Συμπλήρωση στοιχείων» εγγράφου: ΕΝΑ σημείο για τη διαδρομή. */
+export const DOCUMENT_FACTS_URL = `${DOCUMENT_REGISTRY_URL}/document-facts`;
+
+/** **Δήλωσε** έκδοση · τυπωμένη λήξη · κατηγορία ενός αρχείου — ο διακομιστής κρίνει ξανά με τον ΙΔΙΟ κριτή. */
+export async function saveFactsDeclaration(body: FactsDeclarationBody): Promise<ObligorDesignationSave> {
+  return putRegistryAction(DOCUMENT_FACTS_URL, body, 'Τα στοιχεία του εγγράφου δεν αποθηκεύτηκαν', { kind: body.kind });
 }
 
 /** ADR-915 §27 — η ανάθεση έκδοσης: ΕΝΑ σημείο για τη διαδρομή. */

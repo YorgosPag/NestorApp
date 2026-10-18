@@ -32,17 +32,18 @@ import {
 } from '@/lib/document-validity/document-registry';
 import { needsProfessionalSearch } from '@/lib/document-validity/document-next-step';
 import { createModuleLogger } from '@/lib/telemetry';
+import { resolvedPropertyClassOf } from '@/constants/property-classification';
 import type { ConveyanceCase } from '@/types/conveyance-case';
 import type { PublicListing } from '@/types/public-listing';
 import {
   DOCUMENT_REGISTRY_CAPS,
   REGISTRY_SOURCES,
   type DocumentRegistryResponse,
-  type RegistryLabel,
+  type RegistryFileLabel,
   type RegistryPropertyLabel,
   type RegistrySource,
 } from './document-registry.types';
-import { readRegistryFiles, registryDocumentsOf, type RegistryFile } from './registry-documents.server';
+import { readRegistryFiles, readUndeclaredFiles, registryDocumentsOf, type RegistryFile } from './registry-documents.server';
 import { listingRequirementsOf, readAgencyListings, readListingsById } from './registry-listings.server';
 import { readOfficeOwnerProperties } from './registry-owner-properties.server';
 import { readRegistryIssuance, type RegistryIssuanceReading } from './registry-issuance.server';
@@ -55,6 +56,7 @@ const logger = createModuleLogger('document-registry.service');
 
 /** Ό,τι διάβασαν τα πέντε ερωτήματα, μαζί με όποια πηγή κόπηκε. */
 interface RegistrySources {
+  /** Αρχεία με γεγονότα **και** (ADR-915 §33) αρχεία χωρίς στοιχεία — ξένα σύνολα (`facts` υπάρχει ή όχι). */
   readonly files: readonly RegistryFile[];
   readonly declared: readonly RegistryProperty[];
   readonly cases: readonly ConveyanceCase[];
@@ -66,25 +68,27 @@ interface RegistrySources {
 }
 
 async function readSources(db: AdminFirestore, companyId: string): Promise<RegistrySources> {
-  const [files, declared, cases, owners, listings] = await Promise.all([
+  const [files, declared, cases, owners, listings, undeclared] = await Promise.all([
     readRegistryFiles(db, companyId, DOCUMENT_REGISTRY_CAPS.files),
     readDeclaredCertificateProperties(db, companyId, DOCUMENT_REGISTRY_CAPS.declared),
     readOpenCases(db, companyId, DOCUMENT_REGISTRY_CAPS.cases),
     readOfficeOwnerProperties(db, companyId, DOCUMENT_REGISTRY_CAPS['owner-properties']),
     readAgencyListings(db, companyId, DOCUMENT_REGISTRY_CAPS.listings),
+    readUndeclaredFiles(db, companyId, DOCUMENT_REGISTRY_CAPS['undeclared-files']),
   ]);
   const cut: Record<RegistrySource, boolean> = {
     files: files.truncated, declared: declared.truncated, cases: cases.truncated,
     'owner-properties': owners.truncated, listings: listings.truncated,
     // §27 — ο κατάλογος αναθέσεων διαβάζεται ΜΕΤΑ τις γραμμές (μόνο όπου δείχνεται «Ανάθεση»)· το όριό του μπαίνει εκεί.
     'issuance-assignments': false,
+    'undeclared-files': undeclared.truncated,
   };
   const truncatedSources = REGISTRY_SOURCES.filter((source) => cut[source]);
   if (truncatedSources.length > 0) {
     logger.warn('Το μητρώο λήξεων χτύπησε όριο ανάγνωσης', { data: { companyId, truncatedSources } });
   }
   return {
-    files: files.files, declared: declared.properties, cases: cases.cases,
+    files: [...files.files, ...undeclared.files], declared: declared.properties, cases: cases.cases,
     owners: owners.properties, listings: listings.listings, truncatedSources,
   };
 }
@@ -122,8 +126,8 @@ async function readProperties(
   return new Map([...known, ...fetched]);
 }
 
-function fileLabelsOf(files: readonly RegistryFile[]): Record<string, RegistryLabel> {
-  return Object.fromEntries(files.map((file) => [file.fileId, { name: file.name }]));
+function fileLabelsOf(files: readonly RegistryFile[]): Record<string, RegistryFileLabel> {
+  return Object.fromEntries(files.map((file) => [file.fileId, { name: file.name, storagePath: file.storagePath }]));
 }
 
 function propertyLabelsOf(
@@ -138,6 +142,7 @@ function propertyLabelsOf(
     ownerContactIds: owners.owners.get(p.id) ?? null,
     obligorLead: owners.leads.get(p.id) ?? null,
     ownerShares: owners.shares.get(p.id) ?? {},
+    propertyClass: resolvedPropertyClassOf(p.data.type),
   }]));
 }
 

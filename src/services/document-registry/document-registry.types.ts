@@ -7,6 +7,7 @@
  * Κάθε πηγή που χτύπησε το όριό της **ονομάζεται** στο `truncatedSources`.
  */
 
+import type { PropertyClass } from '@/constants/property-types';
 import type { DocumentRegistry } from '@/lib/document-validity/document-registry';
 import type { RowIssuance } from '@/lib/document-validity/issuance-rows';
 import type { ObligorLead } from '@/lib/document-validity/obligor-lead';
@@ -15,8 +16,11 @@ import type { ObligorLead } from '@/lib/document-validity/obligor-lead';
  * Οι πηγές που διαβάζονται με ερώτημα — άρα έχουν όριο. Φ4δ: `owner-properties` (ακίνητα ιδιωτών υπό θεματοφυλακή του
  * γραφείου, Ε10) · `listings` (οι αγγελίες με το όνομα του γραφείου — βρίσκονται **και** όταν το ακίνητο δεν έχει
  * κανένα έγγραφο, Ε11). §27: `issuance-assignments` (οι αναθέσεις έκδοσης του γραφείου — τρέχουσες **και** «ξανά»).
+ * §33: `undeclared-files` (αρχεία **χωρίς στοιχεία** σε θέση που υπόσχεται είδος — «Συμπλήρωση στοιχείων»).
  */
-export const REGISTRY_SOURCES = ['files', 'declared', 'cases', 'owner-properties', 'listings', 'issuance-assignments'] as const;
+export const REGISTRY_SOURCES = [
+  'files', 'declared', 'cases', 'owner-properties', 'listings', 'issuance-assignments', 'undeclared-files',
+] as const;
 export type RegistrySource = (typeof REGISTRY_SOURCES)[number];
 
 /** Βαλβίδα ασφαλείας ανά πηγή, όχι σελιδοποίηση. Η υπόθεση = ίδιο μέγεθος με τη σάρωση λήξεων (`EXPIRY_SWEEP_LIMIT`). */
@@ -27,6 +31,7 @@ export const DOCUMENT_REGISTRY_CAPS: Readonly<Record<RegistrySource, number>> = 
   'owner-properties': 500,
   listings: 500,
   'issuance-assignments': 500,
+  'undeclared-files': 500,
 };
 
 /** Σε ποιο **είδος** ακινήτου δείχνει το όνομα — αποφασίζει τη διεύθυνση της οθόνης (ακίνητο εταιρείας · εντολή). */
@@ -42,6 +47,14 @@ export const REGISTRY_GET_ALL_CHUNK = 100;
  */
 export interface RegistryLabel {
   readonly name: string | null;
+}
+
+/**
+ * Το όνομα ενός αρχείου **και** το αντικείμενο που είδε η οθόνη (ADR-915 §33): η «Συμπλήρωση στοιχείων» το στέλνει πίσω
+ * ως CAS — νέα έκδοση του αρχείου στο μεταξύ ⇒ άρνηση, ποτέ ημερομηνίες του παλιού πάνω στο νέο.
+ */
+export interface RegistryFileLabel extends RegistryLabel {
+  readonly storagePath: string | null;
 }
 
 export interface RegistryPropertyLabel extends RegistryLabel {
@@ -65,6 +78,11 @@ export interface RegistryPropertyLabel extends RegistryLabel {
   readonly obligorLead: ObligorLead | null;
   /** §26 — επαφή → μερίδιο %, **μόνο** όταν τα μερίδια είναι γνωστά (αγοραστές)· αλλιώς `{}`. */
   readonly ownerShares: Readonly<Record<string, number>>;
+  /**
+   * ADR-915 §33 — η κλάση του τύπου ακινήτου (`resolvedPropertyClassOf`): **μόνο** υπόδειξη για την προεπιλογή κατηγορίας
+   * στη «Συμπλήρωση στοιχείων» (`classificationHintOf`). `null` = άγνωστος τύπος ⇒ καμία υπόδειξη.
+   */
+  readonly propertyClass: PropertyClass | null;
 }
 
 export interface DocumentRegistryResponse extends DocumentRegistry {
@@ -82,8 +100,8 @@ export interface DocumentRegistryResponse extends DocumentRegistry {
   readonly unscopedListings: number;
   /** Ονόματα ακινήτων (γραμμή · υπόθεση · αγγελία δένονται όλα σε ακίνητο), με το είδος τους. */
   readonly properties: Readonly<Record<string, RegistryPropertyLabel>>;
-  /** Ονόματα αρχείων (`displayName`). */
-  readonly files: Readonly<Record<string, RegistryLabel>>;
+  /** Ονόματα αρχείων (`displayName`) + το αντικείμενο που είδε η οθόνη (§33 CAS). */
+  readonly files: Readonly<Record<string, RegistryFileLabel>>;
   /**
    * ADR-915 §25 — ονόματα επαφών (`cont_*` → όνομα), διαβασμένα **ζωντανά** με έλεγχο μισθωτή. Μόνο όσες ονομάζει κάποια
    * γραμμή. Επαφή που λείπει από εδώ (ξένη ≡ ανύπαρκτη, ADR-742) **δεν** δείχνεται ως σύνδεσμος.
