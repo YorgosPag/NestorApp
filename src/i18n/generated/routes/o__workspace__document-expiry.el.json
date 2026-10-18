@@ -202,11 +202,15 @@
         "civil-engineer": "Πολιτικός μηχανικός",
         "civil-engineer-tei": "Πολιτικός μηχανικός ΤΕΙ",
         "civil-sub-engineer": "Πολιτικός υπομηχανικός",
+        "electrical-installer": "Ηλεκτρολόγος εγκαταστάτης με άδεια Περιφέρειας",
         "spatial-planner": "Μηχανικός χωροταξίας-πολεοδομίας",
         "surveyor-engineer": "Αγρονόμος τοπογράφος μηχανικός"
       },
       "registered": "{qualification}, εγγεγραμμένος στο {registry}",
       "selfService": "{authority} — ηλεκτρονικά, χωρίς επαγγελματία"
+    },
+    "kind": {
+      "electrical-installation": "ΥΔΕ — ηλεκτρική εγκατάσταση"
     },
     "leadPicker": {
       "automatic": "Αυτόματη επιλογή",

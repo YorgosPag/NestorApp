@@ -13,7 +13,7 @@
     "src/i18n/generated/routes/demands.el.json": "3c41547e2fe76dd07a2d8df26d28a52173cfbf1092d0bc182c78c567bd2dc8a7",
     "src/i18n/generated/routes/demands__demandId.el.json": "7d95c157ece8087fe485acdbdcba5f422d82828388ea5a9e5c11963e27005681",
     "src/i18n/generated/routes/demands__new.el.json": "c390254b9260d785611e1122559f64ed7b8c58a105b7ac65b82473967b293008",
-    "src/i18n/generated/routes/document-request.el.json": "cbc03a4f39db4c9d0342bf077f97f6f1caa8a2dd5af9ada54d8853d5ef217393",
+    "src/i18n/generated/routes/document-request.el.json": "338bf20a255b543d764c4de13e402154d7db86fbeebf0f95b0e1ba2608886101",
     "src/i18n/generated/routes/dossiers.el.json": "c57b6e5a4e4bf7a5348bb016115953d9fa3d612426865ddd7e86b824e70faa0a",
     "src/i18n/generated/routes/dossiers__dossierId.el.json": "ce0d6f7456040ae6e78100d1d0c9015dc21cd705b3212e0c48fad7fcff141315",
     "src/i18n/generated/routes/email__preferences__token.el.json": "b8eb64c11ff6698391ff1c979e04c414958183f8b946f7a9c62ce9d8d33da32a",
@@ -34,7 +34,7 @@
     "src/i18n/generated/routes/o__workspace__cases.el.json": "62e1b3378215c16e66a12632667ad61be33b59cc632e634dde0ffaf9763769d4",
     "src/i18n/generated/routes/o__workspace__cases__engagementId.el.json": "cb0565009bf6f7bec16cd93768e557804df81971abe3c5a23b7c050e9eb91ec3",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
-    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "8b64c4bad56e9713965aaeb40d754e29c3e785c012036d420a7eac2433d960f0",
+    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "ac39c9736bcb018bd951a1331452b50fe12a657589e5e0697d27bbac124ad843",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "f2b0212cf0909081143453962ba0bfec2a47dc8753dc81a009ee34c12579b137",
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "2753c7edd9c05a17a65b15f3146177db8a27ca727df7b1f77d28fd1724f4fa6f",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "e1c5896ab910b7f5515ef0a3991a4daae3ba7fc776c6291815cfeaddb51e2398",
@@ -58,7 +58,7 @@
     "src/i18n/generated/routes/private-marketing-disclosure.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
     "src/i18n/generated/routes/private-marketing-disclosure__versions.el.json": "b5985d2511b93344b355342677c84641c2bc629c80ca0b367778c17afd7800b7",
     "src/i18n/generated/routes/private-marketing-disclosure__versions__version.el.json": "0b0f52262c8ead9f7c4c7a282fee6c540b128f8a9a5c78716d351fd4681a6db4",
-    "src/i18n/generated/routes/pro.el.json": "d1d4932857451b3c7be47daca9086652a5b9b8fdb2b1db9368e4e44fbc9591ce",
+    "src/i18n/generated/routes/pro.el.json": "df2ccf3e31b1b62a4958022fb2c136a67d333c3cefc57f3951df2223d77f334b",
     "src/i18n/generated/routes/pro__alias.el.json": "cab418d4b3c11cb463da7952d60e292c0f6cd99c64341b0b4e668dc79ebb646b",
     "src/i18n/generated/routes/profile.el.json": "24b5f25a2e330998e650126e7fb3ffc0452c89fcda2946634f21bd02b5b7dd95",
     "src/i18n/generated/routes/saved-listings.el.json": "7b13b8c74093929134a72cfd029aa8f474840f42c4a734f86b3b50181fa86eac",
@@ -151,7 +151,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "963fc94f3e6cd508a49d50ba7451084469c48c4abc576224198b9e0dd57a1379",
+  "inputsSha256": "830a72519a4f48ee9466a182feee092bb870ccdf0b0ab2e121dc366e884c6fcc",
   "languages": [
     "el"
   ],
@@ -1857,9 +1857,11 @@
             "issuer.qualification.civil-engineer",
             "issuer.qualification.civil-engineer-tei",
             "issuer.qualification.civil-sub-engineer",
+            "issuer.qualification.electrical-installer",
             "issuer.qualification.spatial-planner",
             "issuer.qualification.surveyor-engineer",
-            "issuer.registered"
+            "issuer.registered",
+            "kind.electrical-installation"
           ],
           "prefixes": [],
           "whole": false
@@ -5456,10 +5458,12 @@
             "issuer.qualification.civil-engineer",
             "issuer.qualification.civil-engineer-tei",
             "issuer.qualification.civil-sub-engineer",
+            "issuer.qualification.electrical-installer",
             "issuer.qualification.spatial-planner",
             "issuer.qualification.surveyor-engineer",
             "issuer.registered",
             "issuer.selfService",
+            "kind.electrical-installation",
             "leadPicker.automatic",
             "leadPicker.automaticHint",
             "leadPicker.cancel",
@@ -8847,9 +8851,11 @@
             "issuer.qualification.civil-engineer",
             "issuer.qualification.civil-engineer-tei",
             "issuer.qualification.civil-sub-engineer",
+            "issuer.qualification.electrical-installer",
             "issuer.qualification.spatial-planner",
             "issuer.qualification.surveyor-engineer",
-            "issuer.registered"
+            "issuer.registered",
+            "kind.electrical-installation"
           ],
           "prefixes": [],
           "whole": false
@@ -11131,7 +11137,7 @@
   ],
   "stats": {
     "matchedKeys": 248,
-    "sliceBytes": 773095
+    "sliceBytes": 773794
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

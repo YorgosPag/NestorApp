@@ -63,6 +63,9 @@
     "missingDocument": "Not recorded",
     "sourceFloor": "at least — the printed expiry has not been entered"
   },
+  "kind": {
+    "electrical-installation": "Electrical installation declaration (YDE)"
+  },
   "issuer": {
     "heading": "Issued by",
     "obligorHeading": "Provided by",
@@ -79,7 +82,8 @@
       "surveyor-engineer": "Surveying engineer",
       "spatial-planner": "Spatial planning engineer",
       "civil-sub-engineer": "Civil sub-engineer",
-      "civil-engineer-tei": "Civil engineer (TEI)"
+      "civil-engineer-tei": "Civil engineer (TEI)",
+      "electrical-installer": "Licensed electrical installer (regional licence)"
     },
     "authority": {
       "aade": "AADE (myAADE)",
