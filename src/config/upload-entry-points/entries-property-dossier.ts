@@ -62,6 +62,8 @@ export const PROPERTY_DOSSIER_VIEW: Readonly<Record<PropertyDossierFileTab, read
     { id: 'study-admin-urban-plan', classes: LAND },
     { id: 'unit-permit', classes: BUILDING },
     { id: 'study-energy-certificate', classes: BUILDING },
+    // ADR-915 §32 — ΥΔΕ: λήγει, την παρακολουθεί το μητρώο λήξεων· μόνο σε κτίριο (η γη δεν έχει εσωτερική εγκατάσταση).
+    { id: 'unit-yde-declaration', classes: BUILDING },
     { id: 'study-admin-regulation', classes: BUILDING },
     { id: 'unit-contract', classes: BUILDING },
     { id: 'unit-invoice', classes: BOTH },

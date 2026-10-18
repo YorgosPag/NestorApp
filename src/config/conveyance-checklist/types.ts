@@ -138,6 +138,13 @@ type ChecklistValidity = DocumentValidityRule;
 export interface EvidenceMatcher {
   readonly level: EvidenceLevel;
   readonly entryPointIds: readonly string[];
+  /**
+   * ADR-915 §33 — **υπόσχεται** η θέση ανεβάσματος το είδος της γραμμής, ή απλώς το **φιλοξενεί** ανάμεσα σε άλλα;
+   * `'candidate'` = γενική θέση («Πιστοποιητικό — ενεργειακό, ιδιοκτησίας, κτλ.»): το είδος το λέει μόνο το ίδιο το
+   * έγγραφο (αναγνώστης κειμένου, ADR-915 §20) ή ο ελεγκτής· το μητρώο **δεν** δείχνει κάθε τέτοιο αρχείο ως «χωρίς
+   * στοιχεία» αυτού του είδους. Απουσία = η θέση **ονομάζει** το είδος (Procore/Arthur: ο τύπος επιλέγεται στο ανέβασμα).
+   */
+  readonly promise?: 'candidate';
 }
 
 /**

@@ -82,6 +82,8 @@ describe('Σ1 — η ροή', () => {
         kind: 'energy-certificate',
         issuedOn: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
         printedValidUntil: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        // ADR-915 §32 — το ΠΕΑ δεν κατατάσσεται ⇒ `null`, ρητά.
+        classification: null,
         source: { kind: 'document-text', reader: 'pea-text' },
         recordedBy: 'u1',
       },
@@ -138,7 +140,7 @@ describe('Σ2 — ADR-915 Φ3: ανάγνωση ΠΕΑ → γεγονότα εγ
 
   it('έκδοση + τυπωμένη λήξη ⇒ γεγονότα `document-text`', () => {
     expect(peaDocumentFacts(reading('2026-07-16', '2036-07-16'), 'u1')).toEqual({
-      kind: 'energy-certificate', issuedOn: '2026-07-16', printedValidUntil: '2036-07-16',
+      kind: 'energy-certificate', issuedOn: '2026-07-16', printedValidUntil: '2036-07-16', classification: null,
       source: { kind: 'document-text', reader: 'pea-text' }, recordedBy: 'u1',
     });
   });

@@ -194,7 +194,8 @@ export const PROPERTY_ITEMS: readonly ChecklistItem[] = [
     satisfaction: {
       kind: 'files',
       matchers: [
-        { level: 'property', entryPointIds: ['unit-certificate'] },
+        // ADR-915 §33 — γενική θέση «Πιστοποιητικό» (ενεργειακό, ιδιοκτησίας, κτλ.): φιλοξενεί ΠΕΑ, δεν το υπόσχεται.
+        { level: 'property', entryPointIds: ['unit-certificate'], promise: 'candidate' },
         { level: 'project', entryPointIds: ['study-energy-certificate'] },
       ],
     },

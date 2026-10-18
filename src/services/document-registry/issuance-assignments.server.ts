@@ -84,6 +84,11 @@ export const ISSUANCE_AUDIT_FIELDS: Readonly<Record<DocumentKind, IssuanceAuditF
   'tax-clearance': null,
   'insurance-clearance': null,
   'enfia-certificate': null,
+  'electrical-installation': {
+    stage: 'electricalInstallationIssuanceStage',
+    professional: 'electricalInstallationIssuer',
+    approvalRequest: 'electricalInstallationIssuanceApprovalRequest',
+  },
 };
 
 function assignmentsCollection(db: Firestore) {
