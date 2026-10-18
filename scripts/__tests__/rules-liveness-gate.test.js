@@ -89,10 +89,11 @@ describe('Ζ — το ζωντανό δέντρο', () => {
   // 2026-10-17: +2 (ADR-915 §26 — `document_obligor_designations`: read/write `if false`) ⇒ 778.
   // 2026-10-17: +2 (ADR-915 §27 — `document_issuance_assignments`: read/write `if false`) ⇒ 780.
   // 2026-10-17: +2 (ADR-915 §28 — `document_issuance_invitations`: read/write `if false`) ⇒ 782.
-  it('Ζ 🔑 0 ευρήματα — ΚΑΙ ο πληθυσμός είναι αυτός που μετρήθηκε (782 + 71 allow)', () => {
+  // 2026-10-18: +2 (ADR-915 §35 — `property_upkeep_declarations`: read/write `if false`) ⇒ 784.
+  it('Ζ 🔑 0 ευρήματα — ΚΑΙ ο πληθυσμός είναι αυτός που μετρήθηκε (784 + 71 allow)', () => {
     const result = sweep(ROOT);
     expect(result.violations).toEqual([]);
-    expect(result.perFile.map((f) => f.allows)).toEqual([782, 71]);
+    expect(result.perFile.map((f) => f.allows)).toEqual([784, 71]);
     expect(result.tally[GATE_STATES.COVERED]).toBeGreaterThan(600);
     expect(result.claimName).toBe('revokedSignIns');
   });

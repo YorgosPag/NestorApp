@@ -328,6 +328,14 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
+    // ADR-915 §35 — η απόφαση μόνιμης υποχρέωσης ακινήτου. `deny_all`: εγγραφή από πελάτη θα γεννούσε (ή θα έσβηνε)
+    // «λείπει ΥΔΕ» χωρίς ίχνος, ή θα έγραφε ψεύτικο «η εφαρμογή το πρότεινε». Η σουίτα σπέρνει έγγραφο του ΙΔΙΟΥ μισθωτή.
+    collection: 'property_upkeep_declarations',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/property-upkeep-declarations.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     // ADR-915 §27 — η ανάθεση έκδοσης σε επαγγελματία. `deny_all`: εγγραφή από πελάτη θα έγραφε «Ανατέθηκε» χωρίς
     // απόφαση του υπευθύνου ιδιοκτήτη (ο έλεγχος ζει μόνο στο API). Η σουίτα σπέρνει έγγραφο του ΙΔΙΟΥ μισθωτή.
     collection: 'document_issuance_assignments',
