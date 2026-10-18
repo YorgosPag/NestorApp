@@ -40,6 +40,7 @@ import type { PersonaType } from '@/types/contacts/personas';
 import type { UploadEntryPoint, FloorInfo } from '@/config/upload-entry-points';
 import { getAvailableGroups, selectOfferedEntryPoints } from '@/config/upload-entry-points';
 import { FilesList } from './FilesList';
+import { fileSequenceItem } from '@/lib/files/file-sequence';
 import { FilesPreviewSplit } from './FilesPreviewSplit';
 import { useShownViewMode } from './FilesViewModeControl';
 import { GroupedFilesList } from './GroupedFilesList';
@@ -347,7 +348,9 @@ function FilesTabContent(props: EntityFilesContentProps) {
       {/* Λίστα + προεπισκόπηση: δίπλα-δίπλα σε υπολογιστή, πλήρης οθόνη στο κινητό (ADR-912 §12.15). */}
       <FilesPreviewSplit
         list={<FileViewDispatch {...props} iconSizes={iconSizes} />}
+        files={props.filteredFiles}
         selectedFile={props.selectedFile}
+        onSelect={props.onSelectFile}
         onClose={() => props.onSelectFile(null)}
         companyId={props.custody?.companyId}
         currentUserId={props.currentUserId}
@@ -460,6 +463,7 @@ function GalleryView(props: EntityFilesContentProps) {
       {props.filteredFiles.map((file) => (
         <article
           key={file.id}
+          {...fileSequenceItem(file.id)}
           className="cursor-pointer rounded-lg border bg-card hover:bg-accent/50 transition-colors p-4 flex flex-col items-center text-center gap-3"
           onClick={() => props.onView(file)}
         >

@@ -55,6 +55,8 @@ import type { FileRecord } from '@/types/file-record';
 import { fileCustodyOf } from '@/lib/files/file-custody';
 import { fileDisplayUrlOf } from '@/lib/files/file-display-url';
 import { FileOpenInTabButton } from '@/components/shared/files/FileOpenInTabAction';
+import { FileSequenceNav } from './FileSequenceNav';
+import type { FileSequence } from './hooks/useFileSequence';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -82,6 +84,8 @@ interface FilePreviewPanelProps {
    * κρατά μόνο τις ενέργειες. Αλλιώς δύο τίτλοι και δύο ✕ το ένα κάτω από το άλλο.
    */
   titledByHost?: boolean;
+  /** ‹ 3 / 48 ›: η σειρά της λίστας από την οποία άνοιξε το αρχείο (ADR-912 §12.16)· `null` ⇒ μεμονωμένο αρχείο. */
+  sequence?: FileSequence | null;
 }
 
 function getPreviewIcon(previewType: PreviewType) {
@@ -99,7 +103,7 @@ function getPreviewIcon(previewType: PreviewType) {
 // MAIN COMPONENT
 // ============================================================================
 
-export function FilePreviewPanel({ file, onClose, companyId, currentUserId, currentUserName, onRefresh, className, titledByHost = false }: FilePreviewPanelProps) {
+export function FilePreviewPanel({ file, onClose, companyId, currentUserId, currentUserName, onRefresh, className, titledByHost = false, sequence = null }: FilePreviewPanelProps) {
   const colors = useSemanticColors();
   const { t } = useTranslation(['files', 'files-media', 'iso19650']);
   const [showVersions, setShowVersions] = useState(false);
@@ -173,6 +177,8 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
             </Tooltip>
           </>
         )}
+
+        {sequence && <FileSequenceNav sequence={sequence} />}
 
         {/* Actions */}
         <nav className="ml-auto flex items-center gap-1 flex-shrink-0">

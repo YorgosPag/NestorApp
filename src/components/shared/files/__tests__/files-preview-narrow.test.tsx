@@ -35,7 +35,13 @@ const FILE = { id: 'file_1', displayName: 'Συμβόλαιο.pdf' } as unknown 
 
 function renderSplit(selectedFile: FileRecord | null) {
   return render(
-    <FilesPreviewSplit list={<ul data-testid="list" />} selectedFile={selectedFile} onClose={noop} />,
+    <FilesPreviewSplit
+      list={<ul data-testid="list" />}
+      files={selectedFile ? [selectedFile] : []}
+      selectedFile={selectedFile}
+      onSelect={noop}
+      onClose={noop}
+    />,
   );
 }
 

@@ -33,6 +33,7 @@ import { useNotifications } from '@/providers/NotificationProvider';
 import { FileInspector } from './FileInspector';
 import '@/lib/design-system';
 
+import { fileSequenceItem } from '@/lib/files/file-sequence';
 import type { FilePathTreeProps } from './file-path-tree-config';
 import {
   getFolderIndentClass,
@@ -240,6 +241,7 @@ export function FilePathTree({
 
             <button
               type="button"
+              {...fileSequenceItem(node.fileRecord.id)}
               onClick={() => handleFileSelect(node.fileRecord)}
               className={cn(
                 'flex-1 text-left text-sm truncate',

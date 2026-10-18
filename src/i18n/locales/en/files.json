@@ -71,8 +71,8 @@
     "title": "PDF Document",
     "preview": "PDF preview",
     "openInNewTab": "Open PDF in new tab",
-    "previous": "Previous",
-    "next": "Next",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
     "loading": "Loading PDF...",
     "loadFailed": "The PDF could not be opened. Try again or download the file.",
     "fullscreen": "Full screen"
@@ -344,7 +344,12 @@
     "hiddenByFilters": "This file is not in the list because of the active filters.",
     "clearFilters": "Clear filters",
     "inboxNotice": "Incoming file that has not been filed yet.",
-    "openInbox": "Open Inbox"
+    "openInbox": "Open Inbox",
+    "previousFile": "Previous file",
+    "nextFile": "Next file",
+    "sequencePosition": "{index} / {total}",
+    "sequenceLabel": "File {index} of {total}",
+    "sequenceNav": "File navigation"
   },
   "trash": {
     "title": "Trash",

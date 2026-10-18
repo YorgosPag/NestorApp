@@ -11,10 +11,13 @@
  *   το ✕ γυρνά στη λίστα **στο ίδιο σημείο κύλισης** (η λίστα δεν αποπροσαρτάται ποτέ, το φύλλο σκεπάζει).
  * 🔑 **Μετακόμιση, όχι απόκρυψη** ⇒ `useViewportClass`, όπως η κάτω μπάρα: **ΕΝΑΣ** θεατής προσαρτημένος, ποτέ δύο
  *   (δύο κρυμμένοι με CSS θα κατέβαζαν το PDF δύο φορές). `measuring` ⇒ καμία προεπισκόπηση για ένα καρέ.
+ * 🔑 **‹ 3 / 48 ›** (ADR-912 §12.16): η σειρά του θεατή διαβάζεται από το **περιτύλιγμα της λίστας** όπως αποδόθηκε —
+ *   όποια προβολή κι αν είναι — ποτέ από δεύτερη ταξινόμηση (`useFileSequence`).
  */
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { FilePreviewPanel } from '@/components/file-manager/FilePreviewPanel';
+import { useFileSequence } from '@/components/file-manager/hooks/useFileSequence';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { MobileDetailsSlideIn } from '@/core/layouts/MobileDetailsSlideIn';
 import { useViewportClass } from '@/hooks/media/useViewportClass';
@@ -24,15 +27,21 @@ import type { FileRecord } from '@/types/file-record';
 export interface FilesPreviewSplitProps {
   /** Η προβολή των αρχείων (πλέγμα · λίστα · δέντρο). */
   readonly list: ReactNode;
+  /** Τα αρχεία που δείχνει η λίστα (μετά την αναζήτηση) — από εδώ ο θεατής βρίσκει τον γείτονα. */
+  readonly files: readonly FileRecord[];
   readonly selectedFile: FileRecord | null;
+  /** Επιλογή άλλου αρχείου μέσα από τον θεατή (‹ ›, ← →). */
+  readonly onSelect: (file: FileRecord) => void;
   readonly onClose: () => void;
   readonly companyId?: string;
   readonly currentUserId?: string;
 }
 
-export function FilesPreviewSplit({ list, selectedFile, onClose, companyId, currentUserId }: FilesPreviewSplitProps) {
+export function FilesPreviewSplit({ list, files, selectedFile, onSelect, onClose, companyId, currentUserId }: FilesPreviewSplitProps) {
   const viewport = useViewportClass();
   const displayNameOf = useFileDisplayName();
+  const [listRoot, setListRoot] = useState<HTMLElement | null>(null);
+  const sequence = useFileSequence({ root: listRoot, files, current: selectedFile, onSelect });
   const docked = viewport === 'wide' && selectedFile !== null;
   const preview = (titledByHost: boolean) => selectedFile && (
     <FilePreviewPanel
@@ -41,6 +50,7 @@ export function FilesPreviewSplit({ list, selectedFile, onClose, companyId, curr
       companyId={companyId}
       currentUserId={currentUserId}
       titledByHost={titledByHost}
+      sequence={sequence}
     />
   );
 
@@ -48,7 +58,10 @@ export function FilesPreviewSplit({ list, selectedFile, onClose, companyId, curr
     <>
       <ResizablePanelGroup orientation="horizontal" className="min-h-[400px] rounded-lg">
         <ResizablePanel defaultSize={docked ? 45 : 100} minSize={30}>
-          {list}
+          {/* `contents`: κανένα κουτί στη διάταξη — μόνο η ρίζα από την οποία διαβάζεται η σειρά της λίστας. */}
+          <div ref={setListRoot} data-file-sequence-root="" className="contents">
+            {list}
+          </div>
         </ResizablePanel>
         {docked && (
           <>

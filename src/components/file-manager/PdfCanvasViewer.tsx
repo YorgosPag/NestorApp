@@ -31,6 +31,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { shouldGlobalShortcutYield } from '@/lib/a11y/keyboard-scope';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -43,6 +44,7 @@ import {
   WHEEL_ZOOM_FACTOR,
   loadPdfJs,
 } from './pdf-canvas-config';
+import { loadPdfBytes } from './pdf-bytes-cache';
 import { pdfFetchTarget } from './pdf-fetch-target';
 
 // ============================================================================
@@ -103,9 +105,8 @@ export function PdfCanvasViewer({ url, fileId, urlDelivery, title, className }: 
         // 🔑 «Από πού, και με ποια διαπιστευτήρια;» το απαντά ο ΕΝΑΣ απαντητής
         //    (`pdfFetchTarget`, ADR-901 §14.9) — ποτέ ξανά inline εδώ.
         const target = pdfFetchTarget({ url, fileId, urlDelivery });
-        const response = await fetch(target.url, { credentials: target.credentials });
-        if (!response.ok) throw new Error(`PDF fetch: HTTP ${response.status}`);
-        const data = new Uint8Array(await response.arrayBuffer());
+        //    Τα bytes από τη μνήμη του θεατή: αν τα προφόρτωσε η πλοήγηση αρχείων (ADR-912 §12.16), είναι ήδη εδώ.
+        const data = await loadPdfBytes(target);
         if (cancelled) return;
 
         const doc = await lib.getDocument({ data }).promise;
@@ -332,11 +333,14 @@ export function PdfCanvasViewer({ url, fileId, urlDelivery, title, className }: 
     window.open(url, '_blank', 'noopener,noreferrer');
   }, [url]);
 
-  // Keyboard navigation
+  // Keyboard navigation — PgUp/PgDn = σελίδες (Adobe · Chrome PDF). Τα ←/→ μόνο όταν δεν τα διεκδίκησε κανείς:
+  // μέσα σε σειρά αρχείων ανήκουν στην πλοήγηση ΑΡΧΕΙΩΝ (`FileSequenceNav`, ADR-912 §12.16 — όπως το Drive).
+  // `shouldGlobalShortcutYield`: πεδίο κειμένου / ανοιχτός διάλογος κρατούν τα πλήκτρα τους.
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'ArrowLeft') goToPrev();
-      else if (e.key === 'ArrowRight') goToNext();
+      if (e.defaultPrevented || shouldGlobalShortcutYield(e)) return;
+      if (e.key === 'ArrowLeft' || e.key === 'PageUp') goToPrev();
+      else if (e.key === 'ArrowRight' || e.key === 'PageDown') goToNext();
       else if (e.key === '+' || e.key === '=') zoomIn();
       else if (e.key === '-') zoomOut();
       else if (e.key === '0') fitToWidth();
@@ -364,13 +368,14 @@ export function PdfCanvasViewer({ url, fileId, urlDelivery, title, className }: 
                 variant="ghost"
                 size="sm"
                 onClick={goToPrev}
+                aria-label={t('pdf.previousPage')}
                 disabled={state.currentPage <= 1}
                 className="h-7 w-7 p-0"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{t('pdf.previous')}</TooltipContent>
+            <TooltipContent>{t('pdf.previousPage')}</TooltipContent>
           </Tooltip>
 
           <span className={cn("text-xs min-w-[60px] text-center tabular-nums", colors.text.muted)}>
@@ -383,13 +388,14 @@ export function PdfCanvasViewer({ url, fileId, urlDelivery, title, className }: 
                 variant="ghost"
                 size="sm"
                 onClick={goToNext}
+                aria-label={t('pdf.nextPage')}
                 disabled={state.currentPage >= state.numPages}
                 className="h-7 w-7 p-0"
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{t('pdf.next')}</TooltipContent>
+            <TooltipContent>{t('pdf.nextPage')}</TooltipContent>
           </Tooltip>
         </div>
 

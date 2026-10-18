@@ -18,6 +18,7 @@ import { FileText, Calendar, HardDrive, Link2, Check, X, RotateCcw } from 'lucid
 import type { FileRecord } from '@/types/file-record';
 import type { FileRecordWithLinkStatus } from './hooks/useEntityFiles';
 import { FileThumbnail } from './FileThumbnail';
+import { fileSequenceItem } from '@/lib/files/file-sequence';
 import { FileRowActions } from './FileRowActions';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -168,6 +169,7 @@ export function FilesList({
       {files.map((file) => (
         <article
           key={file.id}
+          {...fileSequenceItem(file.id)}
           className={`group flex items-center justify-between gap-2 p-2 bg-card ${quick.card} border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} cursor-pointer`}
           aria-label={`${t('list.file')}: ${translateDisplayName(file)}`}
           onClick={() => onView?.(file)}

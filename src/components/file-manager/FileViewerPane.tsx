@@ -25,6 +25,7 @@ import type { FileRecord } from '@/types/file-record';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 import { FilePreviewPanel } from './FilePreviewPanel';
+import type { FileSequence } from './hooks/useFileSequence';
 
 type Outcome = FileViewerOutcome<FileRecord>;
 type MessageKind = Extract<Outcome['kind'], 'trashed' | 'archived' | 'not-found'>;
@@ -47,6 +48,8 @@ export interface FileViewerPaneProps {
   readonly currentUserId?: string;
   readonly currentUserName?: string;
   readonly onRefresh?: () => void;
+  /** ‹ 3 / 48 › — η σειρά της λίστας (ADR-912 §12.16). */
+  readonly sequence?: FileSequence | null;
 }
 
 function ViewerMessage({ kind, onDismiss, onOpenTrash }: { kind: MessageKind; onDismiss: () => void; onOpenTrash: () => void }) {

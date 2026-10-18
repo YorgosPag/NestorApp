@@ -77,6 +77,9 @@ import { FileManagerErrorView } from './FileManagerErrorView';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { FileRecord } from '@/types/file-record';
+import { fileSequenceItem } from '@/lib/files/file-sequence';
+import { fileShownBy } from '@/lib/files/file-viewer-outcome';
+import { useFileSequence } from './hooks/useFileSequence';
 import { gridPatterns } from '@/styles/design-tokens';
 
 // ============================================================================
@@ -100,6 +103,7 @@ function FileCard({ file, onClick, onDoubleClick }: FileCardProps) {
 
   return (
     <Card
+      {...fileSequenceItem(file.id)}
       className="cursor-pointer hover:bg-accent/50 transition-colors"
       onClick={() => onClick?.(file)}
       onDoubleClick={() => onDoubleClick?.(file)}
@@ -148,6 +152,12 @@ export function FileManagerPageContent() {
     handleBatchClassify, handleBatchArchive,
     handleFileUpload, handleAIClassify, handleCardClick, handleClearFilters,
   } = handlers;
+
+  // ‹ 3 / 48 › στον θεατή: η σειρά της λίστας όπως αποδόθηκε (ADR-912 §12.16).
+  const [listRoot, setListRoot] = React.useState<HTMLElement | null>(null);
+  const sequence = useFileSequence({
+    root: listRoot, files: filteredFiles, current: fileShownBy(viewerOutcome), onSelect: handleFileClick,
+  });
 
   const headerTitle = t('header.title');
 
@@ -269,6 +279,8 @@ export function FileManagerPageContent() {
                 <ResizablePanelGroup orientation="horizontal" className="h-full min-h-[500px]">
                   {/* File browser panel */}
                   <ResizablePanel defaultSize={40} minSize={15} className="overflow-auto">
+                    {/* `contents`: κανένα κουτί — μόνο η ρίζα από την οποία ο θεατής διαβάζει τη σειρά. */}
+                    <div ref={setListRoot} data-file-sequence-root="" className="contents">
                     {filteredFiles.length === 0 ? (
                       <section className="flex flex-col items-center justify-center h-full min-h-[300px] p-8">
                         <Files className={cn('h-12 w-12 opacity-50 mb-4', colors.text.muted)} />
@@ -321,6 +333,7 @@ export function FileManagerPageContent() {
                         onToggleSelect={toggleSelect}
                       />
                     )}
+                    </div>
                   </ResizablePanel>
 
                   <ResizableHandle withHandle />
@@ -337,6 +350,7 @@ export function FileManagerPageContent() {
                       currentUserId={user?.uid}
                       currentUserName={user?.displayName || undefined}
                       onRefresh={refetch}
+                      sequence={sequence}
                     />
                   </ResizablePanel>
                 </ResizablePanelGroup>

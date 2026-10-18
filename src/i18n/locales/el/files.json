@@ -71,8 +71,8 @@
     "title": "Έγγραφο PDF",
     "preview": "PDF προεπισκόπηση",
     "openInNewTab": "Άνοιγμα PDF σε νέα καρτέλα",
-    "previous": "Προηγούμενη",
-    "next": "Επόμενη",
+    "previousPage": "Προηγούμενη σελίδα",
+    "nextPage": "Επόμενη σελίδα",
     "loading": "Φόρτωση PDF...",
     "loadFailed": "Το PDF δεν μπόρεσε να ανοίξει. Δοκιμάστε ξανά ή κατεβάστε το αρχείο.",
     "fullscreen": "Πλήρης οθόνη"
@@ -344,7 +344,12 @@
     "hiddenByFilters": "Το αρχείο δεν εμφανίζεται στη λίστα λόγω των φίλτρων.",
     "clearFilters": "Καθαρισμός φίλτρων",
     "inboxNotice": "Εισερχόμενο αρχείο που δεν έχει ταξινομηθεί ακόμη.",
-    "openInbox": "Άνοιγμα Εισερχομένων"
+    "openInbox": "Άνοιγμα Εισερχομένων",
+    "previousFile": "Προηγούμενο αρχείο",
+    "nextFile": "Επόμενο αρχείο",
+    "sequencePosition": "{index} / {total}",
+    "sequenceLabel": "Αρχείο {index} από {total}",
+    "sequenceNav": "Πλοήγηση αρχείων"
   },
   "trash": {
     "title": "Κάδος Ανακύκλωσης",

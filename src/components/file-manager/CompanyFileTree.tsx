@@ -28,6 +28,7 @@ import { useFileDisplayName } from '@/hooks/useFileDisplayName';
 import type { FileRecord } from '@/types/file-record';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { getStatusColor } from '@/lib/design-system';
+import { fileSequenceItem } from '@/lib/files/file-sequence';
 
 import type { TreeNodeData, CompanyFileTreeProps, ViewMode } from './company-file-tree-builders';
 import { buildTreeByEntity, buildTreeByCategory, buildTreeByISO19650 } from './company-file-tree-builders';
@@ -99,6 +100,7 @@ function TreeNode({
     <li role="treeitem" aria-expanded={node.type !== 'file' ? isExpanded : undefined}>
       <button
         type="button"
+        {...(node.type === 'file' && node.file ? fileSequenceItem(node.file.id) : {})}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         className={cn(
