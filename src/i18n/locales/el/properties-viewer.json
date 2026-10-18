@@ -96,7 +96,9 @@
       "backToList": "Πίσω στη λίστα",
       "showDetails": "Στοιχεία",
       "detailsTitle": "Στοιχεία ακινήτου",
-      "closeDetails": "Κλείσιμο στοιχείων"
+      "closeDetails": "Κλείσιμο στοιχείων",
+      "lessDetails": "Λιγότερα στοιχεία, περισσότερη κάτοψη",
+      "moreDetails": "Περισσότερα στοιχεία"
     },
     "media": {
       "floorplans": "Κάτοψη",
@@ -108,8 +110,8 @@
       "floorplanProperty": "Κάτοψη Ακινήτου",
       "floorplanFloor": "Κάτοψη Ορόφου",
       "floorplanUnit": "Κάτοψη Μονάδας",
-      "floorplanLevel": "Κάτοψη {name}",
-      "floorplanFloorLevel": "Κάτοψη Ορόφου {name}",
+      "floorplanLevel": "Ακίνητο · {name}",
+      "floorplanFloorLevel": "Κτίριο · {name}",
       "noFloorFloorplans": "Δεν βρέθηκαν κατόψεις ορόφου"
     }
   },

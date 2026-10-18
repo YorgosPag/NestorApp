@@ -151,7 +151,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "e269a5e0e3519415fdf665b8b62dd249d527a88a97fe77626805fd43efc8b398",
+  "inputsSha256": "963fc94f3e6cd508a49d50ba7451084469c48c4abc576224198b9e0dd57a1379",
   "languages": [
     "el"
   ],
@@ -3501,6 +3501,14 @@
           "prefixes": [
             "savedListing.notice"
           ],
+          "whole": false
+        },
+        "common-actions": {
+          "keys": [
+            "actions.next",
+            "actions.previous"
+          ],
+          "prefixes": [],
           "whole": false
         },
         "common-photos": {

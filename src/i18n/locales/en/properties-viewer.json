@@ -96,7 +96,9 @@
       "backToList": "Back to list",
       "showDetails": "Details",
       "detailsTitle": "Property details",
-      "closeDetails": "Close details"
+      "closeDetails": "Close details",
+      "lessDetails": "Less details, more floor plan",
+      "moreDetails": "More details"
     },
     "media": {
       "floorplans": "Floorplan",
@@ -108,8 +110,8 @@
       "floorplanProperty": "Unit Floorplan",
       "floorplanFloor": "Floor Plan",
       "floorplanUnit": "Unit Floorplan",
-      "floorplanLevel": "{name} Plan",
-      "floorplanFloorLevel": "Floor Plan {name}",
+      "floorplanLevel": "Property · {name}",
+      "floorplanFloorLevel": "Building · {name}",
       "noFloorFloorplans": "No floor plans found"
     }
   },

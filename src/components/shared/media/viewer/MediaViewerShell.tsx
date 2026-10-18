@@ -14,13 +14,15 @@
  */
 
 import '@/lib/design-system';
-import type { ReactElement, ReactNode } from 'react';
+import { useRef, type ReactElement, type ReactNode } from 'react';
 import { AlertCircle, RefreshCw, type LucideIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TABS_RAIL_BELOW_REM, TabsRail } from '@/components/ui/navigation/tabs-rail';
+import { useContainerClass } from '@/hooks/media/useContainerClass';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
@@ -76,24 +78,26 @@ export interface MediaViewerShellProps {
 
 export function MediaViewerShell({ tabs, activeTab, onTabChange, layout = 'fill', className }: MediaViewerShellProps): ReactElement {
   const spacing = useSpacingTokens();
-  const iconSizes = useIconSizes();
-  const colors = useSemanticColors();
   const classes = LAYOUT_CLASSES[layout];
+  /**
+   * ADR-912 §12.17 — **στενός χώρος ⇒ ΜΙΑ σειρά που κυλά** (`TabsRail`, ADR-912 §2), όχι αναδίπλωση. Μετρημένο στα
+   * 390px: 6 καρτέλες ακινήτου σε **4 σειρές, 138px** πάνω από την κάτοψη. Αποφασίζει ο χώρος του κελύφους, όχι το
+   * παράθυρο· `measuring` (SSR · jsdom) ⇒ η αναδιπλούμενη, όπως πριν.
+   */
+  const rootRef = useRef<HTMLDivElement>(null);
+  const rail = useContainerClass(rootRef, TABS_RAIL_BELOW_REM, { zeroWidth: 'measuring' }) === 'narrow';
+  const triggers = tabs.map((tab) => <MediaTabTrigger key={tab.id} tab={tab} />);
 
   return (
-    <Card data-media-viewer-layout={layout} className={cn(classes.card, className)}>
+    <Card ref={rootRef} data-media-viewer-layout={layout} className={cn(classes.card, className)}>
       <Tabs value={activeTab} onValueChange={onTabChange} className={classes.tabs}>
-        <TabsList className={cn('shrink-0 w-full flex-wrap justify-start rounded-none border-b bg-transparent h-auto', spacing.padding.sm)}>
-          {tabs.map(({ id, label, icon: Icon, count }) => (
-            <TabsTrigger key={id} value={id} className="flex items-center gap-1.5 data-[state=active]:bg-primary/10 px-3 py-1.5">
-              <Icon className={iconSizes.sm} aria-hidden="true" />
-              <span className="text-xs">{label}</span>
-              {count !== undefined && count > 0 && (
-                <span className={cn('ml-1 text-xs', colors.text.muted)}>({count})</span>
-              )}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        {rail ? (
+          <TabsRail value={activeTab} className="shrink-0 rounded-none border-b bg-transparent">{triggers}</TabsRail>
+        ) : (
+          <TabsList className={cn('shrink-0 w-full flex-wrap justify-start rounded-none border-b bg-transparent h-auto', spacing.padding.sm)}>
+            {triggers}
+          </TabsList>
+        )}
 
         <section className={classes.stage}>
           {tabs.map(({ id, scroll, panel }) => (
@@ -104,6 +108,21 @@ export function MediaViewerShell({ tabs, activeTab, onTabChange, layout = 'fill'
         </section>
       </Tabs>
     </Card>
+  );
+}
+
+/** Μία καρτέλα — ίδια στη λωρίδα που κυλά και στην αναδιπλούμενη· η ετικέτα φαίνεται πάντα (Material 3 scrollable tabs). */
+function MediaTabTrigger({ tab: { id, label, icon: Icon, count } }: { tab: MediaViewerTab }): ReactElement {
+  const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
+  return (
+    <TabsTrigger value={id} className="flex shrink-0 items-center gap-1.5 whitespace-nowrap data-[state=active]:bg-primary/10 px-3 py-1.5">
+      <Icon className={iconSizes.sm} aria-hidden="true" />
+      <span className="text-xs">{label}</span>
+      {count !== undefined && count > 0 && (
+        <span className={cn('ml-1 text-xs', colors.text.muted)}>({count})</span>
+      )}
+    </TabsTrigger>
   );
 }
 
