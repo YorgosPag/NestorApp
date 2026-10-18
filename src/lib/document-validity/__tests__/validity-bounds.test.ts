@@ -117,7 +117,8 @@ describe('Π — κανόνας `printed`: η τυπωμένη λήξη είνα
 
   it('Π8 κάθε `printed` λήγει (`ruleExpires`) — το ζητά ο διάλογος ελέγχου', () => {
     const printed = Object.values(DOCUMENT_KIND_SPECS).filter((spec) => spec.rule.kind === 'printed');
-    expect(printed).toHaveLength(3);
+    // φορολογική · ασφαλιστική · ΕΝΦΙΑ · ΥΔΕ (ADR-915 §32)
+    expect(printed).toHaveLength(4);
     for (const spec of printed) expect(ruleExpires(spec.rule)).toBe(true);
   });
 });

@@ -19,8 +19,10 @@ import { addMonthsUTC, normalizeToMillisOrNull, utcDateOf } from '@/lib/date-loc
 import {
   ENFIA_CENTRAL_ISSUANCE,
   ENFIA_CENTRAL_ISSUANCE_EXPECTED_BY,
+  type DocumentClassification,
   type DocumentValidityRule,
-  type ValidityBound,
+  type ValidityCeiling,
+  type ValidityRegime,
 } from '@/config/document-validity/document-validity';
 
 const pad = (value: number): string => String(value).padStart(2, '0');
@@ -64,14 +66,38 @@ export function enfiaCentralIssuanceCoverage(today: string): 'known' | 'awaiting
   return today.slice(5) <= ENFIA_CENTRAL_ISSUANCE_EXPECTED_BY ? 'awaiting' : 'missing';
 }
 
-/** Η τελευταία ημέρα ισχύος κατά το όριο — `null` όταν η έκδοση δεν διαβάζεται ή το όριο δεν είναι γνωστό. */
-export function boundExpiresOn(bound: ValidityBound, issuedOn: string | null): string | null {
+/**
+ * Το καθεστώς που ίσχυε την ημέρα έκδοσης — το πρώτο του πίνακα με `from <= issuedOn` (ή χωρίς `from`). Ο πίνακας
+ * γράφεται από το νεότερο προς το παλαιότερο· η σειρά δεν μαντεύεται εδώ, την κλειδώνει άγκυρα.
+ */
+export function regimeOn(regimes: readonly ValidityRegime[], issuedOn: string): ValidityRegime | null {
+  return regimes.find((regime) => regime.from === null || issuedOn >= regime.from) ?? null;
+}
+
+/** Μήνες για την κατηγορία — ή, με άγνωστη κατηγορία, το **μέγιστο** του καθεστώτος (μόνο ως ανώτατο, βλ. `ValidityCeiling`). */
+function classifiedMonthsOf(regime: ValidityRegime, classification: DocumentClassification | null): number {
+  return classification === null ? Math.max(...Object.values(regime.months)) : regime.months[classification];
+}
+
+/**
+ * Η τελευταία ημέρα ισχύος κατά το όριο — `null` όταν η έκδοση δεν διαβάζεται ή το όριο δεν είναι γνωστό.
+ * `classification` = η κατάταξη που έγραψε ο εκδότης (ADR-915 §32)· τη ρωτά μόνο το `classified-months`.
+ */
+export function boundExpiresOn(
+  bound: ValidityCeiling,
+  issuedOn: string | null,
+  classification: DocumentClassification | null = null,
+): string | null {
   if (issuedOn === null || !isDateKey(issuedOn)) return null;
   switch (bound.kind) {
     case 'months': return addMonthsToDateKey(issuedOn, bound.months);
     case 'end-of-month': return endOfMonthOf(issuedOn);
     case 'end-of-year': return endOfYearOf(issuedOn);
     case 'enfia-cycle': return enfiaCycleEndOf(issuedOn);
+    case 'classified-months': {
+      const regime = regimeOn(bound.regimes, issuedOn);
+      return regime === null ? null : addMonthsToDateKey(issuedOn, classifiedMonthsOf(regime, classification));
+    }
   }
 }
 
@@ -82,11 +108,15 @@ export interface PrintedBounds {
 }
 
 /** Το νόμιμο εύρος της τυπωμένης λήξης για αυτή την έκδοση — `null` όταν ο κανόνας δεν είναι `printed`. */
-export function printedBoundsOf(rule: DocumentValidityRule, issuedOn: string | null): PrintedBounds | null {
+export function printedBoundsOf(
+  rule: DocumentValidityRule,
+  issuedOn: string | null,
+  classification: DocumentClassification | null = null,
+): PrintedBounds | null {
   if (rule.kind !== 'printed') return null;
   return {
     floor: rule.floor === null ? null : boundExpiresOn(rule.floor, issuedOn),
-    ceiling: boundExpiresOn(rule.ceiling, issuedOn),
+    ceiling: boundExpiresOn(rule.ceiling, issuedOn, classification),
   };
 }
 

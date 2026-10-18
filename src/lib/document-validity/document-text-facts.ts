@@ -61,6 +61,7 @@ export function peaTextFacts(reading: PeaReading): DocumentTextFacts | null {
     kind: 'energy-certificate',
     issuedOn: reading.issuedOn,
     printedValidUntil: reading.validUntil,
+    classification: null,
     source: { kind: 'document-text', reader: 'pea-text' },
   };
 }
@@ -84,7 +85,10 @@ const CLEARANCE_READER: DocumentTextReaderSpec = {
     if (text.kind === 'not-recognized') return text;
     const { kind, reader, issuedOn, printedValidUntil } = text.reading;
     if (issuedOn === null) return { kind: 'issue-date-unread', found: kind };
-    return { kind: 'read', facts: { kind, issuedOn, printedValidUntil, source: { kind: 'document-text', reader } } };
+    return {
+      kind: 'read',
+      facts: { kind, issuedOn, printedValidUntil, classification: null, source: { kind: 'document-text', reader } },
+    };
   },
 };
 

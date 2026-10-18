@@ -21,7 +21,7 @@
  */
 
 import { addDaysToDateKey, daysBetweenDateKeys, isDateKey } from '@/lib/calendar/date-key';
-import type { DocumentValidityRule } from '@/config/document-validity/document-validity';
+import type { DocumentClassification, DocumentValidityRule } from '@/config/document-validity/document-validity';
 import { addMonthsToDateKey, boundExpiresOn, printedBoundsOf } from '@/lib/document-validity/validity-bounds';
 
 /** Ανοχή ασυμφωνίας: μία μέρα (στρογγυλοποίηση εκδότη «έως και» vs «έως»). Πέρα από αυτή, το λέμε. */
@@ -72,6 +72,8 @@ export interface DocumentExpiryInput {
   readonly issuedOn: string | null;
   /** Ό,τι γράφει το ίδιο το έγγραφο (`YYYY-MM-DD`), αν το διαβάσαμε. */
   readonly printedValidUntil?: string | null;
+  /** Η κατάταξη που έγραψε ο εκδότης (ADR-915 §32) — στενεύει το ανώτατο ενός `classified-months`. */
+  readonly classification?: DocumentClassification | null;
 }
 
 function discrepancyOf(rule: string, printed: string): ExpiryDiscrepancy | null {
@@ -92,8 +94,9 @@ function printedRuleExpiry(
   rule: Extract<DocumentValidityRule, { kind: 'printed' }>,
   issuedOn: string | null,
   printed: string | null,
+  classification: DocumentClassification | null,
 ): DocumentExpiry {
-  const { floor, ceiling } = printedBoundsOf(rule, issuedOn) ?? { floor: null, ceiling: null };
+  const { floor, ceiling } = printedBoundsOf(rule, issuedOn, classification) ?? { floor: null, ceiling: null };
   if (printed === null) return floor === null ? UNKNOWN_EXPIRY : { expiresOn: floor, source: 'floor', discrepancy: null };
   if (ceiling !== null && printed > ceiling) {
     return { expiresOn: ceiling, source: 'rule', discrepancy: discrepancyOf(ceiling, printed) };
@@ -103,9 +106,14 @@ function printedRuleExpiry(
 }
 
 /** Η ισχύουσα λήξη: η **νωρίτερη** από κανόνα και έγγραφο, με την προέλευσή της και την ασυμφωνία τους. */
-export function documentExpiry({ rule, issuedOn, printedValidUntil = null }: DocumentExpiryInput): DocumentExpiry {
+export function documentExpiry({
+  rule,
+  issuedOn,
+  printedValidUntil = null,
+  classification = null,
+}: DocumentExpiryInput): DocumentExpiry {
   const printed = printedValidUntil !== null && isDateKey(printedValidUntil) ? printedValidUntil : null;
-  if (rule.kind === 'printed') return printedRuleExpiry(rule, issuedOn, printed);
+  if (rule.kind === 'printed') return printedRuleExpiry(rule, issuedOn, printed, classification);
   const fromRule = ruleExpiresOn(rule, issuedOn);
   if (rule.kind === 'none') return { expiresOn: null, source: null, discrepancy: null };
   if (fromRule === null && printed === null) return { expiresOn: null, source: null, discrepancy: null };

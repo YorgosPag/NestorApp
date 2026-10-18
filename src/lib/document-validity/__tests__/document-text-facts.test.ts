@@ -19,7 +19,7 @@ describe('judgeDocumentText (ADR-915 §20)', () => {
     expect(judgeDocumentText([TAX_PDFJS], ['tax-clearance'])).toEqual({
       kind: 'read',
       facts: {
-        kind: 'tax-clearance', issuedOn: '2026-07-22', printedValidUntil: '2026-08-22',
+        kind: 'tax-clearance', issuedOn: '2026-07-22', printedValidUntil: '2026-08-22', classification: null,
         source: { kind: 'document-text', reader: 'aade-tax-clearance-text' },
       },
     });
