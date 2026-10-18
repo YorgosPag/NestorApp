@@ -12,11 +12,13 @@
 
 import {
   isProfessionalLicence,
+  PROFESSIONAL_LICENCES,
   PROFESSIONAL_LICENCE_SPECS,
   type ProfessionalLicence,
 } from '@/config/professional-licences';
+import { isChapteredRegistry } from '@/constants/professional-registries';
 import { readProfessionalAttestation } from '@/lib/professional/professional-attestation';
-import type { PublicShowcase, ShowcaseLicence } from '@/types/agency-profile';
+import type { PublicShowcase, ShowcaseCredential, ShowcaseLicence } from '@/types/agency-profile';
 
 /**
  * **Οι λόγοι άρνησης της πράξης «άδειες»** — δικό τους κλειστό λεξιλόγιο (ρίζα, CHECK 3.73), χωριστό από τη δημοσίευση
@@ -30,6 +32,13 @@ export const SHOWCASE_LICENCE_REJECTIONS = [
   'licence-duplicate',
   /** Δήλωση αδειών για βιτρίνα που ΔΕΝ υπάρχει: δεν έχουν πού να φανούν (ίδιο με την κάρτα). */
   'licences-without-showcase',
+  /**
+   * Άδεια αρχής **με παραρτήματα** (Περιφερειακή Ενότητα) χωρίς τον εκδότη: «1234» χωρίς «ΠΕ Θεσσαλονίκης» δεν
+   * επαληθεύεται από κανέναν (ADR-841 Α9.1 · ADR-915 §34).
+   */
+  'licence-chapter-missing',
+  /** Η άδεια προκύπτει ΗΔΗ από δηλωμένη ειδικότητα (ηλεκτρολόγος + εγγραφή Περιφέρειας) — καμία διπλή δήλωση (§34 Λ5). */
+  'licence-held-through-occupation',
 ] as const;
 export type ShowcaseLicenceRejection = (typeof SHOWCASE_LICENCE_REJECTIONS)[number];
 
@@ -37,14 +46,22 @@ export type ShowcaseLicenceRejection = (typeof SHOWCASE_LICENCE_REJECTIONS)[numb
 interface LicenceDeclaration {
   readonly licence: string;
   readonly registrationNumber: string;
+  readonly registrationChapter?: string;
 }
 
-/** Μια **δηλωμένη** άδεια — η αρχή από τον πίνακα, ο αριθμός όπως τον έδωσε ο άνθρωπος. */
-function declaredLicence(licence: ProfessionalLicence, number: string): ShowcaseLicence {
+/**
+ * Μια **δηλωμένη** άδεια — η αρχή από τον πίνακα, ο αριθμός (και, σε αρχή με παραρτήματα, ο εκδότης) όπως τα έδωσε ο
+ * άνθρωπος. Κενός εκδότης σε αρχή με παραρτήματα ⇒ `null` (ο καλών αρνείται ονομαστικά)· σε εθνική αρχή αγνοείται.
+ */
+function declaredLicence(licence: ProfessionalLicence, number: string, chapter: string): ShowcaseLicence | null {
   const { authority } = PROFESSIONAL_LICENCE_SPECS[licence];
+  if (!isChapteredRegistry(authority)) {
+    return { licence, attestation: { state: 'declared', registration: { authorityKind: 'national', authority, number } } };
+  }
+  if (chapter === '') return null;
   return {
     licence,
-    attestation: { state: 'declared', registration: { authorityKind: 'national', authority, number } },
+    attestation: { state: 'declared', registration: { authorityKind: 'chapter', authority, chapter, number } },
   };
 }
 
@@ -56,12 +73,14 @@ export function formShowcaseLicences(
   declared: readonly LicenceDeclaration[],
 ): { readonly licences: readonly ShowcaseLicence[] } | { readonly reason: ShowcaseLicenceRejection } {
   const licences: ShowcaseLicence[] = [];
-  for (const { licence, registrationNumber } of declared) {
+  for (const { licence, registrationNumber, registrationChapter } of declared) {
     if (!isProfessionalLicence(licence)) return { reason: 'licence-number-missing' };
     const number = registrationNumber.trim();
     if (number === '') return { reason: 'licence-number-missing' };
     if (licences.some((held) => held.licence === licence)) return { reason: 'licence-duplicate' };
-    licences.push(declaredLicence(licence, number));
+    const formed = declaredLicence(licence, number, (registrationChapter ?? '').trim());
+    if (formed === null) return { reason: 'licence-chapter-missing' };
+    licences.push(formed);
   }
   return { licences };
 }
@@ -90,7 +109,52 @@ export function readShowcaseLicences(raw: unknown): readonly ShowcaseLicence[] {
   return raw.map(readLicence).filter((licence): licence is ShowcaseLicence => licence !== null);
 }
 
-/** *«Δηλώνει αυτή η βιτρίνα την άδεια;»* — η **μία** ερώτηση για κριτή, πλήθη και κάρτα. */
-export function showcaseHoldsLicence(showcase: Pick<PublicShowcase, 'licences'>, licence: ProfessionalLicence): boolean {
-  return showcase.licences.some((held) => held.licence === licence);
+/**
+ * Η άδεια που **είναι** ένα credential, αν είναι (ADR-915 §34 Λ3): ειδικότητα του `heldThroughOccupations` **και**
+ * δηλωμένη/επαληθευμένη εγγραφή στην **ίδια** αρχή. Ηλεκτρολόγος 7411 χωρίς αριθμό Περιφέρειας ⇒ καμία (π.δ. 108/2013
+ * άρθ. 12: χωρίς άδεια δεν υπογράφει)· ηλεκτρολόγος οικιακών συσκευών με αριθμό ⇒ καμία (δεν ελέγχει εγκατάσταση).
+ */
+function licenceOfCredential(credential: ShowcaseCredential, licence: ProfessionalLicence): ShowcaseLicence | null {
+  const spec = PROFESSIONAL_LICENCE_SPECS[licence];
+  const { attestation, occupation } = credential;
+  if (attestation.state === 'unknown' || !spec.heldThroughOccupations.includes(occupation.escoUri)) return null;
+  return attestation.registration.authority === spec.authority ? { licence, attestation } : null;
+}
+
+/**
+ * *«Ποιες άδειες έχει ήδη αυτή η βιτρίνα **μέσα από τις ειδικότητές της**;»* — μία ανά άδεια, με την απόδειξη του
+ * credential. Τη ρωτούν ο κριτής, η φόρμα («καλύπτεται από την ειδικότητά σας») και ο γραφέας (καμία διπλή δήλωση).
+ */
+export function licencesHeldThroughCredentials(credentials: readonly ShowcaseCredential[]): readonly ShowcaseLicence[] {
+  return PROFESSIONAL_LICENCES.flatMap((licence) => {
+    for (const credential of credentials) {
+      const held = licenceOfCredential(credential, licence);
+      if (held !== null) return [held];
+    }
+    return [];
+  });
+}
+
+/**
+ * *«Έχει αυτή η βιτρίνα την άδεια;»* — η **μία** ερώτηση για κριτή, πλήθη και κάρτα: ρητή δήλωση **ή** ειδικότητα που
+ * **είναι** η άδεια (§34 Λ3).
+ */
+export function showcaseHoldsLicence(
+  showcase: Pick<PublicShowcase, 'licences' | 'credentials'>,
+  licence: ProfessionalLicence,
+): boolean {
+  if (showcase.licences.some((held) => held.licence === licence)) return true;
+  return showcase.credentials.some((credential) => licenceOfCredential(credential, licence) !== null);
+}
+
+/**
+ * Ο φρουρός του γραφέα (§34 Λ5): ρητή άδεια που η βιτρίνα **ήδη** έχει μέσα από ειδικότητα ⇒ ονομασμένη άρνηση. Δύο
+ * δηλώσεις της ίδιας άδειας θα μπορούσαν να διαφωνήσουν (άλλος αριθμός, άλλη ΠΕ) — και κανείς δεν θα ήξερε ποια ισχύει.
+ */
+export function licenceDeclaredTwice(
+  licences: readonly ShowcaseLicence[],
+  credentials: readonly ShowcaseCredential[],
+): ShowcaseLicenceRejection | null {
+  const implied = new Set(licencesHeldThroughCredentials(credentials).map((held) => held.licence));
+  return licences.some((declared) => implied.has(declared.licence)) ? 'licence-held-through-occupation' : null;
 }

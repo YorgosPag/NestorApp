@@ -4,13 +4,20 @@
  * @related lib/agency/occupation-query.ts · lib/agency/showcase-licence.ts · config/document-validity/document-issuers.ts
  */
 
+import { ELECTRICAL_INSTALLER_ESCO_URIS } from '@/config/electrical-installer-occupations';
 import { PROJECT_ROLE_BRIDGE } from '@/config/profession-bridge.config';
 import { escoOccupationUri } from '@/lib/esco/esco-uri';
 import type { PublicShowcase, ShowcaseCredential, ShowcaseLicence } from '@/types/agency-profile';
+import type { ProfessionalAttestation } from '@/types/professional-identity';
 
 import { showcaseFixture } from '../__fixtures__/showcase-fixture';
 import { documentToken, readOccupationQuery, showcaseOffersOccupation } from '../occupation-query';
-import { formShowcaseLicences, readShowcaseLicences } from '../showcase-licence';
+import {
+  formShowcaseLicences,
+  licenceDeclaredTwice,
+  licencesHeldThroughCredentials,
+  readShowcaseLicences,
+} from '../showcase-licence';
 import { parseShowcaseFilters, serializeShowcaseFilters } from '../showcase-filter';
 
 function uriOf(role: 'structural_engineer' | 'architect' | 'mechanical_engineer'): string {
@@ -94,5 +101,96 @@ describe('ADR-915 §21 — οι άδειες της βιτρίνας', () => {
     const foreignAuthority = { ...INSPECTOR_LICENCE, attestation: { state: 'declared', registration: { authorityKind: 'national', authority: 'tee', number: '1' } } };
     const unknownState = { ...INSPECTOR_LICENCE, attestation: { state: 'unknown' } };
     expect(readShowcaseLicences([foreignAuthority, unknownState, { licence: 'nope', attestation: INSPECTOR_LICENCE.attestation }])).toEqual([]);
+  });
+});
+
+// ── ADR-915 §34 — άδεια ηλεκτρολόγου εγκαταστάτη ανά Περιφερειακή Ενότητα ──────────────────────────────────────
+const ELECTRICIAN = ELECTRICAL_INSTALLER_ESCO_URIS[0];
+// 7411 «ηλεκτρολόγος οικιακών συσκευών»: ίδια ομάδα ISCO, ΔΕΝ ελέγχει εγκατάσταση (ADR-915 §32 Υ5).
+const APPLIANCE_ELECTRICIAN = escoOccupationUri('5dbb9cf0-b226-402c-a295-2f42ef05ff8b');
+const REGIONAL: ProfessionalAttestation = {
+  state: 'declared',
+  registration: { authorityKind: 'chapter', authority: 'regional-authority', chapter: 'ΠΕ Θεσσαλονίκης', number: '4521' },
+};
+const TEE: ProfessionalAttestation = {
+  state: 'declared',
+  registration: { authorityKind: 'national', authority: 'tee', number: '98765' },
+};
+const INSTALLER_LICENCE: ShowcaseLicence = { licence: 'electrical-installer', attestation: REGIONAL };
+
+function attested(escoUri: string, iscoCode: string, attestation: ProfessionalAttestation): ShowcaseCredential {
+  return { ...credential(escoUri, iscoCode), attestation };
+}
+
+describe('ADR-915 §34 — «Βρες ηλεκτρολόγο για ΥΔΕ» = όσοι μπορούν να την υπογράψουν', () => {
+  const yde = documentToken('electrical-installation');
+
+  it('Η1: ηλεκτρολόγος 7411 ΧΩΡΙΣ αριθμό Περιφέρειας ⇒ όχι (π.δ. 108/2013 άρθ. 12) · ΜΕ αριθμό + ΠΕ ⇒ ναι', () => {
+    expect(offers(showcase([credential(ELECTRICIAN, '7411')]), yde)).toBe(false);
+    expect(offers(showcase([attested(ELECTRICIAN, '7411', REGIONAL)]), yde)).toBe(true);
+  });
+
+  it('Η2: η εγγραφή πρέπει να είναι στην ΙΔΙΑ αρχή — ηλεκτρολόγος με «αριθμό ΤΕΕ» δεν έχει άδεια εγκαταστάτη', () => {
+    expect(offers(showcase([attested(ELECTRICIAN, '7411', TEE)]), yde)).toBe(false);
+  });
+
+  it('Η3: ηλεκτρολόγος οικιακών συσκευών, ακόμη και με αριθμό Περιφέρειας ⇒ όχι', () => {
+    expect(offers(showcase([attested(APPLIANCE_ELECTRICIAN, '7411', REGIONAL)]), yde)).toBe(false);
+  });
+
+  it('Η4: μηχανικός ΤΕΕ μόνο ⇒ όχι · με δηλωμένη βεβαίωση αναγγελίας (ρητή άδεια) ⇒ ναι', () => {
+    expect(offers(showcase([attested(MECHANICAL, '2144', TEE)]), yde)).toBe(false);
+    expect(offers(showcase([attested(MECHANICAL, '2144', TEE)], [INSTALLER_LICENCE]), yde)).toBe(true);
+  });
+
+  it('Η5: η άδεια εγκαταστάτη ΔΕΝ κάνει κάποιον ενεργειακό επιθεωρητή (καμία διαρροή μεταξύ αδειών)', () => {
+    const electrician = showcase([attested(ELECTRICIAN, '7411', REGIONAL)], [INSTALLER_LICENCE]);
+    expect(offers(electrician, documentToken('energy-certificate'))).toBe(false);
+  });
+});
+
+describe('ADR-915 §34 — άδεια με Περιφερειακή Ενότητα: σχηματισμός · ανάγνωση · μία δήλωση', () => {
+  it('Π1: αρχή με παραρτήματα ⇒ ο εκδότης ΥΠΟΧΡΕΩΤΙΚΟΣ (ονομασμένη άρνηση) · με εκδότη ⇒ εγγραφή `chapter`', () => {
+    const missing = { reason: 'licence-chapter-missing' };
+    expect(formShowcaseLicences([{ licence: 'electrical-installer', registrationNumber: '4521' }])).toEqual(missing);
+    expect(
+      formShowcaseLicences([{ licence: 'electrical-installer', registrationNumber: '4521', registrationChapter: '  ' }]),
+    ).toEqual(missing);
+    expect(
+      formShowcaseLicences([
+        { licence: 'electrical-installer', registrationNumber: ' 4521 ', registrationChapter: ' ΠΕ Θεσσαλονίκης ' },
+      ]),
+    ).toEqual({ licences: [INSTALLER_LICENCE] });
+  });
+
+  it('Π2: εθνική αρχή ΑΓΝΟΕΙ τον εκδότη — ο επιθεωρητής δεν αποκτά «παράρτημα» ΥΠΕΝ', () => {
+    expect(
+      formShowcaseLicences([{ licence: 'energy-inspector', registrationNumber: '12345', registrationChapter: 'ΠΕ Χ' }]),
+    ).toEqual({ licences: [INSPECTOR_LICENCE] });
+  });
+
+  it('Π3: αποθηκευμένη άδεια εγκαταστάτη χωρίς ΠΕ ή σε άλλη αρχή ⇒ παραλείπεται · σωστή ⇒ πλήρης κύκλος', () => {
+    const noChapter = {
+      licence: 'electrical-installer',
+      attestation: { state: 'declared', registration: { authority: 'regional-authority', number: '1' } },
+    };
+    expect(readShowcaseLicences([noChapter, { licence: 'electrical-installer', attestation: TEE }])).toEqual([]);
+    expect(readShowcaseLicences([INSTALLER_LICENCE])).toEqual([INSTALLER_LICENCE]);
+  });
+
+  it('Π4: η ειδικότητα ΕΙΝΑΙ η άδεια — μία ανά άδεια, με την απόδειξη του credential · `unknown` ⇒ καμία', () => {
+    const credentials = [
+      attested(ELECTRICIAN, '7411', REGIONAL),
+      attested(ELECTRICAL_INSTALLER_ESCO_URIS[1], '7411', REGIONAL),
+    ];
+    expect(licencesHeldThroughCredentials(credentials)).toEqual([INSTALLER_LICENCE]);
+    expect(licencesHeldThroughCredentials([credential(ELECTRICIAN, '7411')])).toEqual([]);
+  });
+
+  it('Π5: καμία διπλή δήλωση — ρητή άδεια που δίνει ήδη η ειδικότητα ⇒ ονομασμένη άρνηση · αλλιώς τίποτα', () => {
+    const electrician = [attested(ELECTRICIAN, '7411', REGIONAL)];
+    expect(licenceDeclaredTwice([INSTALLER_LICENCE], electrician)).toBe('licence-held-through-occupation');
+    expect(licenceDeclaredTwice([INSTALLER_LICENCE], [attested(MECHANICAL, '2144', TEE)])).toBeNull();
+    expect(licenceDeclaredTwice([INSPECTOR_LICENCE], electrician)).toBeNull();
   });
 });

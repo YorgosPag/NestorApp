@@ -19,7 +19,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { readShowcase } from '@/lib/agency/showcase-read';
 import { createModuleLogger } from '@/lib/telemetry';
-import type { ShowcaseLicenceRejection } from '@/lib/agency/showcase-licence';
+import { licenceDeclaredTwice, type ShowcaseLicenceRejection } from '@/lib/agency/showcase-licence';
 import type { ShowcaseLicence } from '@/types/agency-profile';
 
 const logger = createModuleLogger('showcase-licence-custody');
@@ -45,6 +45,10 @@ export async function saveShowcaseLicences(
       const existing = snapshot.exists ? readShowcase(snapshot.data(), companyId) : null;
       // Άδεια χωρίς βιτρίνα δεν έχει πού να φανεί — ονομασμένη άρνηση, όχι σιωπηλή γραφή σε ανύπαρκτο έγγραφο.
       if (existing?.outcome !== 'showcase') return { kind: 'rejected', reason: 'licences-without-showcase' };
+      // 🔑 Κρίνεται ΜΕΣΑ στη συναλλαγή, πάνω στις ειδικότητες που διαβάστηκαν τώρα (ADR-915 §34 Λ5): μια ταυτόχρονη
+      //    δημοσίευση που προσθέτει εγγραφή Περιφέρειας ξανατρέχει τη συναλλαγή — καμία διπλή δήλωση από αγώνα.
+      const twice = licenceDeclaredTwice(licences, existing.showcase.credentials);
+      if (twice !== null) return { kind: 'rejected', reason: twice };
       transaction.update(ref, { licences });
       return { kind: 'saved', licences };
     });

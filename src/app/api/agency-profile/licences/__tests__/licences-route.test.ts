@@ -104,3 +104,40 @@ describe('ADR-915 §21 — οι άδειες: η αρχή ΠΑΡΑΓΕΤΑΙ, ο
     expect((await put({ licences: [] })).status).toBe(500);
   });
 });
+
+describe('ADR-915 §34 — άδεια ηλεκτρολόγου: ο εκδότης (Περιφερειακή Ενότητα) περνά το σύνορο', () => {
+  it('🔑 Π1 — με ΠΕ ⇒ στον γραφέα εγγραφή `chapter` στη Διεύθυνση Ανάπτυξης, με τον εκδότη κομμένο', async () => {
+    const answer = await put({
+      licences: [{ licence: 'electrical-installer', registrationNumber: '4521', registrationChapter: ' ΠΕ Λάρισας ' }],
+    });
+
+    expect(answer.status).toBe(200);
+    expect(saveMock).toHaveBeenCalledWith(expect.anything(), 'comp_alfa', [
+      {
+        licence: 'electrical-installer',
+        attestation: {
+          state: 'declared',
+          registration: { authorityKind: 'chapter', authority: 'regional-authority', chapter: 'ΠΕ Λάρισας', number: '4521' },
+        },
+      },
+    ]);
+  });
+
+  it('🔴 Π2 — χωρίς ΠΕ ⇒ 422 `licence-chapter-missing`, ΚΑΜΙΑ γραφή', async () => {
+    const answer = await put({ licences: [{ licence: 'electrical-installer', registrationNumber: '4521' }] });
+
+    expect(answer.status).toBe(422);
+    expect(answer.body.reason).toBe('licence-chapter-missing');
+    expect(saveMock).not.toHaveBeenCalled();
+  });
+
+  it('🔴 Π3 — η άρνηση «την έχετε ήδη από την ειδικότητα» του γραφέα φτάνει ονομαστικά (422)', async () => {
+    saveMock.mockResolvedValueOnce({ kind: 'rejected', reason: 'licence-held-through-occupation' });
+    const answer = await put({
+      licences: [{ licence: 'electrical-installer', registrationNumber: '4521', registrationChapter: 'ΠΕ Λάρισας' }],
+    });
+
+    expect(answer.status).toBe(422);
+    expect(answer.body.reason).toBe('licence-held-through-occupation');
+  });
+});

@@ -30,7 +30,13 @@ import type { ShowcaseLicence } from '@/types/agency-profile';
 /** 🔑 `z.ZodType<ShowcaseLicencesWire>` — νέο πεδίο στο σύρμα **δεν μεταγλωττίζεται** εδώ σιωπηλά. `max` = φρουρός πόρου. */
 const licencesSchema: z.ZodType<ShowcaseLicencesWire> = z.object({
   licences: z
-    .array(z.object({ licence: z.enum(PROFESSIONAL_LICENCES), registrationNumber: z.string().max(64) }))
+    .array(
+      z.object({
+        licence: z.enum(PROFESSIONAL_LICENCES),
+        registrationNumber: z.string().max(64),
+        registrationChapter: z.string().max(80).optional(),
+      }),
+    )
     .max(PROFESSIONAL_LICENCES.length * 2),
 });
 
@@ -49,6 +55,7 @@ async function saveHandler(request: NextRequest, ctx: AuthContext): Promise<Next
   }
 
   const result = await saveShowcaseLicences(getAdminFirestore(), ctx.companyId, formed.licences);
+  // `rejected` = και η διπλή δήλωση άδειας που ήδη δίνει η ειδικότητα (ADR-915 §34 Λ5) — κρίνεται στη συναλλαγή.
   switch (result.kind) {
     case 'saved':
       return NextResponse.json({ licences: result.licences });

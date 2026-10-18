@@ -57,6 +57,8 @@ export interface ShowcaseCredentialWire {
 export interface ShowcaseLicenceWire {
   readonly licence: string;
   readonly registrationNumber: string;
+  /** Ο εκδότης (Περιφερειακή Ενότητα) — υποχρεωτικός **μόνο** σε άδεια αρχής με παραρτήματα (ADR-915 §34). */
+  readonly registrationChapter?: string;
 }
 
 /** **Ό,τι στέλνει η υποσελίδα «Άδειες»** — ολόκληρη η λίστα· κενή = «δεν έχω καμία». */
