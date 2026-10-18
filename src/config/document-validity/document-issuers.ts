@@ -21,9 +21,8 @@
  * @see ADR-915 §18 — Στάδιο 1: εκδότης και υπόχρεος
  */
 
-import { ELECTRICAL_INSTALLER_ESCO_URIS } from '@/config/electrical-installer-occupations';
 import { PROJECT_ROLE_BRIDGE } from '@/config/profession-bridge.config';
-import type { ProfessionalLicence } from '@/config/professional-licences';
+import { PROFESSIONAL_LICENCE_SPECS, type ProfessionalLicence } from '@/config/professional-licences';
 import { escoOccupationUri } from '@/lib/esco/esco-uri';
 
 /**
@@ -82,10 +81,21 @@ export const ISSUER_QUALIFICATION_SPECS: Readonly<Record<IssuerQualification, Is
   // Ο ενεργειακός επιθεωρητής είναι μηχανικός με ΕΠΙΠΛΕΟΝ άδεια του Μητρώου της ΕΥΕΠΕΝ (buildingcert.gr) — άδεια, όχι
   // επάγγελμα (ADR-915 §21).
   'energy-inspector-registered': { kind: 'licence', licence: 'energy-inspector' },
-  // ΥΔΕ: υπογράφει ηλεκτρολόγος εγκαταστάτης — ειδικότητα ISCO 7411 που ελέγχει εσωτερική ηλεκτρική εγκατάσταση, με
-  // άδεια της Περιφερειακής Ενότητας (ADR-915 §32). Η λίστα ζει μία φορά (`electrical-installer-occupations.ts`).
-  'electrical-installer': { kind: 'occupation', escoUris: ELECTRICAL_INSTALLER_ESCO_URIS },
+  // ΥΔΕ: υπογράφει όποιος έχει άδεια ηλεκτρολόγου εγκαταστάτη ή βεβαίωση αναγγελίας της Περιφερειακής Ενότητας
+  // (π.δ. 108/2013 άρθ. 12: «οφείλουν να διαθέτουν αντίστοιχη άδεια») — άδεια, όχι ειδικότητα (ADR-915 §34). Ο
+  // ηλεκτρολόγος 7411 με εγγραφή Περιφέρειας την έχει ΗΔΗ (`heldThroughOccupations`)· ο μηχανικός ΤΕΕ τη δηλώνει.
+  'electrical-installer': { kind: 'licence', licence: 'electrical-installer' },
 };
+
+/**
+ * Η δημόσια σελίδα όπου ελέγχεται ο αριθμός ενός προσόντος — `null` για ειδικότητα **ή** για άδεια χωρίς δημόσιο μητρώο
+ * (ηλεκτρολόγος εγκαταστάτης, ADR-915 §34). Η **μία** απάντηση για τη γραμμή ανάθεσης (§27) και τη σελίδα του συνδέσμου
+ * (§28) — δύο αντίγραφα του `spec.kind === 'licence'` θα έδειχναν σύνδεσμο χωρίς προορισμό.
+ */
+export function qualificationLookupUrl(qualification: IssuerQualification): string | null {
+  const spec = ISSUER_QUALIFICATION_SPECS[qualification];
+  return spec.kind === 'licence' ? PROFESSIONAL_LICENCE_SPECS[spec.licence].registryLookupUrl : null;
+}
 
 /** Δημόσιες αρχές που εκδίδουν έγγραφα του μητρώου. */
 export const ISSUER_AUTHORITIES = ['aade', 'efka'] as const;

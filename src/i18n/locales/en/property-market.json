@@ -1633,9 +1633,6 @@
       "registryLabel": "Registry number ({authority})",
       "registryHint": "The number as issued by the authority. You declare it — we have not checked it.",
       "registryPlaceholder": "e.g. 123456789000",
-      "chapterLabel": "Issuing chapter",
-      "chapterHint": "Which chapter issued the number. Without it, the number cannot be verified by anyone.",
-      "chapterPlaceholder": "e.g. Thessaloniki Bar",
       "registryNone": "No authority keeps a registry for this occupation. Nothing is missing from your showcase.",
       "registryUnexamined": "We have not examined whether a registry exists for this occupation.",
       "occupationUnknown": "This occupation was not found in the classification. Please pick again from the list.",
@@ -1682,10 +1679,12 @@
       "coverageAgreementExtendRadius": "Extend to {km} km",
       "coverageAgreementNoAutoFix": "Add their areas to the declaration above so you appear there.",
       "licencesLabel": "Licences",
-      "licencesHint": "Licences you hold in addition to your occupation. People looking for who can issue a document — e.g. an energy certificate — find you through them.",
+      "licencesHint": "Licences you hold in addition to your occupation. They let people find you when they look for who can issue a document — e.g. an energy certificate or an electrical installation declaration.",
       "licenceHold": "I hold a licence: {licence}",
+      "licenceHeldThroughChapter": "{licence}: through your occupation — {chapter} · no. {number}",
+      "licenceHeldThroughNational": "{licence}: through your occupation — no. {number}",
       "licencesTitle": "Licences",
-      "licencesLead": "Licences you hold in addition to your occupation — e.g. energy inspector. They appear on your showcase, and people looking for who can issue a document find you through them.",
+      "licencesLead": "Licences you hold in addition to your occupation — e.g. energy inspector or licensed electrical installer. They appear on your showcase and let people find you when they look for who can issue a document.",
       "licencesDoor": "Licences",
       "licencesDoorNone": "No licence declared.",
       "licencesDoorCount": "{count, plural, one {# declared licence} other {# declared licences}}",
@@ -1695,7 +1694,9 @@
       "licenceRejection": {
         "licence-number-missing": "Enter the licence's registration number — without it nobody can check it.",
         "licence-duplicate": "The same licence was declared twice.",
-        "licences-without-showcase": "Publish the showcase first — licences appear inside it."
+        "licences-without-showcase": "Publish the showcase first — licences appear inside it.",
+        "licence-chapter-missing": "Enter the regional unit that issued the licence.",
+        "licence-held-through-occupation": "You already hold this licence through your occupation."
       }
     },
     "directory": {
@@ -2220,24 +2221,40 @@
     },
     "barAssociation": {
       "name": "Bar Association",
-      "abbreviation": "Bar"
+      "abbreviation": "Bar",
+      "chapter": {
+        "label": "Bar association",
+        "placeholder": "e.g. Thessaloniki Bar"
+      }
     },
     "notaryAssociation": {
       "name": "Notarial Association",
-      "abbreviation": "Not."
+      "abbreviation": "Not.",
+      "chapter": {
+        "label": "Notaries association",
+        "placeholder": "e.g. Thessaloniki Notaries"
+      }
     },
     "regionalAuthority": {
       "name": "Regional Unit Development Directorate",
-      "abbreviation": "Reg."
+      "abbreviation": "Reg.",
+      "chapter": {
+        "label": "Regional unit",
+        "placeholder": "e.g. Regional Unit of Larissa"
+      }
     },
     "ypen": {
       "name": "Energy Inspectors Registry (Ministry of Environment)",
       "abbreviation": "YPEN"
-    }
+    },
+    "chapterHint": "Who issued the number. Without it, the number cannot be verified by anyone."
   },
   "licences": {
     "energyInspector": {
       "name": "Energy inspector"
+    },
+    "electricalInstaller": {
+      "name": "Licensed electrical installer"
     }
   },
   "listing": {

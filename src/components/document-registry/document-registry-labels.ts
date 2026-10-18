@@ -189,7 +189,8 @@ export const ISSUER_QUALIFICATION_LABEL_KEYS: Readonly<Record<IssuerQualificatio
   'civil-engineer-tei': `${K}issuer.qualification.civil-engineer-tei`,
   // Προσόν-άδεια ⇒ το ΟΝΟΜΑ ΤΗΣ ΑΔΕΙΑΣ, ένα κλειδί (`PROFESSIONAL_LICENCE_SPECS.nameKey` — άγκυρα ισότητας στο test).
   'energy-inspector-registered': 'property-market:licences.energyInspector.name',
-  'electrical-installer': `${K}issuer.qualification.electrical-installer`,
+  // ADR-915 §34: άδεια (Περιφερειακή Ενότητα), όχι ειδικότητα ⇒ το όνομα της άδειας, όπως ο επιθεωρητής.
+  'electrical-installer': 'property-market:licences.electricalInstaller.name',
 };
 
 /**
@@ -199,6 +200,7 @@ export const ISSUER_QUALIFICATION_LABEL_KEYS: Readonly<Record<IssuerQualificatio
  */
 export const LICENCE_REGISTRY_LABEL_KEYS: Readonly<Record<ProfessionalLicence, string>> = {
   'energy-inspector': 'property-market:registries.ypen.name',
+  'electrical-installer': 'property-market:registries.regionalAuthority.name',
 };
 
 /** Ένας μεταφραστής, όποιος κι αν είναι — το `t` της οθόνης ή το `createBundleTranslate` του διακομιστή (email, §28). */

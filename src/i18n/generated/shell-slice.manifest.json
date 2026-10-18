@@ -13,7 +13,7 @@
     "src/i18n/generated/routes/demands.el.json": "3c41547e2fe76dd07a2d8df26d28a52173cfbf1092d0bc182c78c567bd2dc8a7",
     "src/i18n/generated/routes/demands__demandId.el.json": "7d95c157ece8087fe485acdbdcba5f422d82828388ea5a9e5c11963e27005681",
     "src/i18n/generated/routes/demands__new.el.json": "c390254b9260d785611e1122559f64ed7b8c58a105b7ac65b82473967b293008",
-    "src/i18n/generated/routes/document-request.el.json": "338bf20a255b543d764c4de13e402154d7db86fbeebf0f95b0e1ba2608886101",
+    "src/i18n/generated/routes/document-request.el.json": "3fc30b5c3cce0660d1e8ee25b177af72c4d9d9ed87c2bfcdf05085e4becc18f7",
     "src/i18n/generated/routes/dossiers.el.json": "c57b6e5a4e4bf7a5348bb016115953d9fa3d612426865ddd7e86b824e70faa0a",
     "src/i18n/generated/routes/dossiers__dossierId.el.json": "ce0d6f7456040ae6e78100d1d0c9015dc21cd705b3212e0c48fad7fcff141315",
     "src/i18n/generated/routes/email__preferences__token.el.json": "b8eb64c11ff6698391ff1c979e04c414958183f8b946f7a9c62ce9d8d33da32a",
@@ -34,14 +34,14 @@
     "src/i18n/generated/routes/o__workspace__cases.el.json": "62e1b3378215c16e66a12632667ad61be33b59cc632e634dde0ffaf9763769d4",
     "src/i18n/generated/routes/o__workspace__cases__engagementId.el.json": "cb0565009bf6f7bec16cd93768e557804df81971abe3c5a23b7c050e9eb91ec3",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
-    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "e4eac6bfc39e99d64d1520dce01697c4c7d28502e7089b0a6dadcf2550fd81fe",
+    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "2da5c3445330ad5cb235b76244630a6dac7b3951733735abbb14cc075a83e43d",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "f2b0212cf0909081143453962ba0bfec2a47dc8753dc81a009ee34c12579b137",
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "2753c7edd9c05a17a65b15f3146177db8a27ca727df7b1f77d28fd1724f4fa6f",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "e1c5896ab910b7f5515ef0a3991a4daae3ba7fc776c6291815cfeaddb51e2398",
     "src/i18n/generated/routes/o__workspace__listings__mandates__requests.el.json": "3b685808152db56cfc0ce4d50912bcd6166e986921ebb92e601cbef9936c0a0b",
-    "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "b8f81ef88aea5123177a6d2615b8fb5710c05ef5d29acb3e1c1740d3ef955bfa",
+    "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "b03e81241290c68f5477873e0b46a5531ab5e604b19d161e58569305b1d76f1e",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__card.el.json": "df1448a2bb4c85fc26bfbdcc903c7df7d53eaecd1d97fdc03e01a17528acfbae",
-    "src/i18n/generated/routes/o__workspace__settings__agency-profile__licences.el.json": "4d278756a2478fd10c23a48c12efa636c218d8189a4e3f2607c84d9ae6738dc9",
+    "src/i18n/generated/routes/o__workspace__settings__agency-profile__licences.el.json": "325b5fc53f5957e1ef22fc03b8a3ecc2f02ce512cd89cb261b621941d3cf371f",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__registry.el.json": "c31ac607e41ec524cd78d412c71f24c321d5922d87c07166cd544a39ef06b213",
     "src/i18n/generated/routes/o__workspace__settings__brokerage.el.json": "debcbb4f81b54b13b2fd4218a808c207f838bf54216be5fd94a25a0133328d2b",
     "src/i18n/generated/routes/offers.el.json": "9bb55581ec319b22e1ed3f0c129711b788413d1e8ba9a2e0173802e2d5a4e817",
@@ -58,7 +58,7 @@
     "src/i18n/generated/routes/private-marketing-disclosure.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
     "src/i18n/generated/routes/private-marketing-disclosure__versions.el.json": "b5985d2511b93344b355342677c84641c2bc629c80ca0b367778c17afd7800b7",
     "src/i18n/generated/routes/private-marketing-disclosure__versions__version.el.json": "0b0f52262c8ead9f7c4c7a282fee6c540b128f8a9a5c78716d351fd4681a6db4",
-    "src/i18n/generated/routes/pro.el.json": "df2ccf3e31b1b62a4958022fb2c136a67d333c3cefc57f3951df2223d77f334b",
+    "src/i18n/generated/routes/pro.el.json": "284ea25f83ab1c5163cb96fd6ea227918f17db168b05f7533a93534f82191450",
     "src/i18n/generated/routes/pro__alias.el.json": "cab418d4b3c11cb463da7952d60e292c0f6cd99c64341b0b4e668dc79ebb646b",
     "src/i18n/generated/routes/profile.el.json": "24b5f25a2e330998e650126e7fb3ffc0452c89fcda2946634f21bd02b5b7dd95",
     "src/i18n/generated/routes/saved-listings.el.json": "7b13b8c74093929134a72cfd029aa8f474840f42c4a734f86b3b50181fa86eac",
@@ -72,7 +72,7 @@
     "src/i18n/generated/routes/tour-invite__token.el.json": "aeec8bc36081f1b5a8c49674c18a1a367f5d97d69bad1124f15f0a1349d110cf",
     "src/i18n/generated/routes/vendor__quote.el.json": "413f934a43a5be908bb20d0c0c0c92d312922631921b3363e9c49b3200b7a7ae",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "dde11d460ec83c2ee87cf42fd233b3a5300e85088d821902459f5fe752d4ec59",
+    "src/i18n/generated/shell-slice.el.json": "fa4148a620794ff96d444e0a9ce87e0500651f59635bc932717c3ecaa51e4534",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "generator": "scripts/generate-i18n-shell-slice.js",
@@ -151,7 +151,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "9d9f20f355adb2fc04c1856292c54fd6b46bcc5fb571168533f855643efac439",
+  "inputsSha256": "3ac23d3177f5891dbb04ce2aaac9e4d836e2c57f715dbcf3c782fd8f5d9084b9",
   "languages": [
     "el"
   ],
@@ -1857,7 +1857,6 @@
             "issuer.qualification.civil-engineer",
             "issuer.qualification.civil-engineer-tei",
             "issuer.qualification.civil-sub-engineer",
-            "issuer.qualification.electrical-installer",
             "issuer.qualification.spatial-planner",
             "issuer.qualification.surveyor-engineer",
             "issuer.registered",
@@ -1935,7 +1934,9 @@
         },
         "property-market": {
           "keys": [
+            "licences.electricalInstaller.name",
             "licences.energyInspector.name",
+            "registries.regionalAuthority.name",
             "registries.ypen.name"
           ],
           "prefixes": [],
@@ -5462,7 +5463,6 @@
             "issuer.qualification.civil-engineer",
             "issuer.qualification.civil-engineer-tei",
             "issuer.qualification.civil-sub-engineer",
-            "issuer.qualification.electrical-installer",
             "issuer.qualification.spatial-planner",
             "issuer.qualification.surveyor-engineer",
             "issuer.registered",
@@ -5555,7 +5555,9 @@
         },
         "property-market": {
           "keys": [
+            "licences.electricalInstaller.name",
             "licences.energyInspector.name",
+            "registries.regionalAuthority.name",
             "registries.ypen.name"
           ],
           "prefixes": [],
@@ -6601,6 +6603,7 @@
       "wants": {
         "property-market": {
           "keys": [
+            "licences.electricalInstaller.name",
             "licences.energyInspector.name",
             "mandate.showcase.cardBackToShowcase",
             "mandate.showcase.cardSaving",
@@ -8857,7 +8860,6 @@
             "issuer.qualification.civil-engineer",
             "issuer.qualification.civil-engineer-tei",
             "issuer.qualification.civil-sub-engineer",
-            "issuer.qualification.electrical-installer",
             "issuer.qualification.spatial-planner",
             "issuer.qualification.surveyor-engineer",
             "issuer.registered",
@@ -8875,6 +8877,7 @@
         },
         "property-market": {
           "keys": [
+            "licences.electricalInstaller.name",
             "licences.energyInspector.name",
             "mandate.credibility.claim.chapter",
             "mandate.credibility.claim.declared",
@@ -9129,6 +9132,7 @@
           "keys": [
             "contact.first.cta",
             "contact.first.ctaPro",
+            "licences.electricalInstaller.name",
             "licences.energyInspector.name",
             "mandate.credibility.claim.chapter",
             "mandate.credibility.claim.declared",
@@ -10436,6 +10440,7 @@
             "interestCheck.entry.hint",
             "interestCheck.entry.label",
             "interestCheck.submit",
+            "licences.electricalInstaller.name",
             "licences.energyInspector.name",
             "mandate.credibility.claim.chapter",
             "mandate.credibility.claim.declared",
@@ -11142,8 +11147,8 @@
     "src/components/search/GlobalSearchDialog.tsx"
   ],
   "stats": {
-    "matchedKeys": 248,
-    "sliceBytes": 774446
+    "matchedKeys": 249,
+    "sliceBytes": 773968
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -16430,6 +16435,7 @@
         "jobs.procurement.label",
         "jobs.site.label",
         "landingHeroes",
+        "licences.electricalInstaller.name",
         "licences.energyInspector.name",
         "mandate.credibility.claim.chapter",
         "mandate.credibility.claim.declared",

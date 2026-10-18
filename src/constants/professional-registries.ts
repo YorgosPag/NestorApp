@@ -210,6 +210,45 @@ export const REGISTRY_AUTHORITY_PRESENTATION: Readonly<
   ypen: { nameKey: `${R}.ypen.name`, abbreviationKey: `${R}.ypen.abbreviation` },
 } as const;
 
+/**
+ * Πώς ονομάζεται ο **εκδότης** μιας αρχής με παραρτήματα — ετικέτα, υπόδειξη και παράδειγμα του πεδίου «ποιος εξέδωσε
+ * τον αριθμό» *(ADR-915 §34)*.
+ *
+ * 🏆 **Πρακτική LinkedIn «Issuing organization · Ex: Microsoft» / Angi «License · State»**: σύντομη ετικέτα **ανά είδος**
+ * και ένα **παράδειγμα** — ΟΧΙ μακριά υπόδειξη ανά αρχή. Η υπόδειξη λέει την **αρχή** («χωρίς εκδότη ο αριθμός δεν
+ * επαληθεύεται»), που είναι **ίδια** για όλες ⇒ **ένα** κλειδί (`chapterHint`), όχι τρία αντίγραφα της ίδιας πρότασης.
+ *
+ * 🔑 **Ανά αρχή, όχι ένα γενικό «Εκδότης»**: ο δικηγόρος γράφει *σύλλογο* («ΔΣΘ»), ο ηλεκτρολόγος *Περιφερειακή
+ * Ενότητα* («ΠΕ Θεσσαλονίκης»). Ένα κοινό «π.χ. ΔΣΘ» έλεγε στον ηλεκτρολόγο να γράψει δικηγορικό σύλλογο.
+ * 🔑 **Ολικός** σε `ChapteredRegistryId` — νέα αρχή με παραρτήματα **σπάει το build** μέχρι να πει πώς λέγεται ο εκδότης.
+ * Τον διαβάζουν το πεδίο ειδικότητας **και** το πεδίο άδειας της βιτρίνας — ένα σημείο.
+ */
+export interface ChapterPresentation {
+  readonly labelKey: string;
+  readonly hintKey: string;
+  readonly placeholderKey: string;
+}
+
+// ⚠️ Κυριολεκτικά κλειδιά, χωρίς βοηθό που τα συνθέτει: ο τεμαχιστής του CHECK 3.34 λύνει `t(TABLE[x])` μόνο όταν η
+//    τιμή φαίνεται στατικά στο ίδιο module (ίδιος λόγος με τον πίνακα παρουσίασης παραπάνω).
+export const CHAPTER_PRESENTATION: Readonly<Record<ChapteredRegistryId, ChapterPresentation>> = {
+  'bar-association': {
+    labelKey: `${R}.barAssociation.chapter.label`,
+    hintKey: `${R}.chapterHint`,
+    placeholderKey: `${R}.barAssociation.chapter.placeholder`,
+  },
+  'notary-association': {
+    labelKey: `${R}.notaryAssociation.chapter.label`,
+    hintKey: `${R}.chapterHint`,
+    placeholderKey: `${R}.notaryAssociation.chapter.placeholder`,
+  },
+  'regional-authority': {
+    labelKey: `${R}.regionalAuthority.chapter.label`,
+    hintKey: `${R}.chapterHint`,
+    placeholderKey: `${R}.regionalAuthority.chapter.placeholder`,
+  },
+};
+
 // =============================================================================
 // ΟΙ ΦΡΟΥΡΟΙ — «είναι αυτό που λέει ότι είναι;»
 // =============================================================================

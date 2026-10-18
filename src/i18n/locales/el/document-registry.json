@@ -83,8 +83,7 @@
       "surveyor-engineer": "Αγρονόμος τοπογράφος μηχανικός",
       "spatial-planner": "Μηχανικός χωροταξίας-πολεοδομίας",
       "civil-sub-engineer": "Πολιτικός υπομηχανικός",
-      "civil-engineer-tei": "Πολιτικός μηχανικός ΤΕΙ",
-      "electrical-installer": "Ηλεκτρολόγος εγκαταστάτης με άδεια Περιφέρειας"
+      "civil-engineer-tei": "Πολιτικός μηχανικός ΤΕΙ"
     },
     "authority": {
       "aade": "ΑΑΔΕ (myAADE)",

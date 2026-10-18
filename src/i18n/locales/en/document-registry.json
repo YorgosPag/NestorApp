@@ -83,8 +83,7 @@
       "surveyor-engineer": "Surveying engineer",
       "spatial-planner": "Spatial planning engineer",
       "civil-sub-engineer": "Civil sub-engineer",
-      "civil-engineer-tei": "Civil engineer (TEI)",
-      "electrical-installer": "Licensed electrical installer (regional licence)"
+      "civil-engineer-tei": "Civil engineer (TEI)"
     },
     "authority": {
       "aade": "AADE (myAADE)",
