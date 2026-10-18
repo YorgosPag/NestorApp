@@ -42,7 +42,7 @@ const Card = React.forwardRef<
   return (
     <Comp
       ref={ref}
-
+      {...CARD_SURFACE_MARKER}
       className={cn(
         `${quick.card} bg-card text-card-foreground shadow-sm overflow-clip min-w-0`,
         className

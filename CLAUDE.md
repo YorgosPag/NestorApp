@@ -307,7 +307,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ### Pre-commit checks (summary):
 
 <!-- BEGIN GENERATED GATE INDEX — ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ ΣΤΟ ΧΕΡΙ. Πηγή: docs/gates/3.NN.md · αναπαραγωγή: npm run gate-index:generate
-     fingerprint: sha256:c35d244cb87803563a410eb8d1932bc119b29b400900436efd41f6faeb98af66 -->
+     fingerprint: sha256:df46ad3598d488bf02667413563cac1a3a161301ce6596c82e1b02bdc1c1790d -->
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |
@@ -354,7 +354,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.60** | **Πύλη εμβέλειας χώρου** (ADR-787) — «ζει αυτή η σελίδα πίσω από το **πρόθεμα χώρου**, και αν όχι, το είπε κάποιος **με λόγο**;» · `npm run test:workspace-scope` · `SKIP_WORKSPACE_SCOPE=1` · 📘 `docs/gates/3.60.md` | 🔴 RATCHET (Κ1) + ⛔ ZERO-TOL (Κ2+Κ3) | `.workspace-scope-baseline.json` |
 | **3.61** | **Πύλη του συνόρου πλοήγησης** (ADR-787) — «ζητά αυτό το αρχείο την πλοήγηση από το **ΣΥΝΟΡΟ** (`@/lib/workspace/navigation`), και αν όχι, το είπε κάποιος **με λόγο**;» · `npm run test:navigation-boundary` · `SKIP_NAVIGATION_BOUNDARY=1` · 📘 `docs/gates/3.61.md` | ⛔ ZERO TOL | — |
 | **3.62** | **Πύλη δημόσιας επιφάνειας** (ADR-796) — «ζητά κάποιος **από έξω** ένα σύμβολο του `dxf-viewer` που **κανείς δεν δήλωσε δημόσιο**;» · `npm run test:public-surface` · `SKIP_PUBLIC_SURFACE=1` · 📘 `docs/gates/3.62.md` | 🔴 RATCHET | `.public-surface-baseline.json` |
-| **3.63** | **Πύλη του διαδρόμου του κελύφους** (ADR-797) — «δηλώνει κάποιος κενό που **δεν του ανήκει**, και ξέρει κάποιος ποιες σελίδες βγήκαν από τον διάδρομο;» · `npm run test:shell-surface` · `SKIP_SHELL_SURFACE=1` · 📘 `docs/gates/3.63.md` | ⛔ ZERO-TOL (Κ1+Κ3+Κ4+Υ1+Υ2+Υ3+Υ5) + 🔴 RATCHET (Κ2+Κ5+Υ4) | `.shell-surface-baseline.json` |
+| **3.63** | **Πύλη του διαδρόμου του κελύφους** (ADR-797) — «δηλώνει κάποιος κενό που **δεν του ανήκει**, και ξέρει κάποιος ποιες σελίδες βγήκαν από τον διάδρομο;» · `npm run test:shell-surface` · `SKIP_SHELL_SURFACE=1` · 📘 `docs/gates/3.63.md` | ⛔ ZERO-TOL (Κ1+Κ3+Κ4+Κ7+Υ1+Υ2+Υ3+Υ5) + 🔴 RATCHET (Κ2+Κ5+Υ4) | `.shell-surface-baseline.json` |
 | **3.64** | **Πύλη της βαθμίδας μέτρησης κειμένου** (ADR-799) — «μέτρησε αυτή η σουίτα κείμενο σε βαθμίδα που **ΔΕΝ ΒΛΕΠΕΙ** ό,τι της ζητήθηκε, και το ξέρει κάποιος;» · `npm run test:text-measure-tier` · `SKIP_TEXT_MEASURE_TIER=1` · 📘 `docs/gates/3.64.md` | 🔴 RATCHET + ⛔ ZERO-TOL | `.text-measure-tier-baseline.json` |
 | **3.65** | **Πύλη της μίας έκδοσης** (ADR-800) — «υπάρχει **ΕΝΑ** σημείο δήλωσης και **ΜΙΑ** εγκατεστημένη έκδοση για κάθε όνομα πακέτου μέσα στο workspace;» · `npm run test:one-version` · `SKIP_ONE_VERSION=1` · 📘 `docs/gates/3.65.md` | ⛔ ZERO TOL | — |
 | **3.66** | **Πύλη του μητρώου πυλών** (ADR-802) — «είναι κάθε πύλη που **ΤΡΕΧΕΙ** γραμμένη σε αυτό το αρχείο, και κάθε γραμμή αυτού του πίνακα πύλη που **ΤΡΕΧΕΙ**;» · `npm run test:gate-inventory` · `SKIP_GATE_INVENTORY=1` · 📘 `docs/gates/3.66.md` | 🔴 RATCHET + ⛔ ZERO-TOL | `.gate-inventory-baseline.json` |
