@@ -18,6 +18,7 @@ const fromText: DocumentFacts = {
   kind: 'energy-certificate',
   issuedOn: '2026-07-16',
   printedValidUntil: '2036-07-16',
+  classification: null,
   source: { kind: 'document-text', reader: 'pea-text' },
   recordedBy: 'u1',
   recordedAt: '2026-10-14T10:00:00.000Z',
@@ -26,6 +27,7 @@ const fromText: DocumentFacts = {
 const attested: DocumentFacts = {
   ...fromText,
   printedValidUntil: null,
+  classification: null,
   source: { kind: 'attested', via: 'conveyance-review' },
   recordedBy: 'u2',
 };
@@ -86,6 +88,34 @@ describe('Δ2 — η ιεραρχία προέλευσης (ο γραφέας ρ
   it('νέα ανάγνωση των ΙΔΙΩΝ bytes με άλλο αποτέλεσμα (νεότερος αναγνώστης) ⇒ write', () => {
     expect(documentFactsVerdict(fromText, { ...fromText, printedValidUntil: '2036-07-15' })).toBe('write');
   });
+
+  // ADR-915 §33 Δ3 — οι διαδρομές δήλωσης έχουν βάρος: η «Συμπλήρωση στοιχείων» του μητρώου είναι η ελαφρύτερη.
+  const declared: DocumentFacts = { ...attested, issuedOn: '2026-08-01', source: { kind: 'attested', via: 'registry-declaration' } };
+
+  it('⛔ δήλωση μητρώου πάνω σε έγκριση ελεγκτή μεταβίβασης ⇒ outranked (η έγκριση δεν σβήνεται σιωπηλά)', () => {
+    expect(documentFactsVerdict(attested, declared)).toBe('outranked');
+  });
+
+  it('⛔ δήλωση μητρώου πάνω σε ανάγνωση του εγγράφου ⇒ outranked', () => {
+    expect(documentFactsVerdict(fromText, declared)).toBe('outranked');
+  });
+
+  it('έγκριση ελεγκτή πάνω σε δήλωση μητρώου ⇒ write (η βαρύτερη μαρτυρία κερδίζει)', () => {
+    expect(documentFactsVerdict(declared, attested)).toBe('write');
+  });
+
+  it('διόρθωση δήλωσης μητρώου από δήλωση μητρώου ⇒ write · ίδια ⇒ already-recorded', () => {
+    expect(documentFactsVerdict(declared, { ...declared, issuedOn: '2026-08-02' })).toBe('write');
+    expect(documentFactsVerdict(declared, { ...declared, recordedBy: 'u9' })).toBe('already-recorded');
+  });
+
+  it('ανάγνωση πάνω σε δήλωση μητρώου ⇒ write (το έγγραφο κερδίζει κάθε δήλωση)', () => {
+    expect(documentFactsVerdict(declared, fromText)).toBe('write');
+  });
+
+  it('ο αναγνώστης δέχεται την προέλευση «registry-declaration»', () => {
+    expect(readDocumentFacts(declared)).toEqual(declared);
+  });
 });
 
 describe('Δ3 — η γέφυρα προς τη λήξη (Α4: η νωρίτερη)', () => {
@@ -136,7 +166,7 @@ describe('Δ4 — Α3: το αρχείο κερδίζει, ανά πεδίο (η
 describe('Δ5 — η προβολή δεν κουβαλά «ποιος/πότε»', () => {
   it('🔒 κανένα recordedBy/recordedAt σε ό,τι ταξιδεύει σε τρίτους', () => {
     const view = readDocumentFactsView(fromText);
-    expect(view).toEqual({ kind: fromText.kind, issuedOn: fromText.issuedOn, printedValidUntil: fromText.printedValidUntil, source: fromText.source });
+    expect(view).toEqual({ kind: fromText.kind, issuedOn: fromText.issuedOn, printedValidUntil: fromText.printedValidUntil, classification: null, source: fromText.source });
     expect(view).not.toHaveProperty('recordedBy');
     expect(readDocumentFactsView(undefined)).toBeNull();
   });

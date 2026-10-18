@@ -30,7 +30,11 @@
  */
 
 import { addDaysToDateKey } from '@/lib/calendar/date-key';
-import { documentKindSpec, type DocumentKind } from '@/config/document-validity/document-validity';
+import {
+  documentKindSpec,
+  type DocumentClassification,
+  type DocumentKind,
+} from '@/config/document-validity/document-validity';
 import type { DocumentExpiry } from '@/lib/document-validity/document-expiry';
 import { documentFactsExpiry, type DocumentFactsSource } from '@/lib/document-validity/document-facts';
 import {
@@ -38,6 +42,7 @@ import {
   registryGroupKeyOf,
   requirementHolders,
   trackedDocumentOf,
+  withoutYieldingUndeclared,
 } from '@/lib/document-validity/document-registry-holders';
 import {
   absentDependentsOf,
@@ -92,7 +97,12 @@ export interface RegistryDocument {
   readonly origin: RegistryDocumentOrigin;
   readonly issuedOn: string | null;
   readonly printedValidUntil: string | null;
-  /** Προέλευση των γεγονότων· `null` για δήλωση ακινήτου. */
+  /** Η κατάταξη του εκδότη (ADR-915 §32)· `null` = το είδος δεν κατατάσσεται ή δεν ξέρουμε. */
+  readonly classification: DocumentClassification | null;
+  /**
+   * Προέλευση των γεγονότων· `null` για δήλωση ακινήτου, για έγκριση χωρίς γεγονότα, και (ADR-915 §33) για **αρχείο
+   * χωρίς στοιχεία**: θέση που υπόσχεται το είδος, κανείς δεν δήλωσε ή διάβασε ημερομηνίες ⇒ `expiry-unknown`.
+   */
   readonly source: DocumentFactsSource | null;
   /** Το ακίνητο ονομάζει **αυτό** το αρχείο ως πηγή του μπλοκ του (`sourceFileId`). */
   readonly pinned: boolean;
@@ -273,7 +283,8 @@ function tallyOf(rows: readonly RegistryRow[]): Record<RegistryRowState, number>
  * επείγοντος, με τις μετρήσεις του. Κάθε απαίτηση μετρά κάτω από **ακριβώς μία** γραμμή.
  */
 export function documentRegistry({ documents, requirements, asOf }: DocumentRegistryInput): DocumentRegistry {
-  const all = [...documents, ...attestedDocumentsOf(documents, requirements)];
+  const own = withoutYieldingUndeclared(documents, requirements);
+  const all = [...own, ...attestedDocumentsOf(own, requirements)];
   const current = currentOfEach(all);
   const { held, unheld } = requirementHolders(all, current, requirements);
   const documentRows = all.map((document) =>

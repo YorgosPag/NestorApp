@@ -304,3 +304,32 @@ describe('Φ4δ Ε9 — Δ3: ΠΕΑ επιπέδου έργου, ένας κάτ
     for (const requirement of requirements) expect(held.filter((r) => r === requirement)).toHaveLength(1);
   });
 });
+
+describe('ADR-915 §33 — αρχείο ΧΩΡΙΣ στοιχεία (θέση που υπόσχεται το είδος, κανένα γεγονός)', () => {
+  const undeclared = (id: string, extra: Partial<RegistryDocument> = {}): RegistryDocument =>
+    pea(id, null, { source: null, ...extra });
+  const approved = (fileId: string, issuedOn: string) => ({ attestation: { fileId, issuedOn, printedValidUntil: null } });
+
+  it('γραμμή `expiry-unknown` που ΚΡΑΤΑ την απαίτηση — φαίνεται, και ΔΕΝ γίνεται ψευδές «λείπει»', () => {
+    const { rows } = registry([undeclared('u1')], [caseOn('c1', 'p1')]);
+    expect(rows.map((row) => [registryRowIdOf(row), row.state])).toEqual([['u1', 'expiry-unknown']]);
+    expect(matchesRegistryFilter(rows[0], 'expiry-unknown', ASOF)).toBe(true);
+  });
+
+  it('Δ5 — αρχείο χωρίς στοιχεία που ΕΝΕΚΡΙΝΕ ελεγκτής ⇒ υποχωρεί: μένει η γραμμή έγκρισης ΜΕ την ημερομηνία του ελεγκτή', () => {
+    const { rows } = registry([undeclared('f-review')], [caseOn('c1', 'p1', approved('f-review', '2016-01-10'))]);
+    expect(ids(rows)).toEqual(['attested:c1:energy-certificate']);
+    expect([rows[0].state, asDocument(rows[0]).expiry.expiresOn]).toEqual(['expired', '2026-01-10']);
+  });
+
+  it('Δ5 μόνο για αρχεία ΧΩΡΙΣ στοιχεία: εγκεκριμένο αρχείο ΜΕ γεγονότα μένει δικό του (Ε9, όπως πριν)', () => {
+    const { rows } = registry([pea('f-read', '2024-01-01')], [caseOn('c1', 'p1', approved('f-read', '2024-01-01'))]);
+    expect(ids(rows)).toEqual(['f-read']);
+  });
+
+  it('δίπλα σε έγγραφο με ημερομηνία ⇒ αντικατεστημένο (άγνωστη έκδοση = παλαιότερη), ποτέ «έληξε»', () => {
+    const { rows } = registry([undeclared('u1'), pea('dated', '2024-01-01')]);
+    expect(byId(rows, 'u1')?.state).toBe('superseded');
+    expect(byId(rows, 'dated')?.state).toBe('valid');
+  });
+});

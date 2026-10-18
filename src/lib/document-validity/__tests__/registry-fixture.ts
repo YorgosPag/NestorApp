@@ -79,12 +79,12 @@ export function sole(contactId: string): ObligorLead {
   return { kind: 'designated', contactId, basis: 'sole', sharePct: null, staleContactId: null };
 }
 
-const NO_LEAD = { obligorLead: null, ownerShares: {} } as const;
+const NO_LEAD = { obligorLead: null, ownerShares: {}, propertyClass: null } as const;
 
 const NAMES: Pick<DocumentRegistryResponse, 'properties' | 'files' | 'people'> = {
   properties: {
     // ADR-915 §24 — μόνο το p1 έχει αποδεδειγμένο δήμο: το κενό p6 δείχνει τον κατάλογο ΧΩΡΙΣ περιοχή.
-    p1: { name: 'Συνθετικό Α1', scope: 'property', areaId: FIXTURE_AREA_ID, ownerContactIds: ['cont_alpha'], obligorLead: sole('cont_alpha'), ownerShares: {} },
+    p1: { name: 'Συνθετικό Α1', scope: 'property', areaId: FIXTURE_AREA_ID, ownerContactIds: ['cont_alpha'], obligorLead: sole('cont_alpha'), ownerShares: {}, propertyClass: 'residential' },
     // ADR-915 §25 — p2: ρωτήθηκε, κανείς · p3/p4/p5: δεν ρωτήθηκε (μόνο ο ρόλος).
     p2: { name: 'Συνθετικό Β2', scope: 'property', areaId: null, ownerContactIds: [], ...NO_LEAD },
     p3: { name: null, scope: 'property', areaId: null, ownerContactIds: null, ...NO_LEAD },
@@ -95,13 +95,13 @@ const NAMES: Pick<DocumentRegistryResponse, 'properties' | 'files' | 'people'> =
       name: 'Συνθετικό Ζ6', scope: 'property', areaId: null,
       ownerContactIds: ['cont_gone', 'cont_unnamed', 'cont_alpha', 'cont_gamma', 'cont_delta'],
       // ADR-915 §26 — κανένα μερίδιο, κανένας κύριος πωλητής ⇒ κανείς υπεύθυνος (ποτέ «ο πρώτος της λίστας»).
-      obligorLead: { kind: 'undesignated', reason: 'unknown-shares', staleContactId: null }, ownerShares: {},
+      obligorLead: { kind: 'undesignated', reason: 'unknown-shares', staleContactId: null }, ownerShares: {}, propertyClass: null,
     },
-    ownp_7: { name: 'Συνθετική εντολή Η7', scope: 'owner-property', areaId: null, ownerContactIds: ['cont_client'], obligorLead: sole('cont_client'), ownerShares: {} },
+    ownp_7: { name: 'Συνθετική εντολή Η7', scope: 'owner-property', areaId: null, ownerContactIds: ['cont_client'], obligorLead: sole('cont_client'), ownerShares: {}, propertyClass: null },
   },
   files: {
-    'f-expired': { name: 'synthetic-expired.pdf' }, 'f-expiring': { name: 'synthetic-expiring.pdf' }, 'f-soon': { name: 'synthetic-soon.pdf' },
-    'f-unknown': { name: null }, 'f-valid': { name: 'synthetic-new.pdf' }, 'f-old': { name: 'synthetic-old.pdf' },
+    'f-expired': { name: 'synthetic-expired.pdf', storagePath: null }, 'f-expiring': { name: 'synthetic-expiring.pdf', storagePath: null }, 'f-soon': { name: 'synthetic-soon.pdf', storagePath: null },
+    'f-unknown': { name: null, storagePath: null }, 'f-valid': { name: 'synthetic-new.pdf', storagePath: null }, 'f-old': { name: 'synthetic-old.pdf', storagePath: null },
   },
   // ADR-915 §25 — το `cont_gone` λείπει επίτηδες: ξένη ή διαγραμμένη επαφή.
   people: {

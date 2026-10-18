@@ -24,6 +24,8 @@ import { isOneOf, isPlainRecord, trimmedStringOrNull as text } from '@/lib/type-
 import {
   DOCUMENT_KINDS,
   documentKindSpec,
+  isClassificationOf,
+  type DocumentClassification,
   type DocumentKind,
 } from '@/config/document-validity/document-validity';
 import { documentExpiry, type DocumentExpiry } from '@/lib/document-validity/document-expiry';
@@ -40,8 +42,12 @@ export const DOCUMENT_TEXT_READERS = [
 ] as const;
 export type DocumentTextReader = (typeof DOCUMENT_TEXT_READERS)[number];
 
-/** Οι διαδρομές από τις οποίες δηλώνει άνθρωπος. Κλειστό σύνολο. */
-export const DOCUMENT_ATTESTATION_PATHS = ['conveyance-review'] as const;
+/**
+ * Οι διαδρομές από τις οποίες δηλώνει άνθρωπος. Κλειστό σύνολο, **σε σειρά βάρους** (βαρύτερη πρώτη — ADR-915 §33):
+ * - `conveyance-review`    — ο ελεγκτής μεταβίβασης ενέκρινε το έγγραφο μέσα σε νομική διαδικασία·
+ * - `registry-declaration` — «Συμπλήρωση στοιχείων» από το μητρώο λήξεων: πληκτρολόγηση χωρίς διαδικασία ελέγχου.
+ */
+export const DOCUMENT_ATTESTATION_PATHS = ['conveyance-review', 'registry-declaration'] as const;
 export type DocumentAttestationPath = (typeof DOCUMENT_ATTESTATION_PATHS)[number];
 
 /** Από πού ήρθαν τα γεγονότα — και άρα πόσο βαραίνουν. */
@@ -55,6 +61,11 @@ export interface DocumentFacts {
   readonly issuedOn: string | null;
   /** Ό,τι **τυπώνει** το έγγραφο ως λήξη (`YYYY-MM-DD`) — ίδιο όνομα με το `DocumentExpiryInput` (Α4). */
   readonly printedValidUntil: string | null;
+  /**
+   * Η κατάταξη που **γράφει ο εκδότης** πάνω στο έγγραφο (ADR-915 §32 — π.χ. κατηγορία Α/Β/Γ της ΥΔΕ). `null` = το είδος
+   * δεν κατατάσσεται, ή δεν ξέρουμε. Τιμή εκτός του λεξιλογίου του είδους (`DOCUMENT_CLASSIFICATIONS`) ⇒ `null`.
+   */
+  readonly classification: DocumentClassification | null;
   readonly source: DocumentFactsSource;
   /** `uid` ανθρώπου ή ονομασμένος αυτοματισμός (`system:…`). */
   readonly recordedBy: string;
@@ -99,7 +110,9 @@ export function readDocumentFacts(raw: unknown): DocumentFacts | null {
   const issuedOn = dateOrNull(raw.issuedOn);
   const printed = dateOrNull(raw.printedValidUntil);
   const printedValidUntil = printed !== null && issuedOn !== null && printed < issuedOn ? null : printed;
-  return { kind, issuedOn, printedValidUntil, source, recordedBy, recordedAt };
+  // Πριν από την §32 κανένα αρχείο δεν είχε το πεδίο ⇒ απουσία = `null`, ποτέ απόρριψη των υπόλοιπων γεγονότων.
+  const classification = isClassificationOf(kind, raw.classification) ? raw.classification : null;
+  return { kind, issuedOn, printedValidUntil, classification, source, recordedBy, recordedAt };
 }
 
 // =============================================================================
@@ -125,8 +138,12 @@ export function sameDocumentFacts(a: DocumentFacts, b: DocumentFacts): boolean {
   return a.kind === b.kind
     && a.issuedOn === b.issuedOn
     && a.printedValidUntil === b.printedValidUntil
+    && a.classification === b.classification
     && sameSource(a.source, b.source);
 }
+
+/** Το βάρος μιας διαδρομής δήλωσης — η θέση της στο {@link DOCUMENT_ATTESTATION_PATHS} (μικρότερο = βαρύτερο). */
+const attestationWeight = (via: DocumentAttestationPath): number => DOCUMENT_ATTESTATION_PATHS.indexOf(via);
 
 /**
  * Γράφεται το `incoming` πάνω στο `stored`;
@@ -135,13 +152,17 @@ export function sameDocumentFacts(a: DocumentFacts, b: DocumentFacts): boolean {
  *   ίδια γεγονότα                         ⇒ already-recorded   (ιδεμπότητα)
  *   δήλωση ανθρώπου πάνω σε ανάγνωση      ⇒ outranked          (το έγγραφο λέει άλλο· δεν σβήνεται)
  *   ανάγνωση πάνω σε οτιδήποτε             ⇒ write              (τα bytes είναι αμετάβλητα ⇒ νεότερος αναγνώστης)
- *   δήλωση πάνω σε δήλωση                 ⇒ write              (διόρθωση ανθρώπου· το ημερολόγιο την κρατά)
+ *   δήλωση πάνω σε ΒΑΡΥΤΕΡΗ δήλωση        ⇒ outranked          (ADR-915 §33: το μητρώο δεν σβήνει έγκριση ελεγκτή)
+ *   δήλωση πάνω σε ίση ή ελαφρύτερη       ⇒ write              (διόρθωση ανθρώπου· το ημερολόγιο την κρατά)
+ *
+ * 🔑 Η κρίση τρέχει **μέσα** στη συναλλαγή του ΕΝΟΣ γραφέα — καμία προ-ανάγνωση στον καλούντα, κανένας αγώνας.
  */
 export function documentFactsVerdict(stored: DocumentFacts | null, incoming: DocumentFacts): DocumentFactsVerdict {
   if (stored === null) return 'write';
   if (sameDocumentFacts(stored, incoming)) return 'already-recorded';
-  if (incoming.source.kind === 'attested' && stored.source.kind === 'document-text') return 'outranked';
-  return 'write';
+  if (incoming.source.kind === 'document-text') return 'write';
+  if (stored.source.kind === 'document-text') return 'outranked';
+  return attestationWeight(incoming.source.via) > attestationWeight(stored.source.via) ? 'outranked' : 'write';
 }
 
 // =============================================================================
@@ -149,7 +170,8 @@ export function documentFactsVerdict(stored: DocumentFacts | null, incoming: Doc
 // =============================================================================
 
 /** Ό,τι χρειάζεται ο υπολογισμός λήξης — χωρίς το «ποιος/πότε». */
-type ExpiryFacts = Pick<DocumentFacts, 'kind' | 'issuedOn' | 'printedValidUntil'>;
+type ExpiryFacts = Pick<DocumentFacts, 'kind' | 'issuedOn' | 'printedValidUntil'> &
+  Partial<Pick<DocumentFacts, 'classification'>>;
 
 /** Η ισχύουσα λήξη των γεγονότων — κανόνας του είδους + τυπωμένη, η νωρίτερη (ο ΕΝΑΣ υπολογισμός της Φ1). */
 export function documentFactsExpiry(facts: ExpiryFacts): DocumentExpiry {
@@ -157,6 +179,7 @@ export function documentFactsExpiry(facts: ExpiryFacts): DocumentExpiry {
     rule: documentKindSpec(facts.kind).rule,
     issuedOn: facts.issuedOn,
     printedValidUntil: facts.printedValidUntil,
+    classification: facts.classification ?? null,
   });
 }
 
@@ -176,6 +199,7 @@ export function resolvedDocumentExpiry(
     kind,
     issuedOn: own?.issuedOn ?? fallbackIssuedOn,
     printedValidUntil: own?.printedValidUntil ?? fallbackPrintedValidUntil,
+    classification: own?.classification ?? null,
   });
 }
 
@@ -191,7 +215,8 @@ export type DocumentFactsView = Omit<DocumentFacts, 'recordedBy' | 'recordedAt'>
 
 export function documentFactsView(facts: DocumentFacts | null): DocumentFactsView | null {
   if (facts === null) return null;
-  return { kind: facts.kind, issuedOn: facts.issuedOn, printedValidUntil: facts.printedValidUntil, source: facts.source };
+  const { kind, issuedOn, printedValidUntil, classification, source } = facts;
+  return { kind, issuedOn, printedValidUntil, classification, source };
 }
 
 /** Το ωμό πεδίο ενός αρχείου → η προβολή, μέσω του ΕΝΟΣ ανεκτικού αναγνώστη. */
