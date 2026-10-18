@@ -100,6 +100,7 @@ const {
   OUT_OF_FLOW,
 } = require('./lib/shell-surface/scan');
 const { findMeasureColumnGaps } = require('./lib/shell-surface/measure-gap');
+const { findNarrowBleedFiles } = require('./lib/shell-surface/narrow-bleed');
 
 const REPO = path.resolve(__dirname, '..');
 const BASELINE = path.join(REPO, '.shell-surface-baseline.json');
@@ -187,7 +188,15 @@ function readRegistry() {
     needsReason(entry, group);
   }
 
-  return { fullBleed, withoutCorridor, viewportLocked, withoutFrame };
+  // ⛔ Κ7 — bleed ΜΟΝΟ στο στενό (ADR-797 · ADR-912 §12.17): κλειδί = το ΑΡΧΕΙΟ που το γράφει (η δήλωση είναι βαθιά
+  //    και υπό συνθήκη — καμία διαδρομή δεν τη «φοράει»). Λόγος ΚΑΙ μέτρηση υποχρεωτικά, όπως στο `fullBleed`.
+  const narrowBleed = raw.narrowBleed || {};
+  for (const [file, entry] of Object.entries(narrowBleed)) {
+    if (file.startsWith('$')) continue;
+    needsReason(entry, file);
+  }
+
+  return { fullBleed, withoutCorridor, viewportLocked, withoutFrame, narrowBleed };
 }
 
 /** Το κείμενο ενός αρχείου χωρίς σχόλια, ή `null` αν δεν υπάρχει. */
@@ -535,6 +544,23 @@ function measure() {
       `«${hit.klass}» σε πλέγμα μέτρου — τρεις στήλες ⇒ δύο column-gaps που στο κινητό ΞΕΠΕΡΝΟΥΝ την οθόνη· γράψε gap-y-*`);
   }
 
+  // ⛔ Κ7 — bleed ΜΟΝΟ στο στενό: κλειστό σύνολο ΚΑΙ προς τις δύο κατευθύνσεις (ADR-797 · ADR-912 §12.17).
+  const narrowBleedFiles = findNarrowBleedFiles(REPO);
+  for (const file of narrowBleedFiles) {
+    declarations.push(`narrow:${file}`);
+    if (!registry.narrowBleed[file]) {
+      flag(file, 'undeclared-narrow-bleed', file,
+        `δηλώνει data-shell-bleed χωρίς γραμμή στο ${relative(REGISTRY)} → narrowBleed`);
+    }
+  }
+  for (const file of Object.keys(registry.narrowBleed)) {
+    if (file.startsWith('$')) continue;
+    if (!narrowBleedFiles.includes(file)) {
+      flag(file, 'orphan-narrow-bleed-declaration', relative(REGISTRY),
+        'το μητρώο δηλώνει bleed-στο-στενό για αρχείο που δεν το γράφει (πια)');
+    }
+  }
+
   // fail-closed: κλειστή λογιστική, ΔΥΟ κατάστιχα. Άγνωστη κατάσταση δεν χάνεται
   // σιωπηλά — και τα δύο μεγέθη μετρώνται ανεξάρτητα από τα ευρήματα.
   const counted = Object.values(tally).reduce((a, b) => a + b, 0);
@@ -593,6 +619,9 @@ const ZERO_TOL = new Set([
   'owner-declares-padding',
   'undeclared-bleed',
   'orphan-declaration',
+  // Κ7 — bleed μόνο στο στενό (ADR-912 §12.17): ίδιο συμβόλαιο με το `bleed`.
+  'undeclared-narrow-bleed',
+  'orphan-narrow-bleed-declaration',
   'group-without-corridor',
   'group-without-layout',
   'corridor-contradicts-declaration',

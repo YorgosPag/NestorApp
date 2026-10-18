@@ -1090,3 +1090,31 @@ describe('Κ6 — measure-column-gap', () => {
     expect(findMeasureColumnGaps(REPO)).toEqual([]);
   });
 });
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Κ7 — bleed ΜΟΝΟ στο στενό (ADR-797 · ADR-912 §12.17)
+// ──────────────────────────────────────────────────────────────────────────────
+const { declaresNarrowBleed, findNarrowBleedFiles } = require('../lib/shell-surface/narrow-bleed');
+
+describe('Κ7 — bleed μόνο στο στενό: κλειστό σύνολο, ορατό στην πύλη', () => {
+  it('Κ7-1 η δήλωση αναγνωρίζεται σε JSX· ένα ΣΧΟΛΙΟ που την εξηγεί ΔΕΝ είναι δήλωση', () => {
+    expect(declaresNarrowBleed("<section data-shell-bleed={focused ? 'narrow' : undefined} />")).toBe(true);
+    expect(declaresNarrowBleed('// γράψε data-shell-bleed="narrow" για καμβά\n<section />')).toBe(false);
+    expect(declaresNarrowBleed('<section data-shell-surface="bleed" />')).toBe(false);
+  });
+
+  it('Κ7-2 το CSS μηδενίζει τον διάδρομο ΜΟΝΟ κάτω από το md, και ΜΟΝΟ με το χωριστό χαρακτηριστικό', () => {
+    const css = fs.readFileSync(path.join(process.cwd(), 'src/app/shell-surface.css'), 'utf8');
+    const block = /@media \(max-width: 767px\) \{\s*\[data-shell-surface\]:has\(\[data-shell-bleed='narrow'\]\) \{\s*padding-inline: 0;\s*padding-block: 0;/u;
+    expect(css).toMatch(block);
+    // Ποτέ τιμή του `data-shell-surface`: θα ταίριαζε στον κανόνα §2 και θα έδινε διάδρομο στο ίδιο το στοιχείο.
+    expect(css).not.toMatch(/data-shell-surface='bleed-narrow'/u);
+  });
+
+  it('Κ7-3 μητρώο ⇄ δίσκος: κάθε δήλωση έχει αρχείο που τη γράφει, και κάθε αρχείο δήλωση με λόγο', () => {
+    const registry = JSON.parse(fs.readFileSync(path.join(process.cwd(), '.shell-surface.json'), 'utf8'));
+    const declared = Object.keys(registry.narrowBleed || {}).filter((k) => !k.startsWith('$')).sort();
+    expect(findNarrowBleedFiles(process.cwd())).toEqual(declared);
+    for (const file of declared) expect(registry.narrowBleed[file].reason.length).toBeGreaterThan(20);
+  });
+});

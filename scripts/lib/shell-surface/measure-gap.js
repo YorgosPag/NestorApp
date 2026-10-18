@@ -93,4 +93,4 @@ function findMeasureColumnGaps(repoRoot) {
   return results;
 }
 
-module.exports = { COLUMN_GAP, measureGapsInSource, findMeasureColumnGaps };
+module.exports = { COLUMN_GAP, measureGapsInSource, findMeasureColumnGaps, collectTsx };

@@ -1,6 +1,6 @@
 {
   "$doc": "ADR-797 / CHECK 3.63 — σελίδες που δηλώνουν γεωμετρία που ανήκει στο κέλυφος: κενό (page/content-padding, negative-margin) ή ΠΛΑΤΟΣ (page-measure). Ο αριθμός ΔΕΝ είναι δείκτης υγείας: είναι εκστρατεία που τελειώνει στο μηδέν. Τα zero-tolerance ΔΕΝ μπαίνουν ΠΟΤΕ εδώ.",
-  "generated": "2026-09-27",
+  "generated": "2026-10-18",
   "violations": [
     "/admin/audit-log|content-padding",
     "/demo/addresses-editor-state|page-measure",
@@ -35,6 +35,7 @@
     "/listing/[id]/tour",
     "/o/[workspace]/dxf/viewer",
     "/search/results",
+    "narrow:src/components/properties/page/PropertyFloorplanView.tsx",
     "viewport:/listing/[id]/tour",
     "viewport:/search/results"
   ]
