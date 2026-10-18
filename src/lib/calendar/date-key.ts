@@ -58,3 +58,12 @@ export function calendarDateOfDateKey(key: string): Date | null {
   const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
   return localDateOf(date) === key ? date : null;
 }
+
+/**
+ * **Επιλογέας ημερομηνίας ↔ κλειδί** — `null` (κλειδί) ⇔ `undefined` (κενό πεδίο). Ένα ζεύγος για κάθε διάλογο που
+ * δηλώνει ημέρες (μεταβίβαση · μητρώο λήξεων, ADR-915 §33)· ήταν ιδιωτικά δίδυμα σε δύο components.
+ */
+export const pickerDateOfKey = (key: string | null): Date | undefined =>
+  key === null ? undefined : calendarDateOfDateKey(key) ?? undefined;
+
+export const dateKeyOfPicker = (date: Date | undefined): string | null => (date ? localDateOf(date) : null);

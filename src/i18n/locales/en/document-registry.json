@@ -52,6 +52,7 @@
     "attested": "Approved in the conveyance review",
     "fileUnnamed": "Unnamed file",
     "expiry": "Expiry",
+    "undeclared": "No details — issue and expiry dates have not been entered. Fill them in from the document itself",
     "expiryUnknown": "Unknown — the issue date is missing or the validity of this kind is not verified",
     "daysLeft": "{count, plural, =0 {expires today} one {in # day} other {in # days}}",
     "daysAgo": "{count, plural, one {# day ago} other {# days ago}}",
@@ -157,7 +158,8 @@
     "cases": "conveyance cases",
     "owner-properties": "privately owned properties under a mandate",
     "listings": "published listings",
-    "issuance-assignments": "issuance assignments"
+    "issuance-assignments": "issuance assignments",
+    "undeclared-files": "files without details"
   },
   "empty": {
     "title": "No expiring documents found",
@@ -333,6 +335,36 @@
       "complained": "The recipient marked it as spam — contact them by phone.",
       "reminderSent": "Reminder sent on {date}",
       "reminderNext": "Next reminder: {date}"
+    }
+  },
+  "factsDeclaration": {
+    "declare": "Fill in details",
+    "correct": "Correct details",
+    "title": "Document details",
+    "description": "Enter what the document itself states. The expiry is checked against the legal limits of its kind.",
+    "classificationLegend": "Category (as stated on the document)",
+    "classificationUnknown": "Not stated / unknown",
+    "classificationSuggested": "Suggested from the property type — choose the category the author states on the document.",
+    "classification": {
+      "A": "A — residence and similar premises",
+      "B": "B — business premises",
+      "C": "C — entertainment or public assembly premises, outdoor installation"
+    },
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Document details saved",
+    "error": {
+      "failed": "The details were not saved. Please try again.",
+      "absent": "The file was not found — it may have been deleted.",
+      "kindNotPromised": "The file was not uploaded as this kind of document.",
+      "notThisObject": "A new version of the file was uploaded meanwhile. Close and reopen to see it.",
+      "outranked": "The details were read from the document itself or approved in the conveyance review — correct them there.",
+      "empty": "Enter at least one date.",
+      "invalidDate": "Invalid date.",
+      "notPrinted": "This kind of document does not print an expiry date — the expiry is computed from the issue date.",
+      "validityBeforeIssue": "The expiry is before the issue date.",
+      "classificationInvalid": "This category does not apply to this kind of document."
     }
   }
 }

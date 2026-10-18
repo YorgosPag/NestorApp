@@ -31,8 +31,9 @@ import {
   type IssuerQualification,
 } from '@/config/document-validity/document-issuers';
 import type { ProfessionalLicence } from '@/config/professional-licences';
-import type { DocumentKind } from '@/config/document-validity/document-validity';
+import type { DocumentClassification, DocumentKind } from '@/config/document-validity/document-validity';
 import type { ExpirySource } from '@/lib/document-validity/document-expiry';
+import type { FactsDeclarationServiceRefusal } from '@/lib/document-validity/facts-declaration';
 import type { RegistryRowState } from '@/lib/document-validity/document-registry';
 import type { ObligorLeadBasis, ObligorUndesignatedReason } from '@/lib/document-validity/obligor-lead';
 import type { RegistryPickerView } from '@/lib/document-validity/document-registry-view';
@@ -77,6 +78,8 @@ export const REGISTRY_KEYS = {
   fileUnnamed: `${K}row.fileUnnamed`,
   expiry: `${K}row.expiry`,
   expiryUnknown: `${K}row.expiryUnknown`,
+  /** ADR-915 §33 — αρχείο που υπόσχεται το είδος, χωρίς δηλωμένες/αναγνωσμένες ημερομηνίες. */
+  undeclared: `${K}row.undeclared`,
   daysLeft: `${K}row.daysLeft`,
   daysAgo: `${K}row.daysAgo`,
   state: `${K}row.state`,
@@ -330,4 +333,43 @@ export const TRUNCATED_SOURCE_KEYS: Readonly<Record<RegistrySource, string>> = {
   listings: `${K}truncated.listings`,
   'issuance-assignments': `${K}truncated.issuance-assignments`,
   'undeclared-files': `${K}truncated.undeclared-files`,
+};
+
+/** ADR-915 §33 — «Συμπλήρωση στοιχείων» εγγράφου από το μητρώο. */
+export const FACTS_DECLARATION_KEYS = {
+  declare: `${K}factsDeclaration.declare`,
+  correct: `${K}factsDeclaration.correct`,
+  title: `${K}factsDeclaration.title`,
+  description: `${K}factsDeclaration.description`,
+  classificationLegend: `${K}factsDeclaration.classificationLegend`,
+  classificationUnknown: `${K}factsDeclaration.classificationUnknown`,
+  classificationSuggested: `${K}factsDeclaration.classificationSuggested`,
+  cancel: `${K}factsDeclaration.cancel`,
+  save: `${K}factsDeclaration.save`,
+  saving: `${K}factsDeclaration.saving`,
+  saved: `${K}factsDeclaration.saved`,
+} as const;
+
+/**
+ * Η κατηγορία όπως τη γράφει ο εκδότης (ADR-915 §32 — σήμερα μόνο η ΥΔΕ: Α/Β/Γ). Νέα κατηγορία στο
+ * `DOCUMENT_CLASSIFICATIONS` δεν μεταγλωττίζεται χωρίς ετικέτα εδώ.
+ */
+export const CLASSIFICATION_LABEL_KEYS: Readonly<Record<DocumentClassification, string>> = {
+  A: `${K}factsDeclaration.classification.A`,
+  B: `${K}factsDeclaration.classification.B`,
+  C: `${K}factsDeclaration.classification.C`,
+};
+
+/** Κάθε άρνηση (του κριτή ή του διακομιστή) λέει **γιατί**· `failed` = δίκτυο / άγνωστος κωδικός. */
+export const FACTS_DECLARATION_ERROR_KEYS: Readonly<Record<FactsDeclarationServiceRefusal | 'failed', string>> = {
+  failed: `${K}factsDeclaration.error.failed`,
+  absent: `${K}factsDeclaration.error.absent`,
+  'kind-not-promised': `${K}factsDeclaration.error.kindNotPromised`,
+  'not-this-object': `${K}factsDeclaration.error.notThisObject`,
+  outranked: `${K}factsDeclaration.error.outranked`,
+  empty: `${K}factsDeclaration.error.empty`,
+  'invalid-date': `${K}factsDeclaration.error.invalidDate`,
+  'not-printed': `${K}factsDeclaration.error.notPrinted`,
+  'validity-before-issue': `${K}factsDeclaration.error.validityBeforeIssue`,
+  'classification-invalid': `${K}factsDeclaration.error.classificationInvalid`,
 };
