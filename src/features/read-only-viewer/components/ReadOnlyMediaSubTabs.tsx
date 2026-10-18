@@ -98,6 +98,7 @@ export function FloorFloorplanTabContent({
         unitsPerMeter={unitsPerMeter}
         backgroundId={backgroundId}
         emptyMessage={t('viewer.media.noFloorFloorplans', { ns: 'properties' })}
+        layout="fill"
         className="h-full"
       />
     </TabContentWrapper>
@@ -137,6 +138,7 @@ export function UnitFloorplanTabContent({
         unitsPerMeter={unitsPerMeter}
         backgroundId={backgroundId}
         emptyMessage={t('viewer.media.noFloorplans', { ns: 'properties' })}
+        layout="fill"
         className="h-full"
       />
     </TabContentWrapper>

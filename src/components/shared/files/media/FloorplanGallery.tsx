@@ -7,10 +7,9 @@
 
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Download, Trash2, Map, Sun, Moon, Compass } from 'lucide-react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { Map } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useFullscreen } from '@/hooks/useFullscreen';
@@ -36,14 +35,13 @@ import { getFloorplanDxfScene } from '@/components/shared/files/media/floorplan-
 import type { Entity } from '@/subapps/dxf-viewer/types/entities';
 import { useFileDownload } from '@/components/shared/files/hooks/useFileDownload';
 import { FloorplanGalleryZoomControls } from '@/components/shared/files/media/FloorplanGalleryZoomControls';
-import { MeasureToolbar, type MeasureMode } from '@/components/shared/files/media/MeasureToolbar';
+import type { MeasureMode } from '@/components/shared/files/media/MeasureToolbar';
+import { FloorplanGalleryToolbar, type FloorplanToolbarDxf } from '@/components/shared/files/media/FloorplanGalleryToolbar';
+import { floorplanSequenceOf } from '@/components/shared/files/media/floorplan-sequence';
 import { MeasureToolOverlay } from '@/components/shared/files/media/MeasureToolOverlay';
 import { CalibrateScaleDialog } from '@/components/shared/files/media/CalibrateScaleDialog';
 import { useMeasureSnapFinder } from '@/components/shared/files/media/measure-snap-bridge';
-import { Bim3DToggleButton } from '@/components/shared/files/media/Bim3DToggleButton';
 import { Bim3DReadOnlyOverlay } from '@/components/shared/files/media/Bim3DReadOnlyOverlay';
-import { FloorplanInkPicker } from '@/components/shared/files/media/FloorplanInkPicker';
-import { OpenInDxfViewerButton } from '@/components/shared/files/media/OpenInDxfViewerButton';
 import { fileDisplayUrl } from '@/lib/files/file-display-url';
 
 // Re-exports for backward compatibility
@@ -67,6 +65,7 @@ export function FloorplanGallery({
   backgroundId,
   floorplanId,
   projectId = null,
+  layout = 'flow',
 }: FloorplanGalleryProps) {
   const { t } = useTranslation(['files', 'files-media']);
   const iconSizes = useIconSizes();
@@ -147,32 +146,12 @@ export function FloorplanGallery({
   });
   // SPEC-237C: Effective highlight = external (list hover) OR local (canvas hover)
   const effectiveHighlightId = highlightedOverlayUnitId || hoveredOverlayUnitId;
-  // NAVIGATION
-  const goToPrevious = useCallback(() => {
-    setCurrentIndex(prev => (prev > 0 ? prev - 1 : floorplanFiles.length - 1));
-  }, [floorplanFiles.length]);
-  const goToNext = useCallback(() => {
-    setCurrentIndex(prev => (prev < floorplanFiles.length - 1 ? prev + 1 : 0));
-  }, [floorplanFiles.length]);
-  // Keyboard navigation
-  // ⚠️ ADR-241 (2026-09-11): ΚΑΝΕΝΑΣ κλάδος Escape εδώ. Την πλήρη οθόνη της γκαλερί την κατέχει ο Radix
-  // `<Dialog>` (`onOpenChange` → `fullscreen.exit`). Ως τότε υπήρχαν ΤΡΕΙΣ ιδιοκτήτες για το ίδιο πάτημα —
-  // ο Radix, το `useFullscreen` και αυτός ο ωμός listener του `window` — και κανείς δεν ρωτούσε αν το πάτημα
-  // είχε ήδη καταναλωθεί από εσώτερη στρώση (π.χ. το εργαλείο μέτρησης μέσα στον διάλογο).
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (floorplanFiles.length <= 1) return;
-      if (event.key === 'ArrowLeft') {
-        event.preventDefault();
-        goToPrevious();
-      } else if (event.key === 'ArrowRight') {
-        event.preventDefault();
-        goToNext();
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [goToPrevious, goToNext, floorplanFiles.length]);
+  // NAVIGATION — ‹ 1/2 › + ←/→ ανήκουν στο ΕΝΑ `FileSequenceNav` (ADR-912 §12.17)· η σειρά = ο πίνακας που δείχνεται.
+  // ⚠️ ADR-241 (2026-09-11): ΚΑΝΕΝΑΣ κλάδος Escape εδώ — την πλήρη οθόνη την κατέχει ο Radix `<Dialog>`.
+  const sequence = useMemo(
+    () => floorplanSequenceOf(floorplanFiles, currentIndex, setCurrentIndex),
+    [floorplanFiles, currentIndex],
+  );
   // FULLSCREEN
   const handleOpenFullscreen = useCallback(() => {
     fullscreen.enter();
@@ -219,6 +198,15 @@ export function FloorplanGallery({
     () => (isDxf && loadedScene?.entities?.length ? getFloorplanDxfScene(loadedScene) : null),
     [isDxf, loadedScene],
   );
+  // ADR-912 §12.17 — ό,τι χρειάζεται η γραμμή εργαλείων για το DXF, σε ΕΝΑ αντικείμενο (στενή ⇄ φαρδιά το διαβάζουν ίδια).
+  const toolbarDxf = useMemo<FloorplanToolbarDxf | null>(() => (isDxf ? {
+    drawingMode,
+    onToggleDrawingMode: () => setDrawingMode((prev) => (prev === 'dark' ? 'light' : 'dark')),
+    inkColor,
+    onInkChange: setInkColor,
+    bim3D: sceneBim.hasAny ? { active: show3D, onToggle: () => setShow3D((v) => !v) } : null,
+  } : null), [isDxf, drawingMode, inkColor, sceneBim.hasAny, show3D]);
+  const openCalibrate = useCallback(() => setCalibrateOpen(true), []);
   useFloorplanCanvasRender({
     canvasRef: inlineCanvasRef, enabled: true, isDxf, isRaster, loadedScene, rasterImage, rasterBounds,
     currentBounds, zoom: inlineZP.zoom, panOffset: inlineZP.panOffset, drawingMode, inkColor,
@@ -284,7 +272,7 @@ export function FloorplanGallery({
       <figure
         ref={zp.containerRef}
         {...zp.handlers}
-        className={cn('flex-1 min-h-0 relative overflow-hidden bg-muted/30 select-none', zp.cursorClass, viewClassName)}
+        className={cn('flex-1 min-h-0 relative overflow-hidden bg-muted/30 select-none', zp.cursorClass, zp.touchClass, viewClassName)}
       >
         {anyLoading && (
           <section className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 z-10">
@@ -348,106 +336,23 @@ export function FloorplanGallery({
   return (
     <>
       <article className={cn('flex flex-col h-full', className)} role="region" aria-label={t('floorplan.galleryLabel')}>
-        <header className="flex flex-wrap items-center justify-between gap-y-1 p-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <nav className="flex min-w-0 items-center gap-2" aria-label={t('floorplan.navigation')}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={goToPrevious} disabled={floorplanFiles.length <= 1} aria-label={t('floorplan.previous')}>
-                  <ChevronLeft className={iconSizes.md} aria-hidden="true" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t('floorplan.previous')}</TooltipContent>
-            </Tooltip>
-            <span className="flex min-w-0 items-center gap-2 justify-center sm:min-w-[200px]">
-              {getFileIcon(currentFile?.ext || '')}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="font-medium truncate max-w-[150px]">{currentFile?.displayName || t('floorplan.untitled')}</span>
-                </TooltipTrigger>
-                <TooltipContent>{currentFile?.displayName}</TooltipContent>
-              </Tooltip>
-              <span className={cn('text-sm', colors.text.muted)}>({currentIndex + 1}/{floorplanFiles.length})</span>
-            </span>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={goToNext} disabled={floorplanFiles.length <= 1} aria-label={t('floorplan.next')}>
-                  <ChevronRight className={iconSizes.md} aria-hidden="true" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t('floorplan.next')}</TooltipContent>
-            </Tooltip>
-          </nav>
-          {/* ADR-907 §11.14 — αναδιπλώνει: στα 320 / 390 μετρήθηκαν 9 ενέργειες κομμένες εκτός κάδρου, άφταστες. */}
-          <nav className="flex flex-wrap items-center gap-1" aria-label={t('floorplan.actions')}>
-            {isDxf && (
-              <>
-                {sceneBim.hasAny && (
-                  <Bim3DToggleButton
-                    active={show3D}
-                    onToggle={() => setShow3D((v) => !v)}
-                  />
-                )}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDrawingMode(prev => prev === 'dark' ? 'light' : 'dark')}
-                      aria-label={drawingMode === 'dark' ? t('floorplan.lightMode') : t('floorplan.darkMode')}
-                      aria-pressed={drawingMode === 'light'}
-                    >
-                      {drawingMode === 'dark'
-                        ? <Sun className={iconSizes.sm} aria-hidden="true" />
-                        : <Moon className={iconSizes.sm} aria-hidden="true" />}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{drawingMode === 'dark' ? t('floorplan.lightMode') : t('floorplan.darkMode')}</TooltipContent>
-                </Tooltip>
-                <FloorplanInkPicker inkColor={inkColor} onChange={setInkColor} />
-                <span className="w-px h-6 bg-border mx-1" aria-hidden="true" />
-              </>
-            )}
-            <MeasureToolbar mode={measureMode} onModeChange={setMeasureMode} scopeKey={floorplanId ?? currentFile?.id ?? null} />
-            {canCalibrate && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setCalibrateOpen(true)}
-                    aria-label={t('floorplan.calibrate.openButton', { ns: 'files-media' })}
-                  >
-                    <Compass className={iconSizes.sm} aria-hidden="true" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t('floorplan.calibrate.openButton', { ns: 'files-media' })}</TooltipContent>
-              </Tooltip>
-            )}
-            <span className="w-px h-6 bg-border mx-1" aria-hidden="true" />
-            <FloorplanGalleryZoomControls zp={inlineZP} showFullscreen onOpenFullscreen={handleOpenFullscreen} />
-            <span className="w-px h-6 bg-border mx-1" aria-hidden="true" />
-            <OpenInDxfViewerButton fileId={isDxf ? viewedFileId : null} />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={handleDownload} disabled={!currentFileUrl} aria-label={t('floorplan.download')}>
-                  <Download className={iconSizes.sm} aria-hidden="true" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t('floorplan.download')}</TooltipContent>
-            </Tooltip>
-            {onDelete && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={handleDelete} className="text-destructive hover:text-destructive" aria-label={t('floorplan.delete')}>
-                    <Trash2 className={iconSizes.sm} aria-hidden="true" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t('floorplan.delete')}</TooltipContent>
-              </Tooltip>
-            )}
-          </nav>
-        </header>
-        {renderViewerContent(inlineZP, inlineCanvasRef, 'min-h-[500px]', true,
+        <FloorplanGalleryToolbar
+          sequence={sequence}
+          fileName={currentFile?.displayName ?? null}
+          fileExt={currentFile?.ext || ''}
+          zp={inlineZP}
+          onOpenFullscreen={handleOpenFullscreen}
+          dxf={toolbarDxf}
+          measureMode={measureMode}
+          onMeasureModeChange={setMeasureMode}
+          measureScopeKey={floorplanId ?? currentFile?.id ?? null}
+          dxfFileId={isDxf ? viewedFileId : null}
+          onCalibrate={canCalibrate ? openCalibrate : null}
+          onDownload={handleDownload}
+          downloadDisabled={!currentFileUrl}
+          onDelete={onDelete ? handleDelete : undefined}
+        />
+        {renderViewerContent(inlineZP, inlineCanvasRef, layout === 'fill' ? 'min-h-0' : 'min-h-[500px]', true,
           show3D && isDxf ? (
             <Bim3DReadOnlyOverlay
               bimSnapshot={sceneBim}

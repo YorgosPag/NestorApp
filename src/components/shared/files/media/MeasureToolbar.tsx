@@ -35,13 +35,14 @@ export interface MeasureToolbarProps {
   scopeKey?: string | null;
 }
 
-interface ToolDef {
+export interface MeasureToolDef {
   mode: MeasureMode;
   Icon: LucideIcon;
   labelKey: string;
 }
 
-const TOOLS: ReadonlyArray<ToolDef> = [
+/** ΕΝΑΣ κατάλογος εργαλείων — τον διαβάζει και το «⋯» της στενής γραμμής (`FloorplanGalleryToolbar`). */
+export const MEASURE_TOOLS: ReadonlyArray<MeasureToolDef> = [
   { mode: 'distance', Icon: Ruler,    labelKey: 'floorplan.measure.distance' },
   { mode: 'area',     Icon: Square,   labelKey: 'floorplan.measure.area' },
   { mode: 'angle',    Icon: Triangle, labelKey: 'floorplan.measure.angle' },
@@ -54,7 +55,7 @@ export function MeasureToolbar({ mode, onModeChange, scopeKey }: MeasureToolbarP
 
   return (
     <nav className="flex items-center gap-1" aria-label={t('floorplan.measure.toolbar')}>
-      {TOOLS.map(({ mode: m, Icon, labelKey }) => {
+      {MEASURE_TOOLS.map(({ mode: m, Icon, labelKey }) => {
         const active = mode === m;
         const label = t(labelKey);
         return (

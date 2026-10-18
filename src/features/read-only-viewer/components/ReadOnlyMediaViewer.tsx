@@ -111,6 +111,7 @@ function unitFloorplanTabs(levels: readonly ViewerLevel[] | null, floorplans: Me
         <FloorplanGallery
           files={floorplans.files}
           emptyMessage={t('viewer.media.noFloorplans', { ns: 'properties' })}
+          layout="fill"
           className="h-full"
         />
       </TabContentWrapper>
@@ -263,6 +264,7 @@ export function ReadOnlyMediaViewer({
               unitsPerMeter={singleFloorUnitsPerMeter}
               backgroundId={singleFloorBackgroundId}
               emptyMessage={t('viewer.media.noFloorFloorplans', { ns: 'properties' })}
+              layout="fill"
               className="h-full"
             />
           </TabContentWrapper>
