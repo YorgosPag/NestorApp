@@ -75,7 +75,8 @@ async function commitFacts(db: AdminFirestore, input: RecordDocumentFactsInput, 
 /** Η γραμμή ημερολογίου ως **επίπεδο** πλαίσιο — ό,τι χρειάζεται ο άνθρωπος για να καταλάβει τι γράφτηκε. */
 function auditMetadataOf(facts: DocumentFacts): Record<string, string | null> {
   const source = facts.source.kind === 'document-text' ? `document-text:${facts.source.reader}` : `attested:${facts.source.via}`;
-  return { kind: facts.kind, issuedOn: facts.issuedOn, printedValidUntil: facts.printedValidUntil, source };
+  const { kind, issuedOn, printedValidUntil, classification } = facts;
+  return { kind, issuedOn, printedValidUntil, classification, source };
 }
 
 /**

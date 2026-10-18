@@ -22,6 +22,7 @@ const claim: DocumentFactsClaim = {
   kind: 'energy-certificate',
   issuedOn: '2026-07-16',
   printedValidUntil: '2036-07-16',
+  classification: null,
   source: { kind: 'document-text', reader: 'pea-text' },
   recordedBy: 'u1',
 };
@@ -54,7 +55,7 @@ describe('Γ1 — η εγγραφή', () => {
       fileId: 'file_1',
       action: 'document_facts_record',
       performedBy: 'u1',
-      metadata: { kind: 'energy-certificate', issuedOn: '2026-07-16', printedValidUntil: '2036-07-16', source: 'document-text:pea-text' },
+      metadata: { kind: 'energy-certificate', issuedOn: '2026-07-16', printedValidUntil: '2036-07-16', classification: null, source: 'document-text:pea-text' },
       companyId: 'c1',
     });
   });

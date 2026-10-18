@@ -165,6 +165,24 @@ export const PROPERTY_ENTRY_POINTS: UploadEntryPoint[] = [
       icon: 'Scale',
       order: 14,
     },
+    {
+      // ADR-915 §32 — η ΥΔΕ αφορά την παροχή ΤΗΣ ΜΟΝΑΔΑΣ ⇒ έγγραφο του ακινήτου, με λήξη (μητρώο λήξεων).
+      // Ίδιος σκοπός με το `yde-declaration` της επαφής: ίδιο έγγραφο, άλλο επίπεδο (το επίπεδο κρίνει, ADR-901 §2).
+      id: 'unit-yde-declaration',
+      purpose: 'yde-declaration',
+      domain: 'admin',
+      category: 'documents',
+      label: {
+        el: 'ΥΔΕ (Υπεύθυνη Δήλωση Ηλεκτρολόγου Εγκαταστάτη)',
+        en: 'Electrical Installation Declaration (YDE)',
+      },
+      description: {
+        el: 'Ηλεκτρική εγκατάσταση της μονάδας — τακτικός επανέλεγχος κάθε 10 έτη (κατοικία) ή 5 έτη (επαγγελματικός χώρος)',
+        en: 'Unit electrical installation — periodic re-inspection every 10 years (residence) or 5 years (business premises)',
+      },
+      icon: 'FileCheck',
+      order: 15,
+    },
 
     // ------------------------------------------------------------------------
     // ΦΩΤΟΓΡΑΦΙΕΣ ΜΟΝΑΔΑΣ (Photos)

@@ -24,6 +24,7 @@ const FACTS = {
   kind: 'energy-certificate',
   issuedOn: '2024-03-12',
   printedValidUntil: '2034-03-12',
+  classification: null,
   source: { kind: 'document-text', reader: 'pea-text' },
   recordedBy: 'u1',
   recordedAt: '2026-10-14T10:00:00.000Z',

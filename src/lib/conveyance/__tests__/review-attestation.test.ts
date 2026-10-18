@@ -20,7 +20,7 @@ describe('attestationOfReview', () => {
   it('αποδοχή ΠΕΑ με ημερομηνία ⇒ `attested` μέσω `conveyance-review`, χωρίς τυπωμένη λήξη', () => {
     expect(attestationOfReview(accept(), [PEA], 'u1')).toEqual({
       fileId: 'file_pea',
-      claim: { kind: 'energy-certificate', issuedOn: '2025-01-01', printedValidUntil: null, source: { kind: 'attested', via: 'conveyance-review' }, recordedBy: 'u1' },
+      claim: { kind: 'energy-certificate', issuedOn: '2025-01-01', printedValidUntil: null, classification: null, source: { kind: 'attested', via: 'conveyance-review' }, recordedBy: 'u1' },
     });
   });
 

@@ -51,7 +51,7 @@ describe('readDocumentTextFacts — ο ΕΝΑΣ δρόμος (ADR-915 §20)', ()
       fileId: 'file_1',
       expectedStoragePath: PATH,
       claim: {
-        kind: 'tax-clearance', issuedOn: '2026-07-22', printedValidUntil: '2026-08-22',
+        kind: 'tax-clearance', issuedOn: '2026-07-22', printedValidUntil: '2026-08-22', classification: null,
         source: { kind: 'document-text', reader: 'aade-tax-clearance-text' }, recordedBy: 'system:document-text',
       },
     }]);

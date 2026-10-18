@@ -82,6 +82,8 @@ export function attestationOfReview(
       kind,
       issuedOn: command.issuedOn,
       printedValidUntil,
+      // Τα είδη του καταλόγου μεταβίβασης δεν κατατάσσονται (ADR-915 §32: μόνο η ΥΔΕ, εκτός καταλόγου).
+      classification: null,
       source: { kind: 'attested', via: 'conveyance-review' },
       recordedBy: actorUid,
     },
