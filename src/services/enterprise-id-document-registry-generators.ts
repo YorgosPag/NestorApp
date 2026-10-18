@@ -33,6 +33,14 @@ export abstract class DocumentRegistryIdGenerators extends AreaMarketIdGenerator
   }
 
   /**
+   * ADR-915 §35 — **ΜΙΑ** απόφαση μόνιμης υποχρέωσης ανά (γραφείο, ακίνητο, είδος): επιβεβαίωση/εξαίρεση = `set`,
+   * «ξανά ρώτα» = `delete`, πάντα το **ίδιο** έγγραφο — δύο ταυτόχρονες αποφάσεις δεν γίνονται ποτέ δύο υποχρεώσεις.
+   */
+  generateDeterministicPropertyUpkeepDeclarationId(seed: string): string {
+    return this.mintDeterministicV4Id(P.PROPERTY_UPKEEP_DECLARATION, seed);
+  }
+
+  /**
    * ADR-915 §28 — ο **σύνδεσμος** της ανάθεσης (έγκριση ιδιοκτήτη · απάντηση επαγγελματία). Τυχαίο, όχι ντετερμινιστικό:
    * επαναποστολή = **νέο** id, και η ανάθεση θυμάται ποιο είναι το τρέχον (ο παλιός πεθαίνει από κατασκευή).
    */

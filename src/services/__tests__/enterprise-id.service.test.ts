@@ -304,6 +304,8 @@ describe('EnterpriseIdService', () => {
       'generateDeterministicDocumentObligorDesignationId',
       // ADR-915 §27 — ΜΙΑ ανάθεση έκδοσης ανά (γραφείο, ακίνητο, είδος): τυχαίο id = δεύτερη ανάθεση = δύο ΠΕΑ.
       'generateDeterministicDocumentIssuanceAssignmentId',
+      // ADR-915 §35 — ΜΙΑ απόφαση μόνιμης υποχρέωσης ανά (γραφείο, ακίνητο, είδος): τυχαίο id = δεύτερη υποχρέωση.
+      'generateDeterministicPropertyUpkeepDeclarationId',
       // ADR-ACC-010 §2.1.1 Φ4 — ΜΙΑ απόσβεση ανά (μισθωτής, πάγιο, χρήση): η ταυτότητα ΕΙΝΑΙ η ιδεμποτία της
       // εκτέλεσης αποσβέσεων. Ο τυχαίος `generateDepreciationId` ΚΑΤΑΡΓΗΘΗΚΕ — τυχαίο id = διπλή απόσβεση.
       'generateDeterministicDepreciationRecordId',
@@ -382,6 +384,7 @@ describe('EnterpriseIdService', () => {
       generateDeterministicConveyanceViewSignalId: 'cvs_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
       generateDeterministicDocumentObligorDesignationId: 'dobd_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
       generateDeterministicDocumentIssuanceAssignmentId: 'dias_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
+      generateDeterministicPropertyUpkeepDeclarationId: 'pupk_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
       // ADR-853 Ε3 Φάση 2 — τέσσερις παράμετροι, ο `call()` δίνει μία (σπόρος `anchor-seed:undefined:…`,
       //    ίδιο σκεπτικό με το `wacr`): το συμβόλαιο είναι «ίδιος σπόρος ⇒ ίδιο id, διαχρονικά».
       generateDeterministicIdempotencyRecordId: 'idr_4ad60692-1f51-41af-8816-c25429d2e5f9',

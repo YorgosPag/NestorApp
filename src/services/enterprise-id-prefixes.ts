@@ -452,6 +452,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   CONVEYANCE_VIEW_SIGNAL: 'cvs', // ADR-901 §14.8 — σήμα αλλαγής ΜΙΑΣ όψης (οικοδεσπότης ή συμμετοχή) — ντετερμινιστικό
   DOCUMENT_OBLIGOR_DESIGNATION: 'dobd', // ADR-915 §26 — ρητός υπεύθυνος εγγράφων ακινήτου· ΕΝΑΣ ανά (γραφείο, ακίνητο) — ντετερμινιστικό
   DOCUMENT_ISSUANCE_ASSIGNMENT: 'dias', // ADR-915 §27 — ανάθεση έκδοσης σε επαγγελματία· ΜΙΑ ανά (γραφείο, ακίνητο, είδος) — ντετερμινιστικό
+  PROPERTY_UPKEEP_DECLARATION: 'pupk', // ADR-915 §35 — απόφαση μόνιμης υποχρέωσης ακινήτου· ΜΙΑ ανά (γραφείο, ακίνητο, είδος) — ντετερμινιστικό
   DOCUMENT_ISSUANCE_INVITATION: 'diin', // ADR-915 §28 — σύνδεσμος χωρίς λογαριασμό (έγκριση ιδιοκτήτη · απάντηση επαγγελματία)· επαναποστολή = νέο id
   PIPELINE_QUEUE: 'pq',
   BROKERAGE: 'brk',

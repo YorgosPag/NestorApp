@@ -154,6 +154,8 @@ export const generateDeterministicDocumentObligorDesignationId = (seed: string) 
   enterpriseIdService.generateDeterministicDocumentObligorDesignationId(seed);
 export const generateDeterministicDocumentIssuanceAssignmentId = (seed: string) =>
   enterpriseIdService.generateDeterministicDocumentIssuanceAssignmentId(seed);
+export const generateDeterministicPropertyUpkeepDeclarationId = (seed: string) =>
+  enterpriseIdService.generateDeterministicPropertyUpkeepDeclarationId(seed);
 export const generateDocumentIssuanceInvitationId = () => enterpriseIdService.generateDocumentIssuanceInvitationId();
 export const generatePipelineQueueId = () => enterpriseIdService.generatePipelineQueueId();
 export const generateVoiceCommandId = () => enterpriseIdService.generateVoiceCommandId();

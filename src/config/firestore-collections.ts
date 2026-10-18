@@ -976,6 +976,9 @@ export const COLLECTIONS = {
   // ADR-915 §26 — ο ΡΗΤΟΣ υπεύθυνος (επαφή) των εγγράφων ακινήτου με πολλούς ιδιοκτήτες: ΕΝΑ έγγραφο ανά (γραφείο,
   // ακίνητο), ντετερμινιστικό. Χωριστό δοχείο, όχι πεδίο του ακινήτου (θα πυροδοτούσε το CDC, ADR-905)· deny-all, μόνο server.
   DOCUMENT_OBLIGOR_DESIGNATIONS: process.env.NEXT_PUBLIC_DOCUMENT_OBLIGOR_DESIGNATIONS_COLLECTION || 'document_obligor_designations',
+  // ADR-915 §35 — η ΑΠΟΦΑΣΗ μόνιμης υποχρέωσης ακινήτου (επιβεβαίωση · εξαίρεση με λόγο · τι πρότεινε η εφαρμογή τότε):
+  // ΜΙΑ ανά (γραφείο, ακίνητο, είδος), ντετερμινιστική. Χωριστό δοχείο, όχι πεδίο του ακινήτου (CDC, ADR-905)· deny-all.
+  PROPERTY_UPKEEP_DECLARATIONS: process.env.NEXT_PUBLIC_PROPERTY_UPKEEP_DECLARATIONS_COLLECTION || 'property_upkeep_declarations',
   // ADR-915 §27 — η ΑΝΑΘΕΣΗ ΕΚΔΟΣΗΣ (πρόταση γραφείου · απόφαση ιδιοκτήτη · ενημέρωση/απάντηση επαγγελματία): ΜΙΑ ανά
   // (γραφείο, ακίνητο, είδος), ντετερμινιστική ⇒ «ποτέ δύο ΠΕΑ». Deny-all, μόνο server· ιστορικό στην καρτέλα ακινήτου.
   DOCUMENT_ISSUANCE_ASSIGNMENTS: process.env.NEXT_PUBLIC_DOCUMENT_ISSUANCE_ASSIGNMENTS_COLLECTION || 'document_issuance_assignments',
