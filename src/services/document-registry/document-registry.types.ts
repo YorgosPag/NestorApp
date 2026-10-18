@@ -7,19 +7,22 @@
  * Κάθε πηγή που χτύπησε το όριό της **ονομάζεται** στο `truncatedSources`.
  */
 
+import type { OperationalStatus } from '@/constants/operational-statuses';
 import type { PropertyClass } from '@/constants/property-types';
 import type { DocumentRegistry } from '@/lib/document-validity/document-registry';
 import type { RowIssuance } from '@/lib/document-validity/issuance-rows';
 import type { ObligorLead } from '@/lib/document-validity/obligor-lead';
+import type { UpkeepItem } from '@/lib/document-validity/property-upkeep';
 
 /**
  * Οι πηγές που διαβάζονται με ερώτημα — άρα έχουν όριο. Φ4δ: `owner-properties` (ακίνητα ιδιωτών υπό θεματοφυλακή του
  * γραφείου, Ε10) · `listings` (οι αγγελίες με το όνομα του γραφείου — βρίσκονται **και** όταν το ακίνητο δεν έχει
  * κανένα έγγραφο, Ε11). §27: `issuance-assignments` (οι αναθέσεις έκδοσης του γραφείου — τρέχουσες **και** «ξανά»).
  * §33: `undeclared-files` (αρχεία **χωρίς στοιχεία** σε θέση που υπόσχεται είδος — «Συμπλήρωση στοιχείων»).
+ * §35: `upkeep-declarations` (οι αποφάσεις μόνιμης υποχρέωσης του γραφείου — επιβεβαιώσεις **και** εξαιρέσεις).
  */
 export const REGISTRY_SOURCES = [
-  'files', 'declared', 'cases', 'owner-properties', 'listings', 'issuance-assignments', 'undeclared-files',
+  'files', 'declared', 'cases', 'owner-properties', 'listings', 'issuance-assignments', 'undeclared-files', 'upkeep-declarations',
 ] as const;
 export type RegistrySource = (typeof REGISTRY_SOURCES)[number];
 
@@ -32,6 +35,7 @@ export const DOCUMENT_REGISTRY_CAPS: Readonly<Record<RegistrySource, number>> = 
   listings: 500,
   'issuance-assignments': 500,
   'undeclared-files': 500,
+  'upkeep-declarations': 500,
 };
 
 /** Σε ποιο **είδος** ακινήτου δείχνει το όνομα — αποφασίζει τη διεύθυνση της οθόνης (ακίνητο εταιρείας · εντολή). */
@@ -83,6 +87,11 @@ export interface RegistryPropertyLabel extends RegistryLabel {
    * στη «Συμπλήρωση στοιχείων» (`classificationHintOf`). `null` = άγνωστος τύπος ⇒ καμία υπόδειξη.
    */
   readonly propertyClass: PropertyClass | null;
+  /**
+   * ADR-915 §35 — η **φάση** (`operationalStatus`, κανονικοποιημένη): μαζί με την κλάση, η βάση της πρότασης μόνιμης
+   * υποχρέωσης (`upkeepProposalOf`). `null` = ακίνητο ιδιώτη (δεν έχει φάση) ή άγνωστη τιμή.
+   */
+  readonly phase: OperationalStatus | null;
 }
 
 export interface DocumentRegistryResponse extends DocumentRegistry {
@@ -114,4 +123,9 @@ export interface DocumentRegistryResponse extends DocumentRegistry {
    * ψεύτικο «δεν ανατέθηκε» θα έφερνε δεύτερο ΠΕΑ).
    */
   readonly issuanceKnown: boolean;
+  /**
+   * ADR-915 §35 — η ενότητα «Μόνιμες υποχρεώσεις»: ανά (ακίνητο, είδος) ό,τι **περιμένει** απόφαση (προτείνεται · η
+   * εφαρμογή δεν ξέρει) **και** ό,τι αποφασίστηκε. Χωριστά από τις γραμμές: η πρόταση **δεν** είναι κατάσταση εγγράφου.
+   */
+  readonly upkeep: readonly UpkeepItem[];
 }

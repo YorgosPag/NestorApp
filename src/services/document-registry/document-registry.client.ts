@@ -15,6 +15,7 @@ import { ApiClientError, apiClient, isClientRefusal } from '@/lib/api/enterprise
 import { createModuleLogger } from '@/lib/telemetry';
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
 import type { FactsDeclarationBody } from '@/lib/document-validity/facts-declaration';
+import type { UpkeepDeclarationBody } from '@/lib/document-validity/upkeep-declaration-request';
 import type { IssuanceAssignmentBody, IssuanceSendBody } from '@/lib/document-validity/issuance-request';
 import type { IssuanceDelivery } from '@/lib/document-validity/issuance-delivery';
 import type { IssuancePreview } from '@/types/issuance-invitation';
@@ -84,6 +85,17 @@ export const DOCUMENT_FACTS_URL = `${DOCUMENT_REGISTRY_URL}/document-facts`;
 /** **Δήλωσε** έκδοση · τυπωμένη λήξη · κατηγορία ενός αρχείου — ο διακομιστής κρίνει ξανά με τον ΙΔΙΟ κριτή. */
 export async function saveFactsDeclaration(body: FactsDeclarationBody): Promise<ObligorDesignationSave> {
   return putRegistryAction(DOCUMENT_FACTS_URL, body, 'Τα στοιχεία του εγγράφου δεν αποθηκεύτηκαν', { kind: body.kind });
+}
+
+/** ADR-915 §35 — η απόφαση μόνιμης υποχρέωσης ακινήτου: ΕΝΑ σημείο για τη διαδρομή. */
+export const UPKEEP_DECLARATIONS_URL = `${DOCUMENT_REGISTRY_URL}/upkeep-declarations`;
+
+/** **Επιβεβαίωσε**, **εξαίρεσε** (με λόγο) ή, με `decision: null`, **αναίρεσε** τη μόνιμη υποχρέωση ενός ακινήτου. */
+export async function saveUpkeepDeclaration(body: UpkeepDeclarationBody): Promise<ObligorDesignationSave> {
+  return putRegistryAction(UPKEEP_DECLARATIONS_URL, body, 'Η απόφαση μόνιμης υποχρέωσης δεν αποθηκεύτηκε', {
+    kind: body.documentKind,
+    decision: body.decision ?? 'reask',
+  });
 }
 
 /** ADR-915 §27 — η ανάθεση έκδοσης: ΕΝΑ σημείο για τη διαδρομή. */
