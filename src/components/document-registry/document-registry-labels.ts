@@ -91,6 +91,7 @@ export const REGISTRY_KEYS = {
   missingHeading: `${K}dependents.missingHeading`,
   dependentsNone: `${K}dependents.none`,
   signingOn: `${K}dependents.signingOn`,
+  upkeepDeclaredOn: `${K}dependents.upkeepDeclaredOn`,
   continuous: `${K}dependents.continuous`,
   unscheduled: `${K}dependents.unscheduled`,
   /** `undetermined` επειδή λείπει η **μέρα**, όχι η λήξη — το `IMPACT_LABEL_KEYS.undetermined` λέει «η λήξη». */
@@ -313,6 +314,7 @@ export const EXPIRY_SOURCE_LABEL_KEYS: Readonly<Record<ExpirySource, string>> = 
 export const PROCESS_LABEL_KEYS: Readonly<Record<DocumentProcess, string>> = {
   conveyance: `${K}dependents.conveyance`,
   'listing-publication': `${K}dependents.listing-publication`,
+  'property-upkeep': `${K}dependents.property-upkeep`,
 };
 
 export const IMPACT_LABEL_KEYS: Readonly<Record<DependentImpact, string>> = {
@@ -335,6 +337,7 @@ export const TRUNCATED_SOURCE_KEYS: Readonly<Record<RegistrySource, string>> = {
   listings: `${K}truncated.listings`,
   'issuance-assignments': `${K}truncated.issuance-assignments`,
   'undeclared-files': `${K}truncated.undeclared-files`,
+  'upkeep-declarations': `${K}truncated.upkeep-declarations`,
 };
 
 /** ADR-915 §33 — «Συμπλήρωση στοιχείων» εγγράφου από το μητρώο. */

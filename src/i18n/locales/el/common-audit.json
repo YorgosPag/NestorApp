@@ -666,7 +666,10 @@
       "buildingIdentityIssuanceApprovalRequest": "Ανάθεση ταυτότητας κτιρίου — αίτημα έγκρισης προς",
       "electricalInstallationIssuanceStage": "Ανάθεση ΥΔΕ — στάδιο",
       "electricalInstallationIssuer": "Ανάθεση ΥΔΕ — επαγγελματίας",
-      "electricalInstallationIssuanceApprovalRequest": "Ανάθεση ΥΔΕ — αίτημα έγκρισης προς"
+      "electricalInstallationIssuanceApprovalRequest": "Ανάθεση ΥΔΕ — αίτημα έγκρισης προς",
+      "electricalInstallationStandingObligation": "Μόνιμη υποχρέωση ΥΔΕ — απόφαση",
+      "electricalInstallationStandingObligationExemption": "Μόνιμη υποχρέωση ΥΔΕ — λόγος εξαίρεσης",
+      "electricalInstallationStandingObligationProposal": "Μόνιμη υποχρέωση ΥΔΕ — πρόταση εφαρμογής"
     },
     "retiredFieldNotice": "Το πεδίο δεν υπάρχει πλέον στο μητρώο — εμφανίζεται το όνομα που είχε καταγραφεί τη στιγμή της αλλαγής."
   }

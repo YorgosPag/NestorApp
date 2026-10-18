@@ -135,7 +135,9 @@
     "none": "No open process needs it today.",
     "conveyance": "Conveyance",
     "listing-publication": "Published listing",
+    "property-upkeep": "Standing property obligation",
     "signingOn": "signing {date}",
+    "upkeepDeclaredOn": "confirmed {date}",
     "continuous": "for as long as it stays published",
     "unscheduled": "no signing date set",
     "stops": "stops from {date}",
@@ -158,7 +160,8 @@
     "owner-properties": "privately owned properties under a mandate",
     "listings": "published listings",
     "issuance-assignments": "issuance assignments",
-    "undeclared-files": "files without details"
+    "undeclared-files": "files without details",
+    "upkeep-declarations": "standing-obligation decisions"
   },
   "empty": {
     "title": "No expiring documents found",
@@ -364,6 +367,48 @@
       "notPrinted": "This kind of document does not print an expiry date — the expiry is computed from the issue date.",
       "validityBeforeIssue": "The expiry is before the issue date.",
       "classificationInvalid": "This category does not apply to this kind of document."
+    }
+  },
+  "upkeep": {
+    "title": "Standing obligations",
+    "lead": "They count as missing only after you confirm them.",
+    "pending": "Pending: {count}",
+    "statute": "Basis: {statute}",
+    "proposal": {
+      "inUse": "Suggested: building in use",
+      "phaseUndeclared": "Suggested: phase not declared",
+      "class": "Not suggested for this type",
+      "phase": "Not suggested: not completed",
+      "classUnknown": "Unknown property type"
+    },
+    "decision": {
+      "required": "Confirmed obligation",
+      "notRequired": "Exemption"
+    },
+    "exemption": {
+      "noOwnSupply": "No supply of its own",
+      "notConnected": "No active grid connection",
+      "other": "Other reason"
+    },
+    "verdict": {
+      "proposed": "Was suggested",
+      "notProposed": "Was not suggested",
+      "undetermined": "The app could not suggest"
+    },
+    "decidedOn": "Decided {date}",
+    "overrode": "Against the suggestion",
+    "confirm": "Confirm",
+    "exempt": "Not applicable",
+    "exemptLegend": "Why does it not apply?",
+    "saveExempt": "Save exemption",
+    "reask": "Undo decision",
+    "cancel": "Cancel",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "error": {
+      "failed": "Not saved. Please try again.",
+      "absent": "The property is not in the registry.",
+      "notStanding": "Not a standing obligation."
     }
   }
 }

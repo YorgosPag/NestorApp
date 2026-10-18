@@ -666,7 +666,10 @@
       "buildingIdentityIssuanceApprovalRequest": "Building identity issuance — approval requested from",
       "electricalInstallationIssuanceStage": "Electrical installation declaration (YDE) assignment — stage",
       "electricalInstallationIssuer": "Electrical installation declaration (YDE) assignment — professional",
-      "electricalInstallationIssuanceApprovalRequest": "Electrical installation declaration (YDE) issuance — approval requested from"
+      "electricalInstallationIssuanceApprovalRequest": "Electrical installation declaration (YDE) issuance — approval requested from",
+      "electricalInstallationStandingObligation": "Standing electrical declaration obligation — decision",
+      "electricalInstallationStandingObligationExemption": "Standing electrical declaration obligation — exemption reason",
+      "electricalInstallationStandingObligationProposal": "Standing electrical declaration obligation — app suggestion"
     },
     "retiredFieldNotice": "This field no longer exists in the registry — showing the name recorded at the time of the change."
   }

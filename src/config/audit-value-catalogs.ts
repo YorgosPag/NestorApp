@@ -127,6 +127,12 @@ export const AUDIT_VALUE_CATALOGS: Readonly<Record<string, AuditCatalogRef>> = {
   energyCertificateIssuanceStage: { ns: 'document-registry', path: 'issuance.stage' },
   buildingIdentityIssuanceStage: { ns: 'document-registry', path: 'issuance.stage' },
   electricalInstallationIssuanceStage: { ns: 'document-registry', path: 'issuance.stage' },
+
+  // ── Property: ADR-915 §35 — απόφαση μόνιμης υποχρέωσης (ένα πεδίο ανά είδος). Οι ΙΔΙΟΙ κατάλογοι με την ενότητα
+  //    «Μόνιμες υποχρεώσεις» (μόνο camelCase· ο resolver κανονικοποιεί `not-required` → `notRequired`).
+  electricalInstallationStandingObligation: { ns: 'document-registry', path: 'upkeep.decision' },
+  electricalInstallationStandingObligationExemption: { ns: 'document-registry', path: 'upkeep.exemption' },
+  electricalInstallationStandingObligationProposal: { ns: 'document-registry', path: 'upkeep.verdict' },
 } as const;
 
 /** Type-safe lookup. Returns `undefined` for fields without a registered catalog. */
