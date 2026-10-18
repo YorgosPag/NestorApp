@@ -14,6 +14,7 @@
 import { ListLayout } from '@/features/read-only-viewer/components/ListLayout';
 import { useViewportClass } from '@/hooks/media/useViewportClass';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
+import { cn } from '@/lib/utils';
 import type { Property } from '@/types/property-viewer';
 
 interface PropertyFloorplanViewProps {
@@ -25,6 +26,8 @@ interface PropertyFloorplanViewProps {
   onHoverProperty: (propertyId: string | null) => void;
   onSelectProperty: (propertyId: string, isShiftClick: boolean) => void;
   onSelectFloor: (floorId: string | null) => void;
+  /** ADR-912 §12.17 — στενή λεπτομέρεια: ο καμβάς ως την άκρη, χωρίς το περιθώριο της λίστας. */
+  detailFocused: boolean;
 }
 
 export function PropertyFloorplanView(props: PropertyFloorplanViewProps) {
@@ -36,7 +39,12 @@ export function PropertyFloorplanView(props: PropertyFloorplanViewProps) {
   const viewport = useViewportClass();
 
   return (
-    <section className={`flex min-h-0 flex-1 overflow-hidden ${layout.listGapResponsive} ${layout.listPaddingResponsive}`}>
+    <section
+      // ADR-797 Κ7 · ADR-912 §12.17 — στη στενή λεπτομέρεια η κάτοψη είναι καμβάς ως τις άκρες: το κέλυφος αδειάζει τον
+      // διάδρομό του (CSS, μόνο κάτω από `md`). Δηλωμένο με λόγο στο `.shell-surface.json → narrowBleed`.
+      data-shell-bleed={props.detailFocused ? 'narrow' : undefined}
+      className={cn('flex min-h-0 flex-1 overflow-hidden', layout.listGapResponsive, layout.listPaddingResponsive, props.detailFocused && layout.listPaddingDetailFlush)}
+    >
       <ListLayout
         isLoading={props.isLoading}
         filteredProperties={props.filteredProperties}
