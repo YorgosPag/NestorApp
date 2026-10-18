@@ -18,8 +18,7 @@ import React from 'react';
 import { ExternalLink } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { ISSUER_QUALIFICATION_SPECS } from '@/config/document-validity/document-issuers';
-import { PROFESSIONAL_LICENCE_SPECS } from '@/config/professional-licences';
+import { qualificationLookupUrl } from '@/config/document-validity/document-issuers';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatDate } from '@/lib/intl-formatting';
 import type {
@@ -78,13 +77,13 @@ function candidateNames(t: Translate, view: RegistryIssuanceView, registry: Name
 function CredentialLine({ record }: { readonly record: IssuanceAssignmentRecord }): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS, PROPERTY_MARKET_NS]);
   const { qualification, registryNumber } = record.credential;
-  const spec = ISSUER_QUALIFICATION_SPECS[qualification];
+  const lookupUrl = qualificationLookupUrl(qualification);
   const label = qualificationText(t, qualification);
   return (
     <span className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
       <span>{registryNumber === null ? t(ISSUANCE_KEYS.credential, { qualification: label }) : t(ISSUANCE_KEYS.credentialWithNumber, { qualification: label, number: registryNumber })}</span>
-      {spec.kind === 'licence' ? (
-        <a href={PROFESSIONAL_LICENCE_SPECS[spec.licence].registryLookupUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline underline-offset-4">
+      {lookupUrl !== null ? (
+        <a href={lookupUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline underline-offset-4">
           {t(ISSUANCE_KEYS.verifyRegistry)}<ExternalLink className="size-3" aria-hidden="true" />
           <span className="sr-only">{t(NEXT_STEP_KEYS.opensInNewTab)}</span>
         </a>

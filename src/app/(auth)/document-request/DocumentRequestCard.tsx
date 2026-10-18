@@ -20,9 +20,8 @@ import { AuthCardSection } from '@/components/ui/auth-card-section';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ISSUER_QUALIFICATION_SPECS } from '@/config/document-validity/document-issuers';
+import { qualificationLookupUrl } from '@/config/document-validity/document-issuers';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
-import { PROFESSIONAL_LICENCE_SPECS } from '@/config/professional-licences';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ISSUANCE_NOTE_MAX } from '@/lib/document-validity/issuance-assignment';
 import type { IssuanceLinkAnswer } from '@/lib/document-validity/issuance-request';
@@ -74,15 +73,15 @@ function Fact({ term, children }: { readonly term: string; readonly children: Re
 
 function ProfessionalFacts({ professional }: { readonly professional: NonNullable<IssuanceLinkView['professional']> }) {
   const { t } = useTranslation(['document-request', 'document-registry', 'property-market']);
-  const spec = ISSUER_QUALIFICATION_SPECS[professional.qualification];
+  const lookupUrl = qualificationLookupUrl(professional.qualification);
   const qualification = qualificationText(t, professional.qualification);
   return (
     <>
       <Fact term={t('document-request:facts.professional')}>{professional.name ?? t('document-request:facts.unnamed')}</Fact>
       <Fact term={t('document-request:facts.credential')}>
         <span>{professional.registryNumber === null ? qualification : t('document-request:facts.credentialWithNumber', { qualification, number: professional.registryNumber })}</span>
-        {spec.kind === 'licence' ? (
-          <a href={PROFESSIONAL_LICENCE_SPECS[spec.licence].registryLookupUrl} target="_blank" rel="noopener noreferrer" className="ml-2 inline-flex items-center gap-1 text-xs underline underline-offset-4">
+        {lookupUrl !== null ? (
+          <a href={lookupUrl} target="_blank" rel="noopener noreferrer" className="ml-2 inline-flex items-center gap-1 text-xs underline underline-offset-4">
             {t('document-request:facts.verifyRegistry')}<ExternalLink className="size-3" aria-hidden="true" />
           </a>
         ) : null}

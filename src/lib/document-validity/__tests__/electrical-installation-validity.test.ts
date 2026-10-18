@@ -21,6 +21,7 @@ import {
   type DocumentClassification,
 } from '@/config/document-validity/document-validity';
 import { OCCUPATION_FAMILIES } from '@/config/occupation-families';
+import { PROFESSIONAL_LICENCE_SPECS } from '@/config/professional-licences';
 import { escoOccupationUri } from '@/lib/esco/esco-uri';
 import { documentExpiry, ruleExpires } from '@/lib/document-validity/document-expiry';
 import { documentFactsExpiry, readDocumentFacts } from '@/lib/document-validity/document-facts';
@@ -109,7 +110,12 @@ describe('Ε — ποιος την εκδίδει, πού ελέγχεται', (
   it('Υ11 ηλεκτρολόγος εγκαταστάτης: υποσύνολο της ομάδας «Ηλεκτρολόγος», ΧΩΡΙΣ οικιακών συσκευών / ηλιακής ενέργειας', () => {
     const { issuer } = documentKindSpec('electrical-installation');
     expect(issuer).toMatchObject({ kind: 'professional', qualifications: ['electrical-installer'], appointedBy: 'owner' });
-    expect(ISSUER_QUALIFICATION_SPECS['electrical-installer']).toEqual({ kind: 'occupation', escoUris: ELECTRICAL_INSTALLER_ESCO_URIS });
+    // ADR-915 §34: το προσόν είναι η ΑΔΕΙΑ· οι ειδικότητες 7411 την έχουν μέσα από την εγγραφή Περιφέρειας.
+    expect(ISSUER_QUALIFICATION_SPECS['electrical-installer']).toEqual({ kind: 'licence', licence: 'electrical-installer' });
+    expect(PROFESSIONAL_LICENCE_SPECS['electrical-installer']).toMatchObject({
+      authority: 'regional-authority',
+      heldThroughOccupations: ELECTRICAL_INSTALLER_ESCO_URIS,
+    });
     const family = OCCUPATION_FAMILIES.find((candidate) => candidate.id === 'electrician');
     for (const uri of ELECTRICAL_INSTALLER_ESCO_URIS) expect(family?.escoUris).toContain(uri);
     expect(ELECTRICAL_INSTALLER_ESCO_URIS).not.toContain(escoOccupationUri('5dbb9cf0-b226-402c-a295-2f42ef05ff8b'));
