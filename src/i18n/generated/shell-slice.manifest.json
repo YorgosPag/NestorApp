@@ -151,7 +151,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "830a72519a4f48ee9466a182feee092bb870ccdf0b0ab2e121dc366e884c6fcc",
+  "inputsSha256": "e8317c6c89d4aeb7e4798e6de7f13ef1d611d54fb0a0d4a5dfe35b2f11ff6485",
   "languages": [
     "el"
   ],
@@ -5535,7 +5535,8 @@
             "truncated.issuance-assignments",
             "truncated.listings",
             "truncated.owner-properties",
-            "truncated.title"
+            "truncated.title",
+            "truncated.undeclared-files"
           ],
           "prefixes": [],
           "whole": false

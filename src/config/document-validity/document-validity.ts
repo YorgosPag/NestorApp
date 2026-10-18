@@ -21,7 +21,9 @@
  * @see ADR-915 — Μητρώο λήξεων εγγράφων + αλυσίδα απαιτήσεων
  */
 
+import type { EvidenceMatcher } from '@/config/conveyance-checklist/types';
 import type { DocumentIssuer, DocumentObligor } from '@/config/document-validity/document-issuers';
+import type { PropertyClass } from '@/constants/property-types';
 
 /**
  * Κανόνας ισχύος ενός είδους εγγράφου:
@@ -40,7 +42,7 @@ export type DocumentValidityRule =
   | { readonly kind: 'days'; readonly days: number }
   | { readonly kind: 'act_day' }
   | { readonly kind: 'unverified' }
-  | { readonly kind: 'printed'; readonly floor: ValidityBound | null; readonly ceiling: ValidityBound };
+  | { readonly kind: 'printed'; readonly floor: ValidityBound | null; readonly ceiling: ValidityCeiling };
 
 /**
  * Ένα νόμιμο όριο λήξης, μετρημένο από την έκδοση:
@@ -55,6 +57,59 @@ export type ValidityBound =
   | { readonly kind: 'end-of-month' }
   | { readonly kind: 'end-of-year' }
   | { readonly kind: 'enfia-cycle' };
+
+/**
+ * Το **ανώτατο** όριο ενός κανόνα `printed`: ένα {@link ValidityBound}, ή μήνες που εξαρτώνται από **δύο** γεγονότα του
+ * ίδιου του εγγράφου — **πότε** εκδόθηκε (ποιο καθεστώς ίσχυε) και **σε ποια κατηγορία** το κατέταξε ο εκδότης
+ * ({@link DOCUMENT_CLASSIFICATIONS}). Μόνο ανώτατο, ποτέ κατώτατο: με άγνωστη κατηγορία ισχύει το **μέγιστο** του
+ * καθεστώτος — ό,τι ο νόμος επιτρέπει για κάποια κατηγορία· για κατώτατο αυτό θα ήταν εγγύηση που δεν υπάρχει.
+ */
+export type ValidityCeiling =
+  | ValidityBound
+  | { readonly kind: 'classified-months'; readonly regimes: readonly ValidityRegime[] };
+
+/** Ένα νομικό καθεστώς διαρκειών: από ποια ημέρα έκδοσης ισχύει, και μήνες ανά κατηγορία. */
+export interface ValidityRegime {
+  /** Πρώτη ημέρα έκδοσης (`YYYY-MM-DD`) που ακολουθεί το καθεστώς· `null` = ό,τι εκδόθηκε πριν από κάθε άλλο. */
+  readonly from: string | null;
+  readonly months: Readonly<Record<DocumentClassification, number>>;
+  /** Η διάταξη, αυτολεξεί (εξαίρεση N.11, όπως το `statute` του είδους). */
+  readonly statute: string;
+}
+
+/**
+ * **Η κατάταξη που γράφει ο ΕΚΔΟΤΗΣ πάνω στο έγγραφο**, ανά είδος — γεγονός του εγγράφου, ποτέ του ακινήτου.
+ *
+ * 🔴 **Γιατί όχι ο τύπος του ακινήτου** (ADR-915 §32): το ΦΕΚ Β' 4654/2021, Παράρτημα ΙΙ παρ. 1, αυτολεξεί: «Η κατάταξη
+ * ΕΗΕ σε κατηγορία Α, Β και Γ […] γίνεται με ευθύνη του συντάκτη της ΥΔΕ». Ο τύπος ακινήτου θα έκανε λάθος: η αποθήκη
+ * κατοικίας είναι Α (Α5) ενώ το `PROPERTY_TYPE_CLASS` λέει `commercial`· το καφέ άνω των 50 ατόμων είναι Γ (2 έτη).
+ * Ο τύπος ακινήτου είναι μόνο **υπόδειξη** στη δήλωση.
+ *
+ * Οι κωδικοί είναι λατινικοί (`C` = Γ)· η ετικέτα ζει στα locales (N.11).
+ */
+export const DOCUMENT_CLASSIFICATIONS = {
+  'electrical-installation': ['A', 'B', 'C'],
+} as const;
+type ClassifiedDocumentKind = keyof typeof DOCUMENT_CLASSIFICATIONS;
+export type DocumentClassification = (typeof DOCUMENT_CLASSIFICATIONS)[ClassifiedDocumentKind][number];
+
+/**
+ * Τακτικός επανέλεγχος εσωτερικής ηλεκτρικής εγκατάστασης — **μέγιστο** διάστημα ανά κατηγορία (ADR-915 §32).
+ *
+ * - **Από 08.10.2021** (έναρξη ισχύος, άρθρο 7 παρ. 1 — δημοσίευση ΦΕΚ Β' 4654/08.10.2021): άρθρο 4 παρ. 5 + Παράρτημα
+ *   ΙΙ, αυτολεξεί: «Α. ΕΗΕ σε κατοικίες και ανάλογους χώρους, με μέγιστο χρονικό διάστημα τακτικού επανελέγχου δέκα (10)
+ *   χρόνια» · «Β. ΕΗΕ σε επαγγελματικούς χώρους, […] πέντε (5) χρόνια» · «Γ. ΕΗΕ σε χώρους ψυχαγωγίας και συνάθροισης
+ *   κοινού και υπαίθριες επαγγελματικές ΕΗΕ, […] δύο (2) χρόνια». Διαβασμένο από τις σελίδες του ΦΕΚ (2026-10-18).
+ * - **Πριν**: άρθρο 6 παρ. 1–2 — οι ΥΔΕ που υποβλήθηκαν πριν, **ή** εκδόθηκαν ως 9 μήνες πριν και υποβλήθηκαν μετά,
+ *   κρατούν «τα προβλεπόμενα κατά την έκδοσή τους χρονικά διαστήματα επανελέγχου» ⇒ κρίνει η **έκδοση**. Παλιό καθεστώς
+ *   (ΥΑ Φ.7.5/1816/88/2004, Β' 470, άρθρο 5): «τουλάχιστον κάθε 14 χρόνια για τις κατοικίες και σε χρονικά διαστήματα
+ *   από 1 έως 7 χρόνια για επαγγελματικούς χώρους» — ⚠️ από απάντηση υπουργείου στη Βουλή, **όχι** από το ΦΕΚ του 2004·
+ *   οι κατηγορίες εκείνου του καθεστώτος δεν είναι οι Α/Β/Γ ⇒ Β και Γ παίρνουν το μέγιστο των επαγγελματικών (7 έτη).
+ */
+export const ELECTRICAL_REINSPECTION_REGIMES: readonly ValidityRegime[] = [
+  { from: '2021-10-08', months: { A: 120, B: 60, C: 24 }, statute: 'ΥΑ 101195/17.9.2021 (ΦΕΚ Β\' 4654/2021) άρθρο 4 παρ. 5 · Παράρτημα ΙΙ' },
+  { from: null, months: { A: 168, B: 84, C: 84 }, statute: 'ΥΑ Φ.7.5/1816/88/2004 (ΦΕΚ Β\' 470) άρθρο 5 · άρθρο 6 παρ. 1–2 ΥΑ 101195/2021' },
+];
 
 /**
  * Η **πρώτη κεντρική έκδοση** της πράξης προσδιορισμού ΕΝΦΙΑ ανά έτος (Α.1085/2023 άρθρο 1 παρ. 6α: το πιστοποιητικό
@@ -86,8 +141,41 @@ export const DOCUMENT_KINDS = [
   'tax-clearance',
   'insurance-clearance',
   'enfia-certificate',
+  'electrical-installation',
 ] as const;
 export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
+
+function isClassifiedKind(kind: DocumentKind): kind is ClassifiedDocumentKind {
+  return Object.prototype.hasOwnProperty.call(DOCUMENT_CLASSIFICATIONS, kind);
+}
+
+/** Οι κατηγορίες που δέχεται ένα είδος — κενό = το είδος δεν κατατάσσεται. */
+export function classificationsOf(kind: DocumentKind): readonly DocumentClassification[] {
+  return isClassifiedKind(kind) ? DOCUMENT_CLASSIFICATIONS[kind] : [];
+}
+
+/** *«Είναι αυτή η τιμή κατηγορία αυτού του είδους;»* — ο φρουρός του ανεκτικού αναγνώστη και της δήλωσης. */
+export function isClassificationOf(kind: DocumentKind, value: unknown): value is DocumentClassification {
+  return typeof value === 'string' && (classificationsOf(kind) as readonly string[]).includes(value);
+}
+
+/**
+ * ADR-915 §33 — **υπόδειξη** κατηγορίας από την κλάση του ακινήτου, για την προεπιλογή του διαλόγου δήλωσης. ⚠️ ΠΟΤΕ
+ * αλήθεια: την κατηγορία τη γράφει ο εκδότης (Παράρτημα ΙΙ παρ. 1)· αποθήκη κατοικίας = Α ενώ η κλάση της λέει
+ * `commercial`, καφέ άνω των 50 ατόμων = Γ. Ο διακομιστής **δεν** τη διαβάζει. `null` = καμία υπόδειξη.
+ */
+export const DOCUMENT_CLASSIFICATION_HINTS: Readonly<
+  Record<ClassifiedDocumentKind, Readonly<Record<PropertyClass, DocumentClassification | null>>>
+> = {
+  // Α «κατοικίες και ανάλογους χώρους» · Β «επαγγελματικούς χώρους» · οικόπεδο: καμία εσωτερική εγκατάσταση.
+  'electrical-installation': { residential: 'A', commercial: 'B', land: null },
+};
+
+/** Η υπόδειξη για αυτό το είδος σε ακίνητο αυτής της κλάσης — `null` όταν το είδος δεν κατατάσσεται ή δεν ξέρουμε. */
+export function classificationHintOf(kind: DocumentKind, propertyClass: PropertyClass | null): DocumentClassification | null {
+  if (propertyClass === null || !isClassifiedKind(kind)) return null;
+  return DOCUMENT_CLASSIFICATION_HINTS[kind][propertyClass];
+}
 
 export interface DocumentKindSpec {
   readonly rule: DocumentValidityRule;
@@ -109,6 +197,17 @@ export interface DocumentKindSpec {
   readonly issuer: DocumentIssuer;
   /** Ποιος **οφείλει να το φέρει** — ουδέτερα ως προς τη διαδικασία (στη μεταβίβαση: ο πωλητής). */
   readonly obligor: DocumentObligor;
+  /**
+   * Η **δημόσια** σελίδα όπου ο καθένας ελέγχει την ισχύ αυτού του εγγράφου στην αρχή που το τηρεί — σύνδεσμος, **ποτέ**
+   * scraping (ίδιο δόγμα με το `registryLookupUrl` των αδειών, ADR-798 §7). `null` = καμία επαληθευμένη σελίδα.
+   */
+  readonly publicLookup: { readonly url: string; readonly verifiedAt: string } | null;
+  /**
+   * **Από πού ανεβαίνει**, για είδος που **δεν** το ζητά ο κατάλογος μεταβίβασης (ADR-915 §32 — η ΥΔΕ). Τα είδη του
+   * καταλόγου δηλώνουν τα entry points τους **στη γραμμή τους** και εδώ `null`: ΕΝΑΣ ιδιοκτήτης ανά είδος (άγκυρα
+   * `document-kind-of-file.test.ts`), αλλιώς οι δύο λίστες θα απέκλιναν σιωπηλά.
+   */
+  readonly standaloneEvidence: readonly EvidenceMatcher[] | null;
 }
 
 export const DOCUMENT_KIND_SPECS: Readonly<Record<DocumentKind, DocumentKindSpec>> = {
@@ -131,6 +230,8 @@ export const DOCUMENT_KIND_SPECS: Readonly<Record<DocumentKind, DocumentKindSpec
       verifiedAt: null,
     },
     obligor: 'owner',
+    publicLookup: null,
+    standaloneEvidence: null,
   },
   // Άρθρο 83 παρ. 6 Ν.4495/2017, αυτολεξεί: «Οι ανωτέρω βεβαιώσεις των μηχανικών έχουν ισχύ δύο (2) μηνών από την
   // υπογραφή τους» (έρευνα 2026-10-16, ADR-915 §13). ⚠️ Η έρευνα της 2026-10-14 δεν το είχε βρει και ο κανόνας ήταν
@@ -156,6 +257,8 @@ export const DOCUMENT_KIND_SPECS: Readonly<Record<DocumentKind, DocumentKindSpec
       verifiedAt: null,
     },
     obligor: 'owner',
+    publicLookup: null,
+    standaloneEvidence: null,
   },
   // Τα τρία παρακάτω εκδίδονται ηλεκτρονικά (myAADE · e-ΕΦΚΑ) την ίδια μέρα ⇒ η ανανέωση θέλει μέρες, όχι εβδομάδες:
   // `renewalLeadDays: 7` = εκτίμηση πρακτικής, όχι διάταξη. Πηγές = κωδικοποιημένα κείμενα, όχι ΦΕΚ ⇒ `verifiedAt: null`.
@@ -170,6 +273,8 @@ export const DOCUMENT_KIND_SPECS: Readonly<Record<DocumentKind, DocumentKindSpec
     advertisingDisclosure: null,
     issuer: { kind: 'authority', service: 'aade-tax-clearance' },
     obligor: 'owner',
+    publicLookup: null,
+    standaloneEvidence: null,
   },
   // ΑΑΕ: 6 μήνες χωρίς οφειλή · 2 μήνες με ρύθμιση που τηρείται · έως το τέλος του μήνα έκδοσης με αρρύθμιστη οφειλή ή
   // βεβαίωση οφειλής (ΥΑ 15435/913/2020 άρθρο 6 παρ. 1 α΄–γ΄, ΦΕΚ Β' 1559 — αυτολεξεί, ADR-915 §16) ⇒ το τέλος του μήνα
@@ -182,6 +287,8 @@ export const DOCUMENT_KIND_SPECS: Readonly<Record<DocumentKind, DocumentKindSpec
     advertisingDisclosure: null,
     issuer: { kind: 'authority', service: 'efka-insurance-clearance' },
     obligor: 'owner',
+    publicLookup: null,
+    standaloneEvidence: null,
   },
   // Έως την πρώτη κεντρική έκδοση ΕΝΦΙΑ του έτους (αν εκδόθηκε πριν από αυτήν) · αλλιώς ως 31/12 του έτους έκδοσης
   // (Α.1085/2023 άρθρο 1 παρ. 6). ⚠️ Αποβιώσαντες / νομικά πρόσωπα σε διακοπή (Α.1082/2024): ισχύει ως τη μνημόνευση
@@ -194,6 +301,40 @@ export const DOCUMENT_KIND_SPECS: Readonly<Record<DocumentKind, DocumentKindSpec
     advertisingDisclosure: null,
     issuer: { kind: 'authority', service: 'aade-enfia-certificate' },
     obligor: 'owner',
+    publicLookup: null,
+    standaloneEvidence: null,
+  },
+  // ΥΔΕ — Υπεύθυνη Δήλωση Ηλεκτρολόγου Εγκαταστάτη (ADR-915 §32). Λήγει η ΥΔΕ, ΟΧΙ το ηλεκτρολογικό σχέδιο (συνημμένο
+  // της, δεν λήγει). Το υπόδειγμα (Παράρτημα Ι) **τυπώνει** «ΕΠΟΜΕΝΟΣ ΤΑΚΤΙΚΟΣ ΕΠΑΝΕΛΕΓΧΟΣ — μέχρι:» ⇒ `printed`.
+  // `floor: null`: ο συντάκτης μπορεί να ορίσει **μικρότερο** διάστημα «για λόγους ασφαλείας», με αιτιολόγηση (Παράρτημα
+  // ΙΙ παρ. 4) ⇒ ο νόμος δεν εγγυάται κανένα κατώτατο, και η μικρότερη τυπωμένη ΔΕΝ είναι ασυμφωνία.
+  // Η αγγελία και ο συμβολαιογράφος δεν τη ζητούν ⇒ `advertisingDisclosure: null`, καμία γραμμή καταλόγου μεταβίβασης.
+  // Νέα ΥΔΕ πριν τη λήξη (έκτακτος έλεγχος, άρθρο 4 παρ. 4γ): αλλαγή κατηγορίας/χρήσης (30 ημέρες) · αλλαγή ιδιοκτήτη ή
+  // καταναλωτή **μόνο** στις Β και Γ · τροποποίηση πίνακα/γείωσης · ατύχημα · πλημμύρα, πυρκαγιά, σεισμός.
+  'electrical-installation': {
+    rule: { kind: 'printed', floor: null, ceiling: { kind: 'classified-months', regimes: ELECTRICAL_REINSPECTION_REGIMES } },
+    statute: 'ΥΑ 101195/17.9.2021 (ΦΕΚ Β\' 4654/2021) άρθρο 4 · Παράρτημα Ι · Παράρτημα ΙΙ · άρθρο 6',
+    // Εκτίμηση πρακτικής (εύρεση ηλεκτρολόγου, έλεγχος, μετρήσεις, ηλεκτρονική υποβολή), ΟΧΙ διάταξη.
+    renewalLeadDays: 30,
+    // Διαβασμένο από τις σελίδες του ΦΕΚ, όχι από επαγγελματία· το παλιό καθεστώς από δευτερογενή πηγή ⇒ `null`.
+    verifiedAt: null,
+    advertisingDisclosure: null,
+    // Υπογράφει «αδειούχος ηλεκτρολόγος εγκαταστάτης» (Παράρτημα Ι: «ΑΡ. ΑΔΕΙΑΣ / ΒΕΒ. ΑΝΑΓΓΕΛΙΑΣ · ΕΚΔΟΥΣΑ ΑΡΧΗ ·
+    // ΕΙΔΙΚΟΤΗΤΑ / ΟΜΑΔΑ»)· η άδεια εκδίδεται ανά Περιφερειακή Ενότητα (ν.3982/2011 · π.δ. 108/2013). «Έχω ενημερώσει
+    // τον ιδιοκτήτη και τον καταναλωτή για την υποχρέωση τακτικού επανελέγχου» (δήλωση 5) ⇒ υπόχρεος ο ιδιοκτήτης.
+    issuer: {
+      kind: 'professional',
+      qualifications: ['electrical-installer'],
+      appointedBy: 'owner',
+      statute: 'ν.3982/2011 · π.δ. 108/2013',
+      verifiedAt: null,
+    },
+    obligor: 'owner',
+    // ΔΕΔΔΗΕ: «μπορεί να αναζητηθεί η καταληκτική ημερομηνία ισχύος μιας Υ.Δ.Ε.» με τα 11 πρώτα ψηφία του αριθμού παροχής.
+    publicLookup: { url: 'https://apps.deddie.gr/LicensedElectricianCertification/', verifiedAt: '2026-10-18' },
+    // Έγγραφο ΤΟΥ ΑΚΙΝΗΤΟΥ: η ΥΔΕ αφορά την παροχή της μονάδας. Το `yde-declaration` της επαφής (persona
+    // `construction_worker`) είναι το αρχείο του ηλεκτρολόγου για τη δουλειά του — άλλο επίπεδο, δεν παρακολουθείται.
+    standaloneEvidence: [{ level: 'property', entryPointIds: ['unit-yde-declaration'] }],
   },
 };
 

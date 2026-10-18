@@ -21,6 +21,7 @@
  * @see ADR-915 §18 — Στάδιο 1: εκδότης και υπόχρεος
  */
 
+import { ELECTRICAL_INSTALLER_ESCO_URIS } from '@/config/electrical-installer-occupations';
 import { PROJECT_ROLE_BRIDGE } from '@/config/profession-bridge.config';
 import type { ProfessionalLicence } from '@/config/professional-licences';
 import { escoOccupationUri } from '@/lib/esco/esco-uri';
@@ -41,6 +42,7 @@ export const ISSUER_QUALIFICATIONS = [
   'civil-sub-engineer',
   'civil-engineer-tei',
   'energy-inspector-registered',
+  'electrical-installer',
 ] as const;
 export type IssuerQualification = (typeof ISSUER_QUALIFICATIONS)[number];
 
@@ -80,6 +82,9 @@ export const ISSUER_QUALIFICATION_SPECS: Readonly<Record<IssuerQualification, Is
   // Ο ενεργειακός επιθεωρητής είναι μηχανικός με ΕΠΙΠΛΕΟΝ άδεια του Μητρώου της ΕΥΕΠΕΝ (buildingcert.gr) — άδεια, όχι
   // επάγγελμα (ADR-915 §21).
   'energy-inspector-registered': { kind: 'licence', licence: 'energy-inspector' },
+  // ΥΔΕ: υπογράφει ηλεκτρολόγος εγκαταστάτης — ειδικότητα ISCO 7411 που ελέγχει εσωτερική ηλεκτρική εγκατάσταση, με
+  // άδεια της Περιφερειακής Ενότητας (ADR-915 §32). Η λίστα ζει μία φορά (`electrical-installer-occupations.ts`).
+  'electrical-installer': { kind: 'occupation', escoUris: ELECTRICAL_INSTALLER_ESCO_URIS },
 };
 
 /** Δημόσιες αρχές που εκδίδουν έγγραφα του μητρώου. */

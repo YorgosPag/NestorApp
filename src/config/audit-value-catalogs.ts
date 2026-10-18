@@ -126,6 +126,7 @@ export const AUDIT_VALUE_CATALOGS: Readonly<Record<string, AuditCatalogRef>> = {
   // ── Property: ADR-915 §27 — στάδιο ανάθεσης έκδοσης (ένα πεδίο ανά είδος, ίδιος κατάλογος σταδίων)
   energyCertificateIssuanceStage: { ns: 'document-registry', path: 'issuance.stage' },
   buildingIdentityIssuanceStage: { ns: 'document-registry', path: 'issuance.stage' },
+  electricalInstallationIssuanceStage: { ns: 'document-registry', path: 'issuance.stage' },
 } as const;
 
 /** Type-safe lookup. Returns `undefined` for fields without a registered catalog. */

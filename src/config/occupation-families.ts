@@ -40,6 +40,7 @@ import {
   Zap,
 } from 'lucide-react';
 
+import { ELECTRICAL_INSTALLER_ESCO_URIS } from '@/config/electrical-installer-occupations';
 import { PROJECT_ROLE_BRIDGE } from '@/config/profession-bridge.config';
 import { escoOccupationUri } from '@/lib/esco/esco-uri';
 import type { ProjectRole } from '@/types/entity-associations';
@@ -101,10 +102,9 @@ export const OCCUPATION_FAMILIES = [
     esco('461959ed-6a80-4c33-a75e-26aaeb52a5a7'), // 7126 τεχνικός αποχετεύσεων
   ] },
   { id: 'electrician', group: 'trades', Icon: PlugZap, escoUris: [
-    esco('4910419f-b4af-4f59-b544-9dbebc8a74f0'), // 7411 ηλεκτρολόγος
-    esco('33960bab-4423-4808-af6c-ec2b485dba41'), // 7411 ηλεκτρολόγος κτιρίων
+    // ηλεκτρολόγος · κτιρίων · βιομηχανικών εγκαταστάσεων — όσοι υπογράφουν ΥΔΕ (ADR-915 §32)
+    ...ELECTRICAL_INSTALLER_ESCO_URIS,
     esco('5dbb9cf0-b226-402c-a295-2f42ef05ff8b'), // 7411 ηλεκτρολόγος οικιακών συσκευών
-    esco('5df63943-f1bc-4438-90f1-92768a7a23c8'), // 7411 ηλεκτρολόγος βιομηχανικών εγκαταστάσεων
     esco('75b63949-1b93-4bf2-a777-ccf978dc3e8a'), // 7411 τεχνικός ηλιακής ενέργειας
   ] },
   { id: 'painter', group: 'trades', Icon: PaintRoller, escoUris: [

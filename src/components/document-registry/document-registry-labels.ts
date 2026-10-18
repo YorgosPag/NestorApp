@@ -159,6 +159,8 @@ export const DOCUMENT_KIND_LABEL_KEYS: Readonly<Record<DocumentKind, string>> = 
   'tax-clearance': 'conveyance:items.seller_tax_clearance.label',
   'insurance-clearance': 'conveyance:items.seller_insurance_clearance.label',
   'enfia-certificate': 'conveyance:items.seller_enfia_certificate.label',
+  // ADR-915 §32 — δεν είναι γραμμή του καταλόγου μεταβίβασης: το όνομα ζει στο μητρώο.
+  'electrical-installation': `${K}kind.electrical-installation`,
 };
 
 /** ADR-915 §18 — «Εκδίδει / Το φέρνει»: κάθε χάρτης δεμένος στο κλειστό σύνολο του `document-issuers.ts`. */
@@ -184,6 +186,7 @@ export const ISSUER_QUALIFICATION_LABEL_KEYS: Readonly<Record<IssuerQualificatio
   'civil-engineer-tei': `${K}issuer.qualification.civil-engineer-tei`,
   // Προσόν-άδεια ⇒ το ΟΝΟΜΑ ΤΗΣ ΑΔΕΙΑΣ, ένα κλειδί (`PROFESSIONAL_LICENCE_SPECS.nameKey` — άγκυρα ισότητας στο test).
   'energy-inspector-registered': 'property-market:licences.energyInspector.name',
+  'electrical-installer': `${K}issuer.qualification.electrical-installer`,
 };
 
 /**
@@ -326,4 +329,5 @@ export const TRUNCATED_SOURCE_KEYS: Readonly<Record<RegistrySource, string>> = {
   'owner-properties': `${K}truncated.owner-properties`,
   listings: `${K}truncated.listings`,
   'issuance-assignments': `${K}truncated.issuance-assignments`,
+  'undeclared-files': `${K}truncated.undeclared-files`,
 };

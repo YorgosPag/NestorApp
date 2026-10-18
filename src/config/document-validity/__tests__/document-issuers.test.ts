@@ -66,6 +66,8 @@ describe('ADR-915 §18 — εκδότες εγγράφων', () => {
       'tax-clearance': 'aade/owner',
       'insurance-clearance': 'efka/owner',
       'enfia-certificate': 'aade/owner',
+      // ADR-915 §32 — ηλεκτρολόγος εγκαταστάτης· «Έχω ενημερώσει τον ιδιοκτήτη […]» (ΥΔΕ, δήλωση 5)
+      'electrical-installation': 'professional/owner',
     });
   });
 
