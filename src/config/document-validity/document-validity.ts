@@ -208,6 +208,17 @@ export interface DocumentKindSpec {
    * `document-kind-of-file.test.ts`), αλλιώς οι δύο λίστες θα απέκλιναν σιωπηλά.
    */
   readonly standaloneEvidence: readonly EvidenceMatcher[] | null;
+  /**
+   * ADR-915 §35 — **μόνιμη υποχρέωση του ακινήτου**: ο νόμος θέλει αυτό το έγγραφο σε ισχύ **όσο ζει** το ακίνητο, όχι
+   * μόνο όσο κρατά μια πράξη. `proposedFor` = οι κλάσεις όπου η εφαρμογή **προτείνει** τη δήλωση — **ποτέ** απαίτηση
+   * μόνη της: την υποχρέωση την επιβεβαιώνει άνθρωπος, με ίχνος (`property-upkeep`).
+   * `null` = το έγγραφο γεννιέται από πράξη (ΠΕΑ: πώληση · μίσθωση · αγγελία, ν.4122/2013 άρθρο 12 — τις καλύπτουν ήδη
+   * η μεταβίβαση και η αγγελία· βεβαιώσεις: ανά συμβόλαιο). Διάταξη αυτολεξεί (εξαίρεση N.11).
+   */
+  readonly standingObligation: {
+    readonly statute: string;
+    readonly proposedFor: readonly PropertyClass[];
+  } | null;
 }
 
 export const DOCUMENT_KIND_SPECS: Readonly<Record<DocumentKind, DocumentKindSpec>> = {
@@ -232,6 +243,7 @@ export const DOCUMENT_KIND_SPECS: Readonly<Record<DocumentKind, DocumentKindSpec
     obligor: 'owner',
     publicLookup: null,
     standaloneEvidence: null,
+    standingObligation: null,
   },
   // Άρθρο 83 παρ. 6 Ν.4495/2017, αυτολεξεί: «Οι ανωτέρω βεβαιώσεις των μηχανικών έχουν ισχύ δύο (2) μηνών από την
   // υπογραφή τους» (έρευνα 2026-10-16, ADR-915 §13). ⚠️ Η έρευνα της 2026-10-14 δεν το είχε βρει και ο κανόνας ήταν
@@ -259,6 +271,7 @@ export const DOCUMENT_KIND_SPECS: Readonly<Record<DocumentKind, DocumentKindSpec
     obligor: 'owner',
     publicLookup: null,
     standaloneEvidence: null,
+    standingObligation: null,
   },
   // Τα τρία παρακάτω εκδίδονται ηλεκτρονικά (myAADE · e-ΕΦΚΑ) την ίδια μέρα ⇒ η ανανέωση θέλει μέρες, όχι εβδομάδες:
   // `renewalLeadDays: 7` = εκτίμηση πρακτικής, όχι διάταξη. Πηγές = κωδικοποιημένα κείμενα, όχι ΦΕΚ ⇒ `verifiedAt: null`.
@@ -275,6 +288,7 @@ export const DOCUMENT_KIND_SPECS: Readonly<Record<DocumentKind, DocumentKindSpec
     obligor: 'owner',
     publicLookup: null,
     standaloneEvidence: null,
+    standingObligation: null,
   },
   // ΑΑΕ: 6 μήνες χωρίς οφειλή · 2 μήνες με ρύθμιση που τηρείται · έως το τέλος του μήνα έκδοσης με αρρύθμιστη οφειλή ή
   // βεβαίωση οφειλής (ΥΑ 15435/913/2020 άρθρο 6 παρ. 1 α΄–γ΄, ΦΕΚ Β' 1559 — αυτολεξεί, ADR-915 §16) ⇒ το τέλος του μήνα
@@ -289,6 +303,7 @@ export const DOCUMENT_KIND_SPECS: Readonly<Record<DocumentKind, DocumentKindSpec
     obligor: 'owner',
     publicLookup: null,
     standaloneEvidence: null,
+    standingObligation: null,
   },
   // Έως την πρώτη κεντρική έκδοση ΕΝΦΙΑ του έτους (αν εκδόθηκε πριν από αυτήν) · αλλιώς ως 31/12 του έτους έκδοσης
   // (Α.1085/2023 άρθρο 1 παρ. 6). ⚠️ Αποβιώσαντες / νομικά πρόσωπα σε διακοπή (Α.1082/2024): ισχύει ως τη μνημόνευση
@@ -303,6 +318,7 @@ export const DOCUMENT_KIND_SPECS: Readonly<Record<DocumentKind, DocumentKindSpec
     obligor: 'owner',
     publicLookup: null,
     standaloneEvidence: null,
+    standingObligation: null,
   },
   // ΥΔΕ — Υπεύθυνη Δήλωση Ηλεκτρολόγου Εγκαταστάτη (ADR-915 §32). Λήγει η ΥΔΕ, ΟΧΙ το ηλεκτρολογικό σχέδιο (συνημμένο
   // της, δεν λήγει). Το υπόδειγμα (Παράρτημα Ι) **τυπώνει** «ΕΠΟΜΕΝΟΣ ΤΑΚΤΙΚΟΣ ΕΠΑΝΕΛΕΓΧΟΣ — μέχρι:» ⇒ `printed`.
@@ -335,8 +351,22 @@ export const DOCUMENT_KIND_SPECS: Readonly<Record<DocumentKind, DocumentKindSpec
     // Έγγραφο ΤΟΥ ΑΚΙΝΗΤΟΥ: η ΥΔΕ αφορά την παροχή της μονάδας. Το `yde-declaration` της επαφής (persona
     // `construction_worker`) είναι το αρχείο του ηλεκτρολόγου για τη δουλειά του — άλλο επίπεδο, δεν παρακολουθείται.
     standaloneEvidence: [{ level: 'property', entryPointIds: ['unit-yde-declaration'] }],
+    // Ο τακτικός επανέλεγχος βαραίνει την εγκατάσταση **όσο υπάρχει**, όχι μια πράξη (άρθρο 4 παρ. 5 · Παράρτημα ΙΙ:
+    // «μέγιστο χρονικό διάστημα τακτικού επανελέγχου»). Οικόπεδο: καμία εσωτερική εγκατάσταση ⇒ καμία πρόταση.
+    standingObligation: {
+      statute: 'ΥΑ 101195/17.9.2021 (ΦΕΚ Β\' 4654/2021) άρθρο 4 παρ. 5 · Παράρτημα ΙΙ',
+      proposedFor: ['residential', 'commercial'],
+    },
   },
 };
+
+/**
+ * ADR-915 §35 — τα είδη που ο νόμος θέλει **μόνιμα** στο ακίνητο: **παράγωγο** του `standingObligation`, ποτέ δεύτερη
+ * λίστα. Σειρά = σειρά του καταλόγου (σταθερή στην οθόνη).
+ */
+export const STANDING_OBLIGATION_KINDS: readonly DocumentKind[] = DOCUMENT_KINDS.filter(
+  (kind) => DOCUMENT_KIND_SPECS[kind].standingObligation !== null,
+);
 
 /** Οι κανόνες αυτού του είδους — η μία πόρτα (ο τύπος κάνει αδύνατο να ζητηθεί είδος που δεν υπάρχει). */
 export function documentKindSpec(kind: DocumentKind): DocumentKindSpec {

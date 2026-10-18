@@ -51,25 +51,38 @@ export function isNeededDayUnknown(neededOn: NeededOn): boolean {
 /** `block` = η διαδικασία δεν προχωρά· `warn` = προχωρά, και το λέει (ADR-915 Α1: η αγγελία μένει, γράφει «έληξε»). */
 export type RequirementPolicy = 'block' | 'warn';
 
-/** Οι διαδικασίες που ζητούν έγγραφα σε ισχύ. Κλειστό σύνολο. */
-export const DOCUMENT_PROCESSES = ['conveyance', 'listing-publication'] as const;
+/**
+ * Οι διαδικασίες που ζητούν έγγραφα σε ισχύ. Κλειστό σύνολο. `property-upkeep` (ADR-915 §35) = η **μόνιμη υποχρέωση**
+ * του ακινήτου: ζει όσο ζει το ακίνητο, και υπάρχει **μόνο** όταν την επιβεβαίωσε άνθρωπος.
+ */
+export const DOCUMENT_PROCESSES = ['conveyance', 'listing-publication', 'property-upkeep'] as const;
 export type DocumentProcess = (typeof DOCUMENT_PROCESSES)[number];
 
-/** Ποια **συγκεκριμένη** διαδικασία — ώστε το «τι σταματά» να δείχνει υπόθεση/αγγελία, όχι είδος. */
+/** Ποια **συγκεκριμένη** διαδικασία — ώστε το «τι σταματά» να δείχνει υπόθεση/αγγελία/ακίνητο, όχι είδος. */
 export type RequirementProcessRef =
   | { readonly kind: 'conveyance'; readonly caseId: string }
-  | { readonly kind: 'listing-publication'; readonly listingId: string };
+  | { readonly kind: 'listing-publication'; readonly listingId: string }
+  | { readonly kind: 'property-upkeep'; readonly propertyId: string };
 
 /**
  * **Γιατί** το ζητά — ποτέ σιωπηλό:
- * - `checklist-item` — γραμμή του καταλόγου μεταβίβασης (ADR-901 §5.5· επαληθεύεται από επαγγελματία, §11)
- * - `statute`        — κελί `raised` του πίνακα νομιμότητας, με τη διάταξη
- * - `unresolved`     — κελί `unresolved`: δεν ξέρουμε αν το ζητά ο νόμος, και **το λέμε** αντί να το σβήσουμε
+ * - `checklist-item`      — γραμμή του καταλόγου μεταβίβασης (ADR-901 §5.5· επαληθεύεται από επαγγελματία, §11)
+ * - `statute`             — κελί `raised` του πίνακα νομιμότητας, με τη διάταξη
+ * - `unresolved`          — κελί `unresolved`: δεν ξέρουμε αν το ζητά ο νόμος, και **το λέμε** αντί να το σβήσουμε
+ * - `standing-obligation` — μόνιμη υποχρέωση (ADR-915 §35): η διάταξη **και** ποιος την επιβεβαίωσε για αυτό το
+ *                           ακίνητο, πότε. Ο νόμος λέει «ισχύει για εγκαταστάσεις»· ότι **αυτό** το ακίνητο έχει τέτοια
+ *                           εγκατάσταση το λέει άνθρωπος, και το ίχνος του μένει στη βάση.
  */
 export type RequirementBasis =
   | { readonly kind: 'checklist-item'; readonly itemId: string; readonly verifiedAt: string | null }
   | { readonly kind: 'statute'; readonly statute: string }
-  | { readonly kind: 'unresolved'; readonly question: string };
+  | { readonly kind: 'unresolved'; readonly question: string }
+  | {
+    readonly kind: 'standing-obligation';
+    readonly statute: string;
+    readonly declaredAt: string;
+    readonly declaredByUid: string;
+  };
 
 /**
  * ADR-915 §25 (5γ) — το **πρόσωπο** που αφορά το έγγραφο, όταν εκδίδεται ανά πρόσωπο (φορολογική · ασφαλιστική · ΕΝΦΙΑ:
