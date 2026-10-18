@@ -7,7 +7,8 @@
  *
  * Το Procore λέει «non-compliant»· δεν λέει **ποια** πληρωμή σταματά και **πότε**. Εδώ κάθε διαδικασία που χρειάζεται
  * το έγγραφο ονομάζεται, με τη μέρα που θα βρεθεί χωρίς έγκυρο έγγραφο (`stopsOn`) και το αν **μπλοκάρει** (`block`,
- * μεταβίβαση) ή απλώς **προειδοποιεί** (`warn`, αγγελία — Α1: μένει δημοσιευμένη).
+ * μεταβίβαση) ή απλώς **προειδοποιεί** (`warn`, αγγελία — Α1: μένει δημοσιευμένη · μόνιμη υποχρέωση — §35: ο νόμος
+ * βαραίνει τον ιδιοκτήτη, δεν σταματά καμία πράξη της εφαρμογής).
  *
  * 🔑 **Κανένας υπολογισμός**: `impact` · `stopsOn` · `blocking` ήρθαν έτοιμα από τον διακομιστή.
  * ⚠️ **Η υπόθεση του οικοδεσπότη δεν έχει δική της διεύθυνση** (ζει στην καρτέλα «Μεταβίβαση» της στήλης πωλήσεων):
@@ -19,12 +20,17 @@ import React from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatDateKey } from '@/lib/intl-formatting';
+import { formatDate, formatDateKey } from '@/lib/intl-formatting';
 import { listingDetailHref } from '@/lib/listings/listing-routes';
 import { ENTITY_ROUTES } from '@/lib/routes/entityRoutes';
 import { Link } from '@/lib/workspace/navigation';
 import { isBlockingDependent, type RegistryRowState } from '@/lib/document-validity/document-registry';
-import { isNeededDayUnknown, type DocumentDependent, type NeededOn } from '@/lib/document-validity/document-requirement';
+import {
+  isNeededDayUnknown,
+  type DocumentDependent,
+  type NeededOn,
+  type RequirementProcessRef,
+} from '@/lib/document-validity/document-requirement';
 import {
   IMPACT_LABEL_KEYS,
   POLICY_LABEL_KEYS,
@@ -57,15 +63,38 @@ function impactText(t: Translate, dependent: DocumentDependent): string {
   return t(IMPACT_LABEL_KEYS[dependent.impact]);
 }
 
-/** Ο σύνδεσμος της διαδικασίας — **μόνο** από τα μητρώα διαδρομών, μέσα από το σύνορο πλοήγησης (CHECK 3.61). */
+/** Η ταυτότητα της συγκεκριμένης διαδικασίας — εξαντλητικά: νέα διαδικασία δεν μεταγλωττίζεται χωρίς απάντηση. */
+function processIdOf(process: RequirementProcessRef): string {
+  switch (process.kind) {
+    case 'conveyance': return process.caseId;
+    case 'listing-publication': return process.listingId;
+    case 'property-upkeep': return process.propertyId;
+  }
+}
+
+/**
+ * Ο σύνδεσμος της διαδικασίας — **μόνο** από τα μητρώα διαδρομών, μέσα από το σύνορο πλοήγησης (CHECK 3.61). Η
+ * μεταβίβαση και η μόνιμη υποχρέωση ζουν στο **ακίνητο**· η αγγελία έχει δική της σελίδα.
+ */
 function ProcessLink({ dependent }: { readonly dependent: DocumentDependent }): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS, CONVEYANCE_NS, LEGALITY_NS]);
   const { process, subject } = dependent.requirement;
   const href = process.kind === 'listing-publication'
     ? listingDetailHref(process.listingId)
     : ENTITY_ROUTES.properties.withId(subject.propertyId);
-  const label = process.kind === 'listing-publication' ? REGISTRY_KEYS.openListing : REGISTRY_KEYS.openProperty;
-  return <Link href={href} className="text-sm underline underline-offset-4">{t(label)}</Link>;
+  return (
+    <Link href={href} className="text-sm underline underline-offset-4">
+      {t(process.kind === 'listing-publication' ? REGISTRY_KEYS.openListing : REGISTRY_KEYS.openProperty)}
+    </Link>
+  );
+}
+
+/** §35 — ποιος/πότε: η μόνιμη υποχρέωση **δεν** είναι συμπέρασμα, είναι απόφαση ανθρώπου — και το λέει. */
+function DeclaredOn({ dependent }: { readonly dependent: DocumentDependent }): React.ReactElement | null {
+  const { t } = useTranslation([REGISTRY_NS, CONVEYANCE_NS, LEGALITY_NS]);
+  const { basis } = dependent.requirement;
+  if (basis.kind !== 'standing-obligation') return null;
+  return <span className="text-muted-foreground">{t(REGISTRY_KEYS.upkeepDeclaredOn, { date: formatDate(basis.declaredAt) })}</span>;
 }
 
 interface DependentProps {
@@ -82,6 +111,7 @@ function DependentItem({ dependent, state }: DependentProps): React.ReactElement
       <p className="m-0 flex flex-wrap items-center gap-2 text-sm text-foreground">
         <strong className="font-medium">{t(PROCESS_LABEL_KEYS[process.kind])}</strong>
         <span className="text-muted-foreground">{neededOnText(t, neededOn)}</span>
+        <DeclaredOn dependent={dependent} />
         <Badge variant="muted">{t(POLICY_LABEL_KEYS[policy])}</Badge>
         {/* 🔑 «Υποχρεωτικό» ≠ «μπλοκάρει τώρα»: ΠΕΑ ως το 2036 δεν μπλοκάρει σήμερα. Κρίνει ο ΠΥΡΗΝΑΣ (`isBlockingDependent`). */}
         {isBlockingDependent(dependent, state) ? <Badge variant="error">{t(REGISTRY_KEYS.blockingNow)}</Badge> : null}
@@ -112,15 +142,10 @@ export function RegistryDependents({
       ) : (
         <ul className="m-0 flex list-none flex-col gap-3 p-0">
           {dependents.map((dependent) => (
-            <DependentItem key={`${dependent.requirement.process.kind}:${processIdOf(dependent)}`} dependent={dependent} state={state} />
+            <DependentItem key={`${dependent.requirement.process.kind}:${processIdOf(dependent.requirement.process)}`} dependent={dependent} state={state} />
           ))}
         </ul>
       )}
     </section>
   );
 }
-
-const processIdOf = (dependent: DocumentDependent): string => {
-  const { process } = dependent.requirement;
-  return process.kind === 'conveyance' ? process.caseId : process.listingId;
-};

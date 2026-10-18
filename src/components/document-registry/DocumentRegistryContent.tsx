@@ -31,6 +31,7 @@ import { useCapability } from '@/auth/hooks/useCapability';
 import { useDocumentRegistry, type DocumentRegistryApi, type DocumentRegistryState } from '@/hooks/document-registry/useDocumentRegistry';
 import { useIssuanceAssignment } from '@/hooks/document-registry/useIssuanceAssignment';
 import { useObligorDesignation } from '@/hooks/document-registry/useObligorDesignation';
+import { useUpkeepDeclaration } from '@/hooks/document-registry/useUpkeepDeclaration';
 import { isGranted } from '@/types/capability-authority';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatDateKey, formatList } from '@/lib/intl-formatting';
@@ -58,6 +59,7 @@ import { RegistryGapItem } from '@/components/document-registry/RegistryGapItem'
 import { IssuanceAssignmentProvider } from '@/components/document-registry/issuance-assignment-context';
 import { ObligorDesignationProvider } from '@/components/document-registry/obligor-designation-context';
 import { RegistryTally } from '@/components/document-registry/RegistryTally';
+import { RegistryUpkeepPanel } from '@/components/document-registry/RegistryUpkeepPanel';
 import {
   REGISTRY_KEYS,
   CONVEYANCE_NS,
@@ -216,6 +218,8 @@ function useDesignatedRegistry({ registry: loaded, revalidate }: ReadyBodyProps)
 
 function ReadyBody(props: ReadyBodyProps): React.ReactElement {
   const { registry, actions, issuanceActions } = useDesignatedRegistry(props);
+  // §35 — η απόφαση μόνιμης υποχρέωσης: ίδιο δικαίωμα (αλλάζει γεγονός του ακινήτου), ΟΧΙ αισιόδοξα.
+  const upkeep = useUpkeepDeclaration(props.revalidate);
   const [view, select] = useRegistryView();
   const tally = useMemo(() => registryViewTally(registry.rows, registry.asOf), [registry]);
   const rows = useMemo(() => rowsOfRegistryView(registry.rows, view, registry.asOf), [registry, view]);
@@ -224,6 +228,7 @@ function ReadyBody(props: ReadyBodyProps): React.ReactElement {
       <IssuanceAssignmentProvider value={issuanceActions}>
         <TruncatedNotice registry={registry} />
         <RegistryTally tally={registry.tally} view={view} onSelect={select} />
+        <RegistryUpkeepPanel registry={registry} declaration={upkeep} canDecide={actions.canDesignate} />
         {registry.rows.length === 0 ? (
           <EmptyState />
         ) : (
