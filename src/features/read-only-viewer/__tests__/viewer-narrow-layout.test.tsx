@@ -65,6 +65,7 @@ jest.mock('@/components/ui/card', () => ({
   CardHeader: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
   CardContent: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
   CardTitle: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+  CARD_SECTIONS_SCOPE: 'card-sections-scope',
 }));
 
 jest.mock('@/components/ui/scroll-area', () => ({
@@ -350,6 +351,12 @@ describe('Θ — Το βοηθητικό πάνελ ανοίγει μόνο όπ
     showDetails(root);
     expect(sheetPanel(root)).not.toBeNull();
     expect(sheetPanel(root)?.closest('[data-list-scroll]')).toHaveClass('overflow-y-auto');
+  });
+
+  it('Θ13β: 🔴 το φύλλο είναι ήδη επιφάνεια — δηλώνει το πεδίο «κάρτες ⇒ ενότητες» (ADR-912 §12.18 · Apple/Google Maps place sheet)', () => {
+    const { root } = mount('narrow', ['p1']);
+    showDetails(root);
+    expect(sheetPanel(root)?.closest('[data-list-scroll]')).toHaveClass('card-sections-scope');
   });
 
   it('Θ14: 🔴 στην ευρεία ΔΕΝ ανοίγει ΠΟΤΕ — ακόμη κι αν πατηθεί η σκανδάλη', () => {

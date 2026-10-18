@@ -4,6 +4,19 @@ import { Slot } from "@radix-ui/react-slot"
 import { cn } from "@/lib/utils"
 import { useBorderTokens } from "@/hooks/useBorderTokens"
 import '@/lib/design-system';
+import cardSectionsStyles from './card-sections.module.css';
+
+/**
+ * **Το σήμα «είμαι επιφάνεια-κάρτα»** (ADR-912 §12.18). Το φορά κάθε `Card`· το απλώνει ρητά όποια επιφάνεια ζωγραφίζει
+ * κάρτα χωρίς `Card` (π.χ. ο μετρητής πληρότητας). Μόνο του δεν αλλάζει τίποτα — το διαβάζει το `CARD_SECTIONS_SCOPE`.
+ */
+export const CARD_SURFACE_MARKER = { 'data-card': '' } as const;
+
+/**
+ * **Μέσα σε αυτό το δοχείο οι κάρτες γίνονται ενότητες με διαχωριστικά** (Apple / Google Maps place sheet · Material 3
+ * «μην εμφωλεύεις κάρτες»). Το δηλώνει ρητά η επιφάνεια που είναι ήδη επιφάνεια (φύλλο κινητού) — ποτέ η κάρτα.
+ */
+export const CARD_SECTIONS_SCOPE = cardSectionsStyles.scope;
 
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   /**
@@ -29,6 +42,7 @@ const Card = React.forwardRef<
   return (
     <Comp
       ref={ref}
+
       className={cn(
         `${quick.card} bg-card text-card-foreground shadow-sm overflow-clip min-w-0`,
         className

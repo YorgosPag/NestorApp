@@ -29,11 +29,13 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
+import { CARD_SECTIONS_SCOPE } from '@/components/ui/card';
 import { SnapBottomSheet } from '@/components/ui/snap-bottom-sheet/SnapBottomSheet';
 import { useSheetSnap, type SheetSnapController } from '@/hooks/media/useSheetSnap';
 import type { ViewportClass } from '@/hooks/media/useViewportClass';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { BOTTOM_SHEET_DISMISS_STOP } from '@/lib/layout/bottom-sheet-stops';
+import { cn } from '@/lib/utils';
 
 import { VIEWER_DETAILS_SHEET_HISTORY_KEY } from '../viewer-panes';
 import styles from './viewer-details-sheet.module.css';
@@ -121,8 +123,9 @@ export function ViewerDetailsSheet({ state, viewport, children }: ViewerDetailsS
       className="md:hidden"
     >
       {/* `overscroll-contain`: η κύλιση στο άκρο δεν διαρρέει στο φύλλο/κάτοψη. `min-h-0`: αλλιώς το flex παιδί δεν
-          συρρικνώνεται και η περιοχή δεν κυλά ποτέ. */}
-      <div data-list-scroll="" className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          συρρικνώνεται και η περιοχή δεν κυλά ποτέ. `CARD_SECTIONS_SCOPE`: το φύλλο είναι ήδη επιφάνεια — οι κάρτες
+          του πάνελ γίνονται ενότητες με διαχωριστικά (Apple / Google Maps place sheet, ADR-912 §12.18). */}
+      <div data-list-scroll="" className={cn('min-h-0 flex-1 overflow-y-auto overscroll-contain', CARD_SECTIONS_SCOPE)}>
         {state.mounted && children}
       </div>
     </SnapBottomSheet>

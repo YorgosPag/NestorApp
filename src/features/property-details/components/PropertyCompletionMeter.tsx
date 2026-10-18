@@ -24,6 +24,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { CARD_SURFACE_MARKER } from '@/components/ui/card';
 import { ChevronDown, ChevronUp, X, Gauge } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -106,6 +107,7 @@ export function PropertyCompletionMeter({
   if (isDismissed) {
     return (
       <section
+        {...CARD_SURFACE_MARKER}
         aria-label={t('completion.aria')}
         className={cn(
           'w-full shrink-0 border flex items-center justify-between',
@@ -139,6 +141,7 @@ export function PropertyCompletionMeter({
 
   return (
     <section
+      {...CARD_SURFACE_MARKER}
       aria-label={t('completion.aria')}
       className={cn(
         // `shrink-0` critical: parent PropertyDetailsContent outer div is
