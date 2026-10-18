@@ -21,7 +21,10 @@ import { ListContainer, PageContainer } from '@/core/containers';
 import { PageLoadingState } from '@/core/states';
 import { PropertyCardGrid } from '@/features/property-grid/PropertyCardGrid';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { DEFAULT_FILTERS } from '@/types/property-viewer';
+import { selectedViewerItem } from '@/features/read-only-viewer/viewer-panes';
+import { cn } from '@/lib/utils';
 import { isCatalogPending } from './detail/property-page-state';
 import { PropertiesHeader } from './page/PropertiesHeader';
 import { PropertyPageBody } from './page/PropertyPageBody';
@@ -39,7 +42,9 @@ const PropertyFloorplanView = dynamic(
 );
 
 /** Το σώμα της ενεργής όψης. Κάδος/αρχείο σκεπάζουν **κάθε** όψη (η κεφαλίδα δείχνει τότε καμία πατημένη). */
-function PropertiesScreenBody({ screen, urlTab }: { screen: PropertiesScreenState; urlTab: string | null }) {
+function PropertiesScreenBody({ screen, urlTab, detailFocused }: {
+  screen: PropertiesScreenState; urlTab: string | null; detailFocused: boolean;
+}) {
   const { engine, view, creation, retired, viewedProperty, canDelete, viewOnFloorplan } = screen;
 
   if (view === 'grid' && !retired.retiredView) {
@@ -56,6 +61,7 @@ function PropertiesScreenBody({ screen, urlTab }: { screen: PropertiesScreenStat
         onHoverProperty={engine.onHoverProperty}
         onSelectProperty={engine.handlePolygonSelect}
         onSelectFloor={engine.onSelectFloor}
+        detailFocused={detailFocused}
       />
     );
   }
@@ -95,6 +101,9 @@ export function PropertiesScreen({ urlTab = null }: { urlTab?: string | null }) 
   const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer', 'trash']);
   const screen = usePropertiesScreen();
   const { engine, view, setView, creation, retired } = screen;
+  const layout = useLayoutClasses();
+  const detailFocused = view === 'floorplan' && !retired.retiredView
+    && selectedViewerItem(engine.filteredProperties, engine.selectedPropertyIds) !== null;
 
   // ADR-229 — φρουρός φόρτωσης δεδομένων· όχι κατά τη δημιουργία (θα έσβηνε φόρμα στη μέση της συμπλήρωσης).
   // ADR-777 §8.30 — «δεν απάντησε» ≠ «άδειο»: το `loading` μόνο του είναι `false` και ΠΡΙΝ ρωτήσει κανείς.
@@ -108,36 +117,44 @@ export function PropertiesScreen({ urlTab = null }: { urlTab?: string | null }) 
 
   return (
     <PageContainer ariaLabel={t('page.pageLabel')}>
-      <PropertiesHeader
-        viewMode={view}
-        setViewMode={(next) => setView(next)}
-        showDashboard={engine.showDashboard}
-        setShowDashboard={engine.setShowDashboard}
-        searchTerm={engine.filters.searchTerm}
-        setSearchTerm={screen.setSearchTerm}
-        showFilters={screen.showFilters}
-        setShowFilters={screen.setShowFilters}
-        visibleCount={engine.filteredProperties.length}
-        {...retired.headerProps}
-      />
+      {/*
+        ADR-912 §12.17 — **στο στενό η λεπτομέρεια είναι ΔΙΚΗ ΤΗΣ οθόνη** (Gmail · Zillow · Idealista): με επιλεγμένο
+        ακίνητο στην κάτοψη, τίτλος + προβολές/φίλτρα/κάδος της ΛΙΣΤΑΣ δεν φαίνονται — μετρημένα ~135px στα 390×844. Το
+        ‹ πίσω της μπάρας του θεατή γυρίζει στη λίστα, όπου ξαναεμφανίζονται. Μόνο ορατότητα ⇒ CSS `max-md:` (το ίδιο 768
+        με το `MOBILE_BREAKPOINT`), σωστό από το πρώτο καρέ, αμετάβλητο σε desktop (§12.14 κανόνας 4).
+      */}
+      <div className={cn('contents', detailFocused && 'max-md:hidden')}>
+        <PropertiesHeader
+          viewMode={view}
+          setViewMode={(next) => setView(next)}
+          showDashboard={engine.showDashboard}
+          setShowDashboard={engine.setShowDashboard}
+          searchTerm={engine.filters.searchTerm}
+          setSearchTerm={screen.setSearchTerm}
+          showFilters={screen.showFilters}
+          setShowFilters={screen.setShowFilters}
+          visibleCount={engine.filteredProperties.length}
+          {...retired.headerProps}
+        />
 
-      {engine.showDashboard && (
-        <PropertyPageDashboard stats={engine.dashboardStats} filters={engine.filters} onFiltersChange={screen.updateFilters} />
-      )}
+        {engine.showDashboard && (
+          <PropertyPageDashboard stats={engine.dashboardStats} filters={engine.filters} onFiltersChange={screen.updateFilters} />
+        )}
 
-      <ResponsiveFiltersPanel
-        config={screen.filtersConfig}
-        filters={engine.filters}
-        onFiltersChange={screen.onFiltersChange}
-        defaultFilters={DEFAULT_FILTERS}
-        showMobile={screen.showFilters}
-      />
+        <ResponsiveFiltersPanel
+          config={screen.filtersConfig}
+          filters={engine.filters}
+          onFiltersChange={screen.onFiltersChange}
+          defaultFilters={DEFAULT_FILTERS}
+          showMobile={screen.showFilters}
+        />
 
-      {/* 🗑️🗄️ Κάδος ή Αρχείο: η μπάρα της ανοιχτής προβολής (μόνο με `:delete`) + οι γραμμές της */}
-      {retired.actionsBar}
+        {/* 🗑️🗄️ Κάδος ή Αρχείο: η μπάρα της ανοιχτής προβολής (μόνο με `:delete`) + οι γραμμές της */}
+        {retired.actionsBar}
+      </div>
 
-      <ListContainer>
-        <PropertiesScreenBody screen={screen} urlTab={urlTab} />
+      <ListContainer className={detailFocused ? layout.listPaddingDetailFlush : undefined}>
+        <PropertiesScreenBody screen={screen} urlTab={urlTab} detailFocused={detailFocused} />
       </ListContainer>
 
       {engine.PropertyMutationImpactDialog}

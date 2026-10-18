@@ -71,15 +71,11 @@ jest.mock('@/components/ui/scroll-area', () => ({
   ScrollArea: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
 }));
 
-// Το φύλλο μιμείται **τη μοναδική ιδιότητα που κρίνεται**: προσαρτά περιεχόμενο μόνο όταν
-// είναι ανοιχτό — ακριβώς όπως το Radix.
-jest.mock('@/components/ui/sheet', () => ({
-  Sheet: ({ open, children }: { open?: boolean; children?: React.ReactNode }) =>
-    open ? <div data-testid="details-sheet">{children}</div> : null,
-  SheetContent: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
-  SheetHeader: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
-  SheetTitle: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
-}));
+// ADR-912 §12.17 — το φύλλο στοιχείων είναι πλέον το κοινό `SnapBottomSheet` (όχι Radix): το jsdom δεν έχει
+// `Element.scrollTo`, που καλεί ο ελεγκτής στάσεων. Οι στάσεις μετριούνται ζωντανά (ADR)· εδώ κρίνεται η ΔΟΜΗ.
+beforeAll(() => {
+  if (!Element.prototype.scrollTo) Element.prototype.scrollTo = () => undefined;
+});
 
 jest.mock('@/components/property-viewer/PropertyList', () => ({
   PropertyList: () => <div data-testid="property-list" />,
@@ -327,26 +323,46 @@ describe('Θ — Η επιστροφή στη λίστα, και η ταυτοδ
 });
 
 describe('Θ — Το βοηθητικό πάνελ ανοίγει μόνο όπου υπάρχει', () => {
-  it('Θ12: το φύλλο μένει κλειστό μέχρι να ζητηθεί', () => {
-    const { view } = mount('narrow', ['p1']);
-    expect(view.queryByTestId('details-sheet')).toBeNull();
-  });
-
-  it('Θ13: το κουμπί «Στοιχεία» το ανοίγει στη στενή', () => {
-    const { root, view } = mount('narrow', ['p1']);
+  /** Το φύλλο στοιχείων (στη σκηνή) και το πάνελ μέσα του — όχι το αντίτυπο της στήλης επιθεωρητή. */
+  const sheetOf = (root: HTMLElement) => root.querySelector<HTMLElement>('[data-sheet-state]');
+  const sheetPanel = (root: HTMLElement) => sheetOf(root)?.querySelector('[data-testid="details-panel"]') ?? null;
+  const showDetails = (root: HTMLElement) => {
     const buttons = root.querySelectorAll<HTMLButtonElement>('nav button');
     fireEvent.click(buttons[buttons.length - 1]);
-    expect(view.queryByTestId('details-sheet')).not.toBeNull();
+  };
+
+  it('Θ12: το φύλλο μένει κλειστό μέχρι να ζητηθεί — και κλειστό σημαίνει εκτός Tab (`inert`)', () => {
+    const { root } = mount('narrow', ['p1']);
+    expect(sheetOf(root)).not.toBeNull();
+    expect(sheetPanel(root)).toBeNull();
+    expect(sheetOf(root)?.querySelector('section')).toHaveAttribute('inert');
+  });
+
+  it('Θ12β: 🔴 ΜΗ-ΑΠΟΚΛΕΙΣΤΙΚΟ (Apple Maps · Material standard sheet): η κάτοψη μένει ζωντανή από πάνω', () => {
+    const { root } = mount('narrow', ['p1']);
+    expect(sheetOf(root)).toHaveClass('pointer-events-none');
+    expect(root.querySelector('[role="dialog"]')).toBeNull();
+    expect(root.querySelector('[aria-modal]')).toBeNull();
+  });
+
+  it('Θ13: το κουμπί «Στοιχεία» το ανοίγει στη στενή, με το πάνελ να κυλά στο ΦΥΛΛΟ', () => {
+    const { root } = mount('narrow', ['p1']);
+    showDetails(root);
+    expect(sheetPanel(root)).not.toBeNull();
+    expect(sheetPanel(root)?.closest('[data-list-scroll]')).toHaveClass('overflow-y-auto');
   });
 
   it('Θ14: 🔴 στην ευρεία ΔΕΝ ανοίγει ΠΟΤΕ — ακόμη κι αν πατηθεί η σκανδάλη', () => {
-    // Το `SheetContent` φέρει `md:hidden`, αλλά το σκοτεινό στρώμα του Radix **όχι**: ένα
-    // φύλλο «κρυμμένο» σε desktop θα άφηνε επικάλυψη πάνω σε τρεις κανονικές στήλες. Γι' αυτό
-    // το άνοιγμα κρίνεται από τη **μέτρηση**, όχι μόνο από την πρόθεση του χρήστη.
-    const { root, view } = mount('wide', ['p1']);
-    const buttons = root.querySelectorAll<HTMLButtonElement>('nav button');
-    fireEvent.click(buttons[buttons.length - 1]);
-    expect(view.queryByTestId('details-sheet')).toBeNull();
+    const { root } = mount('wide', ['p1']);
+    showDetails(root);
+    expect(sheetPanel(root)).toBeNull();
+    expect(sheetOf(root)).toHaveClass('md:hidden');
+  });
+
+  it('Θ14γ: ‹ πίσω με το φύλλο κλειστό ⇒ επιστροφή στη λίστα ΑΜΕΣΑ (καμία αναμονή κλεισίματος)', () => {
+    const { root, onSelect } = mount('narrow', ['p1']);
+    fireEvent.click(root.querySelectorAll<HTMLButtonElement>('nav button')[0]);
+    expect(onSelect).toHaveBeenCalledWith('', false);
   });
 
   it('Θ14β: η γραμμή της στενής αποδίδεται ΠΑΝΤΑ και κρύβεται με CSS — ποτέ μετά τη μέτρηση', () => {
@@ -371,7 +387,7 @@ describe('Θ — Τα κλειδιά υπάρχουν και στις δύο γ�
 
     const el = read('el');
     const en = read('en');
-    const expected = ['backToList', 'showDetails', 'detailsTitle', 'closeDetails'];
+    const expected = ['backToList', 'showDetails', 'detailsTitle', 'closeDetails', 'lessDetails', 'moreDetails'];
 
     for (const key of expected) {
       expect(typeof el[key]).toBe('string');

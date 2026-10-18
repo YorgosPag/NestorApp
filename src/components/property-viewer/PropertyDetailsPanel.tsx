@@ -25,6 +25,12 @@ interface PropertyDetailsPanelProps {
   properties: Property[];
   onUpdateProperty?: (propertyId: string, updates: Partial<Property>) => void;
   isReadOnly?: boolean; // NEW: Read-only mode prop
+  /**
+   * **Ποιος κυλά** (ADR-912 §12.17). `panel` (προεπιλογή) = το πάνελ με δική του `ScrollArea` (στήλη επιθεωρητή).
+   * `host` = ο ξενιστής έχει ήδη περιοχή κύλισης (φύλλο με στάσεις): μια δεύτερη, εσωτερική, θα έτρωγε το σύρσιμο που
+   * πρέπει να **μεγαλώνει το φύλλο** — και μέσα σε φύλλο χωρίς ορισμένο ύψος το `h-full` της δεν λυνόταν καν.
+   */
+  scrollOwner?: 'panel' | 'host';
 }
 
 export function PropertyDetailsPanel({
@@ -32,7 +38,8 @@ export function PropertyDetailsPanel({
   onSelectFloor,
   properties,
   onUpdateProperty,
-  isReadOnly = false // NEW: Default to false
+  isReadOnly = false, // NEW: Default to false
+  scrollOwner = 'panel',
 }: PropertyDetailsPanelProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
@@ -97,13 +104,12 @@ export function PropertyDetailsPanel({
     );
   }
 
-  return (
-    <ScrollArea className="h-full">
-      <PropertyDetailsContent
-        property={property as ExtendedPropertyDetails}
-        onSelectFloor={safeOnSelectFloor}
-        onUpdateProperty={safeOnUpdateProperty}
-      />
-    </ScrollArea>
+  const content = (
+    <PropertyDetailsContent
+      property={property as ExtendedPropertyDetails}
+      onSelectFloor={safeOnSelectFloor}
+      onUpdateProperty={safeOnUpdateProperty}
+    />
   );
+  return scrollOwner === 'host' ? content : <ScrollArea className="h-full">{content}</ScrollArea>;
 }

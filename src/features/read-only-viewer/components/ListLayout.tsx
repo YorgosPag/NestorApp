@@ -26,7 +26,7 @@ import { PropertyHoverInfo } from '@/components/property-viewer/PropertyHoverInf
 import { PropertyStatusLegend } from '@/components/property-viewer/PropertyStatusLegend';
 import { ReadOnlyMediaViewer, parseMediaTabParam } from './ReadOnlyMediaViewer';
 import { useMediaTabParam } from '@/components/shared/media/viewer/useMediaTabParam';
-import { ViewerDetailsSheet } from './ViewerDetailsSheet';
+import { ViewerDetailsSheet, useDetailsSheet } from './ViewerDetailsSheet';
 import { ViewerNarrowBar } from './ViewerNarrowBar';
 import { ViewerInspectorSplit } from './ViewerInspectorSplit';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -40,6 +40,7 @@ import {
   VIEWER_DETAIL_HISTORY_KEY,
   VIEWER_PANE_ATTRIBUTE,
   reportedViewerPane,
+  selectedViewerItem,
 } from '../viewer-panes';
 import type { Property } from '@/types/property-viewer';
 import type { ReadOnlyViewerContextProps } from '../types';
@@ -49,6 +50,12 @@ import { PROPERTY_STATUS_LABELS } from '@/constants/domains/property-status-core
 import type { PropertyStatus } from '@/constants/domains/property-status-core';
 import { resolvedPriceLabel } from '@/lib/listings/listing-price-label';
 import { getEffectivePrice } from '@/lib/properties/price-resolver';
+
+/**
+ * ADR-912 §12.17 — στη στενή οθόνη η σκηνή ΕΙΝΑΙ η οθόνη (Zillow · Idealista): ο θεατής μέσων χάνει πλαίσιο, ακτίνα και
+ * σκιά, ώστε η κάτοψη να φτάνει ως την άκρη. Μόνο ορατότητα ⇒ CSS `max-md:` (§12.14 κανόνας 4)· από `md` η κάρτα μένει.
+ */
+const NARROW_STAGE_FLUSH = 'max-md:rounded-none max-md:border-0 max-md:shadow-none';
 
 export function ListLayout({
   isLoading,
@@ -98,10 +105,10 @@ export function ListLayout({
    * έπρεπε να αλλάξουν μαζί. Δεν ήταν διακοσμητικό: η μία από τις έξι είχε ήδη αποκλίνει
    * σε μορφή (τυλιγμένη σε αμέσως καλούμενη συνάρτηση για το `companyId`).
    */
-  const selectedProperty = React.useMemo<Property | null>(() => {
-    const id = selectedPropertyIds[0];
-    return id ? filteredProperties.find((p) => p.id === id) ?? null : null;
-  }, [filteredProperties, selectedPropertyIds]);
+  const selectedProperty = React.useMemo<Property | null>(
+    () => selectedViewerItem(filteredProperties, selectedPropertyIds),
+    [filteredProperties, selectedPropertyIds],
+  );
 
   const hasSelection = selectedProperty !== null;
 
@@ -162,17 +169,11 @@ export function ListLayout({
    */
   const backToList = React.useCallback(() => handlePolygonSelect('', false), [handlePolygonSelect]);
 
-  const [detailsRequested, setDetailsRequested] = React.useState(false);
-
   /**
-   * ⚠️ **Το φύλλο κλείνει όταν η οθόνη γίνει ευρεία, και δεν είναι πολυτέλεια.** Το
-   * `SheetContent` φέρει `md:hidden`, αλλά το **σκοτεινό στρώμα** του Radix αποδίδεται από τη
-   * βιβλιοθήκη και **δεν** το φέρει: ένα ανοιχτό φύλλο που «κρύφτηκε» στο desktop θα άφηνε
-   * επικάλυψη πάνω σε τρεις κανονικές στήλες. **Συμπεριφορά**, άρα σωστά κρέμεται από τη μέτρηση.
+   * ADR-912 §12.17 — τα «Στοιχεία» στη στενή είναι φύλλο με στάσεις πάνω από την κάτοψη (Apple Maps · Google Maps).
+   * Τον κύκλο ζωής (ζητήθηκε → προσάρτηση → «μισό»· «κλειστό» → αποπροσάρτηση· φαρδιά → τίποτα) τον κατέχει ΕΝΑ hook.
    */
-  React.useEffect(() => {
-    if (viewport === 'wide') setDetailsRequested(false);
-  }, [viewport]);
+  const detailsSheet = useDetailsSheet(viewport);
 
   useSheetBackDismiss({
     historyKey: VIEWER_DETAIL_HISTORY_KEY,
@@ -201,11 +202,12 @@ export function ListLayout({
    *
    * ⚠️ Το πάνελ γράφεται **μία** φορά και τοποθετείται σε **δύο** θέσεις — στήλη στην ευρεία, φύλλο στη στενή.
    */
-  const detailsPanel = (
+  const renderDetailsPanel = (scrollOwner: 'panel' | 'host') => (
     <PropertyDetailsPanel
       propertyIds={selectedPropertyIds}
       onSelectFloor={handleSelectFloor}
       properties={properties}
+      scrollOwner={scrollOwner}
     />
   );
 
@@ -261,8 +263,8 @@ export function ListLayout({
           <section className="flex min-h-0 min-w-0 flex-1 flex-col">
             <ViewerNarrowBar
               title={selectedProperty?.name}
-              onBack={backToList}
-              onShowDetails={() => setDetailsRequested(true)}
+              onBack={() => detailsSheet.leave(backToList)}
+              onShowDetails={detailsSheet.open}
             />
 
             {showPropertyHoverInfo && (
@@ -271,20 +273,29 @@ export function ListLayout({
                 className="absolute bottom-2 left-2 z-10"
               />
             )}
-            <ReadOnlyMediaViewer
-              propertyId={selectedPropertyIds[0] ?? null}
-              propertyName={selectedProperty?.name}
-              floorId={selectedProperty?.floorId ?? null}
-              buildingId={selectedProperty?.buildingId ?? null}
-              floorNumber={selectedProperty?.floor ?? null}
-              companyId={selectedCompanyId}
-              levels={selectedProperty?.levels}
-              levelsSettled={hasSelection}
-              onHoverOverlay={onHoverProperty}
-              onClickOverlay={(propertyId) => handlePolygonSelect(propertyId, false)}
-              highlightedOverlayUnitId={hoveredPropertyId}
-              propertyLabels={propertyLabels}
-            />
+            {/* Η σκηνή είναι ο τόπος του φύλλου στοιχείων (ADR-912 §12.17): το φύλλο σκεπάζει την κάτοψη, ΠΟΤΕ τη μπάρα ‹ πίσω. */}
+            <div className="relative flex min-h-0 flex-1 flex-col">
+              <ReadOnlyMediaViewer
+                propertyId={selectedPropertyIds[0] ?? null}
+                propertyName={selectedProperty?.name}
+                floorId={selectedProperty?.floorId ?? null}
+                buildingId={selectedProperty?.buildingId ?? null}
+                floorNumber={selectedProperty?.floor ?? null}
+                companyId={selectedCompanyId}
+                levels={selectedProperty?.levels}
+                levelsSettled={hasSelection}
+                onHoverOverlay={onHoverProperty}
+                onClickOverlay={(propertyId) => handlePolygonSelect(propertyId, false)}
+                highlightedOverlayUnitId={hoveredPropertyId}
+                propertyLabels={propertyLabels}
+                className={NARROW_STAGE_FLUSH}
+              />
+              {hasSelection && (
+                <ViewerDetailsSheet state={detailsSheet} viewport={viewport}>
+                  {renderDetailsPanel('host')}
+                </ViewerDetailsSheet>
+              )}
+            </div>
           </section>
         )}
         inspector={(
@@ -296,7 +307,7 @@ export function ListLayout({
               </CardHeader>
               {/* 🏢 ENTERPRISE: No padding - ScrollArea fills to edges (same pattern as Διαθέσιμα Ακίνητα) */}
               <CardContent className={`flex-1 ${spacing.padding.none} overflow-hidden`}>
-                {detailsPanel}
+                {renderDetailsPanel('panel')}
               </CardContent>
             </Card>
             {/*
@@ -330,17 +341,6 @@ export function ListLayout({
         )}
       />
 
-      {/*
-        ΤΟ ΒΟΗΘΗΤΙΚΟ ΠΑΝΕΛ ΣΤΗ ΣΤΕΝΗ ΟΘΟΝΗ. Το `hasSelection` στη συνθήκη **δεν** είναι
-        διακόσμηση: όταν το πίσω κουμπί καθαρίσει την επιλογή, το φύλλο κλείνει **μόνο του**,
-        χωρίς δεύτερη κατάσταση που θα μπορούσε να αποκλίνει.
-      */}
-      <ViewerDetailsSheet
-        open={detailsRequested && hasSelection && viewport === 'narrow'}
-        onOpenChange={setDetailsRequested}
-      >
-        {detailsPanel}
-      </ViewerDetailsSheet>
     </div>
   );
 }

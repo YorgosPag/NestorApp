@@ -99,6 +99,13 @@ export type ViewerPane = (typeof VIEWER_PANES)[number];
 export const VIEWER_DETAIL_HISTORY_KEY = '__readOnlyViewerDetail' as const;
 
 /**
+ * Η καταχώριση του **φύλλου στοιχείων** (ADR-912 §12.17) — στοιβάζεται ΠΑΝΩ από τη λεπτομέρεια: «πίσω» κλείνει πρώτα
+ * το φύλλο, δεύτερο «πίσω» γυρίζει στη λίστα. Δικό της κλειδί (Θ11), και ο `useSheetBackDismiss` αγνοεί το `popstate`
+ * που δεν αφαίρεσε τη δική του καταχώριση.
+ */
+export const VIEWER_DETAILS_SHEET_HISTORY_KEY = '__readOnlyViewerDetailsSheet' as const;
+
+/**
  * **Τι δείχνει ο θεατής** — για την αναφορά, ποτέ για τη διάταξη.
  *
  * @param viewport Η κλάση πλάτους· `measuring` όσο δεν έχει μετρηθεί παράθυρο.
@@ -108,4 +115,14 @@ export function reportedViewerPane(viewport: ViewportClass, hasSelection: boolea
   if (viewport === 'measuring') return 'measuring';
   if (viewport === 'wide') return 'columns';
   return hasSelection ? 'media' : 'list';
+}
+
+/**
+ * **Το επιλεγμένο ακίνητο του θεατή, λυμένο σε ΕΝΑ σημείο** (ADR-912 §12.17). Το ρωτούν **δύο**: ο `ListLayout` (λίστα ή
+ * λεπτομέρεια;) και η οθόνη ακινήτων (κρύβεται η κεφαλίδα της λίστας στο στενό;). Αν διαφωνούσαν — π.χ. επιλογή που
+ * φίλτρο έκρυψε — θα έμενε στενή οθόνη **χωρίς** κεφαλίδα και **με** λίστα.
+ */
+export function selectedViewerItem<T extends { readonly id: string }>(items: readonly T[], selectedIds: readonly string[]): T | null {
+  const id = selectedIds[0];
+  return id ? items.find((item) => item.id === id) ?? null : null;
 }
