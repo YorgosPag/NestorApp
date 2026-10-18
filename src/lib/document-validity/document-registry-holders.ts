@@ -86,9 +86,36 @@ function attestedDocumentOf(requirement: DocumentRequirement, caseId: string): R
     origin: { kind: 'attested', caseId, fileId: attestation?.fileId ?? null },
     issuedOn: attestation?.issuedOn ?? null,
     printedValidUntil: attestation?.printedValidUntil ?? null,
+    // Η έγκριση μεταβίβασης δεν δηλώνει κατάταξη (κανένα είδος του καταλόγου δεν κατατάσσεται, ADR-915 §32).
+    classification: null,
     source: null,
     pinned: false,
   };
+}
+
+/**
+ * Αρχείο **χωρίς στοιχεία** (ADR-915 §33): καμία προέλευση **και** καμία ημερομηνία. Η δεύτερη συνθήκη είναι ζώνη
+ * ασφαλείας — μια γραμμή που κρατά έστω μία ημερομηνία δεν υποχωρεί ποτέ, όπως κι αν έφτασε εδώ.
+ */
+const isUndeclaredFile = (document: RegistryDocument): boolean =>
+  document.origin.kind === 'file' && document.source === null && document.issuedOn === null && document.printedValidUntil === null;
+
+/**
+ * ADR-915 §33 Δ5 — **η γραμμή «χωρίς στοιχεία» υποχωρεί** σε ό,τι ήδη ξέρουμε για το ίδιο αρχείο. Αρχείο χωρίς γεγονότα
+ * που ενέκρινε ελεγκτής μεταβίβασης (`attestation.fileId`) **δεν** γίνεται δική του γραμμή: αλλιώς η βεβαίωση θα δενόταν
+ * πάνω του (Ε9) και η ημερομηνία του ελεγκτή θα χανόταν πίσω από ένα «χωρίς στοιχεία». Τη γραμμή την κάνει η Ε8.
+ */
+export function withoutYieldingUndeclared(
+  documents: readonly RegistryDocument[],
+  requirements: readonly DocumentRequirement[],
+): readonly RegistryDocument[] {
+  const attestedFileIds = new Set<string>();
+  for (const { attestation, process } of requirements) {
+    if (attestation === null || attestation.fileId === null || process.kind !== 'conveyance') continue;
+    attestedFileIds.add(attestation.fileId);
+  }
+  return documents.filter((document) =>
+    !(isUndeclaredFile(document) && document.origin.kind === 'file' && attestedFileIds.has(document.origin.fileId)));
 }
 
 /**

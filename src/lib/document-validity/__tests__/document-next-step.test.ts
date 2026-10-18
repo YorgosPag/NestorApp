@@ -47,6 +47,10 @@ describe('ADR-915 §24 — «Επόμενο βήμα»', () => {
       'tax-clearance': [{ kind: 'self-service', service: 'aade-tax-clearance' }],
       'insurance-clearance': [{ kind: 'self-service', service: 'efka-insurance-clearance' }],
       'enfia-certificate': [{ kind: 'self-service', service: 'aade-enfia-certificate' }],
+      'electrical-installation': [
+        { kind: 'assign-professional', documentKind: 'electrical-installation' },
+        { kind: 'find-professional', documentKind: 'electrical-installation' },
+      ],
     });
     const professional = DOCUMENT_KINDS.filter((kind) => documentKindSpec(kind).issuer.kind === 'professional');
     expect(DOCUMENT_KINDS.filter((kind) => needsProfessionalSearch(kind, 'missing'))).toEqual(professional);

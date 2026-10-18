@@ -39,20 +39,31 @@ function matchKey(level: EvidenceLevel, entityType: string, purpose: string): st
   return `${level}|${entityType}|${purpose}`;
 }
 
+/** Ένα `(entityType, purpose)` αρχείου που ικανοποιεί matcher — όπως είναι αποθηκευμένο σε κάθε `FileRecord`. */
+export interface MatcherFileKey {
+  readonly entityType: EntityType;
+  readonly purpose: string;
+}
+
 /**
- * Τα κλειδιά `(level, entityType, purpose)` που ικανοποιούν έναν matcher. Entry point που
- * δεν υπάρχει σε κανέναν τύπο του επιπέδου **δεν** δίνει κλειδί — το πιάνει η άγκυρα Α7
- * (`conveyance-checklist-catalog.test.ts`), όχι η εκτέλεση.
+ * Τα `(entityType, purpose)` που ικανοποιούν έναν matcher. Entry point που δεν υπάρχει σε κανέναν τύπο του επιπέδου
+ * **δεν** δίνει κλειδί — το πιάνει η άγκυρα Α7 (`conveyance-checklist-catalog.test.ts`), όχι η εκτέλεση. Εξάγεται για
+ * ερωτήματα που χρειάζονται τους **σκοπούς** (ADR-915 §33 — το μητρώο τους παράγει, δεν τους ξαναγράφει).
  */
-function matcherKeys(matcher: EvidenceMatcher): readonly string[] {
-  const keys: string[] = [];
+export function matcherFileKeys(matcher: EvidenceMatcher): readonly MatcherFileKey[] {
+  const keys: MatcherFileKey[] = [];
   for (const entryPointId of matcher.entryPointIds) {
     for (const entityType of LEVEL_ENTITY_TYPES[matcher.level]) {
       const entryPoint = findEntryPoint(entityType, entryPointId);
-      if (entryPoint) keys.push(matchKey(matcher.level, entityType, entryPoint.purpose));
+      if (entryPoint) keys.push({ entityType, purpose: entryPoint.purpose });
     }
   }
   return keys;
+}
+
+/** Τα κλειδιά `level|entityType|purpose` ενός matcher. */
+function matcherKeys(matcher: EvidenceMatcher): readonly string[] {
+  return matcherFileKeys(matcher).map(({ entityType, purpose }) => matchKey(matcher.level, entityType, purpose));
 }
 
 /**

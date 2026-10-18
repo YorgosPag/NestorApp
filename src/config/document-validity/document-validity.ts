@@ -164,7 +164,7 @@ export function isClassificationOf(kind: DocumentKind, value: unknown): value is
  * αλήθεια: την κατηγορία τη γράφει ο εκδότης (Παράρτημα ΙΙ παρ. 1)· αποθήκη κατοικίας = Α ενώ η κλάση της λέει
  * `commercial`, καφέ άνω των 50 ατόμων = Γ. Ο διακομιστής **δεν** τη διαβάζει. `null` = καμία υπόδειξη.
  */
-export const DOCUMENT_CLASSIFICATION_HINTS: Readonly<
+const DOCUMENT_CLASSIFICATION_HINTS: Readonly<
   Record<ClassifiedDocumentKind, Readonly<Record<PropertyClass, DocumentClassification | null>>>
 > = {
   // Α «κατοικίες και ανάλογους χώρους» · Β «επαγγελματικούς χώρους» · οικόπεδο: καμία εσωτερική εγκατάσταση.

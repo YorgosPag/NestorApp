@@ -3,9 +3,14 @@
  */
 
 import { CONVEYANCE_CHECKLIST } from '@/config/conveyance-checklist/catalog';
+import { DOCUMENT_KINDS, documentKindSpec } from '@/config/document-validity/document-validity';
 import { findEntryPoint } from '@/config/upload-entry-points/queries';
 import { LEVEL_ENTITY_TYPES } from '@/lib/conveyance/evidence-match';
-import { documentKindsOfFile } from '@/lib/conveyance/document-kind-of-file';
+import {
+  documentKindsOfFile,
+  namedDocumentFileKeys,
+  namedDocumentKindOfFile,
+} from '@/lib/conveyance/document-kind-of-file';
 
 describe('documentKindsOfFile (ADR-915 §20)', () => {
   it('ενημερότητες του πωλητή (επαφή) ⇒ το είδος της γραμμής τους', () => {
@@ -41,5 +46,57 @@ describe('documentKindsOfFile (ADR-915 §20)', () => {
       }
     }
     expect(checked).toBeGreaterThanOrEqual(6);
+  });
+});
+
+describe('ADR-915 §32 — είδη ΕΚΤΟΣ καταλόγου (`standaloneEvidence`)', () => {
+  it('ΥΔΕ στο ακίνητο ⇒ ηλεκτρική εγκατάσταση· ο ΙΔΙΟΣ σκοπός στην επαφή (αρχείο του ηλεκτρολόγου) ⇒ τίποτα', () => {
+    expect(documentKindsOfFile({ entityType: 'property', purpose: 'yde-declaration' })).toEqual(['electrical-installation']);
+    expect(documentKindsOfFile({ entityType: 'contact', purpose: 'yde-declaration' })).toEqual([]);
+  });
+
+  it('ΕΝΑΣ ιδιοκτήτης ανά είδος: κανένα είδος δεν δηλώνει entry points ΚΑΙ στη γραμμή του καταλόγου ΚΑΙ στο είδος', () => {
+    const inChecklist = new Set(CONVEYANCE_CHECKLIST.flatMap((item) => (item.documentKind === undefined ? [] : [item.documentKind])));
+    const both = DOCUMENT_KINDS.filter((kind) => documentKindSpec(kind).standaloneEvidence !== null && inChecklist.has(kind));
+    expect(both).toEqual([]);
+  });
+
+  it('κάθε δηλωμένο entry point ΥΠΑΡΧΕΙ σε κάποιον τύπο του επιπέδου του — αλλιώς το είδος δεν θα έβρισκε ποτέ αρχείο', () => {
+    const missing = DOCUMENT_KINDS.flatMap((kind) =>
+      (documentKindSpec(kind).standaloneEvidence ?? []).flatMap((matcher) =>
+        matcher.entryPointIds.filter((id) =>
+          LEVEL_ENTITY_TYPES[matcher.level].every((entityType) => findEntryPoint(entityType, id) === undefined)),
+      ),
+    );
+    expect(missing).toEqual([]);
+  });
+});
+
+describe('ADR-915 §33 — υπόσχεση vs φιλοξενία (`namedDocumentKindOfFile`)', () => {
+  it('⛔ η γενική θέση «Πιστοποιητικό» ΦΙΛΟΞΕΝΕΙ ΠΕΑ (ο αναγνώστης κρίνει) αλλά ΔΕΝ το υπόσχεται', () => {
+    expect(documentKindsOfFile({ entityType: 'property', purpose: 'certificate' })).toEqual(['energy-certificate']);
+    expect(namedDocumentKindOfFile({ entityType: 'property', purpose: 'certificate' })).toBeNull();
+  });
+
+  it('ονομαστικές θέσεις ⇒ το είδος τους: ΥΔΕ ακινήτου · ΠΕΑ έργου · ενημερότητες επαφής', () => {
+    expect(namedDocumentKindOfFile({ entityType: 'property', purpose: 'yde-declaration' })).toBe('electrical-installation');
+    expect(namedDocumentKindOfFile({ entityType: 'project', purpose: 'study-energy-cert' })).toBe('energy-certificate');
+    expect(namedDocumentKindOfFile({ entityType: 'contact', purpose: 'tax-clearance' })).toBe('tax-clearance');
+  });
+
+  it('ΥΔΕ στην επαφή (αρχείο του ηλεκτρολόγου) · άγνωστος σκοπός ⇒ τίποτα', () => {
+    expect(namedDocumentKindOfFile({ entityType: 'contact', purpose: 'yde-declaration' })).toBeNull();
+    expect(namedDocumentKindOfFile({ entityType: 'property', purpose: 'invoice' })).toBeNull();
+  });
+
+  it('οι σκοποί του ερωτήματος ΠΑΡΑΓΟΝΤΑΙ: κάθε κλειδί δίνει πίσω είδος, και ο γενικός σκοπός ΔΕΝ είναι μέσα', () => {
+    const keys = namedDocumentFileKeys();
+    expect(keys.length).toBeGreaterThanOrEqual(6);
+    for (const key of keys) expect(namedDocumentKindOfFile(key)).not.toBeNull();
+    expect(keys).not.toContainEqual({ entityType: 'property', purpose: 'certificate' });
+  });
+
+  it('το `in` του Firestore δέχεται ως 30 τιμές — οι σκοποί χωράνε', () => {
+    expect(new Set(namedDocumentFileKeys().map((key) => key.purpose)).size).toBeLessThanOrEqual(30);
   });
 });
