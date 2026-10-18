@@ -78,15 +78,21 @@ export function useSheetBackDismiss({
   useEffect(() => {
     if (!active) return;
 
-    const onPopState = (): void => {
+    const onPopState = (event: PopStateEvent): void => {
       if (!ownsEntry.current) return;
+      // ADR-912 §12.17 — ΣΤΟΙΒΑΓΜΕΝΟΙ ΚΑΤΟΧΟΙ (λεπτομέρεια θεατή + φύλλο στοιχείων από πάνω της). Το `popstate` το
+      // ακούνε ΟΛΟΙ· η καταχώριση που αφαιρέθηκε είναι ΜΙΑ. Ο `pushHistoryMarker` συγχωνεύει τα σημάδια, άρα αν η
+      // κατάσταση όπου προσγειωθήκαμε κρατά ακόμη το ΔΙΚΟ μας κλειδί, έφυγε του επάνω — όχι η δική μας. Χωρίς αυτό ένα
+      // «πίσω» έκλεινε το φύλλο ΚΑΙ γύριζε στη λίστα με ένα πάτημα.
+      const landed: unknown = event.state;
+      if (typeof landed === 'object' && landed !== null && (landed as Record<string, unknown>)[historyKey] === true) return;
       ownsEntry.current = false;
       dismissRef.current();
     };
 
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
-  }, [active]);
+  }, [active, historyKey]);
 
   useEffect(() => {
     if (!active) return;
