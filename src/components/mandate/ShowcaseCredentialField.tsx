@@ -40,6 +40,7 @@ import { EscoOccupationPicker } from '@/components/shared/EscoOccupationPicker';
 import { SHOWCASE_KEYS, SHOWCASE_NS } from '@/components/mandate/agency-showcase-labels';
 import { resolveRegistryAuthority } from '@/config/isco-registry-authority';
 import {
+  CHAPTER_PRESENTATION,
   REGISTRY_AUTHORITY_PRESENTATION,
   isChapteredRegistry,
 } from '@/constants/professional-registries';
@@ -182,9 +183,9 @@ function RegistryFields({
       {isChapteredRegistry(verdict.authority) && (
         <HintedField
           id={`showcase-chapter-${index}`}
-          label={t(SHOWCASE_KEYS.chapterLabel)}
-          hint={t(SHOWCASE_KEYS.chapterHint)}
-          placeholder={t(SHOWCASE_KEYS.chapterPlaceholder)}
+          label={t(CHAPTER_PRESENTATION[verdict.authority].labelKey)}
+          hint={t(CHAPTER_PRESENTATION[verdict.authority].hintKey)}
+          placeholder={t(CHAPTER_PRESENTATION[verdict.authority].placeholderKey)}
           value={draft.registrationChapter}
           onChange={(registrationChapter) => onChange({ ...draft, registrationChapter })}
         />

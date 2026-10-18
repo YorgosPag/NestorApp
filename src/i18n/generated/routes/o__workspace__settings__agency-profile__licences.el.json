@@ -5,9 +5,13 @@
         "cardBackToShowcase": "Πίσω στη βιτρίνα",
         "cardSaving": "Αποθήκευση…",
         "failed": "Η ενέργεια δεν ολοκληρώθηκε. Δοκιμάστε ξανά.",
+        "licenceHeldThroughChapter": "{licence}: από την ειδικότητά σας — {chapter} · αρ. {number}",
+        "licenceHeldThroughNational": "{licence}: από την ειδικότητά σας — αρ. {number}",
         "licenceHold": "Έχω άδεια: {licence}",
         "licenceRejection": {
+          "licence-chapter-missing": "Συμπληρώστε την Περιφερειακή Ενότητα που εξέδωσε την άδεια.",
           "licence-duplicate": "Η ίδια άδεια δηλώθηκε δύο φορές.",
+          "licence-held-through-occupation": "Την άδεια αυτή την έχετε ήδη από την ειδικότητά σας.",
           "licence-number-missing": "Συμπληρώστε τον αριθμό μητρώου της άδειας — χωρίς αυτόν κανείς δεν μπορεί να την ελέγξει.",
           "licences-without-showcase": "Δημοσιεύστε πρώτα τη βιτρίνα — οι άδειες εμφανίζονται μέσα σε αυτήν."
         },
@@ -22,6 +26,27 @@
         "registryLabel": "Αριθμός μητρώου ({authority})",
         "registryPlaceholder": "π.χ. 123456789000",
         "temporarilyUnavailable": "Δεν μπορέσαμε να ολοκληρώσουμε τώρα. Ξαναδοκιμάστε — μην αλλάξετε τίποτα."
+      }
+    },
+    "registries": {
+      "barAssociation": {
+        "chapter": {
+          "label": "Δικηγορικός Σύλλογος",
+          "placeholder": "π.χ. ΔΣΘ"
+        }
+      },
+      "chapterHint": "Ο εκδότης του αριθμού. Χωρίς αυτόν, ο αριθμός δεν επαληθεύεται από κανέναν.",
+      "notaryAssociation": {
+        "chapter": {
+          "label": "Συμβολαιογραφικός Σύλλογος",
+          "placeholder": "π.χ. Σ.Σ. Θεσσαλονίκης"
+        }
+      },
+      "regionalAuthority": {
+        "chapter": {
+          "label": "Περιφερειακή Ενότητα",
+          "placeholder": "π.χ. ΠΕ Λάρισας"
+        }
       }
     }
   }

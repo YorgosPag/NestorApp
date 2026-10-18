@@ -67,6 +67,9 @@ export const SHOWCASE_KEYS = {
   licencesLabel: `${K}.licencesLabel`,
   licencesHint: `${K}.licencesHint`,
   licenceHold: `${K}.licenceHold`,
+  /** ADR-915 §34 — η άδεια που ΗΔΗ δίνει η ειδικότητα (ηλεκτρολόγος + εγγραφή Περιφέρειας): γραμμή, όχι checkbox. */
+  licenceHeldThroughChapter: `${K}.licenceHeldThroughChapter`,
+  licenceHeldThroughNational: `${K}.licenceHeldThroughNational`,
   /** Η υποσελίδα «Άδειες» και η πόρτα της (ADR-915 §21 — δική τους πράξη, όπως η κάρτα). */
   licencesTitle: `${K}.licencesTitle`,
   licencesLead: `${K}.licencesLead`,
@@ -76,9 +79,6 @@ export const SHOWCASE_KEYS = {
   licencesSave: `${K}.licencesSave`,
   licencesSaved: `${K}.licencesSaved`,
   licencesNeedsShowcase: `${K}.licencesNeedsShowcase`,
-  chapterLabel: `${K}.chapterLabel`,
-  chapterHint: `${K}.chapterHint`,
-  chapterPlaceholder: `${K}.chapterPlaceholder`,
   /** 🔑 *«Δεν τηρείται μητρώο. **Δεν σου λείπει τίποτα.**»* — Α9.3, όχι σιωπή. */
   registryNone: `${K}.registryNone`,
   /** 🔑 *«Δεν **έχουμε εξετάσει**…»* — υποκείμενο **εμείς**, ποτέ ο άνθρωπος. */
@@ -273,6 +273,8 @@ export const SHOWCASE_LICENCE_REJECTION_KEYS: Record<ShowcaseLicenceRejection, s
   'licence-number-missing': `${K}.licenceRejection.licence-number-missing`,
   'licence-duplicate': `${K}.licenceRejection.licence-duplicate`,
   'licences-without-showcase': `${K}.licenceRejection.licences-without-showcase`,
+  'licence-chapter-missing': `${K}.licenceRejection.licence-chapter-missing`,
+  'licence-held-through-occupation': `${K}.licenceRejection.licence-held-through-occupation`,
 };
 
 export const SHOWCASE_REJECTION_KEYS: Record<AgencyProfileRejection, string> = {

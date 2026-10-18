@@ -135,8 +135,23 @@ describe('Φ — τα πεδία του μητρώου εξαρτώνται απ
     // 🔒 «1234» χωρίς «ΔΣΘ» δεν επαληθεύεται από κανέναν — και οι Δικηγορικοί
     //    Σύλλογοι είναι **63**.
     expect(
-      screen.getByText(resolve('property-market:mandate.showcase.chapterLabel')),
+      screen.getByText(resolve('property-market:registries.barAssociation.chapter.label')),
     ).toBeInTheDocument();
+  });
+
+  it('🔴 Φ3β — ΗΛΕΚΤΡΟΛΟΓΟΣ (7411 → Περιφερειακή Ενότητα): ο εκδότης λέγεται με τη ΔΙΚΗ του αρχή (ADR-915 §34)', () => {
+    show({ iscoCode: '7411' });
+
+    // Ένα κοινό «Εκδότης · π.χ. ΔΣΘ» έλεγε στον ηλεκτρολόγο να γράψει δικηγορικό σύλλογο.
+    expect(
+      screen.getByText(resolve('property-market:registries.regionalAuthority.chapter.label')),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText(resolve('property-market:registries.regionalAuthority.chapter.placeholder')),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(resolve('property-market:registries.barAssociation.chapter.label')),
+    ).not.toBeInTheDocument();
   });
 
   it('🔑 Φ3α — Ο ΠΑΡΟΝΟΜΑΣΤΗΣ ΤΟΥ Φ3: εθνική αρχή ΔΕΝ ζητά εκδότη', () => {
@@ -145,9 +160,11 @@ describe('Φ — τα πεδία του μητρώου εξαρτώνται απ
     // υπάρχει.
     show({ iscoCode: '3334' });
 
-    expect(
-      screen.queryByText(resolve('property-market:mandate.showcase.chapterLabel')),
-    ).not.toBeInTheDocument();
+    for (const segment of ['barAssociation', 'notaryAssociation', 'regionalAuthority']) {
+      expect(
+        screen.queryByText(resolve(`property-market:registries.${segment}.chapter.label`)),
+      ).not.toBeInTheDocument();
+    }
   });
 
   it('🔴 Φ4 — ΠΡΙΝ ΔΙΑΛΕΞΕΙ ΕΙΔΙΚΟΤΗΤΑ Η ΟΘΟΝΗ ΣΩΠΑΙΝΕΙ — καμία πρόωρη εξήγηση', () => {

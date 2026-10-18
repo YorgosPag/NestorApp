@@ -176,6 +176,27 @@
         "withdrawHint": "Η απόσυρση σβήνει τη βιτρίνα. Οι αγγελίες σας δεν επηρεάζονται.",
         "withdrawing": "Απόσυρση…"
       }
+    },
+    "registries": {
+      "barAssociation": {
+        "chapter": {
+          "label": "Δικηγορικός Σύλλογος",
+          "placeholder": "π.χ. ΔΣΘ"
+        }
+      },
+      "chapterHint": "Ο εκδότης του αριθμού. Χωρίς αυτόν, ο αριθμός δεν επαληθεύεται από κανέναν.",
+      "notaryAssociation": {
+        "chapter": {
+          "label": "Συμβολαιογραφικός Σύλλογος",
+          "placeholder": "π.χ. Σ.Σ. Θεσσαλονίκης"
+        }
+      },
+      "regionalAuthority": {
+        "chapter": {
+          "label": "Περιφερειακή Ενότητα",
+          "placeholder": "π.χ. ΠΕ Λάρισας"
+        }
+      }
     }
   }
 }

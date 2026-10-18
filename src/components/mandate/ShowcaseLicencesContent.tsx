@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAgencyShowcase } from '@/hooks/mandate/useAgencyShowcase';
 import { useShowcaseLicences, type ShowcaseLicencesFailure } from '@/hooks/mandate/useShowcaseLicences';
+import { licencesHeldThroughCredentials } from '@/lib/agency/showcase-licence';
 import { AGENCY_SHOWCASE_ROUTE } from '@/lib/mandate/mandate-routes';
 import type { PublicShowcase } from '@/types/agency-profile';
 
@@ -58,6 +59,7 @@ function LicencesForm({ published }: { readonly published: PublicShowcase }): Re
   const { t } = useTranslation([SHOWCASE_NS]);
   const { busy, failure, saved, save } = useShowcaseLicences();
   const [drafts, setDrafts] = React.useState(NO_LICENCE_DRAFTS);
+  const heldThrough = React.useMemo(() => licencesHeldThroughCredentials(published.credentials), [published.credentials]);
 
   // 🔑 Προσυμπλήρωση από τη ΔΗΜΟΣΙΕΥΜΕΝΗ λίστα, όποτε αλλάζει (κλειδί = το περιεχόμενό της, όχι η ταυτότητα του πίνακα).
   const storedKey = JSON.stringify(published.licences);
@@ -71,10 +73,14 @@ function LicencesForm({ published }: { readonly published: PublicShowcase }): Re
       className="flex flex-col gap-4"
       onSubmit={(event) => {
         event.preventDefault();
-        void save({ licences: licenceWireOf(drafts) });
+        void save({ licences: licenceWireOf(drafts, heldThrough) });
       }}
     >
-      <ShowcaseLicenceField value={drafts} onChange={setDrafts} />
+      <ShowcaseLicenceField
+        value={drafts}
+        onChange={setDrafts}
+        heldThrough={heldThrough}
+      />
       {failure !== null ? <p role="alert" className="m-0 text-sm text-destructive">{failureText(t, failure)}</p> : null}
       <span className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={busy}>

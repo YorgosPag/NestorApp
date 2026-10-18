@@ -34,19 +34,24 @@ export function LicenceStatement({ licence }: LicenceStatementProps): React.JSX.
     <section className="flex flex-col gap-1">
       <p className="m-0 text-sm font-medium text-foreground">{t(spec.nameKey)}</p>
       <ClaimLines claim={licence.attestation} />
-      <a
-        href={spec.registryLookupUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-describedby={hintId}
-        className="ml-5 inline-flex w-fit items-center gap-1 text-xs text-foreground underline underline-offset-2"
-      >
-        {t(CREDIBILITY_KEYS.licenceLookup)}
-        <ExternalLink className="size-3" aria-hidden="true" />
-      </a>
-      <span id={hintId} className="sr-only">
-        {t(CREDIBILITY_KEYS.licenceLookupHint)}
-      </span>
+      {/* Χωρίς δημόσιο μητρώο (ηλεκτρολόγος, ADR-915 §34) ⇒ κανένας σύνδεσμος — ποτέ σύνδεσμος που δεν απαντά. */}
+      {spec.registryLookupUrl !== null ? (
+        <>
+          <a
+            href={spec.registryLookupUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-describedby={hintId}
+            className="ml-5 inline-flex w-fit items-center gap-1 text-xs text-foreground underline underline-offset-2"
+          >
+            {t(CREDIBILITY_KEYS.licenceLookup)}
+            <ExternalLink className="size-3" aria-hidden="true" />
+          </a>
+          <span id={hintId} className="sr-only">
+            {t(CREDIBILITY_KEYS.licenceLookupHint)}
+          </span>
+        </>
+      ) : null}
     </section>
   );
 }
