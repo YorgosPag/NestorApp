@@ -82,8 +82,9 @@ export function usePropertyInlineEdit(onSaved: () => Promise<void>): UseProperty
         type: editType || undefined,
         floor: editFloor ? parseInt(editFloor, 10) : undefined,
         area: editArea ? parseFloat(editArea) : undefined,
-        // Μόνο δήλωση επεξεργαστή· κατάσταση που την κατέχει συναλλαγή δεν ξαναγράφεται από εδώ (ADR-777 §8.60.18).
-        status: isEditorCommercialStatus(editStatus) ? editStatus : undefined,
+        // Το ΚΑΝΟΝΙΚΟ κλειδί (το `status` είναι κάτοπτρο που γράφει ο server)· μόνο δήλωση επεξεργαστή —
+        // κατάσταση που την κατέχει συναλλαγή δεν ξαναγράφεται από εδώ (ADR-777 §8.60.18 · §8.60.20.12).
+        commercialStatus: isEditorCommercialStatus(editStatus) ? editStatus : undefined,
       };
       if (editVersion !== undefined) payload._v = editVersion;
 

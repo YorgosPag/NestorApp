@@ -45,8 +45,10 @@
  */
 
 import {
+  DEFAULT_COMMERCIAL_STATUS,
   FINALIZED_COMMERCIAL_STATUSES,
   LISTED_COMMERCIAL_STATUSES,
+  resolveCommercialStatus,
   type CommercialStatus,
 } from '@/constants/commercial-statuses';
 import { projectLegality } from './legality-projection';
@@ -181,7 +183,7 @@ export function isOffered(property: OfferStateFacts): boolean {
  * πάνω στο εφήμερο `PublicListing` των γεγονότων ταιριάσματος (άγκυρα Γ4).
  */
 export function offerStateOf(property: OfferStateFacts): OfferState {
-  const status = property.commercialStatus ?? property.status ?? null;
+  const status = resolveCommercialStatus(property);
 
   // 🔑 **Η ΟΛΟΚΛΗΡΩΣΗ ΚΡΙΝΕΤΑΙ ΠΡΩΤΗ**: ένα πουλημένο ακίνητο χωρίς είδος παραμένει
   //    πουλημένο. Για τη δημοσίευση η σειρά είναι αδιάφορη (και τα δύο ⇒ όχι)· για τη
@@ -300,7 +302,7 @@ function projectedOfferKinds(property: ProjectableProperty): OfferKind[] {
   );
   if (declared.length > 0) return declared;
 
-  return offerKindsFromLegacyStatus(property.commercialStatus ?? property.status);
+  return offerKindsFromLegacyStatus(resolveCommercialStatus(property));
 }
 
 /**
@@ -415,7 +417,7 @@ export function projectListingShape(
 
   return {
     id: property.id,
-    commercialStatus: (property.commercialStatus ?? property.status ?? 'unavailable') as CommercialStatus,
+    commercialStatus: resolveCommercialStatus(property) ?? DEFAULT_COMMERCIAL_STATUS,
     commercial: {
       askingPrice: numberOrNull(commercial?.askingPrice),
       finalPrice: numberOrNull(commercial?.finalPrice),

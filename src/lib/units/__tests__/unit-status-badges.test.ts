@@ -2,15 +2,18 @@
  * ⚓ ADR-777 §8.60.20 — τα ΣΗΜΑΤΑ κατάστασης μονάδων: ένα SSoT για ακίνητα, θέσεις, αποθήκες.
  *
  * Ομάδες: Α — το περιστατικό · Β — η λειτουργική εξαίρεση · Γ — εξαντλητικότητα · Δ — η όψη
- * πωλήσεων · Ε — τα ακίνητα (κανονικό πεδίο πάνω από το κάτοπτρο).
+ * πωλήσεων · Ε — τα ακίνητα (κανονικό πεδίο πάνω από το κάτοπτρο) ·
+ * Ζ — το σχήμα, δεύτερο μη χρωματικό κανάλι (ADR-771).
  */
 
 import { COMMERCIAL_STATUSES, resolveCommercialStatus } from '@/constants/commercial-statuses';
 import { OPERATIONAL_STATUSES } from '@/constants/operational-statuses';
+import { CircleCheck } from 'lucide-react';
 import {
   commercialStatusBadge,
   commercialStatusLabelKey,
   operationalExceptionBadge,
+  badgeFromSpec,
   propertyStatusBadges,
   statusBadgesText,
   operationalStatusBadge,
@@ -26,7 +29,7 @@ const t = (key: string, options?: Record<string, unknown>) => `${String(options?
 describe('Α. ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ', () => {
   it('🔴 Α1 — θέση πωλημένη μαζί με ακίνητο (legacy `available`) ⇒ «Πωλήθηκε», ΟΧΙ «Διαθέσιμη»', () => {
     const badges = spaceStatusBadges({ status: 'available', commercialStatus: 'sold' }, t);
-    expect(badges).toEqual([{ label: `${UNIT_STATUS_NAMESPACE}:commercialStatus.sold`, variant: 'success' }]);
+    expect(badges).toEqual([{ label: `${UNIT_STATUS_NAMESPACE}:commercialStatus.sold`, variant: 'success', icon: CircleCheck }]);
   });
 
   it('Α2 — άγνωστη διάθεση ⇒ ΚΑΝΕΝΑ σήμα (ποτέ «Διαθέσιμη» από εικασία)', () => {
@@ -52,7 +55,7 @@ describe('Β. Η ΛΕΙΤΟΥΡΓΙΚΗ ΚΑΤΑΣΤΑΣΗ — ΜΟΝΟ ΩΣ Ε�
   });
 
   it('Β3 — η κάρτα ακινήτου δείχνει ΚΑΘΕ δηλωμένη λειτουργική (και το «Έτοιμο»)', () => {
-    expect(operationalStatusBadge('ready')).toEqual({ labelKey: 'operationalStatus.ready', variant: 'success' });
+    expect(operationalStatusBadge('ready')).toMatchObject({ labelKey: 'operationalStatus.ready', variant: 'success' });
   });
 });
 
@@ -80,7 +83,7 @@ describe('Ε. ΤΑ ΑΚΙΝΗΤΑ — ΤΟ ΚΑΝΟΝΙΚΟ ΠΕΔΙΟ ΚΕΡΔ�
   it('🔴 Ε1 — `commercialStatus` και `status` αποκλίνουν ⇒ μετρά το κανονικό', () => {
     expect(resolveCommercialStatus({ commercialStatus: 'sold', status: 'for-sale' })).toBe('sold');
     expect(propertyStatusBadges({ commercialStatus: 'sold', status: 'for-sale' }, t)).toEqual([
-      { label: `${UNIT_STATUS_NAMESPACE}:commercialStatus.sold`, variant: 'success' },
+      { label: `${UNIT_STATUS_NAMESPACE}:commercialStatus.sold`, variant: 'success', icon: CircleCheck },
     ]);
   });
 
@@ -105,5 +108,34 @@ describe('Ε. ΤΑ ΑΚΙΝΗΤΑ — ΤΟ ΚΑΝΟΝΙΚΟ ΠΕΔΙΟ ΚΕΡΔ�
 
   it.each([...COMMERCIAL_STATUSES])('Ε6 — το κλειδί ετικέτας του «%s» είναι ΕΝΑ για σήμα και φίλτρο', (status) => {
     expect(commercialStatusBadge(status)?.labelKey).toBe(commercialStatusLabelKey(status));
+  });
+});
+
+describe('Ζ. ΤΟ ΣΧΗΜΑ — ΔΕΥΤΕΡΟ ΜΗ ΧΡΩΜΑΤΙΚΟ ΚΑΝΑΛΙ (ADR-771 · WCAG 1.4.1)', () => {
+  it('🔴 Ζ1 — κάθε διάθεση έχει ΔΙΚΟ της σχήμα (καμία σύγχυση χωρίς χρώμα)', () => {
+    const icons = COMMERCIAL_STATUSES.map((status) => commercialStatusBadge(status)?.icon);
+    expect(icons.every(Boolean)).toBe(true);
+    expect(new Set(icons).size).toBe(COMMERCIAL_STATUSES.length);
+  });
+
+  it('🔴 Ζ2 — ίδια απόχρωση ⇒ ΔΙΑΦΟΡΕΤΙΚΟ σχήμα (πωλήθηκε · ενοικιάστηκε)', () => {
+    const sold = commercialStatusBadge('sold');
+    const rented = commercialStatusBadge('rented');
+    expect(sold?.variant).toBe(rented?.variant);
+    expect(sold?.icon).not.toBe(rented?.icon);
+  });
+
+  it('Ζ3 — κάθε λειτουργική κατάσταση έχει δικό της σχήμα', () => {
+    const icons = OPERATIONAL_STATUSES.map((status) => operationalStatusBadge(status)?.icon);
+    expect(new Set(icons).size).toBe(OPERATIONAL_STATUSES.length);
+  });
+
+  it('Ζ4 — το `badgeFromSpec` μεταφέρει ετικέτα, απόχρωση ΚΑΙ σχήμα μαζί', () => {
+    const spec = commercialStatusBadge('reserved');
+    expect(spec && badgeFromSpec(spec, t)).toEqual({
+      label: `${UNIT_STATUS_NAMESPACE}:commercialStatus.reserved`,
+      variant: 'outline',
+      icon: spec?.icon,
+    });
   });
 });

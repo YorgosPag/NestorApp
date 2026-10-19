@@ -52,3 +52,32 @@ describe('ΕΞΟΔΟΣ ΑΠΟ ΣΥΝΑΛΛΑΓΗ', () => {
     expect(statusOf(() => validatePropertyFieldLockingUnlessRevert('sold', { commercialStatus: 'for-rent' }))).toBe(403);
   });
 });
+
+describe('ΤΟ ΠΑΛΙΟ ΚΛΕΙΔΙ `status` (ADR-777 §8.60.20.12)', () => {
+  it.each([
+    ['reserved', 'for-rent', 409],
+    ['reserved', 'unavailable', 409],
+    ['sold', 'for-rent', 403],
+    ['rented', 'unavailable', 403],
+  ] as const)('🔴 Π1 — `%s` + `{ status: %s }` κρίνεται ως `commercialStatus` ⇒ %s', (current, target, code) => {
+    expect(statusOf(() => validatePropertyFieldLockingUnlessRevert(current, { status: target }))).toBe(code);
+  });
+
+  it('Π2 — ίδιο αποτέλεσμα με το κανονικό κλειδί (καμία δεύτερη πόρτα)', () => {
+    for (const current of ['reserved', 'sold', 'rented', 'for-sale']) {
+      for (const target of ['for-sale', 'for-rent', 'unavailable', 'sold']) {
+        expect(statusOf(() => validatePropertyFieldLockingUnlessRevert(current, { status: target })))
+          .toBe(statusOf(() => validatePropertyFieldLockingUnlessRevert(current, { commercialStatus: target })));
+      }
+    }
+  });
+
+  it('Π3 — και τα δύο κλειδιά ⇒ κρίνεται το κανονικό (όπως στον γραφέα)', () => {
+    expect(statusOf(() => validatePropertyFieldLockingUnlessRevert('reserved', { commercialStatus: 'sold', status: 'for-rent' })))
+      .toBe('ok');
+  });
+
+  it('Π4 — μη κλειδωμένο ακίνητο: το `status` περνά ελεύθερα', () => {
+    expect(statusOf(() => validatePropertyFieldLockingUnlessRevert('for-sale', { status: 'for-rent', name: 'Α1' }))).toBe('ok');
+  });
+});

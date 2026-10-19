@@ -19,6 +19,7 @@ import {
   type PropertyStatus,
 } from '@/constants/domains/property-status-core';
 import { STATUS_COLORS_MAPPING } from '@/subapps/dxf-viewer/config/color-mapping';
+import { resolveCommercialStatus } from '@/constants/commercial-statuses';
 import { getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
@@ -41,7 +42,7 @@ export function PropertyStatusLegend({ properties, className }: PropertyStatusLe
   const presentStatuses = React.useMemo<PropertyStatus[]>(() => {
     const seen = new Set<PropertyStatus>();
     for (const p of properties) {
-      const key = (p.commercialStatus ?? p.status) as PropertyStatus | undefined;
+      const key = resolveCommercialStatus(p);
       if (key && key in STATUS_COLORS_MAPPING) seen.add(key);
     }
     return Array.from(seen);

@@ -32,7 +32,7 @@ import {
 import type { MarketingAudience } from '@/constants/marketing-audiences';
 import { offeredAudienceOf } from '@/services/listings/public-listing-projection';
 import { retiredKindOf, type RetiredKind } from '@/lib/firestore/trashed-status';
-import { commercialStatusBadge, UNIT_STATUS_NAMESPACE } from '@/lib/units/unit-status-badges';
+import { badgeFromSpec, commercialStatusBadge, UNIT_STATUS_NAMESPACE } from '@/lib/units/unit-status-badges';
 import { resolveCommercialStatus } from '@/constants/commercial-statuses';
 import type { Property } from '@/types/property-viewer';
 
@@ -112,9 +112,7 @@ export function buildPropertyStatusBadge(property: Property, t: TFn): GridCardBa
   if (retired !== null) return retired;
 
   const spec = commercialStatusBadge(resolveCommercialStatus(property));
-  return spec
-    ? { label: t(spec.labelKey, { ns: UNIT_STATUS_NAMESPACE }), variant: spec.variant }
-    : null;
+  return spec ? badgeFromSpec(spec, t) : null;
 }
 
 /** Απόχρωση ανά κοινό. `Record<MarketingAudience, …>`: τέταρτο κοινό δεν μεταγλωττίζεται χωρίς απόχρωση. */

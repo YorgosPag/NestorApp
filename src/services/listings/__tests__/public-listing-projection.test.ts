@@ -19,6 +19,7 @@ import {
 } from '../public-listing-projection';
 import { addressToPositionCandidate, resolveListingPosition } from '../public-listing-position';
 import { offerKindsFromLegacyStatus } from '@/lib/offers/derive-commercial-status';
+import { COMMERCIAL_STATUSES } from '@/constants/commercial-statuses';
 
 const AT = '2026-08-10T10:00:00.000Z';
 const NO_PLACE: PlaceKnowledge = { candidates: [], ref: null };
@@ -794,4 +795,29 @@ describe('🔴 Κ1 — η πύλη ζει στο `buildPublicListing`· ο ΓΡ�
     expect(writer).toContain('buildPublicListing');
     expect(writer).not.toContain('projectListingShape');
   });
+});
+
+describe('Η ΔΙΑΘΕΣΗ ΣΤΟ ΔΗΜΟΣΙΟ ΣΧΗΜΑ — ΜΟΝΟ ΟΙ ΕΠΤΑ (ADR-842 Φ5 · ADR-777 §8.60.20.12)', () => {
+  // Ωμά έγγραφα: το `status` μπορεί να κρατά λέξεις του ΠΑΛΙΟΥ λεξιλογίου, που ο τύπος δεν δηλώνει.
+  const shapeOf = (over: { readonly commercialStatus?: string; readonly status?: string }) =>
+    projectListingShape({ ...REAL_MAISONETTE, ...over } as unknown as ProjectableProperty, NO_PLACE, AT).commercialStatus;
+
+  it('🔴 Δ1 — παλιό `status` εκτός λεξιλογίου (`coming-soon`) ΔΕΝ περνά ωμό· γίνεται η προεπιλογή', () => {
+    expect(shapeOf({ commercialStatus: undefined, status: 'coming-soon' })).toBe('unavailable');
+  });
+
+  it('Δ2 — ψευδώνυμο κανονικοποιείται (`available` ⇒ `for-sale`)', () => {
+    expect(shapeOf({ commercialStatus: undefined, status: 'available' })).toBe('for-sale');
+  });
+
+  it('Δ3 — το κανονικό πεδίο κερδίζει το κάτοπτρο', () => {
+    expect(shapeOf({ commercialStatus: 'sold', status: 'for-sale' })).toBe('sold');
+  });
+
+  it.each(['coming-soon', 'landowner', 'under-negotiation', 'off-market', 'deleted', 'available'])(
+    'Δ4 — `status: %s` ⇒ τιμή ΜΕΣΑ στο `COMMERCIAL_STATUSES`',
+    (legacy) => {
+      expect(COMMERCIAL_STATUSES).toContain(shapeOf({ commercialStatus: undefined, status: legacy }));
+    },
+  );
 });

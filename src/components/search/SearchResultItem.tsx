@@ -36,7 +36,7 @@ import { NAVIGATION_ENTITIES, type NavigationEntityType } from '@/components/nav
 // 🏢 DOMAIN TYPES
 import type { SearchResult, SearchEntityType } from '@/types/search';
 import { SEARCH_ENTITY_TYPES } from '@/types/search';
-import { commercialStatusBadge } from '@/lib/units/unit-status-badges';
+import { badgeFromSpec, commercialStatusBadge } from '@/lib/units/unit-status-badges';
 import '@/lib/design-system';
 
 // =============================================================================
@@ -168,7 +168,7 @@ export function SearchResultItem({
     // `available`/`occupied` δεν αναγνωρίζεται ⇒ κανένα σήμα, ποτέ «Διαθέσιμη» από εικασία.
     if (result.entityType === 'parking' || result.entityType === 'storage') {
       const spec = commercialStatusBadge(result.status);
-      if (spec) badgeList.push({ label: tUnit(spec.labelKey), variant: spec.variant });
+      if (spec) badgeList.push(badgeFromSpec(spec, tUnit));
     }
 
     return badgeList;

@@ -2,16 +2,6 @@
 
 **STATUS: ACTIVE**
 
-- 🟡 **19/10 — Ο ΚΑΝΟΝΑΣ ΑΝΑΓΝΩΣΗΣ ΤΗΣ ΔΙΑΘΕΣΗΣ ΓΡΑΦΕΤΑΙ ΜΕ ΤΟ ΧΕΡΙ ΣΕ 8 ΣΗΜΕΙΑ** *(ADR-777 §8.60.20.12, εύρημα κατά τη διόρθωση των σημάτων της καρτέλας «Μονάδες»)*
-
-  **Τι:** `commercialStatus ?? status` (κανονικό πεδίο → `@deprecated` κάτοπτρο), χωρίς κανονικοποίηση. **Υπάρχει πλέον
-  SSoT:** `resolveCommercialStatus` (`constants/commercial-statuses.ts`). **Πού** (`grep -rnE "commercialStatus \?\? [a-z]+\.status"`):
-  `property-viewer/PropertyStatusLegend.tsx` · `property-hover/components/PropertyQuickView.tsx` ·
-  `read-only-viewer/components/ListLayout.tsx` · `lib/properties/price-resolver.ts` · `lib/property/property-completion-stance.ts`
-  (σχόλιο) · `services/listings/public-listing-projection.ts` ×3. **Προσοχή:** τρία από αυτά κάνουν cast σε `PropertyStatus`
-  (ευρύτερο από `CommercialStatus`) και το `public-listing-projection` αγγίζει το mirror των Cloud Functions ⇒ deploy.
-  **Μέγεθος:** 6 αρχεία, 2 τομείς ⇒ με εντολή Giorgio.
-
 - 🟡 **16/10 — ΤΑ POST-FINALIZE HOOKS ΜΑΛΛΟΝ ΔΕΝ ΤΡΕΧΟΥΝ ΠΟΤΕ ΓΙΑ ΑΝΕΒΑΣΜΑΤΑ ΑΠΟ BROWSER** *(ADR-915 §20.8, εύρημα audit — ΔΕΝ επαληθεύτηκε)*
 
   **Τι:** `FileRecordService.finalizeFileRecord` (`services/file-record.service.ts`) τρέχει **στον browser** και καλεί
@@ -1792,31 +1782,6 @@
   **Fix**: `extractPostalCode` + `splitStreetAndNumber` από το `address-parse` **μετά** την
   αφαίρεση της ετικέτας, + άγκυρα στο `invoice-auto-enrichment` για «Οδός: 25ης Μαρτίου 12,
   546 25» *(που σήμερα δίνει λάθος Τ.Κ. και μηδέν αριθμό)*.
-
-- 🔴 **02/09 — Η ΔΙΑΘΕΣΗ ΜΠΑΙΝΕΙ ΣΤΟ ΔΗΜΟΣΙΟ ΣΧΗΜΑ ΜΕ ΩΜΟ `as`** *(ADR-842 Φ5, μετρημένο)*
-
-  **Τι**: `services/listings/public-listing-projection.ts:307` γράφει
-  `commercialStatus: (property.commercialStatus ?? property.status ?? 'unavailable') as CommercialStatus`.
-  Το `property.status` όμως είναι **`PropertyStatus`** — **δεύτερο, παλαιότερο λεξιλόγιο** με
-  **δώδεκα** τιμές (`constants/domains/property-status-core.ts`), ενώ το `CommercialStatus`
-  (`constants/commercial-statuses.ts`) έχει **επτά**. ⇒ Το δημόσιο πεδίο είναι **τυπωμένο ως
-  ένωση επτά τιμών και μπορεί να κρατά δώδεκα**: `coming-soon` · `landowner` ·
-  `under-negotiation` · `off-market` · `deleted`.
-
-  **Γιατί έχει σημασία**: είναι **ακριβώς η οικογένεια** που η Φ3 έκλεισε για τα δεκατρία
-  λεξιλόγια χαρακτηριστικών (*«η αντιγραφή πεδίων ήταν ΚΡΙΣΗ»*), αφημένη ανοιχτή για τη
-  **διάθεση** — και η διάθεση είναι πεδίο **φιλτραρίσματος**, δηλαδή η αστοχία βγαίνει σε
-  ερώτημα, όχι σε ετικέτα. Υπάρχει **ήδη** ο κριτής: `normalizeCommercialStatus`.
-
-  **Γιατί ΔΕΝ έγινε τώρα**: η διόρθωση αλλάζει **ποιες τιμές υπάρχουν δημόσια**, άρα αγγίζει
-  το `lib/listings/listing-filters.ts` — αρχείο που τη στιγμή του ευρήματος το άλλαζε **άλλη
-  συνεδρία**. Η Φ5 το **περιέφραξε** αντί να το αγνοήσει: το
-  `lib/property/property-completion-stance.ts` κλειδώνει τον πίνακά του στο **υπερσύνολο**
-  `PropertyStatus`, ώστε κάθε τιμή που μπορεί πράγματι να φτάσει να έχει απάντηση.
-
-  **Fix**: `commercialStatus: normalizeCommercialStatus(...) ?? DEFAULT_COMMERCIAL_STATUS`,
-  **μετά** από μέτρηση ποιες τιμές υπάρχουν ζωντανά, + άγκυρα ότι το δημόσιο πεδίο δέχεται
-  **μόνο** τις επτά + έλεγχος των καταναλωτών φίλτρου.
 
 - 🔶 **02/09 — Η ΜΗΧΑΝΗ ΠΛΗΡΟΤΗΤΑΣ ΣΥΓΧΕΕΙ ΤΟ «ΑΠΑΝΤΗΣΕ: ΚΑΜΙΑ» ΜΕ ΤΟ «ΔΕΝ ΡΩΤΗΘΗΚΕ»** *(ADR-842 Φ5)*
 
@@ -5020,6 +4985,7 @@ Closed via `hostWall.params.sceneUnits ?? 'mm'` frozen-context pattern σε **4 
 ## Changelog
 
 | Date       | Change |
+| 2026-10-19 | ✅ **Ο ΚΑΝΟΝΑΣ ΑΝΑΓΝΩΣΗΣ ΤΗΣ ΔΙΑΘΕΣΗΣ ΕΓΙΝΕ ΕΝΑΣ — ΕΚΛΕΙΣΑΝ ΔΥΟ ΓΡΑΜΜΕΣ (ADR-777 §8.60.20.12, Opus 5.5).** (1) «02/09 — η διάθεση μπαίνει στο δημόσιο σχήμα με ωμό `as`» (ADR-842 Φ5): η προβολή γράφει πλέον `resolveCommercialStatus(property) ?? DEFAULT_COMMERCIAL_STATUS`. Οι τρεις προϋποθέσεις της γραμμής εκπληρώθηκαν: μέτρηση ζωντανά (19/19 ακίνητα, 19/19 αγγελίες ήδη κανονικά ⇒ καμία δημόσια τιμή δεν άλλαξε) · άγκυρα Δ1–Δ4 στο `public-listing-projection.test.ts` (μετάλλαξη: 8 κόκκινα) · καταναλωτής φίλτρου (`operationalStatusForListing`) πάνω στο υπερσύνολο, άρα καλύπτει τις επτά. (2) «19/10 — `commercialStatus ?? status` χειρόγραφο σε 8 σημεία»: και τα 7 σημεία κώδικα ζητούν το `resolveCommercialStatus` (`PropertyStatusLegend` · `PropertyQuickView` · `ListLayout` · `price-resolver` · `public-listing-projection` ×3) + το σχόλιο του `property-completion-stance`. ⚠️ Διόρθωση: η γραμμή έγραφε ότι αγγίζει «το mirror των Cloud Functions ⇒ deploy». **Ψευδές**: δεν υπάρχει καθρέφτης του `public-listing-projection` στο `functions/`. Jest σχετικών φακέλων 156 σουίτες / 3.012 tests πράσινα. |
 | 2026-10-16 | ✅ **ΜΗΝΥΜΑΤΑ ΑΡΝΗΣΗΣ ΠΕΡΙΟΔΟΥ ΣΕ ΕΛΛΗΝΙΚΟ ΚΕΙΜΕΝΟ — ΕΚΛΕΙΣΕ (ADR-ACC-010 §2.1.1 Φάση 7, Opus 5.5).** ΕΝΑ λεξιλόγιο `POSTING_PERIOD_DENIALS` (τράπεζα με `satisfies`, αποσβέσεις χωρίς `PERIOD_NOT_OPEN`) · ΕΝΑΣ κανόνας `postingPeriodDenialOf` · `ApiError(409, …, denial, details)` · κείμενο + ετικέτα μήνα (CLDR) στον πελάτη, el+en · `FiscalPeriod.label` αφαιρέθηκε. Βρέθηκε και διορθώθηκε: ομαδικό ταίριασμα τράπεζας ⇒ `PERIOD_CLOSED` για ανύπαρκτη περίοδο. Μεταλλάξεις 8/8. |
 | 2026-10-15 | ✅ **ΤΡΙΑ ΑΡΧΕΙΑ ΤΟΥ CHECK 3.34 > 500 γρ. — ΕΚΛΕΙΣΕ (ADR-744 · `52eaa9bb`)**: `plan.js` 749→444 · ελεγκτής 659→335 · `ledger.js` 632→191, με re-exports (νέα: `manifest-build` · `namespace-inheritance` · `layer-one-checks` · `route-ledger`). Ερμητική αναγέννηση: άλλαξαν ΜΟΝΟ `globalInputs.toolchain` + `inputsSha256`· Layer 1 + `--full` ✅. |
 | 2026-10-05 | ✅ **ΙΣΤΟΡΙΚΟ ΟΡΟΦΩΝ — ΕΚΛΕΙΣΕ (CHECK 3.17 · ADR-195, Opus 5.5, απόφαση Giorgio «όπως οι μεγάλοι ή καλύτερα»).** Η εγγραφή έλεγε «το `PATCH /api/floors` δεν γράφει ιστορικό» — **ανακριβές**: έγραφε, μέσα στο `floor-update-effects.ts`, και η πύλη (που κρίνει ανά αρχείο) σήμαινε τον handler. Το πραγματικό ελάττωμα ήταν η **ποιότητα**: χειρόγραφη διαφορά εκτός μητρώου, βιβλίο του καλούντος, καμία γραμμή χωρίς `ctx.companyId`, και οι αλυσίδες έγραφαν με το uid του **ανθρώπου**. Τώρα: **ένας** γραφέας ανθρώπινης ενημέρωσης (`services/audit/record-entity-update.ts`, γενίκευση του `recordBuildingUpdate` — όχι δεύτερος) δίπλα στη γραφή· **ένας** γραφέας παράγωγων (`api/floors/_shared/floor-cascade-audit.ts`) με εκτελεστή τη μηχανή (`system:floor-stack` · `system:floor-ref`) και **αιτία** (`cause.auditId`) τη γραμμή του ανθρώπου. Baseline `.entity-audit-coverage-baseline.json` **2 → 1**. Μαζί: `placeRef` κτιρίου στο ιστορικό, `docs/gates/3.17.md` γραμμένο. |

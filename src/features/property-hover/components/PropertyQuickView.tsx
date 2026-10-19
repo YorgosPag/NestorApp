@@ -20,6 +20,7 @@ import { ORIENTATION_LABELS } from '@/constants/property-features-enterprise';
 import type { OrientationType } from '@/types/property';
 import type { Property } from '@/types/property-viewer';
 import type { PropertyStatus } from '@/core/types/BadgeTypes';
+import { resolveCommercialStatus } from '@/constants/commercial-statuses';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { pricePerAreaLabel, pricePerSqmAmount, resolvedPriceLabel } from '@/lib/listings/listing-price-label';
@@ -59,9 +60,9 @@ export function PropertyQuickView({ property }: PropertyQuickViewProps) {
   const floorLabel = useFloorLabel();
   const colors = useSemanticColors();
   const statusConfig = getPropertyHoverStatusConfig();
-  // 🏢 ADR-258: commercialStatus is SSoT, legacy status is fallback
-  const effectiveStatus = property.commercialStatus ?? property.status;
-  const statusInfo = statusConfig[effectiveStatus as keyof typeof statusConfig] || statusConfig['unknown'];
+  // 🏢 ADR-258: commercialStatus is SSoT, legacy status is fallback — ο ΕΝΑΣ αναγνώστης (ADR-777 §8.60.20.12)
+  const effectiveStatus = resolveCommercialStatus(property) ?? undefined;
+  const statusInfo = statusConfig[(effectiveStatus ?? 'unknown') as keyof typeof statusConfig] || statusConfig['unknown'];
 
   const { areas, layout, orientations, linkedSpaces } = property;
   // 🏢 ADR-197/258: status-aware price (rent for for-rent/rented, sale otherwise) — SSoT

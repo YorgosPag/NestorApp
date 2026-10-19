@@ -106,7 +106,26 @@ export function validatePropertyFieldLockingUnlessRevert(
   currentStatus: string | null | undefined,
   body: Record<string, unknown>,
 ): void {
-  if (isPropertyRevertTransition(currentStatus, body)) return;
-  validatePropertyFieldLocking(currentStatus, Object.keys(body));
-  validateTransactionExit(currentStatus, body);
+  const guarded = withCanonicalStatusKey(body);
+  if (isPropertyRevertTransition(currentStatus, guarded)) return;
+  validatePropertyFieldLocking(currentStatus, Object.keys(guarded));
+  validateTransactionExit(currentStatus, guarded);
+}
+
+/**
+ * 🔴 **Το παλιό κλειδί `status` κρίνεται ΩΣ `commercialStatus`** (ADR-777 §8.60.20.12).
+ *
+ * Ο γραφέας (`property-write-normalizer`, «reverse heal») μετατρέπει ένα σκέτο `status` σε
+ * `commercialStatus` **μετά** από τους φρουρούς. Ως τις 2026-10-19 οι φρουροί έβλεπαν το ωμό σώμα:
+ * το `'status'` δεν είναι στη λίστα κλειδωμάτων και το `validateTransactionExit` κοίταζε μόνο το
+ * `commercialStatus` ⇒ ένα `PATCH { status: 'for-sale' }` έβγαζε **πουλημένο** ακίνητο από τη
+ * συναλλαγή με τον αγοραστή ακόμη γραμμένο. Οι φρουροί κρίνουν πλέον ό,τι **θα γραφτεί**.
+ * Όταν υπάρχουν και τα δύο, κερδίζει το κανονικό — όπως και στον γραφέα.
+ */
+function withCanonicalStatusKey(body: Record<string, unknown>): Record<string, unknown> {
+  if (body.status === undefined || body.status === null) return body;
+  const { status, ...rest } = body;
+  return rest.commercialStatus === undefined || rest.commercialStatus === null
+    ? { ...rest, commercialStatus: status }
+    : rest;
 }

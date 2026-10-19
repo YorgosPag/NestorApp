@@ -124,6 +124,11 @@ export interface CardBadge<TVariant extends CardBadgeVariant = CardBadgeVariant>
   label: string;
   /** Visual variant */
   variant?: TVariant;
+  /**
+   * Εικονίδιο-σχήμα της κατάστασης (ADR-771 · WCAG 1.4.1) — **πλεονασμός** της ετικέτας, ποτέ υποκατάστατό της:
+   * ζωγραφίζεται `aria-hidden`, το όνομα το λέει το κείμενο. Πρότυπο GitHub Primer `StateLabel`.
+   */
+  icon?: LucideIcon;
   /** Additional className */
   className?: string;
 }

@@ -151,7 +151,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "1289a9d1db055338211c4e0d3d6d2596135d2fb1745f3f510a2e3f4257859b07",
+  "inputsSha256": "c0730813822175f62c6030e16a23e6d76c0e68600382ed1b2e66313498b38fdb",
   "languages": [
     "el"
   ],
@@ -11541,7 +11541,6 @@
         "src/components/search-results/ListingCardNoPhotoCover.tsx",
         "src/components/search-results/PriceReductionBadge.tsx",
         "src/components/search/GlobalSearchDialog.tsx",
-        "src/components/search/SearchResultItem.tsx",
         "src/components/shared/ModuleBreadcrumb.tsx",
         "src/components/sidebar/sidebar-menu-group.tsx",
         "src/components/sidebar/sidebar-menu-item.tsx",
@@ -12023,7 +12022,6 @@
         "src/components/header/voice-assistant-button.tsx",
         "src/components/search/GlobalSearchDialog.tsx",
         "src/components/search/LandingMySpaces.tsx",
-        "src/components/search/SearchResultItem.tsx",
         "src/components/sidebar/sidebar-menu-group.tsx",
         "src/components/sidebar/sidebar-menu-item.tsx",
         "src/components/ui/ProductTour/product-tour-overlay.tsx",
@@ -12467,7 +12465,6 @@
         "src/components/header/voice-assistant-button.tsx",
         "src/components/search/GlobalSearchDialog.tsx",
         "src/components/search/LandingShowcase.tsx",
-        "src/components/search/SearchResultItem.tsx",
         "src/components/sidebar/sidebar-menu-group.tsx",
         "src/components/sidebar/sidebar-menu-item.tsx",
         "src/components/ui/ProductTour/product-tour-overlay.tsx",
@@ -12903,7 +12900,6 @@
         "src/components/header/user-menu.tsx",
         "src/components/header/voice-assistant-button.tsx",
         "src/components/search/GlobalSearchDialog.tsx",
-        "src/components/search/SearchResultItem.tsx",
         "src/components/sidebar/sidebar-menu-group.tsx",
         "src/components/sidebar/sidebar-menu-item.tsx",
         "src/components/ui/ProductTour/product-tour-overlay.tsx",
@@ -13336,7 +13332,6 @@
         "src/components/header/user-menu.tsx",
         "src/components/header/voice-assistant-button.tsx",
         "src/components/search/GlobalSearchDialog.tsx",
-        "src/components/search/SearchResultItem.tsx",
         "src/components/sidebar/sidebar-menu-group.tsx",
         "src/components/sidebar/sidebar-menu-item.tsx",
         "src/components/ui/ProductTour/product-tour-overlay.tsx",
@@ -13771,7 +13766,6 @@
         "src/components/listings/ListingSpatialBadge.tsx",
         "src/components/search-results/ListingCardNoPhotoCover.tsx",
         "src/components/search/GlobalSearchDialog.tsx",
-        "src/components/search/SearchResultItem.tsx",
         "src/components/shared/gallery/SnapGallery.tsx",
         "src/components/shared/media/viewer/ImageViewControls.tsx",
         "src/components/sidebar/sidebar-menu-group.tsx",
@@ -14219,7 +14213,6 @@
         "src/components/header/user-menu.tsx",
         "src/components/header/voice-assistant-button.tsx",
         "src/components/search/GlobalSearchDialog.tsx",
-        "src/components/search/SearchResultItem.tsx",
         "src/components/sidebar/sidebar-menu-group.tsx",
         "src/components/sidebar/sidebar-menu-item.tsx",
         "src/components/ui/ProductTour/product-tour-overlay.tsx",
@@ -15117,7 +15110,6 @@
         "src/components/header/user-menu.tsx",
         "src/components/header/voice-assistant-button.tsx",
         "src/components/search/GlobalSearchDialog.tsx",
-        "src/components/search/SearchResultItem.tsx",
         "src/components/sidebar/sidebar-menu-group.tsx",
         "src/components/sidebar/sidebar-menu-item.tsx",
         "src/components/ui/ProductTour/product-tour-overlay.tsx",
@@ -15550,7 +15542,6 @@
         "src/components/header/user-menu.tsx",
         "src/components/header/voice-assistant-button.tsx",
         "src/components/search/GlobalSearchDialog.tsx",
-        "src/components/search/SearchResultItem.tsx",
         "src/components/sidebar/sidebar-menu-group.tsx",
         "src/components/sidebar/sidebar-menu-item.tsx",
         "src/components/ui/ProductTour/product-tour-overlay.tsx",
@@ -16281,7 +16272,6 @@
     },
     "properties-enums": {
       "from": [
-        "src/components/search/SearchResultItem.tsx",
         "src/lib/units/unit-status-badges.ts"
       ],
       "keys": [
@@ -16410,7 +16400,6 @@
         "src/components/public-site/PublicSiteHeader.tsx",
         "src/components/search/LandingDoors.tsx",
         "src/components/search/LandingProBand.tsx",
-        "src/components/search/SearchResultItem.tsx",
         "src/components/shared/ModuleBreadcrumb.tsx",
         "src/components/ui/navigation/route-tabs.tsx",
         "src/lib/units/unit-status-badges.ts"
@@ -16606,7 +16595,6 @@
         "src/components/search/LandingShowcase.tsx",
         "src/components/search/PlaceSearchBox.tsx",
         "src/components/search/SearchLandingContent.tsx",
-        "src/components/search/SearchResultItem.tsx",
         "src/components/shared/ModuleBreadcrumb.tsx",
         "src/components/ui/navigation/route-tabs.tsx",
         "src/lib/listings/listing-price-label.ts",

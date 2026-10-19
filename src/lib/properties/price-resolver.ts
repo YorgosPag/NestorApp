@@ -38,6 +38,7 @@ import {
   FINALIZED_COMMERCIAL_STATUSES,
   isListedCommercialStatus,
   isTransactionOwnedCommercialStatus,
+  resolveCommercialStatus,
   type CommercialStatus,
 } from '@/constants/commercial-statuses';
 import { isRetired } from '@/lib/firestore/trashed-status';
@@ -310,7 +311,7 @@ const ANSWER_WHERE_LEGACY_IS_SILENT: Readonly<
 
 /** Effective status key: canonical `commercialStatus` wins, legacy `status` backs it. */
 function statusKeyOf(input: PricedPropertyLike): string {
-  return (input.commercialStatus ?? input.status ?? '') as string;
+  return resolveCommercialStatus(input) ?? '';
 }
 
 /** First strictly-positive candidate, tagged with the field it came from. */

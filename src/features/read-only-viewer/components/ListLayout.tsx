@@ -47,7 +47,7 @@ import type { ReadOnlyViewerContextProps } from '../types';
 import '@/lib/design-system';
 import type { OverlayLabel } from '@/components/shared/files/media/overlay-polygon-renderer';
 import { PROPERTY_STATUS_LABELS } from '@/constants/domains/property-status-core';
-import type { PropertyStatus } from '@/constants/domains/property-status-core';
+import { resolveCommercialStatus } from '@/constants/commercial-statuses';
 import { resolvedPriceLabel } from '@/lib/listings/listing-price-label';
 import { getEffectivePrice } from '@/lib/properties/price-resolver';
 
@@ -134,7 +134,7 @@ export function ListLayout({
       const grossSqm = p.areas?.gross ?? p.area;
       const hasSqm = typeof grossSqm === 'number' && Number.isFinite(grossSqm);
       const effectivePrice = getEffectivePrice(p);
-      const statusKey = (p.commercialStatus ?? p.status) as PropertyStatus | undefined;
+      const statusKey = resolveCommercialStatus(p);
       const statusI18nKey = statusKey ? PROPERTY_STATUS_LABELS[statusKey] : undefined;
       const statusText = statusI18nKey ? t(statusI18nKey).toUpperCase() : undefined;
       map.set(p.id, {

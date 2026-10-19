@@ -84,8 +84,8 @@
       "reason": "ΕΝΑΣ καταναλωτης, ενας συνδεσμος επιστροφης — και μπαινει στην κλειστοτητα μεσω αλυσιδας εισαγωγων του κελυφους, οχι επειδη το θελει καποια σελιδα. Υποψηφιο για αφαιρεση μολις σπασει η αλυσιδα."
     },
     "properties-enums": {
-      "dragger": "src/components/search/SearchResultItem.tsx",
-      "reason": "ADR-777 §8.60.20 — ΑΝΤΙΚΑΤΑΣΤΑΣΗ, ΟΧΙ ΠΡΟΣΘΗΚΗ: ο ιδιος dragger εσερνε ως τις 2026-09-18 το `parking` (`status.*`, πανω στο παλιο αναμεικτο `status`). Το σημα διαθεσης θεσης/αποθηκης στο αποτελεσμα αναζητησης (βιτρινα της ριζας = shell root) βγαινει πλεον απο το ΕΝΑ SSoT των μοναδων (`lib/units/unit-status-badges`), με τις ΙΔΙΕΣ ετικετες με τα ακινητα (`properties-enums:commercialStatus.*`). Το πληθος των key-sliced μενει 8 (parking εξω, properties-enums μεσα) — η σφραγιση ΔΕΝ αλλαζει. Ταξιδευουν μονο τα 12 ακριβη κλειδια του dynamicKeyPolicy, οχι το namespace. Θα φυγει μαζι με το parking που αντικαθιστα: οταν η βιτρινα αποκτησει δικο της route slice."
+      "dragger": "src/lib/units/unit-status-badges.ts",
+      "reason": "2026-10-19 (ADR-777 §8.60.20.12): ο αιτιος κατεβηκε ΕΝΑ αρχειο — η κληση `t(spec.labelKey)` μετακομισε απο το `SearchResultItem` στο `badgeFromSpec` του SSoT· η αλυσιδα (shell root → SearchResultItem → unit-status-badges) και τα κλειδια ιδια. ADR-777 §8.60.20 — ΑΝΤΙΚΑΤΑΣΤΑΣΗ, ΟΧΙ ΠΡΟΣΘΗΚΗ: ο ιδιος dragger εσερνε ως τις 2026-09-18 το `parking` (`status.*`, πανω στο παλιο αναμεικτο `status`). Το σημα διαθεσης θεσης/αποθηκης στο αποτελεσμα αναζητησης (βιτρινα της ριζας = shell root) βγαινει πλεον απο το ΕΝΑ SSoT των μοναδων (`lib/units/unit-status-badges`), με τις ΙΔΙΕΣ ετικετες με τα ακινητα (`properties-enums:commercialStatus.*`). Το πληθος των key-sliced μενει 8 (parking εξω, properties-enums μεσα) — η σφραγιση ΔΕΝ αλλαζει. Ταξιδευουν μονο τα 12 ακριβη κλειδια του dynamicKeyPolicy, οχι το namespace. Θα φυγει μαζι με το parking που αντικαθιστα: οταν η βιτρινα αποκτησει δικο της route slice."
     },
     "property-market": {
       "dragger": "src/components/public-site/PublicSiteHeader.tsx",

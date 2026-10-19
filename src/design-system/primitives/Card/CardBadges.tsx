@@ -24,6 +24,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: Centralized Badge component (single source of truth for all badges)
 import { Badge } from '@/components/ui/badge';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 import type { CardBadge } from './types';
 import '@/lib/design-system';
@@ -82,6 +83,7 @@ export function CardBadges({
   fitting,
 }: CardBadgesProps) {
   // Ένα όριο, δύο λόγοι: το πλήθος (`max`) και — μόνο στη μετρημένη γραμμή — το πλάτος (`fitting`).
+  const iconSizes = useIconSizes();
   const shown = Math.min(max, fitting ?? max);
   const hidden = overflow === 'count' ? badges.slice(shown) : [];
   return (
@@ -89,14 +91,16 @@ export function CardBadges({
       {badges.slice(0, max).map((badge, index) => {
         // Δεν χωρά: μένει στη ροή για να μετριέται, αλλά δεν φαίνεται και δεν διαβάζεται (το όνομά του το λέει το «+N»).
         const unfitted = index >= shown;
+        const Icon = badge.icon;
         return (
           <Badge
             key={`${keyPrefix}${badge.label}-${index}`}
             variant={badge.variant}
-            className={cn('whitespace-nowrap', badgeClassName, badge.className, unfitted && 'invisible order-last')}
+            className={cn('whitespace-nowrap', Icon && 'gap-1', badgeClassName, badge.className, unfitted && 'invisible order-last')}
             aria-hidden={unfitted || undefined}
             {...BADGE_MARK}
           >
+            {Icon && <Icon aria-hidden="true" className={cn(iconSizes.xs, 'shrink-0')} />}
             {badge.label}
           </Badge>
         );
