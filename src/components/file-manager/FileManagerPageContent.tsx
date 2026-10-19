@@ -278,7 +278,7 @@ export function FileManagerPageContent() {
               {activeTab === 'files' ? (
                 <ResizablePanelGroup orientation="horizontal" className="h-full min-h-[500px]">
                   {/* File browser panel */}
-                  <ResizablePanel defaultSize={40} minSize={15} className="overflow-auto">
+                  <ResizablePanel defaultSize="40%" minSize="15%" className="overflow-auto">
                     {/* `contents`: κανένα κουτί — μόνο η ρίζα από την οποία ο θεατής διαβάζει τη σειρά. */}
                     <div ref={setListRoot} data-file-sequence-root="" className="contents">
                     {filteredFiles.length === 0 ? (
@@ -339,7 +339,7 @@ export function FileManagerPageContent() {
                   <ResizableHandle withHandle />
 
                   {/* Right panel: preview */}
-                  <ResizablePanel defaultSize={60} minSize={25} className="overflow-hidden">
+                  <ResizablePanel defaultSize="60%" minSize="25%" className="overflow-hidden">
                     <FileViewerPane
                       outcome={viewerOutcome}
                       onDismiss={() => setSelectedFile(null)}

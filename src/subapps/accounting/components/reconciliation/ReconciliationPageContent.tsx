@@ -166,7 +166,7 @@ export function ReconciliationPageContent() {
           orientation="horizontal"
           className="flex-1 min-h-[400px]"
         >
-          <ResizablePanel defaultSize={45} minSize={25}>
+          <ResizablePanel defaultSize="45%" minSize="25%">
             <TransactionsPanel
               transactions={transactions}
               selectedTransactionId={selectedTxnId}
@@ -202,7 +202,7 @@ export function ReconciliationPageContent() {
 
           <ResizableHandle withHandle />
 
-          <ResizablePanel defaultSize={55} minSize={30}>
+          <ResizablePanel defaultSize="55%" minSize="30%">
             <CandidatesPanel
               transaction={selectedTxn}
               candidates={candidates}

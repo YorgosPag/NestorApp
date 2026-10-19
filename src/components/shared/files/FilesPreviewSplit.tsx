@@ -57,7 +57,7 @@ export function FilesPreviewSplit({ list, files, selectedFile, onSelect, onClose
   return (
     <>
       <ResizablePanelGroup orientation="horizontal" className="min-h-[400px] rounded-lg">
-        <ResizablePanel defaultSize={docked ? 45 : 100} minSize={30}>
+        <ResizablePanel defaultSize={docked ? '45%' : '100%'} minSize="30%">
           {/* `contents`: κανένα κουτί στη διάταξη — μόνο η ρίζα από την οποία διαβάζεται η σειρά της λίστας. */}
           <div ref={setListRoot} data-file-sequence-root="" className="contents">
             {list}
@@ -66,7 +66,7 @@ export function FilesPreviewSplit({ list, files, selectedFile, onSelect, onClose
         {docked && (
           <>
             <ResizableHandle withHandle />
-            <ResizablePanel defaultSize={55} minSize={30}>
+            <ResizablePanel defaultSize="55%" minSize="30%">
               {preview(false)}
             </ResizablePanel>
           </>
