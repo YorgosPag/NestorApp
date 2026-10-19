@@ -16,7 +16,7 @@ import { SpaceStatusBadges } from '@/components/shared/unit-status/SpaceStatusBa
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { spaceAvailabilityBucket } from '@/lib/spaces/space-availability';
 import type { SpaceStatusSource } from '@/lib/spaces/space-status-split';
-import { spaceStatusBadges } from '@/lib/units/unit-status-badges';
+import { spaceStatusBadges, statusBadgesText } from '@/lib/units/unit-status-badges';
 import { cn } from '@/lib/utils';
 
 import type { SpaceColumn } from './types';
@@ -78,7 +78,7 @@ export function useSpaceAvailabilityColumn<T extends SpaceStatusSource>(): Space
       width: 'w-36',
       sortValue: (item) => spaceAvailabilityBucket(item),
       render: (item) => <SpaceStatusBadges space={item} />,
-      exportCell: (item) => spaceStatusBadges(item, t).map((badge) => badge.label).join(' · ') || null,
+      exportCell: (item) => statusBadgesText(spaceStatusBadges(item, t)),
     }),
     [t],
   );

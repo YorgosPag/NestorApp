@@ -28,6 +28,7 @@ import type { LinkableItem } from '../shared';
 import { usePropertyTabColumns, usePropertyTabCardFields, renderUnitStatusBadge } from './property-tab-columns';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import { usePropertyDeletionGuard } from '@/hooks/usePropertyDeletionGuard';
+import { isListedCommercialStatus, resolveCommercialStatus } from '@/constants/commercial-statuses';
 import {
   UNIT_TYPES_FOR_FILTER, UNIT_STATUSES_FOR_FILTER,
   getPropertyTypeLabel, getPropertyStatusLabel,
@@ -149,7 +150,8 @@ export function PropertiesTabContent({ building, onActiveUnitsCountChange }: Pro
 
   const stats = useMemo(() => ({
     total: units.length,
-    available: units.filter(u => u.status === 'for-sale' || u.status === 'for-rent').length,
+    // Κανονικό `commercialStatus` + `LISTED` SSoT (μετρά και το `for-sale-and-rent`, που η χειρόγραφη σύγκριση έχανε).
+    available: units.filter(u => isListedCommercialStatus(resolveCommercialStatus(u))).length,
     // ADR-777 Α5/Α6 + §8.60.14.13 — the price SSoT, PER ROLE (never one sum across units).
     priceTotals: totalPriceByRole(units),
     totalArea: units.reduce((sum, u) => sum + (propertyDisplayArea(u) ?? 0), 0),
@@ -162,7 +164,7 @@ export function PropertiesTabContent({ building, onActiveUnitsCountChange }: Pro
         (unit.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         getPropertyTypeLabel(unit.type, tUnits).toLowerCase().includes(searchTerm.toLowerCase());
       const matchesType = filterType === 'all' || unit.type === filterType;
-      const matchesStatus = filterStatus === 'all' || unit.status === filterStatus;
+      const matchesStatus = filterStatus === 'all' || resolveCommercialStatus(unit) === filterStatus;
       return matchesSearch && matchesType && matchesStatus;
     });
   }, [units, searchTerm, filterType, filterStatus, tUnits]);
@@ -299,7 +301,6 @@ export function PropertiesTabContent({ building, onActiveUnitsCountChange }: Pro
     typeFilter,
     statusFilter,
   });
-  const getStatusBadge = (status: string) => renderUnitStatusBadge(status, tUnits);
 
   // Ίδιες ενέργειες σε κάρτες ΚΑΙ πίνακα — γραμμένες μία φορά, ώστε οι δύο όψεις
   // της ίδιας καρτέλας να μη μπορούν να προσφέρουν διαφορετικές.
@@ -391,7 +392,7 @@ export function PropertiesTabContent({ building, onActiveUnitsCountChange }: Pro
             items={filteredUnits}
             getKey={(u) => u.id}
             getName={(u) => u.name || u.code || u.id}
-            renderStatus={(u) => getStatusBadge(u.status)}
+            renderStatus={(u) => renderUnitStatusBadge(u, tUnits)}
             fields={unitCardFields}
             actions={spaceActions}
             actionState={spaceActionState}

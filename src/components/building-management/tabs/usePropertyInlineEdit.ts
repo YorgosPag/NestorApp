@@ -15,6 +15,11 @@ import type { Property, PropertyType } from '@/types/property';
 import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
 import { outcomeOrThrow } from '@/hooks/impact-guard/guard-result';
 import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
+import {
+  DEFAULT_COMMERCIAL_STATUS,
+  isEditorCommercialStatus,
+  resolveCommercialStatus,
+} from '@/constants/commercial-statuses';
 
 interface UsePropertyInlineEditReturn {
   editingId: string | null;
@@ -44,7 +49,7 @@ export function usePropertyInlineEdit(onSaved: () => Promise<void>): UseProperty
   const [editType, setEditType] = useState<PropertyType | ''>('apartment');
   const [editFloor, setEditFloor] = useState('');
   const [editArea, setEditArea] = useState('');
-  const [editStatus, setEditStatus] = useState('for-sale');
+  const [editStatus, setEditStatus] = useState<string>(DEFAULT_COMMERCIAL_STATUS);
   const [editVersion, setEditVersion] = useState<number | undefined>(undefined);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [saving, setSaving] = useState(false);
@@ -59,7 +64,7 @@ export function usePropertyInlineEdit(onSaved: () => Promise<void>): UseProperty
     setEditType(property.type || 'apartment');
     setEditFloor(property.floor ? String(property.floor) : '');
     setEditArea(property.area ? String(property.area) : '');
-    setEditStatus(property.status || 'for-sale');
+    setEditStatus(resolveCommercialStatus(property) ?? DEFAULT_COMMERCIAL_STATUS);
     setEditVersion((property as unknown as { _v?: number })._v);
   }, []);
 
@@ -77,7 +82,8 @@ export function usePropertyInlineEdit(onSaved: () => Promise<void>): UseProperty
         type: editType || undefined,
         floor: editFloor ? parseInt(editFloor, 10) : undefined,
         area: editArea ? parseFloat(editArea) : undefined,
-        status: editStatus || undefined,
+        // Μόνο δήλωση επεξεργαστή· κατάσταση που την κατέχει συναλλαγή δεν ξαναγράφεται από εδώ (ADR-777 §8.60.18).
+        status: isEditorCommercialStatus(editStatus) ? editStatus : undefined,
       };
       if (editVersion !== undefined) payload._v = editVersion;
 

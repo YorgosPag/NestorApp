@@ -72,7 +72,7 @@
     "src/i18n/generated/routes/tour-invite__token.el.json": "aeec8bc36081f1b5a8c49674c18a1a367f5d97d69bad1124f15f0a1349d110cf",
     "src/i18n/generated/routes/vendor__quote.el.json": "413f934a43a5be908bb20d0c0c0c92d312922631921b3363e9c49b3200b7a7ae",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "35ae0b9ff52a55dc0891a42d06ff3a7c452ffc720ccacae4adc5e39265246cf8",
+    "src/i18n/generated/shell-slice.el.json": "208f8a9dcdac614a53b9732535972f221a914d21f349781e2bd2f65f2e28d223",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "generator": "scripts/generate-i18n-shell-slice.js",
@@ -151,7 +151,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "2700fbcf15fd05a074877f4f34e16bd88c07496275af0a856c9f752b65484144",
+  "inputsSha256": "1289a9d1db055338211c4e0d3d6d2596135d2fb1745f3f510a2e3f4257859b07",
   "languages": [
     "el"
   ],
@@ -11189,8 +11189,8 @@
     "src/components/search/GlobalSearchDialog.tsx"
   ],
   "stats": {
-    "matchedKeys": 249,
-    "sliceBytes": 777955
+    "matchedKeys": 255,
+    "sliceBytes": 777691
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -11999,7 +11999,6 @@
         "channelShare.capability",
         "channelShare.channels",
         "channelShare.externalIdPlaceholder",
-        "commercialStatus",
         "emailShare",
         "emailShare.recipientMode",
         "notifications.email.newFrom",
@@ -12447,7 +12446,6 @@
         "channelShare.capability",
         "channelShare.channels",
         "channelShare.externalIdPlaceholder",
-        "commercialStatus",
         "emailShare",
         "emailShare.recipientMode",
         "userMenu.spaces"
@@ -12886,7 +12884,6 @@
         "channelShare.capability",
         "channelShare.channels",
         "channelShare.externalIdPlaceholder",
-        "commercialStatus",
         "emailShare",
         "emailShare.recipientMode"
       ],
@@ -13320,7 +13317,6 @@
         "channelShare.capability",
         "channelShare.channels",
         "channelShare.externalIdPlaceholder",
-        "commercialStatus",
         "emailShare",
         "emailShare.recipientMode"
       ],
@@ -13754,7 +13750,6 @@
         "channelShare.capability",
         "channelShare.channels",
         "channelShare.externalIdPlaceholder",
-        "commercialStatus",
         "emailShare",
         "emailShare.recipientMode"
       ],
@@ -14205,7 +14200,6 @@
         "channelShare.capability",
         "channelShare.channels",
         "channelShare.externalIdPlaceholder",
-        "commercialStatus",
         "emailShare",
         "emailShare.recipientMode"
       ],
@@ -14639,7 +14633,6 @@
         "channelShare.capability",
         "channelShare.channels",
         "channelShare.externalIdPlaceholder",
-        "commercialStatus",
         "emailShare",
         "emailShare.recipientMode"
       ],
@@ -15103,7 +15096,6 @@
         "channelShare.capability",
         "channelShare.channels",
         "channelShare.externalIdPlaceholder",
-        "commercialStatus",
         "emailShare",
         "emailShare.recipientMode",
         "productTour",
@@ -15539,7 +15531,6 @@
         "channelShare.capability",
         "channelShare.channels",
         "channelShare.externalIdPlaceholder",
-        "commercialStatus",
         "emailShare",
         "emailShare.recipientMode"
       ],
@@ -15973,7 +15964,6 @@
         "channelShare.capability",
         "channelShare.channels",
         "channelShare.externalIdPlaceholder",
-        "commercialStatus",
         "emailShare",
         "emailShare.recipientMode"
       ],
@@ -16399,9 +16389,7 @@
         "theme.light",
         "theme.system"
       ],
-      "prefixes": [
-        "commercialStatus"
-      ],
+      "prefixes": [],
       "whole": false
     },
     "property-market": {

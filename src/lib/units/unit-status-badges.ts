@@ -22,7 +22,9 @@
 import {
   DEFAULT_COMMERCIAL_STATUS,
   normalizeCommercialStatus,
+  resolveCommercialStatus,
   type CommercialStatus,
+  type CommercialStatusSource,
 } from '@/constants/commercial-statuses';
 import {
   isOperationalException,
@@ -71,11 +73,16 @@ const OPERATIONAL_VARIANTS: Readonly<Record<OperationalStatus, GridCardBadgeVari
   draft: 'default',
 };
 
+/** Το κλειδί ετικέτας μιας διάθεσης (namespace {@link UNIT_STATUS_NAMESPACE}) — ένα σημείο για σήμα, φίλτρο και εξαγωγή. */
+export function commercialStatusLabelKey(status: CommercialStatus): string {
+  return `commercialStatus.${status}`;
+}
+
 /** Το σήμα διάθεσης — ή `null` όταν η κατάσταση είναι άγνωστη (ποτέ «Διαθέσιμη» από εικασία). */
 export function commercialStatusBadge(value: unknown): UnitStatusBadgeSpec | null {
   const status = normalizeCommercialStatus(value);
   if (!status) return null;
-  return { labelKey: `commercialStatus.${status}`, variant: COMMERCIAL_VARIANTS[status] };
+  return { labelKey: commercialStatusLabelKey(status), variant: COMMERCIAL_VARIANTS[status] };
 }
 
 /** Το σήμα λειτουργίας — για **κάθε** δηλωμένη κατάσταση (η κάρτα ακινήτου το δείχνει πάντα). */
@@ -114,6 +121,28 @@ export function unitStatusBadges(unit: UnitStatusSource, t: Translate): GridCard
   }));
 }
 
+/** Τα σήματα ως **κείμενο** (εξαγωγή XLSX) — `null` όταν δεν υπάρχει κανένα, ποτέ κενό κελί-ψέμα. */
+export function statusBadgesText(badges: readonly GridCardBadge[]): string | null {
+  return badges.map((badge) => badge.label).join(' · ') || null;
+}
+
+/** Ό,τι χρειάζεται από ένα **ακίνητο** για τα σήματά του (κανονικό πεδίο + παλιό κάτοπτρο). */
+export interface PropertyStatusSource extends CommercialStatusSource {
+  readonly operationalStatus?: unknown;
+}
+
+/**
+ * Τα σήματα ενός **ακινήτου** — η διάθεση περνά πρώτα από τον ΕΝΑ αναγνώστη
+ * (`resolveCommercialStatus`), ώστε κάθε επιφάνεια να διαβάζει το κανονικό `commercialStatus`
+ * και όχι το `@deprecated` κάτοπτρο `status`.
+ */
+export function propertyStatusBadges(property: PropertyStatusSource, t: Translate): GridCardBadge[] {
+  return unitStatusBadges(
+    { commercialStatus: resolveCommercialStatus(property), operationalStatus: property.operationalStatus },
+    t,
+  );
+}
+
 /**
  * Τα σήματα ενός **χώρου** (θέση · αποθήκη) — περνούν πρώτα από τον ΕΝΑ αναγνώστη
  * (`resolveSpaceStatuses`), ώστε κάθε επιφάνεια να δείχνει το ίδιο ό,τι κι αν της έδωσαν:
@@ -133,5 +162,5 @@ export function spaceCommercialStatusView(
   t: Translate,
 ): { readonly statusKey: CommercialStatus; readonly statusLabel: string } {
   const statusKey = resolveSpaceStatuses(space).commercialStatus ?? DEFAULT_COMMERCIAL_STATUS;
-  return { statusKey, statusLabel: t(`commercialStatus.${statusKey}`, { ns: UNIT_STATUS_NAMESPACE }) };
+  return { statusKey, statusLabel: t(commercialStatusLabelKey(statusKey), { ns: UNIT_STATUS_NAMESPACE }) };
 }

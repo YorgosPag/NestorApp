@@ -26,31 +26,24 @@ import {
 } from '../shared';
 import { propertyDisplayArea } from '@/lib/properties/property-display-area';
 import { useFloorLabel } from '@/hooks/useFloorLabel';
-import {
-  UNIT_STATUS_COLOR_MAP,
-  getPropertyTypeLabel,
-  getPropertyStatusLabel,
-} from './property-tab-constants';
+import { getPropertyTypeLabel } from './property-tab-constants';
+import { resolveCommercialStatus } from '@/constants/commercial-statuses';
+import { propertyStatusBadges, statusBadgesText } from '@/lib/units/unit-status-badges';
+import { UnitStatusBadges } from '@/components/shared/unit-status/UnitStatusBadges';
 
 /** The translate function shape both namespaces expose. */
 type TFn = (key: string, options?: Record<string, unknown>) => string;
 
 /**
- * Status pill for a unit.
+ * Status badges for a unit — the SAME resolver (`propertyStatusBadges`) and painter
+ * (`UnitStatusBadges`) as every other unit surface (ADR-777 §8.60.20). Shared by the table column
+ * and the card grid so the two views of one tab cannot render the same status differently.
  *
- * Shared by the table column and the card grid so the two views of one tab
- * cannot render the same status differently.
+ * Until 2026-10-19 this was a local `<span>` over a local colour map (`text-primary` on a card —
+ * invisible in the dark theme, ADR-770) reading the `@deprecated` `status` mirror.
  */
-export function renderUnitStatusBadge(status: string, tUnits: TFn) {
-  return (
-    <span
-      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-        UNIT_STATUS_COLOR_MAP[status] || UNIT_STATUS_COLOR_MAP.unavailable
-      }`}
-    >
-      {getPropertyStatusLabel(status, tUnits)}
-    </span>
-  );
+export function renderUnitStatusBadge(unit: Property, tUnits: TFn) {
+  return <UnitStatusBadges badges={propertyStatusBadges(unit, tUnits)} />;
 }
 
 /**
@@ -93,9 +86,9 @@ export function usePropertyTabColumns(
       key: 'status',
       label: t('unitsTable.columns.status'),
       width: 'w-28',
-      sortValue: (u) => u.status,
-      render: (u) => renderUnitStatusBadge(u.status, tUnits),
-      exportCell: (u) => getPropertyStatusLabel(u.status, tUnits),
+      sortValue: (u) => resolveCommercialStatus(u),
+      render: (u) => renderUnitStatusBadge(u, tUnits),
+      exportCell: (u) => statusBadgesText(propertyStatusBadges(u, tUnits)),
     },
   ], [t, tUnits, mutedTextClass, floorLabel]);
 }

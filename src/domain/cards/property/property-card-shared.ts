@@ -33,6 +33,7 @@ import type { MarketingAudience } from '@/constants/marketing-audiences';
 import { offeredAudienceOf } from '@/services/listings/public-listing-projection';
 import { retiredKindOf, type RetiredKind } from '@/lib/firestore/trashed-status';
 import { commercialStatusBadge, UNIT_STATUS_NAMESPACE } from '@/lib/units/unit-status-badges';
+import { resolveCommercialStatus } from '@/constants/commercial-statuses';
 import type { Property } from '@/types/property-viewer';
 
 type TFn = (key: string, opts?: Record<string, unknown>) => string;
@@ -110,7 +111,7 @@ export function buildPropertyStatusBadge(property: Property, t: TFn): GridCardBa
   const retired = buildRetiredBadge(property, t);
   if (retired !== null) return retired;
 
-  const spec = commercialStatusBadge(property.commercialStatus ?? property.status);
+  const spec = commercialStatusBadge(resolveCommercialStatus(property));
   return spec
     ? { label: t(spec.labelKey, { ns: UNIT_STATUS_NAMESPACE }), variant: spec.variant }
     : null;

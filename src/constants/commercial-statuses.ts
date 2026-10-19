@@ -453,3 +453,20 @@ export function normalizeCommercialStatus(
   if (key.length === 0) return null;
   return COMMERCIAL_STATUS_ALIASES[key] ?? null;
 }
+
+/** Ό,τι κρατά ένα έγγραφο ακινήτου για τη διάθεσή του: το κανονικό πεδίο **και** το παλιό κάτοπτρο. */
+export interface CommercialStatusSource {
+  readonly commercialStatus?: unknown;
+  readonly status?: unknown;
+}
+
+/**
+ * Η διάθεση ενός ακινήτου όπως τη **διαβάζει** κάθε επιφάνεια: το κανονικό `commercialStatus`
+ * κερδίζει πάντα· το `@deprecated` κάτοπτρο `status` συμπληρώνει **μόνο** παλιά έγγραφα χωρίς αυτό.
+ * Ίδιος κανόνας με τη θεραπεία του γραφέα (`property-write-normalizer`), από την πλευρά του αναγνώστη.
+ *
+ * `null` = άγνωστη· ο καταναλωτής αποφασίζει (ποτέ «Διαθέσιμη» από εικασία).
+ */
+export function resolveCommercialStatus(source: CommercialStatusSource): CommercialStatus | null {
+  return normalizeCommercialStatus(source.commercialStatus) ?? normalizeCommercialStatus(source.status);
+}

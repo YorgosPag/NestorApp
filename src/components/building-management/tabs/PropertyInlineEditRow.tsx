@@ -24,10 +24,17 @@ import {
 import type { TFunction } from 'i18next';
 import {
   UNIT_TYPES_FOR_FILTER,
-  UNIT_STATUSES_FOR_FILTER,
   getPropertyTypeLabel,
   getPropertyStatusLabel,
 } from './property-tab-constants';
+import {
+  EDITOR_COMMERCIAL_STATUSES,
+  isTransactionOwnedCommercialStatus,
+  resolveCommercialStatus,
+} from '@/constants/commercial-statuses';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { propertyStatusBadges, UNIT_STATUS_NAMESPACE } from '@/lib/units/unit-status-badges';
+import { UnitStatusBadges } from '@/components/shared/unit-status/UnitStatusBadges';
 import type { Property } from '@/types/property';
 import { SpacePriceCell } from '../shared/buildingSpacePriceColumn';
 import { BuildingSpaceEditActions } from '../shared/BuildingSpaceActions';
@@ -40,6 +47,35 @@ interface PropertyInlineEditRowProps {
   tUnits: TFunction;
   /** Η μονάδα της γραμμής — για τα κελιά που δεν επεξεργάζονται επί τόπου (τιμή). */
   unit: Property;
+}
+
+/**
+ * Το κελί «Κατάσταση» της γρήγορης επεξεργασίας (ADR-777 §8.60.18).
+ *
+ * Ο επεξεργαστής δηλώνει **μόνο** `EDITOR_COMMERCIAL_STATUSES` — ως τις 2026-10-19 πρόσφερε και
+ * «Πωλήθηκε»/«Κρατημένο» (η έξοδος/είσοδος συναλλαγής είναι δική της πράξη) και το φάντασμα
+ * `under-negotiation`, που ο γραφέας μετέτρεπε σιωπηλά σε `unavailable`. Μονάδα που την κατέχει
+ * συναλλαγή δείχνει το σήμα της **μόνο για ανάγνωση**.
+ */
+function UnitStatusEditCell({ edit, tUnits, unit }: PropertyInlineEditRowProps) {
+  const { t: tEnums } = useTranslation(UNIT_STATUS_NAMESPACE);
+  if (isTransactionOwnedCommercialStatus(resolveCommercialStatus(unit))) {
+    return <UnitStatusBadges badges={propertyStatusBadges(unit, tEnums)} />;
+  }
+  return (
+    <Select value={edit.editStatus} onValueChange={edit.setEditStatus} disabled={edit.saving}>
+      <SelectTrigger className="h-8">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {EDITOR_COMMERCIAL_STATUSES.map((status) => (
+          <SelectItem key={status} value={status}>
+            {getPropertyStatusLabel(status, tUnits)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 }
 
 export function PropertyInlineEditRow({ edit, tUnits, unit }: PropertyInlineEditRowProps) {
@@ -100,18 +136,7 @@ export function PropertyInlineEditRow({ edit, tUnits, unit }: PropertyInlineEdit
         <SpacePriceCell item={unit} t={tUnits} />
       </TableCell>
       <TableCell>
-        <Select value={edit.editStatus} onValueChange={edit.setEditStatus} disabled={edit.saving}>
-          <SelectTrigger className="h-8">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {UNIT_STATUSES_FOR_FILTER.map((us) => (
-              <SelectItem key={us} value={us}>
-                {getPropertyStatusLabel(us, tUnits)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <UnitStatusEditCell edit={edit} tUnits={tUnits} unit={unit} />
       </TableCell>
       <TableCell>
         <BuildingSpaceEditActions

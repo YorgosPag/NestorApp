@@ -1,4 +1,3 @@
-/* eslint-disable design-system/enforce-semantic-colors */
 /**
  * Property tab constants — SSOT for labels and option arrays.
  *
@@ -13,6 +12,8 @@ import type { TFunction } from 'i18next';
 import type { PropertyType, CommercialStatus } from '@/types/property';
 import { isLandProperty } from '@/constants/property-classification';
 import { PROPERTY_TYPES, PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
+import { COMMERCIAL_STATUSES, normalizeCommercialStatus } from '@/constants/commercial-statuses';
+import { UNIT_STATUS_NAMESPACE, commercialStatusLabelKey } from '@/lib/units/unit-status-badges';
 
 // ============================================================================
 // TYPE LABELS & OPTIONS (i18n keys — resolve with t())
@@ -48,27 +49,13 @@ export const UNIT_TYPES_FOR_FILTER: PropertyType[] = PROPERTY_TYPES.filter(
 // STATUS LABELS & OPTIONS (i18n keys — resolve with t())
 // ============================================================================
 
-/** Maps commercial status value → i18n key in "properties" namespace */
-export const UNIT_STATUS_LABEL_KEYS: Record<string, string> = {
-  'for-sale': 'commercialStatus.for-sale',
-  'for-rent': 'commercialStatus.for-rent',
-  sold: 'commercialStatus.sold',
-  reserved: 'commercialStatus.reserved',
-  rented: 'commercialStatus.rented',
-  'under-negotiation': 'commercialStatus.under-negotiation',
-  unavailable: 'commercialStatus.unavailable',
-};
-
-export const UNIT_STATUSES_FOR_FILTER = [
-  'for-sale', 'for-rent', 'sold', 'reserved', 'rented', 'under-negotiation', 'unavailable',
-] as const;
-
-/** ADR-197: Commercial statuses allowed at creation (reserved/sold via sales flow) */
-export const CREATION_COMMERCIAL_OPTION_KEYS: { value: CommercialStatus; labelKey: string }[] = [
-  { value: 'unavailable', labelKey: 'commercialStatus.unavailable' },
-  { value: 'for-sale', labelKey: 'commercialStatus.for-sale' },
-  { value: 'for-rent', labelKey: 'commercialStatus.for-rent' },
-];
+/**
+ * Οι διαθέσεις του φίλτρου «Κατάσταση» — **όλες** οι κανονικές (`COMMERCIAL_STATUSES`), ποτέ
+ * χειρόγραφη λίστα. Ως τις 2026-10-19 ήταν τοπική: περιείχε το φάντασμα `under-negotiation`
+ * (ούτε κατάσταση ούτε ψευδώνυμο — ο γραφέας το έκανε σιωπηλά `unavailable`) και **έλειπε**
+ * το `for-sale-and-rent`.
+ */
+export const UNIT_STATUSES_FOR_FILTER: readonly CommercialStatus[] = COMMERCIAL_STATUSES;
 
 // ============================================================================
 // HELPERS
@@ -80,22 +67,15 @@ export function getPropertyTypeLabel(type: string, t: TFunction): string {
   return key ? t(key) : type;
 }
 
-/** Resolve a commercial status to its translated label */
-export function getPropertyStatusLabel(status: string, t: TFunction): string {
-  const key = UNIT_STATUS_LABEL_KEYS[status];
-  return key ? t(key) : status;
+/**
+ * Η μεταφρασμένη ετικέτα μιας διάθεσης — από το SSoT των σημάτων (`commercialStatusLabelKey`,
+ * namespace `properties-enums`). Άγνωστη τιμή ⇒ η ίδια η τιμή (ορατή, όχι κενή).
+ */
+export function getPropertyStatusLabel(status: string | null, t: TFunction): string {
+  const canonical = normalizeCommercialStatus(status);
+  if (!canonical) return status ?? '';
+  return t(commercialStatusLabelKey(canonical), { ns: UNIT_STATUS_NAMESPACE });
 }
-
-export const UNIT_STATUS_COLOR_MAP: Record<string, string> = {
-  available: 'bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))]',
-  'for-sale': 'bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))]',
-  'for-rent': 'bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))]',
-  sold: 'bg-accent text-primary',
-  reserved: 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]',
-  rented: 'bg-[hsl(var(--bg-info))]/20 text-primary',
-  'under-negotiation': 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]',
-  unavailable: 'bg-muted text-muted-foreground',
-};
 
 // ============================================================================
 // SHARED TYPES

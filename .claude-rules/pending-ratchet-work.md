@@ -2,6 +2,16 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **19/10 — Ο ΚΑΝΟΝΑΣ ΑΝΑΓΝΩΣΗΣ ΤΗΣ ΔΙΑΘΕΣΗΣ ΓΡΑΦΕΤΑΙ ΜΕ ΤΟ ΧΕΡΙ ΣΕ 8 ΣΗΜΕΙΑ** *(ADR-777 §8.60.20.12, εύρημα κατά τη διόρθωση των σημάτων της καρτέλας «Μονάδες»)*
+
+  **Τι:** `commercialStatus ?? status` (κανονικό πεδίο → `@deprecated` κάτοπτρο), χωρίς κανονικοποίηση. **Υπάρχει πλέον
+  SSoT:** `resolveCommercialStatus` (`constants/commercial-statuses.ts`). **Πού** (`grep -rnE "commercialStatus \?\? [a-z]+\.status"`):
+  `property-viewer/PropertyStatusLegend.tsx` · `property-hover/components/PropertyQuickView.tsx` ·
+  `read-only-viewer/components/ListLayout.tsx` · `lib/properties/price-resolver.ts` · `lib/property/property-completion-stance.ts`
+  (σχόλιο) · `services/listings/public-listing-projection.ts` ×3. **Προσοχή:** τρία από αυτά κάνουν cast σε `PropertyStatus`
+  (ευρύτερο από `CommercialStatus`) και το `public-listing-projection` αγγίζει το mirror των Cloud Functions ⇒ deploy.
+  **Μέγεθος:** 6 αρχεία, 2 τομείς ⇒ με εντολή Giorgio.
+
 - 🟡 **16/10 — ΤΑ POST-FINALIZE HOOKS ΜΑΛΛΟΝ ΔΕΝ ΤΡΕΧΟΥΝ ΠΟΤΕ ΓΙΑ ΑΝΕΒΑΣΜΑΤΑ ΑΠΟ BROWSER** *(ADR-915 §20.8, εύρημα audit — ΔΕΝ επαληθεύτηκε)*
 
   **Τι:** `FileRecordService.finalizeFileRecord` (`services/file-record.service.ts`) τρέχει **στον browser** και καλεί
