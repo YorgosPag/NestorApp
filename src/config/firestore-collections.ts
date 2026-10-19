@@ -126,6 +126,14 @@ export const COLLECTIONS = {
   PROPERTY_HANDOVERS: process.env.NEXT_PUBLIC_PROPERTY_HANDOVERS_COLLECTION || 'property_handovers',
 
   /**
+   * ✉️ ADR-916 Φ-Β — **Η ΠΡΟΣΚΛΗΣΗ ΤΟΥ ΑΓΟΡΑΣΤΗ** στον φάκελό του (`phin_*`, ADR-853 κοινός πυρήνας). **Μόνο
+   * διακομιστής** και στις δύο πλευρές: στη βάση ζει μόνο το `sha256` του nonce και το email του αγοραστή. Την εκδίδει
+   * ο **ένας** γραφέας της παράδοσης, στην ίδια συναλλαγή με την παράδοση.
+   */
+  PROPERTY_HANDOVER_INVITATIONS:
+    process.env.NEXT_PUBLIC_PROPERTY_HANDOVER_INVITATIONS_COLLECTION || 'property_handover_invitations',
+
+  /**
    * 🧭 ADR-884 Φ0.1–Φ0.2 — **Η ΧΩΡΙΚΗ ΠΕΡΙΗΓΗΣΗ** (`stour_*`, μία ανά ρίζα αγγελίας). **Δύο διαμερίσματα**,
    * όπως τα αρχεία: επιλογή **μόνο** μέσω `SPATIAL_TOUR_COLLECTION[kind]` (`lib/spatial-tour/spatial-tour-custody`).
    * Γράφει **μόνο** ο διακομιστής· ο κάτοχος διαβάζει (ζωντανός επεξεργαστής), κάθε άλλο κοινό από διαδρομές (Φ0.9).

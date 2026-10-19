@@ -150,6 +150,18 @@ export abstract class PublicRegistryIdGenerators extends BimEntityIdGenerators {
     return this.mintDeterministicV4Id(P.PROPERTY_HANDOVER, seed);
   }
 
+  /** ADR-916 Φ-Β — η **πρόσκληση** του αγοραστή (`phin_*`). Διακομιστής μόνο· νέα έκδοση = νέο id (ADR-853 §20). */
+  generatePropertyHandoverInvitationId(): string { return this.generateId(P.PROPERTY_HANDOVER_INVITATION).id; }
+
+  /**
+   * ADR-916 Φ-Β — ο **φάκελος του αγοραστή** (`pdos_*`), ντετερμινιστικός από την παράδοση που τον γεννά: δύο
+   * ταυτόχρονες αποδοχές (ή επανάληψη δικτύου) βρίσκουν το **ίδιο** έγγραφο ⇒ ποτέ δεύτερος φάκελος για το ίδιο σπίτι.
+   * Ίδιο πρόθεμα με τον φάκελο που γεννά ο ιδιώτης: είναι **η ίδια** οντότητα (ADR-866), όχι δεύτερο είδος.
+   */
+  generateDeterministicPropertyDossierId(seed: string): string {
+    return this.mintDeterministicV4Id(P.PROPERTY_DOSSIER, seed);
+  }
+
   /** ADR-900 §3.8 — η κλειδαριά του ΑΦΜ (`txic_*`), ντετερμινιστική από το **HMAC** του — ο ΑΦΜ δεν γίνεται ποτέ id. */
   generateDeterministicTaxIdentityClaimId(taxIdHmac: string): string {
     return this.mintDeterministicV4Id(P.TAX_IDENTITY_CLAIM, taxIdHmac);

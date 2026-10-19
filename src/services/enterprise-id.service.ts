@@ -72,6 +72,8 @@ export {
   generateDeterministicOwnershipKaekClaimId,
   generateDeterministicTaxIdentityClaimId,
   generateDeterministicPropertyHandoverId,
+  generatePropertyHandoverInvitationId,
+  generateDeterministicPropertyDossierId,
   generateDeterministicPublicUnitId,
   generateFirstContactId,
   generateFirstContactInvitationId,

@@ -177,6 +177,10 @@ export const generateDeterministicTaxIdentityClaimId = (taxIdHmac: string) =>
 // ADR-916 §5.2 — η παράδοση φακέλου από πώληση, εξαγόμενη μαζί με τη μέθοδο (το μάθημα του `mreq`).
 export const generateDeterministicPropertyHandoverId = (seed: string) =>
   enterpriseIdService.generateDeterministicPropertyHandoverId(seed);
+// ADR-916 Φ-Β — η πρόσκληση του αγοραστή και ο φάκελός του (ντετερμινιστικός από την παράδοση).
+export const generatePropertyHandoverInvitationId = () => enterpriseIdService.generatePropertyHandoverInvitationId();
+export const generateDeterministicPropertyDossierId = (seed: string) =>
+  enterpriseIdService.generateDeterministicPropertyDossierId(seed);
 // ADR-900 §8 #2 (2β.4) — η δημόσια μονάδα, από σπόρο HMAC (ποτέ τον ΚΑΕΚ).
 export const generateDeterministicPublicUnitId = (unitSeed: string) =>
   enterpriseIdService.generateDeterministicPublicUnitId(unitSeed);
