@@ -4100,6 +4100,13 @@
 
 ## Pending tasks (priority order)
 
+### 🧾 Αναγνώστες του deprecated `soldTo` — ~18 αρχεία δεν βλέπουν πωλήσεις γραμμένες μόνο σε `commercial.owners` (προτεραιότητα ΜΕΣΑΙΑ, 2026-10-19, ADR-244 · N.0.2)
+- **Περιστατικό**: η ροή πώλησης γράφει `commercial.owners[]` + `ownerContactIds[]` (ADR-244), **όχι** `soldTo` ⇒ η καρτέλα «Πελάτες» έργου ήταν κενή για πουλημένη μονάδα. Διορθώθηκαν **μόνο** τα δύο endpoints «Πελάτες» (έργου + κτιρίου).
+- **SSoT**: `lib/ownership/owner-utils.ts` → `isStoredPropertySold` · `readStoredBuyerContactIds` (owners χωρίς οικοπεδούχους, `soldTo` μόνο αν δεν υπάρχουν owners) · `countSoldPropertiesPerBuyer`.
+- **Μένουν**: `api/contacts/[contactId]/properties/route.ts`, `lib/contacts/owner-property-stats.ts`, `api/notifications/professional-assigned/hierarchy-resolver.ts` (έχει δικό του fallback — να γίνει κλήση SSoT), `api/properties/property-link-sold.handler.ts`, `components/properties/tabs/PropertyCustomerTab.tsx`, `components/shared/customer-info/components/PropertyCustomerDisplay.tsx`, `components/projects/structure-tab/parts/PropertyNode.tsx`, `features/property-details/PropertyDetailsContent.tsx`, `hooks/property-viewer-selection.ts`, `hooks/reports/useExecutiveReport.ts`, `services/properties.service.ts`· mappers/normalizers (`firestore-mappers.ts`, `property-normalizer.ts`) αγγίζονται τελευταίοι.
+- ⚠️ Οι client αναγνώστες κρατούν τυπωμένο `Property`, όχι ωμό record — χρειάζεται typed παραλλαγή του SSoT, όχι cast.
+- **Νεκρός δίδυμος**: `api/v2/projects/[projectId]/customers/*` (PostgreSQL, `u.sold_to`) — κανείς δεν τον καλεί (`API_ROUTES.PROJECTS.CUSTOMERS` → v1). Υποψήφιος διαγραφής, απόφαση Giorgio.
+
 ### 👤 Χειροποίητα `Avatar` + `AvatarFallback` — 7 οθόνες εκτός του `EntityAvatar` (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-18, ADR-190 §Display · N.0.2)
 - **SSoT**: `EntityAvatar` (`design-system/primitives/Avatar/`) — σχήμα από `kind`, μονόγραμμα AA (`monogram-tone.ts`), `<img>` lazy μέσω `identityImageSource` (μικρογραφία από optimizer).
 - **Μένουν** (κάθε μία με δικό της fallback): `components/admin/role-management/components/UserTable.tsx` (χρώμα = **άθροισμα χαρακτήρων** ⇒ αναγραμματισμοί συγκρούονται· παλέτα με επαναλήψεις + `bg-destructive`), `components/shared/customer-info/components/{CustomerInfoCompact,UnifiedCustomerCard}.tsx`, `components/crm/pages/CrmTeamsPageContent.tsx`, `components/header/user-menu.tsx`, `components/network-messaging/AudienceRosterPanel.tsx`, `app/(app)/o/[workspace]/account/layout.tsx`.

@@ -8,6 +8,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { countSoldPropertiesPerBuyer } from '@/lib/ownership/owner-utils';
 
 const logger = createModuleLogger('BuildingCustomersRoute');
 
@@ -86,21 +87,16 @@ export async function GET(
           .where(FIELDS.BUILDING_ID, '==', buildingId)
           .get();
 
-        const units = unitsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        const units = unitsSnapshot.docs.map(doc => doc.data());
 
         logger.info('Total units found', { count: units.length });
 
-        // Filter sold units
-        type UnitWithSoldTo = { id: string; status?: string; soldTo?: string };
-        const soldProperties = units.filter((u): u is UnitWithSoldTo & { status: 'sold'; soldTo: string } =>
-          (u as UnitWithSoldTo).status === 'sold' && !!(u as UnitWithSoldTo).soldTo
-        );
-        logger.info('Sold properties', { count: soldProperties.length });
+        // Sold units → buyers (ADR-244 SSoT: commercial.owners, legacy soldTo fallback)
+        const { soldPropertiesCount, propertiesPerBuyer: customerUnitCount } =
+          countSoldPropertiesPerBuyer(units);
+        logger.info('Sold properties', { count: soldPropertiesCount });
 
-        if (soldProperties.length === 0) {
+        if (soldPropertiesCount === 0) {
           logger.info('No sold properties found for building', { buildingId });
           return NextResponse.json({
             success: true,
@@ -109,12 +105,6 @@ export async function GET(
             summary: { customersCount: 0, soldPropertiesCount: 0 }
           });
         }
-
-        // Count units per customer
-        const customerUnitCount: { [contactId: string]: number } = {};
-        soldProperties.forEach(unit => {
-          customerUnitCount[unit.soldTo] = (customerUnitCount[unit.soldTo] || 0) + 1;
-        });
 
         const customerIds = Object.keys(customerUnitCount);
         logger.info('Unique customers', { count: customerIds.length });
@@ -165,7 +155,7 @@ export async function GET(
           buildingId,
           summary: {
             customersCount: customers.length,
-            soldPropertiesCount: soldProperties.length
+            soldPropertiesCount
           }
         });
 

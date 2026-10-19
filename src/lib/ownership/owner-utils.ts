@@ -113,6 +113,48 @@ export function readStoredOwners(rawOwners: unknown): readonly StoredOwnerShare[
 }
 
 // ============================================================================
+// STORED BUYERS — who bought a stored property (customers tabs read HERE)
+// ============================================================================
+
+/** Stored property is sold — canonical `commercialStatus`, or the legacy `status` of older docs. */
+export function isStoredPropertySold(property: Readonly<Record<string, unknown>>): boolean {
+  return property.commercialStatus === 'sold' || property.status === 'sold';
+}
+
+/**
+ * Buyer contactIds of a stored property, unique, in owner order.
+ * Canonical: `commercial.owners[]` (ADR-244) minus landowners (antiparochi ≠ customer).
+ * Fallback: legacy `soldTo` — ONLY when the doc has no stored owners at all.
+ */
+export function readStoredBuyerContactIds(property: Readonly<Record<string, unknown>>): readonly string[] {
+  const commercial = isRecord(property.commercial) ? property.commercial : null;
+  const rawOwners = Array.isArray(commercial?.owners) ? commercial.owners : [];
+  if (rawOwners.length > 0) {
+    const buyers = rawOwners.filter(raw => isRecord(raw) && raw.role !== 'landowner');
+    return [...new Set(readStoredOwners(buyers).map(o => o.contactId))];
+  }
+  const legacy = trimmedStringOrNull(property.soldTo);
+  return legacy === null ? [] : [legacy];
+}
+
+/** Sold properties count + properties-per-buyer, for the project/building customers endpoints. */
+export function countSoldPropertiesPerBuyer(properties: readonly Readonly<Record<string, unknown>>[]): {
+  readonly soldPropertiesCount: number;
+  readonly propertiesPerBuyer: Readonly<Record<string, number>>;
+} {
+  const propertiesPerBuyer: Record<string, number> = {};
+  let soldPropertiesCount = 0;
+  for (const property of properties) {
+    if (!isStoredPropertySold(property)) continue;
+    const buyerIds = readStoredBuyerContactIds(property);
+    if (buyerIds.length === 0) continue;
+    soldPropertiesCount += 1;
+    for (const id of buyerIds) propertiesPerBuyer[id] = (propertiesPerBuyer[id] ?? 0) + 1;
+  }
+  return { soldPropertiesCount, propertiesPerBuyer };
+}
+
+// ============================================================================
 // FLAT ARRAY FOR FIRESTORE QUERIES
 // ============================================================================
 

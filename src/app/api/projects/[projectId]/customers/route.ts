@@ -31,6 +31,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
 import { getErrorMessage } from '@/lib/error-utils';
 import { nowISO } from '@/lib/date-local';
+import { countSoldPropertiesPerBuyer } from '@/lib/ownership/owner-utils';
 
 const logger = createModuleLogger('ProjectCustomersRoute');
 
@@ -112,7 +113,7 @@ export const GET = withStandardRateLimit(async function GET(
         // ============================================================================
 
         const buildingIds = buildingsSnapshot.docs.map(doc => doc.id);
-        const allProperties = [];
+        const allProperties: Record<string, unknown>[] = [];
 
         for (const buildingId of buildingIds) {
           let propertiesQuery = getAdminFirestore()
@@ -123,24 +124,20 @@ export const GET = withStandardRateLimit(async function GET(
           }
           const propertiesSnapshot = await propertiesQuery.get();
 
-          const properties = propertiesSnapshot.docs.map(propertyDoc => ({
-            id: propertyDoc.id,
-            ...propertyDoc.data()
-          } as Record<string, unknown> & { id: string; status?: string; soldTo?: string }));
-
-          allProperties.push(...properties);
+          allProperties.push(...propertiesSnapshot.docs.map(propertyDoc => propertyDoc.data()));
         }
 
         logger.info('Total properties found', { count: allProperties.length });
 
         // ============================================================================
-        // STEP 4: FILTER SOLD UNITS AND EXTRACT CUSTOMER IDs
+        // STEP 4+5: SOLD PROPERTIES → BUYERS (ADR-244 SSoT: commercial.owners, legacy soldTo fallback)
         // ============================================================================
 
-        const soldProperties = allProperties.filter(u => u.status === 'sold' && u.soldTo);
-        logger.info('Sold properties', { count: soldProperties.length });
+        const { soldPropertiesCount, propertiesPerBuyer: customerPropertyCount } =
+          countSoldPropertiesPerBuyer(allProperties);
+        logger.info('Sold properties', { count: soldPropertiesCount });
 
-        if (soldProperties.length === 0) {
+        if (soldPropertiesCount === 0) {
           logger.info('No sold properties found');
           return NextResponse.json({
             success: true,
@@ -150,17 +147,6 @@ export const GET = withStandardRateLimit(async function GET(
             message: 'No sold properties found for this project'
           }, { status: 200 });
         }
-
-        // ============================================================================
-        // STEP 5: COUNT UNITS PER CUSTOMER
-        // ============================================================================
-
-        const customerPropertyCount: { [contactId: string]: number } = {};
-        soldProperties.forEach(prop => {
-          if (prop.soldTo) {
-            customerPropertyCount[prop.soldTo] = (customerPropertyCount[prop.soldTo] || 0) + 1;
-          }
-        });
 
         const customerIds = Object.keys(customerPropertyCount);
         logger.info('Unique customers', { count: customerIds.length });
@@ -219,7 +205,7 @@ export const GET = withStandardRateLimit(async function GET(
           };
         });
 
-        logger.info('[Projects/Customers] Complete', { customersCount: customers.length, soldPropertiesCount: soldProperties.length });
+        logger.info('[Projects/Customers] Complete', { customersCount: customers.length, soldPropertiesCount });
 
         // Audit successful access
         // ADR-438: dedupable — idempotent listing ανά έργο. Το `targetId` (projectId)
@@ -229,7 +215,7 @@ export const GET = withStandardRateLimit(async function GET(
           dedupable: true,
           metadata: {
             path: `/api/projects/${projectId}/customers`,
-            reason: `Project customers accessed (${customers.length} customers, ${soldProperties.length} properties)`
+            reason: `Project customers accessed (${customers.length} customers, ${soldPropertiesCount} properties)`
           }
         });
 
@@ -239,7 +225,7 @@ export const GET = withStandardRateLimit(async function GET(
           projectId,
           summary: {
             customersCount: customers.length,
-            soldPropertiesCount: soldProperties.length
+            soldPropertiesCount
           }
         }, { status: 200 });
 
