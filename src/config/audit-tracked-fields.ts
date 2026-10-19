@@ -1401,12 +1401,21 @@ const PROPERTY_DOSSIER_TRACKED_FIELDS_RAW: Record<string, string> = {
 export const PROPERTY_DOSSIER_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(PROPERTY_DOSSIER_TRACKED_FIELDS_RAW, {});
 
+/** Ο παραλήπτης μιας παράδοσης ως τιμή ιστορικού — το uid που δέθηκε (ADR-916 Φ-Β)· ποτέ ωμό JSON. */
+function formatAuditHandoverRecipient(value: unknown): string | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const { userId } = value as { readonly userId?: unknown };
+  return typeof userId === 'string' && userId !== '' ? userId : null;
+}
+
 /**
  * Property-handover audit registry (ADR-916 §5.2). Μόνο ο **κύκλος ζωής**: ο παραλήπτης και το ακίνητο είναι
  * η ταυτότητα της παράδοσης (αμετάβλητα), και η ολοκλήρωση γράφεται **μαζί** με τη μετάβαση σε `ready`.
  */
 export const PROPERTY_HANDOVER_TRACKED_FIELDS: Record<string, TrackedFieldDef> = {
   lifecycle: { kind: 'scalar', label: 'lifecycle', enumCatalog: AUDIT_VALUE_CATALOGS.propertyHandoverLifecycle },
+  // ADR-916 Φ-Β — «ο αγοραστής αποδέχτηκε»: ο λογαριασμός που δέθηκε (ταυτότητα, όχι περιγραφή — βλ. `value`).
+  recipient: { kind: 'scalar', label: 'recipient', value: formatAuditHandoverRecipient },
 };
 
 /** Project audit registry — `field → TrackedFieldDef`. */

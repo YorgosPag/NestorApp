@@ -52,7 +52,9 @@ import {
   type PropertyDossierChange,
   type PropertyDossierDraft,
   type PropertyDossierInvariant,
+  type PropertyDossierOrigin,
 } from '@/types/property-dossier';
+import type { PropertyHandoverLifecycle } from '@/types/property-handover';
 
 const logger = createModuleLogger('property-dossier-write.service');
 
@@ -115,6 +117,9 @@ export type ListingDossierStaging =
  *
  * ⚠️ Συναλλαγή ⇒ **ανάγνωση πρώτα**, μετά εγγραφές (περιορισμός Firestore). **Καμία** παρενέργεια: το σώμα
  * ξανατρέχει. Ο καλών κάνει το `create` της αγγελίας **μετά** από αυτό, στην ίδια συναλλαγή.
+ *
+ * 🔑 **Δεύτερος καλών (ADR-916 Φ-Β)**: η αποδοχή της πρόσκλησης αγοραστή — ίδιο «γέννηση ή σύνδεση», με `origin`.
+ * Ο φάκελος που **υπάρχει** κρατά την προέλευση που είχε: η ιστορία γράφεται μία φορά.
  */
 export async function stagePropertyDossierForListing(
   tx: Transaction,
@@ -122,6 +127,7 @@ export async function stagePropertyDossierForListing(
   birth: PropertyDossierBirth,
   draft: PropertyDossierDraft,
   now: string,
+  origin: PropertyDossierOrigin | null = null,
 ): Promise<ListingDossierStaging> {
   const snapshot = await tx.get(dossierRef(adminDb, birth.id));
   if (snapshot.exists) {
@@ -129,9 +135,47 @@ export async function stagePropertyDossierForListing(
     const owned = dossier !== null && isOwnedByCustody(snapshot.data(), { userId: birth.userId });
     return owned ? { kind: 'existing', dossier } : { kind: 'foreign' };
   }
-  const dossier = newPropertyDossier(birth, draft, now);
+  const dossier = newPropertyDossier(birth, draft, now, origin);
   stagePropertyDossierBirth(tx, adminDb, dossier);
   return { kind: 'born', dossier };
+}
+
+/** Ποιος φάκελος προβάλλει **ποια** παράδοση, και σε ποιον κύκλο ζωής πρέπει να φτάσει. */
+export interface PropertyDossierHandoverProjection {
+  readonly dossierId: string;
+  /** Ο κάτοχος που **δέχτηκε** — ο φάκελος πρέπει να είναι ακόμη δικός του. */
+  readonly userId: string;
+  readonly handoverId: string;
+  readonly handoverLifecycle: PropertyHandoverLifecycle;
+}
+
+/**
+ * **Η προβολή του κύκλου ζωής της παράδοσης στον φάκελο του αγοραστή** (ADR-916 Φ-Β · Δ10), μέσα στη συναλλαγή του
+ * γραφέα της παράδοσης. Ανάγνωση **εδώ**, γραφή **μόνο** στο `commit()` — ο καλών το καλεί μετά από κάθε δική του
+ * ανάγνωση. Γράφει **μόνο** αν ο φάκελος είναι ακόμη του ίδιου κατόχου **και** προβάλλει την ίδια παράδοση (ένας
+ * φάκελος που άλλαξε χέρια — Φ4 — δεν ακούει πια την παλιά πώληση).
+ *
+ * ⚠️ Το `updatedAt` **δεν** αλλάζει: σημαίνει «πότε τον άλλαξε ο άνθρωπος», και η προβολή δεν είναι πράξη του.
+ */
+export async function stagePropertyDossierHandoverProjection(
+  tx: Transaction,
+  adminDb: AdminFirestore,
+  projection: PropertyDossierHandoverProjection,
+): Promise<{ readonly changed: boolean; commit(): void }> {
+  const ref = dossierRef(adminDb, projection.dossierId);
+  const data = (await tx.get(ref)).data();
+  const dossier = isOwnedByCustody(data, { userId: projection.userId })
+    ? propertyDossierFromDocument(data, projection.dossierId)
+    : null;
+  const origin = dossier?.origin ?? null;
+  const changed = origin !== null && origin.handoverId === projection.handoverId
+    && origin.handoverLifecycle !== projection.handoverLifecycle;
+  return {
+    changed,
+    commit: () => {
+      if (changed) tx.update(ref, { 'origin.handoverLifecycle': projection.handoverLifecycle });
+    },
+  };
 }
 
 /**

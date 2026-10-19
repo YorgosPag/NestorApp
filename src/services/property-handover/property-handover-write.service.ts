@@ -18,9 +18,13 @@ import 'server-only';
  *
  * 📜 **Ίχνος μετά το commit** (ADR-195 · πρότυπο `property-dossier-write.service.ts`): το σώμα της
  * συναλλαγής ξανατρέχει σε σύγκρουση, άρα παρενέργεια μέσα του θα γραφόταν δύο φορές.
+ *
+ * ✉️ **Φ-Β — η πρόσκληση του αγοραστή στην ΙΔΙΑ συναλλαγή** (`property-handover-invitation-stage.ts`): κύκλος ζωής,
+ * κάτοπτρο πρόσκλησης, η ίδια η πρόσκληση (supersede) και η προβολή στον φάκελο του αγοραστή γράφονται **αδιαίρετα**.
+ * Τα email φεύγουν **μετά** το commit (ίδιος λόγος με το ίχνος)· το δίχτυ ξαναδοκιμάζει ό,τι δεν έγινε δεκτό.
  */
 
-import type { Firestore as AdminFirestore, Query } from 'firebase-admin/firestore';
+import type { Firestore as AdminFirestore, Query, Transaction } from 'firebase-admin/firestore';
 
 import { PROPERTY_HANDOVER_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -29,12 +33,22 @@ import { getErrorMessage } from '@/lib/error-utils';
 import {
   planPropertyHandovers,
   propertyHandoverSnapshotOf,
+  type PropertyHandoverSnapshot,
   type PropertyHandoverWrite,
 } from '@/lib/property-handover/handover-plan';
 import { propertyHandoverFromDocument } from '@/lib/property-handover/property-handover-from-document';
 import { createModuleLogger } from '@/lib/telemetry';
+import {
+  deliverIssuedHandoverInvitations,
+  followUpHandoverInvitation,
+  type HandoverDeliveryRecorder,
+} from '@/server/property-handover-invitations/handover-invitation-delivery';
+import type { MintedHandoverInvitation } from '@/server/property-handover-invitations/handover-invitation-kind';
 import { recordTrackedEntityWrite } from '@/services/entity-audit-tracked-write';
-import type { PropertyHandover } from '@/types/property-handover';
+import { stagePropertyDossierHandoverProjection } from '@/services/property-dossier/property-dossier-write.service';
+import type { PropertyHandover, PropertyHandoverInvitationDelivery } from '@/types/property-handover';
+
+import { stageHandoverInvitations } from './property-handover-invitation-stage';
 
 const logger = createModuleLogger('PropertyHandoverWrite');
 
@@ -48,7 +62,11 @@ export interface PropertyHandoverSyncRequest {
 }
 
 export type PropertyHandoverSyncOutcome =
-  | { readonly kind: 'synced'; readonly writes: number }
+  /**
+   * `writes` = μεταβάσεις κύκλου ζωής (στο δίχτυ: σημείο κλήσης που ξέφυγε). `invitationWrites` = παραδόσεις που
+   * άλλαξαν **μόνο** πρόσκληση — π.χ. άλλαξε το email της επαφής, πράξη που **δεν** έχει σημείο κλήσης· δεν είναι διαρροή.
+   */
+  | { readonly kind: 'synced'; readonly writes: number; readonly invitationWrites: number }
   | { readonly kind: 'failed' };
 
 /**
@@ -70,12 +88,19 @@ function storedHandover(handover: PropertyHandover): Omit<PropertyHandover, 'id'
     recipientContactId: handover.recipientContactId,
     lifecycle: handover.lifecycle,
     completion: handover.completion,
+    // ⚠️ `set` ολόκληρου εγγράφου: ό,τι δεν περάσει από εδώ **σβήνεται** — και ο παραλήπτης δεν ξαναγράφεται ποτέ.
+    recipient: handover.recipient,
+    invitation: handover.invitation,
     createdAt: handover.createdAt,
     updatedAt: handover.updatedAt,
   };
 }
 
-async function recordHandoverWrite(write: PropertyHandoverWrite, performedBy: string): Promise<void> {
+/**
+ * **Το ίχνος μιας γραφής παράδοσης** — το ΕΝΑ σημείο, για τη συμφιλίωση **και** για την αποδοχή της πρόσκλησης
+ * (Φ-Β, `recipient`). Καλείται **μετά** το commit.
+ */
+export async function recordHandoverWrite(write: PropertyHandoverWrite, performedBy: string): Promise<void> {
   await recordTrackedEntityWrite({
     entityType: 'property_handover',
     entityId: write.after.id,
@@ -88,31 +113,175 @@ async function recordHandoverWrite(write: PropertyHandoverWrite, performedBy: st
   });
 }
 
-/** Η συναλλαγή: ανάγνωση → σχέδιο → εγγραφές. Επιστρέφει ό,τι γράφτηκε, για το ίχνος. */
-function applyPlan(adminDb: AdminFirestore, propertyId: string): Promise<readonly PropertyHandoverWrite[]> {
-  return adminDb.runTransaction(async (tx) => {
-    const propertySnap = await tx.get(adminDb.collection(COLLECTIONS.PROPERTIES).doc(propertyId));
-    const snapshot = propertySnap.exists ? propertyHandoverSnapshotOf(propertyId, propertySnap.data() ?? {}) : null;
-    if (!snapshot) return [];
+// =============================================================================
+// Φ-Β — ΟΙ ΑΛΛΕΣ ΓΡΑΦΕΣ ΤΗΣ ΠΑΡΑΔΟΣΗΣ, ΣΤΟΝ ΙΔΙΟ ΓΡΑΦΕΑ (καμία δεύτερη διαδρομή προς τη συλλογή)
+// =============================================================================
 
-    const existing = (await tx.get(propertyHandoversQuery(adminDb, snapshot.companyId, propertyId))).docs.flatMap((doc) => {
-      const handover = propertyHandoverFromDocument(doc.data(), doc.id);
-      return handover ? [handover] : [];
+function handoverDocRef(adminDb: AdminFirestore, handoverId: string) {
+  return adminDb.collection(COLLECTIONS.PROPERTY_HANDOVERS).doc(handoverId);
+}
+
+/**
+ * **Ο αγοραστής αποδέχτηκε** — μέσα στη συναλλαγή της εξαργύρωσης (ADR-853 §20: ένα κλικ ⇒ ένα αποτέλεσμα). Ο καλών
+ * έχει ήδη διαβάσει και κρίνει την παράδοση **στην ίδια** συναλλαγή· το ίχνος (`recordHandoverWrite`) μετά το commit.
+ */
+export function stageHandoverRecipient(tx: Transaction, adminDb: AdminFirestore, after: PropertyHandover): void {
+  tx.update(handoverDocRef(adminDb, after.id), { recipient: after.recipient, updatedAt: after.updatedAt });
+}
+
+/**
+ * **«Δεν το θέλω»** — μέσα στη συναλλαγή της εξαργύρωσης. Η πρόσκληση που απαντιέται είναι **πάντα** η τρέχουσα του
+ * κατόπτρου (το supersede είναι ατομικό με το κάτοπτρο), άρα δεν χρειάζεται ανάγνωση — και δεν επιτρέπεται: ο πυρήνας
+ * καλεί το άγκιστρο της άρνησης **μετά** από γραφή.
+ */
+export function stageHandoverInvitationDeclined(tx: Transaction, adminDb: AdminFirestore, handoverId: string, declinedAt: string): void {
+  tx.update(handoverDocRef(adminDb, handoverId), { 'invitation.declinedAt': declinedAt, updatedAt: declinedAt });
+}
+
+/**
+ * **Η έκβαση ενός email πρόσκλησης στο κάτοπτρο** — CAS: γράφει **μόνο** αν η παράδοση δείχνει ακόμη **αυτή** την
+ * πρόσκληση (μια νεότερη έκδοση στο μεταξύ δεν κληρονομεί την έκβαση της παλιάς). Τηλεμετρία παράδοσης, όχι πράξη
+ * ανθρώπου ⇒ κανένα ίχνος οντότητας (τα παρακολουθούμενα πεδία είναι κύκλος ζωής και παραλήπτης).
+ */
+export async function recordHandoverInvitationDelivery(
+  adminDb: AdminFirestore,
+  input: { readonly handoverId: string; readonly invitationId: string; readonly delivery: PropertyHandoverInvitationDelivery; readonly reminded: boolean },
+): Promise<void> {
+  const ref = handoverDocRef(adminDb, input.handoverId);
+  await adminDb.runTransaction(async (tx) => {
+    const link = propertyHandoverFromDocument((await tx.get(ref)).data(), ref.id)?.invitation ?? null;
+    if (link === null || link.status !== 'issued' || link.invitationId !== input.invitationId) return;
+    const now = nowISO();
+    tx.update(ref, {
+      'invitation.delivery': input.delivery,
+      'invitation.deliveryAttempts': link.deliveryAttempts + 1,
+      ...(input.reminded && input.delivery === 'accepted' ? { 'invitation.remindedAt': now } : {}),
+      updatedAt: now,
     });
-    const writes = planPropertyHandovers(snapshot, existing, nowISO());
-    for (const write of writes) {
-      const ref = adminDb.collection(COLLECTIONS.PROPERTY_HANDOVERS).doc(write.after.id);
-      // `create` στη γέννηση: αν το ντετερμινιστικό έγγραφο υπάρχει ήδη χωρίς να το είδε το ερώτημα
-      // (π.χ. αλλοιωμένο), η συναλλαγή αποτυγχάνει δυνατά — ποτέ σιωπηλή αντικατάσταση.
-      if (write.kind === 'create') tx.create(ref, storedHandover(write.after));
-      else tx.set(ref, storedHandover(write.after));
-    }
-    return writes;
+  });
+}
+
+/** Ό,τι έγινε σε μία συναλλαγή — για το ίχνος, τα email και το δίχτυ. */
+interface AppliedPlan {
+  /** Οι μεταβάσεις κύκλου ζωής (το ίχνος) — με το `after` **όπως γράφτηκε** (μαζί με το κάτοπτρο). */
+  readonly lifecycleWrites: readonly PropertyHandoverWrite[];
+  /** Πόσες παραδόσεις άλλαξαν **μόνο** κάτοπτρο πρόσκλησης (π.χ. άλλαξε το email της επαφής). */
+  readonly mirrorWrites: number;
+  readonly issued: readonly MintedHandoverInvitation[];
+  /** Όλες οι παραδόσεις του ακινήτου, όπως **είναι** μετά το commit. */
+  readonly handovers: readonly PropertyHandover[];
+}
+
+const NOTHING_APPLIED: AppliedPlan = { lifecycleWrites: [], mirrorWrites: 0, issued: [], handovers: [] };
+
+/** Οι παραδόσεις όπως **θα** είναι μετά το σχέδιο κύκλου ζωής — υπάρχουσες + γεννήσεις, με τις μεταβάσεις. */
+function afterLifecycle(existing: readonly PropertyHandover[], writes: readonly PropertyHandoverWrite[]): readonly PropertyHandover[] {
+  const byId = new Map(existing.map((handover) => [handover.id, handover]));
+  for (const write of writes) byId.set(write.after.id, write.after);
+  return [...byId.values()];
+}
+
+/**
+ * **Η προβολή στον φάκελο του αγοραστή** (Δ10) — μόνο για παραδόσεις με παραλήπτη των οποίων **άλλαξε** ο κύκλος ζωής.
+ * Αναγνώσεις εδώ· οι γραφές στα `commit()` που επιστρέφονται.
+ */
+async function stageDossierProjections(
+  tx: Transaction,
+  adminDb: AdminFirestore,
+  writes: readonly PropertyHandoverWrite[],
+): Promise<ReadonlyArray<() => void>> {
+  const staged = await Promise.all(writes.flatMap((write) => {
+    const { recipient } = write.after;
+    if (write.kind !== 'update' || recipient === null) return [];
+    return [stagePropertyDossierHandoverProjection(tx, adminDb, {
+      dossierId: recipient.dossierId, userId: recipient.userId, handoverId: write.after.id, handoverLifecycle: write.after.lifecycle,
+    })];
+  }));
+  return staged.map((stage) => stage.commit);
+}
+
+/** Το ακίνητο και οι υπάρχουσες παραδόσεις του — **μέσα** στη συναλλαγή. `null` ⇒ ακίνητο χωρίς μισθωτή/ανύπαρκτο. */
+async function readHandoverState(
+  tx: Transaction,
+  adminDb: AdminFirestore,
+  propertyId: string,
+): Promise<{ readonly snapshot: PropertyHandoverSnapshot; readonly existing: readonly PropertyHandover[] } | null> {
+  const propertySnap = await tx.get(adminDb.collection(COLLECTIONS.PROPERTIES).doc(propertyId));
+  const snapshot = propertySnap.exists ? propertyHandoverSnapshotOf(propertyId, propertySnap.data() ?? {}) : null;
+  if (!snapshot) return null;
+  const existing = (await tx.get(propertyHandoversQuery(adminDb, snapshot.companyId, propertyId))).docs.flatMap((doc) => {
+    const handover = propertyHandoverFromDocument(doc.data(), doc.id);
+    return handover ? [handover] : [];
+  });
+  return { snapshot, existing };
+}
+
+/**
+ * **Οι εγγραφές των παραδόσεων** — ένα έγγραφο ανά παράδοση που άλλαξε (μετάβαση **ή** κάτοπτρο), στην τελική του μορφή.
+ * Επιστρέφει όλες τις παραδόσεις του ακινήτου όπως είναι **μετά**.
+ */
+function writeHandovers(
+  tx: Transaction,
+  adminDb: AdminFirestore,
+  existing: readonly PropertyHandover[],
+  lifecycleWrites: readonly PropertyHandoverWrite[],
+  mirrored: ReadonlyMap<string, PropertyHandover>,
+): readonly PropertyHandover[] {
+  const changed = new Map(lifecycleWrites.map((write) => [write.after.id, { handover: write.after, create: write.kind === 'create' }]));
+  for (const [id, handover] of mirrored) if (!changed.has(id)) changed.set(id, { handover, create: false });
+  const final = new Map(existing.map((handover) => [handover.id, handover]));
+  for (const [id, { handover, create }] of changed) {
+    const ref = adminDb.collection(COLLECTIONS.PROPERTY_HANDOVERS).doc(id);
+    // `create` στη γέννηση: αν το ντετερμινιστικό έγγραφο υπάρχει ήδη χωρίς να το είδε το ερώτημα
+    // (π.χ. αλλοιωμένο), η συναλλαγή αποτυγχάνει δυνατά — ποτέ σιωπηλή αντικατάσταση.
+    if (create) tx.create(ref, storedHandover(handover));
+    else tx.set(ref, storedHandover(handover));
+    final.set(id, handover);
+  }
+  return [...final.values()];
+}
+
+/** Η συναλλαγή: ανάγνωση → σχέδιο → πρόσκληση → προβολή → εγγραφές (όλες οι αναγνώσεις **πριν** από κάθε γραφή). */
+function applyPlan(adminDb: AdminFirestore, propertyId: string, actorUid: string): Promise<AppliedPlan> {
+  return adminDb.runTransaction(async (tx) => {
+    const state = await readHandoverState(tx, adminDb, propertyId);
+    if (state === null) return NOTHING_APPLIED;
+    const nowValue = nowISO();
+    const planned = planPropertyHandovers(state.snapshot, state.existing, nowValue);
+    const invitations = await stageHandoverInvitations(tx, adminDb, {
+      companyId: state.snapshot.companyId, handovers: afterLifecycle(state.existing, planned), actorUid, nowValue,
+    });
+    // Το κάτοπτρο **πάνω** στη μετάβαση: ένα `set` ανά έγγραφο, με την τελική του μορφή.
+    const lifecycleWrites = planned.map((write) => ({ ...write, after: invitations.mirrored.get(write.after.id) ?? write.after }));
+    const projections = await stageDossierProjections(tx, adminDb, lifecycleWrites);
+
+    const handovers = writeHandovers(tx, adminDb, state.existing, lifecycleWrites, invitations.mirrored);
+    invitations.commit();
+    projections.forEach((commit) => commit());
+
+    const lifecycleIds = new Set(lifecycleWrites.map((write) => write.after.id));
+    const mirrorWrites = [...invitations.mirrored.keys()].filter((id) => !lifecycleIds.has(id)).length;
+    return { lifecycleWrites, mirrorWrites, issued: invitations.issued, handovers };
   });
 }
 
 /**
- * **Συμφιλιώνει** τις παραδόσεις ενός ακινήτου. Ιδεμπότητο · ποτέ δεν πετά · ίχνος μόνο για ό,τι άλλαξε.
+ * **Μετά το commit**: τα πρώτα email των νέων προσκλήσεων — και, **μόνο** στο νυχτερινό δίχτυ, επανάληψη αποτυχιών και
+ * η μία υπενθύμιση (ένα PATCH ακινήτου δεν πληρώνει email τρίτων). Ποτέ δεν πετά.
+ */
+async function deliverAfterCommit(adminDb: AdminFirestore, applied: AppliedPlan, cause: PropertyHandoverSyncCause): Promise<void> {
+  const record: HandoverDeliveryRecorder = (input) => recordHandoverInvitationDelivery(adminDb, input);
+  await deliverIssuedHandoverInvitations(adminDb, applied.issued, record);
+  if (cause !== 'reconcile') return;
+  const fresh = new Set(applied.issued.map(({ invitation }) => invitation.handoverId));
+  for (const handover of applied.handovers) {
+    if (!fresh.has(handover.id)) await followUpHandoverInvitation(adminDb, handover, record);
+  }
+}
+
+/**
+ * **Συμφιλιώνει** τις παραδόσεις ενός ακινήτου — κύκλο ζωής **και** πρόσκληση αγοραστή. Ιδεμπότητο · ποτέ δεν πετά ·
+ * ίχνος μόνο για ό,τι άλλαξε.
  */
 export async function syncPropertyHandovers(
   adminDb: AdminFirestore,
@@ -120,10 +289,14 @@ export async function syncPropertyHandovers(
   request: PropertyHandoverSyncRequest,
 ): Promise<PropertyHandoverSyncOutcome> {
   try {
-    const writes = await applyPlan(adminDb, propertyId);
-    await Promise.all(writes.map((write) => recordHandoverWrite(write, request.performedBy)));
-    if (writes.length > 0) logger.info('Property handovers synced', { propertyId, cause: request.cause, writes: writes.length });
-    return { kind: 'synced', writes: writes.length };
+    const applied = await applyPlan(adminDb, propertyId, request.performedBy);
+    await Promise.all(applied.lifecycleWrites.map((write) => recordHandoverWrite(write, request.performedBy)));
+    await deliverAfterCommit(adminDb, applied, request.cause);
+    const writes = applied.lifecycleWrites.length;
+    if (writes + applied.mirrorWrites > 0) {
+      logger.info('Property handovers synced', { propertyId, cause: request.cause, writes, invitations: applied.mirrorWrites, issued: applied.issued.length });
+    }
+    return { kind: 'synced', writes, invitationWrites: applied.mirrorWrites };
   } catch (error) {
     logger.error('Property handover sync failed', { propertyId, cause: request.cause, error: getErrorMessage(error) });
     return { kind: 'failed' };
