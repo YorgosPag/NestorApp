@@ -15,11 +15,17 @@
 
 import {
   PROPERTY_HANDOVER_COMPLETION_SOURCES,
+  PROPERTY_HANDOVER_INVITATION_DELIVERIES,
+  PROPERTY_HANDOVER_INVITATION_OCCASIONS,
   PROPERTY_HANDOVER_LIFECYCLES,
   type PropertyHandover,
   type PropertyHandoverCompletion,
   type PropertyHandoverCompletionSource,
+  type PropertyHandoverInvitationDelivery,
+  type PropertyHandoverInvitationLink,
+  type PropertyHandoverInvitationOccasion,
   type PropertyHandoverLifecycle,
+  type PropertyHandoverRecipient,
 } from '@/types/property-handover';
 
 const nonEmptyString = (value: unknown): value is string => typeof value === 'string' && value.trim() !== '';
@@ -34,6 +40,42 @@ function completionOf(raw: unknown): PropertyHandoverCompletion | null {
   if (typeof raw !== 'object' || raw === null) return null;
   const { source, at } = raw as Record<string, unknown>;
   return isCompletionSource(source) && nonEmptyString(at) ? { source, at } : null;
+}
+
+const isOccasion = (value: unknown): value is PropertyHandoverInvitationOccasion =>
+  (PROPERTY_HANDOVER_INVITATION_OCCASIONS as readonly unknown[]).includes(value);
+
+const isDelivery = (value: unknown): value is PropertyHandoverInvitationDelivery =>
+  (PROPERTY_HANDOVER_INVITATION_DELIVERIES as readonly unknown[]).includes(value);
+
+const stringOrNull = (value: unknown): string | null => (nonEmptyString(value) ? value : null);
+
+function recipientOf(raw: unknown): PropertyHandoverRecipient | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const { userId, acceptedAt, dossierId } = raw as Record<string, unknown>;
+  return nonEmptyString(userId) && nonEmptyString(acceptedAt) && nonEmptyString(dossierId)
+    ? { userId, acceptedAt, dossierId }
+    : null;
+}
+
+/**
+ * Το κάτοπτρο της πρόσκλησης. ⚠️ Αδιάβαστο ⇒ `null` («δεν έχει κριθεί»), που ο γραφέας ξανακρίνει: στη χειρότερη
+ * περίπτωση φεύγει **νέα** πρόσκληση και η παλιά ανακαλείται ατομικά (supersede) — ποτέ δύο ζωντανοί σύνδεσμοι.
+ */
+function invitationOf(raw: unknown): PropertyHandoverInvitationLink | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const link = raw as Record<string, unknown>;
+  if (link.status === 'no-address') return nonEmptyString(link.checkedAt) ? { status: 'no-address', checkedAt: link.checkedAt } : null;
+  if (link.status !== 'issued') return null;
+  const { invitationId, inviteeEmail, occasion, issuedAt, expiresAt, delivery, deliveryAttempts } = link;
+  if (!nonEmptyString(invitationId) || !nonEmptyString(inviteeEmail) || !isOccasion(occasion)) return null;
+  if (!nonEmptyString(issuedAt) || !nonEmptyString(expiresAt) || !isDelivery(delivery)) return null;
+  if (typeof deliveryAttempts !== 'number' || !Number.isInteger(deliveryAttempts) || deliveryAttempts < 0) return null;
+  return {
+    status: 'issued', invitationId, inviteeEmail, occasion, issuedAt, expiresAt, delivery, deliveryAttempts,
+    remindedAt: stringOrNull(link.remindedAt),
+    declinedAt: stringOrNull(link.declinedAt),
+  };
 }
 
 /** **Διαβάζει ένα αποθηκευμένο έγγραφο ως παράδοση.** `null` ⇒ «αυτό δεν είναι παράδοση». */
@@ -52,6 +94,9 @@ export function propertyHandoverFromDocument(raw: unknown, id: string): Property
     recipientContactId,
     lifecycle,
     completion: completionOf(stored.completion),
+    // Φ-Β — τα έγγραφα της Φ-Α δεν τα έχουν: η απουσία είναι η δηλωμένη ουδέτερη τιμή (`null`), ποτέ εφεύρεση.
+    recipient: recipientOf(stored.recipient),
+    invitation: invitationOf(stored.invitation),
     createdAt,
     updatedAt,
   };

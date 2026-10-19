@@ -93,6 +93,9 @@ function wantedHandover(
     recipientContactId,
     lifecycle,
     completion,
+    // Φ-Β — η πρόσκληση **δεν** αποφασίζεται εδώ: τη κρίνει το `handover-invitation-plan` μετά, στην ίδια συναλλαγή.
+    recipient: null,
+    invitation: null,
     createdAt: now,
     updatedAt: now,
   };

@@ -23,7 +23,27 @@ const STORED = {
 
 describe('🏆 Α36.7 — `propertyDossierFromDocument`', () => {
   it('πλήρες έγγραφο ⇒ φάκελος, με την ταυτότητα του ΕΓΓΡΑΦΟΥ (όχι του περιεχομένου)', () => {
-    expect(propertyDossierFromDocument(STORED, 'pdos_document-id')).toEqual({ ...STORED, id: 'pdos_document-id' });
+    expect(propertyDossierFromDocument(STORED, 'pdos_document-id')).toEqual({ ...STORED, id: 'pdos_document-id', origin: null });
+  });
+
+  // ADR-916 Φ-Β — η προέλευση «από παράδοση πώλησης».
+  const ORIGIN = {
+    kind: 'handover', handoverId: 'phov_1', issuerCompanyId: 'comp_1', issuerName: 'Κατασκευαστική Α.Ε.',
+    acceptedAt: '2026-10-19T10:00:00.000Z', handoverLifecycle: 'awaiting-completion',
+  };
+
+  it('φάκελος από παράδοση ⇒ η προέλευση διαβάζεται ολόκληρη', () => {
+    expect(propertyDossierFromDocument({ ...STORED, origin: ORIGIN }, 'pdos_x')?.origin).toEqual(ORIGIN);
+  });
+
+  it.each([
+    ['άγνωστο είδος προέλευσης', { ...ORIGIN, kind: 'gift' }],
+    ['άγνωστος κύκλος ζωής παράδοσης', { ...ORIGIN, handoverLifecycle: 'delivered-maybe' }],
+    ['χωρίς εκδότη', { ...ORIGIN, issuerCompanyId: '' }],
+  ])('%s ⇒ `origin: null` — ο φάκελος ΜΕΝΕΙ, χάνεται μόνο το σήμα', (_case, origin) => {
+    const dossier = propertyDossierFromDocument({ ...STORED, origin }, 'pdos_x');
+    expect(dossier).not.toBeNull();
+    expect(dossier?.origin).toBeNull();
   });
 
   it.each([

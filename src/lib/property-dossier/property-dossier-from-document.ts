@@ -24,7 +24,9 @@ import {
   PROPERTY_DOSSIER_LIFECYCLES,
   type PropertyDossier,
   type PropertyDossierLifecycle,
+  type PropertyDossierOrigin,
 } from '@/types/property-dossier';
+import { PROPERTY_HANDOVER_LIFECYCLES, type PropertyHandoverLifecycle } from '@/types/property-handover';
 
 const nonEmptyString = (value: unknown): value is string =>
   typeof value === 'string' && value.trim() !== '';
@@ -34,6 +36,23 @@ const isLifecycle = (value: unknown): value is PropertyDossierLifecycle =>
 
 const isPropertyType = (value: unknown): value is PropertyTypeCanonical =>
   (PROPERTY_TYPES as readonly unknown[]).includes(value);
+
+const isHandoverLifecycle = (value: unknown): value is PropertyHandoverLifecycle =>
+  (PROPERTY_HANDOVER_LIFECYCLES as readonly unknown[]).includes(value);
+
+/**
+ * Η προέλευση (ADR-916 Φ-Β). ⚠️ Αδιάβαστη ⇒ `null` («τον γέννησε ο άνθρωπος») — ο φάκελος **δεν** εξαφανίζεται επειδή
+ * χάλασε ένα πεδίο ιστορικού· απλώς δεν δείχνει σήμα κατασκευάστριας. Γράφεται **μόνο** από τον διακομιστή.
+ */
+function originOf(raw: unknown): PropertyDossierOrigin | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const origin = raw as Record<string, unknown>;
+  const { kind, handoverId, issuerCompanyId, acceptedAt, handoverLifecycle } = origin;
+  if (kind !== 'handover' || !nonEmptyString(handoverId) || !nonEmptyString(issuerCompanyId)) return null;
+  if (!nonEmptyString(acceptedAt) || !isHandoverLifecycle(handoverLifecycle)) return null;
+  const issuerName = nonEmptyString(origin.issuerName) ? origin.issuerName : null;
+  return { kind, handoverId, issuerCompanyId, issuerName, acceptedAt, handoverLifecycle };
+}
 
 /**
  * **Διαβάζει ένα αποθηκευμένο έγγραφο ως φάκελο.** `null` ⇒ «αυτό δεν είναι φάκελος».
@@ -56,6 +75,7 @@ export function propertyDossierFromDocument(raw: unknown, id: string): PropertyD
     label,
     type: isPropertyType(stored.type) ? stored.type : null,
     lifecycle,
+    origin: originOf(stored.origin),
     createdAt,
     updatedAt,
   };
