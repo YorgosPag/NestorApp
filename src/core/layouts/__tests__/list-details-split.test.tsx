@@ -10,6 +10,7 @@
 
 /* global describe, it, expect, jest, beforeEach */
 
+import { useState } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Warehouse } from 'lucide-react';
@@ -33,7 +34,7 @@ function Details() {
   );
 }
 
-function renderSplit(props: { sheetOpen: boolean; listOnly?: boolean; onCloseSheet?: () => void }) {
+function renderSplit(props: { sheetOpen: boolean; peek?: boolean; onCloseSheet?: () => void }) {
   return render(
     <ListDetailsSplit
       list={<ul aria-label="λίστα"><li>Αποθήκη 1</li></ul>}
@@ -41,12 +42,13 @@ function renderSplit(props: { sheetOpen: boolean; listOnly?: boolean; onCloseShe
       sheetOpen={props.sheetOpen}
       sheetTitle="Αποθήκη 1"
       onCloseSheet={props.onCloseSheet ?? jest.fn()}
-      listOnly={props.listOnly}
+      peek={props.peek}
     />,
   );
 }
 
-const sheet = () => document.querySelector('[data-details-sheet]');
+const sheet = () => document.querySelector('[role="dialog"] [data-details-sheet]');
+const peekPanel = () => document.querySelector<HTMLElement>('[data-details-peek]');
 
 describe('Λ — λίστα + λεπτομέρειες', () => {
   beforeEach(() => {
@@ -96,14 +98,62 @@ describe('Λ — λίστα + λεπτομέρειες', () => {
     expect(onCloseSheet).toHaveBeenCalledTimes(1);
   });
 
-  it('Λ6 — πλέγμα (`listOnly`): στο desktop καμία στήλη λεπτομερειών· στο κινητό το φύλλο ανοίγει κανονικά', () => {
-    const { unmount } = renderSplit({ sheetOpen: true, listOnly: true });
-    expect(mounts.details).toBe(0);
+  it('🔴 Λ6 — πλέγμα (`peek`): στο desktop οι λεπτομέρειες ανοίγουν ΔΙΠΛΑ (side peek) με την «Επεξεργασία» στη μπάρα· στο κινητό ως φύλλο', () => {
+    // Ως 2026-10-19 (`listOnly`) εδώ υπήρχε `expect(mounts.details).toBe(0)` — δηλαδή η άγκυρα ΚΛΕΙΔΩΝΕ το σφάλμα.
+    const { unmount } = renderSplit({ sheetOpen: true, peek: true });
+    expect(peekPanel()).not.toBeNull();
+    expect(sheet()).toBeNull();
+    expect(screen.getByRole('complementary', { name: 'Αποθήκη 1' })).toBe(peekPanel());
+    expect(screen.getAllByRole('button', { name: 'Επεξεργασία' })).toHaveLength(1);
+    expect(mounts.details).toBe(1);
     unmount();
 
     mobile = true;
-    renderSplit({ sheetOpen: true, listOnly: true });
+    mounts.details = 0;
+    renderSplit({ sheetOpen: true, peek: true });
     expect(sheet()).not.toBeNull();
+    expect(peekPanel()).toBeNull();
     expect(screen.getAllByRole('button', { name: 'Επεξεργασία' })).toHaveLength(1);
+  });
+
+  it('Λ7 — πλέγμα χωρίς επιλογή: μόνο το πλέγμα, οι λεπτομέρειες δεν στήνονται πουθενά (ούτε αθέατες)', () => {
+    renderSplit({ sheetOpen: false, peek: true });
+    expect(peekPanel()).toBeNull();
+    expect(mounts.details).toBe(0);
+    expect(screen.getByRole('list', { name: 'λίστα' })).toBeInTheDocument();
+  });
+
+  it('🔴 Λ8 — side peek: το focus μπαίνει στο panel· ✕ και Esc καλούν το κλείσιμο της σελίδας', async () => {
+    const onCloseSheet = jest.fn();
+    renderSplit({ sheetOpen: true, peek: true, onCloseSheet });
+    expect(peekPanel()).toHaveFocus();
+
+    await userEvent.keyboard('{Escape}');
+    expect(onCloseSheet).toHaveBeenCalledTimes(1);
+
+    await userEvent.click(document.querySelector('[data-details-sheet-leave]') as HTMLElement);
+    expect(onCloseSheet).toHaveBeenCalledTimes(2);
+  });
+
+  it('Λ9 — side peek κλείνει ⇒ το focus γυρνά στην κάρτα που το άνοιξε', async () => {
+    function Grid() {
+      const [open, setOpen] = useState(false);
+      return (
+        <ListDetailsSplit
+          peek
+          list={<button type="button" onClick={() => setOpen(true)}>Κάρτα</button>}
+          details={<Details />}
+          sheetOpen={open}
+          sheetTitle="Αποθήκη 1"
+          onCloseSheet={() => setOpen(false)}
+        />
+      );
+    }
+    render(<Grid />);
+    await userEvent.click(screen.getByRole('button', { name: 'Κάρτα' }));
+    expect(peekPanel()).toHaveFocus();
+    await userEvent.keyboard('{Escape}');
+    expect(peekPanel()).toBeNull();
+    expect(screen.getByRole('button', { name: 'Κάρτα' })).toHaveFocus();
   });
 });
