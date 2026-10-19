@@ -640,6 +640,14 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...serverWrittenTenantInternalMatrix(),
   },
   {
+    // ADR-916 Φ-Β — Η ΠΡΟΣΚΛΗΣΗ ΤΟΥ ΑΓΟΡΑΣΤΗ. `deny_all` όπως κάθε είδος του κοινού πυρήνα: ανάγνωση = email
+    // ιδιωτών + `nonceHash`· γραφή = αποδοχή χωρίς σύνδεσμο, δηλαδή φάκελος σε λάθος λογαριασμό.
+    collection: 'property_handover_invitations',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/property-handover-invitations.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     // ADR-884 Φ0.9 — ΧΩΡΙΚΗ ΠΕΡΙΗΓΗΣΗ, εταιρικό διαμέρισμα. Διαβάζει ΜΟΝΟ ο εσωτερικός χρήστης του
     // μισθωτή (ζωντανός επεξεργαστής)· ΚΑΘΕ άλλο κοινό περνά από διαδρομή διακομιστή. Γράφει ΜΟΝΟ ο
     // διακομιστής. ⚠️ Τα μπλοκ των υποσυλλογών (`tour_captures` · `tour_access_requests` ·
