@@ -82,6 +82,10 @@ export const STORAGE_KEYS = {
   // ακινήτου — px όπως τα CAD). Σχήμα: `components/ui/resizable-column-store.ts`.
   PROPERTY_INSPECTOR_COLUMN: 'nestor:property-inspector-column:v1',
 
+  // ADR-912 §12.19 — το πλάτος του panel λεπτομερειών δίπλα στο πλέγμα (επαφές · έργα · κτίρια · …), ανά **συσκευή**:
+  // ένα για όλη την κλάση, όπως το side peek της Notion. Σχήμα: `components/ui/resizable-column-store.ts`.
+  DETAILS_PEEK_COLUMN: 'nestor:details-peek-column:v1',
+
   // ADR-894 — η εγγραφή συνεδρίας **αυτού του browser** (prefix — append uid). localStorage και όχι
   // sessionStorage, επίτηδες: μία εγγραφή ανά **συσκευή** (Google «Your devices»), όχι μία ανά καρτέλα —
   // το sessionStorage γεννούσε νέα συνεδρία (και αίτημα τοποθεσίας) σε κάθε καρτέλα.
