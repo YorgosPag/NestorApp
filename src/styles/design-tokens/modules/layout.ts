@@ -174,6 +174,19 @@ const CATALOG_COLUMNS_TILE = 'grid-cols-[repeat(auto-fill,minmax(min(100%,15rem)
  */
 const CATALOG_COLUMNS_CHIP = 'grid-cols-[repeat(auto-fill,minmax(min(100%,10rem),1fr))]';
 
+/**
+ * **Πού πάει το κενό ύψος ενός καταλόγου** — στο τέλος, ποτέ μέσα στις κάρτες.
+ *
+ * 🔴 Μετρημένο 2026-10-18 (επαφές, 2400 px): η `<section>` του πλέγματος είναι flex item και τεντώνεται στα
+ * **893 px** του γονέα· με γραμμές `auto` και `align-content: normal` (= `stretch` για grid) το πλέγμα **μοίρασε
+ * το κενό στις 2 γραμμές** ⇒ κάρτες **424 και 444 px** με περιεχόμενο **72–176 px**. Τα έργα και τα κτίρια δεν το
+ * έδειχναν επειδή ο γονέας τους δεν τεντώνει — η βλάβη ζούσε στον κατάλογο, όχι στη σελίδα.
+ *
+ * `content-start` κρατά τις γραμμές στο ύψος τους. ΔΕΝ αγγίζει το `align-items`: οι κάρτες της **ίδιας**
+ * γραμμής μένουν ισοϋψείς, όπως σε HubSpot / Google Contacts.
+ */
+const CATALOG_ROW_PACKING = 'content-start';
+
 // Grid patterns για layout consistency
 export const gridPatterns = {
   // Stats grids
@@ -210,14 +223,14 @@ export const gridPatterns = {
     /** Η «λίστα» — μία στήλη. Ο ίδιος μηχανισμός πλέγματος, ένα σκαλί. */
     single: 'grid-cols-1',
     /** Κατάλογος από **κάρτες με εικόνα**. Σκεπτικό πάνω από το `CATALOG_COLUMNS_MEDIA`. */
-    media: CATALOG_COLUMNS_MEDIA,
+    media: `${CATALOG_COLUMNS_MEDIA} ${CATALOG_ROW_PACKING}`,
     /** Κατάλογος από **συμπαγή πλακίδια**. Σκεπτικό πάνω από το `CATALOG_COLUMNS_TILE`. */
-    tile: CATALOG_COLUMNS_TILE,
+    tile: `${CATALOG_COLUMNS_TILE} ${CATALOG_ROW_PACKING}`,
     /** Κατάλογος από **τσιπάκια εικονιδίου-και-ετικέτας**. Σκεπτικό πάνω από το `CATALOG_COLUMNS_CHIP`. */
-    chip: CATALOG_COLUMNS_CHIP,
+    chip: `${CATALOG_COLUMNS_CHIP} ${CATALOG_ROW_PACKING}`,
     gap: 'gap-4',
     /** ⚠️ ΣΥΝΤΙΘΕΤΑΙ — ποτέ ξαναγραμμένο, αλλιώς ο ένας αριθμός γίνεται δύο. */
-    full: `grid gap-4 ${CATALOG_COLUMNS_MEDIA}`,
+    full: `grid gap-4 ${CATALOG_COLUMNS_MEDIA} ${CATALOG_ROW_PACKING}`,
   },
 
   // Form layouts
