@@ -311,7 +311,7 @@ export function BuildingsPageContent() {
   }
 
   // Οι λεπτομέρειες του κτιρίου — ΜΙΑ δήλωση για τη στήλη του desktop, το φύλλο του κινητού και το side peek του
-  // πλέγματος (ADR-912 §12.17). Ήταν γραμμένες δύο φορές με ίδια props σε άλλη σειρά.
+  // πλέγματος (ADR-912 §12.19). Ήταν γραμμένες δύο φορές με ίδια props σε άλλη σειρά.
   const buildingDetails = (
     <BuildingDetails
       building={selectedBuilding}
@@ -427,7 +427,7 @@ export function BuildingsPageContent() {
               </MobileDetailsSlideIn>
             </>
           ) : (
-            // ADR-912 §12.17 — πλέγμα + side peek: ως 2026-10-19 το πλέγμα δεν είχε ΚΑΝΕΝΑ φύλλο, ούτε στο κινητό.
+            // ADR-912 §12.19 — πλέγμα + side peek: ως 2026-10-19 το πλέγμα δεν είχε ΚΑΝΕΝΑ φύλλο, ούτε στο κινητό.
             <ListDetailsSplit
               peek
               list={

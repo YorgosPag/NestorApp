@@ -42,7 +42,7 @@ export function BuildingCard({
   const [isFavorite, setIsFavorite] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const CategoryIcon = getCategoryIcon(building.category || 'mixed');
-  // ADR-912 §12.17 — η κάρτα ανοίγει το side peek: πρέπει να παίρνει focus και να ανοίγει με Enter/Space, όπως το
+  // ADR-912 §12.19 — η κάρτα ανοίγει το side peek: πρέπει να παίρνει focus και να ανοίγει με Enter/Space, όπως το
   // `GridCard`. Ως 2026-10-19 ήταν σκέτο `div` με `onClick` ⇒ μετρημένο: μετά το Esc το focus έπεφτε στο `body`.
   const { handleClick, handleKeyDown } = useCardInteraction({ onClick });
 

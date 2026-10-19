@@ -261,7 +261,7 @@ export function ContactsPageContent() {
             </MobileDetailsSlideIn>
           </>
         ) : (
-          // ADR-912 §12.17 — πλέγμα + side peek: η επιλογή ανοίγει τις λεπτομέρειες ΔΙΠΛΑ (desktop) ή ως φύλλο (κινητό).
+          // ADR-912 §12.19 — πλέγμα + side peek: η επιλογή ανοίγει τις λεπτομέρειες ΔΙΠΛΑ (desktop) ή ως φύλλο (κινητό).
           <ListDetailsSplit
             peek
             list={

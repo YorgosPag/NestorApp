@@ -122,7 +122,7 @@ export function ProjectViewSwitch({
    * λεπτομέρειες του έργου — δεκατέσσερις γραμμές props η καθεμία. Δύο αντίγραφα σημαίνει ότι
    * ένα prop μπορούσε να προστεθεί στο ένα και να **λείπει σιωπηλά** στο άλλο, δηλαδή η ίδια
    * οθόνη να συμπεριφέρεται αλλιώς ανάλογα με το πώς την άνοιξες.
-   * Από το ADR-912 §12.17 το ίδιο στοιχείο ανοίγει και **δίπλα** στο πλέγμα (side peek) — πάλι **μία** δήλωση.
+   * Από το ADR-912 §12.19 το ίδιο στοιχείο ανοίγει και **δίπλα** στο πλέγμα (side peek) — πάλι **μία** δήλωση.
    */
   const projectDetails = selectedProject && (
     <ProjectDetails
@@ -167,7 +167,7 @@ export function ProjectViewSwitch({
   // 🏢 ENTERPRISE: Grid View Rendering - Using proper GridCard (PR: Enterprise Grid System)
   // Uses ProjectGridCard (vertical layout) for grid view
   if (viewMode === 'grid') {
-    // ADR-912 §12.17 — πλέγμα + side peek: η επιλογή ανοίγει τις λεπτομέρειες ΔΙΠΛΑ (desktop) ή ως φύλλο (κινητό).
+    // ADR-912 §12.19 — πλέγμα + side peek: η επιλογή ανοίγει τις λεπτομέρειες ΔΙΠΛΑ (desktop) ή ως φύλλο (κινητό).
     return (
       <ListDetailsSplit
         peek
