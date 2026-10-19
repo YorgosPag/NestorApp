@@ -156,4 +156,20 @@ describe('Λ — λίστα + λεπτομέρειες', () => {
     expect(peekPanel()).toBeNull();
     expect(screen.getByRole('button', { name: 'Κάρτα' })).toHaveFocus();
   });
+
+  it('🔴 Λ10 — side peek: ΜΙΑ διαχωριστική που σέρνεται (WAI-ARIA separator) — μόνο όσο υπάρχει panel, ποτέ στο κινητό', () => {
+    const separators = () => screen.queryAllByRole('separator', { name: 'actions.resizeDetails' });
+
+    const open = renderSplit({ sheetOpen: true, peek: true });
+    expect(separators()).toHaveLength(1);
+    open.unmount();
+
+    const closed = renderSplit({ sheetOpen: false, peek: true });
+    expect(separators()).toHaveLength(0);
+    closed.unmount();
+
+    mobile = true;
+    renderSplit({ sheetOpen: true, peek: true });
+    expect(separators()).toHaveLength(0);
+  });
 });

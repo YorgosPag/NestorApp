@@ -2,7 +2,8 @@
 /**
  * @fileoverview **Το πλευρικό panel λεπτομερειών του πλέγματος** (desktop) — η εγγραφή που διάλεξες σε προβολή πλέγματος
  *   ανοίγει **δίπλα** στο πλέγμα, με την ίδια μπάρα (✕ · τίτλος · ενέργειες) που έχει το φύλλο του κινητού.
- * @related ADR-912 §12.17 · `details-sheet-frame.tsx` (η κοινή μπάρα) · `ListDetailsSplit` (ο μόνος καλών)
+ * @related ADR-912 §12.19 · `details-sheet-frame.tsx` (η κοινή μπάρα) · `details-peek-split.tsx` (ο μόνος καλών — η
+ *   στήλη που σέρνεται)
  * @module core/layouts/DetailsPeekPanel
  *
  * 🔴 **Η αφορμή, μετρημένη 2026-10-19 στα 2400px** (επαφές · έργα · κτίρια): κλικ σε κάρτα του πλέγματος ⇒ η κάρτα
@@ -23,12 +24,6 @@ import { captureFocusReturnTarget, returnFocus } from '@/lib/a11y/focus-return';
 import { DirtyFormProvider } from '@/providers/DirtyFormProvider';
 import { cn } from '@/lib/utils';
 import { DetailsSheetFrame } from './details-sheet-frame';
-
-/**
- * Το πλάτος του panel: αρκετό για φόρμα δύο στηλών, ποτέ πάνω από το μισό της περιοχής — το πλέγμα κρατά πάντα το
- * μεγαλύτερο κομμάτι (μετρημένο 2026-10-19: 2400px ⇒ ~768px panel, πλέγμα 5 στηλών αντί για 8).
- */
-export const DETAILS_PEEK_WIDTH = 'w-[clamp(24rem,38%,48rem)] shrink-0';
 
 /** Παροδικές στρώσεις (portal) — η εστίαση μέσα τους δεν αλλάζει τον opener του panel. */
 const TRANSIENT_LAYER = '[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"], [data-radix-popper-content-wrapper]';
@@ -98,8 +93,8 @@ function OpenDetailsPeek({ onClose, title, children }: DetailsPeekPanelProps) {
             leave();
           }}
           className={cn(
-            DETAILS_PEEK_WIDTH,
-            'flex min-h-0 flex-col overflow-hidden rounded-lg border bg-card shadow-sm outline-none',
+            // Το πλάτος το ορίζει η στήλη που σέρνεται (`details-peek-split.tsx`) — εδώ μόνο γεμίζει.
+            'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border bg-card shadow-sm outline-none',
             'animate-in slide-in-from-right-4 fade-in-0 duration-200',
           )}
         >
