@@ -120,6 +120,7 @@ export function CardHeaderBlock({
   entityType,
   customIcon,
   customIconColor,
+  avatar,
   title,
   subtitle,
   compact = false,
@@ -142,6 +143,7 @@ export function CardHeaderBlock({
         entityType={entityType}
         customIcon={customIcon}
         customIconColor={customIconColor}
+        avatar={avatar}
         title={title}
         subtitle={subtitle}
         compact={compact}

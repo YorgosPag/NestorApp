@@ -19,6 +19,7 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import type { StatItem } from '@/design-system';
 import type { GridCardBadgeVariant } from '@/design-system/components/GridCard/GridCard.types';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { resolveContactIdentityImage } from '@/lib/contacts/contact-identity-image';
 import type { Contact } from '@/types/contacts';
 import {
   getContactDisplayName,
@@ -136,9 +137,13 @@ export function useContactCardModel(contact: Contact): CardViewModel {
     }
   }, [contact.type]);
 
+  /** Photo / logo / monogram — the same resolver the detail header asks (ADR-190 §Display) */
+  const avatar = useMemo(() => resolveContactIdentityImage(contact), [contact]);
+
   return {
     customIcon: contactIconConfig.icon,
     customIconColor: contactIconConfig.color,
+    avatar,
     title: displayName,
     subtitle,
     badges,

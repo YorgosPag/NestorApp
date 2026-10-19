@@ -30,7 +30,7 @@ import type { CardIdentityProps } from './types';
  * ```
  */
 export function pickCardIdentity(props: CardIdentityProps): CardIdentityProps {
-  const { entityType, customIcon, customIconColor, title, subtitle, compact, hideIcon } = props;
+  const { entityType, customIcon, customIconColor, avatar, title, subtitle, compact, hideIcon } = props;
 
-  return { entityType, customIcon, customIconColor, title, subtitle, compact, hideIcon };
+  return { entityType, customIcon, customIconColor, avatar, title, subtitle, compact, hideIcon };
 }

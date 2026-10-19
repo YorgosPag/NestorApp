@@ -15,6 +15,7 @@ import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import type { NavigationEntityType } from '@/components/navigation/config/navigation-entities';
 import type { BadgeVariantProps } from '@/components/ui/badge';
+import type { EntityAvatarSpec } from '../Avatar/entity-avatar.types';
 
 // =============================================================================
 // 🏢 CARD ICON TYPES
@@ -169,6 +170,12 @@ export interface CardIdentityProps {
 
   /** Custom icon color override */
   customIconColor?: string;
+
+  /**
+   * Identity image in place of the icon — photo, logo or monogram (ADR-190 §Display). Optional: a card
+   * without it renders exactly as before, so the ~11 grids that never pass it are untouched.
+   */
+  avatar?: EntityAvatarSpec;
 
   /** Card title */
   title: string;

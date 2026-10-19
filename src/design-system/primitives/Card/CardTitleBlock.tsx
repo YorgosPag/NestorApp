@@ -24,6 +24,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTypography } from '@/hooks/useTypography';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 
+import { EntityAvatar } from '../Avatar/EntityAvatar';
 import { CardIcon } from './CardIcon';
 import type { CardIdentityProps } from './types';
 import '@/lib/design-system';
@@ -58,6 +59,7 @@ export function CardTitleBlock({
   entityType,
   customIcon,
   customIconColor,
+  avatar,
   title,
   subtitle,
   compact = false,
@@ -88,8 +90,11 @@ export function CardTitleBlock({
 
   return (
     <div className={cn('flex items-center', spacing.gap.sm, className)}>
+      {/* Identity image (photo / logo / monogram) wins over the type icon — ADR-190 §Display */}
+      {!hideIcon && avatar && <EntityAvatar {...avatar} size={compact ? 'sm' : 'md'} />}
+
       {/* Entity Icon */}
-      {!hideIcon && (entityType || customIcon) && (
+      {!hideIcon && !avatar && (entityType || customIcon) && (
         <CardIcon
           entityType={entityType}
           icon={customIcon}

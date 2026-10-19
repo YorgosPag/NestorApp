@@ -73,6 +73,23 @@ describe('Card shells - shared contract', () => {
       expect(screen.getByText('Τυπική Θέση')).toBeInTheDocument();
     });
 
+    // ADR-190 §Display — `avatar` is OPTIONAL: the ~11 grids that never pass it must render exactly as before.
+    it('without an avatar keeps the type icon — no identity image appears', () => {
+      const { container } = render(<Card title="P-001" customIcon={Ruler} />);
+
+      expect(container.querySelector('[data-entity-avatar]')).toBeNull();
+      expect(container.querySelector('header svg')).not.toBeNull();
+    });
+
+    it('with an avatar shows the identity image IN PLACE of the icon', () => {
+      const avatar = { name: 'Άλφα Τεχνική', seed: 'cont_1', kind: 'organization' as const };
+      const { container } = render(<Card title="Άλφα Τεχνική" customIcon={Ruler} avatar={avatar} />);
+
+      expect(container.querySelector('[data-entity-avatar="organization"]')).not.toBeNull();
+      expect(screen.getByText('ΑΤ')).toBeInTheDocument();
+      expect(container.querySelector('header svg')).toBeNull();
+    });
+
     // Ως τις 2026-10-09 το όριο ήταν δύο και το τρίτο έπεφτε χωρίς ίχνος (ADR-777 §8.87.9γ2).
     it('caps badges at three in priority order — the overflow is counted, never dropped', () => {
       render(<Card title="P-001" badges={[...BADGES, { label: 'Τέταρτη', variant: 'outline' as const }]} />);

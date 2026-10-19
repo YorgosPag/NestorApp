@@ -18,6 +18,7 @@
 import type { LucideIcon } from 'lucide-react';
 import type { NavigationEntityType } from '@/components/navigation/config/navigation-entities';
 import type { StatItem } from '@/design-system';
+import type { EntityAvatarSpec } from '@/design-system/primitives/Avatar/entity-avatar.types';
 import type { GridCardBadge } from '@/design-system/components/GridCard/GridCard.types';
 
 /**
@@ -32,6 +33,8 @@ export interface CardViewModel {
   customIcon?: LucideIcon;
   /** Custom icon color override */
   customIconColor?: string;
+  /** Identity image in place of the icon (ADR-190 §Display) — omitted by every entity that has none */
+  avatar?: EntityAvatarSpec;
   /** Card title */
   title: string;
   /** Card subtitle — omit here when it is computed per-view in the wrapper */
