@@ -87,7 +87,7 @@ function SalesStorageContent() {
       filtersConfig={filtersConfig}
       filters={panelFilters as unknown as StorageFilterState}
       onFiltersChange={onPanelFiltersChange}
-      renderList={() => <SalesStorageSidebar {...salesSpaceSidebarProps(storageState)} />}
+      renderSplit={grid => <SalesStorageSidebar {...salesSpaceSidebarProps(storageState)} grid={grid} />}
       renderGrid={() => (
         <SalesCardGrid
           items={filteredItems}

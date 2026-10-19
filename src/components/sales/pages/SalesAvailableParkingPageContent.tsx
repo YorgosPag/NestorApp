@@ -86,7 +86,7 @@ function SalesParkingContent() {
       filtersConfig={filtersConfig}
       filters={panelFilters as unknown as ParkingFilterState}
       onFiltersChange={onPanelFiltersChange}
-      renderList={() => <SalesParkingSidebar {...salesSpaceSidebarProps(parkingState)} />}
+      renderSplit={grid => <SalesParkingSidebar {...salesSpaceSidebarProps(parkingState)} grid={grid} />}
       renderGrid={() => (
         <SalesCardGrid
           items={filteredItems}

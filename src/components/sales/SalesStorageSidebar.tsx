@@ -16,6 +16,7 @@ import {
   SalesSpaceSidebar,
   type SalesSpaceRedirectTab,
 } from '@/components/sales/shared/SalesSpaceSidebar';
+import type { SalesSpaceSidebarProps as SalesSpaceSidebarContract } from '@/components/sales/shared/sales-space-page';
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFloorLabel } from '@/hooks/useFloorLabel';
@@ -27,16 +28,8 @@ import '@/lib/design-system';
 // 🏢 TYPES
 // =============================================================================
 
-interface SalesStorageSidebarProps {
-  items: Storage[];
-  selectedItem: Storage | null;
-  onSelectItem: (id: string) => void;
-  selectedItemId: string | null;
-  selectedStatus: string;
-  onStatusChange: (s: string) => void;
-  selectedType: string;
-  onTypeChange: (t: string) => void;
-}
+/** Το κοινό συμβόλαιο των sidebars χώρων — όχι χειρόγραφο αντίγραφο. */
+type SalesStorageSidebarProps = SalesSpaceSidebarContract<Storage>;
 
 // =============================================================================
 // 🏢 STORAGE-SPECIFIC ACCESSORS
@@ -63,6 +56,7 @@ export function SalesStorageSidebar({
   onStatusChange,
   selectedType,
   onTypeChange,
+  grid,
 }: SalesStorageSidebarProps) {
   const { t } = useTranslation(COMMON_NAMESPACES);
   const floorLabel = useFloorLabel();
@@ -131,6 +125,7 @@ export function SalesStorageSidebar({
       getSubtitle={getStorageSubtitle}
       renderDetailPanel={(storage) => <StorageDetailPanel data={storage} />}
       renderCard={renderCard}
+      grid={grid}
       quickFilters={
         <StorageQuickFilters
           selectedStatus={selectedStatus}

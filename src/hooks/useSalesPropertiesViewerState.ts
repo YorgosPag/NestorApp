@@ -15,6 +15,8 @@ import type { PricedPropertyLike } from '@/lib/properties/price-resolver';
 import { EMPTY_PRICE_RANGE, isPriceRangeActive, matchesPriceRange, type RolePriceRange } from '@/lib/properties/price-range';
 import { totalPriceByRole } from '@/lib/properties/price-totals';
 import type { SalesDashboardStats } from '@/types/sales-shared';
+import { matchesPropertyLocation, reconcileLocationSelection } from '@/lib/properties/property-location';
+import { resolveSpaceStatuses } from '@/lib/spaces/space-status-split';
 
 // =============================================================================
 // 🏢 TYPES
@@ -24,8 +26,16 @@ export interface SalesFilterState {
   searchTerm: string;
   commercialStatus: CommercialStatus | 'all';
   propertyType: string;
-  building: string;
-  floor: string;
+  /**
+   * ADR-840 §7.9 — έργο / κτίριο / όροφος ως **ταυτότητες** (`projectId` · `buildingId` · αριθμός ορόφου),
+   * στο σχήμα `LocationSelection`: τις κρίνει ο ΕΝΑΣ κριτής `matchesPropertyLocation`, όπως στην οθόνη ακινήτων.
+   * Κενός πίνακας = «όλα».
+   */
+  project: string[];
+  building: string[];
+  floor: string[];
+  /** Λειτουργική κατάσταση (το select «Κατάσταση» του panel) — ίδιος κριτής με την οθόνη ακινήτων. */
+  status: string[];
   /** Εύρος τιμής **με μονάδα** (ADR-777 §8.60.14.14). */
   priceRange: RolePriceRange;
   areaRange: { min: number | null; max: number | null };
@@ -70,8 +80,10 @@ const DEFAULT_FILTERS: SalesFilterState = {
   searchTerm: '',
   commercialStatus: 'all',
   propertyType: 'all',
-  building: 'all',
-  floor: 'all',
+  project: [],
+  building: [],
+  floor: [],
+  status: [],
   priceRange: EMPTY_PRICE_RANGE,
   areaRange: { min: null, max: null },
 };
@@ -93,7 +105,7 @@ export function useSalesPropertiesViewerState(
   const [showDashboard, setShowDashboard] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
-  const [filters, setFilters] = useState<SalesFilterState>(DEFAULT_FILTERS);
+  const [requestedFilters, setFilters] = useState<SalesFilterState>(DEFAULT_FILTERS);
 
   // Quick filters (dual row)
   const [selectedCommercialStatus, setSelectedCommercialStatus] = useState<string>('all');
@@ -149,6 +161,13 @@ export function useSalesPropertiesViewerState(
     });
   }, [allUnits, viewScope]);
 
+  // Καταρράκτης στην ΠΑΡΑΓΩΓΗ, όχι με εγγραφή σε effect (ίδιο σχήμα με `usePropertyFiltersUrlState`):
+  // κτίριο/όροφος που δεν ανήκουν πια στο επιλεγμένο έργο απλώς παύουν να ισχύουν. Ιδεμποτές.
+  const filters = useMemo(
+    () => reconcileLocationSelection(requestedFilters, salesUnits),
+    [requestedFilters, salesUnits],
+  );
+
   // =========================================================================
   // FILTER: Apply user filters + search + quick filters
   // =========================================================================
@@ -175,14 +194,13 @@ export function useSalesPropertiesViewerState(
       result = result.filter(u => u.type === filters.propertyType);
     }
 
-    // Advanced filter: building
-    if (filters.building !== 'all') {
-      result = result.filter(u => u.buildingId === filters.building);
-    }
+    // Advanced filter: project / building / floor — ADR-840 §7.9, ο ΕΝΑΣ κριτής θέσης (ταυτότητες).
+    const { project, building, floor, status } = filters;
+    result = result.filter(u => matchesPropertyLocation(u, { project, building, floor }));
 
-    // Advanced filter: floor
-    if (filters.floor !== 'all') {
-      result = result.filter(u => u.floor === Number(filters.floor));
+    // Advanced filter: operational status — ίδιος κριτής με το `usePropertyFilters`.
+    if (status.length > 0) {
+      result = result.filter(u => status.includes(resolveSpaceStatuses(u).operationalStatus ?? ''));
     }
 
     // Advanced filter: price range — ADR-777 Α6 + §8.60.14.14: the range carries its UNIT;
@@ -276,7 +294,7 @@ export function useSalesPropertiesViewerState(
     selectedPropertyId,
     handleSelectProperty,
 
-    // Filters
+    // Filters — η ΑΠΟΤΕΛΕΣΜΑΤΙΚΗ επιλογή (μετά τον καταρράκτη), αυτή που βλέπει και το panel.
     filters,
     handleFiltersChange,
     clearAllFilters,

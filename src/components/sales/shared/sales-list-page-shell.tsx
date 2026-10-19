@@ -16,9 +16,15 @@
  * god-component. Ίδιο σχήμα με το `band-stack-preview-renderer.ts` (ADR-412/414):
  * ο κοινός ιδιοκτήτης + ό,τι πραγματικά διαφέρει, και τίποτε άλλο.
  *
- * ⚠️ `renderList` / `renderGrid` είναι συναρτήσεις, όχι έτοιμα elements: έτσι
+ * ⚠️ `renderSplit` / `renderGrid` είναι συναρτήσεις, όχι έτοιμα elements: έτσι
  * χτίζεται ΜΟΝΟ η ενεργή προβολή — το πλέγμα δεν παράγει κάρτες όσο η σελίδα
  * είναι σε λίστα.
+ *
+ * 🔴 ADR-912 §12.20 — **το πλέγμα ζει ΜΕΣΑ στο πλαίσιο λίστας + λεπτομερειών, όχι δίπλα του.**
+ * Ως 2026-10-19 ο σκελετός απέδιδε `renderList()` **ή** `renderGrid()`: οι λεπτομέρειες ζούσαν μόνο
+ * μέσα στο sidebar της λίστας, άρα στο πλέγμα το κλικ σε κάρτα άλλαζε την επιλογή χωρίς κανένα
+ * πάνελ — σε **κάθε** πλάτος και στις **4** σελίδες. Τώρα ο κανόνας ζει εδώ, μία φορά: στο πλέγμα το
+ * sidebar παίρνει το πλέγμα ως `grid` και ανοίγει τις λεπτομέρειες ως side peek / φύλλο κινητού.
  *
  * @module components/sales/shared/sales-list-page-shell
  * @see SalesCardGrid.tsx — ο καμβάς της προβολής πλέγματος
@@ -67,7 +73,11 @@ export interface SalesListPageShellProps<TFilters extends GenericFilterState> {
   filtersConfig: FilterPanelConfig;
   filters: TFilters;
   onFiltersChange: (filters: TFilters) => void;
-  renderList: () => React.ReactNode;
+  /**
+   * Το πλαίσιο «λίστα + λεπτομέρειες» της σελίδας (το sidebar της). Στην προβολή πλέγματος δέχεται το πλέγμα και
+   * το βάζει στη θέση της λίστας (`grid`) — οι λεπτομέρειες ανοίγουν τότε ως side peek (ADR-912 §12.20).
+   */
+  renderSplit: (grid?: React.ReactNode) => React.ReactNode;
   renderGrid: () => React.ReactNode;
 }
 
@@ -82,7 +92,7 @@ export function SalesListPageShell<TFilters extends GenericFilterState>({
   filtersConfig,
   filters,
   onFiltersChange,
-  renderList,
+  renderSplit,
   renderGrid,
 }: SalesListPageShellProps<TFilters>) {
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -132,7 +142,7 @@ export function SalesListPageShell<TFilters extends GenericFilterState>({
         showMobile={chrome.showFilters}
       />
 
-      <ListContainer>{chrome.viewMode === 'list' ? renderList() : renderGrid()}</ListContainer>
+      <ListContainer>{renderSplit(chrome.viewMode === 'list' ? undefined : renderGrid())}</ListContainer>
     </PageContainer>
   );
 }

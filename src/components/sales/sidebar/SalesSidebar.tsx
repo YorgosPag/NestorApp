@@ -25,10 +25,9 @@ const SellDialog = dynamic(() => import('@/components/sales/dialogs/SellDialog')
 const RevertDialog = dynamic(() => import('@/components/sales/dialogs/RevertDialog').then(m => ({ default: m.RevertDialog })), { ssr: false });
 const ConveyanceTab = dynamic(() => import('@/components/sales/conveyance/ConveyanceTab').then(m => ({ default: m.ConveyanceTab })), { ssr: false });
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { useIsMobile } from '@/hooks/useMobile';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { ENTITY_ROUTES } from '@/lib/routes';
-import { MobileDetailsSlideIn } from '@/core/layouts';
+import { ListDetailsSplit } from '@/core/layouts/ListDetailsSplit';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -85,6 +84,8 @@ interface SalesSidebarProps {
    * items share the same status (e.g. /sales/sold — all 'sold').
    */
   hideCommercialStatusFilter?: boolean;
+  /** Προβολή πλέγματος: το πλέγμα στη θέση της λίστας + side peek (ADR-912 §12.20). */
+  grid?: React.ReactNode;
 }
 
 // =============================================================================
@@ -152,10 +153,10 @@ export function SalesSidebar({
   onDataMutated,
   labels,
   hideCommercialStatusFilter = false,
+  grid,
 }: SalesSidebarProps) {
   const colors = useSemanticColors();
   const { t } = useTranslation(COMMON_NAMESPACES);
-  const isMobile = useIsMobile();
   const iconSizes = useIconSizes();
   // ADR-901 Φ1 — η καρτέλα φαίνεται ΜΟΝΟ σε όποιον τη δέχεται και ο server (μάθημα ADR-829).
   const canViewConveyance = isGranted(useCapability('legal:conveyance:view').verdict);
@@ -327,18 +328,15 @@ export function SalesSidebar({
   // =========================================================================
   return (
     <>
-      {/* Desktop: list + details side by side */}
-      {listColumn}
-      {!isMobile && detailsContent}
-
-      {/* Mobile: slide-in details */}
-      <MobileDetailsSlideIn
-        isOpen={isMobile && !!selectedProperty}
-        onClose={() => onSelectProperty('__none__')}
-        title={selectedProperty?.name || unitDetailsLabel}
-      >
-        {isMobile && selectedProperty && detailsContent}
-      </MobileDetailsSlideIn>
+      {/* Λίστα ή πλέγμα + λεπτομέρειες: ο ΕΝΑΣ σκελετός (ADR-912 §12.11 · §12.20). */}
+      <ListDetailsSplit
+        list={grid ?? listColumn}
+        details={detailsContent}
+        sheetOpen={selectedProperty !== null}
+        sheetTitle={selectedProperty?.name || unitDetailsLabel}
+        onCloseSheet={() => onSelectProperty('__none__')}
+        peek={grid !== undefined}
+      />
 
       {/* Commercial Action Dialogs (ADR-197 §2.9) */}
       {selectedProperty && (

@@ -22,8 +22,7 @@ import { GenericListHeader } from '@/components/shared/GenericListHeader';
 import { EntityDetailsHeader } from '@/core/entity-headers';
 import type { EntityHeaderAction } from '@/core/entity-headers';
 import { ActivityTab } from '@/components/shared/audit/ActivityTab';
-import { useIsMobile } from '@/hooks/useMobile';
-import { MobileDetailsSlideIn } from '@/core/layouts';
+import { ListDetailsSplit } from '@/core/layouts/ListDetailsSplit';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -90,6 +89,12 @@ export interface SalesSpaceSidebarProps<TItem extends { id: string }> {
   renderCard: (item: TItem, isSelected: boolean) => React.ReactNode;
   /** Space-specific quick filter controls, already wired by the caller. */
   quickFilters: React.ReactNode;
+  /**
+   * **Προβολή πλέγματος** (ADR-912 §12.20): το πλέγμα αντικαθιστά τη στήλη λίστας και η επιλογή ανοίγει τις
+   * λεπτομέρειες ως side peek (desktop) / φύλλο (κινητό) — μέσω του ΕΝΟΣ `ListDetailsSplit`. Ως 2026-10-19 το
+   * πλέγμα αποδιδόταν ΕΞΩ από τον σκελετό ⇒ κλικ σε κάρτα = επιλογή χωρίς κανένα πάνελ, σε κάθε πλάτος.
+   */
+  grid?: React.ReactNode;
 }
 
 /** The details header exposes no per-item actions on the sales sidebars. */
@@ -114,9 +119,9 @@ export function SalesSpaceSidebar<TItem extends { id: string }>({
   renderDetailPanel,
   renderCard,
   quickFilters,
+  grid,
 }: SalesSpaceSidebarProps<TItem>) {
   const colors = useSemanticColors();
-  const isMobile = useIsMobile();
   const iconSizes = useIconSizes();
 
   const detailsContent = selectedItem ? (
@@ -226,17 +231,13 @@ export function SalesSpaceSidebar<TItem extends { id: string }>({
   );
 
   return (
-    <>
-      {listColumn}
-      {!isMobile && detailsContent}
-
-      <MobileDetailsSlideIn
-        isOpen={isMobile && !!selectedItem}
-        onClose={() => onSelectItem(CLEAR_SELECTION_ID)}
-        title={selectedItem ? getTitle(selectedItem) : labels.detailsTitle}
-      >
-        {isMobile && selectedItem && detailsContent}
-      </MobileDetailsSlideIn>
-    </>
+    <ListDetailsSplit
+      list={grid ?? listColumn}
+      details={detailsContent}
+      sheetOpen={selectedItem !== null}
+      sheetTitle={selectedItem ? getTitle(selectedItem) : labels.detailsTitle}
+      onCloseSheet={() => onSelectItem(CLEAR_SELECTION_ID)}
+      peek={grid !== undefined}
+    />
   );
 }

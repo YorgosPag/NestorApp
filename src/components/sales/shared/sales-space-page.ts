@@ -16,7 +16,7 @@
  * @see SalesSpaceSidebar.tsx — το κοινό sidebar που δέχεται αυτά τα props
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, type ReactNode } from 'react';
 import {
   pricePerAreaLabel,
   pricePerSqmAmount,
@@ -50,6 +50,8 @@ export interface SalesSpaceSidebarProps<TItem extends SalesSpaceItem> {
   onStatusChange: (status: string) => void;
   selectedType: string;
   onTypeChange: (type: string) => void;
+  /** Προβολή πλέγματος: το πλέγμα στη θέση της λίστας + side peek (ADR-912 §12.20). */
+  grid?: ReactNode;
 }
 
 /** Κατάσταση → props sidebar. Μία μετονομασία, όχι δύο αντίγραφα. */

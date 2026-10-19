@@ -16,6 +16,7 @@ import {
   SalesSpaceSidebar,
   type SalesSpaceRedirectTab,
 } from '@/components/sales/shared/SalesSpaceSidebar';
+import type { SalesSpaceSidebarProps as SalesSpaceSidebarContract } from '@/components/sales/shared/sales-space-page';
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFloorLabel } from '@/hooks/useFloorLabel';
@@ -27,16 +28,8 @@ import '@/lib/design-system';
 // 🏢 TYPES
 // =============================================================================
 
-interface SalesParkingSidebarProps {
-  items: ParkingSpot[];
-  selectedItem: ParkingSpot | null;
-  onSelectItem: (id: string) => void;
-  selectedItemId: string | null;
-  selectedStatus: string;
-  onStatusChange: (s: string) => void;
-  selectedType: string;
-  onTypeChange: (t: string) => void;
-}
+/** Το κοινό συμβόλαιο των sidebars χώρων — όχι χειρόγραφο αντίγραφο. */
+type SalesParkingSidebarProps = SalesSpaceSidebarContract<ParkingSpot>;
 
 // =============================================================================
 // 🏢 PARKING-SPECIFIC ACCESSORS
@@ -63,6 +56,7 @@ export function SalesParkingSidebar({
   onStatusChange,
   selectedType,
   onTypeChange,
+  grid,
 }: SalesParkingSidebarProps) {
   const { t } = useTranslation(COMMON_NAMESPACES);
 
@@ -129,6 +123,7 @@ export function SalesParkingSidebar({
       getSubtitle={getSubtitle}
       renderDetailPanel={(spot) => <ParkingDetailPanel data={spot} />}
       renderCard={renderCard}
+      grid={grid}
       quickFilters={
         <ParkingQuickFilters
           selectedStatus={selectedStatus}

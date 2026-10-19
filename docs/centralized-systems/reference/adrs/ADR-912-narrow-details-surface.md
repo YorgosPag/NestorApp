@@ -1047,10 +1047,51 @@ jest στις περιοχές που άγγιξα: 38 σουίτες / 258 πρ
 ⚠️ **Διόρθωση ταυτότητας**: η πρώτη υλοποίηση (commits `7802aadb` · `1743bb38`) παρέπεμπε σε «§12.17», που είναι η
 λεπτομέρεια ακινήτου με κάτοψη. Όλες οι αναφορές του side peek δείχνουν πλέον εδώ.
 
+### 12.20 Προβολή πλέγματος στις σελίδες ΠΩΛΗΣΕΩΝ: το κλικ σε κάρτα ανοίγει τις λεπτομέρειες *(2026-10-19)*
+
+**Αναφορά Giorgio** (στιγμιότυπο 390×844, `/sales/available-properties`): στην προβολή πλέγματος το κλικ σε κάρτα **δεν
+ανοίγει** το παράθυρο πληροφοριών.
+
+**Ρίζα (κώδικας):** ο §12.19 έφερε το side peek στις προβολές πλέγματος των **χώρων** (επαφές · έργα · κτίρια · θέσεις ·
+αποθήκες), αλλά οι **4** σελίδες πωλήσεων δεν περνούσαν από το `ListDetailsSplit`. Ο `SalesListPageShell` απέδιδε
+`renderList()` **ή** `renderGrid()`. Οι λεπτομέρειες (desktop στήλη + φύλλο κινητού) ζούσαν **μόνο** μέσα στο sidebar της
+λίστας (`SalesSidebar` · `SalesSpaceSidebar`), το καθένα με **χειρόγραφο αντίγραφο** του `ListDetailsSplit`
+(`{listColumn}{!isMobile && details}<MobileDetailsSlideIn …/>`). Άρα στο πλέγμα το κλικ άλλαζε την επιλογή χωρίς κανένα
+πάνελ, σε **κάθε** πλάτος και στις 4 σελίδες (Διαθέσιμα · Πωληθέντα · Αποθήκες · Θέσεις).
+
+**Θεραπεία: ο κανόνας σε ΕΝΑ σημείο, το πλαίσιο από το ΕΝΑ SSoT:**
+
+| αρχείο | αλλαγή |
+|---|---|
+| `sales/shared/sales-list-page-shell.tsx` | `renderList()` → **`renderSplit(grid?)`**: στο πλέγμα ο σκελετός δίνει το πλέγμα **μέσα** στο πλαίσιο λίστας + λεπτομερειών, όχι στη θέση του. Ο κανόνας ζει εδώ, μία φορά. |
+| `sales/sidebar/SalesSidebar.tsx` · `sales/shared/SalesSpaceSidebar.tsx` | το χειρόγραφο split → **`ListDetailsSplit`** (`list={grid ?? listColumn}` · `peek={grid !== undefined}`). Desktop: side peek που σέρνεται (§12.19)· κινητό: φύλλο. −`useIsMobile` · −`MobileDetailsSlideIn` από τα δύο αρχεία. |
+| `sales/SalesStorageSidebar.tsx` · `sales/SalesParkingSidebar.tsx` | 🧹 Boy Scout: το **χειρόγραφο** interface props (ίδιο και στα δύο) → το κοινό συμβόλαιο `SalesSpaceSidebarProps<T>` του `sales-space-page.ts`, που απέκτησε το `grid`. Προωθούν το `grid`. |
+| 4 σελίδες πωλήσεων | μία γραμμή η καθεμία: `renderSplit={grid => <…Sidebar {...} grid={grid} />}`. |
+
+⚠️ **Αλλαγή συμπεριφοράς της λίστας στο κινητό (σκόπιμη):** με ανοιχτό φύλλο η περιοχή της λίστας κρύβεται
+(`ENTITY_LIST_TOKENS.mobileRegion`), όπως σε κάθε άλλη σελίδα του `ListDetailsSplit` (§12.11). Πριν έμενε από κάτω.
+
+**Απόδειξη:**
+- `sales/shared/__tests__/sales-grid-details.test.tsx` (**5**): Π1 ο σκελετός καλεί `renderSplit(πλέγμα)` στο πλέγμα και
+  `renderSplit()` στη λίστα· Π2 desktop: πλέγμα στη θέση της λίστας + `[data-details-peek]` με τις λεπτομέρειες· Π2β χωρίς
+  επιλογή κανένα panel· Π3 κινητό: φύλλο· Π4 χωρίς `grid` η λίστα μένει. **Μετάλλαξη σε αντίγραφο** (παλιός σκελετός +
+  sidebar που αγνοεί το `grid`): **2/5 κόκκινα** (Π1 · Π2).
+- Μαζί με `list-details-split.test.tsx` + `sales-property-filters.test.tsx`: **31/31**. CHECK 3.47 ✓ · 3.28 ✓ · 3.38 ✓.
+- **Ζωντανά** (Chrome, κλάδος κινητού): λίστα → κλικ ⇒ φύλλο ✓· **πλέγμα → κλικ σε κάρτα ⇒ φύλλο** «Διαμέρισμα 95 τ.μ.» με
+  «Αλλαγή Τιμής», «Ιεραρχία Ακινήτου», «Εμπορικά Στοιχεία» ✓.
+
+**Ανοιχτά:**
+1. **Side peek σε desktop (≥md) για τις πωλήσεις: ΔΕΝ μετρήθηκε ζωντανά**. Ο dev server έπεσε σε 9–12 GB RAM και δεν
+   απαντούσε κατά την επαλήθευση. Καλύπτεται από το Π2 (jsdom: ποιο δέντρο στήνεται, όχι pixels).
+2. Η αποεπιλογή γίνεται ακόμη με το φρουρό-αναγνωριστικό `'__none__'` (`SalesSidebar`) / `CLEAR_SELECTION_ID`
+   (`SalesSpaceSidebar`), επειδή το `handleSelectProperty` είναι εναλλαγή. Λειτουργεί· ένα ρητό `clearSelection` στην
+   κατάσταση θα ήταν καθαρότερο.
+
 ## Changelog
 
 | Date | Change |
 |---|---|
+| 2026-10-19 | **§12.20 — πλέγμα πωλήσεων: κλικ σε κάρτα ⇒ λεπτομέρειες** (στιγμιότυπο Giorgio 390px). Ο `SalesListPageShell` απέδιδε λίστα **ή** πλέγμα, και οι λεπτομέρειες ζούσαν μόνο στο sidebar της λίστας ⇒ στο πλέγμα καμία επιφάνεια, στις 4 σελίδες. `renderList` → `renderSplit(grid?)`· `SalesSidebar` + `SalesSpaceSidebar`: χειρόγραφο split → `ListDetailsSplit` (`peek` με `grid`)· Boy Scout: διπλό interface των sidebars χώρων → `SalesSpaceSidebarProps<T>`. `sales-grid-details.test.tsx` 5/5, μετάλλαξη 2/5. Ζωντανά (κινητό): πλέγμα → κλικ ⇒ φύλλο ✓. Desktop peek **αμέτρητο ζωντανά** (dev server 9–12 GB, χωρίς απόκριση). |
 | 2026-10-19 | **§12.19 — συνέπειες με το panel ανοιχτό**: (1) κάρτες επαφών κομμένες (γραμμές 97px για 186px) ⇒ `CATALOG_ROW_PACKING += auto-rows-max` στο SSoT, αφαίρεση του τοπικού αντιγράφου στο `PropertyCardGrid` (ADR-784 §12.1)· (2) μονάδες της v4 (px) σε 3 split γραμμένα ως ποσοστά (`FilesPreviewSplit` · `FileManagerPageContent` · `ReconciliationPageContent`) ⇒ `"40%"`· φρουρός `resizable-size-units.test.ts`. Ζωντανά: 0/15 κομμένες κάρτες· Διαχείριση Αρχείων 15px/25px ⇒ ≥307px/≥511px. |
 | 2026-10-19 | **§12.19 — πλάτος του side peek που σέρνεται** (στιγμιότυπο Giorgio): νέο `core/layouts/details-peek-split.tsx` πάνω στο SSoT `ui/resizable` + `resizable-persistence` + `resizable-column-store`. px ανά συσκευή (`STORAGE_KEYS.DETAILS_PEEK_COLUMN`), όρια 384/640/1600, πλέγμα ≥320px. `DetailsPeekPanel` χωρίς σταθερό πλάτος (`DETAILS_PEEK_WIDTH` αφαιρέθηκε). i18n `common-actions:actions.resizeDetails`. Λ10 + μετάλλαξη. Ζωντανά: σύρσιμο 640 ⇒ 1040, το πλάτος διατηρείται στο επόμενο άνοιγμα. **Διόρθωση**: οι αναφορές «§12.17» του side peek (10 αρχεία + changelog) ⇒ §12.19, γιατί ο §12.17 είναι άλλη ενότητα. |
 | 2026-10-19 | **§12.19 — side peek στις προβολές πλέγματος** (`DetailsPeekPanel` + κοινό `details-sheet-frame` με το `MobileDetailsSlideIn`· `ListDetailsSplit` `listOnly` ⇒ `peek`· επαφές · έργα · κτίρια · θέσεις · αποθήκες· `BuildingCard` εστιάσιμη με `useCardInteraction`). Boy Scout (CHECK 3.28): το δίδυμο «φίλτρα + μπάρα κάδου + ειδοποίηση συνδέσμου» των σελίδων θέσεων/αποθηκών ⇒ `space-management/shared/SpaceCatalogPreamble`. |

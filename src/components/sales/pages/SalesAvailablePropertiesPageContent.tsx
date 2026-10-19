@@ -12,7 +12,6 @@
 import React, { Suspense } from 'react';
 import { SalesSidebar } from '@/components/sales/sidebar/SalesSidebar';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
-import { propertyListFiltersConfig, type UnitFilterState } from '@/components/core/AdvancedFilters';
 import { ShoppingBag, DollarSign, TrendingUp, Maximize2 } from 'lucide-react';
 import { StaticPageLoading } from '@/core/states';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -29,8 +28,8 @@ import '@/lib/design-system';
 function SalesAvailableContent() {
   const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation', 'properties-enums']);
 
-  const { state, onAdvancedFiltersChange, sidebarProps } = useSalesPropertiesListPage();
-  const { dashboardStats, filters, handleFiltersChange, handleSelectProperty } = state;
+  const { state, filtersConfig, panelFilters, onAdvancedFiltersChange, sidebarProps } = useSalesPropertiesListPage();
+  const { dashboardStats, handleFiltersChange, handleSelectProperty } = state;
 
   const unifiedDashboardStats: DashboardStat[] = [
     {
@@ -76,10 +75,10 @@ function SalesAvailableContent() {
       chrome={state}
       stats={unifiedDashboardStats}
       onSearchChange={searchTerm => handleFiltersChange({ searchTerm })}
-      filtersConfig={propertyListFiltersConfig}
-      filters={filters as unknown as UnitFilterState}
+      filtersConfig={filtersConfig}
+      filters={panelFilters}
       onFiltersChange={onAdvancedFiltersChange}
-      renderList={() => <SalesSidebar {...sidebarProps} />}
+      renderSplit={grid => <SalesSidebar {...sidebarProps} grid={grid} />}
       renderGrid={() => (
         <SalesCardGrid
           items={sidebarProps.units}

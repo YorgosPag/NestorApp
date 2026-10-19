@@ -35,10 +35,15 @@
 import { useMemo } from 'react';
 import { propertyListFiltersConfig } from '../configs/propertyFiltersConfig';
 import type { FilterOption, FilterPanelConfig } from '../types';
-import type { Property } from '@/types/property-viewer';
 import { useHierarchyNames, type HierarchyNames } from '@/components/navigation/core/hooks/useHierarchyNames';
 import { useFloorLabel } from '@/hooks/useFloorLabel';
-import { locationChoices, type LocationSelection } from '@/lib/properties/property-location';
+import { locationChoices, type LocatedProperty, type LocationSelection } from '@/lib/properties/property-location';
+
+/**
+ * Ό,τι χρειάζεται ο εγχυτής από ένα ακίνητο — **ταυτότητες** θέσης + είδος. Δομικός τύπος, ώστε να τον
+ * ταΐζει κάθε οθόνη (ακίνητα · πωλήσεις) με το δικό της μοντέλο, χωρίς cast (ADR-840 §7.9).
+ */
+export type FilterOptionSource = LocatedProperty & { readonly type?: string | null };
 
 /** Τα ονόματα πεδίων που δέχονται έγχυση, ανά ερώτημα που απαντούν. */
 const PROJECT_FIELD = 'project';
@@ -54,8 +59,8 @@ const UNKNOWN_BUILDING_LABEL = 'filters.unknownBuilding';
 const NO_SELECTION: LocationSelection = {};
 
 /** Μη κενά αλφαριθμητικά, μοναδικά, ταξινομημένα — για το είδος (κλειδί λεξιλογίου). */
-function distinctNames(values: readonly string[]): string[] {
-  return Array.from(new Set(values.filter(v => v !== undefined && v !== null && v !== ''))).sort();
+function distinctNames(values: readonly (string | null | undefined)[]): string[] {
+  return Array.from(new Set(values.filter((v): v is string => v !== undefined && v !== null && v !== ''))).sort();
 }
 
 /** `[όλα] + οι πραγματικές τιμές` — η σειρά που περιμένει κάθε select του πίνακα. */
@@ -85,7 +90,7 @@ function namedOptions(
 
 /** Οι επιλογές που προκύπτουν **από τα ίδια τα ακίνητα**, κλειδωμένες στο όνομα πεδίου. */
 function buildOptionsByField(
-  properties: readonly Property[],
+  properties: readonly FilterOptionSource[],
   selection: LocationSelection,
   names: HierarchyNames,
   floorLabel: (floor: number) => string,
@@ -115,7 +120,7 @@ function buildOptionsByField(
  * @param selection Η τρέχουσα επιλογή έργου/κτιρίου — για τον καταρράκτη. Χωρίς αυτήν, όλα ανοιχτά.
  */
 export function usePropertyFiltersConfig(
-  properties: Property[],
+  properties: readonly FilterOptionSource[],
   baseConfig: FilterPanelConfig = propertyListFiltersConfig,
   selection: LocationSelection = NO_SELECTION,
 ): FilterPanelConfig {

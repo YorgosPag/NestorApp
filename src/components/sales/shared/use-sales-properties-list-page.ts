@@ -10,6 +10,10 @@
  * αντιστοιχίζουν τα ίδια φίλτρα και ταΐζουν το ίδιο `SalesSidebar` — γι' αυτό η
  * αντιστοίχιση ζει εδώ μία φορά (jscpd: 33+18 διπλές γραμμές πριν το ADR-584).
  *
+ * 🔑 ADR-840 §7.9 — **οι επιλογές των φίλτρων ζουν ΕΔΩ, μία φορά**: ο ΕΝΑΣ εγχυτής
+ * (`usePropertyFiltersConfig`) πάνω στα ακίνητα της προβολής. Ως τις 2026-10-19 οι δύο σελίδες
+ * περνούσαν τη **στατική** σταθερά ⇒ Έργο/Κτίριο/Όροφος/Τύπος έδειχναν ΜΟΝΟ «Όλα».
+ *
  * Ό,τι διαφέρει πραγματικά (τίτλοι, στατιστικά, κάρτα, ετικέτες sidebar) μένει
  * στη σελίδα — δηλωτικά, ΟΧΙ με `if (scope === 'sold')` εδώ μέσα.
  *
@@ -23,26 +27,60 @@ import {
   useSalesPropertiesViewerState,
   type UseSalesPropertiesViewerStateOptions,
 } from '@/hooks/useSalesPropertiesViewerState';
-import type { UnitFilterState } from '@/components/core/AdvancedFilters';
+import { propertyListFiltersConfig, type UnitFilterState } from '@/components/core/AdvancedFilters';
+import { usePropertyFiltersConfig } from '@/components/core/AdvancedFilters/hooks/usePropertyFiltersConfig';
+import type { SalesFilterState } from '@/hooks/useSalesPropertiesViewerState';
 import type { Property } from '@/types/property';
+
+/** Μονή τιμή της κατάστασης → πίνακας του panel (`'all'` = κενός). */
+function asList(value: string): string[] {
+  return value === 'all' ? [] : [value];
+}
+
+/** Η κατάσταση της σελίδας → οι τιμές που δείχνει το panel. Ρητή αντιστοίχιση, όχι cast. */
+export function toPanelFilters(filters: SalesFilterState): UnitFilterState {
+  return {
+    searchTerm: filters.searchTerm,
+    project: filters.project,
+    building: filters.building,
+    floor: filters.floor,
+    type: asList(filters.propertyType),
+    status: filters.status,
+    priceRange: filters.priceRange,
+    areaRange: filters.areaRange,
+    features: [],
+  };
+}
+
+/** Τα φίλτρα του panel → η κατάσταση της σελίδας. Οι ταυτότητες θέσης περνούν αυτούσιες (πίνακες). */
+export function fromPanelFilters(unitFilters: UnitFilterState): Partial<SalesFilterState> {
+  return {
+    searchTerm: unitFilters.searchTerm || '',
+    project: unitFilters.project ?? [],
+    building: unitFilters.building ?? [],
+    floor: unitFilters.floor ?? [],
+    status: unitFilters.status ?? [],
+    propertyType: unitFilters.type?.[0] || 'all',
+    areaRange: {
+      min: unitFilters.areaRange?.min ?? null,
+      max: unitFilters.areaRange?.max ?? null,
+    },
+  };
+}
 
 export function useSalesPropertiesListPage(options?: UseSalesPropertiesViewerStateOptions) {
   const state = useSalesPropertiesViewerState(options);
-  const { handleFiltersChange } = state;
+  const { handleFiltersChange, filters } = state;
+
+  // ADR-840 §7.9 — ο ΕΝΑΣ εγχυτής, πάνω στα ακίνητα ΤΗΣ ΠΡΟΒΟΛΗΣ (όχι του φίλτρου: οι επιλογές δεν
+  // εξαφανίζονται όταν διαλέγεις μία), με καταρράκτη από την τρέχουσα επιλογή έργου/κτιρίου.
+  const filtersConfig = usePropertyFiltersConfig(state.salesUnits, propertyListFiltersConfig, filters);
+  const panelFilters = React.useMemo(() => toPanelFilters(filters), [filters]);
 
   /** Τα φίλτρα του panel (πολλαπλή επιλογή) → η κατάσταση της σελίδας (μονή τιμή). */
   const onAdvancedFiltersChange = React.useCallback(
     (unitFilters: UnitFilterState) => {
-      handleFiltersChange({
-        searchTerm: unitFilters.searchTerm || '',
-        building: unitFilters.building?.[0] || 'all',
-        floor: unitFilters.floor?.[0] || 'all',
-        propertyType: unitFilters.type?.[0] || 'all',
-        areaRange: {
-          min: unitFilters.areaRange?.min ?? null,
-          max: unitFilters.areaRange?.max ?? null,
-        },
-      });
+      handleFiltersChange(fromPanelFilters(unitFilters));
     },
     [handleFiltersChange]
   );
@@ -60,5 +98,5 @@ export function useSalesPropertiesListPage(options?: UseSalesPropertiesViewerSta
     onDataMutated: state.refetch,
   };
 
-  return { state, onAdvancedFiltersChange, sidebarProps };
+  return { state, filtersConfig, panelFilters, onAdvancedFiltersChange, sidebarProps };
 }
