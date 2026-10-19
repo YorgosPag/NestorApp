@@ -36,6 +36,8 @@ const SURFACE_VARIANTS = new Set(['default', 'secondary', 'outline', 'ghost']);
 const DECLARED_EMPHASIS_TERNARIES = Object.freeze({
   'src/components/account/ShowcaseDoor.tsx': 1,
   'src/components/contact/FirstContactAwaitingProof.tsx': 1,
+  // «Δήλωση στοιχείων» = το κύριο κουμπί ΟΣΟ δεν έχει δηλωθεί τίποτα· μετά «Διόρθωση», δευτερεύον.
+  'src/components/document-registry/RegistryFactsDeclaration.tsx': 1,
   'src/components/mandate/ShowcaseEmailConfirmationContent.tsx': 2,
   'src/components/mandate/inbox/MandateInboxRow.tsx': 1,
   'src/components/projects/ika/components/QrCodePanel.tsx': 1,

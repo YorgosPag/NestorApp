@@ -8,14 +8,7 @@
 
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useEffect, useState } from 'react';
-import {
-  Building2,
-  FolderKanban,
-  Home,
-  MapPin,
-  Briefcase,
-  FileText,
-} from 'lucide-react';
+import { FileText, ListTree } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -28,8 +21,18 @@ import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { createStaleCache } from '@/lib/stale-cache';
+import { NAVIGATION_ENTITIES, type NavigationEntityType } from '@/components/navigation/config';
 
 const propertyHierarchyCache = createStaleCache<PropertyHierarchyResponse>('property-hierarchy');
+
+/**
+ * Εικονίδιο + μελάνι οντότητας από το SSoT (`NAVIGATION_ENTITIES`) — το ίδιο που δείχνει το
+ * breadcrumb της ίδιας σελίδας. ADR-770 §21: ποτέ χειρόγραφο `text-primary` (≡ `--card` στο σκοτεινό).
+ */
+function entityVisual(type: NavigationEntityType) {
+  const { icon, color } = NAVIGATION_ENTITIES[type];
+  return { icon, iconColor: color };
+}
 
 // =============================================================================
 // TYPES
@@ -95,6 +98,7 @@ export function PropertyHierarchyCard({ propertyId }: PropertyHierarchyCardProps
   // Αν δεν υπάρχει τίποτα εκτός από τη μονάδα, δεν εμφανίζουμε
   if (!hierarchy.company && !hierarchy.project && !hierarchy.building) return null;
 
+  const LocationIcon = NAVIGATION_ENTITIES.location.icon;
   const address = hierarchy.project
     ? [hierarchy.project.address, hierarchy.project.city].filter(Boolean).join(', ')
     : null;
@@ -109,7 +113,7 @@ export function PropertyHierarchyCard({ propertyId }: PropertyHierarchyCardProps
     <Card>
       <CardHeader className="p-3 pb-0">
         <CardTitle className="text-sm font-semibold flex items-center gap-2">
-          <Building2 className={`${iconSizes.sm} text-primary`} />
+          <ListTree className={cn(iconSizes.sm, colors.text.muted)} aria-hidden />
           {t('sales.saleInfo.hierarchy')}
         </CardTitle>
       </CardHeader>
@@ -118,8 +122,7 @@ export function PropertyHierarchyCard({ propertyId }: PropertyHierarchyCardProps
           {/* Εταιρεία */}
           {hierarchy.company && (
             <HierarchyNode
-              icon={Briefcase}
-              iconColor="text-muted-foreground"
+              {...entityVisual('company')}
               label={t('sales.hierarchy.company')}
               value={hierarchy.company.name}
               iconSizeClass={iconSizes.xs}
@@ -129,8 +132,7 @@ export function PropertyHierarchyCard({ propertyId }: PropertyHierarchyCardProps
           {/* Έργο */}
           {hierarchy.project && (
             <HierarchyNode
-              icon={FolderKanban}
-              iconColor="text-primary"
+              {...entityVisual('project')}
               label={t('sales.hierarchy.project')}
               value={hierarchy.project.name}
               iconSizeClass={iconSizes.xs}
@@ -141,7 +143,7 @@ export function PropertyHierarchyCard({ propertyId }: PropertyHierarchyCardProps
           {hierarchy.project?.permitTitle && (
             <HierarchyNode
               icon={FileText}
-              iconColor="text-[hsl(var(--text-warning))]"
+              iconColor={colors.text.muted}
               label={t('sales.hierarchy.permit')}
               value={hierarchy.project.permitTitle}
               iconSizeClass={iconSizes.xs}
@@ -151,8 +153,7 @@ export function PropertyHierarchyCard({ propertyId }: PropertyHierarchyCardProps
           {/* Κτίριο */}
           {hierarchy.building && (
             <HierarchyNode
-              icon={Building2}
-              iconColor="text-primary"
+              {...entityVisual('building')}
               label={t('sales.hierarchy.building')}
               value={hierarchy.building.name}
               iconSizeClass={iconSizes.xs}
@@ -161,8 +162,7 @@ export function PropertyHierarchyCard({ propertyId }: PropertyHierarchyCardProps
 
           {/* Μονάδα + Όροφος */}
           <HierarchyNode
-            icon={Home}
-            iconColor="text-[hsl(var(--text-success))]"
+            {...entityVisual('property')}
             label={t('sales.hierarchy.unit')}
             value={`${hierarchy.property.name} — ${floorLabel(hierarchy.property.floor)}`}
             iconSizeClass={iconSizes.xs}
@@ -174,7 +174,7 @@ export function PropertyHierarchyCard({ propertyId }: PropertyHierarchyCardProps
         {address && (
           <footer className={cn("mt-3 pt-2 border-t text-sm space-y-1", colors.text.muted)}>
             <p className="flex items-center gap-2">
-              <MapPin className={`${iconSizes.sm} text-destructive flex-shrink-0`} />
+              <LocationIcon className={cn(iconSizes.sm, NAVIGATION_ENTITIES.location.color, 'flex-shrink-0')} aria-hidden />
               <span>{address}</span>
             </p>
             {hasExtraAddressInfo && (
@@ -217,7 +217,7 @@ function HierarchyNode({
     <li className={`relative pl-5 ${isLast ? 'pb-0' : 'pb-2'}`}>
       {/* Bullet on the timeline */}
       <span className="absolute -left-[5px] top-1.5 flex items-center justify-center rounded-full bg-background border-2 border-muted">
-        <Icon className={`${iconSizeClass} ${iconColor}`} />
+        <Icon className={cn(iconSizeClass, iconColor)} aria-hidden />
       </span>
       <p className={cn("text-xs", colors.text.muted)}>{label}</p>
       <p className="text-sm font-medium text-foreground">{value}</p>

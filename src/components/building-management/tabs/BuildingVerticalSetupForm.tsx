@@ -21,7 +21,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Spinner } from '@/components/ui/spinner';
-import { Check, X, AlertTriangle, Building2 } from 'lucide-react';
+import { Check, X, AlertTriangle } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -65,6 +66,9 @@ function parseCount(value: string): number {
   const n = parseInt(value, 10);
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
+
+/** Εικονίδιο + μελάνι οντότητας από το SSoT — ADR-770 §21. */
+const BuildingIcon = NAVIGATION_ENTITIES.building.icon;
 
 export function BuildingVerticalSetupForm({
   buildingId,
@@ -186,7 +190,7 @@ export function BuildingVerticalSetupForm({
   return (
     <section className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-3" role="group">
       <header className="flex items-center gap-2 text-sm font-semibold">
-        <Building2 className="h-4 w-4 text-primary" />
+        <BuildingIcon className={cn('h-4 w-4', NAVIGATION_ENTITIES.building.color)} aria-hidden />
         {t('tabs.floors.quickSetup.title')}
       </header>
 

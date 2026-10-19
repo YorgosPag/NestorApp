@@ -17,7 +17,7 @@
 import React from 'react';
 import { MoreHorizontal, MoreVertical } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button, type ButtonVariantProps } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -121,6 +121,17 @@ interface ActionOverflowMenuProps {
   readonly label?: string;
 }
 
+type OverflowAppearance = NonNullable<ActionOverflowMenuProps['appearance']>;
+
+/**
+ * Το κουμπί του μενού ανά **θέση** — όχι κατάσταση: το `appearance` δεν αλλάζει όσο ζει το στοιχείο, άρα δεν είναι
+ * πατημένο χειριστήριο (ADR-770 §19). Εικονίδιο και επιφάνεια διαλέγονται μαζί, από ΕΝΑ σημείο.
+ */
+const MORE_TRIGGER: Readonly<Record<OverflowAppearance, { readonly icon: typeof MoreHorizontal; readonly variant: NonNullable<ButtonVariantProps['variant']> }>> = {
+  toolbar: { icon: MoreHorizontal, variant: 'outline' },
+  row: { icon: MoreVertical, variant: 'ghost' },
+};
+
 interface ActionMenuItemsProps {
   readonly actions: readonly EntityHeaderAction[];
   readonly className?: string;
@@ -161,7 +172,7 @@ export function ActionOverflowMenu({
   const iconSizes = useIconSizes();
   // Ενέργεια που τρέχει μέσα στο κλειστό μενού δεν φαίνεται από πουθενά ⇒ το λέει το ίδιο το κουμπί του μενού.
   const busy = [...actions, ...destructive].some((action) => action.pending);
-  const MoreIcon = appearance === 'row' ? MoreVertical : MoreHorizontal;
+  const { icon: MoreIcon, variant: triggerVariant } = MORE_TRIGGER[appearance];
   // Ενέργεια με `claimsFocus` (επιτόπια μετονομασία) ⇒ στο κλείσιμο η εστίαση ΔΕΝ γυρίζει στο κουμπί: αλλιώς το Radix
   // την κλέβει από το πεδίο που μόλις άνοιξε. Escape / κλικ έξω ⇒ γυρίζει κανονικά (WAI-ARIA menu button).
   const focusClaimed = React.useRef(false);
@@ -175,7 +186,7 @@ export function ActionOverflowMenu({
       <DropdownMenuTrigger asChild>
         <Button
           type="button"
-          variant={appearance === 'row' ? 'ghost' : 'outline'}
+          variant={triggerVariant}
           size="sm"
           className="h-8 w-8 shrink-0 p-0"
           aria-label={label ?? t('actions.more')}

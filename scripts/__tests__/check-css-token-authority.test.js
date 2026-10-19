@@ -562,6 +562,39 @@ describe('Θ — οι υποσχέσεις της θεραπείας Π1 (ό,τ�
     }
   });
 
+  test('Θ14 — κάθε μελάνι ταυτότητας οντότητας πιάνει 4,5:1 σε ΚΑΘΕ επιφάνεια, και στα δύο (ADR-770 §21)', () => {
+    // Αφορμή: «Ιεραρχία Ακινήτου» — στο φωτεινό θέμα το `--hue-teal` (Μονάδα στο breadcrumb)
+    // έδινε 2,50:1 (< 3:1, WCAG 1.4.11), μετρημένο σε ζωντανό browser 2,62:1. Το 3.43 έβλεπε
+    // μόνο ότι το token «υπάρχει». Τα tokens ΔΙΑΒΑΖΟΝΤΑΙ από το SSoT, όχι από λίστα εδώ:
+    // νέα οντότητα με νέο μελάνι μπαίνει μόνη της στον έλεγχο.
+    // ⚠️ Η κλάση λύνεται από το ΙΔΙΟ το Tailwind (`textColor` πρώτα): το `text-destructive`
+    // είναι `--text-error`, ΟΧΙ `--destructive` (§15) — χειρόγραφη αντιστοίχιση το μέτρησε
+    // 1,48:1 και κατήγγειλε ψευδώς ένα σωστό μελάνι.
+    const { loadTailwindColors, resolveClassToken } = require('../lib/contrast/tailwind-class-resolver');
+    const palette = loadTailwindColors(REPO_ROOT);
+    const source = fs.readFileSync(path.join(
+      REPO_ROOT, 'src/components/navigation/config/navigation-entities/entity-config.ts',
+    ), 'utf8');
+    const inks = new Set();
+    for (const [, cls] of source.matchAll(/color:\s*'([^']+)'/g)) {
+      const resolved = resolveClassToken(cls, palette);
+      inks.add(resolved && resolved.form === 'css-var' ? resolved.varName : cls);
+    }
+    expect(inks.size).toBeGreaterThanOrEqual(5); // ο αναγνώστης βρήκε πράγματι τα μελάνια
+    const SURFACES = ['--background', '--card', '--popover', '--muted', '--secondary', '--accent'];
+    const failures = [];
+    for (const theme of ['light', 'dark']) {
+      for (const ink of inks) {
+        expect(rgbOf(theme, ink)).not.toBeNull(); // άγνωστη μορφή κλάσης ⇒ κόκκινο, όχι σιωπή
+        for (const surface of SURFACES) {
+          const r = ratio(theme, ink, surface);
+          if (r < 4.5) failures.push(`${theme} ${ink} / ${surface} = ${r.toFixed(2)}`);
+        }
+      }
+    }
+    expect(failures).toEqual([]);
+  });
+
   test('Θ13 — κανένα από τα 8 αρχεία του Π2 δεν ξαναποκτά σταθερό ασπρόμαυρο state layer', () => {
     // Η ΔΟΜΙΚΗ άγκυρα — η μόνη που πιάνει την επιστροφή της κατηγορίας, γιατί ένα ωμό
     // `rgba(255,255,255,α)` ΔΕΝ έχει `var()` και άρα **δεν μετριέται πουθενά** στη baseline.

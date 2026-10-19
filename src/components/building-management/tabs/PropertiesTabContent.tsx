@@ -12,6 +12,7 @@ import { API_ROUTES } from '@/config/domain-constants';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { Button } from '@/components/ui/button';
 import { Home, Plus, CheckCircle, Euro, Ruler, Link2 } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { BuildingSpaceTabLoading, BuildingSpaceTabError } from '../shared/BuildingSpaceTabStatus';
 import { BuildingSpaceTabHeader } from '../shared/BuildingSpaceTabHeader';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
@@ -59,6 +60,9 @@ interface PropertiesTabContentProps {
   building: Building;
   onActiveUnitsCountChange?: (count: number) => void;
 }
+
+/** Εικονίδιο + μελάνι οντότητας από το SSoT — ADR-770 §21. */
+const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
 
 export function PropertiesTabContent({ building, onActiveUnitsCountChange }: PropertiesTabContentProps) {
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
@@ -320,7 +324,7 @@ export function PropertiesTabContent({ building, onActiveUnitsCountChange }: Pro
     <section className="flex flex-col gap-2 p-2">
       {/* Header */}
       <BuildingSpaceTabHeader
-        icon={<Home className="h-5 w-5 shrink-0 text-primary" />}
+        icon={<PropertyIcon className={cn('h-5 w-5 shrink-0', NAVIGATION_ENTITIES.property.color)} aria-hidden />}
         title={t('tabs.labels.units')}
         count={units.length}
       >

@@ -19,6 +19,24 @@
 
 ## Decision Log
 
+### 2026-10-19: Property hierarchy card + calibrated entity inks (ADR-770 §21)
+
+**Context**: `/sales/available-properties` → «Ιεραρχία Ακινήτου» declared its own entity icons/colors (`Briefcase`,
+`FolderKanban`+`text-primary`, `Building2`+`text-primary`). They differed from the breadcrumb on the same page and were
+invisible in dark theme (1,18:1).
+
+| File | Violation | Fix |
+|------|-----------|-----|
+| `sales/cards/PropertyHierarchyCard.tsx` | 4 hand-written entity icons/colors + `MapPin`/`text-destructive` | `entityVisual(type)` → `NAVIGATION_ENTITIES[type].icon/.color` (company · project · building · property · location) |
+| `building-management/tabs/PropertiesTabContent.tsx` | `Home` + `text-primary` | `NAVIGATION_ENTITIES.property` |
+| `building-management/tabs/BuildingVerticalSetupForm.tsx` | `Building2` + `text-primary` | `NAVIGATION_ENTITIES.building` |
+
+**SSoT contract strengthened**: every `NAVIGATION_ENTITIES[*].color` is now a **contrast promise**: ≥4,5:1 on all six app
+surfaces in both themes, enforced by anchor **Θ14** (`scripts/__tests__/check-css-token-authority.test.js`). Its first run
+exposed `--hue-teal` at 2,50:1 (light theme), now calibrated in `globals.css` (ADR-770 §21.2).
+
+**Exceptions confirmed (NOT entities)**: `IBANInput` / `ContactBankingTab` (bank), `SharedContactPageContent` (employer).
+
 ### 2026-03-15: Enforcement Sweep — 14 violations fixed
 
 **Context**: Full audit revealed 14 files using hardcoded entity icons/colors instead of `NAVIGATION_ENTITIES` SSoT.

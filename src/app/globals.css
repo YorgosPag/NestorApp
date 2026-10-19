@@ -44,7 +44,7 @@
        Values below are conversions of the HSL triples, not aspirations.
        Reproduce: node scripts/lib/contrast/wcag-contrast.js consumers, or
        `npm run measure:text-primary`.
-       ✅ RAISED TO AA 2026-10-03 (ADR-770 §20): this family is now THE link role —
+       ✅ RAISED TO AA 2026-10-03 (ADR-770 §21): this family is now THE link role —
        `text-link` / `hover:text-link-hover` / `visited:text-link-visited`
        (tailwind.config.ts → textColor.link), read by `<Button variant="link">` and
        INTERACTIVE_PATTERNS.LINK_*. Was 4.28 / 3.01 / 4.45:1 on --background.
@@ -127,10 +127,12 @@
     --viewcube-accent: 33 100% 50%;
     --viewcube-accent-foreground: 222.2 47.4% 11.2%;
 
-    /* Additional vivid category hues (theme-aware) — dashboard launchpad tiles (ADR-179) */
-    --hue-teal: 173 80% 36%;          /* teal-600 */
-    --hue-pink: 330 81% 51%;          /* pink-600 */
-    --hue-indigo: 243 75% 58%;        /* indigo-500/600 */
+    /* Additional vivid category hues (theme-aware) — dashboard launchpad tiles (ADR-179) +
+       μελάνια ταυτότητας οντοτήτων (`NAVIGATION_ENTITIES`). ADR-770 §21: βαθμονομημένα στις 6
+       ανοιχτές επιφάνειες (ίδια μέθοδος με §18, ισοτιμία ~5,3:1) — ήταν teal 2,50 ❌ · pink 3,50 · indigo 5,29 */
+    --hue-teal: 173 80% 23%;          /* ADR-770 §21 — ήταν 36% (teal-600) = 2,50:1 ❌ · τώρα ≥5,32:1 */
+    --hue-pink: 330 81% 39%;          /* ADR-770 §21 — ήταν 51% (pink-600) = 3,50:1 · τώρα ≥5,33:1 */
+    --hue-indigo: 243 75% 57%;        /* ADR-770 §21 — ήταν 58% = 5,29:1 · τώρα ≥5,53:1 (ισοτιμία) */
 
     /* Enterprise Background Variables - SINGLE SOURCE OF TRUTH */
     --bg-success: 142 45% 97%;        /* success background - green-50 */
