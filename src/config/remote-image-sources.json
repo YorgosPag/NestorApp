@@ -1,0 +1,8 @@
+{
+  "$comment": "SSoT of the remote image origins the Next image optimizer may resize (ADR-190 §Display). Read by next.config.js (images.remotePatterns) AND src/lib/media/identity-image-source.ts (which URLs are routed through the optimizer). {bucket} = NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET — scoped to OUR bucket so the optimizer is never an open resizing proxy for any Firebase project.",
+  "firebaseStorage": {
+    "protocol": "https",
+    "hostname": "firebasestorage.googleapis.com",
+    "pathnamePrefix": "/v0/b/{bucket}/o/"
+  }
+}

@@ -1,4 +1,16 @@
 const { withSentryConfig } = require('@sentry/nextjs');
+const remoteImageSources = require('./src/config/remote-image-sources.json');
+
+/**
+ * [IMAGES] Οι απομακρυσμένες πηγές που επιτρέπεται να μικρύνει ο optimizer (ADR-190 §Display).
+ * Μόνο ο ΔΙΚΟΣ μας κάδος — ποτέ `/v0/b/**`, αλλιώς ο server γίνεται ανοιχτός proxy αλλαγής μεγέθους
+ * για οποιοδήποτε project Firebase. Ίδια πηγή με το `src/lib/media/identity-image-source.ts`.
+ */
+function firebaseStorageImagePatterns(bucket) {
+  if (!bucket) return [];
+  const { protocol, hostname, pathnamePrefix } = remoteImageSources.firebaseStorage;
+  return [{ protocol, hostname, pathname: `${pathnamePrefix.replace('{bucket}', bucket)}**` }];
+}
 
 /**
  * [DEV] Κατάλογος build ανά στιγμιότυπο — λύνει τη σύγκρουση δύο `next dev` στο ΙΔΙΟ working tree.
@@ -515,6 +527,12 @@ const nextConfig = {
   images: {
     // Domains για external images
     domains: ['images.unsplash.com', 'via.placeholder.com'],
+    remotePatterns: firebaseStorageImagePatterns(process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET),
+    // Μετρημένο 2026-10-18: ο κάδος απαντά `Cache-Control: private, max-age=0` ⇒ χωρίς αυτό ο optimizer πέφτει
+    // στα 60s του Next 15 και ξανα-κωδικοποιεί κάθε μικρογραφία κάθε λεπτό. Ασφαλές επειδή κάθε URL είναι
+    // αμετάβλητο (path `file_<uuid>` + token· τα παλιά in-place αρχεία φέρουν `v=` από τον επιλυτή) και η cache
+    // του container μηδενίζεται σε κάθε deploy. 30 ημέρες.
+    minimumCacheTTL: 2592000,
     // Image formats
     formats: ['image/avif', 'image/webp'],
     // Quality settings
