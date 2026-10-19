@@ -184,8 +184,15 @@ const CATALOG_COLUMNS_CHIP = 'grid-cols-[repeat(auto-fill,minmax(min(100%,10rem)
  *
  * `content-start` κρατά τις γραμμές στο ύψος τους. ΔΕΝ αγγίζει το `align-items`: οι κάρτες της **ίδιας**
  * γραμμής μένουν ισοϋψείς, όπως σε HubSpot / Google Contacts.
+ *
+ * 🔴 **Η αντίστροφη βλάβη** (στιγμιότυπο Giorgio 2026-10-19, επαφές με side peek, ADR-912 §12.19): η ίδια `<section>`
+ * κυλά μόνη της με ύψος 847 px· οι κάρτες έχουν `overflow-hidden` ⇒ η ελάχιστη συνεισφορά τους στο Grid είναι **0**.
+ * Με γραμμές `auto` ο browser **στρίμωξε** τις 11 γραμμές στο ύψος του δοχείου αντί να κυλήσει: **97 px** ανά γραμμή
+ * για περιεχόμενο **186 px** ⇒ η γραμμή email/ΑΦΜ κομμένη. Με 8 στήλες (3 γραμμές) χωρούσε, γι' αυτό δεν φαινόταν.
+ * `auto-rows-max` (`grid-auto-rows: max-content`): η γραμμή έχει **πάντα** το ύψος του περιεχομένου της —
+ * ούτε τεντώνεται (το πάνω περιστατικό) ούτε στριμώχνεται· το περίσσευμα **κυλά**.
  */
-const CATALOG_ROW_PACKING = 'content-start';
+const CATALOG_ROW_PACKING = 'content-start auto-rows-max';
 
 // Grid patterns για layout consistency
 export const gridPatterns = {

@@ -43,11 +43,10 @@ export function PropertyCardGrid({ properties, onViewFloorPlan }: PropertyCardGr
   }
 
   return (
-    // ⚠️ `auto-rows-max` ΔΕΝ είναι διακόσμηση (μετρημένο στην οθόνη, ADR-840 Σ3): το πλέγμα ζει πλέον μέσα σε δοχείο
-    //    ΣΤΑΘΕΡΟΥ ύψους που κυλά, και το `overflow-hidden` κάθε `li` μηδενίζει το ελάχιστο ύψος του ⇒ οι γραμμές
-    //    συμπιέζονταν ώστε να «χωρέσουν» και οι κάρτες κόβονταν στο κάτω μέρος. Γραμμές = ύψος περιεχομένου.
+    // ADR-840 Σ3: γραμμές = ύψος περιεχομένου σε δοχείο σταθερού ύψους που κυλά — το `auto-rows-max` ζει πλέον στο
+    //    `gridPatterns.cards.*` (`CATALOG_ROW_PACKING`), για ΚΑΘΕ κατάλογο (ADR-912 §12.19).
     <ul
-      className={`grid w-full auto-rows-max overflow-y-auto p-2 ${gridPatterns.cards.gap} ${gridPatterns.cards.media}`}
+      className={`grid w-full overflow-y-auto p-2 ${gridPatterns.cards.gap} ${gridPatterns.cards.media}`}
       role="list"
       aria-label={t('header.title')}
     >
