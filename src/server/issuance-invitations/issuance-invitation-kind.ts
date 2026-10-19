@@ -16,9 +16,9 @@ import { z } from 'zod';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { DOCUMENT_KINDS, type DocumentKind } from '@/config/document-validity/document-validity';
-import { normaliseChannelEmail } from '@/lib/contact/channel-email';
 import { ISSUANCE_AUDIENCES, type IssuanceAudience } from '@/lib/document-validity/issuance-request';
 import { mintAccessCode, storedAccessCodeSchema } from '@/server/invitations/invitation-access-code';
+import { mintInvitationLinkReissue, newPendingInvitationCore } from '@/server/invitations/invitation-lifecycle';
 import type { InvitationLocator } from '@/server/invitations/invitation-redeem';
 import { defaultInvitationExpiryMs, mintInvitationToken } from '@/server/invitations/invitation-token';
 import { generateDocumentIssuanceInvitationId } from '@/services/enterprise-id.service';
@@ -119,17 +119,7 @@ export async function mintIssuanceInvitation(draft: IssuanceInvitationDraft): Pr
   // Το ίδιο μυστικό με τον σύνδεσμο: λείπει ⇒ πετά **πριν** από κάθε εγγραφή (ο καλών λέει `secret-missing`).
   const code = draft.requireAccessCode ? mintAccessCode(ISSUANCE_INVITE_SECRET_ENV, id) : null;
   const invitation: IssuanceInvitation = {
-    id,
-    inviteeEmail: normaliseChannelEmail(draft.email),
-    invitedByUid: draft.actorUid,
-    nonceHash,
-    state: 'pending',
-    createdAt: draft.nowValue,
-    expiresAt: new Date(expiresAtMs).toISOString(),
-    openedAt: null,
-    resolvedAt: null,
-    resolvedByUid: null,
-    mailboxProvenAt: null,
+    ...newPendingInvitationCore({ id, email: draft.email, actorUid: draft.actorUid, nonceHash, createdAt: draft.nowValue, expiresAtMs }),
     companyId: draft.companyId,
     propertyId: draft.propertyId,
     documentKind: draft.documentKind,
@@ -137,7 +127,6 @@ export async function mintIssuanceInvitation(draft: IssuanceInvitationDraft): Pr
     audience: draft.audience,
     contactId: draft.contactId,
     accessCode: code?.stored ?? null,
-    reissuedNonceHashes: [],
   };
   return { invitation, token, accessCode: code?.code ?? null };
 }
@@ -166,13 +155,12 @@ export async function reissueIssuanceInvitationLink(db: Firestore, invitationId:
     if (invitation === null) return { ok: false, refusal: 'missing' };
     if (invitation.state !== 'pending') return { ok: false, refusal: 'not-pending' };
     if (isIssuanceLinkLocked(invitation)) return { ok: false, refusal: 'locked' };
-    if (Date.parse(invitation.expiresAt) <= Date.parse(nowIso)) return { ok: false, refusal: 'expired' };
-    const reissued = invitation.reissuedNonceHashes ?? [];
-    if (reissued.length >= ISSUANCE_LINK_REISSUE_CAP) return { ok: false, refusal: 'cap-reached' };
-    const { token, nonceHash } = await mintInvitationToken(ISSUANCE_INVITE_SECRET_ENV, {
-      id: invitation.id, expiresAtMs: Date.parse(invitation.expiresAt), locator: [],
+    // Λήξη · όριο · νέο nonce — ο ΚΟΙΝΟΣ πυρήνας (ADR-916 Φ-Β: δεύτερος καταναλωτής ⇒ εξαγωγή, όχι δίδυμο).
+    const reissue = await mintInvitationLinkReissue(invitation, {
+      secretEnv: ISSUANCE_INVITE_SECRET_ENV, locator: [], cap: ISSUANCE_LINK_REISSUE_CAP, nowValue: nowIso,
     });
-    tx.update(ref, { reissuedNonceHashes: [...reissued, nonceHash] });
-    return { ok: true, invitation, token };
+    if (!reissue.ok) return reissue;
+    tx.update(ref, { reissuedNonceHashes: reissue.reissuedNonceHashes });
+    return { ok: true, invitation, token: reissue.token };
   });
 }

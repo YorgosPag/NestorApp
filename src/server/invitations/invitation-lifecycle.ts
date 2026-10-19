@@ -18,6 +18,7 @@ import type {
   Transaction,
 } from 'firebase-admin/firestore';
 
+import { normaliseChannelEmail } from '@/lib/contact/channel-email';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
   readStoredInvitationState,
@@ -25,6 +26,8 @@ import {
   type InvitationRecordCore,
   type InvitationState,
 } from '@/types/invitation-core';
+
+import { mintInvitationToken } from './invitation-token';
 
 const logger = createModuleLogger('invitation-lifecycle');
 
@@ -81,6 +84,25 @@ export async function stageInvitationWithSupersede(
   tx: Transaction,
   input: InvitationSupersedeInput,
 ): Promise<{ readonly supersededCount: number; commit(): void }> {
+  const revocation = await stageLiveInvitationRevocation(tx, input);
+  return {
+    supersededCount: revocation.revokedCount,
+    commit: () => {
+      revocation.commit();
+      tx.set(input.collection.doc(input.invitation.id), input.invitation);
+    },
+  };
+}
+
+/**
+ * **Ανάκληση κάθε ζωντανής, ΜΕΣΑ σε συναλλαγή του καλούντα — χωρίς νέα πρόσκληση** (ADR-916 Φ-Β): η πράξη που
+ * σκοτώνει τον σύνδεσμο στα εισερχόμενα όταν η αφορμή του **έπαψε** (η πώληση ακυρώθηκε · η επαφή έχασε το email της).
+ * Το ίδιο σκέλος που κάνει το supersede — ένας κώδικας για «ποιες είναι ζωντανές» και «πώς ανακαλούνται».
+ */
+export async function stageLiveInvitationRevocation(
+  tx: Transaction,
+  input: Omit<InvitationSupersedeInput, 'invitation'>,
+): Promise<{ readonly revokedCount: number; commit(): void }> {
   const live = await tx.get(input.liveQuery.limit(LIVE_INVITATION_SCAN_LIMIT));
 
   // ⚠️ Η κατάσταση ξαναδιαβάζεται **fail-closed** και δεν εμπιστευόμαστε το `where`:
@@ -90,7 +112,7 @@ export async function stageInvitationWithSupersede(
   );
 
   return {
-    supersededCount: stale.length,
+    revokedCount: stale.length,
     commit: () => {
       for (const doc of stale) {
         tx.update(input.collection.doc(doc.id), {
@@ -99,9 +121,71 @@ export async function stageInvitationWithSupersede(
           resolvedByUid: input.actorUid,
         });
       }
-      tx.set(input.collection.doc(input.invitation.id), input.invitation);
     },
   };
+}
+
+/**
+ * **Τα κοινά πεδία μιας νέας πρόσκλησης** — `pending`, κανένα άνοιγμα, καμία επίλυση, κανένας επανεκδομένος σύνδεσμος.
+ * Εξήχθη 2026-10-19 (ADR-916 Φ-Β · CHECK 3.28): ζούσε δίδυμο στα είδη έκδοσης και παράδοσης. Το είδος **απλώνει** αυτό
+ * και προσθέτει τα δικά του πεδία· το email κανονικοποιείται **εδώ**, μία φορά (κλειδί ιδεμποτησίας και δέσμευσης).
+ */
+export function newPendingInvitationCore(input: {
+  readonly id: string;
+  readonly email: string;
+  readonly actorUid: string;
+  readonly nonceHash: string;
+  readonly createdAt: string;
+  readonly expiresAtMs: number;
+}): InvitationRecordCore & { reissuedNonceHashes: string[] } {
+  return {
+    id: input.id,
+    inviteeEmail: normaliseChannelEmail(input.email),
+    invitedByUid: input.actorUid,
+    nonceHash: input.nonceHash,
+    reissuedNonceHashes: [],
+    state: 'pending',
+    createdAt: input.createdAt,
+    expiresAt: new Date(input.expiresAtMs).toISOString(),
+    openedAt: null,
+    resolvedAt: null,
+    resolvedByUid: null,
+    mailboxProvenAt: null,
+  };
+}
+
+// =============================================================================
+// 1β. ΝΕΟΣ ΣΥΝΔΕΣΜΟΣ ΓΙΑ ΤΗΝ ΙΔΙΑ ΠΡΟΣΚΛΗΣΗ (υπενθύμιση · επανάληψη αποστολής)
+// =============================================================================
+
+/** Γιατί **δεν** επανεκδίδεται σύνδεσμος — η πρόσκληση δεν ζει πια, ή εξαντλήθηκε το όριο. */
+export type InvitationLinkReissueRefusal = 'not-pending' | 'expired' | 'cap-reached';
+
+export type InvitationLinkReissue =
+  | { readonly ok: true; readonly token: string; readonly reissuedNonceHashes: readonly string[] }
+  | { readonly ok: false; readonly refusal: InvitationLinkReissueRefusal };
+
+/**
+ * **Νέος σύνδεσμος για την ΙΔΙΑ πρόσκληση** (ADR-915 §31 — εξήχθη 2026-10-19 με τον δεύτερο καταναλωτή, ADR-916 Φ-Β):
+ * ίδιο `invitationId`, **ίδια** λήξη, νέο nonce. Ο ωμός σύνδεσμος δεν αποθηκεύεται ποτέ, άρα κάθε email μετά το πρώτο
+ * φέρει νέο· ο σύνδεσμος του πρώτου email **συνεχίζει** να δουλεύει (DocuSign). Μίας χρήσης **αθροιστικά**.
+ *
+ * ⚠️ **Δεν γράφει**: ο καλών έχει ήδη διαβάσει το έγγραφο **μέσα** στη συναλλαγή του και γράφει το
+ * `reissuedNonceHashes` **πριν** φύγει το email — αλλιώς ο σύνδεσμος της υπενθύμισης δεν θα δούλευε.
+ * Πετά μόνο αν λείπει το μυστικό (ο καλών δεν στέλνει τίποτα).
+ */
+export async function mintInvitationLinkReissue(
+  stored: Pick<InvitationDocumentCore, 'id' | 'state' | 'expiresAt' | 'reissuedNonceHashes'>,
+  input: { readonly secretEnv: string; readonly locator: readonly string[]; readonly cap: number; readonly nowValue: string },
+): Promise<InvitationLinkReissue> {
+  if (readStoredInvitationState(stored.state) !== 'pending') return { ok: false, refusal: 'not-pending' };
+  if (Date.parse(stored.expiresAt) <= Date.parse(input.nowValue)) return { ok: false, refusal: 'expired' };
+  const reissued = stored.reissuedNonceHashes ?? [];
+  if (reissued.length >= input.cap) return { ok: false, refusal: 'cap-reached' };
+  const { token, nonceHash } = await mintInvitationToken(input.secretEnv, {
+    id: stored.id, expiresAtMs: Date.parse(stored.expiresAt), locator: input.locator,
+  });
+  return { ok: true, token, reissuedNonceHashes: [...reissued, nonceHash] };
 }
 
 // =============================================================================
