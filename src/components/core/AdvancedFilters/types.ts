@@ -261,11 +261,12 @@ export type UnitFilterState = PropertyListFilterState;
 
 export interface BuildingFilterState extends GenericFilterState {
   searchTerm: string;
+  /** `projectId` (ταυτότητα) — ποτέ όνομα (ADR-840 §7.6). */
   project: string[];
   status: string[];
   type: string[];
+  /** Πόλη του κτιρίου (`city`), όπως είναι γραμμένη. */
   location: string[];
-  company: string[];
   priority: string[];
   energyClass: string[];
   renovation: string[];

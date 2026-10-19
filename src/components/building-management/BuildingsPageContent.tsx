@@ -28,7 +28,8 @@ import { useBuildingsPageState } from '@/hooks/useBuildingsPageState';
 import { useBuildingStats } from '@/hooks/useBuildingStats';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
 import { deleteBuildingWithPolicy } from '@/services/building/building-mutation-gateway';
-import { AdvancedFiltersPanel, buildingFiltersConfig } from '@/components/core/AdvancedFilters';
+import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters';
+import { useBuildingFiltersConfig } from '@/components/core/AdvancedFilters/hooks/useBuildingFiltersConfig';
 import { ListContainer, PageContainer } from '@/core/containers';
 // [ENTERPRISE] i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -74,6 +75,8 @@ export function BuildingsPageContent() {
     focusFloorId,
     selection,
   } = useBuildingsPageState(buildingsData, { hasAnswered: !buildingsLoading });
+  // ADR-840 §7.6 — επιλογές έργου/τοποθεσίας από τα ίδια τα κτίρια, όχι δείγματα
+  const buildingFilterPanelConfig = useBuildingFiltersConfig(buildingsData);
 
   // Mobile-only filter toggle state
   const [showFilters, setShowFilters] = React.useState(false);
@@ -370,7 +373,7 @@ export function BuildingsPageContent() {
         {/* Advanced Filters Panel - Desktop */}
         <aside className="hidden md:block" role="complementary" aria-label={t('pages.buildings.filters.desktop')}>
           <AdvancedFiltersPanel
-            config={buildingFiltersConfig}
+            config={buildingFilterPanelConfig}
             filters={filters}
             onFiltersChange={setFilters}
           />
@@ -380,7 +383,7 @@ export function BuildingsPageContent() {
         {showFilters && (
           <aside className="md:hidden" role="complementary" aria-label={t('pages.buildings.filters.mobile')}>
             <AdvancedFiltersPanel
-              config={buildingFiltersConfig}
+              config={buildingFilterPanelConfig}
               filters={filters}
               onFiltersChange={setFilters}
               defaultOpen

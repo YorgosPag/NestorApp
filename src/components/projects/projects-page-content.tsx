@@ -6,6 +6,8 @@ import type { Project } from '@/types/project';
 import { useProjectsPageState } from '@/hooks/useProjectsPageState';
 import { useFirestoreProjects } from '@/hooks/useFirestoreProjects';
 import { AdvancedFiltersPanel, projectFiltersConfig, type FilterPanelConfig } from '@/components/core/AdvancedFilters';
+import { injectFilterOptions, verbatimOptions, withAllOption } from '@/components/core/AdvancedFilters/hooks/filter-option-injection';
+import { COMMON_FILTER_LABELS } from '@/constants/domains/filter-labels';
 import { DeepLinkNotice } from '@/components/shared/deep-link/DeepLinkNotice';
 import { ListContainer, PageContainer } from '@/core/containers';
 import { useProjectsStats } from '@/hooks/useProjectsStats';
@@ -199,42 +201,13 @@ export function ProjectsPageContent() {
     setIsDeleting(false);
   }, [projectToDelete, setSelectedProject, fetchTrashedProjects]);
 
-  // 🏢 ENTERPRISE: Dynamic filter config — populate company/location/client options from real Firestore data
+  // 🏢 ENTERPRISE: Dynamic filter config — company/location options from real Firestore data (ADR-840 §7.6)
   const dynamicProjectConfig = useMemo<FilterPanelConfig>(() => {
     const projects = firestoreProjects ?? [];
-    const companyValues = [...new Set(projects.map(p => p.company).filter(Boolean))].sort();
-    const cityValues = [...new Set(projects.map(p => p.city).filter(Boolean))].sort();
-
-    return {
-      ...projectFiltersConfig,
-      rows: projectFiltersConfig.rows.map(row => {
-        if (row.id !== 'project-details') return row;
-        return {
-          ...row,
-          fields: row.fields.map(field => {
-            if (field.id === 'company' && field.options) {
-              return {
-                ...field,
-                options: [
-                  field.options[0], // "All Companies"
-                  ...companyValues.map(c => ({ value: c, label: c }))
-                ]
-              };
-            }
-            if (field.id === 'location' && field.options) {
-              return {
-                ...field,
-                options: [
-                  field.options[0], // "All Locations"
-                  ...cityValues.map(c => ({ value: c, label: c }))
-                ]
-              };
-            }
-            return field;
-          })
-        };
-      })
-    };
+    return injectFilterOptions(projectFiltersConfig, new Map([
+      ['company', withAllOption(COMMON_FILTER_LABELS.ALL_COMPANIES, verbatimOptions(projects.map(p => p.company)))],
+      ['location', withAllOption(COMMON_FILTER_LABELS.ALL_LOCATIONS, verbatimOptions(projects.map(p => p.city)))],
+    ]));
   }, [firestoreProjects]);
 
   // 🏢 ENTERPRISE: Memoized dashboard stats — avoids array recreation on every render (INP optimization)

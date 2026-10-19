@@ -11,6 +11,7 @@
 import { useCallback } from 'react';
 import type { Building } from '@/components/building-management/BuildingsPageContent';
 import { defaultBuildingFilters, type BuildingFilterState } from '@/components/core/AdvancedFilters';
+import { matchesBuildingLocation } from '@/components/core/AdvancedFilters/hooks/building-filter-options';
 import { resolveBuildingById, isTrashedEntity } from './entity-deep-link-sources';
 import {
   useEntityPageState,
@@ -40,9 +41,6 @@ function filterBuildings(buildings: Building[], filters: BuildingFilterState): B
     const selectFilters: Array<{ arr: string[] | undefined; field: keyof Building }> = [
       { arr: filters.status, field: 'status' },
       { arr: filters.type, field: 'type' },
-      { arr: filters.project, field: 'project' },
-      { arr: filters.location, field: 'location' },
-      { arr: filters.company, field: 'company' },
       { arr: filters.priority, field: 'priority' },
       { arr: filters.energyClass, field: 'energyClass' },
       { arr: filters.renovation, field: 'renovation' },
@@ -50,6 +48,11 @@ function filterBuildings(buildings: Building[], filters: BuildingFilterState): B
     for (const { arr, field } of selectFilters) {
       const val = arr && arr.length > 0 ? arr[0] : null;
       if (val && val !== 'all' && building[field] !== val) return false;
+    }
+
+    // Έργο (`projectId`) + τοποθεσία (`city`) — ο ΕΝΑΣ κριτής, ίδιος με τις επιλογές (ADR-840 §7.6)
+    if (!matchesBuildingLocation(building, { project: filters.project?.[0], location: filters.location?.[0] })) {
+      return false;
     }
 
     // Nested range filters

@@ -149,28 +149,6 @@
       "containsTower": "Περιέχει Tower",
       "containsComplex": "Περιέχει Complex"
     },
-    "sampleProjects": {
-      "projectA": "Έργο Α",
-      "projectB": "Έργο Β",
-      "projectC": "Έργο Γ",
-      "projectD": "Έργο Δ"
-    },
-    "sampleCompanies": {
-      "companyA": "Εταιρεία Α",
-      "companyB": "Εταιρεία Β",
-      "companyC": "Εταιρεία Γ",
-      "companyD": "Εταιρεία Δ"
-    },
-    "sampleCities": {
-      "athens": "Αθήνα",
-      "thessaloniki": "Θεσσαλονίκη",
-      "patras": "Πάτρα",
-      "heraklion": "Ηράκλειο",
-      "volos": "Βόλος",
-      "kavala": "Καβάλα",
-      "lamia": "Λαμία",
-      "rhodes": "Ρόδος"
-    },
     "energyClass": {
       "aPlus": "Α+",
       "a": "Α",

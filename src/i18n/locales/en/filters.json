@@ -352,22 +352,6 @@
     "complex": "Complex",
     "veryComplex": "Very Complex"
   },
-  "sampleCompanies": {
-    "companyA": "Company A",
-    "companyB": "Company B",
-    "companyC": "Company C",
-    "companyD": "Company D"
-  },
-  "sampleCities": {
-    "athens": "Athens",
-    "thessaloniki": "Thessaloniki",
-    "patras": "Patras",
-    "heraklion": "Heraklion",
-    "volos": "Volos",
-    "kavala": "Kavala",
-    "lamia": "Lamia",
-    "rhodes": "Rhodes"
-  },
   "ranges": {
     "unitsAll": "All units",
     "units1to2": "1-2 units",

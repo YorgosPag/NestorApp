@@ -1,4 +1,4 @@
-import type { BuildingFilterState, FilterPanelConfig, ProjectFilterState } from '../types';
+import type { BuildingFilterState, FilterFieldConfig, FilterPanelConfig, ProjectFilterState } from '../types';
 import {
   BUILDING_PROJECT_STATUS_LABELS,
   COMMON_FILTER_LABELS,
@@ -10,6 +10,17 @@ import {
   SP,
   UNIFIED_STATUS_FILTER_LABELS,
 } from './shared';
+
+/** Ένα select πλάτους 1 — το κοινό σχήμα των πεδίων κτιρίων/έργων (CHECK 3.28: όχι δίδυμα μπλοκ). */
+function selectField(
+  id: string,
+  label: string,
+  placeholder: string,
+  ariaLabel: string,
+  options: FilterFieldConfig['options'],
+): FilterFieldConfig {
+  return { id, type: "select", label, placeholder, ariaLabel, width: 1, options };
+}
 
 export const buildingFiltersConfig: FilterPanelConfig = {
   title: FT.buildings,
@@ -51,21 +62,13 @@ export const buildingFiltersConfig: FilterPanelConfig = {
             { value: "planning", label: UNIFIED_STATUS_FILTER_LABELS.PLANNING },
           ],
         },
-        {
-          id: "priority",
-          type: "select",
-          label: FL.priority,
-          placeholder: SP.priority_placeholder,
-          ariaLabel: "Priority filter",
-          width: 1,
-          options: [
-            { value: "all", label: COMMON_FILTER_LABELS.ALL_PRIORITIES },
-            { value: "high", label: PRIORITY_LABELS.high },
-            { value: "medium", label: PRIORITY_LABELS.medium },
-            { value: "low", label: PRIORITY_LABELS.low },
-            { value: "urgent", label: PRIORITY_LABELS.urgent },
-          ],
-        },
+        selectField("priority", FL.priority, SP.priority_placeholder, "Priority filter", [
+          { value: "all", label: COMMON_FILTER_LABELS.ALL_PRIORITIES },
+          { value: "high", label: PRIORITY_LABELS.high },
+          { value: "medium", label: PRIORITY_LABELS.medium },
+          { value: "low", label: PRIORITY_LABELS.low },
+          { value: "urgent", label: PRIORITY_LABELS.urgent },
+        ]),
       ],
     },
     {
@@ -111,46 +114,11 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           width: 1,
           options: [
             { value: "all", label: COMMON_FILTER_LABELS.ALL_PROJECTS },
-            { value: "project1", label: "filters.sampleProjects.projectA" },
-            { value: "project2", label: "filters.sampleProjects.projectB" },
-            { value: "project3", label: "filters.sampleProjects.projectC" },
           ],
         },
-        {
-          id: "location",
-          type: "select",
-          label: FL.location,
-          placeholder: SP.location_placeholder,
-          ariaLabel: "Location filter",
-          width: 1,
-          options: [
-            { value: "all", label: COMMON_FILTER_LABELS.ALL_LOCATIONS },
-            { value: "main-city", label: "filters.sampleCities.athens" },
-            {
-              value: "alternative-city",
-              label: "filters.sampleCities.thessaloniki",
-            },
-            { value: "city3", label: "filters.sampleCities.patras" },
-            { value: "city4", label: "filters.sampleCities.heraklion" },
-            { value: "city5", label: "filters.sampleCities.volos" },
-            { value: "city6", label: "filters.sampleCities.kavala" },
-            { value: "city7", label: "filters.sampleCities.lamia" },
-          ],
-        },
-        {
-          id: "company",
-          type: "select",
-          label: FL.company,
-          placeholder: SP.company_placeholder,
-          ariaLabel: "Company filter",
-          width: 1,
-          options: [
-            { value: "all", label: COMMON_FILTER_LABELS.ALL_COMPANIES },
-            { value: "company1", label: "filters.sampleCompanies.companyA" },
-            { value: "company2", label: "filters.sampleCompanies.companyB" },
-            { value: "company3", label: "filters.sampleCompanies.companyC" },
-          ],
-        },
+        selectField("location", FL.location, SP.location_placeholder, "Location filter", [
+          { value: "all", label: COMMON_FILTER_LABELS.ALL_LOCATIONS },
+        ]),
       ],
     },
     {
@@ -338,21 +306,13 @@ export const projectFiltersConfig: FilterPanelConfig = {
             { value: "delayed", label: "filters.status.delayed" },
           ],
         },
-        {
-          id: "priority",
-          type: "select",
-          label: FL.priority,
-          placeholder: SP.priority_placeholder,
-          ariaLabel: "Priority filter",
-          width: 1,
-          options: [
-            { value: "all", label: COMMON_FILTER_LABELS.ALL_PRIORITIES },
-            { value: "critical", label: PRIORITY_LABELS.critical },
-            { value: "high", label: PRIORITY_LABELS.high },
-            { value: "medium", label: PRIORITY_LABELS.medium },
-            { value: "low", label: PRIORITY_LABELS.low },
-          ],
-        },
+        selectField("priority", FL.priority, SP.priority_placeholder, "Priority filter", [
+          { value: "all", label: COMMON_FILTER_LABELS.ALL_PRIORITIES },
+          { value: "critical", label: PRIORITY_LABELS.critical },
+          { value: "high", label: PRIORITY_LABELS.high },
+          { value: "medium", label: PRIORITY_LABELS.medium },
+          { value: "low", label: PRIORITY_LABELS.low },
+        ]),
       ],
     },
     {
@@ -397,18 +357,9 @@ export const projectFiltersConfig: FilterPanelConfig = {
             { value: "all", label: COMMON_FILTER_LABELS.ALL_COMPANIES },
           ],
         },
-        {
-          id: "location",
-          type: "select",
-          label: FL.location,
-          placeholder: SP.location_placeholder,
-          ariaLabel: "Location filter",
-          width: 1,
-          // [ENTERPRISE]: Dynamic options populated from Firestore projects data
-          options: [
-            { value: "all", label: COMMON_FILTER_LABELS.ALL_LOCATIONS },
-          ],
-        },
+        selectField("location", FL.location, SP.location_placeholder, "Location filter", [
+          { value: "all", label: COMMON_FILTER_LABELS.ALL_LOCATIONS },
+        ]),
         {
           id: "client",
           type: "select",
@@ -435,7 +386,6 @@ export const defaultBuildingFilters: BuildingFilterState = {
   status: [],
   type: [],
   location: [],
-  company: [],
   priority: [],
   energyClass: [],
   renovation: [],

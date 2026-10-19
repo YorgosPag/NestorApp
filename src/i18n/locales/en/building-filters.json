@@ -149,28 +149,6 @@
       "containsTower": "Contains Tower",
       "containsComplex": "Contains Complex"
     },
-    "sampleProjects": {
-      "projectA": "Project A",
-      "projectB": "Project B",
-      "projectC": "Project C",
-      "projectD": "Project D"
-    },
-    "sampleCompanies": {
-      "companyA": "Company A",
-      "companyB": "Company B",
-      "companyC": "Company C",
-      "companyD": "Company D"
-    },
-    "sampleCities": {
-      "athens": "Athens",
-      "thessaloniki": "Thessaloniki",
-      "patras": "Patras",
-      "heraklion": "Heraklion",
-      "volos": "Volos",
-      "kavala": "Kavala",
-      "lamia": "Lamia",
-      "rhodes": "Rhodes"
-    },
     "energyClass": {
       "aPlus": "A+",
       "a": "A",

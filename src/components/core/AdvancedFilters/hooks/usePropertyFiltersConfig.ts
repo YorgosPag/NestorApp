@@ -35,6 +35,7 @@
 import { useMemo } from 'react';
 import { propertyListFiltersConfig } from '../configs/propertyFiltersConfig';
 import type { FilterOption, FilterPanelConfig } from '../types';
+import { injectFilterOptions, namedOptions, withAllOption } from './filter-option-injection';
 import { useHierarchyNames, type HierarchyNames } from '@/components/navigation/core/hooks/useHierarchyNames';
 import { useFloorLabel } from '@/hooks/useFloorLabel';
 import { locationChoices, type LocatedProperty, type LocationSelection } from '@/lib/properties/property-location';
@@ -61,31 +62,6 @@ const NO_SELECTION: LocationSelection = {};
 /** Μη κενά αλφαριθμητικά, μοναδικά, ταξινομημένα — για το είδος (κλειδί λεξιλογίου). */
 function distinctNames(values: readonly (string | null | undefined)[]): string[] {
   return Array.from(new Set(values.filter((v): v is string => v !== undefined && v !== null && v !== ''))).sort();
-}
-
-/** `[όλα] + οι πραγματικές τιμές` — η σειρά που περιμένει κάθε select του πίνακα. */
-function withAllOption(allLabel: string, options: readonly FilterOption[]): FilterOption[] {
-  return [{ value: 'all', label: allLabel }, ...options];
-}
-
-/**
- * Ταυτότητες → επιλογές με όνομα. Τα επιλυμένα αλφαβητικά (ελληνική σύγκριση)· όσα δεν έχουν όνομα
- * ακόμη, στο τέλος, με ουδέτερη ετικέτα.
- */
-function namedOptions(
-  ids: readonly string[],
-  nameOf: (id: string) => string | null,
-  unknownLabel: string,
-): FilterOption[] {
-  const named: FilterOption[] = [];
-  const unnamed: FilterOption[] = [];
-  for (const id of ids) {
-    const name = nameOf(id);
-    if (name === null) unnamed.push({ value: id, label: unknownLabel });
-    else named.push({ value: id, label: name, verbatim: true });
-  }
-  named.sort((a, b) => a.label.localeCompare(b.label, 'el', { numeric: true }));
-  return [...named, ...unnamed];
 }
 
 /** Οι επιλογές που προκύπτουν **από τα ίδια τα ακίνητα**, κλειδωμένες στο όνομα πεδίου. */
@@ -131,17 +107,6 @@ export function usePropertyFiltersConfig(
   return useMemo(() => {
     const optionsByField = buildOptionsByField(properties, { project, building }, names, floorLabel);
 
-    // Βαθύ αντίγραφο: ο πίνακας είναι **δεδομένα**, και η έγχυση δεν επιτρέπεται να
-    // μεταλλάξει τη σταθερά που μοιράζονται όλες οι οθόνες.
-    const config = JSON.parse(JSON.stringify(baseConfig)) as FilterPanelConfig;
-
-    for (const row of config.rows) {
-      for (const field of row.fields) {
-        const options = optionsByField.get(field.id);
-        if (options) field.options = options;
-      }
-    }
-
-    return config;
+    return injectFilterOptions(baseConfig, optionsByField);
   }, [properties, baseConfig, project, building, names, floorLabel]);
 }
