@@ -8,7 +8,8 @@
 'use client';
 
 import React from 'react';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { EntityAvatar } from '@/design-system/primitives/Avatar/EntityAvatar';
+import type { EntityAvatarSize, EntityAvatarSpec } from '@/design-system/primitives/Avatar/entity-avatar.types';
 import { LucideIcon } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useDetailsSheetActions, type DetailsSheetActionsSlot } from '@/core/layouts/details-sheet-actions';
@@ -16,7 +17,6 @@ import { EntityHeaderActions } from './EntityHeaderActions';
 import { RecordHeaderActions } from './RecordHeaderActions';
 import { orderEntityActions } from './entity-action-presets';
 import { cn } from '@/lib/utils';
-import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Centralized spacing tokens
@@ -101,8 +101,12 @@ export interface EntityHeaderProps {
   // Why: badges[] renders below and is non-interactive; this slot keeps the
   // pill on the title line — Linear/Gmail pattern for entity state.
   titleAdornment?: React.ReactNode;
-  avatarImageUrl?: string; // Optional avatar/photo URL to display instead of icon
-  onAvatarClick?: () => void; // Optional click handler for avatar image
+  /** Identity image (photo / logo / monogram) in place of the icon — ADR-190 §Display */
+  avatar?: EntityAvatarSpec;
+  /** Opens the image viewer; makes the avatar a button */
+  onAvatarClick?: () => void;
+  /** Accessible name of that button */
+  avatarActivateLabel?: string;
 
   // 🏢 ENTERPRISE: Flat icon color from NAVIGATION_ENTITIES (SSoT)
   // When provided → flat icon with this color (like breadcrumb). When omitted → gradient bg container.
@@ -127,6 +131,13 @@ export interface EntityHeaderProps {
   children?: React.ReactNode;
 }
 
+/** Avatar box per header variant — matches the icon box it replaces (xl2 = 48 · xl = 32). */
+const AVATAR_SIZE_BY_VARIANT: Readonly<Record<NonNullable<EntityHeaderProps['variant']>, EntityAvatarSize>> = {
+  default: 'lg',
+  compact: 'sm',
+  detailed: 'sm',
+};
+
 // ===== MAIN ENTITY HEADER COMPONENT =====
 
 export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
@@ -136,8 +147,9 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
   badges = [],
   actions = [],
   titleAdornment,
-  avatarImageUrl,
+  avatar,
   onAvatarClick,
+  avatarActivateLabel,
   iconColor,
   variant = 'default',
   className,
@@ -183,8 +195,9 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
         subtitle={subtitle}
         badges={badges}
         titleAdornment={titleAdornment}
-        avatarImageUrl={avatarImageUrl}
+        avatar={avatar}
         onAvatarClick={onAvatarClick}
+        avatarActivateLabel={avatarActivateLabel}
         details={details}
       >
         {children}
@@ -224,29 +237,14 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
           ? "flex flex-col gap-4 sm:flex-row sm:items-start flex-1 basis-[32rem] min-w-0"
           : "flex items-center gap-3 flex-1 min-w-0"}>
           {/* Media, Icon or Avatar */}
-          {media ? media : avatarImageUrl ? (
-            <Avatar
-              key={avatarImageUrl || 'empty-avatar'}
-              className={cn(
-                `flex-shrink-0 shadow-sm cursor-pointer ${INTERACTIVE_PATTERNS.OPACITY_HOVER} ${TRANSITION_PRESETS.OPACITY}`,
-                iconSizeClasses[variant]
-              )}
-              onClick={onAvatarClick}
-            >
-              <AvatarImage
-                src={avatarImageUrl}
-                alt={`${title} φωτογραφία`}
-                className="object-cover"
-              />
-              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600">
-                <Icon className={cn(
-                  "text-white",
-                  variant === 'detailed' ? iconSizes.sm :
-                  variant === 'compact' ? iconSizes.sm :
-                  iconSizes.md
-                )} />
-              </AvatarFallback>
-            </Avatar>
+          {media ? media : avatar ? (
+            <EntityAvatar
+              {...avatar}
+              size={AVATAR_SIZE_BY_VARIANT[variant]}
+              onActivate={onAvatarClick}
+              activateLabel={avatarActivateLabel}
+              className="shadow-sm"
+            />
           ) : iconColor ? (
             <Icon
               className={cn(
@@ -331,7 +329,7 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
 
 type EntityHeaderInSheetProps = Pick<
   EntityHeaderProps,
-  'icon' | 'title' | 'subtitle' | 'badges' | 'titleAdornment' | 'avatarImageUrl' | 'onAvatarClick' | 'details' | 'children'
+  'icon' | 'title' | 'subtitle' | 'badges' | 'titleAdornment' | 'avatar' | 'onAvatarClick' | 'avatarActivateLabel' | 'details' | 'children'
 > & {
   readonly sheet: DetailsSheetActionsSlot;
   readonly actions: readonly EntityHeaderAction[];
@@ -377,19 +375,20 @@ function useSheetDismissal(
 function EntityHeaderInSheet({
   sheet,
   actions: declaredActions,
-  icon: Icon,
   title,
   subtitle,
   badges = [],
   titleAdornment,
-  avatarImageUrl,
+  avatar,
   onAvatarClick,
+  avatarActivateLabel,
   details,
   children,
 }: EntityHeaderInSheetProps) {
   const colors = useSemanticColors();
-  const iconSizes = useIconSizes();
-  const hasIdentityExtras = Boolean(avatarImageUrl || titleAdornment || subtitle || badges.length > 0);
+  // Στο φύλλο ο τίτλος ζει στη μπάρα ⇒ ένα σκέτο μονόγραμμα θα πρόσθετε γραμμή χωρίς πληροφορία· μόνο εικόνα.
+  const sheetAvatar = avatar?.imageUrl ? avatar : undefined;
+  const hasIdentityExtras = Boolean(sheetAvatar || titleAdornment || subtitle || badges.length > 0);
   const actions = useSheetDismissal(sheet, declaredActions);
   const { host, titleTruncated } = sheet;
 
@@ -405,14 +404,8 @@ function EntityHeaderInSheet({
           )}
           {hasIdentityExtras && (
             <div className="flex min-w-0 flex-wrap items-center gap-2">
-              {avatarImageUrl && (
-                <Avatar
-                  className={cn('shrink-0 cursor-pointer', INTERACTIVE_PATTERNS.OPACITY_HOVER, iconSizes.xl)}
-                  onClick={onAvatarClick}
-                >
-                  <AvatarImage src={avatarImageUrl} alt={title} className="object-cover" />
-                  <AvatarFallback><Icon className={iconSizes.sm} /></AvatarFallback>
-                </Avatar>
+              {sheetAvatar && (
+                <EntityAvatar {...sheetAvatar} size="sm" onActivate={onAvatarClick} activateLabel={avatarActivateLabel} />
               )}
               {titleAdornment}
               {subtitle && <p className={cn('min-w-0 truncate text-sm', colors.text.muted)}>{subtitle}</p>}

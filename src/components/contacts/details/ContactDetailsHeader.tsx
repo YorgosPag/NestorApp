@@ -13,10 +13,10 @@ import type {
   Contact,
   ContactType
 } from '@/types/contacts';
-import type { ContactStatus } from '@/core/types/BadgeTypes';
 import { isNonEmptyString } from '@/lib/type-guards';
-import { getContactDisplayName, getContactInitials, isIndividualContact, isCompanyContact, isServiceContact } from '@/types/contacts';
-import { CONTACT_TYPES, getContactIcon } from '@/constants/contacts';
+import { contactImageSourceUrl, resolveContactIdentityImage } from '@/lib/contacts/contact-identity-image';
+import { isIndividualContact } from '@/types/contacts';
+import { getContactIcon } from '@/constants/contacts';
 import type { PersonaType } from '@/types/contacts/personas';
 import { ROLE_PERSONA_TYPES } from '@/config/persona-config';
 import { PersonaSelector } from '@/components/contacts/personas/PersonaSelector';
@@ -83,72 +83,34 @@ export function ContactDetailsHeader({
   }, [contact.id]);
   const Icon = getContactIcon(type);
 
-  // ✅ ENTERPRISE: Type-safe property access using type guards
-  const _status: ContactStatus | undefined = contact.status;
-
-  // 🏢 ENTERPRISE: Safe property accessors based on contact type using type guards
+  // 🖼️ ADR-190 §Display — η εικόνα ταυτότητας από τον ΕΝΑ επιλυτή (ίδιος με πλέγμα και λίστα).
+  const avatar = resolveContactIdentityImage(contact);
+  const displayName = avatar.name;
+  // Το ωμό URL (χωρίς παράμετρο έκδοσης) — αυτό συγκρίνεται με τα στοιχεία της συλλογής.
+  const sourceUrl = contactImageSourceUrl(contact);
   const photoURL = isIndividualContact(contact) ? contact.photoURL : undefined;
-  const logoURL = (isCompanyContact(contact) || isServiceContact(contact)) ? contact.logoURL : undefined;
+  const logoURL = isIndividualContact(contact) ? undefined : contact.logoURL;
   const multiplePhotoURLs = isIndividualContact(contact) ? contact.multiplePhotoURLs : undefined;
-  const displayName = getContactDisplayName(contact);
-  const _initials = getContactInitials(contact);
-
-  // 🎯 SMART AVATAR LOGIC: Different URL based on contact type
-  const getAvatarImageUrl = () => {
-    switch (type) {
-      case CONTACT_TYPES.INDIVIDUAL:
-        return photoURL;
-      case CONTACT_TYPES.COMPANY:
-      case CONTACT_TYPES.SERVICE:
-        return logoURL;
-      default:
-        return photoURL;
-    }
-  };
-
-  const rawAvatarImageUrl = getAvatarImageUrl();
-
-  // 🔥 ULTIMATE FIX: Cache buster για browser image cache ΜΟΝΟ για Individuals
-  // ΠΡΟΒΛΗΜΑ: Browser cache κρατάει τις Firebase images για 1 χρόνο (Cache-Control: public, max-age=31536000)
-  // ΛΥΣΗ: Προσθήκη timestamp στην URL ώστε ο browser να φορτώσει fresh εικόνα
-  // TESTED: 2025-12-04 - Τελική λύση μετά από 12+ ώρες debugging με browser cache
-  // ΣΗΜΕΙΩΣΗ: Cache buster μόνο όταν ΠΡΑΓΜΑΤΙΚΑ χρειάζεται
-  const needsCacheBuster = type === 'individual' &&
-                          Array.isArray(multiplePhotoURLs) &&
-                          multiplePhotoURLs?.length === 0;
-
-  const avatarImageUrl = rawAvatarImageUrl
-    ? (needsCacheBuster
-        ? `${rawAvatarImageUrl}?v=${contact.updatedAt || Date.now()}`
-        : rawAvatarImageUrl)
-    : undefined;
 
   // Handler για άνοιγμα photo modal με smart gallery logic για όλους τους τύπους
   const handleAvatarClick = () => {
-    if (!avatarImageUrl) return;
+    if (!sourceUrl) return;
 
     // 🎯 SMART LOGIC: Gallery navigation για Individual με multiplePhotoURLs
     if (type === 'individual' && multiplePhotoURLs && multiplePhotoURLs.length > 0) {
       const validPhotos = multiplePhotoURLs.filter(isNonEmptyString);
-      const currentPhotoIndex = validPhotos.findIndex((url) => url === avatarImageUrl);
-      const photoIndex = currentPhotoIndex >= 0 ? currentPhotoIndex : 0;
-
-      // Άνοιγμα με gallery navigation (βελάκια working!)
-      openGalleryPhotoModal(photoModal, contact, photoIndex);
+      const currentPhotoIndex = validPhotos.findIndex((url) => url === sourceUrl);
+      openGalleryPhotoModal(photoModal, contact, currentPhotoIndex >= 0 ? currentPhotoIndex : 0);
 
     } else if (type === 'company' || type === 'service') {
-      // Πλοήγηση συλλογής για εταιρεία/υπηρεσία: [logoURL, photoURL].
-      //
-      // ⚠️ **Ήταν ΔΥΟ ταυτόσημα σκέλη** (CHECK 3.28, 2026-09-12): το `company` και το `service` είχαν
-      // αντιγραμμένο τον ίδιο κώδικα λέξη προς λέξη, με μόνη διαφορά δύο μεταβλητές που **κανείς δεν
-      // διάβαζε** (`_companyLogoURL` / `_serviceLogoURL`). Δύο αντίγραφα = δύο σημεία να ξεχάσεις.
+      // Πλοήγηση συλλογής για εταιρεία/υπηρεσία: [logoURL, photoURL] (ήταν δύο ταυτόσημα σκέλη, CHECK 3.28).
       const validPhotos = [logoURL, photoURL].filter(isNonEmptyString);
       if (validPhotos.length > 1) {
-        const currentPhotoIndex = validPhotos.findIndex((url) => url === avatarImageUrl);
+        const currentPhotoIndex = validPhotos.findIndex((url) => url === sourceUrl);
         const galleryContact = { ...contact, multiplePhotoURLs: validPhotos } as Contact;
         openGalleryPhotoModal(photoModal, galleryContact, currentPhotoIndex >= 0 ? currentPhotoIndex : 0);
       } else {
-        openContactAvatarModal(photoModal, contact, avatarImageUrl === logoURL ? 'logo' : 'avatar');
+        openContactAvatarModal(photoModal, contact, sourceUrl === logoURL ? 'logo' : 'avatar');
       }
 
     } else {
@@ -166,8 +128,12 @@ export function ContactDetailsHeader({
           key={`contact-header-${contact.id}-${avatarKey}`}
           icon={Icon}
           title={displayName}
-          avatarImageUrl={avatarImageUrl}
-          onAvatarClick={avatarImageUrl ? handleAvatarClick : undefined}
+          avatar={avatar}
+          onAvatarClick={sourceUrl ? handleAvatarClick : undefined}
+          avatarActivateLabel={t(
+            avatar.kind === 'person' ? 'contacts-core:header.avatar.openPhoto' : 'contacts-core:header.avatar.openLogo',
+            { name: displayName },
+          )}
           actions={
             // ADR-317: Adaptive actions — inline sub-form focus wins over global edit mode.
             // When an inline form is active (e.g. BankAccountForm), Save/Cancel delegate to it

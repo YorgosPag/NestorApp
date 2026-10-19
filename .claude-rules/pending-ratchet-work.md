@@ -4100,6 +4100,13 @@
 
 ## Pending tasks (priority order)
 
+### 👤 Χειροποίητα `Avatar` + `AvatarFallback` — 7 οθόνες εκτός του `EntityAvatar` (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-18, ADR-190 §Display · N.0.2)
+- **SSoT**: `EntityAvatar` (`design-system/primitives/Avatar/`) — σχήμα από `kind`, μονόγραμμα AA (`monogram-tone.ts`), `<img>` lazy μέσω `identityImageSource` (μικρογραφία από optimizer).
+- **Μένουν** (κάθε μία με δικό της fallback): `components/admin/role-management/components/UserTable.tsx` (χρώμα = **άθροισμα χαρακτήρων** ⇒ αναγραμματισμοί συγκρούονται· παλέτα με επαναλήψεις + `bg-destructive`), `components/shared/customer-info/components/{CustomerInfoCompact,UnifiedCustomerCard}.tsx`, `components/crm/pages/CrmTeamsPageContent.tsx`, `components/header/user-menu.tsx`, `components/network-messaging/AudienceRosterPanel.tsx`, `app/(app)/o/[workspace]/account/layout.tsx`.
+- **Δεύτερη υλοποίηση αρχικών**: `components/network-messaging/thread-labels.ts` `initialsOf` — κρατά τόνους («ΆΤ») και παίρνει πρώτη+**τελευταία** λέξη, ενώ το `getInitials` (ADR-209) πρώτη+δεύτερη. ⚠️ Ορατή αλλαγή — απόφαση Giorgio.
+- **Στρώση**: το `getInitials` ζει στο `types/contacts/helpers.ts` αλλά είναι γενικό· το `EntityAvatar` το εισάγει από εκεί. Μετακίνηση σε `lib/text/initials.ts` (5+ καταναλωτές).
+- ⚠️ Τα avatar χρηστών (`user.photoURL` της Google, `lh3.googleusercontent.com`) **δεν** είναι στον κάδο ⇒ το `identityImageSource` τα περνά αυτούσια. Για μικρογραφία εκεί: η Google δέχεται `=s96-c` — **δεύτερη** γραμμή στο `remote-image-sources.json`, όχι κώδικας ανά οθόνη.
+
 ### 🪟 Κάρτα μέσα στην κάρτα λεπτομερειών — οι υπόλοιπες καρτέλες εκτός αρχείων (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-17, ADR-912 §12.14 · N.0.2)
 - **SSoT**: `NESTED_IN_DETAILS_FLUSH` / `NESTED_IN_DETAILS_FLUSH_SECTION` (`core/containers/DetailsContainer.tsx`). Στο κινητό, μέσα σε `[data-details-flush]`, η κάρτα χάνει πλαίσιο, σκιά, φόντο και `px`.
 - **Εφαρμόστηκε ΜΟΝΟ** στην κάρτα του `EntityFilesManager` (όλες οι καρτέλες αρχείων).

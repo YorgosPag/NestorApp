@@ -38,6 +38,10 @@
       "save": "Save",
       "cancel": "Cancel",
       "delete": "Move to Trash"
+    },
+    "avatar": {
+      "openPhoto": "View photo: {name}",
+      "openLogo": "View logo: {name}"
     }
   },
   "list": {
