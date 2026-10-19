@@ -65,6 +65,7 @@ import { runMandateExpiry } from '@/lib/cron/jobs/mandate-expiry.job';
 import { runOAuthCleanup } from '@/lib/cron/jobs/oauth-cleanup.job';
 import { runOnboardingReminder } from '@/lib/cron/jobs/onboarding-reminder.job';
 import { runOverdueAlerts } from '@/lib/cron/jobs/overdue-alerts.job';
+import { runPropertyHandoverReconcile } from '@/lib/cron/jobs/property-handover-reconcile.job';
 import { runPurgeDeletedEntities } from '@/lib/cron/jobs/purge-deleted-entities.job';
 import { runStayChannelImport } from '@/lib/cron/jobs/stay-channel-import.job';
 import { runStayHoldExpiry } from '@/lib/cron/jobs/stay-hold-expiry.job';
@@ -596,6 +597,23 @@ export const CRON_SCHEDULE: readonly CronJobDefinition[] = [
     maxRuntimeMinutes: 10,
     leaseMinutes: 12,
     run: runTourTilesetBake,
+  },
+  {
+    slug: 'property-handover-reconcile',
+    path: '/api/cron/property-handover-reconcile',
+    description: 'Δίχτυ παράδοσης φακέλου: πώληση ⇄ παραδόσεις ανά αγοραστή, με τον ΙΔΙΟ γραφέα συμφιλίωσης (ADR-916 §5.4)',
+    enabled: true,
+    // 🔑 **Ημερήσια, γιατί είναι ΔΙΧΤΥ και όχι μηχανισμός.** Κάθε γραφέας πώλησης (PATCH ακινήτου · νομική
+    // φάση) συμφιλιώνει στο ίδιο αίτημα· εδώ μετριέται μόνο αν κάποιος ξέφυγε (`changed` οφείλει να είναι 0).
+    //
+    // ⚠️ **04:51**: μετά τη συμφιλίωση μέσων (04:41), σε λεπτό που δεν κατέχει κανείς (*/5 από :02 → :52 ·
+    // */10 → :50 · */10 από :04 → :54 · */15 από :08 → :53).
+    schedule: '51 4 * * *',
+    timezone: CRON_TIMEZONE,
+    checkinMarginMinutes: 20,
+    maxRuntimeMinutes: 10,
+    leaseMinutes: 15,
+    run: runPropertyHandoverReconcile,
   },
 
   // ─── Δηλωμένα αλλά ανενεργά ────────────────────────────────────────────────

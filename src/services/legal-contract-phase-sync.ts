@@ -33,6 +33,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { EntityAuditService } from '@/services/entity-audit.service';
+import { syncPropertyHandovers } from '@/services/property-handover/property-handover-write.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import type { ContractPhase, LegalPhase } from '@/types/legal-contracts';
 
@@ -164,6 +165,10 @@ export async function updatePropertyLegalPhase(
         companyId,
       });
     }
+
+    // ADR-916 §5.4 — υπογραφή οριστικού ⇒ η παράδοση φακέλου οφείλεται. Συμφιλίωση με την ΤΡΕΧΟΥΣΑ
+    // αλήθεια του ακινήτου (ιδεμπότητη)· ποτέ δεν πετά, άρα δεν αγγίζει το αποτέλεσμα της φάσης.
+    await syncPropertyHandovers(db, propertyId, { cause: 'legal-phase', performedBy: performer.uid });
   } catch (error) {
     logger.error(
       `[LegalContractPhaseSync] Failed to update legalPhase for ${propertyId}:`,

@@ -843,6 +843,7 @@
       "owner_property": "Listing",
       "network_act_team": "Act team",
       "property_dossier": "Property dossier",
+      "property_handover": "Dossier handover",
       "conveyance_case": "Conveyance case",
       "engagement": "Case engagement"
     },

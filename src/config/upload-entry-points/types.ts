@@ -61,6 +61,16 @@ export interface CaptureMetadata {
 // ============================================================================
 
 /**
+ * ADR-916 §5.1 — **παραδίδεται στον αγοραστή;** Η δήλωση ζει **εδώ**, μία φορά ανά είδος εγγράφου· την κρίση
+ * την κάνει **μόνο** το `lib/property-handover/handover-disposition.ts`.
+ *
+ * - `deliver`  — μπαίνει στον φάκελο του αγοραστή (κατόψεις, ΠΕΑ, ΥΔΕ, άδειες, φωτογραφίες…)
+ * - `internal` — δεν φεύγει ποτέ από το γραφείο (τιμολόγια, φορολογικά…)
+ * - `review`   — **δεν** φεύγει αυτόματα· το γραφείο αποφασίζει (γενικό έγγραφο, συμβόλαιο με στοιχεία τρίτων)
+ */
+export type HandoverDisposition = 'deliver' | 'internal' | 'review';
+
+/**
  * Upload Entry Point Definition.
  * Defines what type of document the user wants to upload.
  */
@@ -121,6 +131,11 @@ export interface UploadEntryPoint {
    * even if the group targets both building + project.
    */
   visibleIn?: EntityLevel[];
+  /**
+   * ADR-916 §5.1 — παραδίδεται στον αγοραστή; Απούσα ⇒ αποφασίζει η ομάδα μελετών, αλλιώς η **κατηγορία**
+   * (`HANDOVER_DISPOSITION_BY_CATEGORY`). Δηλώνεται **μόνο** όπου η κατηγορία δεν αρκεί.
+   */
+  handover?: HandoverDisposition;
 }
 
 /**

@@ -187,6 +187,15 @@ const BOUNDARIES = [
     remedy: '«propertyDossierFromDocument(raw, id)»',
   },
   {
+    // 🤝 ADR-916 §5.2 — Η ΠΑΡΑΔΟΣΗ ΦΑΚΕΛΟΥ ΑΠΟ ΠΩΛΗΣΗ, και η γραμμή μπαίνει ΜΑΖΙ με το σύνορο (όπως ο φάκελος).
+    //    Αναγνώστες: ο γραφέας συμφιλίωσης (μέσα σε συναλλαγή) και η πόρτα προεπισκόπησης.
+    adr: 'ADR-916 §5.2',
+    typeName: 'PropertyHandover',
+    custodian: 'src/lib/property-handover/property-handover-from-document.ts',
+    module: 'property-handover-from-document',
+    remedy: '«propertyHandoverFromDocument(raw, id)»',
+  },
+  {
     // 🔴 ADR-862 Φ0 Β1 — Η ΠΕΜΠΤΗ ΓΡΑΜΜΗ, ΚΑΙ Η ΠΡΩΤΗ ΠΟΥ ΦΥΛΑΕΙ **ΟΡΑΤΟΤΗΤΑ**, ΟΧΙ ΟΘΟΝΗ.
     //
     // Τα τέσσερα προηγούμενα σύνορα φυλάνε **οθόνη**: πεδίο που λείπει ⇒ λευκή σελίδα.

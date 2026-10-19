@@ -83,6 +83,9 @@ const TRACKED_COLLECTION_KEYS = new Set([
   // ADR-866 Φ1.1 — ο φάκελος του ακινήτου (audit entityType: 'property_dossier', βιβλίο 'custody').
   // Κάθε γραφή περνά από το property-dossier-write.service.ts (ίχνος μετά το commit).
   'PROPERTY_DOSSIERS',
+  // ADR-916 §5.2 — η παράδοση φακέλου από πώληση (audit entityType: 'property_handover', βιβλίο 'company').
+  // Κάθε γραφή περνά από το property-handover-write.service.ts (ίχνος μετά το commit).
+  'PROPERTY_HANDOVERS',
   // ADR-867 Β5 — η ομάδα της πράξης (audit entityType: 'network_act_team', βιβλίο 'company').
   // Κάθε αλλαγή μετά τη γέννηση περνά από το `commitActTeamVersion` του act-team-writer.ts.
   'NETWORK_ACT_TEAMS',
@@ -271,6 +274,9 @@ const AUDIT_RECORDER_DELEGATES = [
   // Η γραμμή μιας ΠΑΡΑΓΩΓΗΣ γραφής των αλυσίδων ορόφου (στοίβα · ειδικές στάθμες · φιλοξενούμενα): εκτελεστής η
   // μηχανή, αιτία η ανθρώπινη πράξη. Τέσσερα αρχεία είχαν η καθεμία το δικό της αντίγραφο.
   { fn: 'recordDerivedWrites', file: 'src/app/api/floors/_shared/floor-cascade-audit.ts' },
+  // Η γραμμή μιας γραφής **διακομιστή** με μητρώο παρακολουθούμενων πεδίων (διαφορά → ενέργεια → εγγραφή ·
+  // ιδεμπότητα): αγγελία (`owner-property-audit`) · φάκελος (`property-dossier-audit`) · παράδοση (ADR-916, απευθείας).
+  { fn: 'recordTrackedEntityWrite', file: 'src/services/entity-audit-tracked-write.ts' },
 ];
 // ---------------------------------------------------------------------------
 // ANSI colours (no-op on non-TTY)

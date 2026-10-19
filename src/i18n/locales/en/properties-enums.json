@@ -341,6 +341,11 @@
     "closed": "Closed",
     "withdrawn": "Withdrawn"
   },
+  "handoverLifecycle": {
+    "awaitingCompletion": "Awaiting sale completion",
+    "ready": "Ready for handover",
+    "cancelled": "Cancelled"
+  },
   "marketingAudience": {
     "custodians": "Private — custodians only",
     "network": "Private — professional network",

@@ -1401,6 +1401,14 @@ const PROPERTY_DOSSIER_TRACKED_FIELDS_RAW: Record<string, string> = {
 export const PROPERTY_DOSSIER_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(PROPERTY_DOSSIER_TRACKED_FIELDS_RAW, {});
 
+/**
+ * Property-handover audit registry (ADR-916 §5.2). Μόνο ο **κύκλος ζωής**: ο παραλήπτης και το ακίνητο είναι
+ * η ταυτότητα της παράδοσης (αμετάβλητα), και η ολοκλήρωση γράφεται **μαζί** με τη μετάβαση σε `ready`.
+ */
+export const PROPERTY_HANDOVER_TRACKED_FIELDS: Record<string, TrackedFieldDef> = {
+  lifecycle: { kind: 'scalar', label: 'lifecycle', enumCatalog: AUDIT_VALUE_CATALOGS.propertyHandoverLifecycle },
+};
+
 /** Project audit registry — `field → TrackedFieldDef`. */
 export const PROJECT_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(PROJECT_TRACKED_FIELDS_RAW, PROJECT_COLLECTION_DEFS);
@@ -1492,6 +1500,9 @@ export function getTrackedFieldsForEntityAuditType(
     // ADR-866 Φ1.1 — η δεύτερη οντότητα βιβλίου `custody`.
     case 'property_dossier':
       return PROPERTY_DOSSIER_TRACKED_FIELDS;
+    // ADR-916 §5.2 — η παράδοση φακέλου από πώληση (βιβλίο `company`).
+    case 'property_handover':
+      return PROPERTY_HANDOVER_TRACKED_FIELDS;
     default:
       return null;
   }

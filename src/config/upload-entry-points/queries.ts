@@ -15,7 +15,7 @@ import type { PersonaType } from '@/types/contacts/personas';
 import type { ContactType } from '@/types/contacts';
 import type { EntityLevel, StudyGroup } from '../study-groups-config';
 import { getStudyGroupMeta } from '../study-groups-config';
-import type { UploadEntryPoint, UploadEntryPointsConfig, FloorInfo } from './types';
+import type { UploadEntryPoint, UploadEntryPointsConfig, FloorInfo, HandoverDisposition } from './types';
 
 import { CONTACT_ENTRY_POINTS } from './entries-contact';
 import { BUILDING_ENTRY_POINTS } from './entries-building';
@@ -285,4 +285,38 @@ export function getUngroupedEntryPoints(entityType: EntityType): UploadEntryPoin
  */
 export function hasPerFloorEntries(entityType: EntityType): boolean {
   return getEntryPointsForEntity(entityType).some((ep) => ep.perFloor);
+}
+
+// ============================================================================
+// Handover declaration (ADR-916 §5.1)
+// ============================================================================
+
+/** Ό,τι κρατά ένα αποθηκευμένο αρχείο για τη θέση του στον κατάλογο. */
+export interface CatalogFileKey {
+  readonly entryPointId?: string | null;
+  readonly purpose?: string | null;
+}
+
+/**
+ * Η θέση του καταλόγου που περιγράφει ένα **αποθηκευμένο** αρχείο: πρώτα το `entryPointId` (ακριβές), αλλιώς το
+ * `purpose`. Ψάχνει στις θέσεις της οντότητας **και** στις μελέτες — ένα ΠΕΑ ανεβαίνει και στη μονάδα.
+ *
+ * ⚠️ Μετρημένο 2026-10-19 (ADR-916 §2.3): **0/100** αρχεία ακινήτου έχουν `entryPointId`, και το `purpose`
+ * γράφεται και από αγωγούς **εκτός** καταλόγου (`document` · `photo` · `video`) ⇒ `undefined` είναι συνηθισμένη
+ * απάντηση, όχι σφάλμα — αποφασίζει τότε η κατηγορία.
+ */
+export function findCatalogEntryForFile(
+  entityType: EntityType,
+  key: CatalogFileKey,
+): UploadEntryPoint | undefined {
+  const candidates = [...getEntryPointsForEntity(entityType), ...STUDY_ENTRIES];
+  const byId = key.entryPointId ? candidates.find((entry) => entry.id === key.entryPointId) : undefined;
+  if (byId) return byId;
+  return key.purpose ? candidates.find((entry) => entry.purpose === key.purpose) : undefined;
+}
+
+/** Η δηλωμένη απόφαση παράδοσης μιας θέσης — δική της, αλλιώς της ομάδας μελετών· `undefined` ⇒ αποφασίζει η κατηγορία. */
+export function declaredHandoverOf(entry: UploadEntryPoint): HandoverDisposition | undefined {
+  if (entry.handover) return entry.handover;
+  return entry.group ? getStudyGroupMeta(entry.group)?.handover : undefined;
 }

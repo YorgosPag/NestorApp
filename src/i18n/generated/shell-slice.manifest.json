@@ -72,7 +72,7 @@
     "src/i18n/generated/routes/tour-invite__token.el.json": "aeec8bc36081f1b5a8c49674c18a1a367f5d97d69bad1124f15f0a1349d110cf",
     "src/i18n/generated/routes/vendor__quote.el.json": "413f934a43a5be908bb20d0c0c0c92d312922631921b3363e9c49b3200b7a7ae",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "208f8a9dcdac614a53b9732535972f221a914d21f349781e2bd2f65f2e28d223",
+    "src/i18n/generated/shell-slice.el.json": "ca73e92159546cc930cc6b5126e623320a1786ff3248798a1c3bcd983502012c",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "generator": "scripts/generate-i18n-shell-slice.js",
@@ -151,7 +151,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "c0730813822175f62c6030e16a23e6d76c0e68600382ed1b2e66313498b38fdb",
+  "inputsSha256": "fb6b3b28a424eebf5064a74099bb6aeee1877936947a9afb49bb8e22a44b2ac8",
   "languages": [
     "el"
   ],
@@ -11190,7 +11190,7 @@
   ],
   "stats": {
     "matchedKeys": 255,
-    "sliceBytes": 777691
+    "sliceBytes": 777755
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

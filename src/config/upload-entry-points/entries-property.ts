@@ -100,6 +100,8 @@ export const PROPERTY_ENTRY_POINTS: UploadEntryPoint[] = [
       },
       icon: 'FileSignature',
       order: 10,
+      // ADR-916 §5.1 — μπορεί να είναι συμβόλαιο ΠΡΟΗΓΟΥΜΕΝΟΥ (ακυρωμένου) αγοραστή ⇒ στοιχεία τρίτου: αποφασίζει το γραφείο.
+      handover: 'review',
     },
     {
       id: 'unit-certificate',
@@ -116,6 +118,7 @@ export const PROPERTY_ENTRY_POINTS: UploadEntryPoint[] = [
       },
       icon: 'Award',
       order: 11,
+      handover: 'deliver', // ADR-916 §5.1 — ΠΕΑ / πιστοποιητικά: πυρήνας του πακέτου παράδοσης
     },
     {
       id: 'unit-permit',
@@ -148,6 +151,7 @@ export const PROPERTY_ENTRY_POINTS: UploadEntryPoint[] = [
       },
       icon: 'Receipt',
       order: 13,
+      handover: 'internal', // ADR-916 §5.1 — οικονομικά του γραφείου (και ο τομέας `accounting` το λέει ήδη)
     },
     {
       id: 'unit-deed',
@@ -164,6 +168,7 @@ export const PROPERTY_ENTRY_POINTS: UploadEntryPoint[] = [
       },
       icon: 'Scale',
       order: 14,
+      handover: 'review', // ADR-916 §5.1 — στοιχεία συμβαλλομένων· ο αγοραστής παίρνει το δικό του από τον συμβολαιογράφο
     },
     {
       // ADR-915 §32 — η ΥΔΕ αφορά την παροχή ΤΗΣ ΜΟΝΑΔΑΣ ⇒ έγγραφο του ακινήτου, με λήξη (μητρώο λήξεων).
@@ -182,6 +187,7 @@ export const PROPERTY_ENTRY_POINTS: UploadEntryPoint[] = [
       },
       icon: 'FileCheck',
       order: 15,
+      handover: 'deliver', // ADR-916 §5.1 — η ΥΔΕ ακολουθεί την παροχή, άρα τον ιδιοκτήτη
     },
 
     // ------------------------------------------------------------------------
@@ -339,5 +345,6 @@ export const PROPERTY_ENTRY_POINTS: UploadEntryPoint[] = [
       icon: 'File',
       order: 99,
       requiresCustomTitle: true, // 🏢 ENTERPRISE: Mandatory title field (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ)
+      handover: 'review', // ADR-916 §5.1 — «άλλο» έγγραφο: κανείς δεν ξέρει τι είναι χωρίς να το δει
     },
 ];

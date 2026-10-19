@@ -17,7 +17,7 @@
 
 import 'server-only';
 
-import type { DocumentData, Firestore } from 'firebase-admin/firestore';
+import type { DocumentData, Firestore, QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ENTITY_TYPES, FILE_STATUS } from '@/config/domain-constants';
 import type { EvidenceLevel } from '@/config/conveyance-checklist/types';
@@ -172,8 +172,17 @@ function chunk<T>(items: readonly T[]): T[][] {
   return chunks;
 }
 
-/** Ιδιόκτητα αρχεία: ένα ερώτημα ανά τύπο οντότητας (`entityId in [...]`). */
-async function ownedFiles(db: Firestore, companyId: string, targets: readonly EvidenceTarget[], audience: EvidenceAudience): Promise<EvidenceFile[]> {
+/**
+ * **Τα ωμά έγγραφα των αρχείων που ΚΑΤΕΧΟΥΝ οι στόχοι** (μισθωτής · `ready`) — ένα ερώτημα ανά τύπο οντότητας
+ * (`entityId in [...]`). Ο ΕΝΑΣ τρόπος ερώτησης «τα αρχεία αυτών των οντοτήτων»: τον μοιράζονται τα τεκμήρια της
+ * υπόθεσης **και** η παράδοση φακέλου (ADR-916 §5.1) — που χρειάζεται πεδία (`domain` · `category` ·
+ * `classification`) που το `EvidenceFile` δεν κρατά. Ίδιο ερώτημα, δύο μετασχηματισμοί.
+ */
+export async function queryOwnedTargetFileDocs(
+  db: Firestore,
+  companyId: string,
+  targets: readonly EvidenceTarget[],
+): Promise<readonly QueryDocumentSnapshot[]> {
   const byType = new Map<string, EvidenceTarget[]>();
   for (const t of targets) byType.set(t.entityType, [...(byType.get(t.entityType) ?? []), t]);
   const queries = [...byType.entries()].flatMap(([entityType, refs]) =>
@@ -186,8 +195,13 @@ async function ownedFiles(db: Firestore, companyId: string, targets: readonly Ev
         .get(),
     ),
   );
-  const snaps = await Promise.all(queries);
-  return snaps.flatMap((snap) => snap.docs.flatMap((doc) => evidenceFrom(doc.id, doc.data(), ownerTargetsOf(doc.data(), targets), audience)));
+  return (await Promise.all(queries)).flatMap((snap) => snap.docs);
+}
+
+/** Ιδιόκτητα αρχεία ως τεκμήρια. */
+async function ownedFiles(db: Firestore, companyId: string, targets: readonly EvidenceTarget[], audience: EvidenceAudience): Promise<EvidenceFile[]> {
+  const docs = await queryOwnedTargetFileDocs(db, companyId, targets);
+  return docs.flatMap((doc) => evidenceFrom(doc.id, doc.data(), ownerTargetsOf(doc.data(), targets), audience));
 }
 
 /** Συνδεδεμένα αρχεία (`linkedTo` = `fileLinkTag(...)`) — τα δείχνει και το UI. */

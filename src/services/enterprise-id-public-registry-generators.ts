@@ -141,6 +141,15 @@ export abstract class PublicRegistryIdGenerators extends BimEntityIdGenerators {
     return this.mintDeterministicV4Id(P.OWNERSHIP_KAEK_CLAIM, canonicalKaek);
   }
 
+  /**
+   * ADR-916 §5.2 — η **παράδοση φακέλου από πώληση** (`phov_*`), ντετερμινιστική από `(ακίνητο, επαφή αγοραστή)`:
+   * ίδιο ζεύγος ⇒ ίδιο έγγραφο ⇒ δύο συμφιλιώσεις (PATCH · `legalPhase` · δίχτυ) **δεν** γεννούν ποτέ δεύτερη.
+   * Ο σπόρος συντίθεται σε **ένα** σημείο: `propertyHandoverIdOf` (`lib/property-handover/property-handover-id.ts`).
+   */
+  generateDeterministicPropertyHandoverId(seed: string): string {
+    return this.mintDeterministicV4Id(P.PROPERTY_HANDOVER, seed);
+  }
+
   /** ADR-900 §3.8 — η κλειδαριά του ΑΦΜ (`txic_*`), ντετερμινιστική από το **HMAC** του — ο ΑΦΜ δεν γίνεται ποτέ id. */
   generateDeterministicTaxIdentityClaimId(taxIdHmac: string): string {
     return this.mintDeterministicV4Id(P.TAX_IDENTITY_CLAIM, taxIdHmac);

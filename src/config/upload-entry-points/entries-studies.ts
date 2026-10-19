@@ -121,6 +121,7 @@ export const STUDY_ENTRIES: UploadEntryPoint[] = [
     icon: 'File',
     order: 119,
     group: 'administrative',
+    handover: 'review', // ADR-916 §5.1 — «άλλο» διοικητικό/νομικό: αποφασίζει το γραφείο
     requiresCustomTitle: true,
   },
 
@@ -534,6 +535,7 @@ export const STUDY_ENTRIES: UploadEntryPoint[] = [
     icon: 'HardHat',
     order: 700,
     group: 'site',
+    handover: 'deliver', // ADR-916 §5.1 — ο ΦΑΥ παραδίδεται στον κύριο του έργου (ΠΔ 305/1996 άρθ. 3)
   },
   {
     id: 'study-site-waste',
@@ -578,6 +580,7 @@ export const STUDY_ENTRIES: UploadEntryPoint[] = [
     icon: 'Flame',
     order: 704,
     group: 'site',
+    handover: 'deliver', // ADR-916 §5.1 — η πυροπροστασία αφορά τον ιδιοκτήτη για όσο ζει το κτίριο
   },
   {
     id: 'study-site-other',
@@ -589,6 +592,7 @@ export const STUDY_ENTRIES: UploadEntryPoint[] = [
     icon: 'File',
     order: 719,
     group: 'site',
+    handover: 'review', // ADR-916 §5.1 — «άλλο» εργοταξιακό: αποφασίζει το γραφείο
     requiresCustomTitle: true,
   },
 ];

@@ -625,6 +625,9 @@
         "type": "Είδος ακινήτου",
         "lifecycle": "Κατάσταση"
       },
+      "property_handover": {
+        "lifecycle": "Κατάσταση παράδοσης"
+      },
       "objectiveValueFacts": {
         "permitDate": "Ημερομηνία οικοδομικής άδειας κτιρίου",
         "plotUtilisation": "ΣΑΟ οικοπέδου",

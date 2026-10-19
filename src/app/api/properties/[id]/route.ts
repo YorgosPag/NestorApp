@@ -48,6 +48,7 @@ import { assertPropertyAnchorWrite } from './property-anchor-guard';
 import { companyEnergyDeclarationPatch } from './property-energy-patch';
 import { nowISO } from '@/lib/date-local';
 import { asApiError } from '@/lib/api/api-error-types';
+import { syncPropertyHandovers } from '@/services/property-handover/property-handover-write.service';
 
 import { isPlainRecord } from '@/lib/type-guards';
 
@@ -278,6 +279,12 @@ export const PATCH = entityIdRoute<ApiSuccessResponse<PropertyMutationResult>>({
             performedByName: ctx.email ?? null,
             companyId: ctx.companyId,
           }).catch(() => { /* fire-and-forget */ });
+        }
+
+        // ADR-916 §5.4 — η παράδοση φακέλου στους αγοραστές: συμφιλίωση με την ΤΡΕΧΟΥΣΑ αλήθεια (κράτηση ·
+        // πώληση · ακύρωση · αλλαγή ιδιοκτητών). Awaited και ποτέ δεν πετά — ίδιο συμβόλαιο με την προβολή.
+        if ('commercialStatus' in body || 'commercial' in body || 'status' in body) {
+          await syncPropertyHandovers(adminDb, id, { cause: 'property-write', performedBy: ctx.uid });
         }
 
         // ADR-777 Α3/Α5 — η δημόσια προβολή. Awaited (όχι fire-and-forget) και ποτέ

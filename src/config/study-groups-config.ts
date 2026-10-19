@@ -7,6 +7,9 @@
  * Each group maps to a set of UploadEntryPoints with matching `group` field.
  */
 
+// Type-only — σβήνεται στη μεταγλώττιση, καμία εξάρτηση χρόνου εκτέλεσης προς τον κατάλογο.
+import type { HandoverDisposition } from './upload-entry-points/types';
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export type StudyGroup =
@@ -31,6 +34,12 @@ export interface StudyGroupMeta {
   readonly bgClass: string;
   readonly iconBgClass: string;
   readonly order: number;
+  /**
+   * ADR-916 §5.1 — η **προεπιλογή** της ομάδας για την παράδοση στον αγοραστή· μια μελέτη τη διορθώνει με το δικό
+   * της `handover`. Φορολογικά/ασφαλιστικά = υποχρεώσεις του **γραφείου** · εργοταξίου = εσωτερικά, εκτός από ΣΑΥ-ΦΑΥ
+   * και πυροπροστασία (ο ΦΑΥ παραδίδεται στον κύριο του έργου — ΠΔ 305/1996 άρθ. 3).
+   */
+  readonly handover: HandoverDisposition;
 }
 
 // ─── Configuration ───────────────────────────────────────────────────────────
@@ -50,6 +59,7 @@ export const STUDY_GROUPS: readonly StudyGroupMeta[] = [
     bgClass: 'bg-[hsl(var(--bg-info))]/20',
     iconBgClass: 'bg-[hsl(var(--bg-info))]/20',
     order: 1,
+    handover: 'deliver',
   },
   {
     group: 'fiscal',
@@ -65,6 +75,7 @@ export const STUDY_GROUPS: readonly StudyGroupMeta[] = [
     bgClass: 'bg-[hsl(var(--bg-success))]/10',
     iconBgClass: 'bg-[hsl(var(--bg-success))]/10',
     order: 2,
+    handover: 'internal',
   },
   {
     group: 'architectural',
@@ -80,6 +91,7 @@ export const STUDY_GROUPS: readonly StudyGroupMeta[] = [
     bgClass: 'bg-accent',
     iconBgClass: 'bg-accent',
     order: 3,
+    handover: 'deliver',
   },
   {
     group: 'structural',
@@ -95,6 +107,7 @@ export const STUDY_GROUPS: readonly StudyGroupMeta[] = [
     bgClass: 'bg-[hsl(var(--bg-warning))]/40',
     iconBgClass: 'bg-[hsl(var(--bg-warning))]/40',
     order: 4,
+    handover: 'deliver',
   },
   {
     group: 'mechanical',
@@ -110,6 +123,7 @@ export const STUDY_GROUPS: readonly StudyGroupMeta[] = [
     bgClass: 'bg-destructive/10',
     iconBgClass: 'bg-destructive/10',
     order: 5,
+    handover: 'deliver',
   },
   {
     group: 'energy',
@@ -125,6 +139,7 @@ export const STUDY_GROUPS: readonly StudyGroupMeta[] = [
     bgClass: 'bg-[hsl(var(--bg-warning))]/40',
     iconBgClass: 'bg-[hsl(var(--bg-warning))]/40',
     order: 6,
+    handover: 'deliver',
   },
   {
     group: 'site',
@@ -140,6 +155,7 @@ export const STUDY_GROUPS: readonly StudyGroupMeta[] = [
     bgClass: 'bg-accent',
     iconBgClass: 'bg-accent',
     order: 7,
+    handover: 'internal',
   },
 ] as const;
 

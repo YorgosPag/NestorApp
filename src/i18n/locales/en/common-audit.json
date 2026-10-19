@@ -625,6 +625,9 @@
         "type": "Property type",
         "lifecycle": "Status"
       },
+      "property_handover": {
+        "lifecycle": "Handover status"
+      },
       "objectiveValueFacts": {
         "permitDate": "Building permit date",
         "plotUtilisation": "Plot utilisation (SAO)",

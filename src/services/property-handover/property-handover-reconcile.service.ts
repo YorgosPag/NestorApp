@@ -1,0 +1,60 @@
+import 'server-only';
+
+/**
+ * @fileoverview **Το δίχτυ της παράδοσης** — ό,τι ξέφυγε από τα σημεία κλήσης (ADR-916 §5.4).
+ * @related services/property-handover/property-handover-write.service.ts (ο ΕΝΑΣ γραφέας) · ADR-740
+ * @module services/property-handover/property-handover-reconcile.service
+ *
+ * 🔑 **Δεν είναι δεύτερη μηχανή**: για κάθε υποψήφιο ακίνητο καλεί τον **ίδιο** `syncPropertyHandovers`.
+ * Υποψήφια = (α) ό,τι πουλιέται τώρα (κράτηση · πώληση — και στο παλιό κάτοπτρο `status`), (β) ό,τι έχει
+ * παράδοση σε αναμονή (ώστε μια ακύρωση που ξέφυγε να γίνει `cancelled`).
+ *
+ * 🔴 **Το `changed` είναι ο λόγος ύπαρξής του**: με κάθε σημείο κλήσης στη θέση του είναι **μηδέν**. Μη
+ * μηδενικό = σημείο κλήσης που ξέφυγε — φαίνεται στα μεγέθη της εκτέλεσης.
+ */
+
+import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
+
+import { COLLECTIONS } from '@/config/firestore-collections';
+
+import { syncPropertyHandovers } from './property-handover-write.service';
+
+/** Οι διαθέσεις που ανοίγουν παράδοση — ίδιο σύνολο με το `handover-plan` (κράτηση · πώληση). */
+const COMMITTED_STATUSES = ['reserved', 'sold'];
+
+export interface PropertyHandoverReconcileReport {
+  readonly scanned: number;
+  readonly changed: number;
+  readonly failed: number;
+}
+
+async function candidatePropertyIds(adminDb: AdminFirestore): Promise<readonly string[]> {
+  const properties = adminDb.collection(COLLECTIONS.PROPERTIES);
+  const [committed, legacy, awaiting] = await Promise.all([
+    // tenant-scope-exempt: νυχτερινό δίχτυ συστήματος — σαρώνει ΟΛΟΥΣ τους μισθωτές· κάθε ακίνητο συμφιλιώνεται με τον δικό του `companyId`
+    properties.where('commercialStatus', 'in', COMMITTED_STATUSES).get(),
+    // tenant-scope-exempt: το παλιό κάτοπτρο `status` (ADR-249) — ίδιο δίχτυ, έγγραφα χωρίς `commercialStatus`
+    properties.where('status', 'in', COMMITTED_STATUSES).get(),
+    // tenant-scope-exempt: παραδόσεις σε αναμονή όλων των μισθωτών — η ακύρωση που ξέφυγε γίνεται `cancelled`
+    adminDb.collection(COLLECTIONS.PROPERTY_HANDOVERS).where('lifecycle', '==', 'awaiting-completion').get(),
+  ]);
+  const ids = new Set([...committed.docs, ...legacy.docs].map((doc) => doc.id));
+  for (const doc of awaiting.docs) {
+    const propertyId: unknown = doc.get('propertyId');
+    if (typeof propertyId === 'string' && propertyId !== '') ids.add(propertyId);
+  }
+  return [...ids];
+}
+
+/** **Συμφιλιώνει** κάθε υποψήφιο ακίνητο, ένα-ένα (ο γραφέας κρατά συναλλαγή ανά ακίνητο). */
+export async function reconcilePropertyHandovers(adminDb: AdminFirestore): Promise<PropertyHandoverReconcileReport> {
+  const propertyIds = await candidatePropertyIds(adminDb);
+  let changed = 0;
+  let failed = 0;
+  for (const propertyId of propertyIds) {
+    const outcome = await syncPropertyHandovers(adminDb, propertyId, { cause: 'reconcile', performedBy: 'system' });
+    if (outcome.kind === 'failed') failed += 1;
+    else if (outcome.writes > 0) changed += 1;
+  }
+  return { scanned: propertyIds.length, changed, failed };
+}

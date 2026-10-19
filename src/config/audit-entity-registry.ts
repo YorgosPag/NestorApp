@@ -202,6 +202,13 @@ export const AUDIT_ENTITIES = {
   property_dossier: { collectionKey: 'PROPERTY_DOSSIERS', scope: 'top-level', writer: 'server-direct', ledger: 'custody', renamePropagation: false, backup: true },
 
   /**
+   * 🤝 ADR-916 §5.2 — **η παράδοση φακέλου από πώληση**. Βιβλίο `'company'` = ο μισθωτής-πωλητής (η παράδοση
+   * είναι **εταιρικό** έγγραφο — Δ10). Κάθε γραφή περνά από το `property-handover-write.service.ts` (ίχνος μετά
+   * το commit, μόνο όταν αλλάζει παρακολουθούμενο πεδίο).
+   */
+  property_handover: { collectionKey: 'PROPERTY_HANDOVERS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+
+  /**
    * 💬 ADR-867 Β5 — **η ομάδα της πράξης** (ποιος απαντά από το γραφείο). Βιβλίο `'company'`
    * = ο χώρος που **φιλοξενεί** την πράξη (`hostCompanyId`). Κάθε αλλαγή μετά τη γέννηση —
    * ανθρώπινη ή μεταβίβαση — περνά από το `commitActTeamVersion` του `act-team-writer.ts` και

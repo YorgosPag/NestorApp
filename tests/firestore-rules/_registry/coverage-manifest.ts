@@ -631,6 +631,15 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...serverWrittenAuthorOwnedMatrix(),
   },
   {
+    // ADR-916 §5.2 — Η ΠΑΡΑΔΟΣΗ ΦΑΚΕΛΟΥ ΑΠΟ ΠΩΛΗΣΗ. Εταιρικό έγγραφο, ίδιο σύνορο με την περιήγηση
+    // (`spatial_tours`): διαβάζει ΜΟΝΟ ο εσωτερικός χρήστης του μισθωτή, γράφει ΜΟΝΟ ο διακομιστής ⇒ ίδια
+    // μήτρα, ΚΑΜΙΑ νέα. Ο πελάτης του γραφείου ΔΕΝ διαβάζει: κρατά όλους τους συνιδιοκτήτες (Δ10).
+    collection: 'property_handovers',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/property-handovers.rules.test.ts',
+    ...serverWrittenTenantInternalMatrix(),
+  },
+  {
     // ADR-884 Φ0.9 — ΧΩΡΙΚΗ ΠΕΡΙΗΓΗΣΗ, εταιρικό διαμέρισμα. Διαβάζει ΜΟΝΟ ο εσωτερικός χρήστης του
     // μισθωτή (ζωντανός επεξεργαστής)· ΚΑΘΕ άλλο κοινό περνά από διαδρομή διακομιστή. Γράφει ΜΟΝΟ ο
     // διακομιστής. ⚠️ Τα μπλοκ των υποσυλλογών (`tour_captures` · `tour_access_requests` ·

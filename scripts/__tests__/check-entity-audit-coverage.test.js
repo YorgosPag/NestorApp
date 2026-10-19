@@ -115,7 +115,8 @@ describe('κάλυψη — άμεση ή μέσω δηλωμένου γραφέ�
   it('Κ5 — οι πραγματικοί κοινοί γραφείς είναι ζωντανοί (εξάγονται ΚΑΙ γράφουν)', () => {
     // Ο ανθρώπινος (PATCH κτιρίων/ορόφων) και ο παράγωγος (αλυσίδες ορόφου). Κλειστή λίστα: τρίτο όνομα
     // εδώ σημαίνει ότι κάποιος πρόσθεσε γραφέα — να είναι όντως ΚΟΙΝΟΣ, όχι παράκαμψη της πύλης.
-    expect(liveRecorderDelegates(PROJECT_ROOT)).toEqual(['recordEntityUpdate', 'recordDerivedWrites']);
+    // 2026-10-19 (ADR-916): τρίτος ο `recordTrackedEntityWrite` — κοινός σε αγγελία · φάκελο · παράδοση.
+    expect(liveRecorderDelegates(PROJECT_ROOT)).toEqual(['recordEntityUpdate', 'recordDerivedWrites', 'recordTrackedEntityWrite']);
   });
 
   it('Κ6 — γραφέας που έπαψε να γράφει (ή λείπει) παύει να μετρά', () => {

@@ -341,6 +341,11 @@
     "closed": "Ολοκληρώθηκε",
     "withdrawn": "Αποσύρθηκε"
   },
+  "handoverLifecycle": {
+    "awaitingCompletion": "Αναμένει την ολοκλήρωση της πώλησης",
+    "ready": "Προς παράδοση",
+    "cancelled": "Ακυρώθηκε"
+  },
   "marketingAudience": {
     "custodians": "Κλειστή — μόνο διαχειριστές",
     "network": "Κλειστή — επαγγελματικό δίκτυο",

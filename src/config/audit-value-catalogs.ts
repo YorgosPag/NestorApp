@@ -123,6 +123,11 @@ export const AUDIT_VALUE_CATALOGS: Readonly<Record<string, AuditCatalogRef>> = {
   // για να την ελέγχει η πύλη 3.14 (ύπαρξη · ισοτιμία el/en · μόνο camelCase).
   propertyStatus: { ns: 'properties-enums', path: 'status' },
 
+  // ── ADR-916 §5.2: ο κύκλος ζωής της **παράδοσης φακέλου** — δικό του λεξιλόγιο (`awaiting-completion` · `ready` ·
+  // `cancelled`), άρα **όχι** στο κοινό `lifecycle` (που κρατά αγγελία και διάθεση). Δείχνει εδώ το
+  // `PROPERTY_HANDOVER_TRACKED_FIELDS.lifecycle.enumCatalog` (μόνο camelCase — ο resolver κανονικοποιεί).
+  propertyHandoverLifecycle: { ns: 'properties-enums', path: 'handoverLifecycle' },
+
   // ── Property: ADR-915 §27 — στάδιο ανάθεσης έκδοσης (ένα πεδίο ανά είδος, ίδιος κατάλογος σταδίων)
   energyCertificateIssuanceStage: { ns: 'document-registry', path: 'issuance.stage' },
   buildingIdentityIssuanceStage: { ns: 'document-registry', path: 'issuance.stage' },

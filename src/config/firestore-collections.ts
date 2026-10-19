@@ -118,6 +118,14 @@ export const COLLECTIONS = {
   PROPERTY_DOSSIERS: process.env.NEXT_PUBLIC_PROPERTY_DOSSIERS_COLLECTION || 'property_dossiers',
 
   /**
+   * 🤝 ADR-916 §5.2 — **Η ΠΑΡΑΔΟΣΗ ΦΑΚΕΛΟΥ ΑΠΟ ΠΩΛΗΣΗ** (`phov_*`, **ντετερμινιστικό** από ακίνητο + επαφή
+   * αγοραστή ⇒ μία ανά ιδιοκτήτη, ιδεμπότητα χωρίς ερώτημα). **Εταιρικό** έγγραφο (`companyId`): το διαβάζει
+   * μόνο ο εσωτερικός χρήστης του γραφείου — ο αγοραστής βλέπει τον **φάκελό** του, ποτέ αυτό (κρατά και τους
+   * συνιδιοκτήτες). Γράφει **μόνο** ο διακομιστής (`property-handover-write.service.ts`).
+   */
+  PROPERTY_HANDOVERS: process.env.NEXT_PUBLIC_PROPERTY_HANDOVERS_COLLECTION || 'property_handovers',
+
+  /**
    * 🧭 ADR-884 Φ0.1–Φ0.2 — **Η ΧΩΡΙΚΗ ΠΕΡΙΗΓΗΣΗ** (`stour_*`, μία ανά ρίζα αγγελίας). **Δύο διαμερίσματα**,
    * όπως τα αρχεία: επιλογή **μόνο** μέσω `SPATIAL_TOUR_COLLECTION[kind]` (`lib/spatial-tour/spatial-tour-custody`).
    * Γράφει **μόνο** ο διακομιστής· ο κάτοχος διαβάζει (ζωντανός επεξεργαστής), κάθε άλλο κοινό από διαδρομές (Φ0.9).

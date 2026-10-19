@@ -174,6 +174,9 @@ export const generateDeterministicOwnershipKaekClaimId = (canonicalKaek: string)
   enterpriseIdService.generateDeterministicOwnershipKaekClaimId(canonicalKaek);
 export const generateDeterministicTaxIdentityClaimId = (taxIdHmac: string) =>
   enterpriseIdService.generateDeterministicTaxIdentityClaimId(taxIdHmac);
+// ADR-916 §5.2 — η παράδοση φακέλου από πώληση, εξαγόμενη μαζί με τη μέθοδο (το μάθημα του `mreq`).
+export const generateDeterministicPropertyHandoverId = (seed: string) =>
+  enterpriseIdService.generateDeterministicPropertyHandoverId(seed);
 // ADR-900 §8 #2 (2β.4) — η δημόσια μονάδα, από σπόρο HMAC (ποτέ τον ΚΑΕΚ).
 export const generateDeterministicPublicUnitId = (unitSeed: string) =>
   enterpriseIdService.generateDeterministicPublicUnitId(unitSeed);

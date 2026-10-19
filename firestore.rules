@@ -1942,6 +1942,16 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ADR-916 §5.2 — Η ΠΑΡΑΔΟΣΗ ΦΑΚΕΛΟΥ ΑΠΟ ΠΩΛΗΣΗ (`phov_*`). Εταιρικό έγγραφο: διαβάζει ΜΟΝΟ ο
+    // εσωτερικός χρήστης του μισθωτή-πωλητή· γράφει ΜΟΝΟ ο διακομιστής (property-handover-write.service.ts).
+    //
+    // ⚠️ ΟΥΤΕ ο αγοραστής ΟΥΤΕ ο πελάτης του γραφείου (`external_user`): το έγγραφο κρατά τη σχέση με
+    // ΟΛΟΥΣ τους συνιδιοκτήτες (ADR-916 Δ10). Ο αγοραστής βλέπει τον ΔΙΚΟ του φάκελο (`property_dossiers`).
+    match /property_handovers/{handoverId} {
+      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow write: if false;
+    }
+
     // =========================================================================
     // 📅 ΗΜΕΡΟΛΟΓΙΟ ΚΑΤΑΛΥΜΑΤΟΣ — ADR-835 §20 (Στάδιο Α)
     // =========================================================================
