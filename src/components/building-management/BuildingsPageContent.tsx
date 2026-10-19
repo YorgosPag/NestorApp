@@ -22,7 +22,7 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 // [ENTERPRISE] Navigation context for breadcrumb sync
 import { useNavigation } from '@/components/navigation/core/NavigationContext';
 import { useBreadcrumbSync } from '@/components/navigation/core/hooks/useBreadcrumbSync';
-import { MobileDetailsSlideIn } from '@/core/layouts';
+import { ListDetailsSplit, MobileDetailsSlideIn } from '@/core/layouts';
 import { BuildingsGroupedView } from './BuildingsPage/BuildingsGroupedView';
 import { useBuildingsPageState } from '@/hooks/useBuildingsPageState';
 import { useBuildingStats } from '@/hooks/useBuildingStats';
@@ -310,6 +310,24 @@ export function BuildingsPageContent() {
     );
   }
 
+  // Οι λεπτομέρειες του κτιρίου — ΜΙΑ δήλωση για τη στήλη του desktop, το φύλλο του κινητού και το side peek του
+  // πλέγματος (ADR-912 §12.17). Ήταν γραμμένες δύο φορές με ίδια props σε άλλη σειρά.
+  const buildingDetails = (
+    <BuildingDetails
+      building={selectedBuilding}
+      onNewBuilding={showTrash ? undefined : handleNewBuilding}
+      onDeleteBuilding={showTrash ? undefined : handleDeleteBuilding}
+      startInEditMode={showTrash ? false : startInEditMode}
+      isEditing={showTrash ? false : isEditingBuilding}
+      isTrashMode={showTrash}
+      onSetEditing={showTrash ? undefined : setIsEditingBuilding}
+      isCreateMode={showTrash ? false : isCreateMode}
+      onBuildingCreated={showTrash ? undefined : handleBuildingCreated}
+      onCancelCreate={showTrash ? undefined : handleCancelCreate}
+      focusFloorId={showTrash ? undefined : focusFloorId}
+    />
+  );
+
   // The desktop split layout and the mobile list render the SAME list, with the same props — only
   // their surrounding <section> differs (breakpoint + aria-label). Built once so the two can never
   // drift into passing different props for what the user reads as one list.
@@ -391,19 +409,7 @@ export function BuildingsPageContent() {
               {/* [DESKTOP] Standard split layout */}
               <section className="hidden md:flex flex-1 gap-2 min-h-0 min-w-0 overflow-hidden" role="region" aria-label={t('pages.buildings.views.desktopView')}>
                 {buildingsList}
-                <BuildingDetails
-                  building={selectedBuilding!}
-                  onNewBuilding={showTrash ? undefined : handleNewBuilding}
-                  onDeleteBuilding={showTrash ? undefined : handleDeleteBuilding}
-                  startInEditMode={showTrash ? false : startInEditMode}
-                  isEditing={showTrash ? false : isEditingBuilding}
-                  isTrashMode={showTrash}
-                  onSetEditing={showTrash ? undefined : setIsEditingBuilding}
-                  isCreateMode={showTrash ? false : isCreateMode}
-                  onBuildingCreated={showTrash ? undefined : handleBuildingCreated}
-                  onCancelCreate={showTrash ? undefined : handleCancelCreate}
-                  focusFloorId={showTrash ? undefined : focusFloorId}
-                />
+                {buildingDetails}
               </section>
 
               {/* [MOBILE] Show only BuildingsList when no building is selected */}
@@ -417,29 +423,25 @@ export function BuildingsPageContent() {
                 onClose={handleCloseMobileDetails}
                 title={selectedBuilding?.name || t('pages.buildings.details.title')}
               >
-                {selectedBuilding && (
-                  <BuildingDetails
-                    building={selectedBuilding}
-                    onNewBuilding={showTrash ? undefined : handleNewBuilding}
-                    onDeleteBuilding={showTrash ? undefined : handleDeleteBuilding}
-                    startInEditMode={showTrash ? false : startInEditMode}
-                    isEditing={showTrash ? false : isEditingBuilding}
-                    onSetEditing={showTrash ? undefined : setIsEditingBuilding}
-                    isCreateMode={showTrash ? false : isCreateMode}
-                    onBuildingCreated={showTrash ? undefined : handleBuildingCreated}
-                    onCancelCreate={showTrash ? undefined : handleCancelCreate}
-                    isTrashMode={showTrash}
-                    focusFloorId={showTrash ? undefined : focusFloorId}
-                  />
-                )}
+                {selectedBuilding && buildingDetails}
               </MobileDetailsSlideIn>
             </>
           ) : (
-            <BuildingsGroupedView
-              viewMode={viewMode}
-              filteredBuildings={baseFilteredBuildings}
-              selectedBuilding={selectedBuilding}
-              setSelectedBuilding={setSelectedBuilding}
+            // ADR-912 §12.17 — πλέγμα + side peek: ως 2026-10-19 το πλέγμα δεν είχε ΚΑΝΕΝΑ φύλλο, ούτε στο κινητό.
+            <ListDetailsSplit
+              peek
+              list={
+                <BuildingsGroupedView
+                  viewMode={viewMode}
+                  filteredBuildings={baseFilteredBuildings}
+                  selectedBuilding={selectedBuilding}
+                  setSelectedBuilding={setSelectedBuilding}
+                />
+              }
+              details={selectedBuilding && buildingDetails}
+              sheetOpen={!!selectedBuilding}
+              sheetTitle={selectedBuilding?.name || t('pages.buildings.details.title')}
+              onCloseSheet={handleCloseMobileDetails}
             />
           )}
         </ListContainer>

@@ -9,7 +9,7 @@ import { ProjectsList } from './projects-list';
 import { ProjectDetails } from './project-details';
 import { useProjectDraftAddresses } from './draft/useProjectDraftAddresses';
 import type { CreatedProjectFields } from './general-tab/created-project';
-import { DESKTOP_SPLIT, MobileDetailsSlideIn } from '@/core/layouts';
+import { DESKTOP_SPLIT, ListDetailsSplit, MobileDetailsSlideIn } from '@/core/layouts';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
@@ -122,31 +122,32 @@ export function ProjectViewSwitch({
    * λεπτομέρειες του έργου — δεκατέσσερις γραμμές props η καθεμία. Δύο αντίγραφα σημαίνει ότι
    * ένα prop μπορούσε να προστεθεί στο ένα και να **λείπει σιωπηλά** στο άλλο, δηλαδή η ίδια
    * οθόνη να συμπεριφέρεται αλλιώς ανάλογα με το πώς την άνοιξες.
+   * Από το ADR-912 §12.17 το ίδιο στοιχείο ανοίγει και **δίπλα** στο πλέγμα (side peek) — πάλι **μία** δήλωση.
    */
+  const projectDetails = selectedProject && (
+    <ProjectDetails
+      key={detailsIdentity}
+      project={getProjectWithCompanyName(selectedProject)}
+      initialTab={activeTab}
+      onActiveTabChange={setActiveTab}
+      draftAddresses={draftAddresses}
+      onNewProject={onNewProject}
+      onDeleteProject={onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
+      isEditing={isEditingProject}
+      onSetEditing={setIsEditingProject}
+      isCreateMode={isCreateMode}
+      onProjectCreated={onProjectCreated}
+      onCancelCreate={onCancelCreate}
+      onDraftStatusChange={onDraftStatusChange}
+      isTrashMode={isTrashMode}
+    />
+  );
+  const detailsTitle = selectedProject ? getProjectWithCompanyName(selectedProject).name : t('viewSwitch.detailsTitle');
+  const closeDetails = () => onSelectProject(null);
+
   const mobileSlideIn = (
-    <MobileDetailsSlideIn
-      isOpen={!!selectedProject}
-      onClose={() => onSelectProject(null)}
-      title={selectedProject ? getProjectWithCompanyName(selectedProject).name : t('viewSwitch.detailsTitle')}
-    >
-      {selectedProject && (
-        <ProjectDetails
-          key={detailsIdentity}
-          project={getProjectWithCompanyName(selectedProject)}
-          initialTab={activeTab}
-          onActiveTabChange={setActiveTab}
-          draftAddresses={draftAddresses}
-          onNewProject={onNewProject}
-          onDeleteProject={onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
-          isEditing={isEditingProject}
-          onSetEditing={setIsEditingProject}
-          isCreateMode={isCreateMode}
-          onProjectCreated={onProjectCreated}
-          onCancelCreate={onCancelCreate}
-          onDraftStatusChange={onDraftStatusChange}
-          isTrashMode={isTrashMode}
-        />
-      )}
+    <MobileDetailsSlideIn isOpen={!!selectedProject} onClose={closeDetails} title={detailsTitle}>
+      {projectDetails}
     </MobileDetailsSlideIn>
   );
 
@@ -166,29 +167,34 @@ export function ProjectViewSwitch({
   // 🏢 ENTERPRISE: Grid View Rendering - Using proper GridCard (PR: Enterprise Grid System)
   // Uses ProjectGridCard (vertical layout) for grid view
   if (viewMode === 'grid') {
+    // ADR-912 §12.17 — πλέγμα + side peek: η επιλογή ανοίγει τις λεπτομέρειες ΔΙΠΛΑ (desktop) ή ως φύλλο (κινητό).
     return (
-      <>
-        {/* 🖥️ DESKTOP & MOBILE: Grid layout */}
-        <ScrollArea className="flex-1 w-full">
-          <section
-            className={cn(spacing.padding.sm, "grid", gridPatterns.cards.tile, spacing.gap.sm)}
-            aria-label={t('grid.ariaLabel')}
-          >
-            {projects.map((project: Project) => (
-              <ProjectGridCard
-                key={project.id}
-                project={project}
-                isSelected={selectedProject?.id === project.id}
-                isFavorite={favorites.includes(project.id)}
-                onSelect={() => onSelectProject(toggleSelect(selectedProject, project))}
-                onToggleFavorite={() => toggleFavorite(project.id)}
-              />
-            ))}
-          </section>
-        </ScrollArea>
-
-        {mobileSlideIn}
-      </>
+      <ListDetailsSplit
+        peek
+        list={
+          <ScrollArea className="flex-1 w-full">
+            <section
+              className={cn(spacing.padding.sm, "grid", gridPatterns.cards.tile, spacing.gap.sm)}
+              aria-label={t('grid.ariaLabel')}
+            >
+              {projects.map((project: Project) => (
+                <ProjectGridCard
+                  key={project.id}
+                  project={project}
+                  isSelected={selectedProject?.id === project.id}
+                  isFavorite={favorites.includes(project.id)}
+                  onSelect={() => onSelectProject(toggleSelect(selectedProject, project))}
+                  onToggleFavorite={() => toggleFavorite(project.id)}
+                />
+              ))}
+            </section>
+          </ScrollArea>
+        }
+        details={projectDetails}
+        sheetOpen={!!selectedProject}
+        sheetTitle={detailsTitle}
+        onCloseSheet={closeDetails}
+      />
     );
   }
 

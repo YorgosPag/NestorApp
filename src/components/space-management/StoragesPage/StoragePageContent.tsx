@@ -10,7 +10,7 @@ import { StoragesHeader } from '@/components/space-management/StoragesPage/Stora
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { DistributionCard } from '@/components/property-management/dashboard/DistributionCard';
 import { StoragesList } from '@/components/space-management/StoragesPage/StoragesList';
-import { DeepLinkNotice } from '@/components/shared/deep-link/DeepLinkNotice';
+import { SpaceCatalogPreamble } from '@/components/space-management/shared/SpaceCatalogPreamble';
 import { StorageDetails } from '@/components/space-management/StoragesPage/StorageDetails';
 import { StorageGridView } from '@/components/space-management/StoragesPage/StorageGridView';
 import { StorageGeneralTab } from '@/components/space-management/StoragesPage/StorageDetails/tabs/StorageGeneralTab';
@@ -50,7 +50,6 @@ import type { Storage } from '@/types/storage/contracts';
 import { useStoragesTrashState } from '@/hooks/useStoragesTrashState';
 import { useEntityCreateForm } from '@/hooks/useEntityCreateForm';
 import { useListPageHeaderState } from '@/hooks/useListPageHeaderState';
-import { TrashActionsBar } from '@/components/shared/trash/TrashActionsBar';
 import { EntityTrashDialogs } from '@/components/shared/trash/EntityTrashDialogs';
 import { useNotifications } from '@/providers/NotificationProvider';
 import '@/lib/design-system';
@@ -283,34 +282,29 @@ export function StoragePageContent() {
           </section>
         )}
 
-        {/* Desktop: Filters */}
-        <aside className="hidden md:block" role="complementary" aria-label={t('pages.storage.filters.label')}>
-          <AdvancedFiltersPanel
-            config={filtersConfig}
-            filters={filters}
-            onFiltersChange={setFilters}
-          />
-        </aside>
-
-        {/* 🗑️ ADR-281: Trash actions bar — shown only in trash view */}
-        {showTrash && !loadingTrash && (
-          <TrashActionsBar
-            selectedIds={selectedStorage ? [selectedStorage.id] : []}
-            onBack={handleToggleTrash}
-            onRestore={handleRestoreStorages}
-            onPermanentDelete={handlePermanentDeleteStorages}
-            trashCount={trashCount}
-          />
-        )}
-
-        {/* Content */}
-        {/* ADR-777 §8.31 — ο σύνδεσμος απαντά, ακόμη κι όταν η απάντηση είναι «όχι». */}
-        <DeepLinkNotice selection={selection} className="mb-2" />
+        {/* Φίλτρα desktop · 🗑️ ADR-281 μπάρα κάδου · ADR-777 §8.31 ειδοποίηση συνδέσμου */}
+        <SpaceCatalogPreamble
+          selection={selection}
+          filters={{
+            label: t('pages.storage.filters.label'),
+            config: filtersConfig,
+            value: filters,
+            onChange: setFilters,
+          }}
+          trash={{
+            visible: showTrash && !loadingTrash,
+            activeId: selectedStorage?.id,
+            count: trashCount,
+            onBack: handleToggleTrash,
+            onRestore: handleRestoreStorages,
+            onPermanentDelete: handlePermanentDeleteStorages,
+          }}
+        />
 
         <ListContainer>
           {/* ADR-912 §12.11 — λίστα + λεπτομέρειες στο desktop, λίστα ή φύλλο στο κινητό (και για τη φόρμα δημιουργίας). */}
           <ListDetailsSplit
-            listOnly={viewMode === 'grid'}
+            peek={viewMode === 'grid'}
             list={viewMode === 'grid' ? (
               <StorageGridView
                 storages={visibleStorages}

@@ -12,7 +12,7 @@ import { ParkingsHeader } from '@/components/space-management/ParkingPage/Parkin
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { DistributionCard } from '@/components/property-management/dashboard/DistributionCard';
 import { ParkingsList } from '@/components/space-management/ParkingPage/ParkingsList';
-import { DeepLinkNotice } from '@/components/shared/deep-link/DeepLinkNotice';
+import { SpaceCatalogPreamble } from '@/components/space-management/shared/SpaceCatalogPreamble';
 import { ParkingDetails } from '@/components/space-management/ParkingPage/ParkingDetails';
 import { ParkingGridView } from '@/components/space-management/ParkingPage/ParkingGridView';
 import { ParkingGeneralTab } from '@/components/space-management/ParkingPage/ParkingDetails/tabs/ParkingGeneralTab';
@@ -55,7 +55,6 @@ import type { ParkingSpot } from '@/types/parking';
 import { useParkingTrashState } from '@/hooks/useParkingTrashState';
 import { useEntityCreateForm } from '@/hooks/useEntityCreateForm';
 import { useListPageHeaderState } from '@/hooks/useListPageHeaderState';
-import { TrashActionsBar } from '@/components/shared/trash/TrashActionsBar';
 import { EntityTrashDialogs } from '@/components/shared/trash/EntityTrashDialogs';
 import '@/lib/design-system';
 
@@ -284,34 +283,29 @@ export function ParkingPageContent() {
           </section>
         )}
 
-        {/* Desktop: Filters */}
-        <aside className="hidden md:block" role="complementary" aria-label={t('pages.parking.filters.label')}>
-          <AdvancedFiltersPanel
-            config={filtersConfig}
-            filters={filters}
-            onFiltersChange={setFilters}
-          />
-        </aside>
-
-        {/* 🗑️ ADR-281: Trash actions bar — shown only in trash view */}
-        {showTrash && !loadingTrash && (
-          <TrashActionsBar
-            selectedIds={selectedParking ? [selectedParking.id] : []}
-            onBack={handleToggleTrash}
-            onRestore={handleRestoreParkingSpots}
-            onPermanentDelete={handlePermanentDeleteParkingSpots}
-            trashCount={trashCount}
-          />
-        )}
-
-        {/* Content */}
-        {/* ADR-777 §8.31 — ο σύνδεσμος απαντά, ακόμη κι όταν η απάντηση είναι «όχι». */}
-        <DeepLinkNotice selection={selection} className="mb-2" />
+        {/* Φίλτρα desktop · 🗑️ ADR-281 μπάρα κάδου · ADR-777 §8.31 ειδοποίηση συνδέσμου */}
+        <SpaceCatalogPreamble
+          selection={selection}
+          filters={{
+            label: t('pages.parking.filters.label'),
+            config: filtersConfig,
+            value: filters,
+            onChange: setFilters,
+          }}
+          trash={{
+            visible: showTrash && !loadingTrash,
+            activeId: selectedParking?.id,
+            count: trashCount,
+            onBack: handleToggleTrash,
+            onRestore: handleRestoreParkingSpots,
+            onPermanentDelete: handlePermanentDeleteParkingSpots,
+          }}
+        />
 
         <ListContainer>
           {/* ADR-912 §12.11 — λίστα + λεπτομέρειες στο desktop, λίστα ή φύλλο στο κινητό (και για τη φόρμα δημιουργίας). */}
           <ListDetailsSplit
-            listOnly={viewMode === 'grid'}
+            peek={viewMode === 'grid'}
             list={viewMode === 'grid' ? (
               <ParkingGridView
                 parkingSpots={visibleParkingSpots}

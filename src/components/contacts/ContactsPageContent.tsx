@@ -16,7 +16,7 @@ import { UnifiedDashboard } from '@/components/property-management/dashboard/Uni
 import { ContactsList } from './list/ContactsList';
 import { ContactGridCard } from '@/domain';
 import { ContactDetails } from './details/ContactDetails';
-import { MobileDetailsSlideIn } from '@/core/layouts';
+import { ListDetailsSplit, MobileDetailsSlideIn } from '@/core/layouts';
 import { ContactTypeSelector, InlineContactCreation } from './creation';
 import dynamic from 'next/dynamic';
 import { contactFiltersConfig, AdvancedFiltersPanel } from '@/components/core/AdvancedFilters';
@@ -261,42 +261,38 @@ export function ContactsPageContent() {
             </MobileDetailsSlideIn>
           </>
         ) : (
-          <>
-            {/* Grid view */}
-            <section
-              className={`w-full p-2 gap-2 overflow-y-auto grid ${gridPatterns.cards.tile}`}
-              role="region"
-              aria-label={t('page.views.gridView')}
-            >
-              {filteredContacts.map((contact: Contact) => (
-                <ContactGridCard
-                  key={contact.id}
-                  contact={contact}
-                  isSelected={selectedContact?.id === contact.id}
-                  isFavorite={contact.isFavorite}
-                  onSelect={() => setSelectedContact(toggleSelect(selectedContact, contact))}
-                  onToggleFavorite={async () => {
-                    await toggleContactFavoriteWithPolicy({
-                      contactId: contact.id!,
-                      currentStatus: contact.isFavorite || false,
-                    });
-                    refreshContacts();
-                  }}
-                />
-              ))}
-            </section>
-
-            {/* Mobile slide-in for grid view */}
-            <MobileDetailsSlideIn
-              isOpen={!!selectedContact}
-              onClose={() => setSelectedContact(null)}
-              title={selectedContact ? getContactDisplayName(selectedContact) : t('page.details.title')}
-            >
-              {selectedContact && (
-                <ContactDetails {...contactDetailProps} />
-              )}
-            </MobileDetailsSlideIn>
-          </>
+          // ADR-912 §12.17 — πλέγμα + side peek: η επιλογή ανοίγει τις λεπτομέρειες ΔΙΠΛΑ (desktop) ή ως φύλλο (κινητό).
+          <ListDetailsSplit
+            peek
+            list={
+              <section
+                className={`w-full p-2 gap-2 overflow-y-auto grid ${gridPatterns.cards.tile}`}
+                role="region"
+                aria-label={t('page.views.gridView')}
+              >
+                {filteredContacts.map((contact: Contact) => (
+                  <ContactGridCard
+                    key={contact.id}
+                    contact={contact}
+                    isSelected={selectedContact?.id === contact.id}
+                    isFavorite={contact.isFavorite}
+                    onSelect={() => setSelectedContact(toggleSelect(selectedContact, contact))}
+                    onToggleFavorite={async () => {
+                      await toggleContactFavoriteWithPolicy({
+                        contactId: contact.id!,
+                        currentStatus: contact.isFavorite || false,
+                      });
+                      refreshContacts();
+                    }}
+                  />
+                ))}
+              </section>
+            }
+            details={selectedContact ? <ContactDetails {...contactDetailProps} /> : null}
+            sheetOpen={!!selectedContact}
+            sheetTitle={selectedContact ? getContactDisplayName(selectedContact) : t('page.details.title')}
+            onCloseSheet={() => guardLeave(() => setSelectedContact(null))}
+          />
         )}
       </ListContainer>
 

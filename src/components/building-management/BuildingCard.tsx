@@ -15,6 +15,7 @@ import { buildingStatusLabel } from '@/lib/buildings/building-enum-labels';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 import { EntityDetailsHeader } from '@/core/entity-headers';
+import { useCardInteraction } from '@/design-system/primitives/Card/useCardInteraction';
 import { BuildingCardContent } from './BuildingCard/BuildingCardContent';
 import { BuildingCardTimeline } from './BuildingCard/BuildingCardTimeline';
 // 🏢 ENTERPRISE: Only import non-i18n utilities - labels come from centralized i18n
@@ -41,6 +42,9 @@ export function BuildingCard({
   const [isFavorite, setIsFavorite] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const CategoryIcon = getCategoryIcon(building.category || 'mixed');
+  // ADR-912 §12.17 — η κάρτα ανοίγει το side peek: πρέπει να παίρνει focus και να ανοίγει με Enter/Space, όπως το
+  // `GridCard`. Ως 2026-10-19 ήταν σκέτο `div` με `onClick` ⇒ μετρημένο: μετά το Esc το focus έπεφτε στο `body`.
+  const { handleClick, handleKeyDown } = useCardInteraction({ onClick });
 
   return (
     <Card
@@ -53,7 +57,9 @@ export function BuildingCard({
           ? `${getStatusBorder('info')} shadow-lg ring-2 ring-ring`
           : "border-border"
       )}
-      onClick={onClick}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
