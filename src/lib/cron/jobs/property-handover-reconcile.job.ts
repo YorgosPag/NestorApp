@@ -16,7 +16,7 @@ import type { CronJobResult } from '@/types/cron-schedule';
 export async function runPropertyHandoverReconcile(): Promise<CronJobResult> {
   const report = await reconcilePropertyHandovers(getAdminFirestore());
   return {
-    summary: `handovers: scanned ${report.scanned}, changed ${report.changed}, failed ${report.failed}`,
+    summary: `handovers: scanned ${report.scanned}, changed ${report.changed}, invitations ${report.invitationChanged}, failed ${report.failed}`,
     metrics: { ...report },
   };
 }

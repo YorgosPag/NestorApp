@@ -251,6 +251,26 @@ export const ENVIRONMENT_CONTRACT: readonly EnvironmentRequirement[] = [
     consumer: 'src/server/engagement-invitations/engagement-invitation-issue.ts',
   },
   {
+    name: 'ISSUANCE_INVITE_SECRET',
+    severity: 'feature',
+    feature: 'Σύνδεσμος ανάθεσης έκδοσης εγγράφου σε ιδιοκτήτη/επαγγελματία χωρίς λογαριασμό (ADR-915 §28)',
+    consequence:
+      'Το γραφείο πατά «Αποστολή» και ΤΙΠΟΤΑ δεν φεύγει (`secret-missing`)· κάθε υπάρχων σύνδεσμος έγκρισης απαντά '
+      + '«δεν μπόρεσα» — καμία ανάθεση δεν εγκρίνεται από τον ιδιοκτήτη. ⚠️ ΔΙΚΟ του μυστικό: με κοινό με άλλο είδος, '
+      + 'σύνδεσμος έγκρισης θα μπορούσε να διαβαστεί ως πρόσκληση σε χώρο ή υπόθεση.',
+    consumer: 'src/server/issuance-invitations/issuance-invitation-kind.ts',
+  },
+  {
+    name: 'PROPERTY_HANDOVER_INVITE_SECRET',
+    severity: 'feature',
+    feature: 'Πρόσκληση του αγοραστή στον φάκελο του σπιτιού του (ADR-916 Φ-Β)',
+    consequence:
+      'Η πώληση γράφεται κανονικά, αλλά ΚΑΜΙΑ πρόσκληση δεν εκδίδεται: ο αγοραστής δεν λαμβάνει ποτέ email και δεν '
+      + 'αποκτά φάκελο — σιωπηλά, γιατί η πώληση δεν αποτυγχάνει για χάρη της παράδοσης. Κάθε υπάρχων σύνδεσμος απαντά '
+      + '«δεν μπόρεσα». ⚠️ ΔΙΚΟ του μυστικό: με κοινό, σύνδεσμος αγοραστή θα διαβαζόταν ως πρόσκληση σε γραφείο.',
+    consumer: 'src/server/property-handover-invitations/handover-invitation-kind.ts',
+  },
+  {
     name: 'TOUR_UPLOAD_SECRET',
     severity: 'feature',
     feature: 'Ανέβασμα λήψης 360° σε χωρική περιήγηση (ADR-884 Φ0.8 · Κ3α)',

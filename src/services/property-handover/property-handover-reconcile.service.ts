@@ -24,7 +24,13 @@ const COMMITTED_STATUSES = ['reserved', 'sold'];
 
 export interface PropertyHandoverReconcileReport {
   readonly scanned: number;
+  /** Μεταβάσεις κύκλου ζωής — μη μηδενικό = σημείο κλήσης που ξέφυγε. */
   readonly changed: number;
+  /**
+   * Ακίνητα όπου άλλαξε **μόνο** η πρόσκληση (ADR-916 Φ-Β) — π.χ. η επαφή απέκτησε ή άλλαξε email. **Δεν** είναι διαρροή:
+   * η επεξεργασία επαφής δεν έχει (και δεν πρέπει να έχει) σημείο κλήσης της παράδοσης· το δίχτυ **είναι** ο δρόμος της.
+   */
+  readonly invitationChanged: number;
   readonly failed: number;
 }
 
@@ -50,11 +56,13 @@ async function candidatePropertyIds(adminDb: AdminFirestore): Promise<readonly s
 export async function reconcilePropertyHandovers(adminDb: AdminFirestore): Promise<PropertyHandoverReconcileReport> {
   const propertyIds = await candidatePropertyIds(adminDb);
   let changed = 0;
+  let invitationChanged = 0;
   let failed = 0;
   for (const propertyId of propertyIds) {
     const outcome = await syncPropertyHandovers(adminDb, propertyId, { cause: 'reconcile', performedBy: 'system' });
     if (outcome.kind === 'failed') failed += 1;
     else if (outcome.writes > 0) changed += 1;
+    else if (outcome.invitationWrites > 0) invitationChanged += 1;
   }
-  return { scanned: propertyIds.length, changed, failed };
+  return { scanned: propertyIds.length, changed, invitationChanged, failed };
 }
