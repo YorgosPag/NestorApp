@@ -26,6 +26,7 @@
  */
 
 import type { PropertyTypeCanonical } from '@/constants/property-types';
+import type { PropertyHandoverLifecycle } from '@/types/property-handover';
 
 // =============================================================================
 // 1. ΚΥΚΛΟΣ ΖΩΗΣ
@@ -44,6 +45,33 @@ import type { PropertyTypeCanonical } from '@/constants/property-types';
 export const PROPERTY_DOSSIER_LIFECYCLES = ['active', 'archived'] as const;
 
 export type PropertyDossierLifecycle = (typeof PROPERTY_DOSSIER_LIFECYCLES)[number];
+
+// =============================================================================
+// 1β. ΠΡΟΕΛΕΥΣΗ — από πού ήρθε ο φάκελος (ADR-916 Φ-Β · Π2 · Π3)
+// =============================================================================
+
+/**
+ * **Ο φάκελος γεννήθηκε από παράδοση πώλησης** — ο αγοραστής αποδέχτηκε την πρόσκληση της κατασκευάστριας.
+ *
+ * 🔑 **Αμετάβλητη ιστορία + ΕΝΑ προβαλλόμενο πεδίο.** Ό,τι λέει **ποιος** και **πότε** γράφεται μία φορά, στην αποδοχή.
+ * Το `handoverLifecycle` είναι **προβολή** του κύκλου ζωής της παράδοσης, που τη γράφει **μόνο** ο ένας γραφέας της
+ * παράδοσης στην ίδια συναλλαγή: ο αγοραστής **δεν** διαβάζει ποτέ το `property_handovers` (ADR-916 Δ10 — κρατά και
+ * τους συνιδιοκτήτες), άρα το «ετοιμάζεται / έτοιμος / ακυρώθηκε» φτάνει σε αυτόν **μόνο** από εδώ.
+ *
+ * ⚠️ `issuerName` = **στιγμιότυπο** στην αποδοχή, όχι αναφορά: ο φάκελος ζει **εφ' όρου ζωής** — και μετά το κλείσιμο
+ * της εταιρείας (Δ2) — άρα δεν μπορεί να εξαρτάται από έγγραφο που ίσως πάψει να υπάρχει.
+ */
+export interface PropertyDossierHandoverOrigin {
+  readonly kind: 'handover';
+  readonly handoverId: string;
+  readonly issuerCompanyId: string;
+  readonly issuerName: string | null;
+  readonly acceptedAt: string;
+  readonly handoverLifecycle: PropertyHandoverLifecycle;
+}
+
+/** Κλειστό σύνολο προελεύσεων — σήμερα **μία** (Φ4: η παράδοση ιδιώτη → ιδιώτη θα προσθέσει τη δική της). */
+export type PropertyDossierOrigin = PropertyDossierHandoverOrigin;
 
 // =============================================================================
 // 2. Η ΟΝΤΟΤΗΤΑ
@@ -70,6 +98,8 @@ export interface PropertyDossier {
    */
   readonly type: PropertyTypeCanonical | null;
   readonly lifecycle: PropertyDossierLifecycle;
+  /** `null` ⇒ τον γέννησε ο ίδιος ο άνθρωπος («Νέος φάκελος» · αγγελία ιδιώτη). Βλ. {@link PropertyDossierHandoverOrigin}. */
+  readonly origin: PropertyDossierOrigin | null;
   /** ISO — `nowISO()`, όπως η αγγελία. */
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -103,6 +133,7 @@ export function newPropertyDossier(
   birth: PropertyDossierBirth,
   draft: PropertyDossierDraft,
   now: string,
+  origin: PropertyDossierOrigin | null = null,
 ): PropertyDossier {
   return {
     id: birth.id,
@@ -110,6 +141,7 @@ export function newPropertyDossier(
     label: draft.label.trim(),
     type: draft.type,
     lifecycle: 'active',
+    origin,
     createdAt: now,
     updatedAt: now,
   };

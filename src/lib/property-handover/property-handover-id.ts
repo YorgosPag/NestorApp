@@ -10,8 +10,20 @@
  * εταιρεία **δεν** μπορεί να γράψει πάνω σε παράδοση άλλου μισθωτή — άλλος μισθωτής, άλλο έγγραφο.
  */
 
-import { generateDeterministicPropertyHandoverId } from '@/services/enterprise-id.service';
+import {
+  generateDeterministicPropertyDossierId,
+  generateDeterministicPropertyHandoverId,
+} from '@/services/enterprise-id.service';
 
 export function propertyHandoverIdOf(companyId: string, propertyId: string, recipientContactId: string): string {
   return generateDeterministicPropertyHandoverId(`${companyId}:${propertyId}:${recipientContactId}`);
+}
+
+/**
+ * **Ο φάκελος του αγοραστή που γεννά μια παράδοση** (ADR-916 Φ-Β) — ένας ανά παράδοση. Η παράδοση **ήδη** κρατά
+ * μισθωτή, ακίνητο και αγοραστή στην ταυτότητά της, άρα αρκεί ως σπόρος· το πρόθεμα `handover:` χωρίζει τον χώρο
+ * σπόρων από κάθε μελλοντική πηγή φακέλου (Φ4: παράδοση ιδιώτη → ιδιώτη).
+ */
+export function handoverDossierIdOf(handoverId: string): string {
+  return generateDeterministicPropertyDossierId(`handover:${handoverId}`);
 }
