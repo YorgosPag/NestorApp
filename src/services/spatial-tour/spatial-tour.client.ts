@@ -10,6 +10,7 @@
 
 import { API_ROUTES } from '@/config/domain-constants';
 import { apiClient, apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
+import { invitationLinkRefusalOf } from '@/lib/invitations/invitation-link-refusal';
 // ⚠️ **TYPE-ONLY πέρα από το σύνορο του διακομιστή** — σβήνεται στη μεταγλώττιση (ζωντανό ιδίωμα του έργου).
 import type { TourCaptureInvitationView } from '@/app/api/spatial-tours/[kind]/[subjectId]/capture-invitations/route';
 import type { InvitationNoticeOutcome } from '@/server/invitations/invitation-notice';
@@ -38,10 +39,6 @@ function refusalOf(cause: unknown): TourRefusalName | null {
   const body = apiErrorBodyOf(cause);
   if (body === null || body.error !== 'TOUR_REFUSED') return null;
   return isTourRefusalName(body.reason) ? body.reason : null;
-}
-
-function isInvitationCoreRefusal(value: unknown): value is InvitationCoreRefusal {
-  return typeof value === 'string' && (CORE_INVITATION_REFUSALS as readonly string[]).includes(value);
 }
 
 /** Ολόκληρο το λεξιλόγιο — το {@link refusalOf} έχει ήδη απορρίψει κάθε άγνωστο λόγο. */
@@ -195,8 +192,7 @@ export async function redeemTourCaptureInvitationFromScreen(
     const body = await apiClient.post<{ status: 'accepted' | 'declined' }>(routes.REDEEM, { token, action });
     return { kind: body.status };
   } catch (cause: unknown) {
-    const body = apiErrorBodyOf(cause);
-    const reason = body?.error === 'LINK_REFUSED' ? body.reason : null;
-    return isInvitationCoreRefusal(reason) ? { kind: 'refused', reason } : { kind: 'failed' };
+    const reason = invitationLinkRefusalOf(cause, CORE_INVITATION_REFUSALS);
+    return reason !== null ? { kind: 'refused', reason } : { kind: 'failed' };
   }
 }

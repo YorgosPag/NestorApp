@@ -12,13 +12,14 @@
 import { API_ROUTES } from '@/config/domain-constants';
 import { apiClient, apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
 import type { ActingWorkspaceRequest } from '@/lib/auth/acting-workspace';
+import { invitationLinkRefusalOf } from '@/lib/invitations/invitation-link-refusal';
 import { CASE_HOME_PARAM, type CaseHome } from '@/lib/conveyance/conveyance-routes';
 import type { CaseEngagementAnswer, CredentialDeclarationInput } from '@/lib/conveyance/declared-credential';
 import type { CaseFileMode } from '@/lib/conveyance/case-activity';
 import type { CaseActivityItem, CaseProfessionalSlot, EngagedCaseView, MyCaseCard } from '@/types/conveyance-case';
 import type { ContributionSummary } from '@/types/conveyance-contribution';
 import { isEngagementVerdict, type ConsentBasis, type EngagementVerdict } from '@/types/engagement';
-import { isEngagementInvitationRefusal, type EngagementInvitationRefusal } from '@/types/engagement-invitation';
+import { ENGAGEMENT_INVITATION_REFUSALS, type EngagementInvitationRefusal } from '@/types/engagement-invitation';
 import type { LegalProfessionalRole } from '@/types/legal-contracts';
 
 // =============================================================================
@@ -199,9 +200,8 @@ export async function redeemCaseInvitationFromScreen(
     );
     return body.status === 'accepted' ? { kind: 'accepted', engagementId: body.engagementId, home: body.home } : { kind: 'declined' };
   } catch (cause: unknown) {
-    const body = apiErrorBodyOf(cause);
-    const reason = body?.error === 'LINK_REFUSED' ? body.reason : null;
-    return isEngagementInvitationRefusal(reason) ? { kind: 'refused', reason } : { kind: 'failed' };
+    const reason = invitationLinkRefusalOf(cause, ENGAGEMENT_INVITATION_REFUSALS);
+    return reason !== null ? { kind: 'refused', reason } : { kind: 'failed' };
   }
 }
 

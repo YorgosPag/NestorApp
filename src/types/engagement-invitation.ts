@@ -37,10 +37,6 @@ export type EngagementInvitationKindRefusal = (typeof ENGAGEMENT_INVITATION_KIND
 export const ENGAGEMENT_INVITATION_REFUSALS = [...CORE_INVITATION_REFUSALS, ...ENGAGEMENT_INVITATION_KIND_REFUSALS] as const;
 export type EngagementInvitationRefusal = (typeof ENGAGEMENT_INVITATION_REFUSALS)[number];
 
-export function isEngagementInvitationRefusal(value: unknown): value is EngagementInvitationRefusal {
-  return typeof value === 'string' && (ENGAGEMENT_INVITATION_REFUSALS as readonly string[]).includes(value);
-}
-
 /**
  * Ό,τι ξέρει ήδη το βιβλίο του οικοδεσπότη για τον αριθμό μητρώου (persona της επαφής) — **προσυμπλήρωση**,
  * ποτέ δήλωση: δηλώνει **μόνο** ο ίδιος ο επαγγελματίας στην αποδοχή (Ε-4).

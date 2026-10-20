@@ -28,8 +28,9 @@
  */
 
 import { apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
+import { invitationLinkRefusalOf } from '@/lib/invitations/invitation-link-refusal';
 import {
-  isWorkspaceInvitationRefusal,
+  WORKSPACE_INVITATION_REFUSALS,
   isWorkspaceInvitationState,
   type WorkspaceInvitationRefusal,
   type WorkspaceInvitationState,
@@ -150,7 +151,5 @@ export function revokeSetbackOf(cause: unknown): RevokeSetback | null {
  * σε σελίδα που τη βλέπει άγνωστος άνθρωπος από email.
  */
 export function redeemRefusalOf(cause: unknown): WorkspaceInvitationRefusal | null {
-  const body = apiErrorBodyOf(cause);
-  if (body === null || body.error !== 'LINK_REFUSED') return null;
-  return isWorkspaceInvitationRefusal(body.reason) ? body.reason : null;
+  return invitationLinkRefusalOf(cause, WORKSPACE_INVITATION_REFUSALS);
 }

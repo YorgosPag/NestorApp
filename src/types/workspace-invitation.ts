@@ -159,13 +159,6 @@ export const WORKSPACE_INVITATION_REFUSALS = [
 
 export type WorkspaceInvitationRefusal = (typeof WORKSPACE_INVITATION_REFUSALS)[number];
 
-export function isWorkspaceInvitationRefusal(
-  value: unknown,
-): value is WorkspaceInvitationRefusal {
-  return typeof value === 'string'
-    && (WORKSPACE_INVITATION_REFUSALS as readonly string[]).includes(value);
-}
-
 // =============================================================================
 // 5. Η ΟΨΗ — τι ταξιδεύει στην οθόνη του ΧΩΡΟΥ
 // =============================================================================
