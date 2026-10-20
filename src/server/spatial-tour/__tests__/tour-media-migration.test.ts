@@ -7,34 +7,15 @@
 
 jest.mock('server-only', () => ({}));
 
-interface FakeObject { crc32c: string; size: number }
-type FakeStore = Map<string, FakeObject>;
+import { fakeGcsBucket, type FakeGcsStore } from '@/test-utils/fake-gcs/fake-gcs-bucket';
 
-const us: FakeStore = new Map();
-const eu: FakeStore = new Map();
+const us: FakeGcsStore = new Map();
+const eu: FakeGcsStore = new Map();
 let copyHook: (name: string) => void = () => undefined;
 
-function fakeBucket(store: FakeStore, name: string) {
-  const file = (path: string) => ({
-    name: path,
-    get metadata() { return store.get(path) ?? {}; },
-    copy: async (dest: { name: string; store: FakeStore }) => {
-      const object = store.get(path);
-      if (object) dest.store.set(dest.name, { ...object });
-      copyHook(path);
-    },
-    store,
-  });
-  return {
-    name,
-    file,
-    getFiles: async ({ prefix }: { prefix: string }) => [[...store.keys()].filter((key) => key.startsWith(prefix)).map(file)],
-    deleteFiles: async ({ prefix }: { prefix: string }) => { for (const key of [...store.keys()]) if (key.startsWith(prefix)) store.delete(key); },
-  };
-}
-
-const usBucket = fakeBucket(us, 'us');
-const euBucket = fakeBucket(eu, 'eu');
+// `skip`: αυτή η σουίτα μετρά ΤΙ ζητήθηκε να αντιγραφεί — πηγή που λείπει δεν είναι το θέμα της.
+const usBucket = fakeGcsBucket(us, 'us', { missingSource: 'skip', onCopy: (call) => copyHook(call.from) });
+const euBucket = fakeGcsBucket(eu, 'eu', { missingSource: 'skip', onCopy: (call) => copyHook(call.from) });
 jest.mock('../tour-media-store', () => ({
   effectiveMediaPlacement: (placement: string | undefined) => placement ?? 'legacy-default',
   tourMediaBucket: (placement: string | undefined) => ((placement ?? 'legacy-default') === 'tour-eu' ? euBucket : usBucket),

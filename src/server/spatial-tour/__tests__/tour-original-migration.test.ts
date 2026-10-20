@@ -9,41 +9,19 @@
 
 jest.mock('server-only', () => ({}));
 
-interface FakeObject { crc32c: string; size: number; generation: number; metadata?: Record<string, string> }
-type FakeStore = Map<string, FakeObject>;
+import { fakeGcsBucket, type FakeGcsCopyCall, type FakeGcsStore } from '@/test-utils/fake-gcs/fake-gcs-bucket';
 
-const us: FakeStore = new Map();
-const eu: FakeStore = new Map();
-const copyCalls: Array<{ from: string; generation: number | undefined; options: Record<string, unknown> }> = [];
+const us: FakeGcsStore = new Map();
+const eu: FakeGcsStore = new Map();
+const copyCalls: FakeGcsCopyCall[] = [];
 let copyHook: () => void = () => undefined;
+const onCopy = (call: FakeGcsCopyCall): void => {
+  copyCalls.push(call);
+  copyHook();
+};
 
-function fakeBucket(store: FakeStore, name: string) {
-  const bucket = {
-    name,
-    store,
-    file: (path: string, opts?: { generation?: number }) => ({
-      name: path,
-      bucket,
-      store,
-      get metadata() { return store.get(path) ?? {}; },
-      copy: async (dest: { name: string; store: FakeStore }, options: Record<string, unknown> = {}) => {
-        const object = store.get(path);
-        if (!object) throw new Error(`404 ${path}`);
-        if (opts?.generation !== undefined && opts.generation !== object.generation) throw new Error(`412 γενιά ${path}`);
-        copyCalls.push({ from: path, generation: opts?.generation, options });
-        const metadata = 'metadata' in options ? (options.metadata as Record<string, string>) : object.metadata;
-        dest.store.set(dest.name, { ...object, generation: object.generation + 100, ...(metadata ? { metadata } : {}) });
-        copyHook();
-      },
-      delete: async () => { store.delete(path); },
-    }),
-    getFiles: async ({ prefix }: { prefix: string }) => [[...store.keys()].filter((key) => key.startsWith(prefix)).map((key) => bucket.file(key))],
-  };
-  return bucket;
-}
-
-const usBucket = fakeBucket(us, 'us');
-const euBucket = fakeBucket(eu, 'eu');
+const usBucket = fakeGcsBucket(us, 'us', { onCopy });
+const euBucket = fakeGcsBucket(eu, 'eu', { onCopy });
 const audits: Array<Record<string, unknown>> = [];
 
 jest.mock('@/server/files/file-record-bucket', () => ({
