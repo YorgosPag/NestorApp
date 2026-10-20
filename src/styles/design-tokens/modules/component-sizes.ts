@@ -95,6 +95,9 @@ export const componentSizes = {
       maxHeightCompact: 'max-h-80',      // 320px — constrained lists
       maxHeightCombobox: 'max-h-60',     // 240px — searchable combobox
       minWidth: 'min-w-[8rem]',          // 128px — minimum dropdown width
+      // ADR-001 «Content width»: λίστα που μεγαλώνει ως τη μεγαλύτερη ετικέτα — ποτέ στενότερη από
+      // τον ενεργοποιητή, ποτέ φαρδύτερη από 28rem ή από τον διαθέσιμο χώρο της οθόνης (Radix popper).
+      widthFitContent: 'w-auto min-w-[var(--radix-select-trigger-width)] max-w-[min(28rem,var(--radix-select-content-available-width))]',
       shadow: 'shadow-md',
       shadowElevated: 'shadow-lg',       // Sub-menus
       sideOffset: 4,                     // Radix numeric prop (px)

@@ -4075,6 +4075,10 @@
 
 ## Pending tasks (priority order)
 
+### ↔️ Τέσσερις παρακάμψεις πλάτους `SelectContent` στο DXF → `width="content"` (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-20, ADR-001 «Content width» · N.0.2)
+- Το `ui/select` απέκτησε `<SelectContent width="content">` (token `dropdown.content.widthFitContent`). Πριν, τέσσερα αρχεία έγραφαν μόνα τους `w-auto min-w-[var(--radix-select-trigger-width)]` με **διαφορετικά** όρια: `ui/bim-properties/BimPropertyRow.tsx` (24rem) · `ui/panels/entourage/EntouragePalette.tsx` (260px) · `ui/panels/materials/MaterialEditorSections.tsx` (χωρίς όριο ⇒ μπορεί να βγει από την οθόνη) · `ui/ribbon/components/buttons/RibbonCombobox.tsx` (28rem).
+- **Fix**: `width="content"` και αφαίρεση του `className`· αν κάποιο πάνελ χρειάζεται στενότερο όριο, δεύτερο token, όχι τοπική κλάση. Αγγίζει DXF (CHECK 6D) ⇒ χωριστό βήμα.
+
 ### 🗂️ Ετικέτες πράξεων ιστορικού αρχείου — ΚΑΜΙΑ από τις ~45 `FileAuditAction` δεν έχει κλειδί i18n (προτεραιότητα ΜΕΣΑΙΑ, 2026-10-20, ADR-916 Φ-Γ1 · N.0.2)
 - **Περιστατικό**: το `AuditLogPanel` αποδίδει `t(\`audit.action.${entry.action}\`, entry.action)` — **ωμή εφεδρεία** με το ίδιο το κλειδί. Μετρημένο: το `files.json` (el/en) έχει `audit.{title, noEntries, file*}` αλλά **κανένα** `audit.action.*` ⇒ ο άνθρωπος βλέπει `storage_relocate`, `cde_supersede`, `handover_receive` αυτολεξεί. Το CHECK 3.97 το κρύβει επειδή η εφεδρεία δεν είναι literal.
 - **Fix**: κλειστός χάρτης `Record<FileAuditAction, string>` (όπως `ACTION_ICON_MAP`, ώστε νέα πράξη χωρίς ετικέτα **να μη μεταγλωττίζεται**) + ~45 κλειδιά el/en + αφαίρεση της εφεδρείας. 2 locale + 1 component, αλλά ~45 μεταφράσεις ⇒ >1h.

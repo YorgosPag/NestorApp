@@ -60,3 +60,23 @@ import { SelectItem } from '@/components/ui/select';
 
 **Άγκυρα**: `src/components/ui/__tests__/select-native-option-sync.test.tsx` (ρωτά το αποδοθέν native
 option· μετάλλαξη ⇒ 2 🔴). Πλήρες ιστορικό: ADR-744 §25.
+
+## Content width (2026-10-20)
+
+**Πρόβλημα**: το `SelectContent` (popper) καρφώνει το πλάτος στον ενεργοποιητή
+(`w-[var(--radix-select-trigger-width)]`) ⇒ σε στενό πεδίο τα μεγάλα ονόματα κόβονται με `…`
+(ADR-841 Α9.7). Μετρήθηκε στη φόρμα «Προσθήκη Δανείου» (SPEC-242C): «ΕΡΓΟ ΙΩΑΝΝΙΝΩΝ —…».
+Τέσσερα αρχεία DXF το είχαν ήδη παρακάμψει, το καθένα με δικό του `className`.
+
+**Θεραπεία** (SSoT `src/components/ui/select.tsx`): `<SelectContent width="content">`.
+- Πλάτος = token `dropdown.content.widthFitContent` (`component-sizes.ts`): `w-auto`
+  + `min-w-[trigger]` + `max-w-[min(28rem, --radix-select-content-available-width)]` — ποτέ στενότερη
+  από τον ενεργοποιητή, ποτέ έξω από την οθόνη.
+- Το `SelectItem` μαθαίνει τη λειτουργία από context: στο όριο η ετικέτα **τυλίγεται**
+  (`whitespace-normal break-words`) αντί για `truncate`, οπότε το πλήρες όνομα μένει πάντα ορατό
+  (πρότυπο GitHub Primer ActionList: οι ετικέτες τυλίγονται εκτός αν ζητηθεί περικοπή).
+- Η προεπιλογή `width="trigger"` **δεν άλλαξε** — οι υπάρχοντες καταναλωτές βασίζονται στην ευθυγράμμιση.
+- Πότε: λίστες ονομάτων μεταβλητού μήκους (έργα, επαφές). Όχι για σύντομα enum.
+
+**Άγκυρα**: `src/components/ui/__tests__/select-content-width.test.tsx` (κλάσεις στο αποδοθέν DOM).
+Εκκρεμεί: μετάβαση των 4 παρακάμψεων DXF → `.claude-rules/pending-ratchet-work.md`.

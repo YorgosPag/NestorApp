@@ -104,18 +104,38 @@ const SelectScrollDownButton = React.forwardRef<
 SelectScrollDownButton.displayName =
   SelectPrimitive.ScrollDownButton.displayName
 
+/**
+ * ADR-001 «Content width» — ποιος αποφασίζει το πλάτος της λίστας.
+ * - `trigger` (προεπιλογή): ακριβώς όσο ο ενεργοποιητής· η ετικέτα κόβεται με `…` (ADR-841 Α9.7).
+ * - `content`: όσο η μεγαλύτερη ετικέτα, ≥ ενεργοποιητής, ≤ min(28rem, διαθέσιμος χώρος)·
+ *   ό,τι ξεπερνά το όριο **τυλίγεται** — το πλήρες όνομα μένει πάντα ορατό (πρότυπο GitHub Primer ActionList).
+ */
+type SelectContentWidth = 'trigger' | 'content';
+
+/** Το στοιχείο λίστας μαθαίνει τη λειτουργία πλάτους από το περιέχον `SelectContent`. */
+const SelectContentWidthContext = React.createContext<SelectContentWidth>('trigger');
+
+interface SelectContentProps extends React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content> {
+  /** Πλάτος λίστας — `trigger` (προεπιλογή) ή `content` για ονόματα μεταβλητού μήκους. */
+  width?: SelectContentWidth;
+}
+
 const SelectContent = React.forwardRef<
   React.ComponentRef<typeof SelectPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
->(({ className, children, position = "popper", onEscapeKeyDown, ...props }, ref) => {
+  SelectContentProps
+>(({ className, children, position = "popper", width = "trigger", onEscapeKeyDown, ...props }, ref) => {
   const { quick } = useBorderTokens();
   const dropdown = useDropdownTokens();
 
   // 🏢 ENTERPRISE: z-index must be ABOVE floating panels (ρόλος `toast`) — δες ADR-780 Φ.Γ
   // Pattern: Autodesk/Adobe - dropdown content always on top
   // Using centralized tokens for z-index, max-height, shadow
-  // 🏢 ENTERPRISE: Width EXACTLY matches trigger width (not min-width)
+  // 🏢 ENTERPRISE: Width matches trigger width — unless `width="content"` (ADR-001 «Content width»)
+  const popperWidth = width === "content"
+    ? dropdown.content.widthFitContent
+    : "w-[var(--radix-select-trigger-width)] min-w-[var(--radix-select-trigger-width)]"; // eslint-disable-line custom/no-hardcoded-strings
   return (
+    <SelectContentWidthContext.Provider value={width}>
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
         ref={ref}
@@ -123,7 +143,8 @@ const SelectContent = React.forwardRef<
         className={cn(
           `relative ${dropdown.content.zIndexElevated} ${dropdown.content.maxHeight} overflow-hidden ${quick.table} bg-popover text-popover-foreground ${dropdown.content.shadow} data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2`,
           position === "popper" &&
-            "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1 w-[var(--radix-select-trigger-width)] min-w-[var(--radix-select-trigger-width)]", // eslint-disable-line custom/no-hardcoded-strings
+            "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1", // eslint-disable-line custom/no-hardcoded-strings
+          position === "popper" && popperWidth,
           className
         )}
         position={position}
@@ -144,6 +165,7 @@ const SelectContent = React.forwardRef<
         <SelectScrollDownButton />
       </SelectPrimitive.Content>
     </SelectPrimitive.Portal>
+    </SelectContentWidthContext.Provider>
   );
 })
 SelectContent.displayName = SelectPrimitive.Content.displayName
@@ -225,6 +247,10 @@ const SelectItem = React.forwardRef<
   const dropdown = useDropdownTokens();
   const textBox = React.useRef<HTMLSpanElement>(null);
   useResyncItemTextAfterCommit(textBox);
+  // ADR-001 «Content width»: σε λίστα με πλάτος περιεχομένου η ετικέτα τυλίγεται στο όριο, δεν κόβεται.
+  const labelFit = React.useContext(SelectContentWidthContext) === 'content'
+    ? 'whitespace-normal break-words' // eslint-disable-line custom/no-hardcoded-strings
+    : 'truncate'; // eslint-disable-line custom/no-hardcoded-strings
 
   // 🏢 ENTERPRISE: Dev-only guardrail - catch empty value early
   if (process.env.NODE_ENV !== 'production') {
@@ -275,9 +301,12 @@ const SelectItem = React.forwardRef<
         εκεί θα ήταν **σιωπηλά άκυρο**: κώδικας που μοιάζει με θεραπεία και δεν
         αγγίζει τίποτα. Γι' αυτό η άγκυρα ρωτά αν η κλάση **έφτασε στο DOM**, όχι αν
         γράφτηκε στην πηγή.
+
+        ➕ ADR-001 «Content width»: με `<SelectContent width="content">` η λίστα μεγαλώνει ως την
+        ετικέτα και ό,τι ξεπερνά το όριο **τυλίγεται** αντί να κοπεί (`labelFit`).
       */}
       {/* eslint-disable-next-line custom/no-hardcoded-strings -- CSS classes, not i18n */}
-      <span ref={textBox} className="min-w-0 flex-1 truncate">
+      <span ref={textBox} className={cn('min-w-0 flex-1', labelFit)}>
         <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
       </span>
     </SelectPrimitive.Item>
@@ -313,4 +342,4 @@ export {
   SelectScrollDownButton,
 }
 
-export type { SelectTriggerProps }
+export type { SelectTriggerProps, SelectContentProps, SelectContentWidth }

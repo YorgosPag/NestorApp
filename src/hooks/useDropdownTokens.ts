@@ -64,6 +64,8 @@ export interface DropdownTokens {
     readonly maxHeightCombobox: string;
     /** Minimum content width: min-w-[8rem] (128px) */
     readonly minWidth: string;
+    /** Content-sized list (ADR-001): ≥ trigger, ≤ min(28rem, available width) */
+    readonly widthFitContent: string;
     /** Standard shadow: shadow-md */
     readonly shadow: string;
     /** Elevated shadow (sub-menus): shadow-lg */
