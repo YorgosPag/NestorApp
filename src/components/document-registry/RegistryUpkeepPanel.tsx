@@ -2,7 +2,7 @@
 
 /**
  * @fileoverview ADR-915 §35 — **η ενότητα «Μόνιμες υποχρεώσεις»** του μητρώου: η εφαρμογή προτείνει, ο άνθρωπος αποφασίζει.
- * @related lib/document-validity/property-upkeep.ts (πρόταση · απόφαση) · RegistryUpkeepDecision.tsx (τα κουμπιά) ·
+ * @related lib/document-validity/property-upkeep.ts (πρόταση · απόφαση) · RegistryUpkeepItem.tsx (ένα στοιχείο — ΚΟΙΝΟ με την καρτέλα ακινήτου, §36) ·
  *   hooks/document-registry/useUpkeepDeclaration.ts (η αποστολή)
  * @module components/document-registry/RegistryUpkeepPanel
  *
@@ -16,72 +16,62 @@
 
 import React from 'react';
 
-import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { documentKindSpec } from '@/config/document-validity/document-validity';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatDate } from '@/lib/intl-formatting';
-import { followsProposal, type UpkeepItem } from '@/lib/document-validity/property-upkeep';
+import { cn } from '@/lib/utils';
+import type { UpkeepItem } from '@/lib/document-validity/property-upkeep';
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
 import { upkeepItemKeyOf, type UpkeepDeclarationSubmit } from '@/hooks/document-registry/useUpkeepDeclaration';
-import { RegistryPropertyValue } from '@/components/document-registry/RegistryPropertyValue';
-import { RegistryUpkeepDecision } from '@/components/document-registry/RegistryUpkeepDecision';
+import { RegistryUpkeepItem } from '@/components/document-registry/RegistryUpkeepItem';
+import { CONVEYANCE_NS, LEGALITY_NS, REGISTRY_NS } from '@/components/document-registry/document-registry-labels';
 import {
-  CONVEYANCE_NS,
-  DOCUMENT_KIND_LABEL_KEYS,
-  LEGALITY_NS,
-  REGISTRY_KEYS,
-  REGISTRY_NS,
-} from '@/components/document-registry/document-registry-labels';
-import {
-  UPKEEP_DECISION_KEYS,
-  UPKEEP_ERROR_KEYS,
-  UPKEEP_EXEMPTION_KEYS,
   UPKEEP_KEYS,
-  UPKEEP_PROPOSAL_KEYS,
+  UPKEEP_SECTION_TITLE_KEYS,
+  type UpkeepSectionPlace,
 } from '@/components/document-registry/upkeep-labels';
 
-interface ItemProps {
-  readonly item: UpkeepItem;
-  readonly registry: Pick<DocumentRegistryResponse, 'properties'>;
+export interface UpkeepItemsSectionProps {
+  /** Μοναδικό `id` της επικεφαλίδας (`aria-labelledby`). */
+  readonly headingId: string;
+  /** Πού ζει — αποφασίζει τον τίτλο: «Μόνιμες υποχρεώσεις» (μητρώο) ή «… του ακινήτου» (καρτέλα, §36). */
+  readonly place: UpkeepSectionPlace;
+  readonly items: readonly UpkeepItem[];
+  /** Ονόματα ακινήτων (μητρώο) — `null` στην καρτέλα του ίδιου του ακινήτου. */
+  readonly names: Pick<DocumentRegistryResponse, 'properties'> | null;
   readonly declaration: UpkeepDeclarationSubmit;
   readonly canDecide: boolean;
+  /** Απόσταση από το περιβάλλον της (π.χ. πάνω από τα αρχεία στην καρτέλα ακινήτου). */
+  readonly className?: string;
 }
 
-/** Η απόφαση όπως πάρθηκε: τι, γιατί (εξαίρεση), πότε — και αν πήγε **αντίθετα** στην πρόταση της εφαρμογής. */
-function DecisionValue({ item }: { readonly item: UpkeepItem }): React.ReactElement | null {
+/**
+ * Η ενότητα — ΜΙΑ για μητρώο **και** καρτέλα ακινήτου (§36): τίτλος + «Εκκρεμούν: N» + στοιχεία. **Τίποτα** όταν δεν
+ * υπάρχει ούτε πρόταση ούτε απόφαση (κανένα άδειο πλαίσιο).
+ */
+export function UpkeepItemsSection(props: UpkeepItemsSectionProps): React.ReactElement | null {
+  const { headingId, place, items, names, declaration, canDecide, className } = props;
   const { t } = useTranslation([REGISTRY_NS, CONVEYANCE_NS, LEGALITY_NS]);
-  const { declaration } = item;
-  if (declaration === null) return null;
+  if (items.length === 0) return null;
+  const pending = items.filter((item) => item.declaration === null).length;
   return (
-    <p className="m-0 flex flex-wrap items-center gap-2 text-sm text-foreground">
-      <Badge variant={declaration.decision === 'required' ? 'default' : 'muted'}>{t(UPKEEP_DECISION_KEYS[declaration.decision])}</Badge>
-      {declaration.exemptionReason === null ? null : <span>{t(UPKEEP_EXEMPTION_KEYS[declaration.exemptionReason])}</span>}
-      <span className="text-muted-foreground">{t(UPKEEP_KEYS.decidedOn, { date: formatDate(declaration.declaredAt) })}</span>
-      {followsProposal(declaration) === false ? <span className="text-muted-foreground">{t(UPKEEP_KEYS.overrode)}</span> : null}
-    </p>
-  );
-}
-
-function UpkeepItemCard({ item, registry, declaration, canDecide }: ItemProps): React.ReactElement {
-  const { t } = useTranslation([REGISTRY_NS, CONVEYANCE_NS, LEGALITY_NS]);
-  const key = upkeepItemKeyOf(item.propertyId, item.documentKind);
-  const statute = documentKindSpec(item.documentKind).standingObligation?.statute ?? null;
-  const error = declaration.error?.key === key ? declaration.error.reason : null;
-  return (
-    <article className="flex flex-col gap-2">
-      <dl className="m-0 grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-[max-content_1fr]">
-        <dt className="text-sm text-muted-foreground">{t(REGISTRY_KEYS.property)}</dt>
-        <RegistryPropertyValue propertyId={item.propertyId} names={registry} />
-        <dt className="text-sm text-muted-foreground">{t(REGISTRY_KEYS.document)}</dt>
-        <dd className="m-0 text-sm text-foreground">{t(DOCUMENT_KIND_LABEL_KEYS[item.documentKind])}</dd>
-      </dl>
-      <p className="m-0 text-sm text-muted-foreground">{t(UPKEEP_PROPOSAL_KEYS[item.proposal.reason])}</p>
-      <DecisionValue item={item} />
-      {statute === null ? null : <p className="m-0 text-xs text-muted-foreground">{t(UPKEEP_KEYS.statute, { statute })}</p>}
-      {canDecide ? <RegistryUpkeepDecision item={item} busy={declaration.busyKey === key} onSubmit={declaration.submit} /> : null}
-      {error === null ? null : <p role="alert" className="m-0 text-sm text-destructive">{t(UPKEEP_ERROR_KEYS[error])}</p>}
-    </article>
+    <section className={cn('flex flex-col gap-3', className)} aria-labelledby={headingId}>
+      <header className="flex flex-col gap-1">
+        <h2 id={headingId} className="m-0 text-lg font-semibold text-foreground">
+          {t(UPKEEP_SECTION_TITLE_KEYS[place])}{' '}
+          <span className="text-sm font-normal text-muted-foreground">{t(UPKEEP_KEYS.pending, { count: pending })}</span>
+        </h2>
+        <p className="m-0 text-sm text-muted-foreground">{t(UPKEEP_KEYS.lead)}</p>
+      </header>
+      <ul className="m-0 flex list-none flex-col gap-3 p-0">
+        {items.map((item) => (
+          <li key={upkeepItemKeyOf(item.propertyId, item.documentKind)}>
+            <Card className="p-4">
+              <RegistryUpkeepItem item={item} names={names} declaration={declaration} canDecide={canDecide} />
+            </Card>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -91,29 +81,16 @@ export interface RegistryUpkeepPanelProps {
   readonly canDecide: boolean;
 }
 
-/** Η ενότητα — **τίποτα** όταν δεν υπάρχει ούτε πρόταση ούτε απόφαση (κανένα άδειο πλαίσιο). */
+/** Η ενότητα του μητρώου — όλο το χαρτοφυλάκιο (§36: κάθε ακίνητο του γραφείου, όχι μόνο όσα έχουν έγγραφο). */
 export function RegistryUpkeepPanel({ registry, declaration, canDecide }: RegistryUpkeepPanelProps): React.ReactElement | null {
-  const { t } = useTranslation([REGISTRY_NS, CONVEYANCE_NS, LEGALITY_NS]);
-  if (registry.upkeep.length === 0) return null;
-  const pending = registry.upkeep.filter((item) => item.declaration === null).length;
   return (
-    <section className="flex flex-col gap-3" aria-labelledby="registry-upkeep-title">
-      <header className="flex flex-col gap-1">
-        <h2 id="registry-upkeep-title" className="m-0 text-lg font-semibold text-foreground">
-          {t(UPKEEP_KEYS.title)}{' '}
-          <span className="text-sm font-normal text-muted-foreground">{t(UPKEEP_KEYS.pending, { count: pending })}</span>
-        </h2>
-        <p className="m-0 text-sm text-muted-foreground">{t(UPKEEP_KEYS.lead)}</p>
-      </header>
-      <ul className="m-0 flex list-none flex-col gap-3 p-0">
-        {registry.upkeep.map((item) => (
-          <li key={upkeepItemKeyOf(item.propertyId, item.documentKind)}>
-            <Card className="p-4">
-              <UpkeepItemCard item={item} registry={registry} declaration={declaration} canDecide={canDecide} />
-            </Card>
-          </li>
-        ))}
-      </ul>
-    </section>
+    <UpkeepItemsSection
+      headingId="registry-upkeep-title"
+      place="registry"
+      items={registry.upkeep}
+      names={registry}
+      declaration={declaration}
+      canDecide={canDecide}
+    />
   );
 }

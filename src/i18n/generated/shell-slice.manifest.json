@@ -35,7 +35,7 @@
     "src/i18n/generated/routes/o__workspace__cases.el.json": "62e1b3378215c16e66a12632667ad61be33b59cc632e634dde0ffaf9763769d4",
     "src/i18n/generated/routes/o__workspace__cases__engagementId.el.json": "cb0565009bf6f7bec16cd93768e557804df81971abe3c5a23b7c050e9eb91ec3",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
-    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "62f945714e354b17fcd70e871b1ee3f22ad64edd93f8d1e700177a9c6a5ccc43",
+    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "3f6f04b8aa83ce76d9ea0dcba97440b846308fee9edd540f713af414a6866d97",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "f2b0212cf0909081143453962ba0bfec2a47dc8753dc81a009ee34c12579b137",
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "2753c7edd9c05a17a65b15f3146177db8a27ca727df7b1f77d28fd1724f4fa6f",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "e1c5896ab910b7f5515ef0a3991a4daae3ba7fc776c6291815cfeaddb51e2398",
@@ -152,7 +152,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "436633c6edae77e4a849c7414d7a873a1cdde476fb61a3710e870bf5616a3801",
+  "inputsSha256": "fbeec6bdbbc5e1571b68b7323343b6f81ba897869aaaa07e022ab0e47ad45b33",
   "languages": [
     "el"
   ],
@@ -5650,6 +5650,7 @@
             "upkeep.error.absent",
             "upkeep.error.failed",
             "upkeep.error.notStanding",
+            "upkeep.error.retired",
             "upkeep.exempt",
             "upkeep.exemption.noOwnSupply",
             "upkeep.exemption.notConnected",
@@ -5657,11 +5658,13 @@
             "upkeep.lead",
             "upkeep.overrode",
             "upkeep.pending",
+            "upkeep.propertyTitle",
             "upkeep.proposal.class",
             "upkeep.proposal.classUnknown",
             "upkeep.proposal.inUse",
             "upkeep.proposal.phase",
             "upkeep.proposal.phaseUndeclared",
+            "upkeep.proposalChanged",
             "upkeep.reask",
             "upkeep.saved",
             "upkeep.saving",
@@ -11288,7 +11291,7 @@
   ],
   "stats": {
     "matchedKeys": 255,
-    "sliceBytes": 786382
+    "sliceBytes": 786702
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

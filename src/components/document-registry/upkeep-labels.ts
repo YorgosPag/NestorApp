@@ -34,7 +34,21 @@ export const UPKEEP_KEYS = {
   cancel: `${K}cancel`,
   saving: `${K}saving`,
   saved: `${K}saved`,
+  proposalChanged: `${K}proposalChanged`,
+  loadFailed: `${K}loadFailed`,
 } as const;
+
+/**
+ * §36 — **πού** ζει η ενότητα: μητρώο (όλο το χαρτοφυλάκιο) ή καρτέλα ενός ακινήτου. Χάρτης με κυριολεκτικές τιμές, όχι
+ * κλειδί ως prop: ο γεννήτορας του route slice (3.34) λύνει μόνο ό,τι βλέπει στατικά.
+ */
+export const UPKEEP_SECTION_PLACES = ['registry', 'property'] as const;
+export type UpkeepSectionPlace = (typeof UPKEEP_SECTION_PLACES)[number];
+
+export const UPKEEP_SECTION_TITLE_KEYS: Readonly<Record<UpkeepSectionPlace, string>> = {
+  registry: `${K}title`,
+  property: `${K}propertyTitle`,
+};
 
 export const UPKEEP_PROPOSAL_KEYS: Readonly<Record<UpkeepProposalReason, string>> = {
   'in-use': `${K}proposal.inUse`,
@@ -59,5 +73,6 @@ export const UPKEEP_EXEMPTION_KEYS: Readonly<Record<UpkeepExemptionReason, strin
 export const UPKEEP_ERROR_KEYS: Readonly<Record<UpkeepDeclarationRefusal | 'failed', string>> = {
   failed: `${K}error.failed`,
   absent: `${K}error.absent`,
+  retired: `${K}error.retired`,
   'not-standing': `${K}error.notStanding`,
 };
