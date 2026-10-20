@@ -14,7 +14,8 @@ import 'server-only';
 
 import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import type { PurchaseOrder } from '@/types/procurement';
+import { PO_COMMITTED_STATUSES } from '@/types/procurement';
+import { fetchProjectPurchaseOrders } from './project-purchase-orders';
 
 // ============================================================================
 // TYPES
@@ -26,8 +27,6 @@ export interface ProjectBasicStats {
   totalCommittedSpend: number;
 }
 
-const COMMITTED_STATUSES = new Set(['ordered', 'partially_delivered', 'delivered', 'closed']);
-
 // ============================================================================
 // AGGREGATOR
 // ============================================================================
@@ -37,18 +36,13 @@ export async function computeProjectBasicStats(
   projectId: string,
 ): Promise<ProjectBasicStats> {
   return safeFirestoreOperation(async (db) => {
-    const [rfqSnap, poSnap] = await Promise.all([
+    const [rfqSnap, purchaseOrders] = await Promise.all([
       db
         .collection(COLLECTIONS.RFQS)
         .where('companyId', '==', companyId)
         .where('projectId', '==', projectId)
         .get(),
-      db
-        .collection(COLLECTIONS.PURCHASE_ORDERS)
-        .where('companyId', '==', companyId)
-        .where('isDeleted', '==', false)
-        .where('projectId', '==', projectId)
-        .get(),
+      fetchProjectPurchaseOrders(db, companyId, projectId),
     ]);
 
     let openRfqCount = 0;
@@ -58,10 +52,9 @@ export async function computeProjectBasicStats(
 
     let pendingApprovalPoCount = 0;
     let totalCommittedSpend = 0;
-    for (const doc of poSnap.docs) {
-      const po = doc.data() as PurchaseOrder;
+    for (const po of purchaseOrders) {
       if (po.status === 'draft') pendingApprovalPoCount++;
-      if (COMMITTED_STATUSES.has(po.status)) totalCommittedSpend += po.total ?? 0;
+      if (PO_COMMITTED_STATUSES.has(po.status)) totalCommittedSpend += po.total ?? 0;
     }
 
     return { openRfqCount, pendingApprovalPoCount, totalCommittedSpend };

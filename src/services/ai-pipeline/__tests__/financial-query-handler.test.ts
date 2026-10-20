@@ -55,6 +55,15 @@ describe('FinancialQueryHandler', () => {
     expect(result.count).toBe(2);
   });
 
+  it('get_budget_variance scopes the read to the caller company (ADR-917 Φ0)', async () => {
+    const { getBudgetVarianceForQuery } = jest.requireMock('../tools/financial-query-tools') as {
+      getBudgetVarianceForQuery: jest.Mock;
+    };
+    const result = await handler.execute('get_budget_variance', { projectId: 'p1' }, makeCtx());
+    expect(result.success).toBe(true);
+    expect(getBudgetVarianceForQuery).toHaveBeenCalledWith('comp_test', 'p1');
+  });
+
   it('get_project_financial_details requires projectId', async () => {
     const result = await handler.execute('get_project_financial_details', {}, makeCtx());
     expect(result.success).toBe(false);

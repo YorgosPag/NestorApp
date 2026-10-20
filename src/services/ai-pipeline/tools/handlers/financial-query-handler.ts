@@ -64,7 +64,7 @@ export class FinancialQueryHandler implements ToolHandler {
           return await this.getDebtMaturitySchedule(ctx);
 
         case 'get_budget_variance':
-          return await this.getBudgetVariance(args);
+          return await this.getBudgetVariance(args, ctx);
 
         case 'calculate_scenario_npv':
           return this.calculateScenarioNPV(args);
@@ -105,11 +105,14 @@ export class FinancialQueryHandler implements ToolHandler {
     return { success: true, data: entries, count: entries.length };
   }
 
-  private async getBudgetVariance(args: Record<string, unknown>): Promise<ToolResult> {
+  private async getBudgetVariance(
+    args: Record<string, unknown>,
+    ctx: AgenticContext
+  ): Promise<ToolResult> {
     const projectId = String(args.projectId ?? '');
     if (!projectId) return { success: false, error: 'projectId is required' };
 
-    const analysis = await getBudgetVarianceForQuery(projectId);
+    const analysis = await getBudgetVarianceForQuery(ctx.companyId, projectId);
     if (!analysis) return { success: true, data: null, count: 0, warning: 'No budget variance data for this project.' };
     return { success: true, data: analysis, count: 1 };
   }

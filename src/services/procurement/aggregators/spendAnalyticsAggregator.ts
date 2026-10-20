@@ -3,6 +3,9 @@ import 'server-only';
 import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { PurchaseOrder } from '@/types/procurement';
+import { PO_COMMITTED_STATUSES, PO_DELIVERED_STATUSES } from '@/types/procurement';
+import { normalizeBOQItem } from '@/services/measurements/boq-document-normalize';
+import { computeCostLedger, hasBudgetOrCommitment, type LedgerBoqItem } from '@/services/project-cost/cost-ledger';
 import { athensDateRangeToUtc, getPreviousPeriod } from '@/lib/date/quarter-helpers';
 import { compareByLocale } from '@/lib/intl-utils';
 
@@ -55,19 +58,7 @@ export interface SpendAnalyticsResult {
 // CONSTANTS
 // ============================================================================
 
-const COMMITTED = new Set(['ordered', 'partially_delivered', 'delivered', 'closed']);
-const DELIVERED = new Set(['delivered', 'closed']);
 const TOP_N = 10;
-
-interface RawBoqItem {
-  projectId: string;
-  categoryCode: string;
-  estimatedQuantity: number | null;
-  wasteFactor: number | null;
-  materialUnitCost: number | null;
-  laborUnitCost: number | null;
-  equipmentUnitCost: number | null;
-}
 
 const EMPTY_KPIS: SpendKpis = { totalPOs: 0, committedAmount: 0, deliveredAmount: 0, activeSuppliers: 0 };
 
@@ -111,8 +102,8 @@ function computeSpendKpis(pos: PurchaseOrder[]): SpendKpis {
   const suppliers = new Set<string>();
   for (const po of pos) {
     suppliers.add(po.supplierId);
-    if (COMMITTED.has(po.status)) committedAmount += po.total ?? 0;
-    if (DELIVERED.has(po.status)) deliveredAmount += po.total ?? 0;
+    if (PO_COMMITTED_STATUSES.has(po.status)) committedAmount += po.total ?? 0;
+    if (PO_DELIVERED_STATUSES.has(po.status)) deliveredAmount += po.total ?? 0;
   }
   return { totalPOs: pos.length, committedAmount, deliveredAmount, activeSuppliers: suppliers.size };
 }
@@ -165,44 +156,20 @@ function computeMonthlyTrend(pos: PurchaseOrder[]): MonthlyPoint[] {
     .sort((a, b) => compareByLocale(a.month, b.month));
 }
 
-function boqItemCost(item: RawBoqItem): number {
-  const qty = item.estimatedQuantity ?? 0;
-  const waste = item.wasteFactor ?? 0;
-  const unit = (item.materialUnitCost ?? 0) + (item.laborUnitCost ?? 0) + (item.equipmentUnitCost ?? 0);
-  return qty * (1 + waste) * unit;
-}
-
+/** ADR-917 Δ1: the arithmetic lives in the cost ledger — this only shapes the wire point. */
 function computeBudgetVsActual(
-  boqItems: RawBoqItem[],
+  boqItems: readonly LedgerBoqItem[],
   pos: PurchaseOrder[],
   catFilter: string[],
 ): BudgetVsActualPoint[] {
-  const budget = new Map<string, number>();
-  const committed = new Map<string, number>();
-  const delivered = new Map<string, number>();
-
-  for (const item of boqItems) {
-    const code = item.categoryCode ?? 'OTHER';
-    if (catFilter.length > 0 && !catFilter.includes(code)) continue;
-    budget.set(code, (budget.get(code) ?? 0) + boqItemCost(item));
-  }
-  for (const po of pos) {
-    for (const item of po.items ?? []) {
-      const code = item.categoryCode ?? 'OTHER';
-      if (catFilter.length > 0 && !catFilter.includes(code)) continue;
-      if (COMMITTED.has(po.status)) committed.set(code, (committed.get(code) ?? 0) + (item.total ?? 0));
-      if (DELIVERED.has(po.status)) delivered.set(code, (delivered.get(code) ?? 0) + (item.total ?? 0));
-    }
-  }
-  const allCodes = new Set([...budget.keys(), ...committed.keys()]);
-  return [...allCodes]
-    .map(code => ({
-      categoryCode: code,
-      budget: budget.get(code) ?? 0,
-      committed: committed.get(code) ?? 0,
-      delivered: delivered.get(code) ?? 0,
-    }))
-    .sort((a, b) => compareByLocale(a.categoryCode, b.categoryCode));
+  return computeCostLedger(boqItems, pos, catFilter).rows
+    .filter(hasBudgetOrCommitment)
+    .map(row => ({
+      categoryCode: row.categoryCode,
+      budget: row.budget,
+      committed: row.committed,
+      delivered: row.delivered,
+    }));
 }
 
 function computeDeltas(current: SpendKpis, prev: SpendKpis): SpendKpis {
@@ -276,7 +243,7 @@ export async function computeSpendAnalytics(
     }));
 
     const boqItems = boqSnap.docs
-      .map(d => d.data() as RawBoqItem)
+      .map(d => normalizeBOQItem(d.id, d.data()))
       .filter(item => filters.projectId.length === 0 || filters.projectId.includes(item.projectId));
 
     return {

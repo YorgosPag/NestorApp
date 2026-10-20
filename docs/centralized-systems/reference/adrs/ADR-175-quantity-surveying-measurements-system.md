@@ -1500,3 +1500,9 @@ Existing `CategoryLevel = 'group' | 'subgroup' | 'item'` and `parentId` field re
 
 **Impact:** BIM entities now auto-generate BOQ items on first-save. User can detach any auto-item to take manual control. Detached items survive BIM delete/update. Phase 6.1 adds DNA layer sub-items.
 **Ref:** **ADR-363 §6** (Phase 6 spec + implementation)
+
+### 2026-10-20 — `computeItemCost` = ο ΜΟΝΟΣ τύπος κόστους γραμμής (ADR-917 Φ1)
+- Η υπογραφή στενεύει σε `BOQCostInput` (`Pick` των 6 πεδίων κοστολόγησης) — συμβατό με κάθε `BOQItem`.
+- Δύο aggregators προμηθειών (`spendAnalyticsAggregator`, `projectBoqCoverageStats`) είχαν **αντίγραφο** του τύπου
+  **χωρίς** τον περιορισμό φύρας `[0,1]` ⇒ άλλος προϋπολογισμός ανά οθόνη. Πλέον αναθέτουν στο
+  `services/project-cost/cost-ledger` → `computeItemCost`. Δες ADR-917 §2 Δ1.

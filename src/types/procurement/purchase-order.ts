@@ -64,6 +64,16 @@ export const PO_COMMITTED_STATUSES: ReadonlySet<PurchaseOrderStatus> = new Set([
   'ordered', 'partially_delivered', 'delivered', 'closed',
 ]);
 
+/** Fully received — the «delivered» column of budget-vs-actual (ADR-917) */
+export const PO_DELIVERED_STATUSES: ReadonlySet<PurchaseOrderStatus> = new Set([
+  'delivered', 'closed',
+]);
+
+/** Not yet sent to the supplier — Procore's «pending cost changes» (ADR-917 §4 Β) */
+export const PO_PENDING_STATUSES: ReadonlySet<PurchaseOrderStatus> = new Set([
+  'draft', 'approved',
+]);
+
 /** Status metadata for UI rendering */
 export const PO_STATUS_META: Record<PurchaseOrderStatus, {
   label: { el: string; en: string };
@@ -162,7 +172,7 @@ export interface PurchaseOrderItem {
 
   // BOQ Integration (optional link, categoryCode required)
   boqItemId: string | null;         // ref → boq_items (optional)
-  categoryCode: string;             // ΑΤΟΕ code (OIK-1...OIK-12) — MANDATORY
+  categoryCode: string;             // ΑΤΟΕ code (OIK-1...OIK-16) — MANDATORY
 
   // Material Catalog link (ADR-330 Phase 4.5 — explicit FK, no ambiguous matching)
   materialId?: string | null;       // ref → materials/ — drives avgPrice auto-update on delivery

@@ -19,11 +19,14 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { withHighRateLimit } from '@/lib/middleware/with-rate-limit';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { API_ROUTES } from '@/config/domain-constants';
+import { requireProjectInTenant } from '@/lib/auth/tenant-isolation';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { BudgetVarianceEntry, BudgetVarianceAnalysis, VarianceTrend } from '@/types/interest-calculator';
 import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('BudgetVarianceRoute');
+const BUDGET_VARIANCE_PATH = API_ROUTES.FINANCIAL_INTELLIGENCE.BUDGET_VARIANCE;
 
 function getDocId(projectId: string): string {
   return `budget_variance_${projectId}`;
@@ -43,6 +46,9 @@ export const GET = withHighRateLimit(
       if (!projectId) {
         throw new ApiError(400, 'projectId query param required');
       }
+
+      // ADR-917 Φ0: the doc id is the bare projectId — the project's tenant is the only fence.
+      await requireProjectInTenant({ ctx, projectId, path: BUDGET_VARIANCE_PATH });
 
       const db = getAdminFirestore();
       const docRef = db.collection(COLLECTIONS.SETTINGS).doc(getDocId(projectId));
@@ -108,6 +114,7 @@ export const POST = withHighRateLimit(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       const body = await req.json() as Record<string, unknown>;
       const payload = validatePayload(body);
+      await requireProjectInTenant({ ctx, projectId: payload.projectId, path: BUDGET_VARIANCE_PATH });
       const db = getAdminFirestore();
 
       // Build variance entries
@@ -152,7 +159,7 @@ export const POST = withHighRateLimit(
       };
 
       const docRef = db.collection(COLLECTIONS.SETTINGS).doc(getDocId(payload.projectId));
-      await docRef.set({ ...analysis, updatedAt: nowISO() });
+      await docRef.set({ ...analysis, companyId: ctx.companyId, updatedAt: nowISO() });
 
       logger.info(`[BudgetVariance] Saved ${entries.length} categories for project ${payload.projectId}`);
       return apiSuccess({ analysis }, 'Budget variance saved');

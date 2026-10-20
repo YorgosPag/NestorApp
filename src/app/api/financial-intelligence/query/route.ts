@@ -109,7 +109,7 @@ async function executeTool(
       }
       case 'get_budget_variance': {
         const projectId = String(args.projectId ?? '');
-        const analysis = await getBudgetVarianceForQuery(projectId);
+        const analysis = await getBudgetVarianceForQuery(companyId, projectId);
         return JSON.stringify(analysis ?? { error: 'No data' });
       }
       case 'calculate_scenario_npv': {

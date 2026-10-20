@@ -35,13 +35,22 @@ export function computeGrossQuantity(netQuantity: number, wasteFactor: number): 
 // ITEM COST BREAKDOWN
 // ============================================================================
 
+/** Τα πεδία που αρκούν για την κοστολόγηση — ο server aggregator δεν χρειάζεται όλο το `BOQItem` (ADR-917). */
+export type BOQCostInput = Pick<
+  BOQItem,
+  'estimatedQuantity' | 'wasteFactor' | 'materialUnitCost' | 'laborUnitCost' | 'equipmentUnitCost' | 'unit'
+>;
+
 /**
  * Πλήρης ανάλυση κόστους ενός BOQ item
+ *
+ * ⚠️ Ο ΜΟΝΟΣ τύπος κόστους γραμμής BOQ (ADR-917 §2 Δ1): δύο aggregators προμηθειών είχαν
+ * αντίγραφο χωρίς τον περιορισμό φύρας του `computeGrossQuantity`.
  *
  * @param item - Το BOQ item
  * @returns CostBreakdown — computed, NEVER stored in Firestore
  */
-export function computeItemCost(item: BOQItem): CostBreakdown {
+export function computeItemCost(item: BOQCostInput): CostBreakdown {
   const grossQuantity = computeGrossQuantity(item.estimatedQuantity, item.wasteFactor);
 
   const materialCost = grossQuantity * item.materialUnitCost;

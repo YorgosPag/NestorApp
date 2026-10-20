@@ -1,0 +1,109 @@
+/**
+ * ADR-917 §7 — anchors for the ONE budget-vs-actual arithmetic.
+ * Each `it` names the mutation it exists to catch.
+ */
+
+import {
+  computeCostLedger,
+  hasBudgetOrCommitment,
+  UNCATEGORIZED_COST_CODE,
+  type LedgerBoqItem,
+  type LedgerPurchaseOrder,
+} from '../cost-ledger';
+import type { PurchaseOrderItem, PurchaseOrderStatus } from '@/types/procurement';
+
+function boq(id: string, categoryCode: string, overrides: Partial<LedgerBoqItem> = {}): LedgerBoqItem {
+  return {
+    id,
+    categoryCode,
+    unit: 'm2',
+    estimatedQuantity: 10,
+    wasteFactor: 0,
+    materialUnitCost: 5,
+    laborUnitCost: 3,
+    equipmentUnitCost: 2,
+    ...overrides,
+  };
+}
+
+function line(categoryCode: string, total: number, boqItemId: string | null = null): PurchaseOrderItem {
+  return {
+    id: `poi_${categoryCode}_${total}`,
+    description: '',
+    quantity: 1,
+    unit: 'pcs',
+    unitPrice: total,
+    total,
+    boqItemId,
+    categoryCode,
+    quantityReceived: 0,
+    quantityRemaining: 1,
+  };
+}
+
+function po(status: PurchaseOrderStatus, items: PurchaseOrderItem[]): LedgerPurchaseOrder {
+  return { status, items };
+}
+
+describe('computeCostLedger (ADR-917)', () => {
+  it('A1 — budget per line = cost-engine total (10 × (5+3+2) = 100)', () => {
+    const { rows } = computeCostLedger([boq('b1', 'OIK-2'), boq('b2', 'OIK-2')], []);
+    expect(rows).toEqual([
+      expect.objectContaining({ categoryCode: 'OIK-2', budget: 200, boqItemCount: 2 }),
+    ]);
+  });
+
+  it('A2 — waste factor is clamped to 1 like cost-engine (a local copy would give 300)', () => {
+    const { rows } = computeCostLedger([boq('b1', 'OIK-2', { wasteFactor: 2 })], []);
+    expect(rows[0].budget).toBe(200);
+  });
+
+  it('A4 — a code with PO money but no BOQ reports boqItemCount 0 (no source ≠ 0 €)', () => {
+    const { rows } = computeCostLedger([], [po('ordered', [line('OIK-5', 40)])]);
+    expect(rows[0]).toEqual(expect.objectContaining({ categoryCode: 'OIK-5', boqItemCount: 0, committed: 40 }));
+    expect(hasBudgetOrCommitment(rows[0])).toBe(true);
+  });
+
+  it('A5 — draft/approved go to pending, never to committed', () => {
+    const { rows } = computeCostLedger([], [po('draft', [line('OIK-3', 10)]), po('approved', [line('OIK-3', 5)])]);
+    expect(rows[0]).toEqual(expect.objectContaining({ pending: 15, committed: 0, delivered: 0 }));
+    expect(hasBudgetOrCommitment(rows[0])).toBe(false);
+  });
+
+  it('delivered counts only delivered/closed; cancelled counts nowhere', () => {
+    const { rows } = computeCostLedger([], [
+      po('partially_delivered', [line('OIK-4', 10)]),
+      po('closed', [line('OIK-4', 20)]),
+      po('cancelled', [line('OIK-4', 99)]),
+    ]);
+    expect(rows[0]).toEqual(expect.objectContaining({ committed: 30, delivered: 20, pending: 0 }));
+  });
+
+  it('coverage counts existing BOQ lines once, attributed to the BOQ code', () => {
+    const ledger = computeCostLedger(
+      [boq('b1', 'OIK-2'), boq('b2', 'OIK-2')],
+      [
+        po('ordered', [line('OIK-2', 10, 'b1'), line('OIK-2', 10, 'b1'), line('OIK-2', 10, 'gone')]),
+        po('draft', [line('OIK-2', 10, 'b2')]),
+      ],
+    );
+    expect(ledger.coveredBoqItemCount).toBe(1);
+    expect(ledger.boqItemCount).toBe(2);
+    expect(ledger.rows[0].coveredBoqItemCount).toBe(1);
+  });
+
+  it('category filter applies to budget and commitments alike', () => {
+    const { rows } = computeCostLedger(
+      [boq('b1', 'OIK-1'), boq('b2', 'OIK-2')],
+      [po('ordered', [line('OIK-1', 7), line('OIK-2', 9)])],
+      ['OIK-2'],
+    );
+    expect(rows.map(r => r.categoryCode)).toEqual(['OIK-2']);
+    expect(rows[0]).toEqual(expect.objectContaining({ budget: 100, committed: 9 }));
+  });
+
+  it('lines without a code land in the uncategorized bucket', () => {
+    const { rows } = computeCostLedger([boq('b1', '')], [po('ordered', [line('', 3)])]);
+    expect(rows).toEqual([expect.objectContaining({ categoryCode: UNCATEGORIZED_COST_CODE, budget: 100, committed: 3 })]);
+  });
+});

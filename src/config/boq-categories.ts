@@ -1,7 +1,7 @@
 /**
  * BOQ Master Categories — ΑΤΟΕ (Αναλυτικό Τιμολόγιο Οικοδομικών Εργών)
  *
- * 12 κατηγορίες εργασιών σύμφωνα με τα ελληνικά πρότυπα.
+ * 16 κατηγορίες εργασιών (OIK-1…OIK-16) σύμφωνα με τα ελληνικά πρότυπα.
  * Static data — χρησιμοποιείται ως fallback αν το Firestore boq_categories είναι κενό.
  *
  * @module config/boq-categories
@@ -34,7 +34,7 @@ export interface MasterBOQCategory {
 }
 
 // ============================================================================
-// 12 ΑΤΟΕ MASTER CATEGORIES
+// 16 ΑΤΟΕ MASTER CATEGORIES
 // ============================================================================
 
 export const ATOE_MASTER_CATEGORIES: readonly MasterBOQCategory[] = [
