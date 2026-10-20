@@ -54,7 +54,7 @@ import {
   type PropertyDossierInvariant,
   type PropertyDossierOrigin,
 } from '@/types/property-dossier';
-import type { PropertyHandoverLifecycle } from '@/types/property-handover';
+import type { PropertyHandoverFileDeliverySummary, PropertyHandoverLifecycle } from '@/types/property-handover';
 
 const logger = createModuleLogger('property-dossier-write.service');
 
@@ -147,7 +147,12 @@ export interface PropertyDossierHandoverProjection {
   readonly userId: string;
   readonly handoverId: string;
   readonly handoverLifecycle: PropertyHandoverLifecycle;
+  /** Φ-Γ1 — η πρόοδος αντιγραφής· απούσα ⇒ η προβολή **δεν** την αγγίζει (μόνο ο κύκλος ζωής). */
+  readonly fileDelivery?: PropertyHandoverFileDeliverySummary;
 }
+
+const sameFileDelivery = (a: PropertyHandoverFileDeliverySummary | null, b: PropertyHandoverFileDeliverySummary): boolean =>
+  a !== null && a.state === b.state && a.delivered === b.delivered && a.total === b.total;
 
 /**
  * **Η προβολή του κύκλου ζωής της παράδοσης στον φάκελο του αγοραστή** (ADR-916 Φ-Β · Δ10), μέσα στη συναλλαγή του
@@ -168,12 +173,18 @@ export async function stagePropertyDossierHandoverProjection(
     ? propertyDossierFromDocument(data, projection.dossierId)
     : null;
   const origin = dossier?.origin ?? null;
-  const changed = origin !== null && origin.handoverId === projection.handoverId
-    && origin.handoverLifecycle !== projection.handoverLifecycle;
+  const ours = origin !== null && origin.handoverId === projection.handoverId;
+  const lifecycleChanged = ours && origin.handoverLifecycle !== projection.handoverLifecycle;
+  const { fileDelivery } = projection;
+  const deliveryChanged = ours && fileDelivery !== undefined && !sameFileDelivery(origin.fileDelivery, fileDelivery);
   return {
-    changed,
+    changed: lifecycleChanged || deliveryChanged,
     commit: () => {
-      if (changed) tx.update(ref, { 'origin.handoverLifecycle': projection.handoverLifecycle });
+      if (!lifecycleChanged && !deliveryChanged) return;
+      tx.update(ref, {
+        ...(lifecycleChanged ? { 'origin.handoverLifecycle': projection.handoverLifecycle } : {}),
+        ...(deliveryChanged ? { 'origin.fileDelivery': fileDelivery } : {}),
+      });
     },
   };
 }
