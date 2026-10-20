@@ -66,7 +66,13 @@ export type PropertyHandoverSyncOutcome =
    * `writes` = μεταβάσεις κύκλου ζωής (στο δίχτυ: σημείο κλήσης που ξέφυγε). `invitationWrites` = παραδόσεις που
    * άλλαξαν **μόνο** πρόσκληση — π.χ. άλλαξε το email της επαφής, πράξη που **δεν** έχει σημείο κλήσης· δεν είναι διαρροή.
    */
-  | { readonly kind: 'synced'; readonly writes: number; readonly invitationWrites: number }
+  | {
+      readonly kind: 'synced';
+      readonly writes: number;
+      readonly invitationWrites: number;
+      /** Προσκλήσεις που οφείλονται αλλά περιμένουν το μυστικό των συνδέσμων (ADR-916 §5.6) — ΕΝΑ σήμα, όχι σφάλμα. */
+      readonly invitationsAwaitingConfiguration: number;
+    }
   | { readonly kind: 'failed' };
 
 /**
@@ -168,11 +174,12 @@ interface AppliedPlan {
   /** Πόσες παραδόσεις άλλαξαν **μόνο** κάτοπτρο πρόσκλησης (π.χ. άλλαξε το email της επαφής). */
   readonly mirrorWrites: number;
   readonly issued: readonly MintedHandoverInvitation[];
+  readonly awaitingConfiguration: number;
   /** Όλες οι παραδόσεις του ακινήτου, όπως **είναι** μετά το commit. */
   readonly handovers: readonly PropertyHandover[];
 }
 
-const NOTHING_APPLIED: AppliedPlan = { lifecycleWrites: [], mirrorWrites: 0, issued: [], handovers: [] };
+const NOTHING_APPLIED: AppliedPlan = { lifecycleWrites: [], mirrorWrites: 0, issued: [], awaitingConfiguration: 0, handovers: [] };
 
 /** Οι παραδόσεις όπως **θα** είναι μετά το σχέδιο κύκλου ζωής — υπάρχουσες + γεννήσεις, με τις μεταβάσεις. */
 function afterLifecycle(existing: readonly PropertyHandover[], writes: readonly PropertyHandoverWrite[]): readonly PropertyHandover[] {
@@ -261,7 +268,7 @@ function applyPlan(adminDb: AdminFirestore, propertyId: string, actorUid: string
 
     const lifecycleIds = new Set(lifecycleWrites.map((write) => write.after.id));
     const mirrorWrites = [...invitations.mirrored.keys()].filter((id) => !lifecycleIds.has(id)).length;
-    return { lifecycleWrites, mirrorWrites, issued: invitations.issued, handovers };
+    return { lifecycleWrites, mirrorWrites, issued: invitations.issued, awaitingConfiguration: invitations.awaitingConfiguration, handovers };
   });
 }
 
@@ -296,7 +303,7 @@ export async function syncPropertyHandovers(
     if (writes + applied.mirrorWrites > 0) {
       logger.info('Property handovers synced', { propertyId, cause: request.cause, writes, invitations: applied.mirrorWrites, issued: applied.issued.length });
     }
-    return { kind: 'synced', writes, invitationWrites: applied.mirrorWrites };
+    return { kind: 'synced', writes, invitationWrites: applied.mirrorWrites, invitationsAwaitingConfiguration: applied.awaitingConfiguration };
   } catch (error) {
     logger.error('Property handover sync failed', { propertyId, cause: request.cause, error: getErrorMessage(error) });
     return { kind: 'failed' };

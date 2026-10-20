@@ -16,12 +16,18 @@ import 'server-only';
  * 🔴 **Το email ΔΕΝ φεύγει εδώ** (το σώμα ξανατρέχει σε σύγκρουση): επιστρέφεται το ωμό token για τον καλούντα.
  *
  * ⛔ **Καμία ανάγνωση στο `commit()`** — όλες γίνονται στη σκηνή (το Firestore θέλει αναγνώσεις πριν από γραφές).
+ *
+ * 🔑 **Η απούσα ρύθμιση είναι ΕΝΑ σήμα, όχι σφάλμα ανά παράδοση** (ADR-916 §5.6): το «υπάρχει το μυστικό;» ρωτιέται
+ *    **μία** φορά, πριν από τον βρόχο, από το SSoT `readConfiguredValue`· οι εκδόσεις που περιμένουν **μετριούνται**
+ *    (`awaitingConfiguration`) και τις λέει ο καλών **έξω** από τη συναλλαγή (το σώμα της ξανατρέχει σε σύγκρουση).
+ *    Κάθε **άλλη** αποτυχία έκδοσης γράφεται ως `error` με το **πραγματικό** μήνυμα — ποτέ με λάθος διάγνωση.
  */
 
 import type { Firestore as AdminFirestore, Transaction } from 'firebase-admin/firestore';
 
 import { normaliseChannelEmail } from '@/lib/contact/channel-email';
 import { primaryEmailOf } from '@/lib/contacts/primary-email';
+import { readConfiguredValue } from '@/lib/environment/environment-audit';
 import { getErrorMessage } from '@/lib/error-utils';
 import { handoverInvitationIntentOf, type HandoverInvitationIntent } from '@/lib/property-handover/handover-invitation-plan';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -30,6 +36,7 @@ import { readOwnedContactDocsInTransaction } from '@/server/lib/owned-contact-do
 import {
   liveHandoverInvitationsQuery,
   mintHandoverInvitation,
+  PROPERTY_HANDOVER_INVITE_SECRET_ENV,
   propertyHandoverInvitationsCollection,
   type MintedHandoverInvitation,
 } from '@/server/property-handover-invitations/handover-invitation-kind';
@@ -51,6 +58,8 @@ export interface StagedHandoverInvitations {
   readonly mirrored: ReadonlyMap<string, PropertyHandover>;
   /** Οι νέες προσκλήσεις — το email τους φεύγει **μετά** το commit. */
   readonly issued: readonly MintedHandoverInvitation[];
+  /** Εκδόσεις που **οφείλονται** αλλά περιμένουν το μυστικό των συνδέσμων — το δίχτυ τις εκδίδει όταν ρυθμιστεί. */
+  readonly awaitingConfiguration: number;
   commit(): void;
 }
 
@@ -111,8 +120,9 @@ async function stageIntent(
       email: intent.email, occasion: intent.occasion, actorUid: input.actorUid, nowValue: input.nowValue,
     });
   } catch (error) {
-    // Λείπει ΔΙΚΟ ΜΑΣ μυστικό ⇒ καμία πρόσκληση χωρίς σύνδεσμο. Το δίχτυ ξαναδοκιμάζει όταν ρυθμιστεί.
-    logger.error('Δεν εκδόθηκε πρόσκληση αγοραστή — λείπει το μυστικό', { handoverId: handover.id, error: getErrorMessage(error) });
+    // Το μυστικό ελέγχθηκε πριν από τον βρόχο ⇒ εδώ φτάνει ΜΟΝΟ πραγματική βλάβη: το λέμε με το δικό της όνομα.
+    // Η παράδοση μένει χωρίς κάτοπτρο ⇒ το δίχτυ ξαναδοκιμάζει· ο κύκλος ζωής δεν θυσιάζεται για την πρόσκληση.
+    logger.error('Δεν εκδόθηκε πρόσκληση αγοραστή', { handoverId: handover.id, error: getErrorMessage(error) });
     return null;
   }
   const staged = await stageInvitationWithSupersede(tx, { ...lifecycle, invitation: minted.invitation });
@@ -133,15 +143,22 @@ export async function stageHandoverInvitations(
   const mirrored = new Map<string, PropertyHandover>();
   const issued: MintedHandoverInvitation[] = [];
   const commits: Array<() => void> = [];
+  const linksConfigured = readConfiguredValue(process.env, PROPERTY_HANDOVER_INVITE_SECRET_ENV) !== null;
+  let awaitingConfiguration = 0;
 
   for (const handover of open) {
     const intent = handoverInvitationIntentOf(handover, emails.get(handover.recipientContactId) ?? null);
     if (intent.kind === 'none') continue;
+    // Χωρίς μυστικό καμία έκδοση (σύνδεσμος που δεν θα άνοιγε)· η ανάκληση όμως δεν το χρειάζεται και γίνεται κανονικά.
+    if (intent.kind === 'issue' && !linksConfigured) {
+      awaitingConfiguration += 1;
+      continue;
+    }
     const stage = await stageIntent(tx, adminDb, handover, intent, input);
     if (stage === null) continue;
     mirrored.set(handover.id, { ...handover, invitation: stage.link, updatedAt: input.nowValue });
     if (stage.minted !== null) issued.push(stage.minted);
     commits.push(stage.commit);
   }
-  return { mirrored, issued, commit: () => commits.forEach((commit) => commit()) };
+  return { mirrored, issued, awaitingConfiguration, commit: () => commits.forEach((commit) => commit()) };
 }

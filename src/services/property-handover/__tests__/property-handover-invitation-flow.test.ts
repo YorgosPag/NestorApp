@@ -17,9 +17,10 @@ import { respondToHandoverInvitation } from '@/server/property-handover-invitati
 import { syncPropertyHandovers } from '@/services/property-handover/property-handover-write.service';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 
-jest.mock('@/lib/telemetry', () => ({
-  createModuleLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }),
-}));
+jest.mock('@/lib/telemetry', () => {
+  const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
+  return { createModuleLogger: () => logger, sharedLogger: logger };
+});
 jest.mock('@/services/entity-audit-tracked-write', () => ({ recordTrackedEntityWrite: jest.fn(async () => undefined) }));
 jest.mock('@/lib/workspace/workspace-catalog', () => ({ readWorkspaceName: jest.fn(async () => 'Κατασκευαστική Άλφα') }));
 jest.mock('@/services/conveyance/conveyance-subject.server', () => ({
@@ -29,6 +30,7 @@ jest.mock('@/server/invitations/invitation-notice', () => ({ deliverInvitationEm
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const { deliverInvitationEmail } = require('@/server/invitations/invitation-notice') as { deliverInvitationEmail: jest.Mock };
+const { sharedLogger: mockLogger } = require('@/lib/telemetry') as { sharedLogger: Record<'info' | 'warn' | 'error' | 'debug', jest.Mock> };
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 interface Sent { readonly to: string; readonly subject: string; readonly text: string }
@@ -74,6 +76,7 @@ const preview = (token: string, viewerEmail: string | null = null) => previewHan
 beforeEach(() => {
   process.env.PROPERTY_HANDOVER_INVITE_SECRET = 'test-secret-handover-0123456789abcdef';
   process.env.NEXT_PUBLIC_APP_URL = 'https://app.example.test';
+  Object.values(mockLogger).forEach((fn) => fn.mockClear());
   fake = new FakeFirestore();
   sent = [];
   provider = 'accepted';
@@ -251,6 +254,19 @@ describe('Β18–Β20 — ολοκλήρωση · ακύρωση · άρνηση
     const token = tokenOf(sent[0]);
     delete process.env.PROPERTY_HANDOVER_INVITE_SECRET;
     expect(await preview(token)).toEqual({ kind: 'unavailable' });
+  });
+
+  it('Β27 — 🔴 λείπει το μυστικό στην έκδοση ⇒ ΕΝΑ σήμα «σε αναμονή ρύθμισης», ΚΑΝΕΝΑ `error`· όταν ρυθμιστεί, το δίχτυ εκδίδει', async () => {
+    delete process.env.PROPERTY_HANDOVER_INVITE_SECRET;
+    expect(await sync()).toEqual({ kind: 'synced', writes: 1, invitationWrites: 0, invitationsAwaitingConfiguration: 1 });
+    expect(invitations()).toHaveLength(0);
+    expect(sent).toHaveLength(0);
+    expect(handovers()[0]?.invitation).toBeNull();
+    expect(mockLogger.error).not.toHaveBeenCalled();
+    process.env.PROPERTY_HANDOVER_INVITE_SECRET = 'test-secret-handover-0123456789abcdef';
+    expect(await sync('reconcile')).toMatchObject({ kind: 'synced', invitationWrites: 1, invitationsAwaitingConfiguration: 0 });
+    expect(live()).toHaveLength(1);
+    expect(sent).toHaveLength(1);
   });
 
   it('Β21 — ο πάροχος αρνήθηκε ⇒ `failed` στο κάτοπτρο· το δίχτυ ξαναστέλνει με ΝΕΟ σύνδεσμο της ΙΔΙΑΣ πρόσκλησης, που δουλεύει', async () => {
