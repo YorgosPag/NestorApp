@@ -14,13 +14,13 @@
     "src/i18n/generated/routes/demands__demandId.el.json": "7d95c157ece8087fe485acdbdcba5f422d82828388ea5a9e5c11963e27005681",
     "src/i18n/generated/routes/demands__new.el.json": "c390254b9260d785611e1122559f64ed7b8c58a105b7ac65b82473967b293008",
     "src/i18n/generated/routes/document-request.el.json": "3fc30b5c3cce0660d1e8ee25b177af72c4d9d9ed87c2bfcdf05085e4becc18f7",
-    "src/i18n/generated/routes/dossiers.el.json": "aa2fa39e24167fd135719d3c235e2fb4f7f3462ac951e83650faef5f6fc4170b",
-    "src/i18n/generated/routes/dossiers__dossierId.el.json": "2cf247c15372212d58774e69b1bd7c7a7ef15cd630a34355c911d10b6bee8a49",
+    "src/i18n/generated/routes/dossiers.el.json": "748b2c70219501b87610f1b7cc98d324852df5bb814b1120f66c91a8809ce440",
+    "src/i18n/generated/routes/dossiers__dossierId.el.json": "368e0c4a0e55badfdec7f664e4231b25161d422382b617c9adfaac8a887bc508",
     "src/i18n/generated/routes/email__preferences__token.el.json": "b8eb64c11ff6698391ff1c979e04c414958183f8b946f7a9c62ce9d8d33da32a",
     "src/i18n/generated/routes/engagements.el.json": "62e1b3378215c16e66a12632667ad61be33b59cc632e634dde0ffaf9763769d4",
     "src/i18n/generated/routes/engagements__engagementId.el.json": "cb0565009bf6f7bec16cd93768e557804df81971abe3c5a23b7c050e9eb91ec3",
     "src/i18n/generated/routes/ergaleia__antikeimeniki-axia.el.json": "f430b58d8427830f6f00eb4b807237852b5845a01ae9baf2b0500b42be47ffef",
-    "src/i18n/generated/routes/handover-invite__token.el.json": "270cf4927cdaef8b2cbcea024677c7410dd8d0c6c220876bb312641b988f74da",
+    "src/i18n/generated/routes/handover-invite__token.el.json": "77391ee1f926f45a51ba8ed20018681580e5c4e00f2ed34038ef2f5b56080515",
     "src/i18n/generated/routes/hours-question__token.el.json": "86ba92b35d6e4e4ba43e09267d5749b0ae21774b4dba41d9a4989d48872d0a72",
     "src/i18n/generated/routes/interest-check.el.json": "d0002364331595d2870077e92bf3218896f97dbb2ee2924845b755f5b98fdc94",
     "src/i18n/generated/routes/invite__token.el.json": "aba3b759414cfd4d6bcbed80e662dcac25d828d2fbb82d760ab0b376f9745785",
@@ -152,7 +152,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "85892e2e1c21384de8b70fb6963cc8c7f40f20a8a096ad8eb2fda664b9177f1b",
+  "inputsSha256": "b95572104d9a016fb6aceb3ac8609ea4a5c8acb865b56bec72a7aeb3aa046462",
   "languages": [
     "el"
   ],
@@ -3228,6 +3228,7 @@
             "handoverInvite.accepted",
             "handoverInvite.acceptedBody.completion",
             "handoverInvite.acceptedBody.reservation",
+            "handoverInvite.answerFailed",
             "handoverInvite.cost",
             "handoverInvite.costLabel",
             "handoverInvite.decline",
@@ -11278,7 +11279,7 @@
   ],
   "stats": {
     "matchedKeys": 255,
-    "sliceBytes": 784906
+    "sliceBytes": 785028
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

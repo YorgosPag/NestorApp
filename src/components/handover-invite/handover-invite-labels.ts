@@ -34,6 +34,8 @@ export const HANDOVER_INVITE_KEYS = {
   declined: 'property-market:handoverInvite.declined',
   declinedBody: 'property-market:handoverInvite.declinedBody',
   unavailable: 'property-market:handoverInvite.unavailable',
+  /** Μετά το κλικ: η πρόσκληση άνοιξε — απέτυχε η **απάντηση**, και λέμε ότι τίποτα δεν χάθηκε. */
+  answerFailed: 'property-market:handoverInvite.answerFailed',
   retry: 'property-market:handoverInvite.retry',
   home: 'property-market:handoverInvite.home',
   myDossiers: 'property-market:handoverInvite.myDossiers',

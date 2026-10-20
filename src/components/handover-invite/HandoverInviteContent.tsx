@@ -51,6 +51,9 @@ registerRouteSlice(routeSlice);
 
 export type HandoverInviteView = InvitationPageView<PropertyHandoverInvitationPreview, InvitationCoreRefusal>;
 
+/** Ετικέτα όρου πάνω από την τιμή του (μία στήλη). */
+const TERM_CLASS = 'mt-2 text-xs font-medium text-muted-foreground first:mt-0';
+
 type PreviewView = InvitationPreviewView<PropertyHandoverInvitationPreview>;
 type OnOutcome = (outcome: HandoverInvitationRedeemResult) => void;
 
@@ -77,12 +80,13 @@ function Preview({ view, onOutcome }: { readonly view: PreviewView; readonly onO
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
-          <dt className="text-muted-foreground">{t(HANDOVER_INVITE_KEYS.findLabel)}</dt>
+        {/* Ετικέτα ΠΑΝΩ από την τιμή: οι τιμές είναι προτάσεις — σε δύο στήλες στένευαν σε ~4 λέξεις/γραμμή στο κινητό (γκαλερί 375px). */}
+        <dl className="grid gap-y-1 text-sm">
+          <dt className={TERM_CLASS}>{t(HANDOVER_INVITE_KEYS.findLabel)}</dt>
           <dd>{t(HANDOVER_INVITE_KEYS.find)}</dd>
-          <dt className="text-muted-foreground">{t(HANDOVER_INVITE_KEYS.costLabel)}</dt>
+          <dt className={TERM_CLASS}>{t(HANDOVER_INVITE_KEYS.costLabel)}</dt>
           <dd>{t(HANDOVER_INVITE_KEYS.cost)}</dd>
-          <dt className="text-muted-foreground">{t(HANDOVER_INVITE_KEYS.linkExpires)}</dt>
+          <dt className={TERM_CLASS}>{t(HANDOVER_INVITE_KEYS.linkExpires)}</dt>
           {/* Η ΙΔΙΑ μορφή με το email («λήγει στις …») — ποτέ «σε N ημέρες» που θα στρογγυλευόταν αλλιώς. */}
           <dd>{formatDateTime(preview.expiresAt, { dateStyle: 'long', timeStyle: 'short' })}</dd>
         </dl>
@@ -106,8 +110,10 @@ function Answer({ token, onOutcome }: { readonly token: string; readonly onOutco
   const [pending, setPending] = useState<InvitationRedeemAction | null>(null);
   const answer = useCallback(async (action: InvitationRedeemAction) => {
     setPending(action);
-    onOutcome(await redeemHandoverInvitationFromScreen(token, action));
+    const result = await redeemHandoverInvitationFromScreen(token, action);
+    // Πρώτα το «τελείωσε», μετά η έκβαση: η έκβαση αντικαθιστά αυτό το κομμάτι — καμία ενημέρωση σε αποπροσαρτημένο.
     setPending(null);
+    onOutcome(result);
   }, [onOutcome, token]);
 
   return (
@@ -140,12 +146,17 @@ function Outcome({ outcome, view, onRetry }: {
         </InvitationMessageCard>
       );
     case 'declined':
-      return <InvitationMessageCard title={t(HANDOVER_INVITE_KEYS.declined)} body={t(HANDOVER_INVITE_KEYS.declinedBody)} />;
+      // Κάθε έκβαση έχει έξοδο — και η άρνηση (εύρημα της γκαλερί καταστάσεων, 2026-10-20).
+      return (
+        <InvitationMessageCard title={t(HANDOVER_INVITE_KEYS.declined)} body={t(HANDOVER_INVITE_KEYS.declinedBody)}>
+          <Button asChild variant="outline" className="w-full"><Link href="/">{t(HANDOVER_INVITE_KEYS.home)}</Link></Button>
+        </InvitationMessageCard>
+      );
     case 'refused':
       return <Refusal reason={outcome.reason} switchAccountHref={view.switchAccountHref} />;
     case 'failed':
       return (
-        <InvitationMessageCard title={t(HANDOVER_INVITE_KEYS.title)} body={t(HANDOVER_INVITE_KEYS.unavailable)}>
+        <InvitationMessageCard title={t(HANDOVER_INVITE_KEYS.title)} body={t(HANDOVER_INVITE_KEYS.answerFailed)}>
           <Button className="w-full" onClick={onRetry}>{t(HANDOVER_INVITE_KEYS.retry)}</Button>
         </InvitationMessageCard>
       );

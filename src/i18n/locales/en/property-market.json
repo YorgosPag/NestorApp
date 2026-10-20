@@ -2412,7 +2412,7 @@
       "explain": {
         "awaiting-completion": "The developer is preparing the file; the home's drawings, photos and certificates arrive here when the purchase completes.",
         "ready": "The purchase is complete; the file is yours and stays with you.",
-        "cancelled": "The sale was cancelled. The file stays yours, together with anything you have added."
+        "cancelled": "The file stays yours, together with anything you have added."
       }
     }
   },
@@ -2641,6 +2641,7 @@
     "declined": "Invitation declined",
     "declinedBody": "Your answer has been recorded. If this was a mistake, ask the company for a new invitation.",
     "unavailable": "We could not open the invitation right now. Please try again shortly.",
+    "answerFailed": "Your answer was not recorded right now — nothing was lost. Please try again shortly.",
     "retry": "Try again",
     "home": "Home page",
     "myDossiers": "My files",
