@@ -45,11 +45,10 @@
  * κωδικό κατάστασης. Ο `guestFailureOf` το αποκωδικοποιεί κανονικά. Ό,τι δει ο άνθρωπος
  * στη γκαλερί είναι ό,τι θα δει και στην παραγωγή.
  *
- * **Layering**: leaf — καθαρά δεδομένα + ένα εργοστάσιο σφάλματος. Κανένα React, κανένα
+ * **Layering**: leaf — καθαρά δεδομένα (το σφάλμα το φτιάχνει ο κοινός `scripted-transport`). Κανένα React, κανένα
  * Firestore, κανένα κείμενο οθόνης.
  */
 
-import { ApiClientError } from '@/lib/api/enterprise-api-client';
 import { FIRST_CONTACT_INVITATION_REFUSALS } from '@/types/first-contact-invitation';
 
 /**
@@ -121,23 +120,3 @@ export const PROOF_SCENARIOS: readonly ProofScenario[] = [
  *  μεταφορέας απαντά με βάση την ταυτότητα, όχι τα ψηφία. Υπάρχει μόνο επειδή η
  *  υποβολή γυρίζει νωρίς σε κενό πεδίο. */
 export const HARNESS_CODE = '000000';
-
-/**
- * **Το σφάλμα που θα είχε πετάξει ο μεταφορέας**, ταυτόσημο σε σχήμα.
- *
- * ⛔ **ΜΗΝ το αντικαταστήσεις με σκέτο `new Error(...)`**: ο `apiErrorBodyOf` απαιτεί
- * **`ApiClientError`** *(`instanceof`)* και διαβάζει **μόνο** το `errorBody`. Ένα απλό
- * `Error` θα γύριζε `null` ⇒ **κάθε** σενάριο θα κατέληγε `failed`, και η γκαλερί θα
- * έδειχνε δώδεκα φορές την ίδια οθόνη ενώ θα δήλωνε ότι δείχνει δώδεκα διαφορετικές.
- */
-export function scriptedRejection(scenario: ProofScenario): ApiClientError {
-  return new ApiClientError(
-    `harness: scripted ${scenario.id}`,
-    scenario.status,
-    typeof scenario.reply?.error === 'string' ? scenario.reply.error : undefined,
-    undefined,
-    undefined,
-    undefined,
-    scenario.reply,
-  );
-}

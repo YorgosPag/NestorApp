@@ -77,43 +77,29 @@ import React from 'react';
 
 import { Card } from '@/components/ui/card';
 
-import { apiClient, type ApiRequestConfig } from '@/lib/api/enterprise-api-client';
+import { clickWhenEnabled, PANEL_WIDTH_CLASS, PanelWidthSelect, type PanelWidth } from '@/components/testing/harness/harness-panel';
+import { scriptedBodyField, useScriptedPost, type ScriptedRoute } from '@/components/testing/harness/scripted-transport';
 
 import { FirstContactAwaitingProof } from '../FirstContactAwaitingProof';
 import {
   HARNESS_CODE,
   PROOF_SCENARIOS,
-  scriptedRejection,
   type ProofScenario,
 } from './first-contact-proof-scenarios';
 
-/** Πόσο πλατύ αποδίδεται κάθε πάνελ. `375` = το κινητό από το οποίο έρχεται ο άνθρωπος. */
-type PanelWidth = 'auto' | '375';
-
-/**
- * **Πλήρες `Record`, ποτέ τερνάριο** — ίδιο ιδίωμα με το `REFUSAL_ACTION`: τρίτο πλάτος
- * **δεν μεταγλωττίζεται** χωρίς να πει κάποιος πόσο είναι.
- *
- * ⚠️ Οι κλάσεις είναι **γραμμένες ολόκληρες**: ο σαρωτής του Tailwind διαβάζει
- * **κείμενο**, και ένα `w-[${n}px]` δεν παράγει ποτέ κανόνα.
- */
-const PANEL_WIDTH_CLASS: Record<PanelWidth, string> = {
-  auto: 'w-[420px]',
-  '375': 'w-[375px]',
-};
-
 const CONFIRM_PATH = '/confirm';
 
+const PROOF_BY_ID = new Map(PROOF_SCENARIOS.map((scenario) => [scenario.id, scenario]));
+
 /**
- * Πόσες φορές ξαναρωτά η γκαλερί το κουμπί, και κάθε πότε.
- *
- * ⚠️ **Η ΚΑΝΟΝΙΚΗ ΔΙΑΔΡΟΜΗ ΔΕΝ ΤΑ ΧΡΗΣΙΜΟΠΟΙΕΙ ΚΑΘΟΛΟΥ**: η πρώτη δοκιμή γίνεται
- * **σύγχρονα** και πετυχαίνει *(δες {@link clickWhenEnabled})*. Είναι δίχτυ, όχι ρολόι
- * — και το `setTimeout` **τρέχει** σε αδρανή καρτέλα, σε αντίθεση με το
- * `requestAnimationFrame` που **δεν τρέχει καθόλου** και άδειαζε ολόκληρη τη γκαλερί.
+ * **Ο δρομολογητής του ΕΝΟΣ μεταφορέα** (`useScriptedPost`) — δρομολογεί στο `invitationId`, όπως ο handler του MSW
+ * στο URL. Σε εμβέλεια module: σταθερός, άρα το μπάλωμα στήνεται **μία** φορά.
  */
-const READY_ATTEMPT_BUDGET = 40;
-const READY_ATTEMPT_MS = 50;
+const proofRoute: ScriptedRoute = (url, body) => {
+  if (!url.endsWith(CONFIRM_PATH)) return undefined;
+  const scenario = PROOF_BY_ID.get(scriptedBodyField(body, 'invitationId'));
+  return scenario?.reply ? { status: scenario.status, body: scenario.reply } : undefined;
+};
 
 export function FirstContactProofHarness(): React.JSX.Element {
   const [resending, setResending] = React.useState(false);
@@ -127,7 +113,7 @@ export function FirstContactProofHarness(): React.JSX.Element {
   //    σχεδόν πάντα, δηλαδή θα ήταν **στοίχημα στον χρόνο** — το ακριβές λάθος που
   //    κοκκίνισε στο πλήρες τρέξιμο του ADR-844 §11. Η σειρά εδώ είναι **εγγυημένη**:
   //    το πάνελ δεν οδηγείται μέχρι ο γονιός να δηλώσει ότι ο μεταφορέας στέκει.
-  const armed = useScriptedTransport();
+  const armed = useScriptedPost(proofRoute);
 
   return (
     // 🔴 **ΟΥΤΕ ΚΕΝΟ ΟΥΤΕ ΤΑΒΑΝΙ ΟΥΤΕ `<main>` — ΚΑΙ ΤΑ ΤΡΙΑ ΑΝΗΚΟΥΝ ΣΤΟ ΚΕΛΥΦΟΣ**
@@ -203,17 +189,7 @@ function HarnessControls({
           resending
         </label>
 
-        <label className="flex items-center gap-2 text-foreground">
-          width
-          <select
-            className="rounded-md border border-border bg-background px-2 py-1"
-            value={width}
-            onChange={(event) => onWidthChange(event.target.value === '375' ? '375' : 'auto')}
-          >
-            <option value="auto">auto</option>
-            <option value="375">375px (phone)</option>
-          </select>
-        </label>
+        <PanelWidthSelect width={width} onChange={onWidthChange} />
 
         <span className="text-muted-foreground">{PROOF_SCENARIOS.length} panels</span>
       </section>
@@ -285,54 +261,6 @@ function ProofPanel({
 }
 
 /**
- * **Ο ΕΝΑΣ ψεύτικος μεταφορέας** — εγκαθίσταται μία φορά, επαναφέρεται πάντα.
- *
- * 🔴 **ΔΡΟΜΟΛΟΓΕΙ, ΔΕΝ ΚΑΤΑΠΙΝΕΙ**: ό,τι δεν είναι η πόρτα της απόδειξης — ή δεν
- * κουβαλά ταυτότητα που ξέρουμε — πηγαίνει στον **αληθινό** μεταφορέα. Ένα μπάλωμα
- * που κατάπινε τα πάντα θα έσπαγε το κέλυφος γύρω από τη γκαλερί *(ειδοποιήσεις,
- * ταυτότητα)* και θα κατηγορούσαμε την οθόνη.
- *
- * ⚠️ **Το `bind` πριν την αντικατάσταση δεν είναι διακόσμηση**: το `apiClient` είναι
- * **στιγμιότυπο κλάσης**, και η μέθοδος χρειάζεται το `this` της. Ίδιο ιδίωμα με το
- * `ContactMutationHarness`.
- */
-function useScriptedTransport(): boolean {
-  const [armed, setArmed] = React.useState(false);
-
-  React.useEffect(() => {
-    const byId = new Map(PROOF_SCENARIOS.map((scenario) => [scenario.id, scenario]));
-    const originalPost = apiClient.post.bind(apiClient);
-
-    apiClient.post = async <T = unknown>(
-      url: string,
-      body?: Record<string, unknown> | unknown,
-      config?: Omit<ApiRequestConfig, 'method' | 'body'>,
-    ): Promise<T> => {
-      const scenario = url.endsWith(CONFIRM_PATH) ? byId.get(invitationIdOf(body)) : undefined;
-      if (scenario !== undefined && scenario.reply !== null) throw scriptedRejection(scenario);
-
-      return originalPost<T>(url, body, config);
-    };
-    setArmed(true);
-
-    return () => {
-      apiClient.post = originalPost;
-      setArmed(false);
-    };
-  }, []);
-
-  return armed;
-}
-
-/** Ο φρουρός του σώματος — έρχεται ως `unknown` και **οφείλει** να ελεγχθεί. */
-function invitationIdOf(body: unknown): string {
-  if (body === null || typeof body !== 'object') return '';
-
-  const candidate = (body as { invitationId?: unknown }).invitationId;
-  return typeof candidate === 'string' ? candidate : '';
-}
-
-/**
  * **Οδηγεί το πάνελ στην έκβασή του** — γεμίζει τον κωδικό και υποβάλλει, μία φορά.
  *
  * 🏆 Είναι η `play` συνάρτηση του Storybook: η γκαλερί **δεν** στήνει εσωτερική
@@ -352,7 +280,7 @@ function useAutoProve(host: React.RefObject<HTMLDivElement | null>, enabled: boo
     if (!enabled || root === null) return;
 
     typeCode(root, HARNESS_CODE);
-    return clickWhenEnabled(root);
+    return clickWhenEnabled(root, 'button[type="submit"]');
   }, [host, enabled]);
 }
 
@@ -369,50 +297,6 @@ function typeCode(root: HTMLElement, code: string): void {
   const writer = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
   writer?.call(input, code);
   input.dispatchEvent(new Event('input', { bubbles: true }));
-}
-
-/**
- * **Πατά μόλις η οθόνη δηλώσει ότι είναι έτοιμη** — συνήθως **αμέσως**, χωρίς αναμονή.
- *
- * 🔴 **ΓΙΑΤΙ ΟΧΙ `requestAnimationFrame` — ΜΕΤΡΗΘΗΚΕ ΖΩΝΤΑΝΑ, 06/09.** Η πρώτη γραφή
- * περίμενε σε βρόχο `rAF` και η γκαλερί έμενε **μονίμως άδεια**: κάθε πάνελ είχε
- * γραμμένο τον κωδικό και **ενεργό** κουμπί, και **καμία** άρνηση δεν κατασταλάζε.
- * Ο λόγος δεν ήταν το σήμα — ήταν ο **χρονοδρομολογητής**: ο φυλλομετρητής
- * **σταματά** το `requestAnimationFrame` σε καρτέλα που δεν βλέπεται. Δηλαδή η
- * γκαλερί δούλευε **μόνο όσο την κοιτούσες**, και ήταν άδεια σε κάθε άλλη περίπτωση
- * *(δεύτερη καρτέλα, ελαχιστοποιημένο παράθυρο, αυτοματισμός)*.
- *
- * ✅ **Η σωστή απάντηση ήταν να μη ζητήσουμε καθόλου χρονοδρομολογητή**: το γεγονός
- * `input` είναι **διακριτό**, άρα ο React 18 το ξεπλένει **σύγχρονα** — τη στιγμή που
- * επιστρέφει το {@link typeCode}, το κουμπί είναι ήδη ενεργό. Η πρώτη δοκιμή γίνεται
- * **αμέσως**· το `setTimeout` μένει μόνο ως δίχτυ *(και **τρέχει** σε αδρανή καρτέλα,
- * απλώς στραγγαλισμένο — σε αντίθεση με το `rAF`, που **δεν τρέχει καθόλου**)*.
- *
- * Επιστρέφει καθαριστή **πάντα**: αλλιώς πάνελ που αποπροσαρτάται αφήνει βρόχο να
- * τρέχει πάνω σε αποσυνδεδεμένο δέντρο.
- */
-function clickWhenEnabled(root: HTMLElement): () => void {
-  let timer = 0;
-  let tries = 0;
-  let cancelled = false;
-
-  const attempt = (): void => {
-    if (cancelled) return;
-
-    const submit = root.querySelector<HTMLButtonElement>('button[type="submit"]');
-    if (submit !== null && !submit.disabled) {
-      submit.click();
-      return;
-    }
-    if (++tries > READY_ATTEMPT_BUDGET) return;
-    timer = window.setTimeout(attempt, READY_ATTEMPT_MS);
-  };
-
-  attempt();
-  return () => {
-    cancelled = true;
-    window.clearTimeout(timer);
-  };
 }
 
 /** Η γκαλερί δεν έχει πού να πάει: κάθε έξοδος του συστατικού είναι **θέαμα**, όχι πράξη. */
