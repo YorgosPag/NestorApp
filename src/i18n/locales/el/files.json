@@ -285,6 +285,7 @@
     "openInNewTab": "Άνοιγμα σε νέα καρτέλα",
     "classifying": "Κατηγοριοποίηση...",
     "classificationFailed": "Αποτυχία κατηγοριοποίησης",
+    "handoverOrigin": "Από την κατασκευάστρια",
     "retryClassification": "Επανάληψη κατηγοριοποίησης",
     "selectFile": "Επιλογή: {name}"
   },

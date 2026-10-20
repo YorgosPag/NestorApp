@@ -2413,7 +2413,13 @@
         "awaiting-completion": "The developer is preparing the file; the home's drawings, photos and certificates arrive here when the purchase completes.",
         "ready": "The purchase is complete; the file is yours and stays with you.",
         "cancelled": "The file stays yours, together with anything you have added."
-      }
+      },
+      "delivery": {
+        "pending": "Document delivery is starting.",
+        "delivering": "{delivered} of {total} documents delivered; the rest arrive on their own.",
+        "delivered": "{total, plural, one {# document delivered} other {# documents delivered}} — your own copies, which stay with you."
+      },
+      "appurtenance": "Part of the same purchase — a separate file, because it transfers separately."
     }
   },
   "savedListings": {

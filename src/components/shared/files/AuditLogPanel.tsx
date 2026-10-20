@@ -41,6 +41,7 @@ import {
   Ban,
   MessageSquare,
   Globe,
+  PackageCheck,
   CalendarCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -93,6 +94,8 @@ const ACTION_ICON_MAP: Record<FileAuditAction, LucideIcon> = {
   move: FolderInput,
   // ADR-895 Φ4 — τα bytes άλλαξαν κάδο (κατοικία δεδομένων), όχι φάκελο.
   storage_relocate: Globe,
+  // ADR-916 Φ-Γ1 — παραδόθηκε από την κατασκευάστρια στον φάκελο του αγοραστή.
+  handover_receive: PackageCheck,
   approval_request: Send,
   approval_approve: CheckCircle,
   approval_reject: XCircle,
@@ -134,6 +137,7 @@ const ACTION_COLOR_MAP: Record<string, string> = {
   hold_release: 'text-[hsl(var(--text-success))]',
   move: 'text-primary',
   storage_relocate: 'text-[hsl(var(--text-info))]',
+  handover_receive: 'text-[hsl(var(--text-success))]',
   approval_request: 'text-[hsl(var(--text-warning))]',
   approval_approve: 'text-[hsl(var(--text-success))]',
   approval_reject: 'text-destructive',

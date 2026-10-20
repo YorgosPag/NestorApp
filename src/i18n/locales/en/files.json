@@ -285,6 +285,7 @@
     "openInNewTab": "Open in new tab",
     "classifying": "Classifying",
     "classificationFailed": "Classification failed",
+    "handoverOrigin": "From the developer",
     "retryClassification": "Retry classification",
     "selectFile": "Select {name}"
   },

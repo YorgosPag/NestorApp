@@ -16,7 +16,11 @@ import React from 'react';
 import { Badge, type BadgeVariantProps } from '@/components/ui/badge';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { PropertyDossierOrigin } from '@/types/property-dossier';
-import type { PropertyHandoverLifecycle } from '@/types/property-handover';
+import type {
+  PropertyHandoverFileDeliveryState,
+  PropertyHandoverFileDeliverySummary,
+  PropertyHandoverLifecycle,
+} from '@/types/property-handover';
 
 const NS = 'property-market';
 
@@ -58,7 +62,20 @@ export function PropertyDossierOriginLine({ origin }: { readonly origin: Propert
   return origin === null ? null : <OriginLine origin={origin} />;
 }
 
-/** Στη σελίδα του φακέλου: η ίδια γραμμή + τι σημαίνει τώρα. */
+/** Φ-Γ1 — η πρόοδος της αντιγραφής, με λέξη. */
+const DELIVERY_KEY: Readonly<Record<PropertyHandoverFileDeliveryState, string>> = {
+  pending: 'property-market:dossier.origin.delivery.pending',
+  delivering: 'property-market:dossier.origin.delivery.delivering',
+  delivered: 'property-market:dossier.origin.delivery.delivered',
+};
+
+/** Η προβολή του γραφέα — ο αγοραστής **δεν** διαβάζει ποτέ την ίδια την παράδοση (Δ10). */
+function DeliveryLine({ delivery }: { readonly delivery: PropertyHandoverFileDeliverySummary }) {
+  const { t } = useTranslation([NS]);
+  return <p className="m-0 text-sm text-foreground">{t(DELIVERY_KEY[delivery.state], { delivered: delivery.delivered, total: delivery.total })}</p>;
+}
+
+/** Στη σελίδα του φακέλου: η ίδια γραμμή + τι σημαίνει τώρα + (Φ-Γ1) πόσα έγγραφα παραδόθηκαν. */
 export function PropertyDossierOriginNotice({ origin }: { readonly origin: PropertyDossierOrigin | null }): React.ReactElement | null {
   const { t } = useTranslation([NS]);
   if (origin === null) return null;
@@ -66,6 +83,8 @@ export function PropertyDossierOriginNotice({ origin }: { readonly origin: Prope
     <aside className="flex flex-col gap-1 rounded-md border border-border bg-muted/30 p-3">
       <OriginLine origin={origin} />
       <p className="m-0 text-sm text-foreground">{t(LIFECYCLE_EXPLAIN_KEY[origin.handoverLifecycle])}</p>
+      {origin.fileDelivery !== null && <DeliveryLine delivery={origin.fileDelivery} />}
+      {origin.appurtenanceOf !== null && <p className="m-0 text-sm text-muted-foreground">{t('property-market:dossier.origin.appurtenance')}</p>}
     </aside>
   );
 }

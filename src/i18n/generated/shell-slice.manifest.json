@@ -14,8 +14,8 @@
     "src/i18n/generated/routes/demands__demandId.el.json": "7d95c157ece8087fe485acdbdcba5f422d82828388ea5a9e5c11963e27005681",
     "src/i18n/generated/routes/demands__new.el.json": "c390254b9260d785611e1122559f64ed7b8c58a105b7ac65b82473967b293008",
     "src/i18n/generated/routes/document-request.el.json": "3fc30b5c3cce0660d1e8ee25b177af72c4d9d9ed87c2bfcdf05085e4becc18f7",
-    "src/i18n/generated/routes/dossiers.el.json": "748b2c70219501b87610f1b7cc98d324852df5bb814b1120f66c91a8809ce440",
-    "src/i18n/generated/routes/dossiers__dossierId.el.json": "368e0c4a0e55badfdec7f664e4231b25161d422382b617c9adfaac8a887bc508",
+    "src/i18n/generated/routes/dossiers.el.json": "9ee9e5f01ee7b75c9833821aa3fc2b0be460b126ef4b67ddb4797924ede5482a",
+    "src/i18n/generated/routes/dossiers__dossierId.el.json": "61266805bc8fcd38f04df315d8777cf7dfda98fb5ffbc189e02ee14bbf3625a1",
     "src/i18n/generated/routes/email__preferences__token.el.json": "b8eb64c11ff6698391ff1c979e04c414958183f8b946f7a9c62ce9d8d33da32a",
     "src/i18n/generated/routes/engagements.el.json": "62e1b3378215c16e66a12632667ad61be33b59cc632e634dde0ffaf9763769d4",
     "src/i18n/generated/routes/engagements__engagementId.el.json": "cb0565009bf6f7bec16cd93768e557804df81971abe3c5a23b7c050e9eb91ec3",
@@ -152,7 +152,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "b95572104d9a016fb6aceb3ac8609ea4a5c8acb865b56bec72a7aeb3aa046462",
+  "inputsSha256": "d9239b068a913960ed23b2c50ff5d651359b9b6ae9e15fab447a3b82a146ac66",
   "languages": [
     "el"
   ],
@@ -2102,6 +2102,10 @@
             "dossier.list.noType",
             "dossier.list.title",
             "dossier.list.updated",
+            "dossier.origin.appurtenance",
+            "dossier.origin.delivery.delivered",
+            "dossier.origin.delivery.delivering",
+            "dossier.origin.delivery.pending",
             "dossier.origin.explain.awaiting-completion",
             "dossier.origin.explain.cancelled",
             "dossier.origin.explain.ready",
@@ -2507,6 +2511,10 @@
             "dossier.list.actions.restore",
             "dossier.list.noType",
             "dossier.list.updated",
+            "dossier.origin.appurtenance",
+            "dossier.origin.delivery.delivered",
+            "dossier.origin.delivery.delivering",
+            "dossier.origin.delivery.pending",
             "dossier.origin.explain.awaiting-completion",
             "dossier.origin.explain.cancelled",
             "dossier.origin.explain.ready",
@@ -11279,7 +11287,7 @@
   ],
   "stats": {
     "matchedKeys": 255,
-    "sliceBytes": 785028
+    "sliceBytes": 786304
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
