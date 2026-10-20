@@ -202,7 +202,7 @@ export function BudgetVarianceChart({
             <SelectTrigger className="w-48">
               <SelectValue placeholder={t('variance.selectProject')} />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent width="content">
               {projects.map((project) => (
                 <SelectItem key={project.projectId} value={project.projectId}>
                   {project.projectName}

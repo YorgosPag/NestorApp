@@ -444,8 +444,15 @@ export interface DrawScheduleResult {
 // 📊 SPEC-242C — Portfolio Dashboard & Debt Maturity Wall
 // =============================================================================
 
-/** Health status traffic-light for project financial health */
-export type HealthStatus = 'excellent' | 'good' | 'warning' | 'critical';
+/**
+ * Health status traffic-light for project financial health.
+ * `noData` = nothing could be measured — deliberately not a severity.
+ * Rules: `services/financial-intelligence/portfolio-health.ts`.
+ */
+export type HealthStatus = 'excellent' | 'good' | 'warning' | 'critical' | 'noData';
+
+/** A metric that portfolio health is judged on. */
+export type HealthMetricKey = 'costOfMoney' | 'collectionDays' | 'soldPercent' | 'collectedPercent';
 
 /** Portfolio-level aggregate summary across all projects */
 export interface PortfolioSummary {
@@ -461,10 +468,10 @@ export interface PortfolioSummary {
   totalCollected: number;
   /** Total outstanding amount (€) */
   totalOutstanding: number;
-  /** Weighted average cost of money across portfolio (%) */
-  weightedAvgCostOfMoney: number;
-  /** Weighted average collection period (days) */
-  weightedAvgCollectionDays: number;
+  /** Value-weighted average cost of money (%) over projects that report it; `null` when none do */
+  weightedAvgCostOfMoney: number | null;
+  /** Value-weighted average collection period (days) over projects that report it; `null` when none do */
+  weightedAvgCollectionDays: number | null;
   /** Total NPV across all units (€) */
   totalNPV: number;
   /** Total time cost across portfolio (€) */
@@ -487,12 +494,14 @@ export interface ProjectFinancialSummary {
   totalValue: number;
   /** Total collected (€) */
   collected: number;
-  /** Effective cost of money (%) */
-  costOfMoney: number;
-  /** Average collection period (days) */
-  avgCollectionDays: number;
-  /** Overall health status (worst of 3 metrics) */
+  /** Effective cost of money (%); `null` when no unit reports it */
+  costOfMoney: number | null;
+  /** Average collection period (days); `null` when no unit reports it */
+  avgCollectionDays: number | null;
+  /** Overall health — worst of the measured metrics, `noData` when none was measured */
   healthStatus: HealthStatus;
+  /** The metrics that set `healthStatus` (empty for `noData`) */
+  healthDrivers: HealthMetricKey[];
 }
 
 /** Loan type for debt maturity wall */
@@ -502,7 +511,12 @@ export type LoanType = 'construction' | 'mortgage' | 'bridge' | 'mezzanine';
 export interface DebtMaturityEntry {
   /** Unique loan ID (dmt_ prefix) */
   loanId: string;
-  /** Associated project name */
+  /**
+   * Associated project document ID. Absent only on entries written before the
+   * project picker existed, when the project was free text.
+   */
+  projectId?: string;
+  /** Project display name, resolved server-side from `projectId` at write time */
   projectName: string;
   /** Type of loan */
   loanType: LoanType;

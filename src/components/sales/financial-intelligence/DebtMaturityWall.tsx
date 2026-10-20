@@ -24,6 +24,7 @@ import {
   type ChartSeries,
 } from '@/components/ui/chart-card';
 import { Input } from '@/components/ui/input';
+import { HEALTH_BADGE_VARIANT } from './HealthStatusBadge';
 import { NumericField } from '@/components/ui/numeric-field';
 import { Label } from '@/components/ui/label';
 import {
@@ -39,7 +40,7 @@ import type {
   DebtMaturityEntry,
   MaturityWallYear,
   LoanType,
-  HealthStatus,
+  ProjectFinancialSummary,
 } from '@/types/interest-calculator';
 import '@/lib/design-system';
 
@@ -49,13 +50,16 @@ import '@/lib/design-system';
 
 interface DebtMaturityWallProps {
   entries: DebtMaturityEntry[];
+  /** The company's projects — the only things a loan can be linked to. */
+  projects: ProjectFinancialSummary[];
   onAdd: (data: DebtMaturityFormData) => Promise<void>;
   onRemove: (loanId: string) => Promise<void>;
   t: (key: string, options?: Record<string, unknown>) => string;
 }
 
 export interface DebtMaturityFormData {
-  projectName: string;
+  /** Chosen from the project list; the server resolves the display name from it. */
+  projectId: string;
   loanType: LoanType;
   outstandingBalance: number;
   currentRate: number;
@@ -84,15 +88,8 @@ interface MaturityYearPoint {
  */
 const LOAN_TYPES: readonly LoanType[] = ['construction', 'mortgage', 'bridge', 'mezzanine'];
 
-const RISK_BADGE: Record<HealthStatus, 'success' | 'info' | 'warning' | 'destructive'> = {
-  excellent: 'success',
-  good: 'info',
-  warning: 'warning',
-  critical: 'destructive',
-};
-
 const INITIAL_FORM: DebtMaturityFormData = {
-  projectName: '',
+  projectId: '',
   loanType: 'construction',
   outstandingBalance: 0,
   currentRate: 0,
@@ -156,7 +153,7 @@ function buildChartData(yearData: MaturityWallYear[]): MaturityYearPoint[] {
 // MAIN COMPONENT
 // =============================================================================
 
-export function DebtMaturityWall({ entries, onAdd, onRemove, t }: DebtMaturityWallProps) {
+export function DebtMaturityWall({ entries, projects, onAdd, onRemove, t }: DebtMaturityWallProps) {
   const formatEuro = useCallback((value: number) => formatCurrencyWhole(value) ?? '', []);
 
   const chartData = useMemo(
@@ -179,7 +176,7 @@ export function DebtMaturityWall({ entries, onAdd, onRemove, t }: DebtMaturityWa
     >
       <ChartCard.Header title={t('maturity.title')}>
         <ChartCardEditor.Disclosure triggerLabel={t('maturity.addEntry')}>
-          {(close) => <AddEntryForm onAdd={onAdd} onDone={close} t={t} />}
+          {(close) => <AddEntryForm projects={projects} onAdd={onAdd} onDone={close} t={t} />}
         </ChartCardEditor.Disclosure>
       </ChartCard.Header>
 
@@ -236,7 +233,7 @@ function EntryList({ entries, onRemove, t }: EntryListProps) {
             className="flex items-center justify-between rounded-md border p-3"
           >
             <span className="flex items-center gap-3">
-              <Badge variant={RISK_BADGE[entry.riskLevel]}>
+              <Badge variant={HEALTH_BADGE_VARIANT[entry.riskLevel]}>
                 {t(`maturity.types.${entry.loanType}`)}
               </Badge>
               <span className="text-sm font-medium">{entry.projectName}</span>
@@ -262,19 +259,20 @@ function EntryList({ entries, onRemove, t }: EntryListProps) {
 // =============================================================================
 
 interface AddEntryFormProps {
+  projects: ProjectFinancialSummary[];
   onAdd: (data: DebtMaturityFormData) => Promise<void>;
   /** Collapses the disclosure. Called only after the write resolves. */
   onDone: () => void;
   t: (key: string, options?: Record<string, unknown>) => string;
 }
 
-function AddEntryForm({ onAdd, onDone, t }: AddEntryFormProps) {
+function AddEntryForm({ projects, onAdd, onDone, t }: AddEntryFormProps) {
   const [form, setForm] = useState<DebtMaturityFormData>(INITIAL_FORM);
 
   const { submitting, submit } = useEntrySubmit<DebtMaturityFormData>({
     onSubmit: onAdd,
     isValid: (value) =>
-      Boolean(value.projectName) && Boolean(value.maturityDate) && value.outstandingBalance > 0,
+      Boolean(value.projectId) && Boolean(value.maturityDate) && value.outstandingBalance > 0,
     onSubmitted: () => {
       setForm(INITIAL_FORM);
       onDone();
@@ -291,11 +289,24 @@ function AddEntryForm({ onAdd, onDone, t }: AddEntryFormProps) {
     <ChartCardEditor.Grid>
       <ChartCardEditor.Field>
         <Label htmlFor="maturity-project">{t('maturity.projectName')}</Label>
-        <Input
-          id="maturity-project"
-          value={form.projectName}
-          onChange={(event) => patch({ projectName: event.target.value })}
-        />
+        <Select
+          value={form.projectId || undefined}
+          onValueChange={(projectId: string) => patch({ projectId })}
+          disabled={projects.length === 0}
+        >
+          <SelectTrigger id="maturity-project">
+            <SelectValue
+              placeholder={t(projects.length === 0 ? 'maturity.noProjects' : 'maturity.selectProject')}
+            />
+          </SelectTrigger>
+          <SelectContent width="content">
+            {projects.map((project) => (
+              <SelectItem key={project.projectId} value={project.projectId}>
+                {project.projectName}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </ChartCardEditor.Field>
 
       <ChartCardEditor.Field>

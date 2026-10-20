@@ -191,12 +191,30 @@
     "costOfMoney": "Κόστος %",
     "collectionDays": "Ημέρες Είσπραξης",
     "health": "Υγεία",
+    "healthStatus": {
+      "excellent": "Άριστη",
+      "good": "Καλή",
+      "warning": "Προσοχή",
+      "critical": "Κρίσιμη",
+      "noData": "Χωρίς δεδομένα"
+    },
+    "healthMetric": {
+      "costOfMoney": "Κόστος χρήματος",
+      "collectionDays": "Χρόνος είσπραξης",
+      "soldPercent": "Ποσοστό πωλήσεων",
+      "collectedPercent": "Ποσοστό εισπράξεων"
+    },
+    "healthBasis": "Καθορίζεται από: {metrics}",
+    "healthNoDataReason": "Δεν υπάρχουν ακόμη μονάδες ή στοιχεία πληρωμών για αξιολόγηση.",
+    "notMeasured": "—",
     "noProjects": "Δεν βρέθηκαν έργα."
   },
   "maturity": {
     "title": "Τοίχος Λήξης Χρέους",
     "addEntry": "Προσθήκη Δανείου",
     "projectName": "Έργο",
+    "selectProject": "Επιλέξτε έργο…",
+    "noProjects": "Δεν υπάρχουν έργα για σύνδεση δανείου.",
     "loanType": "Τύπος Δανείου",
     "balance": "Υπόλοιπο (€)",
     "rate": "Επιτόκιο (%)",

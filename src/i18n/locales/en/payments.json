@@ -191,12 +191,30 @@
     "costOfMoney": "Cost %",
     "collectionDays": "Collection Days",
     "health": "Health",
+    "healthStatus": {
+      "excellent": "Excellent",
+      "good": "Good",
+      "warning": "Warning",
+      "critical": "Critical",
+      "noData": "No data"
+    },
+    "healthMetric": {
+      "costOfMoney": "Cost of money",
+      "collectionDays": "Collection period",
+      "soldPercent": "Share sold",
+      "collectedPercent": "Share collected"
+    },
+    "healthBasis": "Driven by: {metrics}",
+    "healthNoDataReason": "There are no units or payment records to assess yet.",
+    "notMeasured": "—",
     "noProjects": "No projects found."
   },
   "maturity": {
     "title": "Debt Maturity Wall",
     "addEntry": "Add Loan",
     "projectName": "Project",
+    "selectProject": "Select project…",
+    "noProjects": "No projects to link a loan to.",
     "loanType": "Loan Type",
     "balance": "Balance (€)",
     "rate": "Rate (%)",

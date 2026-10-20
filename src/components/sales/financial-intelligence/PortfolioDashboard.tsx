@@ -29,13 +29,13 @@ import {
   TableCell,
   TableHead,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
 import { KPIAlertCard } from './KPIAlertCard';
+import { HealthStatusBadge } from './HealthStatusBadge';
 import { DebtMaturityWall } from './DebtMaturityWall';
 import type { DebtMaturityFormData } from './DebtMaturityWall';
 import { BudgetVarianceChart } from './BudgetVarianceChart';
@@ -45,8 +45,8 @@ import type {
   ProjectFinancialSummary,
   DebtMaturityEntry,
   BudgetVarianceAnalysis,
-  HealthStatus,
 } from '@/types/interest-calculator';
+import { assessPortfolioKpis } from '@/services/financial-intelligence/portfolio-health';
 import {
   addDebtMaturityEntryWithPolicy,
   removeDebtMaturityEntryWithPolicy,
@@ -80,17 +80,6 @@ interface BudgetApiResponse {
 // ADR-300: Module-level caches — survive React unmount/remount (navigation)
 const portfolioCache = createStaleCache<{ portfolio: PortfolioSummary; projects: ProjectFinancialSummary[] }>('portfolio-summary');
 const debtMaturityCache = createStaleCache<DebtMaturityEntry[]>('portfolio-debt-maturity');
-
-// =============================================================================
-// HEALTH STATUS BADGE MAP
-// =============================================================================
-
-const STATUS_BADGE: Record<HealthStatus, 'success' | 'info' | 'warning' | 'destructive'> = {
-  excellent: 'success',
-  good: 'info',
-  warning: 'warning',
-  critical: 'destructive',
-};
 
 // =============================================================================
 // EURO FORMATTER
@@ -227,16 +216,9 @@ export function PortfolioDashboard() {
 
   if (!portfolio) return null;
 
-  // =========================================================================
-  // PORTFOLIO HEALTH — worst across all projects
-  // =========================================================================
-
-  const portfolioHealth: HealthStatus = projects.length > 0
-    ? projects.reduce<HealthStatus>((worst, p) => {
-        const priority: Record<HealthStatus, number> = { critical: 0, warning: 1, good: 2, excellent: 3 };
-        return priority[p.healthStatus] < priority[worst] ? p.healthStatus : worst;
-      }, 'excellent')
-    : 'good';
+  // ADR SPEC-242C: one rulebook for every traffic light on this page
+  const kpiHealth = assessPortfolioKpis(portfolio, projects);
+  const notMeasured = t('portfolio.notMeasured');
 
   // =========================================================================
   // RENDER
@@ -250,7 +232,7 @@ export function PortfolioDashboard() {
           title={t('portfolio.totalValue')}
           value={portfolio.totalPortfolioValue}
           format="currency"
-          status={portfolioHealth}
+          health={kpiHealth.totalValue}
           icon={DollarSign}
           subtitle={`${portfolio.activeProjects} ${t('portfolio.projects')} · ${portfolio.totalProperties} ${t('portfolio.units')}`}
         />
@@ -258,7 +240,7 @@ export function PortfolioDashboard() {
           title={t('portfolio.collected')}
           value={portfolio.totalCollected}
           format="currency"
-          status={portfolio.totalCollected > portfolio.totalPortfolioValue * 0.5 ? 'good' : 'warning'}
+          health={kpiHealth.collected}
           icon={TrendingUp}
           subtitle={`${t('portfolio.outstanding')}: ${fmtEuro(portfolio.totalOutstanding)}`}
         />
@@ -266,12 +248,7 @@ export function PortfolioDashboard() {
           title={t('portfolio.avgCostOfMoney')}
           value={portfolio.weightedAvgCostOfMoney}
           format="percent"
-          status={
-            portfolio.weightedAvgCostOfMoney < 3 ? 'excellent'
-              : portfolio.weightedAvgCostOfMoney < 5 ? 'good'
-              : portfolio.weightedAvgCostOfMoney < 8 ? 'warning'
-              : 'critical'
-          }
+          health={kpiHealth.costOfMoney}
           icon={BarChart3}
           subtitle={`${t('portfolio.timeCost')}: ${fmtEuro(portfolio.totalTimeCost)}`}
         />
@@ -279,12 +256,7 @@ export function PortfolioDashboard() {
           title={t('portfolio.avgCollectionDays')}
           value={portfolio.weightedAvgCollectionDays}
           format="days"
-          status={
-            portfolio.weightedAvgCollectionDays < 180 ? 'excellent'
-              : portfolio.weightedAvgCollectionDays < 365 ? 'good'
-              : portfolio.weightedAvgCollectionDays < 540 ? 'warning'
-              : 'critical'
-          }
+          health={kpiHealth.collectionDays}
           icon={Clock}
           subtitle={`${portfolio.soldProperties}/${portfolio.totalProperties} ${t('portfolio.unitsSold')}`}
         />
@@ -314,12 +286,14 @@ export function PortfolioDashboard() {
                   <TableCell className="text-right">{proj.soldProperties}</TableCell>
                   <TableCell className="text-right">{fmtEuro(proj.totalValue)}</TableCell>
                   <TableCell className="text-right">{fmtEuro(proj.collected)}</TableCell>
-                  <TableCell className="text-right">{proj.costOfMoney.toFixed(2)}%</TableCell>
-                  <TableCell className="text-right">{proj.avgCollectionDays}d</TableCell>
+                  <TableCell className="text-right">
+                    {proj.costOfMoney === null ? notMeasured : `${proj.costOfMoney.toFixed(2)}%`}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {proj.avgCollectionDays === null ? notMeasured : `${proj.avgCollectionDays}d`}
+                  </TableCell>
                   <TableCell className="text-center">
-                    <Badge variant={STATUS_BADGE[proj.healthStatus]}>
-                      {proj.healthStatus}
-                    </Badge>
+                    <HealthStatusBadge status={proj.healthStatus} drivers={proj.healthDrivers} />
                   </TableCell>
                 </TableRow>
               ))}
@@ -331,6 +305,7 @@ export function PortfolioDashboard() {
       {/* Debt Maturity Wall */}
       <DebtMaturityWall
         entries={debtEntries}
+        projects={projects}
         onAdd={handleAddDebt}
         onRemove={handleRemoveDebt}
         t={t}

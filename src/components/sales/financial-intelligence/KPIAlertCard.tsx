@@ -10,11 +10,12 @@
 import React from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
-import type { HealthStatus } from '@/types/interest-calculator';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import type { HealthAssessment } from '@/services/financial-intelligence/portfolio-health';
+import { HealthStatusBadge } from './HealthStatusBadge';
 
 // =============================================================================
 // TYPES
@@ -22,30 +23,13 @@ import type { HealthStatus } from '@/types/interest-calculator';
 
 interface KPIAlertCardProps {
   title: string;
-  value: string | number;
+  /** `null` = not measured — shown as a dash, never as a fabricated zero */
+  value: string | number | null;
   format?: 'currency' | 'percent' | 'number' | 'days';
-  status: HealthStatus;
+  health: HealthAssessment;
   icon: LucideIcon;
   subtitle?: string;
 }
-
-// =============================================================================
-// HEALTH STATUS → BADGE VARIANT MAPPING
-// =============================================================================
-
-const STATUS_BADGE_VARIANT: Record<HealthStatus, 'success' | 'info' | 'warning' | 'destructive'> = {
-  excellent: 'success',
-  good: 'info',
-  warning: 'warning',
-  critical: 'destructive',
-};
-
-const STATUS_LABEL: Record<HealthStatus, string> = {
-  excellent: 'Excellent',
-  good: 'Good',
-  warning: 'Warning',
-  critical: 'Critical',
-};
 
 // =============================================================================
 // FORMAT HELPERS
@@ -70,8 +54,9 @@ function formatValue(value: string | number, format?: string): string {
 // COMPONENT
 // =============================================================================
 
-export function KPIAlertCard({ title, value, format, status, icon: Icon, subtitle }: KPIAlertCardProps) {
+export function KPIAlertCard({ title, value, format, health, icon: Icon, subtitle }: KPIAlertCardProps) {
   const colors = useSemanticColors();
+  const { t } = useTranslation('payments');
 
   return (
     <Card>
@@ -81,9 +66,7 @@ export function KPIAlertCard({ title, value, format, status, icon: Icon, subtitl
             <Icon
               className={cn('h-5 w-5', colors.text.muted)}
             />
-            <Badge variant={STATUS_BADGE_VARIANT[status]}>
-              {STATUS_LABEL[status]}
-            </Badge>
+            <HealthStatusBadge status={health.status} drivers={health.drivers} />
           </header>
           <dl>
             <dt
@@ -92,7 +75,7 @@ export function KPIAlertCard({ title, value, format, status, icon: Icon, subtitl
               {title}
             </dt>
             <dd className={cn('text-2xl font-bold', colors.text.primary)}>
-              {formatValue(value, format)}
+              {value === null ? t('portfolio.notMeasured') : formatValue(value, format)}
             </dd>
           </dl>
           {subtitle && (

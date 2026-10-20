@@ -21,6 +21,7 @@ import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErro
 import { withHighRateLimit } from '@/lib/middleware/with-rate-limit';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateDebtMaturityId } from '@/services/enterprise-id.service';
+import { resolveCompanyProjectName } from '@/services/financial-intelligence/project-reference';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { DebtMaturityEntry, LoanType, HealthStatus } from '@/types/interest-calculator';
 import { nowISO } from '@/lib/date-local';
@@ -58,7 +59,7 @@ export const GET = withHighRateLimit(
 // =============================================================================
 
 interface DebtMaturityInput {
-  projectName: string;
+  projectId: string;
   loanType: LoanType;
   outstandingBalance: number;
   currentRate: number;
@@ -69,9 +70,9 @@ interface DebtMaturityInput {
 }
 
 function validateInput(body: Record<string, unknown>): DebtMaturityInput {
-  const projectName = body.projectName;
-  if (typeof projectName !== 'string' || projectName.trim().length === 0) {
-    throw new ApiError(400, 'projectName is required');
+  const projectId = body.projectId;
+  if (typeof projectId !== 'string' || projectId.trim().length === 0) {
+    throw new ApiError(400, 'projectId is required');
   }
   const loanType = body.loanType;
   if (!['construction', 'mortgage', 'bridge', 'mezzanine'].includes(loanType as string)) {
@@ -91,7 +92,7 @@ function validateInput(body: Record<string, unknown>): DebtMaturityInput {
   }
 
   return {
-    projectName: projectName.trim(),
+    projectId: projectId.trim(),
     loanType: loanType as LoanType,
     outstandingBalance,
     currentRate,
@@ -115,6 +116,10 @@ export const POST = withHighRateLimit(
       const body = await req.json() as Record<string, unknown>;
       const input = validateInput(body);
       const db = getAdminFirestore();
+      // The loan's project must belong to the caller's company; its name comes from the
+      // project document, never from the client.
+      const projectName = await resolveCompanyProjectName(db, input.projectId, ctx.companyId);
+      if (projectName === null) throw new ApiError(404, 'Project not found');
 
       const maturityMs = new Date(input.maturityDate).getTime();
       const nowMs = Date.now();
@@ -122,7 +127,8 @@ export const POST = withHighRateLimit(
 
       const entry: DebtMaturityEntry = {
         loanId: generateDebtMaturityId(),
-        projectName: input.projectName,
+        projectId: input.projectId,
+        projectName,
         loanType: input.loanType,
         outstandingBalance: input.outstandingBalance,
         currentRate: input.currentRate,

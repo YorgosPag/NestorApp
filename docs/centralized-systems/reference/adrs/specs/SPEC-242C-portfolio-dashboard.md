@@ -108,7 +108,9 @@ export interface ProjectFinancialSummary {
 export interface DebtMaturityEntry {
   /** Loan/debt identifier */
   loanId: string;
-  /** Project name */
+  /** Project document ID — absent only on legacy free-text entries (see §9) */
+  projectId?: string;
+  /** Project display name — resolved server-side from projectId at write time */
   projectName: string;
   /** Loan type */
   loanType: 'construction' | 'mortgage' | 'bridge' | 'mezzanine';
@@ -217,11 +219,16 @@ Aggregation Pipeline:
 
 #### Health Status Logic
 
-| Metric | Excellent | Good | Warning | Critical |
-|--------|-----------|------|---------|----------|
-| Cost of Money | < 3% | 3-5% | 5-8% | > 8% |
-| Collection Period | < 180 days | 180-365 | 365-540 | > 540 days |
-| Sold % | > 80% | 60-80% | 40-60% | < 40% |
+**SSoT**: `src/services/financial-intelligence/portfolio-health.ts` (`HEALTH_THRESHOLDS`, `rateMetric`, `assessHealth`, `combineAssessments`, `assessPortfolioKpis`) — used by the server aggregator **and** the KPI cards. Thresholds live nowhere else.
+
+| Metric | Excellent | Good | Warning | Critical | No data |
+|--------|-----------|------|---------|----------|---------|
+| Cost of Money | < 3% | 3-5% | 5-8% | ≥ 8% | no unit reports it |
+| Collection Period | < 180 days | 180-365 | 365-540 | ≥ 540 days | no unit reports it |
+| Sold % | > 80% | 60-80% | 40-60% | ≤ 40% | project has no units |
+| Collected % (KPI card) | > 75% | 50-75% | 25-50% | ≤ 25% | portfolio value is 0 |
+
+Rules: (1) a metric without a sample is `null` → `noData`, **never** `0`; (2) project/portfolio status = worst **measured** metric, `noData` only if nothing was measured; (3) every assessment carries `drivers` — the metrics that set it — shown in the badge tooltip; (4) value-weighted portfolio averages count only projects that report the metric.
 
 ### 3.2 Variance Analyzer — `src/services/financial-intelligence/variance-analyzer.ts`
 
@@ -573,6 +580,18 @@ Tooltip: "{category}: Budget €{budget}, Actual €{actual}, Variance {sign}€
 11. **Zero `any`**, semantic HTML, enterprise TypeScript
 12. **Recharts**: Reuse existing chart.tsx wrapper
 13. **CSS**: No inline styles — use Tailwind + globals.css
+
+---
+
+## 9. Changelog
+
+| Date | Change |
+|------|--------|
+| 2026-10-20 | **Health badges translated.** `HealthStatusBadge.tsx` is the single `HealthStatus` → badge variant + i18n label (`payments:portfolio.healthStatus.*`). Before: `KPIAlertCard` carried hardcoded English labels, the projects table rendered the raw enum (`critical`), and the variant map was copied in 3 files (`DebtMaturityWall` now imports `HEALTH_BADGE_VARIANT`). |
+| 2026-10-20 | **Debt Maturity project = picker, not free text.** The add-loan form selects from the portfolio's projects (Radix `Select`, ADR-001). The client sends `projectId`; `POST /api/financial-intelligence/debt-maturity` resolves the display name from the project document via `resolveCompanyProjectName` (`src/services/financial-intelligence/project-reference.ts`) and answers 404 for a missing project **or one of another company**. Entries written before this change keep only `projectName` (no migration — the name is still displayed). Test: `src/services/financial-intelligence/__tests__/project-reference.test.ts`. |
+| 2026-10-20 | **«Χωρίς δεδομένα» + explainable health** (§3.1 Health Status Logic). Measured bug: every project with 0 units showed **Critical** (0% sold), while the empty portfolio's cost-of-money and collection cards showed **Excellent** (0.00% / 0d) — both fabricated from missing data. Now: `HealthStatus` gains `noData` (neutral `muted` badge); `ProjectFinancialSummary.costOfMoney/avgCollectionDays` and `PortfolioSummary.weightedAvg*` are `number \| null` (UI shows «—»); `ProjectFinancialSummary.healthDrivers` names the deciding metrics, shown in the badge tooltip («Καθορίζεται από: Ποσοστό πωλήσεων»). Also fixed: portfolio weighted averages used to give weight to projects that did not report the metric, dragging the average towards 0. The collected-share card moved from an ad-hoc `> 50% good / else warning` to the shared 4-band thresholds. Precedent: monitoring tools (e.g. Datadog) keep «No Data» as its own state, distinct from OK and Alert. Test: `__tests__/portfolio-health.test.ts`. |
+| 2026-10-20 | **Read / compute split.** `aggregatePortfolio` was one ~160-line function mixing Firestore reads with arithmetic (N.7.1: max 40). Now `portfolio-aggregator.ts` only reads (`readLiveUnits` — tenant-scoped, retired units excluded) and the pure `portfolio-rollup.ts` computes: `readUnitFinancials` (unit doc → `UnitFinancials`, missing metrics `null`) → `rollUpProject` (summary + health) → `rollUpPortfolio` (totals + value-weighted averages over reporting projects only). Behaviour unchanged; the rollup had **no tests** and now has `__tests__/portfolio-rollup.test.ts` (mutation-checked). |
+| 2026-10-20 | **Project picker shows full names.** The list of the «Έργο» picker (add-loan form, `DebtMaturityWall`) and the variance project picker (`BudgetVarianceChart`) had the narrow trigger's width, so long names were cut («ΕΡΓΟ ΙΩΑΝΝΙΝΩΝ —…»). Both now use `<SelectContent width="content">` — a generic option added **once** in `ui/select` (ADR-001 «Content width»): the list grows to the longest name, never narrower than the trigger, capped at `min(28rem, available viewport width)`; past the cap the label wraps instead of truncating. The trigger keeps its single-line ellipsis; the full name is one click away in the list. Test: `src/components/ui/__tests__/select-content-width.test.tsx`. |
 
 ---
 
