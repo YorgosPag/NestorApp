@@ -19,6 +19,7 @@ import {
 } from '@/lib/document-validity/document-registry';
 import {
   followsProposal,
+  proposalChangedSince,
   upkeepItemsOf,
   upkeepProposalOf,
   upkeepRequirementsOf,
@@ -172,6 +173,29 @@ describe('Ο — η ενότητα: ό,τι περιμένει απόφαση κ
     expect(followsProposal(declaration())).toBe(true);
     expect(followsProposal(declaration({ decision: 'not-required', exemptionReason: 'other' }))).toBe(false);
     expect(followsProposal(declaration({ proposalAtDecision: { ...IN_USE, verdict: 'undetermined', reason: 'class-unknown' } }))).toBeNull();
+  });
+});
+
+describe('§36 — «η πρόταση άλλαξε από την απόφαση»: σήμα, ποτέ αναίρεση', () => {
+  const item = (proposal: UpkeepProposal, decided: UpkeepDeclaration | null) =>
+    ({ propertyId: 'prop_1', documentKind: YDE, proposal, declaration: decided });
+
+  it('χωρίς απόφαση ⇒ τίποτα να αλλάξει', () => {
+    expect(proposalChangedSince(item(IN_USE, null))).toBe(false);
+  });
+
+  it('ίδια ετυμηγορία ΚΑΙ ίδιος λόγος ⇒ όχι', () => {
+    expect(proposalChangedSince(item(IN_USE, declaration()))).toBe(false);
+  });
+
+  it('άλλαξε ΜΟΝΟ ο λόγος (`phase-undeclared` → `in-use`) ⇒ ναι — νέο γεγονός, η ίδια ετυμηγορία', () => {
+    const then: UpkeepProposal = { ...IN_USE, reason: 'phase-undeclared', phase: null };
+    expect(proposalChangedSince(item(IN_USE, declaration({ proposalAtDecision: then })))).toBe(true);
+  });
+
+  it('άλλαξε η ετυμηγορία (έγινε οικόπεδο) ⇒ ναι', () => {
+    const now: UpkeepProposal = { verdict: 'not-proposed', reason: 'class', propertyClass: 'land', phase: 'ready' };
+    expect(proposalChangedSince(item(now, declaration()))).toBe(true);
   });
 });
 

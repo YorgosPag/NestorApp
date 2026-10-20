@@ -20,9 +20,12 @@ import type { UpkeepItem } from '@/lib/document-validity/property-upkeep';
  * κανένα έγγραφο, Ε11). §27: `issuance-assignments` (οι αναθέσεις έκδοσης του γραφείου — τρέχουσες **και** «ξανά»).
  * §33: `undeclared-files` (αρχεία **χωρίς στοιχεία** σε θέση που υπόσχεται είδος — «Συμπλήρωση στοιχείων»).
  * §35: `upkeep-declarations` (οι αποφάσεις μόνιμης υποχρέωσης του γραφείου — επιβεβαιώσεις **και** εξαιρέσεις).
+ * §36: `company-properties` (**όλα** τα ακίνητα της εταιρείας — η μόνιμη υποχρέωση προτείνεται και σε ακίνητο χωρίς
+ * κανένα έγγραφο, που είναι ακριβώς αυτό που πιθανότατα του λείπει).
  */
 export const REGISTRY_SOURCES = [
   'files', 'declared', 'cases', 'owner-properties', 'listings', 'issuance-assignments', 'undeclared-files', 'upkeep-declarations',
+  'company-properties',
 ] as const;
 export type RegistrySource = (typeof REGISTRY_SOURCES)[number];
 
@@ -36,6 +39,7 @@ export const DOCUMENT_REGISTRY_CAPS: Readonly<Record<RegistrySource, number>> = 
   'issuance-assignments': 500,
   'undeclared-files': 500,
   'upkeep-declarations': 500,
+  'company-properties': 500,
 };
 
 /** Σε ποιο **είδος** ακινήτου δείχνει το όνομα — αποφασίζει τη διεύθυνση της οθόνης (ακίνητο εταιρείας · εντολή). */

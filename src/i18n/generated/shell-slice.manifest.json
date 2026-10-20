@@ -35,7 +35,7 @@
     "src/i18n/generated/routes/o__workspace__cases.el.json": "62e1b3378215c16e66a12632667ad61be33b59cc632e634dde0ffaf9763769d4",
     "src/i18n/generated/routes/o__workspace__cases__engagementId.el.json": "cb0565009bf6f7bec16cd93768e557804df81971abe3c5a23b7c050e9eb91ec3",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
-    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "3bcc5ce64c6ec768338a265d07a4261e5555e04b952b2f272ac58b552a562dd0",
+    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "62f945714e354b17fcd70e871b1ee3f22ad64edd93f8d1e700177a9c6a5ccc43",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "f2b0212cf0909081143453962ba0bfec2a47dc8753dc81a009ee34c12579b137",
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "2753c7edd9c05a17a65b15f3146177db8a27ca727df7b1f77d28fd1724f4fa6f",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "e1c5896ab910b7f5515ef0a3991a4daae3ba7fc776c6291815cfeaddb51e2398",
@@ -152,7 +152,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "d9239b068a913960ed23b2c50ff5d651359b9b6ae9e15fab447a3b82a146ac66",
+  "inputsSha256": "436633c6edae77e4a849c7414d7a873a1cdde476fb61a3710e870bf5616a3801",
   "languages": [
     "el"
   ],
@@ -5634,6 +5634,7 @@
             "tally.heading",
             "truncated.body",
             "truncated.cases",
+            "truncated.company-properties",
             "truncated.declared",
             "truncated.files",
             "truncated.issuance-assignments",
@@ -11287,7 +11288,7 @@
   ],
   "stats": {
     "matchedKeys": 255,
-    "sliceBytes": 786304
+    "sliceBytes": 786382
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

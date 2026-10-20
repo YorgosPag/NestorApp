@@ -80,3 +80,18 @@ export async function readOfficeOwnerProperties(
   });
   return { properties, truncated: snapshot.size > cap };
 }
+
+/**
+ * ADR-915 §36 — **ένα** ακίνητο ιδιώτη, μόνο αν είναι υπό θεματοφυλακή **αυτού** του γραφείου· αλλιώς `null` (ξένο ≡
+ * ανύπαρκτο). Ο ΙΔΙΟΣ αναγνώστης (`ownerPropertyFromDocument`) και ο ΙΔΙΟΣ κριτής (`custodyOf`) με τον κατάλογο.
+ */
+export async function readOfficeOwnerProperty(
+  db: AdminFirestore,
+  companyId: string,
+  propertyId: string,
+): Promise<RegistryProperty | null> {
+  const snapshot = await db.collection(COLLECTIONS.OWNER_PROPERTIES).doc(propertyId).get();
+  const data = snapshot.data();
+  const property = data === undefined ? null : ownerPropertyFromDocument(data, snapshot.id);
+  return property !== null && inOfficeCustody(property, companyId) ? registryOwnerPropertyOf(property, data ?? {}) : null;
+}

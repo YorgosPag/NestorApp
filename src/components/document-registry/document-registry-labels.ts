@@ -338,6 +338,7 @@ export const TRUNCATED_SOURCE_KEYS: Readonly<Record<RegistrySource, string>> = {
   'issuance-assignments': `${K}truncated.issuance-assignments`,
   'undeclared-files': `${K}truncated.undeclared-files`,
   'upkeep-declarations': `${K}truncated.upkeep-declarations`,
+  'company-properties': `${K}truncated.company-properties`,
 };
 
 /** ADR-915 §33 — «Συμπλήρωση στοιχείων» εγγράφου από το μητρώο. */

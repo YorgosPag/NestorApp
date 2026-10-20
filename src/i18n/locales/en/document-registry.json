@@ -161,7 +161,8 @@
     "listings": "published listings",
     "issuance-assignments": "issuance assignments",
     "undeclared-files": "files without details",
-    "upkeep-declarations": "standing-obligation decisions"
+    "upkeep-declarations": "standing-obligation decisions",
+    "company-properties": "company properties"
   },
   "empty": {
     "title": "No expiring documents found",
@@ -405,9 +406,13 @@
     "cancel": "Cancel",
     "saving": "Saving…",
     "saved": "Saved",
+    "propertyTitle": "Standing obligations of the property",
+    "proposalChanged": "The proposal has changed since the decision — check that it still applies.",
+    "loadFailed": "Standing obligations could not be loaded.",
     "error": {
       "failed": "Not saved. Please try again.",
-      "absent": "The property is not in the registry.",
+      "absent": "The property was not found in this office.",
+      "retired": "The property is archived or in the trash.",
       "notStanding": "Not a standing obligation."
     }
   }

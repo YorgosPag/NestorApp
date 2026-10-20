@@ -28,16 +28,22 @@ export const upkeepDeclarationBody = z.object({
 
 export type UpkeepDeclarationBody = z.infer<typeof upkeepDeclarationBody>;
 
+/** §36 — η ανάγνωση της καρτέλας ακινήτου: `GET …/upkeep-declarations?propertyId=`. */
+export const upkeepPropertyQuery = z.object({ propertyId: z.string().trim().min(1) });
+
 /**
  * Οι αρνήσεις του διακομιστή:
- * - `absent`       — το ακίνητο δεν είναι στο μητρώο **του γραφείου** (ξένο ≡ ανύπαρκτο, ποτέ 403)
+ * - `absent`       — το ακίνητο δεν είναι **του γραφείου** (ξένο ≡ ανύπαρκτο, ποτέ 403)
+ * - `retired`      — §36: το ακίνητο είναι στο αρχείο ή στον κάδο (ADR-281) — καμία απόφαση πάνω του
  * - `not-standing` — το είδος **δεν** είναι μόνιμη υποχρέωση στον κατάλογο (ο νόμος αποφασίζει, όχι το αίτημα)
  */
-export const UPKEEP_DECLARATION_REFUSALS = ['absent', 'not-standing'] as const;
+export const UPKEEP_DECLARATION_REFUSALS = ['absent', 'retired', 'not-standing'] as const;
 export type UpkeepDeclarationRefusal = (typeof UPKEEP_DECLARATION_REFUSALS)[number];
 
 export const UPKEEP_DECLARATION_ERROR_CODES: Readonly<Record<UpkeepDeclarationRefusal, string>> = {
   absent: 'NOT_FOUND',
+  // Ο ίδιος κωδικός με τον φρουρό ακινήτου (`assertNotRetired`, ADR-281): μία λέξη για «αποσυρμένο» σε όλο το API.
+  retired: 'ENTITY_RETIRED',
   'not-standing': 'NOT_STANDING_OBLIGATION',
 };
 

@@ -18,7 +18,7 @@ import 'server-only';
 
 import type { Firestore } from 'firebase-admin/firestore';
 
-import type { DocumentKind } from '@/config/document-validity/document-validity';
+import { STANDING_OBLIGATION_KINDS, type DocumentKind } from '@/config/document-validity/document-validity';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import type { UpkeepDecision, UpkeepExemptionReason, UpkeepProposal } from '@/lib/document-validity/property-upkeep';
@@ -61,18 +61,34 @@ export interface UpkeepDeclarationsReading {
   readonly truncated: boolean;
 }
 
-/** Όλες οι αποφάσεις του γραφείου (φραγμένα). Ξένο ≡ ανύπαρκτο· χαλασμένο ⇒ παραλείπεται και αναφέρεται. */
+/** Ένα έγγραφο → απόφαση **του γραφείου**, ή τίποτα. Ξένο ≡ ανύπαρκτο· χαλασμένο ⇒ παραλείπεται **και** αναφέρεται. */
+function ownDeclarationsOf(id: string, raw: unknown, companyId: string): StoredUpkeepDeclaration[] {
+  const parsed = parseUpkeepDeclaration(raw);
+  if (parsed !== null && parsed.companyId === companyId) return [parsed];
+  logger.warn('Μη αναγνώσιμη απόφαση μόνιμης υποχρέωσης — παραλείφθηκε', { declarationId: id });
+  return [];
+}
+
+/** Όλες οι αποφάσεις του γραφείου (φραγμένα). */
 export async function readUpkeepDeclarations(db: Firestore, companyId: string, cap: number): Promise<UpkeepDeclarationsReading> {
   const snapshot = await declarationsCollection(db).where(FIELDS.COMPANY_ID, '==', companyId).limit(cap + 1).get();
-  const declarations = snapshot.docs.slice(0, cap).flatMap((doc) => {
-    const parsed = parseUpkeepDeclaration(doc.data());
-    if (parsed === null || parsed.companyId !== companyId) {
-      logger.warn('Μη αναγνώσιμη απόφαση μόνιμης υποχρέωσης — παραλείφθηκε', { declarationId: doc.id });
-      return [];
-    }
-    return [parsed];
-  });
+  const declarations = snapshot.docs.slice(0, cap).flatMap((doc) => ownDeclarationsOf(doc.id, doc.data(), companyId));
   return { declarations, truncated: snapshot.size > cap };
+}
+
+/**
+ * §36 — οι αποφάσεις **ενός** ακινήτου (καρτέλα ακινήτου): ένα `getAll` στις ντετερμινιστικές ταυτότητες, μία ανά είδος
+ * μόνιμης υποχρέωσης. Κανένα ερώτημα, κανένα όριο, κανένας δείκτης.
+ */
+export async function readPropertyUpkeepDeclarations(
+  db: Firestore,
+  companyId: string,
+  propertyId: string,
+): Promise<readonly StoredUpkeepDeclaration[]> {
+  const refs = STANDING_OBLIGATION_KINDS.map((kind) => declarationsCollection(db).doc(upkeepDeclarationIdOf(companyId, propertyId, kind)));
+  if (refs.length === 0) return [];
+  const snapshots = await db.getAll(...refs);
+  return snapshots.flatMap((snapshot) => (snapshot.exists ? ownDeclarationsOf(snapshot.id, snapshot.data(), companyId) : []));
 }
 
 /** Η νέα απόφαση· `null` = «ξανά ρώτα» (το έγγραφο σβήνεται, η υποχρέωση γυρίζει σε πρόταση). */

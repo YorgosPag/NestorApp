@@ -199,3 +199,13 @@ export function upkeepItemsOf(
     return [{ propertyId: subject.propertyId, documentKind, proposal, declaration }];
   }));
 }
+
+/**
+ * §36 — «Η πρόταση **άλλαξε** από την απόφαση;» (π.χ. το ακίνητο ολοκληρώθηκε, ή άλλαξε είδος). Ετυμηγορία **ή** λόγος:
+ * το «προτείνεται: φάση μη δηλωμένη» → «προτείνεται: σε χρήση» είναι κι αυτό νέο γεγονός. Μόνο σήμα στην οθόνη — η
+ * απόφαση **δεν** αναιρείται ποτέ αυτόματα (ο άνθρωπος αποφασίζει, §35.9).
+ */
+export function proposalChangedSince(item: UpkeepItem): boolean {
+  const then = item.declaration?.proposalAtDecision ?? null;
+  return then !== null && (then.verdict !== item.proposal.verdict || then.reason !== item.proposal.reason);
+}

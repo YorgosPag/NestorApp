@@ -15,7 +15,7 @@
 
 import 'server-only';
 
-import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
+import type { Firestore as AdminFirestore, QuerySnapshot as AdminQuerySnapshot } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
@@ -81,9 +81,18 @@ export async function readCompanyProperties(
   return owned;
 }
 
-interface DeclaredCertificateProperties {
+interface CompanyPropertiesReading {
   readonly properties: readonly RegistryProperty[];
   readonly truncated: boolean;
+}
+
+/** Φραγμένο ερώτημα → γραμμές + «κόπηκε;». ⚠️ Μόνο το αποτέλεσμα μοιράζεται: κάθε ερώτημα γράφεται ΟΛΟΚΛΗΡΟ στη θέση
+ *  του, ώστε οι στατικές πύλες εμβέλειας/δεικτών (CHECK 3.10 · 3.35 · 3.91) να βλέπουν το `companyId ==` στην αλυσίδα. */
+function cappedOf(snapshot: AdminQuerySnapshot, cap: number): CompanyPropertiesReading {
+  return {
+    properties: snapshot.docs.slice(0, cap).map((doc) => registryPropertyOf(doc.id, doc.data())),
+    truncated: snapshot.size > cap,
+  };
 }
 
 /** Τα ακίνητα της εταιρείας που **δηλώνουν** ΠΕΑ (κλάση) — με ή χωρίς αρχείο-πηγή. */
@@ -91,7 +100,7 @@ export async function readDeclaredCertificateProperties(
   db: AdminFirestore,
   companyId: string,
   cap: number,
-): Promise<DeclaredCertificateProperties> {
+): Promise<CompanyPropertiesReading> {
   const snapshot = await db
     .collection(COLLECTIONS.PROPERTIES)
     .where(FIELDS.COMPANY_ID, '==', companyId)
@@ -99,8 +108,19 @@ export async function readDeclaredCertificateProperties(
     .where('energy.class', 'in', [...ENERGY_CLASSES])
     .limit(cap + 1)
     .get();
-  return {
-    properties: snapshot.docs.slice(0, cap).map((doc) => registryPropertyOf(doc.id, doc.data())),
-    truncated: snapshot.size > cap,
-  };
+  return cappedOf(snapshot, cap);
+}
+
+/**
+ * ADR-915 §36 — **όλα** τα ακίνητα της εταιρείας (φραγμένα): η μόνιμη υποχρέωση προτείνεται και σε ακίνητο χωρίς κανένα
+ * έγγραφο. Μία ισότητα ⇒ κανένας σύνθετος δείκτης. Τα αποσυρμένα επιστρέφονται — τα κρίνει ο καταναλωτής (`isRetired`),
+ * γιατί ένα αρχειοθετημένο ακίνητο μπορεί ακόμη να ονομάζεται από έγγραφο ή υπόθεση.
+ */
+export async function readCompanyPropertyPortfolio(
+  db: AdminFirestore,
+  companyId: string,
+  cap: number,
+): Promise<CompanyPropertiesReading> {
+  const snapshot = await db.collection(COLLECTIONS.PROPERTIES).where(FIELDS.COMPANY_ID, '==', companyId).limit(cap + 1).get();
+  return cappedOf(snapshot, cap);
 }
