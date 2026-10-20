@@ -64,6 +64,7 @@ import { WORKSPACE_PATH_PREFIX, workspacePath } from './workspace-path';
 import { WORKSPACE_INVITE_SEGMENT } from './workspace-routes';
 import { TOUR_CAPTURES_SEGMENT, TOUR_INVITE_SEGMENT } from '@/lib/spatial-tour/tour-routes';
 import { CASE_INVITE_SEGMENT, PERSONAL_CASES_SEGMENT } from '@/lib/conveyance/conveyance-routes';
+import { HANDOVER_INVITE_SEGMENT } from '@/lib/property-handover/handover-routes';
 
 /**
  * **Τα κορυφαία τμήματα που ΔΕΝ ζουν μέσα σε χώρο** — κλειστό σύνολο, με
@@ -142,6 +143,11 @@ export const OUTSIDE_WORKSPACE: Readonly<Record<string, string>> = {
     'Η ΣΕΛΙΔΑ ΤΗΣ ΠΡΟΣΚΛΗΣΗΣ ΥΠΟΘΕΣΗΣ (`/case-invite/<token>`). Ο δικηγόρος/συμβολαιογράφος φτάνει από EMAIL ' +
     'πριν από κάθε ταυτότητα — και ΔΕΝ θα ανήκει ΠΟΤΕ στον χώρο του οικοδεσπότη: παίρνει ΣΥΜΜΕΤΟΧΗ σε μία ' +
     'υπόθεση (ADR-862 §5.3), όχι ιδιότητα μέλους (ADR-901 Α1). Πρόθεμα θα ονόμαζε χώρο στον οποίο δεν μπαίνει.',
+  // ── Ο ΑΓΟΡΑΣΤΗΣ ΠΟΥ ΠΑΡΑΛΑΜΒΑΝΕΙ ΤΟΝ ΦΑΚΕΛΟ ΤΟΥ ΣΠΙΤΙΟΥ ΤΟΥ (ADR-916 Φ-Β2) ─────
+  [HANDOVER_INVITE_SEGMENT]:
+    'Η ΣΕΛΙΔΑ ΤΗΣ ΠΡΟΣΚΛΗΣΗΣ ΑΓΟΡΑΣΤΗ (`/handover-invite/<token>`). Ο αγοραστής φτάνει από EMAIL πριν από κάθε ' +
+    'ταυτότητα — και ΔΕΝ θα ανήκει ΠΟΤΕ στον χώρο της εταιρείας που πούλησε: παίρνει τον ΔΙΚΟ του φάκελο, στον ' +
+    'προσωπικό του χώρο (`/dossiers`, επίσης εκτός προθέματος). Πρόθεμα θα ονόμαζε χώρο στον οποίο δεν μπαίνει.',
   [TOUR_CAPTURES_SEGMENT]:
     '«ΟΙ ΛΗΨΕΙΣ ΜΟΥ» ΤΟΥ ΦΩΤΟΓΡΑΦΟΥ (route group `(me)`). Οι άδειές του ζουν σε περιηγήσεις ΔΙΑΦΟΡΕΤΙΚΩΝ ' +
     'κατόχων — γραφείων ΚΑΙ ιδιωτών — άρα κανένα ψευδώνυμο χώρου δεν τις περιγράφει· ο διακομιστής τις βρίσκει ' +

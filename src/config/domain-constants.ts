@@ -1034,6 +1034,12 @@ export const API_ROUTES = {
     INVITATION_REDEEM: '/api/engagement-invitations/redeem',
   },
 
+  // ── Παράδοση φακέλου στον αγοραστή (ADR-916 Φ-Β) ──────────────────────
+  PROPERTY_HANDOVER_INVITATIONS: {
+    // Η αποδοχή/άρνηση από `/handover-invite/[token]` — token σε σώμα, ποτέ σε URL.
+    REDEEM: '/api/property-handover-invitations/redeem',
+  },
+
   // ── Sales ─────────────────────────────────────────────────────────────
   SALES: {
     ACCOUNTING_EVENT: (propertyId: string) => `/api/sales/${propertyId}/accounting-event` as const,

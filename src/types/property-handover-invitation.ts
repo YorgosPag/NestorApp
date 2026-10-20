@@ -10,7 +10,7 @@
  * **Layering**: leaf — καθαροί τύποι (τους εισάγουν και οθόνες).
  */
 
-import type { InvitationRecordCore } from '@/types/invitation-core';
+import { CORE_INVITATION_REFUSALS, type InvitationRecordCore } from '@/types/invitation-core';
 import type { PropertyHandoverInvitationOccasion } from '@/types/property-handover';
 
 /** Το έγγραφο `property_handover_invitations/{phin_*}`. ⛔ Κανένα πεδίο δεν φτάνει ωμό σε πελάτη (`read: false`). */
@@ -32,6 +32,14 @@ export interface PropertyHandoverInvitation extends InvitationRecordCore {
 export const PROPERTY_HANDOVER_INVITATION_KIND_REFUSALS = ['handover-closed'] as const;
 
 export type PropertyHandoverInvitationKindRefusal = (typeof PROPERTY_HANDOVER_INVITATION_KIND_REFUSALS)[number];
+
+/** Ό,τι μπορεί να απαντήσει η πόρτα εξαργύρωσης — το κλειστό λεξιλόγιο της σελίδας `/handover-invite/[token]`. */
+export const PROPERTY_HANDOVER_INVITATION_REFUSALS = [
+  ...CORE_INVITATION_REFUSALS,
+  ...PROPERTY_HANDOVER_INVITATION_KIND_REFUSALS,
+] as const;
+
+export type PropertyHandoverInvitationRefusal = (typeof PROPERTY_HANDOVER_INVITATION_REFUSALS)[number];
 
 /**
  * **Η όψη πριν την απόφαση** — «ποιος μου δίνει, ποιο σπίτι, ως πότε». 🔒 Καμία ονομασία μέρους, κανένα email: ένα
