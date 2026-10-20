@@ -21,7 +21,7 @@ const EMAIL = 'anna@example.test';
 function handover(overrides: Partial<PropertyHandover> = {}): PropertyHandover {
   return {
     id: 'phov_1', companyId: 'comp_1', propertyId: 'prop_1', recipientContactId: 'cont_anna',
-    lifecycle: 'awaiting-completion', completion: null, recipient: null, invitation: null,
+    lifecycle: 'awaiting-completion', completion: null, recipient: null, invitation: null, fileDelivery: null,
     createdAt: ISSUED_AT, updatedAt: ISSUED_AT,
     ...overrides,
   };

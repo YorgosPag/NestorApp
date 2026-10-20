@@ -15,12 +15,16 @@
 
 import {
   PROPERTY_HANDOVER_COMPLETION_SOURCES,
+  PROPERTY_HANDOVER_FILE_DELIVERY_STATES,
   PROPERTY_HANDOVER_INVITATION_DELIVERIES,
   PROPERTY_HANDOVER_INVITATION_OCCASIONS,
   PROPERTY_HANDOVER_LIFECYCLES,
   type PropertyHandover,
   type PropertyHandoverCompletion,
   type PropertyHandoverCompletionSource,
+  type PropertyHandoverFileDelivery,
+  type PropertyHandoverFileDeliveryState,
+  type PropertyHandoverFileDeliverySummary,
   type PropertyHandoverInvitationDelivery,
   type PropertyHandoverInvitationLink,
   type PropertyHandoverInvitationOccasion,
@@ -78,6 +82,39 @@ function invitationOf(raw: unknown): PropertyHandoverInvitationLink | null {
   };
 }
 
+const isFileDeliveryState = (value: unknown): value is PropertyHandoverFileDeliveryState =>
+  (PROPERTY_HANDOVER_FILE_DELIVERY_STATES as readonly unknown[]).includes(value);
+
+const isCount = (value: unknown): value is number => typeof value === 'number' && Number.isInteger(value) && value >= 0;
+
+/**
+ * **Η όψη της προόδου που βλέπει ο αγοραστής** (Φ-Γ1) — η ΜΙΑ ανάγνωσή της: την καλεί και ο αναγνώστης του φακέλου για
+ * την προβολή `origin.fileDelivery`. Αδιάβαστη ⇒ `null` («δεν ξεκίνησε»), ποτέ ψεύτικο «0 από 0».
+ */
+export function fileDeliverySummaryOf(raw: unknown): PropertyHandoverFileDeliverySummary | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const { state, delivered, total } = raw as Record<string, unknown>;
+  return isFileDeliveryState(state) && isCount(delivered) && isCount(total) ? { state, delivered, total } : null;
+}
+
+/**
+ * Η πρόοδος της αντιγραφής (Φ-Γ1). ⚠️ Αδιάβαστη ⇒ `null` («δεν έχει ξεκινήσει»): ο εκτελεστής ξαναμετρά από το
+ * καθολικό και τα ντετερμινιστικά αντίγραφα — στη χειρότερη περίπτωση ξανακοιτά αρχεία που ήδη υπάρχουν, ποτέ δεύτερο.
+ */
+function fileDeliveryOf(raw: unknown): PropertyHandoverFileDelivery | null {
+  const summary = fileDeliverySummaryOf(raw);
+  if (summary === null) return null;
+  const stored = raw as Record<string, unknown>;
+  const { awaitingReview, bytes, startedAt } = stored;
+  if (!isCount(awaitingReview) || !isCount(bytes) || !nonEmptyString(startedAt)) return null;
+  return {
+    ...summary, awaitingReview, bytes, startedAt,
+    digest: stringOrNull(stored.digest),
+    completedAt: stringOrNull(stored.completedAt),
+    lastError: stringOrNull(stored.lastError),
+  };
+}
+
 /** **Διαβάζει ένα αποθηκευμένο έγγραφο ως παράδοση.** `null` ⇒ «αυτό δεν είναι παράδοση». */
 export function propertyHandoverFromDocument(raw: unknown, id: string): PropertyHandover | null {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return null;
@@ -97,6 +134,7 @@ export function propertyHandoverFromDocument(raw: unknown, id: string): Property
     // Φ-Β — τα έγγραφα της Φ-Α δεν τα έχουν: η απουσία είναι η δηλωμένη ουδέτερη τιμή (`null`), ποτέ εφεύρεση.
     recipient: recipientOf(stored.recipient),
     invitation: invitationOf(stored.invitation),
+    fileDelivery: fileDeliveryOf(stored.fileDelivery),
     createdAt,
     updatedAt,
   };

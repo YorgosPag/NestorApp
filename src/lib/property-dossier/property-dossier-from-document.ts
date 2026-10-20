@@ -26,6 +26,7 @@ import {
   type PropertyDossierLifecycle,
   type PropertyDossierOrigin,
 } from '@/types/property-dossier';
+import { fileDeliverySummaryOf } from '@/lib/property-handover/property-handover-from-document';
 import { PROPERTY_HANDOVER_LIFECYCLES, type PropertyHandoverLifecycle } from '@/types/property-handover';
 
 const nonEmptyString = (value: unknown): value is string =>
@@ -51,8 +52,14 @@ function originOf(raw: unknown): PropertyDossierOrigin | null {
   if (kind !== 'handover' || !nonEmptyString(handoverId) || !nonEmptyString(issuerCompanyId)) return null;
   if (!nonEmptyString(acceptedAt) || !isHandoverLifecycle(handoverLifecycle)) return null;
   const issuerName = nonEmptyString(origin.issuerName) ? origin.issuerName : null;
-  return { kind, handoverId, issuerCompanyId, issuerName, acceptedAt, handoverLifecycle };
+  return {
+    kind, handoverId, issuerCompanyId, issuerName, acceptedAt, handoverLifecycle,
+    // Φ-Γ1 — οι φάκελοι της Φ-Β δεν τα έχουν: απουσία = η δηλωμένη ουδέτερη τιμή, ποτέ εφεύρεση.
+    fileDelivery: fileDeliverySummaryOf(origin.fileDelivery),
+    appurtenanceOf: nonEmptyString(origin.appurtenanceOf) ? origin.appurtenanceOf : null,
+  };
 }
+
 
 /**
  * **Διαβάζει ένα αποθηκευμένο έγγραφο ως φάκελο.** `null` ⇒ «αυτό δεν είναι φάκελος».

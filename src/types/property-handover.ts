@@ -12,9 +12,11 @@
  * ⚠️ **Εταιρικό έγγραφο** (`companyId`): ο αγοραστής **δεν** το διαβάζει ποτέ (ADR-916 Δ10) — κρατά τη
  * σχέση του γραφείου με **όλους** τους ιδιοκτήτες.
  *
- * ⛔ **Οι τιμές του κύκλου ζωής είναι μόνο όσες παράγει σήμερα κώδικας** (Φ-Α). Το `delivering`/`delivered`
- * γεννιούνται με τη μηχανή παράδοσης (Φ-Γ), το `withdrawn` με την πράξη ανάκλησης (Φ-Δ) — τιμή που κανείς
- * δεν παράγει θα ήταν νεκρή (ίδιο δόγμα με το `PROPERTY_DOSSIER_LIFECYCLES`).
+ * ⛔ **Οι τιμές του κύκλου ζωής είναι μόνο όσες παράγει σήμερα κώδικας** (Φ-Α). Το `withdrawn` γεννιέται με την
+ * πράξη ανάκλησης (Φ-Δ) — τιμή που κανείς δεν παράγει θα ήταν νεκρή (ίδιο δόγμα με το `PROPERTY_DOSSIER_LIFECYCLES`).
+ * 🔑 **Η πρόοδος της αντιγραφής ΔΕΝ είναι κύκλος ζωής** (Φ-Γ1): το `lifecycle` λέει τη **νομική** κατάσταση της πώλησης
+ * (κολλώδες `ready`), το `fileDelivery` την **τεχνική** πρόοδο — που ξαναγίνεται `delivering` σε κάθε συμπλήρωση (Δ5).
+ * Δύο άξονες σε ένα enum θα έκαναν το «ολοκληρώθηκε η πώληση;» να εξαρτάται από το αν τελείωσε η αντιγραφή.
  *
  * **Layering**: leaf — τύποι, καμία εξάρτηση από Firestore ή React.
  */
@@ -96,6 +98,42 @@ export type PropertyHandoverInvitationLink =
       readonly declinedAt: string | null;
     };
 
+// =============================================================================
+// Φ-Γ1 — Η ΠΑΡΑΔΟΣΗ ΤΩΝ ΑΡΧΕΙΩΝ (ADR-916 Δ2 · Δ5 · Π2)
+// =============================================================================
+
+/**
+ * - `pending` — οφείλεται (ολοκληρωμένη πώληση + αποδεκτή πρόσκληση) και δεν έχει ξεκινήσει.
+ * - `delivering` — μέρος έχει παραδοθεί· η επόμενη εκτέλεση συνεχίζει από όπου σταμάτησε.
+ * - `delivered` — κάθε παραδοτέο αρχείο έχει αντίγραφο. Νέο παραδοτέο (Δ5) ⇒ ξανά `delivering`.
+ */
+export const PROPERTY_HANDOVER_FILE_DELIVERY_STATES = ['pending', 'delivering', 'delivered'] as const;
+
+export type PropertyHandoverFileDeliveryState = (typeof PROPERTY_HANDOVER_FILE_DELIVERY_STATES)[number];
+
+/** Όσα βλέπει ο **αγοραστής** — προβάλλονται στον φάκελό του (Δ10: ποτέ η ίδια η παράδοση). */
+export interface PropertyHandoverFileDeliverySummary {
+  readonly state: PropertyHandoverFileDeliveryState;
+  /** Αρχεία με αντίγραφο στον φάκελο (γραμμές καθολικού). */
+  readonly delivered: number;
+  /** Όσα **οφείλονται** σήμερα — παραδοτέα (`deliver`) **και** όσα έχουν ήδη παραδοθεί. */
+  readonly total: number;
+}
+
+/** Η πρόοδος, όπως τη γράφει ο **ένας** γραφέας της παράδοσης μετά από κάθε εκτέλεση του εκτελεστή. */
+export interface PropertyHandoverFileDelivery extends PropertyHandoverFileDeliverySummary {
+  /** Δ3 — αρχεία που περιμένουν απόφαση γραφείου· **δεν** παραδίδονται σιωπηλά, και ο αριθμός τους δεν χάνεται. */
+  readonly awaitingReview: number;
+  readonly bytes: number;
+  /** sha256 πάνω στις **ταξινομημένες** γραμμές του καθολικού — απόδειξη αλλοίωσης (Π1 θα τη σφραγίσει). */
+  readonly digest: string | null;
+  readonly startedAt: string;
+  /** Πότε έγινε **τελευταία** φορά `delivered` — `null` όσο εκκρεμεί. */
+  readonly completedAt: string | null;
+  /** Η αιτία της τελευταίας αποτυχίας **αρχείου** (το επόμενο ξαναδοκιμάζεται). */
+  readonly lastError: string | null;
+}
+
 /** Η παράδοση, όπως αποθηκεύεται στο `property_handovers/{phov_*}`. */
 export interface PropertyHandover {
   /** Ντετερμινιστικό `phov_*` από `(propertyId, recipientContactId)` — `propertyHandoverIdOf`. */
@@ -112,6 +150,8 @@ export interface PropertyHandover {
   readonly recipient: PropertyHandoverRecipient | null;
   /** `null` ⇒ δεν έχει κριθεί ακόμη πρόσκληση (π.χ. ακυρωμένη πριν φύγει, ή έγγραφο της Φ-Α). */
   readonly invitation: PropertyHandoverInvitationLink | null;
+  /** Φ-Γ1 — `null` μέχρι την πρώτη εκτέλεση του εκτελεστή. Το «οφείλεται;» το λέει το `fileDeliveryStateOf`. */
+  readonly fileDelivery: PropertyHandoverFileDelivery | null;
   /** ISO — `nowISO()`. */
   readonly createdAt: string;
   readonly updatedAt: string;

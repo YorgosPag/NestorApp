@@ -96,6 +96,8 @@ function wantedHandover(
     // Φ-Β — η πρόσκληση **δεν** αποφασίζεται εδώ: τη κρίνει το `handover-invitation-plan` μετά, στην ίδια συναλλαγή.
     recipient: null,
     invitation: null,
+    // Φ-Γ1 — η αντιγραφή αρχείων γράφεται από τον εκτελεστή της, όχι από το σχέδιο κύκλου ζωής.
+    fileDelivery: null,
     createdAt: now,
     updatedAt: now,
   };

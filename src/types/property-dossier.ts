@@ -26,7 +26,7 @@
  */
 
 import type { PropertyTypeCanonical } from '@/constants/property-types';
-import type { PropertyHandoverLifecycle } from '@/types/property-handover';
+import type { PropertyHandoverFileDeliverySummary, PropertyHandoverLifecycle } from '@/types/property-handover';
 
 // =============================================================================
 // 1. ΚΥΚΛΟΣ ΖΩΗΣ
@@ -68,6 +68,16 @@ export interface PropertyDossierHandoverOrigin {
   readonly issuerName: string | null;
   readonly acceptedAt: string;
   readonly handoverLifecycle: PropertyHandoverLifecycle;
+  /**
+   * Φ-Γ1 — **προβολή** της προόδου αντιγραφής («Παραδόθηκαν 12 από 14 έγγραφα»), μόνο στον **κύριο** φάκελο·
+   * τη γράφει ο ένας γραφέας της παράδοσης. `null` ⇒ δεν έχει ξεκινήσει.
+   */
+  readonly fileDelivery: PropertyHandoverFileDeliverySummary | null;
+  /**
+   * Φ-Γ1 · Δ4 — φάκελος **παρακολουθήματος** (θέση στάθμευσης · αποθήκη): ο κύριος φάκελος της ίδιας παράδοσης.
+   * `null` ⇒ αυτός **είναι** ο κύριος. Χωριστός φάκελος, γιατί μεταπωλείται χωριστά (χωριστός ΚΑΕΚ).
+   */
+  readonly appurtenanceOf: string | null;
 }
 
 /** Κλειστό σύνολο προελεύσεων — σήμερα **μία** (Φ4: η παράδοση ιδιώτη → ιδιώτη θα προσθέσει τη δική της). */
