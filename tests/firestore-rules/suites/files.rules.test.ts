@@ -507,6 +507,47 @@ describe('files.rules — tenant_state_machine pattern', () => {
   // Ίδιο ιδίωμα και ίδιο πρόσωπο με το «measured freeze»: κάθε `expectDeny` αποδίδεται ΜΟΝΟ στη ρήτρα
   // `documentFactsUnchanged`/`documentFactsBornAbsent`. 🔴 Από την έκδοση υπολογίζεται αν το ΠΕΑ ισχύει την ημέρα της
   // υπογραφής — ένα `issuedOn` γραμμένο από πελάτη θα «ανανέωνε» ληγμένο έγγραφο με ένα κλικ.
+  // --- ADR-916 Φ-Γ1 — η ΠΡΟΕΛΕΥΣΗ ΠΑΡΑΔΟΣΗΣ δεν γράφεται από πελάτη ---------------
+  //
+  // Τα αντίγραφα παράδοσης ζουν στο προσωπικό διαμέρισμα· εδώ κλείνει η ΙΔΙΑ κλάση στο εταιρικό, ώστε το κλειδί να
+  // σημαίνει ένα πράγμα παντού: «το έγραψε ο εκτελεστής της παράδοσης». Ίδιο ιδίωμα με τα γεγονότα εγγράφου.
+  describe('handover origin freeze — η προέλευση παράδοσης τη γράφει μόνο ο διακομιστής (ADR-916 Φ-Γ1)', () => {
+    const ORIGIN = {
+      handoverOrigin: {
+        handoverId: 'phov_seed_0001', sourceFileId: 'file_company_0001', issuerCompanyId: SAME_TENANT_COMPANY_ID,
+        crc32c: 'AAAAAA==', size: 2048, revisionOfFileId: null,
+      },
+    };
+    const fileDoc = (docId: string) =>
+      getContext(env, 'same_tenant_admin').firestore().collection('files').doc(docId);
+
+    it.each(UPDATE_LEGS)('⛔ σκέλος $leg: προσθήκη/αφαίρεση προέλευσης ⇒ ΑΡΝΗΣΗ · το σκέτο φορτίο ⇒ ΕΠΙΤΡΕΠΕΤΑΙ', async ({ leg, seed, base }) => {
+      const index = UPDATE_LEGS.findIndex((l) => l.leg === leg);
+      await seedFile(env, `origin-add-${index}`, { companyId: SAME_TENANT_COMPANY_ID, overrides: { ...seed } });
+      await seedFile(env, `origin-change-${index}`, { companyId: SAME_TENANT_COMPANY_ID, overrides: { ...seed, ...ORIGIN } });
+      await expectDeny(fileDoc(`origin-add-${index}`).update({ ...base, ...ORIGIN }));
+      await expectDeny(fileDoc(`origin-change-${index}`).update({ ...base, handoverOrigin: null }));
+      await expectAllow(fileDoc(`origin-change-${index}`).update(base));
+    });
+
+    it('⛔ γέννηση με προέλευση: ΑΡΝΗΣΗ · ✅ χωρίς', async () => {
+      const born = (docId: string, extra: Record<string, unknown>) => fileDoc(docId).set({
+        fileName: `${docId}.pdf`,
+        mimeType: 'application/pdf',
+        size: 2048,
+        status: 'pending',
+        isDeleted: false,
+        storagePath: `companies/${SAME_TENANT_COMPANY_ID}/files/${docId}.pdf`,
+        createdBy: PERSONA_CLAIMS.same_tenant_admin.uid,
+        companyId: SAME_TENANT_COMPANY_ID,
+        cdeReadReach: 'tenant',
+        ...extra,
+      });
+      await expectDeny(born('born-origin', { ...ORIGIN }));
+      await expectAllow(born('born-no-origin', {}));
+    });
+  });
+
   describe('document facts freeze — τα γεγονότα εγγράφου τα γράφει μόνο ο γραφέας του διακομιστή (ADR-915 Φ3)', () => {
     const ADMIN_UID = PERSONA_CLAIMS.same_tenant_admin.uid;
     const facts = (issuedOn: string) => ({

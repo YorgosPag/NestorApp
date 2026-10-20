@@ -24,6 +24,9 @@
  *   **Π7. Κάδος · επαναφορά · μετονομασία ΜΟΝΟ μαζί με τη γραμμή δραστηριότητάς τους** — ίδια ατομική
  *   δέσμη, `lastActivityId` σε ΝΕΑ γραμμή (ADR-866 §2.6.11 Ε-Φ0-4). Γι' αυτό κάθε τέτοια πράξη σε
  *   αυτή τη σουίτα περνά από το `commitPairedActivity`, όπως στον πραγματικό γραφέα.
+ *   **Π8. Η ΠΡΟΕΛΕΥΣΗ ΠΑΡΑΔΟΣΗΣ** (ADR-916 Φ-Γ1): το `handoverOrigin` («Από την κατασκευάστρια») ο κάτοχος **ούτε**
+ *   το γεννά **ούτε** το αλλάζει **ούτε** το αφαιρεί — αλλά το αντίγραφο που του παρέδωσε ο διακομιστής το **διαβάζει**,
+ *   το σχολιάζει και το σβήνει: είναι **δικό** του (Δ2 · Δ8).
  *
  * @since 2026-09-17 (ADR-866 Φ0 βήμα 2β)
  */
@@ -357,6 +360,47 @@ describe('files_personal.rules — το προσωπικό αρχείο το α�
       await assertSucceeds(commitPairedActivity(env.authenticatedContext(CITIZEN_UID, {}).firestore(), {
         uid: CITIZEN_UID, fileId: PREV, action: 'rename', updates: { displayName: 'έκδοση 1 (παλιά)' },
       }));
+    });
+  });
+
+  // ==========================================================================
+  // 🔴 Π8 — Η ΠΡΟΕΛΕΥΣΗ ΠΑΡΑΔΟΣΗΣ ΤΗ ΓΡΑΦΕΙ ΜΟΝΟ Ο ΔΙΑΚΟΜΙΣΤΗΣ (ADR-916 Φ-Γ1 · Π2)
+  // ==========================================================================
+  // Το σήμα «Από την κατασκευάστρια» είναι ο λόγος που ο αγοραστής ξεχωρίζει το επίσημο εγχειρίδιο από ένα δικό του
+  // σκαναρισμένο χαρτί. Αν ο πελάτης μπορούσε να το γράψει, το σήμα δεν θα σήμαινε τίποτα.
+  describe('🔴 Π8 — η προέλευση παράδοσης: ο κάτοχος τη ΔΙΑΒΑΖΕΙ, δεν τη ΓΡΑΦΕΙ', () => {
+    const ORIGIN = {
+      handoverId: 'phov_seed_0001', sourceFileId: 'file_company_0001', issuerCompanyId: 'comp_seed_0001',
+      crc32c: 'AAAAAA==', size: 2048, revisionOfFileId: null,
+    };
+    const citizenDb = () => env.authenticatedContext(CITIZEN_UID, {}).firestore();
+
+    it('⛔ γέννηση με προέλευση «από κούνια» ⇒ ΑΡΝΗΣΗ · ✅ χωρίς', async () => {
+      await assertFails(citizenDb().collection(COLLECTION).doc('forged-origin').set({
+        ...personalFilePayload(CITIZEN_UID, 'forged-origin'), handoverOrigin: ORIGIN,
+      }));
+      await assertSucceeds(citizenDb().collection(COLLECTION).doc('plain').set(personalFilePayload(CITIZEN_UID, 'plain')));
+    });
+
+    it('⛔ προσθήκη · αλλαγή · αφαίρεση της προέλευσης ⇒ ΑΡΝΗΣΗ — και στην οριστικοποίηση', async () => {
+      await seedPersonalFile(env, 'mine', CITIZEN_UID);
+      await assertFails(citizenDb().collection(COLLECTION).doc('mine').update({ handoverOrigin: ORIGIN }));
+      await seedPersonalFile(env, 'pending-origin', CITIZEN_UID, { status: 'pending' });
+      await assertFails(citizenDb().collection(COLLECTION).doc('pending-origin').update({ status: 'ready', handoverOrigin: ORIGIN }));
+      await assertSucceeds(citizenDb().collection(COLLECTION).doc('pending-origin').update({ status: 'ready' }));
+      await seedPersonalFile(env, DOC_ID, CITIZEN_UID, { handoverOrigin: ORIGIN });
+      const ref = citizenDb().collection(COLLECTION).doc(DOC_ID);
+      await assertFails(ref.update({ handoverOrigin: { ...ORIGIN, issuerCompanyId: 'comp_other' } }));
+      await assertFails(ref.update({ handoverOrigin: null }));
+    });
+
+    it('✅ το παραδομένο αντίγραφο είναι ΔΙΚΟ του: το διαβάζει, το βρίσκει στη λίστα, γράφει σημείωση, το σβήνει', async () => {
+      await seedPersonalFile(env, DOC_ID, CITIZEN_UID, { handoverOrigin: ORIGIN });
+      const ref = citizenDb().collection(COLLECTION).doc(DOC_ID);
+      await assertSucceeds(ref.get());
+      await assertSucceeds(citizenDb().collection(COLLECTION).where('userId', '==', CITIZEN_UID).get());
+      await assertSucceeds(ref.update({ description: 'το εγχειρίδιο του λέβητα' }));
+      await assertSucceeds(ref.delete());
     });
   });
 

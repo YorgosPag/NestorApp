@@ -648,6 +648,14 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
+    // ADR-916 Φ-Γ1 — ΤΟ ΚΑΘΟΛΙΚΟ ΠΑΡΑΔΟΣΗΣ (transmittal). `deny_all`: η απόδειξη του γραφείου για το ΤΙ παραδόθηκε·
+    // εγγραφή από πελάτη = «παραδόθηκε» χωρίς αντίγραφο, ανάγνωση = σχέση με όλους τους συνιδιοκτήτες (Δ10).
+    collection: 'property_handover_deliveries',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/property-handover-deliveries.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     // ADR-884 Φ0.9 — ΧΩΡΙΚΗ ΠΕΡΙΗΓΗΣΗ, εταιρικό διαμέρισμα. Διαβάζει ΜΟΝΟ ο εσωτερικός χρήστης του
     // μισθωτή (ζωντανός επεξεργαστής)· ΚΑΘΕ άλλο κοινό περνά από διαδρομή διακομιστή. Γράφει ΜΟΝΟ ο
     // διακομιστής. ⚠️ Τα μπλοκ των υποσυλλογών (`tour_captures` · `tour_access_requests` ·
