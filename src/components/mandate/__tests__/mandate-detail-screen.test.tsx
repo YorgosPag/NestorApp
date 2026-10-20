@@ -82,6 +82,16 @@ jest.mock('@/components/network-messaging/NetworkThreadPanel', () => ({
   },
 }));
 
+// 📋 ADR-915 §37 (Β1) — η ενότητα μόνιμων υποχρεώσεων έχει δικές της άγκυρες· εδώ κρίνεται ΜΟΝΟ ότι η οθόνη τη
+//    δείχνει για ΤΟ ακίνητο της διαδρομής, και μόνο όταν η εντολή βρέθηκε. Στέλεχος που καταγράφει τα props.
+const upkeepProps = jest.fn();
+jest.mock('@/components/document-registry/PropertyUpkeepSection', () => ({
+  PropertyUpkeepSection: (props: Record<string, unknown>) => {
+    upkeepProps(props);
+    return null;
+  },
+}));
+
 /** Τα id νήματος/ομάδας όπως τα στέλνει η διαδρομή της εντολής (ADR-867 Β7 · §8 #8). */
 const NETWORK = { threadId: 'nthr_route-thread', teamId: 'nteam_route-team' } as const;
 
@@ -118,6 +128,7 @@ const ANNOUNCED: MandateCatalogRow = {
 beforeEach(() => {
   fetchMandateDetail.mockReset();
   threadPanelProps.mockReset();
+  upkeepProps.mockReset();
 });
 
 describe('ADR-841 §7 Α18.12 — η οθόνη της μίας εντολής', () => {
@@ -290,5 +301,23 @@ describe('ADR-841 §7 Α18.12 — η οθόνη της μίας εντολής',
 
     await waitFor(() => expect(threadPanelProps).toHaveBeenCalled());
     expect(threadPanelProps).toHaveBeenLastCalledWith({ threadId: NETWORK.threadId, teamId: NETWORK.teamId, variant: 'office' });
+  });
+
+  // ===========================================================================
+  // Ο8 — ADR-915 §37 (Β1): Η ΜΟΝΙΜΗ ΥΠΟΧΡΕΩΣΗ ΤΟΥ ΑΚΙΝΗΤΟΥ ΙΔΙΩΤΗ, ΚΑΤΩ ΑΠΟ ΤΗΝ ΕΝΤΟΛΗ
+  // ===========================================================================
+  it('Ο8 — «Μόνιμες υποχρεώσεις» για ΤΟ ακίνητο της διαδρομής· απουσία εντολής ⇒ καμία ενότητα', async () => {
+    fetchMandateDetail.mockResolvedValue({ kind: MANDATE_FOUND, row: ANNOUNCED, network: NETWORK });
+    const found = render(<MandateDetailContent ownerPropertyId={ANNOUNCED.ownerPropertyId} />);
+    await screen.findByRole('article');
+    await waitFor(() => expect(upkeepProps).toHaveBeenCalled());
+    expect(upkeepProps).toHaveBeenLastCalledWith({ propertyId: ANNOUNCED.ownerPropertyId });
+    found.unmount();
+
+    upkeepProps.mockReset();
+    fetchMandateDetail.mockResolvedValue({ kind: MANDATE_MISSING });
+    const missing = render(<MandateDetailContent ownerPropertyId="ownp_y" />);
+    await waitFor(() => expect(missing.container).toHaveTextContent(DETAIL_ABSENCE_KEYS.missing.title));
+    expect(upkeepProps).not.toHaveBeenCalled();
   });
 });

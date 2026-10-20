@@ -8,7 +8,10 @@
  * 🔑 **Ίδια κατηγορήματα με το μητρώο, όχι ολόκληρο το μητρώο.** Μέχρι το §36 ο κριτής του PUT ήταν το
  *    `readDocumentRegistry`: βαρύ (επτά πηγές για ένα ακίνητο), **και** με όριο ανάγνωσης ⇒ ακίνητο πέρα από το όριο
  *    γινόταν «μη αποφασίσιμο». Εδώ: ακίνητο εταιρείας = `readCompanyProperties` (ο ΙΔΙΟΣ έλεγχος `companyId`)· ακίνητο
- *    ιδιώτη = `readOfficeOwnerProperty` (ο ΙΔΙΟΣ `custodyOf`). Ξένο ≡ ανύπαρκτο.
+ *    ιδιώτη = `readAdministeredOwnerProperty` (ο ΕΝΑΣ κριτής `mayAdminister(custodyOf(…))`). Ξένο ≡ ανύπαρκτο.
+ * 🔑 §37 — **αποφασίζει όποιος διαχειρίζεται τον χώρο του ακινήτου** (Zanzibar/Figma/MLS, `listing-custody.ts`): γραφείο
+ *    για τα δικά του και για ακίνητα ιδιωτών υπό θεματοφυλακή του· ο ιδιώτης χωρίς μεσίτη για το δικό του. Ο κριτής
+ *    επιστρέφει και το **βιβλίο** (`CustodyScope`) — εκεί διαβάζονται και γράφονται οι αποφάσεις.
  * 🔑 **Αποσυρμένο** (κάδος · αρχείο, `isRetired` — ADR-281) ⇒ καμία πρόταση, καμία απόφαση. Το ίδιο φίλτρο εφαρμόζει
  *    το μητρώο (`isRetiredRegistryProperty`), ώστε οθόνη και πράξη να μη διαφωνούν ποτέ.
  * 🔑 **Τα γεγονότα** (κλάση + ωμή φάση) τα βγάζει ΕΝΑ σημείο (`upkeepSubjectOf`) για μητρώο, καρτέλα **και** πράξη.
@@ -21,7 +24,9 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { resolvedPropertyClassOf } from '@/constants/property-classification';
 import { upkeepItemsOf, type UpkeepItem, type UpkeepSubject } from '@/lib/document-validity/property-upkeep';
 import { isRetired } from '@/lib/firestore/trashed-status';
-import { readOfficeOwnerProperty } from './registry-owner-properties.server';
+import type { ListingActor } from '@/lib/owner-property/listing-custody';
+import type { CustodyScope } from '@/lib/workspace/custody-scope';
+import { readAdministeredOwnerProperty } from './registry-owner-properties.server';
 import { readCompanyProperties, type RegistryProperty } from './registry-properties.server';
 import { readPropertyUpkeepDeclarations } from './upkeep-declarations.server';
 
@@ -41,16 +46,26 @@ export function isRetiredRegistryProperty(property: RegistryProperty): boolean {
 }
 
 export type UpkeepSubjectReading =
-  | { readonly kind: 'subject'; readonly property: RegistryProperty }
+  | { readonly kind: 'subject'; readonly property: RegistryProperty; readonly owner: CustodyScope }
   | { readonly kind: 'absent' }
   | { readonly kind: 'retired' };
 
-/** Ακίνητο εταιρείας πρώτα (το συνηθέστερο), μετά ακίνητο ιδιώτη υπό θεματοφυλακή — αλλιώς `absent`. */
-export async function readUpkeepSubject(db: Firestore, companyId: string, propertyId: string): Promise<UpkeepSubjectReading> {
-  const property = (await readCompanyProperties(db, companyId, [propertyId])).get(propertyId)
-    ?? await readOfficeOwnerProperty(db, companyId, propertyId);
-  if (property === null) return { kind: 'absent' };
-  return isRetiredRegistryProperty(property) ? { kind: 'retired' } : { kind: 'subject', property };
+/** Ακίνητο εταιρείας — μόνο για δρώντα **με** εταιρεία (ο ιδιώτης δεν έχει χαρτοφυλάκιο εταιρείας). */
+async function readCompanySubject(
+  db: Firestore,
+  actor: ListingActor,
+  propertyId: string,
+): Promise<{ readonly property: RegistryProperty; readonly owner: CustodyScope } | null> {
+  if (actor.companyId === null || actor.companyId === '') return null;
+  const property = (await readCompanyProperties(db, actor.companyId, [propertyId])).get(propertyId);
+  return property === undefined ? null : { property, owner: { companyId: actor.companyId } };
+}
+
+/** Ακίνητο εταιρείας πρώτα (το συνηθέστερο), μετά ακίνητο ιδιώτη που ο δρων διαχειρίζεται — αλλιώς `absent`. */
+export async function readUpkeepSubject(db: Firestore, actor: ListingActor, propertyId: string): Promise<UpkeepSubjectReading> {
+  const found = await readCompanySubject(db, actor, propertyId) ?? await readAdministeredOwnerProperty(db, actor, propertyId);
+  if (found === null) return { kind: 'absent' };
+  return isRetiredRegistryProperty(found.property) ? { kind: 'retired' } : { kind: 'subject', ...found };
 }
 
 export type PropertyUpkeepReading =
@@ -62,9 +77,9 @@ export type PropertyUpkeepReading =
  * Η ενότητα «Μόνιμες υποχρεώσεις» **ενός** ακινήτου — ο ΙΔΙΟΣ `upkeepItemsOf` με το μητρώο, πάνω στο ίδιο υποκείμενο
  * και τις αποφάσεις του (ένα `getAll`). Κενή λίστα = τίποτα να προταθεί ή να αποφασιστεί (π.χ. οικόπεδο).
  */
-export async function readPropertyUpkeep(db: Firestore, companyId: string, propertyId: string): Promise<PropertyUpkeepReading> {
-  const subject = await readUpkeepSubject(db, companyId, propertyId);
+export async function readPropertyUpkeep(db: Firestore, actor: ListingActor, propertyId: string): Promise<PropertyUpkeepReading> {
+  const subject = await readUpkeepSubject(db, actor, propertyId);
   if (subject.kind !== 'subject') return subject;
-  const declarations = await readPropertyUpkeepDeclarations(db, companyId, propertyId);
+  const declarations = await readPropertyUpkeepDeclarations(db, subject.owner, propertyId);
   return { kind: 'ready', items: upkeepItemsOf([upkeepSubjectOf(subject.property)], declarations) };
 }

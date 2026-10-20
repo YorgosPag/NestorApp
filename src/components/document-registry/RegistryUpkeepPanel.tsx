@@ -26,6 +26,7 @@ import { RegistryUpkeepItem } from '@/components/document-registry/RegistryUpkee
 import { CONVEYANCE_NS, LEGALITY_NS, REGISTRY_NS } from '@/components/document-registry/document-registry-labels';
 import {
   UPKEEP_KEYS,
+  UPKEEP_SECTION_LEAD_KEYS,
   UPKEEP_SECTION_TITLE_KEYS,
   type UpkeepSectionPlace,
 } from '@/components/document-registry/upkeep-labels';
@@ -33,12 +34,13 @@ import {
 export interface UpkeepItemsSectionProps {
   /** Μοναδικό `id` της επικεφαλίδας (`aria-labelledby`). */
   readonly headingId: string;
-  /** Πού ζει — αποφασίζει τον τίτλο: «Μόνιμες υποχρεώσεις» (μητρώο) ή «… του ακινήτου» (καρτέλα, §36). */
+  /** Πού ζει — αποφασίζει τίτλο και υπότιτλο: μητρώο · καρτέλα ακινήτου (§36) · συρτάρι δημιουργίας (§37). */
   readonly place: UpkeepSectionPlace;
   readonly items: readonly UpkeepItem[];
   /** Ονόματα ακινήτων (μητρώο) — `null` στην καρτέλα του ίδιου του ακινήτου. */
   readonly names: Pick<DocumentRegistryResponse, 'properties'> | null;
-  readonly declaration: UpkeepDeclarationSubmit;
+  /** Η αποστολή απόφασης — `null` όπου **δεν** υπάρχει πράξη (συρτάρι δημιουργίας: δεν υπάρχει ακόμη ακίνητο). */
+  readonly declaration: UpkeepDeclarationSubmit | null;
   readonly canDecide: boolean;
   /** Απόσταση από το περιβάλλον της (π.χ. πάνω από τα αρχεία στην καρτέλα ακινήτου). */
   readonly className?: string;
@@ -57,10 +59,16 @@ export function UpkeepItemsSection(props: UpkeepItemsSectionProps): React.ReactE
     <section className={cn('flex flex-col gap-3', className)} aria-labelledby={headingId}>
       <header className="flex flex-col gap-1">
         <h2 id={headingId} className="m-0 text-lg font-semibold text-foreground">
-          {t(UPKEEP_SECTION_TITLE_KEYS[place])}{' '}
-          <span className="text-sm font-normal text-muted-foreground">{t(UPKEEP_KEYS.pending, { count: pending })}</span>
+          {t(UPKEEP_SECTION_TITLE_KEYS[place])}
+          {/* Στο συρτάρι δεν «εκκρεμεί» τίποτα ακόμη: δεν υπάρχει ακίνητο να αποφασιστεί. */}
+          {place === 'create' ? null : (
+            <>
+              {' '}
+              <span className="text-sm font-normal text-muted-foreground">{t(UPKEEP_KEYS.pending, { count: pending })}</span>
+            </>
+          )}
         </h2>
-        <p className="m-0 text-sm text-muted-foreground">{t(UPKEEP_KEYS.lead)}</p>
+        <p className="m-0 text-sm text-muted-foreground">{t(UPKEEP_SECTION_LEAD_KEYS[place])}</p>
       </header>
       <ul className="m-0 flex list-none flex-col gap-3 p-0">
         {items.map((item) => (

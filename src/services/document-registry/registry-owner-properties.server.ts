@@ -22,9 +22,10 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { mandatedPropertyOwners } from '@/lib/document-validity/registry-owners';
-import { custodyOf } from '@/lib/owner-property/listing-custody';
+import { custodyOf, custodyWorkspace, mayAdminister, type ListingActor } from '@/lib/owner-property/listing-custody';
 import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import { trimmedStringOrNull } from '@/lib/type-guards';
+import { custodyScopeOf, type CustodyScope } from '@/lib/workspace/custody-scope';
 import type { GeoPoint } from '@/types/geo/coordinates';
 import type { OwnerProperty, OwnerPropertyPlace } from '@/types/owner-property';
 import type { RegistryProperty } from './registry-properties.server';
@@ -81,17 +82,28 @@ export async function readOfficeOwnerProperties(
   return { properties, truncated: snapshot.size > cap };
 }
 
+/** Ένα ακίνητο ιδιώτη που ο δρων **διαχειρίζεται**, μαζί με το βιβλίο του χώρου του (§37). */
+export interface AdministeredOwnerProperty {
+  readonly property: RegistryProperty;
+  /** Ο χώρος που το διαχειρίζεται — εκεί ζουν οι αποφάσεις του και το ιστορικό τους. */
+  readonly owner: CustodyScope;
+}
+
 /**
- * ADR-915 §36 — **ένα** ακίνητο ιδιώτη, μόνο αν είναι υπό θεματοφυλακή **αυτού** του γραφείου· αλλιώς `null` (ξένο ≡
- * ανύπαρκτο). Ο ΙΔΙΟΣ αναγνώστης (`ownerPropertyFromDocument`) και ο ΙΔΙΟΣ κριτής (`custodyOf`) με τον κατάλογο.
+ * ADR-915 §36 · §37 — **ένα** ακίνητο ιδιώτη, μόνο αν ο δρων **διαχειρίζεται** τον χώρο του· αλλιώς `null` (ξένο ≡
+ * ανύπαρκτο). Ο ΙΔΙΟΣ αναγνώστης (`ownerPropertyFromDocument`) και ο ΕΝΑΣ κριτής θεματοφυλακής (`mayAdminister`,
+ * CHECK 3.56): θεματοφυλακή γραφείου ⇒ μόνο το γραφείο· προσωπική ⇒ μόνο ο ιδιοκτήτης (ποτέ το γραφείο του υπαλλήλου).
  */
-export async function readOfficeOwnerProperty(
+export async function readAdministeredOwnerProperty(
   db: AdminFirestore,
-  companyId: string,
+  actor: ListingActor,
   propertyId: string,
-): Promise<RegistryProperty | null> {
+): Promise<AdministeredOwnerProperty | null> {
   const snapshot = await db.collection(COLLECTIONS.OWNER_PROPERTIES).doc(propertyId).get();
   const data = snapshot.data();
   const property = data === undefined ? null : ownerPropertyFromDocument(data, snapshot.id);
-  return property !== null && inOfficeCustody(property, companyId) ? registryOwnerPropertyOf(property, data ?? {}) : null;
+  if (property === null) return null;
+  const custody = custodyOf(property);
+  if (!mayAdminister(custody, actor)) return null;
+  return { property: registryOwnerPropertyOf(property, data ?? {}), owner: custodyScopeOf(custodyWorkspace(custody)) };
 }

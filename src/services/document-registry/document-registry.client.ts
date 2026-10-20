@@ -94,9 +94,15 @@ export const UPKEEP_DECLARATIONS_URL = `${DOCUMENT_REGISTRY_URL}/upkeep-declarat
 /**
  * §36 — τι έφερε η ανάγνωση της καρτέλας ακινήτου. `unavailable` = ονομασμένη άρνηση (ακίνητο ξένο · ανύπαρκτο ·
  * αποσυρμένο): η ενότητα **σιωπά**, όπως και η καρτέλα δεν προσφέρει πράξεις σε αποσυρμένο. `failed` = βλάβη.
+ * §37 — `canDecide`: ο server λέει αν το PUT θα επιτραπεί, με τον ΙΔΙΟ κανόνα (Google Drive `capabilities`).
  */
+export interface PropertyUpkeepReady {
+  readonly items: readonly UpkeepItem[];
+  readonly canDecide: boolean;
+}
+
 export type PropertyUpkeepLoad =
-  | { readonly kind: 'ready'; readonly items: readonly UpkeepItem[] }
+  | ({ readonly kind: 'ready' } & PropertyUpkeepReady)
   | { readonly kind: 'unavailable' }
   | { readonly kind: 'failed' };
 
@@ -104,7 +110,8 @@ export type PropertyUpkeepLoad =
 export async function fetchPropertyUpkeep(propertyId: string): Promise<PropertyUpkeepLoad> {
   try {
     const url = `${UPKEEP_DECLARATIONS_URL}?propertyId=${encodeURIComponent(propertyId)}`;
-    return { kind: 'ready', items: (await apiClient.get<{ readonly items: readonly UpkeepItem[] }>(url)).items };
+    const { items, canDecide } = await apiClient.get<PropertyUpkeepReady>(url);
+    return { kind: 'ready', items, canDecide };
   } catch (cause) {
     logActionFailure('Οι μόνιμες υποχρεώσεις του ακινήτου δεν φορτώθηκαν', cause, { propertyId });
     return isClientRefusal(cause) ? { kind: 'unavailable' } : { kind: 'failed' };

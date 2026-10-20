@@ -97,6 +97,16 @@ const NetworkThreadPanel = dynamic(() =>
 );
 
 /**
+ * 📋 ADR-915 §37 (Β1) — **«Μόνιμες υποχρεώσεις του ακινήτου» για το ακίνητο ιδιώτη υπό θεματοφυλακή του γραφείου**: η
+ * ΙΔΙΑ ενότητα με την καρτέλα ακινήτου (ίδιο `GET`/`PUT`, ίδιος κριτής `custodyOf`). Ξένο ⇒ ο διακομιστής αρνείται ⇒ σιωπά.
+ * `ssr: false` + `next/dynamic`: εκτός κλειστότητας του route slice (3.34), ίδιο ιδίωμα με το `DocumentsTab`.
+ */
+const PropertyUpkeepSection = dynamic(
+  () => import('@/components/document-registry/PropertyUpkeepSection').then((mod) => mod.PropertyUpkeepSection),
+  { ssr: false },
+);
+
+/**
  * **Ο δρόμος πίσω — και είναι ΥΠΟΧΡΕΩΤΙΚΟΣ, όχι ευγένεια.**
  *
  * 🔴 Ο άνθρωπος φτάνει εδώ από **ειδοποίηση** *(κλικ σε κάρτα του συρταριού, ή σύνδεσμο
@@ -203,6 +213,14 @@ export function MandateDetailContent({
         🔑 ADR-864 §18 — **κάτω** από την κάρτα, όχι μέσα της: η κάρτα είναι **κοινή** με τον κατάλογο (μία
         απόδοση ανά εντολή), η συναίνεση κλειστής διάθεσης είναι πράξη **αυτής** της σελίδας.
       */}
+      {/*
+        📋 ADR-915 §37 (Β1) — η μόνιμη υποχρέωση (ΥΔΕ) του ακινήτου, **κάτω** από την κάρτα: την αποφασίζει όποιος
+        διαχειρίζεται τον χώρο του ακινήτου (θεματοφυλακή γραφείου ⇒ εδώ). Arthur · Re-Leased: «από τη σελίδα του».
+      */}
+      {view.state === 'settled' && view.loaded.kind === MANDATE_FOUND && (
+        <PropertyUpkeepSection propertyId={ownerPropertyId} />
+      )}
+
       {view.state === 'settled' && view.loaded.kind === MANDATE_FOUND && (
         <PrivateMarketingAgencySection ownerPropertyId={ownerPropertyId} />
       )}

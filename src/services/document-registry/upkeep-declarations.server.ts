@@ -5,9 +5,10 @@
  *   obligor-designations.server.ts (το ιδίωμα)
  * @module services/document-registry/upkeep-declarations.server
  *
- * 🔑 **Μία απόφαση ανά (γραφείο, ακίνητο, είδος)**, ντετερμινιστική ⇒ επιβεβαίωση/εξαίρεση = `set`, «ξανά ρώτα» =
- *    `delete`, καμία διπλή εγγραφή.
- * 🔑 **Ξένο ≡ ανύπαρκτο**: έγγραφο με άλλο `companyId` δεν διαβάζεται ποτέ ως απόφαση.
+ * 🔑 **Μία απόφαση ανά (χώρος, ακίνητο, είδος)**, ντετερμινιστική ⇒ επιβεβαίωση/εξαίρεση = `set`, «ξανά ρώτα» =
+ *    `delete`, καμία διπλή εγγραφή. Χώρος = γραφείο `{ companyId }` ή ιδιώτης χωρίς μεσίτη `{ userId }` (§37).
+ * 🔑 **Ξένο ≡ ανύπαρκτο**: έγγραφο άλλου βιβλίου δεν διαβάζεται ποτέ ως απόφαση (`isOwnedByCustody`, ο ΙΔΙΟΣ κριτής
+ *    με ιστορικό και αρχεία).
  * 🔑 **Ιστορικό στην καρτέλα του ακινήτου** (ADR-195): η απόφαση, ο λόγος εξαίρεσης **και** τι πρότεινε η εφαρμογή τότε
  *    — το έγγραφο ξαναγράφεται στην επόμενη απόφαση, το ίχνος μένει.
  * ⚠️ Μη αναγνώσιμο έγγραφο ⇒ παραλείπεται **και** αναφέρεται — ποτέ «λείπει» από μαντεψιά.
@@ -23,6 +24,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import type { UpkeepDecision, UpkeepExemptionReason, UpkeepProposal } from '@/lib/document-validity/property-upkeep';
 import { createModuleLogger } from '@/lib/telemetry';
+import { custodyOnly, isOwnedByCustody, type CustodyScope } from '@/lib/workspace/custody-scope';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import type { RegistryPropertyScope } from './document-registry.types';
 import { parseUpkeepDeclaration, upkeepDeclarationIdOf, type StoredUpkeepDeclaration } from './upkeep-declaration-schema';
@@ -61,10 +63,10 @@ export interface UpkeepDeclarationsReading {
   readonly truncated: boolean;
 }
 
-/** Ένα έγγραφο → απόφαση **του γραφείου**, ή τίποτα. Ξένο ≡ ανύπαρκτο· χαλασμένο ⇒ παραλείπεται **και** αναφέρεται. */
-function ownDeclarationsOf(id: string, raw: unknown, companyId: string): StoredUpkeepDeclaration[] {
+/** Ένα έγγραφο → απόφαση **αυτού του βιβλίου**, ή τίποτα. Ξένο ≡ ανύπαρκτο· χαλασμένο ⇒ παραλείπεται **και** αναφέρεται. */
+function ownDeclarationsOf(id: string, raw: unknown, owner: CustodyScope): StoredUpkeepDeclaration[] {
   const parsed = parseUpkeepDeclaration(raw);
-  if (parsed !== null && parsed.companyId === companyId) return [parsed];
+  if (parsed !== null && isOwnedByCustody(parsed, owner)) return [parsed];
   logger.warn('Μη αναγνώσιμη απόφαση μόνιμης υποχρέωσης — παραλείφθηκε', { declarationId: id });
   return [];
 }
@@ -72,23 +74,23 @@ function ownDeclarationsOf(id: string, raw: unknown, companyId: string): StoredU
 /** Όλες οι αποφάσεις του γραφείου (φραγμένα). */
 export async function readUpkeepDeclarations(db: Firestore, companyId: string, cap: number): Promise<UpkeepDeclarationsReading> {
   const snapshot = await declarationsCollection(db).where(FIELDS.COMPANY_ID, '==', companyId).limit(cap + 1).get();
-  const declarations = snapshot.docs.slice(0, cap).flatMap((doc) => ownDeclarationsOf(doc.id, doc.data(), companyId));
+  const declarations = snapshot.docs.slice(0, cap).flatMap((doc) => ownDeclarationsOf(doc.id, doc.data(), { companyId }));
   return { declarations, truncated: snapshot.size > cap };
 }
 
 /**
  * §36 — οι αποφάσεις **ενός** ακινήτου (καρτέλα ακινήτου): ένα `getAll` στις ντετερμινιστικές ταυτότητες, μία ανά είδος
- * μόνιμης υποχρέωσης. Κανένα ερώτημα, κανένα όριο, κανένας δείκτης.
+ * μόνιμης υποχρέωσης. Κανένα ερώτημα, κανένα όριο, κανένας δείκτης. §37: στο βιβλίο του χώρου που το διαχειρίζεται.
  */
 export async function readPropertyUpkeepDeclarations(
   db: Firestore,
-  companyId: string,
+  owner: CustodyScope,
   propertyId: string,
 ): Promise<readonly StoredUpkeepDeclaration[]> {
-  const refs = STANDING_OBLIGATION_KINDS.map((kind) => declarationsCollection(db).doc(upkeepDeclarationIdOf(companyId, propertyId, kind)));
+  const refs = STANDING_OBLIGATION_KINDS.map((kind) => declarationsCollection(db).doc(upkeepDeclarationIdOf(owner, propertyId, kind)));
   if (refs.length === 0) return [];
   const snapshots = await db.getAll(...refs);
-  return snapshots.flatMap((snapshot) => (snapshot.exists ? ownDeclarationsOf(snapshot.id, snapshot.data(), companyId) : []));
+  return snapshots.flatMap((snapshot) => (snapshot.exists ? ownDeclarationsOf(snapshot.id, snapshot.data(), owner) : []));
 }
 
 /** Η νέα απόφαση· `null` = «ξανά ρώτα» (το έγγραφο σβήνεται, η υποχρέωση γυρίζει σε πρόταση). */
@@ -98,7 +100,8 @@ export interface UpkeepDecisionInput {
 }
 
 export interface UpkeepDeclarationWrite {
-  readonly companyId: string;
+  /** Το βιβλίο — ο χώρος που διαχειρίζεται το ακίνητο (§37). Εκεί και η απόφαση **και** το ιστορικό της. */
+  readonly owner: CustodyScope;
   readonly actorUid: string;
   readonly actorName: string | null;
   readonly property: { readonly id: string; readonly scope: RegistryPropertyScope; readonly name: string | null };
@@ -133,14 +136,14 @@ async function recordDeclarationAudit(write: UpkeepDeclarationWrite, previous: S
     ].filter((change) => change.oldValue !== change.newValue),
     performedBy: write.actorUid,
     performedByName: write.actorName,
-    companyId: write.companyId,
+    ...custodyOnly(write.owner),
   });
 }
 
 function storedOf(write: UpkeepDeclarationWrite, id: string, next: UpkeepDecisionInput): StoredUpkeepDeclaration {
   return {
     id,
-    companyId: write.companyId,
+    ...custodyOnly(write.owner),
     propertyId: write.property.id,
     scope: write.property.scope,
     documentKind: write.documentKind,
@@ -157,10 +160,10 @@ function storedOf(write: UpkeepDeclarationWrite, id: string, next: UpkeepDecisio
  * ποτέ λάθος «από» στο ιστορικό. Ίδια απόφαση με την τρέχουσα ⇒ καμία εγγραφή, κανένα ίχνος (ιδεμποτές).
  */
 export async function writeUpkeepDeclaration(db: Firestore, write: UpkeepDeclarationWrite): Promise<UpkeepDeclarationOutcome> {
-  const ref = declarationsCollection(db).doc(upkeepDeclarationIdOf(write.companyId, write.property.id, write.documentKind));
+  const ref = declarationsCollection(db).doc(upkeepDeclarationIdOf(write.owner, write.property.id, write.documentKind));
   const outcome = await db.runTransaction(async (tx) => {
     const parsed = parseUpkeepDeclaration((await tx.get(ref)).data());
-    const previous = parsed !== null && parsed.companyId === write.companyId ? parsed : null;
+    const previous = parsed !== null && isOwnedByCustody(parsed, write.owner) ? parsed : null;
     if (sameDecision(previous, write.next)) return { changed: false, previous };
     if (write.next === null) tx.delete(ref);
     else tx.set(ref, storedOf(write, ref.id, write.next));

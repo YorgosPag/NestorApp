@@ -59,7 +59,8 @@ export interface RegistryUpkeepItemProps {
   readonly item: UpkeepItem;
   /** Τα ονόματα των ακινήτων (μητρώο) — `null` μέσα στην καρτέλα του ίδιου του ακινήτου. */
   readonly names: Pick<DocumentRegistryResponse, 'properties'> | null;
-  readonly declaration: UpkeepDeclarationSubmit;
+  /** `null` = καμία πράξη εδώ (συρτάρι δημιουργίας, §37): μόνο η πρόταση με τον λόγο της. */
+  readonly declaration: UpkeepDeclarationSubmit | null;
   readonly canDecide: boolean;
 }
 
@@ -67,7 +68,7 @@ export function RegistryUpkeepItem({ item, names, declaration, canDecide }: Regi
   const { t } = useTranslation(NAMESPACES);
   const key = upkeepItemKeyOf(item.propertyId, item.documentKind);
   const statute = documentKindSpec(item.documentKind).standingObligation?.statute ?? null;
-  const error = declaration.error?.key === key ? declaration.error.reason : null;
+  const error = declaration?.error?.key === key ? declaration.error.reason : null;
   return (
     <article className="flex flex-col gap-2">
       <dl className="m-0 grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-[max-content_1fr]">
@@ -84,7 +85,9 @@ export function RegistryUpkeepItem({ item, names, declaration, canDecide }: Regi
       <DecisionValue item={item} />
       {proposalChangedSince(item) ? <p className="m-0 text-sm text-muted-foreground">{t(UPKEEP_KEYS.proposalChanged)}</p> : null}
       {statute === null ? null : <p className="m-0 text-xs text-muted-foreground">{t(UPKEEP_KEYS.statute, { statute })}</p>}
-      {canDecide ? <RegistryUpkeepDecision item={item} busy={declaration.busyKey === key} onSubmit={declaration.submit} /> : null}
+      {canDecide && declaration !== null ? (
+        <RegistryUpkeepDecision item={item} busy={declaration.busyKey === key} onSubmit={declaration.submit} />
+      ) : null}
       {error === null ? null : <p role="alert" className="m-0 text-sm text-destructive">{t(UPKEEP_ERROR_KEYS[error])}</p>}
     </article>
   );

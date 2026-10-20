@@ -3,6 +3,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { useUnsavedEdits } from '@/hooks/useUnsavedEdits';
 import { normalizePropertyType } from '@/constants/property-type-aliases';
 import { useNotifications } from '@/providers/NotificationProvider';
@@ -40,6 +41,12 @@ import { validatePropertyCreationFields, isStandaloneUnitType } from '@/hooks/pr
 import { isMultiLevelCapableType, ENTITY_TYPES } from '@/config/domain-constants';
 // ADR-287 Batch 28: completion meter
 import { PropertyCompletionMeter } from './PropertyCompletionMeter';
+
+/** ADR-915 §37 (Γ) — η πρόταση μόνιμων υποχρεώσεων πριν σωθεί το ακίνητο· εκτός route slice (3.34), καμία εγγραφή. */
+const UpkeepCreatePreview = dynamic(
+  () => import('@/components/document-registry/UpkeepCreatePreview').then((mod) => mod.UpkeepCreatePreview),
+  { ssr: false },
+);
 const logger = createModuleLogger('PropertyFieldsBlock');
 
 interface PropertyFieldsBlockProps {
@@ -414,6 +421,8 @@ export function PropertyFieldsBlock({
           onChange={handleHierarchyChange}
         />
       )}
+      {/* ADR-915 §37 (Γ) — ζωντανή πρόταση από είδος + φάση της φόρμας· η απόφαση γίνεται στην καρτέλα «Έγγραφα». */}
+      {isCreatingNewUnit && <UpkeepCreatePreview type={formData.type} phase={formData.operationalStatus} />}
       {/* ADR-287 Batch 28: completion meter — Google profile-strength pattern. */}
       {/* Hidden during creation (nothing to measure) + read-only branch unreachable here. */}
       {!isCreatingNewUnit && !isReadOnly && !isLocked && (

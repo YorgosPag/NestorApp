@@ -7,7 +7,7 @@
  *   services/document-registry/document-registry.client.ts (`fetchPropertyUpkeep`)
  * @module hooks/document-registry/usePropertyUpkeep
  *
- * 🔑 **Κανένας υπολογισμός**: πρόταση και απόφαση έρχονται έτοιμες από τον διακομιστή (ο ΙΔΙΟΣ `upkeepItemsOf`).
+ * 🔑 **Κανένας υπολογισμός**: πρόταση, απόφαση **και** «μπορώ να αποφασίσω;» (§37) έρχονται έτοιμα από τον διακομιστή.
  * 🔑 **Ανανέωση χωρίς «φορτώνει»**: μετά την απόφαση τα στοιχεία μένουν ορατά μέχρι να έρθουν τα νέα (το `reload` του
  *    `useIdentityGatedResource` θα έσβηνε την ενότητα). Η νεότερη απάντηση είναι **δεμένη** στη φόρτωση πάνω στην οποία
  *    ήρθε: αλλαγή ακινήτου ⇒ ποτέ τα στοιχεία του προηγούμενου.
@@ -26,7 +26,7 @@ export type PropertyUpkeepView =
   | { readonly state: 'loading' }
   | { readonly state: 'unavailable' }
   | { readonly state: 'failed' }
-  | { readonly state: 'ready'; readonly items: readonly UpkeepItem[] };
+  | { readonly state: 'ready'; readonly items: readonly UpkeepItem[]; readonly canDecide: boolean };
 
 export interface PropertyUpkeepApi {
   readonly view: PropertyUpkeepView;
@@ -42,7 +42,8 @@ interface Fresher {
 function viewOf(loaded: PropertyUpkeepLoad | null, fresher: Fresher | null): PropertyUpkeepView {
   if (loaded === null) return { state: 'loading' };
   if (loaded.kind !== 'ready') return { state: loaded.kind };
-  return { state: 'ready', items: fresher !== null && fresher.base === loaded ? fresher.items : loaded.items };
+  const items = fresher !== null && fresher.base === loaded ? fresher.items : loaded.items;
+  return { state: 'ready', items, canDecide: loaded.canDecide };
 }
 
 export function usePropertyUpkeep(propertyId: string): PropertyUpkeepApi {

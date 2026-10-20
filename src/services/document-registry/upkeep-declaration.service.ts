@@ -11,6 +11,9 @@
  * 🔑 **Η πρόταση την υπολογίζει ο διακομιστής** (`upkeepProposalOf` πάνω στην κλάση + φάση που διάβασε), ποτέ ο πελάτης:
  *    το ίχνος «τι πρότεινε η εφαρμογή» δεν γίνεται να το γράψει όποιος στέλνει το αίτημα.
  * 🔑 Ο νόμος αποφασίζει ποιο είδος είναι μόνιμη υποχρέωση (`standingObligation`), όχι το αίτημα ⇒ `not-standing`.
+ * 🔑 §37 — **ο δρων είναι γραφείο Ή ιδιώτης** (`ListingActor`): αποφασίζει όποιος διαχειρίζεται τον χώρο του ακινήτου,
+ *    και η απόφαση γράφεται στο **βιβλίο** που επιστρέφει ο κριτής — ποτέ σε βιβλίο που διαλέγει ο καλών.
+ *    ⚠️ Το δικαίωμα του **οργανισμού** (`properties:properties:update`) το κρίνει το σύνορο (route) πριν φτάσει εδώ.
  */
 
 import 'server-only';
@@ -20,12 +23,12 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { documentKindSpec } from '@/config/document-validity/document-validity';
 import { upkeepProposalOf } from '@/lib/document-validity/property-upkeep';
 import type { UpkeepDeclarationBody, UpkeepDeclarationRefusal } from '@/lib/document-validity/upkeep-declaration-request';
+import type { ListingActor } from '@/lib/owner-property/listing-custody';
 import { readUpkeepSubject, upkeepSubjectOf } from './upkeep-subject.server';
 import { writeUpkeepDeclaration, type UpkeepDeclarationOutcome } from './upkeep-declarations.server';
 
-export interface UpkeepDeclarationActor {
-  readonly companyId: string;
-  readonly uid: string;
+/** Ποιος αποφασίζει — γραφείο (`companyId`) ή ιδιώτης (`companyId: null`), με όνομα για το ιστορικό. */
+export interface UpkeepDeclarationActor extends ListingActor {
   readonly name: string | null;
 }
 
@@ -40,11 +43,11 @@ export async function declareRegistryUpkeep(
   now: Date,
 ): Promise<UpkeepDeclarationResult> {
   if (documentKindSpec(body.documentKind).standingObligation === null) return { ok: false, refusal: 'not-standing' };
-  const subject = await readUpkeepSubject(db, actor.companyId, body.propertyId);
+  const subject = await readUpkeepSubject(db, actor, body.propertyId);
   if (subject.kind !== 'subject') return { ok: false, refusal: subject.kind };
-  const { property } = subject;
+  const { property, owner } = subject;
   const outcome = await writeUpkeepDeclaration(db, {
-    companyId: actor.companyId,
+    owner,
     actorUid: actor.uid,
     actorName: actor.name,
     property: { id: property.id, scope: property.scope, name: property.name },

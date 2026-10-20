@@ -109,6 +109,16 @@ const OwnershipVerificationPanel = dynamic(() =>
   import('./OwnershipVerificationPanel').then((mod) => mod.OwnershipVerificationPanel),
 );
 
+/**
+ * 📋 ADR-915 §37 (Β2) — **«Μόνιμες υποχρεώσεις του ακινήτου»**: ο ιδιώτης χωρίς μεσίτη αποφασίζει ο ίδιος (ο νόμος τον
+ * βαραίνει — ΥΑ 101195/2021). Η ΙΔΙΑ ενότητα, το ΙΔΙΟ `GET`/`PUT` με την καρτέλα ακινήτου και τη σελίδα εντολής· τον
+ * κρίνει ο ΕΝΑΣ κριτής θεματοφυλακής (`mayAdminister`). `ssr: false`: εκτός route slice (3.34), ιδίωμα `DocumentsTab`.
+ */
+const PropertyUpkeepSection = dynamic(
+  () => import('@/components/document-registry/PropertyUpkeepSection').then((mod) => mod.PropertyUpkeepSection),
+  { ssr: false },
+);
+
 const OwnerPropertyStatsPanel = dynamic(
   () => import('./OwnerPropertyStatsPanel').then((mod) => mod.OwnerPropertyStatsPanel),
   { loading: StatsPanelPending },
@@ -295,6 +305,12 @@ function OwnerPropertyView({
         🔑 **Και πριν το κουμπί επεξεργασίας**, γιατί είναι ο λόγος να το πατήσει.
       */}
       <OwnerListingCompletion listing={projectedListing} improveOfferId={onMap ? property.id : null} />
+
+      {/*
+        📋 ADR-915 §37 (Β2) — **η μόνιμη υποχρέωση (ΥΔΕ), μετά το «τι λείπει» της αγγελίας**: εκείνο αφορά το κοινό,
+        αυτό τον νόμο. Η εφαρμογή **προτείνει με λόγο**, ο ιδιοκτήτης αποφασίζει με ίχνος· ξένο/αποσυρμένο ⇒ σιωπή.
+      */}
+      <PropertyUpkeepSection propertyId={property.id} />
 
       {/*
         🔴 **Ο σύνδεσμος που κλείνει τον κύκλο της Α14.** Εμφανίζεται μόνο όταν η

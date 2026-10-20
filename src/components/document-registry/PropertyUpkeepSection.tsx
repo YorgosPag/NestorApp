@@ -12,13 +12,14 @@
  *    άνθρωπος αποφασίζει με ίχνος. Η δημιουργία **δεν** γράφει απόφαση — η πρόταση ποτέ δεν γεννά «λείπει» (§35 Μ3).
  * 🔑 **Μηδέν δεύτερη μηχανή**: ίδια όψη (`upkeepItemsOf` στον διακομιστή), ίδια συστατικά, ίδιος γραφέας.
  * 🔑 Αποσυρμένο · ξένο ακίνητο ⇒ ο διακομιστής αρνείται ⇒ η ενότητα σιωπά. Βλάβη ⇒ το λέει, δεν σιωπά.
+ * 🔑 §37 — **ΜΙΑ ενότητα, τρεις σελίδες**: καρτέλα ακινήτου εταιρείας · σελίδα εντολής του γραφείου (ακίνητο ιδιώτη υπό
+ *    θεματοφυλακή) · «Τα ακίνητά μου» του ιδιώτη χωρίς μεσίτη. Το «μπορείς να αποφασίσεις;» το λέει ο **server**
+ *    (`canDecide`, ο ίδιος κανόνας με το PUT) — ο ιδιώτης δεν έχει ρόλο εταιρείας για να το κρίνει ο πελάτης.
  */
 
 import React from 'react';
 
-import { useCapability } from '@/auth/hooks/useCapability';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { isGranted } from '@/types/capability-authority';
 import { usePropertyUpkeep } from '@/hooks/document-registry/usePropertyUpkeep';
 import { useUpkeepDeclaration } from '@/hooks/document-registry/useUpkeepDeclaration';
 import { UpkeepItemsSection } from '@/components/document-registry/RegistryUpkeepPanel';
@@ -33,8 +34,6 @@ export function PropertyUpkeepSection({ propertyId }: PropertyUpkeepSectionProps
   const { t } = useTranslation([REGISTRY_NS]);
   const { view, revalidate } = usePropertyUpkeep(propertyId);
   const declaration = useUpkeepDeclaration(revalidate);
-  // Εργονομία, όχι ασφάλεια (ADR-801): ο διακομιστής κρίνει ξανά το ίδιο δικαίωμα στο `PUT`.
-  const canDecide = isGranted(useCapability('properties:properties:update').verdict);
   if (view.state === 'failed') return <p role="alert" className="m-0 mb-4 text-sm text-destructive">{t(UPKEEP_KEYS.loadFailed)}</p>;
   if (view.state !== 'ready') return null;
   return (
@@ -44,7 +43,7 @@ export function PropertyUpkeepSection({ propertyId }: PropertyUpkeepSectionProps
       items={view.items}
       names={null}
       declaration={declaration}
-      canDecide={canDecide}
+      canDecide={view.canDecide}
       className="mb-4"
     />
   );

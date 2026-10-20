@@ -29,6 +29,9 @@ const COMPANY = 'comp_alfa';
 const OTHER = 'comp_beta';
 const NOW = new Date('2026-10-18T09:00:00.000Z');
 const ACTOR = { companyId: COMPANY, uid: 'user_1', name: 'agent@example.test' };
+const OWNER_UID = 'user_owner';
+/** §37 — ο ιδιώτης χωρίς οργανισμό (`companyId: null`, όπως τον δίνει το `listingActorOf`). */
+const PERSONAL = { companyId: null, uid: OWNER_UID, name: 'owner@example.test' };
 const YDE = 'electrical-installation' as const;
 
 let fake: FakeFirestore;
@@ -37,8 +40,11 @@ const read = () => readDocumentRegistry(db(), COMPANY, NOW);
 const declare = (body: Partial<UpkeepDeclarationBody> = {}) => declareRegistryUpkeep(db(), ACTOR, {
   propertyId: 'prop_1', documentKind: YDE, decision: 'required', exemptionReason: null, ...body,
 }, NOW);
+const declareAs = (actor: typeof PERSONAL, body: Partial<UpkeepDeclarationBody> = {}) => declareRegistryUpkeep(db(), actor, {
+  propertyId: 'prop_1', documentKind: YDE, decision: 'required', exemptionReason: null, ...body,
+}, NOW);
 const stored = (propertyId = 'prop_1') =>
-  fake.getAllDocs(COLLECTIONS.PROPERTY_UPKEEP_DECLARATIONS)[upkeepDeclarationIdOf(COMPANY, propertyId, YDE)];
+  fake.getAllDocs(COLLECTIONS.PROPERTY_UPKEEP_DECLARATIONS)[upkeepDeclarationIdOf({ companyId: COMPANY }, propertyId, YDE)];
 const gaps = (registry: Awaited<ReturnType<typeof read>>) => registry.rows.filter((row) => row.kind === 'gap');
 
 /** Ακίνητο με δηλωμένο ΠΕΑ (⇒ το ξέρει το μητρώο) — κατοικία, έτοιμη. */
@@ -50,7 +56,7 @@ function seedProperty(id: string, over: Record<string, unknown> = {}): void {
 }
 
 function seedDeclaration(propertyId: string, over: Record<string, unknown> = {}): void {
-  const id = upkeepDeclarationIdOf(COMPANY, propertyId, YDE);
+  const id = upkeepDeclarationIdOf({ companyId: COMPANY }, propertyId, YDE);
   fake.seed(COLLECTIONS.PROPERTY_UPKEEP_DECLARATIONS, id, {
     id, companyId: COMPANY, propertyId, scope: 'property', documentKind: YDE, decision: 'required', exemptionReason: null,
     proposalAtDecision: { verdict: 'proposed', reason: 'in-use', propertyClass: 'residential', phase: 'ready' },
@@ -230,6 +236,41 @@ describe('§36 — ΚΑΘΕ ακίνητο του γραφείου, όχι μό�
     expect(await declare({ propertyId: 'ownp_1' })).toEqual({ ok: true, outcome: 'changed' });
     expect(stored('ownp_1')).toMatchObject({ scope: 'owner-property' });
     expect(await declare({ propertyId: 'ownp_x' })).toEqual({ ok: false, refusal: 'absent' });
+  });
+
+  it('🔑 §37 — ο ιδιώτης χωρίς μεσίτη αποφασίζει για το ΔΙΚΟ του: προσωπικό βιβλίο, προσωπικό ιστορικό, ποτέ στο γραφείο', async () => {
+    fake.seed(COLLECTIONS.OWNER_PROPERTIES, 'ownp_me', { authorUserId: OWNER_UID, authorCompanyId: null, title: 'Το σπίτι μου' });
+    expect(await declareAs(PERSONAL, { propertyId: 'ownp_me' })).toEqual({ ok: true, outcome: 'changed' });
+    const docs = fake.getAllDocs(COLLECTIONS.PROPERTY_UPKEEP_DECLARATIONS);
+    const mine = docs[upkeepDeclarationIdOf({ userId: OWNER_UID }, 'ownp_me', YDE)];
+    expect(mine).toMatchObject({ userId: OWNER_UID, scope: 'owner-property', decision: 'required', declaredByUid: OWNER_UID });
+    expect(mine).not.toHaveProperty('companyId');
+    expect(EntityAuditService.recordChange).toHaveBeenCalledWith(expect.objectContaining({ entityType: 'owner_property', userId: OWNER_UID }));
+    expect(EntityAuditService.recordChange.mock.calls[0][0]).not.toHaveProperty('companyId');
+    // Το μητρώο του γραφείου ΔΕΝ βλέπει προσωπική απόφαση (ερώτημα `companyId ==`).
+    expect((await read()).upkeep.filter((item) => item.propertyId === 'ownp_me')).toEqual([]);
+  });
+
+  it('🔑 §37 — ο ιδιώτης ΔΕΝ αγγίζει ακίνητο εταιρείας, ούτε ακίνητο ιδιώτη υπό θεματοφυλακή γραφείου, ούτε ξένο προσωπικό', async () => {
+    fake.seed(COLLECTIONS.OWNER_PROPERTIES, 'ownp_office', { authorUserId: OWNER_UID, authorCompanyId: COMPANY, title: 'Υπό γραφείο' });
+    fake.seed(COLLECTIONS.OWNER_PROPERTIES, 'ownp_other', { authorUserId: 'user_other', authorCompanyId: null, title: 'Ξένο' });
+    for (const propertyId of ['prop_1', 'ownp_office', 'ownp_other']) {
+      expect(await declareAs(PERSONAL, { propertyId })).toEqual({ ok: false, refusal: 'absent' });
+    }
+    expect(fake.getAllDocs(COLLECTIONS.PROPERTY_UPKEEP_DECLARATIONS)).toEqual({});
+  });
+
+  it('🔑 §37 — το προσωπικό ακίνητο υπαλλήλου: ΑΛΛΟΣ του γραφείου ⇒ `absent`· ο ίδιος ⇒ ΠΡΟΣΩΠΙΚΟ βιβλίο, ποτέ του γραφείου', async () => {
+    fake.seed(COLLECTIONS.OWNER_PROPERTIES, 'ownp_home', { authorUserId: 'user_2', authorCompanyId: null, title: 'Σπίτι υπαλλήλου' });
+    // Ο ιδιωτικός χώρος ΔΕΝ διευρύνεται στο γραφείο (`mayAdminister`, κανόνας Figma Drafts).
+    expect(await declare({ propertyId: 'ownp_home' })).toEqual({ ok: false, refusal: 'absent' });
+    const colleague = { ...ACTOR, uid: 'user_2' };
+    expect(await declareRegistryUpkeep(db(), colleague, {
+      propertyId: 'ownp_home', documentKind: YDE, decision: 'required', exemptionReason: null,
+    }, NOW)).toEqual({ ok: true, outcome: 'changed' });
+    const docs = fake.getAllDocs(COLLECTIONS.PROPERTY_UPKEEP_DECLARATIONS);
+    expect(docs[upkeepDeclarationIdOf({ userId: 'user_2' }, 'ownp_home', YDE)]).toMatchObject({ userId: 'user_2' });
+    expect(docs[upkeepDeclarationIdOf({ companyId: COMPANY }, 'ownp_home', YDE)]).toBeUndefined();
   });
 
   it('🔴 χαρτοφυλάκιο πάνω από το όριο ⇒ `company-properties` στο `truncatedSources`, και ακίνητο ΕΚΤΟΣ ορίου αποφασίζεται', async () => {

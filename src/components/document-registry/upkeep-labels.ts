@@ -39,15 +39,24 @@ export const UPKEEP_KEYS = {
 } as const;
 
 /**
- * §36 — **πού** ζει η ενότητα: μητρώο (όλο το χαρτοφυλάκιο) ή καρτέλα ενός ακινήτου. Χάρτης με κυριολεκτικές τιμές, όχι
- * κλειδί ως prop: ο γεννήτορας του route slice (3.34) λύνει μόνο ό,τι βλέπει στατικά.
+ * §36 · §37 — **πού** ζει η ενότητα: μητρώο (όλο το χαρτοφυλάκιο) · καρτέλα ενός ακινήτου · **συρτάρι δημιουργίας**
+ * (προεπισκόπηση πριν υπάρξει ακίνητο — καμία απόφαση). Χάρτες με κυριολεκτικές τιμές, όχι κλειδί ως prop: ο γεννήτορας
+ * του route slice (3.34) λύνει μόνο ό,τι βλέπει στατικά.
  */
-export const UPKEEP_SECTION_PLACES = ['registry', 'property'] as const;
+export const UPKEEP_SECTION_PLACES = ['registry', 'property', 'create'] as const;
 export type UpkeepSectionPlace = (typeof UPKEEP_SECTION_PLACES)[number];
 
 export const UPKEEP_SECTION_TITLE_KEYS: Readonly<Record<UpkeepSectionPlace, string>> = {
   registry: `${K}title`,
   property: `${K}propertyTitle`,
+  create: `${K}createTitle`,
+};
+
+/** Ο υπότιτλος — στο συρτάρι λέει **πού** και **πότε** αποφασίζεται, και ότι η δημιουργία δεν γράφει απόφαση (§35 Μ3). */
+export const UPKEEP_SECTION_LEAD_KEYS: Readonly<Record<UpkeepSectionPlace, string>> = {
+  registry: `${K}lead`,
+  property: `${K}lead`,
+  create: `${K}createLead`,
 };
 
 export const UPKEEP_PROPOSAL_KEYS: Readonly<Record<UpkeepProposalReason, string>> = {

@@ -407,11 +407,13 @@
     "saving": "Saving…",
     "saved": "Saved",
     "propertyTitle": "Standing obligations of the property",
+    "createTitle": "Standing obligations that will be suggested",
+    "createLead": "They follow the type and phase. You decide them from the Documents tab after saving; creating the property records no decision.",
     "proposalChanged": "The proposal has changed since the decision — check that it still applies.",
     "loadFailed": "Standing obligations could not be loaded.",
     "error": {
       "failed": "Not saved. Please try again.",
-      "absent": "The property was not found in this office.",
+      "absent": "The property was not found or you do not manage it.",
       "retired": "The property is archived or in the trash.",
       "notStanding": "Not a standing obligation."
     }
