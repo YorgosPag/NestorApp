@@ -65,6 +65,36 @@ export function invitationPreviewViewOf<P>(args: {
   };
 }
 
+/** Η έκβαση κάθε αναγνώστη όψης (`preview*Invitation`) — όσο χρειάζεται η σελίδα για να διαλέξει οθόνη. */
+export type InvitationPageOutcome<P, R extends string> =
+  | { readonly kind: 'preview'; readonly preview: P; readonly addressedToViewer: boolean | null }
+  | { readonly kind: 'refused'; readonly reason: R }
+  | { readonly kind: 'unavailable' };
+
+/** Ό,τι ζωγραφίζει το client component κάθε σελίδας πρόσκλησης. ⛔ Κανένα `markOpened` εδώ — δεν ταξιδεύει. */
+export type InvitationPageView<P, R extends string> =
+  | InvitationPreviewView<P>
+  | { readonly kind: 'refused'; readonly reason: R }
+  | { readonly kind: 'unavailable' };
+
+/**
+ * **Έκβαση → όψη σελίδας** — κοινή για `/tour-invite` · `/case-invite` · `/handover-invite` (ADR-916 Φ-Β2, CHECK 3.28:
+ * θα ήταν τρίτο δίδυμο). Ρητή αναδόμηση, ποτέ `...outcome`: το `markOpened` είναι συνάρτηση διακομιστή.
+ */
+export function invitationPageViewOf<P, R extends string>(
+  outcome: InvitationPageOutcome<P, R>,
+  page: { readonly token: string; readonly viewerEmail: string | null; readonly invitationHref: string },
+): InvitationPageView<P, R> {
+  switch (outcome.kind) {
+    case 'preview':
+      return invitationPreviewViewOf({ preview: outcome.preview, addressedToViewer: outcome.addressedToViewer, ...page });
+    case 'refused':
+      return { kind: 'refused', reason: outcome.reason };
+    case 'unavailable':
+      return { kind: 'unavailable' };
+  }
+}
+
 /**
  * **Ποιες κοινές αρνήσεις σημαίνουν «αυτός ο σύνδεσμος δεν δείχνει πουθενά» ⇒ 404** (ADR-853 §18 Ε-Η) — ο ΕΝΑΣ
  * χάρτης για **κάθε** σελίδα πρόσκλησης (χώρου · φωτογράφου · υπόθεσης). Κάθε είδος **απλώνει** αυτόν και προσθέτει

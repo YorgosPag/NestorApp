@@ -20,7 +20,7 @@ import { CaseInviteContent, type CaseInviteView } from '@/components/case-invite
 import { activeWorkspaceOf } from '@/lib/auth/workspace-membership';
 import { caseInvitationHref } from '@/lib/conveyance/conveyance-routes';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { CORE_REFUSAL_IS_NOT_FOUND, invitationPreviewViewOf } from '@/lib/invitations/invitation-respond';
+import { CORE_REFUSAL_IS_NOT_FOUND, invitationPageViewOf } from '@/lib/invitations/invitation-respond';
 import { CREDENTIAL_LINK_PAGE_METADATA } from '@/lib/tokens/credential-link-page';
 import type { PageIdentity } from '@/server/auth/page-identity';
 import { readInvitationPageRequest } from '@/server/invitations/invitation-page-request';
@@ -42,23 +42,8 @@ function viewOf(
   viewerEmail: string | null,
   acceptance: AcceptancePreview | null,
 ): CaseInviteView {
-  switch (outcome.kind) {
-    case 'preview':
-      return {
-        ...invitationPreviewViewOf({
-          preview: outcome.preview,
-          addressedToViewer: outcome.addressedToViewer,
-          token,
-          viewerEmail,
-          invitationHref: caseInvitationHref(token),
-        }),
-        acceptance,
-      };
-    case 'refused':
-      return { kind: 'refused', reason: outcome.reason };
-    case 'unavailable':
-      return { kind: 'unavailable' };
-  }
+  const view = invitationPageViewOf(outcome, { token, viewerEmail, invitationHref: caseInvitationHref(token) });
+  return view.kind === 'preview' ? { ...view, acceptance } : view;
 }
 
 /**

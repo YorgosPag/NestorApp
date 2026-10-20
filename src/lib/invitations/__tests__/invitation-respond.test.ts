@@ -3,7 +3,7 @@
  * (`/invite/[token]` · `/tour-invite/[token]`).
  */
 
-import { invitationPreviewViewOf, invitationRespondOf } from '../invitation-respond';
+import { invitationPageViewOf, invitationPreviewViewOf, invitationRespondOf } from '../invitation-respond';
 import { loginHref } from '@/lib/routes/return-path';
 
 const HREF = '/tour-invite/tok-1';
@@ -44,5 +44,20 @@ describe('invitationPreviewViewOf', () => {
     });
     expect(Object.keys(view).sort()).toEqual(['kind', 'preview', 'respond', 'switchAccountHref', 'token']);
     expect(view.respond).toEqual({ kind: 'other-account', signedInAs: 'a@b.gr' });
+  });
+});
+
+describe('invitationPageViewOf (ADR-916 Φ-Β2 — κοινό για /tour-invite · /case-invite · /handover-invite)', () => {
+  const page = { token: 'tok-1', viewerEmail: null, invitationHref: HREF };
+
+  it('🔴 the server-only `markOpened` NEVER reaches the client view (rendered into HTML)', () => {
+    const outcome = { kind: 'preview' as const, preview: { hostName: 'Host' }, addressedToViewer: null, markOpened: async () => undefined };
+    const view = invitationPageViewOf(outcome, page);
+    expect(Object.keys(view).sort()).toEqual(['kind', 'preview', 'respond', 'switchAccountHref', 'token']);
+  });
+
+  it('refused keeps ONLY its reason · unavailable stays bare', () => {
+    expect(invitationPageViewOf({ kind: 'refused', reason: 'expired' }, page)).toEqual({ kind: 'refused', reason: 'expired' });
+    expect(invitationPageViewOf({ kind: 'unavailable' }, page)).toEqual({ kind: 'unavailable' });
   });
 });

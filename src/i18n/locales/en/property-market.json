@@ -2400,6 +2400,20 @@
     },
     "history": {
       "lead": "Every change to the property file: what changed, when and by whom. Only you can see it."
+    },
+    "origin": {
+      "from": "From the developer {issuer}",
+      "fromUnnamed": "From the developer",
+      "lifecycle": {
+        "awaiting-completion": "In preparation",
+        "ready": "Ready",
+        "cancelled": "Sale cancelled"
+      },
+      "explain": {
+        "awaiting-completion": "The developer is preparing the file; the home's drawings, photos and certificates arrive here when the purchase completes.",
+        "ready": "The purchase is complete; the file is yours and stays with you.",
+        "cancelled": "The sale was cancelled. The file stays yours, together with anything you have added."
+      }
     }
   },
   "savedListings": {
@@ -2598,5 +2612,47 @@
     "heading": "{count, plural, one {# unit verified with the Hellenic Cadastre} other {# units verified with the Hellenic Cadastre}}",
     "level": "{level}: {count}",
     "unknownLevel": "No declared floor: {count}"
+  },
+  "handoverInvite": {
+    "title": "Your home's file",
+    "intro": {
+      "reservation": "{issuer} is preparing the digital file of the property {property}. You receive it when your purchase completes.",
+      "completion": "{issuer} has completed the handover of the property {property}. Its file is now yours."
+    },
+    "findLabel": "What you will find",
+    "find": "Drawings, photos, certificates (e.g. the energy certificate) and the home's documents — your own copy, kept with you for good.",
+    "costLabel": "Cost",
+    "cost": "None. You only need an account with the email address the invitation was sent to.",
+    "linkExpires": "The link expires on",
+    "scope": "Accepting gives you the file of your own home only, in your personal account — you do not become a member of the company.",
+    "unnamedIssuer": "The company that sold you the property",
+    "unnamedProperty": "you purchased",
+    "signIn": "Sign in or sign up to accept",
+    "signInHint": "Use the email address the invitation was sent to; signing up takes about a minute and brings you back here.",
+    "accept": "Accept the file",
+    "decline": "I don't want it",
+    "declineHint": "\"I don't want it\": your answer is recorded for the company and no new automatic invitation will be sent to this email.",
+    "accepted": "The file is yours",
+    "acceptedBody": {
+      "reservation": "You will find it in your files. Until the purchase completes it shows as \"in preparation\".",
+      "completion": "You will find it in your files."
+    },
+    "openDossier": "Open the file",
+    "declined": "Invitation declined",
+    "declinedBody": "Your answer has been recorded. If this was a mistake, ask the company for a new invitation.",
+    "unavailable": "We could not open the invitation right now. Please try again shortly.",
+    "retry": "Try again",
+    "home": "Home page",
+    "myDossiers": "My files",
+    "refusals": {
+      "link-invalid": "The link is not valid. Open it in full, directly from the email.",
+      "link-foreign": "The link does not belong to this application. Open it directly from the email.",
+      "invitation-unknown": "The invitation was not found. Check that you opened the full link from the email.",
+      "expired": "The link has expired. Ask the company to send it again.",
+      "already-used": "The invitation has already been answered. If you accepted it, the file is in your files.",
+      "revoked": "The invitation is no longer valid — it was replaced by a newer one or the sale was cancelled. If you received a newer email, use that one.",
+      "wrong-recipient": "The invitation is addressed to another email address. Sign in with the account of the address that received it.",
+      "handover-closed": "The handover is no longer open for this invitation — the sale was cancelled or the file has already been handed over. Please contact the company."
+    }
   }
 }

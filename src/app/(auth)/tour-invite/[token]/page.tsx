@@ -17,7 +17,7 @@ import { after } from 'next/server';
 
 import { TourCaptureInviteContent, type TourCaptureInviteView } from '@/components/spatial-tour/TourCaptureInviteContent';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { CORE_REFUSAL_IS_NOT_FOUND, invitationPreviewViewOf } from '@/lib/invitations/invitation-respond';
+import { CORE_REFUSAL_IS_NOT_FOUND, invitationPageViewOf } from '@/lib/invitations/invitation-respond';
 import { tourCaptureInvitationHref } from '@/lib/spatial-tour/tour-routes';
 import { CREDENTIAL_LINK_PAGE_METADATA } from '@/lib/tokens/credential-link-page';
 import { readInvitationPageRequest } from '@/server/invitations/invitation-page-request';
@@ -32,20 +32,7 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = CREDENTIAL_LINK_PAGE_METADATA;
 
 function viewOf(outcome: TourCaptureInvitationPreviewOutcome, token: string, viewerEmail: string | null): TourCaptureInviteView {
-  switch (outcome.kind) {
-    case 'preview':
-      return invitationPreviewViewOf({
-        preview: outcome.preview,
-        addressedToViewer: outcome.addressedToViewer,
-        token,
-        viewerEmail,
-        invitationHref: tourCaptureInvitationHref(token),
-      });
-    case 'refused':
-      return { kind: 'refused', reason: outcome.reason };
-    case 'unavailable':
-      return { kind: 'unavailable' };
-  }
+  return invitationPageViewOf(outcome, { token, viewerEmail, invitationHref: tourCaptureInvitationHref(token) });
 }
 
 export default async function TourCaptureInvitePage({ params }: { params: Promise<{ token: string }> }): Promise<React.ReactElement> {
