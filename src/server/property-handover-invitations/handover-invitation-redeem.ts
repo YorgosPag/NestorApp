@@ -103,7 +103,7 @@ function isOpenFor(handover: PropertyHandover, record: PropertyHandoverInvitatio
 function dossierBirthOf(handover: PropertyHandover, description: HandoverInvitationDescription, acceptedAt: string) {
   const origin: PropertyDossierOrigin = {
     kind: 'handover', handoverId: handover.id, issuerCompanyId: handover.companyId, issuerName: description.issuerName,
-    acceptedAt, handoverLifecycle: handover.lifecycle,
+    acceptedAt, handoverLifecycle: handover.lifecycle, fileDelivery: null, appurtenanceOf: null,
   };
   // Το σπίτι έχει πάντα όνομα στο γραφείο· η εφεδρεία υπάρχει γιατί ο φάκελος **δεν** γεννιέται χωρίς όνομα.
   const label = propertyDossierLabelFrom(description.propertyLabel ?? '') || propertyDossierLabelFrom(description.issuerName ?? '') || handover.propertyId;

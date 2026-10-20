@@ -22,6 +22,10 @@ import 'server-only';
  * ✉️ **Φ-Β — η πρόσκληση του αγοραστή στην ΙΔΙΑ συναλλαγή** (`property-handover-invitation-stage.ts`): κύκλος ζωής,
  * κάτοπτρο πρόσκλησης, η ίδια η πρόσκληση (supersede) και η προβολή στον φάκελο του αγοραστή γράφονται **αδιαίρετα**.
  * Τα email φεύγουν **μετά** το commit (ίδιος λόγος με το ίχνος)· το δίχτυ ξαναδοκιμάζει ό,τι δεν έγινε δεκτό.
+ *
+ * 📦 **Φ-Γ1 — τα αρχεία, μετά το commit** (`server/property-handover-delivery`): όταν η παράδοση **οφείλεται**
+ * (`fileDeliveryStateOf`), ο εκτελεστής αντιγράφει ένα πρώτο κομμάτι και το cron `property-handover-delivery` συνεχίζει.
+ * Η πρόοδος γράφεται **εδώ** (`recordHandoverFileDelivery`, CAS) — ο εκτελεστής δεν αγγίζει ποτέ τη συλλογή.
  */
 
 import type { Firestore as AdminFirestore, Query, Transaction } from 'firebase-admin/firestore';
@@ -30,6 +34,8 @@ import { PROPERTY_HANDOVER_TRACKED_FIELDS } from '@/config/audit-tracked-fields'
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { nowISO } from '@/lib/date-local';
 import { getErrorMessage } from '@/lib/error-utils';
+import { HANDOVER_DELIVERY_INLINE_FILE_BUDGET } from '@/config/property-handover-delivery-policy';
+import { fileDeliveryStateOf } from '@/lib/property-handover/handover-delivery-plan';
 import {
   planPropertyHandovers,
   propertyHandoverSnapshotOf,
@@ -38,6 +44,7 @@ import {
 } from '@/lib/property-handover/handover-plan';
 import { propertyHandoverFromDocument } from '@/lib/property-handover/property-handover-from-document';
 import { createModuleLogger } from '@/lib/telemetry';
+import { deliverHandoverFiles, type HandoverFileDeliveryRecorder } from '@/server/property-handover-delivery/handover-delivery.server';
 import {
   deliverIssuedHandoverInvitations,
   followUpHandoverInvitation,
@@ -46,14 +53,14 @@ import {
 import type { MintedHandoverInvitation } from '@/server/property-handover-invitations/handover-invitation-kind';
 import { recordTrackedEntityWrite } from '@/services/entity-audit-tracked-write';
 import { stagePropertyDossierHandoverProjection } from '@/services/property-dossier/property-dossier-write.service';
-import type { PropertyHandover, PropertyHandoverInvitationDelivery } from '@/types/property-handover';
+import type { PropertyHandover, PropertyHandoverFileDelivery, PropertyHandoverInvitationDelivery } from '@/types/property-handover';
 
 import { stageHandoverInvitations } from './property-handover-invitation-stage';
 
 const logger = createModuleLogger('PropertyHandoverWrite');
 
 /** Ποιος ζήτησε τη συμφιλίωση — μόνο για το ημερολόγιο· το αποτέλεσμα **δεν** εξαρτάται από αυτό. */
-export type PropertyHandoverSyncCause = 'property-write' | 'legal-phase' | 'reconcile';
+export type PropertyHandoverSyncCause = 'property-write' | 'legal-phase' | 'acceptance' | 'reconcile';
 
 export interface PropertyHandoverSyncRequest {
   readonly cause: PropertyHandoverSyncCause;
@@ -86,8 +93,12 @@ export function propertyHandoversQuery(adminDb: AdminFirestore, companyId: strin
     .where('propertyId', '==', propertyId);
 }
 
-/** Το έγγραφο όπως αποθηκεύεται — η ταυτότητα είναι το id του εγγράφου, όχι πεδίο. */
-function storedHandover(handover: PropertyHandover): Omit<PropertyHandover, 'id'> {
+/**
+ * Το έγγραφο όπως αποθηκεύεται — η ταυτότητα είναι το id του εγγράφου, όχι πεδίο. Το `fileDeliveryState` είναι
+ * **παράγωγο** (`fileDeliveryStateOf`) και υπάρχει μόνο για το ερώτημα ισότητας του cron — ποτέ χειρόγραφο, άρα δεν
+ * μπορεί να διαφωνήσει με την παράδοση. Ο αναγνώστης δεν το διαβάζει.
+ */
+function storedHandover(handover: PropertyHandover): Omit<PropertyHandover, 'id'> & { readonly fileDeliveryState: string | null } {
   return {
     companyId: handover.companyId,
     propertyId: handover.propertyId,
@@ -97,6 +108,8 @@ function storedHandover(handover: PropertyHandover): Omit<PropertyHandover, 'id'
     // ⚠️ `set` ολόκληρου εγγράφου: ό,τι δεν περάσει από εδώ **σβήνεται** — και ο παραλήπτης δεν ξαναγράφεται ποτέ.
     recipient: handover.recipient,
     invitation: handover.invitation,
+    fileDelivery: handover.fileDelivery,
+    fileDeliveryState: fileDeliveryStateOf(handover),
     createdAt: handover.createdAt,
     updatedAt: handover.updatedAt,
   };
@@ -132,7 +145,10 @@ function handoverDocRef(adminDb: AdminFirestore, handoverId: string) {
  * έχει ήδη διαβάσει και κρίνει την παράδοση **στην ίδια** συναλλαγή· το ίχνος (`recordHandoverWrite`) μετά το commit.
  */
 export function stageHandoverRecipient(tx: Transaction, adminDb: AdminFirestore, after: PropertyHandover): void {
-  tx.update(handoverDocRef(adminDb, after.id), { recipient: after.recipient, updatedAt: after.updatedAt });
+  // Φ-Γ1 — αποδοχή σε **ήδη** ολοκληρωμένη πώληση ⇒ η αντιγραφή οφείλεται από **αυτή** τη στιγμή (Ο12).
+  tx.update(handoverDocRef(adminDb, after.id), {
+    recipient: after.recipient, fileDeliveryState: fileDeliveryStateOf(after), updatedAt: after.updatedAt,
+  });
 }
 
 /**
@@ -164,6 +180,31 @@ export async function recordHandoverInvitationDelivery(
       ...(input.reminded && input.delivery === 'accepted' ? { 'invitation.remindedAt': now } : {}),
       updatedAt: now,
     });
+  });
+}
+
+/**
+ * **Φ-Γ1 — η πρόοδος της αντιγραφής**, στην παράδοση **και** (προβολή, Δ10) στον κύριο φάκελο του αγοραστή, ατομικά.
+ * CAS: γράφει **μόνο** αν η παράδοση οφείλει ακόμη αντιγραφή στον **ίδιο** παραλήπτη — μια ανάκληση ή αλλαγή χεριών στο
+ * μεταξύ δεν κληρονομεί πρόοδο που δεν της ανήκει. Τεχνική πρόοδος, όχι πράξη ανθρώπου ⇒ κανένα ίχνος οντότητας.
+ */
+export async function recordHandoverFileDelivery(
+  adminDb: AdminFirestore,
+  input: { readonly handoverId: string; readonly recipientUserId: string; readonly fileDelivery: PropertyHandoverFileDelivery },
+): Promise<void> {
+  const ref = handoverDocRef(adminDb, input.handoverId);
+  await adminDb.runTransaction(async (tx) => {
+    const current = propertyHandoverFromDocument((await tx.get(ref)).data(), ref.id);
+    const recipient = current?.recipient ?? null;
+    if (current === null || recipient === null || fileDeliveryStateOf(current) === null || recipient.userId !== input.recipientUserId) return;
+    const { state, delivered, total } = input.fileDelivery;
+    const projection = await stagePropertyDossierHandoverProjection(tx, adminDb, {
+      dossierId: recipient.dossierId, userId: recipient.userId, handoverId: current.id,
+      handoverLifecycle: current.lifecycle, fileDelivery: { state, delivered, total },
+    });
+    const after: PropertyHandover = { ...current, fileDelivery: input.fileDelivery, updatedAt: nowISO() };
+    tx.update(ref, { fileDelivery: after.fileDelivery, fileDeliveryState: fileDeliveryStateOf(after), updatedAt: after.updatedAt });
+    projection.commit();
   });
 }
 
@@ -279,10 +320,24 @@ function applyPlan(adminDb: AdminFirestore, propertyId: string, actorUid: string
 async function deliverAfterCommit(adminDb: AdminFirestore, applied: AppliedPlan, cause: PropertyHandoverSyncCause): Promise<void> {
   const record: HandoverDeliveryRecorder = (input) => recordHandoverInvitationDelivery(adminDb, input);
   await deliverIssuedHandoverInvitations(adminDb, applied.issued, record);
+  await deliverDueFiles(adminDb, applied.handovers, cause);
   if (cause !== 'reconcile') return;
   const fresh = new Set(applied.issued.map(({ invitation }) => invitation.handoverId));
   for (const handover of applied.handovers) {
     if (!fresh.has(handover.id)) await followUpHandoverInvitation(adminDb, handover, record);
+  }
+}
+
+/**
+ * **Φ-Γ1 — τα αρχεία που οφείλονται**, ένα πρώτο κομμάτι (`HANDOVER_DELIVERY_INLINE_FILE_BUDGET`)· το cron συνεχίζει.
+ * Στο νυχτερινό δίχτυ ξανακοιτά και τις **παραδομένες**: ένα νέο παραδοτέο αρχείο (Δ5) φτάνει μόνο του.
+ */
+async function deliverDueFiles(adminDb: AdminFirestore, handovers: readonly PropertyHandover[], cause: PropertyHandoverSyncCause): Promise<void> {
+  const record: HandoverFileDeliveryRecorder = (input) => recordHandoverFileDelivery(adminDb, input);
+  for (const handover of handovers) {
+    const state = fileDeliveryStateOf(handover);
+    if (state === null || (state === 'delivered' && cause !== 'reconcile')) continue;
+    await deliverHandoverFiles(adminDb, handover, { maxFiles: HANDOVER_DELIVERY_INLINE_FILE_BUDGET, deadlineAt: null }, record);
   }
 }
 

@@ -65,6 +65,7 @@ import { runMandateExpiry } from '@/lib/cron/jobs/mandate-expiry.job';
 import { runOAuthCleanup } from '@/lib/cron/jobs/oauth-cleanup.job';
 import { runOnboardingReminder } from '@/lib/cron/jobs/onboarding-reminder.job';
 import { runOverdueAlerts } from '@/lib/cron/jobs/overdue-alerts.job';
+import { runPropertyHandoverDelivery } from '@/lib/cron/jobs/property-handover-delivery.job';
 import { runPropertyHandoverReconcile } from '@/lib/cron/jobs/property-handover-reconcile.job';
 import { runPurgeDeletedEntities } from '@/lib/cron/jobs/purge-deleted-entities.job';
 import { runStayChannelImport } from '@/lib/cron/jobs/stay-channel-import.job';
@@ -614,6 +615,23 @@ export const CRON_SCHEDULE: readonly CronJobDefinition[] = [
     maxRuntimeMinutes: 10,
     leaseMinutes: 15,
     run: runPropertyHandoverReconcile,
+  },
+  {
+    slug: 'property-handover-delivery',
+    path: '/api/cron/property-handover-delivery',
+    description: 'Παράδοση αρχείων στον φάκελο του αγοραστή: ό,τι δεν πρόλαβε το αίτημα, με προϋπολογισμό (ADR-916 Φ-Γ1)',
+    enabled: true,
+    // 🔑 **Κάθε 15′, γιατί ΕΙΝΑΙ μηχανισμός** (όχι δίχτυ): το αίτημα που ολοκληρώνει πώληση ή αποδοχή παραδίδει μόνο ένα
+    // πρώτο κομμάτι· τα υπόλοιπα τα φέρνει αυτό, ώστε ο αγοραστής να μην περιμένει το βράδυ. Άδεια ουρά ⇒ ένα ερώτημα.
+    //
+    // ⚠️ **:01 · :16 · :31 · :46**: λεπτά που δεν κατέχει κανείς (*/5 από :02 · */10 · */10 από :04 · */15 από :08 ·
+    // :15 · :35).
+    schedule: '1-59/15 * * * *',
+    timezone: CRON_TIMEZONE,
+    checkinMarginMinutes: 10,
+    maxRuntimeMinutes: 5,
+    leaseMinutes: 6,
+    run: runPropertyHandoverDelivery,
   },
 
   // ─── Δηλωμένα αλλά ανενεργά ────────────────────────────────────────────────
