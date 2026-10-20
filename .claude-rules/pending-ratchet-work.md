@@ -4075,6 +4075,13 @@
 
 ## Pending tasks (priority order)
 
+### 🗂️ Ετικέτες πράξεων ιστορικού αρχείου — ΚΑΜΙΑ από τις ~45 `FileAuditAction` δεν έχει κλειδί i18n (προτεραιότητα ΜΕΣΑΙΑ, 2026-10-20, ADR-916 Φ-Γ1 · N.0.2)
+- **Περιστατικό**: το `AuditLogPanel` αποδίδει `t(\`audit.action.${entry.action}\`, entry.action)` — **ωμή εφεδρεία** με το ίδιο το κλειδί. Μετρημένο: το `files.json` (el/en) έχει `audit.{title, noEntries, file*}` αλλά **κανένα** `audit.action.*` ⇒ ο άνθρωπος βλέπει `storage_relocate`, `cde_supersede`, `handover_receive` αυτολεξεί. Το CHECK 3.97 το κρύβει επειδή η εφεδρεία δεν είναι literal.
+- **Fix**: κλειστός χάρτης `Record<FileAuditAction, string>` (όπως `ACTION_ICON_MAP`, ώστε νέα πράξη χωρίς ετικέτα **να μη μεταγλωττίζεται**) + ~45 κλειδιά el/en + αφαίρεση της εφεδρείας. 2 locale + 1 component, αλλά ~45 μεταφράσεις ⇒ >1h.
+
+### 🧪 Τρίτο τοπικό fake bucket — `tour-capture-upload.test.ts` (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-20, ADR-916 Φ-Γ1 · ADR-895 · N.0.2)
+- Οι δύο δίδυμοι (`tour-media-migration` · `tour-original-migration`) ενοποιήθηκαν στο `src/test-utils/fake-gcs/fake-gcs-bucket.ts`. Μένει ο τρίτος στο `server/spatial-tour/__tests__/tour-capture-upload.test.ts` (άλλο σχήμα: `getAdminBucket`/καραντίνα) — επέκταση του κοινού αν χρειαστεί `save`/`createWriteStream`, όχι τέταρτο.
+
 ### 🧾 Αναγνώστες του deprecated `soldTo` — ~18 αρχεία δεν βλέπουν πωλήσεις γραμμένες μόνο σε `commercial.owners` (προτεραιότητα ΜΕΣΑΙΑ, 2026-10-19, ADR-244 · N.0.2)
 - **Περιστατικό**: η ροή πώλησης γράφει `commercial.owners[]` + `ownerContactIds[]` (ADR-244), **όχι** `soldTo` ⇒ η καρτέλα «Πελάτες» έργου ήταν κενή για πουλημένη μονάδα. Διορθώθηκαν **μόνο** τα δύο endpoints «Πελάτες» (έργου + κτιρίου).
 - **SSoT**: `lib/ownership/owner-utils.ts` → `isStoredPropertySold` · `readStoredBuyerContactIds` (owners χωρίς οικοπεδούχους, `soldTo` μόνο αν δεν υπάρχουν owners) · `countSoldPropertiesPerBuyer`.
