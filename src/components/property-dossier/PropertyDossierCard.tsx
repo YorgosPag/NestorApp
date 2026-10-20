@@ -29,6 +29,7 @@ import { dossierDetailHref } from '@/lib/property-dossier/property-dossier-route
 import { Link, useRouter } from '@/lib/workspace/navigation';
 import type { PropertyDossier } from '@/types/property-dossier';
 
+import { PropertyDossierOriginLine } from './PropertyDossierOrigin';
 import type { PropertyDossierLifecycleControls } from './usePropertyDossierLifecycle';
 
 const NS = 'property-market';
@@ -89,6 +90,7 @@ export function PropertyDossierCard(props: PropertyDossierCardProps): React.Reac
           <p className="m-0 text-sm text-muted-foreground">
             {typeLabel} · {t(`${K}.updated`, { date: formatRelativeTime(dossier.updatedAt) })}
           </p>
+          <PropertyDossierOriginLine origin={dossier.origin} />
         </div>
         <DossierActions {...props} />
       </article>

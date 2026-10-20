@@ -39,6 +39,7 @@ import type { PropertyDossier } from '@/types/property-dossier';
 
 import { usePropertyDossierTypeLabel } from './PropertyDossierCard';
 import { PropertyDossierDialog } from './PropertyDossierDialog';
+import { PropertyDossierOriginNotice } from './PropertyDossierOrigin';
 import { PropertyDossierTitle } from './PropertyDossierTitle';
 import { usePropertyDossierLifecycle } from './usePropertyDossierLifecycle';
 
@@ -103,6 +104,7 @@ function DossierView({ dossier }: { readonly dossier: PropertyDossier }) {
   return (
     <>
       <DossierHeader dossier={dossier} />
+      <PropertyDossierOriginNotice origin={dossier.origin} />
       {dossier.lifecycle === 'archived' && <ArchivedNotice dossier={dossier} />}
       <UniversalTabsRenderer<PropertyDossier, PropertyDossierTabComponentProps>
         tabs={tabs}
