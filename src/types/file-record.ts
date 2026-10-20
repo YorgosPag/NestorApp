@@ -19,6 +19,7 @@
 import type { FileStoragePlacement } from '@/lib/files/file-storage-placement';
 import type { ImageDimensions } from '@/lib/images/image-dimensions';
 import type { DocumentFacts } from '@/lib/document-validity/document-facts';
+import type { FileHandoverOrigin } from '@/lib/property-handover/file-handover-origin';
 import type {
   EntityType,
   FileDomain,
@@ -435,6 +436,13 @@ export interface FileRecord {
    * Απόν ⇒ «δεν ξέρουμε»· διαβάζεται **μόνο** μέσω `readDocumentFacts` (`lib/document-validity/document-facts`).
    */
   documentFacts?: DocumentFacts;
+
+  /**
+   * **Η προέλευση παράδοσης** (ADR-916 Φ-Γ1 · Π2) — μόνο στα αντίγραφα που παρέδωσε η κατασκευάστρια στον φάκελο του
+   * αγοραστή. ⛔ Γράφεται **μόνο** στη γέννηση από τον εκτελεστή της παράδοσης· ο πελάτης δεν το αγγίζει
+   * (`handoverOriginUnchanged`). Διαβάζεται **μόνο** μέσω `readFileHandoverOrigin`.
+   */
+  handoverOrigin?: FileHandoverOrigin;
 
   /**
    * Download URL from Firebase Storage (populated after upload)

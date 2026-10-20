@@ -30,6 +30,7 @@ import type { FileCustody } from '@/lib/files/file-custody';
 // ADR-895 Α1 — η θέση των bytes, γραμμένη στη γέννηση. Type-only.
 import type { FileStoragePlacement } from '@/lib/files/file-storage-placement';
 import type { FilePlacementTransition } from '@/types/file-record';
+import type { FileHandoverOrigin } from '@/lib/property-handover/file-handover-origin';
 
 // ============================================================================
 // TYPES - INPUT/OUTPUT CONTRACTS
@@ -132,6 +133,9 @@ export interface PendingFileRecordCoordinates {
   // ADR-895 Φ3 — η θέση των bytes, όπως την έκρινε το `placementForNewFile` ΠΡΙΝ τη γέννηση·
   // απουσία = `legacy-default` (Α1), ποτέ «άγνωστο».
   storagePlacement?: FileStoragePlacement;
+
+  // ADR-916 Φ-Γ1 — η προέλευση παράδοσης· ΜΟΝΟ ο εκτελεστής της παράδοσης (Admin SDK) τη δίνει.
+  handoverOrigin?: FileHandoverOrigin;
 
   // Language for display name
   language?: 'el' | 'en';
@@ -260,6 +264,9 @@ export interface FileRecordCommonBase {
 
   // ADR-895 Α1 — ο κάδος των bytes· αλλάζει ΜΟΝΟ με CAS της μετάβασης
   storagePlacement?: FileStoragePlacement;
+
+  // ADR-916 Φ-Γ1 — η προέλευση παράδοσης· αμετάβλητη μετά τη γέννηση
+  handoverOrigin?: FileHandoverOrigin;
 }
 
 /**

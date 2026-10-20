@@ -21,11 +21,20 @@ import type { TourMediaPlacement } from '@/constants/spatial-tour-vocabulary';
 import type { FileStoragePlacement } from './file-storage-placement';
 
 /** Η περίσταση γέννησης ενός αρχείου — ό,τι χρειάζεται η πολιτική, τίποτα παραπάνω. */
-export type NewFileContext = {
-  readonly kind: 'tour-capture';
-  /** Ο κάδος της καραντίνας, όπως τον **δέσμευσε** το εισιτήριο — εκεί είναι ήδη τα bytes. */
-  readonly ingestPlacement: TourMediaPlacement;
-};
+export type NewFileContext =
+  | {
+      readonly kind: 'tour-capture';
+      /** Ο κάδος της καραντίνας, όπως τον **δέσμευσε** το εισιτήριο — εκεί είναι ήδη τα bytes. */
+      readonly ingestPlacement: TourMediaPlacement;
+    }
+  | {
+      /**
+       * ADR-916 Φ-Γ1 — το **αντίγραφο παράδοσης** στον φάκελο του αγοραστή. Η θέση ακολουθεί την **πηγή**: rewrite μέσα
+       * στην ίδια περιοχή, ποτέ σιωπηλή μεταφορά bytes σε άλλη χώρα στο όνομα του αγοραστή (ίδια αρχή με την καραντίνα).
+       */
+      readonly kind: 'handover-copy';
+      readonly sourcePlacement: FileStoragePlacement;
+    };
 
 /** Κάθε θέση μέσων περιήγησης έχει **δηλωμένη** απάντηση — νέα θέση χωρίς γραμμή εδώ δεν μεταγλωττίζεται. */
 const TOUR_INGEST_TO_FILE_PLACEMENT: Readonly<Record<TourMediaPlacement, FileStoragePlacement>> = {
@@ -38,5 +47,7 @@ export function placementForNewFile(context: NewFileContext): FileStoragePlaceme
   switch (context.kind) {
     case 'tour-capture':
       return TOUR_INGEST_TO_FILE_PLACEMENT[context.ingestPlacement];
+    case 'handover-copy':
+      return context.sourcePlacement;
   }
 }

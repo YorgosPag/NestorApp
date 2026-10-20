@@ -83,9 +83,33 @@ function pinnedSource(file: File): File {
   return generation === undefined ? file : file.bucket.file(file.name, { generation: Number(generation) });
 }
 
+/**
+ * Ένα αντικείμενο προς αντιγραφή **με νέο όνομα** (ADR-916 Φ-Γ1 — η παράδοση στον φάκελο του αγοραστή): η πηγή ζει στο
+ * κλειδί της εταιρείας, το αντίγραφο στο `people/{uid}/…`. Η αντιγραφή ίδιου ονόματος είναι η ειδική περίπτωση.
+ */
+export interface CopyPair {
+  readonly source: File;
+  readonly destinationName: string;
+}
+
+/** Όσα ζεύγη **δεν** έχουν ήδη πανομοιότυπο αντίγραφο στον προορισμό — ακριβή ονόματα, ποτέ πρόθεμα. */
+export async function missingPairsIn(target: Bucket, pairs: readonly CopyPair[]): Promise<CopyPair[]> {
+  const present = new Map((await statObjects(target, pairs.map((pair) => pair.destinationName))).map((file) => [file.name, file] as const));
+  return pairs.filter((pair) => {
+    const copy = present.get(pair.destinationName);
+    return copy === undefined || !sameObject(pair.source, copy);
+  });
+}
+
+/** GCS rewrite σε δέσμες προς **δηλωμένο** όνομα — ιδεμπότητο όταν ο καλών δίνει μόνο ό,τι λείπει ({@link missingPairsIn}). */
+export async function copyPairs(pairs: readonly CopyPair[], target: Bucket): Promise<void> {
+  for (let i = 0; i < pairs.length; i += COPY_CONCURRENCY) {
+    await Promise.all(pairs.slice(i, i + COPY_CONCURRENCY).map(({ source, destinationName }) =>
+      pinnedSource(source).copy(target.file(destinationName), copyOptionsFor(source))));
+  }
+}
+
 /** GCS rewrite σε δέσμες, ίδιο όνομα στον προορισμό — ιδεμπότητο όταν ο καλών δίνει μόνο ό,τι λείπει ({@link missingIn}). */
 export async function copyObjects(files: readonly File[], target: Bucket): Promise<void> {
-  for (let i = 0; i < files.length; i += COPY_CONCURRENCY) {
-    await Promise.all(files.slice(i, i + COPY_CONCURRENCY).map((file) => pinnedSource(file).copy(target.file(file.name), copyOptionsFor(file))));
-  }
+  await copyPairs(files.map((source) => ({ source, destinationName: source.name })), target);
 }

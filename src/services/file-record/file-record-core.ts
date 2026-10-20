@@ -243,6 +243,10 @@ export function buildPendingFileRecordData(
   if (input.storagePlacement !== undefined) {
     recordBase.storagePlacement = input.storagePlacement;
   }
+  // ADR-916 Φ-Γ1 — μόνο στα αντίγραφα παράδοσης· η απουσία σημαίνει «δικό του αρχείο», όχι «άγνωστο».
+  if (input.handoverOrigin !== undefined) {
+    recordBase.handoverOrigin = input.handoverOrigin;
+  }
 
   return {
     fileId,
