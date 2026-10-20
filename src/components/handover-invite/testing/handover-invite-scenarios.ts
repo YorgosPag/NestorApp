@@ -118,6 +118,7 @@ export const ORIGIN_SCENARIOS: readonly OriginScenario[] = PROPERTY_HANDOVER_LIF
     origin: {
       kind: 'handover', handoverId: 'phov_harness', issuerCompanyId: 'comp_harness',
       issuerName: named ? ISSUER : null, acceptedAt: '2026-10-20T09:00:00.000Z', handoverLifecycle: lifecycle,
+      fileDelivery: null, appurtenanceOf: null,
     },
   })));
 

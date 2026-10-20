@@ -9,9 +9,13 @@
  *
  * 🔑 **`withPersonalOrOrgAuth`**: ο αγοραστής **δεν** είναι μέλος κανενός χώρου και **δεν** γίνεται ποτέ — καμία γραφή
  * claim εδώ. Μετά την αποδοχή, η οθόνη τον στέλνει στον **φάκελό** του (`dossierId` στην απάντηση).
+ *
+ * 📦 **ADR-916 Φ-Γ1 — μετά την απόκριση** (`after`): αν η πώληση έχει ήδη ολοκληρωθεί, ο **ίδιος** γραφέας συμφιλίωσης
+ * ξεκινά την αντιγραφή των αρχείων (Ο12). Η απάντηση **δεν** περιμένει τα αρχεία — ο φάκελος είναι ζωντανός και τα
+ * δείχνει καθώς φτάνουν· ό,τι δεν προλάβει το συνεχίζει το cron `property-handover-delivery`.
  */
 
-import { NextResponse, type NextRequest } from 'next/server';
+import { after, NextResponse, type NextRequest } from 'next/server';
 
 import { INVITATION_REDEEM_REFUSED_STATUS } from '@/contracts/invitation-redeem-body';
 import { readJsonBody } from '@/lib/api/json-body';
@@ -30,6 +34,7 @@ import {
   respondToHandoverInvitation,
   type HandoverRedeemOutcome,
 } from '@/server/property-handover-invitations/handover-invitation-redeem';
+import { syncPropertyHandovers } from '@/services/property-handover/property-handover-write.service';
 import type { InvitationCoreRefusal } from '@/types/invitation-core';
 import type { PropertyHandoverInvitationKindRefusal } from '@/types/property-handover-invitation';
 
@@ -65,7 +70,12 @@ async function handler(request: NextRequest, actor: ApiActor): Promise<NextRespo
   try {
     // 🔴 §15 — ο λογαριασμός **από το Auth**, ποτέ από το token.
     const identity = await readInvitationRedeemer(actor.ctx.uid);
-    const outcome = await respondToHandoverInvitation(getAdminFirestore(), { action: parsed.data.action, token: parsed.data.token, identity });
+    const db = getAdminFirestore();
+    const outcome = await respondToHandoverInvitation(db, { action: parsed.data.action, token: parsed.data.token, identity });
+    if (outcome.kind === 'accepted') {
+      const { propertyId } = outcome.effect.after;
+      after(() => syncPropertyHandovers(db, propertyId, { cause: 'acceptance', performedBy: actor.ctx.uid }));
+    }
     return respond(outcome);
   } catch (error: unknown) {
     logger.error('Η εξαργύρωση πρόσκλησης αγοραστή δεν ολοκληρώθηκε', { uid: actor.ctx.uid, error: getErrorMessage(error) });

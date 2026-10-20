@@ -24,7 +24,10 @@ jest.mock('@/lib/telemetry', () => {
 jest.mock('@/services/entity-audit-tracked-write', () => ({ recordTrackedEntityWrite: jest.fn(async () => undefined) }));
 jest.mock('@/lib/workspace/workspace-catalog', () => ({ readWorkspaceName: jest.fn(async () => 'Κατασκευαστική Άλφα') }));
 jest.mock('@/services/conveyance/conveyance-subject.server', () => ({
-  loadConveyanceSubject: jest.fn(async () => ({ propertyName: 'Διαμέρισμα Α1' })),
+  loadConveyanceSubject: jest.fn(async (_db: unknown, _companyId: string, propertyId: string) => ({
+    propertyName: 'Διαμέρισμα Α1',
+    subject: { kind: 'property', propertyId, buildingId: null, projectId: null, appurtenances: [] },
+  })),
 }));
 jest.mock('@/server/invitations/invitation-notice', () => ({ deliverInvitationEmail: jest.fn() }));
 
@@ -214,6 +217,18 @@ describe('Β18–Β20 — ολοκλήρωση · ακύρωση · άρνηση
     expect(sent[1]?.subject).toContain('έτοιμος');
     expect(await accept(tokenOf(sent[0]))).toEqual({ kind: 'refused', reason: 'revoked' });
     expect((await accept(tokenOf(sent[1]))).kind).toBe('accepted');
+  });
+
+  it('Γ7β — 🔴 Ο12: ολοκλήρωση ΠΡΙΝ την αποδοχή ⇒ καμία αντιγραφή· η αποδοχή την κάνει οφειλόμενη και ο γραφέας την τρέχει', async () => {
+    await sync();
+    setProperty({ commercialStatus: 'sold', commercial: { owners: [{ contactId: 'cont_anna', ownershipPct: 100, role: 'buyer' }], legalPhase: 'final_signed' } });
+    await sync();
+    expect(handovers()[0]).toMatchObject({ lifecycle: 'ready', fileDeliveryState: null });
+    expect((await accept(tokenOf(sent.at(-1)))).kind).toBe('accepted');
+    expect(handovers()[0]).toMatchObject({ fileDeliveryState: 'pending' });
+    await syncPropertyHandovers(db(), PROPERTY, { cause: 'acceptance', performedBy: ANNA.uid });
+    expect(handovers()[0]).toMatchObject({ fileDeliveryState: 'delivered', fileDelivery: { state: 'delivered', delivered: 0, total: 0 } });
+    expect(dossiers()[0]?.[1]).toMatchObject({ origin: { fileDelivery: { state: 'delivered', delivered: 0, total: 0 } } });
   });
 
   it('Β19 — ακύρωση πριν την αποδοχή ⇒ ο σύνδεσμος ανακαλείται και η αποδοχή αρνείται· κανένας φάκελος', async () => {
