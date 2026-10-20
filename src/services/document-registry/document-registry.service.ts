@@ -15,6 +15,8 @@
  * 🔑 **§35**: οι αποφάσεις μόνιμης υποχρέωσης είναι **τρίτος παραγωγός** απαιτήσεων (`upkeepRequirementsOf`), δίπλα στη
  *    μεταβίβαση και την αγγελία — ο ΙΔΙΟΣ πυρήνας λέει «λείπει» / «τι σταματά». Απόφαση για ακίνητο που δεν είναι πια του
  *    γραφείου **αγνοείται** (ποτέ κενό για ξένο ακίνητο).
+ * 🔑 **§36**: η ενότητα βλέπει **κάθε** ακίνητο της εταιρείας (πηγή `company-properties`) — και το ακίνητο χωρίς κανένα
+ *    έγγραφο, που είναι ακριβώς αυτό που πιθανότατα του λείπει η ΥΔΕ. Αποσυρμένο (κάδος · αρχείο) ⇒ εκτός ενότητας.
  * 🔒 **Εμβέλεια**: το `companyId` έρχεται από το `ctx` του `withAuth`, **ποτέ** από το αίτημα. Κάθε ερώτημα το ονομάζει
  *    στατικά (CHECK 3.10/3.35)· κάθε ακίνητο ελέγχεται ότι είναι της εταιρείας πριν δώσει «τι σταματά» ή όνομα.
  * ⚠️ **Κανένας σύνθετος δείκτης**: ισότητες + `in`, μετρημένα ζωντανά (§11.3). Ταξινόμηση στη μνήμη (επείγον =
@@ -54,10 +56,16 @@ import { readOfficeOwnerProperties } from './registry-owner-properties.server';
 import { readRegistryIssuance, type RegistryIssuanceReading } from './registry-issuance.server';
 import { readRegistryOwners, type RegistryOwners, type RegistryOwnersQuestion } from './registry-owners.server';
 import { readRegistryPropertyAreas } from './registry-property-area.server';
-import { readCompanyProperties, readDeclaredCertificateProperties, type RegistryProperty } from './registry-properties.server';
+import {
+  readCompanyProperties,
+  readCompanyPropertyPortfolio,
+  readDeclaredCertificateProperties,
+  type RegistryProperty,
+} from './registry-properties.server';
 import { openCaseRequirements, readOpenCases } from './registry-requirements.server';
 import type { StoredUpkeepDeclaration } from './upkeep-declaration-schema';
 import { readUpkeepDeclarations } from './upkeep-declarations.server';
+import { isRetiredRegistryProperty, upkeepSubjectOf } from './upkeep-subject.server';
 
 const logger = createModuleLogger('document-registry.service');
 
@@ -66,6 +74,8 @@ interface RegistrySources {
   /** Αρχεία με γεγονότα **και** (ADR-915 §33) αρχεία χωρίς στοιχεία — ξένα σύνολα (`facts` υπάρχει ή όχι). */
   readonly files: readonly RegistryFile[];
   readonly declared: readonly RegistryProperty[];
+  /** §36 — όλα τα ακίνητα της εταιρείας (φραγμένα): υποκείμενα της μόνιμης υποχρέωσης, και γνωστά χωρίς δεύτερη ανάγνωση. */
+  readonly portfolio: readonly RegistryProperty[];
   readonly cases: readonly ConveyanceCase[];
   /** Ακίνητα ιδιωτών υπό θεματοφυλακή του γραφείου (Φ4δ Ε10). */
   readonly owners: readonly RegistryProperty[];
@@ -77,7 +87,7 @@ interface RegistrySources {
 }
 
 async function readSources(db: AdminFirestore, companyId: string): Promise<RegistrySources> {
-  const [files, declared, cases, owners, listings, undeclared, upkeep] = await Promise.all([
+  const [files, declared, cases, owners, listings, undeclared, upkeep, portfolio] = await Promise.all([
     readRegistryFiles(db, companyId, DOCUMENT_REGISTRY_CAPS.files),
     readDeclaredCertificateProperties(db, companyId, DOCUMENT_REGISTRY_CAPS.declared),
     readOpenCases(db, companyId, DOCUMENT_REGISTRY_CAPS.cases),
@@ -85,6 +95,7 @@ async function readSources(db: AdminFirestore, companyId: string): Promise<Regis
     readAgencyListings(db, companyId, DOCUMENT_REGISTRY_CAPS.listings),
     readUndeclaredFiles(db, companyId, DOCUMENT_REGISTRY_CAPS['undeclared-files']),
     readUpkeepDeclarations(db, companyId, DOCUMENT_REGISTRY_CAPS['upkeep-declarations']),
+    readCompanyPropertyPortfolio(db, companyId, DOCUMENT_REGISTRY_CAPS['company-properties']),
   ]);
   const cut: Record<RegistrySource, boolean> = {
     files: files.truncated, declared: declared.truncated, cases: cases.truncated,
@@ -93,13 +104,14 @@ async function readSources(db: AdminFirestore, companyId: string): Promise<Regis
     'issuance-assignments': false,
     'undeclared-files': undeclared.truncated,
     'upkeep-declarations': upkeep.truncated,
+    'company-properties': portfolio.truncated,
   };
   const truncatedSources = REGISTRY_SOURCES.filter((source) => cut[source]);
   if (truncatedSources.length > 0) {
     logger.warn('Το μητρώο λήξεων χτύπησε όριο ανάγνωσης', { data: { companyId, truncatedSources } });
   }
   return {
-    files: [...files.files, ...undeclared.files], declared: declared.properties, cases: cases.cases,
+    files: [...files.files, ...undeclared.files], declared: declared.properties, portfolio: portfolio.properties, cases: cases.cases,
     owners: owners.properties, listings: listings.listings, upkeep: upkeep.declarations, truncatedSources,
   };
 }
@@ -128,17 +140,25 @@ async function readListings(db: AdminFirestore, sources: RegistrySources, known:
   return [...sources.listings, ...more];
 }
 
-/** Δηλωμένα ακίνητα (ήδη διαβασμένα) + όσα ονομάζουν αρχεία και υποθέσεις — ένα `getAll` για τα υπόλοιπα. */
+/**
+ * Τα ακίνητα εταιρείας του μητρώου: δηλωμένα · §36 τα **ζωντανά** του χαρτοφυλακίου · όσα ονομάζουν αρχεία, υποθέσεις,
+ * αγγελίες, αποφάσεις. Ό,τι είναι ήδη διαβασμένο δεν ξαναδιαβάζεται — ένα `getAll` μόνο για όσα λείπουν (π.χ. πέρα από
+ * το όριο του χαρτοφυλακίου). Αποσυρμένο ακίνητο του χαρτοφυλακίου μπαίνει **μόνο** αν το ονομάζει κάτι (όπως πριν).
+ */
 async function readProperties(
   db: AdminFirestore,
   companyId: string,
-  declared: readonly RegistryProperty[],
+  sources: Pick<RegistrySources, 'declared' | 'portfolio'>,
   wanted: readonly string[],
 ): Promise<Map<string, RegistryProperty>> {
-  const known = new Map(declared.map((property) => [property.id, property]));
-  const missing = wanted.filter((id) => !known.has(id));
-  const fetched = await readCompanyProperties(db, companyId, missing);
-  return new Map([...known, ...fetched]);
+  const known = new Map([...sources.declared, ...sources.portfolio].map((property) => [property.id, property]));
+  const fetched = await readCompanyProperties(db, companyId, wanted.filter((id) => !known.has(id)));
+  const named = wanted.flatMap((id) => {
+    const property = known.get(id);
+    return property === undefined ? [] : [property];
+  });
+  const live = sources.portfolio.filter((property) => !isRetiredRegistryProperty(property));
+  return new Map([...sources.declared, ...live, ...named, ...fetched.values()].map((property) => [property.id, property]));
 }
 
 function fileLabelsOf(files: readonly RegistryFile[]): Record<string, RegistryFileLabel> {
@@ -164,16 +184,14 @@ function propertyLabelsOf(
 
 /**
  * §35 — οι αποφάσεις **των ακινήτων του γραφείου** (ό,τι έπαψε να είναι του γραφείου αγνοείται), οι απαιτήσεις τους, και
- * η ενότητα «Μόνιμες υποχρεώσεις» πάνω στην ΙΔΙΑ κλάση + φάση με τις ετικέτες.
+ * η ενότητα «Μόνιμες υποχρεώσεις» πάνω στα ΙΔΙΑ γεγονότα (`upkeepSubjectOf`) με την καρτέλα και την πράξη.
+ * §36 — **ζωντανά** μόνο: ακίνητο στον κάδο ή στο αρχείο δεν προτείνεται και δεν γεννά «λείπει» (ίδιο φίλτρο με τον κριτή).
  */
 function upkeepOf(sources: RegistrySources, subjects: ReadonlyMap<string, RegistryProperty>) {
-  const declarations = sources.upkeep.filter((declaration) => subjects.has(declaration.propertyId));
-  const facts = [...subjects.values()].map((p) => ({
-    propertyId: p.id,
-    propertyClass: resolvedPropertyClassOf(p.data.type),
-    phase: p.data.operationalStatus,
-  }));
-  return { requirements: upkeepRequirementsOf(declarations), items: upkeepItemsOf(facts, declarations) };
+  const live = [...subjects.values()].filter((property) => !isRetiredRegistryProperty(property));
+  const liveIds = new Set(live.map((property) => property.id));
+  const declarations = sources.upkeep.filter((declaration) => liveIds.has(declaration.propertyId));
+  return { requirements: upkeepRequirementsOf(declarations), items: upkeepItemsOf(live.map(upkeepSubjectOf), declarations) };
 }
 
 /**
@@ -210,7 +228,7 @@ function professionalSearchPropertyIds(rows: DocumentRegistry['rows']): Readonly
 export async function readDocumentRegistry(db: AdminFirestore, companyId: string, now: Date): Promise<DocumentRegistryResponse> {
   const asOf = conveyanceToday(now);
   const sources = await readSources(db, companyId);
-  const properties = await readProperties(db, companyId, sources.declared, wantedPropertyIds(sources));
+  const properties = await readProperties(db, companyId, sources, wantedPropertyIds(sources));
   // Ό,τι είναι «του γραφείου»: ακίνητο εταιρείας (κρίθηκε στο `readCompanyProperties`) ή εντολή υπό θεματοφυλακή του.
   const subjects = new Map<string, RegistryProperty>([...properties, ...sources.owners.map((owner) => [owner.id, owner] as const)]);
   const documents = registryDocumentsOf(sources.files, [...sources.declared, ...sources.owners], properties);

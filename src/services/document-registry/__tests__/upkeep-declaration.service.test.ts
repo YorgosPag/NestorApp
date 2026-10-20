@@ -177,3 +177,68 @@ describe('ο αναγνώστης των αποφάσεων', () => {
     expect((await read()).truncatedSources).toContain('upkeep-declarations');
   });
 });
+
+describe('§36 — ΚΑΘΕ ακίνητο του γραφείου, όχι μόνο όσα ξέρει το μητρώο', () => {
+  /** Ακίνητο που το μητρώο της Φ2 δεν θα έβλεπε ποτέ: κανένα ΠΕΑ, κανένα αρχείο, καμία υπόθεση, αγγελία ή απόφαση. */
+  const seedBare = (id: string, over: Record<string, unknown> = {}) => fake.seed(COLLECTIONS.PROPERTIES, id, {
+    companyId: COMPANY, name: 'Νέα μονάδα', type: 'apartment', operationalStatus: 'draft', ...over,
+  });
+  const itemOf = (registry: Awaited<ReturnType<typeof read>>, propertyId: string) =>
+    registry.upkeep.find((item) => item.propertyId === propertyId);
+
+  it('ακίνητο ΧΩΡΙΣ ΤΙΠΟΤΑ, μόλις γεννήθηκε (`draft`) ⇒ προτείνεται (φάση μη δηλωμένη), και ΔΕΝ λέει «λείπει»', async () => {
+    seedBare('prop_new');
+    const registry = await read();
+    expect(itemOf(registry, 'prop_new')).toMatchObject({ declaration: null, proposal: { verdict: 'proposed', reason: 'phase-undeclared' } });
+    expect(registry.properties.prop_new).toMatchObject({ name: 'Νέα μονάδα', scope: 'property' });
+    expect(gaps(registry).filter((row) => row.gap.propertyId === 'prop_new')).toEqual([]);
+  });
+
+  it('όλο το χαρτοφυλάκιο: οικόπεδο σιωπά, άγνωστο είδος περιμένει απόφαση', async () => {
+    seedBare('prop_plot', { type: 'plot' });
+    seedBare('prop_odd', { type: undefined });
+    const registry = await read();
+    expect(itemOf(registry, 'prop_plot')).toBeUndefined();
+    expect(itemOf(registry, 'prop_odd')).toMatchObject({ proposal: { verdict: 'undetermined', reason: 'class-unknown' } });
+  });
+
+  it.each(['deleted', 'archived'])('αποσυρμένο (`%s`) ⇒ ΚΑΜΙΑ πρόταση, ΚΑΝΕΝΑ «λείπει» — ούτε με παλιά επιβεβαίωση', async (status) => {
+    seedBare('prop_gone', { status, operationalStatus: 'ready' });
+    seedDeclaration('prop_gone');
+    const registry = await read();
+    expect(itemOf(registry, 'prop_gone')).toBeUndefined();
+    expect(gaps(registry).filter((row) => row.gap.propertyId === 'prop_gone')).toEqual([]);
+  });
+
+  it('αποσυρμένο ⇒ η πράξη αρνείται `retired` (κανένα ίχνος) — ίδιο φίλτρο με την οθόνη', async () => {
+    seedBare('prop_gone', { status: 'deleted' });
+    expect(await declare({ propertyId: 'prop_gone' })).toEqual({ ok: false, refusal: 'retired' });
+    expect(stored('prop_gone')).toBeUndefined();
+    expect(EntityAuditService.recordChange).not.toHaveBeenCalled();
+  });
+
+  it('ακίνητο εταιρείας από τη γέννησή του ⇒ αποφασίζεται, με πρόταση `phase-undeclared` στο ίχνος', async () => {
+    seedBare('prop_new');
+    expect(await declare({ propertyId: 'prop_new' })).toEqual({ ok: true, outcome: 'changed' });
+    expect(stored('prop_new')).toMatchObject({ proposalAtDecision: { verdict: 'proposed', reason: 'phase-undeclared', phase: 'draft' } });
+    expect(gaps(await read()).map((row) => row.gap.propertyId)).toContain('prop_new');
+  });
+
+  it('ακίνητο ιδιώτη υπό θεματοφυλακή του γραφείου ⇒ ο ίδιος κριτής το δέχεται· άλλου γραφείου ⇒ `absent`', async () => {
+    fake.seed(COLLECTIONS.OWNER_PROPERTIES, 'ownp_1', { authorUserId: 'user_9', authorCompanyId: COMPANY, title: 'Εντολή' });
+    fake.seed(COLLECTIONS.OWNER_PROPERTIES, 'ownp_x', { authorUserId: 'user_9', authorCompanyId: OTHER, title: 'Ξένη' });
+    expect(await declare({ propertyId: 'ownp_1' })).toEqual({ ok: true, outcome: 'changed' });
+    expect(stored('ownp_1')).toMatchObject({ scope: 'owner-property' });
+    expect(await declare({ propertyId: 'ownp_x' })).toEqual({ ok: false, refusal: 'absent' });
+  });
+
+  it('🔴 χαρτοφυλάκιο πάνω από το όριο ⇒ `company-properties` στο `truncatedSources`, και ακίνητο ΕΚΤΟΣ ορίου αποφασίζεται', async () => {
+    for (let i = 0; i <= DOCUMENT_REGISTRY_CAPS['company-properties']; i += 1) seedBare(`prop_${String(i).padStart(4, '0')}`);
+    seedBare('zz_last');
+    const registry = await read();
+    expect(registry.truncatedSources).toContain('company-properties');
+    expect(registry.properties.zz_last).toBeUndefined();
+    // Ο κριτής ΔΕΝ είναι το μητρώο: το όριο ανάγνωσης δεν κάνει κανένα ακίνητο «μη αποφασίσιμο».
+    expect(await declare({ propertyId: 'zz_last' })).toEqual({ ok: true, outcome: 'changed' });
+  });
+});

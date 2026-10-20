@@ -1,5 +1,5 @@
 /**
- * @fileoverview `PUT /api/document-registry/upkeep-declarations` — η απόφαση μόνιμης υποχρέωσης ακινήτου (ADR-915 §35).
+ * @fileoverview `GET` · `PUT /api/document-registry/upkeep-declarations` — η μόνιμη υποχρέωση ακινήτου (ADR-915 §35 · §36).
  * @related services/document-registry/upkeep-declaration.service.ts (η πράξη) · lib/document-validity/upkeep-declaration-request.ts
  *
  * PUT { propertyId, documentKind, decision: 'required' | 'not-required' | null, exemptionReason } → `{ outcome }`
@@ -7,7 +7,10 @@
  *   - εξαίρεση **πάντα** με λόγο (400 αλλιώς) · η πρόταση της στιγμής την υπολογίζει ο server, ποτέ ο πελάτης
  *   - ίδια απόφαση ξανά ⇒ `unchanged`, καμία εγγραφή, κανένα ίχνος· σύνορο ιδεμποτίας ADR-872 μέσα στο `withAuth`
  *
- * Δικαίωμα: `properties:properties:update` — η απόφαση αλλάζει **γεγονός του ακινήτου** που βλέπουν όλοι. Εμβέλεια =
+ * GET ?propertyId=… → `{ items }` (§36) — η ενότητα **ενός** ακινήτου για την καρτέλα του: ο ΙΔΙΟΣ `upkeepItemsOf` με το
+ *   μητρώο, πάνω στον ΙΔΙΟ κριτή υποκειμένου με το PUT. Δικαίωμα: όσο και το μητρώο (μόνο σύνδεση + εμβέλεια `ctx`).
+ *
+ * Δικαίωμα PUT: `properties:properties:update` — η απόφαση αλλάζει **γεγονός του ακινήτου** που βλέπουν όλοι. Εμβέλεια =
  * `ctx.companyId`· ακίνητο **άλλου** γραφείου ≡ ανύπαρκτο (404, ποτέ 403 που θα επιβεβαίωνε ότι υπάρχει).
  */
 
@@ -22,15 +25,30 @@ import { safeParseBody } from '@/lib/validation/shared-schemas';
 import {
   UPKEEP_DECLARATION_ERROR_CODES,
   upkeepDeclarationBody,
+  upkeepPropertyQuery,
   type UpkeepDeclarationRefusal,
 } from '@/lib/document-validity/upkeep-declaration-request';
 import { declareRegistryUpkeep } from '@/services/document-registry/upkeep-declaration.service';
+import { readPropertyUpkeep } from '@/services/document-registry/upkeep-subject.server';
 
 /** Άρνηση → HTTP, κάθε λόγος ρητά (χωρίς `default`)· ο κωδικός από τον ΕΝΑ πίνακα που διαβάζει και η οθόνη. */
 const REFUSAL_STATUS: Readonly<Record<UpkeepDeclarationRefusal, number>> = {
   absent: 404,
+  retired: 409,
   'not-standing': 422,
 };
+
+function refused(refusal: UpkeepDeclarationRefusal, message: string): ApiError {
+  return new ApiError(REFUSAL_STATUS[refusal], message, UPKEEP_DECLARATION_ERROR_CODES[refusal]);
+}
+
+async function propertyUpkeepHandler(request: NextRequest, ctx: AuthContext) {
+  const parsed = safeParseBody(upkeepPropertyQuery, { propertyId: request.nextUrl.searchParams.get('propertyId') ?? '' });
+  if (parsed.error) return parsed.error;
+  const reading = await readPropertyUpkeep(getAdminFirestore(), ctx.companyId, parsed.data.propertyId);
+  if (reading.kind !== 'ready') throw refused(reading.kind, 'Property upkeep unavailable');
+  return apiSuccess({ items: reading.items });
+}
 
 async function upkeepDeclarationHandler(request: NextRequest, ctx: AuthContext) {
   const parsed = safeParseBody(upkeepDeclarationBody, await request.json());
@@ -42,9 +60,10 @@ async function upkeepDeclarationHandler(request: NextRequest, ctx: AuthContext) 
     new Date(),
   );
   if (!result.ok) {
-    throw new ApiError(REFUSAL_STATUS[result.refusal], 'Upkeep declaration refused', UPKEEP_DECLARATION_ERROR_CODES[result.refusal]);
+    throw refused(result.refusal, 'Upkeep declaration refused');
   }
   return apiSuccess({ outcome: result.outcome });
 }
 
+export const GET = withStandardRateLimit(withAuth(propertyUpkeepHandler));
 export const PUT = withStandardRateLimit(withAuth(upkeepDeclarationHandler, { permissions: 'properties:properties:update' }));

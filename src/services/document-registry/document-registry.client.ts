@@ -16,6 +16,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
 import type { FactsDeclarationBody } from '@/lib/document-validity/facts-declaration';
 import type { UpkeepDeclarationBody } from '@/lib/document-validity/upkeep-declaration-request';
+import type { UpkeepItem } from '@/lib/document-validity/property-upkeep';
 import type { IssuanceAssignmentBody, IssuanceSendBody } from '@/lib/document-validity/issuance-request';
 import type { IssuanceDelivery } from '@/lib/document-validity/issuance-delivery';
 import type { IssuancePreview } from '@/types/issuance-invitation';
@@ -89,6 +90,26 @@ export async function saveFactsDeclaration(body: FactsDeclarationBody): Promise<
 
 /** ADR-915 §35 — η απόφαση μόνιμης υποχρέωσης ακινήτου: ΕΝΑ σημείο για τη διαδρομή. */
 export const UPKEEP_DECLARATIONS_URL = `${DOCUMENT_REGISTRY_URL}/upkeep-declarations`;
+
+/**
+ * §36 — τι έφερε η ανάγνωση της καρτέλας ακινήτου. `unavailable` = ονομασμένη άρνηση (ακίνητο ξένο · ανύπαρκτο ·
+ * αποσυρμένο): η ενότητα **σιωπά**, όπως και η καρτέλα δεν προσφέρει πράξεις σε αποσυρμένο. `failed` = βλάβη.
+ */
+export type PropertyUpkeepLoad =
+  | { readonly kind: 'ready'; readonly items: readonly UpkeepItem[] }
+  | { readonly kind: 'unavailable' }
+  | { readonly kind: 'failed' };
+
+/** **Φέρε** την ενότητα «Μόνιμες υποχρεώσεις» ενός ακινήτου — η ΙΔΙΑ όψη με το μητρώο, για ένα ακίνητο. */
+export async function fetchPropertyUpkeep(propertyId: string): Promise<PropertyUpkeepLoad> {
+  try {
+    const url = `${UPKEEP_DECLARATIONS_URL}?propertyId=${encodeURIComponent(propertyId)}`;
+    return { kind: 'ready', items: (await apiClient.get<{ readonly items: readonly UpkeepItem[] }>(url)).items };
+  } catch (cause) {
+    logActionFailure('Οι μόνιμες υποχρεώσεις του ακινήτου δεν φορτώθηκαν', cause, { propertyId });
+    return isClientRefusal(cause) ? { kind: 'unavailable' } : { kind: 'failed' };
+  }
+}
 
 /** **Επιβεβαίωσε**, **εξαίρεσε** (με λόγο) ή, με `decision: null`, **αναίρεσε** τη μόνιμη υποχρέωση ενός ακινήτου. */
 export async function saveUpkeepDeclaration(body: UpkeepDeclarationBody): Promise<ObligorDesignationSave> {
