@@ -12,7 +12,7 @@
  * σύνδεση, όχι για ό,τι ήδη ελέγχει η ομάδα Ε.
  */
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 
 import { validOwnerProperty } from '@/lib/owner-property/__tests__/owner-property-fixtures';
@@ -59,6 +59,15 @@ jest.mock('@/components/owner-property/OwnerPropertyCard', () => ({ OwnerPropert
 jest.mock('@/components/owner-property/OwnerPropertyHistory', () => ({ OwnerPropertyHistory: () => null }));
 jest.mock('@/components/owner-property/OwnerPropertyStatsPanel', () => ({ OwnerPropertyStatsPanel: () => null }));
 jest.mock('@/components/owner-property/PrivateMarketingOwnerSection', () => ({ PrivateMarketingOwnerSection: () => null }));
+// 📋 ADR-915 §37 (Β2) — η ενότητα μόνιμων υποχρεώσεων έχει δικές της άγκυρες (`property-upkeep-section.test.tsx`)·
+//    εδώ κρίνεται μόνο ότι η σελίδα του ιδιώτη τη δείχνει για ΤΟ δικό του ακίνητο.
+const upkeepProps = jest.fn();
+jest.mock('@/components/document-registry/PropertyUpkeepSection', () => ({
+  PropertyUpkeepSection: (props: Record<string, unknown>) => {
+    upkeepProps(props);
+    return null;
+  },
+}));
 
 /** Στέλεχος φόρμας: «κλείνω» = καλώ ό,τι μου έδωσε η σελίδα (ή τίποτα, αν δεν μου έδωσε). */
 jest.mock('@/components/owner-property/OwnerPropertyFormContent', () => ({
@@ -91,5 +100,11 @@ describe('🔴 Σ — η σελίδα του ακινήτου κλείνει τ�
 
     expect(screen.getByRole('button', { name: EDIT })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'form-stub-close' })).toBeNull();
+  });
+
+  it('§37 — «Μόνιμες υποχρεώσεις»: ο ιδιώτης χωρίς μεσίτη τις βλέπει για ΤΟ ακίνητο της σελίδας', async () => {
+    render(<OwnerPropertyDetailContent ownerPropertyId={validOwnerProperty().id} />);
+    await waitFor(() => expect(upkeepProps).toHaveBeenCalled());
+    expect(upkeepProps).toHaveBeenLastCalledWith({ propertyId: validOwnerProperty().id });
   });
 });

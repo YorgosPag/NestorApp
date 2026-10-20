@@ -116,6 +116,22 @@ describe('§37 — ο ιδιώτης χωρίς μεσίτη: ο ΕΝΑΣ κρι
     expect(await mine('ownp_other')).toEqual({ kind: 'absent' });
   });
 
+  it('🔴 Μ5 — έγγραφο στη ΔΙΚΗ του διεύθυνση αλλά με ΞΕΝΟ βιβλίο (πλαστό · χαλασμένο) ⇒ αόρατο', async () => {
+    const id = upkeepDeclarationIdOf({ userId: 'user_owner' }, 'ownp_me', YDE);
+    fake.seed(COLLECTIONS.PROPERTY_UPKEEP_DECLARATIONS, id, {
+      id, companyId: COMPANY, propertyId: 'ownp_me', scope: 'owner-property', documentKind: YDE, decision: 'required',
+      exemptionReason: null, proposalAtDecision: { verdict: 'proposed', reason: 'phase-undeclared', propertyClass: 'residential', phase: null },
+      declaredByUid: 'user_9', declaredAt: '2026-10-20T09:00:00.000Z',
+    });
+    // Η διεύθυνση ΔΕΝ είναι απόδειξη ιδιοκτησίας: κρίνει το βιβλίο ΜΕΣΑ στο έγγραφο (`isOwnedByCustody`).
+    expect(await mine()).toMatchObject({ kind: 'ready', items: [{ declaration: null }] });
+  });
+
+  it('🔴 Μ6 — ακίνητο εταιρείας με `companyId: null` ⇒ ο ιδιώτης ΔΕΝ το «κατέχει» (null ≠ εταιρεία)', async () => {
+    seedProperty('prop_orphan', { companyId: null });
+    expect(await mine('prop_orphan')).toEqual({ kind: 'absent' });
+  });
+
   it('🔒 η ταυτότητα του ΓΡΑΦΕΙΟΥ είναι η ίδια με το §35 (καμία μετανάστευση)· ο ιδιώτης δεν συμπίπτει ποτέ', () => {
     expect(upkeepDeclarationIdOf({ companyId: 'comp_a' }, 'p', YDE))
       .toBe(generateDeterministicPropertyUpkeepDeclarationId(`comp_a:p:${YDE}`));
