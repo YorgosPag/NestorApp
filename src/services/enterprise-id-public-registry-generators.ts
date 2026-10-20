@@ -154,6 +154,15 @@ export abstract class PublicRegistryIdGenerators extends BimEntityIdGenerators {
   generatePropertyHandoverInvitationId(): string { return this.generateId(P.PROPERTY_HANDOVER_INVITATION).id; }
 
   /**
+   * ADR-916 Φ-Γ1 — **γραμμή του καθολικού παράδοσης** (`phdl_*`), ντετερμινιστική από `(παράδοση, αρχείο-πηγή)`: η
+   * εκτέλεση που συνεχίζει μετά από διακοπή βρίσκει την **ίδια** γραμμή ⇒ ποτέ δύο αποδείξεις για ένα αρχείο.
+   * Ο σπόρος συντίθεται σε **ένα** σημείο: `handoverDeliveryIdOf` (`lib/property-handover/property-handover-id.ts`).
+   */
+  generateDeterministicPropertyHandoverDeliveryId(seed: string): string {
+    return this.mintDeterministicV4Id(P.PROPERTY_HANDOVER_DELIVERY, seed);
+  }
+
+  /**
    * ADR-916 Φ-Β — ο **φάκελος του αγοραστή** (`pdos_*`), ντετερμινιστικός από την παράδοση που τον γεννά: δύο
    * ταυτόχρονες αποδοχές (ή επανάληψη δικτύου) βρίσκουν το **ίδιο** έγγραφο ⇒ ποτέ δεύτερος φάκελος για το ίδιο σπίτι.
    * Ίδιο πρόθεμα με τον φάκελο που γεννά ο ιδιώτης: είναι **η ίδια** οντότητα (ADR-866), όχι δεύτερο είδος.

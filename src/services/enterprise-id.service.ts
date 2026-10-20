@@ -73,6 +73,7 @@ export {
   generateDeterministicTaxIdentityClaimId,
   generateDeterministicPropertyHandoverId,
   generatePropertyHandoverInvitationId,
+  generateDeterministicPropertyHandoverDeliveryId,
   generateDeterministicPropertyDossierId,
   generateDeterministicPublicUnitId,
   generateFirstContactId,

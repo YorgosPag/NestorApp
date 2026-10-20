@@ -11,7 +11,9 @@
  */
 
 import {
+  generateDeterministicFileId,
   generateDeterministicPropertyDossierId,
+  generateDeterministicPropertyHandoverDeliveryId,
   generateDeterministicPropertyHandoverId,
 } from '@/services/enterprise-id.service';
 
@@ -19,11 +21,35 @@ export function propertyHandoverIdOf(companyId: string, propertyId: string, reci
   return generateDeterministicPropertyHandoverId(`${companyId}:${propertyId}:${recipientContactId}`);
 }
 
+/** Ένα παρακολούθημα της πώλησης (θέση στάθμευσης · αποθήκη) — ο **δικός** του φάκελος (Δ4). */
+export interface HandoverAppurtenanceKey {
+  readonly entityType: string;
+  readonly entityId: string;
+}
+
 /**
- * **Ο φάκελος του αγοραστή που γεννά μια παράδοση** (ADR-916 Φ-Β) — ένας ανά παράδοση. Η παράδοση **ήδη** κρατά
- * μισθωτή, ακίνητο και αγοραστή στην ταυτότητά της, άρα αρκεί ως σπόρος· το πρόθεμα `handover:` χωρίζει τον χώρο
- * σπόρων από κάθε μελλοντική πηγή φακέλου (Φ4: παράδοση ιδιώτη → ιδιώτη).
+ * **Ο φάκελος του αγοραστή που γεννά μια παράδοση** (ADR-916 Φ-Β) — ένας για το ακίνητο και, από τη Φ-Γ1, **ένας ανά
+ * παρακολούθημα** (Δ4: χωριστός ΚΑΕΚ, μεταπωλείται χωριστά). Η παράδοση **ήδη** κρατά μισθωτή, ακίνητο και αγοραστή στην
+ * ταυτότητά της, άρα αρκεί ως σπόρος· το πρόθεμα `handover:` χωρίζει τον χώρο σπόρων από κάθε μελλοντική πηγή φακέλου.
+ * ⚠️ Ο σπόρος του **κύριου** φακέλου μένει αυτολεξεί ίδιος — φάκελοι που ήδη υπάρχουν δεν αλλάζουν ταυτότητα.
  */
-export function handoverDossierIdOf(handoverId: string): string {
-  return generateDeterministicPropertyDossierId(`handover:${handoverId}`);
+export function handoverDossierIdOf(handoverId: string, appurtenance: HandoverAppurtenanceKey | null = null): string {
+  const seed = appurtenance === null
+    ? `handover:${handoverId}`
+    : `handover:${handoverId}:${appurtenance.entityType}:${appurtenance.entityId}`;
+  return generateDeterministicPropertyDossierId(seed);
+}
+
+/**
+ * **Το αντίγραφο παράδοσης ενός αρχείου** (ADR-916 Φ-Γ1) — ένα ανά `(παράδοση, αρχείο-πηγή)`. Η επανάληψη μετά από
+ * διακοπή καταλήγει στο **ίδιο** έγγραφο και στο **ίδιο** κλειδί storage ⇒ ποτέ δεύτερο αντίγραφο του ίδιου αρχείου.
+ * Νέα αναθεώρηση της πηγής = **νέο** αρχείο-πηγή ⇒ νέο αντίγραφο· το παλιό μένει ως ιστορικό (ISO 19650).
+ */
+export function handoverCopyFileIdOf(handoverId: string, sourceFileId: string): string {
+  return generateDeterministicFileId(`handover-copy:${handoverId}:${sourceFileId}`);
+}
+
+/** **Η γραμμή του καθολικού** για το ίδιο ζεύγος — η απόδειξη του γραφείου ότι το αντίγραφο παραδόθηκε. */
+export function handoverDeliveryIdOf(handoverId: string, sourceFileId: string): string {
+  return generateDeterministicPropertyHandoverDeliveryId(`${handoverId}:${sourceFileId}`);
 }
