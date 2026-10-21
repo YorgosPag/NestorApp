@@ -22,4 +22,13 @@ export abstract class ProjectCostIdGenerators extends DocumentRegistryIdGenerato
   generateDeterministicProjectBudgetLineId(seed: string): string {
     return this.mintDeterministicV4Id(P.PROJECT_BUDGET_LINE, seed);
   }
+
+  /**
+   * ADR-917 Φ4.0 — **ΜΙΑ** εγγραφή Ε-Ε ανά επιβεβαιωμένο παραστατικό εξόδου (η πηγή του «Εκτελεσμένου»):
+   * σπόρος `(εταιρεία, παραστατικό)` ⇒ δεύτερο «Επιβεβαίωση» (διπλό κλικ, επανάληψη δικτύου) βρίσκει το **ίδιο**
+   * έγγραφο και δεν γεννά δεύτερη εγγραφή. Πρόθεμα `je` — είναι κανονική εγγραφή ημερολογίου.
+   */
+  generateDeterministicExpenseJournalEntryId(seed: string): string {
+    return this.mintDeterministicV4Id(P.JOURNAL_ENTRY, `expense:${seed}`);
+  }
 }

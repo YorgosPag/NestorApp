@@ -833,6 +833,8 @@ export const API_ROUTES = {
     LIST: '/api/procurement',
     BY_ID: (poId: string) => `/api/procurement/${poId}` as const,
     ACTION: (poId: string, action: string) => `/api/procurement/${poId}?action=${action}` as const,
+    /** ADR-267 Phase C — rank the POs an expense document may bill against (ADR-917 Φ4 wires it to the UI) */
+    INVOICE_MATCH: '/api/procurement/invoice-match',
     SHARE: (poId: string) => `/api/procurement/${poId}/share` as const,
     EMAIL: (poId: string) => `/api/procurement/${poId}/email` as const,
     PDF: (poId: string) => `/api/procurement/${poId}/pdf` as const,
@@ -1106,6 +1108,8 @@ export const API_ROUTES = {
     DOCUMENTS: {
       LIST: '/api/accounting/documents',
       BY_ID: (id: string) => `/api/accounting/documents/${id}` as const,
+      /** ADR-917 Φ4 — the document's cost allocation (project + cost code) and its proposal from a PO */
+      COST_ALLOCATIONS: (id: string) => `/api/accounting/documents/${encodeURIComponent(id)}/cost-allocations` as const,
     },
     SETUP: {
       BASE: '/api/accounting/setup',

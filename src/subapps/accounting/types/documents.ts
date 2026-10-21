@@ -90,6 +90,34 @@ export interface ExtractedDocumentData {
 }
 
 // ============================================================================
+// COST ALLOCATION — Κατανομή σε έργο + κωδικό κόστους (ADR-917 Φ4 · §4 Γ1)
+// ============================================================================
+
+/**
+ * Από πού ήρθε μια γραμμή κατανομής: πρόταση από τις γραμμές της PO (αναλογικά, ντετερμινιστικά) ή
+ * επιλογή του ανθρώπου. Η προέλευση μένει **ορατή** — μια πρόταση που ο άνθρωπος άλλαξε γίνεται `manual`.
+ */
+export type ExpenseCostAllocationOrigin = 'po_proposal' | 'manual';
+
+/**
+ * Μία γραμμή κατανομής παραστατικού εξόδου. **Καθαρό** ποσό (Ζ5), σε ευρώ με δύο δεκαδικά.
+ *
+ * Ορθογώνια στη φορολογική κατηγορία (`confirmedCategory`, §4 Α2): το ίδιο τιμολόγιο έχει **και** τα δύο,
+ * όπως λογαριασμό ΓΛ + cost code στα ERP. Γραφέας: ΜΟΝΟ `expense-cost-allocations.server.ts`.
+ */
+export interface ExpenseCostAllocation {
+  /** Έργο της ίδιας εταιρείας */
+  projectId: string;
+  /** Κωδικός της ταξινομίας κόστους (`config/cost-taxonomy.ts`) */
+  costCode: string;
+  /** Καθαρό ποσό > 0 */
+  netAmount: number;
+  /** PO του ίδιου έργου έναντι της οποίας τιμολογείται· `null` ⇒ άμεσο έξοδο (χωρίς PO) */
+  purchaseOrderId: string | null;
+  origin: ExpenseCostAllocationOrigin;
+}
+
+// ============================================================================
 // RECEIVED EXPENSE DOCUMENT — Πλήρης Εγγραφή
 // ============================================================================
 
@@ -145,6 +173,14 @@ export interface ReceivedExpenseDocument {
   suggestedPOId: string | null;
   /** Confidence score of PO match (0-100) */
   poMatchConfidence: number | null;
+
+  // — Cost Allocation (ADR-917 Φ4) — απόν σε παλιά έγγραφα ⇒ «χωρίς κατανομή», ποτέ 0 € —
+  /** Γραμμές κατανομής σε έργο + κωδικό */
+  costAllocations?: ExpenseCostAllocation[];
+  /** Παράγωγο των `costAllocations` (μοναδικά, ταξινομημένα) — υπάρχει ΜΟΝΟ για το ερώτημα `array-contains` */
+  allocatedProjectIds?: string[];
+  /** Αυξάνεται σε κάθε αλλαγή κατανομής ⇒ compare-and-set στον γραφέα (κανένα χαμένο update) */
+  allocationRevision?: number;
 
   // — Metadata —
   /** Σημειώσεις χρήστη */

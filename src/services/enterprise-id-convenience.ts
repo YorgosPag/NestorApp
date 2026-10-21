@@ -158,6 +158,8 @@ export const generateDeterministicPropertyUpkeepDeclarationId = (seed: string) =
   enterpriseIdService.generateDeterministicPropertyUpkeepDeclarationId(seed);
 export const generateDeterministicProjectBudgetLineId = (seed: string) =>
   enterpriseIdService.generateDeterministicProjectBudgetLineId(seed);
+export const generateDeterministicExpenseJournalEntryId = (seed: string) =>
+  enterpriseIdService.generateDeterministicExpenseJournalEntryId(seed);
 export const generateDocumentIssuanceInvitationId = () => enterpriseIdService.generateDocumentIssuanceInvitationId();
 export const generatePipelineQueueId = () => enterpriseIdService.generatePipelineQueueId();
 export const generateVoiceCommandId = () => enterpriseIdService.generateVoiceCommandId();

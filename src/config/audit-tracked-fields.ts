@@ -446,6 +446,17 @@ const PROJECT_COLLECTION_DEFS: Record<string, CollectionDef> = {
     trackSubFields: ['amount', 'note'],
     subFieldLabelScope: 'budgetLine',
   },
+  // ADR-917 Φ4 — οι κατανομές παραστατικών εξόδου ζουν στο `accounting_expense_documents`· η επίδρασή τους
+  // στο κόστος ανήκει στο **έργο** ⇒ ιστορικό εδώ, μία γραμμή ανά (παραστατικό, κωδικός, PO).
+  // Γραφέας: `expense-cost-allocations.server.ts` (ο ΕΝΑΣ). Αφαίρεση γραμμής ⇒ `removed`.
+  expenseAllocations: {
+    kind: 'collection',
+    label: 'expenseAllocations',
+    keyBy: 'key',
+    labelFields: ['document', 'costCode', 'purchaseOrder'],
+    trackSubFields: ['netAmount'],
+    subFieldLabelScope: 'expenseAllocation',
+  },
 };
 
 const CONTACT_COLLECTION_DEFS: Record<string, CollectionDef> = {
