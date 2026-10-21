@@ -13,7 +13,7 @@
  * @enterprise SPEC-242C — Portfolio Dashboard & Debt Maturity Wall
  */
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { API_ROUTES } from '@/config/domain-constants';
 import {
   DollarSign,
@@ -40,6 +40,7 @@ import { DebtMaturityWall } from './DebtMaturityWall';
 import type { DebtMaturityFormData } from './DebtMaturityWall';
 import { BudgetVarianceChart } from './BudgetVarianceChart';
 import { FinancialQueryChat } from './FinancialQueryChat';
+import { useProjectCostLedger } from '@/hooks/useProjectCostLedger';
 import type {
   PortfolioSummary,
   ProjectFinancialSummary,
@@ -93,7 +94,8 @@ const fmtEuro = (val: number) => formatCurrencyWhole(val) ?? '';
 
 export function PortfolioDashboard() {
   const colors = useSemanticColors();
-  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
+  // `procurement` — cost-code + PO status labels of the budget card (ADR-917 Φ2)
+  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans', 'procurement']);
 
   // State — ADR-300: Seed from module-level cache → zero flash on re-navigation
   const cachedPortfolio = portfolioCache.get();
@@ -102,6 +104,8 @@ export function PortfolioDashboard() {
   const [debtEntries, setDebtEntries] = useState<DebtMaturityEntry[]>(debtMaturityCache.get() ?? []);
   const [budgetAnalysis, setBudgetAnalysis] = useState<BudgetVarianceAnalysis | null>(null);
   const [selectedBudgetProject, setSelectedBudgetProject] = useState<string | null>(null);
+  // ADR-917 Φ2: the chart reads the cost ledger from source documents; `budgetAnalysis` feeds only the retiring editor.
+  const { ledger: costLedger, error: costLedgerError } = useProjectCostLedger(selectedBudgetProject);
   const [loading, setLoading] = useState(!portfolioCache.hasLoaded());
   const [error, setError] = useState<string | null>(null);
 
@@ -136,11 +140,17 @@ export function PortfolioDashboard() {
     }
   }, []);
 
+  // Only the answer for the project still selected may land: a late answer for the
+  // previous project would seed its values into this one's editor (and its Save).
+  const requestedBudgetProject = useRef<string | null>(null);
+
   const fetchBudgetVariance = useCallback(async (projectId: string) => {
+    requestedBudgetProject.current = projectId;
     try {
-      const res = await fetch(`${API_ROUTES.FINANCIAL_INTELLIGENCE.BUDGET_VARIANCE}?projectId=${projectId}`);
-      if (!res.ok) return;
+      const res = await fetch(`${API_ROUTES.FINANCIAL_INTELLIGENCE.BUDGET_VARIANCE}?projectId=${encodeURIComponent(projectId)}`);
+      if (!res.ok || requestedBudgetProject.current !== projectId) return;
       const json = await res.json() as BudgetApiResponse;
+      if (requestedBudgetProject.current !== projectId) return;
       setBudgetAnalysis(json.data.analysis);
     } catch {
       // Non-critical
@@ -185,6 +195,7 @@ export function PortfolioDashboard() {
   }, [selectedBudgetProject, fetchBudgetVariance]);
 
   const handleBudgetProjectSelect = useCallback((projectId: string) => {
+    setBudgetAnalysis(null);
     setSelectedBudgetProject(projectId);
   }, []);
 
@@ -313,11 +324,13 @@ export function PortfolioDashboard() {
 
       {/* Budget Variance Chart */}
       <BudgetVarianceChart
-        analysis={budgetAnalysis}
+        ledger={costLedger}
+        ledgerError={Boolean(costLedgerError)}
+        legacyAnalysis={budgetAnalysis}
         projects={projects}
         selectedProjectId={selectedBudgetProject}
         onProjectSelect={handleBudgetProjectSelect}
-        onSave={handleSaveBudget}
+        onLegacySave={handleSaveBudget}
         t={t}
       />
 

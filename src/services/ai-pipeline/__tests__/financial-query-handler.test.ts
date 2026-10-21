@@ -15,7 +15,7 @@ jest.mock('../tools/financial-query-tools', () => ({
   getPortfolioSummaryForQuery: jest.fn(() => Promise.resolve({ portfolio: { activeProjects: 2 }, projects: [{ projectId: 'p1' }, { projectId: 'p2' }] })),
   getProjectFinancialDetails: jest.fn(() => Promise.resolve({ projectId: 'p1', projectName: 'Test' })),
   getDebtMaturitySchedule: jest.fn(() => Promise.resolve([{ loanId: 'loan_1' }])),
-  getBudgetVarianceForQuery: jest.fn(() => Promise.resolve({ projectId: 'p1', categories: [] })),
+  getBudgetVarianceForQuery: jest.fn(() => Promise.resolve({ projectId: 'p1', isEmpty: false, rows: [{ costCode: 'OIK-2' }] })),
   calculateScenarioNPVForQuery: jest.fn(() => 42000),
   compareHedgingStrategiesForQuery: jest.fn(() => ({ strategies: [{ strategy: 'swap' }], cheapestIndex: 0 })),
 }));
@@ -62,6 +62,27 @@ describe('FinancialQueryHandler', () => {
     const result = await handler.execute('get_budget_variance', { projectId: 'p1' }, makeCtx());
     expect(result.success).toBe(true);
     expect(getBudgetVarianceForQuery).toHaveBeenCalledWith('comp_test', 'p1');
+    expect(result.count).toBe(1);
+  });
+
+  it('get_budget_variance says «nothing recorded» for an empty ledger instead of reporting zeros (ADR-917 Δ2)', async () => {
+    const { getBudgetVarianceForQuery } = jest.requireMock('../tools/financial-query-tools') as {
+      getBudgetVarianceForQuery: jest.Mock;
+    };
+    getBudgetVarianceForQuery.mockResolvedValueOnce({ projectId: 'p1', isEmpty: true, rows: [] });
+    const result = await handler.execute('get_budget_variance', { projectId: 'p1' }, makeCtx());
+    expect(result.count).toBe(0);
+    expect(result.warning).toMatch(/no BOQ or purchase orders/);
+  });
+
+  it('get_budget_variance reports a foreign/missing project as not found', async () => {
+    const { getBudgetVarianceForQuery } = jest.requireMock('../tools/financial-query-tools') as {
+      getBudgetVarianceForQuery: jest.Mock;
+    };
+    getBudgetVarianceForQuery.mockResolvedValueOnce(null);
+    const result = await handler.execute('get_budget_variance', { projectId: 'p1' }, makeCtx());
+    expect(result.data).toBeNull();
+    expect(result.warning).toMatch(/not found/);
   });
 
   it('get_project_financial_details requires projectId', async () => {

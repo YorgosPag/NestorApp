@@ -1,41 +1,30 @@
 'use client';
 
 /**
- * BudgetVarianceChart — variance of actual against budget, per cost category.
+ * BudgetVarianceChart — budget vs projected cost per cost code, READ from the
+ * project's source documents (ADR-917 Φ2): budget = BOQ, cost = purchase orders.
  *
- * Renders through the ADR-710 chart card shell. Everything this file used to own
- * about *being a card* — the Card/CardContent frame, the header, the sized figure,
- * the recharts responsive wrapper, the empty state, the row editor chrome, the
- * saving flag — now comes from `@/components/ui/chart-card`. What remains here is
- * what is genuinely about budget variance: the categories, the waterfall points,
- * and the fields of one budget row.
+ * Nothing on the chart is typed by hand. A code without BOQ shows NO budget bar
+ * (the shell renders `null` as «missing», never as 0 €) and the summary says how
+ * complete the picture is. Clicking a bar lists the documents behind it.
+ *
+ * The retiring hand-typed form lives collapsed in `LegacyBudgetVarianceEditor`
+ * until ADR-917 Φ5.
  *
  * @enterprise SPEC-242C — Portfolio Dashboard
  * @enterprise ADR-710 — Chart card shell
+ * @see ADR-917 §4 Δ2/Δ3
  */
 
-import { useCallback, useMemo } from 'react';
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  ReferenceLine,
-  XAxis,
-  YAxis,
-} from 'recharts';
+import { useCallback, useMemo, useState } from 'react';
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import {
   CHART_BAR_RADIUS,
   ChartCard,
-  ChartCardEditor,
-  chartPolarityColor,
   chartPolarityTone,
-  useEntrySubmit,
-  useRepeatingRows,
+  seriesColorVar,
   type ChartSeries,
 } from '@/components/ui/chart-card';
-import { Input } from '@/components/ui/input';
-import { NumericField } from '@/components/ui/numeric-field';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -47,63 +36,42 @@ import {
 import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type {
   BudgetVarianceAnalysis,
-  BudgetVarianceEntry,
   ProjectFinancialSummary,
 } from '@/types/interest-calculator';
+import type { CostLedgerViewRow, ProjectCostLedgerView } from '@/services/project-cost/cost-ledger-view';
+import { CostLedgerDrillDown } from './CostLedgerDrillDown';
+import { LegacyBudgetVarianceEditor, type BudgetVarianceSaveData } from './LegacyBudgetVarianceEditor';
 import '@/lib/design-system';
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
 interface BudgetVarianceChartProps {
-  analysis: BudgetVarianceAnalysis | null;
+  ledger: ProjectCostLedgerView | null;
+  ledgerError: boolean;
+  /** Retiring hand-typed values — feed only the collapsed legacy editor */
+  legacyAnalysis: BudgetVarianceAnalysis | null;
   projects: ProjectFinancialSummary[];
   selectedProjectId: string | null;
   onProjectSelect: (projectId: string) => void;
-  onSave: (data: BudgetVarianceSaveData) => Promise<void>;
-  t: (key: string, options?: Record<string, unknown>) => string;
+  onLegacySave: (data: BudgetVarianceSaveData) => Promise<void>;
+  t: Translate;
 }
 
-interface BudgetVarianceSaveData {
-  projectId: string;
-  projectName: string;
-  categories: CategoryInput[];
+interface LedgerPoint {
+  costCode: string;
+  label: string;
+  budget: number | null;
+  projected: number;
 }
 
-interface CategoryInput {
-  category: string;
-  categoryKey: string;
-  budgetAmount: number;
-  actualAmount: number;
+/** What recharts hands a chart-level click: the datum under the pointer. */
+interface ChartClickState {
+  activePayload?: ReadonlyArray<{ payload?: LedgerPoint }>;
 }
-
-interface WaterfallPoint {
-  name: string;
-  variance: number;
-  budget: number;
-  actual: number;
-}
-
-// =============================================================================
-// CONSTANTS
-// =============================================================================
-
-/**
- * Cost breakdown of a Greek construction project. Keys only — the labels are
- * translations, so a locale change does not rewrite stored `categoryKey` values.
- */
-const DEFAULT_CATEGORY_KEYS = [
-  'land',
-  'permits',
-  'foundation',
-  'structure',
-  'mechanical',
-  'finishes',
-  'marketing',
-  'legal',
-  'contingency',
-] as const;
 
 /** Spending above plan is the bad direction — see `chartPolarityTone`. */
 const VARIANCE_POLARITY = 'lower-is-better' as const;
@@ -112,27 +80,21 @@ const VARIANCE_POLARITY = 'lower-is-better' as const;
 // DERIVATIONS
 // =============================================================================
 
-function toCategoryInput(entry: BudgetVarianceEntry): CategoryInput {
-  return {
-    category: entry.category,
-    categoryKey: entry.categoryKey,
-    budgetAmount: entry.budgetAmount,
-    actualAmount: entry.actualAmount,
-  };
+function costCodeLabel(costCode: string, t: Translate): string {
+  return t(`procurement:categories.${costCode}`);
 }
 
-function buildWaterfallData(categories: BudgetVarianceEntry[]): WaterfallPoint[] {
-  return categories.map((category) => ({
-    name: category.category,
-    variance: category.variance,
-    budget: category.budgetAmount,
-    actual: category.actualAmount,
+function toPoints(rows: readonly CostLedgerViewRow[], t: Translate): LedgerPoint[] {
+  return rows.map((row) => ({
+    costCode: row.costCode,
+    label: costCodeLabel(row.costCode, t),
+    budget: row.budget,
+    projected: row.projected,
   }));
 }
 
-/** Stored keys are slugs of the typed label, so a renamed category stays traceable. */
-function toCategoryKey(label: string): string {
-  return label.toLowerCase().replace(/\s+/g, '_');
+function formatSigned(value: number, format: (value: number) => string): string {
+  return `${value > 0 ? '+' : ''}${format(value)}`;
 }
 
 // =============================================================================
@@ -140,65 +102,60 @@ function toCategoryKey(label: string): string {
 // =============================================================================
 
 export function BudgetVarianceChart({
-  analysis,
+  ledger,
+  ledgerError,
+  legacyAnalysis,
   projects,
   selectedProjectId,
   onProjectSelect,
-  onSave,
+  onLegacySave,
   t,
 }: BudgetVarianceChartProps) {
   const formatEuro = useCallback((value: number) => formatCurrencyWhole(value) ?? '', []);
+  const [drillCode, setDrillCode] = useState<string | null>(null);
 
-  const waterfallData = useMemo(
-    () => (analysis?.categories ? buildWaterfallData(analysis.categories) : []),
-    [analysis],
-  );
+  const points = useMemo(() => (ledger ? toPoints(ledger.rows, t) : []), [ledger, t]);
+  const drillRow = ledger?.rows.find((row) => row.costCode === drillCode) ?? null;
 
-  const series = useMemo<ChartSeries<WaterfallPoint>[]>(
-    () => [{ key: 'variance', label: t('variance.totalVariance') }],
+  const series = useMemo<ChartSeries<LedgerPoint>[]>(
+    () => [
+      { key: 'budget', label: t('variance.source.budgetSeries') },
+      { key: 'projected', label: t('variance.source.projectedSeries') },
+    ],
     [t],
   );
 
-  const rows = useRepeatingRows<CategoryInput>({
-    // Rebuild only when a different project is loaded — never mid-typing.
-    seedKey: selectedProjectId ?? '',
-    seed: () =>
-      analysis?.categories?.length
-        ? analysis.categories.map(toCategoryInput)
-        : DEFAULT_CATEGORY_KEYS.map((key) => ({
-            category: t(`variance.defaultCategories.${key}`),
-            categoryKey: key,
-            budgetAmount: 0,
-            actualAmount: 0,
-          })),
-    createRow: () => ({ category: '', categoryKey: '', budgetAmount: 0, actualAmount: 0 }),
-  });
+  const drillInto = useCallback((state: ChartClickState | null) => {
+    const point = state?.activePayload?.[0]?.payload;
+    if (point) setDrillCode(point.costCode);
+  }, []);
 
-  const { submitting, submit } = useEntrySubmit<CategoryInput[]>({
-    isValid: () => Boolean(selectedProjectId),
-    onSubmit: async (categories) => {
-      const project = projects.find((entry) => entry.projectId === selectedProjectId);
-      if (!selectedProjectId || !project) return;
-      await onSave({
-        projectId: selectedProjectId,
-        projectName: project.projectName,
-        categories: categories.filter((category) => category.category.trim()),
-      });
+  const selectProject = useCallback(
+    (projectId: string) => {
+      setDrillCode(null);
+      onProjectSelect(projectId);
     },
-  });
+    [onProjectSelect],
+  );
+
+  const emptyMessage = !selectedProjectId
+    ? t('variance.source.selectProjectPrompt')
+    : ledgerError
+      ? t('variance.source.loadError')
+      : t('variance.source.noSources');
 
   return (
     <ChartCard
       series={series}
-      data={waterfallData}
-      categoryKey="name"
+      data={points}
+      categoryKey="label"
       categoryLabel={t('variance.category')}
       formatValue={formatEuro}
     >
       <ChartCard.Header title={t('variance.title')}>
         <nav className="flex items-center gap-2">
           <Label className="text-sm">{t('variance.project')}</Label>
-          <Select value={selectedProjectId ?? ''} onValueChange={onProjectSelect}>
+          <Select value={selectedProjectId ?? ''} onValueChange={selectProject}>
             <SelectTrigger className="w-48">
               <SelectValue placeholder={t('variance.selectProject')} />
             </SelectTrigger>
@@ -213,129 +170,89 @@ export function BudgetVarianceChart({
         </nav>
       </ChartCard.Header>
 
-      <ChartCard.Figure
-        caption={t('variance.caption')}
-        emptyMessage={t('variance.emptyState')}
-      >
-        <BarChart data={waterfallData}>
+      <ChartCard.Figure caption={t('variance.source.caption')} emptyMessage={emptyMessage}>
+        <BarChart data={points} onClick={drillInto} className="cursor-pointer">
           <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-          <XAxis dataKey="name" tickLine={false} axisLine={false} />
+          <XAxis dataKey="label" tickLine={false} axisLine={false} />
           <YAxis tickFormatter={formatEuro} width={100} tickLine={false} axisLine={false} />
           <ChartCard.Tooltip />
-          <ReferenceLine y={0} stroke="hsl(var(--border))" />
-          <Bar dataKey="variance" radius={CHART_BAR_RADIUS}>
-            {waterfallData.map((point) => (
-              <Cell
-                key={point.name}
-                fill={chartPolarityColor(point.variance, VARIANCE_POLARITY)}
-              />
-            ))}
-          </Bar>
+          {series.map((entry) => (
+            <Bar
+              key={entry.key}
+              dataKey={entry.key}
+              fill={seriesColorVar(entry.key)}
+              radius={CHART_BAR_RADIUS}
+            />
+          ))}
         </BarChart>
       </ChartCard.Figure>
 
-      {analysis ? (
-        <ChartCard.Summary>
-          <ChartCard.SummaryItem
-            label={t('variance.totalBudget')}
-            value={formatEuro(analysis.totalBudget)}
-          />
-          <ChartCard.SummaryItem
-            label={t('variance.totalActual')}
-            value={formatEuro(analysis.totalActual)}
-          />
-          <ChartCard.SummaryItem
-            label={t('variance.totalVariance')}
-            value={`${analysis.totalVariance > 0 ? '+' : ''}${formatEuro(analysis.totalVariance)} (${analysis.totalVariancePercent}%)`}
-            tone={chartPolarityTone(analysis.totalVariance, VARIANCE_POLARITY)}
-          />
-        </ChartCard.Summary>
+      {ledger && !ledger.isEmpty ? <LedgerSummary ledger={ledger} format={formatEuro} t={t} /> : null}
+
+      {drillRow ? (
+        <CostLedgerDrillDown
+          row={drillRow}
+          label={costCodeLabel(drillRow.costCode, t)}
+          onClose={() => setDrillCode(null)}
+          t={t}
+        />
+      ) : ledger && !ledger.isEmpty ? (
+        <p className="text-sm text-muted-foreground">{t('variance.drillDown.hint')}</p>
       ) : null}
 
       {selectedProjectId ? (
         <ChartCard.Editor>
-          <CategoryRows rows={rows} t={t} />
-          <ChartCardEditor.Actions>
-            <ChartCardEditor.Submit
-              label={t('variance.save')}
-              pending={submitting}
-              onClick={() => void submit([...rows.rows])}
-            />
-          </ChartCardEditor.Actions>
+          <LegacyBudgetVarianceEditor
+            analysis={legacyAnalysis}
+            projects={projects}
+            selectedProjectId={selectedProjectId}
+            onSave={onLegacySave}
+            t={t}
+          />
         </ChartCard.Editor>
-      ) : (
-        <p className="py-4 text-center text-sm text-muted-foreground">
-          {t('variance.selectProjectPrompt')}
-        </p>
-      )}
+      ) : null}
     </ChartCard>
   );
 }
 
 // =============================================================================
-// ROW EDITOR — the fields of one budget row, and nothing else
+// SUMMARY — totals compare like with like; completeness is always stated
 // =============================================================================
 
-interface CategoryRowsProps {
-  rows: ReturnType<typeof useRepeatingRows<CategoryInput>>;
-  t: (key: string, options?: Record<string, unknown>) => string;
+interface LedgerSummaryProps {
+  ledger: ProjectCostLedgerView;
+  format: (value: number) => string;
+  t: Translate;
 }
 
-function CategoryRows({ rows, t }: CategoryRowsProps) {
-  const { rows: categories, updateRow, addRow, removeRow } = rows;
-
-  const renameCategory = useCallback(
-    (index: number, label: string) =>
-      updateRow(index, { category: label, categoryKey: toCategoryKey(label) }),
-    [updateRow],
-  );
+function LedgerSummary({ ledger, format, t }: LedgerSummaryProps) {
+  const { totals, completeness } = ledger;
+  const coverage = completeness.coveragePct === null
+    ? t('variance.source.noBoq')
+    : `${completeness.coveragePct}%`;
 
   return (
-    <ChartCardEditor.Rows>
-      <ChartCardEditor.RowHeader>
-        <span className="col-span-4">{t('variance.category')}</span>
-        <span className="col-span-3">{t('variance.budget')}</span>
-        <span className="col-span-3">{t('variance.actual')}</span>
-        <span className="col-span-2" />
-      </ChartCardEditor.RowHeader>
-
-      {categories.map((category, index) => (
-        <ChartCardEditor.Row key={`${category.categoryKey}-${index}`}>
-          {/* The column headers above name these cells — hence aria-label, not a
-              placeholder repeated on every row. */}
-          <Input
-            className="col-span-4"
-            value={category.category}
-            onChange={(event) => renameCategory(index, event.target.value)}
-            aria-label={t('variance.category')}
-          />
-          <NumericField
-            className="col-span-3"
-            value={category.budgetAmount}
-            onValueChange={(budgetAmount) => updateRow(index, { budgetAmount })}
-            blankValue={0}
-            min={0}
-            step={0.01}
-            aria-label={t('variance.budget')}
-          />
-          <NumericField
-            className="col-span-3"
-            value={category.actualAmount}
-            onValueChange={(actualAmount) => updateRow(index, { actualAmount })}
-            blankValue={0}
-            min={0}
-            step={0.01}
-            aria-label={t('variance.actual')}
-          />
-          <ChartCardEditor.Remove
-            className="col-span-2"
-            label={t('variance.removeRow')}
-            onClick={() => removeRow(index)}
-          />
-        </ChartCardEditor.Row>
-      ))}
-
-      <ChartCardEditor.AddRow label={t('variance.addRow')} onClick={addRow} />
-    </ChartCardEditor.Rows>
+    <ChartCard.Summary>
+      <ChartCard.SummaryItem
+        label={t('variance.totalBudget')}
+        value={totals.budget === null ? t('variance.source.noBudget') : format(totals.budget)}
+      />
+      <ChartCard.SummaryItem label={t('variance.source.projected')} value={format(totals.projected)} />
+      {totals.variance !== null ? (
+        <ChartCard.SummaryItem
+          label={t('variance.totalVariance')}
+          value={formatSigned(totals.variance, format)}
+          tone={chartPolarityTone(totals.variance, VARIANCE_POLARITY)}
+        />
+      ) : null}
+      {totals.unbudgetedProjected > 0 ? (
+        <ChartCard.SummaryItem
+          label={t('variance.source.unbudgeted')}
+          value={`${format(totals.unbudgetedProjected)} · ${t('variance.source.codesWithoutBudget', { count: completeness.codesWithoutBudget })}`}
+          tone="bad"
+        />
+      ) : null}
+      <ChartCard.SummaryItem label={t('variance.source.coverage')} value={coverage} />
+    </ChartCard.Summary>
   );
 }

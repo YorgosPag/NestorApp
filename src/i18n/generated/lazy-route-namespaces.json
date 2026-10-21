@@ -913,7 +913,8 @@
     "navigation-entities",
     "payments",
     "payments-cost-calc",
-    "payments-loans"
+    "payments-loans",
+    "procurement"
   ],
   "Navigation": [
     "common",

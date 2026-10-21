@@ -237,6 +237,9 @@ Rules: (1) a metric without a sample is `null` → `noData`, **never** `0`; (2) 
 > στο `settings/budget_variance_{projectId}` (`api/financial-intelligence/budget-variance`). Η «Phase 2» (πηγές
 > αντί για πληκτρολόγηση) σχεδιάζεται στο ADR-917. **Φ0 ✅**: έλεγχος ενοικίου στη διαδρομή + στο εργαλείο AI
 > `get_budget_variance` (πριν: οποιοσδήποτε συνδεδεμένος χρήστης διάβαζε/έγραφε κάθε έργο με γνωστό ID).
+> **Φ2 ✅** (2026-10-20): η κάρτα **διαβάζει** `GET /api/projects/[projectId]/cost-ledger` (BOQ + παραγγελίες, μόνο
+> ανάγνωση, drill-down, πληρότητα)· το εργαλείο AI διαβάζει τον ίδιο πυρήνα. Η χειροκίνητη φόρμα μένει **κλειστή** και
+> **δεν** τροφοδοτεί το γράφημα μέχρι την απόσυρση (ADR-917 Φ5).
 
 ```
 Αρχείο: src/services/financial-intelligence/variance-analyzer.ts

@@ -5,6 +5,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import type { PurchaseOrder } from '@/types/procurement';
 import { PO_COMMITTED_STATUSES, PO_DELIVERED_STATUSES } from '@/types/procurement';
 import { normalizeBOQItem } from '@/services/measurements/boq-document-normalize';
+import { fetchCompanyPurchaseOrders } from './project-purchase-orders';
 import { computeCostLedger, hasBudgetOrCommitment, type LedgerBoqItem } from '@/services/project-cost/cost-ledger';
 import { athensDateRangeToUtc, getPreviousPeriod } from '@/lib/date/quarter-helpers';
 import { compareByLocale } from '@/lib/intl-utils';
@@ -202,10 +203,12 @@ export async function computeSpendAnalytics(
     const prev = getPreviousPeriod(filters.from, filters.to);
     const { start: prevStart, end: prevEnd } = athensDateRangeToUtc(prev.from, prev.to);
 
-    const [rawPos, rawPrevPos, boqSnap] = await Promise.all([
+    const [rawPos, rawPrevPos, boqSnap, lifetimePos] = await Promise.all([
       fetchRawPOs(db, companyId, start, end),
       fetchRawPOs(db, companyId, prevStart, prevEnd),
       db.collection(COLLECTIONS.BOQ_ITEMS).where('companyId', '==', companyId).get(),
+      // ADR-917 Δ3/Δ4: the budget is whole-life, so its comparison reads whole-life orders.
+      fetchCompanyPurchaseOrders(db, companyId),
     ]);
 
     const pos = applyPoFilters(rawPos, filters);
@@ -254,7 +257,7 @@ export async function computeSpendAnalytics(
         byVendor,
         byProject: computeByProject(pos),
         monthlyTrend: computeMonthlyTrend(pos),
-        budgetVsActual: computeBudgetVsActual(boqItems, pos, filters.categoryCode),
+        budgetVsActual: computeBudgetVsActual(boqItems, applyPoFilters(lifetimePos, filters), filters.categoryCode),
       },
       comparison: {
         previousFrom: prev.from,

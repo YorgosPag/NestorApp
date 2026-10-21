@@ -89,6 +89,56 @@ export type AttachmentPurpose = typeof ATTACHMENT_PURPOSES[number];
 export const ACTIVITY_OPERATIONS = ['add', 'list', 'remove', 'set_primary'] as const;
 /** ADR-267 Phase C: Purchase order operations (SSoT — tool def enum + handler validation) */
 export const PO_TOOL_OPERATIONS = ['create', 'list', 'get_status'] as const;
+
+// ============================================================================
+// SHARED PARAMETER SCHEMAS — one shape per repeated argument group (CHECK 3.28)
+// ============================================================================
+
+/** One Firestore filter condition (`firestore_query` · `firestore_count`); only the value hint differs. */
+function firestoreFilterItemSchema(valueDescription: string): Record<string, unknown> {
+  return {
+    type: 'object',
+    properties: {
+      field: { type: 'string', description: 'Firestore field name' },
+      operator: {
+        type: 'string',
+        description: 'Comparison operator',
+        enum: ['==', '!=', '<', '<=', '>', '>=', 'in', 'array-contains'],
+      },
+      value: { type: 'string', description: valueDescription },
+    },
+    required: ['field', 'operator', 'value'],
+    additionalProperties: false,
+  };
+}
+
+/** Contact name + text — the arguments of every "send a social DM to a contact" tool. */
+function contactMessageParameters(): Record<string, unknown> {
+  return {
+    type: 'object',
+    properties: {
+      contactName: {
+        type: 'string',
+        description: 'Contact name to search for',
+      },
+      text: {
+        type: 'string',
+        description: 'Message text to send',
+      },
+    },
+    required: ['contactName', 'text'],
+    additionalProperties: false,
+  };
+}
+
+/** Org-structure tools: the tenant's own structure (L1) or a CompanyContact's embedded one (L2). */
+function orgScopeProperties(): Record<string, unknown> {
+  return {
+    scope: { type: 'string', enum: ['tenant', 'contact'] },
+    contactId: { type: ['string', 'null'], description: 'Required when scope=contact' },
+  };
+}
+
 // ============================================================================
 // AGENTIC TOOL DEFINITIONS (Chat Completions API format)
 // ============================================================================
@@ -110,20 +160,7 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
           filters: {
             type: 'array',
             description: 'Array of filter conditions.',
-            items: {
-              type: 'object',
-              properties: {
-                field: { type: 'string', description: 'Firestore field name' },
-                operator: {
-                  type: 'string',
-                  description: 'Comparison operator',
-                  enum: ['==', '!=', '<', '<=', '>', '>=', 'in', 'array-contains'],
-                },
-                value: { type: 'string', description: 'Value to compare (numbers as strings, e.g. "42")' },
-              },
-              required: ['field', 'operator', 'value'],
-              additionalProperties: false,
-            },
+            items: firestoreFilterItemSchema('Value to compare (numbers as strings, e.g. "42")'),
           },
           orderBy: {
             type: ['string', 'null'],
@@ -195,20 +232,7 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
           filters: {
             type: 'array',
             description: 'Array of filter conditions (same format as firestore_query)',
-            items: {
-              type: 'object',
-              properties: {
-                field: { type: 'string', description: 'Firestore field name' },
-                operator: {
-                  type: 'string',
-                  description: 'Comparison operator',
-                  enum: ['==', '!=', '<', '<=', '>', '>=', 'in', 'array-contains'],
-                },
-                value: { type: 'string', description: 'Value to compare' },
-              },
-              required: ['field', 'operator', 'value'],
-              additionalProperties: false,
-            },
+            items: firestoreFilterItemSchema('Value to compare'),
           },
         },
         required: ['collection', 'filters'],
@@ -317,21 +341,7 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
     function: {
       name: 'send_messenger_message',
       description: 'Send a Facebook Messenger message to a contact. Searches for the contact by name, finds their Messenger PSID from external_identities, and sends the message. The contact must have previously messaged the Facebook Page.',
-      parameters: {
-        type: 'object',
-        properties: {
-          contactName: {
-            type: 'string',
-            description: 'Contact name to search for',
-          },
-          text: {
-            type: 'string',
-            description: 'Message text to send',
-          },
-        },
-        required: ['contactName', 'text'],
-        additionalProperties: false,
-      },
+      parameters: contactMessageParameters(),
       strict: true,
     },
   },
@@ -342,21 +352,7 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
     function: {
       name: 'send_instagram_message',
       description: 'Send an Instagram Direct Message to a contact. Searches for the contact by name, finds their Instagram IGSID from external_identities, and sends the message. The contact must have previously messaged the Instagram Business account.',
-      parameters: {
-        type: 'object',
-        properties: {
-          contactName: {
-            type: 'string',
-            description: 'Contact name to search for',
-          },
-          text: {
-            type: 'string',
-            description: 'Message text to send',
-          },
-        },
-        required: ['contactName', 'text'],
-        additionalProperties: false,
-      },
+      parameters: contactMessageParameters(),
       strict: true,
     },
   },
@@ -1217,8 +1213,7 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
       parameters: {
         type: 'object',
         properties: {
-          scope: { type: 'string', enum: ['tenant', 'contact'] },
-          contactId: { type: ['string', 'null'], description: 'Required when scope=contact' },
+          ...orgScopeProperties(),
           departmentCode: {
             type: ['string', 'null'],
             description: 'Canonical code (one of: accounting, engineering, architecture_studies, construction, sales, legal, hr, it, procurement, operations, management, customer_service). Null if using label.',
@@ -1248,8 +1243,7 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
       parameters: {
         type: 'object',
         properties: {
-          scope: { type: 'string', enum: ['tenant', 'contact'] },
-          contactId: { type: ['string', 'null'], description: 'Required when scope=contact' },
+          ...orgScopeProperties(),
           query: {
             type: 'string',
             description: 'Search term — case-insensitive substring match against displayName / positionLabel / role.',
@@ -1277,8 +1271,7 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
       parameters: {
         type: 'object',
         properties: {
-          scope: { type: 'string', enum: ['tenant', 'contact'] },
-          contactId: { type: ['string', 'null'], description: 'Required when scope=contact' },
+          ...orgScopeProperties(),
           memberId: { type: 'string', description: 'OrgMember ID (omem_xxx) to start traversal from.' },
           direction: {
             type: 'string',
@@ -1350,7 +1343,7 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
     type: 'function' as const,
     function: {
       name: 'get_budget_variance',
-      description: 'Returns budget vs actual variance analysis for a specific project. Admin only.',
+      description: 'Returns budget vs actual for a specific project, per cost code (ATOE), computed from its source documents: budget = bills of quantities (BOQ), cost = purchase orders (pending / committed / delivered, net of VAT). budget: null means the code has NO BOQ (unknown budget), never zero; completeness.coveragePct tells how much of the BOQ is ordered. Admin only.',
       parameters: {
         type: 'object',
         properties: {
@@ -1428,8 +1421,7 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
       parameters: {
         type: 'object',
         properties: {
-          scope: { type: 'string', enum: ['tenant', 'contact'] },
-          contactId: { type: ['string', 'null'], description: 'Required when scope=contact' },
+          ...orgScopeProperties(),
           event: {
             type: ['string', 'null'],
             description: 'Tenant routing event code (e.g. "reservation.created", "sale.deposit_invoice", "professional.assigned"). Required when scope=tenant.',

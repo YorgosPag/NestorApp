@@ -1,8 +1,8 @@
 import 'server-only';
 
 /**
- * All live purchase orders of ONE project — the read shared by the project-scoped
- * aggregators (basic stats, BOQ coverage / cost ledger).
+ * Live purchase orders WITHOUT a date window — the reads behind every inception-to-date
+ * figure (project KPIs, cost ledger, analytics budget-vs-actual, ADR-917 Δ4).
  *
  * ⚠️ Not `procurement-repository.listPurchaseOrders`: that one pages (`limit 100`),
  * which would silently truncate a sum. Aggregates need every order.
@@ -24,6 +24,23 @@ export async function fetchProjectPurchaseOrders(
     .where('companyId', '==', companyId)
     .where('isDeleted', '==', false)
     .where('projectId', '==', projectId)
+    .get();
+  return snap.docs.map(d => d.data() as PurchaseOrder);
+}
+
+/**
+ * All live purchase orders of the company — for budget-vs-actual, which compares a
+ * whole-life budget and therefore must not see only the orders of a date window
+ * (ADR-917 §2 Δ3). Equality filters only ⇒ no composite index.
+ */
+export async function fetchCompanyPurchaseOrders(
+  db: FirebaseFirestore.Firestore,
+  companyId: string,
+): Promise<PurchaseOrder[]> {
+  const snap = await db
+    .collection(COLLECTIONS.PURCHASE_ORDERS)
+    .where('companyId', '==', companyId)
+    .where('isDeleted', '==', false)
     .get();
   return snap.docs.map(d => d.data() as PurchaseOrder);
 }

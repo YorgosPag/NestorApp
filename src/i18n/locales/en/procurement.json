@@ -236,17 +236,22 @@
   },
   "categories": {
     "OIK-1": "Earthworks",
-    "OIK-2": "Concrete",
+    "OIK-2": "Concrete Works",
     "OIK-3": "Masonry",
     "OIK-4": "Plastering",
-    "OIK-5": "Marble",
-    "OIK-6": "Carpentry",
-    "OIK-7": "Metalwork",
-    "OIK-8": "Plumbing",
+    "OIK-5": "Flooring",
+    "OIK-6": "Doors & Windows",
+    "OIK-7": "Painting",
+    "OIK-8": "Plumbing & HVAC",
     "OIK-9": "Electrical",
-    "OIK-10": "Painting",
-    "OIK-11": "Mechanical",
-    "OIK-12": "Other"
+    "OIK-10": "Insulation",
+    "OIK-11": "Baseboards & Sills",
+    "OIK-12": "Metalwork",
+    "OIK-13": "Elevators & Lifts",
+    "OIK-14": "Swimming Pools",
+    "OIK-15": "Photovoltaics",
+    "OIK-16": "Joinery & Kitchens",
+    "OTHER": "No cost code"
   },
   "supplierMetrics": {
     "title": "Supplier Performance",
@@ -378,7 +383,7 @@
         "categoryLabel": "Month"
       },
       "budgetVsActual": {
-        "title": "Budget vs Committed vs Delivered per Category",
+        "title": "Budget vs Committed vs Delivered per Category (project to date)",
         "ariaLabel": "Comparison of budget, committed and delivered spend per ATOE category",
         "empty": "No BOQ or spend data available for comparison",
         "budget": "Budget",

@@ -253,6 +253,32 @@
     "caption": "Actual against budget per category. A positive value is an overrun.",
     "emptyState": "Enter budget and actual amounts to render the chart.",
     "removeRow": "Delete category",
+    "source": {
+      "caption": "Budget from bills of quantities (BOQ) and projected cost from purchase orders, per cost code. A code without a budget bar has no BOQ — it does not mean zero.",
+      "budgetSeries": "Budget (BOQ)",
+      "projectedSeries": "Projected (purchase orders)",
+      "projected": "Projected cost",
+      "unbudgeted": "Cost without a budget",
+      "noBudget": "No BOQ",
+      "noSources": "This project has no bills of quantities or purchase orders yet.",
+      "selectProjectPrompt": "Select a project to see its budget and cost from source documents.",
+      "loadError": "Could not load cost data.",
+      "coverage": "BOQ coverage by purchase orders",
+      "noBoq": "No BOQ",
+      "codesWithoutBudget": "{count, plural, one {# code with cost but no budget} other {# codes with cost but no budget}}"
+    },
+    "drillDown": {
+      "hint": "Click a bar to see which documents it comes from.",
+      "title": "Sources — {code}",
+      "boqItems": "BOQ lines",
+      "purchaseOrders": "Purchase orders",
+      "none": "None",
+      "close": "Close"
+    },
+    "legacy": {
+      "trigger": "Old manual values (to be retired)",
+      "notice": "These values no longer feed the chart; they are kept until moved into the project's budget lines."
+    },
     "defaultCategories": {
       "land": "Land Acquisition",
       "permits": "Permits & Fees",

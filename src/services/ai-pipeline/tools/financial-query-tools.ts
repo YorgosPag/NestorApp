@@ -22,11 +22,12 @@ import { aggregatePortfolio } from '@/services/financial-intelligence/portfolio-
 import { compareHedgingStrategies } from '@/lib/hedging-engine';
 import { calculateNPV } from '@/lib/npv-engine';
 import { nowISO } from '@/lib/date-local';
+import { loadProjectCostLedger } from '@/services/project-cost/project-cost-ledger.server';
+import { toCostLedgerView, type ProjectCostLedgerView } from '@/services/project-cost/cost-ledger-view';
 import type {
   PortfolioSummary,
   ProjectFinancialSummary,
   DebtMaturityEntry,
-  BudgetVarianceAnalysis,
   HedgingInput,
   HedgingComparisonResult,
   CashFlowEntry,
@@ -91,24 +92,22 @@ export async function getDebtMaturitySchedule(companyId: string): Promise<DebtMa
 }
 
 /**
- * Returns budget vs actual variance analysis for a specific project.
- * Stored as a settings document: budget_variance_{projectId}.
- * ADR-917 Φ0: the doc id carries no tenant — a project outside `companyId` reads as absent.
+ * Budget vs actual of ONE project, from its source documents (ADR-917 Φ2):
+ * budget = BOQ, cost = purchase orders — the same ledger the dashboard card reads.
+ * `budget: null` on a row means «no BOQ under this code», never 0 €.
+ * ADR-917 Φ0: a project outside `companyId` reads as absent.
  */
 export async function getBudgetVarianceForQuery(
   companyId: string,
   projectId: string
-): Promise<BudgetVarianceAnalysis | null> {
+): Promise<ProjectCostLedgerView | null> {
   if (!isAddressableDocId(projectId)) return null;
   const db = getAdminFirestore();
   const projectSnap = await db.collection(COLLECTIONS.PROJECTS).doc(projectId).get();
   if (!isPayloadOwnedByCompany(projectSnap.data(), companyId)) return null;
-  const docId = `budget_variance_${projectId}`;
-  const snap = await db.collection(COLLECTIONS.SETTINGS).doc(docId).get();
-  if (!snap.exists) return null;
-  const data = snap.data();
-  if (!data) return null;
-  return data as BudgetVarianceAnalysis;
+  const ledger = await loadProjectCostLedger(db, companyId, projectId);
+  // Figures only — the per-document lists would flood the model's context.
+  return toCostLedgerView(projectId, ledger, { includeSources: false });
 }
 
 /**

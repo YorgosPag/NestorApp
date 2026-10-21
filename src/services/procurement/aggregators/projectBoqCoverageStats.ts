@@ -20,10 +20,8 @@ import 'server-only';
  */
 
 import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
-import { fetchProjectPurchaseOrders } from './project-purchase-orders';
-import { normalizeBOQItem } from '@/services/measurements/boq-document-normalize';
-import { computeCostLedger, hasBudgetOrCommitment } from '@/services/project-cost/cost-ledger';
+import { hasBudgetOrCommitment } from '@/services/project-cost/cost-ledger';
+import { loadProjectCostLedger } from '@/services/project-cost/project-cost-ledger.server';
 
 // ============================================================================
 // TYPES
@@ -58,18 +56,8 @@ export async function computeBoqCoverageStats(
   };
 
   return safeFirestoreOperation(async (db) => {
-    const [boqSnap, purchaseOrders] = await Promise.all([
-      db
-        .collection(COLLECTIONS.BOQ_ITEMS)
-        .where('companyId', '==', companyId)
-        .where('projectId', '==', projectId)
-        .get(),
-      fetchProjectPurchaseOrders(db, companyId, projectId),
-    ]);
-
-    // ADR-917 Δ1: one arithmetic (cost-engine + PO status SSoT) — no local copy.
-    const boqItems = boqSnap.docs.map(d => normalizeBOQItem(d.id, d.data()));
-    const ledger = computeCostLedger(boqItems, purchaseOrders);
+    // ADR-917 Δ1/Δ3: one read + one arithmetic, shared with the cost-ledger route and the AI tool.
+    const ledger = await loadProjectCostLedger(db, companyId, projectId);
 
     const budgetVsCommitted: BudgetVsCommittedEntry[] = ledger.rows
       .filter(hasBudgetOrCommitment)

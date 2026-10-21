@@ -24,11 +24,8 @@ import { usePOSupplierContacts } from '@/hooks/procurement';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import type { SpendAnalyticsFilters } from '@/services/procurement/aggregators/spendAnalyticsAggregator';
 import { getCurrentQuarterRange } from '@/lib/date/quarter-helpers';
+import { ATOE_MASTER_CATEGORIES } from '@/config/boq-categories';
 
-const ATOE_CODES = [
-  'OIK-1', 'OIK-2', 'OIK-3', 'OIK-4', 'OIK-5', 'OIK-6',
-  'OIK-7', 'OIK-8', 'OIK-9', 'OIK-10', 'OIK-11', 'OIK-12',
-] as const;
 
 const STATUS_VALUES = [
   'draft', 'approved', 'ordered', 'partially_delivered',
@@ -150,7 +147,7 @@ function FilterFields({ filters, onChange }: AnalyticsFiltersBarProps) {
     [suppliers],
   );
   const categoryOptions = useMemo<MultiComboboxOption[]>(
-    () => ATOE_CODES.map((c) => ({ value: c, label: t(`categories.${c}`) })),
+    () => ATOE_MASTER_CATEGORIES.map(({ code }) => ({ value: code, label: t(`categories.${code}`) })),
     [t],
   );
   const statusOptions = useMemo<MultiComboboxOption[]>(

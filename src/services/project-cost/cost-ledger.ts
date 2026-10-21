@@ -3,12 +3,13 @@
  *
  * Pure: BOQ lines + purchase orders → one row per cost code. Every surface that
  * compares budget with commitments (procurement analytics, project overview KPIs,
- * and — from ADR-917 Φ2 — the Financial Intelligence card) delegates here.
+ * the Financial Intelligence card, the AI tool) delegates here.
  *
  * - Budget per BOQ line comes ONLY from `cost-engine.computeItemCost` (ADR-175).
  * - PO buckets come ONLY from the status sets in `types/procurement`.
  * - `boqItemCount === 0` means the budget has NO source, not «zero cost»
  *   (ADR-917 §4 Δ2 · SPEC-242C §3.1) — consumers must not read it as 0 €.
+ * - Every row carries the documents behind its numbers (`sources`, ADR-917 Φ2 drill-down).
  *
  * @module services/project-cost/cost-ledger
  * @see ADR-917
@@ -27,8 +28,28 @@ import { compareByLocale } from '@/lib/intl-utils';
 /** Bucket for lines that carry no cost code */
 export const UNCATEGORIZED_COST_CODE = 'OTHER';
 
-export type LedgerBoqItem = BOQCostInput & Pick<BOQItem, 'id' | 'categoryCode'>;
-export type LedgerPurchaseOrder = Pick<PurchaseOrder, 'status' | 'items'>;
+export type LedgerBoqItem = BOQCostInput & Pick<BOQItem, 'id' | 'categoryCode' | 'title'>;
+export type LedgerPurchaseOrder = Pick<PurchaseOrder, 'id' | 'poNumber' | 'status' | 'items'>;
+
+/** One BOQ line behind a row's budget */
+export interface LedgerBoqSource {
+  id: string;
+  title: string;
+  amount: number;
+}
+
+/** One purchase order behind a row's money — its lines of THIS code summed */
+export interface LedgerPurchaseOrderSource {
+  id: string;
+  poNumber: string;
+  status: PurchaseOrder['status'];
+  amount: number;
+}
+
+export interface CostLedgerSources {
+  boqItems: LedgerBoqSource[];
+  purchaseOrders: LedgerPurchaseOrderSource[];
+}
 
 export interface CostLedgerRow {
   categoryCode: string;
@@ -42,6 +63,8 @@ export interface CostLedgerRow {
   pending: number;
   committed: number;
   delivered: number;
+  /** The documents behind every number of the row — a bar always answers «from where?» */
+  sources: CostLedgerSources;
 }
 
 export interface CostLedger {
@@ -59,7 +82,16 @@ function codeOf(raw: string | null | undefined): string {
 }
 
 function emptyRow(categoryCode: string): CostLedgerRow {
-  return { categoryCode, budget: 0, boqItemCount: 0, coveredBoqItemCount: 0, pending: 0, committed: 0, delivered: 0 };
+  return {
+    categoryCode,
+    budget: 0,
+    boqItemCount: 0,
+    coveredBoqItemCount: 0,
+    pending: 0,
+    committed: 0,
+    delivered: 0,
+    sources: { boqItems: [], purchaseOrders: [] },
+  };
 }
 
 function rowFor(rows: Map<string, CostLedgerRow>, code: string): CostLedgerRow {
@@ -80,11 +112,23 @@ function accumulateBudget(
     const code = codeOf(item.categoryCode);
     if (!accepts(code)) continue;
     const row = rowFor(rows, code);
-    row.budget += computeItemCost(item).totalCost;
+    const amount = computeItemCost(item).totalCost;
+    row.budget += amount;
     row.boqItemCount += 1;
+    row.sources.boqItems.push({ id: item.id, title: item.title, amount });
     codeByBoqId.set(item.id, code);
   }
   return codeByBoqId;
+}
+
+/** Several lines of one order under one code are ONE source, not one per line. */
+function addPurchaseOrderSource(row: CostLedgerRow, po: LedgerPurchaseOrder, amount: number): void {
+  const existing = row.sources.purchaseOrders.find(source => source.id === po.id);
+  if (existing) {
+    existing.amount += amount;
+    return;
+  }
+  row.sources.purchaseOrders.push({ id: po.id, poNumber: po.poNumber, status: po.status, amount });
 }
 
 function accumulatePurchaseOrders(
@@ -107,6 +151,7 @@ function accumulatePurchaseOrders(
       if (committed) row.committed += amount;
       if (delivered) row.delivered += amount;
       if (committed && line.boqItemId) coveredBoqIds.add(line.boqItemId);
+      addPurchaseOrderSource(row, po, amount);
     }
   }
   return coveredBoqIds;
@@ -146,7 +191,7 @@ export function computeCostLedger(
   };
 }
 
-/** Rows a budget-vs-commitment chart shows: a budget source or money committed (pending-only codes wait for Φ2). */
+/** Rows a budget-vs-commitment chart shows: a budget source or money committed. */
 export function hasBudgetOrCommitment(row: CostLedgerRow): boolean {
   return row.boqItemCount > 0 || row.committed > 0;
 }

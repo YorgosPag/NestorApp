@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | 🟡 **ΣΕ ΕΞΕΛΙΞΗ** — έγκριση Giorgio 2026-10-20 («συνέχισε»). **Φ0 ✅** έλεγχος ενοικίου *(uncommitted)* · **Φ1 ✅** πυρήνας `cost-ledger` + καθαρισμός Δ1/Δ2 *(uncommitted)* · ⏳ Φ2–Φ6 · ❓ ανοιχτά §8 Ε1–Ε6 (μπλοκάρουν Φ3+) |
+| **Status** | 🟡 **ΣΕ ΕΞΕΛΙΞΗ** — έγκριση Giorgio 2026-10-20 («συνέχισε»). **Φ0 ✅** έλεγχος ενοικίου *(uncommitted)* · **Φ1 ✅** πυρήνας `cost-ledger` + καθαρισμός Δ1/Δ2 *(uncommitted)* · **Φ2 ✅** η κάρτα + το AI διαβάζουν από πηγές, Δ3 *(uncommitted)* · ⏳ Φ3–Φ6 · ✅ §8 Ε1–Ε6 αποφασίστηκαν (§4 Ζ) |
 | **Date** | 2026-10-20 |
 | **Category** | Finance / Procurement / Measurements (BOQ) / Accounting |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
@@ -153,6 +153,10 @@
 - **Δ3 — Αναγνώστες**: (α) νέο `GET /api/projects/[projectId]/cost-ledger` με `withAuth` **και** έλεγχο ενοικίου·
   (β) κάρτα Financial Intelligence **μόνο-ανάγνωσης** με drill-down στα έγγραφα κάθε μπάρας· (γ) το εργαλείο AI
   `get_budget_variance` διαβάζει τον **ίδιο** πυρήνα· (δ) τα analytics προμηθειών αναθέτουν.
+  *Υλοποίηση Φ2*: **μία** ανάγνωση `loadProjectCostLedger` (`project-cost-ledger.server.ts`) για route + AI + KPIs
+  έργου· **ένα** wire σχήμα `toCostLedgerView` (`cost-ledger-view.ts`: `budget: number | null`, `projected`,
+  `variance`, `totals` χωρίς ανάμειξη κωδικών χωρίς προϋπολογισμό → `unbudgetedProjected`, `completeness`, `isEmpty`)·
+  οι πηγές ανά γραμμή (`sources`) γεννιούνται **μέσα** στον πυρήνα, όχι σε δεύτερο πέρασμα.
 - **Δ4 — Χρόνος**: ο προϋπολογισμός είναι **από την αρχή του έργου ως σήμερα** (inception-to-date). Τα analytics
   προμηθειών που φιλτράρουν περίοδο δείχνουν budget **μόνο** όταν το φίλτρο είναι «όλη η ζωή» (διόρθωση Δ3 του §2).
 
@@ -344,6 +348,29 @@ SPEC-242C §3.1 (`noData`), §3.2 (αντικαθίσταται) · ADR-175 · A
 ADR-265 §8.5 · ADR-017/210 · ADR-195 · ADR-001 (Select).
 
 ## §10. Changelog
+- **2026-10-20 — Φ2 σε κώδικα** *(uncommitted)*. Έγκριση Giorgio («ok, προχώρα στη Φ2» + έγκριση σχεδίου).
+  - **Πυρήνας**: `CostLedgerRow.sources` (γραμμές BOQ με ποσό cost-engine · παραγγελίες — πολλές γραμμές μιας PO στον ίδιο
+    κωδικό = **μία** πηγή). Νέο `cost-ledger-view.ts` (`toCostLedgerView`) + `project-cost-ledger.server.ts`
+    (`loadProjectCostLedger`)· το `projectBoqCoverageStats` αναθέτει στη φόρτωση (σβήστηκε η δική του ανάγνωση).
+  - **Route** `GET /api/projects/[projectId]/cost-ledger` (`defineRoute` + `requireProjectInTenant`)· `API_ROUTES.PROJECTS.COST_LEDGER`.
+  - **Κάρτα**: `BudgetVarianceChart` διαβάζει `useProjectCostLedger` (`useAsyncData` — ληγμένη απάντηση άλλου έργου
+    απορρίπτεται)· μπάρες Προϋπολογισμός / Προβλεπόμενο, κωδικός χωρίς BOQ = **χωρίς** μπάρα προϋπολογισμού (το κέλυφος
+    ADR-710 δείχνει το `null` ως «λείπει»), σύνοψη με πληρότητα, `CostLedgerDrillDown` με σύνδεσμο στην παραγγελία.
+    Η χειροκίνητη φόρμα μεταφέρθηκε **αυτούσια** στο `LegacyBudgetVarianceEditor` πίσω από `ChartCardEditor.Disclosure`·
+    δεν τροφοδοτεί πια το γράφημα (απόσυρση Φ5).
+  - **AI**: `getBudgetVarianceForQuery` → ledger χωρίς `sources` (μικρό context)· νέα περιγραφή εργαλείου («`budget: null`
+    = χωρίς BOQ, ποτέ μηδέν»)· ο handler λέει «κανένα BOQ ή παραγγελία» αντί για μηδενικά.
+  - **Δ3 λύθηκε**: το `budgetVsActual` των analytics διαβάζει **όλες** τις παραγγελίες (`fetchCompanyPurchaseOrders`,
+    μόνο ισότητες ⇒ χωρίς σύνθετο δείκτη)· τα υπόλοιπα γραφήματα κρατούν την περίοδο· τίτλος «(από την έναρξη του έργου)».
+  - 🆕 **Λ6 — ευρήματα κατά την υλοποίηση (διορθώθηκαν, Boy Scout)**: (α) οι ετικέτες `procurement:categories` ήταν
+    **άλλη** λίστα από τον κατάλογο ΑΤΟΕ (12 vs 16 κωδικοί· π.χ. `OIK-5` «Μαρμαρικά» αντί για «Πατώματα / Δάπεδα») —
+    ο επιλογέας γραμμής PO διατρέχει τον κατάλογο, άρα ο χρήστης διάλεγε κωδικό με **λάθος όνομα**, και τα OIK-13…16
+    έβγαιναν ωμά κλειδιά· τα locale el/en ευθυγραμμίστηκαν με `ATOE_MASTER_CATEGORIES` (+ `OTHER`). (β) Το
+    `AnalyticsFiltersBar` κρατούσε δικό του αντίγραφο 12 κωδικών → διαβάζει τον κατάλογο. (γ) Race στο παλιό fetch της
+    κάρτας: αργοπορημένη απάντηση έργου Α γέμιζε τη φόρμα του Β (και την «Αποθήκευση» του) → φύλακας τελευταίου αιτήματος.
+  - Άγκυρες: `cost-ledger-view.test.ts` 7 · `cost-ledger.test.ts` +2 (πηγές) · `cost-ledger-route.test.ts` 2 (**Α7**) ·
+    `financial-query-handler.test.ts` +2. Μεταλλάξεις 3/3 (`budget: 0` αντί `null` · διπλή πηγή PO · αφαίρεση φράχτη
+    ενοικίου). `test:ai-pipeline:all` 80/80 · CHECK 3.28 / 3.33 / 3.34 καθαρά.
 - **2026-10-20 — §8.1 προτάσεις Ε1–Ε6** *(προς επιβεβαίωση Giorgio)*. Έρευνα (Procore, ΣΛΟΤ 2022/2024, ν.5144/2024 άρθρο 70) +
   grep. Δύο διορθώσεις της αρχικής πρότασης: **Ε2** (β) θα διπλομετρούσε (η ΣΛΟΤ: κόστος οικοπέδου = κόστος κατασκευής των
   κτισμάτων του οικοπεδούχου, ήδη μέσα στο σκληρό κόστος)· **Ε4** «υποχωρεί με την πρώτη γραμμή BOQ» θα κατέρρεε τον

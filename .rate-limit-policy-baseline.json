@@ -211,6 +211,7 @@
     "defineRoute::/api/procurement/supplier-metrics",
     "defineRoute::/api/procurement/supplier-metrics/comparison",
     "defineRoute::/api/procurement/vendor-invites",
+    "defineRoute::/api/projects/[projectId]/cost-ledger",
     "entityIdRoute::/api/properties/[id]",
     "runGuarded::/api/properties/[id]/energy-certificate-import",
     "segmentIdRoute::/api/properties/[id]/showcase/generate"

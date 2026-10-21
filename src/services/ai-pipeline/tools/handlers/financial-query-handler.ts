@@ -112,9 +112,10 @@ export class FinancialQueryHandler implements ToolHandler {
     const projectId = String(args.projectId ?? '');
     if (!projectId) return { success: false, error: 'projectId is required' };
 
-    const analysis = await getBudgetVarianceForQuery(ctx.companyId, projectId);
-    if (!analysis) return { success: true, data: null, count: 0, warning: 'No budget variance data for this project.' };
-    return { success: true, data: analysis, count: 1 };
+    const ledger = await getBudgetVarianceForQuery(ctx.companyId, projectId);
+    if (!ledger) return { success: true, data: null, count: 0, warning: 'Project not found.' };
+    if (ledger.isEmpty) return { success: true, data: ledger, count: 0, warning: 'This project has no BOQ or purchase orders yet.' };
+    return { success: true, data: ledger, count: ledger.rows.length };
   }
 
   private calculateScenarioNPV(args: Record<string, unknown>): ToolResult {

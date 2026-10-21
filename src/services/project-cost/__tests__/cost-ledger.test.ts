@@ -16,6 +16,7 @@ function boq(id: string, categoryCode: string, overrides: Partial<LedgerBoqItem>
   return {
     id,
     categoryCode,
+    title: `BOQ ${id}`,
     unit: 'm2',
     estimatedQuantity: 10,
     wasteFactor: 0,
@@ -41,8 +42,9 @@ function line(categoryCode: string, total: number, boqItemId: string | null = nu
   };
 }
 
-function po(status: PurchaseOrderStatus, items: PurchaseOrderItem[]): LedgerPurchaseOrder {
-  return { status, items };
+let poSeq = 0;
+function po(status: PurchaseOrderStatus, items: PurchaseOrderItem[], id = `po_${++poSeq}`): LedgerPurchaseOrder {
+  return { id, poNumber: `PO-${id}`, status, items };
 }
 
 describe('computeCostLedger (ADR-917)', () => {
@@ -105,5 +107,20 @@ describe('computeCostLedger (ADR-917)', () => {
   it('lines without a code land in the uncategorized bucket', () => {
     const { rows } = computeCostLedger([boq('b1', '')], [po('ordered', [line('', 3)])]);
     expect(rows).toEqual([expect.objectContaining({ categoryCode: UNCATEGORIZED_COST_CODE, budget: 100, committed: 3 })]);
+  });
+
+  it('sources — one order with two lines under one code is ONE source with the summed amount', () => {
+    const { rows } = computeCostLedger([], [po('ordered', [line('OIK-6', 10), line('OIK-6', 5)], 'po_a')]);
+    expect(rows[0].sources.purchaseOrders).toEqual([
+      { id: 'po_a', poNumber: 'PO-po_a', status: 'ordered', amount: 15 },
+    ]);
+  });
+
+  it('sources — every BOQ line behind the budget is listed with its cost-engine amount', () => {
+    const { rows } = computeCostLedger([boq('b1', 'OIK-2'), boq('b2', 'OIK-2')], []);
+    expect(rows[0].sources.boqItems).toEqual([
+      { id: 'b1', title: 'BOQ b1', amount: 100 },
+      { id: 'b2', title: 'BOQ b2', amount: 100 },
+    ]);
   });
 });

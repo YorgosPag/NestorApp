@@ -813,6 +813,8 @@ export const API_ROUTES = {
     CUSTOMERS: (projectId: string) => `/api/projects/${projectId}/customers` as const,
     STRUCTURE: (projectId: string) => `/api/projects/structure/${projectId}` as const,
     PAYMENT_REPORT: (projectId: string) => `/api/projects/${projectId}/payment-report` as const,
+    /** ADR-917 Φ2 — budget vs actual from source documents (BOQ + purchase orders) */
+    COST_LEDGER: (projectId: string) => `/api/projects/${encodeURIComponent(projectId)}/cost-ledger` as const,
     IMPACT_PREVIEW: (projectId: string) => `/api/projects/${projectId}/impact-preview` as const,
     ADDRESS_IMPACT_PREVIEW: (projectId: string) => `/api/projects/${projectId}/address-impact-preview` as const,
     OWNERSHIP_IMPACT_PREVIEW: (projectId: string) => `/api/projects/${projectId}/ownership-impact-preview` as const,
