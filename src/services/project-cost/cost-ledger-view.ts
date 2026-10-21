@@ -5,7 +5,10 @@
  * without re-deriving anything:
  * - `budget: null` ⇔ `budgetSource: null` — «no source», never 0 € (Δ2). An unpriced
  *   BOQ line is not a source either (Ζ7): `unpricedBoqItemCount` says why.
- * - `projected` = committed + pending (Procore «Projected Costs»; Φ4 adds direct costs).
+ * - `projected` = committed + pending + direct cost + over-billing (Procore «Projected Costs», ADR-917 §4 Β).
+ *   An invoice billed against a PO is ALREADY in the PO — it counts in `invoiced`, never twice (Α3).
+ * - `invoiced` = Σ allocated net amounts of confirmed expense documents (Φ4); `directCost` = the part with no PO.
+ *   `invoiced: null` ⇔ NO confirmed allocated document under the code — «nothing invoiced yet», never 0 €.
  * - `variance` = projected − budget, positive = over budget; `null` without a budget source.
  * - Totals compare like with like: money under codes WITHOUT a budget is reported
  *   apart (`unbudgetedProjected`), never silently added on one side only.
@@ -16,7 +19,13 @@
  */
 
 import { costCodeFamilyOf } from '@/config/cost-taxonomy';
-import type { CostLedger, CostLedgerBudgetSource, CostLedgerRow, CostLedgerSources } from './cost-ledger';
+import type {
+  CostLedger,
+  CostLedgerBudgetSource,
+  CostLedgerRow,
+  CostLedgerSources,
+  LedgerExpenseCompleteness,
+} from './cost-ledger';
 
 // ============================================================================
 // TYPES
@@ -35,6 +44,12 @@ export interface CostLedgerViewRow {
   pending: number;
   committed: number;
   delivered: number;
+  /** Φ4 — Σ confirmed expense documents allocated here; `null` ⇒ no such document (NOT zero) */
+  invoiced: number | null;
+  /** Φ4 — the part of `invoiced` with no PO (enters `projected`) */
+  directCost: number;
+  /** Φ4 — invoiced above its PO on this code (enters `projected`) */
+  overbilled: number;
   projected: number;
   /** projected − budget; `null` ⇒ nothing to compare against */
   variance: number | null;
@@ -57,6 +72,9 @@ export interface CostLedgerViewTotals {
   unbudgetedProjected: number;
   committed: number;
   delivered: number;
+  /** Φ4 — Σ invoiced over every code; `null` ⇒ no confirmed allocated document at all (NOT zero) */
+  invoiced: number | null;
+  directCost: number;
 }
 
 export interface CostLedgerCompleteness {
@@ -74,6 +92,8 @@ export interface CostLedgerCompleteness {
   excludedSummaryCount: number;
   /** Λ7 — legacy group parents with no provable role: counted, the total may double-count */
   unresolvedGroupRoleCount: number;
+  /** Φ4 — how complete «invoiced» is: documents in review, partly allocated, awaiting allocation */
+  expenses: LedgerExpenseCompleteness;
 }
 
 /** Ζ2 — the landowner's share, valued in kind; NEVER part of `totals` */
@@ -87,7 +107,7 @@ export interface CostLedgerLandExchange {
 
 export interface ProjectCostLedgerView {
   projectId: string;
-  /** `true` ⇒ no BOQ, no orders, no budget lines: «nothing recorded yet», not «0 €» */
+  /** `true` ⇒ no BOQ, no orders, no budget lines, no allocated invoices: «nothing recorded yet», not «0 €» */
   isEmpty: boolean;
   rows: CostLedgerViewRow[];
   totals: CostLedgerViewTotals;
@@ -117,11 +137,17 @@ export function bartexPercentageOf(project: unknown): number | null {
 // ============================================================================
 
 function isShown(row: CostLedgerRow): boolean {
-  return row.budgetSource !== null || row.committed > 0 || row.pending > 0 || row.boqItemCount > 0;
+  return row.budgetSource !== null || row.committed > 0 || row.pending > 0 || row.boqItemCount > 0
+    || row.sources.expenseDocuments.length > 0;
+}
+
+/** Procore «Projected Costs» + over-billing — the ONE projection formula (Α3: PO-billed invoices are in the PO) */
+function projectedCostOf(row: Pick<CostLedgerRow, 'committed' | 'pending' | 'directCost' | 'overbilled'>): number {
+  return row.committed + row.pending + row.directCost + row.overbilled;
 }
 
 function toViewRow(row: CostLedgerRow, options: CostLedgerViewOptions): CostLedgerViewRow {
-  const projected = row.committed + row.pending;
+  const projected = projectedCostOf(row);
   const budget = row.budgetSource === null ? null : row.budget;
   const viewRow: CostLedgerViewRow = {
     costCode: row.categoryCode,
@@ -132,6 +158,9 @@ function toViewRow(row: CostLedgerRow, options: CostLedgerViewOptions): CostLedg
     pending: row.pending,
     committed: row.committed,
     delivered: row.delivered,
+    invoiced: row.sources.expenseDocuments.some(source => source.counted) ? row.invoiced : null,
+    directCost: row.directCost,
+    overbilled: row.overbilled,
     projected,
     variance: budget === null ? null : projected - budget,
     boqItemCount: row.boqItemCount,
@@ -145,11 +174,14 @@ function toViewRow(row: CostLedgerRow, options: CostLedgerViewOptions): CostLedg
 function toTotals(rows: readonly CostLedgerViewRow[]): CostLedgerViewTotals {
   const totals: CostLedgerViewTotals = {
     budget: null, softBudget: 0, projected: 0, variance: null, unbudgetedProjected: 0, committed: 0, delivered: 0,
+    invoiced: null, directCost: 0,
   };
   let budget = 0;
   for (const row of rows) {
     totals.committed += row.committed;
     totals.delivered += row.delivered;
+    if (row.invoiced !== null) totals.invoiced = (totals.invoiced ?? 0) + row.invoiced;
+    totals.directCost += row.directCost;
     if (row.budget === null) {
       totals.unbudgetedProjected += row.projected;
       continue;
@@ -175,6 +207,7 @@ function toCompleteness(ledger: CostLedger, rows: readonly CostLedgerViewRow[]):
     allowanceCodes: rows.filter(row => row.budgetSource === 'allowance').length,
     excludedSummaryCount: ledger.excludedSummaryCount,
     unresolvedGroupRoleCount: ledger.unresolvedGroupRoleCount,
+    expenses: ledger.expenses,
   };
 }
 

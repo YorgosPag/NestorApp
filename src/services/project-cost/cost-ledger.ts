@@ -12,6 +12,8 @@
  * - `budgetSource === null` means the budget has NO source, not «zero cost»
  *   (ADR-917 §4 Δ2 · SPEC-242C §3.1) — consumers must not read `budget` as 0 €.
  * - Every row carries the documents behind its numbers (`sources`, ADR-917 Φ2 drill-down).
+ * - Actuals (Φ4) come ONLY from `cost-ledger-actuals.accumulateExpenseDocuments`: invoiced · direct cost ·
+ *   over-billing — a line billed against a PO is never added on top of the PO (Α3).
  * - «Does this BOQ line count?» ONLY from `boq-line-role.partitionCountableBoqLines` (Λ7): a
  *   summary parent (DNA wall) is NOT summed — its children are — and it stays visible in
  *   `sources.excludedSummaries`, never silently dropped.
@@ -32,9 +34,22 @@ import {
   type CostLedgerBudgetSource,
   type LedgerBudgetLine,
 } from './cost-ledger-budget';
+import {
+  accumulateExpenseDocuments,
+  purchaseOrderAmountKey,
+  type LedgerExpenseCompleteness,
+  type LedgerExpenseDocument,
+  type LedgerExpenseDocumentSource,
+} from './cost-ledger-actuals';
 
 export { UNCATEGORIZED_COST_CODE };
-export type { CostLedgerBudgetSource, LedgerBudgetLine };
+export type {
+  CostLedgerBudgetSource,
+  LedgerBudgetLine,
+  LedgerExpenseCompleteness,
+  LedgerExpenseDocument,
+  LedgerExpenseDocumentSource,
+};
 
 // ============================================================================
 // TYPES
@@ -80,6 +95,8 @@ export interface CostLedgerSources {
   purchaseOrders: LedgerPurchaseOrderSource[];
   budgetLines: LedgerBudgetLine[];
   excludedSummaries: LedgerExcludedSummarySource[];
+  /** Φ4 — expense documents allocated to this code (in-review ones shown, not summed) */
+  expenseDocuments: LedgerExpenseDocumentSource[];
 }
 
 export interface CostLedgerRow {
@@ -107,6 +124,12 @@ export interface CostLedgerRow {
   pending: number;
   committed: number;
   delivered: number;
+  /** Φ4 — Σ allocated net amounts of CONFIRMED expense documents */
+  invoiced: number;
+  /** Φ4 — the part of `invoiced` with no purchase order */
+  directCost: number;
+  /** Φ4 — invoiced above its PO on this code: cost the order does not show (enters the projection) */
+  overbilled: number;
   /** The documents behind every number of the row — a bar always answers «from where?» */
   sources: CostLedgerSources;
 }
@@ -120,6 +143,8 @@ export interface CostLedger {
   excludedSummaryCount: number;
   /** Legacy group parents with no provable role — counted, but declared */
   unresolvedGroupRoleCount: number;
+  /** Φ4 — how complete the actuals are («no allocation» is declared, never 0 €) */
+  expenses: LedgerExpenseCompleteness;
 }
 
 export interface CostLedgerOptions {
@@ -127,6 +152,10 @@ export interface CostLedgerOptions {
   categoryFilter?: readonly string[];
   /** Project budget lines — soft cost + ΑΤΟΕ allowances (ADR-917 Φ3) */
   budgetLines?: readonly LedgerBudgetLine[];
+  /** Expense documents allocated to the project (ADR-917 Φ4) */
+  expenseDocuments?: readonly LedgerExpenseDocument[];
+  /** Documents matched to one of the project's POs with no allocation yet — counted by the loader */
+  awaitingAllocationCount?: number;
 }
 
 // ============================================================================
@@ -155,7 +184,10 @@ function emptyRow(categoryCode: string): CostLedgerRow {
     pending: 0,
     committed: 0,
     delivered: 0,
-    sources: { boqItems: [], purchaseOrders: [], budgetLines: [], excludedSummaries: [] },
+    invoiced: 0,
+    directCost: 0,
+    overbilled: 0,
+    sources: { boqItems: [], purchaseOrders: [], budgetLines: [], excludedSummaries: [], expenseDocuments: [] },
   };
 }
 
@@ -234,12 +266,19 @@ function addPurchaseOrderSource(row: CostLedgerRow, po: LedgerPurchaseOrder, amo
   row.sources.purchaseOrders.push({ id: po.id, poNumber: po.poNumber, status: po.status, amount });
 }
 
+/** Covered BOQ lines + each order's counted amount per code (the over-billing rule compares against it) */
+interface PurchaseOrderAccumulation {
+  coveredBoqIds: Set<string>;
+  poAmounts: Map<string, number>;
+}
+
 function accumulatePurchaseOrders(
   rows: Map<string, CostLedgerRow>,
   purchaseOrders: readonly LedgerPurchaseOrder[],
   accepts: (code: string) => boolean,
-): Set<string> {
+): PurchaseOrderAccumulation {
   const coveredBoqIds = new Set<string>();
+  const poAmounts = new Map<string, number>();
   for (const po of purchaseOrders) {
     const committed = PO_COMMITTED_STATUSES.has(po.status);
     const delivered = PO_DELIVERED_STATUSES.has(po.status);
@@ -255,9 +294,11 @@ function accumulatePurchaseOrders(
       if (delivered) row.delivered += amount;
       if (committed && line.boqItemId) coveredBoqIds.add(line.boqItemId);
       addPurchaseOrderSource(row, po, amount);
+      const key = purchaseOrderAmountKey(po.id, code);
+      poAmounts.set(key, (poAmounts.get(key) ?? 0) + amount);
     }
   }
-  return coveredBoqIds;
+  return { coveredBoqIds, poAmounts };
 }
 
 function applyResolvedBudget(row: CostLedgerRow): void {
@@ -286,7 +327,7 @@ function applyResolvedBudget(row: CostLedgerRow): void {
 export function computeCostLedger(
   boqItems: readonly LedgerBoqItem[],
   purchaseOrders: readonly LedgerPurchaseOrder[],
-  { categoryFilter = [], budgetLines = [] }: CostLedgerOptions = {},
+  { categoryFilter = [], budgetLines = [], expenseDocuments = [], awaitingAllocationCount = 0 }: CostLedgerOptions = {},
 ): CostLedger {
   const accepts = (code: string): boolean => categoryFilter.length === 0 || categoryFilter.includes(code);
   const rows = new Map<string, CostLedgerRow>();
@@ -295,7 +336,8 @@ export function computeCostLedger(
   const codeByBoqId = accumulateBoq(rows, countable, accepts);
   attachExcludedSummaries(rows, excludedSummaries, accepts);
   accumulateBudgetLines(rows, budgetLines, accepts);
-  const coveredBoqIds = accumulatePurchaseOrders(rows, purchaseOrders, accepts);
+  const { coveredBoqIds, poAmounts } = accumulatePurchaseOrders(rows, purchaseOrders, accepts);
+  const expenses = accumulateExpenseDocuments(code => rowFor(rows, code), expenseDocuments, poAmounts, accepts);
   rows.forEach(applyResolvedBudget);
 
   let coveredBoqItemCount = 0;
@@ -312,10 +354,11 @@ export function computeCostLedger(
     coveredBoqItemCount,
     excludedSummaryCount: excludedSummaries.length,
     unresolvedGroupRoleCount,
+    expenses: { ...expenses, awaitingAllocationCount },
   };
 }
 
-/** Rows a budget-vs-commitment chart shows: a budget source or money committed. */
+/** Rows a budget-vs-commitment chart shows: a budget source, money committed or money invoiced. */
 export function hasBudgetOrCommitment(row: CostLedgerRow): boolean {
-  return row.budgetSource !== null || row.committed > 0;
+  return row.budgetSource !== null || row.committed > 0 || row.invoiced > 0;
 }
