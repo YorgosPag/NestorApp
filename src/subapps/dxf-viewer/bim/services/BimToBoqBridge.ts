@@ -27,6 +27,7 @@
  */
 
 import { doc, getDoc, getDocs, query, setDoc, where, collection } from 'firebase/firestore';
+import { withHumanOwnedFields } from './boq-row-ownership';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -333,7 +334,8 @@ class BimToBoqBridgeImpl {
     const existingCreatedAt = snap.exists()
       ? (snap.data() as Record<string, unknown>).createdAt as string ?? null
       : null;
-    const payload = buildSingleEntryPayload(deterministicId, entityType, entity, context, mapping, existingCreatedAt);
+    const built = buildSingleEntryPayload(deterministicId, entityType, entity, context, mapping, existingCreatedAt);
+    const payload = withHumanOwnedFields(built, snap.exists() ? (snap.data() as Record<string, unknown>) : undefined);
 
     try {
       await setDoc(ref, payload);

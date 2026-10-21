@@ -765,3 +765,43 @@ describe('ADR-712 — foundationStub children', () => {
     expect(writtenById().has('boq_bim_col-4')).toBe(true);
   });
 });
+
+describe('bimToBoqBridge — the human\'s fields survive a model sync (ADR-917 Λ10 · Α31)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetDocs.mockResolvedValue({ docs: [] });
+    mockSetDoc.mockResolvedValue(undefined);
+  });
+
+  const typed = { materialUnitCost: 40, laborUnitCost: 15, status: 'submitted', notes: 'προσφορά Χ' };
+
+  it('🔴 single entry: a moved beam keeps its price + status; the quantity follows the model', async () => {
+    mockGetDoc.mockResolvedValue(makeSnap(true, { createdAt: '2026-01-01T00:00:00Z', estimatedQuantity: 0.2, ...typed }));
+    await bimToBoqBridge.upsertBoqItemForBim('beam', { id: 'beam-9', kind: 'straight', geometry: { volume: 0.7 } }, context, 'updated');
+    const payload = mockSetDoc.mock.calls[0][1] as Record<string, unknown>;
+    expect(payload).toEqual(expect.objectContaining({ ...typed, estimatedQuantity: 0.7 }));
+  });
+
+  it('🔴 DNA wall: a priced LAYER keeps its price; the SUMMARY parent is written with 0 (derived, Ε2)', async () => {
+    mockGetDoc.mockResolvedValue(makeSnap(true, { createdAt: '2026-01-01T00:00:00Z', ...typed }));
+    const wall = {
+      id: 'wall-9',
+      kind: 'straight',
+      params: {
+        category: 'exterior',
+        dna: {
+          totalThickness: 250,
+          layers: [
+            { id: 'L0', name: 'Plaster', thickness: 20, materialId: 'mat-plaster-ext', side: 'exterior' as const },
+            { id: 'L1', name: 'Concrete', thickness: 230, materialId: 'mat-concrete-c25', side: 'core' as const },
+          ],
+        },
+      },
+      geometry: { area: 30 },
+    };
+    await bimToBoqBridge.upsertBoqItemForBim('wall', wall, context, 'updated');
+    const byId = new Map(mockSetDoc.mock.calls.map((call) => [(call[0] as { id: string }).id, call[1] as Record<string, unknown>]));
+    expect(byId.get('boq_bim_wall-9_layer_L0')).toEqual(expect.objectContaining(typed));
+    expect(byId.get('boq_bim_wall-9')).toEqual(expect.objectContaining({ materialUnitCost: 0, laborUnitCost: 0, status: 'submitted' }));
+  });
+});

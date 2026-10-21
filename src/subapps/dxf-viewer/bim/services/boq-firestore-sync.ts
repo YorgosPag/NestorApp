@@ -31,6 +31,7 @@
 
 import { deleteDoc, doc, getDoc, setDoc, type DocumentReference } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { withHumanOwnedFields } from './boq-row-ownership';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { nowISO } from '@/lib/date-local';
 import { isFrozenBaselineStatus } from '@/types/boq/units';
@@ -165,7 +166,7 @@ export async function syncManagedBoqRow(params: SyncManagedBoqRowParams): Promis
     }
 
     const existingCreatedAt = (data?.createdAt as string | undefined) ?? null;
-    const payload = buildPayload(existingCreatedAt);
+    const payload = withHumanOwnedFields(buildPayload(existingCreatedAt), data);
 
     try {
       await setDoc(ref, payload);

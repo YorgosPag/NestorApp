@@ -220,6 +220,9 @@ Deterministic IDs: `boq_bim_${id}` / `_finish_${materialId}` (PART B, ένα chi
 - ETICS-grade per-element exterior detection (πέρα από outer-ring proximity) = μετέπειτα slice.
 
 ## 6. Changelog
+- **2026-10-21** — **ADR-917 Ε2 / Λ10**. Ο γονέας `work` (πυρήνας κολόνας/δοκού) **μένει** επεξεργάσιμος — μόνο η σύνοψη τοίχου DNA
+  κλειδώνει. Ο συγχρονισμός (`upsertWithChildren` ⇒ `boq-row-batch-sync`) περνά πλέον από το `withHumanOwnedFields`: τιμή/φύρα/κατάσταση
+  που γράφει ο άνθρωπος στον πυρήνα ή στον σοβά **επιβιώνει** την επόμενη αλλαγή της κολόνας (πριν: πλήρες `setDoc` με τιμές 0).
 - **2026-10-21** — **ADR-917 Λ7: ρητός ρόλος γονέα**. Ο πυρήνας γράφεται με `groupRole: 'work'` (και στη διαδρομή μόνο κοντόστυλου του bridge) ⇒ κάθε αθροιστής μετρά πυρήνα **+** σοβά, ενώ η σύνοψη τοίχου DNA (`'summary'`) δεν αθροίζεται. Το §2.4 διορθώθηκε στον κώδικα (ids ανά υλικό · `upsertWithChildren`). Άγκυρα: `structural-finish-boq.test.ts`.
 - **2026-10-09 (ADR-909 Β2.5 — ο σοβάς είναι ΜΕΛΑΝΙ στο print pass)** — Μετρημένο ζωντανά στη `monochrome`
   δημόσια κάτοψη: **8.552 μπεζ pixels**, γραμμή 0,75 px σε εικόνα 4096 px. Το `drawStructuralFinishOutline` έβαζε

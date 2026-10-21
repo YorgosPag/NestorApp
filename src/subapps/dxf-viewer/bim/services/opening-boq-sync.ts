@@ -16,6 +16,7 @@
 
 import { collection, doc, getDoc, getDocs, query, setDoc, where, type QueryConstraint } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { withHumanOwnedFields } from './boq-row-ownership';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { isFrozenBaselineStatus } from '@/types/boq/units';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -231,7 +232,8 @@ async function writeSignatureGroup(
     });
 
     try {
-      await setDoc(doc(db, COLLECTIONS.BOQ_ITEMS, groupId), built.payload);
+      const stored = existing && existing.exists() ? (existing.data() as Record<string, unknown>) : undefined;
+      await setDoc(doc(db, COLLECTIONS.BOQ_ITEMS, groupId), withHumanOwnedFields(built.payload, stored));
     } catch (err) {
       logger.error('OpeningBoqSync: signature-group upsert failed', { groupId, err });
     }

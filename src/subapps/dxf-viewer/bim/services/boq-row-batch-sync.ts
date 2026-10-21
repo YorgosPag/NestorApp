@@ -28,6 +28,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { isFrozenBaselineStatus } from '@/types/boq/units';
 import { recordBaselineDrift } from './boq-firestore-sync';
+import { withHumanOwnedFields } from './boq-row-ownership';
 import type { BuiltBoqRow } from './boq-base-row';
 import type { ExistingCreatedAtMap } from './boq-multi-layer-builder';
 
@@ -93,7 +94,7 @@ async function upsertBoqRow(
     return;
   }
   try {
-    await setDoc(doc(db, COLLECTIONS.BOQ_ITEMS, row.id), row.payload);
+    await setDoc(doc(db, COLLECTIONS.BOQ_ITEMS, row.id), withHumanOwnedFields(row.payload, state.exists ? state.raw : undefined));
   } catch (err) {
     logger.error('BimToBoqBridge: row upsert failed', { rowId: row.id, err });
   }
