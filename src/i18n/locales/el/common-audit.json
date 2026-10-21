@@ -261,6 +261,7 @@
         "isActive": "Ενεργό",
         "hasIssues": "Έχει ζητήματα",
         "landowners": "Οικοπεδούχοι",
+        "budgetLines": "Γραμμές προϋπολογισμού",
         "bartexPercentage": "Ποσοστό αντιπαροχής",
         "projectCode": "Κωδικός Έργου",
         "addresses": "Διεύθυνση",
@@ -427,6 +428,10 @@
         "area": "Εμβαδόν",
         "number": "Αριθμός Θέσης",
         "objectiveValuePosition": "Θέση κατά την αντικειμενική"
+      },
+      "budgetLine": {
+        "amount": "Ποσό (καθαρό)",
+        "note": "Σημείωση"
       },
       "address": {
         "type": "Τύπος Διεύθυνσης",

@@ -977,6 +977,8 @@ export const COLLECTIONS = {
   BOQ_CATEGORIES: process.env.NEXT_PUBLIC_BOQ_CATEGORIES_COLLECTION || 'boq_categories',
   BOQ_SYSTEM_SUBCATEGORIES: process.env.NEXT_PUBLIC_BOQ_SYSTEM_SUBCATEGORIES_COLLECTION || 'boq_system_subcategories',
   BOQ_PRICE_LISTS: process.env.NEXT_PUBLIC_BOQ_PRICE_LISTS_COLLECTION || 'boq_price_lists',
+  // ADR-917 Φ3β — γραμμές προϋπολογισμού έργου (μαλακό κόστος + προβλέψεις)· μόνο server, ΕΝΑΣ γραφέας
+  PROJECT_BUDGET_LINES: process.env.NEXT_PUBLIC_PROJECT_BUDGET_LINES_COLLECTION || 'project_budget_lines',
   BOQ_TEMPLATES: process.env.NEXT_PUBLIC_BOQ_TEMPLATES_COLLECTION || 'boq_templates',
 
   // 🧾 CHEQUE REGISTRY (ADR-234 Phase 3 — SPEC-234A)

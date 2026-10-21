@@ -23,7 +23,7 @@ import { compareHedgingStrategies } from '@/lib/hedging-engine';
 import { calculateNPV } from '@/lib/npv-engine';
 import { nowISO } from '@/lib/date-local';
 import { loadProjectCostLedger } from '@/services/project-cost/project-cost-ledger.server';
-import { toCostLedgerView, type ProjectCostLedgerView } from '@/services/project-cost/cost-ledger-view';
+import { bartexPercentageOf, toCostLedgerView, type ProjectCostLedgerView } from '@/services/project-cost/cost-ledger-view';
 import type {
   PortfolioSummary,
   ProjectFinancialSummary,
@@ -93,7 +93,7 @@ export async function getDebtMaturitySchedule(companyId: string): Promise<DebtMa
 
 /**
  * Budget vs actual of ONE project, from its source documents (ADR-917 Φ2):
- * budget = BOQ, cost = purchase orders — the same ledger the dashboard card reads.
+ * budget = BOQ + project budget lines (Φ3β), cost = purchase orders — the same ledger the dashboard card reads.
  * `budget: null` on a row means «no BOQ under this code», never 0 €.
  * ADR-917 Φ0: a project outside `companyId` reads as absent.
  */
@@ -104,10 +104,11 @@ export async function getBudgetVarianceForQuery(
   if (!isAddressableDocId(projectId)) return null;
   const db = getAdminFirestore();
   const projectSnap = await db.collection(COLLECTIONS.PROJECTS).doc(projectId).get();
-  if (!isPayloadOwnedByCompany(projectSnap.data(), companyId)) return null;
+  const project = projectSnap.data();
+  if (!isPayloadOwnedByCompany(project, companyId)) return null;
   const ledger = await loadProjectCostLedger(db, companyId, projectId);
   // Figures only — the per-document lists would flood the model's context.
-  return toCostLedgerView(projectId, ledger, { includeSources: false });
+  return toCostLedgerView(projectId, ledger, { includeSources: false, bartexPercentage: bartexPercentageOf(project) });
 }
 
 /**

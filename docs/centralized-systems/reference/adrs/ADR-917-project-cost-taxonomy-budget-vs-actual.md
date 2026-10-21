@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | 🟡 **ΣΕ ΕΞΕΛΙΞΗ** — έγκριση Giorgio 2026-10-20 («συνέχισε»). **Φ0 ✅** έλεγχος ενοικίου *(uncommitted)* · **Φ1 ✅** πυρήνας `cost-ledger` + καθαρισμός Δ1/Δ2 *(uncommitted)* · **Φ2 ✅** η κάρτα + το AI διαβάζουν από πηγές, Δ3 *(uncommitted)* · **Φ3α ✅** ταξινομία + πυρήνας μαλακού προϋπολογισμού / πρόβλεψης / «χωρίς τιμή» *(uncommitted)* · ⏳ Φ3β–Φ3γ, Φ4–Φ6 · ✅ §8 Ε1–Ε6 αποφασίστηκαν (§4 Ζ) |
+| **Status** | 🟡 **ΣΕ ΕΞΕΛΙΞΗ** — έγκριση Giorgio 2026-10-20 («συνέχισε»). **Φ0–Φ3α ✅ committed** (`030f8030` … `213d74fe`) · **Φ0 ✅** έλεγχος ενοικίου · **Φ1 ✅** πυρήνας `cost-ledger` + καθαρισμός Δ1/Δ2 · **Φ2 ✅** η κάρτα + το AI διαβάζουν από πηγές, Δ3 · **Φ3α ✅** ταξινομία + πυρήνας μαλακού προϋπολογισμού / πρόβλεψης / «χωρίς τιμή» · **Φ3β ✅** αποθήκευση γραμμών προϋπολογισμού (κανόνες ⇒ `firestore:deploy` από Giorgio) *(uncommitted)* · ⏳ Λ7 (εγκρίθηκε, επόμενο) · Φ3γ, Φ4–Φ6 · ✅ §8 Ε1–Ε6 αποφασίστηκαν (§4 Ζ) |
 | **Date** | 2026-10-20 |
 | **Category** | Finance / Procurement / Measurements (BOQ) / Accounting |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
@@ -76,7 +76,7 @@
 | Λ3 | Υπεργολαβίες / συμβάσεις κόστους: καμία συλλογή με ποσά (`legal_contracts` = **έσοδα**) |
 | Λ4 | 🆕 **Τέσσερις** ταξινομίες κόστους, όχι τρεις: ΑΤΟΕ · `ExpenseCategory` · λίστα κάρτας · **`ObligationCostBinding.costCode`** (ελεύθερο κείμενο + `budgetAmount`, `types/obligations/contracts.ts:51`, φόρμα `MetadataPanel.tsx:262`) |
 | Λ5 | 🆕 Το σχόλιο του `boq-categories.ts` λέει «12 κατηγορίες»· ο πίνακας έχει **16** (`OIK-1…OIK-16`) |
-| 🆕 Λ7 | *(2026-10-21)* **Γονέας + παιδιά BOQ μετρούν μαζί.** Τοίχος DNA: γονέας = εμβαδόν όλου του τοίχου **και** ένα παιδί ανά στρώση, **μαζί με τον πυρήνα** (`boq-multi-layer-builder.ts`). Κολόνα/δοκός (ADR-449): γονέας = στατικός πυρήνας (πραγματική εργασία), παιδιά = μόνο επιχρίσματα. Και τα δύο φέρουν `isGroupParent: true` ⇒ από τα δεδομένα **δεν** ξεχωρίζουν. Ο πυρήνας **και** το `computeBuildingSummary` αθροίζουν και τα δύο ⇒ μόλις μπουν τιμές, ο τοίχος DNA **διπλομετρά**. Σήμερα αόρατο (όλες οι τιμές BIM = 0). ⏳ **Απόφαση Giorgio** — αγγίζει BIM (ADR-363/449) |
+| 🆕 Λ7 | *(2026-10-21)* **Γονέας + παιδιά BOQ μετρούν μαζί.** Τοίχος DNA: γονέας = εμβαδόν όλου του τοίχου **και** ένα παιδί ανά στρώση, **μαζί με τον πυρήνα** (`boq-multi-layer-builder.ts`). Κολόνα/δοκός (ADR-449): γονέας = στατικός πυρήνας (πραγματική εργασία), παιδιά = μόνο επιχρίσματα. Και τα δύο φέρουν `isGroupParent: true` ⇒ από τα δεδομένα **δεν** ξεχωρίζουν. Ο πυρήνας **και** το `computeBuildingSummary` αθροίζουν και τα δύο ⇒ μόλις μπουν τιμές, ο τοίχος DNA **διπλομετρά**. Σήμερα αόρατο (όλες οι τιμές BIM = 0). ✅ **Εγκρίθηκε 2026-10-21** η πρόταση: ρητός ρόλος γονέα (`summary` τοίχος DNA / `work` κολόνα-δοκός) από τον BIM builder· πυρήνας **και** `computeBuildingSummary` δεν μετρούν `summary` με παιδιά· fallback/backfill για τα παλιά έγγραφα. Σειρά: **μετά** τη Φ3β, **πριν** τη Φ3γ — αγγίζει BIM (ADR-363/449) |
 | 🆕 Λ8 | *(2026-10-21)* (α) Το έργο έχει **ήδη** `bartexPercentage` + `landowners[]` (ADR-244) ⇒ η ένδειξη «σε είδος» της Ζ2 **δεν** θέλει νέο πεδίο. (β) Το `boq_price_lists` είναι δηλωμένο στο `firestore-collections.ts`, αλλά **δεν το διαβάζει κανείς** ⇒ καμία τιμή δεν μπαίνει αυτόματα· το BIM γράφει 0 (`boq-base-row.ts:95-97`), η ανάγνωση βάζει 0 όταν λείπει (`boq-document-normalize.ts:66-68`) ⇒ βάση της Ζ7. (γ) Ο υπολογισμός ενσήμων ΕΦΚΑ υπάρχει (ADR-090 `useStampsCalculation`) ⇒ μελλοντική **αυτόματη** πρόβλεψη `SOFT-EFKA` |
 
 ---
@@ -203,7 +203,7 @@
 | **Φ1 — Πυρήνας + καθαρισμός** | `cost-taxonomy.ts` · `computeProjectCostLedger` (καθαρός) · ανάθεση από τους 2 aggregators · Δ1/Δ2/Δ3 · σχόλιο «12→16» · άγκυρες | ~6 | μεσαίο (αλλάζουν αριθμοί analytics λόγω Δ1 — **σωστά**) |
 | **Φ2 — Ανάγνωση στην κάρτα** | `cost-ledger` route · κάρτα μόνο-ανάγνωσης με BOQ + PO · drill-down · πληρότητα · AI tool στον πυρήνα | ~6 | μεσαίο |
 | **Φ3α — Ταξινομία + πυρήνας** ✅ | `cost-taxonomy.ts` · `hasUnitPrice` · `cost-ledger-budget.resolveRowBudget` (Ζ4′/Ζ7/Ζ8) · view (`budgetSource`, `softBudget`, `landExchange`) · κάρτα «χωρίς τιμή» | ~15 | μεσαίο — καθαρή λογική, χωρίς Firestore |
-| **Φ3β — Αποθήκευση** | `project_budget_lines` (ID `(projectId, costCode)` από `enterprise-id`) + κανόνες + σουίτα (3.16) + δείκτης (3.15/3.91) + γραφέας με ίχνος (3.17) + route + ανάγνωση στο `loadProjectCostLedger` + `bartexPercentage` στο route | ~9 | μεσαίο (κανόνες ⇒ `firestore:deploy` από Giorgio) |
+| **Φ3β — Αποθήκευση** ✅ | `project_budget_lines` (ID `(projectId, costCode)` από `enterprise-id`) + κανόνες + σουίτα (3.16) + δείκτης (3.15/3.91) + γραφέας με ίχνος (3.17) + route + ανάγνωση στο `loadProjectCostLedger` + `bartexPercentage` στο route | ~9 | μεσαίο (κανόνες ⇒ `firestore:deploy` από Giorgio) |
 | **Φ3γ — Οθόνη** | καρτέλα «Προϋπολογισμός» έργου (`project-tabs-config.ts`) + επεξεργαστής · πηγή ανά μπάρα στην κάρτα · ένδειξη αντιπαροχής · περιγραφή εργαλείου AI | ~8 | χαμηλό |
 | **Φ4 — Εκτελεσμένο από λογιστικό** | `costAllocations` στο παραστατικό · αυτόματη πρόταση από PO · φόρμα επιβεβαίωσης · κανόνες | ~8 | υψηλό (αγγίζει accounting subapp) |
 | **Φ5 — Απόσυρση** | αφαίρεση φόρμας + POST + `DEFAULT_CATEGORY_KEYS` + τύπων · μετάπτωση παλιών εγγράφων κατά §8 Ε3 | ~5 | χαμηλό |
@@ -243,6 +243,12 @@
 - **Α11** πρόβλεψη + πλήρως τιμολογημένο υπογεγραμμένο BOQ ⇒ `boq`· με **μία** υπογεγραμμένη χωρίς τιμή ⇒ μένει `allowance` (Ζ4′).
 - **Α12** γραμμή 2ου επιπέδου αθροίζεται στην ομάδα· σειρά ΑΤΟΕ → SOFT → OTHER.
 - **Α13** η αντιπαροχή αποτιμάται σε είδος και **δεν** μπαίνει σε κανένα σύνολο (Ζ2).
+- **Α14** *(Φ3β)* ΜΙΑ γραμμή ανά (έργο, κωδικό): ντετερμινιστικό id· επανάληψη ίδιων τιμών ⇒ `unchanged`, καμία εγγραφή, κανένα ίχνος. ✅ `project-budget-lines.server.test.ts`
+- **Α15** *(Φ3β)* παλιά `revision` ⇒ `conflict` (409 με την τρέχουσα), τίποτα δεν αλλάζει — καμία χαμένη ενημέρωση. ✅ ίδιο + `budget-lines-route.test.ts`
+- **Α16** *(Φ3β)* κωδικός εκτός ταξινομίας **ή** ελεύθερο κείμενο ως 2ο επίπεδο ⇒ 400, καμία εγγραφή. ✅ `cost-taxonomy.test.ts` + route
+- **Α17** *(Φ3β)* ξένο έργο ⇒ 404 χωρίς εγγραφή· έγγραφο **ξένης** εταιρείας ή μη αναγνώσιμο στο δικό μας id ⇒ **ποτέ** αντικατάσταση. ✅
+- **Α18** *(Φ3β)* αρχειοθέτηση ⇒ το έγγραφο μένει, το ledger το αγνοεί, ιστορικό `removed`· `set` σε αρχειοθετημένη ⇒ αναβίωση στο **ίδιο** έγγραφο. ✅
+- **Α19** *(Φ3β)* το ledger διαβάζει τις γραμμές (`SOFT-*` ⇒ `budgetSource: 'soft'`)· το `bartexPercentage` του έργου φτάνει στο view (route + AI). ✅
 
 ---
 
@@ -371,6 +377,38 @@ SPEC-242C §3.1 (`noData`), §3.2 (αντικαθίσταται) · ADR-175 · A
 ADR-265 §8.5 · ADR-017/210 · ADR-195 · ADR-001 (Select).
 
 ## §10. Changelog
+- **2026-10-21 — Φ3β σε κώδικα: αποθήκευση γραμμών προϋπολογισμού** *(uncommitted)*. Έγκριση Giorgio («ΟΚ»: Plan Mode ένας
+  agent · κανόνες `deny_all` και για ανάγνωση · **χωρίς** κλείδωμα αρχικού προϋπολογισμού τώρα — το `revision` + το πλήρες ίχνος
+  το επιτρέπουν αργότερα χωρίς μετάπτωση · Λ7 εγκρίθηκε, **μετά** τη Φ3β και **πριν** τη Φ3γ). Έρευνα: Procore *Lock a Budget*
+  (ο αρχικός γίνεται μόνο-ανάγνωση, αλλαγές μέσω Budget Modifications/Change Orders)· Autodesk Build: Revised = Original +
+  μεταφορές + εγκεκριμένες αλλαγές.
+  - **Ταυτότητα**: πρόθεμα `PROJECT_BUDGET_LINE: 'pbl'` · νέος κρίκος `enterprise-id-project-cost-generators.ts`
+    (`generateDeterministicProjectBudgetLineId`, σπόρος `companyId:projectId:costCode`) ανάμεσα σε DocumentRegistry και
+    CompositeKey · δηλωμένος στη λίστα `DETERMINISTIC_ONLY` + χρυσό id στο `enterprise-id.service.test.ts`.
+  - **Συλλογή** `COLLECTIONS.PROJECT_BUDGET_LINES` · κανόνες `read/write: if false` · σουίτα `project-budget-lines.rules.test.ts`
+    (35 κελιά + κελί **ίδιου** μισθωτή) · γραμμή `deny_all` στο `coverage-manifest.ts`.
+  - **Σχήμα** `project-budget-line-schema.ts` (καθαρό): `companyId · projectId · costCode · amount (καθαρό, ≥0, λεπτά) · note ·
+    revision · created/updated At/By · archivedAt` — **κανένα `kind`** (Ζ8)· fail-closed parse· σώματα αιτήματος PUT/DELETE.
+  - **Ο ΕΝΑΣ γραφέας/αναγνώστης** `project-budget-lines.server.ts`: συναλλαγή με CAS στο `revision` · ίδιες τιμές ⇒ `unchanged` ·
+    αρχειοθέτηση αντί διαγραφής · ξένο/μη αναγνώσιμο έγγραφο ⇒ άρνηση, ποτέ αντικατάσταση · ίχνος ADR-195 στο **έργο** μέσω του
+    κανονικού `diffTrackedFields` (νέα συλλογή `budgetLines` στο `PROJECT_TRACKED_FIELDS`, κλειδί = κωδικός, υπο-πεδία
+    `amount`/`note`· locales `common-audit` el/en· `src/types/i18n.ts` ξαναπαράχθηκε).
+  - **CHECK 3.17**: το `PROJECT_BUDGET_LINES` μπήκε στο `TRACKED_COLLECTION_KEYS` — κάθε **μελλοντικός** γραφέας αναγκάζεται σε ίχνος.
+  - **Routes**: `GET /api/projects/[projectId]/budget-lines` (`projects:projects:view`) · `PUT`/`DELETE …/budget-lines/[costCode]`
+    (`projects:projects:update`) — `defineRoute` ⇒ `withAuth` ⇒ σύνορο `Idempotency-Key` (3.92) · `requireProjectInTenant` ·
+    rate `standard`. 400 άκυρος κωδικός/ποσό · 409 `{ currentRevision }`.
+  - **Ταξινομία**: το `isBudgetLineCostCode` ελέγχει πλέον και **μορφή** (ομάδα + το πολύ ΕΝΑ επίπεδο `[A-Z0-9]{1,16}`) — πριν
+    δεχόταν `SOFT-PERMITS.<οτιδήποτε>`.
+  - **Ανάγνωση**: `loadProjectCostLedger` διαβάζει τις ενεργές γραμμές (3ο ερώτημα, μόνο ισότητες `companyId`+`projectId` —
+    CHECK 3.91 το αναλύει και το κρίνει καλυμμένο με συγχώνευση απλών δεικτών, **κανένας** σύνθετος) · `bartexPercentageOf`
+    (ένας αναγνώστης) ⇒ το route `cost-ledger` και το εργαλείο AI περνούν το `bartexPercentage` (Ζ2). Συνέπεια: και τα KPIs
+    προμηθειών βλέπουν πλέον προβλέψεις σε `OIK-*` (ίδιος πυρήνας — σωστά).
+  - **Επαλήθευση**: project-cost + route + taxonomy + procurement + measurements 316/316 · AI pipeline 1268/1268 · μεταλλάξεις
+    **6/6 κόκκινες** (CAS · ιδεμποτία · ξένη εταιρεία · έλεγχος κωδικού · μορφή κωδικού · ledger χωρίς γραμμές) · CHECK 3.28 / 3.91 καθαρά.
+  - **Σειρά ενεργοποίησης**: push → `npm run firestore:deploy` **από τον Giorgio** (CHECK 3.86). Μέχρι τότε η συλλογή δεν έχει κανόνα
+    στην παραγωγή ⇒ προεπιλογή deny — ο server (Admin SDK) δουλεύει ήδη.
+  - **Μένει**: Λ7 (επόμενο) · Ζ3 μετάπτωση `settings/budget_variance_*` (dry-run, Φ5) · Φ3γ οθόνη (το GET επιστρέφει `revision`
+    για το `expectedRevision`).
 - **2026-10-21 — Φ3α σε κώδικα: ταξινομία + πυρήνας μαλακού προϋπολογισμού** *(uncommitted)*. Έγκριση Giorgio («όπως οι
   μεγάλοι, χωρίς εκπτώσεις» + έγκριση σχεδίου). Έρευνα: Procore (μοναδικός κωδικός ανά γραμμή· allowance/contingency ως τύπος
   κόστους, κατανάλωση με χειροκίνητο ζεύγος εγγραφών· κλείδωμα προϋπολογισμού), Autodesk Build (Original / Revised / Forecast).

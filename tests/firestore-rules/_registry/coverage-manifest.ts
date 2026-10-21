@@ -1395,6 +1395,14 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     // Full CRUD: isSuperAdminOnly || (companyId && belongsToCompany).
     ...fileTenantFullMatrix(),
   },
+  {
+    // ADR-917 Φ3β — η γραμμή προϋπολογισμού έργου. `deny_all`: εγγραφή από πελάτη θα άλλαζε τον προϋπολογισμό χωρίς
+    // ίχνος, χωρίς CAS, με κωδικό εκτός ταξινομίας. Η σουίτα σπέρνει έγγραφο του ΙΔΙΟΥ μισθωτή.
+    collection: 'project_budget_lines',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/project-budget-lines.rules.test.ts',
+    ...denyAllMatrix(),
+  },
   // ── ADR-298 Phase C.4 — BoQ / Commissions / Ownership collections (2026-04-14) ──
   {
     collection: 'boq_items',

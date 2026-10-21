@@ -92,6 +92,9 @@ const TRACKED_COLLECTION_KEYS = new Set([
   // ADR-901 Φ1 — η υπόθεση μεταβίβασης (audit entityType: 'conveyance_case', βιβλίο 'company').
   // Κάθε γραφή περνά από το conveyance-case.service.ts.
   'CONVEYANCE_CASES',
+  // ADR-917 Φ3β — γραμμή προϋπολογισμού έργου (audit entityType: 'project', βιβλίο 'company').
+  // Κάθε γραφή περνά από το project-budget-lines.server.ts (ίχνος μετά το commit).
+  'PROJECT_BUDGET_LINES',
   // ADR-344 Phase 7.B — DXF text templates (audit entityType: 'text_template')
   'TEXT_TEMPLATES',
   // ADR-363 Phase 1D-C — BIM wall entities (audit via wall-audit-client.ts → /api/audit-trail/record)

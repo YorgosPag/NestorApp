@@ -472,6 +472,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   // Financial Intelligence (SPEC-242C)
   DEBT_MATURITY: 'dmt',
   BUDGET_VARIANCE: 'bvar',
+  PROJECT_BUDGET_LINE: 'pbl', // ADR-917 Ζ8 — γραμμή προϋπολογισμού έργου· ΜΙΑ ανά (έργο, κωδικό κόστους) — ντετερμινιστικό
 
   // Procurement (ADR-267)
   PURCHASE_ORDER: 'po',

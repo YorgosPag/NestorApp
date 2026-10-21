@@ -435,6 +435,17 @@ const PROJECT_COLLECTION_DEFS: Record<string, CollectionDef> = {
     // ΠΟΤΕ ποιος άλλαξε στάδιο κτήσης — σιωπηλό κενό ιστορικού, χωρίς σφάλμα.
     trackSubFields: ['name', 'landOwnershipPct', 'allocatedShares', 'acquisitionStatus'],
   },
+  // ADR-917 Φ3β — οι γραμμές προϋπολογισμού ζουν στο `project_budget_lines`, όχι στο έγγραφο του έργου·
+  // το ιστορικό τους όμως ανήκει στην καρτέλα του **έργου**, ως συλλογή με κλειδί τον κωδικό κόστους (Ζ8).
+  // Γραφέας: `project-budget-lines.server.ts` (ο ΕΝΑΣ). Αρχειοθέτηση ⇒ `removed`.
+  budgetLines: {
+    kind: 'collection',
+    label: 'budgetLines',
+    keyBy: 'costCode',
+    labelFields: ['costCode'],
+    trackSubFields: ['amount', 'note'],
+    subFieldLabelScope: 'budgetLine',
+  },
 };
 
 const CONTACT_COLLECTION_DEFS: Record<string, CollectionDef> = {

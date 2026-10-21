@@ -98,6 +98,16 @@ export interface CostLedgerViewOptions {
   bartexPercentage?: number | null;
 }
 
+/**
+ * `Project.bartexPercentage` from a raw project document — the ONE reader for the route and the AI tool.
+ * Anything that is not a percentage in (0, 100] ⇒ `null`: no in-kind figure from a value nobody set.
+ */
+export function bartexPercentageOf(project: unknown): number | null {
+  if (typeof project !== 'object' || project === null) return null;
+  const value = (project as { bartexPercentage?: unknown }).bartexPercentage;
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 && value <= 100 ? value : null;
+}
+
 // ============================================================================
 // DERIVATION
 // ============================================================================

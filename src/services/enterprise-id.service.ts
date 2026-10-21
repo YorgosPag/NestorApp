@@ -64,6 +64,7 @@ export {
   generateDeterministicDocumentObligorDesignationId,
   generateDeterministicDocumentIssuanceAssignmentId,
   generateDeterministicPropertyUpkeepDeclarationId,
+  generateDeterministicProjectBudgetLineId,
   generateDocumentIssuanceInvitationId,
   generatePipelineQueueId, generateVoiceCommandId, generateBrokerageId, generateMandateRequestId,
   generatePrivateMarketingEventId,

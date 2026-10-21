@@ -55,8 +55,16 @@ export function costCodeFamilyOf(code: string): CostCodeFamily {
   return 'other';
 }
 
+/**
+ * The SHAPE of a budget-line code: a group plus at most ONE lower level of 1–16 `A–Z`/`0–9`
+ * (`OIK-2.03`, `SOFT-PERMITS.TEE`). The group check alone would admit any suffix — `SOFT-PERMITS.<anything>` —
+ * and every free-text tail is a new row nobody can roll back up by meaning (Λ4: `ObligationCostBinding.costCode`).
+ */
+const BUDGET_LINE_CODE_SHAPE = /^[A-Z0-9-]+(\.[A-Z0-9]{1,16})?$/;
+
 /** Codes a project budget line may carry: an ΑΤΟΕ group of the catalogue or a soft code (2nd level allowed). */
 export function isBudgetLineCostCode(code: string): boolean {
+  if (!BUDGET_LINE_CODE_SHAPE.test(code)) return false;
   const group = costCodeGroupOf(code);
   return isSoftCostCode(group) || findATOECategory(group) !== undefined;
 }

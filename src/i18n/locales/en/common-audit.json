@@ -261,6 +261,7 @@
         "isActive": "Active",
         "hasIssues": "Has issues",
         "landowners": "Landowners",
+        "budgetLines": "Budget lines",
         "bartexPercentage": "Bartex percentage",
         "projectCode": "Project code",
         "addresses": "Address",
@@ -427,6 +428,10 @@
         "area": "Area",
         "number": "Spot Number",
         "objectiveValuePosition": "Objective-value position"
+      },
+      "budgetLine": {
+        "amount": "Amount (net)",
+        "note": "Note"
       },
       "address": {
         "type": "Address type",

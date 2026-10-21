@@ -61,6 +61,16 @@ describe('cost taxonomy (ADR-917 Α1 · Ζ1)', () => {
     expect(isBudgetLineCostCode(UNCATEGORIZED_COST_CODE)).toBe(false);
   });
 
+  it('🔴 the lower level is ONE short code segment — never free text under a valid group (Φ3β)', () => {
+    expect(isBudgetLineCostCode('OIK-2.03')).toBe(true);
+    expect(isBudgetLineCostCode('SOFT-PERMITS.tee')).toBe(false);
+    expect(isBudgetLineCostCode('SOFT-PERMITS.TEE.X')).toBe(false);
+    expect(isBudgetLineCostCode('SOFT-PERMITS.')).toBe(false);
+    expect(isBudgetLineCostCode('SOFT-PERMITS.ΤΕΕ')).toBe(false);
+    expect(isBudgetLineCostCode(`SOFT-PERMITS.${'A'.repeat(17)}`)).toBe(false);
+    expect(isBudgetLineCostCode('SOFT-PERMITS/TEE')).toBe(false);
+  });
+
   it('order: ΑΤΟΕ by catalogue → soft by declaration → other', () => {
     const codes = ['OTHER', 'SOFT-CONTINGENCY', 'OIK-10', 'SOFT-LAND', 'OIK-2'];
     expect([...codes].sort(compareCostCodes)).toEqual(['OIK-2', 'OIK-10', 'SOFT-LAND', 'SOFT-CONTINGENCY', 'OTHER']);

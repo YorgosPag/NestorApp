@@ -306,6 +306,9 @@ describe('EnterpriseIdService', () => {
       'generateDeterministicDocumentIssuanceAssignmentId',
       // ADR-915 §35 — ΜΙΑ απόφαση μόνιμης υποχρέωσης ανά (γραφείο, ακίνητο, είδος): τυχαίο id = δεύτερη υποχρέωση.
       'generateDeterministicPropertyUpkeepDeclarationId',
+      // ADR-917 Ζ8 — ΜΙΑ γραμμή προϋπολογισμού ανά (εταιρεία, έργο, κωδικό): τυχαίο id = δεύτερη γραμμή στον ίδιο κωδικό =
+      // διπλός προϋπολογισμός, και το CAS του γραφέα θα φύλαγε μόνο τη μία.
+      'generateDeterministicProjectBudgetLineId',
       // ADR-916 §5.2 — ΜΙΑ παράδοση ανά (ακίνητο, επαφή αγοραστή): τυχαίο id = δεύτερη παράδοση = δεύτερος φάκελος
       // και διπλά αρχεία στον αγοραστή, όταν το PATCH και ο γραφέας του `legalPhase` συμφιλιώνουν ταυτόχρονα.
       'generateDeterministicPropertyHandoverId',
@@ -388,6 +391,8 @@ describe('EnterpriseIdService', () => {
       generateDeterministicDocumentObligorDesignationId: 'dobd_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
       generateDeterministicDocumentIssuanceAssignmentId: 'dias_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
       generateDeterministicPropertyUpkeepDeclarationId: 'pupk_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
+      // ADR-917 Φ3β — ίδιο uuid με το `pupk_`: ίδιος σπόρος, ίδια μηχανή· μόνο το πρόθεμα διαφέρει.
+      generateDeterministicProjectBudgetLineId: 'pbl_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
       generateDeterministicPropertyHandoverId: 'phov_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
       // ADR-853 Ε3 Φάση 2 — τέσσερις παράμετροι, ο `call()` δίνει μία (σπόρος `anchor-seed:undefined:…`,
       //    ίδιο σκεπτικό με το `wacr`): το συμβόλαιο είναι «ίδιος σπόρος ⇒ ίδιο id, διαχρονικά».

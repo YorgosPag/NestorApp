@@ -25,6 +25,8 @@
  *     ↑ extends
  *   DocumentRegistryIdGenerators (ADR-915 §26 — μητρώο λήξεων εγγράφων)
  *     ↑ extends
+ *   ProjectCostIdGenerators      (ADR-917 — γραμμές προϋπολογισμού έργου)
+ *     ↑ extends
  *   CompositeKeyIdGenerators     (this file)
  *     ↑ extends
  *   EnterpriseIdService          (owns the engine: retry loop, cache, stats)
@@ -56,9 +58,9 @@ import {
   isValidEnterpriseId,
   parseEnterpriseId,
 } from './enterprise-id-parse';
-import { DocumentRegistryIdGenerators } from './enterprise-id-document-registry-generators';
+import { ProjectCostIdGenerators } from './enterprise-id-project-cost-generators';
 
-export abstract class CompositeKeyIdGenerators extends DocumentRegistryIdGenerators {
+export abstract class CompositeKeyIdGenerators extends ProjectCostIdGenerators {
   // --- Deterministic Composite Key Generators ---
   // Public surface only; the pure builders live in `./enterprise-id-composite-keys`
   // (N.7.1 — καμία κατάσταση εδώ: ο βρόχος επανάληψης, η μνήμη και τα στατιστικά

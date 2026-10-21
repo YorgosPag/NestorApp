@@ -75,6 +75,13 @@ describe('GET /api/projects/[projectId]/cost-ledger (ADR-917 Φ2)', () => {
     expect(loadProjectCostLedger).toHaveBeenCalledWith(expect.anything(), 'comp_A', 'p1');
   });
 
+  it('Φ3β — the project bartexPercentage reaches the view (in-kind figure, Ζ2)', async () => {
+    requireProjectInTenant.mockResolvedValueOnce({ id: 'p1', bartexPercentage: 35 });
+    loadProjectCostLedger.mockResolvedValueOnce({ rows: [], boqItemCount: 0, coveredBoqItemCount: 0 });
+    const body = (await (await call('p1')).json()) as { data?: { landExchange: { bartexPercentage: number } | null } };
+    expect(body.data?.landExchange).toEqual(expect.objectContaining({ bartexPercentage: 35 }));
+  });
+
   it('🔴 A7 — foreign project → 404 and NO source read', async () => {
     requireProjectInTenant.mockRejectedValueOnce(new TenantIsolationError('Project not found', 404, 'NOT_FOUND'));
     const res = await call('p_foreign');

@@ -815,6 +815,11 @@ export const API_ROUTES = {
     PAYMENT_REPORT: (projectId: string) => `/api/projects/${projectId}/payment-report` as const,
     /** ADR-917 Φ2 — budget vs actual from source documents (BOQ + purchase orders) */
     COST_LEDGER: (projectId: string) => `/api/projects/${encodeURIComponent(projectId)}/cost-ledger` as const,
+    /** ADR-917 Φ3β — the project's budget lines (soft cost + allowances): list */
+    BUDGET_LINES: (projectId: string) => `/api/projects/${encodeURIComponent(projectId)}/budget-lines` as const,
+    /** ADR-917 Φ3β — ONE budget line per (project, cost code): set / archive */
+    BUDGET_LINE: (projectId: string, costCode: string) =>
+      `/api/projects/${encodeURIComponent(projectId)}/budget-lines/${encodeURIComponent(costCode)}` as const,
     IMPACT_PREVIEW: (projectId: string) => `/api/projects/${projectId}/impact-preview` as const,
     ADDRESS_IMPACT_PREVIEW: (projectId: string) => `/api/projects/${projectId}/address-impact-preview` as const,
     OWNERSHIP_IMPACT_PREVIEW: (projectId: string) => `/api/projects/${projectId}/ownership-impact-preview` as const,
