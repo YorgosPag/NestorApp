@@ -7,6 +7,7 @@ import type { ProjectCostLedgerView } from '@/services/project-cost/cost-ledger-
 import {
   budgetLineEffect,
   budgetLineFamilyOf,
+  budgetLineInvoiced,
   budgetLineLabel,
   parseBudgetAmount,
 } from '../budget-line-presentation';
@@ -47,6 +48,23 @@ describe('budget line on screen (Α30)', () => {
     expect(parseBudgetAmount('-5')).toBeNull();
     expect(parseBudgetAmount('')).toBeNull();
     expect(parseBudgetAmount('2000000000000')).toBeNull();
+  });
+});
+
+describe('invoiced column (Φ4) — read from the GROUP row of the ledger', () => {
+  const ledger = { rows: [
+    { costCode: 'SOFT-PERMITS', invoiced: 80, directCost: 80 },
+    { costCode: 'OIK-2', invoiced: null, directCost: 0 },
+  ] } as unknown as ProjectCostLedgerView;
+
+  it('a lower-level line reads its group; direct cost travels with it', () => {
+    expect(budgetLineInvoiced('SOFT-PERMITS.TEE', ledger)).toEqual({ kind: 'amount', amount: 80, directCost: 80 });
+  });
+
+  it('🔴 nothing invoiced is `none` (said in words), never 0 €; no ledger yet ⇒ unknown', () => {
+    expect(budgetLineInvoiced('OIK-2', ledger)).toEqual({ kind: 'none' });
+    expect(budgetLineInvoiced('SOFT-LAND', ledger)).toEqual({ kind: 'none' });
+    expect(budgetLineInvoiced('OIK-2', null)).toEqual({ kind: 'unknown' });
   });
 });
 

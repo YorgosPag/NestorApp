@@ -7,7 +7,9 @@
  * Besides the figures it says what is missing or set apart: money under codes without a budget, unpriced
  * BOQ lines (Ζ7), land exchange valued in kind and kept out of every total (Ζ2), wall summaries left out of
  * the sum because their layers count (Λ7), and legacy group parents whose role cannot be proven (Λ7 —
- * counted, so the total may double-count: said, never hidden).
+ * counted, so the total may double-count: said, never hidden). Φ4: invoiced from confirmed expense documents —
+ * «no allocated document» is said in words, never shown as 0 €; documents in review, partly allocated or not
+ * allocated at all are declared.
  *
  * @module components/sales/financial-intelligence/CostLedgerSummary
  */
@@ -39,6 +41,13 @@ function TotalsItems({ ledger, format, t }: CostLedgerSummaryProps) {
         value={totals.budget === null ? t('variance.source.noBudget') : format(totals.budget)}
       />
       <ChartCard.SummaryItem label={t('variance.source.projected')} value={format(totals.projected)} />
+      <ChartCard.SummaryItem
+        label={t('variance.source.invoiced')}
+        value={totals.invoiced === null ? t('variance.source.noInvoiced') : format(totals.invoiced)}
+      />
+      {totals.directCost > 0 ? (
+        <ChartCard.SummaryItem label={t('variance.source.directCost')} value={format(totals.directCost)} />
+      ) : null}
       {totals.variance !== null ? (
         <ChartCard.SummaryItem
           label={t('variance.totalVariance')}
@@ -52,6 +61,24 @@ function TotalsItems({ ledger, format, t }: CostLedgerSummaryProps) {
           value={`${format(totals.unbudgetedProjected)} · ${t('variance.source.codesWithoutBudget', { count: completeness.codesWithoutBudget })}`}
           tone="bad"
         />
+      ) : null}
+    </>
+  );
+}
+
+/** Φ4 — what «invoiced» does NOT yet contain, each said by count */
+function ExpenseCompletenessItems({ ledger, t }: Pick<CostLedgerSummaryProps, 'ledger' | 't'>) {
+  const { expenses } = ledger.completeness;
+  return (
+    <>
+      {expenses.inReviewDocumentCount > 0 ? (
+        <ChartCard.SummaryItem label={t('variance.source.expensesInReviewLabel')} value={t('variance.source.expensesInReview', { count: expenses.inReviewDocumentCount })} tone="bad" />
+      ) : null}
+      {expenses.partiallyAllocatedDocumentCount > 0 ? (
+        <ChartCard.SummaryItem label={t('variance.source.expensesPartialLabel')} value={t('variance.source.expensesPartial', { count: expenses.partiallyAllocatedDocumentCount })} tone="bad" />
+      ) : null}
+      {expenses.awaitingAllocationCount > 0 ? (
+        <ChartCard.SummaryItem label={t('variance.source.expensesAwaitingLabel')} value={t('variance.source.expensesAwaiting', { count: expenses.awaitingAllocationCount })} tone="bad" />
       ) : null}
     </>
   );
@@ -87,6 +114,7 @@ export function CostLedgerSummary(props: CostLedgerSummaryProps) {
     <ChartCard.Summary>
       <TotalsItems {...props} />
       <CompletenessItems {...props} />
+      <ExpenseCompletenessItems ledger={props.ledger} t={props.t} />
     </ChartCard.Summary>
   );
 }

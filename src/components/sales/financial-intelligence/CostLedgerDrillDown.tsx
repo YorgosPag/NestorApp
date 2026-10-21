@@ -6,7 +6,8 @@
  * Every bar of the budget-vs-actual card answers «from where?»: the BOQ lines
  * and project budget lines that make its budget and the purchase orders that make
  * its cost, each order linking to its own page. An unpriced BOQ line says so —
- * it is never shown as «0 €» (Ζ7).
+ * it is never shown as «0 €» (Ζ7). Φ4: the expense documents allocated to the code
+ * (direct cost or against an order; a document in review is listed, not counted).
  *
  * @see ADR-917 §4 Δ3 (β) · Ζ7
  */
@@ -19,6 +20,7 @@ import { ENTITY_ROUTES } from '@/lib/routes/entityRoutes';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { CostLedgerViewRow } from '@/services/project-cost/cost-ledger-view';
+import type { LedgerExpenseDocumentSource } from '@/services/project-cost/cost-ledger';
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
@@ -44,9 +46,44 @@ function SourceList({ title, empty, children }: { title: string; empty: string; 
   );
 }
 
+function expenseKindText(document: LedgerExpenseDocumentSource, t: Translate): string {
+  if (!document.counted) return t('variance.drillDown.expenseInReview');
+  return t(document.purchaseOrderId === null ? 'variance.drillDown.expenseDirect' : 'variance.drillDown.expenseAgainstPo');
+}
+
+interface ExpenseDocumentListProps {
+  documents: readonly LedgerExpenseDocumentSource[];
+  overbilled: number;
+  t: Translate;
+}
+
+/** ADR-917 Φ4 — what makes «invoiced»: direct cost or against an order; in review = listed, not counted */
+function ExpenseDocumentList({ documents, overbilled, t }: ExpenseDocumentListProps) {
+  // ONE array — `SourceList` decides «none» by its length, so a conditional sibling would always count
+  const items = documents.map((document) => (
+    <li key={`${document.id}|${document.purchaseOrderId ?? ''}`} className="flex justify-between gap-4 px-3 py-1.5">
+      <span className="truncate">{document.label}</span>
+      <span className="text-muted-foreground">{expenseKindText(document, t)}</span>
+      <span className="tabular-nums">{formatCurrencyWhole(document.amount)}</span>
+    </li>
+  ));
+  if (overbilled > 0) {
+    items.push(
+      <li key="overbilled" className="px-3 py-1.5 font-medium">
+        {t('variance.drillDown.overbilled', { amount: formatCurrencyWhole(overbilled) })}
+      </li>,
+    );
+  }
+  return (
+    <SourceList title={t('variance.drillDown.expenseDocuments')} empty={t('variance.drillDown.none')}>
+      {items}
+    </SourceList>
+  );
+}
+
 export function CostLedgerDrillDown({ row, label, source, onClose, t }: CostLedgerDrillDownProps) {
   const iconSizes = useIconSizes();
-  const sources = row.sources ?? { boqItems: [], purchaseOrders: [], budgetLines: [], excludedSummaries: [] };
+  const sources = row.sources ?? { boqItems: [], purchaseOrders: [], budgetLines: [], excludedSummaries: [], expenseDocuments: [] };
   const none = t('variance.drillDown.none');
 
   return (
@@ -117,6 +154,8 @@ export function CostLedgerDrillDown({ row, label, source, onClose, t }: CostLedg
           </li>
         ))}
       </SourceList>
+
+      <ExpenseDocumentList documents={sources.expenseDocuments} overbilled={row.overbilled} t={t} />
     </section>
   );
 }

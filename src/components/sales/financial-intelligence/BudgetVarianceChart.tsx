@@ -2,8 +2,9 @@
 
 /**
  * BudgetVarianceChart — budget vs projected cost per cost code, READ from the
- * project's source documents (ADR-917 Φ2 · Φ3γ): budget = signed-off BOQ, allowance
- * or soft-cost line; cost = purchase orders.
+ * project's source documents (ADR-917 Φ2 · Φ3γ · Φ4): budget = signed-off BOQ, allowance
+ * or soft-cost line; projected = purchase orders + direct costs; invoiced = confirmed expense
+ * documents allocated to the project (an invoice against a PO is never counted twice).
  *
  * Nothing on the chart is typed by hand. A code without a source shows NO budget bar
  * (the shell renders `null` as «missing», never as 0 €) and the summary says how
@@ -156,6 +157,7 @@ function useLedgerChart(ledger: ProjectCostLedgerView | null, t: Translate) {
     () => [
       { key: 'budget', label: t('variance.source.budgetSeries') },
       { key: 'projected', label: t('variance.source.projectedSeries') },
+      { key: 'invoiced', label: t('variance.source.invoicedSeries') },
     ],
     [t],
   );

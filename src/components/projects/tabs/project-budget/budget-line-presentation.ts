@@ -46,6 +46,22 @@ export function budgetLineEffect(costCode: string, ledger: ProjectCostLedgerView
   return { kind: 'unknown' };
 }
 
+export type BudgetLineInvoiced =
+  | { kind: 'unknown' }
+  | { kind: 'none' }
+  | { kind: 'amount'; amount: number; directCost: number };
+
+/**
+ * ADR-917 Φ4 — what the line's GROUP has been invoiced, read from the ledger row (never summed here). `none` ⇔
+ * no confirmed allocated document (never «0 €»); `unknown` until the ledger is read.
+ */
+export function budgetLineInvoiced(costCode: string, ledger: ProjectCostLedgerView | null): BudgetLineInvoiced {
+  if (ledger === null) return { kind: 'unknown' };
+  const row = ledger.rows.find(candidate => candidate.costCode === costCodeGroupOf(costCode));
+  if (!row || row.invoiced === null) return { kind: 'none' };
+  return { kind: 'amount', amount: row.invoiced, directCost: row.directCost };
+}
+
 /**
  * Typed text → a net amount the server accepts (Ζ5: ≥ 0, cents), in either decimal convention
  * (`1.200,50` · `1,200.50`); `null` ⇒ the cell restores instead of sending a request that would be refused.

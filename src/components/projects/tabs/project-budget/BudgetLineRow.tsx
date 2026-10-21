@@ -19,7 +19,7 @@ import { TableCell, TableRow } from '@/components/ui/table';
 import { formatCurrency, formatNumber } from '@/lib/intl-utils';
 import { BUDGET_LINE_NOTE_MAX } from '@/services/project-cost/budget-line-limits';
 import type { BudgetLineDisplay, BudgetLineValues } from '@/services/project-cost/budget-lines-optimistic';
-import { budgetLineLabel, parseBudgetAmount, type BudgetLineEffect } from './budget-line-presentation';
+import { budgetLineLabel, parseBudgetAmount, type BudgetLineEffect, type BudgetLineInvoiced } from './budget-line-presentation';
 import { useInlineCellDraft } from './useInlineCellDraft';
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
@@ -27,6 +27,7 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
 interface BudgetLineRowProps {
   line: BudgetLineDisplay;
   effect: BudgetLineEffect;
+  invoiced: BudgetLineInvoiced;
   readOnly: boolean;
   onSet: (costCode: string, values: BudgetLineValues) => void;
   onArchive: (line: BudgetLineDisplay) => void;
@@ -51,7 +52,23 @@ function EffectText({ effect, t }: { effect: BudgetLineEffect; t: Translate }) {
   );
 }
 
-export function BudgetLineRow({ line, effect, readOnly, onSet, onArchive, t }: BudgetLineRowProps) {
+/** ADR-917 Φ4 — «no document» is said in words, never «0 €» */
+function InvoicedText({ invoiced, t }: { invoiced: BudgetLineInvoiced; t: Translate }) {
+  if (invoiced.kind === 'unknown') return <>{t('budgetEditor.invoiced.unknown')}</>;
+  if (invoiced.kind === 'none') return <span className="text-muted-foreground">{t('budgetEditor.invoiced.none')}</span>;
+  return (
+    <>
+      <span className="tabular-nums">{formatCurrency(invoiced.amount)}</span>
+      {invoiced.directCost > 0 ? (
+        <small className="block text-muted-foreground">
+          {t('budgetEditor.invoiced.direct', { amount: formatCurrency(invoiced.directCost) })}
+        </small>
+      ) : null}
+    </>
+  );
+}
+
+export function BudgetLineRow({ line, effect, invoiced, readOnly, onSet, onArchive, t }: BudgetLineRowProps) {
   const label = budgetLineLabel(line.costCode, t);
 
   const commitAmount = useCallback((text: string) => {
@@ -103,6 +120,9 @@ export function BudgetLineRow({ line, effect, readOnly, onSet, onArchive, t }: B
       </TableCell>
       <TableCell className="text-sm">
         {line.pending ? <span className="text-muted-foreground">{t('budgetEditor.row.saving')}</span> : <EffectText effect={effect} t={t} />}
+      </TableCell>
+      <TableCell className="text-right text-sm">
+        <InvoicedText invoiced={invoiced} t={t} />
       </TableCell>
       <TableCell className="w-12 text-right">
         {readOnly ? null : (

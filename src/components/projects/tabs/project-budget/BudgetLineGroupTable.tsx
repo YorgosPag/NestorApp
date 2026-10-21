@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, Table
 import { formatCurrency } from '@/lib/intl-utils';
 import type { ProjectCostLedgerView } from '@/services/project-cost/cost-ledger-view';
 import type { BudgetLineDisplay, BudgetLineValues } from '@/services/project-cost/budget-lines-optimistic';
-import { budgetLineEffect, type BudgetLineFamily } from './budget-line-presentation';
+import { budgetLineEffect, budgetLineInvoiced, type BudgetLineFamily } from './budget-line-presentation';
 import { BudgetLineRow } from './BudgetLineRow';
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
@@ -44,6 +44,7 @@ export function BudgetLineGroupTable({ family, lines, ledger, readOnly, onSet, o
             <TableHead className="text-right">{t('budgetEditor.columns.amount')}</TableHead>
             <TableHead>{t('budgetEditor.columns.note')}</TableHead>
             <TableHead>{t('budgetEditor.columns.effect')}</TableHead>
+            <TableHead className="text-right">{t('budgetEditor.columns.invoiced')}</TableHead>
             <TableHead className="sr-only">{t('budgetEditor.columns.actions')}</TableHead>
           </TableRow>
         </TableHeader>
@@ -53,6 +54,7 @@ export function BudgetLineGroupTable({ family, lines, ledger, readOnly, onSet, o
               key={line.costCode}
               line={line}
               effect={budgetLineEffect(line.costCode, ledger)}
+              invoiced={budgetLineInvoiced(line.costCode, ledger)}
               readOnly={readOnly}
               onSet={onSet}
               onArchive={onArchive}
@@ -64,7 +66,7 @@ export function BudgetLineGroupTable({ family, lines, ledger, readOnly, onSet, o
           <TableRow>
             <TableCell className="font-semibold">{t('budgetEditor.total')}</TableCell>
             <TableCell className="text-right font-semibold tabular-nums">{formatCurrency(total)}</TableCell>
-            <TableCell colSpan={3} />
+            <TableCell colSpan={4} />
           </TableRow>
         </TableFooter>
       </Table>

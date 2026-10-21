@@ -21,6 +21,8 @@ export interface LedgerPoint {
   budget: number | null;
   budgetSource: CostLedgerBudgetSource | null;
   projected: number;
+  /** Φ4 — `null` ⇒ no confirmed allocated invoice under the code: no bar, never a 0 € bar */
+  invoiced: number | null;
 }
 
 export function costCodeLabel(costCode: string, t: Translate): string {
@@ -34,6 +36,7 @@ export function toLedgerPoints(rows: readonly CostLedgerViewRow[], t: Translate)
     budget: row.budget,
     budgetSource: row.budgetSource,
     projected: row.projected,
+    invoiced: row.invoiced,
   }));
 }
 
