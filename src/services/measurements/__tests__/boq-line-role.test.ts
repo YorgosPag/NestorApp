@@ -6,12 +6,14 @@
 import {
   countableBoqLines,
   excludedSummaryIds,
+  isSummaryBoqLine,
+  writesDerivedPrice,
   partitionCountableBoqLines,
   resolveBoqGroupRole,
   type BoqRoleInput,
 } from '../boq-line-role';
 import { computeBuildingSummary } from '../cost-engine';
-import { groupBoqCost } from '../boq-cost-groups';
+import { deriveSummaryCost, derivedSummaryCosts, groupBoqCost } from '../boq-cost-groups';
 import { normalizeBOQItem } from '../boq-document-normalize';
 import type { BOQItem } from '@/types/boq';
 
@@ -118,5 +120,58 @@ describe('groupBoqCost — οι πίνακες μετρήσεων (ADR-917 Λ7)'
     const [group] = groupBoqCost(items, (item) => item.linkedFloorId ?? '');
     expect(group.items.map((item) => item.id)).toEqual(['boq_bim_w1', 'boq_bim_w1_layer_core']);
     expect(group.totalCost).toBe(200);
+  });
+});
+
+describe('derivedSummaryCosts — η σύνοψη είναι παράγωγο (ADR-917 Ε2 · Α32)', () => {
+  const layer = (id: string, unitCost: number, quantity: number) =>
+    normalizeBOQItem(id, { materialUnitCost: unitCost, laborUnitCost: 0, equipmentUnitCost: 0, estimatedQuantity: quantity, parentBoqItemId: 'boq_bim_w1', categoryCode: 'OIK-4' });
+  const summary = (own: number) =>
+    normalizeBOQItem('boq_bim_w1', { materialUnitCost: own, laborUnitCost: 0, equipmentUnitCost: 0, estimatedQuantity: 20, isGroupParent: true, groupRole: 'summary', categoryCode: 'OIK-3' });
+
+  it('🔴 Σ στρώσεων και τιμή μονάδας = Σ ÷ ποσότητα σύνοψης — η δική της τιμή αγνοείται', () => {
+    const derived = derivedSummaryCosts([summary(999), layer('l1', 10, 20), layer('l2', 5, 20)]);
+    expect(derived.get('boq_bim_w1')).toEqual({ layerCount: 2, totalCost: 300, unitRate: 15 });
+  });
+
+  it('🔴 σύνοψη ΧΩΡΙΣ στρώσεις δεν είναι παράγωγο — μετρά με τη δική της τιμή (Α22)', () => {
+    expect(derivedSummaryCosts([summary(7)]).has('boq_bim_w1')).toBe(false);
+  });
+
+  it('γονέας «work» (κολόνα) δεν είναι παράγωγο — αθροίζεται μαζί με τα παιδιά', () => {
+    const work = normalizeBOQItem('boq_bim_c1', { materialUnitCost: 5, estimatedQuantity: 1, isGroupParent: true, groupRole: 'work', categoryCode: 'OIK-2' });
+    const child = normalizeBOQItem('boq_bim_c1_finish_x', { materialUnitCost: 5, estimatedQuantity: 1, parentBoqItemId: 'boq_bim_c1', categoryCode: 'OIK-4' });
+    expect(derivedSummaryCosts([work, child]).size).toBe(0);
+  });
+
+  it('ποσότητα 0 ⇒ τιμή μονάδας null (ποτέ διαίρεση με το μηδέν)', () => {
+    expect(deriveSummaryCost(0, [10])).toEqual({ layerCount: 1, totalCost: 10, unitRate: null });
+  });
+});
+
+describe('writesDerivedPrice — η τιμή σύνοψης δεν πληκτρολογείται (ADR-917 Ε2 · Α33)', () => {
+  const summary = { id: 'w', isGroupParent: true, groupRole: 'summary' as const, materialUnitCost: 7, laborUnitCost: 0, equipmentUnitCost: 0 };
+
+  it('🔴 νέα τιμή ≠ 0 σε σύνοψη ⇒ άρνηση', () => {
+    expect(writesDerivedPrice(summary, { materialUnitCost: 12 })).toBe(true);
+    expect(writesDerivedPrice(summary, { laborUnitCost: 3 })).toBe(true);
+  });
+
+  it('🔴 ίδια τιμή ή 0 ⇒ επιτρέπεται (συγχρονισμός μοντέλου · καθαρισμός) — όπως ο κανόνας', () => {
+    expect(writesDerivedPrice(summary, { materialUnitCost: 7, laborUnitCost: 0 })).toBe(false);
+    expect(writesDerivedPrice(summary, { materialUnitCost: 0 })).toBe(false);
+    expect(writesDerivedPrice(summary, { notes: undefined } as never)).toBe(false);
+  });
+
+  it('🔴 παλιά σύνοψη χωρίς ρόλο, αποδεδειγμένη από τον builder (τοίχος) ⇒ επίσης κλειδωμένη', () => {
+    const legacy = { id: 'w', isGroupParent: true, sourceEntityType: 'wall' as const, materialUnitCost: 0 };
+    expect(isSummaryBoqLine(legacy)).toBe(true);
+    expect(writesDerivedPrice(legacy, { materialUnitCost: 5 })).toBe(true);
+  });
+
+  it('γραμμή στρώσης, απλή γραμμή, γονέας «work» ⇒ ελεύθερη τιμή', () => {
+    expect(writesDerivedPrice({ id: 'l', parentBoqItemId: 'w', materialUnitCost: 0 }, { materialUnitCost: 5 })).toBe(false);
+    expect(writesDerivedPrice({ id: 'x', materialUnitCost: 0 }, { materialUnitCost: 5 })).toBe(false);
+    expect(writesDerivedPrice({ id: 'c', isGroupParent: true, groupRole: 'work', materialUnitCost: 0 }, { materialUnitCost: 5 })).toBe(false);
   });
 });

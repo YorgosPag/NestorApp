@@ -48,6 +48,7 @@ import { applyBoqSearchText, computeBoqStats, EMPTY_BOQ_STATS } from './boq-read
 // SSoT ελέγχου ιδιοκτησίας — κοινός με το Admin-SDK μονοπάτι. Δύο αντίγραφα του
 // ίδιου ελέγχου πρόσβασης θα απέκλιναν σιωπηλά (ADR-584 / CHECK 3.28).
 import { ownedItemOrNull } from './boq-tenant-ownership';
+import { BoqDerivedPriceError, writesDerivedPrice } from './boq-line-role';
 
 const logger = createModuleLogger('FirestoreBOQRepository');
 
@@ -179,6 +180,8 @@ export class FirestoreBOQRepository implements IBOQRepository {
       if (!current) {
         return null;
       }
+      // ADR-917 Ε2 — a summary's price is the sum of its layers: never set by hand (the rule refuses it too).
+      if (writesDerivedPrice(current, data)) throw new BoqDerivedPriceError(id);
 
       const updatePayload: Record<string, unknown> = {
         ...data,
@@ -193,6 +196,7 @@ export class FirestoreBOQRepository implements IBOQRepository {
 
       return await this.readOwned(companyId, id);
     } catch (error) {
+      if (error instanceof BoqDerivedPriceError) throw error;
       logger.error('Error updating BOQ item', { error, id });
       return null;
     }
@@ -245,6 +249,11 @@ export class FirestoreBOQRepository implements IBOQRepository {
         approvedBy: null,
         createdAt: now,
         updatedAt: now,
+        // A copy is a standalone line: never a second layer of the same wall, never a priced «summary» (Ε2 · Λ7).
+        parentBoqItemId: null,
+        isGroupParent: null,
+        groupRole: null,
+        layerIndex: null,
       };
 
       // Remove the id before writing

@@ -4636,6 +4636,31 @@ service cloud.firestore {
     // =========================================================================
     match /boq_items/{itemId} {
 
+      // 🔒 ADR-917 Ε2 — a wall SUMMARY's price is DERIVED from its layers (Σ ÷ quantity, Autodesk Build):
+      // it is never typed. A write may keep a price or clear it to 0 (the model's sync · legacy cleanup),
+      // never set one. The role, once written, cannot be changed to unlock the price. The app checks the
+      // same thing before any request (`boq-line-role.writesDerivedPrice`); this is the server's word.
+      function boqPriceKeptOrCleared(field) {
+        return request.resource.data.get(field, 0) == resource.data.get(field, 0)
+            || request.resource.data.get(field, 0) == 0;
+      }
+      function boqSummaryPriceLocked() {
+        return request.resource.data.get('groupRole', null) != 'summary'
+            || (boqPriceKeptOrCleared('materialUnitCost')
+                && boqPriceKeptOrCleared('laborUnitCost')
+                && boqPriceKeptOrCleared('equipmentUnitCost'));
+      }
+      function boqSummaryCreatedUnpriced() {
+        return request.resource.data.get('groupRole', null) != 'summary'
+            || (request.resource.data.get('materialUnitCost', 0) == 0
+                && request.resource.data.get('laborUnitCost', 0) == 0
+                && request.resource.data.get('equipmentUnitCost', 0) == 0);
+      }
+      function boqGroupRoleImmutable() {
+        return resource.data.get('groupRole', null) == null
+            || request.resource.data.get('groupRole', null) == resource.data.get('groupRole', null);
+      }
+
       // 📖 READ: Tenant-scoped
       // 🔒 SECURITY (ADR-252 FR-H1): Was `isAuthenticated()` → now tenant-scoped
       allow read: if isAuthenticated()
@@ -4668,7 +4693,8 @@ service cloud.firestore {
                     && request.resource.data.scope in [
                          'building', 'common_areas', 'floor', 'property', 'properties'
                        ]
-                    && request.resource.data.estimatedQuantity is number;
+                    && request.resource.data.estimatedQuantity is number
+                    && boqSummaryCreatedUnpriced();
 
       // ✏️ UPDATE: Tenant-scoped (buildingId and projectId immutable)
       // 📐 ADR-329 §3.3.1: scope-related fields immutable once status leaves draft.
@@ -4677,6 +4703,8 @@ service cloud.firestore {
                     && request.resource.data.buildingId == resource.data.buildingId
                     && request.resource.data.projectId == resource.data.projectId
                     && request.resource.data.companyId == resource.data.companyId
+                    && boqGroupRoleImmutable()
+                    && boqSummaryPriceLocked()
                     && request.resource.data.status in [
                          'draft', 'submitted', 'approved', 'certified', 'locked'
                        ]

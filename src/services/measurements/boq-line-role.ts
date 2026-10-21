@@ -112,3 +112,38 @@ export function excludedSummaryIds(items: readonly BoqRoleInput[]): ReadonlySet<
 export function countableBoqLines<T extends BoqRoleInput>(items: readonly T[]): T[] {
   return partitionCountableBoqLines(items).countable;
 }
+
+// ============================================================================
+// Ε2 — the price of a summary is DERIVED from its layers, never typed
+// ============================================================================
+
+/** The price fields a summary parent does not own (its cost = Σ of its layers) */
+export const BOQ_PRICE_FIELDS = ['materialUnitCost', 'laborUnitCost', 'equipmentUnitCost'] as const;
+
+/** A summary parent (explicit or proven by its builder) — its price is locked, whatever its children (Ε2). */
+export function isSummaryBoqLine(item: BoqRoleInput): boolean {
+  return resolveBoqGroupRole(item).role === 'summary';
+}
+
+/**
+ * Does this update try to SET a price on a summary? Writing the same value or 0 is allowed (the model's
+ * sync and the cleanup of a legacy price) — exactly what the Firestore rule admits (Α34).
+ */
+export function writesDerivedPrice(
+  current: BoqRoleInput & Partial<Record<(typeof BOQ_PRICE_FIELDS)[number], number>>,
+  update: Partial<Record<(typeof BOQ_PRICE_FIELDS)[number], number | undefined>>,
+): boolean {
+  if (!isSummaryBoqLine(current)) return false;
+  return BOQ_PRICE_FIELDS.some((field) => {
+    const next = update[field];
+    return next !== undefined && next !== 0 && next !== current[field];
+  });
+}
+
+/** Refusal of {@link writesDerivedPrice} — named, so the screen can say why (never a generic failure). */
+export class BoqDerivedPriceError extends Error {
+  constructor(readonly boqItemId: string) {
+    super(`BOQ item ${boqItemId} is a summary: its price is the sum of its layers`);
+    this.name = 'BoqDerivedPriceError';
+  }
+}
