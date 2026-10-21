@@ -27,11 +27,13 @@ import {
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { ExtractedDataDisplay } from './ExtractedDataDisplay';
+import { ExpenseCostAllocationSection } from './ExpenseCostAllocationSection';
 import type { ReceivedExpenseDocument, ExpenseCategory } from '@/subapps/accounting/types';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 import { cn } from '@/lib/utils';
+import { parseLocaleNumber } from '@/lib/number/locale-number';
 
 // ============================================================================
 // TYPES
@@ -82,7 +84,8 @@ export function DocumentReviewCard({
   onReject,
   confirming,
 }: DocumentReviewCardProps) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  // `procurement` — the cost-code labels of the allocation section (ADR-917 Φ4)
+  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices', 'procurement']);
   const colors = useSemanticColors();
 
   // Editable confirmed fields — pre-populated from AI extraction
@@ -105,16 +108,21 @@ export function DocumentReviewCard({
   const statusVariant = STATUS_VARIANT_MAP[doc.status];
   const statusLabel = t(`documents.statuses.${doc.status}`);
   const isEditable = doc.status === 'review';
+  // A typed figure, or `null` when empty / unreadable — never a silent 0 € (ADR-917 Φ4.0)
+  const net = parseLocaleNumber(netAmount);
+  const vat = parseLocaleNumber(vatAmount);
+  const canConfirm = net !== null && vat !== null && date.trim() !== '';
 
   const handleConfirm = useCallback(async () => {
+    if (net === null || vat === null || date.trim() === '') return;
     await onConfirm({
       confirmedCategory: category,
-      confirmedNetAmount: parseFloat(netAmount) || 0,
-      confirmedVatAmount: parseFloat(vatAmount) || 0,
+      confirmedNetAmount: net,
+      confirmedVatAmount: vat,
       confirmedDate: date,
       confirmedIssuerName: issuerName,
     });
-  }, [category, netAmount, vatAmount, date, issuerName, onConfirm]);
+  }, [category, net, vat, date, issuerName, onConfirm]);
 
   const handleReject = useCallback(async () => {
     await onReject();
@@ -206,11 +214,17 @@ export function DocumentReviewCard({
             </div>
           </section>
         )}
+
+        {/* ADR-917 Φ4 — project + cost code of the net amount (also after confirmation; never once rejected) */}
+        {doc.status === 'review' || doc.status === 'confirmed' ? (
+          <ExpenseCostAllocationSection document={doc} t={t} />
+        ) : null}
       </CardContent>
 
       {/* Action Buttons */}
       {isEditable && (
-        <CardFooter className="flex justify-end gap-3">
+        <CardFooter className="flex flex-wrap items-center justify-end gap-3">
+          {!canConfirm ? <p className="mr-auto text-xs text-muted-foreground">{t('documents.confirmHint')}</p> : null}
           <Button
             variant="outline"
             onClick={handleReject}
@@ -220,7 +234,7 @@ export function DocumentReviewCard({
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={confirming}
+            disabled={confirming || !canConfirm}
           >
             {confirming ? <Spinner size="small" className="mr-2" /> : null}
             {t('documents.confirm')}
