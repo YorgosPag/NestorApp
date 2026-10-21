@@ -20,6 +20,7 @@ import { PO_COMMITTED_STATUSES, PO_DELIVERED_STATUSES, PO_PENDING_STATUSES } fro
 import type { BOQItem } from '@/types/boq';
 import { computeItemCost, type BOQCostInput } from '@/services/measurements/cost-engine';
 import { compareByLocale } from '@/lib/intl-utils';
+import { atoeGroupCodeOf, findATOECategory } from '@/config/boq-categories';
 
 // ============================================================================
 // TYPES
@@ -34,6 +35,8 @@ export type LedgerPurchaseOrder = Pick<PurchaseOrder, 'id' | 'poNumber' | 'statu
 /** One BOQ line behind a row's budget */
 export interface LedgerBoqSource {
   id: string;
+  /** The line's own code (article `OIK-2.03`) — the row groups it under `OIK-2` */
+  costCode: string | null;
   title: string;
   amount: number;
 }
@@ -77,8 +80,18 @@ export interface CostLedger {
 // HELPERS
 // ============================================================================
 
+/**
+ * Rows are ΑΤΟΕ **groups**: BOQ lines carry article codes (`OIK-2.03`) while PO lines
+ * carry group codes (`OIK-2`) — compared at different levels they would never meet.
+ */
 function codeOf(raw: string | null | undefined): string {
-  return raw ? raw : UNCATEGORIZED_COST_CODE;
+  return raw ? atoeGroupCodeOf(raw) : UNCATEGORIZED_COST_CODE;
+}
+
+/** ΑΤΟΕ catalogue order (OIK-2 before OIK-10); codes outside it (OTHER, SOFT-*) after, by name. */
+function compareCostCodes(a: string, b: string): number {
+  const order = (code: string): number => findATOECategory(code)?.sortOrder ?? Number.MAX_SAFE_INTEGER;
+  return order(a) - order(b) || compareByLocale(a, b);
 }
 
 function emptyRow(categoryCode: string): CostLedgerRow {
@@ -115,7 +128,7 @@ function accumulateBudget(
     const amount = computeItemCost(item).totalCost;
     row.budget += amount;
     row.boqItemCount += 1;
-    row.sources.boqItems.push({ id: item.id, title: item.title, amount });
+    row.sources.boqItems.push({ id: item.id, costCode: item.categoryCode ?? null, title: item.title, amount });
     codeByBoqId.set(item.id, code);
   }
   return codeByBoqId;
@@ -185,7 +198,7 @@ export function computeCostLedger(
   }
 
   return {
-    rows: [...rows.values()].sort((a, b) => compareByLocale(a.categoryCode, b.categoryCode)),
+    rows: [...rows.values()].sort((a, b) => compareCostCodes(a.categoryCode, b.categoryCode)),
     boqItemCount: codeByBoqId.size,
     coveredBoqItemCount,
   };

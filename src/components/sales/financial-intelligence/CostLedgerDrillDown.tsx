@@ -58,7 +58,10 @@ export function CostLedgerDrillDown({ row, label, onClose, t }: CostLedgerDrillD
       <SourceList title={t('variance.drillDown.boqItems')} empty={none}>
         {sources.boqItems.map((item) => (
           <li key={item.id} className="flex justify-between gap-4 px-3 py-1.5">
-            <span className="truncate">{item.title}</span>
+            <span className="truncate">
+              {item.costCode && <span className="mr-2 font-mono text-muted-foreground">{item.costCode}</span>}
+              {item.title}
+            </span>
             <span className="tabular-nums">{formatCurrencyWhole(item.amount)}</span>
           </li>
         ))}

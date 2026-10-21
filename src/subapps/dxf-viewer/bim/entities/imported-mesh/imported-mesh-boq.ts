@@ -21,8 +21,9 @@
  * @see docs/centralized-systems/reference/adrs/ADR-683-bim-collaboration-roundtrip.md §10.2
  */
 
-import { getAllowedUnits } from '@/config/boq-categories';
-import { findSubCategory } from '@/config/boq-subcategories';
+// Οι μονάδες ορίζονται ΜΟΝΟ στην ομάδα: υποκατηγορία (`OIK-3.1`) ή άρθρο (`OIK-2.03`) τις
+// κληρονομεί μέσω `atoeGroupCodeOf`, αλλιώς θα έπεφτε στο γενικό fallback και θα χαλάρωνε το gating.
+import { atoeGroupCodeOf, getAllowedUnits } from '@/config/boq-categories';
 import type { BimEntityForBoq } from '../../services/BimToBoqBridge';
 import {
   IMPORTED_MESH_ENTITY_TYPE,
@@ -54,17 +55,6 @@ export function supportedBoqUnits(params: ImportedMeshParams): readonly Imported
 /** Μπορεί η ανάθεση αυτής της μονάδας να παραγάγει πραγματικό νούμερο; */
 export function isBoqUnitSupported(params: ImportedMeshParams, unit: ImportedMeshBoqUnit): boolean {
   return supportedBoqUnits(params).includes(unit);
-}
-
-/**
- * Ο **κωδικός ομάδας** ΑΤΟΕ ενός άρθρου. Η ταυτότητα μπορεί να δηλώνει είτε ομάδα (`OIK-3`) είτε
- * υποκατηγορία (`OIK-3.1`), αλλά οι επιτρεπόμενες μονάδες ορίζονται **μόνο** στην ομάδα
- * (`ATOE_MASTER_CATEGORIES`). Χωρίς αυτή τη μετάβαση, το `getAllowedUnits('OIK-3.1')` δεν βρίσκει
- * κατηγορία και πέφτει στο γενικό fallback — δηλαδή η υποκατηγορία θα χαλάρωνε σιωπηλά το gating
- * αντί να το κληρονομεί.
- */
-function atoeGroupCodeOf(categoryCode: string): string {
-  return findSubCategory(categoryCode)?.parentCode ?? categoryCode;
 }
 
 /**

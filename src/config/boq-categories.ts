@@ -209,6 +209,16 @@ export function findATOECategory(code: string): MasterBOQCategory | undefined {
   return ATOE_MASTER_CATEGORIES.find((cat) => cat.code === code);
 }
 
+/**
+ * Ο κωδικός **ομάδας** ΑΤΟΕ (`OIK-n`) ενός κωδικού οποιουδήποτε επιπέδου: ομάδα `OIK-2`,
+ * υποκατηγορία `OIK-2.1` (ADR-337) ή άρθρο `OIK-2.03` (ΒΙΜ → BOQ). Η τελεία χωρίζει πάντα
+ * την ομάδα από το επίπεδο κάτω της (ADR-917 Ζ1) — δεν απαιτείται ο κωδικός να είναι στον κατάλογο.
+ */
+export function atoeGroupCodeOf(code: string): string {
+  const dot = code.indexOf('.');
+  return dot === -1 ? code : code.slice(0, dot);
+}
+
 /** Default waste factor βάσει κωδικού κατηγορίας */
 export function getDefaultWasteFactor(categoryCode: string): number {
   return findATOECategory(categoryCode)?.defaultWasteFactor ?? 0;

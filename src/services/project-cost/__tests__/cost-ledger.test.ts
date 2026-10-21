@@ -119,8 +119,29 @@ describe('computeCostLedger (ADR-917)', () => {
   it('sources — every BOQ line behind the budget is listed with its cost-engine amount', () => {
     const { rows } = computeCostLedger([boq('b1', 'OIK-2'), boq('b2', 'OIK-2')], []);
     expect(rows[0].sources.boqItems).toEqual([
-      { id: 'b1', title: 'BOQ b1', amount: 100 },
-      { id: 'b2', title: 'BOQ b2', amount: 100 },
+      { id: 'b1', costCode: 'OIK-2', title: 'BOQ b1', amount: 100 },
+      { id: 'b2', costCode: 'OIK-2', title: 'BOQ b2', amount: 100 },
     ]);
+  });
+
+  it('🔴 article codes roll up to their ΑΤΟΕ group — a BOQ article and a PO group line meet in ONE row', () => {
+    const { rows } = computeCostLedger(
+      [boq('b1', 'OIK-2.03'), boq('b2', 'OIK-2.07')],
+      [po('ordered', [line('OIK-2', 30, 'b1')], 'po_a')],
+    );
+    expect(rows).toEqual([
+      expect.objectContaining({ categoryCode: 'OIK-2', budget: 200, boqItemCount: 2, committed: 30, coveredBoqItemCount: 1 }),
+    ]);
+    expect(rows[0].sources.boqItems.map(s => s.costCode)).toEqual(['OIK-2.03', 'OIK-2.07']);
+  });
+
+  it('a group filter matches the articles under it', () => {
+    const { rows } = computeCostLedger([boq('b1', 'OIK-10.20'), boq('b2', 'OIK-2.03')], [], ['OIK-10']);
+    expect(rows.map(r => r.categoryCode)).toEqual(['OIK-10']);
+  });
+
+  it('rows follow the ΑΤΟΕ catalogue order (OIK-2 before OIK-10), codes outside it last', () => {
+    const { rows } = computeCostLedger([boq('b1', 'OIK-10.20'), boq('b2', ''), boq('b3', 'OIK-2.03')], []);
+    expect(rows.map(r => r.categoryCode)).toEqual(['OIK-2', 'OIK-10', UNCATEGORIZED_COST_CODE]);
   });
 });

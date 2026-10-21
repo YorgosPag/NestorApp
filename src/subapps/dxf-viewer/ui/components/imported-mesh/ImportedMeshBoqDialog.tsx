@@ -46,7 +46,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { SELECT_CLEAR_VALUE } from '@/config/domain-constants';
-import { ATOE_MASTER_CATEGORIES } from '@/config/boq-categories';
+import { ATOE_MASTER_CATEGORIES, atoeGroupCodeOf } from '@/config/boq-categories';
 import { subCategoriesFor } from '@/config/boq-subcategories';
 import type { BimMaterial } from '../../../bim/types/bim-material-types';
 import { assignableBoqUnits } from '../../../bim/entities/imported-mesh/imported-mesh-boq';
@@ -110,7 +110,7 @@ function draftFromIdentity(identity: ImportedMeshBoqIdentity | null): DraftIdent
   if (!identity) return EMPTY_DRAFT;
   const isSub = identity.categoryCode.includes('.');
   return {
-    groupCode: isSub ? identity.categoryCode.split('.')[0] : identity.categoryCode,
+    groupCode: atoeGroupCodeOf(identity.categoryCode),
     subCategoryCode: isSub ? identity.categoryCode : '',
     unit: identity.unit,
     titleEL: identity.titleEL,
