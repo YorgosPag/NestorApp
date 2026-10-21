@@ -95,7 +95,8 @@
         "quantity": "Quantity",
         "unitCost": "Unit cost",
         "totalCost": "Total"
-      }
+      },
+      "derivedFromLayers": "= Σ of {count, plural, one {# layer} other {# layers}} — the summary has no price of its own"
     },
     "comments": {
       "empty": "No comments yet",

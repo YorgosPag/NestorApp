@@ -58,7 +58,8 @@
       "surveyData": "Survey Data",
       "objectiveValue": "Objective value",
       "listing": "Listing",
-      "tour360": "360° tour"
+      "tour360": "360° tour",
+      "budget": "Budget"
     },
     "descriptions": {
       "projectGeneral": "Basic information and project details",
@@ -83,7 +84,9 @@
       "locations": "Manage project addresses",
       "procurement": "RFQ requests and quote evaluation for the project",
       "buildingCode": "Building coefficient, coverage, height and ΝΟΚ zone per project",
-      "surveyData": "Institutional and legal plot data, as declared by the surveyor"
+      "surveyData": "Institutional and legal plot data, as declared by the surveyor",
+      "budget": "Soft-cost and allowance lines of the project",
+      "projectMeasurements": "Aggregated measurements from every building of the project"
     },
     "floors": {
       "title": "Building Floors",
@@ -280,7 +283,8 @@
         "actions": "Actions",
         "items": "items",
         "categoryTotal": "Category total",
-        "subtotal": "Subtotal"
+        "subtotal": "Subtotal",
+        "derivedFromLayers": "= Σ of {count, plural, one {# layer} other {# layers}}"
       },
       "editor": {
         "createTitle": "New Item",
@@ -338,6 +342,16 @@
           "subCategory": "Specifies the type of work within the selected category. Always editable.",
           "notes": "Internal team notes — not printed on client documents.",
           "status": "Work lifecycle: Draft → Active → Completed → Locked (non-editable)."
+        },
+        "derived": {
+          "title": "Cost from the layers",
+          "note": "Wall summary: its cost is the sum of its layers and is not typed. Set the price on each layer.",
+          "unitRate": "Derived unit rate",
+          "unitRateValue": "{value} per {unit}",
+          "total": "Total",
+          "totalNote": "= Σ of {count, plural, one {# layer} other {# layers}}",
+          "layers": "Layers",
+          "noLayers": "This summary has no layers right now — re-sync the wall from the drawing to bring them back. Its price stays locked."
         }
       },
       "scope": {
@@ -464,7 +478,8 @@
         "updated": "Item updated",
         "deleted": "Item deleted",
         "statusChanged": "Status changed",
-        "error": "Error: {message}"
+        "error": "Error: {message}",
+        "derivedPrice": "A wall summary's price comes from its layers — set the price on each layer."
       },
       "coverage": {
         "floorGapTitle": "Incomplete floor-level measurements",

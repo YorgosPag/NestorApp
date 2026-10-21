@@ -95,7 +95,8 @@
         "quantity": "Ποσότητα",
         "unitCost": "Τιμή/μον.",
         "totalCost": "Σύνολο"
-      }
+      },
+      "derivedFromLayers": "= Σ {count, plural, one {# στρώματος} other {# στρωμάτων}} — η σύνοψη δεν έχει δική της τιμή"
     },
     "comments": {
       "empty": "Δεν υπάρχουν σχόλια",

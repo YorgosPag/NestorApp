@@ -254,8 +254,8 @@
     "emptyState": "Enter budget and actual amounts to render the chart.",
     "removeRow": "Delete category",
     "source": {
-      "caption": "Budget from bills of quantities (BOQ) and projected cost from purchase orders, per cost code. A code without a budget bar has no BOQ — it does not mean zero.",
-      "budgetSeries": "Budget (BOQ)",
+      "caption": "Budget from its sources (signed-off bill of quantities, allowance or soft-cost line) and projected cost from purchase orders, per cost code. A code without a budget bar has no source — it does not mean zero.",
+      "budgetSeries": "Budget",
       "projectedSeries": "Projected (purchase orders)",
       "projected": "Projected cost",
       "unbudgeted": "Cost without a budget",
@@ -267,7 +267,22 @@
       "noBoq": "No BOQ",
       "codesWithoutBudget": "{count, plural, one {# code with cost but no budget} other {# codes with cost but no budget}}",
       "unpricedLabel": "No unit price",
-      "unpriced": "{count, plural, one {# BOQ line without a price} other {# BOQ lines without a price}}"
+      "unpriced": "{count, plural, one {# BOQ line without a price} other {# BOQ lines without a price}}",
+      "kind": {
+        "boq": "bill of quantities",
+        "allowance": "allowance (estimate)",
+        "soft": "soft cost",
+        "none": "no source"
+      },
+      "categoryWithSource": "{label} · source: {source}",
+      "estimateLegend": "Dashed bar: the budget is still an allowance — not yet backed by a signed-off, fully priced bill of quantities.",
+      "landExchangeLabel": "Land exchange (in kind)",
+      "landExchange": "≈ {value} · {percentage}% of the hard budget — outside every total",
+      "excludedSummariesLabel": "Wall summaries left out of the sum",
+      "excludedSummaries": "{count, plural, one {# summary — its layers count} other {# summaries — their layers count}}",
+      "unresolvedRolesLabel": "Groups with no provable role",
+      "unresolvedRoles": "{count, plural, one {# parent line counts together with its layers — possible double count} other {# parent lines count together with their layers — possible double count}}",
+      "editBudget": "Edit project budget"
     },
     "drillDown": {
       "hint": "Click a bar to see which documents it comes from.",
@@ -279,7 +294,8 @@
       "budgetLines": "Budget lines",
       "excludedSummaries": "Summaries left out of the sum",
       "excludedSummaryNote": "its {count} layers count instead",
-      "close": "Close"
+      "close": "Close",
+      "source": "Budget source: {source}"
     },
     "legacy": {
       "trigger": "Old manual values (to be retired)",
@@ -330,5 +346,76 @@
     "invalidDueDate": "Enter a due date",
     "installmentSaveFailed": "Saving the installment failed",
     "installmentDeleteFailed": "Deleting the installment failed"
+  },
+  "budgetEditor": {
+    "title": "Project budget",
+    "intro": "What the bill of quantities does not measure: soft cost (permits, design, insurance…) and allowances on ATOE codes until the bill of quantities is signed off. Amounts net of VAT.",
+    "loading": "Loading budget lines…",
+    "loadError": "The budget lines could not be loaded.",
+    "retry": "Try again",
+    "readOnly": "View only — you are not allowed to edit the budget.",
+    "empty": "No lines yet. The project budget comes from the bills of quantities; add here what is not measured.",
+    "codeWithLowerLevel": "{group} · {lowerLevel}",
+    "groups": {
+      "allowance": "Allowances on ATOE codes",
+      "allowanceHint": "An estimate until a fully priced bill of quantities is signed off on the same code; then it steps aside on its own.",
+      "soft": "Soft cost",
+      "softHint": "Cost that no bill of quantities measures."
+    },
+    "columns": {
+      "code": "Code",
+      "amount": "Amount (net)",
+      "note": "Note",
+      "effect": "What counts in the budget",
+      "actions": "Actions"
+    },
+    "effect": {
+      "allowanceActive": "Counts as the budget",
+      "estimateDelta": "estimate accuracy: the bill of quantities differs by {delta}",
+      "superseded": "Stepped aside — the signed-off bill of quantities counts",
+      "soft": "Soft cost",
+      "unknown": "Calculating…"
+    },
+    "total": "Total",
+    "landExchange": {
+      "label": "Land exchange in kind",
+      "value": "≈ {value} — {percentage}% (landowner shares) of the hard budget. Not a cash cost and part of no total."
+    },
+    "add": {
+      "title": "New line",
+      "group": "Code",
+      "groupPlaceholder": "Select a code",
+      "lowerLevel": "Sub-code (optional)",
+      "lowerLevelHint": "Latin capitals or digits, up to 16 — e.g. TEE",
+      "amount": "Amount (net)",
+      "note": "Note",
+      "submit": "Add",
+      "invalidCode": "Invalid sub-code.",
+      "duplicate": "A line with this code already exists — change its amount.",
+      "invalidAmount": "Invalid amount."
+    },
+    "row": {
+      "saving": "Saving…",
+      "archive": "Archive",
+      "archiveAria": "Archive line {code}",
+      "amountAria": "Amount for {code}",
+      "noteAria": "Note for {code}"
+    },
+    "toast": {
+      "archived": "Line {code} archived",
+      "undo": "Undo",
+      "failed": "The change was not saved — the value was restored.",
+      "forbidden": "You are not allowed to edit the budget.",
+      "invalid": "The server rejected the value — the value was restored."
+    },
+    "conflict": {
+      "title": "Line {code} was changed by someone else meanwhile",
+      "theirs": "Current value: {value}",
+      "theirsArchived": "Current state: archived",
+      "mine": "Yours: {value}",
+      "mineArchive": "Yours: archive",
+      "keepMine": "Keep mine",
+      "keepTheirs": "Keep current"
+    }
   }
 }
