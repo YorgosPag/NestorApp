@@ -25,6 +25,8 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
 interface CostLedgerDrillDownProps {
   row: CostLedgerViewRow;
   label: string;
+  /** Where the row's budget comes from, already in words («allowance (estimate)» · «no source») */
+  source: string;
   onClose: () => void;
   t: Translate;
 }
@@ -42,7 +44,7 @@ function SourceList({ title, empty, children }: { title: string; empty: string; 
   );
 }
 
-export function CostLedgerDrillDown({ row, label, onClose, t }: CostLedgerDrillDownProps) {
+export function CostLedgerDrillDown({ row, label, source, onClose, t }: CostLedgerDrillDownProps) {
   const iconSizes = useIconSizes();
   const sources = row.sources ?? { boqItems: [], purchaseOrders: [], budgetLines: [], excludedSummaries: [] };
   const none = t('variance.drillDown.none');
@@ -50,7 +52,10 @@ export function CostLedgerDrillDown({ row, label, onClose, t }: CostLedgerDrillD
   return (
     <section className="space-y-3 rounded-md border p-3" aria-label={t('variance.drillDown.title', { code: label })}>
       <header className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">{t('variance.drillDown.title', { code: label })}</h3>
+        <hgroup>
+          <h3 className="text-sm font-semibold">{t('variance.drillDown.title', { code: label })}</h3>
+          <p className="text-xs text-muted-foreground">{t('variance.drillDown.source', { source })}</p>
+        </hgroup>
         <Button variant="ghost" size="sm" onClick={onClose} aria-label={t('variance.drillDown.close')}>
           <X className={iconSizes.sm} aria-hidden="true" />
         </Button>

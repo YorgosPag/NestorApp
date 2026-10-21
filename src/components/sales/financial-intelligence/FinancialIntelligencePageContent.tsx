@@ -18,7 +18,8 @@ import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 import { PortfolioDashboard } from '@/components/sales/financial-intelligence/PortfolioDashboard';
 
 export function FinancialIntelligencePageContent() {
-  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
+  // `procurement` carries the cost-code labels of the budget card (`costCodeLabelKey`, ADR-917)
+  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans', 'procurement']);
   const colors = useSemanticColors();
   const { quick } = useBorderTokens();
 
