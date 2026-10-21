@@ -50,6 +50,17 @@ export const contractCasesWrites: readonly ContractCase[] = [
     },
   },
   {
+    id: 'W3b',
+    title: '`arrayUnion()` προσθέτει μόνο ό,τι λείπει (καμία διπλή εγγραφή)· `arrayRemove()` σβήνει κάθε εμφάνιση· σε απόν πεδίο ⇒ πίνακας',
+    async run(db) {
+      await db.collection('w3b').doc('a').set({ ids: ['x', 'y'] });
+      await db.collection('w3b').doc('a').update({ ids: FieldValue.arrayUnion('y', 'z'), fresh: FieldValue.arrayUnion('k') });
+      expect(await dataOf(db, 'w3b', 'a')).toEqual({ ids: ['x', 'y', 'z'], fresh: ['k'] });
+      await db.collection('w3b').doc('a').update({ ids: FieldValue.arrayRemove('x', 'nope') });
+      expect(await dataOf(db, 'w3b', 'a')).toEqual({ ids: ['y', 'z'], fresh: ['k'] });
+    },
+  },
+  {
     id: 'W4',
     title: '`set` χωρίς merge ΑΝΤΙΚΑΘΙΣΤΑ· με merge κρατά τα άλλα πεδία και εφαρμόζει `increment()`',
     async run(db) {

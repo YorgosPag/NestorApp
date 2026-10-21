@@ -120,10 +120,37 @@ function incrementOperand(value: unknown): number | null {
   return typeof operand === 'number' && value.isEqual(FieldValue.increment(operand)) ? operand : null;
 }
 
-/** Εφαρμόζει μία τιμή πάνω στην προηγούμενη: αύξηση → άθροισμα, οτιδήποτε άλλο → η ίδια η τιμή. */
+/**
+ * Τα στοιχεία ενός `FieldValue.arrayUnion(…)` / `arrayRemove(…)`, ή `null` (ADR-917 Φ4). Όπως στο `increment`, το SDK
+ * κρατά τα στοιχεία στο `elements` χωρίς δημόσιο τύπο· το `isEqual` **επιβεβαιώνει** το είδος του συμβόλου.
+ * Χωρίς αυτό το fake αποθήκευε το **σύμβολο** στη θέση του πίνακα — και κάθε έλεγχος πάνω στον πίνακα ήταν λάθος.
+ */
+function arrayTransformOf(value: unknown): { readonly kind: 'union' | 'remove'; readonly elements: unknown[] } | null {
+  if (!isInstance(value, FieldValue)) return null;
+  const elements = (value as unknown as { readonly elements?: unknown }).elements;
+  if (!Array.isArray(elements)) return null;
+  if (value.isEqual(FieldValue.arrayUnion(...elements))) return { kind: 'union', elements };
+  if (value.isEqual(FieldValue.arrayRemove(...elements))) return { kind: 'remove', elements };
+  return null;
+}
+
+function applyArrayTransform(previous: unknown, transform: { readonly kind: 'union' | 'remove'; readonly elements: unknown[] }): unknown[] {
+  const current = Array.isArray(previous) ? [...previous] : [];
+  if (transform.kind === 'remove') {
+    return current.filter((item) => !transform.elements.some((element) => valuesEqual(item, element)));
+  }
+  for (const element of transform.elements) {
+    if (!current.some((item) => valuesEqual(item, element))) current.push(element);
+  }
+  return current;
+}
+
+/** Εφαρμόζει μία τιμή πάνω στην προηγούμενη: αύξηση → άθροισμα, arrayUnion/Remove → πίνακας, οτιδήποτε άλλο → η ίδια η τιμή. */
 export function resolveWrite(previous: unknown, value: unknown): unknown {
   const step = incrementOperand(value);
-  return step === null ? value : (typeof previous === 'number' ? previous : 0) + step;
+  if (step !== null) return (typeof previous === 'number' ? previous : 0) + step;
+  const transform = arrayTransformOf(value);
+  return transform === null ? value : applyArrayTransform(previous, transform);
 }
 
 /** Όλα τα πεδία ενός εγγράφου με τις αυξήσεις εφαρμοσμένες πάνω στο `existing` — πάντα **νέο** αντικείμενο. */
