@@ -50,12 +50,16 @@ export function applyJournalDefaults(entry: JournalEntry): JournalEntry {
   return entry;
 }
 
-export async function createJournalEntry(
+/**
+ * The stored shape of a new journal entry — ONE composition, shared by `createJournalEntry` and by writers
+ * that must post inside their own transaction (expense confirmation, ADR-917 Φ4.0).
+ */
+export function buildJournalEntryRecord(
   tenant: TenantContext,
-  data: CreateJournalEntryInput
-): Promise<{ id: string }> {
-  const id = generateJournalEntryId();
-  const now = isoNow();
+  id: string,
+  data: CreateJournalEntryInput,
+  now: string,
+): Record<string, unknown> {
   const doc: JournalEntry = {
     ...sanitizeForFirestore(data as unknown as Record<string, unknown>) as unknown as CreateJournalEntryInput,
     entryId: id,
@@ -65,11 +69,18 @@ export async function createJournalEntry(
     createdAt: now,
     updatedAt: now,
   };
+  return sanitizeForFirestore(doc as unknown as Record<string, unknown>);
+}
+
+export async function createJournalEntry(
+  tenant: TenantContext,
+  data: CreateJournalEntryInput
+): Promise<{ id: string }> {
+  const id = generateJournalEntryId();
+  const record = buildJournalEntryRecord(tenant, id, data, isoNow());
 
   await safeFirestoreOperation(async (db) => {
-    await db.collection(COLLECTIONS.ACCOUNTING_JOURNAL_ENTRIES).doc(id).set(
-      sanitizeForFirestore(doc as unknown as Record<string, unknown>)
-    );
+    await db.collection(COLLECTIONS.ACCOUNTING_JOURNAL_ENTRIES).doc(id).set(record);
   }, undefined);
 
   return { id };

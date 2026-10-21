@@ -28,6 +28,15 @@ import type {
 import type { TenantContext } from '../../types/common';
 
 import { sanitizeForFirestore, isoNow } from './firestore-helpers';
+import { deleteOwnedDoc, readOwnedDoc, updateOwnedDoc, type OwnedDocAddress } from './tenant-owned-doc';
+
+// Κάθε πρόσβαση κατά id περνά από τον φράχτη εταιρείας (ADR-917 Φ4.0) — ο `tenant` δεν είναι διακοσμητικός.
+const expenseDocAt = (id: string): OwnedDocAddress =>
+  ({ collection: COLLECTIONS.ACCOUNTING_EXPENSE_DOCUMENTS, id, resource: 'expense document' });
+const apyCertificateAt = (id: string): OwnedDocAddress =>
+  ({ collection: COLLECTIONS.ACCOUNTING_APY_CERTIFICATES, id, resource: 'APY certificate' });
+const customCategoryAt = (id: string): OwnedDocAddress =>
+  ({ collection: COLLECTIONS.ACCOUNTING_CUSTOM_CATEGORIES, id, resource: 'custom category' });
 
 // ============================================================================
 // EXPENSE DOCUMENTS
@@ -59,11 +68,7 @@ export async function getExpenseDocument(
   tenant: TenantContext,
   documentId: string
 ): Promise<ReceivedExpenseDocument | null> {
-  return safeFirestoreOperation(async (db) => {
-    const snap = await db.collection(COLLECTIONS.ACCOUNTING_EXPENSE_DOCUMENTS).doc(documentId).get();
-    if (!snap.exists) return null;
-    return snap.data() as ReceivedExpenseDocument;
-  }, null);
+  return readOwnedDoc<ReceivedExpenseDocument>(tenant, expenseDocAt(documentId));
 }
 
 export async function updateExpenseDocument(
@@ -71,11 +76,11 @@ export async function updateExpenseDocument(
   documentId: string,
   updates: Partial<ReceivedExpenseDocument>
 ): Promise<void> {
-  await safeFirestoreOperation(async (db) => {
-    await db.collection(COLLECTIONS.ACCOUNTING_EXPENSE_DOCUMENTS).doc(documentId).update(
-      sanitizeForFirestore({ ...updates, updatedAt: isoNow() } as Record<string, unknown>)
-    );
-  }, undefined);
+  await updateOwnedDoc(
+    tenant,
+    expenseDocAt(documentId),
+    sanitizeForFirestore({ ...updates, updatedAt: isoNow() } as Record<string, unknown>),
+  );
 }
 
 export async function listExpenseDocuments(
@@ -130,14 +135,7 @@ export async function getAPYCertificate(
   tenant: TenantContext,
   certificateId: string
 ): Promise<APYCertificate | null> {
-  return safeFirestoreOperation(async (db) => {
-    const snap = await db
-      .collection(COLLECTIONS.ACCOUNTING_APY_CERTIFICATES)
-      .doc(certificateId)
-      .get();
-    if (!snap.exists) return null;
-    return snap.data() as APYCertificate;
-  }, null);
+  return readOwnedDoc<APYCertificate>(tenant, apyCertificateAt(certificateId));
 }
 
 export async function listAPYCertificates(
@@ -170,17 +168,11 @@ export async function updateAPYCertificate(
   certificateId: string,
   updates: Partial<Omit<APYCertificate, 'certificateId' | 'createdAt'>>
 ): Promise<void> {
-  await safeFirestoreOperation(async (db) => {
-    await db
-      .collection(COLLECTIONS.ACCOUNTING_APY_CERTIFICATES)
-      .doc(certificateId)
-      .update(
-        sanitizeForFirestore({
-          ...updates,
-          updatedAt: isoNow(),
-        } as Record<string, unknown>)
-      );
-  }, undefined);
+  await updateOwnedDoc(
+    tenant,
+    apyCertificateAt(certificateId),
+    sanitizeForFirestore({ ...updates, updatedAt: isoNow() } as Record<string, unknown>),
+  );
 }
 
 export async function pushAPYEmailRecord(
@@ -188,17 +180,12 @@ export async function pushAPYEmailRecord(
   certificateId: string,
   record: APYEmailSendRecord
 ): Promise<void> {
-  await safeFirestoreOperation(async (db) => {
-    await db
-      .collection(COLLECTIONS.ACCOUNTING_APY_CERTIFICATES)
-      .doc(certificateId)
-      .update({
-        emailHistory: FieldValue.arrayUnion(
-          sanitizeForFirestore(record as unknown as Record<string, unknown>)
-        ),
-        updatedAt: isoNow(),
-      });
-  }, undefined);
+  await updateOwnedDoc(tenant, apyCertificateAt(certificateId), {
+    emailHistory: FieldValue.arrayUnion(
+      sanitizeForFirestore(record as unknown as Record<string, unknown>)
+    ),
+    updatedAt: isoNow(),
+  });
 }
 
 // ============================================================================
@@ -239,14 +226,7 @@ export async function getCustomCategory(
   tenant: TenantContext,
   categoryId: string
 ): Promise<CustomCategoryDocument | null> {
-  return safeFirestoreOperation(async (db) => {
-    const snap = await db
-      .collection(COLLECTIONS.ACCOUNTING_CUSTOM_CATEGORIES)
-      .doc(categoryId)
-      .get();
-    if (!snap.exists) return null;
-    return snap.data() as CustomCategoryDocument;
-  }, null);
+  return readOwnedDoc<CustomCategoryDocument>(tenant, customCategoryAt(categoryId));
 }
 
 export async function listCustomCategories(
@@ -275,24 +255,13 @@ export async function updateCustomCategory(
   categoryId: string,
   updates: UpdateCustomCategoryInput
 ): Promise<void> {
-  await safeFirestoreOperation(async (db) => {
-    await db
-      .collection(COLLECTIONS.ACCOUNTING_CUSTOM_CATEGORIES)
-      .doc(categoryId)
-      .update(
-        sanitizeForFirestore({
-          ...updates,
-          updatedAt: isoNow(),
-        } as Record<string, unknown>)
-      );
-  }, undefined);
+  await updateOwnedDoc(
+    tenant,
+    customCategoryAt(categoryId),
+    sanitizeForFirestore({ ...updates, updatedAt: isoNow() } as Record<string, unknown>),
+  );
 }
 
 export async function deleteCustomCategory(tenant: TenantContext, categoryId: string): Promise<void> {
-  await safeFirestoreOperation(async (db) => {
-    await db
-      .collection(COLLECTIONS.ACCOUNTING_CUSTOM_CATEGORIES)
-      .doc(categoryId)
-      .delete();
-  }, undefined);
+  await deleteOwnedDoc(tenant, customCategoryAt(categoryId));
 }
