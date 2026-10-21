@@ -4,10 +4,14 @@
  *
  * Parent row: isGroupParent === true OR the single BOQ item for simple (non-DNA) entities.
  * Children rows: items where parentBoqItemId === parent.id (multi-layer DNA layers).
+ * ADR-917 Ε2: a SUMMARY parent with layers shows Σ of its layers (`deriveSummaryCost`, the ONE rule of the
+ * BOQ tables too) — never its own price, which the Λ7 core leaves out of every sum.
  */
 
 import type { BOQItem } from '@/types/boq';
 import { computeItemCost } from '@/services/measurements/cost-engine';
+import { deriveSummaryCost, type DerivedSummaryCost } from '@/services/measurements/boq-cost-groups';
+import { isSummaryBoqLine } from '@/services/measurements/boq-line-role';
 
 export interface BoqDisplayRow {
   readonly id: string;
@@ -19,6 +23,8 @@ export interface BoqDisplayRow {
   readonly totalCost: number;
   readonly layerIndex: number | null;
   readonly isParent: boolean;
+  /** Present ⇔ a summary parent replaced by its layers: `totalCost` IS `derived.totalCost` */
+  readonly derived: DerivedSummaryCost | null;
 }
 
 export interface BoqTree {
@@ -39,7 +45,16 @@ function toDisplayRow(item: BOQItem, isParent: boolean): BoqDisplayRow {
     totalCost: computeItemCost({ ...item, estimatedQuantity: quantity }).totalCost,
     layerIndex: item.layerIndex ?? null,
     isParent,
+    derived: null,
   };
+}
+
+/** A summary with layers costs what its layers cost; any other parent keeps its own row (Λ7 · Ε2). */
+function parentRow(parent: BOQItem, children: readonly BoqDisplayRow[]): BoqDisplayRow {
+  const row = toDisplayRow(parent, true);
+  if (children.length === 0 || !isSummaryBoqLine(parent)) return row;
+  const derived = deriveSummaryCost(row.quantity, children.map((child) => child.totalCost));
+  return { ...row, totalCost: derived.totalCost, derived };
 }
 
 export function buildBoqTree(items: readonly BOQItem[]): BoqTree {
@@ -53,5 +68,5 @@ export function buildBoqTree(items: readonly BOQItem[]): BoqTree {
     .sort((a, b) => (a.layerIndex ?? 0) - (b.layerIndex ?? 0))
     .map((i) => toDisplayRow(i, false));
 
-  return { parent: toDisplayRow(parent, true), children };
+  return { parent: parentRow(parent, children), children };
 }

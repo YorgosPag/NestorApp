@@ -14,6 +14,7 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { buildBoqTree, type BoqTree } from './boq-tree-builder';
+import { formatCurrency } from '@/lib/intl-utils';
 import type { BOQItem } from '@/types/boq';
 
 interface BimBoqTabProps {
@@ -87,8 +88,13 @@ export function BimBoqTab({ bimId, companyId, projectId }: BimBoqTabProps) {
             </span>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            {t('entityCard.boq.layerRow.totalCost')}: {parent.totalCost.toFixed(2)} €
+            {t('entityCard.boq.layerRow.totalCost')}: {formatCurrency(parent.totalCost)}
           </p>
+          {parent.derived ? (
+            <p className="text-xs italic text-muted-foreground">
+              {t('entityCard.boq.derivedFromLayers', { count: parent.derived.layerCount })}
+            </p>
+          ) : null}
         </div>
       </section>
 
@@ -109,7 +115,7 @@ export function BimBoqTab({ bimId, companyId, projectId }: BimBoqTabProps) {
                   {child.quantity.toFixed(2)} {child.unit}
                 </span>
                 <span className="font-mono text-foreground">
-                  {child.totalCost.toFixed(2)} €
+                  {formatCurrency(child.totalCost)}
                 </span>
               </li>
             ))}

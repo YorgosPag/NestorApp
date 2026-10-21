@@ -1388,6 +1388,15 @@ src/
 
 ## Changelog
 
+### 2026-10-21 — ADR-917 Ε2: η σύνοψη τοίχου DNA είναι **παράγωγο** στον επεξεργαστή και στους πίνακες
+- Επεξεργαστής BOQ: σε γραμμή-σύνοψη (`isSummaryBoqLine` — ρητό `groupRole` ή απόδειξη από τον builder) τα πεδία τιμής
+  **αντικαθίστανται** από το `BOQDerivedCostFieldset`: Σ στρώσεων, **παράγωγη τιμή μονάδας** (Σ ÷ ποσότητα σύνοψης, πρότυπο Autodesk
+  Build) και λίστα στρώσεων με το κόστος της καθεμιάς. Η αποθήκευση **δεν στέλνει** πεδία τιμής (`buildBOQUpdatePayload`).
+- Πίνακες (`BOQCategoryAccordion` / `BOQFloorGroup`): η γραμμή-σύνοψη δείχνει «Σ N στρώσεων» αντί για τη δική της (διαγραμμένη) τιμή·
+  η απόφαση παίρνεται στο **πλήρες** σύνολο του κτιρίου (`derivedSummaryCosts(items)`), όχι στο φιλτραρισμένο.
+- Αποθετήριο: `update` αρνείται τιμή ≠ 0 σε σύνοψη (`BoqDerivedPriceError`)· `duplicate` βγάζει αυτόνομη γραμμή (χωρίς δεσμό ομάδας).
+- Κανόνες `boq_items`: σε σύνοψη τιμή μόνο ίδια ή 0 · create χωρίς τιμή · `groupRole` αμετάβλητο. Λεπτομέρειες: ADR-917 §10 (Α31–Α35).
+
 ### 2026-10-21 — ADR-917 Λ7: «μετράει η γραμμή;» στο `cost-engine`
 - `computeBuildingSummary` αθροίζει **μόνο** τις γραμμές του `boq-line-role.partitionCountableBoqLines`: γονέας-σύνοψη
   (τοίχος DNA, `groupRole: 'summary'`) με children **δεν** αθροίζεται. Νέα πεδία `BOQSummary.excludedSummaryItemCount` /
