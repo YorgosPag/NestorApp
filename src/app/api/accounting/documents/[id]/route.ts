@@ -5,6 +5,8 @@
  *
  * GET:   Get single document with AI-extracted data
  * PATCH: Confirm or reject extracted data (creates journal entry on confirm)
+ *        Confirm = ONE idempotent transaction (`confirmExpenseDocument`, ADR-917 Φ4.0): only `review` is
+ *        confirmable, a replay answers with the SAME journal entry, a missing figure is 422 — never 0 €.
  *
  * Auth: withAuth (authenticated users)
  * Rate: standard (60 req/min)
@@ -18,10 +20,14 @@ import 'server-only';
 
 import { z } from 'zod';
 import { logFinancialTransition } from '@/lib/auth';
-import { defineRoute, ok, notFound } from '@/lib/api/define-route';
-import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
-import { isoToday } from '@/subapps/accounting/services/repository/firestore-helpers';
-import type { AccountCategory, ExpenseCategory } from '@/subapps/accounting/types';
+import { ApiError } from '@/lib/api/ApiErrorHandler';
+import { defineRoute, ok, notFound, conflict } from '@/lib/api/define-route';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { validatePostingAllowed } from '@/subapps/accounting/services';
+import { resolveExpenseConfirmation } from '@/subapps/accounting/services/expense-confirmation-input';
+import { confirmExpenseDocument } from '@/subapps/accounting/services/expense-confirmation.server';
+import { assertPostingAllowed } from '../../_shared/fiscal-period-errors';
+import { requireExpenseDocument } from '../../_shared/expense-document-access';
 
 const PatchDocumentSchema = z.object({
   action: z.enum(['confirm', 'reject']),
@@ -41,14 +47,7 @@ export const GET = defineRoute({
   rateLimit: 'standard',
   fallbackError: 'Failed to get document',
   handler: async ({ auth, params }) => {
-    const { id } = params;
-    const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
-
-    const document = await repository.getExpenseDocument(id);
-    if (!document) {
-      notFound('Document not found');
-    }
-
+    const { document } = await requireExpenseDocument(auth, params.id);
     return ok(document);
   },
 });
@@ -63,14 +62,15 @@ export const PATCH = defineRoute({
   fallbackError: 'Failed to update document',
   handler: async ({ auth, body, params }) => {
     const { id } = params;
-    const { repository, service } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
-
-    const document = await repository.getExpenseDocument(id);
-    if (!document) {
-      notFound('Document not found');
-    }
+    const { repository, document } = await requireExpenseDocument(auth, id);
 
     if (body.action === 'reject') {
+      // A confirmed document has POSTED its journal entry — «rejected» would hide a cost the books still carry.
+      if (document.status === 'confirmed') conflict('Confirmed document cannot be rejected', { status: document.status });
+      // Allocated lines are linked to POs (projection) — clearing them is the allocation writer's job, first.
+      if ((document.costAllocations ?? []).length > 0) {
+        throw new ApiError(409, 'Clear the cost allocation before rejecting', 'EXPENSE_HAS_ALLOCATIONS');
+      }
       await repository.updateExpenseDocument(id, {
         status: 'rejected',
         notes: body.notes ?? document.notes,
@@ -83,39 +83,30 @@ export const PATCH = defineRoute({
 
     // ── Confirm flow ─────────────────────────────────────────────────
 
-    const confirmedCategory = body.confirmedCategory ?? document.confirmedCategory ?? 'other_expense';
-    const confirmedNetAmount = body.confirmedNetAmount ?? document.extractedData.netAmount ?? 0;
-    const confirmedVatAmount = body.confirmedVatAmount ?? document.extractedData.vatAmount ?? 0;
-    const confirmedDate = body.confirmedDate ?? document.extractedData.issueDate ?? isoToday();
-    const confirmedIssuerName = body.confirmedIssuerName ?? document.extractedData.issuerName ?? null;
-    const journalEntry = await service.createJournalEntryFromExpense({
-      documentId: id,
-      fileName: document.fileName,
-      confirmedNetAmount,
-      confirmedVatAmount,
-      confirmedCategory: confirmedCategory as AccountCategory,
-      confirmedDate,
-      confirmedIssuerName: confirmedIssuerName ?? null,
-      confirmedPaymentMethod: document.extractedData.paymentMethod ?? 'bank_transfer',
-      fiscalYear: document.fiscalYear,
-    });
-    const journalEntryId = journalEntry?.entryId ?? null;
+    const resolution = resolveExpenseConfirmation(document, body);
+    if (!resolution.ok) {
+      throw new ApiError(422, 'Expense confirmation is missing figures', 'EXPENSE_CONFIRMATION_INCOMPLETE', {
+        missing: [...resolution.missing],
+      });
+    }
+    assertPostingAllowed(await validatePostingAllowed(repository, resolution.confirmation.date));
 
-    // Update document with confirmed data
-    await repository.updateExpenseDocument(id, {
-      status: 'confirmed',
-      confirmedCategory: confirmedCategory as ExpenseCategory,
-      confirmedNetAmount,
-      confirmedVatAmount,
-      confirmedDate,
-      confirmedIssuerName: confirmedIssuerName ?? null,
-      journalEntryId,
-      notes: body.notes ?? document.notes,
-    });
+    const tenant = { companyId: auth.companyId, userId: auth.uid };
+    const outcome = await confirmExpenseDocument(getAdminFirestore(), tenant, id, resolution.confirmation);
+    if (outcome.kind === 'not_found') notFound('Document not found');
+    if (outcome.kind === 'not_reviewable') conflict('Document is not awaiting review', { status: outcome.status });
+    if (outcome.kind === 'allocation_exceeds_net') {
+      throw new ApiError(409, 'Cost allocation exceeds the confirmed net amount', 'EXPENSE_ALLOCATION_EXCEEDS_NET', {
+        allocated: outcome.allocated,
+      });
+    }
 
-    await logFinancialTransition(auth, 'invoice', id, document.status ?? 'pending', 'confirmed', {
-      journalEntryId,
-    }).catch(() => {/* non-blocking */});
+    const journalEntryId = outcome.journalEntryId;
+    if (outcome.kind === 'confirmed') {
+      await logFinancialTransition(auth, 'invoice', id, outcome.previousStatus, 'confirmed', {
+        journalEntryId,
+      }).catch(() => {/* non-blocking */});
+    }
 
     return ok({
       documentId: id,
