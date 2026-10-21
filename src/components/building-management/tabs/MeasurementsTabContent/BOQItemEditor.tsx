@@ -38,6 +38,7 @@ import { usePropertiesByBuilding } from '@/components/properties/shared/usePrope
 import '@/lib/design-system';
 
 import { useBOQEditorState } from './useBOQEditorState';
+import { BOQDerivedCostFieldset, useSummaryPriceLock } from './BOQDerivedCostFieldset';
 import { BOQEditorScopeSection } from './BOQEditorScopeSection';
 import { BOQEditorCostAllocationSection } from './BOQEditorCostAllocationSection';
 import { resolveTargetProperties } from './boq-target-properties';
@@ -60,23 +61,28 @@ interface BOQItemEditorProps {
   categories: readonly MasterBOQCategory[];
   onSave: (data: CreateBOQItemInput | UpdateBOQItemInput, isNew: boolean) => Promise<void>;
   onReopenToDraft?: (id: string) => Promise<void>;
+  /** The building's FULL item set — a wall summary's price is derived from its layers (ADR-917 Ε2) */
+  buildingItems?: readonly BOQItem[];
 }
 
+const NO_ITEMS: readonly BOQItem[] = [];
+
 export function BOQItemEditor({
-  open, onClose, item, buildingId, projectId, categories, onSave, onReopenToDraft,
+  open, onClose, item, buildingId, projectId, categories, onSave, onReopenToDraft, buildingItems = NO_ITEMS,
 }: BOQItemEditorProps) {
   const { t } = useTranslation([
     'building', 'building-address', 'building-filters', 'building-storage',
     'building-tabs', 'building-timeline',
   ]);
   const colors = useSemanticColors();
+  const priceLock = useSummaryPriceLock(item, buildingItems);
 
   const {
     form, saving, isEdit, scopeLocked,
     grossQuantity, materialCost, laborCost, equipmentCost, totalCost,
     allowedUnits, availableStatuses, scopeValidation, customAllocationsValid,
     updateField, handleScopeChange, handleCategoryChange, handleSave,
-  } = useBOQEditorState({ open, item, categories, buildingId, projectId, onSave, onClose });
+  } = useBOQEditorState({ open, item, categories, buildingId, projectId, onSave, onClose, pricesLocked: priceLock.locked });
 
   // Μαζί με τα αποσυρμένα: ακίνητο που η επιμέτρηση ΟΝΟΜΑΖΕΙ μένει στόχος ακόμη κι αν
   // αρχειοθετήθηκε — το ποια μετρούν το αποφασίζει ο `resolveTargetProperties` (ADR-329 §3.9).
@@ -184,22 +190,28 @@ export function BOQItemEditor({
                 t={t}
               />
 
-              <CostsFieldset
-                form={form}
-                onUpdateField={updateField}
-                colors={colors}
-                t={t}
-              />
+              {priceLock.locked && item ? (
+                <BOQDerivedCostFieldset summary={item} derived={priceLock.derived} layers={priceLock.layers} colors={colors} t={t} />
+              ) : (
+                <>
+                  <CostsFieldset
+                    form={form}
+                    onUpdateField={updateField}
+                    colors={colors}
+                    t={t}
+                  />
 
-              <TotalsFieldset
-                grossQuantity={grossQuantity}
-                materialCost={materialCost}
-                laborCost={laborCost}
-                equipmentCost={equipmentCost}
-                totalCost={totalCost}
-                colors={colors}
-                t={t}
-              />
+                  <TotalsFieldset
+                    grossQuantity={grossQuantity}
+                    materialCost={materialCost}
+                    laborCost={laborCost}
+                    equipmentCost={equipmentCost}
+                    totalCost={totalCost}
+                    colors={colors}
+                    t={t}
+                  />
+                </>
+              )}
 
               <NotesAndStatusFieldset
                 form={form}

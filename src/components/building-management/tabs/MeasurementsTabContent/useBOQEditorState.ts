@@ -168,10 +168,39 @@ interface UseBOQEditorParams {
   projectId: string;
   onSave: (data: CreateBOQItemInput | UpdateBOQItemInput, isNew: boolean) => Promise<void>;
   onClose: () => void;
+  /** ADR-917 Ε2 — a wall summary: its price is derived from its layers ⇒ the price fields are NEVER sent */
+  pricesLocked?: boolean;
+}
+
+interface EditorNumbers {
+  numericEstimated: number;
+  numericWaste: number;
+  materialCost: number;
+  laborCost: number;
+  equipmentCost: number;
+}
+
+/** The update an edit sends. A locked price is left out ENTIRELY — the stored (derived) value is not the form's. */
+export function buildBOQUpdatePayload(form: EditorFormState, numbers: EditorNumbers, pricesLocked: boolean): UpdateBOQItemInput {
+  const prices = pricesLocked
+    ? {}
+    : { materialUnitCost: numbers.materialCost, laborUnitCost: numbers.laborCost, equipmentUnitCost: numbers.equipmentCost };
+  return {
+    title: form.title.trim(),
+    subCategoryCode: form.subCategoryCode || null,
+    description: form.description.trim() || null,
+    unit: form.unit,
+    estimatedQuantity: numbers.numericEstimated,
+    wasteFactor: numbers.numericWaste,
+    actualQuantity: form.actualQuantity ? parseFloat(form.actualQuantity) : null,
+    ...prices,
+    linkedPhaseId: form.linkedPhaseId || null,
+    notes: form.notes.trim() || null,
+  };
 }
 
 export function useBOQEditorState({
-  open, item, categories, buildingId, projectId, onSave, onClose,
+  open, item, categories, buildingId, projectId, onSave, onClose, pricesLocked = false,
 }: UseBOQEditorParams) {
   const isEdit = item !== null;
   const defaultCategory = categories[0]?.code ?? 'OIK-1';
@@ -261,21 +290,8 @@ export function useBOQEditorState({
     setSaving(true);
     try {
       if (isEdit) {
-        const updateData: UpdateBOQItemInput = {
-          title: form.title.trim(),
-          subCategoryCode: form.subCategoryCode || null,
-          description: form.description.trim() || null,
-          unit: form.unit,
-          estimatedQuantity: numericEstimated,
-          wasteFactor: numericWaste,
-          actualQuantity: form.actualQuantity ? parseFloat(form.actualQuantity) : null,
-          materialUnitCost: materialCost,
-          laborUnitCost: laborCost,
-          equipmentUnitCost: equipmentCost,
-          linkedPhaseId: form.linkedPhaseId || null,
-          notes: form.notes.trim() || null,
-        };
-        await onSave(updateData, false);
+        const numbers = { numericEstimated, numericWaste, materialCost, laborCost, equipmentCost };
+        await onSave(buildBOQUpdatePayload(form, numbers, pricesLocked), false);
       } else {
         const createData: CreateBOQItemInput = {
           projectId, buildingId,
@@ -302,7 +318,7 @@ export function useBOQEditorState({
   }, [
     form, isEdit, scopeValidation.valid, customAllocationsValid,
     numericEstimated, numericWaste, materialCost, laborCost, equipmentCost,
-    projectId, buildingId, buildScopePayload, onSave, onClose,
+    projectId, buildingId, buildScopePayload, onSave, onClose, pricesLocked,
   ]);
 
   return {

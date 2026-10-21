@@ -31,7 +31,7 @@ import { Pencil, Trash2, Unlink } from 'lucide-react';
 import type { BOQItem, BOQItemStatus } from '@/types/boq';
 import type { MasterBOQCategory } from '@/config/boq-categories';
 import { findSubCategory } from '@/config/boq-subcategories';
-import { computeItemCost, computeVariance, computeBaselineDrift, excludedSummaryIds, groupBoqCost } from '@/services/measurements';
+import { computeItemCost, computeVariance, computeBaselineDrift, groupBoqCost, type DerivedSummaryCost } from '@/services/measurements';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
 
@@ -53,11 +53,13 @@ interface BOQRowActions {
   onDelete: (item: BOQItem) => void;
   onStatusChange: (item: BOQItem, status: BOQItemStatus) => void;
   onDetach?: (item: BOQItem) => void;
-  t: (key: string, options?: Record<string, string>) => string;
+  t: (key: string, options?: Record<string, unknown>) => string;
 }
 
 interface BOQFloorGroupProps extends BOQRowActions {
   items: BOQItem[];
+  /** ADR-917 Ε2 — a summary shows Σ of its layers (decided on the FULL set), never its own price */
+  derivedCosts: ReadonlyMap<string, DerivedSummaryCost>;
   categories: readonly MasterBOQCategory[];
 }
 
@@ -94,6 +96,7 @@ function getVarianceClass(percent: number): string {
 
 export function BOQFloorGroup({
   items,
+  derivedCosts,
   categories,
   onEdit,
   onDelete,
@@ -102,15 +105,15 @@ export function BOQFloorGroup({
   t,
 }: BOQFloorGroupProps) {
   // ADR-917 Λ7 — η σύνοψη τοίχου DNA φαίνεται, αλλά ΔΕΝ αθροίζεται (μετρούν οι στρώσεις)
-  const summaryIds = useMemo(() => excludedSummaryIds(items), [items]);
+  const summaryIds = useMemo(() => new Set(derivedCosts.keys()), [derivedCosts]);
   const groups = useMemo<CategoryGroup[]>(() => {
-    return groupBoqCost(items, (item) => item.categoryCode)
+    return groupBoqCost(items, (item) => item.categoryCode, summaryIds)
       .map(({ key, items: groupItems, totalCost }) => {
         const cat = categories.find((c) => c.code === key);
         return { code: key, name: cat?.nameEL ?? key, sortOrder: cat?.sortOrder ?? 999, items: groupItems, totalCost };
       })
       .sort((a, b) => a.sortOrder - b.sortOrder);
-  }, [items, categories]);
+  }, [items, categories, summaryIds]);
 
   return (
     <section className="space-y-3">
@@ -119,7 +122,7 @@ export function BOQFloorGroup({
           key={group.code}
           items={group.items}
           totalCost={group.totalCost}
-          summaryIds={summaryIds}
+          derivedCosts={derivedCosts}
           categoryName={`${group.code} — ${group.name}`}
           onEdit={onEdit}
           onDelete={onDelete}
@@ -133,18 +136,40 @@ export function BOQFloorGroup({
 }
 
 // ============================================================================
+// COST CELL — a summary shows Σ of its layers (ADR-917 Ε2)
+// ============================================================================
+
+interface SummaryAwareCostCellProps {
+  cost: number;
+  /** Present ⇔ the row is a summary replaced by its layers: its own price is never shown as its cost */
+  derived: DerivedSummaryCost | undefined;
+  mutedClass: string;
+  t: BOQRowActions['t'];
+}
+
+function SummaryAwareCostCell({ cost, derived, mutedClass, t }: SummaryAwareCostCellProps) {
+  if (!derived) return <TableCell className="text-right tabular-nums font-medium">{formatCurrency(cost)}</TableCell>;
+  return (
+    <TableCell className={cn('text-right tabular-nums italic', mutedClass)}>
+      {formatCurrency(derived.totalCost)}
+      <small className="block not-italic">{t('tabs.measurements.table.derivedFromLayers', { count: derived.layerCount })}</small>
+    </TableCell>
+  );
+}
+
+// ============================================================================
 // INNER TABLE COMPONENT
 // ============================================================================
 
 interface CategoryItemsTableProps extends BOQRowActions {
   items: BOQItem[];
   totalCost: number;
-  /** ADR-917 Λ7 — γονείς-σύνοψη: φαίνονται, δεν αθροίζονται */
-  summaryIds: ReadonlySet<string>;
+  /** ADR-917 Λ7 · Ε2 — γονείς-σύνοψη: φαίνονται με το Σ των στρώσεών τους, δεν αθροίζονται */
+  derivedCosts: ReadonlyMap<string, DerivedSummaryCost>;
   categoryName: string;
 }
 
-function CategoryItemsTable({ items, totalCost, summaryIds, categoryName, onEdit, onDelete, onDetach, t }: CategoryItemsTableProps) {
+function CategoryItemsTable({ items, totalCost, derivedCosts, categoryName, onEdit, onDelete, onDetach, t }: CategoryItemsTableProps) {
   const colors = useSemanticColors();
   return (
     <Table>
@@ -189,7 +214,7 @@ function CategoryItemsTable({ items, totalCost, summaryIds, categoryName, onEdit
                       : t('tabs.measurements.badge.bimAuto')}
                   </Badge>
                 )}
-                {summaryIds.has(item.id) && (
+                {derivedCosts.has(item.id) && (
                   <Badge variant="outline" className="text-xs mt-1">
                     {t('tabs.measurements.badge.groupSummary')}
                   </Badge>
@@ -218,9 +243,7 @@ function CategoryItemsTable({ items, totalCost, summaryIds, categoryName, onEdit
               <TableCell className={cn("text-right tabular-nums", colors.text.muted)}>
                 {formatNumber(item.wasteFactor * 100, { maximumFractionDigits: 0 })}%
               </TableCell>
-              <TableCell className={cn('text-right tabular-nums font-medium', summaryIds.has(item.id) && cn('line-through', colors.text.muted))}>
-                {formatCurrency(cost.totalCost)}
-              </TableCell>
+              <SummaryAwareCostCell cost={cost.totalCost} derived={derivedCosts.get(item.id)} mutedClass={colors.text.muted} t={t} />
               <TableCell className="text-center">
                 <Badge
                   variant={STATUS_VARIANT[item.status]}

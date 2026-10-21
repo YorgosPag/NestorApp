@@ -17,6 +17,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAuth } from '@/hooks/useAuth';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { useBOQItems } from '@/hooks/useBOQItems';
+import { derivedSummaryCosts } from '@/services/measurements';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { BOQSummaryCards } from './MeasurementsTabContent/BOQSummaryCards';
 import { BOQCoverageIndicator } from './MeasurementsTabContent/BOQCoverageIndicator';
@@ -80,6 +81,8 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
   );
 
   const iconSizes = useIconSizes();
+  // ADR-917 Ε2 · Α25 — summaries replaced by their layers, decided on the FULL set (filters never change it)
+  const derivedCosts = useMemo(() => derivedSummaryCosts(items), [items]);
 
   // Editor dialog state
   const [editorOpen, setEditorOpen] = useState(false);
@@ -293,6 +296,7 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
       {/* Per-floor BOQ groups with category tables (ADR-395 G7) */}
       <BOQCategoryAccordion
         items={filteredItems}
+        derivedCosts={derivedCosts}
         categories={categories}
         buildingId={building.id}
         onEdit={handleEdit}
@@ -312,6 +316,7 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
         projectId={building.projectId}
         categories={categories}
         onSave={handleSave}
+        buildingItems={items}
       />
     </FullscreenOverlay>
   );

@@ -22,7 +22,7 @@ import { formatCurrency, formatNumber } from '@/lib/intl-utils';
 import { cn } from '@/lib/utils';
 import type { BOQItem, BOQItemStatus } from '@/types/boq';
 import type { MasterBOQCategory } from '@/config/boq-categories';
-import { excludedSummaryIds, groupBoqCost } from '@/services/measurements';
+import { groupBoqCost, type DerivedSummaryCost } from '@/services/measurements';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useFloorsByBuilding } from '@/components/properties/shared/useFloorsByBuilding';
 import { BOQFloorGroup } from './BOQFloorGroup';
@@ -41,6 +41,8 @@ const NO_FLOOR_KEY = '__no_floor__';
 
 interface BOQCategoryAccordionProps {
   items: BOQItem[];
+  /** ADR-917 Ε2 · Α25 — summaries replaced by their layers, decided on the FULL set (not the filtered `items`) */
+  derivedCosts: ReadonlyMap<string, DerivedSummaryCost>;
   categories: readonly MasterBOQCategory[];
   /** Building scope — resolves the floor list for per-floor grouping (G7). */
   buildingId: string;
@@ -85,6 +87,7 @@ export function BOQCategoryAccordion({
   onDetach,
   expandedCategories,
   onExpandedChange,
+  derivedCosts,
 }: BOQCategoryAccordionProps) {
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const colors = useSemanticColors();
@@ -99,9 +102,9 @@ export function BOQCategoryAccordion({
 
   // Group items by floor (linkedFloorId), ordered by floor.number; NO_FLOOR last.
   // ADR-917 Λ7 — γονέας-σύνοψη (τοίχος DNA): ΔΕΝ αθροίζεται, ούτε σε κόστος (groupBoqCost) ούτε σε ποσότητα
-  const summaryIds = useMemo(() => excludedSummaryIds(items), [items]);
+  const summaryIds = useMemo(() => new Set(derivedCosts.keys()), [derivedCosts]);
   const floorGroups = useMemo<FloorGroup[]>(() => {
-    return groupBoqCost(items, (item) => item.linkedFloorId ?? NO_FLOOR_KEY)
+    return groupBoqCost(items, (item) => item.linkedFloorId ?? NO_FLOOR_KEY, summaryIds)
       .map(({ key, items: groupItems, totalCost }) => {
         const meta = key === NO_FLOOR_KEY ? null : floorMeta.get(key);
         return {
@@ -113,7 +116,7 @@ export function BOQCategoryAccordion({
         };
       })
       .sort((a, b) => a.sortKey - b.sortKey);
-  }, [items, floorMeta, t]);
+  }, [items, floorMeta, t, summaryIds]);
 
   // Per-category quantity totals across all floors (Σύνολα ανά κατηγορία).
   const categoryTotals = useMemo<CategoryTotal[]>(() => {
@@ -151,6 +154,7 @@ export function BOQCategoryAccordion({
     content: (
       <BOQFloorGroup
         items={group.items}
+        derivedCosts={derivedCosts}
         categories={categories}
         onEdit={onEdit}
         onDelete={onDelete}
