@@ -92,6 +92,36 @@ export function costCodeLabelKey(code: string): string {
   return `procurement:categories.${code}`;
 }
 
+/**
+ * A code as a screen shows it: the GROUP carries the translated label, the lower level is shown as typed
+ * (`SOFT-PERMITS.TEE` → «Άδειες» · `TEE`). Only groups have label keys, so asking `costCodeLabelKey` for a
+ * lower-level code would put a raw key on the screen (ADR-917 Α30).
+ */
+export interface CostCodeLabelParts {
+  groupLabelKey: string;
+  lowerLevel: string | null;
+}
+
+export function costCodeLabelParts(code: string): CostCodeLabelParts {
+  const group = costCodeGroupOf(code);
+  return { groupLabelKey: costCodeLabelKey(group), lowerLevel: code.length > group.length ? code.slice(group.length + 1) : null };
+}
+
+/** The groups a budget line can be opened under, in display order: ΑΤΟΕ (allowance) → soft. */
+export function budgetLineGroupCodes(): readonly string[] {
+  return [...ATOE_MASTER_CATEGORIES.map(category => category.code), ...SOFT_COST_CODES].sort(compareCostCodes);
+}
+
+/**
+ * Group + optional lower level → the line's code (`SOFT-PERMITS` + ` tee ` → `SOFT-PERMITS.TEE`).
+ * `null` ⇔ the result is not a budget-line code — the editor refuses BEFORE any request.
+ */
+export function composeBudgetLineCode(group: string, lowerLevel: string): string | null {
+  const segment = lowerLevel.trim().toUpperCase();
+  const code = segment === '' ? group : `${group}.${segment}`;
+  return isBudgetLineCostCode(code) && costCodeGroupOf(code) === group ? code : null;
+}
+
 /** Every code that must carry a label (ADR-917 §7 Α8). */
 export function allCostCodes(): readonly string[] {
   return [

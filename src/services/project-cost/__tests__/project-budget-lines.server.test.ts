@@ -116,12 +116,25 @@ describe('archive, never delete — Ζ3', () => {
     expect(storedDocs()).toEqual({});
   });
 
-  it('a set on an archived line revives it on the SAME document', async () => {
+  it('🔴 Α28 a set on an archived line revives it on the SAME document — from `0`, what the reader showed (Λ9)', async () => {
     await write();
     await write({ next: null, expectedRevision: 1 });
-    const outcome = await write({ next: { amount: 500, note: null }, expectedRevision: 2 });
+    const outcome = await write({ next: { amount: 500, note: null }, expectedRevision: 0 });
     expect(outcome).toEqual({ kind: 'changed', line: expect.objectContaining({ revision: 3, archivedAt: null, amount: 500 }) });
     expect(Object.keys(storedDocs())).toHaveLength(1);
+  });
+
+  it('🔴 Α28 the archived revision is not an address: reviving with it is a conflict at `0`', async () => {
+    await write();
+    await write({ next: null, expectedRevision: 1 });
+    expect(await write({ next: { amount: 500, note: null }, expectedRevision: 2 })).toEqual({ kind: 'conflict', currentRevision: 0 });
+  });
+
+  it('🔴 Α28 two revivals from `0`: the second one is a conflict with the revived revision', async () => {
+    await write();
+    await write({ next: null, expectedRevision: 1 });
+    await write({ next: { amount: 500, note: null }, expectedRevision: 0 });
+    expect(await write({ next: { amount: 700, note: null }, expectedRevision: 0 })).toEqual({ kind: 'conflict', currentRevision: 3 });
   });
 });
 

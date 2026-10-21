@@ -28,11 +28,11 @@ import { diffTrackedFields } from '@/lib/audit/audit-diff';
 import { createModuleLogger } from '@/lib/telemetry';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import {
-  normalizeBudgetAmount,
   parseProjectBudgetLine,
   projectBudgetLineIdOf,
   type StoredProjectBudgetLine,
 } from './project-budget-line-schema';
+import { normalizeBudgetAmount } from './budget-line-limits';
 
 const logger = createModuleLogger('project-budget-lines');
 
@@ -103,6 +103,13 @@ export type BudgetLineWriteOutcome =
 const isActive = (line: StoredProjectBudgetLine | null): line is StoredProjectBudgetLine =>
   line !== null && line.archivedAt === null;
 
+/**
+ * The revision a caller can have SEEN. The reader shows active lines only, so an archived line is «no line»
+ * (`0`) to every editor — comparing against its stored revision would answer 409 forever to a revival nobody
+ * could ever address (Λ9). The stored revision still grows monotonically (`nextLine`).
+ */
+const activeRevisionOf = (line: StoredProjectBudgetLine | null): number => (isActive(line) ? line.revision : 0);
+
 function sameValues(current: StoredProjectBudgetLine | null, next: BudgetLineValues | null): boolean {
   if (!isActive(current) || next === null) return !isActive(current) && next === null;
   return current.amount === next.amount && current.note === next.note;
@@ -167,7 +174,7 @@ export async function writeProjectBudgetLine(db: Firestore, write: BudgetLineWri
     // Fail-closed: a document we cannot read is never overwritten by a guess of what it held.
     if (snapshot.exists && previous === null) throw new Error(`Unreadable project budget line ${ref.id}`);
     if (sameValues(previous, normalized)) return { kind: 'unchanged' as const, line: previous, previous };
-    const currentRevision = previous?.revision ?? 0;
+    const currentRevision = activeRevisionOf(previous);
     if (currentRevision !== write.expectedRevision) return { kind: 'conflict' as const, currentRevision, previous };
     const line = nextLine({ ...write, next: normalized }, ref.id, previous);
     tx.set(ref, line);

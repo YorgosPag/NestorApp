@@ -21,10 +21,7 @@ import { z } from 'zod';
 import { isBudgetLineCostCode } from '@/config/cost-taxonomy';
 import { generateDeterministicProjectBudgetLineId } from '@/services/enterprise-id.service';
 import type { LedgerBudgetLine } from './cost-ledger-budget';
-
-/** Upper bound of one line — a typo guard (a trillion euros), not a business rule */
-export const BUDGET_LINE_MAX_AMOUNT = 1_000_000_000_000;
-export const BUDGET_LINE_NOTE_MAX = 500;
+import { BUDGET_LINE_MAX_AMOUNT, BUDGET_LINE_NOTE_MAX } from './budget-line-limits';
 
 const nonEmpty = z.string().min(1);
 const isoOrNull = nonEmpty.nullable();
@@ -66,11 +63,6 @@ export function projectBudgetLineIdOf(companyId: string, projectId: string, cost
 /** Stored → the ledger's input (`computeCostLedger({ budgetLines })`) */
 export function toLedgerBudgetLine(line: StoredProjectBudgetLine): LedgerBudgetLine {
   return { id: line.id, costCode: line.costCode, amount: line.amount, note: line.note };
-}
-
-/** Euros → cents precision; the client's float noise never reaches the disk */
-export function normalizeBudgetAmount(amount: number): number {
-  return Math.round(amount * 100) / 100;
 }
 
 // ============================================================================

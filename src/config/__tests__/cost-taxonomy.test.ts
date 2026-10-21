@@ -7,10 +7,13 @@ import elProcurement from '@/i18n/locales/el/procurement.json';
 import enProcurement from '@/i18n/locales/en/procurement.json';
 import {
   allCostCodes,
+  budgetLineGroupCodes,
   compareCostCodes,
+  composeBudgetLineCode,
   costCodeFamilyOf,
   costCodeGroupOf,
   costCodeLabelKey,
+  costCodeLabelParts,
   isBudgetLineCostCode,
   SOFT_COST_CODES,
   UNCATEGORIZED_COST_CODE,
@@ -74,5 +77,30 @@ describe('cost taxonomy (ADR-917 Α1 · Ζ1)', () => {
   it('order: ΑΤΟΕ by catalogue → soft by declaration → other', () => {
     const codes = ['OTHER', 'SOFT-CONTINGENCY', 'OIK-10', 'SOFT-LAND', 'OIK-2'];
     expect([...codes].sort(compareCostCodes)).toEqual(['OIK-2', 'OIK-10', 'SOFT-LAND', 'SOFT-CONTINGENCY', 'OTHER']);
+  });
+});
+
+describe('budget-line codes on screen (ADR-917 Φ3γ · Α30)', () => {
+  it('🔴 a lower-level code is labelled by its GROUP plus the typed segment — never a raw key', () => {
+    expect(costCodeLabelParts('SOFT-PERMITS.TEE')).toEqual({ groupLabelKey: 'procurement:categories.SOFT-PERMITS', lowerLevel: 'TEE' });
+    expect(costCodeLabelParts('OIK-2')).toEqual({ groupLabelKey: 'procurement:categories.OIK-2', lowerLevel: null });
+  });
+
+  it('every group a line can open under has a label in el AND en', () => {
+    for (const code of budgetLineGroupCodes()) {
+      for (const [locale, json] of Object.entries(LOCALES)) {
+        expect([locale, code, typeof json.categories[code]]).toEqual([locale, code, 'string']);
+      }
+    }
+    expect(budgetLineGroupCodes()).not.toContain(UNCATEGORIZED_COST_CODE);
+    expect(budgetLineGroupCodes().indexOf('OIK-2')).toBeLessThan(budgetLineGroupCodes().indexOf('SOFT-LAND'));
+  });
+
+  it('🔴 compose: trimmed + upper-cased segment under the SAME group, or null before any request', () => {
+    expect(composeBudgetLineCode('SOFT-PERMITS', ' tee ')).toBe('SOFT-PERMITS.TEE');
+    expect(composeBudgetLineCode('SOFT-PERMITS', '')).toBe('SOFT-PERMITS');
+    expect(composeBudgetLineCode('SOFT-PERMITS', 'τεε')).toBeNull();
+    expect(composeBudgetLineCode('SOFT-PERMITS', 'A.B')).toBeNull();
+    expect(composeBudgetLineCode('OTHER', '')).toBeNull();
   });
 });
