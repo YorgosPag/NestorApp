@@ -7,6 +7,7 @@
  * @since 2026-04-13 (ADR-298 Phase C.1)
  */
 
+import { assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
 import { initEmulator, teardownEmulator, resetData } from '../_harness/emulator';
 import { getContext } from '../_harness/auth-contexts';
 import { assertCell, type AssertTarget } from '../_harness/assertions';
@@ -51,4 +52,37 @@ describe('accounting_expense_documents.rules — role_dual', () => {
       });
     });
   }
+});
+
+describe('accounting_expense_documents.rules — the cost allocation has ONE writer (ADR-917 Φ4)', () => {
+  let env: RulesTestEnvironment;
+
+  beforeAll(async () => { env = await initEmulator(); });
+  afterAll(async () => { await teardownEmulator(env); });
+  afterEach(async () => { await resetData(env); });
+
+  const docs = () => getContext(env, 'same_tenant_user').firestore().collection('accounting_expense_documents');
+  const line = { projectId: 'p1', costCode: 'OIK-3', netAmount: 100, purchaseOrderId: null, origin: 'manual' };
+
+  it('🔴 the client never writes costAllocations / allocatedProjectIds / allocationRevision', async () => {
+    await seedAccountingExpenseDocument(env, 'e1');
+    await assertFails(docs().doc('e1').update({ costAllocations: [line] }));
+    await assertFails(docs().doc('e1').update({ allocatedProjectIds: ['p1'] }));
+    await assertFails(docs().doc('e1').update({ allocationRevision: 7 }));
+  });
+
+  it('🔴 nor at creation', async () => {
+    const base = {
+      companyId: SAME_TENANT_COMPANY_ID,
+      createdBy: PERSONA_CLAIMS.same_tenant_user.uid,
+      createdAt: new Date(),
+    };
+    await assertFails(docs().doc('n1').set({ ...base, costAllocations: [line] }));
+    await assertSucceeds(docs().doc('n2').set(base));
+  });
+
+  it('other fields of the same document stay writable by its creator', async () => {
+    await seedAccountingExpenseDocument(env, 'e1', { overrides: { costAllocations: [line], allocationRevision: 1 } });
+    await assertSucceeds(docs().doc('e1').update({ notes: 'x', updatedAt: new Date() }));
+  });
 });

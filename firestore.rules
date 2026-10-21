@@ -4940,10 +4940,19 @@ service cloud.firestore {
       allow delete: if canDeleteAccounting(resource.data.companyId, resource.data.createdBy);
     }
 
+    // ADR-917 Φ4 — η κατανομή κόστους (έργο + κωδικός) έχει ΕΝΑΝ γραφέα: `expense-cost-allocations.server.ts`
+    // (Admin SDK, μία συναλλαγή με CAS + προβολή στις PO). Ο client δεν τη γράφει ποτέ — ούτε στη γέννηση,
+    // ούτε στην ενημέρωση: μια κατανομή χωρίς τον γραφέα θα έδειχνε έργο που δεν ελέγχθηκε και PO που δεν ξέρει.
+    function expenseAllocationFields() {
+      return ['costAllocations', 'allocatedProjectIds', 'allocationRevision'];
+    }
+
     match /accounting_expense_documents/{docId} {
       allow read:   if canReadAccounting(resource.data.companyId);
-      allow create: if canCreateAccounting();
-      allow update: if canUpdateAccounting(resource.data.companyId, resource.data.createdBy);
+      allow create: if canCreateAccounting()
+                    && !request.resource.data.keys().hasAny(expenseAllocationFields());
+      allow update: if canUpdateAccounting(resource.data.companyId, resource.data.createdBy)
+                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(expenseAllocationFields());
       allow delete: if canDeleteAccounting(resource.data.companyId, resource.data.createdBy);
     }
 
