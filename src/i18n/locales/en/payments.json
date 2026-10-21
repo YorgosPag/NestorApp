@@ -259,13 +259,15 @@
       "projectedSeries": "Projected (purchase orders)",
       "projected": "Projected cost",
       "unbudgeted": "Cost without a budget",
-      "noBudget": "No BOQ",
+      "noBudget": "No budget source",
       "noSources": "This project has no bills of quantities or purchase orders yet.",
       "selectProjectPrompt": "Select a project to see its budget and cost from source documents.",
       "loadError": "Could not load cost data.",
       "coverage": "BOQ coverage by purchase orders",
       "noBoq": "No BOQ",
-      "codesWithoutBudget": "{count, plural, one {# code with cost but no budget} other {# codes with cost but no budget}}"
+      "codesWithoutBudget": "{count, plural, one {# code with cost but no budget} other {# codes with cost but no budget}}",
+      "unpricedLabel": "No unit price",
+      "unpriced": "{count, plural, one {# BOQ line without a price} other {# BOQ lines without a price}}"
     },
     "drillDown": {
       "hint": "Click a bar to see which documents it comes from.",
@@ -273,6 +275,8 @@
       "boqItems": "BOQ lines",
       "purchaseOrders": "Purchase orders",
       "none": "None",
+      "unpriced": "no price",
+      "budgetLines": "Budget lines",
       "close": "Close"
     },
     "legacy": {

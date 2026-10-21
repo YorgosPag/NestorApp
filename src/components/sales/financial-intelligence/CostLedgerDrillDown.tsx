@@ -4,10 +4,11 @@
  * CostLedgerDrillDown — the documents behind ONE cost code of the ledger.
  *
  * Every bar of the budget-vs-actual card answers «from where?»: the BOQ lines
- * that make its budget and the purchase orders that make its cost, each order
- * linking to its own page.
+ * and project budget lines that make its budget and the purchase orders that make
+ * its cost, each order linking to its own page. An unpriced BOQ line says so —
+ * it is never shown as «0 €» (Ζ7).
  *
- * @see ADR-917 §4 Δ3 (β)
+ * @see ADR-917 §4 Δ3 (β) · Ζ7
  */
 
 import type { ReactNode } from 'react';
@@ -43,7 +44,7 @@ function SourceList({ title, empty, children }: { title: string; empty: string; 
 
 export function CostLedgerDrillDown({ row, label, onClose, t }: CostLedgerDrillDownProps) {
   const iconSizes = useIconSizes();
-  const sources = row.sources ?? { boqItems: [], purchaseOrders: [] };
+  const sources = row.sources ?? { boqItems: [], purchaseOrders: [], budgetLines: [] };
   const none = t('variance.drillDown.none');
 
   return (
@@ -62,10 +63,28 @@ export function CostLedgerDrillDown({ row, label, onClose, t }: CostLedgerDrillD
               {item.costCode && <span className="mr-2 font-mono text-muted-foreground">{item.costCode}</span>}
               {item.title}
             </span>
-            <span className="tabular-nums">{formatCurrencyWhole(item.amount)}</span>
+            {item.priced ? (
+              <span className="tabular-nums">{formatCurrencyWhole(item.amount)}</span>
+            ) : (
+              <span className="text-muted-foreground">{t('variance.drillDown.unpriced')}</span>
+            )}
           </li>
         ))}
       </SourceList>
+
+      {sources.budgetLines.length > 0 ? (
+        <SourceList title={t('variance.drillDown.budgetLines')} empty={none}>
+          {sources.budgetLines.map((line) => (
+            <li key={line.id} className="flex justify-between gap-4 px-3 py-1.5">
+              <span className="truncate">
+                <span className="mr-2 font-mono text-muted-foreground">{line.costCode}</span>
+                {line.note}
+              </span>
+              <span className="tabular-nums">{formatCurrencyWhole(line.amount)}</span>
+            </li>
+          ))}
+        </SourceList>
+      ) : null}
 
       <SourceList title={t('variance.drillDown.purchaseOrders')} empty={none}>
         {sources.purchaseOrders.map((order) => (

@@ -73,6 +73,16 @@ export function computeItemCost(item: BOQCostInput): CostBreakdown {
   };
 }
 
+/**
+ * Έχει η γραμμή τιμή μονάδας; (ADR-917 Ζ7)
+ *
+ * Το BIM γράφει μηδενικές τιμές και η ανάγνωση βάζει 0 όταν λείπει τιμή ⇒ `0` σημαίνει
+ * «κανείς δεν την τιμολόγησε», όχι «δωρεάν». Γραμμή χωρίς τιμή δεν είναι προϋπολογισμός 0 €.
+ */
+export function hasUnitPrice(item: Pick<BOQCostInput, 'materialUnitCost' | 'laborUnitCost' | 'equipmentUnitCost'>): boolean {
+  return item.materialUnitCost + item.laborUnitCost + item.equipmentUnitCost > 0;
+}
+
 // ============================================================================
 // VARIANCE (ESTIMATED vs ACTUAL)
 // ============================================================================

@@ -163,7 +163,7 @@ function computeBudgetVsActual(
   pos: PurchaseOrder[],
   catFilter: string[],
 ): BudgetVsActualPoint[] {
-  return computeCostLedger(boqItems, pos, catFilter).rows
+  return computeCostLedger(boqItems, pos, { categoryFilter: catFilter }).rows
     .filter(hasBudgetOrCommitment)
     .map(row => ({
       categoryCode: row.categoryCode,

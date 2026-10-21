@@ -20,7 +20,8 @@ import 'server-only';
  */
 
 import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
-import { hasBudgetOrCommitment } from '@/services/project-cost/cost-ledger';
+import { costCodeFamilyOf } from '@/config/cost-taxonomy';
+import { hasBudgetOrCommitment, type CostLedgerRow } from '@/services/project-cost/cost-ledger';
 import { loadProjectCostLedger } from '@/services/project-cost/project-cost-ledger.server';
 
 // ============================================================================
@@ -44,6 +45,11 @@ export interface BoqCoverageStats {
 // AGGREGATOR
 // ============================================================================
 
+/** Procurement KPIs compare hard cost only — soft cost (SOFT-*) is never bought with a PO line. */
+function isProcurementRow(row: CostLedgerRow): boolean {
+  return hasBudgetOrCommitment(row) && costCodeFamilyOf(row.categoryCode) !== 'soft';
+}
+
 export async function computeBoqCoverageStats(
   companyId: string,
   projectId: string,
@@ -60,7 +66,7 @@ export async function computeBoqCoverageStats(
     const ledger = await loadProjectCostLedger(db, companyId, projectId);
 
     const budgetVsCommitted: BudgetVsCommittedEntry[] = ledger.rows
-      .filter(hasBudgetOrCommitment)
+      .filter(isProcurementRow)
       .map(row => ({ categoryCode: row.categoryCode, budget: row.budget, committed: row.committed }));
 
     const totalBoqItemCount = ledger.boqItemCount;

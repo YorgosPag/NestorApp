@@ -251,6 +251,16 @@
     "OIK-14": "Swimming Pools",
     "OIK-15": "Photovoltaics",
     "OIK-16": "Joinery & Kitchens",
+    "SOFT-LAND": "Land",
+    "SOFT-PERMITS": "Permits & fees",
+    "SOFT-EFKA": "EFKA contributions",
+    "SOFT-UTILITIES": "Utility connections",
+    "SOFT-DESIGN": "Design & supervision",
+    "SOFT-LEGAL": "Legal & notarial",
+    "SOFT-MARKETING": "Marketing & brokerage",
+    "SOFT-FINANCE": "Finance & interest",
+    "SOFT-INSURANCE": "Project insurance",
+    "SOFT-CONTINGENCY": "Contingency",
     "OTHER": "No cost code"
   },
   "supplierMetrics": {

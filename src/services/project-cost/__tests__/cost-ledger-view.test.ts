@@ -3,7 +3,7 @@
  * Each `it` names the mutation it exists to catch.
  */
 
-import { computeCostLedger, type LedgerBoqItem, type LedgerPurchaseOrder } from '../cost-ledger';
+import { computeCostLedger, type LedgerBoqItem, type LedgerBudgetLine, type LedgerPurchaseOrder } from '../cost-ledger';
 import { toCostLedgerView } from '../cost-ledger-view';
 import type { PurchaseOrderItem, PurchaseOrderStatus } from '@/types/procurement';
 
@@ -82,5 +82,41 @@ describe('toCostLedgerView (ADR-917 Φ2)', () => {
   it('figures-only view drops the per-document sources (AI context)', () => {
     const { rows } = view([boq('b1', 'OIK-2')], [], false);
     expect(rows[0].sources).toBeUndefined();
+  });
+});
+
+describe('toCostLedgerView (ADR-917 Φ3α)', () => {
+  const unpriced = (id: string, code: string): LedgerBoqItem => ({
+    ...boq(id, code), materialUnitCost: 0, laborUnitCost: 0, equipmentUnitCost: 0,
+  });
+  const line = (costCode: string, amount: number): LedgerBudgetLine => ({ id: `pbl_${costCode}`, costCode, amount, note: null });
+
+  it('Α9 an unpriced-only code is SHOWN with budget null and counted in completeness (not hidden, not 0 €)', () => {
+    const ledgerView = toCostLedgerView('p1', computeCostLedger([unpriced('b1', 'OIK-2')], []), { includeSources: false });
+    expect(ledgerView.isEmpty).toBe(false);
+    expect(ledgerView.rows[0]).toEqual(expect.objectContaining({ budget: null, budgetSource: null, unpricedBoqItemCount: 1 }));
+    expect(ledgerView.totals.budget).toBeNull();
+    expect(ledgerView.completeness.unpricedBoqItemCount).toBe(1);
+  });
+
+  it('soft cost is part of the budget AND reported apart; allowance codes are counted', () => {
+    const ledger = computeCostLedger([boq('b1', 'OIK-2')], [], {
+      budgetLines: [line('SOFT-PERMITS', 40), line('OIK-3', 70)],
+    });
+    const { totals, completeness } = toCostLedgerView('p1', ledger, { includeSources: false });
+    expect(totals).toEqual(expect.objectContaining({ budget: 210, softBudget: 40 }));
+    expect(completeness.allowanceCodes).toBe(1);
+  });
+
+  it('Α13 🔴 land in exchange is valued in kind on the HARD budget and stays OUT of every total', () => {
+    const ledger = computeCostLedger([boq('b1', 'OIK-2')], [], { budgetLines: [line('SOFT-LEGAL', 50)] });
+    const ledgerView = toCostLedgerView('p1', ledger, { includeSources: false, bartexPercentage: 40 });
+    expect(ledgerView.landExchange).toEqual({ bartexPercentage: 40, inKindValue: 40, basis: 'current-hard-budget' });
+    expect(ledgerView.totals.budget).toBe(150);
+  });
+
+  it('no αντιπαροχή ⇒ no in-kind figure', () => {
+    const ledgerView = toCostLedgerView('p1', computeCostLedger([boq('b1', 'OIK-2')], []), { includeSources: false });
+    expect(ledgerView.landExchange).toBeNull();
   });
 });

@@ -34,6 +34,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
+import { costCodeLabelKey } from '@/config/cost-taxonomy';
 import type {
   BudgetVarianceAnalysis,
   ProjectFinancialSummary,
@@ -81,7 +82,7 @@ const VARIANCE_POLARITY = 'lower-is-better' as const;
 // =============================================================================
 
 function costCodeLabel(costCode: string, t: Translate): string {
-  return t(`procurement:categories.${costCode}`);
+  return t(costCodeLabelKey(costCode));
 }
 
 function toPoints(rows: readonly CostLedgerViewRow[], t: Translate): LedgerPoint[] {
@@ -249,6 +250,13 @@ function LedgerSummary({ ledger, format, t }: LedgerSummaryProps) {
         <ChartCard.SummaryItem
           label={t('variance.source.unbudgeted')}
           value={`${format(totals.unbudgetedProjected)} · ${t('variance.source.codesWithoutBudget', { count: completeness.codesWithoutBudget })}`}
+          tone="bad"
+        />
+      ) : null}
+      {completeness.unpricedBoqItemCount > 0 ? (
+        <ChartCard.SummaryItem
+          label={t('variance.source.unpricedLabel')}
+          value={t('variance.source.unpriced', { count: completeness.unpricedBoqItemCount })}
           tone="bad"
         />
       ) : null}
