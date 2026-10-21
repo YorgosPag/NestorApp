@@ -265,10 +265,24 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     label: 'tabs.labels.measurements',
     value: 'measurements',
     icon: 'ruler',
-    description: 'Συγκεντρωτικές επιμετρήσεις από όλα τα κτίρια του έργου',
+    description: 'tabs.descriptions.projectMeasurements',
     order: 12,
     enabled: true,
     component: 'ProjectMeasurementsTab',
+  },
+
+  // -------------------------------------------------------------------------
+  // 12.2. ΠΡΟΫΠΟΛΟΓΙΣΜΟΣ ΕΡΓΟΥ (ADR-917 Φ3γ — μαλακό κόστος + προβλέψεις)
+  // -------------------------------------------------------------------------
+  {
+    id: 'budget',
+    label: 'tabs.labels.budget',
+    value: 'budget',
+    icon: 'calculator',
+    description: 'tabs.descriptions.budget',
+    order: 12.2,
+    enabled: true,
+    component: 'ProjectBudgetTab',
   },
 
   // -------------------------------------------------------------------------

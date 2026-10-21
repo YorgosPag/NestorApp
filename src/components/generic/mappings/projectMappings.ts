@@ -38,6 +38,7 @@ import { ProjectParkingTab } from '@/components/projects/tabs/ProjectParkingTab'
 import { ProjectLocationsTab } from '@/components/projects/tabs/ProjectLocationsTab';
 // 🏢 ENTERPRISE: Project-level measurements aggregation (read-only, data from buildings)
 import { ProjectMeasurementsTab } from '@/components/projects/tabs/ProjectMeasurementsTab';
+import { ProjectBudgetTab } from '@/components/projects/tabs/project-budget/ProjectBudgetTab';
 // 🏢 ENTERPRISE: Centralized audit trail / history tab (ADR-195)
 import { ActivityTab } from '@/components/shared/audit/ActivityTab';
 // 🏢 ENTERPRISE: Brokerage agreements tab (ADR-230 / SPEC-230B)
@@ -78,6 +79,8 @@ export const PROJECT_COMPONENT_MAPPING = {
   'ProjectLocationsTab': ProjectLocationsTab,
   // 🏢 ENTERPRISE: Project-level measurements aggregation (read-only)
   'ProjectMeasurementsTab': ProjectMeasurementsTab,
+  // ADR-917 Φ3γ: soft-cost + allowance lines, edited in place (optimistic, compare-and-set)
+  'ProjectBudgetTab': ProjectBudgetTab,
   // 🏢 ENTERPRISE: Centralized audit trail / history tab (ADR-195)
   'ActivityTab': ActivityTab,
   // 🏢 ENTERPRISE: Brokerage agreements tab (ADR-230 / SPEC-230B)

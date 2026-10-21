@@ -3,6 +3,7 @@
 import React from 'react';
 import { MapPin, Plus } from 'lucide-react';
 import { useRouter } from '@/lib/workspace/navigation';
+import { getProjectTabUrl } from '@/lib/navigation/project-urls';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Spinner } from '@/components/ui/spinner';
@@ -122,7 +123,7 @@ export function BuildingAddressesCard(props: BuildingAddressesCardProps) {
                 isAddressSelected={isAddressSelected}
                 onToggleProjectAddress={toggleProjectAddress}
                 onSetPrimary={setProjectPrimaryAddress}
-                onOpenProjectLocations={() => router.push(`/projects?projectId=${props.projectId}&tab=locations`)}
+                onOpenProjectLocations={() => { if (props.projectId) router.push(getProjectTabUrl(props.projectId, 'locations')); }}
               />
               <BuildingAddressesMapPane
                 addresses={localAddresses}
