@@ -328,6 +328,67 @@
       "review": "Pending Review",
       "confirmed": "Confirmed",
       "rejected": "Rejected"
+    },
+    "confirmHint": "Fill in net amount, VAT and date to confirm — an empty field never becomes €0.",
+    "allocation": {
+      "title": "Cost allocation to projects",
+      "intro": "Which project and cost code the net amount belongs to. Independent of the tax category.",
+      "loadFailed": "Could not load the cost allocation.",
+      "coverage": {
+        "none": "Not allocated — counts on no project",
+        "partial": "{allocated} of {net} allocated · {remaining} remaining",
+        "full": "Fully allocated ({allocated})",
+        "over": "{allocated} allocated — more than the net amount {net}",
+        "unknown": "Net amount unknown — allocation not possible"
+      },
+      "proposal": {
+        "title": "Proposal from purchase order {poNumber}",
+        "note": "Proportional to the order lines. Review and accept.",
+        "accept": "Use proposal",
+        "empty": "The order has no priced lines to propose from."
+      },
+      "match": {
+        "button": "Find purchase order",
+        "searching": "Searching…",
+        "none": "No purchase order of this supplier was found.",
+        "failed": "The purchase order search failed.",
+        "candidate": "{poNumber} · {confidence}% match",
+        "choose": "Propose from this order"
+      },
+      "lines": {
+        "project": "Project",
+        "costCode": "Cost code",
+        "purchaseOrder": "Purchase order",
+        "amount": "Net amount",
+        "origin": "Origin",
+        "direct": "Direct cost (no purchase order)",
+        "originProposal": "From purchase order",
+        "originManual": "Manual",
+        "remove": "Remove line {code}",
+        "amountAria": "Net amount of line {code}",
+        "empty": "No allocation lines.",
+        "unknownProject": "Unknown project"
+      },
+      "add": {
+        "title": "Direct cost to a project",
+        "project": "Project",
+        "costCode": "Cost code",
+        "costCodePlaceholder": "Choose a code",
+        "amount": "Net amount",
+        "submit": "Add"
+      },
+      "save": "Save allocation",
+      "saving": "Saving…",
+      "saved": "Allocation saved.",
+      "errors": {
+        "conflict": "The allocation changed meanwhile. The current one was loaded; your version stays in the form for review.",
+        "invalid": "The allocation was refused: check projects, codes and that the total does not exceed the net amount.",
+        "failed": "Saving failed. Please try again.",
+        "amount": "Invalid amount on one or more lines.",
+        "missingFields": "Choose a project, a code and a positive amount.",
+        "exceeds": "The total ({allocated}) exceeds the net amount ({net}).",
+        "duplicate": "A line for the same project, code and purchase order already exists."
+      }
     }
   },
   "reports": {

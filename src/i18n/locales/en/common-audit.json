@@ -265,7 +265,8 @@
         "bartexPercentage": "Bartex percentage",
         "projectCode": "Project code",
         "addresses": "Address",
-        "buildingCode": "Building Code Data"
+        "buildingCode": "Building Code Data",
+        "expenseAllocations": "Expense document allocations"
       },
       "contact": {
         "firstName": "First name",
@@ -677,7 +678,10 @@
       "electricalInstallationIssuanceApprovalRequest": "Electrical installation declaration (YDE) issuance — approval requested from",
       "electricalInstallationStandingObligation": "Standing electrical declaration obligation — decision",
       "electricalInstallationStandingObligationExemption": "Standing electrical declaration obligation — exemption reason",
-      "electricalInstallationStandingObligationProposal": "Standing electrical declaration obligation — app suggestion"
+      "electricalInstallationStandingObligationProposal": "Standing electrical declaration obligation — app suggestion",
+      "expenseAllocation": {
+        "netAmount": "Allocated net amount"
+      }
     },
     "retiredFieldNotice": "This field no longer exists in the registry — showing the name recorded at the time of the change."
   }

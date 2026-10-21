@@ -265,7 +265,8 @@
         "bartexPercentage": "Ποσοστό αντιπαροχής",
         "projectCode": "Κωδικός Έργου",
         "addresses": "Διεύθυνση",
-        "buildingCode": "Στοιχεία ΝΟΚ"
+        "buildingCode": "Στοιχεία ΝΟΚ",
+        "expenseAllocations": "Κατανομές παραστατικών εξόδου"
       },
       "contact": {
         "firstName": "Όνομα",
@@ -677,7 +678,10 @@
       "electricalInstallationIssuanceApprovalRequest": "Ανάθεση ΥΔΕ — αίτημα έγκρισης προς",
       "electricalInstallationStandingObligation": "Μόνιμη υποχρέωση ΥΔΕ — απόφαση",
       "electricalInstallationStandingObligationExemption": "Μόνιμη υποχρέωση ΥΔΕ — λόγος εξαίρεσης",
-      "electricalInstallationStandingObligationProposal": "Μόνιμη υποχρέωση ΥΔΕ — πρόταση εφαρμογής"
+      "electricalInstallationStandingObligationProposal": "Μόνιμη υποχρέωση ΥΔΕ — πρόταση εφαρμογής",
+      "expenseAllocation": {
+        "netAmount": "Καθαρό ποσό κατανομής"
+      }
     },
     "retiredFieldNotice": "Το πεδίο δεν υπάρχει πλέον στο μητρώο — εμφανίζεται το όνομα που είχε καταγραφεί τη στιγμή της αλλαγής."
   }

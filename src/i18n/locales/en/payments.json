@@ -254,7 +254,7 @@
     "emptyState": "Enter budget and actual amounts to render the chart.",
     "removeRow": "Delete category",
     "source": {
-      "caption": "Budget from its sources (signed-off bill of quantities, allowance or soft-cost line) and projected cost from purchase orders, per cost code. A code without a budget bar has no source — it does not mean zero.",
+      "caption": "Budget from its sources (signed-off bill of quantities, allowance or soft-cost line), projected cost from purchase orders and direct costs, and invoiced from confirmed expense documents, per cost code. A code without a bar has no source — it does not mean zero.",
       "budgetSeries": "Budget",
       "projectedSeries": "Projected (purchase orders)",
       "projected": "Projected cost",
@@ -282,7 +282,17 @@
       "excludedSummaries": "{count, plural, one {# summary — its layers count} other {# summaries — their layers count}}",
       "unresolvedRolesLabel": "Groups with no provable role",
       "unresolvedRoles": "{count, plural, one {# parent line counts together with its layers — possible double count} other {# parent lines count together with their layers — possible double count}}",
-      "editBudget": "Edit project budget"
+      "editBudget": "Edit project budget",
+      "invoicedSeries": "Invoiced (expense documents)",
+      "invoiced": "Invoiced",
+      "noInvoiced": "No allocated expense document",
+      "directCost": "Direct costs (no purchase order)",
+      "expensesInReviewLabel": "Documents in review",
+      "expensesInReview": "{count, plural, one {# allocated document is not confirmed yet — not counted} other {# allocated documents are not confirmed yet — not counted}}",
+      "expensesPartialLabel": "Partly allocated",
+      "expensesPartial": "{count, plural, one {# document is only partly allocated} other {# documents are only partly allocated}}",
+      "expensesAwaitingLabel": "Not allocated",
+      "expensesAwaiting": "{count, plural, one {# document matched to a project order has no allocation} other {# documents matched to project orders have no allocation}}"
     },
     "drillDown": {
       "hint": "Click a bar to see which documents it comes from.",
@@ -295,7 +305,12 @@
       "excludedSummaries": "Summaries left out of the sum",
       "excludedSummaryNote": "its {count} layers count instead",
       "close": "Close",
-      "source": "Budget source: {source}"
+      "source": "Budget source: {source}",
+      "expenseDocuments": "Expense documents",
+      "expenseDirect": "direct cost",
+      "expenseAgainstPo": "against purchase order",
+      "expenseInReview": "in review — not counted",
+      "overbilled": "Billed above the purchase orders: {amount}"
     },
     "legacy": {
       "trigger": "Old manual values (to be retired)",
@@ -367,7 +382,8 @@
       "amount": "Amount (net)",
       "note": "Note",
       "effect": "What counts in the budget",
-      "actions": "Actions"
+      "actions": "Actions",
+      "invoiced": "Invoiced (code group)"
     },
     "effect": {
       "allowanceActive": "Counts as the budget",
@@ -416,6 +432,11 @@
       "mineArchive": "Yours: archive",
       "keepMine": "Keep mine",
       "keepTheirs": "Keep current"
+    },
+    "invoiced": {
+      "none": "No document",
+      "unknown": "Calculating…",
+      "direct": "of which direct {amount}"
     }
   }
 }
