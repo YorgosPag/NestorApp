@@ -2,6 +2,18 @@
 
 **STATUS: ACTIVE**
 
+- 🔴 **21/10 — ΤΟ ACCOUNTING REPOSITORY ΔΙΑΒΑΖΕΙ/ΓΡΑΦΕΙ ΚΑΤΑ ID ΧΩΡΙΣ ΦΡΑΧΤΗ ΕΝΟΙΚΙΟΥ** *(ADR-917 §2.4 Λ11, εύρημα Φ4)*
+
+  **Τι:** οι `get*/update*/delete*` κατά id δέχονται `tenant` αλλά **δεν** τον διαβάζουν — το Admin SDK παρακάμπτει τους κανόνες,
+  άρα ένα id αρκεί για ξένο έγγραφο. Στη Φ4 διορθώθηκε **μόνο** το `accounting-repo-documents.ts` (παραστατικά εξόδου · ΑΠΥ ·
+  κατηγορίες). **Πού μένει** (μετρημένο 2026-10-21, `grep "\.doc([a-zA-Z]*Id)"` χωρίς έλεγχο ιδιοκτησίας):
+  `accounting-repo-financial.ts` (εγγραφές Ε-Ε, **τιμολόγια**, δόσεις φόρου) · `accounting-repo-operations.ts` (τραπεζικές κινήσεις,
+  πάγια) · `matching-rules-repo.ts` · `accounting-repo-entities.ts` (πληρωμές ΕΦΚΑ). **Θεραπεία:** ο ΗΔΗ υπάρχων φράχτης
+  `services/repository/tenant-owned-doc.ts` (`readOwnedDoc` · `updateOwnedDoc` · `deleteOwnedDoc`), όπως στο
+  `accounting-repo-documents.ts`, + σουίτα στο πρότυπο `__tests__/expense-documents-tenant-confirm.test.ts`. Προσοχή: κάθε
+  `update` που **περιμένει** να ρίξει σε ανύπαρκτο έγγραφο πλέον ρίχνει `OwnedDocumentNotFoundError` — ελέγξτε τους καλούντες.
+  **Μέγεθος:** > 1h, 5 αρχεία ⇒ εντολή Giorgio. **Προτεραιότητα:** υψηλή (ασφάλεια, ίδια κλάση με το ADR-917 Ε5).
+
 - 🟡 **16/10 — ΤΑ POST-FINALIZE HOOKS ΜΑΛΛΟΝ ΔΕΝ ΤΡΕΧΟΥΝ ΠΟΤΕ ΓΙΑ ΑΝΕΒΑΣΜΑΤΑ ΑΠΟ BROWSER** *(ADR-915 §20.8, εύρημα audit — ΔΕΝ επαληθεύτηκε)*
 
   **Τι:** `FileRecordService.finalizeFileRecord` (`services/file-record.service.ts`) τρέχει **στον browser** και καλεί
