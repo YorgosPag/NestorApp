@@ -329,24 +329,6 @@ export async function recordDelivery(
 }
 
 // ============================================================================
-// INVOICE LINKING
-// ============================================================================
-
-export async function linkInvoice(
-  poId: string,
-  invoiceId: string
-): Promise<void> {
-  const po = await getPurchaseOrder(poId);
-  if (!po) throw new Error(`PO not found: ${poId}`);
-
-  const linkedInvoiceIds = [...po.linkedInvoiceIds, invoiceId];
-  await updatePurchaseOrder(poId, {
-    linkedInvoiceIds,
-    dateInvoiced: po.dateInvoiced ?? isoNow(),
-  });
-}
-
-// ============================================================================
 // PRICE HISTORY QUERY
 // ============================================================================
 

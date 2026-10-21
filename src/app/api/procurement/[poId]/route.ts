@@ -4,7 +4,8 @@
  * DELETE /api/procurement/[poId] — Soft delete PO
  *
  * PATCH actions via ?action= query param:
- *   approve, order, close, cancel, record-delivery, link-invoice, duplicate, update
+ *   approve, order, close, cancel, record-delivery, duplicate, update
+ *   (`link-invoice` retired — ADR-917 Φ4: the expense document's cost allocation links invoice ↔ PO)
  *
  * Auth: withAuth | Rate: standard (GET), sensitive (PATCH/DELETE)
  * @see ADR-267 §Phase A
@@ -15,7 +16,7 @@ import 'server-only';
 
 import { z } from 'zod';
 import { NextResponse } from 'next/server';
-import { defineRoute, ok, created, notFound, httpError } from '@/lib/api/define-route';
+import { defineRoute, ok, created, notFound, badRequest, httpError } from '@/lib/api/define-route';
 import {
   getPO,
   updatePO,
@@ -24,7 +25,6 @@ import {
   closePO,
   cancelPO,
   recordPODelivery,
-  linkInvoiceToPO,
   deletePO,
   duplicatePO,
 } from '@/services/procurement';
@@ -52,10 +52,6 @@ const DeliverySchema = z.object({
     itemId: z.string().min(1),
     quantityReceived: z.number().positive(),
   })).min(1),
-});
-
-const LinkInvoiceSchema = z.object({
-  invoiceId: z.string().min(1),
 });
 
 // ============================================================================
@@ -125,12 +121,11 @@ export const PATCH = defineRoute<z.ZodTypeAny, PoParams>({
           });
         }
 
-        case 'link-invoice': {
-          const parsed = safeParseBody(LinkInvoiceSchema, body);
-          if (parsed.error) return parsed.error;
-          await linkInvoiceToPO(auth, poId, parsed.data.invoiceId);
-          return NextResponse.json({ success: true, message: 'Invoice linked' });
-        }
+        // ADR-917 Φ4: `linkedInvoiceIds` is a PROJECTION of the expense document's cost allocation, written
+        // only by `expense-cost-allocations.server.ts`. Refused by name — falling through to `update` would
+        // answer «PO updated» while linking nothing.
+        case 'link-invoice':
+          return badRequest('link-invoice is retired: allocate the expense document to this PO (ADR-917 Φ4)');
 
         case 'duplicate': {
           const result = await duplicatePO(auth, poId);

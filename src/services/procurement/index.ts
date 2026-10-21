@@ -10,7 +10,6 @@ export {
   listPOs,
   updatePO,
   recordPODelivery,
-  linkInvoiceToPO,
   deletePO,
   duplicatePO,
   getPriceHistory,

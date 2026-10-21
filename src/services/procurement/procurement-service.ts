@@ -285,33 +285,6 @@ export async function recordPODelivery(
 }
 
 // ============================================================================
-// INVOICE LINKING
-// ============================================================================
-
-export async function linkInvoiceToPO(
-  ctx: AuthContext,
-  poId: string,
-  invoiceId: string
-): Promise<void> {
-  await linkInvoice(poId, invoiceId);
-
-  await audit(ctx, 'procurement.po.invoice_linked', poId, {
-    invoiceId,
-  });
-
-  EntityAuditService.recordChange({
-    entityType: 'purchase_order',
-    entityId: poId,
-    entityName: poId,
-    action: 'linked',
-    changes: [{ field: 'linkedInvoiceIds', oldValue: null, newValue: invoiceId, label: 'Invoice Linked' }],
-    performedBy: ctx.uid,
-    performedByName: null,
-    companyId: ctx.companyId,
-  }).catch(() => {});
-}
-
-// ============================================================================
 // SOFT DELETE
 // ============================================================================
 

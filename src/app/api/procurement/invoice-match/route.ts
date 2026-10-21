@@ -13,12 +13,9 @@
 import 'server-only';
 
 import { defineRoute, ok, badRequest, notFound } from '@/lib/api/define-route';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { matchInvoiceToPO } from '@/services/procurement/po-invoice-matcher';
-import type { ReceivedExpenseDocument } from '@/subapps/accounting/types/documents';
-import { nowISO } from '@/lib/date-local';
+import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 
 const logger = createModuleLogger('PO_INVOICE_MATCH');
 
@@ -35,14 +32,11 @@ export const POST = defineRoute({
 
     if (!expenseDocId) badRequest('expenseDocId is required');
 
-    // Fetch expense document
-    const db = getAdminFirestore();
-    const docRef = db.collection(COLLECTIONS.ACCOUNTING_EXPENSE_DOCUMENTS).doc(expenseDocId);
-    const docSnap = await docRef.get();
+    // Fetch expense document — through the tenant-fenced repository: a foreign id reads as absent (ADR-917 Φ4.0)
+    const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
+    const expenseDoc = await repository.getExpenseDocument(expenseDocId);
 
-    if (!docSnap.exists) notFound('Expense document not found');
-
-    const expenseDoc = docSnap.data() as ReceivedExpenseDocument;
+    if (!expenseDoc) notFound('Expense document not found');
 
     if (!expenseDoc.extractedData) badRequest('Document has no extracted data yet');
 
@@ -51,10 +45,9 @@ export const POST = defineRoute({
 
     // If auto-matched, write suggestion to document
     if (result.autoMatched && result.bestMatch) {
-      await docRef.update({
+      await repository.updateExpenseDocument(expenseDocId, {
         suggestedPOId: result.bestMatch.poId,
         poMatchConfidence: result.bestMatch.confidence,
-        updatedAt: nowISO(),
       });
 
       logger.info('Auto-matched expense doc to PO', {

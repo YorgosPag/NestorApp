@@ -60,7 +60,6 @@ var poSvc = {
   closePO: jest.fn(async () => undefined),
   cancelPO: jest.fn(async () => undefined),
   recordPODelivery: jest.fn(async () => ({ newStatus: 'partially_received' })),
-  linkInvoiceToPO: jest.fn(async () => undefined),
   deletePO: jest.fn(async () => undefined),
   duplicatePO: jest.fn(),
 };
@@ -75,7 +74,6 @@ jest.mock('@/services/procurement', () => ({
   closePO: (...a: unknown[]) => poSvc.closePO(...a),
   cancelPO: (...a: unknown[]) => poSvc.cancelPO(...a),
   recordPODelivery: (...a: unknown[]) => poSvc.recordPODelivery(...a),
-  linkInvoiceToPO: (...a: unknown[]) => poSvc.linkInvoiceToPO(...a),
   deletePO: (...a: unknown[]) => poSvc.deletePO(...a),
   duplicatePO: (...a: unknown[]) => poSvc.duplicatePO(...a),
 }));
@@ -214,9 +212,10 @@ describe('procurement/[poId] — PATCH action-switch', () => {
     });
   });
 
-  it('link-invoice → message Invoice linked', async () => {
+  it('link-invoice (retired, ADR-917 Φ4) → 400 by name, never a silent «PO updated»', async () => {
     const res = (await poPatch(patchReq('link-invoice', { invoiceId: 'inv_1' }), seg)) as Envelope;
-    expect(await res.json()).toEqual({ success: true, message: 'Invoice linked' });
+    expect(res.status).toBe(400);
+    expect(poSvc.updatePO).not.toHaveBeenCalled();
   });
 
   it('duplicate → 201 { success:true, data }', async () => {

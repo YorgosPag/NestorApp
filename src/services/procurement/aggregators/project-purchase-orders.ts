@@ -14,6 +14,15 @@ import 'server-only';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { PurchaseOrder } from '@/types/procurement';
 
+/**
+ * The document's ADDRESS is its identity — never a stored `id` field that a legacy order may lack. The ledger's
+ * double-count rule (ADR-917 Φ4 Α3) matches invoices to orders by id: a missing id would turn every invoice
+ * against the order into «new cost».
+ */
+function purchaseOrderOf(doc: FirebaseFirestore.QueryDocumentSnapshot): PurchaseOrder {
+  return { ...(doc.data() as PurchaseOrder), id: doc.id };
+}
+
 export async function fetchProjectPurchaseOrders(
   db: FirebaseFirestore.Firestore,
   companyId: string,
@@ -25,7 +34,7 @@ export async function fetchProjectPurchaseOrders(
     .where('isDeleted', '==', false)
     .where('projectId', '==', projectId)
     .get();
-  return snap.docs.map(d => d.data() as PurchaseOrder);
+  return snap.docs.map(purchaseOrderOf);
 }
 
 /**
@@ -42,5 +51,5 @@ export async function fetchCompanyPurchaseOrders(
     .where('companyId', '==', companyId)
     .where('isDeleted', '==', false)
     .get();
-  return snap.docs.map(d => d.data() as PurchaseOrder);
+  return snap.docs.map(purchaseOrderOf);
 }

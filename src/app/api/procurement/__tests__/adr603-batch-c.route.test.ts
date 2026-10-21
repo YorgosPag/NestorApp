@@ -138,6 +138,14 @@ jest.mock('@/services/procurement/po-invoice-matcher', () => ({
   matchInvoiceToPO: (...a: unknown[]) => matchSvc.matchInvoiceToPO(...a),
 }));
 jest.mock('@/lib/date-local', () => ({ nowISO: () => '2026-07-08T00:00:00.000Z' }));
+// ADR-917 Φ4.0 — the route reads through the tenant-fenced accounting repository (the fence has its own anchors)
+var expenseRepo = {
+  getExpenseDocument: jest.fn(async (): Promise<unknown> => ({ extractedData: {} })),
+  updateExpenseDocument: jest.fn(async () => undefined),
+};
+jest.mock('@/subapps/accounting/services/create-accounting-services', () => ({
+  createAccountingServices: () => ({ repository: expenseRepo }),
+}));
 
 // ---- [poId]/email ----------------------------------------------------------
 var emailSvc = {
@@ -302,14 +310,14 @@ describe('invoice-match — POST', () => {
   });
 
   it('doc not found → 404', async () => {
-    fsDoc.get.mockResolvedValue({ exists: false, data: () => undefined });
+    expenseRepo.getExpenseDocument.mockResolvedValueOnce(null);
     const res = (await matchPost(req(`${BASE}/invoice-match`, { expenseDocId: 'doc_1' }))) as Envelope;
     expect(res.status).toBe(404);
     expect((await res.json()).error).toBe('Expense document not found');
   });
 
   it('no extractedData → 400', async () => {
-    fsDoc.get.mockResolvedValue({ exists: true, data: () => ({ extractedData: null }) });
+    expenseRepo.getExpenseDocument.mockResolvedValueOnce({ extractedData: null });
     const res = (await matchPost(req(`${BASE}/invoice-match`, { expenseDocId: 'doc_1' }))) as Envelope;
     expect(res.status).toBe(400);
     expect((await res.json()).error).toBe('Document has no extracted data yet');
