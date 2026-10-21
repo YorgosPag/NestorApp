@@ -119,6 +119,27 @@ const PROBE_ITEM_SECOND: BOQItem = {
   liveQuantitySyncedAt: null,
 };
 
+/**
+ * ADR-917 Λ7 — ομάδα «σύνοψη + child» (τοίχος DNA). Χωρίς αυτήν, το να σταματήσει η σύνοψη να
+ * αθροίζεται (ή να ξαναρχίσει) θα άφηνε το αποτύπωμα ίδιο — αλλαγή σημασίας χωρίς νέα έκδοση.
+ */
+const PROBE_GROUP_SUMMARY: BOQItem = {
+  ...PROBE_ITEM_SECOND,
+  id: 'probe-group-summary',
+  categoryCode: 'OIK-3',
+  estimatedQuantity: 25,
+  isGroupParent: true,
+  groupRole: 'summary',
+};
+
+const PROBE_GROUP_CHILD: BOQItem = {
+  ...PROBE_GROUP_SUMMARY,
+  id: 'probe-group-child',
+  isGroupParent: false,
+  groupRole: null,
+  parentBoqItemId: 'probe-group-summary',
+};
+
 /** Ονόματα κατηγοριών ως `Map` — ελέγχει και ότι ο κωδικοποιητής δεν τα ισοπεδώνει. */
 const PROBE_CATEGORY_NAMES = new Map<string, string>([
   ['OIK-1', 'probe-category-one'],
@@ -132,7 +153,7 @@ const PROBE_CATEGORY_NAMES = new Map<string, string>([
 function probeEngineBehaviour(): unknown {
   const summary = computeBuildingSummary(
     'probe-building',
-    [PROBE_ITEM_BASE, PROBE_ITEM_SECOND],
+    [PROBE_ITEM_BASE, PROBE_ITEM_SECOND, PROBE_GROUP_SUMMARY, PROBE_GROUP_CHILD],
     PROBE_CATEGORY_NAMES,
   );
   return {
@@ -149,6 +170,8 @@ function probeEngineBehaviour(): unknown {
       totalItems: summary.totalItems,
       totalEstimatedCost: summary.totalEstimatedCost,
       totalActualCost: summary.totalActualCost,
+      excludedSummaryItemCount: summary.excludedSummaryItemCount,
+      unresolvedGroupRoleCount: summary.unresolvedGroupRoleCount,
       // ΟΧΙ `summary.lastUpdated` — ρολόι.
       // Επανα-ταξινόμηση κατά code unit — ΟΧΙ locale.
       categories: [...summary.categories].sort((a, b) =>

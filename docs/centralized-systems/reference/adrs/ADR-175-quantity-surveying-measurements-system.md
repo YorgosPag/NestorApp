@@ -1388,6 +1388,14 @@ src/
 
 ## Changelog
 
+### 2026-10-21 — ADR-917 Λ7: «μετράει η γραμμή;» στο `cost-engine`
+- `computeBuildingSummary` αθροίζει **μόνο** τις γραμμές του `boq-line-role.partitionCountableBoqLines`: γονέας-σύνοψη
+  (τοίχος DNA, `groupRole: 'summary'`) με children **δεν** αθροίζεται. Νέα πεδία `BOQSummary.excludedSummaryItemCount` /
+  `unresolvedGroupRoleCount`· το `totalItems` μετρά **όλες** τις γραμμές.
+- `normalizeBOQItem` μεταφέρει πλέον `parentBoqItemId` · `isGroupParent` · `groupRole` · `layerIndex` · `materialId` ·
+  `liveQuantity(SyncedAt)` — πριν τα πετούσε, άρα και η απόκλιση ADR-674 δεν έφτανε ποτέ στο UI.
+- Νέο `computeItemActualCost` (ένας τύπος πραγματικού κόστους για σύνοψη + EVM). Λεπτομέρειες: ADR-917 §10.
+
 ### 2026-02-12 — Phase 1A Implemented
 **Status:** `ΕΡΕΥΝΑ` → `PHASE_1A_IMPLEMENTED`
 

@@ -17,14 +17,7 @@ import type { BuildingMilestone } from '@/types/building/milestone';
 
 // ─── Mocks ─────────────────────────────────────────────────────────────
 
-jest.mock('@/services/measurements/cost-engine', () => ({
-  computeItemCost: jest.fn((item: BOQItem) => {
-    const unitCost = item.materialUnitCost + item.laborUnitCost + item.equipmentUnitCost;
-    const grossQty = item.estimatedQuantity * (1 + (item.wasteFactor ?? 0));
-    return { totalCost: grossQty * unitCost };
-  }),
-  computeGrossQuantity: jest.fn((net: number, waste: number) => net * (1 + waste)),
-}));
+// ADR-917 Δ1/Λ7: ο cost-engine είναι καθαρός — τρέχει ο ΓΝΗΣΙΟΣ (πριν υπήρχε mock-αντίγραφο του τύπου).
 
 jest.mock('@/utils/collection-utils', () => ({
   sumBy: jest.fn(<T>(arr: T[], fn: (item: T) => number) =>
@@ -421,5 +414,22 @@ describe('computeEVM', () => {
     expect(result.scheduleVariance).toBeGreaterThan(0);
     expect(result.spi).toBeGreaterThan(1);
     expect(result.spiHealth).toBe('green');
+  });
+});
+
+describe('EVM — ADR-917 Λ7 (γονέας-σύνοψη τοίχου DNA)', () => {
+  const wall = [
+    makeBOQItem({ id: 'boq_bim_w1', isGroupParent: true, groupRole: 'summary', linkedPhaseId: 'ph_1' }),
+    makeBOQItem({ id: 'boq_bim_w1_layer_a', parentBoqItemId: 'boq_bim_w1', linkedPhaseId: 'ph_1' }),
+  ];
+
+  it('BAC μετρά τον τοίχο ΜΙΑ φορά (σπάει αν ξαναμετρηθεί η σύνοψη)', () => {
+    expect(computeBudgetAtCompletion(wall)).toBe(computeBudgetAtCompletion([wall[1]]));
+  });
+
+  it('το φίλτρο φάσης γίνεται ΜΕΤΑ τη διαμέριση: σύνοψη σε άλλη φάση δεν επιστρέφει', () => {
+    const parentElsewhere = [{ ...wall[0], linkedPhaseId: 'ph_2' }, wall[1]];
+    const phase = { id: 'ph_2', progress: 100 } as ConstructionPhase;
+    expect(computeEarnedValue([phase], parentElsewhere)).toBe(0);
   });
 });

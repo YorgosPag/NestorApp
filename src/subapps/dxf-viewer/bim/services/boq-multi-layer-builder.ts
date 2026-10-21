@@ -25,6 +25,7 @@ import type { WallDna, WallDnaLayer } from '../types/wall-dna-types';
 import type { AtoeMappingEntry, BimEntityType } from '../config/bim-to-atoe-mapping';
 import {
   resolveMaterialAtoeMapping,
+  resolveUnmappedLayerMapping,
   type MaterialAtoeMapping,
 } from '../config/material-to-atoe-mapping';
 import { buildGroupChildBoqRow, buildGroupParentBoqRow, type BuiltBoqRow } from './boq-base-row';
@@ -118,20 +119,18 @@ export function buildMultiLayerBoqPayloads(
     parentMapping,
     wallNetArea,
     existingCreatedAt.get(parentId) ?? null,
+    // Λ7 — τα children καλύπτουν ΟΛΟ τον τοίχο (και τον πυρήνα) ⇒ ο γονέας δεν αθροίζεται
+    'summary',
   );
 
   // ── Children (per layer) ──────────────────────────────────────────────────
   const children: BuiltBoqRow[] = [];
   let layerIndex = 0;
   for (const layer of dna.layers) {
-    const matMapping = resolveMaterialAtoeMapping(layer.materialId);
-    if (!matMapping) {
-      // Unknown material (user custom string) — skip this layer's child row
-      // silently. Parent still represents total wall. Phase 6.2+ may surface
-      // a "legacy/custom" badge via UI; tracked in pending ratchet entry.
-      layerIndex += 1;
-      continue;
-    }
+    // ADR-917 Λ7 — άγνωστο υλικό ⇒ child «χωρίς άρθρο», ΟΧΙ παράλειψη: ο γονέας είναι σύνοψη
+    // και δεν αθροίζεται, άρα μια παραλειπόμενη στρώση θα έχανε σιωπηλά το κόστος της.
+    const matMapping = resolveMaterialAtoeMapping(layer.materialId)
+      ?? resolveUnmappedLayerMapping(layer.materialId, layer.name);
     const childId = layerChildBoqId(entityId, layer.id);
     children.push(buildGroupChildBoqRow(
       childId,

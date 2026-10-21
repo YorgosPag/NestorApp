@@ -77,6 +77,15 @@ export const normalizeBOQItem = (id: string, data: Record<string, unknown>): BOQ
   sourceEntityId: (data.sourceEntityId as string) ?? null,
   sourceEntityType: (data.sourceEntityType as BOQItem['sourceEntityType']) ?? null,
   detached: (data.detached as boolean) ?? null,
+  // ADR-674 / ADR-363 §6.1 / ADR-917 Λ7 — χωρίς αυτά ο πυρήνας κόστους δεν βλέπει ομάδες
+  // (διπλομέτρηση τοίχου DNA) και κανείς δεν βλέπει την απόκλιση του ζωντανού μοντέλου.
+  liveQuantity: (data.liveQuantity as number) ?? null,
+  liveQuantitySyncedAt: (data.liveQuantitySyncedAt as string) ?? null,
+  parentBoqItemId: (data.parentBoqItemId as string) ?? null,
+  isGroupParent: (data.isGroupParent as boolean) ?? null,
+  groupRole: (data.groupRole as BOQItem['groupRole']) ?? null,
+  layerIndex: (data.layerIndex as number) ?? null,
+  materialId: (data.materialId as string) ?? null,
   status: (data.status as BOQItemStatus) ?? 'draft',
   qaStatus: (data.qaStatus as BOQItem['qaStatus']) ?? 'pending',
   notes: (data.notes as string) ?? null,

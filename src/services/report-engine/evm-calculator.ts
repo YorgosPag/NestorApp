@@ -3,6 +3,8 @@
  *
  * Earned Value Management υπολογισμοί χωρίς side effects.
  * Χρησιμοποιεί τα existing BOQ cost-engine functions.
+ * ADR-917 Λ7: κάθε άθροισμα περνά από το `countableBoqLines` (γονέας-σύνοψη τοίχου DNA ΔΕΝ
+ * αθροίζεται) — **πριν** από το φίλτρο φάσης, ώστε γονέας και children να κρίνονται μαζί.
  *
  * @module services/report-engine/evm-calculator
  * @see ADR-265 §8.5 (Earned Value Management)
@@ -11,7 +13,8 @@
 import type { BOQItem } from '@/types/boq';
 import type { ConstructionPhase } from '@/types/building/construction';
 import type { BuildingMilestone } from '@/types/building/milestone';
-import { computeItemCost, computeGrossQuantity } from '@/services/measurements/cost-engine';
+import { computeItemCost, computeItemActualCost } from '@/services/measurements/cost-engine';
+import { countableBoqLines } from '@/services/measurements/boq-line-role';
 import { sumBy } from '@/utils/collection-utils';
 
 // ============================================================================
@@ -97,7 +100,7 @@ function phaseElapsedFraction(phase: ConstructionPhase, asOfDate: Date): number 
 /** Compute total budget for items linked to a specific phase */
 function phaseBudget(items: BOQItem[], phaseId: string): number {
   return sumBy(
-    items.filter(i => i.linkedPhaseId === phaseId),
+    countableBoqLines(items).filter(i => i.linkedPhaseId === phaseId),
     i => computeItemCost(i).totalCost,
   );
 }
@@ -108,20 +111,12 @@ function phaseBudget(items: BOQItem[], phaseId: string): number {
 
 /** BAC = SUM of all estimated item costs */
 export function computeBudgetAtCompletion(items: BOQItem[]): number {
-  return sumBy(items, i => computeItemCost(i).totalCost);
+  return sumBy(countableBoqLines(items), i => computeItemCost(i).totalCost);
 }
 
 /** AC = SUM of actual costs for items with actual measurements */
 export function computeActualCost(items: BOQItem[]): number {
-  let total = 0;
-  for (const item of items) {
-    if (item.actualQuantity !== null && item.actualQuantity !== undefined) {
-      const grossActual = computeGrossQuantity(item.actualQuantity, item.wasteFactor);
-      const unitCost = item.materialUnitCost + item.laborUnitCost + item.equipmentUnitCost;
-      total += grossActual * unitCost;
-    }
-  }
-  return total;
+  return sumBy(countableBoqLines(items), i => computeItemActualCost(i) ?? 0);
 }
 
 /** EV = SUM of (phase.progress/100 × phaseBudget) for each phase */

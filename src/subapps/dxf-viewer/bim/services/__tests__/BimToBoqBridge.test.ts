@@ -303,6 +303,7 @@ describe('bimToBoqBridge.upsertBoqItemForBim — multi-layer wall (Phase 6.1)', 
     const parentCall = mockSetDoc.mock.calls.find((c) => (c[0] as { id: string }).id === 'boq_bim_wall-200');
     const payload = parentCall![1] as Record<string, unknown>;
     expect(payload.isGroupParent).toBe(true);
+    expect(payload.groupRole).toBe('summary'); // ADR-917 Λ7 — τοίχος DNA: σύνοψη
     expect(payload.parentBoqItemId).toBeNull();
     expect(payload.categoryCode).toBe('OIK-3.05');
     expect(payload.estimatedQuantity).toBe(30);
@@ -716,6 +717,7 @@ describe('ADR-712 — foundationStub children', () => {
     expect(parent.categoryCode).toBe('OIK-2.03');
     expect(parent.estimatedQuantity).toBeCloseTo(0.48, 6); // ΑΝΩΔΟΜΗ — δεν φουσκώνει
     expect(parent.isGroupParent).toBe(true);
+    expect(parent.groupRole).toBe('work'); // ADR-917 Λ7 — πυρήνας + κοντόστυλο αθροίζονται
 
     const stub = rows.get('boq_bim_col-2_foundation_stub')!;
     // Ο διαχωρισμός ΤΙΜΗΣ: θεμέλια ≠ ανωδομή (ΝΕΤ ΟΙΚ).

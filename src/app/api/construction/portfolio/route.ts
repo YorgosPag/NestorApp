@@ -18,9 +18,7 @@ import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
 import { computeEVM } from '@/services/report-engine/evm-calculator';
 import { compareByLocale } from '@/lib/intl-formatting';
-import type { ConstructionPhase, ConstructionTask } from '@/types/building/construction';
-import type { BuildingMilestone } from '@/types/building/milestone';
-import type { BOQItem } from '@/types/boq';
+import { readBuildingScheduleSources } from '@/services/report-engine/building-schedule-sources';
 import type { Building } from '@/types/building/contracts';
 import { withCanonicalBuildingStatus } from '@/lib/buildings/canonical-building-enums';
 
@@ -94,10 +92,9 @@ async function aggregateBuilding(
       .get(),
   ]);
 
-  const phases = phasesSnap.docs.map(d => d.data() as ConstructionPhase);
-  const tasks = tasksSnap.docs.map(d => d.data() as ConstructionTask);
-  const milestones = milestonesSnap.docs.map(d => d.data() as BuildingMilestone);
-  const boqItems = boqSnap.docs.map(d => d.data() as BOQItem);
+  const { phases, tasks, milestones, boqItems } = readBuildingScheduleSources({
+    phasesSnap, tasksSnap, milestonesSnap, boqSnap,
+  });
 
   const evm = computeEVM(boqItems, phases, milestones);
 

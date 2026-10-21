@@ -290,6 +290,7 @@ class BimToBoqBridgeImpl {
       parent = buildGroupParentBoqRow(
         parentId, context, entity.id, entityType, coreMapping, coreQuantity,
         existingCreatedAt.get(parentId) ?? null,
+        'work', // Λ7 — πυρήνας κολώνας + κοντόστυλο: αθροίζονται και τα δύο
       );
     }
 

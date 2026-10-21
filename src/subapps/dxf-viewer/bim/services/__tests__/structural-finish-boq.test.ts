@@ -88,6 +88,8 @@ describe('buildFinishBoqPayloads (group-by-material)', () => {
     expect(parent.payload.unit).toBe('m3');
     expect(parent.payload.estimatedQuantity).toBe(0.75);
     expect(parent.payload.isGroupParent).toBe(true);
+    // ADR-917 Λ7: ο πυρήνας είναι ΕΡΓΑΣΙΑ — αθροίζεται μαζί με τον σοβά
+    expect(parent.payload.groupRole).toBe('work');
 
     expect(children).toHaveLength(2);
     const knauf = children.find((c) => c.id === finishChildBoqId('col-1', 'mat-gypsum-board'))!;

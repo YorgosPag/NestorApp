@@ -28,9 +28,7 @@ import { computeEVM } from '@/services/report-engine/evm-calculator';
 import { runAlertRules } from '@/services/construction-alert-rules';
 import { saveNewAlerts } from '@/services/construction-alert.service';
 import { fetchWeatherForecast } from '@/services/weather/open-meteo.service';
-import type { ConstructionPhase, ConstructionTask } from '@/types/building/construction';
-import type { BuildingMilestone } from '@/types/building/milestone';
-import type { BOQItem } from '@/types/boq';
+import { readBuildingScheduleSources } from '@/services/report-engine/building-schedule-sources';
 import type { Firestore } from 'firebase-admin/firestore';
 
 export const maxDuration = 60;
@@ -114,10 +112,9 @@ async function checkOneBuilding(
     coords ? fetchWeatherForecast(coords.latitude, coords.longitude) : Promise.resolve(null),
   ]);
 
-  const phases = phasesSnap.docs.map(d => d.data() as ConstructionPhase);
-  const tasks = tasksSnap.docs.map(d => d.data() as ConstructionTask);
-  const milestones = milestonesSnap.docs.map(d => d.data() as BuildingMilestone);
-  const boqItems = boqSnap.docs.map(d => d.data() as BOQItem);
+  const { phases, tasks, milestones, boqItems } = readBuildingScheduleSources({
+    phasesSnap, tasksSnap, milestonesSnap, boqSnap,
+  });
 
   const evm = computeEVM(boqItems, phases, milestones);
   const candidates = runAlertRules(phases, tasks, milestones, evm, weather);

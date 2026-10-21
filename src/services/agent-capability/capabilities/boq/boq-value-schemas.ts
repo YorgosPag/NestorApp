@@ -27,7 +27,7 @@ import type {
   CostBreakdown,
   VarianceResult,
 } from '@/types/boq';
-import { BOQ_SCOPE_VALUES, BOQ_STATUS_LIFECYCLE_ORDER } from '@/types/boq';
+import { BOQ_GROUP_ROLE_VALUES, BOQ_SCOPE_VALUES, BOQ_STATUS_LIFECYCLE_ORDER } from '@/types/boq';
 import type { BOQStats } from '@/services/measurements/contracts';
 import {
   arraySchema,
@@ -106,6 +106,11 @@ const BOQ_ITEM_FIELDS: Readonly<Record<keyof BOQItem, SchemaField>> = {
   liveQuantitySyncedAt: opt(STR_OR_NULL),
   parentBoqItemId: opt(STR_OR_NULL),
   isGroupParent: opt(BOOL_OR_NULL),
+  groupRole: opt(nullable({
+    type: 'string',
+    enum: [...BOQ_GROUP_ROLE_VALUES],
+    description: 'ADR-917 Λ7 — summary: σύνοψη των children, ΔΕΝ αθροίζεται· work: πραγματική εργασία, αθροίζεται.',
+  })),
   layerIndex: opt(NUM_OR_NULL),
   materialId: opt(STR_OR_NULL),
 };
@@ -180,6 +185,14 @@ const SUMMARY_FIELDS: Readonly<Record<keyof BOQSummary, SchemaField>> = {
   totalItems: req(NUM),
   totalEstimatedCost: req(NUM),
   totalActualCost: req(NUM_OR_NULL),
+  excludedSummaryItemCount: req({
+    ...NUM,
+    description: 'ADR-917 Λ7 — γονείς-σύνοψη (τοίχος DNA) εκτός αθροίσματος· μετρούν τα children τους.',
+  }),
+  unresolvedGroupRoleCount: req({
+    ...NUM,
+    description: 'ADR-917 Λ7 — παλιοί γονείς χωρίς αποδείξιμο ρόλο· αθροίζονται, αλλά το σύνολο μπορεί να διπλομετρά.',
+  }),
   categories: req(arraySchema(fieldsToObjectSchema(CATEGORY_SUMMARY_FIELDS))),
   lastUpdated: req({
     ...STR,

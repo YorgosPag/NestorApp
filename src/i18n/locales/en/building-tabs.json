@@ -431,7 +431,8 @@
       },
       "badge": {
         "bimAuto": "Auto from BIM",
-        "bimDetached": "Detached from BIM"
+        "bimDetached": "Detached from BIM",
+        "groupSummary": "Summary — not summed; its layers count"
       },
       "drift": {
         "summary": "Signed {baseline} · model {live} · Δ {delta}"

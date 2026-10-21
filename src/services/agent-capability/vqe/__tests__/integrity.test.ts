@@ -110,4 +110,24 @@ describe('engine fingerprint', () => {
 
     expect(after).toBe(before);
   });
+
+  /**
+   * ADR-917 Λ7 — η σύνοψη τοίχου DNA σταμάτησε να αθροίζεται: αλλαγή **σημασίας** της μηχανής.
+   * Αν το δείγμα δεν είχε ομάδα, ένα «ξαναμέτρα τη σύνοψη» θα περνούσε με την ίδια έκδοση.
+   */
+  it('αλλάζει όταν αλλάξει το «μετράει η γραμμή;» (ADR-917 Λ7)', async () => {
+    const before = computeEngineFingerprint();
+
+    jest.resetModules();
+    jest.doMock('@/services/measurements/boq-line-role', () => ({
+      partitionCountableBoqLines: <T,>(items: readonly T[]) => ({
+        countable: [...items], excludedSummaries: [], unresolvedGroupRoleCount: 0,
+      }),
+    }));
+    const reloaded = await import('../engine-version');
+    const after = reloaded.computeEngineFingerprint();
+    jest.dontMock('@/services/measurements/boq-line-role');
+
+    expect(after).not.toBe(before);
+  });
 });

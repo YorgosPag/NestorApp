@@ -24,6 +24,7 @@ export { IFC_UNIT_MAP } from './units';
 export type {
   BOQScope,
   CostAllocationMethod,
+  BoqGroupRole,
   BOQItem,
   BOQCategory,
   BOQCategorySummary,
@@ -33,7 +34,7 @@ export type {
   UpdateBOQItemInput,
   BOQFilters,
 } from './boq';
-export { BOQ_ITEM_DEFAULTS, BOQ_SCOPE_VALUES } from './boq';
+export { BOQ_ITEM_DEFAULTS, BOQ_SCOPE_VALUES, BOQ_GROUP_ROLE_VALUES } from './boq';
 
 // Governance lifecycle ordering (ADR-734 §6.3 κανόνας 1)
 export {

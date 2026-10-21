@@ -14,7 +14,7 @@
  * @see @/types/boq (BOQItem)
  */
 
-import type { BOQItem } from '@/types/boq';
+import type { BOQItem, BoqGroupRole } from '@/types/boq';
 import { nowISO } from '@/lib/date-local';
 import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import type { AtoeMappingEntry } from '../config/bim-to-atoe-mapping';
@@ -140,6 +140,7 @@ export function buildSingleEntityBoqRow(
     estimatedQuantity: quantity,
     parentBoqItemId: null,
     isGroupParent: null,
+    groupRole: null,
     layerIndex: null,
     materialId: null,
   };
@@ -175,6 +176,7 @@ export function buildGroupChildBoqRow(
     estimatedQuantity: quantity,
     parentBoqItemId: parentId,
     isGroupParent: false,
+    groupRole: null,
     layerIndex: grouping?.layerIndex ?? null,
     materialId: grouping?.materialId ?? null,
   };
@@ -185,9 +187,12 @@ export function buildGroupChildBoqRow(
 }
 
 /**
- * Build the **group-parent** summary row (`isGroupParent: true`, no material/layer
- * link) shared by the multi-layer wall builder and the structural-finish builder.
- * The parent carries the whole-entity quantity; children are appended by the caller.
+ * Build the **group-parent** row (`isGroupParent: true`, no material/layer link) shared by
+ * the multi-layer wall builder and the structural-finish / foundation-stub builders.
+ *
+ * ADR-917 Λ7 — `groupRole` is REQUIRED: the caller states what the parent means, nobody
+ * infers it later. `'summary'` (DNA wall: children cover the whole wall, core included ⇒ the
+ * parent is NOT summed) vs `'work'` (column/beam core: children add to it ⇒ summed).
  */
 export function buildGroupParentBoqRow(
   parentId: string,
@@ -197,6 +202,7 @@ export function buildGroupParentBoqRow(
   mapping: AtoeMappingEntry,
   quantity: number,
   existingCreatedAt: string | null,
+  groupRole: BoqGroupRole,
 ): BuiltBoqRow {
   const base = buildBoqBaseRow(parentId, context, entityId, entityType, existingCreatedAt);
   const parentItem: BOQItem = {
@@ -207,6 +213,7 @@ export function buildGroupParentBoqRow(
     estimatedQuantity: quantity,
     parentBoqItemId: null,
     isGroupParent: true,
+    groupRole,
     layerIndex: null,
     materialId: null,
   };

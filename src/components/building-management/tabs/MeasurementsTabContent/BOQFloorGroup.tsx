@@ -31,7 +31,7 @@ import { Pencil, Trash2, Unlink } from 'lucide-react';
 import type { BOQItem, BOQItemStatus } from '@/types/boq';
 import type { MasterBOQCategory } from '@/config/boq-categories';
 import { findSubCategory } from '@/config/boq-subcategories';
-import { computeItemCost, computeVariance, computeBaselineDrift } from '@/services/measurements';
+import { computeItemCost, computeVariance, computeBaselineDrift, excludedSummaryIds, groupBoqCost } from '@/services/measurements';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
 
@@ -101,26 +101,15 @@ export function BOQFloorGroup({
   onDetach,
   t,
 }: BOQFloorGroupProps) {
+  // ADR-917 Λ7 — η σύνοψη τοίχου DNA φαίνεται, αλλά ΔΕΝ αθροίζεται (μετρούν οι στρώσεις)
+  const summaryIds = useMemo(() => excludedSummaryIds(items), [items]);
   const groups = useMemo<CategoryGroup[]>(() => {
-    const map = new Map<string, CategoryGroup>();
-    for (const item of items) {
-      const cost = computeItemCost(item);
-      const existing = map.get(item.categoryCode);
-      if (existing) {
-        existing.items.push(item);
-        existing.totalCost += cost.totalCost;
-      } else {
-        const cat = categories.find((c) => c.code === item.categoryCode);
-        map.set(item.categoryCode, {
-          code: item.categoryCode,
-          name: cat?.nameEL ?? item.categoryCode,
-          sortOrder: cat?.sortOrder ?? 999,
-          items: [item],
-          totalCost: cost.totalCost,
-        });
-      }
-    }
-    return Array.from(map.values()).sort((a, b) => a.sortOrder - b.sortOrder);
+    return groupBoqCost(items, (item) => item.categoryCode)
+      .map(({ key, items: groupItems, totalCost }) => {
+        const cat = categories.find((c) => c.code === key);
+        return { code: key, name: cat?.nameEL ?? key, sortOrder: cat?.sortOrder ?? 999, items: groupItems, totalCost };
+      })
+      .sort((a, b) => a.sortOrder - b.sortOrder);
   }, [items, categories]);
 
   return (
@@ -130,6 +119,7 @@ export function BOQFloorGroup({
           key={group.code}
           items={group.items}
           totalCost={group.totalCost}
+          summaryIds={summaryIds}
           categoryName={`${group.code} — ${group.name}`}
           onEdit={onEdit}
           onDelete={onDelete}
@@ -149,10 +139,12 @@ export function BOQFloorGroup({
 interface CategoryItemsTableProps extends BOQRowActions {
   items: BOQItem[];
   totalCost: number;
+  /** ADR-917 Λ7 — γονείς-σύνοψη: φαίνονται, δεν αθροίζονται */
+  summaryIds: ReadonlySet<string>;
   categoryName: string;
 }
 
-function CategoryItemsTable({ items, totalCost, categoryName, onEdit, onDelete, onDetach, t }: CategoryItemsTableProps) {
+function CategoryItemsTable({ items, totalCost, summaryIds, categoryName, onEdit, onDelete, onDetach, t }: CategoryItemsTableProps) {
   const colors = useSemanticColors();
   return (
     <Table>
@@ -197,6 +189,11 @@ function CategoryItemsTable({ items, totalCost, categoryName, onEdit, onDelete, 
                       : t('tabs.measurements.badge.bimAuto')}
                   </Badge>
                 )}
+                {summaryIds.has(item.id) && (
+                  <Badge variant="outline" className="text-xs mt-1">
+                    {t('tabs.measurements.badge.groupSummary')}
+                  </Badge>
+                )}
                 {variance && (
                   <p className={cn('text-xs tabular-nums mt-0.5', getVarianceClass(variance.percent))}>
                     {variance.percent > 0 ? '+' : ''}{formatNumber(variance.percent, { maximumFractionDigits: 1 })}%
@@ -221,7 +218,7 @@ function CategoryItemsTable({ items, totalCost, categoryName, onEdit, onDelete, 
               <TableCell className={cn("text-right tabular-nums", colors.text.muted)}>
                 {formatNumber(item.wasteFactor * 100, { maximumFractionDigits: 0 })}%
               </TableCell>
-              <TableCell className="text-right tabular-nums font-medium">
+              <TableCell className={cn('text-right tabular-nums font-medium', summaryIds.has(item.id) && cn('line-through', colors.text.muted))}>
                 {formatCurrency(cost.totalCost)}
               </TableCell>
               <TableCell className="text-center">

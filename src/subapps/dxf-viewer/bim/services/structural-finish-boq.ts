@@ -119,6 +119,8 @@ export function buildFinishBoqPayloads(
     coreMapping,
     coreQuantity,
     existingCreatedAt.get(parentId) ?? null,
+    // Λ7 — ο πυρήνας είναι πραγματική εργασία· ο σοβάς προστίθεται
+    'work',
   );
 
   const children: BuiltBoqRow[] = [];

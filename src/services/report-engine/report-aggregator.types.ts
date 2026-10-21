@@ -263,15 +263,6 @@ export interface BuildingDoc {
   projectId?: string;
 }
 
-export interface BOQItemDoc {
-  buildingId?: string;
-  estimatedQuantity?: number;
-  actualQuantity?: number;
-  materialUnitCost?: number;
-  laborUnitCost?: number;
-  equipmentUnitCost?: number;
-}
-
 export interface OpportunityDoc {
   stage?: string;
   estimatedValue?: number;

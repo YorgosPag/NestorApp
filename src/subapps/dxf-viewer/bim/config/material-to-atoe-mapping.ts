@@ -126,3 +126,26 @@ export function resolveMaterialAtoeMapping(materialId: string | undefined): Mate
   if (!materialId) return null;
   return MATERIAL_MAPPING[materialId] ?? null;
 }
+
+/** Πρόθεμα τίτλου γραμμής για στρώση με υλικό εκτός πίνακα (δεδομένο BOQ, όπως τα `titleEL` παραπάνω). */
+const UNMAPPED_LAYER_TITLE_EL = 'Στρώση χωρίς άρθρο ΑΤΟΕ';
+
+/**
+ * ADR-917 Λ7 — στρώση τοίχου DNA με υλικό **εκτός** πίνακα (custom κείμενο χρήστη).
+ *
+ * Πριν το Λ7 παραλειπόταν σιωπηλά («ο γονέας αντιπροσωπεύει όλο τον τοίχο»). Όμως ο γονέας είναι
+ * **σύνοψη** και δεν αθροίζεται ⇒ το κόστος της στρώσης θα χανόταν. Γίνεται child **χωρίς άρθρο**
+ * (`categoryCode: ''` ⇒ «Λοιπά» στο ledger, ατιμολόγητο κατά Ζ7): ορατό, ποτέ μαντεμένο.
+ * Μονάδα m²: το εμβαδόν της στρώσης είναι **μετρημένο** (= καθαρό εμβαδόν τοίχου)· ο όγκος θα
+ * απαιτούσε να μαντέψουμε ότι το υλικό τιμολογείται ανά m³.
+ */
+export function resolveUnmappedLayerMapping(materialId: string, layerName: string): MaterialAtoeMapping {
+  const label = layerName.trim() || materialId.trim();
+  return {
+    materialId,
+    categoryCode: '',
+    unit: 'm2',
+    quantityKind: 'area',
+    titleEL: label ? `${UNMAPPED_LAYER_TITLE_EL}: ${label}` : UNMAPPED_LAYER_TITLE_EL,
+  };
+}

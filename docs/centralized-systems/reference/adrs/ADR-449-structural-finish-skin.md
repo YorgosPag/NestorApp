@@ -45,11 +45,11 @@ Output `StructuralFinishFaces` = εκτεθειμένες υπο-ακμές + `i
 
 ### 2.4 BOQ (ξεχωριστές γραμμές, εξαιρώντας καλυμμένα)
 `bim/services/structural-finish-boq.ts` (mirror `boq-multi-layer-builder`):
-- **parent** = στατικός πυρήνας (κολόνα `OIK-2.03` m³ σκυρόδεμα, αμετάβλητο, `isGroupParent:true`),
+- **parent** = στατικός πυρήνας (κολόνα `OIK-2.03` m³ σκυρόδεμα, αμετάβλητο, `isGroupParent:true`, `groupRole: 'work'` — ADR-917 Λ7: αθροίζεται **μαζί** με τα children, σε αντίθεση με τη σύνοψη τοίχου DNA),
 - **child interior** = εσωτ. σοβάς (`OIK-4.01` m², `interiorAreaM2`) — αν >0,
 - **child exterior** = εξωτ. σοβάς (`OIK-4.03` m², `exteriorAreaM2`) — αν >0.
 
-Deterministic IDs: `boq_bim_${id}` / `_finish_int` / `_finish_ext`. Hook στο `BimToBoqBridge.upsertWithFinish` (dispatch: opening → multiLayerWall → **finish** → single-entry). Contribution υπολογίζεται upstream στο `column-boq-feed` (έχει πρόσβαση στη σκηνή). Delete cascade ΗΔΗ καλύπτει finish children (parentBoqItemId).
+Deterministic IDs: `boq_bim_${id}` / `_finish_${materialId}` (PART B, ένα child ανά υλικό — ⚠️ διορθώθηκε 2026-10-21· έγραφε `_finish_int`/`_finish_ext`) + `_foundation_stub` (ADR-712). Hook στο `BimToBoqBridge.upsertWithChildren` (⚠️ έγραφε `upsertWithFinish`· dispatch: opening → multiLayerWall → **σοβάς ή κοντόστυλο** → single-entry). Contribution υπολογίζεται upstream στο `column-boq-feed` (έχει πρόσβαση στη σκηνή). Delete cascade ΗΔΗ καλύπτει finish children (parentBoqItemId).
 
 ## 3. Files (Slice 1)
 
@@ -220,6 +220,7 @@ Deterministic IDs: `boq_bim_${id}` / `_finish_int` / `_finish_ext`. Hook στο 
 - ETICS-grade per-element exterior detection (πέρα από outer-ring proximity) = μετέπειτα slice.
 
 ## 6. Changelog
+- **2026-10-21** — **ADR-917 Λ7: ρητός ρόλος γονέα**. Ο πυρήνας γράφεται με `groupRole: 'work'` (και στη διαδρομή μόνο κοντόστυλου του bridge) ⇒ κάθε αθροιστής μετρά πυρήνα **+** σοβά, ενώ η σύνοψη τοίχου DNA (`'summary'`) δεν αθροίζεται. Το §2.4 διορθώθηκε στον κώδικα (ids ανά υλικό · `upsertWithChildren`). Άγκυρα: `structural-finish-boq.test.ts`.
 - **2026-10-09 (ADR-909 Β2.5 — ο σοβάς είναι ΜΕΛΑΝΙ στο print pass)** — Μετρημένο ζωντανά στη `monochrome`
   δημόσια κάτοψη: **8.552 μπεζ pixels**, γραμμή 0,75 px σε εικόνα 4096 px. Το `drawStructuralFinishOutline` έβαζε
   σταθερά px και το χρώμα του υλικού χωρίς να ρωτά την πολιτική εκτύπωσης. Τώρα, **μόνο** σε print pass: χρώμα από

@@ -70,6 +70,10 @@ export interface CostLedgerCompleteness {
   unpricedBoqItemCount: number;
   /** Codes whose budget still rests on an allowance, not on a signed-off BOQ (Ζ4) */
   allowanceCodes: number;
+  /** Λ7 — summary parents left out of the sum (their children count) */
+  excludedSummaryCount: number;
+  /** Λ7 — legacy group parents with no provable role: counted, the total may double-count */
+  unresolvedGroupRoleCount: number;
 }
 
 /** Ζ2 — the landowner's share, valued in kind; NEVER part of `totals` */
@@ -169,6 +173,8 @@ function toCompleteness(ledger: CostLedger, rows: readonly CostLedgerViewRow[]):
     codesWithoutBudget: rows.filter(row => row.budget === null && row.projected > 0).length,
     unpricedBoqItemCount: rows.reduce((sum, row) => sum + row.unpricedBoqItemCount, 0),
     allowanceCodes: rows.filter(row => row.budgetSource === 'allowance').length,
+    excludedSummaryCount: ledger.excludedSummaryCount,
+    unresolvedGroupRoleCount: ledger.unresolvedGroupRoleCount,
   };
 }
 

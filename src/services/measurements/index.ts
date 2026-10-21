@@ -25,5 +25,9 @@ export {
   computeBuildingSummary,
 } from './cost-engine';
 
+// «Μετράει η γραμμή;» — ο ΕΝΑΣ ορισμός για κάθε αθροιστή (ADR-917 Λ7)
+export { countableBoqLines, excludedSummaryIds } from './boq-line-role';
+export { groupBoqCost } from './boq-cost-groups';
+
 /** Pre-configured singleton instance */
 export const boqService = _BOQService.getInstance();

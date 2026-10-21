@@ -145,3 +145,53 @@ describe('computeCostLedger (ADR-917)', () => {
     expect(rows.map(r => r.categoryCode)).toEqual(['OIK-2', 'OIK-10', UNCATEGORIZED_COST_CODE]);
   });
 });
+
+describe('computeCostLedger — Λ7 ρόλος γονέα BOQ (ADR-917 §7 Α20–Α25)', () => {
+  const wall = (): LedgerBoqItem[] => [
+    boq('boq_bim_w1', 'OIK-3.05', { isGroupParent: true, groupRole: 'summary', sourceEntityType: 'wall', status: 'approved' }),
+    boq('boq_bim_w1_layer_core', 'OIK-3.05', { parentBoqItemId: 'boq_bim_w1', status: 'approved' }),
+    boq('boq_bim_w1_layer_ins', 'OIK-10.20', { parentBoqItemId: 'boq_bim_w1', status: 'approved' }),
+  ];
+
+  it('Α20 τοίχος DNA: η σύνοψη ΔΕΝ αθροίζεται, φαίνεται στο drill-down', () => {
+    const ledger = computeCostLedger(wall(), []);
+    const oik3 = ledger.rows.find(r => r.categoryCode === 'OIK-3');
+    expect(oik3).toEqual(expect.objectContaining({ boqAmount: 100, boqItemCount: 1 }));
+    expect(oik3?.sources.excludedSummaries).toEqual([
+      { id: 'boq_bim_w1', costCode: 'OIK-3.05', title: 'BOQ boq_bim_w1', childCount: 2 },
+    ]);
+    expect(ledger.boqItemCount).toBe(2);
+    expect(ledger.excludedSummaryCount).toBe(1);
+  });
+
+  it('Α21 κολόνα: πυρήνας + σοβάς αθροίζονται και οι δύο', () => {
+    const ledger = computeCostLedger([
+      boq('boq_bim_c1', 'OIK-2.03', { isGroupParent: true, groupRole: 'work', sourceEntityType: 'column' }),
+      boq('boq_bim_c1_finish', 'OIK-4.01', { parentBoqItemId: 'boq_bim_c1' }),
+    ], []);
+    expect(ledger.rows.map(r => [r.categoryCode, r.boqAmount])).toEqual([['OIK-2', 100], ['OIK-4', 100]]);
+    expect(ledger.excludedSummaryCount).toBe(0);
+  });
+
+  it('Α25 φίλτρο κωδικού ΜΕΤΑ τη διαμέριση: η σύνοψη δεν επιστρέφει όταν τα children είναι σε άλλο κωδικό', () => {
+    const { rows } = computeCostLedger(wall(), [], { categoryFilter: ['OIK-3'] });
+    expect(rows[0]).toEqual(expect.objectContaining({ categoryCode: 'OIK-3', boqAmount: 100, boqItemCount: 1 }));
+  });
+
+  it('Α20β ατιμολόγητη σύνοψη δεν κρατά την πρόβλεψη (Ζ4′): μετρά η πληρότητα των στρώσεων', () => {
+    const unpricedSummary = wall().map(item => item.id === 'boq_bim_w1'
+      ? { ...item, materialUnitCost: 0, laborUnitCost: 0, equipmentUnitCost: 0 }
+      : item);
+    const oik3 = computeCostLedger(unpricedSummary, []).rows.find(r => r.categoryCode === 'OIK-3');
+    expect(oik3).toEqual(expect.objectContaining({ unpricedBoqItemCount: 0, frozenUnpricedBoqItemCount: 0 }));
+  });
+
+  it('Α24 παλιός γονέας χωρίς αποδείξιμο ρόλο: μετρά και δηλώνεται', () => {
+    const ledger = computeCostLedger([
+      boq('p', 'OIK-2.03', { isGroupParent: true, sourceEntityType: 'slab' }),
+      boq('c', 'OIK-2.03', { parentBoqItemId: 'p' }),
+    ], []);
+    expect(ledger.rows[0].boqAmount).toBe(200);
+    expect(ledger.unresolvedGroupRoleCount).toBe(1);
+  });
+});

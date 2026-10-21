@@ -277,6 +277,8 @@
       "none": "Καμία",
       "unpriced": "χωρίς τιμή",
       "budgetLines": "Γραμμές προϋπολογισμού",
+      "excludedSummaries": "Συνόψεις εκτός αθροίσματος",
+      "excludedSummaryNote": "μετρούν οι {count} στρώσεις της",
       "close": "Κλείσιμο"
     },
     "legacy": {

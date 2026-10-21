@@ -22,7 +22,7 @@ import { formatCurrency, formatNumber } from '@/lib/intl-utils';
 import { cn } from '@/lib/utils';
 import type { BOQItem, BOQItemStatus } from '@/types/boq';
 import type { MasterBOQCategory } from '@/config/boq-categories';
-import { computeItemCost } from '@/services/measurements';
+import { excludedSummaryIds, groupBoqCost } from '@/services/measurements';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useFloorsByBuilding } from '@/components/properties/shared/useFloorsByBuilding';
 import { BOQFloorGroup } from './BOQFloorGroup';
@@ -98,35 +98,28 @@ export function BOQCategoryAccordion({
   }, [floors]);
 
   // Group items by floor (linkedFloorId), ordered by floor.number; NO_FLOOR last.
+  // ADR-917 Λ7 — γονέας-σύνοψη (τοίχος DNA): ΔΕΝ αθροίζεται, ούτε σε κόστος (groupBoqCost) ούτε σε ποσότητα
+  const summaryIds = useMemo(() => excludedSummaryIds(items), [items]);
   const floorGroups = useMemo<FloorGroup[]>(() => {
-    const map = new Map<string, FloorGroup>();
-    for (const item of items) {
-      const key = item.linkedFloorId ?? NO_FLOOR_KEY;
-      const cost = computeItemCost(item);
-      const existing = map.get(key);
-      if (existing) {
-        existing.items.push(item);
-        existing.totalCost += cost.totalCost;
-      } else {
+    return groupBoqCost(items, (item) => item.linkedFloorId ?? NO_FLOOR_KEY)
+      .map(({ key, items: groupItems, totalCost }) => {
         const meta = key === NO_FLOOR_KEY ? null : floorMeta.get(key);
-        map.set(key, {
+        return {
           key,
-          label: key === NO_FLOOR_KEY
-            ? t('tabs.measurements.floorGroup.noFloor')
-            : (meta?.name || key),
+          label: key === NO_FLOOR_KEY ? t('tabs.measurements.floorGroup.noFloor') : (meta?.name || key),
           sortKey: key === NO_FLOOR_KEY ? Number.POSITIVE_INFINITY : (meta?.number ?? 9998),
-          items: [item],
-          totalCost: cost.totalCost,
-        });
-      }
-    }
-    return Array.from(map.values()).sort((a, b) => a.sortKey - b.sortKey);
+          items: groupItems,
+          totalCost,
+        };
+      })
+      .sort((a, b) => a.sortKey - b.sortKey);
   }, [items, floorMeta, t]);
 
   // Per-category quantity totals across all floors (Σύνολα ανά κατηγορία).
   const categoryTotals = useMemo<CategoryTotal[]>(() => {
     const map = new Map<string, CategoryTotal>();
     for (const item of items) {
+      if (summaryIds.has(item.id)) continue;
       const existing = map.get(item.categoryCode);
       if (existing) {
         existing.quantity += item.estimatedQuantity;
@@ -142,7 +135,7 @@ export function BOQCategoryAccordion({
       }
     }
     return Array.from(map.values()).sort((a, b) => a.sortOrder - b.sortOrder);
-  }, [items, categories]);
+  }, [items, categories, summaryIds]);
 
   const accordionItems: EnterpriseAccordionItem[] = floorGroups.map((group) => ({
     value: group.key,

@@ -431,7 +431,8 @@
       },
       "badge": {
         "bimAuto": "Αυτόματο από BIM",
-        "bimDetached": "Αποσυνδεδεμένο από BIM"
+        "bimDetached": "Αποσυνδεδεμένο από BIM",
+        "groupSummary": "Σύνοψη — δεν αθροίζεται· μετρούν οι στρώσεις"
       },
       "drift": {
         "summary": "Υπογεγραμμένο {baseline} · σχέδιο {live} · Δ {delta}"

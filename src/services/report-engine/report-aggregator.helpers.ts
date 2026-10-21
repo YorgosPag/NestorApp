@@ -10,9 +10,11 @@
 
 import type { Installment } from '@/types/payment-plan';
 import { formatOwnerNames } from '@/lib/ownership/owner-utils';
+import type { BOQItem } from '@/types/boq';
+import { computeItemActualCost, computeItemCost } from '@/services/measurements/cost-engine';
+import { countableBoqLines } from '@/services/measurements/boq-line-role';
 import type {
   UnitDoc,
-  BOQItemDoc,
   TopBuyerItem,
   PricePerSqmItem,
   BOQVarianceItem,
@@ -80,17 +82,22 @@ export function buildPricePerSqm(
     }));
 }
 
+/**
+ * Εκτίμηση vs πραγματικό ανά κτίριο. ADR-917: κόστος ΜΟΝΟ από το `cost-engine` (Δ1 — εδώ ήταν
+ * αντίγραφο χωρίς φύρα) και μόνο από γραμμές που μετρούν (Λ7 — η σύνοψη τοίχου DNA ΔΕΝ αθροίζεται).
+ * Το «πραγματικό» πέφτει στην εκτίμηση όταν δεν υπάρχει μέτρηση.
+ */
 export function buildBOQVariance(
-  boqItems: BOQItemDoc[],
+  boqItems: readonly BOQItem[],
   buildingNames: Record<string, string>,
 ): BOQVarianceItem[] {
   const totals: Record<string, { estimated: number; actual: number }> = {};
-  for (const item of boqItems) {
-    const bName = buildingNames[item.buildingId ?? ''] ?? item.buildingId ?? 'unknown';
+  for (const item of countableBoqLines(boqItems)) {
+    const bName = buildingNames[item.buildingId] ?? (item.buildingId || 'unknown');
     if (!totals[bName]) totals[bName] = { estimated: 0, actual: 0 };
-    const unitCost = (item.materialUnitCost ?? 0) + (item.laborUnitCost ?? 0) + (item.equipmentUnitCost ?? 0);
-    totals[bName].estimated += (item.estimatedQuantity ?? 0) * unitCost;
-    totals[bName].actual += (item.actualQuantity ?? item.estimatedQuantity ?? 0) * unitCost;
+    const estimated = computeItemCost(item).totalCost;
+    totals[bName].estimated += estimated;
+    totals[bName].actual += computeItemActualCost(item) ?? estimated;
   }
   return Object.entries(totals).map(([building, v]) => ({
     building,

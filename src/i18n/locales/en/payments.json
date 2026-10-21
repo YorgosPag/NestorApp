@@ -277,6 +277,8 @@
       "none": "None",
       "unpriced": "no price",
       "budgetLines": "Budget lines",
+      "excludedSummaries": "Summaries left out of the sum",
+      "excludedSummaryNote": "its {count} layers count instead",
       "close": "Close"
     },
     "legacy": {

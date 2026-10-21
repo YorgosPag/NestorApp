@@ -15,13 +15,13 @@ import { normalizeCommercialStatus, requiresAskingPrice } from '@/constants/comm
 import { computeEVM } from './evm-calculator';
 import type { EVMResult } from './evm-calculator';
 import { computeAgingBuckets } from './aging-calculator';
-import type { BOQItem } from '@/types/boq';
+import { normalizeBOQItem } from '@/services/measurements/boq-document-normalize';
 import type { ConstructionPhase } from '@/types/building/construction';
 import type { BuildingMilestone } from '@/types/building/milestone';
 import type {
   ReportFilter, ContactsReportData, ProjectsReportData, SalesReportData,
   CrmReportData, SpacesReportData, ConstructionReportData, ComplianceReportData,
-  FinancialReportData, ContactDoc, ProjectDoc, UnitDoc, BuildingDoc, BOQItemDoc,
+  FinancialReportData, ContactDoc, ProjectDoc, UnitDoc, BuildingDoc,
   OpportunityDoc, TaskDoc, CommunicationDoc, ParkingDoc, StorageDoc,
   AttendanceDoc, EmploymentDoc, ChequeDoc,
 } from './report-aggregator.types';
@@ -102,7 +102,8 @@ export class ReportDataAggregator {
     const projects = projectsSnap.docs.map(d => ({ id: d.id, ...d.data() as ProjectDoc }));
     const units = liveUnits(unitsSnap.docs.map(d => d.data() as UnitDoc));
     const buildings = buildingsSnap.docs.map(d => ({ id: d.id, ...d.data() as BuildingDoc }));
-    const boqItems = boqSnap.docs.map(d => d.data() as BOQItemDoc);
+    // ADR-917 Λ7: ο ΕΝΑΣ αναγνώστης εγγράφου BOQ — με id, ώστε η σύνοψη τοίχου DNA να μη διπλομετρά
+    const boqItems = boqSnap.docs.map(d => normalizeBOQItem(d.id, d.data()));
 
     const projectNames = buildNameMap(projects);
     const buildingNames = buildNameMap(buildings);
@@ -347,7 +348,7 @@ export class ReportDataAggregator {
       boqQuery = boqQuery.where('buildingId', '==', filter.buildingId);
     }
     const boqSnap = await boqQuery.get();
-    const boqItems = boqSnap.docs.map(d => ({ id: d.id, ...d.data() }) as BOQItem);
+    const boqItems = boqSnap.docs.map(d => normalizeBOQItem(d.id, d.data()));
 
     // EVM per building
     const phasesByBuilding = groupByKey(phases, p => p.buildingId);

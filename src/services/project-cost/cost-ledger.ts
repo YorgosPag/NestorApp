@@ -12,6 +12,9 @@
  * - `budgetSource === null` means the budget has NO source, not «zero cost»
  *   (ADR-917 §4 Δ2 · SPEC-242C §3.1) — consumers must not read `budget` as 0 €.
  * - Every row carries the documents behind its numbers (`sources`, ADR-917 Φ2 drill-down).
+ * - «Does this BOQ line count?» ONLY from `boq-line-role.partitionCountableBoqLines` (Λ7): a
+ *   summary parent (DNA wall) is NOT summed — its children are — and it stays visible in
+ *   `sources.excludedSummaries`, never silently dropped.
  *
  * @module services/project-cost/cost-ledger
  * @see ADR-917
@@ -22,6 +25,7 @@ import { PO_COMMITTED_STATUSES, PO_DELIVERED_STATUSES, PO_PENDING_STATUSES } fro
 import type { BOQItem } from '@/types/boq';
 import { isFrozenBaselineStatus } from '@/types/boq/units';
 import { computeItemCost, hasUnitPrice, type BOQCostInput } from '@/services/measurements/cost-engine';
+import { partitionCountableBoqLines, type BoqRoleInput, type ExcludedBoqSummary } from '@/services/measurements/boq-line-role';
 import { compareCostCodes, costCodeGroupOf, UNCATEGORIZED_COST_CODE } from '@/config/cost-taxonomy';
 import {
   resolveRowBudget,
@@ -39,7 +43,8 @@ export type { CostLedgerBudgetSource, LedgerBudgetLine };
 /** `status` absent ⇒ not signed off (a draft take-off) */
 export type LedgerBoqItem = BOQCostInput
   & Pick<BOQItem, 'id' | 'categoryCode' | 'title'>
-  & Partial<Pick<BOQItem, 'status'>>;
+  & Partial<Pick<BOQItem, 'status'>>
+  & BoqRoleInput;
 export type LedgerPurchaseOrder = Pick<PurchaseOrder, 'id' | 'poNumber' | 'status' | 'items'>;
 
 /** One BOQ line behind a row's budget */
@@ -51,6 +56,15 @@ export interface LedgerBoqSource {
   amount: number;
   /** `false` ⇒ no unit price yet: «unpriced», not «0 €» (Ζ7) */
   priced: boolean;
+}
+
+/** A summary parent left out of the sum (Λ7) — its children carry the money */
+export interface LedgerExcludedSummarySource {
+  id: string;
+  costCode: string | null;
+  title: string;
+  /** Present children that replace it in the sum */
+  childCount: number;
 }
 
 /** One purchase order behind a row's money — its lines of THIS code summed */
@@ -65,6 +79,7 @@ export interface CostLedgerSources {
   boqItems: LedgerBoqSource[];
   purchaseOrders: LedgerPurchaseOrderSource[];
   budgetLines: LedgerBudgetLine[];
+  excludedSummaries: LedgerExcludedSummarySource[];
 }
 
 export interface CostLedgerRow {
@@ -98,8 +113,13 @@ export interface CostLedgerRow {
 
 export interface CostLedger {
   rows: CostLedgerRow[];
+  /** Counted BOQ lines — summary parents excluded (Λ7) */
   boqItemCount: number;
   coveredBoqItemCount: number;
+  /** Summary parents left out of every sum (their children count) */
+  excludedSummaryCount: number;
+  /** Legacy group parents with no provable role — counted, but declared */
+  unresolvedGroupRoleCount: number;
 }
 
 export interface CostLedgerOptions {
@@ -135,7 +155,7 @@ function emptyRow(categoryCode: string): CostLedgerRow {
     pending: 0,
     committed: 0,
     delivered: 0,
-    sources: { boqItems: [], purchaseOrders: [], budgetLines: [] },
+    sources: { boqItems: [], purchaseOrders: [], budgetLines: [], excludedSummaries: [] },
   };
 }
 
@@ -172,6 +192,21 @@ function accumulateBoq(
     codeByBoqId.set(item.id, code);
   }
   return codeByBoqId;
+}
+
+/** Λ7 — a summary parent stays visible on its row's drill-down, outside every number. */
+function attachExcludedSummaries(
+  rows: Map<string, CostLedgerRow>,
+  excluded: readonly ExcludedBoqSummary<LedgerBoqItem>[],
+  accepts: (code: string) => boolean,
+): void {
+  for (const { item, childCount } of excluded) {
+    const code = codeOf(item.categoryCode);
+    if (!accepts(code)) continue;
+    rowFor(rows, code).sources.excludedSummaries.push({
+      id: item.id, costCode: item.categoryCode ?? null, title: item.title, childCount,
+    });
+  }
 }
 
 /** Ζ8 — a 2nd-level line (`SOFT-PERMITS.TEE`) rolls up into its group row. */
@@ -255,7 +290,10 @@ export function computeCostLedger(
 ): CostLedger {
   const accepts = (code: string): boolean => categoryFilter.length === 0 || categoryFilter.includes(code);
   const rows = new Map<string, CostLedgerRow>();
-  const codeByBoqId = accumulateBoq(rows, boqItems, accepts);
+  // Λ7: partition the WHOLE set first — the code filter must not separate a parent from its children.
+  const { countable, excludedSummaries, unresolvedGroupRoleCount } = partitionCountableBoqLines(boqItems);
+  const codeByBoqId = accumulateBoq(rows, countable, accepts);
+  attachExcludedSummaries(rows, excludedSummaries, accepts);
   accumulateBudgetLines(rows, budgetLines, accepts);
   const coveredBoqIds = accumulatePurchaseOrders(rows, purchaseOrders, accepts);
   rows.forEach(applyResolvedBudget);
@@ -272,6 +310,8 @@ export function computeCostLedger(
     rows: [...rows.values()].sort((a, b) => compareCostCodes(a.categoryCode, b.categoryCode)),
     boqItemCount: codeByBoqId.size,
     coveredBoqItemCount,
+    excludedSummaryCount: excludedSummaries.length,
+    unresolvedGroupRoleCount,
   };
 }
 

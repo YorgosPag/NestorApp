@@ -76,6 +76,12 @@ describe('buildMultiLayerBoqPayloads — parent payload', () => {
     expect(parent.payload.materialId).toBeNull();
   });
 
+  it('ADR-917 Λ7: ο γονέας τοίχου DNA είναι ρητά ΣΥΝΟΨΗ (δεν αθροίζεται)· τα children χωρίς ρόλο', () => {
+    const { parent, children } = buildMultiLayerBoqPayloads(makeInput(), emptyExisting);
+    expect(parent.payload.groupRole).toBe('summary');
+    for (const c of children) expect(c.payload.groupRole).toBeNull();
+  });
+
   it('parent quantity = wallNetArea (m²) με parentMapping.categoryCode + unit', () => {
     const { parent } = buildMultiLayerBoqPayloads(makeInput({ wallNetArea: 42 }), emptyExisting);
     expect(parent.payload.estimatedQuantity).toBe(42);
@@ -149,8 +155,8 @@ describe('buildMultiLayerBoqPayloads — children quantities', () => {
   });
 });
 
-describe('buildMultiLayerBoqPayloads — unknown material skip', () => {
-  it('skips child row για layer με unknown materialId (parent unchanged)', () => {
+describe('buildMultiLayerBoqPayloads — unknown material (ADR-917 Λ7)', () => {
+  it('γίνεται child «χωρίς άρθρο» — ΟΧΙ παράλειψη: ο γονέας-σύνοψη δεν αθροίζεται, το κόστος θα χανόταν', () => {
     const dna: WallDna = {
       totalThickness: 230,
       layers: [
@@ -160,11 +166,13 @@ describe('buildMultiLayerBoqPayloads — unknown material skip', () => {
       ],
     };
     const { parent, children } = buildMultiLayerBoqPayloads(makeInput({ dna }), emptyExisting);
-    expect(children).toHaveLength(2);
-    expect(children.map((c) => c.payload.materialId)).toEqual(['mat-plaster-ext', 'mat-plaster-int']);
-    // layerIndex still preserves position (0 + 2, NOT renumbered 0 + 1)
-    expect(children[0]!.payload.layerIndex).toBe(0);
-    expect(children[1]!.payload.layerIndex).toBe(2);
+    expect(children).toHaveLength(3);
+    expect(children.map((c) => c.payload.materialId)).toEqual(['mat-plaster-ext', 'mat-unicorn-fluff', 'mat-plaster-int']);
+    expect(children.map((c) => c.payload.layerIndex)).toEqual([0, 1, 2]);
+    // Χωρίς άρθρο (⇒ «Λοιπά» στο ledger), μετρημένο εμβαδόν, ορατός τίτλος — καμία μαντεψιά m³
+    expect(children[1]!.payload).toEqual(expect.objectContaining({
+      categoryCode: '', unit: 'm2', estimatedQuantity: 30, title: 'Στρώση χωρίς άρθρο ΑΤΟΕ: Mystery',
+    }));
     // parent untouched
     expect(parent.payload.estimatedQuantity).toBe(30);
   });

@@ -67,6 +67,14 @@ export const BOQ_SCOPE_VALUES: readonly BOQScope[] = Object.keys(BOQ_SCOPE_PRESE
  */
 export type CostAllocationMethod = 'by_area' | 'equal' | 'custom';
 
+/** ADR-917 Λ7 — ρόλος γονέα ομάδας BOQ: `summary` δεν αθροίζεται (το κάνουν τα children), `work` αθροίζεται. */
+export type BoqGroupRole = 'summary' | 'work';
+
+const BOQ_GROUP_ROLE_PRESENCE: Readonly<Record<BoqGroupRole, true>> = { summary: true, work: true };
+
+/** Κατάλογος ρόλων — παράγεται, δεν ξαναγράφεται (JSON Schema `enum` του πράκτορα). */
+export const BOQ_GROUP_ROLE_VALUES: readonly BoqGroupRole[] = Object.keys(BOQ_GROUP_ROLE_PRESENCE) as BoqGroupRole[];
+
 // ============================================================================
 // BOQ ITEM — ΚΥΡΙΟ ENTITY
 // ============================================================================
@@ -237,8 +245,16 @@ export interface BOQItem {
   /** Parent BOQ item ID — set σε child rows (per-layer entries). null για standalone ή parent. */
   parentBoqItemId?: string | null;
 
-  /** True όταν αυτό το item είναι summary parent για multi-layer wall (έχει N children). */
+  /** True όταν αυτό το item είναι γονέας ομάδας (έχει children) — ΔΕΝ λέει αν μετράει· αυτό το λέει το `groupRole`. */
   isGroupParent?: boolean | null;
+
+  /**
+   * ADR-917 Λ7 — τι σημαίνει ο γονέας (μόνο όταν `isGroupParent`), γραμμένο ρητά από τον BIM builder:
+   * `'summary'` = σύνοψη των children (τοίχος DNA: τα children καλύπτουν και τον πυρήνα) ⇒ ΔΕΝ αθροίζεται·
+   * `'work'` = πραγματική εργασία που τα children συμπληρώνουν (κολόνα/δοκός: πυρήνας + σοβάς/κοντόστυλο).
+   * Απόν σε παλιά έγγραφα ⇒ `services/measurements/boq-line-role` (fallback με απόδειξη, όχι εικασία).
+   */
+  groupRole?: BoqGroupRole | null;
 
   /** Ordinal layer index στο WallDna (0-based). null σε parent/standalone. */
   layerIndex?: number | null;
@@ -312,9 +328,14 @@ export interface BOQCategorySummary {
 /** Σύνοψη ανά κτίριο */
 export interface BOQSummary {
   buildingId: string;
+  /** Όλες οι γραμμές, μαζί με τους γονείς-σύνοψη που ΔΕΝ αθροίζονται */
   totalItems: number;
   totalEstimatedCost: number;
   totalActualCost: number | null;
+  /** ADR-917 Λ7 — γονείς-σύνοψη εκτός αθροίσματος (τα children τους μετρούν) */
+  excludedSummaryItemCount: number;
+  /** ADR-917 Λ7 — παλιοί γονείς χωρίς αποδείξιμο ρόλο: μετρούν (κανένα ποσό δεν κρύβεται), δηλωμένα */
+  unresolvedGroupRoleCount: number;
   categories: BOQCategorySummary[];
   lastUpdated: string;
 }

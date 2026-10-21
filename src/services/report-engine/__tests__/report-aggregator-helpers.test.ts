@@ -12,7 +12,9 @@
  * @see ADR-265 (Enterprise Reports System)
  */
 
-import type { UnitDoc, BOQItemDoc } from '../report-aggregator.types';
+import type { UnitDoc } from '../report-aggregator.types';
+import type { BOQItem } from '@/types/boq';
+import { normalizeBOQItem } from '@/services/measurements/boq-document-normalize';
 import {
   buildNameMap,
   buildRevenueByProject,
@@ -45,8 +47,10 @@ function makeUnitDoc(overrides: Partial<UnitDoc> = {}): UnitDoc {
   } as UnitDoc;
 }
 
-function makeBOQItemDoc(overrides: Partial<BOQItemDoc> = {}): BOQItemDoc {
-  return {
+let boqSeq = 0;
+function makeBOQItemDoc(overrides: Record<string, unknown> = {}): BOQItem {
+  boqSeq += 1;
+  return normalizeBOQItem(String(overrides.id ?? `boq_${boqSeq}`), {
     buildingId: 'bld_1',
     estimatedQuantity: 100,
     actualQuantity: null,
@@ -54,7 +58,7 @@ function makeBOQItemDoc(overrides: Partial<BOQItemDoc> = {}): BOQItemDoc {
     laborUnitCost: 5,
     equipmentUnitCost: 2,
     ...overrides,
-  } as BOQItemDoc;
+  });
 }
 
 // ============================================================================
@@ -185,6 +189,21 @@ describe('buildBOQVariance', () => {
     // unitCost = 5+3+2 = 10, estimated = 10*10 = 100, actual = 10*10 = 100
     expect(result[0].estimated).toBe(100);
     expect(result[0].actual).toBe(100);
+  });
+
+  it('applies the waste factor of the ONE cost formula (ADR-917 Δ1)', () => {
+    const items = [makeBOQItemDoc({ estimatedQuantity: 10, materialUnitCost: 10, laborUnitCost: 0, equipmentUnitCost: 0, wasteFactor: 0.1 })];
+    expect(buildBOQVariance(items, buildingNames)[0].estimated).toBe(110);
+  });
+
+  it('counts a DNA-wall summary parent ONCE — through its layers (ADR-917 Λ7)', () => {
+    const priced = { materialUnitCost: 10, laborUnitCost: 0, equipmentUnitCost: 0 };
+    const items = [
+      makeBOQItemDoc({ id: 'boq_bim_w1', ...priced, estimatedQuantity: 20, isGroupParent: true, groupRole: 'summary' }),
+      makeBOQItemDoc({ id: 'boq_bim_w1_layer_a', ...priced, estimatedQuantity: 20, parentBoqItemId: 'boq_bim_w1' }),
+      makeBOQItemDoc({ id: 'boq_bim_w1_layer_b', ...priced, estimatedQuantity: 20, parentBoqItemId: 'boq_bim_w1' }),
+    ];
+    expect(buildBOQVariance(items, buildingNames)[0].estimated).toBe(400);
   });
 });
 

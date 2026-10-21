@@ -14,6 +14,7 @@ import type { Property } from '@/types/property';
 import { nowISO } from '@/lib/date-local';
 import { compareByLocale } from '@/lib/intl-formatting';
 import { propertyAreaOnFloor } from '@/lib/properties/floor-helpers';
+import { partitionCountableBoqLines } from './boq-line-role';
 
 // ============================================================================
 // GROSS QUANTITY
@@ -240,11 +241,42 @@ export function allocateCost(
 // BUILDING SUMMARY — ROLLUP
 // ============================================================================
 
+interface CategoryAccumulator {
+  itemCount: number;
+  estimatedCost: number;
+  actualCost: number | null;
+}
+
+/** Πραγματικό κόστος γραμμής — `null` όταν δεν υπάρχει `actualQuantity` (ο ΕΝΑΣ τύπος· EVM + σύνοψη) */
+export function computeItemActualCost(
+  item: Pick<BOQItem, 'actualQuantity' | 'wasteFactor' | 'materialUnitCost' | 'laborUnitCost' | 'equipmentUnitCost'>,
+): number | null {
+  if (item.actualQuantity === null || item.actualQuantity === undefined) return null;
+  const actualGross = computeGrossQuantity(item.actualQuantity, item.wasteFactor);
+  return actualGross * (item.materialUnitCost + item.laborUnitCost + item.equipmentUnitCost);
+}
+
+function accumulateByCategory(items: readonly BOQItem[]): Map<string, CategoryAccumulator> {
+  const categoryMap = new Map<string, CategoryAccumulator>();
+  for (const item of items) {
+    const acc = categoryMap.get(item.categoryCode) ?? { itemCount: 0, estimatedCost: 0, actualCost: null };
+    const itemActualCost = computeItemActualCost(item);
+    acc.itemCount += 1;
+    acc.estimatedCost += computeItemCost(item).totalCost;
+    if (itemActualCost !== null) acc.actualCost = (acc.actualCost ?? 0) + itemActualCost;
+    categoryMap.set(item.categoryCode, acc);
+  }
+  return categoryMap;
+}
+
 /**
  * Αθροιστική σύνοψη BOQ ανά κτίριο
  *
+ * ADR-917 Λ7: αθροίζει μόνο τις γραμμές του `partitionCountableBoqLines` — γονέας-σύνοψη
+ * (τοίχος DNA) με children ΔΕΝ αθροίζεται· δηλώνεται στο `excludedSummaryItemCount`.
+ *
  * @param buildingId - ID κτιρίου
- * @param items - BOQ items του κτιρίου
+ * @param items - BOQ items του κτιρίου (ΟΛΑ — η διαμέριση θέλει γονείς + children μαζί)
  * @param categoryNames - Map categoryCode → ελληνική ονομασία
  * @returns BOQSummary
  */
@@ -253,59 +285,23 @@ export function computeBuildingSummary(
   items: BOQItem[],
   categoryNames: Map<string, string>
 ): BOQSummary {
-  // Ομαδοποίηση ανά κατηγορία
-  const categoryMap = new Map<string, { items: BOQItem[]; estimatedCost: number; actualCost: number | null }>();
-
-  for (const item of items) {
-    const existing = categoryMap.get(item.categoryCode);
-    const breakdown = computeItemCost(item);
-
-    // Υπολογισμός actual cost αν υπάρχει actualQuantity
-    let itemActualCost: number | null = null;
-    if (item.actualQuantity !== null) {
-      const actualGross = computeGrossQuantity(item.actualQuantity, item.wasteFactor);
-      const unitCost = item.materialUnitCost + item.laborUnitCost + item.equipmentUnitCost;
-      itemActualCost = actualGross * unitCost;
-    }
-
-    if (existing) {
-      existing.items.push(item);
-      existing.estimatedCost += breakdown.totalCost;
-      if (itemActualCost !== null) {
-        existing.actualCost = (existing.actualCost ?? 0) + itemActualCost;
-      }
-    } else {
-      categoryMap.set(item.categoryCode, {
-        items: [item],
-        estimatedCost: breakdown.totalCost,
-        actualCost: itemActualCost,
-      });
-    }
-  }
-
-  // Build category summaries
+  const { countable, excludedSummaries, unresolvedGroupRoleCount } = partitionCountableBoqLines(items);
   const categories: BOQCategorySummary[] = [];
   let totalEstimatedCost = 0;
   let totalActualCost: number | null = null;
 
-  for (const [code, data] of categoryMap.entries()) {
-    const categoryName = categoryNames.get(code) ?? code;
-
+  for (const [code, data] of accumulateByCategory(countable).entries()) {
     categories.push({
       categoryCode: code,
-      categoryName,
-      itemCount: data.items.length,
+      categoryName: categoryNames.get(code) ?? code,
+      itemCount: data.itemCount,
       totalEstimatedCost: data.estimatedCost,
       totalActualCost: data.actualCost,
     });
-
     totalEstimatedCost += data.estimatedCost;
-    if (data.actualCost !== null) {
-      totalActualCost = (totalActualCost ?? 0) + data.actualCost;
-    }
+    if (data.actualCost !== null) totalActualCost = (totalActualCost ?? 0) + data.actualCost;
   }
 
-  // Sort by category code
   categories.sort((a, b) => compareByLocale(a.categoryCode, b.categoryCode));
 
   return {
@@ -313,6 +309,8 @@ export function computeBuildingSummary(
     totalItems: items.length,
     totalEstimatedCost,
     totalActualCost,
+    excludedSummaryItemCount: excludedSummaries.length,
+    unresolvedGroupRoleCount,
     categories,
     lastUpdated: nowISO(),
   };

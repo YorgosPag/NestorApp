@@ -13,7 +13,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency } from '@/lib/intl-utils';
 import { cn } from '@/lib/utils';
 import type { BOQItem } from '@/types/boq';
-import { computeItemCost } from '@/services/measurements';
+import { computeItemCost, countableBoqLines } from '@/services/measurements';
 import { Package, Wrench, Truck, Calculator } from 'lucide-react';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
@@ -46,7 +46,8 @@ export function BOQSummaryCards({ items }: BOQSummaryCardsProps) {
     let laborCost = 0;
     let equipmentCost = 0;
 
-    for (const item of items) {
+    // ADR-917 Λ7 — γονέας-σύνοψη (τοίχος DNA) δεν αθροίζεται· μετρούν οι στρώσεις του
+    for (const item of countableBoqLines(items)) {
       const cost = computeItemCost(item);
       materialCost += cost.materialCost;
       laborCost += cost.laborCost;

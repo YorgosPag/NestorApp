@@ -44,7 +44,7 @@ function SourceList({ title, empty, children }: { title: string; empty: string; 
 
 export function CostLedgerDrillDown({ row, label, onClose, t }: CostLedgerDrillDownProps) {
   const iconSizes = useIconSizes();
-  const sources = row.sources ?? { boqItems: [], purchaseOrders: [], budgetLines: [] };
+  const sources = row.sources ?? { boqItems: [], purchaseOrders: [], budgetLines: [], excludedSummaries: [] };
   const none = t('variance.drillDown.none');
 
   return (
@@ -71,6 +71,21 @@ export function CostLedgerDrillDown({ row, label, onClose, t }: CostLedgerDrillD
           </li>
         ))}
       </SourceList>
+
+      {sources.excludedSummaries.length > 0 ? (
+        // ADR-917 Λ7 — ορατή, όχι κρυμμένη: η σύνοψη τοίχου DNA δεν αθροίζεται, μετρούν οι στρώσεις
+        <SourceList title={t('variance.drillDown.excludedSummaries')} empty={none}>
+          {sources.excludedSummaries.map((summary) => (
+            <li key={summary.id} className="flex justify-between gap-4 px-3 py-1.5 text-muted-foreground">
+              <span className="truncate">
+                {summary.costCode && <span className="mr-2 font-mono">{summary.costCode}</span>}
+                {summary.title}
+              </span>
+              <span>{t('variance.drillDown.excludedSummaryNote', { count: summary.childCount })}</span>
+            </li>
+          ))}
+        </SourceList>
+      ) : null}
 
       {sources.budgetLines.length > 0 ? (
         <SourceList title={t('variance.drillDown.budgetLines')} empty={none}>

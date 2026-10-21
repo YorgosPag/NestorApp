@@ -7,6 +7,7 @@
  */
 
 import type { BOQItem } from '@/types/boq';
+import { computeItemCost } from '@/services/measurements/cost-engine';
 
 export interface BoqDisplayRow {
   readonly id: string;
@@ -27,7 +28,6 @@ export interface BoqTree {
 
 function toDisplayRow(item: BOQItem, isParent: boolean): BoqDisplayRow {
   const quantity = item.actualQuantity ?? item.estimatedQuantity;
-  const unitCost = item.materialUnitCost + item.laborUnitCost + item.equipmentUnitCost;
   return {
     id: item.id,
     title: item.title,
@@ -35,7 +35,8 @@ function toDisplayRow(item: BOQItem, isParent: boolean): BoqDisplayRow {
     quantity,
     materialUnitCost: item.materialUnitCost,
     laborUnitCost: item.laborUnitCost,
-    totalCost: unitCost * quantity * (1 + item.wasteFactor),
+    // ADR-917 Δ1 — ο ΕΝΑΣ τύπος κόστους (εδώ ήταν αντίγραφο χωρίς το όριο φύρας του cost-engine)
+    totalCost: computeItemCost({ ...item, estimatedQuantity: quantity }).totalCost,
     layerIndex: item.layerIndex ?? null,
     isParent,
   };
