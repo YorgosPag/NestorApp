@@ -306,5 +306,136 @@
       "loadFailed": "Photos could not be loaded",
       "captureSpot": "Placed on the floor plan"
     }
+  },
+  "handover": {
+    "title": "File handover",
+    "intro": "For each buyer: who makes the next move, why, and where each step stands.",
+    "loading": "Loading handovers…",
+    "failed": "The handovers could not be loaded.",
+    "retry": "Try again",
+    "unavailable": "The handovers of this property are not available.",
+    "empty": "No handover yet. It opens automatically once the sale is committed (reservation or sale) to a buyer.",
+    "unnamedBuyer": "Unnamed buyer",
+    "buyersLabel": "Buyers",
+    "sealNotConfigured": "The electronic seal provider is not configured yet. Handover Protocols will be issued automatically once it is; file delivery does not wait.",
+    "summary": {
+      "office": "Office action: {count}",
+      "buyer": "Waiting for buyer: {count}",
+      "sale": "Waiting for completion: {count}",
+      "system": "In progress: {count}",
+      "none": "Nothing pending: {count}"
+    },
+    "move": {
+      "office": "Office action",
+      "buyer": "Waiting for buyer",
+      "sale": "Waiting for completion",
+      "system": "In progress",
+      "none": "Nothing pending"
+    },
+    "reason": {
+      "cancelled": {
+        "title": "Cancelled",
+        "hint": "The sale was not completed and the invitation was revoked. No action needed."
+      },
+      "sale-reverted": {
+        "title": "The sale changed after completion",
+        "hint": "The buyer is no longer among the owners or the sale was cancelled. Whatever was delivered stays in their dossier until the office decides."
+      },
+      "invitation-not-issued": {
+        "title": "Invitation being prepared",
+        "hint": "It will be sent to the buyer automatically at the next sync."
+      },
+      "no-address": {
+        "title": "Buyer email missing",
+        "hint": "Add an email to their contact. The invitation goes out automatically once it exists."
+      },
+      "invitation-undeliverable": {
+        "title": "Invitation not delivered",
+        "hint": "The email provider rejected the address or the attempts ran out. Check the contact's email."
+      },
+      "invitation-retrying": {
+        "title": "Retrying delivery",
+        "hint": "The last delivery failed. The system retries automatically."
+      },
+      "declined": {
+        "title": "The buyer declined",
+        "hint": "No new invitation is sent automatically. If the buyer asks, the office can send a new one."
+      },
+      "invitation-expired": {
+        "title": "Invitation expired",
+        "hint": "The buyer did not answer in time. The office needs to send a new invitation."
+      },
+      "awaiting-buyer": {
+        "title": "Waiting for the buyer",
+        "hint": "The invitation was sent. Once accepted, their dossier fills itself."
+      },
+      "awaiting-completion": {
+        "title": "Waiting for completion",
+        "hint": "The buyer accepted. Files are delivered when the final contract is signed."
+      },
+      "delivery-queued": {
+        "title": "Handover starting",
+        "hint": "The files are queued for copying into the buyer's dossier."
+      },
+      "delivering": {
+        "title": "Delivering files",
+        "hint": "Files are being copied and fingerprinted one by one. Progress continues automatically."
+      },
+      "unverifiable-rows": {
+        "title": "Files without proof",
+        "hint": "Delivered files that can no longer be proven: {count}. Both the source and the copy are gone, so the Protocol is not issued until the office decides."
+      },
+      "digest-pending": {
+        "title": "Completing the fingerprint",
+        "hint": "All files were delivered. The overall fingerprint is being computed before the Protocol."
+      },
+      "awaiting-seal-configuration": {
+        "title": "Waiting for seal configuration",
+        "hint": "The files were delivered. The Protocol will be issued automatically once the electronic seal provider is configured."
+      },
+      "protocol-due": {
+        "title": "Protocol being issued",
+        "hint": "The sealed Handover Protocol will be issued in the next cycle."
+      },
+      "sealed": {
+        "title": "Sealed",
+        "hint": "The Handover Protocol was issued and sealed. Nothing is pending."
+      }
+    },
+    "signal": {
+      "invitation-expiring": "The invitation expires on {date}",
+      "files-awaiting-review": "Files awaiting an office decision: {count}"
+    },
+    "stepsLabel": "Handover steps",
+    "step": {
+      "invitation": "Invitation",
+      "acceptance": "Acceptance",
+      "completion": "Sale completion",
+      "files": "Files",
+      "protocol": "Protocol"
+    },
+    "stepState": {
+      "done": "done",
+      "current": "in progress",
+      "blocked": "needs a decision",
+      "pending": "pending"
+    },
+    "facts": {
+      "invitedAt": "Invitation",
+      "expiresAt": "Invitation expiry",
+      "acceptedAt": "Acceptance",
+      "completedAt": "Completion",
+      "files": "Files",
+      "filesValue": "{delivered} of {total}"
+    },
+    "verify": "Public verification page",
+    "files": {
+      "title": "Property files",
+      "deliver": "Delivered: {count}",
+      "review": "Need a decision: {count}",
+      "internal": "Stay with the office: {count}",
+      "reviewHint": "These files are not delivered without an office decision, nor are they silently dropped.",
+      "none": "No files."
+    }
   }
 }
