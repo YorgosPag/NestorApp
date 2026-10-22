@@ -98,6 +98,8 @@ function wantedHandover(
     invitation: null,
     // Φ-Γ1 — η αντιγραφή αρχείων γράφεται από τον εκτελεστή της, όχι από το σχέδιο κύκλου ζωής.
     fileDelivery: null,
+    // Φ-Γ2 Σ4 — το Πρωτόκολλο το γράφει ο δικός του γραφέας, μετά την παράδοση των αρχείων.
+    protocol: null,
     createdAt: now,
     updatedAt: now,
   };

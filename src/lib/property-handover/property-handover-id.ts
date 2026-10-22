@@ -15,6 +15,7 @@ import {
   generateDeterministicPropertyDossierId,
   generateDeterministicPropertyHandoverDeliveryId,
   generateDeterministicPropertyHandoverId,
+  generateDeterministicPropertyHandoverProtocolId,
 } from '@/services/enterprise-id.service';
 
 export function propertyHandoverIdOf(companyId: string, propertyId: string, recipientContactId: string): string {
@@ -52,4 +53,23 @@ export function handoverCopyFileIdOf(handoverId: string, sourceFileId: string): 
 /** **Η γραμμή του καθολικού** για το ίδιο ζεύγος — η απόδειξη του γραφείου ότι το αντίγραφο παραδόθηκε. */
 export function handoverDeliveryIdOf(handoverId: string, sourceFileId: string): string {
   return generateDeterministicPropertyHandoverDeliveryId(`${handoverId}:${sourceFileId}`);
+}
+
+/**
+ * **Το Πρωτόκολλο ενός καθολικού** (ADR-916 Φ-Γ2 Σ4) — ένα ανά `(παράδοση, αποτύπωμα v2)`. Το αποτύπωμα **είναι** το
+ * περιεχόμενο του πρωτοκόλλου: ίδιο καθολικό ⇒ ίδιο έγγραφο ⇒ η δεύτερη εκτέλεση βρίσκει το πρώτο και δεν ξανασφραγίζει.
+ */
+export function handoverProtocolIdOf(handoverId: string, ledgerDigest: string): string {
+  return generateDeterministicPropertyHandoverProtocolId(`${handoverId}:${ledgerDigest}`);
+}
+
+/** Ποιος κρατά ένα αντίτυπο του πρωτοκόλλου: η εταιρεία (`files`) ή ο αγοραστής (`files_personal`). */
+export type HandoverProtocolHolder = 'company' | 'recipient';
+
+/**
+ * **Το αρχείο ενός αντιτύπου** — ένα ανά `(πρωτόκολλο, κάτοχος)`. Ντετερμινιστικό ⇒ ντετερμινιστικό **κλειδί storage**, άρα
+ * δύο εκτελέσεις συναντιούνται στο ίδιο αντικείμενο και το «μόνο δημιουργία» του ανεβάσματος τις κρίνει.
+ */
+export function handoverProtocolFileIdOf(protocolId: string, holder: HandoverProtocolHolder): string {
+  return generateDeterministicFileId(`handover-protocol:${protocolId}:${holder}`);
 }

@@ -18,14 +18,17 @@ import {
   handoverDeliveryDigest,
   type HandoverDeliveredRow,
 } from '@/lib/property-handover/handover-delivery-plan';
+import {
+  HANDOVER_PROTOCOL_LEGAL_DOCUMENT,
+  HANDOVER_PROTOCOL_REQUIRED_CLAUSES,
+  handoverProtocolTermsOn,
+  missingHandoverProtocolClauses,
+} from '@/lib/property-handover/handover-protocol-terms';
 import { clauseIdsOf } from '@/lib/legal/legal-clauses';
 import { legalDocumentInForce, latestLegalDocumentVersion } from '@/lib/legal/legal-document-versions';
 import type { FrozenLegalText } from '@/lib/legal/frozen-legal-document';
 
-const DOCUMENT = 'handover-protocol';
-
-/** Οι ρήτρες που το Πρωτόκολλο **δεν** εκδίδεται χωρίς αυτές (σχέδιο Σ3/Σ4 · ADR-916 §5.11). */
-const REQUIRED_CLAUSES = ['digitalFilesOnly', 'notPropertyDelivery', 'noWaiver', 'contentNotCertified'] as const;
+const DOCUMENT = HANDOVER_PROTOCOL_LEGAL_DOCUMENT;
 
 /** Η ονομασία κάθε πεδίου της γραμμής **όπως τη γράφει το κείμενο**, ανά γλώσσα → πεδίο του καθολικού. */
 const FIELD_NAMES = {
@@ -119,10 +122,35 @@ describe('ADR-916 Σ3 — οι ρήτρες του Πρωτοκόλλου ζου
     expect(legalDocumentInForce(DOCUMENT, '2026-10-22').kind).toBe('in-force');
   });
 
-  it.each(REQUIRED_CLAUSES)('η ρήτρα «%s» υπάρχει στην τελευταία έκδοση', (id) => {
+  it.each(HANDOVER_PROTOCOL_REQUIRED_CLAUSES)('η ρήτρα «%s» υπάρχει στην τελευταία έκδοση', (id) => {
     const lookup = latestLegalDocumentVersion(DOCUMENT);
     if (lookup.kind !== 'published') throw new Error('καμία έκδοση');
     expect(clauseIdsOf(lookup.version.frozen)).toContain(id);
+  });
+
+  it('Γ32 — οι όροι μιας ημέρας: σε ισχύ από 2026-10-22 · πριν από αυτή ⇒ none-in-force (ποτέ εφευρημένο κείμενο)', () => {
+    const terms = handoverProtocolTermsOn('2026-10-22');
+    expect(terms.kind).toBe('in-force');
+    if (terms.kind === 'in-force') expect(terms.version.digest).toBe('sha256:25d9432eb3563718abbf10389c2b4a05f66cd341ec9dfce860b6267629babda4');
+    expect(handoverProtocolTermsOn('2026-10-21')).toEqual({ kind: 'none-in-force' });
+  });
+
+  it('🔴 Γ32 — κείμενο χωρίς υποχρεωτική ρήτρα ⇒ ονομάζει ΠΟΙΑ λείπει', () => {
+    const lookup = latestLegalDocumentVersion(DOCUMENT);
+    if (lookup.kind !== 'published') throw new Error('καμία έκδοση');
+    const { frozen } = lookup.version;
+    const stripped = {
+      ...frozen,
+      locales: {
+        ...frozen.locales,
+        el: {
+          ...frozen.locales.el,
+          sections: frozen.locales.el.sections.map((s) => ({ ...s, blocks: s.blocks.filter((b) => !(b.kind === 'clause' && b.id === 'notPropertyDelivery')) })),
+        },
+      },
+    };
+    expect(missingHandoverProtocolClauses(frozen)).toEqual([]);
+    expect(missingHandoverProtocolClauses(stripped)).toEqual(['notPropertyDelivery']);
   });
 
   it('τα ids των ρητρών είναι ΚΟΙΝΑ στις δύο γλώσσες, με μη κενό κείμενο', () => {
