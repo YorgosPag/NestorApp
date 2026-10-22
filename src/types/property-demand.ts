@@ -312,6 +312,21 @@ export type DemandTiming =
    */
   | { readonly kind: 'whenever' };
 
+/**
+ * **Τα τρία «πότε», με τη σειρά που τα δείχνουμε** — το ΕΝΑ κλειστό σύνολο (ADR-777 §8.98).
+ *
+ * Το διαβάζουν το σχήμα της φόρμας, το πεδίο της φόρμας, ο επιλογέας του πρώτου βήματος και ο
+ * parser του `?when=`. Πριν, η λίστα ήταν γραμμένη με το χέρι σε δύο σημεία.
+ */
+export const DEMAND_TIMING_KINDS = ['now', 'window', 'whenever'] as const satisfies readonly DemandTiming['kind'][];
+
+export type DemandTimingKind = (typeof DEMAND_TIMING_KINDS)[number];
+
+/** Ο ΕΝΑΣ έλεγχος για τιμή που ήρθε απ' έξω (π.χ. το `?when=` του συνδέσμου). */
+export function isDemandTimingKind(value: unknown): value is DemandTimingKind {
+  return DEMAND_TIMING_KINDS.some((kind) => kind === value);
+}
+
 // =============================================================================
 // 3. ΧΑΡΑΚΤΗΡΙΣΤΙΚΑ — Ζ8 (+ ο όροφος της Ζ5)
 // =============================================================================

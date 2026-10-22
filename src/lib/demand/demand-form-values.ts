@@ -60,6 +60,7 @@ import {
   DEMAND_LIFE_CONTEXTS,
   DEMAND_OWNER_SIGNALS,
   DEMAND_PROXIMITY_KINDS,
+  DEMAND_TIMING_KINDS,
   FRONTAGE_SIDES,
   NO_AMOUNT_RANGE,
   NO_DEMAND_FEATURES,
@@ -238,7 +239,7 @@ export const demandFormSchema = z.object({
   frontageDepthMetres: optionalNumber,
 
   // ── ΧΡΟΝΟΣ ──────────────────────────────────────────────────────────────
-  timingKind: z.enum(['now', 'window', 'whenever']),
+  timingKind: z.enum(DEMAND_TIMING_KINDS),
   fromDate: isoDate,
   toDate: isoDate,
 

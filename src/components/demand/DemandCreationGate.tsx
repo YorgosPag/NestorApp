@@ -19,6 +19,7 @@ import dynamic from 'next/dynamic';
 
 import { CreationFormLoading, CreationPageShell } from '@/components/shared/CreationPageShell';
 import type { DemandFormContentProps } from './DemandFormContent';
+import { DemandTimingChooser } from './DemandTimingChooser';
 
 // 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE ΤΗΣ ΔΙΑΔΡΟΜΗΣ `/demands/new` (ADR-777 §8.36).
 //
@@ -54,10 +55,23 @@ const DemandFormContent = dynamic<DemandFormContentProps>(
   { ssr: false, loading: CreationFormLoading },
 );
 
-export function DemandCreationGate(props: DemandFormContentProps): React.ReactElement {
+/**
+ * ADR-777 §8.98 — **δύο βήματα, μία σελίδα**: με `timingChooserQuery` δείχνει την ερώτηση «Πότε το
+ * θέλεις;». Αλλιώς δείχνει τη φόρμα. Ο επιλογέας εισάγεται **στατικά**: είναι ελαφρύς, και είναι το
+ * πρώτο που βλέπει ο άνθρωπος. Η βαριά φόρμα κατεβαίνει μόνο μετά την απάντηση.
+ */
+export type DemandCreationGateProps =
+  | (DemandFormContentProps & { readonly timingChooserQuery?: undefined })
+  | { readonly timingChooserQuery: string };
+
+export function DemandCreationGate(props: DemandCreationGateProps): React.ReactElement {
   return (
     <CreationPageShell>
-      <DemandFormContent {...props} />
+      {props.timingChooserQuery !== undefined ? (
+        <DemandTimingChooser currentQuery={props.timingChooserQuery} />
+      ) : (
+        <DemandFormContent initialValues={props.initialValues} editingId={props.editingId} />
+      )}
     </CreationPageShell>
   );
 }

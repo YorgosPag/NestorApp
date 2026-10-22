@@ -30,6 +30,7 @@ import { isLandownerShareInRange } from '@/lib/offers/offer-amount';
 import { formatPercentage } from '@/lib/intl-formatting';
 import {
   DEMAND_PROXIMITY_KINDS,
+  DEMAND_TIMING_KINDS,
   PRICED_SEEK_KINDS,
   type DemandProximityKind,
 } from '@/types/property-demand';
@@ -225,7 +226,7 @@ export function DemandTimingField(): React.ReactElement {
       <DemandOptionsField
         name="timingKind"
         mode="single"
-        options={['now', 'window', 'whenever'] as const}
+        options={DEMAND_TIMING_KINDS}
         labelOf={(kind) => t(`${NS}:demand.form.timing.${kind}`)}
       />
 

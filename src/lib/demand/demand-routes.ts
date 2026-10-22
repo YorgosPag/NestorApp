@@ -32,6 +32,9 @@
  * το ανακάλυπτε κανείς όταν ήταν αργά.
  */
 import { typedHref } from '@/lib/workspace/route-worlds';
+// ⚠️ ΜΟΝΟ τύπος: το αρχείο μένει φύλλο (το διαβάζει και η πλοήγηση). Ο έλεγχος τιμής ζει δίπλα στο
+//    σύνολο, `isDemandTimingKind` στο `types/property-demand`.
+import type { DemandTimingKind } from '@/types/property-demand';
 
 export const MY_DEMANDS_ROUTE = '/demands' as const;
 
@@ -81,6 +84,23 @@ export function demandDetailHref(demandId: string) {
  * ανοίγουν την **ίδια** προσυμπληρωμένη φόρμα. Το περιεχόμενο είναι ακριβώς το `serializeListingFilters`.
  */
 export const NEW_DEMAND_FROM_SEARCH_PARAM = 'from' as const;
+
+/**
+ * ADR-777 §8.98 — η απάντηση του **πρώτου βήματος** («Πότε το θέλεις;»). Ζει στον σύνδεσμο για τον
+ * ίδιο λόγο με το `from`: με «πίσω», ανανέωση ή νέα καρτέλα ανοίγει το ίδιο βήμα. Χωρίς αυτήν, η σελίδα
+ * δείχνει τον επιλογέα. Με αυτήν, δείχνει τη φόρμα με το «πότε» ήδη απαντημένο.
+ */
+export const NEW_DEMAND_TIMING_PARAM = 'when' as const;
+
+/**
+ * Το δεύτερο βήμα: η ίδια διεύθυνση με το `?when=` γραμμένο. Τυχόν `from` (ADR-888) **κρατιέται**,
+ * ώστε η αναζήτηση από τον χάρτη να περνά και από την ερώτηση του χρόνου.
+ */
+export function newDemandWithTimingHref(timing: DemandTimingKind, currentQuery: string) {
+  const params = new URLSearchParams(currentQuery);
+  params.set(NEW_DEMAND_TIMING_PARAM, timing);
+  return typedHref(`${NEW_DEMAND_ROUTE}?${params.toString()}`);
+}
 
 /** «Περισσότερες ρυθμίσεις» από το παράθυρο αποθήκευσης — η φόρμα, προσυμπληρωμένη από την αναζήτηση. */
 export function newDemandFromSearchHref(searchQuery: string) {

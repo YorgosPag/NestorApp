@@ -166,7 +166,13 @@
         "whenever": "Whenever it comes up",
         "wheneverHint": "The request never expires. We will only ask you to confirm that you are still looking.",
         "fromLabel": "From",
-        "toLabel": "To"
+        "toLabel": "To",
+        "chooser": {
+          "now": "You are looking for something available today.",
+          "window": "You need it for a specific period, e.g. a rental from March. We show you what will be available then, even if it is not today.",
+          "whenever": "No rush. The request never expires and finds you as soon as something comes up, even if it is still being built today.",
+          "changeLater": "You can still change this on the next page."
+        }
       },
       "features": {
         "legend": "What property?",
