@@ -12,6 +12,7 @@
  * λείπει ⇒ σφάλμα `code: 404`, όπως το πραγματικό GCS.
  */
 
+import { createHash } from 'crypto';
 import { Readable } from 'stream';
 
 export interface FakeGcsObject {
@@ -52,6 +53,8 @@ export interface FakeGcsFile {
   readonly store: FakeGcsStore;
   readonly metadata: FakeGcsObject | Record<string, never>;
   copy(dest: { readonly name: string; readonly store: FakeGcsStore }, options?: Record<string, unknown>): Promise<void>;
+  /** ADR-916 Σ4 — ανέβασμα· `preconditionOpts.ifGenerationMatch: 0` σε υπάρχον ⇒ σφάλμα `code: 412`, όπως το πραγματικό GCS. */
+  save(data: Uint8Array, options?: { readonly preconditionOpts?: { readonly ifGenerationMatch?: number }; readonly contentType?: string }): Promise<void>;
   createReadStream(): Readable;
   delete(): Promise<void>;
 }
@@ -67,7 +70,11 @@ export interface FakeGcsBucket {
 /** Η γενιά του αντιγράφου — **νέα** (το GCS δίνει πάντα νέα γενιά στον προορισμό), ποτέ ίδια με της πηγής. */
 const copiedGeneration = (generation: number | undefined): number | undefined => (generation === undefined ? undefined : generation + 100);
 
+/** Ψεύτικο crc32c — ντετερμινιστικό από τα bytes (ίδια bytes ⇒ ίδιο «crc32c»), αρκετό για το `sameObject`. */
+const fakeCrc32cOf = (bytes: Uint8Array): string => `crc_${createHash('sha256').update(bytes).digest('hex').slice(0, 12)}`;
+
 export function fakeGcsBucket(store: FakeGcsStore, name: string, options: FakeGcsBucketOptions = {}): FakeGcsBucket {
+  let nextGeneration = 1000;
   const bucket: FakeGcsBucket = {
     name,
     store,
@@ -88,6 +95,14 @@ export function fakeGcsBucket(store: FakeGcsStore, name: string, options: FakeGc
         const metadata = 'metadata' in copyOptions ? (copyOptions.metadata as Record<string, string>) : object.metadata;
         dest.store.set(dest.name, { ...object, generation: copiedGeneration(object.generation), ...(metadata ? { metadata } : {}) });
         options.onCopy?.(call);
+      },
+      save: async (data, saveOptions = {}) => {
+        if (saveOptions.preconditionOpts?.ifGenerationMatch === 0 && store.has(path)) {
+          throw Object.assign(new Error(`412 precondition ${path}`), { code: 412 });
+        }
+        const bytes = new Uint8Array(data);
+        nextGeneration += 1;
+        store.set(path, { crc32c: fakeCrc32cOf(bytes), size: bytes.length, generation: nextGeneration, bytes });
       },
       createReadStream: () => {
         options.onRead?.({ path, generation: opts?.generation });

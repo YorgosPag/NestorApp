@@ -34,6 +34,14 @@ export type NewFileContext =
        */
       readonly kind: 'handover-copy';
       readonly sourcePlacement: FileStoragePlacement;
+    }
+  | {
+      /**
+       * ADR-916 Φ-Γ2 Σ4 — το **σφραγισμένο Πρωτόκολλο παράδοσης**, που το **παράγει** ο διακομιστής (κανένα ανέβασμα, καμία
+       * πηγή να ακολουθήσει). Απόφαση **Ε1 = όλα τα νέα πρωτότυπα στην ΕΕ** (ADR-895 §6): το έγγραφο κρατά όνομα φυσικού
+       * προσώπου, άρα γεννιέται εκεί όπου θα ζήσει. Το αντίτυπο του αγοραστή ακολουθεί αυτό (`handover-copy`).
+       */
+      readonly kind: 'handover-protocol';
     };
 
 /** Κάθε θέση μέσων περιήγησης έχει **δηλωμένη** απάντηση — νέα θέση χωρίς γραμμή εδώ δεν μεταγλωττίζεται. */
@@ -49,5 +57,7 @@ export function placementForNewFile(context: NewFileContext): FileStoragePlaceme
       return TOUR_INGEST_TO_FILE_PLACEMENT[context.ingestPlacement];
     case 'handover-copy':
       return context.sourcePlacement;
+    case 'handover-protocol':
+      return 'eu-originals';
   }
 }

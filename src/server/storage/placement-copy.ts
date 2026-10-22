@@ -112,6 +112,20 @@ export async function copyPairs(pairs: readonly CopyPair[], target: Bucket): Pro
   }
 }
 
+/**
+ * **Αντιγραφή + απόδειξη** για ζεύγη προς δηλωμένα ονόματα — αντιγράφει ό,τι λείπει και επιστρέφει τα ονόματα προορισμού
+ * που **αποδείχτηκαν** πανομοιότυπα ({@link sameObject}). Ο ΕΝΑΣ δρόμος «bytes → απόδειξη» της παράδοσης (ADR-916): τον
+ * μοιράζονται η αντιγραφή των αρχείων (Φ-Γ1) και το αντίτυπο του Πρωτοκόλλου στον αγοραστή (Φ-Γ2 Σ4).
+ */
+export async function copyProvenPairs(pairs: readonly CopyPair[], target: Bucket): Promise<ReadonlySet<string>> {
+  await copyPairs(await missingPairsIn(target, pairs), target);
+  const present = new Map((await statObjects(target, pairs.map((pair) => pair.destinationName))).map((file) => [file.name, file] as const));
+  return new Set(pairs.filter((pair) => {
+    const destination = present.get(pair.destinationName);
+    return destination !== undefined && sameObject(pair.source, destination);
+  }).map((pair) => pair.destinationName));
+}
+
 /** GCS rewrite σε δέσμες, ίδιο όνομα στον προορισμό — ιδεμπότητο όταν ο καλών δίνει μόνο ό,τι λείπει ({@link missingIn}). */
 export async function copyObjects(files: readonly File[], target: Bucket): Promise<void> {
   await copyPairs(files.map((source) => ({ source, destinationName: source.name })), target);
