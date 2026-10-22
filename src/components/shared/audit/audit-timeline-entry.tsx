@@ -20,6 +20,8 @@ import { AUDIT_TIMELINE_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from "react";
 import { Link } from '@/lib/workspace/navigation';
 import { declaredHref } from '@/lib/workspace/route-worlds';
+import { getProjectUrl } from '@/lib/navigation/project-urls';
+import { ENTITY_ROUTES } from '@/lib/routes/entityRoutes';
 import { ExternalLink } from "lucide-react";
 import { formatRelativeTime, formatDateTime } from "@/lib/intl-utils";
 import type {
@@ -50,6 +52,10 @@ import { resolveActorName, resolveCauseText } from "./audit-actor";
 /**
  * Build the canonical detail route for each entity type.
  * Used when rendering in `showEntityLink` mode (global admin view).
+ *
+ * 🔑 **Δεν γράφει διευθύνσεις — τις ΖΗΤΑ** από τα SSoT (`ENTITY_ROUTES` · `getProjectUrl`, ADR-242). Ήταν δεύτερο
+ *   μητρώο με χειρόγραφα `/projects/${id}` · `/contacts/${id}` · `/buildings/${id}`: διευθύνσεις-redirect (ένα άλμα
+ *   παραπάνω), που απέκλιναν σιωπηλά από το κεντρικό μητρώο. Τώρα κάθε τύπος πάει **κατευθείαν** στην κανονική μορφή.
  */
 export function buildEntityHref(
   type: AuditEntityType,
@@ -57,25 +63,22 @@ export function buildEntityHref(
 ): string | null {
   switch (type) {
     case "contact":
-      return `/contacts/${id}`;
     case "company":
-      return `/contacts/${id}`;
+      return ENTITY_ROUTES.contacts.withId(id);
     case "project":
-      return `/projects/${id}`;
+      return getProjectUrl(id);
     case "building":
-      return `/buildings/${id}`;
+      return ENTITY_ROUTES.buildings.withId(id);
     case "property":
-      return `/properties/${id}`;
+      return ENTITY_ROUTES.properties.withId(id);
     case "parking":
-      return `/parking/${id}`;
+      return ENTITY_ROUTES.spaces.parking(id);
     case "storage":
-      return `/storage/${id}`;
-    case "floor":
-      return null;
+      return ENTITY_ROUTES.spaces.storage(id);
     case "purchase_order":
-      return `/procurement/purchase-orders/${id}`;
+      return ENTITY_ROUTES.procurement.purchaseOrder(id);
+    case "floor":
     case "quote":
-      return null;
     default:
       return null;
   }

@@ -21,21 +21,12 @@ import {
   Clock,
   BarChart3,
 } from 'lucide-react';
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableCell,
-  TableHead,
-} from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatCurrencyWhole } from '@/lib/intl-utils';
 import { KPIAlertCard } from './KPIAlertCard';
-import { HealthStatusBadge } from './HealthStatusBadge';
+import { PortfolioProjectsTable, formatPortfolioEuro as fmtEuro } from './PortfolioProjectsTable';
 import { DebtMaturityWall } from './DebtMaturityWall';
 import type { DebtMaturityFormData } from './DebtMaturityWall';
 import { BudgetVarianceChart } from './BudgetVarianceChart';
@@ -81,12 +72,6 @@ interface BudgetApiResponse {
 // ADR-300: Module-level caches — survive React unmount/remount (navigation)
 const portfolioCache = createStaleCache<{ portfolio: PortfolioSummary; projects: ProjectFinancialSummary[] }>('portfolio-summary');
 const debtMaturityCache = createStaleCache<DebtMaturityEntry[]>('portfolio-debt-maturity');
-
-// =============================================================================
-// EURO FORMATTER
-// =============================================================================
-
-const fmtEuro = (val: number) => formatCurrencyWhole(val) ?? '';
 
 // =============================================================================
 // COMPONENT
@@ -229,7 +214,6 @@ export function PortfolioDashboard() {
 
   // ADR SPEC-242C: one rulebook for every traffic light on this page
   const kpiHealth = assessPortfolioKpis(portfolio, projects);
-  const notMeasured = t('portfolio.notMeasured');
 
   // =========================================================================
   // RENDER
@@ -273,45 +257,8 @@ export function PortfolioDashboard() {
         />
       </div>
 
-      {/* Projects Table */}
-      {projects.length > 0 && (
-        <section className="border rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('portfolio.projectName')}</TableHead>
-                <TableHead className="text-right">{t('portfolio.units')}</TableHead>
-                <TableHead className="text-right">{t('portfolio.sold')}</TableHead>
-                <TableHead className="text-right">{t('portfolio.value')}</TableHead>
-                <TableHead className="text-right">{t('portfolio.collected')}</TableHead>
-                <TableHead className="text-right">{t('portfolio.costOfMoney')}</TableHead>
-                <TableHead className="text-right">{t('portfolio.collectionDays')}</TableHead>
-                <TableHead className="text-center">{t('portfolio.health')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {projects.map(proj => (
-                <TableRow key={proj.projectId}>
-                  <TableCell className="font-medium">{proj.projectName}</TableCell>
-                  <TableCell className="text-right">{proj.totalProperties}</TableCell>
-                  <TableCell className="text-right">{proj.soldProperties}</TableCell>
-                  <TableCell className="text-right">{fmtEuro(proj.totalValue)}</TableCell>
-                  <TableCell className="text-right">{fmtEuro(proj.collected)}</TableCell>
-                  <TableCell className="text-right">
-                    {proj.costOfMoney === null ? notMeasured : `${proj.costOfMoney.toFixed(2)}%`}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {proj.avgCollectionDays === null ? notMeasured : `${proj.avgCollectionDays}d`}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <HealthStatusBadge status={proj.healthStatus} drivers={proj.healthDrivers} />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </section>
-      )}
+      {/* Projects Table — ADR-242: το όνομα οδηγεί στο έργο */}
+      <PortfolioProjectsTable projects={projects} />
 
       {/* Debt Maturity Wall */}
       <DebtMaturityWall

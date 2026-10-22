@@ -39,6 +39,7 @@ import {
 import { formatCurrencyWhole } from '@/lib/intl-utils';
 import { Link } from '@/lib/workspace/navigation';
 import { getProjectTabUrl } from '@/lib/navigation/project-urls';
+import { VISIBLE_LINK_CLASS } from '@/lib/ui/link-style';
 import type {
   BudgetVarianceAnalysis,
   ProjectFinancialSummary,
@@ -108,7 +109,7 @@ function ProjectPicker({ projects, selectedProjectId, onSelect, t }: ProjectPick
         </SelectContent>
       </Select>
       {selectedProjectId ? (
-        <Link href={getProjectTabUrl(selectedProjectId, 'budget')} className="text-sm text-[hsl(var(--text-info))] underline-offset-2 hover:underline">
+        <Link href={getProjectTabUrl(selectedProjectId, 'budget')} className={`text-sm text-[hsl(var(--text-info))] ${VISIBLE_LINK_CLASS}`}>
           {t('variance.source.editBudget')}
         </Link>
       ) : null}

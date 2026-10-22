@@ -5,12 +5,14 @@
  * @enterprise ADR-265 Phase 4 — RAG Project Health Table
  *
  * Shows active projects with CPI/SPI traffic lights and progress bars.
- * Click row → navigate to project detail.
+ * The project name is the row's ONE real link (ADR-242) — no row `onClick` (Ctrl/middle click, copy link, keyboard).
  */
 
 import '@/lib/design-system';
 import { useTranslation } from 'react-i18next';
-import { useRouter } from '@/lib/workspace/navigation';
+import { getProjectUrl } from '@/lib/navigation/project-urls';
+import { TABLE_CELL_LINK_CLASS } from '@/lib/ui/link-style';
+import { Link } from '@/lib/workspace/navigation';
 import {
   ReportSection,
   ReportTable,
@@ -36,13 +38,15 @@ interface ProjectHealthTableProps {
 
 export function ProjectHealthTable({ data, loading }: ProjectHealthTableProps) {
   const { t } = useTranslation('reports');
-  const router = useRouter();
 
   const columns: ReportColumnDef<ProjectHealthRow>[] = [
     {
       key: 'name',
       header: t('executive.projectHealth.project'),
       sortable: true,
+      render: (_value: unknown, row: ProjectHealthRow) => (
+        <Link href={getProjectUrl(row.id)} className={TABLE_CELL_LINK_CLASS}>{row.name}</Link>
+      ),
     },
     {
       key: 'progress',
@@ -94,10 +98,6 @@ export function ProjectHealthTable({ data, loading }: ProjectHealthTableProps) {
     },
   ];
 
-  const handleRowClick = (row: ProjectHealthRow) => {
-    router.push(`/projects/${row.id}`);
-  };
-
   if (!loading && data.length === 0) {
     return (
       <ReportSection
@@ -126,7 +126,6 @@ export function ProjectHealthTable({ data, loading }: ProjectHealthTableProps) {
         size="compact"
         showPagination={false}
         loading={loading}
-        onRowClick={handleRowClick}
       />
     </ReportSection>
   );

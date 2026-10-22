@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useRouter } from '@/lib/workspace/navigation';
 import { withQuery } from '@/lib/workspace/route-worlds';
+import { getProjectUrl } from '@/lib/navigation/project-urls';
+import { VISIBLE_LINK_CLASS } from '@/lib/ui/link-style';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Building2, ClipboardList, Eye, EyeOff, Plus, ScanLine } from 'lucide-react';
@@ -261,8 +263,8 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
   if (id.startsWith('[')) return null;
   const projectSubtitle = rfq?.projectId && projectName ? (
     <Link
-      href={`/projects/${rfq.projectId}`}
-      className="text-sm text-muted-foreground hover:text-foreground hover:underline inline-flex items-center gap-1"
+      href={getProjectUrl(rfq.projectId)}
+      className={cn('text-sm text-muted-foreground inline-flex items-center gap-1', VISIBLE_LINK_CLASS)}
       aria-label={t('rfqs.detail.projectLink.aria', { projectName })}
     >
       <Building2 className="size-3" />

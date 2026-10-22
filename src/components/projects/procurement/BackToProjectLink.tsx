@@ -9,6 +9,7 @@
  * provides the canonical return path back to the project tab strip.
  */
 
+import { getProjectUrl } from '@/lib/navigation/project-urls';
 import { Link } from '@/lib/workspace/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -22,7 +23,7 @@ export function BackToProjectLink({ projectId, className }: BackToProjectLinkPro
   const { t } = useTranslation('projects');
   return (
     <Link
-      href={`/projects?projectId=${projectId}`}
+      href={getProjectUrl(projectId)}
       className={
         className ??
         'inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors'
