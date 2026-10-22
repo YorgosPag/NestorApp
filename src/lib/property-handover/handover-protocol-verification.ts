@@ -165,6 +165,7 @@ export function handoverProtocolVerdictOf(
   if (registry.kind === 'unknown') return { kind: 'not-registered' };
   if (registry.file !== 'match' || !isSha256Hex(proof.pdfSha256)) return { kind: 'altered', registry };
   const { manifest } = proof;
+  if (registry.standing.kind === 'superseded') return { kind: 'superseded', manifest, registry, latestRevision: registry.standing.latestRevision };
   if (registry.standing.kind === 'undetermined') return { kind: 'genuine-standing-undetermined', manifest, registry };
   return { kind: 'verified', manifest, registry };
 }
