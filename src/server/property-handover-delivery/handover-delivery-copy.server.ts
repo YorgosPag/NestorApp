@@ -17,7 +17,7 @@ import 'server-only';
  * γραφείου, κανένα πεδίο της πηγής πέρα από όσα περιγράφουν το έγγραφο (τομέας · κατηγορία · σκοπός · ετικέτα).
  */
 
-import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
+import type { DocumentReference, Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import type { File } from '@google-cloud/storage';
 
 import { ENTITY_TYPES, FILE_STATUS } from '@/config/domain-constants';
@@ -27,7 +27,7 @@ import { FILE_COLLECTION } from '@/lib/files/file-custody';
 import { fileStoragePlacementOf, type FileStoragePlacement } from '@/lib/files/file-storage-placement';
 import { placementForNewFile } from '@/lib/files/new-file-placement';
 import { FieldValue } from '@/lib/firebaseAdmin';
-import type { HandoverDeliveredRow, PlannedHandoverCopy } from '@/lib/property-handover/handover-delivery-plan';
+import type { PlannedHandoverCopy } from '@/lib/property-handover/handover-delivery-plan';
 import { handoverCopyFileIdOf } from '@/lib/property-handover/property-handover-id';
 import { buildProxyUrl } from '@/lib/storage/storage-object-url';
 import { custodyKindOfScope } from '@/lib/workspace/custody-scope';
@@ -38,7 +38,7 @@ import { buildFinalizeFileRecordUpdate, buildPendingFileRecordData } from '@/ser
 import type { DeliverableHandoverFile } from '@/services/property-handover/property-handover-set.server';
 import type { PropertyHandover } from '@/types/property-handover';
 
-import { deliveryLedgerRef, stageDeliveryLedgerRow } from './handover-delivery-ledger.server';
+import { deliveryLedgerRef, stageDeliveryLedgerRow, type HandoverLedgerProof } from './handover-delivery-ledger.server';
 import { handoverEntityKey, type HandoverDossierTargets } from './handover-delivery-dossiers.server';
 
 /** Ο δρών της παράδοσης στο ιστορικό — ονομασμένος αυτοματισμός, ποτέ ο αγοραστής (δεν το ανέβασε εκείνος). */
@@ -64,6 +64,11 @@ interface PreparedCopy {
   readonly dossierId: string;
   readonly built: ReturnType<typeof buildPendingFileRecordData>;
   readonly revisionOfFileId: string | null;
+}
+
+/** Η εγγραφή του αντιγράφου στο personal διαμέρισμα του αγοραστή — η ΜΙΑ θέση (αντιγραφή · κατακερματισμός Σ2). */
+export function handoverCopyRecordRef(adminDb: AdminFirestore, recipientUserId: string, copyFileId: string): DocumentReference {
+  return adminDb.collection(COLLECTIONS[FILE_COLLECTION[custodyKindOfScope({ userId: recipientUserId })]]).doc(copyFileId);
 }
 
 const text = (value: unknown): string | undefined => (typeof value === 'string' && value !== '' ? value : undefined);
@@ -113,11 +118,15 @@ async function copyAndProve(prepared: readonly PreparedCopy[], placement: FileSt
  * Εγγραφή `ready` + γραμμή καθολικού, **ατομικά**. Η επανάληψη βρίσκει και τα δύο και δεν γράφει τίποτα· αν λείπει
  * **ένα** από τα δύο (π.χ. γραμμή χειροκίνητα σβησμένη), γεννιέται **μόνο** αυτό — η απόδειξη θεραπεύεται, ποτέ διπλή.
  */
-async function commitCopy(ctx: HandoverCopyContext, copy: PreparedCopy): Promise<HandoverDeliveredRow> {
+async function commitCopy(ctx: HandoverCopyContext, copy: PreparedCopy): Promise<HandoverLedgerProof> {
   const { built, source, item } = copy;
   const custody = { userId: ctx.recipientUserId };
-  const recordRef = ctx.adminDb.collection(COLLECTIONS[FILE_COLLECTION[custodyKindOfScope(custody)]]).doc(built.fileId);
-  const row: HandoverDeliveredRow = { sourceFileId: item.sourceFileId, copyFileId: built.fileId, crc32c: String(source.metadata.crc32c), size: Number(source.metadata.size) };
+  const recordRef = handoverCopyRecordRef(ctx.adminDb, ctx.recipientUserId, built.fileId);
+  const sourceGeneration = String(source.metadata.generation ?? '');
+  const row: HandoverLedgerProof = {
+    sourceFileId: item.sourceFileId, copyFileId: built.fileId, crc32c: String(source.metadata.crc32c), size: Number(source.metadata.size),
+    sha256: null, sourceGeneration,
+  };
   const ledgerRef = deliveryLedgerRef(ctx.adminDb, ctx.handover.id, item.sourceFileId);
   await ctx.adminDb.runTransaction(async (tx) => {
     const [recordSnap, ledgerSnap] = await Promise.all([tx.get(recordRef), tx.get(ledgerRef)]);
@@ -130,8 +139,9 @@ async function commitCopy(ctx: HandoverCopyContext, copy: PreparedCopy): Promise
       createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
     });
     if (!ledgerSnap.exists) stageDeliveryLedgerRow(tx, ledgerRef, {
-      ...row, companyId: ctx.handover.companyId, propertyId: ctx.handover.propertyId, handoverId: ctx.handover.id,
-      recipientUserId: ctx.recipientUserId, dossierId: copy.dossierId, sourceGeneration: String(source.metadata.generation ?? ''),
+      sourceFileId: row.sourceFileId, copyFileId: row.copyFileId, crc32c: row.crc32c, size: row.size,
+      companyId: ctx.handover.companyId, propertyId: ctx.handover.propertyId, handoverId: ctx.handover.id,
+      recipientUserId: ctx.recipientUserId, dossierId: copy.dossierId, sourceGeneration,
       revisionOfFileId: copy.revisionOfFileId, deliveredAt: nowISO(),
     });
   });
@@ -143,7 +153,7 @@ async function commitCopy(ctx: HandoverCopyContext, copy: PreparedCopy): Promise
 }
 
 export interface HandoverCopyBatchResult {
-  readonly rows: readonly HandoverDeliveredRow[];
+  readonly rows: readonly HandoverLedgerProof[];
   readonly failed: number;
   readonly lastError: string | null;
 }
@@ -164,7 +174,7 @@ export async function copyHandoverBatch(
   const placements = [...new Set(prepared.map((copy) => copy.placement))];
   const proven = (await Promise.all(placements.map((placement) => copyAndProve(prepared.filter((copy) => copy.placement === placement), placement)))).flat();
   if (proven.length < prepared.length) errors.push(`${prepared.length - proven.length} αντίγραφα δεν αποδείχτηκαν πανομοιότυπα`);
-  const rows: HandoverDeliveredRow[] = [];
+  const rows: HandoverLedgerProof[] = [];
   for (const copy of proven) {
     try {
       rows.push(await commitCopy(ctx, copy));

@@ -9,7 +9,7 @@ import 'server-only';
  * @module server/property-handover-delivery/handover-delivery.server
  *
  * ```
- * οφείλεται; → σύνολο παράδοσης → φάκελοι-προορισμοί → καθολικό → σχέδιο (προϋπολογισμός) → δέσμες → πρόοδος (γραφέας)
+ * οφείλεται; → σύνολο παράδοσης → φάκελοι-προορισμοί → καθολικό → σχέδιο (προϋπολογισμός) → δέσμες → sha256 (Σ2) → πρόοδος
  * ```
  * 🔑 **Δεν αγγίζει ποτέ τη συλλογή των παραδόσεων**: την πρόοδο τη γράφει ο **ένας** γραφέας, μέσω του καταγραφέα που
  *    του δίνεται (ίδιο πρότυπο με τα email της πρόσκλησης — κανένας κύκλος εισαγωγών, καμία δεύτερη διαδρομή).
@@ -26,7 +26,6 @@ import {
   fileDeliveryStateOf,
   handoverDeliveryDigest,
   planHandoverDelivery,
-  type HandoverDeliveredRow,
   type HandoverDeliveryPlan,
 } from '@/lib/property-handover/handover-delivery-plan';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -35,7 +34,8 @@ import type { PropertyHandover, PropertyHandoverFileDelivery, PropertyHandoverRe
 
 import { copyHandoverBatch, type HandoverCopyContext, type HandoverDeliverableItem } from './handover-delivery-copy.server';
 import { ensureHandoverDossiers } from './handover-delivery-dossiers.server';
-import { predecessorsOf, readDeliveredRows } from './handover-delivery-ledger.server';
+import { hashDeliveredRows, type HandoverHashRun } from './handover-delivery-hash.server';
+import { predecessorsOf, readDeliveredRows, type HandoverLedgerProof } from './handover-delivery-ledger.server';
 
 const logger = createModuleLogger('PropertyHandoverDelivery');
 
@@ -46,6 +46,8 @@ export interface HandoverDeliveryBudget {
   readonly maxFiles: number;
   /** `Date.now()` μετά από το οποίο **δεν** ξεκινά νέα δέσμη — `null` ⇒ μόνο το όριο αρχείων. */
   readonly deadlineAt: number | null;
+  /** Φ-Γ2 Σ2 — bytes προς κατακερματισμό (sha256) σε αυτή την εκτέλεση· ίδια προθεσμία με την αντιγραφή. */
+  readonly maxHashBytes: number;
 }
 
 /** Ο καταγραφέας της προόδου — τον δίνει ο **ένας** γραφέας της παράδοσης (CAS στον ίδιο παραλήπτη). */
@@ -62,14 +64,14 @@ export interface HandoverDeliveryRunOutcome {
 }
 
 interface CopyRun {
-  readonly rows: readonly HandoverDeliveredRow[];
+  readonly rows: readonly HandoverLedgerProof[];
   readonly failed: number;
   readonly lastError: string | null;
 }
 
 /** Οι δέσμες, ως την προθεσμία — ό,τι δεν πρόλαβε μένει για την επόμενη εκτέλεση (καμία κατάσταση να χαθεί). */
 async function runBatches(ctx: HandoverCopyContext, plan: HandoverDeliveryPlan<HandoverDeliverableItem>, deadlineAt: number | null): Promise<CopyRun> {
-  const rows: HandoverDeliveredRow[] = [];
+  const rows: HandoverLedgerProof[] = [];
   let failed = 0;
   let lastError: string | null = null;
   for (let i = 0; i < plan.copies.length; i += BATCH_SIZE) {
@@ -82,16 +84,20 @@ async function runBatches(ctx: HandoverCopyContext, plan: HandoverDeliveryPlan<H
   return { rows, failed, lastError };
 }
 
-/** **Η νέα πρόοδος** — από το καθολικό (την αλήθεια), ποτέ από μετρητή που ίσως έχασε μια εκτέλεση. */
+/**
+ * **Η νέα πρόοδος** — από το καθολικό (την αλήθεια), ποτέ από μετρητή που ίσως έχασε μια εκτέλεση. `delivered` θέλει
+ * **και** sha256 σε κάθε γραμμή (Σ2): ως τότε μένει `delivering`, ώστε η ουρά του cron να συνεχίσει τον κατακερματισμό.
+ */
 async function progressOf(
   previous: PropertyHandoverFileDelivery | null,
-  rows: readonly HandoverDeliveredRow[],
   total: number,
   run: CopyRun,
+  hashing: HandoverHashRun,
   awaitingReview: number,
 ): Promise<PropertyHandoverFileDelivery> {
   const now = nowISO();
-  const state = run.failed === 0 && rows.length >= total ? 'delivered' : 'delivering';
+  const { rows } = hashing;
+  const state = run.failed === 0 && hashing.pending === 0 && rows.length >= total ? 'delivered' : 'delivering';
   const completedAt = state !== 'delivered' ? null : previous?.state === 'delivered' && previous.completedAt !== null ? previous.completedAt : now;
   return {
     state, delivered: rows.length, total, awaitingReview,
@@ -99,7 +105,7 @@ async function progressOf(
     digest: await handoverDeliveryDigest(rows),
     startedAt: previous?.startedAt ?? now,
     completedAt,
-    lastError: state === 'delivered' ? null : run.lastError ?? previous?.lastError ?? null,
+    lastError: state === 'delivered' ? null : run.lastError ?? hashing.lastError ?? previous?.lastError ?? null,
   };
 }
 
@@ -125,10 +131,14 @@ async function runDelivery(
   const plan = planHandoverDelivery({ deliverable, delivered, predecessorOf, budget: budget.maxFiles });
   const ctx: HandoverCopyContext = { adminDb, handover, recipientUserId: recipient.userId, targets };
   const run = await runBatches(ctx, plan, budget.deadlineAt);
-  const progress = await progressOf(handover.fileDelivery, [...delivered, ...run.rows], plan.total, run, set.review.length);
+  const hashing = await hashDeliveredRows(ctx, [...delivered, ...run.rows], { maxBytes: budget.maxHashBytes, deadlineAt: budget.deadlineAt });
+  const progress = await progressOf(handover.fileDelivery, plan.total, run, hashing, set.review.length);
   if (!sameProgress(handover.fileDelivery, progress)) await record({ handoverId: handover.id, recipientUserId: recipient.userId, fileDelivery: progress });
-  if (run.rows.length > 0 || run.failed > 0) {
-    logger.info('Παράδοση αρχείων αγοραστή', { handoverId: handover.id, copied: run.rows.length, failed: run.failed, delivered: progress.delivered, total: progress.total });
+  if (run.rows.length > 0 || run.failed > 0 || hashing.hashed > 0) {
+    logger.info('Παράδοση αρχείων αγοραστή', {
+      handoverId: handover.id, copied: run.rows.length, failed: run.failed, hashed: hashing.hashed, unhashed: hashing.pending,
+      delivered: progress.delivered, total: progress.total,
+    });
   }
   return { kind: progress.state, copied: run.rows.length, failed: run.failed };
 }

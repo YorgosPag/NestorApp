@@ -29,5 +29,18 @@ export const HANDOVER_DELIVERY_CRON_HANDOVER_LIMIT = 50;
  */
 export const HANDOVER_DELIVERY_CRON_DEADLINE_MS = 240_000;
 
+/**
+ * Φ-Γ2 Σ2 — **bytes** προς κατακερματισμό (sha256) ανά εκτέλεση **μέσα** σε αίτημα. Το κόστος του sha256 είναι η ανάγνωση
+ * των bytes (το GCS δεν το υπολογίζει ποτέ) ⇒ ο προϋπολογισμός μετρά bytes, όχι αρχεία. 256 MiB: τα έγγραφα ενός σπιτιού
+ * χωρούν συνήθως ολόκληρα· τα βίντεο/μεγάλα σχέδια τα συνεχίζει το cron.
+ */
+export const HANDOVER_DELIVERY_INLINE_HASH_BYTE_BUDGET = 256 * 1024 * 1024;
+
+/**
+ * Φ-Γ2 Σ2 — bytes προς κατακερματισμό ανά παράδοση σε **μία** εκτέλεση του cron (2 GiB). Κοινή προθεσμία με την αντιγραφή
+ * (`HANDOVER_DELIVERY_CRON_DEADLINE_MS`): δεν ξεκινά νέο αρχείο μετά από αυτήν· ό,τι μένει το συνεχίζει η επόμενη (15′).
+ */
+export const HANDOVER_DELIVERY_CRON_HASH_BYTE_BUDGET = 2 * 1024 * 1024 * 1024;
+
 /** Πόσα βήματα πίσω ακολουθείται η αλυσίδα αναθεωρήσεων μιας πηγής (A → B → C) για το `revisionOfFileId`. */
 export const HANDOVER_DELIVERY_REVISION_CHAIN_LIMIT = 8;

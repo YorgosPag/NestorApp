@@ -6,12 +6,15 @@
  *   πραγματική προεπισκόπηση. Mocks: μόνο οι κάδοι, το ίχνος και το ημερολόγιο αρχείων. Όλα τα δεδομένα συνθετικά.
  */
 
+import { createHash } from 'crypto';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { handoverDeliveryDigest, type HandoverDeliveredRow } from '@/lib/property-handover/handover-delivery-plan';
 import { propertyHandoverFromDocument } from '@/lib/property-handover/property-handover-from-document';
 import { handoverCopyFileIdOf, handoverDossierIdOf, propertyHandoverIdOf } from '@/lib/property-handover/property-handover-id';
 import { deliverHandoverFiles, type HandoverFileDeliveryRecorder } from '@/server/property-handover-delivery/handover-delivery.server';
+import { recordDeliverySha256 } from '@/server/property-handover-delivery/handover-delivery-ledger.server';
 import { runPropertyHandoverDeliveryQueue } from '@/services/property-handover/property-handover-delivery-queue.service';
 import { previewPropertyHandover } from '@/services/property-handover/property-handover-preview.server';
 import { recordHandoverFileDelivery } from '@/services/property-handover/property-handover-write.service';
@@ -32,7 +35,12 @@ const mockAudits: Array<Record<string, unknown>> = [];
 const store: FakeGcsStore = new Map();
 const copies: FakeGcsCopyCall[] = [];
 let copyHook: (call: FakeGcsCopyCall) => void = () => undefined;
-const bucket = fakeGcsBucket(store, 'default', { onCopy: (call) => { copies.push(call); copyHook(call); } });
+const reads: string[] = [];
+let readHook: (path: string) => void = () => undefined;
+const bucket = fakeGcsBucket(store, 'default', {
+  onCopy: (call) => { copies.push(call); copyHook(call); },
+  onRead: (call) => { reads.push(call.path); readHook(call.path); },
+});
 function mockBucket() { return bucket; }
 
 const COMPANY = 'comp_alfa';
@@ -52,7 +60,7 @@ const handover = () => {
   if (found === null) throw new Error('no handover');
   return found;
 };
-const deliver = (maxFiles = 50) => deliverHandoverFiles(db(), handover(), { maxFiles, deadlineAt: null }, record);
+const deliver = (maxFiles = 50, maxHashBytes = 1_000_000) => deliverHandoverFiles(db(), handover(), { maxFiles, deadlineAt: null, maxHashBytes }, record);
 const copyOf = (sourceFileId: string) => docs(COLLECTIONS.FILES_PERSONAL)[handoverCopyFileIdOf(HANDOVER, sourceFileId)];
 
 /** Αρχείο της εταιρείας **με** τα bytes του. */
@@ -62,8 +70,15 @@ function companyFile(id: string, category: string, entity: { type: string; id: s
     companyId: COMPANY, entityType: entity.type, entityId: entity.id, domain: 'construction', category, status: 'ready',
     storagePath, originalFilename: `${id}.pdf`, displayName: id, contentType: 'application/pdf', ext: 'pdf', ...extra,
   });
-  store.set(storagePath, { crc32c: `crc_${id}`, size: 1000, generation: 5 });
+  store.set(storagePath, { crc32c: `crc_${id}`, size: 1000, generation: 5, bytes: bytesOf(id) });
 }
+
+/** Συνθετικά bytes ενός αρχείου — 1000, διαφορετικά ανά αρχείο. */
+const bytesOf = (id: string): Buffer => Buffer.alloc(1000, id);
+const shaOf = (bytes: Buffer): string => createHash('sha256').update(bytes).digest('hex');
+const ledgerRow = (sourceFileId: string) =>
+  Object.values(docs(COLLECTIONS.PROPERTY_HANDOVER_DELIVERIES)).find((row) => row.sourceFileId === sourceFileId);
+const sourcePath = (id: string) => `companies/${COMPANY}/entities/property/${PROPERTY}/files/${id}.pdf`;
 
 function seedHandover(patch: Record<string, unknown> = {}) {
   fake.seed(COLLECTIONS.PROPERTY_HANDOVERS, HANDOVER, {
@@ -77,8 +92,10 @@ beforeEach(() => {
   fake = new FakeFirestore();
   store.clear();
   copies.length = 0;
+  reads.length = 0;
   mockAudits.length = 0;
   copyHook = () => undefined;
+  readHook = () => undefined;
   seedWorld();
 });
 
@@ -197,6 +214,73 @@ describe('Γ13 — η όψη του γραφείου και η πράξη ΔΕΝ
   it('η ουρά βρίσκει την οφειλόμενη παράδοση από το παράγωγο `fileDeliveryState` και την ολοκληρώνει', async () => {
     expect(await runPropertyHandoverDeliveryQueue(db())).toMatchObject({ queued: 1, completed: 1, copied: 3, failedHandovers: 0 });
     expect(await runPropertyHandoverDeliveryQueue(db())).toMatchObject({ queued: 0 });
+  });
+});
+
+describe('Γ18–Γ22 — Φ-Γ2 Σ2: sha256 ανά παραδομένο αρχείο + αποτύπωμα v2', () => {
+  it('Γ18 — κάθε γραμμή καθολικού κρατά το sha256 των bytes του ΑΝΤΙΓΡΑΦΟΥ · το αποτύπωμα καλύπτει κάθε byte', async () => {
+    expect(await deliver()).toEqual({ kind: 'delivered', copied: 3, failed: 0 });
+    for (const id of ['f_plan', 'f_photo', 'f_park']) {
+      expect(ledgerRow(id)).toMatchObject({ sha256: shaOf(bytesOf(id)), sha256Of: 'copy' });
+      expect(ledgerRow(id)?.hashedAt).toEqual(expect.any(String));
+    }
+    const rows = Object.values(docs(COLLECTIONS.PROPERTY_HANDOVER_DELIVERIES)) as unknown as HandoverDeliveredRow[];
+    expect(handover().fileDelivery?.digest).toBe(await handoverDeliveryDigest(rows));
+    expect(reads.every((path) => path.startsWith('people/'))).toBe(true);
+  });
+
+  it('Γ19 — προϋπολογισμός bytes: «παραδόθηκαν» αλλά αποτύπωμα ΕΚΚΡΕΜΕΙ ⇒ `delivering` + digest `null` · οι επόμενες ολοκληρώνουν, καμία διπλή ανάγνωση', async () => {
+    expect(await deliver(50, 1000)).toEqual({ kind: 'delivering', copied: 3, failed: 0 });
+    expect(handover().fileDelivery).toMatchObject({ state: 'delivering', delivered: 3, total: 3, digest: null });
+    expect(docs(COLLECTIONS.PROPERTY_HANDOVERS)[HANDOVER]).toMatchObject({ fileDeliveryState: 'delivering' });
+    expect(await deliver(50, 1000)).toMatchObject({ kind: 'delivering', copied: 0 });
+    expect(await deliver(50, 1000)).toMatchObject({ kind: 'delivered', copied: 0 });
+    expect(handover().fileDelivery?.digest).toMatch(/^[0-9a-f]{64}$/);
+    expect(reads).toHaveLength(3);
+    await deliver();
+    expect(reads).toHaveLength(3);
+  });
+
+  it('Γ20 — ο αγοραστής ΑΝΤΙΚΑΤΕΣΤΗΣΕ το αντίγραφό του πριν τον κατακερματισμό ⇒ μετριέται η καρφωμένη γενιά-πηγή (ίδια bytes)', async () => {
+    await deliver(50, 0);
+    const copyPath = String(copyOf('f_plan')?.storagePath);
+    store.set(copyPath, { crc32c: 'άλλο', size: 1000, generation: 999, bytes: Buffer.alloc(1000, 'x') });
+    expect(await deliver()).toMatchObject({ kind: 'delivered' });
+    expect(ledgerRow('f_plan')).toMatchObject({ sha256: shaOf(bytesOf('f_plan')), sha256Of: 'source' });
+  });
+
+  it('🔴 Γ21 — ούτε αντίγραφο ούτε η γενιά-πηγή ⇒ ΚΑΝΕΝΑ sha256, κανένα αποτύπωμα, το σφάλμα λέγεται', async () => {
+    await deliver(50, 0);
+    store.delete(String(copyOf('f_plan')?.storagePath));
+    store.set(sourcePath('f_plan'), { crc32c: 'crc_f_plan', size: 1000, generation: 6, bytes: bytesOf('f_plan') });
+    expect(await deliver()).toMatchObject({ kind: 'delivering' });
+    expect(ledgerRow('f_plan')).toMatchObject({ sha256: null, sha256Of: null });
+    expect(ledgerRow('f_photo')?.sha256).toBe(shaOf(bytesOf('f_photo')));
+    expect(handover().fileDelivery).toMatchObject({ state: 'delivering', digest: null, lastError: expect.stringMatching(/f_plan/) });
+  });
+
+  it('🔴 Γ22 — η γενιά αλλάζει ΑΝΑΜΕΣΑ σε μέτρηση και ανάγνωση (ίδιο crc32c, άλλα bytes) ⇒ ΔΕΝ γράφεται λάθος sha256', async () => {
+    await deliver(50, 0);
+    const copyPath = String(copyOf('f_plan')?.storagePath);
+    const forged = { crc32c: 'crc_f_plan', size: 1000, bytes: Buffer.alloc(1000, 'πλαστό') };
+    readHook = (path) => {
+      if (path === copyPath) store.set(copyPath, { ...forged, generation: 777 });
+      if (path === sourcePath('f_plan')) store.set(path, { ...forged, generation: 778 });
+    };
+    await deliver();
+    expect(ledgerRow('f_plan')?.sha256).toBeNull();
+    expect(ledgerRow('f_plan')?.sha256).not.toBe(shaOf(forged.bytes));
+    expect(handover().fileDelivery?.digest).toBeNull();
+  });
+
+  it('🔴 Γ23 — το sha256 γράφεται ΜΙΑ φορά: δεύτερη εγγραφή επιστρέφει το αποθηκευμένο · άλλα bytes (crc32c) ⇒ άρνηση', async () => {
+    await deliver(50, 0);
+    const first = { sourceFileId: 'f_plan', crc32c: 'crc_f_plan', size: 1000, sha256: 'a'.repeat(64), origin: 'copy' as const };
+    expect(await recordDeliverySha256(db(), HANDOVER, first)).toEqual({ kind: 'hashed', sha256: 'a'.repeat(64) });
+    expect(await recordDeliverySha256(db(), HANDOVER, { ...first, sha256: 'b'.repeat(64) })).toEqual({ kind: 'hashed', sha256: 'a'.repeat(64) });
+    expect(await recordDeliverySha256(db(), HANDOVER, { ...first, sourceFileId: 'f_photo', crc32c: 'άλλο' })).toEqual({ kind: 'refused' });
+    expect(ledgerRow('f_plan')?.sha256).toBe('a'.repeat(64));
+    expect(ledgerRow('f_photo')?.sha256).toBeNull();
   });
 });
 

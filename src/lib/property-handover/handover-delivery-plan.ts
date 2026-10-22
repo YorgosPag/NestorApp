@@ -43,6 +43,12 @@ export interface HandoverDeliveredRow {
   readonly copyFileId: string;
   readonly crc32c: string;
   readonly size: number;
+  /**
+   * Φ-Γ2 Σ2 — το sha256 των bytes που παραδόθηκαν (64 hex). `null` ⇒ **εκκρεμεί κατακερματισμός**: η γραμμή γεννιέται
+   * χωρίς αυτό (η αντιγραφή είναι rewrite μέσα στο Google, τα bytes δεν περνούν από εμάς) και το συμπληρώνει **μία**
+   * φορά ο ίδιος εκτελεστής, με δικό του προϋπολογισμό bytes ({@link planHandoverHashing}).
+   */
+  readonly sha256: string | null;
 }
 
 export interface HandoverDeliveryPlanInput<T extends HandoverDeliverable> {
@@ -85,12 +91,52 @@ export function planHandoverDelivery<T extends HandoverDeliverable>(input: Hando
 }
 
 /**
- * **Το αποτύπωμα του καθολικού** — sha256 πάνω στις ταξινομημένες γραμμές `πηγή|αντίγραφο|crc32c|μέγεθος`. Ανεξάρτητο
- * σειράς εγγραφής· αλλάζει αν αλλάξει **οποιαδήποτε** γραμμή. Κανένα portal των μεγάλων δεν αποδεικνύει τι παρέδωσε —
- * εδώ το αποτύπωμα είναι αυτό που θα σφραγίσει το Πρωτόκολλο (Φ-Γ2). `null` ⇒ τίποτα δεν παραδόθηκε ακόμη.
+ * Η **ετικέτα σχήματος** του αποτυπώματος — πρώτη γραμμή της εισόδου (domain separation). Ό,τι αλλάζει τη μορφή των
+ * γραμμών αλλάζει **και** την ετικέτα, ώστε δύο σχήματα να μη δίνουν ποτέ το ίδιο αποτύπωμα. Το Πρωτόκολλο (Σ4) τη
+ * δηλώνει μαζί με τις γραμμές, για να το ξαναϋπολογίσει ο τρίτος χωρίς εμάς.
+ * v1 (Φ-Γ1): `πηγή|αντίγραφο|crc32c|μέγεθος`, χωρίς ετικέτα — καμία ζωντανή παράδοση δεν το κράτησε (0 γραμμές, 2026-10-22).
+ */
+export const HANDOVER_DELIVERY_DIGEST_SCHEME = 'nestor.handover-delivery.v2';
+
+/** Η γραμμή του αποτυπώματος — `πηγή|αντίγραφο|sha256|μέγεθος`. */
+export const handoverDigestLineOf = (row: HandoverDeliveredRow & { readonly sha256: string }): string =>
+  `${row.sourceFileId}|${row.copyFileId}|${row.sha256}|${row.size}`;
+
+const isHashed = (row: HandoverDeliveredRow): row is HandoverDeliveredRow & { readonly sha256: string } => row.sha256 !== null;
+
+/**
+ * **Το αποτύπωμα του καθολικού (v2)** — sha256 πάνω στην ετικέτα σχήματος + τις ταξινομημένες γραμμές. Ανεξάρτητο σειράς
+ * εγγραφής· αλλάζει αν αλλάξει **οποιαδήποτε** γραμμή, και αφού κάθε γραμμή κρατά το sha256 του αρχείου της, αλλάζει με
+ * **οποιοδήποτε byte** οποιουδήποτε παραδομένου αρχείου. Αυτό σφραγίζει το Πρωτόκολλο (Σ4).
+ * `null` ⇒ τίποτα δεν παραδόθηκε **ή** κάποια γραμμή περιμένει κατακερματισμό: αποτύπωμα που δεν καλύπτει κάθε byte δεν
+ * εκδίδεται ποτέ — άρα ούτε Πρωτόκολλο.
  */
 export async function handoverDeliveryDigest(rows: readonly HandoverDeliveredRow[]): Promise<string | null> {
-  if (rows.length === 0) return null;
-  const lines = rows.map((row) => `${row.sourceFileId}|${row.copyFileId}|${row.crc32c}|${row.size}`).sort();
-  return sha256HexOfText(lines.join('\n'));
+  const hashed = rows.filter(isHashed);
+  if (rows.length === 0 || hashed.length < rows.length) return null;
+  return sha256HexOfText([HANDOVER_DELIVERY_DIGEST_SCHEME, ...hashed.map(handoverDigestLineOf).sort()].join('\n'));
+}
+
+export interface HandoverHashingPlan<R extends HandoverDeliveredRow> {
+  /** Τι κατακερματίζεται **τώρα** — σταθερή σειρά (`sourceFileId`). */
+  readonly hash: readonly R[];
+  /** Όσες γραμμές μένουν χωρίς sha256 **μετά** από αυτή την εκτέλεση, αν πετύχουν όλες. */
+  readonly remaining: number;
+}
+
+/**
+ * **Ποιες γραμμές κατακερματίζονται τώρα.** Προϋπολογισμός σε **bytes** (το κόστος είναι η ανάγνωση, όχι το πλήθος): όσες
+ * χωρούν με σταθερή σειρά — και **τουλάχιστον μία** όταν ο προϋπολογισμός είναι θετικός, ώστε ένα αρχείο μεγαλύτερο από
+ * τον προϋπολογισμό να μη μένει για πάντα πίσω. Γραμμή με sha256 δεν ξαναμετριέται ποτέ.
+ */
+export function planHandoverHashing<R extends HandoverDeliveredRow>(rows: readonly R[], byteBudget: number): HandoverHashingPlan<R> {
+  const pending = rows.filter((row) => !isHashed(row)).sort((a, b) => a.sourceFileId.localeCompare(b.sourceFileId));
+  const hash: R[] = [];
+  let bytes = 0;
+  for (const row of pending) {
+    if (byteBudget <= 0 || (hash.length > 0 && bytes + row.size > byteBudget)) break;
+    hash.push(row);
+    bytes += row.size;
+  }
+  return { hash, remaining: pending.length - hash.length };
 }

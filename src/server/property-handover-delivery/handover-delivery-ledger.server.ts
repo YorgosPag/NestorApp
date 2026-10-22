@@ -9,13 +9,16 @@ import 'server-only';
  * 🔑 **Γιατί καθολικό στο γραφείο και όχι μόνο τα αντίγραφα στον αγοραστή**: το αντίγραφο είναι **του αγοραστή** — μπορεί
  *    να το σβήσει (Δ2). Η απόδειξη ότι **παραδόθηκε**, με ποιο crc32c και πότε, ανήκει στον εκδότη και πρέπει να επιζεί.
  *    Από εδώ θα χτιστεί το σφραγισμένο Πρωτόκολλο Παράδοσης (Φ-Γ2).
- * ⛔ **Αμετάβλητο**: γραμμή γεννιέται με `tx.create` (ποτέ αντικατάσταση) και δεν αλλάζει ποτέ.
+ * ⛔ **Αμετάβλητο**: γραμμή γεννιέται με `tx.create` (ποτέ αντικατάσταση). **Μία και μόνη** εγγραφή μετά τη γέννηση
+ *    (Φ-Γ2 Σ2): το `sha256` γεννιέται `null` και γράφεται **μία** φορά από τον κατακερματισμό — σε συναλλαγή που αρνείται
+ *    αν η γραμμή δεν περιγράφει πια τα bytes που μετρήθηκαν (crc32c/μέγεθος), και δεν αντικαθιστά ποτέ υπάρχον.
  */
 
 import type { DocumentReference, Firestore as AdminFirestore, Transaction } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { HANDOVER_DELIVERY_REVISION_CHAIN_LIMIT } from '@/config/property-handover-delivery-policy';
+import { nowISO } from '@/lib/date-local';
 import type { HandoverDeliveredRow } from '@/lib/property-handover/handover-delivery-plan';
 import { handoverDeliveryIdOf } from '@/lib/property-handover/property-handover-id';
 import type { PropertyHandover } from '@/types/property-handover';
@@ -32,22 +35,35 @@ export interface HandoverDeliveryLedgerRow extends HandoverDeliveredRow {
   readonly sourceGeneration: string;
   readonly revisionOfFileId: string | null;
   readonly deliveredAt: string;
+  /** Σ2 — **πού** μετρήθηκε το `sha256`: στο αντίγραφο του αγοραστή, ή (αν εκείνο λείπει/άλλαξε) στη γενιά-πηγή. */
+  readonly sha256Of: HandoverSha256Origin | null;
+  readonly hashedAt: string | null;
+}
+
+/** Το αντίγραφο του αγοραστή (πρώτη επιλογή — αυτό κρατά) ή η καρφωμένη γενιά-πηγή (ίδια bytes, ίδιο crc32c). */
+export type HandoverSha256Origin = 'copy' | 'source';
+
+/** Ό,τι διαβάζει ο εκτελεστής από μια γραμμή: η γραμμή της κρίσης **+** η γενιά-πηγή (εφεδρεία του κατακερματισμού). */
+export interface HandoverLedgerProof extends HandoverDeliveredRow {
+  readonly sourceGeneration: string | null;
 }
 
 const text = (value: unknown): string | null => (typeof value === 'string' && value !== '' ? value : null);
+const SHA256_HEX = /^[0-9a-f]{64}$/;
+const sha256Text = (value: unknown): string | null => (typeof value === 'string' && SHA256_HEX.test(value) ? value : null);
 
 /** Πεδίο προς πεδίο — μια αλλοιωμένη γραμμή **δεν** μετρά ως παράδοση (ο εκτελεστής θα ξαναδεί το αντίγραφο). */
-function deliveredRowOf(raw: Record<string, unknown>): HandoverDeliveredRow | null {
+function deliveredRowOf(raw: Record<string, unknown>): HandoverLedgerProof | null {
   const sourceFileId = text(raw.sourceFileId);
   const copyFileId = text(raw.copyFileId);
   const crc32c = text(raw.crc32c);
   const { size } = raw;
   if (sourceFileId === null || copyFileId === null || crc32c === null || typeof size !== 'number') return null;
-  return { sourceFileId, copyFileId, crc32c, size };
+  return { sourceFileId, copyFileId, crc32c, size, sha256: sha256Text(raw.sha256), sourceGeneration: text(raw.sourceGeneration) };
 }
 
 /** **Ό,τι έχει παραδοθεί** για αυτή την παράδοση. */
-export async function readDeliveredRows(adminDb: AdminFirestore, handover: PropertyHandover): Promise<HandoverDeliveredRow[]> {
+export async function readDeliveredRows(adminDb: AdminFirestore, handover: PropertyHandover): Promise<HandoverLedgerProof[]> {
   const snapshot = await adminDb.collection(COLLECTIONS.PROPERTY_HANDOVER_DELIVERIES)
     .where('companyId', '==', handover.companyId)
     .where('handoverId', '==', handover.id)
@@ -63,9 +79,37 @@ export function deliveryLedgerRef(adminDb: AdminFirestore, handoverId: string, s
   return adminDb.collection(COLLECTIONS.PROPERTY_HANDOVER_DELIVERIES).doc(handoverDeliveryIdOf(handoverId, sourceFileId));
 }
 
-/** **Η γραμμή** — μέσα στη συναλλαγή που γεννά και το αντίγραφο (ποτέ το ένα χωρίς το άλλο). */
-export function stageDeliveryLedgerRow(tx: Transaction, ref: DocumentReference, row: Omit<HandoverDeliveryLedgerRow, 'id'>): void {
-  tx.create(ref, { id: ref.id, ...row });
+/** **Η γραμμή** — μέσα στη συναλλαγή που γεννά και το αντίγραφο (ποτέ το ένα χωρίς το άλλο). Γεννιέται χωρίς sha256. */
+export function stageDeliveryLedgerRow(
+  tx: Transaction,
+  ref: DocumentReference,
+  row: Omit<HandoverDeliveryLedgerRow, 'id' | 'sha256' | 'sha256Of' | 'hashedAt'>,
+): void {
+  tx.create(ref, { id: ref.id, ...row, sha256: null, sha256Of: null, hashedAt: null });
+}
+
+/** Η έκβαση της εγγραφής του sha256 — το **αποθηκευμένο** αποτύπωμα (δικό μας ή μιας ταυτόχρονης εκτέλεσης), ή άρνηση. */
+export type DeliverySha256Write = { readonly kind: 'hashed'; readonly sha256: string } | { readonly kind: 'refused' };
+
+export interface MeasuredDeliverySha256 extends Pick<HandoverDeliveredRow, 'sourceFileId' | 'crc32c' | 'size'> {
+  readonly sha256: string;
+  readonly origin: HandoverSha256Origin;
+}
+
+/**
+ * **Γράφει το sha256 μιας γραμμής — μία φορά.** Μέσα σε συναλλαγή: υπάρχει ήδη ⇒ επιστρέφεται το αποθηκευμένο (ποτέ
+ * αντικατάσταση)· η γραμμή λείπει ή περιγράφει **άλλα** bytes (crc32c/μέγεθος) από όσα μετρήθηκαν ⇒ `refused`.
+ */
+export async function recordDeliverySha256(adminDb: AdminFirestore, handoverId: string, measured: MeasuredDeliverySha256): Promise<DeliverySha256Write> {
+  const ref = deliveryLedgerRef(adminDb, handoverId, measured.sourceFileId);
+  return adminDb.runTransaction(async (tx): Promise<DeliverySha256Write> => {
+    const data = (await tx.get(ref)).data();
+    if (data === undefined || data.crc32c !== measured.crc32c || data.size !== measured.size) return { kind: 'refused' };
+    const stored = sha256Text(data.sha256);
+    if (stored !== null) return { kind: 'hashed', sha256: stored };
+    tx.update(ref, { sha256: measured.sha256, sha256Of: measured.origin, hashedAt: nowISO() });
+    return { kind: 'hashed', sha256: measured.sha256 };
+  });
 }
 
 /** Ένα βήμα της αλυσίδας: πηγή → ο διάδοχός της, για όσες έχουν. */

@@ -34,7 +34,7 @@ import { PROPERTY_HANDOVER_TRACKED_FIELDS } from '@/config/audit-tracked-fields'
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { nowISO } from '@/lib/date-local';
 import { getErrorMessage } from '@/lib/error-utils';
-import { HANDOVER_DELIVERY_INLINE_FILE_BUDGET } from '@/config/property-handover-delivery-policy';
+import { HANDOVER_DELIVERY_INLINE_FILE_BUDGET, HANDOVER_DELIVERY_INLINE_HASH_BYTE_BUDGET } from '@/config/property-handover-delivery-policy';
 import { fileDeliveryStateOf } from '@/lib/property-handover/handover-delivery-plan';
 import {
   planPropertyHandovers,
@@ -337,7 +337,8 @@ async function deliverDueFiles(adminDb: AdminFirestore, handovers: readonly Prop
   for (const handover of handovers) {
     const state = fileDeliveryStateOf(handover);
     if (state === null || (state === 'delivered' && cause !== 'reconcile')) continue;
-    await deliverHandoverFiles(adminDb, handover, { maxFiles: HANDOVER_DELIVERY_INLINE_FILE_BUDGET, deadlineAt: null }, record);
+    const budget = { maxFiles: HANDOVER_DELIVERY_INLINE_FILE_BUDGET, deadlineAt: null, maxHashBytes: HANDOVER_DELIVERY_INLINE_HASH_BYTE_BUDGET };
+    await deliverHandoverFiles(adminDb, handover, budget, record);
   }
 }
 

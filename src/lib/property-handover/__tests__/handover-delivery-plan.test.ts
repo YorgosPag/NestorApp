@@ -5,16 +5,22 @@
  *   αποτύπωμα του καθολικού. Καθαρές συναρτήσεις — καμία βάση, κανένας κάδος.
  */
 
+import { createHash } from 'crypto';
+
 import {
   fileDeliveryStateOf,
+  HANDOVER_DELIVERY_DIGEST_SCHEME,
   handoverDeliveryDigest,
   planHandoverDelivery,
+  planHandoverHashing,
   type HandoverDeliveredRow,
 } from '@/lib/property-handover/handover-delivery-plan';
 import type { PropertyHandoverFileDelivery } from '@/types/property-handover';
 
+const shaOf = (text: string): string => createHash('sha256').update(text).digest('hex');
 const row = (sourceFileId: string, copyFileId = `copy_${sourceFileId}`): HandoverDeliveredRow =>
-  ({ sourceFileId, copyFileId, crc32c: `crc_${sourceFileId}`, size: 100 });
+  ({ sourceFileId, copyFileId, crc32c: `crc_${sourceFileId}`, size: 100, sha256: shaOf(sourceFileId) });
+const unhashed = (sourceFileId: string, size = 100): HandoverDeliveredRow => ({ ...row(sourceFileId), size, sha256: null });
 const files = (...ids: string[]) => ids.map((sourceFileId) => ({ sourceFileId }));
 const NO_PREDECESSORS = new Map<string, string>();
 
@@ -74,12 +80,50 @@ describe('Γ2–Γ5 — το σχέδιο της εκτέλεσης', () => {
   });
 });
 
-describe('Γ6 — το αποτύπωμα του καθολικού', () => {
-  it('ανεξάρτητο της σειράς εγγραφής · αλλάζει με ΟΠΟΙΑΔΗΠΟΤΕ γραμμή · κενό ⇒ `null`', async () => {
+describe('Γ6 — το αποτύπωμα του καθολικού (v2: `πηγή|αντίγραφο|sha256|μέγεθος`)', () => {
+  it('ανεξάρτητο της σειράς εγγραφής · κενό ⇒ `null`', async () => {
     const forward = await handoverDeliveryDigest([row('f1'), row('f2')]);
     expect(forward).toMatch(/^[0-9a-f]{64}$/);
     expect(await handoverDeliveryDigest([row('f2'), row('f1')])).toBe(forward);
-    expect(await handoverDeliveryDigest([row('f1'), { ...row('f2'), crc32c: 'tampered' }])).not.toBe(forward);
     expect(await handoverDeliveryDigest([])).toBeNull();
+  });
+
+  it('Γ15 — αλλάζει όταν αλλάξει το sha256 ΜΙΑΣ γραμμής (= ένα byte ενός αρχείου) ή το μέγεθός της', async () => {
+    const base = await handoverDeliveryDigest([row('f1'), row('f2')]);
+    expect(await handoverDeliveryDigest([row('f1'), { ...row('f2'), sha256: shaOf('άλλο') }])).not.toBe(base);
+    expect(await handoverDeliveryDigest([row('f1'), { ...row('f2'), size: 101 }])).not.toBe(base);
+  });
+
+  it('Γ15β — ξαναϋπολογίζεται από τρίτο ΧΩΡΙΣ εμάς: ετικέτα σχήματος + ταξινομημένες γραμμές, sha256 του κειμένου', async () => {
+    const lines = [`f1|copy_f1|${shaOf('f1')}|100`, `f2|copy_f2|${shaOf('f2')}|100`];
+    expect(await handoverDeliveryDigest([row('f2'), row('f1')])).toBe(shaOf([HANDOVER_DELIVERY_DIGEST_SCHEME, ...lines].join('\n')));
+  });
+
+  it('🔴 Γ16 — ΜΙΑ γραμμή χωρίς sha256 ⇒ `null` (εκκρεμεί κατακερματισμός ⇒ κανένα Πρωτόκολλο)', async () => {
+    expect(await handoverDeliveryDigest([row('f1'), unhashed('f2')])).toBeNull();
+  });
+});
+
+describe('Γ17 — ο κατακερματισμός με προϋπολογισμό BYTES', () => {
+  it('μόνο οι γραμμές χωρίς sha256, σταθερή σειρά, όσες χωρούν — και λέει πόσες μένουν', () => {
+    const plan = planHandoverHashing([unhashed('c'), row('a'), unhashed('b'), unhashed('d')], 250);
+    expect(plan.hash.map((entry) => entry.sourceFileId)).toEqual(['b', 'c']);
+    expect(plan.remaining).toBe(1);
+  });
+
+  it('δύο εκτελέσεις καλύπτουν ό,τι δεν χώρεσε στην πρώτη — καμία γραμμή δύο φορές', () => {
+    const rows = [unhashed('a'), unhashed('b'), unhashed('c')];
+    const first = planHandoverHashing(rows, 200);
+    const hashedFirst = new Set(first.hash.map((entry) => entry.sourceFileId));
+    const after = rows.map((entry) => (hashedFirst.has(entry.sourceFileId) ? { ...entry, sha256: shaOf(entry.sourceFileId) } : entry));
+    const second = planHandoverHashing(after, 200);
+    expect([...first.hash, ...second.hash].map((entry) => entry.sourceFileId)).toEqual(['a', 'b', 'c']);
+    expect(second.remaining).toBe(0);
+    expect(planHandoverHashing(after.map((entry) => ({ ...entry, sha256: shaOf(entry.sourceFileId) })), 200).hash).toEqual([]);
+  });
+
+  it('αρχείο ΜΕΓΑΛΥΤΕΡΟ από τον προϋπολογισμό ⇒ περνά μόνο του (ποτέ για πάντα πίσω) · μηδενικός ⇒ τίποτα', () => {
+    expect(planHandoverHashing([unhashed('big', 10_000), unhashed('small')], 500).hash.map((entry) => entry.sourceFileId)).toEqual(['big']);
+    expect(planHandoverHashing([unhashed('a')], 0)).toEqual({ hash: [], remaining: 1 });
   });
 });

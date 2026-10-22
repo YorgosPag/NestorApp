@@ -18,6 +18,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import {
   HANDOVER_DELIVERY_CRON_DEADLINE_MS,
   HANDOVER_DELIVERY_CRON_FILE_BUDGET,
+  HANDOVER_DELIVERY_CRON_HASH_BYTE_BUDGET,
   HANDOVER_DELIVERY_CRON_HANDOVER_LIMIT,
 } from '@/config/property-handover-delivery-policy';
 import { HANDOVER_FILE_DELIVERY_QUEUE_STATES } from '@/lib/property-handover/handover-delivery-plan';
@@ -56,7 +57,8 @@ export async function runPropertyHandoverDeliveryQueue(adminDb: AdminFirestore, 
       report.deferred += 1;
       continue;
     }
-    const outcome = await deliverHandoverFiles(adminDb, handover, { maxFiles: HANDOVER_DELIVERY_CRON_FILE_BUDGET, deadlineAt }, record);
+    const budget = { maxFiles: HANDOVER_DELIVERY_CRON_FILE_BUDGET, deadlineAt, maxHashBytes: HANDOVER_DELIVERY_CRON_HASH_BYTE_BUDGET };
+    const outcome = await deliverHandoverFiles(adminDb, handover, budget, record);
     report.copied += outcome.copied;
     report.failedFiles += outcome.failed;
     if (outcome.kind === 'delivered') report.completed += 1;

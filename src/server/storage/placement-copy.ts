@@ -77,8 +77,11 @@ export function copyOptionsFor(file: File): RewriteBody {
   return body;
 }
 
-/** Η πηγή **στη γενιά που μετρήθηκε** — αλλιώς το rewrite θα αντέγραφε την τρέχουσα, όποια κι αν είναι. */
-function pinnedSource(file: File): File {
+/**
+ * Το αντικείμενο **στη γενιά που μετρήθηκε** — αλλιώς το rewrite θα αντέγραφε (ή η ανάγνωση θα διάβαζε) την τρέχουσα,
+ * όποια κι αν είναι. Ο ΕΝΑΣ τρόπος· τον μοιράζονται η αντιγραφή και ο κατακερματισμός (`object-sha256.server`).
+ */
+export function pinnedToGeneration(file: File): File {
   const generation = file.metadata.generation;
   return generation === undefined ? file : file.bucket.file(file.name, { generation: Number(generation) });
 }
@@ -105,7 +108,7 @@ export async function missingPairsIn(target: Bucket, pairs: readonly CopyPair[])
 export async function copyPairs(pairs: readonly CopyPair[], target: Bucket): Promise<void> {
   for (let i = 0; i < pairs.length; i += COPY_CONCURRENCY) {
     await Promise.all(pairs.slice(i, i + COPY_CONCURRENCY).map(({ source, destinationName }) =>
-      pinnedSource(source).copy(target.file(destinationName), copyOptionsFor(source))));
+      pinnedToGeneration(source).copy(target.file(destinationName), copyOptionsFor(source))));
   }
 }
 
