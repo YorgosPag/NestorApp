@@ -13,6 +13,8 @@
 
 import React from 'react';
 
+import { Card } from '@/components/ui/card';
+
 /** Πόσο πλατύ αποδίδεται κάθε πάνελ. */
 export type PanelWidth = 'auto' | '375';
 
@@ -38,6 +40,50 @@ export function PanelWidthSelect({ width, onChange }: { readonly width: PanelWid
         <option value="375">375px (phone)</option>
       </select>
     </label>
+  );
+}
+
+/** **Το πλάτος των πάνελ μιας γκαλερί** και η κλάση που παράγει — ΕΝΑ σημείο (ADR-916 Φ-Δ, N.0.2: ήταν τρίδυμο). */
+export function useHarnessPanelWidth(): { readonly width: PanelWidth; readonly setWidth: (next: PanelWidth) => void; readonly panelClass: string } {
+  const [width, setWidth] = React.useState<PanelWidth>('auto');
+  return { width, setWidth, panelClass: `flex flex-col gap-3 overflow-visible p-4 ${PANEL_WIDTH_CLASS[width]}` };
+}
+
+/**
+ * **Ο σκελετός κάθε γκαλερί καταστάσεων** — τίτλος, περιγραφή, επιλογή πλάτους, πλήθος πάνελ, και οι ομάδες ως παιδιά.
+ * Εξήχθη όταν ήρθε η τρίτη γκαλερί (ADR-916 Φ-Δ, N.0.2 / CHECK 3.28): ήταν αντιγραμμένος σε τρία harness.
+ */
+export function HarnessGallery({
+  label,
+  title,
+  description,
+  panelCount,
+  width,
+  onWidthChange,
+  children,
+}: {
+  readonly label: string;
+  readonly title: string;
+  readonly description: React.ReactNode;
+  readonly panelCount: number;
+  readonly width: PanelWidth;
+  readonly onWidthChange: (next: PanelWidth) => void;
+  readonly children: React.ReactNode;
+}) {
+  return (
+    <section className="flex flex-col gap-6" aria-label={label}>
+      <header className="flex flex-col gap-2">
+        <h1 className="m-0 text-2xl font-semibold text-foreground">{title}</h1>
+        <p className="m-0 max-w-3xl text-sm text-muted-foreground">{description}</p>
+      </header>
+      <Card asChild className="flex flex-wrap items-center gap-6 p-4 text-sm">
+        <section aria-label="Harness controls">
+          <PanelWidthSelect width={width} onChange={onWidthChange} />
+          <span className="text-muted-foreground">{panelCount} panels</span>
+        </section>
+      </Card>
+      {children}
+    </section>
   );
 }
 
@@ -76,4 +122,26 @@ export function clickWhenEnabled(root: HTMLElement, selector: string): () => voi
     cancelled = true;
     window.clearTimeout(timer);
   };
+}
+
+/** **Μια ομάδα πάνελ** με τίτλο — εξήχθη όταν ήρθε η τρίτη γκαλερί (ADR-916 Φ-Δ, N.0.2): ήταν δίδυμο σε δύο. */
+export function HarnessPanelGroup({ title, children }: { readonly title: string; readonly children: React.ReactNode }) {
+  return (
+    <section className="flex flex-col gap-3" aria-label={title}>
+      <h2 className="m-0 text-lg font-semibold text-foreground">{title}</h2>
+      <section className="flex flex-wrap items-start gap-6">{children}</section>
+    </section>
+  );
+}
+
+/** **Ένα πάνελ = μία κατάσταση.** Η λεζάντα λέει μόνο την ταυτότητα — το «τι κάνει» το δείχνει η ίδια η οθόνη. */
+export function HarnessPanel({ id, className, children }: { readonly id: string; readonly className: string; readonly children: React.ReactNode }) {
+  return (
+    <Card asChild className={className}>
+      <article data-testid={`harness-panel-${id}`}>
+        <h3 className="m-0 font-mono text-xs text-muted-foreground">{id}</h3>
+        {children}
+      </article>
+    </Card>
+  );
 }

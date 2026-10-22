@@ -23,14 +23,19 @@
 import React from 'react';
 
 import { PropertyDossierOriginLine, PropertyDossierOriginNotice } from '@/components/property-dossier/PropertyDossierOrigin';
-import { clickWhenEnabled, PANEL_WIDTH_CLASS, PanelWidthSelect, type PanelWidth } from '@/components/testing/harness/harness-panel';
+import {
+  HarnessPanel as Panel,
+  HarnessPanelGroup as PanelGroup,
+  HarnessGallery,
+  clickWhenEnabled,
+  useHarnessPanelWidth,
+} from '@/components/testing/harness/harness-panel';
 import {
   scriptedBodyField,
   useScriptedTransport,
   type ScriptedGetRoute,
   type ScriptedRoute,
 } from '@/components/testing/harness/scripted-transport';
-import { Card } from '@/components/ui/card';
 import { API_ROUTES } from '@/config/domain-constants';
 import { FILE_CUSTODY_PARAM } from '@/lib/files/file-custody';
 
@@ -57,30 +62,26 @@ const downloadRoute: ScriptedGetRoute = (url, params) =>
 const PANEL_COUNT = SERVER_SCENARIOS.length + ANSWER_SCENARIOS.length + ORIGIN_SCENARIOS.length;
 
 export function HandoverInviteHarness(): React.JSX.Element {
-  const [width, setWidth] = React.useState<PanelWidth>('auto');
+  const { width, setWidth, panelClass } = useHarnessPanelWidth();
   // 🔴 Η ΣΕΙΡΑ: κανένα πάνελ δεν πατά πριν σταθεί ο μεταφορέας (τα effects των παιδιών τρέχουν πρώτα).
   const armed = useScriptedTransport(handoverRoute, downloadRoute);
-  const panelClass = `flex flex-col gap-3 overflow-visible p-4 ${PANEL_WIDTH_CLASS[width]}`;
 
   return (
-    <section className="flex flex-col gap-6" aria-label="Handover Invite Harness">
-      <header className="flex flex-col gap-2">
-        <h1 className="m-0 text-2xl font-semibold text-foreground">Handover Invite — State Gallery</h1>
-        <p className="m-0 max-w-3xl text-sm text-muted-foreground">
+    <HarnessGallery
+      label="Handover Invite Harness"
+      title="Handover Invite — State Gallery"
+      panelCount={PANEL_COUNT}
+      width={width}
+      onWidthChange={setWidth}
+      description={
+        <>
           Every state of <code>/handover-invite/[token]</code> and of the dossier origin badge, rendered at once against a
           scripted transport. Panels are derived from the closed sets (<code>InvitationRespond</code> × occasion,
           <code> CORE_INVITATION_REFUSALS</code>, <code>PROPERTY_HANDOVER_INVITATION_REFUSALS</code>,
           <code> PROPERTY_HANDOVER_LIFECYCLES</code>) — never listed by hand. No secret, no database, no email.
-        </p>
-      </header>
-
-      <Card asChild className="flex flex-wrap items-center gap-6 p-4 text-sm">
-        <section aria-label="Harness controls">
-          <PanelWidthSelect width={width} onChange={setWidth} />
-          <span className="text-muted-foreground">{PANEL_COUNT} panels</span>
-        </section>
-      </Card>
-
+        </>
+      }
+    >
       <PanelGroup title="1 · Server — before any click">
         {SERVER_SCENARIOS.map((scenario) => (
           <Panel key={scenario.id} id={scenario.id} className={panelClass}>
@@ -103,28 +104,7 @@ export function HandoverInviteHarness(): React.JSX.Element {
           </Panel>
         ))}
       </PanelGroup>
-    </section>
-  );
-}
-
-function PanelGroup({ title, children }: { readonly title: string; readonly children: React.ReactNode }) {
-  return (
-    <section className="flex flex-col gap-3" aria-label={title}>
-      <h2 className="m-0 text-lg font-semibold text-foreground">{title}</h2>
-      <section className="flex flex-wrap items-start gap-6">{children}</section>
-    </section>
-  );
-}
-
-/** **Ένα πάνελ = μία κατάσταση.** Η λεζάντα λέει μόνο την ταυτότητα — το «τι κάνει» το δείχνει η ίδια η οθόνη. */
-function Panel({ id, className, children }: { readonly id: string; readonly className: string; readonly children: React.ReactNode }) {
-  return (
-    <Card asChild className={className}>
-      <article data-testid={`harness-panel-${id}`}>
-        <h3 className="m-0 font-mono text-xs text-muted-foreground">{id}</h3>
-        {children}
-      </article>
-    </Card>
+    </HarnessGallery>
   );
 }
 
