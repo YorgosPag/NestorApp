@@ -30,6 +30,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { myCasesRoute, type CaseHome } from '@/lib/conveyance/conveyance-routes';
 import { formatDate } from '@/lib/intl-utils';
+import { BACK_LINK_CLASS } from '@/lib/ui/link-style';
 import { cn } from '@/lib/utils';
 import { Link, usePathname, useRouter, useWorkspaceHref } from '@/lib/workspace/navigation';
 import { declaredHref } from '@/lib/workspace/route-worlds';
@@ -117,7 +118,7 @@ export function EngagedCaseContent({ engagementId, home }: EngagedCaseContentPro
   return (
     <section className="flex w-full flex-col gap-4">
       <nav>
-        <Link href={myCasesRoute(home)} className="inline-flex items-center gap-1 text-sm font-medium text-foreground underline">
+        <Link href={myCasesRoute(home)} className={BACK_LINK_CLASS}>
           <ArrowLeft className={iconSizes.sm} aria-hidden="true" />
           {t('engagement.case.back')}
         </Link>

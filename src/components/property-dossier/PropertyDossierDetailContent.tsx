@@ -32,6 +32,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { registerRouteSlice } from '@/i18n/route-slice';
 import { MY_DOSSIERS_ROUTE } from '@/lib/property-dossier/property-dossier-routes';
 import { floorplanTabKind } from '@/lib/property-dossier/property-dossier-view';
+import { BACK_LINK_CLASS } from '@/lib/ui/link-style';
 import { cn } from '@/lib/utils';
 import { Link } from '@/lib/workspace/navigation';
 import { useMyPropertyDossier } from '@/services/realtime/hooks/useMyPropertyDossiers';
@@ -124,7 +125,7 @@ export function PropertyDossierDetailContent({ dossierId }: { readonly dossierId
   return (
     <main className="flex w-full flex-col gap-6">
       <nav>
-        <Link href={MY_DOSSIERS_ROUTE} className="inline-flex items-center gap-1 text-sm font-medium text-foreground underline">
+        <Link href={MY_DOSSIERS_ROUTE} className={BACK_LINK_CLASS}>
           <ArrowLeft className={iconSizes.sm} aria-hidden="true" />
           {t(`${K}.detail.back`)}
         </Link>

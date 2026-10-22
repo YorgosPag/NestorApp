@@ -211,6 +211,12 @@
   (σωστό, αλλά αντίγραφο). Θεραπεία: μετάβαση στο `VISIBLE_LINK_CLASS` όπου ο σύνδεσμος ζει μέσα σε κείμενο· όπου το
   `hover:underline` είναι σκόπιμο (κάρτα/κουμπί που ήδη **μοιάζει** πατήσιμο), γραπτός λόγος. Μέτρα πρώτα:
   `grep -rl "hover:underline" src --include=*.tsx`.
+  ➕ **22/10 (ADR-242 Βήμα 4)**: το SSoT έχει πλέον και `ENTITY_LINK_CLASS` (όνομα οντότητας) και `BACK_LINK_CLASS` (επιστροφή,
+  και οι 4 επιστροφές μετακινήθηκαν, με άγκυρα που μπλοκάρει το literal). Τρίτη οικογένεια literal:
+  `text-sm font-medium text-foreground underline` σε **μη** επιστροφές, 7 σημεία: `demand/DemandCard.tsx` ×2 ·
+  `DemandDetailContent` · `DemandTitleEditor` (**`<button>`** — θέλει απόφαση: σύνδεσμος ή κουμπί-κείμενο;) ·
+  `conveyance/my-cases/MyCaseCardView` · `owner-property/OwnerPropertyDetailContent` · `stay-calendar/StayCalendarContent`.
+  Όλα χωρίς `TOUCH_TARGET_MIN` (ύψος ~20 px < 24 px του WCAG 2.5.8).
 
 - 🟠 **26/09 — `findContactByEmail`: ΣΩΣΤΟ ΤΩΡΑ, ΑΛΛΑ O(n) ΑΝΑΓΝΩΣΕΙΣ ΑΝΑ ΕΛΕΓΧΟ** *(ADR-884 §4.6 · ADR-827)*
 
