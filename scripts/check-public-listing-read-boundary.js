@@ -196,6 +196,15 @@ const BOUNDARIES = [
     remedy: '«propertyHandoverFromDocument(raw, id)»',
   },
   {
+    // 🔏 ADR-916 Φ-Γ2 Σ4 — ΤΟ ΣΦΡΑΓΙΣΜΕΝΟ ΠΡΩΤΟΚΟΛΛΟ ΠΑΡΑΔΟΣΗΣ, και η γραμμή μπαίνει ΜΑΖΙ με το σύνορο.
+    //    Αναγνώστες: ο γραφέας του πρωτοκόλλου (μέσα σε συναλλαγή)· αύριο η πόρτα επαλήθευσης (Σ6).
+    adr: 'ADR-916 Φ-Γ2 Σ4',
+    typeName: 'PropertyHandoverProtocol',
+    custodian: 'src/lib/property-handover/property-handover-protocol-from-document.ts',
+    module: 'property-handover-protocol-from-document',
+    remedy: '«propertyHandoverProtocolFromDocument(raw, id)»',
+  },
+  {
     // 🔴 ADR-862 Φ0 Β1 — Η ΠΕΜΠΤΗ ΓΡΑΜΜΗ, ΚΑΙ Η ΠΡΩΤΗ ΠΟΥ ΦΥΛΑΕΙ **ΟΡΑΤΟΤΗΤΑ**, ΟΧΙ ΟΘΟΝΗ.
     //
     // Τα τέσσερα προηγούμενα σύνορα φυλάνε **οθόνη**: πεδίο που λείπει ⇒ λευκή σελίδα.

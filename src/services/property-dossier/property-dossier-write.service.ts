@@ -55,6 +55,7 @@ import {
   type PropertyDossierOrigin,
 } from '@/types/property-dossier';
 import type { PropertyHandoverFileDeliverySummary, PropertyHandoverLifecycle } from '@/types/property-handover';
+import type { PropertyHandoverProtocolSummary } from '@/types/property-handover-protocol';
 
 const logger = createModuleLogger('property-dossier-write.service');
 
@@ -149,7 +150,12 @@ export interface PropertyDossierHandoverProjection {
   readonly handoverLifecycle: PropertyHandoverLifecycle;
   /** Φ-Γ1 — η πρόοδος αντιγραφής· απούσα ⇒ η προβολή **δεν** την αγγίζει (μόνο ο κύκλος ζωής). */
   readonly fileDelivery?: PropertyHandoverFileDeliverySummary;
+  /** Φ-Γ2 Σ4 — το τελευταίο Πρωτόκολλο· απόν ⇒ η προβολή **δεν** το αγγίζει. */
+  readonly protocol?: PropertyHandoverProtocolSummary;
 }
+
+const sameProtocol = (a: PropertyHandoverProtocolSummary | null, b: PropertyHandoverProtocolSummary): boolean =>
+  a !== null && a.revision === b.revision && a.issuedAt === b.issuedAt && a.fileId === b.fileId;
 
 const sameFileDelivery = (a: PropertyHandoverFileDeliverySummary | null, b: PropertyHandoverFileDeliverySummary): boolean =>
   a !== null && a.state === b.state && a.delivered === b.delivered && a.total === b.total;
@@ -177,13 +183,16 @@ export async function stagePropertyDossierHandoverProjection(
   const lifecycleChanged = ours && origin.handoverLifecycle !== projection.handoverLifecycle;
   const { fileDelivery } = projection;
   const deliveryChanged = ours && fileDelivery !== undefined && !sameFileDelivery(origin.fileDelivery, fileDelivery);
+  const { protocol } = projection;
+  const protocolChanged = ours && protocol !== undefined && !sameProtocol(origin.protocol, protocol);
   return {
-    changed: lifecycleChanged || deliveryChanged,
+    changed: lifecycleChanged || deliveryChanged || protocolChanged,
     commit: () => {
-      if (!lifecycleChanged && !deliveryChanged) return;
+      if (!lifecycleChanged && !deliveryChanged && !protocolChanged) return;
       tx.update(ref, {
         ...(lifecycleChanged ? { 'origin.handoverLifecycle': projection.handoverLifecycle } : {}),
         ...(deliveryChanged ? { 'origin.fileDelivery': fileDelivery } : {}),
+        ...(protocolChanged ? { 'origin.protocol': protocol } : {}),
       });
     },
   };

@@ -394,6 +394,19 @@ describe('files_personal.rules — το προσωπικό αρχείο το α�
       await assertFails(ref.update({ handoverOrigin: null }));
     });
 
+    // ADR-916 Φ-Γ2 Σ4 — το σημάδι του σφραγισμένου Πρωτοκόλλου: ίδιος φρουρός, ίδια απαγόρευση (πλαστό «επίσημο» PDF).
+    it('⛔ το σημάδι Πρωτοκόλλου: γέννηση · προσθήκη · αφαίρεση ⇒ ΑΡΝΗΣΗ', async () => {
+      const MARK = { protocolId: 'phpr_seed_0001', handoverId: 'phov_seed_0001', revision: 1 };
+      await assertFails(citizenDb().collection(COLLECTION).doc('forged-mark').set({
+        ...personalFilePayload(CITIZEN_UID, 'forged-mark'), handoverProtocolOf: MARK,
+      }));
+      await seedPersonalFile(env, 'mark-add', CITIZEN_UID);
+      await assertFails(citizenDb().collection(COLLECTION).doc('mark-add').update({ handoverProtocolOf: MARK }));
+      await seedPersonalFile(env, 'mark-held', CITIZEN_UID, { handoverProtocolOf: MARK });
+      await assertFails(citizenDb().collection(COLLECTION).doc('mark-held').update({ handoverProtocolOf: null }));
+      await assertSucceeds(citizenDb().collection(COLLECTION).doc('mark-held').update({ description: 'το πρωτόκολλο' }));
+    });
+
     it('✅ το παραδομένο αντίγραφο είναι ΔΙΚΟ του: το διαβάζει, το βρίσκει στη λίστα, γράφει σημείωση, το σβήνει', async () => {
       await seedPersonalFile(env, DOC_ID, CITIZEN_UID, { handoverOrigin: ORIGIN });
       const ref = citizenDb().collection(COLLECTION).doc(DOC_ID);

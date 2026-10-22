@@ -548,6 +548,26 @@ describe('files.rules — tenant_state_machine pattern', () => {
     });
   });
 
+  // --- ADR-916 Φ-Γ2 Σ4 — το ΣΗΜΑΔΙ ΠΡΩΤΟΚΟΛΛΟΥ δεν γράφεται από πελάτη -----------------------------------------------
+  //
+  // Ίδιος φρουρός (`handoverOriginKeys`), δεύτερο κλειδί. 🔴 Δύο κατευθύνσεις κινδύνου: πελάτης που το ΠΡΟΣΘΕΤΕΙ κάνει δικό
+  // του PDF να μοιάζει με σφραγισμένο Πρωτόκολλο· πελάτης που το ΑΦΑΙΡΕΙ από το γνήσιο το κάνει παραδοτέο ⇒ μπαίνει στο
+  // καθολικό ⇒ νέο αποτύπωμα ⇒ νέα αναθεώρηση ⇒ βρόχος αναθεωρήσεων.
+  describe('handover protocol mark freeze — το σημάδι Πρωτοκόλλου το γράφει μόνο ο διακομιστής (ADR-916 Φ-Γ2 Σ4)', () => {
+    const MARK = { handoverProtocolOf: { protocolId: 'phpr_seed_0001', handoverId: 'phov_seed_0001', revision: 1 } };
+    const fileDoc = (docId: string) =>
+      getContext(env, 'same_tenant_admin').firestore().collection('files').doc(docId);
+
+    it.each(UPDATE_LEGS)('⛔ σκέλος $leg: προσθήκη/αφαίρεση σημαδιού ⇒ ΑΡΝΗΣΗ · το σκέτο φορτίο ⇒ ΕΠΙΤΡΕΠΕΤΑΙ', async ({ leg, seed, base }) => {
+      const index = UPDATE_LEGS.findIndex((l) => l.leg === leg);
+      await seedFile(env, `mark-add-${index}`, { companyId: SAME_TENANT_COMPANY_ID, overrides: { ...seed } });
+      await seedFile(env, `mark-change-${index}`, { companyId: SAME_TENANT_COMPANY_ID, overrides: { ...seed, ...MARK } });
+      await expectDeny(fileDoc(`mark-add-${index}`).update({ ...base, ...MARK }));
+      await expectDeny(fileDoc(`mark-change-${index}`).update({ ...base, handoverProtocolOf: null }));
+      await expectAllow(fileDoc(`mark-change-${index}`).update(base));
+    });
+  });
+
   describe('document facts freeze — τα γεγονότα εγγράφου τα γράφει μόνο ο γραφέας του διακομιστή (ADR-915 Φ3)', () => {
     const ADMIN_UID = PERSONA_CLAIMS.same_tenant_admin.uid;
     const facts = (issuedOn: string) => ({
