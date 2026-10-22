@@ -8,13 +8,17 @@
  *
  * 🔑 Τα κουμπιά λένε «Αποθηκεύεται…» **μόνο** στο (ακίνητο, είδος) που στέλνεται· ο φρουρός του hook αγνοεί δεύτερη
  *    αποστολή όσο η πρώτη είναι σε πτήση.
+ * ♿ **Η εστίαση δεν πέφτει ποτέ στο `<body>`** (WCAG 2.4.3, μετρημένο στον browser §37.6): σε πτήση `aria-disabled`, όχι
+ *    `disabled` — ο Chrome πετά την εστίαση από στοιχείο που απενεργοποιείται· και αφού η πράξη **αντικαταστήσει** το
+ *    κουμπί, η εστίαση πάει στο νέο («Αναίρεση» · «Επιβεβαίωση» · πίσω στο «Δεν ισχύει»). Μόνο αν χάθηκε — ποτέ κλοπή.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { focusFirstWithin } from '@/lib/a11y/focus-first';
 import type { UpkeepItem } from '@/lib/document-validity/property-upkeep';
 import type { UpkeepDeclarationBody } from '@/lib/document-validity/upkeep-declaration-request';
 import { CONVEYANCE_NS, LEGALITY_NS, REGISTRY_NS } from '@/components/document-registry/document-registry-labels';
@@ -32,28 +36,64 @@ export interface UpkeepDecisionProps {
   readonly onSubmit: (body: UpkeepDeclarationBody) => Promise<boolean>;
 }
 
+/** Πού επιστρέφει η εστίαση όταν η πράξη αντικαταστήσει το κουμπί που την είχε. */
+type FocusReturn = 'first' | 'exempt';
+
+/** Η εστίαση χάθηκε (στο `<body>`) ή είναι ακόμη εδώ — αλλιώς ο άνθρωπος πήγε αλλού και δεν τον τραβάμε πίσω. */
+function focusIsOurs(root: HTMLElement | null): boolean {
+  const active = document.activeElement;
+  return active === null || active === document.body || (root?.contains(active) ?? false);
+}
+
+/** Μόλις η πράξη τελειώσει (όχι σε πτήση, όχι μέσα στη φόρμα), η εστίαση πάει εκεί που ζήτησε το `returnTo`. */
+function useFocusReturn(settled: boolean, declaration: UpkeepItem['declaration']) {
+  const navRef = useRef<HTMLElement>(null);
+  const exemptRef = useRef<HTMLButtonElement>(null);
+  const pending = useRef<FocusReturn | null>(null);
+  useEffect(() => {
+    const target = pending.current;
+    if (target === null || !settled) return;
+    pending.current = null;
+    if (!focusIsOurs(navRef.current)) return;
+    if (target === 'exempt' && exemptRef.current !== null) exemptRef.current.focus({ preventScroll: true });
+    else focusFirstWithin(navRef.current);
+  }, [settled, declaration]);
+  const returnTo = (target: FocusReturn): void => {
+    pending.current = target;
+  };
+  return { navRef, exemptRef, returnTo };
+}
+
 /** Χωρίς απόφαση: «Επιβεβαίωση» · «Δεν ισχύει». Με απόφαση: «Αναίρεση» (γυρίζει η πρόταση — κι αυτό με ίχνος). */
 export function RegistryUpkeepDecision({ item, busy, onSubmit }: UpkeepDecisionProps): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS, CONVEYANCE_NS, LEGALITY_NS]);
   const [exempting, setExempting] = useState(false);
-  const send = (decision: UpkeepDeclarationBody['decision']): Promise<boolean> =>
-    onSubmit({ propertyId: item.propertyId, documentKind: item.documentKind, decision, exemptionReason: null });
-  if (exempting) return <UpkeepExemptForm item={item} busy={busy} onSubmit={onSubmit} onCancel={() => setExempting(false)} />;
+  const { navRef, exemptRef, returnTo } = useFocusReturn(!busy && !exempting, item.declaration);
+  const send = (decision: UpkeepDeclarationBody['decision']): void => {
+    if (busy) return;
+    returnTo('first');
+    void onSubmit({ propertyId: item.propertyId, documentKind: item.documentKind, decision, exemptionReason: null });
+  };
+  const closeForm = (): void => {
+    returnTo('exempt');
+    setExempting(false);
+  };
+  if (exempting) return <UpkeepExemptForm item={item} busy={busy} onSubmit={onSubmit} onCancel={closeForm} />;
   if (item.declaration !== null) {
     return (
-      <nav className="flex flex-wrap gap-2">
-        <Button type="button" size="sm" variant="secondary" onClick={() => send(null)} disabled={busy}>
+      <nav ref={navRef} className="flex flex-wrap gap-2">
+        <Button type="button" size="sm" variant="secondary" onClick={() => send(null)} aria-disabled={busy}>
           {t(busy ? UPKEEP_KEYS.saving : UPKEEP_KEYS.reask)}
         </Button>
       </nav>
     );
   }
   return (
-    <nav className="flex flex-wrap gap-2">
-      <Button type="button" size="sm" onClick={() => send('required')} disabled={busy}>
+    <nav ref={navRef} className="flex flex-wrap gap-2">
+      <Button type="button" size="sm" onClick={() => send('required')} aria-disabled={busy}>
         {t(busy ? UPKEEP_KEYS.saving : UPKEEP_KEYS.confirm)}
       </Button>
-      <Button type="button" size="sm" variant="secondary" onClick={() => setExempting(true)} disabled={busy}>
+      <Button ref={exemptRef} type="button" size="sm" variant="secondary" onClick={() => !busy && setExempting(true)} aria-disabled={busy}>
         {t(UPKEEP_KEYS.exempt)}
       </Button>
     </nav>

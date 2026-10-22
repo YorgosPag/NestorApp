@@ -13,6 +13,7 @@
 
 import React from 'react';
 
+import { TOUCH_TARGET_MIN } from '@/design-system/touch-target';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { mandateDetailHref } from '@/lib/mandate/mandate-routes';
 import { ENTITY_ROUTES } from '@/lib/routes/entityRoutes';
@@ -30,7 +31,8 @@ interface RegistryPropertyValueProps {
   readonly names: Pick<DocumentRegistryResponse, 'properties'>;
 }
 
-const LINK = 'underline underline-offset-4';
+// WCAG 2.5.8: όνομα σε δύο γραμμές + «Έγγραφα ακινήτου» από κάτω = στόχοι που εφάπτονται (μετρημένο 390 px, §37.6).
+const LINK = `${TOUCH_TARGET_MIN} underline underline-offset-4`;
 
 /** Το `<dd>` της ετικέτας «Ακίνητο»: όνομα με σύνδεσμο + ο δρόμος προς τα έγγραφά του. */
 export function RegistryPropertyValue({ propertyId, names }: RegistryPropertyValueProps): React.ReactElement {
