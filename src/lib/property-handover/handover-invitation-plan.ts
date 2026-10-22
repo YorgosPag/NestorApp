@@ -22,6 +22,7 @@
 
 import {
   HANDOVER_INVITATION_DELIVERY_CAP,
+  isHandoverInvitationExpired,
   isHandoverInvitationReminderDue,
 } from '@/config/property-handover-invitation-policy';
 import type { PropertyHandover, PropertyHandoverInvitationOccasion } from '@/types/property-handover';
@@ -77,7 +78,7 @@ export type HandoverInvitationFollowUp = 'none' | 'redeliver' | 'remind';
 export function handoverInvitationFollowUpOf(handover: PropertyHandover, nowValue: string): HandoverInvitationFollowUp {
   const link = handover.invitation;
   if (handover.recipient !== null || handover.lifecycle === 'cancelled' || link === null || link.status !== 'issued') return 'none';
-  if (link.declinedAt !== null || Date.parse(link.expiresAt) <= Date.parse(nowValue)) return 'none';
+  if (link.declinedAt !== null || isHandoverInvitationExpired(link.expiresAt, nowValue)) return 'none';
   if (link.deliveryAttempts >= HANDOVER_INVITATION_DELIVERY_CAP) return 'none';
   // Μια υπενθύμιση που ο πάροχος δεν δέχτηκε ξαναδοκιμάζεται **ως υπενθύμιση** — ποτέ δεύτερη «πρώτη» πρόσκληση.
   const reminderDue = link.remindedAt === null && isHandoverInvitationReminderDue(link.issuedAt, nowValue);

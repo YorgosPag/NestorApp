@@ -932,6 +932,8 @@ export const API_ROUTES = {
     FLOORPLAN: (propertyId: string) => `/api/properties/${propertyId}/floorplan` as const,
     /** ADR-845 §7.17 Α5β — «συμφωνεί η δημόσια αγγελία με το τρέχον υλικό;» (`GET`) · ενημέρωση τώρα (`POST`). */
     LISTING_MEDIA: (propertyId: string) => `/api/properties/${propertyId}/listing-media` as const,
+    /** ADR-916 §5.5 · §5.15 — η καρτέλα «Παράδοση»: παραδόσεις με την κρίση τους + αρχεία κριμένα (`GET`). */
+    HANDOVER: (propertyId: string) => `/api/properties/${encodeURIComponent(propertyId)}/handover` as const,
     TRASH: '/api/properties/trash',
     /** ADR-329 §3.9 — λίστα αρχείου (ίδιες γραμμές με τον κάδο, άλλη κατάσταση) */
     ARCHIVED: '/api/properties/archived',

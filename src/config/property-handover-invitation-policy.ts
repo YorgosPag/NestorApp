@@ -30,6 +30,23 @@ export function handoverInvitationExpiryMs(nowValue: string): number {
   return Date.parse(nowValue) + HANDOVER_INVITATION_LIFETIME_DAYS * DAY_MS;
 }
 
+/**
+ * Φ-Δ — «**λήγει σύντομα**»: σήμα στην καρτέλα «Παράδοση» όταν απομένουν τόσες ημέρες ή λιγότερες. Ίδιο παράθυρο με το
+ * «Expiring Soon» του DocuSign Manage (6 ημέρες) — αρκετό για ένα τηλεφώνημα πριν πεθάνει ο σύνδεσμος.
+ */
+const HANDOVER_INVITATION_EXPIRING_SOON_DAYS = 6;
+
+/** Ζει ακόμη; — η **μία** σύγκριση λήξης για κρίσεις και όψεις. */
+export function isHandoverInvitationExpired(expiresAt: string, nowValue: string): boolean {
+  return Date.parse(expiresAt) <= Date.parse(nowValue);
+}
+
+/** Ζωντανή, αλλά μέσα στο παράθυρο «λήγει σύντομα». */
+export function isHandoverInvitationExpiringSoon(expiresAt: string, nowValue: string): boolean {
+  return !isHandoverInvitationExpired(expiresAt, nowValue)
+    && Date.parse(expiresAt) - Date.parse(nowValue) <= HANDOVER_INVITATION_EXPIRING_SOON_DAYS * DAY_MS;
+}
+
 /** Οφείλεται υπενθύμιση; — από τη στιγμή της **έκδοσης**, όχι της τελευταίας αποστολής. */
 export function isHandoverInvitationReminderDue(issuedAt: string, nowValue: string): boolean {
   return Date.parse(issuedAt) + HANDOVER_INVITATION_REMIND_AFTER_DAYS * DAY_MS <= Date.parse(nowValue);

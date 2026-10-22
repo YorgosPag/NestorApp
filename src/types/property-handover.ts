@@ -184,9 +184,81 @@ export interface PropertyHandoverPreviewFile {
   readonly entityId: string;
 }
 
+// =============================================================================
+// Φ-Δ — Η ΟΨΗ ΤΟΥ ΓΡΑΦΕΙΟΥ: «ποιος οφείλει την επόμενη κίνηση, και γιατί;» (ADR-916 §5.15)
+// =============================================================================
+
+/**
+ * **Ποιος κινείται τώρα** — ο άξονας που λείπει από τις λίστες κατάστασης (DocuSign «Action Required / Waiting for Others»
+ * είναι **φίλτρα**· εδώ είναι **κρίση**, η ίδια για την καρτέλα, τη γκαλερί και κάθε μελλοντική λίστα).
+ * - `office` — αποφασίζει το γραφείο (email που λείπει · άρνηση · λήξη · γραμμή χωρίς απόδειξη · ακυρωμένη πώληση)
+ * - `buyer` — περιμένουμε την απάντηση του αγοραστή
+ * - `sale` — περιμένουμε την ολοκλήρωση της πώλησης (οριστικό συμβόλαιο)
+ * - `system` — η μηχανή συνεχίζει μόνη της (αποστολή · αντιγραφή · σφράγιση) ή περιμένει ρύθμιση πλατφόρμας
+ * - `none` — τίποτα δεν οφείλεται (σφραγίστηκε · ακυρώθηκε)
+ */
+export const HANDOVER_OFFICE_MOVES = ['office', 'buyer', 'sale', 'system', 'none'] as const;
+
+export type HandoverOfficeMove = (typeof HANDOVER_OFFICE_MOVES)[number];
+
+/** **Γιατί** — ένας λόγος ανά παράδοση, με σειρά προτεραιότητας στην κρίση (`handoverOfficeStatusOf`). */
+export const HANDOVER_OFFICE_REASONS = [
+  'cancelled',
+  'sale-reverted',
+  'invitation-not-issued',
+  'no-address',
+  'invitation-undeliverable',
+  'invitation-retrying',
+  'declined',
+  'invitation-expired',
+  'awaiting-buyer',
+  'awaiting-completion',
+  'delivery-queued',
+  'delivering',
+  'unverifiable-rows',
+  'digest-pending',
+  'awaiting-seal-configuration',
+  'protocol-due',
+  'sealed',
+] as const;
+
+export type HandoverOfficeReason = (typeof HANDOVER_OFFICE_REASONS)[number];
+
+/** Σήματα που **συνυπάρχουν** με τον λόγο — δεν αλλάζουν ποιος κινείται, αλλά ο άνθρωπος πρέπει να τα δει. */
+export const HANDOVER_OFFICE_SIGNALS = ['invitation-expiring', 'files-awaiting-review'] as const;
+
+export type HandoverOfficeSignal = (typeof HANDOVER_OFFICE_SIGNALS)[number];
+
+/** Τα βήματα της παράδοσης — **ανεξάρτητα**: η ολοκλήρωση μπορεί να προηγηθεί της αποδοχής (πρόσκληση «completion»). */
+export const HANDOVER_OFFICE_STEPS = ['invitation', 'acceptance', 'completion', 'files', 'protocol'] as const;
+
+export type HandoverOfficeStep = (typeof HANDOVER_OFFICE_STEPS)[number];
+
+export const HANDOVER_OFFICE_STEP_STATES = ['done', 'current', 'blocked', 'pending'] as const;
+
+export type HandoverOfficeStepState = (typeof HANDOVER_OFFICE_STEP_STATES)[number];
+
+/** Η κρίση για **μία** παράδοση. */
+export interface HandoverOfficeStatus {
+  readonly move: HandoverOfficeMove;
+  readonly reason: HandoverOfficeReason;
+  readonly signals: readonly HandoverOfficeSignal[];
+  readonly steps: Readonly<Record<HandoverOfficeStep, HandoverOfficeStepState>>;
+}
+
+/** Μία παράδοση στην καρτέλα του γραφείου — η αποθηκευμένη, το όνομα του αγοραστή (μόνο όνομα) και η κρίση. */
+export interface PropertyHandoverOfficeEntry {
+  readonly handover: PropertyHandover;
+  /** Ονοματεπώνυμο της επαφής του **ίδιου** μισθωτή — ποτέ email · τηλέφωνο · ΑΦΜ. `null` ⇒ η επαφή δεν διαβάζεται. */
+  readonly recipientName: string | null;
+  readonly status: HandoverOfficeStatus;
+}
+
 /** Η απάντηση της πόρτας προεπισκόπησης — ό,τι δεν είναι επιλέξιμο (κάδος · πρόχειρο · παλιά έκδοση) λείπει. */
 export interface PropertyHandoverPreview {
-  readonly handovers: readonly PropertyHandover[];
+  readonly handovers: readonly PropertyHandoverOfficeEntry[];
+  /** Έχει ρυθμιστεί ο πάροχος σφραγίδας; — **μόνο** η απάντηση, ποτέ τα ονόματα των μεταβλητών που λείπουν. */
+  readonly seal: { readonly configured: boolean };
   readonly files: {
     readonly deliver: readonly PropertyHandoverPreviewFile[];
     /** Χρειάζεται απόφαση γραφείου — **ούτε** φεύγει αυτόματα **ούτε** χάνεται σιωπηλά. */
