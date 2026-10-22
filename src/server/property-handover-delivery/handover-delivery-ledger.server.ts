@@ -19,6 +19,7 @@ import type { DocumentReference, Firestore as AdminFirestore, Transaction } from
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { HANDOVER_DELIVERY_REVISION_CHAIN_LIMIT } from '@/config/property-handover-delivery-policy';
 import { nowISO } from '@/lib/date-local';
+import { isSha256Hex } from '@/lib/hash/sha256';
 import type { HandoverDeliveredRow } from '@/lib/property-handover/handover-delivery-plan';
 import { handoverDeliveryIdOf } from '@/lib/property-handover/property-handover-id';
 import type { PropertyHandover } from '@/types/property-handover';
@@ -49,8 +50,7 @@ export interface HandoverLedgerProof extends HandoverDeliveredRow {
 }
 
 const text = (value: unknown): string | null => (typeof value === 'string' && value !== '' ? value : null);
-const SHA256_HEX = /^[0-9a-f]{64}$/;
-const sha256Text = (value: unknown): string | null => (typeof value === 'string' && SHA256_HEX.test(value) ? value : null);
+const sha256Text = (value: unknown): string | null => (isSha256Hex(value) ? value : null);
 
 /** Πεδίο προς πεδίο — μια αλλοιωμένη γραμμή **δεν** μετρά ως παράδοση (ο εκτελεστής θα ξαναδεί το αντίγραφο). */
 function deliveredRowOf(raw: Record<string, unknown>): HandoverLedgerProof | null {

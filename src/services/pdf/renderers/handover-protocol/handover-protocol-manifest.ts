@@ -25,15 +25,14 @@ import {
 } from 'pdf-lib';
 
 import { HANDOVER_DELIVERY_DIGEST_SCHEME } from '@/lib/property-handover/handover-delivery-plan';
+// Ο αναγνώστης (Σ6) κατέχει την ετικέτα: γραφέας και αναγνώστης δεν μπορούν να διαφωνήσουν στο σχήμα.
+import { HANDOVER_PROTOCOL_MANIFEST_SCHEME } from '@/lib/property-handover/handover-protocol-manifest-parse';
 import { HANDOVER_PROTOCOL_LEGAL_DOCUMENT } from '@/lib/property-handover/handover-protocol-terms';
 
 import type { HandoverProtocolView } from './handover-protocol-view';
 
 /** Το όνομα του συνημμένου — σταθερό: ο τρίτος το ψάχνει με αυτό. */
 export const HANDOVER_PROTOCOL_MANIFEST_NAME = 'manifest.json';
-
-/** Ετικέτα σχήματος του manifest — αλλαγή μορφής ⇒ νέα ετικέτα (ίδια αρχή με το αποτύπωμα). */
-export const HANDOVER_PROTOCOL_MANIFEST_SCHEME = 'nestor.handover-protocol-manifest.v1';
 
 const UTF8 = new TextEncoder();
 

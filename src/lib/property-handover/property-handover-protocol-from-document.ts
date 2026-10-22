@@ -9,13 +9,13 @@
  * **Layering**: leaf — καθαρή συνάρτηση, κανένα Firestore SDK.
  */
 
+import { isSha256Hex } from '@/lib/hash/sha256';
 import type { PropertyHandoverProtocol } from '@/types/property-handover-protocol';
 
 import { protocolPointerOf } from './property-handover-from-document';
 
 const nonEmptyString = (value: unknown): value is string => typeof value === 'string' && value.trim() !== '';
 const isCount = (value: unknown): value is number => typeof value === 'number' && Number.isInteger(value) && value >= 0;
-const isSha256Hex = (value: unknown): value is string => typeof value === 'string' && /^[0-9a-f]{64}$/.test(value);
 
 function legalTextOf(raw: unknown): PropertyHandoverProtocol['legalText'] | null {
   if (typeof raw !== 'object' || raw === null) return null;

@@ -20,6 +20,7 @@ import { createHash } from 'node:crypto';
 import { ENTITY_TYPES, FILE_CATEGORIES, FILE_DOMAINS } from '@/config/domain-constants';
 import type { FileStoragePlacement } from '@/lib/files/file-storage-placement';
 import { placementForNewFile } from '@/lib/files/new-file-placement';
+import { parseHandoverProtocolManifest, type HandoverProtocolManifest } from '@/lib/property-handover/handover-protocol-manifest-parse';
 import { handoverProtocolFileIdOf } from '@/lib/property-handover/property-handover-id';
 import { verifyPdfSeal } from '@/server/pdf-seal/verify-pdf-seal';
 import { fileStorageBucket } from '@/server/files/file-record-bucket';
@@ -90,25 +91,23 @@ function companyRecordOf(handover: PropertyHandover, view: HandoverProtocolView)
 
 const sha256Of = (bytes: Uint8Array): string => createHash('sha256').update(bytes).digest('hex');
 
-interface AdoptableManifest {
-  readonly protocol?: { readonly id?: unknown; readonly revision?: unknown; readonly issuedAt?: unknown; readonly supersedes?: { readonly id?: unknown } | null };
-  readonly delivery?: { readonly digest?: unknown };
-}
-
 /** Περιγράφει το manifest **αυτό** το πρωτόκολλο; — ταυτότητα · αναθεώρηση · αντικατάσταση · αποτύπωμα. */
-function describesProtocol(manifest: AdoptableManifest, view: HandoverProtocolView): manifest is AdoptableManifest & { readonly protocol: { readonly issuedAt: string } } {
+function describesProtocol(manifest: HandoverProtocolManifest, view: HandoverProtocolView): boolean {
   const { protocol, delivery } = manifest;
-  return protocol?.id === view.protocolId && protocol.revision === view.revision && typeof protocol.issuedAt === 'string'
-    && (protocol.supersedes?.id ?? null) === (view.supersedes?.protocolId ?? null) && delivery?.digest === view.ledgerDigest;
+  return protocol.id === view.protocolId && protocol.revision === view.revision
+    && (protocol.supersedes?.id ?? null) === (view.supersedes?.protocolId ?? null) && delivery.digest === view.ledgerDigest;
 }
 
-/** **Υιοθέτηση** υπάρχοντος αντικειμένου — μόνο γνήσια σφραγισμένο, που περιγράφει **αυτό** το πρωτόκολλο. */
+/**
+ * **Υιοθέτηση** υπάρχοντος αντικειμένου — μόνο γνήσια σφραγισμένο, που περιγράφει **αυτό** το πρωτόκολλο. Ο αναγνώστης
+ * είναι ο ΕΝΑΣ της πόρτας επαλήθευσης (Σ6): άκυρο JSON ⇒ `null`, ποτέ εξαίρεση μέσα στον εκτελεστή.
+ */
 async function adopt(file: File, view: HandoverProtocolView): Promise<SealedHandoverProtocol | null> {
   const pdf = await readObjectBytes(file);
   if ((await verifyPdfSeal(pdf)).kind !== 'valid') return null;
   const text = await readHandoverProtocolManifest(pdf);
-  const manifest: unknown = text === null ? null : JSON.parse(text);
-  if (typeof manifest !== 'object' || manifest === null || !describesProtocol(manifest, view)) return null;
+  const manifest = text === null ? null : parseHandoverProtocolManifest(text);
+  if (manifest === null || !describesProtocol(manifest, view)) return null;
   return { pdf, sha256: sha256Of(pdf), view: { ...view, issuedAt: manifest.protocol.issuedAt } };
 }
 

@@ -50,6 +50,15 @@ export function bytesToHex(bytes: Uint8Array): string {
 }
 
 /**
+ * **Το σχήμα ενός SHA-256 hex** — ακριβώς 64 lowercase hex, όπως τα παράγει το {@link sha256Hex}. Ο ΕΝΑΣ φρουρός για
+ * κάθε σύνορο που δέχεται αποτύπωμα απ' έξω (έγγραφο Firestore · manifest · παράμετρος διαδρομής). Κεφαλαία ⇒ `false`:
+ * δύο ορθογραφίες του ίδιου αποτυπώματος θα σύγκριναν άνισες.
+ */
+export function isSha256Hex(value: unknown): value is string {
+  return typeof value === 'string' && /^[0-9a-f]{64}$/.test(value);
+}
+
+/**
  * SHA-256 των bytes → 64 χαρακτήρες lowercase hex.
  *
  * Δέχεται **οποιοδήποτε** `BufferSource`. Ένα `Uint8Array` μπορεί να είναι *προβολή* πάνω
