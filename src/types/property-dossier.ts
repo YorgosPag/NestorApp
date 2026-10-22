@@ -27,6 +27,7 @@
 
 import type { PropertyTypeCanonical } from '@/constants/property-types';
 import type { PropertyHandoverFileDeliverySummary, PropertyHandoverLifecycle } from '@/types/property-handover';
+import type { PropertyHandoverProtocolSummary } from '@/types/property-handover-protocol';
 
 // =============================================================================
 // 1. ΚΥΚΛΟΣ ΖΩΗΣ
@@ -73,6 +74,11 @@ export interface PropertyDossierHandoverOrigin {
    * τη γράφει ο ένας γραφέας της παράδοσης. `null` ⇒ δεν έχει ξεκινήσει.
    */
   readonly fileDelivery: PropertyHandoverFileDeliverySummary | null;
+  /**
+   * Φ-Γ2 Σ4 — **προβολή** του τελευταίου σφραγισμένου Πρωτοκόλλου παράδοσης, μόνο στον **κύριο** φάκελο· τη γράφει ο
+   * γραφέας του πρωτοκόλλου στη συναλλαγή της έκδοσης. `null` ⇒ δεν εκδόθηκε ακόμη.
+   */
+  readonly protocol: PropertyHandoverProtocolSummary | null;
   /**
    * Φ-Γ1 · Δ4 — φάκελος **παρακολουθήματος** (θέση στάθμευσης · αποθήκη): ο κύριος φάκελος της ίδιας παράδοσης.
    * `null` ⇒ αυτός **είναι** ο κύριος. Χωριστός φάκελος, γιατί μεταπωλείται χωριστά (χωριστός ΚΑΕΚ).

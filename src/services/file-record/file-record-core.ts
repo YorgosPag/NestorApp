@@ -247,6 +247,10 @@ export function buildPendingFileRecordData(
   if (input.handoverOrigin !== undefined) {
     recordBase.handoverOrigin = input.handoverOrigin;
   }
+  // ADR-916 Φ-Γ2 Σ4 — μόνο στα αντίτυπα του Πρωτοκόλλου· η απουσία σημαίνει «δεν είναι Πρωτόκολλο».
+  if (input.handoverProtocolOf !== undefined) {
+    recordBase.handoverProtocolOf = input.handoverProtocolOf;
+  }
 
   return {
     fileId,

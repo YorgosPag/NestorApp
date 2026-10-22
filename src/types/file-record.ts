@@ -19,7 +19,7 @@
 import type { FileStoragePlacement } from '@/lib/files/file-storage-placement';
 import type { ImageDimensions } from '@/lib/images/image-dimensions';
 import type { DocumentFacts } from '@/lib/document-validity/document-facts';
-import type { FileHandoverOrigin } from '@/lib/property-handover/file-handover-origin';
+import type { FileHandoverOrigin, FileHandoverProtocolOf } from '@/lib/property-handover/file-handover-origin';
 import type {
   EntityType,
   FileDomain,
@@ -443,6 +443,13 @@ export interface FileRecord {
    * (`handoverOriginUnchanged`). Διαβάζεται **μόνο** μέσω `readFileHandoverOrigin`.
    */
   handoverOrigin?: FileHandoverOrigin;
+
+  /**
+   * **Το σημάδι Πρωτοκόλλου παράδοσης** (ADR-916 Φ-Γ2 Σ4) — μόνο στα δύο αντίτυπα του σφραγισμένου PDF. ⛔ Γράφεται
+   * **μόνο** στη γέννηση από τον γραφέα του πρωτοκόλλου (ίδιος φρουρός κανόνα με το `handoverOrigin`). Διαβάζεται
+   * **μόνο** μέσω `readFileHandoverProtocolOf`. Κάνει την κρίση παράδοσης να **μην** το ξαναπαραδώσει (βρόχος).
+   */
+  handoverProtocolOf?: FileHandoverProtocolOf;
 
   /**
    * Download URL from Firebase Storage (populated after upload)

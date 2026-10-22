@@ -21,6 +21,8 @@
  * **Layering**: leaf — τύποι, καμία εξάρτηση από Firestore ή React.
  */
 
+import type { PropertyHandoverProtocolPointer } from './property-handover-protocol';
+
 /**
  * - `awaiting-completion` — η πώληση **δεσμεύτηκε** (κράτηση · πώληση)· η παράδοση **οφείλεται** όταν ολοκληρωθεί.
  * - `ready` — η πώληση **ολοκληρώθηκε** (οριστικό συμβόλαιο)· ο φάκελος οφείλεται τώρα. **Κολλώδες**: η
@@ -136,6 +138,12 @@ export interface PropertyHandoverFileDelivery extends PropertyHandoverFileDelive
   readonly completedAt: string | null;
   /** Η αιτία της τελευταίας αποτυχίας **αρχείου** (το επόμενο ξαναδοκιμάζεται). */
   readonly lastError: string | null;
+  /**
+   * Φ-Γ2 Σ4 (Ο13) — γραμμές που **δεν αποδεικνύονται**: ούτε το αντίγραφο ούτε η γενιά-πηγή κρατούν πια τα bytes που
+   * παραδόθηκαν. Όσο > 0 το αποτύπωμα μένει `null` και **κανένα** Πρωτόκολλο δεν εκδίδεται (BagIt: έγκυρο = πλήρες **και**
+   * επαληθευμένο). Ονομασμένο, όχι κείμενο σφάλματος: είναι απόφαση γραφείου (Ο13β), όχι βλάβη που ξαναδοκιμάζεται.
+   */
+  readonly unverifiable: number;
 }
 
 /** Η παράδοση, όπως αποθηκεύεται στο `property_handovers/{phov_*}`. */
@@ -156,6 +164,8 @@ export interface PropertyHandover {
   readonly invitation: PropertyHandoverInvitationLink | null;
   /** Φ-Γ1 — `null` μέχρι την πρώτη εκτέλεση του εκτελεστή. Το «οφείλεται;» το λέει το `fileDeliveryStateOf`. */
   readonly fileDelivery: PropertyHandoverFileDelivery | null;
+  /** Φ-Γ2 Σ4 — το **τελευταίο** σφραγισμένο Πρωτόκολλο· `null` μέχρι το πρώτο. Το γράφει μόνο ο γραφέας του πρωτοκόλλου. */
+  readonly protocol: PropertyHandoverProtocolPointer | null;
   /** ISO — `nowISO()`. */
   readonly createdAt: string;
   readonly updatedAt: string;
