@@ -132,6 +132,20 @@ describe('Γ7 — ολοκληρωμένη πώληση + αποδεκτή πρ�
   });
 });
 
+describe('Γ37 (Σ4) — ο εκτελεστής καλεί τον εκδότη Πρωτοκόλλου ΜΟΝΟ όταν καταλήγει `delivered`', () => {
+  it('διακοπή ⇒ κανένας εκδότης · ολοκλήρωση ⇒ μία κλήση με την ΤΕΛΙΚΗ πρόοδο · δίχτυ χωρίς αλλαγή ⇒ ξανά (επανάληψη σφράγισης)', async () => {
+    const issued: Array<{ readonly state: string | undefined; readonly digest: string | null | undefined }> = [];
+    const issuer = async (h: ReturnType<typeof handover>) => { issued.push({ state: h.fileDelivery?.state, digest: h.fileDelivery?.digest }); };
+    const run = (maxFiles: number) => deliverHandoverFiles(db(), handover(), { maxFiles, deadlineAt: null, maxHashBytes: 1_000_000 }, record, issuer);
+    expect(await run(1)).toMatchObject({ kind: 'delivering' });
+    expect(issued).toEqual([]);
+    expect(await run(50)).toMatchObject({ kind: 'delivered' });
+    expect(issued).toEqual([{ state: 'delivered', digest: handover().fileDelivery?.digest }]);
+    expect(await run(50)).toMatchObject({ kind: 'delivered', copied: 0 });
+    expect(issued).toHaveLength(2);
+  });
+});
+
 describe('Γ8–Γ9 — συνέχιση χωρίς διπλά', () => {
   it('Γ8 — διακοπή μετά από 1 ⇒ `delivering` 1/3 · η επόμενη εκτέλεση ολοκληρώνει · καμία δεύτερη αντιγραφή', async () => {
     expect(await deliver(1)).toMatchObject({ kind: 'delivering', copied: 1 });
@@ -257,6 +271,8 @@ describe('Γ18–Γ22 — Φ-Γ2 Σ2: sha256 ανά παραδομένο αρχ�
     expect(ledgerRow('f_plan')).toMatchObject({ sha256: null, sha256Of: null });
     expect(ledgerRow('f_photo')?.sha256).toBe(shaOf(bytesOf('f_photo')));
     expect(handover().fileDelivery).toMatchObject({ state: 'delivering', digest: null, lastError: expect.stringMatching(/f_plan/) });
+    // Σ4 (Ο13) — ονομασμένο, όχι μόνο κείμενο σφάλματος: η κρίση του Πρωτοκόλλου το διαβάζει ως «απόφαση γραφείου».
+    expect(handover().fileDelivery?.unverifiable).toBe(1);
   });
 
   it('🔴 Γ22 — η γενιά αλλάζει ΑΝΑΜΕΣΑ σε μέτρηση και ανάγνωση (ίδιο crc32c, άλλα bytes) ⇒ ΔΕΝ γράφεται λάθος sha256', async () => {

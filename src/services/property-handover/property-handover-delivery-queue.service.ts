@@ -12,7 +12,7 @@ import 'server-only';
  *    800 φωτογραφίες εργοταξίου δεν καθυστερεί τα υπόλοιπα.
  */
 
-import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
+import type { Firestore as AdminFirestore, QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import {
@@ -23,8 +23,13 @@ import {
 } from '@/config/property-handover-delivery-policy';
 import { HANDOVER_FILE_DELIVERY_QUEUE_STATES } from '@/lib/property-handover/handover-delivery-plan';
 import { propertyHandoverFromDocument } from '@/lib/property-handover/property-handover-from-document';
-import { deliverHandoverFiles, type HandoverFileDeliveryRecorder } from '@/server/property-handover-delivery/handover-delivery.server';
+import {
+  deliverHandoverFiles,
+  type HandoverFileDeliveryRecorder,
+  type HandoverProtocolIssuer,
+} from '@/server/property-handover-delivery/handover-delivery.server';
 
+import { openHandoverProtocolRun } from './property-handover-protocol-write.service';
 import { recordHandoverFileDelivery } from './property-handover-write.service';
 
 export interface PropertyHandoverDeliveryReport {
@@ -38,6 +43,8 @@ export interface PropertyHandoverDeliveryReport {
   readonly failedHandovers: number;
   /** Παραδόσεις που δεν πρόλαβαν πριν την προθεσμία — η επόμενη εκτέλεση (15′) συνεχίζει. */
   readonly deferred: number;
+  /** Φ-Γ2 Σ4 — Πρωτόκολλα που οφείλονταν αλλά περιμένουν ρύθμιση παρόχου σφραγίδας (ADR-918) — ΕΝΑ σήμα, όχι σφάλμα. */
+  readonly protocolsAwaitingSealConfiguration: number;
 }
 
 /** **Μία εκτέλεση της ουράς.** Ποτέ δεν πετά (ο εκτελεστής κρατά κάθε σφάλμα στη δική του παράδοση). */
@@ -50,7 +57,33 @@ export async function runPropertyHandoverDeliveryQueue(adminDb: AdminFirestore, 
     .get();
   const record: HandoverFileDeliveryRecorder = (input) => recordHandoverFileDelivery(adminDb, input);
   const report = { queued: snapshot.size, completed: 0, copied: 0, failedFiles: 0, failedHandovers: 0, deferred: 0 };
-  for (const doc of snapshot.docs) {
+  // Σ4 — **μία** συνεδρία σφράγισης για όλη την εκτέλεση ⇒ ένα σήμα «περιμένει ρύθμιση», όσα κι αν οφείλονταν.
+  const protocols = openHandoverProtocolRun(adminDb);
+  let protocolsAwaitingSealConfiguration = 0;
+  try {
+    await deliverQueued(adminDb, snapshot.docs, { deadlineAt, record, issue: protocols.issue }, report);
+  } finally {
+    protocolsAwaitingSealConfiguration = protocols.finish();
+  }
+  return { ...report, protocolsAwaitingSealConfiguration };
+}
+
+interface QueueRun {
+  readonly deadlineAt: number;
+  readonly record: HandoverFileDeliveryRecorder;
+  readonly issue: HandoverProtocolIssuer;
+}
+
+type MutableReport = Omit<PropertyHandoverDeliveryReport, 'protocolsAwaitingSealConfiguration'>;
+
+async function deliverQueued(
+  adminDb: AdminFirestore,
+  docs: readonly QueryDocumentSnapshot[],
+  run: QueueRun,
+  report: { -readonly [K in keyof MutableReport]: MutableReport[K] },
+): Promise<void> {
+  const { deadlineAt, record } = run;
+  for (const doc of docs) {
     const handover = propertyHandoverFromDocument(doc.data(), doc.id);
     if (handover === null) continue;
     if (Date.now() >= deadlineAt) {
@@ -58,11 +91,10 @@ export async function runPropertyHandoverDeliveryQueue(adminDb: AdminFirestore, 
       continue;
     }
     const budget = { maxFiles: HANDOVER_DELIVERY_CRON_FILE_BUDGET, deadlineAt, maxHashBytes: HANDOVER_DELIVERY_CRON_HASH_BYTE_BUDGET };
-    const outcome = await deliverHandoverFiles(adminDb, handover, budget, record);
+    const outcome = await deliverHandoverFiles(adminDb, handover, budget, record, run.issue);
     report.copied += outcome.copied;
     report.failedFiles += outcome.failed;
     if (outcome.kind === 'delivered') report.completed += 1;
     if (outcome.kind === 'failed') report.failedHandovers += 1;
   }
-  return report;
 }
