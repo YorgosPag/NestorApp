@@ -193,14 +193,25 @@ export function drawProtocolTerms(page: ProtocolPage, y: number): number {
 
 const QR_SIZE = 26;
 
+/** Γραμμές με ετικέτα και, δεξιά, QR — μόνο όταν υπάρχει απόλυτος σύνδεσμος (το ΕΝΑ σχήμα «σύνδεσμος + QR»). */
+function qrReference(page: ProtocolPage, y: number, rows: readonly (readonly [string, string])[], qrPng: string | null): number {
+  const top = ensurePageSpace(page.pdf, y, QR_SIZE + 6, page.layout);
+  if (qrPng !== null) page.pdf.addImage(qrPng, 'PNG', page.width - MARGIN - QR_SIZE, top, QR_SIZE, QR_SIZE);
+  const after = labelled(page, rows, top, qrPng === null ? 0 : QR_SIZE + 3);
+  return Math.max(after, qrPng === null ? after : top + QR_SIZE + 3);
+}
+
 /** **Η επαλήθευση του κειμένου**: έκδοση + αποτύπωμα + σύνδεσμος, και QR μόνο όταν υπάρχει απόλυτος σύνδεσμος. */
 export function drawProtocolTextReference(page: ProtocolPage, y: number, qrPng: string | null): number {
   const { view, wording } = page;
-  const top = ensurePageSpace(page.pdf, y, QR_SIZE + 6, page.layout);
-  if (qrPng !== null) page.pdf.addImage(qrPng, 'PNG', page.width - MARGIN - QR_SIZE, top, QR_SIZE, QR_SIZE);
-  const after = labelled(page, [
+  return qrReference(page, y, [
     [wording.legalDigest, chunk(view.legalText.digest, 39)],
     [wording.legalLink, view.legalText.url ?? view.legalText.path],
-  ], top, qrPng === null ? 0 : QR_SIZE + 3);
-  return Math.max(after, qrPng === null ? after : top + QR_SIZE + 3);
+  ], qrPng);
+}
+
+/** **Η επαλήθευση του πρωτοκόλλου** (Σ6): η δημόσια πόρτα για **αυτόν** τον κωδικό — ο τρίτος σκανάρει το χαρτί. */
+export function drawProtocolVerification(page: ProtocolPage, y: number, qrPng: string | null): number {
+  const { view, wording } = page;
+  return qrReference(page, y, [[wording.verifyLink, view.verification.url ?? view.verification.path]], qrPng);
 }

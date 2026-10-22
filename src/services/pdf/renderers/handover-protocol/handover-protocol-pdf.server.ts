@@ -42,8 +42,9 @@ const failed = (reason: HandoverProtocolPdfFailure, detail: string): HandoverPro
 /** Το ασφράγιστο υλικό: απόδοση + συνημμένο manifest (πριν τη σφράγιση — ό,τι μπει μετά θα την έσπαγε). */
 async function unsealedMaterial(view: HandoverProtocolView, manifest: string): Promise<Uint8Array> {
   const wording = HANDOVER_PROTOCOL_WORDING.el;
-  const qr = view.legalText.url === null ? null : await qrPngDataUrl(view.legalText.url, 'print', QR_WIDTH_PX);
-  const rendered = await renderHandoverProtocolPdf(view, wording, qr);
+  const qrOf = (url: string | null): Promise<string | null> => (url === null ? Promise.resolve(null) : qrPngDataUrl(url, 'print', QR_WIDTH_PX));
+  const [legalText, verification] = await Promise.all([qrOf(view.legalText.url), qrOf(view.verification.url)]);
+  const rendered = await renderHandoverProtocolPdf(view, wording, { legalText, verification });
   return attachHandoverProtocolManifest(rendered, manifest, new Date(view.issuedAt));
 }
 

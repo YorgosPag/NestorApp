@@ -53,6 +53,17 @@ export interface HandoverProtocolLegalText {
   readonly url: string | null;
 }
 
+/**
+ * **Η πόρτα επαλήθευσης αυτού του πρωτοκόλλου** (ADR-916 Φ-Γ2 Σ6) — `/handover-protocol/verify/{protocolId}`. Τυπώνεται
+ * δίπλα στο κείμενο των όρων, **εκτός** manifest (το σχήμα v1 μένει αυτολεξεί).
+ */
+export interface HandoverProtocolVerificationLink {
+  /** Σχετική διαδρομή — πάντα γνωστή. */
+  readonly path: string;
+  /** Απόλυτος σύνδεσμος — `null` όταν η εγκατάσταση δεν ξέρει τη δημόσια διεύθυνσή της (τότε **κανένα** QR). */
+  readonly url: string | null;
+}
+
 export interface HandoverProtocolView {
   readonly protocolId: string;
   readonly revision: number;
@@ -70,6 +81,7 @@ export interface HandoverProtocolView {
   readonly rows: readonly HandoverProtocolRow[];
   readonly totalBytes: number;
   readonly legalText: HandoverProtocolLegalText;
+  readonly verification: HandoverProtocolVerificationLink;
   readonly operator: OperatorStatementView;
 }
 

@@ -50,6 +50,8 @@ export interface HandoverProtocolWording {
   readonly legalHeading: (version: number) => string;
   readonly legalDigest: string;
   readonly legalLink: string;
+  /** ADR-916 Φ-Γ2 Σ6 — ο σύνδεσμος/QR της δημόσιας πόρτας επαλήθευσης. */
+  readonly verifyLink: string;
   readonly operator: {
     readonly vatNumber: string;
     readonly gemiNumber: string;
@@ -97,6 +99,7 @@ export const HANDOVER_PROTOCOL_WORDING: Readonly<Record<HumanLanguage, HandoverP
     legalHeading: (version) => `Όροι του πρωτοκόλλου — έκδοση ${version}`,
     legalDigest: 'Αποτύπωμα κειμένου',
     legalLink: 'Δημόσιο κείμενο της έκδοσης',
+    verifyLink: 'Επαλήθευση αυτού του πρωτοκόλλου',
     operator: { vatNumber: 'ΑΦΜ', gemiNumber: 'ΓΕΜΗ' },
     page: (page, total) => `Σελίδα ${page}/${total}`,
     sealReason: (revision) => `Πρωτόκολλο παράδοσης ψηφιακών αρχείων — αναθεώρηση ${revision}`,
@@ -138,6 +141,7 @@ export const HANDOVER_PROTOCOL_WORDING: Readonly<Record<HumanLanguage, HandoverP
     legalHeading: (version) => `Terms of the protocol — version ${version}`,
     legalDigest: 'Text fingerprint',
     legalLink: 'Public text of this version',
+    verifyLink: 'Verify this protocol',
     operator: { vatNumber: 'VAT No.', gemiNumber: 'G.E.MI.' },
     page: (page, total) => `Page ${page}/${total}`,
     sealReason: (revision) => `Digital file handover protocol — revision ${revision}`,

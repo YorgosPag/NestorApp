@@ -27,6 +27,7 @@ import {
   drawProtocolParties,
   drawProtocolTerms,
   drawProtocolTextReference,
+  drawProtocolVerification,
   type ProtocolPage,
 } from './handover-protocol-pdf-sections';
 import type { HandoverProtocolView } from './handover-protocol-view';
@@ -59,7 +60,15 @@ function stampMetadata(pdf: jsPDF, view: HandoverProtocolView, wording: Handover
   });
 }
 
-function drawBody(page: ProtocolPage, qrPng: string | null): void {
+/** Τα δύο QR (PNG data URL) — `null` ⇒ κανένα QR, μόνο η τυπωμένη διαδρομή. */
+export interface HandoverProtocolQrCodes {
+  readonly legalText: string | null;
+  readonly verification: string | null;
+}
+
+export const NO_HANDOVER_PROTOCOL_QR: HandoverProtocolQrCodes = { legalText: null, verification: null };
+
+function drawBody(page: ProtocolPage, qr: HandoverProtocolQrCodes): void {
   let y = page.layout.marginTop;
   y = drawProtocolHeader(page, y);
   y = drawProtocolParties(page, y);
@@ -67,20 +76,21 @@ function drawBody(page: ProtocolPage, qrPng: string | null): void {
   y = drawProtocolFiles(page, y);
   y = drawProtocolDigest(page, y, HANDOVER_DELIVERY_DIGEST_SCHEME);
   y = drawProtocolTerms(page, y);
-  drawProtocolTextReference(page, y, qrPng);
+  y = drawProtocolTextReference(page, y, qr.legalText);
+  drawProtocolVerification(page, y, qr.verification);
 }
 
 /** **Αποδίδει** την όψη σε PDF — ασφράγιστο υλικό, μόνο για τον παραγωγό του σφραγισμένου. */
 export async function renderHandoverProtocolPdf(
   view: HandoverProtocolView,
   wording: HandoverProtocolWording,
-  qrPng: string | null,
+  qr: HandoverProtocolQrCodes,
 ): Promise<Uint8Array> {
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
   await registerGreekFont(pdf);
   stampMetadata(pdf, view, wording);
   const width = pdf.internal.pageSize.getWidth();
-  drawBody({ pdf, view, wording, layout: LAYOUT, width }, qrPng);
+  drawBody({ pdf, view, wording, layout: LAYOUT, width }, qr);
   addReportPdfFooters(pdf, {
     pageWidth: width,
     pageHeight: LAYOUT.pageHeight,

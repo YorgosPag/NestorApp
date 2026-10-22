@@ -20,6 +20,7 @@ import 'server-only';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { publicUrl } from '@/lib/http/public-origin';
+import { handoverProtocolVerifyHref } from '@/lib/routes/legalRoutes';
 import { operatorStatementOn, type OperatorStatementView } from '@/lib/platform-operator/operator-presentation';
 import { handoverDeliveryDigest } from '@/lib/property-handover/handover-delivery-plan';
 import type { HandoverProtocolPlan } from '@/lib/property-handover/handover-protocol-plan';
@@ -140,8 +141,10 @@ export async function loadHandoverProtocolFacts(
   if (rows === null) return refused('ledger-moved', handover.id);
   if (parties === null) return refused('subject-missing', handover.propertyId);
   if (parties.issuerName === null) return refused('issuer-unnamed', handover.companyId);
+  const verificationPath = handoverProtocolVerifyHref(plan.protocolId);
   const view = handoverProtocolViewOf({
     protocolId: plan.protocolId, revision: plan.revision, issuedAt, ledgerDigest: plan.ledgerDigest, rows,
+    verification: { path: verificationPath, url: publicUrl(verificationPath) },
     supersedes: plan.supersedesProtocolId === null ? null : { protocolId: plan.supersedesProtocolId, revision: plan.revision - 1 },
     ...parties, issuerName: parties.issuerName,
     events: {

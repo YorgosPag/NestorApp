@@ -16,14 +16,18 @@ import { join } from 'path';
 
 import { legalDocumentInForce } from '@/lib/legal/legal-document-versions';
 import { operatorStatementOn } from '@/lib/platform-operator/operator-presentation';
+import { readProtocolLocally } from '@/components/handover-protocol-verify/protocol-local-read';
 import { HANDOVER_DELIVERY_DIGEST_SCHEME, handoverDeliveryDigest } from '@/lib/property-handover/handover-delivery-plan';
+import { parseHandoverProtocolManifest } from '@/lib/property-handover/handover-protocol-manifest-parse';
+import { handoverProtocolVerdictOf, registryAnswerOf } from '@/lib/property-handover/handover-protocol-verification';
+import type { PropertyHandoverProtocol } from '@/types/property-handover-protocol';
 import { openSealSession } from '@/server/pdf-seal/seal-pdf.server';
 import { verifyPdfSeal } from '@/server/pdf-seal/verify-pdf-seal';
 import { makeSigner, syntheticProvider, type SyntheticSigner } from '@/server/pdf-seal/__tests__/synthetic-seal-provider';
 
 import { handoverProtocolManifestOf, readHandoverProtocolManifest } from '../handover-protocol-manifest';
 import { produceHandoverProtocolPdf } from '../handover-protocol-pdf.server';
-import { renderHandoverProtocolPdf } from '../handover-protocol-pdf-renderer';
+import { NO_HANDOVER_PROTOCOL_QR, renderHandoverProtocolPdf } from '../handover-protocol-pdf-renderer';
 import { handoverProtocolViewOf, type HandoverProtocolRow, type HandoverProtocolView } from '../handover-protocol-view';
 import { HANDOVER_PROTOCOL_WORDING } from '../handover-protocol-wording';
 
@@ -62,6 +66,10 @@ async function viewOf(overrides: Partial<HandoverProtocolView> = {}): Promise<Ha
     legalText: {
       version: terms.version.frozen.version, digest: terms.version.digest, text: terms.version.frozen.locales.el,
       path: '/handover-protocol/versions/1', url: 'https://nestorconstruct.gr/handover-protocol/versions/1',
+    },
+    verification: {
+      path: '/handover-protocol/verify/phpr_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
+      url: 'https://nestorconstruct.gr/handover-protocol/verify/phpr_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
     },
     operator: operator.view,
     ...overrides,
@@ -156,6 +164,12 @@ describe('Γ34 — το σφραγισμένο Πρωτόκολλο', () => {
     for (const row of ROWS) expect(flat).toContain(row.sha256);
   });
 
+  it('Σ6: τυπώνει τον σύνδεσμο της πόρτας επαλήθευσης ΑΥΤΟΥ του κωδικού — και το manifest μένει χωρίς αυτόν (σχήμα v1)', async () => {
+    expect(text).toContain(HANDOVER_PROTOCOL_WORDING.el.verifyLink);
+    expect(text.replace(/\s+/g, '')).toContain(view.verification.url ?? 'λείπει');
+    expect(await readHandoverProtocolManifest(sealed.pdf)).not.toContain('/verify');
+  });
+
   it('🔒 GDPR: ΚΑΝΕΝΑ «@» στο κείμενο ή στο manifest — ούτε του φορέα, που ΕΧΕΙ email στο μητρώο του', async () => {
     expect(view.operator.contactEmail).toContain('@'); // μάρτυρας διάκρισης: το email υπάρχει και θα φαινόταν
     expect(text).not.toContain('@');
@@ -170,7 +184,7 @@ function sha256Of(bytes: Uint8Array): string {
 describe('Γ34 — άρνηση και ντετερμινισμός', () => {
   it('ντετερμινισμός: δύο αποδόσεις της ίδιας όψης ⇒ ΙΔΙΑ bytes πριν τη σφράγιση', async () => {
     const view = await viewOf();
-    const [a, b] = await Promise.all([renderHandoverProtocolPdf(view, HANDOVER_PROTOCOL_WORDING.el, null), renderHandoverProtocolPdf(view, HANDOVER_PROTOCOL_WORDING.el, null)]);
+    const [a, b] = await Promise.all([renderHandoverProtocolPdf(view, HANDOVER_PROTOCOL_WORDING.el, NO_HANDOVER_PROTOCOL_QR), renderHandoverProtocolPdf(view, HANDOVER_PROTOCOL_WORDING.el, NO_HANDOVER_PROTOCOL_QR)]);
     expect(sha256Of(a)).toBe(sha256Of(b));
     expect(handoverProtocolManifestOf(view)).toBe(handoverProtocolManifestOf(await viewOf({ rows: [...ROWS].reverse() })));
   }, 30_000);
@@ -188,5 +202,57 @@ describe('Γ34 — άρνηση και ντετερμινισμός', () => {
   it('🔴 πίνακας που δεν δίνει το αποτύπωμα του καθολικού ⇒ digest-mismatch, τίποτα δεν σφραγίζεται', async () => {
     const outcome = await produceHandoverProtocolPdf(await viewOf({ ledgerDigest: 'f'.repeat(64) }), configured());
     expect(outcome).toMatchObject({ kind: 'failed', reason: 'digest-mismatch' });
+  });
+});
+
+/**
+ * Γ41 (Σ6) — **η πόρτα επαλήθευσης διαβάζει το ΠΡΑΓΜΑΤΙΚΑ σφραγισμένο Πρωτόκολλο** όπως ο browser του τρίτου: ο ίδιος
+ * αναγνώστης, το ίδιο Web Crypto, η ίδια κρίση. Γραφέας → αναγνώστης κλείνει εδώ, όχι σε χειρόγραφο fixture.
+ */
+describe('Γ41 — η πόρτα επαλήθευσης πάνω στο σφραγισμένο PDF', () => {
+  let view: HandoverProtocolView;
+  let sealed: Awaited<ReturnType<typeof sealedOf>>;
+
+  beforeAll(async () => {
+    view = await viewOf();
+    sealed = await sealedOf(view);
+  }, 60_000);
+
+  const storedFor = (pdfSha256: string): PropertyHandoverProtocol => ({
+    protocolId: view.protocolId, revision: view.revision, digest: view.ledgerDigest, issuedAt: view.issuedAt,
+    companyFileId: 'file_company', recipientFileId: 'file_recipient', companyId: 'comp_1', propertyId: 'prop_1',
+    handoverId: 'phov_1', recipientUserId: 'user_1', supersedesProtocolId: view.supersedes?.protocolId ?? null,
+    pdfSha256, legalText: { version: view.legalText.version, digest: view.legalText.digest }, rows: view.rows.length, bytes: view.totalBytes,
+  });
+
+  it('ο αναγνώστης της πόρτας = ο γραφέας: manifest αναγνωρίσιμο, πίνακας αυτοσυνεπής, αποτύπωμα αρχείου = του μητρώου', async () => {
+    const reading = await readProtocolLocally(new Blob([Uint8Array.from(sealed.pdf)]));
+    if (reading.kind !== 'readable') throw new Error(`αναμενόταν readable: ${reading.kind}`);
+    expect(reading.pdfSha256).toBe(sealed.sha256);
+    expect(reading.manifest.protocol).toEqual({ id: view.protocolId, revision: 2, supersedes: { id: view.supersedes?.protocolId, revision: 1 }, issuedAt: view.issuedAt });
+    expect(reading.manifest.delivery.digest).toBe(view.ledgerDigest);
+    expect(parseHandoverProtocolManifest(sealed.manifest)).toEqual(reading.manifest);
+  });
+
+  it('καταχωρισμένο + ίδια bytes + τρέχον ⇒ «Επαληθευμένο»', async () => {
+    const reading = await readProtocolLocally(new Blob([Uint8Array.from(sealed.pdf)]));
+    if (reading.kind !== 'readable') throw new Error(reading.kind);
+    const pointer = { ...storedFor(sealed.sha256) };
+    const registry = registryAnswerOf(storedFor(sealed.sha256), pointer, reading.pdfSha256);
+    expect(handoverProtocolVerdictOf(reading, registry, view.protocolId).kind).toBe('verified');
+  });
+
+  it('🔴 ΕΝΑ byte προστεθειμένο (incremental update) ⇒ διαβάζεται ακόμη, αλλά «Δεν είναι το αρχείο που εκδόθηκε»', async () => {
+    const touched = Uint8Array.from([...sealed.pdf, 0x0a]);
+    await expect(verifyPdfSeal(touched)).resolves.toMatchObject({ kind: 'invalid' });
+    const reading = await readProtocolLocally(new Blob([touched]));
+    if (reading.kind !== 'readable') throw new Error(reading.kind);
+    const registry = registryAnswerOf(storedFor(sealed.sha256), storedFor(sealed.sha256), reading.pdfSha256);
+    expect(handoverProtocolVerdictOf(reading, registry, null).kind).toBe('altered');
+  });
+
+  it('🔴 PDF χωρίς manifest (π.χ. σάρωση του χαρτιού) ⇒ no-manifest, καμία ερώτηση στο μητρώο', async () => {
+    const blank = await renderHandoverProtocolPdf(view, HANDOVER_PROTOCOL_WORDING.el, NO_HANDOVER_PROTOCOL_QR);
+    await expect(readProtocolLocally(new Blob([Uint8Array.from(blank)]))).resolves.toEqual({ kind: 'refused', reason: 'no-manifest' });
   });
 });
