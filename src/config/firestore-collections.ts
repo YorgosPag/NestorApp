@@ -142,6 +142,14 @@ export const COLLECTIONS = {
     process.env.NEXT_PUBLIC_PROPERTY_HANDOVER_DELIVERIES_COLLECTION || 'property_handover_deliveries',
 
   /**
+   * 🔏 ADR-916 Φ-Γ2 / ADR-918 — **ΤΟ ΜΗΤΡΩΟ ΠΡΩΤΟΚΟΛΛΩΝ ΠΑΡΑΔΟΣΗΣ** (`phpr_*`): μία εγγραφή ανά αναθεώρηση του
+   * σφραγισμένου Πρωτοκόλλου (αποτύπωμα καθολικού · sha256 του PDF · σφραγίδα · αντικατάσταση). Απέναντί του απαντά η
+   * πόρτα επαλήθευσης. **Μόνο διακομιστής**, και στις δύο πλευρές.
+   */
+  PROPERTY_HANDOVER_PROTOCOLS:
+    process.env.NEXT_PUBLIC_PROPERTY_HANDOVER_PROTOCOLS_COLLECTION || 'property_handover_protocols',
+
+  /**
    * 🧭 ADR-884 Φ0.1–Φ0.2 — **Η ΧΩΡΙΚΗ ΠΕΡΙΗΓΗΣΗ** (`stour_*`, μία ανά ρίζα αγγελίας). **Δύο διαμερίσματα**,
    * όπως τα αρχεία: επιλογή **μόνο** μέσω `SPATIAL_TOUR_COLLECTION[kind]` (`lib/spatial-tour/spatial-tour-custody`).
    * Γράφει **μόνο** ο διακομιστής· ο κάτοχος διαβάζει (ζωντανός επεξεργαστής), κάθε άλλο κοινό από διαδρομές (Φ0.9).

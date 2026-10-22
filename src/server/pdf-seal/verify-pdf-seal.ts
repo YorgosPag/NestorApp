@@ -15,57 +15,30 @@
  * 7. **Αλυσίδα**: προς τις ρίζες του μητρώου (`config/trust/pdf-seal-trust.ts`) — χωριστό πεδίο, ΟΧΙ άκυρο.
  *
  * Εξάρτηση: `pkijs` + `asn1js` (BSD-3-Clause, N.5 ✅) πάνω στο WebCrypto του Node — καμία εγγενής βιβλιοθήκη.
+ * Τα OID/μηχανή/αναλυτές ζουν στο `cms-primitives.ts`, κοινά με τον παραγωγό σφραγίδας (ADR-918).
  */
 
 import 'server-only';
 
-import { createHash, webcrypto } from 'crypto';
+import { createHash } from 'crypto';
 import * as asn1js from 'asn1js';
 import * as pkijs from 'pkijs';
 
 import { PDF_SEAL_TRUST_ANCHORS } from '@/config/trust/pdf-seal-trust';
+import {
+  attributeValue,
+  bytesEqual,
+  certificateDer,
+  CMS_ENGINE as ENGINE,
+  DIGEST_ALGORITHMS as DIGESTS,
+  OID,
+  parseSignedData,
+  sha256Hex,
+} from './cms-primitives';
 import { signedRangesOf } from './pdf-byte-range';
 import type { PdfSealSigner, PdfSealVerdict, PdfSealVerifier } from './pdf-seal.types';
 
-const ENGINE = new pkijs.CryptoEngine({ name: 'node-webcrypto', crypto: webcrypto as unknown as Crypto });
-
-const DIGESTS: Readonly<Record<string, 'sha256' | 'sha384' | 'sha512'>> = {
-  '2.16.840.1.101.3.4.2.1': 'sha256',
-  '2.16.840.1.101.3.4.2.2': 'sha384',
-  '2.16.840.1.101.3.4.2.3': 'sha512',
-};
-
-const OID = {
-  messageDigest: '1.2.840.113549.1.9.4',
-  signingTime: '1.2.840.113549.1.9.5',
-  timeStampToken: '1.2.840.113549.1.9.16.2.14',
-  commonName: '2.5.4.3',
-  organization: '2.5.4.10',
-  organizationIdentifier: '2.5.4.97',
-} as const;
-
 const invalid = (reason: Extract<PdfSealVerdict, { kind: 'invalid' }>['reason']): PdfSealVerdict => ({ kind: 'invalid', reason });
-
-function attributeValue(attrs: pkijs.SignedAndUnsignedAttributes | undefined, oid: string): asn1js.AsnType | null {
-  const found = attrs?.attributes.find((attribute) => attribute.type === oid);
-  return found?.values[0] ?? null;
-}
-
-function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
-  return a.length === b.length && a.every((value, index) => value === b[index]);
-}
-
-function parseSignedData(der: Uint8Array): pkijs.SignedData | null {
-  try {
-    const asn1 = asn1js.fromBER(der);
-    if (asn1.offset === -1) return null;
-    const contentInfo = new pkijs.ContentInfo({ schema: asn1.result });
-    if (contentInfo.contentType !== pkijs.ContentInfo.SIGNED_DATA) return null;
-    return new pkijs.SignedData({ schema: contentInfo.content });
-  } catch {
-    return null;
-  }
-}
 
 function subjectValue(certificate: pkijs.Certificate, oid: string): string | null {
   const entry = certificate.subject.typesAndValues.find((value) => value.type === oid);
@@ -78,7 +51,7 @@ function signerOf(certificate: pkijs.Certificate): PdfSealSigner {
     commonName: subjectValue(certificate, OID.commonName),
     organization: subjectValue(certificate, OID.organization),
     organizationIdentifier: subjectValue(certificate, OID.organizationIdentifier),
-    certificateSha256: createHash('sha256').update(new Uint8Array(certificate.toSchema().toBER(false))).digest('hex'),
+    certificateSha256: sha256Hex(certificateDer(certificate)),
   };
 }
 
@@ -93,7 +66,9 @@ async function timestampOf(signerInfo: pkijs.SignerInfo): Promise<Date | null> {
     const tstInfo = new pkijs.TSTInfo({ schema: asn1js.fromBER(eContent.getValue()).result });
     const signatureValue = signerInfo.signature.valueBlock.valueHexView;
     const imprintOk = await tstInfo.verify({ data: signatureValue.slice().buffer }, ENGINE);
-    const tokenOk = await tokenData.verify({ signer: 0, checkChain: false }, ENGINE);
+    // ⚠️ ADR-918 εύρημα (21/10): για TSTInfo το pkijs ΑΠΑΙΤΕΙ το `data` — χωρίς αυτό ρίχνει, το catch έδινε `null`,
+    // και ΚΑΘΕ γνήσια χρονοσήμανση διαβαζόταν «χωρίς χρονοσήμανση». Αόρατο ως τότε: το fixture δεν είχε TSA.
+    const tokenOk = await tokenData.verify({ signer: 0, checkChain: false, data: signatureValue.slice().buffer }, ENGINE);
     return imprintOk && tokenOk ? tstInfo.genTime : null;
   } catch {
     return null;

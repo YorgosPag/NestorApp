@@ -2,6 +2,7 @@
  * @jest-environment node
  *
  * ADR-900 §3.8 — άγκυρα του ελεγκτή σφραγίδας PDF (PAdES), πάνω σε **συνθετικό** σφραγισμένο PDF.
+ * Από 21/10 το συνθετικό PDF βγαίνει από τον **παραγωγό** ADR-918 (PAdES B-T): η ώρα είναι πλέον η χρονοσήμανση της TSA.
  *
  * Σ1 γνήσιο ⇒ valid · Σ2 αλλαγμένο byte ⇒ digest-mismatch · Σ3 προσθήκη μετά την υπογραφή ⇒ byte-range-incomplete ·
  * Σ4 χωρίς υπογραφή ⇒ no-signature · Σ5 πιστοποιητικό εκτός ισχύος τη στιγμή της υπογραφής ·
@@ -35,7 +36,7 @@ describe('Σ1 — γνήσιο', () => {
       kind: 'valid',
       signer: { organizationIdentifier: ORG_ID, commonName: 'SYNTHETIC SEAL', organization: 'SYNTHETIC ORG' },
       signedAt: NOW.toISOString(),
-      timestamped: false,
+      timestamped: true,
     });
   });
 });
@@ -43,8 +44,9 @@ describe('Σ1 — γνήσιο', () => {
 describe('Σ2 — αλλοίωση', () => {
   it('🔴 ένα byte αλλαγμένο στο υπογεγραμμένο κείμενο ⇒ digest-mismatch', async () => {
     const tampered = sealed.slice();
-    const at = latin1(tampered).indexOf('050681726003');
-    tampered[at] = '9'.charCodeAt(0);
+    // Η κεφαλίδα '%PDF-1.7' είναι μέσα στην πρώτη υπογεγραμμένη περιοχή [0, b).
+    expect(latin1(tampered).startsWith('%PDF-1.7')).toBe(true);
+    tampered[7] = '6'.charCodeAt(0);
     expect(await verifyPdfSeal(tampered)).toEqual({ kind: 'invalid', reason: 'digest-mismatch' });
   });
 });

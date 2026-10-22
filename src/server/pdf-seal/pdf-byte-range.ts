@@ -70,8 +70,18 @@ export function signedRangesOf(pdf: Uint8Array): SignedRanges {
   const length = padded === null ? null : derLength(padded);
   if (padded === null || length === null || length > padded.length) return { kind: 'failed', reason: 'malformed-cms' };
 
-  const signedBytes = new Uint8Array(b + d);
+  return { kind: 'found', signedBytes: joinSignedRanges(pdf, b, c), cms: padded.subarray(0, length) };
+}
+
+/**
+ * Τα bytes που **υπογράφονται**: `[0, b)` + `[c, τέλος)` — το κενό `[b, c)` είναι το `<…>` του `/Contents`.
+ * 🔑 **Ένας** ορισμός για ελεγκτή (ADR-902) **και** παραγωγό (ADR-918): αν ο καθένας ένωνε μόνος του τις περιοχές,
+ * ο παραγωγός θα μπορούσε να υπογράψει κάτι διαφορετικό από αυτό που ελέγχει ο ελεγκτής — και ο αυτοέλεγχος να
+ * «περνά» επειδή κάνουν το **ίδιο** λάθος.
+ */
+export function joinSignedRanges(pdf: Uint8Array, b: number, c: number): Uint8Array {
+  const signedBytes = new Uint8Array(b + (pdf.length - c));
   signedBytes.set(pdf.subarray(0, b), 0);
-  signedBytes.set(pdf.subarray(c, c + d), b);
-  return { kind: 'found', signedBytes, cms: padded.subarray(0, length) };
+  signedBytes.set(pdf.subarray(c), b);
+  return signedBytes;
 }

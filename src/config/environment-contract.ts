@@ -324,4 +324,49 @@ export const ENVIRONMENT_CONTRACT: readonly EnvironmentRequirement[] = [
       '«επαληθευμένη από ΓΕΜΗ», κανένας διακριτικός τίτλος για επιλογή, και κανείς δεν μαθαίνει γιατί.',
     consumer: 'src/services/company-registry/gemi-opendata.client.ts',
   },
+  {
+    name: 'NESTOR_SEAL_CSC_BASE_URL',
+    severity: 'feature',
+    feature: 'Σφράγιση PDF PAdES B-T (ADR-918) — η υπηρεσία CSC v2 του παρόχου (μόνο https://)',
+    consequence:
+      'Κανένα σφραγισμένο έγγραφο (π.χ. Πρωτόκολλο Παράδοσης Ψηφιακού Φακέλου) δεν εκδίδεται: ο αγοραστής δεν λαμβάνει '
+      + 'αποδεικτικό τι του παραδόθηκε. Ποτέ ασφράγιστο στη θέση του — «περιμένει ρύθμιση», ΕΝΑ σήμα ανά εκτέλεση.',
+    consumer: 'src/server/pdf-seal/seal-config.server.ts',
+  },
+  {
+    name: 'NESTOR_SEAL_CSC_CLIENT_ID',
+    severity: 'feature',
+    feature: 'Σφράγιση PDF PAdES B-T (ADR-918) — ο client OAuth2 του λογαριασμού σφράγισης',
+    consequence:
+      'Χωρίς client η υπηρεσία CSC δεν δίνει token: κανένα σφραγισμένο έγγραφο δεν εκδίδεται, ποτέ ασφράγιστο στη θέση '
+      + 'του — «περιμένει ρύθμιση», ΕΝΑ σήμα ανά εκτέλεση.',
+    consumer: 'src/server/pdf-seal/seal-config.server.ts',
+  },
+  {
+    name: 'NESTOR_SEAL_CSC_CLIENT_SECRET',
+    severity: 'feature',
+    feature: 'Σφράγιση PDF PAdES B-T (ADR-918) — το μυστικό του client OAuth2 (ΟΧΙ το κλειδί της σφραγίδας)',
+    consequence:
+      'Χωρίς μυστικό η υπηρεσία CSC δεν δίνει token: κανένα σφραγισμένο έγγραφο δεν εκδίδεται, ποτέ ασφράγιστο στη θέση '
+      + 'του — «περιμένει ρύθμιση», ΕΝΑ σήμα ανά εκτέλεση.',
+    consumer: 'src/server/pdf-seal/seal-config.server.ts',
+  },
+  {
+    name: 'NESTOR_SEAL_CSC_CREDENTIAL_ID',
+    severity: 'feature',
+    feature: 'Σφράγιση PDF PAdES B-T (ADR-918) — το credential της σφραγίδας στον πάροχο',
+    consequence:
+      'Χωρίς credential δεν ξέρουμε ΠΟΙΑ σφραγίδα να ζητήσουμε: κανένα σφραγισμένο έγγραφο δεν εκδίδεται, ποτέ ασφράγιστο '
+      + 'στη θέση του — «περιμένει ρύθμιση», ΕΝΑ σήμα ανά εκτέλεση.',
+    consumer: 'src/server/pdf-seal/seal-config.server.ts',
+  },
+  {
+    name: 'NESTOR_SEAL_TSA_URL',
+    severity: 'feature',
+    feature: 'Σφράγιση PDF PAdES B-T (ADR-918) — η εγκεκριμένη χρονοσήμανση RFC 3161 (μόνο https://)',
+    consequence:
+      'Χωρίς χρονοσήμανση η ώρα της σφραγίδας θα ήταν δήλωση δική μας, όχι μαρτυρία τρίτου: γι\' αυτό ΚΑΝΕΝΑ έγγραφο δεν '
+      + 'εκδίδεται (ποτέ B-B στη θέση του B-T) — «περιμένει ρύθμιση», ΕΝΑ σήμα ανά εκτέλεση.',
+    consumer: 'src/server/pdf-seal/seal-config.server.ts',
+  },
 ] as const;
