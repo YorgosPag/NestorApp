@@ -8,6 +8,7 @@ import type { NavigationCompany } from '@/components/navigation/core/types';
 import { ProjectsList } from './projects-list';
 import { ProjectDetails } from './project-details';
 import { useProjectDraftAddresses } from './draft/useProjectDraftAddresses';
+import { useProjectActiveTab } from './hooks/useProjectActiveTab';
 import type { CreatedProjectFields } from './general-tab/created-project';
 import { DESKTOP_SPLIT, ListDetailsSplit, MobileDetailsSlideIn } from '@/core/layouts';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -33,8 +34,6 @@ interface ProjectViewSwitchProps {
   onSelectProject: (project: Project | null) => void;
   companies: NavigationCompany[];
   viewMode?: ProjectsViewMode;
-  /** Deep-link initial tab — forwarded to ProjectDetails → UniversalTabsRenderer */
-  initialTab?: string;
   onNewProject?: () => void;
   onDeleteProject?: (project: Project) => void;
   /** Start in edit mode (for inline project creation) */
@@ -52,7 +51,7 @@ interface ProjectViewSwitchProps {
 }
 
 export function ProjectViewSwitch({
-  projects, selectedProject, onSelectProject, companies, viewMode = 'list', initialTab, onNewProject, onDeleteProject, startInEditMode, isCreateMode, onProjectCreated, onCancelCreate, onDraftStatusChange, isTrashMode = false }: ProjectViewSwitchProps) {
+  projects, selectedProject, onSelectProject, companies, viewMode = 'list', onNewProject, onDeleteProject, startInEditMode, isCreateMode, onProjectCreated, onCancelCreate, onDraftStatusChange, isTrashMode = false }: ProjectViewSwitchProps) {
   // 🏢 ENTERPRISE: Hooks must be called inside component body
   // 🏢 ENTERPRISE: Centralized spacing tokens
   const spacing = useSpacingTokens();
@@ -73,20 +72,12 @@ export function ProjectViewSwitch({
   // ADR-742: το `ProjectDetails` στήνεται με `key` ανά ταυτότητα έργου (βλ. `detailsIdentity`). Ό,τι
   // πρέπει να ΕΠΙΒΙΩΣΕΙ της αλλαγής ταυτότητας ζει εδώ: το πρόχειρο διευθύνσεων (μεταβιβάζεται από
   // την ψευδο-ταυτότητα στην πραγματική) και η ενεργή καρτέλα (ο άνθρωπος που ξεφυλλίζει έργα στην
-  // «Κτίρια» δεν γυρίζει στη «Γενικά» σε κάθε κλικ).
+  // «Κτίρια» δεν γυρίζει στη «Γενικά» σε κάθε κλικ) — η οποία ζει πλέον στη διεύθυνση (ADR-242 Βήμα 3).
   const draftAddresses = useProjectDraftAddresses(selectedProject?.id);
-  const [activeTab, setActiveTab] = useState(initialTab);
-  React.useEffect(() => {
-    if (initialTab) setActiveTab(initialTab);
-  }, [initialTab]);
-  // Το «Νέο έργο» ανοίγει ΠΑΝΤΑ στη «Γενικά» — όχι στην καρτέλα του έργου που κοιτούσε ο άνθρωπος,
-  // η οποία στο πρόχειρο θα έλεγε μόνο «αποθηκεύστε πρώτα». Κατά την απόδοση και όχι σε effect:
-  // το `ProjectDetails` του πρόχειρου δεν πρέπει να στηθεί ούτε μία φορά με την παλιά καρτέλα.
-  const [wasCreateMode, setWasCreateMode] = useState(isCreateMode === true);
-  if (wasCreateMode !== (isCreateMode === true)) {
-    setWasCreateMode(isCreateMode === true);
-    if (isCreateMode) setActiveTab('general');
-  }
+  const { activeTab, setActiveTab } = useProjectActiveTab({
+    isCreateMode: isCreateMode === true,
+    hasSelection: selectedProject !== null,
+  });
 
   /**
    * 🔑 **Μία ταυτότητα = ένα στήσιμο.** Χωρίς `key`, το πέρασμα πρόχειρο → πραγματικό έργο κρατούσε
@@ -128,7 +119,7 @@ export function ProjectViewSwitch({
     <ProjectDetails
       key={detailsIdentity}
       project={getProjectWithCompanyName(selectedProject)}
-      initialTab={activeTab}
+      activeTab={activeTab}
       onActiveTabChange={setActiveTab}
       draftAddresses={draftAddresses}
       onNewProject={onNewProject}
@@ -207,7 +198,7 @@ export function ProjectViewSwitch({
         <ProjectDetails
           key={detailsIdentity}
           project={selectedProject ? getProjectWithCompanyName(selectedProject) : null}
-          initialTab={activeTab}
+          activeTab={activeTab}
           onActiveTabChange={setActiveTab}
           draftAddresses={draftAddresses}
           onNewProject={onNewProject}

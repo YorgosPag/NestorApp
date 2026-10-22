@@ -51,8 +51,12 @@ const DRAFT_CAPABLE_TAB_COMPONENTS: ReadonlySet<string> = new Set([
 
 interface ProjectDetailsProps {
   project: (Project & { companyName: string }) | null;
-  /** Deep-link initial tab — overrides default "general" tab */
-  initialTab?: string;
+  /**
+   * Η ενεργή καρτέλα, όταν την κρατά **ο γονέας** (η σελίδα έργου: στη διεύθυνση, ADR-242 Βήμα 3). Μαζί με το
+   * `onActiveTabChange` το στοιχείο γίνεται **ελεγχόμενο** — μία πηγή, ώστε π.χ. το `hideEditButton` να μη διαφωνεί
+   * ποτέ με το URL. Απόν ⇒ δική του τοπική καρτέλα (π.χ. το φύλλο γρήγορης δημιουργίας, που δεν έχει διεύθυνση).
+   */
+  activeTab?: string;
   onNewProject?: () => void;
   onDeleteProject?: () => void;
   /** Lifted edit state from parent (e.g., CompactToolbar triggers edit) */
@@ -69,7 +73,7 @@ interface ProjectDetailsProps {
    * στην πραγματική (`commit`), άρα οφείλει να **επιβιώσει** του ξαναστησίματος. Απόν ⇒ δικό του.
    */
   draftAddresses?: ProjectDraftAddresses;
-  /** Ενημερώνει τον γονέα για την ενεργή καρτέλα, ώστε να τη διατηρήσει όταν αλλάζει το έργο. */
+  /** Ζητά από τον γονέα αλλαγή καρτέλας (ελεγχόμενη λειτουργία, βλ. `activeTab`). */
   onActiveTabChange?: (tabId: string) => void;
   /** Callback to cancel create mode */
   onCancelCreate?: () => void;
@@ -91,7 +95,7 @@ interface ProjectDetailsProps {
 
 export function ProjectDetails({
   project,
-  initialTab,
+  activeTab: controlledTab,
   onNewProject,
   onDeleteProject,
   isEditing: externalIsEditing,
@@ -111,7 +115,9 @@ export function ProjectDetails({
   // 'locations' is excluded: that tab uses inline-only editing (always-visible
   // "New Address" button + per-card actions), so the global header Edit toggle
   // is redundant and confusing.
-  const [activeTab, setActiveTab] = useState(initialTab || 'general');
+  const [localTab, setLocalTab] = useState('general');
+  const isTabControlled = controlledTab !== undefined && onActiveTabChange !== undefined;
+  const activeTab = controlledTab !== undefined && isTabControlled ? controlledTab : localTab;
   const EDIT_TABS = new Set(['general', 'measurements']);
   const hideEditButton = !EDIT_TABS.has(activeTab);
 
@@ -188,9 +194,9 @@ export function ProjectDetails({
   const draftAddresses = sharedDraftAddresses ?? ownDraftAddresses;
 
   const handleTabChange = useCallback((tabId: string) => {
-    setActiveTab(tabId);
-    onActiveTabChange?.(tabId);
-  }, [onActiveTabChange]);
+    if (isTabControlled) onActiveTabChange?.(tabId);
+    else setLocalTab(tabId);
+  }, [isTabControlled, onActiveTabChange]);
 
   // Όσο το έργο δεν έχει ταυτότητα, οι καρτέλες που δείχνουν ΑΛΛΕΣ εγγραφές δεμένες σε αυτήν
   // δεν έχουν τι να ρωτήσουν — λένε τι λείπει αντί να ζητήσουν την ψευδο-ταυτότητα.
@@ -260,7 +266,7 @@ export function ProjectDetails({
             data={displayProject}
             componentMapping={PROJECT_COMPONENT_MAPPING as unknown as Record<string, React.ComponentType<TabComponentProps>>}
             customComponents={draftTabOverrides}
-            defaultTab={initialTab || "general"}
+            defaultTab={activeTab}
             theme="default"
             translationNamespace="building"
             globalProps={globalProps}

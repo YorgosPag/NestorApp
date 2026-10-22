@@ -4,7 +4,8 @@
  * ADR-203: Projects Page State — thin wrapper around useEntityPageState
  *
  * Entity-specific concerns:
- * - URL param: projectId + tab (deep-link)
+ * - URL param: projectId (selection). The active TAB is not page state: it lives in the URL and is read/written
+ *   by `ProjectViewSwitch` through `useActiveUrlTab` (ADR-242 Step 3).
  * - Sync fields: name, title, status
  * - Filter logic: extensive project-specific filters
  */
@@ -12,6 +13,7 @@
 import { useCallback } from 'react';
 import type { Project } from '@/types/project';
 import { defaultProjectFilters, type ProjectFilterState } from '@/components/core/AdvancedFilters';
+import { PROJECT_ID_PARAM } from '@/lib/navigation/project-urls';
 import {
   useEntityPageState,
   type EntityPageStateConfig,
@@ -98,13 +100,12 @@ export function useProjectsPageState(
   const stableFilterFn = useCallback(filterProjects, []);
 
   const config: EntityPageStateConfig<Project, ProjectFilterState> = {
-    urlParamName: 'projectId',
+    urlParamName: PROJECT_ID_PARAM,
     loggerName: 'useProjectsPageState',
     defaultFilters: defaultProjectFilters,
     filterFn: stableFilterFn,
     // ADR-777 §8.31 — η ζωντανή κατάσταση της πηγής ταξιδεύει από τον καλούντα.
     ...options,
-    extraUrlParams: ['tab'],
     syncCompareFields: ['name', 'title', 'status'],
   };
 
@@ -118,7 +119,6 @@ export function useProjectsPageState(
     filteredItems,
     filters,
     setFilters,
-    extraParams,
     selection,
   } = useEntityPageState(initialProjects, config);
 
@@ -132,7 +132,6 @@ export function useProjectsPageState(
     filteredProjects: filteredItems,
     filters,
     setFilters,
-    tabFromUrl: extraParams.tab,
     /** ADR-777 §8.31 — τι ζήτησε η διεύθυνση και τι βρέθηκε (ρητά). */
     selection,
   };

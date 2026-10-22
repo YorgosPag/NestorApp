@@ -52,7 +52,7 @@ export function ProjectsPageContent() {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation(['projects', 'projects-data', 'projects-ika', 'trash']);
 
-  // Note: Deep-link tab is read from useProjectsPageState (same useSearchParams instance)
+  // Η ενεργή καρτέλα ΔΕΝ περνά από εδώ: ζει στη διεύθυνση και τη διαβάζει/γράφει το `ProjectViewSwitch` (ADR-242 Βήμα 3).
 
   // 🏢 ENTERPRISE: Navigation context for breadcrumb sync
   const { companies } = useNavigation();
@@ -70,7 +70,6 @@ export function ProjectsPageContent() {
     filteredProjects,
     filters,
     setFilters,
-    tabFromUrl,
     selection,
   } = useProjectsPageState(firestoreProjects || [], { hasAnswered: !loading });
 
@@ -401,7 +400,6 @@ export function ProjectsPageContent() {
             }}
             companies={companies}
             viewMode={viewMode}
-            initialTab={tabFromUrl || undefined}
             onNewProject={showTrash ? undefined : handleNewProject}
             onDeleteProject={showTrash ? undefined : handleDeleteProject}
             startInEditMode={showTrash ? false : startInEditMode}
