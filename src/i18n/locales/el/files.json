@@ -277,6 +277,7 @@
     "confirmRename": "Επιβεβαίωση μετονομασίας",
     "renameSuccess": "Το αρχείο μετονομάστηκε επιτυχώς",
     "renameError": "Αποτυχία μετονομασίας αρχείου",
+    "downloadError": "Η λήψη του αρχείου απέτυχε",
     "addDescription": "+ Προσθήκη περιγραφής",
     "descriptionPlaceholder": "Προσθέστε περιγραφή ή σημειώσεις...",
     "filesCount": "αρχεία",
@@ -286,6 +287,7 @@
     "classifying": "Κατηγοριοποίηση...",
     "classificationFailed": "Αποτυχία κατηγοριοποίησης",
     "handoverOrigin": "Από την κατασκευάστρια",
+    "handoverProtocol": "Πρωτόκολλο παράδοσης · αναθ. {revision}",
     "retryClassification": "Επανάληψη κατηγοριοποίησης",
     "selectFile": "Επιλογή: {name}"
   },

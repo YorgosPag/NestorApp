@@ -2419,7 +2419,20 @@
         "delivering": "{delivered} of {total} documents delivered; the rest arrive on their own.",
         "delivered": "{total, plural, one {# document delivered} other {# documents delivered}} — your own copies, which stay with you."
       },
-      "appurtenance": "Part of the same purchase — a separate file, because it transfers separately."
+      "appurtenance": "Part of the same purchase — a separate file, because it transfers separately.",
+      "protocol": {
+        "title": "Digital files handover protocol",
+        "sealed": "Sealed · rev. {revision}",
+        "short": "Protocol · rev. {revision}",
+        "issuedAt": "Issued",
+        "supersedes": "Supersedes",
+        "supersedesValue": "Rev. {revision} — earlier revisions stay in Documents.",
+        "meaning": "It certifies which files were handed over to you and that they have not changed since. It is not acceptance of the property and you sign nothing.",
+        "download": "Download PDF",
+        "downloading": "Downloading…",
+        "legalText": "Text of version {version}",
+        "fileName": "Handover protocol - rev. {revision}"
+      }
     }
   },
   "savedListings": {

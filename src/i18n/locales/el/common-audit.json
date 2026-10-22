@@ -632,7 +632,9 @@
         "lifecycle": "Κατάσταση"
       },
       "property_handover": {
-        "lifecycle": "Κατάσταση παράδοσης"
+        "lifecycle": "Κατάσταση παράδοσης",
+        "recipient": "Παραλήπτης",
+        "protocol": "Πρωτόκολλο παράδοσης"
       },
       "objectiveValueFacts": {
         "permitDate": "Ημερομηνία οικοδομικής άδειας κτιρίου",

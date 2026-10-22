@@ -277,6 +277,7 @@
     "confirmRename": "Confirm rename",
     "renameSuccess": "File renamed successfully",
     "renameError": "Failed to rename file",
+    "downloadError": "The file could not be downloaded",
     "addDescription": "+ Add description",
     "descriptionPlaceholder": "Add a description or notes...",
     "filesCount": "files",
@@ -286,6 +287,7 @@
     "classifying": "Classifying",
     "classificationFailed": "Classification failed",
     "handoverOrigin": "From the developer",
+    "handoverProtocol": "Handover protocol · rev. {revision}",
     "retryClassification": "Retry classification",
     "selectFile": "Select {name}"
   },
