@@ -31,6 +31,7 @@ import {
   type PropertyHandoverLifecycle,
   type PropertyHandoverRecipient,
 } from '@/types/property-handover';
+import type { PropertyHandoverProtocolPointer, PropertyHandoverProtocolSummary } from '@/types/property-handover-protocol';
 
 const nonEmptyString = (value: unknown): value is string => typeof value === 'string' && value.trim() !== '';
 
@@ -112,7 +113,34 @@ function fileDeliveryOf(raw: unknown): PropertyHandoverFileDelivery | null {
     digest: stringOrNull(stored.digest),
     completedAt: stringOrNull(stored.completedAt),
     lastError: stringOrNull(stored.lastError),
+    // Σ4 (Ο13) — πρόοδος γραμμένη πριν τη Σ4 δεν το έχει: τότε δεν είχε μετρηθεί καμία, άρα 0 (ποτέ εφεύρεση).
+    unverifiable: isCount(stored.unverifiable) ? stored.unverifiable : 0,
   };
+}
+
+const isRevision = (value: unknown): value is number => isCount(value) && value >= 1;
+
+/**
+ * **Η όψη του Πρωτοκόλλου που βλέπει ο αγοραστής** (Φ-Γ2 Σ4) — η ΜΙΑ ανάγνωσή της, για την προβολή `origin.protocol` του
+ * φακέλου. Αδιάβαστη ⇒ `null` («δεν εκδόθηκε ακόμη»), ποτέ ψεύτικη αναθεώρηση.
+ */
+export function protocolSummaryOf(raw: unknown): PropertyHandoverProtocolSummary | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const { revision, issuedAt, fileId } = raw as Record<string, unknown>;
+  return isRevision(revision) && nonEmptyString(issuedAt) && nonEmptyString(fileId) ? { revision, issuedAt, fileId } : null;
+}
+
+/**
+ * **Ο δείκτης στο τελευταίο Πρωτόκολλο** (Φ-Γ2 Σ4). ⚠️ Αδιάβαστος ⇒ `null` — και ο γραφέας **δεν** εκδίδει τότε «αναθεώρηση
+ * 1» από πάνω: η ταυτότητα `phpr` είναι ντετερμινιστική από το αποτύπωμα και το `create` της συναλλαγής βρίσκει το
+ * υπάρχον έγγραφο, άρα ένα χαλασμένο πεδίο δεν γεννά ποτέ δεύτερο πρωτόκολλο για το ίδιο καθολικό.
+ */
+export function protocolPointerOf(raw: unknown): PropertyHandoverProtocolPointer | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const { protocolId, revision, digest, issuedAt, companyFileId, recipientFileId } = raw as Record<string, unknown>;
+  if (!nonEmptyString(protocolId) || !isRevision(revision) || !nonEmptyString(digest) || !nonEmptyString(issuedAt)) return null;
+  if (!nonEmptyString(companyFileId) || !nonEmptyString(recipientFileId)) return null;
+  return { protocolId, revision, digest, issuedAt, companyFileId, recipientFileId };
 }
 
 /** **Διαβάζει ένα αποθηκευμένο έγγραφο ως παράδοση.** `null` ⇒ «αυτό δεν είναι παράδοση». */
@@ -135,6 +163,7 @@ export function propertyHandoverFromDocument(raw: unknown, id: string): Property
     recipient: recipientOf(stored.recipient),
     invitation: invitationOf(stored.invitation),
     fileDelivery: fileDeliveryOf(stored.fileDelivery),
+    protocol: protocolPointerOf(stored.protocol),
     createdAt,
     updatedAt,
   };

@@ -5,6 +5,7 @@
 import { getEntryPointsForEntity, findCatalogEntryForFile } from '@/config/upload-entry-points';
 import type { EntityType } from '@/config/domain-constants';
 import {
+  handoverCandidateFromDocument,
   handoverDispositionOf,
   isHandoverEligible,
   selectHandoverFiles,
@@ -60,6 +61,23 @@ describe('handoverDispositionOf', () => {
     for (const category of ['photos', 'floorplans', 'videos', 'panoramas', 'models', 'drawings'] as const) {
       expect(handoverDispositionOf(file({ purpose: 'photo', category }))).toBe('deliver');
     }
+  });
+});
+
+describe('Γ35 (Σ4) — το Πρωτόκολλο παράδοσης ταξιδεύει από τον ΔΙΚΟ του δρόμο (κανένας βρόχος)', () => {
+  const marker = { protocolId: 'phpr_1', handoverId: 'phov_1', revision: 1 };
+
+  it('σημάδι πρωτοκόλλου ⇒ `internal`, ακόμη και με κατηγορία/μελέτη που θα έλεγε `deliver`', () => {
+    const deliverable = file({ purpose: 'study-energy-cert', domain: 'construction' });
+    expect(handoverDispositionOf(deliverable)).toBe('deliver');
+    expect(handoverDispositionOf({ ...deliverable, handoverProtocolOf: marker })).toBe('internal');
+  });
+
+  it('το σημάδι διαβάζεται από το έγγραφο · αλλοιωμένο σημάδι ⇒ `null` (άρα `review`, ποτέ σιωπηλά `deliver`)', () => {
+    const stored = { entityType: 'property', domain: 'legal', category: 'contracts', status: 'ready' };
+    expect(handoverCandidateFromDocument({ ...stored, handoverProtocolOf: marker })?.handoverProtocolOf).toEqual(marker);
+    expect(handoverCandidateFromDocument({ ...stored, handoverProtocolOf: { protocolId: 'phpr_1' } })).toBeNull();
+    expect(handoverCandidateFromDocument(stored)?.handoverProtocolOf).toBeUndefined();
   });
 });
 

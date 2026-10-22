@@ -41,6 +41,8 @@ import { declaredHandoverOf, findCatalogEntryForFile } from '@/config/upload-ent
 import type { HandoverDisposition } from '@/config/upload-entry-points/types';
 import type { FileRecord } from '@/types/file-record';
 
+import { readFileHandoverProtocolOf } from './file-handover-origin';
+
 /** Ό,τι χρειάζεται η κρίση από ένα αποθηκευμένο αρχείο — **τίποτα** παραπάνω. */
 export type HandoverCandidateFile = Pick<
   FileRecord,
@@ -55,6 +57,7 @@ export type HandoverCandidateFile = Pick<
   | 'isDeleted'
   | 'supersededByFileId'
   | 'cdeState'
+  | 'handoverProtocolOf'
 >;
 
 /**
@@ -100,6 +103,9 @@ export function isHandoverEligible(file: HandoverCandidateFile): boolean {
 
 /** **Η κρίση** για ένα επιλέξιμο αρχείο (η επιλεξιμότητα κρίνεται χωριστά — {@link isHandoverEligible}). */
 export function handoverDispositionOf(file: HandoverCandidateFile): HandoverDisposition {
+  // ADR-916 Φ-Γ2 Σ4 — το Πρωτόκολλο ταξιδεύει από τον ΔΙΚΟ του δρόμο. Παραδοτέο θα έμπαινε στο καθολικό ⇒ νέο αποτύπωμα ⇒
+  // νέο πρωτόκολλο ⇒ ∞. Πρώτος κανόνας: κανένα άλλο κριτήριο δεν μπορεί να το ξαναστείλει.
+  if (file.handoverProtocolOf !== undefined) return 'internal';
   if (file.classification === FILE_CLASSIFICATIONS.CONFIDENTIAL) return 'review';
   if (OFFICE_ONLY_DOMAINS.has(file.domain)) return 'internal';
   const entry = findCatalogEntryForFile(file.entityType, file);
@@ -139,8 +145,10 @@ export function handoverCandidateFromDocument(raw: unknown): HandoverCandidateFi
   const unknownOptional =
     (stored.lifecycleState != null && !isLifecycleState(stored.lifecycleState))
     || (stored.classification != null && !isClassification(stored.classification))
-    || (stored.cdeState != null && !isCdeState(stored.cdeState));
+    || (stored.cdeState != null && !isCdeState(stored.cdeState))
+    || (stored.handoverProtocolOf != null && readFileHandoverProtocolOf(stored.handoverProtocolOf) === null);
   if (unknownOptional) return null;
+  const handoverProtocolOf = readFileHandoverProtocolOf(stored.handoverProtocolOf);
   return {
     entityType,
     domain,
@@ -153,6 +161,7 @@ export function handoverCandidateFromDocument(raw: unknown): HandoverCandidateFi
     isDeleted: stored.isDeleted === true,
     supersededByFileId: optionalText(stored.supersededByFileId),
     cdeState: isCdeState(stored.cdeState) ? stored.cdeState : undefined,
+    handoverProtocolOf: handoverProtocolOf ?? undefined,
   };
 }
 

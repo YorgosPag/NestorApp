@@ -28,6 +28,27 @@ export interface FileHandoverOrigin {
 
 const nonEmptyString = (value: unknown): value is string => typeof value === 'string' && value.trim() !== '';
 
+/**
+ * **Το σημάδι «αυτό ΕΙΝΑΙ Πρωτόκολλο παράδοσης»** (ADR-916 Φ-Γ2 Σ4) — και στα δύο αντίτυπα (εταιρεία · αγοραστής).
+ * 🔴 Υπάρχει για να **σπάσει έναν βρόχο**: το PDF της εταιρείας ζει πάνω στο ακίνητο· αν το έκρινε παραδοτέο το σύνολο
+ * παράδοσης, θα έμπαινε στο καθολικό ⇒ νέο αποτύπωμα ⇒ νέο πρωτόκολλο ⇒ ∞. Η κρίση (`handoverDispositionOf`) το στέλνει
+ * στα `internal`: το Πρωτόκολλο ταξιδεύει από τον **δικό** του δρόμο. Κριτήριο **δομικό** (ποιος το γέννησε), όχι
+ * κατηγορία που ένας άνθρωπος μπορεί να αλλάξει. ⛔ Ίδιος φρουρός κανόνα με το `handoverOrigin` (`handoverOriginKeys`).
+ */
+export interface FileHandoverProtocolOf {
+  readonly protocolId: string;
+  readonly handoverId: string;
+  readonly revision: number;
+}
+
+/** **Διαβάζει** το σημάδι πρωτοκόλλου από ωμό έγγραφο αρχείου — `null` ⇒ «δεν είναι Πρωτόκολλο». */
+export function readFileHandoverProtocolOf(raw: unknown): FileHandoverProtocolOf | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const { protocolId, handoverId, revision } = raw as Record<string, unknown>;
+  if (!nonEmptyString(protocolId) || !nonEmptyString(handoverId)) return null;
+  return typeof revision === 'number' && Number.isInteger(revision) && revision >= 1 ? { protocolId, handoverId, revision } : null;
+}
+
 /** **Διαβάζει** την προέλευση από ωμό έγγραφο αρχείου — `null` ⇒ «δεν είναι παραδομένο αρχείο». Ποτέ ισχυρισμός τύπου. */
 export function readFileHandoverOrigin(raw: unknown): FileHandoverOrigin | null {
   if (typeof raw !== 'object' || raw === null) return null;

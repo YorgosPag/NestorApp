@@ -15,6 +15,7 @@
  */
 
 import { sha256HexOfText } from '@/lib/hash/sha256';
+import { compareUtf8 } from '@/lib/string/byte-order';
 import type { PropertyHandover, PropertyHandoverFileDeliveryState } from '@/types/property-handover';
 
 /** Οι καταστάσεις που περιμένουν τον εκτελεστή — το ερώτημα του cron (ισότητα στο `fileDeliveryState`). */
@@ -98,11 +99,17 @@ export function planHandoverDelivery<T extends HandoverDeliverable>(input: Hando
  */
 export const HANDOVER_DELIVERY_DIGEST_SCHEME = 'nestor.handover-delivery.v2';
 
+/** Τα **τέσσερα** πεδία της γραμμής του αποτυπώματος — ό,τι χρειάζεται ο τρίτος, τίποτα παραπάνω (π.χ. όχι crc32c). */
+export type HandoverDigestLineFields = Pick<HandoverDeliveredRow, 'sourceFileId' | 'copyFileId' | 'size'> & { readonly sha256: string };
+
 /** Η γραμμή του αποτυπώματος — `πηγή|αντίγραφο|sha256|μέγεθος`. */
-export const handoverDigestLineOf = (row: HandoverDeliveredRow & { readonly sha256: string }): string =>
+export const handoverDigestLineOf = (row: HandoverDigestLineFields): string =>
   `${row.sourceFileId}|${row.copyFileId}|${row.sha256}|${row.size}`;
 
-const isHashed = (row: HandoverDeliveredRow): row is HandoverDeliveredRow & { readonly sha256: string } => row.sha256 !== null;
+/** Ό,τι διαβάζει το αποτύπωμα από μια γραμμή — με sha256 ή χωρίς (τότε το αποτύπωμα είναι `null`). */
+type HandoverDigestInput = Omit<HandoverDigestLineFields, 'sha256'> & { readonly sha256: string | null };
+
+const isHashed = <R extends HandoverDigestInput>(row: R): row is R & { readonly sha256: string } => row.sha256 !== null;
 
 /**
  * **Το αποτύπωμα του καθολικού (v2)** — sha256 πάνω στην ετικέτα σχήματος + τις ταξινομημένες γραμμές. Ανεξάρτητο σειράς
@@ -110,11 +117,18 @@ const isHashed = (row: HandoverDeliveredRow): row is HandoverDeliveredRow & { re
  * **οποιοδήποτε byte** οποιουδήποτε παραδομένου αρχείου. Αυτό σφραγίζει το Πρωτόκολλο (Σ4).
  * `null` ⇒ τίποτα δεν παραδόθηκε **ή** κάποια γραμμή περιμένει κατακερματισμό: αποτύπωμα που δεν καλύπτει κάθε byte δεν
  * εκδίδεται ποτέ — άρα ούτε Πρωτόκολλο.
+ * 🔑 **Ταξινόμηση κατά bytes UTF-8** (Σ4), όπως το λέει αυτολεξεί το παγωμένο κείμενο (`handover-protocol` v1, βήμα 3):
+ *    ποτέ `.sort()` (σειρά UTF-16). Για ASCII οι δύο ταυτίζονται ⇒ κανένα υπάρχον αποτύπωμα δεν άλλαξε.
  */
-export async function handoverDeliveryDigest(rows: readonly HandoverDeliveredRow[]): Promise<string | null> {
+export async function handoverDeliveryDigest(rows: readonly HandoverDigestInput[]): Promise<string | null> {
   const hashed = rows.filter(isHashed);
   if (rows.length === 0 || hashed.length < rows.length) return null;
-  return sha256HexOfText([HANDOVER_DELIVERY_DIGEST_SCHEME, ...hashed.map(handoverDigestLineOf).sort()].join('\n'));
+  return sha256HexOfText([HANDOVER_DELIVERY_DIGEST_SCHEME, ...inHandoverDigestOrder(hashed).map(handoverDigestLineOf)].join('\n'));
+}
+
+/** **Οι γραμμές με τη σειρά του αποτυπώματος** — η ΜΙΑ σειρά για το digest **και** για τον πίνακα του Πρωτοκόλλου (Σ4). */
+export function inHandoverDigestOrder<R extends HandoverDigestLineFields>(rows: readonly R[]): readonly R[] {
+  return [...rows].sort((a, b) => compareUtf8(handoverDigestLineOf(a), handoverDigestLineOf(b)));
 }
 
 export interface HandoverHashingPlan<R extends HandoverDeliveredRow> {

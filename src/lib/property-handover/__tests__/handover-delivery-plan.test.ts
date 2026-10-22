@@ -11,6 +11,7 @@ import {
   fileDeliveryStateOf,
   HANDOVER_DELIVERY_DIGEST_SCHEME,
   handoverDeliveryDigest,
+  inHandoverDigestOrder,
   planHandoverDelivery,
   planHandoverHashing,
   type HandoverDeliveredRow,
@@ -27,6 +28,7 @@ const NO_PREDECESSORS = new Map<string, string>();
 const RECIPIENT = { userId: 'uid_anna', acceptedAt: '2026-10-20T09:00:00.000Z', dossierId: 'pdos_1' };
 const DELIVERED: PropertyHandoverFileDelivery = {
   state: 'delivered', delivered: 2, total: 2, awaitingReview: 0, bytes: 200, digest: 'd', startedAt: 'a', completedAt: 'b', lastError: null,
+  unverifiable: 0,
 };
 
 describe('Γ1 — οφείλεται αντιγραφή ΜΟΝΟ σε ολοκληρωμένη πώληση ΜΕ αποδεκτή πρόσκληση', () => {
@@ -101,6 +103,33 @@ describe('Γ6 — το αποτύπωμα του καθολικού (v2: `πηγ
 
   it('🔴 Γ16 — ΜΙΑ γραμμή χωρίς sha256 ⇒ `null` (εκκρεμεί κατακερματισμός ⇒ κανένα Πρωτόκολλο)', async () => {
     expect(await handoverDeliveryDigest([row('f1'), unhashed('f2')])).toBeNull();
+  });
+});
+
+/**
+ * 🔴 Γ30 (Σ4) — **ταξινόμηση κατά BYTES, όπως το λέει το παγωμένο κείμενο** — όχι κατά μονάδες UTF-16 (`.sort()`).
+ * Μάρτυρας: `U+FF61` (UTF-8 `EF BD A1`) και `U+1F600` (ζεύγος `D83D DE00`, UTF-8 `F0 9F 98 80`). Στο UTF-16 το emoji
+ * είναι **πρώτο** (`D83D < FF61`), στα bytes **δεύτερο** (`EF < F0`). Για ASCII οι δύο σειρές ταυτίζονται ⇒ το Γ15β μένει.
+ */
+describe('Γ30 — το αποτύπωμα ταξινομεί κατά bytes UTF-8 (ο τρίτος του κειμένου)', () => {
+  const HALFWIDTH = { ...row('｡'), sha256: shaOf('halfwidth') };
+  const EMOJI = { ...row('\u{1F600}'), sha256: shaOf('emoji') };
+  const lineOf = (r: typeof HALFWIDTH): string => `${r.sourceFileId}|${r.copyFileId}|${r.sha256}|${r.size}`;
+  const byBytes = (lines: readonly string[]): string[] =>
+    lines.map((l) => Buffer.from(l, 'utf8')).sort(Buffer.compare).map((b) => b.toString('utf8'));
+
+  it('μάρτυρας διάκρισης: εδώ η σειρά UTF-16 ΔΙΑΦΕΡΕΙ από τη σειρά bytes', () => {
+    const lines = [lineOf(HALFWIDTH), lineOf(EMOJI)];
+    expect([...lines].sort()).not.toEqual(byBytes(lines));
+  });
+
+  it('το αποτύπωμα = του τρίτου που ταξινομεί με `Buffer.compare`', async () => {
+    const lines = byBytes([lineOf(EMOJI), lineOf(HALFWIDTH)]);
+    expect(await handoverDeliveryDigest([EMOJI, HALFWIDTH])).toBe(shaOf([HANDOVER_DELIVERY_DIGEST_SCHEME, ...lines].join('\n')));
+  });
+
+  it('ο πίνακας του Πρωτοκόλλου ακολουθεί την ΙΔΙΑ σειρά με το αποτύπωμα', () => {
+    expect(inHandoverDigestOrder([EMOJI, HALFWIDTH]).map((r) => r.sourceFileId)).toEqual(['｡', '\u{1F600}']);
   });
 });
 
