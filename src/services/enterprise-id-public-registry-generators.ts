@@ -163,6 +163,15 @@ export abstract class PublicRegistryIdGenerators extends BimEntityIdGenerators {
   }
 
   /**
+   * ADR-916 Φ-Γ2 Σ4 — το **Πρωτόκολλο παράδοσης** (`phpr_*`), ντετερμινιστικό από `(παράδοση, αποτύπωμα καθολικού)`: δύο
+   * εκτελέσεις πάνω στο ίδιο καθολικό καταλήγουν στο **ίδιο** έγγραφο ⇒ ποτέ δύο σφραγισμένα πρωτόκολλα για ένα καθολικό.
+   * Ο σπόρος συντίθεται σε **ένα** σημείο: `handoverProtocolIdOf` (`lib/property-handover/property-handover-id.ts`).
+   */
+  generateDeterministicPropertyHandoverProtocolId(seed: string): string {
+    return this.mintDeterministicV4Id(P.PROPERTY_HANDOVER_PROTOCOL, seed);
+  }
+
+  /**
    * ADR-916 Φ-Β — ο **φάκελος του αγοραστή** (`pdos_*`), ντετερμινιστικός από την παράδοση που τον γεννά: δύο
    * ταυτόχρονες αποδοχές (ή επανάληψη δικτύου) βρίσκουν το **ίδιο** έγγραφο ⇒ ποτέ δεύτερος φάκελος για το ίδιο σπίτι.
    * Ίδιο πρόθεμα με τον φάκελο που γεννά ο ιδιώτης: είναι **η ίδια** οντότητα (ADR-866), όχι δεύτερο είδος.

@@ -312,6 +312,12 @@ describe('EnterpriseIdService', () => {
       // ADR-916 §5.2 — ΜΙΑ παράδοση ανά (ακίνητο, επαφή αγοραστή): τυχαίο id = δεύτερη παράδοση = δεύτερος φάκελος
       // και διπλά αρχεία στον αγοραστή, όταν το PATCH και ο γραφέας του `legalPhase` συμφιλιώνουν ταυτόχρονα.
       'generateDeterministicPropertyHandoverId',
+      // ADR-916 Φ-Γ2 Σ4 — ΕΝΑ πρωτόκολλο ανά (παράδοση, αποτύπωμα): τυχαίο id = δύο σφραγισμένα PDF για το ίδιο καθολικό
+      // όταν το inline μετά το commit και το cron τελειώνουν ταυτόχρονα, και δύο «αναθεωρήσεις 1» στον αγοραστή.
+      'generateDeterministicPropertyHandoverProtocolId',
+      // ADR-916 Φ-Γ1 — ΜΙΑ γραμμή καθολικού ανά (παράδοση, αρχείο-πηγή): τυχαίο id = δύο αποδείξεις για ένα αρχείο
+      // όταν η εκτέλεση συνεχίζει μετά από διακοπή. Δηλώνεται εδώ στη Σ4 — έλειπε από τη Φ-Γ1 και το test κοκκίνιζε.
+      'generateDeterministicPropertyHandoverDeliveryId',
       // ADR-ACC-010 §2.1.1 Φ4 — ΜΙΑ απόσβεση ανά (μισθωτής, πάγιο, χρήση): η ταυτότητα ΕΙΝΑΙ η ιδεμποτία της
       // εκτέλεσης αποσβέσεων. Ο τυχαίος `generateDepreciationId` ΚΑΤΑΡΓΗΘΗΚΕ — τυχαίο id = διπλή απόσβεση.
       'generateDeterministicDepreciationRecordId',
@@ -394,6 +400,11 @@ describe('EnterpriseIdService', () => {
       // ADR-917 Φ3β — ίδιο uuid με το `pupk_`: ίδιος σπόρος, ίδια μηχανή· μόνο το πρόθεμα διαφέρει.
       generateDeterministicProjectBudgetLineId: 'pbl_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
       generateDeterministicPropertyHandoverId: 'phov_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
+      generateDeterministicPropertyHandoverProtocolId: 'phpr_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
+      // ADR-916 Φ-Γ1 / Φ-Β — καταγεγραμμένα από τους ίδιους τους γεννήτορες στη Σ4 (2026-10-22): έλειπαν, και το
+      //    «κάθε γεννήτορας έχει χρυσό δείγμα» κοκκίνιζε από τότε.
+      generateDeterministicPropertyHandoverDeliveryId: 'phdl_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
+      generateDeterministicPropertyDossierId: 'pdos_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
       // ADR-853 Ε3 Φάση 2 — τέσσερις παράμετροι, ο `call()` δίνει μία (σπόρος `anchor-seed:undefined:…`,
       //    ίδιο σκεπτικό με το `wacr`): το συμβόλαιο είναι «ίδιος σπόρος ⇒ ίδιο id, διαχρονικά».
       generateDeterministicIdempotencyRecordId: 'idr_4ad60692-1f51-41af-8816-c25429d2e5f9',

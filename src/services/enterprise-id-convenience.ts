@@ -186,6 +186,9 @@ export const generatePropertyHandoverInvitationId = () => enterpriseIdService.ge
 // ADR-916 Φ-Γ1 — η γραμμή του καθολικού παράδοσης (ντετερμινιστική από παράδοση + αρχείο-πηγή).
 export const generateDeterministicPropertyHandoverDeliveryId = (seed: string) =>
   enterpriseIdService.generateDeterministicPropertyHandoverDeliveryId(seed);
+// ADR-916 Φ-Γ2 Σ4 — το Πρωτόκολλο παράδοσης (ντετερμινιστικό από παράδοση + αποτύπωμα καθολικού).
+export const generateDeterministicPropertyHandoverProtocolId = (seed: string) =>
+  enterpriseIdService.generateDeterministicPropertyHandoverProtocolId(seed);
 export const generateDeterministicPropertyDossierId = (seed: string) =>
   enterpriseIdService.generateDeterministicPropertyDossierId(seed);
 // ADR-900 §8 #2 (2β.4) — η δημόσια μονάδα, από σπόρο HMAC (ποτέ τον ΚΑΕΚ).

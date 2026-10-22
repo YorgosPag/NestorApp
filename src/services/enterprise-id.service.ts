@@ -76,6 +76,7 @@ export {
   generateDeterministicPropertyHandoverId,
   generatePropertyHandoverInvitationId,
   generateDeterministicPropertyHandoverDeliveryId,
+  generateDeterministicPropertyHandoverProtocolId,
   generateDeterministicPropertyDossierId,
   generateDeterministicPublicUnitId,
   generateFirstContactId,
