@@ -24,9 +24,15 @@ import React from 'react';
 
 import { PropertyDossierOriginLine, PropertyDossierOriginNotice } from '@/components/property-dossier/PropertyDossierOrigin';
 import { clickWhenEnabled, PANEL_WIDTH_CLASS, PanelWidthSelect, type PanelWidth } from '@/components/testing/harness/harness-panel';
-import { scriptedBodyField, useScriptedPost, type ScriptedRoute } from '@/components/testing/harness/scripted-transport';
+import {
+  scriptedBodyField,
+  useScriptedTransport,
+  type ScriptedGetRoute,
+  type ScriptedRoute,
+} from '@/components/testing/harness/scripted-transport';
 import { Card } from '@/components/ui/card';
 import { API_ROUTES } from '@/config/domain-constants';
+import { FILE_CUSTODY_PARAM } from '@/lib/files/file-custody';
 
 import { HandoverInviteContent } from '../HandoverInviteContent';
 import {
@@ -34,6 +40,7 @@ import {
   ORIGIN_SCENARIOS,
   SERVER_SCENARIOS,
   scriptedAnswerFor,
+  scriptedDownloadFor,
   type AnswerScenario,
 } from './handover-invite-scenarios';
 
@@ -41,12 +48,18 @@ import {
 const handoverRoute: ScriptedRoute = (url, body) =>
   url.endsWith(API_ROUTES.PROPERTY_HANDOVER_INVITATIONS.REDEEM) ? scriptedAnswerFor(scriptedBodyField(body, 'token')) : undefined;
 
+/** ADR-916 §5.13 — η πόρτα λήψης, κατά `fileId`: η «Λήψη PDF» των πάνελ Πρωτοκόλλου δεν φτάνει ποτέ στην παραγωγή. */
+const downloadRoute: ScriptedGetRoute = (url, params) =>
+  url.endsWith(API_ROUTES.DOWNLOAD) && typeof params.fileId === 'string'
+    ? scriptedDownloadFor(params.fileId, String(params[FILE_CUSTODY_PARAM] ?? ''))
+    : undefined;
+
 const PANEL_COUNT = SERVER_SCENARIOS.length + ANSWER_SCENARIOS.length + ORIGIN_SCENARIOS.length;
 
 export function HandoverInviteHarness(): React.JSX.Element {
   const [width, setWidth] = React.useState<PanelWidth>('auto');
   // 🔴 Η ΣΕΙΡΑ: κανένα πάνελ δεν πατά πριν σταθεί ο μεταφορέας (τα effects των παιδιών τρέχουν πρώτα).
-  const armed = useScriptedPost(handoverRoute);
+  const armed = useScriptedTransport(handoverRoute, downloadRoute);
   const panelClass = `flex flex-col gap-3 overflow-visible p-4 ${PANEL_WIDTH_CLASS[width]}`;
 
   return (

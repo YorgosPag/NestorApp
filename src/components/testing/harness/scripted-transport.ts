@@ -31,6 +31,15 @@ export interface ScriptedReply {
 /** `undefined` ⇒ «δεν είναι δικό μου» — το αίτημα πάει στον αληθινό μεταφορέα. */
 export type ScriptedRoute = (url: string, body: unknown) => ScriptedReply | undefined;
 
+/** Τα query params ενός `GET`, όπως τα δίνει ο καλών στο `config.params`. */
+export type ScriptedParams = Readonly<Record<string, string | number | boolean>>;
+
+/**
+ * Ο δρομολογητής του `GET` (ADR-916 §5.13 — η λήψη αρχείου). `Blob` ⇒ τα bytes που «στέλνει» ο διακομιστής·
+ * `ScriptedReply` ⇒ ωμή απάντηση (άρνηση με τον κωδικό της)· `undefined` ⇒ στον αληθινό μεταφορέα.
+ */
+export type ScriptedGetRoute = (url: string, params: ScriptedParams) => ScriptedReply | Blob | undefined;
+
 /**
  * **Το σφάλμα που θα είχε πετάξει ο μεταφορέας**, ταυτόσημο σε σχήμα.
  * ⛔ **ΠΟΤΕ σκέτο `new Error(...)`**: ο `apiErrorBodyOf` απαιτεί `ApiClientError` και διαβάζει **μόνο** το `errorBody`·
@@ -58,31 +67,66 @@ export function scriptedBodyField(body: unknown, field: string): string {
  * ⚠️ Ο δρομολογητής πρέπει να είναι **σταθερός** (σε εμβέλεια module): νέα συνάρτηση ανά απόδοση θα ξαναμπάλωνε.
  */
 export function useScriptedPost(route: ScriptedRoute): boolean {
+  return useScriptedTransport(route);
+}
+
+type RequestConfig = Omit<ApiRequestConfig, 'method' | 'body'>;
+
+/**
+ * 🔴 Επαναφορά = ΑΚΡΙΒΩΣ ό,τι υπήρχε. Η μέθοδος ζει στο πρωτότυπο της κλάσης· η παλιά επαναφορά έγραφε πίσω τη
+ *    **δεμένη** εκδοχή ως ιδιοκτησία του στιγμιοτύπου — ξένη σκιά στο singleton μετά από κάθε γκαλερί (άγκυρα Γ1).
+ */
+function restorerOf(method: 'get' | 'post'): () => void {
+  const ownBefore = Object.getOwnPropertyDescriptor(apiClient, method);
+  return () => {
+    if (ownBefore === undefined) Reflect.deleteProperty(apiClient, method);
+    else Object.defineProperty(apiClient, method, ownBefore);
+  };
+}
+
+function patchPost(route: ScriptedRoute): () => void {
+  const restore = restorerOf('post');
+  const originalPost = apiClient.post.bind(apiClient);
+  apiClient.post = async <T = unknown>(url: string, body?: Record<string, unknown> | unknown, config?: RequestConfig): Promise<T> => {
+    const reply = route(url, body);
+    if (reply === undefined) return originalPost<T>(url, body, config);
+    if (reply.status >= 400) throw scriptedApiRejection(url, reply);
+    return reply.body as T;
+  };
+  return restore;
+}
+
+function patchGet(route: ScriptedGetRoute): () => void {
+  const restore = restorerOf('get');
+  const originalGet = apiClient.get.bind(apiClient);
+  apiClient.get = async <T = unknown>(url: string, config?: RequestConfig): Promise<T> => {
+    const reply = route(url, config?.params ?? {});
+    if (reply === undefined) return originalGet<T>(url, config);
+    if (reply instanceof Blob) return reply as T;
+    if (reply.status >= 400) throw scriptedApiRejection(url, reply);
+    return reply.body as T;
+  };
+  return restore;
+}
+
+/**
+ * **ΕΝΑ μπάλωμα ανά σελίδα** για `post` και — όταν δοθεί — `get`. Ίδιοι κανόνες με το `useScriptedPost`: `armed` = η
+ * σειρά, οι δρομολογητές **σταθεροί** (σε εμβέλεια module), επαναφορά πάντα.
+ */
+export function useScriptedTransport(route: ScriptedRoute, getRoute?: ScriptedGetRoute): boolean {
   const [armed, setArmed] = React.useState(false);
 
   React.useEffect(() => {
-    // 🔴 Επαναφορά = ΑΚΡΙΒΩΣ ό,τι υπήρχε. Η μέθοδος ζει στο πρωτότυπο της κλάσης· η παλιά επαναφορά έγραφε πίσω τη
-    //    **δεμένη** εκδοχή ως ιδιοκτησία του στιγμιοτύπου — ξένη σκιά στο singleton μετά από κάθε γκαλερί (άγκυρα Γ1).
-    const ownBefore = Object.getOwnPropertyDescriptor(apiClient, 'post');
-    const originalPost = apiClient.post.bind(apiClient);
-    apiClient.post = async <T = unknown>(
-      url: string,
-      body?: Record<string, unknown> | unknown,
-      config?: Omit<ApiRequestConfig, 'method' | 'body'>,
-    ): Promise<T> => {
-      const reply = route(url, body);
-      if (reply === undefined) return originalPost<T>(url, body, config);
-      if (reply.status >= 400) throw scriptedApiRejection(url, reply);
-      return reply.body as T;
-    };
+    const restorePost = patchPost(route);
+    const restoreGet = getRoute === undefined ? () => undefined : patchGet(getRoute);
     setArmed(true);
 
     return () => {
-      if (ownBefore === undefined) Reflect.deleteProperty(apiClient, 'post');
-      else Object.defineProperty(apiClient, 'post', ownBefore);
+      restoreGet();
+      restorePost();
       setArmed(false);
     };
-  }, [route]);
+  }, [route, getRoute]);
 
   return armed;
 }

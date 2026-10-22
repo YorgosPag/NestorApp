@@ -33,10 +33,10 @@ jest.mock('@/lib/workspace/navigation', () => ({
 }));
 jest.mock('@/lib/browser/document-navigation', () => ({ navigateDocument: jest.fn() }));
 jest.mock('@/auth', () => ({ useAuthOptional: () => ({ signOut: jest.fn(), refreshToken: jest.fn() }) }));
-// ADR-916 Σ5 — η λήψη του Πρωτοκόλλου: καταγράφεται, δεν κατεβαίνει τίποτα. Αναφορά τη στιγμή της κλήσης (όχι στο hoisting).
-const mockHandleDownload = jest.fn(async () => undefined);
-jest.mock('@/components/shared/files/hooks/useFileDownload', () => ({
-  useFileDownload: () => ({ handleDownload: (file: unknown) => mockHandleDownload(file) }),
+// ADR-916 §5.13 — η λήψη περνά από τον ΠΡΑΓΜΑΤΙΚΟ `useFileDownload` ως τον μεταφορέα της γκαλερί· εδώ μόνο η ειδοποίηση.
+const mockDownloadError = jest.fn();
+jest.mock('@/hooks/notifications/useFilesNotifications', () => ({
+  useFilesNotifications: () => ({ list: { downloadError: mockDownloadError } }),
 }));
 
 import React from 'react';
@@ -59,6 +59,7 @@ import {
 import { HandoverInviteHarness } from '../testing/HandoverInviteHarness';
 import {
   ANSWER_SCENARIOS,
+  HARNESS_PROTOCOL_DOWNLOADS,
   HARNESS_PROTOCOL_REVISIONS,
   ORIGIN_SCENARIOS,
   SERVER_SCENARIOS,
@@ -68,6 +69,7 @@ import {
 const SETTLE_TIMEOUT_MS = 8000;
 const ids = (list: readonly { readonly id: string }[]) => list.map((scenario) => scenario.id);
 const panel = (id: string) => screen.getByTestId(`harness-panel-${id}`);
+const PROTOCOL_PANEL_COUNT = HARNESS_PROTOCOL_REVISIONS.length * HARNESS_PROTOCOL_DOWNLOADS.length;
 
 /**
  * **Αποδίδει και περιμένει να ΚΑΤΑΣΤΑΛΑΞΕΙ κάθε πάνελ απάντησης** — σήμα της οθόνης, όχι χρόνος: όσο ένα πάνελ έχει ακόμη
@@ -93,7 +95,7 @@ describe('Α — κάθε μέλος κάθε κλειστού συνόλου έ
       for (const viewer of ['sign-in', 'other-account', 'ready']) expect(ids(SERVER_SCENARIOS)).toContain(`view-${viewer}-${occasion}`);
       expect(ids(ANSWER_SCENARIOS)).toContain(`answer-accepted-${occasion}`);
     }
-    expect(ORIGIN_SCENARIOS).toHaveLength(PROPERTY_HANDOVER_LIFECYCLES.length * 2 + HARNESS_PROTOCOL_REVISIONS.length);
+    expect(ORIGIN_SCENARIOS).toHaveLength(PROPERTY_HANDOVER_LIFECYCLES.length * 2 + PROTOCOL_PANEL_COUNT);
   });
 
   it('🔑 Α3 — καμία ταυτότητα δύο φορές (ο μεταφορέας δρομολογεί σε αυτήν)', () => {
@@ -144,12 +146,14 @@ describe('Β — κάθε πάνελ δείχνει ΤΟ ΔΙΚΟ ΤΟΥ κεί�
 });
 
 describe('Γ — ο μεταφορέας δεν διαρρέει', () => {
-  it('🔴 Γ1 — μετά το unmount το `apiClient.post` είναι ΞΑΝΑ το αληθινό', async () => {
-    const original = apiClient.post;
+  it('🔴 Γ1 — μετά το unmount τα `apiClient.post` ΚΑΙ `apiClient.get` είναι ΞΑΝΑ τα αληθινά', async () => {
+    const original = { post: apiClient.post, get: apiClient.get };
     const { unmount } = await renderSettled();
-    expect(apiClient.post).not.toBe(original);
+    expect(apiClient.post).not.toBe(original.post);
+    expect(apiClient.get).not.toBe(original.get);
     unmount();
-    expect(apiClient.post).toBe(original);
+    expect(apiClient.post).toBe(original.post);
+    expect(apiClient.get).toBe(original.get);
   });
 });
 
@@ -160,7 +164,7 @@ describe('Δ — Σ5: το Πρωτόκολλο στον φάκελο (Γ40)', (
 
   it('🔴 Δ1 — κάρτα + σήμα ΜΟΝΟ όπου ο γραφέας πρόβαλε Πρωτόκολλο· «αντικαθιστά» μόνο από την αναθ. 2', async () => {
     await renderSettled();
-    expect(withProtocol).toHaveLength(HARNESS_PROTOCOL_REVISIONS.length);
+    expect(withProtocol).toHaveLength(PROTOCOL_PANEL_COUNT);
     for (const scenario of withoutProtocol) expect(panel(scenario.id)).not.toHaveTextContent(P);
     for (const scenario of withProtocol) {
       const card = within(panel(scenario.id));
@@ -182,16 +186,33 @@ describe('Δ — Σ5: το Πρωτόκολλο στον φάκελο (Γ40)', (
     }
   });
 
-  it('🔴 Δ3 — «Λήψη» κατεβάζει το ΔΙΚΟ ΤΟΥ αντίτυπο, από το ΠΡΟΣΩΠΙΚΟ διαμέρισμα', async () => {
+  /**
+   * 🔴 Δ3 — η «Λήψη» ζητά το **δικό της** `fileId` από το **προσωπικό** διαμέρισμα (ο μεταφορέας αρνείται κάθε άλλο, όπως ο
+   * διακομιστής) · παραδόθηκε ⇒ PDF στον browser, καμία ειδοποίηση · 404 ⇒ **μία** ειδοποίηση αποτυχίας · και **τίποτα**
+   * δεν φτάνει στον αληθινό μεταφορέα.
+   */
+  it('🔴 Δ3 — «Λήψη» = το ΔΙΚΟ ΤΟΥ αντίτυπο, ΠΡΟΣΩΠΙΚΟ διαμέρισμα· επιτυχία και αποτυχία ορατές, μηδέν κλήσεις στην παραγωγή', async () => {
+    const realGet = jest.mocked(apiClient.get);
+    realGet.mockClear();
+    const createObjectURL = jest.fn((blob: Blob) => `blob:${blob.type}:${blob.size}`);
+    Object.assign(URL, { createObjectURL, revokeObjectURL: jest.fn() });
     await renderSettled();
     for (const scenario of withProtocol) {
-      mockHandleDownload.mockClear();
+      mockDownloadError.mockClear();
+      createObjectURL.mockClear();
       fireEvent.click(within(panel(scenario.id)).getByRole('button', { name: `${P}.download` }));
-      await waitFor(() => expect(mockHandleDownload).toHaveBeenCalledTimes(1));
-      expect(mockHandleDownload).toHaveBeenCalledWith(expect.objectContaining({
-        id: scenario.origin.protocol?.fileId, custody: 'personal', ext: 'pdf',
-      }));
+      if (scenario.id.endsWith('-delivered')) {
+        await waitFor(() => expect(createObjectURL).toHaveBeenCalledTimes(1));
+        const blob = createObjectURL.mock.calls[0][0];
+        expect(blob.type).toBe('application/pdf');
+        expect((await blob.text()).startsWith('%PDF-')).toBe(true);
+        expect(mockDownloadError).not.toHaveBeenCalled();
+      } else {
+        await waitFor(() => expect(mockDownloadError).toHaveBeenCalledTimes(1));
+        expect(createObjectURL).not.toHaveBeenCalled();
+      }
     }
+    expect(realGet).not.toHaveBeenCalled();
   });
 
   it('🔒 Δ4 — κανένα στοιχείο επικοινωνίας στην κάρτα (κανένα «@»)', async () => {

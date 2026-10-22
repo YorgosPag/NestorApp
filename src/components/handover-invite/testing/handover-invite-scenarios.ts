@@ -127,20 +127,67 @@ const originOf = (lifecycle: PropertyHandoverLifecycle, named: boolean): Propert
 export const HARNESS_PROTOCOL_REVISIONS = [1, 2] as const;
 export const HARNESS_PROTOCOL_ISSUED_AT = '2026-10-21T21:30:00.000Z';
 
+/**
+ * ADR-916 §5.13 — τι απαντά η πόρτα λήψης όταν πατηθεί «Λήψη PDF»: τα bytes, ή η **ίδια** άρνηση με τη διαδρομή
+ * (`/api/download`: 404 `File not found`). Κάθε αναθεώρηση × κάθε έκβαση = ένα πάνελ — καμία κλήση στην παραγωγή.
+ */
+export const HARNESS_PROTOCOL_DOWNLOADS = ['delivered', 'not-found'] as const;
+export type HarnessProtocolDownload = (typeof HARNESS_PROTOCOL_DOWNLOADS)[number];
+
+const protocolFileIdOf = (revision: number, download: HarnessProtocolDownload) => `file_harness_protocol_rev${revision}_${download}`;
+
 export const ORIGIN_SCENARIOS: readonly OriginScenario[] = [
   ...PROPERTY_HANDOVER_LIFECYCLES.flatMap((lifecycle) =>
     [true, false].map((named): OriginScenario => ({
       id: `origin-${lifecycle}-${named ? 'named' : 'unnamed'}`,
       origin: originOf(lifecycle, named),
     }))),
-  ...HARNESS_PROTOCOL_REVISIONS.map((revision): OriginScenario => ({
-    id: `origin-ready-protocol-rev${revision}`,
+  ...HARNESS_PROTOCOL_REVISIONS.flatMap((revision) => HARNESS_PROTOCOL_DOWNLOADS.map((download): OriginScenario => ({
+    id: `origin-ready-protocol-rev${revision}-${download}`,
     origin: {
       ...originOf('ready', true),
-      protocol: { revision, issuedAt: HARNESS_PROTOCOL_ISSUED_AT, fileId: `file_harness_protocol_rev${revision}` },
+      protocol: { revision, issuedAt: HARNESS_PROTOCOL_ISSUED_AT, fileId: protocolFileIdOf(revision, download) },
     },
-  })),
+  }))),
 ];
+
+/** Ένα **έγκυρο** μονοσέλιδο PDF (ASCII ⇒ οι θέσεις του xref είναι μήκη συμβολοσειρών) — ανοίγει, δεν σπάει. */
+function harnessSamplePdf(): Blob {
+  const text = 'BT /F1 16 Tf 72 770 Td (Handover protocol - harness sample, not a real document) Tj ET';
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+    `<< /Length ${text.length} >>\nstream\n${text}\nendstream`,
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+  ];
+  let pdf = '%PDF-1.4\n';
+  const offsets = objects.map((body, index) => {
+    const offset = pdf.length;
+    pdf += `${index + 1} 0 obj\n${body}\nendobj\n`;
+    return offset;
+  });
+  const xref = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  pdf += offsets.map((offset) => `${String(offset).padStart(10, '0')} 00000 n \n`).join('');
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return new Blob([pdf], { type: 'application/pdf' });
+}
+
+const DOWNLOAD_BY_FILE_ID = new Map(HARNESS_PROTOCOL_REVISIONS.flatMap((revision) =>
+  HARNESS_PROTOCOL_DOWNLOADS.map((download) => [protocolFileIdOf(revision, download), download] as const)));
+
+const NOT_FOUND: ScriptedReply = { status: 404, body: { error: 'File not found' } };
+
+/**
+ * Η απάντηση της πόρτας λήψης για το `fileId` — `undefined` ⇒ δεν είναι αρχείο της γκαλερί (πάει στον αληθινό).
+ * 🔒 Όπως ο διακομιστής: το αντίτυπο του αγοραστή ζει στο **προσωπικό** διαμέρισμα· ο εταιρικός κριτής το αρνείται (404).
+ */
+export function scriptedDownloadFor(fileId: string, custody: string): ScriptedReply | Blob | undefined {
+  const download = DOWNLOAD_BY_FILE_ID.get(fileId);
+  if (download === undefined) return undefined;
+  return download === 'delivered' && custody === 'personal' ? harnessSamplePdf() : NOT_FOUND;
+}
 
 const ANSWER_BY_TOKEN = new Map(ANSWER_SCENARIOS.map((scenario) => [scenario.id, scenario.reply]));
 
