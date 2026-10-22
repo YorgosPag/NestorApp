@@ -13,8 +13,7 @@
  *    κουμπί, η εστίαση πάει στο νέο («Αναίρεση» · «Επιβεβαίωση» · πίσω στο «Δεν ισχύει»). Μόνο αν χάθηκε — ποτέ κλοπή.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
-import dynamic from 'next/dynamic';
+import React, { Suspense, lazy, useLayoutEffect, useRef, useState, useTransition } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -25,10 +24,16 @@ import { CONVEYANCE_NS, LEGALITY_NS, REGISTRY_NS } from '@/components/document-r
 import { UPKEEP_KEYS } from '@/components/document-registry/upkeep-labels';
 
 // Όριο κλειστότητας (CHECK 3.34): η φόρμα εξαίρεσης φαίνεται μόνο μετά το «Δεν ισχύει».
-const UpkeepExemptForm = dynamic(
-  () => import('./RegistryUpkeepExemptForm').then((mod) => mod.UpkeepExemptForm),
-  { ssr: false },
-);
+// ♿ `React.lazy`, ΟΧΙ `next/dynamic` (§37.7, μετρημένο στην παραγωγή): το `dynamic({ ssr: false })` βάζει **δικό του, νέο**
+//    `<Suspense fallback={null}>` — και ένα νέο όριο δείχνει το fallback του αμέσως, ακόμη και σε μετάβαση. Άρα στο πρώτο
+//    πάτημα το «Δεν ισχύει» έφευγε από το DOM πριν φτάσει το chunk ⇒ εστίαση στο `<body>`. Εδώ το όριο είναι το εξωτερικό
+//    (ήδη ορατό) και το άνοιγμα γίνεται σε `startTransition`: το κουμπί ΜΕΝΕΙ εστιασμένο μέχρι να είναι έτοιμη η φόρμα.
+const loadExemptForm = () => import('./RegistryUpkeepExemptForm');
+const UpkeepExemptForm = lazy(() => loadExemptForm().then((mod) => ({ default: mod.UpkeepExemptForm })));
+/** Πρόθεση (εστίαση/δείκτης πάνω στο κουμπί) ⇒ το chunk ξεκινά πριν το πάτημα· το `import()` δεν κατεβάζει δύο φορές. */
+const warmExemptForm = (): void => {
+  void loadExemptForm();
+};
 
 export interface UpkeepDecisionProps {
   readonly item: UpkeepItem;
@@ -45,12 +50,16 @@ function focusIsOurs(root: HTMLElement | null): boolean {
   return active === null || active === document.body || (root?.contains(active) ?? false);
 }
 
-/** Μόλις η πράξη τελειώσει (όχι σε πτήση, όχι μέσα στη φόρμα), η εστίαση πάει εκεί που ζήτησε το `returnTo`. */
+/**
+ * Μόλις η πράξη τελειώσει (όχι σε πτήση, όχι μέσα στη φόρμα), η εστίαση πάει εκεί που ζήτησε το `returnTo`.
+ * `useLayoutEffect`: το commit που αφαίρεσε το εστιασμένο κουμπί μετά από `await` ΔΕΝ είναι διακριτή είσοδος — ένα passive
+ * effect θα έτρεχε μετά το βάψιμο, με την εστίαση στο `<body>` στο ενδιάμεσο (ίδιο σκεπτικό με `useFocusFirstOnMount`).
+ */
 function useFocusReturn(settled: boolean, declaration: UpkeepItem['declaration']) {
   const navRef = useRef<HTMLElement>(null);
   const exemptRef = useRef<HTMLButtonElement>(null);
   const pending = useRef<FocusReturn | null>(null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const target = pending.current;
     if (target === null || !settled) return;
     pending.current = null;
@@ -64,11 +73,24 @@ function useFocusReturn(settled: boolean, declaration: UpkeepItem['declaration']
   return { navRef, exemptRef, returnTo };
 }
 
+/** Το εξωτερικό, ήδη ορατό όριο: πάνω του η μετάβαση «κρατά» το κουμπί αντί να δείξει κενό. */
+export function RegistryUpkeepDecision(props: UpkeepDecisionProps): React.ReactElement {
+  return (
+    <Suspense fallback={null}>
+      <UpkeepDecisionBody {...props} />
+    </Suspense>
+  );
+}
+
 /** Χωρίς απόφαση: «Επιβεβαίωση» · «Δεν ισχύει». Με απόφαση: «Αναίρεση» (γυρίζει η πρόταση — κι αυτό με ίχνος). */
-export function RegistryUpkeepDecision({ item, busy, onSubmit }: UpkeepDecisionProps): React.ReactElement {
+function UpkeepDecisionBody({ item, busy, onSubmit }: UpkeepDecisionProps): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS, CONVEYANCE_NS, LEGALITY_NS]);
   const [exempting, setExempting] = useState(false);
+  const [opening, startOpening] = useTransition();
   const { navRef, exemptRef, returnTo } = useFocusReturn(!busy && !exempting, item.declaration);
+  const openForm = (): void => {
+    if (!busy) startOpening(() => setExempting(true));
+  };
   const send = (decision: UpkeepDeclarationBody['decision']): void => {
     if (busy) return;
     returnTo('first');
@@ -93,7 +115,10 @@ export function RegistryUpkeepDecision({ item, busy, onSubmit }: UpkeepDecisionP
       <Button type="button" size="sm" onClick={() => send('required')} aria-disabled={busy}>
         {t(busy ? UPKEEP_KEYS.saving : UPKEEP_KEYS.confirm)}
       </Button>
-      <Button ref={exemptRef} type="button" size="sm" variant="secondary" onClick={() => !busy && setExempting(true)} aria-disabled={busy}>
+      <Button
+        ref={exemptRef} type="button" size="sm" variant="secondary" onClick={openForm}
+        onFocus={warmExemptForm} onPointerEnter={warmExemptForm} aria-disabled={busy} aria-busy={opening}
+      >
         {t(UPKEEP_KEYS.exempt)}
       </Button>
     </nav>

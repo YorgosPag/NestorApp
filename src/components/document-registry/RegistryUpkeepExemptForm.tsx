@@ -2,7 +2,7 @@
 
 /**
  * @fileoverview ADR-915 §35 — **«Δεν ισχύει»: η εξαίρεση από μόνιμη υποχρέωση, ΠΑΝΤΑ με λόγο.**
- * @related RegistryUpkeepDecision.tsx (το φορτώνει με `next/dynamic`) · hooks/document-registry/useUpkeepDeclaration.ts
+ * @related RegistryUpkeepDecision.tsx (το φορτώνει με `React.lazy` + μετάβαση) · hooks/document-registry/useUpkeepDeclaration.ts
  * @module components/document-registry/RegistryUpkeepExemptForm
  *
  * 🔑 Arthur: «mark as completed» χωρίς τίποτα. Εδώ radio σε `<fieldset>/<legend>` (δόγμα §26 Ζ10), όλοι οι λόγοι ορατοί,
@@ -11,13 +11,13 @@
  *    λέξεις της δεν ανήκουν στο πρώτο καρέ της σελίδας.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { focusFirstWithin } from '@/lib/a11y/focus-first';
+import { useFocusFirstOnMount } from '@/lib/a11y/use-focus-first-on-mount';
 import { UPKEEP_EXEMPTION_REASONS, type UpkeepExemptionReason, type UpkeepItem } from '@/lib/document-validity/property-upkeep';
 import type { UpkeepDeclarationBody } from '@/lib/document-validity/upkeep-declaration-request';
 import { CONVEYANCE_NS, LEGALITY_NS, REGISTRY_NS } from '@/components/document-registry/document-registry-labels';
@@ -38,10 +38,8 @@ export function UpkeepExemptForm({ item, busy, onSubmit, onCancel }: UpkeepExemp
   const [reason, setReason] = useState<UpkeepExemptionReason | null>(null);
   const legendId = React.useId();
   const fieldsetRef = useRef<HTMLFieldSetElement>(null);
-  // ♿ Το «Δεν ισχύει» που πατήθηκε μόλις έφυγε από το DOM: η εστίαση πάει στον πρώτο λόγο, όχι στο `<body>` (§37.6).
-  useEffect(() => {
-    focusFirstWithin(fieldsetRef.current);
-  }, []);
+  // ♿ Το «Δεν ισχύει» που πατήθηκε έφυγε στο ΙΔΙΟ commit: η εστίαση πάει στον πρώτο λόγο, ποτέ στο `<body>` (§37.6/§37.7).
+  useFocusFirstOnMount(fieldsetRef);
   const save = async (): Promise<void> => {
     if (reason === null || busy) return;
     const saved = await onSubmit({ propertyId: item.propertyId, documentKind: item.documentKind, decision: 'not-required', exemptionReason: reason });

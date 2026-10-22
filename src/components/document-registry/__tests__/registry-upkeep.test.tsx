@@ -108,7 +108,8 @@ describe('πριν την απόφαση', () => {
     registry = withUpkeep(null);
     render(<DocumentRegistryContent />);
     await userEvent.click(button(UPKEEP_KEYS.exempt)!);
-    expect(within(panel()).getByRole('group', { name: UPKEEP_KEYS.exemptLegend })).toBeInTheDocument();
+    // Η φόρμα έρχεται όταν είναι έτοιμο το chunk (μετάβαση, §37.7) — ως τότε μένει το «Δεν ισχύει», όχι κενό.
+    expect(await within(panel()).findByRole('group', { name: UPKEEP_KEYS.exemptLegend })).toBeInTheDocument();
     expect(button(UPKEEP_KEYS.saveExempt)).toBeDisabled();
     await userEvent.click(within(panel()).getByRole('radio', { name: UPKEEP_EXEMPTION_KEYS['not-connected'] }));
     await userEvent.click(button(UPKEEP_KEYS.saveExempt)!);
