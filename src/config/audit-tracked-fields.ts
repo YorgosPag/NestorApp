@@ -1431,6 +1431,16 @@ function formatAuditHandoverRecipient(value: unknown): string | null {
 }
 
 /**
+ * Το Πρωτόκολλο μιας παράδοσης ως τιμή ιστορικού — `r{αναθεώρηση} · {phpr_…}` (ADR-916 Φ-Γ2 Σ4)· ποτέ ωμό JSON.
+ * Η αναθεώρηση μπροστά: στο ιστορικό «r1 → r2» διαβάζεται αμέσως ως συμπλήρωση, το id τεκμηριώνει **ποιο** έγγραφο.
+ */
+function formatAuditHandoverProtocol(value: unknown): string | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const { protocolId, revision } = value as { readonly protocolId?: unknown; readonly revision?: unknown };
+  return typeof protocolId === 'string' && protocolId !== '' && typeof revision === 'number' ? `r${revision} · ${protocolId}` : null;
+}
+
+/**
  * Property-handover audit registry (ADR-916 §5.2). Μόνο ο **κύκλος ζωής**: ο παραλήπτης και το ακίνητο είναι
  * η ταυτότητα της παράδοσης (αμετάβλητα), και η ολοκλήρωση γράφεται **μαζί** με τη μετάβαση σε `ready`.
  */
@@ -1438,6 +1448,9 @@ export const PROPERTY_HANDOVER_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   lifecycle: { kind: 'scalar', label: 'lifecycle', enumCatalog: AUDIT_VALUE_CATALOGS.propertyHandoverLifecycle },
   // ADR-916 Φ-Β — «ο αγοραστής αποδέχτηκε»: ο λογαριασμός που δέθηκε (ταυτότητα, όχι περιγραφή — βλ. `value`).
   recipient: { kind: 'scalar', label: 'recipient', value: formatAuditHandoverRecipient },
+  // ADR-916 Φ-Γ2 Σ4 — «εκδόθηκε (νέα αναθεώρηση του) Πρωτοκόλλου»: πράξη με νομικό βάρος, άρα ίχνος — αντίθετα με την
+  // τεχνική πρόοδο της αντιγραφής, που ίχνος δεν αφήνει.
+  protocol: { kind: 'scalar', label: 'protocol', value: formatAuditHandoverProtocol },
 };
 
 /** Project audit registry — `field → TrackedFieldDef`. */

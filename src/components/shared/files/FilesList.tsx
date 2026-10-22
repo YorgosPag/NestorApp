@@ -14,7 +14,7 @@
 
 import React from 'react';
 import { getStatusColor } from '@/lib/design-system';
-import { FileText, Calendar, HardDrive, Link2, Check, X, RotateCcw, PackageCheck } from 'lucide-react';
+import { FileText, Calendar, HardDrive, Link2, Check, X, RotateCcw } from 'lucide-react';
 import type { FileRecord } from '@/types/file-record';
 import type { FileRecordWithLinkStatus } from './hooks/useEntityFiles';
 import { FileThumbnail } from './FileThumbnail';
@@ -38,7 +38,7 @@ import { useFileClassification } from './hooks/useFileClassification';
 import { useRetiredKind } from '@/lib/firestore/retired-record-context';
 import { useUserDisplayNames, seedUserNameCache } from '@/hooks/useUserDisplayNames';
 import { useAuth } from '@/auth/hooks/useAuth';
-import { readFileHandoverOrigin } from '@/lib/property-handover/file-handover-origin';
+import { FileHandoverBadge } from './FileHandoverBadge';
 
 // ============================================================================
 // TYPES
@@ -279,13 +279,8 @@ export function FilesList({
                   </span>
                 )}
 
-                {/* ADR-916 Φ-Γ1 — παραδόθηκε από την κατασκευάστρια· μόνο από το `handoverOrigin` (το γράφει μόνο ο διακομιστής) */}
-                {readFileHandoverOrigin(file.handoverOrigin) !== null && (
-                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium leading-none ${getStatusColor('active', 'bg')}/15 ${getStatusColor('active', 'text')}`}>
-                    <PackageCheck className={iconSizes.xs} aria-hidden="true" />
-                    {t('list.handoverOrigin')}
-                  </span>
-                )}
+                {/* ADR-916 Φ-Γ1 · Σ5 — προέλευση παράδοσης / Πρωτόκολλο· μόνο από σημάδια που γράφει ο διακομιστής */}
+                <FileHandoverBadge file={file} />
 
                 {/* AI classification state badge */}
                 {file.ingestion?.state === 'classifying' && (

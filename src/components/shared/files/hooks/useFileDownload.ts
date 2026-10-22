@@ -25,6 +25,7 @@ import {
 } from '@/services/filesystem/file-mutation-gateway';
 import { fileCustodyKindOf } from '@/lib/files/file-custody';
 import { fileDisplayUrl } from '@/lib/files/file-display-url';
+import { useFilesNotifications } from '@/hooks/notifications/useFilesNotifications';
 import type { CustodyKind } from '@/lib/workspace/custody-scope';
 
 // ============================================================================
@@ -137,6 +138,7 @@ function ensureFileExtension(
 // ============================================================================
 
 export function useFileDownload(): UseFileDownloadReturn {
+  const fileNotifications = useFilesNotifications();
   const handleDownload = useCallback(async (file: DownloadableFile) => {
     // ADR-899 §4.1 — η εφεδρεία από τον ΕΝΑ αναγνώστη: `downloadUrl` ή, ελλείψει, το proxy του `storagePath`.
     const fallbackUrl = file.id ? null : fileDisplayUrl(file);
@@ -181,8 +183,10 @@ export function useFileDownload(): UseFileDownloadReturn {
         error: error instanceof Error ? error.message : 'Unknown error',
         displayName: file.displayName,
       });
+      // ADR-916 §5.13 — η αποτυχία ήταν **σιωπηλή** για κάθε καλούντα: κλικ, τίποτα. Μία ειδοποίηση εδώ, για όλους.
+      fileNotifications.list.downloadError();
     }
-  }, []);
+  }, [fileNotifications]);
 
   return { handleDownload };
 }
