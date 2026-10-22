@@ -11,6 +11,8 @@
  *    σύνδεσμος οδηγεί στο κείμενο **της έκδοσης που τυπώθηκε**, όχι στο «τρέχον».
  * 🔒 Διαβάζει **μόνο** τον φάκελο (Δ10) — ποτέ `property_handovers`. Κανένα στοιχείο αγοραστή (η προβολή δεν έχει).
  * 🔑 Λήψη **κατά id** με διαμέρισμα `personal`: ο διακομιστής βρίσκει τα bytes και περνά από τον φρουρό του δοχείου.
+ * 🏢 Φ-Δ (ADR-916 §5.15) — η **ίδια** κάρτα στην καρτέλα «Παράδοση» του γραφείου, με το αντίτυπο **εταιρείας**
+ *    (`custody: 'company'`): ένα κείμενο, μία λήψη, μία παραπομπή σε κείμενο έκδοσης για τις δύο πλευρές.
  */
 
 import React from 'react';
@@ -25,6 +27,7 @@ import { formatDateTime } from '@/lib/intl-formatting';
 import { handoverProtocolPresentationOf } from '@/lib/property-handover/handover-protocol-presentation';
 import { cn } from '@/lib/utils';
 import { Link } from '@/lib/workspace/navigation';
+import type { CustodyKind } from '@/lib/workspace/custody-scope';
 import type { PropertyHandoverProtocolSummary } from '@/types/property-handover-protocol';
 
 const K = 'property-market:dossier.origin.protocol';
@@ -43,8 +46,14 @@ export function PropertyDossierProtocolBadge({ protocol }: { readonly protocol: 
   );
 }
 
-/** «Λήψη» — κατά id, στο προσωπικό διαμέρισμα· κλειδώνει όσο κατεβαίνει (ποτέ δύο λήψεις από διπλό κλικ). */
-function DownloadAction({ protocol }: { readonly protocol: PropertyHandoverProtocolSummary }) {
+interface ProtocolCustodyProps {
+  readonly protocol: PropertyHandoverProtocolSummary;
+  /** Ποιο αντίτυπο — του αγοραστή (`personal`, προεπιλογή) ή της εταιρείας (`company`, καρτέλα γραφείου). */
+  readonly custody?: CustodyKind;
+}
+
+/** «Λήψη» — κατά id, στο διαμέρισμα του αντιτύπου· κλειδώνει όσο κατεβαίνει (ποτέ δύο λήψεις από διπλό κλικ). */
+function DownloadAction({ protocol, custody = 'personal' }: ProtocolCustodyProps) {
   const { t } = useTranslation(['property-market']);
   const iconSizes = useIconSizes();
   const { handleDownload } = useFileDownload();
@@ -54,14 +63,14 @@ function DownloadAction({ protocol }: { readonly protocol: PropertyHandoverProto
     try {
       await handleDownload({
         id: protocol.fileId,
-        custody: 'personal',
+        custody,
         displayName: t(`${K}.fileName`, { revision: protocol.revision }),
         ext: 'pdf',
       });
     } finally {
       setBusy(false);
     }
-  }, [handleDownload, protocol.fileId, protocol.revision, t]);
+  }, [custody, handleDownload, protocol.fileId, protocol.revision, t]);
   return (
     <button type="button" disabled={busy} aria-busy={busy} onClick={() => void download()} className={cn(ACTION_CLASS, 'disabled:opacity-50')}>
       <Download className={iconSizes.sm} aria-hidden="true" />
@@ -71,7 +80,7 @@ function DownloadAction({ protocol }: { readonly protocol: PropertyHandoverProto
 }
 
 /** Στη σελίδα του φακέλου: τι είναι, πότε, τι αντικαθιστά, λήψη, κείμενο της έκδοσης. `null` ⇒ τίποτα. */
-export function PropertyDossierProtocolCard({ protocol }: { readonly protocol: PropertyHandoverProtocolSummary | null }) {
+export function PropertyDossierProtocolCard({ protocol, custody }: { readonly protocol: PropertyHandoverProtocolSummary | null; readonly custody?: CustodyKind }) {
   const { t } = useTranslation(['property-market']);
   const iconSizes = useIconSizes();
   const titleId = React.useId();
@@ -98,7 +107,7 @@ export function PropertyDossierProtocolCard({ protocol }: { readonly protocol: P
       </dl>
       <p className="m-0 text-sm text-foreground">{t(`${K}.meaning`)}</p>
       <nav aria-label={t(`${K}.title`)} className="flex flex-wrap gap-2">
-        <DownloadAction protocol={protocol} />
+        <DownloadAction protocol={protocol} custody={custody} />
         {view.legalText !== null && (
           <Link href={view.legalText.href} target="_blank" rel="noopener noreferrer" className={ACTION_CLASS}>
             <ExternalLink className={iconSizes.sm} aria-hidden="true" />
