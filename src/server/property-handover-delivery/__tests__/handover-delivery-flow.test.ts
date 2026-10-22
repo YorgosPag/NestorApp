@@ -225,6 +225,26 @@ describe('Γ13 — η όψη του γραφείου και η πράξη ΔΕΝ
     expect(preview?.files.deliver.map((file) => file.fileId).sort()).toEqual(ledger);
   });
 
+  it('Ζ8 — η καρτέλα «Παράδοση» (Φ-Δ): κρίση ανά παράδοση από την ΙΔΙΑ πόρτα · μόνο ονοματεπώνυμο · σφραγίδα μόνο «ρυθμίστηκε;»', async () => {
+    fake.seed(COLLECTIONS.CONTACTS, 'cont_anna', {
+      companyId: COMPANY, type: 'individual', firstName: 'Άννα', lastName: 'Δοκιμαστική', vatNumber: '000000000', phones: [{ number: '2100000000' }],
+    });
+    const preview = await previewPropertyHandover(db(), COMPANY, PROPERTY);
+    expect(preview?.seal).toEqual({ configured: false });
+    expect(preview?.handovers).toHaveLength(1);
+    expect(preview?.handovers[0]).toMatchObject({ recipientName: 'Άννα Δοκιμαστική', status: { reason: 'delivery-queued', move: 'system' } });
+    const wire = JSON.stringify(preview);
+    expect(wire).not.toContain('000000000');
+    expect(wire).not.toContain('2100000000');
+    expect(wire).not.toMatch(/NESTOR_SEAL/);
+  });
+
+  it('Ζ8β — Ο4 στην πόρτα: η πώληση έπεσε ΜΕΤΑ την ολοκλήρωση ⇒ sale-reverted (ποτέ σιωπηλά «σε εξέλιξη»)', async () => {
+    fake.seed(COLLECTIONS.PROPERTIES, PROPERTY, { ...docs(COLLECTIONS.PROPERTIES)[PROPERTY], commercial: { owners: [], legalPhase: 'final_signed' } });
+    const preview = await previewPropertyHandover(db(), COMPANY, PROPERTY);
+    expect(preview?.handovers[0]?.status).toMatchObject({ reason: 'sale-reverted', move: 'office' });
+  });
+
   it('η ουρά βρίσκει την οφειλόμενη παράδοση από το παράγωγο `fileDeliveryState` και την ολοκληρώνει', async () => {
     expect(await runPropertyHandoverDeliveryQueue(db())).toMatchObject({ queued: 1, completed: 1, copied: 3, failedHandovers: 0 });
     expect(await runPropertyHandoverDeliveryQueue(db())).toMatchObject({ queued: 0 });
