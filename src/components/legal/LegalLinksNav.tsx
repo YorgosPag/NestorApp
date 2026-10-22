@@ -35,6 +35,7 @@ const LABEL_KEYS = {
   legalNotice: 'legal.legalNotice',
   openSource: 'legal.openSource',
   privateMarketingDisclosure: 'legal.privateMarketingDisclosure',
+  handoverProtocol: 'legal.handoverProtocol',
 } as const;
 
 /** Η **όψη** ανά επιφάνεια — η λίστα, η σειρά και οι ετικέτες μένουν κοινές. */

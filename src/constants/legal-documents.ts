@@ -30,6 +30,8 @@ export const LEGAL_DOCUMENT_IDS = [
   'data-deletion',
   // ADR-864 Φ3 — η ενημέρωση που συναινεί ο πωλητής πριν από κλειστή διάθεση (Α7-Α8).
   'private-marketing-disclosure',
+  // ADR-916 Φ-Γ2 Σ3 — οι ρήτρες του Πρωτοκόλλου παράδοσης ψηφιακών αρχείων (τυπώνονται στο σφραγισμένο PDF).
+  'handover-protocol',
 ] as const;
 
 export type LegalDocumentId = (typeof LEGAL_DOCUMENT_IDS)[number];
@@ -167,6 +169,31 @@ export const LEGAL_DOCUMENT_OUTLINES: { readonly [Id in LegalDocumentId]: LegalD
         clause('revocation'),
         clause('instruction'),
       ),
+    ],
+  },
+  /**
+   * ADR-916 Φ-Γ2 Σ3 — κείμενο **εγκεκριμένο από τον Giorgio 2026-10-22** (ελληνικά δεσμευτικά· η αγγλική απόδοση πιστή).
+   * Τι βεβαιώνει και τι **όχι** (DocuSign / Adobe Sign: η διαδικασία, όχι το περιεχόμενο) · **καμία** παράδοση ακινήτου
+   * (αφετηρία ΑΚ 555 / τεκμήριο ΑΚ 541) · **καμία** γνώση ή παραίτηση (ΑΚ 539) · επαλήθευση **χωρίς εμάς** — το
+   * `verification.item3` περιγράφει αυτολεξεί το αποτύπωμα v2 (`HANDOVER_DELIVERY_DIGEST_SCHEME`).
+   */
+  'handover-protocol': {
+    source: 'handoverProtocol',
+    titleKey: 'title',
+    sections: [
+      section('intro', paragraph('intro.content')),
+      section(
+        'statements',
+        clause('digitalFilesOnly'),
+        clause('notPropertyDelivery'),
+        clause('noWaiver'),
+        clause('contentNotCertified'),
+        clause('issuerAndSeal'),
+        clause('revisions'),
+        clause('personalData'),
+      ),
+      section('verification', paragraph('verification.intro'), list(true, ...items('verification', 4))),
+      section('operator', paragraph('operator.intro'), OPERATOR),
     ],
   },
 };

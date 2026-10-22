@@ -9,6 +9,14 @@
         "version": 1
       }
     ],
+    "handover-protocol": [
+      {
+        "digest": "sha256:25d9432eb3563718abbf10389c2b4a05f66cd341ec9dfce860b6267629babda4",
+        "effectiveFrom": "2026-10-22",
+        "material": true,
+        "version": 1
+      }
+    ],
     "privacy-policy": [
       {
         "digest": "sha256:2bdb6866f9fa2156d5e860ad81d088a417b88f18e6e93db0f96d71c234c4d4f8",

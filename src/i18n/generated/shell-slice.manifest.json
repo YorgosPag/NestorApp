@@ -21,6 +21,9 @@
     "src/i18n/generated/routes/engagements__engagementId.el.json": "cb0565009bf6f7bec16cd93768e557804df81971abe3c5a23b7c050e9eb91ec3",
     "src/i18n/generated/routes/ergaleia__antikeimeniki-axia.el.json": "f430b58d8427830f6f00eb4b807237852b5845a01ae9baf2b0500b42be47ffef",
     "src/i18n/generated/routes/handover-invite__token.el.json": "77391ee1f926f45a51ba8ed20018681580e5c4e00f2ed34038ef2f5b56080515",
+    "src/i18n/generated/routes/handover-protocol.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
+    "src/i18n/generated/routes/handover-protocol__versions.el.json": "b5985d2511b93344b355342677c84641c2bc629c80ca0b367778c17afd7800b7",
+    "src/i18n/generated/routes/handover-protocol__versions__version.el.json": "0b0f52262c8ead9f7c4c7a282fee6c540b128f8a9a5c78716d351fd4681a6db4",
     "src/i18n/generated/routes/hours-question__token.el.json": "86ba92b35d6e4e4ba43e09267d5749b0ae21774b4dba41d9a4989d48872d0a72",
     "src/i18n/generated/routes/interest-check.el.json": "d0002364331595d2870077e92bf3218896f97dbb2ee2924845b755f5b98fdc94",
     "src/i18n/generated/routes/invite__token.el.json": "aba3b759414cfd4d6bcbed80e662dcac25d828d2fbb82d760ab0b376f9745785",
@@ -73,7 +76,7 @@
     "src/i18n/generated/routes/tour-invite__token.el.json": "aeec8bc36081f1b5a8c49674c18a1a367f5d97d69bad1124f15f0a1349d110cf",
     "src/i18n/generated/routes/vendor__quote.el.json": "413f934a43a5be908bb20d0c0c0c92d312922631921b3363e9c49b3200b7a7ae",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "ca73e92159546cc930cc6b5126e623320a1786ff3248798a1c3bcd983502012c",
+    "src/i18n/generated/shell-slice.el.json": "247053d0e60f12797b7c3e64b798b7b9068e828e24c55bb1237dce004a379010",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "generator": "scripts/generate-i18n-shell-slice.js",
@@ -89,7 +92,7 @@
       "lazyRouteRegistries": "70bded58e6a83e4d2e5e3d2c594b8cfe466e0dfe7d73fa2d4e9e97fce23ad110",
       "localesDir": "a7045bc6e57a2ccd3b4834f975b27f55d6b1b2ace4e9df3ac06ebeced4b9590d",
       "outputDir": "3912195b17692b5eaf099bb5accb2bcf870fd0f9f4bd626e02929a8fa741d7ba",
-      "routeSlices": "b127b978ec6f643258b3449c1e1540380cd1397ba3312ebc8e5c93af1903aded",
+      "routeSlices": "58cbb79f48dc0092545fd3d845f56519494823a851b69506666f560f69b8c7a4",
       "shellRoots": "6303336d888ef26b0205f00bf8f48b03205413ebe5b4f41d2b0918b0be4394a0"
     },
     "keyConstants": {
@@ -152,7 +155,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "dfc3aaf725ec2a27225a32b2f88aa226bfb246b2f9ea6daa9d3e2d6f5d65c0e0",
+  "inputsSha256": "aa0430448a8eac19f05fa79f8a942942fd095ee7400d2eb9a9b8ddb3925a66df",
   "languages": [
     "el"
   ],
@@ -968,6 +971,7 @@
             "jobs.procurement.label",
             "jobs.site.label",
             "legal.dataDeletion",
+            "legal.handoverProtocol",
             "legal.legalLinks",
             "legal.legalNotice",
             "legal.openSource",
@@ -3273,6 +3277,120 @@
         }
       }
     },
+    "handover-protocol": {
+      "page": "src/app/(app)/handover-protocol/page.tsx",
+      "wants": {
+        "legal": {
+          "keys": [
+            "operator.labels.contact",
+            "operator.labels.gemi",
+            "operator.labels.operator",
+            "operator.labels.privacy",
+            "operator.labels.seat",
+            "operator.labels.vat",
+            "operator.mailboxPending",
+            "operator.noDpo",
+            "operator.noGemi",
+            "operator.pending",
+            "operator.qualifier.legalForm",
+            "operator.qualifier.tradeName",
+            "versions.absent",
+            "versions.archiveLink",
+            "versions.line",
+            "versions.placeholders.agency",
+            "versions.placeholders.expiresOn",
+            "versions.upcoming"
+          ],
+          "prefixes": [],
+          "whole": false
+        }
+      }
+    },
+    "handover-protocol__versions": {
+      "page": "src/app/(app)/handover-protocol/versions/page.tsx",
+      "wants": {
+        "legal": {
+          "keys": [
+            "operator.labels.contact",
+            "operator.labels.gemi",
+            "operator.labels.operator",
+            "operator.labels.privacy",
+            "operator.labels.seat",
+            "operator.labels.vat",
+            "operator.mailboxPending",
+            "operator.noDpo",
+            "operator.noGemi",
+            "operator.pending",
+            "operator.qualifier.legalForm",
+            "operator.qualifier.tradeName",
+            "versions.absent",
+            "versions.archiveIntro",
+            "versions.archiveTitle",
+            "versions.effectiveFrom",
+            "versions.firstVersion",
+            "versions.material",
+            "versions.minor",
+            "versions.open",
+            "versions.placeholders.agency",
+            "versions.placeholders.expiresOn",
+            "versions.status.inForce",
+            "versions.status.scheduled",
+            "versions.status.superseded"
+          ],
+          "prefixes": [],
+          "whole": false
+        }
+      }
+    },
+    "handover-protocol__versions__version": {
+      "page": "src/app/(app)/handover-protocol/versions/[version]/page.tsx",
+      "wants": {
+        "legal": {
+          "keys": [
+            "operator.labels.contact",
+            "operator.labels.gemi",
+            "operator.labels.operator",
+            "operator.labels.privacy",
+            "operator.labels.seat",
+            "operator.labels.vat",
+            "operator.mailboxPending",
+            "operator.noDpo",
+            "operator.noGemi",
+            "operator.pending",
+            "operator.qualifier.legalForm",
+            "operator.qualifier.tradeName",
+            "versions.absent",
+            "versions.archiveIntro",
+            "versions.archiveLink",
+            "versions.archiveTitle",
+            "versions.change.added",
+            "versions.change.changed",
+            "versions.change.removed",
+            "versions.change.unchanged",
+            "versions.changesTitle",
+            "versions.digestLabel",
+            "versions.download",
+            "versions.downloadHint",
+            "versions.effectiveFrom",
+            "versions.firstVersion",
+            "versions.material",
+            "versions.minor",
+            "versions.nextText",
+            "versions.noteTitle",
+            "versions.open",
+            "versions.placeholders.agency",
+            "versions.placeholders.expiresOn",
+            "versions.previousText",
+            "versions.status.inForce",
+            "versions.status.scheduled",
+            "versions.status.superseded",
+            "versions.versionTitle"
+          ],
+          "prefixes": [],
+          "whole": false
+        }
+      }
+    },
     "hours-question__token": {
       "page": "src/app/(auth)/hours-question/[token]/page.tsx",
       "wants": {
@@ -3565,6 +3683,7 @@
         "navigation": {
           "keys": [
             "legal.dataDeletion",
+            "legal.handoverProtocol",
             "legal.legalLinks",
             "legal.legalNotice",
             "legal.openSource",
@@ -4730,6 +4849,7 @@
             "jobs.procurement.label",
             "jobs.site.label",
             "legal.dataDeletion",
+            "legal.handoverProtocol",
             "legal.legalLinks",
             "legal.legalNotice",
             "legal.openSource",
@@ -8716,6 +8836,7 @@
         "navigation": {
           "keys": [
             "legal.dataDeletion",
+            "legal.handoverProtocol",
             "legal.legalLinks",
             "legal.legalNotice",
             "legal.openSource",
@@ -10242,6 +10363,7 @@
         "navigation": {
           "keys": [
             "legal.dataDeletion",
+            "legal.handoverProtocol",
             "legal.legalLinks",
             "legal.legalNotice",
             "legal.openSource",
@@ -11293,7 +11415,7 @@
   ],
   "stats": {
     "matchedKeys": 255,
-    "sliceBytes": 787085
+    "sliceBytes": 794109
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -16241,6 +16363,7 @@
         "jobs.switch.tooltip",
         "landingHeroes",
         "legal.dataDeletion",
+        "legal.handoverProtocol",
         "legal.legalLinks",
         "legal.legalNotice",
         "legal.openSource",

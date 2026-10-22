@@ -43,6 +43,12 @@ export const LEGAL_ROUTES = {
    * νομικό κείμενο και ο πωλητής πρέπει να το βρίσκει **πριν** του ζητηθεί (άγκυρα Σ1: κάθε διαδρομή = σύνδεσμος).
    */
   privateMarketingDisclosure: '/private-marketing-disclosure',
+  /**
+   * Οι ρήτρες του Πρωτοκόλλου παράδοσης ψηφιακών αρχείων (ADR-916 Φ-Γ2 Σ3). Δημόσια — το σφραγισμένο PDF
+   * παραπέμπει σε **έκδοση + αποτύπωμα** κειμένου, και ο τρίτος (δικηγόρος, συμβολαιογράφος, δικαστήριο) τη
+   * συγκρίνει εδώ **χωρίς λογαριασμό** (ρήτρα `verification.item4`).
+   */
+  handoverProtocol: '/handover-protocol',
 } as const;
 
 export type LegalRouteId = keyof typeof LEGAL_ROUTES;
@@ -56,6 +62,7 @@ export const LEGAL_DOCUMENT_ROUTES: { readonly [Id in LegalDocumentId]: string }
   'terms-of-service': LEGAL_ROUTES.terms,
   'data-deletion': LEGAL_ROUTES.dataDeletion,
   'private-marketing-disclosure': LEGAL_ROUTES.privateMarketingDisclosure,
+  'handover-protocol': LEGAL_ROUTES.handoverProtocol,
 };
 
 /**
@@ -88,4 +95,6 @@ export const LEGAL_LINK_ORDER: readonly LegalRouteId[] = [
   'openSource',
   // ADR-864 Φ3 — η ενημέρωση κλειστής διάθεσης: αφορά μόνο πωλητή με εντολή, άρα μετά από όλα.
   'privateMarketingDisclosure',
+  // ADR-916 Φ-Γ2 Σ3 — οι ρήτρες του Πρωτοκόλλου παράδοσης: αφορούν μόνο αγοραστή με φάκελο, άρα τελευταίες.
+  'handoverProtocol',
 ];

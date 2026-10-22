@@ -191,5 +191,34 @@
       "revocation": "You may revoke this consent at any time by choosing public marketing or withdrawal. Private marketing stops immediately.",
       "instruction": "I instruct the agency to market the property without a public listing, for as long as the mandate is valid or until I revoke this consent."
     }
+  },
+  "handoverProtocol": {
+    "title": "Digital file handover record",
+    "intro": {
+      "title": "What this document is",
+      "content": "This record states which digital files the issuer made available to the recipient through the platform, when, and with what exact content. It is issued automatically by the platform and requires no signature or other action from anyone."
+    },
+    "statements": {
+      "title": "What it confirms and what it does not",
+      "digitalFilesOnly": "This record covers only the digital files listed in its table. It does not cover paper documents, keys, equipment or anything else handed over outside the platform.",
+      "notPropertyDelivery": "This record is not delivery or acceptance of the property and does not prove that the property was delivered. Its date does not affect any time limit linked to delivery of the property, such as the limitation period for the buyer's rights.",
+      "noWaiver": "The recipient declares, accepts and signs nothing. This record does not mean that the recipient took notice of, examined or approved the files or the property, and it contains no waiver of any right or claim of the recipient, in particular for a material or legal defect or a lack of conformity of the property with the contract.",
+      "contentNotCertified": "This record confirms which files were handed over and that they have not changed since. It does not confirm that their content is correct, complete or sufficient. Responsibility for the content lies with whoever prepared or handed it over, under the contract and the law.",
+      "issuerAndSeal": "The issuer is the business named in the header. The file is electronically sealed by the platform operator and carries a timestamp. The type of seal under Regulation (EU) No 910/2014 (eIDAS) is shown in the file's signature details. Any change after sealing invalidates the seal.",
+      "revisions": "If files are added to the folder, a new revision is issued stating which revision it replaces. Every revision remains unchanged and proves the state as at its date.",
+      "personalData": "This record contains only the personal data needed to identify the handover: the recipient's full name and the time of each event. It contains no email address, telephone number, tax number or IP address. The processing is described in the Privacy Policy."
+    },
+    "verification": {
+      "title": "How to verify it",
+      "intro": "Verification needs no account and no access to the platform. The record file, the handed-over files and common tools are enough.",
+      "item1": "Seal: open the record in a PDF reader that checks signatures, or in a public validation tool. The seal must show as valid and the document as unchanged since sealing.",
+      "item2": "Each file: compute the SHA-256 of the file you hold (for example \"sha256sum file\" or \"certutil -hashfile file SHA256\"). It must match the value in the table. The same value means the same bytes.",
+      "item3": "Folder fingerprint: for each row of the table form the text \"source identifier|copy identifier|SHA-256|size in bytes\", with the SHA-256 as 64 lowercase hexadecimal characters and the size as a decimal integer. Sort the lines by bytes, put the line \"nestor.handover-delivery.v2\" first and join them with a line feed (LF), with no line feed at the end. The SHA-256 of that text in UTF-8 must equal the fingerprint printed on the record.",
+      "item4": "Clause text: the record states the version of this text and its fingerprint. Every version is published unchanged on this text's versions page."
+    },
+    "operator": {
+      "title": "The platform operator",
+      "intro": "The platform operator, which seals the record:"
+    }
   }
 }
