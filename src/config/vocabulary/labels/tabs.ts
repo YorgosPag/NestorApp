@@ -109,6 +109,8 @@ export interface UnitsTabLabelsConfig {
   readonly tour: string;
   readonly listing: string;
   readonly objectiveValue: string;
+  /** ADR-916 §5.15 Φ-Δ — η παράδοση του φακέλου στους αγοραστές: ποιος οφείλει την επόμενη κίνηση. */
+  readonly handover: string;
   // Legacy keys for backward compatibility
   readonly general: string;
   readonly details: string;
@@ -265,6 +267,7 @@ export const VOCAB_UNITS_TAB_LABELS: UnitsTabLabelsConfig = {
   tour: "tabs.labels.tour360",
   listing: "tabs.labels.listing",
   objectiveValue: "tabs.labels.objectiveValue",
+  handover: "tabs.labels.handover",
   // 🔧 Legacy keys for backward compatibility
   general: "tabs.labels.basicInfo",
   details: "tabs.labels.customer",

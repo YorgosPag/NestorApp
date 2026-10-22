@@ -279,12 +279,22 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             component: 'PropertyObjectiveValueTab',
             liveRecordOnly: true
           },
+          // ADR-916 §5.15 Φ-Δ — η παράδοση του φακέλου στους αγοραστές («τα κλειδιά»): ποιος οφείλει την επόμενη κίνηση.
+          {
+            id: 'handover',
+            value: 'handover',
+            icon: 'key',
+            order: 9,
+            enabled: true,
+            component: 'PropertyHandoverTab',
+            liveRecordOnly: true
+          },
           {
             id: 'history',
             value: 'history',
             icon: 'clock',
             description: 'Ιστορικό αλλαγών της μονάδας',
-            order: 9,
+            order: 10,
             enabled: true,
             component: 'ActivityTab'
           }

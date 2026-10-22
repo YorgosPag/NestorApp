@@ -46,6 +46,11 @@ const LazyPropertyTourTab = React.lazy(() =>
   import('@/components/properties/tabs/PropertyTourTab').then((tabs) => ({ default: tabs.PropertyTourTab })),
 );
 
+/** ADR-916 §5.15 Φ-Δ — η καρτέλα «Παράδοση» με όριο: το namespace της φορτώνει μόνο όταν ανοίξει. */
+const LazyPropertyHandoverTab = React.lazy(() =>
+  import('@/components/properties/tabs/PropertyHandoverTab').then((tabs) => ({ default: tabs.PropertyHandoverTab })),
+);
+
 /** Η στιγμή φόρτωσης μιας τεμπέλικης καρτέλας. */
 function TabLoading(): React.ReactElement {
   const { t } = useTranslation(['common']);
@@ -187,20 +192,25 @@ function PropertyObjectiveValueTabAdapter(props: PropertyTabComponentProps) {
   return React.createElement('article', { className: 'p-2' }, React.createElement(PropertyObjectiveValuePanel, { property }));
 }
 
-function PropertyTourTabAdapter(props: PropertyTabComponentProps) {
-  const property = resolveSelectedProperty(props);
-  if (!property) return null;
-  return React.createElement(
-    React.Suspense,
-    { fallback: React.createElement(TabLoading) },
-    React.createElement(LazyPropertyTourTab, { property }),
-  );
+/** Μια τεμπέλικη καρτέλα ακινήτου, με την ίδια στιγμή φόρτωσης — ένα ιδίωμα για όλες. */
+function lazyPropertyTabAdapter(
+  LazyTab: React.ComponentType<{ readonly property: Property }>,
+): ComponentType<PropertyTabComponentProps> {
+  return function LazyPropertyTabAdapter(props: PropertyTabComponentProps) {
+    const property = resolveSelectedProperty(props);
+    if (!property) return null;
+    return React.createElement(React.Suspense, { fallback: React.createElement(TabLoading) }, React.createElement(LazyTab, { property }));
+  };
 }
+
+const PropertyTourTabAdapter = lazyPropertyTabAdapter(LazyPropertyTourTab);
+const PropertyHandoverTabAdapter = lazyPropertyTabAdapter(LazyPropertyHandoverTab);
 
 export const PROPERTIES_COMPONENT_MAPPING: Record<string, ComponentType<PropertyTabComponentProps>> = {
   PropertyListingTab: PropertyListingTabAdapter,
   PropertyObjectiveValueTab: PropertyObjectiveValueTabAdapter,
   PropertyTourTab: PropertyTourTabAdapter,
+  PropertyHandoverTab: PropertyHandoverTabAdapter,
   PropertyDetailsContent: PropertyDetailsTabAdapter,
   UnitCustomerTab: UnitCustomerTabAdapter,
   FloorPlanTab: FloorPlanTabAdapter,
