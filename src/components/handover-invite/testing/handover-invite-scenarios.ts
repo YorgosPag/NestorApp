@@ -28,6 +28,7 @@ import {
   PROPERTY_HANDOVER_INVITATION_OCCASIONS,
   PROPERTY_HANDOVER_LIFECYCLES,
   type PropertyHandoverInvitationOccasion,
+  type PropertyHandoverLifecycle,
 } from '@/types/property-handover';
 import {
   PROPERTY_HANDOVER_INVITATION_REFUSALS,
@@ -112,15 +113,34 @@ export const ANSWER_SCENARIOS: readonly AnswerScenario[] = [
   answer('answer-unknown-code', 'accept', { status: 500, body: { error: 'A_CODE_THIS_CLIENT_HAS_NEVER_HEARD_OF' } }),
 ];
 
-export const ORIGIN_SCENARIOS: readonly OriginScenario[] = PROPERTY_HANDOVER_LIFECYCLES.flatMap((lifecycle) =>
-  [true, false].map((named): OriginScenario => ({
-    id: `origin-${lifecycle}-${named ? 'named' : 'unnamed'}`,
+const originOf = (lifecycle: PropertyHandoverLifecycle, named: boolean): PropertyDossierHandoverOrigin => ({
+  kind: 'handover', handoverId: 'phov_harness', issuerCompanyId: 'comp_harness',
+  issuerName: named ? ISSUER : null, acceptedAt: '2026-10-20T09:00:00.000Z', handoverLifecycle: lifecycle,
+  fileDelivery: null, protocol: null, appurtenanceOf: null,
+});
+
+/**
+ * ADR-916 Σ5 — οι αναθεωρήσεις του Πρωτοκόλλου στη γκαλερί: η πρώτη (δεν αντικαθιστά τίποτα) και μία επόμενη (λέει
+ * ρητά ποια αντικαθιστά). Πρωτόκολλο υπάρχει **μόνο** σε `ready` — ο γραφέας εκδίδει μόνο τότε.
+ * `issuedAt` 21/10 21:30Z = 22/10 00:30 Αθήνα: η όψη παραπέμπει στην έκδοση που ίσχυε την **ελληνική** μέρα.
+ */
+export const HARNESS_PROTOCOL_REVISIONS = [1, 2] as const;
+export const HARNESS_PROTOCOL_ISSUED_AT = '2026-10-21T21:30:00.000Z';
+
+export const ORIGIN_SCENARIOS: readonly OriginScenario[] = [
+  ...PROPERTY_HANDOVER_LIFECYCLES.flatMap((lifecycle) =>
+    [true, false].map((named): OriginScenario => ({
+      id: `origin-${lifecycle}-${named ? 'named' : 'unnamed'}`,
+      origin: originOf(lifecycle, named),
+    }))),
+  ...HARNESS_PROTOCOL_REVISIONS.map((revision): OriginScenario => ({
+    id: `origin-ready-protocol-rev${revision}`,
     origin: {
-      kind: 'handover', handoverId: 'phov_harness', issuerCompanyId: 'comp_harness',
-      issuerName: named ? ISSUER : null, acceptedAt: '2026-10-20T09:00:00.000Z', handoverLifecycle: lifecycle,
-      fileDelivery: null, appurtenanceOf: null,
+      ...originOf('ready', true),
+      protocol: { revision, issuedAt: HARNESS_PROTOCOL_ISSUED_AT, fileId: `file_harness_protocol_rev${revision}` },
     },
-  })));
+  })),
+];
 
 const ANSWER_BY_TOKEN = new Map(ANSWER_SCENARIOS.map((scenario) => [scenario.id, scenario.reply]));
 

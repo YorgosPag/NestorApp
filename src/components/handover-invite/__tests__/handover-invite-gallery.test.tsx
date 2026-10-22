@@ -33,13 +33,20 @@ jest.mock('@/lib/workspace/navigation', () => ({
 }));
 jest.mock('@/lib/browser/document-navigation', () => ({ navigateDocument: jest.fn() }));
 jest.mock('@/auth', () => ({ useAuthOptional: () => ({ signOut: jest.fn(), refreshToken: jest.fn() }) }));
+// ADR-916 Σ5 — η λήψη του Πρωτοκόλλου: καταγράφεται, δεν κατεβαίνει τίποτα. Αναφορά τη στιγμή της κλήσης (όχι στο hoisting).
+const mockHandleDownload = jest.fn(async () => undefined);
+jest.mock('@/components/shared/files/hooks/useFileDownload', () => ({
+  useFileDownload: () => ({ handleDownload: (file: unknown) => mockHandleDownload(file) }),
+}));
 
 import React from 'react';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { dossierDetailHref, MY_DOSSIERS_ROUTE } from '@/lib/property-dossier/property-dossier-routes';
+import { HANDOVER_PROTOCOL_LEGAL_DOCUMENT } from '@/lib/property-handover/handover-protocol-terms';
+import { legalDocumentVersionHref } from '@/lib/routes/legalRoutes';
 import { CORE_INVITATION_REFUSALS } from '@/types/invitation-core';
 import { PROPERTY_HANDOVER_INVITATION_OCCASIONS, PROPERTY_HANDOVER_LIFECYCLES } from '@/types/property-handover';
 import { PROPERTY_HANDOVER_INVITATION_REFUSALS } from '@/types/property-handover-invitation';
@@ -50,7 +57,12 @@ import {
   HANDOVER_INVITE_REFUSAL_KEY,
 } from '../handover-invite-labels';
 import { HandoverInviteHarness } from '../testing/HandoverInviteHarness';
-import { ANSWER_SCENARIOS, ORIGIN_SCENARIOS, SERVER_SCENARIOS } from '../testing/handover-invite-scenarios';
+import {
+  ANSWER_SCENARIOS,
+  HARNESS_PROTOCOL_REVISIONS,
+  ORIGIN_SCENARIOS,
+  SERVER_SCENARIOS,
+} from '../testing/handover-invite-scenarios';
 
 /** Ταβάνι, όχι χρονισμός: η αναμονή σταματά στο **δηλωμένο σήμα** της οθόνης (ADR-844 §11). */
 const SETTLE_TIMEOUT_MS = 8000;
@@ -81,7 +93,7 @@ describe('Α — κάθε μέλος κάθε κλειστού συνόλου έ
       for (const viewer of ['sign-in', 'other-account', 'ready']) expect(ids(SERVER_SCENARIOS)).toContain(`view-${viewer}-${occasion}`);
       expect(ids(ANSWER_SCENARIOS)).toContain(`answer-accepted-${occasion}`);
     }
-    expect(ORIGIN_SCENARIOS).toHaveLength(PROPERTY_HANDOVER_LIFECYCLES.length * 2);
+    expect(ORIGIN_SCENARIOS).toHaveLength(PROPERTY_HANDOVER_LIFECYCLES.length * 2 + HARNESS_PROTOCOL_REVISIONS.length);
   });
 
   it('🔑 Α3 — καμία ταυτότητα δύο φορές (ο μεταφορέας δρομολογεί σε αυτήν)', () => {
@@ -138,5 +150,52 @@ describe('Γ — ο μεταφορέας δεν διαρρέει', () => {
     expect(apiClient.post).not.toBe(original);
     unmount();
     expect(apiClient.post).toBe(original);
+  });
+});
+
+describe('Δ — Σ5: το Πρωτόκολλο στον φάκελο (Γ40)', () => {
+  const P = 'property-market:dossier.origin.protocol';
+  const withProtocol = ORIGIN_SCENARIOS.filter((scenario) => scenario.origin.protocol !== null);
+  const withoutProtocol = ORIGIN_SCENARIOS.filter((scenario) => scenario.origin.protocol === null);
+
+  it('🔴 Δ1 — κάρτα + σήμα ΜΟΝΟ όπου ο γραφέας πρόβαλε Πρωτόκολλο· «αντικαθιστά» μόνο από την αναθ. 2', async () => {
+    await renderSettled();
+    expect(withProtocol).toHaveLength(HARNESS_PROTOCOL_REVISIONS.length);
+    for (const scenario of withoutProtocol) expect(panel(scenario.id)).not.toHaveTextContent(P);
+    for (const scenario of withProtocol) {
+      const card = within(panel(scenario.id));
+      expect(card.getByRole('heading', { name: `${P}.title` })).toBeInTheDocument();
+      expect(card.getByText(`${P}.sealed`)).toBeInTheDocument();
+      expect(card.getByText(`${P}.short`)).toBeInTheDocument();
+      expect(card.getByText(`${P}.meaning`)).toBeInTheDocument();
+      const supersedes = card.queryByText(`${P}.supersedes`);
+      if (scenario.origin.protocol?.revision === 1) expect(supersedes).toBeNull();
+      else expect(supersedes).toBeInTheDocument();
+    }
+  });
+
+  it('🔴 Δ2 — ο σύνδεσμος οδηγεί στο κείμενο που ΙΣΧΥΕ την ελληνική μέρα έκδοσης', async () => {
+    await renderSettled();
+    for (const scenario of withProtocol) {
+      expect(within(panel(scenario.id)).getByRole('link', { name: `${P}.legalText` }))
+        .toHaveAttribute('href', legalDocumentVersionHref(HANDOVER_PROTOCOL_LEGAL_DOCUMENT, 1));
+    }
+  });
+
+  it('🔴 Δ3 — «Λήψη» κατεβάζει το ΔΙΚΟ ΤΟΥ αντίτυπο, από το ΠΡΟΣΩΠΙΚΟ διαμέρισμα', async () => {
+    await renderSettled();
+    for (const scenario of withProtocol) {
+      mockHandleDownload.mockClear();
+      fireEvent.click(within(panel(scenario.id)).getByRole('button', { name: `${P}.download` }));
+      await waitFor(() => expect(mockHandleDownload).toHaveBeenCalledTimes(1));
+      expect(mockHandleDownload).toHaveBeenCalledWith(expect.objectContaining({
+        id: scenario.origin.protocol?.fileId, custody: 'personal', ext: 'pdf',
+      }));
+    }
+  });
+
+  it('🔒 Δ4 — κανένα στοιχείο επικοινωνίας στην κάρτα (κανένα «@»)', async () => {
+    await renderSettled();
+    for (const scenario of withProtocol) expect(panel(scenario.id).textContent ?? '').not.toContain('@');
   });
 });
