@@ -28,6 +28,10 @@ export default {
     // το `text-[0.625rem]` + `rounded-tl` της απόδοσης χάρτη (`lib/maps/map-attribution-view.tsx`) ΔΕΝ παράγονταν:
     // το «© OpenStreetMap contributors» έβγαινε σε κληρονομημένο μέγεθος και σκέπαζε τη μισή μικρογραφία (ADR-777 §8.70.8).
     './src/lib/**/*.tsx',
+    // Οι **κλάσεις-SSoT** εμφάνισης (`lib/ui/link-style.ts`: `VISIBLE_LINK_CLASS` · `ENTITY_LINK_CLASS` · `BACK_LINK_CLASS`).
+    // Χωρίς αυτή τη γραμμή το `decoration-1` και το `hover:decoration-2` ΔΕΝ παράγονταν ποτέ (μετρημένο ζωντανά
+    // 2026-10-22, ADR-242 Βήμα 4): η υπογράμμιση έβγαινε, γιατί το `underline` υπάρχει και αλλού — το πάχος όχι.
+    './src/lib/ui/**/*.ts',
     './src/features/**/*.{ts,tsx}',
     './src/domain/**/*.{ts,tsx}',
     './src/hooks/**/*.ts',
