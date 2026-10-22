@@ -22,7 +22,7 @@ import { Link } from '@/lib/workspace/navigation';
 import { declaredHref } from '@/lib/workspace/route-worlds';
 import { getProjectUrl } from '@/lib/navigation/project-urls';
 import { ENTITY_ROUTES } from '@/lib/routes/entityRoutes';
-import { ExternalLink } from "lucide-react";
+import { ENTITY_LINK_CLASS } from '@/lib/ui/link-style';
 import { formatRelativeTime, formatDateTime } from "@/lib/intl-utils";
 import type {
   AuditEntityType,
@@ -259,10 +259,9 @@ export function AuditTimelineEntry({
             {entityHref ? (
               <Link
                 href={entityHref}
-                className="inline-flex items-center gap-1 font-medium text-[hsl(var(--text-info))] hover:underline"
+                className={cn("font-medium", ENTITY_LINK_CLASS)}
               >
                 {safeEntityName(entry.entityName) ?? t('audit.unknownEntityName')}
-                <ExternalLink className="h-3 w-3 opacity-60" />
               </Link>
             ) : (
               <span className="font-medium">

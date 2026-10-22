@@ -17,7 +17,7 @@ import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from '@
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
 import { getProjectUrl } from '@/lib/navigation/project-urls';
-import { TABLE_CELL_LINK_CLASS } from '@/lib/ui/link-style';
+import { ENTITY_LINK_CLASS } from '@/lib/ui/link-style';
 import { Link } from '@/lib/workspace/navigation';
 import type { ProjectFinancialSummary } from '@/types/interest-calculator';
 import { HealthStatusBadge } from './HealthStatusBadge';
@@ -52,7 +52,7 @@ export function PortfolioProjectsTable({ projects }: PortfolioProjectsTableProps
           {projects.map(proj => (
             <TableRow key={proj.projectId}>
               <TableCell className="font-medium">
-                <Link href={getProjectUrl(proj.projectId)} className={TABLE_CELL_LINK_CLASS}>{proj.projectName}</Link>
+                <Link href={getProjectUrl(proj.projectId)} className={ENTITY_LINK_CLASS}>{proj.projectName}</Link>
               </TableCell>
               <TableCell className="text-right">{proj.totalProperties}</TableCell>
               <TableCell className="text-right">{proj.soldProperties}</TableCell>

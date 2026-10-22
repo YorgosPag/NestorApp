@@ -39,6 +39,8 @@ import { PropertyDetailSurface } from '@/features/property-detail-surface/Proper
 import { usePropertiesViewerState } from '@/hooks/usePropertiesViewerState';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ENTITY_ROUTES } from '@/lib/routes';
+import { BACK_LINK_CLASS } from '@/lib/ui/link-style';
+import { cn } from '@/lib/utils';
 import { PageErrorState, StaticPageLoading } from '@/core/states';
 import { RecordActionBarProvider } from '@/core/layouts/record-action-bar';
 import { PropertyReinstateAction } from '@/components/properties/trash/PropertyReinstateAction';
@@ -167,7 +169,7 @@ export function PropertyDetailPageContent({
           </p>
           <Link
             href={ENTITY_ROUTES.properties.list}
-            className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-foreground underline"
+            className={cn('mt-4', BACK_LINK_CLASS)}
           >
             {t(`${NS}:detailPage.backToList`)}
           </Link>

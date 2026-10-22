@@ -16,10 +16,21 @@ import { TOUCH_TARGET_MIN } from '@/design-system/touch-target';
 export const VISIBLE_LINK_CLASS = 'underline decoration-1 underline-offset-4 hover:decoration-2';
 
 /**
- * **Το όνομα μιας γραμμής πίνακα ως σύνδεσμος προς την οντότητά της** (ADR-242) — ο ΕΝΑΣ πραγματικός `<a>` της γραμμής.
+ * **Το όνομα μιας οντότητας ως σύνδεσμος προς αυτήν** (ADR-242) — γραμμή πίνακα, εγγραφή ιστορικού αλλαγών, υπότιτλος.
  *
- * 🔑 Η γραμμή **ΔΕΝ** πατιέται ολόκληρη με `onClick` στο `<tr>` (Roselli 2023 · GOV.UK · GitHub): χάνονται Ctrl/μεσαίο
- *   κλικ, «Αντιγραφή συνδέσμου», πληκτρολόγιο και επιλογή κειμένου. Χρώμα κειμένου (όχι μπλε) + ορατή υπογράμμιση +
- *   στόχος αφής ≥24 px (WCAG 2.5.8).
+ * 🔑 Η γραμμή πίνακα **ΔΕΝ** πατιέται ολόκληρη με `onClick` στο `<tr>` (Roselli 2023 · GOV.UK · GitHub): χάνονται
+ *   Ctrl/μεσαίο κλικ, «Αντιγραφή συνδέσμου», πληκτρολόγιο και επιλογή κειμένου — ο ΕΝΑΣ πραγματικός `<a>` είναι το όνομα.
+ * 🔑 Χρώμα κειμένου (όχι μπλε) + ορατή υπογράμμιση + στόχος αφής ≥24 px (WCAG 2.5.8).
+ * 🔑 **Χωρίς εικονίδιο `ExternalLink`**: ανοίγει στην ΙΔΙΑ καρτέλα (απόφαση ADR-242)· το εικονίδιο δηλώνει «φεύγεις από
+ *   το site / νέα καρτέλα» — βαλμένο εδώ θα ήταν ψέμα (ADR-242 Βήμα 4).
  */
-export const TABLE_CELL_LINK_CLASS = `text-foreground ${VISIBLE_LINK_CLASS} ${TOUCH_TARGET_MIN}`;
+export const ENTITY_LINK_CLASS = `text-foreground ${VISIBLE_LINK_CLASS} ${TOUCH_TARGET_MIN}`;
+
+/**
+ * **Ο σύνδεσμος επιστροφής** («← Πίσω στο …») — ADR-242 Βήμα 4.
+ *
+ * 🔑 GOV.UK Back link: χρώμα κειμένου (όχι γκρι — το `text-muted-foreground` τον έκανε να μοιάζει ετικέτα), υπογράμμιση
+ *   **πάντα** (WCAG 1.4.1), βέλος στα αριστερά (`aria-hidden` — το όνομα το δίνει το κείμενο, WCAG 2.4.4).
+ * 🔑 Στόχος αφής ≥24 px (WCAG 2.5.8): μετρημένο ζωντανά 20 px πριν, στο «Πίσω στο έργο» των προμηθειών.
+ */
+export const BACK_LINK_CLASS = `gap-1 text-sm font-medium text-foreground ${VISIBLE_LINK_CLASS} ${TOUCH_TARGET_MIN}`;

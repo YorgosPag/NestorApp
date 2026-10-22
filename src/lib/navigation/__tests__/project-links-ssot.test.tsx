@@ -9,18 +9,25 @@
  * (β) «Πίσω στο έργο» των προμηθειών: ίδια διεύθυνση με το SSoT, όχι χειρόγραφο query·
  * (γ) ιστορικό αλλαγών: κάθε τύπος οντότητας πάει στην ΚΑΝΟΝΙΚΗ διεύθυνση του κεντρικού μητρώου — ποτέ στις
  *     διευθύνσεις-redirect `/projects/:id` · `/contacts/:id` · `/buildings/:id` · `/parking/:id` · `/storage/:id`.
+ * ADR-242 Βήμα 4 — **ο σύνδεσμος ΦΑΙΝΕΤΑΙ σύνδεσμος**: (α) `BACK_LINK_CLASS` (GOV.UK Back link) · (β) `ENTITY_LINK_CLASS`
+ *   στο ιστορικό, χωρίς ψευδές εικονίδιο «νέας καρτέλας» · (δ) το χειρόγραφο literal της επιστροφής δεν ξαναγεννιέται.
  */
 
 import { fireEvent, render, screen } from '@testing-library/react';
+import fs from 'fs';
+import path from 'path';
 import React from 'react';
 
 import { BackToProjectLink } from '@/components/projects/procurement/BackToProjectLink';
 import { ProjectHealthTable } from '@/components/reports/sections/executive/ProjectHealthTable';
 import type { ProjectHealthRow } from '@/components/reports/sections/executive/types';
-import { buildEntityHref } from '@/components/shared/audit/audit-timeline-entry';
+import { AuditTimelineEntry, buildEntityHref } from '@/components/shared/audit/audit-timeline-entry';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { TOUCH_TARGET_MIN } from '@/design-system/touch-target';
 import { getProjectUrl } from '@/lib/navigation/project-urls';
 import { ENTITY_ROUTES } from '@/lib/routes/entityRoutes';
-import type { AuditEntityType } from '@/types/audit-trail';
+import { BACK_LINK_CLASS, ENTITY_LINK_CLASS, VISIBLE_LINK_CLASS } from '@/lib/ui/link-style';
+import type { AuditEntityType, EntityAuditEntry } from '@/types/audit-trail';
 
 const mockPush = jest.fn();
 
@@ -33,6 +40,7 @@ jest.mock('@/lib/workspace/navigation', () => ({
   ),
   useRouter: () => ({ push: mockPush, replace: mockPush, back: jest.fn(), prefetch: jest.fn() }),
 }));
+jest.mock('@/hooks/useFloorLabel', () => ({ useFloorLabel: () => (value: unknown) => String(value) }));
 
 const healthRow = (id: string, name: string): ProjectHealthRow => ({
   id, name, progress: 40, cpi: 1, spi: 1, cpiHealth: 'green', spiHealth: 'green', overallHealth: 'green', budget: 0,
@@ -96,4 +104,67 @@ describe('buildEntityHref — ζητά από το κεντρικό μητρώο
       }
     },
   );
+});
+
+// ── ADR-242 Βήμα 4 — ο σύνδεσμος ΦΑΙΝΕΤΑΙ σύνδεσμος (υπογράμμιση πάντα · ≥24 px · κανένα ψέμα «νέας καρτέλας») ──
+
+const tokens = (classes: string): string[] => classes.split(/\s+/).filter(Boolean);
+const expectWears = (el: HTMLElement, ssot: string) => {
+  for (const token of tokens(ssot)) expect(el).toHaveClass(token);
+};
+
+describe('Βήμα 4 (α) — «Πίσω στο έργο» φορά το SSoT του συνδέσμου επιστροφής', () => {
+  it('υπογράμμιση πάντα + στόχος αφής + χρώμα κειμένου (όχι γκρι ετικέτα)', () => {
+    render(<BackToProjectLink projectId="proj_a" />);
+    const link = screen.getByRole('link');
+    expectWears(link, BACK_LINK_CLASS);
+    expectWears(link, VISIBLE_LINK_CLASS);
+    expectWears(link, TOUCH_TARGET_MIN);
+    expect(link).not.toHaveClass('text-muted-foreground');
+  });
+
+  it('το `className` ΣΥΓΧΩΝΕΥΕΤΑΙ — δεν αντικαθιστά την ορατότητα', () => {
+    render(<BackToProjectLink projectId="proj_a" className="mb-2" />);
+    const link = screen.getByRole('link');
+    expect(link).toHaveClass('mb-2');
+    expectWears(link, VISIBLE_LINK_CLASS);
+  });
+});
+
+describe('Βήμα 4 (β) — όνομα οντότητας στο ιστορικό αλλαγών', () => {
+  const ENTRY = {
+    id: 'aud_1', entityType: 'building', entityId: 'bld_1', entityName: 'Κτίριο Α', action: 'updated', changes: [],
+    performedBy: 'user_1', performedByName: 'Γιώργος', timestamp: '2026-10-22T09:00:00.000Z', companyId: 'comp_1',
+  } as unknown as EntityAuditEntry;
+
+  const renderEntry = () => render(
+    <TooltipProvider><ol><AuditTimelineEntry entry={ENTRY} showEntityLink /></ol></TooltipProvider>,
+  );
+
+  it('φορά το `ENTITY_LINK_CLASS` (υπογράμμιση πάντα, όχι μόνο στο hover · ≥24 px)', () => {
+    renderEntry();
+    const link = screen.getByRole('link', { name: 'Κτίριο Α' });
+    expectWears(link, ENTITY_LINK_CLASS);
+    expect(link).not.toHaveClass('hover:underline');
+  });
+
+  it('ίδια καρτέλα ⇒ ΚΑΝΕΝΑ εικονίδιο «εξωτερικού συνδέσμου» και κανένα `target`', () => {
+    renderEntry();
+    const link = screen.getByRole('link', { name: 'Κτίριο Α' });
+    expect(link).not.toHaveAttribute('target');
+    expect(link.querySelector('svg')).toBeNull();
+  });
+});
+
+describe('Βήμα 4 — ο σύνδεσμος επιστροφής ζει ΜΙΑ φορά (άγκυρα SSoT)', () => {
+  const SRC = path.join(process.cwd(), 'src');
+  // Συναρμολογημένο, ώστε το ίδιο το test να μη βρίσκει τον εαυτό του.
+  const LITERAL = ['items-center gap-1', 'text-sm font-medium text-foreground underline"'].join(' ');
+
+  it('κανένα `.tsx` δεν ξαναγράφει χειρόγραφα την κλάση του `BACK_LINK_CLASS`', () => {
+    const offenders = (fs.readdirSync(SRC, { recursive: true }) as string[])
+      .filter((rel) => rel.endsWith('.tsx'))
+      .filter((rel) => fs.readFileSync(path.join(SRC, rel), 'utf8').includes(LITERAL));
+    expect(offenders).toEqual([]);
+  });
 });

@@ -11,7 +11,7 @@
 import '@/lib/design-system';
 import { useTranslation } from 'react-i18next';
 import { getProjectUrl } from '@/lib/navigation/project-urls';
-import { TABLE_CELL_LINK_CLASS } from '@/lib/ui/link-style';
+import { ENTITY_LINK_CLASS } from '@/lib/ui/link-style';
 import { Link } from '@/lib/workspace/navigation';
 import {
   ReportSection,
@@ -45,7 +45,7 @@ export function ProjectHealthTable({ data, loading }: ProjectHealthTableProps) {
       header: t('executive.projectHealth.project'),
       sortable: true,
       render: (_value: unknown, row: ProjectHealthRow) => (
-        <Link href={getProjectUrl(row.id)} className={TABLE_CELL_LINK_CLASS}>{row.name}</Link>
+        <Link href={getProjectUrl(row.id)} className={ENTITY_LINK_CLASS}>{row.name}</Link>
       ),
     },
     {
