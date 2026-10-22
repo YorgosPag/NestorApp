@@ -21,6 +21,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 
+import { openHandoverProtocolRun } from './property-handover-protocol-write.service';
 import { syncPropertyHandovers } from './property-handover-write.service';
 
 const logger = createModuleLogger('PropertyHandoverReconcile');
@@ -39,6 +40,8 @@ export interface PropertyHandoverReconcileReport {
   readonly invitationChanged: number;
   /** Προσκλήσεις που οφείλονται αλλά περιμένουν το μυστικό των συνδέσμων — μη μηδενικό = ρύθμιση, όχι βλάβη κώδικα. */
   readonly invitationsAwaitingConfiguration: number;
+  /** Φ-Γ2 Σ4 — Πρωτόκολλα που οφείλονταν αλλά περιμένουν ρύθμιση παρόχου σφραγίδας (ADR-918) — ΕΝΑ σήμα, όχι βλάβη. */
+  readonly protocolsAwaitingSealConfiguration: number;
   readonly failed: number;
 }
 
@@ -67,20 +70,27 @@ export async function reconcilePropertyHandovers(adminDb: AdminFirestore): Promi
   let invitationChanged = 0;
   let invitationsAwaitingConfiguration = 0;
   let failed = 0;
-  for (const propertyId of propertyIds) {
-    const outcome = await syncPropertyHandovers(adminDb, propertyId, { cause: 'reconcile', performedBy: 'system' });
-    if (outcome.kind === 'failed') {
-      failed += 1;
-      continue;
+  // Σ4 — **μία** συνεδρία σφράγισης για όλα τα ακίνητα ⇒ ένα σήμα· εδώ ξαναδοκιμάζονται Πρωτόκολλα που περίμεναν ρύθμιση.
+  const protocols = openHandoverProtocolRun(adminDb);
+  let protocolsAwaitingSealConfiguration = 0;
+  try {
+    for (const propertyId of propertyIds) {
+      const outcome = await syncPropertyHandovers(adminDb, propertyId, { cause: 'reconcile', performedBy: 'system', protocolIssuer: protocols.issue });
+      if (outcome.kind === 'failed') {
+        failed += 1;
+        continue;
+      }
+      invitationsAwaitingConfiguration += outcome.invitationsAwaitingConfiguration;
+      if (outcome.writes > 0) changed += 1;
+      else if (outcome.invitationWrites > 0) invitationChanged += 1;
     }
-    invitationsAwaitingConfiguration += outcome.invitationsAwaitingConfiguration;
-    if (outcome.writes > 0) changed += 1;
-    else if (outcome.invitationWrites > 0) invitationChanged += 1;
+  } finally {
+    protocolsAwaitingSealConfiguration = protocols.finish();
   }
   if (invitationsAwaitingConfiguration > 0) {
     logger.warn('Προσκλήσεις αγοραστή σε αναμονή ρύθμισης — λείπει το μυστικό των συνδέσμων· το δίχτυ ξαναδοκιμάζει', {
       pending: invitationsAwaitingConfiguration,
     });
   }
-  return { scanned: propertyIds.length, changed, invitationChanged, invitationsAwaitingConfiguration, failed };
+  return { scanned: propertyIds.length, changed, invitationChanged, invitationsAwaitingConfiguration, protocolsAwaitingSealConfiguration, failed };
 }

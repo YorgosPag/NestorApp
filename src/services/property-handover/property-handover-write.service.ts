@@ -44,7 +44,11 @@ import {
 } from '@/lib/property-handover/handover-plan';
 import { propertyHandoverFromDocument } from '@/lib/property-handover/property-handover-from-document';
 import { createModuleLogger } from '@/lib/telemetry';
-import { deliverHandoverFiles, type HandoverFileDeliveryRecorder } from '@/server/property-handover-delivery/handover-delivery.server';
+import {
+  deliverHandoverFiles,
+  type HandoverFileDeliveryRecorder,
+  type HandoverProtocolIssuer,
+} from '@/server/property-handover-delivery/handover-delivery.server';
 import {
   deliverIssuedHandoverInvitations,
   followUpHandoverInvitation,
@@ -54,6 +58,7 @@ import type { MintedHandoverInvitation } from '@/server/property-handover-invita
 import { recordTrackedEntityWrite } from '@/services/entity-audit-tracked-write';
 import { stagePropertyDossierHandoverProjection } from '@/services/property-dossier/property-dossier-write.service';
 import type { PropertyHandover, PropertyHandoverFileDelivery, PropertyHandoverInvitationDelivery } from '@/types/property-handover';
+import type { PropertyHandoverProtocolPointer } from '@/types/property-handover-protocol';
 
 import { stageHandoverInvitations } from './property-handover-invitation-stage';
 
@@ -66,6 +71,11 @@ export interface PropertyHandoverSyncRequest {
   readonly cause: PropertyHandoverSyncCause;
   /** uid του δρώντα — `'system'` για δίχτυ και γραφέα νομικής φάσης χωρίς άνθρωπο. */
   readonly performedBy: string;
+  /**
+   * Φ-Γ2 Σ4 — ο εκδότης Πρωτοκόλλου **της εκτέλεσης του καλούντα** (π.χ. το νυχτερινό δίχτυ ανοίγει **μία** συνεδρία
+   * σφράγισης για όλα τα ακίνητα ⇒ ένα σήμα). Απών ⇒ η συμφιλίωση ανοίγει δική της, **μόνο** αν κάποια παράδοση τρέξει.
+   */
+  readonly protocolIssuer?: HandoverProtocolIssuer;
 }
 
 export type PropertyHandoverSyncOutcome =
@@ -109,6 +119,9 @@ function storedHandover(handover: PropertyHandover): Omit<PropertyHandover, 'id'
     recipient: handover.recipient,
     invitation: handover.invitation,
     fileDelivery: handover.fileDelivery,
+    // Φ-Γ2 Σ4 — ο δείκτης στο τελευταίο Πρωτόκολλο: μια συμφιλίωση που δεν τον περνούσε θα τον **έσβηνε** ⇒ η επόμενη
+    // έκδοση θα έβγαινε ξανά «αναθεώρηση 1» χωρίς `supersedes`.
+    protocol: handover.protocol,
     fileDeliveryState: fileDeliveryStateOf(handover),
     createdAt: handover.createdAt,
     updatedAt: handover.updatedAt,
@@ -206,6 +219,58 @@ export async function recordHandoverFileDelivery(
     tx.update(ref, { fileDelivery: after.fileDelivery, fileDeliveryState: fileDeliveryStateOf(after), updatedAt: after.updatedAt });
     projection.commit();
   });
+}
+
+/** Τι περιμένει ο γραφέας του Πρωτοκόλλου να βρει — και τι γράφει αν το βρει (Φ-Γ2 Σ4). */
+export interface HandoverProtocolPointerWrite {
+  readonly handoverId: string;
+  readonly recipientUserId: string;
+  /** Το αποτύπωμα που σφραγίστηκε — πρέπει να είναι **ακόμη** το αποτύπωμα της παράδοσης. */
+  readonly ledgerDigest: string;
+  /** Το πρωτόκολλο που αντικαθίσταται — `null` στην πρώτη αναθεώρηση. Άλλος δείκτης ⇒ κάποιος πρόλαβε. */
+  readonly previousProtocolId: string | null;
+  readonly pointer: PropertyHandoverProtocolPointer;
+}
+
+/** Η γραφή του δείκτη, ετοιμασμένη: ανάγνωση **έγινε**, γραφή στο `commit()` (το Firestore θέλει αναγνώσεις πρώτα). */
+export interface HandoverProtocolPointerStage {
+  readonly write: PropertyHandoverWrite & { readonly kind: 'update' };
+  commit(): void;
+}
+
+/**
+ * **Φ-Γ2 Σ4 — ο δείκτης στο τελευταίο Πρωτόκολλο**, στην παράδοση **και** (προβολή, Δ10) στον κύριο φάκελο του αγοραστή,
+ * μέσα στη συναλλαγή του γραφέα του πρωτοκόλλου. **CAS**: `null` (καμία γραφή) αν η παράδοση **δεν** είναι πια
+ * `delivered` με **το ίδιο** αποτύπωμα, στον **ίδιο** παραλήπτη, με **τον ίδιο** προηγούμενο δείκτη — μια συμπλήρωση, μια
+ * ανάκληση ή μια ταυτόχρονη έκδοση στο μεταξύ **δεν** κληρονομεί πρωτόκολλο που δεν περιγράφει την αλήθεια της.
+ */
+export async function stageHandoverProtocolPointer(
+  tx: Transaction,
+  adminDb: AdminFirestore,
+  input: HandoverProtocolPointerWrite,
+): Promise<HandoverProtocolPointerStage | null> {
+  const ref = handoverDocRef(adminDb, input.handoverId);
+  const before = propertyHandoverFromDocument((await tx.get(ref)).data(), ref.id);
+  const recipient = before?.recipient ?? null;
+  const delivery = before?.fileDelivery ?? null;
+  if (before === null || recipient === null || recipient.userId !== input.recipientUserId) return null;
+  // Ακυρωμένη (ή πια μη οφειλόμενη) παράδοση **δεν** παίρνει Πρωτόκολλο, όσο «delivered» κι αν έμεινε η πρόοδός της.
+  if (fileDeliveryStateOf(before) === null) return null;
+  if (delivery?.state !== 'delivered' || delivery.digest !== input.ledgerDigest) return null;
+  if ((before.protocol?.protocolId ?? null) !== input.previousProtocolId) return null;
+  const { revision, issuedAt, recipientFileId } = input.pointer;
+  const projection = await stagePropertyDossierHandoverProjection(tx, adminDb, {
+    dossierId: recipient.dossierId, userId: recipient.userId, handoverId: before.id, handoverLifecycle: before.lifecycle,
+    protocol: { revision, issuedAt, fileId: recipientFileId },
+  });
+  const after: PropertyHandover = { ...before, protocol: input.pointer, updatedAt: nowISO() };
+  return {
+    write: { kind: 'update', before, after },
+    commit: () => {
+      tx.update(ref, { protocol: after.protocol, updatedAt: after.updatedAt });
+      projection.commit();
+    },
+  };
 }
 
 /** Ό,τι έγινε σε μία συναλλαγή — για το ίχνος, τα email και το δίχτυ. */
@@ -317,10 +382,11 @@ function applyPlan(adminDb: AdminFirestore, propertyId: string, actorUid: string
  * **Μετά το commit**: τα πρώτα email των νέων προσκλήσεων — και, **μόνο** στο νυχτερινό δίχτυ, επανάληψη αποτυχιών και
  * η μία υπενθύμιση (ένα PATCH ακινήτου δεν πληρώνει email τρίτων). Ποτέ δεν πετά.
  */
-async function deliverAfterCommit(adminDb: AdminFirestore, applied: AppliedPlan, cause: PropertyHandoverSyncCause): Promise<void> {
+async function deliverAfterCommit(adminDb: AdminFirestore, applied: AppliedPlan, request: PropertyHandoverSyncRequest): Promise<void> {
+  const { cause } = request;
   const record: HandoverDeliveryRecorder = (input) => recordHandoverInvitationDelivery(adminDb, input);
   await deliverIssuedHandoverInvitations(adminDb, applied.issued, record);
-  await deliverDueFiles(adminDb, applied.handovers, cause);
+  await deliverDueFiles(adminDb, applied.handovers, request);
   if (cause !== 'reconcile') return;
   const fresh = new Set(applied.issued.map(({ invitation }) => invitation.handoverId));
   for (const handover of applied.handovers) {
@@ -332,14 +398,31 @@ async function deliverAfterCommit(adminDb: AdminFirestore, applied: AppliedPlan,
  * **Φ-Γ1 — τα αρχεία που οφείλονται**, ένα πρώτο κομμάτι (`HANDOVER_DELIVERY_INLINE_FILE_BUDGET`)· το cron συνεχίζει.
  * Στο νυχτερινό δίχτυ ξανακοιτά και τις **παραδομένες**: ένα νέο παραδοτέο αρχείο (Δ5) φτάνει μόνο του.
  */
-async function deliverDueFiles(adminDb: AdminFirestore, handovers: readonly PropertyHandover[], cause: PropertyHandoverSyncCause): Promise<void> {
-  const record: HandoverFileDeliveryRecorder = (input) => recordHandoverFileDelivery(adminDb, input);
-  for (const handover of handovers) {
+async function deliverDueFiles(adminDb: AdminFirestore, handovers: readonly PropertyHandover[], request: PropertyHandoverSyncRequest): Promise<void> {
+  const due = handovers.filter((handover) => {
     const state = fileDeliveryStateOf(handover);
-    if (state === null || (state === 'delivered' && cause !== 'reconcile')) continue;
-    const budget = { maxFiles: HANDOVER_DELIVERY_INLINE_FILE_BUDGET, deadlineAt: null, maxHashBytes: HANDOVER_DELIVERY_INLINE_HASH_BYTE_BUDGET };
-    await deliverHandoverFiles(adminDb, handover, budget, record);
+    return state !== null && (state !== 'delivered' || request.cause === 'reconcile');
+  });
+  if (due.length === 0) return;
+  const record: HandoverFileDeliveryRecorder = (input) => recordHandoverFileDelivery(adminDb, input);
+  const own = request.protocolIssuer === undefined ? await openOwnProtocolRun(adminDb) : null;
+  const issue = request.protocolIssuer ?? own?.issue ?? null;
+  const budget = { maxFiles: HANDOVER_DELIVERY_INLINE_FILE_BUDGET, deadlineAt: null, maxHashBytes: HANDOVER_DELIVERY_INLINE_HASH_BYTE_BUDGET };
+  try {
+    for (const handover of due) await deliverHandoverFiles(adminDb, handover, budget, record, issue);
+  } finally {
+    own?.finish();
   }
+}
+
+/**
+ * Φ-Γ2 Σ4 — η **δική** της εκτέλεση έκδοσης, για συμφιλίωση χωρίς εκδότη από τον καλούντα. ⚠️ **Δυναμική** εισαγωγή, επίτηδες:
+ * (α) ο γραφέας του πρωτοκόλλου εισάγει **αυτό** το αρχείο (δείκτης · ίχνος) — στατική εισαγωγή θα έκλεινε κύκλο·
+ * (β) φέρνει jsPDF + pdf-lib + κρυπτογραφία, που **δεν** χρειάζεται κάθε PATCH ακινήτου.
+ */
+async function openOwnProtocolRun(adminDb: AdminFirestore): Promise<{ readonly issue: HandoverProtocolIssuer; finish(): number }> {
+  const { openHandoverProtocolRun } = await import('./property-handover-protocol-write.service');
+  return openHandoverProtocolRun(adminDb);
 }
 
 /**
@@ -354,7 +437,7 @@ export async function syncPropertyHandovers(
   try {
     const applied = await applyPlan(adminDb, propertyId, request.performedBy);
     await Promise.all(applied.lifecycleWrites.map((write) => recordHandoverWrite(write, request.performedBy)));
-    await deliverAfterCommit(adminDb, applied, request.cause);
+    await deliverAfterCommit(adminDb, applied, request);
     const writes = applied.lifecycleWrites.length;
     if (writes + applied.mirrorWrites > 0) {
       logger.info('Property handovers synced', { propertyId, cause: request.cause, writes, invitations: applied.mirrorWrites, issued: applied.issued.length });
