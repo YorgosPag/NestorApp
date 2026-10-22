@@ -427,6 +427,15 @@ export function getEnabledProjectTabs(): ProjectTabConfig[] {
 }
 
 /**
+ * Οι καρτέλες που μπορούν να είναι **ενεργές** (με περιεχόμενο — όχι καρτέλα-σύνδεσμος `href`), ως οι τιμές που
+ * δέχεται ο `UniversalTabsRenderer`, με την **προεπιλογή πρώτη**. Είναι το κλειστό σύνολο του `?tab=` της σελίδας
+ * έργου (ADR-242 Βήμα 3): ό,τι λείπει από εδώ πέφτει στην προεπιλογή, ίδια ερώτηση με το `selectableDefaultTab`.
+ */
+export function getSelectableProjectTabIds(): readonly string[] {
+  return getEnabledProjectTabs().filter(tab => !tab.href).map(tab => tab.value);
+}
+
+/**
  * Get specific tab by ID
  */
 export function getProjectTab(tabId: string): ProjectTabConfig | undefined {
@@ -477,6 +486,7 @@ export default {
   PROJECT_TABS,
   getSortedProjectTabs,
   getEnabledProjectTabs,
+  getSelectableProjectTabIds,
   getProjectTab,
   getProjectTabByValue,
   getProjectTabsByComponent,

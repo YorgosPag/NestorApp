@@ -11,4 +11,15 @@
  * ⏳ Το literal `underline underline-offset-4` επαναλαμβάνεται σε 30+ αρχεία, και το `hover:underline` (αόρατο στην αφή)
  *   σε άλλα τόσα — η μετάβαση είναι καταγεγραμμένη στο `.claude-rules/pending-ratchet-work.md`.
  */
+import { TOUCH_TARGET_MIN } from '@/design-system/touch-target';
+
 export const VISIBLE_LINK_CLASS = 'underline decoration-1 underline-offset-4 hover:decoration-2';
+
+/**
+ * **Το όνομα μιας γραμμής πίνακα ως σύνδεσμος προς την οντότητά της** (ADR-242) — ο ΕΝΑΣ πραγματικός `<a>` της γραμμής.
+ *
+ * 🔑 Η γραμμή **ΔΕΝ** πατιέται ολόκληρη με `onClick` στο `<tr>` (Roselli 2023 · GOV.UK · GitHub): χάνονται Ctrl/μεσαίο
+ *   κλικ, «Αντιγραφή συνδέσμου», πληκτρολόγιο και επιλογή κειμένου. Χρώμα κειμένου (όχι μπλε) + ορατή υπογράμμιση +
+ *   στόχος αφής ≥24 px (WCAG 2.5.8).
+ */
+export const TABLE_CELL_LINK_CLASS = `text-foreground ${VISIBLE_LINK_CLASS} ${TOUCH_TARGET_MIN}`;
