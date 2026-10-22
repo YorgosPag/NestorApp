@@ -32,7 +32,7 @@ import { handoverCopyFileIdOf } from '@/lib/property-handover/property-handover-
 import { buildProxyUrl } from '@/lib/storage/storage-object-url';
 import { custodyKindOfScope } from '@/lib/workspace/custody-scope';
 import { fileRecordBucket, fileStorageBucket } from '@/server/files/file-record-bucket';
-import { copyPairs, missingPairsIn, sameObject, statObjects } from '@/server/storage/placement-copy';
+import { copyProvenPairs, statObjects } from '@/server/storage/placement-copy';
 import { recordFileAudit } from '@/services/file-audit-admin.service';
 import { buildFinalizeFileRecordUpdate, buildPendingFileRecordData } from '@/services/file-record';
 import type { DeliverableHandoverFile } from '@/services/property-handover/property-handover-set.server';
@@ -104,14 +104,25 @@ async function prepareCopy(ctx: HandoverCopyContext, planned: PlannedHandoverCop
 
 /** Bytes → απόδειξη, για μία θέση. Επιστρέφει όσα **αποδείχτηκαν** πανομοιότυπα στον προορισμό. */
 async function copyAndProve(prepared: readonly PreparedCopy[], placement: FileStoragePlacement): Promise<PreparedCopy[]> {
-  const target = fileStorageBucket(placement);
-  const pairs = prepared.map((copy) => ({ source: copy.source, destinationName: copy.built.storagePath }));
-  await copyPairs(await missingPairsIn(target, pairs), target);
-  const present = new Map((await statObjects(target, pairs.map((pair) => pair.destinationName))).map((file) => [file.name, file] as const));
-  return prepared.filter((copy) => {
-    const destination = present.get(copy.built.storagePath);
-    return destination !== undefined && sameObject(copy.source, destination);
-  });
+  const proven = await copyProvenPairs(prepared.map((copy) => ({ source: copy.source, destinationName: copy.built.storagePath })), fileStorageBucket(placement));
+  return prepared.filter((copy) => proven.has(copy.built.storagePath));
+}
+
+/**
+ * **Η εγγραφή αρχείου που γεννιέται κατευθείαν `ready`** — τα bytes έχουν ήδη αποδειχτεί. Ο ΕΝΑΣ τρόπος για τα αντίγραφα
+ * της παράδοσης (Φ-Γ1) **και** τα αντίτυπα του Πρωτοκόλλου (Φ-Γ2 Σ4): ποτέ δύο διατυπώσεις του «έτοιμου» σε δύο γραφείς.
+ */
+export function readyFileRecordData(
+  built: ReturnType<typeof buildPendingFileRecordData>,
+  ready: { readonly sizeBytes: number; readonly placement: FileStoragePlacement; readonly hash: string | undefined },
+): Record<string, unknown> {
+  return {
+    ...built.recordBase,
+    ...buildFinalizeFileRecordUpdate({
+      sizeBytes: ready.sizeBytes, downloadUrl: buildProxyUrl(built.storagePath, ready.placement), hash: ready.hash, nextStatus: FILE_STATUS.READY,
+    }),
+    createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
+  };
 }
 
 /**
@@ -130,14 +141,9 @@ async function commitCopy(ctx: HandoverCopyContext, copy: PreparedCopy): Promise
   const ledgerRef = deliveryLedgerRef(ctx.adminDb, ctx.handover.id, item.sourceFileId);
   await ctx.adminDb.runTransaction(async (tx) => {
     const [recordSnap, ledgerSnap] = await Promise.all([tx.get(recordRef), tx.get(ledgerRef)]);
-    if (!recordSnap.exists) tx.create(recordRef, {
-      ...built.recordBase,
-      ...buildFinalizeFileRecordUpdate({
-        sizeBytes: row.size, downloadUrl: buildProxyUrl(built.storagePath, copy.placement),
-        hash: text(item.file.doc.data().hash), nextStatus: FILE_STATUS.READY,
-      }),
-      createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
-    });
+    if (!recordSnap.exists) {
+      tx.create(recordRef, readyFileRecordData(built, { sizeBytes: row.size, placement: copy.placement, hash: text(item.file.doc.data().hash) }));
+    }
     if (!ledgerSnap.exists) stageDeliveryLedgerRow(tx, ledgerRef, {
       sourceFileId: row.sourceFileId, copyFileId: row.copyFileId, crc32c: row.crc32c, size: row.size,
       companyId: ctx.handover.companyId, propertyId: ctx.handover.propertyId, handoverId: ctx.handover.id,

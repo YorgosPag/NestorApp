@@ -57,6 +57,13 @@ export type HandoverFileDeliveryRecorder = (input: {
   readonly fileDelivery: PropertyHandoverFileDelivery;
 }) => Promise<void>;
 
+/**
+ * Φ-Γ2 Σ4 — **ο εκδότης του Πρωτοκόλλου**, όταν η εκτέλεση καταλήγει `delivered`. Θύρα (όπως ο καταγραφέας): ο εκτελεστής
+ * **δεν** ξέρει τίποτα για σφράγιση ή PDF, και ο γραφέας του πρωτοκόλλου μένει έξω από τον κύκλο εισαγωγών του. Τη δίνουν
+ * οι καλούντες (inline · cron · νυχτερινό δίχτυ) με **μία** συνεδρία σφράγισης ανά εκτέλεσή τους. Δεν ρίχνει ποτέ.
+ */
+export type HandoverProtocolIssuer = (handover: PropertyHandover) => Promise<void>;
+
 export interface HandoverDeliveryRunOutcome {
   readonly kind: 'not-due' | 'delivering' | 'delivered' | 'failed';
   readonly copied: number;
@@ -106,13 +113,15 @@ async function progressOf(
     startedAt: previous?.startedAt ?? now,
     completedAt,
     lastError: state === 'delivered' ? null : run.lastError ?? hashing.lastError ?? previous?.lastError ?? null,
+    unverifiable: state === 'delivered' ? 0 : hashing.unverifiable,
   };
 }
 
 /** Ίδια πρόοδος (εκτός χρονοσφραγίδων) ⇒ καμία εγγραφή: το νυχτερινό δίχτυ σε παραδομένη παράδοση γράφει **τίποτα**. */
 function sameProgress(a: PropertyHandoverFileDelivery | null, b: PropertyHandoverFileDelivery): boolean {
   return a !== null && a.state === b.state && a.delivered === b.delivered && a.total === b.total
-    && a.awaitingReview === b.awaitingReview && a.bytes === b.bytes && a.digest === b.digest && a.lastError === b.lastError;
+    && a.awaitingReview === b.awaitingReview && a.bytes === b.bytes && a.digest === b.digest && a.lastError === b.lastError
+    && a.unverifiable === b.unverifiable;
 }
 
 async function runDelivery(
@@ -121,6 +130,7 @@ async function runDelivery(
   recipient: PropertyHandoverRecipient,
   budget: HandoverDeliveryBudget,
   record: HandoverFileDeliveryRecorder,
+  issueProtocol: HandoverProtocolIssuer | null,
 ): Promise<HandoverDeliveryRunOutcome> {
   const set = await loadHandoverSet(adminDb, handover.companyId, handover.propertyId);
   if (set === null) throw new Error(`Property ${handover.propertyId} not found in tenant ${handover.companyId}`);
@@ -134,6 +144,8 @@ async function runDelivery(
   const hashing = await hashDeliveredRows(ctx, [...delivered, ...run.rows], { maxBytes: budget.maxHashBytes, deadlineAt: budget.deadlineAt });
   const progress = await progressOf(handover.fileDelivery, plan.total, run, hashing, set.review.length);
   if (!sameProgress(handover.fileDelivery, progress)) await record({ handoverId: handover.id, recipientUserId: recipient.userId, fileDelivery: progress });
+  // Σ4 — και όταν η πρόοδος δεν άλλαξε (νυχτερινό δίχτυ): εκεί ξαναδοκιμάζεται σφράγιση που περίμενε ρύθμιση.
+  if (progress.state === 'delivered' && issueProtocol !== null) await issueProtocol({ ...handover, fileDelivery: progress });
   if (run.rows.length > 0 || run.failed > 0 || hashing.hashed > 0) {
     logger.info('Παράδοση αρχείων αγοραστή', {
       handoverId: handover.id, copied: run.rows.length, failed: run.failed, hashed: hashing.hashed, unhashed: hashing.pending,
@@ -152,11 +164,12 @@ export async function deliverHandoverFiles(
   handover: PropertyHandover,
   budget: HandoverDeliveryBudget,
   record: HandoverFileDeliveryRecorder,
+  issueProtocol: HandoverProtocolIssuer | null = null,
 ): Promise<HandoverDeliveryRunOutcome> {
   const { recipient } = handover;
   if (recipient === null || fileDeliveryStateOf(handover) === null) return { kind: 'not-due', copied: 0, failed: 0 };
   try {
-    return await runDelivery(adminDb, handover, recipient, budget, record);
+    return await runDelivery(adminDb, handover, recipient, budget, record, issueProtocol);
   } catch (error) {
     logger.error('Η παράδοση αρχείων αγοραστή απέτυχε', { handoverId: handover.id, error: getErrorMessage(error) });
     return { kind: 'failed', copied: 0, failed: 0 };

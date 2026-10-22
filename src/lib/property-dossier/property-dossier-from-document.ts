@@ -26,7 +26,7 @@ import {
   type PropertyDossierLifecycle,
   type PropertyDossierOrigin,
 } from '@/types/property-dossier';
-import { fileDeliverySummaryOf } from '@/lib/property-handover/property-handover-from-document';
+import { fileDeliverySummaryOf, protocolSummaryOf } from '@/lib/property-handover/property-handover-from-document';
 import { PROPERTY_HANDOVER_LIFECYCLES, type PropertyHandoverLifecycle } from '@/types/property-handover';
 
 const nonEmptyString = (value: unknown): value is string =>
@@ -56,6 +56,7 @@ function originOf(raw: unknown): PropertyDossierOrigin | null {
     kind, handoverId, issuerCompanyId, issuerName, acceptedAt, handoverLifecycle,
     // Φ-Γ1 — οι φάκελοι της Φ-Β δεν τα έχουν: απουσία = η δηλωμένη ουδέτερη τιμή, ποτέ εφεύρεση.
     fileDelivery: fileDeliverySummaryOf(origin.fileDelivery),
+    protocol: protocolSummaryOf(origin.protocol),
     appurtenanceOf: nonEmptyString(origin.appurtenanceOf) ? origin.appurtenanceOf : null,
   };
 }

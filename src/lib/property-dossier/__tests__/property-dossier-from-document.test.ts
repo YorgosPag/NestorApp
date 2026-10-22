@@ -34,14 +34,21 @@ describe('🏆 Α36.7 — `propertyDossierFromDocument`', () => {
 
   it('φάκελος από παράδοση ⇒ η προέλευση διαβάζεται ολόκληρη (Φ-Β: χωρίς πρόοδο αντιγραφής ⇒ `null`)', () => {
     expect(propertyDossierFromDocument({ ...STORED, origin: ORIGIN }, 'pdos_x')?.origin)
-      .toEqual({ ...ORIGIN, fileDelivery: null, appurtenanceOf: null });
+      .toEqual({ ...ORIGIN, fileDelivery: null, protocol: null, appurtenanceOf: null });
   });
 
   it('Φ-Γ1 — η πρόοδος αντιγραφής και ο κύριος φάκελος παρακολουθήματος διαβάζονται· αλλοιωμένη πρόοδος ⇒ `null`', () => {
-    const delivered = { ...ORIGIN, fileDelivery: { state: 'delivering', delivered: 3, total: 5 }, appurtenanceOf: 'pdos_main' };
+    const delivered = { ...ORIGIN, fileDelivery: { state: 'delivering', delivered: 3, total: 5 }, protocol: null, appurtenanceOf: 'pdos_main' };
     expect(propertyDossierFromDocument({ ...STORED, origin: delivered }, 'pdos_x')?.origin).toEqual(delivered);
     const corrupt = { ...ORIGIN, fileDelivery: { state: 'teleported', delivered: -1, total: 5 } };
     expect(propertyDossierFromDocument({ ...STORED, origin: corrupt }, 'pdos_x')?.origin?.fileDelivery).toBeNull();
+  });
+
+  it('Φ-Γ2 Σ4 — η προβολή του Πρωτοκόλλου διαβάζεται· αλλοιωμένη ⇒ `null` (ποτέ ψεύτικη αναθεώρηση)', () => {
+    const protocol = { revision: 2, issuedAt: '2026-10-22T10:00:00.000Z', fileId: 'file_recipient_2' };
+    expect(propertyDossierFromDocument({ ...STORED, origin: { ...ORIGIN, protocol } }, 'pdos_x')?.origin?.protocol).toEqual(protocol);
+    const corrupt = { ...ORIGIN, protocol: { ...protocol, revision: 0 } };
+    expect(propertyDossierFromDocument({ ...STORED, origin: corrupt }, 'pdos_x')?.origin?.protocol).toBeNull();
   });
 
   it.each([

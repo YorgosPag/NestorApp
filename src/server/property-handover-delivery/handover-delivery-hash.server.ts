@@ -42,6 +42,12 @@ export interface HandoverHashRun {
   readonly hashed: number;
   /** Γραμμές που μένουν χωρίς sha256 — όσο > 0, το αποτύπωμα (και το Πρωτόκολλο) εκκρεμεί. */
   readonly pending: number;
+  /**
+   * Σ4 (Ο13) — γραμμές που δοκιμάστηκαν **σε αυτή** την εκτέλεση και **καμία** υποψήφια δεν κρατά πια τα bytes τους
+   * (όχι σφάλμα δικτύου: αυτό είναι `lastError` και ξαναδοκιμάζεται). Η σταθερή σειρά του `planHandoverHashing` φέρνει
+   * τέτοια γραμμή **πρώτη** σε κάθε επόμενη εκτέλεση, άρα ο αριθμός δεν «αναβοσβήνει».
+   */
+  readonly unverifiable: number;
   readonly lastError: string | null;
 }
 
@@ -110,16 +116,20 @@ export async function hashDeliveredRows(ctx: HandoverHashContext, rows: readonly
   const candidates = await candidatesOf(ctx, plan.hash);
   const proven = new Map<string, string>();
   let lastError: string | null = null;
+  let unverifiable = 0;
   for (const row of plan.hash) {
     if (budget.deadlineAt !== null && Date.now() >= budget.deadlineAt) break;
     try {
       const sha256 = await hashRow(ctx, row, candidates.get(row.sourceFileId) ?? []);
-      if (sha256 === null) lastError = `Χωρίς αποδείξιμο αποτύπωμα: ${row.sourceFileId}`;
-      else proven.set(row.sourceFileId, sha256);
+      if (sha256 !== null) proven.set(row.sourceFileId, sha256);
+      else {
+        unverifiable += 1;
+        lastError = `Χωρίς αποδείξιμο αποτύπωμα: ${row.sourceFileId}`;
+      }
     } catch (error) {
       lastError = getErrorMessage(error);
     }
   }
   const out = rows.map((row) => (row.sha256 !== null ? row : { ...row, sha256: proven.get(row.sourceFileId) ?? null }));
-  return { rows: out, hashed: proven.size, pending: out.filter((row) => row.sha256 === null).length, lastError };
+  return { rows: out, hashed: proven.size, pending: out.filter((row) => row.sha256 === null).length, unverifiable, lastError };
 }

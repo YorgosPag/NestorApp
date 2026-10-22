@@ -61,7 +61,7 @@ async function readMainDossier(adminDb: AdminFirestore, recipient: PropertyHando
 }
 
 /** Το όνομα του χώρου (αριθμός θέσης · όνομα αποθήκης) — δεδομένα, ποτέ κείμενο του κώδικα· εφεδρεία ο κωδικός του. */
-async function appurtenanceLabelOf(adminDb: AdminFirestore, appurtenance: ConveyanceAppurtenanceRef): Promise<string> {
+export async function appurtenanceLabelOf(adminDb: AdminFirestore, appurtenance: ConveyanceAppurtenanceRef): Promise<string> {
   const kind = SPACE_KIND_OF[appurtenance.entityType];
   const data = (await adminDb.collection(SPACE_COLLECTION_OF[kind]).doc(appurtenance.entityId).get()).data() ?? {};
   return propertyDossierLabelFrom(spaceDisplayNameOf({ id: appurtenance.entityId, kind, data }) ?? '') || appurtenance.entityId;
@@ -76,7 +76,7 @@ async function ensureAppurtenanceDossier(
 ): Promise<string | null> {
   const id = handoverDossierIdOf(handover.id, appurtenance);
   const label = await appurtenanceLabelOf(adminDb, appurtenance);
-  const origin = main.origin === null ? null : { ...main.origin, fileDelivery: null, appurtenanceOf: main.id };
+  const origin = main.origin === null ? null : { ...main.origin, fileDelivery: null, protocol: null, appurtenanceOf: main.id };
   const staged = await adminDb.runTransaction((tx) => stagePropertyDossierForListing(
     tx, adminDb, { id, userId: main.userId }, { label, type: DOSSIER_TYPE_OF[appurtenance.entityType] }, nowISO(), origin,
   ));
