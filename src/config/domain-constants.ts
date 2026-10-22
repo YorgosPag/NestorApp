@@ -1048,6 +1048,10 @@ export const API_ROUTES = {
     // Η αποδοχή/άρνηση από `/handover-invite/[token]` — token σε σώμα, ποτέ σε URL.
     REDEEM: '/api/property-handover-invitations/redeem',
   },
+  // ADR-916 Φ-Γ2 Σ6 — η δημόσια πόρτα επαλήθευσης: `GET` με το sha256 του PDF (ποτέ τα bytes) ως `?sha256=`.
+  HANDOVER_PROTOCOLS: {
+    VERIFICATION: (protocolId: string) => `/api/handover-protocols/${encodeURIComponent(protocolId)}/verification` as const,
+  },
 
   // ── Sales ─────────────────────────────────────────────────────────────
   SALES: {
