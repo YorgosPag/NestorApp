@@ -10,7 +10,7 @@
  * 🔑 **`GET`, ποτέ τα bytes**: ο browser στέλνει **μόνο** το sha256 του PDF (`?sha256=`). Το PDF κρατά ονοματεπώνυμο
  *    αγοραστή και λίστα αρχείων — δεν φεύγει από τη συσκευή (το EU DSS ζητά «μην ανεβάζετε ευαίσθητα»· εμείς δεν ζητάμε).
  *    Χωρίς `sha256` ⇒ ερώτηση από **χαρτί** (QR): μόνο όσα τυπώνει ήδη το χαρτί.
- * ⚠️ `withSensitiveRateLimit` (fail-closed): πόρτα χωρίς ταυτότητα. `no-store`: η απάντηση αλλάζει όταν εκδοθεί νεότερη
+ * ⚠️ `withSensitiveRateLimit` (fail-closed): πόρτα χωρίς ταυτότητα. `no-store` (το μόνο δικό της header): η απάντηση αλλάζει όταν εκδοθεί νεότερη
  *    αναθεώρηση — καμία κρυφή μνήμη δεν επιτρέπεται να πει «τρέχον» για χθες.
  */
 
@@ -30,7 +30,9 @@ import { ENTERPRISE_ID_PREFIXES } from '@/services/enterprise-id-prefixes';
 
 const logger = createModuleLogger('HANDOVER_PROTOCOL_VERIFICATION');
 
-const HEADERS = { 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' } as const;
+// ⚠️ Μόνο `no-store`. Το `Referrer-Policy` το ορίζει το middleware (`SECURITY_HEADERS` → `strict-origin-when-cross-origin`)
+//    και ΝΙΚΑ — μετρημένο ζωντανά 2026-10-22: δεύτερη δήλωση εδώ ήταν νεκρή, δηλαδή ψευδής ισχυρισμός.
+const HEADERS = { 'Cache-Control': 'no-store' } as const;
 
 const reply = (body: HandoverProtocolVerificationResponse, status: number): NextResponse<HandoverProtocolVerificationResponse> =>
   NextResponse.json(body, { status, headers: HEADERS });

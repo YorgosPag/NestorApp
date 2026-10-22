@@ -72,10 +72,10 @@ describe('Γ44 — η δημόσια πόρτα επαλήθευσης', () => {
     expect(jest.requireMock('@/lib/middleware/with-rate-limit').withSensitiveRateLimit).toHaveBeenCalledTimes(1);
   });
 
-  it('ίδια bytes ⇒ registered · match · current, με no-store + no-referrer', async () => {
+  it('ίδια bytes ⇒ registered · match · current, με no-store', async () => {
     const reply = await call(ID, `?sha256=${PDF_SHA}`);
     expect(reply.status).toBe(200);
-    expect(reply.headers).toEqual({ 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' });
+    expect(reply.headers).toEqual({ 'Cache-Control': 'no-store' });
     await expect(reply.json()).resolves.toMatchObject({ ok: true, registry: { kind: 'registered', file: 'match', standing: { kind: 'current' } } });
   });
 
