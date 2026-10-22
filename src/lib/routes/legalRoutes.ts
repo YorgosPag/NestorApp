@@ -79,6 +79,16 @@ export const legalDocumentVersionHref = (document: LegalDocumentId, version: num
   `${legalDocumentVersionsHref(document)}/${version}`;
 
 /**
+ * Η **δημόσια πόρτα επαλήθευσης** του Πρωτοκόλλου παράδοσης (ADR-916 Φ-Γ2 Σ6) — υποδιαδρομή της σελίδας του εγγράφου,
+ * ίδια οικογένεια με το `versions` (κληρονομεί την εγγραφή «εκτός χώρου»). Με `protocolId` ⇒ ο σύνδεσμος του QR που
+ * τυπώνει το ίδιο το Πρωτόκολλο: ανοίγει την καταχώριση του μητρώου για **αυτόν** τον κωδικό.
+ */
+export const handoverProtocolVerifyHref = (protocolId?: string): string =>
+  protocolId === undefined
+    ? `${LEGAL_ROUTES.handoverProtocol}/verify`
+    : `${LEGAL_ROUTES.handoverProtocol}/verify/${encodeURIComponent(protocolId)}`;
+
+/**
  * **Η σειρά των συνδέσμων** — ίδια σε κάθε επιφάνεια (μενού · οθόνες σύνδεσης · σελίδα νομικών
  * στοιχείων). Οι ετικέτες ζουν στο UI (`components/legal/LegalLinksNav.tsx`), όχι εδώ: αυτό το
  * αρχείο είναι διαδρομές μόνο, όπως τα αδέλφια του.

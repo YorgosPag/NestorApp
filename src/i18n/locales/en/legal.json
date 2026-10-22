@@ -220,5 +220,134 @@
       "title": "The platform operator",
       "intro": "The platform operator, which seals the record:"
     }
+  },
+  "handoverVerify": {
+    "title": "Verify a Handover Protocol",
+    "lead": "Check whether a digital-files Handover Protocol is genuine, unaltered and the latest revision.",
+    "privacy": "Your file is not uploaded anywhere. The check runs on your device; only the Protocol code and the SHA-256 fingerprint of the file reach the issuer’s registry.",
+    "pick": {
+      "protocolTitle": "The Protocol file",
+      "protocolHint": "Drop the Protocol PDF here or choose it from your device.",
+      "choose": "Choose PDF",
+      "packageTitle": "The files you received",
+      "packageHint": "Optional: drop the files you received here to check, one by one, that they are the ones in the table.",
+      "chooseMany": "Choose files",
+      "another": "Check another file"
+    },
+    "progress": {
+      "reading": "Reading “{name}” on your device…",
+      "asking": "Asking the issuer’s registry…"
+    },
+    "refused": {
+      "tooLarge": {
+        "title": "Not a Protocol",
+        "body": "The file is far larger than a Handover Protocol."
+      },
+      "notPdf": {
+        "title": "Not a readable PDF",
+        "body": "The file is not a PDF or it is damaged."
+      },
+      "noManifest": {
+        "title": "Not a Handover Protocol",
+        "body": "The PDF does not contain the machine-readable table (manifest.json) that every Handover Protocol embeds."
+      },
+      "manifestInvalid": {
+        "title": "Unrecognised table",
+        "body": "The embedded table is not in the Handover Protocol format."
+      }
+    },
+    "inconsistent": {
+      "title": "The table has been altered",
+      "body": "The fingerprint recomputed from the table rows does not match the one the document itself states. This is not the file that was issued."
+    },
+    "unavailable": {
+      "rateLimited": {
+        "title": "Too many checks in a short time",
+        "body": "Please try again in a minute."
+      },
+      "unreachable": {
+        "title": "The registry did not answer",
+        "body": "Please try again shortly. You can also verify independently, as described below."
+      }
+    },
+    "verdict": {
+      "verified": {
+        "title": "Verified",
+        "body": "The file is, byte for byte, the one the issuer sealed and registered, and it is the current revision."
+      },
+      "superseded": {
+        "title": "Genuine — superseded",
+        "body": "The file is genuine, but a newer revision ({latest}) has been issued. Ask the holder for it."
+      },
+      "undetermined": {
+        "title": "Genuine — latest revision not confirmed",
+        "body": "The file is the one the issuer sealed; it cannot be confirmed right now that no newer revision exists."
+      },
+      "altered": {
+        "title": "Not the file that was issued",
+        "body": "The code matches a registered Protocol, but the file differs from the one that was sealed — even by a single byte. Ask for the original."
+      },
+      "notRegistered": {
+        "title": "Not found in the registry",
+        "body": "No Protocol with this code has been issued by the platform."
+      },
+      "otherProtocol": {
+        "title": "A different Protocol",
+        "body": "The file belongs to a different Protocol than the code you opened."
+      }
+    },
+    "facts": {
+      "code": "Code",
+      "revision": "Revision",
+      "issuedAt": "Issued",
+      "issuer": "Issuer",
+      "property": "Property",
+      "recipient": "Recipient",
+      "files": "Files",
+      "filesValue": "{count, plural, one {# file} other {# files}} · {size}",
+      "digest": "Delivery fingerprint",
+      "legalText": "Terms text",
+      "legalTextValue": "Version {version}"
+    },
+    "record": {
+      "title": "Registry entry",
+      "loading": "Reading the registry…",
+      "standing": "Status",
+      "current": "Current revision",
+      "superseded": "Superseded by revision {latest}",
+      "undetermined": "Whether this is the current revision cannot be confirmed",
+      "compare": "Compare the above with the document you hold — or, for a full check, check the PDF below."
+    },
+    "package": {
+      "title": "File check",
+      "hashing": "Checking {done} of {total}…",
+      "complete": "Complete: every file in the table was provided and matches byte for byte.",
+      "incomplete": "Not complete: see the rows below.",
+      "caption": "The Protocol files, in table order",
+      "columnFile": "File",
+      "columnSize": "Size",
+      "columnStatus": "Status",
+      "unnamed": "File {index}",
+      "providedAs": "provided as “{name}”",
+      "status": {
+        "match": "Matches",
+        "differs": "Differs",
+        "unchecked": "Not checked — too large for the browser",
+        "notProvided": "Not provided"
+      },
+      "extrasTitle": "Files outside the table",
+      "extra": {
+        "notInProtocol": "Not part of the Protocol",
+        "unchecked": "Not checked — too large for the browser"
+      },
+      "largeHint": "For files over {limit}: sha256sum <file> (Linux/macOS) or certutil -hashfile <file> SHA256 (Windows), then compare with the table row."
+    },
+    "independent": {
+      "title": "Independent verification — without trusting us",
+      "seal": "The seal: open the PDF in Adobe Acrobat Reader or any eIDAS signature validator; they show the seal and the timestamp.",
+      "files": "The files: compute the SHA-256 of each file (sha256sum or certutil) and compare it with the Protocol table.",
+      "digest": "The table: the Protocol prints the recipe of the delivery fingerprint, which can be recomputed from the table with any SHA-256 tool.",
+      "legalText": "The terms: the text of every version and its fingerprint are public."
+    }
   }
 }
