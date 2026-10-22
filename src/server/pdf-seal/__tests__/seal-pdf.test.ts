@@ -178,6 +178,16 @@ describe('Α5 — χωρίς ρύθμιση', () => {
     expect(openSealSession({}, { fetchImpl: jest.fn(), env: {}, now: () => NOW }).finish()).toBe(0);
     expect(warn).not.toHaveBeenCalled();
   });
+
+  it('Α5β (ADR-916 Σ4) — «περιμένει» ΠΡΙΝ την απόδοση: μετρά στο ΙΔΙΟ σήμα · με ρύθμιση ⇒ `null`', async () => {
+    const session = openSealSession({}, { fetchImpl: jest.fn(), env: {}, now: () => NOW });
+    expect(session.awaitingConfiguration()).toMatchObject({ kind: 'awaiting-seal-configuration', missing: expect.arrayContaining(['NESTOR_SEAL_TSA_URL']) });
+    await session.seal(unsigned, PRESENTATION);
+    expect(session.finish()).toBe(2);
+    expect(warn).toHaveBeenCalledTimes(1);
+    const provider = syntheticProvider(seal, tsa, { tsa: { genTime: NOW } });
+    expect(openSealSession(provider.env, provider.transport).awaitingConfiguration()).toBeNull();
+  });
 });
 
 describe('Α6 — ονομασμένες αρνήσεις εισόδου', () => {

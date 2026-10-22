@@ -74,6 +74,30 @@ export function drawReportHeading(pdf: jsPDF, title: string, y: number, pageWidt
 }
 
 // ============================================================================
+// ΑΛΛΑΓΗ ΣΕΛΙΔΑΣ
+// ============================================================================
+
+/** Τα κάθετα όρια της σελίδας σε mm — ό,τι χρειάζεται η {@link ensurePageSpace}. */
+export interface PdfVerticalLayout {
+  readonly pageHeight: number;
+  readonly marginTop: number;
+  readonly marginBottom: number;
+}
+
+/**
+ * **Χωράει; Αλλιώς νέα σελίδα** — επιστρέφει το `y` όπου συνεχίζει η γραφή.
+ *
+ * ⚠️ Ήταν γραμμένο **τρεις** φορές με ταυτόσημο σώμα (`po-pdf-generator.ts` · `apy-certificate-pdf-template.ts` ·
+ * `invoice-pdf-constants.ts`), καθένα δεμένο στο δικό του `LAYOUT`. Εδώ το layout είναι **παράμετρος**: ο ADR-916 Σ4
+ * είναι ο πρώτος καταναλωτής· τα τρία δίδυμα μεταφέρονται όταν αγγιχτούν (Boy Scout).
+ */
+export function ensurePageSpace(pdf: jsPDF, y: number, needed: number, layout: PdfVerticalLayout): number {
+  if (y + needed <= layout.pageHeight - layout.marginBottom) return y;
+  pdf.addPage();
+  return layout.marginTop;
+}
+
+// ============================================================================
 // ΠΙΝΑΚΕΣ (autoTable)
 // ============================================================================
 
@@ -116,6 +140,13 @@ interface ReportPdfFooterOptions {
    * σκέτο το όνομα του προϊόντος. Η ρίζα και των δύο είναι το `constants/product-identity`.
    */
   readonly centerLabel: string;
+  /**
+   * Το κείμενο **δεξιά** — προεπιλογή η στιγμή της απόδοσης. ADR-916 Σ4: έγγραφο που **σφραγίζεται** δίνει εδώ τον χρόνο
+   * **έκδοσής** του, ώστε δύο αποδόσεις του ίδιου εγγράφου να δίνουν τα ίδια bytes (κανένα «τώρα» μέσα σε απόδειξη).
+   */
+  readonly timestampLabel?: string;
+  /** Η αρίθμηση **αριστερά** — προεπιλογή «Σελίδα i/n». Παράμετρος για έγγραφα με δική τους γλώσσα (ADR-916 Σ4). */
+  readonly pageLabel?: (page: number, total: number) => string;
 }
 
 /**
@@ -128,7 +159,8 @@ interface ReportPdfFooterOptions {
 export function addReportPdfFooters(pdf: jsPDF, options: ReportPdfFooterOptions): void {
   const { pageWidth, pageHeight, centerLabel } = options;
   const totalPages = pdf.getNumberOfPages();
-  const timestamp = new Date().toLocaleString('el-GR');
+  const timestamp = options.timestampLabel ?? new Date().toLocaleString('el-GR');
+  const pageLabel = options.pageLabel ?? ((page: number, total: number) => `Σελίδα ${page}/${total}`);
 
   for (let i = 1; i <= totalPages; i++) {
     pdf.setPage(i);
@@ -136,7 +168,7 @@ export function addReportPdfFooters(pdf: jsPDF, options: ReportPdfFooterOptions)
     pdf.setFontSize(7);
     pdf.setTextColor(...SLATE_400);
 
-    pdf.text(`Σελίδα ${i}/${totalPages}`, MARGIN, pageHeight - 8);
+    pdf.text(pageLabel(i, totalPages), MARGIN, pageHeight - 8);
     pdf.text(centerLabel, pageWidth / 2, pageHeight - 8, { align: 'center' });
     pdf.text(timestamp, pageWidth - MARGIN, pageHeight - 8, { align: 'right' });
 

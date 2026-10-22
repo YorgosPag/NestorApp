@@ -108,6 +108,11 @@ export interface SealSession {
   /** `false` ⇒ κάθε `seal` απαντά `awaiting-seal-configuration`, χωρίς δίκτυο. */
   readonly configured: boolean;
   seal(pdf: Uint8Array, presentation: SealPresentation): Promise<SealOutcome>;
+  /**
+   * ADR-916 Σ4 — **πριν** παραχθεί το έγγραφο: χωρίς ρύθμιση, μετρά ένα έγγραφο που περιμένει (στο **ίδιο** σήμα του
+   * `finish`) και επιστρέφει την έκβαση· με ρύθμιση, `null`. Ο καλών **δεν** αποδίδει ένα PDF που δεν θα σφραγιστεί.
+   */
+  awaitingConfiguration(): Extract<SealOutcome, { readonly kind: 'awaiting-seal-configuration' }> | null;
   /** Τέλος εκτέλεσης: **ένα** σήμα αν κάτι περίμενε ρύθμιση. Επιστρέφει πόσα περίμεναν. */
   finish(): number;
 }
@@ -126,6 +131,11 @@ export function openSealSession(env: EnvironmentSource = LIVE_SEAL_TRANSPORT.env
       if (deps !== null) return sealPdf(pdf, presentation, deps);
       awaiting += 1;
       return { kind: 'awaiting-seal-configuration', missing: configuration.kind === 'configured' ? [] : configuration.missing };
+    },
+    awaitingConfiguration() {
+      if (configuration.kind === 'configured') return null;
+      awaiting += 1;
+      return { kind: 'awaiting-seal-configuration', missing: configuration.missing };
     },
     finish() {
       if (awaiting > 0 && configuration.kind !== 'configured') {

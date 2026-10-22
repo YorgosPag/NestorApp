@@ -20,6 +20,8 @@
 import * as asn1js from 'asn1js';
 import * as pkijs from 'pkijs';
 
+import { compareBytes } from '@/lib/string/byte-order';
+
 import { certificateDer, derOf, OID, sha256 } from './cms-primitives';
 import type { SealSignatureAlgorithm } from './seal-signer.types';
 
@@ -32,11 +34,6 @@ const SIGNATURE_ALGORITHM_OID: Readonly<Record<SealSignatureAlgorithm, string>> 
   'rsa-pkcs1-sha256': OID.sha256WithRsa,
   'ecdsa-sha256': OID.ecdsaWithSha256,
 };
-
-function compareBytes(a: Uint8Array, b: Uint8Array): number {
-  for (let i = 0; i < Math.min(a.length, b.length); i += 1) if (a[i] !== b[i]) return a[i] - b[i];
-  return a.length - b.length;
-}
 
 function attribute(type: string, value: asn1js.AsnType): pkijs.Attribute {
   return new pkijs.Attribute({ type, values: [value] });
