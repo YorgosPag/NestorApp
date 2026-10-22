@@ -27,6 +27,7 @@ import { changedCommercialAmounts } from '@/lib/properties/commercial-draft';
 import { readCommonCharges, sameCommonCharges } from '@/lib/common-charges/common-charges';
 import { readEnergyCertificate, sameEnergyCertificate } from '@/lib/energy-certificate/energy-certificate';
 import { energyOfForm } from '@/lib/energy-certificate/energy-certificate-form';
+import { sameAreas, writtenAreasOf } from '@/lib/properties/property-areas';
 
 /**
  * Builds the Firestore update payload from the current form state.
@@ -35,6 +36,7 @@ import { energyOfForm } from '@/lib/energy-certificate/energy-certificate-form';
  * - Uses suggestedCode as fallback if user hasn't typed a custom one (ADR-233)
  * - Preserves existing property.floorId when present (ADR-232)
  * - Emits commercial.askingPrice only when it differs from current value
+ * - Emits areas only when they differ — `0` and absent are the same "not measured" (ADR-777 §8.97)
  * - For multi-level units, auto-aggregates per-level data (ADR-236 Phase 2)
  */
 export function buildPropertyUpdatesFromForm(params: {
@@ -69,14 +71,16 @@ export function buildPropertyUpdatesFromForm(params: {
     updates.description = formData.description.trim();
   }
 
-  const areasData: { gross: number; net?: number; balcony?: number; terrace?: number; garden?: number } = {
+  // ADR-777 §8.97 — τα εμβαδά: ολόκληρο το μπλοκ, και μόνο όταν άλλαξε. Ως τώρα έφευγε σε **κάθε** αποθήκευση, και ένα
+  // αποθηκευμένο `terrace: 0` (≡ «δεν μετρήθηκε») έβγαινε «αλλαγή» στον διάλογο επιπτώσεων και σβηνόταν.
+  const areas = writtenAreasOf({
     gross: formData.areaGross,
-  };
-  if (formData.areaNet > 0) areasData.net = formData.areaNet;
-  if (formData.areaBalcony > 0) areasData.balcony = formData.areaBalcony;
-  if (formData.areaTerrace > 0) areasData.terrace = formData.areaTerrace;
-  if (formData.areaGarden > 0) areasData.garden = formData.areaGarden;
-  updates.areas = areasData;
+    net: formData.areaNet,
+    balcony: formData.areaBalcony,
+    terrace: formData.areaTerrace,
+    garden: formData.areaGarden,
+  });
+  if (!sameAreas(areas, property.areas)) updates.areas = areas;
 
   if (formData.condition) updates.condition = formData.condition as ConditionType;
   // ADR-777 §8.94 — το ΠΕΑ: ολόκληρο το μπλοκ, και μόνο όταν άλλαξε. Ως τώρα έφευγε `{ class }` σε **κάθε**

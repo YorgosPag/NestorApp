@@ -16,6 +16,9 @@
  * αντικειμενικής μεταβίβασης (ADR-898 §15).
  */
 
+import { measuredAreaOrNull } from '@/lib/properties/property-areas';
+import { isPlainRecord } from '@/lib/type-guards';
+
 /** Ένα επίπεδο της βάσης υπολογισμού: ο όροφος (αριθμός, όπως `PropertyLevel.floorNumber`) και το μικτό του εμβαδόν. */
 export interface LevelArea {
   readonly floor: number;
@@ -25,20 +28,12 @@ export interface LevelArea {
 /** Ανοχή στρογγυλοποίησης ανάμεσα στο άθροισμα των επιπέδων και στο συνολικό μικτό (τ.μ.). */
 const SUM_TOLERANCE_SQM = 0.01;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function positiveArea(value: unknown): number | null {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
-}
-
 /** Το μικτό εμβαδόν **ενός** επιπέδου — `null` όταν λείπει, είναι άκυρο ή είναι ο σπόρος `0`. */
 export function levelGrossArea(levelData: unknown, floorId: string): number | null {
-  if (!isRecord(levelData)) return null;
+  if (!isPlainRecord(levelData)) return null;
   const level = levelData[floorId];
-  if (!isRecord(level) || !isRecord(level.areas)) return null;
-  return positiveArea(level.areas.gross);
+  if (!isPlainRecord(level) || !isPlainRecord(level.areas)) return null;
+  return measuredAreaOrNull(level.areas.gross);
 }
 
 interface LevelRef {
@@ -47,7 +42,7 @@ interface LevelRef {
 }
 
 function levelRefOf(raw: unknown): LevelRef | null {
-  if (!isRecord(raw)) return null;
+  if (!isPlainRecord(raw)) return null;
   const { floorId, floorNumber } = raw;
   if (typeof floorId !== 'string' || floorId === '') return null;
   if (typeof floorNumber !== 'number' || !Number.isInteger(floorNumber)) return null;
@@ -106,8 +101,8 @@ export function readStoredLevelAreas(raw: unknown): readonly LevelArea[] | null 
   if (!Array.isArray(raw) || raw.length < 2) return null;
   const areas: LevelArea[] = [];
   for (const entry of raw) {
-    if (!isRecord(entry)) return null;
-    const grossSqm = positiveArea(entry.grossSqm);
+    if (!isPlainRecord(entry)) return null;
+    const grossSqm = measuredAreaOrNull(entry.grossSqm);
     const { floor } = entry;
     if (grossSqm === null || typeof floor !== 'number' || !Number.isInteger(floor)) return null;
     areas.push({ floor, grossSqm });

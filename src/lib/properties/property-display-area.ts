@@ -17,6 +17,7 @@
  * αρνητικό, `Infinity`) θα περνούσε από το `||` αυτούσιο στην οθόνη ή στην αγγελία.
  */
 
+import { measuredAreaOrNull } from '@/lib/properties/property-areas';
 import { isPlainRecord } from '@/lib/type-guards';
 
 export interface DisplayAreaSource {
@@ -24,11 +25,7 @@ export interface DisplayAreaSource {
   readonly area?: unknown;
 }
 
-function measuredOrNull(value: unknown): number | null {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
-}
-
 export function propertyDisplayArea(source: DisplayAreaSource): number | null {
   const areas = isPlainRecord(source.areas) ? source.areas : {};
-  return measuredOrNull(areas.gross) ?? measuredOrNull(areas.net) ?? measuredOrNull(source.area);
+  return measuredAreaOrNull(areas.gross) ?? measuredAreaOrNull(areas.net) ?? measuredAreaOrNull(source.area);
 }
