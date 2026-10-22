@@ -22,6 +22,8 @@ import type {
   PropertyHandoverLifecycle,
 } from '@/types/property-handover';
 
+import { PropertyDossierProtocolBadge, PropertyDossierProtocolCard } from './PropertyDossierProtocol';
+
 const NS = 'property-market';
 
 const LIFECYCLE_KEY: Readonly<Record<PropertyHandoverLifecycle, string>> = {
@@ -43,7 +45,7 @@ const LIFECYCLE_VARIANT: Readonly<Record<PropertyHandoverLifecycle, NonNullable<
   cancelled: 'muted',
 };
 
-function OriginLine({ origin }: { readonly origin: PropertyDossierOrigin }) {
+function OriginLine({ origin, children }: { readonly origin: PropertyDossierOrigin; readonly children?: React.ReactNode }) {
   const { t } = useTranslation([NS]);
   return (
     <p className="m-0 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
@@ -53,13 +55,18 @@ function OriginLine({ origin }: { readonly origin: PropertyDossierOrigin }) {
           : t('property-market:dossier.origin.from', { issuer: origin.issuerName })}
       </span>
       <Badge variant={LIFECYCLE_VARIANT[origin.handoverLifecycle]}>{t(LIFECYCLE_KEY[origin.handoverLifecycle])}</Badge>
+      {children}
     </p>
   );
 }
 
-/** Στην κάρτα της λίστας: μία γραμμή — ποιος και πού βρίσκεται. `null` προέλευση ⇒ τίποτα (φάκελος του ίδιου). */
+/** Στην κάρτα της λίστας: μία γραμμή — ποιος, πού βρίσκεται, και (Σ5) αν υπάρχει Πρωτόκολλο. `null` προέλευση ⇒ τίποτα. */
 export function PropertyDossierOriginLine({ origin }: { readonly origin: PropertyDossierOrigin | null }): React.ReactElement | null {
-  return origin === null ? null : <OriginLine origin={origin} />;
+  return origin === null ? null : (
+    <OriginLine origin={origin}>
+      <PropertyDossierProtocolBadge protocol={origin.protocol} />
+    </OriginLine>
+  );
 }
 
 /** Φ-Γ1 — η πρόοδος της αντιγραφής, με λέξη. */
@@ -75,7 +82,7 @@ function DeliveryLine({ delivery }: { readonly delivery: PropertyHandoverFileDel
   return <p className="m-0 text-sm text-foreground">{t(DELIVERY_KEY[delivery.state], { delivered: delivery.delivered, total: delivery.total })}</p>;
 }
 
-/** Στη σελίδα του φακέλου: η ίδια γραμμή + τι σημαίνει τώρα + (Φ-Γ1) πόσα έγγραφα παραδόθηκαν. */
+/** Στη σελίδα του φακέλου: η ίδια γραμμή + τι σημαίνει τώρα + (Φ-Γ1) πόσα έγγραφα παραδόθηκαν + (Σ5) το Πρωτόκολλο. */
 export function PropertyDossierOriginNotice({ origin }: { readonly origin: PropertyDossierOrigin | null }): React.ReactElement | null {
   const { t } = useTranslation([NS]);
   if (origin === null) return null;
@@ -85,6 +92,7 @@ export function PropertyDossierOriginNotice({ origin }: { readonly origin: Prope
       <p className="m-0 text-sm text-foreground">{t(LIFECYCLE_EXPLAIN_KEY[origin.handoverLifecycle])}</p>
       {origin.fileDelivery !== null && <DeliveryLine delivery={origin.fileDelivery} />}
       {origin.appurtenanceOf !== null && <p className="m-0 text-sm text-muted-foreground">{t('property-market:dossier.origin.appurtenance')}</p>}
+      <PropertyDossierProtocolCard protocol={origin.protocol} />
     </aside>
   );
 }

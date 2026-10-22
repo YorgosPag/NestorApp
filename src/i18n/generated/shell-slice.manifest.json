@@ -14,8 +14,8 @@
     "src/i18n/generated/routes/demands__demandId.el.json": "7d95c157ece8087fe485acdbdcba5f422d82828388ea5a9e5c11963e27005681",
     "src/i18n/generated/routes/demands__new.el.json": "c390254b9260d785611e1122559f64ed7b8c58a105b7ac65b82473967b293008",
     "src/i18n/generated/routes/document-request.el.json": "3fc30b5c3cce0660d1e8ee25b177af72c4d9d9ed87c2bfcdf05085e4becc18f7",
-    "src/i18n/generated/routes/dossiers.el.json": "9ee9e5f01ee7b75c9833821aa3fc2b0be460b126ef4b67ddb4797924ede5482a",
-    "src/i18n/generated/routes/dossiers__dossierId.el.json": "61266805bc8fcd38f04df315d8777cf7dfda98fb5ffbc189e02ee14bbf3625a1",
+    "src/i18n/generated/routes/dossiers.el.json": "73f5872c53c16d4a66d143ae8e7fcab64e40c78a05a1500056eb5b15a5872468",
+    "src/i18n/generated/routes/dossiers__dossierId.el.json": "a96831a719d958b0616f20191790ce4da56a0bbe96e11e477aa178e1530eaa39",
     "src/i18n/generated/routes/email__preferences__token.el.json": "b8eb64c11ff6698391ff1c979e04c414958183f8b946f7a9c62ce9d8d33da32a",
     "src/i18n/generated/routes/engagements.el.json": "62e1b3378215c16e66a12632667ad61be33b59cc632e634dde0ffaf9763769d4",
     "src/i18n/generated/routes/engagements__engagementId.el.json": "cb0565009bf6f7bec16cd93768e557804df81971abe3c5a23b7c050e9eb91ec3",
@@ -76,7 +76,7 @@
     "src/i18n/generated/routes/tour-invite__token.el.json": "aeec8bc36081f1b5a8c49674c18a1a367f5d97d69bad1124f15f0a1349d110cf",
     "src/i18n/generated/routes/vendor__quote.el.json": "413f934a43a5be908bb20d0c0c0c92d312922631921b3363e9c49b3200b7a7ae",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "247053d0e60f12797b7c3e64b798b7b9068e828e24c55bb1237dce004a379010",
+    "src/i18n/generated/shell-slice.el.json": "53327586459af25481072ea57fe5265fb02148365130e3e76650091f61b5b163",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "generator": "scripts/generate-i18n-shell-slice.js",
@@ -96,7 +96,7 @@
       "shellRoots": "6303336d888ef26b0205f00bf8f48b03205413ebe5b4f41d2b0918b0be4394a0"
     },
     "keyConstants": {
-      "NOTIFICATION_KEYS": "9a29189c43a5ae2241e674543f3280b76406f7fa07ab01aea83aebe19822a318",
+      "NOTIFICATION_KEYS": "2e2e301f8fcb3ffb7dfeb958d68f481c4292d5f65274c8369824599d1feb102c",
       "PROPERTY_TYPE_I18N_KEYS": "c2b1197829f5a048bf9d3968f014d0234c44cbe90e78ec7578dbd175f7149859"
     },
     "lazyRoutes": {
@@ -155,7 +155,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "aa0430448a8eac19f05fa79f8a942942fd095ee7400d2eb9a9b8ddb3925a66df",
+  "inputsSha256": "c58dcce12c205691d9f9f10c0c13b87faa0cbcadfa8d5b218bddc70777b53e6f",
   "languages": [
     "el"
   ],
@@ -1966,7 +1966,8 @@
           "keys": [
             "buttons.cancel",
             "buttons.close",
-            "buttons.confirm"
+            "buttons.confirm",
+            "copy.copyError"
           ],
           "prefixes": [],
           "whole": false
@@ -2052,6 +2053,39 @@
           "prefixes": [],
           "whole": false
         },
+        "files": {
+          "keys": [
+            "archived.unarchiveError",
+            "archived.unarchiveSuccess",
+            "batch.archiveError",
+            "batch.noAIClassifiableFiles",
+            "batch.unarchiveError",
+            "batch.unarchiveSuccess",
+            "list.deleteError",
+            "list.deleteSuccess",
+            "list.downloadError",
+            "list.renameError",
+            "list.renameSuccess",
+            "list.unlinkError",
+            "list.unlinkSuccess",
+            "technical.pathCopied",
+            "technical.pathUnavailable",
+            "trash.movedToTrash",
+            "trash.restoreError",
+            "trash.restoreSuccess",
+            "upload.errors.allFailed",
+            "upload.errors.authFailed",
+            "upload.errors.generic",
+            "upload.errors.notAuthenticated",
+            "upload.errors.partialSuccess",
+            "upload.listingVideo.blocked",
+            "upload.listingVideo.unpublishable",
+            "upload.success",
+            "upload.toast.uploadSuccess"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "properties-enums": {
           "keys": [
             "types.apartment",
@@ -2117,7 +2151,18 @@
             "dossier.origin.fromUnnamed",
             "dossier.origin.lifecycle.awaiting-completion",
             "dossier.origin.lifecycle.cancelled",
-            "dossier.origin.lifecycle.ready"
+            "dossier.origin.lifecycle.ready",
+            "dossier.origin.protocol.download",
+            "dossier.origin.protocol.downloading",
+            "dossier.origin.protocol.fileName",
+            "dossier.origin.protocol.issuedAt",
+            "dossier.origin.protocol.legalText",
+            "dossier.origin.protocol.meaning",
+            "dossier.origin.protocol.sealed",
+            "dossier.origin.protocol.short",
+            "dossier.origin.protocol.supersedes",
+            "dossier.origin.protocol.supersedesValue",
+            "dossier.origin.protocol.title"
           ],
           "prefixes": [
             "dossier.invariant",
@@ -2352,7 +2397,8 @@
           "keys": [
             "buttons.cancel",
             "buttons.close",
-            "buttons.confirm"
+            "buttons.confirm",
+            "copy.copyError"
           ],
           "prefixes": [],
           "whole": false
@@ -2436,6 +2482,39 @@
             "buttons.cancel",
             "buttons.close",
             "buttons.confirm"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "files": {
+          "keys": [
+            "archived.unarchiveError",
+            "archived.unarchiveSuccess",
+            "batch.archiveError",
+            "batch.noAIClassifiableFiles",
+            "batch.unarchiveError",
+            "batch.unarchiveSuccess",
+            "list.deleteError",
+            "list.deleteSuccess",
+            "list.downloadError",
+            "list.renameError",
+            "list.renameSuccess",
+            "list.unlinkError",
+            "list.unlinkSuccess",
+            "technical.pathCopied",
+            "technical.pathUnavailable",
+            "trash.movedToTrash",
+            "trash.restoreError",
+            "trash.restoreSuccess",
+            "upload.errors.allFailed",
+            "upload.errors.authFailed",
+            "upload.errors.generic",
+            "upload.errors.notAuthenticated",
+            "upload.errors.partialSuccess",
+            "upload.listingVideo.blocked",
+            "upload.listingVideo.unpublishable",
+            "upload.success",
+            "upload.toast.uploadSuccess"
           ],
           "prefixes": [],
           "whole": false
@@ -2527,6 +2606,17 @@
             "dossier.origin.lifecycle.awaiting-completion",
             "dossier.origin.lifecycle.cancelled",
             "dossier.origin.lifecycle.ready",
+            "dossier.origin.protocol.download",
+            "dossier.origin.protocol.downloading",
+            "dossier.origin.protocol.fileName",
+            "dossier.origin.protocol.issuedAt",
+            "dossier.origin.protocol.legalText",
+            "dossier.origin.protocol.meaning",
+            "dossier.origin.protocol.sealed",
+            "dossier.origin.protocol.short",
+            "dossier.origin.protocol.supersedes",
+            "dossier.origin.protocol.supersedesValue",
+            "dossier.origin.protocol.title",
             "dossier.tabs.loading",
             "label",
             "Έγγραφο",
@@ -11414,8 +11504,8 @@
     "src/components/search/GlobalSearchDialog.tsx"
   ],
   "stats": {
-    "matchedKeys": 255,
-    "sliceBytes": 794109
+    "matchedKeys": 256,
+    "sliceBytes": 796226
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -16198,6 +16288,7 @@
         "batch.unarchiveSuccess",
         "list.deleteError",
         "list.deleteSuccess",
+        "list.downloadError",
         "list.renameError",
         "list.renameSuccess",
         "list.unlinkError",

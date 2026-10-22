@@ -59,6 +59,7 @@ export interface FilesUploadNotifications {
 export interface FilesListNotifications {
   readonly renameSuccess: () => void;
   readonly renameError: () => void;
+  readonly downloadError: () => void;
   readonly deleteSuccess: () => void;
   readonly deleteError: () => void;
   readonly unlinkSuccess: () => void;
@@ -134,6 +135,7 @@ export function useFilesNotifications(): FilesNotifications {
       list: {
         renameSuccess: () => success(t(NOTIFICATION_KEYS.files.list.renameSuccess)),
         renameError: () => error(t(NOTIFICATION_KEYS.files.list.renameError)),
+        downloadError: () => error(t(NOTIFICATION_KEYS.files.list.downloadError)),
         deleteSuccess: () => success(t(NOTIFICATION_KEYS.files.list.deleteSuccess)),
         deleteError: () => error(t(NOTIFICATION_KEYS.files.list.deleteError)),
         unlinkSuccess: () => success(t(NOTIFICATION_KEYS.files.list.unlinkSuccess)),

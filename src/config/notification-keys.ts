@@ -230,6 +230,7 @@ export const NOTIFICATION_KEYS = {
     list: {
       renameSuccess: 'files:list.renameSuccess',
       renameError: 'files:list.renameError',
+      downloadError: 'files:list.downloadError',
       deleteSuccess: 'files:list.deleteSuccess',
       deleteError: 'files:list.deleteError',
       unlinkSuccess: 'files:list.unlinkSuccess',
