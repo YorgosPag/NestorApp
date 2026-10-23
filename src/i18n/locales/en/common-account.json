@@ -165,7 +165,8 @@
           "caseDocumentTransmitted": "New documents from lawyers and the notary in my conveyance cases",
           "caseDocumentRequests": "Document requests waiting on me in my conveyance cases",
           "ownershipVerificationDecided": "My ownership verification was decided",
-          "documentIssuanceAnswers": "Owner and professional answers to document issuance assignments"
+          "documentIssuanceAnswers": "Owner and professional answers to document issuance assignments",
+          "handoverInvitationAnswers": "Buyer answers to handover invitations"
         },
         "tasks": {
           "title": "Tasks",

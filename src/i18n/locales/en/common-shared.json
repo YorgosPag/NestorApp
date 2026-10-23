@@ -987,5 +987,23 @@
     "bounced": "Email bounced — “{title}”",
     "bouncedBody": "The email with the link to {name} was not delivered. Check the contact’s address and send again from “Document expiry”.",
     "bouncedBodyUnnamed": "The email with the link was not delivered. Check the contact’s address and send again from “Document expiry”."
+  },
+  "handoverInvitationAnswered": {
+    "accepted": "The buyer accepted the handover — “{title}”",
+    "declined": "The buyer declined the handover — “{title}”",
+    "body": {
+      "office": "Answer from {name}. The next move is the office’s: open the “Handover” tab to decide how to continue.",
+      "buyer": "Answer from {name}. The next move is the buyer’s — nothing is needed from you yet.",
+      "sale": "Answer from {name}. The files are delivered automatically as soon as the sale is completed.",
+      "system": "Answer from {name}. The file delivery proceeds automatically — follow its progress in the “Handover” tab.",
+      "none": "Answer from {name}. The handover needs no further action."
+    },
+    "bodyUnnamed": {
+      "office": "The buyer answered. The next move is the office’s: open the “Handover” tab to decide how to continue.",
+      "buyer": "The buyer answered. The next move is theirs — nothing is needed from you yet.",
+      "sale": "The buyer answered. The files are delivered automatically as soon as the sale is completed.",
+      "system": "The buyer answered. The file delivery proceeds automatically — follow its progress in the “Handover” tab.",
+      "none": "The buyer answered. The handover needs no further action."
+    }
   }
 }
