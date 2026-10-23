@@ -4093,6 +4093,10 @@
 
 ## Pending tasks (priority order)
 
+### 📅 Έλεγχος «ημερολογιακή ημέρα ISO» — ~14 χειρόγραφα `/^\d{4}-\d{2}-\d{2}$/`, κανένα δεν ελέγχει ότι η ημέρα ΥΠΑΡΧΕΙ (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-23, ADR-919 · N.0.2)
+- **Τι**: το ίδιο regex γραμμένο ξεχωριστά σε `listing-stats-document.ts`, `url-filters/multi-value.ts`, `operator-readiness.ts`, `listing-stay-url.ts`, `demand-form-values.ts`, `conveyance/*` (2), `accounting-day.ts`, `accounting-repo-scan.ts`, `quote-search.ts`, `attendance/qr/generate/route.ts`, `purchase-orders/page.tsx`, κ.ά. Όλα δέχονται `2027-02-30`.
+- **Fix**: εξαγωγή του `parseCalendarDay` (σήμερα ιδιωτικό στο `src/lib/listings/availability-window.ts`, πάνω στο `daysInMonth` του `lib/date/calendar-arithmetic.ts`) σε `lib/date/calendar-day.ts` με `isCalendarDay()`, και μετάβαση των καλούντων ένα-ένα (με zod `.refine` όπου είναι σχήμα). Πρόσεξε: κάποιοι δέχονται και κενό (`demand-form-values`) ή πρόθεμα χωρίς `$` (`audit-value-resolver`, `payment-plan`) — άλλη σημασία, μην τα ενοποιήσεις τυφλά.
+
 ### 🔗 Σκόρπιοι σύνδεσμοι/μητρώα διευθύνσεων οντοτήτων → SSoT (προτεραιότητα ΜΕΣΑΙΑ, 2026-10-22, ADR-242 · N.0.2)
 - ✅ **Έκλεισαν (Βήμα 2)**: `ProjectHealthTable` (κλικ γραμμής → σύνδεσμος στο όνομα) · `RfqDetailClient` · `BackToProjectLink` · `audit-timeline-entry` `buildEntityHref` (όλοι οι τύποι → `ENTITY_ROUTES` + `getProjectUrl`). SSoT κλάσης: `TABLE_CELL_LINK_CLASS` (`lib/ui/link-style.ts`).
 - **Μένουν**:
