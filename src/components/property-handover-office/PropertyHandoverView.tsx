@@ -13,6 +13,7 @@
 import React from 'react';
 
 import { Badge } from '@/components/ui/badge';
+import type { HandoverInvitationRenewalActions } from '@/hooks/property-handover/useHandoverInvitationRenewal';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { PropertyHandoverPreview, PropertyHandoverPreviewFile } from '@/types/property-handover';
@@ -67,7 +68,13 @@ function HandoverFiles({ files }: { readonly files: PropertyHandoverPreview['fil
   );
 }
 
-export function PropertyHandoverView({ preview }: { readonly preview: PropertyHandoverPreview }): React.ReactElement {
+interface PropertyHandoverViewProps {
+  readonly preview: PropertyHandoverPreview;
+  /** Φ-Δ.3 — οι πράξεις του γραφείου: πραγματικές στην καρτέλα, προσομοιωμένες στη γκαλερί (η ΙΔΙΑ όψη). */
+  readonly actions: HandoverInvitationRenewalActions;
+}
+
+export function PropertyHandoverView({ preview, actions }: PropertyHandoverViewProps): React.ReactElement {
   const { t } = useTranslation(['properties-detail']);
   const live = preview.handovers.some(({ handover }) => handover.lifecycle !== 'cancelled');
   return (
@@ -78,7 +85,7 @@ export function PropertyHandoverView({ preview }: { readonly preview: PropertyHa
       {live && !preview.seal.configured && <p role="note" className="m-0 text-sm text-muted-foreground">{t(`${K}.sealNotConfigured`)}</p>}
       {preview.handovers.length > 0 && (
         <ul className="m-0 flex list-none flex-col gap-3 p-0">
-          {sortHandoverEntries(preview.handovers).map((entry) => <li key={entry.handover.id}><HandoverEntryCard entry={entry} /></li>)}
+          {sortHandoverEntries(preview.handovers).map((entry) => <li key={entry.handover.id}><HandoverEntryCard entry={entry} actions={actions} /></li>)}
         </ul>
       )}
       <HandoverFiles files={preview.files} />

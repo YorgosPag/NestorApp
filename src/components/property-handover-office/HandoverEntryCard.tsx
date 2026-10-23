@@ -18,6 +18,7 @@ import { PropertyDossierProtocolCard } from '@/components/property-dossier/Prope
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+import type { HandoverInvitationRenewalActions } from '@/hooks/property-handover/useHandoverInvitationRenewal';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatDate } from '@/lib/intl-formatting';
@@ -27,6 +28,7 @@ import { Link } from '@/lib/workspace/navigation';
 import type { PropertyHandover, PropertyHandoverOfficeEntry } from '@/types/property-handover';
 
 import { HANDOVER_MOVE_PRESENTATION } from './handover-office-presentation';
+import { HandoverInvitationRenewal } from './HandoverInvitationRenewal';
 import { HandoverStepTrack } from './HandoverStepTrack';
 
 const K = 'properties-detail:handover';
@@ -98,7 +100,13 @@ function HandoverProtocol({ handover }: { readonly handover: PropertyHandover })
   );
 }
 
-export function HandoverEntryCard({ entry }: { readonly entry: PropertyHandoverOfficeEntry }): React.ReactElement {
+interface HandoverEntryCardProps {
+  readonly entry: PropertyHandoverOfficeEntry;
+  /** Φ-Δ.3 — οι πράξεις του γραφείου (η γκαλερί δίνει προσομοιωμένες, η καρτέλα τις πραγματικές). */
+  readonly actions: HandoverInvitationRenewalActions;
+}
+
+export function HandoverEntryCard({ entry, actions }: HandoverEntryCardProps): React.ReactElement {
   const { t } = useTranslation(['properties-detail']);
   const iconSizes = useIconSizes();
   const titleId = React.useId();
@@ -117,6 +125,7 @@ export function HandoverEntryCard({ entry }: { readonly entry: PropertyHandoverO
         </header>
         <p className="m-0 text-sm font-medium text-foreground">{t(`${K}.reason.${status.reason}.title`)}</p>
         <p className="m-0 text-sm text-muted-foreground">{t(`${K}.reason.${status.reason}.hint`, hintParams)}</p>
+        <HandoverInvitationRenewal handoverId={handover.id} offer={status.renewal} actions={actions} />
         <HandoverSignals entry={entry} />
         <HandoverStepTrack steps={status.steps} />
         <HandoverFacts handover={handover} />
