@@ -20,6 +20,7 @@ import type { FileStoragePlacement } from '@/lib/files/file-storage-placement';
 import type { ImageDimensions } from '@/lib/images/image-dimensions';
 import type { DocumentFacts } from '@/lib/document-validity/document-facts';
 import type { FileHandoverOrigin, FileHandoverProtocolOf } from '@/lib/property-handover/file-handover-origin';
+import type { FileHandoverDecision } from '@/lib/property-handover/file-handover-decision';
 import type {
   EntityType,
   FileDomain,
@@ -450,6 +451,13 @@ export interface FileRecord {
    * **μόνο** μέσω `readFileHandoverProtocolOf`. Κάνει την κρίση παράδοσης να **μην** το ξαναπαραδώσει (βρόχος).
    */
   handoverProtocolOf?: FileHandoverProtocolOf;
+
+  /**
+   * **Η απόφαση παράδοσης του γραφείου** (ADR-916 §5.18 Φ-Δ.4) — «παραδίδεται» / «μένει εσωτερικό», με αιτιολογία.
+   * ⛔ Γράφεται **μόνο** από τον γραφέα της απόφασης (`handoverDecisionUnchanged`). Διαβάζεται **μόνο** μέσω
+   * `readFileHandoverDecision`. Ανά **έκδοση**: νέα έκδοση γεννιέται χωρίς αυτήν.
+   */
+  handoverDecision?: FileHandoverDecision;
 
   /**
    * Download URL from Firebase Storage (populated after upload)

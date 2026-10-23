@@ -22,13 +22,13 @@ import {
   HarnessGallery,
   useHarnessPanelWidth,
 } from '@/components/testing/harness/harness-panel';
-import { ENTITY_TYPES } from '@/config/domain-constants';
 import { handoverOfficeStatusOf } from '@/lib/property-handover/handover-office-status';
-import type { HandoverInvitationRenewalActions } from '@/hooks/property-handover/useHandoverInvitationRenewal';
+import type { HandoverOfficeActions } from '@/hooks/property-handover/useHandoverOfficeActions';
 import type { PropertyHandoverOfficeEntry, PropertyHandoverPreview } from '@/types/property-handover';
 
 import { HandoverEntryCard } from '../HandoverEntryCard';
 import { PropertyHandoverView } from '../PropertyHandoverView';
+import { scenarioPreviewFiles } from './handover-file-decision-scenarios';
 import { HANDOVER_OFFICE_SCENARIOS, type HandoverOfficeScenario } from './handover-office-scenarios';
 
 /** Η κατάσταση ενός σεναρίου — από την **πραγματική** κρίση. */
@@ -40,7 +40,6 @@ function harnessEntryOf(scenario: HandoverOfficeScenario, index: number): Proper
   };
 }
 
-const file = (id: string, displayName: string) => ({ fileId: id, displayName, entityType: ENTITY_TYPES.PROPERTY, entityId: 'prop_demo' });
 const MIXED_IDS = ['declined', 'awaiting-buyer-expiring', 'delivering', 'awaiting-seal-configuration', 'sealed', 'cancelled'];
 
 /** Ολόκληρη η καρτέλα: ανάμεικτοι αγοραστές, αρχεία που θέλουν απόφαση, πάροχος σφραγίδας χωρίς ρύθμιση. */
@@ -50,18 +49,15 @@ const HARNESS_VIEWS: readonly { readonly id: string; readonly preview: PropertyH
     preview: {
       handovers: HANDOVER_OFFICE_SCENARIOS.flatMap((s, i) => (MIXED_IDS.includes(s.id) ? [harnessEntryOf(s, i)] : [])),
       seal: { configured: false },
-      files: {
-        deliver: [file('f_plan', 'Floor plan A1.pdf'), file('f_epc', 'Energy certificate.pdf')],
-        review: [file('f_unknown', 'Scan 0042.pdf')],
-        internal: [file('f_invoice', 'Contractor invoice.pdf')],
-      },
+      // Φ-Δ.4 — κάθε μορφή της προσφοράς και κάθε λόγος κατάταξης, από την πραγματική σύνθεση.
+      files: scenarioPreviewFiles(),
     },
   },
   { id: 'whole-tab-empty', preview: { handovers: [], seal: { configured: true }, files: { deliver: [], review: [], internal: [] } } },
 ];
 
-/** Φ-Δ.3 — οι πράξεις του γραφείου **προσομοιωμένες**: κανένα αίτημα, καμία πρόσκληση, κανένα email. */
-const IDLE_ACTIONS: HandoverInvitationRenewalActions = { busyId: null, renew: async () => undefined };
+/** Φ-Δ.3 · Φ-Δ.4 — οι πράξεις του γραφείου **προσομοιωμένες**: κανένα αίτημα, καμία πρόσκληση, κανένα email. */
+const IDLE_ACTIONS: HandoverOfficeActions = { busyId: null, renew: async () => undefined, decideFile: async () => true };
 
 /** «Νέα πρόσκληση» σε εξέλιξη — το κουμπί όπως το βλέπει ο άνθρωπος **ενώ** στέλνεται. */
 const RENEWAL_IN_FLIGHT = HANDOVER_OFFICE_SCENARIOS.findIndex((s) => s.id === 'invitation-expired');

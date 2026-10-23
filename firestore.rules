@@ -778,6 +778,7 @@ service cloud.firestore {
                     && documentFactsBornAbsent()
                     // 📦 ADR-916 Φ-Γ1 — η προέλευση παράδοσης («Από την κατασκευάστρια») τη γράφει ΜΟΝΟ ο διακομιστής.
                     && handoverOriginBornAbsent()
+                    && handoverDecisionBornAbsent()
                     // 📣 ADR-845 §7.17 Α4α — καμία διαβάθμιση/ταυτότητα δημοσίευσης «από κούνια».
                     && publicationBornAbsent()
                     // 🗄️ ADR-281 · ADR-329 §3.9 — όχι νέο αρχείο κάτω από αποσυρμένο ακίνητο.
@@ -819,6 +820,7 @@ service cloud.firestore {
                     && measuredUnchanged()
                     && documentFactsUnchanged()
                     && handoverOriginUnchanged()
+                    && handoverDecisionUnchanged()
                     // 📣 ADR-845 §7.17 Α4α — ούτε διαβάθμιση. Όχι όλο το κατηγόρημα: το `status`
                     //    ΠΡΕΠΕΙ να αλλάξει εδώ (pending → ready).
                     && publicationCustodyUnchanged()
@@ -869,6 +871,7 @@ service cloud.firestore {
                     && measuredUnchanged()
                     && documentFactsUnchanged()
                     && handoverOriginUnchanged()
+                    && handoverDecisionUnchanged()
                     // 📣 ADR-845 §7.17 Α4α — ΟΛΟ το κατηγόρημα δημοσίευσης παγώνει εδώ: αυτό το
                     //    σκέλος δεν είχε κανέναν λόγο να αγγίξει κατηγορία, κάτοχο, διαβάθμιση ή
                     //    κύκλο ζωής — και το πρόσωπό του είναι το χαλαρότερο. Το `purpose` παγώνει
@@ -927,6 +930,7 @@ service cloud.firestore {
                     && documentFactsBornAbsent()
                     // 📦 ADR-916 Φ-Γ1 — η προέλευση παράδοσης («Από την κατασκευάστρια») τη γράφει ΜΟΝΟ ο διακομιστής.
                     && handoverOriginBornAbsent()
+                    && handoverDecisionBornAbsent()
                     && request.resource.data.status == 'pending'
                     && resource == null;
 
@@ -953,6 +957,7 @@ service cloud.firestore {
                     && measuredUnchanged()
                     && documentFactsUnchanged()
                     && handoverOriginUnchanged()
+                    && handoverDecisionUnchanged()
                     // 📒 ADR-866 §2.6.11 — κάδος · επαναφορά · μετονομασία ΜΟΝΟ μαζί με τη γραμμή τους.
                     && personalActivityPaired();
 
@@ -6420,6 +6425,23 @@ service cloud.firestore {
 
     function handoverOriginBornAbsent() {
       return !request.resource.data.keys().hasAny(handoverOriginKeys());
+    }
+
+    // ADR-916 §5.18 Φ-Δ.4 — `handoverDecision` = «το γραφείο αποφάσισε: αυτό ΠΑΡΑΔΙΔΕΤΑΙ / ΜΕΝΕΙ ΕΣΩΤΕΡΙΚΟ», με αιτιολογία.
+    // Το γράφει ΜΟΝΟ ο γραφέας της απόφασης (Admin SDK, μετά την κρίση `handoverFileDecisionOf`). Πελάτης που το γράφει θα
+    // έστελνε στον αγοραστή εμπιστευτικό αρχείο χωρίς επιβεβαίωση, αιτιολογία ή ίχνος — ή θα έκρυβε παραδοτέο. Η 2η πόρτα
+    // ενημέρωσης (σύνδεση/αποσύνδεση) είναι ανοιχτή σε ΚΑΘΕ μέλος: χωρίς φρουρό το πεδίο θα ήταν γραπτό από όλους.
+    // Ανά ΕΚΔΟΣΗ: νέο έγγραφο γεννιέται χωρίς απόφαση (BornAbsent). Και τα δύο διαμερίσματα.
+    function handoverDecisionKeys() {
+      return ['handoverDecision'];
+    }
+
+    function handoverDecisionUnchanged() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(handoverDecisionKeys());
+    }
+
+    function handoverDecisionBornAbsent() {
+      return !request.resource.data.keys().hasAny(handoverDecisionKeys());
     }
 
     // Γέννηση ΧΩΡΙΣ δέσμευση: κανένα κλειδί της, εκτός από ρητό `hold: 'none'` (= απουσία).

@@ -18,7 +18,7 @@ import { PropertyDossierProtocolCard } from '@/components/property-dossier/Prope
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
-import type { HandoverInvitationRenewalActions } from '@/hooks/property-handover/useHandoverInvitationRenewal';
+import type { HandoverOfficeActions } from '@/hooks/property-handover/useHandoverOfficeActions';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatDate } from '@/lib/intl-formatting';
@@ -103,7 +103,7 @@ function HandoverProtocol({ handover }: { readonly handover: PropertyHandover })
 interface HandoverEntryCardProps {
   readonly entry: PropertyHandoverOfficeEntry;
   /** Φ-Δ.3 — οι πράξεις του γραφείου (η γκαλερί δίνει προσομοιωμένες, η καρτέλα τις πραγματικές). */
-  readonly actions: HandoverInvitationRenewalActions;
+  readonly actions: HandoverOfficeActions;
 }
 
 export function HandoverEntryCard({ entry, actions }: HandoverEntryCardProps): React.ReactElement {

@@ -34,7 +34,6 @@ import { PROPERTY_HANDOVER_TRACKED_FIELDS } from '@/config/audit-tracked-fields'
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { nowISO } from '@/lib/date-local';
 import { getErrorMessage } from '@/lib/error-utils';
-import { HANDOVER_DELIVERY_INLINE_FILE_BUDGET, HANDOVER_DELIVERY_INLINE_HASH_BYTE_BUDGET } from '@/config/property-handover-delivery-policy';
 import { fileDeliveryStateOf } from '@/lib/property-handover/handover-delivery-plan';
 import {
   planPropertyHandovers,
@@ -44,10 +43,9 @@ import {
 } from '@/lib/property-handover/handover-plan';
 import { propertyHandoverFromDocument } from '@/lib/property-handover/property-handover-from-document';
 import { createModuleLogger } from '@/lib/telemetry';
-import {
-  deliverHandoverFiles,
-  type HandoverFileDeliveryRecorder,
-  type HandoverProtocolIssuer,
+import type {
+  HandoverFileDeliveryRecorder,
+  HandoverProtocolIssuer,
 } from '@/server/property-handover-delivery/handover-delivery.server';
 import {
   deliverIssuedHandoverInvitations,
@@ -60,6 +58,7 @@ import { stagePropertyDossierHandoverProjection } from '@/services/property-doss
 import type { PropertyHandover, PropertyHandoverFileDelivery, PropertyHandoverInvitationDelivery } from '@/types/property-handover';
 import type { PropertyHandoverProtocolPointer } from '@/types/property-handover-protocol';
 
+import { deliverDueHandoverFiles } from './property-handover-delivery-trigger';
 import {
   stageHandoverInvitations,
   type HandoverInvitationRenewalOutcome,
@@ -72,7 +71,14 @@ const logger = createModuleLogger('PropertyHandoverWrite');
  * Ποιος ζήτησε τη συμφιλίωση — μόνο για το ημερολόγιο· το αποτέλεσμα **δεν** εξαρτάται από αυτό. Η ρητή πρόθεση του
  * γραφείου (`office-renewal`, Φ-Δ.3) περνά από το {@link PropertyHandoverSyncRequest.renewal}, **όχι** από την αιτία.
  */
-export type PropertyHandoverSyncCause = 'property-write' | 'legal-phase' | 'acceptance' | 'reconcile' | 'office-renewal';
+export type PropertyHandoverSyncCause =
+  | 'property-write' | 'legal-phase' | 'acceptance' | 'reconcile' | 'office-renewal' | 'office-file-decision';
+
+/**
+ * Οι αιτίες που ξανακοιτούν και τις **παραδομένες** παραδόσεις: το δίχτυ (συμπληρώσεις, Δ5) και η απόφαση γραφείου ανά
+ * αρχείο (Φ-Δ.4 — ό,τι έγινε «Παραδίδεται» φτάνει τώρα, και το «θέλουν απόφαση» ξαναμετριέται τώρα, όχι στο νυχτερινό).
+ */
+const CAUSES_RESCANNING_DELIVERED: ReadonlySet<PropertyHandoverSyncCause> = new Set(['reconcile', 'office-file-decision']);
 
 export interface PropertyHandoverSyncRequest {
   readonly cause: PropertyHandoverSyncCause;
@@ -421,43 +427,15 @@ async function deliverAfterCommit(adminDb: AdminFirestore, applied: AppliedPlan,
   const { cause } = request;
   const record: HandoverDeliveryRecorder = (input) => recordHandoverInvitationDelivery(adminDb, input);
   await deliverIssuedHandoverInvitations(adminDb, applied.issued, record);
-  await deliverDueFiles(adminDb, applied.handovers, request);
+  const recordFiles: HandoverFileDeliveryRecorder = (input) => recordHandoverFileDelivery(adminDb, input);
+  await deliverDueHandoverFiles(adminDb, applied.handovers, {
+    rescanDelivered: CAUSES_RESCANNING_DELIVERED.has(cause), protocolIssuer: request.protocolIssuer,
+  }, recordFiles);
   if (cause !== 'reconcile') return;
   const fresh = new Set(applied.issued.map(({ invitation }) => invitation.handoverId));
   for (const handover of applied.handovers) {
     if (!fresh.has(handover.id)) await followUpHandoverInvitation(adminDb, handover, record);
   }
-}
-
-/**
- * **Φ-Γ1 — τα αρχεία που οφείλονται**, ένα πρώτο κομμάτι (`HANDOVER_DELIVERY_INLINE_FILE_BUDGET`)· το cron συνεχίζει.
- * Στο νυχτερινό δίχτυ ξανακοιτά και τις **παραδομένες**: ένα νέο παραδοτέο αρχείο (Δ5) φτάνει μόνο του.
- */
-async function deliverDueFiles(adminDb: AdminFirestore, handovers: readonly PropertyHandover[], request: PropertyHandoverSyncRequest): Promise<void> {
-  const due = handovers.filter((handover) => {
-    const state = fileDeliveryStateOf(handover);
-    return state !== null && (state !== 'delivered' || request.cause === 'reconcile');
-  });
-  if (due.length === 0) return;
-  const record: HandoverFileDeliveryRecorder = (input) => recordHandoverFileDelivery(adminDb, input);
-  const own = request.protocolIssuer === undefined ? await openOwnProtocolRun(adminDb) : null;
-  const issue = request.protocolIssuer ?? own?.issue ?? null;
-  const budget = { maxFiles: HANDOVER_DELIVERY_INLINE_FILE_BUDGET, deadlineAt: null, maxHashBytes: HANDOVER_DELIVERY_INLINE_HASH_BYTE_BUDGET };
-  try {
-    for (const handover of due) await deliverHandoverFiles(adminDb, handover, budget, record, issue);
-  } finally {
-    own?.finish();
-  }
-}
-
-/**
- * Φ-Γ2 Σ4 — η **δική** της εκτέλεση έκδοσης, για συμφιλίωση χωρίς εκδότη από τον καλούντα. ⚠️ **Δυναμική** εισαγωγή, επίτηδες:
- * (α) ο γραφέας του πρωτοκόλλου εισάγει **αυτό** το αρχείο (δείκτης · ίχνος) — στατική εισαγωγή θα έκλεινε κύκλο·
- * (β) φέρνει jsPDF + pdf-lib + κρυπτογραφία, που **δεν** χρειάζεται κάθε PATCH ακινήτου.
- */
-async function openOwnProtocolRun(adminDb: AdminFirestore): Promise<{ readonly issue: HandoverProtocolIssuer; finish(): number }> {
-  const { openHandoverProtocolRun } = await import('./property-handover-protocol-write.service');
-  return openHandoverProtocolRun(adminDb);
 }
 
 /**

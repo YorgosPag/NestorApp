@@ -568,6 +568,47 @@ describe('files.rules — tenant_state_machine pattern', () => {
     });
   });
 
+  // --- ADR-916 §5.18 Φ-Δ.4 — η ΑΠΟΦΑΣΗ ΠΑΡΑΔΟΣΗΣ του γραφείου δεν γράφεται από πελάτη ----------------------------------
+  //
+  // Δικός της φρουρός (`handoverDecisionKeys`). 🔴 Δύο κατευθύνσεις κινδύνου: πελάτης που την ΠΡΟΣΘΕΤΕΙ στέλνει στον αγοραστή
+  // εμπιστευτικό αρχείο χωρίς επιβεβαίωση, αιτιολογία ή ίχνος· πελάτης που την ΑΦΑΙΡΕΙ ξαναστέλνει ό,τι το γραφείο κράτησε.
+  // Η πόρτα σύνδεσης/αποσύνδεσης είναι ανοιχτή σε κάθε μέλος — εκεί ακριβώς χρειάζεται ο φρουρός.
+  describe('handover decision freeze — την απόφαση παράδοσης τη γράφει μόνο ο διακομιστής (ADR-916 Φ-Δ.4)', () => {
+    const DECISION = {
+      handoverDecision: {
+        disposition: 'deliver', reason: 'Εγκεκριμένο από τον νομικό', decidedBy: 'u-office', decidedAt: '2026-10-23T10:00:00.000Z',
+      },
+    };
+    const fileDoc = (docId: string) =>
+      getContext(env, 'same_tenant_admin').firestore().collection('files').doc(docId);
+
+    it.each(UPDATE_LEGS)('⛔ σκέλος $leg: προσθήκη/αφαίρεση απόφασης ⇒ ΑΡΝΗΣΗ · το σκέτο φορτίο ⇒ ΕΠΙΤΡΕΠΕΤΑΙ', async ({ leg, seed, base }) => {
+      const index = UPDATE_LEGS.findIndex((l) => l.leg === leg);
+      await seedFile(env, `decision-add-${index}`, { companyId: SAME_TENANT_COMPANY_ID, overrides: { ...seed } });
+      await seedFile(env, `decision-change-${index}`, { companyId: SAME_TENANT_COMPANY_ID, overrides: { ...seed, ...DECISION } });
+      await expectDeny(fileDoc(`decision-add-${index}`).update({ ...base, ...DECISION }));
+      await expectDeny(fileDoc(`decision-change-${index}`).update({ ...base, handoverDecision: null }));
+      await expectAllow(fileDoc(`decision-change-${index}`).update(base));
+    });
+
+    it('⛔ γέννηση με απόφαση: ΑΡΝΗΣΗ · ✅ χωρίς', async () => {
+      const born = (docId: string, extra: Record<string, unknown>) => fileDoc(docId).set({
+        fileName: `${docId}.pdf`,
+        mimeType: 'application/pdf',
+        size: 2048,
+        status: 'pending',
+        isDeleted: false,
+        storagePath: `companies/${SAME_TENANT_COMPANY_ID}/files/${docId}.pdf`,
+        createdBy: PERSONA_CLAIMS.same_tenant_admin.uid,
+        companyId: SAME_TENANT_COMPANY_ID,
+        cdeReadReach: 'tenant',
+        ...extra,
+      });
+      await expectDeny(born('born-decision', { ...DECISION }));
+      await expectAllow(born('born-no-decision', {}));
+    });
+  });
+
   describe('document facts freeze — τα γεγονότα εγγράφου τα γράφει μόνο ο γραφέας του διακομιστή (ADR-915 Φ3)', () => {
     const ADMIN_UID = PERSONA_CLAIMS.same_tenant_admin.uid;
     const facts = (issuedOn: string) => ({

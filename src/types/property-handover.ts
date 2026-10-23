@@ -21,6 +21,11 @@
  * **Layering**: leaf — τύποι, καμία εξάρτηση από Firestore ή React.
  */
 
+import type {
+  HandoverDispositionBasis,
+  HandoverFileDecisionDisposition,
+  HandoverFileDecisionOffer,
+} from './property-handover-file-decision';
 import type { PropertyHandoverProtocolPointer } from './property-handover-protocol';
 
 /**
@@ -175,13 +180,32 @@ export interface PropertyHandover {
 // ΠΡΟΕΠΙΣΚΟΠΗΣΗ — «τι θα παραδοθεί» (ADR-916 §5.1, πόρτα `GET /api/properties/[id]/handover`)
 // =============================================================================
 
-/** Ένα αρχείο της προεπισκόπησης — **μόνο** όσα χρειάζεται η λίστα του γραφείου. */
-export interface PropertyHandoverPreviewFile {
+/** Η ταυτότητα ενός αρχείου του συνόλου — ό,τι ξέρει το σύνολο **χωρίς** να διαβάσει το καθολικό. */
+export interface PropertyHandoverSetFileIdentity {
   readonly fileId: string;
   readonly displayName: string;
   /** Ποια οντότητα το κατέχει — το ακίνητο ή ένα παρακολούθημά του. */
   readonly entityType: string;
   readonly entityId: string;
+  /** Φ-Δ.4 — **γιατί** είναι εκεί που είναι: ο κανόνας της κρίσης που απάντησε πρώτος. */
+  readonly basis: HandoverDispositionBasis;
+  /** Φ-Δ.4 — η απόφαση του γραφείου (🔒 χωρίς uid· η αιτιολογία μένει στο γραφείο, η πόρτα είναι μόνο δική του). */
+  readonly decision: PropertyHandoverPreviewFileDecision | null;
+  readonly confidential: boolean;
+}
+
+export interface PropertyHandoverPreviewFileDecision {
+  readonly disposition: HandoverFileDecisionDisposition;
+  readonly reason: string;
+  readonly decidedAt: string;
+}
+
+/** Ένα αρχείο της προεπισκόπησης — **μόνο** όσα χρειάζεται η λίστα του γραφείου. */
+export interface PropertyHandoverPreviewFile extends PropertyHandoverSetFileIdentity {
+  /** Υπάρχει ήδη στο καθολικό κάποιας παράδοσης — ό,τι παραδόθηκε μένει (Δ5). */
+  readonly delivered: boolean;
+  /** Φ-Δ.4 — τι μπορεί να αποφασίσει το γραφείο, από την **ίδια** κρίση με την πόρτα. */
+  readonly offer: HandoverFileDecisionOffer;
 }
 
 // =============================================================================

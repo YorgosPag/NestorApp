@@ -44,6 +44,7 @@ import {
   PackageCheck,
   Stamp,
   CalendarCheck,
+  Scale,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Spinner } from '@/components/ui/spinner';
@@ -99,6 +100,8 @@ const ACTION_ICON_MAP: Record<FileAuditAction, LucideIcon> = {
   handover_receive: PackageCheck,
   // ADR-916 Φ-Γ2 Σ4 — εκδόθηκε (σφραγίστηκε) το Πρωτόκολλο παράδοσης.
   handover_protocol_issue: Stamp,
+  // ADR-916 Φ-Δ.4 — απόφαση γραφείου: παραδίδεται / μένει εσωτερικό.
+  handover_decision: Scale,
   approval_request: Send,
   approval_approve: CheckCircle,
   approval_reject: XCircle,
@@ -142,6 +145,7 @@ const ACTION_COLOR_MAP: Record<string, string> = {
   storage_relocate: 'text-[hsl(var(--text-info))]',
   handover_receive: 'text-[hsl(var(--text-success))]',
   handover_protocol_issue: 'text-[hsl(var(--text-success))]',
+  handover_decision: 'text-[hsl(var(--text-warning))]',
   approval_request: 'text-[hsl(var(--text-warning))]',
   approval_approve: 'text-[hsl(var(--text-success))]',
   approval_reject: 'text-destructive',

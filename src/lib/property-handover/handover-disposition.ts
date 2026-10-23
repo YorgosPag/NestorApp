@@ -12,6 +12,7 @@
  * αναγκάζει πληρότητα (`Record<FileCategory, …>`).
  *
  * ⚖️ **Προτεραιότητα** (η πρώτη που απαντά κερδίζει):
+ *   0. Πρωτόκολλο ⇒ `internal` · **απόφαση του γραφείου** (Φ-Δ.4, αιτιολογημένη — Purview override)
  *   1. εμπιστευτικό (`classification: confidential`) ⇒ `review` — ποτέ αυτόματα προς τα έξω (DLP)
  *   2. τομέας του **γραφείου** (λογιστική · οικονομικά · μεσιτεία · εισερχόμενα) ⇒ `internal`
  *   3. δήλωση καταλόγου (θέση ή ομάδα μελετών)
@@ -40,7 +41,9 @@ import { CDE_STATES, type CdeState } from '@/config/iso19650-constants';
 import { declaredHandoverOf, findCatalogEntryForFile } from '@/config/upload-entry-points/queries';
 import type { HandoverDisposition } from '@/config/upload-entry-points/types';
 import type { FileRecord } from '@/types/file-record';
+import type { HandoverDispositionBasis } from '@/types/property-handover-file-decision';
 
+import { readFileHandoverDecision } from './file-handover-decision';
 import { readFileHandoverProtocolOf } from './file-handover-origin';
 
 /** Ό,τι χρειάζεται η κρίση από ένα αποθηκευμένο αρχείο — **τίποτα** παραπάνω. */
@@ -58,6 +61,7 @@ export type HandoverCandidateFile = Pick<
   | 'supersededByFileId'
   | 'cdeState'
   | 'handoverProtocolOf'
+  | 'handoverDecision'
 >;
 
 /**
@@ -101,16 +105,39 @@ export function isHandoverEligible(file: HandoverCandidateFile): boolean {
   return file.cdeState !== 'SUPERSEDED' && file.cdeState !== 'WIP';
 }
 
-/** **Η κρίση** για ένα επιλέξιμο αρχείο (η επιλεξιμότητα κρίνεται χωριστά — {@link isHandoverEligible}). */
-export function handoverDispositionOf(file: HandoverCandidateFile): HandoverDisposition {
+/** Η κρίση **και** ο κανόνας που απάντησε — ό,τι βλέπει ο άνθρωπος ως «γιατί» (Purview policy tip). */
+export interface HandoverDispositionVerdict {
+  readonly disposition: HandoverDisposition;
+  readonly basis: Exclude<HandoverDispositionBasis, 'unrecognised'>;
+}
+
+/**
+ * **Η ΜΙΑ κρίση, με την αιτιολόγησή της** (η επιλεξιμότητα κρίνεται χωριστά — {@link isHandoverEligible}).
+ * Η {@link handoverDispositionOf} της **αναθέτει**: καμία δεύτερη αλυσίδα κανόνων.
+ */
+export function handoverDispositionBasisOf(file: HandoverCandidateFile): HandoverDispositionVerdict {
   // ADR-916 Φ-Γ2 Σ4 — το Πρωτόκολλο ταξιδεύει από τον ΔΙΚΟ του δρόμο. Παραδοτέο θα έμπαινε στο καθολικό ⇒ νέο αποτύπωμα ⇒
-  // νέο πρωτόκολλο ⇒ ∞. Πρώτος κανόνας: κανένα άλλο κριτήριο δεν μπορεί να το ξαναστείλει.
-  if (file.handoverProtocolOf !== undefined) return 'internal';
-  if (file.classification === FILE_CLASSIFICATIONS.CONFIDENTIAL) return 'review';
-  if (OFFICE_ONLY_DOMAINS.has(file.domain)) return 'internal';
+  // νέο πρωτόκολλο ⇒ ∞. Πρώτος κανόνας: κανένα άλλο κριτήριο — ούτε απόφαση γραφείου — δεν μπορεί να το ξαναστείλει.
+  if (file.handoverProtocolOf !== undefined) return { disposition: 'internal', basis: 'protocol' };
+  // Φ-Δ.4 — ο άνθρωπος αποφάσισε, με αιτιολογία: νικά κάθε κανόνα **κατάταξης** (και το DLP του εμπιστευτικού, όπως το
+  // override του Purview). Η επιλεξιμότητα (κάδος · πρόχειρο · αντικατεστημένο) μένει **πριν** από εδώ.
+  if (file.handoverDecision !== undefined) return { disposition: file.handoverDecision.disposition, basis: 'office-decision' };
+  if (file.classification === FILE_CLASSIFICATIONS.CONFIDENTIAL) return { disposition: 'review', basis: 'confidential' };
+  if (OFFICE_ONLY_DOMAINS.has(file.domain)) return { disposition: 'internal', basis: 'office-domain' };
   const entry = findCatalogEntryForFile(file.entityType, file);
   const declared = entry ? declaredHandoverOf(entry) : undefined;
-  return declared ?? HANDOVER_DISPOSITION_BY_CATEGORY[file.category];
+  if (declared !== undefined) return { disposition: declared, basis: 'catalog' };
+  return { disposition: HANDOVER_DISPOSITION_BY_CATEGORY[file.category], basis: 'category' };
+}
+
+/** **Η κρίση** για ένα επιλέξιμο αρχείο. */
+export function handoverDispositionOf(file: HandoverCandidateFile): HandoverDisposition {
+  return handoverDispositionBasisOf(file).disposition;
+}
+
+/** Τι θα έκρινε ο κανόνας **χωρίς** την απόφαση του γραφείου — η σημασία του «Αυτόματα». */
+export function automaticHandoverDispositionOf(file: HandoverCandidateFile): HandoverDisposition {
+  return handoverDispositionOf({ ...file, handoverDecision: undefined });
 }
 
 // =============================================================================
@@ -146,9 +173,11 @@ export function handoverCandidateFromDocument(raw: unknown): HandoverCandidateFi
     (stored.lifecycleState != null && !isLifecycleState(stored.lifecycleState))
     || (stored.classification != null && !isClassification(stored.classification))
     || (stored.cdeState != null && !isCdeState(stored.cdeState))
-    || (stored.handoverProtocolOf != null && readFileHandoverProtocolOf(stored.handoverProtocolOf) === null);
+    || (stored.handoverProtocolOf != null && readFileHandoverProtocolOf(stored.handoverProtocolOf) === null)
+    || (stored.handoverDecision != null && readFileHandoverDecision(stored.handoverDecision) === null);
   if (unknownOptional) return null;
   const handoverProtocolOf = readFileHandoverProtocolOf(stored.handoverProtocolOf);
+  const handoverDecision = readFileHandoverDecision(stored.handoverDecision);
   return {
     entityType,
     domain,
@@ -162,7 +191,17 @@ export function handoverCandidateFromDocument(raw: unknown): HandoverCandidateFi
     supersededByFileId: optionalText(stored.supersededByFileId),
     cdeState: isCdeState(stored.cdeState) ? stored.cdeState : undefined,
     handoverProtocolOf: handoverProtocolOf ?? undefined,
+    handoverDecision: handoverDecision ?? undefined,
   };
+}
+
+/**
+ * **Παραδοτέο ΤΩΡΑ;** — το ξαναρωτά ο εκτελεστής **μέσα** στη συναλλαγή της αντιγραφής (Φ-Δ.4): μια απόφαση «μένει
+ * εσωτερικό» που δεσμεύτηκε ανάμεσα στην ανάγνωση του συνόλου και την εγγραφή του καθολικού **νικά** την αντιγραφή.
+ */
+export function isHandoverDeliverableDocument(raw: unknown): boolean {
+  const candidate = handoverCandidateFromDocument(raw);
+  return candidate !== null && isHandoverEligible(candidate) && handoverDispositionOf(candidate) === 'deliver';
 }
 
 /** Τα αρχεία ενός ακινήτου, μοιρασμένα κατά απόφαση — ό,τι **δεν** είναι επιλέξιμο δεν εμφανίζεται πουθενά. */

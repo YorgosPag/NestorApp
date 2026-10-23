@@ -12,7 +12,7 @@
 import React from 'react';
 
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
-import { useHandoverInvitationRenewal } from '@/hooks/property-handover/useHandoverInvitationRenewal';
+import { useHandoverOfficeActions } from '@/hooks/property-handover/useHandoverOfficeActions';
 import { usePropertyHandover } from '@/hooks/property-handover/usePropertyHandover';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
@@ -24,7 +24,7 @@ const K = 'properties-detail:handover';
 function PanelBody({ propertyId }: { readonly propertyId: string }): React.ReactElement {
   const { t } = useTranslation(['properties-detail']);
   const { view, reload } = usePropertyHandover(propertyId);
-  const actions = useHandoverInvitationRenewal(propertyId, reload);
+  const actions = useHandoverOfficeActions(propertyId, reload);
   if (view.kind === 'loading') return <p role="status" className="m-0 text-sm text-muted-foreground">{t(`${K}.loading`)}</p>;
   if (view.kind === 'unavailable') return <p className="m-0 text-sm text-muted-foreground">{t(`${K}.unavailable`)}</p>;
   if (view.kind === 'failed') {

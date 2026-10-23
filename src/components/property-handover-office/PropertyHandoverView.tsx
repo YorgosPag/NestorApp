@@ -13,12 +13,13 @@
 import React from 'react';
 
 import { Badge } from '@/components/ui/badge';
-import type { HandoverInvitationRenewalActions } from '@/hooks/property-handover/useHandoverInvitationRenewal';
+import type { HandoverOfficeActions } from '@/hooks/property-handover/useHandoverOfficeActions';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { PropertyHandoverPreview, PropertyHandoverPreviewFile } from '@/types/property-handover';
 
 import { HandoverEntryCard } from './HandoverEntryCard';
+import { HandoverFileRow } from './HandoverFileRow';
 import { HANDOVER_MOVE_PRESENTATION, handoverMoveCounts, sortHandoverEntries } from './handover-office-presentation';
 
 const K = 'properties-detail:handover';
@@ -44,7 +45,13 @@ function MoveSummary({ preview }: { readonly preview: PropertyHandoverPreview })
   );
 }
 
-function FileGroup({ group, files }: { readonly group: (typeof FILE_GROUPS)[number]; readonly files: readonly PropertyHandoverPreviewFile[] }) {
+interface FileGroupProps {
+  readonly group: (typeof FILE_GROUPS)[number];
+  readonly files: readonly PropertyHandoverPreviewFile[];
+  readonly actions: HandoverOfficeActions;
+}
+
+function FileGroup({ group, files, actions }: FileGroupProps) {
   const { t } = useTranslation(['properties-detail']);
   return (
     <details open={group === 'review' && files.length > 0} data-group={group} className="text-sm">
@@ -52,26 +59,26 @@ function FileGroup({ group, files }: { readonly group: (typeof FILE_GROUPS)[numb
       {group === 'review' && files.length > 0 && <p className="m-0 mt-1 text-muted-foreground">{t(`${K}.files.reviewHint`)}</p>}
       {files.length === 0
         ? <p className="m-0 mt-1 text-muted-foreground">{t(`${K}.files.none`)}</p>
-        : <ul className="m-0 mt-1 list-disc pl-5 text-foreground">{files.map((file) => <li key={file.fileId}>{file.displayName}</li>)}</ul>}
+        : <ul className="m-0 mt-1 flex list-none flex-col divide-y divide-border p-0">{files.map((file) => <HandoverFileRow key={file.fileId} file={file} actions={actions} />)}</ul>}
     </details>
   );
 }
 
-function HandoverFiles({ files }: { readonly files: PropertyHandoverPreview['files'] }): React.ReactElement {
+function HandoverFiles({ files, actions }: { readonly files: PropertyHandoverPreview['files']; readonly actions: HandoverOfficeActions }): React.ReactElement {
   const { t } = useTranslation(['properties-detail']);
   const titleId = React.useId();
   return (
     <section aria-labelledby={titleId} className="flex flex-col gap-2">
       <h3 id={titleId} className="m-0 text-base font-semibold text-foreground">{t(`${K}.files.title`)}</h3>
-      {FILE_GROUPS.map((group) => <FileGroup key={group} group={group} files={files[group]} />)}
+      {FILE_GROUPS.map((group) => <FileGroup key={group} group={group} files={files[group]} actions={actions} />)}
     </section>
   );
 }
 
 interface PropertyHandoverViewProps {
   readonly preview: PropertyHandoverPreview;
-  /** Φ-Δ.3 — οι πράξεις του γραφείου: πραγματικές στην καρτέλα, προσομοιωμένες στη γκαλερί (η ΙΔΙΑ όψη). */
-  readonly actions: HandoverInvitationRenewalActions;
+  /** Φ-Δ.3 · Φ-Δ.4 — οι πράξεις του γραφείου: πραγματικές στην καρτέλα, προσομοιωμένες στη γκαλερί (η ΙΔΙΑ όψη). */
+  readonly actions: HandoverOfficeActions;
 }
 
 export function PropertyHandoverView({ preview, actions }: PropertyHandoverViewProps): React.ReactElement {
@@ -88,7 +95,7 @@ export function PropertyHandoverView({ preview, actions }: PropertyHandoverViewP
           {sortHandoverEntries(preview.handovers).map((entry) => <li key={entry.handover.id}><HandoverEntryCard entry={entry} actions={actions} /></li>)}
         </ul>
       )}
-      <HandoverFiles files={preview.files} />
+      <HandoverFiles files={preview.files} actions={actions} />
     </div>
   );
 }

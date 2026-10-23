@@ -936,6 +936,8 @@ export const API_ROUTES = {
     HANDOVER: (propertyId: string) => `/api/properties/${encodeURIComponent(propertyId)}/handover` as const,
     /** ADR-916 §5.17 Φ-Δ.3 — «Νέα πρόσκληση» από το γραφείο (`POST`, supersede από τον ΙΔΙΟ γραφέα). */
     HANDOVER_INVITATION: (propertyId: string) => `/api/properties/${encodeURIComponent(propertyId)}/handover/invitation` as const,
+    /** ADR-916 §5.18 Φ-Δ.4 — απόφαση γραφείου ανά αρχείο: «παραδίδεται» / «μένει εσωτερικό» / «αυτόματα» (`POST`). */
+    HANDOVER_FILE_DECISION: (propertyId: string) => `/api/properties/${encodeURIComponent(propertyId)}/handover/file-decision` as const,
     TRASH: '/api/properties/trash',
     /** ADR-329 §3.9 — λίστα αρχείου (ίδιες γραμμές με τον κάδο, άλλη κατάσταση) */
     ARCHIVED: '/api/properties/archived',

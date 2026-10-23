@@ -28,6 +28,7 @@ import { fileStoragePlacementOf, type FileStoragePlacement } from '@/lib/files/f
 import { placementForNewFile } from '@/lib/files/new-file-placement';
 import { FieldValue } from '@/lib/firebaseAdmin';
 import type { PlannedHandoverCopy } from '@/lib/property-handover/handover-delivery-plan';
+import { isHandoverDeliverableDocument } from '@/lib/property-handover/handover-disposition';
 import { handoverCopyFileIdOf } from '@/lib/property-handover/property-handover-id';
 import { buildProxyUrl } from '@/lib/storage/storage-object-url';
 import { custodyKindOfScope } from '@/lib/workspace/custody-scope';
@@ -128,8 +129,12 @@ export function readyFileRecordData(
 /**
  * Εγγραφή `ready` + γραμμή καθολικού, **ατομικά**. Η επανάληψη βρίσκει και τα δύο και δεν γράφει τίποτα· αν λείπει
  * **ένα** από τα δύο (π.χ. γραμμή χειροκίνητα σβησμένη), γεννιέται **μόνο** αυτό — η απόδειξη θεραπεύεται, ποτέ διπλή.
+ *
+ * ⚖️ Φ-Δ.4 — **η πηγή ξαναδιαβάζεται ΜΕΣΑ στη συναλλαγή**: μια απόφαση «μένει εσωτερικό» που δεσμεύτηκε αφού διαβάστηκε
+ * το σύνολο **νικά** την αντιγραφή (`withdrawn`). Ο γραφέας της απόφασης διαβάζει τη **ίδια** θέση καθολικού στη δική του
+ * συναλλαγή ⇒ οι δύο σειριοποιούνται: ή η απόφαση βλέπει την παράδοση (`already-delivered`), ή η αντιγραφή βλέπει την απόφαση.
  */
-async function commitCopy(ctx: HandoverCopyContext, copy: PreparedCopy): Promise<HandoverLedgerProof> {
+async function commitCopy(ctx: HandoverCopyContext, copy: PreparedCopy): Promise<HandoverLedgerProof | 'withdrawn'> {
   const { built, source, item } = copy;
   const custody = { userId: ctx.recipientUserId };
   const recordRef = handoverCopyRecordRef(ctx.adminDb, ctx.recipientUserId, built.fileId);
@@ -139,8 +144,10 @@ async function commitCopy(ctx: HandoverCopyContext, copy: PreparedCopy): Promise
     sha256: null, sourceGeneration,
   };
   const ledgerRef = deliveryLedgerRef(ctx.adminDb, ctx.handover.id, item.sourceFileId);
-  await ctx.adminDb.runTransaction(async (tx) => {
-    const [recordSnap, ledgerSnap] = await Promise.all([tx.get(recordRef), tx.get(ledgerRef)]);
+  const committed = await ctx.adminDb.runTransaction(async (tx) => {
+    const [recordSnap, ledgerSnap, sourceSnap] = await Promise.all([tx.get(recordRef), tx.get(ledgerRef), tx.get(item.file.doc.ref)]);
+    // Θεραπεία (υπάρχει ήδη ένα από τα δύο) = ήταν παραδομένο ⇒ η απόδειξη ολοκληρώνεται πάντα (Δ5: ό,τι παραδόθηκε μένει).
+    if (!recordSnap.exists && !ledgerSnap.exists && !isHandoverDeliverableDocument(sourceSnap.data())) return false;
     if (!recordSnap.exists) {
       tx.create(recordRef, readyFileRecordData(built, { sizeBytes: row.size, placement: copy.placement, hash: text(item.file.doc.data().hash) }));
     }
@@ -150,7 +157,13 @@ async function commitCopy(ctx: HandoverCopyContext, copy: PreparedCopy): Promise
       recipientUserId: ctx.recipientUserId, dossierId: copy.dossierId, sourceGeneration,
       revisionOfFileId: copy.revisionOfFileId, deliveredAt: nowISO(),
     });
+    return true;
   });
+  if (!committed) {
+    // Τα bytes γράφτηκαν ήδη στο κλειδί του αγοραστή χωρίς εγγραφή — αόρατα, αλλά δεν τα αφήνουμε (καλύτερη προσπάθεια).
+    await fileStorageBucket(copy.placement).file(built.storagePath).delete({ ignoreNotFound: true }).catch(() => undefined);
+    return 'withdrawn';
+  }
   await recordFileAudit({
     fileId: built.fileId, action: 'handover_receive', performedBy: HANDOVER_DELIVERY_ACTOR, ...custody,
     metadata: { handoverId: ctx.handover.id, sourceFileId: item.sourceFileId, issuerCompanyId: ctx.handover.companyId },
@@ -160,6 +173,8 @@ async function commitCopy(ctx: HandoverCopyContext, copy: PreparedCopy): Promise
 
 export interface HandoverCopyBatchResult {
   readonly rows: readonly HandoverLedgerProof[];
+  /** Φ-Δ.4 — δεν είναι πια παραδοτέα (απόφαση γραφείου μέσα στο παράθυρο) — **ούτε** αποτυχία **ούτε** παράδοση. */
+  readonly withdrawn: number;
   readonly failed: number;
   readonly lastError: string | null;
 }
@@ -181,12 +196,15 @@ export async function copyHandoverBatch(
   const proven = (await Promise.all(placements.map((placement) => copyAndProve(prepared.filter((copy) => copy.placement === placement), placement)))).flat();
   if (proven.length < prepared.length) errors.push(`${prepared.length - proven.length} αντίγραφα δεν αποδείχτηκαν πανομοιότυπα`);
   const rows: HandoverLedgerProof[] = [];
+  let withdrawn = 0;
   for (const copy of proven) {
     try {
-      rows.push(await commitCopy(ctx, copy));
+      const outcome = await commitCopy(ctx, copy);
+      if (outcome === 'withdrawn') withdrawn += 1;
+      else rows.push(outcome);
     } catch (error) {
       errors.push(error instanceof Error ? error.message : String(error));
     }
   }
-  return { rows, failed: planned.length - rows.length, lastError: errors.at(-1) ?? null };
+  return { rows, withdrawn, failed: planned.length - rows.length - withdrawn, lastError: errors.at(-1) ?? null };
 }

@@ -27,15 +27,16 @@ import {
   selectHandoverFiles,
   type HandoverCandidateFile,
 } from '@/lib/property-handover/handover-disposition';
+import { handoverPreviewFileOf, handoverSetFileIdentityOf } from '@/lib/property-handover/handover-preview-file';
 import { queryOwnedTargetFileDocs, type EvidenceTarget } from '@/services/conveyance/conveyance-evidence.server';
 import { loadConveyanceSubject } from '@/services/conveyance/conveyance-subject.server';
 import type { ConveyanceCaseSubject } from '@/types/conveyance-case';
-import type { PropertyHandoverPreview, PropertyHandoverPreviewFile } from '@/types/property-handover';
+import type { PropertyHandoverPreview, PropertyHandoverSetFileIdentity } from '@/types/property-handover';
 
 /** Ένα αρχείο του συνόλου — το **ίδιο** έγγραφο που διάβασε η κρίση, και η μορφή του για την όψη του γραφείου. */
 export interface HandoverSetFile {
   readonly doc: QueryDocumentSnapshot;
-  readonly preview: PropertyHandoverPreviewFile;
+  readonly preview: PropertyHandoverSetFileIdentity;
   /** Τα κλειστά πεδία, όπως τα διάβασε η κρίση — `null` ⇒ αδιάβαστο (πάει πάντα στα `review`). */
   readonly candidate: HandoverCandidateFile | null;
 }
@@ -62,16 +63,16 @@ function handoverTargetsOf(subject: ConveyanceCaseSubject): readonly EvidenceTar
   ];
 }
 
-function previewFileOf(doc: QueryDocumentSnapshot): PropertyHandoverPreviewFile {
+function previewFileOf(doc: QueryDocumentSnapshot, candidate: HandoverCandidateFile | null): PropertyHandoverSetFileIdentity {
   const displayName: unknown = doc.get('displayName');
   const entityType: unknown = doc.get('entityType');
   const entityId: unknown = doc.get('entityId');
-  return {
+  return handoverSetFileIdentityOf({
     fileId: doc.id,
     displayName: typeof displayName === 'string' && displayName !== '' ? displayName : doc.id,
     entityType: typeof entityType === 'string' ? entityType : '',
     entityId: typeof entityId === 'string' ? entityId : '',
-  };
+  }, candidate);
 }
 
 /** Τα αρχεία, μοιρασμένα κατά απόφαση. Ό,τι **δεν** αναγνωρίζεται πάει στα `review` — ποτέ σιωπηλά πουθενά. */
@@ -80,10 +81,10 @@ function judgeFiles(docs: readonly QueryDocumentSnapshot[]): Omit<HandoverSet, '
   const candidates = docs.flatMap((doc) => {
     const candidate = handoverCandidateFromDocument(doc.data());
     if (candidate === null) {
-      unrecognised.push({ doc, preview: previewFileOf(doc), candidate: null });
+      unrecognised.push({ doc, preview: previewFileOf(doc, null), candidate: null });
       return [];
     }
-    const file: DeliverableHandoverFile = { doc, preview: previewFileOf(doc), candidate };
+    const file: DeliverableHandoverFile = { doc, preview: previewFileOf(doc, candidate), candidate };
     return [{ ...candidate, file }];
   });
   const selection = selectHandoverFiles(candidates);
@@ -102,8 +103,12 @@ export async function loadHandoverSet(adminDb: AdminFirestore, companyId: string
   return { subject: context.subject, ...judgeFiles(fileDocs) };
 }
 
-/** Η όψη του γραφείου πάνω στο **ίδιο** σύνολο. */
-export function handoverSetPreviewFiles(set: HandoverSet): PropertyHandoverPreview['files'] {
-  const previews = (files: readonly HandoverSetFile[]) => files.map(({ preview }) => preview);
+/**
+ * Η όψη του γραφείου πάνω στο **ίδιο** σύνολο. `deliveredSourceIds` = οι πηγές που υπάρχουν στο καθολικό **οποιασδήποτε**
+ * παράδοσης του ακινήτου — από εκεί βγαίνει η προσφορά της Φ-Δ.4, με την **ίδια** κρίση που εφαρμόζει η πόρτα.
+ */
+export function handoverSetPreviewFiles(set: HandoverSet, deliveredSourceIds: ReadonlySet<string>): PropertyHandoverPreview['files'] {
+  const previews = (files: readonly HandoverSetFile[]) =>
+    files.map(({ doc, preview, candidate }) => handoverPreviewFileOf(preview, candidate, deliveredSourceIds.has(doc.id)));
   return { deliver: previews(set.deliver), review: previews(set.review), internal: previews(set.internal) };
 }

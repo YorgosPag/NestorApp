@@ -21,7 +21,7 @@ jest.mock('@/lib/workspace/navigation', () => ({
 jest.mock('@/components/shared/files/hooks/useFileDownload', () => ({ useFileDownload: () => ({ handleDownload: jest.fn() }) }));
 
 import React from 'react';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 import el from '@/i18n/locales/el/properties-detail.json';
@@ -35,7 +35,14 @@ import {
   HANDOVER_OFFICE_STEP_STATES,
   HANDOVER_OFFICE_STEPS,
 } from '@/types/property-handover';
+import {
+  HANDOVER_DISPOSITION_BASES,
+  HANDOVER_FILE_DECISION_CHOICES,
+  HANDOVER_FILE_DECISION_DISPOSITIONS,
+  HANDOVER_FILE_DECISION_REFUSALS,
+} from '@/types/property-handover-file-decision';
 
+import { HANDOVER_FILE_SCENARIOS, scenarioPreviewFileOf } from '../testing/handover-file-decision-scenarios';
 import { HANDOVER_OFFICE_SCENARIOS } from '../testing/handover-office-scenarios';
 import { PANEL_COUNT, PropertyHandoverOfficeHarness } from '../testing/PropertyHandoverOfficeHarness';
 
@@ -83,6 +90,15 @@ describe('Ζ9 Δ — κάθε λέξη του λεξιλογίου έχει κε
     ...HANDOVER_OFFICE_STEP_STATES.map((state) => `stepState.${state}`),
     ...HANDOVER_INVITATION_RENEWAL_REFUSALS.map((reason) => `renewal.refusal.${reason}`),
     ...['action', 'busy', 'confirmTitle', 'confirmDescription', 'confirmAction', 'success', 'failed'].map((key) => `renewal.${key}`),
+    // Φ-Δ.4 — η απόφαση ανά αρχείο.
+    ...HANDOVER_DISPOSITION_BASES.map((basis) => `files.basis.${basis}`),
+    ...HANDOVER_FILE_DECISION_CHOICES.map((choice) => `fileDecision.choice.${choice}`),
+    ...HANDOVER_FILE_DECISION_DISPOSITIONS.map((disposition) => `fileDecision.decided.${disposition}`),
+    ...['deliver', 'review', 'internal'].map((automatic) => `fileDecision.automaticMeans.${automatic}`),
+    ...HANDOVER_FILE_DECISION_REFUSALS.map((reason) => `fileDecision.refusal.${reason}`),
+    ...['action', 'busy', 'title', 'description', 'choiceLabel', 'reasonLabel', 'confirmConfidential', 'confirmAction', 'success', 'failed']
+      .map((key) => `fileDecision.${key}`),
+    'fileDecision.blocked.already-delivered', 'files.confidential', 'files.delivered',
   ];
   const lookup = (bundle: unknown, path: string): unknown =>
     path.split('.').reduce<unknown>((node, part) => (typeof node === 'object' && node !== null ? (node as Record<string, unknown>)[part] : undefined), bundle);
@@ -103,6 +119,39 @@ describe('Ζ17γ — «Νέα πρόσκληση» (Φ-Δ.3): το κουμπί 
     const button = within(panel('renewal-in-flight')).getByRole('button', { name: `${K}.renewal.busy` });
     expect(button).toBeDisabled();
     expect(button).toHaveAttribute('aria-busy', 'true');
+  });
+});
+
+describe('Ζ29β — «Απόφαση για αρχείο» (Φ-Δ.4): η γραμμή λέει ΓΙΑΤΙ, και το κουμπί ζει ΜΟΝΟ όπου η κρίση το προσφέρει', () => {
+  const rows = () => [...panel('whole-tab-mixed').querySelectorAll<HTMLElement>('li[data-file]')];
+  const row = (scenarioId: string) => panel('whole-tab-mixed').querySelector<HTMLElement>(`li[data-file="f_${scenarioId}"]`);
+
+  it('μία γραμμή ανά σενάριο, με τον λόγο κατάταξης από την κρίση', () => {
+    expect(rows()).toHaveLength(HANDOVER_FILE_SCENARIOS.length);
+    for (const scenario of HANDOVER_FILE_SCENARIOS) {
+      const expected = scenarioPreviewFileOf(scenario);
+      expect(row(scenario.id)).toHaveAttribute('data-basis', expected.basis);
+      expect(within(row(scenario.id) as HTMLElement).getByText(`${K}.files.basis.${expected.basis}`)).toBeInTheDocument();
+    }
+  });
+
+  it('το κουμπί «Απόφαση…» ⇔ ανοιχτή προσφορά · το «παραδόθηκε, μένει» φαίνεται όπου κλειδώνει', () => {
+    const withButton = HANDOVER_FILE_SCENARIOS.filter((s) => within(row(s.id) as HTMLElement).queryByText(`${K}.fileDecision.action`) !== null);
+    expect(withButton.map((s) => s.id).sort()).toEqual(HANDOVER_FILE_SCENARIOS.filter((s) => scenarioPreviewFileOf(s).offer.kind === 'open').map((s) => s.id).sort());
+    expect(within(row('decision-deliver-delivered') as HTMLElement).getByText(`${K}.fileDecision.blocked.already-delivered`)).toBeInTheDocument();
+  });
+
+  it('ο διάλογος: μόνο οι προσφερόμενες επιλογές · αιτιολογία ΚΑΙ επιβεβαίωση εμπιστευτικού πριν ενεργοποιηθεί η αποθήκευση', () => {
+    fireEvent.click(within(row('review-confidential') as HTMLElement).getByText(`${K}.fileDecision.action`));
+    const dialog = screen.getByRole('alertdialog');
+    expect(within(dialog).getByText(`${K}.fileDecision.choice.deliver`)).toBeInTheDocument();
+    expect(within(dialog).queryByText(`${K}.fileDecision.choice.automatic`)).toBeNull();
+    const save = within(dialog).getByRole('button', { name: `${K}.fileDecision.confirmAction` });
+    expect(save).toBeDisabled();
+    fireEvent.change(within(dialog).getByRole('textbox'), { target: { value: 'Ελέγχθηκε από τον νομικό σύμβουλο' } });
+    expect(save).toBeDisabled();
+    fireEvent.click(within(dialog).getByRole('checkbox'));
+    expect(save).toBeEnabled();
   });
 });
 

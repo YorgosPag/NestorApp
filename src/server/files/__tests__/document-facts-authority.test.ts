@@ -19,41 +19,21 @@
  * `[DOCUMENT_FACTS_FIELD]`)· ένα κλειδί χτισμένο σε μεταβλητή μένει αόρατο (ίδιο όριο με την 3.17).
  */
 
-import { execFileSync } from 'child_process';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
 import { DOCUMENT_FACTS_FIELD } from '@/lib/document-validity/document-facts';
+import { codeSourcesMentioning, REPO_ROOT as ROOT, writeKeyPattern, writesKeyIn } from '@/test-utils/one-writer-anchor';
 
-const ROOT = join(__dirname, '..', '..', '..', '..');
 const WRITER = 'src/server/files/document-facts-writer.ts';
 const { rulesKeyListOf } = require('../../../../scripts/_shared/firestore-rules-parser.js') as {
   rulesKeyListOf: (rulesText: string, functionName: string) => string[];
 };
 
-/** Κλήσεις γραφής Firestore και το κοντινό τους φορτίο. */
-const WRITE_CALL = /\b(?:update|set|create|updateDoc|setDoc)\s*\(/g;
-const FACTS_KEY = new RegExp(String.raw`(?:\b${DOCUMENT_FACTS_FIELD}\s*:|\[\s*DOCUMENT_FACTS_FIELD\s*\]\s*:)`);
-const WINDOW = 400;
-
-/** Γράφει αυτό το κείμενο το πεδίο μέσα σε όρισμα κλήσης γραφής; */
-function writesDocumentFacts(source: string): boolean {
-  for (const match of source.matchAll(WRITE_CALL)) {
-    const start = (match.index ?? 0) + match[0].length;
-    if (FACTS_KEY.test(source.slice(start, start + WINDOW))) return true;
-  }
-  return false;
-}
-
-/** Μόνο τα αρχεία που **αναφέρουν** το πεδίο — `git grep` (tracked + untracked), όχι ανάγνωση 19.000 αρχείων. */
-function candidateSources(): string[] {
-  const out = execFileSync(
-    'git',
-    ['grep', '-l', '--untracked', '-e', DOCUMENT_FACTS_FIELD, '-e', 'DOCUMENT_FACTS_FIELD', '--', 'src'],
-    { cwd: ROOT, encoding: 'utf8' },
-  );
-  return out.split('\n').filter((file) => /\.tsx?$/.test(file) && !/__tests__|\.test\.|\.spec\./.test(file));
-}
+// ADR-916 Φ-Δ.4 — ο σαρωτής έγινε κοινός (`test-utils/one-writer-anchor`): δεύτερη άγκυρα ενός γραφέα (`handoverDecision`).
+const FACTS_KEY = writeKeyPattern(DOCUMENT_FACTS_FIELD, 'DOCUMENT_FACTS_FIELD');
+const writesDocumentFacts = (source: string): boolean => writesKeyIn(source, FACTS_KEY);
+const candidateSources = (): string[] => codeSourcesMentioning([DOCUMENT_FACTS_FIELD, 'DOCUMENT_FACTS_FIELD']);
 
 describe('Ε — ο ΕΝΑΣ γραφέας των γεγονότων εγγράφου', () => {
   it('Ε1 — ο κανόνας παγώνει ΑΚΡΙΒΩΣ το πεδίο του κώδικα', () => {

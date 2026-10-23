@@ -451,7 +451,55 @@
       "review": "Need a decision: {count}",
       "internal": "Stay with the office: {count}",
       "reviewHint": "These files are not delivered without an office decision, nor are they silently dropped.",
-      "none": "No files."
+      "none": "No files.",
+      "confidential": "Confidential",
+      "delivered": "Delivered",
+      "basis": {
+        "protocol": "Handover protocol — travels on its own route.",
+        "office-decision": "Office decision.",
+        "confidential": "Confidential — does not leave without a decision.",
+        "office-domain": "Belongs to office operations (accounting, finance, brokerage, intake).",
+        "catalog": "From the document type.",
+        "category": "From the file category.",
+        "unrecognised": "Not recognised — fix the file's classification."
+      }
+    },
+    "fileDecision": {
+      "action": "Decide…",
+      "busy": "Saving…",
+      "title": "Decision for “{name}”",
+      "description": "Choose whether this file is delivered to the buyer. The justification stays in the office history — the buyer never sees it.",
+      "choiceLabel": "Decision",
+      "choice": {
+        "deliver": "Deliver",
+        "internal": "Keep internal",
+        "automatic": "Automatic"
+      },
+      "automaticMeans": {
+        "deliver": "Automatically, the file is delivered.",
+        "review": "Automatically, the file will wait for a decision.",
+        "internal": "Automatically, the file stays with the office."
+      },
+      "reasonLabel": "Justification (at least {min} characters)",
+      "confirmConfidential": "This file is confidential. I confirm it may be delivered to the buyer.",
+      "confirmAction": "Save decision",
+      "success": "Decision saved.",
+      "failed": "The decision could not be saved right now. Please try again.",
+      "decided": {
+        "deliver": "Delivered · decided {date}",
+        "internal": "Internal · decided {date}"
+      },
+      "blocked": {
+        "already-delivered": "Already delivered and stays in the buyer's folder. Withdrawal is a separate action."
+      },
+      "refusal": {
+        "file-unknown": "This file no longer belongs to the sale.",
+        "protocol-file": "The handover protocol cannot be changed by a decision.",
+        "unrecognised": "This file was not recognised — fix its classification first.",
+        "stale": "Someone else decided in the meantime. The tab has been refreshed.",
+        "already-delivered": "This file was delivered in the meantime and stays with the buyer.",
+        "confidential-unconfirmed": "This file is confidential — explicit confirmation is required."
+      }
     }
   }
 }

@@ -407,6 +407,20 @@ describe('files_personal.rules — το προσωπικό αρχείο το α�
       await assertSucceeds(citizenDb().collection(COLLECTION).doc('mark-held').update({ description: 'το πρωτόκολλο' }));
     });
 
+    // ADR-916 §5.18 Φ-Δ.4 — η απόφαση παράδοσης του γραφείου: ζει στα αρχεία της εταιρείας, αλλά το κλειδί σημαίνει ένα
+    // πράγμα παντού («το έγραψε ο γραφέας της απόφασης») — ίδιος φρουρός και στο προσωπικό διαμέρισμα.
+    it('⛔ η απόφαση παράδοσης: γέννηση · προσθήκη · αφαίρεση ⇒ ΑΡΝΗΣΗ', async () => {
+      const DECISION = { disposition: 'internal', reason: 'Κρατήθηκε από το γραφείο', decidedBy: 'u-office', decidedAt: '2026-10-23T10:00:00.000Z' };
+      await assertFails(citizenDb().collection(COLLECTION).doc('forged-decision').set({
+        ...personalFilePayload(CITIZEN_UID, 'forged-decision'), handoverDecision: DECISION,
+      }));
+      await seedPersonalFile(env, 'decision-add', CITIZEN_UID);
+      await assertFails(citizenDb().collection(COLLECTION).doc('decision-add').update({ handoverDecision: DECISION }));
+      await seedPersonalFile(env, 'decision-held', CITIZEN_UID, { handoverDecision: DECISION });
+      await assertFails(citizenDb().collection(COLLECTION).doc('decision-held').update({ handoverDecision: null }));
+      await assertSucceeds(citizenDb().collection(COLLECTION).doc('decision-held').update({ description: 'σημείωση' }));
+    });
+
     it('✅ το παραδομένο αντίγραφο είναι ΔΙΚΟ του: το διαβάζει, το βρίσκει στη λίστα, γράφει σημείωση, το σβήνει', async () => {
       await seedPersonalFile(env, DOC_ID, CITIZEN_UID, { handoverOrigin: ORIGIN });
       const ref = citizenDb().collection(COLLECTION).doc(DOC_ID);

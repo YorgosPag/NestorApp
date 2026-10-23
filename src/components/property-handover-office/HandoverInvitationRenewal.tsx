@@ -2,7 +2,7 @@
 
 /**
  * @fileoverview **Το κουμπί «Νέα πρόσκληση»** μιας παράδοσης (ADR-916 §5.17 Φ-Δ.3 · §8 Ο9).
- * @related hooks/property-handover/useHandoverInvitationRenewal (η πράξη) · HandoverEntryCard.tsx (η κάρτα)
+ * @related hooks/property-handover/useHandoverOfficeActions (η πράξη) · HandoverEntryCard.tsx (η κάρτα)
  * @module components/property-handover-office/HandoverInvitationRenewal
  *
  * 🔑 **Το κουμπί ΔΕΝ κρίνει**: εμφανίζεται όταν το λέει το `status.renewal`, που βγαίνει από την **ίδια** συνάρτηση με την
@@ -17,7 +17,7 @@ import { Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import type { HandoverInvitationRenewalActions } from '@/hooks/property-handover/useHandoverInvitationRenewal';
+import type { HandoverOfficeActions } from '@/hooks/property-handover/useHandoverOfficeActions';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { HandoverInvitationRenewalOffer } from '@/types/property-handover';
 
@@ -26,7 +26,7 @@ const K = 'properties-detail:handover.renewal';
 interface HandoverInvitationRenewalProps {
   readonly handoverId: string;
   readonly offer: HandoverInvitationRenewalOffer;
-  readonly actions: HandoverInvitationRenewalActions;
+  readonly actions: HandoverOfficeActions;
 }
 
 export function HandoverInvitationRenewal({ handoverId, offer, actions }: HandoverInvitationRenewalProps): React.ReactElement | null {

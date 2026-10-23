@@ -72,6 +72,8 @@ export interface HandoverDeliveryRunOutcome {
 
 interface CopyRun {
   readonly rows: readonly HandoverLedgerProof[];
+  /** Φ-Δ.4 — έπαψαν να είναι παραδοτέα μέσα στο παράθυρο (απόφαση γραφείου): βγαίνουν από το σύνολο, όχι αποτυχία. */
+  readonly withdrawn: number;
   readonly failed: number;
   readonly lastError: string | null;
 }
@@ -80,15 +82,17 @@ interface CopyRun {
 async function runBatches(ctx: HandoverCopyContext, plan: HandoverDeliveryPlan<HandoverDeliverableItem>, deadlineAt: number | null): Promise<CopyRun> {
   const rows: HandoverLedgerProof[] = [];
   let failed = 0;
+  let withdrawn = 0;
   let lastError: string | null = null;
   for (let i = 0; i < plan.copies.length; i += BATCH_SIZE) {
     if (deadlineAt !== null && Date.now() >= deadlineAt) break;
     const result = await copyHandoverBatch(ctx, plan.copies.slice(i, i + BATCH_SIZE));
     rows.push(...result.rows);
     failed += result.failed;
+    withdrawn += result.withdrawn;
     lastError = result.lastError ?? lastError;
   }
-  return { rows, failed, lastError };
+  return { rows, withdrawn, failed, lastError };
 }
 
 /**
@@ -142,7 +146,7 @@ async function runDelivery(
   const ctx: HandoverCopyContext = { adminDb, handover, recipientUserId: recipient.userId, targets };
   const run = await runBatches(ctx, plan, budget.deadlineAt);
   const hashing = await hashDeliveredRows(ctx, [...delivered, ...run.rows], { maxBytes: budget.maxHashBytes, deadlineAt: budget.deadlineAt });
-  const progress = await progressOf(handover.fileDelivery, plan.total, run, hashing, set.review.length);
+  const progress = await progressOf(handover.fileDelivery, plan.total - run.withdrawn, run, hashing, set.review.length);
   if (!sameProgress(handover.fileDelivery, progress)) await record({ handoverId: handover.id, recipientUserId: recipient.userId, fileDelivery: progress });
   // Σ4 — και όταν η πρόοδος δεν άλλαξε (νυχτερινό δίχτυ): εκεί ξαναδοκιμάζεται σφράγιση που περίμενε ρύθμιση.
   if (progress.state === 'delivered' && issueProtocol !== null) await issueProtocol({ ...handover, fileDelivery: progress });
