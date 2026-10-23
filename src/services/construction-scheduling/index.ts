@@ -1,5 +1,6 @@
 export { computeCPM } from './cpm-calculator';
-export type { CPMResult, CPMTaskResult } from './cpm-types';
+export type { CPMOptions, CPMResult, CPMTaskResult } from './cpm-types';
+export { forecastCompletion, type CompletionForecast } from './completion-forecast';
 export {
   fetchResourceAssignments,
   createResourceAssignment,

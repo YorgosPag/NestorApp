@@ -9,38 +9,18 @@
  */
 
 import type { ConstructionPhase, ConstructionTask } from '@/types/building/construction';
-import type { CPMResult, CPMTaskResult } from './cpm-types';
+import type { CPMOptions, CPMResult, CPMTaskResult } from './cpm-types';
 import { nowISO } from '@/lib/date-local';
-
-// ─── Constants ──────────────────────────────────────────────────────────
-
-const MS_PER_DAY = 86_400_000;
-
-// ─── Date Helpers ───────────────────────────────────────────────────────
-
-function daysBetween(a: string | Date, b: string | Date): number {
-  const ta = typeof a === 'string' ? new Date(a).getTime() : a.getTime();
-  const tb = typeof b === 'string' ? new Date(b).getTime() : b.getTime();
-  return Math.round((tb - ta) / MS_PER_DAY);
-}
-
-function addDays(date: Date, days: number): Date {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
-  return result;
-}
-
-function toISO(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
-function maxDate(...dates: Date[]): Date {
-  return new Date(Math.max(...dates.map(d => d.getTime())));
-}
-
-function minDate(...dates: Date[]): Date {
-  return new Date(Math.min(...dates.map(d => d.getTime())));
-}
+// ADR-919 βήμα 2: η αριθμητική ημερών ζει στο `schedule-dates` (σε UTC — το παλιό τοπικό
+// `setDate` έχανε μία μέρα στην αλλαγή ώρας του Μαρτίου).
+import {
+  addDaysUtc as addDays,
+  daysBetween,
+  maxDate,
+  minDate,
+  toIsoDay as toISO,
+} from './schedule-dates';
+import { activityWindowAt, plannedDurationDays } from './status-date-rule';
 
 // ─── Graph Construction ─────────────────────────────────────────────────
 
@@ -119,28 +99,27 @@ function forwardPass(
   sortedIds: string[],
   taskMap: Map<string, ConstructionTask>,
   predecessors: Map<string, string[]>,
+  statusDate: Date | null,
 ): Map<string, { es: Date; ef: Date }> {
   const results = new Map<string, { es: Date; ef: Date }>();
 
   for (const id of sortedIds) {
     const task = taskMap.get(id)!;
-    const duration = Math.max(1, daysBetween(task.plannedStartDate, task.plannedEndDate));
-    const preds = predecessors.get(id) ?? [];
+    const predFinishes = (predecessors.get(id) ?? [])
+      .map(pid => results.get(pid)?.ef)
+      .filter((d): d is Date => d !== undefined);
+    const earliest = predFinishes.length > 0
+      ? maxDate(...predFinishes)
+      : new Date(task.plannedStartDate);
 
-    let es: Date;
-    if (preds.length === 0) {
-      es = new Date(task.plannedStartDate);
-    } else {
-      const predFinishes = preds
-        .map(pid => results.get(pid)?.ef)
-        .filter((d): d is Date => d !== undefined);
-      es = predFinishes.length > 0
-        ? maxDate(...predFinishes)
-        : new Date(task.plannedStartDate);
+    if (statusDate !== null) {
+      // ADR-919 βήμα 2: ημερομηνία κατάστασης — πρόοδος, πραγματικές ημερομηνίες, «όχι πριν από σήμερα».
+      const { start, finish } = activityWindowAt(task, statusDate, earliest);
+      results.set(id, { es: start, ef: finish });
+      continue;
     }
-
-    const ef = addDays(es, duration);
-    results.set(id, { es, ef });
+    const duration = plannedDurationDays(task);
+    results.set(id, { es: earliest, ef: addDays(earliest, duration) });
   }
 
   return results;
@@ -151,7 +130,7 @@ function forwardPass(
 /** Compute Late Start / Late Finish for each task */
 function backwardPass(
   sortedIds: string[],
-  taskMap: Map<string, ConstructionTask>,
+  fwd: Map<string, { es: Date; ef: Date }>,
   successors: Map<string, string[]>,
   projectEnd: Date,
 ): Map<string, { ls: Date; lf: Date }> {
@@ -159,8 +138,10 @@ function backwardPass(
   const reversed = [...sortedIds].reverse();
 
   for (const id of reversed) {
-    const task = taskMap.get(id)!;
-    const duration = Math.max(1, daysBetween(task.plannedStartDate, task.plannedEndDate));
+    // Η διάρκεια του παραθύρου του forward pass: στο σχέδιο ταυτίζεται με την προγραμματισμένη,
+    // στην πρόβλεψη (ADR-919) είναι η υπόλοιπη, ώστε το float να μετρά το ίδιο πράγμα.
+    const { es, ef } = fwd.get(id)!;
+    const duration = daysBetween(es, ef);
     const succs = successors.get(id) ?? [];
 
     let lf: Date;
@@ -200,10 +181,16 @@ function computeDelayImpact(
 
 // ─── Main Entry Point ───────────────────────────────────────────────────
 
-/** Compute Critical Path Method for a set of construction tasks */
+/**
+ * Compute Critical Path Method for a set of construction tasks.
+ *
+ * Χωρίς `options.statusDate` ο υπολογισμός είναι **το σχέδιο** (ό,τι δείχνει το Gantt). Με
+ * `statusDate` είναι **πρόβλεψη** (ADR-919 βήμα 2, `completion-forecast.ts`).
+ */
 export function computeCPM(
   tasks: ConstructionTask[],
   phases: ConstructionPhase[],
+  options: CPMOptions = {},
 ): CPMResult {
   if (tasks.length === 0) {
     return emptyResult();
@@ -225,14 +212,15 @@ export function computeCPM(
   }
 
   // Forward pass
-  const fwd = forwardPass(sortedIds, taskMap, graph.predecessors);
+  const statusDate = options.statusDate ? new Date(options.statusDate) : null;
+  const fwd = forwardPass(sortedIds, taskMap, graph.predecessors, statusDate);
 
   // Project end = max Early Finish
   const allEFs = sortedIds.map(id => fwd.get(id)!.ef);
   const projectEnd = maxDate(...allEFs);
 
   // Backward pass
-  const bwd = backwardPass(sortedIds, taskMap, graph.successors, projectEnd);
+  const bwd = backwardPass(sortedIds, fwd, graph.successors, projectEnd);
 
   // Assemble results
   const cpmTasks = assembleResults(
@@ -259,6 +247,25 @@ export function computeCPM(
 
 // ─── Assemble Results ───────────────────────────────────────────────────
 
+type TaskIdentity = Pick<
+  CPMTaskResult,
+  'taskId' | 'taskName' | 'taskCode' | 'phaseId' | 'phaseName' | 'durationDays' | 'status' | 'progress'
+>;
+
+/** Τα πεδία που δεν εξαρτώνται από το CPM — κοινά για κανονικές και κυκλικές εργασίες. */
+function taskIdentity(task: ConstructionTask, phase: ConstructionPhase | undefined): TaskIdentity {
+  return {
+    taskId: task.id,
+    taskName: task.name,
+    taskCode: task.code,
+    phaseId: task.phaseId,
+    phaseName: phase?.name ?? '—',
+    durationDays: plannedDurationDays(task),
+    status: task.status,
+    progress: task.progress,
+  };
+}
+
 function assembleResults(
   sortedIds: string[],
   cyclicIds: string[],
@@ -277,12 +284,7 @@ function assembleResults(
     const totalFloat = Math.max(0, daysBetween(es, ls));
 
     results.push({
-      taskId: task.id,
-      taskName: task.name,
-      taskCode: task.code,
-      phaseId: task.phaseId,
-      phaseName: phase?.name ?? '—',
-      durationDays: Math.max(1, daysBetween(task.plannedStartDate, task.plannedEndDate)),
+      ...taskIdentity(task, phase),
       earlyStart: toISO(es),
       earlyFinish: toISO(ef),
       lateStart: toISO(ls),
@@ -291,22 +293,14 @@ function assembleResults(
       isCritical: totalFloat === 0,
       delayImpactDays: computeDelayImpact(task, ef),
       hasCyclicDependency: false,
-      status: task.status,
-      progress: task.progress,
     });
   }
 
   // Add cyclic tasks as flagged entries
   for (const id of cyclicIds) {
     const task = taskMap.get(id)!;
-    const phase = phaseMap.get(task.phaseId);
     results.push({
-      taskId: task.id,
-      taskName: task.name,
-      taskCode: task.code,
-      phaseId: task.phaseId,
-      phaseName: phase?.name ?? '—',
-      durationDays: Math.max(1, daysBetween(task.plannedStartDate, task.plannedEndDate)),
+      ...taskIdentity(task, phaseMap.get(task.phaseId)),
       earlyStart: task.plannedStartDate,
       earlyFinish: task.plannedEndDate,
       lateStart: task.plannedStartDate,
@@ -315,8 +309,6 @@ function assembleResults(
       isCritical: false,
       delayImpactDays: 0,
       hasCyclicDependency: true,
-      status: task.status,
-      progress: task.progress,
     });
   }
 

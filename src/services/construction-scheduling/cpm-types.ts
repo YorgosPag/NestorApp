@@ -56,3 +56,14 @@ export interface CPMResult {
   /** false if no valid tasks to compute */
   isValid: boolean;
 }
+
+// ─── Options ────────────────────────────────────────────────────────────
+
+export interface CPMOptions {
+  /**
+   * Ημερομηνία κατάστασης (data date, ISO). Χωρίς αυτήν το CPM υπολογίζει **το σχέδιο**. Με αυτήν
+   * υπολογίζει **πρόβλεψη**: πρόοδος, πραγματικές ημερομηνίες, και τίποτα ανοιχτό δεν τελειώνει
+   * πριν από αυτήν (ADR-919 βήμα 2 · `status-date-rule.ts`).
+   */
+  readonly statusDate?: string;
+}
