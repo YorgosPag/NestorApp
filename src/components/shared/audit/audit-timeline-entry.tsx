@@ -20,8 +20,7 @@ import { AUDIT_TIMELINE_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from "react";
 import { Link } from '@/lib/workspace/navigation';
 import { declaredHref } from '@/lib/workspace/route-worlds';
-import { getProjectUrl } from '@/lib/navigation/project-urls';
-import { ENTITY_ROUTES } from '@/lib/routes/entityRoutes';
+import { getEntityHref, type LinkableEntityType } from '@/lib/navigation/entity-href';
 import { ENTITY_LINK_CLASS } from '@/lib/ui/link-style';
 import { formatRelativeTime, formatDateTime } from "@/lib/intl-utils";
 import type {
@@ -53,35 +52,27 @@ import { resolveActorName, resolveCauseText } from "./audit-actor";
  * Build the canonical detail route for each entity type.
  * Used when rendering in `showEntityLink` mode (global admin view).
  *
- * 🔑 **Δεν γράφει διευθύνσεις — τις ΖΗΤΑ** από τα SSoT (`ENTITY_ROUTES` · `getProjectUrl`, ADR-242). Ήταν δεύτερο
- *   μητρώο με χειρόγραφα `/projects/${id}` · `/contacts/${id}` · `/buildings/${id}`: διευθύνσεις-redirect (ένα άλμα
- *   παραπάνω), που απέκλιναν σιωπηλά από το κεντρικό μητρώο. Τώρα κάθε τύπος πάει **κατευθείαν** στην κανονική μορφή.
+ * 🔑 **Δεν γράφει διευθύνσεις — τις ΖΗΤΑ** από το `getEntityHref` (ADR-242 Βήμα 5). Ήταν δεύτερο μητρώο με
+ *   χειρόγραφα `/projects/${id}` · `/contacts/${id}` · `/buildings/${id}`: διευθύνσεις-redirect (ένα άλμα παραπάνω).
+ *   Εδώ μένει **μόνο** η μετάφραση του λεξιλογίου του ιστορικού (`company` = επαφή) στον τύπο του resolver.
  */
+const AUDIT_LINK_TYPE: Partial<Record<AuditEntityType, LinkableEntityType>> = {
+  contact: "contact",
+  company: "contact",
+  project: "project",
+  building: "building",
+  property: "property",
+  parking: "parking",
+  storage: "storage",
+  purchase_order: "purchase_order",
+};
+
 export function buildEntityHref(
   type: AuditEntityType,
   id: string,
 ): string | null {
-  switch (type) {
-    case "contact":
-    case "company":
-      return ENTITY_ROUTES.contacts.withId(id);
-    case "project":
-      return getProjectUrl(id);
-    case "building":
-      return ENTITY_ROUTES.buildings.withId(id);
-    case "property":
-      return ENTITY_ROUTES.properties.withId(id);
-    case "parking":
-      return ENTITY_ROUTES.spaces.parking(id);
-    case "storage":
-      return ENTITY_ROUTES.spaces.storage(id);
-    case "purchase_order":
-      return ENTITY_ROUTES.procurement.purchaseOrder(id);
-    case "floor":
-    case "quote":
-    default:
-      return null;
-  }
+  const linkType = AUDIT_LINK_TYPE[type];
+  return linkType ? getEntityHref(linkType, id) : null;
 }
 
 // ============================================================================

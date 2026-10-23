@@ -120,7 +120,7 @@ export async function buildSearchDocument(
     requiredPermission: config.requiredPermission,
     links: {
       // ΔΡΟΜΟΣ #3: `routeTemplate` είναι ΓΛΩΣΣΑ DSL ({id} placeholder) του search
-      // index builder — ίδιο σχήμα με το report-builder entityLinkPath, άλλο σύστημα.
+      // index builder (ο report builder ΔΕΝ έχει πια δικό του πρότυπο: δηλώνει τύπο, ADR-242 Βήμα 5).
       href: declaredHref(
         'search-backfill routeTemplate DSL — {id} placeholder, όχι Next [id].',
         config.routeTemplate.replace('{id}', entityId),
