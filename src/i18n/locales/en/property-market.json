@@ -160,7 +160,7 @@
       },
       "timing": {
         "legend": "When do you need it?",
-        "help": "No property portal asks this. We know what is being built — so we can meet supply that does not exist yet.",
+        "help": "Timing changes what fits you. If you are in no rush, homes still being built count too, as soon as their listing is published.",
         "now": "Now",
         "window": "In a specific period",
         "whenever": "Whenever it comes up",
@@ -169,7 +169,7 @@
         "toLabel": "To",
         "chooser": {
           "now": "You are looking for something available today.",
-          "window": "You need it for a specific period, e.g. a rental from March. We show you what will be available then, even if it is not today.",
+          "window": "You need it for a specific period, e.g. a rental from March. Listings do not yet state when they become available, so we will tell you plainly where we cannot say whether they fit, instead of guessing.",
           "whenever": "No rush. The request never expires and finds you as soon as something comes up, even if it is still being built today.",
           "changeLater": "You can still change this on the next page."
         }
