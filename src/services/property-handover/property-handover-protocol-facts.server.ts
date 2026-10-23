@@ -11,7 +11,7 @@ import 'server-only';
  *     έκρινε το σχέδιο, αλλιώς το καθολικό κινήθηκε στο μεταξύ και τίποτα δεν εκδίδεται (`ledger-moved`)
  *   - εκδότης → νομική επωνυμία (`readCompanyLegalIdentity`), εφεδρεία το όνομα του χώρου· ακίνητο → `loadConveyanceSubject`
  *     (ο ίδιος αναγνώστης με την πρόσκληση)· παρακολουθήματα → `appurtenanceLabelOf` (ο ίδιος με τους φακέλους τους)
- *   - παραλήπτης → **μόνο** `extractContactDisplayName` πάνω στην επαφή του μισθωτή· κανένα άλλο πεδίο επαφής δεν
+ *   - παραλήπτης → **μόνο** το ονοματεπώνυμο (`handoverRecipientNamesOf`, ο ίδιος αναγνώστης με καρτέλα και ειδοποίηση)· κανένα άλλο πεδίο επαφής δεν
  *     φεύγει από αυτό το αρχείο (ρήτρα `personalData`, GDPR άρθ. 5 §1 γ)
  * ⛔ **Άρνηση, όχι εικασία**: ό,τι λείπει από ένα **νομικό** έγγραφο (κείμενο · φορέας · εκδότης · ακίνητο) ⇒ ονομασμένη
  *    άρνηση. Ποτέ «—» στη θέση του εκδότη ενός σφραγισμένου εγγράφου.
@@ -30,8 +30,6 @@ import {
   handoverProtocolTermsOn,
 } from '@/lib/property-handover/handover-protocol-terms';
 import { readWorkspaceName } from '@/lib/workspace/workspace-catalog';
-import { extractContactDisplayName } from '@/server/lib/contact-doc-fields';
-import { readOwnedContactDocs } from '@/server/lib/owned-contact-docs';
 import { handoverCopyRecordRef } from '@/server/property-handover-delivery/handover-delivery-copy.server';
 import { appurtenanceLabelOf } from '@/server/property-handover-delivery/handover-delivery-dossiers.server';
 import { readDeliveredRows } from '@/server/property-handover-delivery/handover-delivery-ledger.server';
@@ -44,6 +42,8 @@ import {
   type HandoverProtocolView,
 } from '@/services/pdf/renderers/handover-protocol/handover-protocol-view';
 import type { PropertyHandover } from '@/types/property-handover';
+
+import { handoverRecipientNamesOf } from './property-handover-recipient-name.server';
 
 export type DueHandoverProtocol = Extract<HandoverProtocolPlan, { readonly kind: 'due' }>;
 
@@ -111,18 +111,16 @@ interface ProtocolParties {
 /** Εκδότης · ακίνητο + παρακολουθήματα · παραλήπτης (μόνο ονοματεπώνυμο). `null` ⇒ το ακίνητο δεν είναι πια του μισθωτή. */
 async function partiesOf(adminDb: AdminFirestore, handover: PropertyHandover): Promise<ProtocolParties | null> {
   const { companyId, propertyId, recipientContactId } = handover;
-  const [subject, legal, workspaceName, contacts] = await Promise.all([
+  const [subject, legal, workspaceName, names] = await Promise.all([
     loadConveyanceSubject(adminDb, companyId, propertyId),
     readCompanyLegalIdentity(companyId),
     readWorkspaceName(companyId),
-    readOwnedContactDocs(adminDb, companyId, [recipientContactId]),
+    handoverRecipientNamesOf(adminDb, companyId, [recipientContactId]),
   ]);
   if (subject === null) return null;
   const appurtenances = await Promise.all(subject.subject.appurtenances.map((ref) => appurtenanceLabelOf(adminDb, ref)));
-  const contact = contacts.get(recipientContactId);
   const issuerName = legal?.businessName ?? legal?.tradeName ?? workspaceName.trim();
-  const recipientName = contact === undefined ? '' : extractContactDisplayName(contact);
-  return { issuerName: issuerName || null, propertyLabel: subject.propertyName, appurtenances, recipientName: recipientName || null };
+  return { issuerName: issuerName || null, propertyLabel: subject.propertyName, appurtenances, recipientName: names.get(recipientContactId) ?? null };
 }
 
 /** **Τα στοιχεία ενός οφειλόμενου Πρωτοκόλλου** — ή ονομασμένη άρνηση. */

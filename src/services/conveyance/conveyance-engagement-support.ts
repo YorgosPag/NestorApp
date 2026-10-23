@@ -14,7 +14,7 @@ import { actingWorkspaceOf } from '@/lib/auth/acting-workspace';
 import { decideEngagement, isEngaged } from '@/lib/auth/engagement-judge';
 import { engagementsCollection, engagementsForSubjectQuery } from '@/lib/auth/engagement-ref';
 import { parseEngagement } from '@/lib/auth/engagement-schema';
-import { activeWorkspaceAdministrators } from '@/lib/workspace/workspace-administrators';
+import { workspaceHostRecipients } from '@/lib/workspace/workspace-host-recipients';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import type { AuditAction, AuditFieldChange } from '@/types/audit-trail';
 import type { CaseEngagementSummary, ConveyanceCase } from '@/types/conveyance-case';
@@ -54,7 +54,7 @@ export async function activeCaseEngagements(db: Firestore, record: ConveyanceCas
 
 /** Ο οικοδεσπότης ως **παραλήπτες**: ο δημιουργός της υπόθεσης **και** οι ενεργοί διαχειριστές του χώρου, χωρίς διπλά. */
 export async function caseHostRecipients(db: Firestore, record: ConveyanceCase): Promise<string[]> {
-  return [...new Set([record.createdBy, ...(await activeWorkspaceAdministrators(db, record.companyId))])];
+  return workspaceHostRecipients(db, record.companyId, { actors: [record.createdBy] });
 }
 
 /** Το κλειδί μιας συμμετοχής **από την ίδια** — ποτέ από το αίτημα. */

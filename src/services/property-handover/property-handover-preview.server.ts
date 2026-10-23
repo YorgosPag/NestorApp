@@ -23,26 +23,12 @@ import { nowISO } from '@/lib/date-local';
 import { propertyHandoverSnapshotOf, type PropertyHandoverSnapshot } from '@/lib/property-handover/handover-plan';
 import { handoverOfficeStatusOf } from '@/lib/property-handover/handover-office-status';
 import { propertyHandoverFromDocument } from '@/lib/property-handover/property-handover-from-document';
-import { extractContactDisplayName } from '@/server/lib/contact-doc-fields';
-import { readOwnedContactDocs } from '@/server/lib/owned-contact-docs';
 import { sealConfigurationOf } from '@/server/pdf-seal/seal-config.server';
-import type { PropertyHandover, PropertyHandoverOfficeEntry, PropertyHandoverPreview } from '@/types/property-handover';
+import type { PropertyHandoverOfficeEntry, PropertyHandoverPreview } from '@/types/property-handover';
 
+import { handoverRecipientNamesOf } from './property-handover-recipient-name.server';
 import { handoverSetPreviewFiles, loadHandoverSet } from './property-handover-set.server';
 import { propertyHandoversQuery } from './property-handover-write.service';
-
-/** Τα ονοματεπώνυμα των αγοραστών — **μία** ανάγνωση, μόνο επαφές του ίδιου μισθωτή. */
-async function recipientNamesOf(
-  adminDb: AdminFirestore,
-  companyId: string,
-  handovers: readonly PropertyHandover[],
-): Promise<ReadonlyMap<string, string>> {
-  const contacts = await readOwnedContactDocs(adminDb, companyId, [...new Set(handovers.map((h) => h.recipientContactId))]);
-  return new Map([...contacts].flatMap(([contactId, contact]) => {
-    const name = extractContactDisplayName(contact);
-    return name ? [[contactId, name] as const] : [];
-  }));
-}
 
 async function readSnapshot(adminDb: AdminFirestore, propertyId: string): Promise<PropertyHandoverSnapshot | null> {
   const snap = await adminDb.collection(COLLECTIONS.PROPERTIES).doc(propertyId).get();
@@ -65,7 +51,7 @@ export async function previewPropertyHandover(
     const handover = propertyHandoverFromDocument(doc.data(), doc.id);
     return handover ? [handover] : [];
   });
-  const names = await recipientNamesOf(adminDb, companyId, handovers);
+  const names = await handoverRecipientNamesOf(adminDb, companyId, handovers.map((h) => h.recipientContactId));
   const sealConfigured = sealConfigurationOf(process.env).kind === 'configured';
   const context = { snapshot, sealConfigured, nowValue: nowISO() };
   const entries = handovers.map((handover): PropertyHandoverOfficeEntry => ({
