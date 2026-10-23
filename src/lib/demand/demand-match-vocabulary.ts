@@ -25,6 +25,7 @@ import type { DemandProximityKind, PricedSeekKind } from '@/types/property-deman
 import type { PriceRole } from '@/lib/properties/price-resolver';
 import type { PublicListing } from '@/types/public-listing';
 import type { PlaceRef } from '@/types/geo/public-place';
+import type { ListingAvailability as ListingAvailabilityFact } from '@/types/listing-availability';
 
 // =============================================================================
 // 1. ΤΑ ΓΕΓΟΝΟΤΑ ΠΟΥ ΔΕΝ ΖΟΥΝ ΣΤΗΝ ΑΓΓΕΛΙΑ
@@ -54,22 +55,17 @@ export type ListingPlaceLink = PlaceRef;
 /**
  * **Πότε** ελευθερώνεται η αγγελία — ο άξονας που κάνει τη Ζ2 δυνατή.
  *
- * 🔶 **ΔΗΛΩΜΕΝΟ ΚΕΝΟ, με όνομα.** Ούτε αυτό υπάρχει στο `PublicListing` σήμερα. Και
- * είναι το πιο **πολύτιμο** από τα δύο κενά: το §12.3 λέει ότι το πλεονέκτημά μας
- * είναι πως *«ξέρουμε τι χτίζεται»* — ένα διαμέρισμα που παραδίδεται τον Σεπτέμβριο
- * 2027 είναι **προσφορά με ημερομηνία διαθεσιμότητας**, και *«το μοντέλο του υπάρχει
- * ήδη στο BIM»*. Η άντληση αυτής της ημερομηνίας από το έργο είναι ξεχωριστή δουλειά·
- * η **μηχανή** είναι έτοιμη να τη δεχτεί.
+ * 🔑 **Ο τύπος ΔΕΝ ξαναγράφεται εδώ — εισάγεται** (ADR-919), όπως το `PlaceRef`. Ζει στο
+ * `types/listing-availability.ts` επειδή είναι γεγονός της **αγγελίας**, όχι της ζήτησης.
+ * Τρεις καταστάσεις (`ready` · `scheduled` · `unknown`) αντί για το παλιό διφορούμενο
+ * `from: null` («ήδη διαθέσιμο» **ή** «άγνωστο»).
  *
- * `null` και στα δύο άκρα = «*δεν ξέρουμε*», και η μηχανή το λέει **ονομαστικά**
+ * 🔶 **ΔΗΛΩΜΕΝΟ ΚΕΝΟ, με όνομα** (ADR-777 §8.99.2): κανένας παραγωγός δεν το γεμίζει ακόμη,
+ * όλοι δίνουν `LISTING_AVAILABILITY_UNKNOWN`. Η άντληση από το έργο είναι τα βήματα 2–4 του
+ * §8.99.4· η **μηχανή** είναι έτοιμη να τη δεχτεί, και λέει το `unknown` **ονομαστικά**
  * (`availability-unknown`) αντί να υποθέσει «διαθέσιμο πάντα».
  */
-export interface ListingAvailability {
-  /** ISO `YYYY-MM-DD`. `null` = διαθέσιμο ήδη / άγνωστη αρχή. */
-  readonly from: string | null;
-  /** ISO `YYYY-MM-DD`. `null` = χωρίς λήξη διαθεσιμότητας. */
-  readonly to: string | null;
-}
+export type ListingAvailability = ListingAvailabilityFact;
 
 /**
  * Ό,τι χρειάζεται η μηχανή **πέρα** από την ίδια την αγγελία.
@@ -83,8 +79,8 @@ export interface ListingMatchFacts {
   readonly listing: PublicListing;
   /** `null` = δεν ξέρουμε σε ποιο φυσικό ακίνητο ανήκει. */
   readonly place: ListingPlaceLink | null;
-  /** `null` = δεν ξέρουμε καθόλου διαθεσιμότητα. */
-  readonly availability: ListingAvailability | null;
+  /** Ποτέ `null`: η άγνοια είναι η ονομασμένη κατάσταση `unknown`. */
+  readonly availability: ListingAvailability;
   /**
    * **Ζ6** — μετρημένες αποστάσεις σε **μέτρα** ανά είδος γειτονιάς.
    *

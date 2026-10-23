@@ -361,29 +361,42 @@ function sideJudgeableFrom(position: Extract<PlacePosition, { kind: 'known' }>):
   );
 }
 
-/** Χρονικός άξονας — «τι θα υπάρχει **τότε**». */
+/**
+ * Χρονικός άξονας — «τι θα υπάρχει **τότε**» (ADR-919 · ADR-777 §8.99.4).
+ *
+ * | ζήτηση | `ready` | `scheduled` | `unknown` |
+ * |---|---|---|---|
+ * | `whenever` | ✓ | ✓ | ✓ |
+ * | `now` | ✓ | `end ≤ σήμερα` | `availability-unknown` |
+ * | `window` | ✓ (Δ4) | `end ≤ toDate` | `availability-unknown` |
+ *
+ * 🔑 **Το `scheduled` κρίνεται με το ΤΕΛΟΣ του διαστήματος (Δ2).** «Γ' τρίμηνο 2027» σημαίνει
+ * «σίγουρα έτοιμο ως τις 30/9», άρα ταιριάζει μόνο σε ζήτηση που φτάνει ως εκεί. Αυτή είναι η
+ * **μία** θέση του κανόνα· όποιος ρωτά «ταιριάζει τότε;» ρωτά εδώ.
+ *
+ * ⚠️ **Το `unknown` δεν είναι ποτέ «διαθέσιμο», ούτε στο «τώρα».** Παλιότερα το «τώρα» δεχόταν
+ * κάθε αγγελία χωρίς δήλωση («αφού δημοσιεύτηκε, είναι διαθέσιμη»), που έβγαζε σε ζήτηση
+ * «τώρα» και τα διαμερίσματα που ακόμη χτίζονται. Η πρακτική της αγοράς (η ενεργή αγγελία
+ * μεταπώλησης είναι διαθέσιμη) ζει πλέον στην **πηγή**: ο επιλυτής δίνει `ready` στο έτοιμο
+ * ακίνητο, και `unknown` μένει μόνο όπου πραγματικά δεν ξέρουμε.
+ */
 export function timingBlockers(
   timing: DemandTiming,
-  availability: ListingAvailability | null,
+  availability: ListingAvailability,
   todayDate: string,
 ): DemandBlocker[] {
   if (timing.kind === 'whenever') return [];
 
-  if (timing.kind === 'now') {
-    // ⚠️ «Τώρα» **δεν** απαιτεί δηλωμένη διαθεσιμότητα: μια αγγελία στην αγορά είναι
-    // εξ ορισμού διαθέσιμη σήμερα, αλλιώς δεν θα ήταν δημοσιευμένη. Απορρίπτεται μόνο
-    // αν κάποιος έχει δηλώσει ρητά **μελλοντική** αρχή.
-    if (availability?.from == null) return [];
-    return availability.from <= todayDate ? [] : ['not-available-then'];
+  switch (availability.kind) {
+    case 'ready':
+      return [];
+    case 'unknown':
+      return ['availability-unknown'];
+    case 'scheduled': {
+      const neededBy = timing.kind === 'now' ? todayDate : timing.toDate;
+      return availability.window.end <= neededBy ? [] : ['not-available-then'];
+    }
   }
-
-  if (availability === null || (availability.from === null && availability.to === null)) {
-    return ['availability-unknown'];
-  }
-  // Επικάλυψη διαστημάτων: `from ≤ toDate` **και** `to ≥ fromDate`.
-  const startsInTime = availability.from === null || availability.from <= timing.toDate;
-  const endsInTime = availability.to === null || availability.to >= timing.fromDate;
-  return startsInTime && endsInTime ? [] : ['not-available-then'];
 }
 
 /** **Ζ6** — γειτονιά. Ξεχωρίζει «μακριά» από «δεν ρωτήθηκε». */

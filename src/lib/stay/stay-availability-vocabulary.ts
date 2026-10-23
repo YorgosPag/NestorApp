@@ -47,7 +47,7 @@
  * 🔴 ΤΟ `unknown` ΕΔΩ ΔΕΝ ΕΙΝΑΙ ΤΟ `availability-unknown` ΤΗΣ ΖΗΤΗΣΗΣ — ΜΕΤΡΗΘΗΚΕ
  * ────────────────────────────────────────────────────────────────────────────
  *
- * Το `'availability-unknown'` (`lib/demand/demand-match-vocabulary.ts:125`) είναι
+ * Το `'availability-unknown'` (`lib/demand/demand-match-vocabulary.ts:122`) είναι
  * **`DemandBlocker`**: μέλος κλειστού συνόλου **18** τιμών, με δικό του
  * `CATEGORICAL_BLOCKERS`, δικό του `isMeasurableBlocker` και δικά του κλειδιά i18n. Το
  * ερώτημά του είναι *«γιατί αυτή η **ζήτηση** δεν ταιριάζει σε αυτή την αγγελία;»*.

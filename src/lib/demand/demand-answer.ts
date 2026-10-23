@@ -29,7 +29,7 @@
  * |---|---|---|
  * | αγγελία | ✅ `public_listings` | — |
  * | δεσμός επιπέδου Α | ❌ **άδειο** (`public_lands`/`public_buildings`) | `place-unresolved` |
- * | διαθεσιμότητα | ❌ δεν αντλείται από BIM | `availability-unknown` |
+ * | διαθεσιμότητα | ❌ δεν αντλείται ακόμη από το έργο (ADR-919 · §8.99.4) | `availability-unknown` |
  * | αποστάσεις POI | ❌ λείπει το ερώτημα Overpass | `proximity-unknown` |
  *
  * ⚠️ **Και τα τρία κενά είναι ΚΑΤΗΓΟΡΙΚΑ εμπόδια, δηλαδή `no-match`.** Άρα μια ζήτηση
@@ -48,6 +48,7 @@
  */
 
 import type { PublicListing } from '@/types/public-listing';
+import { LISTING_AVAILABILITY_UNKNOWN } from '@/types/listing-availability';
 import type { PropertyDemand } from '@/types/property-demand';
 import { discloseCompetition, type DemandDisclosure } from './demand-aggregate';
 import {
@@ -128,7 +129,8 @@ export function listingFactsFrom(
   return listings.map((listing) => ({
     listing,
     place: knowledge.places.get(listing.id) ?? null,
-    availability: knowledge.availability.get(listing.id) ?? null,
+    // Απών από τον χάρτη = «δεν ρωτήσαμε» ⇒ η ονομασμένη άγνοια, ποτέ «διαθέσιμο».
+    availability: knowledge.availability.get(listing.id) ?? LISTING_AVAILABILITY_UNKNOWN,
     // ⚠️ Κενός χάρτης = «δεν ρωτήσαμε **κανένα** είδος», που η μηχανή διαβάζει ως
     // `proximity-unknown` **ανά απαίτηση**. Είναι διαφορετικό από «δεν υπάρχει κοντά».
     proximityMetres: knowledge.proximityMetres.get(listing.id) ?? {},
