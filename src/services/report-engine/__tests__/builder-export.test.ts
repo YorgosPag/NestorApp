@@ -43,7 +43,7 @@ const DOMAIN_DEF: DomainDefinition = {
   collection: 'properties',
   labelKey: 'Μονάδες',
   descriptionKey: 'desc',
-  entityLinkPath: '/units/{id}',
+  entityLink: { type: 'property' },
   fields: UNIT_FIELDS,
   defaultSortField: 'name',
   defaultSortDirection: 'asc',

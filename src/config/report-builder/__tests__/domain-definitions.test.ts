@@ -21,6 +21,7 @@ import {
   type FieldValueType,
   type DomainGroup,
 } from '../report-builder-types';
+import { isLinkableEntityType } from '@/lib/navigation/entity-href';
 /**
  * Inline copy of getNestedValue for testing — avoids importing server-only module.
  * The real function lives in report-query-executor.ts (server-only, Firebase Admin).
@@ -86,7 +87,7 @@ describe('Domain Definitions — Schema Integrity', () => {
     expect(def.group).toBeTruthy();
     expect(def.labelKey).toMatch(/^domains\.\w+\.label$/);
     expect(def.descriptionKey).toMatch(/^domains\.\w+\.description$/);
-    expect(def.entityLinkPath).toContain('{');
+    expect(def.entityLink).toBeDefined();
     expect(def.fields.length).toBeGreaterThan(0);
     expect(def.defaultSortField).toBeTruthy();
     expect(['asc', 'desc']).toContain(def.defaultSortDirection);
@@ -668,10 +669,17 @@ describe('Domain Definitions — Boundary & Consistency', () => {
     }
   });
 
-  it('entityLinkPath contains {id} placeholder for all domains', () => {
-    for (const id of VALID_DOMAIN_IDS) {
-      const def = getDomainDefinition(id);
-      expect(def.entityLinkPath).toContain('{');
+  // ADR-242 Βήμα 5 — η σύνδεση γραμμής είναι ΔΗΛΩΣΗ, όχι πρότυπο διεύθυνσης: είτε τύπος που ο resolver ξέρει
+  // (και `idField` που ΥΠΑΡΧΕΙ ως πεδίο του domain), είτε `unlinked` με λόγο. Η σιωπή είναι αδύνατη.
+  it.each(VALID_DOMAIN_IDS)('%s: entityLink is a resolvable declaration or a reasoned unlinked', (id) => {
+    const link = getDomainDefinition(id).entityLink;
+    if ('unlinked' in link) {
+      expect(link.unlinked.trim().length).toBeGreaterThan(10);
+      return;
+    }
+    expect(isLinkableEntityType(link.type)).toBe(true);
+    if (link.idField !== undefined && link.idField !== 'id') {
+      expect(getFieldDefinition(id, link.idField)).toBeDefined();
     }
   });
 

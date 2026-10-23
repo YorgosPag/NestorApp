@@ -97,7 +97,7 @@ export const SUPPLIERS_DEFINITION: DomainDefinition = {
   group: 'specialists',
   labelKey: 'domains.suppliers.label',
   descriptionKey: 'domains.suppliers.description',
-  entityLinkPath: '/contacts/{id}',
+  entityLink: { type: 'contact' },
   defaultSortField: 'lastName',
   defaultSortDirection: 'asc',
   preFilters: [
@@ -138,7 +138,7 @@ export const ENGINEERS_DEFINITION: DomainDefinition = {
   group: 'specialists',
   labelKey: 'domains.engineers.label',
   descriptionKey: 'domains.engineers.description',
-  entityLinkPath: '/contacts/{id}',
+  entityLink: { type: 'contact' },
   defaultSortField: 'lastName',
   defaultSortDirection: 'asc',
   preFilters: [
@@ -196,7 +196,7 @@ export const WORKERS_DEFINITION: DomainDefinition = {
   group: 'specialists',
   labelKey: 'domains.workers.label',
   descriptionKey: 'domains.workers.description',
-  entityLinkPath: '/contacts/{id}',
+  entityLink: { type: 'contact' },
   defaultSortField: 'lastName',
   defaultSortDirection: 'asc',
   preFilters: [
@@ -261,7 +261,7 @@ export const LEGAL_DEFINITION: DomainDefinition = {
   group: 'specialists',
   labelKey: 'domains.legal.label',
   descriptionKey: 'domains.legal.description',
-  entityLinkPath: '/contacts/{id}',
+  entityLink: { type: 'contact' },
   defaultSortField: 'lastName',
   defaultSortDirection: 'asc',
   preFilters: [
@@ -332,7 +332,7 @@ export const AGENTS_DEFINITION: DomainDefinition = {
   group: 'specialists',
   labelKey: 'domains.agents.label',
   descriptionKey: 'domains.agents.description',
-  entityLinkPath: '/contacts/{id}',
+  entityLink: { type: 'contact' },
   defaultSortField: 'lastName',
   defaultSortDirection: 'asc',
   preFilters: [

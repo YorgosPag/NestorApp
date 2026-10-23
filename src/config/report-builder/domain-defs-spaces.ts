@@ -47,7 +47,7 @@ export const PARKING_DEFINITION: DomainDefinition = {
   group: 'realestate',
   labelKey: 'domains.parking.label',
   descriptionKey: 'domains.parking.description',
-  entityLinkPath: '/parking/{id}',
+  entityLink: { type: 'parking' },
   defaultSortField: 'number',
   defaultSortDirection: 'asc',
   fields: [
@@ -159,7 +159,7 @@ export const STORAGE_DEFINITION: DomainDefinition = {
   group: 'realestate',
   labelKey: 'domains.storage.label',
   descriptionKey: 'domains.storage.description',
-  entityLinkPath: '/storage/{id}',
+  entityLink: { type: 'storage' },
   defaultSortField: 'name',
   defaultSortDirection: 'asc',
   fields: [

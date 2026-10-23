@@ -7,6 +7,7 @@
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { DomainDefinition } from './report-builder-types';
+import { docAgeDays } from './report-computed-days';
 
 // ============================================================================
 // Enum Constants (SSoT)
@@ -58,10 +59,7 @@ function computePOIsOverdue(doc: Record<string, unknown>): boolean {
 }
 
 function computePODaysOverdue(doc: Record<string, unknown>): number {
-  const needed = doc['dateNeeded'];
-  if (typeof needed !== 'string') return 0;
-  const diffMs = Date.now() - new Date(needed).getTime();
-  return diffMs > 0 ? Math.floor(diffMs / 86_400_000) : 0;
+  return docAgeDays(doc, 'dateNeeded', 'floor') ?? 0;
 }
 
 function computePOAgingBucket(doc: Record<string, unknown>): string | null {
@@ -74,9 +72,7 @@ function computePOAgingBucket(doc: Record<string, unknown>): string | null {
 }
 
 function computePODaysInStatus(doc: Record<string, unknown>): number | null {
-  const updated = doc['updatedAt'];
-  if (typeof updated !== 'string') return null;
-  return Math.max(0, Math.floor((Date.now() - new Date(updated).getTime()) / 86_400_000));
+  return docAgeDays(doc, 'updatedAt', 'floor');
 }
 
 function computeItemCount(doc: Record<string, unknown>): number {
@@ -97,9 +93,7 @@ function computePaymentOverdue(doc: Record<string, unknown>): boolean {
 }
 
 function computeDaysSinceOrdered(doc: Record<string, unknown>): number | null {
-  const ordered = doc['dateOrdered'];
-  if (typeof ordered !== 'string') return null;
-  return Math.max(0, Math.floor((Date.now() - new Date(ordered).getTime()) / 86_400_000));
+  return docAgeDays(doc, 'dateOrdered', 'floor');
 }
 
 // ============================================================================
@@ -114,7 +108,7 @@ export const PURCHASE_ORDERS_DEFINITION: DomainDefinition = {
   labelKey: 'domains.purchaseOrders.label',
   descriptionKey: 'domains.purchaseOrders.description',
   // eslint-disable-next-line custom/no-hardcoded-strings
-  entityLinkPath: '/procurement/{id}',
+  entityLink: { type: 'purchase_order' },
   defaultSortField: 'dateCreated',
   defaultSortDirection: 'desc',
   fields: [

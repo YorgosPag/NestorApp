@@ -33,7 +33,7 @@ export const OWNERSHIP_SUMMARY_DEFINITION: DomainDefinition = {
   labelKey: 'domains.ownershipSummary.label',
   descriptionKey: 'domains.ownershipSummary.description',
   // eslint-disable-next-line custom/no-hardcoded-strings
-  entityLinkPath: '/ownership/{id}',
+  entityLink: { unlinked: 'Ownership tables have no detail page addressable by URL' },
   defaultSortField: 'updatedAt',
   defaultSortDirection: 'desc',
   fields: [
@@ -69,7 +69,7 @@ export const OWNERSHIP_DETAIL_DEFINITION: DomainDefinition = {
   labelKey: 'domains.ownershipDetail.label',
   descriptionKey: 'domains.ownershipDetail.description',
   // eslint-disable-next-line custom/no-hardcoded-strings
-  entityLinkPath: '/ownership/{_parentId}',
+  entityLink: { unlinked: 'Ownership tables (owners of ownership rows) have no detail page addressable by URL' },
   defaultSortField: 'ordinal',
   defaultSortDirection: 'asc',
   fields: [
