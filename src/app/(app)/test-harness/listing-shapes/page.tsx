@@ -42,6 +42,7 @@ import { useListingFocus } from '@/hooks/listings/useListingFocus';
 import { ListingLedgerBar } from '@/components/search-results/ListingLedgerBar';
 import { computeListingLedger } from '@/services/realtime/hooks/usePublicListings';
 import { UNASKED_LISTING_ATTRIBUTES, type PublicListing } from '@/types/public-listing';
+import { LISTING_AVAILABILITY_UNKNOWN } from '@/types/listing-availability';
 import { UNDECLARED_LISTING_OBJECTIVE_VALUE } from '@/lib/objective-value/objective-value-declarations';
 
 registerRouteSlice(routeSlice);
@@ -94,6 +95,7 @@ function fixture(id: string, title: string, position: PublicListing['position'])
     ...UNASKED_LISTING_ATTRIBUTES,
     projectedAt: AT,
     listedAt: { kind: 'unknown', reason: 'predates-record' },
+    availability: LISTING_AVAILABILITY_UNKNOWN, // ADR-919 — το εργαστήριο δείχνει σχήματα θέσης, όχι διαθεσιμότητα.
     priceReduction: null,
     objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
     levelAreas: null,

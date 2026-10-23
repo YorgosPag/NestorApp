@@ -2,12 +2,12 @@
 
 | | |
 |---|---|
-| **Status** | 🟡 **ΣΕ ΕΞΕΛΙΞΗ** — **Βήμα 1 ✅ σε κώδικα** *(2026-10-23, uncommitted)*: τύπος τριών καταστάσεων · κατασκευαστής διαστήματος ανά ακρίβεια · `timingBlockers` κρίνει με το τέλος του διαστήματος. **Βήμα 2 ✅ σε κώδικα** *(2026-10-23, uncommitted)*: `forecastCompletion` με ημερομηνία κατάστασης (P6) πάνω στο CPM. ⏳ Βήματα 3–9 του ADR-777 §8.99.4 |
+| **Status** | 🟡 **ΣΕ ΕΞΕΛΙΞΗ** — **Βήμα 1 ✅** *(2026-10-23, `2bdf7a56`/`690fbaf5`)*: τύπος τριών καταστάσεων · κατασκευαστής διαστήματος ανά ακρίβεια · `timingBlockers` κρίνει με το τέλος του διαστήματος. **Βήμα 2 ✅** *(2026-10-23, `80e9f88f`)*: `forecastCompletion` με ημερομηνία κατάστασης (P6) πάνω στο CPM. **Βήμα 3 ✅ σε κώδικα** *(2026-10-23, uncommitted)*: επιλυτής `resolveListingAvailability` (μονάδα → κτίριο, «το γεγονός νικά την υπόσχεση») + `PublicListing.availability` + κρίκος σχήματος 25 (§7). ⏳ Βήματα 4–9 του ADR-777 §8.99.4 |
 | **Date** | 2026-10-23 |
 | **Category** | Listings / Demand matching |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
 | **Προέλευση** | ADR-777 §8.99.2 (ο αριθμός «χτίζονται N» μπλοκαρισμένος) · §8.99.4 (σχέδιο εγκεκριμένο: Δ1–Δ4) |
-| **Αυθεντία** | ο κώδικας: `src/types/listing-availability.ts` · `src/lib/listings/availability-window.ts` · `timingBlockers` στο `src/lib/demand/demand-match-axes.ts`. Όπου διαφωνεί αυτό το ADR, κερδίζει ο κώδικας |
+| **Αυθεντία** | ο κώδικας: `src/types/listing-availability.ts` · `src/lib/listings/availability-window.ts` · `src/lib/listings/listing-availability.ts` · `timingBlockers` στο `src/lib/demand/demand-match-axes.ts`. Όπου διαφωνεί αυτό το ADR, κερδίζει ο κώδικας |
 
 > 🎯 **Σε μία πρόταση**: η διαθεσιμότητα μιας αγγελίας είναι **ρητά** «έτοιμη», «προγραμματισμένη μέσα σε δηλωμένο
 > διάστημα» ή «άγνωστη», και η μηχανή ταιριάσματος υπόσχεται μόνο ό,τι είναι σίγουρο: το **τέλος** του διαστήματος.
@@ -98,9 +98,79 @@ forecastCompletion(phases, tasks, statusDate): CompletionForecast
 **Άγκυρες**: `construction-scheduling/__tests__/completion-forecast.test.ts`, ομάδες Φ/Ο/Ε/Ω (14 tests). Δύο μεταλλάξεις
 κοκκίνισαν: τοπικό `setDate` ⇒ 1 κόκκινο με `TZ=Europe/Athens`, αφαίρεση του «όχι πριν από σήμερα» ⇒ 4 κόκκινα.
 
+## §7. Βήμα 3: ο επιλυτής και το πεδίο της αγγελίας
+
+**Μετρημένο 2026-10-23**: 10 κτίρια, όλα με `status` ∈ {planning, construction}. Κανένα δεν έχει `phase` (ADR-369) και το
+`completionDate` είναι κενό παντού. Οι 19 μονάδες έχουν όλες `operationalStatus: draft`. Το `Property.deliveryDate` δεν το
+έχει **κανένα** έγγραφο. Οι 19 αγγελίες (8 ιδιωτών, 11 εταιρείας) είναι στις εκδόσεις 20 και 24.
+
+**Η δήλωση.** Ένας τύπος, `SourcedAttribute<AvailabilityDeclaration>` (`{ precision, anchor }`), με δύο φορείς:
+
+| Φορέας | Πεδίο | Πρότυπο |
+|---|---|---|
+| Μονάδα | `Property.availabilityDeclaration` («διαθέσιμο από») | RESO `AvailabilityDate`, που είναι γεγονός της μονάδας (π.χ. ενοικιαζόμενο με ένοικο) |
+| Κτίριο | `Building.completionDeclaration` (η δημόσια υπόσχεση παράδοσης) | idealista «fecha de entrega» ανά promoción |
+
+Όταν άνθρωπος εγκρίνει την πρόταση του χρονοδιαγράμματος (§6, στο βήμα 7), αυτή γράφεται ως `inferred` + `confirmedAt`.
+Την κρίνει ο **ίδιος** `isPubliclyPresentable` του Α7: χωρίς `confirmedAt` δεν δημοσιεύεται και ο επιλυτής πέφτει στο επόμενο σκαλί.
+
+**Η σειρά** (`lib/listings/listing-availability.ts`). Σε κάθε επίπεδο, ό,τι ισχύει **τώρα** νικά μια υπόσχεση για το **μέλλον**:
+
+| # | Πηγή | Αποτέλεσμα |
+|---|---|---|
+| 1 | δήλωση της μονάδας (παρουσιάσιμη) | `scheduled` |
+| 2 | γη (`isLandProperty`) | `ready` |
+| 3 | μονάδα με `operationalStatus: ready` | `ready` |
+| 4 | κτίριο `completed`/`active` (`isDeliveredBuildingStatus`, νέο υποσύνολο στο `building-statuses.ts`) | `ready` |
+| 5 | δήλωση του κτιρίου (παρουσιάσιμη) | `scheduled` |
+| 6 | `isNewConstruction === false` (RESO `NewConstructionYN`) | `ready` |
+| 7 | τίποτα από τα παραπάνω | `unknown` |
+
+- **Το σκαλί 6 ρωτά «τι απόθεμα είναι», όχι «ποιος υπογράφει».** Ο προβολέας του ιδιώτη γράφει ρητά `isNewConstruction: false`,
+  γιατί το λεξιλόγιο του `OwnerProperty` δεν έχει κατάσταση κατασκευής. Το `authorship` **απορρίφθηκε** ως σήμα: ένα ιδιωτικό
+  σπίτι με εντολή σε μεσίτη έχει `authorship: 'agency'` και θα έβγαινε `unknown`. Η μονάδα εταιρείας χωρίς κτίριο μένει `unknown`,
+  γιατί η εταιρεία πουλά και off-plan.
+- **Χωρίς ρολόι.** Μια ληγμένη υπόσχεση μένει `scheduled` και η μηχανή την κρίνει με το `window.end`. Η προειδοποίηση λήξης ή
+  απόκλισης ανήκει στο βήμα 6/7.
+- **Υπολογίζεται στην καθαρή προβολή** (`projectListingShape`), όχι στο `withPublicationFacts`, γιατί καμία είσοδος δεν θέλει I/O.
+  Η μονάδα είναι το ίδιο το έγγραφο. Το κτίριο το διαβάζει ήδη το `collectPlaceKnowledge` → `readBuildingDoc`, οπότε **δεν προστίθεται
+  καμία ανάγνωση** (πεδίο `PlaceKnowledge.buildingAvailability`). Έτσι η ίδια τιμή φτάνει στον γραφέα, στην προεπισκόπηση του κατόχου,
+  στο δόλωμα της ζήτησης και στον πίνακα του εργολάβου. Το `constructionYear` (ADR-890 Φ0) περνά από τα publication facts **μόνο**
+  επειδή διαβάζει το δημόσιο κτίριο.
+
+**Το `Building.completionDate` δεν είναι η δημόσια υπόσχεση. Εδώ αποκλίνουμε από το ADR-777 §8.99.4, και ο λόγος είναι
+ο εξής.** Το §8.99.4 έγραφε ότι το πεδίο «γίνεται η δομημένη δήλωση». Ο κώδικας όμως το χρησιμοποιεί ως **εσωτερική**
+ημερομηνία διαχείρισης, δηλαδή το planned finish του P6/Procore, με ~30 αναγνώστες (timeline, showcase, report builder).
+Η δημόσια υπόσχεση είναι **άλλη έννοια** (Δ1) με δικό της κύκλο έγκρισης: μια ημερομηνία που πληκτρολόγησε ο διαχειριστής
+του έργου δεν πρέπει να γίνει υπόσχεση προς το κοινό χωρίς να το ξέρει. Χάρη στον διαχωρισμό, το βήμα 7 μπορεί να δείξει **τριπλή**
+σύγκριση: σχέδιο (`completionDate`) · πρόβλεψη (§6) · δημόσια υπόσχεση (`completionDeclaration`). Άγκυρα: `Δ3` στο
+`listing-place-wholeness.test.ts`.
+
+**Απόσυρση του `Property.deliveryDate`**, που ήταν νεκρό. Αφαιρέθηκε από τον τύπο, τον mapper και τον normalizer, μαζί με τη
+γραμμή «Ημερομηνία παράδοσης» του showcase (οθόνη, PDF, Telegram) και το κλειδί `showcase:specs.deliveryDate`. Η γραμμή θα
+επιστρέψει στο βήμα 7, με πηγή την αγγελία. Δεν μένει δεύτερο πεδίο.
+
+**Το πεδίο** είναι `PublicListing.availability: ListingAvailability` και δεν είναι ποτέ `null`. Ο ρόλος αποκάλυψής του είναι
+`'availability'`. Δεν είναι `'attribute'`, για να μη χρεώνεται το `unknown` στο «N από M». Ούτε `'market-entry'`, γιατί
+το πότε μπήκε στην αγορά δεν ταυτίζεται με το πότε παραδίδεται. Ο **κρίκος σχήματος 25** (`adds: ['availability.kind']`)
+δίνει στο παλιό έγγραφο `unknown`, **ποτέ** `ready`. Ο κριτής `readStoredAvailability` ξαναχτίζει το `scheduled` με το
+`scheduledAvailability` και το κρατά μόνο αν βγάζει το ίδιο τέλος. Την αλήθεια τη γράφει η επαναπροβολή.
+
+**Άγκυρες**:
+- `lib/listings/__tests__/listing-availability.test.ts`, 28 tests σε έξι ομάδες: Σ σειρά · Ε έτοιμο · Κ σιωπή · Α7 · Δ δήλωση · Μ κριτής.
+- `services/listings/__tests__/listing-place-wholeness.test.ts`, ομάδα **Δ**: FakeFirestore → `collectPlaceKnowledge` → προβολή,
+  και για ιδιώτη με ή χωρίς εντολή.
+- `public-listing-schema.test.ts`, ομάδα **Κ16**.
+
+Μεταλλάξεις **4/4 κόκκινες**: αντιστροφή μονάδας/κτιρίου (5 κόκκινα) · αφαίρεση του `isPubliclyPresentable` (2) · υπόσχεση
+κτιρίου πριν από το γεγονός (4) · χωρίς `isNewConstruction` στον ιδιώτη (2).
+
+⚠️ **Το §4 ισχύει ακόμη**: οι τρεις παραγωγοί της ζήτησης δεν διαβάζουν ακόμη το πεδίο (βήμα 4). Ούτε push ούτε deploy πριν από αυτό.
+
 ## Changelog
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
 | 2026-10-23 | **Βήμα 1** — δημιουργία. Τύπος τριών καταστάσεων, `availabilityWindowOf` / `scheduledAvailability` πάνω στο `daysInMonth` (ADR-828), `timingBlockers` με εξαντλητικό `switch`, οι τρεις παραγωγοί δίνουν την ονομασμένη άγνοια. Κανένα νέο `DemandBlocker`, κανένα νέο κλειδί i18n. |
 | 2026-10-23 | **Βήμα 2** — `forecastCompletion` (`services/construction-scheduling/completion-forecast.ts`) πάνω στον κοινό κανόνα `status-date-rule.ts` και στο `computeCPM(…, { statusDate })`. Κοινές ημερομηνίες σε UTC (`schedule-dates.ts`). Η πραγματική φάση της βάσης βγαίνει 2027-02-06 αντί για το «23/12» του σχεδίου. 14 άγκυρες, μεταλλάξεις 2/2. |
+| 2026-10-23 | **Βήμα 3** — `resolveListingAvailability` + `readAvailabilityDeclaration` (`lib/listings/listing-availability.ts`), `PublicListing.availability` από την καθαρή προβολή, `PlaceKnowledge.buildingAvailability` από το ίδιο ανέβασμα, `Building.completionDeclaration` / `Property.availabilityDeclaration`, `DELIVERED_BUILDING_STATUSES`, ρόλος αποκάλυψης `'availability'`, κρίκος 25. Απόσυρση του `Property.deliveryDate`. Το `completionDate` μένει εσωτερικό (§7). 34 νέες άγκυρες, μεταλλάξεις 4/4. |

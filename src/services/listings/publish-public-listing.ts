@@ -42,6 +42,7 @@ import { withdrawListingShelves, writeWithShelf } from './publish-public-listing
 import { resolvePublicationFacts, withPublicationFacts } from './listing-publication-facts';
 import { addressToPositionCandidate, type AddressLike } from './public-listing-position';
 import type { PlaceRef } from '@/types/geo/public-place';
+import type { BuildingAvailabilityFacts } from '@/lib/listings/listing-availability';
 import type { ListingImage, PublicListing } from '@/types/public-listing';
 import { listingLeadImage } from '@/lib/listings/listing-images';
 import { listingMapMark, type ListingMapMark } from '@/lib/listings/listing-map-mark';
@@ -174,30 +175,35 @@ export async function collectPlaceKnowledge(
   locatedAt: string
 ): Promise<PlaceKnowledge> {
   const building = await readBuildingDoc(adminDb, property.buildingId ?? null);
-  const ref = building?.placeRef ?? null;
-
-  const buildingConstructionYear = building?.constructionYear ?? null;
+  // 🔑 Ό,τι λέει το κτίριο για την αγγελία — από το ΙΔΙΟ snapshot, μία ανάγνωση (Β3 · ADR-890 Φ0 · ADR-919 §7).
+  const facts = {
+    ref: building?.placeRef ?? null,
+    buildingConstructionYear: building?.constructionYear ?? null,
+    buildingAvailability: building?.availability ?? null,
+  };
 
   const projectId = property.projectId ?? building?.projectId ?? null;
-  if (!projectId) return { candidates: [], ref, buildingConstructionYear };
+  if (!projectId) return { candidates: [], ...facts };
 
   const snap = await adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId).get();
-  if (!snap.exists) return { candidates: [], ref, buildingConstructionYear };
+  if (!snap.exists) return { candidates: [], ...facts };
 
   const addresses = (snap.data()?.addresses ?? []) as AddressLike[];
   const candidates = addresses
     .map((address) => addressToPositionCandidate(address, locatedAt))
     .filter((c): c is ListingPositionCandidate => c !== null);
 
-  return { candidates, ref, buildingConstructionYear };
+  return { candidates, ...facts };
 }
 
-/** Ό,τι χρειάζεται η αλυσίδα από το κτίριο — **τρία** πεδία, όχι ολόκληρο το έγγραφο. */
+/** Ό,τι χρειάζεται η αλυσίδα από το κτίριο — **τέσσερα** γεγονότα, όχι ολόκληρο το έγγραφο. */
 interface BuildingChainFacts {
   readonly projectId: string | null;
   readonly placeRef: PlaceRef | null;
   /** Ωμή δήλωση έτους κατασκευής (ADR-890 Φ0) — την κρίνει η προβολή, όχι ο αναγνώστης. */
   readonly constructionYear: unknown;
+  /** Κατάσταση + δημόσια υπόσχεση παράδοσης (ADR-919 §7) — ωμά· τα κρίνει ο `resolveListingAvailability`. */
+  readonly availability: BuildingAvailabilityFacts;
 }
 
 /** Το έγγραφο του κτιρίου, **μία φορά** — ή `null` αν δεν υπάρχει κτίριο να ρωτηθεί. */
@@ -215,6 +221,7 @@ async function readBuildingDoc(
     projectId: (data.projectId as string | undefined) ?? null,
     placeRef: (data.placeRef as PlaceRef | undefined) ?? null,
     constructionYear: data.constructionYear ?? null,
+    availability: { status: data.status ?? null, completionDeclaration: data.completionDeclaration ?? null },
   };
 }
 

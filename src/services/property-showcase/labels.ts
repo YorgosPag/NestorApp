@@ -51,7 +51,6 @@ export interface ShowcaseSpecLabels {
   energyClass: string;
   condition: string;
   renovationYear: string;
-  deliveryDate: string;
 }
 
 export interface ShowcaseProjectLabels {

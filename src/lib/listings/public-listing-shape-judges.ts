@@ -9,6 +9,13 @@ import { z } from 'zod';
 import { LISTED_TOUR_VISIBILITIES } from '@/constants/spatial-tour-vocabulary';
 import type { ListedAt } from '@/types/public-listing';
 import { readStayPetPolicy } from '@/lib/offers/stay-pet-policy';
+import { scheduledAvailability } from '@/lib/listings/availability-window';
+import {
+  AVAILABILITY_PRECISIONS,
+  LISTING_AVAILABILITY_READY,
+  LISTING_AVAILABILITY_UNKNOWN,
+  type ListingAvailability,
+} from '@/types/listing-availability';
 import type { StoredListingDocument } from './public-listing-schema-types';
 
 // ============================================================================
@@ -125,6 +132,40 @@ export const listedAtValue = listedAtShape.catch({ kind: 'unknown', reason: 'pre
 export function readListedAt(value: unknown): ListedAt | null {
   const parsed = listedAtShape.safeParse(value);
   return parsed.success ? parsed.data : null;
+}
+
+/**
+ * **Η διαθεσιμότητα** (ADR-919 §7) — έλεγχος **ΒΑΘΥΣ**, όπως το `listedAtValue`: το `kind` **είναι** η απάντηση
+ * «διαθέσιμο;», και ένα ρηχό `passthrough()` θα άφηνε ένα `{ kind: 'scheduled' }` χωρίς διάστημα να φτάσει
+ * στη μηχανή ταιριάσματος.
+ */
+const availabilityShape = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('ready') }),
+  z.object({
+    kind: z.literal('scheduled'),
+    precision: z.enum(AVAILABILITY_PRECISIONS),
+    window: z.object({ start: z.string(), end: z.string() }),
+  }),
+  z.object({ kind: z.literal('unknown') }),
+]);
+
+/**
+ * Αποθηκευμένη διαθεσιμότητα → τιμή του λεξιλογίου. Ό,τι δεν στέκει ⇒ `unknown` (η ονομασμένη άγνοια, ποτέ `ready`).
+ *
+ * 🔑 **Το `scheduled` ΞΑΝΑΧΤΙΖΕΤΑΙ** με τον **μόνο** κατασκευαστή (`scheduledAvailability`) από την αρχή του
+ * διαστήματος, και κρατιέται μόνο αν βγάλει **το ίδιο** τέλος: ένα «τρίμηνο» με τέλος τον Αύγουστο δεν περνά, γιατί
+ * η μηχανή υπόσχεται ακριβώς αυτό το τέλος. **Ιδιοδύναμο (Κ3)**: έγκυρη τιμή βγαίνει ταυτόσημη.
+ */
+export function readStoredAvailability(value: unknown): ListingAvailability {
+  const parsed = availabilityShape.safeParse(value);
+  if (!parsed.success) return LISTING_AVAILABILITY_UNKNOWN;
+  const stored = parsed.data;
+  if (stored.kind === 'ready') return LISTING_AVAILABILITY_READY;
+  if (stored.kind === 'unknown') return LISTING_AVAILABILITY_UNKNOWN;
+  const rebuilt = scheduledAvailability(stored.precision, stored.window.start);
+  return rebuilt.kind === 'scheduled' && rebuilt.window.end === stored.window.end
+    ? rebuilt
+    : LISTING_AVAILABILITY_UNKNOWN;
 }
 
 /** Το `stay` λείπει ⇒ `null`, που σημαίνει **«δεν είναι κατάλυμα»** (ADR-835 §4.5). */

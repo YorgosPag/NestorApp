@@ -77,7 +77,11 @@ const completePropertyDoc: PropertyDoc = {
   ],
   condition: 'excellent',
   renovationYear: 2023,
-  deliveryDate: mockTimestamp,
+  availabilityDeclaration: {
+    provenance: 'declared',
+    value: { precision: 'quarter', anchor: '2027-08-15' },
+    at: '2026-10-23T00:00:00.000Z',
+  },
   systemsOverride: {
     heatingType: 'central',
     heatingFuel: 'natural-gas',

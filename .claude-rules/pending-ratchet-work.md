@@ -2,6 +2,16 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **23/10 — ΔΥΟ ΛΕΞΙΛΟΓΙΑ ΚΥΚΛΟΥ ΖΩΗΣ ΚΤΙΡΙΟΥ: `Building.status` ΚΑΙ `Building.phase`** *(ADR-919 §7, εύρημα του βήματος 3)*
+
+  **Τι:** το `status` (`constants/building-statuses.ts`, ADR-287: planning · construction · completed · active) και το `phase`
+  (`types/building/elevation.schemas.ts`, ADR-369: planned · permitted · under_construction · completed) απαντούν το **ίδιο**
+  ερώτημα («σε ποιο στάδιο είναι το κτίριο;») με δύο λεξιλόγια. **Μετρημένο 2026-10-23:** `status` σε 10/10 κτίρια, `phase` σε **0**·
+  το `phase` το δέχεται μόνο το elevation patch schema, κανένας αναγνώστης. Ο επιλυτής διαθεσιμότητας ρωτά **μόνο** το `status`
+  (`isDeliveredBuildingStatus`). **Κίνδυνος:** όποιος γράψει `phase: 'completed'` χωρίς `status` θα δει την αγγελία `unknown`.
+  **Θεραπεία:** ένα λεξιλόγιο (το `status`, που έχει δεδομένα και SSoT). Το `permitted` του `phase` ή γίνεται τιμή του `status`
+  ή αποσύρεται. **Μέγεθος:** ~1h + απόφαση Giorgio για το `permitted`.
+
 - 🔴 **21/10 — ΤΟ ACCOUNTING REPOSITORY ΔΙΑΒΑΖΕΙ/ΓΡΑΦΕΙ ΚΑΤΑ ID ΧΩΡΙΣ ΦΡΑΧΤΗ ΕΝΟΙΚΙΟΥ** *(ADR-917 §2.4 Λ11, εύρημα Φ4)*
 
   **Τι:** οι `get*/update*/delete*` κατά id δέχονται `tenant` αλλά **δεν** τον διαβάζουν — το Admin SDK παρακάμπτει τους κανόνες,

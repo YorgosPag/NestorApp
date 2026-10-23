@@ -36,7 +36,7 @@ import {
   placeKnowledgeFromOwnerProperty,
   projectableFromOwnerProperty,
 } from '@/lib/owner-property/owner-property-projection';
-import { validOwnerProperty } from '@/lib/owner-property/__tests__/owner-property-fixtures';
+import { brokeredMandate, validOwnerProperty } from '@/lib/owner-property/__tests__/owner-property-fixtures';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { PlaceRef } from '@/types/geo/public-place';
 
@@ -239,5 +239,55 @@ describe('🔴 Μ — ο δεσμός έχει ΜΙΑ είσοδο· δεύτε�
 
     expect(listing?.place).toBeNull();
     expect(Object.keys(listing ?? {})).toContain('place');
+  });
+});
+
+// =============================================================================
+// Δ — Η ΔΙΑΘΕΣΙΜΟΤΗΤΑ ΑΝΕΒΑΙΝΕΙ ΤΗΝ ΙΔΙΑ ΑΛΥΣΙΔΑ (ADR-919 §7)
+// =============================================================================
+
+describe('Δ — η διαθεσιμότητα: ΚΑΘΕ διαδρομή, ΕΝΑ ανέβασμα', () => {
+  const Q3_2027 = { kind: 'scheduled', precision: 'quarter', window: { start: '2027-07-01', end: '2027-09-30' } };
+  const promise = { provenance: 'declared', value: { precision: 'quarter', anchor: '2027-08-15' }, at: AT };
+
+  async function companyAvailability(building: Record<string, unknown> | null) {
+    const knowledge = await collectPlaceKnowledge(dbWith(building), COMPANY_PROPERTY, AT);
+    return buildPublicListing(COMPANY_PROPERTY, knowledge, AT)?.availability;
+  }
+
+  it('Δ1 — ΕΠΑΓΓΕΛΜΑΤΙΑΣ: η υπόσχεση παράδοσης του ΚΤΙΡΙΟΥ κατεβαίνει στην αγγελία', async () => {
+    await expect(companyAvailability({ projectId: 'proj_1', status: 'construction', completionDeclaration: promise }))
+      .resolves.toEqual(Q3_2027);
+  });
+
+  it('Δ2 — παραδομένο κτίριο ⇒ ready· κτίριο υπό κατασκευή χωρίς υπόσχεση ⇒ unknown', async () => {
+    await expect(companyAvailability({ projectId: 'proj_1', status: 'completed', completionDeclaration: promise }))
+      .resolves.toEqual({ kind: 'ready' });
+    await expect(companyAvailability({ projectId: 'proj_1', status: 'construction' }))
+      .resolves.toEqual({ kind: 'unknown' });
+  });
+
+  it('Δ3 — το εσωτερικό `completionDate` ΔΕΝ φτάνει ποτέ στο κοινό', async () => {
+    await expect(companyAvailability({ projectId: 'proj_1', status: 'construction', completionDate: '2027-03-01' }))
+      .resolves.toEqual({ kind: 'unknown' });
+  });
+
+  it('Δ4 — κτίριο που δεν υπάρχει ⇒ unknown, χωρίς εξαίρεση', async () => {
+    await expect(companyAvailability(null)).resolves.toEqual({ kind: 'unknown' });
+  });
+
+  /**
+   * 🔴 Το «με εντολή» είναι η ουσία: τότε το `authorship` γίνεται `agency`, όμως το σπίτι μένει **υπάρχον**. Ένας
+   * επιλυτής που ρωτούσε την υπογραφή θα έδινε εδώ `unknown` — και θα έβγαζε από το «Τώρα» κάθε ανατεθειμένο ακίνητο.
+   */
+  it.each([
+    ['χωρίς εντολή', [] as const],
+    ['με εντολή σε μεσίτη', [brokeredMandate({ confirmation: 'confirmed' })]],
+  ])('Δ5 — ΙΔΙΩΤΗΣ %s: υπάρχον ακίνητο ⇒ ready', (_label, mandates) => {
+    const owner = validOwnerProperty({ mandates });
+    const projectable = projectableFromOwnerProperty(owner, AT);
+    const listing = buildPublicListing(projectable, placeKnowledgeFromOwnerProperty(owner, AT), AT);
+    expect(projectable.authorship).toBe(mandates.length > 0 ? 'agency' : 'owner-declared');
+    expect(listing?.availability).toEqual({ kind: 'ready' });
   });
 });

@@ -27,6 +27,8 @@ import type {
 } from '@/types/public-listing';
 import type { PublicShelfSource } from '@/services/upload/utils/storage-path-public-shelf';
 
+import type { BuildingAvailabilityFacts } from '@/lib/listings/listing-availability';
+
 import type { LegalityBearingProperty } from './legality-projection';
 
 // ============================================================================
@@ -148,6 +150,21 @@ export interface ProjectableProperty {
    */
   readonly condition?: unknown;
   readonly renovationYear?: number | null;
+  /**
+   * **«Διαθέσιμο από» της μονάδας** (ADR-919 §7) και η **λειτουργική κατάσταση** της — ωμά, όπως κάθονται στο
+   * έγγραφο. Η **μία** ερμηνεία ζει στο `resolveListingAvailability`· η δήλωση **δεν** φτάνει ποτέ αυτούσια στο κοινό.
+   */
+  readonly availabilityDeclaration?: unknown;
+  readonly operationalStatus?: unknown;
+  /**
+   * **Νεόδμητο;** (RESO `NewConstructionYN` · ADR-919 §7). `false` = υπάρχον απόθεμα ⇒ διαθέσιμο χωρίς δήλωση.
+   *
+   * ⚠️ **Το γράφει ΡΗΤΑ μόνο ο προβολέας του ιδιώτη** (`owner-property-projection.ts`): το λεξιλόγιο του
+   * `OwnerProperty` δεν έχει κατάσταση κατασκευής, άρα ό,τι δηλώνει είναι υπάρχον. Το έγγραφο της εταιρείας δεν
+   * το κουβαλά ⇒ απόν ⇒ «δεν ξέρουμε» (η εταιρεία πουλά και off-plan). ⛔ Ποτέ από το `authorship`: η υπογραφή
+   * λέει ποιος δηλώνει την αγγελία, όχι τι απόθεμα είναι.
+   */
+  readonly isNewConstruction?: boolean | null;
   /**
    * **Το ΠΕΑ** (ADR-777 §8.94) — ωμό, όπως κάθεται στο έγγραφο (ιδιώτη **ή** εταιρείας). Η **μία** ερμηνεία ζει στο
    * `readEnergyCertificate`: από εκεί βγαίνει και η κλάση (`energyClass`) και το κουτί των αριθμών.
@@ -321,6 +338,14 @@ export interface PlaceKnowledge {
    * ιδιώτης: η δική του δήλωση ανήκει στη Φ4 του ADR-842). Τότε μένει μόνο η δημόσια εγγραφή.
    */
   readonly buildingConstructionYear?: unknown;
+  /**
+   * **Κατάσταση και δημόσια υπόσχεση παράδοσης του ΚΤΙΡΙΟΥ** (ADR-919 §7) — ωμά, από το ίδιο ανέβασμα
+   * (`readBuildingDoc`), μηδέν επιπλέον αναγνώσεις. Τα κρίνει **μόνο** το `resolveListingAvailability`.
+   *
+   * ⚠️ `null`/απόν = **δεν υπάρχει κτίριο επαγγελματία** (ιδιώτης, ή μονάδα χωρίς `buildingId`) — και ο
+   * επιλυτής το διαβάζει ως τέτοιο, όχι ως «κτίριο χωρίς δήλωση».
+   */
+  readonly buildingAvailability?: BuildingAvailabilityFacts | null;
 }
 
 /** Μία υποψήφια θέση, με την προέλευσή της. */

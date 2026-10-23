@@ -245,7 +245,6 @@ export function drawViewsSection(ctx: SectionContext, yStart: number): number {
 export function buildSpecsRows(
   snapshot: PropertyShowcaseSnapshot,
   labels: PropertyShowcasePDFLabels,
-  formatDate: (iso: string) => string,
 ): SpecRow[] {
   const p = snapshot.property;
   const unit = labels.specs.areaUnit;
@@ -280,8 +279,6 @@ export function buildSpecsRows(
     ]);
   if (p.condition?.renovationYear !== undefined)
     rows.push([labels.specs.renovationYear, String(p.condition.renovationYear)]);
-  if (p.condition?.deliveryDate)
-    rows.push([labels.specs.deliveryDate, formatDate(p.condition.deliveryDate)]);
 
   return rows;
 }
@@ -290,7 +287,7 @@ export function drawSpecsSection(ctx: SectionContext, yStart: number): number {
   let y = ctx.ensureSpace(yStart, 20);
   y = ctx.drawSectionTitle(y, ctx.labels.specs.title);
   y += 2;
-  const rows = buildSpecsRows(ctx.snapshot, ctx.labels, ctx.formatDate);
+  const rows = buildSpecsRows(ctx.snapshot, ctx.labels);
   y = drawKeyValueGrid(ctx, y, rows);
   return y + 2;
 }

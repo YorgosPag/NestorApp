@@ -1,6 +1,8 @@
 
 import { PropertyStatus } from '@/constants/property-statuses-enterprise';
 import type { Timestamp } from 'firebase/firestore';
+import type { SourcedAttribute } from '@/lib/property/attribute-provenance';
+import type { AvailabilityDeclaration } from '@/types/listing-availability';
 import type { HostedOnFloor } from '@/lib/floor/hosted-floor';
 import type { ARCHIVED_STATUS } from '@/lib/firestore/trashed-status';
 import type { LegalPhase } from '@/types/legal-contracts';
@@ -377,8 +379,12 @@ export interface PropertySpecificationFields {
   /** Year of last renovation */
   renovationYear?: number;
 
-  /** Expected delivery date */
-  deliveryDate?: Timestamp;
+  /**
+   * **«Διαθέσιμο από»** της μονάδας (ADR-919 §7, RESO `AvailabilityDate`) — π.χ. ενοικιαζόμενο με ένοικο.
+   * Νικά τη δήλωση του κτιρίου· η αγγελία παίρνει **μόνο** το παράγωγο `ListingAvailability`
+   * (`resolveListingAvailability`). Αντικατέστησε το νεκρό `deliveryDate` (0 έγγραφα, κανένας γραφέας).
+   */
+  availabilityDeclaration?: SourcedAttribute<AvailabilityDeclaration> | null;
 
   // === SYSTEMS (with override capability) ===
   systemsOverride?: Partial<{

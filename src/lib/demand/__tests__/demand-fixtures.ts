@@ -117,6 +117,8 @@ export function listing(overrides: Partial<PublicListing> = {}): PublicListing {
     legality: [],
     projectedAt: NOW_ISO,
     listedAt: { kind: 'unknown', reason: 'predates-record' },
+    // ADR-919 §7 — η σημερινή, μετρημένη αλήθεια: κανένα κτίριο δεν έχει δηλώσει παράδοση.
+    availability: LISTING_AVAILABILITY_UNKNOWN,
     priceReduction: null,
     objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
     levelAreas: null,

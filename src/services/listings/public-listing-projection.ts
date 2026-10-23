@@ -70,6 +70,8 @@ import type { PriceReduction } from '@/types/price-history';
 import { resolveListingPosition } from './public-listing-position';
 import { floorPairOf } from '@/lib/floor/hosted-floor';
 import { isRetired } from '@/lib/firestore/trashed-status';
+import { resolveListingAvailability } from '@/lib/listings/listing-availability';
+import type { ListingAvailability } from '@/types/listing-availability';
 
 // ============================================================================
 // ΕΙΣΟΔΟΙ — το συμβόλαιο ζει στο -types.ts (N.7.1), η μηχανή εδώ
@@ -359,6 +361,23 @@ function projectExchange(
 }
 
 /**
+ * **Η διαθεσιμότητα** (ADR-919 §7) — η μονάδα από το έγγραφό της, το κτίριο από το ίδιο ανέβασμα της αλυσίδας
+ * (`PlaceKnowledge.buildingAvailability`). Μόνο μεταφορά: η κρίση και το Α7 ζουν στο `resolveListingAvailability`.
+ *
+ * 🔑 **Εδώ και όχι στο `withPublicationFacts`**: καμία είσοδος δεν θέλει I/O, άρα η ίδια τιμή φτάνει σε γραφέα,
+ * προεπισκόπηση κατόχου και δόλωμα ζήτησης χωρίς δεύτερο δέτη.
+ */
+function projectListingAvailability(property: ProjectableProperty, place: PlaceKnowledge): ListingAvailability {
+  return resolveListingAvailability({
+    unitDeclaration: property.availabilityDeclaration,
+    unitOperationalStatus: property.operationalStatus,
+    propertyType: property.type,
+    isNewConstruction: property.isNewConstruction ?? null,
+    building: place.buildingAvailability ?? null,
+  });
+}
+
+/**
  * Ακίνητο + τόπος → **δημόσια αγγελία**, ή `null` αν δεν δημοσιεύεται.
  *
  * 🔑 **Το `null` δεν είναι σφάλμα — είναι εντολή διαγραφής.** Ο γραφέας το μεταφράζει
@@ -516,6 +535,8 @@ export function projectListingShape(
     //    συγχέεται με το `'predates-record'`: ένα σπασμένο CAS οφείλει να είναι
     //    **μετρήσιμο**, όχι κρυμμένο μέσα στο κανονικό ιστορικό.
     listedAt: property.listedAt ?? { kind: 'unknown', reason: 'not-recorded' },
+    // ADR-919 §7 — μονάδα → κτίριο, «το γεγονός νικά την υπόσχεση»· ο κριτής και το Α7 ζουν στο φύλλο.
+    availability: projectListingAvailability(property, place),
     // 🔴 **ΣΥΜΠΕΡΑΣΜΑ ΑΠΟ ΤΟ ΙΣΤΟΡΙΚΟ ΤΟΥ ΑΚΙΝΗΤΟΥ** (ADR-777 §8.69) — ο κριτής ζει στο
     //    `lib/listings/price-history.ts`, εδώ μόνο καλείται. Η τιμή λύνεται από τον ΕΝΑ
     //    `price-resolver` πάνω στο **ίδιο** `offerKinds` που γράφει η αγγελία, ώστε η

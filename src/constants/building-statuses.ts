@@ -86,3 +86,21 @@ export const IN_CONSTRUCTION_BUILDING_STATUSES = [
   'planning',
   'construction',
 ] as const satisfies readonly BuildingStatus[];
+
+/**
+ * **Το κτίριο έχει ΠΑΡΑΔΟΘΕΙ** (ADR-919 §7) — αποπερατωμένο ή σε χρήση. Το συμπλήρωμα του
+ * {@link IN_CONSTRUCTION_BUILDING_STATUSES} μέσα στις ενεργές καταστάσεις.
+ *
+ * 🔑 Ό,τι είναι ήδη γεγονός νικά μια υπόσχεση: ο επιλυτής διαθεσιμότητας (`lib/listings/listing-availability.ts`)
+ * δίνει `ready` σε μονάδα τέτοιου κτιρίου **πριν** κοιτάξει τη δηλωμένη ημερομηνία παράδοσης.
+ */
+export const DELIVERED_BUILDING_STATUSES = [
+  'completed',
+  'active',
+] as const satisfies readonly BuildingStatus[];
+
+/** Έχει παραδοθεί το κτίριο; Η αποθηκευμένη τιμή περνά από το {@link parseBuildingStatus} (ψευδώνυμα, άγνωστα ⇒ όχι). */
+export function isDeliveredBuildingStatus(raw: unknown): boolean {
+  const status = parseBuildingStatus(raw);
+  return status !== null && (DELIVERED_BUILDING_STATUSES as readonly BuildingStatus[]).includes(status);
+}

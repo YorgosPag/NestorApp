@@ -177,6 +177,9 @@ export function projectableFromOwnerProperty(
      */
     authorship: listingAuthorshipOf(mandatesOf(property)),
     agency,
+    // ADR-919 §7 — ο ιδιώτης δηλώνει **υπάρχον** ακίνητο (το λεξιλόγιό του δεν έχει κατάσταση κατασκευής):
+    // RESO `NewConstructionYN = false` ⇒ διαθέσιμο, όπως κάθε ενεργή μεταπώληση. Ισχύει και με εντολή σε μεσίτη.
+    isNewConstruction: false,
 
     /**
      * 🔴 **Η ΑΝΘΡΩΠΙΝΗ ΠΡΑΞΗ ΦΤΑΝΕΙ ΣΤΟ ΡΑΦΙ** (ADR-841 §7 Α2) — και είναι **η μία

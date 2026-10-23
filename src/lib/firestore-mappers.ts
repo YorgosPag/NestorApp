@@ -234,7 +234,7 @@ export function mapPropertyDoc(docId: string, data: Record<string, unknown>): Pr
     views: data.views as Property['views'],
     condition: data.condition as Property['condition'],
     renovationYear: typeof data.renovationYear === 'number' ? data.renovationYear : undefined,
-    deliveryDate: data.deliveryDate as Property['deliveryDate'],
+    availabilityDeclaration: data.availabilityDeclaration as Property['availabilityDeclaration'],
     systemsOverride: data.systemsOverride as Property['systemsOverride'],
     energy: data.energy as Property['energy'],
     finishes: data.finishes as Property['finishes'],

@@ -177,6 +177,8 @@ export const LISTING_DISCLOSURE = {
   //    ακριβώς η δουλειά του: **τέταρτη** φορά που το `satisfies Record<keyof
   //    PublicListing, …>` πιάνει προσθήκη σχήματος.
   listedAt: 'market-entry',
+  // ✅ **ADR-919 §7** — η διαθεσιμότητα· δες τον ρόλο `'availability'` για το γιατί δεν είναι `'market-entry'`.
+  availability: 'availability',
   // ✅ **ADR-777 §8.69** — και ο πίνακας **κοκκίνισε μόλις μπήκε το πεδίο**: πέμπτη φορά
   //    που το `satisfies Record<keyof PublicListing, …>` πιάνει προσθήκη σχήματος.
   priceReduction: 'price-reduction',

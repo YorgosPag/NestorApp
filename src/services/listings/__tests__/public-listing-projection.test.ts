@@ -192,6 +192,9 @@ describe('Κ4 — η προβολή δεν κουβαλά ΚΑΜΙΑ ταυτό�
       // μητρώου. Ο έλεγχος διαρροής (Κ4, από πάνω) το επιβεβαιώνει ανεξάρτητα.
       'amenities',
       'areaSqm', 'authorship',
+      // ADR-919 §7: `availability` — **μόνο** το παράγωγο (`ready`/`scheduled`/`unknown`)· η δήλωση, η προέλευσή της
+      // και η πρόβλεψη του χρονοδιαγράμματος **δεν** ταξιδεύουν (Δ1 · ADR-842 Α7).
+      'availability',
       'balconies', 'balconyAreaSqm', 'bathrooms', 'bedrooms',
       // ADR-890 Φ0: `constructionYear` — έτος του **κτιρίου** με την πηγή του (RESO `YearBuiltSource`).
       'commercial', 'commercialStatus',

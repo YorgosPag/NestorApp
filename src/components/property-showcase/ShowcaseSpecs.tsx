@@ -47,7 +47,6 @@ function buildRows(
 
   pushSpecRow(rows, t('specs.condition'), p.condition?.conditionLabel || p.condition?.condition);
   pushSpecRow(rows, t('specs.renovationYear'), p.condition?.renovationYear);
-  pushSpecRow(rows, t('specs.deliveryDate'), p.condition?.deliveryDate);
 
   return rows;
 }

@@ -10,6 +10,7 @@ import {
   relistedFinalEnergyOf,
   relistedScopeOf,
 } from '@/lib/energy-certificate/energy-certificate';
+import { readStoredAvailability } from './public-listing-shape-judges';
 import type { ListingMigration } from './public-listing-schema-types';
 
 /** Οι κρίκοι `to: 21` … `to: 30`, με τη σειρά που συνέβησαν. Παγωμένοι — δες την κεφαλίδα του `public-listing-schema.ts`. */
@@ -106,5 +107,23 @@ export const LISTING_MIGRATIONS_21_30: readonly ListingMigration[] = [
         doc.energyCertificate,
       ),
     }),
+  },
+  {
+    to: 25,
+    adr: 'ADR-919 §7',
+    // ⚠️ **ΦΥΛΛΟ, όχι το όνομα του πεδίου** (ίδιο ιδίωμα με το `listedAt` του κρίκου 9): το `adds` εκτελείται πάνω στο
+    //    `leafPaths`. Παλιό έγγραφο παίρνει πάντα `{ kind: 'unknown' }` ⇒ το φύλλο που προστίθεται είναι το `kind`.
+    adds: ['availability.kind'],
+    /**
+     * 🔴 **Η ΑΓΓΕΛΙΑ ΑΠΕΚΤΗΣΕ ΔΙΑΘΕΣΙΜΟΤΗΤΑ — ΤΑ ΠΑΛΙΑ ΕΓΓΡΑΦΑ ΔΕΝ ΤΗΝ ΕΧΟΥΝ.**
+     *
+     * 🔑 **Η ΑΛΗΘΕΙΑ ΤΟΥ ΠΑΛΙΟΥ ΕΓΓΡΑΦΟΥ ΕΙΝΑΙ «ΔΕΝ ΛΥΘΗΚΕ»** (`unknown`), ποτέ `ready`: ο κρίκος είναι καθαρή συνάρτηση
+     * πάνω σε **ένα** έγγραφο (κρίκος 3) — δεν ανοίγει κτίριο ούτε μονάδα. Ένα `ready` εδώ θα έβαζε στο «Τώρα» και τα
+     * διαμερίσματα που ακόμη χτίζονται, δηλαδή ακριβώς το λάθος που έκλεισε το ADR-919. Την αλήθεια τη γράφει η
+     * **επαναπροβολή** (`rebuild-public-listings`), που περνά από τον ένα γραφέα και τον επιλυτή.
+     *
+     * 🔑 **Ιδιοδύναμο (Κ3)**: ό,τι έγραψε ήδη ο γραφέας περνά από τον κριτή του σχήματος (`readStoredAvailability`) αυτούσιο.
+     */
+    apply: (doc) => ({ ...doc, availability: readStoredAvailability(doc.availability) }),
   },
 ];

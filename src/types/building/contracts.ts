@@ -7,6 +7,8 @@ import type { BuildingAddressReference, ProjectAddress } from '../project/addres
 import type { PropertyType } from '@/types/property';
 // ADR-777 §14.5 — ο δεσμός του επιπέδου Β προς το κοινό επίπεδο Α
 import type { PlaceRef } from '@/types/geo/public-place';
+import type { SourcedAttribute } from '@/lib/property/attribute-provenance';
+import type { AvailabilityDeclaration } from '@/types/listing-availability';
 // ADR-287 — PriorityLevel SSoT (shared across Building/Project domains)
 import type { PriorityLevel } from '@/constants/priority-levels';
 // ADR-287 — SSoT imports (χρειάζονται locally για use στο Building interface,
@@ -106,7 +108,17 @@ export type {
     status: BuildingStatus;
     progress: number; // 0-100
     startDate?: string;
+    /**
+     * ⚠️ **Εσωτερική** ημερομηνία διαχείρισης (planned finish) — **ΔΕΝ** φτάνει ποτέ στο κοινό. Η δημόσια
+     * υπόσχεση είναι το {@link completionDeclaration} (ADR-919 §7): άλλη έννοια, άλλος κύκλος έγκρισης.
+     */
     completionDate?: string;
+    /**
+     * **Η δημόσια υπόσχεση παράδοσης** (ADR-919 §7 · idealista «fecha de entrega») — ακρίβεια τριμήνου /
+     * μήνα / ημέρας. Μία δήλωση ανά κτίριο, την κληρονομούν οι μονάδες (`collectPlaceKnowledge`). Ως `inferred`
+     * (πρόταση του χρονοδιαγράμματος) δημοσιεύεται **μόνο** με `confirmedAt` (ADR-842 Α7).
+     */
+    completionDeclaration?: SourcedAttribute<AvailabilityDeclaration> | null;
     totalValue?: number;
     company?: string;
     companyId?: string;

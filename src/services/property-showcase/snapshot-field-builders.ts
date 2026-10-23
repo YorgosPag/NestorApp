@@ -177,13 +177,11 @@ export function buildViews(p: Record<string, unknown>): ShowcaseViewInfo[] | und
 export function buildCondition(p: Record<string, unknown>, locale: EnumLocale): ShowcaseConditionInfo | undefined {
   const condition = pickString(p.condition);
   const renovationYear = pickNumber(p.renovationYear);
-  const deliveryDate = normalizeDate(p.deliveryDate);
-  if (!condition && renovationYear === undefined && !deliveryDate) return undefined;
+  if (!condition && renovationYear === undefined) return undefined;
   return {
     condition,
     conditionLabel: translatePropertyCondition(condition, locale),
     renovationYear,
-    deliveryDate,
   };
 }
 

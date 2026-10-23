@@ -614,3 +614,21 @@ describe('Κ15 — κρίκος 24: εμβέλεια του ΠΕΑ, μονάδα
     expect((link.apply(stored({ energyCertificate: { ...V23_BOX, scope: 'tower' } })).energyCertificate as { scope: unknown }).scope).toBeNull();
   });
 });
+
+describe('Κ16 — κρίκος 25: η διαθεσιμότητα (ADR-919 §7)', () => {
+  const link = LISTING_MIGRATIONS_21_30.find((migration) => migration.to === 25)!;
+  const Q3_2027 = { kind: 'scheduled', precision: 'quarter', window: { start: '2027-07-01', end: '2027-09-30' } };
+
+  it('🔴 παλιό έγγραφο ⇒ `unknown`, ΠΟΤΕ `ready` — αλλιώς τα υπό κατασκευή θα έμπαιναν στο «Τώρα»', () => {
+    expect(link.apply({ type: 'apartment' }).availability).toEqual({ kind: 'unknown' });
+    expect(upgradeListingDocument({ ...PRODUCTION_V1 }).availability).toEqual({ kind: 'unknown' });
+  });
+
+  it('ιδιοδύναμο: ό,τι έγραψε ήδη ο γραφέας μένει αυτούσιο· σκουπίδι ⇒ unknown', () => {
+    const once = link.apply({ availability: Q3_2027 });
+    expect(once.availability).toEqual(Q3_2027);
+    expect(link.apply(once)).toEqual(once);
+    expect(link.apply({ availability: { kind: 'ready' } }).availability).toEqual({ kind: 'ready' });
+    expect(link.apply({ availability: { kind: 'scheduled', precision: 'quarter' } }).availability).toEqual({ kind: 'unknown' });
+  });
+});

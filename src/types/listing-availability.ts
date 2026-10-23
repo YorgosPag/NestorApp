@@ -56,6 +56,24 @@ export type ListingAvailability =
     }
   | { readonly kind: 'unknown' };
 
+/**
+ * **Η ΑΠΟΘΗΚΕΥΜΕΝΗ ΔΗΛΩΣΗ** (ADR-919 §7, βήμα 3) — ό,τι γράφει ο άνθρωπος στη μονάδα («διαθέσιμο από») ή στο
+ * κτίριο («παράδοση»). Αποθηκεύεται ως `SourcedAttribute<AvailabilityDeclaration>`, ώστε η πρόταση του
+ * χρονοδιαγράμματος (βήμα 2) που ενέκρινε άνθρωπος να γράφεται `inferred` + `confirmedAt` και να την κρίνει ο
+ * **ίδιος** κανόνας Α7 (`isPubliclyPresentable`).
+ *
+ * 🔑 **Ακρίβεια + άγκυρα, ποτέ διάστημα**: το διάστημα το παράγει **μόνο** το `scheduledAvailability`, άρα
+ * δεν μπορεί να αποθηκευτεί «Γ' τρίμηνο» με τέλος τον Αύγουστο. Η άγκυρα είναι **οποιαδήποτε** ημέρα μέσα
+ * στο τρίμηνο / μήνα, ή η ίδια η ημέρα (`YYYY-MM-DD`).
+ *
+ * ⛔ **Ποτέ δημόσια αυτούσια**: στην αγγελία φτάνει μόνο το παράγωγο {@link ListingAvailability}, χωρίς
+ * προέλευση, ακρίβεια εμπιστοσύνης ή στιγμή έγκρισης.
+ */
+export interface AvailabilityDeclaration {
+  readonly precision: AvailabilityPrecision;
+  readonly anchor: string;
+}
+
 /** Η μία τιμή «δεν ξέρουμε» — ονομασμένη, ώστε κάθε παραγωγός που ακόμη δεν ξέρει να φαίνεται στο grep. */
 export const LISTING_AVAILABILITY_UNKNOWN: ListingAvailability = { kind: 'unknown' };
 

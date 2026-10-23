@@ -87,8 +87,6 @@ export interface ShowcaseConditionInfo {
   condition?: string;
   conditionLabel?: string;
   renovationYear?: number;
-  /** ISO date string (YYYY-MM-DD) after normalization. */
-  deliveryDate?: string;
 }
 
 export interface ShowcaseEnergyInfo {

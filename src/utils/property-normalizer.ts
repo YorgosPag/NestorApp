@@ -18,6 +18,48 @@ import type {
 import type { I18nParams } from '@/types/i18n-params';
 
 
+/** Optional + extended fields, identical before and after backfill (arrays default to empty). */
+function mapOptionalPropertyFields(doc: PropertyDoc): Partial<PropertyModel> {
+  return {
+    code: doc.code,
+    useCategory: doc.useCategory,
+    operationalStatus: doc.operationalStatus,
+    price: doc.price,
+    area: doc.area,
+    description: doc.description,
+    soldTo: doc.soldTo,
+    saleDate: doc.saleDate,
+    propertyName: doc.propertyName,
+    areas: doc.areas,
+    layout: doc.layout,
+    orientations: doc.orientations || [],
+    views: doc.views || [],
+    condition: doc.condition,
+    renovationYear: doc.renovationYear,
+    availabilityDeclaration: doc.availabilityDeclaration,
+    systemsOverride: doc.systemsOverride,
+    energy: doc.energy,
+    finishes: doc.finishes,
+    interiorFeatures: doc.interiorFeatures || [],
+    securityFeatures: doc.securityFeatures || [],
+    propertyAmenities: doc.propertyAmenities || [],
+    linkedSpaces: doc.linkedSpaces || [],
+  };
+}
+
+/** Coverage flags default to false; only the timestamp source differs between the two paths. */
+function buildPropertyCoverage(
+  doc: PropertyDoc,
+  updatedAt: PropertyModel['propertyCoverage']['updatedAt']
+): PropertyModel['propertyCoverage'] {
+  return {
+    hasPhotos: doc.propertyCoverage?.hasPhotos ?? false,
+    hasFloorplans: doc.propertyCoverage?.hasFloorplans ?? false,
+    hasDocuments: doc.propertyCoverage?.hasDocuments ?? false,
+    updatedAt,
+  };
+}
+
 
 /**
  * 🏢 ENTERPRISE: Clean normalizer function
@@ -75,40 +117,8 @@ export function normalizeProperty(doc: PropertyDoc, backfillData?: BackfillDefau
       // Legacy status field (MUST exist post-backfill)
       status: doc.status,
 
-      // Optional fields with proper defaults
-      code: doc.code,
-      useCategory: doc.useCategory,
-      operationalStatus: doc.operationalStatus,
-      price: doc.price,
-      area: doc.area,
-      description: doc.description,
-      soldTo: doc.soldTo,
-      saleDate: doc.saleDate,
-      propertyName: doc.propertyName,
-
-      // Extended fields - arrays default to empty
-      areas: doc.areas,
-      layout: doc.layout,
-      orientations: doc.orientations || [],
-      views: doc.views || [],
-      condition: doc.condition,
-      renovationYear: doc.renovationYear,
-      deliveryDate: doc.deliveryDate,
-      systemsOverride: doc.systemsOverride,
-      energy: doc.energy,
-      finishes: doc.finishes,
-      interiorFeatures: doc.interiorFeatures || [],
-      securityFeatures: doc.securityFeatures || [],
-      propertyAmenities: doc.propertyAmenities || [],
-      linkedSpaces: doc.linkedSpaces || [],
-
-      // Coverage with strict requirements
-      propertyCoverage: {
-        hasPhotos: doc.propertyCoverage?.hasPhotos ?? false,
-        hasFloorplans: doc.propertyCoverage?.hasFloorplans ?? false,
-        hasDocuments: doc.propertyCoverage?.hasDocuments ?? false,
-        updatedAt: doc.propertyCoverage.updatedAt
-      }
+      ...mapOptionalPropertyFields(doc),
+      propertyCoverage: buildPropertyCoverage(doc, doc.propertyCoverage.updatedAt)
     } as PropertyModel;
   }
 
@@ -129,40 +139,8 @@ export function normalizeProperty(doc: PropertyDoc, backfillData?: BackfillDefau
     // Status from server backfill
     status: doc.status || backfillData.status,
 
-    // Optional fields
-    code: doc.code,
-    useCategory: doc.useCategory,
-    operationalStatus: doc.operationalStatus,
-    price: doc.price,
-    area: doc.area,
-    description: doc.description,
-    soldTo: doc.soldTo,
-    saleDate: doc.saleDate,
-    propertyName: doc.propertyName,
-
-    // Extended fields
-    areas: doc.areas,
-    layout: doc.layout,
-    orientations: doc.orientations || [],
-    views: doc.views || [],
-    condition: doc.condition,
-    renovationYear: doc.renovationYear,
-    deliveryDate: doc.deliveryDate,
-    systemsOverride: doc.systemsOverride,
-    energy: doc.energy,
-    finishes: doc.finishes,
-    interiorFeatures: doc.interiorFeatures || [],
-    securityFeatures: doc.securityFeatures || [],
-    propertyAmenities: doc.propertyAmenities || [],
-    linkedSpaces: doc.linkedSpaces || [],
-
-    // Coverage with server timestamp
-    propertyCoverage: {
-      hasPhotos: doc.propertyCoverage?.hasPhotos ?? false,
-      hasFloorplans: doc.propertyCoverage?.hasFloorplans ?? false,
-      hasDocuments: doc.propertyCoverage?.hasDocuments ?? false,
-      updatedAt: backfillData.updatedAt // Server-provided timestamp
-    }
+    ...mapOptionalPropertyFields(doc),
+    propertyCoverage: buildPropertyCoverage(doc, backfillData.updatedAt) // Server-provided timestamp
   } as PropertyModel;
 }
 
@@ -269,7 +247,7 @@ export function preparePropertyForFirestore(property: PropertyModel): PropertyDo
   // Other optional complex fields
   if (property.condition) doc.condition = property.condition;
   if (property.renovationYear) doc.renovationYear = property.renovationYear;
-  if (property.deliveryDate) doc.deliveryDate = property.deliveryDate;
+  if (property.availabilityDeclaration) doc.availabilityDeclaration = property.availabilityDeclaration;
   if (property.systemsOverride) doc.systemsOverride = property.systemsOverride;
   if (property.energy) doc.energy = property.energy;
   if (property.finishes) doc.finishes = property.finishes;

@@ -138,7 +138,6 @@ function buildSpecsSection(snapshot: PropertyShowcaseSnapshot, labels: PropertyS
     typeof layout.balconies === 'number' ? fmt(s.balconies, String(layout.balconies)) : null,
     fmt(s.condition, cond.conditionLabel ?? cond.condition),
     typeof cond.renovationYear === 'number' ? fmt(s.renovationYear, String(cond.renovationYear)) : null,
-    fmt(s.deliveryDate, cond.deliveryDate),
   ]);
   return section(labels.specs.sectionTitle, body);
 }

@@ -80,6 +80,7 @@ import type { ListedTourVisibility } from '@/constants/spatial-tour-vocabulary';
 import type { PropertyTypeCanonical } from '@/constants/property-types';
 import type { PlacePosition, PlaceRef } from '@/types/geo/public-place';
 import type { PriceReduction } from '@/types/price-history';
+import type { ListingAvailability } from '@/types/listing-availability';
 import type {
   AmenityCodeType,
   ConditionType,
@@ -1079,6 +1080,16 @@ export interface PublicListing {
    * {@link PublicListing.projectedAt}.
    */
   readonly listedAt: ListedAt;
+  /**
+   * **Από πότε είναι διαθέσιμο** (ADR-919 · RESO `AvailabilityDate`) — `ready` · `scheduled` (δηλωμένο
+   * διάστημα) · `unknown`. Το λύνει ο `resolveListingAvailability` (μονάδα → κτίριο, «το γεγονός νικά την
+   * υπόσχεση»), μέσα στην καθαρή προβολή.
+   *
+   * ⛔ **Ποτέ `null`**: η άγνοια έχει όνομα (`unknown`), και η μηχανή ταιριάσματος τη λέει ονομαστικά.
+   * ⛔ **Μόνο το παράγωγο ταξιδεύει**: όχι η δήλωση, η προέλευση, οι φάσεις ή η απόκλιση της πρόβλεψης (Δ1).
+   * Πρόβλεψη χρονοδιαγράμματος χωρίς ανθρώπινη έγκριση δεν φτάνει ποτέ εδώ (ADR-842 Α7).
+   */
+  readonly availability: ListingAvailability;
   /**
    * **Η μείωση τιμής σε ισχύ** — ή `null` (ADR-777 §8.69). Δες {@link PriceReduction}.
    *

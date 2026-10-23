@@ -53,8 +53,7 @@
     "orientation": "Προσανατολισμός",
     "energyClass": "Ενεργειακή κλάση",
     "condition": "Κατάσταση διατήρησης",
-    "renovationYear": "Έτος ανακαίνισης",
-    "deliveryDate": "Ημερομηνία παράδοσης"
+    "renovationYear": "Έτος ανακαίνισης"
   },
   "project": {
     "sectionTitle": "Έργο",
