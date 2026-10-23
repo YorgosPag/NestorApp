@@ -248,6 +248,11 @@ export interface PropertiesNotificationSettings {
    */
   documentIssuanceAnswers: boolean;
   /**
+   * 🔑 ADR-916 §5.15 Φ-Δ.2 — «ο αγοραστής **απάντησε** στην πρόσκληση παράδοσης» (αποδοχή · άρνηση), με την επόμενη κίνηση.
+   * Σε όποιον την έστειλε + στους διαχειριστές του χώρου.
+   */
+  handoverInvitationAnswers: boolean;
+  /**
    * 📤 ADR-901 Φ4.4 — «**νέο έγγραφο** στην υπόθεση» (transmittal επαγγελματία) — μόνο σε όσους ανήκουν στο
    * ακροατήριο του ρόλου του συντάκτη (οικοδεσπότης · επαγγελματίες).
    */
@@ -501,6 +506,7 @@ export const DEFAULT_PROPERTIES_SETTINGS: PropertiesNotificationSettings = {
   caseExpiryAlerts: true,
   documentExpiryAlerts: true,
   documentIssuanceAnswers: true,
+  handoverInvitationAnswers: true,
   caseDocumentTransmitted: true,
   caseDocumentRequests: true,
 };

@@ -96,6 +96,8 @@ export const NOTIFICATION_PREFERENCE_GROUPS: readonly NotificationPreferenceGrou
       { key: 'documentExpiryAlerts', labelKey: 'common-account:account.notificationSettings.categories.properties.documentExpiryAlerts' },
       // ADR-915 §28 — απάντηση στον σύνδεσμο της ανάθεσης έκδοσης (έγκριση ιδιοκτήτη · αποδοχή επαγγελματία).
       { key: 'documentIssuanceAnswers', labelKey: 'common-account:account.notificationSettings.categories.properties.documentIssuanceAnswers' },
+      // ADR-916 Φ-Δ.2 — απάντηση αγοραστή στην πρόσκληση παράδοσης (αποδοχή · άρνηση).
+      { key: 'handoverInvitationAnswers', labelKey: 'common-account:account.notificationSettings.categories.properties.handoverInvitationAnswers' },
       // ADR-901 Φ4.4 — νέο έγγραφο από επαγγελματία στην υπόθεση (οικοδεσπότης · επαγγελματίας — μία προτίμηση).
       { key: 'caseDocumentTransmitted', labelKey: 'common-account:account.notificationSettings.categories.properties.caseDocumentTransmitted' },
       // ADR-901 Φ4.5 — «σας ζητούν έγγραφο» στην υπόθεση (οικοδεσπότης · επαγγελματίας — μία προτίμηση).

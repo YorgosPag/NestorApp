@@ -26,6 +26,7 @@ import {
   expectedDestinationOf,
   RULED_EVENT_TYPES,
 } from '@/server/notifications/notification-destination-rules';
+import { handoverInvitationAnsweredDestination } from '@/server/property-handover-invitations/handover-invitation-answer-notifier';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
@@ -174,6 +175,8 @@ describe('Λ — ό,τι δεν ξέρουμε, λέγεται', () => {
       'properties.demandPriceDrop',
       // ADR-843 §10.20 — «νέο ενδιαφέρον»: τα εισερχόμενα επαφών, στον ιδιωτικό χώρο του παραλήπτη.
       'properties.firstContactReceived',
+      // ADR-916 Φ-Δ.2 — απάντηση αγοραστή: η καρτέλα «Παράδοση» (χώρος = μισθωτής του ακινήτου).
+      'properties.handoverInvitationAnswered',
       // ADR-841 §7 Α21.21 Φάση Β — η ερώτηση αργιών οδηγεί στην κάρτα του γραφείου.
       'properties.holidayHoursQuestion',
       'properties.mandateDecided',
@@ -191,6 +194,19 @@ describe('Λ — ό,τι δεν ξέρουμε, λέγεται', () => {
       'properties.tourLinkOpened',
       'security.ownershipLost',
     ]);
+  });
+});
+
+describe('ADR-916 Φ-Δ.2 — «ο αγοραστής απάντησε» προσγειώνεται στην καρτέλα «Παράδοση»', () => {
+  it('Ζ16 — ο κανόνας ΕΚΤΕΛΕΙΤΑΙ και λέει ό,τι ο παραγωγός: `?tab=handover`, στον χώρο του μισθωτή του ακινήτου', async () => {
+    const result = await expectedDestinationOf(world(), notification('properties.handoverInvitationAnswered', 'prop_1'));
+    expect(result).toEqual({ kind: 'expected', destination: handoverInvitationAnsweredDestination('prop_1', 'comp_9c7c') });
+    expect(JSON.stringify(result)).toContain(ENTITY_ROUTES.properties.withTab('prop_1', 'handover'));
+  });
+
+  it('Ζ16β — ακίνητο χωρίς μισθωτή ⇒ `entity-absent`, ποτέ μαντεψιά χώρου', async () => {
+    const result = await expectedDestinationOf(world(), notification('properties.handoverInvitationAnswered', 'prop_orphan'));
+    expect(result).toMatchObject({ kind: 'unresolvable', reason: 'entity-absent' });
   });
 });
 

@@ -30,6 +30,7 @@
  * | `properties.caseDocumentEngaged` | `caseEngagementChangedDestination` | `announceDocumentToEngaged` |
  * | `properties.caseDocumentRequestHost` | ακίνητο + `caseEngagementAnsweredDestination` | `announceDocumentRequest` (host) |
  * | `properties.caseDocumentRequestEngaged` | `caseEngagementChangedDestination` | `announceDocumentRequest` (engaged) |
+ * | `properties.handoverInvitationAnswered` | ακίνητο + `handoverInvitationAnsweredDestination` | `announceHandoverInvitationAnswer` |
  *
  * 🔑 **Κανένας κανόνας δεν γράφει δική του διαδρομή ή δικό του χώρο.** Αν αύριο ο
  * παραγωγός αλλάξει πόρτα, ο ανιχνευτής την ξέρει την ίδια στιγμή — δεν υπάρχει δεύτερο
@@ -59,6 +60,7 @@ import type { NotificationDestination } from '@/lib/notifications/notification-d
 import { custodyOf } from '@/lib/owner-property/listing-custody';
 import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import { placeDestination } from '@/lib/places/place-detail-route';
+import { handoverInvitationAnsweredDestination } from '@/server/property-handover-invitations/handover-invitation-answer-notifier';
 import { firstContactReceivedDestination } from '@/services/contact/first-contact-notifier.service';
 import { listingMatchDestination } from '@/services/demand/listing-match-notifier.service';
 import { locatePlace } from '@/services/demand/place-interest.service';
@@ -157,14 +159,22 @@ const networkTeamJoinedRule: DestinationRule = async (db, notification, entityId
 };
 
 /**
- * ADR-901 Φ2 — «ανέλαβε / δεν ανέλαβε» προς τον οικοδεσπότη: ο χώρος είναι ο **μισθωτής του ακινήτου**
- * (ίδια πηγή με τον παραγωγό — η υπόθεση ζει στον χώρο που κατέχει το ακίνητο).
+ * **Προς το γραφείο που κατέχει το ακίνητο**: ο χώρος είναι ο **μισθωτής του ακινήτου** (ίδια πηγή με τον παραγωγό) και ο
+ * προορισμός ρωτιέται από τον **ίδιο** τον παραγωγό. Ένα σχήμα για κάθε ειδοποίηση οικοδεσπότη (N.0.2, ADR-916 Φ-Δ.2 —
+ * ήταν γραμμένο μία φορά για την υπόθεση· η απάντηση αγοραστή θα ήταν το δεύτερο αντίγραφο).
  */
-const caseEngagementAnsweredRule: DestinationRule = async (db, _notification, entityId) => {
-  const companyId: unknown = (await db.collection(COLLECTIONS.PROPERTIES).doc(entityId).get()).data()?.companyId;
-  if (typeof companyId !== 'string' || companyId === '') return unresolvable('entity-absent');
-  return expected(caseEngagementAnsweredDestination(entityId, companyId));
-};
+const propertyHostRule = (destinationOf: (propertyId: string, companyId: string) => NotificationDestination): DestinationRule =>
+  async (db, _notification, entityId) => {
+    const companyId: unknown = (await db.collection(COLLECTIONS.PROPERTIES).doc(entityId).get()).data()?.companyId;
+    if (typeof companyId !== 'string' || companyId === '') return unresolvable('entity-absent');
+    return expected(destinationOf(entityId, companyId));
+  };
+
+/** ADR-901 Φ2 — «ανέλαβε / δεν ανέλαβε» προς τον οικοδεσπότη (η υπόθεση ζει στον χώρο που κατέχει το ακίνητο). */
+const caseEngagementAnsweredRule = propertyHostRule(caseEngagementAnsweredDestination);
+
+/** ADR-916 Φ-Δ.2 — «ο αγοραστής απάντησε»: η καρτέλα «Παράδοση» του ακινήτου. */
+const handoverInvitationAnsweredRule = propertyHostRule(handoverInvitationAnsweredDestination);
 
 /**
  * ADR-901 Φ2 · §15 Γ1 — κάθε ειδοποίηση προς τον **επαγγελματία** (αλλαγή · λήξη · έγγραφο · αίτημα εγγράφου): η
@@ -233,6 +243,8 @@ const RULES: Readonly<Partial<Record<NotificationEventType, DestinationRule>>> =
   // ADR-901 Φ4.5 — «Ζήτησε έγγραφο»: ΙΔΙΟΙ προορισμοί με το ζεύγος της συμμετοχής.
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_DOCUMENT_REQUEST_HOST]: caseEngagementAnsweredRule,
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_DOCUMENT_REQUEST_ENGAGED]: caseEngagedRule,
+  // ADR-916 Φ-Δ.2 — απάντηση αγοραστή: η καρτέλα «Παράδοση» (ο ΙΔΙΟΣ προορισμός με τον παραγωγό).
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_HANDOVER_INVITATION_ANSWERED]: handoverInvitationAnsweredRule,
 };
 
 /** Οι τύποι που ο ανιχνευτής ξέρει να ξαναχτίσει — για την αναφορά και τις άγκυρες. */

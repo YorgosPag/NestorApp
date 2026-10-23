@@ -173,6 +173,12 @@ export const NOTIFICATION_EVENT_TYPES = {
    */
   PROPERTIES_DOCUMENT_ISSUANCE_ANSWERED: 'properties.documentIssuanceAnswered',
   /**
+   * ADR-916 §5.15 Φ-Δ.2 (Ο7) — **ο αγοραστής απάντησε στην πρόσκληση παράδοσης** (αποδοχή · άρνηση). Προς όποιον την
+   * έστειλε (αν είναι άνθρωπος) + τους διαχειριστές του χώρου· προσγείωση στην καρτέλα «Παράδοση». Το σώμα λέει την
+   * **επόμενη κίνηση** από την ίδια κρίση με την καρτέλα. Προτίμηση: `handoverInvitationAnswers`.
+   */
+  PROPERTIES_HANDOVER_INVITATION_ANSWERED: 'properties.handoverInvitationAnswered',
+  /**
    * ADR-901 Φ4.4 — **νέο έγγραφο στην υπόθεση** (transmittal επαγγελματία), **μόνο** σε όσους ανήκουν στο ακροατήριο του
    * ρόλου του συντάκτη. Δύο τύποι για ντετερμινιστικό προορισμό· **μία** προτίμηση: `caseDocumentTransmitted`.
    */
@@ -449,6 +455,13 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_DOCUMENT_ISSUANCE_ANSWERED]: {
     category: 'properties',
     settingKey: 'documentIssuanceAnswers',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
+  // ADR-916 Φ-Δ.2 — απάντηση αγοραστή στην πρόσκληση παράδοσης: ΠΛΗΡΟΦΟΡΙΑ· η άρνηση ανεβαίνει σε ΠΡΟΕΙΔΟΠΟΙΗΣΗ ανά αποστολή.
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_HANDOVER_INVITATION_ANSWERED]: {
+    category: 'properties',
+    settingKey: 'handoverInvitationAnswers',
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
   },
