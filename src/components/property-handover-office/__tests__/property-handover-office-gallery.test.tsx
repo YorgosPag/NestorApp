@@ -28,6 +28,7 @@ import el from '@/i18n/locales/el/properties-detail.json';
 import en from '@/i18n/locales/en/properties-detail.json';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import {
+  HANDOVER_INVITATION_RENEWAL_REFUSALS,
   HANDOVER_OFFICE_MOVES,
   HANDOVER_OFFICE_REASONS,
   HANDOVER_OFFICE_SIGNALS,
@@ -80,6 +81,8 @@ describe('Ζ9 Δ — κάθε λέξη του λεξιλογίου έχει κε
     ...HANDOVER_OFFICE_SIGNALS.map((signal) => `signal.${signal}`),
     ...HANDOVER_OFFICE_STEPS.map((step) => `step.${step}`),
     ...HANDOVER_OFFICE_STEP_STATES.map((state) => `stepState.${state}`),
+    ...HANDOVER_INVITATION_RENEWAL_REFUSALS.map((reason) => `renewal.refusal.${reason}`),
+    ...['action', 'busy', 'confirmTitle', 'confirmDescription', 'confirmAction', 'success', 'failed'].map((key) => `renewal.${key}`),
   ];
   const lookup = (bundle: unknown, path: string): unknown =>
     path.split('.').reduce<unknown>((node, part) => (typeof node === 'object' && node !== null ? (node as Record<string, unknown>)[part] : undefined), bundle);
@@ -87,6 +90,19 @@ describe('Ζ9 Δ — κάθε λέξη του λεξιλογίου έχει κε
   it.each([['el', el], ['en', en]] as const)('%s', (_, bundle) => {
     const missing = vocabularyKeys.filter((key) => typeof lookup(bundle, `handover.${key}`) !== 'string');
     expect(missing).toEqual([]);
+  });
+});
+
+describe('Ζ17γ — «Νέα πρόσκληση» (Φ-Δ.3): το κουμπί ζει ΜΟΝΟ όπου η κρίση το προσφέρει', () => {
+  it('μόνο στα πάνελ «έληξε» και «αρνήθηκε»', () => {
+    const withButton = HANDOVER_OFFICE_SCENARIOS.filter((s) => within(panel(s.id)).queryByText(`${K}.renewal.action`) !== null).map((s) => s.id);
+    expect(withButton.sort()).toEqual(['declined', 'invitation-expired']);
+  });
+
+  it('σε εξέλιξη ⇒ «Αποστολή…», και κανένα δεύτερο κλικ', () => {
+    const button = within(panel('renewal-in-flight')).getByRole('button', { name: `${K}.renewal.busy` });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('aria-busy', 'true');
   });
 });
 

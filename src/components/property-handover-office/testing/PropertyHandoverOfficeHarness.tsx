@@ -24,6 +24,7 @@ import {
 } from '@/components/testing/harness/harness-panel';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { handoverOfficeStatusOf } from '@/lib/property-handover/handover-office-status';
+import type { HandoverInvitationRenewalActions } from '@/hooks/property-handover/useHandoverInvitationRenewal';
 import type { PropertyHandoverOfficeEntry, PropertyHandoverPreview } from '@/types/property-handover';
 
 import { HandoverEntryCard } from '../HandoverEntryCard';
@@ -59,7 +60,13 @@ const HARNESS_VIEWS: readonly { readonly id: string; readonly preview: PropertyH
   { id: 'whole-tab-empty', preview: { handovers: [], seal: { configured: true }, files: { deliver: [], review: [], internal: [] } } },
 ];
 
-export const PANEL_COUNT = HANDOVER_OFFICE_SCENARIOS.length + HARNESS_VIEWS.length;
+/** Φ-Δ.3 — οι πράξεις του γραφείου **προσομοιωμένες**: κανένα αίτημα, καμία πρόσκληση, κανένα email. */
+const IDLE_ACTIONS: HandoverInvitationRenewalActions = { busyId: null, renew: async () => undefined };
+
+/** «Νέα πρόσκληση» σε εξέλιξη — το κουμπί όπως το βλέπει ο άνθρωπος **ενώ** στέλνεται. */
+const RENEWAL_IN_FLIGHT = HANDOVER_OFFICE_SCENARIOS.findIndex((s) => s.id === 'invitation-expired');
+
+export const PANEL_COUNT = HANDOVER_OFFICE_SCENARIOS.length + HARNESS_VIEWS.length + 1;
 
 export function PropertyHandoverOfficeHarness(): React.JSX.Element {
   const { width, setWidth, panelClass } = useHarnessPanelWidth();
@@ -80,16 +87,24 @@ export function PropertyHandoverOfficeHarness(): React.JSX.Element {
       <HarnessPanelGroup title="1 · One buyer per reason">
         {HANDOVER_OFFICE_SCENARIOS.map((scenario, index) => (
           <HarnessPanel key={scenario.id} id={scenario.id} className={panelClass}>
-            <HandoverEntryCard entry={harnessEntryOf(scenario, index)} />
+            <HandoverEntryCard entry={harnessEntryOf(scenario, index)} actions={IDLE_ACTIONS} />
           </HarnessPanel>
         ))}
       </HarnessPanelGroup>
       <HarnessPanelGroup title="2 · The whole tab">
         {HARNESS_VIEWS.map((view) => (
           <HarnessPanel key={view.id} id={view.id} className={panelClass}>
-            <PropertyHandoverView preview={view.preview} />
+            <PropertyHandoverView preview={view.preview} actions={IDLE_ACTIONS} />
           </HarnessPanel>
         ))}
+      </HarnessPanelGroup>
+      <HarnessPanelGroup title="3 · Office actions">
+        <HarnessPanel id="renewal-in-flight" className={panelClass}>
+          <HandoverEntryCard
+            entry={harnessEntryOf(HANDOVER_OFFICE_SCENARIOS[RENEWAL_IN_FLIGHT], RENEWAL_IN_FLIGHT)}
+            actions={{ ...IDLE_ACTIONS, busyId: 'phov_invitation-expired' }}
+          />
+        </HarnessPanel>
       </HarnessPanelGroup>
     </HarnessGallery>
   );
