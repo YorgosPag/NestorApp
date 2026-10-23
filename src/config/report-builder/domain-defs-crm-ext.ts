@@ -20,6 +20,7 @@
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { TRIAGE_STATUS_VALUES } from '@/constants/triage-statuses';
 import type { DomainDefinition } from './report-builder-types';
+import { docAgeDays, docDaysPast } from './report-computed-days';
 
 // ============================================================================
 // Enum Constants (SSoT — match Firestore data & crm.ts / appointment.ts types)
@@ -49,20 +50,13 @@ const COLD_THRESHOLD_DAYS = 30;
 
 /** G6: Days since this communication was created */
 function computeDaysSinceContact(doc: Record<string, unknown>): number | null {
-  const created = doc['createdAt'] as string | undefined;
-  if (!created) return null;
-  const ms = Date.now() - new Date(created).getTime();
-  return Math.max(0, Math.round(ms / 86_400_000));
+  return docAgeDays(doc, 'createdAt');
 }
 
 /** G15: Is the contact going cold (no recent communication) */
 function computeIsGoingCold(doc: Record<string, unknown>): boolean {
-  const created = doc['createdAt'] as string | undefined;
-  if (!created) return false;
-  const days = Math.round(
-    (Date.now() - new Date(created).getTime()) / 86_400_000,
-  );
-  return days > COLD_THRESHOLD_DAYS;
+  const days = docDaysPast(doc, 'createdAt');
+  return days !== null && days > COLD_THRESHOLD_DAYS;
 }
 
 // ============================================================================
@@ -87,10 +81,7 @@ function computeWaitingDays(doc: Record<string, unknown>): number | null {
   if (status === 'completed' || status === 'rejected' || status === 'cancelled') {
     return null;
   }
-  const created = doc['createdAt'] as string | undefined;
-  if (!created) return null;
-  const ms = Date.now() - new Date(created).getTime();
-  return Math.max(0, Math.round(ms / 86_400_000));
+  return docAgeDays(doc, 'createdAt');
 }
 
 /** G17: Days from creation to approval */
@@ -113,7 +104,7 @@ export const COMMUNICATIONS_DEFINITION: DomainDefinition = {
   labelKey: 'domains.communications.label',
   descriptionKey: 'domains.communications.description',
   // eslint-disable-next-line custom/no-hardcoded-strings -- route template
-  entityLinkPath: '/crm/communications/{id}',
+  entityLink: { unlinked: 'Communications have no detail page addressable by URL' },
   defaultSortField: 'createdAt',
   defaultSortDirection: 'desc',
   fields: [
@@ -177,7 +168,7 @@ export const APPOINTMENTS_DEFINITION: DomainDefinition = {
   labelKey: 'domains.appointments.label',
   descriptionKey: 'domains.appointments.description',
   // eslint-disable-next-line custom/no-hardcoded-strings -- route template
-  entityLinkPath: '/crm/appointments/{id}',
+  entityLink: { unlinked: 'Appointments have no detail page addressable by URL' },
   defaultSortField: 'createdAt',
   defaultSortDirection: 'desc',
   fields: [

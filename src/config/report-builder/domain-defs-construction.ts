@@ -199,7 +199,7 @@ export const CONSTRUCTION_PHASES_DEFINITION: DomainDefinition = {
   labelKey: 'domains.constructionPhases.label',
   descriptionKey: 'domains.constructionPhases.description',
   // eslint-disable-next-line custom/no-hardcoded-strings -- route template, not user-facing
-  entityLinkPath: '/buildings/{buildingId}',
+  entityLink: { type: 'building', idField: 'buildingId' },
   defaultSortField: 'plannedStartDate',
   defaultSortDirection: 'asc',
   fields: [
@@ -258,7 +258,7 @@ export const CONSTRUCTION_TASKS_DEFINITION: DomainDefinition = {
   labelKey: 'domains.constructionTasks.label',
   descriptionKey: 'domains.constructionTasks.description',
   // eslint-disable-next-line custom/no-hardcoded-strings -- route template, not user-facing
-  entityLinkPath: '/buildings/{buildingId}',
+  entityLink: { type: 'building', idField: 'buildingId' },
   defaultSortField: 'plannedStartDate',
   defaultSortDirection: 'asc',
   fields: [
@@ -278,7 +278,7 @@ export const RESOURCE_ASSIGNMENTS_DEFINITION: DomainDefinition = {
   labelKey: 'domains.resourceAssignments.label',
   descriptionKey: 'domains.resourceAssignments.description',
   // eslint-disable-next-line custom/no-hardcoded-strings -- route template, not user-facing
-  entityLinkPath: '/buildings/{buildingId}',
+  entityLink: { type: 'building', idField: 'buildingId' },
   defaultSortField: 'resourceName',
   defaultSortDirection: 'asc',
   fields: [

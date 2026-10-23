@@ -135,7 +135,7 @@ export const BOQ_ITEMS_DEFINITION: DomainDefinition = {
   labelKey: 'domains.boqItems.label',
   descriptionKey: 'domains.boqItems.description',
   // eslint-disable-next-line custom/no-hardcoded-strings -- route template, not user-facing
-  entityLinkPath: '/buildings/{buildingId}',
+  entityLink: { type: 'building', idField: 'buildingId' },
   defaultSortField: 'title',
   defaultSortDirection: 'asc',
   fields: [
@@ -194,7 +194,7 @@ export const BUILDING_MILESTONES_DEFINITION: DomainDefinition = {
   labelKey: 'domains.buildingMilestones.label',
   descriptionKey: 'domains.buildingMilestones.description',
   // eslint-disable-next-line custom/no-hardcoded-strings -- route template, not user-facing
-  entityLinkPath: '/buildings/{buildingId}',
+  entityLink: { type: 'building', idField: 'buildingId' },
   defaultSortField: 'date',
   defaultSortDirection: 'asc',
   fields: [
@@ -242,7 +242,7 @@ export const CONSTRUCTION_BASELINES_DEFINITION: DomainDefinition = {
   labelKey: 'domains.constructionBaselines.label',
   descriptionKey: 'domains.constructionBaselines.description',
   // eslint-disable-next-line custom/no-hardcoded-strings -- route template, not user-facing
-  entityLinkPath: '/buildings/{buildingId}',
+  entityLink: { type: 'building', idField: 'buildingId' },
   defaultSortField: 'createdAt',
   defaultSortDirection: 'desc',
   fields: [

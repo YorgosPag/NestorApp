@@ -25,7 +25,7 @@ export const BUYERS_DEFINITION: DomainDefinition = {
   group: 'people',
   labelKey: 'domains.buyers.label',
   descriptionKey: 'domains.buyers.description',
-  entityLinkPath: '/properties/{id}',
+  entityLink: { type: 'property' },
   defaultSortField: 'commercial.ownerContactIds',
   defaultSortDirection: 'asc',
   preFilters: [

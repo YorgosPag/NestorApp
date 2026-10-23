@@ -25,6 +25,7 @@
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { PROPERTY_TYPES } from '@/constants/property-types';
 import type { DomainDefinition } from './report-builder-types';
+import { docAgeDays } from './report-computed-days';
 
 // ============================================================================
 // Enum Constants (SSoT — match Firestore data & crm.ts types)
@@ -76,37 +77,26 @@ function computeWeightedValue(doc: Record<string, unknown>): number | null {
 
 /** G2: Age in calendar days since creation */
 function computeAgeDays(doc: Record<string, unknown>): number | null {
-  const created = doc['createdAt'] as string | undefined;
-  if (!created) return null;
-  const ms = Date.now() - new Date(created).getTime();
-  return Math.max(0, Math.round(ms / 86_400_000));
+  return docAgeDays(doc, 'createdAt');
 }
 
 /** G3: Days since last activity (deal rotting) */
 function computeDaysSinceLastActivity(doc: Record<string, unknown>): number | null {
-  const lastActivity = doc['lastActivity'] as string | undefined;
-  if (!lastActivity) return null;
-  const ms = Date.now() - new Date(lastActivity).getTime();
-  return Math.max(0, Math.round(ms / 86_400_000));
+  return docAgeDays(doc, 'lastActivity');
 }
 
 /** G9: Days in current stage (bottleneck detection) */
 function computeDaysInCurrentStage(doc: Record<string, unknown>): number | null {
-  const updated = doc['updatedAt'] as string | undefined;
-  if (!updated) return null;
-  const ms = Date.now() - new Date(updated).getTime();
-  return Math.max(0, Math.round(ms / 86_400_000));
+  return docAgeDays(doc, 'updatedAt');
 }
 
 /** G11: Deal Velocity Score = (value × probability) / ageDays */
 function computeDealVelocity(doc: Record<string, unknown>): number | null {
   const value = doc['estimatedValue'] as number | undefined;
   const probability = doc['probability'] as number | undefined;
-  const created = doc['createdAt'] as string | undefined;
-  if (value === undefined || probability === undefined || !created) return null;
-  const ageDays = Math.max(1, Math.round(
-    (Date.now() - new Date(created).getTime()) / 86_400_000,
-  ));
+  const age = docAgeDays(doc, 'createdAt');
+  if (value === undefined || probability === undefined || age === null) return null;
+  const ageDays = Math.max(1, age);
   return Math.round((value * (probability / 100)) / ageDays);
 }
 
@@ -133,20 +123,13 @@ function computeDaysUntilDue(doc: Record<string, unknown>): number | null {
 
 /** G12: Days open (since creation) */
 function computeTaskDaysOpen(doc: Record<string, unknown>): number | null {
-  const created = doc['createdAt'] as string | undefined;
-  if (!created) return null;
-  const ms = Date.now() - new Date(created).getTime();
-  return Math.max(0, Math.round(ms / 86_400_000));
+  return docAgeDays(doc, 'createdAt');
 }
 
 /** G13: Aging bucket categorization (Salesforce pattern) */
 function computeAgingBucket(doc: Record<string, unknown>): string {
-  const created = doc['createdAt'] as string | undefined;
-  if (!created) return 'today';
-  const days = Math.max(0, Math.round(
-    (Date.now() - new Date(created).getTime()) / 86_400_000,
-  ));
-  if (days === 0) return 'today';
+  const days = docAgeDays(doc, 'createdAt');
+  if (days === null || days === 0) return 'today';
   if (days <= 7) return 'days7';
   if (days <= 14) return 'weeks2';
   if (days <= 30) return 'weeks4';
@@ -174,7 +157,7 @@ export const OPPORTUNITIES_DEFINITION: DomainDefinition = {
   labelKey: 'domains.opportunities.label',
   descriptionKey: 'domains.opportunities.description',
   // eslint-disable-next-line custom/no-hardcoded-strings -- route template
-  entityLinkPath: '/crm/opportunities/{id}',
+  entityLink: { unlinked: 'Opportunities have no detail page addressable by URL' },
   defaultSortField: 'createdAt',
   defaultSortDirection: 'desc',
   fields: [
@@ -281,7 +264,7 @@ export const CRM_TASKS_DEFINITION: DomainDefinition = {
   labelKey: 'domains.crmTasks.label',
   descriptionKey: 'domains.crmTasks.description',
   // eslint-disable-next-line custom/no-hardcoded-strings -- route template
-  entityLinkPath: '/crm/tasks/{id}',
+  entityLink: { type: 'crm_task' },
   defaultSortField: 'dueDate',
   defaultSortDirection: 'asc',
   fields: [

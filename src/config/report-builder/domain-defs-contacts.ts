@@ -39,7 +39,7 @@ export const INDIVIDUALS_DEFINITION: DomainDefinition = {
   group: 'people',
   labelKey: 'domains.individuals.label',
   descriptionKey: 'domains.individuals.description',
-  entityLinkPath: '/contacts/{id}',
+  entityLink: { type: 'contact' },
   defaultSortField: 'lastName',
   defaultSortDirection: 'asc',
   preFilters: [
@@ -204,7 +204,7 @@ export const COMPANIES_DEFINITION: DomainDefinition = {
   group: 'people',
   labelKey: 'domains.companies.label',
   descriptionKey: 'domains.companies.description',
-  entityLinkPath: '/contacts/{id}',
+  entityLink: { type: 'contact' },
   defaultSortField: 'companyName',
   defaultSortDirection: 'asc',
   preFilters: [

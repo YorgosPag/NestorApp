@@ -9,6 +9,7 @@
 
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import type { DomainDefinition } from './report-builder-types';
+import { docAgeDays } from './report-computed-days';
 
 // ============================================================================
 // Enum Constants (SSoT — match Firestore data)
@@ -144,7 +145,7 @@ export const PAYMENT_PLANS_DEFINITION: DomainDefinition = {
   labelKey: 'domains.paymentPlans.label',
   descriptionKey: 'domains.paymentPlans.description',
   // eslint-disable-next-line custom/no-hardcoded-strings -- route template
-  entityLinkPath: '/properties/{propertyId}',
+  entityLink: { type: 'property', idField: 'propertyId' },
   defaultSortField: 'updatedAt',
   defaultSortDirection: 'desc',
   fields: [
@@ -219,7 +220,7 @@ export const CHEQUES_DEFINITION: DomainDefinition = {
   labelKey: 'domains.cheques.label',
   descriptionKey: 'domains.cheques.description',
   // eslint-disable-next-line custom/no-hardcoded-strings
-  entityLinkPath: '/cheques/{chequeId}',
+  entityLink: { unlinked: 'Cheques have no detail page addressable by URL' },
   defaultSortField: 'maturityDate',
   defaultSortDirection: 'asc',
   fields: [
@@ -258,15 +259,11 @@ export const CHEQUES_DEFINITION: DomainDefinition = {
 // ============================================================================
 
 function computeContractDaysInStatus(doc: Record<string, unknown>): number | null {
-  const updated = doc['updatedAt'];
-  if (typeof updated !== 'string') return null;
-  return Math.max(0, Math.floor((Date.now() - new Date(updated).getTime()) / 86_400_000));
+  return docAgeDays(doc, 'updatedAt', 'floor');
 }
 
 function computeDaysSinceSigned(doc: Record<string, unknown>): number | null {
-  const signed = doc['signedAt'];
-  if (typeof signed !== 'string') return null;
-  return Math.max(0, Math.floor((Date.now() - new Date(signed).getTime()) / 86_400_000));
+  return docAgeDays(doc, 'signedAt', 'floor');
 }
 
 function computeIsStale(doc: Record<string, unknown>): boolean {
@@ -276,9 +273,7 @@ function computeIsStale(doc: Record<string, unknown>): boolean {
 }
 
 function computePhaseProgressDays(doc: Record<string, unknown>): number | null {
-  const created = doc['createdAt'];
-  if (typeof created !== 'string') return null;
-  return Math.max(0, Math.floor((Date.now() - new Date(created).getTime()) / 86_400_000));
+  return docAgeDays(doc, 'createdAt', 'floor');
 }
 
 function computeStaleBucket(doc: Record<string, unknown>): string | null {
@@ -302,7 +297,7 @@ export const LEGAL_CONTRACTS_DEFINITION: DomainDefinition = {
   labelKey: 'domains.legalContracts.label',
   descriptionKey: 'domains.legalContracts.description',
   // eslint-disable-next-line custom/no-hardcoded-strings
-  entityLinkPath: '/properties/{propertyId}',
+  entityLink: { type: 'property', idField: 'propertyId' },
   defaultSortField: 'updatedAt',
   defaultSortDirection: 'desc',
   fields: [
