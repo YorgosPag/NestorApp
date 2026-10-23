@@ -394,7 +394,8 @@
         "status": "Κατάσταση Κτιρίου",
         "progress": "Πρόοδος Κτιρίου (%)",
         "addresses": "Διεύθυνση",
-        "placeRef": "Δεσμός με τόπο (οικόπεδο/κτίσμα)"
+        "placeRef": "Δεσμός με τόπο (οικόπεδο/κτίσμα)",
+        "completionDeclaration": "Δημόσια υπόσχεση παράδοσης"
       },
       "floor": {
         "buildingId": "Κτίριο",
@@ -684,7 +685,8 @@
       "electricalInstallationStandingObligationProposal": "Μόνιμη υποχρέωση ΥΔΕ — πρόταση εφαρμογής",
       "expenseAllocation": {
         "netAmount": "Καθαρό ποσό κατανομής"
-      }
+      },
+      "availabilityDeclaration": "Διαθέσιμο από"
     },
     "retiredFieldNotice": "Το πεδίο δεν υπάρχει πλέον στο μητρώο — εμφανίζεται το όνομα που είχε καταγραφεί τη στιγμή της αλλαγής."
   }

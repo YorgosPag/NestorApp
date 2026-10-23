@@ -22,13 +22,22 @@ import type { ScheduledAvailability } from '@/types/availability-history';
 /** Η υπογραφή που ικανοποιούν και το i18next `t` και το `BundleTranslate`. */
 export type AvailabilityPhraseT = (key: string, params?: Readonly<Record<string, unknown>>) => string;
 
-/** Στατικά, ώστε να τα βλέπουν οι πύλες i18n (3.8 · 3.34). Τα διαβάζει και ο επιλογέας τριμήνου της φόρμας. */
-export const QUARTER_ORDINAL_KEYS = [
-  'common-shared:listingAvailability.quarterOrdinals.1',
-  'common-shared:listingAvailability.quarterOrdinals.2',
-  'common-shared:listingAvailability.quarterOrdinals.3',
-  'common-shared:listingAvailability.quarterOrdinals.4',
-] as const;
+/**
+ * Στατικά, ώστε να τα βλέπουν οι πύλες i18n (3.8 · 3.34). Τα διαβάζει και ο επιλογέας τριμήνου της φόρμας.
+ * ⚠️ **Αντικείμενο, όχι πίνακας**: ο γεννήτορας του shell slice (CHECK 3.34) διπλώνει μόνο object literals με
+ * κλειδιά-συμβολοσειρές· ο υπολογισμένος δείκτης σε αυτό λύνεται στατικά (ταξιδεύουν και τα τέσσερα).
+ */
+export const QUARTER_ORDINAL_KEYS = {
+  '1': 'common-shared:listingAvailability.quarterOrdinals.1',
+  '2': 'common-shared:listingAvailability.quarterOrdinals.2',
+  '3': 'common-shared:listingAvailability.quarterOrdinals.3',
+  '4': 'common-shared:listingAvailability.quarterOrdinals.4',
+} as const;
+
+export type QuarterOrdinal = keyof typeof QUARTER_ORDINAL_KEYS;
+
+/** Τα τρίμηνα με τη σειρά τους — ο δείκτης `0..3` είναι `floor((μήνας - 1) / 3)`. */
+export const QUARTER_ORDINALS: readonly QuarterOrdinal[] = ['1', '2', '3', '4'];
 
 /** Η υπόσχεση ως φράση στη γλώσσα `locale`. Η αρχή του διαστήματος ορίζει τρίμηνο/μήνα/ημέρα. */
 export function availabilityPromisePhrase(
@@ -40,6 +49,6 @@ export function availabilityPromisePhrase(
   if (promise.precision === 'day') return formatCalendarDate(start, locale);
   if (promise.precision === 'month') return formatCalendarMonth(start.slice(0, 7), locale);
   const month = Number(start.slice(5, 7));
-  const ordinal = t(QUARTER_ORDINAL_KEYS[Math.floor((month - 1) / 3)]);
+  const ordinal = t(QUARTER_ORDINAL_KEYS[QUARTER_ORDINALS[Math.floor((month - 1) / 3)]]);
   return t('common-shared:listingAvailability.quarter', { ordinal, year: start.slice(0, 4) });
 }

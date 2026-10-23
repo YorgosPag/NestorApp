@@ -29,6 +29,9 @@ import { SectionFrame } from '@/components/ui/section-frame';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { DemandBlocker } from '@/lib/demand/demand-match-vocabulary';
+import { getCurrentLocale } from '@/lib/intl-utils';
+import { availabilityPromisePhrase } from '@/lib/listings/availability-phrase';
+import type { ScheduledAvailability } from '@/types/availability-history';
 
 /** Πλήθος ανά εμπόδιο → ταξινομημένη, σταθερή λίστα. */
 function orderedEntries(
@@ -37,10 +40,22 @@ function orderedEntries(
   return [...tally.entries()].sort((a, b) => (b[1] - a[1]) || a[0].localeCompare(b[0]));
 }
 
+/**
+ * ADR-919 §11 — «πότε θα υπάρχει»: η νωρίτερη υπόσχεση των αγγελιών που σταμάτησε ο χρόνος, με την ΙΔΙΑ φράση με
+ * κάρτα, σελίδα και email. Η κρίση έγινε στη μηχανή (`earliestTimingBlockedPromise`)· εδώ μόνο αποδίδεται.
+ */
+function TimingHorizon({ horizon }: { horizon: ScheduledAvailability }): React.ReactElement {
+  const { t } = useTranslation(['property-market', 'common-shared']);
+  const promise = availabilityPromisePhrase(horizon, t, getCurrentLocale());
+  return <span className="block text-xs">{t('property-market:demand.blocker.earliestDelivery', { promise })}</span>;
+}
+
 export function DemandBlockerList({
   blockedBy,
+  timingHorizon = null,
 }: {
   blockedBy: ReadonlyMap<DemandBlocker, number>;
+  timingHorizon?: ScheduledAvailability | null;
 }): React.ReactElement | null {
   const { t } = useTranslation(['property-market']);
 
@@ -55,6 +70,7 @@ export function DemandBlockerList({
           <div key={blocker} className="flex items-baseline justify-between gap-4">
             <dt className="text-muted-foreground">
               {t(`property-market:demand.blocker.${blocker}`)}
+              {blocker === 'not-available-then' && timingHorizon !== null && <TimingHorizon horizon={timingHorizon} />}
             </dt>
             {/*
               Ο αριθμός περνά από κλειδί i18n αντί να γραφτεί ωμός στο JSX: ο

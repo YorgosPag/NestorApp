@@ -48,6 +48,8 @@
  */
 
 import type { PublicListing } from '@/types/public-listing';
+import type { ScheduledAvailability } from '@/types/availability-history';
+import { earliestTimingBlockedPromise } from './demand-timing-horizon';
 import type { PropertyDemand } from '@/types/property-demand';
 import { discloseCompetition, type DemandDisclosure } from './demand-aggregate';
 import {
@@ -166,6 +168,11 @@ export interface DemandAnswer {
    * ακίνητο στην Ελλάδα». Με αυτό, η οθόνη λέει *«καμία δεν κρίθηκε γεωγραφικά»*.
    */
   readonly blockedBy: ReadonlyMap<DemandBlocker, number>;
+  /**
+   * Η νωρίτερη δημόσια υπόσχεση ανάμεσα στις απορριφθείσες με `not-available-then` (ADR-919 §11) — **ίδιο σύνολο** με
+   * το `blockedBy`, ώστε η φράση να σχολιάζει ακριβώς τη γραμμή δίπλα της. `null` = κανένα τέτοιο εμπόδιο.
+   */
+  readonly timingHorizon: ScheduledAvailability | null;
   /** Πόσοι **άλλοι** ζητούν κάτι παρόμοιο — ή `null` κάτω από το κατώφλι. */
   readonly competition: DemandDisclosure;
   /**
@@ -211,6 +218,7 @@ export function answerDemand(params: {
       results.nearMissed.map((outcome) => outcome.match),
     ),
     blockedBy: tallyBlockers(results.rejected.map((outcome) => outcome.match)),
+    timingHorizon: earliestTimingBlockedPromise(results.rejected),
     competition: discloseCompetition(demand, otherDemands, nowIso),
     axesLost: axesLostProjectingDemand(demand),
     results,

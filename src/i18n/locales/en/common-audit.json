@@ -394,7 +394,8 @@
         "status": "Building Status",
         "progress": "Building Progress (%)",
         "addresses": "Address",
-        "placeRef": "Place link (plot/building)"
+        "placeRef": "Place link (plot/building)",
+        "completionDeclaration": "Public delivery promise"
       },
       "floor": {
         "buildingId": "Building",
@@ -684,7 +685,8 @@
       "electricalInstallationStandingObligationProposal": "Standing electrical declaration obligation — app suggestion",
       "expenseAllocation": {
         "netAmount": "Allocated net amount"
-      }
+      },
+      "availabilityDeclaration": "Available from"
     },
     "retiredFieldNotice": "This field no longer exists in the registry — showing the name recorded at the time of the change."
   }

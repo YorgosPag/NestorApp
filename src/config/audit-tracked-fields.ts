@@ -21,6 +21,8 @@ import { BUILDING_OBJECTIVE_VALUE_FIELDS } from '@/lib/objective-value/building-
 import { OBJECTIVE_VALUE_DECLARED_FIELDS } from '@/lib/objective-value/objective-value-declarations';
 import { UNDECLARED_COMMON_CHARGES } from '@/lib/common-charges/common-charges';
 import { UNDECLARED_ENERGY_CERTIFICATE } from '@/lib/energy-certificate/energy-certificate';
+import { scheduledAvailability } from '@/lib/listings/availability-window';
+import { readAvailabilityDeclaration } from '@/lib/listings/listing-availability';
 
 // Re-export the SSoT type so consumers that already import from this file
 // (the historical home of `*_TRACKED_FIELDS`) can keep their imports.
@@ -590,6 +592,8 @@ const PROPERTY_COLLECTION_DEFS: Record<string, CollectionDef> = {
 const PROPERTY_FIELD_DEFS: Record<string, TrackedFieldDef> = {
   // Το `status` ως όνομα πεδίου το κρατά ο κατάλογος του **έργου**· το ακίνητο έχει δικό του λεξιλόγιο.
   status: { kind: 'scalar', label: 'status', enumCatalog: AUDIT_VALUE_CATALOGS.propertyStatus },
+  // ADR-919 §11 — «διαθέσιμο από»: σκαλί 1 του επιλυτή, υπερισχύει της υπόσχεσης του κτιρίου.
+  availabilityDeclaration: { kind: 'scalar', label: 'availabilityDeclaration', value: formatAuditAvailabilityDeclaration },
 };
 
 /** Property audit registry — `field → TrackedFieldDef`. */
@@ -641,6 +645,22 @@ const BUILDING_TRACKED_FIELDS_RAW: Record<string, string> = {
  * (`public-place-read.service.ts`) κρίνει **ύπαρξη**, δεν εκθέτει όνομα τόπου — και ένα όνομα θα ήταν
  * στιγμιότυπο που δεν ξεχωρίζει δύο οικόπεδα στην ίδια οδό. `null` ⇒ ο δεσμός δεν υπάρχει (άρση).
  */
+/**
+ * Η δήλωση διαθεσιμότητας (ADR-919 §11) ως τιμή ιστορικού: `2027-07-01…2027-09-30 (quarter · declared)`.
+ *
+ * 🔑 Το **διάστημα** από τον ΕΝΑ κατασκευαστή (`scheduledAvailability`), όχι η άγκυρα: δύο άγκυρες του ίδιου τριμήνου
+ * είναι η ίδια υπόσχεση και δεν πρέπει να γράφουν «αλλαγή». Η προέλευση μένει, γιατί «το ενέκρινε άνθρωπος από
+ * πρόταση» και «το δήλωσε» είναι διαφορετικά γεγονότα. `null` ⇒ ανάκληση.
+ */
+function formatAuditAvailabilityDeclaration(value: unknown): string | null {
+  const declaration = readAvailabilityDeclaration(value);
+  if (declaration === null) return null;
+  const availability = scheduledAvailability(declaration.value.precision, declaration.value.anchor);
+  if (availability.kind !== 'scheduled') return null;
+  const { start, end } = availability.window;
+  return `${start}…${end} (${availability.precision} · ${declaration.provenance})`;
+}
+
 function formatAuditPlaceRef(value: unknown): string | null {
   if (value === null || typeof value !== 'object') return null;
   const { landId, buildingId } = value as { landId?: unknown; buildingId?: unknown };
@@ -652,6 +672,8 @@ const BUILDING_COLLECTION_DEFS: Record<string, TrackedFieldDef> = {
   addresses: ADDRESS_COLLECTION_DEF,
   // Αλλαγή δεσμού αλλάζει **ποιο πράγμα είναι** κάθε αγγελία του κτιρίου — δεν γίνεται να μην αφήνει ίχνος.
   placeRef: { kind: 'scalar', label: 'placeRef', value: formatAuditPlaceRef },
+  // ADR-919 §11 — η δημόσια υπόσχεση παράδοσης: δημόσια δέσμευση, άρα ποιος/πότε την άλλαξε μένει πάντα.
+  completionDeclaration: { kind: 'scalar', label: 'completionDeclaration', value: formatAuditAvailabilityDeclaration },
 };
 
 /** Building audit registry — `field → TrackedFieldDef`. */

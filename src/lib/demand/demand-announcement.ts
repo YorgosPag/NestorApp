@@ -48,7 +48,9 @@
  * **Layering**: leaf — καθαρές συναρτήσεις. Καμία εξάρτηση από Firestore/δίκτυο/ρολόι.
  */
 
+import { isAvailabilityChangeFresh } from '@/lib/listings/availability-history';
 import { isReductionFresh } from '@/lib/listings/price-history';
+import type { AvailabilityChange } from '@/types/availability-history';
 import type { PriceReduction } from '@/types/price-history';
 import type { DemandSeek } from '@/types/property-demand';
 import { amountRangeOfRole } from './demand-seek-roles';
@@ -246,4 +248,56 @@ export function priceDropVerdict(
   if (match.kind === 'never-announced') return 'announce';
   if (match.atMs === null) return 'predates-match';
   return Date.parse(reduction.since) > match.atMs ? 'announce' : 'predates-match';
+}
+
+// ============================================================================
+// ADR-919 §10 — Η ΜΕΤΑΘΕΣΗ ΤΗΣ ΠΑΡΑΔΟΣΗΣ: ΤΕΤΑΡΤΗ ΕΙΔΗΣΗ, ΤΕΤΑΡΤΟ ΚΛΕΙΔΙ
+// ============================================================================
+
+/**
+ * **Το κλειδί μιας αλλαγής διαθεσιμότητας ανά (παραλήπτη, αγγελία, έκδοση δήλωσης).** Η στιγμή της αλλαγής
+ * **είναι** η έκδοση: κάθε νέα δημόσια τιμή είναι νέο κλειδί, η ίδια αλλαγή σε κάθε ωριαίο πέρασμα είναι **ένα**.
+ */
+export function recipientAvailabilityChangeEventId(
+  listingId: string,
+  change: Pick<AvailabilityChange, 'at'>,
+): string {
+  return `${recipientListingMatchEventId(listingId)}:availability:${change.at}`;
+}
+
+/**
+ * **Προς ποια μεριά πήγε το ταίρι** εξαιτίας της αλλαγής. Την απάντηση τη δίνει η **μηχανή** (`timingBlockers`),
+ * ρωτημένη δύο φορές, με την παλιά και με τη νέα τιμή (ADR-919 §3.7). Εδώ δεν ξανακρίνεται τίποτα.
+ */
+export type AvailabilityShiftDirection = 'lost' | 'gained';
+
+/** Η ετυμηγορία για μια αλλαγή διαθεσιμότητας: ονομασμένη, ποτέ boolean. */
+export type AvailabilityChangeVerdict =
+  | 'announce'
+  | 'never-known'
+  | 'left-to-match'
+  | 'predates-change'
+  | 'stale';
+
+/**
+ * **Αξίζει να πούμε αυτή την αλλαγή;**
+ *
+ * | Κατάσταση | Ετυμηγορία | Γιατί |
+ * |---|---|---|
+ * | η αλλαγή είναι παλιά (30 ημέρες) | `stale` | φράχτης backfill· παλιά είδηση δεν είναι είδηση |
+ * | **χάνει**, και δεν του είπαμε ποτέ για την αγγελία | `never-known` | «χάθηκε κάτι που δεν σου δείξαμε» είναι θόρυβος |
+ * | **κερδίζει**, και δεν του είπαμε ποτέ | `left-to-match` | το email ταιριάσματος το λέει ήδη, **μία** φορά |
+ * | του το είπαμε **πριν** την αλλαγή | `announce` | αυτό που ξέρει **άλλαξε** |
+ * | του το είπαμε **μετά** την αλλαγή, ή δεν ξέρουμε πότε | `predates-change` | ό,τι έμαθε έλεγε ήδη τη νέα τιμή |
+ */
+export function availabilityChangeVerdict(
+  change: AvailabilityChange,
+  direction: AvailabilityShiftDirection,
+  match: MatchHistory,
+  nowMs: number,
+): AvailabilityChangeVerdict {
+  if (!isAvailabilityChangeFresh(change, nowMs)) return 'stale';
+  if (match.kind === 'never-announced') return direction === 'gained' ? 'left-to-match' : 'never-known';
+  if (match.atMs === null) return 'predates-change';
+  return Date.parse(change.at) > match.atMs ? 'announce' : 'predates-change';
 }

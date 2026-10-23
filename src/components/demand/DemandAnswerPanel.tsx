@@ -178,7 +178,7 @@ export function DemandAnswerPanel({
       )}
 
       <DemandConcessionList report={answer.concessions} />
-      <DemandBlockerList blockedBy={answer.blockedBy} />
+      <DemandBlockerList blockedBy={answer.blockedBy} timingHorizon={answer.timingHorizon} />
       <DemandCompetitionPanel competition={competition} />
     </section>
   );

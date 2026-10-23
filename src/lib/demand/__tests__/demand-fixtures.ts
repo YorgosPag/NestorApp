@@ -90,6 +90,7 @@ export function listing(overrides: Partial<PublicListing> = {}): PublicListing {
     videos: [],
     floorPlates: [],
     tour: null,
+    terrain: null,
     type: 'apartment',
     areaSqm: 100,
     offerKinds: ['sell'],
@@ -119,6 +120,8 @@ export function listing(overrides: Partial<PublicListing> = {}): PublicListing {
     listedAt: { kind: 'unknown', reason: 'predates-record' },
     // ADR-919 §7 — η σημερινή, μετρημένη αλήθεια: κανένα κτίριο δεν έχει δηλώσει παράδοση.
     availability: LISTING_AVAILABILITY_UNKNOWN,
+    // ADR-919 §10 — καμία δημόσια υπόσχεση ⇒ καμία ιστορία.
+    availabilityTrack: null,
     priceReduction: null,
     objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
     levelAreas: null,
