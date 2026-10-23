@@ -94,7 +94,7 @@ export function readAvailabilityDeclaration(raw: unknown): SourcedAttribute<Avai
  * **Η δήλωση που επιτρέπεται να γίνει δημόσια υπόσχεση** — `scheduled`, ή `null` όταν δεν υπάρχει, δεν
  * στέκει, δεν εγκρίθηκε (Α7) ή η άγκυρα δεν είναι πραγματική ημέρα.
  */
-function presentableSchedule(raw: unknown): ListingAvailability | null {
+export function presentableSchedule(raw: unknown): Extract<ListingAvailability, { kind: 'scheduled' }> | null {
   const declaration = readAvailabilityDeclaration(raw);
   if (declaration === null || !isPubliclyPresentable(declaration)) return null;
   const availability = scheduledAvailability(declaration.value.precision, declaration.value.anchor);
