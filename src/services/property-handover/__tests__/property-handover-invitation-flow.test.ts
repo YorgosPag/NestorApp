@@ -9,6 +9,7 @@
 
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
+import { PROPERTY_HANDOVER_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { InvitationRedeemer } from '@/server/invitations/invitation-redeem';
 import { mintHandoverInvitation } from '@/server/property-handover-invitations/handover-invitation-kind';
@@ -42,6 +43,7 @@ const { deliverInvitationEmail } = require('@/server/invitations/invitation-noti
 const { sharedLogger: mockLogger } = require('@/lib/telemetry') as { sharedLogger: Record<'info' | 'warn' | 'error' | 'debug', jest.Mock> };
 const { dispatchNotification } = require('@/server/notifications/notification-orchestrator') as { dispatchNotification: jest.Mock };
 const { activeWorkspaceAdministrators } = require('@/lib/workspace/workspace-administrators') as { activeWorkspaceAdministrators: jest.Mock };
+const { recordTrackedEntityWrite } = require('@/services/entity-audit-tracked-write') as { recordTrackedEntityWrite: jest.Mock };
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 interface Sent { readonly to: string; readonly subject: string; readonly text: string }
@@ -267,7 +269,7 @@ describe('Β18–Β20 — ολοκλήρωση · ακύρωση · άρνηση
     // Αλλοίωση που ο γραφέας δεν παράγει ποτέ: δεύτερη `pending` για την ίδια παράδοση, άγνωστη στο κάτοπτρο.
     const orphan = await mintHandoverInvitation({
       companyId: COMPANY, propertyId: PROPERTY, handoverId, contactId: 'cont_anna',
-      email: ANNA.email, occasion: 'reservation', actorUid: 'uid_agent', nowValue: new Date().toISOString(),
+      email: ANNA.email, occasion: 'reservation', supersedesInvitationId: null, actorUid: 'uid_agent', nowValue: new Date().toISOString(),
     });
     fake.seed(COLLECTIONS.PROPERTY_HANDOVER_INVITATIONS, orphan.invitation.id, { ...orphan.invitation });
     expect(await accept(orphan.token)).toEqual({ kind: 'refused', reason: 'handover-closed' });
@@ -283,7 +285,7 @@ describe('Β18–Β20 — ολοκλήρωση · ακύρωση · άρνηση
 
   it('Β27 — 🔴 λείπει το μυστικό στην έκδοση ⇒ ΕΝΑ σήμα «σε αναμονή ρύθμισης», ΚΑΝΕΝΑ `error`· όταν ρυθμιστεί, το δίχτυ εκδίδει', async () => {
     delete process.env.PROPERTY_HANDOVER_INVITE_SECRET;
-    expect(await sync()).toEqual({ kind: 'synced', writes: 1, invitationWrites: 0, invitationsAwaitingConfiguration: 1 });
+    expect(await sync()).toEqual({ kind: 'synced', writes: 1, invitationWrites: 0, invitationsAwaitingConfiguration: 1, renewal: null });
     expect(invitations()).toHaveLength(0);
     expect(sent).toHaveLength(0);
     expect(handovers()[0]?.invitation).toBeNull();
@@ -399,5 +401,99 @@ describe('Ζ10–Ζ15 — ADR-916 Φ-Δ.2 (Ο7): το γραφείο μαθαί�
     const payload = JSON.stringify(answered());
     expect(payload).toContain('Άννα Συνθετική');
     for (const secret of [ANNA.email, '+306900000001', '6900000001', '999999999']) expect(payload).not.toContain(secret);
+  });
+});
+
+/** Η πρόθεση του γραφείου — ο άνθρωπος είναι ο δρων (Φ-Δ.3). */
+const OFFICE = 'uid_office';
+const renew = (confirmDeclined = false) => syncPropertyHandovers(db(), PROPERTY, {
+  cause: 'office-renewal', performedBy: OFFICE, renewal: { handoverId: String(docs(COLLECTIONS.PROPERTY_HANDOVERS)[0]?.[0]), confirmDeclined },
+});
+const renewalOf = async (confirmDeclined = false) => {
+  const outcome = await renew(confirmDeclined);
+  return outcome.kind === 'synced' ? outcome.renewal : outcome;
+};
+/** Η πρόσκληση λήγει — στο κάτοπτρο, όπου κοιτούν η κρίση και η καρτέλα (ο σύνδεσμος του email μένει έγκυρος ως υπογραφή). */
+function expireMirror(): void {
+  const [[id, doc] = ['', {}]] = docs(COLLECTIONS.PROPERTY_HANDOVERS);
+  const invitation = doc.invitation as Record<string, unknown>;
+  fake.seed(COLLECTIONS.PROPERTY_HANDOVERS, id, { ...doc, invitation: { ...invitation, expiresAt: '2020-01-01T00:00:00.000Z' } });
+}
+/** Οι γραμμές ίχνους που ζήτησε ο γραφέας. */
+const auditCalls = () => (recordTrackedEntityWrite as jest.Mock).mock.calls.map(([write]) => write as Record<string, unknown>);
+
+describe('Ζ18–Ζ21 — ADR-916 Φ-Δ.3 (Ο9): «Νέα πρόσκληση» από το γραφείο, από τον ΙΔΙΟ γραφέα', () => {
+  beforeEach(() => (recordTrackedEntityWrite as jest.Mock).mockClear());
+
+  it('Ζ18 — ληγμένη ⇒ ΝΕΑ πρόσκληση + ΕΝΑ email· η παλιά ανακαλείται ατομικά και ο σύνδεσμός της ΠΕΘΑΙΝΕΙ· αλυσίδα `supersedes`', async () => {
+    await sync();
+    const oldId = String(invitations()[0]?.id);
+    const oldToken = tokenOf(sent[0]);
+    expireMirror();
+    const renewal = await renewalOf();
+    expect(renewal).toMatchObject({ kind: 'renewed' });
+    expect(live()).toHaveLength(1);
+    expect(live()[0]).toMatchObject({ supersedesInvitationId: oldId, invitedByUid: OFFICE });
+    expect(invitations().find((invitation) => invitation.id === oldId)).toMatchObject({ state: 'revoked', resolvedByUid: OFFICE });
+    expect(sent).toHaveLength(2);
+    expect(sent[1]?.to).toBe(ANNA.email);
+    expect(await accept(oldToken)).toEqual({ kind: 'refused', reason: 'revoked' });
+    expect((await accept(tokenOf(sent[1]))).kind).toBe('accepted');
+  });
+
+  it('Ζ19 — αρνημένη ΧΩΡΙΣ επιβεβαίωση ⇒ `declined-unconfirmed`, καμία εγγραφή, κανένα email· ΜΕ επιβεβαίωση ⇒ νέα', async () => {
+    await sync();
+    expect((await decline(tokenOf(sent[0]))).kind).toBe('declined');
+    const before = JSON.stringify(handovers());
+    expect(await renewalOf(false)).toEqual({ kind: 'refused', reason: 'declined-unconfirmed' });
+    expect(JSON.stringify(handovers())).toBe(before);
+    expect(sent).toHaveLength(1);
+    expect(await renewalOf(true)).toMatchObject({ kind: 'renewed' });
+    expect(live()).toHaveLength(1);
+    expect(sent).toHaveLength(2);
+    expect(handovers()[0]?.invitation).toMatchObject({ status: 'issued', declinedAt: null });
+  });
+
+  it('Ζ20 — ενεργή ⇒ `not-renewable`· δεύτερο αίτημα αμέσως μετά (άλλο κλειδί ιδεμποτίας) ⇒ ΜΙΑ νέα πρόσκληση, ΕΝΑ email', async () => {
+    await sync();
+    expect(await renewalOf()).toEqual({ kind: 'refused', reason: 'not-renewable' });
+    expireMirror();
+    expect(await renewalOf()).toMatchObject({ kind: 'renewed' });
+    expect(await renewalOf()).toEqual({ kind: 'refused', reason: 'not-renewable' });
+    expect(invitations()).toHaveLength(2);
+    expect(sent).toHaveLength(2);
+  });
+
+  it('Ζ20β — αποδεκτή ⇒ `not-renewable` · άγνωστη παράδοση ⇒ `handover-unknown` · η επαφή έχασε το email ⇒ `no-address`', async () => {
+    await sync();
+    expireMirror();
+    setEmail(null);
+    expect(await renewalOf()).toEqual({ kind: 'refused', reason: 'no-address' });
+    const unknown = await syncPropertyHandovers(db(), PROPERTY, {
+      cause: 'office-renewal', performedBy: OFFICE, renewal: { handoverId: 'phov_foreign', confirmDeclined: true },
+    });
+    expect(unknown).toMatchObject({ kind: 'synced', renewal: { kind: 'refused', reason: 'handover-unknown' } });
+  });
+
+  it('Ζ20γ — λείπει το μυστικό των συνδέσμων ⇒ `awaiting-configuration`, ποτέ πρόσκληση χωρίς σύνδεσμο', async () => {
+    await sync();
+    expireMirror();
+    delete process.env.PROPERTY_HANDOVER_INVITE_SECRET;
+    expect(await renewalOf()).toEqual({ kind: 'refused', reason: 'awaiting-configuration' });
+    expect(invitations()).toHaveLength(1);
+  });
+
+  it('Ζ21 — ίχνος: ο ΑΝΘΡΩΠΟΣ ως δρων, η νέα ταυτότητα στο `after` — και 🔒 καμία τιμή ίχνους δεν είναι email', async () => {
+    await sync();
+    expireMirror();
+    await renew();
+    const write = auditCalls().find((call) => call.performedBy === OFFICE);
+    expect(write).toMatchObject({ entityType: 'property_handover' });
+    const after = (write?.after as { invitation: { invitationId: string } }).invitation.invitationId;
+    expect(after).toBe(String(live()[0]?.id));
+    const def = PROPERTY_HANDOVER_TRACKED_FIELDS.invitation;
+    const formatted = def?.kind === 'scalar' ? def.value?.((write?.after as { invitation: unknown }).invitation) : undefined;
+    expect(formatted).toBe(after);
+    expect(JSON.stringify(formatted)).not.toContain(ANNA.email);
   });
 });

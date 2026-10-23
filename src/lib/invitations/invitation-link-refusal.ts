@@ -16,7 +16,15 @@ import { apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
 import { isOneOf } from '@/lib/type-guards';
 
 export function invitationLinkRefusalOf<R extends string>(cause: unknown, refusals: readonly R[]): R | null {
+  return apiRefusalReasonOf(cause, 'LINK_REFUSED', refusals);
+}
+
+/**
+ * **Ο γενικός αναγνώστης ονομασμένης άρνησης** `{ error: <διακριτής>, reason }` — ο ίδιος κανόνας για κάθε πόρτα που
+ * αρνείται με λόγο (ADR-916 Φ-Δ.3 «Νέα πρόσκληση»: N.0.2, όχι πέμπτο αντίγραφο της ίδιας ανάγνωσης).
+ */
+export function apiRefusalReasonOf<R extends string>(cause: unknown, discriminator: string, refusals: readonly R[]): R | null {
   const body = apiErrorBodyOf(cause);
-  if (body === null || body.error !== 'LINK_REFUSED') return null;
+  if (body === null || body.error !== discriminator) return null;
   return isOneOf(refusals, body.reason) ? body.reason : null;
 }

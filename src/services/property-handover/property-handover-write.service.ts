@@ -60,17 +60,30 @@ import { stagePropertyDossierHandoverProjection } from '@/services/property-doss
 import type { PropertyHandover, PropertyHandoverFileDelivery, PropertyHandoverInvitationDelivery } from '@/types/property-handover';
 import type { PropertyHandoverProtocolPointer } from '@/types/property-handover-protocol';
 
-import { stageHandoverInvitations } from './property-handover-invitation-stage';
+import {
+  stageHandoverInvitations,
+  type HandoverInvitationRenewalOutcome,
+  type HandoverInvitationRenewalRequest,
+} from './property-handover-invitation-stage';
 
 const logger = createModuleLogger('PropertyHandoverWrite');
 
-/** Ποιος ζήτησε τη συμφιλίωση — μόνο για το ημερολόγιο· το αποτέλεσμα **δεν** εξαρτάται από αυτό. */
-export type PropertyHandoverSyncCause = 'property-write' | 'legal-phase' | 'acceptance' | 'reconcile';
+/**
+ * Ποιος ζήτησε τη συμφιλίωση — μόνο για το ημερολόγιο· το αποτέλεσμα **δεν** εξαρτάται από αυτό. Η ρητή πρόθεση του
+ * γραφείου (`office-renewal`, Φ-Δ.3) περνά από το {@link PropertyHandoverSyncRequest.renewal}, **όχι** από την αιτία.
+ */
+export type PropertyHandoverSyncCause = 'property-write' | 'legal-phase' | 'acceptance' | 'reconcile' | 'office-renewal';
 
 export interface PropertyHandoverSyncRequest {
   readonly cause: PropertyHandoverSyncCause;
   /** uid του δρώντα — `'system'` για δίχτυ και γραφέα νομικής φάσης χωρίς άνθρωπο. */
   readonly performedBy: string;
+  /**
+   * Φ-Δ.3 (Ο9) — «το γραφείο ζητά νέα πρόσκληση»: supersede **στην ίδια** συναλλαγή με τη συμφιλίωση (ποτέ δεύτερος
+   * γραφέας). Η κρίση (`handoverInvitationRenewalOf`) ξανατρέχει **μέσα** στη συναλλαγή — μια ταυτόχρονη αποδοχή ή
+   * δεύτερο κλικ βλέπει την πρώτη και αρνείται `not-renewable`.
+   */
+  readonly renewal?: HandoverInvitationRenewalRequest;
   /**
    * Φ-Γ2 Σ4 — ο εκδότης Πρωτοκόλλου **της εκτέλεσης του καλούντα** (π.χ. το νυχτερινό δίχτυ ανοίγει **μία** συνεδρία
    * σφράγισης για όλα τα ακίνητα ⇒ ένα σήμα). Απών ⇒ η συμφιλίωση ανοίγει δική της, **μόνο** αν κάποια παράδοση τρέξει.
@@ -89,6 +102,8 @@ export type PropertyHandoverSyncOutcome =
       readonly invitationWrites: number;
       /** Προσκλήσεις που οφείλονται αλλά περιμένουν το μυστικό των συνδέσμων (ADR-916 §5.6) — ΕΝΑ σήμα, όχι σφάλμα. */
       readonly invitationsAwaitingConfiguration: number;
+      /** Φ-Δ.3 — η έκβαση της ρητής πρόθεσης· `null` όταν δεν ζητήθηκε. */
+      readonly renewal: HandoverInvitationRenewalOutcome | null;
     }
   | { readonly kind: 'failed' };
 
@@ -277,15 +292,34 @@ export async function stageHandoverProtocolPointer(
 interface AppliedPlan {
   /** Οι μεταβάσεις κύκλου ζωής (το ίχνος) — με το `after` **όπως γράφτηκε** (μαζί με το κάτοπτρο). */
   readonly lifecycleWrites: readonly PropertyHandoverWrite[];
-  /** Πόσες παραδόσεις άλλαξαν **μόνο** κάτοπτρο πρόσκλησης (π.χ. άλλαξε το email της επαφής). */
-  readonly mirrorWrites: number;
+  /**
+   * Οι παραδόσεις που άλλαξαν **μόνο** κάτοπτρο πρόσκλησης (π.χ. άλλαξε το email · νέα από το γραφείο) — για το ίχνος
+   * (Φ-Δ.3): γραμμή γράφεται **μόνο** αν άλλαξε η ταυτότητα της πρόσκλησης, ποτέ για τηλεμετρία αποστολής.
+   */
+  readonly mirrorWrites: readonly PropertyHandoverWrite[];
   readonly issued: readonly MintedHandoverInvitation[];
   readonly awaitingConfiguration: number;
   /** Όλες οι παραδόσεις του ακινήτου, όπως **είναι** μετά το commit. */
   readonly handovers: readonly PropertyHandover[];
+  readonly renewal: HandoverInvitationRenewalOutcome | null;
 }
 
-const NOTHING_APPLIED: AppliedPlan = { lifecycleWrites: [], mirrorWrites: 0, issued: [], awaitingConfiguration: 0, handovers: [] };
+const NOTHING_APPLIED: AppliedPlan = {
+  lifecycleWrites: [], mirrorWrites: [], issued: [], awaitingConfiguration: 0, handovers: [], renewal: null,
+};
+
+/** Οι εγγραφές **μόνο** κατόπτρου, ως `update` με το πριν — ό,τι δεν είναι ήδη μετάβαση κύκλου ζωής. */
+function mirrorOnlyWrites(
+  existing: readonly PropertyHandover[],
+  lifecycleWrites: readonly PropertyHandoverWrite[],
+  mirrored: ReadonlyMap<string, PropertyHandover>,
+): readonly PropertyHandoverWrite[] {
+  const lifecycleIds = new Set(lifecycleWrites.map((write) => write.after.id));
+  return existing.flatMap((before) => {
+    const after = mirrored.get(before.id);
+    return after === undefined || lifecycleIds.has(before.id) ? [] : [{ kind: 'update' as const, before, after }];
+  });
+}
 
 /** Οι παραδόσεις όπως **θα** είναι μετά το σχέδιο κύκλου ζωής — υπάρχουσες + γεννήσεις, με τις μεταβάσεις. */
 function afterLifecycle(existing: readonly PropertyHandover[], writes: readonly PropertyHandoverWrite[]): readonly PropertyHandover[] {
@@ -355,14 +389,15 @@ function writeHandovers(
 }
 
 /** Η συναλλαγή: ανάγνωση → σχέδιο → πρόσκληση → προβολή → εγγραφές (όλες οι αναγνώσεις **πριν** από κάθε γραφή). */
-function applyPlan(adminDb: AdminFirestore, propertyId: string, actorUid: string): Promise<AppliedPlan> {
+function applyPlan(adminDb: AdminFirestore, propertyId: string, request: PropertyHandoverSyncRequest): Promise<AppliedPlan> {
   return adminDb.runTransaction(async (tx) => {
     const state = await readHandoverState(tx, adminDb, propertyId);
     if (state === null) return NOTHING_APPLIED;
     const nowValue = nowISO();
     const planned = planPropertyHandovers(state.snapshot, state.existing, nowValue);
     const invitations = await stageHandoverInvitations(tx, adminDb, {
-      companyId: state.snapshot.companyId, handovers: afterLifecycle(state.existing, planned), actorUid, nowValue,
+      companyId: state.snapshot.companyId, handovers: afterLifecycle(state.existing, planned),
+      actorUid: request.performedBy, nowValue, renewal: request.renewal,
     });
     // Το κάτοπτρο **πάνω** στη μετάβαση: ένα `set` ανά έγγραφο, με την τελική του μορφή.
     const lifecycleWrites = planned.map((write) => ({ ...write, after: invitations.mirrored.get(write.after.id) ?? write.after }));
@@ -372,9 +407,9 @@ function applyPlan(adminDb: AdminFirestore, propertyId: string, actorUid: string
     invitations.commit();
     projections.forEach((commit) => commit());
 
-    const lifecycleIds = new Set(lifecycleWrites.map((write) => write.after.id));
-    const mirrorWrites = [...invitations.mirrored.keys()].filter((id) => !lifecycleIds.has(id)).length;
-    return { lifecycleWrites, mirrorWrites, issued: invitations.issued, awaitingConfiguration: invitations.awaitingConfiguration, handovers };
+    const { issued, awaitingConfiguration, renewal } = invitations;
+    const mirrorWrites = mirrorOnlyWrites(state.existing, lifecycleWrites, invitations.mirrored);
+    return { lifecycleWrites, mirrorWrites, issued, awaitingConfiguration, handovers, renewal };
   });
 }
 
@@ -435,14 +470,19 @@ export async function syncPropertyHandovers(
   request: PropertyHandoverSyncRequest,
 ): Promise<PropertyHandoverSyncOutcome> {
   try {
-    const applied = await applyPlan(adminDb, propertyId, request.performedBy);
-    await Promise.all(applied.lifecycleWrites.map((write) => recordHandoverWrite(write, request.performedBy)));
+    const applied = await applyPlan(adminDb, propertyId, request);
+    const audited = [...applied.lifecycleWrites, ...applied.mirrorWrites];
+    await Promise.all(audited.map((write) => recordHandoverWrite(write, request.performedBy)));
     await deliverAfterCommit(adminDb, applied, request);
     const writes = applied.lifecycleWrites.length;
-    if (writes + applied.mirrorWrites > 0) {
-      logger.info('Property handovers synced', { propertyId, cause: request.cause, writes, invitations: applied.mirrorWrites, issued: applied.issued.length });
+    const invitationWrites = applied.mirrorWrites.length;
+    if (writes + invitationWrites > 0) {
+      logger.info('Property handovers synced', { propertyId, cause: request.cause, writes, invitations: invitationWrites, issued: applied.issued.length });
     }
-    return { kind: 'synced', writes, invitationWrites: applied.mirrorWrites, invitationsAwaitingConfiguration: applied.awaitingConfiguration };
+    return {
+      kind: 'synced', writes, invitationWrites,
+      invitationsAwaitingConfiguration: applied.awaitingConfiguration, renewal: applied.renewal,
+    };
   } catch (error) {
     logger.error('Property handover sync failed', { propertyId, cause: request.cause, error: getErrorMessage(error) });
     return { kind: 'failed' };
