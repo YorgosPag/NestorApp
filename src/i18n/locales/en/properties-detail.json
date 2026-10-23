@@ -428,6 +428,22 @@
       "files": "Files",
       "filesValue": "{delivered} of {total}"
     },
+    "renewal": {
+      "action": "New invitation",
+      "busy": "Sending…",
+      "confirmTitle": "New invitation after a decline?",
+      "confirmDescription": "The buyer declined the previous invitation. Send a new one only if they asked for it. They will receive a new link with a new deadline.",
+      "confirmAction": "Send new invitation",
+      "success": "The new invitation was sent to the buyer.",
+      "failed": "The new invitation was not sent. Please try again.",
+      "refusal": {
+        "not-renewable": "No new invitation is needed — the status changed in the meantime. The tab was refreshed.",
+        "declined-unconfirmed": "The buyer had declined — a new invitation needs confirmation.",
+        "no-address": "The buyer's contact has no email. Add an email to the contact and the invitation will be sent automatically.",
+        "awaiting-configuration": "Buyer invitations are not configured on the platform yet.",
+        "handover-unknown": "The handover was not found. The tab was refreshed."
+      }
+    },
     "verify": "Public verification page",
     "files": {
       "title": "Property files",

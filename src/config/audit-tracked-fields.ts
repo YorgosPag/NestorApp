@@ -1441,6 +1441,17 @@ function formatAuditHandoverProtocol(value: unknown): string | null {
 }
 
 /**
+ * Η πρόσκληση μιας παράδοσης ως τιμή ιστορικού — η **ταυτότητα** (`phin_…`) ή `no-address` (ADR-916 Φ-Δ.3)· 🔒 **ποτέ** το
+ * email του αγοραστή. Η τηλεμετρία αποστολής (`delivery` · προσπάθειες · υπενθύμιση) **δεν** αλλάζει την τιμή ⇒ καμία γραμμή.
+ */
+function formatAuditHandoverInvitation(value: unknown): string | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const { status, invitationId } = value as { readonly status?: unknown; readonly invitationId?: unknown };
+  if (status === 'no-address') return 'no-address';
+  return typeof invitationId === 'string' && invitationId !== '' ? invitationId : null;
+}
+
+/**
  * Property-handover audit registry (ADR-916 §5.2). Μόνο ο **κύκλος ζωής**: ο παραλήπτης και το ακίνητο είναι
  * η ταυτότητα της παράδοσης (αμετάβλητα), και η ολοκλήρωση γράφεται **μαζί** με τη μετάβαση σε `ready`.
  */
@@ -1451,6 +1462,8 @@ export const PROPERTY_HANDOVER_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   // ADR-916 Φ-Γ2 Σ4 — «εκδόθηκε (νέα αναθεώρηση του) Πρωτοκόλλου»: πράξη με νομικό βάρος, άρα ίχνος — αντίθετα με την
   // τεχνική πρόοδο της αντιγραφής, που ίχνος δεν αφήνει.
   protocol: { kind: 'scalar', label: 'protocol', value: formatAuditHandoverProtocol },
+  // ADR-916 Φ-Δ.3 — «εκδόθηκε νέα πρόσκληση» (συστήματος **ή** γραφείου): ποιος, πότε, ποια αντικατέστησε ποια.
+  invitation: { kind: 'scalar', label: 'invitation', value: formatAuditHandoverInvitation },
 };
 
 /** Project audit registry — `field → TrackedFieldDef`. */

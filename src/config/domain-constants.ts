@@ -934,6 +934,8 @@ export const API_ROUTES = {
     LISTING_MEDIA: (propertyId: string) => `/api/properties/${propertyId}/listing-media` as const,
     /** ADR-916 §5.5 · §5.15 — η καρτέλα «Παράδοση»: παραδόσεις με την κρίση τους + αρχεία κριμένα (`GET`). */
     HANDOVER: (propertyId: string) => `/api/properties/${encodeURIComponent(propertyId)}/handover` as const,
+    /** ADR-916 §5.17 Φ-Δ.3 — «Νέα πρόσκληση» από το γραφείο (`POST`, supersede από τον ΙΔΙΟ γραφέα). */
+    HANDOVER_INVITATION: (propertyId: string) => `/api/properties/${encodeURIComponent(propertyId)}/handover/invitation` as const,
     TRASH: '/api/properties/trash',
     /** ADR-329 §3.9 — λίστα αρχείου (ίδιες γραμμές με τον κάδο, άλλη κατάσταση) */
     ARCHIVED: '/api/properties/archived',
