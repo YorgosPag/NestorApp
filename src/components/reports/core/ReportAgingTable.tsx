@@ -57,8 +57,6 @@ export interface ReportAgingTableProps {
   colorScale?: boolean;
   /** Custom value formatter */
   formatValue?: (value: number) => string;
-  /** Click handler for rows */
-  onRowClick?: (row: AgingRow) => void;
   className?: string;
 }
 
@@ -93,7 +91,6 @@ export function ReportAgingTable({
   showCounts = false,
   colorScale = true,
   formatValue: customFormat,
-  onRowClick,
   className,
 }: ReportAgingTableProps) {
   const { t } = useTranslation('reports');
@@ -146,11 +143,7 @@ export function ReportAgingTable({
           {data.map((row) => (
             <TableRow
               key={row.id}
-              className={cn(
-                onRowClick && 'cursor-pointer',
-                row.overdue && 'font-medium',
-              )}
-              onClick={() => onRowClick?.(row)}
+              className={cn(row.overdue && 'font-medium')}
             >
               <TableCell className="sticky left-0 z-10 bg-background font-medium">
                 {row.name}

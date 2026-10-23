@@ -20,6 +20,7 @@
 | 2026-03-28 | Phase 11 | Construction — API route `/api/reports/construction`, `useConstructionReport` hook, 4 section components (ConstructionKPIs, MilestoneCompletionChart, PhaseProgressChart, BOQCostBreakdownChart), EVM CPI/SPI per building, BOQ estimated vs actual, construction i18n keys (en+el) |
 | 2026-03-28 | Phase 12 | Compliance — API route `/api/reports/compliance`, `useComplianceReport` hook, 3 section components (ComplianceKPIs, AttendanceMethodChart, InsuranceClassChart), extended aggregator from stub to real queries (attendance_events+employment_records), compliance i18n keys (en+el) |
 | 2026-03-28 | Phase 13 | Export Center — `useExportCenter` hook, 2 section components (ExportDomainGrid, ExportStatusPanel), 9-domain card grid with PDF/Excel per domain, dynamic import of exporters, job status tracking, exportCenter i18n keys (en+el) |
+| 2026-10-23 | ADR-242 Βήμα 5 | `ReportTable`: `onRowClick` → `getRowHref` (σύνδεσμος `ENTITY_LINK_CLASS` στο πρώτο κελί, ποτέ `onClick`/`cursor-pointer` στο `<tr>`) + `getRowKey` (σταθερό key από `row.id`, όχι index). `ReportAgingTable`: αφαιρέθηκε το νεκρό `onRowClick`. |
 **Scope**: Full application reporting — all domains except DXF Viewer & Geo Canvas
 
 ---
