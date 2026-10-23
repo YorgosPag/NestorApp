@@ -60,10 +60,9 @@ export type ListingPlaceLink = PlaceRef;
  * Τρεις καταστάσεις (`ready` · `scheduled` · `unknown`) αντί για το παλιό διφορούμενο
  * `from: null` («ήδη διαθέσιμο» **ή** «άγνωστο»).
  *
- * 🔶 **ΔΗΛΩΜΕΝΟ ΚΕΝΟ, με όνομα** (ADR-777 §8.99.2): κανένας παραγωγός δεν το γεμίζει ακόμη,
- * όλοι δίνουν `LISTING_AVAILABILITY_UNKNOWN`. Η άντληση από το έργο είναι τα βήματα 2–4 του
- * §8.99.4· η **μηχανή** είναι έτοιμη να τη δεχτεί, και λέει το `unknown` **ονομαστικά**
- * (`availability-unknown`) αντί να υποθέσει «διαθέσιμο πάντα».
+ * ✅ **Οι παραγωγοί τη διαβάζουν από την αγγελία** (`PublicListing.availability`, ADR-919 βήμα 4)·
+ * τη λύνει ο **ένας** επιλυτής `lib/listings/listing-availability.ts`. Όπου το έργο σιωπά μένει
+ * `unknown`, και η μηχανή το λέει **ονομαστικά** (`availability-unknown`) αντί να υποθέσει «διαθέσιμο».
  */
 export type ListingAvailability = ListingAvailabilityFact;
 

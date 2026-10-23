@@ -22,14 +22,14 @@
  * ────────────────────────────────────────────────────────────────────────────
  *
  * Η μηχανή δέχεται {@link ListingMatchFacts}: αγγελία **+** δεσμό προς το επίπεδο Α
- * **+** διαθεσιμότητα **+** μετρημένες αποστάσεις γειτονιάς. Από τα τέσσερα, σήμερα
- * υπάρχει **ένα**:
+ * **+** διαθεσιμότητα **+** μετρημένες αποστάσεις γειτονιάς. *(Ο πίνακας είναι η αρχική
+ * μέτρηση· ο δεσμός και η διαθεσιμότητα έκλεισαν αργότερα — δες {@link knowledgeFromListings}.)*
  *
  * | Είσοδος | Κατάσταση σήμερα | Τι λέει η μηχανή |
  * |---|---|---|
  * | αγγελία | ✅ `public_listings` | — |
  * | δεσμός επιπέδου Α | ❌ **άδειο** (`public_lands`/`public_buildings`) | `place-unresolved` |
- * | διαθεσιμότητα | ❌ δεν αντλείται ακόμη από το έργο (ADR-919 · §8.99.4) | `availability-unknown` |
+ * | διαθεσιμότητα | ✅ `PublicListing.availability` (ADR-919 βήμα 4) — `unknown` όπου το έργο σιωπά | `availability-unknown` |
  * | αποστάσεις POI | ❌ λείπει το ερώτημα Overpass | `proximity-unknown` |
  *
  * ⚠️ **Και τα τρία κενά είναι ΚΑΤΗΓΟΡΙΚΑ εμπόδια, δηλαδή `no-match`.** Άρα μια ζήτηση
@@ -48,7 +48,6 @@
  */
 
 import type { PublicListing } from '@/types/public-listing';
-import { LISTING_AVAILABILITY_UNKNOWN } from '@/types/listing-availability';
 import type { PropertyDemand } from '@/types/property-demand';
 import { discloseCompetition, type DemandDisclosure } from './demand-aggregate';
 import {
@@ -77,7 +76,7 @@ import { axesLostProjectingDemand, type DemandAxisLostInFilters } from './demand
  */
 export interface ListingKnowledge {
   readonly places: ReadonlyMap<string, ListingMatchFacts['place']>;
-  readonly availability: ReadonlyMap<string, ListingMatchFacts['availability']>;
+  // ⛔ ΟΧΙ χάρτης διαθεσιμότητας: ζει ΣΤΗΝ αγγελία (ADR-919 βήμα 4) — ένας χάρτης εδώ θα ήταν δεύτερη πηγή.
   readonly proximityMetres: ReadonlyMap<string, ListingMatchFacts['proximityMetres']>;
 }
 
@@ -90,7 +89,6 @@ export interface ListingKnowledge {
  */
 export const NO_LISTING_KNOWLEDGE: ListingKnowledge = {
   places: new Map(),
-  availability: new Map(),
   proximityMetres: new Map(),
 };
 
@@ -106,9 +104,11 @@ export const NO_LISTING_KNOWLEDGE: ListingKnowledge = {
  * **δεν μπαίνει** — άρα η μηχανή εξακολουθεί να λέει `place-unresolved` **γι' αυτήν**,
  * ονομαστικά. Το κενό δεν εξαφανίστηκε· έπαψε να είναι **καθολικό**.
  *
- * ⚠️ **Τα άλλα δύο κενά μένουν, με τα ονόματά τους** — διαθεσιμότητα (θέλει άντληση
- * από BIM) και αποστάσεις γειτονιάς (θέλει ερώτημα Overpass ανά αγγελία). Ένας κενός
- * `Map` για αυτά λέει *«δεν ρωτήσαμε»*, ποτέ *«δεν υπάρχει»*.
+ * ✅ **Το δεύτερο έκλεισε (ADR-919 βήμα 4)**: η διαθεσιμότητα είναι πεδίο της αγγελίας και
+ * διαβάζεται απευθείας από το {@link listingFactsFrom}.
+ *
+ * ⚠️ **Το τρίτο κενό μένει, με το όνομά του** — αποστάσεις γειτονιάς (θέλει ερώτημα
+ * Overpass ανά αγγελία). Ένας κενός `Map` λέει *«δεν ρωτήσαμε»*, ποτέ *«δεν υπάρχει»*.
  */
 export function knowledgeFromListings(
   listings: readonly PublicListing[],
@@ -118,7 +118,7 @@ export function knowledgeFromListings(
     if (listing.place !== null) places.set(listing.id, listing.place);
   }
 
-  return { places, availability: new Map(), proximityMetres: new Map() };
+  return { places, proximityMetres: new Map() };
 }
 
 /** Αγγελίες + γνώση → οι είσοδοι της μηχανής. */
@@ -129,8 +129,8 @@ export function listingFactsFrom(
   return listings.map((listing) => ({
     listing,
     place: knowledge.places.get(listing.id) ?? null,
-    // Απών από τον χάρτη = «δεν ρωτήσαμε» ⇒ η ονομασμένη άγνοια, ποτέ «διαθέσιμο».
-    availability: knowledge.availability.get(listing.id) ?? LISTING_AVAILABILITY_UNKNOWN,
+    // Η αγγελία πέρασε από το σύνορο ανάγνωσης (κρίκος 25): παλιό έγγραφο ⇒ `unknown`, ποτέ «διαθέσιμο».
+    availability: listing.availability,
     // ⚠️ Κενός χάρτης = «δεν ρωτήσαμε **κανένα** είδος», που η μηχανή διαβάζει ως
     // `proximity-unknown` **ανά απαίτηση**. Είναι διαφορετικό από «δεν υπάρχει κοντά».
     proximityMetres: knowledge.proximityMetres.get(listing.id) ?? {},

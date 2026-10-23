@@ -49,7 +49,6 @@ import {
 import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import type { OwnerProperty } from '@/types/owner-property';
 import type { ListingMatchFacts } from '@/lib/demand/demand-match-vocabulary';
-import { LISTING_AVAILABILITY_UNKNOWN } from '@/types/listing-availability';
 import type { PlaceSource } from '@/constants/place-sources';
 
 // =============================================================================
@@ -201,16 +200,14 @@ export async function companyPropertyFactsOf(
  * ⛔ **Το αποτέλεσμα ΔΕΝ γράφεται πουθενά.** Είναι εφήμερο, στη μνήμη του διακομιστή,
  * και βγαίνει από εδώ **μόνο** ως λογοκριμένο πλήθος.
  *
- * 🔶 **Τα δύο δηλωμένα κενά ταξιδεύουν ανοιχτά** (`availability` · `proximityMetres`):
- * η διαθεσιμότητα δεν αντλείται ακόμη από το BIM και οι αποστάσεις POI δεν μετρώνται.
- * Η μηχανή τα λέει **ονομαστικά** (`availability-unknown` / `proximity-unknown`) αντί
- * να υποθέσει — και γι' αυτό **δεν** γεμίζονται εδώ με εικασίες.
+ * ✅ **Η διαθεσιμότητα έρχεται από την ίδια την προβολή** (ADR-919 βήμα 4): το
+ * `projectListingShape` τη λύνει με τον **έναν** επιλυτή, άρα ο ιδιοκτήτης βλέπει την ίδια
+ * τιμή που θα έβλεπε ο αγοραστής αν δημοσίευε.
+ *
+ * 🔶 **Το δηλωμένο κενό ταξιδεύει ανοιχτά** (`proximityMetres`): οι αποστάσεις POI δεν
+ * μετρώνται, και η μηχανή το λέει **ονομαστικά** (`proximity-unknown`) αντί να υποθέσει.
  */
 export function factsOfProjection({ property, place, at }: OwnedProjectionInput): ListingMatchFacts {
-  return {
-    listing: projectListingShape(property, place, at),
-    place: place.ref,
-    availability: LISTING_AVAILABILITY_UNKNOWN,
-    proximityMetres: {},
-  };
+  const listing = projectListingShape(property, place, at);
+  return { listing, place: place.ref, availability: listing.availability, proximityMetres: {} };
 }

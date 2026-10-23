@@ -48,7 +48,6 @@ import 'server-only';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import type { ListingMatchFacts } from '@/lib/demand/demand-match-vocabulary';
-import { LISTING_AVAILABILITY_UNKNOWN } from '@/types/listing-availability';
 import {
   familyOfListingId,
   LISTING_FAMILY,
@@ -281,9 +280,11 @@ function agencyCustodyOf(
  * ήταν **δεύτερο**, και το `public-listing-projection.ts` προειδοποιεί ρητά ότι τα
  * δύο θα διαφωνούσαν **ακριβώς στην αντιπαροχή**.
  *
- * 🔶 **Τα δύο δηλωμένα κενά ταξιδεύουν ΑΝΟΙΧΤΑ** (`availability` · `proximityMetres`):
- * δεν αντλούνται σήμερα και **δεν** γεμίζονται με εικασία — ένα εμπόδιο **άγνοιας**
- * είναι δικό μας χρέος, όχι αστοχία της αγγελίας.
+ * ✅ **Η διαθεσιμότητα είναι της ΑΓΓΕΛΙΑΣ** (ADR-919 βήμα 4): τη λύνει **ο ίδιος**
+ * επιλυτής μέσα στην προβολή, άρα εδώ **διαβάζεται**, δεν ξαναϋπολογίζεται.
+ *
+ * 🔶 **Το δηλωμένο κενό ταξιδεύει ΑΝΟΙΧΤΑ** (`proximityMetres`): δεν αντλείται σήμερα
+ * και **δεν** γεμίζεται με εικασία — ένα εμπόδιο **άγνοιας** είναι δικό μας χρέος.
  */
 function factsOf(
   property: ProjectableProperty,
@@ -293,5 +294,5 @@ function factsOf(
   const listing = buildPublicListing(property, place, nowISO);
   if (listing === null) return null;
 
-  return { listing, place: place.ref, availability: LISTING_AVAILABILITY_UNKNOWN, proximityMetres: {} };
+  return { listing, place: place.ref, availability: listing.availability, proximityMetres: {} };
 }

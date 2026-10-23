@@ -24,7 +24,7 @@ import {
 import type { PropertyDemand } from '@/types/property-demand';
 import type { PublicListing } from '@/types/public-listing';
 import { NOW_ISO, TODAY, demand, listing, seek } from './demand-fixtures';
-import { LISTING_AVAILABILITY_UNKNOWN } from '@/types/listing-availability';
+import { LISTING_AVAILABILITY_READY, LISTING_AVAILABILITY_UNKNOWN } from '@/types/listing-availability';
 import { scheduledAvailability } from '@/lib/listings/availability-window';
 
 /** Συντομογραφία: ζήτηση + αγγελίες + **μηδέν** γνώση (η σημερινή πραγματικότητα). */
@@ -241,19 +241,16 @@ describe('🔶 τα τρία δηλωμένα κενά είναι ΟΡΑΤΑ, ό
     expect(answer(d, [listing()]).matchedCount).toBe(0);
   });
 
-  it('όταν η γνώση **υπάρχει**, το ίδιο κενό γίνεται ταίριασμα', () => {
+  it('ADR-919 βήμα 4 — η διαθεσιμότητα της ΑΓΓΕΛΙΑΣ γίνεται ταίριασμα', () => {
     const d = demand({ timing: { kind: 'window', fromDate: '2027-01-01', toDate: '2027-12-31' } });
-    const result = answerDemand({
-      demand: d,
-      listings: [listing()],
-      knowledge: {
-        ...NO_LISTING_KNOWLEDGE,
-        availability: new Map([['prop_1', scheduledAvailability('month', '2027-03-01')]]),
-      },
-      otherDemands: [],
-      todayDate: TODAY,
-      nowIso: NOW_ISO,
-    });
+    const result = answer(d, [listing({ availability: scheduledAvailability('month', '2027-03-01') })]);
     expect(result.matchedCount).toBe(1);
+  });
+
+  it('ADR-919 βήμα 4 — `ready` στην αγγελία ⇒ ταιριάζει σε ζήτηση «Τώρα»', () => {
+    const d = demand({ timing: { kind: 'now' } });
+    const [built] = listingFactsFrom([listing({ availability: LISTING_AVAILABILITY_READY })], NO_LISTING_KNOWLEDGE);
+    expect(built.availability).toEqual(LISTING_AVAILABILITY_READY);
+    expect(answer(d, [listing({ availability: LISTING_AVAILABILITY_READY })]).matchedCount).toBe(1);
   });
 });
