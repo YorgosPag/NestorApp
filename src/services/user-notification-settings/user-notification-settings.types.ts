@@ -166,6 +166,14 @@ export interface PropertiesNotificationSettings {
    */
   demandPriceDrop: boolean;
   /**
+   * 🎯 ADR-919 §10 — «άλλαξε η **δημόσια υπόσχεση παράδοσης** αγγελίας που ξέρεις, και η ζήτησή σου έχασε ή
+   * κέρδισε το ταίρι».
+   *
+   * ⚠️ **Προεπιλογή `true`, ίδιος κανόνας με το `demandPriceDrop`**: φτάνει μόνο σε όποιον ήδη ξέρει την αγγελία και
+   * του άλλαξε η απάντηση, άρα είναι είδηση που αλλάζει απόφαση. Ο χρήστης το κλείνει από τις ρυθμίσεις.
+   */
+  demandAvailabilityChange: boolean;
+  /**
    * 🎯 ADR-777 §8.34 — «**ο Κώστας ενέκρινε**» / «**ο Κώστας αρνήθηκε**».
    *
    * ⚠️ **Προεπιλογή `true`, με τον ίδιο κανόνα**: ειδοποίησε για ό,τι ο χρήστης
@@ -490,6 +498,7 @@ export const DEFAULT_PROPERTIES_SETTINGS: PropertiesNotificationSettings = {
   demandInterest: true,
   demandListingMatch: true,
   demandPriceDrop: true,
+  demandAvailabilityChange: true,
   mandateDecided: true,
   ownershipVerificationDecided: true,
   mandateRequestAnswered: true,

@@ -331,6 +331,7 @@
       "outside-radius": "Outside the radius",
       "outside-area": "Outside the area you drew",
       "not-available-then": "Not available in the period you asked for",
+      "earliestDelivery": "The earliest is delivered {promise}, after your period.",
       "proximity-too-far": "Farther away than you asked",
       "wrong-side": "It is on the other side of the street",
       "side-unresolved": "We do not know yet which side of the street it is on",
@@ -2679,6 +2680,23 @@
       "revoked": "The invitation is no longer valid — it was replaced by a newer one or the sale was cancelled. If you received a newer email, use that one.",
       "wrong-recipient": "The invitation is addressed to another email address. Sign in with the account of the address that received it.",
       "handover-closed": "The handover is no longer open for this invitation — the sale was cancelled or the file has already been handed over. Please contact the company."
+    }
+  },
+  "terrainPublication": {
+    "refusals": {
+      "TERRAIN_SOURCE_REQUIRED": "No survey was sent — choose the file again and retry",
+      "TERRAIN_TYPE_UNSUPPORTED": "The survey was not sent in the format the server accepts — reload the page and try again",
+      "TERRAIN_SOURCE_EMPTY": "The survey arrived empty — check that you chose the right file",
+      "TERRAIN_SOURCE_TOO_LARGE": "The survey is larger than {maxMegabytes} MB — thin out the points and try again",
+      "TERRAIN_SOURCE_MALFORMED": "The survey data cannot be read or exceeds the limits (up to {maxPoints} points) — check the file and its coordinate columns",
+      "TERRAIN_DECLARATION_INVALID": "The declaration is incomplete — fill in the surveyor and the survey date, and confirm you have the right to publish",
+      "TERRAIN_SURVEY_DATE_IN_FUTURE": "The survey date is in the future — correct it and try again",
+      "TERRAIN_NOT_LAND": "Terrain relief is published only for plots and land parcels",
+      "TERRAIN_INSUFFICIENT_SURFACE": "The points do not form a ground surface — at least three points with elevation are needed, not all on one line",
+      "TERRAIN_EMPTY_AFTER_CLIP": "No part of the terrain falls inside the plot boundary — check that boundary and points share the same coordinate system",
+      "TERRAIN_TOO_DENSE": "The relief comes out above {maxTriangles} triangles — thin out the points and try again",
+      "TERRAIN_PUBLICATION_NOT_CAPABLE": "You do not have permission to publish material to listings",
+      "TERRAIN_UPLOAD_FAILED": "Saving the survey failed on the server — try again"
     }
   }
 }

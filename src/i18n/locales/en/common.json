@@ -1167,5 +1167,9 @@
       "mac": "Use ⌘ + scroll to zoom the map",
       "mobile": "Use two fingers to move the map"
     }
+  },
+  "listingAvailability": {
+    "deliveryOn": "Delivery {promise}",
+    "readyNow": "Available now"
   }
 }

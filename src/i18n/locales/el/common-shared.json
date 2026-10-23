@@ -788,6 +788,17 @@
     "namedTitleMany": "Μειώθηκε η τιμή αγγελίας για «{demand}» και {others, plural, one {# ακόμη ζήτηση} other {# ακόμη ζητήσεις}}: «{title}»",
     "intoBudgetNamedTitle": "Μπήκε στον προϋπολογισμό της ζήτησης «{demand}»: «{title}»"
   },
+  "demandAvailabilityChange": {
+    "lostTitle": "Η παράδοση αγγελίας άλλαξε και δεν ταιριάζει πια στη ζήτηση «{demand}»: «{title}»",
+    "lostTitleMany": "Η παράδοση αγγελίας άλλαξε και δεν ταιριάζει πια στη «{demand}» και σε {others, plural, one {# ακόμη ζήτηση} other {# ακόμη ζητήσεις}}: «{title}»",
+    "gainedTitle": "Η παράδοση αγγελίας άλλαξε και ταιριάζει ξανά στη ζήτηση «{demand}»: «{title}»",
+    "gainedTitleMany": "Η παράδοση αγγελίας άλλαξε και ταιριάζει ξανά στη «{demand}» και σε {others, plural, one {# ακόμη ζήτηση} other {# ακόμη ζητήσεις}}: «{title}»"
+  },
+  "listingAvailability": {
+    "quarter": "{ordinal} τρίμηνο {year}",
+    "quarterOrdinals": { "1": "Α΄", "2": "Β΄", "3": "Γ΄", "4": "Δ΄" }
+  },
+
   "mandateDecision": {
     "confirmedTitle": "Ο/Η {client} ενέκρινε την εντολή για «{title}»",
     "declinedTitle": "Ο/Η {client} αρνήθηκε την εντολή για «{title}»",

@@ -788,6 +788,17 @@
     "namedTitleMany": "Price reduced on a listing for “{demand}” and {others, plural, one {# other demand} other {# other demands}}: “{title}”",
     "intoBudgetNamedTitle": "Now within the budget of your demand “{demand}”: “{title}”"
   },
+  "demandAvailabilityChange": {
+    "lostTitle": "A listing’s delivery date changed and it no longer fits your demand “{demand}”: “{title}”",
+    "lostTitleMany": "A listing’s delivery date changed and it no longer fits “{demand}” and {others, plural, one {# other demand} other {# other demands}}: “{title}”",
+    "gainedTitle": "A listing’s delivery date changed and it fits your demand “{demand}” again: “{title}”",
+    "gainedTitleMany": "A listing’s delivery date changed and it fits “{demand}” and {others, plural, one {# other demand} other {# other demands}} again: “{title}”"
+  },
+  "listingAvailability": {
+    "quarter": "Q{ordinal} {year}",
+    "quarterOrdinals": { "1": "1", "2": "2", "3": "3", "4": "4" }
+  },
+
   "mandateDecision": {
     "confirmedTitle": "{client} approved the mandate for “{title}”",
     "declinedTitle": "{client} declined the mandate for “{title}”",

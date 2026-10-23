@@ -63,6 +63,7 @@
         "bedrooms-below": "Λιγότερα υπνοδωμάτια",
         "bedrooms-undeclared": "Δεν έχει δηλωθεί αριθμός υπνοδωματίων",
         "count": "{count}",
+        "earliestDelivery": "Η νωρίτερη παραδίδεται {promise}, μετά το διάστημά σου.",
         "floor-outside": "Όροφος εκτός εύρους",
         "floor-undeclared": "Δεν έχει δηλωθεί όροφος",
         "heading": "Τι τις σταμάτησε",

@@ -2082,6 +2082,10 @@
       "typeFilterAriaLabel": "Φίλτρο τύπου",
       "typePlaceholder": "Τύπος"
     },
+    "listingAvailability": {
+      "deliveryOn": "Παράδοση {promise}",
+      "readyNow": "Άμεσα διαθέσιμο"
+    },
     "loading": {
       "ariaLabel": "Φόρτωση σελίδας",
       "content": "Φόρτωση περιεχομένου",
