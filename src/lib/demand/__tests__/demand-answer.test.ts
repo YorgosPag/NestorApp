@@ -24,6 +24,8 @@ import {
 import type { PropertyDemand } from '@/types/property-demand';
 import type { PublicListing } from '@/types/public-listing';
 import { NOW_ISO, TODAY, demand, listing, seek } from './demand-fixtures';
+import { LISTING_AVAILABILITY_UNKNOWN } from '@/types/listing-availability';
+import { scheduledAvailability } from '@/lib/listings/availability-window';
 
 /** Συντομογραφία: ζήτηση + αγγελίες + **μηδέν** γνώση (η σημερινή πραγματικότητα). */
 function answer(d: PropertyDemand, listings: readonly PublicListing[], others: readonly PropertyDemand[] = []) {
@@ -225,10 +227,10 @@ describe('🔴 Λ — δύο ανεξάρτητα αθροίσματα, και �
 // =============================================================================
 
 describe('🔶 τα τρία δηλωμένα κενά είναι ΟΡΑΤΑ, όχι υποτιθέμενα', () => {
-  it('`NO_LISTING_KNOWLEDGE` δίνει `null` σε place/availability και κενό σε proximity', () => {
+  it('`NO_LISTING_KNOWLEDGE` δίνει `null` σε place, `unknown` σε availability και κενό σε proximity', () => {
     const [built] = listingFactsFrom([listing()], NO_LISTING_KNOWLEDGE);
     expect(built.place).toBeNull();
-    expect(built.availability).toBeNull();
+    expect(built.availability).toEqual(LISTING_AVAILABILITY_UNKNOWN);
     expect(built.proximityMetres).toEqual({});
   });
 
@@ -246,7 +248,7 @@ describe('🔶 τα τρία δηλωμένα κενά είναι ΟΡΑΤΑ, ό
       listings: [listing()],
       knowledge: {
         ...NO_LISTING_KNOWLEDGE,
-        availability: new Map([['prop_1', { from: '2027-03-01', to: null }]]),
+        availability: new Map([['prop_1', scheduledAvailability('month', '2027-03-01')]]),
       },
       otherDemands: [],
       todayDate: TODAY,

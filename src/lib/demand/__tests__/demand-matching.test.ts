@@ -51,6 +51,11 @@ import {
 import type { PublicListing } from '@/types/public-listing';
 import type { StayPetPolicy } from '@/types/property-offers';
 import { IGNORANCE_BLOCKERS } from '../demand-answer';
+import {
+  LISTING_AVAILABILITY_READY,
+  LISTING_AVAILABILITY_UNKNOWN,
+} from '@/types/listing-availability';
+import { scheduledAvailability } from '@/lib/listings/availability-window';
 
 // =============================================================================
 // ΒΟΗΘΗΤΙΚΑ
@@ -162,8 +167,8 @@ describe('🔴 Θ — `match` ⇒ τα προβεβλημένα φίλτρα Τ�
     }),
     facts({ place: { landId: 'land_1', buildingId: 'pbld_1' } }),
     facts({ place: { landId: 'land_other', buildingId: null } }),
-    facts({ availability: { from: '2027-06-01', to: null } }),
-    facts({ availability: { from: null, to: '2026-12-31' } }),
+    facts({ availability: scheduledAvailability('month', '2027-06-01') }),
+    facts({ availability: LISTING_AVAILABILITY_READY }),
     facts({ proximityMetres: { school: 200 } }),
     facts({ proximityMetres: { school: 900 } }),
   ];
@@ -194,7 +199,7 @@ describe('🔴 Θ — `match` ⇒ τα προβεβλημένα φίλτρα Τ�
     // Αν ίσχυε και η αντίστροφη, η προβολή δεν θα έχανε τίποτα — και τότε ολόκληρη
     // η λίστα `DEMAND_AXES_LOST_IN_FILTERS` θα ήταν ψεύτικη.
     const d = demand({ timing: { kind: 'window', fromDate: '2027-01-01', toDate: '2027-03-31' } });
-    const f = facts({ availability: { from: '2028-01-01', to: null } });
+    const f = facts({ availability: scheduledAvailability('quarter', '2028-01-01') });
 
     expect(matchesListingFilters(f.listing, listingFiltersFromDemand(d))).toBe(true);
     expect(matchDemandAgainstListing(d, f, TODAY).verdict).not.toBe('match');
@@ -230,7 +235,7 @@ describe('🔴 Ζ — κάθε εμπόδιο πυροδοτεί σε πραγμ
     [
       'availability-unknown',
       demand({ timing: { kind: 'window', fromDate: '2027-01-01', toDate: '2027-12-31' } }),
-      facts({ availability: null }),
+      facts({ availability: LISTING_AVAILABILITY_UNKNOWN }),
     ],
     [
       'proximity-unknown',
@@ -361,7 +366,7 @@ describe('🔴 Ζ — κάθε εμπόδιο πυροδοτεί σε πραγμ
     [
       'not-available-then',
       demand({ timing: { kind: 'window', fromDate: '2027-01-01', toDate: '2027-06-30' } }),
-      facts({ availability: { from: '2029-01-01', to: null } }),
+      facts({ availability: scheduledAvailability('quarter', '2029-01-01') }),
     ],
     [
       'proximity-too-far',
@@ -557,33 +562,60 @@ describe('🔴 Λ — κλειστή λογιστική στα αποτελέσ�
 // Χ — Ο ΧΡΟΝΟΣ (Ζ2) — ο άξονας που δεν έχει κανένα portal
 // =============================================================================
 
-describe('Χ — ο τέταρτος άξονας', () => {
-  it('«όποτε κι αν βγει» δεν κοιτάζει καθόλου διαθεσιμότητα', () => {
+describe('Χ — ο τέταρτος άξονας (ADR-919: ready · scheduled · unknown)', () => {
+  const NOW = { kind: 'now' } as const;
+  const WINDOW_2027 = { kind: 'window', fromDate: '2027-06-01', toDate: '2027-12-31' } as const;
+
+  /** Τα εμπόδια του χρόνου μόνο — οι άλλοι άξονες είναι ουδέτεροι στα fixtures. */
+  function timingVerdict(
+    timing: PropertyDemand['timing'],
+    availability: ListingMatchFacts['availability'],
+  ): readonly DemandBlocker[] {
+    const blockers = matchDemandAgainstListing(demand({ timing }), facts({ availability }), TODAY).blockers;
+    return blockers.filter((b) => b === 'availability-unknown' || b === 'not-available-then');
+  }
+
+  it('«όποτε κι αν βγει» δεν κοιτάζει καθόλου διαθεσιμότητα — ούτε το `unknown`', () => {
     const d = demand({ timing: { kind: 'whenever' } });
-    expect(matchDemandAgainstListing(d, facts({ availability: null })).verdict).toBe('match');
+    expect(matchDemandAgainstListing(d, facts({ availability: LISTING_AVAILABILITY_UNKNOWN })).verdict).toBe('match');
   });
 
-  it('«τώρα» δέχεται αγγελία χωρίς δηλωμένη διαθεσιμότητα (είναι ήδη στην αγορά)', () => {
-    const d = demand({ timing: { kind: 'now' } });
-    expect(matchDemandAgainstListing(d, facts({ availability: null })).verdict).toBe('match');
+  it('`ready` ταιριάζει στο «τώρα» ΚΑΙ σε κάθε διάστημα (Δ4)', () => {
+    expect(timingVerdict(NOW, LISTING_AVAILABILITY_READY)).toEqual([]);
+    expect(timingVerdict(WINDOW_2027, LISTING_AVAILABILITY_READY)).toEqual([]);
   });
 
-  it('🔴 «τώρα» ΑΠΟΡΡΙΠΤΕΙ αγγελία που ελευθερώνεται στο μέλλον', () => {
-    const d = demand({ timing: { kind: 'now' } });
-    const f = facts({ availability: { from: '2029-01-01', to: null } });
-    expect(matchDemandAgainstListing(d, f, TODAY).blockers).toContain('not-available-then');
+  it('🔴 `unknown` ΔΕΝ είναι «διαθέσιμο» — ούτε στο «τώρα»', () => {
+    // Παλιότερα το «τώρα» δεχόταν κάθε αγγελία χωρίς δήλωση, μαζί και όσες ακόμη χτίζονται.
+    expect(timingVerdict(NOW, LISTING_AVAILABILITY_UNKNOWN)).toEqual(['availability-unknown']);
+    expect(timingVerdict(WINDOW_2027, LISTING_AVAILABILITY_UNKNOWN)).toEqual(['availability-unknown']);
   });
 
-  it('🔑 παράθυρο που ΕΠΙΚΑΛΥΠΤΕΤΑΙ μερικώς → ταιριάζει (§12.3: πουλάει πριν χτίσει)', () => {
-    const d = demand({ timing: { kind: 'window', fromDate: '2027-06-01', toDate: '2027-12-31' } });
-    const f = facts({ availability: { from: '2027-09-01', to: null } });
-    expect(matchDemandAgainstListing(d, f, TODAY).verdict).toBe('match');
+  it('🔴 «τώρα» ΑΠΟΡΡΙΠΤΕΙ αγγελία που παραδίδεται στο μέλλον', () => {
+    expect(timingVerdict(NOW, scheduledAvailability('quarter', '2029-01-01'))).toEqual(['not-available-then']);
   });
 
-  it('παράθυρο που ΔΕΝ επικαλύπτεται → not-available-then', () => {
-    const d = demand({ timing: { kind: 'window', fromDate: '2027-01-01', toDate: '2027-03-31' } });
-    const f = facts({ availability: { from: null, to: '2026-12-31' } });
-    expect(matchDemandAgainstListing(d, f, TODAY).blockers).toContain('not-available-then');
+  it('«τώρα» δέχεται `scheduled` που έχει ήδη λήξει ολόκληρο', () => {
+    expect(timingVerdict(NOW, scheduledAvailability('month', '2026-07-15'))).toEqual([]);
+  });
+
+  it('🔑 το `scheduled` κρίνεται με το ΤΕΛΟΣ του διαστήματος (Δ2), όχι με την αρχή', () => {
+    // Δ' τρίμηνο 2027 = 2027-10-01…2027-12-31: η αρχή χωράει σε ζήτηση «ως 30/11», το τέλος όχι.
+    const q4 = scheduledAvailability('quarter', '2027-11-10');
+    const untilNovember = { kind: 'window', fromDate: '2027-06-01', toDate: '2027-11-30' } as const;
+    expect(timingVerdict(untilNovember, q4)).toEqual(['not-available-then']);
+    // Ως το τέλος του τριμήνου → σίγουρα έτοιμο → ταιριάζει.
+    expect(timingVerdict(WINDOW_2027, q4)).toEqual([]);
+    // Η ίδια ημέρα με ακρίβεια ημέρας ταιριάζει και στη στενότερη ζήτηση.
+    expect(timingVerdict(untilNovember, scheduledAvailability('day', '2027-11-10'))).toEqual([]);
+  });
+
+  it('🔑 παράδοση ΠΡΙΝ από το διάστημα της ζήτησης → ταιριάζει (μένει διαθέσιμο)', () => {
+    expect(timingVerdict(WINDOW_2027, scheduledAvailability('month', '2027-03-01'))).toEqual([]);
+  });
+
+  it('παράδοση ΜΕΤΑ το διάστημα της ζήτησης → not-available-then', () => {
+    expect(timingVerdict(WINDOW_2027, scheduledAvailability('quarter', '2028-02-01'))).toEqual(['not-available-then']);
   });
 });
 

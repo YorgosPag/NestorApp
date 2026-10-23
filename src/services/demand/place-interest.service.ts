@@ -49,6 +49,7 @@ import {
 import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import type { OwnerProperty } from '@/types/owner-property';
 import type { ListingMatchFacts } from '@/lib/demand/demand-match-vocabulary';
+import { LISTING_AVAILABILITY_UNKNOWN } from '@/types/listing-availability';
 import type { PlaceSource } from '@/constants/place-sources';
 
 // =============================================================================
@@ -209,7 +210,7 @@ export function factsOfProjection({ property, place, at }: OwnedProjectionInput)
   return {
     listing: projectListingShape(property, place, at),
     place: place.ref,
-    availability: null,
+    availability: LISTING_AVAILABILITY_UNKNOWN,
     proximityMetres: {},
   };
 }

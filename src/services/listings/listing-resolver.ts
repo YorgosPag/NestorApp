@@ -48,6 +48,7 @@ import 'server-only';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import type { ListingMatchFacts } from '@/lib/demand/demand-match-vocabulary';
+import { LISTING_AVAILABILITY_UNKNOWN } from '@/types/listing-availability';
 import {
   familyOfListingId,
   LISTING_FAMILY,
@@ -292,5 +293,5 @@ function factsOf(
   const listing = buildPublicListing(property, place, nowISO);
   if (listing === null) return null;
 
-  return { listing, place: place.ref, availability: null, proximityMetres: {} };
+  return { listing, place: place.ref, availability: LISTING_AVAILABILITY_UNKNOWN, proximityMetres: {} };
 }

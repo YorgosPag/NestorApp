@@ -25,6 +25,7 @@ import {
 import type { OfferKind } from '@/types/property-offers';
 import { UNASKED_LISTING_ATTRIBUTES, type PublicListing } from '@/types/public-listing';
 import type { ListingMatchFacts } from '../demand-match-vocabulary';
+import { LISTING_AVAILABILITY_UNKNOWN } from '@/types/listing-availability';
 import { UNDECLARED_LISTING_OBJECTIVE_VALUE } from '@/lib/objective-value/objective-value-declarations';
 
 /** Η σταθερή «σήμερα» όλων των σουιτών ζήτησης. */
@@ -127,14 +128,14 @@ export function listing(overrides: Partial<PublicListing> = {}): PublicListing {
  * Τα γεγονότα γύρω από την αγγελία — **και τα τρία κενά ανοιχτά** από προεπιλογή.
  *
  * ⚠️ Αυτή είναι η **σημερινή, μετρημένη** κατάσταση παραγωγής: το επίπεδο Α είναι
- * άδειο, η διαθεσιμότητα δεν αντλείται, οι αποστάσεις POI δεν μετρώνται. Ένα fixture
+ * άδειο, η διαθεσιμότητα δεν αντλείται (`unknown`), οι αποστάσεις POI δεν μετρώνται. Ένα fixture
  * που τα γέμιζε «για ευκολία» θα δοκίμαζε τη μηχανή σε κόσμο που **δεν υπάρχει**.
  */
 export function facts(overrides: Partial<ListingMatchFacts> = {}): ListingMatchFacts {
   return {
     listing: listing(),
     place: null,
-    availability: null,
+    availability: LISTING_AVAILABILITY_UNKNOWN,
     proximityMetres: {},
     ...overrides,
   };
