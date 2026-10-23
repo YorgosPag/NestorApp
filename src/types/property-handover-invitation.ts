@@ -23,6 +23,11 @@ export interface PropertyHandoverInvitation extends InvitationRecordCore {
   /** Ο αγοραστής ως επαφή του γραφείου — για τα ίχνη· η δέσμευση γίνεται με το email (ADR-853 §7.5). */
   readonly contactId: string;
   readonly occasion: PropertyHandoverInvitationOccasion;
+  /**
+   * Φ-Δ.3 — η πρόσκληση που **αντικατέστησε** αυτή (το κάτοπτρο της παράδοσης τη στιγμή της έκδοσης) · `null` στην πρώτη.
+   * Η αλυσίδα είναι ορατή στο ίχνος: καμία νέα πρόσκληση δεν αντικαθιστά σιωπηλά την παλιά.
+   */
+  readonly supersedesInvitationId: string | null;
 }
 
 /**

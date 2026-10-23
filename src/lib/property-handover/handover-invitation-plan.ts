@@ -25,7 +25,12 @@ import {
   isHandoverInvitationExpired,
   isHandoverInvitationReminderDue,
 } from '@/config/property-handover-invitation-policy';
-import type { PropertyHandover, PropertyHandoverInvitationOccasion } from '@/types/property-handover';
+import type {
+  HandoverInvitationRenewalOffer,
+  HandoverInvitationRenewalRefusal,
+  PropertyHandover,
+  PropertyHandoverInvitationOccasion,
+} from '@/types/property-handover';
 
 /** Η πράξη **μέσα** στη συναλλαγή της παράδοσης. */
 export type HandoverInvitationIntent =
@@ -61,6 +66,45 @@ export function handoverInvitationIntentOf(handover: PropertyHandover, email: st
   }
   if (link.declinedAt !== null) return { kind: 'none' };
   return link.occasion === occasion ? { kind: 'none' } : { kind: 'issue', email, occasion };
+}
+
+// =============================================================================
+// Φ-Δ.3 (Ο9) — «ΝΕΑ ΠΡΟΣΚΛΗΣΗ» ΑΠΟ ΤΟ ΓΡΑΦΕΙΟ: ρητή πρόθεση, ΙΔΙΟΣ γραφέας (supersede)
+// =============================================================================
+
+/**
+ * **Το κουμπί ΚΑΙ η πόρτα** — η μία απάντηση στο «μπορεί το γραφείο να στείλει νέα;» (η καρτέλα το δείχνει, η πόρτα το
+ * επιβάλλει). Μόνο ό,τι **τερματίστηκε** χωρίς αποδοχή (έληξε · αρνήθηκε): σε ενεργή πρόσκληση η νέα θα ήταν spam, και
+ * το `no-address` / `undeliverable` θεραπεύονται στο email της επαφής (τότε η συμφιλίωση εκδίδει **μόνη** της). Αυτό είναι
+ * και το όριο ανά παραλήπτη: δομικό, όχι μετρητής — δεύτερη νέα πριν λήξει ή απαντηθεί η πρώτη **δεν υπάρχει**.
+ */
+export function handoverInvitationRenewalOfferOf(handover: PropertyHandover, nowValue: string): HandoverInvitationRenewalOffer {
+  const link = handover.invitation;
+  if (handover.recipient !== null || handover.lifecycle === 'cancelled' || link === null || link.status !== 'issued') return 'none';
+  if (link.declinedAt !== null) return 'renew-after-decline';
+  return isHandoverInvitationExpired(link.expiresAt, nowValue) ? 'renew' : 'none';
+}
+
+export type HandoverInvitationRenewal =
+  | Extract<HandoverInvitationIntent, { kind: 'issue' }>
+  | { readonly kind: 'refused'; readonly reason: Extract<HandoverInvitationRenewalRefusal, 'not-renewable' | 'declined-unconfirmed' | 'no-address'> };
+
+/**
+ * **Η κρίση της ρητής πρόθεσης** — `email` όπως στο {@link handoverInvitationIntentOf} (το **τρέχον**, κανονικοποιημένο).
+ * Η αφορμή είναι η **τρέχουσα** (`invitationOccasionOf`), όχι της παλιάς: μια πώληση που ολοκληρώθηκε στο μεταξύ λέει
+ * «ο φάκελός σας είναι έτοιμος».
+ */
+export function handoverInvitationRenewalOf(
+  handover: PropertyHandover,
+  email: string | null,
+  nowValue: string,
+  confirmDeclined: boolean,
+): HandoverInvitationRenewal {
+  const offer = handoverInvitationRenewalOfferOf(handover, nowValue);
+  if (offer === 'none') return { kind: 'refused', reason: 'not-renewable' };
+  if (offer === 'renew-after-decline' && !confirmDeclined) return { kind: 'refused', reason: 'declined-unconfirmed' };
+  if (email === null) return { kind: 'refused', reason: 'no-address' };
+  return { kind: 'issue', email, occasion: invitationOccasionOf(handover) };
 }
 
 // =============================================================================

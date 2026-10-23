@@ -38,6 +38,8 @@ const propertyHandoverInvitationSchema = z.object({
   handoverId: nonEmpty,
   contactId: nonEmpty,
   occasion: z.enum(PROPERTY_HANDOVER_INVITATION_OCCASIONS),
+  // Φ-Δ.3 — τα έγγραφα πριν από την αλυσίδα δεν έχουν το πεδίο: διαβάζονται ως «πρώτη».
+  supersedesInvitationId: nonEmpty.nullable().default(null),
 });
 
 /** Ωμό έγγραφο → `PropertyHandoverInvitation`, ή `null` αν δεν είναι πρόσκληση που καταλαβαίνουμε. */

@@ -61,6 +61,8 @@ export interface HandoverInvitationDraft {
   readonly contactId: string;
   readonly email: string;
   readonly occasion: PropertyHandoverInvitationOccasion;
+  /** Φ-Δ.3 — το `invitationId` του κατόπτρου τη στιγμή της έκδοσης (η πρόσκληση που αντικαθίσταται) · `null` στην πρώτη. */
+  readonly supersedesInvitationId: string | null;
   /** uid του δρώντα που προκάλεσε τη συμφιλίωση — `'system'` για το δίχτυ. */
   readonly actorUid: string;
   readonly nowValue: string;
@@ -84,6 +86,7 @@ export async function mintHandoverInvitation(draft: HandoverInvitationDraft): Pr
     handoverId: draft.handoverId,
     contactId: draft.contactId,
     occasion: draft.occasion,
+    supersedesInvitationId: draft.supersedesInvitationId,
   };
   return { invitation, token };
 }

@@ -238,12 +238,51 @@ export const HANDOVER_OFFICE_STEP_STATES = ['done', 'current', 'blocked', 'pendi
 
 export type HandoverOfficeStepState = (typeof HANDOVER_OFFICE_STEP_STATES)[number];
 
+/**
+ * **Φ-Δ.3 (Ο9) — μπορεί το γραφείο να στείλει νέα πρόσκληση;** Η ΙΔΙΑ τιμή κρίνει το κουμπί της καρτέλας **και** την πόρτα
+ * (`handoverInvitationRenewalOfferOf`) — η οθόνη δεν μπορεί να υποσχεθεί πράξη που ο διακομιστής θα αρνηθεί.
+ * - `renew` — η πρόσκληση έληξε χωρίς απάντηση
+ * - `renew-after-decline` — ο αγοραστής αρνήθηκε: νέα **μόνο** με ρητή επιβεβαίωση (DocuSign: declined = τερματικό)
+ */
+export const HANDOVER_INVITATION_RENEWAL_OFFERS = ['none', 'renew', 'renew-after-decline'] as const;
+
+export type HandoverInvitationRenewalOffer = (typeof HANDOVER_INVITATION_RENEWAL_OFFERS)[number];
+
+/**
+ * Γιατί η πόρτα **δεν** έστειλε νέα πρόσκληση — κλειστό λεξιλόγιο, το διαβάζει άνθρωπος.
+ * - `not-renewable` — δεν οφείλεται (ενεργή · αποδεκτή · ακυρωμένη): η οθόνη είναι μπαγιάτικη
+ * - `declined-unconfirmed` — ο αγοραστής αρνήθηκε και η επιβεβαίωση έλειπε
+ * - `no-address` — η επαφή δεν έχει πια email
+ * - `awaiting-configuration` — λείπει το μυστικό των συνδέσμων (ADR-916 §5.6)
+ * - `handover-unknown` — η παράδοση δεν ανήκει σε αυτό το ακίνητο
+ */
+export const HANDOVER_INVITATION_RENEWAL_REFUSALS = [
+  'not-renewable',
+  'declined-unconfirmed',
+  'no-address',
+  'awaiting-configuration',
+  'handover-unknown',
+] as const;
+
+export type HandoverInvitationRenewalRefusal = (typeof HANDOVER_INVITATION_RENEWAL_REFUSALS)[number];
+
+/** Ο διακριτής του σώματος άρνησης της πόρτας «Νέα πρόσκληση» — ο πελάτης τον ελέγχει **πριν** από τον λόγο. */
+export const HANDOVER_INVITATION_RENEWAL_REFUSED = 'HANDOVER_INVITATION_RENEWAL_REFUSED';
+
+/** Το συμβόλαιο της πόρτας `POST /api/properties/[id]/handover/invitation` — 🔒 ποτέ email, ποτέ token. */
+export type HandoverInvitationRenewalResponse =
+  | { readonly status: 'renewed' }
+  | { readonly error: typeof HANDOVER_INVITATION_RENEWAL_REFUSED; readonly reason: HandoverInvitationRenewalRefusal }
+  | { readonly error: 'RENEWAL_UNAVAILABLE' };
+
 /** Η κρίση για **μία** παράδοση. */
 export interface HandoverOfficeStatus {
   readonly move: HandoverOfficeMove;
   readonly reason: HandoverOfficeReason;
   readonly signals: readonly HandoverOfficeSignal[];
   readonly steps: Readonly<Record<HandoverOfficeStep, HandoverOfficeStepState>>;
+  /** Φ-Δ.3 — το κουμπί «Νέα πρόσκληση» (από την **ίδια** κρίση με την πόρτα). */
+  readonly renewal: HandoverInvitationRenewalOffer;
 }
 
 /** Μία παράδοση στην καρτέλα του γραφείου — η αποθηκευμένη, το όνομα του αγοραστή (μόνο όνομα) και η κρίση. */

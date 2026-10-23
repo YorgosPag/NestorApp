@@ -38,6 +38,7 @@ import {
   type PropertyHandover,
 } from '@/types/property-handover';
 
+import { handoverInvitationRenewalOfferOf } from './handover-invitation-plan';
 import type { PropertyHandoverSnapshot } from './handover-plan';
 import { planHandoverProtocol, type HandoverProtocolPlan } from './handover-protocol-plan';
 
@@ -166,5 +167,7 @@ export function handoverOfficeStatusOf(handover: PropertyHandover, context: Hand
     reason,
     signals: signalsOf(handover, reason, context.nowValue),
     steps: stepsOf(handover, reason),
+    // Φ-Δ.3 — η ΙΔΙΑ συνάρτηση με την πόρτα: το κουμπί δεν υπόσχεται πράξη που ο διακομιστής θα αρνηθεί (Ζ17).
+    renewal: handoverInvitationRenewalOfferOf(handover, context.nowValue),
   };
 }
