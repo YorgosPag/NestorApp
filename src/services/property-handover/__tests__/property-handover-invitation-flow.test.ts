@@ -30,10 +30,18 @@ jest.mock('@/services/conveyance/conveyance-subject.server', () => ({
   })),
 }));
 jest.mock('@/server/invitations/invitation-notice', () => ({ deliverInvitationEmail: jest.fn() }));
+// ADR-916 Φ-Δ.2 — ο αγωγός ειδοποιήσεων καταγράφει (ο ΚΑΛΩΝ ελέγχεται, όχι ο orchestrator)· οι διαχειριστές ως σταθερά.
+jest.mock('@/server/notifications/notification-orchestrator', () => ({
+  ...jest.requireActual('@/server/notifications/notification-orchestrator'),
+  dispatchNotification: jest.fn(),
+}));
+jest.mock('@/lib/workspace/workspace-administrators', () => ({ activeWorkspaceAdministrators: jest.fn() }));
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const { deliverInvitationEmail } = require('@/server/invitations/invitation-notice') as { deliverInvitationEmail: jest.Mock };
 const { sharedLogger: mockLogger } = require('@/lib/telemetry') as { sharedLogger: Record<'info' | 'warn' | 'error' | 'debug', jest.Mock> };
+const { dispatchNotification } = require('@/server/notifications/notification-orchestrator') as { dispatchNotification: jest.Mock };
+const { activeWorkspaceAdministrators } = require('@/lib/workspace/workspace-administrators') as { activeWorkspaceAdministrators: jest.Mock };
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 interface Sent { readonly to: string; readonly subject: string; readonly text: string }
@@ -93,6 +101,8 @@ beforeEach(() => {
     commercial: { owners: [{ contactId: 'cont_anna', ownershipPct: 100, role: 'buyer' }], legalPhase: 'preliminary_signed' },
   });
   setEmail(ANNA.email);
+  dispatchNotification.mockReset().mockImplementation(async () => ({ success: true, dedupeKey: 'k', skipped: false }));
+  activeWorkspaceAdministrators.mockReset().mockResolvedValue(['uid_admin', 'uid_agent']);
 });
 
 describe('Β11–Β13 — ο γραφέας: κράτηση ⇒ πρόσκληση, μία φορά', () => {
@@ -294,5 +304,100 @@ describe('Β18–Β20 — ολοκλήρωση · ακύρωση · άρνηση
     expect(sent).toHaveLength(2);
     expect(handovers()[0]?.invitation).toMatchObject({ delivery: 'accepted', deliveryAttempts: 2 });
     expect((await accept(tokenOf(sent[1]))).kind).toBe('accepted');
+  });
+});
+
+/** Οι ειδοποιήσεις «απάντησε ο αγοραστής» που έφυγαν — ό,τι ζήτησε ο καλών από τον αγωγό. */
+const answered = () => dispatchNotification.mock.calls
+  .map(([request]) => request as Record<string, unknown>)
+  .filter((request) => request.eventType === 'properties.handoverInvitationAnswered');
+const decline = (token: string) => respondToHandoverInvitation(db(), { action: 'decline', token, identity: ANNA });
+
+describe('Ζ10–Ζ15 — ADR-916 Φ-Δ.2 (Ο7): το γραφείο μαθαίνει την απάντηση του αγοραστή', () => {
+  it('Ζ10 — αποδοχή ⇒ ΜΙΑ ειδοποίηση ανά άνθρωπο (αποστολέας + διαχειριστής, χωρίς διπλά), καρτέλα «Παράδοση», επόμενη κίνηση = η πώληση', async () => {
+    await sync();
+    expect((await accept(tokenOf(sent[0]))).kind).toBe('accepted');
+    const invitationId = String(invitations()[0]?.id);
+    expect(answered().map((request) => request.recipientId).sort()).toEqual(['uid_admin', 'uid_agent']);
+    for (const request of answered()) {
+      expect(request).toMatchObject({
+        tenantId: COMPANY, entityId: PROPERTY, entityType: 'property', severity: 'info',
+        eventId: `handover-invitation:${invitationId}:accepted`,
+        titleKey: 'handoverInvitationAnswered.accepted', titleParams: { title: 'Διαμέρισμα Α1' },
+        // Η κρίση της καρτέλας: κράτηση, όχι ολοκλήρωση ⇒ η επόμενη κίνηση είναι της πώλησης.
+        bodyKey: 'handoverInvitationAnswered.body.sale', bodyParams: { name: 'Άννα Συνθετική' },
+        workspace: { kind: 'org', companyId: COMPANY },
+      });
+      expect(JSON.stringify(request.actions)).toContain(`/properties/${PROPERTY}?tab=handover`);
+    }
+  });
+
+  it('Ζ11 — άρνηση ⇒ ΠΡΟΕΙΔΟΠΟΙΗΣΗ με «η επόμενη κίνηση είναι του γραφείου» — ίδια λέξη με την καρτέλα (`declined ⇒ office`)', async () => {
+    await sync();
+    expect((await decline(tokenOf(sent[0]))).kind).toBe('declined');
+    expect(answered()).toHaveLength(2);
+    expect(answered()[0]).toMatchObject({
+      severity: 'warning', titleKey: 'handoverInvitationAnswered.declined', bodyKey: 'handoverInvitationAnswered.body.office',
+      eventId: `handover-invitation:${String(invitations()[0]?.id)}:declined`,
+    });
+  });
+
+  it('Ζ12 — 🔴 πρόσκληση της νυχτερινής συμφιλίωσης (`system`) ⇒ μόνο άνθρωποι· ποτέ στη μηχανή, ποτέ στον ίδιο τον αγοραστή', async () => {
+    activeWorkspaceAdministrators.mockResolvedValue(['uid_admin', ANNA.uid]);
+    await sync('reconcile');
+    await accept(tokenOf(sent[0]));
+    expect(answered().map((request) => request.recipientId)).toEqual(['uid_admin']);
+  });
+
+  it('Ζ13 — δεύτερο κλικ ⇒ `already-used` και ΚΑΜΙΑ νέα ειδοποίηση· το `eventId` είναι ντετερμινιστικό (αποδίπλωση στον αγωγό)', async () => {
+    await sync();
+    const token = tokenOf(sent[0]);
+    await accept(token);
+    const first = answered().map((request) => request.eventId);
+    expect((await accept(token)).kind).toBe('refused');
+    expect(answered().map((request) => request.eventId)).toEqual(first);
+    expect(new Set(first).size).toBe(1);
+  });
+
+  it('Ζ14 — 🔴 ο αγωγός πέφτει ⇒ η αποδοχή ΜΕΝΕΙ πετυχημένη (δέσιμο + φάκελος) και η βλάβη καταγράφεται', async () => {
+    dispatchNotification.mockRejectedValue(new Error('notifications down'));
+    await sync();
+    expect((await accept(tokenOf(sent[0]))).kind).toBe('accepted');
+    expect(handovers()[0]?.recipient).toMatchObject({ userId: ANNA.uid });
+    expect(dossiers()).toHaveLength(1);
+    expect(mockLogger.error).toHaveBeenCalledWith('Η ειδοποίηση απάντησης αγοραστή δεν στάλθηκε', expect.objectContaining({ answer: 'accepted' }));
+  });
+
+  it('Ζ14γ — 🔴 βλάβη σε ΕΝΑΝ παραλήπτη ⇒ οι άλλοι την παίρνουν κανονικά, και η βλάβη λέγεται με το ΣΩΣΤΟ όνομα (όχι «δεν βρέθηκαν αποδέκτες»)', async () => {
+    dispatchNotification.mockImplementation(async (request: { recipientId: string }) => {
+      if (request.recipientId === 'uid_admin') throw new Error('one recipient down');
+      return { success: true, dedupeKey: 'k', skipped: false };
+    });
+    await sync();
+    expect((await accept(tokenOf(sent[0]))).kind).toBe('accepted');
+    expect(answered().map((request) => request.recipientId).sort()).toEqual(['uid_admin', 'uid_agent']);
+    expect(mockLogger.error).toHaveBeenCalledTimes(1);
+    expect(mockLogger.error).toHaveBeenCalledWith('Η ειδοποίηση απάντησης αγοραστή δεν στάλθηκε', expect.objectContaining({ answer: 'accepted' }));
+  });
+
+  it('Ζ14β — 🔴 ούτε οι αποδέκτες διαβάζονται ⇒ η άρνηση ΜΕΝΕΙ καταγεγραμμένη, καμία ειδοποίηση, η βλάβη λέγεται', async () => {
+    activeWorkspaceAdministrators.mockRejectedValue(new Error('members unreadable'));
+    await sync();
+    expect((await decline(tokenOf(sent[0]))).kind).toBe('declined');
+    expect(handovers()[0]?.invitation).toMatchObject({ declinedAt: expect.any(String) });
+    expect(answered()).toHaveLength(0);
+    expect(mockLogger.error).toHaveBeenCalledWith('Οι αποδέκτες της απάντησης αγοραστή δεν βρέθηκαν', expect.objectContaining({ answer: 'declined' }));
+  });
+
+  it('Ζ15 — 🔒 καμία PII: ούτε email, ούτε τηλέφωνο, ούτε ΑΦΜ του αγοραστή στην ειδοποίηση — μόνο ονοματεπώνυμο', async () => {
+    fake.seed(COLLECTIONS.CONTACTS, 'cont_anna', {
+      ...fake.getAllDocs(COLLECTIONS.CONTACTS).cont_anna,
+      phones: [{ number: '+306900000001', isPrimary: true, type: 'mobile' }], vatNumber: '999999999',
+    });
+    await sync();
+    await accept(tokenOf(sent[0]));
+    const payload = JSON.stringify(answered());
+    expect(payload).toContain('Άννα Συνθετική');
+    for (const secret of [ANNA.email, '+306900000001', '6900000001', '999999999']) expect(payload).not.toContain(secret);
   });
 });

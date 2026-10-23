@@ -49,6 +49,7 @@ import type {
   PropertyHandoverInvitationKindRefusal,
 } from '@/types/property-handover-invitation';
 
+import { announceHandoverInvitationAnswer } from './handover-invitation-answer-notifier';
 import { describeHandoverInvitation, type HandoverInvitationDescription } from './handover-invitation-description';
 import { PROPERTY_HANDOVER_INVITATION_LOCATOR } from './handover-invitation-kind';
 
@@ -172,8 +173,9 @@ async function recordAcceptance(acceptance: HandoverAcceptance, performedBy: str
 }
 
 /**
- * **Η απάντηση του αγοραστή** — εξαργύρωση (ατομική) → ίχνος. Δύο ταυτόχρονα κλικ ⇒ **ένας** φάκελος, **ένα** δέσιμο
- * (η δεύτερη συναλλαγή βρίσκει `accepted` ⇒ `already-used`).
+ * **Η απάντηση του αγοραστή** — εξαργύρωση (ατομική) → ίχνος → ειδοποίηση γραφείου (Φ-Δ.2). Δύο ταυτόχρονα κλικ ⇒ **ένας**
+ * φάκελος, **ένα** δέσιμο, **μία** ειδοποίηση (η δεύτερη συναλλαγή βρίσκει `accepted` ⇒ `already-used`, δεν φτάνει εδώ).
+ * Ίχνος και ειδοποίηση **μετά** το commit και **δεν πετούν**: η απάντηση του αγοραστή δεν εξαρτάται από αυτά.
  */
 export async function respondToHandoverInvitation(
   db: Firestore,
@@ -186,5 +188,8 @@ export async function respondToHandoverInvitation(
     nowValue: nowISO(),
   });
   if (outcome.kind === 'accepted') await recordAcceptance(outcome.effect, input.identity.uid);
+  if (outcome.kind === 'accepted' || outcome.kind === 'declined') {
+    await announceHandoverInvitationAnswer(db, { invitation: outcome.invitation, answer: outcome.kind, respondentUid: input.identity.uid });
+  }
   return outcome;
 }
