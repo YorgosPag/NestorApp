@@ -4103,6 +4103,10 @@
 
 ## Pending tasks (priority order)
 
+### 🔤 Δύο υλοποιήσεις «ταξινόμησε τα κλειδιά αναδρομικά» — `sortDeep` (canonical-json) ≡ `sortKeys` (audit-diff) (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-23, ADR-919 §9 · N.0.2)
+- **Τι**: το `sortDeep` στο `src/lib/legal/canonical-json.ts` και το `sortKeys` στο `src/lib/audit/audit-diff.ts` κάνουν το ίδιο (αναδρομή σε πίνακες/αντικείμενα, σειρά μονάδων UTF-16). Βρέθηκε στο βήμα 5 του ADR-919, όπου επαναχρησιμοποιήθηκε το `canonicalJson`.
+- **Fix**: ένα πρωτογενές `sortKeysDeep` σε ουδέτερο `src/lib/` (όχι `legal` ούτε `audit`), που το εισάγουν και τα δύο. ⚠️ Το `canonical-json` είναι **παγωμένη μορφή** (αποτυπώματα νομικών εκδόσεων, ADR-861 §7): μετά την αλλαγή πρέπει να μείνει πράσινο το `legal-document-versions.test.ts`, που ελέγχει bytes-ισότητα. Γι' αυτό δεν διορθώθηκε επί τόπου (ξένα αρχεία, κοινό working tree).
+
 ### 📅 Έλεγχος «ημερολογιακή ημέρα ISO» — ~14 χειρόγραφα `/^\d{4}-\d{2}-\d{2}$/`, κανένα δεν ελέγχει ότι η ημέρα ΥΠΑΡΧΕΙ (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-23, ADR-919 · N.0.2)
 - **Τι**: το ίδιο regex γραμμένο ξεχωριστά σε `listing-stats-document.ts`, `url-filters/multi-value.ts`, `operator-readiness.ts`, `listing-stay-url.ts`, `demand-form-values.ts`, `conveyance/*` (2), `accounting-day.ts`, `accounting-repo-scan.ts`, `quote-search.ts`, `attendance/qr/generate/route.ts`, `purchase-orders/page.tsx`, κ.ά. Όλα δέχονται `2027-02-30`.
 - **Fix**: εξαγωγή του `parseCalendarDay` (σήμερα ιδιωτικό στο `src/lib/listings/availability-window.ts`, πάνω στο `daysInMonth` του `lib/date/calendar-arithmetic.ts`) σε `lib/date/calendar-day.ts` με `isCalendarDay()`, και μετάβαση των καλούντων ένα-ένα (με zod `.refine` όπου είναι σχήμα). Πρόσεξε: κάποιοι δέχονται και κενό (`demand-form-values`) ή πρόθεμα χωρίς `$` (`audit-value-resolver`, `payment-plan`) — άλλη σημασία, μην τα ενοποιήσεις τυφλά.
