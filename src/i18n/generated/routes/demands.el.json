@@ -33,9 +33,6 @@
         },
         "place": {
           "legend": "Πού;"
-        },
-        "timing": {
-          "legend": "Πότε το θέλεις;"
         }
       },
       "incomplete": {

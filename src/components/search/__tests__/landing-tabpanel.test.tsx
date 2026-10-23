@@ -253,7 +253,8 @@ describe('Π2 — 🔴 ΤΟ ΠΑΝΕΛ ΕΙΝΑΙ Η ΒΙΤΡΙΝΑ, ΚΑΙ ΚΑ
     expect(doors).not.toBeNull();
     expect(doors?.parentElement).toBe(measure);
     // ADR-900 §3.7 — τρίτη πόρτα: «Έχετε ακίνητο;» με πεδίο διεύθυνσης, στον ΙΔΙΟ άξονα.
-    expect(doors?.querySelectorAll('li')).toHaveLength(3);
+    // ⚠️ Μόνο τα **άμεσα** τέκνα: η πόρτα «Ζητώ» έχει δική της λίστα συντομεύσεων (ADR-777 §8.99).
+    expect(doors?.querySelectorAll(':scope > ul > li')).toHaveLength(3);
   });
 
   it('🔑 ADR-900 — η πόρτα του ιδιοκτήτη είναι αληθινή φόρμα GET (δουλεύει και χωρίς JS) με το όνομα που διαβάζει η σελίδα', () => {

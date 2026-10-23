@@ -31,7 +31,8 @@ import { Link } from '@/lib/workspace/navigation';
 import { OwnerInterestEntry } from '@/components/demand/interest-check/OwnerInterestEntry';
 import { PROSE_MEASURE_CLASS } from '@/components/shared/prose-measure';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { MY_DEMANDS_ROUTE } from '@/lib/demand/demand-routes';
+import { MY_DEMANDS_ROUTE, newDemandWithTimingHref } from '@/lib/demand/demand-routes';
+import type { DemandTimingKind } from '@/types/property-demand';
 import { MY_OFFERS_ROUTE } from '@/lib/owner-property/owner-property-routes';
 import type { WorkspaceHref } from '@/lib/workspace/route-worlds';
 
@@ -52,6 +53,11 @@ interface DoorCardProps {
    * `regular` (προεπιλογή) = οι πόρτες «Ζητώ · Προσφέρω», όπου το κείμενο **εξηγεί**.
    */
   readonly density?: 'regular' | 'compact';
+  /**
+   * Δευτερεύοντες σύνδεσμοι **μέσα** στο περίγραμμα της κάρτας, κάτω από τον κύριο (ADR-777 §8.99).
+   * Ζουν **δίπλα** στον κύριο σύνδεσμο, όχι μέσα του: σύνδεσμος μέσα σε σύνδεσμο είναι άκυρη HTML.
+   */
+  readonly footer?: React.ReactNode;
 }
 
 /** Το κείμενο βοήθειας κρατά το μέτρο πρόζας (`PROSE_MEASURE_CLASS`, ADR-820 §5.4.1) — η κάρτα απλώνει, η γραμμή όχι. */
@@ -60,15 +66,18 @@ const DOOR_DENSITY = {
   compact: { link: 'items-center gap-3 px-4 py-3', icon: 'size-5', label: 'text-base', hint: 'truncate' },
 } as const;
 
-/** Όλη η κάρτα είναι ο σύνδεσμος — ένας στόχος αφής. */
-export function DoorCard({ href, icon: Icon, label, hint, signal, density = 'regular' }: DoorCardProps) {
+/**
+ * Όλη η κάρτα είναι ο σύνδεσμος — ένας στόχος αφής. Το περίγραμμα ζει στο `<li>`, ώστε ένα `footer`
+ * να μπαίνει μέσα στην **ίδια** κάρτα χωρίς να γίνει τέκνο του συνδέσμου.
+ */
+export function DoorCard({ href, icon: Icon, label, hint, signal, density = 'regular', footer }: DoorCardProps) {
   const d = DOOR_DENSITY[density];
   return (
-    <li className="min-w-0">
+    <li className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-card">
       <Link
         href={href}
         className={cn(
-          'flex h-full rounded-lg border border-border bg-card text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          'flex flex-1 text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
           d.link,
         )}
       >
@@ -81,7 +90,48 @@ export function DoorCard({ href, icon: Icon, label, hint, signal, density = 'reg
           <span className={cn('text-sm text-muted-foreground', d.hint)}>{hint}</span>
         </span>
       </Link>
+      {footer}
     </li>
+  );
+}
+
+/**
+ * ADR-777 §8.99 — **το πρώτο βήμα της ζήτησης, απαντημένο από την αρχική.** Όποιος ξέρει ήδη «πότε»
+ * πηγαίνει κατευθείαν στη φόρμα (`?when=`). Η κάρτα μένει σύνδεσμος προς τον **κατάλογο**, όπως ορίζει
+ * η Α8.
+ *
+ * ⚠️ **Τύπος, όχι τιμή, από το `types/property-demand`**: εκείνο σέρνει runtime modules που δεν
+ *    ανήκουν στο κέλυφος. Το `Record<DemandTimingKind, …>` εγγυάται ότι νέο «πότε» χωρίς ετικέτα εδώ
+ *    δεν μεταγλωττίζεται. Τα κλειδιά είναι ρητά, γιατί ο γεννήτορας του shell slice αρνείται δυναμική `t()`.
+ */
+function DemandTimingShortcuts(): React.ReactElement {
+  const { t } = useTranslation(['property-market']);
+  const labels: Record<DemandTimingKind, string> = {
+    now: t('property-market:demand.form.timing.now'),
+    window: t('property-market:demand.form.timing.window'),
+    whenever: t('property-market:demand.form.timing.whenever'),
+  };
+  const kinds = Object.keys(labels) as DemandTimingKind[];
+  const legendId = React.useId();
+
+  return (
+    <footer className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border px-5 py-3 text-sm">
+      <span id={legendId} className="text-muted-foreground">
+        {t('property-market:demand.form.timing.legend')}
+      </span>
+      <ul aria-labelledby={legendId} className="m-0 flex list-none flex-wrap gap-2 p-0">
+        {kinds.map((kind) => (
+          <li key={kind}>
+            <Link
+              href={newDemandWithTimingHref(kind, '')}
+              className="inline-block rounded-full border border-border px-3 py-1 font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {labels[kind]}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </footer>
   );
 }
 
@@ -117,6 +167,7 @@ export function LandingDoors() {
           icon={HandHelping}
           label={t('property-market:demand.door.label')}
           hint={t('property-market:demand.door.hint')}
+          footer={<DemandTimingShortcuts />}
         />
         <DoorCard
           href={MY_OFFERS_ROUTE}
