@@ -9,6 +9,7 @@
 import type { PriceObservation } from '@/types/price-history';
 
 import { resolvePriceHistory } from '../price-history-stamp';
+import { historyStoreOf } from './property-history-store';
 
 const AT_FIRST = '2026-08-01T08:00:00.000Z';
 const AT_LATER = '2026-08-20T08:00:00.000Z';
@@ -18,44 +19,7 @@ const ID = 'prop_a0000001-7777-4aaa-8aaa-000000000001';
 const SALE_300K = { role: 'sale', amount: 300_000 } as const;
 const SALE_270K = { role: 'sale', amount: 270_000 } as const;
 
-function storeOf(initial: Record<string, unknown> | undefined) {
-  const state: { doc: Record<string, unknown> | undefined } = { doc: initial };
-  const counters = { transactions: 0, updates: 0 };
-  let onBeforeTransactionRead: (() => void) | null = null;
-  let failUpdate = false;
-
-  const adminDb = {
-    collection: () => ({ doc: () => ({}) }),
-    runTransaction: async <T,>(fn: (tx: unknown) => Promise<T>): Promise<T> => {
-      counters.transactions += 1;
-      const tx = {
-        get: async () => {
-          onBeforeTransactionRead?.();
-          return { data: () => state.doc };
-        },
-        update: (_ref: unknown, patch: Record<string, unknown>) => {
-          if (failUpdate) throw new Error('PERMISSION_DENIED');
-          counters.updates += 1;
-          state.doc = { ...(state.doc ?? {}), ...patch };
-        },
-      };
-      return fn(tx);
-    },
-  } as never;
-
-  return {
-    adminDb,
-    counters,
-    state,
-    current: () => state.doc?.priceHistory,
-    race: (fn: () => void) => {
-      onBeforeTransactionRead = fn;
-    },
-    breakUpdate: () => {
-      failUpdate = true;
-    },
-  };
-}
+const storeOf = (initial: Record<string, unknown> | undefined) => historyStoreOf('priceHistory', initial);
 
 describe('Σ. Η ΣΦΡΑΓΙΔΑ ΤΟΥ ΙΣΤΟΡΙΚΟΥ ΤΙΜΗΣ', () => {
   it('Σ1 — πρώτη δημοσίευση γράφει μία παρατήρηση με τη στιγμή του περάσματος', async () => {
