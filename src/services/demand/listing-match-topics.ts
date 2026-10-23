@@ -16,6 +16,10 @@ import type { DemandOutcome, DemandSeekMet } from '@/lib/demand/demand-matching'
 import type { PropertyDemand } from '@/types/property-demand';
 import type { PublicListing } from '@/types/public-listing';
 
+import {
+  EMPTY_AVAILABILITY_CHANGE_TALLY,
+  type AvailabilityChangeTally,
+} from './listing-availability-change-notifier';
 import { EMPTY_PRICE_DROP_TALLY, type DispatchOutcome, type PriceDropTally } from './listing-price-drop-notifier';
 
 /** Τα ταιριάσματα **μίας** ζήτησης — η έξοδος της μηχανής ταιριάσματος, **με** την ετυμηγορία. */
@@ -138,6 +142,8 @@ export interface MatchTally {
   readonly collapsedReasons: number;
   readonly recipientsTruncated: number;
   readonly priceDrops: PriceDropTally;
+  /** ADR-919 §10 — οι αλλαγές διαθεσιμότητας: κάθε κάδος, και οι σιωπές. */
+  readonly availabilityChanges: AvailabilityChangeTally;
 }
 
 export const EMPTY_TALLY: MatchTally = {
@@ -148,6 +154,7 @@ export const EMPTY_TALLY: MatchTally = {
   collapsedReasons: 0,
   recipientsTruncated: 0,
   priceDrops: EMPTY_PRICE_DROP_TALLY,
+  availabilityChanges: EMPTY_AVAILABILITY_CHANGE_TALLY,
 };
 
 const OUTCOME_FIELD: Readonly<Record<DispatchOutcome, 'announced' | 'alreadyKnown' | 'optedOut'>> = {
@@ -161,11 +168,15 @@ export function countMatch(tally: MatchTally, outcome: DispatchOutcome): MatchTa
   return { ...tally, [field]: tally[field] + 1, considered: tally.considered + 1 };
 }
 
+/** Άθροισμα δύο κλειστών λογιστικών ανά κάδο: μία συνάρτηση για κάθε ταμπλό (μείωση · διαθεσιμότητα). */
+export function sumBuckets<K extends string>(a: Readonly<Record<K, number>>, b: Readonly<Record<K, number>>): Record<K, number> {
+  const sum = { ...a } as Record<K, number>;
+  for (const key of Object.keys(b) as K[]) sum[key] = a[key] + b[key];
+  return sum;
+}
+
 export function mergeTallies(a: MatchTally, b: MatchTally): MatchTally {
-  const priceDrops = { ...a.priceDrops };
-  for (const key of Object.keys(b.priceDrops) as (keyof PriceDropTally)[]) {
-    priceDrops[key] = a.priceDrops[key] + b.priceDrops[key];
-  }
+  const priceDrops = sumBuckets(a.priceDrops, b.priceDrops);
   return {
     announced: a.announced + b.announced,
     alreadyKnown: a.alreadyKnown + b.alreadyKnown,
@@ -174,5 +185,6 @@ export function mergeTallies(a: MatchTally, b: MatchTally): MatchTally {
     collapsedReasons: a.collapsedReasons + b.collapsedReasons,
     recipientsTruncated: a.recipientsTruncated + b.recipientsTruncated,
     priceDrops,
+    availabilityChanges: sumBuckets(a.availabilityChanges, b.availabilityChanges),
   };
 }

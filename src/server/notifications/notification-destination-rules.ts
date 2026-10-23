@@ -205,6 +205,9 @@ const RULES: Readonly<Partial<Record<NotificationEventType, DestinationRule>>> =
   // ADR-777 §8.69 — η μείωση οδηγεί στην **ίδια** δημόσια αγγελία, με τον **ίδιο** κανόνα.
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_DEMAND_PRICE_DROP]: async (_db, notification, entityId) =>
     expected(listingMatchDestination(entityId, notification.userId)),
+  // ADR-919 §10 — η αλλαγή διαθεσιμότητας οδηγεί στην **ίδια** δημόσια αγγελία, με τον **ίδιο** κανόνα.
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_DEMAND_AVAILABILITY_CHANGE]: async (_db, notification, entityId) =>
+    expected(listingMatchDestination(entityId, notification.userId)),
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_MANDATE_REQUEST_ANSWERED]: async (_db, notification, entityId) =>
     expected(mandateRequestDestination(entityId, notification.userId)),
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_MANDATE_DECIDED]: mandateDecidedRule,

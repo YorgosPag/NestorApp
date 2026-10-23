@@ -72,6 +72,7 @@ import type { PropertyDemand } from '@/types/property-demand';
 import type { SavedListing } from '@/types/saved-listing';
 import { readSavesOfListings } from '@/services/listings/saved-listing.service';
 
+import { announceAvailabilityChanges } from './availability-change-pass';
 import { readRecipientLedger, type RecipientLedger, type TopicKnowledge } from './demand-match-ledger';
 import { freshReductionOf, matchAnnouncementCopy } from './listing-announcement-copy';
 import {
@@ -223,7 +224,7 @@ async function withPriceDrop(
 }
 
 const NEVER_ANNOUNCED: MatchHistory = { kind: 'never-announced' };
-const UNKNOWN_TOPIC: TopicKnowledge = { match: NEVER_ANNOUNCED, priceDropKnown: false };
+const UNKNOWN_TOPIC: TopicKnowledge = { match: NEVER_ANNOUNCED, priceDropKnown: false, availabilityChangeKnown: false };
 
 function knowledgeOf(pass: RecipientPass, topic: ListingTopic): TopicKnowledge {
   return pass.ledger.get(topic.listing.id) ?? UNKNOWN_TOPIC;
@@ -306,13 +307,24 @@ async function tallyMatches(
         listingId: listing.id,
         demandIds: reasons.demandIds,
         reduction: listing.priceReduction,
+        availabilityChange: null,
       })),
     );
     const passTally = await announceForRecipient({ recipientId, topics, ledger, nowMs });
     tally = mergeTallies(tally, { ...passTally, collapsedReasons: pairs - topics.length });
   }
 
-  return tally;
+  // 🏆 ADR-919 §10 — όποιος έχασε ή κέρδισε ταίρι επειδή άλλαξε η δημόσια υπόσχεση, πάνω στην ΙΔΙΑ εικόνα αγοράς.
+  const availabilityChanges = await announceAvailabilityChanges(db, {
+    demands,
+    listings,
+    knowledge,
+    todayDate,
+    nowMs,
+    destinationOf: listingMatchDestination,
+  });
+
+  return { ...tally, availabilityChanges };
 }
 
 /**

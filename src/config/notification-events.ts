@@ -89,6 +89,15 @@ export const NOTIFICATION_EVENT_TYPES = {
    */
   PROPERTIES_DEMAND_PRICE_DROP: 'properties.demandPriceDrop',
   /**
+   * ADR-919 §10 — «άλλαξε η **δημόσια υπόσχεση παράδοσης** αγγελίας που ξέρεις, και η ζήτησή σου **έχασε ή
+   * κέρδισε** το ταίρι». Ένα γεγονός ανά (παραλήπτη, αγγελία, έκδοση δήλωσης):
+   * {@link recipientAvailabilityChangeEventId} βάζει τη στιγμή της αλλαγής στο κλειδί.
+   *
+   * 🏆 **Ρητό είδος, με δικό του διακόπτη**, όπως η μείωση (μοντέλο Zoopla / Redfin). Κανένα portal δεν το στέλνει·
+   * ο NHQC του ΗΒ ζητά από τον κατασκευαστή να ενημερώνει για κάθε αλλαγή του completion window.
+   */
+  PROPERTIES_DEMAND_AVAILABILITY_CHANGE: 'properties.demandAvailabilityChange',
+  /**
    * ADR-777 §8.34 — **ο ιδιοκτήτης απάντησε στην εντολή**, ναι ή όχι.
    *
    * 🔑 **Ένα γεγονός για τις δύο απαντήσεις, ΟΧΙ δύο.** Ο διακόπτης προτίμησης
@@ -351,6 +360,13 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_DEMAND_PRICE_DROP]: {
     category: 'properties',
     settingKey: 'demandPriceDrop',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
+  /** ⚠️ **`isMandatory: false`, ίδιος λόγος** — εμπορική είδηση, ποτέ ασφάλεια (ADR-919 §10). */
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_DEMAND_AVAILABILITY_CHANGE]: {
+    category: 'properties',
+    settingKey: 'demandAvailabilityChange',
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
   },

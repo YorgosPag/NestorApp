@@ -68,6 +68,8 @@ export const NOTIFICATION_PREFERENCE_GROUPS: readonly NotificationPreferenceGrou
       { key: 'demandListingMatch', labelKey: 'common-account:account.notificationSettings.categories.properties.demandListingMatch' },
       // ADR-777 §8.69 — «μειώθηκε η τιμή αγγελίας που ταιριάζει» (αντικατέστησε το νεκρό `priceChange`).
       { key: 'demandPriceDrop', labelKey: 'common-account:account.notificationSettings.categories.properties.demandPriceDrop' },
+      // ADR-919 §10 — «άλλαξε η παράδοση αγγελίας που ξέρω, και η ζήτησή μου έχασε ή κέρδισε το ταίρι».
+      { key: 'demandAvailabilityChange', labelKey: 'common-account:account.notificationSettings.categories.properties.demandAvailabilityChange' },
       // ADR-777 §8.34 — «ο πελάτης απάντησε στην εντολή».
       { key: 'mandateDecided', labelKey: 'common-account:account.notificationSettings.categories.properties.mandateDecided' },
       // ADR-827 §9.21 — «το γραφείο απάντησε στο αίτημά σου».

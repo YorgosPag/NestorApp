@@ -16,6 +16,7 @@ import { NOTIFICATION_EVENT_TYPES } from '@/config/notification-events';
 import {
   demandListingMatchEventId,
   demandPriceDropEventId,
+  recipientAvailabilityChangeEventId,
   recipientListingMatchEventId,
   recipientPriceDropEventId,
 } from '@/lib/demand/demand-announcement';
@@ -30,6 +31,8 @@ const T2 = new Date('2026-09-05T10:00:00.000Z');
 
 const matchDoc = (eventId: string): string =>
   generateNotificationDedupeId(NOTIFICATION_EVENT_TYPES.PROPERTIES_DEMAND_LISTING_MATCH, RECIPIENT, eventId);
+const changeDoc = (eventId: string): string =>
+  generateNotificationDedupeId(NOTIFICATION_EVENT_TYPES.PROPERTIES_DEMAND_AVAILABILITY_CHANGE, RECIPIENT, eventId);
 const dropDoc = (eventId: string): string =>
   generateNotificationDedupeId(NOTIFICATION_EVENT_TYPES.PROPERTIES_DEMAND_PRICE_DROP, RECIPIENT, eventId);
 
@@ -44,7 +47,7 @@ function fakeDb(docs: Readonly<Record<string, Date | null>>) {
   return { db: db as never, getAll };
 }
 
-const TOPIC = { listingId: 'l1', demandIds: ['d1', 'd2'], reduction: null };
+const TOPIC = { listingId: 'l1', demandIds: ['d1', 'd2'], reduction: null, availabilityChange: null };
 
 describe('Κ — το καθολόγιο αναγνωρίζει ΚΑΙ τα νέα ΚΑΙ τα παλιά κλειδιά', () => {
   it('Κ1 — νέο κλειδί θέματος ⇒ ανακοινωμένο, με τη στιγμή του', async () => {
@@ -52,7 +55,7 @@ describe('Κ — το καθολόγιο αναγνωρίζει ΚΑΙ τα νέ
 
     const ledger = await readRecipientLedger(db, RECIPIENT, [TOPIC]);
 
-    expect(ledger.get('l1')).toEqual({ match: { kind: 'announced', atMs: T2.getTime() }, priceDropKnown: false });
+    expect(ledger.get('l1')).toEqual({ match: { kind: 'announced', atMs: T2.getTime() }, priceDropKnown: false, availabilityChangeKnown: false });
   });
 
   it('🔴 Σ3 — ΜΟΝΟ το παλιό κλειδί της d2 ⇒ το θέμα είναι ΓΝΩΣΤΟ (καμία ξανα-ανακοίνωση)', async () => {
@@ -90,7 +93,7 @@ describe('Κ — το καθολόγιο αναγνωρίζει ΚΑΙ τα νέ
 
     const ledger = await readRecipientLedger(db, RECIPIENT, [TOPIC]);
 
-    expect(ledger.get('l1')).toEqual({ match: { kind: 'never-announced' }, priceDropKnown: false });
+    expect(ledger.get('l1')).toEqual({ match: { kind: 'never-announced' }, priceDropKnown: false, availabilityChangeKnown: false });
   });
 });
 
@@ -132,6 +135,36 @@ describe('Μ — η τρέχουσα μείωση, με νέο ή παλιό κ�
   });
 });
 
+describe('Α — η αλλαγή διαθεσιμότητας (ADR-919 §10)', () => {
+  const CHANGE = { at: '2026-10-20T10:00:00.000Z' };
+  const WITH_CHANGE = { ...TOPIC, availabilityChange: CHANGE };
+
+  it('Α1 — η ίδια αλλαγή ήδη γραμμένη ⇒ `availabilityChangeKnown`', async () => {
+    const { db } = fakeDb({ [changeDoc(recipientAvailabilityChangeEventId('l1', CHANGE))]: T2 });
+
+    const ledger = await readRecipientLedger(db, RECIPIENT, [WITH_CHANGE]);
+
+    expect(ledger.get('l1')?.availabilityChangeKnown).toBe(true);
+    expect(ledger.get('l1')?.match).toEqual({ kind: 'never-announced' });
+  });
+
+  it('Α2 — ΑΛΛΗ (παλιότερη) αλλαγή γραμμένη ⇒ η τρέχουσα ΔΕΝ είναι γνωστή', async () => {
+    const { db } = fakeDb({ [changeDoc(recipientAvailabilityChangeEventId('l1', { at: '2026-09-01T10:00:00.000Z' }))]: T1 });
+
+    const ledger = await readRecipientLedger(db, RECIPIENT, [WITH_CHANGE]);
+
+    expect(ledger.get('l1')?.availabilityChangeKnown).toBe(false);
+  });
+
+  it('Α3 — θέμα χωρίς αλλαγή ΔΕΝ ανιχνεύει έγγραφα αλλαγής', async () => {
+    const { db, getAll } = fakeDb({});
+
+    await readRecipientLedger(db, RECIPIENT, [WITH_CHANGE]);
+
+    expect(getAll.mock.calls.flat()).toHaveLength(4);
+  });
+});
+
 describe('Δ — δέσμες', () => {
   it('Δ1 — κενή λίστα θεμάτων ⇒ καμία ανάγνωση', async () => {
     const { db, getAll } = fakeDb({});
@@ -143,7 +176,7 @@ describe('Δ — δέσμες', () => {
   });
 
   it('Δ2 — πάνω από μία δέσμη ανιχνεύσεων ⇒ πολλές κλήσεις, καμία χαμένη απάντηση', async () => {
-    const topics = Array.from({ length: MATCH_LEDGER_BATCH }, (_, i) => ({ listingId: `l${i}`, demandIds: ['d1'], reduction: null }));
+    const topics = Array.from({ length: MATCH_LEDGER_BATCH }, (_, i) => ({ listingId: `l${i}`, demandIds: ['d1'], reduction: null, availabilityChange: null }));
     const last = `l${MATCH_LEDGER_BATCH - 1}`;
     const { db, getAll } = fakeDb({ [matchDoc(demandListingMatchEventId('d1', last))]: T1 });
 

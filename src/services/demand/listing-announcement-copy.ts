@@ -30,6 +30,7 @@
 import {
   strongestBudgetVerdict,
   type AnnouncementReasons,
+  type AvailabilityShiftDirection,
   type BudgetVerdict,
 } from '@/lib/demand/demand-announcement';
 import type {
@@ -38,11 +39,14 @@ import type {
   DemandSeekMetPriced,
 } from '@/lib/demand/demand-matching';
 import { isReductionFresh } from '@/lib/listings/price-history';
+import { availabilityPromisePhrase } from '@/lib/listings/availability-phrase';
 import type { PriceRole } from '@/lib/properties/price-resolver';
 import { createBundleTranslate } from '@/i18n/bundle-translate';
 import elShared from '@/i18n/locales/el/common-shared.json';
 import elMarket from '@/i18n/locales/el/property-market.json';
 import { formatEuro } from '@/services/email-templates/base-email-template';
+import type { AvailabilityChange, ScheduledAvailability } from '@/types/availability-history';
+import type { ListingAvailability } from '@/types/listing-availability';
 import type { PriceReduction } from '@/types/price-history';
 import type { OfferKind } from '@/types/property-offers';
 import type { PublicListing } from '@/types/public-listing';
@@ -81,7 +85,15 @@ interface Lead {
   readonly manyKey: string | null;
 }
 
-type LeadName = 'match' | 'matchReduced' | 'matchIntoBudget' | 'priceDrop' | 'priceDropIntoBudget' | 'priceDropSaved';
+type LeadName =
+  | 'match'
+  | 'matchReduced'
+  | 'matchIntoBudget'
+  | 'priceDrop'
+  | 'priceDropIntoBudget'
+  | 'priceDropSaved'
+  | 'availabilityLost'
+  | 'availabilityGained';
 
 const LEADS: Readonly<Record<LeadName, Lead>> = {
   match: { key: 'demandListingMatch.namedTitle', manyKey: 'demandListingMatch.namedTitleMany' },
@@ -91,6 +103,9 @@ const LEADS: Readonly<Record<LeadName, Lead>> = {
   priceDropIntoBudget: { key: 'demandPriceDrop.intoBudgetNamedTitle', manyKey: null },
   // ADR-777 §8.74 — θέμα **μόνο** αποθήκευσης: καμία ζήτηση, άρα κανένα όνομα.
   priceDropSaved: { key: 'demandPriceDrop.savedTitle', manyKey: null },
+  // ADR-919 §10 — η μετάθεση: ποτέ θέμα αποθήκευσης (χωρίς ζήτηση δεν χάνεται ούτε κερδίζεται ταίρι).
+  availabilityLost: { key: 'demandAvailabilityChange.lostTitle', manyKey: 'demandAvailabilityChange.lostTitleMany' },
+  availabilityGained: { key: 'demandAvailabilityChange.gainedTitle', manyKey: 'demandAvailabilityChange.gainedTitleMany' },
 };
 
 /** Ο αποδότης του θέματος — το ελληνικό `common-shared`, όπως και το υπόλοιπο email (δηλωμένη εξαίρεση N.11). */
@@ -194,10 +209,10 @@ function headerOf(lead: Lead, listing: PublicListing, reasons: AnnouncementReaso
  * «Ταιριάζει στις ζητήσεις σας «Α», «Β» και «Γ».» — **όλα** τα ονόματα, μόνο όταν είναι πολλά· με έναν
  * λόγο το λέει ήδη ο τίτλος. 🏆 Εδώ ξεπερνάμε τα portals: εκείνα στέλνουν **Ν** email για Ν αναζητήσεις.
  */
-function namesSentence(reasons: AnnouncementReasons): string | undefined {
+function namesSentence(reasons: AnnouncementReasons, lead = 'Ταιριάζει στις ζητήσεις σας'): string | undefined {
   if (reasons.names.length < 2) return undefined;
   const quoted = reasons.names.map((name) => `«${name}»`);
-  return `Ταιριάζει στις ζητήσεις σας ${quoted.slice(0, -1).join(', ')} και ${quoted[quoted.length - 1]}.`;
+  return `${lead} ${quoted.slice(0, -1).join(', ')} και ${quoted[quoted.length - 1]}.`;
 }
 
 /** Οι προτάσεις του σώματος, με τη σειρά τους — όσες υπάρχουν. */
@@ -316,5 +331,60 @@ export function priceDropCopy(
   return {
     ...headerOf(priceDropLead(verdict, reasons), listing, reasons, featuredOf(verdict)),
     body: joinSentences(namesSentence(reasons), bodyOf(listing, reduction, verdict, reasons)),
+  };
+}
+
+// ============================================================================
+// ADR-919 §10 — Η ΑΛΛΑΓΗ ΤΗΣ ΔΗΜΟΣΙΑΣ ΥΠΟΣΧΕΣΗΣ
+// ============================================================================
+
+/**
+ * «Β΄ τρίμηνο 2027» · «Σεπτέμβριος 2027» · «15 Σεπτεμβρίου 2027»: η υπόσχεση **με την ακρίβεια που δηλώθηκε** (Δ2).
+ *
+ * 🔑 **Λεπτή κλήση του ΕΝΟΣ μορφοποιητή** (`lib/listings/availability-phrase.ts`, ADR-919 §11): η ίδια φράση με την
+ * κάρτα, τη σελίδα, το showcase και την απάντηση ζήτησης. Πριν ζούσε εδώ με δικά του `Intl` και κλειδιά, και η ημέρα
+ * έβγαινε «15/9/2027» στο email ενώ η οθόνη θα έγραφε άλλη μορφή.
+ */
+export function promisePhrase(promise: ScheduledAvailability): string {
+  return availabilityPromisePhrase(promise, elSharedT, 'el');
+}
+
+/** Η πρώτη πρόταση: **τι άλλαξε**, μόνο με δημόσιες τιμές (καμία αιτία, καμία φάση). */
+function changeSentence(change: AvailabilityChange, now: ListingAvailability): string {
+  const from = change.from.kind === 'scheduled' ? promisePhrase(change.from) : null;
+  if (now.kind === 'ready') return 'Το ακίνητο είναι πλέον έτοιμο για παράδοση.';
+  if (now.kind === 'unknown') {
+    return from === null
+      ? 'Η αγγελία δεν δηλώνει πλέον ημερομηνία παράδοσης.'
+      : `Η αγγελία δεν δηλώνει πλέον ημερομηνία παράδοσης (έλεγε ${from}).`;
+  }
+  const to = promisePhrase(now);
+  if (change.kind === 'slipped') return `Η παράδοση μετατέθηκε${from === null ? '' : ` από ${from}`} σε ${to}.`;
+  if (change.kind === 'advanced') return `Η παράδοση επισπεύστηκε${from === null ? '' : ` από ${from}`} σε ${to}.`;
+  return `Η αγγελία δηλώνει πλέον παράδοση ${to}.`;
+}
+
+const SHIFT_SENTENCE: Readonly<Record<AvailabilityShiftDirection, string>> = {
+  lost: 'Δεν ταιριάζει πια στον χρόνο που ζητάτε.',
+  gained: 'Ταιριάζει ξανά στον χρόνο που ζητάτε.',
+};
+
+/**
+ * **Το email της αλλαγής διαθεσιμότητας**, για αγγελία που ο ζητών **ήδη** ξέρει.
+ *
+ * 🔑 Λέει **τι άλλαξε** και **τι σημαίνει για τη ζήτησή του**, όχι γιατί. Οι αιτίες (φάσεις, καθυστερήσεις) δεν
+ * είναι ποτέ δημόσιες (ADR-777 §8.99.4 «Ιδιωτικότητα»).
+ */
+export function availabilityChangeCopy(
+  listing: PublicListing,
+  change: AvailabilityChange,
+  direction: AvailabilityShiftDirection,
+  reasons: AnnouncementReasons,
+): AnnouncementCopy {
+  const lead = direction === 'lost' ? LEADS.availabilityLost : LEADS.availabilityGained;
+  const names = namesSentence(reasons, 'Αφορά τις ζητήσεις σας');
+  return {
+    ...headerOf(lead, listing, reasons),
+    body: joinSentences(changeSentence(change, listing.availability), SHIFT_SENTENCE[direction], names),
   };
 }

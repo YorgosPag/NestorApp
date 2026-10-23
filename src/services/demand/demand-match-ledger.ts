@@ -41,11 +41,13 @@ import { normalizeToMillisOrNull } from '@/lib/date-local';
 import {
   demandListingMatchEventId,
   demandPriceDropEventId,
+  recipientAvailabilityChangeEventId,
   recipientListingMatchEventId,
   recipientPriceDropEventId,
   type MatchHistory,
 } from '@/lib/demand/demand-announcement';
 import { generateNotificationDedupeId } from '@/services/enterprise-id.service';
+import type { AvailabilityChange } from '@/types/availability-history';
 import type { PriceReduction } from '@/types/price-history';
 
 /**
@@ -54,11 +56,15 @@ import type { PriceReduction } from '@/types/price-history';
  */
 export const MATCH_LEDGER_BATCH = 100;
 
-/** **Ένα θέμα** που ρωτάμε: η αγγελία, οι ζητήσεις-λόγοι της, και η μείωσή της αν έχει. */
+/**
+ * **Ένα θέμα** που ρωτάμε: η αγγελία, οι ζητήσεις-λόγοι της, η μείωσή της αν έχει, και (ADR-919 §10) η αλλαγή
+ * διαθεσιμότητας που κρίνεται σε αυτό το πέρασμα, αν υπάρχει.
+ */
 export interface LedgerTopic {
   readonly listingId: string;
   readonly demandIds: readonly string[];
   readonly reduction: Pick<PriceReduction, 'to' | 'since'> | null;
+  readonly availabilityChange: Pick<AvailabilityChange, 'at'> | null;
 }
 
 /** **Τι ξέρει ήδη ο άνθρωπος** για μία αγγελία. */
@@ -66,12 +72,14 @@ export interface TopicKnowledge {
   readonly match: MatchHistory;
   /** Η **τρέχουσα** μείωση έχει ήδη γραμμένη ειδοποίηση — με νέο ή παλιό κλειδί. */
   readonly priceDropKnown: boolean;
+  /** Η αλλαγή διαθεσιμότητας του θέματος έχει ήδη γραμμένη ειδοποίηση (ADR-919 §10· ένα κλειδί, καμία παλιά γενιά). */
+  readonly availabilityChangeKnown: boolean;
 }
 
 /** `listingId → γνώση` για **κάθε** θέμα που ρωτήθηκε — ποτέ απουσία. */
 export type RecipientLedger = ReadonlyMap<string, TopicKnowledge>;
 
-type Aspect = 'match' | 'price-drop';
+type Aspect = 'match' | 'price-drop' | 'availability-change';
 
 interface Probe {
   readonly listingId: string;
@@ -81,7 +89,7 @@ interface Probe {
 
 /** Όλα τα αναγνωριστικά εγγράφων που θα σήμαιναν «το έχουμε πει» για αυτό το θέμα. */
 function probesOf(recipientId: string, topic: LedgerTopic): Probe[] {
-  const { listingId, demandIds, reduction } = topic;
+  const { listingId, demandIds, reduction, availabilityChange } = topic;
   const probe = (aspect: Aspect, eventType: string, eventId: string): Probe => ({
     listingId,
     aspect,
@@ -93,6 +101,15 @@ function probesOf(recipientId: string, topic: LedgerTopic): Probe[] {
     probe('match', matchType, recipientListingMatchEventId(listingId)),
     ...demandIds.map((demandId) => probe('match', matchType, demandListingMatchEventId(demandId, listingId))),
   ];
+  if (availabilityChange !== null) {
+    probes.push(
+      probe(
+        'availability-change',
+        NOTIFICATION_EVENT_TYPES.PROPERTIES_DEMAND_AVAILABILITY_CHANGE,
+        recipientAvailabilityChangeEventId(listingId, availabilityChange),
+      ),
+    );
+  }
   if (reduction === null) return probes;
 
   const dropType = NOTIFICATION_EVENT_TYPES.PROPERTIES_DEMAND_PRICE_DROP;
@@ -112,11 +129,16 @@ interface Accumulator {
   matchUnreadable: boolean;
   earliestMs: number;
   priceDropKnown: boolean;
+  availabilityChangeKnown: boolean;
 }
 
 function absorb(acc: Accumulator, aspect: Aspect, createdAtMs: number | null): void {
   if (aspect === 'price-drop') {
     acc.priceDropKnown = true;
+    return;
+  }
+  if (aspect === 'availability-change') {
+    acc.availabilityChangeKnown = true;
     return;
   }
   acc.matchSeen = true;
@@ -125,11 +147,9 @@ function absorb(acc: Accumulator, aspect: Aspect, createdAtMs: number | null): v
 }
 
 function knowledgeOf(acc: Accumulator): TopicKnowledge {
-  if (!acc.matchSeen) return { match: { kind: 'never-announced' }, priceDropKnown: acc.priceDropKnown };
-  return {
-    match: { kind: 'announced', atMs: acc.matchUnreadable ? null : acc.earliestMs },
-    priceDropKnown: acc.priceDropKnown,
-  };
+  const known = { priceDropKnown: acc.priceDropKnown, availabilityChangeKnown: acc.availabilityChangeKnown };
+  if (!acc.matchSeen) return { match: { kind: 'never-announced' }, ...known };
+  return { match: { kind: 'announced', atMs: acc.matchUnreadable ? null : acc.earliestMs }, ...known };
 }
 
 /** **Τι ξέρει ήδη αυτός ο παραλήπτης για αυτά τα θέματα.** Κενή λίστα ⇒ καμία ανάγνωση. */
@@ -141,7 +161,13 @@ export async function readRecipientLedger(
   const accumulators = new Map<string, Accumulator>(
     topics.map((topic) => [
       topic.listingId,
-      { matchSeen: false, matchUnreadable: false, earliestMs: Number.POSITIVE_INFINITY, priceDropKnown: false },
+      {
+        matchSeen: false,
+        matchUnreadable: false,
+        earliestMs: Number.POSITIVE_INFINITY,
+        priceDropKnown: false,
+        availabilityChangeKnown: false,
+      },
     ]),
   );
   const probes = topics.flatMap((topic) => probesOf(recipientId, topic));

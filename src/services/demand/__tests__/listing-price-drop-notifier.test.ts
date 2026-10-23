@@ -375,7 +375,7 @@ describe('Σ — §8.69.12: ΕΝΑΣ άνθρωπος, ΜΙΑ αγγελία, Μ
     expect(readRecipientLedger).toHaveBeenCalledTimes(1);
     expect(readRecipientLedger.mock.calls[0][1]).toBe('usr_x');
     expect(readRecipientLedger.mock.calls[0][2]).toEqual([
-      { listingId: 'l1', demandIds: ['d1', 'd2'], reduction: REDUCTION },
+      { listingId: 'l1', demandIds: ['d1', 'd2'], reduction: REDUCTION, availabilityChange: null },
     ]);
   });
 });
