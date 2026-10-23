@@ -35,6 +35,7 @@
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { DomainDefinition } from './report-builder-types';
+import { docAgeDays, docDaysPast } from './report-computed-days';
 
 // ============================================================================
 // Enum Constants (SSoT — match Firestore data & accounting types)
@@ -80,13 +81,12 @@ function computeIsReconciled(doc: Record<string, unknown>): string {
 
 const RECONCILED_VALUES = ['matched', 'unmatched', 'excluded'] as const;
 
+/** A bank transaction's date: `transactionDate`, else `valueDate`. */
+const TRANSACTION_DATE_FIELDS = ['transactionDate', 'valueDate'] as const;
+
 /** G11: Days since transaction date */
 function computeDaysSinceTransaction(doc: Record<string, unknown>): number | null {
-  const txDate = doc['transactionDate'] as string | undefined
-    ?? doc['valueDate'] as string | undefined;
-  if (!txDate) return null;
-  const ms = Date.now() - new Date(txDate).getTime();
-  return Math.max(0, Math.round(ms / 86_400_000));
+  return docAgeDays(doc, TRANSACTION_DATE_FIELDS);
 }
 
 /** G12: Days unmatched (0 if already matched) */
@@ -95,11 +95,7 @@ function computeUnmatchedAge(doc: Record<string, unknown>): number | null {
   if (status === 'auto_matched' || status === 'manual_matched' || status === 'excluded') {
     return 0;
   }
-  const txDate = doc['transactionDate'] as string | undefined
-    ?? doc['valueDate'] as string | undefined;
-  if (!txDate) return null;
-  const ms = Date.now() - new Date(txDate).getTime();
-  return Math.max(0, Math.round(ms / 86_400_000));
+  return docAgeDays(doc, TRANSACTION_DATE_FIELDS);
 }
 
 /** G25: Is inflow (credit = money in) */
@@ -146,10 +142,7 @@ function computeIsDeductible(doc: Record<string, unknown>): boolean | null {
 
 /** G27: Document age in days since upload */
 function computeDocumentAge(doc: Record<string, unknown>): number | null {
-  const created = doc['createdAt'] as string | undefined;
-  if (!created) return null;
-  const ms = Date.now() - new Date(created).getTime();
-  return Math.max(0, Math.round(ms / 86_400_000));
+  return docAgeDays(doc, 'createdAt');
 }
 
 /** G28: Needs user review (status = 'review') */
@@ -185,10 +178,7 @@ function computeEfkaIsOverdue(doc: Record<string, unknown>): boolean {
 function computeDaysOverdueOrUntilDue(doc: Record<string, unknown>): number | null {
   const status = doc['status'] as string | undefined;
   if (status === 'paid') return 0;
-  const dueDate = doc['dueDate'] as string | undefined;
-  if (!dueDate) return null;
-  const ms = Date.now() - new Date(dueDate).getTime();
-  return Math.round(ms / 86_400_000);
+  return docDaysPast(doc, 'dueDate');
 }
 
 /** G18: KEAO risk level based on overdue days */
@@ -196,12 +186,8 @@ function computeKeaoRisk(doc: Record<string, unknown>): string {
   const status = doc['status'] as string | undefined;
   if (status === 'paid' || status === 'upcoming') return 'low';
   if (status === 'keao') return 'high';
-  const dueDate = doc['dueDate'] as string | undefined;
-  if (!dueDate) return 'low';
-  const days = Math.round(
-    (Date.now() - new Date(dueDate).getTime()) / 86_400_000,
-  );
-  if (days <= 0) return 'low';
+  const days = docDaysPast(doc, 'dueDate');
+  if (days === null || days <= 0) return 'low';
   if (days <= 60) return 'medium';
   return 'high';
 }
@@ -231,7 +217,7 @@ export const BANK_TRANSACTIONS_DEFINITION: DomainDefinition = {
   labelKey: 'domains.bankTransactions.label',
   descriptionKey: 'domains.bankTransactions.description',
   // eslint-disable-next-line custom/no-hardcoded-strings -- route template
-  entityLinkPath: '/accounting/bank/{id}',
+  entityLink: { unlinked: 'Bank transactions have no detail page addressable by URL' },
   defaultSortField: 'transactionDate',
   defaultSortDirection: 'desc',
   fields: [
@@ -325,7 +311,7 @@ export const EXPENSE_DOCUMENTS_DEFINITION: DomainDefinition = {
   labelKey: 'domains.expenseDocuments.label',
   descriptionKey: 'domains.expenseDocuments.description',
   // eslint-disable-next-line custom/no-hardcoded-strings -- route template
-  entityLinkPath: '/accounting/expenses/{id}',
+  entityLink: { unlinked: 'Expense documents have no detail page addressable by URL' },
   defaultSortField: 'createdAt',
   defaultSortDirection: 'desc',
   fields: [
@@ -437,7 +423,7 @@ export const EFKA_PAYMENTS_DEFINITION: DomainDefinition = {
   labelKey: 'domains.efkaPayments.label',
   descriptionKey: 'domains.efkaPayments.description',
   // eslint-disable-next-line custom/no-hardcoded-strings -- route template
-  entityLinkPath: '/accounting/efka/{id}',
+  entityLink: { unlinked: 'EFKA payments have no detail page addressable by URL' },
   defaultSortField: 'dueDate',
   defaultSortDirection: 'desc',
   fields: [

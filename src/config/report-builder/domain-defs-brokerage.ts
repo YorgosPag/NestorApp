@@ -34,7 +34,7 @@ export const BROKERAGE_DEFINITION: DomainDefinition = {
   labelKey: 'domains.brokerageAgreements.label',
   descriptionKey: 'domains.brokerageAgreements.description',
   // eslint-disable-next-line custom/no-hardcoded-strings
-  entityLinkPath: '/brokerage/{id}',
+  entityLink: { unlinked: 'Brokerage agreements have no detail page addressable by URL' },
   defaultSortField: 'startDate',
   defaultSortDirection: 'desc',
   fields: [
@@ -72,7 +72,7 @@ export const COMMISSIONS_DEFINITION: DomainDefinition = {
   labelKey: 'domains.commissionRecords.label',
   descriptionKey: 'domains.commissionRecords.description',
   // eslint-disable-next-line custom/no-hardcoded-strings
-  entityLinkPath: '/brokerage/{brokerageAgreementId}',
+  entityLink: { unlinked: 'Brokerage agreements (owners of commission records) have no detail page addressable by URL' },
   defaultSortField: 'createdAt',
   defaultSortDirection: 'desc',
   fields: [

@@ -7,6 +7,7 @@
  */
 
 import { generateTempId } from '@/services/enterprise-id.service';
+import type { LinkableEntityType } from '@/lib/navigation/entity-href';
 
 // Phase 3 — Export types (barrel re-export for convenience)
 export type {
@@ -152,6 +153,18 @@ export interface FieldDefinition {
   conditionalOn?: { field: string; value: string | string[] };
 }
 
+/**
+ * A row's entity link: the entity type to open + the row field holding its id (default `'id'` = the row itself).
+ * `idField` ≠ `'id'` links a row WITHOUT its own page to its owner (floor → building); the server projects that id
+ * as `REPORT_ROW_LINK_ID_KEY`, so the link exists even when the user did not pick the owner's column.
+ */
+export type DomainEntityLink =
+  | { readonly type: LinkableEntityType; readonly idField?: string }
+  | { readonly unlinked: string };
+
+/** Reserved key of a projected result row that carries the entity link id (see `DomainEntityLink`). */
+export const REPORT_ROW_LINK_ID_KEY = '_linkId';
+
 /** Complete domain configuration */
 export interface DomainDefinition {
   /** Domain identifier */
@@ -164,8 +177,11 @@ export interface DomainDefinition {
   labelKey: string;
   /** i18n key for domain description */
   descriptionKey: string;
-  /** Next.js route template for entity links, e.g. '/projects/{id}' */
-  entityLinkPath: string;
+  /**
+   * Where a result row links to (ADR-242 Βήμα 5) — a DECLARATION, resolved by `getEntityHref`, never a URL template.
+   * `unlinked` is mandatory prose: a domain without a detail page must say why, so silence is impossible.
+   */
+  entityLink: DomainEntityLink;
   /** All available fields in this domain */
   fields: FieldDefinition[];
   /** Default sort field key */

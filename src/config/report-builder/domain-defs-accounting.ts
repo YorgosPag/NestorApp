@@ -35,6 +35,7 @@
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { DomainDefinition } from './report-builder-types';
+import { docAgeDays, docDaysPast } from './report-computed-days';
 
 // ============================================================================
 // Enum Constants (SSoT — match Firestore data & accounting types)
@@ -73,10 +74,7 @@ const FISCAL_QUARTERS = ['Q1', 'Q2', 'Q3', 'Q4'] as const;
 function computeDaysPastDue(doc: Record<string, unknown>): number | null {
   const paymentStatus = doc['paymentStatus'] as string | undefined;
   if (paymentStatus === 'paid') return 0;
-  const dueDate = doc['dueDate'] as string | undefined;
-  if (!dueDate) return null;
-  const ms = Date.now() - new Date(dueDate).getTime();
-  return Math.round(ms / 86_400_000);
+  return docDaysPast(doc, 'dueDate');
 }
 
 /** G2: Is invoice overdue (unpaid/partial AND past due date) */
@@ -100,12 +98,8 @@ function computePaymentProgress(doc: Record<string, unknown>): number | null {
 function computeInvoiceAgingBucket(doc: Record<string, unknown>): string {
   const paymentStatus = doc['paymentStatus'] as string | undefined;
   if (paymentStatus === 'paid') return 'current';
-  const dueDate = doc['dueDate'] as string | undefined;
-  if (!dueDate) return 'current';
-  const days = Math.round(
-    (Date.now() - new Date(dueDate).getTime()) / 86_400_000,
-  );
-  if (days <= 0) return 'current';
+  const days = docDaysPast(doc, 'dueDate');
+  if (days === null || days <= 0) return 'current';
   if (days <= 30) return 'days30';
   if (days <= 60) return 'days60';
   if (days <= 90) return 'days90';
@@ -128,8 +122,7 @@ function computeDaysToPayment(doc: Record<string, unknown>): number | null {
       }
     }
   }
-  const ms = Date.now() - new Date(issued).getTime();
-  return Math.max(0, Math.round(ms / 86_400_000));
+  return docAgeDays(doc, 'issueDate');
 }
 
 /** G6: Outstanding amount (totalGrossAmount - totalPaid) */
@@ -149,10 +142,7 @@ function computeMydataStatus(doc: Record<string, unknown>): string | null {
 
 /** G20: Days since invoice was issued */
 function computeDaysSinceIssued(doc: Record<string, unknown>): number | null {
-  const issued = doc['issueDate'] as string | undefined;
-  if (!issued) return null;
-  const ms = Date.now() - new Date(issued).getTime();
-  return Math.max(0, Math.round(ms / 86_400_000));
+  return docAgeDays(doc, 'issueDate');
 }
 
 /** G21: Is invoice cancelled */
@@ -177,11 +167,7 @@ function computePaymentCount(doc: Record<string, unknown>): number {
 function computeDaysSinceLastPayment(doc: Record<string, unknown>): number | null {
   const payments = doc['payments'] as Array<Record<string, unknown>> | undefined;
   if (!payments || payments.length === 0) return null;
-  const lastPayment = payments[payments.length - 1];
-  const paidDate = lastPayment['date'] as string | undefined;
-  if (!paidDate) return null;
-  const ms = Date.now() - new Date(paidDate).getTime();
-  return Math.max(0, Math.round(ms / 86_400_000));
+  return docAgeDays(payments[payments.length - 1], 'date');
 }
 
 /** G37: Number of emails sent for this invoice */
@@ -202,10 +188,7 @@ function computeWasEmailed(doc: Record<string, unknown>): boolean {
 
 /** G7: Entry age in days since creation */
 function computeEntryAge(doc: Record<string, unknown>): number | null {
-  const created = doc['createdAt'] as string | undefined;
-  if (!created) return null;
-  const ms = Date.now() - new Date(created).getTime();
-  return Math.max(0, Math.round(ms / 86_400_000));
+  return docAgeDays(doc, 'createdAt');
 }
 
 /** G8: Has linked invoice */
@@ -254,7 +237,7 @@ export const INVOICES_DEFINITION: DomainDefinition = {
   labelKey: 'domains.invoices.label',
   descriptionKey: 'domains.invoices.description',
   // eslint-disable-next-line custom/no-hardcoded-strings -- route template
-  entityLinkPath: '/accounting/invoices/{id}',
+  entityLink: { unlinked: 'Invoice details are list-local state (viewInvoiceId), not a URL' },
   defaultSortField: 'issueDate',
   defaultSortDirection: 'desc',
   fields: [
@@ -463,7 +446,7 @@ export const JOURNAL_ENTRIES_DEFINITION: DomainDefinition = {
   labelKey: 'domains.journalEntries.label',
   descriptionKey: 'domains.journalEntries.description',
   // eslint-disable-next-line custom/no-hardcoded-strings -- route template
-  entityLinkPath: '/accounting/journal/{id}',
+  entityLink: { unlinked: 'Journal entries have no detail page addressable by URL' },
   defaultSortField: 'date',
   defaultSortDirection: 'desc',
   fields: [

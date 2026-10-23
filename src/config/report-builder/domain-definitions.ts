@@ -151,7 +151,7 @@ const PROJECTS_DEFINITION: DomainDefinition = {
   labelKey: 'domains.projects.label',
   descriptionKey: 'domains.projects.description',
   // eslint-disable-next-line custom/no-hardcoded-strings -- route template, not user-facing
-  entityLinkPath: '/projects/{id}',
+  entityLink: { type: 'project' },
   defaultSortField: 'name',
   defaultSortDirection: 'asc',
   fields: [
@@ -178,7 +178,7 @@ const BUILDINGS_DEFINITION: DomainDefinition = {
   labelKey: 'domains.buildings.label',
   descriptionKey: 'domains.buildings.description',
   // eslint-disable-next-line custom/no-hardcoded-strings -- route template, not user-facing
-  entityLinkPath: '/buildings/{id}',
+  entityLink: { type: 'building' },
   defaultSortField: 'name',
   defaultSortDirection: 'asc',
   fields: [
@@ -204,7 +204,7 @@ const FLOORS_DEFINITION: DomainDefinition = {
   labelKey: 'domains.floors.label',
   descriptionKey: 'domains.floors.description',
   // eslint-disable-next-line custom/no-hardcoded-strings -- route template, not user-facing
-  entityLinkPath: '/buildings/{buildingId}',
+  entityLink: { type: 'building', idField: 'buildingId' },
   defaultSortField: 'number',
   defaultSortDirection: 'asc',
   fields: [
@@ -224,7 +224,7 @@ const PROPERTIES_DEFINITION: DomainDefinition = {
   labelKey: 'domains.properties.label',
   descriptionKey: 'domains.properties.description',
   // eslint-disable-next-line custom/no-hardcoded-strings -- route template, not user-facing
-  entityLinkPath: '/properties/{id}',
+  entityLink: { type: 'property' },
   defaultSortField: 'name',
   defaultSortDirection: 'asc',
   fields: [
