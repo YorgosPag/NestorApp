@@ -9,6 +9,7 @@
  * - η προθεσμία: ο πάροχος που αργεί δεν κρατά την «Αποθήκευση», και η εκκρεμότητα προγραμματίζεται·
  * - το ιστορικό: κείμενο **και** θέση (σύρσιμο πινέζας), απέναντι στο αποθηκευμένο έγγραφο·
  * - η αυτόματη αποθήκευση: ξαναστέλνει **όλα** τα πεδία — αμετάβλητα πεδία ⇒ καμία γραμμή.
+ * - η επαναπροβολή (ADR-919 §9): ό,τι διαβάζει η αγγελία από το κτίριο ξαναπροβάλλεται **μόνο όταν άλλαξε**.
  */
 
 /* global describe, it, expect, beforeEach, afterEach, jest */
@@ -19,6 +20,7 @@ import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { geocodeWithVerdict } from '@/app/api/geocoding/geocoding-engine';
 import { scheduleAddressPositionCompletion } from '@/services/listings/address-position-completion-schedule';
 import { EntityAuditService } from '@/services/entity-audit.service';
+import { republishListingsForProject } from '@/services/listings/listing-scope-republish';
 import { PATCH } from '../building-update.handler';
 
 jest.mock('server-only', () => ({}));
@@ -221,5 +223,46 @@ describe('προθεσμία θέσης', () => {
     await patch({ name: 'Κτίριο Β' });
 
     expect(schedule.mock.calls[0][0].pendingIds).toEqual([]);
+  });
+});
+
+// ADR-919 §9 (βήμα 5) — η διαθεσιμότητα ζει στο κτίριο: η αγγελία ξαναπροβάλλεται όταν **άλλαξε**, και μόνο τότε.
+describe('επαναπροβολή — ό,τι διαβάζει η αγγελία από το κτίριο', () => {
+  const republish = republishListingsForProject as jest.MockedFunction<typeof republishListingsForProject>;
+  const DECLARATION = {
+    provenance: 'declared',
+    value: { precision: 'quarter', anchor: '2027-07-01' },
+    at: '2026-10-23T10:00:00.000Z',
+  };
+
+  beforeEach(() => {
+    storedBuilding = { ...BUILDING, status: 'construction', completionDeclaration: DECLARATION };
+    republish.mockReset();
+    republish.mockResolvedValue({ published: 0, withdrawn: 0, failed: 0 });
+  });
+
+  it('Ε1 — το κτίριο παραδόθηκε ⇒ ξαναπροβάλλεται το έργο του', async () => {
+    await patch({ status: 'completed' });
+
+    expect(republish).toHaveBeenCalledTimes(1);
+    expect(republish.mock.calls[0][1]).toBe('proj_1');
+  });
+
+  it('Ε2 — μετατέθηκε η δημόσια υπόσχεση παράδοσης ⇒ ξαναπροβάλλεται', async () => {
+    await patch({ completionDeclaration: { ...DECLARATION, value: { precision: 'quarter', anchor: '2027-10-01' } } });
+
+    expect(republish).toHaveBeenCalledTimes(1);
+  });
+
+  it('Ε3 — η αυτόματη αποθήκευση ξαναστέλνει ΑΜΕΤΑΒΛΗΤΑ όλα τα πεδία ⇒ καμία επαναπροβολή', async () => {
+    await patch({ ...storedBuilding, completionDeclaration: { ...DECLARATION } });
+
+    expect(republish).not.toHaveBeenCalled();
+  });
+
+  it('Ε4 — αλλαγή πεδίου που η αγγελία δεν διαβάζει (`completionDate`, εσωτερικό) ⇒ καμία επαναπροβολή', async () => {
+    await patch({ completionDate: '2027-12-31' });
+
+    expect(republish).not.toHaveBeenCalled();
   });
 });

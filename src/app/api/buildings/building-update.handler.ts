@@ -33,6 +33,7 @@ import {
   type ProjectAddressLike,
 } from '@/services/listings/address-place-writeback';
 import { scheduleAddressPositionCompletion } from '@/services/listings/address-position-completion-schedule';
+import { buildingListingFactsChanged } from '@/services/listings/building-listing-facts';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { verifyPlaceRef } from '@/services/places/public-place-read.service';
 import type { AddressPositionDrift } from '@/lib/geocoding/address-position';
@@ -320,13 +321,12 @@ export const PATCH = withStandardRateLimit(
       // `republishListingsForProject` είναι το SSoT και είναι **idempotent**, οπότε ένα
       // υπερσύνολο είναι σωστό. Δεύτερη συνάρτηση «ανά κτίριο» θα ήταν δεύτερη μηχανή
       // για την ίδια ερώτηση (ADR-749).
-      // ADR-890 Φ0 — το ΕΤΟΣ ΚΑΤΑΣΚΕΥΗΣ ζει κι αυτό στο κτίριο, και το κληρονομεί κάθε αγγελία του.
-      // ⚠️ Μόνο όταν **άλλαξε**: η αυτόματη αποθήκευση το στέλνει σε κάθε κύκλο, και ένα σκέτο
-      //    `in` θα ξαναπρόβαλλε όλο το έργο σε κάθε πληκτρολόγηση του ονόματος.
-      const constructionYearChanged =
-        'constructionYear' in cleanUpdates &&
-        (cleanUpdates.constructionYear ?? null) !== (buildingData?.constructionYear ?? null);
-      if ('placeRef' in cleanUpdates || 'projectId' in cleanUpdates || constructionYearChanged) {
+      // Το ίδιο ισχύει για το ΕΤΟΣ ΚΑΤΑΣΚΕΥΗΣ (ADR-890 Φ0) και τη ΔΙΑΘΕΣΙΜΟΤΗΤΑ (`status` ·
+      // `completionDeclaration`, ADR-919 §9): ζουν στο κτίριο και τα κληρονομεί κάθε αγγελία του.
+      // 🔑 Το «άλλαξε;» το απαντά η **ίδια** συνάρτηση που διαλέγει τα πεδία για την προβολή — όχι
+      //    χειρόγραφη λίστα, που είχε ήδη ξεμείνει πίσω από τον αναγνώστη. Μόνο όταν **άλλαξε**: η
+      //    αυτόματη αποθήκευση στέλνει όλα τα πεδία σε κάθε κύκλο.
+      if (buildingListingFactsChanged(buildingData ?? {}, cleanUpdates)) {
         const affectedProjectId =
           (cleanUpdates.projectId as string | undefined) ??
           (buildingData?.projectId as string | undefined) ??

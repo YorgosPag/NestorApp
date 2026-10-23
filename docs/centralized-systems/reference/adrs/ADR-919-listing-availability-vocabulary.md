@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | 🟡 **ΣΕ ΕΞΕΛΙΞΗ** — **Βήμα 1 ✅** *(2026-10-23, `2bdf7a56`/`690fbaf5`)*: τύπος τριών καταστάσεων · κατασκευαστής διαστήματος ανά ακρίβεια · `timingBlockers` κρίνει με το τέλος του διαστήματος. **Βήμα 2 ✅** *(2026-10-23, `80e9f88f`)*: `forecastCompletion` με ημερομηνία κατάστασης (P6) πάνω στο CPM. **Βήμα 3 ✅ σε κώδικα** *(2026-10-23, uncommitted)*: επιλυτής `resolveListingAvailability` (μονάδα → κτίριο, «το γεγονός νικά την υπόσχεση») + `PublicListing.availability` + κρίκος σχήματος 25 (§7). ⏳ Βήματα 4–9 του ADR-777 §8.99.4 |
+| **Status** | 🟡 **ΣΕ ΕΞΕΛΙΞΗ** — **Βήμα 1 ✅** *(2026-10-23, `2bdf7a56`/`690fbaf5`)*: τύπος τριών καταστάσεων · κατασκευαστής διαστήματος ανά ακρίβεια · `timingBlockers` κρίνει με το τέλος του διαστήματος. **Βήμα 2 ✅** *(2026-10-23, `80e9f88f`)*: `forecastCompletion` με ημερομηνία κατάστασης (P6) πάνω στο CPM. **Βήμα 3 ✅** *(2026-10-23, `5fcf400e`)*: επιλυτής `resolveListingAvailability` (μονάδα → κτίριο, «το γεγονός νικά την υπόσχεση») + `PublicListing.availability` + κρίκος σχήματος 25 (§7). **Βήμα 4 ✅ σε κώδικα** *(2026-10-23, uncommitted)*: οι τρεις παραγωγοί διαβάζουν `listing.availability` (§8). **Βήμα 5 ✅ σε κώδικα** *(2026-10-23, uncommitted)*: επαναπροβολή όταν αλλάζει είσοδος του επιλυτή· ο ανιχνευτής αλλαγής του κτιρίου είναι ο ίδιος ο αναγνώστης (§9). ⏳ Βήματα 6–9 του ADR-777 §8.99.4 |
 | **Date** | 2026-10-23 |
 | **Category** | Listings / Demand matching |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
@@ -63,6 +63,9 @@ type ListingAvailability =
 Μέχρι το βήμα 4 (`listingAvailabilityOf`) **όλοι** οι παραγωγοί δίνουν `LISTING_AVAILABILITY_UNKNOWN`
 (`listing-resolver.ts`, `place-interest.service.ts`, `demand-answer.ts`). Άρα μια ζήτηση «Τώρα» δείχνει
 «δεν ξέρουμε» αντί για αποτελέσματα. **Το βήμα 1 δεν αναπτύσσεται μόνο του**· φεύγει μαζί με τα βήματα 2–4.
+
+✅ **Έκλεισε με το βήμα 4 (§8).** Μένει η επαναπροβολή μετά το deploy: έγγραφο με σχήμα < 25 διαβάζεται `unknown`
+μέχρι να ξαναγραφτεί (`rebuild-public-listings`).
 
 ## §5. Άγκυρες
 
@@ -165,7 +168,84 @@ forecastCompletion(phases, tasks, statusDate): CompletionForecast
 Μεταλλάξεις **4/4 κόκκινες**: αντιστροφή μονάδας/κτιρίου (5 κόκκινα) · αφαίρεση του `isPubliclyPresentable` (2) · υπόσχεση
 κτιρίου πριν από το γεγονός (4) · χωρίς `isNewConstruction` στον ιδιώτη (2).
 
-⚠️ **Το §4 ισχύει ακόμη**: οι τρεις παραγωγοί της ζήτησης δεν διαβάζουν ακόμη το πεδίο (βήμα 4). Ούτε push ούτε deploy πριν από αυτό.
+*(Το §4 έκλεισε με το βήμα 4, §8.)*
+
+## §8. Βήμα 4: οι παραγωγοί διαβάζουν την αγγελία
+
+Η διαθεσιμότητα είναι πλέον **πεδίο της αγγελίας**, άρα οι παραγωγοί των `ListingMatchFacts` τη **διαβάζουν**:
+δεν την ξαναϋπολογίζουν και δεν τη συμπληρώνουν από αλλού.
+
+| Παραγωγός | Πηγή της αγγελίας | Τι γράφει |
+|---|---|---|
+| `services/listings/listing-resolver.ts` (`factsOf`) | `buildPublicListing` (ζωντανό έγγραφο) | `listing.availability` |
+| `services/demand/place-interest.service.ts` (`factsOfProjection`) | `projectListingShape` (κάτοχος, και πριν δημοσιεύσει) | `listing.availability` |
+| `lib/demand/demand-answer.ts` (`listingFactsFrom`) | `public_listings` μέσω του συνόρου ανάγνωσης (κρίκος 25) | `listing.availability` |
+
+- **Δεν χρειάστηκε `listingAvailabilityOf`** (το όνομα του ADR-777 §8.99.4). Ο τύπος εγγυάται το πεδίο, και το
+  σύνορο ανάγνωσης (CHECK 3.74 + κρίκος 25) εγγυάται ότι το αποθηκευμένο έγγραφο το έχει κριμένο. Ένας τρίτος
+  αναγνώστης θα ξανάκρινε ό,τι ήδη κρίθηκε.
+- **Αφαιρέθηκε ο χάρτης `ListingKnowledge.availability`.** Το `ListingKnowledge` κρατά ό,τι **δεν** ζει στην αγγελία.
+  Ένας χάρτης διαθεσιμότητας δίπλα στο πεδίο θα ήταν δεύτερη πηγή, που μπορεί να διαφωνεί σιωπηλά.
+- Άγκυρες: `listing-resolver-availability.test.ts` (έγγραφο Firestore → γεγονότα: παραδομένο κτίριο, δήλωση
+  κτιρίου, σιωπή, ιδιώτης), `place-interest-availability.test.ts`, και δύο στο `demand-answer.test.ts`
+  (`scheduled` και `ready` της αγγελίας γίνονται ταίριασμα).
+
+## §9. Βήμα 5: επαναπροβολή όταν αλλάζει είσοδος του επιλυτή
+
+Η τιμή υπολογίζεται τη στιγμή της προβολής, άρα κάθε είσοδος του επιλυτή χρειάζεται δρόμο προς επαναπροβολή.
+Αλλιώς ένα κτίριο που παραδόθηκε αφήνει τις αγγελίες του να λένε «Γ' τρίμηνο 2027».
+
+**Έλεγχος γραφέων (grep, 2026-10-23):**
+
+| Είσοδος | Γραφέας | Επαναπροβολή |
+|---|---|---|
+| `Property.availabilityDeclaration` · `operationalStatus` · `type` | μόνο ο `PATCH /api/properties/[id]` (τα εργαλεία AI μόνο διαβάζουν) | ✅ ήδη, **χωρίς όρο**, σε κάθε PATCH (`republishPublicProjection`). Καμία αλλαγή |
+| `Building.status` · `completionDeclaration` | μόνο ο `PATCH /api/buildings` (`building-update.handler.ts`). Οι κανόνες έχουν `allow write: if false`· οι άλλοι γραφείς είναι δημιουργία ή migrations | ❌ → ✅ **εδώ** |
+| φάσεις κατασκευής | `api/buildings/[buildingId]/construction-phases/*` | **Δεν χρειάζεται** (βλ. κάτω) |
+
+**Ο ανιχνευτής αλλαγής είναι ο ίδιος ο αναγνώστης** (`services/listings/building-listing-facts.ts`). Ο handler
+απαριθμούσε με το χέρι `placeRef || projectId || constructionYearChanged`, δηλαδή μια δεύτερη λίστα των πεδίων που
+διαβάζει το `readBuildingDoc`. Όταν το βήμα 3 πρόσθεσε `status` και `completionDeclaration` στον αναγνώστη, η λίστα
+δεν τα ακολούθησε. Τώρα:
+
+- `buildingChainFactsOf(data)`: το **μόνο** σημείο που διαλέγει τα πεδία του κτιρίου για την αγγελία. Το καλεί το
+  `readBuildingDoc`.
+- `buildingListingFactsChanged(stored, written)`: σύγκριση των γεγονότων πριν/μετά με `canonicalJson` (ταξινομημένα
+  κλειδιά, ήδη SSoT στο `listing-media-fingerprint`). Ισοδυναμία, όχι `!==` σε αντικείμενο.
+- Ο handler ρωτά μόνο αυτό και καλεί το υπάρχον `republishProjectListings` → `republishListingsForProject`
+  (idempotent, όλο το έργο, ADR-749). Δεν υπάρχει δεύτερη συνάρτηση «ανά κτίριο».
+
+Έτσι πεδίο κτιρίου που διαβάζει η προβολή χωρίς να ξαναπροβάλλεται όταν αλλάζει είναι **δομικά αδύνατο**. Η αγορά
+λύνει το ίδιο πρόβλημα αλλιώς: το RESO με `ModificationTimestamp`, που αλλάζει σε **κάθε** εγγραφή και αφήνει τον
+καταναλωτή να ξανατραβήξει τα πάντα, και το idealista με λίστα «πεδίων που επηρεάζουν το feed», που είναι η ίδια
+δεύτερη λίστα που ξέμεινε εδώ. Εμείς ξαναπροβάλλουμε **μόνο** όταν άλλαξε κάτι που διαβάζεται, και η λίστα δεν
+μπορεί να ξεμείνει, γιατί είναι ο ίδιος ο αναγνώστης. Παράπλευρο κέρδος: η αυτόματη αποθήκευση που ξαναστέλνει
+ίδιο `placeRef`/`projectId` δεν ξαναπροβάλλει πια όλο το έργο.
+
+**Απορρίφθηκαν:**
+- *Σημασιολογική σύγκριση* («άλλαξε το `isDeliveredBuildingStatus`;», ώστε το planning → construction να μη
+  ξαναπροβάλλει). Θα ήταν δεύτερο σημείο κρίσης του επιλυτή. Η ωμή σύγκριση είναι φθηνή: η αλλαγή κατάστασης είναι
+  σπάνια ανθρώπινη πράξη και η επαναπροβολή idempotent.
+- *Σταθερά `BUILDING_LISTING_INPUT_FIELDS`*: θα ήταν δεύτερη πηγή δίπλα στον αναγνώστη.
+
+**Οι φάσεις κατασκευής δεν ξαναπροβάλλουν την αγγελία.** Καμία ανάγνωση φάσεων δεν υπάρχει σε `services/listings`,
+`lib/listings`, `lib/demand`, `services/demand`. Η πρόβλεψη του §6 είναι **πρόταση** (Δ1) και γίνεται δημόσια μόνο
+όταν άνθρωπος την εγκρίνει και γραφτεί ως `Building.completionDeclaration` με `confirmedAt` (Α7). Αυτή η εγγραφή
+περνά από τον `PATCH /api/buildings`, άρα από τον ανιχνευτή. Η αλλαγή φάσης αλλάζει την **πρόταση**, και αυτό αφορά
+την οθόνη του βήματος 7 (προειδοποίηση απόκλισης), όχι το κοινό. Το ADR-777 §8.99.4 #5 («διαδρομή φάσεων»)
+διορθώθηκε ανάλογα.
+
+**Πύλη τύπου CHECK 3.104: όχι.** Στο κτίριο υπάρχει ένας γραφέας (κλειστοί κανόνες, ένας handler), και ο ανιχνευτής
+είναι ο αναγνώστης, οπότε η κλάση «νέο πεδίο χωρίς επαναπροβολή» κλείνει δομικά. Στη μονάδα η επαναπροβολή γίνεται
+χωρίς όρο. Η 3.104 υπάρχει επειδή εκεί πολλοί γραφείς γράφουν σε πολλές συλλογές. Εδώ μια πύλη θα επόπτευε κάτι που
+δεν μπορεί να αποκλίνει. Αν εμφανιστεί δεύτερος γραφέας κατάστασης κτιρίου (π.χ. αυτόματη μετάβαση από το
+χρονοδιάγραμμα), ξανανοίγει η ερώτηση.
+
+**Άγκυρες**:
+- `services/listings/__tests__/building-listing-facts.test.ts`: ομάδες Α (αλλαγή ⇒ ναι), Σ (αυτόματη αποθήκευση,
+  σειρά κλειδιών, άσχετο πεδίο, απόν = `null` ⇒ όχι), Ρ (αναγνώστης).
+- `app/api/buildings/__tests__/building-update.handler.test.ts`, ομάδα **Ε**: παράδοση και μετάθεση ⇒ επαναπροβολή
+  του έργου· αμετάβλητα πεδία ή `completionDate` ⇒ καμία.
 
 ## Changelog
 
@@ -174,3 +254,5 @@ forecastCompletion(phases, tasks, statusDate): CompletionForecast
 | 2026-10-23 | **Βήμα 1** — δημιουργία. Τύπος τριών καταστάσεων, `availabilityWindowOf` / `scheduledAvailability` πάνω στο `daysInMonth` (ADR-828), `timingBlockers` με εξαντλητικό `switch`, οι τρεις παραγωγοί δίνουν την ονομασμένη άγνοια. Κανένα νέο `DemandBlocker`, κανένα νέο κλειδί i18n. |
 | 2026-10-23 | **Βήμα 2** — `forecastCompletion` (`services/construction-scheduling/completion-forecast.ts`) πάνω στον κοινό κανόνα `status-date-rule.ts` και στο `computeCPM(…, { statusDate })`. Κοινές ημερομηνίες σε UTC (`schedule-dates.ts`). Η πραγματική φάση της βάσης βγαίνει 2027-02-06 αντί για το «23/12» του σχεδίου. 14 άγκυρες, μεταλλάξεις 2/2. |
 | 2026-10-23 | **Βήμα 3** — `resolveListingAvailability` + `readAvailabilityDeclaration` (`lib/listings/listing-availability.ts`), `PublicListing.availability` από την καθαρή προβολή, `PlaceKnowledge.buildingAvailability` από το ίδιο ανέβασμα, `Building.completionDeclaration` / `Property.availabilityDeclaration`, `DELIVERED_BUILDING_STATUSES`, ρόλος αποκάλυψης `'availability'`, κρίκος 25. Απόσυρση του `Property.deliveryDate`. Το `completionDate` μένει εσωτερικό (§7). 34 νέες άγκυρες, μεταλλάξεις 4/4. |
+| 2026-10-23 | **Βήμα 4** — οι τρεις παραγωγοί (`listing-resolver` · `place-interest` · `demand-answer`) γράφουν `listing.availability` αντί για τη σταθερά. Αφαιρέθηκε ο χάρτης `ListingKnowledge.availability` (δεύτερη πηγή). Το §4 έκλεισε (§8). |
+| 2026-10-23 | **Βήμα 5** — επαναπροβολή όταν αλλάζει είσοδος του επιλυτή (§9). Νέο `services/listings/building-listing-facts.ts`: το `buildingChainFactsOf` είναι ο αναγνώστης (`readBuildingDoc`) **και** ο ανιχνευτής (`buildingListingFactsChanged`, `canonicalJson`), οπότε ο `PATCH /api/buildings` ξαναπροβάλλει σε αλλαγή `status`/`completionDeclaration` αντί για χειρόγραφη λίστα. Η μονάδα ξαναπροβαλλόταν ήδη χωρίς όρο. Οι φάσεις δεν ξαναπροβάλλουν (η πρόταση δεν είναι δημόσια). Καμία νέα πύλη, με λόγο. |

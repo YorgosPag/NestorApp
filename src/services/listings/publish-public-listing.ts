@@ -41,8 +41,7 @@ import { marketPriceOf } from '@/lib/listings/price-history';
 import { withdrawListingShelves, writeWithShelf } from './publish-public-listing-shelf';
 import { resolvePublicationFacts, withPublicationFacts } from './listing-publication-facts';
 import { addressToPositionCandidate, type AddressLike } from './public-listing-position';
-import type { PlaceRef } from '@/types/geo/public-place';
-import type { BuildingAvailabilityFacts } from '@/lib/listings/listing-availability';
+import { buildingChainFactsOf, type BuildingChainFacts } from './building-listing-facts';
 import type { ListingImage, PublicListing } from '@/types/public-listing';
 import { listingLeadImage } from '@/lib/listings/listing-images';
 import { listingMapMark, type ListingMapMark } from '@/lib/listings/listing-map-mark';
@@ -196,17 +195,12 @@ export async function collectPlaceKnowledge(
   return { candidates, ...facts };
 }
 
-/** Ό,τι χρειάζεται η αλυσίδα από το κτίριο — **τέσσερα** γεγονότα, όχι ολόκληρο το έγγραφο. */
-interface BuildingChainFacts {
-  readonly projectId: string | null;
-  readonly placeRef: PlaceRef | null;
-  /** Ωμή δήλωση έτους κατασκευής (ADR-890 Φ0) — την κρίνει η προβολή, όχι ο αναγνώστης. */
-  readonly constructionYear: unknown;
-  /** Κατάσταση + δημόσια υπόσχεση παράδοσης (ADR-919 §7) — ωμά· τα κρίνει ο `resolveListingAvailability`. */
-  readonly availability: BuildingAvailabilityFacts;
-}
-
-/** Το έγγραφο του κτιρίου, **μία φορά** — ή `null` αν δεν υπάρχει κτίριο να ρωτηθεί. */
+/**
+ * Το έγγραφο του κτιρίου, **μία φορά** — ή `null` αν δεν υπάρχει κτίριο να ρωτηθεί.
+ *
+ * 🔑 Τα πεδία τα διαλέγει **μόνο** το `buildingChainFactsOf`, το ίδιο που ρωτά ο `PATCH /api/buildings`
+ * «άλλαξαν;» (ADR-919 §9). Πεδίο που διαβάζεται εδώ χωρίς να περνά από εκεί δεν θα ξαναπροβαλλόταν ποτέ.
+ */
 async function readBuildingDoc(
   adminDb: AdminFirestore,
   buildingId: string | null
@@ -216,13 +210,7 @@ async function readBuildingDoc(
   const snap = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(buildingId).get();
   if (!snap.exists) return null;
 
-  const data = snap.data() ?? {};
-  return {
-    projectId: (data.projectId as string | undefined) ?? null,
-    placeRef: (data.placeRef as PlaceRef | undefined) ?? null,
-    constructionYear: data.constructionYear ?? null,
-    availability: { status: data.status ?? null, completionDeclaration: data.completionDeclaration ?? null },
-  };
+  return buildingChainFactsOf(snap.data() ?? {});
 }
 
 /**
