@@ -28,6 +28,7 @@ import {
   applySortInJs,
   getNestedValue,
   chunkArray,
+  projectColumns,
 } from './report-query-transforms';
 import { nowISO } from '@/lib/date-local';
 import { readFirstDocs } from '@/lib/firestore/live-docs';
@@ -113,7 +114,7 @@ export async function executeBuilderQuery(
   const resolvedRefs = await resolveRefs(limitedRows, fields, request.columns);
 
   // Project columns
-  const projected = projectColumns(limitedRows, request.columns);
+  const projected = projectColumns(limitedRows, request.columns, domain.entityLink);
 
   logger.info('Builder query executed', {
     domain: request.domain,
@@ -467,23 +468,6 @@ async function batchGetDocs(
   }
 
   return allDocs;
-}
-
-// ============================================================================
-// Column Projection
-// ============================================================================
-
-function projectColumns(
-  rows: Record<string, unknown>[],
-  columns: string[],
-): Record<string, unknown>[] {
-  return rows.map((row) => {
-    const projected: Record<string, unknown> = { id: row['id'] };
-    for (const col of columns) {
-      projected[col] = getNestedValue(row, col);
-    }
-    return projected;
-  });
 }
 
 // ============================================================================

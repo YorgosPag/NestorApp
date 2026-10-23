@@ -20,6 +20,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { Link } from '@/lib/workspace/navigation';
+import { ENTITY_LINK_CLASS } from '@/lib/ui/link-style';
+import type { EntityHref } from '@/lib/navigation/entity-href';
 import { formatCurrency, formatNumber, formatPercentage, formatDate } from '@/lib/intl-formatting';
 import { ReportEmptyState } from './ReportEmptyState';
 
@@ -70,8 +73,14 @@ export interface ReportTableProps<T = Record<string, unknown>> {
   emptyMessage?: string;
   /** Show loading skeleton */
   loading?: boolean;
-  /** Click handler for rows */
-  onRowClick?: (row: T) => void;
+  /**
+   * The row's entity page (ADR-242 Βήμα 5). The FIRST column renders as a real link (`<a href>`): keyboard,
+   * middle-click, Ctrl+click, screen readers. ⛔ Never an `onClick` on the `<tr>` — a row is not a control.
+   * `null` ⇒ plain text. The first column's own `render` must then not return a link (no `<a>` inside `<a>`).
+   */
+  getRowHref?: (row: T) => EntityHref | null;
+  /** Stable React key — default: `row.id` when it is a string, else the index. */
+  getRowKey?: (row: T, index: number) => string;
   className?: string;
 }
 
@@ -99,6 +108,10 @@ function formatCellValue(value: unknown, format?: ReportColumnDef['format']): Re
   }
 }
 
+function defaultRowKey(row: Record<string, unknown>, index: number): string {
+  return typeof row.id === 'string' && row.id !== '' ? row.id : String(index);
+}
+
 function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
   return path.split('.').reduce<unknown>((acc, key) => {
     if (acc && typeof acc === 'object') return (acc as Record<string, unknown>)[key];
@@ -120,7 +133,8 @@ export function ReportTable<T extends Record<string, unknown> = Record<string, u
   size: _size = 'default',
   emptyMessage,
   loading = false,
-  onRowClick,
+  getRowHref,
+  getRowKey = defaultRowKey,
   className,
 }: ReportTableProps<T>) {
   const { t } = useTranslation('reports');
@@ -229,25 +243,26 @@ export function ReportTable<T extends Record<string, unknown> = Record<string, u
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedData.map((row, rowIndex) => (
-              <TableRow
-                key={rowIndex}
-                className={cn(onRowClick && 'cursor-pointer')}
-                onClick={() => onRowClick?.(row)}
-              >
-                {columns.map((col) => {
-                  const cellValue = getNestedValue(row, col.key);
-                  return (
-                    <TableCell key={col.key} className={alignClass(col.align)}>
-                      {col.render
-                        ? col.render(cellValue, row)
-                        : formatCellValue(cellValue, col.format)
-                      }
-                    </TableCell>
-                  );
-                })}
-              </TableRow>
-            ))}
+            {paginatedData.map((row, rowIndex) => {
+              const rowHref = getRowHref?.(row) ?? null;
+              return (
+                <TableRow key={getRowKey(row, rowIndex)}>
+                  {columns.map((col, colIndex) => {
+                    const cellValue = getNestedValue(row, col.key);
+                    const content = col.render
+                      ? col.render(cellValue, row)
+                      : formatCellValue(cellValue, col.format);
+                    return (
+                      <TableCell key={col.key} className={alignClass(col.align)}>
+                        {colIndex === 0 && rowHref ? (
+                          <Link href={rowHref} className={ENTITY_LINK_CLASS}>{content}</Link>
+                        ) : content}
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>

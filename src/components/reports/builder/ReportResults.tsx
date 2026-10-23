@@ -11,8 +11,9 @@
 import '@/lib/design-system';
 import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useRouter } from '@/lib/workspace/navigation';
-import { declaredHref } from '@/lib/workspace/route-worlds';
+import { Link } from '@/lib/workspace/navigation';
+import { ENTITY_LINK_CLASS } from '@/lib/ui/link-style';
+import { resolveReportRefHref, resolveReportRowHref } from './report-row-links';
 import { AlertTriangle, Check, Clock, Link2 } from 'lucide-react';
 import { useState } from 'react';
 import { ReportTable, type ReportColumnDef } from '@/components/reports/core/ReportTable';
@@ -76,8 +77,6 @@ export function ReportResults({
 }: ReportResultsProps) {
   const { t } = useTranslation('report-builder');
   const { t: tDomains } = useTranslation('report-builder-domains');
-  const router = useRouter();
-
   // Build dynamic column definitions
   const columnDefs = useMemo(
     () =>
@@ -85,22 +84,10 @@ export function ReportResults({
     [columns, domainDefinition, results?.resolvedRefs, tDomains],
   );
 
-  // Row click → navigate to entity page
-  const handleRowClick = useCallback(
-    (row: Record<string, unknown>) => {
-      const id = row['id'] as string;
-      if (!id) return;
-      const path = domainDefinition.entityLinkPath.replace('{id}', id);
-      // ΔΡΟΜΟΣ #3: το `entityLinkPath` είναι ΓΛΩΣΣΑ ΤΟΥ report-builder DSL
-      // (`{id}` placeholder, ΟΧΙ Next `[id]`) — άλλο σύστημα, άλλη απόδειξη.
-      router.push(
-        declaredHref(
-          'report-builder DSL entityLinkPath, γλώσσα ΔΙΑΦΟΡΕΤΙΚΗ από τον κατάλογο Next.',
-          path,
-        ),
-      );
-    },
-    [domainDefinition.entityLinkPath, router],
+  // ADR-242 Βήμα 5 — the row's entity page, as a real link in the first cell (never `onClick` on the `<tr>`)
+  const getRowHref = useCallback(
+    (row: Record<string, unknown>) => resolveReportRowHref(domainDefinition, row),
+    [domainDefinition],
   );
 
   // Error state
@@ -172,7 +159,7 @@ export function ReportResults({
           data={results?.rows ?? []}
           loading={loading}
           sortable
-          onRowClick={handleRowClick}
+          getRowHref={getRowHref}
           pageSize={25}
         />
       )}
@@ -190,7 +177,9 @@ function buildColumnDefs(
   resolvedRefs: Record<string, Record<string, string>>,
   t: (key: string) => string,
 ): ReportColumnDef<Record<string, unknown>>[] {
-  return columns.map((key) => {
+  // The first cell carries the ROW link when the domain declares one — a ref link there would nest `<a>` in `<a>`.
+  const rowLinked = !('unlinked' in domainDef.entityLink);
+  return columns.map((key, index) => {
     const field = domainDef.fields.find((f) => f.key === key);
     if (!field) {
       return { key, header: key, sortable: false };
@@ -203,12 +192,16 @@ function buildColumnDefs(
       format: field.format,
     };
 
-    // Ref fields — show resolved name instead of ID
+    // Ref fields — show resolved name instead of ID, linked to the referenced entity (ADR-242 Βήμα 5)
     if (field.refDomain && resolvedRefs[field.refDomain]) {
       const refMap = resolvedRefs[field.refDomain];
+      const refDomain = field.refDomain;
+      const linkable = index > 0 || !rowLinked;
       def.render = (value: unknown) => {
         const id = String(value ?? '');
-        return refMap[id] ?? id;
+        const label = refMap[id] ?? id;
+        const href = linkable ? resolveReportRefHref(refDomain, id) : null;
+        return href ? <Link href={href} className={ENTITY_LINK_CLASS}>{label}</Link> : label;
       };
     }
 

@@ -7,7 +7,11 @@
  * Extracted to keep report-query-executor.ts under 500 lines (Google SRP).
  */
 
-import type { FieldDefinition } from '@/config/report-builder/report-builder-types';
+import {
+  REPORT_ROW_LINK_ID_KEY,
+  type DomainEntityLink,
+  type FieldDefinition,
+} from '@/config/report-builder/report-builder-types';
 import { chunkArray } from '@/lib/array-utils';
 
 export { chunkArray };
@@ -51,6 +55,34 @@ export function getNestedValue(obj: Record<string, unknown>, dotPath: string): u
   }
 
   return current;
+}
+
+// ============================================================================
+// Column Projection
+// ============================================================================
+
+/**
+ * Keeps `id` + the requested columns. When the domain declares a row link, the linked entity's id also travels
+ * under `REPORT_ROW_LINK_ID_KEY` (ADR-242 Βήμα 5) — so a floor links to its building even when the user did not
+ * pick the building column. Absent id ⇒ no key ⇒ the row renders without a link (never a broken URL).
+ */
+export function projectColumns(
+  rows: Record<string, unknown>[],
+  columns: string[],
+  entityLink: DomainEntityLink,
+): Record<string, unknown>[] {
+  const linkIdField = 'unlinked' in entityLink ? null : (entityLink.idField ?? 'id');
+  return rows.map((row) => {
+    const projected: Record<string, unknown> = { id: row['id'] };
+    for (const col of columns) {
+      projected[col] = getNestedValue(row, col);
+    }
+    if (linkIdField !== null) {
+      const linkId = getNestedValue(row, linkIdField);
+      if (typeof linkId === 'string' && linkId !== '') projected[REPORT_ROW_LINK_ID_KEY] = linkId;
+    }
+    return projected;
+  });
 }
 
 // ============================================================================

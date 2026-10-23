@@ -26,9 +26,13 @@ import {
 import {
   applyComputedFields,
   expandRows,
+  projectColumns,
 } from '../report-query-transforms';
 import { getDomainDefinition } from '@/config/report-builder/domain-definitions';
-import type { ReportBuilderFilter } from '@/config/report-builder/report-builder-types';
+import {
+  REPORT_ROW_LINK_ID_KEY,
+  type ReportBuilderFilter,
+} from '@/config/report-builder/report-builder-types';
 
 // ============================================================================
 // getNestedValue
@@ -436,5 +440,41 @@ describe('planFilterExecution — computed fields', () => {
     const plan = planFilterExecution(filters, paymentFields);
     expect(plan.firestoreClauses).toHaveLength(1); // status → Firestore
     expect(plan.postFilters).toHaveLength(1); // completionPct → JS
+  });
+});
+
+// ============================================================================
+// projectColumns — ADR-242 Βήμα 5: το id της σύνδεσης ταξιδεύει ΠΑΝΤΑ, ακόμα κι αν η στήλη δεν επιλέχθηκε
+// ============================================================================
+
+describe('projectColumns — entity link id', () => {
+  const ROW = { id: 'flr_1', name: 'Όροφος 2', buildingId: 'bld_9', secret: 'x' };
+
+  it('keeps only id + the requested columns', () => {
+    const [out] = projectColumns([ROW], ['name'], { unlinked: 'no page for this test' });
+    expect(out).toEqual({ id: 'flr_1', name: 'Όροφος 2' });
+  });
+
+  it('owner link (idField) projects the owner id although its column was not picked', () => {
+    const [out] = projectColumns([ROW], ['name'], { type: 'building', idField: 'buildingId' });
+    expect(out[REPORT_ROW_LINK_ID_KEY]).toBe('bld_9');
+    expect(out).not.toHaveProperty('buildingId');
+  });
+
+  it('self link (no idField) projects the row id', () => {
+    const [out] = projectColumns([ROW], ['name'], { type: 'building' });
+    expect(out[REPORT_ROW_LINK_ID_KEY]).toBe('flr_1');
+  });
+
+  it('missing / empty owner id ⇒ no link key (never a broken URL)', () => {
+    const rows = [{ id: 'flr_2', buildingId: '' }, { id: 'flr_3' }];
+    for (const out of projectColumns(rows, [], { type: 'building', idField: 'buildingId' })) {
+      expect(out).not.toHaveProperty(REPORT_ROW_LINK_ID_KEY);
+    }
+  });
+
+  it('unlinked domain ⇒ no link key', () => {
+    const [out] = projectColumns([ROW], ['name'], { unlinked: 'no page for this test' });
+    expect(out).not.toHaveProperty(REPORT_ROW_LINK_ID_KEY);
   });
 });
