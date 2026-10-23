@@ -132,6 +132,12 @@ const MATERIAL_DOORS = Object.freeze({
       'ADR-909 Β1 — η δημοσίευση κάτοψης από το σχέδιο. Γεννά δημόσιο αρχείο και αρχειοθετεί την προηγούμενη ' +
       'παραγόμενη του ίδιου επιπέδου· περνά από τον κορμό `publishPropertyMaterial`, που ξαναπροβάλλει στο τέλος.',
   },
+  'src/app/api/properties/[id]/terrain/route.ts': {
+    cover: DOOR_COVER.REFRESH,
+    reason:
+      'ADR-920 Β3 — η δημοσίευση τοπογραφικού οικοπέδου. Γεννά την ιδιωτική πηγή του εδάφους και αρχειοθετεί ' +
+      'την προηγούμενη (`terrain/measured`)· περνά από τον κορμό `publishPropertyMaterial`, που ξαναπροβάλλει στο τέλος.',
+  },
   'src/app/api/properties/[id]/listing-media/route.ts': {
     cover: DOOR_COVER.REFRESH,
     reason: 'Α5β — «ξαναφτιάξε την αγγελία από το τρέχον υλικό». Δεν γράφει αρχείο· ΕΙΝΑΙ η επαναπροβολή κατά παραγγελία.',

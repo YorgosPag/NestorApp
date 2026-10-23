@@ -12,31 +12,11 @@
 
 import type { LineweightMm } from '../../types/scene-types';
 
-/** Canonical contour-generation parameters. */
-export interface ContourConfig {
-  /** Minor contour interval in canonical mm (e.g. 500 = 0.5 m). Must be > 0. */
-  readonly intervalMm: number;
-  /** Every N-th contour is a MAJOR (index) contour. e.g. 5 → majors at each 5·interval. */
-  readonly majorEvery: number;
-  /**
-   * Elevation (mm) that the interval grid is anchored to. Levels are generated at
-   * `baseElevationMm + k·intervalMm`. Default 0 (contours at 0, ±interval, …).
-   */
-  readonly baseElevationMm: number;
-  /** Emit elevation TextEntity labels on major contours. */
-  readonly labelMajors: boolean;
-  /** Decimal places for the metre-formatted elevation label. */
-  readonly labelDecimals: number;
-}
-
-/** Sensible topographic defaults (0.5 m minor, 2.5 m major index every 5th). */
-export const DEFAULT_CONTOUR_CONFIG: ContourConfig = {
-  intervalMm: 500,
-  majorEvery: 5,
-  baseElevationMm: 0,
-  labelMajors: true,
-  labelDecimals: 2,
-};
+// ADR-920 Β1 — the generation parameters live in `@/lib/terrain/contour-config` (shared with the
+// public plot listing). Re-exported so every existing importer is unchanged; only the DXF
+// presentation (layers, colours, lineweights) is declared below.
+export type { ContourConfig } from '@/lib/terrain/contour-config';
+export { DEFAULT_CONTOUR_CONFIG } from '@/lib/terrain/contour-config';
 
 /**
  * ADR-650 M3 — display style of the SAME contours (non-destructive; the raw

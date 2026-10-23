@@ -24,51 +24,17 @@
 import type { Point2D } from '../../rendering/types/Types';
 import { polygonArea, polygonAreaCentroid } from '../../bim/geometry/shared/polygon-utils';
 import { clipPolygonAtScalarZero } from './planar-scalar-clip';
+import {
+  MIN_AREA_MM2,
+  dzAt,
+  type DzPlane,
+  type DzVertex,
+} from '@/lib/terrain/dz-plane';
 
-/** A polygon vertex carrying the Δz (surface − reference) of the surface at that point. */
-export interface DzVertex {
-  readonly x: number;
-  readonly y: number;
-  /** Canonical mm. > 0 → ground above the reference (cut). < 0 → below it (fill). */
-  readonly dz: number;
-}
-
-/** The plane `Δz = a·x + b·y + c` fitted through a triangle's three Δz samples. */
-export interface DzPlane {
-  readonly a: number;
-  readonly b: number;
-  readonly c: number;
-}
-
-/** Degenerate-area guard, in mm² — a sliver below this contributes no volume anyway. */
-const MIN_AREA_MM2 = 1e-6;
-
-/**
- * The Δz plane through three vertices, or `null` when they are collinear (a zero-area
- * triangle — no plane, and no volume to lose by skipping it).
- */
-export function fitDzPlane(v0: DzVertex, v1: DzVertex, v2: DzVertex): DzPlane | null {
-  const det =
-    (v1.x - v0.x) * (v2.y - v0.y) - (v2.x - v0.x) * (v1.y - v0.y);
-  if (!Number.isFinite(det) || Math.abs(det) < MIN_AREA_MM2) return null;
-
-  const a =
-    ((v1.dz - v0.dz) * (v2.y - v0.y) - (v2.dz - v0.dz) * (v1.y - v0.y)) / det;
-  const b =
-    ((v2.dz - v0.dz) * (v1.x - v0.x) - (v1.dz - v0.dz) * (v2.x - v0.x)) / det;
-  const c = v0.dz - a * v0.x - b * v0.y;
-  return Number.isFinite(a) && Number.isFinite(b) && Number.isFinite(c) ? { a, b, c } : null;
-}
-
-/** Δz of the plane at a planimetric point — the SSoT way to re-attach Δz to a cut vertex. */
-export function dzAt(plane: DzPlane, p: Point2D): number {
-  return plane.a * p.x + plane.b * p.y + plane.c;
-}
-
-/** Lift a planimetric polygon onto the plane, so every vertex carries its own Δz. */
-export function attachDz(vertices: readonly Point2D[], plane: DzPlane): DzVertex[] {
-  return vertices.map((p) => ({ x: p.x, y: p.y, dz: dzAt(plane, p) }));
-}
+// ADR-920 Β1 — the Δz plane (fit / evaluate / lift) lives in `@/lib/terrain/dz-plane`, shared with
+// the surface boundary clip and the public plot listing. Re-exported so every importer is unchanged.
+export { fitDzPlane, dzAt, attachDz } from '@/lib/terrain/dz-plane';
+export type { DzVertex, DzPlane } from '@/lib/terrain/dz-plane';
 
 /**
  * Split a polygon on the ZERO line of its Δz field — the daylight line.
