@@ -28,7 +28,7 @@ import { LISTING_CARD_MIN_REM } from '@/components/search-results/listing-card-f
 const TRACK = 'section ul[data-scroll-edges]';
 import type { PublicListing } from '@/types/public-listing';
 import { showcaseProfile } from './showcase-profile-fixture';
-import { UNDECLARED_LISTING_OBJECTIVE_VALUE } from '@/lib/objective-value/objective-value-declarations';
+import { landingListing } from './landing-listing-fixture';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -43,9 +43,14 @@ jest.mock('@/lib/workspace/navigation', () => ({
   usePathname: () => '/',
 }));
 
+/**
+ * Πάνω στο **κοινό** `landingListing` (ADR-777 §8.82): το χειρόγραφο αντίγραφο που ζούσε εδώ έμεινε πίσω
+ * όταν το `PublicListing` απέκτησε `models` · `videos` · `floorPlates`, και η σουίτα κοκκίνισε σιωπηλά.
+ * Εδώ προστίθεται μόνο ό,τι κρίνει αυτή η σουίτα: τίτλος και μία φωτογραφία.
+ */
 function listing(id: string, title: string): PublicListing {
   return {
-    id,
+    ...landingListing(id, ['sell'], false),
     title,
     gallery: [
       {
@@ -56,22 +61,6 @@ function listing(id: string, title: string): PublicListing {
         sources: [],
       },
     ],
-    floorplans: [],
-    coverImage: null,
-    authorship: 'owner-declared',
-    commercial: { askingPrice: 100000, finalPrice: null, rentPrice: null, nightlyRate: null },
-    commercialStatus: 'for-sale',
-    offerKinds: ['sell'],
-    position: { kind: 'unknown', reason: 'owner-declined' },
-    areaSqm: 90,
-    floor: null,
-    bedrooms: null,
-    legality: [],
-    agencyName: null,
-    agencyId: null,
-    priceReduction: null,
-    objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
-    levelAreas: null,
   } as unknown as PublicListing;
 }
 

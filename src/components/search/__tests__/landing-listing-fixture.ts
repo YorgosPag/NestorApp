@@ -28,6 +28,10 @@ export function landingListing(
     title: `Τ-${id}`,
     gallery: [],
     floorplans: [],
+    // Οι υποχρεωτικοί πίνακες μέσων του `PublicListing`: χωρίς αυτούς το `presentableModels` πετά.
+    models: [],
+    videos: [],
+    floorPlates: [],
     coverImage: null,
     authorship: 'owner-declared',
     commercial: { askingPrice: 100000, finalPrice: null, rentPrice: null, nightlyRate: null },

@@ -49,5 +49,7 @@ export function showcaseProfile(companyId: string, displayName: string): PublicS
     // 🔴 Ίδια κλάση με το `mark` (ADR-846): απόν `coverage` περνά το `coverage === null`
     //    της `AgencyCard` ⇒ `isNationwide(undefined)` ⇒ η καρτέλα σκάει.
     coverage: null,
+    // Ίδια κλάση (ADR-915 §21): απόν `licences` ⇒ `profile.licences.map` ⇒ η καρτέλα σκάει.
+    licences: [],
   } as unknown as PublicShowcase;
 }
