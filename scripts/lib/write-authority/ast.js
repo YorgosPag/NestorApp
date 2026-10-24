@@ -39,6 +39,30 @@ function chainNodes(node) {
 const isCallTo = (node, name) => ts.isCallExpression(node) && ts.isIdentifier(node.expression)
   && node.expression.text === name;
 
+/** Το δεξιότερο όνομα μιας έκφρασης: `f` · `x.f` · `ctx.tourRef` ⇒ `f` · `f` · `tourRef` (αλλιώς `null`). */
+function trailingName(expression) {
+  if (!expression) return null;
+  if (ts.isIdentifier(expression)) return expression.text;
+  if (ts.isPropertyAccessExpression(expression)) return expression.name.text;
+  return null;
+}
+
+/** Το όνομα της συνάρτησης που καλείται άμεσα (`f(` ή `x.f(`). */
+const calleeName = (call) => trailingName(call.expression);
+
+/** Κάθε κόμβος του δέντρου, από πάνω προς τα κάτω. */
+function walk(node, visit) {
+  visit(node);
+  ts.forEachChild(node, (child) => walk(child, visit));
+}
+
+/** Θέση κλήσης `{ name, line }` όταν ο κόμβος είναι κλήση με ονομαστό καλούμενο — αλλιώς `null`. */
+function callSiteOf(sf, node) {
+  if (!ts.isCallExpression(node)) return null;
+  const name = calleeName(node);
+  return name ? { name, line: lineOf(sf, node) } : null;
+}
+
 /** `X.collection(<key>)` του Admin SDK ή `collection(db, <key>)` του client SDK. */
 function isCollectionOf(node, collectionKey) {
   if (!ts.isCallExpression(node)) return false;
@@ -105,6 +129,6 @@ function exemptionsFor(tag) {
 }
 
 module.exports = {
-  ts, PROJECT_ROOT, sourceFileOf, lineOf, chainNodes, isCallTo, isCollectionOf, isDocOf,
+  ts, PROJECT_ROOT, sourceFileOf, lineOf, chainNodes, isCallTo, trailingName, calleeName, walk, callSiteOf, isCollectionOf, isDocOf,
   refIdentifiersOf, refersTo, isCreation, literalKeys, exemptionsFor,
 };

@@ -271,6 +271,8 @@
     "paper-ink:report": "node scripts/check-paper-ink.js --report",
     "paper-ink:baseline": "node scripts/check-paper-ink.js --write-baseline",
     "test:paper-ink": "jest scripts/__tests__/paper-ink-gate.test.js",
+    "listing-terrain-authority:report": "node scripts/check-listing-terrain-authority.js",
+    "test:listing-terrain-authority": "jest scripts/__tests__/listing-terrain-authority-gate.test.js",
     "tour-presence-authority:report": "node scripts/check-tour-presence-authority.js",
     "test:tour-presence-authority": "jest scripts/__tests__/tour-presence-authority-gate.test.js src/server/spatial-tour/__tests__/tour-presence-refresh-wiring.test.ts src/services/listings/__tests__/listing-tour-refresh.test.ts",
     "floor-stack-authority:report": "node scripts/check-floor-stack-authority.js",

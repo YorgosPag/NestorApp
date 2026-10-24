@@ -1182,6 +1182,14 @@ if (!process.env.SKIP_PAPER_INK)
 if (!process.env.SKIP_TOUR_PRESENCE_AUTHORITY)
   addThread('3.104', 'Tour presence authority', 'scripts/check-tour-presence-authority.js');
 
+// CHECK 3.105 (ADR-920 §12) — ο ένας γραφέας του εδάφους της αγγελίας. «Γράφει κάποιος το `PublicListing.terrain` έξω
+// από τον binder — γεννά πηγή εδάφους έξω από πόρτα που ξαναπροβάλλει — ή παράγει δημοσιεύσιμο στιγμιότυπο έξω από τον
+// ψήστη;» Το έδαφος είναι ΠΑΡΑΓΩΓΟ μετρημένου τοπογραφικού τρίτου (Δ2)· δεύτερος γραφέας = bytes που κανείς δεν
+// επικύρωσε σε μόνιμη διεύθυνση. Λίστα: `.listing-terrain-authority.json` (+ `MATERIAL_DOORS`, χωρίς αντίγραφο).
+// AST, ZERO-TOL, καμία baseline. 🔴 ΧΩΡΙΣ ΣΚΑΝΔΑΛΗ: νέος γραφέας γεννιέται οπουδήποτε· το προφίλτρο κρατά τη σάρωση φθηνή.
+if (!process.env.SKIP_LISTING_TERRAIN_AUTHORITY)
+  addThread('3.105', 'Listing terrain authority', 'scripts/check-listing-terrain-authority.js');
+
 // CHECK 3.90 (ADR-868) — το ΕΝΑ σύνορο. «Υπάρχει δημόσιο endpoint που ΔΕΝ περνά από το `withAuth`;»
 // Κάθε `'use server'` είναι server action = δημόσιο POST. Στο δέντρο ζούσαν 7 τέτοια αρχεία, και
 // κανένα δεν επαλήθευε ταυτότητα: το AI inbox διάβαζε `messages` ΟΛΩΝ των εταιρειών με

@@ -31,8 +31,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ast = require('./lib/write-authority/ast');
-const { collectSourceFiles } = require('./lib/module-graph/scan-config');
-const { toPosix } = require('./lib/module-graph/resolve-specifier');
+const { defineRegistryGate } = require('./lib/write-authority/gate-runner');
 
 const { ts, PROJECT_ROOT } = ast;
 const REGISTRY_FILE = '.tour-presence-authority.json';
@@ -60,13 +59,7 @@ function loadRegistry(root) {
   return JSON.parse(fs.readFileSync(path.join(root, REGISTRY_FILE), 'utf8'));
 }
 
-/** Το τελευταίο όνομα μιας έκφρασης: `tourRef` · `ctx.tourRef` · `plan.captureRef` ⇒ το δεξιότερο αναγνωριστικό. */
-function trailingName(expression) {
-  if (!expression) return null;
-  if (ts.isIdentifier(expression)) return expression.text;
-  if (ts.isPropertyAccessExpression(expression)) return expression.name.text;
-  return null;
-}
+const { trailingName } = ast;
 
 /** `tx.update(tourRef, …)` (ο στόχος είναι το 1ο όρισμα) ή `tourRef.update(…)` (ο στόχος είναι ο δέκτης). */
 function tourWriteTarget(call) {
@@ -78,24 +71,16 @@ function tourWriteTarget(call) {
   return TARGET_NAMES.has(firstArgument) ? firstArgument : null;
 }
 
-/** Το όνομα της συνάρτησης που καλείται άμεσα (`f(` ή `x.f(`). */
-function calleeName(call) {
-  return trailingName(call.expression);
-}
-
 /** Όσα ενδιαφέρουν την πύλη σε ένα αρχείο, σε ένα πέρασμα. */
 function scan(sf) {
   const facts = { writes: [], calls: [] };
-  const visit = (node) => {
-    if (ts.isCallExpression(node)) {
-      const target = tourWriteTarget(node);
-      if (target) facts.writes.push({ target, line: ast.lineOf(sf, node) });
-      const name = calleeName(node);
-      if (name) facts.calls.push({ name, line: ast.lineOf(sf, node) });
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(sf);
+  ast.walk(sf, (node) => {
+    const call = ast.callSiteOf(sf, node);
+    if (!call) return;
+    const target = tourWriteTarget(node);
+    if (target) facts.writes.push({ target, line: call.line });
+    facts.calls.push(call);
+  });
   return facts;
 }
 
@@ -155,55 +140,22 @@ function declaredFindings(root, registry, factsByFile) {
 
 const RELEVANT = /tourRef|captureRef|refreshListingAfterTourChange|refreshListingOfTour|listedTourFromPresence|listedTourOf/;
 
-function measure(opts = {}) {
-  const root = opts.root || PROJECT_ROOT;
-  const registry = opts.registry || loadRegistry(root);
-  const files = (opts.codeFiles || collectSourceFiles(root, ['src'])).filter((f) => !/__tests__|\.test\.|\.spec\./.test(f));
-  if (!opts.codeFiles && files.length < 1000) throw new Error(`ΦΡΟΥΡΟΣ: μόνο ${files.length} αρχεία — η σάρωση δεν κοίταξε`);
-  const findings = [];
-  const factsByFile = new Map();
-  for (const abs of files) {
-    let text;
-    try { text = fs.readFileSync(abs, 'utf8'); } catch { continue; }
-    if (!RELEVANT.test(text)) continue;
-    const rel = toPosix(path.relative(root, abs));
-    const facts = scan(ast.sourceFileOf(abs, text));
-    factsByFile.set(rel, facts);
-    findings.push(...findingsIn(rel, facts, registry));
-  }
-  findings.push(...declaredFindings(root, registry, factsByFile));
-  const tally = Object.fromEntries(Object.values(STATES).map((s) => [s, findings.filter((f) => f.state === s).length]));
-  return { findings, tally, examined: files.length };
-}
-
-function report(result, log = console.log) {
-  const { tally, findings } = result;
-  log('');
-  log('🧭 CHECK 3.104 — Πύλη του ενός δρόμου της παρουσίας περιήγησης (ADR-884 · ADR-777 §8.88)');
-  log(`   αρχεία που εξετάστηκαν: ${result.examined}`);
-  log('');
-  for (const s of BLOCKING) log(`   ⛔ ${s.padEnd(36)} ${tally[s]}`);
-  for (const s of [STATES.PRESENCE_WRITER, STATES.EXEMPT]) log(`   ✅ ${s.padEnd(36)} ${tally[s]}`);
-  const blocking = findings.filter((f) => BLOCKING.includes(f.state));
-  for (const f of blocking) log(`   ⛔ ${f.state}  ${f.file}${f.line ? ':' + f.line : ''}\n        ${f.detail}`);
-  if (blocking.length) {
-    log('\n   ΘΕΡΑΠΕΙΑ: μετά το commit της συναλλαγής → `refreshListingAfterTourChange(db, subject)` (ή `refreshListingOfTour`');
-    log(`   όταν κρατάς μόνο την περιήγηση), και γραμμή στο ${REGISTRY_FILE}. ⚠️ ΜΗΝ γράψεις το \`tour\` της αγγελίας με το χέρι.`);
-  }
-  return blocking.length;
-}
-
-function main() {
-  if (process.env.SKIP_TOUR_PRESENCE_AUTHORITY === '1') {
-    console.log('⏭️  CHECK 3.104 παραλείφθηκε (SKIP_TOUR_PRESENCE_AUTHORITY=1)');
-    return 0;
-  }
-  const blocking = report(measure());
-  console.log(blocking > 0
-    ? `\n❌ CHECK 3.104 ΑΠΕΤΥΧΕ — ${blocking} μπλοκάρουσα(ες) παραβίαση(εις)\n`
-    : '\n✅ CHECK 3.104 — κάθε γραφέας περιήγησης ζητά επαναπροβολή, και το `tour` το δένει ένας\n');
-  return blocking > 0 ? 1 : 0;
-}
+const { measure, report, main } = defineRegistryGate({
+  check: '3.104',
+  skipEnv: 'SKIP_TOUR_PRESENCE_AUTHORITY',
+  ok: 'κάθε γραφέας περιήγησης ζητά επαναπροβολή, και το `tour` το δένει ένας',
+  projectRoot: PROJECT_ROOT, loadRegistry, relevant: () => RELEVANT, scan, findingsIn, declaredFindings, states: STATES,
+  report: {
+    title: '🧭 CHECK 3.104 — Πύλη του ενός δρόμου της παρουσίας περιήγησης (ADR-884 · ADR-777 §8.88)',
+    blocking: BLOCKING,
+    healthy: [STATES.PRESENCE_WRITER, STATES.EXEMPT],
+    width: 36,
+    remedy: [
+      'ΘΕΡΑΠΕΙΑ: μετά το commit της συναλλαγής → `refreshListingAfterTourChange(db, subject)` (ή `refreshListingOfTour`',
+      `όταν κρατάς μόνο την περιήγηση), και γραμμή στο ${REGISTRY_FILE}. ⚠️ ΜΗΝ γράψεις το \`tour\` της αγγελίας με το χέρι.`,
+    ],
+  },
+});
 
 if (require.main === module) process.exit(main());
 

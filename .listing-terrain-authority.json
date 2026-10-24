@@ -1,0 +1,15 @@
+{
+  "$doc": "ADR-920 Β3β · CHECK 3.105 — Η ΜΙΑ ΠΗΓΗ για το «ποιος γράφει το `PublicListing.terrain`, ποιος γεννά την ιδιωτική πηγή του, και ποιος παράγει το δημοσιευμένο στιγμιότυπο». Το έδαφος είναι παράγωγο μετρημένου τοπογραφικού τρίτου (Δ2: ποτέ η πηγή, μόνο παράγωγο)· ένας δεύτερος γραφέας με ωμό URL θα δημοσίευε bytes που κανείς δεν επικύρωσε, σε content-addressed — δηλαδή ΜΟΝΙΜΗ — διεύθυνση. Τον έναν ΚΑΛΟΥΝΤΑ του binder (`withPublishedTerrain`) τον φυλά η CHECK 3.76· οι πόρτες με επαναπροβολή ζουν στο `MATERIAL_DOORS` (`scripts/lib/listing-model-custody/material-doors-contract.js`) — εδώ ΔΕΝ αντιγράφονται. Τη διαβάζουν η πύλη (`scripts/check-listing-terrain-authority.js`, AST) και το self-test της — ποτέ δεύτερη λίστα.",
+  "binder": "src/services/listings/public-listing-terrain-projection.ts",
+  "sourceRefName": "LISTING_TERRAIN_SOURCE_REF",
+  "judgeFunction": "readStoredTerrain",
+  "schemaLinks": {
+    "src/lib/listings/public-listing-migrations-21-30.ts": "Κρίκος σχήματος 26: περνά το αποθηκευμένο `terrain` από τον κριτή (`readStoredTerrain`) — ό,τι έγραψε ο binder μένει αυτούσιο, σκουπίδι γίνεται `null`. Δεν παράγει ποτέ έδαφος."
+  },
+  "sourceRecordBuilders": ["buildPublishedTerrainFileRecord"],
+  "derivers": ["buildListingTerrainSnapshot", "listingTerrainCardOf"],
+  "derivationHome": "src/lib/terrain/",
+  "derivationOwners": {
+    "src/services/listings/public-shelf-terrain-bake.ts": "Ο ΨΗΣΤΗΣ του ραφιού: το ΜΟΝΟ σημείο όπου το στιγμιότυπο και η κάρτα του γίνονται δημόσια bytes — από την κανονική πηγή του server, ποτέ από στιγμιότυπο πελάτη."
+  }
+}
