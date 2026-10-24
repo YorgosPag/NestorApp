@@ -37,7 +37,9 @@
  *   SKIP_ADR_IDENTITY              '1' = bypass CHECK 3.49 (ADR number identity)
  *   SKIP_I18N_RAW_FALLBACK         '1' = bypass CHECK 3.97 (raw i18n defaultValue fallback)
  *   SKIP_CAPTURE_API_CONTRACT      '1' = bypass CHECK 3.98 (mobile capture API contract freshness)
- *   CHECK_WORKER_TIMEOUT_MS        per-worker timeout ms (default 60000)
+ *   CHECK_WORKER_TIMEOUT_MS        per-worker timeout ms (default 120000)
+ *   CHECK_CONCURRENCY              max checks in flight (default: CPU cores)
+ *   CHECK_TRACE                    '1' = print each check id to stderr as it starts
  *
  * Exit: 0 = all pass, 1 = any fail.
  */
@@ -45,6 +47,7 @@
 const { Worker }   = require('worker_threads');
 const { spawn }    = require('child_process');
 const fs           = require('fs');
+const os           = require('os');
 const path         = require('path');
 
 const RED    = '\x1b[0;31m';
@@ -55,6 +58,8 @@ const NC     = '\x1b[0m';
 const cwd            = process.cwd();
 const RUNNER         = path.join(__dirname, 'worker-check-runner.js');
 const TIMEOUT_MS     = Number(process.env.CHECK_WORKER_TIMEOUT_MS) || 120_000;
+// Max checks in flight (workers + processes). Default: CPU cores — see `runBounded`.
+const CONCURRENCY    = Number(process.env.CHECK_CONCURRENCY) || os.availableParallelism();
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1227,6 +1232,8 @@ if (!process.env.SKIP_CAPTURE_API_CONTRACT)
 // ─── Runners ──────────────────────────────────────────────────────────────────
 
 function runThread(check) {
+  // A native crash in one worker kills the whole process with no output: the trace names it.
+  if (process.env.CHECK_TRACE === '1') process.stderr.write(`  ▶ ${check.id} ${check.name}\n`);
   return new Promise(resolve => {
     const worker = new Worker(RUNNER, {
       workerData: { scriptPath: check.script, args: check.args, cwd },
@@ -1288,6 +1295,28 @@ function runProcess(check) {
   });
 }
 
+/**
+ * Runs the task factories with at most `limit` in flight; results keep input order.
+ *
+ * 🔴 Unbounded `Promise.all` started 72 workers at once — 72 V8 isolates in one process —
+ * and the orchestrator died with a native `Segmentation fault` (no check output at all)
+ * on a 4-core machine with ~4 GB free (2026-10-24, 2/2 runs). Measured after: 8 in flight
+ * still crashed 1 run in 3, 1 in flight never did ⇒ default = cores. ADR-598 §7.
+ */
+async function runBounded(factories, limit) {
+  const results = new Array(factories.length);
+  let next = 0;
+  async function lane() {
+    while (next < factories.length) {
+      const index = next++;
+      results[index] = await factories[index]();
+    }
+  }
+  const lanes = Math.max(1, Math.min(limit, factories.length));
+  await Promise.all(Array.from({ length: lanes }, lane));
+  return results;
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -1303,10 +1332,10 @@ async function main() {
     ` (${threads.length} threads + ${processes.length} processes)...${NC}`
   );
 
-  const results = await Promise.all([
-    ...threads.map(runThread),
-    ...processes.map(runProcess),
-  ]);
+  const results = await runBounded([
+    ...threads.map(check => () => runThread(check)),
+    ...processes.map(check => () => runProcess(check)),
+  ], CONCURRENCY);
 
   let failed = false;
   for (const r of results) {

@@ -24,7 +24,7 @@
 
 ## 2. Υπάρχουσα υποδομή (baseline — τι ΗΔΗ ελέγχεται)
 
-**Pre-commit hook**: `scripts/git-hooks/pre-commit` (644 γρ.), ενεργοποιείται μέσω `scripts/install-hooks.sh` (`git config core.hooksPath scripts/git-hooks`, τρέχει από `prepare`). Orchestrator: `scripts/run-checks-parallel.js` (worker-thread pool).
+**Pre-commit hook**: `scripts/git-hooks/pre-commit` (644 γρ.), ενεργοποιείται μέσω `scripts/install-hooks.sh` (`git config core.hooksPath scripts/git-hooks`, τρέχει από `prepare`). Orchestrator: `scripts/run-checks-parallel.js` (worker-thread pool, όριο `CHECK_CONCURRENCY`, προεπιλογή = πυρήνες — §7 2026-10-24).
 
 **Ratchet pattern (SSoT — μιμήσου το, μην εφεύρεις νέο)**:
 `scripts/check-<topic>-ratchet.js` + `.<topic>-baseline.json` (repo root) + `.github/workflows/<topic>-ratchet.yml` (Layer-2). Το νέο check δηλώνεται στο `run-checks-parallel.js`, ΟΧΙ σε νέο orchestrator.
@@ -125,6 +125,15 @@
 ---
 
 ## 7. Changelog
+
+- **2026-10-24** — **Ο orchestrator έγινε πραγματικά pool** (`scripts/run-checks-parallel.js`). Η §2 τον έλεγε «worker-thread
+  pool», αλλά ήταν `Promise.all` χωρίς όριο: **72 workers = 72 V8 isolates ταυτόχρονα** σε ΕΝΑ process. Σε μηχάνημα 4 πυρήνων με
+  ~4 GB ελεύθερα το process έπεφτε με native `Segmentation fault` (`pre-commit: line 343`) **χωρίς καμία έξοδο ελέγχου**, άρα
+  κανένα commit δεν περνούσε (2/2 προσπάθειες). Θεραπεία: `runBounded(factories, limit)` (σειρά αποτελεσμάτων = σειρά εισόδου).
+  Μετρημένο: 8 ταυτόχρονα έσκασε 1 στις 3, 1 ταυτόχρονα ποτέ ⇒ προεπιλογή **`os.availableParallelism()`**. Ρυθμίσεις:
+  `CHECK_CONCURRENCY=N` (όριο) · `CHECK_TRACE=1` (τυπώνει κάθε έλεγχο όταν ξεκινά — αφού ένα native crash σκοτώνει όλο το process
+  χωρίς έξοδο, μόνο έτσι ονομάζεται ο ένοχος). ⚠️ Το timeout (`CHECK_WORKER_TIMEOUT_MS`) μετρά από την **εκκίνηση** του ελέγχου,
+  όχι από την ουρά. Η τεκμηρίωση έλεγε προεπιλογή 60000· ο κώδικας είχε 120000 (διορθώθηκε η τεκμηρίωση).
 
 - **2026-10-16** — **`ui/form/form-keyboard` §3: `submitOnlyExplicitly`** (ADR-ACC-010 §2.1.1 Φάση 7). Οι φόρμες Ε-Ε και τιμολογίου
   υιοθέτησαν το `FormActions` (είχαν δίδυμο πόδι — CHECK 3.28) και έγιναν `<form>`· το «(η)» όμως κάνει το Enter σε πεδίο
