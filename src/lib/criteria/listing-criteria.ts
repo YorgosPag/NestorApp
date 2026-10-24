@@ -39,13 +39,16 @@
  */
 
 import {
+  isAskedDateBound,
   isAskedRange,
+  type CriterionDateBound,
   type CriterionRange,
 } from './criterion-vocabulary';
 import {
   LISTING_CRITERION_ASKING,
   LISTING_CRITERION_KEYS,
   type CriterionKey,
+  type DateBoundCriterionKey,
   type FlagCriterionKey,
   type LevelRangeCriterionKey,
   type RangeCriterionKey,
@@ -74,6 +77,8 @@ export type CriterionValueOf<K extends CriterionKey> = ShapeOf<K> extends 'range
     ? LevelRange
   : ShapeOf<K> extends 'flag'
     ? boolean
+  : ShapeOf<K> extends 'date-bound'
+    ? CriterionDateBound
     : readonly string[];
 
 /**
@@ -121,6 +126,14 @@ export function valuesOf(
   criteria: ListingCriteria,
   key: ValueSetCriterionKey
 ): readonly string[] | undefined {
+  return criteria[key];
+}
+
+/** Το όριο ημερών που ζητήθηκε (ADR-919 §12), ή `undefined`. */
+export function dateBoundOf(
+  criteria: ListingCriteria,
+  key: DateBoundCriterionKey
+): CriterionDateBound | undefined {
   return criteria[key];
 }
 
@@ -229,6 +242,18 @@ export function withFlag(
   return next;
 }
 
+/** Θέτει όριο ημερών. **Χωρίς ημέρες ⇒ ο άξονας φεύγει** (ίδιο συμβόλαιο με το {@link withRange}). */
+export function withDateBound(
+  criteria: ListingCriteria,
+  key: DateBoundCriterionKey,
+  bound: CriterionDateBound
+): ListingCriteria {
+  if (!isAskedDateBound(bound)) return without(criteria, key);
+  const next = draftOf(criteria);
+  next[key] = bound;
+  return next;
+}
+
 // =============================================================================
 // 4. ΛΟΓΙΣΤΙΚΗ ΤΟΥ ΙΔΙΟΥ ΤΟΥ ΧΑΡΤΗ
 // =============================================================================
@@ -264,6 +289,8 @@ function criterionAsksSomething(
       return isAskedLevelRange(value as LevelRange);
     case 'flag':
       return true;
+    case 'date-bound':
+      return isAskedDateBound(value as CriterionDateBound);
     default:
       return (value as readonly string[]).length > 0;
   }

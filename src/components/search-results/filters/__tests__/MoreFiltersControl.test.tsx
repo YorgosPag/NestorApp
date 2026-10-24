@@ -34,6 +34,7 @@ const NOOP_COMMIT: FilterCommit = {
   setLevelRange: jest.fn(),
   setValues: jest.fn(),
   setFlag: jest.fn(),
+  setDateBound: jest.fn(),
   clearAxis: jest.fn(),
   clearAllCriteria: jest.fn(),
   setOrder: jest.fn(),

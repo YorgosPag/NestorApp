@@ -31,6 +31,7 @@
 
 import type { PricedDemandSeek, PricedSeekKind } from '@/types/property-demand';
 import type { PublicListing } from '@/types/public-listing';
+import type { ListingAvailability } from '@/types/listing-availability';
 import type {
   ListingAttributeKey,
   ListingFeatureSetKey,
@@ -55,6 +56,7 @@ import {
 import {
   landCanAnswer,
   type CriterionKey,
+  type DateBoundCriterionKey,
   type FlagCriterionKey,
   type LevelRangeCriterionKey,
   type RangeCriterionKey,
@@ -408,4 +410,22 @@ export function readFlagAnswer(
 ): CriterionAnswer<boolean> {
   if (!criterionAppliesTo(listing, key)) return NOT_APPLICABLE;
   return declaredAnswer(FLAG_READERS[key](listing));
+}
+
+// =============================================================================
+// 5. ΤΟ ΟΡΙΟ ΗΜΕΡΩΝ — η υπόσχεση παράδοσης (ADR-919 §12)
+// =============================================================================
+
+/**
+ * Η απάντηση της αγγελίας σε άξονα **ορίου ημερών**: η ίδια η διαθεσιμότητα, αλλιώς «δεν το δήλωσαν».
+ *
+ * 🔑 Το `unknown` είναι `never-asked`, όχι «όχι»: κανείς δεν δήλωσε πότε παραδίδεται. Μετριέται στον κάδο, δεν κρύβεται.
+ * ⛔ **Καμία κρίση εδώ**: το «χτίζεται» και το «ως» τα αποφασίζουν μόνο τα `futureDeliveryPromiseOf` / `deliveredBy`.
+ */
+export function readDateBoundAnswer(
+  listing: PublicListing,
+  key: DateBoundCriterionKey
+): CriterionAnswer<ListingAvailability> {
+  if (!criterionAppliesTo(listing, key)) return NOT_APPLICABLE;
+  return listing.availability.kind === 'unknown' ? NEVER_ASKED : declaredAnswer(listing.availability);
 }

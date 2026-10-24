@@ -36,11 +36,12 @@
  * **Layering**: leaf — καθαρές συναρτήσεις πάνω σε `URLSearchParams`.
  */
 
-import type { CriterionRange } from './criterion-vocabulary';
+import type { CriterionDateBound, CriterionRange } from './criterion-vocabulary';
 import {
   LISTING_CRITERION_ASKING,
   LISTING_CRITERION_KEYS,
   type CriterionKey,
+  type DateBoundCriterionKey,
   type FlagCriterionKey,
   type LevelRangeCriterionKey,
   type RangeCriterionKey,
@@ -53,6 +54,7 @@ import { SEARCH_REGION_PARAM } from '@/lib/listings/listing-search-area';
 import { SEARCH_DRAWN_PARAM } from '@/lib/listings/listing-drawn-area';
 import {
   EMPTY_LISTING_CRITERIA,
+  withDateBound,
   withFlag,
   withLevelRange,
   withRange,
@@ -132,6 +134,10 @@ export const CRITERION_PARAM: Record<CriterionKey, string> = {
   hasPhotos: 'photos',
   /** Το ίδιο όνομα με τη Zillow (`3d`, μετρημένο 2026-10-13) — σύντομο και αυτονόητο σε κοινοποιημένο σύνδεσμο. */
   hasSpatialMedia: '3d',
+
+  // ── όριο ημερών ───────────────────────────────────────────────────────────
+  /** ADR-919 §12: `delivafter` / `delivby` — δες {@link dateBoundParams}. */
+  delivery: 'deliv',
 };
 
 /**
@@ -158,6 +164,32 @@ export function rangeParams(
 ): { readonly min: string; readonly max: string } {
   const base = CRITERION_PARAM[key];
   return { min: `${base}min`, max: `${base}max` };
+}
+
+/** Τα δύο άκρα ενός άξονα ορίου ημερών στη διεύθυνση (ADR-919 §12). */
+export function dateBoundParams(key: DateBoundCriterionKey): { readonly after: string; readonly by: string } {
+  const base = CRITERION_PARAM[key];
+  return { after: `${base}after`, by: `${base}by` };
+}
+
+/**
+ * **Κάθε όνομα παραμέτρου που γράφει αυτός ο άξονας** — ανά σχήμα, από τους ΙΔΙΟΥΣ κατασκευαστές με τον γραφέα.
+ * Ο έλεγχος μοναδικότητας το ρωτά αντί να ξαναγράφει τον διακόπτη (που κάποτε ήξερε μόνο το `range`).
+ */
+export function criterionParamNames(key: CriterionKey): readonly string[] {
+  switch (LISTING_CRITERION_ASKING[key]) {
+    case 'range':
+    case 'level-range': {
+      const { min, max } = rangeParams(key as RangeCriterionKey | LevelRangeCriterionKey);
+      return [min, max];
+    }
+    case 'date-bound': {
+      const { after, by } = dateBoundParams(key as DateBoundCriterionKey);
+      return [after, by];
+    }
+    default:
+      return [CRITERION_PARAM[key]];
+  }
 }
 
 /**
@@ -220,6 +252,26 @@ export function readFiniteNumber(params: URLSearchParams, key: string): number |
   if (raw === null || raw.trim() === '') return null;
   const value = Number(raw);
   return Number.isFinite(value) ? value : null;
+}
+
+const CALENDAR_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Ημέρα ημερολογίου `YYYY-MM-DD` — **μορφή**, όχι υπαρκτότητα.
+ *
+ * 🔴 **Regex και όχι αναγνώστης στιγμών**: εκείνος δέχεται και `2026-08-10T12:00:00Z`, και μια στιγμή με **ώρα**
+ * σε σύγκριση ημερών αλλάζει σιωπηλά τη σημασία της. Το `2026-02-31` περνά εδώ· όποιος χρειάζεται υπαρκτή ημέρα
+ * (το παράθυρο διαμονής) την κόβει μετά με το `intervalShape`. Για τις λεξικογραφικές συγκρίσεις του ορίου
+ * παράδοσης η μορφή αρκεί.
+ */
+export function isCalendarDay(raw: string): boolean {
+  return CALENDAR_DAY.test(raw);
+}
+
+/** Διεύθυνση → ημέρα ημερολογίου, ή `null`. Ο ΕΝΑΣ αναγνώστης ημέρας (διαμονή + όριο παράδοσης). */
+export function readCalendarDay(params: URLSearchParams, key: string): string | null {
+  const raw = params.get(key)?.trim() ?? '';
+  return isCalendarDay(raw) ? raw : null;
 }
 
 /** Διαβάζει ένα άκρο, δοκιμάζοντας και το παλιό όνομα. */
@@ -297,6 +349,15 @@ export function parseListingCriteria(params: URLSearchParams): ListingCriteria {
         criteria = withFlag(criteria, flagKey, readFlag(params, CRITERION_PARAM[key]));
         break;
       }
+      case 'date-bound': {
+        const boundKey = key as DateBoundCriterionKey;
+        const { after, by } = dateBoundParams(boundKey);
+        criteria = withDateBound(criteria, boundKey, {
+          after: readCalendarDay(params, after),
+          by: readCalendarDay(params, by),
+        });
+        break;
+      }
       default: {
         const valuesKey = key as ValueSetCriterionKey;
         criteria = withValues(
@@ -354,6 +415,13 @@ export function writeListingCriteria(
       case 'flag':
         params.set(CRITERION_PARAM[key], (value as boolean) ? '1' : '0');
         break;
+      case 'date-bound': {
+        const { after, by } = dateBoundParams(key as DateBoundCriterionKey);
+        const bound = value as CriterionDateBound;
+        if (bound.after !== null) params.set(after, bound.after);
+        if (bound.by !== null) params.set(by, bound.by);
+        break;
+      }
       default:
         // ⚠️ `append`, ΠΟΤΕ `set`: ο άξονας κρατά **πολλές** τιμές, και ένα `set` θα
         // κρατούσε σιωπηλά μόνο την τελευταία.

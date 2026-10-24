@@ -198,12 +198,14 @@ describe('🔴 Θ — `match` ⇒ τα προβεβλημένα φίλτρα Τ�
   it('🔑 και η ΑΝΤΙΣΤΡΟΦΗ ΔΕΝ ισχύει — τα φίλτρα είναι όντως ΠΛΑΤΥΤΕΡΑ', () => {
     // Αν ίσχυε και η αντίστροφη, η προβολή δεν θα έχανε τίποτα — και τότε ολόκληρη
     // η λίστα `DEMAND_AXES_LOST_IN_FILTERS` θα ήταν ψεύτικη.
+    // ADR-919 §12: ο χρόνος ΔΕΝ χάνεται πια (`delivery.by`). Η διαφορά που μένει είναι ΟΝΟΜΑΣΜΕΝΗ: η άγνωστη
+    // παράδοση μένει ορατή στον κάδο «δεν το δήλωσαν», ενώ η μηχανή τη γράφει εμπόδιο (`availability-unknown`).
     const d = demand({ timing: { kind: 'window', fromDate: '2027-01-01', toDate: '2027-03-31' } });
-    const f = facts({ availability: scheduledAvailability('quarter', '2028-01-01') });
+    const f = facts({ availability: LISTING_AVAILABILITY_UNKNOWN });
 
     expect(matchesListingFilters(f.listing, listingFiltersFromDemand(d))).toBe(true);
     expect(matchDemandAgainstListing(d, f, TODAY).verdict).not.toBe('match');
-    expect(axesLostProjectingDemand(d)).toContain('timing');
+    expect(axesLostProjectingDemand(d)).not.toContain('timing');
   });
 });
 

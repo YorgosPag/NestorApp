@@ -182,6 +182,12 @@ const BESPOKE_ASKING = {
    * το **είδος** το λέει το σήμα της κάρτας.
    */
   hasSpatialMedia: 'flag',
+  /**
+   * «Χτίζονται» και «διαθέσιμο ως <ημέρα>» (ADR-919 §12), **ένας** άξονας πάνω στο `PublicListing.availability`.
+   * Η αγορά έχει μόνο το ναι/όχι (Rightmove «New home», Zillow «New construction»)· εδώ η υπόσχεση είναι δομημένη
+   * (τρίμηνο / μήνας / ημέρα), άρα ρωτιέται και το **πότε**. Κριτές: `futureDeliveryPromiseOf` και `deliveredBy`, μόνο.
+   */
+  delivery: 'date-bound',
 } as const satisfies Record<string, CriterionShape>;
 
 /**
@@ -244,6 +250,8 @@ export type SetAnyCriterionKey = KeysWithShape<'set-any'>;
 export type SetAllCriterionKey = KeysWithShape<'set-all'>;
 /** Άξονες ναι/όχι. */
 export type FlagCriterionKey = KeysWithShape<'flag'>;
+/** Άξονες ορίου ημερών (σήμερα: `delivery`). */
+export type DateBoundCriterionKey = KeysWithShape<'date-bound'>;
 
 /**
  * Οι άξονες που ρωτιούνται με **σύνολο συμβολοσειρών** — δηλαδή τα τρία μη αριθμητικά

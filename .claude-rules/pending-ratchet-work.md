@@ -17,6 +17,9 @@
   `placeFrom` **48** · `demand-match-axes.ts` `spatialOutcome` **44**. Προϋπήρχαν. Δεν τα άγγιξε το βήμα 9, που διόρθωσε μόνο τα δικά
   του (`buildConcessionReport` · `DemandConcessionList` · `DemandAnswerPanel`). **Θεραπεία:** εξαγωγή βοηθών (EXTRACT, ποτέ trim),
   με τις υπάρχουσες σουίτες του `src/lib/demand` ως δίχτυ. **Μέγεθος:** ~1h, 3 αρχεία, ένας τομέας.
+  **+ 24/10 (άξονας «παράδοση», ADR-919 §12):** `components/search-results/filters/CriterionField.tsx` `CriterionField`, ο
+  διανομέας `switch` ανά σχήμα: ήταν ήδη >40 και μεγάλωσε κατά 9 με το `'date-bound'`. Θεραπεία: πίνακας `Record<CriterionShape,
+  …>` αποδοτών αντί για `switch`, ώστε η εξαντλητικότητα να μείνει του μεταγλωττιστή.
 
 - 🟡 **23/10 — ΔΥΟ ΛΕΞΙΛΟΓΙΑ ΚΥΚΛΟΥ ΖΩΗΣ ΚΤΙΡΙΟΥ: `Building.status` ΚΑΙ `Building.phase`** *(ADR-919 §7, εύρημα του βήματος 3)*
 

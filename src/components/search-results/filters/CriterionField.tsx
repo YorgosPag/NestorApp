@@ -31,6 +31,7 @@ import { criterionOptionTallies } from '@/lib/criteria/criterion-option-counts';
 import { LISTING_CRITERION_ASKING, isValueSetShape } from '@/lib/criteria/listing-criterion-asking';
 import type {
   CriterionKey,
+  DateBoundCriterionKey,
   FlagCriterionKey,
   LevelRangeCriterionKey,
   RangeCriterionKey,
@@ -39,6 +40,7 @@ import type {
 import type { ListingCriteria } from '@/lib/criteria/listing-criteria';
 import type { PublicListing } from '@/types/public-listing';
 
+import { CriterionDateBoundField } from './CriterionDateBoundField';
 import { CriterionFlagField } from './CriterionFlagField';
 import { CriterionLevelRangeField, CriterionLevelRangePopover } from './CriterionLevelRangeField';
 import { CriterionRangeField } from './CriterionRangeField';
@@ -127,6 +129,15 @@ export function CriterionField({
         />
       );
     }
+    case 'date-bound':
+      // ADR-919 §12 — δεν είναι στη γραμμή (όχι `PRIMARY_CRITERION_KEYS`), άρα ένα σχήμα για κάθε χώρο.
+      return (
+        <CriterionDateBoundField
+          criteria={criteria}
+          criterionKey={criterionKey as DateBoundCriterionKey}
+          commit={commit}
+        />
+      );
     case 'flag':
       return (
         <CriterionFlagField

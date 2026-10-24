@@ -22,7 +22,7 @@
  */
 
 import { intervalShape } from '@/lib/date-local';
-import { readFiniteNumber } from '@/lib/criteria/listing-criteria-url';
+import { isCalendarDay, readCalendarDay, readFiniteNumber } from '@/lib/criteria/listing-criteria-url';
 import { isWholeGuestCount, isWholePetCount } from '@/lib/offers/offer-amount';
 
 /**
@@ -56,26 +56,6 @@ const STAY_PARAM = {
 } as const;
 
 /**
- * **Αυστηρή ημερολογιακή μέρα `YYYY-MM-DD`** — τίποτα άλλο.
- *
- * 🔴 **ΓΙΑΤΙ REGEX ΚΑΙ ΟΧΙ ΣΚΕΤΟ `intervalShape`.** Ο αναγνώστης στιγμών δέχεται
- * **πολλές** μορφές (`2026-08-10T12:00:00Z`, `Timestamp`, …) και θα τις έκρινε μια
- * χαρά. Αλλά ο τύπος {@link ListingStayWindow} υπόσχεται **ημέρα**, και μια στιγμή με
- * **ώρα** μέσα σε ημι-ανοιχτό διάστημα νυχτών αλλάζει σιωπηλά τη σημασία της
- * αναχώρησης — δηλαδή θα έκανε τη **διαδοχή** δύο κρατήσεων να επικαλύπτεται κατά
- * μισή μέρα, στην πιο ακριβή δυνατή θέση.
- *
- * ⚠️ Ο έλεγχος είναι **μορφής**, όχι υπαρκτότητας: το `2026-02-31` περνά εδώ και
- * κόβεται από το {@link intervalShape} παρακάτω, που το διαβάζει ως στιγμή.
- */
-const CALENDAR_DAY = /^\d{4}-\d{2}-\d{2}$/;
-
-function readDay(params: URLSearchParams, key: string): string | null {
-  const raw = params.get(key)?.trim() ?? '';
-  return CALENDAR_DAY.test(raw) ? raw : null;
-}
-
-/**
  * **Ο ΕΝΑΣ κριτής του παραθύρου** — ο ίδιος για τον αναγνώστη και τον γραφέα.
  *
  * 🔴 **ΚΑΙ ΤΟ ΔΙΑΣΤΗΜΑ ΠΡΕΠΕΙ ΝΑ ΕΙΝΑΙ `proper`** — ο φρουρός του Ε-10, στη μία θέση
@@ -85,8 +65,8 @@ function readDay(params: URLSearchParams, key: string): string | null {
  * **ασυνεπώς** (§17). Απορρίπτονται **εδώ**, στην πόρτα.
  */
 function isProperWindow(window: ListingStayWindow): boolean {
-  return CALENDAR_DAY.test(window.checkIn)
-    && CALENDAR_DAY.test(window.checkOut)
+  return isCalendarDay(window.checkIn)
+    && isCalendarDay(window.checkOut)
     && intervalShape(window.checkIn, window.checkOut) === 'proper';
 }
 
@@ -97,8 +77,8 @@ function isProperWindow(window: ListingStayWindow): boolean {
  * δεν είναι μισή ερώτηση, είναι **καμία**.
  */
 export function readListingStayWindow(params: URLSearchParams): ListingStayWindow | null {
-  const checkIn = readDay(params, STAY_PARAM.checkIn);
-  const checkOut = readDay(params, STAY_PARAM.checkOut);
+  const checkIn = readCalendarDay(params, STAY_PARAM.checkIn);
+  const checkOut = readCalendarDay(params, STAY_PARAM.checkOut);
   if (checkIn === null || checkOut === null) return null;
   const window = { checkIn, checkOut };
   return isProperWindow(window) ? window : null;

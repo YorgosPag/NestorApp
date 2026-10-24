@@ -35,6 +35,7 @@ import type { PriceRole } from '@/lib/properties/price-resolver';
 import type { RangeCriterionKey } from '@/lib/criteria/listing-criterion-asking';
 import { isPointInDemandArea } from '@/lib/demand/demand-area';
 import { distanceMeters } from '@/lib/geo/geo-distance';
+import { deliveredBy } from '@/lib/listings/delivery-promise';
 import { metresOutsideFrontage, sideOfPolyline } from '@/lib/geo/geo-line';
 import type { LocationProvenance } from '@/lib/location/location-provenance';
 import type { PlacePosition } from '@/types/geo/public-place';
@@ -387,16 +388,10 @@ export function timingBlockers(
 ): DemandBlocker[] {
   if (timing.kind === 'whenever') return [];
 
-  switch (availability.kind) {
-    case 'ready':
-      return [];
-    case 'unknown':
-      return ['availability-unknown'];
-    case 'scheduled': {
-      const neededBy = timing.kind === 'now' ? todayDate : timing.toDate;
-      return availability.window.end <= neededBy ? [] : ['not-available-then'];
-    }
-  }
+  // ⛔ Το «παραδίδεται ως» είναι ΜΟΝΟ το `deliveredBy` — το ίδιο με το φίλτρο αναζήτησης (ADR-919 §12).
+  const delivered = deliveredBy(availability, timing.kind === 'now' ? todayDate : timing.toDate);
+  if (delivered === null) return ['availability-unknown'];
+  return delivered ? [] : ['not-available-then'];
 }
 
 /** **Ζ6** — γειτονιά. Ξεχωρίζει «μακριά» από «δεν ρωτήθηκε». */

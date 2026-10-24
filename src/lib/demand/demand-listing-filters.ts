@@ -54,6 +54,7 @@ import { EMPTY_LISTING_FILTERS } from '@/lib/listings/listing-filters';
 import { serializeListingFilters } from '@/lib/listings/listing-filters';
 import {
   EMPTY_LISTING_CRITERIA,
+  withDateBound,
   withLevelRange,
   withRange,
   withValues,
@@ -95,8 +96,8 @@ import {
  * εμφανιζόταν σε αυτή τη λίστα, θα υπονοούσε ότι η μηχανή οφείλει να το ελέγξει.
  */
 export const DEMAND_AXES_LOST_IN_FILTERS = [
-  /** **Ζ2/Ζ3** — τα φίλτρα ρωτούν «τι υπάρχει», ποτέ «τι θα υπάρχει τότε». */
-  'timing',
+  // ✅ Το `'timing'` ΕΦΥΓΕ (ADR-919 §12): το `window` ταξιδεύει ως `delivery.by = toDate`, το `whenever` δεν ρωτά
+  //    τίποτα, και το `now` δεν ήταν ποτέ χαμένο (ήταν υπερσύνολο). Ως τότε και το `whenever` δήλωνε ψευδώς απώλεια.
   /**
    * **Ζ4** — ADR-888: η περιοχή ταξιδεύει πλέον **αυτούσια** ως `?draw=` και **δεν** χάνεται. Μένει μόνο για
    * παλιό έγγραφο με σχήμα που ο χάρτης απορρίπτει (`outlineDefect`): τότε γίνεται κύκλος και το λέμε.
@@ -175,11 +176,10 @@ export type DemandAxisLostInFilters = (typeof DEMAND_AXES_LOST_IN_FILTERS)[numbe
  * τα αποτελέσματα.
  */
 export function axesLostProjectingDemand(
-  demand: Pick<PropertyDemand, 'place' | 'timing' | 'features' | 'proximity' | 'seeks'>,
+  demand: Pick<PropertyDemand, 'place' | 'features' | 'proximity' | 'seeks'>,
 ): DemandAxisLostInFilters[] {
   const lost: DemandAxisLostInFilters[] = [];
 
-  if (demand.timing.kind !== 'now') lost.push('timing');
   if (demand.place.kind === 'area' && demandAreaAsDrawn(demand.place.shapes) === null) lost.push('area-outline');
   if (demand.place.kind === 'frontage') lost.push('frontage-axis');
   if (demand.place.kind === 'place') lost.push('place-identity');
@@ -316,6 +316,7 @@ export function listingFiltersFromDemand(demand: PropertyDemand): ListingFilters
   criteria = withRange(criteria, 'areaSqm', { min: f.areaMin, max: f.areaMax });
   criteria = withRange(criteria, 'bedrooms', { min: f.bedroomsMin, max: null });
   criteria = withLevelRange(criteria, 'floor', levelRangeOf(f));
+  criteria = withDateBound(criteria, 'delivery', deliveryBoundOf(demand.timing));
 
   return {
     ...EMPTY_LISTING_FILTERS,
@@ -324,6 +325,17 @@ export function listingFiltersFromDemand(demand: PropertyDemand): ListingFilters
     guests: headcountOf(demand),
     pets: petsOf(demand),
   };
+}
+
+/**
+ * Ο χρόνος της ζήτησης ως **«διαθέσιμο ως»** (ADR-919 §12): το `window` ⇒ `by = toDate`, η ΙΔΙΑ ημέρα που ρωτά το
+ * `timingBlockers` (`neededBy`), μέσω του ΙΔΙΟΥ `deliveredBy`.
+ *
+ * ✅ **Υπερσύνολο**: η μηχανή αποκλείει και το `unknown`· το φίλτρο το κρατά στον κάδο «δεν το δήλωσαν».
+ * ⚠️ Το `now` **δεν** γράφεται: θα χρειαζόταν το «σήμερα», και η προβολή είναι καθαρή χωρίς ρολόι. Μένει υπερσύνολο.
+ */
+function deliveryBoundOf(timing: PropertyDemand['timing']): { readonly after: null; readonly by: string | null } {
+  return { after: null, by: timing.kind === 'window' ? timing.toDate : null };
 }
 
 /**

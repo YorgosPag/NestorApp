@@ -36,7 +36,14 @@
       "hasSpatialMedia": "With 3D only (tour or model)",
       "priceSale": "Sale price",
       "priceRent": "Rent (monthly)",
-      "priceNightly": "Price per night"
+      "priceNightly": "Price per night",
+      "delivery": "Delivery"
+    },
+    "delivery": {
+      "building": "Under construction (future delivery)",
+      "by": "Available by",
+      "anyTime": "Any time",
+      "byOption": "by {date}"
     },
     "authorship": {
       "agency": "Agencies",

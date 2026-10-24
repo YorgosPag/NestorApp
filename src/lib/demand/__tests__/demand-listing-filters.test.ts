@@ -18,7 +18,7 @@ import {
   parseListingFilters,
   serializeListingFilters,
 } from '@/lib/listings/listing-filters';
-import { levelRangeIn, valuesOf } from '@/lib/criteria/listing-criteria';
+import { dateBoundOf, levelRangeIn, valuesOf } from '@/lib/criteria/listing-criteria';
 import { withinLevelRange } from '@/lib/floor/floor-level-range';
 import {
   NO_AMOUNT_RANGE,
@@ -200,7 +200,6 @@ describe('🔴 Α — η λίστα απωλειών: ούτε ψεύτικη π
   });
 
   const CASES: ReadonlyArray<readonly [string, Partial<PropertyDemand>]> = [
-    ['timing', { timing: { kind: 'whenever' } }],
     ['area-outline', { place: { kind: 'area', shapes: [BOWTIE] } }],
     [
       'frontage-axis',
@@ -271,6 +270,20 @@ describe('🔴 Α — η λίστα απωλειών: ούτε ψεύτικη π
 // =============================================================================
 // Δ — Η ΔΙΕΥΘΥΝΣΗ ΤΑΞΙΔΕΥΕΙ ΚΑΙ ΓΥΡΙΖΕΙ
 // =============================================================================
+
+describe('Π — ο χρόνος ταξιδεύει ως «διαθέσιμο ως» (ADR-919 §12)', () => {
+  it('`window` ⇒ `delivery.by` = `toDate`, η ΙΔΙΑ ημέρα με το `neededBy` του `timingBlockers`', () => {
+    const d = demand({ timing: { kind: 'window', fromDate: '2027-01-01', toDate: '2027-03-31' } });
+    expect(dateBoundOf(listingFiltersFromDemand(d).criteria, 'delivery')).toEqual({ after: null, by: '2027-03-31' });
+    expect(demandResultsHref(d)).toContain('delivby=2027-03-31');
+  });
+
+  it('`now` και `whenever` ⇒ κανένας άξονας παράδοσης (καμία στένωση χωρίς αίτημα)', () => {
+    for (const timing of [{ kind: 'now' }, { kind: 'whenever' }] as const) {
+      expect(dateBoundOf(listingFiltersFromDemand(demand({ timing })).criteria, 'delivery')).toBeUndefined();
+    }
+  });
+});
 
 describe('Δ — ο σύνδεσμος «δες τι υπάρχει σήμερα»', () => {
   it('δείχνει στην οθόνη 2 με τα φίλτρα της ζήτησης', () => {

@@ -18,15 +18,14 @@ import {
   LISTING_CRITERION_KEYS,
   LAND_CANNOT_ANSWER,
   criterionKeysWithShape,
-  type RangeCriterionKey,
   type ValueSetCriterionKey,
 } from '../listing-criterion-asking';
 import {
   CRITERION_PARAM,
   LEGACY_PARAM_ALIASES,
   RESERVED_SEARCH_PARAMS,
+  criterionParamNames,
   parseListingCriteria,
-  rangeParams,
   writeListingCriteria,
 } from '../listing-criteria-url';
 import { CRITERION_VALUES } from '../listing-criterion-values';
@@ -100,8 +99,9 @@ describe('Κ — ο πίνακας αξόνων: εξαντλητικός, κα�
     //    Ένας άξονας με τρεις σημασίες ήταν ο τύπος να λέει ψέματα· σε κλειστό
     //    λεξιλόγιο κάθε κλειδί οφείλει να σημαίνει **ένα** πράγμα.
     // 🔴 **ΕΠΤΑ από το ADR-777 §8.89**: μπήκε το `hasSpatialMedia` («Μόνο με 3D»).
+    // 🔴 **ΟΚΤΩ από το ADR-919 §12**: μπήκε το `delivery` («χτίζονται» · «διαθέσιμο ως»).
     expect(LISTING_CRITERION_KEYS.length).toBe(
-      LISTING_ATTRIBUTE_KEYS.length + LISTING_FEATURE_SET_KEYS.length + 7,
+      LISTING_ATTRIBUTE_KEYS.length + LISTING_FEATURE_SET_KEYS.length + 8,
     );
   });
 
@@ -110,14 +110,9 @@ describe('Κ — ο πίνακας αξόνων: εξαντλητικός, κα�
     // άλλης, σιωπηλά, μέσα σε κοινοποιημένο σύνδεσμο.
     const names: string[] = [...RESERVED_SEARCH_PARAMS, ...Object.keys(LEGACY_PARAM_ALIASES)];
 
-    for (const key of LISTING_CRITERION_KEYS) {
-      if (LISTING_CRITERION_ASKING[key] === 'range') {
-        const { min, max } = rangeParams(key as RangeCriterionKey);
-        names.push(min, max);
-      } else {
-        names.push(CRITERION_PARAM[key]);
-      }
-    }
+    // Ανά σχήμα, από τον ΙΔΙΟ κατασκευαστή με τον γραφέα: κάλυπτε μόνο το `range`, και το `level-range` /
+    // `date-bound` ελέγχονταν με το βασικό όνομα, που η διεύθυνση δεν γράφει ποτέ.
+    for (const key of LISTING_CRITERION_KEYS) names.push(...criterionParamNames(key));
 
     expect(new Set(names).size).toBe(names.length);
   });

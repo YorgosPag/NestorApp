@@ -111,6 +111,7 @@ const BESPOKE_AXIS_LABEL_KEY: Record<BespokeCriterionKey, string> = {
   authorship: 'search-filters:filters.axis.authorship',
   hasPhotos: 'search-filters:filters.axis.hasPhotos',
   hasSpatialMedia: 'search-filters:filters.axis.hasSpatialMedia',
+  delivery: 'search-filters:filters.axis.delivery',
 };
 
 /**

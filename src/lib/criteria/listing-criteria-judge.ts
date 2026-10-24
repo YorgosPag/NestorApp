@@ -47,6 +47,7 @@ import type { CriterionOutcome, CriterionRange } from './criterion-vocabulary';
 import {
   LISTING_CRITERION_ASKING,
   type CriterionKey,
+  type DateBoundCriterionKey,
   type FlagCriterionKey,
   type LevelRangeCriterionKey,
   type RangeCriterionKey,
@@ -54,6 +55,7 @@ import {
 } from './listing-criterion-asking';
 import {
   askedCriterionKeys,
+  dateBoundOf,
   flagOf,
   levelRangeIn,
   rangeOf,
@@ -61,12 +63,14 @@ import {
   type ListingCriteria,
 } from './listing-criteria';
 import {
+  readDateBoundAnswer,
   readFlagAnswer,
   readLevelAnswer,
   readNumericAnswer,
   readValuesAnswer,
 } from './listing-criterion-reading';
 import { withinLevelRange } from '@/lib/floor/floor-level-range';
+import { deliveredBy, futureDeliveryPromiseOf } from '@/lib/listings/delivery-promise';
 
 // =============================================================================
 // 1. ΤΑ ΠΡΩΤΟΓΟΝΑ ΤΗΣ ΚΡΙΣΗΣ
@@ -122,6 +126,8 @@ export function judgeCriterion(
       return judgeLevelRange(listing, criteria, key as LevelRangeCriterionKey);
     case 'flag':
       return judgeFlag(listing, criteria, key as FlagCriterionKey);
+    case 'date-bound':
+      return judgeDateBound(listing, criteria, key as DateBoundCriterionKey);
     default:
       return judgeValues(listing, criteria, key as ValueSetCriterionKey);
   }
@@ -228,6 +234,27 @@ function judgeFlag(
     case 'declared':
       return answer.value === wanted ? 'satisfied' : 'excluded';
   }
+}
+
+/**
+ * **Όριο ημερών** (ADR-919 §12): και τα δύο άκρα, όσα ρωτήθηκαν, πρέπει να ισχύουν.
+ * ⛔ Το «χτίζεται» είναι ΜΟΝΟ το `futureDeliveryPromiseOf` και το «ως» ΜΟΝΟ το `deliveredBy`. Κανένα δεύτερο `>`/`<=` εδώ.
+ */
+function judgeDateBound(
+  listing: PublicListing,
+  criteria: ListingCriteria,
+  key: DateBoundCriterionKey
+): CriterionOutcome {
+  const bound = dateBoundOf(criteria, key);
+  if (bound === undefined) return 'satisfied';
+
+  const answer = readDateBoundAnswer(listing, key);
+  if (answer.state === 'not-applicable') return 'not-applicable';
+  if (answer.state !== 'declared') return 'undeclared';
+
+  const building = bound.after === null || futureDeliveryPromiseOf(answer.value, bound.after) !== null;
+  const deliveredInTime = bound.by === null || deliveredBy(answer.value, bound.by) === true;
+  return building && deliveredInTime ? 'satisfied' : 'excluded';
 }
 
 // =============================================================================

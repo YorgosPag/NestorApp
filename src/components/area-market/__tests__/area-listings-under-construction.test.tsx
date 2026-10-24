@@ -31,10 +31,20 @@ const KEY = 'area-market:listings.underConstruction';
 
 describe('Π — «χτίζονται N» στην περιοχή', () => {
   it('Π1 — πλήθος και η νωρίτερη υπόσχεση με τη ΜΙΑ φράση (`availabilityPromisePhrase`)', () => {
-    render(<AreaListingsSection areaId="municipality:0701" items={[]} total={0} underConstruction={{ count: 3, next: Q4_2027 }} />);
+    render(<AreaListingsSection areaId="municipality:0701" items={[]} total={0} underConstruction={{ summary: { count: 3, next: Q4_2027 }, day: '2026-10-24' }} />);
     const line = screen.getByText(new RegExp(KEY.replace('.', '\\.')));
     expect(line).toHaveTextContent('"count":3');
     expect(line).toHaveTextContent('common-shared:listingAvailability.quarter');
+  });
+
+  it('Π3 — σύνδεσμος στην αναζήτηση της περιοχής με `delivafter` = η ΗΜΕΡΑ ΤΟΥ ΣΤΙΓΜΙΟΤΥΠΟΥ, όχι το σήμερα', () => {
+    render(<AreaListingsSection areaId="municipality:0701" items={[]} total={0} underConstruction={{ summary: { count: 3, next: Q4_2027 }, day: '2026-10-24' }} />);
+    const link = screen.getByText(new RegExp(KEY.replace('.', '\\.'))).closest('a');
+    const url = new URL(link?.getAttribute('href') ?? '', 'https://x.test');
+    expect(url.pathname).toMatch(/search\/results$/);
+    expect(url.searchParams.get('area')).toBe('municipality:0701');
+    expect(url.searchParams.get('delivafter')).toBe('2026-10-24');
+    expect(url.searchParams.has('delivby')).toBe(false);
   });
 
   it('Π2 — `null` ⇒ καμία γραμμή (σιωπή, ποτέ «0»)', () => {

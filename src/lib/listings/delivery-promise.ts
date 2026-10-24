@@ -11,6 +11,7 @@
  * **Layering**: leaf — καθαρές συναρτήσεις. Το «σήμερα» είναι όρισμα.
  */
 
+import { scheduledAvailability } from '@/lib/listings/availability-window';
 import type { ScheduledAvailability } from '@/types/availability-history';
 import type { ListingAvailability } from '@/types/listing-availability';
 
@@ -57,4 +58,25 @@ export function compareDeliveryPromise(a: ScheduledAvailability, b: ScheduledAva
   if (a.window.end !== b.window.end) return a.window.end < b.window.end ? -1 : 1;
   if (a.window.start === b.window.start) return 0;
   return a.window.start > b.window.start ? -1 : 1;
+}
+
+/**
+ * **Τα επόμενα `count` τρίμηνα**, από το τρέχον, ως υποσχέσεις: οι επιλογές του «διαθέσιμο ως» (ADR-919 §12).
+ *
+ * 🔑 Υποσχέσεις και όχι σκέτες ημέρες, ώστε η ετικέτα να βγαίνει από τη ΜΙΑ φράση (`availabilityPromisePhrase`) και η
+ * τιμή να είναι το `window.end`, ακριβώς ό,τι κρίνει το `deliveredBy`. Κατασκευαστής ο ΕΝΑΣ (`scheduledAvailability`).
+ *
+ * @param todayDate — ISO `YYYY-MM-DD`· ρητή παράμετρος, ποτέ ανάγνωση ρολογιού
+ */
+export function upcomingDeliveryQuarters(todayDate: string, count: number): readonly ScheduledAvailability[] {
+  const year = Number(todayDate.slice(0, 4));
+  const firstQuarter = Math.floor((Number(todayDate.slice(5, 7)) - 1) / 3);
+  const quarters: ScheduledAvailability[] = [];
+  for (let offset = 0; offset < count; offset += 1) {
+    const index = firstQuarter + offset;
+    const month = String((index % 4) * 3 + 1).padStart(2, '0');
+    const promise = scheduledAvailability('quarter', `${year + Math.floor(index / 4)}-${month}-01`);
+    if (promise.kind === 'scheduled') quarters.push(promise);
+  }
+  return quarters;
 }

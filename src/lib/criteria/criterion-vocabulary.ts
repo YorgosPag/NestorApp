@@ -87,6 +87,12 @@ export const CRITERION_SHAPES = [
   'set-all',
   /** Ναι/όχι· η απουσία του άξονα σημαίνει «δεν ρωτήθηκε». Παράδειγμα: «με φωτογραφίες». */
   'flag',
+  /**
+   * Δύο **ημέρες** `{ after, by }` (ADR-919 §12): «μελλοντική υπόσχεση ως προς την ημέρα `after`» και «παραδίδεται ως
+   * `by`». Η ημέρα είναι **τιμή του κριτηρίου**, γραμμένη στη διεύθυνση: ο κριτής δεν διαβάζει ρολόι, και ένας
+   * κοινοποιημένος σύνδεσμος δίνει τα ίδια αποτελέσματα.
+   */
+  'date-bound',
 ] as const;
 
 export type CriterionShape = (typeof CRITERION_SHAPES)[number];
@@ -116,6 +122,22 @@ export const NO_RANGE: CriterionRange = { min: null, max: null };
 /** Ρωτά κάτι αυτό το εύρος; **Κενό εύρος = όχι.** */
 export function isAskedRange(range: CriterionRange | undefined): range is CriterionRange {
   return range !== undefined && (range.min !== null || range.max !== null);
+}
+
+/**
+ * Δύο ημέρες ISO `YYYY-MM-DD`, ανεξάρτητα προαιρετικές — όπως το {@link CriterionRange}: το «χτίζονται» και το
+ * «διαθέσιμο ως» είναι **δύο** περιορισμοί, πλήρεις και μόνοι τους.
+ */
+export interface CriterionDateBound {
+  /** «Μελλοντική υπόσχεση παράδοσης» ως προς αυτή την ημέρα (`futureDeliveryPromiseOf`). */
+  readonly after: string | null;
+  /** «Παραδίδεται ως» αυτή την ημέρα (`deliveredBy`). */
+  readonly by: string | null;
+}
+
+/** Ρωτά κάτι αυτό το όριο; **Χωρίς ημέρες = όχι** (ίδιο συμβόλαιο με το {@link isAskedRange}). */
+export function isAskedDateBound(bound: CriterionDateBound | undefined): bound is CriterionDateBound {
+  return bound !== undefined && (bound.after !== null || bound.by !== null);
 }
 
 // =============================================================================

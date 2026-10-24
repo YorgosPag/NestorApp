@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | 🟡 **ΣΕ ΕΞΕΛΙΞΗ** — **Βήμα 1 ✅** *(2026-10-23, `2bdf7a56`/`690fbaf5`)*: τύπος τριών καταστάσεων · κατασκευαστής διαστήματος ανά ακρίβεια · `timingBlockers` κρίνει με το τέλος του διαστήματος. **Βήμα 2 ✅** *(2026-10-23, `80e9f88f`)*: `forecastCompletion` με ημερομηνία κατάστασης (P6) πάνω στο CPM. **Βήμα 3 ✅** *(2026-10-23, `5fcf400e`)*: επιλυτής `resolveListingAvailability` (μονάδα → κτίριο, «το γεγονός νικά την υπόσχεση») + `PublicListing.availability` + κρίκος σχήματος 25 (§7). **Βήμα 4 ✅ σε κώδικα** *(2026-10-23, uncommitted)*: οι τρεις παραγωγοί διαβάζουν `listing.availability` (§8). **Βήμα 5 ✅ σε κώδικα** *(2026-10-23, uncommitted)*: επαναπροβολή όταν αλλάζει είσοδος του επιλυτή· ο ανιχνευτής αλλαγής του κτιρίου είναι ο ίδιος ο αναγνώστης (§9). **Βήμα 6 ✅ σε κώδικα** *(2026-10-23, uncommitted)*: ιστορικό δημόσιων δηλώσεων στη μονάδα, `PublicListing.availabilityTrack` (κρίκος 27), ειδοποίηση σε όποιον χάνει ή κερδίζει ταίρι (§10). ⚠️ Πάνω στον uncommitted κρίκο 26 του ADR-920. **Βήμα 7 ✅ σε κώδικα** *(2026-10-23, uncommitted)*: οθόνες — κάρτα υπόσχεσης κτιρίου (πρόταση χρονοδιαγράμματος + έγκριση + έλεγχος P6 «Must Finish By») και «διαθέσιμο από» μονάδας, πόρτα εγγραφής «πρόθεση → γεγονός», κάρτα/σελίδα/χάρτης/showcase με τη ΜΙΑ φράση, ορίζοντας χρόνου στην απάντηση ζήτησης (§11). **Βήμα 8 ⏸️ μετρήθηκε, δεν τηρείται** *(2026-10-24)*: 0 αγγελίες `scheduled` ⇒ το `chooser.window` μένει ως έχει, κριτήριο επιστροφής στο §12. **Βήμα 9 ✅ επαληθευμένο** *(2026-10-24, `97a974e5` + επαλήθευση §12: jest 572/572, μεταλλάξεις 7/7)*: «χτίζονται N» ως σκάλα αναμονής στην ενότητα «Πόσο λείπει», με κάδο απογραφής και διόρθωση του ορίζοντα του βήματος 7 (§12) |
+| **Status** | 🟡 **ΣΕ ΕΞΕΛΙΞΗ** — **Βήμα 1 ✅** *(2026-10-23, `2bdf7a56`/`690fbaf5`)*: τύπος τριών καταστάσεων · κατασκευαστής διαστήματος ανά ακρίβεια · `timingBlockers` κρίνει με το τέλος του διαστήματος. **Βήμα 2 ✅** *(2026-10-23, `80e9f88f`)*: `forecastCompletion` με ημερομηνία κατάστασης (P6) πάνω στο CPM. **Βήμα 3 ✅** *(2026-10-23, `5fcf400e`)*: επιλυτής `resolveListingAvailability` (μονάδα → κτίριο, «το γεγονός νικά την υπόσχεση») + `PublicListing.availability` + κρίκος σχήματος 25 (§7). **Βήμα 4 ✅ σε κώδικα** *(2026-10-23, uncommitted)*: οι τρεις παραγωγοί διαβάζουν `listing.availability` (§8). **Βήμα 5 ✅ σε κώδικα** *(2026-10-23, uncommitted)*: επαναπροβολή όταν αλλάζει είσοδος του επιλυτή· ο ανιχνευτής αλλαγής του κτιρίου είναι ο ίδιος ο αναγνώστης (§9). **Βήμα 6 ✅ σε κώδικα** *(2026-10-23, uncommitted)*: ιστορικό δημόσιων δηλώσεων στη μονάδα, `PublicListing.availabilityTrack` (κρίκος 27), ειδοποίηση σε όποιον χάνει ή κερδίζει ταίρι (§10). ⚠️ Πάνω στον uncommitted κρίκο 26 του ADR-920. **Βήμα 7 ✅ σε κώδικα** *(2026-10-23, uncommitted)*: οθόνες — κάρτα υπόσχεσης κτιρίου (πρόταση χρονοδιαγράμματος + έγκριση + έλεγχος P6 «Must Finish By») και «διαθέσιμο από» μονάδας, πόρτα εγγραφής «πρόθεση → γεγονός», κάρτα/σελίδα/χάρτης/showcase με τη ΜΙΑ φράση, ορίζοντας χρόνου στην απάντηση ζήτησης (§11). **Βήμα 8 ⏸️ μετρήθηκε, δεν τηρείται** *(2026-10-24)*: 0 αγγελίες `scheduled` ⇒ το `chooser.window` μένει ως έχει, κριτήριο επιστροφής στο §12. **Βήμα 9 ✅ επαληθευμένο** *(2026-10-24, `97a974e5` + επαλήθευση §12: jest 572/572, μεταλλάξεις 7/7)*: «χτίζονται N» ως σκάλα αναμονής στην ενότητα «Πόσο λείπει», με κάδο απογραφής και διόρθωση του ορίζοντα του βήματος 7 (§12). **Άξονας «παράδοση» ✅ σε κώδικα** *(2026-10-24, uncommitted)*: «χτίζονται» + «διαθέσιμο ως» στην αναζήτηση, το «χτίζονται N» της περιοχής έγινε σύνδεσμος (§12) |
 | **Date** | 2026-10-23 |
 | **Category** | Listings / Demand matching |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
@@ -454,7 +454,58 @@ forecastCompletion(phases, tasks, statusDate): CompletionForecast
 Ως πεδίο του νυχτερινού `summarizeArea` → [ADR-890 §19](./ADR-890-area-market-analysis.md). 🔑 **Ένα κριτήριο, όχι δύο**: το
 «μελλοντική υπόσχεση» εξήχθη από το `pendingDeliveryOf` στο `lib/listings/delivery-promise.ts` (`futureDeliveryPromiseOf`), μαζί
 με το `compareDeliveryPromise`. Το ρωτούν πλέον και η απάντηση ζήτησης και η σύνοψη περιοχής. Το `lib/market` δεν εισάγει από το
-`lib/demand`. **Εκκρεμεί**: φίλτρο διαθεσιμότητας στην αναζήτηση, ώστε η γραμμή να γίνει σύνδεσμος (Rightmove «New homes»).
+`lib/demand`. Η γραμμή έγινε **σύνδεσμος** με τον άξονα παράδοσης (παρακάτω).
+
+### Άξονας «παράδοση» στην αναζήτηση ✅ *(2026-10-24)*
+
+**Η αγορά** (έρευνα 2026-10-24): Rightmove «New home» (must-have, ναι/όχι) · Zillow «New construction» (τύπος ακινήτου, με
+καταστάσεις not-yet-built / under construction / move-in ready και «estimated completion» στην κάρτα) · Zoopla ενότητα new
+homes ανά έργο · ImmoScout24 «Bezugsfrei ab» στο exposé, όχι ως φίλτρο. **Κανείς** δεν φιλτράρει «διαθέσιμο ως <ημέρα>» πάνω σε
+δομημένη υπόσχεση. Εδώ η υπόσχεση έχει ακρίβεια (τρίμηνο / μήνας / ημέρα), άρα ρωτιέται και το **πότε**.
+
+**Ένας άξονας, νέο σχήμα `'date-bound'`**: `delivery: { after, by }` (ISO ημέρες, ανεξάρτητα προαιρετικές, κενό ⇒ ο άξονας φεύγει).
+
+| Άκρο | Ερώτηση | Κριτής (ο ΜΟΝΟΣ) | `ready` | `unknown` |
+|---|---|---|---|---|
+| `after` (`?delivafter=`) | «χτίζονται» ως προς αυτή την ημέρα | `futureDeliveryPromiseOf` | όχι | «δεν το δήλωσαν» |
+| `by` (`?delivby=`) | «διαθέσιμο ως» | `deliveredBy` (νέο) | ναι | «δεν το δήλωσαν» |
+
+🔑 **Η απόφαση: το «σήμερα» είναι ΤΙΜΗ του κριτηρίου, γραμμένη στη διεύθυνση**, ποτέ ανάγνωση ρολογιού στον κριτή. Ο κριτής
+(`listingSurvivesCriteria`) είναι καθαρός και δεν ξέρει ημέρα. Ένα flag τύπου `hasPhotos` θα έπρεπε να διαβάσει κρυφά ρολόι
+(CHECK 3.7 `date-local`). Τρία κέρδη: (α) καθαρός κριτής, (β) ο κοινοποιημένος σύνδεσμος δίνει τα ίδια αποτελέσματα (Α3), (γ) ο
+σύνδεσμος της σελίδας περιοχής γράφει `delivafter = snapshot.day`, οπότε η αναζήτηση ρωτά το ίδιο κριτήριο **με το ίδιο «σήμερα»** που
+έβγαλε τον αριθμό. Το χειριστήριο γράφει `todayLocalDate()` **στο κλικ**. Απορρίφθηκε: `today` ως όρισμα του κριτή (13 καταναλωτές,
+και ο αριθμός της περιοχής θα απέκλινε κάθε μέρα μετά το στιγμιότυπο).
+
+🔑 **Κανένα δεύτερο κριτήριο**: το `window.end <= neededBy` ζούσε inline στο `timingBlockers`. Εξήχθη στο `deliveredBy`
+(`lib/listings/delivery-promise.ts`), και το ρωτούν πλέον η μηχανή ζήτησης και ο άξονας αναζήτησης.
+
+**Η ζήτηση δεν χάνει πια τον χρόνο**: `window` ⇒ `delivery.by = toDate` (η ίδια ημέρα με το `neededBy`). Το `'timing'` έφυγε από
+το `DEMAND_AXES_LOST_IN_FILTERS`. Ως τότε και το `whenever` δήλωνε **ψευδώς** απώλεια. Υπερσύνολο: η μηχανή αποκλείει το
+`unknown`, το φίλτρο το κρατά στον κάδο. Το `now` δεν γράφεται (η προβολή δεν έχει ρολόι) και μένει υπερσύνολο.
+
+**Επιλογέας**: τετραγωνίδιο «Χτίζονται» + «Διαθέσιμο ως» με τα επόμενα 8 τρίμηνα (`upcomingDeliveryQuarters`), ετικέτες **μόνο**
+από `availabilityPromisePhrase`, τιμή = τέλος τριμήνου. Ημέρα συνδέσμου εκτός λίστας εμφανίζεται ως επιλογή με ακρίβεια ημέρας.
+
+⚠️ **Όριο ισότητας, δηλωμένο**: ο αριθμός της σελίδας ισούται με της αναζήτησης όταν (α) καμία αγγελία δεν άλλαξε από το
+στιγμιότυπο (λύθηκε με το `snapshot.day`), και (β) η **συμμετοχή** συμπίπτει. Το (β) δεν λύνεται εδώ: η σελίδα μετρά με
+`adminArea`, ενώ το `?area=` κρίνει με πολύγωνο + «ίσως» (ADR-890 §9.1). Ισχύει ήδη και για το «Δες όλες τις N». Λύση: το `?area=`
+να σέβεται το `adminArea` όπου υπάρχει.
+
+| Ρόλος | Αρχείο |
+|---|---|
+| Κριτές | `lib/listings/delivery-promise.ts` (`futureDeliveryPromiseOf` · `deliveredBy` · `upcomingDeliveryQuarters`) |
+| Σχήμα | `lib/criteria/criterion-vocabulary.ts` (`'date-bound'` · `CriterionDateBound` · `isAskedDateBound`) · `listing-criterion-asking.ts` (`delivery`) · `listing-criteria.ts` (`withDateBound` · `dateBoundOf`) |
+| Κρίση | `listing-criterion-reading.ts` (`readDateBoundAnswer`) · `listing-criteria-judge.ts` (`judgeDateBound`) |
+| Διεύθυνση | `listing-criteria-url.ts` (`dateBoundParams` · `criterionParamNames` · `readCalendarDay`, ο ΕΝΑΣ αναγνώστης ημέρας, εξαγμένος από το `listing-stay-url.ts`) |
+| Οθόνη | `components/search-results/filters/CriterionDateBoundField.tsx` ← `CriterionField.tsx` · `use-filter-commit.ts` (`setDateBound`) |
+| Σύνδεσμος | `components/area-market/AreaListingsSection.tsx` (`areaSearchHref` μέσω `serializeListingFilters`, και για το «Δες όλες») |
+| Ζήτηση | `lib/demand/demand-listing-filters.ts` (`deliveryBoundOf`) · `demand-match-axes.ts` (`timingBlockers` → `deliveredBy`) |
+| i18n | `search-filters` `filters.axis.delivery` + `filters.delivery.{building,by,anyTime,byOption}` (el + en). Αφαιρέθηκε το νεκρό `property-market` `demand.axisLost.timing` |
+
+**Άγκυρες**: `delivery-criterion.test.ts` (Α ίδιο σύνολο σύνοψη ⇄ φίλτρο · Β κάδοι · Γ διεύθυνση) · `delivery-promise.test.ts`
+(`deliveredBy`, `upcomingDeliveryQuarters`) · `CriterionDateBoundField.test.tsx` · `area-listings-under-construction.test.tsx` Π3 ·
+`demand-listing-filters.test.ts` Π · `listing-criteria.test.ts` (μοναδικότητα ονομάτων ανά σχήμα, μέσω `criterionParamNames`).
 
 ## Changelog
 
@@ -470,3 +521,4 @@ forecastCompletion(phases, tasks, statusDate): CompletionForecast
 | 2026-10-24 | **Βήματα 8–9** (§12). Βήμα 8: μέτρηση στη βάση (0 `scheduled`) ⇒ το `chooser.window` δεν άλλαξε· κριτήριο επιστροφής ≥1 `scheduled`. Βήμα 9: `demand-awaiting-delivery.ts` (ένα κατηγόρημα, ένα συγκριτικό, σωρευτική σκάλα, `slipped`), κάδος `awaitingDelivery` στην απογραφή υποχωρήσεων, `DemandAnswer.awaitingDelivery` με ισοζύγιο «κάδος = σκάλα», σχήμα `has-concession`, `AwaitingDeliveryLadder` στο «Πόσο λείπει», 3 κλειδιά i18n. Διορθώθηκε το ελάττωμα του βήματος 7 (ο ορίζοντας δεν έβλεπε ποτέ τις αγγελίες «μόνο χρόνος»). Κανένα k-κατώφλι, με λόγο (απόκλιση από ADR-777 §8.99.2 (β)). |
 | 2026-10-24 | **Επαλήθευση §12** (του `97a974e5`). jest `src/lib/demand` + `src/components/demand`: 33 σουίτες, 572/572. Μεταλλάξεις 7/7 νεκρές: (α) χωρίς `window.end > σήμερα` · (β) χωρίς «ακριβώς ένα εμπόδιο» · (γ) χωρίς τον όρο `awaitingDelivery` στο ισοζύγιο απογραφής · (δ) χωρίς «κάδος = σκάλα» · (ε) `has-concession` χωρίς τον κλάδο αναμονής · (στ) το κατηγόρημα μετά το `soleConcessionOf` · (ζ) το `unreachable` δίπλα σε σκάλα. jscpd:diff καθαρό. **Διορθώθηκαν δύο παραβάσεις N.7.1**: το `demand-concessions.ts` ήταν 547 γραμμές (524 πριν το βήμα 9) και το `buildConcessionReport` 48. Η λογιστική (§4: `DemandConcessionCensus` · `concessionCensusBalances` · `DemandConcessionReport` · `buildConcessionReport` · `ladderIdOf` · `tallyBlockers`) μετακινήθηκε στο νέο `lib/demand/demand-concession-report.ts` (389 + 191 γραμμές), με τον βοηθό `bucketNearMisses`. Εισαγωγές ενημερωμένες απευθείας, χωρίς re-export. `DemandConcessionList` 45 → εξαγωγή `ConcessionCensusNotes`. `DemandAnswerPanel` 51 (προϋπήρχε) → εξαγωγή `ResultsLink`. ⚠️ Εύρημα διαδικασίας: ο έλεγχος `if [ -f heavy-task.lock ]` μέσα σε εντολή jest βλέπει **πάντα** κλειδί, γιατί το `heavy-mutex.js` (PreToolUse) το γράφει με το δικό μας sessionId πριν τρέξει η εντολή. Σωστός έλεγχος: κλειδί που ανήκει σε **άλλη** συνεδρία. |
 | 2026-10-24 | **«Χτίζονται N» ανά περιοχή** (§12, ADR-890 §19). Το κριτήριο «μελλοντική υπόσχεση» εξήχθη από το `pendingDeliveryOf` στο νέο `lib/listings/delivery-promise.ts` (`futureDeliveryPromiseOf`), μαζί με το `compareDeliveryPromise`. Το `pendingDeliveryOf` είναι πλέον λεπτή κλήση του. Το νυχτερινό `summarizeArea` γράφει το προαιρετικό `underConstruction { count, next }`, και η σελίδα περιοχής το λέει σε μία γραμμή. Κανένα νέο ερώτημα. Μεταλλάξεις 6/6. Το Βήμα 8 παραμένει ⏸️: νέα μέτρηση, 0 `scheduled`. |
+| 2026-10-24 | **Άξονας «παράδοση» στην αναζήτηση** (§12). Νέο σχήμα κριτηρίου `'date-bound'` και άξονας `delivery { after, by }` (`?delivafter=` · `?delivby=`): «χτίζονται» μόνο με `futureDeliveryPromiseOf`, «διαθέσιμο ως» μόνο με το νέο `deliveredBy` (εξαγμένο από το `timingBlockers`). Η ημέρα είναι τιμή του κριτηρίου στη διεύθυνση, ο κριτής μένει χωρίς ρολόι. Το «χτίζονται N» του `/area/[id]` έγινε σύνδεσμος με `delivafter = snapshot.day`. Η ζήτηση `window` ταξιδεύει ως `delivby = toDate`, και το `'timing'` έφυγε από τις απώλειες. Ένας αναγνώστης ημέρας (`readCalendarDay`), ένας κατάλογος ονομάτων ανά σχήμα (`criterionParamNames`, που κάλυψε και το κενό του `level-range` στο τεστ μοναδικότητας). jest πράσινο, μεταλλάξεις 7/7, jscpd:diff καθαρό. Βήμα 8: νέα μέτρηση **0** `scheduled`, παραμένει ⏸️. |

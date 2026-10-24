@@ -3,7 +3,12 @@
  */
 
 import { scheduledAvailability } from '@/lib/listings/availability-window';
-import { compareDeliveryPromise, deliveredBy, futureDeliveryPromiseOf } from '@/lib/listings/delivery-promise';
+import {
+  compareDeliveryPromise,
+  deliveredBy,
+  futureDeliveryPromiseOf,
+  upcomingDeliveryQuarters,
+} from '@/lib/listings/delivery-promise';
 import type { ScheduledAvailability } from '@/types/availability-history';
 import type { AvailabilityPrecision } from '@/types/listing-availability';
 import { LISTING_AVAILABILITY_READY, LISTING_AVAILABILITY_UNKNOWN } from '@/types/listing-availability';
@@ -54,5 +59,21 @@ describe('deliveredBy — «διαθέσιμο ως» (ADR-919 §12)', () => {
     expect(deliveredBy(Q4_2027, Q4_2027.window.end)).toBe(true);
     expect(deliveredBy(Q4_2027, '2027-12-30')).toBe(false);
     expect(deliveredBy(Q4_2027, Q4_2027.window.start)).toBe(false);
+  });
+});
+
+describe('upcomingDeliveryQuarters — οι επιλογές του «διαθέσιμο ως»', () => {
+  it('από το τρέχον τρίμηνο, με αλλαγή έτους, και τιμή = τέλος τριμήνου', () => {
+    const quarters = upcomingDeliveryQuarters('2026-10-24', 3);
+    expect(quarters.map((q) => q.window)).toEqual([
+      { start: '2026-10-01', end: '2026-12-31' },
+      { start: '2027-01-01', end: '2027-03-31' },
+      { start: '2027-04-01', end: '2027-06-30' },
+    ]);
+    expect(quarters.every((q) => q.precision === 'quarter')).toBe(true);
+  });
+
+  it('η πρώτη μέρα του τριμήνου ανήκει σε αυτό', () => {
+    expect(upcomingDeliveryQuarters('2027-01-01', 1)[0].window.start).toBe('2027-01-01');
   });
 });

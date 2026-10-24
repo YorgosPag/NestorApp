@@ -22,7 +22,7 @@ import { areaMarketHref } from '@/lib/listings/listing-routes';
 import { VISIBLE_LINK_CLASS } from '@/lib/ui/link-style';
 import { Link } from '@/lib/workspace/navigation';
 import type { AdminArea } from '@/lib/geo/admin-area-index-file';
-import { hasAreaMarketPage, type AreaMarketPageData } from '@/types/area-market';
+import { hasAreaMarketPage, type AreaMarketPageData, type AreaMarketSnapshot } from '@/types/area-market';
 
 import { areaLevelName, childMapWordsOf } from './area-level-words';
 import { yieldViews, type AreaSeriesInput } from './area-market-insight-view';
@@ -30,7 +30,7 @@ import { offerViews } from './area-market-view';
 import { AreaAskingSection } from './AreaAskingSection';
 import { AreaMapSection } from './AreaMapSection';
 import { AreaContractSection } from './AreaContractSection';
-import { AreaListingsSection } from './AreaListingsSection';
+import { AreaListingsSection, type AreaUnderConstructionNote } from './AreaListingsSection';
 import { AreaMethodology } from './AreaMethodology';
 import { AreaYieldSection } from './AreaYieldSection';
 
@@ -117,6 +117,12 @@ function seriesInput(data: AreaMarketPageData): AreaSeriesInput | null {
 }
 
 /** Το όνομα του Δήμου για την αναγωγή των συμβολαίων — μόνο όταν διαβάστηκε το αρχείο του. */
+/** «Χτίζονται N» με την ημέρα του στιγμιότυπου που το μέτρησε (ADR-919 §12) — το «σήμερα» του συνδέσμου. */
+function underConstructionNote(snapshot: AreaMarketSnapshot | null): AreaUnderConstructionNote | null {
+  const summary = snapshot?.underConstruction;
+  return snapshot === null || summary === undefined ? null : { summary, day: snapshot.day };
+}
+
 function contractsParentName(data: AreaMarketPageData): string | null {
   const { contracts } = data;
   return contracts.kind === 'ready' && contracts.parent !== null ? (data.ancestors[0]?.name ?? null) : null;
@@ -144,7 +150,7 @@ export function AreaMarketContent({ data }: { readonly data: AreaMarketPageData 
         areaId={data.area.id}
         items={data.listings.items}
         total={data.listings.total}
-        underConstruction={snapshot?.underConstruction ?? null}
+        underConstruction={underConstructionNote(snapshot)}
       />
       {data.childPrices.kind !== 'ready' && <AreaChildren level={data.area.level} areas={data.children} />}
       <AreaMethodology />

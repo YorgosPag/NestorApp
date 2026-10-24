@@ -36,7 +36,14 @@
       "hasSpatialMedia": "Μόνο με 3D (περιήγηση ή μοντέλο)",
       "priceSale": "Τιμή πώλησης",
       "priceRent": "Ενοίκιο (μηνιαίο)",
-      "priceNightly": "Τιμή ανά νύχτα"
+      "priceNightly": "Τιμή ανά νύχτα",
+      "delivery": "Παράδοση"
+    },
+    "delivery": {
+      "building": "Χτίζονται (μελλοντική παράδοση)",
+      "by": "Διαθέσιμο ως",
+      "anyTime": "Οποτεδήποτε",
+      "byOption": "ως {date}"
     },
     "authorship": {
       "agency": "Επαγγελματίες",

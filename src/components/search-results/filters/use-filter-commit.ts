@@ -44,9 +44,10 @@ import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 import { useRouter } from '@/lib/workspace/navigation';
-import type { CriterionRange } from '@/lib/criteria/criterion-vocabulary';
+import type { CriterionDateBound, CriterionRange } from '@/lib/criteria/criterion-vocabulary';
 import type {
   CriterionKey,
+  DateBoundCriterionKey,
   FlagCriterionKey,
   LevelRangeCriterionKey,
   RangeCriterionKey,
@@ -54,6 +55,7 @@ import type {
 } from '@/lib/criteria/listing-criterion-asking';
 import {
   without,
+  withDateBound,
   withFlag,
   withLevelRange,
   withRange,
@@ -83,6 +85,8 @@ export interface FilterCommit {
   readonly setLevelRange: (key: LevelRangeCriterionKey, range: LevelRange) => void;
   readonly setValues: (key: ValueSetCriterionKey, values: readonly string[]) => void;
   readonly setFlag: (key: FlagCriterionKey, value: boolean | undefined) => void;
+  /** ADR-919 §12 — όριο ημερών («χτίζονται» · «διαθέσιμο ως»). */
+  readonly setDateBound: (key: DateBoundCriterionKey, bound: CriterionDateBound) => void;
   /** Ξε-ρώτα **έναν** άξονα, όποιο κι αν είναι το σχήμα του. */
   readonly clearAxis: (key: CriterionKey) => void;
   /**
@@ -162,6 +166,7 @@ export function useFilterCommit(filters: ListingSearch): FilterCommit {
       setLevelRange: (key, range) => commitCriteria(withLevelRange(filters.criteria, key, range)),
       setValues: (key, values) => commitCriteria(withValues(filters.criteria, key, values)),
       setFlag: (key, value) => commitCriteria(withFlag(filters.criteria, key, value)),
+      setDateBound: (key, bound) => commitCriteria(withDateBound(filters.criteria, key, bound)),
       clearAxis: (key) => commitCriteria(without(filters.criteria, key)),
       clearAllCriteria: () => commitCriteria(EMPTY_LISTING_CRITERIA),
       // ⚠️ Περνά τα **τρέχοντα** φίλτρα αυτούσια: αλλαγή σειράς δεν είναι αλλαγή
