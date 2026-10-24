@@ -380,31 +380,10 @@ export type LayerColorMap = Record<string, LayerColorEntry>;
 // ============================================================================
 
 /**
- * Converts DXF units to mm (internal base unit)
+ * Converts DXF units to mm (internal base unit). ADR-920 Β4.1β — the table lives in `@/lib/dxf/dxf-insunits`
+ * (shared with the owner's survey import, which may not import from the subapp); re-exported so importers are unchanged.
  */
-export const INSUNITS_TO_MM: Record<number, number> = {
-  0: 1,       // Unitless - assume mm
-  1: 25.4,    // Inches → mm
-  2: 304.8,   // Feet → mm
-  3: 1609344, // Miles → mm
-  4: 1,       // Millimeters → mm (base)
-  5: 10,      // Centimeters → mm
-  6: 1000,    // Meters → mm
-  7: 1000000, // Kilometers → mm
-  8: 0.0000254, // Microinches → mm
-  9: 0.0254,  // Mils → mm
-  10: 914.4,  // Yards → mm
-  11: 1e-7,   // Angstroms → mm
-  12: 1e-6,   // Nanometers → mm
-  13: 0.001,  // Microns → mm
-  14: 100,    // Decimeters → mm
-  15: 10000,  // Decameters → mm
-  16: 100000, // Hectometers → mm
-  17: 1852000, // Gigameters → mm (nautical mile)
-  18: 1.496e14, // Astronomical units → mm
-  19: 9.461e18, // Light years → mm
-  20: 3.086e19, // Parsecs → mm
-};
+export { INSUNITS_TO_MM } from '@/lib/dxf/dxf-insunits';
 
 /** Unit name lookup for logging */
 export const INSUNITS_NAMES: Record<number, string> = {
