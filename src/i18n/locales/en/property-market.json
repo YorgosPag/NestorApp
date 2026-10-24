@@ -713,6 +713,8 @@
         "kindFloorplan": "Floor plan",
         "kindTopographic": "Survey plan",
         "notDeliverable": "Cannot be published in this format — it stays in your dossier.",
+        "dxfPreparing": "Preparing an image of the drawing for the listing…",
+        "dxfFailed": "No image could be produced from this drawing — it stays in your dossier. To publish it, upload the drawing as an image (PNG or JPG).",
         "keptNote": "Files are uploaded to your property dossier and stay there even if you withdraw the listing."
       }
     },

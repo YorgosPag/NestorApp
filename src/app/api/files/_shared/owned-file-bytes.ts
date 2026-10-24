@@ -59,6 +59,7 @@ import type { AuthContext, PermissionId } from '@/lib/auth';
 import { fileRecordBucket } from '@/server/files/file-record-bucket';
 import { storagePathCustody } from '@/lib/storage/storage-path-custody';
 import { fileDownloadName } from '@/lib/files/file-download-name';
+import type { FileRecord } from '@/types/file-record';
 
 import type { FileCustodyCaller } from './file-custody-route';
 import { fileResource, personalFileResource } from './file-ownership';
@@ -68,7 +69,7 @@ import { fileResource, personalFileResource } from './file-ownership';
 // =============================================================================
 
 /** Ό,τι χρειάζεται η παράδοση από το έγγραφο — **στενεύεται εδώ**, μία φορά. */
-interface FileBytesRecord {
+export interface FileBytesRecord {
   storagePath?: string;
   contentType?: string;
   displayName?: string;
@@ -77,6 +78,10 @@ interface FileBytesRecord {
   isDeleted?: boolean;
   /** ADR-895 Α2 — σε ποιον κάδο ζουν τα bytes· απόν ⇒ κανονικός κάδος. */
   storagePlacement?: unknown;
+  /** ADR-716 Φ5 — η ετυμηγορία μονάδων ενός DXF· τη χρειάζεται όποιος **διαβάζει** το σχέδιο (ADR-922). */
+  userDrawingUnits?: FileRecord['userDrawingUnits'];
+  /** ADR-922 — η καταγεγραμμένη έκβαση της εικόνας δημοσίευσης ενός DXF. */
+  publishRaster?: FileRecord['publishRaster'];
 }
 
 export interface OwnedFileBytesQuery {
@@ -110,6 +115,11 @@ export type OwnedFileBytes =
       readonly contentType: string;
       /** Το όνομα **από το έγγραφο** — ποτέ από το αίτημα. */
       readonly filename: string;
+      /**
+       * Το έγγραφο **όπως κρίθηκε** από την αλυσίδα (ADR-922): όποιος παράγει κάτι **δίπλα** στα bytes (παράγωγο στον
+       * ίδιο κάδο) χρειάζεται τη θέση τους — δεύτερη ανάγνωση θα άνοιγε παράθυρο όπου τα δύο διαβάσματα διαφωνούν.
+       */
+      readonly record: FileBytesRecord;
     }
   | { readonly outcome: 'refused' }
   | { readonly outcome: 'unavailable' };
@@ -217,5 +227,6 @@ async function deliverRecordBytes(data: FileBytesRecord, fileId: string): Promis
     buffer,
     contentType: data.contentType ?? 'application/octet-stream',
     filename: fileDownloadName(data, fileId),
+    record: data,
   };
 }

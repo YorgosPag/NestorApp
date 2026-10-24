@@ -15,6 +15,7 @@
  * | κατηγορία αντί καρτέλας (`floorplans` ⇒ κάτοψη) | Α41.1 «τοπογραφικό» |
  * | πτώση στο `media[]` όταν υπάρχει φάκελος | Α41.2 |
  * | ADR-920 Β4.4: έδαφος χωρίς φρουρά κατόχου · χωρίς «μόνο γη» · μόνο αν δηλωθεί · χωρίς φάκελο | Α41.3 |
+ * | ADR-922: DXF φεύγει χωρίς έτοιμη εικόνα · ως φωτογραφία · με το DXF (όχι το PNG) ως πηγή ραφιού | Α41.4 |
  */
 
 import {
@@ -205,5 +206,46 @@ describe('Α41.3 — ADR-920 Β4.4: το τοπογραφικό του φακέ�
     expect(dossierMediaMaterial(DOSSIER, TERRAIN)).toBeNull();
     const declared = ownerListingMediaSources({ ...plot, publishedFileIds: ['file_terrain'] }, { dossier: DOSSIER, files: [TERRAIN] });
     expect(declared.map((source) => source.material.kind)).toEqual(['terrain']);
+  });
+});
+
+describe('Α41.4 — ADR-922: το DXF φεύγει ΜΟΝΟ ως κάτοψη, ΜΟΝΟ με έτοιμη εικόνα, και η εικόνα —όχι το DXF— πάει στο ράφι', () => {
+  const DXF_PATH = 'people/user-1/entities/property_dossier/pdos_a/domains/admin/categories/documents/files/file_topo_dxf.dxf';
+  const READY = { status: 'ready', width: 3000, height: 2000, renderedAt: AT } as const;
+  const TOPO_DXF = file('file_topo_dxf', {
+    domain: 'admin',
+    category: 'documents',
+    purpose: 'study-topographic',
+    contentType: 'application/dxf',
+    ext: 'dxf',
+    storagePath: DXF_PATH,
+  });
+
+  it('χωρίς έκβαση ή με αποτυχία ⇒ ΔΕΝ φεύγει (η οθόνη λέει «ετοιμάζεται» / «απέτυχε»)', () => {
+    const failed = { ...TOPO_DXF, publishRaster: { status: 'failed', failure: 'unreadable', failedAt: AT } as const };
+    expect(dossierMediaMaterial(DOSSIER, TOPO_DXF)).toBeNull();
+    expect(dossierMediaMaterial(DOSSIER, failed)).toBeNull();
+    expect(publishedDossierMediaSources(DOSSIER, [TOPO_DXF, failed], ['file_topo_dxf'])).toEqual([]);
+  });
+
+  it('έτοιμη εικόνα ⇒ φεύγει ως ΚΑΤΟΨΗ, και το ράφι παραλαμβάνει το PNG δίπλα στο DXF — ποτέ το DXF', () => {
+    const ready = { ...TOPO_DXF, publishRaster: READY, storagePlacement: { kind: 'regional', region: 'eu' } as never };
+    expect(dossierMediaMaterial(DOSSIER, ready)).toEqual({ kind: 'floorplan', at: AT, provenance: 'declared' });
+    const [source] = publishedDossierMediaSources(DOSSIER, [ready], ['file_topo_dxf']);
+    expect(source?.privateStoragePath).toBe(`${DXF_PATH}.publish.png`);
+    expect(source?.storagePlacement).toBe(ready.storagePlacement);
+    expect(source?.sourceFileId).toBe('file_topo_dxf');
+  });
+
+  it('⛔ DXF στην καρτέλα φωτογραφιών ΔΕΝ φεύγει ποτέ ως φωτογραφία, ακόμη και με έτοιμη εικόνα', () => {
+    const asPhoto = file('file_photo_dxf', { contentType: 'application/dxf', ext: 'dxf', publishRaster: READY });
+    expect(dossierMediaMaterial(DOSSIER, asPhoto)).toBeNull();
+  });
+
+  it('🔴 οι φρουροί καταλληλότητας ισχύουν και για το DXF: ξένο · στα σκουπίδια · μη έτοιμο ⇒ δεν φεύγει', () => {
+    const ready = { ...TOPO_DXF, publishRaster: READY };
+    for (const over of [{ userId: 'user-2' }, { entityId: 'pdos_other' }, { isDeleted: true }, { status: 'pending' as const }]) {
+      expect(dossierMediaMaterial(DOSSIER, { ...ready, ...over })).toBeNull();
+    }
   });
 });

@@ -25,6 +25,7 @@
 import React from 'react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import type { DxfPublishRasterProgress } from '@/services/floorplans/dxf-publish-raster';
 import type { PublishableDossierTab } from '@/services/property-dossier/dossier-media-publication';
 
 const NS = 'property-market';
@@ -44,6 +45,11 @@ interface OwnerPropertyDossierItemProps {
    * ήταν χειρότερο — θα **υποσχόταν** δημοσίευση που δεν συμβαίνει.
    */
   readonly deliverable: boolean;
+  /**
+   * 🖼️ ADR-922 — για DXF που **δεν** φεύγει ακόμη: «ετοιμάζεται» ή «απέτυχε», ποτέ το γενικό «δεν δημοσιεύεται».
+   * Το DXF **θα** δημοσιευτεί μόλις υπάρξει η εικόνα του· να το λέγαμε «αδημοσίευτο» θα ήταν ψέμα.
+   */
+  readonly rasterProgress: DxfPublishRasterProgress | null;
   readonly published: boolean;
   /** Είναι **η πρώτη που θα δει ο κόσμος**; Κρίση του SSoT, ποτέ «είναι η γραμμή 0;». */
   readonly isLead: boolean;
@@ -65,6 +71,7 @@ export function OwnerPropertyDossierItem({
   tab,
   isLand,
   deliverable,
+  rasterProgress,
   published,
   isLead,
   canPublish,
@@ -114,7 +121,16 @@ export function OwnerPropertyDossierItem({
           </label>
         </span>
       ) : (
-        <span className="text-xs text-muted-foreground">{t(`${K}.dossier.notDeliverable`)}</span>
+        <span aria-live="polite" className="text-xs text-muted-foreground">
+          {/* 🔴 Τριαδικό ΠΡΙΝ το `t()` — ποτέ κλήση μέσα του (ADR-744 · κανόνας της σκάλας, δες πιο πάνω). */}
+          {t(
+            rasterProgress === 'preparing'
+              ? `${K}.dossier.dxfPreparing`
+              : rasterProgress === 'failed'
+                ? `${K}.dossier.dxfFailed`
+                : `${K}.dossier.notDeliverable`,
+          )}
+        </span>
       )}
 
       {/*

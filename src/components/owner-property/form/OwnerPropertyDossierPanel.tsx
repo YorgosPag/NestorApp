@@ -35,10 +35,12 @@ import {
   type PublishableDossierTab,
 } from '@/services/property-dossier/dossier-media-publication';
 import { PUBLISHED_MEDIA_LIMIT } from '@/services/upload/utils/storage-path-public-shelf';
+import { dxfPublishRasterProgressOf } from '@/services/floorplans/dxf-publish-raster';
 import {
   useOwnerPropertyDossierFiles,
   type FormDossier,
 } from '@/hooks/owner-property/useOwnerPropertyDossierFiles';
+import { useDxfPublishRasterRequests } from '@/hooks/owner-property/useDxfPublishRasterRequests';
 
 import { OwnerPropertyDossierItem } from './OwnerPropertyDossierItem';
 import { useDossierFocalPointSlot } from './use-dossier-focal-point-slot';
@@ -103,6 +105,8 @@ export function OwnerPropertyDossierPanel({
   const { t } = useTranslation([NS]);
   const form = useFormContext<OwnerPropertyFormValues>();
   const { files, upload, uploadFiles } = useOwnerPropertyDossierFiles(dossier);
+  // 🖼️ ADR-922 — κάθε DXF χωρίς εικόνα δημοσίευσης τη ζητά μόνο του· η έκβαση γυρίζει από τη ζωντανή λίστα.
+  useDxfPublishRasterRequests(files);
 
   const declared = declaredFileIds(form.watch('publishedFileIds'));
 
@@ -183,6 +187,7 @@ export function OwnerPropertyDossierPanel({
             {rows.map((file) => {
               // Η καρτέλα ρωτιέται ΜΙΑ φορά ανά γραμμή — τη χρειάζονται και η σήμανση και η εστίαση.
               const tab = propertyDossierFileTabOf(dossier, file, PUBLISHABLE_TABS);
+              const deliverable = dossierMediaMaterial(dossier, file) !== null;
               return (
                 <OwnerPropertyDossierItem
                   key={file.id}
@@ -190,7 +195,8 @@ export function OwnerPropertyDossierPanel({
                   name={file.displayName}
                   tab={tab}
                   isLand={isLand}
-                  deliverable={dossierMediaMaterial(dossier, file) !== null}
+                  deliverable={deliverable}
+                  rasterProgress={deliverable || tab !== 'floorplan' ? null : dxfPublishRasterProgressOf(file)}
                   published={publishedIds.has(file.id)}
                   isLead={published[0]?.file.id === file.id}
                   canPublish={canPublish}

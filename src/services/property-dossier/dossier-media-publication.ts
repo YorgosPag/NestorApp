@@ -33,9 +33,11 @@ import {
   type ListingMaterial,
 } from '@/lib/listings/listing-material';
 import {
+  isDeliverableListingFile,
   isDeliverableListingImage,
   type ListingFileCandidate,
 } from '@/lib/listings/listing-file-deliverability';
+import { dxfPublishRasterPathOf } from '@/services/floorplans/dxf-publish-raster';
 import type { DeclaredFileIds } from '@/lib/listings/declared-file-ids';
 import type { PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 import type { PhotoCaptureSpot } from '@/lib/listings/photo-capture-spot';
@@ -69,7 +71,9 @@ export interface DossierMediaDeclaration {
  * (ADR-920 Β4.4), τα δύο πεδία θεματοφυλακής δημοσίευσης που γράφει μόνο ο διακομιστής.
  */
 export type DossierMediaCandidate = ListingFileCandidate &
-  Pick<FileRecord, 'entityId' | 'userId' | 'domain' | 'category' | 'purpose' | 'classification' | 'publicationIdentity'>;
+  Pick<FileRecord, 'entityId' | 'userId' | 'domain' | 'category' | 'purpose' | 'classification' | 'publicationIdentity'> &
+  // 🖼️ ADR-922 — είδος + κατάσταση της εικόνας δημοσίευσης ενός DXF (ο κριτής ρωτά `dxfPublishRasterPathOf`).
+  Pick<FileRecord, 'ext' | 'publishRaster'>;
 
 /** Ο φάκελος όσο τον χρειάζεται η απόφαση. */
 export type DossierMediaOwner = Pick<PropertyDossier, 'id' | 'label' | 'userId' | 'type'>;
@@ -100,34 +104,70 @@ export type PublishableDossierTab = (typeof PUBLISHABLE_TABS)[number];
 
 const DOSSIER_ENTITY_TYPE = ENTITY_TYPES.PROPERTY_DOSSIER;
 
+/** **Ως τι φεύγει** ένα αρχείο **και ποια bytes** το εκπροσωπούν στο ράφι — ιδιωτική διαδρομή, ποτέ URL. */
+interface DossierMediaPublication {
+  readonly material: ListingMaterial;
+  /**
+   * Η εικόνα που παραλαμβάνει το ράφι. Για φωτογραφία/εικόνα κάτοψης **το ίδιο** το αρχείο· για DXF **το PNG
+   * δημοσίευσης** δίπλα του (ADR-922) — το DXF **δεν** φτάνει ποτέ στον καθαριστή.
+   */
+  readonly imagePath: string;
+}
+
 /**
- * **Ως τι φεύγει αυτό το αρχείο** — ή `null` (δεν φεύγει). ΜΙΑ συνάρτηση για «φεύγει;» **και** «τι είναι;», ώστε να
- * μην μπορούν να διαφωνήσουν (ίδιο δόγμα με το `agencyMediaMaterial`, ADR-841 Α17.7.4). **Δεν** ρωτά τη δήλωση.
+ * **Ποια εικόνα εκπροσωπεί αυτό το αρχείο στη βιτρίνα** — ή `null`.
+ *
+ * 🖼️ ADR-922: το DXF φεύγει **μόνο** ως κάτοψη/τοπογραφικό και **μόνο** όταν το παράγωγο είναι έτοιμο. Ίδιοι φρουροί
+ * καταλληλότητας με κάθε αρχείο (κάτοχος · `ready` · ζωντανό) — αλλάζει μόνο η μορφή που κρίνεται αποκωδικοποιήσιμη.
+ */
+function dossierImagePathOf(file: DossierMediaCandidate, tab: PublishableDossierTab): string | null {
+  if (isDeliverableListingImage(file, DOSSIER_ENTITY_TYPE)) return file.storagePath;
+  if (tab !== 'floorplan' || !isDeliverableListingFile(file, DOSSIER_ENTITY_TYPE)) return null;
+  return dxfPublishRasterPathOf(file);
+}
+
+/** Το υλικό μιας καρτέλας — ή `null` (δεν φεύγει). */
+function tabMaterialOf(tab: PublishableDossierTab, file: DossierMediaCandidate): ListingMaterial | null {
+  if (tab === 'photos') return PHOTO_MATERIAL;
+  // 🔑 Η κάτοψη κουβαλά **πότε** (`SourcedAttribute`): η στιγμή του αρχείου, ή δεν φεύγει καθόλου.
+  const at = normalizeToISO(file.createdAt);
+  return at === null ? null : declaredFloorplanMaterial(at);
+}
+
+/**
+ * **Ως τι φεύγει αυτό το αρχείο, και με ποια bytes** — ή `null`. ΜΙΑ κρίση για «φεύγει;» · «τι είναι;» · «ποια
+ * εικόνα;», ώστε να μην μπορούν να διαφωνήσουν (ίδιο δόγμα με το `agencyMediaMaterial`, ADR-841 Α17.7.4).
+ */
+function dossierMediaPublication(
+  dossier: DossierMediaOwner,
+  file: DossierMediaCandidate,
+): DossierMediaPublication | null {
+  if (file.entityId !== dossier.id || file.userId !== dossier.userId) return null;
+  const tab = propertyDossierFileTabOf(dossier, file, PUBLISHABLE_TABS);
+  if (tab !== 'photos' && tab !== 'floorplan') return null;
+
+  const imagePath = dossierImagePathOf(file, tab);
+  const material = imagePath === null ? null : tabMaterialOf(tab, file);
+  return imagePath === null || material === null ? null : { material, imagePath };
+}
+
+/**
+ * **Ως τι φεύγει αυτό το αρχείο** — ή `null` (δεν φεύγει). **Δεν** ρωτά τη δήλωση. Η ίδια κρίση με τον γραφέα
+ * ({@link dossierMediaPublication}), χωρίς τη διαδρομή — αυτή ανήκει μόνο στο ράφι.
  */
 export function dossierMediaMaterial(
   dossier: DossierMediaOwner,
   file: DossierMediaCandidate,
 ): ListingMaterial | null {
-  if (file.entityId !== dossier.id || file.userId !== dossier.userId) return null;
-  if (!isDeliverableListingImage(file, DOSSIER_ENTITY_TYPE)) return null;
-
-  switch (propertyDossierFileTabOf(dossier, file, PUBLISHABLE_TABS)) {
-    case 'photos':
-      return PHOTO_MATERIAL;
-    case 'floorplan': {
-      // 🔑 Η κάτοψη κουβαλά **πότε** (`SourcedAttribute`): η στιγμή του αρχείου, ή δεν φεύγει καθόλου.
-      const at = normalizeToISO(file.createdAt);
-      return at === null ? null : declaredFloorplanMaterial(at);
-    }
-    default:
-      return null;
-  }
+  return dossierMediaPublication(dossier, file)?.material ?? null;
 }
 
-/** Ένα δηλωμένο αρχείο που **φεύγει**, μαζί με το υλικό του — υπολογισμένο **μία** φορά. */
+/** Ένα δηλωμένο αρχείο που **φεύγει**, μαζί με το υλικό και την εικόνα του — υπολογισμένα **μία** φορά. */
 export interface PublishedDossierFile<T extends DossierMediaCandidate> {
   readonly file: T;
   readonly material: ListingMaterial;
+  /** Η ιδιωτική διαδρομή της εικόνας που παραλαμβάνει το ράφι (ADR-922: για DXF, το PNG δημοσίευσης). */
+  readonly imagePath: string;
 }
 
 /**
@@ -149,8 +189,8 @@ export function publishedDossierFiles<T extends DossierMediaCandidate>(
     const file = byId.get(id);
     if (file === undefined || seen.has(id)) continue;
     seen.add(id);
-    const material = dossierMediaMaterial(dossier, file);
-    if (material !== null) published.push({ file, material });
+    const publication = dossierMediaPublication(dossier, file);
+    if (publication !== null) published.push({ file, ...publication });
   }
   return published.slice(0, PUBLISHED_MEDIA_LIMIT);
 }
@@ -162,8 +202,9 @@ export function publishedDossierMediaSources(
   declared: DeclaredFileIds,
   declaration: DossierMediaDeclaration = {},
 ): readonly PublicShelfSource[] {
-  return publishedDossierFiles(dossier, files, declared).map(({ file, material }) => ({
-    privateStoragePath: file.storagePath,
+  return publishedDossierFiles(dossier, files, declared).map(({ file, material, imagePath }) => ({
+    // 🖼️ ADR-922 — η **εικόνα** του αρχείου: το ίδιο για φωτογραφία, το PNG δημοσίευσης για DXF.
+    privateStoragePath: imagePath,
     // ADR-895 — η θέση ταξιδεύει ΜΑΖΙ με το μονοπάτι.
     storagePlacement: file.storagePlacement,
     material,

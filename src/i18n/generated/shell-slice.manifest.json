@@ -42,7 +42,7 @@
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
     "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "5af0db92c81b9b3022f537e5cfbe016c4a5079ad5e74103223d80d97f058373e",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "f2b0212cf0909081143453962ba0bfec2a47dc8753dc81a009ee34c12579b137",
-    "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "2753c7edd9c05a17a65b15f3146177db8a27ca727df7b1f77d28fd1724f4fa6f",
+    "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "e3e8740e7ed0907d4712b72a84f272fc32a19974a5ccd37213cd853ab211cc0a",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "e1c5896ab910b7f5515ef0a3991a4daae3ba7fc776c6291815cfeaddb51e2398",
     "src/i18n/generated/routes/o__workspace__listings__mandates__requests.el.json": "3b685808152db56cfc0ce4d50912bcd6166e986921ebb92e601cbef9936c0a0b",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "ec24f1fdacbe102d81ef6e2b2c3ffde93e4e29b7857ac702db5ebfe1bb7c3867",
@@ -52,8 +52,8 @@
     "src/i18n/generated/routes/o__workspace__settings__brokerage.el.json": "debcbb4f81b54b13b2fd4218a808c207f838bf54216be5fd94a25a0133328d2b",
     "src/i18n/generated/routes/offers.el.json": "9bb55581ec319b22e1ed3f0c129711b788413d1e8ba9a2e0173802e2d5a4e817",
     "src/i18n/generated/routes/offers__mandate__new.el.json": "dc84dd07a782be53464ec354d3118008b440496ef37cecbc4240aff92b68046e",
-    "src/i18n/generated/routes/offers__new.el.json": "aa0b568ec96d2aabfb3a2a7268f8ea327ebcf93d020753305aa982999afd8132",
-    "src/i18n/generated/routes/offers__offerId.el.json": "657fdbe56a3e1800e20aec4af2f8d258182aa2a42ce0f9915f45abca6859ff52",
+    "src/i18n/generated/routes/offers__new.el.json": "01baecbc996b806a2dc09f00945b426ef661093e21548ea94cb442a163e8b869",
+    "src/i18n/generated/routes/offers__offerId.el.json": "eeac823c4ac10f539f248fd8ebebb58ea2d63019c21fce8f87ad34aecce81c21",
     "src/i18n/generated/routes/offers__offerId__calendar.el.json": "9a3202cadc030b777130a2bbada041272f02fbf2d4d38dc66a2ba28ebb793c40",
     "src/i18n/generated/routes/offers__offerId__improve.el.json": "917d4da308dfe9b65418e57d882aefcf38bf2aaee96cf915f1590005527ecc49",
     "src/i18n/generated/routes/offers__offerId__tour.el.json": "84643b1347f58873468eede91adc022cdbf69f7863d5185d5533355c3e6944d8",
@@ -157,7 +157,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "99a1ad385e4b1f9f7c006121ab1af3c6453b92705b268c8333d96c02ae3d9f84",
+  "inputsSha256": "9bd81a8d953b19fd84c816764beba86cbe1de77cc9f2fb1c72736088cb67a586",
   "languages": [
     "el"
   ],
@@ -6429,6 +6429,8 @@
             "offer.media.dossier.addFloorplan",
             "offer.media.dossier.addPhotos",
             "offer.media.dossier.addTopographic",
+            "offer.media.dossier.dxfFailed",
+            "offer.media.dossier.dxfPreparing",
             "offer.media.dossier.keptNote",
             "offer.media.dossier.kindFloorplan",
             "offer.media.dossier.kindPhoto",
@@ -7820,6 +7822,8 @@
             "offer.media.dossier.addFloorplan",
             "offer.media.dossier.addPhotos",
             "offer.media.dossier.addTopographic",
+            "offer.media.dossier.dxfFailed",
+            "offer.media.dossier.dxfPreparing",
             "offer.media.dossier.keptNote",
             "offer.media.dossier.kindFloorplan",
             "offer.media.dossier.kindPhoto",
@@ -8301,6 +8305,8 @@
             "offer.media.dossier.addFloorplan",
             "offer.media.dossier.addPhotos",
             "offer.media.dossier.addTopographic",
+            "offer.media.dossier.dxfFailed",
+            "offer.media.dossier.dxfPreparing",
             "offer.media.dossier.keptNote",
             "offer.media.dossier.kindFloorplan",
             "offer.media.dossier.kindPhoto",
@@ -11788,7 +11794,7 @@
   ],
   "stats": {
     "matchedKeys": 265,
-    "sliceBytes": 818068
+    "sliceBytes": 819136
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

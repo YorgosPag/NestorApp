@@ -231,6 +231,16 @@ describe('files_personal.rules — το προσωπικό αρχείο το α�
       await assertFails(citizen().collection(COLLECTION).doc(DOC_ID).update(forged));
     });
 
+    // 🖼️ ADR-922 — ΙΔΙΑ λίστα (`measuredKeys()`): ένα πλαστό `ready` θα έστελνε τη βιτρίνα σε PNG που δεν έφτιαξε κανείς.
+    it('🔑 ο κάτοχος δεν γράφει την εικόνα δημοσίευσης DXF: γέννηση · οριστικοποίηση · αλλαγή → deny', async () => {
+      const forged = { publishRaster: { status: 'ready', width: 3000, height: 2000, renderedAt: '2026-10-24T00:00:00.000Z' } };
+      await assertFails(citizen().collection(COLLECTION).doc('raster').set({ ...personalFilePayload(CITIZEN_UID, 'raster'), ...forged }));
+      await seedPersonalFile(env, 'pending-raster', CITIZEN_UID, { status: 'pending' });
+      await assertFails(citizen().collection(COLLECTION).doc('pending-raster').update({ status: 'ready', ...forged }));
+      await seedPersonalFile(env, DOC_ID, CITIZEN_UID, { publishRaster: { status: 'failed', failure: 'unreadable', failedAt: '2026-10-24T00:00:00.000Z' } });
+      await assertFails(citizen().collection(COLLECTION).doc(DOC_ID).update(forged));
+    });
+
     // 📅 ADR-915 Φ3 — ΙΔΙΑ λίστα γεγονότων εγγράφου με το `match /files` (`documentFactsKeys()`).
     it('🔑 ο κάτοχος δεν «ανανεώνει» έγγραφο: γέννηση · οριστικοποίηση · αλλαγή γεγονότων → deny', async () => {
       const forged = { documentFacts: { kind: 'energy-certificate', issuedOn: '2099-01-01', printedValidUntil: null,

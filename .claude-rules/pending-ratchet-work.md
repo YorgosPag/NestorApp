@@ -5351,3 +5351,19 @@ Closed via `hostWall.params.sceneUnits ?? 'mm'` frozen-context pattern σε **4 
   **Πώς επαληθεύεται ότι έκλεισε**: `grep -rn "demand-fixtures" src/` δεν επιστρέφει
   εισαγωγή από φάκελο **εκτός** `lib/demand/`, και το `npm run jscpd:diff` στα αγγιγμένα
   μένει καθαρό.
+
+---
+
+### 🔁 Διπλότυπο `extractScene` (processed DXF JSON → σκηνή) — ADR-922 §5.4 · 2026-10-24
+
+**Πού**: `functions/src/storage/dxf-thumbnail-onfinalize.ts` (`extractScene`) και
+`src/services/floorplans/dxf-thumbnail-selfheal.ts` (`extractScene`) — ίδιο σώμα, δύο αντίγραφα.
+
+**Γιατί pending και όχι τώρα (N.0.2)**: το ένα ζει στα Cloud Functions ⇒ η ένωση θέλει **προβολή** (ADR-874,
+`generate:functions-projection`) σε νέο leaf module (π.χ. `src/lib/dxf/processed-scene.ts`) **και** deploy Functions.
+Δεν το απαιτεί το ADR-922 (που δεν αγγίζει τον εταιρικό αγωγό).
+
+**Τι**: leaf `processedSceneFromJson(raw: unknown): DxfSceneInput | null` στο `src/lib/dxf/`, προβολή στα Functions,
+και οι δύο καλούντες το εισάγουν.
+
+**Πώς επαληθεύεται ότι έκλεισε**: `grep -rn "function extractScene" src functions/src` δεν επιστρέφει τίποτα.

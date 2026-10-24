@@ -57,14 +57,23 @@ export async function downloadFile(
   return rawBuffer;
 }
 
+/** Ό,τι δίνει η ανάγνωση ενός DXF — η σκηνή και τα διαγνωστικά της. */
+export interface ParsedDxfScene {
+  readonly scene: DxfSceneData;
+  readonly encoding: string;
+  readonly warnings: string[];
+  readonly parseTimeMs: number;
+}
+
 /**
- * Process a DXF file: parse, compress scene, upload to Storage.
+ * **Bytes DXF → σκηνή** — ο ΕΝΑΣ server-side parser (ADR-033). Τον καλούν η επεξεργασία κάτοψης ({@link processDxf})
+ * **και** η εικόνα δημοσίευσης (ADR-922, `dxf-publish-raster.service`): δεύτερος parser θα έδινε δεύτερη ανάγνωση
+ * του ίδιου σχεδίου.
  */
-export async function processDxf(
+export async function parseDxfScene(
   rawBuffer: Buffer,
-  fileData: FileRecordData,
-  bucket: Bucket,
-): Promise<ProcessResult> {
+  userDrawingUnits: FileRecordData['userDrawingUnits'],
+): Promise<ParsedDxfScene> {
   const parseStart = Date.now();
 
   const { encodingService } = await import(
@@ -86,14 +95,31 @@ export async function processDxf(
   // ίδιο το FileRecord που ήδη κατέβασε το route. Ίδια είσοδος ⇒ ίδια κλίμακα με τον client.
   const { scene, diagnostics } = DxfSceneBuilder.buildSceneWithDiagnostics(
     content,
-    fileData.userDrawingUnits,
+    userDrawingUnits,
   );
-  const warnings = summarizeDiagnostics(diagnostics);
-  const parseTimeMs = Date.now() - parseStart;
 
   // N.0.2/N.18 — ΜΙΑ προβολή SceneModel → DxfSceneData, ίδια με τον client. Αν οι δύο
   // απέκλιναν, ο viewer θα έδειχνε άλλα layers από ό,τι σέρβιρε ο server.
-  const dxfSceneData: DxfSceneData = toDxfSceneData(scene);
+  return {
+    scene: toDxfSceneData(scene),
+    encoding,
+    warnings: summarizeDiagnostics(diagnostics),
+    parseTimeMs: Date.now() - parseStart,
+  };
+}
+
+/**
+ * Process a DXF file: parse, compress scene, upload to Storage.
+ */
+export async function processDxf(
+  rawBuffer: Buffer,
+  fileData: FileRecordData,
+  bucket: Bucket,
+): Promise<ProcessResult> {
+  const { scene: dxfSceneData, encoding, warnings, parseTimeMs } = await parseDxfScene(
+    rawBuffer,
+    fileData.userDrawingUnits,
+  );
 
   const stats = {
     entityCount: dxfSceneData.entities.length,

@@ -1,6 +1,6 @@
 // ⚠️ GENERATED — DO NOT EDIT. Verbatim projection of src/lib/files/file-companion-objects.ts (ADR-874 · CHECK 3.93).
 // Edit the source, then run: npm run generate:functions-projection
-// sha256:f97ba7090c5cc8deea5f2ff1316e96256318a8fd87cc48a1a64c88090afbf067
+// sha256:abff17b0243c1609046b29c148678411a496788b306d6e9b266a0670da1ea148
 
 /**
  * 🧩 **ΤΑ ΣΥΝΟΔΕΥΤΙΚΑ ΑΝΤΙΚΕΙΜΕΝΑ ΕΝΟΣ ΑΡΧΕΙΟΥ** — το κλειστό μητρώο (ADR-899 §2.2 · ADR-191 document management).
@@ -53,6 +53,12 @@ export const FILE_COMPANION_KINDS = {
   floorplanThumbnail: { base: 'path', suffix: '_thumb.png', home: 'client-default' },
   /** Raster μικρογραφία DXF (`functions/dxf-thumbnail-onfinalize` · `dxf-thumbnail-selfheal`). */
   dxfRasterThumbnail: { base: 'path', suffix: '.thumbnail.png', home: 'beside-original' },
+  /**
+   * 🖼️ **Η εικόνα δημοσίευσης ενός DXF** (ADR-922) — αναλογίες του σχεδίου, ανάλυση αγγελίας, μονόχρωμο σε λευκό.
+   * ⚠️ Όχι η `dxfRasterThumbnail`: εκείνη είναι σταθερό 1200×800 για κάρτες/PDF· αυτή τροφοδοτεί το δημόσιο ράφι,
+   * που βγάζει παράγωγα ως 2560px. Γραφέας: `dxf-publish-raster.service` (διακομιστής, δίπλα στο πρωτότυπο).
+   */
+  dxfPublishRaster: { base: 'path', suffix: '.publish.png', home: 'beside-original' },
   /** Επεξεργασμένη σκηνή DXF (`floorplan-process.service`). */
   dxfProcessedScene: { base: 'path', suffix: '.processed.json', home: 'beside-original' },
   /** Σκηνή του autosave του DXF Viewer (`canonicalScenePath`, ADR-293). */

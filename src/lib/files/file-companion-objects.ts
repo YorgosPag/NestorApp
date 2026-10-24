@@ -49,6 +49,12 @@ export const FILE_COMPANION_KINDS = {
   floorplanThumbnail: { base: 'path', suffix: '_thumb.png', home: 'client-default' },
   /** Raster μικρογραφία DXF (`functions/dxf-thumbnail-onfinalize` · `dxf-thumbnail-selfheal`). */
   dxfRasterThumbnail: { base: 'path', suffix: '.thumbnail.png', home: 'beside-original' },
+  /**
+   * 🖼️ **Η εικόνα δημοσίευσης ενός DXF** (ADR-922) — αναλογίες του σχεδίου, ανάλυση αγγελίας, μονόχρωμο σε λευκό.
+   * ⚠️ Όχι η `dxfRasterThumbnail`: εκείνη είναι σταθερό 1200×800 για κάρτες/PDF· αυτή τροφοδοτεί το δημόσιο ράφι,
+   * που βγάζει παράγωγα ως 2560px. Γραφέας: `dxf-publish-raster.service` (διακομιστής, δίπλα στο πρωτότυπο).
+   */
+  dxfPublishRaster: { base: 'path', suffix: '.publish.png', home: 'beside-original' },
   /** Επεξεργασμένη σκηνή DXF (`floorplan-process.service`). */
   dxfProcessedScene: { base: 'path', suffix: '.processed.json', home: 'beside-original' },
   /** Σκηνή του autosave του DXF Viewer (`canonicalScenePath`, ADR-293). */

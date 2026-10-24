@@ -6385,8 +6385,10 @@ service cloud.firestore {
     // Πελάτης που τα γράφει θα έκοβε την κλίμακα `srcset` σε ψεύτικο πλάτος (θολή εικόνα) ή θα έδινε στο
     // lightbox επινοημένη αναλογία. Ίδιο ιδίωμα με τα CDE/δέσμευσης: `affectedKeys()` πιάνει προσθήκη,
     // αλλαγή ΚΑΙ αφαίρεση· ένα σημείο για `files` και `files_personal`.
+    // 🖼️ ADR-922 — `publishRaster`: η κατάσταση της εικόνας δημοσίευσης ενός DXF. Ένα `ready` γραμμένο από πελάτη θα
+    //    έστελνε τη βιτρίνα σε PNG που δεν έφτιαξε ποτέ κανείς ⇒ ΜΟΝΟ `dxf-publish-raster.service` (Admin SDK).
     function measuredKeys() {
-      return ['imageDimensions'];
+      return ['imageDimensions', 'publishRaster'];
     }
 
     function measuredUnchanged() {

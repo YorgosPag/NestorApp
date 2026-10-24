@@ -18,6 +18,7 @@
 
 import type { FileStoragePlacement } from '@/lib/files/file-storage-placement';
 import type { ImageDimensions } from '@/lib/images/image-dimensions';
+import type { DxfPublishRaster } from '@/services/floorplans/dxf-publish-raster';
 import type { DocumentFacts } from '@/lib/document-validity/document-facts';
 import type { FileHandoverOrigin, FileHandoverProtocolOf } from '@/lib/property-handover/file-handover-origin';
 import type { FileHandoverDecision } from '@/lib/property-handover/file-handover-decision';
@@ -426,6 +427,14 @@ export interface FileRecord {
    * `imageDimensionsOf` (`lib/images/image-dimensions`), ποτέ επινοημένη αναλογία.
    */
   imageDimensions?: ImageDimensions;
+
+  /**
+   * 🖼️ **Η εικόνα δημοσίευσης ενός DXF** (ADR-922) — η κατάσταση του παραγώγου (`ready` με διαστάσεις · `failed` με
+   * αιτία). Μόνο DXF. Ο ΕΝΑΣ γραφέας: `services/floorplans/dxf-publish-raster.service` (Admin SDK)· ο client **δεν** το
+   * γράφει (`firestore.rules` → `measuredKeys()`). Απόν ⇒ «δεν ζητήθηκε ακόμη». Διαβάζεται **μόνο** μέσω
+   * `dxfPublishRasterPathOf` — η διαδρομή του PNG βγαίνει από το μητρώο συνοδευτικών, ποτέ από εδώ.
+   */
+  publishRaster?: DxfPublishRaster;
 
   /**
    * **Τα γεγονότα του εγγράφου** — είδος, έκδοση, τυπωμένη λήξη (ADR-915 Φ3 · Α3). Ακίνητο, μεταβίβαση και αγγελία

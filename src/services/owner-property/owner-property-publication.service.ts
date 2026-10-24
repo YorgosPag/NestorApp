@@ -37,6 +37,8 @@ import {
 import { thumbnailFromLead } from '@/lib/owner-property/owner-listing-thumbnail';
 import type { PublicAgencyIdentity } from '@/types/public-listing';
 import { readDossierMedia } from '@/services/property-dossier/dossier-media.reader';
+import { withDossierPublishRasters } from '@/services/property-dossier/dossier-publish-rasters.server';
+import { declaredFileIds } from '@/lib/listings/declared-file-ids';
 import type { DossierMediaRead } from '@/services/property-dossier/dossier-media-publication';
 import { isPubliclyListed, listingAvailabilityOf } from '@/services/listings/public-listing-projection';
 import { resolveListedAt } from '@/services/listings/listed-at-stamp';
@@ -67,7 +69,10 @@ async function readPublicationInputs(
     readPublicAgencyIdentity(adminDb, property.authorCompanyId),
     property.dossierId === undefined
       ? Promise.resolve(null)
-      : readDossierMedia(adminDb, property.dossierId, property.authorUserId),
+      : readDossierMedia(adminDb, property.dossierId, property.authorUserId).then((read) =>
+          // 🖼️ ADR-922 — δίχτυ ασφαλείας: δηλωμένο DXF χωρίς εικόνα δημοσίευσης την αποκτά πριν κριθεί η βιτρίνα.
+          withDossierPublishRasters(adminDb, read, declaredFileIds(property.publishedFileIds)),
+        ),
   ]);
   return { agency, dossierMedia };
 }
