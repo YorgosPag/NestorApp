@@ -2,6 +2,13 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **24/10 — ΤΡΕΙΣ ΣΥΝΑΡΤΗΣΕΙΣ ΤΟΥ `lib/demand` ΠΑΝΩ ΑΠΟ 40 ΓΡΑΜΜΕΣ (N.7.1)** *(ADR-919 «επαλήθευση §12», εύρημα εκτός βήματος 9)*
+
+  **Τι:** μετρημένο 2026-10-24 με AST (σώμα συνάρτησης): `demand-form-load.ts` `demandFormFrom` **57** · `demand-form-values.ts`
+  `placeFrom` **48** · `demand-match-axes.ts` `spatialOutcome` **44**. Προϋπήρχαν. Δεν τα άγγιξε το βήμα 9, που διόρθωσε μόνο τα δικά
+  του (`buildConcessionReport` · `DemandConcessionList` · `DemandAnswerPanel`). **Θεραπεία:** εξαγωγή βοηθών (EXTRACT, ποτέ trim),
+  με τις υπάρχουσες σουίτες του `src/lib/demand` ως δίχτυ. **Μέγεθος:** ~1h, 3 αρχεία, ένας τομέας.
+
 - 🟡 **23/10 — ΔΥΟ ΛΕΞΙΛΟΓΙΑ ΚΥΚΛΟΥ ΖΩΗΣ ΚΤΙΡΙΟΥ: `Building.status` ΚΑΙ `Building.phase`** *(ADR-919 §7, εύρημα του βήματος 3)*
 
   **Τι:** το `status` (`constants/building-statuses.ts`, ADR-287: planning · construction · completed · active) και το `phase`

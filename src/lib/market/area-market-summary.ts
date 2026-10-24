@@ -18,6 +18,8 @@
 import { assessModePricePlausibility, isActionableVerdict } from '@/constants/price-plausibility';
 import { isListedCommercialStatus } from '@/constants/commercial-statuses';
 import { adminAreaFieldOfLevel, type AdminAreaField } from '@/lib/geo/admin-area-of-point';
+import { compareDeliveryPromise, futureDeliveryPromiseOf } from '@/lib/listings/delivery-promise';
+import type { ScheduledAvailability } from '@/types/availability-history';
 import type { OfferKind } from '@/types/property-offers';
 import type { PublicListing } from '@/types/public-listing';
 import {
@@ -30,6 +32,7 @@ import {
   type AreaMarketSnapshot,
   type AreaOfferSummary,
   type AreaSegmentSummary,
+  type AreaUnderConstruction,
   type AskingExclusion,
   type AskingOffer,
 } from '@/types/area-market';
@@ -181,17 +184,37 @@ export function summarizeOffer(listings: readonly PublicListing[], offer: Asking
   return { listings: offered, counted, excluded, segments };
 }
 
+/**
+ * **«Χτίζονται N»** (ADR-919 §12) — αγγελίες με μελλοντική δημόσια υπόσχεση παράδοσης, και η νωρίτερη. `null` στο μηδέν.
+ * 🔑 Το κριτήριο και το συγκριτικό είναι τα ΙΔΙΑ με της απάντησης ζήτησης (`lib/listings/delivery-promise.ts`).
+ * @param day η ημέρα της νύχτας — το «σήμερα» του κριτηρίου
+ */
+export function summarizeUnderConstruction(listings: readonly PublicListing[], day: string): AreaUnderConstruction | null {
+  let count = 0;
+  let next: ScheduledAvailability | null = null;
+  for (const listing of listings) {
+    const promise = futureDeliveryPromiseOf(listing.availability, day);
+    if (promise === null) continue;
+    count += 1;
+    if (next === null || compareDeliveryPromise(promise, next) < 0) next = promise;
+  }
+  return next === null ? null : { count, next };
+}
+
 /** Η σύνοψη μιας περιοχής για μία ημέρα. */
 export function summarizeArea(areaId: string, day: string, listings: readonly PublicListing[]): AreaMarketSnapshot {
   const offers = Object.fromEntries(
     ASKING_OFFERS.map((offer) => [offer, summarizeOffer(listings, offer)]),
   ) as Record<AskingOffer, AreaOfferSummary>;
+  const underConstruction = summarizeUnderConstruction(listings, day);
   return {
     schemaVersion: AREA_MARKET_SNAPSHOT_SCHEMA_VERSION,
     areaId,
     day,
     listingCount: listings.length,
     offers,
+    // Απόν στο μηδέν: κανένα `undefined` στο Firestore, και τα παλιά στιγμιότυπα διαβάζονται ίδια.
+    ...(underConstruction === null ? {} : { underConstruction }),
   };
 }
 

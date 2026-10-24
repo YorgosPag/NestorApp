@@ -2,7 +2,7 @@
  * @fileoverview **Ο ΟΡΙΖΟΝΤΑΣ ΤΟΥ ΧΡΟΝΟΥ** — «η νωρίτερη παραδίδεται Δ΄ τρίμηνο 2027» δίπλα στο «Δεν είναι διαθέσιμες
  * το διάστημα που ζήτησες» (ADR-919 §11).
  * @related lib/demand/demand-match-axes.ts (`timingBlockers`) · components/demand/DemandBlockerList.tsx ·
- *   lib/demand/demand-awaiting-delivery.ts (`compareDeliveryPromise`)
+ *   lib/listings/delivery-promise.ts (`compareDeliveryPromise`)
  * @module lib/demand/demand-timing-horizon
  *
  * 🔑 **Καμία δεύτερη κρίση χρόνου** (ADR-919 §3.7): δεν ξαναρωτά «χωράει στο διάστημα;». Διαβάζει **μόνο** τις
@@ -20,7 +20,7 @@
  */
 
 import type { ScheduledAvailability } from '@/types/availability-history';
-import { compareDeliveryPromise } from './demand-awaiting-delivery';
+import { compareDeliveryPromise } from '@/lib/listings/delivery-promise';
 import type { DemandOutcome } from './demand-matching';
 
 /** Η νωρίτερη υπόσχεση ανάμεσα στις αγγελίες που σταμάτησε ο χρόνος, ή `null`. Ισοπαλία ⇒ η πιο στενή ακρίβεια. */

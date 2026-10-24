@@ -58,7 +58,7 @@ import {
   concessionCensusBalances,
   tallyBlockers,
   type DemandConcessionReport,
-} from './demand-concessions';
+} from './demand-concession-report';
 import { matchDemand, type DemandOutcome, type DemandResults } from './demand-matching';
 import { ABSENCE_BLOCKERS } from './demand-match-vocabulary';
 import type { DemandBlocker, ListingMatchFacts } from './demand-match-vocabulary';

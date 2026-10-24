@@ -12,6 +12,7 @@ import {
 } from '@/lib/market/area-market-document';
 import { nextAreaMarketSeries } from '@/lib/market/area-market-series';
 import { summarizeArea } from '@/lib/market/area-market-summary';
+import { scheduledAvailability } from '@/lib/listings/availability-window';
 
 describe('areaMarketSnapshotFromDocument', () => {
   const written = summarizeArea('municipality:0701', '2026-09-26', [listing()]);
@@ -41,6 +42,28 @@ describe('areaMarketSnapshotFromDocument', () => {
     ['null', null],
   ])('%s ⇒ null', (_label, raw) => {
     expect(areaMarketSnapshotFromDocument(raw)).toBeNull();
+  });
+
+  describe('ADR-919 §12 — το προαιρετικό «χτίζονται N»', () => {
+    const q2_2028 = scheduledAvailability('quarter', '2028-04-01');
+    const building = summarizeArea('municipality:0701', '2026-10-24', [listing({ availability: q2_2028 })]);
+
+    it('γραμμένο ⇒ διαβάζεται αυτούσιο (κύκλος JSON)', () => {
+      expect(building.underConstruction).toEqual({ count: 1, next: q2_2028 });
+      expect(areaMarketSnapshotFromDocument(JSON.parse(JSON.stringify(building)))).toEqual(building);
+    });
+
+    it.each([
+      ['count 0', { count: 0, next: q2_2028 }],
+      ['count μη ακέραιο', { count: 1.5, next: q2_2028 }],
+      ['next χωρίς διάστημα', { count: 1, next: { kind: 'scheduled', precision: 'quarter' } }],
+      ['next που δεν ξαναχτίζεται (τρίμηνο με τέλος Αύγουστο)', { count: 1, next: { kind: 'scheduled', precision: 'quarter', window: { start: '2028-04-01', end: '2028-08-31' } } }],
+      ['next `ready`', { count: 1, next: { kind: 'ready' } }],
+    ])('χαλασμένο (%s) ⇒ πέφτει ΜΟΝΟ το πεδίο, οι τιμές μένουν', (_label, broken) => {
+      const read = areaMarketSnapshotFromDocument(JSON.parse(JSON.stringify({ ...written, underConstruction: broken })));
+      expect(read).toEqual(written);
+      expect(read !== null && 'underConstruction' in read).toBe(false);
+    });
   });
 });
 

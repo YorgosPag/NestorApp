@@ -11,7 +11,8 @@ import type { AvailabilityTrack, ScheduledAvailability } from '@/types/availabil
 import type { DemandTiming } from '@/types/property-demand';
 
 import { NO_LISTING_KNOWLEDGE, answerDemand, demandAnswerBalances, demandAnswerShape } from '../demand-answer';
-import { awaitingDeliveryOf, compareDeliveryPromise, isAwaitingDelivery } from '../demand-awaiting-delivery';
+import { awaitingDeliveryOf, isAwaitingDelivery } from '../demand-awaiting-delivery';
+import { compareDeliveryPromise } from '@/lib/listings/delivery-promise';
 import { matchDemand } from '../demand-matching';
 import { NOW_ISO, TODAY, demand, facts, listing, seek } from './demand-fixtures';
 

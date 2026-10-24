@@ -12,9 +12,12 @@ import React from 'react';
 import { SavedListingsProvider } from '@/components/listings/SavedListingsProvider';
 import { ListingCard } from '@/components/search-results/ListingCard';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { getCurrentLocale } from '@/lib/intl-utils';
+import { availabilityPromisePhrase } from '@/lib/listings/availability-phrase';
 import { searchResultsHref } from '@/lib/listings/listing-routes';
 import { SEARCH_REGION_PARAM } from '@/lib/listings/listing-search-area';
 import { Link } from '@/lib/workspace/navigation';
+import type { AreaUnderConstruction } from '@/types/area-market';
 import type { PublicListing } from '@/types/public-listing';
 
 const NS = 'area-market';
@@ -23,14 +26,28 @@ interface AreaListingsSectionProps {
   readonly areaId: string;
   readonly items: readonly PublicListing[];
   readonly total: number;
+  /** «Χτίζονται N» της τελευταίας νύχτας (ADR-919 §12) — `null` = καμία, και η γραμμή σιωπά. */
+  readonly underConstruction: AreaUnderConstruction | null;
 }
 
-export function AreaListingsSection({ areaId, items, total }: AreaListingsSectionProps) {
+/**
+ * **«Χτίζονται N»** — μία γραμμή, με τη ΜΙΑ φράση ημερομηνίας (`availabilityPromisePhrase`). Δεν είναι σύνδεσμος: η
+ * αναζήτηση δεν έχει ακόμη φίλτρο διαθεσιμότητας (ADR-919 §12).
+ */
+function UnderConstructionNote({ value }: { readonly value: AreaUnderConstruction | null }) {
+  const { t } = useTranslation([NS, 'common-shared']);
+  if (value === null) return null;
+  const date = availabilityPromisePhrase(value.next, t, getCurrentLocale());
+  return <p className="m-0 text-sm text-foreground">{t(`${NS}:listings.underConstruction`, { count: value.count, date })}</p>;
+}
+
+export function AreaListingsSection({ areaId, items, total, underConstruction }: AreaListingsSectionProps) {
   const { t } = useTranslation([NS]);
   const href = searchResultsHref(new URLSearchParams({ [SEARCH_REGION_PARAM]: areaId }).toString());
   return (
     <section aria-labelledby="area-listings" className="flex flex-col gap-3">
       <h2 id="area-listings" className="m-0 text-xl font-semibold text-foreground">{t(`${NS}:listings.title`)}</h2>
+      <UnderConstructionNote value={underConstruction} />
       {items.length === 0
         ? <p className="m-0 text-sm text-muted-foreground">{t(`${NS}:listings.empty`)}</p>
         : (

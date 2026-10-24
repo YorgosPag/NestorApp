@@ -29,6 +29,7 @@
  */
 
 import { slipNoticeOf } from '@/lib/listings/availability-history';
+import { compareDeliveryPromise, futureDeliveryPromiseOf } from '@/lib/listings/delivery-promise';
 import type { ScheduledAvailability } from '@/types/availability-history';
 import type { DemandMatch } from './demand-match-vocabulary';
 import type { DemandOutcome } from './demand-matching';
@@ -59,13 +60,6 @@ export function isAwaitingDelivery(match: DemandMatch): boolean {
   return match.blockers.length === 1 && match.blockers[0] === 'not-available-then';
 }
 
-/** Νωρίτερο τέλος πρώτα· στην ισοπαλία, η στενότερη ακρίβεια (μεταγενέστερη αρχή). Το κριτήριο Δ2 του `timingBlockers`. */
-export function compareDeliveryPromise(a: ScheduledAvailability, b: ScheduledAvailability): number {
-  if (a.window.end !== b.window.end) return a.window.end < b.window.end ? -1 : 1;
-  if (a.window.start === b.window.start) return 0;
-  return a.window.start > b.window.start ? -1 : 1;
-}
-
 /** Οι υποσχέσεις → σωρευτική σκάλα, ένα σκαλί ανά τέλος. */
 function ladderOf(promises: readonly ScheduledAvailability[]): readonly AwaitingDeliveryStep[] {
   const steps: AwaitingDeliveryStep[] = [];
@@ -83,18 +77,16 @@ function ladderOf(promises: readonly ScheduledAvailability[]): readonly Awaiting
 /**
  * Η **μελλοντική** υπόσχεση μιας αγγελίας που τη σταματά μόνο ο χρόνος — αλλιώς `null`.
  *
- * Μετρά μόνο `window.end > σήμερα`. Μια ληγμένη υπόσχεση μπορεί να σταματήσει ζήτηση με παρελθοντικό διάστημα, αλλά
- * δεν είναι «χτίζεται»: είναι υπόσχεση που δεν τηρήθηκε, και η θέση της είναι στο `slipNoticeOf`, όχι σε αυτή τη
- * σκάλα. 🔑 Το ρωτούν **και** η απογραφή των υποχωρήσεων (κάδος `awaitingDelivery`) **και** η σκάλα, ώστε το άθροισμα
+ * Το «μελλοντική» το κρίνει το ΕΝΑ `futureDeliveryPromiseOf` (`lib/listings/delivery-promise.ts`), το ίδιο που ρωτά η
+ * σύνοψη περιοχής. Μια ληγμένη υπόσχεση μπορεί να σταματήσει ζήτηση με παρελθοντικό διάστημα, αλλά δεν είναι «χτίζεται».
+ * 🔑 Το ρωτούν **και** η απογραφή των υποχωρήσεων (κάδος `awaitingDelivery`) **και** η σκάλα, ώστε το άθροισμα
  * να κλείνει εκ κατασκευής.
  */
 export function pendingDeliveryOf(
   { facts, match }: DemandOutcome,
   todayDate: string,
 ): ScheduledAvailability | null {
-  const availability = facts.availability;
-  if (!isAwaitingDelivery(match) || availability.kind !== 'scheduled') return null;
-  return availability.window.end > todayDate ? availability : null;
+  return isAwaitingDelivery(match) ? futureDeliveryPromiseOf(facts.availability, todayDate) : null;
 }
 
 /**

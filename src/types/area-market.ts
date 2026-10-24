@@ -18,6 +18,7 @@ import type { AreaSummaryFile } from '@/lib/market/market-transactions-file';
 import type { StatCell } from '@/lib/market/market-statistics';
 import type { PriceMapAreas } from '@/lib/market/price-map';
 import type { PublicListing } from '@/types/public-listing';
+import type { ScheduledAvailability } from '@/types/availability-history';
 
 /** Η εκδοχή του σχήματος του εγγράφου. */
 export const AREA_MARKET_SNAPSHOT_SCHEMA_VERSION = 1;
@@ -105,6 +106,19 @@ export interface AreaMarketSnapshot {
   /** Όλες οι δημοσιευμένες αγγελίες της περιοχής, οποιασδήποτε προσφοράς. */
   readonly listingCount: number;
   readonly offers: Readonly<Record<AskingOffer, AreaOfferSummary>>;
+  /**
+   * **«Χτίζονται N»** (ADR-919 §12): αγγελίες με **μελλοντική** δημόσια υπόσχεση παράδοσης. **Απόν = καμία** (σιωπή, ποτέ
+   * «0»). Προαιρετικό και προσθετικό ⇒ η εκδοχή σχήματος **δεν** ανεβαίνει (ADR-890 §12.1).
+   */
+  readonly underConstruction?: AreaUnderConstruction;
+}
+
+/** Οι αγγελίες μιας περιοχής που «χτίζονται» — μόνο από δημοσιευμένες αγγελίες, ποτέ από έργα (ADR-777 §8.99.2 #3). */
+export interface AreaUnderConstruction {
+  /** Πόσες. Πάντα ≥ 1. Χωρίς k-κατώφλι, επίτηδες: οι αγγελίες είναι δημόσιες μία-μία (ADR-919 §12). */
+  readonly count: number;
+  /** Η νωρίτερη υπόσχεση (`compareDeliveryPromise`). */
+  readonly next: ScheduledAvailability;
 }
 
 /**

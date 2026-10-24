@@ -28,7 +28,8 @@ import {
   isMeasurableBlocker,
   isUncertainBlocker,
 } from '../demand-match-vocabulary';
-import { buildConcessionReport, MAX_NIGHTS_CONCESSION } from '../demand-concessions';
+import { MAX_NIGHTS_CONCESSION } from '../demand-concessions';
+import { buildConcessionReport } from '../demand-concession-report';
 import { axesLostProjectingDemand, listingFiltersFromDemand } from '../demand-listing-filters';
 import { readStoredSeeks } from '../demand-seeks-read';
 import { demandDraftFrom, demandFormSchema, EMPTY_DEMAND_FORM } from '../demand-form-values';

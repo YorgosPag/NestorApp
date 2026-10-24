@@ -19,7 +19,7 @@
  * | Πρόταση | Ποιος την παράγει |
  * |---|---|
  * | «δεν βρέθηκε τίποτα» | {@link demandAnswerShape} — **έξι** ονομασμένα σχήματα |
- * | «με +20.000 € υπάρχουν 6» | {@link DemandConcessionList} ← `demand-concessions.ts` |
+ * | «με +20.000 € υπάρχουν 6» | {@link DemandConcessionList} ← `demand-concession-report.ts` |
  * | «άλλοι 8 ζητούν το ίδιο» | {@link DemandCompetitionPanel} ← διαδρομή διακομιστή |
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -124,6 +124,32 @@ function AxesLostNote({ answer }: { answer: DemandAnswer }): React.ReactElement 
   );
 }
 
+/**
+ * Ο σύνδεσμος προς τα αποτελέσματα. Εμφανίζεται **πάντα**, ακόμη και με μηδέν ταιριάσματα — και είναι
+ * σκόπιμο: οδηγεί στην οθόνη 2 με τα φίλτρα της ζήτησης, όπου ο άνθρωπος βλέπει **γιατί** με τα δικά του
+ * μάτια. Η μόνη εξαίρεση (`nothing-to-judge`, άδειος κατάλογος) αποφασίζεται από τον καλούντα.
+ */
+function ResultsLink({
+  demand,
+  answer,
+}: {
+  demand: PropertyDemand;
+  answer: DemandAnswer;
+}): React.ReactElement {
+  const { t } = useTranslation(['property-market']);
+  return (
+    <nav className="flex flex-col gap-2">
+      <Link
+        href={demandResultsHref(demand)}
+        className="inline-block w-fit rounded-md border border-border bg-card px-4 py-2 font-medium text-foreground"
+      >
+        {t('property-market:demand.answer.seeResults')}
+      </Link>
+      <AxesLostNote answer={answer} />
+    </nav>
+  );
+}
+
 export function DemandAnswerPanel({
   demand,
   answer,
@@ -159,23 +185,7 @@ export function DemandAnswerPanel({
 
       <HeadlineSentence shape={shape} answer={answer} />
 
-      {/*
-        Ο σύνδεσμος εμφανίζεται **πάντα**, ακόμη και με μηδέν ταιριάσματα — και είναι
-        σκόπιμο: οδηγεί στην οθόνη 2 με τα φίλτρα της ζήτησης, όπου ο άνθρωπος βλέπει
-        **γιατί** με τα δικά του μάτια. Η μόνη εξαίρεση είναι ο άδειος κατάλογος, όπου
-        δεν υπάρχει τίποτα να δει.
-      */}
-      {shape !== 'nothing-to-judge' && (
-        <nav className="flex flex-col gap-2">
-          <Link
-            href={demandResultsHref(demand)}
-            className="inline-block w-fit rounded-md border border-border bg-card px-4 py-2 font-medium text-foreground"
-          >
-            {t('property-market:demand.answer.seeResults')}
-          </Link>
-          <AxesLostNote answer={answer} />
-        </nav>
-      )}
+      {shape !== 'nothing-to-judge' && <ResultsLink demand={demand} answer={answer} />}
 
       <DemandConcessionList report={answer.concessions} awaitingDelivery={answer.awaitingDelivery} />
       <DemandBlockerList blockedBy={answer.blockedBy} timingHorizon={answer.timingHorizon} />

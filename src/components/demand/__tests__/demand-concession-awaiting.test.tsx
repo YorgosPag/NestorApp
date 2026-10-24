@@ -9,7 +9,7 @@ import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 import type { AwaitingDelivery } from '@/lib/demand/demand-awaiting-delivery';
-import type { DemandConcessionReport } from '@/lib/demand/demand-concessions';
+import type { DemandConcessionReport } from '@/lib/demand/demand-concession-report';
 import { scheduledAvailability } from '@/lib/listings/availability-window';
 import type { ScheduledAvailability } from '@/types/availability-history';
 

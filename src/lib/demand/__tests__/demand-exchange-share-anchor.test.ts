@@ -12,7 +12,8 @@ import { exchangeSeek, demandInvariantViolations, type ExchangeDemandSeek } from
 import type { PublicListing } from '@/types/public-listing';
 
 import { matchDemandAgainstListing } from '../demand-matching';
-import { buildConcessionReport, MAX_SHARE_CONCESSION_POINTS } from '../demand-concessions';
+import { MAX_SHARE_CONCESSION_POINTS } from '../demand-concessions';
+import { buildConcessionReport } from '../demand-concession-report';
 import { axesLostProjectingDemand } from '../demand-listing-filters';
 import { readStoredSeeks } from '../demand-seeks-read';
 import { demandDraftFrom, demandFormSchema, EMPTY_DEMAND_FORM } from '../demand-form-values';

@@ -20,13 +20,11 @@ import {
   DEMAND_CONCESSIONS,
   MAX_RELATIVE_CONCESSION,
   MAX_ROOMS_CONCESSION,
-  buildConcessionReport,
   buildLadder,
   concessionCeiling,
-  concessionCensusBalances,
   soleConcessionOf,
-  tallyBlockers,
 } from '../demand-concessions';
+import { buildConcessionReport, concessionCensusBalances, tallyBlockers } from '../demand-concession-report';
 import { matchDemand } from '../demand-matching';
 import type { DemandMatch } from '../demand-match-vocabulary';
 import { NO_DEMAND_FEATURES } from '@/types/property-demand';

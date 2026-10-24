@@ -9,6 +9,7 @@
  * στιγμιότυπα διαβάζονται ως «δεν υπάρχει» μέχρι να ξαναγραφτούν, αντί να δώσουν `undefined` στην οθόνη.
  */
 
+import { readStoredAvailability } from '@/lib/listings/public-listing-shape-judges';
 import { readPriceMapAreas } from '@/lib/market/price-map';
 import {
   AREA_MARKET_MAP_SCHEMA_VERSION,
@@ -20,6 +21,7 @@ import {
   type AreaMarketSeries,
   type AreaMarketSeriesPoints,
   type AreaMarketSnapshot,
+  type AreaUnderConstruction,
 } from '@/types/area-market';
 
 type DocumentData = Readonly<Record<string, unknown>>;
@@ -36,14 +38,35 @@ function isOfferSummary(value: unknown): boolean {
     && isRecord(value.segments);
 }
 
-/** Έγγραφο `area_market_snapshots` ⇒ σύνοψη, ή `null` όταν δεν έχει το σχήμα της τρέχουσας εκδοχής. */
+/**
+ * Το προαιρετικό «χτίζονται N» (ADR-919 §12) ⇒ τιμή, ή `null`. Η υπόσχεση κρίνεται **βαθιά** από τον ίδιο κριτή με την
+ * αγγελία (`readStoredAvailability`, ξαναχτίζει το διάστημα)· ό,τι δεν στέκει είναι απουσία.
+ */
+function underConstructionOf(value: unknown): AreaUnderConstruction | null {
+  if (!isRecord(value) || typeof value.count !== 'number' || !Number.isInteger(value.count) || value.count < 1) return null;
+  const next = readStoredAvailability(value.next);
+  return next.kind === 'scheduled' ? { count: value.count, next } : null;
+}
+
+/**
+ * Έγγραφο `area_market_snapshots` ⇒ σύνοψη, ή `null` όταν δεν έχει το σχήμα της τρέχουσας εκδοχής.
+ * 🔑 Χαλασμένο **προαιρετικό** πεδίο ρίχνει **μόνο το πεδίο**: οι τιμές της περιοχής δεν χάνονται για μια γραμμή.
+ */
 export function areaMarketSnapshotFromDocument(data: unknown): AreaMarketSnapshot | null {
   if (!isRecord(data) || data.schemaVersion !== AREA_MARKET_SNAPSHOT_SCHEMA_VERSION) return null;
   if (typeof data.areaId !== 'string' || typeof data.day !== 'string' || typeof data.listingCount !== 'number') return null;
   const offers = data.offers;
   if (!isRecord(offers) || !ASKING_OFFERS.every((offer) => isOfferSummary(offers[offer]))) return null;
-  // Ο ΜΟΝΟΣ ισχυρισμός τύπου της συλλογής — μετά τον έλεγχο του σχήματος.
-  return data as unknown as AreaMarketSnapshot;
+  const underConstruction = underConstructionOf(data.underConstruction);
+  return {
+    schemaVersion: AREA_MARKET_SNAPSHOT_SCHEMA_VERSION,
+    areaId: data.areaId,
+    day: data.day,
+    listingCount: data.listingCount,
+    // Ο ΜΟΝΟΣ ισχυρισμός τύπου της συλλογής — μετά τον έλεγχο του σχήματος.
+    offers: offers as unknown as AreaMarketSnapshot['offers'],
+    ...(underConstruction === null ? {} : { underConstruction }),
+  };
 }
 
 /** Έγγραφο `area_market_runs` ⇒ σημάδι εκτέλεσης, ή `null`. */

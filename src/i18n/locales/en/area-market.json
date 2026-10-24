@@ -133,7 +133,8 @@
   "listings": {
     "title": "Listings in the area",
     "seeAll": "{count, plural, one {See the listing on the map} other {See all # listings on the map}}",
-    "empty": "There is no published listing in this area right now."
+    "empty": "There is no published listing in this area right now.",
+    "underConstruction": "{count, plural, one {One listing is under construction, with a declared delivery: {date}.} other {# listings are under construction; the earliest declared delivery: {date}.}} Figures from last night."
   },
   "method": {
     "title": "How the numbers are computed",

@@ -2,7 +2,7 @@
   "adr": "ADR-744",
   "artifacts": {
     "src/i18n/generated/lazy-route-namespaces.json": "02cf92c937237ccb856b70072d24fcaa35e4e126c7248014cf4d1f1e367a09ee",
-    "src/i18n/generated/routes/area__id.el.json": "b2703db396fe6d2130995cb87b2105abcc2837fe84af8628649b5d95f9a94dfe",
+    "src/i18n/generated/routes/area__id.el.json": "f106788944901e33ca37a741bad7fde9ee19ecf6a4b23b7b13a19e0fb03cbc8e",
     "src/i18n/generated/routes/auth__action.el.json": "43a49dcb69050c49113a98b2a32eef16dcb6a4ed4f843ee9401ee65ab7ab5c00",
     "src/i18n/generated/routes/card-email__token.el.json": "46bb991ee24b3cb42dfa9c710624f71afd2198a3d64806f4e554658db414caa9",
     "src/i18n/generated/routes/case-invite__token.el.json": "1dffb689a03d1168af0c05055fde0233dcbc40501b3734c191b8f0e5a0844afb",
@@ -157,7 +157,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "c37c75ffcc6b7fe8f41afce6fc57517f4dbc5cf39df37c4e64e5a6ed616fc082",
+  "inputsSha256": "6b56f4cffb6f0486332ee3c1945834e6a8641fcfd6376ac202c743413fda0051",
   "languages": [
     "el"
   ],
@@ -235,6 +235,7 @@
             "listings.empty",
             "listings.seeAll",
             "listings.title",
+            "listings.underConstruction",
             "map.loading",
             "map.mode.label",
             "map.mode.zones",
@@ -11782,7 +11783,7 @@
   ],
   "stats": {
     "matchedKeys": 265,
-    "sliceBytes": 817535
+    "sliceBytes": 817858
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

@@ -140,7 +140,12 @@ export function AreaMarketContent({ data }: { readonly data: AreaMarketPageData 
       ))}
       <AreaYieldSection views={yields} />
       <AreaContractSection contracts={data.contracts} asking={snapshot} parentName={contractsParentName(data)} />
-      <AreaListingsSection areaId={data.area.id} items={data.listings.items} total={data.listings.total} />
+      <AreaListingsSection
+        areaId={data.area.id}
+        items={data.listings.items}
+        total={data.listings.total}
+        underConstruction={snapshot?.underConstruction ?? null}
+      />
       {data.childPrices.kind !== 'ready' && <AreaChildren level={data.area.level} areas={data.children} />}
       <AreaMethodology />
     </ShellSurface>

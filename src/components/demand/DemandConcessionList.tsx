@@ -37,12 +37,8 @@ import { getCurrentLocale } from '@/lib/intl-utils';
 import { availabilityPromisePhrase } from '@/lib/listings/availability-phrase';
 import type { AwaitingDelivery } from '@/lib/demand/demand-awaiting-delivery';
 import { resolvedPriceLabel } from '@/lib/listings/listing-price-label';
-import {
-  ladderIdOf,
-  type ConcessionLadder,
-  type ConcessionStep,
-  type DemandConcessionReport,
-} from '@/lib/demand/demand-concessions';
+import type { ConcessionLadder, ConcessionStep } from '@/lib/demand/demand-concessions';
+import { ladderIdOf, type DemandConcessionReport } from '@/lib/demand/demand-concession-report';
 
 /**
  * Ποσό → **φράση**, στη μονάδα του άξονα.
@@ -164,18 +160,32 @@ export function DemandConcessionList({
         </p>
       )}
 
-      {(multiAxis > 0 || unquantified > 0) && (
-        <ul className="mt-3 flex flex-col gap-1 text-sm text-muted-foreground">
-          {multiAxis > 0 && (
-            <li>{t('property-market:demand.concession.multiAxis', { count: multiAxis })}</li>
-          )}
-          {unquantified > 0 && (
-            <li>
-              {t('property-market:demand.concession.unquantified', { count: unquantified })}
-            </li>
-          )}
-        </ul>
-      )}
+      <ConcessionCensusNotes multiAxis={multiAxis} unquantified={unquantified} />
     </SectionFrame>
+  );
+}
+
+/** Οι κοντινές που **δεν** μπήκαν σε πρόταση — τυπώνονται, δεν σιωπούν. Στο μηδέν και των δύο, τίποτα. */
+function ConcessionCensusNotes({
+  multiAxis,
+  unquantified,
+}: {
+  multiAxis: number;
+  unquantified: number;
+}): React.ReactElement | null {
+  const { t } = useTranslation(['property-market']);
+  if (multiAxis === 0 && unquantified === 0) return null;
+
+  return (
+    <ul className="mt-3 flex flex-col gap-1 text-sm text-muted-foreground">
+      {multiAxis > 0 && (
+        <li>{t('property-market:demand.concession.multiAxis', { count: multiAxis })}</li>
+      )}
+      {unquantified > 0 && (
+        <li>
+          {t('property-market:demand.concession.unquantified', { count: unquantified })}
+        </li>
+      )}
+    </ul>
   );
 }

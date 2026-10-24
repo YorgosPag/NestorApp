@@ -11,7 +11,10 @@ import {
   observeAsking,
   summarizeArea,
   summarizeOffer,
+  summarizeUnderConstruction,
 } from '@/lib/market/area-market-summary';
+import { scheduledAvailability } from '@/lib/listings/availability-window';
+import type { ScheduledAvailability } from '@/types/availability-history';
 import { SEGMENT_BREAKDOWN_AXES } from '@/lib/market/market-breakdowns';
 import { MARKET_SEGMENTS, SEGMENT_METRIC } from '@/lib/market/market-segments';
 import { isReportedStatCell, MARKET_STAT_MIN_SAMPLE } from '@/lib/market/market-statistics';
@@ -163,5 +166,41 @@ describe('περιοχές — κάθε βαθμίδα με σελίδα, και
     const snapshot = summarizeArea('municipality:0701', '2026-09-26', [listing({ adminArea: THESSALONIKI })]);
     expect(snapshot).toEqual(expect.objectContaining({ schemaVersion: 1, areaId: 'municipality:0701', day: '2026-09-26', listingCount: 1 }));
     expect(snapshot.offers.rent.listings).toBe(0);
+  });
+});
+
+describe('ADR-919 §12 — «χτίζονται N» ανά περιοχή', () => {
+  const DAY = '2026-10-24';
+  const scheduled = (precision: 'quarter' | 'month', anchor: string): ScheduledAvailability => {
+    const availability = scheduledAvailability(precision, anchor);
+    if (availability.kind !== 'scheduled') throw new Error(`fixture: ${anchor}`);
+    return availability;
+  };
+  const Q2_2028 = scheduled('quarter', '2028-04-01');
+  const DEC_2027 = scheduled('month', '2027-12-01');
+  const EXPIRED = scheduled('month', '2026-03-01');
+
+  it('μετρά μόνο τις μελλοντικές υποσχέσεις, και το `next` είναι η νωρίτερη', () => {
+    const listings = [
+      listing({ id: 'p1', availability: Q2_2028 }),
+      listing({ id: 'p2', availability: DEC_2027 }),
+      listing({ id: 'p3', availability: EXPIRED }),
+      listing({ id: 'p4' }),
+    ];
+    expect(summarizeUnderConstruction(listings, DAY)).toEqual({ count: 2, next: DEC_2027 });
+  });
+
+  it('το «σήμερα» είναι η ημέρα της νύχτας: υπόσχεση που λήγει εκείνη την ημέρα δεν μετρά', () => {
+    expect(summarizeUnderConstruction([listing({ availability: DEC_2027 })], DEC_2027.window.end)).toBeNull();
+  });
+
+  it('στο μηδέν το πεδίο ΛΕΙΠΕΙ από το έγγραφο (σιωπή, ποτέ «0», κανένα `undefined` στη βάση)', () => {
+    const snapshot = summarizeArea('municipality:0701', DAY, [listing({ adminArea: THESSALONIKI })]);
+    expect('underConstruction' in snapshot).toBe(false);
+  });
+
+  it('με ≥1 το πεδίο γράφεται στο στιγμιότυπο', () => {
+    const snapshot = summarizeArea('municipality:0701', DAY, [listing({ adminArea: THESSALONIKI, availability: Q2_2028 })]);
+    expect(snapshot.underConstruction).toEqual({ count: 1, next: Q2_2028 });
   });
 });
