@@ -4106,6 +4106,14 @@
 
 ## Pending tasks (priority order)
 
+### 🛣️ Διαδρομές `/api/owner-properties/…` χτισμένες με χειρόγραφο κείμενο — 5 πελάτες εκτός `API_ROUTES` (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-24, ADR-245 · ADR-920 Β4.7 · N.0.2)
+- **Τι**: το ADR-245 απαγορεύει `/api/…` έξω από το `API_ROUTES`, αλλά το μπλοκ `OWNER_PROPERTIES` δεν υπήρχε ως το ADR-920 Β4.7 (γεννήθηκε με μόνο το `TERRAIN`). Χειρόγραφα: `hooks/owner-property/useOwnershipVerification.ts:65` · `services/mandate/mandate-evidence.client.ts:38` · `services/stay-calendar/stay-calendar.client.ts:27` · `services/stay-calendar/stay-channels.client.ts:27` · `hooks/energy-certificate/useEnergyCertificateImportPorts.ts` (`importUrlOf`, και για τα δύο σπίτια).
+- **Fix**: μία γραμμή ανά διαδρομή στο `API_ROUTES.OWNER_PROPERTIES` (`encodeURIComponent` όπως το `TERRAIN`) + `PROPERTIES.ENERGY_CERTIFICATE_IMPORT`, και κάθε πελάτης την εισάγει. Δεν έγινε επί τόπου: 5 αρχεία σε 4 περιοχές (N.0.2 «4+ αρχεία»).
+
+### 🆕 Χειρόγραφο `'__new__'` (ακίνητο που δεν σώθηκε) — SSoT υπάρχει πλέον, 5 αναγνώστες ακόμη εκτός (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-24, ADR-920 Β4.7 · N.0.2)
+- **Τι**: γεννήθηκε `src/lib/properties/unsaved-property.ts` (`UNSAVED_PROPERTY_ID` + `isPersistedPropertyId`) και το χρησιμοποιούν ήδη οι θύρες ΠΕΑ και τοπογραφικού. Χειρόγραφα για **ακίνητο**: `app/api/properties/[id]/route.ts:93` · `features/property-details/PropertyDetailsContent.tsx:411` · `hooks/properties/usePropertyMediaCounts.ts:84,122` · `components/building-management/dialogs/UnitQuickCreateSheet.tsx:66`.
+- **Fix**: εισαγωγή του SSoT σε καθένα. ⚠️ **ΟΧΙ** τα `'__new__'` κτιρίου (`BuildingQuickCreateSheet` `TEMP_BUILDING_ID`), μέλους (`MemberEditor`) ή διεύθυνσης (`AddressMap`): άλλη οντότητα, άλλη ερώτηση — ίδια συμβολοσειρά κατά σύμπτωση.
+
 ### 🔤 Δύο υλοποιήσεις «ταξινόμησε τα κλειδιά αναδρομικά» — `sortDeep` (canonical-json) ≡ `sortKeys` (audit-diff) (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-23, ADR-919 §9 · N.0.2)
 - **Τι**: το `sortDeep` στο `src/lib/legal/canonical-json.ts` και το `sortKeys` στο `src/lib/audit/audit-diff.ts` κάνουν το ίδιο (αναδρομή σε πίνακες/αντικείμενα, σειρά μονάδων UTF-16). Βρέθηκε στο βήμα 5 του ADR-919, όπου επαναχρησιμοποιήθηκε το `canonicalJson`.
 - **Fix**: ένα πρωτογενές `sortKeysDeep` σε ουδέτερο `src/lib/` (όχι `legal` ούτε `audit`), που το εισάγουν και τα δύο. ⚠️ Το `canonical-json` είναι **παγωμένη μορφή** (αποτυπώματα νομικών εκδόσεων, ADR-861 §7): μετά την αλλαγή πρέπει να μείνει πράσινο το `legal-document-versions.test.ts`, που ελέγχει bytes-ισότητα. Γι' αυτό δεν διορθώθηκε επί τόπου (ξένα αρχεία, κοινό working tree).

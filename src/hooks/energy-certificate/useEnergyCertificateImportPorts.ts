@@ -20,15 +20,13 @@ import { ENTITY_TYPES } from '@/config/domain-constants';
 import { energyCertificateSlot } from '@/config/upload-entry-points/energy-certificate-slot';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { custodyOf } from '@/lib/owner-property/listing-custody';
+import { isPersistedPropertyId } from '@/lib/properties/unsaved-property';
 import { validateCustodyUploadAuth } from '@/services/filesystem/file-mutation-gateway';
 import { uploadEntityFile } from '@/services/filesystem/upload-entity-file';
 import type { FileCustody } from '@/lib/files/file-custody';
 import type { EntityType } from '@/config/domain-constants';
 import type { EnergyCertificateImportPort } from '@/lib/energy-certificate/pea-import-outcome';
 import type { OwnerProperty } from '@/types/owner-property';
-
-/** Το id ενός ακινήτου που δεν έχει σωθεί ακόμη (`PropertyFieldsBlock`) — δεν έχει «Έγγραφα». */
-const UNSAVED_PROPERTY_ID = '__new__';
 
 const importUrlOf = (base: 'properties' | 'owner-properties', id: string): string =>
   `/api/${base}/${encodeURIComponent(id)}/energy-certificate-import`;
@@ -61,7 +59,7 @@ export function useCompanyPropertyImportPort(
   const propertyId = property?.id ?? null;
   const label = property?.name;
   return useMemo(() => {
-    if (propertyId === null || propertyId === UNSAVED_PROPERTY_ID || user === null || companyId === null) return null;
+    if (!isPersistedPropertyId(propertyId) || user === null || companyId === null) return null;
     const upload = uploaderOf({
       custody: { companyId },
       entityType: ENTITY_TYPES.PROPERTY,

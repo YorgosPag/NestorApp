@@ -48,7 +48,7 @@ import {
 } from '../../export/core/export-floor-scope';
 import { exportFloorsToMesh3d } from '../../export/formats/mesh3d-export-adapter';
 import type { ExportDeps, ExportFloorScope } from '../../export/types';
-import { announceSupersededFiles, archivedFileIdsOf } from '../publish-shared/announce-superseded-files';
+import { announceSupersededFiles, archivedFileIdsOf } from '@/services/filesystem/announce-superseded-files';
 
 /**
  * Το εύρος που **έχει νόημα για μία αγγελία**.

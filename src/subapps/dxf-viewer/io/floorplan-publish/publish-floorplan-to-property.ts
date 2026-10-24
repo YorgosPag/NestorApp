@@ -18,7 +18,7 @@
 
 import { API_ROUTES } from '@/config/domain-constants';
 import { apiClient } from '@/lib/api/enterprise-api-client';
-import { ApiClientError } from '@/lib/api/api-client-types';
+import { namedRefusalOf, type NamedRefusal } from '@/lib/api/api-client-types';
 import { IDEMPOTENCY_KEY_HEADER } from '@/lib/api/idempotency/idempotency-contract';
 import {
   FLOORPLAN_UPLOAD_FIELDS,
@@ -27,6 +27,7 @@ import {
 } from '@/lib/listings/floorplan-publication-contract';
 import type { FloorplanRenderRecipe } from '@/lib/listings/floorplan-render-recipe';
 import { generateIdempotencyKey } from '@/services/enterprise-id.service';
+import { announceSupersededFiles, archivedFileIdsOf } from '@/services/filesystem/announce-superseded-files';
 
 import {
   capturePublicFloorplan,
@@ -37,7 +38,6 @@ import { retryFailedSceneMeshes } from '../../print/capture/preload-scene-meshes
 import type { PublicFloorplanGroupCounts } from '../../print/public-floorplan/public-floorplan-profile';
 import type { PublicFloorplanChoice } from '../../print/public-floorplan/public-floorplan-presets';
 import type { ExportDeps } from '../../export/types';
-import { announceSupersededFiles, archivedFileIdsOf } from '../publish-shared/announce-superseded-files';
 
 /** Μια εικόνα **έτοιμη να φύγει**: ό,τι δείχνει η προεπισκόπηση είναι ακριβώς ό,τι θα σταλεί. */
 export interface PreparedFloorplan {
@@ -112,7 +112,7 @@ const DECLARED: ReadonlySet<string> = new Set<FloorplanDeclared>(['declared', 'a
 const LISTING: ReadonlySet<string> = new Set<FloorplanListing>(['published', 'withdrawn', 'failed', 'absent']);
 
 /** `network` = δεν ξέρουμε αν έφτασε· `rejected` = ο διακομιστής αρνήθηκε για λόγο εκτός της λίστας της πόρτας. */
-export type FloorplanPublishRefusal = FloorplanRefusalCode | 'network' | 'rejected';
+export type FloorplanPublishRefusal = NamedRefusal<FloorplanRefusalCode>;
 
 export type FloorplanPublishOutcome =
   | {
@@ -131,13 +131,6 @@ function uploadBodyOf(prepared: PreparedFloorplan): FormData {
   body.append(FLOORPLAN_UPLOAD_FIELDS.levelId, prepared.levelId);
   body.append(FLOORPLAN_UPLOAD_FIELDS.recipe, JSON.stringify(prepared.recipe));
   return body;
-}
-
-/** Ο κωδικός της πόρτας ταξιδεύει ως **μήνυμα** του `ApiError`· ο πελάτης τον δέχεται μόνο αν είναι της λίστας. */
-function refusalOf(cause: unknown): FloorplanPublishRefusal {
-  if (!ApiClientError.isApiClientError(cause)) return 'network';
-  if (isFloorplanRefusalCode(cause.errorCode)) return cause.errorCode;
-  return isFloorplanRefusalCode(cause.message) ? cause.message : 'rejected';
 }
 
 function fieldOf(data: unknown, field: string): unknown {
@@ -163,7 +156,7 @@ export async function publishFloorplanToProperty(
       headers: { [IDEMPOTENCY_KEY_HEADER]: prepared.idempotencyKey },
     });
   } catch (cause) {
-    return { ok: false, refusal: refusalOf(cause) };
+    return { ok: false, refusal: namedRefusalOf(cause, isFloorplanRefusalCode) };
   }
 
   const fileId = fieldOf(data, 'fileId');

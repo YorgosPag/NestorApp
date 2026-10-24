@@ -327,3 +327,17 @@ export function apiErrorBodyOf(cause: unknown): Record<string, unknown> | null {
 export function isClientRefusal(cause: unknown): cause is ApiClientError {
   return ApiClientError.isApiClientError(cause) && cause.statusCode >= 400 && cause.statusCode < 500;
 }
+
+/** `network` = δεν ξέρουμε αν η αίτηση έφτασε· `rejected` = ο διακομιστής αρνήθηκε για λόγο **εκτός** της λίστας της πόρτας. */
+export type NamedRefusal<C extends string> = C | 'network' | 'rejected';
+
+/**
+ * **Ο λόγος άρνησης μιας πόρτας υλικού, από την ΚΛΕΙΣΤΗ λίστα της** (ADR-909 κάτοψη · ADR-920 τοπογραφικό).
+ * Ο κωδικός ταξιδεύει ως `errorCode` — ή, σε παλαιότερο σχήμα, ως **μήνυμα** του `ApiError`· γίνεται δεκτός μόνο αν
+ * τον αναγνωρίζει ο φρουρός της πόρτας, ώστε η οθόνη να οφείλει ανθρώπινο μήνυμα για **κάθε** τιμή που λαμβάνει.
+ */
+export function namedRefusalOf<C extends string>(cause: unknown, isCode: (value: unknown) => value is C): NamedRefusal<C> {
+  if (!ApiClientError.isApiClientError(cause)) return 'network';
+  if (isCode(cause.errorCode)) return cause.errorCode;
+  return isCode(cause.message) ? cause.message : 'rejected';
+}

@@ -1,9 +1,9 @@
 /**
  * @fileoverview 🌐 **Η ΙΣΤΟΡΙΑ ΓΡΑΦΤΗΚΕ ΣΤΟΝ ΔΙΑΚΟΜΙΣΤΗ — ΕΔΩ ΜΟΝΟ ΑΝΑΚΟΙΝΩΝΕΤΑΙ** (ADR-845 Ο-27 · ADR-862 Φ0 Β10).
- * @related ../model-publish/publish-model-to-property · ../floorplan-publish/publish-floorplan-to-property
- * @module subapps/dxf-viewer/io/publish-shared/announce-superseded-files
+ * @related subapps/dxf-viewer/io/{model,floorplan}-publish · services/listings/publish-listing-terrain.client
+ * @module services/filesystem/announce-superseded-files
  *
- * Κάθε πόρτα υλικού ακινήτου *(μοντέλο · κάτοψη)* απαντά με `archived`: ποια προηγούμενα αρχεία
+ * Κάθε πόρτα υλικού ακινήτου *(μοντέλο · κάτοψη · τοπογραφικό)* απαντά με `archived`: ποια προηγούμενα αρχεία
  * αρχειοθέτησε **η ίδια**, με τη δική της ταυτότητα. Ο πελάτης το λέει στις ανοιχτές λίστες αρχείων.
  *
  * 🔑 Εκπέμπεται `FILE_SUPERSEDED` **μόνο** για ό,τι ο διακομιστής **πράγματι** αρχειοθέτησε, ποτέ για ό,τι
@@ -11,7 +11,7 @@
  * **είναι ακόμη ενεργό**.
  *
  * Εξήχθη όταν απέκτησε **δεύτερο** καλούντα (ADR-909 Β2): δύο αντίγραφα της ίδιας ανακοίνωσης είναι ο
- * κλώνος που πιάνει το CHECK 3.28.
+ * κλώνος που πιάνει το CHECK 3.28. Βγήκε από τον viewer στον **τρίτο** καλούντα (ADR-920 Β4.7, τοπογραφικό αγγελίας).
  */
 
 import { RealtimeService } from '@/services/realtime';

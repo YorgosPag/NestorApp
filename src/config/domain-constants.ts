@@ -930,6 +930,8 @@ export const API_ROUTES = {
     MODEL: (propertyId: string) => `/api/properties/${propertyId}/model` as const,
     /** ADR-909 Β1 — δημοσίευση κάτοψης **από το σχέδιο** *(PNG + `levelId` + συνταγή, μία αίτηση)*. */
     FLOORPLAN: (propertyId: string) => `/api/properties/${propertyId}/floorplan` as const,
+    /** ADR-920 Β3α — το τοπογραφικό της αγγελίας οικοπέδου *(πηγή JSON + δήλωση Δ2, μία αίτηση)*. */
+    TERRAIN: (propertyId: string) => `/api/properties/${encodeURIComponent(propertyId)}/terrain` as const,
     /** ADR-845 §7.17 Α5β — «συμφωνεί η δημόσια αγγελία με το τρέχον υλικό;» (`GET`) · ενημέρωση τώρα (`POST`). */
     LISTING_MEDIA: (propertyId: string) => `/api/properties/${propertyId}/listing-media` as const,
     /** ADR-916 §5.5 · §5.15 — η καρτέλα «Παράδοση»: παραδόσεις με την κρίση τους + αρχεία κριμένα (`GET`). */
@@ -943,6 +945,14 @@ export const API_ROUTES = {
     TRASH: '/api/properties/trash',
     /** ADR-329 §3.9 — λίστα αρχείου (ίδιες γραμμές με τον κάδο, άλλη κατάσταση) */
     ARCHIVED: '/api/properties/archived',
+  },
+
+  // ── Αγγελίες ιδιοκτήτη (`owner_properties`, ADR-777) ───────────────────
+  // ⚠️ Πέντε πελάτες χτίζουν ακόμη αυτές τις διαδρομές με χειρόγραφο κείμενο — μετακινούνται εδώ στο άγγιγμα
+  //    (`.claude-rules/pending-ratchet-work.md`).
+  OWNER_PROPERTIES: {
+    /** ADR-920 Β4.3+5 — το τοπογραφικό στον φάκελο του ιδιοκτήτη (ίδιο συμβόλαιο με το `PROPERTIES.TERRAIN`). */
+    TERRAIN: (ownerPropertyId: string) => `/api/owner-properties/${encodeURIComponent(ownerPropertyId)}/terrain` as const,
   },
 
   // ── Parking ───────────────────────────────────────────────────────────
