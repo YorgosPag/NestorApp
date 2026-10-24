@@ -34,12 +34,14 @@ import {
 const SRC = join(__dirname, '..', '..', '..', '..');
 /**
  * Everything a terrain door can send: each door's route PLUS the shared terrain request reader (ADR-920 Β4.3).
- * A code moved into the shared reader must stay visible here — otherwise Σ2 would call it a phantom.
+ * A code moved into the shared reader must stay visible here — otherwise Σ2 would call it a phantom. The declaration
+ * judge (Β4.7) is part of it: the door sends ITS codes, and the owner's form runs the same judge before sending.
  */
 const DOOR_SOURCE = [
   'app/api/properties/[id]/terrain/route.ts',
   'app/api/owner-properties/[ownerPropertyId]/terrain/route.ts',
   'server/listing-terrain/terrain-upload.server.ts',
+  'lib/terrain/publication/terrain-survey-declaration.ts',
 ].map((file) => readFileSync(join(SRC, file), 'utf8')).join('\n');
 
 const REJECTIONS: readonly ListingTerrainRejection[] = ['insufficient-surface', 'empty-after-clip', 'too-dense'];

@@ -26,7 +26,8 @@ import { setPointCloud3D } from '../../../systems/topography/pointcloud-3d-store
 import { detectDelimiter, readDelimitedText } from '../../../systems/topography/topo-delimited-reader';
 import { readExcelToTable } from '../../../systems/topography/topo-excel-reader';
 import { extractTopoPointsFromDxf } from '../../../systems/topography/topo-dxf-points';
-import { applyColumnMapping, hasPositionMapping, isMappingComplete, suggestMappingFromHeaders } from '../../../systems/topography/topo-column-mapping';
+import { applyColumnMapping, hasPositionMapping, isMappingComplete } from '../../../systems/topography/topo-column-mapping';
+import { assignRole, padMapping, proposeColumnMapping } from '@/lib/terrain/survey-import/topo-mapping-edit';
 import { describeElevationCoverage } from '../../../systems/topography/topo-point-elevation';
 import type { ElevationCoverage } from '../../../systems/topography/topo-point-elevation';
 import { suggestMappingFromRows } from '../../../systems/topography/topo-column-sniffer';
@@ -230,7 +231,7 @@ export function useTopoImport(surface: TopoSurfaceId = 'existing'): UseTopoImpor
 
       setDxfPoints(null);
       setTable(parsed);
-      setMapping(initialMapping(parsed));
+      setMapping(proposeColumnMapping(parsed));
       setStep('mapping');
     } catch {
       setError('read');
@@ -413,28 +414,4 @@ function buildReadOptions(
     ...(delimiter === undefined ? {} : { delimiter }),
     ...(isMappingComplete(mapping) ? { mapping } : {}),
   };
-}
-
-/** Header labels give a first guess; a header-less file starts fully unmapped. */
-function initialMapping(table: RawTable): ColumnMapping {
-  const width = Math.max(table.headers.length, ...table.rows.map((r) => r.length), 0);
-  if (table.headers.length > 0) return padMapping(suggestMappingFromHeaders(table.headers), width);
-  return Array.from({ length: width }, () => 'ignore' as ColumnRole);
-}
-
-/** Stretch/truncate a mapping to the table's column count. */
-function padMapping(mapping: ColumnMapping, width: number): ColumnMapping {
-  return Array.from({ length: width }, (_, i) => mapping[i] ?? ('ignore' as ColumnRole));
-}
-
-/**
- * Assign a role, releasing whichever column held it before. A role is single-occupancy
- * (X cannot be two columns), so picking it elsewhere must vacate the old one — otherwise
- * `isMappingComplete` would reject a mapping the surveyor believes they just fixed.
- */
-function assignRole(mapping: ColumnMapping, columnIndex: number, role: ColumnRole): ColumnMapping {
-  return mapping.map((current, i) => {
-    if (i === columnIndex) return role;
-    return role !== 'ignore' && current === role ? 'ignore' : current;
-  });
 }

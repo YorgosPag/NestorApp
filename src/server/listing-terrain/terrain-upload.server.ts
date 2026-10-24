@@ -34,9 +34,8 @@ import { LISTING_TERRAIN_SOURCE_MAX_BYTES } from '@/lib/terrain/publication/list
 import type { ListingTerrainSnapshot } from '@/lib/terrain/publication/listing-terrain-types';
 import {
   TERRAIN_DECLARATION_METADATA_KEY,
-  decodeTerrainSurveyDeclaration,
   encodeTerrainSurveyDeclaration,
-  isSurveyDateInFuture,
+  judgeTerrainSurveyDeclaration,
   type TerrainSurveyDeclaration,
 } from '@/lib/terrain/publication/terrain-survey-declaration';
 import {
@@ -100,13 +99,14 @@ function readSourceFile(formData: FormData): File {
   return file;
 }
 
-/** Η δήλωση Δ2: υπάρχει, είναι πλήρης, και η ημερομηνία της δεν είναι στο μέλλον. */
+/** Η κατάσταση HTTP κάθε άρνησης της δήλωσης: σχήμα ⇒ 400, ημερολόγιο ⇒ 422. */
+const DECLARATION_REFUSAL_STATUS = { TERRAIN_DECLARATION_INVALID: 400, TERRAIN_SURVEY_DATE_IN_FUTURE: 422 } as const;
+
+/** Η δήλωση Δ2 από τον ΙΔΙΟ κριτή με τη φόρμα του ιδιοκτήτη (ADR-920 Β4.7): πλήρης, και όχι στο μέλλον. */
 function readDeclaration(formData: FormData): TerrainSurveyDeclaration {
-  const raw = formData.get(TERRAIN_UPLOAD_FIELDS.declaration);
-  const declaration = decodeTerrainSurveyDeclaration(typeof raw === 'string' ? raw : null);
-  if (declaration === null) throw new ApiError(400, 'TERRAIN_DECLARATION_INVALID');
-  if (isSurveyDateInFuture(declaration, new Date())) throw new ApiError(422, 'TERRAIN_SURVEY_DATE_IN_FUTURE');
-  return declaration;
+  const verdict = judgeTerrainSurveyDeclaration(formData.get(TERRAIN_UPLOAD_FIELDS.declaration), new Date());
+  if (!verdict.ok) throw new ApiError(DECLARATION_REFUSAL_STATUS[verdict.code], verdict.code);
+  return verdict.declaration;
 }
 
 /** Τα bytes → JSON, ή `TERRAIN_SOURCE_MALFORMED`. Το σχήμα το κρίνει ο κοινός κριτής. */

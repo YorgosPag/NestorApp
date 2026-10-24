@@ -19,6 +19,7 @@
  */
 
 import { LISTING_TERRAIN_SURVEYOR_NAME_MAX } from './listing-terrain-config';
+import type { TerrainRefusalCode } from './terrain-publication-contract';
 
 /** The ONE name of the metadata key — writer and reader both take it from here. */
 export const TERRAIN_DECLARATION_METADATA_KEY = 'nestorTerrainDeclaration';
@@ -91,4 +92,20 @@ const EARLIEST_ZONE_OFFSET_MS = 14 * 60 * 60 * 1000;
 export function isSurveyDateInFuture(declaration: TerrainSurveyDeclaration, now: Date): boolean {
   const latestToday = new Date(now.getTime() + EARLIEST_ZONE_OFFSET_MS).toISOString().slice(0, 10);
   return declaration.surveyedOn > latestToday;
+}
+
+export type TerrainDeclarationVerdict =
+  | { readonly ok: true; readonly declaration: TerrainSurveyDeclaration }
+  | { readonly ok: false; readonly code: Extract<TerrainRefusalCode, 'TERRAIN_DECLARATION_INVALID' | 'TERRAIN_SURVEY_DATE_IN_FUTURE'> };
+
+/**
+ * **The ONE verdict on a declaration, from its wire string** (ADR-920 Β4.7) — the door judges what arrived, the owner's
+ * form judges what it is about to send, with the SAME function and the SAME codes ⇒ one i18n row explains both, and the
+ * form never lets through what the door refuses. Shape first (`INVALID`), then the calendar (`DATE_IN_FUTURE`).
+ */
+export function judgeTerrainSurveyDeclaration(raw: unknown, now: Date): TerrainDeclarationVerdict {
+  const declaration = decodeTerrainSurveyDeclaration(raw);
+  if (declaration === null) return { ok: false, code: 'TERRAIN_DECLARATION_INVALID' };
+  if (isSurveyDateInFuture(declaration, now)) return { ok: false, code: 'TERRAIN_SURVEY_DATE_IN_FUTURE' };
+  return { ok: true, declaration };
 }

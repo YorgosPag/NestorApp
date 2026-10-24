@@ -6,6 +6,7 @@ import {
   decodeTerrainSurveyDeclaration,
   encodeTerrainSurveyDeclaration,
   isSurveyDateInFuture,
+  judgeTerrainSurveyDeclaration,
   readTerrainSurveyDeclaration,
 } from '../terrain-survey-declaration';
 import { LISTING_TERRAIN_SURVEYOR_NAME_MAX } from '../listing-terrain-config';
@@ -63,5 +64,27 @@ describe('ADR-920 Δ2 — a survey cannot be dated after today, anywhere on Eart
 
   it('a past survey is accepted', () => {
     expect(isSurveyDateInFuture(on('2019-06-01'), new Date('2026-03-14T12:00:00Z'))).toBe(false);
+  });
+});
+
+describe('ADR-920 Β4.7 — ONE verdict for the door and the owner form', () => {
+  const NOW = new Date('2026-03-14T12:00:00Z');
+
+  it('a complete past declaration passes, normalised by the same reader', () => {
+    expect(judgeTerrainSurveyDeclaration(JSON.stringify(VALID), NOW)).toStrictEqual({
+      ok: true,
+      declaration: { surveyorName: 'Τοπογράφος Α. Παπαδόπουλος', surveyedOn: '2026-03-14', rightsAffirmed: true },
+    });
+  });
+
+  it('shape first: an unanswered right, an empty name or a non-string is INVALID — even with a future date', () => {
+    for (const raw of [JSON.stringify({ ...VALID, rightsAffirmed: false }), JSON.stringify({ ...VALID, surveyorName: ' ', surveyedOn: '2099-01-01' }), null, 42]) {
+      expect(judgeTerrainSurveyDeclaration(raw, NOW)).toStrictEqual({ ok: false, code: 'TERRAIN_DECLARATION_INVALID' });
+    }
+  });
+
+  it('then the calendar: a complete declaration dated past every time zone is DATE_IN_FUTURE', () => {
+    const raw = JSON.stringify({ ...VALID, surveyedOn: '2026-03-16' });
+    expect(judgeTerrainSurveyDeclaration(raw, NOW)).toStrictEqual({ ok: false, code: 'TERRAIN_SURVEY_DATE_IN_FUTURE' });
   });
 });
