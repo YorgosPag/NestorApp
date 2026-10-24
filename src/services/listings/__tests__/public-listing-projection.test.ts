@@ -195,6 +195,9 @@ describe('Κ4 — η προβολή δεν κουβαλά ΚΑΜΙΑ ταυτό�
       // ADR-919 §7: `availability` — **μόνο** το παράγωγο (`ready`/`scheduled`/`unknown`)· η δήλωση, η προέλευσή της
       // και η πρόβλεψη του χρονοδιαγράμματος **δεν** ταξιδεύουν (Δ1 · ADR-842 Α7).
       'availability',
+      // ADR-919 §10: `availabilityTrack` — αρχική υπόσχεση · πλήθος μεταθέσεων · τελευταία αλλαγή, μόνο από δημόσιες
+      // τιμές. Το ιστορικό (`availabilityHistory`) μένει στη μονάδα και **δεν** ταξιδεύει.
+      'availabilityTrack',
       'balconies', 'balconyAreaSqm', 'bathrooms', 'bedrooms',
       // ADR-890 Φ0: `constructionYear` — έτος του **κτιρίου** με την πηγή του (RESO `YearBuiltSource`).
       'commercial', 'commercialStatus',
@@ -304,7 +307,10 @@ describe('Κ4 — η προβολή δεν κουβαλά ΚΑΜΙΑ ταυτό�
       // 🔴 **ΚΟΚΚΙΝΙΣΕ ΞΑΝΑ (ADR-777 §8.88, 2026-10-13)** — το `tour` πέρασε από γραμμένη απόφαση (Giorgio): μόνο η
       // **ορατότητα** της περιήγησης 360°, δηλαδή ακριβώς ό,τι ήδη απαντά το **ανώνυμο** endpoint παρουσίας
       // (`/api/spatial-tours/listings/{id}/presence`). Καμία ταυτότητα, κανένας μετρητής, ποτέ `link-only`.
-      'terraceAreaSqm', 'title', 'totalRooms', 'tour', 'type',
+      'terraceAreaSqm',
+      // ⛰️ **ADR-920 Β3β** — το έδαφος: URL του ψημένου στιγμιοτύπου + κάρτα (εμβαδόν, υψόμετρα, κλίσεις, τοπογράφος).
+      // Καμία ταυτότητα πελάτη, καμία θέση (σχετικό πλαίσιο, Δ3).
+      'title', 'totalRooms', 'tour', 'type',
       // ADR-907 §10 — το κουτί του βίντεο: δημόσιο υλικό, καμία ταυτότητα πελάτη (URL ραφιού + μετρημένα στοιχεία).
       'videos',
       'waterHeating', 'wc', 'windowFrames',

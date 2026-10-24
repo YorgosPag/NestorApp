@@ -80,6 +80,7 @@ import type { ListedTourVisibility } from '@/constants/spatial-tour-vocabulary';
 import type { PropertyTypeCanonical } from '@/constants/property-types';
 import type { PlacePosition, PlaceRef } from '@/types/geo/public-place';
 import type { PriceReduction } from '@/types/price-history';
+import type { AvailabilityTrack } from '@/types/availability-history';
 import type { ListingAvailability } from '@/types/listing-availability';
 import type {
   AmenityCodeType,
@@ -1090,6 +1091,15 @@ export interface PublicListing {
    * Πρόβλεψη χρονοδιαγράμματος χωρίς ανθρώπινη έγκριση δεν φτάνει ποτέ εδώ (ADR-842 Α7).
    */
   readonly availability: ListingAvailability;
+  /**
+   * **Η δημόσια ιστορία της υπόσχεσης** (ADR-919 §10, κρίκος 27): αρχική υπόσχεση · πλήθος μεταθέσεων · τελευταία
+   * αλλαγή. `null` = η αγγελία δεν υποσχέθηκε ποτέ ημερομηνία, ή η σφραγίδα έμεινε πίσω (δίχτυ).
+   *
+   * ⛔ **Μόνο ό,τι είδε ήδη ο κόσμος**: χτίζεται από τις δημόσιες τιμές του {@link availability}, ποτέ από φάσεις,
+   * πρόβλεψη ή αιτίες. Το **ιστορικό** μένει στο έγγραφο πηγής (`availabilityHistory`). Το «μετατέθηκε N» το
+   * αποφασίζει **μόνο** το `slipNoticeOf`, ποτέ σκέτο `slips > 0`.
+   */
+  readonly availabilityTrack: AvailabilityTrack | null;
   /**
    * **Η μείωση τιμής σε ισχύ** — ή `null` (ADR-777 §8.69). Δες {@link PriceReduction}.
    *

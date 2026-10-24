@@ -31,13 +31,16 @@ import { nowISO } from '@/lib/date-local';
 import {
   buildPublicListing,
   isPubliclyListed,
+  listingAvailabilityOf,
   type ProjectableProperty,
   type PlaceKnowledge,
   type ListingPositionCandidate,
 } from './public-listing-projection';
 import { resolveListedAt } from './listed-at-stamp';
 import { resolvePriceHistory } from './price-history-stamp';
+import { resolveAvailabilityHistory } from './availability-history-stamp';
 import { marketPriceOf } from '@/lib/listings/price-history';
+import { publicAvailabilityOf } from '@/lib/listings/availability-history';
 import { withdrawListingShelves, writeWithShelf } from './publish-public-listing-shelf';
 import { resolvePublicationFacts, withPublicationFacts } from './listing-publication-facts';
 import { addressToPositionCandidate, type AddressLike } from './public-listing-position';
@@ -274,8 +277,16 @@ export async function republishListing(
   const listed = isPubliclyListed(property);
 
   try {
-    const [place, agency, publishedMedia, listedAt, priceHistory] = await Promise.all([
-      collectPlaceKnowledge(adminDb, property, now),
+    const [{ place, availabilityHistory }, agency, publishedMedia, listedAt, priceHistory] = await Promise.all([
+      // 🔴 **ΤΟ ΙΣΤΟΡΙΚΟ ΔΙΑΘΕΣΙΜΟΤΗΤΑΣ** (ADR-919 §10): θέλει το `place` (η υπόσχεση μπορεί να είναι του κτιρίου),
+      //    άρα αλυσίδα **μετά** τον τόπο, μέσα στο ίδιο `Promise.all`. Ίδια στιγμή `now`, μηδέν ανάγνωση όταν δεν αλλάζει.
+      collectPlaceKnowledge(adminDb, property, now).then(async (place) => ({
+        place,
+        availabilityHistory: await resolveAvailabilityHistory(
+          adminDb, COLLECTIONS.PROPERTIES, propertyId, property.availabilityHistory,
+          publicAvailabilityOf(listingAvailabilityOf(property, place), listed), now
+        ),
+      })),
       resolveAgency(property.companyId),
       // 🔑 **Ο επιλυτής παίρνει ΤΟ ΕΓΓΡΑΦΟ που ήδη κρατάμε** (Α14.7.2): το `properties/{id}`
       //    είναι **1:1** με την αγγελία ⇒ η δήλωση του ανθρώπου και ο όροφος της μονάδας
@@ -305,7 +316,7 @@ export async function republishListing(
     const { outcome } = await writeListingProjection(
       adminDb,
       propertyId,
-      { ...property, agency, publishedMedia, listedAt, priceHistory },
+      { ...property, agency, publishedMedia, listedAt, priceHistory, availabilityHistory },
       place,
       now
     );

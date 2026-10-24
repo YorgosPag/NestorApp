@@ -289,6 +289,11 @@ export interface ProjectableProperty {
    * `readPriceHistory`. `null` = η σφραγίδα απέτυχε ⇒ **καμία** μείωση στην αγγελία.
    */
   readonly priceHistory?: unknown;
+  /**
+   * **Το ιστορικό της δημόσιας υπόσχεσης** (ADR-919 §10): ό,τι επέστρεψε η σφραγίδα (`resolveAvailabilityHistory`),
+   * ή το ωμό πεδίο. `unknown` για τον ίδιο λόγο με το `priceHistory`· μόνη ανάγνωση το `availabilityTrackForListing`.
+   */
+  readonly availabilityHistory?: unknown;
 }
 
 /**

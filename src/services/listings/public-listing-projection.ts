@@ -71,6 +71,7 @@ import { resolveListingPosition } from './public-listing-position';
 import { floorPairOf } from '@/lib/floor/hosted-floor';
 import { isRetired } from '@/lib/firestore/trashed-status';
 import { resolveListingAvailability } from '@/lib/listings/listing-availability';
+import { availabilityTrackForListing } from '@/lib/listings/availability-history';
 import type { ListingAvailability } from '@/types/listing-availability';
 
 // ============================================================================
@@ -366,8 +367,11 @@ function projectExchange(
  *
  * 🔑 **Εδώ και όχι στο `withPublicationFacts`**: καμία είσοδος δεν θέλει I/O, άρα η ίδια τιμή φτάνει σε γραφέα,
  * προεπισκόπηση κατόχου και δόλωμα ζήτησης χωρίς δεύτερο δέτη.
+ *
+ * 🔑 **Εξάγεται (ADR-919 §10)** για τη σφραγίδα του ιστορικού: ο γραφέας ρωτά **αυτή** τη συνάρτηση «τι θα δει το
+ * κοινό;» πριν προβάλει, ώστε η σφραγίδα και η αγγελία να μη διαφωνούν ποτέ για την τιμή.
  */
-function projectListingAvailability(property: ProjectableProperty, place: PlaceKnowledge): ListingAvailability {
+export function listingAvailabilityOf(property: ProjectableProperty, place: PlaceKnowledge): ListingAvailability {
   return resolveListingAvailability({
     unitDeclaration: property.availabilityDeclaration,
     unitOperationalStatus: property.operationalStatus,
@@ -433,6 +437,8 @@ export function projectListingShape(
   const offerKinds = projectedOfferKinds(property);
   // Μία τιμή για το εμφανές εμβαδόν **και** τον έλεγχο αθροίσματος της βάσης ανά όροφο (ADR-898 Φ3β-3β).
   const areaSqm = propertyDisplayArea(property);
+  // ADR-919 §7 · §10 — μία τιμή για το πεδίο **και** για το δίχτυ της ιστορίας της.
+  const availability = listingAvailabilityOf(property, place);
 
   return {
     id: property.id,
@@ -536,7 +542,9 @@ export function projectListingShape(
     //    **μετρήσιμο**, όχι κρυμμένο μέσα στο κανονικό ιστορικό.
     listedAt: property.listedAt ?? { kind: 'unknown', reason: 'not-recorded' },
     // ADR-919 §7 — μονάδα → κτίριο, «το γεγονός νικά την υπόσχεση»· ο κριτής και το Α7 ζουν στο φύλλο.
-    availability: projectListingAvailability(property, place),
+    availability,
+    // ADR-919 §10 — η ιστορία της ίδιας τιμής, με δίχτυ: σφραγίδα που έμεινε πίσω ⇒ `null`, ποτέ λάθος «μετατέθηκε».
+    availabilityTrack: availabilityTrackForListing(property.availabilityHistory, availability),
     // 🔴 **ΣΥΜΠΕΡΑΣΜΑ ΑΠΟ ΤΟ ΙΣΤΟΡΙΚΟ ΤΟΥ ΑΚΙΝΗΤΟΥ** (ADR-777 §8.69) — ο κριτής ζει στο
     //    `lib/listings/price-history.ts`, εδώ μόνο καλείται. Η τιμή λύνεται από τον ΕΝΑ
     //    `price-resolver` πάνω στο **ίδιο** `offerKinds` που γράφει η αγγελία, ώστε η
