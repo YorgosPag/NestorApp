@@ -11,6 +11,7 @@ import type { Point2D } from '../../types/Types';
 import { calculateAngle, subtractPoints, dotProduct, vectorMagnitude } from './geometry-rendering-utils';
 // 🏢 ADR-077: Centralized TAU Constant
 import { TAU } from '../../primitives/canvasPaths';
+import { normalizeTextAngle } from '@/lib/geometry/angle';
 
 // ===== BISECTOR ANGLE =====
 // 🏢 ADR-073: Centralized Midpoint/Bisector Calculations (2026-01-31)
@@ -83,12 +84,10 @@ export {
 
 // ===== ANGULAR CONSTANTS =====
 // 🏢 ADR-103: Centralized Angular Constants (2026-01-31)
-/**
- * Right angle constant: 90° in radians (π/2)
- * Usage: Text rotation flip checks, vertical text rotation
- * @see text-labeling-utils.ts, BaseEntityRenderer.ts, RulerRenderer.ts, LayerRenderer.ts
- */
-export const RIGHT_ANGLE = Math.PI / 2;  // ≈ 1.5708 rad (90°)
+// `RIGHT_ANGLE` (π/2 — text rotation flip checks, vertical text rotation; used by text-labeling-utils,
+// BaseEntityRenderer, RulerRenderer, LayerRenderer) ζει στο `@/lib/geometry/angle` μαζί με το
+// `normalizeTextAngle` (ADR-920 Β4.8). Εδώ ΜΟΝΟ επανεξαγωγή.
+export { RIGHT_ANGLE } from '@/lib/geometry/angle';
 
 /**
  * Arrow angle constant: 30° in radians (π/6)
@@ -100,29 +99,9 @@ export const ARROW_ANGLE = Math.PI / 6;  // ≈ 0.5236 rad (30°)
 // ===== TEXT ROTATION UTILITIES =====
 // 🏢 ADR-112: Centralized Text Rotation Pattern (2026-02-01)
 
-/**
- * 🏢 ENTERPRISE: Normalize angle to keep text readable (never upside-down)
- *
- * CAD Standard: AutoCAD/Revit/MicroStation pattern for text rendering.
- * If angle exceeds 90° (π/2), flips by adding π (180°) to keep text readable.
- *
- * @param angle - Original angle in radians
- * @returns Normalized angle for readable text
- *
- * @example
- * normalizeTextAngle(0)           // → 0 (horizontal, readable)
- * normalizeTextAngle(Math.PI/4)   // → π/4 (45°, readable)
- * normalizeTextAngle(Math.PI)     // → 0 (was 180°, flipped to 0°)
- * normalizeTextAngle(-Math.PI/2)  // → π/2 (was -90°, flipped)
- *
- * @see ADR-112: Text Rotation Pattern Centralization
- */
-export function normalizeTextAngle(angle: number): number {
-  if (Math.abs(angle) > RIGHT_ANGLE) {
-    return angle + Math.PI;
-  }
-  return angle;
-}
+// `normalizeTextAngle` (never upside-down, CAD standard) ζει στο `@/lib/geometry/angle` (ADR-920 Β4.8): οι ετικέτες
+// ισοϋψών της αγγελίας κάνουν την ίδια ερώτηση έξω από το subapp (CHECK 3.62). Επανεξαγωγή + τοπική χρήση παρακάτω.
+export { normalizeTextAngle } from '@/lib/geometry/angle';
 
 /**
  * 🏢 ENTERPRISE: Execute render function within rotated text context

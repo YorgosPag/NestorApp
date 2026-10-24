@@ -27,6 +27,9 @@ export const DEGREES_TO_RADIANS = Math.PI / 180;
 /** Ακτίνια → μοίρες: `deg = rad * RADIANS_TO_DEGREES` — ADR-067. */
 export const RADIANS_TO_DEGREES = 180 / Math.PI;
 
+/** Ορθή γωνία σε ακτίνια (π/2) — ADR-103. */
+export const RIGHT_ANGLE = Math.PI / 2;
+
 /** Μοίρες → ακτίνια — ADR-067. */
 export function degToRad(degrees: number): number {
   return degrees * DEGREES_TO_RADIANS;
@@ -66,6 +69,24 @@ export function normalizeAngleDeg(degrees: number): number {
   let normalized = degrees % 360;
   if (normalized < 0) normalized += 360;
   return normalized;
+}
+
+/**
+ * Γωνία κειμένου που **δεν διαβάζεται ποτέ ανάποδα** (ADR-112 — AutoCAD/Revit/MicroStation): πάνω από 90° κατά μέτρο
+ * στρίβει κατά π. Είσοδος από `atan2`, δηλαδή στο `(-π, π]`.
+ *
+ * 🔑 Μετακόμισε από το `dxf-viewer/.../geometry-angle-utils.ts` (ADR-920 Β4.8): οι ετικέτες ισοϋψών του χάρτη εδάφους
+ * της αγγελίας κάνουν την ίδια ερώτηση και δεν επιτρέπεται να εισάγουν από το subapp (CHECK 3.62).
+ *
+ * Ακριβώς ±90° **δεν** στρίβει (κατακόρυφο κείμενο μένει ως έχει).
+ *
+ * @example normalizeTextAngle(Math.PI) // → 2π (≡ 0) · normalizeTextAngle(-3 * Math.PI / 4) // → π/4
+ */
+export function normalizeTextAngle(angle: number): number {
+  if (Math.abs(angle) > RIGHT_ANGLE) {
+    return angle + Math.PI;
+  }
+  return angle;
 }
 
 /** Ο κυκλικός μέσος όρος γωνιών — η κατεύθυνση **και** πόσο συμφωνούν. */

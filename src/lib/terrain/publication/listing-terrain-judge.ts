@@ -13,9 +13,16 @@ import { buildListingTerrainSnapshot } from './listing-terrain-snapshot';
 import { parseListingTerrainSource, toListingTerrainInput, type ListingTerrainSource } from './listing-terrain-source';
 import { refusalOfTerrainRejection, type TerrainRefusalCode } from './terrain-publication-contract';
 import type { ListingTerrainSnapshot } from './listing-terrain-types';
+import type { SnapshotFrame } from './listing-terrain-frame';
 
 export type ListingTerrainVerdict =
-  | { readonly ok: true; readonly source: ListingTerrainSource; readonly snapshot: ListingTerrainSnapshot }
+  | {
+      readonly ok: true;
+      readonly source: ListingTerrainSource;
+      readonly snapshot: ListingTerrainSnapshot;
+      /** The snapshot's frame (never serialised) — places a WORLD point on the preview through the ONE conversion. */
+      readonly frame: SnapshotFrame;
+    }
   | { readonly ok: false; readonly code: TerrainRefusalCode };
 
 /**
@@ -29,5 +36,5 @@ export function judgeListingTerrainSource(raw: unknown): ListingTerrainVerdict {
 
   const built = buildListingTerrainSnapshot(toListingTerrainInput(source));
   if (!built.ok) return { ok: false, code: refusalOfTerrainRejection(built.reason) };
-  return { ok: true, source, snapshot: built.snapshot };
+  return { ok: true, source, snapshot: built.snapshot, frame: built.frame };
 }

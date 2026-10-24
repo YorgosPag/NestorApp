@@ -266,6 +266,21 @@
     --plan-ink: 0 0% 9%;              /* #171717 */
     --plan-ink-muted: 0 0% 32%;       /* #525252 */
 
+    /* TERRAIN SLOPE CLASSES (ADR-920 Β4.8 — the plot listing's 2D terrain map). ORDINAL (flat → very steep),
+       so ONE hue light → dark — orange, the second sequential hue of the dataviz method: blue is already
+       --map-seq-* (prices), and one colour must not mean two things on two screens. Derived in OKLCH
+       (hue of chart orange #eb6834, L 0.76 / 0.65 / 0.54 / 0.43, max in-gamut chroma ≤ 0.17) and MEASURED
+       with the dataviz validator (--ordinal, surface #ffffff): monotone L ✓ · ΔL ≥ 0.06 ✓ · light end
+       ≥ 2:1 ✓ · single hue ✓. Painted on white PAPER in both themes (the map is a drawing, and the SAME SVG
+       goes to the showcase PDF) — hence identical values in the dark block. Contours and labels are
+       --plan-ink over a paper casing / halo, so they read on every class. Identity never by colour alone
+       (CHECK 3.41): the legend names each range and its share of the area, and a data table backs it.
+       Consumer: components/listing-detail/terrain/terrain-map-palette.ts (the ONE place that names them). */
+    --terrain-slope-1: 16.3 100% 69.6%;  /* #ff8e64  < 5 %   — 2.26:1 vs paper */
+    --terrain-slope-2: 16.9 75.3% 53.9%; /* #e26331  5–15 %  — 3.46:1 */
+    --terrain-slope-3: 20.7 96.8% 37.1%; /* #ba4203  15–25 % — 5.43:1 */
+    --terrain-slope-4: 19.7 97.1% 27.1%; /* #882e02  ≥ 25 %  — 8.61:1 */
+
     /* ENERGY CLASS SCALE (ADR-777 §8.94) — the nine steps of the Greek EPC (ΠΕΑ, KENAK): A+ best … G worst
        (shown as Α+ … Η). ORDINAL, not categorical: this is NOT --chart-N (identity palette) and must not
        borrow from it. Each step paints a NON-TEXT swatch bar; the letter stays in --foreground.
@@ -511,6 +526,13 @@
     --plan-here: 0 72% 51%;           /* #dc2828 */
     --plan-ink: 0 0% 9%;              /* #171717 */
     --plan-ink-muted: 0 0% 32%;       /* #525252 */
+
+    /* TERRAIN SLOPE CLASSES — identical to light on purpose: the map is white paper in both themes
+       (see the light block). */
+    --terrain-slope-1: 16.3 100% 69.6%;  /* #ff8e64  < 5 %   — 2.26:1 vs paper */
+    --terrain-slope-2: 16.9 75.3% 53.9%; /* #e26331  5–15 %  — 3.46:1 */
+    --terrain-slope-3: 20.7 96.8% 37.1%; /* #ba4203  15–25 % — 5.43:1 */
+    --terrain-slope-4: 19.7 97.1% 27.1%; /* #882e02  ≥ 25 %  — 8.61:1 */
 
     /* ENERGY CLASS SCALE — identical to light on purpose: one luminance band clears 3:1 against --card
        in both themes (measured; see the light block). */

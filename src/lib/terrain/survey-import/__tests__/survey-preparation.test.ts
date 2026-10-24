@@ -10,7 +10,8 @@ import { encodeListingTerrainSource } from '../../publication/listing-terrain-so
 import type { TopoPoint } from '../../terrain-types';
 import { surveyFileKindOf } from '../survey-file-kind';
 import { suggestSurveyUnit } from '../survey-units';
-import { prepareSurveyUpload, surveyFactsOf, surveySourceOf } from '../survey-upload-preparation';
+import type { SnapshotFrame } from '../../publication/listing-terrain-frame';
+import { prepareSurveyUpload, surveyFactsOf, surveyMarksOf, surveySourceOf } from '../survey-upload-preparation';
 
 /** A 20 × 20 m plot in ΕΓΣΑ'87, WORLD mm, sloping 10 % east — five points, one of them planimetric. */
 const E0 = 384_512_000;
@@ -72,6 +73,39 @@ describe('surveyFactsOf — what the TIN would resolve silently', () => {
   it('counts coincident points, and separately those whose elevation CONTRADICTS the kept one', () => {
     const facts = surveyFactsOf([[1, 1, 5], [1, 1, 5], [1, 1, 7], [2, 2], [2, 2, 3], [3, 3, 1]]);
     expect(facts).toEqual({ points: 6, withElevation: 5, coincident: 3, conflictingElevations: 2 });
+  });
+});
+
+describe('surveyMarksOf — the repeats ON the preview map (ADR-920 Β4.8), never on the wire', () => {
+  /** A frame that only divides by 1000 — the marks must go through whatever frame they are given. */
+  const METRES: SnapshotFrame = { planM: (x, y) => [x / 1000, y / 1000], elevationM: (z) => z / 1000 };
+
+  it('one mark per repeated position, source order; a contradiction wins over a plain repeat', () => {
+    const marks = surveyMarksOf(
+      [[1000, 1000, 5], [1000, 1000, 5], [1000, 1000, 7], [2000, 2000], [2000, 2000, 3], [3000, 3000, 1], [4000, 4000, 2], [4000, 4000, 2]],
+      METRES,
+    );
+    expect(marks).toEqual([
+      { x: 1, y: 1, kind: 'conflicting' },
+      { x: 2, y: 2, kind: 'conflicting' },
+      { x: 4, y: 4, kind: 'coincident' },
+    ]);
+  });
+
+  it('a survey without repeats has no marks', () => {
+    expect(surveyMarksOf([[1, 1, 1], [2, 2, 2]], METRES)).toEqual([]);
+  });
+
+  it('the preview places the mark through the SNAPSHOT frame: it lands on the published vertex', () => {
+    const prepared = prepareSurveyUpload([...PLOT, { x: E0, y: N0, z: 100_500 }]);
+    expect(prepared.ok).toBe(true);
+    if (!prepared.ok) return;
+    // The surface centre is (E0 + 10 m, N0 + 10 m) ⇒ the SW corner is (−10, −10) in the published frame.
+    expect(prepared.marks).toEqual([{ x: -10, y: -10, kind: 'conflicting' }]);
+    const { positions } = prepared.snapshot.mesh;
+    const vertices = Array.from({ length: positions.length / 3 }, (_, i) => `${positions[3 * i]}:${positions[3 * i + 1]}`);
+    expect(vertices).toContain('-10:-10');
+    expect(prepared.facts.conflictingElevations).toBe(1);
   });
 });
 

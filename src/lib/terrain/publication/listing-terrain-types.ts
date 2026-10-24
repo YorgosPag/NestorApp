@@ -22,6 +22,7 @@
 
 import type { PlanarPoint } from '@/lib/geometry/planar-polygon';
 import type { Breakline, TopoPoint } from '@/lib/terrain/terrain-types';
+import type { SnapshotFrame } from './listing-terrain-frame';
 
 /** Bumped on any breaking change of the snapshot shape; readers refuse versions they do not know. */
 export const LISTING_TERRAIN_SNAPSHOT_VERSION = 1 as const;
@@ -107,7 +108,16 @@ export type ListingTerrainRejection =
   | 'too-dense';
 
 export type ListingTerrainBuildResult =
-  | { readonly ok: true; readonly snapshot: ListingTerrainSnapshot }
+  | {
+      readonly ok: true;
+      readonly snapshot: ListingTerrainSnapshot;
+      /**
+       * The frame the snapshot was built in — for a caller that must place a WORLD point on the published picture
+       * (the owner's preview marks contradicting survey points, ADR-920 Β4.8). It is NOT part of the snapshot and is
+       * never serialised: the ONE world→published conversion stays {@link SnapshotFrame} (Δ3).
+       */
+      readonly frame: SnapshotFrame;
+    }
   | { readonly ok: false; readonly reason: ListingTerrainRejection };
 
 /** The builder's input. All plan coordinates WORLD canonical mm (the survey's own frame). */

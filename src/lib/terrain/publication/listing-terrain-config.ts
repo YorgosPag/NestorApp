@@ -60,3 +60,33 @@ export const LISTING_TERRAIN_SOURCE_MAX_ABS_MM = 1e10;
 
 /** Longest surveyor name kept in the declaration (it travels in object metadata, ≤ 8 KB in total). */
 export const LISTING_TERRAIN_SURVEYOR_NAME_MAX = 160;
+
+// ── Β4.8: the 2D map (`terrain-map-model.ts`) ─────────────────────────────
+// Sizes are FRACTIONS (of the length each knob names), so the picture reads the same at any plot size and any
+// screen/PDF width (the SVG scales as a whole).
+
+/** Margin around the surface (fraction of the SURFACE's longer side), for the north arrow and the scale bar. */
+export const LISTING_TERRAIN_MAP_PADDING_FRACTION = 0.1;
+
+/** The scale bar spans the 1-2-5 length nearest to this share of the map width (Esri / QGIS practice). */
+export const LISTING_TERRAIN_MAP_SCALE_BAR_FRACTION = 0.25;
+
+/** Height of the north arrow, as a fraction of the MARGIN (it lives in the margin, never over the ground). */
+export const LISTING_TERRAIN_MAP_NORTH_ARROW_FRACTION = 0.5;
+
+/** Height of a contour label (and of every map text), as a fraction of the view box's longer side. */
+export const LISTING_TERRAIN_MAP_LABEL_FRACTION = 0.028;
+
+/**
+ * Advance width of one label character, in ems. Labels are digits (+ a decimal point) set in tabular figures, whose
+ * advance is ≈ 0.55–0.6 em in common UI faces; the upper value keeps a label from overrunning its straight stretch.
+ * ⚠️ An ESTIMATE in the pure model (no layout exists here, CHECK 3.64) — it only sizes the window a label needs.
+ */
+export const LISTING_TERRAIN_MAP_DIGIT_EM = 0.6;
+
+/**
+ * «Sparse area»: a triangle whose longest edge exceeds this multiple of the MEDIAN edge of the surface spans ground
+ * nobody measured — the surface there is interpolation, not survey. Civil 3D exposes the same idea as the surface
+ * definition's «maximum triangle length»; we flag such triangles (hatched on the map) instead of deleting them.
+ */
+export const LISTING_TERRAIN_MAP_SPARSE_EDGE_FACTOR = 3;

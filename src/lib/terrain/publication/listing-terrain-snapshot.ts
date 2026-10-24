@@ -77,6 +77,7 @@ export function buildListingTerrainSnapshot(
       envelope: placed.envelope,
       envelopeOmission: placed.omission,
     },
+    frame,
   };
 }
 
