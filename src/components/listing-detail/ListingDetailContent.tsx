@@ -70,6 +70,7 @@ import { cn } from '@/lib/utils';
 import type { PublicListing } from '@/types/public-listing';
 import { ListingMarketContextPending } from './ListingMarketContextPending';
 import { ListingPriceBlock } from './ListingPriceBlock';
+import { ListingAvailability } from './ListingAvailability';
 import { ListingAttributeList } from './ListingAttributeList';
 import { ListingPositionSection } from './ListingPositionSection';
 import { ListingLegality } from './ListingLegality';
@@ -291,6 +292,8 @@ function ListingDetailBody({
           className="flex flex-col gap-4 lg:sticky lg:top-16 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start"
         >
           <ListingPriceBlock listing={listing} />
+          {/* ADR-919 §11 — πότε: η υπόσχεση με την ακρίβεια που δηλώθηκε, και αν έχει μετατεθεί. */}
+          <ListingAvailability listing={listing} />
           {/* Επαφή + αποθήκευση: μία ετυμηγορία κατόχου για τις δύο (ADR-777 §8.74.7). */}
           <ListingDetailActions listingId={listing.id} />
           <ListingOffers listing={listing} />

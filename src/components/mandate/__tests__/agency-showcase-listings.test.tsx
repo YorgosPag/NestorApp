@@ -108,6 +108,9 @@ function listingOf(id: string, title: string): PublicListing {
     title,
     projectedAt: '2026-09-01T09:28:43.769Z',
     listedAt: { kind: 'unknown', reason: 'predates-record' },
+    // ADR-919 §7 — ποτέ απόν στο σχήμα· `unknown` = η κάρτα σιωπά για την παράδοση (§11).
+    availability: { kind: 'unknown' },
+    availabilityTrack: null,
     priceReduction: null,
     objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
     levelAreas: null,
@@ -117,6 +120,11 @@ function listingOf(id: string, title: string): PublicListing {
     exchange: null,
     coverImage: null,
     gallery: [],
+    // ADR-777 — το σήμα χωρικών μέσων της κάρτας διαβάζει τα ράφια· κενά = κανένα σήμα.
+    models: [],
+    videos: [],
+    floorPlates: [],
+    tour: null,
     type: 'apartment',
     areaSqm: 90,
     offerKinds: ['sell'],

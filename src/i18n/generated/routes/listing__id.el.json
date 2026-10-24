@@ -167,6 +167,11 @@
       "reveal": "{count, plural, one {# δεν έχει δηλωθεί} other {# δεν έχουν δηλωθεί}}",
       "undeclared": "Δεν έχει δηλωθεί"
     },
+    "availability": {
+      "basis": "Όπως τη δηλώνει ο φορέας του έργου.",
+      "label": "Παράδοση",
+      "slipNotice": "Αρχικά {originally} · μετατέθηκε {count, plural, one {# φορά} other {# φορές}}"
+    },
     "commonCharges": {
       "includes": "Περιλαμβάνουν: {items}",
       "includesNothing": "Δεν περιλαμβάνουν θέρμανση, νερό ή άλλη παροχή",

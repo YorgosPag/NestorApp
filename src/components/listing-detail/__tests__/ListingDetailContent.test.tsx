@@ -169,6 +169,9 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     legality: legalitySignalsFor([], ['sell'], [{ propertyId: 'prop_a0000001', spaceId: null }], AT, LEGALITY_CLAIM_KINDS),
     projectedAt: AT,
     listedAt: { kind: 'unknown', reason: 'predates-record' },
+    // ADR-919 §7 — το πεδίο δεν είναι ΠΟΤΕ απόν στο σχήμα· `unknown` = η σελίδα σιωπά για την παράδοση (§11).
+    availability: { kind: 'unknown' },
+    availabilityTrack: null,
     priceReduction: null,
     objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
     levelAreas: null,

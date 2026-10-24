@@ -132,6 +132,9 @@ const LISTING: PublicListing = {
   legality: [],
   projectedAt: '2026-09-06T00:00:00.000Z',
   listedAt: { kind: 'unknown', reason: 'predates-record' },
+  // ADR-919 §7 — το πεδίο δεν είναι ΠΟΤΕ απόν στο σχήμα· `unknown` = η φούσκα σιωπά για την παράδοση (§11).
+  availability: { kind: 'unknown' },
+  availabilityTrack: null,
   priceReduction: null,
   objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
   levelAreas: null,

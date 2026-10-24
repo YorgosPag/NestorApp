@@ -11,7 +11,7 @@
     "src/i18n/generated/routes/data-deletion__versions.el.json": "b5985d2511b93344b355342677c84641c2bc629c80ca0b367778c17afd7800b7",
     "src/i18n/generated/routes/data-deletion__versions__version.el.json": "0b0f52262c8ead9f7c4c7a282fee6c540b128f8a9a5c78716d351fd4681a6db4",
     "src/i18n/generated/routes/demands.el.json": "f15243c6529ea9be6b0a1a4d181ff19e7c5866fcc9953aa98635f63969f3d9e2",
-    "src/i18n/generated/routes/demands__demandId.el.json": "1c379b7b78fe4ed8bbb00e72e2e6d60324d6cc3820253880e99d67cfca0d3a46",
+    "src/i18n/generated/routes/demands__demandId.el.json": "53d95059af936ae4dca93742d11b614745698876ed0845d65fcf64c23736a266",
     "src/i18n/generated/routes/demands__new.el.json": "f85744543c4c75526818bd08771e4729c8a79fd26d564a081d9dc8eeb660a3ed",
     "src/i18n/generated/routes/document-request.el.json": "3fc30b5c3cce0660d1e8ee25b177af72c4d9d9ed87c2bfcdf05085e4becc18f7",
     "src/i18n/generated/routes/dossiers.el.json": "73f5872c53c16d4a66d143ae8e7fcab64e40c78a05a1500056eb5b15a5872468",
@@ -30,7 +30,7 @@
     "src/i18n/generated/routes/interest-check.el.json": "d0002364331595d2870077e92bf3218896f97dbb2ee2924845b755f5b98fdc94",
     "src/i18n/generated/routes/invite__token.el.json": "aba3b759414cfd4d6bcbed80e662dcac25d828d2fbb82d760ab0b376f9745785",
     "src/i18n/generated/routes/legal-notice.el.json": "5a606df1478ca8886ee00c31c28c13432bb95ca7d8818c9f5c16f8cd0e3b7087",
-    "src/i18n/generated/routes/listing__id.el.json": "e06da092136e2ec9eb39ffcec9387de8974e747ab39886da9760159523ff107e",
+    "src/i18n/generated/routes/listing__id.el.json": "ef2d0d7fa65b34263239c40e7fecd4ec155ec25fea7a6ecfcf0edf2b451c17f7",
     "src/i18n/generated/routes/listing__id__floorplan.el.json": "40faa0a4a561d7e7c6ea0aa7c630472ec585301f9b4b3c5a774aa2c0aaa17387",
     "src/i18n/generated/routes/listing__id__photos.el.json": "e2e890622901136988e87242709b1a6040982e385d55a80fe48096084eb90116",
     "src/i18n/generated/routes/listing__id__tour.el.json": "289ecb4a6197a553aae1d0b04480f282603f0834920ae61273804e0ec09ade17",
@@ -78,7 +78,7 @@
     "src/i18n/generated/routes/tour-invite__token.el.json": "aeec8bc36081f1b5a8c49674c18a1a367f5d97d69bad1124f15f0a1349d110cf",
     "src/i18n/generated/routes/vendor__quote.el.json": "413f934a43a5be908bb20d0c0c0c92d312922631921b3363e9c49b3200b7a7ae",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "04c069e9d363cfba61f46fe7fed476754ed925cb3909bbe300e8517f388f5926",
+    "src/i18n/generated/shell-slice.el.json": "cda4d3172c0ccb28233c4057dfbe55e0689c272b81d1e97f0f8a79f528af48c8",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "generator": "scripts/generate-i18n-shell-slice.js",
@@ -157,7 +157,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "73e8e3d94fe8d4bacf3c7daf3023988f7913aa2107d4bbb5e9c3ebe5faa5fb39",
+  "inputsSha256": "0562cf70cdf1a6d5fdbd99b926bf5bdfd05231aa872d0c5bc36d241f110b84b4",
   "languages": [
     "el"
   ],
@@ -271,6 +271,7 @@
         "common": {
           "keys": [
             "common.loading",
+            "listingAvailability.deliveryOn",
             "map.gestures.mac",
             "map.gestures.mobile",
             "map.gestures.windows",
@@ -316,6 +317,17 @@
             "photos.spatial.tour",
             "photos.spatial.tourAndModel",
             "photos.spatial.tourAndModelShort"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-shared": {
+          "keys": [
+            "listingAvailability.quarter",
+            "listingAvailability.quarterOrdinals.1",
+            "listingAvailability.quarterOrdinals.2",
+            "listingAvailability.quarterOrdinals.3",
+            "listingAvailability.quarterOrdinals.4"
           ],
           "prefixes": [],
           "whole": false
@@ -3987,6 +3999,8 @@
       "wants": {
         "common": {
           "keys": [
+            "listingAvailability.deliveryOn",
+            "listingAvailability.readyNow",
             "priceAmount.nightly",
             "priceAmount.rent",
             "priceAmount.sale",
@@ -4026,6 +4040,17 @@
             "photos.spatial.tour",
             "photos.spatial.tourAndModel",
             "photos.spatial.tourAndModelShort"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-shared": {
+          "keys": [
+            "listingAvailability.quarter",
+            "listingAvailability.quarterOrdinals.1",
+            "listingAvailability.quarterOrdinals.2",
+            "listingAvailability.quarterOrdinals.3",
+            "listingAvailability.quarterOrdinals.4"
           ],
           "prefixes": [],
           "whole": false
@@ -4151,6 +4176,9 @@
             "attributes.registry.osm",
             "attributes.reveal",
             "attributes.undeclared",
+            "availability.basis",
+            "availability.label",
+            "availability.slipNotice",
             "commonCharges.includes",
             "commonCharges.includesNothing",
             "commonCharges.label",
@@ -9566,6 +9594,7 @@
           "keys": [
             "buttons.close",
             "common.loading",
+            "listingAvailability.deliveryOn",
             "map.gestures.mac",
             "map.gestures.mobile",
             "map.gestures.windows",
@@ -9644,7 +9673,12 @@
         },
         "common-shared": {
           "keys": [
-            "buttons.close"
+            "buttons.close",
+            "listingAvailability.quarter",
+            "listingAvailability.quarterOrdinals.1",
+            "listingAvailability.quarterOrdinals.2",
+            "listingAvailability.quarterOrdinals.3",
+            "listingAvailability.quarterOrdinals.4"
           ],
           "prefixes": [],
           "whole": false
@@ -10363,6 +10397,7 @@
         "common": {
           "keys": [
             "common.loading",
+            "listingAvailability.deliveryOn",
             "priceAmount.nightly",
             "priceAmount.rent",
             "priceAmount.sale",
@@ -10396,6 +10431,17 @@
             "photos.spatial.tour",
             "photos.spatial.tourAndModel",
             "photos.spatial.tourAndModelShort"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-shared": {
+          "keys": [
+            "listingAvailability.quarter",
+            "listingAvailability.quarterOrdinals.1",
+            "listingAvailability.quarterOrdinals.2",
+            "listingAvailability.quarterOrdinals.3",
+            "listingAvailability.quarterOrdinals.4"
           ],
           "prefixes": [],
           "whole": false
@@ -10464,6 +10510,7 @@
           "keys": [
             "buttons.close",
             "common.loading",
+            "listingAvailability.deliveryOn",
             "priceAmount.nightly",
             "priceAmount.rent",
             "priceAmount.sale",
@@ -10539,7 +10586,12 @@
         },
         "common-shared": {
           "keys": [
-            "buttons.close"
+            "buttons.close",
+            "listingAvailability.quarter",
+            "listingAvailability.quarterOrdinals.1",
+            "listingAvailability.quarterOrdinals.2",
+            "listingAvailability.quarterOrdinals.3",
+            "listingAvailability.quarterOrdinals.4"
           ],
           "prefixes": [],
           "whole": false
@@ -10900,6 +10952,7 @@
             "dropdown.addNewOption",
             "dropdown.clearSelection",
             "dropdown.toggleOptions",
+            "listingAvailability.deliveryOn",
             "placeholders.noResults",
             "priceAmount.nightly",
             "priceAmount.rent",
@@ -10952,6 +11005,11 @@
             "geolocation.timeout",
             "geolocation.unavailable",
             "geolocation.unsupported",
+            "listingAvailability.quarter",
+            "listingAvailability.quarterOrdinals.1",
+            "listingAvailability.quarterOrdinals.2",
+            "listingAvailability.quarterOrdinals.3",
+            "listingAvailability.quarterOrdinals.4",
             "placeRecall.areasHeading",
             "placeRecall.chooseArea",
             "placeRecall.clearHistory",
@@ -11228,6 +11286,7 @@
       "wants": {
         "common": {
           "keys": [
+            "listingAvailability.deliveryOn",
             "priceAmount.nightly",
             "priceAmount.rent",
             "priceAmount.sale",
@@ -11256,6 +11315,17 @@
             "photos.spatial.tour",
             "photos.spatial.tourAndModel",
             "photos.spatial.tourAndModelShort"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-shared": {
+          "keys": [
+            "listingAvailability.quarter",
+            "listingAvailability.quarterOrdinals.1",
+            "listingAvailability.quarterOrdinals.2",
+            "listingAvailability.quarterOrdinals.3",
+            "listingAvailability.quarterOrdinals.4"
           ],
           "prefixes": [],
           "whole": false
@@ -11704,8 +11774,8 @@
     "src/components/search/GlobalSearchDialog.tsx"
   ],
   "stats": {
-    "matchedKeys": 260,
-    "sliceBytes": 815974
+    "matchedKeys": 265,
+    "sliceBytes": 816222
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -12054,6 +12124,7 @@
         "src/components/public-site/PublicSiteHeader.tsx",
         "src/components/public-site/PublicSiteMenu.tsx",
         "src/components/search-results/ListingCardNoPhotoCover.tsx",
+        "src/components/search-results/ListingDeliveryBadge.tsx",
         "src/components/search-results/PriceReductionBadge.tsx",
         "src/components/search/GlobalSearchDialog.tsx",
         "src/components/shared/ModuleBreadcrumb.tsx",
@@ -12279,6 +12350,7 @@
         "jobs.site.label",
         "labels.clearSearch",
         "landingHeroes",
+        "listingAvailability.deliveryOn",
         "menu.settings",
         "module.account",
         "module.accounting",
@@ -15193,6 +15265,7 @@
         "src/core/modals/photo-preview-helpers.ts",
         "src/core/modals/usePhotoPreviewState.ts",
         "src/design-system/primitives/Card/CardActionsToolbar.tsx",
+        "src/lib/listings/availability-phrase.ts",
         "src/lib/units/unit-status-badges.ts",
         "src/providers/NotificationProvider.tsx"
       ],
@@ -15365,6 +15438,11 @@
         "jobs.site.label",
         "labels.clearSearch",
         "landingHeroes",
+        "listingAvailability.quarter",
+        "listingAvailability.quarterOrdinals.1",
+        "listingAvailability.quarterOrdinals.2",
+        "listingAvailability.quarterOrdinals.3",
+        "listingAvailability.quarterOrdinals.4",
         "menu.settings",
         "module.account",
         "module.accounting",

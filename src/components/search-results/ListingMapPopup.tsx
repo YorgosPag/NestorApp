@@ -68,6 +68,7 @@ import { resolveDisplayPrice } from '@/lib/properties/price-resolver';
 import { displayPriceLabel } from '@/lib/listings/listing-price-label';
 import { useStayTotal } from './StayTotalsContext';
 import { PriceReductionBadge } from './PriceReductionBadge';
+import { ListingDeliveryBadge } from './ListingDeliveryBadge';
 import { listingDetailHref } from '@/lib/listings/listing-routes';
 import { listingGalleryImages } from '@/lib/listings/listing-images';
 import { photoPositionFor } from '@/lib/listings/listing-photo-position';
@@ -215,6 +216,8 @@ export function ListingMapPopup({ listing, filterQuery, onClose }: ListingMapPop
           {/* ADR-777 §8.69 — η ΙΔΙΑ σήμανση με την κάρτα της λίστας, όχι αντίγραφό της. */}
           <PriceReductionBadge reduction={listing.priceReduction} className="ml-2" />
         </p>
+        {/* ADR-919 §11 — η ΙΔΙΑ υπόσχεση με την κάρτα της λίστας. */}
+        <ListingDeliveryBadge availability={listing.availability} />
 
         {/* §8.78 — «Άνοιγμα» + σύνδεσμος «αυτό το ακίνητο, σε αυτή την αναζήτηση» (Google Maps «Copy link»). */}
         <ListingMapPopupFooter listingId={listing.id} title={listing.title} />

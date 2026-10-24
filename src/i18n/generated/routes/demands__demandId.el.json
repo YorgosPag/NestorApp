@@ -1,15 +1,4 @@
 {
-  "common-shared": {
-    "listingAvailability": {
-      "quarter": "{ordinal} τρίμηνο {year}",
-      "quarterOrdinals": {
-        "1": "Α΄",
-        "2": "Β΄",
-        "3": "Γ΄",
-        "4": "Δ΄"
-      }
-    }
-  },
   "properties-enums": {
     "types": {
       "apartment": "Διαμέρισμα",

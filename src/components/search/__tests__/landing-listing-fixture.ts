@@ -46,6 +46,7 @@ export function landingListing(
     legality: [],
     agencyName: null,
     agencyId: null,
+    availabilityTrack: null,
     priceReduction: null,
     objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
     levelAreas: null,

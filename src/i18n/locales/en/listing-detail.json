@@ -202,5 +202,10 @@
     "buildingCertificate": "Not estimated: the certificate covers the whole building, and its consumption is not the unit's.",
     "unpriced": "Not estimated: there is no official reference price for {sources}.",
     "stalePrices": "Not estimated: the reference prices are not recent."
+  },
+  "availability": {
+    "label": "Delivery",
+    "slipNotice": "Originally {originally} · moved {count, plural, one {# time} other {# times}}",
+    "basis": "As declared by the developer."
   }
 }

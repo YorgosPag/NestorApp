@@ -37,6 +37,7 @@ import { resolveDisplayPrice } from '@/lib/properties/price-resolver';
 import { displayPriceLabel, resolvedPriceLabel } from '@/lib/listings/listing-price-label';
 import { useStayTotal } from './StayTotalsContext';
 import { PriceReductionBadge } from './PriceReductionBadge';
+import { ListingDeliveryBadge } from './ListingDeliveryBadge';
 import { listingDetailHref } from '@/lib/listings/listing-routes';
 import type { PublicListing } from '@/types/public-listing';
 import { formatList } from '@/lib/intl-formatting';
@@ -376,6 +377,9 @@ export function ListingCard({
               <div><dd>{t('search-results:listing.bedrooms', { count: listing.bedrooms })}</dd></div>
             )}
           </dl>
+
+          {/* ADR-919 §11 — η υπόσχεση παράδοσης, μόνο όταν υπάρχει (`scheduled`)· τα υπόλοιπα στη σελίδα. */}
+          <ListingDeliveryBadge availability={listing.availability} className="mt-1" />
 
           {/* Οι ΔΙΑΘΕΣΕΙΣ, ποτέ το lossy `commercialStatus` — αλλιώς η αντιπαροχή σιωπά. */}
           <ul className="mt-2 flex flex-wrap gap-1">
