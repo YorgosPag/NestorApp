@@ -489,6 +489,7 @@ export function projectListingShape(
     models: [],
     videos: [], // ADR-907 §10 — το γεμίζει ΜΟΝΟ ο `withPublishedVideos`, από την αναφορά του ραφιού βίντεο.
     floorPlates: [], // ADR-907 §11 — το γεμίζει ΜΟΝΟ ο γραφέας της κάτοψης ορόφου, αφού κρίνει η επιμέλεια.
+    terrain: null, // ADR-920 Β3β — το γεμίζει ΜΟΝΟ ο `withPublishedTerrain`, από την αναφορά του ραφιού εδάφους.
     tour: null, // ADR-884 — γεγονός της ΔΗΜΟΣΙΕΥΣΗΣ: το δένει ο γραφέας (`withPublicationFacts`) από το `readTourPresence`.
     // 🔴 **ΤΟ ΟΓΔΟΟ `as`, ΚΑΙ ΤΟ ΠΙΟ ΑΚΡΙΒΟ** (ADR-842 §7.6.12 / §8 #11): έγραφε
     //    `(property.type ?? 'apartment') as PropertyType` — **βάφτιζε διαμέρισμα ένα

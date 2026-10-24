@@ -174,7 +174,11 @@ describe('ADR-920 Β3 — η πόρτα του τοπογραφικού', () => 
       contentType: 'application/json',
       publicationIdentity: 'terrain/measured',
       entityId: PROPERTY,
+      // ADR-920 Β4.3 — το εταιρικό σπίτι: αρχείο του μισθωτή στο ακίνητο, ποτέ στον φάκελο ενός ανθρώπου.
+      entityType: 'property',
+      companyId: authContext.companyId,
     }));
+    expect(setDoc.mock.calls[0][0]).not.toHaveProperty('userId');
     expect(trace).toEqual(['query', 'set', 'upload', 'update', 'audit', 'refresh']);
   });
 

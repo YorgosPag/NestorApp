@@ -25,6 +25,7 @@ const settled = (): ShelfReport => ({ outcome: 'reconciled', published: [], remo
 const reconcilePublicShelf = jest.fn(async (..._args: unknown[]): Promise<ShelfReport> => settled());
 const reconcilePublicModelShelf = jest.fn(async (..._args: unknown[]): Promise<ShelfReport> => settled());
 const reconcilePublicVideoShelf = jest.fn(async (..._args: unknown[]): Promise<ShelfReport> => settled());
+const reconcilePublicTerrainShelf = jest.fn(async (..._args: unknown[]): Promise<ShelfReport> => settled());
 
 jest.mock('../public-shelf.service', () => ({
   reconcilePublicShelf: (...args: unknown[]) => reconcilePublicShelf(...args),
@@ -34,6 +35,9 @@ jest.mock('../public-shelf-model.service', () => ({
 }));
 jest.mock('../public-shelf-video.service', () => ({
   reconcilePublicVideoShelf: (...args: unknown[]) => reconcilePublicVideoShelf(...args),
+}));
+jest.mock('../public-shelf-terrain.service', () => ({
+  reconcilePublicTerrainShelf: (...args: unknown[]) => reconcilePublicTerrainShelf(...args),
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports

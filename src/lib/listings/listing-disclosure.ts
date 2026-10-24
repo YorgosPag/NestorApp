@@ -94,6 +94,7 @@ export const LISTING_DISCLOSURE = {
   models: 'media',
   videos: 'media',
   floorPlates: 'media',
+  terrain: 'media', // ADR-920 Β3β — φεύγει αρχείο (το ψημένο στιγμιότυπο εδάφους).
   tour: 'tour-presence',
   // ── Οι ιδιότητες, ΣΤΗ ΣΕΙΡΑ ΠΟΥ ΕΜΦΑΝΙΖΟΝΤΑΙ ────────────────────────────────
   type: 'attribute',
@@ -179,6 +180,8 @@ export const LISTING_DISCLOSURE = {
   listedAt: 'market-entry',
   // ✅ **ADR-919 §7** — η διαθεσιμότητα· δες τον ρόλο `'availability'` για το γιατί δεν είναι `'market-entry'`.
   availability: 'availability',
+  // ✅ **ADR-919 §10** — η ιστορία της ίδιας δημόσιας υπόσχεσης: ίδιος ρόλος, τίποτα που δεν είδε ήδη ο κόσμος.
+  availabilityTrack: 'availability',
   // ✅ **ADR-777 §8.69** — και ο πίνακας **κοκκίνισε μόλις μπήκε το πεδίο**: πέμπτη φορά
   //    που το `satisfies Record<keyof PublicListing, …>` πιάνει προσθήκη σχήματος.
   priceReduction: 'price-reduction',

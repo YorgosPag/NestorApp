@@ -30,6 +30,7 @@
 import {
   LISTING_MODEL_SHELF,
   LISTING_SHELF,
+  LISTING_TERRAIN_SHELF,
   LISTING_VIDEO_SHELF,
   PUBLIC_SHELF_KINDS,
   PUBLIC_SHELF_LISTING_ROOT,
@@ -44,6 +45,7 @@ type ShelfCall = [kind: { root: string; encoding: { kind: string } }, subjectId:
 const reconcilePublicShelf = jest.fn<Promise<unknown>, ShelfCall>();
 const reconcilePublicModelShelf = jest.fn<Promise<unknown>, ShelfCall>();
 const reconcilePublicVideoShelf = jest.fn<Promise<unknown>, ShelfCall>();
+const reconcilePublicTerrainShelf = jest.fn<Promise<unknown>, ShelfCall>();
 
 // 🔑 **ΚΑΙ ΤΑ ΔΥΟ κεφάλια μοκάρονται** — όχι μόνο για ταχύτητα: το κεφάλι του μοντέλου σέρνει
 //    τον ψήστη, δηλαδή **WASM** (`meshoptimizer`, `gltf-validator`). Αυτή η σουίτα ρωτά για
@@ -57,6 +59,9 @@ jest.mock('../public-shelf-model.service', () => ({
 // ADR-907 §10 — το τρίτο κεφάλι: η καλωδίωση ρωτιέται εδώ, το ψήσιμο στο `public-shelf-video-bake.test`.
 jest.mock('../public-shelf-video.service', () => ({
   reconcilePublicVideoShelf: (...args: ShelfCall) => reconcilePublicVideoShelf(...args),
+}));
+jest.mock('../public-shelf-terrain.service', () => ({
+  reconcilePublicTerrainShelf: (...args: ShelfCall) => reconcilePublicTerrainShelf(...args),
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -107,6 +112,7 @@ function calledKinds(): readonly { root: string; encoding: { kind: string } }[] 
     ...reconcilePublicShelf.mock.calls.map((call) => call[0]),
     ...reconcilePublicModelShelf.mock.calls.map((call) => call[0]),
     ...reconcilePublicVideoShelf.mock.calls.map((call) => call[0]),
+    ...reconcilePublicTerrainShelf.mock.calls.map((call) => call[0]),
   ];
 }
 
@@ -115,6 +121,7 @@ beforeEach(() => {
   reconcilePublicShelf.mockResolvedValue(emptyReport());
   reconcilePublicModelShelf.mockResolvedValue(emptyReport());
   reconcilePublicVideoShelf.mockResolvedValue(emptyReport());
+  reconcilePublicTerrainShelf.mockResolvedValue(emptyReport());
 });
 
 // ---------------------------------------------------------------------------
@@ -125,6 +132,7 @@ describe('🏆 Α-8 — Η ΑΠΟΣΥΡΣΗ ΑΔΕΙΑΖΕΙ ΚΑΘΕ ΡΑΦΙ �
       expect(reconcilePublicShelf).toHaveBeenCalledTimes(1);
       expect(reconcilePublicModelShelf).toHaveBeenCalledTimes(1);
       expect(reconcilePublicVideoShelf).toHaveBeenCalledTimes(1);
+      expect(reconcilePublicTerrainShelf).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -134,6 +142,7 @@ describe('🏆 Α-8 — Η ΑΠΟΣΥΡΣΗ ΑΔΕΙΑΖΕΙ ΚΑΘΕ ΡΑΦΙ �
     expect(reconcilePublicShelf).toHaveBeenCalledWith(LISTING_SHELF, LISTING, []);
     expect(reconcilePublicModelShelf).toHaveBeenCalledWith(LISTING_MODEL_SHELF, LISTING, []);
     expect(reconcilePublicVideoShelf).toHaveBeenCalledWith(LISTING_VIDEO_SHELF, LISTING, []);
+    expect(reconcilePublicTerrainShelf).toHaveBeenCalledWith(LISTING_TERRAIN_SHELF, LISTING, []);
   });
 
   it('🔴 ΚΑΘΕ είδος της ρίζας των αγγελιών αδειάζεται — η λίστα ΠΑΡΑΓΕΤΑΙ από τον πίνακα', async () => {
@@ -165,6 +174,7 @@ describe('🏆 Α-8 — Η ΑΠΟΣΥΡΣΗ ΑΔΕΙΑΖΕΙ ΚΑΘΕ ΡΑΦΙ �
     expect(listingRootKinds()).toContain(LISTING_SHELF);
     expect(listingRootKinds()).toContain(LISTING_MODEL_SHELF);
     expect(listingRootKinds()).toContain(LISTING_VIDEO_SHELF);
+    expect(listingRootKinds()).toContain(LISTING_TERRAIN_SHELF);
   });
 });
 
@@ -175,25 +185,27 @@ describe('🏆 Η ΔΙΑΜΕΡΙΣΗ — ΕΝΑ πέρασμα, κάθε πηγ�
       source('owner_properties/u1/plan.png', { kind: 'floorplan', at: SOURCE_AT, provenance: 'declared' }),
       source('owner_properties/u1/model.glb', { kind: 'model' }),
       source('owner_properties/u1/tour.mp4', { kind: 'video' }),
+      source('companies/c1/terrain-source.json', { kind: 'terrain' }),
     ];
   }
 
   it('🔴 η φωτογραφία ΚΑΙ η κάτοψη πάνε στο raster· το μοντέλο ΟΧΙ', () => {
-    const { raster, model, video } = partitionListingSources(mixed());
+    const { raster, model, video, terrain } = partitionListingSources(mixed());
 
     expect(raster.map((s) => s.material.kind)).toEqual(['photo', 'floorplan']);
     expect(model.map((s) => s.material.kind)).toEqual(['model']);
     expect(video.map((s) => s.material.kind)).toEqual(['video']);
+    expect(terrain.map((s) => s.material.kind)).toEqual(['terrain']);
   });
 
   it('🔴 καμία πηγή δεν χάνεται και καμία δεν διπλογράφεται — ΕΝΑ πέρασμα', () => {
     // Η μετρημένη κλάση σφάλματος της Φ4.1: **δύο** ανεξάρτητα κατηγορήματα με άρνηση
     // μπορούν να αφήσουν κενό (καμία δεν πιάνεται) Ή να διπλογράψουν (και τα δύο πιάνουν).
     const sources = mixed();
-    const { raster, model, video } = partitionListingSources(sources);
+    const { raster, model, video, terrain } = partitionListingSources(sources);
 
-    expect(raster.length + model.length + video.length).toBe(sources.length);
-    expect(new Set([...raster, ...model, ...video]).size).toBe(sources.length);
+    expect(raster.length + model.length + video.length + terrain.length).toBe(sources.length);
+    expect(new Set([...raster, ...model, ...video, ...terrain]).size).toBe(sources.length);
   });
 
   it('🔴 το ΜΟΝΤΕΛΟ δεν φτάνει ΠΟΤΕ στο ράφι εικόνων — και το αντίστροφο', async () => {
@@ -379,5 +391,48 @@ describe('🏆 Α-7 (καλωδίωση) — ΕΝΑ `set`, ΚΑΙ ΤΑ ΜΟΝΤ�
     // Η πρώτη κλήση καθενός ήταν η συμφιλίωση· η **δεύτερη** είναι η απόσυρση, με κενό σύνολο.
     expect(reconcilePublicShelf).toHaveBeenLastCalledWith(LISTING_SHELF, LISTING, []);
     expect(reconcilePublicModelShelf).toHaveBeenLastCalledWith(LISTING_MODEL_SHELF, LISTING, []);
+  });
+});
+
+describe('ADR-920 Β3β — ΤΟ ΕΔΑΦΟΣ: ΕΝΑΣ γραφέας, από την αναφορά του ραφιού', () => {
+  const TERRAIN_URL = 'https://storage.googleapis.com/bucket/listings/ownp_77aa21bc/t.json';
+  const CARD = {
+    snapshotVersion: 1,
+    stats: { planAreaM2: 400, minElevationM: 120, maxElevationM: 122, reliefM: 2, meanSlopePct: 10, maxSlopePct: 10, downslopeAzimuthDeg: 270 },
+    contourIntervalM: 0.5,
+    envelope: null,
+    survey: { surveyorName: 'Τοπογράφος Α', surveyedOn: '2026-05-04' },
+  };
+  const terrainSource = source('companies/c1/terrain-source.json', { kind: 'terrain' });
+
+  function written(set: jest.Mock): PublicListing {
+    return set.mock.calls[0][0] as PublicListing;
+  }
+
+  it('🔴 η πηγή πάει ΜΟΝΟ στο ράφι εδάφους — ποτέ στις εικόνες', async () => {
+    await writeWithShelf({ set: jest.fn(async () => undefined) } as never, LISTING, listing(), [terrainSource]);
+
+    expect(reconcilePublicTerrainShelf).toHaveBeenCalledWith(LISTING_TERRAIN_SHELF, LISTING, [terrainSource]);
+    expect(reconcilePublicShelf.mock.calls[0][2]).toEqual([]);
+  });
+
+  it('🔴 ψημένο έδαφος ⇒ `measured` με το URL του ραφιού και την κάρτα του', async () => {
+    reconcilePublicTerrainShelf.mockResolvedValue({
+      outcome: 'reconciled', published: [{ key: 'k', url: TERRAIN_URL, at: SOURCE_AT, card: CARD }], removed: 0, rejected: 0,
+    });
+    const set = jest.fn(async () => undefined);
+    await writeWithShelf({ set } as never, LISTING, listing(), [terrainSource]);
+
+    expect(written(set).terrain).toEqual({
+      provenance: 'measured', value: { url: TERRAIN_URL, ...CARD }, at: SOURCE_AT, sourceRef: 'property-terrain:measured',
+    });
+    expect(written(set)).not.toHaveProperty('terrain.value.key');
+  });
+
+  it('🔴 κενή αναφορά (απόσυρση / άρνηση ψήστη) ⇒ `null`, ποτέ το παλιό έδαφος', async () => {
+    const set = jest.fn(async () => undefined);
+    await writeWithShelf({ set } as never, LISTING, listing(), [terrainSource]);
+
+    expect(written(set).terrain).toBeNull();
   });
 });

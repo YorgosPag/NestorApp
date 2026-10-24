@@ -10,7 +10,8 @@ import {
   relistedFinalEnergyOf,
   relistedScopeOf,
 } from '@/lib/energy-certificate/energy-certificate';
-import { readStoredAvailability } from './public-listing-shape-judges';
+import { readStoredAvailability, readStoredTerrain } from './public-listing-shape-judges';
+import { readStoredAvailabilityTrack } from './availability-history';
 import type { ListingMigration } from './public-listing-schema-types';
 
 /** Οι κρίκοι `to: 21` … `to: 30`, με τη σειρά που συνέβησαν. Παγωμένοι — δες την κεφαλίδα του `public-listing-schema.ts`. */
@@ -125,5 +126,35 @@ export const LISTING_MIGRATIONS_21_30: readonly ListingMigration[] = [
      * 🔑 **Ιδιοδύναμο (Κ3)**: ό,τι έγραψε ήδη ο γραφέας περνά από τον κριτή του σχήματος (`readStoredAvailability`) αυτούσιο.
      */
     apply: (doc) => ({ ...doc, availability: readStoredAvailability(doc.availability) }),
+  },
+  {
+    to: 26,
+    adr: 'ADR-920 §12',
+    adds: ['terrain'],
+    /**
+     * 🔴 **Η ΑΓΓΕΛΙΑ ΑΠΕΚΤΗΣΕ ΕΔΑΦΟΣ — ΤΑ ΠΑΛΙΑ ΕΓΓΡΑΦΑ ΔΕΝ ΤΟ ΕΧΟΥΝ.**
+     *
+     * 🔑 **Η ΑΛΗΘΕΙΑ ΤΟΥ ΠΑΛΙΟΥ ΕΓΓΡΑΦΟΥ ΕΙΝΑΙ «ΔΕΝ ΔΗΜΟΣΙΕΥΤΗΚΕ»** (`null`): το έδαφος υπάρχει μόνο όταν το **ψήσει**
+     * το ράφι από μετρημένη πηγή, και ο κρίκος είναι καθαρή συνάρτηση πάνω σε **ένα** έγγραφο — δεν ανοίγει Storage.
+     * Την αλήθεια τη γράφει η **επαναπροβολή**, μέσω του ενός binder (`withPublishedTerrain`).
+     *
+     * 🔑 **Ιδιοδύναμο (Κ3)**: ό,τι έγραψε ήδη ο binder περνά από τον κριτή (`readStoredTerrain`) αυτούσιο· σκουπίδι ⇒ `null`.
+     */
+    apply: (doc) => ({ ...doc, terrain: readStoredTerrain(doc.terrain) }),
+  },
+  {
+    to: 27,
+    adr: 'ADR-919 §10',
+    adds: ['availabilityTrack'],
+    /**
+     * 🔴 **Η ΑΓΓΕΛΙΑ ΑΠΕΚΤΗΣΕ ΙΣΤΟΡΙΑ ΥΠΟΣΧΕΣΗΣ — ΤΑ ΠΑΛΙΑ ΕΓΓΡΑΦΑ ΔΕΝ ΤΗΝ ΕΧΟΥΝ.**
+     *
+     * 🔑 **Η ΑΛΗΘΕΙΑ ΤΟΥ ΠΑΛΙΟΥ ΕΓΓΡΑΦΟΥ ΕΙΝΑΙ «ΚΑΜΙΑ ΙΣΤΟΡΙΑ»** (`null`), ποτέ ψεύτικο πλήθος μεταθέσεων: το ιστορικό
+     * ζει στη μονάδα, και ο κρίκος είναι καθαρή συνάρτηση πάνω σε **ένα** έγγραφο. Την αλήθεια τη γράφει η
+     * **επαναπροβολή**, μέσω της σφραγίδας (`resolveAvailabilityHistory`) και του διχτυού (`availabilityTrackForListing`).
+     *
+     * 🔑 **Ιδιοδύναμο (Κ3)**: ό,τι έγραψε ήδη ο γραφέας περνά από τον κριτή (`readStoredAvailabilityTrack`) αυτούσιο.
+     */
+    apply: (doc) => ({ ...doc, availabilityTrack: readStoredAvailabilityTrack(doc.availabilityTrack) }),
   },
 ];

@@ -19,6 +19,11 @@
  *
  * ⛔ **ΜΗΝ το κάνεις παράμετρο «για ευελιξία»** — ένα ανέβασμα τοπογραφικού χωρίς πρόθεση δημοσίευσης
  * θα ήταν άλλη πόρτα (ο διαχειριστής αρχείων), χωρίς ταυτότητα.
+ *
+ * 🔑 **ΔΥΟ ΣΠΙΤΙΑ, ΕΝΑ ΕΓΓΡΑΦΟ** *(ADR-920 Β4.3)*: το εταιρικό ακίνητο κρατά την πηγή στα αρχεία της εταιρείας
+ * (`PROPERTY`/`propertyId`), το ακίνητο του ιδιοκτήτη στον **φάκελό** του (`PROPERTY_DOSSIER`/`dossierId`, `files_personal`,
+ * ADR-866). Ο τύπος {@link TerrainSourceHome} **ζευγαρώνει** κάτοχο και δοχείο: εταιρεία με φάκελο ή άνθρωπος με εταιρικό
+ * ακίνητο δεν μεταγλωττίζονται. Τα υπόλοιπα πεδία είναι **ίδια** — άρα και η ταυτότητα, η κατηγορία και η διαδοχή.
  */
 
 import {
@@ -42,12 +47,26 @@ const TERRAIN_FILE_EXT = 'json';
  * προηγούμενη (ISO 19650 superseded, ποτέ σβήσιμο). Πρόθεμα είδους `terrain`, αδελφό των `model` /
  * `floorplan`, ώστε τα είδη να μη συγκρουστούν ποτέ. ⛔ Ποτέ όνομα αρχείου ή ανθρώπου μέσα (ADR-769).
  */
-const TERRAIN_PUBLICATION_IDENTITY = 'terrain/measured';
+export const TERRAIN_PUBLICATION_IDENTITY = 'terrain/measured';
+
+/**
+ * **Πού ζει η πηγή** — κάτοχος **και** δοχείο, ζευγαρωμένα από τον τύπο.
+ * ⚠️ Το διακρίνει το **κλειδί** του κατόχου (`companyId` | `userId`), όπως το `FileCustody` (ADR-866 §5.2).
+ */
+export type TerrainSourceHome =
+  | { readonly companyId: string; readonly propertyId: string }
+  | { readonly userId: string; readonly dossierId: string };
+
+/** Κάτοχος + δοχείο της εγγραφής — η **μία** αντιστοίχιση σπιτιού → πεδία. */
+function fileCoordinatesOf(home: TerrainSourceHome) {
+  return 'userId' in home
+    ? { userId: home.userId, entityType: ENTITY_TYPES.PROPERTY_DOSSIER, entityId: home.dossierId }
+    : { companyId: home.companyId, entityType: ENTITY_TYPES.PROPERTY, entityId: home.propertyId };
+}
 
 /** Ό,τι ξέρει η πόρτα τη στιγμή που γεννά το έγγραφο — και ούτε πεδίο παραπάνω. */
 export interface PublishedTerrainFileRequest {
-  readonly companyId: string;
-  readonly propertyId: string;
+  readonly home: TerrainSourceHome;
   readonly createdBy: string;
   /**
    * Από ποια αρχεία σκηνής προήλθε (πόρτα του DXF Viewer, Β5) — **κενό** για ανέβασμα από τη φόρμα (Β4).
@@ -61,9 +80,7 @@ export function buildPublishedTerrainFileRecord(
   request: PublishedTerrainFileRequest,
 ): BuildPendingFileRecordResult {
   return buildPendingFileRecordData({
-    companyId: request.companyId,
-    entityType: ENTITY_TYPES.PROPERTY,
-    entityId: request.propertyId,
+    ...fileCoordinatesOf(request.home),
     domain: FILE_DOMAINS.CONSTRUCTION,
     category: FILE_CATEGORIES.DRAWINGS,
     contentType: TERRAIN_SOURCE_CONTENT_TYPE,

@@ -46,6 +46,15 @@ jest.mock('../listing-scope-republish', () => ({
   republishListingsInScope: (...args: unknown[]) => republishListingsInScope(...args),
 }));
 
+/** Ο γραφέας της αγγελίας ιδιοκτήτη — mock για τον ίδιο λόγο με τον εταιρικό (ADR-920 Β4.3). */
+const republishOwnerProperty = jest.fn(async (..._args: unknown[]) => ({ publish: 'published', property: {} }));
+jest.mock('@/services/owner-property/owner-property-publication.service', () => ({
+  republishOwnerProperty: (...args: unknown[]) => republishOwnerProperty(...args),
+}));
+jest.mock('@/lib/owner-property/owner-property-from-document', () => ({
+  ownerPropertyFromDocument: (raw: unknown, id: string) => (raw === undefined ? null : { ...(raw as object), id }),
+}));
+
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const refresh = require('../listing-media-refresh') as typeof import('../listing-media-refresh');
 const { refreshListingAfterMediaChange } = refresh;
@@ -295,5 +304,35 @@ describe('ADR-907 §11.8 — ΦΑ: άλλαξε μονάδα ⇒ οι αγγελ
   it('ΦΑ-8 — το κλειδί δεσμού κάθε είδους χώρου είναι αυτό του ΕΝΟΣ μητρώου ρόλων', () => {
     expect(refresh.SPACE_OVERLAY_LINK.parking).toBe(ROLE_REQUIRES_LINK.parking);
     expect(refresh.SPACE_OVERLAY_LINK.storage).toBe(ROLE_REQUIRES_LINK.storage);
+  });
+});
+
+describe('ADR-920 Β4.3 — άλλαξε υλικό στον ΦΑΚΕΛΟ ⇒ ξαναπρόβαλε την αγγελία ιδιοκτήτη', () => {
+  const OWNER_LISTING = 'oprop_1';
+  const OWNER = 'user_9';
+  beforeEach(() => jest.clearAllMocks());
+
+  it('ΙΔ-1 — διαβάζεται ΑΠΟ ΤΗ ΒΑΣΗ και φτάνει στον ΥΠΑΡΧΟΝΤΑ γραφέα της οικογένειας', async () => {
+    const db = dbWith({ authorUserId: OWNER, authorCompanyId: null, title: 'Οικόπεδο' });
+
+    await expect(refresh.refreshOwnerListingAfterMediaChange(db, OWNER_LISTING, OWNER)).resolves.toBe('published');
+    expect((db as unknown as { requested: string[] }).requested).toEqual([`owner_properties/${OWNER_LISTING}`]);
+    expect(republishOwnerProperty).toHaveBeenCalledWith(db, expect.objectContaining({ id: OWNER_LISTING, authorUserId: OWNER }));
+    expect(republishListing).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['ανύπαρκτη', undefined],
+    ['άλλου ανθρώπου', { authorUserId: 'user_other', authorCompanyId: null }],
+    ['σε χώρο γραφείου', { authorUserId: OWNER, authorCompanyId: 'comp_a' }],
+  ])('ΙΔ-2 — 🔐 αγγελία %s ⇒ `absent`, καμία επαναπροβολή', async (_label, stored) => {
+    await expect(refresh.refreshOwnerListingAfterMediaChange(dbWith(stored), OWNER_LISTING, OWNER)).resolves.toBe('absent');
+    expect(republishOwnerProperty).not.toHaveBeenCalled();
+  });
+
+  it('ΙΔ-3 — δεν πετά ποτέ: η αποτυχία ονομάζεται `failed`', async () => {
+    await expect(refresh.refreshOwnerListingAfterMediaChange(dbWith(new Error('UNAVAILABLE')), OWNER_LISTING, OWNER))
+      .resolves.toBe('failed');
+    expect(reportProjectionFailure).toHaveBeenCalledWith(OWNER_LISTING, expect.any(Error));
   });
 });

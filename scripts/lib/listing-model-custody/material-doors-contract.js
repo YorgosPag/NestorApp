@@ -62,6 +62,11 @@ const REFRESH_HELPERS = Object.freeze({
   publishPropertyMaterial:
     'Ο κορμός δημοσίευσης υλικού από το σχέδιο (μοντέλο · παραγόμενη κάτοψη, ADR-909 Β1): γράφει, ' +
     'αρχειοθετεί τους προκατόχους και ξαναπροβάλλει ΤΕΛΕΥΤΑΙΟ. Όπως το `runFileBatch`, η επαναπροβολή είναι ΜΕΣΑ του.',
+  publishOwnerPropertyMaterial:
+    'Το υποκείμενο του ΙΔΙΟΚΤΗΤΗ στον ίδιο κινητήρα (ADR-920 Β4.3): γράφει στον φάκελο (`files_personal`), ' +
+    'αρχειοθετεί τους προκατόχους και ξαναπροβάλλει την αγγελία ιδιοκτήτη ΤΕΛΕΥΤΑΙΟ — η επαναπροβολή είναι ΜΕΣΑ του.',
+  refreshOwnerListingAfterMediaChange:
+    'Η επαναπροβολή της αγγελίας ΙΔΙΟΚΤΗΤΗ όταν άλλαξε υλικό του φακέλου της — ο υπάρχων γραφέας `republishOwnerProperty`.',
 });
 
 /**
@@ -81,7 +86,7 @@ const HAND_WRITE = Object.freeze({
 const DOOR_COVER = Object.freeze({ REFRESH: 'refresh', EXEMPT: 'exempt' });
 
 const SUPERSESSION_REASON =
-  'ΕΣΩΤΕΡΙΚΟ ΒΗΜΑ του κορμού `publishPropertyMaterial`: αρχειοθετεί τους προκατόχους μέσα στην ίδια αίτηση, και ' +
+  'ΕΣΩΤΕΡΙΚΟ ΒΗΜΑ του κινητήρα `publishListingMaterial` (κάθε κηδεμονία, ADR-920 Β4.3): αρχειοθετεί τους προκατόχους μέσα στην ίδια αίτηση, και ' +
   'ο κορμός ξαναπροβάλλει ΜΙΑ φορά στο τέλος. Δεύτερη κλήση εδώ θα έψηνε το ράφι δύο φορές.';
 
 const CONTACT_FILES_REASON =
@@ -138,6 +143,12 @@ const MATERIAL_DOORS = Object.freeze({
       'ADR-920 Β3 — η δημοσίευση τοπογραφικού οικοπέδου. Γεννά την ιδιωτική πηγή του εδάφους και αρχειοθετεί ' +
       'την προηγούμενη (`terrain/measured`)· περνά από τον κορμό `publishPropertyMaterial`, που ξαναπροβάλλει στο τέλος.',
   },
+  'src/app/api/owner-properties/[ownerPropertyId]/terrain/route.ts': {
+    cover: DOOR_COVER.REFRESH,
+    reason:
+      'ADR-920 Β4.3 — το τοπογραφικό της αγγελίας ιδιοκτήτη. Γεννά την ιδιωτική πηγή στον ΦΑΚΕΛΟ και αρχειοθετεί ' +
+      'την προηγούμενη· περνά από το `publishOwnerPropertyMaterial`, που ξαναπροβάλλει την αγγελία ιδιοκτήτη στο τέλος.',
+  },
   'src/app/api/properties/[id]/listing-media/route.ts': {
     cover: DOOR_COVER.REFRESH,
     reason: 'Α5β — «ξαναφτιάξε την αγγελία από το τρέχον υλικό». Δεν γράφει αρχείο· ΕΙΝΑΙ η επαναπροβολή κατά παραγγελία.',
@@ -148,7 +159,7 @@ const MATERIAL_DOORS = Object.freeze({
       'ADR-907 §11.7 — η υπογραφή και η άρση της δήλωσης κάτοψης ορόφου. Δεν γράφει αρχείο· γράφει στον ΟΡΟΦΟ, και η ' +
       'κάτοψη είναι υλικό κάθε αγγελίας του. Ξαναπροβάλλει ΤΕΛΕΥΤΑΙΟ, μέσω του `refreshListingsOfFloor`.',
   },
-  'src/app/api/properties/[id]/_shared/material-supersession.ts': {
+  'src/server/listing-material/material-supersession.ts': {
     cover: DOOR_COVER.EXEMPT,
     reason: SUPERSESSION_REASON,
   },

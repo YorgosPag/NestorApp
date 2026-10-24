@@ -154,6 +154,19 @@ export interface VideoShelfEncoding {
 }
 
 /**
+ * ⛰️ **ΠΩΣ ΚΩΔΙΚΟΠΟΙΕΙΤΑΙ ΕΝΑ ΕΔΑΦΟΣ** *(ADR-920 Β3β)* — δεν κωδικοποιείται· **ψήνεται**: πηγή του τοπογράφου →
+ * `ListingTerrainSnapshot` (JSON, gzip στη μεταφορά). Ισχύει ο κανόνας του {@link ModelShelfEncoding}: *ό,τι είναι
+ * εδώ αλλάζει τα bytes*. Τα bytes τα αλλάζουν **δύο** συμβόλαια — του στιγμιοτύπου (τι παράγει ο builder) και της
+ * πηγής (πώς διαβάζεται) — άρα και τα δύο είναι στη συνταγή: αλλαγή έκδοσης ⇒ νέα συνταγή ⇒ ξαναψήσιμο χωρίς τον
+ * ιδιοκτήτη, στην επόμενη επαναπροβολή.
+ */
+export interface TerrainShelfEncoding {
+  readonly kind: 'terrain';
+  readonly snapshotVersion: number;
+  readonly sourceVersion: number;
+}
+
+/**
  * 🏆 **ΤΙ ΕΙΔΟΥΣ BYTES ΔΗΜΟΣΙΕΥΟΝΤΑΙ** — ο άξονας που έλειπε *(ADR-845 §3, Φ4.0)*.
  *
  * 🔴 **Ο {@link PUBLIC_SHELF_KINDS} γενικεύει ΑΛΛΟΝ άξονα**, και η διάκριση είναι όλο το
@@ -169,7 +182,7 @@ export interface VideoShelfEncoding {
  * 🔑 **Ακολουθεί τον γείτονά του**: το {@link ShelfFraming} από κάτω είναι ήδη διακριτή
  * ένωση. Το σχήμα **δεν** εισάγεται εδώ — υιοθετείται.
  */
-export type ShelfEncoding = RasterShelfEncoding | ModelShelfEncoding | VideoShelfEncoding;
+export type ShelfEncoding = RasterShelfEncoding | ModelShelfEncoding | VideoShelfEncoding | TerrainShelfEncoding;
 
 /**
  * 🏆 **ΠΩΣ ΠΛΑΙΣΙΩΝΕΤΑΙ ΤΟ ΠΕΡΙΕΧΟΜΕΝΟ ΜΕΣΑ ΣΤΑ BYTES** (ADR-841 §7 Α21.10).
@@ -258,6 +271,7 @@ export const FRAMING_INK_TIGHT: ShelfFraming = { mode: 'ink-tight', threshold: 2
 export function shelfRecipe(encoding: RasterShelfEncoding, framing: ShelfFraming): string;
 export function shelfRecipe(encoding: ModelShelfEncoding): string;
 export function shelfRecipe(encoding: VideoShelfEncoding): string;
+export function shelfRecipe(encoding: TerrainShelfEncoding): string;
 export function shelfRecipe(encoding: ShelfEncoding, framing?: ShelfFraming): string {
   // 🔴 **ΤΟ `webp:` ΠΑΥΕΙ ΝΑ ΓΡΑΦΕΤΑΙ ΑΝΕΥ ΟΡΩΝ** *(ADR-845 §3, άγκυρα Α-1)*. Ως τη Φ4.0
   //    αυτή η γραμμή ήταν το **πιο βαθύ** σημείο όπου το ράφι δήλωνε ότι κάθε πράγμα
@@ -270,6 +284,8 @@ export function shelfRecipe(encoding: ShelfEncoding, framing?: ShelfFraming): st
   if (encoding.kind === 'model') return modelRecipe(encoding);
   // ADR-907 §10.3 — καταφατικά, όπως το μοντέλο: ένα «ό,τι δεν είναι μοντέλο είναι εικόνα» θα έγραφε `webp:` σε MP4.
   if (encoding.kind === 'video') return `mp4:${encoding.layout}`;
+  // ADR-920 Β3β — καταφατικά, για τον ίδιο λόγο.
+  if (encoding.kind === 'terrain') return `json:terrain-s${encoding.snapshotVersion}-w${encoding.sourceVersion}`;
 
   // ⚠️ **Ο ΤΥΠΟΣ ΤΟ ΕΓΓΥΑΤΑΙ, Ο ΕΛΕΓΧΟΣ ΤΟ ΕΚΤΕΛΕΙ.** Οι υπερφορτώσεις κάνουν το
   //    *«raster χωρίς πλαισίωμα»* αδύνατο σε χρόνο μεταγλώττισης — αλλά ο **N.17**

@@ -77,6 +77,12 @@ export interface ShelfWrite {
   readonly bytes: Buffer;
   readonly contentType: string;
   readonly metadata: Readonly<Record<string, string>>;
+  /**
+   * ADR-920 Β3β — `'gzip'` ⇒ τα `bytes` είναι **ήδη** συμπιεσμένα και το GCS τα σερβίρει με decompressive transcoding
+   * (ο περιηγητής παίρνει gzip, ο πελάτης χωρίς `Accept-Encoding` το αποσυμπιεσμένο). Το κλειδί μένει το sha256 των
+   * **ασυμπίεστων** bytes — η διεύθυνση είναι του περιεχομένου, όχι της μεταφοράς.
+   */
+  readonly contentEncoding?: 'gzip';
 }
 
 /**
@@ -215,7 +221,11 @@ export async function uploadMissing(
 function saveOne(bucket: Bucket, write: ShelfWrite): Promise<void> {
   return bucket.file(write.key).save(write.bytes, {
     contentType: write.contentType,
-    metadata: { cacheControl: PUBLIC_SHELF_CACHE_CONTROL, metadata: { ...write.metadata } },
+    metadata: {
+      cacheControl: PUBLIC_SHELF_CACHE_CONTROL,
+      ...(write.contentEncoding === undefined ? {} : { contentEncoding: write.contentEncoding }),
+      metadata: { ...write.metadata },
+    },
   });
 }
 

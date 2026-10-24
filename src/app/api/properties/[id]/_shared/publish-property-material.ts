@@ -1,23 +1,24 @@
 import 'server-only';
 
 /**
- * @fileoverview 🏆 **Ο ΚΟΙΝΟΣ ΚΟΡΜΟΣ ΤΗΣ ΔΗΜΟΣΙΕΥΣΗΣ ΥΛΙΚΟΥ ΑΠΟ ΤΟ ΣΧΕΔΙΟ** (ADR-909 Β1 · ADR-845 §7.17).
- * @related ../model/route · ../floorplan/route (οι δύο πόρτες) · ./material-source-lookup · ./material-supersession
+ * @fileoverview 🏆 **ΤΟ ΕΤΑΙΡΙΚΟ ΥΠΟΚΕΙΜΕΝΟ ΤΗΣ ΔΗΜΟΣΙΕΥΣΗΣ ΥΛΙΚΟΥ** (ADR-909 Β1 · ADR-845 §7.17 · ADR-920 Β4.3).
+ * @related ../model/route · ../floorplan/route · ../terrain/route (οι πόρτες) ·
+ *   server/listing-material/publish-listing-material (ο ΕΝΑΣ κινητήρας)
  * @module app/api/properties/[id]/_shared/publish-property-material
  *
  * ```
- * κηδεμονία (ο φρουρός ΤΗΣ ΠΟΡΤΑΣ) → δικαίωμα δημοσίευσης → ανάγνωση αιτήματος → revisions σχεδίων → εγγραφή (PENDING)
- *   → προκάτοχοι → [φρουρός της πόρτας] → bytes → READY → διαδοχή → [δήλωση της πόρτας] → ΕΠΑΝΑΠΡΟΒΟΛΗ
+ * κηδεμονία (ο φρουρός ΤΗΣ ΠΟΡΤΑΣ) → δικαίωμα δημοσίευσης → [κινητήρας: ανάγνωση → … → διαδοχή → δήλωση] → ΕΠΑΝΑΠΡΟΒΟΛΗ
  * ```
  *
- * 🔴 **ΓΙΑΤΙ ΕΝΑΣ ΚΟΡΜΟΣ ΚΑΙ ΟΧΙ ΔΥΟ ROUTES ΠΟΥ ΜΟΙΑΖΟΥΝ.** Κάθε βήμα παραπάνω είναι απόφαση που
- * πληρώθηκε με περιστατικό στην πόρτα του μοντέλου: το *«ρωτάμε προκατόχους ΠΡΙΝ γράψουμε»* (Ο-27), το
- * *«το δικαίωμα ΠΡΙΝ από κάθε εγγραφή»* (Α3β), το *«η επαναπροβολή ΤΕΛΕΥΤΑΙΑ»* (Ο-35). Ένα αντίγραφο
- * της route για την κάτοψη θα τα κληρονομούσε **σήμερα** και θα τα έχανε στην πρώτη διόρθωση της μίας.
+ * 🔑 **Η ΣΕΙΡΑ ΖΕΙ ΣΤΟΝ ΚΙΝΗΤΗΡΑ, ΟΧΙ ΕΔΩ** *(ADR-920 Β4.3)*: όταν η αγγελία του ιδιοκτήτη χρειάστηκε την ίδια
+ * δημοσίευση πάνω στα αρχεία του **φακέλου** της, ο κορμός έγινε κινητήρας με **θύρα υποκειμένου**. Εδώ μένει
+ * ό,τι είναι **του γραφείου**: ο φρουρός κηδεμονίας του μισθωτή, το δικαίωμα `mayChangePublication`, η γέννηση
+ * με `companyId`, τα σχέδια της εταιρείας και η επαναπροβολή της εταιρικής αγγελίας. Η υπογραφή
+ * `publishPropertyMaterial(request, ctx, door)` **δεν άλλαξε** ⇒ καμία πόρτα δεν άγγιξε τη ροή της.
  *
  * 🔑 **Η επαναπροβολή είναι ΜΕΣΑ**, όπως στο `runFileBatch`: πόρτα που περνά από εδώ **δεν μπορεί** να
- * την ξεχάσει. Γι' αυτό ο κορμός είναι δηλωμένος βοηθός επαναπροβολής στο CHECK 3.76
- * (`REFRESH_HELPERS`) — και μια πόρτα **δεν** την καλεί δεύτερη φορά.
+ * την ξεχάσει. Γι' αυτό είναι δηλωμένος βοηθός επαναπροβολής στο CHECK 3.76 (`REFRESH_HELPERS`) — και μια
+ * πόρτα **δεν** την καλεί δεύτερη φορά.
  *
  * 🔒 **Η ΚΛΗΣΗ ΤΟΥ ΦΡΟΥΡΟΥ ΚΗΔΕΜΟΝΙΑΣ ΓΡΑΦΕΤΑΙ ΣΤΗΝ ΠΟΡΤΑ, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ** *(CHECK 3.100, ADR-281)*: η πύλη
  * διαβάζει το κυριολεκτικό `intent: 'write'` **στο `route.ts`**, όχι σε βοηθό. Γι' αυτό κάθε πόρτα δίνει τον
@@ -34,28 +35,18 @@ import type { AuthContext } from '@/lib/auth';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { propertyIdOfRequest } from '@/app/api/properties/_shared/property-id-of-request';
 import type { TenantProperty } from '@/lib/auth/tenant-isolation';
-import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
-import { FILE_STATUS, type FileCategory } from '@/config/domain-constants';
-import {
-  buildFinalizeFileRecordUpdate,
-  type BuildPendingFileRecordResult,
-  type FileRecordBase,
-} from '@/services/file-record';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import type { ModelSourceRevision } from '@/lib/listings/model-source-revisions';
-import { uploadPublicFile } from '@/services/storage-admin/public-upload.service';
 import { mayChangePublication } from '@/services/file-record/file-classification.service';
+import { containerActorOf } from '@/services/iso19650/container-transitions';
+import { refreshListingAfterMediaChange } from '@/services/listings/listing-media-refresh';
 import {
-  refreshListingAfterMediaChange,
-  type ListingMediaRefreshOutcome,
-} from '@/services/listings/listing-media-refresh';
-import { createModuleLogger } from '@/lib/telemetry/Logger';
-import { getErrorMessage } from '@/lib/error-utils';
-
-import { findSupersededMaterial, readSourceRevisions } from './material-source-lookup';
-import { archiveSuperseded } from './material-supersession';
-
-const logger = createModuleLogger('PropertyMaterialPublication');
+  publishListingMaterial,
+  type ListingMaterialDoor,
+  type ListingMaterialPublication,
+  type ListingMaterialSubject,
+} from '@/server/listing-material/publish-listing-material';
+import { findSupersededMaterial, readSourceRevisions } from '@/server/listing-material/material-source-lookup';
 
 /** Ό,τι χρειάζεται ο φρουρός κηδεμονίας — η πόρτα προσθέτει **μόνο** την πρόθεση. */
 interface PropertyCustodyQuery {
@@ -74,7 +65,7 @@ export interface MaterialDoorEnv {
 }
 
 /** Ό,τι δίνει ο κορμός στον κατασκευαστή της εγγραφής — και ούτε πεδίο παραπάνω. */
-interface MaterialBirth {
+export interface MaterialBirth {
   readonly companyId: string;
   readonly propertyId: string;
   readonly createdBy: string;
@@ -82,60 +73,25 @@ interface MaterialBirth {
   readonly sourceRevisions: readonly ModelSourceRevision[];
 }
 
-/** Η στιγμή ανάμεσα στην κρίση και στην πρώτη εγγραφή — η τελευταία ευκαιρία για άρνηση χωρίς ίχνος. */
-interface MaterialVerdict {
-  readonly fileId: string;
-  readonly supersedes: readonly string[];
-}
-
 /**
- * **Ό,τι διαφέρει από πόρτα σε πόρτα** — και τίποτα από ό,τι είναι κοινό.
+ * **Η εταιρική πόρτα** = η πόρτα του κινητήρα + ο φρουρός κηδεμονίας του μισθωτή + ο κωδικός άρνησης δικαιώματος.
  *
  * ⚠️ Κάθε άρνηση της πόρτας είναι `ApiError` με **δικό της** κωδικό: ο άνθρωπος στην άλλη άκρη πρέπει
  * να μάθει *τι* να διορθώσει (ADR-844 §1).
  */
-export interface MaterialPublicationDoor<TParsed, TDeclared = undefined> {
+export interface MaterialPublicationDoor<TParsed, TDeclared = undefined>
+  extends ListingMaterialDoor<TParsed, TDeclared, MaterialDoorEnv, MaterialBirth> {
   /**
    * 🔒 **Ο φρουρός κηδεμονίας, με την πρόθεση γραμμένη από την πόρτα**: `requirePropertyInTenantScope({ …query,
    * intent: 'write' })`. Ξένο ή ανύπαρκτο ακίνητο ⇒ 404· αποσυρμένο ⇒ 409 — πριν από οτιδήποτε άλλο.
    */
   readonly judgeProperty: (query: PropertyCustodyQuery) => Promise<TenantProperty>;
-  /** Ο κάδος του υλικού — στενεύει το ερώτημα των προκατόχων. */
-  readonly category: FileCategory;
   readonly codes: { readonly notCapable: string; readonly uploadFailed: string };
-  /** Το αίτημα → ό,τι έστειλε ο άνθρωπος, **κριμένο**. Πετά `ApiError` για κάθε άρνηση. */
-  readonly read: (formData: FormData, env: MaterialDoorEnv) => Promise<TParsed>;
-  readonly fileOf: (parsed: TParsed) => File;
-  /** Ποια αρχεία σκηνής παρήγαγαν το υλικό — ο διακομιστής διαβάζει το `revision` τους. */
-  readonly sceneFileIdsOf: (parsed: TParsed) => readonly string[];
-  /** **Ο ΕΝΑΣ κατασκευαστής της πόρτας.** Πετά `ApiError` αν η εγγραφή δεν επιτρέπεται να γεννηθεί. */
-  readonly recordOf: (parsed: TParsed, birth: MaterialBirth) => BuildPendingFileRecordResult;
-  /** Ό,τι ταξιδεύει **μέσα στο ίδιο `save()`** με τα bytes. */
-  readonly customMetadataOf?: (parsed: TParsed) => Record<string, string>;
-  /** Φρουρός **πριν** από κάθε εγγραφή, όταν οι προκάτοχοι είναι γνωστοί. */
-  readonly beforeWrite?: (parsed: TParsed, verdict: MaterialVerdict, env: MaterialDoorEnv) => void;
-  /**
-   * Η δήλωση της πόρτας, **μετά** τη διαδοχή και **πριν** την επαναπροβολή — ώστε η αγγελία να
-   * προβληθεί με τη δήλωση ήδη γραμμένη. ⚠️ Δεν επιτρέπεται να ρίξει τη δημοσίευση: επιστρέφει.
-   */
-  readonly afterSuccession?: (parsed: TParsed, verdict: MaterialVerdict, env: MaterialDoorEnv) => Promise<TDeclared>;
 }
 
-interface MaterialPublication<TParsed, TDeclared> {
-  readonly propertyId: string;
-  readonly fileId: string;
-  readonly storagePath: string;
-  /** Ποιους διαδέχεται — ταυτοποιητικά· κενό = πρώτη δημοσίευση αυτής της ταυτότητας. */
-  readonly supersedes: readonly string[];
-  /** Ποιοι από αυτούς αρχειοθετήθηκαν **πράγματι**. */
-  readonly archived: readonly string[];
-  /** Τι έγινε στην αγγελία — το υλικό ανέβηκε σε **κάθε** τιμή. */
-  readonly listing: ListingMediaRefreshOutcome;
-  readonly parsed: TParsed;
-  readonly sourceRevisions: readonly ModelSourceRevision[];
-  readonly bytes: number;
-  readonly declared: TDeclared | undefined;
-}
+/** Η δημοσίευση όπως τη βλέπει η εταιρική πόρτα — το ακίνητο λέγεται `propertyId`. */
+type MaterialPublication<TParsed, TDeclared> =
+  Omit<ListingMaterialPublication<TParsed, TDeclared>, 'listingId'> & { readonly propertyId: string };
 
 /**
  * **Κηδεμονία και δικαίωμα — πριν διαβαστεί το σώμα.**
@@ -158,59 +114,27 @@ async function enterDoor(
   return { adminDb: getAdminFirestore(), ctx, propertyId, property: { ...property } };
 }
 
-/**
- * **Έγγραφο σε αναμονή → bytes (+ ό,τι ταξιδεύει μαζί τους) → έτοιμο.**
- *
- * ⚠️ **Ο κύκλος ζωής είναι ο ΥΠΑΡΧΩΝ**: ο αναγνώστης της δημοσίευσης φιλτράρει `status === READY`,
- * άρα ένα ημιτελές ανέβασμα είναι **αόρατο** αντί για επικίνδυνο.
- * ⚠️ **Η αποτυχία σημαδεύεται, δεν σιωπά**: ένα `FAILED` έγγραφο λέει *«κάτι ανέβηκε και δεν
- * ολοκληρώθηκε»*, ενώ η διαγραφή του θα άφηνε **μόνο** ορφανά bytes και καμία εξήγηση.
- */
-async function writeMaterial(params: {
-  fileId: string;
-  storagePath: string;
-  recordBase: FileRecordBase;
-  file: File;
-  customMetadata: Record<string, string> | undefined;
-  createdBy: string;
-  uploadFailed: string;
-}): Promise<number> {
-  const filesRef = getAdminFirestore().collection(COLLECTIONS.FILES).doc(params.fileId);
-  await filesRef.set({ ...params.recordBase, createdAt: FieldValue.serverTimestamp() });
-
-  try {
-    const buffer = Buffer.from(await params.file.arrayBuffer());
-    const { url: downloadUrl } = await uploadPublicFile({
-      storagePath: params.storagePath,
-      buffer,
-      contentType: params.file.type,
-      createdBy: params.createdBy,
-      // 🏆 **«ΜΙΑ ΕΓΓΡΑΦΗ»** — ό,τι δηλώνει η πόρτα μπαίνει στο ίδιο `save()` με τα bytes.
-      ...(params.customMetadata === undefined ? {} : { customMetadata: params.customMetadata }),
-    });
-
-    await filesRef.update({
-      ...buildFinalizeFileRecordUpdate({ sizeBytes: buffer.length, downloadUrl, nextStatus: FILE_STATUS.READY }),
-      updatedAt: FieldValue.serverTimestamp(),
-    });
-    return buffer.length;
-  } catch (error) {
-    try {
-      await filesRef.update({ status: FILE_STATUS.FAILED, updatedAt: FieldValue.serverTimestamp() });
-    } catch { /* το αρχικό σφάλμα είναι το χρήσιμο — μην το σκεπάσεις */ }
-    logger.error('Το ανέβασμα υλικού απέτυχε', { fileId: params.fileId, error: getErrorMessage(error) });
-    throw new ApiError(500, params.uploadFailed);
-  }
+/** **Το εταιρικό ακίνητο ως υποκείμενο** — γέννηση με `companyId`, σχέδια και προκάτοχοι στο `files` του μισθωτή. */
+function companyPropertySubject(env: MaterialDoorEnv): ListingMaterialSubject<MaterialDoorEnv, MaterialBirth> {
+  const { adminDb, ctx, propertyId } = env;
+  return {
+    adminDb,
+    listingId: propertyId,
+    actor: containerActorOf(ctx),
+    env,
+    birthOf: (sourceRevisions) => ({ companyId: ctx.companyId, propertyId, createdBy: ctx.uid, sourceRevisions }),
+    readSourceRevisions: (sceneFileIds) => readSourceRevisions(adminDb, ctx.companyId, sceneFileIds),
+    findPredecessors: (category, newcomer) =>
+      findSupersededMaterial(adminDb, ctx.companyId, propertyId, category, newcomer),
+    refresh: () => refreshListingAfterMediaChange(adminDb, propertyId, ctx.companyId),
+  };
 }
 
 /**
- * 🏆 **Η ΔΗΜΟΣΙΕΥΣΗ** — ένα σώμα για κάθε πόρτα που γεννά υλικό αγγελίας από το σχέδιο.
+ * 🏆 **Η ΔΗΜΟΣΙΕΥΣΗ ΣΕ ΕΤΑΙΡΙΚΟ ΑΚΙΝΗΤΟ** — κηδεμονία, δικαίωμα, και ο **ΕΝΑΣ** κινητήρας.
  *
- * 🔑 **Οι προκάτοχοι ρωτιούνται ΠΡΙΝ γραφτεί το νέο έγγραφο** *(Ο-27)*: μετά, ο νεοφερμένος θα ήταν
- * μέσα στο αποτέλεσμα και θα έπρεπε να **εξαιρεθεί** — μια γραμμή που, αν ξεχαστεί, κάνει το υλικό να
- * διαδεχθεί τον εαυτό του την ίδια στιγμή που δημοσιεύεται.
- * 🔴 **Η επαναπροβολή είναι ΤΕΛΕΥΤΑΙΑ** *(Ο-35)*, ώστε να δει τον κόσμο όπως έμεινε — νέο `ready`,
- * προκάτοχοι στο αρχείο, δήλωση γραμμένη. Awaited· δεν πετά ποτέ.
+ * 🔑 Η πόρτα κρίνεται **πριν** διαβαστεί το σώμα (`request.formData()`): ξένο ακίνητο δεν πληρώνει ποτέ την
+ * ανάγνωση megabytes.
  */
 export async function publishPropertyMaterial<TParsed, TDeclared = undefined>(
   request: NextRequest,
@@ -218,25 +142,8 @@ export async function publishPropertyMaterial<TParsed, TDeclared = undefined>(
   door: MaterialPublicationDoor<TParsed, TDeclared>,
 ): Promise<MaterialPublication<TParsed, TDeclared>> {
   const env = await enterDoor(request, ctx, door);
-  const { adminDb, propertyId } = env;
-
-  const parsed = await door.read(await request.formData(), env);
-  const sourceRevisions = await readSourceRevisions(adminDb, ctx.companyId, door.sceneFileIdsOf(parsed));
-  const { fileId, storagePath, recordBase } = door.recordOf(parsed, {
-    companyId: ctx.companyId, propertyId, createdBy: ctx.uid, sourceRevisions,
-  });
-
-  const supersedes = await findSupersededMaterial(adminDb, ctx.companyId, propertyId, door.category, recordBase);
-  const verdict: MaterialVerdict = { fileId, supersedes };
-  door.beforeWrite?.(parsed, verdict, env);
-
-  const bytes = await writeMaterial({
-    fileId, storagePath, recordBase, file: door.fileOf(parsed),
-    customMetadata: door.customMetadataOf?.(parsed), createdBy: ctx.uid, uploadFailed: door.codes.uploadFailed,
-  });
-  const archived = await archiveSuperseded(ctx, supersedes, fileId);
-  const declared = await door.afterSuccession?.(parsed, verdict, env);
-  const listing = await refreshListingAfterMediaChange(adminDb, propertyId, ctx.companyId);
-
-  return { propertyId, fileId, storagePath, supersedes, archived, listing, parsed, sourceRevisions, bytes, declared };
+  const { listingId, ...published } = await publishListingMaterial(
+    await request.formData(), companyPropertySubject(env), door,
+  );
+  return { ...published, propertyId: listingId };
 }

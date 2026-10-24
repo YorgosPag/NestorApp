@@ -17,6 +17,24 @@ import type { GeoPoint } from '@/types/geo/coordinates';
 import { gridToGeographic } from './egsa87-projection';
 import { ggrs87ToWgs84 } from './ggrs87-datum';
 
+/**
+ * Η **περιοχή χρήσης** του EPSG:2100 («Greece – onshore»), στις προβαλλόμενες συντεταγμένες του, σε μέτρα — όπως τη
+ * δημοσιεύει το μητρώο EPSG (epsg.io/2100: 94874.71 3859448.36 / 892934.13 4631226.44). Γεγονός του μητρώου, όχι
+ * εκτίμηση: δεν εφευρίσκεται δεύτερο «κουτί της Ελλάδας» (ADR-920 §13.3).
+ */
+export const GREEK_GRID_AREA_OF_USE_M = {
+  minEasting: 94_874.71,
+  minNorthing: 3_859_448.36,
+  maxEasting: 892_934.13,
+  maxNorthing: 4_631_226.44,
+} as const;
+
+/** Πέφτει το (E, N), σε μέτρα, μέσα στην περιοχή χρήσης του ΕΓΣΑ'87; */
+export function isWithinGreekGridAreaOfUse(easting: number, northing: number): boolean {
+  const a = GREEK_GRID_AREA_OF_USE_M;
+  return easting >= a.minEasting && easting <= a.maxEasting && northing >= a.minNorthing && northing <= a.maxNorthing;
+}
+
 /** Σημείο του εθνικού καννάβου ΕΓΣΑ'87 (EPSG:2100), **σε μέτρα**, → WGS84 (μοίρες). */
 export function greekGridToGeoPoint(easting: number, northing: number): GeoPoint {
   const local = gridToGeographic(easting, northing);

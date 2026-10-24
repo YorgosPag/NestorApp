@@ -3,11 +3,13 @@ import 'server-only';
 /**
  * @fileoverview **ΣΕ ΠΟΙΑ ΕΚΔΟΣΗ ΗΤΑΝ ΤΑ ΣΧΕΔΙΑ ΤΗ ΣΤΙΓΜΗ ΤΗΣ ΔΗΜΟΣΙΕΥΣΗΣ;** (ADR-845 Ο-25)
  * @related lib/listings/model-source-revisions · api/cad-files (ο γραφέας του `revision`)
- * @module app/api/properties/[id]/_shared/material-source-lookup
+ * @module server/listing-material/material-source-lookup
  *
  * 🔑 **ΚΟΙΝΟ ΓΙΑ ΚΑΘΕ ΥΛΙΚΟ ΠΟΥ ΠΑΡΑΓΕΤΑΙ ΑΠΟ ΣΧΕΔΙΟ** *(ADR-909 Β1)*: μοντέλο και παραγόμενη κάτοψη
  * ρωτούν τις **ίδιες** δύο ερωτήσεις — *«σε ποιο revision;»* και *«ποιους διαδέχομαι;»*. Γεννήθηκε ως
- * `model/model-source-lookup` και μετακόμισε δίπλα στον κοινό κορμό· το σώμα έμεινε αυτούσιο.
+ * `model/model-source-lookup`, μετακόμισε δίπλα στον κοινό κορμό και, όταν ο κορμός έγινε κινητήρας
+ * δύο κηδεμονιών (ADR-920 Β4.3), στο `server/listing-material/`· το σώμα έμεινε αυτούσιο. Ρωτά τα **εταιρικά**
+ * αρχεία: το υποκείμενο του ιδιοκτήτη δεν έχει σχέδια και διαβάζει τους προκατόχους του από τον φάκελο.
  *
  * ────────────────────────────────────────────────────────────────────────────
  * 🔴 ΓΙΑΤΙ ΧΩΡΙΣΤΟ ΑΡΧΕΙΟ — **ΤΟ ΟΡΙΟ ΤΗΣ ΠΟΡΤΑΣ ΕΙΝΑΙ 300 ΓΡΑΜΜΕΣ**
@@ -31,10 +33,10 @@ import 'server-only';
  * σκηνή. Είναι **ανάγνωση**, και η μόνη της απόφαση είναι *«τι κάνω όταν λείπει»*.
  */
 
-import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
+import type { Firestore as AdminFirestore, Query } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { ENTITY_TYPES, type FileCategory } from '@/config/domain-constants';
+import { ENTITY_TYPES, FILE_STATUS, type FileCategory } from '@/config/domain-constants';
 import {
   supersededByPublication,
   type AgencyMediaCandidate,
@@ -154,29 +156,62 @@ export async function readSourceRevisions(
  * **ήδη** σωστό από την επιμέλεια, ό,τι κι αν πει αυτό το ερώτημα. Η αποτυχία **ονομάζεται**
  * στο ημερολόγιο, ώστε η διαφορά «κανένας προκάτοχος» ⇄ «δεν κοιτάξαμε» να μένει ορατή.
  */
-export async function findSupersededMaterial(
+export function findSupersededMaterial(
   adminDb: AdminFirestore,
   companyId: string,
   propertyId: string,
   category: FileCategory,
   newcomer: FileRecordBase,
 ): Promise<readonly string[]> {
-  try {
-    const snapshot = await adminDb
-      .collection(COLLECTIONS.FILES)
-      .where('companyId', '==', companyId)
-      .where('entityType', '==', ENTITY_TYPES.PROPERTY)
-      .where('entityId', '==', propertyId)
-      .where('category', '==', category)
-      .get();
+  const query = adminDb
+    .collection(COLLECTIONS.FILES)
+    .where('companyId', '==', companyId)
+    .where('entityType', '==', ENTITY_TYPES.PROPERTY)
+    .where('entityId', '==', propertyId)
+    .where('category', '==', category);
+  return supersededAmong(query, newcomer, () => true, { propertyId, companyId });
+}
 
+/**
+ * **Το ίδιο ερώτημα, στον ΦΑΚΕΛΟ του ιδιοκτήτη** (`files_personal`, ADR-920 Β4.3).
+ *
+ * 🔑 **ΚΑΝΕΝΑ ΝΕΟ ΕΥΡΕΤΗΡΙΟ**: τα σκέλη είναι **ακριβώς** εκείνα του `readDossierMedia` — του αναγνώστη που θα
+ * δημοσιεύσει την πηγή. Η κατηγορία στενεύει **στη μνήμη**: ένας φάκελος έχει λίγες δεκάδες έτοιμα αρχεία, και
+ * ένα πέμπτο σκέλος θα ζητούσε ευρετήριο για να γλιτώσει ελάχιστες γραμμές.
+ * ⚠️ Μόνο `ready`: ό,τι δεν έγινε ποτέ έτοιμο δεν δημοσιεύτηκε ποτέ, άρα δεν έχει θέση να παραδώσει.
+ */
+export function findSupersededDossierMaterial(
+  adminDb: AdminFirestore,
+  userId: string,
+  dossierId: string,
+  category: FileCategory,
+  newcomer: FileRecordBase,
+): Promise<readonly string[]> {
+  const query = adminDb
+    .collection(COLLECTIONS.FILES_PERSONAL)
+    .where('userId', '==', userId)
+    .where('entityType', '==', ENTITY_TYPES.PROPERTY_DOSSIER)
+    .where('entityId', '==', dossierId)
+    .where('status', '==', FILE_STATUS.READY);
+  return supersededAmong(query, newcomer, (file) => file.category === category, { dossierId });
+}
+
+/** Η **μία** κρίση πάνω σε ό,τι επέστρεψε το ερώτημα κάθε δοχείου — δεν πετά, ονομάζει την αποτυχία. */
+async function supersededAmong(
+  query: Query,
+  newcomer: FileRecordBase,
+  keep: (file: AgencyMediaCandidate) => boolean,
+  facts: Readonly<Record<string, string>>,
+): Promise<readonly string[]> {
+  try {
+    const snapshot = await query.get();
     return supersededByPublication(
-      snapshot.docs.map((doc) => ({ ...(doc.data() as AgencyMediaCandidate), id: doc.id })),
+      snapshot.docs.map((doc) => ({ ...(doc.data() as AgencyMediaCandidate), id: doc.id })).filter(keep),
       newcomer as AgencyMediaCandidate,
     );
   } catch (error) {
     logger.warn('Οι προκάτοχοι του υλικού δεν διαβάστηκαν — η αγγελία μένει σωστή, η ιστορία όχι', {
-      propertyId, companyId, error: getErrorMessage(error),
+      ...facts, error: getErrorMessage(error),
     });
     return [];
   }

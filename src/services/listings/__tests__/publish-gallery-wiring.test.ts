@@ -47,6 +47,10 @@ jest.mock('../public-shelf-video.service', () => ({
     outcome: 'reconciled', published: [], removed: 0, rejected: 0,
   }),
 }));
+// ADR-920 Β3β — το κεφάλι του εδάφους: αλλιώς το αληθινό θα ζητούσε κάδο.
+jest.mock('../public-shelf-terrain.service', () => ({
+  reconcilePublicTerrainShelf: async () => ({ outcome: 'reconciled', published: [], removed: 0, rejected: 0 }),
+}));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { writeListingProjection, withdrawPublicListing } = require('../publish-public-listing') as

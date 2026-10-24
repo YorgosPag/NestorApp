@@ -115,6 +115,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     floorPlates: [],
     // ADR-777 §8.92 — καμία περιήγηση· ο προβολέας μέσων ρωτά την αγγελία, όχι το δίκτυο.
     tour: null,
+    terrain: null,
     type: 'apartment',
     areaSqm: 95,
     offerKinds: ['sell'],

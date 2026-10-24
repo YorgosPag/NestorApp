@@ -167,7 +167,7 @@ describe('Κ1 — κάθε δημοσιευμένο πεδίο έχει απόφ
   });
 
   it('τα κουτιά μέσων έχουν απόφαση: φεύγει αρχείο ⇒ `media` · η περιήγηση ΟΧΙ', () => {
-    for (const box of ['coverImage', 'gallery', 'floorplans', 'models', 'videos', 'floorPlates'] as const) {
+    for (const box of ['coverImage', 'gallery', 'floorplans', 'models', 'videos', 'floorPlates', 'terrain'] as const) {
       expect(LISTING_DISCLOSURE[box]).toBe('media');
     }
     // Αντίγραφο μιας απάντησης, όχι αρχείο — δες τον ρόλο στο `listing-disclosure-treatment`.

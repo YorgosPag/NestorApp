@@ -32,6 +32,7 @@ export function landingListing(
     models: [],
     videos: [],
     floorPlates: [],
+    terrain: null,
     coverImage: null,
     authorship: 'owner-declared',
     commercial: { askingPrice: 100000, finalPrice: null, rentPrice: null, nightlyRate: null },

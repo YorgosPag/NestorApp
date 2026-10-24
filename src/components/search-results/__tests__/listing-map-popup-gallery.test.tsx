@@ -88,6 +88,7 @@ const LISTING: PublicListing = {
   // ADR-777 §8.88 — η φούσκα ρωτά πλέον `models`/`tour` για το σήμα χωρικών μέσων.
   models: [],
   tour: null,
+  terrain: null,
   type: 'apartment',
   areaSqm: 80,
   offerKinds: ['rent'],

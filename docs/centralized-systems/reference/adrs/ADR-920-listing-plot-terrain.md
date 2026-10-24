@@ -2,10 +2,10 @@
 
 | | |
 |---|---|
-| **Status** | 🟠 PROPOSED — 2026-10-23 · Β0 (αποφάσεις + πλάνο) ✅ · **Β1 (καθαρός πυρήνας στο `src/lib/terrain/`) ✅** · **Β2 (συμβόλαιο + builder στιγμιοτύπου) ✅** · **Β3α (πόρτα server) ✅** · Β3β (κρίκος 26 + δημόσιο ράφι) περιμένει το commit του ADR-919 · Β4–Β8 δεν ξεκίνησαν |
+| **Status** | 🟠 PROPOSED — 2026-10-23 · Β0 (αποφάσεις + πλάνο) ✅ · **Β1 (καθαρός πυρήνας στο `src/lib/terrain/`) ✅** · **Β2 (συμβόλαιο + builder στιγμιοτύπου) ✅** · **Β3α (πόρτα server) ✅** · **Β3β (κρίκος 26 + δημόσιο ράφι + CHECK 3.105 + i18n) ✅** · **Β4 σε εξέλιξη** (Β4.1α ✅ · Β4.1β ✅ · Β4.2 ✅ · Β4.3+5 ✅, §13) · Β5–Β8 δεν ξεκίνησαν |
 | **Date** | 2026-10-23 |
 | **Category** | Marketplace / Public listing / Topography / 3D |
-| **Canonical Location** | πυρήνας `src/lib/terrain/` · στιγμιότυπο `src/lib/terrain/publication/` · πόρτα `src/app/api/properties/[id]/terrain/route.ts` · *(σχεδιασμένο)* θεατής `src/components/listing-detail/terrain/` |
+| **Canonical Location** | πυρήνας `src/lib/terrain/` · στιγμιότυπο `src/lib/terrain/publication/` · κινητήρας δημοσίευσης `src/server/listing-material/` · πόρτες `src/app/api/properties/[id]/terrain/route.ts` + `src/app/api/owner-properties/[ownerPropertyId]/terrain/route.ts` · ράφι + binder `src/services/listings/*terrain*` · πύλη CHECK 3.105 · *(σχεδιασμένο)* θεατής `src/components/listing-detail/terrain/` |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
 | **Σχετικά** | **ADR-650** (τοπογραφικό, CDT/TIN, ισοϋψείς) · **ADR-718** (κοπή στο όριο, παγίδα γεωαναφοράς) · **ADR-720** (σημεία χωρίς Ζ) · **ADR-665** (τομή εδάφους) · **ADR-759** (`SurveyRecord`, όροι με πηγή) · **ADR-909** (δημοσίευση από το σχέδιο, ίδιο μοτίβο) · **ADR-845** (υλικό αγγελίας, `MATERIAL_DOORS`) · **ADR-839/841** (σχήμα δημόσιας αγγελίας) · **ADR-796** (δημόσια επιφάνεια `dxf-viewer`, CHECK 3.62) · **ADR-872** (ιδεμποτία) · **ADR-919** (διαθεσιμότητα, κρίκος σχήματος 25) |
 
@@ -140,8 +140,8 @@
 | **Β1** | Εξαγωγή καθαρού πυρήνα στο `src/lib/terrain/` + re-exports · jest του topography · CHECK 3.62 | ✅ 2026-10-23 (§9) |
 | **Β2** | Συμβόλαιο και builder του `ListingTerrainSnapshot` (καθαρό) · tests: ισοϋψείς, κλίσεις, όγκος, **απουσία απόλυτων συντεταγμένων** | ✅ 2026-10-23 (§10) |
 | **Β3α** | Πόρτα server: πηγή, δήλωση Δ2, ξαναχτίσιμο, ιδιωτική αποθήκευση, διαδοχή, ιστορικό (§11) | ✅ 2026-10-23 |
-| **Β3β** | `PublicListing.terrain` (κρίκος 26) · τρίτο κεφάλι του δημόσιου ραφιού · πύλη ενός γραφέα · i18n · **μετά το commit του ADR-919** (κοινά αρχεία) | ⏳ |
-| **Β4** | Εισαγωγή από τον ιδιοκτήτη στη φόρμα οικοπέδου (Δ2) | ⏳ |
+| **Β3β** | `PublicListing.terrain` (κρίκος 26) · τρίτο κεφάλι του δημόσιου ραφιού · πύλη ενός γραφέα (CHECK 3.105) · i18n | ✅ 2026-10-23 (§12) |
+| **Β4** | Εισαγωγή από τον ιδιοκτήτη στη φόρμα οικοπέδου (Δ2) — 11 υποβήματα (§13) | 🔄 Β4.1α ✅ · Β4.1β ✅ · Β4.2 ✅ |
 | **Β5** | Πόρτα δημοσίευσης από τον DXF Viewer | ⏳ |
 | **Β6** | Θεατής: 2D SVG → 3D lazy | ⏳ |
 | **Β7** | Ιδιωτικότητα θέσης στον χάρτη αγγελιών (Δ3) | ⏳ |
@@ -287,10 +287,308 @@ POST /api/properties/[id]/terrain   withHeavyRateLimit(withAuth(…, properties:
   - χωρίς ονομαστική άρνηση του builder.
 - Πύλες: **3.76** ✅ (μετά τη γραμμή `MATERIAL_DOORS`) · 3.78 ✅ (82/110, αμετάβλητο) · 3.90 ✅ · 3.92 ✅ ·
   3.100 ✅ (`intent: 'write'`) · 3.17 ✅ · 3.47 ✅ · 3.28 (diff) ✅ 0 κλώνοι.
-- ⚠️ Τα μηνύματα i18n των 13 κωδικών μπαίνουν στο Β3β/Β4, μαζί με το UI που τα δείχνει (θέλουν και το
-  παραγόμενο `src/types/i18n.ts`, που είναι staged αλλού). Η άγκυρα Σ3 των μηνυμάτων προστίθεται τότε.
+- ✅ Τα μηνύματα i18n των 13 κωδικών μπήκαν στο Β3β, με άγκυρα **Σ5** (§12). Το UI που τα δείχνει είναι Β4/Β5.
+
+## 12. Β3β — το έδαφος στη δημόσια αγγελία *(2026-10-23)*
+
+**Ροή**
+```
+πόρτα (Β3α) ─▶ ιδιωτική πηγή (DRAWINGS · application/json · public · publicationIdentity 'terrain/measured')
+επαναπροβολή ─▶ listing-media-sources: createTerrainResolver ─ currentTerrainSource (μόνο γη · νεότερο νικά)
+             ─▶ publish-public-listing-shelf: partition 'terrain' ─▶ reconcilePublicTerrainShelf (παράλληλο κεφάλι)
+                  readPrivateOrigin → bakeListingTerrain (ΞΑΝΑΧΤΙΖΕΙ από την κανονική πηγή) → gzip → ράφι
+             ─▶ withPublishedTerrain (ο ΕΝΑΣ binder) ─▶ PublicListing.terrain: SourcedAttribute<ListingTerrain> | null
+```
+
+**Αρχεία**
+
+| Αρχείο | Ρόλος |
+|---|---|
+| `src/lib/terrain/publication/listing-terrain-card.ts` | `ListingTerrainCard` (έκδοση στιγμιοτύπου, stats, ισοδιάσταση, όγκος `volume\|footprint\|omitted\|null`, survey). **Μία** παραγωγή (`listingTerrainCardOf`), **ένας** αναγνώστης (`readListingTerrainCard`, κρίνει το survey με το υπάρχον `readTerrainSurveyDeclaration`) |
+| `src/types/public-listing.ts` | `ListingTerrain extends ListingTerrainCard { url }` · `PublicListing.terrain` |
+| `public-listing-shape-judges.ts` · `public-listing-migrations-21-30.ts` · `public-listing-schema.ts` | `readStoredTerrain` (βαθύς, μόνο `measured`, ποτέ προεπιλογή) · **κρίκος 26** (`adds: ['terrain']`) · έκδοση σχήματος **26** |
+| `listing-disclosure.ts` · `public-listing-projection.ts` | `terrain: 'media'` · η καθαρή προβολή γράφει `null` |
+| `listing-material.ts` · `public-listing-gallery-projection.ts` | είδος υλικού `'terrain'` (**όχι** δηλώσιμο από ιδιοκτήτη) · ονομαστική άρνηση στη γκαλερί |
+| `src/services/listings/terrain.reader.ts` | `currentTerrainSource` (καθαρό) + `createTerrainResolver`: ερώτημα **μόνο ισοτήτων** (ίδιο με το `findSupersededMaterial`), φίλτρο ταυτότητας `TERRAIN_PUBLICATION_IDENTITY` · JSON · `public` · παραδοτέο |
+| `public-shelf-encoding.ts` · `storage-path-public-shelf.ts` · `public-shelf-kinds.ts` · `public-shelf-terrain-kind.ts` | `TerrainShelfEncoding` (συνταγή `json:terrain-s{v}-w{v}`) · επέκταση `json` · είδος `LISTING_TERRAIN_SHELF` |
+| `public-shelf-terrain-bake.ts` · `public-shelf-terrain.service.ts` · `public-shelf-bucket.ts` | ψήσιμο (καθαρό + `zlib`) · κεφάλι πάνω στα `readPrivateOrigin`/`reconcileOnePerSource` · `contentEncoding: 'gzip'` |
+| `public-listing-terrain-projection.ts` · `listing-shelf-projected.ts` · `publish-public-listing-shelf.ts` | ο binder (`LISTING_TERRAIN_SOURCE_REF = 'property-terrain:measured'`) · οι μεταφραστές `toProjected*` **εξήχθησαν αυτούσιοι** (N.7.1) + `toProjectedTerrain` · ενορχήστρωση, αντιστάθμιση, απόσυρση |
+| `scripts/check-listing-terrain-authority.js` · `.listing-terrain-authority.json` · `docs/gates/3.105.md` | **CHECK 3.105** (παρακάτω) |
+| `property-market.json` (el/en) | `terrainPublication.refusals.<CODE>` — 13 μηνύματα |
+
+**Αποφάσεις του Β3β**
+- **Το ράφι ξαναχτίζει, δεν αντιγράφει.** Ο ψήστης διαβάζει την **κανονική** πηγή που αποθήκευσε η πόρτα και τρέχει
+  ξανά τον builder του Β2. Δημόσιο γίνεται μόνο το παράγωγο (Δ2). Αλλαγή του `LISTING_TERRAIN_SNAPSHOT_VERSION`
+  αλλάζει τη συνταγή ⇒ νέο κλειδί ⇒ ξαναψήσιμο χωρίς τον ιδιοκτήτη.
+- **Κλειδί = sha256 των ΑΣΥΜΠΙΕΣΤΩΝ bytes, μεταφορά gzip.** Το κλειδί δεν εξαρτάται από το επίπεδο συμπίεσης· ο
+  browser αποσυμπιέζει διαφανώς (`Content-Encoding: gzip`).
+- **Η κάρτα κρατιέται στα metadata του αντικειμένου.** Στο cache hit ούτε κατεβαίνει ούτε ξαναψήνεται τίποτα· κάρτα
+  που δεν διαβάζεται ⇒ ξαναψήσιμο, ποτέ σιωπηλή προεπιλογή.
+- **Ένας γραφέας**: το `PublicListing.terrain` το γράφει **μόνο** το `withPublishedTerrain`, από την αναφορά του ραφιού.
+  Κενή αναφορά (απόσυρση · άρνηση ψήστη) ⇒ `null`, ποτέ το παλιό έδαφος.
+
+**Αποκλίσεις από το πλάνο (ο κώδικας κερδίζει)**
+- `terrain: 'media'` στη γνωστοποίηση, **όχι** στο `UNASKED_LISTING_ATTRIBUTES`: εκεί μπαίνουν μόνο πεδία `'attribute'`.
+- Αναγνώστης **ταυτότητας** (`publicationIdentity`) αντί για το `agencyMediaMaterial`: η πηγή είναι `DRAWINGS`, εκτός
+  `PUBLISHABLE_CATEGORIES`, άρα η διαδρομή των φωτογραφιών δεν θα την έβλεπε ποτέ — επίτηδες (§11).
+- Άγκυρα μηνυμάτων **Σ5**, όχι Σ3: το Σ3 είναι ήδη η αντιστοίχιση απορρίψεων του builder.
+- Το `publish-public-listing-shelf.ts` θα ξεπερνούσε τις 500 γραμμές ⇒ εξαγωγή των μεταφραστών στο
+  `listing-shelf-projected.ts` (αυτούσιοι, χωρίς αλλαγή σημασιολογίας).
+
+**CHECK 3.105 — ένας γραφέας του εδάφους της αγγελίας** (Α7)
+- **Κ1**: `terrain: { provenance … }` ή χρήση του `LISTING_TERRAIN_SOURCE_REF` μόνο στον binder· `terrain: readStoredTerrain(…)`
+  μόνο στον κρίκο 26. Το κριτήριο είναι το **σχήμα** (`SourcedAttribute`), όχι η λέξη: το συντακτικό «`terrain:` όχι
+  null» μετρήθηκε με **4** ψευδώς θετικά (σώμα απάντησης της πόρτας · `'media'` · destructuring · BIM), που έγιναν δίδυμα.
+- **Κ2**: `buildPublishedTerrainFileRecord` μόνο σε πόρτα με `refresh` στο `MATERIAL_DOORS` — **διαβάζεται** από εκεί,
+  χωρίς αντίγραφο. Η 3.76 βλέπει όποιον καλεί τον κορμό· δεν βλέπει όποιον χτίζει την εγγραφή και τη γράφει αλλιώς.
+- **Κ3**: `buildListingTerrainSnapshot` / `listingTerrainCardOf` έξω από `src/lib/terrain/` μόνο στην πόρτα (ξηρή
+  εκτέλεση) και στον ψήστη. **Κ4**: λόγος ≥ 40, νεκρές δηλώσεις, source-drift.
+- **Μηδέν διπλότυπο με τη 3.76**: τον **έναν καλούντα** του `withPublishedTerrain` τον φυλά η 3.76 (`GUARDED_SYMBOLS`
+  + άγκυρα «ADR-920 Β3β — ΤΟ ΕΔΑΦΟΣ…» στο `REQUIRED_ANCHORS`).
+- **Μηδέν δίδυμο με τη 3.104**: το CHECK 3.28 (jscpd --diff) βρήκε τον σκελετό των δύο πυλών διπλό. Εξήχθη στο
+  `scripts/lib/write-authority/gate-runner.js` (`defineRegistryGate`: σάρωση με προφίλτρο → κρίση μητρώου → κατάστιχο →
+  παράκαμψη), και στο `ast.js` μπήκαν `trailingName` · `calleeName` · `walk` · `callSiteOf`. Κάθε πύλη κρατά μόνο ό,τι τη
+  διαφοροποιεί. Μετά: **0 κλώνοι σε 21 αρχεία**, και οι δύο σουίτες πράσινες.
+
+**i18n (Β3β.4)**: namespace **`property-market`** — η πόρτα ανήκει στο ακίνητο και η φόρμα Β4 το φορτώνει ήδη. Ο
+viewer (Β5) θα το φορτώνει **μόνο όταν ανοίγει** ο διάλογος δημοσίευσης εδάφους (240 KB, έναντι 450 KB του
+`dxf-viewer-shell` που ήδη φορτώνει)· νέο namespace για 13 μηνύματα θα άγγιζε 5 κοινά αρχεία i18n. **Κανένας αριθμός
+στο κείμενο**: τα όρια μπαίνουν ως ICU `{maxMegabytes}` · `{maxPoints}` · `{maxTriangles}`, με τιμές από το
+`listing-terrain-config` (η κάτοψη γράφει «20 MB» στο κείμενο· εδώ δεν επαναλήφθηκε).
+
+**Επαλήθευση**
+- jest: 171 σουίτες / 3.058 tests (listings · terrain · upload · owner-property · mandate · properties)· τα 6 που έπεσαν
+  στο μεγάλο πέρασμα ήταν timeouts φόρτου και πέρασαν μόνα τους. Σουίτες πυλών 3.105 + 3.104 + 3.76: 45/45 · 3.66: 16/16.
+- **Μεταλλάξεις 18/18 κόκκινες**: κρίκος/σχήμα/ράφι/binder/απόσυρση **9/9** · πύλη 3.105 **4/4** (ξεδίπλωμα `as` ·
+  `exempt` ως πόρτα · δείκτης προέλευσης · σιωπηλός binder) · άγκυρα 3.76 **1/1** · Σ5 **4/4** (κωδικός χωρίς en ·
+  ορφανό el · «60.000» αντί για `{maxTriangles}` · ασυμφωνία placeholders).
+- Πύλες: 3.105 ✅ · 3.104 ✅ · 3.76 ✅ · 3.74 ✅ · 3.80 ✅ · 3.91 ✅ (κανένα σημείο του εδάφους· τα 12 Κ2 είναι παλιά, εντός
+  baseline) · 3.17 ✅ · 3.28 ✅ · 3.22 ✅ · 3.47 ✅ · 3.62 ✅ · 3.9 ✅ · 3.33 ✅ · 3.34 ✅ · 3.36 ✅ · 3.71 ✅ · 3.66 ✅ ·
+  3.49 ✅ · 3.53 ✅. Τελικό jest: 135 σουίτες / 2.600 tests (terrain · listings · upload · `api/properties/[id]` · πύλες).
+
+⚠️ **Γνωστός περιορισμός**: όταν αλλάξει η έκδοση του στιγμιοτύπου, το έδαφος ξαναψήνεται στην **επόμενη επαναπροβολή**
+της αγγελίας ή με `POST /api/admin/rebuild-public-listings`. Το νυχτερινό πέρασμα **δεν** το πιάνει, γιατί το
+αποτύπωμα των μέσων περιλαμβάνει τις πηγές, όχι τη συνταγή. Ίδιο ισχύει για το μοντέλο (ADR-845).
+⚠️ **Αμέτρητο ζωντανά**: χρειάζεται deploy + `rebuild-public-listings` για να γραφτεί ο κρίκος 26 στις υπάρχουσες αγγελίες.
+
+## 13. Β4 — εισαγωγή τοπογραφικού από τον ιδιοκτήτη *(σε εξέλιξη, 2026-10-23)*
+
+**Ευρήματα του audit που άλλαξαν το brief**
+- Οι αγγελίες ιδιοκτήτη ζουν στο `owner_properties` (`ownp_*`)· η πόρτα του Β3α κρίνει μόνο `properties` ⇒ θα
+  απαντούσε 404. **Απόφαση** (πρακτική των μεγάλων, Giorgio 2026-10-23): **δεύτερη πόρτα**
+  `POST /api/owner-properties/[ownerPropertyId]/terrain` πάνω στον **ΕΝΑ** κορμό του ADR-909, γενικευμένο με «θύρα
+  υποκειμένου» (εταιρικό ακίνητο | ακίνητο ιδιοκτήτη) — όχι δεύτερος κορμός.
+- Η δημοσίευση ιδιοκτήτη (`republishOwnerProperty` → `writeWithShelf`) περνά **ήδη** από το ίδιο ράφι
+  (partition `terrain` → `reconcilePublicTerrainShelf` → `withPublishedTerrain`). Λείπει μόνο η πηγή εδάφους στο
+  `ownerListingMediaSources`, από τον φάκελο του ακινήτου (`files_personal`, ADR-866) ⇒ κανένα δεύτερο κεφάλι ή binder.
+- 🔴 Το `match /files_personal` δεν έχει `publicationBornAbsent()` / `publicationCustodyUnchanged()` (το `/files` τα
+  έχει). Μόλις η γραμμή ιδιοκτήτη εμπιστευτεί αυτά τα πεδία, η σκλήρυνση των κανόνων γίνεται **προϋπόθεση** (Β4.6).
+- Τίποτα δεν ξαναπροβάλλει αγγελία ιδιοκτήτη όταν αλλάζει αρχείο φακέλου ⇒ η πόρτα ιδιοκτήτη καλεί η ίδια την επαναπροβολή.
+- **Έρευνα web**: Revit = μόνο CSV με X/Y/Z πρώτες στήλες, **σιωπηλή** αραίωση πάνω από 10.000 σημεία· ArchiCAD = στήλες
+  κατά θέση, χωρίς αντιστοίχιση· Forma = έδαφος μόνο από OBJ/IFC. Εμείς: DXF + CSV + XLSX, αυτόματη αναγνώριση στηλών
+  με διόρθωση, πρόταση μονάδων από το μέγεθος, ρητή αναφορά ορίων, προεπισκόπηση με την **ίδια** ετυμηγορία του server.
+
+**Υποβήματα**: Β4.1α parsers πινάκων → `lib` · Β4.1β DXF scanner → `lib` · Β4.2 καθαρός κριτής/πηγή/προέλεγχοι/μονάδες/
+μοντέλο SVG · Β4.3 γενίκευση κορμού · Β4.4 η γραμμή ιδιοκτήτη επιλέγει την πηγή · Β4.5 πόρτα ιδιοκτήτη · Β4.6 κανόνες
+`files_personal` · Β4.7 client/θύρες/hook · Β4.8 προεπισκόπηση · Β4.9 ενότητα «Βελτίωσε την αγγελία» + Δ2 ·
+Β4.10 φόρμα δημιουργίας · Β4.11 ADR.
+
+### 13.1 Β4.1α — οι parsers πινάκων στο `src/lib/terrain/survey-import/` ✅
+- Μετακινήθηκαν αυτούσια (μοτίβο Β1, `export *` από τις παλιές διαδρομές του viewer): `topo-import-types` ·
+  `topo-text-lines` · `topo-delimited-reader` · `topo-excel-reader` (`exceljs` MIT, δυναμικό import) ·
+  `topo-column-mapping` · `topo-column-sniffer` · `topo-order-presets`. Το `TopoPoint` από το
+  `@/lib/terrain/terrain-types`. Κανένας καταναλωτής του viewer δεν άλλαξε.
+- ⚠️ **Το `parse-topo-points` (ο δρόμος «χωρίς οδηγό») μένει στον viewer.** Δεν έχει καταναλωτή στη ρίζα, και το
+  CHECK 3.19 (knip — ο viewer είναι χωριστό workspace, το `export *` του δεν μετρά ως χρήση) το είδε ως νεκρό αρχείο.
+  Μετακινείται όταν αποκτήσει καταναλωτή (Β4.7), όχι πριν. Πατά ήδη στα `topo-column-mapping`/`topo-text-lines` του
+  `lib`, άρα η ερμηνεία των κελιών μένει μία.
+- **Η μία αλλαγή σημασίας**: ο κριτής «αριθμητικό κελί» της αναγνώρισης επικεφαλίδων ήταν το `normalizeNumber` του
+  viewer (το `lib` δεν εισάγει από το subapp). Έγινε το `parseTopoField`, ο **ίδιος** κριτής με τον sniffer και τον
+  αντιστοιχιστή ⇒ γραμμή = «δεδομένα» ακριβώς όταν τη διαβάζει ο αντιστοιχιστής. Απορρίφθηκε το `parseLocaleNumber`:
+  αφαιρεί γράμματα, άρα το «P1» θα γινόταν ο αριθμός 1 και η επικεφαλίδα δεδομένα.
+- 🔴 **Προϋπάρχον σφάλμα που διορθώθηκε (N.0.2)**: σε ελληνικό CSV του Excel (`345678,123;4201234,456;125,30`) το
+  `detectDelimiter` διάλεγε το **κόμμα** (4 κελιά έναντι 3 του `;`) ⇒ το αρχείο διαβαζόταν σκουπίδια, σιωπηλά. Νέος
+  όρος **καθαρότητας κελιών** (`cellPurity`, η ιδέα του `csv.Sniffer`): διαχωριστικό του οποίου τα κελιά περιέχουν ακόμη
+  άλλο υποψήφιο δεν δόμησε τη γραμμή· κελί που διαβάζεται ως αριθμός μετρά καθαρό (εκεί το κόμμα είναι υποδιαστολή).
+- **Επαλήθευση**: jest 69 σουίτες / 683 tests (όλο το `systems/topography` μέσω shims + `bim/table/import` + panels +
+  νέα σουίτα `lib/terrain/survey-import/__tests__/survey-import-lib.test.ts`: όριο «κανένα import από `subapps/`» σε
+  **όλο** το `src/lib/terrain`, ελληνικό `;`, «P1» επικεφαλίδα, συμφωνία με `parseTopoField`). Μεταλλάξεις **4/4
+  κόκκινες** (καθαρότητα πάντα 1 · υποδιαστολή «ακάθαρτη» · κάθε κελί αριθμός · import από subapp). Πύλες: 3.62 ✅
+  (0 αδήλωτες, 391 αμετάβλητο) · 3.28 ✅ (0 κλώνοι, 17 αρχεία) · 3.47 ✅.
+
+### 13.2 Β4.1β — σημεία DXF χωρίς τον viewer ✅
+- **Γιατί**: το `topo-dxf-points` διάβαζε μέσω του `DxfEntityParser`, που σέρνει ~359 αρχεία του subapp. Νέος καθαρός
+  **`src/lib/terrain/survey-import/dxf-survey-points.ts`** πάνω στα **ίδια** φύλλα που χρησιμοποιεί ο parser του
+  viewer, μετακινημένα στο **`src/lib/dxf/`** με re-export: `dxf-section-scan` · `dxf-line-stream` ·
+  `dxf-embedded-object` (μένουν φύλλα **χωρίς imports**, ADR-736) + νέο `dxf-insunits` (ο πίνακας `INSUNITS_TO_MM`,
+  επανεξάγεται από το `dxf-parser-types`).
+- **Δύο φάσεις**: `scanDxfSurvey` → σημεία σε **μονάδες σχεδίου** + `declaredInsunits` (`null` = το αρχείο δεν λέει·
+  `0` = «χωρίς μονάδες», τιμή)· `scaleSurveyPoints` → mm. Η πολιτική μονάδων είναι του **καλούντα**: ο viewer κρατά
+  τις ιστορικές του προεπιλογές (`0` → m · απόν → mm), η φόρμα του ιδιοκτήτη θα **ρωτά** όταν το αρχείο δεν λέει.
+- **Ισοδυναμία αποδεδειγμένη πρώτα**: 11 tests χαρακτηρισμού γράφτηκαν και πέρασαν **πάνω στον παλιό κώδικα** (χωρίς
+  `$INSUNITS` ⇒ mm · `0` ⇒ m · BLOCKS αγνοούνται · χωρίς ENTITIES ⇒ όλο το αρχείο · τομή στο `101` · τελευταία τιμή
+  νικά · ομάδα POLYLINE · CRLF · ελληνική υποδιαστολή στην ετικέτα) και ξαναπέρασαν **αμετάβλητα** μετά. Άγκυρα «δύο
+  αναγνώστες του `$INSUNITS`, μία απάντηση»: `readDxfInsunits ?? 4 ≡ parseHeader().insunits`.
+- 🔴 **Τρία προϋπάρχοντα σφάλματα διορθώθηκαν (N.0.2)**, όλα σιωπηλά:
+  - εκθέτης σε DXF real: το `parseLocaleNumber` αφαιρεί γράμματα ⇒ `1.5E+02` → **1,502**. Τώρα `Number` πρώτα, με τον
+    τοπικό αναγνώστη μόνο ως εφεδρεία για χειροποίητα αρχεία·
+  - `$INSUNITS 17` = γιγάμετρα (10¹² mm), όχι «ναυτικό μίλι» (1.852.000)·
+  - `$INSUNITS 21–24` (US survey feet / inch / yard / mile) **έλειπαν** ⇒ 1 mm ανά μονάδα. Πηγή: πίνακας `INSUNITS`
+    AutoCAD + BricsCAD. Ο **μόνος** καταναλωτής του πίνακα είναι ο εξαγωγέας σημείων ⇒ καμία εισαγωγή σχεδίου δεν άλλαξε κλίμακα.
+- **Επαλήθευση**: jest **199 σουίτες / 2.084 tests** (`lib/terrain` · `lib/dxf` · `systems/topography` · `utils` · `io` ·
+  `bim/table/import` · panels). Μεταλλάξεις **7/7 κόκκινες** (εκθέτης · 101 όχι τομή · σάρωση BLOCKS · 17 ξανά
+  1.852.000 · δηλωμένο 0 ως απόν · viewer: `0` ως mm · επίπεδο σημείο παίρνει z = 0). Πύλες: 3.28 ✅ (0 κλώνοι, 13
+  αρχεία) · 3.62 ✅ (0/391) · 3.47 ✅ · 3.80 ✅ (0 νέοι θανάσιμοι κύκλοι). Το test ορίου σαρώνει πλέον και το `src/lib/dxf`.
+
+### 13.3 Β4.2 — ο καθαρός πυρήνας της εισαγωγής ✅
+| Αρχείο | Ρόλος |
+|---|---|
+| `publication/listing-terrain-judge.ts` | **`judgeListingTerrainSource`** — η **ΜΙΑ** ετυμηγορία: σχήμα → `TERRAIN_SOURCE_MALFORMED`, επιφάνεια → το όνομα του builder. Επιστρέφει την **κανονική** πηγή + το στιγμιότυπο. Την καλεί **ήδη** η πόρτα του Β3α (σχήμα ⇒ 400, επιφάνεια ⇒ 422, όπως πριν) και θα την καλεί η προεπισκόπηση |
+| `survey-import/survey-upload-preparation.ts` | `prepareSurveyUpload(points)` → ακριβώς το σώμα που θα σταλεί (`encodeListingTerrainSource`), με την ετυμηγορία της πόρτας και το όριο bytes της· `surveySourceOf` (σημείο χωρίς Z μένει `[x, y]`)· **`surveyFactsOf`** |
+| `survey-import/survey-units.ts` | `suggestSurveyUnit` → `{ unit, evidence: 'greek-grid' \| 'extent' }` ή `null` |
+| `survey-import/survey-file-kind.ts` | `surveyFileKindOf(name, head)` — τα bytes αποφασίζουν (ZIP ⇒ xlsx · OLE2 ⇒ `xls-legacy` · `AutoCAD Binary DXF` ⇒ `dxf-binary` · δομή `0/SECTION` ⇒ dxf ακόμη κι αν λέγεται `.txt`) |
+| `@/lib/geo/greek-grid.ts` | + `GREEK_GRID_AREA_OF_USE_M` / `isWithinGreekGridAreaOfUse` — η περιοχή χρήσης του **EPSG:2100** από το μητρώο EPSG (E 94.874,71–892.934,13 · N 3.859.448,36–4.631.226,44 m) |
+
+**Αποφάσεις του Β4.2**
+- **Μία ετυμηγορία, δύο καλούντες.** Η πόρτα δεν καλεί πλέον τον builder απευθείας ⇒ η δήλωσή της στο
+  `derivationOwners` της 3.105 **αφαιρέθηκε** (αλλιώς Κ4: νεκρή δήλωση). Μένει ένας κάτοχος παραγωγής: ο ψήστης.
+  *(Απόκλιση από την §12 Κ3, ο κώδικας κερδίζει: η ξηρή εκτέλεση ζει πλέον μέσα στο `src/lib/terrain/`.)*
+- **Ό,τι οι μεγάλοι λύνουν σιωπηλά, εμείς το λέμε.** Το TIN κρατά το **πρώτο** από δύο σημεία στην ίδια θέση (το
+  Revit το ψηλότερο). Στην κανονική πηγή (ακέραια mm) «ίδια θέση» = ακριβώς ό,τι συγχωνεύει το TIN ⇒ μετριούνται τα
+  `coincident` και, χωριστά, τα `conflictingElevations` (ίδια θέση, άλλο υψόμετρο: αντίφαση της μέτρησης).
+- **Πρόταση μονάδων με αιτιολόγηση, ποτέ σιωπηλή.** Revit και ArchiCAD ρωτούν πάντα τη μονάδα, αλλά δεν λένε τι
+  δείχνει το αρχείο. Εμείς: ≥ 90 % των σημείων μέσα στην περιοχή χρήσης του ΕΓΣΑ'87 (ως m ή mm) ⇒ `greek-grid`·
+  αλλιώς η διαγώνιος του οικοπέδου (2–3.000 m) ⇒ `extent`· όπου ισχύουν και οι δύο αναγνώσεις ⇒ `null`, αποφασίζει ο
+  άνθρωπος. Πόδια δεν προτείνονται ποτέ (ένα ξένο DXF τα δηλώνει μόνο του).
+- Αφαιρέθηκε πρώιμος έλεγχος αριθμού σημείων: έδινε το **ίδιο** αποτέλεσμα με το όριο του σχήματος (καμία μετάλλαξη
+  δεν τον σκότωνε ⇒ νεκρός κώδικας).
+- **Το μοντέλο SVG μεταφέρθηκε στο Β4.8**, μαζί με τον πρώτο του καταναλωτή (αλλιώς νεκρά exports, CHECK 3.22).
+  ⚠️ Οι υπόλοιπες εξαγωγές του Β4.2 αποκτούν καταναλωτή στο Β4.7 (hook), όπως έγινε στο Β2.
+
+**Επαλήθευση**: jest **84 σουίτες / 1.111 tests** (`lib/terrain` · `lib/geo` · όλο το `api/properties/[id]` ·
+πύλες 3.105 + 3.76). Μεταλλάξεις **7/7 κόκκινες** (άρνηση builder ως MALFORMED · πόρτα: MALFORMED ως 422 · κάθε
+σύμπτωση ως αντίφαση · επίπεδο σημείο με z = 0 · ένα outlier ακυρώνει το ΕΓΣΑ · το όνομα αποφασίζει αντί για τα
+bytes · όριο northing αγνοείται). Πύλες: 3.28 ✅ · 3.62 ✅ · 3.47 ✅ · 3.105 ✅ · 3.76 ✅ · 3.100 ✅ · 3.92 ✅ · 3.66 ✅
+(αναπαραγωγή του πίνακα στο `CLAUDE.md`: μόνο το αποτύπωμα).
+
+### 13.4 Β4.3+5 — ένας κινητήρας, δύο κηδεμονίες ✅
+**Απόφαση (Giorgio 2026-10-23)**: τα Β4.3 (γενίκευση κορμού) και Β4.5 (πόρτα ιδιοκτήτη) **ενώθηκαν** σε ένα βήμα τριών
+φάσεων: η θύρα υποκειμένου επικυρώνεται μόνο από τον **δεύτερο** καταναλωτή της, αλλιώς σχεδιάζεται στα τυφλά και ο
+κλάδος του ιδιοκτήτη μένει νεκρός (CHECK 3.22). Σειρά: **α** κινητήρας · **β** κοινός κώδικας εδάφους · **γ** πόρτα
+ιδιοκτήτη. Η πόρτα γράφει με Admin SDK, άρα δεν εξαρτάται από τους κανόνες· το Β4.6 (`files_personal`) μπαίνει **πριν**
+το Β4.4, όπου η γραμμή ιδιοκτήτη αρχίζει να εμπιστεύεται τα πεδία δημοσίευσης.
+
+| Αρχείο | Ρόλος |
+|---|---|
+| `src/server/listing-material/publish-listing-material.ts` | **Ο κινητήρας**: η σειρά του ADR-909 (ανάγνωση → `revision` → εγγραφή → προκάτοχοι → bytes → `ready` → διαδοχή → δήλωση → επαναπροβολή) πάνω σε `ListingMaterialSubject<TEnv, TBirth>` + `ListingMaterialDoor<…>` |
+| `src/server/listing-material/material-source-lookup.ts` | Μετακίνηση αυτούσια από το `_shared/` (εταιρικά σχέδια και προκάτοχοι) |
+| `src/server/listing-material/material-supersession.ts` | Μετακίνηση· το `archiveSuperseded` παίρνει **έτοιμο** `ContainerActor` αντί για `AuthContext` |
+| `src/app/api/properties/[id]/_shared/publish-property-material.ts` | Το **εταιρικό υποκείμενο**: φρουρός μισθωτή + `mayChangePublication` + γέννηση με `companyId` + `refreshListingAfterMediaChange`. Η υπογραφή `publishPropertyMaterial(request, ctx, door)` **δεν άλλαξε** |
+
+**Αποφάσεις της φάσης α**
+- **Η συλλογή δεν είναι πεδίο της θύρας: προκύπτει από τον δράστη.** Ο `transitionContainer` διαλέγει ήδη συλλογή και
+  κριτή από το `actor.custody`· η εγγραφή ρωτά το **ίδιο** πεδίο (`COLLECTIONS[FILE_COLLECTION[custodyKindOfScope(…)]]`,
+  γραμμένο στο σημείο κλήσης, όπως το θέλουν οι 3.15/3.35). Ένα χωριστό `filesCollection` (πρόταση του handoff) θα ήταν
+  δεύτερη απάντηση στο «σε ποιον ανήκει;»: το υλικό θα μπορούσε να γεννηθεί στο `files` και η διαδοχή να ψάξει στο
+  `files_personal`. Το ίδιο και το `createdBy`: είναι το `actor.uid`.
+- **Η γέννηση είναι γενική (`TBirth`) και την παρέχει το υποκείμενο** (`birthOf(sourceRevisions)`). Το `MaterialBirth`
+  των πορτών μοντέλου/κάτοψης/εδάφους έμεινε **αμετάβλητο**.
+- **Η επαναπροβολή είναι υποχρεωτικό σκέλος του υποκειμένου** (`refresh`), με τύπο `ListingMediaRefreshOutcome`, ώστε
+  κανένα υποκείμενο να μην μπορεί να την παραλείψει. Κάθε υποκείμενο ονομάζει στατικά τον βοηθό του (CHECK 3.76).
+- **Η εταιρική πόρτα κρίνεται πριν διαβαστεί το σώμα**, όπως πριν: ξένο ακίνητο δεν πληρώνει την ανάγνωση megabytes.
+- Μητρώα: `MATERIAL_DOORS` (3.76): η γραμμή `exempt` της διαδοχής μετακόμισε στη νέα διαδρομή, με λόγο που ονομάζει
+  τον κινητήρα· self-test 3.105: `EXEMPT_DOOR` στη νέα διαδρομή. Τα `model/route.ts` και `terrain/route.ts` άλλαξαν **μόνο**
+  τη γραμμή εισαγωγής του `readSceneFileIds`.
+
+**Επαλήθευση**: jest `api/properties/[id]` **18 σουίτες / 264 tests πράσινα χωρίς αλλαγή** · νέα άγκυρα
+`server/listing-material/__tests__/publish-listing-material.test.ts` (6 tests: προσωπικός δράστης ⇒ `files_personal` ·
+εταιρικός ⇒ `files` · ίδιος δράστης γράφει και αρχειοθετεί · γέννηση από το υποκείμενο · σειρά · αποτυχία ⇒ καμία
+διαδοχή/επαναπροβολή). Μεταλλάξεις **4/4 κόκκινες** (συλλογή πάντα `files` · επαναπροβολή πριν τη δήλωση · διαδοχή με
+άλλον δράστη · `createdBy` όχι από τον δράστη). Πύλες: 3.76 ✅ (ζωντανή + 42 tests) · 3.105 ✅ (ζωντανή + 14) · 3.28 ✅
+(0 κλώνοι) · 3.47 ✅.
+
+**Φάση β — ο κοινός κώδικας εδάφους** ✅
+
+| Αρχείο | Ρόλος |
+|---|---|
+| `src/server/listing-terrain/terrain-upload.server.ts` | **Νέο.** `readTerrainUpload(formData, propertyType)` (αρχείο → δήλωση Δ2 → «είναι γη;» → ο ΕΝΑΣ κριτής → κανονική πηγή) · `terrainMaterialDoor<TEnv, TBirth>({ propertyTypeOf, recordOf, recordPublished })` · `TERRAIN_DOOR_CODES` · `terrainResponseOf` · `terrainPublishedFacts` · τύποι `TerrainUpload` / `TerrainPublicationResponse` |
+| `src/lib/listings/terrain-file-record.ts` | `PublishedTerrainFileRequest = { home, createdBy, sourceRevisions }`· **`TerrainSourceHome`** = `{ companyId, propertyId }` \| `{ userId, dossierId }` — ο τύπος **ζευγαρώνει** κάτοχο και δοχείο (`PROPERTY` ή `PROPERTY_DOSSIER`). Ίδια ταυτότητα, κατηγορία, διαβάθμιση |
+| `src/app/api/properties/[id]/terrain/route.ts` | 212 → 114 γρ.: μένουν μόνο ό,τι είναι του γραφείου — φρουρός μισθωτή (κυριολεκτικό `intent: 'write'`, 3.100), γέννηση με `home: { companyId, propertyId }` (3.105 Κ2), ιστορικό `EntityAuditService` |
+
+**Αποφάσεις της φάσης β**
+- **Η πηγή του ιδιοκτήτη ΔΕΝ φαίνεται σε καρτέλα του φακέλου** (επαληθευμένο με τις πραγματικές εμβέλειες,
+  `propertyDossierFileTabOf`, για οικόπεδο και κατοικία). Είναι κανονικό JSON του διακομιστή, όχι έγγραφο του ανθρώπου:
+  στα «Έγγραφα» θα μετονομαζόταν ή θα μεταφερόταν σαν οποιοδήποτε αρχείο χωρίς να το μάθει η επαναπροβολή. Η ορατή
+  διαχείριση (αφαίρεση τοπογραφικού, φύλαξη του αρχικού DXF/CSV) μένει ανοιχτή ερώτηση (§4 του handoff).
+- **Η γενίκευση του `currentTerrainSource` μεταφέρθηκε στο Β4.4**, μαζί με τον δεύτερο καταναλωτή της (τον επιλογέα του
+  φακέλου). Ίδια αρχή με την ένωση Β4.3+5: καμία γενίκευση χωρίς δεύτερο καταναλωτή (CHECK 3.22).
+- Η άγκυρα Σ1/Σ2 του συμβολαίου διαβάζει πλέον **την ένωση** των πηγών που στέλνουν κωδικούς (πόρτα + κοινός αναγνώστης).
+  Αλλιώς ένας κωδικός που μετακόμισε θα έμοιαζε φάντασμα, ή ένας νέος κωδικός στον κοινό αναγνώστη θα περνούσε αόρατος.
+- **Κενό ελέγχου που έκλεισε**: η σουίτα της εταιρικής πόρτας δεν ρωτούσε τον **κάτοχο** της εγγραφής. Μετάλλαξη
+  «η εταιρική πόρτα γεννά στον φάκελο» επέζησε· η Τ2 ελέγχει τώρα `companyId` + `entityType: property` και απουσία `userId`.
+
+**Επαλήθευση φάσης β**: jest 26 σουίτες / 330+ tests (πόρτες `api/properties/[id]` · `lib/terrain/publication` · κινητήρας ·
+νέα `lib/listings/__tests__/terrain-file-record.test.ts` · ράφι/αναγνώστης εδάφους). Μεταλλάξεις **5/5 κόκκινες** (φάκελος ως
+`PROPERTY` · πηγή σε καρτέλα «Έγγραφα» · χωρίς έλεγχο γης · κωδικός-φάντασμα στον κοινό αναγνώστη · εταιρική πόρτα γεννά στον
+φάκελο). Πύλες: 3.105 ✅ · 3.76 ✅ · 3.100 ✅ · 3.47 ✅ · 3.28 ✅ (0 κλώνοι).
+
+**Φάση γ — η πόρτα του ιδιοκτήτη** ✅
+
+| Αρχείο | Ρόλος |
+|---|---|
+| `src/server/listing-material/publish-owner-property-material.ts` | **Νέο. Το υποκείμενο του ιδιοκτήτη**: `publishOwnerPropertyMaterial(request, actor, ownerPropertyId, door)`. Φρουρός `mayAdminister` (ξένη ⇒ 404 **πριν** το σώμα) → προσωπική κηδεμονία + `dossierId` + φάκελος **του ίδιου** ανθρώπου (αλλιώς 409 `TERRAIN_NO_DOSSIER`) → δράστης `personalContainerActorOf` · `readSourceRevisions → []` · προκάτοχοι στον φάκελο · `refreshOwnerListingAfterMediaChange` |
+| `src/app/api/owner-properties/[ownerPropertyId]/terrain/route.ts` | **Νέο.** `withHeavyRateLimit(withPersonalOrOrgAuth(…))` (ιδεμποτία από το σύνορο, 3.92). Γέννηση `home: { userId, dossierId }` γραμμένη **εδώ** (3.105 Κ2) · ιστορικό `owner_property` / πεδίο `terrain` στο βιβλίο του χώρου του ανθρώπου (`auditLedgerScopeOf(custodyWorkspace(…))`) |
+| `src/server/listing-material/material-source-lookup.ts` | `findSupersededDossierMaterial`: ακριβώς τα σκέλη του `readDossierMedia` (`userId · entityType · entityId · status=ready`) + κάδος **στη μνήμη** ⇒ **0 νέα ευρετήρια**. Το σώμα «ερώτημα → `supersededByPublication` → ονομασμένη αποτυχία» είναι πλέον **ένα** (`supersededAmong`) για τα δύο δοχεία |
+| `src/services/listings/listing-media-refresh.ts` | `refreshOwnerListingAfterMediaChange(adminDb, ownerPropertyId, userId)`: διαβάζει **τώρα**, ξαναρωτά κηδεμονία (άλλου / χώρος γραφείου ⇒ `absent`), καλεί τον **υπάρχοντα** `republishOwnerProperty` (προβολή + αποτύπωμα δημοσίευσης) · δεν πετά |
+| `src/server/listing-terrain/terrain-upload.server.ts` · `terrain-publication-contract.ts` · locales `el`/`en` | Νέος κωδικός **`TERRAIN_NO_DOSSIER`** στο κλειστό σύνολο, με μήνυμα στις δύο γλώσσες (Σ1/Σ2/Σ5 πράσινα) |
+| `scripts/lib/listing-model-custody/material-doors-contract.js` | `MATERIAL_DOORS` + η πόρτα ιδιοκτήτη (`refresh`) · `REFRESH_HELPERS` + `publishOwnerPropertyMaterial`, `refreshOwnerListingAfterMediaChange` |
+
+**Αποφάσεις της φάσης γ**
+- **Τρεις περιπτώσεις, μία άρνηση με όνομα**: αγγελία χωρίς φάκελο, φάκελος που δεν υπάρχει, φάκελος **άλλου** ανθρώπου
+  ⇒ `TERRAIN_NO_DOSSIER` (409). Σε καμία δεν υπάρχει δοχείο του ιδιοκτήτη όπου να ζήσει η πηγή. Αγγελία ιδιοκτήτη σε χώρο
+  **γραφείου** ⇒ ο άνθρωπος δεν τη διαχειρίζεται ⇒ 404 (ποτέ «υπάρχει»). Οι μεσιτευόμενες αγγελίες χωρίς φάκελο μένουν
+  ανοιχτή ερώτηση του Giorgio.
+- **Δεύτερος έλεγχος κηδεμονίας στην επαναπροβολή** (όπως το εταιρικό `companyId`): αν η αγγελία περάσει σε γραφείο ανάμεσα
+  στην πόρτα και στην επαναπροβολή, **δεν** ξαναγράφεται εξαιτίας υλικού του ανθρώπου.
+- **Το `API_ROUTES` δεν άγγιξε**: ο πρώτος πελάτης της διαδρομής έρχεται στο Β4.7, και εκεί μπαίνει η σταθερά. Μια σταθερά
+  χωρίς καταναλωτή θα ήταν νεκρός κώδικας (3.22).
+- Η πόρτα **ακόμα δεν φαίνεται** στην αγγελία: η γραμμή ιδιοκτήτη δεν διαλέγει ακόμα πηγή εδάφους από τον φάκελο (Β4.4,
+  μετά το Β4.6). Η επαναπροβολή τρέχει ήδη, ώστε τη μέρα του Β4.4 να μη χρειαστεί καμία αλλαγή στην πόρτα.
+
+**Επαλήθευση φάσης γ**: νέα άγκυρα `owner-properties/[ownerPropertyId]/terrain/__tests__/owner-property-terrain-route.test.ts`
+(Ι1–Ι7: γέννηση στον φάκελο, ποτέ `companyId`, μόνο `files_personal`, σειρά · ξένη ⇒ 404 χωρίς ανάγνωση σώματος · χώρος γραφείου /
+χωρίς φάκελο / ανύπαρκτος φάκελος · φάκελος άλλου · προκάτοχοι ίδιου φακέλου και κάδου + ιστορικό στο βιβλίο του ανθρώπου ·
+επαναπροβολή με τον κάτοχο · Δ1) + ΙΔ-1…3 στο `listing-media-refresh.test.ts`. Ευρύ jest **177 σουίτες / 3046 tests πράσινα**.
+Μεταλλάξεις **6/6 κόκκινες** (εταιρικό σπίτι · φάκελος άλλου δεκτός · χωρίς φίλτρο κάδου · επαναπροβολή χωρίς κάτοχο ·
+επαναπροβολή χωρίς κηδεμονία · σώμα πριν την πόρτα). Πύλες στο δέντρο: 3.76 ✅ · 3.105 ✅ · 3.92 ✅ · 3.78 ✅ (82/110,
+αμετάβλητο) · 3.100 ✅ · 3.56 ✅ · 3.58 ✅ · 3.80 ✅ (0 θανάσιμες ακμές) · 3.91 ✅ · 3.47 ✅ · 3.33 ✅ (παραγόμενοι τύποι
+ξαναχτίστηκαν) · 3.28 ✅ (0 κλώνοι σε 7 αρχεία). ⚠️ Η 3.17 δείχνει **1** νέα παραβίαση σε **ξένο** αρχείο
+(`property-handover-progress-write.ts`, ADR-916) — δεν αγγίχθηκε.
 
 ## Changelog
+- **2026-10-24 (v11)** — **Β4.3+5 ✅ — φάση γ** (§13.4): πόρτα ιδιοκτήτη `POST /api/owner-properties/[ownerPropertyId]/terrain` πάνω στον
+  ίδιο κινητήρα· υποκείμενο φακέλου (`publish-owner-property-material.ts`), προκάτοχοι φακέλου χωρίς νέο ευρετήριο,
+  `refreshOwnerListingAfterMediaChange`, κωδικός `TERRAIN_NO_DOSSIER`, γραμμές 3.76.
+- **2026-10-23 (v10)** — **Β4.3+5 φάση β ✅** (§13.4): κοινός κώδικας εδάφους `server/listing-terrain/terrain-upload.server.ts`· η πηγή
+  εδάφους γεννιέται σε δύο σπίτια (`TerrainSourceHome`: εταιρικό ακίνητο | φάκελος ιδιοκτήτη)· η εταιρική πόρτα 212 → 114 γρ.
+  Η γενίκευση της επιλογής πηγής πήγε στο Β4.4.
+- **2026-10-23 (v9)** — **Β4.3+5 φάση α ✅** (§13.4): ένωση Β4.3 + Β4.5 (απόφαση Giorgio). Ο κοινός κορμός του ADR-909
+  έγινε κινητήρας δύο κηδεμονιών στο `src/server/listing-material/` (θύρα υποκειμένου, γενική γέννηση, συλλογή από τον
+  δράστη)· το `publishPropertyMaterial` είναι πλέον το εταιρικό υποκείμενο με την ίδια υπογραφή.
+- **2026-10-23 (v8)** — **Β4.2 ✅** (§13.3): `judgeListingTerrainSource` (μία ετυμηγορία· την καλεί ήδη η πόρτα,
+  αφαιρέθηκε η δήλωσή της από το `derivationOwners` της 3.105) · `prepareSurveyUpload` + `surveyFactsOf` (συμπίπτοντα
+  και αντιφατικά σημεία) · `suggestSurveyUnit` (ΕΓΣΑ'87 / έκταση) · `surveyFileKindOf` · περιοχή χρήσης EPSG:2100 στο
+  `greek-grid`. Το μοντέλο SVG πήγε στο Β4.8.
+- **2026-10-23 (v7)** — **Β4.1β ✅** (§13.2): καθαρός scanner σημείων DXF (`scanDxfSurvey` + `scaleSurveyPoints`) στο
+  `lib`, πάνω στα φύλλα `src/lib/dxf/*` (re-exports)· ο viewer αναθέτει και κρατά μόνο την πολιτική μονάδων του.
+  Διορθώσεις: εκθέτης σε DXF real · `$INSUNITS` 17 · 21–24.
+- **2026-10-23 (v6)** — **Β4 ξεκίνησε** (§13): απόφαση δεύτερης πόρτας ιδιοκτήτη πάνω στον ένα κορμό, πλάνο 11
+  υποβημάτων. **Β4.1α ✅**: parsers πινάκων στο `src/lib/terrain/survey-import/` με re-exports· κριτής επικεφαλίδων =
+  `parseTopoField`· διόρθωση του `detectDelimiter` για ελληνικά CSV (`cellPurity`).
+- **2026-10-23 (v5)** — **Β3β ✅**: `PublicListing.terrain` (κρίκος σχήματος 26, κριτής `readStoredTerrain`), τρίτο
+  κεφάλι του δημόσιου ραφιού (ψήσιμο από την κανονική πηγή, gzip, κάρτα στα metadata), ο ένας binder
+  `withPublishedTerrain`, **CHECK 3.105** (ένας γραφέας · πόρτα με `refresh` · ένας ψήστης) και `withPublishedTerrain`
+  στη 3.76, μηνύματα i18n el/en των 13 κωδικών με άγκυρα Σ5 (§12).
 - **2026-10-23 (v4)** — **Β3α ✅**: πόρτα `POST /api/properties/[id]/terrain` πάνω στον κοινό κορμό του
   ADR-909, συμβόλαιο πηγής v1, δήλωση Δ2, κλειστή λίστα κωδικών, γραμμή `MATERIAL_DOORS` (§11). Το Β3
   χωρίστηκε σε Β3α/Β3β λόγω των staged αρχείων του ADR-919.

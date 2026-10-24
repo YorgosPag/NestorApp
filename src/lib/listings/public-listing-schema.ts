@@ -72,7 +72,7 @@ import { LISTING_MIGRATIONS_21_30 } from './public-listing-migrations-21-30';
  * χωρίς κρίκο θα σήμαινε «τα παλιά έγγραφα ανεβαίνουν μόνα τους», που είναι
  * ακριβώς το ψέμα που κατέρρευσε στις 31/08.
  */
-export const PUBLIC_LISTING_SCHEMA_VERSION = 25;
+export const PUBLIC_LISTING_SCHEMA_VERSION = 27;
 
 /**
  * **Η έκδοση κάθε εγγράφου που δεν το λέει.**

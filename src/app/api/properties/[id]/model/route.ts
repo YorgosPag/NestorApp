@@ -49,7 +49,7 @@ import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
 import { FILE_CATEGORIES } from '@/config/domain-constants';
 import { FILE_TYPE_CONFIG } from '@/config/file-upload-config';
 import { buildPublishedModelFileRecord } from '@/lib/listings/model-file-record';
-import { readSceneFileIds } from '../_shared/material-source-lookup';
+import { readSceneFileIds } from '@/server/listing-material/material-source-lookup';
 import {
   publishPropertyMaterial,
   type MaterialPublicationDoor,

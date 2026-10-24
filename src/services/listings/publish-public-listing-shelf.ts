@@ -41,23 +41,22 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { MEDIA_FINGERPRINT_FIELD } from '@/lib/listings/listing-media-fingerprint';
 import { PUBLIC_LISTING_SCHEMA_VERSION } from '@/lib/listings/public-listing-schema';
 import { mediaFingerprintOf } from './listing-media-fingerprint-stamp';
-import { withPublishedGallery, type ProjectedShelfImage } from './public-listing-projection';
-import {
-  withPublishedModels,
-  type ProjectedShelfModel,
-} from './public-listing-model-projection';
-import {
-  withPublishedVideos,
-  type ProjectedShelfVideo,
-  type ProjectedVideoPoster,
-} from './public-listing-video-projection';
+import { withPublishedGallery } from './public-listing-projection';
+import { withPublishedModels } from './public-listing-model-projection';
+import { withPublishedVideos } from './public-listing-video-projection';
 import {
   splitFloorPlateImages,
   withPublishedFloorPlates,
   withinFloorPlateAdmission,
-  type ProjectedShelfFloorPlate,
-  type ShelfFloorPlate,
 } from './public-listing-floor-plate-projection';
+import { withPublishedTerrain } from './public-listing-terrain-projection';
+import {
+  toProjectedFloorPlate,
+  toProjectedImage,
+  toProjectedModel,
+  toProjectedTerrain,
+  toProjectedVideo,
+} from './listing-shelf-projected';
 import { splitVideoPosters, videoPosterSources } from './listing-video-poster';
 import type { PublicListing } from '@/types/public-listing';
 import type { ListingMaterial } from '@/lib/listings/listing-material';
@@ -65,18 +64,17 @@ import type { PublicShelfSource } from '@/services/upload/utils/storage-path-pub
 import {
   LISTING_MODEL_SHELF,
   LISTING_SHELF,
+  LISTING_TERRAIN_SHELF,
   LISTING_VIDEO_SHELF,
   PUBLIC_SHELF_KINDS,
   PUBLIC_SHELF_LISTING_ROOT,
   type AnyPublicShelfKind,
   type ShelfEncoding,
 } from '@/services/upload/utils/public-shelf-kinds';
-import { reconcilePublicShelf, type PublicShelfImage } from './public-shelf.service';
-import {
-  reconcilePublicModelShelf,
-  type PublishedShelfModel,
-} from './public-shelf-model.service';
-import { reconcilePublicVideoShelf, type PublishedShelfVideo } from './public-shelf-video.service';
+import { reconcilePublicShelf } from './public-shelf.service';
+import { reconcilePublicModelShelf } from './public-shelf-model.service';
+import { reconcilePublicVideoShelf } from './public-shelf-video.service';
+import { reconcilePublicTerrainShelf } from './public-shelf-terrain.service';
 
 const logger = createModuleLogger('publish-public-listing-shelf');
 
@@ -85,6 +83,7 @@ interface ListingShelfSources {
   readonly raster: readonly PublicShelfSource<ListingMaterial>[];
   readonly model: readonly PublicShelfSource<ListingMaterial>[];
   readonly video: readonly PublicShelfSource<ListingMaterial>[];
+  readonly terrain: readonly PublicShelfSource<ListingMaterial>[];
 }
 
 // ---------------------------------------------------------------------------
@@ -135,6 +134,7 @@ export function partitionListingSources(
   const raster: PublicShelfSource<ListingMaterial>[] = [];
   const model: PublicShelfSource<ListingMaterial>[] = [];
   const video: PublicShelfSource<ListingMaterial>[] = [];
+  const terrain: PublicShelfSource<ListingMaterial>[] = [];
 
   for (const source of sources) {
     const material = source.material;
@@ -160,12 +160,16 @@ export function partitionListingSources(
         video.push(source);
         break;
 
+      case 'terrain':
+        terrain.push(source);
+        break;
+
       default:
         return assertNeverShelfMaterial(material);
     }
   }
 
-  return { raster, model, video };
+  return { raster, model, video, terrain };
 }
 
 // ---------------------------------------------------------------------------
@@ -209,6 +213,10 @@ async function emptyShelfOfKind(kind: AnyPublicShelfKind, listingId: string): Pr
 
     case 'video':
       await reconcilePublicVideoShelf(kind, listingId, []);
+      return;
+
+    case 'terrain':
+      await reconcilePublicTerrainShelf(kind, listingId, []);
       return;
 
     default:
@@ -277,7 +285,7 @@ export async function writeWithShelf(
   listing: PublicListing,
   sources: readonly PublicShelfSource<ListingMaterial>[]
 ): Promise<PublicListing> {
-  const { images, models, videos } = await reconcileListingShelves(listingId, sources);
+  const { images, models, videos, terrain } = await reconcileListingShelves(listingId, sources);
 
   try {
     // 🔑 **ΕΝΑ `set`, ΤΕΣΣΕΡΙΣ ΓΡΑΦΕΙΣ ΣΕ ΣΥΝΘΕΣΗ.** Συλλογή+κατόψεις, μοντέλα, βίντεο *(ADR-907 §10)*, κάτοψη ορόφου
@@ -293,7 +301,9 @@ export async function writeWithShelf(
       withModels,
       videos.published.map((published) => toProjectedVideo(published, posterByVideo)),
     );
-    const complete = withPublishedFloorPlates(withVideos, floorPlates.map(toProjectedFloorPlate));
+    const withFloorPlates = withPublishedFloorPlates(withVideos, floorPlates.map(toProjectedFloorPlate));
+    // ADR-920 Β3β — ο ΕΝΑΣ γραφέας του `terrain`, μόνο από την αναφορά του ραφιού εδάφους.
+    const complete = withPublishedTerrain(withFloorPlates, toProjectedTerrain(terrain.published));
 
     // 🧬 ADR-845 §7.17 Α5 — **το αποτύπωμα των μέσων**, δίπλα στο `schemaVersion` και για τον ίδιο
     //    λόγο: μεταδεδομένο **αποθήκευσης**, όχι περιεχόμενο αγγελίας *(το κλειστό σχήμα δεν αλλάζει)*.
@@ -301,7 +311,7 @@ export async function writeWithShelf(
     // ⚠️ **Μόνο όταν και τα ΤΡΙΑ ράφια συμφιλιώθηκαν.** Το αποτύπωμα λέει *«αυτά ζητήθηκαν»*· αν
     //    ένα ράφι απέτυχε, η αγγελία γράφτηκε **χωρίς** κάτι που ζητήθηκε, και ένα αποτύπωμα εδώ θα
     //    έλεγε *«συμφωνεί»* στη συμφιλίωση που θα το διόρθωνε. Απόν ⇒ `unknown` ⇒ ξαναψήνεται.
-    const shelvesSettled = [images, models, videos].every((shelf) => shelf.outcome !== 'failed');
+    const shelvesSettled = [images, models, videos, terrain].every((shelf) => shelf.outcome !== 'failed');
 
     await ref.set({
       ...complete,
@@ -312,7 +322,7 @@ export async function writeWithShelf(
   } catch (error) {
     await withdrawShelvesAfterFailure(
       listingId,
-      images.published.length + models.published.length + videos.published.length,
+      images.published.length + models.published.length + videos.published.length + terrain.published.length,
     );
     throw error;
   }
@@ -330,25 +340,27 @@ export async function writeWithShelf(
  * επανασύνθεση το διορθώνει.
  */
 async function reconcileListingShelves(listingId: string, sources: readonly PublicShelfSource<ListingMaterial>[]) {
-  const { raster, model, video } = partitionListingSources(sources);
+  const { raster, model, video, terrain: terrainSources } = partitionListingSources(sources);
 
   const modelsSettling = reconcilePublicModelShelf(LISTING_MODEL_SHELF, listingId, model);
+  const terrainSettling = reconcilePublicTerrainShelf(LISTING_TERRAIN_SHELF, listingId, terrainSources);
   const videos = await reconcilePublicVideoShelf(LISTING_VIDEO_SHELF, listingId, video);
-  const [images, models] = await Promise.all([
+  const [images, models, terrain] = await Promise.all([
     reconcilePublicShelf(LISTING_SHELF, listingId, [
       ...admittedRasterSources(listingId, raster),
       ...videoPosterSources(videos.published, video),
     ]),
     modelsSettling,
+    terrainSettling,
   ]);
 
-  const shelves = { ΕΙΚΟΝΩΝ: images, ΜΟΝΤΕΛΩΝ: models, ΒΙΝΤΕΟ: videos } as const;
+  const shelves = { ΕΙΚΟΝΩΝ: images, ΜΟΝΤΕΛΩΝ: models, ΒΙΝΤΕΟ: videos, ΕΔΑΦΟΥΣ: terrain } as const;
   for (const [name, shelf] of Object.entries(shelves)) {
     if (shelf.outcome !== 'failed') continue;
     logger.error(`Το ράφι ${name} δεν συμφιλιώθηκε — η αγγελία γράφεται ΧΩΡΙΣ το υλικό του`, { propertyId: listingId });
   }
 
-  return { images, models, videos };
+  return { images, models, videos, terrain };
 }
 
 /**
@@ -369,88 +381,6 @@ function admittedRasterSources(
     });
   }
   return admitted;
-}
-
-/**
- * **Ό,τι είδε το ράφι ΕΙΚΟΝΩΝ, στη γλώσσα της ΚΑΘΑΡΗΣ προβολής** — μία γραμμή μετάφρασης.
- *
- * 🔑 Υπάρχει ώστε η προβολή να μη χρειαστεί ποτέ να εισαγάγει τον τύπο της υπηρεσίας: εκείνη
- * δηλώνει ρητά ότι είναι **καθαρή**, και η υπηρεσία σέρνει `firebase-admin` **και** `sharp`.
- *
- * ⚠️ Το `sources` παίρνει **όλα** τα παράγωγα, όχι μόνο το κανονικό: αυτό ακριβώς είναι το
- * `srcset`, και είναι ο λόγος που η αναφορά τα κρατά **ομαδοποιημένα** (Α2.2).
- */
-function toProjectedImage(image: PublicShelfImage<ListingMaterial>): ProjectedShelfImage {
-  return {
-    ...toProjectedFace(image),
-    // 🔑 **Ταξιδεύει αυτούσιο, καμία κρίση εδώ** (ADR-841 §7 Α17.4): αυτή η γραμμή είναι
-    //    μετάφραση τύπων, όχι σημασιολογία. Ο **ένας** τόπος που ρωτά «κάτοψη ή
-    //    φωτογραφία;» είναι το `withPublishedGallery`.
-    material: image.material,
-    // 🎯 ADR-880 — και τα δύο ταξιδεύουν **αυτούσια**· η απόφαση ζει στο `withPublishedGallery`.
-    declaredFocalPoint: image.declaredFocalPoint,
-    detectedFocalPoint: image.focalPoint,
-    // 📍 ADR-897 — αυτούσια· η ταυτότητα γίνεται δείκτης **μόνο** στο `withPublishedGallery`.
-    sourceFileId: image.sourceFileId,
-    declaredCaptureSpot: image.declaredCaptureSpot,
-    declaredNorthRad: image.declaredNorthRad,
-  };
-}
-
-/**
- * **Ό,τι είδε το ράφι ΜΟΝΤΕΛΩΝ, στη γλώσσα της ΚΑΘΑΡΗΣ προβολής** — ο αδελφός από πάνω.
- *
- * ⚠️ **Το `key` ΔΕΝ ταξιδεύει**: είναι η διεύθυνση **μέσα στον κάδο**, χρήσιμη μόνο στον
- * σβήστη. Στο δημόσιο έγγραφο πηγαίνει το **URL**, και τίποτε άλλο που να μοιάζει με
- * εσωτερικό αναγνωριστικό.
- *
- * 🔑 **Και ΚΑΝΕΝΑ `material`** — δες `PublicShelfModelReport` για το γιατί η ασυμμετρία με τον
- * αδελφό του είναι σωστή: ένα μοντέλο έχει **ένα** κουτί, άρα δεν υπάρχει τι να δρομολογηθεί.
- */
-function toProjectedModel(model: PublishedShelfModel): ProjectedShelfModel {
-  return { url: model.url, at: model.at };
-}
-
-/**
- * **Ό,τι είδε το ράφι ΒΙΝΤΕΟ, στη γλώσσα της καθαρής προβολής** — το `key` και η ταυτότητα της πηγής **δεν** ταξιδεύουν.
- *
- * 🖼️ Το εξώφυλλο βρίσκεται με την **ταυτότητα της πηγής**, ποτέ με τη θέση στον πίνακα: ό,τι απορρίφθηκε λείπει από
- * την αναφορά, άρα «το πρώτο εξώφυλλο» δεν είναι απαραίτητα του «πρώτου βίντεο».
- */
-function toProjectedVideo(
-  video: PublishedShelfVideo,
-  posterByVideo: ReadonlyMap<string, PublicShelfImage<ListingMaterial>>,
-): ProjectedShelfVideo {
-  const { url, at, durationSec, width, height, sourceFileId } = video;
-  const image = sourceFileId === null ? undefined : posterByVideo.get(sourceFileId);
-
-  return { url, at, durationSec, width, height, poster: image === undefined ? null : toProjectedFace(image) };
-}
-
-/**
- * **Ό,τι είδε το ράφι για την ΚΑΤΟΨΗ ΟΡΟΦΟΥ, στη γλώσσα της καθαρής προβολής** — η όψη από το ράφι, όλα τα άλλα από το
- * υλικό που ταξίδεψε μαζί της. Καμία ταυτότητα πηγής δεν περνά.
- */
-function toProjectedFloorPlate(
-  plate: ShelfFloorPlate<PublicShelfImage<ListingMaterial>>,
-): ProjectedShelfFloorPlate {
-  const { at, provenance, units } = plate.material;
-  return { image: toProjectedFace(plate.image), at, provenance, units };
-}
-
-/**
- * **Η όψη μιας εικόνας του ραφιού** — διεύθυνση, διαστάσεις και **όλα** τα παράγωγα (αυτό ακριβώς είναι το `srcset`).
- *
- * 🔑 Ένα σώμα για φωτογραφία, κάτοψη, κάτοψη ορόφου **και** εξώφυλλο (N.18): το εξώφυλλο είναι αυτό και **τίποτε άλλο** — καμία δήλωση
- * ανθρώπου (σημείο εστίασης, σημείο λήψης, βορράς) δεν το αφορά· οι εικόνες της συλλογής τις προσθέτουν από πάνω.
- */
-function toProjectedFace(image: PublicShelfImage<ListingMaterial>): ProjectedVideoPoster {
-  return {
-    url: image.canonical.url,
-    width: image.canonical.width,
-    height: image.canonical.height,
-    sources: image.variants.map((variant) => ({ url: variant.url, width: variant.width })),
-  };
 }
 
 /**

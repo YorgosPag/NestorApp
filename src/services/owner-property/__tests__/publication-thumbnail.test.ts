@@ -34,6 +34,9 @@ const ONE_PHOTO_REPORT = {
         { key: 'k0-2560', url: 'https://shelf/0-2560.webp', width: 2560, height: 1700 },
       ],
       material: { kind: 'photo' },
+      // Boy Scout (ADR-920 Β3β): η αναφορά του ραφιού έχει ΠΑΝΤΑ σημείο λήψης (ADR-897) — `null` = κανένα. Χωρίς αυτό
+      //    το fixture έπεφτε στο `toListingCaptureSpot(undefined)` και το test ήταν κόκκινο από το `9bdc2cc8`.
+      declaredCaptureSpot: null,
     },
   ],
   removed: 0,
@@ -49,6 +52,10 @@ jest.mock('@/services/listings/public-shelf-model.service', () => ({
 // ADR-907 §10 — το τρίτο κεφάλι του ραφιού (βίντεο): αλλιώς το αληθινό θα ζητούσε κάδο.
 jest.mock('@/services/listings/public-shelf-video.service', () => ({
   reconcilePublicVideoShelf: async () => EMPTY_REPORT,
+}));
+// ADR-920 Β3β — το κεφάλι του εδάφους: ίδιος λόγος.
+jest.mock('@/services/listings/public-shelf-terrain.service', () => ({
+  reconcilePublicTerrainShelf: async () => EMPTY_REPORT,
 }));
 jest.mock('@/services/mandate/showcase-presence.service', () => ({
   refreshShowcasePresence: async () => undefined,
@@ -91,6 +98,7 @@ describe('🖼️ η μικρογραφία γράφεται στο ΙΔΙΟ α�
         { url: 'https://shelf/0-640.webp', width: 640 },
         { url: 'https://shelf/0-2560.webp', width: 2560 },
       ],
+      focalPoint: null, // ADR-880 — η μικρογραφία κουβαλά το σημείο εστίασης της εικόνας· καμία δήλωση ⇒ `null`.
     };
     expect(publish).toBe('published');
     expect(await storedPublication(db, property.id)).toMatchObject({ outcome: 'published', thumbnail: expected });

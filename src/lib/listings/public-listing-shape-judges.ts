@@ -7,7 +7,9 @@
 import { z } from 'zod';
 
 import { LISTED_TOUR_VISIBILITIES } from '@/constants/spatial-tour-vocabulary';
-import type { ListedAt } from '@/types/public-listing';
+import type { ListedAt, ListingTerrain } from '@/types/public-listing';
+import type { SourcedAttribute } from '@/lib/property/attribute-provenance';
+import { readListingTerrainCard } from '@/lib/terrain/publication/listing-terrain-card';
 import { readStayPetPolicy } from '@/lib/offers/stay-pet-policy';
 import { scheduledAvailability } from '@/lib/listings/availability-window';
 import {
@@ -285,3 +287,27 @@ export const projectedAtOrNull = z.string().trim().min(1).nullable().catch(null)
  * `null` — δηλαδή η αναβάθμιση θα **έτρωγε** το γεγονός που η ίδια παρήγαγε.
  */
 export const alreadySourced = z.object({ provenance: z.string().min(1) }).passthrough().nullable();
+
+/**
+ * **Το δημοσιευμένο έδαφος** (ADR-920 Β3β, κρίκος 26) — έλεγχος **ΒΑΘΥΣ**, όπως το `readStoredAvailability`: η κάρτα
+ * είναι αυτό που διαβάζει ο αγοραστής («κλίση 11 %, τοπογράφος Χ»), και ένα ρηχό `passthrough()` θα άφηνε σκουπίδι
+ * να φτάσει σε δημόσια οθόνη. Ο φάκελος (`measured` + `sourceRef` + `at` + `url`) κρίνεται εδώ· η **κάρτα** από τον
+ * **έναν** αναγνώστη της (`readListingTerrainCard`), όχι από καθρέφτη του.
+ *
+ * Ό,τι δεν στέκει ⇒ `null` («δεν δημοσιεύτηκε»). **Ιδιοδύναμο (Κ3)**: έγκυρη τιμή βγαίνει δομικά ταυτόσημη.
+ */
+const storedTerrainEnvelope = z.object({
+  provenance: z.literal('measured'),
+  sourceRef: z.string().trim().min(1),
+  at: z.string().trim().min(1),
+  value: z.object({ url: z.string().trim().min(1) }).passthrough(),
+});
+
+export function readStoredTerrain(value: unknown): SourcedAttribute<ListingTerrain> | null {
+  const parsed = storedTerrainEnvelope.safeParse(value);
+  if (!parsed.success) return null;
+  const card = readListingTerrainCard(parsed.data.value);
+  if (card === null) return null;
+  const { provenance, sourceRef, at } = parsed.data;
+  return { provenance, sourceRef, at, value: { url: parsed.data.value.url, ...card } };
+}

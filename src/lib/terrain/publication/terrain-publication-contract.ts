@@ -50,6 +50,7 @@ export const TERRAIN_REFUSAL_CODES = [
   'TERRAIN_TOO_DENSE',
   // The publication.
   'TERRAIN_PUBLICATION_NOT_CAPABLE',
+  'TERRAIN_NO_DOSSIER',
   'TERRAIN_UPLOAD_FAILED',
 ] as const;
 

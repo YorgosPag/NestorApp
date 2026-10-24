@@ -240,6 +240,14 @@ export function withPublishedGallery(
             'γράφει ο `withPublishedFloorPlates` (ADR-907 §11.5).',
         );
 
+      case 'terrain':
+        // ADR-920 Β3β — **άρνηση με όνομα**: η πηγή του τοπογράφου δεν είναι εικόνα, και δεν δημοσιεύεται ποτέ αυτούσια.
+        //    Το `terrain` το γράφει ο **δικός του** γραφέας (`withPublishedTerrain`), από το ψημένο στιγμιότυπο.
+        throw new Error(
+          'withPublishedGallery: το έδαφος δεν περνά από τη διαδρομή των εικόνων — το `terrain` το γράφει ο ' +
+            '`withPublishedTerrain` (ADR-920 §12).',
+        );
+
       default:
         return assertNeverMaterial(material);
     }

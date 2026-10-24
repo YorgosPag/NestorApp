@@ -146,6 +146,7 @@ describe('Κ3 — ΤΟ ΣΥΜΒΟΛΟ ΠΟΥ ΚΑΝΕΙΣ ΔΕΝ ΚΑΛΕΙ (τ�
       ['withPublishedModels', 1],
       ['withPublishedVideos', 1],
       ['withPublishedFloorPlates', 1],
+      ['withPublishedTerrain', 1],
       ['withdrawListingShelves', 1],
     ]);
     expect(auditSymbolReach(full)).toEqual([]);

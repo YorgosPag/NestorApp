@@ -90,12 +90,18 @@ function fixture(id: string, title: string, position: PublicListing['position'])
     floorplans: [],
     // Το τέταρτο κουτί (ADR-845 Φ4.1). Κενό: ο παραγωγός μοντέλου γεννιέται στη Φ4.2.
     models: [],
+    // Boy Scout (ADR-920 Β3β): τα κουτιά μέσων που έλειπαν από τότε που μπήκαν (ADR-907 §10/§11 · ADR-884) + το έδαφος.
+    videos: [],
+    floorPlates: [],
+    tour: null,
+    terrain: null,
     // ✅ **ADR-842 Φ3** — το εργαστήριο δείχνει **σχήματα θέσης**, όχι χαρακτηριστικά.
     //    Μία ονομασμένη απουσία αντί για είκοσι τρία `null` γραμμένα εδώ.
     ...UNASKED_LISTING_ATTRIBUTES,
     projectedAt: AT,
     listedAt: { kind: 'unknown', reason: 'predates-record' },
     availability: LISTING_AVAILABILITY_UNKNOWN, // ADR-919 — το εργαστήριο δείχνει σχήματα θέσης, όχι διαθεσιμότητα.
+    availabilityTrack: null,
     priceReduction: null,
     objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
     levelAreas: null,

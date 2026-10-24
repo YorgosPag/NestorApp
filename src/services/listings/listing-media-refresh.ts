@@ -32,6 +32,9 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
+import { custodyOf } from '@/lib/owner-property/listing-custody';
+import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
+import { republishOwnerProperty } from '@/services/owner-property/owner-property-publication.service';
 
 import { AGENCY_ENTITY_TYPE } from './agency-media-publication';
 import {
@@ -93,6 +96,36 @@ export async function refreshListingAfterMediaChange(
     return await republishListing(adminDb, propertyId, { ...data, id: propertyId });
   } catch (error) {
     return reportProjectionFailure(propertyId, error);
+  }
+}
+
+/**
+ * **Το ίδιο, για την αγγελία του ΙΔΙΟΚΤΗΤΗ** — άλλαξε υλικό στον φάκελό της (ADR-920 Β4.3).
+ *
+ * 🔑 Ο **υπάρχων** γραφέας της οικογένειας (`republishOwnerProperty`), ποτέ τρίτος: γράφει την προβολή **και** το
+ * αποτύπωμα δημοσίευσης, ώστε η οθόνη του ιδιοκτήτη να μην λέει «εκκρεμεί» για αγγελία που ήδη άλλαξε.
+ * 🔐 **Η κηδεμονία ξαναρωτιέται ΕΔΩ**, όπως στο εταιρικό: το `userId` είναι ο κάτοχος του **αρχείου** που άλλαξε, και
+ * αγγελία που δεν είναι πια δική του (πέρασε σε γραφείο ενδιάμεσα) **δεν** ξαναπροβάλλεται εξαιτίας του.
+ * ⚠️ Το έγγραφο διαβάζεται **τώρα** — ίδιος λόγος με το εταιρικό. **Δεν πετά ποτέ.**
+ */
+export async function refreshOwnerListingAfterMediaChange(
+  adminDb: AdminFirestore,
+  ownerPropertyId: string,
+  userId: string,
+): Promise<ListingMediaRefreshOutcome> {
+  try {
+    const snapshot = await adminDb.collection(COLLECTIONS.OWNER_PROPERTIES).doc(ownerPropertyId).get();
+    const property = ownerPropertyFromDocument(snapshot.data(), ownerPropertyId);
+    const custody = property === null ? null : custodyOf(property);
+
+    if (property === null || custody?.kind !== 'personal' || custody.userId !== userId) {
+      logger.warn('Υλικό φακέλου άλλαξε, αλλά δεν υπάρχει αγγελία αυτού του ιδιοκτήτη να προβληθεί', { ownerPropertyId });
+      return 'absent';
+    }
+
+    return (await republishOwnerProperty(adminDb, property)).publish;
+  } catch (error) {
+    return reportProjectionFailure(ownerPropertyId, error);
   }
 }
 

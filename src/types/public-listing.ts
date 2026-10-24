@@ -82,6 +82,7 @@ import type { PlacePosition, PlaceRef } from '@/types/geo/public-place';
 import type { PriceReduction } from '@/types/price-history';
 import type { AvailabilityTrack } from '@/types/availability-history';
 import type { ListingAvailability } from '@/types/listing-availability';
+import type { ListingTerrainCard } from '@/lib/terrain/publication/listing-terrain-card';
 import type {
   AmenityCodeType,
   ConditionType,
@@ -403,6 +404,18 @@ export interface PublishedFloorPlate {
  * την ανέβασε άνθρωπος. Ίδιο δοχείο με κάτοψη, μοντέλο και βίντεο — κανένα νέο λεξιλόγιο προέλευσης.
  */
 export type ListingFloorPlate = SourcedAttribute<PublishedFloorPlate>;
+
+/**
+ * ⛰️ **ΤΟ ΔΗΜΟΣΙΕΥΜΕΝΟ ΕΔΑΦΟΣ ΤΟΥ ΟΙΚΟΠΕΔΟΥ** (ADR-920 Β3β) — το `url` του ψημένου στιγμιοτύπου
+ * (`ListingTerrainSnapshot`, ράφι `'terrain'`) **και** η κάρτα του, ώστε κάρτα αποτελεσμάτων και κεφαλίδα να
+ * λένε εμβαδόν, υψομετρική διαφορά, κλίση και τοπογράφο **χωρίς** να κατεβάσουν το mesh.
+ *
+ * 🔴 **Ποτέ θέση**: το στιγμιότυπο είναι σε σχετικό πλαίσιο (Β2), και η κάρτα δεν έχει συντεταγμένες (Δ3).
+ * Η κάρτα φτιάχνεται και διαβάζεται **μόνο** από το `lib/terrain/publication/listing-terrain-card`.
+ */
+export interface ListingTerrain extends ListingTerrainCard {
+  readonly url: string;
+}
 
 /**
  * **ΟΙ ΟΡΟΙ ΔΙΑΜΟΝΗΣ** — τρία πεδία, **κανένα ημερολόγιο** (ADR-835 §4.5).
@@ -730,6 +743,15 @@ export interface PublicListing {
    * που τον καλεί κάθε γραφέας που αλλάζει την απάντηση· το φυλά η πύλη της παρουσίας περιήγησης.
    */
   readonly tour: ListingTourPresence | null;
+
+  /**
+   * ⛰️ **Το ανάγλυφο του οικοπέδου** (ADR-920 Β3β) — `measured`, ψημένο από τον server πάνω στη μέτρηση του
+   * τοπογράφου· ή `null` όταν δεν δημοσιεύτηκε (ποτέ «δεν υπάρχει τοπογραφικό»).
+   *
+   * 🔑 **Ένας γραφέας**: ο binder του ραφιού (`withPublishedTerrain`) — η καθαρή προβολή γράφει `null`. Το φυλά
+   * η πύλη του ενός γραφέα εδάφους. Μόνο για γη (`isLandProperty`).
+   */
+  readonly terrain: SourcedAttribute<ListingTerrain> | null;
 
   // ── 3. ΕΙΔΟΣ + ΕΜΒΑΔΟΝ ────────────────────────────────────────────────────
   /**

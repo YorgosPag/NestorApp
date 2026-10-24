@@ -632,3 +632,77 @@ describe('Κ16 — κρίκος 25: η διαθεσιμότητα (ADR-919 §7)'
     expect(link.apply({ availability: { kind: 'scheduled', precision: 'quarter' } }).availability).toEqual({ kind: 'unknown' });
   });
 });
+
+describe('Κ17 — κρίκος 26: το έδαφος (ADR-920 §12)', () => {
+  const link = LISTING_MIGRATIONS_21_30.find((migration) => migration.to === 26)!;
+  const TERRAIN = {
+    provenance: 'measured',
+    sourceRef: 'property-terrain:measured',
+    at: '2026-10-23T10:00:00.000Z',
+    value: {
+      url: 'https://storage.googleapis.com/b/listings/prop_1/abc.json',
+      snapshotVersion: 1,
+      stats: {
+        planAreaM2: 400, minElevationM: 120, maxElevationM: 122,
+        reliefM: 2, meanSlopePct: 10, maxSlopePct: 10, downslopeAzimuthDeg: 270,
+      },
+      contourIntervalM: 0.5,
+      envelope: { kind: 'volume', maxHeightM: 7.5 },
+      survey: { surveyorName: 'Τοπογράφος Α', surveyedOn: '2026-05-04' },
+    },
+  };
+
+  it('🔴 παλιό έγγραφο ⇒ `null` («δεν δημοσιεύτηκε»), ποτέ επινοημένο έδαφος', () => {
+    expect(link.apply({ type: 'plot' }).terrain).toBeNull();
+    expect(upgradeListingDocument({ ...PRODUCTION_V1 }).terrain).toBeNull();
+  });
+
+  it('ιδιοδύναμο: ό,τι έγραψε ήδη ο binder μένει αυτούσιο', () => {
+    const once = link.apply({ terrain: TERRAIN });
+    expect(once.terrain).toEqual(TERRAIN);
+    expect(link.apply(once)).toEqual(once);
+  });
+
+  it.each([
+    ['όχι measured', { ...TERRAIN, provenance: 'declared' }],
+    ['χωρίς url', { ...TERRAIN, value: { ...TERRAIN.value, url: '' } }],
+    ['κλίση NaN', { ...TERRAIN, value: { ...TERRAIN.value, stats: { ...TERRAIN.value.stats, meanSlopePct: Number.NaN } } }],
+    ['ψεύτικη ημέρα αποτύπωσης', { ...TERRAIN, value: { ...TERRAIN.value, survey: { surveyorName: 'Α', surveyedOn: '2026-02-30' } } }],
+    ['πρίσμα χωρίς ύψος', { ...TERRAIN, value: { ...TERRAIN.value, envelope: { kind: 'volume' } } }],
+    ['κείμενο', 'ναι'],
+  ])('σκουπίδι (%s) ⇒ `null`, ποτέ σε δημόσια οθόνη', (_label, garbage) => {
+    expect(link.apply({ terrain: garbage }).terrain).toBeNull();
+  });
+});
+
+describe('Κ18 — κρίκος 27: η ιστορία της υπόσχεσης (ADR-919 §10)', () => {
+  const link = LISTING_MIGRATIONS_21_30.find((migration) => migration.to === 27)!;
+  const Q2_2027 = { kind: 'scheduled', precision: 'quarter', window: { start: '2027-04-01', end: '2027-06-30' } };
+  const Q4_2027 = { kind: 'scheduled', precision: 'quarter', window: { start: '2027-10-01', end: '2027-12-31' } };
+  const TRACK = {
+    originally: Q2_2027,
+    slips: 1,
+    lastChange: { kind: 'slipped', from: Q2_2027, at: '2026-10-23T10:00:00.000Z' },
+  };
+
+  it('🔴 παλιό έγγραφο ⇒ `null` («καμία ιστορία»), ποτέ ψεύτικο πλήθος μεταθέσεων', () => {
+    expect(link.apply({ availability: Q4_2027 }).availabilityTrack).toBeNull();
+    expect(upgradeListingDocument({ ...PRODUCTION_V1 }).availabilityTrack).toBeNull();
+  });
+
+  it('ιδιοδύναμο: ό,τι έγραψε ήδη ο γραφέας μένει αυτούσιο', () => {
+    const once = link.apply({ availabilityTrack: TRACK });
+    expect(once.availabilityTrack).toEqual(TRACK);
+    expect(link.apply(once)).toEqual(once);
+  });
+
+  it.each([
+    ['αρχική υπόσχεση όχι scheduled', { ...TRACK, originally: { kind: 'ready' } }],
+    ['αρνητικές μεταθέσεις', { ...TRACK, slips: -1 }],
+    ['άγνωστο είδος αλλαγής', { ...TRACK, lastChange: { ...TRACK.lastChange, kind: 'teleported' } }],
+    ['τρίμηνο με λάθος τέλος', { ...TRACK, originally: { ...Q2_2027, window: { start: '2027-04-01', end: '2027-05-31' } } }],
+    ['κείμενο', 'μετατέθηκε'],
+  ])('σκουπίδι (%s) ⇒ `null`, ποτέ σε δημόσια οθόνη', (_label, garbage) => {
+    expect(link.apply({ availabilityTrack: garbage }).availabilityTrack).toBeNull();
+  });
+});

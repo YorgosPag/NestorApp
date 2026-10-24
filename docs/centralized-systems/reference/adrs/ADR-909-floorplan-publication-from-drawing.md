@@ -172,6 +172,7 @@ plot style · επίπλωση. Έτσι η εικόνα είναι **αναπα
 |---|---|---|
 | Πόρτα | `app/api/properties/[id]/floorplan/route.ts` | μόνο ό,τι είναι της κάτοψης |
 | **Κοινός κορμός** | `app/api/properties/[id]/_shared/publish-property-material.ts` | κηδεμονία → δικαίωμα → ανάγνωση → `revision` → εγγραφή → προκάτοχοι → bytes → `ready` → διαδοχή → δήλωση → **επαναπροβολή**. Η πόρτα του μοντέλου ξαναγράφτηκε πάνω του· η σουίτα της πέρασε **χωρίς αλλαγή ισχυρισμών** |
+| Κινητήρας *(ADR-920 Β4.3)* | `server/listing-material/publish-listing-material.ts` (+ `material-source-lookup` · `material-supersession`) | η **σειρά** του κορμού, ανεξάρτητη από κηδεμονία, με θύρα υποκειμένου. Ο κορμός της γραμμής από πάνω είναι πλέον το **εταιρικό υποκείμενο** (ίδια υπογραφή)· το δεύτερο είναι ο φάκελος του ιδιοκτήτη |
 | Κατασκευαστής | `lib/listings/floorplan-file-record.ts` | αδελφός του μοντέλου· `sourceRevisions` και `renderRecipe` **υποχρεωτικά στον τύπο** |
 | Ταυτότητα | `lib/listings/floorplan-publication-identity.ts` | `floorplan/measured/{levelId}` |
 | Συνταγή | `lib/listings/floorplan-render-recipe.ts` | κλειστό σχήμα + `PUBLIC_FLOORPLAN_PROFILE` *(id + έκδοση)* + ανάγνωση IHDR |
@@ -1648,6 +1649,18 @@ push στο `78fe90bb`, `ubuntu-24.04`, Chromium 143.0.7499.4 *(Playwright 1.57.
   εργαλεία ασφάλειας, όχι από CAD.
 
 ## 8. Changelog
+
+### 2026-10-24 — το δεύτερο υποκείμενο: ο φάκελος του ιδιοκτήτη *(ADR-920 Β4.3 φάση γ)*
+
+- `server/listing-material/publish-owner-property-material.ts` (`publishOwnerPropertyMaterial`): κηδεμονία `mayAdminister`, φάκελος
+  του ίδιου ανθρώπου, δράστης `personalContainerActorOf`, προκάτοχοι στο `files_personal` χωρίς νέο ευρετήριο, επαναπροβολή
+  `refreshOwnerListingAfterMediaChange`. Πρώτη πόρτα: το τοπογραφικό. Ο κινητήρας **δεν άλλαξε**. Λεπτομέρειες: ADR-920 §13.4.
+
+### 2026-10-23 — ο κορμός έγινε κινητήρας δύο κηδεμονιών *(ADR-920 Β4.3)*
+
+- `publishPropertyMaterial` κρατά υπογραφή και πόρτες· η σειρά μετακόμισε στο `server/listing-material/publish-listing-material.ts`
+  με θύρα υποκειμένου (`ListingMaterialSubject`). Η συλλογή της εγγραφής προκύπτει από τον **δράστη** (`FILE_COLLECTION[…]`),
+  όπως ήδη στον `transitionContainer`. Οι σουίτες μοντέλου/κάτοψης/εδάφους πέρασαν **χωρίς αλλαγή**. Λεπτομέρειες: ADR-920 §13.4.
 
 ### 2026-10-13 — Γ2.9 τα τέσσερα Κ0: `ellipse` · `point` · `rect` · `spline` φτάνουν στην εικόνα *(§6.9)*
 

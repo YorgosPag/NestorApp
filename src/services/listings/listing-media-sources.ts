@@ -26,6 +26,7 @@ import type { PublicShelfSource } from '@/services/upload/utils/storage-path-pub
 import { agencyMediaDeclaration } from './agency-media-publication';
 import { createAgencyMediaResolver } from './agency-media.reader';
 import { createFloorPlateResolver } from './floor-plate.reader';
+import { createTerrainResolver } from './terrain.reader';
 import type { ListingSourceProperty } from './publish-public-listing';
 
 /** Οι πηγές ραφιού **μιας** αγγελίας γραφείου, από το έγγραφο του ακινήτου της. */
@@ -41,12 +42,14 @@ export type ListingMediaResolver = (
 export function createListingMediaResolver(adminDb: AdminFirestore): ListingMediaResolver {
   const resolveAgencyMedia = createAgencyMediaResolver(adminDb);
   const resolveFloorPlate = createFloorPlateResolver(adminDb);
+  const resolveTerrain = createTerrainResolver(adminDb); // ADR-920 Β3β
 
   return async (propertyId, property) => {
-    const [agencyMedia, floorPlate] = await Promise.all([
+    const [agencyMedia, floorPlate, terrain] = await Promise.all([
       resolveAgencyMedia(propertyId, property.companyId, agencyMediaDeclaration(property)),
       resolveFloorPlate(propertyId, property),
+      resolveTerrain(propertyId, property),
     ]);
-    return [...agencyMedia, ...floorPlate];
+    return [...agencyMedia, ...floorPlate, ...terrain];
   };
 }

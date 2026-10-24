@@ -58,6 +58,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     gallery: [],
     floorplans: [declaredPlan()],
     tour: null,
+    terrain: null,
     ...over,
   } as unknown as PublicListing;
 }

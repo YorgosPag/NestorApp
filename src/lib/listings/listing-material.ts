@@ -54,7 +54,7 @@ import type { FloorPlateUnit } from '@/types/public-listing';
  * που **καμία** δεν έχει νόημα σε δημόσια αγγελία. Ένα συμβόλαιο δεν είναι είδος
  * δημόσιου υλικού· είναι λόγος να **μην** δημοσιευτεί τίποτα.
  */
-export const LISTING_MATERIAL_KINDS = ['photo', 'floorplan', 'model', 'video', 'floorPlate'] as const;
+export const LISTING_MATERIAL_KINDS = ['photo', 'floorplan', 'model', 'video', 'floorPlate', 'terrain'] as const;
 
 /** Δες {@link LISTING_MATERIAL_KINDS}. **Κλειστή ένωση, ποτέ `string`.** */
 export type ListingMaterialKind = (typeof LISTING_MATERIAL_KINDS)[number];
@@ -198,6 +198,17 @@ export type ListingMaterial =
       /** `measured` η λήψη από το σχέδιο (ADR-909) · `declared` η ανεβασμένη εικόνα ορόφου. */
       readonly provenance: FloorplanProvenance;
       readonly units: readonly FloorPlateUnit[];
+    }
+  | {
+      /**
+       * ⛰️ **ΕΔΑΦΟΣ** *(ADR-920 Β3β)* — η κανονική πηγή του τοπογραφικού, γυμνή για τον λόγο του μοντέλου: τη στιγμή
+       * τη δίνει το `timeCreated` του ιδιωτικού αντικειμένου, την κάρτα ο **ψήστης** πάνω στα bytes, και τη δήλωση Δ2
+       * τα μεταδεδομένα του ίδιου αντικειμένου. Ό,τι γραφόταν εδώ θα ήταν δεύτερη αλήθεια για κάτι που μετριέται.
+       *
+       * ⛔ **Δεν το δηλώνει ποτέ ο κάτοχος από το σύρμα** (δεν είναι στο {@link OWNER_DECLARABLE_MATERIAL_KINDS}): η
+       * μόνη είσοδος είναι η πόρτα `POST …/terrain`, και ο μόνος αναγνώστης η ταυτότητα `terrain/measured`.
+       */
+      readonly kind: 'terrain';
     };
 
 /** Το σκέλος της κάτοψης ορόφου — ό,τι χρειάζεται ο γραφέας της αφού η διαμέριση το ξεχωρίσει. */
@@ -223,6 +234,9 @@ export const MODEL_MATERIAL: ListingMaterial = { kind: 'model' } as const;
 
 /** **Βίντεο** — σταθερά για τον ίδιο λόγο με το {@link PHOTO_MATERIAL} *(ADR-907 §10)*. */
 export const VIDEO_MATERIAL: ListingMaterial = { kind: 'video' } as const;
+
+/** **Έδαφος** — σταθερά για τον ίδιο λόγο με το {@link PHOTO_MATERIAL} *(ADR-920 Β3β)*. */
+export const TERRAIN_MATERIAL: ListingMaterial = { kind: 'terrain' } as const;
 
 /** **Κάτοψη δηλωμένη από άνθρωπο**, με τη στιγμή της δήλωσης. */
 export function declaredFloorplanMaterial(at: string): ListingMaterial {

@@ -46,6 +46,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     floorplans: [],
     // ADR-777 §8.92 — «έχει περιήγηση;» το απαντά η ίδια η αγγελία· εδώ καμία.
     tour: null,
+    terrain: null,
     ...over,
   } as unknown as PublicListing;
 }
