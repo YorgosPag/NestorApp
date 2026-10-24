@@ -1,12 +1,12 @@
 /**
  * ADR-920 Β3β — «ποιο τοπογραφικό δημοσιεύει τώρα αυτό το οικόπεδο;». Μόνο ό,τι έγραψε η πόρτα (ταυτότητα),
  * δημόσιο, παραδοτέο, JSON· το νεότερο νικά. Ένα οποιοδήποτε άλλο σχέδιο DRAWINGS ΔΕΝ γίνεται ποτέ έδαφος.
+ * ADR-920 Β4.4 — ο κριτής εξήχθη στο καθαρό `terrain-source-selection` (τον καλεί και ο φάκελος ιδιοκτήτη) και ρωτά
+ * πλέον ΡΗΤΑ τον τύπο οντότητας: αρχείο φακέλου δεν γίνεται έδαφος εταιρικού ακινήτου, ούτε αντίστροφα.
  */
 
-jest.mock('server-only', () => ({}));
-
-import type { AgencyMediaCandidate } from '../agency-media-publication';
-import { currentTerrainSource } from '../terrain.reader';
+import { AGENCY_ENTITY_TYPE, type AgencyMediaCandidate } from '../agency-media-publication';
+import { currentTerrainSource } from '../terrain-source-selection';
 
 function file(id: string, over: Partial<AgencyMediaCandidate> = {}): AgencyMediaCandidate {
   return {
@@ -25,7 +25,7 @@ function file(id: string, over: Partial<AgencyMediaCandidate> = {}): AgencyMedia
 
 describe('currentTerrainSource', () => {
   it('δίνει την πηγή της πόρτας ως υλικό `terrain`', () => {
-    expect(currentTerrainSource([file('file_a')])).toEqual({
+    expect(currentTerrainSource([file('file_a')], AGENCY_ENTITY_TYPE)).toEqual({
       privateStoragePath: 'companies/c1/terrain/file_a.json',
       storagePlacement: undefined,
       material: { kind: 'terrain' },
@@ -36,7 +36,7 @@ describe('currentTerrainSource', () => {
   it('🔑 ένα ανά ακίνητο: νικά η νεότερη', () => {
     const older = file('file_a', { createdAt: '2026-09-01T08:00:00.000Z' });
     const newer = file('file_b', { createdAt: '2026-10-01T08:00:00.000Z' });
-    expect(currentTerrainSource([newer, older])?.sourceFileId).toBe('file_b');
+    expect(currentTerrainSource([newer, older], AGENCY_ENTITY_TYPE)?.sourceFileId).toBe('file_b');
   });
 
   it.each([
@@ -47,7 +47,8 @@ describe('currentTerrainSource', () => {
     ['όχι έτοιμο', { status: 'pending' }],
     ['διαδεγμένο', { lifecycleState: 'superseded' }],
     ['σβησμένο', { isDeleted: true }],
+    ['αρχείο ΦΑΚΕΛΟΥ σε εταιρικό ακίνητο (Β4.4)', { entityType: 'property_dossier' }],
   ])('⛔ %s ⇒ κανένα έδαφος', (_label, over) => {
-    expect(currentTerrainSource([file('file_a', over as Partial<AgencyMediaCandidate>)])).toBeNull();
+    expect(currentTerrainSource([file('file_a', over as Partial<AgencyMediaCandidate>)], AGENCY_ENTITY_TYPE)).toBeNull();
   });
 });

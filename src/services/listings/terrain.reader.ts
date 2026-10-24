@@ -8,8 +8,8 @@
  * έγραψε η πόρτα (`publicationIdentity === 'terrain/measured'`, το πεδίο που γράφει μόνο εκείνη), δημόσια
  * ταξινομημένο, παραδοτέο και JSON. Ένα σχέδιο DRAWINGS οποιουδήποτε άλλου είδους **δεν** γίνεται ποτέ έδαφος.
  *
- * 🔑 **Ένα ανά ακίνητο**: η πόρτα διαδέχεται την προηγούμενη (ISO 19650)· αν βρεθούν δύο, νικά η νεότερη με τον
- * **ίδιο** συγκριτή που κρίνει όλο το υλικό (`compareAgencyMediaForPublication`).
+ * 🔑 **Ένα ανά ακίνητο**: η πόρτα διαδέχεται την προηγούμενη (ISO 19650)· αν βρεθούν δύο, νικά η νεότερη. Την επιλογή
+ * την κάνει ο **ένας** καθαρός κριτής (`./terrain-source-selection`), τον οποίο καλεί και ο φάκελος ιδιοκτήτη (Β4.4).
  *
  * 🔑 **Μόνο γη** (Δ1): ακίνητο που έπαψε να είναι οικόπεδο δεν δίνει πηγή ⇒ το ράφι αποσύρει το έδαφος μόνο του.
  *
@@ -23,19 +23,12 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ENTITY_TYPES, FILE_CATEGORIES } from '@/config/domain-constants';
 import { isLandProperty } from '@/constants/property-classification';
-import { isDeliverableListingFile } from '@/lib/listings/listing-file-deliverability';
-import { TERRAIN_MATERIAL, type ListingMaterial } from '@/lib/listings/listing-material';
-import { TERRAIN_PUBLICATION_IDENTITY } from '@/lib/listings/terrain-file-record';
-import { TERRAIN_SOURCE_CONTENT_TYPE } from '@/lib/terrain/publication/terrain-publication-contract';
+import type { ListingMaterial } from '@/lib/listings/listing-material';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { PublicShelfSource } from '@/services/upload/utils/storage-path-public-shelf';
 
-import {
-  AGENCY_ENTITY_TYPE,
-  compareAgencyMediaForPublication,
-  isPubliclyClassified,
-  type AgencyMediaCandidate,
-} from './agency-media-publication';
+import { AGENCY_ENTITY_TYPE, type AgencyMediaCandidate } from './agency-media-publication';
+import { currentTerrainSource } from './terrain-source-selection';
 import type { ListingSourceProperty } from './publish-public-listing';
 
 const logger = createModuleLogger('terrain-reader');
@@ -46,34 +39,6 @@ export type TerrainResolver = (
   propertyId: string,
   property: ListingSourceProperty,
 ) => Promise<readonly PublicShelfSource<ListingMaterial>[]>;
-
-function isPublishableTerrainSource(file: AgencyMediaCandidate): boolean {
-  return (
-    file.publicationIdentity === TERRAIN_PUBLICATION_IDENTITY &&
-    file.contentType === TERRAIN_SOURCE_CONTENT_TYPE &&
-    isPubliclyClassified(file) &&
-    isDeliverableListingFile(file, AGENCY_ENTITY_TYPE)
-  );
-}
-
-/** **Η τρέχουσα πηγή εδάφους** ανάμεσα στα αρχεία σχεδίων ενός ακινήτου — καθαρή, ώστε να ελέγχεται χωρίς βάση. */
-export function currentTerrainSource(
-  files: readonly AgencyMediaCandidate[],
-): PublicShelfSource<ListingMaterial> | null {
-  let winner: AgencyMediaCandidate | null = null;
-  for (const file of files) {
-    if (!isPublishableTerrainSource(file)) continue;
-    if (winner === null || compareAgencyMediaForPublication(winner, file) < 0) winner = file;
-  }
-  if (winner === null) return null;
-
-  return {
-    privateStoragePath: winner.storagePath,
-    storagePlacement: winner.storagePlacement,
-    material: TERRAIN_MATERIAL,
-    sourceFileId: winner.id,
-  };
-}
 
 async function readTerrainSources(
   adminDb: AdminFirestore,
@@ -95,6 +60,7 @@ async function readTerrainSources(
 
     const source = currentTerrainSource(
       snapshot.docs.map((doc) => ({ ...(doc.data() as AgencyMediaCandidate), id: doc.id })),
+      AGENCY_ENTITY_TYPE,
     );
     return source === null ? NO_TERRAIN : [source];
   } catch (error) {

@@ -14,16 +14,21 @@
  * | χωρίς έλεγχο κατόχου (`entityId`/`userId`) | Α41.1 «ξένο» |
  * | κατηγορία αντί καρτέλας (`floorplans` ⇒ κάτοψη) | Α41.1 «τοπογραφικό» |
  * | πτώση στο `media[]` όταν υπάρχει φάκελος | Α41.2 |
+ * | ADR-920 Β4.4: έδαφος χωρίς φρουρά κατόχου · χωρίς «μόνο γη» · μόνο αν δηλωθεί · χωρίς φάκελο | Α41.3 |
  */
 
 import {
   dossierMediaMaterial,
+  dossierTerrainSource,
   publishedDossierMediaSources,
   type DossierMediaCandidate,
   type DossierMediaOwner,
 } from '../dossier-media-publication';
 import { ownerListingMediaSources } from '@/lib/owner-property/owner-media-publication';
 import { PUBLISHED_MEDIA_LIMIT } from '@/services/upload/utils/storage-path-public-shelf';
+import { FILE_CLASSIFICATIONS } from '@/config/domain-constants';
+import { TERRAIN_PUBLICATION_IDENTITY } from '@/lib/listings/terrain-file-record';
+import { TERRAIN_SOURCE_CONTENT_TYPE } from '@/lib/terrain/publication/terrain-publication-contract';
 import type { OwnerPropertyMedia } from '@/types/owner-property';
 
 const DOSSIER: DossierMediaOwner = { id: 'pdos_a', label: 'Σπίτι', userId: 'user-1', type: 'land' };
@@ -69,6 +74,7 @@ describe('Α41.1 — η δήλωση ΕΙΝΑΙ η εξουσιοδότηση, �
 
     const viaListing = ownerListingMediaSources(
       {
+        type: null,
         media: [],
         dossierId: DOSSIER.id,
         publishedFileIds: ['file_view'],
@@ -124,23 +130,80 @@ describe('Α41.2 — ΜΙΑ πηγή βιτρίνας, διπλή ανάγνωσ
   const read = { dossier: DOSSIER, files: [VIEW] };
 
   it('χωρίς φάκελο ⇒ το παλιό `media[]`, αυτούσιο', () => {
-    expect(ownerListingMediaSources({ media: legacy }, null).map((s) => s.privateStoragePath)).toEqual([
+    expect(ownerListingMediaSources({ type: null, media: legacy }, null).map((s) => s.privateStoragePath)).toEqual([
       'owner_properties/user-1/ownp_a/old.png',
     ]);
   });
 
   it('με φάκελο ⇒ η δήλωση πάνω στον φάκελο — το `media[]` ΔΕΝ διαβάζεται', () => {
-    const listing = { media: legacy, dossierId: 'pdos_a', publishedFileIds: ['file_view'] };
+    const listing = { type: null, media: legacy, dossierId: 'pdos_a', publishedFileIds: ['file_view'] };
     expect(paths(ownerListingMediaSources(listing, read))).toEqual(['file_view.png']);
   });
 
   it('με φάκελο και ΚΕΝΗ δήλωση ⇒ τίποτα (όχι πτώση στο `media[]`)', () => {
-    expect(ownerListingMediaSources({ media: legacy, dossierId: 'pdos_a' }, read)).toEqual([]);
+    expect(ownerListingMediaSources({ type: null, media: legacy, dossierId: 'pdos_a' }, read)).toEqual([]);
   });
 
   it('με φάκελο που δεν διαβάστηκε ή είναι ΑΛΛΟΣ ⇒ τίποτα', () => {
-    const listing = { media: legacy, dossierId: 'pdos_a', publishedFileIds: ['file_view'] };
+    const listing = { type: null, media: legacy, dossierId: 'pdos_a', publishedFileIds: ['file_view'] };
     expect(ownerListingMediaSources(listing, null)).toEqual([]);
     expect(ownerListingMediaSources({ ...listing, dossierId: 'pdos_b' }, read)).toEqual([]);
+  });
+});
+
+describe('Α41.3 — ADR-920 Β4.4: το τοπογραφικό του φακέλου φεύγει ως ΕΔΑΦΟΣ, με την πράξη της πόρτας ως εξουσιοδότηση', () => {
+  const TERRAIN = file('file_terrain', {
+    domain: 'construction',
+    category: 'drawings',
+    purpose: undefined,
+    contentType: TERRAIN_SOURCE_CONTENT_TYPE,
+    classification: FILE_CLASSIFICATIONS.PUBLIC,
+    publicationIdentity: TERRAIN_PUBLICATION_IDENTITY,
+    storagePath: 'people/user-1/entities/property_dossier/pdos_a/domains/construction/categories/drawings/files/file_terrain.json',
+  });
+  const plot = { type: 'land' as const, media: [], dossierId: DOSSIER.id, publishedFileIds: ['file_view'] };
+  const terrainOf = (sources: ReturnType<typeof ownerListingMediaSources>) =>
+    sources.filter((source) => source.material.kind === 'terrain');
+
+  it('οικόπεδο με φάκελο ⇒ οι δηλωμένες φωτογραφίες ΚΑΙ το έδαφος — χωρίς να δηλωθεί στο `publishedFileIds`', () => {
+    const sources = ownerListingMediaSources(plot, { dossier: DOSSIER, files: [VIEW, TERRAIN] });
+    expect(paths(sources)).toEqual(['file_view.png', 'file_terrain.json']);
+    expect(terrainOf(sources)).toEqual([{
+      privateStoragePath: TERRAIN.storagePath,
+      storagePlacement: undefined,
+      material: { kind: 'terrain' },
+      sourceFileId: 'file_terrain',
+    }]);
+  });
+
+  it('⛔ Δ1 — μη οικόπεδο ⇒ κανένα έδαφος (το ράφι το αποσύρει μόνο του)', () => {
+    const read = { dossier: DOSSIER, files: [TERRAIN] };
+    expect(terrainOf(ownerListingMediaSources({ ...plot, type: 'apartment' }, read))).toEqual([]);
+    expect(terrainOf(ownerListingMediaSources({ ...plot, type: null }, read))).toEqual([]);
+  });
+
+  it('⛔ χωρίς φάκελο (παλιό `media[]`) ⇒ κανένα έδαφος, ακόμη και για γη', () => {
+    expect(terrainOf(ownerListingMediaSources({ type: 'land', media: [] }, { dossier: DOSSIER, files: [TERRAIN] }))).toEqual([]);
+  });
+
+  it('🔴 ζώνη ασφαλείας — αρχείο άλλου φακέλου ή άλλου ανθρώπου ΔΕΝ γίνεται έδαφος', () => {
+    expect(dossierTerrainSource(DOSSIER, [{ ...TERRAIN, entityId: 'pdos_other' }])).toBeNull();
+    expect(dossierTerrainSource(DOSSIER, [{ ...TERRAIN, userId: 'user-2' }])).toBeNull();
+  });
+
+  it('⛔ χωρίς την πράξη της πόρτας (διαβάθμιση · ταυτότητα) ⇒ κανένα έδαφος', () => {
+    expect(dossierTerrainSource(DOSSIER, [{ ...TERRAIN, classification: undefined }])).toBeNull();
+    expect(dossierTerrainSource(DOSSIER, [{ ...TERRAIN, publicationIdentity: undefined }])).toBeNull();
+  });
+
+  it('🔑 ένα ανά φάκελο: νικά η νεότερη πηγή', () => {
+    const newer = { ...TERRAIN, id: 'file_terrain_2', createdAt: '2026-10-24T09:00:00.000Z' };
+    expect(dossierTerrainSource(DOSSIER, [TERRAIN, newer])?.sourceFileId).toBe('file_terrain_2');
+  });
+
+  it('🔑 η πηγή εδάφους ΔΕΝ φεύγει ως εικόνα, ακόμη κι αν δηλωθεί', () => {
+    expect(dossierMediaMaterial(DOSSIER, TERRAIN)).toBeNull();
+    const declared = ownerListingMediaSources({ ...plot, publishedFileIds: ['file_terrain'] }, { dossier: DOSSIER, files: [TERRAIN] });
+    expect(declared.map((source) => source.material.kind)).toEqual(['terrain']);
   });
 });

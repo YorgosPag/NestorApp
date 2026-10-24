@@ -27,9 +27,11 @@ import { readDeclaredFocalPoints, readPhotoFocalPoint } from '@/lib/listings/pho
 import { readDeclaredCaptureSpots } from '@/lib/listings/photo-capture-spot';
 import { readDeclaredFloorplanNorth } from '@/lib/listings/floorplan-north';
 import {
+  dossierTerrainSource,
   publishedDossierMediaSources,
   type DossierMediaRead,
 } from '@/services/property-dossier/dossier-media-publication';
+import { isLandProperty } from '@/constants/property-classification';
 import {
   PUBLISHED_MEDIA_LIMIT,
   type PublicShelfSource,
@@ -203,19 +205,24 @@ export function publishedOwnerMediaSources(
  * 🔑 **Ο διακόπτης είναι η ΥΠΑΡΞΗ φακέλου, όχι η ύπαρξη δήλωσης**: αγγελία με φάκελο και κενή δήλωση **είναι** «δεν
  * διάλεξα τίποτα» — μια πτώση στο `media[]` εκεί θα δημοσίευε αρχεία που ο άνθρωπος δεν διάλεξε **για αυτή** την αγγελία.
  *
+ * ⛰️ **ADR-920 Β4.4 — ΤΟ ΤΟΠΟΓΡΑΦΙΚΟ, ΜΟΝΟ ΜΕ ΦΑΚΕΛΟ ΚΑΙ ΜΟΝΟ ΓΙΑ ΓΗ (Δ1)**: η πηγή εδάφους του φακέλου μπαίνει **δίπλα**
+ * στα μέσα· το ράφι τη χωρίζει από το υλικό της (`partitionListingSources` → `terrain`) — κανένα δεύτερο κεφάλι ή binder.
+ * Είδος που έπαψε να είναι οικόπεδο ⇒ καμία πηγή ⇒ το ράφι αποσύρει το έδαφος μόνο του (ίδιο με το εταιρικό ακίνητο).
+ * Το `type` είναι **υποχρεωτικό** στην είσοδο: ένας καλών που το ξεχνά δεν πρέπει να χάνει το έδαφος σιωπηλά.
+ *
  * @param dossierMedia — ό,τι διάβασε ο διακομιστής (`readDossierMedia`)· `null` όταν ο καλών δεν ρωτά τη βιτρίνα.
  */
 export function ownerListingMediaSources(
   listing: Pick<
     OwnerProperty,
-    | 'media' | 'dossierId' | 'publishedFileIds' | 'publishedFileFocalPoints' | 'publishedFileCaptureSpots'
+    | 'type' | 'media' | 'dossierId' | 'publishedFileIds' | 'publishedFileFocalPoints' | 'publishedFileCaptureSpots'
     | 'publishedFileFloorplanNorth'
   >,
   dossierMedia: DossierMediaRead | null,
 ): readonly PublicShelfSource[] {
   if (listing.dossierId === undefined) return publishedOwnerMediaSources(mediaOf(listing));
   if (dossierMedia === null || dossierMedia.dossier.id !== listing.dossierId) return [];
-  return publishedDossierMediaSources(
+  const media = publishedDossierMediaSources(
     dossierMedia.dossier,
     dossierMedia.files,
     declaredFileIds(listing.publishedFileIds),
@@ -227,6 +234,8 @@ export function ownerListingMediaSources(
       floorplanNorth: readDeclaredFloorplanNorth(listing.publishedFileFloorplanNorth),
     },
   );
+  const terrain = isLandProperty(listing.type) ? dossierTerrainSource(dossierMedia.dossier, dossierMedia.files) : null;
+  return terrain === null ? media : [...media, terrain];
 }
 
 /**

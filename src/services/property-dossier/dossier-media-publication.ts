@@ -19,6 +19,10 @@
  *
  * 🔴 **ΖΩΝΗ ΑΣΦΑΛΕΙΑΣ (N.7.2 #4)**: ο αναγνώστης φέρνει ήδη μόνο αρχεία του φακέλου· ο επιλογέας **το ξαναρωτά**
  * (`entityId` · `userId`). Ξένη ταυτότητα στη δήλωση ⇒ **αγνοείται**, όποιος κι αν γέμισε τη λίστα εισόδου.
+ *
+ * ⛰️ **ΤΟ ΤΟΠΟΓΡΑΦΙΚΟ ΔΕΝ ΠΕΡΝΑ ΑΠΟ ΤΗ ΔΗΛΩΣΗ** (ADR-920 Β4.4): την εξουσιοδότηση τη δίνει η **πράξη** της πόρτας
+ * εδάφους (δήλωση Δ2 ⇒ `classification` + `publicationIdentity`, γραμμένα ΜΟΝΟ από τον διακομιστή — κανόνες Β4.6), όχι
+ * το `publishedFileIds`. Το επιλέγει ο **ίδιος** κριτής με το εταιρικό ακίνητο ({@link dossierTerrainSource}).
  */
 
 import { normalizeToISO } from '@/lib/date-local';
@@ -40,6 +44,7 @@ import {
   PUBLISHED_MEDIA_LIMIT,
   type PublicShelfSource,
 } from '@/services/upload/utils/storage-path-public-shelf';
+import { currentTerrainSource } from '@/services/listings/terrain-source-selection';
 import { propertyDossierFileTabOf } from '@/components/property-dossier/property-dossier-media';
 import type { PropertyDossierFileTab } from '@/config/upload-entry-points/entries-property-dossier';
 import type { FileRecord } from '@/types/file-record';
@@ -59,9 +64,12 @@ export interface DossierMediaDeclaration {
   readonly floorplanNorth?: DeclaredFloorplanNorth;
 }
 
-/** Το `FileRecord` όσο το χρειάζεται η απόφαση: καταλληλότητα + εμβέλεια καρτέλας + κάτοχος. */
+/**
+ * Το `FileRecord` όσο το χρειάζεται η απόφαση: καταλληλότητα + εμβέλεια καρτέλας + κάτοχος — και, για το τοπογραφικό
+ * (ADR-920 Β4.4), τα δύο πεδία θεματοφυλακής δημοσίευσης που γράφει μόνο ο διακομιστής.
+ */
 export type DossierMediaCandidate = ListingFileCandidate &
-  Pick<FileRecord, 'entityId' | 'userId' | 'domain' | 'category' | 'purpose'>;
+  Pick<FileRecord, 'entityId' | 'userId' | 'domain' | 'category' | 'purpose' | 'classification' | 'publicationIdentity'>;
 
 /** Ο φάκελος όσο τον χρειάζεται η απόφαση. */
 export type DossierMediaOwner = Pick<PropertyDossier, 'id' | 'label' | 'userId' | 'type'>;
@@ -167,4 +175,19 @@ export function publishedDossierMediaSources(
     // 🧭 ADR-897 Φ5.2 — ο βορράς της **κάτοψης**· για φωτογραφία απλώς απών.
     northRad: declaration.floorplanNorth?.get(file.id) ?? null,
   }));
+}
+
+/**
+ * ⛰️ **Η πηγή εδάφους του φακέλου** — ή `null` (ADR-920 Β4.4).
+ *
+ * 🔴 **Ο ΚΑΤΟΧΟΣ ΞΑΝΑΡΩΤΙΕΤΑΙ ΕΔΩ** (ζώνη ασφαλείας, όπως στο {@link dossierMediaMaterial}): ο αναγνώστης φέρνει ήδη
+ * μόνο αρχεία του φακέλου, αλλά ο επιλογέας δεν εμπιστεύεται τη λίστα εισόδου — αρχείο άλλου φακέλου ή άλλου ανθρώπου
+ * δεν γίνεται ποτέ έδαφος αυτής της αγγελίας. Το «είναι γη;» το κρίνει ο καλών, από το **δημοσιευόμενο** είδος.
+ */
+export function dossierTerrainSource(
+  dossier: DossierMediaOwner,
+  files: readonly DossierMediaCandidate[],
+): PublicShelfSource | null {
+  const owned = files.filter((file) => file.entityId === dossier.id && file.userId === dossier.userId);
+  return currentTerrainSource(owned, DOSSIER_ENTITY_TYPE);
 }
