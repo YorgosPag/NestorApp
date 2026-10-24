@@ -12,9 +12,11 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { handoverDeliveryDigest, type HandoverDeliveredRow } from '@/lib/property-handover/handover-delivery-plan';
 import { propertyHandoverFromDocument } from '@/lib/property-handover/property-handover-from-document';
-import { handoverCopyFileIdOf, handoverDossierIdOf, propertyHandoverIdOf } from '@/lib/property-handover/property-handover-id';
+import { isPreserved } from '@/lib/files/file-hold';
+import { handoverCopyFileIdOf, handoverDeliveryIdOf, handoverDossierIdOf, propertyHandoverIdOf } from '@/lib/property-handover/property-handover-id';
 import { deliverHandoverFiles, type HandoverFileDeliveryRecorder } from '@/server/property-handover-delivery/handover-delivery.server';
 import { recordDeliverySha256 } from '@/server/property-handover-delivery/handover-delivery-ledger.server';
+import { deliverDueHandoverFiles } from '@/services/property-handover/property-handover-delivery-trigger';
 import { runPropertyHandoverDeliveryQueue } from '@/services/property-handover/property-handover-delivery-queue.service';
 import { previewPropertyHandover } from '@/services/property-handover/property-handover-preview.server';
 import { recordHandoverFileDelivery } from '@/services/property-handover/property-handover-progress-write';
@@ -347,6 +349,112 @@ describe('Γ18–Γ22 — Φ-Γ2 Σ2: sha256 ανά παραδομένο αρχ�
     expect(await recordDeliverySha256(db(), HANDOVER, { ...first, sourceFileId: 'f_photo', crc32c: 'άλλο' })).toEqual({ kind: 'refused' });
     expect(ledgerRow('f_plan')?.sha256).toBe('a'.repeat(64));
     expect(ledgerRow('f_photo')?.sha256).toBeNull();
+  });
+});
+
+describe('Ζ67–Ζ73 — Φ-Δ.7α: η γενιά-πηγή ΔΙΑΤΗΡΕΙΤΑΙ ως την απόδειξη (Ο13β πρόληψη)', () => {
+  const source = (id: string) => docs(COLLECTIONS.FILES)[id];
+  const proofOf = (id: string) => handoverDeliveryIdOf(HANDOVER, id);
+  /** Η διαδρομή από την ΙΔΙΑ την εγγραφή — η θέση στάθμευσης ζει κάτω από άλλη οντότητα από το ακίνητο. */
+  const bytesHeld = (id: string) => store.get(String(source(id)?.storagePath))?.temporaryHold === true;
+  const tryDeleteSource = (id: string) => bucket.file(sourcePath(id)).delete();
+
+  it('🔴 Ζ67 — γραμμή χωρίς sha256 ⇒ η πηγή διατηρείται: βάση (`preservedFor`) ΚΑΙ bytes (GCS) — η πλατφόρμα αρνείται τη διαγραφή', async () => {
+    expect(await deliver(50, 0)).toMatchObject({ kind: 'delivering', copied: 3 });
+    for (const id of ['f_plan', 'f_photo', 'f_park']) {
+      expect(source(id)?.preservedFor).toEqual([proofOf(id)]);
+      expect(isPreserved(source(id) ?? {})).toBe(true);
+      expect(bytesHeld(id)).toBe(true);
+    }
+    await expect(tryDeleteSource('f_plan')).rejects.toMatchObject({ code: 403 });
+    // Ό,τι ΔΕΝ παραδόθηκε μένει ανέγγιχτο.
+    expect(source('f_invoice')).not.toHaveProperty('preservedFor');
+    expect(bytesHeld('f_invoice')).toBe(false);
+  });
+
+  it('🔴 Ζ67 — bytes ΠΡΩΤΑ: ο κάδος κλειδώνει ΠΡΙΝ γεννηθεί η γραμμή (ποτέ «διατηρείται στη βάση, ελεύθερο στον κάδο»)', async () => {
+    const order: string[] = [];
+    const original = bucket.file.bind(bucket);
+    const spy = jest.spyOn(bucket, 'file').mockImplementation((path, opts) => {
+      const file = original(path, opts);
+      if (path !== sourcePath('f_plan')) return file;
+      const setMetadata = file.setMetadata;
+      file.setMetadata = async (patch) => {
+        if (patch.temporaryHold) order.push(ledgerRow('f_plan') === undefined ? 'before-row' : 'after-row');
+        return setMetadata(patch);
+      };
+      return file;
+    });
+    try {
+      await deliver(50, 0);
+    } finally {
+      spy.mockRestore();
+    }
+    expect(order[0]).toBe('before-row');
+  });
+
+  it('🔴 Ζ67 — ΑΤΟΜΙΚΑ με τη γραμμή: τη στιγμή που ο κατακερματισμός διαβάζει, η πηγή διατηρείται ΗΔΗ (όχι από το δίχτυ)', async () => {
+    const seen: unknown[] = [];
+    readHook = (path) => { if (path === String(copyOf('f_plan')?.storagePath)) seen.push(source('f_plan')?.preservedFor); };
+    await deliver();
+    expect(seen).toEqual([[proofOf('f_plan')]]);
+  });
+
+  it('🔴 Ζ68 — το sha256 αποδεσμεύει στην ΙΔΙΑ συναλλαγή · τα bytes ξεκλειδώνουν · μία εκτέλεση = καμία διατήρηση στο τέλος', async () => {
+    await deliver(50, 0);
+    expect(await deliver()).toMatchObject({ kind: 'delivered' });
+    for (const id of ['f_plan', 'f_photo', 'f_park']) {
+      expect(ledgerRow(id)?.sha256).toBe(shaOf(bytesOf(id)));
+      expect(source(id)?.preservedFor).toEqual([]);
+      expect(bytesHeld(id)).toBe(false);
+    }
+    await expect(tryDeleteSource('f_plan')).resolves.toBeUndefined();
+  });
+
+  it('🔴 Ζ68 — ποτέ εγγραφή σε ΞΕΝΟ έγγραφο: πηγή άλλου ενοικιαστή ⇒ το sha256 γράφεται, η διατήρησή της ΔΕΝ αγγίζεται', async () => {
+    await deliver(50, 0);
+    fake.seed(COLLECTIONS.FILES, 'f_plan', { ...source('f_plan'), companyId: 'comp_beta' });
+    const measured = { sourceFileId: 'f_plan', crc32c: 'crc_f_plan', size: 1000, sha256: 'a'.repeat(64), origin: 'copy' as const };
+    expect(await recordDeliverySha256(db(), HANDOVER, measured)).toEqual({ kind: 'hashed', sha256: 'a'.repeat(64) });
+    expect(source('f_plan')?.preservedFor).toEqual([proofOf('f_plan')]);
+  });
+
+  it('🔴 Ζ69 — η άρση της διατήρησης ΔΕΝ ξεκλειδώνει bytes που κρατά νόμιμη δέσμευση (ένας διακόπτης, δύο κάτοχοι)', async () => {
+    fake.seed(COLLECTIONS.FILES, 'f_plan', { ...source('f_plan'), hold: 'legal' });
+    await deliver();
+    expect(source('f_plan')?.preservedFor).toEqual([]);
+    expect(bytesHeld('f_plan')).toBe(true);
+    expect(bytesHeld('f_photo')).toBe(false);
+  });
+
+  it('🔴 Ζ71 — η παράδοση ΔΕΝ οφείλεται πια (ανάκληση) ⇒ οι πηγές αφήνονται: βάση + bytes', async () => {
+    await deliver(50, 0);
+    seedHandover({ lifecycle: 'withdrawn', fileDeliveryState: null, fileDelivery: handover().fileDelivery });
+    await deliverDueHandoverFiles(db(), [handover()], { rescanDelivered: false }, record);
+    for (const id of ['f_plan', 'f_photo', 'f_park']) {
+      expect(source(id)?.preservedFor).toEqual([]);
+      expect(bytesHeld(id)).toBe(false);
+    }
+    expect(ledgerRow('f_plan')?.sha256).toBeNull();
+  });
+
+  it('🔴 Ζ72 — δίχτυ: γραμμή χωρίς διατήρηση (πριν τη Φ-Δ.7α · μισή αποτυχία) ⇒ η επόμενη εκτέλεση τη θεραπεύει', async () => {
+    await deliver(50, 0);
+    const { preservedFor: _lost, ...withoutPreservation } = source('f_plan') ?? {};
+    fake.seed(COLLECTIONS.FILES, 'f_plan', withoutPreservation);
+    store.set(sourcePath('f_plan'), { ...store.get(sourcePath('f_plan')), temporaryHold: false } as NonNullable<ReturnType<typeof store.get>>);
+    await deliver(50, 0);
+    expect(source('f_plan')?.preservedFor).toEqual([proofOf('f_plan')]);
+    expect(bytesHeld('f_plan')).toBe(true);
+  });
+
+  it('🔴 Ζ73 — δύο αποδείξεις στην ίδια πηγή ⇒ φεύγει μόνο η ΔΙΚΗ μας· τα bytes μένουν κλειδωμένα για την άλλη', async () => {
+    fake.seed(COLLECTIONS.FILES, 'f_plan', { ...source('f_plan'), preservedFor: ['phdl_other'] });
+    await deliver(50, 0);
+    expect(source('f_plan')?.preservedFor).toEqual(['phdl_other', proofOf('f_plan')]);
+    await deliver();
+    expect(source('f_plan')?.preservedFor).toEqual(['phdl_other']);
+    expect(bytesHeld('f_plan')).toBe(true);
   });
 });
 

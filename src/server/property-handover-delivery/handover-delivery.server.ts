@@ -36,6 +36,7 @@ import { copyHandoverBatch, type HandoverCopyContext, type HandoverDeliverableIt
 import { ensureHandoverDossiers } from './handover-delivery-dossiers.server';
 import { hashDeliveredRows, type HandoverHashRun } from './handover-delivery-hash.server';
 import { predecessorsOf, readDeliveredRows, type HandoverLedgerProof } from './handover-delivery-ledger.server';
+import { reconcileHandoverPreservation } from './handover-delivery-preservation.server';
 
 const logger = createModuleLogger('PropertyHandoverDelivery');
 
@@ -146,6 +147,8 @@ async function runDelivery(
   const ctx: HandoverCopyContext = { adminDb, handover, recipientUserId: recipient.userId, targets };
   const run = await runBatches(ctx, plan, budget.deadlineAt);
   const hashing = await hashDeliveredRows(ctx, [...delivered, ...run.rows], { maxBytes: budget.maxHashBytes, deadlineAt: budget.deadlineAt });
+  // Φ-Δ.7α — δίχτυ: κάθε γραμμή που ΑΚΟΜΗ περιμένει sha256 κρατά την πηγή της (Ο13β πρόληψη).
+  await reconcileHandoverPreservation(adminDb, handover, hashing.rows, true);
   const progress = await progressOf(handover.fileDelivery, plan.total - run.withdrawn, run, hashing, set.review.length);
   if (!sameProgress(handover.fileDelivery, progress)) await record({ handoverId: handover.id, recipientUserId: recipient.userId, fileDelivery: progress });
   // Σ4 — και όταν η πρόοδος δεν άλλαξε (νυχτερινό δίχτυ): εκεί ξαναδοκιμάζεται σφράγιση που περίμενε ρύθμιση.

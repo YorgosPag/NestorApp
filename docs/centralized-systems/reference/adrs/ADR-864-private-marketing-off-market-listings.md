@@ -1156,14 +1156,32 @@ tsc (N.17) · browser · **πραγματικό** bucket (temporary hold στο 
   προσωπικό διαμέρισμα (fail-closed) · `fileTrashBlockOf` για κουμπί **και** πόρτα κάδου. Το `isFileHeld` ρωτά πλέον και το record.
 - **Γραφέας**: `recordHoldFieldsOf` (πεδία γέννησης) + `holdRecordBytes` (GCS `temporaryHold`) — τα καλεί ο **σύστημα**-γραφέας στη
   γέννηση· `releaseFileHold` ⇒ **`record-immutable`** (409, ξαναελέγχεται μέσα στη συναλλαγή)· η συμφιλίωση bytes **δεν** ξεκλειδώνει
-  record (`keepsBytesHeld`).
+  record (`keepsStackBytesHeld` — πρώην `keepsBytesHeld`, μετονομάστηκε στην §21.11).
 - **Κανόνας**: `fileIsNotDeclaredRecord()` στο `allow delete` της `files` (όχι `files_personal`) — δίπλα στο `holdAllowsHardDelete()`.
 - Η σιωπηλή δέσμευση **ισχύει ακέραια** για τα τρία άλλα είδη (άγκυρα Ζ61 του ADR-916: νομική δέσμευση ⇒ ο κάδος επιτρέπεται).
+
+### 21.11 ✅ Δεύτερος άξονας: **διατήρηση** (`preservedFor`) — πολλαπλή, σιωπηλή, μόνο από σύστημα *(2026-10-24 — ADR-916 Φ-Δ.7α · Ο13β)*
+
+Πρώτος καταναλωτής: η γενιά-πηγή μιας γραμμής καθολικού παράδοσης, από τη γέννηση της γραμμής ως το sha256 της (ADR-916 §5.21).
+**Γιατί όχι πέμπτο είδος `hold`**: η δέσμευση είναι **μία** τη φορά (`already-held`) — αρχείο υπό `legal` δεν θα μπορούσε να
+διατηρηθεί και για παράδοση. Purview: *«retention wins over deletion»*, οι διατηρήσεις **ενώνονται**.
+
+- **Πεδίο**: `FileRecord.preservedFor: string[]` = τα ids των αποδείξεων που χρειάζονται τα bytes. Μέλος του `FILE_HOLD_FIELDS`
+  ⇒ output-only στον κανόνα (`holdCustodyKeys()`), γέννηση χωρίς (`holdBornAbsent()`), και στα δύο διαμερίσματα.
+- **Κριτής** `isPreserved` (fail-closed: μη κενός πίνακας **ή** αλλοιωμένη τιμή) · `isFileHeld` τον ρωτά · **όχι** ο
+  `fileTrashBlockOf` (σιωπηλό, όπως η δέσμευση). Κανόνας: ρήτρα στο `holdAllowsHardDelete()`.
+- **Γραφέας** `services/file-record/file-preservation.service.ts`: τοποθέτηση/άρση **μέσα** στη συναλλαγή του γραφέα της απόδειξης
+  (γεγονός, όχι πράξη ανθρώπου) · bytes πρώτα · `reconcilePreservedBytes` (τα bytes ακολουθούν τη βάση).
+- 🔴 **Ο διακόπτης GCS κρίνεται πλέον ανά αντικείμενο**: `reconcileBytes` κλειδώνει έκδοση ανν (δέσμευση/record της **στοίβας**)
+  **ή** (διατήρηση του **δικού** της εγγράφου). Πριν, η άρση νόμιμης δέσμευσης θα ξεκλείδωνε πηγή που περιμένει απόδειξη. Η
+  τοποθέτηση/άρση δέσμευσης **δεν** άλλαξε σημασία για στοίβες χωρίς διατήρηση.
+- Άγκυρες: ADR-916 §7 **Ζ67–Ζ73**.
 
 ## §13. Changelog
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| 2026-10-24 (§21.11) | 🧷 **Δεύτερος άξονας: διατήρηση `preservedFor`** (ADR-916 Φ-Δ.7α · Ο13β): πολλαπλή, σιωπηλή, μόνο από σύστημα, πάνω σε γεγονός. Κριτής `isPreserved` στο `isFileHeld` · κανόνας (`holdCustodyKeys()` + `holdAllowsHardDelete()`, χωριστό commit πρώτα) · ένας γραφέας `file-preservation.service.ts`. 🔴 Ο διακόπτης GCS κρίνεται πλέον **ανά αντικείμενο** (`reconcileBytes`): η άρση νόμιμης δέσμευσης δεν ξεκλειδώνει διατηρημένη έκδοση. `keepsBytesHeld` → `keepsStackBytesHeld` + `keepsObjectBytesHeld`. Άγκυρες ADR-916 Ζ67–Ζ73. |
 | 2026-10-24 (§21.10) | 📜 **Τέταρτο είδος δέσμευσης `record`** (ADR-916 Φ-Δ.6 · Ο14): δεν τοποθετείται/αίρεται από άνθρωπο, αρνείται και τον κάδο, μπαίνει από σύστημα στη γέννηση (βάση + GCS `temporaryHold`). Ο ΕΝΑΣ κριτής για κουμπί, πόρτα κάδου, πόρτες οριστικής διαγραφής και κανόνα. Άγκυρες στο ADR-916 §7 (Ζ57–Ζ66). |
 | 2026-10-09 (§18 · **Α50**) | 🔴 **Εντολή χωρίς καταγεγραμμένο γραφείο: το πάνελ τη λέει με όνομα και δεν προσφέρει πράξη** (εύρημα Ν12). **Σύμπτωμα**: προειδοποίηση React «unique key» στο `PrivateMarketingOwnerSection`. **Αιτία — δεδομένα, όχι απόδοση**: το μοναδικό έγγραφο `brokered` της ζωντανής βάσης (`ownp_bc548607…`, 1 στα 11) κρατά την εντολή στο ενικό `mandate`, γραμμένο πριν το ADR-832, **χωρίς** `agencyCompanyId`· το `privateMarketingPanelOf` αντέγραφε το `undefined`, το JSON το **έσβηνε** στο σύρμα. **Το βαθύτερο**: κάθε γραφή απαιτεί `agencyCompanyId.min(1)` (`private-marketing-request-body`), άρα η οθόνη πρόσφερε «Συναινώ» που ο διακομιστής αρνείται πάντα — και, επειδή ο κριτής `privateMarketingViolationsAdded` μετρά την εντολή παραβάτη, η άρνηση παρέσυρε **όλα** τα γραφεία (Α27). **Διόρθωση**: (α) **ένας αναγνώστης** `mandateAgencyIdOf` (`types/owner-property-mandate.ts`) — τον καλούν `privateMarketingPanelOf` **και** `ownerMandateViewOf` (πρώην ιδιωτικό `emptyToNull` για το ίδιο πεδίο)· (β) `PrivateMarketingPanel.agencyCompanyId: string \| null`, ίδιο σχήμα με το `OwnerMandateView`· (γ) `AddressablePrivateMarketingPanel` + `isAddressablePanel`: τα `RevokeControl` · `DeclineControl` · `PrivateMarketingOwnerConsent` · `PrivateMarketingAttestationControl` δέχονται **μόνο** πάνελ με ταυτότητα — «πράξη χωρίς γραφείο» δεν μεταγλωττίζεται· (δ) `panelsAwaitingConsent` ⇒ `[]` όταν έστω μία εντολή δεν έχει γραφείο· (ε) `panelRowKeyOf` — ταυτότητα γραμμής και χωρίς γραφείο· (στ) η γραμμή γράφει `offer.mandate.agencyUnknown` (υπάρχον κλειδί — τρεις καταστάσεις, όχι δύο) και τον λόγο (`mandate.privateMarketing.owner.agencyUnrecorded`, **νέο**). **Άγκυρες**: `private-marketing-panel.test.ts` (+2) · `private-marketing-screens.test.tsx` (+4)· κόκκινο πρώτα 4/6. ⚠️ **Δεν λύθηκε, δηλωμένο**: (1) η **ρίζα** — `mandatesOf` αφήνει τα τρία πεδία `undefined` παρότι ο τύπος τα θέλει `string`· κανονικοποίηση εκεί αλλάζει ό,τι **ξαναγράφεται** στη βάση (`owner-property-write.service.ts:421`) και σπάει σύγκριση ταυτότητας (`agency-listings-sweep.service.ts:107`) ⇒ δική της δουλειά· (2) το `privateMarketingViolators` επιστρέφει `undefined` μέσα σε `string[]` για τέτοια εντολή· (3) ο ιδιοκτήτης **δεν έχει πράξη** να ξεμπλοκάρει την κλειστή διάθεση όσο η εντολή αυτή δεσμεύει. |
 | 2026-10-08 (§21 Δ21.1) | 🔁 **Ο κάδος εταιρικού αρχείου έφυγε από τους κανόνες** (ADR-845 §7.17 Α4β): τα σκέλη `update` «ready → trashed» / «trashed → ready» της `files` αφαιρέθηκαν — ο κάδος είναι πράξη διακομιστή (`POST /api/files/trash`). **Η σιωπηλή δέσμευση ισχύει ακέραια**, αλλά για τη `files` την κρίνει πλέον ο διακομιστής: νέα άγκυρα **Κ17** στο `api/files/trash/__tests__/trash-route.test.ts` (δεσμευμένο αρχείο πετιέται, η δέσμευσή του μένει ανέγγιχτη). Η Α49 μετρά **2** σκέλη update στη `files` (ήταν 4)· στο `files_personal` ο κάδος μένει πράξη πελάτη και ο κανόνας αμετάβλητος. ⚠️ Η παλιά άγκυρα Α48 «ο κάδος ΔΕΝ αρνείται σε δέσμευση» διαβάζει το `moveToTrash` του **πελάτη** — που από την Α2 του ADR-845 δεν είναι πια η πόρτα που κρίνει τον κάδο εταιρικού αρχείου. |

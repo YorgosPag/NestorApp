@@ -20,6 +20,7 @@ import {
   type HandoverFileDeliveryRecorder,
   type HandoverProtocolIssuer,
 } from '@/server/property-handover-delivery/handover-delivery.server';
+import { releaseUnowedHandoverPreservation } from '@/server/property-handover-delivery/handover-delivery-preservation.server';
 import type { PropertyHandover } from '@/types/property-handover';
 
 export interface DueHandoverFilesOptions {
@@ -51,6 +52,10 @@ export async function deliverDueHandoverFiles(
   options: DueHandoverFilesOptions,
   record: HandoverFileDeliveryRecorder,
 ): Promise<void> {
+  // Φ-Δ.7α — ό,τι ΔΕΝ οφείλεται πια (ανάκληση · ακύρωση) αφήνει τις πηγές του: αμέσως μετά την πράξη ΚΑΙ κάθε νύχτα (δίχτυ).
+  for (const handover of handovers) {
+    if (fileDeliveryStateOf(handover) === null) await releaseUnowedHandoverPreservation(adminDb, handover);
+  }
   const due = handovers.filter((handover) => {
     const state = fileDeliveryStateOf(handover);
     return state !== null && (state !== 'delivered' || options.rescanDelivered);

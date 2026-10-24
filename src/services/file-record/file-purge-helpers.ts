@@ -23,7 +23,7 @@ import {
   type CustodyKind,
   type CustodyScope,
 } from '@/lib/workspace/custody-scope';
-import { isDeclaredRecord, isHoldActive, type FileRecordSubject } from '@/lib/files/file-hold';
+import { isDeclaredRecord, isHoldActive, isPreserved, type FileRecordSubject } from '@/lib/files/file-hold';
 import { UnknownFileStoragePlacementError, type FileStoragePlacementSubject } from '@/lib/files/file-storage-placement';
 import { fileRecordBucket } from '@/server/files/file-record-bucket';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -81,9 +81,10 @@ export type StorageObjectDeletion = 'deleted' | 'absent' | 'refused';
  * καθαρού κριτή (`lib/files/file-hold.ts`) με τον χρόνο του διακομιστή.
  * 📜 ADR-916 Φ-Δ.6 — το record μετρά και **μόνο με το σημάδι** Πρωτοκόλλου (ίδια δύο κλειδιά με τον κανόνα): κάθε πόρτα
  * οριστικής διαγραφής (cron · GDPR · cascade · AI · μετακίνηση) ρωτά εδώ, άρα κανένα σκέλος δεν το ξεχνά.
+ * 🧷 ADR-916 Φ-Δ.7α — και η **διατήρηση** της γενιάς-πηγής ως την απόδειξη της παράδοσης (`isPreserved`).
  */
 export function isFileHeld(data: FileRecordSubject): boolean {
-  return isDeclaredRecord(data) || isHoldActive(data, Date.now());
+  return isDeclaredRecord(data) || isHoldActive(data, Date.now()) || isPreserved(data);
 }
 
 /**

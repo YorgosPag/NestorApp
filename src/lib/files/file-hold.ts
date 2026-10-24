@@ -46,6 +46,7 @@ export const FILE_HOLD_FIELDS = [
   'holdReleasedBy',
   'holdReleasedAt',
   'retentionUntil',
+  'preservedFor',
 ] as const;
 
 /**
@@ -77,6 +78,8 @@ export function holdReasonOf(value: unknown): string | null {
 export interface FileHoldSubject {
   readonly hold?: HoldType | string | null;
   readonly retentionUntil?: unknown;
+  /** ADR-916 Φ-Δ.7α — ωμό: ο κριτής ρωτά μόνο «κρατά κάποιος ακόμη απόδειξη;» (`isPreserved`). */
+  readonly preservedFor?: unknown;
 }
 
 /** Υπάρχει ενεργή (μη `none`) δέσμευση; Απουσία ⇒ όχι. */
@@ -97,6 +100,23 @@ export function isHoldActive(subject: FileHoldSubject, nowMillis: number): boole
   if (retention === undefined || retention === null) return false;
   const retainUntil = normalizeToMillisOrNull(retention);
   return retainUntil === null || retainUntil > nowMillis;
+}
+
+/**
+ * **Διατηρείται;** — ο ΔΕΥΤΕΡΟΣ άξονας του ίδιου συστήματος (ADR-916 Φ-Δ.7α · ADR-864 §21.11).
+ *
+ * 🧷 Purview «retention wins over deletion» + «πολλές διατηρήσεις ενώνονται»: το `preservedFor` κρατά τις αποδείξεις
+ * (`phdl_*` — γραμμές καθολικού παράδοσης χωρίς sha256) που χρειάζονται ακόμη τα bytes ως **γενιά-πηγή**. Όχι νέο είδος
+ * `hold`: η δέσμευση είναι **μία** τη φορά, και μια πηγή υπό νόμιμη δέσμευση πρέπει να διατηρείται **και** για παράδοση.
+ * Σιωπηλή, όπως η δέσμευση: **δεν** απαγορεύει τον κάδο, μόνο την οριστική διαγραφή — και μόνο όσο λείπει η απόδειξη.
+ *
+ * 🔒 **Fail-closed**, σκέλος προς σκέλος με το `holdAllowsHardDelete()`: απουσία / `null` / κενός πίνακας ⇒ όχι·
+ * οτιδήποτε άλλο (μη κενός πίνακας **ή** αλλοιωμένη τιμή) ⇒ διατηρείται.
+ */
+export function isPreserved(subject: FileHoldSubject): boolean {
+  const { preservedFor } = subject;
+  if (preservedFor === undefined || preservedFor === null) return false;
+  return !Array.isArray(preservedFor) || preservedFor.length > 0;
 }
 
 /** Το ελάχιστο σχήμα του record — δέσμευση · σημάδι Πρωτοκόλλου (ωμό: ο κριτής ρωτά μόνο «υπάρχει;») · κάτοχος. */

@@ -39,7 +39,7 @@ import { HOLD_TYPES } from '@/config/domain-constants';
 import { nowISO } from '@/lib/date-local';
 import { getErrorMessage } from '@/lib/error-utils';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { hasActiveHold, isDeclaredRecord, type PlaceableHoldType } from '@/lib/files/file-hold';
+import { hasActiveHold, isDeclaredRecord, isPreserved, type PlaceableHoldType } from '@/lib/files/file-hold';
 import { fileStoragePlacementOf, type FileStoragePlacement } from '@/lib/files/file-storage-placement';
 import { fileStorageBucket } from '@/server/files/file-record-bucket';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -111,7 +111,7 @@ function pathsByPlacement(versions: readonly FileRecord[]): ReadonlyMap<FileStor
 }
 
 /** Γύρισε τον διακόπτη σε κάθε αντικείμενο — ή πέτα. 404 = το αντικείμενο δεν έχει bytes. */
-async function setTemporaryHold(bucket: HoldableBucket, paths: readonly string[], temporaryHold: boolean): Promise<void> {
+export async function setTemporaryHold(bucket: HoldableBucket, paths: readonly string[], temporaryHold: boolean): Promise<void> {
   for (const path of paths) {
     try {
       await bucket.file(path).setMetadata({ temporaryHold });
@@ -121,14 +121,20 @@ async function setTemporaryHold(bucket: HoldableBucket, paths: readonly string[]
   }
 }
 
-/** Ίδιος διακόπτης σε ΚΑΘΕ κάδο που εμπλέκεται στη στοίβα — μία εγγραφή ανά θέση (ADR-895 Α3). */
+/**
+ * Ο διακόπτης σε ΚΑΘΕ κάδο που εμπλέκεται στη στοίβα — μία εγγραφή ανά (θέση, τιμή) (ADR-895 Α3).
+ * 🧷 ADR-916 Φ-Δ.7α — η τιμή κρίνεται **ανά έκδοση**: η δέσμευση είναι της στοίβας, η διατήρηση του **ενός** εγγράφου.
+ */
 async function setTemporaryHoldAcrossStack(
   versions: readonly FileRecord[],
   bucketOf: HoldBucketResolver,
-  temporaryHold: boolean,
+  heldOf: (version: FileRecord) => boolean,
 ): Promise<void> {
-  for (const [placement, paths] of pathsByPlacement(versions)) {
-    await setTemporaryHold(bucketOf(placement), paths, temporaryHold);
+  for (const temporaryHold of [true, false]) {
+    const chosen = versions.filter((version) => heldOf(version) === temporaryHold);
+    for (const [placement, paths] of pathsByPlacement(chosen)) {
+      await setTemporaryHold(bucketOf(placement), paths, temporaryHold);
+    }
   }
 }
 
@@ -138,18 +144,31 @@ async function setTemporaryHoldAcrossStack(
  * ταυτόχρονες τοποθετήσεις (η χαμένη «αντισταθμίζει» ⇒ ξεκλειδώνει τα bytes της νικήτριας) ή
  * τοποθέτηση + αποδέσμευση θα άφηναν «δεσμευμένο στη βάση, ελεύθερο στο bucket».
  * Κάθε ενδιάμεση ασυμφωνία είναι προς την **ασφαλή** πλευρά (bytes κλειδωμένα, βάση ελεύθερη).
+ *
+ * 🧷 ADR-916 Φ-Δ.7α — το GCS `temporaryHold` είναι **ένας** διακόπτης για δύο κατόχους: η στοίβα κλειδώνει όλες τις
+ * εκδόσεις της, η διατήρηση **μόνο** τη δική της. Η άρση νόμιμης δέσμευσης δεν ξεκλειδώνει ποτέ πηγή που περιμένει
+ * απόδειξη παράδοσης — και η διατήρηση μίας έκδοσης δεν κλειδώνει τις άλλες χωρίς λόγο.
  */
 async function reconcileBytes(owner: CustodyScope, fileIds: readonly string[], versions: readonly FileRecord[], bucketOf: HoldBucketResolver): Promise<void> {
   const db = getAdminFirestore();
   const collection = db.collection(COLLECTIONS[FILE_COLLECTION[custodyKindOfScope(owner)]]);
   const snapshots = await Promise.all(fileIds.map((id) => collection.doc(id).get()));
-  const held = snapshots.some((snapshot) => snapshot.exists && keepsBytesHeld(snapshot.data() ?? {}));
-  await setTemporaryHoldAcrossStack(versions, bucketOf, held);
+  const current = new Map(snapshots.flatMap((snapshot) => (snapshot.exists ? [[snapshot.id, snapshot.data() ?? {}] as const] : [])));
+  const stackHeld = [...current.values()].some((data) => keepsStackBytesHeld(data));
+  await setTemporaryHoldAcrossStack(versions, bucketOf, (version) => stackHeld || isPreserved(current.get(version.id) ?? {}));
 }
 
-/** Κρατά τα bytes κλειδωμένα; — δέσμευση **ή** record (και μόνο με το σημάδι: η συμφιλίωση δεν ξεκλειδώνει ποτέ record). */
-function keepsBytesHeld(data: Record<string, unknown>): boolean {
+/** Κρατά η στοίβα τα bytes της; — δέσμευση **ή** record (και μόνο με το σημάδι: η συμφιλίωση δεν ξεκλειδώνει ποτέ record). */
+function keepsStackBytesHeld(data: Record<string, unknown>): boolean {
   return hasActiveHold(data) || isDeclaredRecord(data);
+}
+
+/**
+ * **Κρατά ΑΥΤΟ το έγγραφο τα bytes του;** — δέσμευση · record · διατήρηση (ADR-916 Φ-Δ.7α). Η απάντηση για **ένα**
+ * αντικείμενο: η δέσμευση γράφεται σε **κάθε** έγγραφο της στοίβας (`writeStack`), άρα το ίδιο το έγγραφο αρκεί.
+ */
+export function keepsObjectBytesHeld(data: Record<string, unknown>): boolean {
+  return keepsStackBytesHeld(data) || isPreserved(data);
 }
 
 // =============================================================================
@@ -249,7 +268,7 @@ export async function placeFileHold(input: PlaceFileHoldInput, bucketOf: HoldBuc
 
   const ids = stack.versions.map((v) => v.id);
   try {
-    await setTemporaryHoldAcrossStack(stack.versions, bucketOf, true);
+    await setTemporaryHoldAcrossStack(stack.versions, bucketOf, () => true);
     const placedAt = nowISO();
     const fileIds = await writeStack(input.actor.owner, ids, (current) => {
       if (hasActiveHold(current)) throw new HoldConflict(String(current.hold));

@@ -100,6 +100,19 @@ describe('🏆 Α44 — όλη η στοίβα, βάση ΚΑΙ bytes', () => {
   });
 });
 
+describe('🏆 Ζ69 — ένας διακόπτης GCS, δύο κάτοχοι: δέσμευση στοίβας + διατήρηση εγγράφου (ADR-916 Φ-Δ.7α)', () => {
+  it('🔴 άρση νόμιμης δέσμευσης ⇒ η έκδοση υπό ΔΙΑΤΗΡΗΣΗ μένει κλειδωμένη· η άλλη ξεκλειδώνει (ανά αντικείμενο, όχι ανά στοίβα)', async () => {
+    const { bucket } = world();
+    seed('file_v1', { lifecycleState: 'archived', supersededByFileId: 'file_v2', preservedFor: ['phdl_1'] });
+    await place(oneBucket(bucket));
+
+    expect(await releaseFileHold({ actor, fileId: 'file_v2' }, oneBucket(bucket))).toMatchObject({ kind: 'released' });
+
+    expect(bucket.objects.get(pathOf('file_v1'))?.hold).toBe(true);
+    expect(bucket.objects.get(pathOf('file_v2'))?.hold).toBe(false);
+  });
+});
+
 describe('🏆 Α45 — ποτέ «δεσμευμένο στη βάση, ελεύθερο στο bucket»', () => {
   it('🔴 η πλατφόρμα αρνείται το hold ⇒ τίποτα στη βάση, και όσα κλειδώθηκαν ξεκλειδώνονται', async () => {
     const { bucket } = world();

@@ -373,6 +373,8 @@ describe('files.rules — tenant_state_machine pattern', () => {
       holdReleasedBy: ADMIN_UID,
       holdReleasedAt: '2026-09-18T00:00:00.000Z',
       retentionUntil: '2000-01-01T00:00:00.000Z',
+      // 🧷 ADR-916 Φ-Δ.7α — ο πελάτης ούτε βάζει ούτε αφαιρεί διατήρηση.
+      preservedFor: [],
     };
 
     const fileDoc = (docId: string) =>
@@ -422,6 +424,19 @@ describe('files.rules — tenant_state_machine pattern', () => {
       await expectDeny(fileDoc('retention-hard-delete').delete());
     });
 
+    // 🧷 ADR-916 Φ-Δ.7α (Ζ70) — η γενιά-πηγή μιας γραμμής παράδοσης χωρίς sha256: η εγγραφή που ξέρει ΠΟΥ ζουν τα bytes
+    //    της δεν σβήνεται από πελάτη. Fail-closed: και αλλοιωμένη τιμή αρνείται.
+    it('⛔ οριστική διαγραφή αρχείου υπό ΔΙΑΤΗΡΗΣΗ (`preservedFor` μη κενό ή αλλοιωμένο): ΑΡΝΗΣΗ · ✅ κενό', async () => {
+      const seedPreserved = (docId: string, preservedFor: unknown) =>
+        seedFile(env, docId, { companyId: SAME_TENANT_COMPANY_ID, overrides: { preservedFor } });
+      await seedPreserved('preserved-hard-delete', ['phdl_1']);
+      await seedPreserved('preserved-forged', 'phdl_1');
+      await seedPreserved('preserved-released', []);
+      await expectDeny(fileDoc('preserved-hard-delete').delete());
+      await expectDeny(fileDoc('preserved-forged').delete());
+      await expectAllow(fileDoc('preserved-released').delete());
+    });
+
     it('✅ παρονομαστής: οριστική διαγραφή με `hold: none` / `null` / χωρίς δέσμευση: ΕΠΙΤΡΕΠΕΤΑΙ', async () => {
       await seedFile(env, 'released-hard-delete', {
         companyId: SAME_TENANT_COMPANY_ID,
@@ -447,6 +462,7 @@ describe('files.rules — tenant_state_machine pattern', () => {
       });
       await expectDeny(born('born-legal', { hold: 'legal' }));
       await expectDeny(born('born-retained', { retentionUntil: '2999-01-01T00:00:00.000Z' }));
+      await expectDeny(born('born-preserved', { preservedFor: ['phdl_1'] }));
       await expectDeny(born('born-none-with-trace', { hold: 'none', holdPlacedBy: ADMIN_UID }));
       await expectAllow(born('born-none', { hold: 'none' }));
     });

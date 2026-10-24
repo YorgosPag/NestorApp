@@ -854,6 +854,13 @@ export interface FileRecord {
   /** When the most recent hold was released */
   holdReleasedAt?: Date | string;
 
+  /**
+   * ADR-916 Φ-Δ.7α · ADR-864 §21.11 — the proofs (`phdl_*` handover ledger rows without sha256) that still need these
+   * bytes as their source generation. Silent, multi-holder, system-only (`file-preservation.service.ts`); blocks
+   * permanent deletion while non-empty (`isPreserved`), never the trash.
+   */
+  preservedFor?: readonly string[];
+
   // -------------------------------------------------------------------------
   // ARCHIVE FIELDS (when lifecycleState === 'archived')
   // -------------------------------------------------------------------------

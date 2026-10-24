@@ -6359,10 +6359,12 @@ service cloud.firestore {
     // οριστική διαγραφή θα περνούσε.
     // ⚠️ Η λίστα είναι ΑΚΡΙΒΩΣ το `FILE_HOLD_FIELDS` (`lib/files/file-hold.ts`)· την ισότητα
     //    τη φυλά η άγκυρα Α49 (`file-hold.test.ts`) μέσω του `rulesKeyListOf` — μείνε σε literal.
+    // 🧷 ADR-916 Φ-Δ.7α — `preservedFor`: η ΔΙΑΤΗΡΗΣΗ της γενιάς-πηγής ως την απόδειξη (sha256) της
+    //    γραμμής καθολικού παράδοσης. Γραφέας ΜΟΝΟ ο διακομιστής (`file-preservation.service.ts`).
     function holdCustodyKeys() {
       return [
         'hold', 'holdPlacedBy', 'holdPlacedAt', 'holdReason',
-        'holdReleasedBy', 'holdReleasedAt', 'retentionUntil'
+        'holdReleasedBy', 'holdReleasedAt', 'retentionUntil', 'preservedFor'
       ];
     }
 
@@ -6506,9 +6508,13 @@ service cloud.firestore {
     // την ISO `retentionUntil` με το τώρα ⇒ ΚΑΘΕ δηλωμένη διατήρηση αρνείται (συντηρητικά·
     // η ληγμένη καθαρίζεται από τον διακομιστή, Admin SDK, με τον κριτή `isHoldActive`).
     // `null` ⇒ απουσία, ίδια σημασία με τον κριτή (`hasActiveHold` · `isHoldActive`).
+    // 🧷 ADR-916 Φ-Δ.7α — ούτε υπό ΔΙΑΤΗΡΗΣΗ (`isPreserved`): μόνο απουσία ή ΚΕΝΟΣ πίνακας επιτρέπει·
+    //    οτιδήποτε άλλο (μη κενός · αλλοιωμένη τιμή) αρνείται — fail-closed, σκέλος προς σκέλος με τον κριτή.
     function holdAllowsHardDelete() {
       return resource.data.get('hold', 'none') in ['none', null]
-             && resource.data.get('retentionUntil', null) == null;
+             && resource.data.get('retentionUntil', null) == null
+             && (resource.data.get('preservedFor', null) == null
+                 || resource.data.get('preservedFor', null) == []);
     }
 
     // 📜 ADR-916 Φ-Δ.6 (Ο14) — RECORD (Microsoft Purview «declare as record»): διαγραφή Blocked, για ΚΑΘΕ ρόλο.

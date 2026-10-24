@@ -14,7 +14,7 @@ import 'server-only';
  *    αν η γραμμή δεν περιγράφει πια τα bytes που μετρήθηκαν (crc32c/μέγεθος), και δεν αντικαθιστά ποτέ υπάρχον.
  */
 
-import type { DocumentReference, Firestore as AdminFirestore, Transaction } from 'firebase-admin/firestore';
+import type { DocumentData, DocumentReference, Firestore as AdminFirestore, Transaction } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { HANDOVER_DELIVERY_REVISION_CHAIN_LIMIT } from '@/config/property-handover-delivery-policy';
@@ -22,6 +22,7 @@ import { nowISO } from '@/lib/date-local';
 import { isSha256Hex } from '@/lib/hash/sha256';
 import type { HandoverDeliveredRow } from '@/lib/property-handover/handover-delivery-plan';
 import { handoverDeliveryIdOf } from '@/lib/property-handover/property-handover-id';
+import { reconcilePreservedBytes, stagePreservationRelease } from '@/services/file-record/file-preservation.service';
 import type { PropertyHandover } from '@/types/property-handover';
 
 /** Μία γραμμή, όπως αποθηκεύεται στο `property_handover_deliveries/{phdl_*}`. */
@@ -97,19 +98,39 @@ export interface MeasuredDeliverySha256 extends Pick<HandoverDeliveredRow, 'sour
 }
 
 /**
+ * 🧷 Φ-Δ.7α — **η γενιά-πηγή μιας γραμμής**: η εγγραφή αρχείου της εταιρείας, **μόνο** αν ανήκει στον ίδιο ενοικιαστή με
+ * τη γραμμή (ποτέ διατήρηση/αποδέσμευση σε ξένο έγγραφο).
+ */
+export function deliverySourceRef(adminDb: AdminFirestore, sourceFileId: string): DocumentReference {
+  return adminDb.collection(COLLECTIONS.FILES).doc(sourceFileId);
+}
+
+/** Το έγγραφο-πηγή, μόνο όταν είναι του ενοικιαστή της γραμμής — αλλιώς `undefined` (καμία εγγραφή σε αυτό). */
+export function ownSourceData(source: DocumentData | undefined, ledger: DocumentData | undefined): DocumentData | undefined {
+  return source !== undefined && ledger !== undefined && source.companyId === ledger.companyId ? source : undefined;
+}
+
+/**
  * **Γράφει το sha256 μιας γραμμής — μία φορά.** Μέσα σε συναλλαγή: υπάρχει ήδη ⇒ επιστρέφεται το αποθηκευμένο (ποτέ
  * αντικατάσταση)· η γραμμή λείπει ή περιγράφει **άλλα** bytes (crc32c/μέγεθος) από όσα μετρήθηκαν ⇒ `refused`.
+ * 🧷 Φ-Δ.7α — με το sha256 η απόδειξη **υπάρχει**: στην **ίδια** συναλλαγή η πηγή βγαίνει από τη διατήρηση (και όταν το
+ * αποτύπωμα το έγραψε ταυτόχρονη εκτέλεση) — μετά, τα bytes ακολουθούν τη βάση.
  */
 export async function recordDeliverySha256(adminDb: AdminFirestore, handoverId: string, measured: MeasuredDeliverySha256): Promise<DeliverySha256Write> {
   const ref = deliveryLedgerRef(adminDb, handoverId, measured.sourceFileId);
-  return adminDb.runTransaction(async (tx): Promise<DeliverySha256Write> => {
-    const data = (await tx.get(ref)).data();
+  const sourceRef = deliverySourceRef(adminDb, measured.sourceFileId);
+  const outcome = await adminDb.runTransaction(async (tx): Promise<DeliverySha256Write> => {
+    const [ledgerSnap, sourceSnap] = await Promise.all([tx.get(ref), tx.get(sourceRef)]);
+    const data = ledgerSnap.data();
     if (data === undefined || data.crc32c !== measured.crc32c || data.size !== measured.size) return { kind: 'refused' };
     const stored = sha256Text(data.sha256);
+    stagePreservationRelease(tx, sourceRef, ownSourceData(sourceSnap.data(), data), ref.id);
     if (stored !== null) return { kind: 'hashed', sha256: stored };
     tx.update(ref, { sha256: measured.sha256, sha256Of: measured.origin, hashedAt: nowISO() });
     return { kind: 'hashed', sha256: measured.sha256 };
   });
+  if (outcome.kind === 'hashed') await reconcilePreservedBytes(sourceRef);
+  return outcome;
 }
 
 /** Ένα βήμα της αλυσίδας: πηγή → ο διάδοχός της, για όσες έχουν. */

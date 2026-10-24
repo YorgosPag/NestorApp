@@ -37,6 +37,7 @@ import { fileRecordBucket, fileStorageBucket } from '@/server/files/file-record-
 import { copyProvenPairs, statObjects } from '@/server/storage/placement-copy';
 import { recordFileAudit } from '@/services/file-audit-admin.service';
 import { buildFinalizeFileRecordUpdate, buildPendingFileRecordData } from '@/services/file-record';
+import { preserveObjectBytes, reconcilePreservedBytes, stagePreservation } from '@/services/file-record/file-preservation.service';
 import { handoverDocRef } from '@/services/property-handover/property-handover-progress-write';
 import type { DeliverableHandoverFile } from '@/services/property-handover/property-handover-set.server';
 import type { PropertyHandover } from '@/types/property-handover';
@@ -145,34 +146,55 @@ export function readyFileRecordData(
  * (`withdrawn`)· η ανάκληση γράφει το **ίδιο** έγγραφο ⇒ σειριοποίηση. Η θεραπεία μιας **ήδη** παραδομένης απόδειξης
  * ολοκληρώνεται πάντα (ό,τι παραδόθηκε μένει, Δ5).
  */
-async function commitCopy(ctx: HandoverCopyContext, copy: PreparedCopy): Promise<HandoverLedgerProof | 'withdrawn'> {
-  const { built, source, item } = copy;
-  const custody = { userId: ctx.recipientUserId };
+/** Η έκβαση της συναλλαγής μιας αντιγραφής — αν δεσμεύτηκε, και αν **αυτή** έβαλε την πηγή σε διατήρηση (Φ-Δ.7α). */
+interface CopyTransactionOutcome {
+  readonly committed: boolean;
+  readonly preserved: boolean;
+}
+
+/**
+ * Το σώμα της συναλλαγής: ξαναδιάβασε · κρίνε · γράψε εγγραφή + γραμμή — και, **με τη γραμμή**, τη διατήρηση της πηγής.
+ * 🧷 Φ-Δ.7α — αναλλοίωτο: *γραμμή χωρίς sha256 ⇒ η γενιά-πηγή διατηρείται*, **ατομικά** (ποτέ γραμμή χωρίς διατήρηση,
+ * ούτε για μια στιγμή). Αίρεται στη συναλλαγή που γράφει το sha256 (`recordDeliverySha256`).
+ */
+async function runCopyTransaction(ctx: HandoverCopyContext, copy: PreparedCopy, row: HandoverLedgerProof): Promise<CopyTransactionOutcome> {
+  const { built, item } = copy;
   const recordRef = handoverCopyRecordRef(ctx.adminDb, ctx.recipientUserId, built.fileId);
-  const sourceGeneration = String(source.metadata.generation ?? '');
-  const row: HandoverLedgerProof = {
-    sourceFileId: item.sourceFileId, copyFileId: built.fileId, crc32c: String(source.metadata.crc32c), size: Number(source.metadata.size),
-    sha256: null, sourceGeneration,
-  };
   const ledgerRef = deliveryLedgerRef(ctx.adminDb, ctx.handover.id, item.sourceFileId);
-  const committed = await ctx.adminDb.runTransaction(async (tx) => {
+  return ctx.adminDb.runTransaction(async (tx): Promise<CopyTransactionOutcome> => {
     const [recordSnap, ledgerSnap, sourceSnap, handoverSnap] = await Promise.all([
       tx.get(recordRef), tx.get(ledgerRef), tx.get(item.file.doc.ref), tx.get(handoverDocRef(ctx.adminDb, ctx.handover.id)),
     ]);
     // Θεραπεία (υπάρχει ήδη ένα από τα δύο) = ήταν παραδομένο ⇒ η απόδειξη ολοκληρώνεται πάντα (Δ5: ό,τι παραδόθηκε μένει).
     const healing = recordSnap.exists || ledgerSnap.exists;
-    if (!healing && (!isHandoverDeliverableDocument(sourceSnap.data()) || !stillOwedTo(handoverSnap.data(), ctx))) return false;
+    if (!healing && (!isHandoverDeliverableDocument(sourceSnap.data()) || !stillOwedTo(handoverSnap.data(), ctx))) {
+      return { committed: false, preserved: false };
+    }
     if (!recordSnap.exists) {
       tx.create(recordRef, readyFileRecordData(built, { sizeBytes: row.size, placement: copy.placement, hash: text(item.file.doc.data().hash) }));
     }
-    if (!ledgerSnap.exists) stageDeliveryLedgerRow(tx, ledgerRef, {
+    if (ledgerSnap.exists) return { committed: true, preserved: false };
+    stageDeliveryLedgerRow(tx, ledgerRef, {
       sourceFileId: row.sourceFileId, copyFileId: row.copyFileId, crc32c: row.crc32c, size: row.size,
       companyId: ctx.handover.companyId, propertyId: ctx.handover.propertyId, handoverId: ctx.handover.id,
-      recipientUserId: ctx.recipientUserId, dossierId: copy.dossierId, sourceGeneration,
+      recipientUserId: ctx.recipientUserId, dossierId: copy.dossierId, sourceGeneration: row.sourceGeneration ?? '',
       revisionOfFileId: copy.revisionOfFileId, deliveredAt: nowISO(),
     });
-    return true;
+    return { committed: true, preserved: stagePreservation(tx, item.file.doc.ref, sourceSnap.data(), ledgerRef.id) };
   });
+}
+
+async function commitCopy(ctx: HandoverCopyContext, copy: PreparedCopy): Promise<HandoverLedgerProof | 'withdrawn'> {
+  const { built, source, item } = copy;
+  const custody = { userId: ctx.recipientUserId };
+  const row: HandoverLedgerProof = {
+    sourceFileId: item.sourceFileId, copyFileId: built.fileId, crc32c: String(source.metadata.crc32c), size: Number(source.metadata.size),
+    sha256: null, sourceGeneration: String(source.metadata.generation ?? ''),
+  };
+  // 🧷 Φ-Δ.7α — bytes ΠΡΩΤΑ (ποτέ «διατηρείται στη βάση, ελεύθερο στον κάδο»)· ό,τι δεν κράτησε η βάση ξεκλειδώνεται μετά.
+  await preserveObjectBytes(item.file.doc.data());
+  const { committed, preserved } = await runCopyTransaction(ctx, copy, row);
+  if (!preserved) await reconcilePreservedBytes(item.file.doc.ref);
   if (!committed) {
     // Τα bytes γράφτηκαν ήδη στο κλειδί του αγοραστή χωρίς εγγραφή — αόρατα, αλλά δεν τα αφήνουμε (καλύτερη προσπάθεια).
     await fileStorageBucket(copy.placement).file(built.storagePath).delete({ ignoreNotFound: true }).catch(() => undefined);

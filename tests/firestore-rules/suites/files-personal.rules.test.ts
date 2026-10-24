@@ -213,6 +213,8 @@ describe('files_personal.rules — το προσωπικό αρχείο το α�
       await seedPersonalFile(env, DOC_ID, CITIZEN_UID);
       const ref = citizen().collection(COLLECTION).doc(DOC_ID);
       await assertFails(ref.update({ retentionUntil: '2999-01-01T00:00:00.000Z' }));
+      // 🧷 ADR-916 Φ-Δ.7α — ούτε διατήρηση (ίδια λίστα `holdCustodyKeys()`).
+      await assertFails(ref.update({ preservedFor: ['phdl_1'] }));
       await assertSucceeds(commitPairedActivity(citizen(), {
         uid: CITIZEN_UID, fileId: DOC_ID, action: 'rename', updates: { displayName: 'χωρίς δέσμευση' },
       }));

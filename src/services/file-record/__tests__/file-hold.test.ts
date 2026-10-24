@@ -102,6 +102,34 @@ describe('🏆 Α47 — ο καθαρός κριτής (ADR-864 §21)', () => {
   });
 });
 
+describe('🏆 Ζ70 — η ΔΙΑΤΗΡΗΣΗ της γενιάς-πηγής (ADR-916 Φ-Δ.7α · ADR-864 §21.11)', () => {
+  it('🔴 μη κενό `preservedFor` ⇒ δεσμεύεται για ΚΑΘΕ οριστική διαγραφή — και πάνω από `hold: none`', () => {
+    expect(judge.isPreserved({ preservedFor: ['phdl_1'] })).toBe(true);
+    expect(isFileHeld({ hold: 'none', preservedFor: ['phdl_1'] })).toBe(true);
+  });
+
+  it('🔴 fail-closed: αλλοιωμένη τιμή ⇒ διατηρείται (σκέλος προς σκέλος με το `holdAllowsHardDelete()`)', () => {
+    expect(judge.isPreserved({ preservedFor: 'phdl_1' })).toBe(true);
+    expect(judge.isPreserved({ preservedFor: { phdl_1: true } })).toBe(true);
+  });
+
+  it('🔑 παρονομαστής: απουσία · `null` · κενός πίνακας ⇒ ΟΧΙ', () => {
+    expect(judge.isPreserved({})).toBe(false);
+    expect(judge.isPreserved({ preservedFor: null })).toBe(false);
+    expect(isFileHeld({ preservedFor: [] })).toBe(false);
+  });
+
+  it('🔴 σιωπηλή: ο κριτής κάδου ΔΕΝ ρωτά τη διατήρηση (Vault · Purview — ο χρήστης βλέπει το αρχείο να φεύγει)', () => {
+    expect(judge.fileTrashBlockOf({ preservedFor: ['phdl_1'], companyId: 'c' })).toBeNull();
+  });
+
+  it('🔴 ο κανόνας αρνείται τη διαγραφή εγγραφής υπό διατήρηση — κενός πίνακας ή απουσία μόνο', () => {
+    const body = source('firestore.rules').split('function holdAllowsHardDelete() {')[1]?.split('\n    }')[0] ?? '';
+    expect(body).toContain("resource.data.get('preservedFor', null) == null");
+    expect(body).toContain("resource.data.get('preservedFor', null) == []");
+  });
+});
+
 describe('🏆 Α49 — κώδικας και κανόνας φυλάνε τα ΙΔΙΑ κλειδιά (ADR-864 §21.7)', () => {
   const RULES = source('firestore.rules');
   const ruleKeys = rulesKeyListOf(RULES, 'holdCustodyKeys');
