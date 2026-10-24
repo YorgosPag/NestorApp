@@ -207,5 +207,33 @@
     "label": "Delivery",
     "slipNotice": "Originally {originally} · moved {count, plural, one {# time} other {# times}}",
     "basis": "As declared by the developer."
+  },
+  "terrain": {
+    "map": {
+      "title": "Terrain map",
+      "description": "Contour lines every {interval}, index contours every {major}, and slope classes of the ground. North is up; the scale bar shows {scale}.",
+      "caption": "Contours every {interval} · labelled index contours every {major}",
+      "indicative": "Slope classes are indicative: they help read the terrain and are not a construction cost estimate.",
+      "north": "N",
+      "metres": "{value} m",
+      "slope": {
+        "caption": "Slope classes and share of the area",
+        "class": "Slope",
+        "share": "Share of area",
+        "range": "{from} – {to}",
+        "rangeOpen": "{from} and above",
+        "lessThan": "under {value}"
+      },
+      "legend": {
+        "caption": "Legend",
+        "minor": "Contour every {interval}",
+        "major": "Index contour every {major}, labelled",
+        "extent": "Survey extent",
+        "boundary": "Plot boundary",
+        "sparse": "Sparse area: interpolated, not measured",
+        "conflicting": "Same position, different elevation",
+        "coincident": "Repeated point"
+      }
+    }
   }
 }

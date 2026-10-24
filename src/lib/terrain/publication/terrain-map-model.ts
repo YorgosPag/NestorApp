@@ -56,6 +56,8 @@ export interface TerrainMapModel {
   readonly majorContoursPathData: string;
   readonly contourLabels: readonly TerrainMapContourLabel[];
   readonly contourIntervalM: number;
+  /** Spacing of the labelled index contours (`contourIntervalM × contourMajorEvery`) — the legend names it. */
+  readonly majorContourIntervalM: number;
   /** Height of every map text, SVG units. */
   readonly labelHeightM: number;
   readonly northArrow: TerrainMapNorthArrow;
@@ -89,6 +91,7 @@ export function terrainMapModelOf(
     majorContoursPathData: contourPathData(snapshot.contours, true),
     contourLabels: contourLabelsOf(snapshot.contours, labelHeightM),
     contourIntervalM: snapshot.contourIntervalM,
+    majorContourIntervalM: roundPublished(snapshot.contourIntervalM * snapshot.contourMajorEvery),
     labelHeightM,
     northArrow: northArrowOf(viewBox),
     scaleBar: scaleBarOf(viewBox),

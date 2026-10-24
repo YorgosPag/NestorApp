@@ -6,15 +6,21 @@
  * Παρουσιαστικό: τις ετικέτες τις γράφει ο καλών, στο δικό του namespace.
  */
 
-import React from 'react';
+import React, { type ReactNode } from 'react';
 
 import { HATCH_SWATCH_CLASS, RAMP_SWATCH_CLASS } from './map-ramp';
 
+/**
+ * `symbol`: το δείγμα το ζωγραφίζει ο καλών **με τον ίδιο κώδικα με το σχέδιο του** (μάθημα `FloorPlateSwatch`, ADR-907)
+ * — για σύμβολα που δεν είναι απόχρωση της `--map-seq-*` (ισοϋψείς, σημάνσεις, διαγραμμίσεις του χάρτη εδάφους, ADR-920).
+ * Ένα δεύτερο τετραγωνάκι CSS θα ονόμαζε το χρώμα δεύτερη φορά και θα μπορούσε να αποκλίνει από το σχέδιο.
+ */
 export type MapLegendSwatch =
   | { readonly kind: 'ramp'; readonly step: number }
   | { readonly kind: 'line'; readonly step: number }
   | { readonly kind: 'inherited' }
-  | { readonly kind: 'few' };
+  | { readonly kind: 'few' }
+  | { readonly kind: 'symbol'; readonly node: ReactNode };
 
 export interface MapLegendItem {
   readonly key: string;
@@ -24,7 +30,7 @@ export interface MapLegendItem {
 
 const BOX = 'block size-3 shrink-0 rounded-sm border border-border';
 
-function swatchClass(swatch: MapLegendSwatch): string {
+function swatchClass(swatch: Exclude<MapLegendSwatch, { kind: 'symbol' }>): string {
   switch (swatch.kind) {
     case 'ramp':
       return `${BOX} ${RAMP_SWATCH_CLASS[swatch.step]}`;
@@ -49,7 +55,9 @@ export function MapRampLegend({ caption, items }: MapRampLegendProps) {
       <ul className="m-0 flex list-none flex-wrap gap-x-4 gap-y-1 p-0 text-xs text-foreground">
         {items.map((item) => (
           <li key={item.key} className="flex items-center gap-1.5">
-            <span aria-hidden className={swatchClass(item.swatch)} />
+            {item.swatch.kind === 'symbol'
+              ? item.swatch.node
+              : <span aria-hidden className={swatchClass(item.swatch)} />}
             {item.label}
           </li>
         ))}

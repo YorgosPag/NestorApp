@@ -15,10 +15,12 @@
  *   φτιαγμένο με ξεχωριστά τετραγωνάκια CSS θα μπορούσε να δείχνει άλλο μοτίβο από το σχέδιο χωρίς να κοκκινίσει τίποτα.
  */
 
-import { useId, useRef } from 'react';
+import { useRef } from 'react';
 
 import { SPACE_LABEL_CLASS } from '@/components/spatial-tour/viewer/tour-plan-overlay-palette';
 import { useElementSize } from '@/hooks/media/useElementSize';
+import { useSvgFragmentId } from '@/hooks/media/useSvgFragmentId';
+import { hatchTilePathData } from '@/lib/geometry/hatch-tile';
 import { FLOOR_PLATE_SELF_STATE, FLOOR_PLATE_STATES, type FloorPlateState } from '@/lib/listings/floor-plate/floor-plate-state';
 import { inPaintOrder, type FloorPlateImageSize, type FloorPlateShape } from '@/lib/listings/floor-plate/floor-plate-view';
 import { cn } from '@/lib/utils';
@@ -60,22 +62,19 @@ export function unitLabelFontSize(clearance: number, base: number, scale: number
 
 const SWATCH = { width: 28, height: 18, inset: 1, tile: 6 } as const;
 
-/** Το `useId` της React περιέχει χαρακτήρες που δεν ανήκουν σε αναφορά `url(#…)`. */
+/** Το `useId` της React περιέχει χαρακτήρες που δεν ανήκουν σε αναφορά `url(#…)` — καθαρίζονται στο ΕΝΑ σημείο. */
 function useFragmentId(): string {
-  return `fp${useId().replace(/[^a-zA-Z0-9_-]/gu, '')}`;
+  return useSvgFragmentId('fp');
 }
 
 function patternId(prefix: string, state: FloorPlateState): string {
   return `${prefix}-${state}`;
 }
 
-/** Τα σημάδια ενός πλακιδίου. Οι διαγραμμίσεις ξεκινούν **έξω** από το πλακίδιο, ώστε να ενώνονται χωρίς ραφή. */
+/** Τα σημάδια ενός πλακιδίου — οι διαγραμμίσεις από το ΕΝΑ πλακίδιο χωρίς ραφή (`hatchTilePathData`). */
 function PatternMarks({ kind, tile }: { readonly kind: FloorPlatePatternKind; readonly tile: number }) {
   if (kind === 'dots') return <circle cx={tile / 2} cy={tile / 2} r={tile * 0.13} />;
-  const q = tile / 4;
-  const rising = `M${-q},${q} l${2 * q},${-2 * q} M0,${tile} l${tile},${-tile} M${tile - q},${tile + q} l${2 * q},${-2 * q}`;
-  const falling = `M${-q},${tile - q} l${2 * q},${2 * q} M0,0 l${tile},${tile} M${tile - q},${-q} l${2 * q},${2 * q}`;
-  return <path d={kind === 'cross' ? `${rising} ${falling}` : rising} strokeWidth={tile * 0.1} />;
+  return <path d={hatchTilePathData(tile, kind === 'cross' ? 'cross' : 'rising')} strokeWidth={tile * 0.1} />;
 }
 
 /** Τα μοτίβα όλων των καταστάσεων που έχουν μοτίβο — μία δήλωση ανά `<svg>` (σχέδιο ή δείγμα), με δικό της πρόθεμα. */

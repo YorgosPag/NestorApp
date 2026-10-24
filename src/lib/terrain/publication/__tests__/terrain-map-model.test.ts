@@ -110,6 +110,9 @@ describe('contours and their labels', () => {
     expect(model.minorContoursPathData.length).toBeGreaterThan(0);
     expect(model.majorContoursPathData.length).toBeGreaterThan(0);
     expect(model.contourIntervalM).toBe(0.1);
+    // Index spacing = interval × majorEvery (the legend and caption name it).
+    expect(model.majorContourIntervalM).toBe(0.5);
+    expect(PLANE.contourMajorEvery).toBe(5);
   });
 
   it('index labels sit ON their line: level z at x = 10·(z − 120) − 10', () => {

@@ -2,6 +2,15 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **24/10 — ΤΡΙΑ ΑΝΤΙΓΡΑΦΑ ΤΟΥ «ΚΑΘΑΡΟΥ `useId` ΓΙΑ `url(#…)`»** *(ADR-920 Β4.8 υπο-βήμα 4, εύρημα SSoT audit)*
+
+  **Τι:** δημιουργήθηκε το SSoT `src/hooks/media/useSvgFragmentId.ts` και το χρησιμοποιούν ο χάρτης εδάφους + το
+  `FloorPlateUnitLayer`. Μένουν **τρία** χειρόγραφα `useId().replace(/:/g, '')` (καθαρίζουν **μόνο** `:` — η μορφή του `useId` αλλάζει
+  ανά έκδοση: 18 `:r0:` · 19.1 `«r0»` · 19.2, η τωρινή, `_r_0_`· σήμερα δεν σπάει τίποτα, αλλά η επόμενη αλλαγή μορφής θα σπάσει
+  σιωπηλά το `url(#…)` σε τρία σημεία αντί για ένα): `owner-property/OwnerPropertyStatsChart.tsx:139` ·
+  `sales/payments/financial-intelligence/InterestReserveChart.tsx:51` · `dxf-viewer/ui/ribbon/components/buttons/MepToolIcon.tsx:35`.
+  **Θεραπεία:** `useSvgFragmentId('<πρόθεμα>')`. **Μέγεθος:** ~15′, 3 αρχεία, 3 τομείς (γι' αυτό εδώ και όχι επί τόπου, N.0.2).
+
 - 🟡 **24/10 — ΤΡΕΙΣ ΣΥΝΑΡΤΗΣΕΙΣ ΤΟΥ `lib/demand` ΠΑΝΩ ΑΠΟ 40 ΓΡΑΜΜΕΣ (N.7.1)** *(ADR-919 «επαλήθευση §12», εύρημα εκτός βήματος 9)*
 
   **Τι:** μετρημένο 2026-10-24 με AST (σώμα συνάρτησης): `demand-form-load.ts` `demandFormFrom` **57** · `demand-form-values.ts`
