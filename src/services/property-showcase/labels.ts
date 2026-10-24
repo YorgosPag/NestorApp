@@ -51,6 +51,8 @@ export interface ShowcaseSpecLabels {
   energyClass: string;
   condition: string;
   renovationYear: string;
+  /** ADR-919 §11 — «Παράδοση»· η τιμή είναι η υπόσχεση της αγγελίας. */
+  delivery: string;
 }
 
 export interface ShowcaseProjectLabels {

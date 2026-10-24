@@ -53,7 +53,8 @@
     "orientation": "Orientation",
     "energyClass": "Energy class",
     "condition": "Upkeep condition",
-    "renovationYear": "Renovation year"
+    "renovationYear": "Renovation year",
+    "delivery": "Delivery"
   },
   "project": {
     "sectionTitle": "Project",

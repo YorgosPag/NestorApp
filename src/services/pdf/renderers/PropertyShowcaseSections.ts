@@ -279,6 +279,8 @@ export function buildSpecsRows(
     ]);
   if (p.condition?.renovationYear !== undefined)
     rows.push([labels.specs.renovationYear, String(p.condition.renovationYear)]);
+  // ADR-919 §11 — η υπόσχεση της αγγελίας, ήδη φράση (ίδια με οθόνη και Telegram).
+  if (p.delivery) rows.push([labels.specs.delivery, p.delivery]);
 
   return rows;
 }

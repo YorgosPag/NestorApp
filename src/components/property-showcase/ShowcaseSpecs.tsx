@@ -47,6 +47,8 @@ function buildRows(
 
   pushSpecRow(rows, t('specs.condition'), p.condition?.conditionLabel || p.condition?.condition);
   pushSpecRow(rows, t('specs.renovationYear'), p.condition?.renovationYear);
+  // ADR-919 §11 — η υπόσχεση ΤΗΣ ΑΓΓΕΛΙΑΣ, ήδη φράση στη γλώσσα του snapshot (όχι το νεκρό `deliveryDate`).
+  pushSpecRow(rows, t('specs.delivery'), p.delivery);
 
   return rows;
 }

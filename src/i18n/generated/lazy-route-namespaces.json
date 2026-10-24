@@ -1514,8 +1514,16 @@
     "settings"
   ],
   "SharedFile": [
+    "common",
+    "common-account",
+    "common-actions",
+    "common-empty-states",
+    "common-navigation",
     "common-photos",
+    "common-sales",
     "common-shared",
+    "common-status",
+    "common-validation",
     "files",
     "files-media",
     "showcase",

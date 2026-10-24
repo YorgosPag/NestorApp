@@ -45,6 +45,9 @@ import {
   buildViews,
   pickString,
 } from './snapshot-field-builders';
+import { showcaseDeliveryPhrase } from './showcase-delivery';
+import { readPublicListingById } from '@/services/listings/public-listing-by-id.reader';
+import type { ListingAvailability } from '@/types/listing-availability';
 
 // =============================================================================
 // 🏢 SNAPSHOT TYPES (wire format shared by web API + PDF renderer)
@@ -156,6 +159,8 @@ export interface PropertyShowcaseSnapshot {
     orientationLabels?: string[];
     views?: ShowcaseViewInfo[];
     condition?: ShowcaseConditionInfo;
+    /** ADR-919 §11 — η υπόσχεση της **αγγελίας**, ήδη φράση στη γλώσσα του snapshot. Απόν = τίποτα τίμιο να ειπωθεί. */
+    delivery?: string;
     energy?: ShowcaseEnergyInfo;
     systems?: ShowcaseSystemsInfo;
     finishes?: ShowcaseFinishesInfo;
@@ -182,6 +187,11 @@ export interface PropertyShowcaseContext {
    * property has no `projectId`.
    */
   floors: Map<string, Record<string, unknown>>;
+  /**
+   * ADR-919 §11 — η διαθεσιμότητα της **δημόσιας αγγελίας** (`null` = δεν δημοσιεύεται). Από το σύνορο ανάγνωσης,
+   * ώστε το showcase να μην μπορεί να πει άλλη υπόσχεση από την αγγελία.
+   */
+  listingAvailability: ListingAvailability | null;
 }
 
 export interface LoadContextParams {
@@ -208,7 +218,7 @@ export async function loadShowcaseRelations(
     .filter((s) => s?.spaceType === 'parking' && typeof s?.spaceId === 'string')
     .map((s) => s.spaceId as string);
 
-  const [project, storages, parkingSpots, floors] = await Promise.all([
+  const [project, storages, parkingSpots, floors, listing] = await Promise.all([
     projectId
       ? adminDb
           .collection(COLLECTIONS.PROJECTS)
@@ -220,6 +230,8 @@ export async function loadShowcaseRelations(
     loadDocsByIds(adminDb, COLLECTIONS.STORAGE, storageIds),
     loadDocsByIds(adminDb, COLLECTIONS.PARKING_SPACES, parkingIds),
     projectId ? loadFloorsByProjectId(adminDb, projectId) : Promise.resolve(new Map()),
+    // Η αγγελία έχει την ταυτότητα της μονάδας· αποτυχία ανάγνωσης ⇒ καμία γραμμή, ποτέ σπασμένο showcase.
+    readPublicListingById(adminDb, propertyId).catch(() => null),
   ]);
 
   return {
@@ -230,6 +242,7 @@ export async function loadShowcaseRelations(
     storages,
     parkingSpots,
     floors,
+    listingAvailability: listing?.availability ?? null,
   };
 }
 
@@ -369,6 +382,7 @@ export function buildPropertyShowcaseSnapshot(
       orientationLabels: translateOrientations(rawOrientations, locale),
       views: buildViews(p),
       condition: buildCondition(p, locale),
+      delivery: showcaseDeliveryPhrase(context.listingAvailability, locale),
       energy: buildEnergy(p),
       systems: buildSystems(p, locale),
       finishes: buildFinishes(p, locale),
