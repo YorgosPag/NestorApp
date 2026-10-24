@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | 🟡 **ΣΕ ΕΞΕΛΙΞΗ** — **Βήμα 1 ✅** *(2026-10-23, `2bdf7a56`/`690fbaf5`)*: τύπος τριών καταστάσεων · κατασκευαστής διαστήματος ανά ακρίβεια · `timingBlockers` κρίνει με το τέλος του διαστήματος. **Βήμα 2 ✅** *(2026-10-23, `80e9f88f`)*: `forecastCompletion` με ημερομηνία κατάστασης (P6) πάνω στο CPM. **Βήμα 3 ✅** *(2026-10-23, `5fcf400e`)*: επιλυτής `resolveListingAvailability` (μονάδα → κτίριο, «το γεγονός νικά την υπόσχεση») + `PublicListing.availability` + κρίκος σχήματος 25 (§7). **Βήμα 4 ✅ σε κώδικα** *(2026-10-23, uncommitted)*: οι τρεις παραγωγοί διαβάζουν `listing.availability` (§8). **Βήμα 5 ✅ σε κώδικα** *(2026-10-23, uncommitted)*: επαναπροβολή όταν αλλάζει είσοδος του επιλυτή· ο ανιχνευτής αλλαγής του κτιρίου είναι ο ίδιος ο αναγνώστης (§9). ⏳ Βήματα 6–9 του ADR-777 §8.99.4 |
+| **Status** | 🟡 **ΣΕ ΕΞΕΛΙΞΗ** — **Βήμα 1 ✅** *(2026-10-23, `2bdf7a56`/`690fbaf5`)*: τύπος τριών καταστάσεων · κατασκευαστής διαστήματος ανά ακρίβεια · `timingBlockers` κρίνει με το τέλος του διαστήματος. **Βήμα 2 ✅** *(2026-10-23, `80e9f88f`)*: `forecastCompletion` με ημερομηνία κατάστασης (P6) πάνω στο CPM. **Βήμα 3 ✅** *(2026-10-23, `5fcf400e`)*: επιλυτής `resolveListingAvailability` (μονάδα → κτίριο, «το γεγονός νικά την υπόσχεση») + `PublicListing.availability` + κρίκος σχήματος 25 (§7). **Βήμα 4 ✅ σε κώδικα** *(2026-10-23, uncommitted)*: οι τρεις παραγωγοί διαβάζουν `listing.availability` (§8). **Βήμα 5 ✅ σε κώδικα** *(2026-10-23, uncommitted)*: επαναπροβολή όταν αλλάζει είσοδος του επιλυτή· ο ανιχνευτής αλλαγής του κτιρίου είναι ο ίδιος ο αναγνώστης (§9). **Βήμα 6 ✅ σε κώδικα** *(2026-10-23, uncommitted)*: ιστορικό δημόσιων δηλώσεων στη μονάδα, `PublicListing.availabilityTrack` (κρίκος 27), ειδοποίηση σε όποιον χάνει ή κερδίζει ταίρι (§10). ⚠️ Πάνω στον uncommitted κρίκο 26 του ADR-920. **Βήμα 7 ✅ σε κώδικα** *(2026-10-23, uncommitted)*: οθόνες — κάρτα υπόσχεσης κτιρίου (πρόταση χρονοδιαγράμματος + έγκριση + έλεγχος P6 «Must Finish By») και «διαθέσιμο από» μονάδας, πόρτα εγγραφής «πρόθεση → γεγονός», κάρτα/σελίδα/χάρτης/showcase με τη ΜΙΑ φράση, ορίζοντας χρόνου στην απάντηση ζήτησης (§11). ⏳ Βήματα 8–9 του ADR-777 §8.99.4 |
 | **Date** | 2026-10-23 |
 | **Category** | Listings / Demand matching |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
@@ -247,6 +247,143 @@ forecastCompletion(phases, tasks, statusDate): CompletionForecast
 - `app/api/buildings/__tests__/building-update.handler.test.ts`, ομάδα **Ε**: παράδοση και μετάθεση ⇒ επαναπροβολή
   του έργου· αμετάβλητα πεδία ή `completionDate` ⇒ καμία.
 
+## §10. Βήμα 6: ιστορικό δημόσιων δηλώσεων και ειδοποίηση μετάθεσης (Δ3)
+
+**Τι κάνει η αγορά (έρευνα 2026-10-23).** Τα idealista, ImmoScout24, Rightmove και Zoopla **δεν** δείχνουν ιστορικό
+μεταθέσεων και **δεν** ειδοποιούν όταν μετατεθεί η παράδοση (ADR-777 §8.99.4). Ο NHQC του ΗΒ ζητά από τον κατασκευαστή να
+ενημερώνει τον αγοραστή σε **κάθε** αλλαγή του completion window. Υποθέσεις του New Homes Ombudsman δικαίωσαν αγοραστές που
+«η ημερομηνία μετακινήθηκε πολλές φορές και έπρεπε να κυνηγάω» (Gateley · DAC Beachcroft). Στο ΗΒ μόνο το 64% των νέων
+κατοικιών παραδίδεται εγκαίρως (HomeOwners Alliance). **Εμείς**: η ιστορία χτίζεται αυτόματα, **μόνο** από τη δημόσια τιμή,
+και ειδοποιείται **μόνο** όποιος ήδη ήξερε την αγγελία και του άλλαξε η απάντηση της μηχανής.
+
+### Οι πέντε αποφάσεις
+
+| # | Ερώτημα | Απόφαση | Γιατί |
+|---|---|---|---|
+| 1 | Πού ζει το ιστορικό | Στη **μονάδα** (`properties` / `owner_properties`, πεδίο `availabilityHistory`), δίδυμο του `priceHistory` | Καταγράφεται η **επιλυμένη** τιμή που είδε το κοινό (σκαλί 1 ή 5). Στο κτίριο θα καταγράφονταν αλλαγές που το κοινό δεν είδε ποτέ (μη δημοσιευμένες μονάδες, δήλωση χωρίς `confirmedAt`), και θα χάνονταν οι δηλώσεις της μονάδας. Η απόσυρση σβήνει την προβολή, όχι το ιστορικό. Τα Ν αντίγραφα είναι ≤24 μικρές εγγραφές ανά μονάδα, και είναι **σωστά** σημασιολογικά: «μετατέθηκε 1 φορά» λέει τι υποσχέθηκε **αυτή η αγγελία** |
+| 2 | Τι είναι «μετάθεση» | Μόνο το `slipped`: νέα `scheduled` με **τέλος** αργότερα από την **προηγούμενη υπόσχεση** του επεισοδίου | Ίδιο κριτήριο Δ2 με το `timingBlockers`. Γ΄ τρίμηνο → Σεπτέμβριος = `refined` (εξειδίκευση) · → Οκτώβριος = `slipped` · νωρίτερα = `advanced` · → `ready` = `delivered` (κλείνει το επεισόδιο) · → `unknown` = `withdrawn` · πρώτη υπόσχεση = `promised`. Το Β΄ → άγνωστο → Δ΄ μετρά 1 |
+| 3 | Δημόσια προβολή | `PublicListing.availabilityTrack: { originally, slips, lastChange } \| null`. Η οθόνη δείχνει «αρχικά Χ · μετατέθηκε N» **μόνο** μέσω του `slipNoticeOf` (υπόσχεση ακόμη `scheduled` και `slips ≥ 1`) | **Χωρίς** όριο φρεσκάδας: η μετάθεση δεν παύει να είναι αληθής σε 30 ημέρες (αντίθετα με τη μείωση τιμής, που κατά Omnibus αφορά την τρέχουσα προσφορά). Δίχτυ όπως το `reductionForListing`: ιστορία μόνο αν η τελευταία παρατήρηση **ισούται** με την `availability` της αγγελίας |
+| 4 | Ειδοποίηση | Η μηχανή ρωτιέται **δύο φορές**, με την παλιά (`lastChange.from`) και με τη νέα τιμή. Η διαφορά δίνει `lost` / `gained`. Ετυμηγορία `availabilityChangeVerdict`, κλειδί `listing:{id}:availability:{at}` ανά παραλήπτη, νέο είδος `PROPERTIES_DEMAND_AVAILABILITY_CHANGE` με δικό του διακόπτη | Καμία δεύτερη κρίση χρόνου (§3.7). Ό,τι άλλο εμπόδιζε το ταίρι το εμποδίζει και στις δύο ερωτήσεις, άρα δεν χρεώνεται στη μετάθεση |
+| 5 | Πιο έξυπνα από την αγορά | (α) Είδηση μόνο όταν **αλλάζει η απάντηση** για τη ζήτησή σου, όχι σε όλους. (β) Η επίσπευση ή η παράδοση φέρνει «ταιριάζει ξανά». (γ) **Δείκτης αξιοπιστίας κατασκευαστή** (ποσοστό εγκαίρων παραδόσεων από τα `availabilityHistory` όλων των μονάδων του): εφικτός **χωρίς** ιδιωτικά, γιατί χρησιμοποιεί μόνο δημόσιες τιμές. Χρειάζεται όμως ελάχιστο δείγμα, εγκάρσια ανάγνωση ανά εταιρεία και νομική κρίση (δυσφήμιση). ⇒ **ξεχωριστό βήμα**, όχι εδώ | — |
+
+### Η ετυμηγορία
+
+| Κατάσταση | Ετυμηγορία |
+|---|---|
+| αλλαγή παλαιότερη από 30 ημέρες (`AVAILABILITY_CHANGE_NEWS_WINDOW_DAYS`, φράχτης backfill) | `stale` |
+| **χάνει**, και δεν του είπαμε ποτέ για την αγγελία | `never-known` (σιωπή: «χάθηκε κάτι που δεν σου δείξαμε» είναι θόρυβος) |
+| **κερδίζει**, και δεν του είπαμε ποτέ | `left-to-match` (το email ταιριάσματος το λέει ήδη, **μία** φορά) |
+| του το είπαμε **πριν** την αλλαγή | `announce` |
+| του το είπαμε **μετά** την αλλαγή, ή δεν ξέρουμε πότε | `predates-change` |
+
+⛔ **Ιδιωτικότητα**: το σώμα λέει μόνο δημόσιες τιμές («μετατέθηκε από Γ΄ τρίμηνο 2027 σε Α΄ τρίμηνο 2028»). Ποτέ αιτία,
+φάση ή πρόβλεψη. Η είσοδος της σφραγίδας είναι `publicAvailabilityOf(availability, isPubliclyListed(…))`.
+
+### Κώδικας
+
+| Ρόλος | Αρχείο |
+|---|---|
+| Τύποι | `types/availability-history.ts` (`AvailabilityObservation` · `AvailabilityChange` · `AvailabilityTrack`) |
+| Καθαρή κρίση | `lib/listings/availability-history.ts`: `readAvailabilityHistory` (μία κακή εγγραφή ⇒ όλο κενό, ποτέ ψεύτικη «απόσυρση») · `nextAvailabilityHistory` (ξεκινά στην πρώτη υπόσχεση, μόνο προς τα εμπρός, όριο 24 που κρατά την αρχική) · `availabilityRevisionOf` · `availabilityTrackOf` · `availabilityTrackForListing` (δίχτυ) · `slipNoticeOf` · `readStoredAvailabilityTrack` (κριτής κρίκου 27) |
+| Σφραγίδα | **Κοινός πυρήνας** `services/listings/property-history-stamp.ts` (CAS, μηδέν κόστος, `update` όχι `set`, ποτέ εξαίρεση). Εξήχθη από το `price-history-stamp.ts`, που έγινε λεπτή κλήση του. Δίδυμο: `availability-history-stamp.ts` |
+| Η διαφορά | `lib/demand/availability-shift.ts` (`availabilityShiftsOf` πάνω στο `matchDemandAgainstListing`) |
+| Ετυμηγορία + κλειδί | `lib/demand/demand-announcement.ts` (`availabilityChangeVerdict` · `recipientAvailabilityChangeEventId`) |
+| Πέρασμα | `services/demand/availability-change-pass.ts`, μέσα στο ωριαίο `tallyMatches`: ίδιες ζητήσεις, αγγελίες, «σήμερα» και `nowMs`. Καμία αλλαγή στην αγορά ⇒ καμία ανάγνωση |
+| Αποστολή | `services/demand/listing-availability-change-notifier.ts` (δίδυμο του `announcePriceDrop`) · καθολόγιο με νέα όψη `'availability-change'` · λογιστική `MatchTally.availabilityChanges` |
+| Κείμενα | `listing-announcement-copy.ts` (`availabilityChangeCopy` · `promisePhrase`) · `common-shared`: `demandAvailabilityChange.*` · `listingAvailability.quarter` · `common-account`: ετικέτα διακόπτη |
+| Ασφάλεια | το `availabilityHistory` **δεν** ανήκει στο `isAllowedPropertyFieldUpdate` (deny-by-default) · άγκυρα στο `properties.rules.test.ts` |
+
+**Το σύρμα.** Το `listingAvailabilityOf(property, place)` (`public-listing-projection.ts`, το όνομα του ADR-777 §8.99.4 #4)
+απαντά «τι θα δει το κοινό;» **μία** φορά. Το ρωτούν και η προβολή (`availability` + `availabilityTrack`) και η σφραγίδα, άρα δεν
+μπορούν να διαφωνήσουν. Στο `republishListing` η σφραγίδα είναι αλυσίδα **μετά** το `collectPlaceKnowledge` (η υπόσχεση μπορεί να
+είναι του κτιρίου), **μέσα** στο ίδιο `Promise.all`. Ο ιδιώτης έχει το ίδιο σύρμα: σήμερα είναι πάντα `ready`, άρα μηδέν εγγραφές.
+**Κρίκος σχήματος 27** (`adds: ['availabilityTrack']`): το παλιό έγγραφο παίρνει `null`, και ο κριτής είναι ο
+`readStoredAvailabilityTrack`. ⚠️ Μπήκε πάνω από τον **ακόμη uncommitted** κρίκο 26 (ADR-920), στα ίδια αρχεία. Τα δύο βήματα
+πρέπει να γίνουν commit μαζί, ή το 26 πρώτο με `git add -p`.
+
+**Άγκυρες**: `lib/listings/__tests__/availability-history.test.ts` (Τ ταξινόμηση · Ε εγγραφή · Ι ιστορία · Δ δίχτυ/οθόνη · Μ σύνορο,
+22) · `services/listings/__tests__/availability-history-stamp.test.ts` (Σ1–Σ6) · `lib/demand/__tests__/availability-shift.test.ts`
+(Χ μηχανή δύο φορές · Ε ετυμηγορία) · `services/demand/__tests__/availability-change-pass.test.ts` (Π1–Π6) · `demand-match-ledger.test.ts`
+ομάδα Α · `public-listing-schema.test.ts` ομάδα **Κ18** (κρίκος 27) · `services/listings/__tests__/availability-history-wiring.test.ts` (Σ1–Σ4: **πραγματικός** γραφέας πάνω σε `FakeFirestore` — η μετάθεση της υπόσχεσης του κτιρίου φτάνει ως `availabilityTrack` στην αγγελία **και** ως `availabilityHistory` στη μονάδα· μη δημόσια μονάδα ⇒ τίποτα). Η άγκυρα σύρματος υπάρχει επειδή καμία άλλη δεν ρωτά «**καλεί** κανείς τη σφραγίδα;» (κλάση ADR-841 Α1). Δεν υπήρχε τέτοια ούτε για την τιμή. Μεταλλάξεις **4/4 κόκκινες**: τέλος → αρχή διαστήματος (2) ·
+χωρίς δίχτυ (1) · μία ερώτηση στη μηχανή αντί για δύο (4) · `never-known` ⇒ `announce` (2).
+
+## §11. Βήμα 7: οι οθόνες διαθεσιμότητας
+
+**Έρευνα (2026-10-23).**
+- **Primavera P6**: η εξωτερική δέσμευση του έργου είναι ο περιορισμός «Must Finish By». Όταν η πρόβλεψη τον ξεπερνά,
+  εμφανίζεται **αρνητικό περιθώριο** (negative float). Χωριστά υπάρχει η διαφορά πρόβλεψης-baseline (Variance – Finish
+  Date). Το P6 δεν έχει ενιαία προειδοποίηση· τα στοιχεία τα συνδυάζει ο προγραμματιστής.
+- **SmartPM**: η προβλεπόμενη ολοκλήρωση γίνεται κίτρινη στο 7,5% της υπόλοιπης διάρκειας και κόκκινη στο 15%.
+- **Procore**: η ολίσθηση του χρονοδιαγράμματος φαίνεται ως γκρι «σκιές» των ημερομηνιών του κύριου χρονοδιαγράμματος.
+  Βήμα έγκρισης πρόβλεψης → δέσμευσης **δεν** τεκμηριώθηκε.
+- **ImmoScout24**: «Bezugsfrei ab» είναι δομημένο πεδίο του exposé, με τιμή ημερομηνία ή «Sofort». Η ολοκλήρωση γράφεται
+  στο κείμενο, και βρέθηκε αγγελία όπου τα δύο **αντιφάσκουν** (ολοκλήρωση Γ΄ τρ. 2025, διαθέσιμο από 01.01.2027).
+- **Rightmove**: «Let available date: Now». Τα πεδία που λείπουν γράφονται «Ask agent», αλλά στις ενοικιάσεις.
+  **Zillow**: κατάσταση νεόδμητου (under construction / move-in ready), ενώ η ημερομηνία ζει στο κείμενο.
+
+**Απαντήσεις στα 5 ερωτήματα του handoff.**
+
+| # | Ερώτημα | Απόφαση |
+|---|---|---|
+| 1 | Κάρτα/σελίδα και `unknown` | Στην **κάρτα** μιλά μόνο το `scheduled` («Παράδοση Γ΄ τρίμηνο 2027»). Το `ready` αφορά τη μεγάλη πλειοψηφία των αγγελιών, άρα σε κάθε κάρτα θα ήταν θόρυβος· το ImmoScout το κρατά στο exposé. Στη **σελίδα** το `ready` γράφεται ρητά («Άμεσα διαθέσιμο» = «Bezugsfrei ab: Sofort»). Το `unknown` **σιωπά** και στα δύο: καμία αγορά δεν γράφει «δεν δηλώθηκε» για την παράδοση, και το «Ask agent» του Rightmove αφορά ενοικιάσεις |
+| 2 | Πρόταση → δέσμευση | Μοτίβο Figma: η πρόταση εμφανίζεται ως **φάντασμα τιμής** με δύο επιλογές, «Αποδοχή και δημοσίευση» και «Επεξεργασία». Ποτέ σιωπηλή προσυμπλήρωση. Εμφανίζεται **μόνο** όταν δεν υπάρχει υπόσχεση ή όταν η υπάρχουσα **παραβιάζεται/έληξε** (για να διορθωθεί). Αν η υπόσχεση ισχύει, η πρόταση θα ήταν θόρυβος |
+| 3 | Κανονική φόρμα μονάδας | **Η καρτέλα «Αγγελία»** (`PropertyListingTab`), όχι η φόρμα πεδίων. Εκεί ήδη ισχύει το δόγμα «το δημόσιο είναι **πράξη**, όχι πεδίο φόρμας» (ADR-864 Ε-10) και η ΜΙΑ πύλη μεταλλάξεων |
+| 4 | Inline ή ειδοποίηση | **Inline τώρα.** Η ειδοποίηση στον διαχειριστή έργου είναι **ξεχωριστό βήμα**: θέλει νέο cron, νέο είδος ειδοποίησης και διακόπτη. Κάθε νέο είδος μεγαλώνει και τη σελίδα `/email/preferences/[token]`, που ήδη χτύπησε το CHECK 3.34 στο βήμα 6 |
+| 5 | Εμπόδια ζήτησης | Αποδίδονται στο `components/demand/DemandBlockerList.tsx` ως άθροισμα ανά εμπόδιο. Η ημερομηνία είναι **πεδίο της απάντησης** (`DemandAnswer.timingHorizon`): η νωρίτερη υπόσχεση ανάμεσα στις **απορριφθείσες** με `not-available-then`, δηλαδή στο ίδιο σύνολο με το `blockedBy`. Καμία δεύτερη κρίση χρόνου: διαβάζει μόνο ό,τι σημάδεψε η μηχανή |
+
+**Αποφάσεις.**
+1. **Μία φράση** (`lib/listings/availability-phrase.ts`, `availabilityPromisePhrase(promise, t, locale)`). Τη χρησιμοποιούν
+   email, κάρτα, χάρτης, σελίδα, showcase, απάντηση ζήτησης και φόρμες. Το `promisePhrase` του email έγινε λεπτή κλήση
+   της. Η ημέρα γράφεται πλέον «15 Σεπτεμβρίου 2027» και όχι «15/9/2027», μέσω του νέου `formatCalendarDate`
+   (`lib/intl-formatting.ts`), που έχει την ίδια αγκύρωση UTC με τα αδέλφια του.
+2. **Πόρτα εγγραφής «πρόθεση → γεγονός»** (`lib/listings/availability-declaration-write.ts`). Και οι δύο γραφείς είχαν σχήμα
+   `.passthrough()`, άρα ένα πλαστό `inferred` + `confirmedAt` θα δημοσιευόταν. Ο πελάτης στέλνει **μόνο**
+   `{ precision, anchor, origin: 'declared' | 'schedule-proposal', isLowerBound? }` (`strict`), και την προέλευση και τις ώρες τις
+   γράφει ο **διακομιστής** με τη δική του ώρα. Η πρόταση **δεν αποθηκεύεται ποτέ ανεπιβεβαίωτη**. Το `confidence` καταγράφει
+   μόνο εκτίμηση (0,75) ή κάτω όριο (0,4)· τη δημοσίευση δεν την κρίνει αυτό, μόνο το `confirmedAt`.
+3. **Ο έλεγχος της υπόσχεσης** (`services/construction-scheduling/completion-promise-check.ts`) είναι μία καθαρή κρίση πάνω σε
+   σχέδιο (`completionDate`), πρόβλεψη (§6) και υπόσχεση (P6 «Must Finish By»), με το «σήμερα» ως όρισμα. Βγάζει τα σήματα
+   `expired` · `forecast-beyond-promise` (με «τουλάχιστον» όταν η πρόβλεψη είναι κάτω όριο) · `at-risk` · `plan-beyond-promise` ·
+   `forecast-unreliable`. **Πιο έξυπνα από την αγορά**: (α) η προειδοποίηση **πριν** την παραβίαση (`at-risk`, όταν το περιθώριο
+   πέσει κάτω από το 7,5% του χρόνου ως την υπόσχεση, κατώφλι SmartPM)· (β) σήμα **ληγμένης** υπόσχεσης, ώστε να μη μείνει
+   δημοσιευμένη όπως στο ImmoScout· (γ) τα σήματα **ονομάζονται** με λόγια στη στιγμή της δήλωσης, αντί για στήλη στο P6.
+4. **Η υπόσχεση είναι πράξη, όχι πεδίο φόρμας.** Κάρτα με δική της «Δημοσίευση/Ανάκληση», έξω από την αυτόματη αποθήκευση,
+   γιατί μετράει μεταθέσεις και ειδοποιεί ζητούντες (βήμα 6). Η αποθήκευση είναι **αισιόδοξη** με την ίδια συνάρτηση με τον
+   διακομιστή. Σε αποτυχία γυρίζει στην τελευταία **επιβεβαιωμένη** τιμή, και μετρά μόνο η τελευταία πράξη (αύξων αριθμός).
+5. **Η σύγκριση βλέπει ό,τι θα δει το κοινό**: `presentableSchedule` (εξήχθη από τον επιλυτή, ένας κανόνας Α7) πάνω στην
+   **αισιόδοξη** τιμή. Η σύγκριση δεν μένει πίσω από το κλικ.
+6. **Showcase**: η γραμμή «Παράδοση» επέστρεψε με πηγή το `readPublicListingById` (σύνορο ανάγνωσης). Μη δημοσιευμένη μονάδα
+   ή `unknown` σημαίνει καμία γραμμή, όπως ορίζει ο κανόνας ιδιωτικότητας. Η τιμή ήταν ως τώρα το `Property.deliveryDate`,
+   που ήταν νεκρό. Το «Άμεσα διαθέσιμο» είναι **ένα** κλειδί (`common:listingAvailability.readyNow`) για κάρτα, σελίδα και
+   showcase, όχι δεύτερο στο `showcase.json`.
+7. **Ίχνος** (CHECK 3.17): `completionDeclaration` (κτίριο) και `availabilityDeclaration` (μονάδα) στο `audit-tracked-fields.ts`.
+   Η τιμή καταγράφεται ως **διάστημα** + ακρίβεια + προέλευση, ώστε δύο άγκυρες του ίδιου τριμήνου να μη γράφουν «αλλαγή».
+
+⛔ **Ιδιωτικότητα**: σχέδιο, πρόβλεψη, ημέρες απόκλισης και πρόταση μένουν **μόνο** στην οθόνη του κτιρίου. Στο κοινό φτάνουν
+η εγκεκριμένη υπόσχεση και το `slipNoticeOf`.
+
+**Κώδικας**
+
+| Ρόλος | Αρχείο |
+|---|---|
+| Φράση | `lib/listings/availability-phrase.ts` · `formatCalendarDate` στο `lib/intl-formatting.ts` |
+| Πόρτα εγγραφής | `lib/listings/availability-declaration-write.ts` → `building-update.handler.ts` · `api/properties/[id]/route.ts` + `property-patch-helpers.ts` · `types/building/mutation-payloads.ts` |
+| Έλεγχος | `services/construction-scheduling/completion-promise-check.ts` |
+| Προσχέδιο | `lib/listings/availability-declaration-draft.ts` |
+| Οθόνες εταιρείας | `components/listings/availability-declaration/*` (`AvailabilityDeclarationCard` · `AvailabilityDeclarationEditor` · `BuildingCompletionPromiseCard` · `CompletionScheduleComparison` · `UnitAvailabilityCard` · `useAvailabilityDeclarationSave`) · `building-management/hooks/useCompletionForecast.ts` · θέσεις: `GeneralTabContent.tsx` · `PropertyListingTab.tsx` |
+| Δημόσιες οθόνες | `search-results/ListingDeliveryBadge.tsx` (κάρτα + χάρτης) · `listing-detail/ListingAvailability.tsx` |
+| Showcase | `services/property-showcase/showcase-delivery.ts` · `snapshot-builder.ts` · `ShowcaseSpecs.tsx` · `PropertyShowcaseSections.ts` · `telegram-text-digest.ts` |
+| Ζήτηση | `lib/demand/demand-timing-horizon.ts` · `DemandAnswer.timingHorizon` · `DemandBlockerList.tsx` |
+| Ίχνος | `config/audit-tracked-fields.ts` |
+
+**Άγκυρες**: `availability-phrase.test.ts` (Φ ακρίβεια · Ζ UTC) · `completion-promise-check.test.ts` (Α αρνητικό περιθώριο ·
+Κ σε κίνδυνο · Λ λήξη · Σ σχέδιο/αναξιόπιστο/πρόταση) · `availability-declaration-write.test.ts` (Π πρόθεση → γεγονός · Α πλαστό
+γεγονός/ξένο κλειδί/30 Φεβρουαρίου) · `availability-declaration-draft.test.ts` · `demand-timing-horizon.test.ts` (Ο μόνο ό,τι σημάδεψε
+η μηχανή) · `listing-availability.test.tsx` (Κ κάρτα · Σ σελίδα, μετάθεση μόνο μέσω `slipNoticeOf`) ·
+`useAvailabilityDeclarationSave.test.tsx` (Α αισιόδοξα/επαναφορά · Ρ η τελευταία πράξη) · `demand-blocker-horizon.test.tsx`.
+
+**Εκκρεμεί**: ειδοποίηση απόκλισης στον διαχειριστή έργου (απάντηση 4)· δείκτης αξιοπιστίας κατασκευαστή (§10 #5γ)· βήματα 8–9.
+
 ## Changelog
 
 | Ημερομηνία | Αλλαγή |
@@ -256,3 +393,5 @@ forecastCompletion(phases, tasks, statusDate): CompletionForecast
 | 2026-10-23 | **Βήμα 3** — `resolveListingAvailability` + `readAvailabilityDeclaration` (`lib/listings/listing-availability.ts`), `PublicListing.availability` από την καθαρή προβολή, `PlaceKnowledge.buildingAvailability` από το ίδιο ανέβασμα, `Building.completionDeclaration` / `Property.availabilityDeclaration`, `DELIVERED_BUILDING_STATUSES`, ρόλος αποκάλυψης `'availability'`, κρίκος 25. Απόσυρση του `Property.deliveryDate`. Το `completionDate` μένει εσωτερικό (§7). 34 νέες άγκυρες, μεταλλάξεις 4/4. |
 | 2026-10-23 | **Βήμα 4** — οι τρεις παραγωγοί (`listing-resolver` · `place-interest` · `demand-answer`) γράφουν `listing.availability` αντί για τη σταθερά. Αφαιρέθηκε ο χάρτης `ListingKnowledge.availability` (δεύτερη πηγή). Το §4 έκλεισε (§8). |
 | 2026-10-23 | **Βήμα 5** — επαναπροβολή όταν αλλάζει είσοδος του επιλυτή (§9). Νέο `services/listings/building-listing-facts.ts`: το `buildingChainFactsOf` είναι ο αναγνώστης (`readBuildingDoc`) **και** ο ανιχνευτής (`buildingListingFactsChanged`, `canonicalJson`), οπότε ο `PATCH /api/buildings` ξαναπροβάλλει σε αλλαγή `status`/`completionDeclaration` αντί για χειρόγραφη λίστα. Η μονάδα ξαναπροβαλλόταν ήδη χωρίς όρο. Οι φάσεις δεν ξαναπροβάλλουν (η πρόταση δεν είναι δημόσια). Καμία νέα πύλη, με λόγο. |
+| 2026-10-23 | **Βήμα 7** — οθόνες (§11). Μία φράση `availabilityPromisePhrase` (το `promisePhrase` του email έγινε λεπτή κλήση της· νέο `formatCalendarDate`). Πόρτα εγγραφής «πρόθεση → γεγονός» στους δύο γραφείς `.passthrough()` (ώρες και προέλευση από τον διακομιστή). Έλεγχος υπόσχεσης τύπου P6 «Must Finish By» με προειδοποίηση πριν την παραβίαση (κατώφλι SmartPM 7,5%) και σήμα λήξης. Κάρτα υπόσχεσης κτιρίου (πρόταση ως φάντασμα τιμής + Αποδοχή) και «διαθέσιμο από» στην καρτέλα «Αγγελία» της μονάδας. Σήμανση στην κάρτα και στον χάρτη, ενότητα στη σελίδα με μετάθεση μέσω `slipNoticeOf`. Επιστροφή της γραμμής «Παράδοση» στο showcase από την αγγελία. `DemandAnswer.timingHorizon`. Ίχνος για τα δύο πεδία. Το `presentableSchedule` εξήχθη από τον επιλυτή. |
+| 2026-10-23 | **Βήμα 6** (§10): `availabilityHistory` στη μονάδα, μόνο από δημόσιες τιμές. Ταξινόμηση αλλαγών με το τέλος του διαστήματος. Κοινός πυρήνας σφραγίδας `property-history-stamp.ts`, εξαγμένος από το `price-history-stamp`. Ειδοποίηση `PROPERTIES_DEMAND_AVAILABILITY_CHANGE` με δικό της διακόπτη: η μηχανή ρωτιέται δύο φορές (πριν/τώρα), και μιλά μόνο σε όποιον ήξερε την αγγελία. Σύρμα προβολής (`listingAvailabilityOf`) + κρίκος 27 (`availabilityTrack`). |
