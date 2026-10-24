@@ -628,5 +628,61 @@
     "parkingLoadError": "The parking spots could not be loaded.",
     "storageLoadError": "The storage units could not be loaded.",
     "staleNote": "What you see below is the last version that loaded — it may not be current."
+  },
+  "availabilityPromise": {
+    "buildingTitle": "Public delivery promise",
+    "buildingHint": "What the public sees on this building’s listings. The planned completion date stays internal.",
+    "unitTitle": "Available from",
+    "unitHint": "Declare it only if the unit becomes available on a different date from the building, e.g. when it is let. It overrides the building’s promise.",
+    "precisionLabel": "Precision",
+    "precision": {
+      "quarter": "Quarter",
+      "month": "Month",
+      "day": "Day"
+    },
+    "year": "Year",
+    "quarter": "Quarter",
+    "month": "Month",
+    "day": "Date",
+    "pickDay": "Pick a date",
+    "current": "Published now: {promise}",
+    "currentNone": "No promise declared.",
+    "currentPending": "Saved but not public: approval is missing.",
+    "origin": {
+      "declared": "Declared on {date}",
+      "schedule": "From the schedule, approved on {date}"
+    },
+    "preview": "The public will see: “{promise}”",
+    "publish": "Publish",
+    "withdraw": "Withdraw",
+    "saving": "Saving…",
+    "saved": "Saved.",
+    "saveFailed": "Not saved. Please try again.",
+    "privacyNote": "Only the promise and how many times it moved reach the public. Never phases, forecasts or reasons.",
+    "schedule": {
+      "heading": "Plan · forecast · promise",
+      "plan": "Plan",
+      "forecast": "Forecast",
+      "promise": "Promise",
+      "empty": "—",
+      "atLeast": "at least {date}",
+      "loading": "Calculating forecast…",
+      "noSchedule": "There is no phase schedule, so no forecast can be made.",
+      "completed": "All phases are complete ({date}). If the building has been delivered, the “Completed” status shows “Available now” to the public."
+    },
+    "proposal": {
+      "title": "Suggested by the schedule: {promise}",
+      "lowerBound": "A phase is blocked, so the forecast is the earliest possible date.",
+      "accept": "Accept and publish",
+      "edit": "Edit before publishing"
+    },
+    "signal": {
+      "expired": "The promise expired {days, plural, one {# day} other {# days}} ago without delivery, and the public still sees it.",
+      "forecastBeyond": "The forecast ({date}) exceeds the promise by {days, plural, one {# day} other {# days}}.",
+      "forecastBeyondAtLeast": "The forecast ({date}) exceeds the promise by at least {days, plural, one {# day} other {# days}}.",
+      "atRisk": "Thin margin: the forecast ({date}) is {days, plural, one {# day} other {# days}} from the end of the promise.",
+      "planBeyond": "The plan itself ({date}) ends {days, plural, one {# day} other {# days}} after the promise.",
+      "unreliable": "The schedule gives no reliable forecast (cyclic dependencies or invalid dates)."
+    }
   }
 }

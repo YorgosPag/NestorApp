@@ -20,6 +20,7 @@ import React from 'react';
 
 import { PlaceInterestPanel } from '@/components/demand/PlaceInterestPanel';
 import { MarketingAudienceControl, type AudienceChangeOutcome } from '@/components/listings/MarketingAudienceControl';
+import { UnitAvailabilityCard } from '@/components/listings/availability-declaration/UnitAvailabilityCard';
 import { Card } from '@/components/ui/card';
 import { marketingAudienceOf, type MarketingAudience } from '@/constants/marketing-audiences';
 import { usePlaceInterest } from '@/hooks/demand/usePlaceInterest';
@@ -65,6 +66,9 @@ export function PropertyListingTab({ property }: { readonly property: Property }
           />
         </section>
       </Card>
+
+      {/* ADR-919 §11 — «διαθέσιμο από»: πράξη με δική της ιστορία (μεταθέσεις, ειδοποιήσεις), όπως το κοινό. */}
+      <UnitAvailabilityCard property={property} />
 
       <PlaceInterestPanel interest={interest} audience={audience} />
     </article>

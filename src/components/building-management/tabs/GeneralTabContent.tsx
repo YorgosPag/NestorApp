@@ -36,6 +36,7 @@ import {
 } from '@/lib/listings/construction-year';
 import '@/lib/design-system';
 import { isBuildingCategory } from '@/constants/building-categories';
+import { BuildingCompletionPromiseCard } from '@/components/listings/availability-declaration/BuildingCompletionPromiseCard';
 
 const logger = createModuleLogger('GeneralTabContent');
 
@@ -453,6 +454,8 @@ export function GeneralTabContent({
         isEditing={effectiveIsEditing}
         errors={errors}
       />
+      {/* ADR-919 §11 — η δημόσια υπόσχεση παράδοσης: ρητή πράξη με δική της έγκριση, όχι πεδίο της φόρμας. */}
+      {!isCreateMode && <BuildingCompletionPromiseCard building={building} />}
     </section>
   );
 }
