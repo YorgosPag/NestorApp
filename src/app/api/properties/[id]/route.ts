@@ -46,6 +46,7 @@ import {
 import { OBJECTIVE_VALUE_BODY_KEY, patchPropertyObjectiveValue } from './property-objective-value-patch';
 import { assertPropertyAnchorWrite } from './property-anchor-guard';
 import { companyEnergyDeclarationPatch } from './property-energy-patch';
+import { availabilityDeclarationPatch } from '@/lib/listings/availability-declaration-write';
 import { nowISO } from '@/lib/date-local';
 import { asApiError } from '@/lib/api/api-error-types';
 import { syncPropertyHandovers } from '@/services/property-handover/property-handover-write.service';
@@ -144,7 +145,10 @@ export const PATCH = entityIdRoute<ApiSuccessResponse<PropertyMutationResult>>({
         const energyPatch = await companyEnergyDeclarationPatch(
           adminDb, { companyId: ctx.companyId, propertyId: id }, body.energy, existing, nowISO(),
         );
-        const updateData = { ...buildUpdateData(body, existing), ...energyPatch, ...anchorPatch };
+        // ADR-919 §11 — το «διαθέσιμο από» φτάνει ως ΠΡΟΘΕΣΗ· το γεγονός το γράφει ο διακομιστής (αμετάβλητη επαναποστολή = τίποτα).
+        const availability = availabilityDeclarationPatch(body, 'availabilityDeclaration', nowISO(), existing.availabilityDeclaration);
+        if (availability.kind === 'invalid') throw new ApiError(400, 'availabilityDeclaration invalid');
+        const updateData = { ...buildUpdateData(body, existing), ...energyPatch, ...availability.patch, ...anchorPatch };
         // ADR-903 §6 — φιλοξενούμενο ⇒ `floor`/`floorKind` από το έγγραφο ορόφου (κερδίζει τον client).
         // Αποσύνδεση από όροφο ⇒ ο αριθμός μένει μόνο αν τον έστειλε ρητά (αυτόνομη μονάδα).
         const hostedFloor = await resolveHostedFloorPatch(adminDb, ctx, body, existing);

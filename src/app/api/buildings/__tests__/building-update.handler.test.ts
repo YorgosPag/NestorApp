@@ -249,7 +249,8 @@ describe('επαναπροβολή — ό,τι διαβάζει η αγγελί�
   });
 
   it('Ε2 — μετατέθηκε η δημόσια υπόσχεση παράδοσης ⇒ ξαναπροβάλλεται', async () => {
-    await patch({ completionDeclaration: { ...DECLARATION, value: { precision: 'quarter', anchor: '2027-10-01' } } });
+    // ADR-919 §11 — ο πελάτης στέλνει ΠΡΟΘΕΣΗ· το γεγονός (προέλευση, ώρα) το γράφει ο διακομιστής.
+    await patch({ completionDeclaration: { precision: 'quarter', anchor: '2027-10-01', origin: 'declared' } });
 
     expect(republish).toHaveBeenCalledTimes(1);
   });

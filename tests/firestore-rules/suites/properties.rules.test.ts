@@ -208,6 +208,22 @@ describe('properties.rules — admin_write_only + admin-update (crossdoc via pro
       );
     });
 
+    // ADR-919 §10 — το ιστορικό της δημόσιας υπόσχεσης θεμελιώνει το «μετατέθηκε N φορές» και την ειδοποίηση
+    // «δεν ταιριάζει πια». Ένας διαχειριστής που θα το έγραφε θα έσβηνε μεταθέσεις ή θα κατασκεύαζε «αρχική» υπόσχεση.
+    it('αρνείται `availabilityHistory` — σβησμένη ή ψεύτικη μετάθεση', async () => {
+      await seed();
+      await assertFails(
+        doc().update({
+          availabilityHistory: [
+            {
+              at: '2026-01-01T00:00:00.000Z',
+              availability: { kind: 'scheduled', precision: 'quarter', window: { start: '2027-10-01', end: '2027-12-31' } },
+            },
+          ],
+        })
+      );
+    });
+
     it('αρνείται `listedAt` — ψεύτικη ημερομηνία εισόδου στην αγορά', async () => {
       await seed();
       await assertFails(doc().update({ listedAt: { kind: 'known', at: '2026-09-15T00:00:00.000Z' } }));

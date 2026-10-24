@@ -38,10 +38,12 @@ import { thumbnailFromLead } from '@/lib/owner-property/owner-listing-thumbnail'
 import type { PublicAgencyIdentity } from '@/types/public-listing';
 import { readDossierMedia } from '@/services/property-dossier/dossier-media.reader';
 import type { DossierMediaRead } from '@/services/property-dossier/dossier-media-publication';
-import { isPubliclyListed } from '@/services/listings/public-listing-projection';
+import { isPubliclyListed, listingAvailabilityOf } from '@/services/listings/public-listing-projection';
 import { resolveListedAt } from '@/services/listings/listed-at-stamp';
 import { resolvePriceHistory } from '@/services/listings/price-history-stamp';
+import { resolveAvailabilityHistory } from '@/services/listings/availability-history-stamp';
 import { marketPriceOf } from '@/lib/listings/price-history';
+import { publicAvailabilityOf } from '@/lib/listings/availability-history';
 import type { OwnerProperty } from '@/types/owner-property';
 
 const logger = createModuleLogger('owner-property-publication');
@@ -130,7 +132,8 @@ async function republishOwnerListing(
   //    σφράγιζε ακίνητο που δεν δημοσιεύεται — δες `owner-property-projection.ts`, που
   //    ρωτά **ήδη** έτσι το ίδιο ερώτημα.
   const listed = isPubliclyListed(projectable);
-  const [listedAt, priceHistory] = await Promise.all([
+  const place = placeKnowledgeFromOwnerProperty(property, at);
+  const [listedAt, priceHistory, availabilityHistory] = await Promise.all([
     listed
       ? resolveListedAt(adminDb, COLLECTIONS.OWNER_PROPERTIES, property.id, property.listedAt, at)
       : Promise.resolve(null),
@@ -141,13 +144,20 @@ async function republishOwnerListing(
       adminDb, COLLECTIONS.OWNER_PROPERTIES, property.id, property.priceHistory,
       marketPriceOf(projectable, listed), at,
     ),
+    // 🔴 **ΤΟ ΙΣΤΟΡΙΚΟ ΔΙΑΘΕΣΙΜΟΤΗΤΑΣ** (ADR-919 §10): **ίδια** πολιτική με τον επαγγελματία, **άλλη** διεύθυνση.
+    //    Σήμερα ο ιδιώτης είναι πάντα `ready` (`isNewConstruction: false`) ⇒ καμία εγγραφή, μηδέν κόστος· αλλά η
+    //    στιγμή που θα αποκτήσει «διαθέσιμο από» δεν θα χρειαστεί δεύτερο σύρμα.
+    resolveAvailabilityHistory(
+      adminDb, COLLECTIONS.OWNER_PROPERTIES, property.id, property.availabilityHistory,
+      publicAvailabilityOf(listingAvailabilityOf(projectable, place), listed), at,
+    ),
   ]);
 
   return writeListingProjection(
     adminDb,
     property.id,
-    { ...projectable, listedAt, priceHistory },
-    placeKnowledgeFromOwnerProperty(property, at),
+    { ...projectable, listedAt, priceHistory, availabilityHistory },
+    place,
     at,
   );
 }

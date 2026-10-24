@@ -604,6 +604,12 @@ export interface OwnerProperty {
    */
   readonly priceHistory?: unknown;
 
+  /**
+   * **Το ιστορικό της δημόσιας υπόσχεσης διαθεσιμότητας** (ADR-919 §10): το γράφει **μόνο** η σφραγίδα
+   * `resolveAvailabilityHistory`, ποτέ ο πελάτης. `unknown` για τον ίδιο λόγο με το `priceHistory`.
+   */
+  readonly availabilityHistory?: unknown;
+
   readonly createdAt: string;
   readonly updatedAt: string;
 }

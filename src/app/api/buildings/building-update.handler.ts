@@ -40,6 +40,8 @@ import type { AddressPositionDrift } from '@/lib/geocoding/address-position';
 import { extractLegacyFields } from '@/types/project/address-helpers';
 import type { PlaceRef } from '@/types/geo/public-place';
 import { isPlausibleConstructionYear } from '@/lib/listings/construction-year';
+import { availabilityDeclarationPatch } from '@/lib/listings/availability-declaration-write';
+import { nowISO } from '@/lib/date-local';
 // 🔴 **Το σχήμα καλωδίου γράφεται ΜΙΑ φορά** — ήταν αντιγραμμένο εδώ και στον πελάτη,
 // και τα δύο αντίγραφα **είχαν ήδη αποκλίνει** (`addresses` · `category`). Το εντόπισε
 // το CHECK 3.28, όχι άνθρωπος.
@@ -209,9 +211,15 @@ export const PATCH = withStandardRateLimit(
         throw new ApiError(400, 'constructionYear out of range');
       }
 
+      // ADR-919 §11 — η υπόσχεση παράδοσης φτάνει ως ΠΡΟΘΕΣΗ· το γεγονός (προέλευση, ώρες) το γράφει ο διακομιστής.
+      const declaration = availabilityDeclarationPatch(
+        updates, 'completionDeclaration', nowISO(), buildingData?.completionDeclaration,
+      );
+      if (declaration.kind === 'invalid') throw new ApiError(400, 'completionDeclaration invalid');
+
       const IMMUTABLE_FIELDS = ['companyId'];
       const cleanUpdates = Object.fromEntries(
-        Object.entries(updates).filter(([key, value]) =>
+        Object.entries({ ...updates, ...declaration.patch }).filter(([key, value]) =>
           value !== undefined && !IMMUTABLE_FIELDS.includes(key)
         )
       );

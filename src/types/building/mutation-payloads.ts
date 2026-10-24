@@ -25,6 +25,7 @@
 import type { ProjectAddress } from '@/types/project/addresses';
 import type { PlaceRef } from '@/types/geo/public-place';
 import type { BuildingCategory } from '@/constants/building-categories';
+import type { AvailabilityDeclarationIntent } from '@/lib/listings/availability-declaration-write';
 
 /**
  * **Τι επιτρέπεται να αλλάξει σε ένα κτίριο.**
@@ -50,6 +51,11 @@ export interface BuildingUpdatePayload {
    * κληρονομούν όλες οι αγγελίες του κτιρίου· κρίνεται από το `lib/listings/construction-year.ts`.
    */
   constructionYear?: number | null;
+  /**
+   * ADR-919 §11 — η **δημόσια υπόσχεση παράδοσης** ως **πρόθεση** («δηλώνω» / «αποδέχομαι την πρόταση»)· `null`
+   * = ανάκληση. Το αποθηκευμένο `SourcedAttribute` (προέλευση, ώρες) το γράφει ο διακομιστής, ποτέ ο πελάτης.
+   */
+  completionDeclaration?: AvailabilityDeclarationIntent;
   /** 🏢 LEGACY: μονή διεύθυνση — διατηρείται για μετανάστευση (ADR-167). */
   address?: string;
   city?: string;
