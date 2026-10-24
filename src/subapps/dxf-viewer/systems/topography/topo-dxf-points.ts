@@ -1,107 +1,47 @@
 /**
  * ADR-650 Milestone 2 — DXF drawing → survey points (Q9, second import road).
  *
- * Reuses the DXF parser SSoT (`DxfEntityParser`) — no second DXF reader is written here.
- *
- * ⚠️ WHY WE PARSE THE FILE INSTEAD OF READING THE SCENE: the viewer's scene is 2D — its
- * `PointEntity` carries only `position: Point2D` and has **no Z at all**. Harvesting points
- * from already-imported entities would therefore silently produce a flat surface. The
- * elevation only exists in the raw DXF group codes, so that is where we read it from:
- *
- *   POINT →  10 = X, 20 = Y, **30 = Z**            (a surveyed spot height)
- *   TEXT  →  10 = X, 20 = Y,   1 = "12.47"          (elevation written as a LABEL)
- *
- * The TEXT road is the classic «drawing with spot heights but no 3D points» deliverable —
- * Civil 3D imports it the same way (elevation from text). Both roads yield WORLD mm points.
- *
- * The DXF LAYER of each entity becomes the feature `code` (field-to-finish convention: the
- * layer IS the feature — `EDGE`, `TREE`, `KERB`), except the default layer `0`.
+ * ADR-920 Β4.1β — the scan lives in `@/lib/terrain/survey-import/dxf-survey-points` (shared with the owner's
+ * plot-listing survey import, which may not import from the subapp — CHECK 3.62). This file keeps only the VIEWER's
+ * unit policy, so every existing importer reads exactly what it read before. See the lib file for why the elevation
+ * comes from the raw group codes and never from the 2D scene.
  */
 
-import { DxfEntityParser, type EntityData } from '../../utils/dxf-entity-parser';
-import { parseLocaleNumber } from '@/lib/number/locale-number';
-import type { TopoPoint } from './topo-types';
+import { INSUNITS_TO_MM } from '@/lib/dxf/dxf-insunits';
+import {
+  scaleSurveyPoints,
+  scanDxfSurvey,
+  type DxfPointSource,
+  type DxfPointsResult,
+} from '@/lib/terrain/survey-import/dxf-survey-points';
 
-/** Which DXF entities to harvest elevations from. */
-export type DxfPointSource = 'point' | 'text' | 'both';
+export type { DxfPointSource, DxfPointsResult } from '@/lib/terrain/survey-import/dxf-survey-points';
 
-export interface DxfPointsResult {
-  readonly points: readonly TopoPoint[];
-  /** POINT entities found (before Z validation) — shown in the wizard preview. */
-  readonly pointCount: number;
-  /** TEXT entities whose label parsed as an elevation. */
-  readonly textCount: number;
+/** `DxfEntityParser.parseHeader` reads an absent / non-integer `$INSUNITS` as 4 (millimetres). */
+const PARSER_DEFAULT_INSUNITS = 4;
+
+/**
+ * The viewer's historic unit policy, unchanged (pinned by the characterisation suite):
+ *   • `$INSUNITS 0` (unitless, frequent in instrument exports) → METRES, so a site does not collapse into a 1 m square;
+ *   • an absent header → the parser default (millimetres);
+ *   • otherwise the declared unit.
+ * The owner's form does NOT inherit this: there an undeclared unit is a question for the human (ADR-920 §13.2).
+ */
+function viewerScaleToMm(declaredInsunits: number | null): number {
+  const insunits = declaredInsunits ?? PARSER_DEFAULT_INSUNITS;
+  return insunits ? INSUNITS_TO_MM[insunits] ?? 1 : 1000;
 }
 
 /**
- * Survey DXFs are drawn in METRES. `$INSUNITS` is frequently 0 (unitless) in instrument
- * exports, so an unset/unitless header falls back to metres rather than to «1 mm per unit»,
- * which would collapse a whole site into a 1 m square.
- */
-function resolveScaleToMm(lines: string[], override?: number): number {
-  if (override !== undefined) return override;
-  const insunits = DxfEntityParser.parseHeader(lines).insunits;
-  return insunits ? DxfEntityParser.getUnitScale(insunits) : 1000;
-}
-
-/** Feature code from the entity layer — `0` (the default layer) means «no code». */
-function codeFromLayer(layer: string): string | undefined {
-  return layer && layer !== '0' ? layer : undefined;
-}
-
-/**
- * One entity → spot height. X/Y always come from groups 10/20; only the ELEVATION source
- * differs per entity kind, so it is a parameter rather than a second twin function:
- *
- *   `zCode = '30'` → POINT: the surveyed Z. A POINT without group 30 is 2D → skipped.
- *   `zCode = '1'`  → TEXT:  the LABEL is the measurement. The text's own insertion Z is a
- *                    drafting artefact (where the annotation sits) and is deliberately ignored.
- */
-function pointFromEntity(e: EntityData, scale: number, zCode: '30' | '1'): TopoPoint | null {
-  const x = parseLocaleNumber(e.data['10'] ?? '');
-  const y = parseLocaleNumber(e.data['20'] ?? '');
-  const z = parseLocaleNumber(e.data[zCode] ?? '');
-  if (x === null || y === null || z === null) return null;
-
-  const code = codeFromLayer(e.layer);
-  return { x: x * scale, y: y * scale, z: z * scale, ...(code ? { code } : {}) };
-}
-
-/**
- * Extract survey points from raw DXF text.
- *
- * Only the ENTITIES section is scanned — points living inside BLOCK definitions are
- * templates, not surveyed ground, and would otherwise be harvested at their block-local
- * coordinates (ADR-635 Φ2, same reason the importer restricts its own entity sweep).
+ * Extract survey points from raw DXF text, in WORLD mm. Only the ENTITIES section is scanned — points inside BLOCK
+ * definitions are templates, not surveyed ground (ADR-635 Φ2).
  */
 export function extractTopoPointsFromDxf(
   text: string,
   source: DxfPointSource = 'both',
   unitScaleToMm?: number,
 ): DxfPointsResult {
-  const lines = text.split(/\r?\n/);
-  const scale = resolveScaleToMm(lines, unitScaleToMm);
-  const range = DxfEntityParser.findSectionRange(lines, 'ENTITIES') ?? undefined;
-  const entities = DxfEntityParser.parseEntities(lines, range);
-
-  const points: TopoPoint[] = [];
-  let pointCount = 0;
-  let textCount = 0;
-
-  for (const e of entities) {
-    if (e.type === 'POINT' && source !== 'text') {
-      pointCount++;
-      const p = pointFromEntity(e, scale, '30');
-      if (p) points.push(p);
-    } else if (e.type === 'TEXT' && source !== 'point') {
-      // A TEXT whose label is not a number is ordinary annotation, not a spot height.
-      const p = pointFromEntity(e, scale, '1');
-      if (p) {
-        textCount++;
-        points.push(p);
-      }
-    }
-  }
-
-  return { points, pointCount, textCount };
+  const scan = scanDxfSurvey(text, source);
+  const scale = unitScaleToMm ?? viewerScaleToMm(scan.declaredInsunits);
+  return { points: scaleSurveyPoints(scan.points, scale), pointCount: scan.pointCount, textCount: scan.textCount };
 }

@@ -583,6 +583,15 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
 
 ## Changelog
 
+- **2026-10-23 (v31)** — **Οι parsers εισαγωγής στο `lib` → βλ. [ADR-920](./ADR-920-listing-plot-terrain.md) §13.1–§13.2.**
+  Η φόρμα αγγελίας του ιδιοκτήτη διαβάζει τοπογραφικό στον browser χωρίς τον viewer. **Β4.1α**: οι parsers πινάκων
+  (`topo-import-types` · `topo-text-lines` · `topo-delimited-reader` · `topo-excel-reader` · `topo-column-*` ·
+  `topo-order-presets`) ζουν στο **`src/lib/terrain/survey-import/`**, με `export *` από τις
+  παλιές διαδρομές· το `parse-topo-points` μένει στον viewer ώσπου να αποκτήσει καταναλωτή στη ρίζα (CHECK 3.19). 🔴 Διορθώθηκε το `detectDelimiter`, που σε ελληνικό CSV του Excel διάλεγε το κόμμα αντί για το
+  `;`. **Β4.1β**: το `topo-dxf-points` αναθέτει στον καθαρό `scanDxfSurvey`, πάνω στα φύλλα `src/lib/dxf/*`, και
+  κρατά μόνο την πολιτική μονάδων του viewer, χωρίς αλλαγή. 🔴 Διορθώθηκαν: εκθέτης σε DXF real (`1.5E+02` διαβαζόταν
+  **1,502**) · `$INSUNITS` 17 (γιγάμετρα, όχι «ναυτικό μίλι») · 21–24 (US survey feet/inch/yard/mile έλειπαν ⇒
+  1 mm ανά μονάδα). **Αλλαγές στη λογική εισαγωγής γίνονται στο `lib`.**
 - **2026-10-23 (v30)** — **Νέος καταναλωτής του πυρήνα → βλ. [ADR-920](./ADR-920-listing-plot-terrain.md).**
   Το τοπογραφικό θα δημοσιεύεται σε αγγελία οικοπέδου (ανάγλυφο 3D, ισοϋψείς, ενδεικτικός όγκος).
   **ADR-920 Β1 ✅**: ο καθαρός πυρήνας (`buildTin`, `clipTinToBoundary`, ισοϋψείς, `tin-sampler`, τοπικό
