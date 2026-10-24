@@ -892,6 +892,8 @@ service cloud.firestore {
                          || isCompanyAdminOfCompany(resource.data.companyId)
                        )
                     && holdAllowsHardDelete()
+                    // 📜 ADR-916 Φ-Δ.6 (Ο14) — το αντίτυπο Πρωτοκόλλου της εταιρείας είναι record: ΠΟΤΕ διαγραφή.
+                    && fileIsNotDeclaredRecord()
                     // 🗄️ ADR-281 · ADR-329 §3.9 — το αρχείο αποσυρμένου ακινήτου είναι κλειδωμένο.
                     && parentPropertyIsLive(resource.data);
     }
@@ -6507,6 +6509,17 @@ service cloud.firestore {
     function holdAllowsHardDelete() {
       return resource.data.get('hold', 'none') in ['none', null]
              && resource.data.get('retentionUntil', null) == null;
+    }
+
+    // 📜 ADR-916 Φ-Δ.6 (Ο14) — RECORD (Microsoft Purview «declare as record»): διαγραφή Blocked, για ΚΑΘΕ ρόλο.
+    // ΔΥΟ ανεξάρτητα κλειδιά, ίδια απάντηση με τον κριτή `isDeclaredRecord` (`lib/files/file-hold.ts`):
+    //   (α) η δέσμευση `record` — την ξέρει ήδη και το `holdAllowsHardDelete()`, εδώ λέγεται με το ΟΝΟΜΑ της·
+    //   (β) το σημάδι `handoverProtocolOf` — αμετάβλητο για τον πελάτη (`handoverOriginKeys()`), άρα κρατά ακόμη κι αν
+    //       ένας γραφέας διακομιστή έβγαζε ποτέ κατά λάθος τη δέσμευση.
+    // ⚠️ ΜΟΝΟ στο `files`: το αντίτυπο του αγοραστή (`files_personal`) κουβαλά το ίδιο σημάδι και μένει ΔΙΚΟ του.
+    function fileIsNotDeclaredRecord() {
+      return resource.data.get('hold', 'none') != 'record'
+             && !('handoverProtocolOf' in resource.data);
     }
 
     // =========================================================================

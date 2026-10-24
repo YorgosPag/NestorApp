@@ -412,6 +412,14 @@ describe('files_personal.rules — το προσωπικό αρχείο το α�
       await assertSucceeds(citizenDb().collection(COLLECTION).doc('mark-held').update({ description: 'το πρωτόκολλο' }));
     });
 
+    // ADR-916 Φ-Δ.6 (Ο14) — το record είναι ΜΟΝΟ το αντίτυπο της εταιρείας (`files`). Το αντίτυπο του αγοραστή κουβαλά το ίδιο
+    // σημάδι αλλά είναι ΔΙΚΟ του: ο κανόνας του `files` δεν πρέπει να «διαρρεύσει» εδώ.
+    it('✅ το αντίτυπο Πρωτοκόλλου του αγοραστή: το σβήνει ο ίδιος (το record είναι μόνο της εταιρείας)', async () => {
+      const MARK = { protocolId: 'phpr_seed_0001', handoverId: 'phov_seed_0001', revision: 1 };
+      await seedPersonalFile(env, 'mark-own-delete', CITIZEN_UID, { handoverProtocolOf: MARK });
+      await assertSucceeds(citizenDb().collection(COLLECTION).doc('mark-own-delete').delete());
+    });
+
     // ADR-916 §5.18 Φ-Δ.4 — η απόφαση παράδοσης του γραφείου: ζει στα αρχεία της εταιρείας, αλλά το κλειδί σημαίνει ένα
     // πράγμα παντού («το έγραψε ο γραφέας της απόφασης») — ίδιος φρουρός και στο προσωπικό διαμέρισμα.
     it('⛔ η απόφαση παράδοσης: γέννηση · προσθήκη · αφαίρεση ⇒ ΑΡΝΗΣΗ', async () => {

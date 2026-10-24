@@ -568,6 +568,28 @@ describe('files.rules — tenant_state_machine pattern', () => {
     });
   });
 
+  // --- ADR-916 Φ-Δ.6 (Ο14) — το αντίτυπο Πρωτοκόλλου της ΕΤΑΙΡΕΙΑΣ είναι RECORD: οριστική διαγραφή ΠΟΤΕ -----------------------
+  //
+  // `fileIsNotDeclaredRecord()`: ΔΥΟ ανεξάρτητα κλειδιά (δέσμευση `record` · σημάδι `handoverProtocolOf`) — καθένα ΜΟΝΟ ΤΟΥ
+  // αρκεί για άρνηση. Ο διαχειριστής εταιρείας (ο πλουσιότερος ρόλος που διαγράφει) ⇒ η άρνηση αποδίδεται στο record, όχι στον
+  // ρόλο· ο παρονομαστής «σκέτο αρχείο ⇒ ΕΠΙΤΡΕΠΕΤΑΙ» ζει στο μπλοκ δέσμευσης παραπάνω.
+  describe('record — το αντίτυπο Πρωτοκόλλου της εταιρείας δεν διαγράφεται ποτέ (ADR-916 Φ-Δ.6 · Ο14)', () => {
+    const MARK = { handoverProtocolOf: { protocolId: 'phpr_seed_0001', handoverId: 'phov_seed_0001', revision: 1 } };
+    const RECORD_HOLD = { hold: 'record', holdPlacedBy: 'system:property-handover-protocol', holdPlacedAt: '2026-10-24T10:00:00.000Z' };
+    const fileDoc = (docId: string) =>
+      getContext(env, 'same_tenant_admin').firestore().collection('files').doc(docId);
+
+    it.each([
+      ['μόνο το σημάδι', MARK],
+      ['μόνο η δέσμευση record', RECORD_HOLD],
+      ['σημάδι + δέσμευση (η γέννηση)', { ...MARK, ...RECORD_HOLD }],
+    ])('⛔ %s ⇒ οριστική διαγραφή ΑΡΝΗΣΗ (και από διαχειριστή εταιρείας)', async (_label, overrides) => {
+      const docId = `record-${Object.keys(overrides).length}`;
+      await seedFile(env, docId, { companyId: SAME_TENANT_COMPANY_ID, overrides });
+      await expectDeny(fileDoc(docId).delete());
+    });
+  });
+
   // --- ADR-916 §5.18 Φ-Δ.4 — η ΑΠΟΦΑΣΗ ΠΑΡΑΔΟΣΗΣ του γραφείου δεν γράφεται από πελάτη ----------------------------------
   //
   // Δικός της φρουρός (`handoverDecisionKeys`). 🔴 Δύο κατευθύνσεις κινδύνου: πελάτης που την ΠΡΟΣΘΕΤΕΙ στέλνει στον αγοραστή
