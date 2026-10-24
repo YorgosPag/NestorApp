@@ -10,9 +10,10 @@ import { scheduledAvailability } from '@/lib/listings/availability-window';
 import type { AvailabilityTrack, ScheduledAvailability } from '@/types/availability-history';
 import type { DemandTiming } from '@/types/property-demand';
 
+import { NO_LISTING_KNOWLEDGE, answerDemand, demandAnswerBalances, demandAnswerShape } from '../demand-answer';
 import { awaitingDeliveryOf, compareDeliveryPromise, isAwaitingDelivery } from '../demand-awaiting-delivery';
 import { matchDemand } from '../demand-matching';
-import { TODAY, demand, facts, listing, seek } from './demand-fixtures';
+import { NOW_ISO, TODAY, demand, facts, listing, seek } from './demand-fixtures';
 
 function scheduled(precision: 'quarter' | 'month' | 'day', anchor: string): ScheduledAvailability {
   const availability = scheduledAvailability(precision, anchor);
@@ -137,5 +138,62 @@ describe('Χ — μόνο ΜΕΛΛΟΝΤΙΚΗ υπόσχεση (σύνορο τ
 
   it('Χ3 — κρίνεται το ΤΕΛΟΣ: Γ΄ τρίμηνο 2026 (άρχισε, λήγει 30/9) είναι ακόμη υπόσχεση στις 11/8', () => {
     expect(run([{ id: 'p1', availability: scheduled('quarter', '2026-07-01') }], pastWindow).awaiting?.count).toBe(1);
+  });
+});
+
+/** Η ΠΛΗΡΗΣ απάντηση — μέσω `answerDemand`, όχι της σκάλας μόνης της. */
+function answerOf(candidates: readonly Candidate[], timing: DemandTiming = WINDOW) {
+  const listings = candidates.map(({ id, availability, price = 200_000 }) =>
+    listing({ id, availability, commercial: { askingPrice: price, finalPrice: null, rentPrice: null, nightlyRate: null } }));
+  return answerDemand({
+    demand: demand({ timing, seeks: [seek('sell', { max: 250_000 })] }),
+    listings,
+    knowledge: NO_LISTING_KNOWLEDGE,
+    otherDemands: [],
+    todayDate: TODAY,
+    nowIso: NOW_ISO,
+  });
+}
+
+describe('Λ — μέσα στην απάντηση: κάδος και σκάλα λένε τον ΙΔΙΟ αριθμό', () => {
+  it('Λ1 — δύο «χτίζονται» + μία ακριβότερη ⇒ 4 κάδοι κλείνουν, η σκάλα = ο κάδος', () => {
+    const answer = answerOf([
+      { id: 'p1', availability: Q4_2027 },
+      { id: 'p2', availability: DEC_2027 },
+      { id: 'p3', availability: scheduled('month', '2027-01-01'), price: 260_000 },
+    ]);
+    expect(answer.awaitingDelivery?.count).toBe(2);
+    expect(answer.concessions.census).toEqual({
+      ladderedCount: 1, multiAxis: 0, unquantified: 0, awaitingDelivery: 2, considered: 3,
+    });
+    expect(demandAnswerBalances(answer)).toBe(true);
+  });
+
+  it('Λ2 — μόνο «χτίζονται» ⇒ σχήμα `has-concession`, ποτέ «δεν σου προτείνουμε»', () => {
+    const answer = answerOf([{ id: 'p1', availability: Q4_2027 }]);
+    expect(answer.concessions.census.unquantified).toBe(0);
+    expect(demandAnswerShape(answer)).toBe('has-concession');
+  });
+
+  it('Λ3 — ληγμένη υπόσχεση ⇒ `unquantified`, καμία σκάλα, το άθροισμα κλείνει', () => {
+    const pastWindow: DemandTiming = { kind: 'window', fromDate: '2026-01-01', toDate: '2026-06-30' };
+    const answer = answerOf([{ id: 'p1', availability: scheduled('month', '2026-07-01') }], pastWindow);
+    expect(answer.awaitingDelivery).toBeNull();
+    expect(answer.concessions.census).toMatchObject({ unquantified: 1, awaitingDelivery: 0 });
+    expect(demandAnswerBalances(answer)).toBe(true);
+    expect(demandAnswerShape(answer)).toBe('near-but-unreachable');
+  });
+
+  it('Λ4 — κάδος ≠ σκάλα ⇒ το ισοζύγιο αποτυγχάνει ΘΟΡΥΒΩΔΩΣ', () => {
+    const answer = answerOf([{ id: 'p1', availability: Q4_2027 }]);
+    expect(demandAnswerBalances({ ...answer, awaitingDelivery: null })).toBe(false);
+  });
+});
+
+describe('Ο — ο ορίζοντας του βήματος 7, μέσω της ΠΡΑΓΜΑΤΙΚΗΣ μηχανής', () => {
+  it('Ο1 — μόνο-χρόνος ⇒ ο ορίζοντας σιωπά, η σκάλα μιλά (το ελάττωμα, διορθωμένο ως σημασιολογία)', () => {
+    const answer = answerOf([{ id: 'p1', availability: Q4_2027 }]);
+    expect(answer.timingHorizon).toBeNull();
+    expect(answer.awaitingDelivery?.steps[0].promise).toEqual(Q4_2027);
   });
 });

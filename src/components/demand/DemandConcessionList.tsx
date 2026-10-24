@@ -33,6 +33,9 @@ import { SectionFrame } from '@/components/ui/section-frame';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency, formatNumber } from '@/lib/intl-formatting';
+import { getCurrentLocale } from '@/lib/intl-utils';
+import { availabilityPromisePhrase } from '@/lib/listings/availability-phrase';
+import type { AwaitingDelivery } from '@/lib/demand/demand-awaiting-delivery';
 import { resolvedPriceLabel } from '@/lib/listings/listing-price-label';
 import {
   ladderIdOf,
@@ -91,6 +94,32 @@ function ConcessionSentence({ ladder }: { ladder: ConcessionLadder }): React.Rea
 }
 
 /**
+ * **«Χτίζονται N»** (ADR-919 §12) — η σκάλα της αναμονής, με την ΙΔΙΑ φράση υπόσχεσης με κάρτα, σελίδα και email.
+ * Η κρίση (ποιες, ποια σειρά, ποια σκαλιά) έγινε στο `awaitingDeliveryOf`· εδώ μόνο αποδίδεται.
+ */
+function AwaitingDeliveryLadder({ awaiting }: { awaiting: AwaitingDelivery }): React.ReactElement {
+  const { t } = useTranslation(['property-market', 'common-shared']);
+  const K = 'property-market:demand.concession.awaitingDelivery';
+  const locale = getCurrentLocale();
+
+  return (
+    <section className="mt-3 text-sm">
+      <p className="text-foreground">{t(`${K}.lead`, { count: awaiting.count })}</p>
+      <ul className="mt-1 flex list-disc flex-col gap-1 pl-5 text-foreground">
+        {awaiting.steps.map((step) => (
+          <li key={step.promise.window.end}>
+            {t(`${K}.step`, { promise: availabilityPromisePhrase(step.promise, t, locale), count: step.unlocks })}
+          </li>
+        ))}
+      </ul>
+      {awaiting.slipped > 0 && (
+        <p className="mt-1 text-muted-foreground">{t(`${K}.slipped`, { count: awaiting.slipped })}</p>
+      )}
+    </section>
+  );
+}
+
+/**
  * Οι προτάσεις, **και η λογιστική τους**.
  *
  * 🔴 **Το `multiAxis` και το `unquantified` τυπώνονται, δεν σιωπούν.** Είναι κοντινές
@@ -101,15 +130,17 @@ function ConcessionSentence({ ladder }: { ladder: ConcessionLadder }): React.Rea
  */
 export function DemandConcessionList({
   report,
+  awaitingDelivery = null,
 }: {
   report: DemandConcessionReport;
+  awaitingDelivery?: AwaitingDelivery | null;
 }): React.ReactElement | null {
   const { t } = useTranslation(['property-market']);
 
   const suggested = report.ladders.filter((ladder) => ladder.headline !== null);
   const { multiAxis, unquantified } = report.census;
 
-  if (suggested.length === 0 && multiAxis === 0 && unquantified === 0) return null;
+  if (suggested.length === 0 && awaitingDelivery === null && multiAxis === 0 && unquantified === 0) return null;
 
   return (
     <SectionFrame title={t('property-market:demand.concession.heading')} headingLevel="h3" titleSize="sm">
@@ -125,7 +156,9 @@ export function DemandConcessionList({
         </ul>
       )}
 
-      {suggested.length === 0 && (
+      {awaitingDelivery !== null && <AwaitingDeliveryLadder awaiting={awaitingDelivery} />}
+
+      {suggested.length === 0 && awaitingDelivery === null && (
         <p className="mt-3 text-sm text-foreground">
           {t('property-market:demand.concession.unreachable')}
         </p>

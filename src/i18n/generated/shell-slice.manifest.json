@@ -11,7 +11,7 @@
     "src/i18n/generated/routes/data-deletion__versions.el.json": "b5985d2511b93344b355342677c84641c2bc629c80ca0b367778c17afd7800b7",
     "src/i18n/generated/routes/data-deletion__versions__version.el.json": "0b0f52262c8ead9f7c4c7a282fee6c540b128f8a9a5c78716d351fd4681a6db4",
     "src/i18n/generated/routes/demands.el.json": "f15243c6529ea9be6b0a1a4d181ff19e7c5866fcc9953aa98635f63969f3d9e2",
-    "src/i18n/generated/routes/demands__demandId.el.json": "53d95059af936ae4dca93742d11b614745698876ed0845d65fcf64c23736a266",
+    "src/i18n/generated/routes/demands__demandId.el.json": "d32312940e0410853341a4cbe5b3dc0b7db0ffaa897e23f524f786a19077154d",
     "src/i18n/generated/routes/demands__new.el.json": "f85744543c4c75526818bd08771e4729c8a79fd26d564a081d9dc8eeb660a3ed",
     "src/i18n/generated/routes/document-request.el.json": "3fc30b5c3cce0660d1e8ee25b177af72c4d9d9ed87c2bfcdf05085e4becc18f7",
     "src/i18n/generated/routes/dossiers.el.json": "3b60c708244b90058a464268b96faf8f4e849674d2772c398730460e70729403",
@@ -157,7 +157,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "dc82e2cf7c8dc28148e88af3002fa1cbd21dcf5d337abb4e0b75db130cc1b2b1",
+  "inputsSha256": "c37c75ffcc6b7fe8f41afce6fc57517f4dbc5cf39df37c4e64e5a6ed616fc082",
   "languages": [
     "el"
   ],
@@ -1532,6 +1532,9 @@
             "demand.competition.hidden",
             "demand.competition.hiddenWhy",
             "demand.competition.none",
+            "demand.concession.awaitingDelivery.lead",
+            "demand.concession.awaitingDelivery.slipped",
+            "demand.concession.awaitingDelivery.step",
             "demand.concession.heading",
             "demand.concession.lead",
             "demand.concession.multiAxis",
@@ -11779,7 +11782,7 @@
   ],
   "stats": {
     "matchedKeys": 265,
-    "sliceBytes": 816838
+    "sliceBytes": 817535
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

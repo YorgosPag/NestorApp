@@ -196,7 +196,7 @@ describe('🔴 Μ — σκάλες τιμής ΑΝΑ ΜΟΝΑΔΑ: € πώλη�
 // =============================================================================
 
 describe('🔴 Κ — καμία κοντινή αγγελία δεν χάνεται σιωπηλά', () => {
-  it('το άθροισμα κλείνει με ΚΑΙ ΤΟΥΣ ΤΡΕΙΣ κάδους μη μηδενικούς', () => {
+  it('το άθροισμα κλείνει με ΚΑΙ ΤΟΥΣ ΤΕΣΣΕΡΙΣ κάδους μη μηδενικούς', () => {
     const laddered = nearMiss({
       blockers: ['price-above'],
       gaps: { ...nearMiss({}).gaps, priceOverBy: 1_000 },
@@ -206,16 +206,29 @@ describe('🔴 Κ — καμία κοντινή αγγελία δεν χάνετ
       blockers: ['price-above', 'bedrooms-below'],
       gaps: { ...nearMiss({}).gaps, priceOverBy: 1_000, bedroomsShortBy: 1 },
     });
+    // ADR-919 §12 — η κρίση «μελλοντική υπόσχεση» ζει στον καλώντα (`pendingDeliveryOf`)· εδώ μόνο ο κάδος.
+    const awaiting = nearMiss({ blockers: ['not-available-then'] });
 
-    const report = buildConcessionReport(demand(), [laddered, unquantified, multiAxis]);
+    const report = buildConcessionReport(
+      demand(),
+      [laddered, unquantified, multiAxis, awaiting],
+      (match) => match === awaiting,
+    );
 
     expect(report.census).toEqual({
       ladderedCount: 1,
       multiAxis: 1,
       unquantified: 1,
-      considered: 3,
+      awaitingDelivery: 1,
+      considered: 4,
     });
     expect(concessionCensusBalances(report.census)).toBe(true);
+  });
+
+  it('χωρίς το κατηγόρημα, ο χρόνος μένει `unquantified` (ληγμένη υπόσχεση · καλών χωρίς «σήμερα»)', () => {
+    const report = buildConcessionReport(demand(), [nearMiss({ blockers: ['not-available-then'] })]);
+    expect(report.census.unquantified).toBe(1);
+    expect(report.census.awaitingDelivery).toBe(0);
   });
 
   it('το άθροισμα κλείνει και στο ΜΗΔΕΝ', () => {
@@ -231,6 +244,7 @@ describe('🔴 Κ — καμία κοντινή αγγελία δεν χάνετ
         ladderedCount: 1,
         multiAxis: 0,
         unquantified: 0,
+        awaitingDelivery: 0,
         considered: 3,
       }),
     ).toBe(false);

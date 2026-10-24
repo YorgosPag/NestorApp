@@ -50,6 +50,7 @@
 import type { PublicListing } from '@/types/public-listing';
 import type { ScheduledAvailability } from '@/types/availability-history';
 import { earliestTimingBlockedPromise } from './demand-timing-horizon';
+import { awaitingDeliveryOf, pendingDeliveryOf, type AwaitingDelivery } from './demand-awaiting-delivery';
 import type { PropertyDemand } from '@/types/property-demand';
 import { discloseCompetition, type DemandDisclosure } from './demand-aggregate';
 import {
@@ -173,6 +174,11 @@ export interface DemandAnswer {
    * το `blockedBy`, ώστε η φράση να σχολιάζει ακριβώς τη γραμμή δίπλα της. `null` = κανένα τέτοιο εμπόδιο.
    */
   readonly timingHorizon: ScheduledAvailability | null;
+  /**
+   * **«Χτίζονται N»** (ADR-919 §12) — όσες κοντινές ταιριάζουν σε όλα εκτός από τον χρόνο, ως σκάλα υποσχέσεων. `null`
+   * = καμία (σιωπή, ποτέ «0»). Ίσο, εκ κατασκευής, με τον κάδο `concessions.census.awaitingDelivery`.
+   */
+  readonly awaitingDelivery: AwaitingDelivery | null;
   /** Πόσοι **άλλοι** ζητούν κάτι παρόμοιο — ή `null` κάτω από το κατώφλι. */
   readonly competition: DemandDisclosure;
   /**
@@ -209,6 +215,10 @@ export function answerDemand(params: {
   const { demand, listings, knowledge, otherDemands, todayDate, nowIso } = params;
 
   const results = matchDemand(demand, listingFactsFrom(listings, knowledge), todayDate);
+  // 🔑 Το ΕΝΑ κατηγόρημα (`pendingDeliveryOf`) για κάδο και σκάλα ⇒ το `demandAnswerBalances` τα δένει.
+  const pending = new Set(
+    results.nearMissed.filter((outcome) => pendingDeliveryOf(outcome, todayDate) !== null).map((o) => o.match),
+  );
 
   return {
     matchedCount: results.matched.length,
@@ -216,9 +226,11 @@ export function answerDemand(params: {
     concessions: buildConcessionReport(
       demand,
       results.nearMissed.map((outcome) => outcome.match),
+      (match) => pending.has(match),
     ),
     blockedBy: tallyBlockers(results.rejected.map((outcome) => outcome.match)),
     timingHorizon: earliestTimingBlockedPromise(results.rejected),
+    awaitingDelivery: awaitingDeliveryOf(results.nearMissed, todayDate),
     competition: discloseCompetition(demand, otherDemands, nowIso),
     axesLost: axesLostProjectingDemand(demand),
     results,
@@ -266,7 +278,10 @@ export function matchedPreview(answer: DemandAnswer): {
 export const DEMAND_ANSWER_SHAPES = [
   /** Υπάρχουν ταιριάσματα. Ο,τιδήποτε άλλο είναι δευτερεύον. */
   'has-matches',
-  /** Τίποτα δεν ταιριάζει, αλλά **υπάρχει πρόταση με ποσό**: το «+20.000 → 6». */
+  /**
+   * Τίποτα δεν ταιριάζει, αλλά **υπάρχει πρόταση με ποσό**: το «+20.000 → 6» — **ή με ημερομηνία**: «αν περιμένεις
+   * ως Δ΄ τρίμηνο 2027, υπάρχουν 2» (ADR-919 §12). Αλλιώς η σκάλα παράδοσης θα καθόταν κάτω από «δεν σου προτείνουμε».
+   */
   'has-concession',
   /**
    * Τίποτα δεν ταιριάζει και **καμία πρόταση δεν είναι λογική** — υπάρχουν κοντινές,
@@ -334,7 +349,7 @@ export const IGNORANCE_BLOCKERS = [
  */
 export function demandAnswerShape(answer: DemandAnswer): DemandAnswerShape {
   if (answer.matchedCount > 0) return 'has-matches';
-  if (answer.concessions.ladders.some((ladder) => ladder.headline !== null)) {
+  if (answer.concessions.ladders.some((ladder) => ladder.headline !== null) || answer.awaitingDelivery !== null) {
     return 'has-concession';
   }
   if (answer.results.considered === 0) return 'nothing-to-judge';
@@ -360,10 +375,11 @@ export function ignoranceShare(answer: DemandAnswer): number {
 /**
  * Κλείνει **όλη** η λογιστική της απάντησης; Υπάρχει **για να αποτύχει θορυβωδώς**.
  *
- * Δύο ανεξάρτητα αθροίσματα, **ποτέ ένα με «και»**: το ένα λέει ότι καμία αγγελία
- * δεν χάθηκε ανάμεσα στους τρεις κάδους της μηχανής, το άλλο ότι καμία **κοντινή**
- * δεν χάθηκε ανάμεσα στους τρεις κάδους της σύνθεσης. Ένα εύρημα στο δεύτερο δεν
- * θα φαινόταν καθόλου στο πρώτο.
+ * Τρία ανεξάρτητα αθροίσματα, **ποτέ ένα με «και»**: το ένα λέει ότι καμία αγγελία
+ * δεν χάθηκε ανάμεσα στους τρεις κάδους της μηχανής, το δεύτερο ότι καμία **κοντινή**
+ * δεν χάθηκε ανάμεσα στους τέσσερις κάδους της σύνθεσης, το τρίτο ότι ο κάδος «χτίζονται»
+ * λέει **τον ίδιο αριθμό** με τη σκάλα που δείχνει η οθόνη (ADR-919 §12). Ένα εύρημα
+ * στο ένα δεν θα φαινόταν καθόλου στα άλλα.
  */
 export function demandAnswerBalances(answer: DemandAnswer): boolean {
   const engine =
@@ -371,6 +387,7 @@ export function demandAnswerBalances(answer: DemandAnswer): boolean {
       answer.results.nearMissed.length +
       answer.results.rejected.length ===
     answer.results.considered;
+  const awaiting = answer.concessions.census.awaitingDelivery === (answer.awaitingDelivery?.count ?? 0);
 
-  return engine && concessionCensusBalances(answer.concessions.census);
+  return engine && concessionCensusBalances(answer.concessions.census) && awaiting;
 }

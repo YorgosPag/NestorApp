@@ -67,11 +67,16 @@ type ConcessionDemand = Pick<PropertyDemand, 'features' | 'place' | 'seeks'>;
  * περισσότερα» των πυλών. Ο τύπος {@link CONCESSION_OF_GAP} κάνει τη διάσταση
  * **αδύνατη**: είναι `Record` και στους δύο άξονες.
  *
- * ⚠️ **Δεν υπάρχει άξονας για όροφο, χρόνο, πολύγωνο ή γειτονιά** — και είναι σωστό.
- * Τα εμπόδιά τους (`floor-outside` · `not-available-then` · `outside-area` ·
- * `proximity-too-far`) είναι **μετρήσιμα** ως προς την ετυμηγορία (η αγγελία είναι
- * «κοντά»), αλλά **δεν έχουν πεδίο κενού**: το «πόσο λείπει» δεν ορίζεται μονοσήμαντα
- * σε ημερολόγιο ή σε σχήμα. Λογίζονται ρητά ως `unquantified`, ποτέ σιωπηλά.
+ * ⚠️ **Δεν υπάρχει άξονας για όροφο, πολύγωνο ή γειτονιά** — και είναι σωστό.
+ * Τα εμπόδιά τους (`floor-outside` · `outside-area` · `proximity-too-far`) είναι
+ * **μετρήσιμα** ως προς την ετυμηγορία (η αγγελία είναι «κοντά»), αλλά **δεν έχουν πεδίο
+ * κενού**: το «πόσο λείπει» δεν ορίζεται μονοσήμαντα σε σχήμα. Λογίζονται ρητά ως
+ * `unquantified`, ποτέ σιωπηλά.
+ *
+ * 🔑 **Ο χρόνος (`not-available-then`) δεν είναι άξονας εδώ, αλλά ΕΧΕΙ «πόσο»** (ADR-919
+ * §12): με δημόσια μελλοντική υπόσχεση το «πόσο» είναι η **ημερομηνία**, όχι ποσό. Γι' αυτό
+ * ζει στη δική του σκάλα (`demand-awaiting-delivery.ts`) και στον δικό του κάδο
+ * ({@link DemandConcessionCensus.awaitingDelivery}). Μόνο η ληγμένη υπόσχεση μένει `unquantified`.
  */
 export const DEMAND_CONCESSIONS = [
   /** Ανέβασε την οροφή τιμής. Το κανονικό «+20.000 €» του §12.6. */
@@ -399,8 +404,13 @@ export interface DemandConcessionCensus {
   readonly ladderedCount: number;
   /** Κοντινές με **δύο** άξονες: αληθινές, μη προτάσιμες. */
   readonly multiAxis: number;
-  /** Κοντινές με έναν άξονα **χωρίς** «πόσο» (όροφος · χρόνος · σχήμα · γειτονιά). */
+  /** Κοντινές με έναν άξονα **χωρίς** «πόσο» (όροφος · ληγμένη υπόσχεση · σχήμα · γειτονιά). */
   readonly unquantified: number;
+  /**
+   * Κοντινές που σταματά **μόνο** ο χρόνος, με **μελλοντική** υπόσχεση — «χτίζονται N» (ADR-919 §12). Ίσο, εκ
+   * κατασκευής, με το `DemandAnswer.awaitingDelivery.count`.
+   */
+  readonly awaitingDelivery: number;
   /** Πόσες κοντινές εξετάστηκαν. */
   readonly considered: number;
 }
@@ -408,9 +418,13 @@ export interface DemandConcessionCensus {
 /** Κλείνει το άθροισμα; Υπάρχει **για να αποτύχει θορυβωδώς**, όχι για να επιβεβαιώνει. */
 export function concessionCensusBalances(census: DemandConcessionCensus): boolean {
   return (
-    census.ladderedCount + census.multiAxis + census.unquantified === census.considered
+    census.ladderedCount + census.multiAxis + census.unquantified + census.awaitingDelivery ===
+    census.considered
   );
 }
+
+/** Καμία κοντινή δεν «χτίζεται» — η προεπιλογή όταν ο καλών δεν ξέρει το «σήμερα». */
+const NEVER_AWAITING = (): boolean => false;
 
 /** Οι σκάλες **και** η λογιστική τους — ποτέ το ένα χωρίς το άλλο. */
 export interface DemandConcessionReport {
@@ -427,16 +441,24 @@ export interface DemandConcessionReport {
  *
  * @param demand — για τα δηλωμένα όρια, πάνω στα οποία μετριέται το «λογικό»
  * @param nearMisses — οι ετυμηγορίες `near-miss` της {@link matchDemand}
+ * @param awaitsDelivery — «τη σταματά μόνο ο χρόνος, με μελλοντική υπόσχεση;» (`pendingDeliveryOf`). Ρωτιέται
+ *   **πρώτο**, ώστε μια τέτοια αγγελία να μη λογιστεί ποτέ `unquantified`.
  */
 export function buildConcessionReport(
   demand: ConcessionDemand,
   nearMisses: readonly DemandMatch[],
+  awaitsDelivery: (match: DemandMatch) => boolean = NEVER_AWAITING,
 ): DemandConcessionReport {
   const amounts = new Map<string, { key: LadderKey; list: number[] }>();
   let multiAxis = 0;
   let unquantified = 0;
+  let awaitingDelivery = 0;
 
   for (const match of nearMisses) {
+    if (awaitsDelivery(match)) {
+      awaitingDelivery += 1;
+      continue;
+    }
     if (match.blockers.length > 1) {
       multiAxis += 1;
       continue;
@@ -465,6 +487,7 @@ export function buildConcessionReport(
       ladderedCount: [...amounts.values()].reduce((sum, bucket) => sum + bucket.list.length, 0),
       multiAxis,
       unquantified,
+      awaitingDelivery,
       considered: nearMisses.length,
     },
   };

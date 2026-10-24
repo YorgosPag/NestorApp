@@ -81,11 +81,24 @@ function ladderOf(promises: readonly ScheduledAvailability[]): readonly Awaiting
 }
 
 /**
- * **Κοντινές αγγελίες → «χτίζονται N».**
+ * Η **μελλοντική** υπόσχεση μιας αγγελίας που τη σταματά μόνο ο χρόνος — αλλιώς `null`.
  *
- * Μετρά μόνο **μελλοντική** υπόσχεση (`window.end > σήμερα`). Μια ληγμένη υπόσχεση μπορεί να σταματήσει ζήτηση με
- * παρελθοντικό διάστημα, αλλά δεν είναι «χτίζεται»: είναι υπόσχεση που δεν τηρήθηκε, και η θέση της είναι στο
- * `slipNoticeOf`, όχι σε αυτή τη σκάλα.
+ * Μετρά μόνο `window.end > σήμερα`. Μια ληγμένη υπόσχεση μπορεί να σταματήσει ζήτηση με παρελθοντικό διάστημα, αλλά
+ * δεν είναι «χτίζεται»: είναι υπόσχεση που δεν τηρήθηκε, και η θέση της είναι στο `slipNoticeOf`, όχι σε αυτή τη
+ * σκάλα. 🔑 Το ρωτούν **και** η απογραφή των υποχωρήσεων (κάδος `awaitingDelivery`) **και** η σκάλα, ώστε το άθροισμα
+ * να κλείνει εκ κατασκευής.
+ */
+export function pendingDeliveryOf(
+  { facts, match }: DemandOutcome,
+  todayDate: string,
+): ScheduledAvailability | null {
+  const availability = facts.availability;
+  if (!isAwaitingDelivery(match) || availability.kind !== 'scheduled') return null;
+  return availability.window.end > todayDate ? availability : null;
+}
+
+/**
+ * **Κοντινές αγγελίες → «χτίζονται N».**
  *
  * @param nearMissed — οι ετυμηγορίες `near-miss` της `matchDemand`
  * @param todayDate — ISO `YYYY-MM-DD`· ρητή παράμετρος, ποτέ ανάγνωση ρολογιού
@@ -96,12 +109,11 @@ export function awaitingDeliveryOf(
 ): AwaitingDelivery | null {
   const promises: ScheduledAvailability[] = [];
   let slipped = 0;
-  for (const { facts, match } of nearMissed) {
-    const availability = facts.availability;
-    if (!isAwaitingDelivery(match) || availability.kind !== 'scheduled') continue;
-    if (availability.window.end <= todayDate) continue;
-    promises.push(availability);
-    if (slipNoticeOf(facts.listing.availabilityTrack, availability) !== null) slipped += 1;
+  for (const outcome of nearMissed) {
+    const promise = pendingDeliveryOf(outcome, todayDate);
+    if (promise === null) continue;
+    promises.push(promise);
+    if (slipNoticeOf(outcome.facts.listing.availabilityTrack, promise) !== null) slipped += 1;
   }
   if (promises.length === 0) return null;
   return { count: promises.length, steps: ladderOf(promises), slipped };
