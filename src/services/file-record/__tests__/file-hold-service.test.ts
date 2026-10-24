@@ -228,3 +228,45 @@ describe('🏆 ADR-864 §21.9 · ADR-901 Φ4.4 (Α26) — δέσμευση στ�
     expect(bucket.objects.get(personalPath('pfile_1'))?.hold).toBe(false);
   });
 });
+
+describe('🏆 Ζ63 — record (ADR-916 Φ-Δ.6): ΚΑΝΕΝΑΣ δεν το αποδεσμεύει, ούτε η συμφιλίωση το ξεκλειδώνει', () => {
+  it('🔴 αποδέσμευση ⇒ `record-immutable`: βάση αμετάβλητη, bytes κλειδωμένα, κανένα ίχνος', async () => {
+    const { bucket } = world();
+    seed('file_v2', { createdAt: '2026-09-10T10:00:00.000Z', hold: 'record', holdPlacedBy: 'system:property-handover-protocol' });
+    await bucket.file(pathOf('file_v2')).setMetadata({ temporaryHold: true });
+
+    expect(await releaseFileHold({ actor, fileId: 'file_v2' }, oneBucket(bucket))).toEqual({ kind: 'record-immutable' });
+    expect(await holdOf('file_v2')).toBe('record');
+    expect(bucket.objects.get(pathOf('file_v2'))?.hold).toBe(true);
+    expect(recordFileAudit).not.toHaveBeenCalled();
+  });
+
+  it('🔴 τοποθέτηση πάνω σε record ⇒ `already-held` — ποτέ αντικατάσταση του είδους', async () => {
+    const { bucket } = world();
+    seed('file_v2', { createdAt: '2026-09-10T10:00:00.000Z', hold: 'record' });
+    expect(await place(oneBucket(bucket))).toEqual({ kind: 'already-held', holdType: 'record' });
+    expect(await holdOf('file_v2')).toBe('record');
+  });
+
+  it('🔴 record ΜΟΝΟ με το σημάδι (χωρίς hold) ⇒ κι αυτό `record-immutable`, τα bytes μένουν κλειδωμένα', async () => {
+    const { bucket } = world();
+    seed('file_v2', { createdAt: '2026-09-10T10:00:00.000Z', handoverProtocolOf: { protocolId: 'phpr_1', handoverId: 'phov_1', revision: 1 } });
+    await bucket.file(pathOf('file_v2')).setMetadata({ temporaryHold: true });
+    expect(await releaseFileHold({ actor, fileId: 'file_v2' }, oneBucket(bucket))).toEqual({ kind: 'record-immutable' });
+    expect(bucket.objects.get(pathOf('file_v2'))?.hold).toBe(true);
+  });
+
+  it('🔴 αποτυχημένη τοποθέτηση σε στοίβα με record-μόνο-με-σημάδι ⇒ η συμφιλίωση ΔΕΝ ξεκλειδώνει τα bytes του record', async () => {
+    const { bucket } = world();
+    seed('file_v2', { createdAt: '2026-09-10T10:00:00.000Z', handoverProtocolOf: { protocolId: 'phpr_1', handoverId: 'phov_1', revision: 1 } });
+    await bucket.file(pathOf('file_v2')).setMetadata({ temporaryHold: true });
+    const failing: HoldableBucket = {
+      file: (path) => (path === pathOf('file_v1')
+        ? { setMetadata: async (patch) => { if (patch.temporaryHold) throw new Error('403'); } }
+        : bucket.file(path)),
+    };
+
+    expect(await place(oneBucket(failing))).toEqual({ kind: 'failed' });
+    expect(bucket.objects.get(pathOf('file_v2'))?.hold).toBe(true);
+  });
+});

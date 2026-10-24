@@ -60,6 +60,8 @@ function toResponse(outcome: FileHoldOutcome): NextResponse {
       return fileNotFoundResponse();
     case 'already-held':
       return NextResponse.json({ success: false, kind: outcome.kind, holdType: outcome.holdType }, { status: 409 });
+    case 'record-immutable':
+      return NextResponse.json({ success: false, kind: outcome.kind }, { status: 409 });
     case 'failed':
       return NextResponse.json({ success: false, kind: outcome.kind }, { status: 500 });
     default:

@@ -94,6 +94,8 @@ function getHoldTypeDisplay(hold: string | undefined, t: (key: string) => string
       return t('trash.holdRegulatory');
     case HOLD_TYPES.ADMIN:
       return t('trash.holdAdmin');
+    case HOLD_TYPES.RECORD:
+      return t('trash.holdRecord');
     default:
       return t('trash.holdActive');
   }

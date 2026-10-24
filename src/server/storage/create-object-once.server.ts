@@ -27,9 +27,13 @@ export type CreateObjectOutcome =
 const isPreconditionFailed = (error: unknown): boolean =>
   typeof error === 'object' && error !== null && (error as { readonly code?: unknown }).code === 412;
 
+/** `403` — π.χ. αντικατάσταση αντικειμένου υπό `temporaryHold`. */
+const isForbidden = (error: unknown): boolean =>
+  typeof error === 'object' && error !== null && (error as { readonly code?: unknown }).code === 403;
+
 /** **Γράφει τα bytes μόνο αν το κλειδί είναι κενό** — και επιστρέφει το αντικείμενο με τα μεταδεδομένα του (crc32c · γενιά). */
 export async function createObjectOnce(bucket: Bucket, path: string, bytes: Uint8Array, contentType: string): Promise<CreateObjectOutcome> {
-  let created = true;
+  let failure: unknown = null;
   try {
     await bucket.file(path).save(Buffer.from(bytes), {
       resumable: false,
@@ -38,12 +42,18 @@ export async function createObjectOnce(bucket: Bucket, path: string, bytes: Uint
       preconditionOpts: { ifGenerationMatch: 0 },
     });
   } catch (error) {
-    if (!isPreconditionFailed(error)) throw error;
-    created = false;
+    failure = error;
   }
   const [file] = await statObjects(bucket, [path]);
-  if (file === undefined) throw new Error(`Object missing right after write: ${path}`);
-  return { kind: created ? 'created' : 'exists', file };
+  if (file === undefined) {
+    if (failure !== null) throw failure;
+    throw new Error(`Object missing right after write: ${path}`);
+  }
+  // 🔑 Αποτυχία ΚΑΙ αντικείμενο που υπάρχει ⇒ `exists`, όχι μόνο στο `412`: το κλειδί μπορεί να είναι **record υπό
+  //    `temporaryHold`** (ADR-916 Φ-Δ.6), και η GCS δεν τεκμηριώνει αν απαντά `412` (προϋπόθεση) ή `403` (hold). Ο καλών
+  //    κρίνει έτσι κι αλλιώς αυστηρά τι είναι (υιοθέτηση = έγκυρη σφραγίδα + manifest) — ποτέ επανεγγραφή.
+  if (failure !== null && !isPreconditionFailed(failure) && !isForbidden(failure)) throw failure;
+  return { kind: failure === null ? 'created' : 'exists', file };
 }
 
 /** **Τα bytes της γενιάς που μετρήθηκε** — ποτέ της τρέχουσας, όποια κι αν είναι (καρφωμένη γενιά). */

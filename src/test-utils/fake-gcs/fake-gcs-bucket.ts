@@ -10,6 +10,9 @@
  * `copy(dest, options)` (rewrite: με σώμα `metadata` αντικαθιστά τα custom metadata, αλλιώς τα κρατά) · `getFiles({ prefix })` —
  * και το `server/storage/object-sha256` (ADR-916 Φ-Γ2 Σ2): `createReadStream()` σε **κομμάτια**, με καρφωμένη γενιά που
  * λείπει ⇒ σφάλμα `code: 404`, όπως το πραγματικό GCS.
+ * 📜 ADR-916 Φ-Δ.6 — **`temporaryHold`** (`setMetadata`): αντικείμενο σε δέσμευση **δεν** σβήνεται (`delete` · `deleteFiles`)
+ * ούτε αντικαθίσταται (`save` · `copy` προς αυτό) ⇒ `code: 403`, όπως το πραγματικό GCS· το rewrite **δεν** μεταφέρει τη
+ * δέσμευση στον προορισμό.
  */
 
 import { createHash } from 'crypto';
@@ -23,6 +26,8 @@ export interface FakeGcsObject {
   metadata?: Record<string, string>;
   /** Τα bytes — μόνο για σουίτες που τα **διαβάζουν** (`createReadStream`)· το rewrite τα μεταφέρει αυτολεξεί. */
   bytes?: Uint8Array;
+  /** GCS `temporaryHold` — ούτε διαγραφή ούτε αντικατάσταση. */
+  temporaryHold?: boolean;
 }
 
 export type FakeGcsStore = Map<string, FakeGcsObject>;
@@ -42,6 +47,11 @@ export interface FakeGcsBucketOptions {
   readonly missingSource?: 'throw' | 'skip';
   /** Κάθε ανάγνωση, **πριν** κριθεί η γενιά — για καταγραφή ή για «ο κόσμος άλλαξε ανάμεσα σε μέτρηση και ανάγνωση». */
   readonly onRead?: (call: { readonly path: string; readonly generation: number | undefined }) => void;
+  /**
+   * Τι απαντά το `save` με `ifGenerationMatch: 0` πάνω σε **δεσμευμένο** αντικείμενο. Η GCS δεν τεκμηριώνει τη σειρά
+   * (προϋπόθεση ή δέσμευση πρώτα)· οι σουίτες δοκιμάζουν **και τις δύο**. Προεπιλογή `403` (η δέσμευση νικά).
+   */
+  readonly heldSaveCode?: 403 | 412;
 }
 
 /** Μέγεθος κομματιού της ψεύτικης ροής — μικρό επίτηδες, ώστε κάθε αρχείο να φτάνει σε **πολλά** κομμάτια. */
@@ -57,6 +67,8 @@ export interface FakeGcsFile {
   save(data: Uint8Array, options?: { readonly preconditionOpts?: { readonly ifGenerationMatch?: number }; readonly contentType?: string }): Promise<void>;
   createReadStream(): Readable;
   delete(): Promise<void>;
+  /** ADR-916 Φ-Δ.6 — μόνο το `temporaryHold`· αντικείμενο που λείπει ⇒ `code: 404`. */
+  setMetadata(patch: { readonly temporaryHold: boolean }): Promise<void>;
 }
 
 export interface FakeGcsBucket {
@@ -72,6 +84,9 @@ const copiedGeneration = (generation: number | undefined): number | undefined =>
 
 /** Ψεύτικο crc32c — ντετερμινιστικό από τα bytes (ίδια bytes ⇒ ίδιο «crc32c»), αρκετό για το `sameObject`. */
 const fakeCrc32cOf = (bytes: Uint8Array): string => `crc_${createHash('sha256').update(bytes).digest('hex').slice(0, 12)}`;
+
+const heldError = (path: string): Error => Object.assign(new Error(`403 object under temporary hold ${path}`), { code: 403 });
+const isHeld = (store: FakeGcsStore, path: string): boolean => store.get(path)?.temporaryHold === true;
 
 export function fakeGcsBucket(store: FakeGcsStore, name: string, options: FakeGcsBucketOptions = {}): FakeGcsBucket {
   let nextGeneration = 1000;
@@ -92,14 +107,16 @@ export function fakeGcsBucket(store: FakeGcsStore, name: string, options: FakeGc
           return;
         }
         if (opts?.generation !== undefined && opts.generation !== object.generation) throw new Error(`412 generation ${path}`);
+        if (isHeld(dest.store, dest.name)) throw heldError(dest.name);
         const metadata = 'metadata' in copyOptions ? (copyOptions.metadata as Record<string, string>) : object.metadata;
-        dest.store.set(dest.name, { ...object, generation: copiedGeneration(object.generation), ...(metadata ? { metadata } : {}) });
+        const { temporaryHold: _notCopied, ...carried } = object;
+        dest.store.set(dest.name, { ...carried, generation: copiedGeneration(object.generation), ...(metadata ? { metadata } : {}) });
         options.onCopy?.(call);
       },
       save: async (data, saveOptions = {}) => {
-        if (saveOptions.preconditionOpts?.ifGenerationMatch === 0 && store.has(path)) {
-          throw Object.assign(new Error(`412 precondition ${path}`), { code: 412 });
-        }
+        const preconditionFails = saveOptions.preconditionOpts?.ifGenerationMatch === 0 && store.has(path);
+        if (isHeld(store, path) && !(preconditionFails && options.heldSaveCode === 412)) throw heldError(path);
+        if (preconditionFails) throw Object.assign(new Error(`412 precondition ${path}`), { code: 412 });
         const bytes = new Uint8Array(data);
         nextGeneration += 1;
         store.set(path, { crc32c: fakeCrc32cOf(bytes), size: bytes.length, generation: nextGeneration, bytes });
@@ -115,11 +132,20 @@ export function fakeGcsBucket(store: FakeGcsStore, name: string, options: FakeGc
         const chunks = Array.from({ length: Math.ceil(bytes.length / FAKE_READ_CHUNK) }, (_, i) => Buffer.from(bytes.subarray(i * FAKE_READ_CHUNK, (i + 1) * FAKE_READ_CHUNK)));
         return Readable.from(chunks);
       },
-      delete: async () => { store.delete(path); },
+      delete: async () => {
+        if (isHeld(store, path)) throw heldError(path);
+        store.delete(path);
+      },
+      setMetadata: async (patch) => {
+        const object = store.get(path);
+        if (object === undefined) throw Object.assign(new Error(`404 ${path}`), { code: 404 });
+        store.set(path, { ...object, temporaryHold: patch.temporaryHold });
+      },
     }),
     getFiles: async ({ prefix }) => [[...store.keys()].filter((key) => key.startsWith(prefix)).map((key) => bucket.file(key))],
     deleteFiles: async ({ prefix }) => {
-      for (const key of [...store.keys()]) if (key.startsWith(prefix)) store.delete(key);
+      // Το πραγματικό `deleteFiles({ force: true })` προσπερνά ό,τι αρνείται η πλατφόρμα — ο δεσμευμένος μένει.
+      for (const key of [...store.keys()]) if (key.startsWith(prefix) && !isHeld(store, key)) store.delete(key);
     },
   };
   return bucket;

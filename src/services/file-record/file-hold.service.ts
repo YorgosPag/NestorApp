@@ -23,6 +23,11 @@
  * ⚠️ **Μία δέσμευση τη φορά**: δεύτερη τοποθέτηση σε ήδη δεσμευμένη στοίβα ⇒ `already-held`,
  * ποτέ σιωπηλή αντικατάσταση του είδους/λόγου της πρώτης.
  *
+ * 📜 **Record (ADR-916 Φ-Δ.6, Purview «declare as record»)**: γεννιέται δεσμευμένο από **σύστημα**
+ * (`recordHoldFieldsOf` + `holdRecordBytes`, στον γραφέα του Πρωτοκόλλου) και **δεν αίρεται από κανέναν**:
+ * η αποδέσμευση ⇒ `record-immutable`, η τοποθέτηση ⇒ `already-held` (ήδη δεσμευμένο). Η λήξη του είναι
+ * disposition (ADR-916 Ο23), όχι αποδέσμευση.
+ *
  * @module services/file-record/file-hold.service
  * @see lib/files/file-hold — ο καθαρός κριτής · app/api/files/[fileId]/hold — η διαδρομή
  */
@@ -34,7 +39,7 @@ import { HOLD_TYPES } from '@/config/domain-constants';
 import { nowISO } from '@/lib/date-local';
 import { getErrorMessage } from '@/lib/error-utils';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { hasActiveHold, type PlaceableHoldType } from '@/lib/files/file-hold';
+import { hasActiveHold, isDeclaredRecord, type PlaceableHoldType } from '@/lib/files/file-hold';
 import { fileStoragePlacementOf, type FileStoragePlacement } from '@/lib/files/file-storage-placement';
 import { fileStorageBucket } from '@/server/files/file-record-bucket';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -65,6 +70,8 @@ export type FileHoldOutcome =
   | { readonly kind: 'not-found' }
   | { readonly kind: 'already-held'; readonly holdType: string }
   | { readonly kind: 'not-held' }
+  /** ADR-916 Φ-Δ.6 — η στοίβα κρατά record: δεν αποδεσμεύεται από άνθρωπο, ποτέ. */
+  | { readonly kind: 'record-immutable' }
   | { readonly kind: 'failed' };
 
 class HoldConflict extends Error {
@@ -136,8 +143,40 @@ async function reconcileBytes(owner: CustodyScope, fileIds: readonly string[], v
   const db = getAdminFirestore();
   const collection = db.collection(COLLECTIONS[FILE_COLLECTION[custodyKindOfScope(owner)]]);
   const snapshots = await Promise.all(fileIds.map((id) => collection.doc(id).get()));
-  const held = snapshots.some((snapshot) => snapshot.exists && hasActiveHold(snapshot.data() ?? {}));
+  const held = snapshots.some((snapshot) => snapshot.exists && keepsBytesHeld(snapshot.data() ?? {}));
   await setTemporaryHoldAcrossStack(versions, bucketOf, held);
+}
+
+/** Κρατά τα bytes κλειδωμένα; — δέσμευση **ή** record (και μόνο με το σημάδι: η συμφιλίωση δεν ξεκλειδώνει ποτέ record). */
+function keepsBytesHeld(data: Record<string, unknown>): boolean {
+  return hasActiveHold(data) || isDeclaredRecord(data);
+}
+
+// =============================================================================
+// RECORD — ΓΕΝΝΗΣΗ ΔΕΣΜΕΥΜΕΝΗ (ADR-916 Φ-Δ.6)
+// =============================================================================
+
+export interface RecordHoldInput {
+  /** Ο **σύστημα**-γραφέας που γεννά το record (π.χ. `system:property-handover-protocol`) — ποτέ άνθρωπος. */
+  readonly placedBy: string;
+  readonly reason: string;
+  readonly placedAt: string;
+}
+
+/**
+ * **Τα πεδία δέσμευσης ενός record τη στιγμή της γέννησης** — τα ίδια `FILE_HOLD_FIELDS`, ώστε κάθε πόρτα που ήδη ρωτά
+ * `hasActiveHold` / `holdAllowsHardDelete()` να το βλέπει χωρίς να ξέρει τι είναι Πρωτόκολλο.
+ */
+export function recordHoldFieldsOf(input: RecordHoldInput): Readonly<Record<string, string>> {
+  return { hold: HOLD_TYPES.RECORD, holdPlacedBy: input.placedBy, holdPlacedAt: input.placedAt, holdReason: input.reason };
+}
+
+/**
+ * **Κλείδωσε τα bytes ενός record** — GCS `temporaryHold` (ούτε delete ούτε overwrite, ούτε από Admin SDK).
+ * Καλείται **πριν** γραφτεί η βάση (bytes πρώτα, όπως η τοποθέτηση) **και** σε κάθε επανάληψη/υιοθέτηση ⇒ ιδεμπότητο.
+ */
+export async function holdRecordBytes(bucket: HoldableBucket, path: string): Promise<void> {
+  await setTemporaryHold(bucket, [path], true);
 }
 
 // =============================================================================
@@ -237,12 +276,16 @@ export interface ReleaseFileHoldInput {
 export async function releaseFileHold(input: ReleaseFileHoldInput, bucketOf: HoldBucketResolver = defaultHoldBucketResolver): Promise<FileHoldOutcome> {
   const stack = await heldVersionStack(input.actor, input.fileId);
   if (stack.kind === 'not-found') return { kind: 'not-found' };
+  if (stack.versions.some((version) => isDeclaredRecord(version))) return { kind: 'record-immutable' };
 
   try {
     const ids = stack.versions.map((v) => v.id);
     const releasedAt = nowISO();
+    // Ο έλεγχος ξανατρέχει ΜΕΣΑ στη συναλλαγή: record που γεννήθηκε ανάμεσα στην ανάγνωση και τη γραφή δεν αποδεσμεύεται.
     const fileIds = await writeStack(input.actor.owner, ids, (current) =>
-      hasActiveHold(current) ? { hold: HOLD_TYPES.NONE, holdReleasedBy: input.actor.uid, holdReleasedAt: releasedAt } : null);
+      hasActiveHold(current) && !isDeclaredRecord(current)
+        ? { hold: HOLD_TYPES.NONE, holdReleasedBy: input.actor.uid, holdReleasedAt: releasedAt }
+        : null);
     if (fileIds.length > 0) await auditEach(fileIds, input.actor, 'hold_release', {});
     // Και όταν η βάση έλεγε ήδη «καμία»: μισή αποτυχία προηγούμενης αποδέσμευσης διορθώνεται εδώ.
     await reconcileBytes(input.actor.owner, ids, stack.versions, bucketOf);

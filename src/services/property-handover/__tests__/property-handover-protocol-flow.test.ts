@@ -28,6 +28,8 @@ import { buildStoragePath } from '@/services/upload/utils/storage-path';
 import { loadHandoverSet } from '@/services/property-handover/property-handover-set.server';
 import { issueHandoverProtocol } from '@/services/property-handover/property-handover-protocol-write.service';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
+import { fileTrashBlockOf } from '@/lib/files/file-hold';
+import { isFileHeld } from '@/services/file-record/file-purge-helpers';
 import { fakeGcsBucket, type FakeGcsStore } from '@/test-utils/fake-gcs/fake-gcs-bucket';
 
 jest.mock('server-only', () => ({}));
@@ -47,7 +49,9 @@ const mockFileAudits: Array<Record<string, unknown>> = [];
 const mockEntityAudits: Array<Record<string, unknown>> = [];
 const store: FakeGcsStore = new Map();
 let copyHook: () => void = () => undefined;
-const bucket = fakeGcsBucket(store, 'default', { onCopy: () => copyHook() });
+/** Ζ58 — η GCS δεν τεκμηριώνει αν το `save` πάνω σε δεσμευμένο κλειδί απαντά 403 ή 412: η σουίτα δοκιμάζει ΚΑΙ τα δύο. */
+const bucketOptions: { heldSaveCode: 403 | 412; onCopy: () => void } = { heldSaveCode: 403, onCopy: () => copyHook() };
+const bucket = fakeGcsBucket(store, 'default', bucketOptions);
 function mockBucket() { return bucket; }
 
 const NOW = new Date('2026-10-22T10:00:00.000Z');
@@ -121,6 +125,7 @@ beforeEach(async () => {
   fake = new FakeFirestore();
   store.clear();
   copyHook = () => undefined;
+  bucketOptions.heldSaveCode = 403;
   mockFileAudits.length = 0;
   mockEntityAudits.length = 0;
   fake.seed(COLLECTIONS.CONTACTS, CONTACT, {
@@ -264,5 +269,65 @@ describe('Γ36 — ό,τι ΔΕΝ εκδίδει Πρωτόκολλο, και γ
     expect([...store.keys()].sort()).toEqual([...orphaned.keys()].sort());
     const companyPath = String(companyRecord(handover().protocol?.protocolId ?? '')?.storagePath);
     expect(Buffer.compare(Buffer.from(bytesAt(companyPath)), Buffer.from(orphaned.get(companyPath)?.bytes ?? []))).toBe(0);
+  }, 60_000);
+});
+
+describe('Ζ57–Ζ59 — το αντίτυπο της ΕΤΑΙΡΕΙΑΣ γεννιέται RECORD (ADR-916 Φ-Δ.6 · Ο14)', () => {
+  const issuedPaths = () => {
+    const protocolId = handover().protocol?.protocolId ?? '';
+    return { company: String(companyRecord(protocolId)?.storagePath), recipient: String(recipientRecord(protocolId)?.storagePath), protocolId };
+  };
+
+  it('Ζ57 — βάση ΚΑΙ bytes: `hold: record` από τον σύστημα-γραφέα · GCS `temporaryHold` · ο αγοραστής ΟΧΙ', async () => {
+    await issue();
+    const { company, recipient, protocolId } = issuedPaths();
+    expect(companyRecord(protocolId)).toMatchObject({
+      hold: 'record', holdPlacedBy: 'system:property-handover-protocol', holdReason: 'handover-protocol',
+      holdPlacedAt: docs(COLLECTIONS.PROPERTY_HANDOVER_PROTOCOLS)[protocolId]?.issuedAt,
+    });
+    expect(store.get(company)?.temporaryHold).toBe(true);
+    expect(recipientRecord(protocolId)?.hold).toBeUndefined();
+    expect(store.get(recipient)?.temporaryHold).toBeUndefined();
+    // Κάθε πόρτα οριστικής διαγραφής ρωτά τον ΕΝΑ κριτή — και ο κάδος τον δικό του.
+    expect(isFileHeld(companyRecord(protocolId) ?? {})).toBe(true);
+    expect(fileTrashBlockOf(companyRecord(protocolId) ?? {})).toBe('record');
+    expect(fileTrashBlockOf(recipientRecord(protocolId) ?? {})).toBeNull();
+    expect(isFileHeld(recipientRecord(protocolId) ?? {})).toBe(false);
+  }, 60_000);
+
+  it('Ζ57 — η πλατφόρμα αρνείται: ούτε `delete` ούτε σάρωση προθέματος σβήνει τα bytes του record', async () => {
+    await issue();
+    const { company } = issuedPaths();
+    await expect(bucket.file(company).delete()).rejects.toMatchObject({ code: 403 });
+    await bucket.deleteFiles({ prefix: `companies/${COMPANY}/` });
+    expect(store.has(company)).toBe(true);
+  }, 60_000);
+
+  it.each([403, 412] as const)('Ζ58 — επανάληψη πάνω σε ΔΕΣΜΕΥΜΕΝΟ κλειδί (GCS απαντά %s) ⇒ υιοθέτηση, ποτέ επανεγγραφή', async (code) => {
+    bucketOptions.heldSaveCode = code;
+    const ready = docs(COLLECTIONS.PROPERTY_HANDOVERS)[HANDOVER];
+    copyHook = () => {
+      fake.seed(COLLECTIONS.PROPERTY_HANDOVERS, HANDOVER, { ...ready, lifecycle: 'cancelled' });
+      copyHook = () => undefined;
+    };
+    const stale = handover();
+    expect((await issueHandoverProtocol(db(), stale, configured())).kind).toBe('superseded');
+    fake.seed(COLLECTIONS.PROPERTY_HANDOVERS, HANDOVER, ready);
+    expect(await issueHandoverProtocol(db(), stale, configured())).toMatchObject({ kind: 'issued', revision: 1 });
+    expect(companyRecord(issuedPaths().protocolId)).toMatchObject({ hold: 'record' });
+  }, 60_000);
+
+  it('Ζ59 — χαμένο hold στα bytes (έπεσε μετά το ανέβασμα) ⇒ η επανάληψη το ΘΕΡΑΠΕΥΕΙ στην υιοθέτηση', async () => {
+    const ready = docs(COLLECTIONS.PROPERTY_HANDOVERS)[HANDOVER];
+    copyHook = () => {
+      fake.seed(COLLECTIONS.PROPERTY_HANDOVERS, HANDOVER, { ...ready, lifecycle: 'cancelled' });
+      copyHook = () => undefined;
+    };
+    const stale = handover();
+    expect((await issueHandoverProtocol(db(), stale, configured())).kind).toBe('superseded');
+    for (const [path, object] of store) if (object.temporaryHold) store.set(path, { ...object, temporaryHold: false });
+    fake.seed(COLLECTIONS.PROPERTY_HANDOVERS, HANDOVER, ready);
+    await issueHandoverProtocol(db(), stale, configured());
+    expect(store.get(issuedPaths().company)?.temporaryHold).toBe(true);
   }, 60_000);
 });

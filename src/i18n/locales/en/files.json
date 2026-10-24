@@ -288,6 +288,8 @@
     "classificationFailed": "Classification failed",
     "handoverOrigin": "From the developer",
     "handoverProtocol": "Handover protocol · rev. {revision}",
+    "record": "Record · cannot be deleted",
+    "recordExplain": "Legal evidence of the handover. Kept unchanged — it cannot be moved to the bin or deleted, by anyone.",
     "retryClassification": "Retry classification",
     "selectFile": "Select {name}"
   },
@@ -383,6 +385,8 @@
     "holdRegulatory": "Regulatory Hold",
     "holdAdmin": "Administrative Hold",
     "cannotTrashWithHold": "Cannot delete file with active hold",
+    "holdRecord": "Record",
+    "cannotTrashRecord": "This document is legal evidence (a record) and cannot be deleted.",
     "stats": {
       "totalFiles": "Total files",
       "totalSize": "Total size",

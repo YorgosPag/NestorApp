@@ -28,6 +28,7 @@
  * | αρχείο `public` ⇒ **και** δικαίωμα δημοσίευσης | `mayChangePublication` — κάδος = απόσυρση, επαναφορά = επαναδημοσίευση |
  * | κάδος μόνο για `status: 'ready'` | όπως ο κανόνας |
  * | αρχείο **αποσυρμένου** ακινήτου κλειδωμένο | όπως το `fileStaysUnderLiveProperty()` (ADR-281) |
+ * | **record** (αντίτυπο Πρωτοκόλλου εταιρείας) ⇒ ποτέ κάδος | ο ΕΝΑΣ κριτής `fileTrashBlockOf` — ίδιος με το κουμπί (ADR-916 Φ-Δ.6) |
  *
  * 🌐 **Η πρακτική**: Procore — ο απλός χρήστης σβήνει ό,τι ανέβασε, ο διαχειριστής οτιδήποτε.
  * ⛔ **Κανένα όνομα ρόλου εδώ** (CHECK 3.68).
@@ -44,6 +45,7 @@ import {
 } from '@/config/domain-constants';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { decideCapability } from '@/lib/auth/authority';
+import { fileTrashBlockOf } from '@/lib/files/file-hold';
 import { calculatePurgeDate, isInTrash } from '@/lib/files/file-trash-state';
 import { FieldValue } from '@/lib/firebaseAdmin';
 import { isRetired } from '@/lib/firestore/trashed-status';
@@ -72,6 +74,7 @@ export function isFileTrashAction(value: unknown): value is FileTrashAction {
  * - `not-ready` — κάδος σε αρχείο που δεν ολοκλήρωσε το ανέβασμα
  * - `not-in-trash` — επαναφορά αρχείου που δεν είναι στον κάδο
  * - `retired-property` — το ακίνητό του είναι στο αρχείο ή στον κάδο
+ * - `record` — νομικό τεκμήριο (ADR-916 Φ-Δ.6): ούτε κάδος, για κανέναν ρόλο — ίδιο όνομα με το `FileTrashBlock`
  */
 export const FILE_TRASH_REFUSALS = [
   'not-owner',
@@ -79,6 +82,7 @@ export const FILE_TRASH_REFUSALS = [
   'not-ready',
   'not-in-trash',
   'retired-property',
+  'record',
 ] as const;
 export type FileTrashRefusal = (typeof FILE_TRASH_REFUSALS)[number];
 
@@ -158,6 +162,10 @@ export function judgeFileTrash(
 
   const isPublic = data.classification === FILE_CLASSIFICATIONS.PUBLIC;
   if (isPublic && !mayChangePublication(actor.capability)) return 'not-capable';
+
+  // 📜 ADR-916 Φ-Δ.6 — record: ο ίδιος κριτής που κρύβει το κουμπί. Η επαναφορά δεν αρνείται (record στον κάδο δεν υπάρχει
+  //    ποτέ· αν υπήρχε από πριν τον κριτή, η επαναφορά το **σώζει** — Purview: ό,τι είναι record μένει διαθέσιμο).
+  if (action === 'trash' && fileTrashBlockOf(data) !== null) return 'record';
 
   if (action === 'trash' && data.status !== READY_STATUS) return 'not-ready';
   return null;

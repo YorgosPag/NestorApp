@@ -76,11 +76,17 @@ function protocolDocument(handover: ReadyHandover, plan: DueHandoverProtocol, st
   };
 }
 
-/** Γέννηση εγγραφής αρχείου **μόνο αν λείπει** — η επανάληψη θεραπεύει ό,τι έλειψε, ποτέ διπλό. */
+/**
+ * Γέννηση εγγραφής αρχείου **μόνο αν λείπει** — η επανάληψη θεραπεύει ό,τι έλειψε, ποτέ διπλό.
+ * 📜 ADR-916 Φ-Δ.6 — το αντίτυπο της εταιρείας γεννιέται **record** (`recordHold`) στην ίδια εγγραφή: κανένα παράθυρο όπου
+ * υπάρχει χωρίς δέσμευση. Τα bytes του κλειδώθηκαν ήδη από τον αποθηκευτή, πριν από αυτή τη συναλλαγή.
+ */
 async function createFileIfAbsent(tx: Transaction, ref: DocumentReference, copy: StoredProtocolCopy, sha256: string): Promise<() => void> {
   const exists = (await tx.get(ref)).exists;
   return () => {
-    if (!exists) tx.create(ref, readyFileRecordData(copy.built, { sizeBytes: copy.sizeBytes, placement: copy.placement, hash: sha256 }));
+    if (exists) return;
+    const ready = readyFileRecordData(copy.built, { sizeBytes: copy.sizeBytes, placement: copy.placement, hash: sha256 });
+    tx.create(ref, { ...ready, ...(copy.recordHold ?? {}) });
   };
 }
 

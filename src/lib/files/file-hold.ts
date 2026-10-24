@@ -15,6 +15,13 @@
  * Hold … a silent legal hold»*. Γι' αυτό αυτός ο κριτής **δεν** ρωτιέται από τον κάδο —
  * ρωτιέται από **κάθε** διαδρομή οριστικής διαγραφής.
  *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 📜 Η ΜΙΑ ΕΞΑΙΡΕΣΗ: RECORD — ΟΠΩΣ ΤΟ «DECLARE AS RECORD» ΤΟΥ MICROSOFT PURVIEW (ADR-916 Φ-Δ.6)
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Νομικό τεκμήριο (το αντίτυπο Πρωτοκόλλου παράδοσης της εταιρείας): Purview *«Delete: Blocked»* — άρα **ούτε κάδος**.
+ * Δεν τοποθετείται και δεν αίρεται από άνθρωπο (`PlaceableHoldType` το αποκλείει· ο γραφέας αρνείται `record-immutable`).
+ * `isDeclaredRecord` = **ίδια απάντηση** με το `fileIsNotDeclaredRecord()` του `firestore.rules`, σκέλος προς σκέλος.
+ *
  * ⚠️ **Χωρίς `server-only`, επίτηδες**: τον ρωτούν και ο διακομιστής (`isFileHeld`) και
  * το client module του κύκλου ζωής — ένας κριτής, όχι δύο αντίγραφα που αποκλίνουν.
  *
@@ -24,6 +31,7 @@
 
 import { HOLD_TYPES, type HoldType } from '@/config/domain-constants';
 import { normalizeToMillisOrNull } from '@/lib/date-local';
+import { fileCustodyKindOf, type FileOwnerFields } from '@/lib/files/file-custody';
 
 /**
  * **Τα κλειδιά της δέσμευσης** — έξοδος **μόνο** του γραφέα του διακομιστή (AIP-216
@@ -40,8 +48,11 @@ export const FILE_HOLD_FIELDS = [
   'retentionUntil',
 ] as const;
 
-/** Οι δεσμεύσεις που **τοποθετούνται** — το `none` είναι η απουσία, όχι είδος. */
-export type PlaceableHoldType = Exclude<HoldType, typeof HOLD_TYPES.NONE>;
+/**
+ * Οι δεσμεύσεις που **τοποθετούνται** από άνθρωπο — το `none` είναι η απουσία, όχι είδος· το `record` το βάζει μόνο σύστημα
+ * στη γέννηση (Purview: ο χρήστης δεν «αφαιρεί» record).
+ */
+export type PlaceableHoldType = Exclude<HoldType, typeof HOLD_TYPES.NONE | typeof HOLD_TYPES.RECORD>;
 
 const PLACEABLE_HOLD_TYPES: readonly PlaceableHoldType[] = [HOLD_TYPES.LEGAL, HOLD_TYPES.REGULATORY, HOLD_TYPES.ADMIN];
 
@@ -86,4 +97,30 @@ export function isHoldActive(subject: FileHoldSubject, nowMillis: number): boole
   if (retention === undefined || retention === null) return false;
   const retainUntil = normalizeToMillisOrNull(retention);
   return retainUntil === null || retainUntil > nowMillis;
+}
+
+/** Το ελάχιστο σχήμα του record — δέσμευση · σημάδι Πρωτοκόλλου (ωμό: ο κριτής ρωτά μόνο «υπάρχει;») · κάτοχος. */
+export interface FileRecordSubject extends FileHoldSubject, FileOwnerFields {
+  readonly handoverProtocolOf?: unknown;
+}
+
+/**
+ * **Είναι record;** — δέσμευση `record` **ή** σημάδι Πρωτοκόλλου **έξω από το προσωπικό διαμέρισμα** (ADR-916 Φ-Δ.6).
+ *
+ * 🔒 Δύο ανεξάρτητα κλειδιά, όπως ο κανόνας. Το σημάδι μετρά με την **παρουσία** του (`in`), όχι με την εγκυρότητά του:
+ * ο γραφέας το γράφει μόνο όταν υπάρχει (`file-record-core.ts`), άρα κλειδί με `null` = αλλοιωμένο ⇒ fail-closed.
+ * ⚠️ Το αντίτυπο του **αγοραστή** (`files_personal`) κουβαλά το **ίδιο** σημάδι και είναι **δικό του** — ο κανόνας ζει μόνο
+ * στο `match /files`. Ο κριτής το ξεχωρίζει από τον **κάτοχο** του εγγράφου· άγνωστος κάτοχος ⇒ record (fail-closed).
+ */
+export function isDeclaredRecord(subject: FileRecordSubject): boolean {
+  if (subject.hold === HOLD_TYPES.RECORD) return true;
+  return subject.handoverProtocolOf !== undefined && fileCustodyKindOf(subject) !== 'personal';
+}
+
+/** Γιατί **δεν** πετιέται στον κάδο — κλειστό σύνολο. Η απλή δέσμευση **δεν** είναι λόγος (σιωπηλή). */
+export type FileTrashBlock = 'record';
+
+/** **Ο ΕΝΑΣ κριτής κάδου** για κουμπί **και** πόρτα (`judgeFileTrash`) — `null` = ο κάδος επιτρέπεται από αυτή την πλευρά. */
+export function fileTrashBlockOf(subject: FileRecordSubject): FileTrashBlock | null {
+  return isDeclaredRecord(subject) ? 'record' : null;
 }

@@ -438,6 +438,11 @@ export const HOLD_TYPES = {
   REGULATORY: 'regulatory',
   /** Administrative hold - internal review */
   ADMIN: 'admin',
+  /**
+   * Record (Microsoft Purview «declare as record», ADR-916 Φ-Δ.6) — νομικό τεκμήριο: ούτε κάδος ούτε οριστική διαγραφή.
+   * Το βάζει **μόνο** σύστημα στη γέννηση· **κανένας** άνθρωπος δεν το τοποθετεί ή το αίρει (`lib/files/file-hold.ts`).
+   */
+  RECORD: 'record',
 } as const;
 
 export type HoldType = typeof HOLD_TYPES[keyof typeof HOLD_TYPES];

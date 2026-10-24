@@ -22,6 +22,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFilesNotifications } from '@/hooks/notifications/useFilesNotifications';
 import { useFileDownload } from './useFileDownload';
 import type { FileRecord } from '@/types/file-record';
+import type { FileTrashBlock } from '@/lib/files/file-hold';
 
 interface UseFileListActionsParams {
   onDelete?: (fileId: string) => Promise<void>;
@@ -69,10 +70,18 @@ export interface UseFileListActionsReturn {
 
 const logger = createModuleLogger('FileListActions');
 
-function deriveDeleteBlockMessage(error: unknown, fallbackMessage: string): string {
+/** Ο κωδικός άρνησης της πόρτας κάδου — το σφάλμα τελειώνει σε `…: <κωδικός>` (`throwIfRefused`). */
+const TRASH_REFUSAL_CODE = /: ([a-z-]+)$/;
+
+function deriveDeleteBlockMessage(error: unknown, fallbackMessage: string, recordMessage: string): string {
   if (!(error instanceof Error)) {
     return fallbackMessage;
   }
+
+  // 📜 ADR-916 Φ-Δ.6 — record: ο ίδιος κωδικός με τον κριτή (`FileTrashBlock`). Το κουμπί κρύβεται ήδη· εδώ φτάνει μόνο
+  //    μαζική πράξη ή μπαγιάτικη λίστα, και ο άνθρωπος μαθαίνει ΓΙΑΤΙ, όχι «κάτι πήγε στραβά».
+  const block: FileTrashBlock | null = TRASH_REFUSAL_CODE.exec(error.message)?.[1] === 'record' ? 'record' : null;
+  if (block === 'record') return recordMessage;
 
   const normalizedMessage = error.message.toLowerCase();
   if (normalizedMessage.includes('hold')) {
@@ -185,7 +194,7 @@ export function useFileListActions({
       setDeleteConfirmOpen(false);
       setFileToDelete(null);
     } catch (err) {
-      const blockedMessage = deriveDeleteBlockMessage(err, t('trash.cannotTrashWithHold'));
+      const blockedMessage = deriveDeleteBlockMessage(err, t('trash.cannotTrashWithHold'), t('trash.cannotTrashRecord'));
       setDeleteConfirmOpen(false);
 
       if (blockedMessage) {

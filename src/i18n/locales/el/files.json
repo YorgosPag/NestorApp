@@ -288,6 +288,8 @@
     "classificationFailed": "Αποτυχία κατηγοριοποίησης",
     "handoverOrigin": "Από την κατασκευάστρια",
     "handoverProtocol": "Πρωτόκολλο παράδοσης · αναθ. {revision}",
+    "record": "Αρχείο · δεν διαγράφεται",
+    "recordExplain": "Νομικό τεκμήριο της παράδοσης. Φυλάσσεται αμετάβλητο — δεν πετιέται στον κάδο και δεν διαγράφεται, από κανέναν.",
     "retryClassification": "Επανάληψη κατηγοριοποίησης",
     "selectFile": "Επιλογή: {name}"
   },
@@ -383,6 +385,8 @@
     "holdRegulatory": "Κανονιστικό Hold",
     "holdAdmin": "Διοικητικό Hold",
     "cannotTrashWithHold": "Δεν μπορείτε να διαγράψετε αρχείο με ενεργό hold",
+    "holdRecord": "Αρχείο (record)",
+    "cannotTrashRecord": "Αυτό το έγγραφο είναι νομικό τεκμήριο (αρχείο) και δεν διαγράφεται.",
     "stats": {
       "totalFiles": "Σύνολο αρχείων",
       "totalSize": "Συνολικός χώρος",

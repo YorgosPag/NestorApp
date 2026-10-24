@@ -19,6 +19,7 @@ import type { FileRecord } from '@/types/file-record';
 import type { FileRecordWithLinkStatus } from './hooks/useEntityFiles';
 import { FileThumbnail } from './FileThumbnail';
 import { fileSequenceItem } from '@/lib/files/file-sequence';
+import { fileTrashBlockOf } from '@/lib/files/file-hold';
 import { FileRowActions } from './FileRowActions';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -39,6 +40,7 @@ import { useRetiredKind } from '@/lib/firestore/retired-record-context';
 import { useUserDisplayNames, seedUserNameCache } from '@/hooks/useUserDisplayNames';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { FileHandoverBadge } from './FileHandoverBadge';
+import { FileRecordBadge } from './FileRecordBadge';
 
 // ============================================================================
 // TYPES
@@ -281,6 +283,8 @@ export function FilesList({
 
                 {/* ADR-916 Φ-Γ1 · Σ5 — προέλευση παράδοσης / Πρωτόκολλο· μόνο από σημάδια που γράφει ο διακομιστής */}
                 <FileHandoverBadge file={file} />
+                {/* ADR-916 Φ-Δ.6 — record: ο ίδιος κριτής που κρύβει τη διαγραφή, με εξήγηση γιατί λείπει */}
+                <FileRecordBadge file={file} />
 
                 {/* AI classification state badge */}
                 {file.ingestion?.state === 'classifying' && (
@@ -382,7 +386,9 @@ export function FilesList({
             linkLabel={linkFileLabel}
             onUnlink={file.isLinkedFile && onUnlink ? () => actions.handleUnlinkClick(file.id) : undefined}
             unlinkLabel={unlinkFileLabel}
-            onDelete={onDelete && currentUserId && !file.isLinkedFile ? () => actions.handleDeleteClick(file.id) : undefined}
+            onDelete={onDelete && currentUserId && !file.isLinkedFile && fileTrashBlockOf(file) === null
+              ? () => actions.handleDeleteClick(file.id)
+              : undefined}
           />
         </article>
       ))}
