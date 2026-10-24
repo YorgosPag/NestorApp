@@ -13,6 +13,7 @@
  * | Κ3 κάθε `allow update` της `files` φέρει φρουρό δημοσίευσης | σκέλος χωρίς φρουρό |
  * | Κ4 γέννηση χωρίς διαβάθμιση · το LINK παγώνει ΟΛΟ το κατηγόρημα + `purpose` | «δημόσιο από κούνια» · χαλάρωση του LINK |
  * | Κ5 (Α4β) ακριβώς δύο `allow update`, κανένα δεν θέτει `isDeleted` | επανεισαγωγή σκέλους κάδου/επαναφοράς |
+ * | Κ6 (ADR-920 Β4.6) το `files_personal` φέρει τους ΙΔΙΟΥΣ φρουρούς θεματοφυλακής | «δημόσιο από κούνια» στον φάκελο ιδιοκτήτη |
  *
  * ℹ️ Το **αν ο κανόνας αρνείται πράγματι** το εκτελεί η σουίτα emulator
  * (`tests/firestore-rules/suites/files.rules.test.ts`, «publication freeze»). Εδώ φυλάσσεται η **ισότητα των λιστών**.
@@ -34,9 +35,12 @@ const RULES = readFileSync(join(process.cwd(), 'firestore.rules'), 'utf8');
 /** Το σώμα του `match /files/{fileId}` — ΜΕΧΡΙ το επόμενο καθολικό σχόλιο-ενότητα. */
 const FILES_BLOCK = RULES.split('match /files/{fileId} {')[1]?.split('\n    // ====')[0] ?? '';
 
+/** Το σώμα του `match /files_personal/{fileId}` — ίδιο όριο με το `FILES_BLOCK`. */
+const PERSONAL_BLOCK = RULES.split('match /files_personal/{fileId} {')[1]?.split('\n    // ====')[0] ?? '';
+
 /** Τα σκέλη ενός ρήματος, καθένα ως το κείμενό του μέχρι το επόμενο `allow`. */
-const legsOf = (verb: string): readonly string[] =>
-  FILES_BLOCK.split('allow ').filter((leg) => leg.startsWith(`${verb}:`));
+const legsOf = (verb: string, block: string = FILES_BLOCK): readonly string[] =>
+  block.split('allow ').filter((leg) => leg.startsWith(`${verb}:`));
 
 const CUSTODY_GUARD = '&& publicationCustodyUnchanged()';
 const PREDICATE_GUARD = '&& publicationPredicateUnchanged()';
@@ -81,8 +85,19 @@ describe('🏆 Α4α — κώδικας και κανόνας παγώνουν �
     for (const leg of updates) expect(leg).not.toMatch(/request\.resource\.data\.isDeleted\s*==\s*(?:true|false)/);
   });
 
+  it('🔴 Κ6 (ADR-920 Β4.6) το `files_personal` γεννιέται χωρίς θεματοφυλακή και κάθε `update` την παγώνει', () => {
+    const creates = legsOf('create', PERSONAL_BLOCK);
+    expect(creates).toHaveLength(1);
+    expect(creates[0]).toContain('&& publicationBornAbsent()');
+    const updates = legsOf('update', PERSONAL_BLOCK);
+    expect(updates.length).toBeGreaterThan(0);
+    for (const leg of updates) expect(leg).toContain(CUSTODY_GUARD);
+  });
+
   it('🔑 παρονομαστής: το μπλοκ διαβάστηκε — αλλιώς κάθε «φέρει» παραπάνω θα ήταν πράσινο πάνω σε κενό', () => {
     expect(FILES_BLOCK).toContain('allow delete:');
     expect(FILES_BLOCK).toContain('allow create:');
+    expect(PERSONAL_BLOCK).toContain('allow delete:');
+    expect(PERSONAL_BLOCK).toContain('allow create:');
   });
 });

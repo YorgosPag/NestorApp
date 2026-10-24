@@ -27,6 +27,9 @@
  *   **Π8. Η ΠΡΟΕΛΕΥΣΗ ΠΑΡΑΔΟΣΗΣ** (ADR-916 Φ-Γ1): το `handoverOrigin` («Από την κατασκευάστρια») ο κάτοχος **ούτε**
  *   το γεννά **ούτε** το αλλάζει **ούτε** το αφαιρεί — αλλά το αντίγραφο που του παρέδωσε ο διακομιστής το **διαβάζει**,
  *   το σχολιάζει και το σβήνει: είναι **δικό** του (Δ2 · Δ8).
+ *   **Π9. Η ΘΕΜΑΤΟΦΥΛΑΚΗ ΔΗΜΟΣΙΕΥΣΗΣ** (ADR-845 §7.17 Α4α · ADR-920 Β4.6): `classification` και
+ *   `publicationIdentity` ο κάτοχος **ούτε** τα γεννά **ούτε** τα αλλάζει **ούτε** τα αφαιρεί — η γραμμή ιδιοκτήτη
+ *   δημοσιεύει **από** τον φάκελο, άρα «δημόσιο από κούνια» θα ήταν δημοσίευση που δεν έκρινε κανείς.
  *
  * @since 2026-09-17 (ADR-866 Φ0 βήμα 2β)
  */
@@ -45,6 +48,8 @@ import { FIRESTORE_RULES_COVERAGE } from '../_registry/coverage-manifest';
 import { PERSONA_CLAIMS } from '../_registry/personas';
 import { assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FILE_CLASSIFICATIONS } from '@/config/domain-constants';
+import { floorplanPublicationIdentityKey } from '@/lib/listings/floorplan-publication-identity';
 import { FILE_COLLECTION } from '@/lib/files/file-custody';
 import {
   buildFinalizeFileRecordUpdate,
@@ -428,6 +433,45 @@ describe('files_personal.rules — το προσωπικό αρχείο το α�
       await assertSucceeds(citizenDb().collection(COLLECTION).where('userId', '==', CITIZEN_UID).get());
       await assertSucceeds(ref.update({ description: 'το εγχειρίδιο του λέβητα' }));
       await assertSucceeds(ref.delete());
+    });
+  });
+
+  // ==========================================================================
+  // 🔴 Π9 — Η ΘΕΜΑΤΟΦΥΛΑΚΗ ΔΗΜΟΣΙΕΥΣΗΣ ΤΗ ΓΡΑΦΕΙ ΜΟΝΟ Ο ΔΙΑΚΟΜΙΣΤΗΣ (ADR-845 §7.17 Α4α · ADR-920 Β4.6)
+  // ==========================================================================
+  // Η αγγελία ιδιοκτήτη ΠΑΡΑΓΕΤΑΙ από τον φάκελο. Ο browser δεν έχει πώς να ξαναπροβάλει — άρα τα πεδία που
+  // αποφασίζουν «φεύγει στο κοινό;» τα γράφει μόνο πράξη διακομιστή (Admin SDK), ίδια λίστα με το `match /files`.
+  describe('🔴 Π9 — η θεματοφυλακή δημοσίευσης: ο κάτοχος τη ΔΙΑΒΑΖΕΙ, δεν τη ΓΡΑΦΕΙ', () => {
+    const CUSTODY = {
+      classification: FILE_CLASSIFICATIONS.PUBLIC,
+      publicationIdentity: floorplanPublicationIdentityKey('lvl_seed_0001'),
+    } as const;
+    const citizenDb = () => env.authenticatedContext(CITIZEN_UID, {}).firestore();
+
+    for (const [key, value] of Object.entries(CUSTODY)) {
+      it(`⛔ \`${key}\`: γέννηση · προσθήκη · αλλαγή · αφαίρεση ⇒ ΑΡΝΗΣΗ — και στην οριστικοποίηση`, async () => {
+        await assertFails(citizenDb().collection(COLLECTION).doc(`forged-${key}`).set({
+          ...personalFilePayload(CITIZEN_UID, `forged-${key}`), [key]: value,
+        }));
+        await seedPersonalFile(env, 'add', CITIZEN_UID);
+        await assertFails(citizenDb().collection(COLLECTION).doc('add').update({ [key]: value }));
+        await seedPersonalFile(env, 'pending', CITIZEN_UID, { status: 'pending' });
+        await assertFails(citizenDb().collection(COLLECTION).doc('pending').update({ status: 'ready', [key]: value }));
+        await seedPersonalFile(env, 'held', CITIZEN_UID, { [key]: value });
+        await assertFails(citizenDb().collection(COLLECTION).doc('held').update({ [key]: `${value}-other` }));
+        await assertFails(citizenDb().collection(COLLECTION).doc('held').update({ [key]: null }));
+      });
+    }
+
+    it('✅ χωρίς τα πεδία γεννιέται · με τα πεδία του διακομιστή: σημείωση, κάδος με τη γραμμή του, διαγραφή', async () => {
+      await assertSucceeds(citizenDb().collection(COLLECTION).doc('plain').set(personalFilePayload(CITIZEN_UID, 'plain')));
+      await seedPersonalFile(env, DOC_ID, CITIZEN_UID, CUSTODY);
+      const db = citizenDb();
+      await assertSucceeds(db.collection(COLLECTION).doc(DOC_ID).update({ description: 'τοπογραφικό οικοπέδου' }));
+      await assertSucceeds(commitPairedActivity(db, {
+        uid: CITIZEN_UID, fileId: DOC_ID, action: 'delete', updates: TRASH_UPDATES,
+      }));
+      await assertSucceeds(db.collection(COLLECTION).doc(DOC_ID).delete());
     });
   });
 

@@ -931,6 +931,9 @@ service cloud.firestore {
                     // 📦 ADR-916 Φ-Γ1 — η προέλευση παράδοσης («Από την κατασκευάστρια») τη γράφει ΜΟΝΟ ο διακομιστής.
                     && handoverOriginBornAbsent()
                     && handoverDecisionBornAbsent()
+                    // 📣 ADR-845 §7.17 Α4α · ADR-920 Β4.6 — καμία διαβάθμιση/ταυτότητα δημοσίευσης «από κούνια»:
+                    //    η γραμμή ιδιοκτήτη (Β4.4) δημοσιεύει ΑΠΟ τον φάκελο· ίδια λίστα με το `match /files`.
+                    && publicationBornAbsent()
                     && request.resource.data.status == 'pending'
                     && resource == null;
 
@@ -958,6 +961,10 @@ service cloud.firestore {
                     && documentFactsUnchanged()
                     && handoverOriginUnchanged()
                     && handoverDecisionUnchanged()
+                    // 📣 ADR-845 §7.17 Α4α · ADR-920 Β4.6 — ούτε διαβάθμιση ούτε ταυτότητα δημοσίευσης (τις γράφει
+                    //    ΜΟΝΟ πράξη διακομιστή που ξαναπροβάλλει). Όχι όλο το κατηγόρημα: εδώ ΠΡΕΠΕΙ να αλλάζουν
+                    //    `status`/`isDeleted` (οριστικοποίηση · κάδος · επαναφορά).
+                    && publicationCustodyUnchanged()
                     // 📒 ADR-866 §2.6.11 — κάδος · επαναφορά · μετονομασία ΜΟΝΟ μαζί με τη γραμμή τους.
                     && personalActivityPaired();
 
