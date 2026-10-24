@@ -11,7 +11,10 @@ describe('hatchTilePathData', () => {
     const d = hatchTilePathData(8, 'rising');
     expect(d.match(/M/g)).toHaveLength(3);
     expect(d).toContain('M0,8 l8,-8');
-    expect(Math.min(...numbersOf(d))).toBe(-4);
+    // Οι ακραίες γραμμές ξεκινούν ¼ πλευράς ΕΞΩ (x = −2, x = 6 → ως 10 > 8): τα πλακίδια ενώνονται χωρίς ραφή.
+    expect(d.startsWith('M-2,2 l4,-4')).toBe(true);
+    expect(d.endsWith('M6,10 l4,-4')).toBe(true);
+    expect(numbersOf(d)).toContain(-2);
   });
 
   it('cross = rising + falling (έξι γραμμές)', () => {
