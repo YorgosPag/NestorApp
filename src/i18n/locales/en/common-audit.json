@@ -636,7 +636,8 @@
         "lifecycle": "Handover status",
         "recipient": "Recipient",
         "protocol": "Handover protocol",
-        "invitation": "Buyer invitation"
+        "invitation": "Buyer invitation",
+        "withdrawal": "Handover withdrawal"
       },
       "objectiveValueFacts": {
         "permitDate": "Building permit date",

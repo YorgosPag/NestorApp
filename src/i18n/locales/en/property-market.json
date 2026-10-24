@@ -305,7 +305,12 @@
       "more": "{count, plural, one {# more suggestion} other {# more suggestions}}",
       "unreachable": "There are close ones, but the concession needed is large — we are not suggesting it.",
       "multiAxis": "{count, plural, one {# listing differs} other {# listings differ}} in two things at once — one change is not enough.",
-      "unquantified": "{count, plural, one {# listing is close} other {# listings are close}} on an axis that is not measured in an amount."
+      "unquantified": "{count, plural, one {# listing is close} other {# listings are close}} on an axis that is not measured in an amount.",
+      "awaitingDelivery": {
+        "lead": "{count, plural, one {# listing matches everything but is delivered} other {# listings match everything but are delivered}} later than you asked.",
+        "step": "If you wait until {promise}, there {count, plural, one {is # listing} other {are # listings}}.",
+        "slipped": "{count, plural, one {# of them has} other {# of them have}} already postponed delivery — a date is not a guarantee."
+      }
     },
     "blocker": {
       "share-above": "Landowner share above your ceiling",
@@ -2414,12 +2419,14 @@
       "lifecycle": {
         "awaiting-completion": "In preparation",
         "ready": "Ready",
-        "cancelled": "Sale cancelled"
+        "cancelled": "Sale cancelled",
+        "withdrawn": "Handover withdrawn"
       },
       "explain": {
         "awaiting-completion": "The developer is preparing the file; the home's drawings, photos and certificates arrive here when the purchase completes.",
         "ready": "The purchase is complete; the file is yours and stays with you.",
-        "cancelled": "The file stays yours, together with anything you have added."
+        "cancelled": "The file stays yours, together with anything you have added.",
+        "withdrawn": "The developer withdrew the handover. Everything already delivered to you stays yours; no new documents will be added."
       },
       "delivery": {
         "pending": "Document delivery is starting.",

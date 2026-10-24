@@ -636,7 +636,8 @@
         "lifecycle": "Κατάσταση παράδοσης",
         "recipient": "Παραλήπτης",
         "protocol": "Πρωτόκολλο παράδοσης",
-        "invitation": "Πρόσκληση αγοραστή"
+        "invitation": "Πρόσκληση αγοραστή",
+        "withdrawal": "Ανάκληση παράδοσης"
       },
       "objectiveValueFacts": {
         "permitDate": "Ημερομηνία οικοδομικής άδειας κτιρίου",

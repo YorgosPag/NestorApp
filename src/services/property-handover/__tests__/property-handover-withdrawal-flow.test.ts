@@ -9,8 +9,10 @@
 
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
+import { PROPERTY_HANDOVER_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { HANDOVER_WITHDRAWAL_NOTICE_CAP } from '@/config/property-handover-withdrawal-policy';
+import { diffTrackedFields } from '@/lib/audit/audit-diff';
 import type { InvitationRedeemer } from '@/server/invitations/invitation-redeem';
 import { respondToHandoverInvitation } from '@/server/property-handover-invitations/handover-invitation-redeem';
 import { recordHandoverWithdrawalNotice } from '@/services/property-handover/property-handover-progress-write';
@@ -139,6 +141,23 @@ describe('Ζ45 — η ανάκληση στον ΕΝΑ γραφέα', () => {
       entityType: 'property_handover', performedBy: 'uid_office',
       before: expect.objectContaining({ lifecycle: 'ready' }), after: expect.objectContaining({ lifecycle: 'withdrawn' }),
     }));
+  });
+
+  it('Ο22 — ίχνος: η γραμμή λέει ΚΑΙ την ανάκληση με την αιτιολογία (βιβλίο της εταιρείας), όχι μόνο τον κύκλο ζωής', async () => {
+    await completedThenReverted();
+    recordTrackedEntityWrite.mockClear();
+    await withdraw();
+    const write = recordTrackedEntityWrite.mock.calls.map(([call]) => call).find((call) => call.performedBy === 'uid_office');
+    expect(write).toMatchObject({ ledger: { companyId: COMPANY } });
+    // Η ΠΡΑΓΜΑΤΙΚΗ μηχανή διαφοράς πάνω στο ΠΡΑΓΜΑΤΙΚΟ μητρώο — αν το `withdrawal` λείψει από αυτό, η ανάκληση δεν αφήνει ίχνος.
+    const changes = diffTrackedFields(write.before, write.after, PROPERTY_HANDOVER_TRACKED_FIELDS);
+    expect(changes).toEqual(expect.arrayContaining([
+      expect.objectContaining({ field: 'withdrawal', oldValue: null, newValue: REASON }),
+      expect.objectContaining({ field: 'lifecycle', newValue: 'withdrawn' }),
+    ]));
+    // 🔒 Καμία PII αγοραστή στο ίχνος, και η τηλεμετρία της ειδοποίησης δεν είναι τιμή.
+    expect(JSON.stringify(changes)).not.toContain(ANNA.email);
+    expect(JSON.stringify(changes)).not.toMatch(/accepted|attempts/);
   });
 });
 

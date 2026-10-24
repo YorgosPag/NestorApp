@@ -904,6 +904,20 @@ busy → πράξη → ειδοποίηση → ξαναφόρτωση και �
 `HARD_EXEMPT_PATTERNS` (κατηγορία «γραφείς παραγώγων, όχι πράξεων ανθρώπου», όπως το `owner-property-publication`).
 Ο δείκτης Πρωτοκόλλου επιστρέφει `write` και το ίχνος του το γράφει ο καλών.
 
+**Κλείσιμο Ο22 (2026-10-24)**:
+- **Ίχνος**: `PROPERTY_HANDOVER_TRACKED_FIELDS.withdrawal` (`kind: 'scalar'`, `formatAuditHandoverWithdrawal`, δίπλα στα
+  `invitation` / `protocol` στο `config/audit-tracked-fields.ts`). Τιμή = **η αιτιολογία** — δρών και στιγμή είναι ήδη η
+  ταυτότητα της γραμμής (`performedBy` · χρονοσφραγίδα). Το βιβλίο είναι της εταιρείας (`ledger: company`) ⇒ η αιτιολογία μένει
+  στο γραφείο (Δ10). Η τηλεμετρία της ειδοποίησης (`notice`) **δεν** αλλάζει την τιμή ⇒ καμία γραμμή. Ετικέτες
+  `common-audit:…property_handover.withdrawal` (el + en). Η γραμμή της ανάκλησης γράφει πλέον **δύο** αλλαγές:
+  `lifecycle: ready → withdrawn` **και** `withdrawal: — → «αιτιολογία»`.
+- **Λόγια αγοραστή**: `property-market:dossier.origin.{lifecycle,explain}.withdrawn` (el + en, ύφος των αδελφών `cancelled`,
+  **χωρίς** αιτιολογία). Οι πίνακες κλειδιών βγήκαν από το `PropertyDossierOrigin.tsx` στο
+  `components/property-dossier/property-dossier-origin-labels.ts`, ώστε η άγκυρα να ελέγχει τα **ίδια** κλειδιά που ζητά η οθόνη.
+- **Γιατί δεν το έπιασε τίποτα**: ο τύπος `Record<Lifecycle, string>` φυλά την πληρότητα του πίνακα, όχι την ύπαρξη του
+  κλειδιού· η γκαλερί του αγοραστή περνά με το «ηχώ» mock του `t()`. Η άγκυρα **Ζ55** κλείνει την άλλη άκρη με τους
+  **πραγματικούς** loaders (`test-utils/real-i18n`), για **κάθε** επόμενη κατάσταση του `PROPERTY_HANDOVER_LIFECYCLES`.
+
 ---
 
 ## §6. Φάσεις
@@ -1020,6 +1034,8 @@ busy → πράξη → ειδοποίηση → ξαναφόρτωση και �
 | Ζ52 | κάθε έκβαση μία απάντηση · σιωπή του γραφέα ⇒ `handover-unknown`, ποτέ ψεύτικη επιτυχία · 🔒 ποτέ αιτιολογία ή uid | ίδιο |
 | Ζ53 | **ένας γραφέας** του `withdrawal` (Η4–Η5) · η μετάβαση `withdrawn` γεννιέται **μόνο** στην καθαρή κρίση (Η6) | `services/property-handover/__tests__/handover-withdrawal-authority.test.ts` |
 | Ζ54 | 🔴 **κούρσα**: ανάκληση ανάμεσα στα bytes και το commit ⇒ καμία εγγραφή, καμία γραμμή καθολικού, κανένα ορφανό byte, καμία πρόοδος · ό,τι παραδόθηκε πριν μένει | `server/property-handover-delivery/__tests__/handover-delivery-flow.test.ts` |
+| Ζ55 | 🔴 **Ο22 λόγια**: κάθε `PROPERTY_HANDOVER_LIFECYCLES` έχει **πραγματικό** κείμενο σήματος **και** εξήγησης σε el **και** en (πραγματικοί loaders, όχι «ηχώ» mock) | `components/property-dossier/__tests__/property-dossier-origin-labels.test.ts` |
+| Ζ56 | 🔴 **Ο22 ίχνος**: η γραμμή της ανάκλησης περνά από την **πραγματική** μηχανή διαφοράς με το **πραγματικό** μητρώο και λέει `withdrawal: — → αιτιολογία` + `lifecycle → withdrawn` · βιβλίο εταιρείας · καμία PII / τηλεμετρία | `services/property-handover/__tests__/property-handover-withdrawal-flow.test.ts` |
 | Ζ9 | **η γκαλερί**: κάθε πάνελ τον λόγο του με τίτλο **και** οδηγία · κάρτα Πρωτοκόλλου + σύνδεσμος Σ6 **μόνο** στο σφραγισμένο · καμία λέξη «verified» · «κίνηση γραφείου» πρώτα · κάθε λέξη του λεξιλογίου σε el **και** en · κανένα αίτημα | `components/property-handover-office/__tests__/property-handover-office-gallery.test.tsx` |
 
 **Μεταλλάξεις (2026-10-19)**: χωρίς τομέα γραφείου · WIP επιλέξιμο · `ready` μη κολλώδες · ακύρωση κάθε κατάστασης ·
@@ -1056,7 +1072,7 @@ busy → πράξη → ειδοποίηση → ξαναφόρτωση και �
 | Ο19 | Η πόρτα Σ6 κρίνει **γνησιότητα από το μητρώο**. Η ανεξάρτητη εμπιστοσύνη αλυσίδας (`chainTrusted`) μένει `false` ώσπου να γραφτούν αγκυροβόλια στο μητρώο ADR-902 (μαζί με τον πάροχο, ADR-918 §9) · η μακροχρόνια εγκυρότητα = Σ7 (B-LT) | ενέργεια Giorgio (πάροχος) + Σ7 |
 | Ο20 | Ο «ένας γραφέας» του `handoverDecision` (όπως του `documentFacts`) φυλάγεται από **άγκυρα jest**, όχι πύλη pre-commit — και για τα `handoverOrigin`/`handoverProtocolOf` δεν υπάρχει ούτε άγκυρα | πύλη πάνω στο κοινό `scripts/lib/write-authority/ast.js` όταν ελευθερωθεί (σήμερα το κρατά άλλη δουλειά) — δηλωμένο, όχι παράλειψη |
 | Ο21 | **Επαναφορά** ανακλημένης παράδοσης (η ίδια επαφή ξαναγίνεται αγοραστής — π.χ. η ακύρωση ανατράπηκε). Σήμερα: σήμα `buyer-again` στην καρτέλα, **καμία** αυτόματη ανάσταση | ρητή πράξη γραφείου, όπως ο νέος φάκελος του DocuSign μετά το void. ⚠️ Η ταυτότητα `phov_*` είναι ντετερμινιστική ανά (ακίνητο, επαφή): η επαναφορά ξανανοίγει το **ίδιο** έγγραφο ή γεννά γενιά — απόφαση Giorgio |
-| Ο22 | Το πεδίο `withdrawal` **δεν** είναι ακόμη παρακολουθούμενο πεδίο ιστορικού (`PROPERTY_HANDOVER_TRACKED_FIELDS`): το ίχνος λέει `lifecycle: ready → withdrawn` + δρώντα, η αιτιολογία ζει στο έγγραφο. Τα κείμενα `property-market:dossier.origin.{lifecycle,explain}.withdrawn` περιμένουν επίσης (ο κώδικας τα ζητά ήδη· χωρίς αυτά ο αγοραστής θα έβλεπε ωμό κλειδί και το CHECK 3.8 μπλοκάρει) | το `audit-tracked-fields.ts` και το `property-market.json` είναι **αλλαγμένα από άλλον agent** στο κοινό δέντρο — προσθήκη μετά το commit του |
+| Ο22 | Το πεδίο `withdrawal` **δεν** είναι ακόμη παρακολουθούμενο πεδίο ιστορικού (`PROPERTY_HANDOVER_TRACKED_FIELDS`): το ίχνος λέει `lifecycle: ready → withdrawn` + δρώντα, η αιτιολογία ζει στο έγγραφο. Τα κείμενα `property-market:dossier.origin.{lifecycle,explain}.withdrawn` περιμένουν επίσης (ο κώδικας τα ζητά ήδη· χωρίς αυτά ο αγοραστής θα έβλεπε ωμό κλειδί και το CHECK 3.8 μπλοκάρει) | ✅ **ΕΚΛΕΙΣΕ 2026-10-24** (§5.19 «Κλείσιμο Ο22»): `PROPERTY_HANDOVER_TRACKED_FIELDS.withdrawal` (τιμή = αιτιολογία, βιβλίο εταιρείας) + ετικέτες `common-audit` · κείμενα `dossier.origin.{lifecycle,explain}.withdrawn` el + en · πίνακες κλειδιών στο `property-dossier-origin-labels.ts` · άγκυρες **Ζ55** (λόγια, πραγματικοί loaders) + **Ζ56** (ίχνος, πραγματική μηχανή διαφοράς) |
 | Ο6 | Προϋπάρχοντα κόκκινα που βρέθηκαν, **όχι** από αυτή τη δουλειά: `cron-schedule.test.ts` «heartbeat» (εργασία 5′) · `conveyance-engagement-flow.test.ts` (πρόσκληση `expired` αντί `pending` — καρφωμένη ημερομηνία) · `check-entity-audit-coverage.test.js` Σ6 (10 αντί ≥ 12 κλήσεις `flushInBatches`) | καταγράφονται εδώ, δεν διορθώθηκαν |
 
 ---

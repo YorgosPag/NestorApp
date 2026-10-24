@@ -1474,6 +1474,18 @@ function formatAuditHandoverInvitation(value: unknown): string | null {
 }
 
 /**
+ * Η ανάκληση μιας παράδοσης ως τιμή ιστορικού — η **αιτιολογία** του γραφείου (ADR-916 Φ-Δ.5 / Ο22). Δρών και στιγμή
+ * είναι ήδη η ταυτότητα της γραμμής (`performedBy` · χρονοσφραγίδα) — δεύτερη φορά στην τιμή θα ήταν θόρυβος. 🔒 Το βιβλίο
+ * είναι της εταιρείας (`ledger: company`), άρα η αιτιολογία μένει στο γραφείο (Δ10). Η τηλεμετρία της ειδοποίησης
+ * (`notice` · προσπάθειες) **δεν** αλλάζει την τιμή ⇒ καμία γραμμή.
+ */
+function formatAuditHandoverWithdrawal(value: unknown): string | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const { reason } = value as { readonly reason?: unknown };
+  return typeof reason === 'string' && reason !== '' ? reason : null;
+}
+
+/**
  * Property-handover audit registry (ADR-916 §5.2). Μόνο ο **κύκλος ζωής**: ο παραλήπτης και το ακίνητο είναι
  * η ταυτότητα της παράδοσης (αμετάβλητα), και η ολοκλήρωση γράφεται **μαζί** με τη μετάβαση σε `ready`.
  */
@@ -1486,6 +1498,8 @@ export const PROPERTY_HANDOVER_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   protocol: { kind: 'scalar', label: 'protocol', value: formatAuditHandoverProtocol },
   // ADR-916 Φ-Δ.3 — «εκδόθηκε νέα πρόσκληση» (συστήματος **ή** γραφείου): ποιος, πότε, ποια αντικατέστησε ποια.
   invitation: { kind: 'scalar', label: 'invitation', value: formatAuditHandoverInvitation },
+  // ADR-916 Φ-Δ.5 / Ο22 — «το γραφείο ανακάλεσε την παράδοση»: πράξη με νομικό βάρος, άρα ίχνος με την αιτιολογία.
+  withdrawal: { kind: 'scalar', label: 'withdrawal', value: formatAuditHandoverWithdrawal },
 };
 
 /** Project audit registry — `field → TrackedFieldDef`. */

@@ -22,25 +22,10 @@ import type {
   PropertyHandoverLifecycle,
 } from '@/types/property-handover';
 
+import { DOSSIER_ORIGIN_EXPLAIN_KEY, DOSSIER_ORIGIN_LIFECYCLE_KEY } from './property-dossier-origin-labels';
 import { PropertyDossierProtocolBadge, PropertyDossierProtocolCard } from './PropertyDossierProtocol';
 
 const NS = 'property-market';
-
-const LIFECYCLE_KEY: Readonly<Record<PropertyHandoverLifecycle, string>> = {
-  'awaiting-completion': 'property-market:dossier.origin.lifecycle.awaiting-completion',
-  ready: 'property-market:dossier.origin.lifecycle.ready',
-  cancelled: 'property-market:dossier.origin.lifecycle.cancelled',
-  withdrawn: 'property-market:dossier.origin.lifecycle.withdrawn',
-};
-
-/** Τι σημαίνει η κατάσταση **για τον άνθρωπο** — μόνο στη σελίδα του φακέλου. */
-const LIFECYCLE_EXPLAIN_KEY: Readonly<Record<PropertyHandoverLifecycle, string>> = {
-  'awaiting-completion': 'property-market:dossier.origin.explain.awaiting-completion',
-  ready: 'property-market:dossier.origin.explain.ready',
-  cancelled: 'property-market:dossier.origin.explain.cancelled',
-  // ADR-916 Φ-Δ.5 — «ό,τι παραδόθηκε μένει δικό σας»: ποτέ η αιτιολογία του γραφείου (Δ10).
-  withdrawn: 'property-market:dossier.origin.explain.withdrawn',
-};
 
 const LIFECYCLE_VARIANT: Readonly<Record<PropertyHandoverLifecycle, NonNullable<BadgeVariantProps['variant']>>> = {
   'awaiting-completion': 'info',
@@ -58,7 +43,7 @@ function OriginLine({ origin, children }: { readonly origin: PropertyDossierOrig
           ? t('property-market:dossier.origin.fromUnnamed')
           : t('property-market:dossier.origin.from', { issuer: origin.issuerName })}
       </span>
-      <Badge variant={LIFECYCLE_VARIANT[origin.handoverLifecycle]}>{t(LIFECYCLE_KEY[origin.handoverLifecycle])}</Badge>
+      <Badge variant={LIFECYCLE_VARIANT[origin.handoverLifecycle]}>{t(DOSSIER_ORIGIN_LIFECYCLE_KEY[origin.handoverLifecycle])}</Badge>
       {children}
     </p>
   );
@@ -93,7 +78,7 @@ export function PropertyDossierOriginNotice({ origin }: { readonly origin: Prope
   return (
     <aside className="flex flex-col gap-1 rounded-md border border-border bg-muted/30 p-3">
       <OriginLine origin={origin} />
-      <p className="m-0 text-sm text-foreground">{t(LIFECYCLE_EXPLAIN_KEY[origin.handoverLifecycle])}</p>
+      <p className="m-0 text-sm text-foreground">{t(DOSSIER_ORIGIN_EXPLAIN_KEY[origin.handoverLifecycle])}</p>
       {origin.fileDelivery !== null && <DeliveryLine delivery={origin.fileDelivery} />}
       {origin.appurtenanceOf !== null && <p className="m-0 text-sm text-muted-foreground">{t('property-market:dossier.origin.appurtenance')}</p>}
       <PropertyDossierProtocolCard protocol={origin.protocol} />

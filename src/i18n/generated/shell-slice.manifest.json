@@ -14,8 +14,8 @@
     "src/i18n/generated/routes/demands__demandId.el.json": "53d95059af936ae4dca93742d11b614745698876ed0845d65fcf64c23736a266",
     "src/i18n/generated/routes/demands__new.el.json": "f85744543c4c75526818bd08771e4729c8a79fd26d564a081d9dc8eeb660a3ed",
     "src/i18n/generated/routes/document-request.el.json": "3fc30b5c3cce0660d1e8ee25b177af72c4d9d9ed87c2bfcdf05085e4becc18f7",
-    "src/i18n/generated/routes/dossiers.el.json": "73f5872c53c16d4a66d143ae8e7fcab64e40c78a05a1500056eb5b15a5872468",
-    "src/i18n/generated/routes/dossiers__dossierId.el.json": "a96831a719d958b0616f20191790ce4da56a0bbe96e11e477aa178e1530eaa39",
+    "src/i18n/generated/routes/dossiers.el.json": "3b60c708244b90058a464268b96faf8f4e849674d2772c398730460e70729403",
+    "src/i18n/generated/routes/dossiers__dossierId.el.json": "4bc633fff60b3b6e918f6038bdb4a2966f5e0a884b11ca9c6c6a2383a605d967",
     "src/i18n/generated/routes/email__preferences__token.el.json": "9761b8c5b2050ba1ae30fb31535642000966ba968787501039bf648f95f59adf",
     "src/i18n/generated/routes/engagements.el.json": "62e1b3378215c16e66a12632667ad61be33b59cc632e634dde0ffaf9763769d4",
     "src/i18n/generated/routes/engagements__engagementId.el.json": "cb0565009bf6f7bec16cd93768e557804df81971abe3c5a23b7c050e9eb91ec3",
@@ -157,7 +157,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "81b8e0e7b54edbb644855ff55c73f872d5fec90285bf06fd42ed590fba8223af",
+  "inputsSha256": "dc82e2cf7c8dc28148e88af3002fa1cbd21dcf5d337abb4e0b75db130cc1b2b1",
   "languages": [
     "el"
   ],
@@ -11779,7 +11779,7 @@
   ],
   "stats": {
     "matchedKeys": 265,
-    "sliceBytes": 816222
+    "sliceBytes": 816838
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
