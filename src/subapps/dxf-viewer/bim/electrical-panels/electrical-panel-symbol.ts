@@ -45,8 +45,9 @@ const RACK_DIVIDER_FRACTION = 0.4;
  * Distribution-board glyph: 3 divider lines spanning the width (parallel to the
  * bottom edge) — the panelboard breaker-rows convention. v0=(-hw,-hl) v1=(hw,-hl)
  * v2=(hw,hl) v3=(-hw,hl); dividers run left→right edge (v0→v3 to v1→v2).
+ * Exported: also drawn by the ribbon «Ηλεκτρικός Πίνακας» icon (ADR-444 §Icons).
  */
-function buildBoardStrokes(corners: readonly BimPoint[]): PanelStroke[] {
+export function buildBoardStrokes(corners: readonly BimPoint[]): PanelStroke[] {
   const [v0, v1, v2, v3] = corners;
   return DIVIDER_FRACTIONS.map((t) => [lerpPlanPoint(v0, v3, t), lerpPlanPoint(v1, v2, t)]);
 }
@@ -55,8 +56,9 @@ function buildBoardStrokes(corners: readonly BimPoint[]): PanelStroke[] {
  * Comms-rack glyph (ADR-431): a header divider + a row of short vertical port ticks
  * — the structured-cabling patch-panel convention, visually distinct from the
  * board's breaker rows. Rotation-aware (built on the already-rotated footprint).
+ * Exported: also drawn by the ribbon «Rack Ασθενών» icon (ADR-444 §Icons).
  */
-function buildRackStrokes(corners: readonly BimPoint[]): PanelStroke[] {
+export function buildRackStrokes(corners: readonly BimPoint[]): PanelStroke[] {
   const [v0, v1, v2, v3] = corners;
   const strokes: PanelStroke[] = [[lerpPlanPoint(v0, v3, RACK_DIVIDER_FRACTION), lerpPlanPoint(v1, v2, RACK_DIVIDER_FRACTION)]];
   const [t0, t1] = RACK_PORT_BAND;

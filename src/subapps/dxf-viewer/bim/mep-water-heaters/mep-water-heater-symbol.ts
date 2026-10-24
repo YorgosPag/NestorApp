@@ -184,11 +184,22 @@ export function buildMepWaterHeaterSymbol(
   // Cold (flow:'in') = midpoint of the −X edge, outward −X; hot (flow:'out') = +X edge, outward +X.
   const strokes: WaterHeaterStroke[] = [...stubs];
 
-  const glyphStrokes: WaterHeaterStroke[] = [
+  const glyphStrokes = buildWaterHeaterTankGlyph(v0, v1, v2, v3);
+
+  return { outline, strokes, glyphStrokes };
+}
+
+/**
+ * The DHW tank body glyph (inscribed tank circle + water level + heating element),
+ * on the four rotated footprint corners. SSoT shared by the plan symbol above and the
+ * ribbon «Θερμοσίφωνας» icon (ADR-444 §Icons) — the connector stubs stay plan-only.
+ */
+export function buildWaterHeaterTankGlyph(
+  v0: BimPoint, v1: BimPoint, v2: BimPoint, v3: BimPoint,
+): WaterHeaterStroke[] {
+  return [
     ...buildTankCircleStrokes(v0, v1, v2, v3),
     buildWaterLevelStroke(v0, v1, v2, v3),
     ...buildHeatingElementStrokes(v0, v1, v2, v3),
   ];
-
-  return { outline, strokes, glyphStrokes };
 }

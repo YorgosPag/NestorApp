@@ -18,6 +18,10 @@
   --ribbon-text-muted: #4A4A4A;
   --ribbon-tab-text-active: #000000;
   --ribbon-tab-contextual: #C45C2E;
+  /* ADR-444 §Icons — σήματα «Αποδοχή ✓ / Απόρριψη ✗» στα εικονίδια Η/Μ (Revit Finish/Cancel).
+     Αντίθεση πάνω στο #F0F0F0: 4,4:1 / 5,7:1 (WCAG 1.4.11 ζητά 3:1). */
+  --ribbon-icon-accept: #15803D;
+  --ribbon-icon-reject: #B91C1C;
 
   --ribbon-height-full: 136px;
   --ribbon-height-panel-buttons: 46px;
@@ -68,6 +72,19 @@ html[data-dxf-header-hidden="true"] header.sticky.top-0 {
   --ribbon-text-muted: #888888;
   --ribbon-tab-text-active: #FFFFFF;
   --ribbon-tab-contextual: #E07B45;
+  /* ADR-444 §Icons — αντίθεση πάνω στο navy #1D283A: 8,5:1 / 5,4:1. */
+  --ribbon-icon-accept: #4ADE80;
+  --ribbon-icon-reject: #F87171;
+}
+
+/* ADR-444 §Icons — χρώμα των σημάτων ενέργειας (το σχήμα ✓/✗ ήδη τα ξεχωρίζει· το χρώμα
+   είναι δεύτερη, πλεονάζουσα ένδειξη — ασφαλές για αχρωματοψία). */
+.dxf-ribbon-icon-badge-accept {
+  stroke: var(--ribbon-icon-accept);
+}
+
+.dxf-ribbon-icon-badge-reject {
+  stroke: var(--ribbon-icon-reject);
 }
 
 .dxf-ribbon-root {

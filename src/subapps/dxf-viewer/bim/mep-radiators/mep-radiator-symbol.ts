@@ -43,9 +43,10 @@ const FIN_INSET = 0.12;
  * `FIN_BAR_COUNT` parallel bars across the radiator body — each runs the depth
  * (bottom edge `v0→v3` to top edge `v1→v2`), distributed along the width, inset
  * from the long edges so they stay inside the outline. Rotation-aware for free (the
- * verts are already rotated into world space).
+ * verts are already rotated into world space). Exported: also drawn by the ribbon
+ * «Καλοριφέρ» icon (ADR-444 §Icons).
  */
-function buildFinStrokes(v0: BimPoint, v1: BimPoint, v2: BimPoint, v3: BimPoint): RadiatorStroke[] {
+export function buildFinStrokes(v0: BimPoint, v1: BimPoint, v2: BimPoint, v3: BimPoint): RadiatorStroke[] {
   const bars: RadiatorStroke[] = [];
   for (let i = 0; i < FIN_BAR_COUNT; i++) {
     const frac = (i + 1) / (FIN_BAR_COUNT + 1);

@@ -59,6 +59,8 @@ import { TableIconGlyph } from './table-icon-glyph';
 // (N.7.1). ΣΗΜΕΙΩΣΗ: μαζί μετακόμισε και το `glyphSvg` — τα γλυφά του Excel είναι μέρος της
 // ίδιας ομάδας «Αριθμός», όχι γενικό βοηθητικό αυτού του αρχείου.
 import { resolveTableRibbonIcon } from './ribbon-icon-table';
+// ADR-444 §Icons — τα εικονίδια των καρτελών Η/Μ (σύμβολο κάτοψης × σήμα ενέργειας).
+import { resolveMepRibbonIcon } from './ribbon-icon-mep';
 
 export type RibbonIconSize = 'large' | 'small';
 
@@ -453,6 +455,8 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     default: {
       const tableIcon = resolveTableRibbonIcon(icon, size, className);
       if (tableIcon) return tableIcon;
+      const mepIcon = resolveMepRibbonIcon(icon, className);
+      if (mepIcon) return mepIcon;
       return inlineSvg(size, <circle cx="12" cy="12" r="2" />);
     }
   }

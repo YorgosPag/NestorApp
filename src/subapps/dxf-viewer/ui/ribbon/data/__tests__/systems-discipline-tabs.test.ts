@@ -11,6 +11,7 @@ import {
 } from '../systems-discipline-tabs';
 import { ANALYZE_TAB, CLASH_COORDINATION_PANEL } from '../analyze-tab';
 import type { RibbonCommand, RibbonTab } from '../../types/ribbon-types';
+import { parseMepIconToken } from '../../components/buttons/mep-icon-tokens';
 
 const ALL_EXPECTED_KEYS = [
   // electrical
@@ -84,6 +85,39 @@ describe('ADR-444 — MEP discipline tabs (6 permanent tabs)', () => {
       expect(command.comingSoon).toBeFalsy();
       expect(command.icon).toBeTruthy();
     }
+  });
+
+  // §Icons (Giorgio 2026-10-24) — «τα εικονίδια στα Ηλεκτρολογικά είναι όλα ίδια»: 8 of the
+  // 11 electrical buttons shared one plug glyph. Two buttons of one tab never share an icon.
+  it('gives every button of a tab its OWN icon (no two buttons share an icon)', () => {
+    for (const tab of MEP_DISCIPLINE_TABS) {
+      const icons = commandsOf(tab).map((c) => c.icon);
+      expect({ tab: tab.id, unique: new Set(icons).size }).toEqual({ tab: tab.id, unique: icons.length });
+    }
+  });
+
+  it('uses a VALID plan-symbol MEP icon token for every button (never the fallback dot)', () => {
+    for (const command of MEP_DISCIPLINE_TABS.flatMap((t) => commandsOf(t))) {
+      expect({ id: command.id, spec: parseMepIconToken(command.icon) }).toEqual({
+        id: command.id, spec: expect.objectContaining({ subject: expect.any(String) }),
+      });
+    }
+  });
+
+  it('marks every auto-design triad with generate ✦ / accept ✓ / reject ✗ badges', () => {
+    const badgeOf = (c: RibbonCommand) => parseMepIconToken(c.icon)?.badge;
+    for (const command of MEP_DISCIPLINE_TABS.flatMap((t) => commandsOf(t))) {
+      const key = command.commandKey;
+      if (key.endsWith('.actions.generate')) expect(badgeOf(command)).toBe('generate');
+      if (key.endsWith('.actions.accept')) expect(badgeOf(command)).toBe('accept');
+      if (key.endsWith('.actions.reject')) expect(badgeOf(command)).toBe('reject');
+    }
+  });
+
+  it('splits Ηλεκτρολογικά into strong / weak device + auto-design panels', () => {
+    expect(ELECTRICAL_TAB.panels.map((p) => p.id)).toEqual([
+      'electrical-strong', 'electrical-weak', 'electrical-auto', 'electrical-weak-auto',
+    ]);
   });
 
   it('moves clash OUT of the discipline tabs and INTO the «Ανάλυση» tab', () => {

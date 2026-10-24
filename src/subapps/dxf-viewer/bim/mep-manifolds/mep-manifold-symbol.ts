@@ -118,32 +118,7 @@ export function buildMepManifoldSymbol(
   const [v0, v1, v2, v3] = outline;
   const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
   const stubLen = Math.max(params.length * s * 0.6, 40 * s);
-  const strokes: ManifoldStroke[] = [];
-
-  // Single stub off the −X short edge (midpoint of v0→v3, pointing outward −X).
-  // Its connector ROLE is kind-dependent: water manifold = the inlet feed;
-  // drainage collector (φρεάτιο) = the sewer outlet. The symbol only marks the
-  // position; `buildMepManifoldConnectors` owns the in/out role per kind.
-  const singleStubRoot = lerpPlanPoint(v0, v3, 0.5);
-  const singleStubDir = unitAxis(v0.x - v1.x, v0.y - v1.y); // −X local (world-rotated)
-  strokes.push([
-    singleStubRoot,
-    { x: singleStubRoot.x + singleStubDir.x * stubLen, y: singleStubRoot.y + singleStubDir.y * stubLen, z: 0 },
-  ]);
-
-  // Branch stubs along the +Y front edge (v3→v2, pointing outward +Y). Roles are
-  // again kind-dependent: water manifold = the N outlets; drainage collector = the
-  // N gravity inlets. `outletCount` is the branch COUNT regardless of flow role.
-  const branchStubDir = unitAxis(v3.x - v0.x, v3.y - v0.y); // +Y local (world-rotated)
-  const count = clampOutletCount(params.outletCount);
-  for (let i = 0; i < count; i++) {
-    const frac = (i + 1) / (count + 1);
-    const root = lerpPlanPoint(v3, v2, frac);
-    strokes.push([
-      root,
-      { x: root.x + branchStubDir.x * stubLen, y: root.y + branchStubDir.y * stubLen, z: 0 },
-    ]);
-  }
+  const strokes = buildManifoldStubStrokes(v0, v1, v2, v3, stubLen, clampOutletCount(params.outletCount));
 
   // ADR-408 Φ14 — a drainage collector (φρεάτιο) adds the grating pattern; the
   // stubs above still mark the connector positions (N inlets + 1 outlet).
@@ -152,4 +127,41 @@ export function buildMepManifoldSymbol(
   }
 
   return { outline, strokes };
+}
+
+/**
+ * The manifold connector stubs on the four rotated footprint corners: ONE stub off the
+ * −X short edge + `branchCount` stubs off the +Y front edge, each `stubLen` long.
+ * SSoT shared by the plan symbol above and the ribbon «Συλλέκτης» / «Φρεάτιο» icons
+ * (ADR-444 §Icons). `branchCount` is taken as-is — the plan caller clamps it first.
+ */
+export function buildManifoldStubStrokes(
+  v0: BimPoint, v1: BimPoint, v2: BimPoint, v3: BimPoint,
+  stubLen: number,
+  branchCount: number,
+): ManifoldStroke[] {
+  // Single stub off the −X short edge (midpoint of v0→v3, pointing outward −X).
+  // Its connector ROLE is kind-dependent: water manifold = the inlet feed;
+  // drainage collector (φρεάτιο) = the sewer outlet. The symbol only marks the
+  // position; `buildMepManifoldConnectors` owns the in/out role per kind.
+  const singleStubRoot = lerpPlanPoint(v0, v3, 0.5);
+  const singleStubDir = unitAxis(v0.x - v1.x, v0.y - v1.y); // −X local (world-rotated)
+  const strokes: ManifoldStroke[] = [[
+    singleStubRoot,
+    { x: singleStubRoot.x + singleStubDir.x * stubLen, y: singleStubRoot.y + singleStubDir.y * stubLen, z: 0 },
+  ]];
+
+  // Branch stubs along the +Y front edge (v3→v2, pointing outward +Y). Roles are
+  // again kind-dependent: water manifold = the N outlets; drainage collector = the
+  // N gravity inlets. `branchCount` is the branch COUNT regardless of flow role.
+  const branchStubDir = unitAxis(v3.x - v0.x, v3.y - v0.y); // +Y local (world-rotated)
+  for (let i = 0; i < branchCount; i++) {
+    const frac = (i + 1) / (branchCount + 1);
+    const root = lerpPlanPoint(v3, v2, frac);
+    strokes.push([
+      root,
+      { x: root.x + branchStubDir.x * stubLen, y: root.y + branchStubDir.y * stubLen, z: 0 },
+    ]);
+  }
+  return strokes;
 }

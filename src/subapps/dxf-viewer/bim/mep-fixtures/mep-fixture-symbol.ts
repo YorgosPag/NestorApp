@@ -70,13 +70,7 @@ export function buildFixtureSymbol(
   // bars, yielding the grid. Rotation-aware for free (the verts are world-rotated).
   if (params.kind === 'floor-drain' && outline.length === 4) {
     const [v0, v1, v2, v3] = outline;
-    return {
-      outline,
-      strokes: [
-        ...buildDrainageGratingStrokes(v0, v1, v2, v3),
-        ...buildDrainageGratingStrokes(v0, v3, v2, v1),
-      ],
-    };
+    return { outline, strokes: buildFloorDrainGridStrokes(v0, v1, v2, v3) };
   }
 
   // ADR-408 Φ14 / Δρόμος B — plumbing fixture (sanitary terminal WC/basin/… OR
@@ -139,15 +133,33 @@ export function buildFixtureSymbol(
   }
 
   // Circular (or any non-quad): cross of two diameters at ±45° through centre.
-  const c = footprintCenter(outline);
   const { min, max } = geometry.bbox;
   const r = Math.min(max.x - min.x, max.y - min.y) / 2;
+  return { outline, strokes: buildLuminaireCrossStrokes(footprintCenter(outline), r) };
+}
+
+/**
+ * Circular luminaire "X" (IEC 60617): two diameters at ±45° through `c`, radius `r`.
+ * SSoT shared by the plan symbol above and the ribbon «Φωτιστικό» icon (ADR-444 §Icons).
+ */
+export function buildLuminaireCrossStrokes(c: BimPoint, r: number): FixtureStroke[] {
   const d = r / Math.SQRT2; // 45° component
-  return {
-    outline,
-    strokes: [
-      [{ x: c.x - d, y: c.y - d, z: 0 }, { x: c.x + d, y: c.y + d, z: 0 }],
-      [{ x: c.x - d, y: c.y + d, z: 0 }, { x: c.x + d, y: c.y - d, z: 0 }],
-    ],
-  };
+  return [
+    [{ x: c.x - d, y: c.y - d, z: 0 }, { x: c.x + d, y: c.y + d, z: 0 }],
+    [{ x: c.x - d, y: c.y + d, z: 0 }, { x: c.x + d, y: c.y - d, z: 0 }],
+  ];
+}
+
+/**
+ * Floor-drain (σιφώνι) catch-basin grating GRID: the drainage-collector grating SSoT
+ * applied along BOTH footprint axes (second call with the vertex order rotated lays
+ * the orthogonal bars). Shared by the plan symbol and the ribbon «Σιφώνι» icon.
+ */
+export function buildFloorDrainGridStrokes(
+  v0: BimPoint, v1: BimPoint, v2: BimPoint, v3: BimPoint,
+): FixtureStroke[] {
+  return [
+    ...buildDrainageGratingStrokes(v0, v1, v2, v3),
+    ...buildDrainageGratingStrokes(v0, v3, v2, v1),
+  ];
 }
