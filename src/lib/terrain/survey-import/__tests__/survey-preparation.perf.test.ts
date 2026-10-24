@@ -23,6 +23,11 @@
  *
  * ⚠️ Node, όχι browser: ίδια μηχανή (V8), άλλο μηχάνημα. Το κινητό είναι πιο αργό — ο συντελεστής γράφεται στο ADR ως
  *    συντελεστής, ποτέ ως μέτρηση.
+ *
+ * ⏱ **Δύο τρόποι** (μετρημένο 2026-10-24: ο πλήρης πίνακας κόστισε **2.923 s**: ~1 ms ανά σημείο στον τριγωνισμό, ~n^1,25 —
+ *    ADR-920 §13.8):
+ *   - προεπιλογή: **μόνο** 10k, μία ψυχρή κλήση (~10 s) — η απάντηση στο πραγματικό μέγεθος μένει καρφωμένη.
+ *   - `TERRAIN_PERF=full npx jest <αυτό το αρχείο> -i`: τα τρία μεγέθη, ψυχρή + διάμεσος 5, και τα μέρη χωριστά.
  */
 
 import { encodeListingTerrainSource } from '../../publication/listing-terrain-source';
@@ -33,7 +38,9 @@ import { prepareSurveyUpload, surveyFactsOf, surveyMarksOf, surveySourceOf } fro
 
 const E0 = 400_000_000;
 const N0 = 4_200_000_000;
-const WARM_RUNS = 5;
+const FULL = process.env.TERRAIN_PERF === 'full';
+const WARM_RUNS = FULL ? 5 : 0;
+const fullOnly = FULL ? it : it.skip;
 
 /** Ντετερμινιστική ψευδοτυχαιότητα (LCG) — ο κάνναβος μετατοπίζεται λίγο, όπως στο πεδίο, ίδιος σε κάθε τρέξιμο. */
 function lcg(seed: number): () => number {
@@ -64,7 +71,8 @@ function surveyOf(side: number): TopoPoint[] {
 
 interface Timing {
   readonly coldMs: number;
-  readonly medianMs: number;
+  /** `null` στον σύντομο τρόπο (καμία θερμή επανάληψη). */
+  readonly medianMs: number | null;
 }
 
 /** Πρώτη κλήση (ό,τι πληρώνει ο άνθρωπος στο πρώτο αρχείο) + διάμεσος των επόμενων. */
@@ -79,10 +87,13 @@ function timed<R>(work: () => R, runs = WARM_RUNS): { result: R; timing: Timing 
     warm.push(performance.now() - start);
   }
   warm.sort((a, b) => a - b);
-  return { result, timing: { coldMs, medianMs: warm[Math.floor(warm.length / 2)] } };
+  return { result, timing: { coldMs, medianMs: warm.length === 0 ? null : warm[Math.floor(warm.length / 2)] } };
 }
 
-const ms = (timing: Timing): string => `${timing.coldMs.toFixed(0)} ψυχρή / ${timing.medianMs.toFixed(0)} διάμεσος ms`;
+const ms = (timing: Timing): string =>
+  timing.medianMs === null
+    ? `${timing.coldMs.toFixed(0)} ψυχρή ms`
+    : `${timing.coldMs.toFixed(0)} ψυχρή / ${timing.medianMs.toFixed(0)} διάμεσος ms`;
 
 /** Τα μέρη της προετοιμασίας χωριστά — ώστε η απόφαση να ξέρει ΤΙ θα πήγαινε στον worker. */
 function phasesOf(points: readonly TopoPoint[]): string[] {
@@ -100,7 +111,7 @@ function phasesOf(points: readonly TopoPoint[]): string[] {
 function report(label: string, points: readonly TopoPoint[]) {
   const prepared = timed(() => prepareSurveyUpload(points));
   const lines = [`[ADR-920 Β4.8 μέτρηση] ${label}: ${points.length} σημεία`, `  prepareSurveyUpload: ${ms(prepared.timing)}`];
-  lines.push(...phasesOf(points));
+  if (FULL) lines.push(...phasesOf(points));
   const preparation = prepared.result;
   if (preparation.ok) {
     const { snapshot, marks } = preparation;
@@ -122,11 +133,11 @@ describe('ADR-920 Β4.8 — κόστος προεπισκόπησης σε πρ�
     expect(report('10k', surveyOf(100)).ok).toBe(true);
   });
 
-  it('~29k σημεία (η βαρύτερη που περνά): περνά', () => {
+  fullOnly('~29k σημεία (η βαρύτερη που περνά): περνά', () => {
     expect(report('~29k', surveyOf(170)).ok).toBe(true);
   });
 
-  it('~100k σημεία (το όριο του συμβολαίου): άρνηση «πολύ πυκνό», μετά το TIN', () => {
+  fullOnly('~100k σημεία (το όριο του συμβολαίου): άρνηση «πολύ πυκνό», μετά το TIN', () => {
     const preparation = report('~100k', surveyOf(316));
     expect(preparation).toMatchObject({ ok: false, code: 'TERRAIN_TOO_DENSE' });
   });
