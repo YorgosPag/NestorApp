@@ -45,6 +45,7 @@ import { useResponsiveLayout } from '@/components/contacts/dynamic/hooks/useResp
 // ✅ ADR-065 SRP: Extracted hooks
 import { useDxfViewerCallbacks } from './useDxfViewerCallbacks';
 import { useDxfViewerEffects } from './useDxfViewerEffects';
+import { useToolAvailabilityNotifications } from './useToolAvailabilityNotifications';
 import { useDxfViewerNotifications } from '../hooks/useDxfViewerNotifications';
 import { useStructuralAutoAttach } from '../hooks/useStructuralAutoAttach';
 import { useColumnBeamPromote } from '../hooks/useColumnBeamPromote';
@@ -234,6 +235,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     setOverlayStatus, setOverlayKind,
     showLayers, floatingRef,
   });
+  useToolAvailabilityNotifications(notifications, wrappedHandleAction); // ADR-921 «γιατί δεν μπορώ;» + διόρθωση
   // ✅ ADR-065 SRP: Extracted effects
   useDxfViewerEffects({
     activeTool, overlayMode, currentScene,

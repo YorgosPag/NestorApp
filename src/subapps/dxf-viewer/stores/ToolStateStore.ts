@@ -29,6 +29,7 @@ import { getToolMetadata } from '../systems/tools/ToolStateManager';
 // 🏢 ADR-098: Centralized Timing Constants
 import { UI_TIMING } from '../config/timing-config';
 import { createExternalStore } from './createExternalStore';
+import { guardToolActivation, getToolUnavailability } from './ToolAvailabilityStore';
 
 // ============================================================================
 // TYPES
@@ -112,6 +113,11 @@ export const toolStateStore = {
     if (store.get().activeTool === tool) {
       return; // No change needed
     }
+    // ADR-921 — πύλη διαθεσιμότητας: εδώ καταλήγει ΚΑΘΕ διαδρομή (και η γραμμή εντολών,
+    // που δεν περνά από το `handleToolChange`). Μπλοκαρισμένο ⇒ toast, το εργαλείο μένει.
+    if (!guardToolActivation(tool)) {
+      return;
+    }
 
     store.set({
       activeTool: tool,
@@ -182,7 +188,12 @@ export const toolStateStore = {
    */
   returnToPreviousTool(): void {
     const snapshot = store.get();
-    if (snapshot.previousTool && snapshot.previousTool !== snapshot.activeTool) {
+    // ADR-921 — ούτε η επιστροφή ξανανοίγει εργαλείο που έγινε μη διαθέσιμο στο μεταξύ.
+    if (
+      snapshot.previousTool
+      && snapshot.previousTool !== snapshot.activeTool
+      && !getToolUnavailability(snapshot.previousTool)
+    ) {
       store.set({
         activeTool: snapshot.previousTool,
         previousTool: snapshot.activeTool,

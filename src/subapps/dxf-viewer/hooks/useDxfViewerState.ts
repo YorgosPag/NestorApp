@@ -17,6 +17,7 @@ import { useSnapContext } from '../snapping/context/SnapContext';
 import { useCommandHistory } from '../core/commands';
 // 🏢 ENTERPRISE (2026-01-30): Centralized Tool State Store - ADR Tool Persistence
 import { useToolState, toolStateStore } from '../stores/ToolStateStore';
+import { guardToolActivation } from '../stores/ToolAvailabilityStore';
 // 📐 ADR-189: Guide visibility toggle via keyboard chord (G → V)
 import { getGlobalGuideStore } from '../systems/guides';
 // 🏢 FIX: Grid visibility toggle — use RulersGridContext (single source of truth)
@@ -251,6 +252,10 @@ export function useDxfViewerState() {
   toolChangeDepsRef.current = { toolbarState, canvasActions, drawingHandlers };
   const handleToolChange = useCallback((tool: ToolType) => {
     const { toolbarState, canvasActions, drawingHandlers } = toolChangeDepsRef.current;
+
+    // ADR-921 — πύλη διαθεσιμότητας ΠΡΙΝ από οτιδήποτε άλλο: μη διαθέσιμο εργαλείο δεν
+    // ακυρώνει καν την τρέχουσα λειτουργία (`cancelAllOperations` πιο κάτω) — απλώς εξηγεί.
+    if (!guardToolActivation(tool)) return;
 
     // Crop-window: just activate the tool — canvas sees it as marquee selection mode
     // (not in isInDrawingMode set), so mouse drag shows the selection box visual.

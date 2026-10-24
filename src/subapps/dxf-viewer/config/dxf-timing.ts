@@ -194,6 +194,8 @@ export const DXF_TIMING = {
     TOAST_DEFAULT: 3000,
     /** Important toast. */
     TOAST_LONG: 5000,
+    /** Toast carrying a remedy action button — time to read the cause AND reach the button (ADR-921). */
+    TOAST_ACTIONABLE: 6000,
     /** Clipboard copy feedback reset. */
     COPY_FEEDBACK_RESET: 2000,
     /** Page reload after storage action. */

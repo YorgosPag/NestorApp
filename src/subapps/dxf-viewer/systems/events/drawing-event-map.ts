@@ -13,6 +13,8 @@ import type { BimEventMap } from './drawing-event-map-bim';
 import type { TopoEventMap } from './drawing-event-map-topo';
 import type { PrintFidelityNote } from '../../print/print-fidelity';
 import type { EntityCreateTargetScope } from '../../bim/persistence/bim-floor-scope';
+import type { OverlayDrawingBlockReason } from '../../overlays/overlay-drawing-readiness';
+import type { ToolType } from '../../ui/toolbar/types';
 
 /** Γιατί εκπέμφθηκε ένα `drawing:entity-created` (ADR-533 · ADR-911 Φ2). */
 export type EntityCreatedOrigin = 'create' | 'retrim' | 'bulk';
@@ -180,8 +182,11 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap, Top
   'overlay:cancel-polygon': void; // Signal to cancel the current draft polygon
   // 🏢 ADR-258B: Auto-select new overlay after polygon save → opens Properties Panel
   'overlay:polygon-saved': { overlayId: string };
-  // 🏢 ENTERPRISE: Polygon save error → centralized notification (replaces browser alert)
-  'overlay:save-error': { reason: 'no-level-selected' | 'no-background-context' };
+  // 🏢 ENTERPRISE: Polygon save error → centralized notification (replaces browser alert).
+  // ADR-921 — η αιτία είναι η ΙΔΙΑ με της πύλης ενεργοποίησης· `persist-failed` = σφάλμα εγγραφής.
+  'overlay:save-error': { reason: OverlayDrawingBlockReason | 'persist-failed' };
+  // ADR-921 — η πύλη διαθεσιμότητας αρνήθηκε ενεργοποίηση εργαλείου → ΕΝΑ κεντρικό toast.
+  'tool:activation-blocked': { tool: ToolType; reasonKey: string; remedyAction?: string };
   // 🏢 ENTERPRISE (2026-01-26): Toolbar delete command - ADR-032
   'toolbar:delete': void; // Signal to delete selected grips/overlays with undo support
 

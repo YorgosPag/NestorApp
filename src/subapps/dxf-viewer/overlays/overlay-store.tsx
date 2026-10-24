@@ -36,6 +36,14 @@ import { useFloorOverlays } from '@/hooks/useFloorOverlays';
 import { useLevels } from '../systems/levels';
 import { useFloorplanBackgroundStore } from '../floorplan-background/stores/floorplanBackgroundStore';
 import { dlog, dwarn, derr } from '../debug';
+import { setToolUnavailability } from '../stores/ToolAvailabilityStore';
+import {
+  resolveOverlayDrawingReadiness,
+  OverlayPersistBlockedError,
+  OVERLAY_DRAWING_BLOCK_MESSAGE_KEYS,
+  OVERLAY_DRAWING_REMEDY_ACTIONS,
+  type OverlayPersistContext,
+} from './overlay-drawing-readiness';
 import {
   buildCreatePayload,
   buildUpdatePayload,
@@ -108,10 +116,38 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
   const backgroundId = useFloorplanBackgroundStore(
     (s) => (floorId ? s.floors[floorId]?.background?.id ?? null : null),
   );
-  // DXF fallback: when a floorplan background image isn't loaded yet, use the
-  // level's sceneFileId (the DXF itself is the drawing reference). This lets
-  // overlay zones be saved on DXF-only floors without requiring a separate image.
-  const effectiveBackgroundId = backgroundId ?? currentLevel?.sceneFileId ?? null;
+  // ADR-921 — ΜΙΑ απόφαση «μπορεί να δεχτεί ζώνες;» (όροφος + αναφορά + χρήστης), ρωτημένη
+  // από την αποθήκευση εδώ ΚΑΙ από την πύλη ενεργοποίησης του εργαλείου (δημοσίευση παρακάτω).
+  // Αναφορά = εικόνα κάτοψης ή το DXF του επιπέδου (και το γεννημένο στην εφαρμογή, ADR-913).
+  const userId = user?.uid ?? null;
+  const sceneFileId = currentLevel?.sceneFileId ?? null;
+  const drawingReadiness = useMemo(
+    () => resolveOverlayDrawingReadiness({
+      levelId: currentLevelId,
+      floorId,
+      backgroundImageId: backgroundId,
+      sceneFileId,
+      userId,
+    }),
+    [currentLevelId, floorId, backgroundId, sceneFileId, userId],
+  );
+
+  // Δημοσίευση στην πύλη διαθεσιμότητας: μη έτοιμο ⇒ το «Σχεδίαση Επιπέδων» δεν ξεκινά, το
+  // κουμπί γκριζάρει με την αιτία. Layout effect ⇒ συγχρονισμένο πριν το επόμενο κλικ.
+  React.useLayoutEffect(() => {
+    setToolUnavailability(
+      'layering',
+      drawingReadiness.ready
+        ? null
+        : {
+            reasonKey: OVERLAY_DRAWING_BLOCK_MESSAGE_KEYS[drawingReadiness.reason],
+            ...(OVERLAY_DRAWING_REMEDY_ACTIONS[drawingReadiness.reason]
+              ? { remedyAction: OVERLAY_DRAWING_REMEDY_ACTIONS[drawingReadiness.reason] }
+              : {}),
+          },
+    );
+  }, [drawingReadiness]);
+  React.useLayoutEffect(() => () => setToolUnavailability('layering', null), []);
 
   // ── Subscribe to multi-kind overlays for the active floor ────────────────
   const { overlays: floorItems, loading: subLoading } = useFloorOverlays(floorId);
@@ -184,23 +220,18 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
     [overlays, currentLevelId],
   );
 
-  const ensurePersistContext = useCallback((): { backgroundId: string; floorId: string } | null => {
-    if (!floorId) {
-      dwarn('OverlayStore', '⚠️ No floorId for current level — overlay write skipped');
-      return null;
+  // Άμυνα σε βάθος: η πύλη κρατά το εργαλείο κλειστό, αλλά κάθε εγγραφή ξαναρωτά το ΙΔΙΟ SSoT.
+  const ensurePersistContext = useCallback((): OverlayPersistContext => {
+    if (!drawingReadiness.ready) {
+      dwarn('OverlayStore', `⚠️ Overlay write blocked: ${drawingReadiness.reason}`);
+      throw new OverlayPersistBlockedError(drawingReadiness.reason);
     }
-    if (!effectiveBackgroundId) {
-      dwarn('OverlayStore', '⚠️ No backgroundId or sceneFileId for current floor — overlay write skipped');
-      return null;
-    }
-    return { backgroundId: effectiveBackgroundId, floorId };
-  }, [floorId, effectiveBackgroundId]);
+    return drawingReadiness.context;
+  }, [drawingReadiness]);
 
   const add = useCallback(
     async (overlayData: CreateOverlayData): Promise<string> => {
       const ctx = ensurePersistContext();
-      if (!ctx) throw new Error('Cannot create overlay without floor + background context');
-      if (!user?.uid) throw new Error('Cannot create overlay without authenticated user');
 
       const payload = buildCreatePayload(
         {
@@ -216,7 +247,7 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
       const result = await createFloorplanOverlay(payload);
       return result.overlayId;
     },
-    [ensurePersistContext, user],
+    [ensurePersistContext],
   );
 
   const update = useCallback(
@@ -254,9 +285,11 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
 
   const restore = useCallback(
     async (overlay: Overlay): Promise<void> => {
-      const ctx = ensurePersistContext();
-      if (!ctx) {
-        derr('OverlayStore', '❌ restore: missing floor/background context');
+      let ctx: OverlayPersistContext;
+      try {
+        ctx = ensurePersistContext();
+      } catch (err) {
+        derr('OverlayStore', '❌ restore: overlay write blocked', err);
         return;
       }
       const payload = buildUpsertPayload(

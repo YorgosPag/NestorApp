@@ -25,6 +25,7 @@
 
 import React from 'react';
 import { useSelectedEntityIds, usePrimarySelectedId, SelectedEntitiesStore } from '../systems/selection';
+import { getToolUnavailability } from '../stores/ToolAvailabilityStore';
 // ADR-532 Stage 5 — selection→text-toolbar populate bridge. Genuinely
 // selection-reactive (re-derives toolbar values when the pick-set changes), so
 // it must live in a LEAF, not in the `DxfViewerContent` orchestrator (where its
@@ -84,7 +85,8 @@ export const SelectionSideEffectsHost = React.memo<SelectionSideEffectsHostProps
     if (isNewSelection && activeTool !== 'layering') {
       const primaryEntry = SelectedEntitiesStore.getMap().get(primarySelectedId!);
       const isOverlaySelection = primaryEntry?.type === 'overlay' || primaryEntry?.type === 'region';
-      if (isOverlaySelection) {
+      // ADR-921 — αυτόματη (όχι ρητή) ενεργοποίηση: μη διαθέσιμο ⇒ σιωπηλή παράλειψη, όχι toast.
+      if (isOverlaySelection && !getToolUnavailability('layering')) {
         handleToolChange('layering');
       }
     }

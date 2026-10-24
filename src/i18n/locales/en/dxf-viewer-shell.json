@@ -1,4 +1,12 @@
 {
+  "overlayReadiness": {
+    "noLevel": "Select a level first to draw zones.",
+    "noFloor": "This level does not belong to a building floor. Zones are drawn on a floor plan — open the floor's plan.",
+    "noBackground": "There is no reference drawing for this floor. Import a DXF drawing or a floor plan image to draw zones.",
+    "noAuth": "Your session has expired. Sign in again to draw zones.",
+    "persistFailed": "Saving the zone failed. Check your connection and try again.",
+    "importAction": "Import floor plan"
+  },
   "annotationSymbol": {
     "northArrow": {
       "simple": "Simple North",
@@ -2222,8 +2230,10 @@
       "structuralFinishes": "Finishes",
       "archRoofFloor": "Roof & Floor",
       "archSpaces": "Spaces",
-      "electricalDevices": "Power & Low-Voltage",
-      "electricalAuto": "Auto-Design",
+      "electricalStrong": "Power",
+      "electricalWeak": "Low-Voltage",
+      "electricalAuto": "Auto Power",
+      "electricalWeakAuto": "Auto Low-Voltage",
       "waterNetwork": "Supply Network",
       "waterFixtures": "Sanitary Fixtures & Appliances",
       "waterAuto": "Auto Water Supply",

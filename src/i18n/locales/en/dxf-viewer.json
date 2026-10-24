@@ -182,9 +182,7 @@
       "noRoom": "Select an element inside the bathroom (or draw a closed room) and try again.",
       "noSolution": "No fixture layout fits this bathroom.",
       "done": "Placed {count, plural, one {# sanitary fixture} other {# sanitary fixtures}} automatically."
-    },
-    "selectLevelForPolygon": "Please select a Level first to save the polygon",
-    "overlayNeedsBackground": "No reference file found for this floor. Make sure you have imported a DXF drawing or a floorplan image."
+    }
   },
   "toolbar": {
     "actions": {

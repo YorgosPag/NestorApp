@@ -13,6 +13,7 @@ import { useRibbonDispatch } from '../../context/RibbonCommandContext';
 import { isCommandActive } from '../../utils/ribbon-active-state';
 import { RibbonButtonIcon } from './RibbonButtonIcon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../RibbonTooltip';
+import { useToolUnavailability } from '../../../../stores/ToolAvailabilityStore';
 
 interface RibbonLargeButtonProps {
   command: RibbonCommand;
@@ -34,6 +35,11 @@ const RibbonLargeButtonInner: React.FC<RibbonLargeButtonProps> = ({
   // does not belong on the active storey kind is dimmed (still clickable). Counted
   // storeys → always recommended → no change.
   const recommended = getCommandRecommendation(command.commandKey);
+  // ADR-921 — Revit «command availability»: ανεκπλήρωτη προϋπόθεση ⇒ greyed + «γιατί» στο
+  // tooltip. `aria-disabled` (όχι native `disabled`): το κλικ περνά στην πύλη, που εξηγεί και
+  // προσφέρει τη διόρθωση (π.χ. εισαγωγή κάτοψης). Per-key συνδρομή ⇒ re-render μόνο αυτού.
+  const unavailability = useToolUnavailability(command.commandKey);
+  const disabledReason = unavailability ? t(unavailability.reasonKey) : null;
 
   const handleClick = useCallback(() => {
     if (command.comingSoon) {
@@ -64,6 +70,7 @@ const RibbonLargeButtonInner: React.FC<RibbonLargeButtonProps> = ({
           className={recommended ? 'dxf-ribbon-btn dxf-ribbon-btn-large' : 'dxf-ribbon-btn dxf-ribbon-btn-large opacity-40'}
           onClick={handleClick}
           aria-pressed={isActive || undefined}
+          aria-disabled={disabledReason ? 'true' : undefined}
           data-command-id={command.id}
           data-coming-soon={command.comingSoon ? 'true' : undefined}
           data-active={isActive ? 'true' : undefined}
@@ -76,7 +83,9 @@ const RibbonLargeButtonInner: React.FC<RibbonLargeButtonProps> = ({
         </button>
       </TooltipTrigger>
       <TooltipContent>
-        {recommended ? `${label}${shortcut}` : `${label}${shortcut} — ${t('ribbon.storeyGating.notRecommended')}`}
+        {disabledReason
+          ? `${label}${shortcut} — ${disabledReason}`
+          : recommended ? `${label}${shortcut}` : `${label}${shortcut} — ${t('ribbon.storeyGating.notRecommended')}`}
       </TooltipContent>
     </Tooltip>
   );

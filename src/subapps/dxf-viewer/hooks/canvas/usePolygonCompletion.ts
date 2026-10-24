@@ -17,6 +17,7 @@ import { dwarn, derr } from '../../debug';
 import type { OverlayEditorMode, Status, OverlayKind } from '../../overlays/types';
 import type { LevelsHookReturn } from '../../systems/levels/useLevels';
 import type { useOverlayStore } from '../../overlays/overlay-store';
+import { OverlayPersistBlockedError } from '../../overlays/overlay-drawing-readiness';
 import type { useEventBus } from '../../systems/events';
 
 // ============================================================================
@@ -116,7 +117,7 @@ export function usePolygonCompletion({
     if (!levelManager.currentLevelId) {
       derr('usePolygonCompletion', '❌ Cannot save polygon - no level selected!');
       // 🏢 ENTERPRISE: Use EventBus → centralized notification system (NOT browser alert)
-      eventBus.emit('overlay:save-error', { reason: 'no-level-selected' });
+      eventBus.emit('overlay:save-error', { reason: 'no-level' });
       return false;
     }
 
@@ -135,7 +136,11 @@ export function usePolygonCompletion({
       return true;
     } catch (error) {
       derr('usePolygonCompletion', 'Failed to create overlay:', error);
-      eventBus.emit('overlay:save-error', { reason: 'no-background-context' });
+      // ADR-921 — η ΠΡΑΓΜΑΤΙΚΗ αιτία: μπλοκάρισμα του SSoT ή σφάλμα εγγραφής (δίκτυο/API).
+      // Πριν, κάθε σφάλμα έβγαινε «Δεν βρέθηκε αρχείο αναφοράς» — λάθος αιτία, λάθος διόρθωση.
+      eventBus.emit('overlay:save-error', {
+        reason: error instanceof OverlayPersistBlockedError ? error.reason : 'persist-failed',
+      });
       return false;
     }
     // Note: setDraftPolygon([]) is done in the calling setDraftPolygon callback

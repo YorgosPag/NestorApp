@@ -10,7 +10,6 @@
  */
 
 import React from 'react';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PERFORMANCE_THRESHOLDS } from '../../../core/performance/components/utils/performance-utils';
 import { matchesShortcut } from '../config/keyboard-shortcuts';
 import { dxfPerformanceOptimizer } from '../performance/DxfPerformanceOptimizer';
@@ -34,6 +33,7 @@ import type { OverlayEditorMode } from '../overlays/types';
 // store imperatively (no reactive selection prop). The two selection-DRIVEN
 // effects moved to SelectionSideEffectsHost (its own store subscription).
 import { SelectedEntitiesStore } from '../systems/selection';
+import { getToolUnavailability } from '../stores/ToolAvailabilityStore';
 
 // Types used only by debug keyboard shortcuts
 interface WorkflowStepResult {
@@ -105,14 +105,13 @@ export interface DxfViewerEffectsParams {
  * ADR-065 SRP split.
  */
 export function useDxfViewerEffects(params: DxfViewerEffectsParams): void {
-  const { t } = useTranslation('dxf-viewer');
   const {
     activeTool, overlayMode, currentScene,
     showLayers,
     setOverlayMode,
     handleToolChange, handleAction, handleSceneChange,
     updateGripSettings, showCopyableNotification,
-    eventBus, notifications,
+    eventBus,
     levelManager, overlayStore,
     floatingRef,
     prevGripStateRef,
@@ -315,7 +314,8 @@ Check console for detailed metrics`;
   // 🔺 Bridge overlay edit mode to grip editing system
   React.useEffect(() => {
     if (activeTool === 'layering') return;
-    if (activeTool === 'grip-edit' && overlayMode !== 'edit') {
+    // ADR-921 — αυτόματη ενεργοποίηση: μη διαθέσιμο ⇒ σιωπηλή παράλειψη (όχι toast).
+    if (activeTool === 'grip-edit' && overlayMode !== 'edit' && !getToolUnavailability('layering')) {
       handleToolChange('layering');
     }
   }, [overlayMode, activeTool, handleToolChange]);
@@ -385,15 +385,6 @@ Check console for detailed metrics`;
     return cleanup;
   }, [eventBus]);
 
-  // 🏢 ENTERPRISE: Centralized notification for polygon save errors
-  React.useEffect(() => {
-    const cleanup = eventBus.on('overlay:save-error', ({ reason }) => {
-      if (reason === 'no-level-selected') {
-        notifications.warning(t('callbacks.selectLevelForPolygon'), { duration: 4000 });
-      } else if (reason === 'no-background-context') {
-        notifications.warning(t('callbacks.overlayNeedsBackground'), { duration: 5000 });
-      }
-    });
-    return cleanup;
-  }, [eventBus, notifications, t]);
+  // ADR-921 — η ειδοποίηση `overlay:save-error` μετακόμισε στο `useToolAvailabilityNotifications`
+  // (ΕΝΑΣ ακροατής, ίδιο κείμενο με την πύλη ενεργοποίησης του εργαλείου).
 }
