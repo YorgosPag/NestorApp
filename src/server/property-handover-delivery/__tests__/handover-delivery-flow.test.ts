@@ -17,7 +17,7 @@ import { deliverHandoverFiles, type HandoverFileDeliveryRecorder } from '@/serve
 import { recordDeliverySha256 } from '@/server/property-handover-delivery/handover-delivery-ledger.server';
 import { runPropertyHandoverDeliveryQueue } from '@/services/property-handover/property-handover-delivery-queue.service';
 import { previewPropertyHandover } from '@/services/property-handover/property-handover-preview.server';
-import { recordHandoverFileDelivery } from '@/services/property-handover/property-handover-write.service';
+import { recordHandoverFileDelivery } from '@/services/property-handover/property-handover-progress-write';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { fakeGcsBucket, type FakeGcsCopyCall, type FakeGcsStore } from '@/test-utils/fake-gcs/fake-gcs-bucket';
 
@@ -214,6 +214,36 @@ describe('Γ11–Γ12 — πότε ΔΕΝ γίνεται τίποτα, και τ
     expect(await deliver()).toMatchObject({ kind: 'delivered', copied: 0 });
     expect(copyOf('f_plan')).toMatchObject({ status: 'ready' });
     expect(handover().fileDelivery).toMatchObject({ delivered: 3, total: 3 });
+  });
+});
+
+describe('Ζ54 — Φ-Δ.5: η ανάκληση ΝΙΚΑ την αντιγραφή που ήδη έτρεχε', () => {
+  it('🔴 κούρσα — ανάκληση ΑΝΑΜΕΣΑ στα bytes και το commit ⇒ καμία εγγραφή, καμία γραμμή καθολικού, κανένα ορφανό byte', async () => {
+    const running = handover();
+    copyHook = (call) => {
+      if (!call.to.includes(handoverCopyFileIdOf(HANDOVER, 'f_plan'))) return;
+      seedHandover({
+        lifecycle: 'withdrawn', fileDeliveryState: null,
+        withdrawal: { reason: 'Η πώληση ακυρώθηκε', withdrawnBy: 'uid_office', withdrawnAt: AT, notice: null },
+      });
+    };
+    const outcome = await deliverHandoverFiles(db(), running, { maxFiles: 50, deadlineAt: null, maxHashBytes: 1_000_000 }, record);
+    expect(outcome.failed).toBe(0);
+    expect(copyOf('f_plan')).toBeUndefined();
+    expect(ledgerRow('f_plan')).toBeUndefined();
+    expect([...store.keys()].some((key) => key.includes(handoverCopyFileIdOf(HANDOVER, 'f_plan')))).toBe(false);
+    // Η πρόοδος δεν γράφεται πάνω σε ανακλημένη (CAS των γραφών προόδου).
+    expect(handover()).toMatchObject({ lifecycle: 'withdrawn', fileDelivery: null });
+  });
+
+  it('ό,τι είχε ήδη παραδοθεί πριν την ανάκληση ΜΕΝΕΙ· νέα εκτέλεση = not-due, καμία αντιγραφή', async () => {
+    await deliver();
+    const delivered = copyOf('f_plan');
+    seedHandover({ lifecycle: 'withdrawn', fileDeliveryState: null, fileDelivery: handover().fileDelivery });
+    copies.length = 0;
+    expect(await deliver()).toEqual({ kind: 'not-due', copied: 0, failed: 0 });
+    expect(copies).toHaveLength(0);
+    expect(copyOf('f_plan')).toEqual(delivered);
   });
 });
 

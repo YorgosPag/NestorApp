@@ -1,7 +1,8 @@
 'use client';
 
 /**
- * @fileoverview **Οι πράξεις του γραφείου στην καρτέλα «Παράδοση»** — «Νέα πρόσκληση» (Φ-Δ.3) · «Απόφαση για αρχείο» (Φ-Δ.4).
+ * @fileoverview **Οι πράξεις του γραφείου στην καρτέλα «Παράδοση»** — «Νέα πρόσκληση» (Φ-Δ.3) · «Απόφαση για αρχείο» (Φ-Δ.4) ·
+ *   «Ανάκληση παράδοσης» (Φ-Δ.5).
  * @related services/property-handover/property-handover-office-action.client (το ΕΝΑ σχήμα πράξης) ·
  *          πρότυπο `useInvitationActions` (ADR-853 Φ6)
  * @module hooks/property-handover/useHandoverOfficeActions
@@ -21,10 +22,13 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { decideHandoverFileFromScreen } from '@/services/property-handover/property-handover-file-decision.client';
 import { renewHandoverInvitationFromScreen } from '@/services/property-handover/property-handover-invitation-renewal.client';
+import { withdrawHandoverFromScreen } from '@/services/property-handover/property-handover-withdrawal.client';
+import type { HandoverWithdrawalRequest } from '@/types/property-handover';
 import type { HandoverFileDecisionRequest } from '@/types/property-handover-file-decision';
 
 const RENEWAL = 'properties-detail:handover.renewal';
 const FILE_DECISION = 'properties-detail:handover.fileDecision';
+const WITHDRAWAL = 'properties-detail:handover.withdrawal';
 
 export interface HandoverOfficeActions {
   /** Η παράδοση **ή** το αρχείο με πράξη σε εξέλιξη — `null` όταν καμία. */
@@ -32,6 +36,8 @@ export interface HandoverOfficeActions {
   readonly renew: (handoverId: string, confirmDeclined: boolean) => Promise<void>;
   /** `true` ⇒ η πράξη ολοκληρώθηκε (με επιτυχία ή άρνηση) — ο διάλογος κλείνει· `false` ⇒ «δεν μπόρεσα», μένει ανοιχτός. */
   readonly decideFile: (request: HandoverFileDecisionRequest) => Promise<boolean>;
+  /** Φ-Δ.5 — ίδιο συμβόλαιο με το `decideFile`: `true` ⇒ ο διάλογος κλείνει. */
+  readonly withdraw: (request: HandoverWithdrawalRequest) => Promise<boolean>;
 }
 
 type OfficeOutcome = { readonly kind: 'failed' } | { readonly kind: 'refused'; readonly reason: string } | { readonly kind: 'ok' };
@@ -85,5 +91,14 @@ export function useHandoverOfficeActions(propertyId: string, reload: () => void)
     [propertyId, run],
   );
 
-  return { busyId, renew, decideFile };
+  const withdraw = useCallback(
+    (request: HandoverWithdrawalRequest) =>
+      run(request.handoverId, WITHDRAWAL, async () => {
+        const result = await withdrawHandoverFromScreen(propertyId, request);
+        return result.kind === 'withdrawn' || result.kind === 'unchanged' ? { kind: 'ok' } : result;
+      }),
+    [propertyId, run],
+  );
+
+  return { busyId, renew, decideFile, withdraw };
 }

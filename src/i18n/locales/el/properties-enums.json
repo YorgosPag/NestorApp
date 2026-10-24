@@ -344,7 +344,8 @@
   "handoverLifecycle": {
     "awaitingCompletion": "Αναμένει την ολοκλήρωση της πώλησης",
     "ready": "Προς παράδοση",
-    "cancelled": "Ακυρώθηκε"
+    "cancelled": "Ακυρώθηκε",
+    "withdrawn": "Ανακλήθηκε"
   },
   "marketingAudience": {
     "custodians": "Κλειστή — μόνο διαχειριστές",

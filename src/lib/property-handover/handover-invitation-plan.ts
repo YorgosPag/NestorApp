@@ -12,7 +12,7 @@
  *
  * ⚖️ **Κανόνες** (άγκυρες Β1–Β8):
  *   · αποδέχτηκε ήδη ⇒ τίποτα, ποτέ ξανά
- *   · ακυρώθηκε ⇒ ανάκληση της ζωντανής (ο σύνδεσμος στα εισερχόμενα **πεθαίνει**)
+ *   · ακυρώθηκε **ή ανακλήθηκε** (Φ-Δ.5) ⇒ ανάκληση της ζωντανής (ο σύνδεσμος στα εισερχόμενα **πεθαίνει**)
  *   · χωρίς email ⇒ σήμα `no-address` στο γραφείο — ποτέ σιωπηλή αποτυχία
  *   · πρώτη φορά · άλλαξε το email · έφτασε η ολοκλήρωση χωρίς αποδοχή ⇒ **νέα** πρόσκληση (η παλιά ανακαλείται)
  *   · αρνήθηκε ⇒ **καμία** αυτόματη νέα στο ίδιο email — ούτε στην ολοκλήρωση (σεβασμός, όχι spam)
@@ -31,6 +31,8 @@ import type {
   PropertyHandover,
   PropertyHandoverInvitationOccasion,
 } from '@/types/property-handover';
+
+import { isClosedHandoverLifecycle } from './handover-plan';
 
 /** Η πράξη **μέσα** στη συναλλαγή της παράδοσης. */
 export type HandoverInvitationIntent =
@@ -55,7 +57,7 @@ export function handoverInvitationIntentOf(handover: PropertyHandover, email: st
   if (handover.recipient !== null) return { kind: 'none' };
   const link = handover.invitation;
 
-  if (handover.lifecycle === 'cancelled') {
+  if (isClosedHandoverLifecycle(handover.lifecycle)) {
     return link?.status === 'issued' ? { kind: 'revoke' } : { kind: 'none' };
   }
   if (email === null) return link?.status === 'no-address' ? { kind: 'none' } : { kind: 'no-address' };
@@ -80,7 +82,7 @@ export function handoverInvitationIntentOf(handover: PropertyHandover, email: st
  */
 export function handoverInvitationRenewalOfferOf(handover: PropertyHandover, nowValue: string): HandoverInvitationRenewalOffer {
   const link = handover.invitation;
-  if (handover.recipient !== null || handover.lifecycle === 'cancelled' || link === null || link.status !== 'issued') return 'none';
+  if (handover.recipient !== null || isClosedHandoverLifecycle(handover.lifecycle) || link === null || link.status !== 'issued') return 'none';
   if (link.declinedAt !== null) return 'renew-after-decline';
   return isHandoverInvitationExpired(link.expiresAt, nowValue) ? 'renew' : 'none';
 }
@@ -121,7 +123,7 @@ export type HandoverInvitationFollowUp = 'none' | 'redeliver' | 'remind';
  */
 export function handoverInvitationFollowUpOf(handover: PropertyHandover, nowValue: string): HandoverInvitationFollowUp {
   const link = handover.invitation;
-  if (handover.recipient !== null || handover.lifecycle === 'cancelled' || link === null || link.status !== 'issued') return 'none';
+  if (handover.recipient !== null || isClosedHandoverLifecycle(handover.lifecycle) || link === null || link.status !== 'issued') return 'none';
   if (link.declinedAt !== null || isHandoverInvitationExpired(link.expiresAt, nowValue)) return 'none';
   if (link.deliveryAttempts >= HANDOVER_INVITATION_DELIVERY_CAP) return 'none';
   // Μια υπενθύμιση που ο πάροχος δεν δέχτηκε ξαναδοκιμάζεται **ως υπενθύμιση** — ποτέ δεύτερη «πρώτη» πρόσκληση.

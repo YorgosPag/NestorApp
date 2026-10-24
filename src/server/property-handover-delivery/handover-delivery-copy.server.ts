@@ -27,8 +27,9 @@ import { FILE_COLLECTION } from '@/lib/files/file-custody';
 import { fileStoragePlacementOf, type FileStoragePlacement } from '@/lib/files/file-storage-placement';
 import { placementForNewFile } from '@/lib/files/new-file-placement';
 import { FieldValue } from '@/lib/firebaseAdmin';
-import type { PlannedHandoverCopy } from '@/lib/property-handover/handover-delivery-plan';
+import { fileDeliveryStateOf, type PlannedHandoverCopy } from '@/lib/property-handover/handover-delivery-plan';
 import { isHandoverDeliverableDocument } from '@/lib/property-handover/handover-disposition';
+import { propertyHandoverFromDocument } from '@/lib/property-handover/property-handover-from-document';
 import { handoverCopyFileIdOf } from '@/lib/property-handover/property-handover-id';
 import { buildProxyUrl } from '@/lib/storage/storage-object-url';
 import { custodyKindOfScope } from '@/lib/workspace/custody-scope';
@@ -36,6 +37,7 @@ import { fileRecordBucket, fileStorageBucket } from '@/server/files/file-record-
 import { copyProvenPairs, statObjects } from '@/server/storage/placement-copy';
 import { recordFileAudit } from '@/services/file-audit-admin.service';
 import { buildFinalizeFileRecordUpdate, buildPendingFileRecordData } from '@/services/file-record';
+import { handoverDocRef } from '@/services/property-handover/property-handover-progress-write';
 import type { DeliverableHandoverFile } from '@/services/property-handover/property-handover-set.server';
 import type { PropertyHandover } from '@/types/property-handover';
 
@@ -48,6 +50,12 @@ export const HANDOVER_DELIVERY_ACTOR = 'system:property-handover';
 export interface HandoverDeliverableItem {
   readonly sourceFileId: string;
   readonly file: DeliverableHandoverFile;
+}
+
+/** Οφείλει **ακόμη** η παράδοση αντιγραφή στον **ίδιο** παραλήπτη; — ανακλημένη (Φ-Δ.5) ή αλλαγή χεριών ⇒ όχι. */
+function stillOwedTo(raw: unknown, ctx: HandoverCopyContext): boolean {
+  const current = propertyHandoverFromDocument(raw, ctx.handover.id);
+  return current !== null && fileDeliveryStateOf(current) !== null && current.recipient?.userId === ctx.recipientUserId;
 }
 
 export interface HandoverCopyContext {
@@ -133,6 +141,9 @@ export function readyFileRecordData(
  * ⚖️ Φ-Δ.4 — **η πηγή ξαναδιαβάζεται ΜΕΣΑ στη συναλλαγή**: μια απόφαση «μένει εσωτερικό» που δεσμεύτηκε αφού διαβάστηκε
  * το σύνολο **νικά** την αντιγραφή (`withdrawn`). Ο γραφέας της απόφασης διαβάζει τη **ίδια** θέση καθολικού στη δική του
  * συναλλαγή ⇒ οι δύο σειριοποιούνται: ή η απόφαση βλέπει την παράδοση (`already-delivered`), ή η αντιγραφή βλέπει την απόφαση.
+ * ↩️ Φ-Δ.5 — **και η παράδοση ξαναδιαβάζεται**: μια ανάκληση που δεσμεύτηκε αφού ξεκίνησε η δέσμη **νικά** την αντιγραφή
+ * (`withdrawn`)· η ανάκληση γράφει το **ίδιο** έγγραφο ⇒ σειριοποίηση. Η θεραπεία μιας **ήδη** παραδομένης απόδειξης
+ * ολοκληρώνεται πάντα (ό,τι παραδόθηκε μένει, Δ5).
  */
 async function commitCopy(ctx: HandoverCopyContext, copy: PreparedCopy): Promise<HandoverLedgerProof | 'withdrawn'> {
   const { built, source, item } = copy;
@@ -145,9 +156,12 @@ async function commitCopy(ctx: HandoverCopyContext, copy: PreparedCopy): Promise
   };
   const ledgerRef = deliveryLedgerRef(ctx.adminDb, ctx.handover.id, item.sourceFileId);
   const committed = await ctx.adminDb.runTransaction(async (tx) => {
-    const [recordSnap, ledgerSnap, sourceSnap] = await Promise.all([tx.get(recordRef), tx.get(ledgerRef), tx.get(item.file.doc.ref)]);
+    const [recordSnap, ledgerSnap, sourceSnap, handoverSnap] = await Promise.all([
+      tx.get(recordRef), tx.get(ledgerRef), tx.get(item.file.doc.ref), tx.get(handoverDocRef(ctx.adminDb, ctx.handover.id)),
+    ]);
     // Θεραπεία (υπάρχει ήδη ένα από τα δύο) = ήταν παραδομένο ⇒ η απόδειξη ολοκληρώνεται πάντα (Δ5: ό,τι παραδόθηκε μένει).
-    if (!recordSnap.exists && !ledgerSnap.exists && !isHandoverDeliverableDocument(sourceSnap.data())) return false;
+    const healing = recordSnap.exists || ledgerSnap.exists;
+    if (!healing && (!isHandoverDeliverableDocument(sourceSnap.data()) || !stillOwedTo(handoverSnap.data(), ctx))) return false;
     if (!recordSnap.exists) {
       tx.create(recordRef, readyFileRecordData(built, { sizeBytes: row.size, placement: copy.placement, hash: text(item.file.doc.data().hash) }));
     }

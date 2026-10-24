@@ -16,6 +16,7 @@
  *   · οριστικό ⇒ `ready` — **κολλώδες**: τίποτα στη συμφιλίωση δεν το γυρίζει πίσω (Δ8 · Ο4)
  *   · η δέσμευση έπεσε / ο αγοραστής αφαιρέθηκε **πριν** την ολοκλήρωση ⇒ `cancelled`
  *   · οικοπεδούχος **δεν** είναι παραλήπτης (`readStoredBuyerContactIds`, ADR-916 Ο1)
+ *   · `withdrawn` (Φ-Δ.5, ρητή πράξη γραφείου) **δεν αγγίζεται ποτέ** — τερματικό, όπως το void του DocuSign
  *
  * **Layering**: leaf — καθαρές συναρτήσεις· ο χρόνος **δίνεται**, δεν διαβάζεται.
  */
@@ -100,6 +101,8 @@ function wantedHandover(
     fileDelivery: null,
     // Φ-Γ2 Σ4 — το Πρωτόκολλο το γράφει ο δικός του γραφέας, μετά την παράδοση των αρχείων.
     protocol: null,
+    // Φ-Δ.5 — η ανάκληση είναι ρητή πράξη γραφείου, ποτέ συμπέρασμα της συμφιλίωσης.
+    withdrawal: null,
     createdAt: now,
     updatedAt: now,
   };
@@ -113,6 +116,14 @@ function changed(before: PropertyHandover, after: PropertyHandover): boolean {
  * **Το σχέδιο**: οι εγγραφές που φέρνουν τις αποθηκευμένες παραδόσεις στην αλήθεια του στιγμιοτύπου.
  * Κενό ⇒ ήδη συγκλίνουν (ιδεμπότητα — Α7).
  */
+/**
+ * **Κλειστή παράδοση** — καμία πρόσκληση, καμία υπενθύμιση, κανένα σήμα αρχείων: `cancelled` (έπεσε πριν) **ή**
+ * `withdrawn` (ανακλήθηκε μετά, Φ-Δ.5). Η ΜΙΑ απάντηση για πρόσκληση, κρίση γραφείου και άγκυρες.
+ */
+export function isClosedHandoverLifecycle(lifecycle: PropertyHandoverLifecycle): boolean {
+  return lifecycle === 'cancelled' || lifecycle === 'withdrawn';
+}
+
 export function planPropertyHandovers(
   snapshot: PropertyHandoverSnapshot,
   existing: readonly PropertyHandover[],
@@ -124,6 +135,8 @@ export function planPropertyHandovers(
 
   for (const recipientContactId of wanted) {
     const before = byRecipient.get(recipientContactId) ?? null;
+    // Φ-Δ.5 — τερματικό: ούτε μια νέα πώληση στην ίδια επαφή το ανασταίνει (η επαναφορά είναι ρητή πράξη, Ο21).
+    if (before?.lifecycle === 'withdrawn') continue;
     const after = wantedHandover(snapshot, recipientContactId, before, now);
     if (!before) writes.push({ kind: 'create', after });
     else if (changed(before, after)) writes.push({ kind: 'update', before, after });

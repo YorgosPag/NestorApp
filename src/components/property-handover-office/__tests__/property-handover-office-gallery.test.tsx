@@ -34,6 +34,8 @@ import {
   HANDOVER_OFFICE_SIGNALS,
   HANDOVER_OFFICE_STEP_STATES,
   HANDOVER_OFFICE_STEPS,
+  HANDOVER_WITHDRAWAL_REFUSALS,
+  PROPERTY_HANDOVER_WITHDRAWAL_NOTICE_DELIVERIES,
 } from '@/types/property-handover';
 import {
   HANDOVER_DISPOSITION_BASES,
@@ -70,9 +72,10 @@ describe('Ζ9 Α — ένα πάνελ ανά λόγο, με τα δικά το�
 });
 
 describe('Ζ9 Β — Πρωτόκολλο: μόνο όπου σφραγίστηκε, αντίτυπο εταιρείας, ποτέ «επαληθευμένο»', () => {
-  it('η κάρτα Πρωτοκόλλου και η παραπομπή επαλήθευσης ζουν ΜΟΝΟ στο σφραγισμένο πάνελ', () => {
+  it('η κάρτα Πρωτοκόλλου και η παραπομπή επαλήθευσης ζουν ΜΟΝΟ όπου σφραγίστηκε — και ΜΕΝΟΥΝ μετά την ανάκληση (Φ-Δ.5 · Ε2)', () => {
     const withVerifyLink = HANDOVER_OFFICE_SCENARIOS.filter((s) => within(panel(s.id)).queryByText(`${K}.verify`) !== null).map((s) => s.id);
-    expect(withVerifyLink).toEqual(['sealed']);
+    expect(withVerifyLink).toEqual(HANDOVER_OFFICE_SCENARIOS.filter((s) => s.handover.protocol !== null).map((s) => s.id));
+    expect(withVerifyLink).toEqual(expect.arrayContaining(['sealed', 'withdrawn']));
     expect(within(panel('sealed')).getByText(`${K}.verify`).closest('a')).toHaveAttribute('href', expect.stringMatching(/\/verify\/phpr_/));
   });
 
@@ -99,6 +102,12 @@ describe('Ζ9 Δ — κάθε λέξη του λεξιλογίου έχει κε
     ...['action', 'busy', 'title', 'description', 'choiceLabel', 'reasonLabel', 'confirmConfidential', 'confirmAction', 'success', 'failed']
       .map((key) => `fileDecision.${key}`),
     'fileDecision.blocked.already-delivered', 'files.confidential', 'files.delivered',
+    // Φ-Δ.5 — η ανάκληση.
+    ...HANDOVER_WITHDRAWAL_REFUSALS.map((reason) => `withdrawal.refusal.${reason}`),
+    ...['action', 'title', 'description', 'means.kept', 'means.stops', 'means.notice', 'reasonLabel', 'confirmIrreversible', 'confirmAction', 'success', 'failed']
+      .map((key) => `withdrawal.${key}`),
+    ...PROPERTY_HANDOVER_WITHDRAWAL_NOTICE_DELIVERIES.map((delivery) => `facts.withdrawalNoticeValue.${delivery}`),
+    'facts.withdrawnAt', 'facts.withdrawalReason', 'facts.withdrawalNotice',
   ];
   const lookup = (bundle: unknown, path: string): unknown =>
     path.split('.').reduce<unknown>((node, part) => (typeof node === 'object' && node !== null ? (node as Record<string, unknown>)[part] : undefined), bundle);
@@ -152,6 +161,34 @@ describe('Ζ29β — «Απόφαση για αρχείο» (Φ-Δ.4): η γρα
     expect(save).toBeDisabled();
     fireEvent.click(within(dialog).getByRole('checkbox'));
     expect(save).toBeEnabled();
+  });
+});
+
+describe('Ζ44 — «Ανάκληση παράδοσης» (Φ-Δ.5): ΜΟΝΟ στο Ο4, με αιτιολογία ΚΑΙ επιβεβαίωση, η αιτιολογία μόνο στο γραφείο', () => {
+  it('το κουμπί ζει ΜΟΝΟ στο πάνελ «η πώληση άλλαξε μετά την ολοκλήρωση»', () => {
+    const withButton = HANDOVER_OFFICE_SCENARIOS.filter((s) => within(panel(s.id)).queryByText(`${K}.withdrawal.action`) !== null).map((s) => s.id);
+    expect(withButton).toEqual(['sale-reverted']);
+  });
+
+  it('ο διάλογος λέει τι μένει και τι σταματά· «Ανάκληση» ανενεργό ώσπου να υπάρξουν αιτιολογία ΚΑΙ επιβεβαίωση', () => {
+    fireEvent.click(within(panel('sale-reverted')).getByRole('button', { name: `${K}.withdrawal.action` }));
+    const dialog = screen.getByRole('alertdialog');
+    expect(within(dialog).getByText(`${K}.withdrawal.means.kept`)).toBeInTheDocument();
+    const confirm = within(dialog).getByRole('button', { name: `${K}.withdrawal.confirmAction` });
+    expect(confirm).toBeDisabled();
+    fireEvent.change(within(dialog).getByRole('textbox'), { target: { value: 'Η πώληση ακυρώθηκε δικαστικά.' } });
+    expect(confirm).toBeDisabled();
+    fireEvent.click(within(dialog).getByRole('checkbox'));
+    expect(confirm).toBeEnabled();
+  });
+
+  it('ανακλημένη: γεγονός «Ανάκληση» + η αιτιολογία + η έκβαση της ειδοποίησης — και ΚΑΝΕΝΑ κουμπί πράξης', () => {
+    const card = panel('withdrawn');
+    expect(within(card).getByText(`${K}.facts.withdrawnAt`)).toBeInTheDocument();
+    expect(within(card).getByText('Η πώληση ακυρώθηκε με δικαστική απόφαση.')).toBeInTheDocument();
+    expect(within(card).getByText(`${K}.facts.withdrawalNoticeValue.accepted`)).toBeInTheDocument();
+    expect(within(card).queryByRole('button', { name: `${K}.withdrawal.action` })).toBeNull();
+    expect(within(card).queryByText(`${K}.renewal.action`)).toBeNull();
   });
 });
 

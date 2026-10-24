@@ -30,7 +30,7 @@ import {
 } from '@/server/property-handover-delivery/handover-delivery.server';
 
 import { openHandoverProtocolRun } from './property-handover-protocol-write.service';
-import { recordHandoverFileDelivery } from './property-handover-write.service';
+import { recordHandoverFileDelivery } from './property-handover-progress-write';
 
 export interface PropertyHandoverDeliveryReport {
   readonly queued: number;

@@ -2696,6 +2696,7 @@
       "TERRAIN_EMPTY_AFTER_CLIP": "No part of the terrain falls inside the plot boundary — check that boundary and points share the same coordinate system",
       "TERRAIN_TOO_DENSE": "The relief comes out above {maxTriangles} triangles — thin out the points and try again",
       "TERRAIN_PUBLICATION_NOT_CAPABLE": "You do not have permission to publish material to listings",
+      "TERRAIN_NO_DOSSIER": "This listing has no property dossier to keep the survey in",
       "TERRAIN_UPLOAD_FAILED": "Saving the survey failed on the server — try again"
     }
   }

@@ -285,7 +285,7 @@ describe('Β18–Β20 — ολοκλήρωση · ακύρωση · άρνηση
 
   it('Β27 — 🔴 λείπει το μυστικό στην έκδοση ⇒ ΕΝΑ σήμα «σε αναμονή ρύθμισης», ΚΑΝΕΝΑ `error`· όταν ρυθμιστεί, το δίχτυ εκδίδει', async () => {
     delete process.env.PROPERTY_HANDOVER_INVITE_SECRET;
-    expect(await sync()).toEqual({ kind: 'synced', writes: 1, invitationWrites: 0, invitationsAwaitingConfiguration: 1, renewal: null });
+    expect(await sync()).toEqual({ kind: 'synced', writes: 1, invitationWrites: 0, invitationsAwaitingConfiguration: 1, renewal: null, withdrawal: null });
     expect(invitations()).toHaveLength(0);
     expect(sent).toHaveLength(0);
     expect(handovers()[0]?.invitation).toBeNull();

@@ -30,6 +30,7 @@ const LIFECYCLE_KEY: Readonly<Record<PropertyHandoverLifecycle, string>> = {
   'awaiting-completion': 'property-market:dossier.origin.lifecycle.awaiting-completion',
   ready: 'property-market:dossier.origin.lifecycle.ready',
   cancelled: 'property-market:dossier.origin.lifecycle.cancelled',
+  withdrawn: 'property-market:dossier.origin.lifecycle.withdrawn',
 };
 
 /** Τι σημαίνει η κατάσταση **για τον άνθρωπο** — μόνο στη σελίδα του φακέλου. */
@@ -37,12 +38,15 @@ const LIFECYCLE_EXPLAIN_KEY: Readonly<Record<PropertyHandoverLifecycle, string>>
   'awaiting-completion': 'property-market:dossier.origin.explain.awaiting-completion',
   ready: 'property-market:dossier.origin.explain.ready',
   cancelled: 'property-market:dossier.origin.explain.cancelled',
+  // ADR-916 Φ-Δ.5 — «ό,τι παραδόθηκε μένει δικό σας»: ποτέ η αιτιολογία του γραφείου (Δ10).
+  withdrawn: 'property-market:dossier.origin.explain.withdrawn',
 };
 
 const LIFECYCLE_VARIANT: Readonly<Record<PropertyHandoverLifecycle, NonNullable<BadgeVariantProps['variant']>>> = {
   'awaiting-completion': 'info',
   ready: 'success',
   cancelled: 'muted',
+  withdrawn: 'muted',
 };
 
 function OriginLine({ origin, children }: { readonly origin: PropertyDossierOrigin; readonly children?: React.ReactNode }) {

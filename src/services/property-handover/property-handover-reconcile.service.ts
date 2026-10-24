@@ -7,7 +7,8 @@ import 'server-only';
  *
  * 🔑 **Δεν είναι δεύτερη μηχανή**: για κάθε υποψήφιο ακίνητο καλεί τον **ίδιο** `syncPropertyHandovers`.
  * Υποψήφια = (α) ό,τι πουλιέται τώρα (κράτηση · πώληση — και στο παλιό κάτοπτρο `status`), (β) ό,τι έχει
- * παράδοση σε αναμονή (ώστε μια ακύρωση που ξέφυγε να γίνει `cancelled`).
+ * παράδοση σε αναμονή (ώστε μια ακύρωση που ξέφυγε να γίνει `cancelled`), (γ) ό,τι ανακλήθηκε με email που δεν
+ * έγινε δεκτό (Φ-Δ.5 — ο **ίδιος** γραφέας το ξαναστέλνει, ως το όριο).
  *
  * 🔴 **Το `changed` είναι ο λόγος ύπαρξής του**: με κάθε σημείο κλήσης στη θέση του είναι **μηδέν**. Μη
  * μηδενικό = σημείο κλήσης που ξέφυγε — φαίνεται στα μεγέθη της εκτέλεσης.
@@ -47,16 +48,19 @@ export interface PropertyHandoverReconcileReport {
 
 async function candidatePropertyIds(adminDb: AdminFirestore): Promise<readonly string[]> {
   const properties = adminDb.collection(COLLECTIONS.PROPERTIES);
-  const [committed, legacy, awaiting] = await Promise.all([
+  const [committed, legacy, awaiting, noticeDue] = await Promise.all([
     // tenant-scope-exempt: νυχτερινό δίχτυ συστήματος — σαρώνει ΟΛΟΥΣ τους μισθωτές· κάθε ακίνητο συμφιλιώνεται με τον δικό του `companyId`
     properties.where('commercialStatus', 'in', COMMITTED_STATUSES).get(),
     // tenant-scope-exempt: το παλιό κάτοπτρο `status` (ADR-249) — ίδιο δίχτυ, έγγραφα χωρίς `commercialStatus`
     properties.where('status', 'in', COMMITTED_STATUSES).get(),
     // tenant-scope-exempt: παραδόσεις σε αναμονή όλων των μισθωτών — η ακύρωση που ξέφυγε γίνεται `cancelled`
     adminDb.collection(COLLECTIONS.PROPERTY_HANDOVERS).where('lifecycle', '==', 'awaiting-completion').get(),
+    // tenant-scope-exempt: Φ-Δ.5 — ανακλήσεις όλων των μισθωτών με email που δεν έγινε δεκτό· η πώληση τους δεν είναι πια
+    // δεσμευμένη, άρα κανένα από τα παραπάνω ερωτήματα δεν θα τις έβρισκε
+    adminDb.collection(COLLECTIONS.PROPERTY_HANDOVERS).where('withdrawalNoticeState', '==', 'due').get(),
   ]);
   const ids = new Set([...committed.docs, ...legacy.docs].map((doc) => doc.id));
-  for (const doc of awaiting.docs) {
+  for (const doc of [...awaiting.docs, ...noticeDue.docs]) {
     const propertyId: unknown = doc.get('propertyId');
     if (typeof propertyId === 'string' && propertyId !== '') ids.add(propertyId);
   }

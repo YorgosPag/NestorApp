@@ -22,6 +22,7 @@ import type { DocumentReference, Firestore, Transaction } from 'firebase-admin/f
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { nowISO } from '@/lib/date-local';
 import { getErrorMessage } from '@/lib/error-utils';
+import { isClosedHandoverLifecycle } from '@/lib/property-handover/handover-plan';
 import { handoverDossierIdOf } from '@/lib/property-handover/property-handover-id';
 import { propertyHandoverFromDocument } from '@/lib/property-handover/property-handover-from-document';
 import { propertyHandoverInvitationFromDocument } from '@/lib/property-handover/property-handover-invitation-schema';
@@ -95,7 +96,8 @@ function recordOf(stored: InvitationDocumentCore, resolution: InvitationResoluti
 function isOpenFor(handover: PropertyHandover, record: PropertyHandoverInvitation): boolean {
   const link = handover.invitation;
   return handover.companyId === record.companyId
-    && handover.lifecycle !== 'cancelled'
+    // Κλειστή (ακυρωμένη ή ανακλημένη, Φ-Δ.5) ⇒ καμία αποδοχή, ακόμη κι αν κάποια ανάκληση πρόσκλησης ξέφυγε.
+    && !isClosedHandoverLifecycle(handover.lifecycle)
     && handover.recipient === null
     && link !== null && link.status === 'issued' && link.invitationId === record.id;
 }

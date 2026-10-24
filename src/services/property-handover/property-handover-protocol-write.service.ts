@@ -41,7 +41,8 @@ import {
   type StoredHandoverProtocol,
   type StoredProtocolCopy,
 } from './property-handover-protocol-store.server';
-import { recordHandoverWrite, stageHandoverProtocolPointer, type HandoverProtocolPointerStage } from './property-handover-write.service';
+import { stageHandoverProtocolPointer, type HandoverProtocolPointerStage } from './property-handover-progress-write';
+import { recordHandoverWrite } from './property-handover-write.service';
 
 const logger = createModuleLogger('PropertyHandoverProtocolWrite');
 

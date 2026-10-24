@@ -14,7 +14,7 @@ import { handoverCopyFileIdOf, handoverDossierIdOf, propertyHandoverIdOf } from 
 import { deliverHandoverFiles } from '@/server/property-handover-delivery/handover-delivery.server';
 import { decideHandoverFile, type HandoverFileDecisionCommand } from '@/services/property-handover/property-handover-file-decision.service';
 import { previewPropertyHandover } from '@/services/property-handover/property-handover-preview.server';
-import { recordHandoverFileDelivery } from '@/services/property-handover/property-handover-write.service';
+import { recordHandoverFileDelivery } from '@/services/property-handover/property-handover-progress-write';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { fakeGcsBucket, type FakeGcsCopyCall, type FakeGcsStore } from '@/test-utils/fake-gcs/fake-gcs-bucket';
 

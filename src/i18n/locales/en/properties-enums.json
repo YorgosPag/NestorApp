@@ -344,7 +344,8 @@
   "handoverLifecycle": {
     "awaitingCompletion": "Awaiting sale completion",
     "ready": "Ready for handover",
-    "cancelled": "Cancelled"
+    "cancelled": "Cancelled",
+    "withdrawn": "Withdrawn"
   },
   "marketingAudience": {
     "custodians": "Private — custodians only",

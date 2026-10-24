@@ -30,6 +30,7 @@ import type { PropertyHandover, PropertyHandoverOfficeEntry } from '@/types/prop
 import { HANDOVER_MOVE_PRESENTATION } from './handover-office-presentation';
 import { HandoverInvitationRenewal } from './HandoverInvitationRenewal';
 import { HandoverStepTrack } from './HandoverStepTrack';
+import { HandoverWithdrawal } from './HandoverWithdrawal';
 
 const K = 'properties-detail:handover';
 
@@ -41,6 +42,7 @@ function factsOf(handover: PropertyHandover): readonly { readonly key: string; r
   if (link && handover.recipient === null) facts.push({ key: 'expiresAt', value: formatDate(link.expiresAt) });
   if (handover.recipient) facts.push({ key: 'acceptedAt', value: formatDate(handover.recipient.acceptedAt) });
   if (handover.completion) facts.push({ key: 'completedAt', value: formatDate(handover.completion.at) });
+  if (handover.withdrawal) facts.push({ key: 'withdrawnAt', value: formatDate(handover.withdrawal.withdrawnAt) });
   return facts;
 }
 
@@ -61,6 +63,28 @@ function HandoverFacts({ handover }: { readonly handover: PropertyHandover }): R
         <>
           <dt className="text-muted-foreground">{t(`${K}.facts.files`)}</dt>
           <dd className="m-0 text-foreground">{t(`${K}.facts.filesValue`, { delivered: delivery.delivered, total: delivery.total })}</dd>
+        </>
+      )}
+    </dl>
+  );
+}
+
+/**
+ * Φ-Δ.5 — **η ανάκληση, όπως τη βλέπει μόνο το γραφείο**: η αιτιολογία (Δ10 — ποτέ στον αγοραστή) και τι απέγινε η
+ * ειδοποίηση. Χωριστή λίστα: η αιτιολογία είναι πρόζα, όχι «γεγονός» μίας λέξης.
+ */
+function HandoverWithdrawalFacts({ handover }: { readonly handover: PropertyHandover }): React.ReactElement | null {
+  const { t } = useTranslation(['properties-detail']);
+  const withdrawal = handover.withdrawal;
+  if (withdrawal === null) return null;
+  return (
+    <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+      <dt className="text-muted-foreground">{t(`${K}.facts.withdrawalReason`)}</dt>
+      <dd className="m-0 whitespace-pre-line text-foreground">{withdrawal.reason}</dd>
+      {withdrawal.notice !== null && (
+        <>
+          <dt className="text-muted-foreground">{t(`${K}.facts.withdrawalNotice`)}</dt>
+          <dd className="m-0 text-foreground">{t(`${K}.facts.withdrawalNoticeValue.${withdrawal.notice.delivery}`)}</dd>
         </>
       )}
     </dl>
@@ -102,7 +126,7 @@ function HandoverProtocol({ handover }: { readonly handover: PropertyHandover })
 
 interface HandoverEntryCardProps {
   readonly entry: PropertyHandoverOfficeEntry;
-  /** Φ-Δ.3 — οι πράξεις του γραφείου (η γκαλερί δίνει προσομοιωμένες, η καρτέλα τις πραγματικές). */
+  /** Φ-Δ.3 · Φ-Δ.5 — οι πράξεις του γραφείου (η γκαλερί δίνει προσομοιωμένες, η καρτέλα τις πραγματικές). */
   readonly actions: HandoverOfficeActions;
 }
 
@@ -126,9 +150,11 @@ export function HandoverEntryCard({ entry, actions }: HandoverEntryCardProps): R
         <p className="m-0 text-sm font-medium text-foreground">{t(`${K}.reason.${status.reason}.title`)}</p>
         <p className="m-0 text-sm text-muted-foreground">{t(`${K}.reason.${status.reason}.hint`, hintParams)}</p>
         <HandoverInvitationRenewal handoverId={handover.id} offer={status.renewal} actions={actions} />
+        <HandoverWithdrawal handoverId={handover.id} offer={status.withdrawal} actions={actions} />
         <HandoverSignals entry={entry} />
         <HandoverStepTrack steps={status.steps} />
         <HandoverFacts handover={handover} />
+        <HandoverWithdrawalFacts handover={handover} />
         <HandoverProtocol handover={handover} />
       </section>
     </Card>

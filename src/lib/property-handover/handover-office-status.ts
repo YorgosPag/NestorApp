@@ -1,7 +1,7 @@
 /**
  * @fileoverview **«ΠΟΙΟΣ ΟΦΕΙΛΕΙ ΤΗΝ ΕΠΟΜΕΝΗ ΚΙΝΗΣΗ, ΚΑΙ ΓΙΑΤΙ;»** — η κρίση της καρτέλας «Παράδοση» του γραφείου (ADR-916 §5.15 Φ-Δ).
  * @related handover-protocol-plan.ts (η κρίση του Πρωτοκόλλου — **συντίθεται**, δεν ξαναγράφεται) ·
- *          handover-plan.ts (`PropertyHandoverSnapshot` — η πώληση **τώρα**, για το Ο4) ·
+ *          handover-withdrawal-plan.ts (Ο4 `sale-reverted` + η προσφορά ανάκλησης — η ΙΔΙΑ κρίση με την πόρτα, Φ-Δ.5) ·
  *          config/property-handover-invitation-policy.ts (λήξη · «λήγει σύντομα» · όριο αποστολών)
  * @module lib/property-handover/handover-office-status
  *
@@ -14,7 +14,7 @@
  * Τα ίδια ερωτήματα που κάνει η μηχανή (`planHandoverProtocol` · πολιτική πρόσκλησης) ⇒ η οθόνη δεν μπορεί να διαφωνήσει
  * με την πράξη (ίδια αρχή με την άγκυρα Γ13).
  *
- * ⚖️ **Σειρά** (η πρώτη αλήθεια νικά): ακυρωμένη · ακυρωμένη-μετά-την-ολοκλήρωση (Ο4) · πρόσκληση · ολοκλήρωση · αρχεία ·
+ * ⚖️ **Σειρά** (η πρώτη αλήθεια νικά): ακυρωμένη · ανακλημένη (Φ-Δ.5) · ακυρωμένη-μετά-την-ολοκλήρωση (Ο4) · πρόσκληση · ολοκλήρωση · αρχεία ·
  *    Πρωτόκολλο. Μια πώληση που έπεσε κρύβει κάθε τεχνική πρόοδο από κάτω — είναι η απόφαση που μετρά.
  *
  * 🔒 **Ποτέ «Επαληθευμένο»** εδώ: το `sealed` λέει «σφραγίστηκε»· επαλήθευση κάνει **μόνο** η δημόσια πόρτα (Σ6).
@@ -39,12 +39,20 @@ import {
 } from '@/types/property-handover';
 
 import { handoverInvitationRenewalOfferOf } from './handover-invitation-plan';
-import type { PropertyHandoverSnapshot } from './handover-plan';
+import { isClosedHandoverLifecycle } from './handover-plan';
 import { planHandoverProtocol, type HandoverProtocolPlan } from './handover-protocol-plan';
+import {
+  buyerAgainAfterWithdrawal,
+  handoverWithdrawalOfferOf,
+  saleRevertedAfterCompletion,
+  withdrawalNoticeUndelivered,
+  type HandoverSaleTruth,
+} from './handover-withdrawal-plan';
 
 /** **Ο κάτοχος της επόμενης κίνησης ανά λόγο** — η μία αντιστοίχιση· η κρίση και κάθε όψη τη διαβάζουν από εδώ. */
 export const HANDOVER_OFFICE_MOVE_OF: Readonly<Record<HandoverOfficeReason, HandoverOfficeMove>> = {
   cancelled: 'none',
+  withdrawn: 'none',
   'sale-reverted': 'office',
   'invitation-not-issued': 'system',
   'no-address': 'office',
@@ -66,16 +74,10 @@ export const HANDOVER_OFFICE_MOVE_OF: Readonly<Record<HandoverOfficeReason, Hand
 /** Ό,τι χρειάζεται η κρίση πέρα από την ίδια την παράδοση. */
 export interface HandoverOfficeContext {
   /** Η πώληση **τώρα** — `null` ⇒ το ακίνητο δεν διαβάζεται (καμία υπόθεση για Ο4). */
-  readonly snapshot: Pick<PropertyHandoverSnapshot, 'open' | 'recipientContactIds'> | null;
+  readonly snapshot: HandoverSaleTruth;
   /** Έχει ρυθμιστεί ο πάροχος σφραγίδας (ADR-918); */
   readonly sealConfigured: boolean;
   readonly nowValue: string;
-}
-
-/** Ο4 — `ready` είναι κολλώδες· αν η πώληση έπεσε ή ο αγοραστής αφαιρέθηκε **μετά**, το κρίνει άνθρωπος. */
-function saleRevertedAfterCompletion(handover: PropertyHandover, snapshot: HandoverOfficeContext['snapshot']): boolean {
-  if (handover.lifecycle !== 'ready' || snapshot === null) return false;
-  return !snapshot.open || !snapshot.recipientContactIds.includes(handover.recipientContactId);
 }
 
 /** Ο αγοραστής **δεν** έχει αποδεχτεί ακόμη — τι λέει το κάτοπτρο της πρόσκλησης. */
@@ -104,6 +106,7 @@ function deliveryReasonOf(plan: HandoverProtocolPlan, sealConfigured: boolean, h
 /** **Ο λόγος** — η πρώτη αλήθεια κατά σειρά προτεραιότητας. */
 function handoverOfficeReasonOf(handover: PropertyHandover, context: HandoverOfficeContext): HandoverOfficeReason {
   if (handover.lifecycle === 'cancelled') return 'cancelled';
+  if (handover.lifecycle === 'withdrawn') return 'withdrawn';
   if (saleRevertedAfterCompletion(handover, context.snapshot)) return 'sale-reverted';
   if (handover.recipient === null) return invitationReasonOf(handover, context.nowValue);
   if (handover.lifecycle !== 'ready') return 'awaiting-completion';
@@ -111,13 +114,16 @@ function handoverOfficeReasonOf(handover: PropertyHandover, context: HandoverOff
 }
 
 /** Σήματα που **συνυπάρχουν** με τον λόγο. */
-function signalsOf(handover: PropertyHandover, reason: HandoverOfficeReason, nowValue: string): readonly HandoverOfficeSignal[] {
+function signalsOf(handover: PropertyHandover, reason: HandoverOfficeReason, context: HandoverOfficeContext): readonly HandoverOfficeSignal[] {
   const signals: HandoverOfficeSignal[] = [];
   const link = handover.invitation;
-  if (reason === 'awaiting-buyer' && link?.status === 'issued' && isHandoverInvitationExpiringSoon(link.expiresAt, nowValue)) {
+  if (reason === 'awaiting-buyer' && link?.status === 'issued' && isHandoverInvitationExpiringSoon(link.expiresAt, context.nowValue)) {
     signals.push('invitation-expiring');
   }
-  if (handover.lifecycle !== 'cancelled' && (handover.fileDelivery?.awaitingReview ?? 0) > 0) signals.push('files-awaiting-review');
+  // Κλειστή παράδοση ⇒ κανένα αρχείο δεν φεύγει πια, άρα καμία απόφαση δεν περιμένει.
+  if (!isClosedHandoverLifecycle(handover.lifecycle) && (handover.fileDelivery?.awaitingReview ?? 0) > 0) signals.push('files-awaiting-review');
+  if (withdrawalNoticeUndelivered(handover)) signals.push('withdrawal-notice-undelivered');
+  if (buyerAgainAfterWithdrawal(handover, context.snapshot)) signals.push('buyer-again');
   return signals;
 }
 
@@ -144,7 +150,7 @@ function protocolStep(reason: HandoverOfficeReason): HandoverOfficeStepState {
   return reason === 'protocol-due' || reason === 'digest-pending' ? 'current' : 'pending';
 }
 
-/** Τα βήματα — ανεξάρτητα μεταξύ τους· μια ακυρωμένη παράδοση δεν έχει «τρέχον» βήμα. */
+/** Τα βήματα — ανεξάρτητα μεταξύ τους· μια ακυρωμένη ή ανακλημένη παράδοση δεν έχει «τρέχον» βήμα. */
 function stepsOf(handover: PropertyHandover, reason: HandoverOfficeReason): HandoverOfficeStatus['steps'] {
   const steps: Record<HandoverOfficeStep, HandoverOfficeStepState> = {
     invitation: invitationStep(handover, reason),
@@ -153,7 +159,7 @@ function stepsOf(handover: PropertyHandover, reason: HandoverOfficeReason): Hand
     files: filesStep(handover),
     protocol: protocolStep(reason),
   };
-  if (reason !== 'cancelled') return steps;
+  if (!isClosedHandoverLifecycle(handover.lifecycle)) return steps;
   const settle = (state: HandoverOfficeStepState): HandoverOfficeStepState => (state === 'done' ? 'done' : 'pending');
   for (const step of HANDOVER_OFFICE_STEPS) steps[step] = settle(steps[step]);
   return steps;
@@ -165,9 +171,11 @@ export function handoverOfficeStatusOf(handover: PropertyHandover, context: Hand
   return {
     move: HANDOVER_OFFICE_MOVE_OF[reason],
     reason,
-    signals: signalsOf(handover, reason, context.nowValue),
+    signals: signalsOf(handover, reason, context),
     steps: stepsOf(handover, reason),
     // Φ-Δ.3 — η ΙΔΙΑ συνάρτηση με την πόρτα: το κουμπί δεν υπόσχεται πράξη που ο διακομιστής θα αρνηθεί (Ζ17).
     renewal: handoverInvitationRenewalOfferOf(handover, context.nowValue),
+    // Φ-Δ.5 — ΙΔΙΑ συνάρτηση με την πόρτα: το κουμπί εμφανίζεται μόνο όταν ο διακομιστής θα δεχτεί.
+    withdrawal: handoverWithdrawalOfferOf(handover, context.snapshot),
   };
 }

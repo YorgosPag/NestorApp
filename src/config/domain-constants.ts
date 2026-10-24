@@ -938,6 +938,8 @@ export const API_ROUTES = {
     HANDOVER_INVITATION: (propertyId: string) => `/api/properties/${encodeURIComponent(propertyId)}/handover/invitation` as const,
     /** ADR-916 §5.18 Φ-Δ.4 — απόφαση γραφείου ανά αρχείο: «παραδίδεται» / «μένει εσωτερικό» / «αυτόματα» (`POST`). */
     HANDOVER_FILE_DECISION: (propertyId: string) => `/api/properties/${encodeURIComponent(propertyId)}/handover/file-decision` as const,
+    /** ADR-916 §5.19 Φ-Δ.5 — «Ανάκληση παράδοσης» όταν η πώληση έπεσε μετά την ολοκλήρωση (`POST`, μη αναστρέψιμη). */
+    HANDOVER_WITHDRAWAL: (propertyId: string) => `/api/properties/${encodeURIComponent(propertyId)}/handover/withdrawal` as const,
     TRASH: '/api/properties/trash',
     /** ADR-329 §3.9 — λίστα αρχείου (ίδιες γραμμές με τον κάδο, άλλη κατάσταση) */
     ARCHIVED: '/api/properties/archived',

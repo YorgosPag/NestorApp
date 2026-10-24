@@ -17,6 +17,7 @@ import type {
   PropertyHandover,
   PropertyHandoverFileDelivery,
   PropertyHandoverInvitationLink,
+  PropertyHandoverWithdrawal,
 } from '@/types/property-handover';
 import type { PropertyHandoverProtocolPointer } from '@/types/property-handover-protocol';
 
@@ -31,7 +32,7 @@ export function handoverFixture(overrides: Partial<PropertyHandover> = {}): Prop
   return {
     id: 'phov_demo', companyId: 'comp_demo', propertyId: 'prop_demo', recipientContactId: CONTACT,
     lifecycle: 'ready', completion: { source: 'final-contract', at: '2026-10-10T09:00:00.000Z' },
-    recipient: RECIPIENT, invitation: issuedInvitation({ delivery: 'accepted' }), fileDelivery: null, protocol: null,
+    recipient: RECIPIENT, invitation: issuedInvitation({ delivery: 'accepted' }), fileDelivery: null, protocol: null, withdrawal: null,
     createdAt: ISSUED_AT, updatedAt: ISSUED_AT,
     ...overrides,
   };
@@ -64,6 +65,16 @@ export function protocolPointerFixture(overrides: Partial<PropertyHandoverProtoc
   };
 }
 
+/** Φ-Δ.5 — μια ανακλημένη παράδοση που είχε παραδώσει αρχεία (ό,τι παραδόθηκε μένει). */
+export function withdrawnFixture(
+  notice: PropertyHandoverWithdrawal['notice'] = { delivery: 'accepted', attempts: 1 },
+): Partial<PropertyHandover> {
+  return {
+    lifecycle: 'withdrawn', fileDelivery: fileDeliveryFixture(), protocol: protocolPointerFixture(),
+    withdrawal: { reason: 'Η πώληση ακυρώθηκε με δικαστική απόφαση.', withdrawnBy: 'uid_office', withdrawnAt: '2026-10-21T09:00:00.000Z', notice },
+  };
+}
+
 export interface HandoverOfficeScenario {
   readonly id: string;
   readonly handover: PropertyHandover;
@@ -72,6 +83,8 @@ export interface HandoverOfficeScenario {
 }
 
 const OPEN_SALE: HandoverOfficeContext['snapshot'] = { open: true, recipientContactIds: [CONTACT] };
+/** Η πώληση έπεσε μετά την ολοκλήρωση (Ο4). */
+const REVERTED_SALE: HandoverOfficeContext['snapshot'] = { open: false, recipientContactIds: [] };
 const context = (overrides: Partial<HandoverOfficeContext> = {}): HandoverOfficeContext => ({
   snapshot: OPEN_SALE, sealConfigured: true, nowValue: SCENARIO_NOW, ...overrides,
 });
@@ -91,7 +104,12 @@ const scenario = (
 /** Ένα σενάριο ανά λόγο, με τη σειρά προτεραιότητας της κρίσης — και όσα σήματα χρειάζονται δικό τους πάνελ. */
 export const HANDOVER_OFFICE_SCENARIOS: readonly HandoverOfficeScenario[] = [
   scenario('cancelled', 'cancelled', { ...pendingBuyer(null), lifecycle: 'cancelled' }),
-  scenario('sale-reverted', 'sale-reverted', { fileDelivery: fileDeliveryFixture() }, { context: { snapshot: { open: false, recipientContactIds: [] } } }),
+  scenario('withdrawn', 'withdrawn', withdrawnFixture(), { context: { snapshot: REVERTED_SALE } }),
+  scenario('withdrawn-notice-undelivered', 'withdrawn', withdrawnFixture({ delivery: 'no-address', attempts: 1 }), {
+    context: { snapshot: REVERTED_SALE }, signals: ['withdrawal-notice-undelivered'],
+  }),
+  scenario('withdrawn-buyer-again', 'withdrawn', withdrawnFixture(), { signals: ['buyer-again'] }),
+  scenario('sale-reverted', 'sale-reverted', { fileDelivery: fileDeliveryFixture() }, { context: { snapshot: REVERTED_SALE } }),
   scenario('invitation-not-issued', 'invitation-not-issued', pendingBuyer(null)),
   scenario('no-address', 'no-address', pendingBuyer({ status: 'no-address', checkedAt: ISSUED_AT })),
   scenario('invitation-undeliverable', 'invitation-undeliverable', pendingBuyer(issuedInvitation({ delivery: 'unaddressable' }))),

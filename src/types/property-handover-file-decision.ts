@@ -58,9 +58,14 @@ export interface HandoverFileDecisionRequest {
   readonly confirmConfidential: boolean;
 }
 
-/** Τα όρια της αιτιολογίας — ένα σημείο για zod, διάλογο και κρίση. */
-export const HANDOVER_FILE_DECISION_REASON_MIN = 10;
-export const HANDOVER_FILE_DECISION_REASON_MAX = 500;
+/**
+ * Τα όρια της αιτιολογίας — για zod, διάλογο και κρίση. Φ-Δ.5: **η ΙΔΙΑ** αιτιολογία με κάθε πράξη γραφείου στην παράδοση
+ * (`config/property-handover-office-policy.ts`) — δύο αριθμοί σε δύο αρχεία θα απέκλιναν.
+ */
+export {
+  HANDOVER_OFFICE_REASON_MIN as HANDOVER_FILE_DECISION_REASON_MIN,
+  HANDOVER_OFFICE_REASON_MAX as HANDOVER_FILE_DECISION_REASON_MAX,
+} from '@/config/property-handover-office-policy';
 
 export const HANDOVER_FILE_DECISION_REFUSALS = [
   'file-unknown',

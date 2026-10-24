@@ -176,6 +176,13 @@ const HARD_EXEMPT_PATTERNS = [
   /[\\/]services[\\/]owner-property[\\/]owner-property-publication\.service\.ts$/,
   //   · mandate-expiry: ο δείκτης σάρωσης `mandatesExpireAt` (παράγεται από τις εντολές)
   /[\\/]services[\\/]mandate[\\/]mandate-expiry\.service\.ts$/,
+  //   · property-handover-progress-write (ADR-916 §5.19): ΤΗΛΕΜΕΤΡΙΑ της παράδοσης μετά τη συμφιλίωση — έκβαση email
+  //     πρόσκλησης/ανάκλησης, πρόοδος αντιγραφής. Τα παρακολουθούμενα πεδία (κύκλος ζωής · παραλήπτης · πρόσκληση ·
+  //     ανάκληση) τα γράφει ΜΟΝΟ το `property-handover-write.service.ts`, με ίχνος· ο δείκτης Πρωτοκόλλου επιστρέφει
+  //     `write` και το ίχνος του το γράφει ο καλών (`property-handover-protocol-write.service.ts` → `recordHandoverWrite`).
+  //     Εξήχθη από τον γραφέα για το N.7.1 (468/500) — πριν, περνούσε μόνο επειδή μοιραζόταν αρχείο με εκείνον.
+  //     Άγκυρες: `property-handover-withdrawal-flow.test.ts` (Ζ48β CAS) · `handover-withdrawal-authority.test.ts` (Η4).
+  /[\\/]services[\\/]property-handover[\\/]property-handover-progress-write\.ts$/,
   //   · agency-listings-sweep: σάρωση συστήματος `mandate.agencyRevokedAt` όταν ανακαλείται
   //     γραφείο — το βιβλίο της εντολής είναι το ADR-861 (έκδοση συναίνεσης), όχι το ADR-195
   /[\\/]services[\\/]mandate[\\/]agency-listings-sweep\.service\.ts$/,

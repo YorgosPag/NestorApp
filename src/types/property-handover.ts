@@ -12,8 +12,8 @@
  * ⚠️ **Εταιρικό έγγραφο** (`companyId`): ο αγοραστής **δεν** το διαβάζει ποτέ (ADR-916 Δ10) — κρατά τη
  * σχέση του γραφείου με **όλους** τους ιδιοκτήτες.
  *
- * ⛔ **Οι τιμές του κύκλου ζωής είναι μόνο όσες παράγει σήμερα κώδικας** (Φ-Α). Το `withdrawn` γεννιέται με την
- * πράξη ανάκλησης (Φ-Δ) — τιμή που κανείς δεν παράγει θα ήταν νεκρή (ίδιο δόγμα με το `PROPERTY_DOSSIER_LIFECYCLES`).
+ * ⛔ **Οι τιμές του κύκλου ζωής είναι μόνο όσες παράγει σήμερα κώδικας** (Φ-Α). Το `withdrawn` γεννήθηκε **μαζί**
+ * με την πράξη που το γράφει (Φ-Δ.5, `handover-withdrawal-plan.ts`) — τιμή που κανείς δεν παράγει θα ήταν νεκρή.
  * 🔑 **Η πρόοδος της αντιγραφής ΔΕΝ είναι κύκλος ζωής** (Φ-Γ1): το `lifecycle` λέει τη **νομική** κατάσταση της πώλησης
  * (κολλώδες `ready`), το `fileDelivery` την **τεχνική** πρόοδο — που ξαναγίνεται `delivering` σε κάθε συμπλήρωση (Δ5).
  * Δύο άξονες σε ένα enum θα έκαναν το «ολοκληρώθηκε η πώληση;» να εξαρτάται από το αν τελείωσε η αντιγραφή.
@@ -34,8 +34,10 @@ import type { PropertyHandoverProtocolPointer } from './property-handover-protoc
  *   συμφιλίωση δεν το γυρίζει ποτέ πίσω — ακύρωση μετά την ολοκλήρωση την κρίνει άνθρωπος (ADR-916 Ο4).
  * - `cancelled` — η δέσμευση έπεσε **πριν** την ολοκλήρωση (ακύρωση · ο ιδιοκτήτης αφαιρέθηκε). Ξανανοίγει
  *   αν η ίδια επαφή ξαναγίνει αγοραστής του ίδιου ακινήτου — ίδιο έγγραφο, ίδια ταυτότητα.
+ * - `withdrawn` — Φ-Δ.5 (Δ8): το γραφείο **ανακάλεσε** ολοκληρωμένη παράδοση της οποίας η πώληση δεν ισχύει πια.
+ *   **Τερματικό** (DocuSign void): η συμφιλίωση δεν το αλλάζει ποτέ· ό,τι παραδόθηκε **μένει** στον αγοραστή.
  */
-export const PROPERTY_HANDOVER_LIFECYCLES = ['awaiting-completion', 'ready', 'cancelled'] as const;
+export const PROPERTY_HANDOVER_LIFECYCLES = ['awaiting-completion', 'ready', 'cancelled', 'withdrawn'] as const;
 
 export type PropertyHandoverLifecycle = (typeof PROPERTY_HANDOVER_LIFECYCLES)[number];
 
@@ -151,6 +153,37 @@ export interface PropertyHandoverFileDelivery extends PropertyHandoverFileDelive
   readonly unverifiable: number;
 }
 
+// =============================================================================
+// Φ-Δ.5 — Η ΑΝΑΚΛΗΣΗ ΤΗΣ ΠΑΡΑΔΟΣΗΣ (ADR-916 Δ8 · Ο4)
+// =============================================================================
+
+/**
+ * Τι απέγινε το email ανάκλησης προς τον αγοραστή.
+ * - `pending` — η ανάκληση γράφτηκε, το email δεν δοκιμάστηκε ακόμη (πτώση ανάμεσα σε commit και αποστολή ⇒ το δίχτυ το βλέπει)
+ * - `accepted` — ο πάροχος το δέχτηκε (⚠️ όχι «παραδόθηκε»)
+ * - `failed` — ο πάροχος αρνήθηκε ή ο λογαριασμός δεν διαβάστηκε — ξαναδοκιμάζεται ως το όριο
+ * - `no-address` — ο λογαριασμός του αγοραστή δεν υπάρχει πια ή δεν έχει email — σήμα στο γραφείο, όχι επανάληψη
+ */
+export const PROPERTY_HANDOVER_WITHDRAWAL_NOTICE_DELIVERIES = ['pending', 'accepted', 'failed', 'no-address'] as const;
+
+export type PropertyHandoverWithdrawalNoticeDelivery = (typeof PROPERTY_HANDOVER_WITHDRAWAL_NOTICE_DELIVERIES)[number];
+
+export interface PropertyHandoverWithdrawalNotice {
+  readonly delivery: PropertyHandoverWithdrawalNoticeDelivery;
+  /** Πόσες αποστολές έγιναν — φραγμένο (`HANDOVER_WITHDRAWAL_NOTICE_CAP`). */
+  readonly attempts: number;
+}
+
+/** **Η ανάκληση** — γράφεται **μία** φορά, στην ίδια συναλλαγή με τη μετάβαση `withdrawn`. */
+export interface PropertyHandoverWithdrawal {
+  /** 🔒 Η αιτιολογία του γραφείου — μόνο για το γραφείο (Δ10): ποτέ στο email, ποτέ στον φάκελο του αγοραστή. */
+  readonly reason: string;
+  readonly withdrawnBy: string;
+  readonly withdrawnAt: string;
+  /** `null` ⇒ ο αγοραστής δεν είχε αποδεχτεί (δεν έχει φάκελο· ο σύνδεσμός του απλώς πεθαίνει). */
+  readonly notice: PropertyHandoverWithdrawalNotice | null;
+}
+
 /** Η παράδοση, όπως αποθηκεύεται στο `property_handovers/{phov_*}`. */
 export interface PropertyHandover {
   /** Ντετερμινιστικό `phov_*` από `(propertyId, recipientContactId)` — `propertyHandoverIdOf`. */
@@ -171,6 +204,8 @@ export interface PropertyHandover {
   readonly fileDelivery: PropertyHandoverFileDelivery | null;
   /** Φ-Γ2 Σ4 — το **τελευταίο** σφραγισμένο Πρωτόκολλο· `null` μέχρι το πρώτο. Το γράφει μόνο ο γραφέας του πρωτοκόλλου. */
   readonly protocol: PropertyHandoverProtocolPointer | null;
+  /** Φ-Δ.5 — `null` εκτός αν `lifecycle === 'withdrawn'`. Το γράφει μόνο ο ένας γραφέας της παράδοσης. */
+  readonly withdrawal: PropertyHandoverWithdrawal | null;
   /** ISO — `nowISO()`. */
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -228,6 +263,7 @@ export type HandoverOfficeMove = (typeof HANDOVER_OFFICE_MOVES)[number];
 /** **Γιατί** — ένας λόγος ανά παράδοση, με σειρά προτεραιότητας στην κρίση (`handoverOfficeStatusOf`). */
 export const HANDOVER_OFFICE_REASONS = [
   'cancelled',
+  'withdrawn',
   'sale-reverted',
   'invitation-not-issued',
   'no-address',
@@ -249,7 +285,14 @@ export const HANDOVER_OFFICE_REASONS = [
 export type HandoverOfficeReason = (typeof HANDOVER_OFFICE_REASONS)[number];
 
 /** Σήματα που **συνυπάρχουν** με τον λόγο — δεν αλλάζουν ποιος κινείται, αλλά ο άνθρωπος πρέπει να τα δει. */
-export const HANDOVER_OFFICE_SIGNALS = ['invitation-expiring', 'files-awaiting-review'] as const;
+export const HANDOVER_OFFICE_SIGNALS = [
+  'invitation-expiring',
+  'files-awaiting-review',
+  /** Φ-Δ.5 — το email ανάκλησης δεν θα φτάσει χωρίς άνθρωπο (όριο · λογαριασμός χωρίς email). */
+  'withdrawal-notice-undelivered',
+  /** Φ-Δ.5 — η επαφή είναι ξανά αγοραστής ανακλημένης παράδοσης: η επαναφορά είναι ρητή πράξη (Ο21), όχι αυτόματη. */
+  'buyer-again',
+] as const;
 
 export type HandoverOfficeSignal = (typeof HANDOVER_OFFICE_SIGNALS)[number];
 
@@ -299,6 +342,38 @@ export type HandoverInvitationRenewalResponse =
   | { readonly error: typeof HANDOVER_INVITATION_RENEWAL_REFUSED; readonly reason: HandoverInvitationRenewalRefusal }
   | { readonly error: 'RENEWAL_UNAVAILABLE' };
 
+/**
+ * **Φ-Δ.5 (Δ8) — μπορεί το γραφείο να ανακαλέσει την παράδοση;** Η ΙΔΙΑ τιμή κρίνει το κουμπί **και** την πόρτα
+ * (`handoverWithdrawalOfferOf`). `withdraw` μόνο όταν η μηχανή επιβεβαιώνει την αντίφαση (Ο4 · `sale-reverted`).
+ */
+export const HANDOVER_WITHDRAWAL_OFFERS = ['none', 'withdraw'] as const;
+
+export type HandoverWithdrawalOffer = (typeof HANDOVER_WITHDRAWAL_OFFERS)[number];
+
+/**
+ * Γιατί η πόρτα **δεν** ανακάλεσε — κλειστό λεξιλόγιο, το διαβάζει άνθρωπος.
+ * - `not-withdrawable` — η πώληση ισχύει ή η παράδοση δεν είναι ολοκληρωμένη: η οθόνη είναι μπαγιάτικη
+ * - `handover-unknown` — η παράδοση δεν ανήκει σε αυτό το ακίνητο
+ */
+export const HANDOVER_WITHDRAWAL_REFUSALS = ['not-withdrawable', 'handover-unknown'] as const;
+
+export type HandoverWithdrawalRefusal = (typeof HANDOVER_WITHDRAWAL_REFUSALS)[number];
+
+/** Ο διακριτής του σώματος άρνησης της πόρτας «Ανάκληση παράδοσης». */
+export const HANDOVER_WITHDRAWAL_REFUSED = 'HANDOVER_WITHDRAWAL_REFUSED';
+
+/** Ό,τι στέλνει η οθόνη — την επιβεβαίωση του μη αναστρέψιμου την προσθέτει ρητά ο client. */
+export interface HandoverWithdrawalRequest {
+  readonly handoverId: string;
+  readonly reason: string;
+}
+
+/** Το συμβόλαιο της πόρτας `POST /api/properties/[id]/handover/withdrawal` — 🔒 ποτέ αιτιολογία, ποτέ uid. */
+export type HandoverWithdrawalResponse =
+  | { readonly status: 'withdrawn' | 'unchanged' }
+  | { readonly error: typeof HANDOVER_WITHDRAWAL_REFUSED; readonly reason: HandoverWithdrawalRefusal }
+  | { readonly error: 'WITHDRAWAL_UNAVAILABLE' };
+
 /** Η κρίση για **μία** παράδοση. */
 export interface HandoverOfficeStatus {
   readonly move: HandoverOfficeMove;
@@ -307,6 +382,8 @@ export interface HandoverOfficeStatus {
   readonly steps: Readonly<Record<HandoverOfficeStep, HandoverOfficeStepState>>;
   /** Φ-Δ.3 — το κουμπί «Νέα πρόσκληση» (από την **ίδια** κρίση με την πόρτα). */
   readonly renewal: HandoverInvitationRenewalOffer;
+  /** Φ-Δ.5 — το κουμπί «Ανάκληση παράδοσης» (από την **ίδια** κρίση με την πόρτα). */
+  readonly withdrawal: HandoverWithdrawalOffer;
 }
 
 /** Μία παράδοση στην καρτέλα του γραφείου — η αποθηκευμένη, το όνομα του αγοραστή (μόνο όνομα) και η κρίση. */

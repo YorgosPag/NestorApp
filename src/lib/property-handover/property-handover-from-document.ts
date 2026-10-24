@@ -19,6 +19,7 @@ import {
   PROPERTY_HANDOVER_INVITATION_DELIVERIES,
   PROPERTY_HANDOVER_INVITATION_OCCASIONS,
   PROPERTY_HANDOVER_LIFECYCLES,
+  PROPERTY_HANDOVER_WITHDRAWAL_NOTICE_DELIVERIES,
   type PropertyHandover,
   type PropertyHandoverCompletion,
   type PropertyHandoverCompletionSource,
@@ -30,6 +31,9 @@ import {
   type PropertyHandoverInvitationOccasion,
   type PropertyHandoverLifecycle,
   type PropertyHandoverRecipient,
+  type PropertyHandoverWithdrawal,
+  type PropertyHandoverWithdrawalNotice,
+  type PropertyHandoverWithdrawalNoticeDelivery,
 } from '@/types/property-handover';
 import type { PropertyHandoverProtocolPointer, PropertyHandoverProtocolSummary } from '@/types/property-handover-protocol';
 
@@ -118,6 +122,27 @@ function fileDeliveryOf(raw: unknown): PropertyHandoverFileDelivery | null {
   };
 }
 
+const isWithdrawalNoticeDelivery = (value: unknown): value is PropertyHandoverWithdrawalNoticeDelivery =>
+  (PROPERTY_HANDOVER_WITHDRAWAL_NOTICE_DELIVERIES as readonly unknown[]).includes(value);
+
+function withdrawalNoticeOf(raw: unknown): PropertyHandoverWithdrawalNotice | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const { delivery, attempts } = raw as Record<string, unknown>;
+  return isWithdrawalNoticeDelivery(delivery) && isCount(attempts) ? { delivery, attempts } : null;
+}
+
+/**
+ * Φ-Δ.5 — **η ανάκληση**. ⚠️ Αδιάβαστη ⇒ `null`: ο κύκλος ζωής `withdrawn` μένει (τερματικός, τον κρατά το `lifecycle`)·
+ * χάνεται μόνο η ειδοποίηση, και **καμία** εφεύρεση δρώντα ή αιτιολογίας. Αδιάβαστη ειδοποίηση ⇒ `null` = «δεν οφείλεται»
+ * — ποτέ δεύτερο email από χαλασμένο πεδίο.
+ */
+function withdrawalOf(raw: unknown): PropertyHandoverWithdrawal | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const { reason, withdrawnBy, withdrawnAt, notice } = raw as Record<string, unknown>;
+  if (!nonEmptyString(reason) || !nonEmptyString(withdrawnBy) || !nonEmptyString(withdrawnAt)) return null;
+  return { reason, withdrawnBy, withdrawnAt, notice: withdrawalNoticeOf(notice) };
+}
+
 const isRevision = (value: unknown): value is number => isCount(value) && value >= 1;
 
 /**
@@ -164,6 +189,8 @@ export function propertyHandoverFromDocument(raw: unknown, id: string): Property
     invitation: invitationOf(stored.invitation),
     fileDelivery: fileDeliveryOf(stored.fileDelivery),
     protocol: protocolPointerOf(stored.protocol),
+    // Φ-Δ.5 — υπάρχει μόνο σε ανακλημένη: πεδίο σε άλλη κατάσταση είναι αλλοίωση, όχι ανάκληση.
+    withdrawal: lifecycle === 'withdrawn' ? withdrawalOf(stored.withdrawal) : null,
     createdAt,
     updatedAt,
   };

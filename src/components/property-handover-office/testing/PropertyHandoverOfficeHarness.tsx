@@ -56,8 +56,10 @@ const HARNESS_VIEWS: readonly { readonly id: string; readonly preview: PropertyH
   { id: 'whole-tab-empty', preview: { handovers: [], seal: { configured: true }, files: { deliver: [], review: [], internal: [] } } },
 ];
 
-/** Φ-Δ.3 · Φ-Δ.4 — οι πράξεις του γραφείου **προσομοιωμένες**: κανένα αίτημα, καμία πρόσκληση, κανένα email. */
-const IDLE_ACTIONS: HandoverOfficeActions = { busyId: null, renew: async () => undefined, decideFile: async () => true };
+/** Φ-Δ.3 · Φ-Δ.4 · Φ-Δ.5 — οι πράξεις του γραφείου **προσομοιωμένες**: κανένα αίτημα, καμία πρόσκληση, κανένα email. */
+const IDLE_ACTIONS: HandoverOfficeActions = {
+  busyId: null, renew: async () => undefined, decideFile: async () => true, withdraw: async () => true,
+};
 
 /** «Νέα πρόσκληση» σε εξέλιξη — το κουμπί όπως το βλέπει ο άνθρωπος **ενώ** στέλνεται. */
 const RENEWAL_IN_FLIGHT = HANDOVER_OFFICE_SCENARIOS.findIndex((s) => s.id === 'invitation-expired');

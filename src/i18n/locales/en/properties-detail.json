@@ -339,7 +339,7 @@
       },
       "sale-reverted": {
         "title": "The sale changed after completion",
-        "hint": "The buyer is no longer among the owners or the sale was cancelled. Whatever was delivered stays in their dossier until the office decides."
+        "hint": "The buyer is no longer among the owners or the sale was cancelled. If the change is final, withdraw the handover — everything already delivered stays in their file."
       },
       "invitation-not-issued": {
         "title": "Invitation being prepared",
@@ -400,11 +400,17 @@
       "sealed": {
         "title": "Sealed",
         "hint": "The Handover Protocol was issued and sealed. Nothing is pending."
+      },
+      "withdrawn": {
+        "title": "Handover withdrawn",
+        "hint": "The office withdrew the handover. Everything delivered stays in the buyer’s file; no new files are added."
       }
     },
     "signal": {
       "invitation-expiring": "The invitation expires on {date}",
-      "files-awaiting-review": "Files awaiting an office decision: {count}"
+      "files-awaiting-review": "Files awaiting an office decision: {count}",
+      "withdrawal-notice-undelivered": "The withdrawal notice did not reach the buyer — tell them directly.",
+      "buyer-again": "The contact is again a buyer of this property — the withdrawn handover does not reopen by itself."
     },
     "stepsLabel": "Handover steps",
     "step": {
@@ -426,7 +432,16 @@
       "acceptedAt": "Acceptance",
       "completedAt": "Completion",
       "files": "Files",
-      "filesValue": "{delivered} of {total}"
+      "filesValue": "{delivered} of {total}",
+      "withdrawnAt": "Withdrawn",
+      "withdrawalReason": "Reason for withdrawal",
+      "withdrawalNotice": "Buyer notice",
+      "withdrawalNoticeValue": {
+        "pending": "Waiting to be sent",
+        "accepted": "Sent",
+        "failed": "Not sent — retrying automatically",
+        "no-address": "The buyer’s account has no email"
+      }
     },
     "renewal": {
       "action": "New invitation",
@@ -499,6 +514,25 @@
         "stale": "Someone else decided in the meantime. The tab has been refreshed.",
         "already-delivered": "This file was delivered in the meantime and stays with the buyer.",
         "confidential-unconfirmed": "This file is confidential — explicit confirmation is required."
+      }
+    },
+    "withdrawal": {
+      "action": "Withdraw handover",
+      "title": "Withdraw the handover?",
+      "description": "Withdrawal is final. Use it when the sale has definitively ceased to apply to this buyer.",
+      "means": {
+        "kept": "Everything already delivered stays in the buyer’s file, together with the sealed Protocol.",
+        "stops": "New files and a new Protocol will no longer reach the file.",
+        "notice": "The buyer is told by email, without your reason."
+      },
+      "reasonLabel": "Reason (at least {min} characters — stays with the office only)",
+      "confirmIrreversible": "I understand the withdrawal cannot be undone.",
+      "confirmAction": "Withdraw",
+      "success": "The handover was withdrawn.",
+      "failed": "The withdrawal did not complete. Try again.",
+      "refusal": {
+        "not-withdrawable": "The handover can no longer be withdrawn — the sale changed in the meantime. The tab was refreshed.",
+        "handover-unknown": "The handover was not found. The tab was refreshed."
       }
     }
   }
