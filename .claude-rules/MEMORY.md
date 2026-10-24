@@ -16,6 +16,7 @@
 - [Giorgio fa commit + push](feedback_only_commit_no_push.md) — **AGGIORNATO 2026-05-16**: Giorgio fa SIA commit SIA push. Agent NEVER committa né pusha autonomamente. Vedi CLAUDE.md N.(-1).
 - [Never ask about commit/push](feedback_never_ask_commit_push.md) — NEVER ask "do you want a commit?" — Giorgio says so himself
 - 🆕 [ΠΟΤΕ `TMP`/`TEMP`/`TMPDIR` ως μεταβλητή σε Git Bash](feedback_tmp_env_var_git_bash.md) — **2026-09-16**. Εξαγόμενες μεταβλητές Windows· το git.exe κάνει το `TMP` → `TMPDIR` των hooks ⇒ `mktemp` αποτυγχάνει. Χρησιμοποίησε `IDX`/`T`. Πύλες: έξοδος στη μνήμη, ποτέ `2>/dev/null`.
+- 🆕 [Έλεγχος heavy-task.lock: κλειδί ΑΛΛΗΣ συνεδρίας](feedback_heavy_lock_guard.md) — **2026-10-24**. Το `heavy-mutex.js` κλειδώνει με το ΔΙΚΟ μας sessionId πριν τρέξει το jest ⇒ σκέτο `if [ -f lock ]` = πάντα LOCKED. Έλεγξε `! grep -q <session-id>`.
 - 🆕 [Γράψε με `Write`/`Edit`, όχι heredoc](feedback_write_tool_not_heredoc.md) — **2026-09-04 · διάγνωση διορθώθηκε 09-10**. Δεν φταίνε τα ελληνικά/απόστροφοι: το εργαλείο Bash στα Windows **σπάει κάθε εντολή > ~7.000 χαρακτήρων** με ψευδές `unexpected EOF ... matching '` (μετρημένο σε 45.253 εντολές). Φρένο: `.claude/hooks/bash-length-guard.js` (> 6.000 ⇒ άρνηση). Περιεχόμενο αρχείου → `Write`, με την πρώτη. Μήνυμα commit → `Write` + `git commit -F`. ⛔ ΠΟΤΕ `sed -i` σε αρχείο με ελληνικά.
 
 ## Pending Work
