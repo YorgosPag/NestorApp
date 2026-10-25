@@ -6336,6 +6336,30 @@ service cloud.firestore {
       allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
       allow write: if false;
     }
+    // ADR-923 §5.10 — τα ΔΕΔΟΜΕΝΑ του καταλόγου, ΙΔΙΟ σύνορο (Φάση 2β). Κάθε εγγραφή κρίνει ΟΛΟ το σύνολο του
+    // μοντέλου (κανόνες συνέπειας, συνδυασμός αξόνων, κρατήσεις μοναδικότητας, παράγωγα πληρότητας) — τίποτα από
+    // αυτά δεν εκφράζεται σε κανόνα. Οι κρατήσεις (`catalog_unique_values`) διαβάζονται από τον χώρο (η οθόνη μπορεί
+    // να πει «ο κωδικός υπάρχει ήδη» πριν στείλει), γράφονται ΜΟΝΟ στην ίδια συναλλαγή με το προϊόν.
+    match /catalog_product_models/{modelId} {
+      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow write: if false;
+    }
+    match /catalog_products/{productId} {
+      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow write: if false;
+    }
+    match /catalog_assets/{assetId} {
+      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow write: if false;
+    }
+    match /catalog_settings/{settingsId} {
+      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow write: if false;
+    }
+    match /catalog_unique_values/{reservationId} {
+      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow write: if false;
+    }
 
     // 🔒 ADR-894 §10.7 — ΖΩΝΤΑΝΗ ΣΥΝΔΕΣΗ. Η λίστα `users/{uid}/security/revoked_sign_ins` (ανακλημένα `auth_time`,
     // ΜΙΑ συσκευή τη φορά) προβάλλεται στο claim `revokedSignIns` από τον ΕΝΑ γραφέα claims (`set-claims-with-mirror`).

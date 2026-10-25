@@ -102,6 +102,11 @@ const TRACKED_COLLECTION_KEYS = new Set([
   'CATALOG_MEASUREMENT_FAMILIES',
   'CATALOG_CATEGORIES',
   'CATALOG_FAMILIES',
+  // ADR-923 §5.10 — τα δεδομένα του καταλόγου, ίδια μηχανή. (`CATALOG_UNIQUE_VALUES` ΟΧΙ: ευρετήριο, όχι οντότητα.)
+  'CATALOG_PRODUCT_MODELS',
+  'CATALOG_PRODUCTS',
+  'CATALOG_ASSETS',
+  'CATALOG_SETTINGS',
   // ADR-344 Phase 7.B — DXF text templates (audit entityType: 'text_template')
   'TEXT_TEMPLATES',
   // ADR-363 Phase 1D-C — BIM wall entities (audit via wall-audit-client.ts → /api/audit-trail/record)

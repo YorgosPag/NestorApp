@@ -20,6 +20,9 @@
  *  Κ3 εξαίρεση ΜΟΝΟ με λόγο (`// catalog-schema-authority-exempt: <λόγος>` στη γραμμή πάνω)
  *  Κ4 καλωδίωση: η μηχανή ΟΝΤΩΣ κάνει συναλλαγή + ίχνος, κάθε γραφέας ΟΝΤΩΣ περνά από τη συναλλαγή της
  *  Κ5 η πόρτα απευθείας εγγραφής (MCP `WRITE_ALLOWED_COLLECTIONS`) μένει ΚΛΕΙΣΤΗ για κάθε `catalog_*`
+ *  Κ6 (Φάση 2β, ADR-923 §5.10 Θωράκιση 1) ο ΜΟΝΟΣ δρόμος για παράγωγα (`stageDerived`) γράφει ΜΟΝΟ `derived`:
+ *     (α) το σώμα του δεν αγγίζει αναθεώρηση / σφραγίδα / ίχνος (αλλιώς κάθε επανυπολογισμός = ψευδή 409 + ψεύτικο
+ *     ιστορικό), (β) τον καλεί ΜΟΝΟ η μηχανή του συνόλου (αλλιώς είναι πόρτα που γράφει χωρίς κρίση του συνόλου)
  *
  * @see ADR-923 §5.9 · docs/gates/3.106.md · αδελφή: CHECK 3.102
  */
@@ -41,10 +44,17 @@ const CATALOG_COLLECTIONS = [
   'COLLECTIONS.CATALOG_MEASUREMENT_FAMILIES',
   'COLLECTIONS.CATALOG_CATEGORIES',
   'COLLECTIONS.CATALOG_FAMILIES',
+  // Φάση 2β (ADR-923 §5.10) — τα δεδομένα
+  'COLLECTIONS.CATALOG_PRODUCT_MODELS',
+  'COLLECTIONS.CATALOG_PRODUCTS',
+  'COLLECTIONS.CATALOG_ASSETS',
+  'COLLECTIONS.CATALOG_SETTINGS',
+  'COLLECTIONS.CATALOG_UNIQUE_VALUES',
 ];
 /** Τα ονόματα των συλλογών στη βάση — για την πόρτα του MCP (Κ5). */
 const CATALOG_COLLECTION_NAMES = [
   'catalog_attributes', 'catalog_attribute_groups', 'catalog_measurement_families', 'catalog_categories', 'catalog_families',
+  'catalog_product_models', 'catalog_products', 'catalog_assets', 'catalog_settings', 'catalog_unique_values',
 ];
 
 const STORE = 'src/server/catalog/catalog-store.server.ts';
@@ -52,8 +62,17 @@ const LIBRARY_READS = 'src/server/catalog/catalog-library-reads.server.ts';
 const KINDS = 'src/server/catalog/catalog-kinds.ts';
 const DIRECT_WRITE_DOOR = 'mcp-server/src/security/access-control.ts';
 
+const UNIQUE_RESERVATIONS = 'src/server/catalog/unique-reservations.server.ts';
+const AGGREGATE = 'src/server/catalog/catalog-aggregate.server.ts';
+
 /** Ποια αρχεία επιτρέπεται να καλούν `catalogDocRef(` (Κ2) — η μηχανή γράφει, οι αναγνώσεις διαβάζουν. */
 const DOC_REF_USERS = new Set([STORE, LIBRARY_READS]);
+/** Οι αναφορές εγγράφου της μηχανής (Κ2) → ποια αρχεία τις καλούν. Η κράτηση διαβάζεται μόνο από τον σχεδιαστή της. */
+const DOC_REF_FUNCTIONS = { catalogDocRef: DOC_REF_USERS, uniqueValueRef: new Set([STORE, UNIQUE_RESERVATIONS]) };
+/** Ποιος καλεί τον δρόμο των παραγώγων (Κ6β): μόνο η μηχανή του συνόλου, που κρίνει το σύνολο πριν γράψει. */
+const DERIVED_USERS = new Set([STORE, AGGREGATE]);
+/** Ό,τι το σώμα του `stageDerived` ΔΕΝ πρέπει να αγγίζει (Κ6α). */
+const DERIVED_FORBIDDEN = ['revision', 'updatedAt', 'updatedBy', 'changes.push', 'recordTrackedEntityWrite'];
 
 /** Κάθε δηλωμένος γραφέας, με το πώς ΑΠΟΔΕΙΚΝΥΕΙ ότι περνά από τη μηχανή (Κ4). Κλειστό σύνολο. */
 const WIRING = {
@@ -63,7 +82,14 @@ const WIRING = {
   'src/server/catalog/measurement-family-writer.server.ts': ['runCatalogTransaction('],
   'src/server/catalog/category-writer.server.ts': ['runCatalogTransaction('],
   'src/server/catalog/family-writer.server.ts': ['runCatalogTransaction('],
-  [KINDS]: CATALOG_COLLECTIONS,
+  // Φάση 2β — δεδομένα: κάθε γραφέας στη συναλλαγή· η μηχανή του συνόλου κρίνει, κρατά και γράφει παράγωγα.
+  'src/server/catalog/product-model-writer.server.ts': ['runCatalogTransaction(', 'commitAggregate('],
+  'src/server/catalog/product-writer.server.ts': ['runCatalogTransaction(', 'commitAggregate('],
+  'src/server/catalog/asset-writer.server.ts': ['runCatalogTransaction('],
+  'src/server/catalog/catalog-settings-writer.server.ts': ['runCatalogTransaction('],
+  'src/server/catalog/completeness-recompute.server.ts': ['runCatalogTransaction(', 'commitAggregate('],
+  [AGGREGATE]: ['judgeAggregate(', 'planUniqueReservations(', 'stageReservationPlan(', 'stageDerived('],
+  [KINDS]: CATALOG_COLLECTIONS.filter((key) => key !== 'COLLECTIONS.CATALOG_UNIQUE_VALUES'),
 };
 
 const WRITE_METHODS = new Set(['set', 'update', 'create', 'delete']);
@@ -79,14 +105,17 @@ const STATES = {
   DIRECT_DOOR_OPEN: 'direct-write-door-open',
   EXEMPT_NO_REASON: 'exempt-without-reason',
   SOURCE_DRIFT: 'source-drift',
+  DERIVED_TRACKED: 'derived-path-tracked',
+  DERIVED_OUTSIDE: 'derived-write-outside-aggregate',
 };
 const BLOCKING = [
   STATES.WRITE_OUTSIDE, STATES.DOC_REF_OUTSIDE, STATES.STORE_UNASKED, STATES.DIRECT_DOOR_OPEN,
-  STATES.EXEMPT_NO_REASON, STATES.SOURCE_DRIFT,
+  STATES.EXEMPT_NO_REASON, STATES.SOURCE_DRIFT, STATES.DERIVED_TRACKED, STATES.DERIVED_OUTSIDE,
 ];
 const DETAIL = {
   [STATES.WRITE_OUTSIDE]: `γράφει σχήμα καταλόγου έξω από τη μηχανή — πέρασε από τους γραφείς του \`src/server/catalog/\` (${STORE})`,
-  [STATES.DOC_REF_OUTSIDE]: '`catalogDocRef(` εκτός δηλωμένων αρχείων — είναι πόρτα γύρω από τη μηχανή',
+  [STATES.DOC_REF_OUTSIDE]: 'αναφορά εγγράφου της μηχανής (`catalogDocRef(`/`uniqueValueRef(`) εκτός δηλωμένων αρχείων — πόρτα γύρω από τη μηχανή',
+  [STATES.DERIVED_OUTSIDE]: '`stageDerived(` εκτός μηχανής συνόλου — γράφει παράγωγα χωρίς να κρίνει το σύνολο (Κ6β)',
 };
 
 /** Γράφει αυτή η κλήση σε συλλογή καταλόγου; */
@@ -114,8 +143,10 @@ function findingsIn(sf, rel) {
   ast.walk(sf, (node) => {
     if (!ts.isCallExpression(node)) return;
     if (isCatalogWrite(node, refsByKey)) findings.push(classify(sf, node, rel, STATES.WRITE_OUTSIDE));
-    else if (ast.isCallTo(node, 'catalogDocRef') && !DOC_REF_USERS.has(rel)) {
+    else if (Object.entries(DOC_REF_FUNCTIONS).some(([fn, users]) => ast.isCallTo(node, fn) && !users.has(rel))) {
       findings.push(classify(sf, node, rel, STATES.DOC_REF_OUTSIDE));
+    } else if (ast.isCallTo(node, 'stageDerived') && !DERIVED_USERS.has(rel)) {
+      findings.push(classify(sf, node, rel, STATES.DERIVED_OUTSIDE));
     }
   });
   return findings;
@@ -134,7 +165,21 @@ function directDoorOpen(text) {
   return open;
 }
 
-/** Κ4 + Κ5 + ύπαρξη δηλωμένων αρχείων. */
+/** Κ6α: το σώμα του `stageDerived` (χωρίς σχόλια) — γράφει ΜΟΝΟ `derived`, χωρίς αναθεώρηση/σφραγίδα/ίχνος. */
+function derivedPathFindings(storeText) {
+  const sf = ast.sourceFileOf(STORE, storeText);
+  let body = null;
+  ast.walk(sf, (node) => {
+    if (ts.isFunctionDeclaration(node) && node.name && node.name.text === 'stageDerived' && node.body) body = node.body;
+  });
+  if (body === null) return [{ state: STATES.STORE_UNASKED, file: STORE, detail: 'λείπει ο δρόμος των παραγώγων `stageDerived` (Κ6α)' }];
+  const code = ts.createPrinter({ removeComments: true }).printNode(ts.EmitHint.Unspecified, body, sf);
+  const touched = DERIVED_FORBIDDEN.filter((token) => code.includes(token));
+  return touched.length === 0 ? [] : [{ state: STATES.DERIVED_TRACKED, file: STORE,
+    detail: `το \`stageDerived\` αγγίζει ${touched.join(' · ')} — ο επανυπολογισμός θα έδινε ψευδή 409 / ψεύτικο ιστορικό (Κ6α)` }];
+}
+
+/** Κ4 + Κ5 + Κ6α + ύπαρξη δηλωμένων αρχείων. */
 function wiringFindings(root) {
   const findings = [];
   const read = (rel) => (fs.existsSync(path.join(root, rel)) ? fs.readFileSync(path.join(root, rel), 'utf8') : null);
@@ -149,6 +194,8 @@ function wiringFindings(root) {
       findings.push({ state: STATES.STORE_UNASKED, file, detail: `δεν περνά από τη μηχανή (λείπει: ${missing.join(' · ')})` });
     }
   }
+  const store = read(STORE);
+  if (store !== null) findings.push(...derivedPathFindings(store));
   const door = read(DIRECT_WRITE_DOOR);
   if (door === null) findings.push({ state: STATES.SOURCE_DRIFT, file: DIRECT_WRITE_DOOR, detail: 'δηλωμένο αρχείο που ΔΕΝ ΥΠΑΡΧΕΙ' });
   else if (directDoorOpen(door)) {
@@ -158,7 +205,7 @@ function wiringFindings(root) {
   return findings;
 }
 
-const RELEVANT = /COLLECTIONS\.CATALOG_|catalogDocRef\(/;
+const RELEVANT = /COLLECTIONS\.CATALOG_|catalogDocRef\(|uniqueValueRef\(|stageDerived\(/;
 
 function measure(opts = {}) {
   const root = opts.root || PROJECT_ROOT;
@@ -179,7 +226,7 @@ function measure(opts = {}) {
 function report(result, log = console.log) {
   const { tally, findings } = result;
   log('');
-  log('🗂️  CHECK 3.106 — Πύλη του ενός γραφέα του σχήματος καταλόγου (ADR-923 §5.9)');
+  log('🗂️  CHECK 3.106 — Πύλη του ενός γραφέα του καταλόγου — σχήμα και δεδομένα (ADR-923 §5.9 · §5.10)');
   log(`   αρχεία που εξετάστηκαν: ${result.examined}`);
   log('');
   for (const s of BLOCKING) log(`   ⛔ ${s.padEnd(40)} ${tally[s]}`);
@@ -208,6 +255,6 @@ function main() {
 if (require.main === module) process.exit(main());
 
 module.exports = {
-  measure, report, main, findingsIn, wiringFindings, directDoorOpen,
-  STATES, BLOCKING, WIRING, STORE, DOC_REF_USERS, DIRECT_WRITE_DOOR, CATALOG_COLLECTIONS,
+  measure, report, main, findingsIn, wiringFindings, directDoorOpen, derivedPathFindings,
+  STATES, BLOCKING, WIRING, STORE, AGGREGATE, DOC_REF_USERS, DIRECT_WRITE_DOOR, CATALOG_COLLECTIONS,
 };

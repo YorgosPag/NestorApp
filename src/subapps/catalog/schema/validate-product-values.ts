@@ -120,10 +120,11 @@ function validateCategories(check: ValueCheck, holder: CatalogValueHolder): void
   if (holder.categoryIds.length > CATALOG_LIMITS.maxCategoriesPerProduct) {
     check.collector.add('tooMany', 'categoryIds', { max: CATALOG_LIMITS.maxCategoriesPerProduct });
   }
-  // Η ύπαρξη των κατηγοριών θέλει ανάγνωση ⇒ ελέγχεται στον γραφέα (2β).
+  // Η ύπαρξη: ο γραφέας διαβάζει τις κατηγορίες στη συναλλαγή (2β) και τις δίνει στο πλαίσιο — ίδιος έλεγχος στην οθόνη.
   const seen = new Set<string>();
   holder.categoryIds.forEach((categoryId, index) => {
     if (seen.has(categoryId)) check.collector.add('duplicateCode', `categoryIds[${index}]`, { code: categoryId });
+    else if (!check.context.categories.has(categoryId)) check.collector.add('unknownReference', `categoryIds[${index}]`);
     seen.add(categoryId);
   });
 }

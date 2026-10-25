@@ -1072,6 +1072,21 @@ export const COLLECTIONS = {
   /** Οικογένειες προϊόντων (ένα έγγραφο ανά οικογένεια, παράγωγο attributeIds[]). IDs via cfam_*. */
   CATALOG_FAMILIES: process.env.NEXT_PUBLIC_CATALOG_FAMILIES_COLLECTION || 'catalog_families',
 
+  // 🗂️ SUPPLIER CATALOG — ΔΕΔΟΜΕΝΑ (ADR-923 §5.10). Ίδιο σύνορο με το σχήμα: ο πελάτης ΜΟΝΟ διαβάζει,
+  //    γράφει ΜΟΝΟ η μηχανή `src/server/catalog/**` (CHECK 3.106).
+  /** Μοντέλα + υπο-μοντέλα (`parentId`, ≤ 2 επίπεδα· η ρίζα κρατά το ευρετήριο απογόνων). IDs via cpmod_* (από κωδικό). */
+  CATALOG_PRODUCT_MODELS:
+    process.env.NEXT_PUBLIC_CATALOG_PRODUCT_MODELS_COLLECTION || 'catalog_product_models',
+  /** SKU (απλό προϊόν = `modelId: null`). IDs via cprod_* — ΤΥΧΑΙΑ (Δ3). */
+  CATALOG_PRODUCTS: process.env.NEXT_PUBLIC_CATALOG_PRODUCTS_COLLECTION || 'catalog_products',
+  /** Μέσα καταλόγου (τα bytes = `FileRecord` με κάτοχο `catalog_asset`). IDs via casst_* (από κωδικό). */
+  CATALOG_ASSETS: process.env.NEXT_PUBLIC_CATALOG_ASSETS_COLLECTION || 'catalog_assets',
+  /** Ρυθμίσεις καταλόγου — ΕΝΑ έγγραφο ανά χώρο (γλώσσες ανά κανάλι, Δ6). IDs via cset_*. */
+  CATALOG_SETTINGS: process.env.NEXT_PUBLIC_CATALOG_SETTINGS_COLLECTION || 'catalog_settings',
+  /** Κρατήσεις μοναδικών τιμών (Akeneo `product_unique_data`) — ευρετήριο, ΟΧΙ οντότητα: χωρίς ιστορικό. IDs via cuval_*. */
+  CATALOG_UNIQUE_VALUES:
+    process.env.NEXT_PUBLIC_CATALOG_UNIQUE_VALUES_COLLECTION || 'catalog_unique_values',
+
   // 🪜 DXF STAIR TOOL — ADR-358 (companyId-scoped, Phase 1)
   /** Parametric stair entities, 11 kinds, IfcStair-aligned. FK → floorplans. IDs via stair_* prefix. */
   FLOORPLAN_STAIRS: process.env.NEXT_PUBLIC_FLOORPLAN_STAIRS_COLLECTION || 'floorplan_stairs',

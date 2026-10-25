@@ -212,7 +212,19 @@
     "modelHierarchyInvalid": "This position does not fit the levels of the variant scheme.",
     "tooManyDescendants": "Up to {max} variants per model.",
     "assetRoleKindMismatch": "The asset role does not accept this kind of file.",
-    "channelLocalesRequired": "Each channel needs at least one language."
+    "channelLocalesRequired": "Each channel needs at least one language.",
+    "consistencyRuleViolated": "The value breaks the consistency rule “{ruleId}”.",
+    "fieldImmutable": "This field cannot change after creation.",
+    "uniqueValueTaken": "The value is already used by another product.",
+    "uniqueValueLooksLike": "The value looks like another product’s — check for look-alike characters.",
+    "richTextUnsafe": "The text contains formatting that is not allowed.",
+    "referenceFamilyNotAllowed": "The target belongs to a family that is not allowed here.",
+    "variantSchemeLockedInUse": "Variant scheme “{code}” is used by models — its axes and levels cannot change.",
+    "attributeLevelLockedInUse": "The attribute has values — it cannot move to another level.",
+    "attributeRemovalLockedInUse": "The attribute has values in this family’s products — it cannot be removed.",
+    "attributeFlagLockedInUse": "The attribute has values — this setting cannot change.",
+    "optionLockedInUse": "Option “{code}” is used by products — it cannot be removed.",
+    "localeLockedInUse": "There are values in language “{locale}” — it cannot be removed."
   },
   "measurement": {
     "family": {
@@ -288,13 +300,24 @@
       "standardUnitCode": "Standard unit",
       "singleUnit": "Single unit",
       "units": "Units",
-      "parentId": "Parent category",
+      "parentId": "Parent",
       "labelAttributeId": "Name attribute",
       "imageAttributeId": "Main image attribute",
       "attributes": "Attributes",
       "variantSchemes": "Variants",
       "tableSpec": "Catalogue table",
-      "consistencyRules": "Consistency rules"
+      "consistencyRules": "Consistency rules",
+      "familyId": "Family",
+      "variantSchemeCode": "Variant scheme",
+      "modelId": "Model",
+      "categoryIds": "Categories",
+      "noValueReasons": "Declared missing values",
+      "values": "Values",
+      "role": "Role",
+      "kind": "Kind",
+      "fileId": "File",
+      "rights": "Rights",
+      "channelLocales": "Languages per channel"
     }
   },
   "attributes": {

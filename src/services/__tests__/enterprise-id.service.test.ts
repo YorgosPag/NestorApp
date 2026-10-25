@@ -333,6 +333,13 @@ describe('EnterpriseIdService', () => {
       'generateDeterministicCatalogMeasurementFamilyId',
       'generateDeterministicCatalogCategoryId',
       'generateDeterministicCatalogFamilyId',
+      // ADR-923 §5.10 Δ3 — μοντέλο / μέσο ανά (χώρος, κωδικός) · ρυθμίσεις ανά χώρο · κράτηση ανά (χώρος, ιδιότητα,
+      // κλειδί). Τυχαίο αδελφό = δεύτερη κράτηση του «016-15-001» ⇒ ο διπλός κωδικός περνά. (Το SKU είναι τυχαίο
+      // ΑΠΟ ΣΧΕΔΙΑΣΜΟ — `generateCatalogProductId` — και ΔΕΝ έχει ντετερμινιστικό αδελφό.)
+      'generateDeterministicCatalogProductModelId',
+      'generateDeterministicCatalogAssetId',
+      'generateDeterministicCatalogSettingsId',
+      'generateDeterministicCatalogUniqueValueId',
     ];
 
     const WITH_RANDOM_SIBLING = DETERMINISTIC_GENERATORS.filter(
@@ -420,6 +427,12 @@ describe('EnterpriseIdService', () => {
       generateDeterministicCatalogMeasurementFamilyId: 'cmfam_1131f2d3-7c7b-4f5d-8767-fa0953e989da',
       generateDeterministicCatalogCategoryId: 'ccat_83e0abf8-3a78-49c7-8bf0-fd35e5eace45',
       generateDeterministicCatalogFamilyId: 'cfam_bee28522-2567-4959-848b-d4e2cc9288bc',
+      // ADR-923 §5.10 — ίδιο σκεπτικό (το `cset` έχει μία παράμετρο ⇒ σπόρος `catalog:settings:anchor-seed`· η
+      //    κράτηση τρεις ⇒ `…:anchor-seed:undefined:undefined`). Καταγεγραμμένα από τους ίδιους τους γεννήτορες, 2026-10-25.
+      generateDeterministicCatalogProductModelId: 'cpmod_c33dea45-c517-4453-8e33-081359d81c55',
+      generateDeterministicCatalogAssetId: 'casst_5712c1d2-fd9a-4f12-8db9-2b91a8d1c876',
+      generateDeterministicCatalogSettingsId: 'cset_8aa8a3f5-50c0-451c-8df4-eacfa0828dd1',
+      generateDeterministicCatalogUniqueValueId: 'cuval_063bceee-787f-4e5a-8fd9-87c43f424c3b',
       // ADR-853 Ε3 Φάση 2 — τέσσερις παράμετροι, ο `call()` δίνει μία (σπόρος `anchor-seed:undefined:…`,
       //    ίδιο σκεπτικό με το `wacr`): το συμβόλαιο είναι «ίδιος σπόρος ⇒ ίδιο id, διαχρονικά».
       generateDeterministicIdempotencyRecordId: 'idr_4ad60692-1f51-41af-8816-c25429d2e5f9',

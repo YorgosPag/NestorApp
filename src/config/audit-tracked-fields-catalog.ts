@@ -8,6 +8,12 @@
  * δίνουν διαφορετικό κείμενο, άρα καμία αλλαγή δεν χάνεται, και η ίδια τιμή δίνει **πάντα** το ίδιο κείμενο,
  * άρα καμία ψεύτικη αλλαγή από αλλαγμένη σειρά κλειδιών.
  * Οι ετικέτες των πεδίων ζουν στο namespace `catalog` (`audit.fields.*`).
+ *
+ * 🔑 **Τιμές προϊόντων: ιστορικό ΑΝΑ ΙΔΙΟΤΗΤΑ** (ADR-923 §5.10 Θωράκιση 6). Ένα JSON ολόκληρου του `values` θα
+ * έγραφε «άλλαξε το values» με 14 τιμές πριν και 14 μετά, για μία αλλαγή βάρους. Η μηχανή (`catalog-kinds.ts`)
+ * προβάλλει τον χάρτη σε **συλλογή** `[{ attributeId, slots }]` πριν από τη σύγκριση, και η μηχανή ιστορικού
+ * (ADR-195 Φ11, `kind: 'collection'`) δίνει **μία** γραμμή ανά ιδιότητα που προστέθηκε / αφαιρέθηκε / άλλαξε —
+ * Akeneo versioning ανά ιδιότητα.
  * @module config/audit-tracked-fields-catalog
  */
 
@@ -53,7 +59,51 @@ export const CATALOG_MEASUREMENT_FAMILY_TRACKED_FIELDS = defs(
 
 export const CATALOG_CATEGORY_TRACKED_FIELDS = defs(['parentId', 'orderKey', 'isDeleted'], ['labels', 'mappings']);
 
+/** Το όνομα του πεδίου της προβολής ανά ιδιότητα — ένα όνομα για μηχανή και περιγραφέα. */
+export const CATALOG_VALUES_AUDIT_FIELD = 'values';
+
+/** Η γραμμή της προβολής: μία ιδιότητα με όλες τις θέσεις της (κανάλι × γλώσσα). */
+export interface CatalogValuesAuditRow {
+  readonly attributeId: string;
+  readonly slots: unknown;
+}
+
+/** Χάρτης `values` → συλλογή, με σταθερή σειρά (η σειρά δεν είναι αλλαγή). */
+export function catalogValuesAuditRows(values: unknown): CatalogValuesAuditRow[] {
+  if (values === null || typeof values !== 'object') return [];
+  return Object.entries(values as Record<string, unknown>)
+    .map(([attributeId, slots]) => ({ attributeId, slots }))
+    .sort((a, b) => a.attributeId.localeCompare(b.attributeId));
+}
+
+const valuesByAttribute: TrackedFieldDef = {
+  kind: 'collection',
+  label: CATALOG_VALUES_AUDIT_FIELD,
+  labelKey: `catalog:audit.fields.${CATALOG_VALUES_AUDIT_FIELD}`,
+  keyBy: 'attributeId',
+  labelFields: ['attributeId'],
+  trackSubFields: ['slots'],
+  subFieldValues: { slots: (item) => structured(item.slots) },
+};
+
 export const CATALOG_FAMILY_TRACKED_FIELDS = defs(
   ['labelAttributeId', 'imageAttributeId', 'isDeleted'],
   ['labels', 'description', 'attributes', 'variantSchemes', 'tableSpec', 'consistencyRules'],
 );
+
+// ── Φάση 2 (ADR-923 §5.10) — δεδομένα. Τα παράγωγα (`derived`) ΔΕΝ παρακολουθούνται: τα γράφει ο γραφέας,
+//    και ένας επανυπολογισμός πληρότητας δεν είναι «αλλαγή» κανενός ανθρώπου.
+
+export const CATALOG_PRODUCT_MODEL_TRACKED_FIELDS = {
+  ...defs(['familyId', 'variantSchemeCode', 'parentId', 'isDeleted'], ['categoryIds', 'noValueReasons']),
+  [CATALOG_VALUES_AUDIT_FIELD]: valuesByAttribute,
+};
+
+export const CATALOG_PRODUCT_TRACKED_FIELDS = {
+  ...defs(['modelId', 'familyId', 'isDeleted'], ['categoryIds', 'noValueReasons']),
+  [CATALOG_VALUES_AUDIT_FIELD]: valuesByAttribute,
+};
+
+export const CATALOG_ASSET_TRACKED_FIELDS = defs(['role', 'kind', 'fileId', 'isDeleted'], ['labels', 'description', 'rights']);
+
+export const CATALOG_SETTINGS_TRACKED_FIELDS = defs([], ['channelLocales']);

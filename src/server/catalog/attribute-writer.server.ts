@@ -10,6 +10,8 @@ import 'server-only';
  *   που χρησιμοποιεί ένα φίλτρο άξονα του πίνακα ⇒ 409 με τα ευρήματα της οικογένειας, όχι κενή γραμμή στον
  *   τυπωμένο κατάλογο (Figma: η αλλαγή component δεν σπάει instances).
  * - Διαγραφή = soft, **μόνο** αν καμία οικογένεια δεν τη χρησιμοποιεί.
+ * - 🔒 Από τη Φάση 2 (ADR-923 §5.10 Θωράκιση 3): με **τιμές**, κλειδώνουν `localizable` · `scopable` · `unique` ·
+ *   οικογένεια μέτρησης και η αφαίρεση επιλογής σε χρήση (`schema-product-locks.server.ts`).
  * @module server/catalog/attribute-writer.server
  */
 
@@ -42,6 +44,7 @@ import {
   type StoredCatalogRecord,
 } from './catalog-store.server';
 import { assertNoIssues, CatalogWriteError } from './catalog-write-error';
+import { assertAttributeChangeKeepsValues } from './schema-product-locks.server';
 
 type StoredAttribute = StoredCatalogRecord<StoredCatalogAttributeDefinition>;
 
@@ -103,6 +106,7 @@ export async function updateCatalogAttribute(
     }
     const registry = await validateAgainstLibrary(scope, definition);
     await assertFamiliesStayValid(scope, id, definition, families, registry);
+    await assertAttributeChangeKeepsValues(scope, id, current, definition);
     return stageReplace(scope, 'attribute', current, toStored(definition));
   });
 }

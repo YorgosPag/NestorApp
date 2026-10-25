@@ -212,7 +212,19 @@
     "modelHierarchyInvalid": "Αυτή η θέση δεν ταιριάζει στα επίπεδα του σχήματος παραλλαγών.",
     "tooManyDescendants": "Έως {max} παραλλαγές ανά μοντέλο.",
     "assetRoleKindMismatch": "Ο ρόλος του μέσου δεν δέχεται αυτό το είδος αρχείου.",
-    "channelLocalesRequired": "Κάθε κανάλι χρειάζεται τουλάχιστον μία γλώσσα."
+    "channelLocalesRequired": "Κάθε κανάλι χρειάζεται τουλάχιστον μία γλώσσα.",
+    "consistencyRuleViolated": "Η τιμή παραβιάζει τον κανόνα συνέπειας «{ruleId}».",
+    "fieldImmutable": "Αυτό το πεδίο δεν αλλάζει μετά τη δημιουργία.",
+    "uniqueValueTaken": "Η τιμή χρησιμοποιείται ήδη από άλλο προϊόν.",
+    "uniqueValueLooksLike": "Η τιμή μοιάζει με τιμή άλλου προϊόντος — ελέγξτε για παρόμοιους χαρακτήρες.",
+    "richTextUnsafe": "Το κείμενο έχει μορφοποίηση που δεν επιτρέπεται.",
+    "referenceFamilyNotAllowed": "Ο στόχος ανήκει σε οικογένεια που δεν επιτρέπεται εδώ.",
+    "variantSchemeLockedInUse": "Το σχήμα παραλλαγών «{code}» χρησιμοποιείται από μοντέλα — οι άξονες και τα επίπεδά του δεν αλλάζουν.",
+    "attributeLevelLockedInUse": "Η ιδιότητα έχει τιμές — δεν μετακινείται σε άλλο επίπεδο.",
+    "attributeRemovalLockedInUse": "Η ιδιότητα έχει τιμές σε προϊόντα της οικογένειας — δεν αφαιρείται.",
+    "attributeFlagLockedInUse": "Η ιδιότητα έχει τιμές — αυτή η ρύθμιση δεν αλλάζει.",
+    "optionLockedInUse": "Η επιλογή «{code}» χρησιμοποιείται από προϊόντα — δεν αφαιρείται.",
+    "localeLockedInUse": "Υπάρχουν τιμές στη γλώσσα «{locale}» — δεν αφαιρείται."
   },
   "measurement": {
     "family": {
@@ -288,13 +300,24 @@
       "standardUnitCode": "Μονάδα-πρότυπο",
       "singleUnit": "Μία μονάδα",
       "units": "Μονάδες",
-      "parentId": "Γονική κατηγορία",
+      "parentId": "Γονέας",
       "labelAttributeId": "Ιδιότητα ονόματος",
       "imageAttributeId": "Ιδιότητα κύριας εικόνας",
       "attributes": "Ιδιότητες",
       "variantSchemes": "Παραλλαγές",
       "tableSpec": "Πίνακας καταλόγου",
-      "consistencyRules": "Κανόνες συνέπειας"
+      "consistencyRules": "Κανόνες συνέπειας",
+      "familyId": "Οικογένεια",
+      "variantSchemeCode": "Σχήμα παραλλαγών",
+      "modelId": "Μοντέλο",
+      "categoryIds": "Κατηγορίες",
+      "noValueReasons": "Δηλωμένες απουσίες τιμής",
+      "values": "Τιμές",
+      "role": "Ρόλος",
+      "kind": "Είδος",
+      "fileId": "Αρχείο",
+      "rights": "Δικαιώματα",
+      "channelLocales": "Γλώσσες ανά κανάλι"
     }
   },
   "attributes": {

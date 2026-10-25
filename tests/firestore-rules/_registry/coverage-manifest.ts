@@ -673,6 +673,37 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     testFile: 'tests/firestore-rules/suites/catalog-families.rules.test.ts',
     ...serverWrittenTenantInternalMatrix(),
   },
+  // ─── ADR-923 §5.10 — ΤΑ ΔΕΔΟΜΕΝΑ ΤΟΥ ΚΑΤΑΛΟΓΟΥ (Φάση 2β) — ίδιο σύνορο, ίδια μήτρα, ίδιος βοηθός ─────
+  {
+    collection: 'catalog_product_models',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/catalog-product-models.rules.test.ts',
+    ...serverWrittenTenantInternalMatrix(),
+  },
+  {
+    collection: 'catalog_products',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/catalog-products.rules.test.ts',
+    ...serverWrittenTenantInternalMatrix(),
+  },
+  {
+    collection: 'catalog_assets',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/catalog-assets.rules.test.ts',
+    ...serverWrittenTenantInternalMatrix(),
+  },
+  {
+    collection: 'catalog_settings',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/catalog-settings.rules.test.ts',
+    ...serverWrittenTenantInternalMatrix(),
+  },
+  {
+    collection: 'catalog_unique_values',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/catalog-unique-values.rules.test.ts',
+    ...serverWrittenTenantInternalMatrix(),
+  },
   {
     // ADR-916 Φ-Β — Η ΠΡΟΣΚΛΗΣΗ ΤΟΥ ΑΓΟΡΑΣΤΗ. `deny_all` όπως κάθε είδος του κοινού πυρήνα: ανάγνωση = email
     // ιδιωτών + `nonceHash`· γραφή = αποδοχή χωρίς σύνδεσμο, δηλαδή φάκελος σε λάθος λογαριασμό.

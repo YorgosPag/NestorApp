@@ -15,6 +15,12 @@ import type { IssueCollector } from './catalog-issues';
 /** Ό,τι χρειάζεται ο επικυρωτής από ένα μέσο: μόνο το είδος του (η ύπαρξη = κλειδί του χάρτη). */
 export type AssetLookup = ReadonlyMap<string, Pick<CatalogAssetDefinition, 'kind'>>;
 
+/** Στόχοι αναφορών που υπάρχουν, με τον κωδικό οικογένειάς τους — κλειδί `είδος:id` (`referenceTargetKey`). */
+export type ReferenceLookup = ReadonlyMap<string, { readonly familyCode: string }>;
+
+/** Το κλειδί ενός στόχου αναφοράς στο `ReferenceLookup` — ένα σχήμα για γραφέα και επικυρωτή. */
+export const referenceTargetKey = (target: { readonly kind: string; readonly id: string }): string => `${target.kind}:${target.id}`;
+
 export interface ProductValuesContext {
   readonly family: CatalogFamilyDefinition;
   readonly attributes: ReadonlyMap<string, CatalogAttributeDefinition>;
@@ -26,6 +32,10 @@ export interface ProductValuesContext {
   readonly depth: number;
   /** Τα μέσα του χώρου που αναφέρονται από τις τιμές (ο γραφέας τα διαβάζει στη συναλλαγή). */
   readonly assets: AssetLookup;
+  /** Οι **ενεργές** κατηγορίες του χώρου που αναφέρει ο φορέας (ξένες/διαγραμμένες απλώς λείπουν). */
+  readonly categories: ReadonlySet<string>;
+  /** Οι στόχοι αναφορών που υπάρχουν, με την οικογένειά τους (για το `targetFamilyCodes`). */
+  readonly references: ReferenceLookup;
 }
 
 /** Πλαίσιο + συλλέκτης — ό,τι περνά σε κάθε έλεγχο τιμής. */

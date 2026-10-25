@@ -22,6 +22,17 @@ export const CATALOG_API = {
     move: (id: string) => `${API_ROOT}/categories/${encodeURIComponent(id)}/move`,
   },
   families: entity('families'),
+  // ── Φάση 2 (ADR-923 §5.10) — δεδομένα ──
+  productModels: {
+    ...entity('product-models'),
+    /** Η δέσμη παραλλαγών (επικόλληση TSV): μία συναλλαγή, CAS ανά παραλλαγή. */
+    variants: (id: string) => `${API_ROOT}/product-models/${encodeURIComponent(id)}/variants`,
+  },
+  products: entity('products'),
+  assets: entity('assets'),
+  settings: `${API_ROOT}/settings`,
+  /** Μία σελίδα της εργασίας επανυπολογισμού παραγώγων (δρομέας). */
+  recomputeDerived: `${API_ROOT}/derived/recompute`,
 } as const;
 
 /** Η παράμετρος αναθεώρησης της διαγραφής (`DELETE …?expectedRevision=N`) — ένα όνομα για πελάτη και route. */

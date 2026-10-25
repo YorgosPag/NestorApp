@@ -6,6 +6,10 @@ import 'server-only';
  * ιδιότητα ένα δευτερόλεπτο πριν, η επικύρωση το βλέπει — δεν υπάρχει παράθυρο όπου η οικογένεια δείχνει σε
  * κάτι που δεν υπάρχει. Το `attributeIds` είναι **παράγωγο** (για «ποιος χρησιμοποιεί αυτή την ιδιότητα;»)
  * και το γράφει μόνο αυτός.
+ *
+ * 🔒 Από τη Φάση 2 (ADR-923 §5.10 Θωράκιση 2): με προϊόντα, κλειδώνουν οι άξονες/επίπεδα των σχημάτων που
+ * χρησιμοποιούνται, η μετακίνηση ιδιότητας με τιμές σε άλλο επίπεδο, η αφαίρεση ιδιότητας με τιμές και η διαγραφή
+ * (`schema-product-locks.server.ts`).
  * @module server/catalog/family-writer.server
  */
 
@@ -30,6 +34,7 @@ import {
   type StoredCatalogRecord,
 } from './catalog-store.server';
 import { assertNoIssues } from './catalog-write-error';
+import { assertFamilyChangeKeepsProducts, assertFamilyHasNoProducts } from './schema-product-locks.server';
 
 type StoredFamily = StoredCatalogRecord<StoredCatalogFamilyDefinition>;
 
@@ -63,15 +68,17 @@ export async function updateCatalogFamily(
     assertRevision(current, expectedRevision);
     assertCodeUnchanged(current, definition.code);
     const stored = await validatedForStorage(scope, definition);
+    await assertFamilyChangeKeepsProducts(scope, id, current, definition);
     return stageReplace(scope, 'family', current, stored);
   });
 }
 
-/** Διαγραφή = soft. Από τη Φάση 2 θα απαγορεύεται όσο υπάρχουν προϊόντα της οικογένειας. */
+/** Διαγραφή = soft, **μόνο** όσο η οικογένεια δεν έχει μοντέλα ή προϊόντα (Θωράκιση 2). */
 export async function deleteCatalogFamily(ctx: AuthContext, id: string, expectedRevision: number): Promise<StoredFamily> {
   return runCatalogTransaction(ctx, async (scope) => {
     const current = await readOwned<StoredCatalogFamilyDefinition>(scope, 'family', id);
     assertRevision(current, expectedRevision);
+    await assertFamilyHasNoProducts(scope, id);
     return stageSoftDelete(scope, 'family', current);
   });
 }

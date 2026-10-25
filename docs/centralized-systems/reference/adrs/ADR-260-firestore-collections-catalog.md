@@ -284,6 +284,8 @@
 > η ενότητα αριθμεί **τοπικά** (Κ1–Κ5) αντί να συνεχίσει μια αρίθμηση που δεν είναι πια αληθινή.
 > Όλες: `companyId`-scoped · ανάγνωση `isInternalUserOfCompany` · εγγραφή **μόνο** `src/server/catalog/catalog-store.server.ts`
 > (CHECK 3.106) · ids ντετερμινιστικά από `(companyId, code)` · χρονοσφραγίδες ISO · `revision` για CAS · ίχνος ADR-195.
+> Φάση 2β (Κ6–Κ10): ίδιο σύνορο· εξαιρέσεις **ταυτότητας** μόνο το SKU (τυχαίο) και οι ρυθμίσεις (ένα ανά χώρο)· τα
+> παράγωγα (`derived.*`) τα γράφει μόνο ο γραφέας, χωρίς αναθεώρηση (`stageDerived`, CHECK 3.106 Κ6).
 
 | # | COLLECTIONS Key | Firestore Name | ADR | Σημειώσεις |
 |---|----------------|----------------|-----|------------|
@@ -292,6 +294,11 @@
 | Κ3 | `CATALOG_MEASUREMENT_FAMILIES` | `catalog_measurement_families` | ADR-923 | Οικογένειες μέτρησης **του χώρου** (`cmfam_*`)· της πλατφόρμας ζουν σε κώδικα |
 | Κ4 | `CATALOG_CATEGORIES` | `catalog_categories` | ADR-923 | Δέντρα κατηγοριών (`ccat_*`) · `ancestorIds[]` · fractional `orderKey` |
 | Κ5 | `CATALOG_FAMILIES` | `catalog_families` | ADR-923 | Οικογένειες προϊόντων (`cfam_*`) · παράγωγο `attributeIds[]` |
+| Κ6 | `CATALOG_PRODUCT_MODELS` | `catalog_product_models` | ADR-923 §5.10 | Μοντέλα + υπο-μοντέλα (`cpmod_*`, από κωδικό) · η ρίζα κρατά `derived.descendants` (ευρετήριο ≤ 200 απογόνων — σειριοποίηση χωρίς ερώτημα) · `derived.summary` / `facetKeys` / `findings` |
+| Κ7 | `CATALOG_PRODUCTS` | `catalog_products` | ADR-923 §5.10 | SKU (`cprod_*`, **τυχαίο** — Δ3) · απλό = `modelId: null` · `derived.completeness` + `completenessHash` · `facetKeys[]` · `completeChannels[]` · `assetIds[]` |
+| Κ8 | `CATALOG_ASSETS` | `catalog_assets` | ADR-923 §5.10 Δ9 | Μέσα καταλόγου (`casst_*`, από κωδικό) · `MediaRights` · `fileId` μόνο από τη ροή ανεβάσματος (2γ) |
+| Κ9 | `CATALOG_SETTINGS` | `catalog_settings` | ADR-923 §5.10 Δ6 | **Ένα** έγγραφο ανά χώρο (`cset_*`) — γλώσσες ανά κανάλι |
+| Κ10 | `CATALOG_UNIQUE_VALUES` | `catalog_unique_values` | ADR-923 §5.10 Δ3 | Κρατήσεις μοναδικών τιμών (`cuval_*`, από χώρο + ιδιότητα + κανονικοποιημένη τιμή) — **ευρετήριο**, όχι οντότητα: χωρίς `revision`, χωρίς ιστορικό |
 
 ---
 
@@ -756,6 +763,7 @@ await setDoc(doc(db, COLLECTIONS.ATTENDANCE_EVENTS, eventId), {
 | Ημερομηνία | Αλλαγή |
 |-----------|--------|
 | 2026-03-24 | Αρχική δημιουργία — Καθολική έρευνα 133 collections + 25 subcollections + 18 system docs |
+| 2026-10-25 | ADR-923 Φ2β — +5 συλλογές δεδομένων καταλόγου (Κ6–Κ10): μοντέλα, SKU, μέσα, ρυθμίσεις, κρατήσεις μοναδικότητας |
 | 2026-03-24 | Εμπλουτισμός: Live DB σύγκριση (9 ενεργές collections), Write Operations Analysis (205+ ops σε 118+ αρχεία), Ασυνέπεια `obligation-sections`, 47 read-only collections, Critical Transaction Points |
 | 2026-03-24 | Enterprise ID Compliance Audit (§11): 70+ generators, 58 COMPLIANT collections, 11 EXEMPT, 1 VIOLATION (`employment_records` — `collRef.doc()` auto-ID), 47 read-only (N/A) |
 | 2026-03-24 | Δεύτερη έρευνα Enterprise ID: +2 VIOLATIONS εντοπίστηκαν — `system_audit_logs` & `audit_logs` subcollection χρησιμοποιούν `.add()` (auto-ID) στο `src/lib/auth/audit.ts` (lines 199, 762). Σύνολο: 3 παραβιάσεις |

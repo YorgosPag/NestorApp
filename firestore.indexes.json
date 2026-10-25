@@ -8954,6 +8954,226 @@
         { "fieldPath": "companyId", "order": "ASCENDING" },
         { "fieldPath": "isDeleted", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "catalog_product_models",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "derived.valueAttributeIds", "arrayConfig": "CONTAINS" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_product_models",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "derived.facetKeys", "arrayConfig": "CONTAINS" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_product_models",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "derived.assetIds", "arrayConfig": "CONTAINS" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_product_models",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "derived.valueLocales", "arrayConfig": "CONTAINS" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_product_models",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "familyId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_product_models",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "familyId", "order": "ASCENDING" },
+        { "fieldPath": "derived.valueAttributeIds", "arrayConfig": "CONTAINS" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_product_models",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "familyId", "order": "ASCENDING" },
+        { "fieldPath": "derived.facetKeys", "arrayConfig": "CONTAINS" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_product_models",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "familyId", "order": "ASCENDING" },
+        { "fieldPath": "derived.completeChannels", "arrayConfig": "CONTAINS" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_products",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "derived.valueAttributeIds", "arrayConfig": "CONTAINS" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_products",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "derived.facetKeys", "arrayConfig": "CONTAINS" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_products",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "derived.assetIds", "arrayConfig": "CONTAINS" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_products",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "derived.valueLocales", "arrayConfig": "CONTAINS" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_products",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "familyId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_products",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "familyId", "order": "ASCENDING" },
+        { "fieldPath": "derived.valueAttributeIds", "arrayConfig": "CONTAINS" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_products",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "familyId", "order": "ASCENDING" },
+        { "fieldPath": "derived.facetKeys", "arrayConfig": "CONTAINS" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_products",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "familyId", "order": "ASCENDING" },
+        { "fieldPath": "derived.completeChannels", "arrayConfig": "CONTAINS" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_product_models",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "familyId", "order": "ASCENDING" },
+        { "fieldPath": "variantSchemeCode", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_product_models",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "parentId", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_product_models",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "parentId", "order": "ASCENDING" },
+        { "fieldPath": "familyId", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_products",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "modelId", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_products",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "modelId", "order": "ASCENDING" },
+        { "fieldPath": "familyId", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_products",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "modelId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_unique_values",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "attributeId", "order": "ASCENDING" },
+        { "fieldPath": "skeleton", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": [

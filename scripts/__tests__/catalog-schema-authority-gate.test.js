@@ -57,6 +57,45 @@ describe('Κ2 — η αναφορά εγγράφου της μηχανής δε�
   });
 });
 
+describe('Κ1 + Κ2 — τα ΔΕΔΟΜΕΝΑ του καταλόγου (Φάση 2β, ADR-923 §5.10)', () => {
+  it('⛔ εγγραφή σε κάθε συλλογή δεδομένων έξω από τη μηχανή', () => {
+    for (const key of ['CATALOG_PRODUCT_MODELS', 'CATALOG_PRODUCTS', 'CATALOG_ASSETS', 'CATALOG_SETTINGS', 'CATALOG_UNIQUE_VALUES']) {
+      expect(findingsOf(`await db.collection(COLLECTIONS.${key}).doc(id).set(data);`)).toEqual([gate.STATES.WRITE_OUTSIDE]);
+    }
+  });
+
+  it('⛔ `uniqueValueRef(` έξω από μηχανή/σχεδιαστή κρατήσεων — ✅ στον σχεδιαστή (μόνο ανάγνωση)', () => {
+    expect(findingsOf('tx.delete(uniqueValueRef(db, id));')).toEqual([gate.STATES.DOC_REF_OUTSIDE]);
+    expect(findingsOf('await tx.getAll(uniqueValueRef(db, id));', 'src/server/catalog/unique-reservations.server.ts')).toEqual([]);
+  });
+});
+
+describe('Κ6 — ο δρόμος των παραγώγων γράφει ΜΟΝΟ `derived` και τον καλεί ΜΟΝΟ η μηχανή του συνόλου', () => {
+  const STORE_WITH = (body) => `export function stageDerived(scope, kind, current, derived) {\n${body}\n}`;
+
+  it('⛔ (β) `stageDerived(` σε γραφέα — ✅ στη μηχανή του συνόλου', () => {
+    expect(findingsOf("stageDerived(scope, 'product', current, derived);", 'src/server/catalog/product-writer.server.ts'))
+      .toEqual([gate.STATES.DERIVED_OUTSIDE]);
+    expect(findingsOf("stageDerived(scope, 'product', current, derived);", gate.AGGREGATE)).toEqual([]);
+  });
+
+  it('⛔ (α) σώμα που ανεβάζει αναθεώρηση ή γράφει ίχνος — ✅ σώμα που γράφει μόνο `derived`', () => {
+    const states = (body) => gate.derivedPathFindings(STORE_WITH(body)).map((f) => f.state);
+    expect(states('scope.tx.update(ref, { derived, revision: current.revision + 1 });')).toEqual([gate.STATES.DERIVED_TRACKED]);
+    expect(states('scope.tx.update(ref, { derived });\nscope.changes.push({ kind, before: current, after: current });'))
+      .toEqual([gate.STATES.DERIVED_TRACKED]);
+    expect(states('scope.tx.update(ref, { derived });\nreturn { ...current, derived };')).toEqual([]);
+  });
+
+  it('✅ (α) ένα ΣΧΟΛΙΟ μέσα στο σώμα που ονομάζει την «revision» δεν είναι κώδικας', () => {
+    expect(gate.derivedPathFindings(STORE_WITH('// καμία revision εδώ\nscope.tx.update(ref, { derived });'))).toEqual([]);
+  });
+
+  it('⛔ (α) μηχανή ΧΩΡΙΣ `stageDerived` κοκκινίζει — ο δρόμος δεν μπορεί να εξαφανιστεί σιωπηλά', () => {
+    expect(gate.derivedPathFindings('export function stageReplace() {}').map((f) => f.state)).toEqual([gate.STATES.STORE_UNASKED]);
+  });
+});
+
 describe('Κ3 — εξαίρεση ΜΟΝΟ με λόγο', () => {
   const write = 'batch.set(db.collection(COLLECTIONS.CATALOG_FAMILIES).doc(id), family);';
 

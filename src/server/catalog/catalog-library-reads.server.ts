@@ -18,6 +18,7 @@ import type { CatalogAttributeDefinition } from '@/subapps/catalog/types/attribu
 import type { CatalogCategoryDefinition } from '@/subapps/catalog/types/category';
 import type { StoredCatalogFamilyDefinition } from '@/subapps/catalog/types/family';
 import type { WorkspaceMeasurementFamilyDefinition } from '@/subapps/catalog/types/measurement-family';
+import type { CatalogKind } from './catalog-kinds';
 import { catalogDocRef, type CatalogTx, type StoredCatalogRecord } from './catalog-store.server';
 
 /** Όριο ασφαλείας για ερωτήματα χρήσης· ένα σχήμα με περισσότερες οικογένειες ανά ιδιότητα είναι απίθανο. */
@@ -40,20 +41,32 @@ export async function readMeasurementRegistry(scope: CatalogTx): Promise<Measure
   );
 }
 
+/**
+ * Ενεργές εγγραφές **αυτού** του χώρου ανά id — οι ξένες/διαγραμμένες/ανύπαρκτες απλώς **λείπουν** από τον χάρτη
+ * (ξένο ≡ ανύπαρκτο). **Ένα** `getAll` για όλα — ο ένας δρόμος «διάβασε αυτά τα ids» για κάθε είδος.
+ */
+export async function readActiveByIds<TDefinition>(
+  scope: CatalogTx,
+  kind: CatalogKind,
+  ids: readonly string[],
+): Promise<Map<string, StoredCatalogRecord<TDefinition>>> {
+  const unique = [...new Set(ids)];
+  if (unique.length === 0) return new Map();
+  const snaps = await scope.tx.getAll(...unique.map((id) => catalogDocRef(scope.db, kind, id)));
+  const result = new Map<string, StoredCatalogRecord<TDefinition>>();
+  for (const snap of snaps) {
+    const data = snap.data() as StoredCatalogRecord<TDefinition> | undefined;
+    if (data && isPayloadOwnedByCompany(data, scope.ctx.companyId) && !data.isDeleted) result.set(snap.id, data);
+  }
+  return result;
+}
+
 /** Ενεργές ιδιότητες αυτού του χώρου ανά id — οι ξένες/διαγραμμένες/ανύπαρκτες απλώς λείπουν. */
 export async function readAttributesByIds(
   scope: CatalogTx,
   ids: readonly string[],
 ): Promise<Map<string, CatalogAttributeDefinition>> {
-  const unique = [...new Set(ids)];
-  if (unique.length === 0) return new Map();
-  const snaps = await scope.tx.getAll(...unique.map((id) => catalogDocRef(scope.db, 'attribute', id)));
-  const result = new Map<string, CatalogAttributeDefinition>();
-  for (const snap of snaps) {
-    const data = snap.data() as StoredCatalogRecord<CatalogAttributeDefinition> | undefined;
-    if (data && isPayloadOwnedByCompany(data, scope.ctx.companyId) && !data.isDeleted) result.set(snap.id, data);
-  }
-  return result;
+  return readActiveByIds<CatalogAttributeDefinition>(scope, 'attribute', ids);
 }
 
 /** Οι ενεργές οικογένειες προϊόντων που χρησιμοποιούν μια ιδιότητα. */

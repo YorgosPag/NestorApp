@@ -4,7 +4,9 @@
  * - `defineRoute` ⇒ `withAuth` ⇒ **ιδεμποτία** (CHECK 3.92) · zod σώμα.
  * - Η βαθμίδα ορίου ρυθμού **δηλώνεται στο ίδιο το `route.ts`** (`{ category: 'STANDARD' }`, CHECK 3.78):
  *   ο αναγνώστης της διαδρομής βλέπει ποιο όριο ισχύει χωρίς να ανοίξει το factory.
- * - Δικαίωμα **`catalog:schema:manage`** σε κάθε εγγραφή (ADR-923 §5.1).
+ * - Δικαίωμα ανά **αρχή** (ADR-923 §5.1 · §5.10): `schema` ⇒ `catalog:schema:manage` (η δομή — προεπιλογή)·
+ *   `products` ⇒ `catalog:products:manage` (τα δεδομένα: μοντέλα, SKU, μέσα, επανυπολογισμός). Akeneo: «edit
+ *   products» ≠ «manage catalog structure».
  * - `CatalogWriteError` ⇒ `ApiError` σε **ένα** σημείο (`toCatalogApiError`): ίδιο λάθος, ίδιος κωδικός, παντού.
  *
  * Οι αναγνώσεις **δεν** περνούν από εδώ: ο πελάτης διαβάζει απευθείας τη Firestore (κανόνες:
@@ -27,12 +29,21 @@ import { expectedRevisionSchema } from '@/subapps/catalog/schema/zod/common.sche
 /** Οι βαθμίδες που έχουν νόημα για εγγραφές σχήματος — ρητή δήλωση ανά διαδρομή. */
 type CatalogRateCategory = Extract<RateLimitCategory, 'STANDARD' | 'SENSITIVE'>;
 
+/** Ποια εξουσία κρίνει τη διαδρομή: η δομή του καταλόγου ή τα δεδομένα του. */
+export type CatalogAuthority = 'schema' | 'products';
+
 export interface CatalogRoutePolicy {
   readonly category: CatalogRateCategory;
+  /** Προεπιλογή `schema` (οι διαδρομές της Φάσης 1). */
+  readonly authority?: CatalogAuthority;
 }
 
 const TIER_OF: Readonly<Record<CatalogRateCategory, RateLimitTier>> = { STANDARD: 'standard', SENSITIVE: 'sensitive' };
-const MANAGE = { permissions: 'catalog:schema:manage' } as const;
+const AUTH_OF: Readonly<Record<CatalogAuthority, { readonly permissions: 'catalog:schema:manage' | 'catalog:products:manage' }>> = {
+  schema: { permissions: 'catalog:schema:manage' },
+  products: { permissions: 'catalog:products:manage' },
+};
+const authOf = (policy: CatalogRoutePolicy) => AUTH_OF[policy.authority ?? 'schema'];
 const FALLBACK_ERROR = 'Catalog schema write failed';
 
 type IdParams = { id: string };
@@ -46,20 +57,32 @@ async function respond<T>(envelope: (data: T) => NextResponse, run: () => Promis
   }
 }
 
-/** `POST /api/catalog/<συλλογή>` — δημιουργία. */
-export function catalogCreateRoute<TSchema extends z.ZodTypeAny, TResult>(
-  policy: CatalogRoutePolicy,
-  schema: TSchema,
-  run: (auth: AuthContext, body: z.infer<TSchema>) => Promise<TResult>,
-) {
-  return defineRoute<TSchema>({
-    rateLimit: TIER_OF[policy.category],
-    schema,
-    auth: MANAGE,
-    fallbackError: FALLBACK_ERROR,
-    handler: ({ auth, body }) => respond(created, () => run(auth, body)),
-  });
-}
+/**
+ * Διαδρομή **χωρίς** id με σώμα. Η δημιουργία και η πράξη διαφέρουν **μόνο** στο περίβλημα (201 ή 200) ⇒ ένα
+ * εργοστάσιο, δύο εφαρμογές του (όχι δύο δίδυμες συναρτήσεις — CHECK 3.28).
+ * 🔑 **Εξαγόμενο επίτηδες**: το CHECK 3.92 υπολογίζει τα σύνορα από **εξαγόμενες** συναρτήσεις που καλούν σύνορο·
+ * μη εξαγόμενο, τα `catalogCreateRoute` / `catalogActionRoute` θα φαίνονταν εκτός συνόρου (ψευδώς θετικό Κ3).
+ */
+export const bodyRouteWith =
+  (envelope: (data: unknown) => NextResponse) =>
+  <TSchema extends z.ZodTypeAny, TResult>(
+    policy: CatalogRoutePolicy,
+    schema: TSchema,
+    run: (auth: AuthContext, body: z.infer<TSchema>) => Promise<TResult>,
+  ) =>
+    defineRoute<TSchema>({
+      rateLimit: TIER_OF[policy.category],
+      schema,
+      auth: authOf(policy),
+      fallbackError: FALLBACK_ERROR,
+      handler: ({ auth, body }) => respond(envelope, () => run(auth, body)),
+    });
+
+/** `POST /api/catalog/<συλλογή>` — δημιουργία (201). */
+export const catalogCreateRoute = bodyRouteWith(created);
+
+/** `PUT /api/catalog/<singleton>` ή `POST /api/catalog/<πράξη>` — πράξη χωρίς id (ρυθμίσεις, εργασίες), 200. */
+export const catalogActionRoute = bodyRouteWith(ok);
 
 /** `PUT /api/catalog/<συλλογή>/[id]` ή `POST …/[id]/<πράξη>` — αλλαγή συγκεκριμένης οντότητας. */
 export function catalogEntityRoute<TSchema extends z.ZodTypeAny, TResult>(
@@ -70,7 +93,7 @@ export function catalogEntityRoute<TSchema extends z.ZodTypeAny, TResult>(
   return defineRoute<TSchema, IdParams>({
     rateLimit: TIER_OF[policy.category],
     schema,
-    auth: MANAGE,
+    auth: authOf(policy),
     fallbackError: FALLBACK_ERROR,
     handler: ({ auth, body, params }) => respond(ok, () => run(auth, params.id, body)),
   });
@@ -83,7 +106,7 @@ export function catalogDeleteRoute<TResult>(
 ) {
   return defineRoute<z.ZodTypeAny, IdParams>({
     rateLimit: TIER_OF[policy.category],
-    auth: MANAGE,
+    auth: authOf(policy),
     fallbackError: FALLBACK_ERROR,
     handler: ({ req, auth, params }) => {
       const raw = new URL(req.url).searchParams.get(EXPECTED_REVISION_PARAM);

@@ -18,11 +18,15 @@ import {
 import { formatAuditCoordinates } from '@/lib/audit/audit-coordinates';
 import { AUDIT_VALUE_CATALOGS } from '@/config/audit-value-catalogs';
 import {
+  CATALOG_ASSET_TRACKED_FIELDS,
   CATALOG_ATTRIBUTE_GROUP_TRACKED_FIELDS,
   CATALOG_ATTRIBUTE_TRACKED_FIELDS,
   CATALOG_CATEGORY_TRACKED_FIELDS,
   CATALOG_FAMILY_TRACKED_FIELDS,
   CATALOG_MEASUREMENT_FAMILY_TRACKED_FIELDS,
+  CATALOG_PRODUCT_MODEL_TRACKED_FIELDS,
+  CATALOG_PRODUCT_TRACKED_FIELDS,
+  CATALOG_SETTINGS_TRACKED_FIELDS,
 } from '@/config/audit-tracked-fields-catalog';
 import { BUILDING_OBJECTIVE_VALUE_FIELDS } from '@/lib/objective-value/building-objective-value-facts';
 import { OBJECTIVE_VALUE_DECLARED_FIELDS } from '@/lib/objective-value/objective-value-declarations';
@@ -1614,6 +1618,14 @@ export function getTrackedFieldsForEntityAuditType(
       return CATALOG_CATEGORY_TRACKED_FIELDS;
     case 'catalog_family':
       return CATALOG_FAMILY_TRACKED_FIELDS;
+    case 'catalog_product_model':
+      return CATALOG_PRODUCT_MODEL_TRACKED_FIELDS;
+    case 'catalog_product':
+      return CATALOG_PRODUCT_TRACKED_FIELDS;
+    case 'catalog_asset':
+      return CATALOG_ASSET_TRACKED_FIELDS;
+    case 'catalog_settings':
+      return CATALOG_SETTINGS_TRACKED_FIELDS;
     default:
       return null;
   }

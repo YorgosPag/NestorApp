@@ -88,12 +88,17 @@ export function completenessPercent(cell: CompletenessCell): number {
   return cell.required === 0 ? 100 : Math.floor((cell.filled / cell.required) * 100);
 }
 
+/** Το κλειδί ενός ζεύγους `κανάλι:γλώσσα` — **ένα** σχήμα για παράγωγο, περίληψη ρίζας και φίλτρα (Δ11). */
+export function completeChannelKey(channel: CatalogChannel, locale: string): string {
+  return `${channel}:${locale}`;
+}
+
 /** Τα πλήρη ζεύγη ως κλειδιά `κανάλι:γλώσσα` — το παράγωγο `completeChannels[]` (Δ11) για φίλτρα. */
 export function completeChannelKeys(matrix: CompletenessMatrix): readonly string[] {
   return CATALOG_CHANNELS.flatMap((channel) =>
     Object.entries(matrix[channel])
       .filter(([, cell]) => cell !== undefined && cell.missing.length === 0)
-      .map(([locale]) => `${channel}:${locale}`),
+      .map(([locale]) => completeChannelKey(channel, locale)),
   );
 }
 

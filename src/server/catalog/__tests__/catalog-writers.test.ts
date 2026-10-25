@@ -7,10 +7,10 @@
 import type { Firestore } from 'firebase-admin/firestore';
 
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
-import type { AuthContext } from '@/lib/auth';
 import type { CatalogAttributeDefinition } from '@/subapps/catalog/types/attribute';
-import type { CatalogFamilyDefinition, FamilyTableRow } from '@/subapps/catalog/types/family';
-import { MFP_ATTRIBUTES, MFP_FAMILY } from '@/subapps/catalog/__tests__/fixtures/mfp-fan-coil.fixture';
+import type { CatalogFamilyDefinition } from '@/subapps/catalog/types/family';
+import { MFP_ATTRIBUTES } from '@/subapps/catalog/__tests__/fixtures/mfp-fan-coil.fixture';
+import { ARIES, RIVAL, mfpFamilyWith, rejectionOf } from './catalog-writer-seed';
 
 const fake = new FakeFirestore();
 const recordTrackedEntityWrite = jest.fn(async () => undefined);
@@ -24,29 +24,7 @@ jest.mock('@/services/entity-audit-tracked-write', () => ({
 import { createCatalogAttributeGroup, deleteCatalogAttributeGroup } from '../attribute-group-writer.server';
 import { createCatalogAttribute, deleteCatalogAttribute, updateCatalogAttribute } from '../attribute-writer.server';
 import { createCatalogFamily, updateCatalogFamily } from '../family-writer.server';
-import { CatalogWriteError } from '../catalog-write-error';
 /* eslint-enable import/first */
-
-const ctxOf = (companyId: string): AuthContext => ({
-  uid: `user-${companyId}`,
-  email: `admin@${companyId}.gr`,
-  companyId,
-  globalRole: 'company_admin',
-  mfaEnrolled: false,
-  isAuthenticated: true,
-});
-const ARIES = ctxOf('comp-aries');
-const RIVAL = ctxOf('comp-rival');
-
-async function rejectionOf(promise: Promise<unknown>): Promise<CatalogWriteError> {
-  try {
-    await promise;
-  } catch (error) {
-    if (error instanceof CatalogWriteError) return error;
-    throw error;
-  }
-  throw new Error('expected a CatalogWriteError');
-}
 
 /** Η βιβλιοθήκη του MFP μέσα από τους γραφείς — επιστρέφει κωδικός → id. */
 async function seedMfpLibrary(): Promise<Map<string, string>> {
@@ -60,30 +38,6 @@ async function seedMfpLibrary(): Promise<Map<string, string>> {
     ids.set(attribute.code, stored.id);
   }
   return ids;
-}
-
-/** Η οικογένεια MFP του fixture (id = κωδικός) με τα πραγματικά id των γραφέων. */
-function mfpFamilyWith(ids: Map<string, string>): CatalogFamilyDefinition {
-  const id = (code: string) => ids.get(code) ?? code;
-  const row = (r: FamilyTableRow): FamilyTableRow => {
-    if (r.kind === 'axis') return { ...r, axisAttributeId: id(r.axisAttributeId) };
-    if (r.kind === 'attribute') {
-      return { ...r, attributeId: id(r.attributeId), axisFilter: r.axisFilter && { ...r.axisFilter, axisAttributeId: id(r.axisFilter.axisAttributeId) } };
-    }
-    return r;
-  };
-  return JSON.parse(JSON.stringify({
-    ...MFP_FAMILY,
-    attributes: MFP_FAMILY.attributes.map((binding) => ({ ...binding, attributeId: id(binding.attributeId) })),
-    labelAttributeId: id('model_code'),
-    imageAttributeId: id('photo'),
-    variantSchemes: MFP_FAMILY.variantSchemes.map((scheme) => ({
-      ...scheme,
-      levels: scheme.levels.map((level) => ({ axisAttributeIds: level.axisAttributeIds.map(id), attributeIds: level.attributeIds.map(id) })),
-    })),
-    tableSpec: MFP_FAMILY.tableSpec && { ...MFP_FAMILY.tableSpec, rows: MFP_FAMILY.tableSpec.rows.map(row) },
-    consistencyRules: [{ id: 'rule_unique_code', kind: 'unique', attributeId: id('model_code'), severity: 'error' }],
-  })) as CatalogFamilyDefinition;
 }
 
 beforeEach(() => {
@@ -203,7 +157,8 @@ describe('καμία αλλαγή της βιβλιοθήκης δεν σπάε�
     const lean: CatalogFamilyDefinition = {
       ...mfpFamilyWith(ids),
       attributes: mfpFamilyWith(ids).attributes.filter((binding) => binding.attributeId !== ids.get('weight')),
-      variantSchemes: [], tableSpec: null,
+      // Χωρίς σχήματα ⇒ και χωρίς κανόνες: ο κανόνας μονοτονίας του fixture δείχνει σε άξονα (ruleAxisUnknown).
+      variantSchemes: [], tableSpec: null, consistencyRules: [],
     };
     const updated = await updateCatalogFamily(ARIES, created.id, created.revision, lean);
     expect(updated.attributeIds).not.toContain(ids.get('weight'));

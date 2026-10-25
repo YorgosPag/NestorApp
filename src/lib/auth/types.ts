@@ -223,6 +223,10 @@ export const PERMISSIONS = {
   // μια αλλαγή σχήματος αγγίζει κάθε προϊόν της οικογένειας.
   "catalog:schema:view": true,
   "catalog:schema:manage": true,
+  // ADR-923 §5.10 — τα ΔΕΔΟΜΕΝΑ του καταλόγου (μοντέλα · SKU · μέσα · επανυπολογισμός): Akeneo «edit products» ≠
+  // «manage catalog structure». Ο εμπλουτισμός προϊόντων δεν αλλάζει το σχήμα — χωριστή εξουσία, ώστε στο μέλλον
+  // να τη δοθεί σε ρόλο εισαγωγής δεδομένων χωρίς να του δοθεί το σχήμα.
+  "catalog:products:manage": true,
 
   // Orders (for vendors)
   "orders:orders:view": true,

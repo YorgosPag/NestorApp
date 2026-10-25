@@ -252,6 +252,13 @@ export const AUDIT_ENTITIES = {
   catalog_measurement_family: { collectionKey: 'CATALOG_MEASUREMENT_FAMILIES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
   catalog_category: { collectionKey: 'CATALOG_CATEGORIES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
   catalog_family: { collectionKey: 'CATALOG_FAMILIES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+  // ADR-923 §5.10 — τα ΔΕΔΟΜΕΝΑ του καταλόγου, ίδιο σύνορο. Το ιστορικό των τιμών γράφεται **ανά ιδιότητα**
+  // (`audit-tracked-fields-catalog`), όχι ως ένα JSON ολόκληρου του χάρτη. Οι κρατήσεις μοναδικότητας
+  // (`catalog_unique_values`) ΔΕΝ είναι οντότητα — είναι ευρετήριο του γραφέα, χωρίς ιστορικό.
+  catalog_product_model: { collectionKey: 'CATALOG_PRODUCT_MODELS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+  catalog_product: { collectionKey: 'CATALOG_PRODUCTS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+  catalog_asset: { collectionKey: 'CATALOG_ASSETS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+  catalog_settings: { collectionKey: 'CATALOG_SETTINGS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
 
   // ── Μηχανή κειμένου (ADR-651 / ADR-344) — server-only services ────────────
   text_template: { collectionKey: 'TEXT_TEMPLATES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },

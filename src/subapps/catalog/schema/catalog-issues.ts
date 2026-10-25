@@ -98,6 +98,19 @@ export const CATALOG_ISSUE_CODES = [
   'tooManyDescendants',
   'assetRoleKindMismatch',
   'channelLocalesRequired',
+  // ── Φάση 2β: γραφείς δεδομένων + κλειδώματα σχήματος με προϊόντα (ADR-923 §5.10.2) ──
+  'consistencyRuleViolated',
+  'fieldImmutable',
+  'uniqueValueTaken',
+  'uniqueValueLooksLike',
+  'richTextUnsafe',
+  'referenceFamilyNotAllowed',
+  'variantSchemeLockedInUse',
+  'attributeLevelLockedInUse',
+  'attributeRemovalLockedInUse',
+  'attributeFlagLockedInUse',
+  'optionLockedInUse',
+  'localeLockedInUse',
 ] as const;
 
 export type CatalogIssueCode = (typeof CATALOG_ISSUE_CODES)[number];

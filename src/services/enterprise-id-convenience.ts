@@ -460,6 +460,15 @@ export const generateDeterministicCatalogCategoryId = (companyId: string, code: 
   enterpriseIdService.generateDeterministicCatalogCategoryId(companyId, code);
 export const generateDeterministicCatalogFamilyId = (companyId: string, code: string) =>
   enterpriseIdService.generateDeterministicCatalogFamilyId(companyId, code);
+export const generateDeterministicCatalogProductModelId = (companyId: string, code: string) =>
+  enterpriseIdService.generateDeterministicCatalogProductModelId(companyId, code);
+export const generateCatalogProductId = () => enterpriseIdService.generateCatalogProductId();
+export const generateDeterministicCatalogAssetId = (companyId: string, code: string) =>
+  enterpriseIdService.generateDeterministicCatalogAssetId(companyId, code);
+export const generateDeterministicCatalogSettingsId = (companyId: string) =>
+  enterpriseIdService.generateDeterministicCatalogSettingsId(companyId);
+export const generateDeterministicCatalogUniqueValueId = (companyId: string, attributeId: string, uniqueKey: string) =>
+  enterpriseIdService.generateDeterministicCatalogUniqueValueId(companyId, attributeId, uniqueKey);
 
 // Optimistic & Temporary
 export const generateOptimisticId = () => enterpriseIdService.generateOptimisticId();

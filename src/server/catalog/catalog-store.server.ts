@@ -2,7 +2,7 @@ import 'server-only';
 
 /**
  * =============================================================================
- * Η ΜΗΧΑΝΗ ΑΠΟΘΗΚΕΥΣΗΣ ΤΟΥ ΣΧΗΜΑΤΟΣ ΚΑΤΑΛΟΓΟΥ — ΤΟ ΕΝΑ ΣΗΜΕΙΟ ΠΟΥ ΓΡΑΦΕΙ (ADR-923 §5.9 · CHECK 3.106)
+ * Η ΜΗΧΑΝΗ ΑΠΟΘΗΚΕΥΣΗΣ ΤΟΥ ΚΑΤΑΛΟΓΟΥ — ΤΟ ΕΝΑ ΣΗΜΕΙΟ ΠΟΥ ΓΡΑΦΕΙ (ADR-923 §5.9 · §5.10 · CHECK 3.106)
  * =============================================================================
  *
  * Κάθε γραφή σε `catalog_*` περνά από εδώ: **μία** συναλλαγή, **ένας** έλεγχος ιδιοκτησίας, **ένας** έλεγχος
@@ -12,22 +12,31 @@ import 'server-only';
  * 🔑 **Οι χρονοσφραγίδες είναι ISO 8601 `string`** σε βάση, σύρμα και πελάτη — **μία** αναπαράσταση αντί για
  * τρεις (ADR-663 §4). Το σχήμα δεν χρειάζεται ταξινόμηση κατά χρόνο στον διακομιστή.
  *
+ * 🔑 **Δύο είδη εγγραφής, επίτηδες** (ADR-923 §5.10 Θωράκιση 1):
+ *   - **αλλαγή ανθρώπου** (`stageCreate/Replace/SoftDelete`): αναθεώρηση +1, σφραγίδα, ίχνος ιστορικού·
+ *   - **παράγωγο** (`stageDerived`): γράφει **μόνο** το `derived` — χωρίς αναθεώρηση, χωρίς ίχνος. Ο
+ *     επανυπολογισμός πληρότητας 200 παραλλαγών δεν είναι «αλλαγή» κανενός: με αναθεώρηση θα έδινε 200 ψευδή
+ *     409 σε όποιον τις επεξεργάζεται, και 200 ψεύτικες γραμμές στο ιστορικό. Η **σειριοποίηση** δεν χάνεται:
+ *     η συναλλαγή διάβασε το έγγραφο, άρα κάθε ταυτόχρονη εγγραφή (και παραγώγου) την ξανατρέχει.
+ *
  * ⚠️ **Firestore: όλες οι αναγνώσεις ΠΡΙΝ από κάθε εγγραφή μέσα στη συναλλαγή.** Γι' αυτό η μηχανή χωρίζει
- * **ανάγνωση** (`readOwned` · `readForCreate`) από **σκηνοθεσία εγγραφής** (`stage*`): ο γραφέας διαβάζει όσα
- * χρειάζεται, κρίνει, και μόνο τότε σκηνοθετεί.
+ * **ανάγνωση** (`read*`) από **σκηνοθεσία εγγραφής** (`stage*`): ο γραφέας διαβάζει όσα χρειάζεται, κρίνει, και
+ * μόνο τότε σκηνοθετεί.
  *
  * @module server/catalog/catalog-store.server
  */
 
 import type { DocumentReference, Firestore, Transaction } from 'firebase-admin/firestore';
 
+import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AuthContext } from '@/lib/auth';
 import { ownedOrNull } from '@/lib/auth/tenant-ownership';
 import { nowISO } from '@/lib/date-local';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { recordTrackedEntityWrite } from '@/services/entity-audit-tracked-write';
+import { enterpriseIdFromRequest } from '@/services/enterprise-id-parse';
 import type { CatalogRecord } from '@/subapps/catalog/types/catalog-record';
-import { CATALOG_KIND_SPECS, type CatalogKind } from './catalog-kinds';
+import { CATALOG_KIND_SPECS, type CatalogKind, type CatalogKindIdentity } from './catalog-kinds';
 import { CatalogWriteError } from './catalog-write-error';
 
 /** Αποθηκευμένη εγγραφή: ορισμός + περίβλημα, χρονοσφραγίδες ISO. */
@@ -49,8 +58,19 @@ export interface CatalogTx {
   readonly changes: StagedChange[];
 }
 
+/** Ο στόχος μιας δημιουργίας: το id και η αναθεώρηση που είχε (0 = ποτέ· > 0 = διαγραμμένο που ξαναγεννιέται). */
+export interface CreateTarget {
+  readonly id: string;
+  readonly previousRevision: number;
+}
+
 export function catalogDocRef(db: Firestore, kind: CatalogKind, id: string): DocumentReference {
   return db.collection(CATALOG_KIND_SPECS[kind].collection).doc(id);
+}
+
+/** Η αναθεώρηση μετά από μία αλλαγή ανθρώπου — ο **ένας** κανόνας «+1», για μηχανή και αποτύπωμα πληρότητας. */
+export function revisionAfterWrite(previousRevision: number): number {
+  return previousRevision + 1;
 }
 
 /**
@@ -73,23 +93,44 @@ export async function runCatalogTransaction<T>(ctx: AuthContext, work: (scope: C
 
 async function recordChange(change: StagedChange, performedBy: string): Promise<void> {
   const spec = CATALOG_KIND_SPECS[change.kind];
+  const view = (record: StoredCatalogRecord<object>): Record<string, unknown> =>
+    spec.auditView ? spec.auditView(record as Readonly<Record<string, unknown>>) : (record as Record<string, unknown>);
   await recordTrackedEntityWrite({
     entityType: spec.entityType,
     entityId: change.after.id,
     entityName: entityNameOf(change.after),
     trackedFields: spec.trackedFields,
-    before: change.before,
-    after: change.after,
+    before: change.before ? view(change.before) : null,
+    after: view(change.after),
     performedBy,
     ledger: { companyId: change.after.companyId },
   });
 }
 
+/** Το όνομα στο ιστορικό: ο κωδικός· για το SKU (χωρίς κωδικό-ταυτότητα) η παραγόμενη ετικέτα του. */
 function entityNameOf(record: object): string | null {
-  return 'code' in record && typeof record.code === 'string' ? record.code : null;
+  if ('code' in record && typeof record.code === 'string') return record.code;
+  if ('derived' in record && record.derived && typeof record.derived === 'object' && 'label' in record.derived) {
+    return typeof record.derived.label === 'string' ? record.derived.label : null;
+  }
+  return null;
 }
 
 // ── Αναγνώσεις ──────────────────────────────────────────────────────────────
+
+/** Η ενεργή εγγραφή **αυτού** του χώρου — ή `null` (ανύπαρκτη, διαγραμμένη ή ξένη: **ίδια** απάντηση). */
+export async function readOwnedOrNull<TDefinition>(
+  scope: CatalogTx,
+  kind: CatalogKind,
+  id: string,
+): Promise<StoredCatalogRecord<TDefinition> | null> {
+  const snap = await scope.tx.get(catalogDocRef(scope.db, kind, id));
+  const owned = ownedOrNull(snap.data() as StoredCatalogRecord<TDefinition> | undefined, scope.ctx.companyId, {
+    resource: CATALOG_KIND_SPECS[kind].collection,
+    resourceId: id,
+  });
+  return owned === null || owned.isDeleted ? null : owned;
+}
 
 /**
  * Η ενεργή εγγραφή **αυτού** του χώρου. Ανύπαρκτη, διαγραμμένη ή ξένη ⇒ `notFound` — **ίδια** απάντηση
@@ -100,12 +141,8 @@ export async function readOwned<TDefinition>(
   kind: CatalogKind,
   id: string,
 ): Promise<StoredCatalogRecord<TDefinition>> {
-  const snap = await scope.tx.get(catalogDocRef(scope.db, kind, id));
-  const owned = ownedOrNull(snap.data() as StoredCatalogRecord<TDefinition> | undefined, scope.ctx.companyId, {
-    resource: CATALOG_KIND_SPECS[kind].collection,
-    resourceId: id,
-  });
-  if (owned === null || owned.isDeleted) throw new CatalogWriteError('notFound');
+  const owned = await readOwnedOrNull<TDefinition>(scope, kind, id);
+  if (owned === null) throw new CatalogWriteError('notFound');
   return owned;
 }
 
@@ -121,21 +158,49 @@ export function assertCodeUnchanged(record: { readonly code: string }, nextCode:
   if (record.code !== nextCode) throw new CatalogWriteError('immutable', [{ code: 'codeImmutable', path: 'code' }]);
 }
 
+function identityOf<M extends CatalogKindIdentity['mode']>(kind: CatalogKind, mode: M): Extract<CatalogKindIdentity, { mode: M }> {
+  const identity = CATALOG_KIND_SPECS[kind].identity;
+  if (identity.mode !== mode) throw new Error(`catalog kind ${kind} has ${identity.mode} identity, not ${mode}`);
+  return identity as Extract<CatalogKindIdentity, { mode: M }>;
+}
+
 /**
  * Για δημιουργία: το id είναι ντετερμινιστικό από `(χώρος, κωδικός)`, άρα **ενεργό** έγγραφο στο ίδιο id
  * σημαίνει διπλότυπο κωδικό. Διαγραμμένο έγγραφο **ξαναγεννιέται** στη θέση του (ο κωδικός ξαναγίνεται
  * διαθέσιμος, η αναθεώρηση συνεχίζει να ανεβαίνει — καμία παλιά αναφορά δεν ξαναζωντανεύει σιωπηλά).
  */
-export async function readForCreate(
-  scope: CatalogTx,
-  kind: CatalogKind,
-  code: string,
-): Promise<{ readonly id: string; readonly previousRevision: number }> {
-  const id = CATALOG_KIND_SPECS[kind].idOf(scope.ctx.companyId, code);
+export async function readForCreate(scope: CatalogTx, kind: CatalogKind, code: string): Promise<CreateTarget> {
+  const id = identityOf(kind, 'code').idOf(scope.ctx.companyId, code);
   const snap = await scope.tx.get(catalogDocRef(scope.db, kind, id));
   const data = snap.data() as StoredCatalogRecord<object> | undefined;
   if (data && !data.isDeleted) throw new CatalogWriteError('duplicateCode', [], { code });
   return { id, previousRevision: data?.revision ?? 0 };
+}
+
+/**
+ * Για δημιουργία με **τυχαίο** id (SKU, Δ3). Ο πελάτης **μπορεί** να το προ-γεννήσει (αισιόδοξη οθόνη, ADR-866
+ * επίπεδο Β): ο διακομιστής **δεν** το εμπιστεύεται — ελέγχει πρόθεμα + uuid v4, διαβάζει το έγγραφο, και η
+ * δημιουργία γράφει με `create()`, που αρνείται υπάρχον έγγραφο ακόμη κι αν κάποιος πρόλαβε μετά την ανάγνωση.
+ */
+export async function readForRandomCreate(scope: CatalogTx, kind: CatalogKind, requestedId: string | null): Promise<CreateTarget> {
+  const identity = identityOf(kind, 'random');
+  const id = requestedId === null ? identity.mint() : enterpriseIdFromRequest(requestedId, identity.prefix);
+  if (id === null) throw new CatalogWriteError('invalid', [{ code: 'invalidCode', path: 'id' }]);
+  const snap = await scope.tx.get(catalogDocRef(scope.db, kind, id));
+  if (snap.exists) throw new CatalogWriteError('duplicateCode', [], { code: id });
+  return { id, previousRevision: 0 };
+}
+
+/** Το singleton του χώρου (ρυθμίσεις): ο στόχος και η τρέχουσα ενεργή εγγραφή, αν υπάρχει. */
+export async function readSingleton<TDefinition>(
+  scope: CatalogTx,
+  kind: CatalogKind,
+): Promise<{ readonly target: CreateTarget; readonly current: StoredCatalogRecord<TDefinition> | null }> {
+  const id = identityOf(kind, 'singleton').idOf(scope.ctx.companyId);
+  const snap = await scope.tx.get(catalogDocRef(scope.db, kind, id));
+  const data = snap.data() as StoredCatalogRecord<TDefinition> | undefined;
+  const current = data && !data.isDeleted && data.companyId === scope.ctx.companyId ? data : null;
+  return { target: { id, previousRevision: data?.revision ?? 0 }, current };
 }
 
 // ── Σκηνοθεσία εγγραφών (ΜΕΤΑ από όλες τις αναγνώσεις) ──────────────────────
@@ -143,7 +208,7 @@ export async function readForCreate(
 export function stageCreate<TDefinition extends object>(
   scope: CatalogTx,
   kind: CatalogKind,
-  target: { readonly id: string; readonly previousRevision: number },
+  target: CreateTarget,
   definition: TDefinition,
 ): StoredCatalogRecord<TDefinition> {
   const { ctx, now } = scope;
@@ -151,7 +216,7 @@ export function stageCreate<TDefinition extends object>(
     ...definition,
     id: target.id,
     companyId: ctx.companyId,
-    revision: target.previousRevision + 1,
+    revision: revisionAfterWrite(target.previousRevision),
     isDeleted: false,
     createdAt: now,
     createdBy: ctx.uid,
@@ -160,7 +225,10 @@ export function stageCreate<TDefinition extends object>(
     deletedAt: null,
     deletedBy: null,
   };
-  scope.tx.set(catalogDocRef(scope.db, kind, target.id), record);
+  const ref = catalogDocRef(scope.db, kind, target.id);
+  // Νέο έγγραφο ⇒ `create()` (αρνείται υπάρχον — ζώνη ασφαλείας πάνω από την ανάγνωση)· διαγραμμένο ⇒ `set()`.
+  if (target.previousRevision === 0) scope.tx.create(ref, record);
+  else scope.tx.set(ref, record);
   scope.changes.push({ kind, before: null, after: record });
   return record;
 }
@@ -178,7 +246,7 @@ function stageRevision<TDefinition extends object>(
   const record: StoredCatalogRecord<TDefinition> = {
     ...current,
     ...patch,
-    revision: current.revision + 1,
+    revision: revisionAfterWrite(current.revision),
     updatedAt: scope.now,
     updatedBy: scope.ctx.uid,
   };
@@ -203,4 +271,46 @@ export function stageSoftDelete<TDefinition extends object>(
   current: StoredCatalogRecord<TDefinition>,
 ): StoredCatalogRecord<TDefinition> {
   return stageRevision(scope, kind, current, { isDeleted: true, deletedAt: scope.now, deletedBy: scope.ctx.uid });
+}
+
+/**
+ * Γράφει **μόνο** το `derived` (ADR-923 §5.10 Θωράκιση 1): **καμία** αναθεώρηση, **καμία** σφραγίδα ανθρώπου,
+ * **κανένα** ίχνος. Ο μόνος δρόμος για παράγωγο σε έγγραφο που **δεν** αλλάζει ο άνθρωπος σε αυτή τη συναλλαγή
+ * (CHECK 3.106 Κ4). `update` (όχι `set`): το υπόλοιπο έγγραφο μένει όπως διαβάστηκε.
+ */
+export function stageDerived<TDerived extends object, TDefinition extends { readonly derived: TDerived }>(
+  scope: CatalogTx,
+  kind: CatalogKind,
+  current: StoredCatalogRecord<TDefinition>,
+  derived: TDerived,
+): StoredCatalogRecord<TDefinition> {
+  scope.tx.update(catalogDocRef(scope.db, kind, current.id), { derived });
+  return { ...current, derived };
+}
+
+// ── Κρατήσεις μοναδικών τιμών (Δ3) — ευρετήριο του γραφέα, ΟΧΙ οντότητα (χωρίς ιστορικό) ─────────────────
+
+/** Μία κράτηση: «αυτή η κανονικοποιημένη τιμή αυτής της ιδιότητας ανήκει σε αυτόν τον φορέα». */
+export interface CatalogUniqueValueDoc {
+  readonly id: string;
+  readonly companyId: string;
+  readonly attributeId: string;
+  readonly uniqueKey: string;
+  /** Σκελετός UTS #39 — **μόνο** για την προειδοποίηση «μοιάζει με υπάρχοντα», ποτέ για ταυτότητα. */
+  readonly skeleton: string;
+  readonly holderKind: 'productModel' | 'product';
+  readonly holderId: string;
+  readonly createdAt: string;
+}
+
+export function uniqueValueRef(db: Firestore, id: string): DocumentReference {
+  return db.collection(COLLECTIONS.CATALOG_UNIQUE_VALUES).doc(id);
+}
+
+export function stageUniqueClaim(scope: CatalogTx, reservation: CatalogUniqueValueDoc): void {
+  scope.tx.set(uniqueValueRef(scope.db, reservation.id), reservation);
+}
+
+export function stageUniqueRelease(scope: CatalogTx, reservationId: string): void {
+  scope.tx.delete(uniqueValueRef(scope.db, reservationId));
 }

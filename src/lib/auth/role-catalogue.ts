@@ -73,6 +73,8 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       // ADR-923 §5.1 — ο διαχειριστής κρατά τη ΔΟΜΗ του καταλόγου (σχήμα).
       "catalog:schema:view",
       "catalog:schema:manage",
+      // ADR-923 §5.10 — και τα ΔΕΔΟΜΕΝΑ του (μοντέλα, SKU, μέσα). Σε ποιον άλλο ρόλο: απόφαση Giorgio (§11).
+      "catalog:products:manage",
       "users:users:view",
       "users:users:manage",
       "projects:projects:view",

@@ -17,10 +17,11 @@ import type {
 } from '../types/attribute';
 import type { AttributeValue, AttributeValueOfType, TableCellValue } from '../types/product';
 import { amountFromCanonical } from '../values/decimal-amount';
+import { checkRichText } from '../values/rich-text';
 import { isEmptyAttributeValue } from '../values/value-shape';
 import { CATALOG_LIMITS } from '../vocabulary/catalog-limits';
 import { reportDuplicates } from './catalog-issues';
-import type { ValueCheck } from './product-validation-context';
+import { referenceTargetKey, type ValueCheck } from './product-validation-context';
 
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
@@ -152,7 +153,16 @@ function checkReferences(
 ): void {
   const max = attribute.config.maxReferences;
   if (max !== null && value.targets.length > max) check.collector.add('tooMany', `${path}.targets`, { max });
-  // Η ύπαρξη και η οικογένεια του στόχου θέλουν ανάγνωση ⇒ ελέγχονται στον γραφέα (2β).
+  // Ύπαρξη + οικογένεια: ο γραφέας διαβάζει τους στόχους στη συναλλαγή (2β) και τους δίνει στο πλαίσιο.
+  const allowed = attribute.config.targetFamilyCodes;
+  value.targets.forEach((target, index) => {
+    const found = check.context.references.get(referenceTargetKey(target));
+    const itemPath = `${path}.targets[${index}]`;
+    if (!found) check.collector.add('unknownReference', itemPath);
+    else if (allowed.length > 0 && !allowed.includes(found.familyCode)) {
+      check.collector.add('referenceFamilyNotAllowed', itemPath, { family: found.familyCode });
+    }
+  });
   reportDuplicates(
     check.collector,
     value.targets.map((target) => `${target.kind}:${target.id}`),
@@ -201,15 +211,20 @@ function checkTable(
   }
 }
 
+/** Μήκος **και** γραμματική (ADR-923 §5.10.2): εκτός γλώσσας ⇒ εύρημα, ποτέ σιωπηλό καθάρισμα. */
+function checkRichTextValue(check: ValueCheck, maxLength: number | null, html: string, path: string): void {
+  checkLength(check, html, maxLength, CATALOG_LIMITS.maxRichTextValueLength, path);
+  const verdict = checkRichText(html);
+  if (!verdict.ok) check.collector.add('richTextUnsafe', path, { offset: verdict.offset });
+}
+
 /** Ο έλεγχος ανά τύπο — `attribute.type === value.type` έχει ήδη επαληθευτεί. */
 function checkTyped(check: ValueCheck, attribute: CatalogAttributeDefinition, value: AttributeValue, path: string): void {
   switch (attribute.type) {
     case 'text':
       return value.type === 'text' ? checkText(check, attribute, value.text, path) : undefined;
     case 'richText':
-      return value.type === 'richText'
-        ? checkLength(check, value.html, attribute.config.maxLength, CATALOG_LIMITS.maxRichTextValueLength, path)
-        : undefined;
+      return value.type === 'richText' ? checkRichTextValue(check, attribute.config.maxLength, value.html, path) : undefined;
     case 'number':
       return value.type === 'number' ? checkAmount(check, value.amount, attribute.config, path, (n) => n) : undefined;
     case 'measurement':

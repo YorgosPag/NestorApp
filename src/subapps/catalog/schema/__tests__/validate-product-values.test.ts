@@ -24,6 +24,8 @@ const context = (depth: number, overrides: Partial<ProductValuesContext> = {}): 
   scheme,
   depth,
   assets: MFP_ASSETS,
+  categories: new Set(['cat_fan_coils']),
+  references: new Map(),
   ...overrides,
 });
 
@@ -133,6 +135,47 @@ describe('η ίδια η τιμή', () => {
     const photo = (assetId: string) => ({ ...MFP_MODEL, values: { ...MFP_MODEL.values, photo: one({ '*': { type: 'asset', assetIds: [assetId] } }) } });
     expect(codes(photo('cas_missing'), 0)).toEqual(['unknownReference']);
     expect(codes(photo('cas_pdf'), 0, { assets: new Map([['cas_pdf', { kind: 'document' }]]) })).toEqual(['assetKindNotAllowed']);
+  });
+});
+
+describe('ό,τι θέλει ανάγνωση — ο γραφέας το δίνει στο πλαίσιο (Φάση 2β)', () => {
+  const inCategory = (categoryIds: string[]): CatalogValueHolder => ({ ...MFP_MODEL, categoryIds });
+
+  it('κατηγορία που δεν υπάρχει (ή είναι ξένη/διαγραμμένη) ⇒ unknownReference', () => {
+    expect(codes(inCategory(['cat_fan_coils']), 0)).toEqual([]);
+    expect(codes(inCategory(['cat_fan_coils', 'cat_gone']), 0)).toEqual(['unknownReference']);
+  });
+
+  const accessory = {
+    ...(MFP_ATTRIBUTE_MAP.get('power_supply') as NonNullable<ReturnType<typeof MFP_ATTRIBUTE_MAP.get>>),
+    code: 'accessory',
+    type: 'reference' as const,
+    config: { relation: 'accessory' as const, targetFamilyCodes: ['valves'], maxReferences: null },
+  };
+  const withAccessory = (overrides: Partial<ProductValuesContext>) => ({
+    family: { ...MFP_FAMILY, attributes: [...MFP_FAMILY.attributes, { attributeId: 'accessory', requiredChannels: [] }] },
+    attributes: new Map([...MFP_ATTRIBUTE_MAP, ['accessory', accessory]]),
+    ...overrides,
+  });
+  const pointingTo = (id: string): CatalogValueHolder => ({
+    ...MFP_MODEL,
+    values: { ...MFP_MODEL.values, accessory: one({ '*': { type: 'reference', targets: [{ kind: 'product', id }] } }) },
+  });
+
+  it('στόχος αναφοράς: υπάρχει ⇒ ✅ · δεν υπάρχει ⇒ unknownReference · άλλη οικογένεια ⇒ referenceFamilyNotAllowed', () => {
+    const references = new Map([['product:cprod_valve', { familyCode: 'valves' }], ['product:cprod_pump', { familyCode: 'pumps' }]]);
+    expect(codes(pointingTo('cprod_valve'), 0, withAccessory({ references }))).toEqual([]);
+    expect(codes(pointingTo('cprod_missing'), 0, withAccessory({ references }))).toEqual(['unknownReference']);
+    expect(codes(pointingTo('cprod_pump'), 0, withAccessory({ references }))).toEqual(['referenceFamilyNotAllowed']);
+  });
+
+  it('`richText` εκτός γραμματικής ⇒ richTextUnsafe (απόρριψη, όχι καθάρισμα)', () => {
+    const description = (html: string): CatalogValueHolder => ({
+      ...MFP_MODEL,
+      values: { ...MFP_MODEL.values, description: { '*': { el: { type: 'richText', html } } } },
+    });
+    expect(codes(description('<p>Σωστό <strong>κείμενο</strong></p>'), 0)).toEqual([]);
+    expect(codes(description('<p onclick="x()">κακό</p>'), 0)).toEqual(['richTextUnsafe']);
   });
 });
 
