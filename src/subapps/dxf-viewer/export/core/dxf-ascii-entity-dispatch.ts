@@ -21,7 +21,7 @@
 
 import type {
   Entity, HatchEntity, LeaderEntity, BlockEntity, EllipseEntity, SplineEntity,
-  XLineEntity, RayEntity,
+  XLineEntity, RayEntity, LineEntity,
 } from '../../types/entities';
 import type { DimensionEntity } from '../../types/dimension';
 import { DxfDocumentVersion } from '../../text-engine/types/text-toolbar.types';
@@ -30,6 +30,8 @@ import {
   tessellateEllipseArc, ellipseArcSegments,
 } from '../../rendering/entities/shared/geometry-ellipse-utils';
 import { tessellateSplinePoints } from '../../rendering/entities/shared/geometry-spline-utils';
+// ADR-635 Φ C.29 / ADR-636 Φ2.4 (D.8) — elevation SSoT: the export asks HERE, never the raw fields.
+import { entityVertexElevations } from '../../utils/entity-elevation';
 import { emitDimensionEntity } from '../../utils/dxf-dimension-writer';
 import { emitHatch, type Pair } from './dxf-ascii-hatch-writer';
 import {
@@ -43,7 +45,6 @@ import {
   emitCircle,
   emitPoint,
   emitArc,
-  emitPath,
   emitLeader,
   emitEllipse,
   emitSpline,
@@ -55,6 +56,7 @@ import {
   type EntityStyleCodes,
 } from './dxf-ascii-primitive-emitters';
 import { emitInsert } from './dxf-ascii-insert-writer';
+import { emitPath } from './dxf-ascii-path-emitter';
 // ADR-737 §18 — SSoT ύψους χαρακτήρα: ίδια πηγή με τον `emitMText` (run του textNode πρώτα).
 import { resolveTextHeight } from '../../hooks/canvas/dxf-text-style-extractor';
 
@@ -73,6 +75,25 @@ const QUAD_ENTITY_NAME: Readonly<Record<'solid' | 'trace' | '3dface', 'SOLID' | 
 };
 
 /**
+ * The Z of each LINE endpoint in OUTPUT units, or `undefined` (2D):
+ *   • ADR-505 (rebar 3D export) — the BIM decomposition's `dxfStartZMm` / `dxfEndZMm` are mm → `mmScale`
+ *     (same convention as the extrusion thickness), on every path as before;
+ *   • ADR-636 Φ2.4 (D.8) — otherwise the scene elevation (`entityVertexElevations`, scene units → `s`),
+ *     AutoCAD path only: Tekton's parser reads no Z.
+ */
+function lineEndpointZ(
+  e: LineEntity, s: number, mmScale: number, explode: boolean,
+): readonly [number | undefined, number | undefined] {
+  const za = (e as { dxfStartZMm?: number }).dxfStartZMm;
+  const zb = (e as { dxfEndZMm?: number }).dxfEndZMm;
+  if (za != null || zb != null) {
+    return [za != null ? za * mmScale : undefined, zb != null ? zb * mmScale : undefined];
+  }
+  const zs = explode ? null : entityVertexElevations(e);
+  return zs ? [zs[0]! * s, zs[1]! * s] : [undefined, undefined];
+}
+
+/**
  * Emit ONE entity into `pair`. `professional` toggles the R2018 subclass/handle context; `owner`
  * is the top-level entity's owner (330 → *Model_Space). `nextDimBlock` hands out the sequential
  * `*Dn` index for anonymous dimension blocks (shared counter across the file / block members).
@@ -88,13 +109,8 @@ export function writeEntity(
   const r2018: EntityR2018 | undefined = professional ? { owner, style: e as EntityStyleCodes } : undefined;
   switch (e.type) {
     case 'line': {
-      // ADR-505 (rebar 3D export) — προαιρετικό Z ανά άκρο (mm → output unit με mmScale,
-      // ΟΧΙ coord scale· ίδια σύμβαση με το extrusion thickness). Absent → 2Δ (body αμετάβλητο).
-      const za = (e as { dxfStartZMm?: number }).dxfStartZMm;
-      const zb = (e as { dxfEndZMm?: number }).dxfEndZMm;
-      emitLine(e.start, e.end, layer, aci, s, pair,
-        za != null ? za * mmScale : undefined,
-        zb != null ? zb * mmScale : undefined, r2018);
+      const [za, zb] = lineEndpointZ(e, s, mmScale, explode);
+      emitLine(e.start, e.end, layer, aci, s, pair, za, zb, r2018);
       break;
     }
     case 'circle':
@@ -164,7 +180,10 @@ export function writeEntity(
       const thicknessMm = (e as { dxfThicknessMm?: number }).dxfThicknessMm ?? 0;
       const thickness = explode ? 0 : thicknessMm * mmScale;
       // ADR-636 Φ2.4 (D.6) — STYLE codes in the POLYLINE header (AutoCAD mode only).
-      emitPath(e.vertices, e.closed ?? false, layer, aci, s, explode, pair, thickness, explode ? undefined : e, r2018);
+      // ADR-636 Φ2.4 (D.8) — elevation (2.5D header Z / 3D POLYLINE) + arcs (42): the inverse of the
+      // import. Z is in scene units → the emitter scales it with `s`; `explode` ignores it (Tekton = 2D).
+      emitPath(e.vertices, e.closed ?? false, layer, aci, s, explode, pair, thickness, explode ? undefined : e, r2018,
+        { bulges: e.bulges, zs: entityVertexElevations(e) });
       break;
     }
     case 'hatch': {

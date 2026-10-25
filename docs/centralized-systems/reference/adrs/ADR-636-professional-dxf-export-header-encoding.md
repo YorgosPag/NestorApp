@@ -180,6 +180,43 @@ also failed to round-trip). Preserving MTEXT-ness on import would be a cross-cut
 tracked separately, not in scope here. **Well-formed `type:'mtext'` nodes (rich toolbar / AI / commands /
 the Φ4 clean AST) export via `emitMText` correctly.**
 
+### Στάδιο 2 Φ2.4 (D.8, DONE 2026-10-25) — υψόμετρο (Z) και τόξα (42) στην εξαγωγή
+
+**Το πρόβλημα (μετρημένο):** η εισαγωγή κρατά το Z από το ADR-635 **Φ C.29**, η εξαγωγή όμως το πετούσε. Εισήγαγες
+ισοϋψείς και τις εξήγαγες **επίπεδες**. Ο `emitPath` δεν έγραφε ούτε το 30 της κεφαλίδας ούτε το 30 των VERTEX, και η LINE
+έγραφε 30/31 μόνο για τους οπλισμούς (`dxfStartZMm`). Επίσης ο `emitPath` **δεν έγραφε ποτέ** τα bulge (42), οπότε κάθε τόξο
+πολυγραμμής σχεδιασμένο στην εφαρμογή (ADR-510) έβγαινε ως χορδή.
+
+**Η απόφαση: το ακριβές αντίστροφο του `utils/dxf-elevation-reader.ts`, χωρίς αλλαγή τύπου οντότητας** (μένει POLYLINE
+παλιού τύπου, όπως πριν):
+
+| Σκηνή (`entityVertexElevations` → `classifyVertexElevations`) | Τι γράφεται |
+|---|---|
+| χωρίς Z (απόν / όλα 0) | 2Δ POLYLINE, **byte-identical** με πριν |
+| ένα `elevation` (2,5Δ) | 2Δ POLYLINE, σημείο κεφαλίδας `10 0 / 20 0 / 30 z` (το υψόμετρο της πολυγραμμής, OCS) |
+| `vertexElevations` (Z ανά κορυφή) | 3Δ POLYLINE: `70` bit 8, `AcDb3dPolyline`, VERTEX `70 32` + `AcDb3dPolylineVertex` + `30 z` (WCS) |
+| LINE με `startElevation`/`endElevation` | `30` / `31` |
+| `bulges` σε 2Δ POLYLINE | VERTEX `42` στην κορυφή που **ξεκινά** το τόξο (κλειστή: και το τμήμα κλεισίματος, στην τελευταία) |
+
+- **Μονάδα: ο συντελεστής των συντεταγμένων `s`, ΟΧΙ το `mmScale`.** Το Z της σκηνής είναι μήκος στην ίδια μονάδα με τα X/Y
+  (η εισαγωγή το κλιμακώνει μαζί τους, `scaledElevationFields`, ADR-462). Το `mmScale` είναι για τα πεδία BIM που είναι πάντα
+  σε mm (thickness 39, `dxfStartZMm` οπλισμού). Αν μπει λάθος συντελεστής, το Z βγαίνει λάθος σε κάθε σκηνή που δεν είναι σε mm.
+  Οι οπλισμοί κρατούν την προτεραιότητα και το `mmScale` τους (`lineEndpointZ`).
+- **Η 3Δ POLYLINE δεν έχει ούτε τόξα ούτε πάχος** (AutoCAD DXF reference, ezdxf `Polyline3d`): τα τόξα γίνονται πυκνή
+  διακριτοποίηση μέσω του SSoT `bulgeToPolyline`, με Z γραμμικό κατά μήκος του τόξου (`densifyElevatedPath`). Έτσι μένει
+  αληθινή γεωμετρία, όχι χορδή. Το 39 παραλείπεται.
+- **Τέκτων (`explode`) = 2Δ** με σύμβαση (ο parser του δεν διαβάζει Z, ίδια σύμβαση με το thickness). Τα τόξα του όμως
+  διακριτοποιούνται πλέον μέσω `expandPolyline` αντί για μία ψεύτικη χορδή.
+- **Fail-closed:** πίνακας `vertexElevations` με μήκος που δεν ταιριάζει με τις κορυφές ⇒ `entityVertexElevations` = `null` ⇒
+  2Δ. Ποτέ δεν γίνεται μετατόπιση Z.
+- **N.7.1:** ο `emitPath` μεταφέρθηκε σε νέο `export/core/dxf-ascii-path-emitter.ts`. Ο `dxf-ascii-primitive-emitters.ts` θα
+  ξεπερνούσε το όριο μεγέθους· εξάγει πλέον το `emitSubEntity` για τον νέο writer. Το `entity-export-coverage.ts` δεν
+  αγγίχτηκε (το `polyline`/`lwpolyline` ήταν ήδη `native`), άρα δεν ενεργοποιείται το CHECK 5C.
+- ⚠️ **ΑΝΟΙΧΤΟ, στην εισαγωγή: τα 42 χάνονται.** Το `parseVerticesFromPairs` διαβάζει το `bulge`, αλλά το
+  `buildPolylineSceneEntity` (`utils/dxf-entity-converters.ts`) δεν κρατά `bulges`. Άρα ένα τόξο από **εισαγόμενο** DXF
+  γίνεται χορδή ήδη πριν από την εξαγωγή. Η D.8 κλείνει τη μισή διαδρομή (τα τόξα της εφαρμογής). Καταγράφηκε στο
+  `.claude-rules/pending-ratchet-work.md`.
+
 ## Tests
 - `export/core/__tests__/dxf-ascii-writer.test.ts` — HEADER emitted (order + exact group codes) when
   options given; still bare when not.
@@ -188,7 +225,20 @@ the Φ4 clean AST) export via `emitMText` correctly.**
 - End-to-end (throwaway, verified & removed): full adapter path emits
   `HEADER $ACADVER=AC1021 / $INSUNITS=6 / $DWGCODEPAGE=ANSI_1252` before `ENTITIES`, Greek intact.
 
+- `export/core/__tests__/dxf-roundtrip-elevation.test.ts` — D.8: εισαγωγή (`DxfSceneBuilder`) → εξαγωγή → εισαγωγή ⇒
+  ίδια Z σε mm (2,5Δ / 3Δ / LINE / αρχείο σε μέτρα), γυμνός **και** R2018 φάκελος· fail-closed· 42 στη σωστή κορυφή·
+  Τέκτων 2Δ με διακριτοποιημένο τόξο· 3Δ + τόξο ⇒ πυκνή διακριτοποίηση με μονοτονικό Z.
+
 ## Changelog
+- **2026-10-25 — Στάδιο 2 Φ2.4 (D.8) — το υψόμετρο και τα τόξα επιβιώνουν της εξαγωγής (🐛, Opus 5.5):** Η εισαγωγή κρατούσε
+  το Z (ADR-635 Φ C.29), η εξαγωγή το πετούσε: ισοϋψείς έβγαιναν επίπεδες. Και τα 42 δεν γράφονταν ποτέ: τα τόξα έβγαιναν
+  χορδές. Πλέον ενιαίο Z ⇒ 2Δ POLYLINE με Z στο σημείο κεφαλίδας· Z ανά κορυφή ⇒ 3Δ POLYLINE (70 bit 8, VERTEX 70 32)·
+  LINE ⇒ 30/31· 2Δ ⇒ VERTEX 42. Μονάδα = συντελεστής συντεταγμένων `s` (όχι `mmScale`). Ανάγνωση μόνο μέσω
+  `entityVertexElevations` (SSoT). Η 3Δ με τόξο γίνεται πυκνή διακριτοποίηση (το 3Δ δεν έχει 42)· ο Τέκτων μένει 2Δ με
+  διακριτοποιημένα τόξα. **Αρχεία:** NEW `export/core/dxf-ascii-path-emitter.ts` (ο `emitPath` μεταφέρθηκε, N.7.1) +
+  `__tests__/dxf-roundtrip-elevation.test.ts`· `dxf-ascii-entity-dispatch.ts` (`lineEndpointZ`, shape στο `emitPath`)·
+  `dxf-ascii-primitive-emitters.ts` (εξάγει `emitSubEntity`)· `dxf-ascii-writer.ts` (σχόλιο). ⚠️ Ανοιχτό: η **εισαγωγή**
+  πετά τα 42 (`buildPolylineSceneEntity`), βλ. §D.8.
 - **2026-07-30 — Στάδιο 2 Φ2.4 (D.7 συμπλήρωμα) — το `emitMText` γράφει πλέον και τις ΣΤΗΛΕΣ (Opus 5):** Το `dxfSourceType:'mtext'` της D.7 δρομολογεί το εισαγόμενο MTEXT στο `emitMText` αντί σε μονογραμμικό TEXT· από το **[ADR-737](./ADR-737-mtext-import-roundtrip-fidelity.md) §13** αυτό το μονοπάτι μεταφέρει **και τη στηλοποίηση**: το `emitMText` κλείνει με προαιρετική ενότητα **`101 Embedded Object`** (νέο `emitMTextColumns`), γραμμένη **τελευταία** — το `101` είναι **τομή ενότητας**, ό,τι ακολουθεί ανήκει στο ενσωματωμένο αντικείμενο. Δηλαδή για MTEXT **με** στήλες η υποβάθμιση σε TEXT έχανε **δύο** επίπεδα δομής, όχι ένα. **Διπλή πύλη `version === R2018 && r2018`** — και το δεύτερο σκέλος αφορά **αυτόν** τον writer: στο **γυμνό** μονοπάτι ο dispatcher προσθέτει τους STYLE κωδικούς **6/48/370 ΜΕΤΑ** τον emitter (`STYLE_APPEND_TYPES` περιέχει `text`/`mtext`), οπότε με ανοιχτή ενότητα `101` θα κατέληγαν **μέσα** στο ενσωματωμένο αντικείμενο και θα χάνονταν σιωπηλά. ⚠️ **Μεταφέρεται τυποποιημένο `MTextColumnsData`, ΟΧΙ ωμά ζεύγη**: τα ωμά είναι μήκη σε μονάδες πηγής ενώ κάθε μήκος εδώ εξάγεται `× s` (ADR-462) ⇒ κλιμακώνονται μόνο τα 40/41/42/43/44/45/46, ποτέ τα πλήθη/σημαίες 71/72/73/74 ούτε το μοναδιαίο διάνυσμα κατεύθυνσης. Το `TextEntity` απέκτησε `mtextColumns` με το ίδιο additive/Firestore-safe ιδίωμα των `width`/`dxfSourceType`. **Verification:** 14 tests στον πλήρη αγωγό παραγωγής, mutation-verified ×3 (writer-off 5 / dispatcher-off 6 / scaler-off 1)· **552 export tests** πράσινα. ⏳ Ανοιχτό στον writer: **R2000–R2013** (εκεί οι στήλες ζουν σε XDATA `ACAD` — ούτε import ούτε export) και τα **5 casts** `(e as MTextEntity)` (ADR-737 §11-4).
 - **2026-07-30 — Στάδιο 2 Φ2.4 (D.7) — ΕΙΣΑΓΟΜΕΝΟ MTEXT: το `emitMText` ήταν ΝΕΚΡΟΣ ΚΩΔΙΚΑΣ για κάθε εισαγωγή (🐛, Opus 5):** Ο Giorgio έδωσε **δύο** αρχεία: `47_ergasia.dxf` (πηγή, **89 MTEXT**) και `Ισόγειο_Ισόγειο (4).dxf` = **το export ΜΑΣ από αυτό**, με **0 MTEXT**. **Ρίζα — dispatcher που ρωτούσε πεδίο το οποίο ο importer δεν γράφει ποτέ:** ο `writeEntity` είχε `case 'mtext' → emitMText`, αλλά ο εισαγωγέας δίνει `type:'text'` σε **κάθε** MTEXT (`buildTextSceneEntity`) ⇒ η περίπτωση **δεν έφτανε ΠΟΤΕ** και όλα έπεφταν στο μονογραμμικό `case 'text' → emitText` ⇒ **`emitMText` + `serializeDxfTextNode` = νεκρός κώδικας για κάθε εισαγόμενο αρχείο** (η ολόκληρη μηχανή σειριοποίησης MTEXT του ADR-344 υπήρχε, δοκιμαζόταν, και **δεν εκτελούνταν**). 🔴 **Γιατί κανένα test δεν το έπιασε — και είναι το πιο σημαντικό εύρημα:** το `export/core/__tests__/dxf-roundtrip-mtext.test.ts` είχε helper **`asMText()`** που **ξανα-ταγκάριζε χειροκίνητα** το imported entity σε `type:'mtext'` **πριν** τον writer — δηλαδή **πράσινο test πάνω σε διαδρομή που η παραγωγή δεν εκτελεί ποτέ**. **Ένα test που πρέπει να πειράξεις τα δεδομένα για να περάσει, δεν δοκιμάζει την παραγωγή.** Το patch **αφαιρέθηκε**· το αρχείο ξαναγράφτηκε πάνω στο πραγματικό αποτέλεσμα του importer. **Fix — δείκτης προέλευσης, ΟΧΙ αλλαγή τύπου:** NEW `TextEntity.dxfSourceType?: 'mtext'`, **ακριβώς το ιδίωμα του `HatchEntity.dxfSourceType` της D.3** (`'solid'|'trace'|'3dface'`)· ο dispatcher: `if (!explode && e.dxfSourceType === 'mtext') → emitMText`. ⚠️ **ΜΗΝ το «απλοποιήσεις» αλλάζοντας το `type` σε `'mtext'`:** **15+ registries** έχουν **ασύμμετρη** κάλυψη `text` vs `mtext` — π.χ. το `grip-computation-producers` **δεν έχει key `mtext`** ⇒ **μηδέν λαβές, σιωπηλά**. Το `explode` (Τέκτονας) μένει σκόπιμα στο TEXT: ο minimal parser του δεν διαβάζει MTEXT (ίδιο σκεπτικό με το SOLID της D.3). **Συνοδό:** δηλώθηκε το `TextEntity.width` (MTEXT group `41`) — το **έγραφε** ο importer και το **διάβαζαν** `text-box.ts`/`emitMText`, αλλά δεν υπήρχε στον τύπο και ο writer το έπαιρνε με `(e as MTextEntity)`· αφότου το `emitMText` δέχεται και `TextEntity`, το cast διάβαζε **πεδίο άγνωστο στον μεταγλωττιστή**. **Files:** `export/core/dxf-ascii-entity-dispatch.ts`, `export/core/entity-export-coverage.ts`, `types/entities.ts`, `utils/dxf-text-converters.ts`, `export/core/__tests__/dxf-roundtrip-mtext.test.ts`. **Verification:** roundtrip **6 failed / 2 passed → 8/8** (πάνω στον **πραγματικό** writer, incl. αρνητικό pin ότι απλό TEXT δεν αναβαθμίζεται + pin ότι στο explode μένει TEXT)· regression **529/529** export suites + **364/364** ADR-587 anchors· end-to-end **export 0 → 80 MTEXT** (80 = 75 + 5 του block `βοράςΝΠ` στο INSERT expansion). ⏳ **Ανοιχτά:** οι **στήλες** MTEXT (embedded object) φτάνουν άθικτες στο `EntityData.embeddedObjects` αλλά **κανείς δεν τις ξαναγράφει** — το ezdxf τις ξαναγράφει, εμείς όχι· και το `emitMText` κάνει ακόμη **5 casts** `(e as MTextEntity)` (καθαρή λύση: accessor `readMTextGeometry`). Πλήρες detail + οι άλλες 4 βλάβες της ίδιας αναφοράς: **[ADR-737](./ADR-737-mtext-import-roundtrip-fidelity.md)**· η ρίζα στον εισαγωγέα: **ADR-635 Φ C.27**.
 - **2026-07-12 — [→ ADR-644] R2018 δομική εγκυρότητα (handles/APPID/subclass/LTYPE) — το αρχείο ΑΝΟΙΓΕΙ (UNCOMMITTED):** Οι TABLES/HEADER που έχτισε αυτό το ADR (Στάδιο 2) ήταν δομικά **ελλιπείς** για τον R2018 parser του AutoCAD. Το **ADR-644** τα ολοκληρώνει: `$HANDSEED` + μοναδικά handles σε κάθε entity/table/record (ΕΝΑΣ allocator + lazy-injection sink), **APPID** table (mirror του `emitLayerXData`), **subclass markers** (`100 AcDb…TableRecord`) σε VPORT/LTYPE/LAYER/STYLE/DIMSTYLE (DIMSTYLE record = group `105`), και **πλήρες LTYPE** (κάθε referenced linetype ορισμένο, incl. ISO). ezdxf strict read: **0 errors** (ήταν strict FAIL). Gating (`emitHandles = wantHeader && !explode`) → bare/Tekton/round-trip byte-identical. Πλήρες detail: **ADR-644**.

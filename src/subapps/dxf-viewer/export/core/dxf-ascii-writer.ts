@@ -455,5 +455,6 @@ function emitSpaceBlock(pair: Pair, name: string, recordHandle: string): void {
   emitBlockEnd(pair, '0', recordHandle, true);
 }
 
-// ADR-505 §A — primitive emitters (emitLine/emitCircle/emitArc/emitPoint/emit3DFace/emitPath),
-// arcPoints + num moved to `dxf-ascii-primitive-emitters.ts` (file-size SRP split, N.7.1).
+// ADR-505 §A — primitive emitters (emitLine/emitCircle/emitArc/emitPoint/emit3DFace),
+// arcPoints + num moved to `dxf-ascii-primitive-emitters.ts` (file-size SRP split, N.7.1);
+// the POLYLINE path (`emitPath`, elevation + arcs, ADR-636 Φ2.4 D.8) to `dxf-ascii-path-emitter.ts`.

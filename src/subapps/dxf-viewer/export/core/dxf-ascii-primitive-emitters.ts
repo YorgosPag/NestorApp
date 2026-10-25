@@ -1,8 +1,9 @@
 /**
  * DXF ASCII — low-level primitive emitters + geometry/format helpers.
  *
- * Pure serializers for the atomic DXF entities (LINE / CIRCLE / ARC / POINT / 3DFACE /
- * POLYLINE-path) plus the arc tessellator and the DXF number formatter. Extracted from
+ * Pure serializers for the atomic DXF entities (LINE / CIRCLE / ARC / POINT / 3DFACE / …)
+ * plus the arc tessellator and the DXF number formatter — the POLYLINE path lives in
+ * `dxf-ascii-path-emitter.ts` (elevation + arcs). Extracted from
  * `dxf-ascii-writer.ts` (file-size SRP split, N.7.1 / ADR-505 §A) so the writer stays
  * under the 500-line limit. Every emitter takes the scale-aware `pair` sink — no shared
  * state — so the entity writer, the dimension-block writer and the HATCH writer all reuse
@@ -131,7 +132,7 @@ export function emitAcDbEntity(pair: Pair, layer: string, aci: number, r: Entity
 }
 
 /** ADR-644 (#9e) — the AcDbEntity block for a sub-entity (VERTEX/SEQEND): layer only, no colour. */
-function emitSubEntity(pair: Pair, layer: string, owner?: string): void {
+export function emitSubEntity(pair: Pair, layer: string, owner?: string): void {
   if (owner) pair(330, owner);
   pair(100, 'AcDbEntity');
   pair(8, layer);
@@ -324,44 +325,6 @@ export function emitConstructionLine(
   pair(10, base.x * s); pair(20, base.y * s); pair(30, 0);
   pair(11, dir.x); pair(21, dir.y); pair(31, 0);
   if (!r2018) { pair(8, layer); pair(62, aci); }
-}
-
-/**
- * Emit a vertex path — as a single `POLYLINE` (AutoCAD) or, when `explode`,
- * as individual `LINE` segments (Tekton has no POLYLINE).
- */
-export function emitPath(
-  vertices: readonly Point2D[], closed: boolean, layer: string, aci: number, s: number, explode: boolean, pair: Pair,
-  thickness = 0, style?: EntityStyleCodes, r2018?: EntityR2018,
-): void {
-  if (vertices.length < 2) return;
-  if (explode) {
-    for (let i = 0; i < vertices.length - 1; i += 1) {
-      emitLine(vertices[i], vertices[i + 1], layer, aci, s, pair);
-    }
-    if (closed && vertices.length > 2) {
-      emitLine(vertices[vertices.length - 1], vertices[0], layer, aci, s, pair);
-    }
-    return;
-  }
-  // Old-style POLYLINE (R12-native, universally readable). With `thickness`,
-  // AutoCAD extrudes the closed polyline along +Z → pseudo-3D prism.
-  pair(0, 'POLYLINE');
-  if (r2018) { emitAcDbEntity(pair, layer, aci, r2018); pair(100, 'AcDb2dPolyline'); }
-  else { pair(8, layer); pair(62, aci); if (style) emitEntityStyle(pair, style); }
-  pair(66, 1);                       // vertices-follow flag
-  pair(70, closed ? 1 : 0);          // 1 = closed
-  if (thickness) pair(39, thickness); // extrusion height (group 39)
-  for (const v of vertices) {
-    pair(0, 'VERTEX');
-    if (r2018) { emitSubEntity(pair, layer, r2018.owner); pair(100, 'AcDbVertex'); pair(100, 'AcDb2dVertex'); }
-    else pair(8, layer);
-    pair(10, v.x * s); pair(20, v.y * s);
-    if (r2018) pair(30, 0);
-  }
-  pair(0, 'SEQEND');
-  if (r2018) emitSubEntity(pair, layer, r2018.owner);
-  else pair(8, layer);
 }
 
 /**
