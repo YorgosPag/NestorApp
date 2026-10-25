@@ -18,6 +18,7 @@ import { AutoAreaPreviewOverlay } from './AutoAreaPreviewOverlay';
 import { RegionPerimeterPreviewOverlay } from './RegionPerimeterPreviewOverlay';
 import { RegionGapMarkersOverlay } from './RegionGapMarkersOverlay';
 import { BasePointPickMarkerOverlay } from './BasePointPickMarkerOverlay';
+import { TopoBreaklineOverlay } from './TopoBreaklineOverlay';
 import { TopoAutoBreaklinePreviewOverlay } from './TopoAutoBreaklinePreviewOverlay';
 import { ModelFromDrawingPreviewOverlay } from './ModelFromDrawingPreviewOverlay';
 import type { Viewport } from '../../rendering/types/Types';
@@ -46,6 +47,10 @@ export function CanvasLayerStack2DOverlays({ viewport }: CanvasLayerStack2DOverl
           flag· ο high-freq realtime-cursor subscriber ζει μόνο όσο armed. Read-only,
           pointer-events-none. STAGE ADR-040 + ADR-652. */}
       <BasePointPickMarkerOverlay viewport={viewport} />
+      {/* ADR-920 Β4.8 Β1 — οι ΔΕΣΜΕΥΜΕΝΕΣ γραμμές ασυνέχειας (κίτρινες, μοτίβο = πηγή υψομέτρου),
+          πάντα ορατές όσο υπάρχουν. ΚΑΤΩ από τις υποψήφιες υπό έγκριση. Self-subscribes στο
+          LOW-freq TopoPointStore· read-only, pointer-events-none. STAGE ADR-040 + ADR-650. */}
+      <TopoBreaklineOverlay viewport={viewport} />
       {/* ADR-650 M8β/Γ — προτεινόμενες γραμμές ασυνέχειας (auto-breaklines) υπό έγκριση:
           πράσινο = τσεκαρισμένη, γκρι διακεκομμένο = απορριφθείσα. Self-subscribes στο
           LOW-freq auto-breakline store· read-only, pointer-events-none. STAGE ADR-650. */}

@@ -7,10 +7,11 @@
  * The direct sibling of {@link ClashOverlayMount} (ADR-435): driven by the LOW-FREQUENCY
  * `useTopoQaReport()` store (set on «Έλεγχος ποιότητας», cleared on Clear), it renders the
  * SHARED {@link ClashMarkerLayer} + ⊙ glyph — ONE attention-marker shape across the app, no
- * second overlay. Each QA flag already carries its position in WORLD canonical mm (ADR-462),
- * which IS the canvas-unit frame the contour entities render in, so — unlike the clash
- * overlay — no metre→canvas conversion is needed; the point projects straight through the
- * immediate 2D transform for zero-lag pan/zoom tracking.
+ * second overlay. Each QA flag carries its position in WORLD canonical mm (ADR-462) — already mm, so
+ * unlike the clash overlay no metre→canvas conversion is needed. ⚠️ ADR-920 Β1: WORLD is ΕΓΣΑ and the
+ * canvas is DISPLAY, so the position passes through the WORLD→DISPLAY projector first (ADR-650 §M10f —
+ * the contours it marks are drawn projected; before Β1 the ⊙ were not, and missed them in every
+ * geo-referenced project), then through the immediate 2D transform for zero-lag pan/zoom tracking.
  *
  * Hidden while the 3D viewport is active — NOT because 3D lacks markers (M5α.2 added them), but
  * because it has its OWN: `TopoQaMarkers3DOverlay` projects the same flags through the camera.
@@ -31,6 +32,8 @@ import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformSt
 import { subscribeImmediateTransformFrame } from '../../rendering/core/immediate-transform-frame';
 import { useViewMode3DStore, selectIs3D } from '../../bim-3d/stores/ViewMode3DStore';
 import { ClashMarkerLayer } from './clash-markers/ClashMarkerLayer';
+import { useTopoDisplayProjector } from '../../systems/topography/useTopoDisplayProjector';
+import { projectWorldPoint } from '../../systems/topography/topo-display-frame';
 
 export interface TopoQaOverlayMountProps {
   // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
@@ -47,11 +50,12 @@ export const TopoQaOverlayMount = React.memo(function TopoQaOverlayMount(props: 
     () => false,
   );
 
-  // Flag positions are already WORLD canonical mm = canvas units (contour-entity frame) — this
+  // Flag positions are WORLD (ΕΓΣΑ) canonical mm → DISPLAY, the frame the contours are drawn in. This
   // one-liner IS the whole difference between this overlay and the 3D twin.
+  const projector = useTopoDisplayProjector();
   const worlds = useMemo(
-    () => topoQaMarkerPositions(report, (f) => ({ x: f.at.x, y: f.at.y })),
-    [report],
+    () => topoQaMarkerPositions(report, (f) => projectWorldPoint({ x: f.at.x, y: f.at.y }, projector)),
+    [report, projector],
   );
   // Separate low-frequency subscription (click-driven, like the report itself — ADR-040-safe).
   const selectedFlagId = useTopoQaSelectedFlagId();

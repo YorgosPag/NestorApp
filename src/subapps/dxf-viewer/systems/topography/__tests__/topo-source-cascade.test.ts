@@ -231,13 +231,39 @@ describe('ασυνέχειες — ο ΙΔΙΟΣ reconciler, όχι δίδυμο
   });
 
   it('ίδιο σχήμα ⇒ ο ορισμός μένει ΤΟ ΙΔΙΟ αντικείμενο (αλλιώς ξανατρέχει ο CDT)', () => {
-    addBreakline([{ x: 0, y: 0, z: M }, { x: 10 * M, y: 10 * M, z: 3 * M }], false, BREAKLINE_ID);
+    // Όπως το γράφει το κλικ: 2Δ γραμμή ⇒ proximity (ADR-920 Β1 — η πηγή είναι μέρος της κατάστασης).
+    addBreakline(
+      [{ x: 0, y: 0, z: M }, { x: 10 * M, y: 10 * M, z: 3 * M }], false, BREAKLINE_ID, 'existing', 'proximity',
+    );
     const before = getTopoBreaklines();
     const same = [{ x: 0, y: 0 }, { x: 10 * M, y: 10 * M }];
 
     cascadeTopoSourceGeometry([BREAKLINE_ID], sceneWith(polyline(BREAKLINE_ID, same, false)));
 
     expect(getTopoBreaklines()).toBe(before);
+  });
+
+  it('ADR-920 Β1 — η γραμμή απέκτησε Z ⇒ η πηγή περνά από proximity σε elevation', () => {
+    addBreakline(
+      [{ x: 0, y: 0, z: M }, { x: 10 * M, y: 10 * M, z: 3 * M }], false, BREAKLINE_ID, 'existing', 'proximity',
+    );
+    const raised = { ...polyline(BREAKLINE_ID, [{ x: 0, y: 0 }, { x: 10 * M, y: 10 * M }], false), elevation: 2 * M };
+
+    cascadeTopoSourceGeometry([BREAKLINE_ID], sceneWith(raised as Entity));
+
+    const [b] = getTopoBreaklines();
+    expect(b!.elevationSource).toBe('elevation');
+    expect(b!.vertices.map((v) => v.z)).toEqual([2 * M, 2 * M]);
+  });
+
+  it('ADR-920 Β1 — παλιά αποθηκευμένη ασυνέχεια (χωρίς πηγή) τη μαθαίνει στο πρώτο πέρασμα', () => {
+    addBreakline([{ x: 0, y: 0, z: M }, { x: 10 * M, y: 10 * M, z: 3 * M }], false, BREAKLINE_ID);
+
+    cascadeTopoSourceGeometry(
+      [BREAKLINE_ID], sceneWith(polyline(BREAKLINE_ID, [{ x: 0, y: 0 }, { x: 10 * M, y: 10 * M }], false)),
+    );
+
+    expect(getTopoBreaklines()[0]!.elevationSource).toBe('proximity');
   });
 
   it('η γραμμή-πηγή διαγράφηκε ⇒ κρατά το τελευταίο σχήμα (ίδιος κανόνας με το όριο)', () => {

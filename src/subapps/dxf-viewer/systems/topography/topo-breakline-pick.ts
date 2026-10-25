@@ -45,10 +45,10 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { WorldToDisplayProjector } from '../geo-referencing/geo-transform';
 import { unprojectDisplayPoints } from './topo-display-frame';
 import { surfacePointsOf } from './topo-point-elevation';
-import type { TopoPoint, TopoPoint3D } from './topo-types';
+import type { TopoPoint, TopoPoint3D, BreaklineElevationSource } from './topo-types';
 
-/** Από πού προέκυψε το z της breakline (για μήνυμα/QA — Civil 3D ορολογία). */
-export type BreaklineSource = 'elevation' | 'proximity';
+/** Από πού προέκυψε το z της breakline (Civil 3D ορολογία). Ό,τι μπορεί να παραγάγει μια γραμμή του σχεδίου — το `surface` ανήκει μόνο στις αυτόματες (ένα λεξιλόγιο, ADR-920 Β1). */
+export type BreaklineSource = Exclude<BreaklineElevationSource, 'surface'>;
 
 /** Χτισμένη breakline, έτοιμη για `addBreakline`. */
 export interface BuiltBreakline {

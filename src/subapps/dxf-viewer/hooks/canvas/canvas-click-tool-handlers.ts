@@ -410,7 +410,7 @@ export function handleTopoBreaklineClick(
     return true;
   }
 
-  addBreakline(built.vertices, built.closed, entityId);
+  addBreakline(built.vertices, built.closed, entityId, 'existing', built.source);
   p.universalSelection.replaceEntitySelection([entityId]);
   showTopoBreaklineHint(built.source === 'elevation' ? 'addedElevation' : 'addedProximity');
   dlog('handleTopoBreaklineClick', `breakline from ${entityId} (${built.source}, ${built.vertices.length} verts)`);

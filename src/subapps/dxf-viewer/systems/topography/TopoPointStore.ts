@@ -23,7 +23,7 @@ import { createExternalStore } from '../../stores/createExternalStore';
 import { generateEntityId } from '@/services/enterprise-id.service';
 import type {
   TopoPoint, TopoPoint3D, Breakline, TopoDefinition, TopoSurfaceId, TopoBoundary, TopoBoundaryLink,
-  TopoCropPrefs,
+  TopoCropPrefs, BreaklineElevationSource,
 } from './topo-types';
 import { TOPO_CROP_OFF } from './topo-types';
 
@@ -147,10 +147,13 @@ export function addBreakline(
   closed = false,
   sourceEntityId?: string,
   id: TopoSurfaceId = 'existing',
+  elevationSource?: BreaklineElevationSource,
 ): string | null {
   if (vertices.length < 2) return null;
   const breaklineId = generateEntityId();
-  const breakline: Breakline = { id: breaklineId, vertices: [...vertices], closed, sourceEntityId };
+  const breakline: Breakline = {
+    id: breaklineId, vertices: [...vertices], closed, sourceEntityId, elevationSource,
+  };
   patchDefinition(id, { breaklines: [...getTopoBreaklines(id), breakline] });
   return breaklineId;
 }

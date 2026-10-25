@@ -213,6 +213,11 @@ export const UI_COLORS_BASE = {
   // because «πράσινη στο σχέδιο» in the panel's own text is a promise the 3D view must keep too.
   TOPO_BREAKLINE_APPROVED: '#22c55e', // ticked → will be written on «Προσθήκη»
   TOPO_BREAKLINE_REJECTED: '#94a3b8', // unticked → shown, but will be ignored
+  // ADR-920 Β4.8 Β1 — COMMITTED breaklines (they shape the surface now). Yellow = Carlson's «Highlight
+  // Breaklines»; the dark casing keeps it legible on top of the drawing line it was picked from.
+  // Provenance is carried by the line pattern (`systems/topography/topo-breakline-style.ts`), never colour.
+  TOPO_BREAKLINE: '#facc15',
+  TOPO_BREAKLINE_CASING: '#0b0f19',
 
   // ADR-911 Φ3β — PREVIEW-ZONE colours: «τι θα συμβεί σε αυτό το σχήμα αν εγκρίνω». One
   // vocabulary for every surface that lights a zone before a write (region/perimeter hover,

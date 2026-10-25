@@ -130,7 +130,21 @@ export interface Breakline {
    * Absent for breaklines that did not come from a drawing entity (e.g. a future file import).
    */
   readonly sourceEntityId?: string;
+  /**
+   * ADR-920 Β4.8 Β1 — where the vertices' z came from. Shown (line pattern in the plan, list in the panel), never
+   * guessed: absent on breaklines saved before this field existed ⇒ «unknown», not silently «elevation».
+   */
+  readonly elevationSource?: BreaklineElevationSource;
 }
+
+/**
+ * ADR-920 Β4.8 Β1 — the ONE vocabulary for a breakline's elevation provenance (Civil 3D keeps this in
+ * Breakline Properties; we draw it):
+ * - `elevation` — the drawing line carries its own z (2D/3D polyline elevation, LINE start/end z);
+ * - `proximity` — a 2D line, z borrowed from the nearest measured point (Civil 3D «proximity breakline»);
+ * - `surface`   — an approved automatic candidate, z read straight off the TIN (ADR-650 M8β).
+ */
+export type BreaklineElevationSource = 'elevation' | 'proximity' | 'surface';
 
 /** LOCAL-origin offset: subtract from world to get local; add to local to get world. */
 export interface LocalOrigin {

@@ -34,6 +34,7 @@ export type {
   ContourSegment,
   ContourLine,
   BreaklineElevationConflict,
+  BreaklineElevationSource,
   TinBuildReport,
 } from '@/lib/terrain/terrain-types';
 

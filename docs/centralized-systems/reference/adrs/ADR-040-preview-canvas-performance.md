@@ -113,6 +113,19 @@ SSoT γεωμετρίας: `canvas-v2/dxf-canvas/dxf-bitmap-cache-anchor.ts` (κ
 
 ## Changelog
 
+### 2026-10-25 — ADR-920 Β4.8 Β1: νέο φύλλο `TopoBreaklineOverlay` + κοινός painter ασυνεχειών (CHECK 6B/6D)
+
+- **`TopoBreaklineOverlay`** (νέο, mount στο `canvas-layer-stack-2d-overlays-leaf.tsx` πριν από το
+  `TopoAutoBreaklinePreviewOverlay`): οι δεσμευμένες γραμμές ασυνέχειας. **Ένα** υψίσυχνο hook (`useTransformValue`)·
+  χαμηλόσυχνα: `subscribeTopo` (γράφεται σε κλικ / clear / επαναφορά / cascade, ποτέ ανά καρέ) και η γεωαναφορά
+  (`useTopoDisplayProjector`). Ένα `<svg>`. Κανόνας #4 τηρείται.
+- **Κοινός painter** `components/dxf-layout/topo-breakline-paint/`: `breaklineScreenPath` (pure, WORLD → projector →
+  `worldRingToScreen`) + `TopoBreaklineStroke` (παιδί χωρίς συνδρομή, το path έρχεται ως prop). Ο
+  `TopoAutoBreaklinePreviewOverlay` μετακόμισε σε αυτόν· η συνδρομή του έμεινε ίδια (+ η χαμηλόσυχνη γεωαναφορά).
+- **`canvas-layer-stack-topo-qa-overlay.tsx`**: οι θέσεις των ⊙ περνούν από τον projector μέσα στο υπάρχον `useMemo`
+  (low-freq)· το frame-synced reproject δεν άλλαξε.
+- Το shell (`CanvasLayerStack` / `CanvasSection`) **δεν** αγγίχτηκε.
+
 ### 2026-10-12 — ADR-911 Φ4-3β: δεύτερη στρώση (ανοίγματα) στο ΙΔΙΟ φύλλο προεπισκόπησης του βοηθού (CHECK 6B/6D)
 
 - **`ModelFromDrawingPreviewOverlay`** ζωγραφίζει πλέον δύο στρώσεις — τοίχους και, από πάνω τους, ανοίγματα. **Καμία

@@ -175,10 +175,14 @@ function rebuiltBreakline(
   const built = buildBreaklineFromEntity(entity, getTopoPoints(surfaceId), pass.projector);
   if (!built) return breakline;
 
+  // ADR-920 Β1 — η πηγή του z ακολουθεί κι αυτή: μια γραμμή που απέκτησε Z περνά από proximity σε elevation.
   const unchanged =
     built.closed === (breakline.closed ?? false) &&
+    built.source === breakline.elevationSource &&
     sameList(breakline.vertices, built.vertices, sameTopoPoint);
-  return unchanged ? breakline : { ...breakline, vertices: built.vertices, closed: built.closed };
+  return unchanged
+    ? breakline
+    : { ...breakline, vertices: built.vertices, closed: built.closed, elevationSource: built.source };
 }
 
 /**

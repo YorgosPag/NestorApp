@@ -60,7 +60,7 @@ export function acceptAutoBreaklines(
 ): string[] {
   const created: string[] = [];
   for (const candidate of candidates) {
-    const id = addBreakline(candidate.vertices, candidate.closed, undefined, surfaceId);
+    const id = addBreakline(candidate.vertices, candidate.closed, undefined, surfaceId, 'surface');
     if (id !== null) created.push(id);
   }
   return created;
