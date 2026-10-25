@@ -2,6 +2,16 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **25/10 — Η ΕΙΣΑΓΩΓΗ DXF ΠΕΤΑ ΤΑ ΤΟΞΑ ΠΟΛΥΓΡΑΜΜΩΝ (42)** *(ADR-636 Φ2.4 D.8, εύρημα του βήματος εξαγωγής του Z)*
+
+  **Τι:** το `parseVerticesFromPairs` (`dxf-viewer/utils/dxf-converter-helpers.ts`) διαβάζει το `bulge` κάθε κορυφής, αλλά το
+  `buildPolylineSceneEntity` (`utils/dxf-entity-converters.ts`) δεν γράφει `bulges` στη σκηνή. Άρα κάθε τόξο LWPOLYLINE/POLYLINE
+  από εισαγόμενο DXF γίνεται χορδή, σε οθόνη, μέτρηση και εξαγωγή. Η D.8 ήδη γράφει 42 στην εξαγωγή, αλλά μόνο για τόξα
+  σχεδιασμένα στην εφαρμογή. **Θεραπεία:** `bulges` παράλληλος πίνακας στο `buildPolylineSceneEntity` (μόνο αν `hasAnyBulge`),
+  κλιμάκωση/τοποθέτηση block (κατοπτρισμός ⇒ αλλαγή προσήμου) και άγκυρα στο `dxf-roundtrip-elevation.test.ts`. Ο renderer, το
+  hit-test και το bbox είναι ήδη bulge-aware (ADR-510). **Μέγεθος:** ~1-2h, 3-4 αρχεία. Αλλάζει την όψη **κάθε** εισαγόμενου
+  σχεδίου με τόξα, άρα αποφασίζει ο Giorgio.
+
 - 🟡 **24/10 — ΤΡΙΑ ΑΝΤΙΓΡΑΦΑ ΤΟΥ «ΚΑΘΑΡΟΥ `useId` ΓΙΑ `url(#…)`»** *(ADR-920 Β4.8 υπο-βήμα 4, εύρημα SSoT audit)*
 
   **Τι:** δημιουργήθηκε το SSoT `src/hooks/media/useSvgFragmentId.ts` και το χρησιμοποιούν ο χάρτης εδάφους + το
@@ -4124,6 +4134,14 @@
 ---
 
 ## Pending tasks (priority order)
+
+### 📐 DXF OCS (210/220/230) για CIRCLE / ARC / TEXT / MTEXT / HATCH — καθρεφτισμένα στοιχεία βγαίνουν ανάποδα (προτεραιότητα ΜΕΣΑΙΑ, 2026-10-25, ADR-635 Φ C.29 · N.0.2)
+- **Τι**: το SSoT `@/lib/dxf/dxf-ocs` (arbitrary axis) υπάρχει πλέον και το χρησιμοποιούν μόνο LWPOLYLINE / 2Δ POLYLINE. Οι υπόλοιπες επίπεδες οντότητες (CIRCLE, ARC, TEXT, MTEXT-εξώθηση, HATCH, ELLIPSE, INSERT) αγνοούν τα 210/220/230 ⇒ με εξώθηση (0,0,−1) (κοινό: MIRROR στο AutoCAD) το κέντρο/σημείο εισαγωγής βγαίνει με αντίθετο X και τα τόξα με ανάποδη φορά. `dxf-point-converter.ts` το αναφέρει ρητά ως «αγνοείται».
+- **Fix**: κάθε converter περνά τα OCS σημεία του από `dxfOcsToWcs` (ARC: και αναστροφή γωνιών για Az.z < 0). 6+ αρχεία σε converters + tests ανά τύπο → όχι επί τόπου (N.0.2 «4+ αρχεία»).
+
+### 🧱 DXF VERTEX 70 flags + Z των μελών επώνυμου μπλοκ κατά το EXPLODE (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-25, ADR-635 Φ C.29)
+- **Τι (α)**: `dxf-polyline-vertex-collector` παίρνει ΚΑΘΕ VERTEX ως κορυφή — οι εγγραφές προσώπου polyface mesh (POLYLINE 70 bit 64, VERTEX 70 = 128) και τα σημεία ελέγχου spline-fit (VERTEX 70 bit 16) θα έπρεπε να παραλείπονται. **(β)**: τα επώνυμα μπλοκ μένουν `BlockEntity`· η τοποθέτηση Z (`withPlacedElevation`, INSERT 30/43 − BLOCK 30) εφαρμόζεται μόνο στον δρόμο διάλυσης `*X`/`*D` — όταν ο χρήστης κάνει EXPLODE, τα μέλη κρατούν το τοπικό Z.
+- **Fix**: (α) διάβασε το VERTEX 70 στον collector και φίλτραρε· (β) το EXPLODE του `systems/block` να καλεί το ίδιο `withPlacedElevation` (χρειάζεται `baseZ` + insert Z στο `BlockEntity`).
 
 ### 🛣️ Διαδρομές `/api/owner-properties/…` χτισμένες με χειρόγραφο κείμενο — 5 πελάτες εκτός `API_ROUTES` (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-24, ADR-245 · ADR-920 Β4.7 · N.0.2)
 - **Τι**: το ADR-245 απαγορεύει `/api/…` έξω από το `API_ROUTES`, αλλά το μπλοκ `OWNER_PROPERTIES` δεν υπήρχε ως το ADR-920 Β4.7 (γεννήθηκε με μόνο το `TERRAIN`). Χειρόγραφα: `hooks/owner-property/useOwnershipVerification.ts:65` · `services/mandate/mandate-evidence.client.ts:38` · `services/stay-calendar/stay-calendar.client.ts:27` · `services/stay-calendar/stay-channels.client.ts:27` · `hooks/energy-certificate/useEnergyCertificateImportPorts.ts` (`importUrlOf`, και για τα δύο σπίτια).

@@ -26,6 +26,7 @@ import { convertEntityToScene } from './dxf-entity-converters';
 import { scaleEntity } from '../systems/scale/scale-entity-transform';
 import { rotateEntity } from './rotation-math';
 import { translateEntityByAnchor } from '../systems/stretch/stretch-entity-transform';
+import { withPlacedElevation } from './entity-elevation';
 import {
   recordClamp,
   recordError,
@@ -108,6 +109,16 @@ export function applyBlockTransformGeometry(
     y: placement.y - base.y,
   });
   return { ...e2, ...moved } as AnySceneEntity;
+}
+
+/**
+ * The INSERT's Z map for member elevations (ADR-635 2026-10-25), or `null` when it is the identity (Z 0, scale 1,
+ * base 0 — the common case, so untouched entities stay byte-identical). An array (MINSERT) shares one Z: its cells
+ * spread along the insert's X/Y only.
+ */
+function blockZPlacement(insertZ: number, sz: number, baseZ: number): ((z: number) => number) | null {
+  if (insertZ === 0 && sz === 1 && baseZ === 0) return null;
+  return (z) => insertZ + sz * (z - baseZ);
 }
 
 /**
@@ -245,6 +256,8 @@ export function instantiateInsert(
   const sx = numOr(data['41'], 1);
   const sy = numOr(data['42'], 1);
   const angle = numOr(data['50'], 0);
+  // Member elevations ride the INSERT's Z placement (10/20/**30**, z-scale 43): z' = insertZ + sz·(z − baseZ).
+  const placeZ = blockZPlacement(numOr(data['30'], 0), numOr(data['43'], 1), def.baseZ ?? 0);
   const cols = Math.max(1, intOr(data['70'], 1));
   const rows = Math.max(1, intOr(data['71'], 1));
   const colSp = numOr(data['44'], 0);
@@ -295,7 +308,8 @@ export function instantiateInsert(
           budgetHit = true;
           break arrayLoop;
         }
-        out.push(transformBlockEntity(e, def.base, sx, sy, angle, placement, insert.layer, ctx.idSeq));
+        const placed = transformBlockEntity(e, def.base, sx, sy, angle, placement, insert.layer, ctx.idSeq);
+        out.push(placeZ ? withPlacedElevation(placed, placeZ) : placed);
         if (ctx.budget) ctx.budget.used++;
       }
     }

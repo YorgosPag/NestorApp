@@ -52,6 +52,7 @@ import { createMTextContentCollector } from './dxf-mtext-chunks';
 import { EMBEDDED_OBJECT_CODE, openEmbeddedObject, appendEmbeddedPair, type EmbeddedObjectBuckets } from './dxf-embedded-object';
 // ADR-736 — SSoT πλοήγησης section (leaf, μηδέν imports). Η `findSectionRange` αναθέτει εδώ.
 import { findDxfSectionRange } from './dxf-section-scan';
+import { collectPolylineVertexPairs } from './dxf-polyline-vertex-collector';
 
 // Re-export table parsers for backward compatibility
 export { parseDimStyles, parseLayerColors } from './dxf-table-parsers';
@@ -427,7 +428,7 @@ export class DxfEntityParser {
    * LWPOLYLINE. Each of POLYLINE / VERTEX / SEQEND is its own `0`-delimited record,
    * so the flat `parseEntity` (which stops at the next `0`) cannot capture the vertices.
    *
-   * Collects ONLY the VERTEX blocks' 10/20/42 into ordered `pairs` — the POLYLINE
+   * Collects ONLY the VERTEX blocks' 10/20/30/42 into ordered `pairs` — the POLYLINE
    * header's dummy elevation point (10/20/30 = 0,0,0) is intentionally excluded so it
    * does not become a spurious vertex. Header flags (70) and color (62) are kept in `data`.
    *
@@ -446,37 +447,10 @@ export class DxfEntityParser {
     const layer = header?.layer ?? '0';
     const data = header?.data ?? {};
 
-    // 2) VERTEX blocks — aggregate their 10/20/42 into ordered pairs until SEQEND/other.
-    let i = DxfEntityParser.findNextEntity(lines, startIndex + 2);
-    const pairs: Array<readonly [string, string]> = [];
-    while (i < lines.length - 1) {
-      const code = lines[i].trim();
-      const value = lines[i + 1].trim();
-      if (code !== '0') { i += 2; continue; }
-      if (value !== 'VERTEX') {
-        // SEQEND (or a stray marker) terminates the polyline group.
-        i = value === 'SEQEND' ? DxfEntityParser.findNextEntity(lines, i + 2) : i;
-        break;
-      }
-
-      let vx: string | undefined;
-      let vy: string | undefined;
-      let vb: string | undefined;
-      let j = i + 2;
-      while (j < lines.length - 1) {
-        const c = lines[j].trim();
-        const v = lines[j + 1].trim();
-        if (c === '0') break;
-        if (c === '10') vx = v;
-        else if (c === '20') vy = v;
-        else if (c === '42') vb = v;
-        j += 2;
-      }
-      if (vx !== undefined) pairs.push(['10', vx]);
-      if (vy !== undefined) pairs.push(['20', vy]);
-      if (vb !== undefined) pairs.push(['42', vb]);
-      i = j;
-    }
+    // 2) VERTEX blocks — 10/20/30/42 into ordered pairs until SEQEND/other (dxf-polyline-vertex-collector).
+    const walk = collectPolylineVertexPairs(lines, DxfEntityParser.findNextEntity(lines, startIndex + 2));
+    const pairs = walk.pairs;
+    const i = walk.endedOnSeqend ? DxfEntityParser.findNextEntity(lines, walk.stopIndex + 2) : walk.stopIndex;
 
     return { entity: { type: 'POLYLINE', layer, data, pairs }, next: i };
   }

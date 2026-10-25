@@ -173,3 +173,34 @@ describe('buildBreaklineFromEntity — τα δύο πλαίσια (ADR-718 §Α)
     expect(new Set(fixed!.vertices.map((v) => v.z)).size).toBe(2);
   });
 });
+
+/**
+ * ADR-635 / ADR-650 M2 (2026-10-25) — Z από εισαγόμενο DXF. Μέχρι τότε διαβαζόταν ΜΟΝΟ το
+ * `lwpolyline.elevation`, ενώ κάθε εισαγόμενη LWPOLYLINE γίνεται `polyline` ⇒ κάθε γραμμή DXF
+ * έπεφτε σιωπηλά σε proximity. Τα σχήματα εδώ είναι ακριβώς ό,τι βγάζουν οι converters.
+ */
+describe('buildBreaklineFromEntity — Z από εισαγόμενο DXF (entity-elevation SSoT)', () => {
+  it('polyline.elevation (LWPOLYLINE 38 μετά την εισαγωγή) ⇒ standard', () => {
+    const built = buildBreaklineFromEntity(polyline({ elevation: 1000 }), POINTS, NO_GEO);
+    expect(built!.source).toBe('elevation');
+    expect(built!.vertices.map((v) => v.z)).toEqual([1000, 1000]);
+  });
+
+  it('3Δ πολυγραμμή: κάθε κορυφή κρατά το ΔΙΚΟ της z', () => {
+    const built = buildBreaklineFromEntity(polyline({ vertexElevations: [5, 7] }), POINTS, NO_GEO);
+    expect(built!.source).toBe('elevation');
+    expect(built!.vertices.map((v) => v.z)).toEqual([5, 7]);
+  });
+
+  it('3Δ LINE (30/31) ⇒ standard με z αρχής/τέλους', () => {
+    const built = buildBreaklineFromEntity(line({ startElevation: 3, endElevation: 4 }), POINTS, NO_GEO);
+    expect(built!.source).toBe('elevation');
+    expect(built!.vertices.map((v) => v.z)).toEqual([3, 4]);
+  });
+
+  it('ασυμφωνία μήκους (επεξεργασμένη γραμμή) ⇒ proximity, ΠΟΤΕ μετατοπισμένο z', () => {
+    const built = buildBreaklineFromEntity(polyline({ vertexElevations: [5, 7, 9] }), POINTS, NO_GEO);
+    expect(built!.source).toBe('proximity');
+    expect(built!.vertices.map((v) => v.z)).toEqual([10, 90]);
+  });
+});

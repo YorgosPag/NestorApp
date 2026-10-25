@@ -18,6 +18,8 @@ import type { ImportDiagnostics } from './dxf-import-diagnostics';
 /** A parsed BLOCK definition: base (grab) point + its member entities (raw, unexpanded). */
 export interface BlockDef {
   base: Point2D;
+  /** Base point Z (BLOCK 30) — the block-local Z origin for INSERT placement of member elevations. Absent = 0. */
+  baseZ?: number;
   entities: EntityData[];
 }
 
@@ -25,19 +27,20 @@ export interface BlockDef {
 export type BlockDefMap = Map<string, BlockDef>;
 
 /**
- * Parse the BLOCK header (name code 2, base point 10/20) starting at a `0/BLOCK` marker.
+ * Parse the BLOCK header (name code 2, base point 10/20/30) starting at a `0/BLOCK` marker.
  * Reuses `parseEntity` (collects the header's group codes) so there is no twin scan loop.
  * @returns name, base, and the index of the first `0` after the header (an entity or ENDBLK).
  */
 function parseBlockHeader(
   lines: string[],
   startIndex: number
-): { name: string; base: Point2D; next: number } {
+): { name: string; base: Point2D; baseZ: number; next: number } {
   const header = DxfEntityParser.parseEntity(lines, startIndex);
   const data = header?.data ?? {};
   return {
     name: data['2'] ?? '',
     base: { x: parseFloat(data['10'] ?? '0') || 0, y: parseFloat(data['20'] ?? '0') || 0 },
+    baseZ: parseFloat(data['30'] ?? '0') || 0,
     next: DxfEntityParser.findNextEntity(lines, startIndex + 2),
   };
 }
@@ -79,7 +82,7 @@ export function parseBlockDefinitions(lines: string[], diagnostics?: ImportDiagn
       i = next;
     }
 
-    if (header.name) defs.set(header.name, { base: header.base, entities });
+    if (header.name) defs.set(header.name, { base: header.base, baseZ: header.baseZ, entities });
   }
 
   return defs;

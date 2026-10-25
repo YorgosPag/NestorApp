@@ -23,6 +23,8 @@ import {
 } from './import-unit-decision';
 // ADR-348 SSoT — per-entity scale transform (reused for the import unit-scale pass).
 import { scaleEntity } from '../systems/scale/scale-entity-transform';
+// Elevation SSoT — Z scales with a unit conversion (ADR-462 · ADR-635 2026-10-25).
+import { scaledElevationFields } from './entity-elevation';
 
 /** Axis-aligned {min,max} extents — mirrors `computeEntityArrayBounds`'s return shape. */
 export interface SceneEntityBounds {
@@ -107,10 +109,16 @@ export function applyCanonicalMmScale(input: CanonicalMmScaleInput): CanonicalMm
   // Uniform scale around the origin (0,0) → reuses the ADR-348 per-entity SSoT (`scaleEntity`),
   // so every entity type (line/arc/circle/text/dimension/hatch…) scales correctly without
   // re-implementing per-type math. Coordinates, radii and text heights all become mm.
+  // Z is a length in the SAME unit, so a unit conversion scales it too (a metre file's LWPOLYLINE 38 = 1.0 is
+  // 1000 mm). `scaleEntity` is planimetric by contract (the user's SCALE leaves Z alone), hence the explicit pass.
   const origin = { x: 0, y: 0 };
   const scaled = entities.map((e) => {
     try {
-      return { ...e, ...scaleEntity(e as unknown as Entity, origin, mmFactor, mmFactor) } as AnySceneEntity;
+      return {
+        ...e,
+        ...scaleEntity(e as unknown as Entity, origin, mmFactor, mmFactor),
+        ...scaledElevationFields(e as unknown as Entity, mmFactor),
+      } as AnySceneEntity;
     } catch (err) {
       // A single entity that resists the unit-scale must not sink the whole import —
       // keep it unscaled and record it (ADR-635 Φ3).

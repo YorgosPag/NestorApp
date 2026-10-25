@@ -34,6 +34,13 @@ import {
 } from './dxf-converter-helpers';
 
 import { dwarn } from '../debug';
+import type { PolylineElevationFields } from './entity-elevation';
+import {
+  isDxf3dPolyline,
+  readLineElevation,
+  readPlanarPolylineElevation,
+  readWorldPolylineElevation,
+} from './dxf-elevation-reader';
 
 // Re-export types for backward compatibility
 export type { EntityData, TextAlignment, EntityConverter } from './dxf-converter-helpers';
@@ -48,7 +55,7 @@ import { convertDimension } from './dxf-dimension-converter';
 
 /**
  * Convert LINE entity
- * DXF Codes: 10,20 = Start point; 11,21 = End point
+ * DXF Codes: 10,20(,30) = Start point; 11,21(,31) = End point — WCS; Z via dxf-elevation-reader.
  */
 export function convertLine(
   data: Record<string, string>,
@@ -76,6 +83,7 @@ export function convertLine(
     visible: true,
     start: { x: x1, y: y1 },
     end: { x: x2, y: y2 },
+    ...readLineElevation(data),
     ...(color && { color })
   };
 }
@@ -84,13 +92,15 @@ export function convertLine(
  * Build the `type:'polyline'` scene entity shared by LWPOLYLINE and old-style POLYLINE.
  * Single source for the closed-flag bitmask (70 bit 1 — AutoCAD emits e.g. 129 = 128|1),
  * color extraction and the emitted shape, so both converters stay identical downstream.
+ * `elevation` = the Z fields resolved by `dxf-elevation-reader` (OCS / 2D-vs-3D already decided by the caller).
  */
 function buildPolylineSceneEntity(
   vertices: Array<{ x: number; y: number }>,
   data: Record<string, string>,
   layer: string,
   index: number,
-  label: 'POLYLINE' | 'LWPOLYLINE'
+  label: 'POLYLINE' | 'LWPOLYLINE',
+  elevation: PolylineElevationFields
 ): AnySceneEntity | null {
   if (vertices.length < 2) {
     dwarn('EntityConverter', `⚠️ Skipping ${label} ${index}: insufficient vertices`, vertices.length);
@@ -107,13 +117,15 @@ function buildPolylineSceneEntity(
     visible: true,
     vertices,
     closed: isClosed,
+    ...elevation,
     ...(color && { color })
   };
 }
 
 /**
  * Convert LWPOLYLINE entity
- * DXF Codes: 10,20 = Vertex points (repeated); 70 = flags (bit 1 = closed)
+ * DXF Codes: 10,20 = Vertex points (repeated, OCS); 70 = flags (bit 1 = closed); 38 = elevation (OCS Z);
+ * 210/220/230 = extrusion. OCS→WCS + elevation via dxf-elevation-reader.
  *
  * Vertices are read from ordered `pairs` (ADR-507) when available, because the flat
  * `data` map overwrites repeated 10/20 and keeps only the last vertex. Falls back to
@@ -125,16 +137,19 @@ export function convertLwPolyline(
   index: number,
   pairs?: ReadonlyArray<readonly [string, string]>
 ): AnySceneEntity | null {
-  const vertices = verticesFromPairsOrData(data, pairs);
-  return buildPolylineSceneEntity(vertices, data, layer, index, 'LWPOLYLINE');
+  const planar = readPlanarPolylineElevation(verticesFromPairsOrData(data, pairs), data, '38');
+  return buildPolylineSceneEntity(planar.vertices, data, layer, index, 'LWPOLYLINE', planar.fields);
 }
 
 /**
  * Convert old-style POLYLINE entity (AutoCAD R12/AC1009: POLYLINE + N×VERTEX + SEQEND).
  *
  * Vertices are pre-aggregated by DxfEntityParser.parsePolylineGroup into ordered `pairs`
- * (10/20/42, header elevation excluded). Emits the SAME scene entity as LWPOLYLINE so all
+ * (10/20/30/42, header elevation excluded). Emits the SAME scene entity as LWPOLYLINE so all
  * downstream (bounds, unit scaling, renderer) treats both identically.
+ *
+ * Z: a 3D POLYLINE (70 bit 8) is WCS with a Z per VERTEX (30); a 2D one is OCS with ONE elevation in the
+ * header point's 30 — exactly the LWPOLYLINE case. See dxf-elevation-reader.
  *
  * Bulge (code 42) is preserved on the parsed vertices but rendered as straight segments
  * for now (Φ1a) — bulge→arc tessellation is a follow-up (Φ1b).
@@ -144,8 +159,13 @@ export function convertPolyline(
   index: number
 ): AnySceneEntity | null {
   const { data, layer, pairs } = entityData;
-  const vertices = parseVerticesFromPairs(pairs).map(v => ({ x: v.x, y: v.y }));
-  return buildPolylineSceneEntity(vertices, data, layer, index, 'POLYLINE');
+  const parsed = parseVerticesFromPairs(pairs);
+  if (isDxf3dPolyline(data)) {
+    const vertices = parsed.map(v => ({ x: v.x, y: v.y }));
+    return buildPolylineSceneEntity(vertices, data, layer, index, 'POLYLINE', readWorldPolylineElevation(parsed));
+  }
+  const planar = readPlanarPolylineElevation(parsed, data, '30');
+  return buildPolylineSceneEntity(planar.vertices, data, layer, index, 'POLYLINE', planar.fields);
 }
 
 // ============================================================================
@@ -308,6 +328,8 @@ export function convertSpline(
   // → the PolylineRenderer lays a fitted curve through the control points (contour SSoT,
   // ADR-650/658) instead of a straight control polygon.
   const vertices = verticesFromPairsOrData(data, pairs);
+  // Control points are WCS with a Z each (30) — a contour delivered as a SPLINE keeps its elevation.
+  const elevation = pairs && pairs.length > 0 ? readWorldPolylineElevation(parseVerticesFromPairs(pairs)) : {};
 
   if (vertices.length < 2) {
     dwarn('EntityConverter', `⚠️ Skipping SPLINE ${index}: insufficient control points`, vertices.length);
@@ -324,6 +346,7 @@ export function convertSpline(
     vertices,
     closed: false,
     smoothDisplay: true,
+    ...elevation,
     ...(color && { color })
   };
 }

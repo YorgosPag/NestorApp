@@ -1,12 +1,16 @@
 /**
  * ADR-650 M2 μέρος Β — pure core: «υπάρχουσα γραμμή του σχεδίου → breakline constraint».
  *
- * Το scene είναι **2D**: `LineEntity` / `PolylineEntity` ΔΕΝ έχουν z· μόνο το
- * `LWPolylineEntity` κουβαλά `elevation`. Άρα το υψόμετρο μιας breakline προκύπτει με τη
- * διάκριση του **Civil 3D**:
+ * Το scene είναι επιπεδομετρικό (`Point2D`)· το Z ζει **δίπλα** στη γεωμετρία και το διαβάζει
+ * **ΜΟΝΟ** το SSoT `utils/entity-elevation` (`entityVertexElevations`): ένα `elevation`
+ * (LWPOLYLINE 38 / 2Δ POLYLINE), Z ανά κορυφή (3Δ POLYLINE / SPLINE) ή start/end (LINE 30/31).
+ * Άρα το υψόμετρο μιας breakline προκύπτει με τη διάκριση του **Civil 3D**:
  *
- *  1. **standard breakline** — `lwpolyline.elevation` ορισμένο ⇒ ΟΛΕΣ οι κορυφές στο ίδιο z
- *     (η γραμμή είναι πραγματικά υψομετρημένη: ακμή δρόμου σε στάθμη, κορυφογραμμή τοίχου).
+ *  1. **standard breakline** — η γραμμή έχει Z (ενιαίο ή ανά κορυφή) ⇒ κάθε κορυφή κρατά το ΔΙΚΟ
+ *     της z (ακμή δρόμου σε στάθμη, κορυφογραμμή, 3Δ πολυγραμμή τοπογράφου).
+ *     ⚠️ Μέχρι 2026-10-25 διαβαζόταν μόνο το `lwpolyline.elevation` — αλλά κάθε εισαγόμενη
+ *     LWPOLYLINE γίνεται `polyline` και ο κωδικός 38 πετιόταν· άρα **κάθε** γραμμή από DXF
+ *     έπεφτε σιωπηλά σε proximity (ADR-635 / ADR-650 M2 changelog).
  *  2. **proximity breakline** — 2D γραμμή χωρίς z ⇒ κάθε κορυφή παίρνει το z του
  *     **πλησιέστερου μετρημένου σημείου**. ΔΕΝ είναι hack: είναι το καθιερωμένο pattern του
  *     Civil 3D για 2D γραμμές. Η αξία της breakline είναι ότι επιβάλλεται ως **constrained
@@ -36,6 +40,7 @@
 
 import type { Entity } from '../../types/entities';
 import { isLineEntity, isPolylineEntity, isLWPolylineEntity } from '../../types/entities';
+import { entityVertexElevations } from '../../utils/entity-elevation';
 import type { Point2D } from '../../rendering/types/Types';
 import type { WorldToDisplayProjector } from '../geo-referencing/geo-transform';
 import { unprojectDisplayPoints } from './topo-display-frame';
@@ -117,13 +122,14 @@ export function buildBreaklineFromEntity(
   // Η ΜΙΑ μετάβαση πλαισίου, πριν από κάθε ανάγνωση των κορυφών (ADR-718 §Α).
   const vertices = unprojectDisplayPoints(poly.vertices, projector);
 
-  // (1) standard breakline — η γραμμή κουβαλά το δικό της, ρητό υψόμετρο.
-  // Το `elevation` είναι **Z** και ο μετασχηματισμός είναι επίπεδος (M10b: «Z is never touched»),
-  // οπότε περνά αυτούσιο — ακριβώς όπως το `level` μιας ισοϋψούς στο `projectContourLines`.
-  const elevation = isLWPolylineEntity(entity) ? entity.elevation : undefined;
-  if (typeof elevation === 'number' && Number.isFinite(elevation)) {
+  // (1) standard breakline — η γραμμή κουβαλά το δικό της, ρητό υψόμετρο (ενιαίο ή ανά κορυφή).
+  // Το Z περνά αυτούσιο: ο μετασχηματισμός είναι επίπεδος (M10b: «Z is never touched») — ακριβώς
+  // όπως το `level` μιας ισοϋψούς στο `projectContourLines`. Το SSoT δίνει `null` σε ασυμφωνία
+  // μήκους (επεξεργασμένη γραμμή) ⇒ proximity, ποτέ μετατοπισμένο z.
+  const zs = entityVertexElevations(entity);
+  if (zs && zs.length === vertices.length) {
     return {
-      vertices: vertices.map((v) => ({ x: v.x, y: v.y, z: elevation })),
+      vertices: vertices.map((v, i) => ({ x: v.x, y: v.y, z: zs[i]! })),
       closed: poly.closed,
       source: 'elevation',
     };

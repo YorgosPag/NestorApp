@@ -156,6 +156,11 @@ export interface DxfPolyVertex {
   y: number;
   /** DXF code 42 — bulge of the arc segment STARTING at this vertex (0 = straight). */
   bulge?: number;
+  /**
+   * DXF code 30 — the vertex Z, as written (WCS for 3D POLYLINE / SPLINE). Absent when the record has no 30.
+   * Interpretation (frame, «all zero = 2D») lives in `dxf-elevation-reader.ts`, not here.
+   */
+  z?: number;
 }
 
 /**
@@ -171,7 +176,7 @@ export interface DxfPolyVertex {
  * vertex-bearing 10/20 pairs — e.g. the POLYLINE header's dummy elevation 10/20/30
  * is excluded upstream.
  *
- * DXF Format: 10 = vertex X, 20 = vertex Y, 42 = bulge (optional, per vertex).
+ * DXF Format: 10 = vertex X, 20 = vertex Y, 30 = vertex Z (optional), 42 = bulge (optional, per vertex).
  *
  * @param pairs - Ordered (code, value) pairs from the entity/vertex stream
  * @returns Array of parsed vertices (with bulge when non-zero)
@@ -182,7 +187,7 @@ export function parseVerticesFromPairs(
   const vertices: DxfPolyVertex[] = [];
   if (!pairs) return vertices;
 
-  let current: { x?: number; y?: number; bulge?: number } = {};
+  let current: { x?: number; y?: number; z?: number; bulge?: number } = {};
 
   const flush = (): void => {
     // 🏢 ADR: Use centralized isValidPoint
@@ -190,6 +195,7 @@ export function parseVerticesFromPairs(
       vertices.push({
         x: current.x,
         y: current.y,
+        ...(current.z !== undefined ? { z: current.z } : {}),
         ...(current.bulge ? { bulge: current.bulge } : {})
       });
     }
@@ -202,6 +208,9 @@ export function parseVerticesFromPairs(
       current = { x: parseFloat(value) };
     } else if (code === '20' && current.x !== undefined) {
       current.y = parseFloat(value);
+    } else if (code === '30' && current.x !== undefined) {
+      const z = parseFloat(value);
+      if (Number.isFinite(z)) current.z = z;
     } else if (code === '42' && current.x !== undefined) {
       const bulge = parseFloat(value);
       if (!Number.isNaN(bulge) && bulge !== 0) current.bulge = bulge;

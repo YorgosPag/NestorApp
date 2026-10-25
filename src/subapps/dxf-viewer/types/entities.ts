@@ -28,6 +28,9 @@ export interface LineEntity extends BaseEntity {
   end: Point2D;
   lineWidth?: number;
   lineStyle?: string;
+  /** Z of `start` / `end` (DXF LINE 30 / 31, WCS, canonical mm). Absent = a 2D line. SSoT: `utils/entity-elevation`. */
+  startElevation?: number;
+  endElevation?: number;
 }
 
 // ─── ADR-510 Φ3: per-segment bulge + variable width (parallel arrays) ──────────
@@ -39,6 +42,9 @@ export interface LineEntity extends BaseEntity {
 //   startWidths[i] = width (DXF 40) at vertices[i] of that outgoing segment
 //   endWidths[i]   = width (DXF 41) at vertices[i+1] of that outgoing segment
 // Geometry SSoT: rendering/entities/shared/geometry-bulge-utils.ts.
+//   vertexElevations[i] = Z of vertices[i] (3D POLYLINE / SPLINE, WCS, canonical mm). A length that no longer matches
+//                    `vertices` (a vertex was added/removed by an edit) is read as «no elevation», never re-aligned.
+//                    Elevation SSoT: utils/entity-elevation.ts.
 /**
  * ADR-636 Φ2.4 (D.4) — provenance ενός imported DXF MLINE. Το import (ADR-635 Φ C.7)
  * εκρήγνυσι το MLINE σε N παράλληλες `polyline` (μία ανά MLINESTYLE element)· αυτό το
@@ -86,6 +92,13 @@ export interface PolylineEntity extends BaseEntity {
   bulges?: number[];          // ADR-510 Φ3: per-segment arc factor (DXF group 42)
   startWidths?: number[];     // ADR-510 Φ3: per-segment start width (DXF group 40)
   endWidths?: number[];       // ADR-510 Φ3: per-segment end width (DXF group 41)
+  /**
+   * One Z for every vertex (2.5D — LWPOLYLINE 38 / 2D POLYLINE header 30, after OCS→WCS, canonical mm).
+   * Mutually exclusive with `vertexElevations`. Absent = a 2D polyline. SSoT: `utils/entity-elevation`.
+   */
+  elevation?: number;
+  /** Per-vertex Z (3D POLYLINE / SPLINE), index-aligned with `vertices` — see the parallel-array note above. */
+  vertexElevations?: number[];
   /** ADR-636 Φ2.4 (D.4) — imported-MLINE provenance· ΜΟΝΟ στο πρώτο element polyline. */
   dxfMlineSource?: DxfMlineSource;
 }
