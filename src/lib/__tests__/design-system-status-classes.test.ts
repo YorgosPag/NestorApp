@@ -11,6 +11,7 @@
  */
 
 import { readRepoCode, readRepoFile } from '@/test-utils/read-source';
+import { isScannedByTailwind } from '@/test-utils/tailwind-content';
 import { getStatusColor } from '../design-system';
 
 const SOURCE = 'src/lib/design-system.ts';
@@ -37,7 +38,7 @@ describe('getStatusColor — κλάσεις ορατές στο Tailwind', () =>
   });
 
   it('το Tailwind σαρώνει το αρχείο που κρατά τις κλάσεις', () => {
-    expect(readRepoCode('tailwind.config.ts')).toContain(`'./${SOURCE}'`);
+    expect(isScannedByTailwind(SOURCE)).toBe(true);
   });
 
   it('κάθε κατάσταση παίρνει το ΔΙΚΟ της χρώμα — το `success` δεν πέφτει στην εφεδρεία', () => {

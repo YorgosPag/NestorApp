@@ -36,6 +36,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { SHOWCASE_SHELF } from '@/services/upload/utils/public-shelf-kinds';
+import { isScannedByTailwind } from '@/test-utils/tailwind-content';
 import { SHOWCASE_MARK_KINDS, type ShowcaseMarkKind } from '@/lib/agency/showcase-mark-kind';
 import { judgeShowcaseMark, markReach, MARK_MIN_EDGE } from '../showcase-mark-fidelity';
 import {
@@ -486,17 +487,10 @@ describe('🔴 Τ — Ο TAILWIND ΠΡΕΠΕΙ ΝΑ ΒΛΕΠΕΙ ΤΙΣ ΚΛΑΣ
    * 🔑 **Η άγκυρα ρωτά τη ΔΙΑΜΟΡΦΩΣΗ, όχι μια σταθερά**: αν το `content` αλλάξει —
    * προστεθεί ή αφαιρεθεί φάκελος — αυτό το test το μαθαίνει.
    */
-  const CONFIG = fs.readFileSync(path.join(process.cwd(), 'tailwind.config.ts'), 'utf8');
-
-  /** Τα πρώτα τμήματα των globs του `content` — `'./src/components/**...'` → `components`. */
-  const scannedRoots = new Set([...CONFIG.matchAll(/'\.\/src\/([\w-]+)/g)].map((m) => m[1]));
-
-  it('🔴 το αρχείο του πλαισίου ζει σε φάκελο που ο σαρωτής ΑΠΑΡΙΘΜΕΙ', () => {
-    // Το `require.resolve` θα έδινε το μεταγλωττισμένο μονοπάτι· εδώ θέλουμε το **πηγαίο**.
-    const frameRoot = 'src/components/mandate/showcase-mark-frame.ts'.split('/')[1];
-
-    expect(scannedRoots.size).toBeGreaterThan(0);
-    expect([...scannedRoots]).toContain(frameRoot);
+  // ⚠️ Το glob κρίνει, όχι η ρίζα του: η παλιά άγκυρα ρωτούσε «απαριθμείται ο φάκελος `lib`;» και κοκκίνισε
+  //    ψευδώς μόλις μπήκε το `src/lib/**/*.tsx` — ενώ το `src/lib/agency/*.ts` εξακολουθεί να ΜΗ σαρώνεται.
+  it('🔴 το αρχείο του πλαισίου πέφτει στο `content` του Tailwind', () => {
+    expect(isScannedByTailwind('src/components/mandate/showcase-mark-frame.ts')).toBe(true);
   });
 
   it('🔴 ΚΑΘΕ κλάση του πίνακα εμφανίζεται ΚΑΙ σε σαρωμένο αρχείο', () => {
@@ -522,7 +516,7 @@ describe('🔴 Τ — Ο TAILWIND ΠΡΕΠΕΙ ΝΑ ΒΛΕΠΕΙ ΤΙΣ ΚΛΑΣ
       'utf8',
     );
 
-    expect([...scannedRoots]).not.toContain('lib');
+    expect(isScannedByTailwind('src/lib/agency/showcase-mark-surfaces.ts')).toBe(false);
     expect(surfaces).not.toMatch(/className/);
   });
 });

@@ -10,6 +10,7 @@
  */
 
 import { readRepoFile } from '@/test-utils/read-source';
+import { isScannedByTailwind } from '@/test-utils/tailwind-content';
 import { TOUCH_TARGET_MIN } from '@/design-system/touch-target';
 import { BACK_LINK_CLASS, ENTITY_LINK_CLASS, VISIBLE_LINK_CLASS } from '../link-style';
 
@@ -17,12 +18,9 @@ const LINK_STYLE = 'src/lib/ui/link-style.ts';
 const TOUCH_TARGET = 'src/design-system/touch-target.ts';
 
 describe('link-style — κλάσεις ορατές στο Tailwind', () => {
-  // Ωμό, ΟΧΙ `readRepoCode`: το `/**/` του glob μοιάζει με σχόλιο και το `stripComments` το τρώει.
-  const config = readRepoFile('tailwind.config.ts');
-
-  it('το Tailwind σαρώνει τα `.ts` του `src/lib/ui` και του `src/design-system`', () => {
-    expect(config).toContain(`'./src/lib/ui/**/*.ts'`);
-    expect(config).toContain(`'./src/design-system/**/*.ts'`);
+  it('το Tailwind σαρώνει τα αρχεία που κρατούν τις κλάσεις', () => {
+    expect(isScannedByTailwind(LINK_STYLE)).toBe(true);
+    expect(isScannedByTailwind(TOUCH_TARGET)).toBe(true);
   });
 
   const sources = [readRepoFile(LINK_STYLE), readRepoFile(TOUCH_TARGET)].join('\n');
