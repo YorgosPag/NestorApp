@@ -17,7 +17,8 @@ import React, { useSyncExternalStore } from 'react';
 import { getTopoState, subscribeTopo } from '../../systems/topography/TopoPointStore';
 import { TOPO_SURFACE_IDS } from '../../systems/topography/topo-types';
 import {
-  breaklineDash, TOPO_BREAKLINE_STROKE_PX, TOPO_BREAKLINE_VERTEX_DOT_PX,
+  breaklineDashPattern, breaklineSvgDasharray,
+  TOPO_BREAKLINE_STROKE_PX, TOPO_BREAKLINE_VERTEX_DOT_PX, TOPO_BREAKLINE_VERTEX_OUTLINE_PX,
 } from '../../systems/topography/topo-breakline-style';
 import { useTopoDisplayProjector } from '../../systems/topography/useTopoDisplayProjector';
 import { useTransformValue } from '../../systems/cursor/ImmediateTransformStore';
@@ -37,7 +38,10 @@ const CASING: BreaklineStrokeSpec = {
 };
 
 const DOTS: BreaklineVertexDots = {
-  diameterPx: TOPO_BREAKLINE_VERTEX_DOT_PX, fill: UI_COLORS.TOPO_BREAKLINE, outline: UI_COLORS.TOPO_BREAKLINE_CASING,
+  diameterPx: TOPO_BREAKLINE_VERTEX_DOT_PX,
+  fill: UI_COLORS.TOPO_BREAKLINE,
+  outline: UI_COLORS.TOPO_BREAKLINE_CASING,
+  outlinePx: TOPO_BREAKLINE_VERTEX_OUTLINE_PX,
 };
 
 export function TopoBreaklineOverlay({ viewport }: Props) {
@@ -64,7 +68,7 @@ export function TopoBreaklineOverlay({ viewport }: Props) {
             stroke={{
               color: UI_COLORS.TOPO_BREAKLINE,
               widthPx: TOPO_BREAKLINE_STROKE_PX.stroke,
-              dash: breaklineDash(b.elevationSource),
+              dash: breaklineSvgDasharray(breaklineDashPattern(b.elevationSource), TOPO_BREAKLINE_STROKE_PX.stroke),
             }}
             dots={DOTS}
           />

@@ -6,7 +6,7 @@
  */
 import { breaklineScreenPath } from '../topo-breakline-screen-path';
 import {
-  breaklineDash, TOPO_BREAKLINE_STROKE_PX, TOPO_BREAKLINE_VERTEX_DOT_PX,
+  breaklineDashPattern, breaklineSvgDasharray, TOPO_BREAKLINE_STROKE_PX, TOPO_BREAKLINE_VERTEX_DOT_PX,
 } from '../../../../systems/topography/topo-breakline-style';
 import {
   AUTO_BREAKLINE_CORNER_DOT_PX, AUTO_BREAKLINE_STROKE_PX,
@@ -51,15 +51,51 @@ describe('breaklineScreenPath — ο ένας δρόμος WORLD → DISPLAY →
 
 describe('topo-breakline-style — το μοτίβο λέει από πού ήρθε το z', () => {
   it('κάθε πηγή έχει ΔΙΚΟ της μοτίβο (ποτέ μόνο χρώμα — WCAG 1.4.1)', () => {
-    const dashes = (['elevation', 'proximity', 'surface'] as const).map(breaklineDash);
-    expect(new Set(dashes).size).toBe(3);
+    const patterns = (['elevation', 'proximity', 'surface'] as const).map(breaklineDashPattern);
+    expect(new Set(patterns.map((p) => JSON.stringify(p))).size).toBe(3);
   });
 
   it('elevation = συνεχής· άγνωστη (παλιά αποθηκευμένη) = συνεχής, όχι μαντεψιά', () => {
-    expect(breaklineDash('elevation')).toBeNull();
-    expect(breaklineDash(undefined)).toBeNull();
+    expect(breaklineDashPattern('elevation')).toBeNull();
+    expect(breaklineDashPattern(undefined)).toBeNull();
+  });
+});
+
+/**
+ * Το SVG με στρογγυλά άκρα ζωγραφίζει `w/2` πέρα από κάθε άκρο παύλας. Η άγκυρα μετρά ό,τι ΒΛΕΠΕΙ
+ * το μάτι (dash + w φωτεινό, gap − w σκοτεινό) — όχι συμβολοσειρές, που ήταν «πράσινες» ενώ στην
+ * οθόνη το `2 4` γινόταν 5/1 και το `8 4` 11/1, δηλαδή τρεις πηγές σχεδόν ίδιες.
+ */
+describe('breaklineSvgDasharray — ορατό μοτίβο με στρογγυλά άκρα', () => {
+  const W = TOPO_BREAKLINE_STROKE_PX.stroke;
+  const visible = (dasharray: string | null): { lit: number; dark: number } => {
+    const [dash, gap] = dasharray!.split(' ').map(Number);
+    return { lit: dash! + W, dark: gap! - W };
+  };
+
+  it('διακεκομμένη (proximity): το μάτι βλέπει ακριβώς το δηλωμένο μοτίβο', () => {
+    const p = breaklineDashPattern('proximity')!;
+    expect(visible(breaklineSvgDasharray(p, W))).toEqual({ lit: p.dashPx, dark: p.gapPx });
   });
 
+  it('κουκκίδες (surface): κύκλος διαμέτρου ίσης με το πάχος, κενό όσο δηλώθηκε', () => {
+    const p = breaklineDashPattern('surface')!;
+    expect(breaklineSvgDasharray(p, W)).toBe(`0 ${p.gapPx + W}`);
+    expect(visible(breaklineSvgDasharray(p, W))).toEqual({ lit: W, dark: p.gapPx });
+  });
+
+  it('κάθε σκοτεινό κενό είναι ΟΡΑΤΟ (≥ 3 px) — η κλάση του σφάλματος, όχι το δείγμα', () => {
+    for (const source of ['proximity', 'surface'] as const) {
+      expect(visible(breaklineSvgDasharray(breaklineDashPattern(source), W)).dark).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it('συνεχής ⇒ κανένα dasharray', () => {
+    expect(breaklineSvgDasharray(null, W)).toBeNull();
+  });
+});
+
+describe('topo-breakline-style — πάχη', () => {
   it('τα πάχη είναι ΔΑΝΕΙΚΑ από τις υποψήφιες: η «Προσθήκη» αλλάζει χρώμα, όχι μέγεθος', () => {
     expect(TOPO_BREAKLINE_STROKE_PX.stroke).toBe(AUTO_BREAKLINE_STROKE_PX.approved);
     expect(TOPO_BREAKLINE_STROKE_PX.casing).toBeGreaterThan(TOPO_BREAKLINE_STROKE_PX.stroke);

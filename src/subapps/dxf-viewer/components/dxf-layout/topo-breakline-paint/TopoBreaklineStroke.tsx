@@ -22,6 +22,8 @@ export interface BreaklineVertexDots {
   readonly diameterPx: number;
   readonly fill: string;
   readonly outline: string;
+  /** Outline ring width (CSS px). */
+  readonly outlinePx: number;
 }
 
 interface Props {
@@ -60,7 +62,7 @@ export function TopoBreaklineStroke({ d, stroke, under, vertices, dots }: Props)
           r={dots.diameterPx / 2}
           fill={dots.fill}
           stroke={dots.outline}
-          strokeWidth={1.5}
+          strokeWidth={dots.outlinePx}
         />
       ))}
     </g>

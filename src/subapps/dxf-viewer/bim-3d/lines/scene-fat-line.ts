@@ -40,11 +40,22 @@ import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { bimEdgeResolutionStore } from '../edges/bim-edge-resolution-store';
+import { applyScreenDash } from './scene-fat-line-screen-dash';
 
 /** World-unit dash (metres along the line) — `LineMaterial` supports exactly one dash + one gap. */
 export interface FatLineDash {
   readonly dashSize: number;
   readonly gapSize: number;
+}
+
+/**
+ * Screen-space dash in CSS px (pre-DPR) — constant on screen at every zoom, restarting at each vertex.
+ * Flat-ended (dashed `LineMaterial` draws no caps), so these are the VISIBLE lengths. See
+ * `scene-fat-line-screen-dash`.
+ */
+export interface FatLineScreenDash {
+  readonly dashPx: number;
+  readonly gapPx: number;
 }
 
 /** Depth-buffer nudge, for a line that must win against its own coplanar faces (Revit edges). */
@@ -70,6 +81,8 @@ export interface SceneFatLineMaterialParams {
   readonly depthTest?: boolean;
   /** Dashed line, in world units along the segment (needs `computeLineDistances()` on the mesh). */
   readonly dash?: FatLineDash | null;
+  /** Dashed line in SCREEN px instead. Mutually exclusive with {@link dash}. */
+  readonly screenDash?: FatLineScreenDash | null;
   /** Pull the line toward the camera in the depth buffer. Omit for depth-test-free overlays. */
   readonly polygonOffset?: FatLinePolygonOffset | null;
   /**
@@ -89,15 +102,9 @@ export interface SceneFatLineMaterial {
   readonly unsubscribe: () => void;
 }
 
-/**
- * Build a `LineMaterial` whose `resolution` and `linewidth` track the BIM 3D viewport for as long
- * as the returned `unsubscribe` is not called. Both are applied immediately, so a material built
- * before the first resize is already correct.
- */
-export function createSceneFatLineMaterial(
-  params: SceneFatLineMaterialParams,
-): SceneFatLineMaterial {
-  const material = new LineMaterial({
+/** The stock `LineMaterial` for `params` — every field except the viewport-tracked ones. */
+function buildLineMaterial(params: SceneFatLineMaterialParams): LineMaterial {
+  return new LineMaterial({
     color: params.color,
     depthTest: params.depthTest ?? true,
     // Every fat line here is an OVERLAY on solid geometry: writing depth would let it occlude the
@@ -107,6 +114,7 @@ export function createSceneFatLineMaterial(
     alphaToCoverage: true,
     ...(params.opacity === undefined ? null : { opacity: params.opacity }),
     ...(params.dash ? { dashed: true, dashSize: params.dash.dashSize, gapSize: params.dash.gapSize } : null),
+    ...(params.screenDash ? { dashed: true } : null),
     ...(params.polygonOffset
       ? {
           polygonOffset: true,
@@ -115,14 +123,34 @@ export function createSceneFatLineMaterial(
         }
       : null),
   });
+}
+
+/**
+ * Build a `LineMaterial` whose `resolution` and `linewidth` track the BIM 3D viewport for as long
+ * as the returned `unsubscribe` is not called. Both are applied immediately, so a material built
+ * before the first resize is already correct.
+ */
+export function createSceneFatLineMaterial(
+  params: SceneFatLineMaterialParams,
+): SceneFatLineMaterial {
+  if (params.dash && params.screenDash) {
+    throw new Error('createSceneFatLineMaterial: `dash` (world) and `screenDash` (px) are mutually exclusive');
+  }
+  const material = buildLineMaterial(params);
 
   const applyViewport = (): void => {
     const snapshot = bimEdgeResolutionStore.getSize();
     const ratio = params.devicePixelRatio ?? snapshot.pixelRatio;
     material.resolution.set(snapshot.width * ratio, snapshot.height * ratio);
     material.linewidth = params.widthPx * ratio;
+    // Screen dash is in the SAME drawing-buffer unit as `linewidth` — scaled by the same ratio.
+    if (params.screenDash) {
+      material.dashSize = params.screenDash.dashPx * ratio;
+      material.gapSize = params.screenDash.gapPx * ratio;
+    }
   };
 
+  if (params.screenDash) applyScreenDash(material);
   applyViewport();
   return { material, unsubscribe: bimEdgeResolutionStore.subscribe(applyViewport) };
 }
