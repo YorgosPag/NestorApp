@@ -33,6 +33,8 @@ export interface FakeGcsObject {
   bytes?: Uint8Array;
   /** GCS `temporaryHold` — ούτε διαγραφή ούτε αντικατάσταση. */
   temporaryHold?: boolean;
+  /** ADR-916 Ο24 — αυξάνει σε **κάθε** αλλαγή μεταδεδομένων (όπως το GCS)· απούσα ⇒ 1. */
+  metageneration?: number;
   /** Φ-Δ.7β — πότε γεννήθηκε **αυτή** η γενιά (το `restore` τη θέτει στη στιγμή της επαναφοράς, όπως το GCS). */
   timeCreated?: string;
 }
@@ -89,8 +91,13 @@ export interface FakeGcsFile {
   save(data: Uint8Array, options?: { readonly preconditionOpts?: { readonly ifGenerationMatch?: number }; readonly contentType?: string }): Promise<void>;
   createReadStream(): Readable;
   delete(options?: FakeGcsPreconditions): Promise<void>;
-  /** ADR-916 Φ-Δ.6 — μόνο το `temporaryHold`· αντικείμενο που λείπει ⇒ `code: 404`. */
-  setMetadata(patch: { readonly temporaryHold: boolean }): Promise<void>;
+  /**
+   * ADR-916 Φ-Δ.6 — μόνο το `temporaryHold`· αντικείμενο που λείπει ⇒ `code: 404`. Ο24 — `ifMetagenerationMatch` που δεν
+   * ταιριάζει ⇒ `code: 412`· κάθε επιτυχής εγγραφή αυξάνει τη metageneration.
+   */
+  setMetadata(patch: { readonly temporaryHold: boolean }, options?: { readonly ifMetagenerationMatch?: number }): Promise<void>;
+  /** ADR-916 Ο24 — τα μεταδεδομένα του ζωντανού αντικειμένου (με metageneration)· λείπει ⇒ `code: 404`. */
+  getMetadata(): Promise<[FakeGcsObject & { readonly metageneration: number }]>;
   /** Φ-Δ.7β — μόνο `{ softDeleted: true, generation }` (τα μεταδεδομένα της soft-deleted γενιάς). */
   get(options: { readonly softDeleted: true; readonly generation: number }): Promise<[FakeGcsSoftDeletedFile]>;
   restore(options: { readonly generation: number } & FakeGcsPreconditions): Promise<FakeGcsObject>;
@@ -180,10 +187,18 @@ export function fakeGcsBucket(store: FakeGcsStore, name: string, options: FakeGc
         if (isHeld(store, path)) throw heldError(path);
         softDelete(path);
       },
-      setMetadata: async (patch) => {
+      setMetadata: async (patch, metaOptions = {}) => {
         const object = store.get(path);
         if (object === undefined) throw coded(404, path);
-        store.set(path, { ...object, temporaryHold: patch.temporaryHold });
+        const metageneration = object.metageneration ?? 1;
+        const expected = metaOptions.ifMetagenerationMatch;
+        if (expected !== undefined && expected !== metageneration) throw coded(412, `metageneration ${path}`);
+        store.set(path, { ...object, temporaryHold: patch.temporaryHold, metageneration: metageneration + 1 });
+      },
+      getMetadata: async () => {
+        const object = store.get(path);
+        if (object === undefined) throw coded(404, path);
+        return [{ ...object, metageneration: object.metageneration ?? 1 }];
       },
       get: async ({ generation }) => {
         const object = softDeletedOf(softDeleted, path, generation);

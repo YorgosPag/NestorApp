@@ -21,6 +21,7 @@ import { sha256OfStoredObject } from '@/server/storage/object-sha256.server';
 
 import { candidatesOf, liveRowBytes, type HandoverEvidenceContext, type HashCandidate } from './handover-delivery-evidence.server';
 import { recordDeliverySha256, type HandoverLedgerProof } from './handover-delivery-ledger.server';
+import { releaseOrphanedSourceBytes } from './handover-delivery-orphan-release.server';
 import { hasOpenRecovery, recoverDeliveredRow } from './handover-delivery-recovery.server';
 
 export interface HandoverHashBudget {
@@ -63,6 +64,8 @@ async function hashRow(ctx: HandoverHashContext, row: HandoverLedgerProof, candi
     const sha256 = await measureCandidate(row, candidate);
     if (sha256 === null) continue;
     const written = await recordDeliverySha256(ctx.adminDb, ctx.handover.id, { ...row, sha256, origin: candidate.origin });
+    // Ο24 — η απόδειξη έκλεισε: αν η συναλλαγή βρήκε την πηγή σβησμένη, τα bytes της παραδίδονται στον sweeper.
+    if (written.kind === 'hashed') await releaseOrphanedSourceBytes(ctx.adminDb, ctx.handover.id, row.sourceFileId);
     return written.kind === 'hashed' ? written.sha256 : null;
   }
   return recoverDeliveredRow(ctx, row);

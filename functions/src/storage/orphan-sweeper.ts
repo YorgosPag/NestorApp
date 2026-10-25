@@ -43,7 +43,7 @@ import * as admin from 'firebase-admin';
 
 import { COLLECTIONS } from '../config/firestore-collections';
 import { generateCloudAuditId } from '../config/enterprise-id';
-import { resolveCustody } from './storage-path-custody';
+import { resolveCustody, type CustodyOutcome } from './storage-path-custody';
 import { fileStorageBucketNames } from './file-record-bucket';
 import type { FileStorageBucketNames } from '../generated/lib/files/file-storage-placement';
 
@@ -88,6 +88,25 @@ async function writeAudit(
       details: { storagePath: filePath, custodyRule: rule, retentionDays: RETENTION_DAYS },
       success: true,
     });
+}
+
+/**
+ * **Η μία διαγραφή.** ADR-916 Ο24 — το αντικείμενο έφυγε ήδη (π.χ. το ξανάσβησε η ανάκτηση της Φ-Δ.7β) ⇒ `gone`: τίποτα να
+ * ανακτηθεί, και ένα σημάδι που μένει θα έπιανε κάθε μέρα μία από τις MAX_DELETIONS_PER_RUN θέσεις για πάντα. Όποιο ΑΛΛΟ
+ * σφάλμα (π.χ. 403 σε `temporaryHold`) πετά ⇒ ο υποψήφιος μένει: η δέσμευση κερδίζει τη διαγραφή.
+ */
+async function reclaimObject(
+  storage: ReturnType<typeof admin.storage>,
+  bucketName: string,
+  filePath: string,
+): Promise<'deleted' | 'gone'> {
+  try {
+    await storage.bucket(bucketName).file(filePath).delete();
+    return 'deleted';
+  } catch (error) {
+    if ((error as { code?: unknown }).code !== 404) throw error;
+    return 'gone';
+  }
 }
 
 /**
@@ -136,7 +155,22 @@ async function sweepOne(
     return 'skipped';
   }
 
-  await storage.bucket(bucketName).file(filePath).delete();
+  return reclaimCandidate(db, storage, doc, { filePath, bucketName, custody });
+}
+
+/** Ένας ώριμος, επανελεγμένος υποψήφιος: διαγραφή + ίχνος + άρση σημαδιού — ή, αν το αντικείμενο έφυγε ήδη, μόνο άρση. */
+async function reclaimCandidate(
+  db: admin.firestore.Firestore,
+  storage: ReturnType<typeof admin.storage>,
+  doc: admin.firestore.QueryDocumentSnapshot,
+  target: { readonly filePath: string; readonly bucketName: string; readonly custody: Extract<CustodyOutcome, { kind: 'orphaned' }> },
+): Promise<'deleted' | 'healed'> {
+  const { filePath, bucketName, custody } = target;
+  if ((await reclaimObject(storage, bucketName, filePath)) === 'gone') {
+    await doc.ref.delete();
+    functions.logger.info('OrphanSweeper: candidate object already gone, released', { filePath, bucketName });
+    return 'healed';
+  }
   await writeAudit(db, filePath, custody.ownerId, custody.rule);
   await doc.ref.delete();
   functions.logger.warn('OrphanSweeper: orphan reclaimed', {

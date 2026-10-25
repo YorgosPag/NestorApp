@@ -179,6 +179,32 @@ describe('runOrphanSweep — φράγματα πριν τη διαγραφή (AD
     expect(candidateDelete).toHaveBeenCalled();
   });
 
+  it('🔴 ADR-916 Ο24: το αντικείμενο έφυγε ήδη (404) → healed, σημάδι αίρεται, ΚΑΝΕΝΑ audit διαγραφής', async () => {
+    process.env.ORPHAN_SWEEP_ENABLED = 'true';
+    mockResolveCustody.mockResolvedValue(ORPHANED);
+    const deleteFile = jest.fn().mockRejectedValue(Object.assign(new Error('404 gone'), { code: 404 }));
+    const candidateDelete = jest.fn();
+    const auditSet = jest.fn();
+
+    const out = await runOrphanSweep(fakeDb([candidateDoc(PATH, candidateDelete)], auditSet), fakeStorage(deleteFile), NOW, BUCKET_NAMES);
+
+    expect(out).toMatchObject({ deleted: 0, healed: 1, skipped: 0 });
+    expect(candidateDelete).toHaveBeenCalled();
+    expect(auditSet).not.toHaveBeenCalled();
+  });
+
+  it('🔴 ADR-916 Ο24: δέσμευση (403) → ο υποψήφιος ΜΕΝΕΙ (η δέσμευση κερδίζει τη διαγραφή)', async () => {
+    process.env.ORPHAN_SWEEP_ENABLED = 'true';
+    mockResolveCustody.mockResolvedValue(ORPHANED);
+    const deleteFile = jest.fn().mockRejectedValue(Object.assign(new Error('403 held'), { code: 403 }));
+    const candidateDelete = jest.fn();
+
+    const out = await runOrphanSweep(fakeDb([candidateDoc(PATH, candidateDelete)]), fakeStorage(deleteFile), NOW, BUCKET_NAMES);
+
+    expect(out).toMatchObject({ deleted: 0, healed: 0, skipped: 1 });
+    expect(candidateDelete).not.toHaveBeenCalled();
+  });
+
   it('σφάλμα σε έναν υποψήφιο δεν ρίχνει ολόκληρη την εκτέλεση (per-item isolation)', async () => {
     process.env.ORPHAN_SWEEP_ENABLED = 'true';
     mockResolveCustody.mockResolvedValue(ORPHANED);

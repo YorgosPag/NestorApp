@@ -162,6 +162,16 @@ export async function readVersionStack(owner: CustodyScope, fileId: string): Pro
 }
 
 /**
+ * **Οι άμεσοι προκάτοχοι ενός id — και όταν το ίδιο το έγγραφο ΛΕΙΠΕΙ** (ADR-916 Ο24). Ο δεσμός `supersededByFileId` ζει
+ * στον **προκάτοχο**, άρα επιζεί της διαγραφής του διαδόχου· από εδώ ο καλών ξαναχτίζει τη στοίβα με {@link readVersionStack}.
+ * Τα **ωμά** δεδομένα επιστρέφονται επίσης: ένας μάρτυρας (π.χ. νόμιμης δέσμευσης) δεν πρέπει να σιωπά επειδή η εγγραφή δεν πέρασε το αυστηρό `normalizeFileRecord`.
+ * Το ίδιο ερώτημα με τη συλλογή προκατόχων — όχι δεύτερο.
+ */
+export async function readPredecessors(owner: CustodyScope, fileId: string): Promise<Array<{ readonly id: string; readonly data: Record<string, unknown> }>> {
+  return (await predecessorQuery(owner, fileId).get()).docs.map((doc) => ({ id: doc.id, data: doc.data() }));
+}
+
+/**
  * **Μόνο η κεφαλή** — το βήμα (1) χωρίς το (2): *«ποια έκδοση ισχύει τώρα για αυτό το αρχείο;»*.
  * Για όποιον δεν χρειάζεται το ιστορικό (ADR-901 Φ4.5 «νέα έκδοση στους ίδιους»): κόστος = μήκος της αλυσίδας
  * **προς τα εμπρός**, όχι ερώτημα ανά προκάτοχο. Ίδιοι κανόνες κατόχου με το {@link readVersionStack}.

@@ -14,12 +14,16 @@ import 'server-only';
  *    - γραμμή χωρίς διατήρηση (γεννήθηκε πριν τη Φ-Δ.7α · μισή αποτυχία) ⇒ τοποθέτηση.
  * 🔑 **Μόνο γραμμές χωρίς sha256**: η γραμμή με sha256 έχει ήδη αποδεσμεύσει την πηγή στην ίδια συναλλαγή — κανένα κόστος.
  * 🛡️ **Ποτέ δεν πετά**: αποτυχία γραμμής = `failed` + log· η επόμενη εκτέλεση (15′ ή νυχτερινό δίχτυ) συγκλίνει.
+ * 🧷 Ο24 — **και** το δίχτυ της άρσης ορφανών bytes: η άρση μιας μη οφειλόμενης γραμμής με πηγή σβησμένη εκτός εφαρμογής γράφει
+ *    πρόθεση στην ίδια συναλλαγή· κάθε γραμμή (και με sha256) με **επαναλήψιμο** ημερολόγιο ξαναρωτά την απόφαση. Οι κανονικές
+ *    γραμμές (χωρίς ημερολόγιο) δεν κοστίζουν καμία ανάγνωση.
  */
 
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { getErrorMessage } from '@/lib/error-utils';
 import { isSha256Hex } from '@/lib/hash/sha256';
+import { orphanReleaseRetryable } from '@/lib/property-handover/handover-orphan-release-journal';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
   preserveObjectBytes,
@@ -35,8 +39,10 @@ import {
   deliverySourceRef,
   ownSourceData,
   readDeliveredRows,
+  stageOrphanReleaseIntent,
   type HandoverLedgerProof,
 } from './handover-delivery-ledger.server';
+import { releaseOrphanedSourceBytes } from './handover-delivery-orphan-release.server';
 
 const logger = createModuleLogger('PropertyHandoverPreservation');
 
@@ -59,16 +65,21 @@ async function settleRow(adminDb: AdminFirestore, handover: PropertyHandover, so
     const source = (await sourceRef.get()).data();
     if (source?.companyId === handover.companyId) await preserveObjectBytes(source);
   }
+  let orphaned = false;
   const outcome = await adminDb.runTransaction(async (tx): Promise<RowOutcome> => {
+    orphaned = false;
     const [ledgerSnap, sourceSnap] = await Promise.all([tx.get(ledgerRef), tx.get(sourceRef)]);
     const ledger = ledgerSnap.data();
     const source = ownSourceData(sourceSnap.data(), ledger);
     // Φ-Δ.7γ — κλεισμένη γραμμή: καμία απόδειξη δεν θα γραφτεί πια ⇒ άρση (δίχτυ της άρσης μέσα στο κλείσιμο).
     const wanted = owed && ledger !== undefined && !isSha256Hex(ledger.sha256) && closureMarkOf(ledger.closure) === null;
     if (wanted) return stagePreservation(tx, sourceRef, source, ledgerRef.id) ? 'preserved' : 'unchanged';
+    // Ο24 — καμία απόδειξη δεν θα γραφτεί πια· πηγή σβησμένη εκτός εφαρμογής ⇒ πρόθεση άρσης των bytes της.
+    orphaned = stageOrphanReleaseIntent(tx, ledgerRef, ledger, sourceSnap.exists);
     return stagePreservationRelease(tx, sourceRef, source, ledgerRef.id) ? 'released' : 'unchanged';
   });
   await reconcilePreservedBytes(sourceRef);
+  if (orphaned) await releaseOrphanedSourceBytes(adminDb, handover.id, sourceFileId);
   return outcome;
 }
 
@@ -83,6 +94,8 @@ export async function reconcileHandoverPreservation(
 ): Promise<HandoverPreservationRun> {
   const run = { preserved: 0, released: 0, failed: 0 };
   for (const row of rows) {
+    // Ο24 δίχτυ — κρασάρισμα ανάμεσα στη συναλλαγή και την άρση, ή λόγος «κράτα» που μπορεί να άλλαξε (ποτέ δεν πετά).
+    if (orphanReleaseRetryable(row.orphanRelease)) await releaseOrphanedSourceBytes(adminDb, handover.id, row.sourceFileId);
     if (row.sha256 !== null) continue;
     try {
       const outcome = await settleRow(adminDb, handover, row.sourceFileId, owed);

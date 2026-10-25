@@ -25,6 +25,7 @@ import { statObjects } from '@/server/storage/placement-copy';
 import { deleteLiveGeneration, restoreIntoVacantName, statSoftDeleted } from '@/server/storage/soft-deleted-object.server';
 
 import type { HandoverCopyContext } from './handover-delivery-copy.server';
+import { releaseOrphanedSourceBytes } from './handover-delivery-orphan-release.server';
 import {
   claimDeliveryRecovery,
   recordDeliverySha256,
@@ -71,6 +72,8 @@ async function finishRestored(ctx: HandoverRecoveryContext, target: RecoveryTarg
   // `changed` ⇒ κάποιος ξανάγραψε το όνομα μετά από εμάς — δεν είναι πια δικό μας, δεν αγγίζεται.
   await deleteLiveGeneration(target.bucket, target.located.path, generation);
   await settleDeliveryRecovery(ctx.adminDb, ctx.handover.id, target.row.sourceFileId);
+  // Ο24 — ΜΕΤΑ το κλείσιμο της ανάκτησης (ποτέ όσο ζει η γενιά που επαναφέραμε): ορφανή πηγή ⇒ στον sweeper.
+  if (sha256 !== null) await releaseOrphanedSourceBytes(ctx.adminDb, ctx.handover.id, target.row.sourceFileId);
   return sha256;
 }
 

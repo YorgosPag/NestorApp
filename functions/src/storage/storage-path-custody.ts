@@ -58,6 +58,7 @@
 import type * as admin from 'firebase-admin';
 import { COLLECTIONS } from '../config/firestore-collections';
 import { findFileOwner } from '../shared/file-ownership-resolver';
+import { fileRecordIdOfPathSegments, stripStorageExtension } from '../generated/lib/files/storage-orphan-candidate';
 import {
   fileStorageBucketNameOf,
   type FileStorageBucketNames,
@@ -104,12 +105,6 @@ interface CustodyRule {
   readonly queryField?: string;
 }
 
-/** Αφαιρεί την κατάληξη ενός filename (`bmat_x.jpg` → `bmat_x`). Πολλαπλές τελείες → η πρώτη. */
-function stripExtension(fileName: string): string {
-  const dot = fileName.indexOf('.');
-  return dot === -1 ? fileName : fileName.slice(0, dot);
-}
-
 /**
  * ΤΟ ΜΗΤΡΩΟ. Κάθε εγγραφή = «αυτό το σχήμα path το κατέχει αυτή η collection, με
  * αυτό το κλειδί». Ό,τι δεν ταιριάζει εδώ είναι `unknown` → **αθάνατο** για τον GC.
@@ -130,7 +125,7 @@ const CUSTODY_RULES: readonly CustodyRule[] = [
     collection: COLLECTIONS.BIM_MATERIALS,
     ownerIdOf: (tail) =>
       tail.length === 2 && tail[0] === 'bim-material-thumbnails'
-        ? stripExtension(tail[1])
+        ? stripStorageExtension(tail[1])
         : null,
   },
   // 💬 Συνημμένα σχολίων BIM (ADR-366 Φ9/C.2) —
@@ -154,7 +149,7 @@ const CUSTODY_RULES: readonly CustodyRule[] = [
     name: 'block-library',
     collection: COLLECTIONS.BLOCK_LIBRARY,
     ownerIdOf: (tail) =>
-      tail.length === 2 && tail[0] === 'block-library' ? stripExtension(tail[1]) : null,
+      tail.length === 2 && tail[0] === 'block-library' ? stripStorageExtension(tail[1]) : null,
   },
   // 🪑 Εισαγόμενα πλέγματα (ADR-683 Φ3) — `projects/{p}/imported-meshes/{uploadId}.glb`.
   // N οντότητες μοιράζονται ΕΝΑ αρχείο μέσω `params.uploadId` → query, όχι doc id.
@@ -164,17 +159,15 @@ const CUSTODY_RULES: readonly CustodyRule[] = [
     queryField: 'params.uploadId',
     ownerIdOf: (tail) =>
       tail.length === 4 && tail[0] === 'projects' && tail[2] === 'imported-meshes'
-        ? stripExtension(tail[3])
+        ? stripStorageExtension(tail[3])
         : null,
   },
   // 📄 Canonical FileRecord (ADR-031) — οποιοδήποτε path τελειώνει σε `files/{fileId}.{ext}`.
   {
     name: 'files',
     collection: COLLECTIONS.FILES,
-    ownerIdOf: (tail) =>
-      tail.length >= 2 && tail[tail.length - 2] === 'files'
-        ? stripExtension(tail[tail.length - 1])
-        : null,
+    // ADR-916 Ο24 — ο ΙΔΙΟΣ κώδικας με όποιον σημαδεύει «ορφανό κατά τον κανόνα `files`» (άρση διατήρησης ορφανών).
+    ownerIdOf: (tail) => fileRecordIdOfPathSegments(tail),
   },
 ];
 
@@ -252,7 +245,7 @@ async function positiveOnlyClaim(
 ): Promise<CustodyOutcome | null> {
   const fileName = tail[tail.length - 1];
   if (!fileName) return null;
-  const fileId = stripExtension(fileName);
+  const fileId = stripStorageExtension(fileName);
   if (!fileId) return null;
   try {
     const claim = await findFileOwner(db, fileId);

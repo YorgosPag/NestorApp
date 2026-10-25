@@ -25,6 +25,7 @@ import { propertyHandoverFromDocument } from '@/lib/property-handover/property-h
 import { createModuleLogger } from '@/lib/telemetry';
 import { custodyOnly } from '@/lib/workspace/custody-scope';
 import { candidatesOf, probeDeliveredRow } from '@/server/property-handover-delivery/handover-delivery-evidence.server';
+import { releaseOrphanedSourceBytes } from '@/server/property-handover-delivery/handover-delivery-orphan-release.server';
 import {
   deliverySourceRef,
   readDeliveredRows,
@@ -110,6 +111,8 @@ export async function closeHandoverLine(adminDb: AdminFirestore, command: Handov
       cause: verdict.cause, reason: command.reason.trim(), closedBy: command.performedBy,
     });
     if (written.kind !== 'closed') return written;
+    // Ο24 — καμία απόδειξη δεν θα γραφτεί πια: ορφανή πηγή ⇒ τα bytes της στον sweeper (ποτέ δεν πετά).
+    await releaseOrphanedSourceBytes(adminDb, command.handoverId, command.sourceFileId);
     await afterClosure(adminDb, command, verdict.cause);
     return { kind: 'closed' };
   } catch (error) {

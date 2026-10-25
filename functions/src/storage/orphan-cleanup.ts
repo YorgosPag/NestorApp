@@ -51,35 +51,13 @@ import * as admin from 'firebase-admin';
 const db = admin.firestore();
 
 import { COLLECTIONS } from '../config/firestore-collections';
-import {
-  FILE_STORAGE_PLACEMENT_LEGACY,
-  type FileStoragePlacement,
-} from '../generated/lib/files/file-storage-placement';
+import type { FileStoragePlacement } from '../generated/lib/files/file-storage-placement';
+// ADR-916 Ο24 — το κλειδί ΚΑΙ το σχήμα του σημαδιού ζουν στην εφαρμογή (δεύτερη πηγή σημαδιών: άρση διατήρησης ορφανών).
+import { candidateDocId, orphanCandidateFields } from '../generated/lib/files/storage-orphan-candidate';
 import { resolveCustody } from './storage-path-custody';
 import { fileStorageBucketNames } from './file-record-bucket';
 import { finalizedObjectOf, type FinalizedObject } from './finalized-object';
 import { FINALIZE_RUNTIME, gen1Memory } from './finalize-runtime';
-
-/**
- * Σταθερό doc id από το storage path: base64url, χωρίς `/` (απαγορευμένο σε doc ids)
- * και χωρίς padding. Ίδιο αντικείμενο → ίδιο έγγραφο → το re-upload ενημερώνει, δεν
- * πολλαπλασιάζει (idempotent).
- *
- * 🔴 ADR-895 Ρ14 — το αντικείμενο είναι **(κάδος, path)**, όχι path. Στη μετάβαση (copy → verify →
- * delete) το ΙΔΙΟ path ζει σε δύο κάδους· με κλειδί μόνο το path τα δύο σημάδια γίνονταν ΕΝΑ έγγραφο
- * και το `bucket` του δεύτερου έσβηνε του πρώτου ⇒ ο sweeper θα έκρινε λάθος αντικείμενο. Η **θέση**
- * (όχι το όνομα κάδου: σταθερή ανά περιβάλλον) μπαίνει στο κλειδί — εκτός από το legacy, που κρατά
- * το κλειδί **αυτολεξεί** ώστε κάθε υπάρχον σημάδι να μένει έγκυρο (ίδιο πρότυπο με το `?placement=`).
- * Ασφαλές ως διακριτό: ο marker δέχεται μόνο paths `companies/…`, ποτέ `{θέση}:…`.
- */
-export function candidateDocId(filePath: string, placement: FileStoragePlacement): string {
-  const key = placement === FILE_STORAGE_PLACEMENT_LEGACY ? filePath : `${placement}:${filePath}`;
-  return Buffer.from(key, 'utf8')
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-}
 
 /**
  * Καταγράφει/ανανεώνει έναν υποψήφιο προς ανάκτηση. Το `firstSeenAt` γράφεται **μόνο
@@ -96,17 +74,14 @@ async function markCandidate(
   const snap = await ref.get();
   await ref.set(
     {
-      storagePath: filePath,
       // ADR-895 Α7 — ο κάδος όπου ΖΟΥΣΕ το αντικείμενο όταν σημαδεύτηκε, ώστε ο sweeper να
       // σβήσει στο ΣΩΣΤΟ κάδο (ποτέ πάντα τον κανονικό). Σημάδια πριν το ADR-895 δεν έχουν
       // αυτό το πεδίο — ο sweeper το διαβάζει με fallback στον κανονικό κάδο.
-      bucket: object.bucket,
-      custodyKind: outcome.kind,
-      custodyRule: outcome.rule ?? null,
-      unknownReason: outcome.reason ?? null,
-      contentType: object.contentType,
-      size: object.size,
-      lastSeenAt: admin.firestore.FieldValue.serverTimestamp(),
+      ...orphanCandidateFields(
+        { storagePath: filePath, bucket: object.bucket, contentType: object.contentType, size: object.size },
+        outcome,
+        admin.firestore.FieldValue.serverTimestamp(),
+      ),
       ...(snap.exists ? {} : { firstSeenAt: admin.firestore.FieldValue.serverTimestamp() }),
     },
     { merge: true },

@@ -13,8 +13,10 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { handoverDeliveryDigest, type HandoverDeliveredRow } from '@/lib/property-handover/handover-delivery-plan';
 import { propertyHandoverFromDocument } from '@/lib/property-handover/property-handover-from-document';
 import { isPreserved } from '@/lib/files/file-hold';
+import { candidateDocId } from '@/lib/files/storage-orphan-candidate';
 import { handoverCopyFileIdOf, handoverDeliveryIdOf, handoverDossierIdOf, propertyHandoverIdOf } from '@/lib/property-handover/property-handover-id';
 import { deliverHandoverFiles, type HandoverFileDeliveryRecorder } from '@/server/property-handover-delivery/handover-delivery.server';
+import { releaseOrphanedSourceBytes } from '@/server/property-handover-delivery/handover-delivery-orphan-release.server';
 import { claimDeliveryRecovery, recordDeliveryClosure, recordDeliverySha256 } from '@/server/property-handover-delivery/handover-delivery-ledger.server';
 import { deliverDueHandoverFiles } from '@/services/property-handover/property-handover-delivery-trigger';
 import { runPropertyHandoverDeliveryQueue } from '@/services/property-handover/property-handover-delivery-queue.service';
@@ -26,12 +28,13 @@ import { fakeGcsBucket, type FakeGcsCopyCall, type FakeGcsStore } from '@/test-u
 
 jest.mock('server-only', () => ({}));
 jest.mock('@/lib/telemetry', () => ({ createModuleLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }) }));
-jest.mock('@/lib/firebaseAdmin', () => ({ FieldValue: { serverTimestamp: () => '2026-10-20T10:00:00.000Z' } }));
+jest.mock('@/lib/firebaseAdmin', () => ({ FieldValue: { serverTimestamp: () => '2026-10-20T10:00:00.000Z' }, getAdminFirestore: () => mockDb() }));
 jest.mock('@/services/entity-audit-tracked-write', () => ({ recordTrackedEntityWrite: jest.fn(async () => undefined) }));
 jest.mock('@/services/file-audit-admin.service', () => ({ recordFileAudit: jest.fn(async (input: Record<string, unknown>) => { mockAudits.push(input); return 'audit'; }) }));
 jest.mock('@/server/files/file-record-bucket', () => ({
   fileRecordBucket: () => mockBucket(),
   fileStorageBucket: () => mockBucket(),
+  fileStorageBucketNames: () => ({ 'legacy-default': 'default', 'eu-originals': 'eu' }),
 }));
 
 const mockAudits: Array<Record<string, unknown>> = [];
@@ -56,6 +59,8 @@ const AT = '2026-10-20T09:00:00.000Z';
 
 let fake: FakeFirestore;
 const db = (): AdminFirestore => fake as unknown as AdminFirestore;
+/** Ο24 — οι υπηρεσίες αρχείων (στοίβα εκδόσεων · ίχνος · σημάδι υποψηφίου) ζητούν τη βάση από το `getAdminFirestore`. */
+function mockDb() { return fake; }
 const docs = (collection: string) => fake.getAllDocs(collection);
 const record: HandoverFileDeliveryRecorder = (input) => recordHandoverFileDelivery(db(), input);
 const handover = () => {
@@ -763,6 +768,227 @@ describe('Ζ83–Ζ92 — Φ-Δ.7γ: κλείσιμο γραμμής χωρίς 
     // Το δίχτυ της διατήρησης δεν την ξαναβάζει σε κλεισμένη γραμμή.
     await deliver();
     expect(isPreserved(docs(COLLECTIONS.FILES).f_plan ?? {})).toBe(false);
+  });
+});
+
+describe('Ζ105–Ζ119 — Ο24: άρση διατήρησης ορφανών bytes + παράδοση στον orphanSweeper (Purview)', () => {
+  const lineId = handoverDeliveryIdOf(HANDOVER, 'f_plan');
+  const held = () => store.get(sourcePath('f_plan'))?.temporaryHold === true;
+  const journal = () => docs(COLLECTIONS.PROPERTY_HANDOVER_DELIVERIES)[lineId]?.orphanRelease as { state?: string; reason?: string | null } | null | undefined;
+  const candidate = () => docs(COLLECTIONS.STORAGE_ORPHAN_CANDIDATES)[candidateDocId(sourcePath('f_plan'), 'legacy-default')];
+  /** «Εκτός εφαρμογής»: η εγγραφή-πηγή σβήνεται ενώ η απόδειξη ακόμη τη διατηρεί (τα bytes μένουν κλειδωμένα). */
+  async function orphanTheSource(): Promise<void> {
+    expect(await deliver(50, 0)).toMatchObject({ kind: 'delivering' });
+    expect(held()).toBe(true);
+    await db().collection(COLLECTIONS.FILES).doc('f_plan').delete();
+  }
+  /** Ψεύτικο GCS: η επόμενη `getMetadata`/`setMetadata` του ονόματος περνά πρώτα από το `hook`. */
+  function onSourceFile(hook: (file: ReturnType<typeof bucket.file>) => void): jest.SpyInstance {
+    const original = bucket.file.bind(bucket);
+    return jest.spyOn(bucket, 'file').mockImplementation((path, opts) => {
+      const file = original(path, opts);
+      if (path === sourcePath('f_plan')) hook(file);
+      return file;
+    });
+  }
+
+  it('🔴 Ζ105 — sha256 με πηγή σβησμένη ⇒ πρόθεση ΣΤΗ συναλλαγή · άρση · σημάδι υποψηφίου κατά τον κανόνα `files`', async () => {
+    await orphanTheSource();
+    expect(await deliver()).toMatchObject({ kind: 'delivered' });
+    expect(held()).toBe(false);
+    expect(journal()).toMatchObject({ state: 'released', reason: null });
+    expect(candidate()).toMatchObject({
+      storagePath: sourcePath('f_plan'), bucket: 'default', custodyKind: 'orphaned', custodyRule: 'files', size: 1000,
+      firstSeenAt: '2026-10-20T10:00:00.000Z',
+    });
+    // Ό,τι δεν ορφάνεψε δεν σημαδεύεται.
+    expect(ledgerRow('f_photo')?.orphanRelease).toBeNull();
+    expect(Object.keys(docs(COLLECTIONS.STORAGE_ORPHAN_CANDIDATES))).toHaveLength(1);
+  });
+
+  it('🔴 Ζ106 — το `firstSeenAt` ΜΟΝΟ την πρώτη φορά (η ωρίμανση δεν ξαναρχίζει) · δεύτερη κλήση = καμία αλλαγή', async () => {
+    await orphanTheSource();
+    fake.seed(COLLECTIONS.STORAGE_ORPHAN_CANDIDATES, candidateDocId(sourcePath('f_plan'), 'legacy-default'), { firstSeenAt: 'ΠΑΛΙΟ' });
+    await deliver();
+    expect(candidate()).toMatchObject({ firstSeenAt: 'ΠΑΛΙΟ', custodyKind: 'orphaned' });
+    expect(await releaseOrphanedSourceBytes(db(), HANDOVER, 'f_plan')).toBe('skipped');
+  });
+
+  it('🔴 Ζ107 — πηγή που ΥΠΑΡΧΕΙ ⇒ κανένα ημερολόγιο, κανένα σημάδι (η συνήθης διαδρομή της Φ-Δ.7α μένει ίδια)', async () => {
+    await deliver(50, 0);
+    await deliver();
+    expect(journal()).toBeNull();
+    expect(docs(COLLECTIONS.STORAGE_ORPHAN_CANDIDATES)).toEqual({});
+  });
+
+  it('🔴 Ζ108 — ΞΕΝΑ bytes στο όνομα (crc32c ≠ γραμμής) ⇒ `foreign-object`: το hold ΔΕΝ αγγίζεται, κανένα σημάδι', async () => {
+    await orphanTheSource();
+    store.set(sourcePath('f_plan'), { crc32c: 'crc_ξένο', size: 1000, generation: 77, temporaryHold: true });
+    await deliver();
+    expect(journal()).toMatchObject({ state: 'kept', reason: 'foreign-object' });
+    expect(held()).toBe(true);
+    expect(candidate()).toBeUndefined();
+  });
+
+  it('🔴 Ζ109 — η στοίβα (από τον προκάτοχο) κρατά νόμιμη δέσμευση ⇒ `hold-evidence`: τα bytes μένουν κλειδωμένα', async () => {
+    companyFile('f_old', 'invoices', undefined, { supersededByFileId: 'f_plan', hold: 'legal' });
+    await orphanTheSource();
+    await deliver();
+    expect(journal()).toMatchObject({ state: 'kept', reason: 'hold-evidence' });
+    expect(held()).toBe(true);
+    expect(candidate()).toBeUndefined();
+  });
+
+  it('🔴 Ζ110 — το ίχνος δείχνει `hold_place` χωρίς `hold_release` ⇒ κρατά· μόλις λυθεί η δέσμευση, το ΔΙΧΤΥ απελευθερώνει', async () => {
+    fake.seed(COLLECTIONS.FILE_AUDIT_LOG, 'aud_1', { companyId: COMPANY, fileId: 'f_plan', action: 'hold_place', timestamp: '2026-10-01T00:00:00.000Z' });
+    await orphanTheSource();
+    await deliver();
+    expect(journal()).toMatchObject({ state: 'kept', reason: 'hold-evidence' });
+    fake.seed(COLLECTIONS.FILE_AUDIT_LOG, 'aud_2', { companyId: COMPANY, fileId: 'f_plan', action: 'hold_release', timestamp: '2026-10-02T00:00:00.000Z' });
+    await deliver();
+    expect(journal()).toMatchObject({ state: 'released' });
+    expect(held()).toBe(false);
+  });
+
+  it('🔴 Ζ111 — άλλη ΟΦΕΙΛΟΜΕΝΗ γραμμή περιμένει απόδειξη από τα ίδια bytes ⇒ `open-proof`· όταν αποδειχτεί, το δίχτυ απελευθερώνει', async () => {
+    const other = 'phnd_other';
+    fake.seed(COLLECTIONS.PROPERTY_HANDOVERS, other, { ...docs(COLLECTIONS.PROPERTY_HANDOVERS)[HANDOVER], recipient: { userId: 'uid_bob', acceptedAt: AT, dossierId: 'pdos_bob' } });
+    fake.seed(COLLECTIONS.PROPERTY_HANDOVER_DELIVERIES, 'phdl_other', {
+      companyId: COMPANY, handoverId: other, recipientUserId: 'uid_bob', sourceFileId: 'f_plan', sha256: null, closure: null,
+    });
+    await orphanTheSource();
+    await deliver();
+    expect(journal()).toMatchObject({ state: 'kept', reason: 'open-proof' });
+    expect(held()).toBe(true);
+    fake.seed(COLLECTIONS.PROPERTY_HANDOVER_DELIVERIES, 'phdl_other', { ...docs(COLLECTIONS.PROPERTY_HANDOVER_DELIVERIES).phdl_other, sha256: 'c'.repeat(64) });
+    await deliver();
+    expect(journal()).toMatchObject({ state: 'released' });
+  });
+
+  it('🔴 Ζ112 — άλλη `FileRecord` δείχνει το ΙΔΙΟ όνομα ⇒ `claimed`· κανένα σημάδι', async () => {
+    fake.seed(COLLECTIONS.FILES, 'f_dup', { companyId: COMPANY, storagePath: sourcePath('f_plan'), category: 'invoices' });
+    await orphanTheSource();
+    await deliver();
+    expect(journal()).toMatchObject({ state: 'kept', reason: 'claimed' });
+    expect(held()).toBe(true);
+  });
+
+  it('🔴 Ζ113 — η metageneration άλλαξε ανάμεσα σε ανάγνωση και εγγραφή ⇒ ΚΑΜΙΑ τυφλή άρση (`pending`)· η επόμενη εκτέλεση συγκλίνει', async () => {
+    await orphanTheSource();
+    const spy = onSourceFile((file) => {
+      const getMetadata = file.getMetadata;
+      file.getMetadata = async () => {
+        const [metadata] = await getMetadata();
+        store.set(sourcePath('f_plan'), { ...metadata, metageneration: metadata.metageneration + 1 });
+        return [metadata];
+      };
+    });
+    try {
+      await deliver();
+    } finally {
+      spy.mockRestore();
+    }
+    expect(journal()).toMatchObject({ state: 'pending' });
+    expect(held()).toBe(true);
+    await deliver();
+    expect(journal()).toMatchObject({ state: 'released' });
+    expect(held()).toBe(false);
+  });
+
+  it('🔴 Ζ114 — σφάλμα δικτύου ΜΕΤΑ τη συναλλαγή ⇒ η πρόθεση μένει `pending` · το ΔΙΧΤΥ (γραμμή με sha256) την ολοκληρώνει', async () => {
+    await orphanTheSource();
+    const spy = onSourceFile((file) => {
+      file.getMetadata = async () => { throw Object.assign(new Error('503 unavailable'), { code: 503 }); };
+    });
+    try {
+      await deliver();
+    } finally {
+      spy.mockRestore();
+    }
+    expect(ledgerRow('f_plan')?.sha256).toBe(shaOf(bytesOf('f_plan')));
+    expect(journal()).toMatchObject({ state: 'pending' });
+    await deliver();
+    expect(journal()).toMatchObject({ state: 'released' });
+    expect(candidate()).toMatchObject({ custodyKind: 'orphaned' });
+  });
+
+  it('🔴 Ζ115 — η παράδοση ΔΕΝ οφείλεται πια (ανάκληση) με πηγή σβησμένη ⇒ η ΤΡΙΤΗ έξοδος επίσης απελευθερώνει', async () => {
+    await orphanTheSource();
+    seedHandover({ lifecycle: 'withdrawn', fileDeliveryState: null, fileDelivery: handover().fileDelivery });
+    await deliverDueHandoverFiles(db(), [handover()], { rescanDelivered: false }, record);
+    expect(ledgerRow('f_plan')?.sha256).toBeNull();
+    expect(journal()).toMatchObject({ state: 'released' });
+    expect(held()).toBe(false);
+  });
+
+  it('🔴 Ζ116 — κλείσιμο 7γ με πηγή σβησμένη ⇒ πρόθεση στη συναλλαγή του κλεισίματος · κανένα αντικείμενο ⇒ `gone`, κανένα σημάδι', async () => {
+    await deliver(50, 0);
+    await bucket.file(String(copyOf('f_plan')?.storagePath)).delete();
+    store.set(sourcePath('f_plan'), { ...store.get(sourcePath('f_plan')), temporaryHold: false } as NonNullable<ReturnType<typeof store.get>>);
+    await bucket.file(sourcePath('f_plan')).delete();
+    await db().collection(COLLECTIONS.FILES).doc('f_plan').delete();
+    bucket.softDeleted.clear();
+    await deliver();
+    expect(await closeHandoverLine(db(), {
+      companyId: COMPANY, propertyId: PROPERTY, handoverId: HANDOVER, sourceFileId: 'f_plan', reason: 'Χάθηκαν.', performedBy: 'uid_office',
+    })).toEqual({ kind: 'closed' });
+    expect(journal()).toMatchObject({ state: 'gone' });
+    expect(candidate()).toBeUndefined();
+  });
+
+  it('🔴 Ζ116β — ο ΓΡΑΦΕΑΣ του κλεισίματος γράφει την πρόθεση στη ΔΙΚΗ του συναλλαγή — όχι το δίχτυ που τρέχει μετά', async () => {
+    await orphanTheSource();
+    expect(await recordDeliveryClosure(db(), HANDOVER, {
+      sourceFileId: 'f_plan', crc32c: 'crc_f_plan', size: 1000, cause: 'bytes-gone', reason: 'Χάθηκαν.', closedBy: 'uid_office',
+    })).toEqual({ kind: 'closed' });
+    expect(journal()).toMatchObject({ state: 'pending', reason: null });
+    expect(held()).toBe(true);
+  });
+
+  it('🔴 Ζ117 — ανάκτηση 7β σε εξέλιξη ⇒ η απόφαση ΠΕΡΙΜΕΝΕΙ (ποτέ σημάδι πάνω στη γενιά που θα ξανασβήσουμε)· χωρίς θέση ⇒ καμία πρόθεση', async () => {
+    await orphanTheSource();
+    await deliver();
+    fake.seed(COLLECTIONS.PROPERTY_HANDOVER_DELIVERIES, lineId, {
+      ...docs(COLLECTIONS.PROPERTY_HANDOVER_DELIVERIES)[lineId],
+      orphanRelease: { state: 'pending', reason: null, since: AT, settledAt: null },
+      recovery: { startedAt: new Date().toISOString(), restoredGeneration: '9001', settledAt: null },
+    });
+    expect(await releaseOrphanedSourceBytes(db(), HANDOVER, 'f_plan')).toBe('pending');
+    expect(journal()).toMatchObject({ state: 'pending' });
+    // Γραμμή χωρίς εντοπιστή πηγής: τίποτα να λυθεί — μόνο αναφορά.
+    fake.seed(COLLECTIONS.PROPERTY_HANDOVER_DELIVERIES, handoverDeliveryIdOf(HANDOVER, 'f_photo'), {
+      ...docs(COLLECTIONS.PROPERTY_HANDOVER_DELIVERIES)[handoverDeliveryIdOf(HANDOVER, 'f_photo')], sha256: null, sourceObject: null,
+    });
+    await db().collection(COLLECTIONS.FILES).doc('f_photo').delete();
+    await deliver();
+    expect(ledgerRow('f_photo')?.orphanRelease).toBeNull();
+  });
+
+  it('🔴 Ζ118 — πρόθεση πάνω σε γραμμή που ΑΚΟΜΗ οφείλεται χωρίς απόδειξη (αλλοιωμένο/πρόωρο ημερολόγιο) ⇒ «open-proof»: ποτέ άρση πριν κλείσει', async () => {
+    await orphanTheSource();
+    fake.seed(COLLECTIONS.PROPERTY_HANDOVER_DELIVERIES, lineId, { ...docs(COLLECTIONS.PROPERTY_HANDOVER_DELIVERIES)[lineId], orphanRelease: 'αλλοιωμένο' });
+    expect(await releaseOrphanedSourceBytes(db(), HANDOVER, 'f_plan')).toBe('kept');
+    expect(journal()).toMatchObject({ state: 'kept', reason: 'open-proof' });
+    expect(held()).toBe(true);
+    expect(candidate()).toBeUndefined();
+  });
+
+  it('🔴 Ζ119 — ο μάρτυρας δέσμευσης ΔΕΝ διαβάζεται ⇒ `unreadable`: κράτα (fail-closed) · το δίχτυ ξαναρωτά και απελευθερώνει', async () => {
+    await orphanTheSource();
+    const original = fake.collection.bind(fake);
+    const spy = jest.spyOn(fake, 'collection').mockImplementation((name: string) => {
+      if (name === COLLECTIONS.FILE_AUDIT_LOG) throw Object.assign(new Error('14 UNAVAILABLE'), { code: 14 });
+      return original(name);
+    });
+    try {
+      await deliver();
+    } finally {
+      spy.mockRestore();
+    }
+    expect(journal()).toMatchObject({ state: 'kept', reason: 'unreadable' });
+    expect(held()).toBe(true);
+    await deliver();
+    expect(journal()).toMatchObject({ state: 'released' });
   });
 });
 

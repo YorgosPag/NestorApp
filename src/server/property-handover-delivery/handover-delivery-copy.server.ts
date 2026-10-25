@@ -192,7 +192,7 @@ async function commitCopy(ctx: HandoverCopyContext, copy: PreparedCopy): Promise
   const row: HandoverLedgerProof = {
     sourceFileId: item.sourceFileId, copyFileId: built.fileId, crc32c: String(source.metadata.crc32c), size: Number(source.metadata.size),
     sha256: null, sourceGeneration: String(source.metadata.generation ?? ''), sourceObject: copy.sourceObject, recovery: null,
-    closure: null, deliveredAt: nowISO(),
+    closure: null, deliveredAt: nowISO(), orphanRelease: null,
   };
   // 🧷 Φ-Δ.7α — bytes ΠΡΩΤΑ (ποτέ «διατηρείται στη βάση, ελεύθερο στον κάδο»)· ό,τι δεν κράτησε η βάση ξεκλειδώνεται μετά.
   await preserveObjectBytes(item.file.doc.data());

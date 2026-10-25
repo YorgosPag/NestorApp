@@ -62,19 +62,18 @@ describe('orphan-cleanup — μηδέν διαγραφή Storage στο real-tim
   it('περνά από το custody SSoT — δεν ξανα-υλοποιεί ownership λογική', () => {
     expect(CLEANUP_SOURCE).toMatch(/from\s+'\.\/storage-path-custody'/);
   });
+
+  it('🔴 ADR-916 Ο24: κλειδί ΚΑΙ σχήμα σημαδιού από το leaf της εφαρμογής — κανένα τοπικό αντίγραφο', () => {
+    expect(CLEANUP_SOURCE).toMatch(/from\s+'\.\.\/generated\/lib\/files\/storage-orphan-candidate'/);
+    expect(CLEANUP_SOURCE).not.toMatch(/function\s+candidateDocId/);
+  });
 });
 
 describe('candidateDocId — σταθερό, idempotent, έγκυρο ως Firestore doc id', () => {
-  // Το import γίνεται εδώ ώστε τα mocks να είναι ενεργά πριν αποτιμηθεί το module scope.
-  const load = (): typeof import('../orphan-cleanup') => {
-    jest.doMock('firebase-functions/v1', () => ({
-      logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
-      runWith: () => ({ storage: { object: () => ({ onFinalize: (f: unknown) => f }) } }),
-    }));
-    jest.doMock('firebase-admin', () => ({ firestore: () => ({}) }));
+  // ADR-916 Ο24 — το κλειδί ζει πλέον στο leaf της εφαρμογής (δύο πηγές σημαδιών, ΕΝΑΣ κώδικας)· εδώ η προβολή του.
+  const load = (): typeof import('../../generated/lib/files/storage-orphan-candidate') =>
     // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
-    return require('../orphan-cleanup');
-  };
+    require('../../generated/lib/files/storage-orphan-candidate');
 
   const PATH = 'companies/c1/bim-material-textures/bmat_34929e3b/albedo.jpg';
 

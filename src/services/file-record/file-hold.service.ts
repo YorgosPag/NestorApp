@@ -116,8 +116,57 @@ export async function setTemporaryHold(bucket: HoldableBucket, paths: readonly s
     try {
       await bucket.file(path).setMetadata({ temporaryHold });
     } catch (error: unknown) {
-      if ((error as { code?: unknown }).code !== 404) throw error;
+      if (errorCodeOf(error) !== 404) throw error;
     }
+  }
+}
+
+/** Ό,τι χρειάζεται η άρση **υπό συνθήκη** — ανάγνωση της metageneration + εγγραφή με precondition (ADR-916 Ο24). */
+export interface ReleasableHoldBucket {
+  file(path: string): {
+    getMetadata(): Promise<readonly [{ readonly crc32c?: string; readonly size?: string | number; readonly metageneration?: string | number; readonly temporaryHold?: boolean | null }, ...unknown[]]>;
+    setMetadata(patch: { readonly temporaryHold: boolean }, options: { readonly ifMetagenerationMatch: number }): Promise<unknown>;
+  };
+}
+
+/** Τα bytes που **περιμένουμε** στο όνομα — crc32c + μέγεθος (καμία γενιά: η γραμμή δεν τη χρειάζεται για ταυτότητα). */
+export interface ExpectedObjectBytes {
+  readonly crc32c: string;
+  readonly size: number;
+}
+
+/**
+ * `released` (λύθηκε τώρα) · `not-held` (ήδη ελεύθερο — μισή αποτυχία προηγούμενης άρσης) · `gone` (κανένα αντικείμενο) ·
+ * `foreign-object` (άλλα bytes στο όνομα) · `raced` (η metageneration άλλαξε ανάμεσα στην ανάγνωση και την εγγραφή).
+ */
+export type ConditionalHoldRelease = 'released' | 'not-held' | 'gone' | 'foreign-object' | 'raced';
+
+const errorCodeOf = (error: unknown): unknown => (error as { code?: unknown }).code;
+
+/**
+ * 🔓 **Ξεκλείδωσε ΑΥΤΑ τα bytes — μόνο αυτά** (ADR-916 Ο24). Ο ένας γραφέας του διακόπτη, με τη μία διαφορά που ζητά ένα
+ * αντικείμενο **χωρίς** έγγραφο: η ταυτότητα δεν έρχεται από τη βάση αλλά από τη γραμμή καθολικού (crc32c + μέγεθος) ⇒
+ * ξένα bytes στο ίδιο όνομα **δεν** αγγίζονται, και η εγγραφή γίνεται με `ifMetagenerationMatch` (επίσημο δείγμα GCS
+ * `storage-set-temporary-hold`): ό,τι άλλαξε στο μεταξύ ⇒ `raced`, ποτέ τυφλή άρση. Σφάλμα δικτύου **πετά**.
+ */
+export async function releaseTemporaryHoldIfSame(bucket: ReleasableHoldBucket, path: string, expected: ExpectedObjectBytes): Promise<ConditionalHoldRelease> {
+  const file = bucket.file(path);
+  let metadata: Awaited<ReturnType<typeof file.getMetadata>>[0];
+  try {
+    [metadata] = await file.getMetadata();
+  } catch (error: unknown) {
+    if (errorCodeOf(error) === 404) return 'gone';
+    throw error;
+  }
+  if (metadata.crc32c !== expected.crc32c || Number(metadata.size) !== expected.size) return 'foreign-object';
+  if (metadata.temporaryHold !== true) return 'not-held';
+  try {
+    await file.setMetadata({ temporaryHold: false }, { ifMetagenerationMatch: Number(metadata.metageneration) });
+    return 'released';
+  } catch (error: unknown) {
+    if (errorCodeOf(error) === 412) return 'raced';
+    if (errorCodeOf(error) === 404) return 'gone';
+    throw error;
   }
 }
 

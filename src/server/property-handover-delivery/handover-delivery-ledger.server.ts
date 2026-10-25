@@ -16,6 +16,8 @@ import 'server-only';
  *    μέγεθος · γενιά · sha256)· υπάρχει για να μη μείνει ποτέ ορφανό αντικείμενο που επαναφέραμε.
  * 🧷 Φ-Δ.7γ — **η δεύτερη και τελευταία εγγραφή απόδειξης**: το `closure` — η γραμμή κλείνει **χωρίς** sha256 όταν τα bytes
  *    χάθηκαν οριστικά. Αμοιβαία αποκλειόμενο με το sha256 (ό,τι γράφεται πρώτο κερδίζει, σε συναλλαγή), μία φορά, ποτέ αναίρεση.
+ * 🧷 Ο24 — το ημερολόγιο `orphanRelease`: η συναλλαγή που κλείνει τη γραμμή βρήκε την πηγή **απούσα** (σβησμένη εκτός
+ *    εφαρμογής) ⇒ πρόθεση άρσης της διατήρησης των bytes της. Όπως το `recovery`: δεν αγγίζει **ποτέ** πεδίο απόδειξης.
  */
 
 import type { DocumentData, DocumentReference, Firestore as AdminFirestore, Transaction } from 'firebase-admin/firestore';
@@ -32,6 +34,8 @@ import {
 } from '@/lib/property-handover/handover-delivery-plan';
 import { propertyHandoverFromDocument } from '@/lib/property-handover/property-handover-from-document';
 import { handoverDeliveryIdOf } from '@/lib/property-handover/property-handover-id';
+import { orphanReleaseIntentOf, orphanReleaseOf } from '@/lib/property-handover/handover-orphan-release-journal';
+import { createModuleLogger } from '@/lib/telemetry';
 import { isOneOf } from '@/lib/type-guards';
 import { reconcilePreservedBytes, stagePreservationRelease } from '@/services/file-record/file-preservation.service';
 import { handoverDocRef } from '@/services/property-handover/property-handover-progress-write';
@@ -41,6 +45,9 @@ import {
   type HandoverLineClosureCause,
   type HandoverLineClosureMark,
 } from '@/types/property-handover-line-closure';
+import type { HandoverOrphanReleaseJournal } from '@/types/property-handover-orphan-release';
+
+const logger = createModuleLogger('PropertyHandoverLedger');
 
 /** Μία γραμμή, όπως αποθηκεύεται στο `property_handover_deliveries/{phdl_*}`. */
 export interface HandoverDeliveryLedgerRow extends HandoverDeliveredRow {
@@ -63,6 +70,8 @@ export interface HandoverDeliveryLedgerRow extends HandoverDeliveredRow {
   readonly recovery: HandoverRecoveryJournal | null;
   /** Φ-Δ.7γ — κλεισμένη χωρίς πλήρες αποτύπωμα (`null` ⇒ ανοιχτή ή αποδεδειγμένη). */
   readonly closure: HandoverLedgerClosure | null;
+  /** Ο24 — η άρση διατήρησης ορφανών bytes (`null` ⇒ η πηγή υπήρχε όταν έκλεισε η γραμμή, ή δεν έκλεισε ακόμη). */
+  readonly orphanRelease: HandoverOrphanReleaseJournal | null;
 }
 
 /** Φ-Δ.7γ — το γεγονός όπως αποθηκεύεται: η αιτία της μηχανής + 🔒 η αιτιολογία και ο άνθρωπος (μόνο για το γραφείο). */
@@ -99,6 +108,8 @@ export interface HandoverLedgerProof extends HandoverDeliveredRow {
   readonly closure: HandoverLineClosureMark | null;
   /** Φ-Δ.7γ — πότε αντιγράφηκε (τυπώνεται για τις κλεισμένες γραμμές)· `null` ⇒ αλλοιωμένο πεδίο. */
   readonly deliveredAt: string | null;
+  /** Ο24 — το δίχτυ ξαναρωτά μόνο όσες γραμμές έχουν επαναλήψιμο ημερολόγιο. */
+  readonly orphanRelease: HandoverOrphanReleaseJournal | null;
 }
 
 const text = (value: unknown): string | null => (typeof value === 'string' && value !== '' ? value : null);
@@ -107,7 +118,7 @@ const fieldsOf = (value: unknown): Record<string, unknown> | null =>
   typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
 
 /** Αλλοιωμένος εντοπιστής ⇒ `null` (καμία ανάκτηση) — ποτέ μαντεψιά κάδου. */
-function sourceObjectOf(raw: unknown): HandoverSourceObject | null {
+export function sourceObjectOf(raw: unknown): HandoverSourceObject | null {
   const fields = fieldsOf(raw);
   const path = text(fields?.path);
   return fields !== null && isFileStoragePlacement(fields.placement) && path !== null ? { placement: fields.placement, path } : null;
@@ -119,6 +130,15 @@ function recoveryOf(raw: unknown): HandoverRecoveryJournal | null {
   const startedAt = text(fields?.startedAt);
   if (fields === null || startedAt === null) return null;
   return { startedAt, restoredGeneration: text(fields.restoredGeneration), settledAt: text(fields.settledAt) };
+}
+
+/**
+ * Ο24 — **ανάκτηση σε εξέλιξη** (μίσθωση ή επαναφερμένη γενιά, χωρίς κλείσιμο): το όνομα μπορεί να κρατά τη γενιά που **εμείς**
+ * επαναφέραμε, και θα την ξανασβήσουμε εμείς ⇒ κανείς δεν το σημαδεύει ορφανό στο μεταξύ (αλλιώς υποψήφιος για ανύπαρκτο).
+ */
+export function recoveryInFlight(raw: unknown): boolean {
+  const journal = recoveryOf(raw);
+  return journal !== null && journal.settledAt === null;
 }
 
 /** Φ-Δ.7γ — αλλοιωμένο ή άγνωστη αιτία ⇒ `null`: η γραμμή μένει ανοιχτή (fail-closed — ποτέ σιωπηλό «κλεισμένη»). */
@@ -142,6 +162,7 @@ function deliveredRowOf(raw: Record<string, unknown>): HandoverLedgerProof | nul
     // Αμοιβαία αποκλειόμενα: με sha256 η γραμμή είναι αποδεδειγμένη, ό,τι κι αν γράφει το `closure`.
     closure: sha256 === null ? closureMarkOf(raw.closure) : null,
     deliveredAt: text(raw.deliveredAt),
+    orphanRelease: orphanReleaseOf(raw.orphanRelease),
   };
 }
 
@@ -186,9 +207,24 @@ export function deliveryLedgerRef(adminDb: AdminFirestore, handoverId: string, s
 export function stageDeliveryLedgerRow(
   tx: Transaction,
   ref: DocumentReference,
-  row: Omit<HandoverDeliveryLedgerRow, 'id' | 'sha256' | 'sha256Of' | 'hashedAt' | 'recovery' | 'closure'>,
+  row: Omit<HandoverDeliveryLedgerRow, 'id' | 'sha256' | 'sha256Of' | 'hashedAt' | 'recovery' | 'closure' | 'orphanRelease'>,
 ): void {
-  tx.create(ref, { id: ref.id, ...row, sha256: null, sha256Of: null, hashedAt: null, recovery: null, closure: null });
+  tx.create(ref, { id: ref.id, ...row, sha256: null, sha256Of: null, hashedAt: null, recovery: null, closure: null, orphanRelease: null });
+}
+
+/**
+ * Ο24 — **η πρόθεση άρσης**, μέσα στη συναλλαγή που κλείνει τη γραμμή (sha256 · closure · άρση μη οφειλόμενης), πάνω στα
+ * έγγραφα που η ίδια διάβασε. Επιστρέφει αν γράφτηκε. Πηγή απούσα **χωρίς** γνωστή θέση ⇒ τίποτα να λυθεί από εδώ — μόνο αναφορά.
+ */
+export function stageOrphanReleaseIntent(tx: Transaction, ref: DocumentReference, ledger: DocumentData | undefined, sourceExists: boolean): boolean {
+  const located = sourceObjectOf(ledger?.sourceObject) !== null;
+  const intent = orphanReleaseIntentOf(ledger, sourceExists, located, nowISO());
+  if (intent !== null) {
+    tx.update(ref, { orphanRelease: intent });
+    return true;
+  }
+  if (ledger !== undefined && !sourceExists && !located) logger.warn('Ορφανή πηγή χωρίς θέση — τα bytes της δεν εντοπίζονται (Ο24)', { lineId: ref.id });
+  return false;
 }
 
 /**
@@ -266,6 +302,7 @@ export async function recordDeliverySha256(adminDb: AdminFirestore, handoverId: 
     if (closureMarkOf(data.closure) !== null && sha256Text(data.sha256) === null) return { kind: 'refused' };
     const stored = sha256Text(data.sha256);
     stagePreservationRelease(tx, sourceRef, ownSourceData(sourceSnap.data(), data), ref.id);
+    stageOrphanReleaseIntent(tx, ref, data, sourceSnap.exists);
     if (stored !== null) return { kind: 'hashed', sha256: stored };
     tx.update(ref, { sha256: measured.sha256, sha256Of: measured.origin, hashedAt: nowISO() });
     return { kind: 'hashed', sha256: measured.sha256 };
@@ -312,6 +349,7 @@ export async function recordDeliveryClosure(adminDb: AdminFirestore, handoverId:
     const verdict = closureVerdictOf(ledger, handoverSnap.data(), input, handoverId);
     if (verdict !== 'write') return verdict;
     stagePreservationRelease(tx, sourceRef, ownSourceData(sourceSnap.data(), ledger), ref.id);
+    stageOrphanReleaseIntent(tx, ref, ledger, sourceSnap.exists);
     tx.update(ref, { closure: { cause: input.cause, reason: input.reason, closedBy: input.closedBy, closedAt: nowISO() } });
     return { kind: 'closed' };
   });
