@@ -43,6 +43,8 @@ export const CATALOG_ISSUE_CODES = [
   'localizableNotSupported',
   'invalidPattern',
   'assetKindsRequired',
+  'invalidUri',
+  'mappingIncomplete',
   // ── οικογένεια προϊόντων ──
   'attributeUnknown',
   'attributeDuplicate',
