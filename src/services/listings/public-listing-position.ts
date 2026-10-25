@@ -26,7 +26,10 @@ import type { GeocodingAccuracy } from '@/lib/geocoding/geocoding-types';
 import { outranksForLocation } from '@/lib/location/location-provenance';
 import type { ListingPosition, UnknownPositionReason } from '@/types/public-listing';
 
+import { deepestDeclaredAdminId } from '@/utils/address/administrative-hierarchy';
+
 import type {
+  DeclaredAdminArea,
   ListingPositionCandidate,
   PlaceKnowledge,
   ProjectableProperty,
@@ -101,4 +104,25 @@ export function addressToPositionCandidate(
     return { kind: 'known', provenance: 'geocoded', point, locatedAt, accuracy };
   }
   return { kind: 'known', provenance: 'manual', point, locatedAt };
+}
+
+/**
+ * Η αποθηκευμένη διεύθυνση **έργου** όπως έρχεται από το Firestore: όσα κρίνει η θέση ({@link AddressLike}) και
+ * οτιδήποτε άλλο κουβαλά — τα πεδία ιεραρχίας τα διαβάζει **μόνο** ο πίνακας του ADR-772.
+ */
+export type StoredProjectAddress = AddressLike & Readonly<Record<string, unknown>>;
+
+/**
+ * Διεύθυνση έργου → **δηλωμένη περιοχή** δεμένη στο σημείο της, ή `null` (ADR-890 §21).
+ *
+ * 🔑 Η δήλωση **ήδη υπάρχει** στη διεύθυνση (`settlementId` / `municipalUnitId` / … του `ProjectAddress`) — απλώς
+ * δεν διαβαζόταν. Δεμένη στο **ίδιο** σημείο με την υποψήφια θέση της ίδιας διεύθυνσης, ώστε να μετρά μόνο η
+ * δήλωση της διεύθυνσης που **κέρδισε** τη θέση.
+ */
+export function addressToDeclaredAdminArea(address: StoredProjectAddress): DeclaredAdminArea | null {
+  const lat = address.coordinates?.lat;
+  const lng = address.coordinates?.lng;
+  if (typeof lat !== 'number' || typeof lng !== 'number') return null;
+  const areaId = deepestDeclaredAdminId(address, 'projectAddress');
+  return areaId === null ? null : { point: { lat, lng }, areaId };
 }

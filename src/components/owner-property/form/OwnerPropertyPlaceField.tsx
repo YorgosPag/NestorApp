@@ -48,6 +48,7 @@ import { addressToPositionCandidate } from '@/services/listings/public-listing-p
 import type { ListingPosition } from '@/types/public-listing';
 
 import { OwnerPlaceAnswerField } from './OwnerPropertyFields';
+import { OwnerPropertyAreaPicker } from './OwnerPropertyAreaPicker';
 
 const NS = 'property-market';
 const K = `${NS}:offer`;
@@ -145,6 +146,8 @@ export function OwnerPropertyPlaceField({
       (place) => {
         form.setValue('placePoint', { lat: place.lat, lng: place.lng }, { shouldDirty: true });
         form.setValue('placeAccuracy', place.accuracy, { shouldDirty: true });
+        // ADR-890 §21 — η δηλωμένη περιοχή ανήκε στο ΠΡΟΗΓΟΥΜΕΝΟ σημείο: νέα θέση, νέα ερώτηση.
+        form.setValue('placeAreaId', null, { shouldDirty: true });
         setResolved(place);
       },
       [form],
@@ -152,6 +155,7 @@ export function OwnerPropertyPlaceField({
     onCleared: React.useCallback(() => {
       form.setValue('placePoint', null, { shouldDirty: true });
       form.setValue('placeAccuracy', null, { shouldDirty: true });
+      form.setValue('placeAreaId', null, { shouldDirty: true });
       setResolved(null);
     }, [form]),
   });
@@ -247,6 +251,7 @@ export function OwnerPropertyPlaceField({
                   if (point !== null) {
                     form.setValue('placePoint', null, { shouldDirty: true });
                     form.setValue('placeAccuracy', null, { shouldDirty: true });
+                    form.setValue('placeAreaId', null, { shouldDirty: true });
                   }
                   if (state !== 'idle') reset();
                 },
@@ -295,6 +300,12 @@ export function OwnerPropertyPlaceField({
             επιβεβαίωση της διεύθυνσης, γιατί αφορά **αυτό** που μόλις επιβεβαιώθηκε —
             ίδια απόφαση με το `CoverageAgreementNotice` κάτω από τον επιλογέα περιοχής.
           */}
+          {/*
+            🗺️ ADR-890 §21 — **η περιοχή που η θέση δεν φτάνει**: μόνο όταν η διεύθυνση εντοπίστηκε ως τον δήμο.
+            Ακριβώς κάτω από την επιβεβαίωση, γιατί συμπληρώνει **αυτό** που μόλις επιβεβαιώθηκε.
+          */}
+          <OwnerPropertyAreaPicker position={position} locality={fresh?.resolvedLocality ?? null} />
+
           {brokered && <CoverageReachNotice position={position} />}
 
           {/*

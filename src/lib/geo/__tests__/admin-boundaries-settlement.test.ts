@@ -41,6 +41,10 @@ describe('adminBoundarySource — οικισμός', () => {
     await source.load();
     const boundary = source.peek();
     expect(boundary?.region.adminId).toBe(DORKADA);
+    // 🔴 Η βαθμίδα του ΟΙΚΙΣΜΟΥ (8), όχι της κοινότητας: αλλιώς ο κριτής συμμετοχής (ADR-890 §9.1) θα έψαχνε
+    //    την ταυτότητα του οικισμού στο `communityId` και θα έβγαζε κάθε αγγελία «εκτός».
+    expect(boundary?.region.level).toBe(8);
+    expect(adminBoundarySource(COMMUNITY).peek()?.region.level).toBe(7);
     expect(boundary?.region.bbox).toEqual({ west: 23.0, south: 40.8, east: 23.2, north: 41.0 });
     expect(boundary?.place).toEqual({ adminId: DORKADA, point: { lng: 23.1032, lat: 40.8866 } });
   });

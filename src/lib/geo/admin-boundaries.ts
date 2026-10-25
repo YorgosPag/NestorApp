@@ -100,7 +100,9 @@ function settlementBoundarySource(adminId: string): LazyJsonSnapshot<LoadedAdmin
       return {
         ...boundary,
         place: placeOf(boundary.places, adminId),
-        region: { ...boundary.region, adminId },
+        // 🔴 Η βαθμίδα του ΟΙΚΙΣΜΟΥ, όχι του γονέα: αλλιώς ο κριτής συμμετοχής θα συνέκρινε την ταυτότητα του
+        //    οικισμού με το πεδίο απόδοσης του δήμου και θα έβγαζε κάθε αγγελία «εκτός» (ADR-890 §9.1).
+        region: { ...boundary.region, adminId, level: area.level },
       };
     },
     onFailure: logFailure(adminId),

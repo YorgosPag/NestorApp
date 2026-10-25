@@ -52,6 +52,7 @@ const THESSALONIKI: AdminAreaAssignment = {
   municipalUnitId: 'municipal_unit:070101',
   communityId: null,
   nearBoundary: false,
+  measuredDepth: 6,
 };
 
 const fake = new FakeFirestore();

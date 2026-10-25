@@ -43,7 +43,11 @@ import { marketPriceOf } from '@/lib/listings/price-history';
 import { publicAvailabilityOf } from '@/lib/listings/availability-history';
 import { withdrawListingShelves, writeWithShelf } from './publish-public-listing-shelf';
 import { resolvePublicationFacts, withPublicationFacts } from './listing-publication-facts';
-import { addressToPositionCandidate, type AddressLike } from './public-listing-position';
+import {
+  addressToDeclaredAdminArea,
+  addressToPositionCandidate,
+  type StoredProjectAddress,
+} from './public-listing-position';
 import { buildingChainFactsOf, type BuildingChainFacts } from './building-listing-facts';
 import type { ListingImage, PublicListing } from '@/types/public-listing';
 import { listingLeadImage } from '@/lib/listings/listing-images';
@@ -190,12 +194,14 @@ export async function collectPlaceKnowledge(
   const snap = await adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId).get();
   if (!snap.exists) return { candidates: [], ...facts };
 
-  const addresses = (snap.data()?.addresses ?? []) as AddressLike[];
+  const addresses = (snap.data()?.addresses ?? []) as StoredProjectAddress[];
   const candidates = addresses
     .map((address) => addressToPositionCandidate(address, locatedAt))
     .filter((c): c is ListingPositionCandidate => c !== null);
+  // ADR-890 §21: η δήλωση περιοχής ζει ήδη στις ίδιες διευθύνσεις — 0 επιπλέον αναγνώσεις.
+  const declaredAdminAreas = addresses.flatMap((address) => addressToDeclaredAdminArea(address) ?? []);
 
-  return { candidates, ...facts };
+  return { candidates, declaredAdminAreas, ...facts };
 }
 
 /**

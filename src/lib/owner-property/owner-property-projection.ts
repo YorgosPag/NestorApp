@@ -259,10 +259,12 @@ export function projectableFromOwnerProperty(
  * @param locatedAt — η στιγμή της προβολής, ίδια για κάθε υποψήφια του ίδιου περάσματος
  */
 export function placeKnowledgeFromOwnerProperty(
-  property: OwnerProperty,
+  // Μόνο η θέση: το ίδιο σύνορο το ρωτά και η πόρτα γραφής πάνω στο προσχέδιο (ADR-890 §21).
+  property: Pick<OwnerProperty, 'place'>,
   locatedAt: string,
 ): PlaceKnowledge {
   if (property.place.kind !== 'declared') return { candidates: [], ref: null };
+  const { point, areaId } = property.place;
 
   const candidate = addressToPositionCandidate(
     {
@@ -290,6 +292,8 @@ export function placeKnowledgeFromOwnerProperty(
     // έσπασε ποτέ**. Δύο παραγωγοί του **ίδιου** πεδίου· τώρα το κλείνουν **και οι
     // δύο**, με την ίδια γραμμή.
     ref: property.place.link ?? null,
+    // ADR-890 §21 — η δήλωση του κατόχου, δεμένη στο ΙΔΙΟ σημείο με την υποψήφια θέση· την κρίνει ο server.
+    declaredAdminAreas: areaId ? [{ point, areaId }] : [],
   };
 }
 

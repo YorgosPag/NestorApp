@@ -17,6 +17,7 @@ import type { GeoRegion } from '@/types/geo/coordinates';
 
 const REGION: GeoRegion = {
   adminId: 'municipality:0708',
+  level: 5,
   rings: [[{ lat: 40.66, lng: 22.9 }, { lat: 40.66, lng: 22.92 }, { lat: 40.68, lng: 22.92 }]],
   bbox: { south: 40.66, west: 22.9, north: 40.68, east: 22.92 },
   toleranceM: 25,

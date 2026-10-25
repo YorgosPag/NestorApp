@@ -89,6 +89,8 @@ export function ownerPlaceFrom(values: OwnerPropertyFormParsed): OwnerPropertyPl
       // ⛔ Ο δεσμός ζει **μόνο** στον κλάδο `declared`: το `declined` δεν μπορεί να
       // τον κουβαλήσει, γιατί το να δείξεις δημόσιο κτίριο **είναι** αποκάλυψη θέσης.
       link: values.placeRef,
+      // ADR-890 §21 — ίδια λογική με τον δεσμό: ζει μόνο στον κλάδο `declared` (περιοχή χωρίς θέση δεν στέκει).
+      areaId: values.placeAreaId,
     };
   }
   return { kind: 'declined' };

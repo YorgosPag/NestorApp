@@ -90,6 +90,7 @@ describe('🔴 Ο — η προσφορά του ιδιώτη ΦΤΑΝΕΙ στ�
           label: 'κάπου',
           accuracy: null,
           link: null,
+          areaId: null,
         },
       }),
     );

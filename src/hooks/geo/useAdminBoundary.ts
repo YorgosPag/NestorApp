@@ -28,7 +28,7 @@ const UNAVAILABLE: LoadedAdminBoundary = {
   level: 0,
   places: new Map(),
   place: null,
-  region: { adminId: '', rings: [], bbox: { south: 0, west: 0, north: 0, east: 0 }, toleranceM: 0 },
+  region: { adminId: '', level: 0, rings: [], bbox: { south: 0, west: 0, north: 0, east: 0 }, toleranceM: 0 },
 };
 
 /** Πηγή για «καμία περιοχή» — απαντά αμέσως, δεν ρωτά ποτέ το δίκτυο. */

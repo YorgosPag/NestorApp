@@ -85,7 +85,7 @@ describe('matchGeoArea — εξαντλητικός διακριτής', () => {
   it('ονομάζει σωστά και τα τέσσερα μέλη', () => {
     expect(kind(point(38, 23, 1))).toBe('circle');
     expect(kind({ south: 1, west: 1, north: 2, east: 2 })).toBe('box');
-    expect(kind({ adminId: 'municipality:0708', rings: [A], bbox: drawn(A).bbox, toleranceM: 25 })).toBe('region');
+    expect(kind({ adminId: 'municipality:0708', level: 5, rings: [A], bbox: drawn(A).bbox, toleranceM: 25 })).toBe('region');
     expect(kind(drawn(A))).toBe('drawn');
   });
 });

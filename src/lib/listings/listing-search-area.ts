@@ -20,10 +20,11 @@
  * χάρτη λέγεται εδώ **`searchArea`** — δύο έννοιες δεν μοιράζονται ένα όνομα.
  */
 
-import { areaRelation } from '@/lib/geo/geo-area';
+import { areaRelation, isGeoRegion } from '@/lib/geo/geo-area';
 import { isAdminAreaId } from '@/lib/geo/admin-area-index-file';
+import { adminAreaFieldOfLevel } from '@/lib/geo/admin-area-of-point';
 import { listingSearchArea } from '@/lib/listings/listing-map-shape';
-import type { GeoArea, GeoBoundingBox, GeoRegionRef } from '@/types/geo/coordinates';
+import type { GeoArea, GeoBoundingBox, GeoRegion, GeoRegionRef } from '@/types/geo/coordinates';
 import type { PublicListing } from '@/types/public-listing';
 
 /**
@@ -138,12 +139,20 @@ export type ListingAreaVerdict = 'inside' | 'maybe' | 'outside';
  * ⚠️ **Χωρίς ερώτηση, όλα είναι `'inside'`.** Το `null` δεν σημαίνει *«καμία
  * περιοχή»* αλλά *«κανείς δεν ρώτησε»* — και σε ερώτηση που δεν έγινε, η τίμια
  * απάντηση δεν είναι «ίσως», είναι ότι το ερώτημα δεν στενεύει τίποτα.
+ *
+ * 🔑 **Διοικητική περιοχή: κρίνει η ΑΠΟΔΟΣΗ, η γεωμετρία μόνο χωρίς καμία απόδοση** (ADR-890 §20) —
+ * δες {@link attributedAreaVerdict}. Κύκλος, κουτί και σχέδιο μένουν γεωμετρικά.
  */
 export function listingAreaVerdict(
   listing: PublicListing,
   area: GeoArea | null
 ): ListingAreaVerdict {
   if (area === null) return 'inside';
+
+  if (isGeoRegion(area)) {
+    const attributed = attributedAreaVerdict(listing, area);
+    if (attributed !== null) return attributed;
+  }
 
   const subject = listingSearchArea(listing.position);
   if (subject === null) return 'maybe';
@@ -156,6 +165,32 @@ export function listingAreaVerdict(
     default:
       return 'maybe';
   }
+}
+
+/**
+ * **Τι λέει η αποθηκευμένη απόδοση** (`PublicListing.adminArea`, ADR-890 Φ0) — ή `null` όταν σιωπά.
+ *
+ * 🔴 **ΕΝΑΣ ΚΡΙΤΗΣ ΓΙΑ ΣΕΛΙΔΑ ΚΑΙ ΑΝΑΖΗΤΗΣΗ.** Η σελίδα `/area/[id]` μετρά με
+ * `where('adminArea.<πεδίο>', '==', id)`. Αν το `?area=` έκρινε με πολύγωνο, το «Δες όλες τις N» θα έδειχνε
+ * άλλο σύνολο από το N του. Εδώ η ίδια ερώτηση, με τον **ίδιο** πίνακα βαθμίδα → πεδίο
+ * (`adminAreaFieldOfLevel`): ορατή (`inside` ∪ `maybe`) ⇔ `adminArea[πεδίο] === id` ⇔ μετρά στη σελίδα.
+ *
+ * - ταίριασμα → `'inside'`· ταίριασμα **κοντά στο σύνορο** → `'maybe'` (μετρά όπως στη σελίδα, αλλά η αβεβαιότητα
+ *   της απλοποίησης **ονομάζεται** στη λογιστική αντί να κρύβεται)·
+ * - άλλη ταυτότητα στο ίδιο πεδίο → `'outside'`, ακόμη κι αν το πολύγωνο έλεγε «μέσα»·
+ * - 🔴 απόδοση που **σταματά πριν** από αυτή τη βαθμίδα (θέση πόλης ⇒ ως τον δήμο, `DEPTH_BY_ACCURACY`) → `'outside'`.
+ *   Είναι η πρακτική των μεγάλων (ImmoScout24 `geocode`, Zillow `regionId`, idealista location ID): η συμμετοχή είναι
+ *   **ετικέτα** πάνω στην αγγελία, και αγγελία χωρίς ετικέτα Δ.Ε. δεν εμφανίζεται σε αναζήτηση Δ.Ε. — εμφανίζεται στον
+ *   δήμο της. Η «γεωμετρία ως εφεδρεία» εδώ θα την έδειχνε σε **κάθε** Δ.Ε. που αγγίζει ο κύκλος των 10 χλμ.·
+ * - `null` = **καμία** απόδοση (έγγραφο πριν από την επαναπροβολή, ADR-890 §9.3) ή βαθμίδα που δεν αποδίδεται
+ *   (οικισμός). Τότε, και **μόνο** τότε, κρίνει η γεωμετρία — δίχτυ ασφαλείας, ονομασμένο ως `unassigned` στη σύνοψη.
+ */
+function attributedAreaVerdict(listing: PublicListing, region: GeoRegion): ListingAreaVerdict | null {
+  const field = adminAreaFieldOfLevel(region.level);
+  const area = listing.adminArea;
+  if (field === null || area === null) return null;
+  if (area[field] !== region.adminId) return 'outside';
+  return area.nearBoundary ? 'maybe' : 'inside';
 }
 
 // ============================================================================

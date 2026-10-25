@@ -490,7 +490,7 @@ homes ανά έργο · ImmoScout24 «Bezugsfrei ab» στο exposé, όχι ω
 ⚠️ **Όριο ισότητας, δηλωμένο**: ο αριθμός της σελίδας ισούται με της αναζήτησης όταν (α) καμία αγγελία δεν άλλαξε από το
 στιγμιότυπο (λύθηκε με το `snapshot.day`), και (β) η **συμμετοχή** συμπίπτει. Το (β) δεν λύνεται εδώ: η σελίδα μετρά με
 `adminArea`, ενώ το `?area=` κρίνει με πολύγωνο + «ίσως» (ADR-890 §9.1). Ισχύει ήδη και για το «Δες όλες τις N». Λύση: το `?area=`
-να σέβεται το `adminArea` όπου υπάρχει.
+να σέβεται το `adminArea` όπου υπάρχει. ✅ **Λύθηκε 2026-10-25** (ADR-890 §20): ένας κριτής συμμετοχής, και το `?area=` ρωτά την ίδια απόδοση με τη σελίδα.
 
 | Ρόλος | Αρχείο |
 |---|---|
@@ -511,6 +511,7 @@ homes ανά έργο · ImmoScout24 «Bezugsfrei ab» στο exposé, όχι ω
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| 2026-10-25 | **§12 «Όριο ισότητας (β)» λύθηκε** (ADR-890 §20): το `?area=` κρίνει με το `adminArea` όπου υπάρχει, άρα το «χτίζονται N» και το «Δες όλες τις N» δείχνουν το ίδιο σύνολο με τον αριθμό τους. |
 | 2026-10-23 | **Βήμα 1** — δημιουργία. Τύπος τριών καταστάσεων, `availabilityWindowOf` / `scheduledAvailability` πάνω στο `daysInMonth` (ADR-828), `timingBlockers` με εξαντλητικό `switch`, οι τρεις παραγωγοί δίνουν την ονομασμένη άγνοια. Κανένα νέο `DemandBlocker`, κανένα νέο κλειδί i18n. |
 | 2026-10-23 | **Βήμα 2** — `forecastCompletion` (`services/construction-scheduling/completion-forecast.ts`) πάνω στον κοινό κανόνα `status-date-rule.ts` και στο `computeCPM(…, { statusDate })`. Κοινές ημερομηνίες σε UTC (`schedule-dates.ts`). Η πραγματική φάση της βάσης βγαίνει 2027-02-06 αντί για το «23/12» του σχεδίου. 14 άγκυρες, μεταλλάξεις 2/2. |
 | 2026-10-23 | **Βήμα 3** — `resolveListingAvailability` + `readAvailabilityDeclaration` (`lib/listings/listing-availability.ts`), `PublicListing.availability` από την καθαρή προβολή, `PlaceKnowledge.buildingAvailability` από το ίδιο ανέβασμα, `Building.completionDeclaration` / `Property.availabilityDeclaration`, `DELIVERED_BUILDING_STATUSES`, ρόλος αποκάλυψης `'availability'`, κρίκος 25. Απόσυρση του `Property.deliveryDate`. Το `completionDate` μένει εσωτερικό (§7). 34 νέες άγκυρες, μεταλλάξεις 4/4. |

@@ -83,6 +83,7 @@ export function placeWithinBoundary(point: GeoPoint, rings: readonly GeoOutline[
 export function adminBoundaryRegion(boundary: AdminBoundary): GeoRegion {
   return {
     adminId: boundary.id,
+    level: boundary.level,
     rings: geoJsonRings(boundary.geometry),
     bbox: boundary.bbox,
     toleranceM: boundary.toleranceM,

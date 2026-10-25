@@ -22,15 +22,15 @@ import 'server-only';
 
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
-import { assignAdminArea, deepestAdminLevelFor, type AdminAreaAssignment } from '@/lib/geo/admin-area-of-point';
+import type { AdminAreaAssignment } from '@/lib/geo/admin-area-of-point';
 import { resolveListingConstructionYear, type ConstructionYearSources } from '@/lib/listings/construction-year';
 import type { SourcedAttribute } from '@/lib/property/attribute-provenance';
 import { createModuleLogger } from '@/lib/telemetry';
-import { readAdminAreaLookup } from '@/services/places/admin-boundaries.reader';
+import { attributeAdminArea } from '@/services/places/admin-area-attribution.server';
 import { readPublicBuildingConstructionYear } from '@/services/places/public-place-read.service';
 import { readTourPresence, type TourPresence } from '@/server/spatial-tour/tour-presence';
 import type { ListingPosition, ListingTourPresence, PublicListing } from '@/types/public-listing';
-import type { PlaceKnowledge } from './public-listing-projection-types';
+import type { DeclaredAdminArea, PlaceKnowledge } from './public-listing-projection-types';
 
 const logger = createModuleLogger('listing-publication-facts');
 
@@ -45,15 +45,34 @@ function describe(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/** Η διοικητική περιοχή της **ήδη λυμένης** θέσης — ποτέ πιο ακριβής από αυτήν. */
-async function adminAreaOf(listingId: string, position: ListingPosition): Promise<AdminAreaAssignment | null> {
-  const deepest = deepestAdminLevelFor(position);
-  if (deepest === null || position.kind === 'unknown') return null;
+/** Η δήλωση της διεύθυνσης που **κέρδισε** τη θέση — ίσο σημείο, ίδια πηγή δεδομένων (ADR-890 §21). */
+function declarationAt(position: ListingPosition, declarations: readonly DeclaredAdminArea[]): string | null {
+  if (position.kind === 'unknown') return null;
+  const { lat, lng } = position.point;
+  return declarations.find(({ point }) => point.lat === lat && point.lng === lng)?.areaId ?? null;
+}
 
+/**
+ * Η διοικητική περιοχή της **ήδη λυμένης** θέσης — ποτέ πιο ακριβής από αυτήν· με τη δηλωμένη ουρά, αν επικυρωθεί
+ * (ADR-890 §21). Απόρριψη ⇒ μένει η μέτρηση και καταγράφεται (σήμα «φουσκωμένης περιοχής»)· το `not-deeper` είναι
+ * φυσιολογικό (πινέζα ήδη ως την κοινότητα) και **δεν** καταγράφεται.
+ */
+async function adminAreaOf(
+  listingId: string,
+  position: ListingPosition,
+  declarations: readonly DeclaredAdminArea[],
+): Promise<AdminAreaAssignment | null> {
+  const declaredAreaId = declarationAt(position, declarations);
   try {
-    const lookup = await readAdminAreaLookup();
-    if (lookup === null) return null; // ο αναγνώστης το έχει ήδη καταγράψει
-    return await assignAdminArea(position.point, deepest, lookup);
+    const { assignment, declaration } = await attributeAdminArea(position, declaredAreaId);
+    if (declaration.kind === 'rejected' && declaration.reason !== 'not-deeper') {
+      logger.warn('Απορρίφθηκε δηλωμένη περιοχή — μένει η μετρημένη', {
+        listingId,
+        areaId: declaredAreaId,
+        reason: declaration.reason,
+      });
+    }
+    return assignment;
   } catch (error) {
     logger.warn('Δεν αποδόθηκε διοικητική περιοχή — η αγγελία φεύγει χωρίς', { listingId, error: describe(error) });
     return null;
@@ -113,7 +132,7 @@ export async function resolvePublicationFacts(
   place: PlaceKnowledge,
 ): Promise<ListingPublicationFacts> {
   const [adminArea, publicRecord, tour] = await Promise.all([
-    adminAreaOf(listing.id, listing.position),
+    adminAreaOf(listing.id, listing.position, place.declaredAdminAreas ?? []),
     publicRecordOf(adminDb, listing.id, place),
     listedTourOf(adminDb, listing.id),
   ]);

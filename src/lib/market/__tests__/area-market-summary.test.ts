@@ -27,12 +27,14 @@ const THESSALONIKI: AdminAreaAssignment = {
   municipalUnitId: 'municipal_unit:070101',
   communityId: null,
   nearBoundary: false,
+  measuredDepth: 6,
 };
 
 const ATHENS: AdminAreaAssignment = {
   ...THESSALONIKI,
   municipalityId: 'municipality:4501',
   municipalUnitId: null,
+  measuredDepth: 5,
 };
 
 describe('observeAsking — ποια τιμή είναι «ζητούμενη»', () => {

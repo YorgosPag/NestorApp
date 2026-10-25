@@ -56,7 +56,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import { republishOwnerProperty } from '@/services/owner-property/owner-property-publication.service';
 import { completeWrite, writeFailure } from '@/services/owner-property/owner-property-write-completion';
-import { placeLinkRefusal } from '@/services/owner-property/owner-property-place-link';
+import { placeAreaRefusal, placeLinkRefusal } from '@/services/owner-property/owner-property-place-link';
 import { createOwnerPropertyWithDossier } from '@/services/owner-property/owner-property-dossier-birth';
 import { privateMarketingViolationsAdded } from '@/lib/mandate/private-marketing-standing';
 import {
@@ -185,7 +185,7 @@ export async function createOwnerProperty(
   // 🔴 **ΤΕΛΕΥΤΑΙΟΣ, ΚΑΙ Η ΣΕΙΡΑ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ**: οι δύο από πάνω είναι **καθαρές
   //    συναρτήσεις**, αυτός **διαβάζει βάση**. Το φθηνό πριν το ακριβό — και ο
   //    άνθρωπος που έστειλε αγγελία με τρία λάθη μαθαίνει πρώτα αυτά που βλέπει.
-  const refusal = await placeLinkRefusal(adminDb, draft);
+  const refusal = (await placeLinkRefusal(adminDb, draft)) ?? (await placeAreaRefusal(draft));
   if (refusal !== null) return refusal;
 
   // Ο δρων της γέννησης **είναι** ο συντάκτης — ιδιώτης ή υπάλληλος γραφείου.
@@ -256,7 +256,7 @@ export async function updateOwnerProperty(
 
   // ⚠️ **ΜΕΤΑ την εξουσιοδότηση, ποτέ πριν.** Δεν κάνουμε δουλειά —ούτε ανάγνωση—
   //    για αιτούντα που δεν έχει δικαίωμα στον χώρο της αγγελίας.
-  const refusal = await placeLinkRefusal(adminDb, draft);
+  const refusal = (await placeLinkRefusal(adminDb, draft)) ?? (await placeAreaRefusal(draft));
   if (refusal !== null) return refusal;
 
   const next = { ...existing, ...draft, updatedAt: nowISO() };

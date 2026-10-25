@@ -51,6 +51,7 @@
 
 import { z } from 'zod';
 
+import { isAdminAreaId } from '@/lib/geo/admin-area-index-file';
 import { placeRefSchema } from '@/lib/geo/place-ref-schema';
 import { normalizeUnitNumber, UNIT_NUMBER_MAX_LENGTH } from '@/lib/geo/unit-number';
 import { FloorKindSchema } from '@/app/api/floors/floors.schemas';
@@ -180,6 +181,16 @@ const place = z.discriminatedUnion('kind', [
      * γραμμή υπάρχει για να αποκλείσει.
      */
     link: placeRef.nullable(),
+    /**
+     * 🗺️ **Η δηλωμένη περιοχή** (ADR-890 §21). Εδώ μόνο το **σχήμα** («ταυτότητα ευρετηρίου;»)· το «είναι συνεπής με
+     * τη θέση;» το απαντά ο `declareAdminArea` στην πόρτα, γιατί χρειάζεται ευρετήριο και όρια — ίδιος διαχωρισμός
+     * με το `link` / `verifyPlaceRef`.
+     *
+     * ⚠️ **`default(null)`, όχι `optional`**: η έξοδος είναι **πάντα** `string | null`, ποτέ `undefined` (που ρίχνει το
+     * Firestore — το μάθημα του `link`). Η απουσία στο σώμα είναι η απάντηση πελάτη που δεν ρωτά περιοχή («καμία
+     * δήλωση»), όχι σφάλμα — άρα δεν απορρίπτεται.
+     */
+    areaId: z.string().refine(isAdminAreaId).nullable().default(null),
   }),
   z.object({ kind: z.literal('declined') }),
 ]);

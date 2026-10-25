@@ -19,6 +19,7 @@ const declared = (accuracy: Extract<OwnerPropertyPlace, { kind: 'declared' }>['a
   label: 'Τσιμισκή 12',
   accuracy,
   link: null,
+  areaId: null,
 });
 const NO_FOOTPRINTS = new Map();
 const lineageOf = (id: string) => [id];

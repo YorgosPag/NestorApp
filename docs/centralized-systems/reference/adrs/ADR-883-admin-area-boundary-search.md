@@ -319,6 +319,11 @@
 
 ## 8. Changelog
 
+- **2026-10-25** — **ADR-890 §20**: το `?area=` κρίνει τη συμμετοχή πρώτα με την αποθηκευμένη απόδοση `PublicListing.adminArea`
+  (`adminAreaFieldOfLevel`, ίδιος πίνακας με τη σελίδα `/area/[id]`). Απόδοση που σταματά πριν από τη βαθμίδα = «εκτός».
+  Το πολύγωνο κρίνει μόνο αγγελίες χωρίς καμία απόδοση. Το όριο
+  φορτώνει όπως πριν (χάρτης, εφεδρεία, ανάγνωση bbox). Νέο `GeoRegion.level` από το `adminBoundaryRegion`· ο οικισμός κρατά
+  τη δική του βαθμίδα (8), όχι του γονέα.
 - **2026-09-28** — **ADR-890 §14.3**: δεύτερο, **πανελλαδικό** σχήμα ορίων για τον χωροπληθή χάρτη τιμών — `public/data/admin-overview/{municipality,municipal_unit}.json` (`lib/geo/admin-overview-file.ts`, `npm run build:admin-overview`), από την **ίδια** πηγή και cache. Απλοποίηση **τοπολογική** (κοινά τόξα, `scripts/lib/admin-boundaries/shared-arc-simplify.ts`), ώστε γειτονικές περιοχές να μη χωρίζονται από σχισμές· τα αρχεία ανά οντότητα του §3 **δεν** άλλαξαν. Εύρημα: η Δ.Ε. Νεμέας (`municipal_unit:420401`) υπάρχει στην ιεραρχία αλλά λείπει από την πηγή ορίων.
 - **2026-09-29** — **ADR-890 §16**: τέταρτη έξοδος του ίδιου γεννήτορα — βαθμίδα **`regional_unit`** (`public/data/admin-overview/regional_unit.json`, 75 Π.Ε., ανοχή 300 m, 78 KB gzip) από το layer `perifereiakes_enotites` (μετρημένο: τοπολογικά καθαρό, **100%** των ακμών του μέσα στα φύλλα· η διάλυση των φύλλων άφηνε 1 αδιάλυτη) + αρχεία παιδιών `children/regional_unit-*.json` (67 Π.Ε. → Δήμοι) και `children/region-*.json` (13 Περιφέρειες → Π.Ε.), κομμένα από τα εθνικά αρχεία (gzip διάμεσος 4 KB, max 16 KB). Τα 245 υπάρχοντα αρχεία byte-ταυτόσημα· δύο εκτελέσεις ⇒ ίδιο sha256 (326 αρχεία). N.0.2: `MUNICIPAL_UNIT_LEVEL` + γυμνό `5` του `admin-boundary-source.ts` → `ADMIN_LEVEL` (ADR-890 §16).
 - **2026-09-29** — **ADR-890 §15**: τρίτη έξοδος του ίδιου γεννήτορα — `public/data/admin-overview/children/municipality-<code>.json` (243 αρχεία, διάμεσος 2,3 KB gzip): οι Δ.Ε. **ενός** Δήμου κομμένες από τα ήδη απλοποιημένα φύλλα (ίδια τόξα, byte-ταυτόσημη γεωμετρία) + σημείο ετικέτας `label` (`lib/geo/geo-label-point.ts`). Όνομα αρχείου με το `adminBoundaryFileName` αυτού του ADR. Κανόνας ύπαρξης `ADMIN_OVERVIEW_CHILDREN_MIN`. Τα αρχεία του §3 και τα δύο πανελλαδικά **δεν** άλλαξαν (sha256 πριν/μετά).

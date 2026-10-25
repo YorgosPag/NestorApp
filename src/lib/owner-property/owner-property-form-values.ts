@@ -148,6 +148,11 @@ export const ownerPropertyFormSchema = z.object({
   placeRef: z
     .object({ landId: z.string(), buildingId: z.string().nullable() })
     .nullable(),
+  /**
+   * 🗺️ **Η περιοχή που δηλώνει** (ADR-890 §21) — μόνο όταν η θέση δεν φτάνει ως την κοινότητα. `null` = καμία δήλωση.
+   * Ο server την επικυρώνει απέναντι στη θέση· η φόρμα μόνο την κρατά.
+   */
+  placeAreaId: z.string().nullable(),
 
   // ── §25.6: ΦΩΤΟΓΡΑΦΙΑ / ΚΑΤΟΨΗ ──────────────────────────────────────────
   /**
@@ -247,6 +252,7 @@ export const EMPTY_OWNER_PROPERTY_FORM: OwnerPropertyFormValues = {
   placePoint: null,
   placeAccuracy: null,
   placeRef: null,
+  placeAreaId: null,
   media: [],
   // ⚠️ `null`, **όχι `[]`**: η κενή φόρμα δεν ξέρει ακόμη αν θα έχει φάκελο — το λέει η οθόνη που την ανοίγει
   //    (δημιουργία ιδιώτη ⇒ ναι· γραφείο και επεξεργασία παλιάς αγγελίας ⇒ όχι).
@@ -422,6 +428,7 @@ export function ownerPropertyFormFrom(
     placePoint: declared?.point ?? null,
     placeAccuracy: declared?.accuracy ?? null,
     placeRef: declared?.link ?? null,
+    placeAreaId: declared?.areaId ?? null,
     media: property.media.map((item) => ({ ...item })),
     /**
      * 🔑 **Ο διακόπτης είναι ο ΦΑΚΕΛΟΣ, όχι η δήλωση** (ADR-866 §2.11.2 Δ4): αγγελία με φάκελο και **κενή** δήλωση

@@ -22,6 +22,7 @@ import {
   readAdminAreaIndex,
   type AdminArea,
 } from '@/lib/geo/admin-area-index-file';
+import type { AdminAreaDeclarationSources } from '@/lib/geo/admin-area-declaration';
 import type { AdminAreaChild, AdminAreaLookup } from '@/lib/geo/admin-area-of-point';
 import {
   ADMIN_BOUNDARIES_DIR,
@@ -92,6 +93,16 @@ export async function readAdminAreaLookup(): Promise<AdminAreaLookup | null> {
     childrenOf: (parentId) => children.get(parentId ?? ROOT_KEY) ?? [],
     regionOf: (adminId) => BOUNDARIES.read(adminId),
   };
+}
+
+/**
+ * **Οι πηγές της επικύρωσης δηλωμένης περιοχής** (ADR-890 §21) — ίδιο ευρετήριο, ίδια όρια με τον κριτή.
+ * `null` = «δεν μπόρεσα να ρωτήσω»: ο καλών κρατά τη μετρημένη απόδοση, ποτέ δεν εφαρμόζει ανεπικύρωτη δήλωση.
+ */
+export async function readAdminAreaDeclarationSources(): Promise<AdminAreaDeclarationSources | null> {
+  const directory = await readAdminAreaDirectory();
+  if (directory === null) return null;
+  return { ...directory, regionOf: (adminId) => BOUNDARIES.read(adminId) };
 }
 
 /** Ο κατάλογος περιοχών για τη σελίδα περιοχής: όνομα/βαθμίδα/γονέας ανά ταυτότητα, και τα παιδιά κάθε γονέα. */

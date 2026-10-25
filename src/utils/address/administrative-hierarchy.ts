@@ -30,6 +30,7 @@ import {
   type PostalFieldKey,
   type HierarchyAdjacentFieldKey,
 } from './administrative-hierarchy-vocabulary';
+import { PATH_KEY_TO_LEVEL } from '@/lib/places/admin-path';
 
 /**
  * Ό,τι παράγει ο μετατροπέας: ονόματα πεδίων του **δοχείου-στόχου** με τιμές.
@@ -293,4 +294,28 @@ export function hierarchyToResolvedAddress(
     // σε κάθε σύρσιμο έργου/κτιρίου. Ο τύπος την κουβαλούσε· η μεταφορά όχι.
     country: value.country || undefined,
   };
+}
+
+/** Τα επίπεδα από το βαθύτερο (οικισμός) προς το ευρύτερο — από τον ΕΝΑ πίνακα βαθμίδων, όχι δεύτερη λίστα. */
+const ADMIN_LEVEL_KEYS_DEEPEST_FIRST: readonly AdminLevelKey[] = [...ADMIN_LEVEL_KEYS].sort(
+  (a, b) => PATH_KEY_TO_LEVEL[b] - PATH_KEY_TO_LEVEL[a],
+);
+
+/**
+ * **Η βαθύτερη διοικητική ταυτότητα που ΔΗΛΩΝΕΙ μια αποθηκευμένη διεύθυνση** — ή `null` (ADR-890 §21).
+ *
+ * 🔑 Διαβάζει **μέσα από τον πίνακα** του ADR-772, όχι με χειρόγραφα ονόματα πεδίων: ένα δοχείο που δεν κρατά ένα
+ * επίπεδο το δηλώνει `NOT_STORED` και απλώς προσπερνιέται (π.χ. η Κοινότητα των έργων ζει μόνο ως όνομα).
+ *
+ * ⚠️ **Δήλωση, όχι αλήθεια**: ο καλών την κρίνει απέναντι στη μετρημένη απόδοση (`declareAdminArea`).
+ */
+export function deepestDeclaredAdminId(
+  source: Readonly<Record<string, unknown>>,
+  from: AddressVocabulary,
+): string | null {
+  for (const level of ADMIN_LEVEL_KEYS_DEEPEST_FIRST) {
+    const id = readId(source, ADMIN_LEVEL_VOCABULARY[level][from].id, false);
+    if (typeof id === 'string') return id;
+  }
+  return null;
 }

@@ -15,6 +15,7 @@
 
 import type { PublishOutcome } from '@/services/listings/publish-public-listing';
 import type { PlaceRefVerdict } from '@/services/places/public-place-read.service';
+import type { AdminAreaDeclarationRejection } from '@/lib/geo/admin-area-declaration';
 import type { OwnerProperty } from '@/types/owner-property';
 import type { OwnerPropertyInvariant } from '@/types/owner-property-invariants';
 import type { MandateInvariant } from '@/types/owner-property-mandate';
@@ -94,6 +95,14 @@ export type OwnerPropertyWriteResult =
    * Η διάκριση έχει **ήδη πληρωθεί μία φορά** (SPEC-777A §13.7.2, εύρημα #5).
    */
   | { readonly kind: 'place-link-unverified' }
+  /**
+   * 🗺️ **Η ΔΗΛΩΜΕΝΗ ΠΕΡΙΟΧΗ ΔΕΝ ΣΤΕΚΕΙ** (ADR-890 §21): δεν υπάρχει, αντιφάσκει στη μετρημένη απόδοση της θέσης, ή
+   * πέφτει έξω από τον κύκλο αβεβαιότητάς της. Η φόρμα προσφέρει **μόνο** έγκυρες επιλογές (ίδιος κριτής), άρα εδώ
+   * φτάνει μπαγιάτικη ή πλαστή απάντηση. Ο λόγος ταξιδεύει ονομαστικά (κλειδί i18n, N.11).
+   */
+  | { readonly kind: 'invalid-place-area'; readonly reason: AdminAreaDeclarationRejection }
+  /** 🔴 **ΔΕΝ ΜΑΘΑΜΕ** — δεν διαβάστηκαν ευρετήριο/όρια. Ποτέ «άκυρη»: ίδιο σκεπτικό με το `place-link-unverified`. */
+  | { readonly kind: 'place-area-unverified' }
   /**
    * **ADR-898 Φ3β — οι δηλώσεις της αντικειμενικής δεν στέκουν**: ημερομηνία άδειας στο μέλλον, ή δρόμος που δεν
    * είναι υποψήφιο μέτωπο στη θέση της αγγελίας. Χωριστό από το `invalid`: άλλη οθόνη, άλλα πεδία (ίδιο σκεπτικό με

@@ -13,6 +13,7 @@ import {
 import { readStoredAvailability, readStoredTerrain } from './public-listing-shape-judges';
 import { readStoredAvailabilityTrack } from './availability-history';
 import type { ListingMigration } from './public-listing-schema-types';
+import { deepestAssignedLevel } from '@/lib/geo/admin-area-of-point';
 
 /** Οι κρίκοι `to: 21` … `to: 30`, με τη σειρά που συνέβησαν. Παγωμένοι — δες την κεφαλίδα του `public-listing-schema.ts`. */
 export const LISTING_MIGRATIONS_21_30: readonly ListingMigration[] = [
@@ -157,4 +158,27 @@ export const LISTING_MIGRATIONS_21_30: readonly ListingMigration[] = [
      */
     apply: (doc) => ({ ...doc, availabilityTrack: readStoredAvailabilityTrack(doc.availabilityTrack) }),
   },
+  {
+    to: 28,
+    adr: 'ADR-890 §21',
+    adds: ['adminArea.measuredDepth'],
+    /**
+     * 🔴 **Η ΑΠΟΔΟΣΗ ΑΠΕΚΤΗΣΕ ΠΡΟΕΛΕΥΣΗ ΑΝΑ ΒΑΘΜΙΔΑ — ΤΑ ΠΑΛΙΑ ΕΓΓΡΑΦΑ ΔΕΝ ΤΗΝ ΕΧΟΥΝ.**
+     *
+     * 🔑 **Η ΑΛΗΘΕΙΑ ΤΟΥ ΠΑΛΙΟΥ ΕΓΓΡΑΦΟΥ ΕΙΝΑΙ ΓΝΩΣΤΗ, ΟΧΙ ΕΙΚΑΣΙΑ**: πριν το §21 δήλωση δεν υπήρχε, άρα **κάθε**
+     * αποθηκευμένη ταυτότητα μετρήθηκε ⇒ `measuredDepth` = η βαθύτερη βαθμίδα με ταυτότητα. Απόδοση χωρίς καμία
+     * ταυτότητα (σκουπίδι) ⇒ `null`, ποτέ ψεύτικο βάθος.
+     *
+     * 🔑 **Ιδιοδύναμο (Κ3)**: ό,τι έγραψε ήδη ο γραφέας (με `measuredDepth`) μένει αυτούσιο.
+     */
+    apply: (doc) => ({ ...doc, adminArea: withMeasuredDepth(doc.adminArea) }),
+  },
 ];
+
+/** Κρίκος 28: παλιά απόδοση ⇒ `measuredDepth` = η βαθύτερη ταυτότητά της. */
+function withMeasuredDepth(stored: unknown): unknown {
+  if (typeof stored !== 'object' || stored === null || 'measuredDepth' in stored) return stored ?? null;
+  const ids: Readonly<Record<string, unknown>> = { ...stored };
+  const measuredDepth = deepestAssignedLevel(ids);
+  return measuredDepth === null ? null : { ...ids, measuredDepth };
+}

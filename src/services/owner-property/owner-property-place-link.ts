@@ -2,6 +2,9 @@ import 'server-only';
 
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
+import { nowISO } from '@/lib/date-local';
+import { placeKnowledgeFromOwnerProperty } from '@/lib/owner-property/owner-property-projection';
+import { attributeAdminArea } from '@/services/places/admin-area-attribution.server';
 import { PLACE_REF_TREATMENT, verifyPlaceRef } from '@/services/places/public-place-read.service';
 import type { OwnerPropertyDraft } from '@/types/owner-property';
 import type { OwnerPropertyWriteResult } from '@/services/owner-property/owner-property-write-result';
@@ -64,5 +67,36 @@ export async function placeLinkRefusal(
       return { kind: 'invalid-place-link', verdict };
     case 'retry':
       return { kind: 'place-link-unverified' };
+  }
+}
+
+// =============================================================================
+// Η ΔΗΛΩΜΕΝΗ ΠΕΡΙΟΧΗ — «στέκει απέναντι στη θέση;», στις ΙΔΙΕΣ τρεις πόρτες (ADR-890 §21)
+// =============================================================================
+
+/**
+ * **Αρνείται η γραφή εξαιτίας της δηλωμένης περιοχής;** `null` = προχώρα.
+ *
+ * 🔑 **Ο κριτής είναι ο ΙΔΙΟΣ με της προβολής** (`attributeAdminArea`): ό,τι δέχεται εδώ, η αγγελία το δημοσιεύει·
+ * ό,τι αρνείται, δεν φτάνει ποτέ στη βάση. Χωρίς αυτή την πόρτα, μια άκυρη δήλωση θα αποθηκευόταν και θα
+ * απορριπτόταν **σιωπηλά** σε κάθε προβολή — ο άνθρωπος θα νόμιζε ότι η αγγελία του είναι στο χωριό του.
+ *
+ * ⚠️ Το `not-deeper` **δεν** αρνείται: η δήλωση είναι συνεπής, απλώς περιττή (η θέση φτάνει ήδη ως την κοινότητα).
+ */
+export async function placeAreaRefusal(draft: OwnerPropertyDraft): Promise<OwnerPropertyWriteResult | null> {
+  if (draft.place.kind !== 'declared' || (draft.place.areaId ?? null) === null) return null;
+
+  const [position] = placeKnowledgeFromOwnerProperty(draft, nowISO()).candidates;
+  if (position === undefined) return null;
+
+  const { declaration } = await attributeAdminArea(position, draft.place.areaId);
+  switch (declaration.kind) {
+    case 'none':
+    case 'applied':
+      return null;
+    case 'rejected':
+      return declaration.reason === 'not-deeper' ? null : { kind: 'invalid-place-area', reason: declaration.reason };
+    case 'unverified':
+      return { kind: 'place-area-unverified' };
   }
 }

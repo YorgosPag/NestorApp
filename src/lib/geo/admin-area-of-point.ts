@@ -35,7 +35,7 @@ import { geoRingsNearestEdgeMetres, isPointInGeoRings } from './geo-ring';
 // ============================================================================
 
 /** Οι βαθμίδες που έχουν **όριο** — 3 (Περιφέρεια) έως 7 (Κοινότητα), ADR-883 §3. */
-type AdminBoundaryLevel = 3 | 4 | 5 | 6 | 7;
+export type AdminBoundaryLevel = 3 | 4 | 5 | 6 | 7;
 
 /**
  * **Η ΑΠΟΔΟΣΗ** — μία ταυτότητα ανά βαθμίδα, ή `null` όταν η βαθμίδα **δεν αποδόθηκε**.
@@ -59,7 +59,18 @@ export interface AdminAreaAssignment {
    * σύνορο θα μπορούσε να την αλλάξει. Μια σύνοψη αγοράς μπορεί να τη βαρύνει λιγότερο.
    */
   readonly nearBoundary: boolean;
+  /**
+   * **Ως ποια βαθμίδα ΜΕΤΡΗΘΗΚΕ** η απόδοση (σημείο-σε-πολύγωνο) — ADR-890 §21.
+   *
+   * 🔑 Κάθε ταυτότητα **βαθύτερα** από αυτή είναι **δηλωμένη** από τον εκδότη και επικυρωμένη στον server
+   * (`admin-area-declaration.ts`). Ένα βαθμωτό, όχι λίστα: η μορφή «μετρημένο πρόθεμα + δηλωμένη ουρά» είναι
+   * **δομική** — δήλωση πάνω από μετρημένη βαθμίδα δεν εκφράζεται καν. Ανάγνωση **μόνο** με {@link adminAreaProvenanceOf}.
+   */
+  readonly measuredDepth: AdminBoundaryLevel;
 }
+
+/** Η προέλευση μιας βαθμίδας της απόδοσης: μετρήθηκε από το σημείο, ή τη δήλωσε ο εκδότης. */
+export type AdminAreaProvenance = 'measured' | 'declared';
 
 /** Βαθμίδα → πεδίο της απόδοσης. **Εξαντλητικό**: νέα βαθμίδα χωρίς πεδίο = σφάλμα μεταγλώττισης. */
 const FIELD_OF_LEVEL = {
@@ -84,6 +95,27 @@ export type AdminAreaField = (typeof FIELD_OF_LEVEL)[AdminBoundaryLevel];
  */
 export function adminAreaFieldOfLevel(level: number): AdminAreaField | null {
   return isBoundaryLevel(level) ? FIELD_OF_LEVEL[level] : null;
+}
+
+/** Οι βαθμίδες με όριο, από τη βαθύτερη. */
+const BOUNDARY_LEVELS_DEEPEST_FIRST: readonly AdminBoundaryLevel[] = [7, 6, 5, 4, 3];
+
+/**
+ * **Η βαθύτερη βαθμίδα με ταυτότητα** σε μια (ίσως αποθηκευμένη, ίσως παλιά) απόδοση — ή `null`.
+ * Δέχεται `unknown` τιμές επίτηδες: τη ρωτά και ο κρίκος μετανάστευσης πάνω σε ωμό έγγραφο (ADR-890 §21).
+ */
+export function deepestAssignedLevel(ids: Readonly<Record<string, unknown>>): AdminBoundaryLevel | null {
+  return BOUNDARY_LEVELS_DEEPEST_FIRST.find((level) => typeof ids[FIELD_OF_LEVEL[level]] === 'string') ?? null;
+}
+
+/**
+ * **Από πού ξέρουμε αυτή τη βαθμίδα της απόδοσης;** — `null` όταν η βαθμίδα δεν αποδόθηκε (ή δεν αποδίδεται).
+ * Ο ΕΝΑΣ αναγνώστης του `measuredDepth` (ADR-890 §21).
+ */
+export function adminAreaProvenanceOf(assignment: AdminAreaAssignment, level: number): AdminAreaProvenance | null {
+  const field = adminAreaFieldOfLevel(level);
+  if (field === null || assignment[field] === null) return null;
+  return level <= assignment.measuredDepth ? 'measured' : 'declared';
 }
 
 // ============================================================================
@@ -231,7 +263,7 @@ export async function assignAdminArea(
   const ids: Record<AdminBoundaryLevel, string | null> = { 3: null, 4: null, 5: null, 6: null, 7: null };
   let parentId: string | null = null;
   let nearBoundary = false;
-  let assigned = false;
+  let measuredDepth: AdminBoundaryLevel | null = null;
 
   for (;;) {
     const children = lookup.childrenOf(parentId).filter((c) => isBoundaryLevel(c.level) && c.level <= deepest);
@@ -244,10 +276,10 @@ export async function assignAdminArea(
     ids[chosen.level] = chosen.id;
     nearBoundary = chosen.nearBoundary;
     parentId = chosen.id;
-    assigned = true;
+    measuredDepth = chosen.level;
   }
 
-  if (!assigned) return null;
+  if (measuredDepth === null) return null;
   return {
     regionId: ids[3],
     regionalUnitId: ids[4],
@@ -255,5 +287,6 @@ export async function assignAdminArea(
     municipalUnitId: ids[6],
     communityId: ids[7],
     nearBoundary,
+    measuredDepth,
   };
 }

@@ -53,6 +53,7 @@ const THESSALONIKI: AdminAreaAssignment = {
   municipalUnitId: null,
   communityId: null,
   nearBoundary: false,
+  measuredDepth: 5,
 };
 
 const CONTRACT: ReportedStatCell = { n: 40, median: 1500, p25: 1200, p75: 1800 };

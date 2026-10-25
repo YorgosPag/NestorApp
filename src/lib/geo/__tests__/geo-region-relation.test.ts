@@ -9,6 +9,7 @@ import type { GeoRegion } from '@/types/geo/coordinates';
 /** Τετράγωνο ~2,2 km × ~1,7 km γύρω από τον Εύοσμο. */
 const REGION: GeoRegion = {
   adminId: 'municipality:0708',
+  level: 5,
   rings: [[
     { lat: 40.66, lng: 22.90 },
     { lat: 40.66, lng: 22.92 },

@@ -123,6 +123,11 @@ export interface ResolvedPlace {
   readonly declaredPostalCode?: string;
   /** Η κρίση για τη δηλωμένη περιοχή — `broader` σημαίνει «σωστά, ευρύτερα» (`lib/geocoding/field-match`). */
   readonly localityMatch?: FieldMatchKind;
+  /**
+   * Η τοποθεσία **όπως την αναγνώρισε ο πάροχος** (π.χ. «Σίβηρη») — η βάση της **πρότασης** δηλωμένης περιοχής
+   * (ADR-890 §21). Πρόταση, όχι δήλωση: ο άνθρωπος την επιβεβαιώνει.
+   */
+  readonly resolvedLocality?: string;
 }
 
 /**
@@ -152,6 +157,7 @@ function toResolvedPlace(result: GeocodingServiceResult, request: GeocodingReque
     declaredLocality: byNeighborhood ? request.neighborhood : request.city,
     declaredPostalCode: request.postalCode,
     localityMatch: byNeighborhood ? fieldMatches.neighborhood : fieldMatches.city,
+    resolvedLocality: result.resolvedFields.neighborhood ?? result.resolvedFields.city,
   };
 }
 

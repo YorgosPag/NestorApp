@@ -238,6 +238,10 @@ describe('Κ6 — η αλυσίδα είναι συνεπής με τον εαυ
     if (adds.some((path) => path.startsWith('energyCertificate.'))) {
       return { ...PRODUCTION_V1, type: 'apartment', energyCertificate: { primaryEnergy: null, co2Emissions: null, absence: null } };
     }
+    // Ίδιος λόγος για την απόδοση περιοχής (κρίκος 28, ADR-890 §21): αγγελία χωρίς θέση έχει νόμιμα `adminArea: null`.
+    if (adds.some((path) => path.startsWith('adminArea.'))) {
+      return { ...PRODUCTION_V1, adminArea: { regionId: 'region:112', municipalityId: 'municipality:1303', nearBoundary: false } };
+    }
     return PRODUCTION_V1;
   };
 
@@ -704,5 +708,37 @@ describe('Κ18 — κρίκος 27: η ιστορία της υπόσχεσης 
     ['κείμενο', 'μετατέθηκε'],
   ])('σκουπίδι (%s) ⇒ `null`, ποτέ σε δημόσια οθόνη', (_label, garbage) => {
     expect(link.apply({ availabilityTrack: garbage }).availabilityTrack).toBeNull();
+  });
+});
+
+describe('Κ19 — κρίκος 28: η προέλευση της απόδοσης ανά βαθμίδα (ADR-890 §21)', () => {
+  const link = LISTING_MIGRATIONS_21_30.find((migration) => migration.to === 28)!;
+  const LEGACY = {
+    regionId: 'region:112',
+    regionalUnitId: 'regional_unit:13',
+    municipalityId: 'municipality:1303',
+    municipalUnitId: null,
+    communityId: null,
+    nearBoundary: false,
+  };
+
+  it('🔴 παλιά απόδοση ⇒ `measuredDepth` = η βαθύτερη ταυτότητα (πριν το §21 όλα ήταν μετρημένα)', () => {
+    expect(link.apply({ adminArea: LEGACY }).adminArea).toEqual({ ...LEGACY, measuredDepth: 5 });
+  });
+
+  it('χωρίς απόδοση ⇒ `null`, όπως ήταν', () => {
+    expect(link.apply({ adminArea: null }).adminArea).toBeNull();
+    expect(link.apply({}).adminArea).toBeNull();
+  });
+
+  it('ιδιοδύναμο: ό,τι έγραψε ήδη ο γραφέας (με δηλωμένη ουρά) μένει αυτούσιο', () => {
+    const declared = { ...LEGACY, municipalUnitId: 'municipal_unit:130301', measuredDepth: 5 };
+    const once = link.apply({ adminArea: declared });
+    expect(once.adminArea).toEqual(declared);
+    expect(link.apply(once)).toEqual(once);
+  });
+
+  it('απόδοση χωρίς καμία ταυτότητα (σκουπίδι) ⇒ `null`, ποτέ ψεύτικο βάθος', () => {
+    expect(link.apply({ adminArea: { nearBoundary: false } }).adminArea).toBeNull();
   });
 });

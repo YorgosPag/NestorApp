@@ -81,6 +81,7 @@ export function validDraft(
       // στιγμιότυπο τον αφήνει κενό, ώστε οι υπάρχουσες άγκυρες να μετρούν ό,τι
       // μετρούσαν — και όποια τον χρειάζεται τον δηλώνει ρητά.
       link: null,
+      areaId: null,
     },
     media: [SAMPLE_MEDIA],
     ...overrides,

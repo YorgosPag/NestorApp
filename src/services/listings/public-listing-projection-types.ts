@@ -17,6 +17,7 @@
  */
 
 import type { CommercialStatus } from '@/constants/commercial-statuses';
+import type { GeoPoint } from '@/types/geo/coordinates';
 import type { PlaceRef } from '@/types/geo/public-place';
 import type { FloorKind } from '@/utils/floor-naming';
 import type {
@@ -351,6 +352,23 @@ export interface PlaceKnowledge {
    * επιλυτής το διαβάζει ως τέτοιο, όχι ως «κτίριο χωρίς δήλωση».
    */
   readonly buildingAvailability?: BuildingAvailabilityFacts | null;
+  /**
+   * **Οι διοικητικές περιοχές που ΔΗΛΩΝΕΙ ο εκδότης** (ADR-890 §21) — μία ανά διεύθυνση/θέση που τις δηλώνει.
+   *
+   * 🔑 **Δεμένες στο ΣΗΜΕΙΟ της διεύθυνσής τους**: ένα έργο έχει πολλές διευθύνσεις, και η δήλωση που μετρά είναι της
+   * διεύθυνσης που **κέρδισε** τη θέση (`listing-publication-facts.ts`, ίσο σημείο). Η δήλωση δεν είναι αλήθεια — την
+   * κρίνει ο `declareAdminArea` απέναντι στη μετρημένη απόδοση και στον κύκλο αβεβαιότητας.
+   *
+   * ⚠️ **Απόν/κενό = καμία δήλωση** (ιδιώτης χωρίς επιλογή, έργο χωρίς ταυτότητες ιεραρχίας) — η απόδοση μένει η μετρημένη.
+   */
+  readonly declaredAdminAreas?: readonly DeclaredAdminArea[];
+}
+
+/** Μια δηλωμένη περιοχή, δεμένη στη θέση από την οποία προήλθε (ADR-890 §21). */
+export interface DeclaredAdminArea {
+  readonly point: GeoPoint;
+  /** Ταυτότητα του ευρετηρίου περιοχών — Δ.Ε., κοινότητα ή οικισμός. */
+  readonly areaId: string;
 }
 
 /** Μία υποψήφια θέση, με την προέλευσή της. */

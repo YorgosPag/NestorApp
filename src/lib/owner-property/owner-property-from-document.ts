@@ -57,7 +57,7 @@
  */
 
 import { readPropertyType } from '@/constants/property-type-aliases';
-import { mediaOf, type OwnerProperty } from '@/types/owner-property';
+import { mediaOf, type OwnerProperty, type OwnerPropertyPlace } from '@/types/owner-property';
 import { declaredFileIds } from '@/lib/listings/declared-file-ids';
 import { readDeclaredFocalPoints } from '@/lib/listings/photo-focal-point';
 import { readDeclaredCaptureSpots } from '@/lib/listings/photo-capture-spot';
@@ -162,9 +162,22 @@ export function readStoredOwnerProperty(
         },
       ),
       ...dossierLinkOf(stored),
+      // ADR-890 §21 — ίδιο σχήμα απουσίας: έγγραφο πριν τη δηλωμένη περιοχή ⇒ `areaId: null` («καμία δήλωση»).
+      place: placeWithDeclaredArea((rest as unknown as OwnerProperty).place),
     },
     vocabularyDrift: drift,
   };
+}
+
+/**
+ * **Η θέση με τη δηλωμένη περιοχή κανονικοποιημένη** (ADR-890 §21): ό,τι δεν είναι μη κενή συμβολοσειρά ⇒ `null`.
+ *
+ * 🔴 **Ποτέ `undefined`**: το επόμενο `set` του Admin SDK θα έσκαγε (το μάθημα του `place.link`, 2026-08-27).
+ */
+function placeWithDeclaredArea(place: OwnerPropertyPlace): OwnerPropertyPlace {
+  if (place?.kind !== 'declared') return place;
+  const { areaId } = place;
+  return { ...place, areaId: typeof areaId === 'string' && areaId !== '' ? areaId : null };
 }
 
 /**
