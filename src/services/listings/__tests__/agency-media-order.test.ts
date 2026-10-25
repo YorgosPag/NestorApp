@@ -25,6 +25,7 @@
  * εξουσιοδότησης**. Το Κ2 το κρατά κλειστό.
  */
 
+import { publicShelfDouble } from '@/test-utils/public-shelf-double';
 import { readFileSync, readdirSync, statSync } from 'fs';
 import { join, sep } from 'path';
 
@@ -34,33 +35,9 @@ import { promoteToFront, withDeclaredFirst } from '@/lib/ordering/declared-order
 import { declaredFileIds } from '@/lib/listings/declared-file-ids';
 import { withOwnerMediaFirst } from '@/lib/owner-property/owner-media-publication';
 import type { OwnerPropertyMedia } from '@/types/owner-property';
-import type { PublicShelfReport } from '../public-shelf.service';
 import type { AgencyMediaCandidate } from '../agency-media-publication';
 
-const reconcilePublicShelf = jest.fn<Promise<PublicShelfReport<unknown>>, [unknown, string, readonly unknown[]]>();
-
-jest.mock('../public-shelf.service', () => ({
-  reconcilePublicShelf: (...args: [unknown, string, readonly unknown[]]) => reconcilePublicShelf(...args),
-}));
-
-// 🔴 **ΤΟ ΔΕΥΤΕΡΟ ΚΕΦΑΛΙ ΜΟΚΑΡΕΤΑΙ ΜΑΖΙ ΜΕ ΤΟ ΠΡΩΤΟ** *(ADR-845 Φ4.2β)* — αλλιώς η σουίτα
-//    χτυπά **πραγματικό GCS** μέσω του αληθινού ραφιού μοντέλων. Δες το πλήρες σκεπτικό στο
-//    `publish-gallery-wiring.test`. Αυτή η σουίτα ρωτά για τη **ΣΕΙΡΑ** των εικόνων.
-jest.mock('../public-shelf-model.service', () => ({
-  reconcilePublicModelShelf: async () => ({
-    outcome: 'reconciled', published: [], removed: 0, rejected: 0,
-  }),
-}));
-// ADR-907 §10 — το τρίτο κεφάλι: αλλιώς το αληθινό θα ζητούσε κάδο (αργό και ασταθές υπό φόρτο, όπως το μοντέλο).
-jest.mock('../public-shelf-video.service', () => ({
-  reconcilePublicVideoShelf: async () => ({
-    outcome: 'reconciled', published: [], removed: 0, rejected: 0,
-  }),
-}));
-// ADR-920 Β3β — το κεφάλι του εδάφους: αλλιώς το αληθινό θα ζητούσε κάδο.
-jest.mock('../public-shelf-terrain.service', () => ({
-  reconcilePublicTerrainShelf: async () => ({ outcome: 'reconciled', published: [], removed: 0, rejected: 0 }),
-}));
+const reconcilePublicShelf = publicShelfDouble.image;
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { republishListing } = require('../publish-public-listing') as

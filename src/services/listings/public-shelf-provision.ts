@@ -28,8 +28,9 @@
 import type { Bucket, Cors } from '@google-cloud/storage';
 
 import { GCS_PUBLIC_MEDIA_BUCKET, GCS_PUBLIC_MEDIA_BUCKET_CONFIG } from '@/config/gcs-buckets';
-import { getAdminStorage } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
+// Ο ΕΝΑΣ δείκτης προς τον δημόσιο κάδο — ήταν δίδυμο εδώ (Boy Scout, 2026-10-25).
+import { shelfBucket } from './public-shelf-bucket';
 
 const logger = createModuleLogger('public-shelf-provision');
 
@@ -148,10 +149,6 @@ export interface PublicShelfBucketState {
   readonly publiclyReadable: boolean;
   /** Το διαβάζει **JS ιστοσελίδας**; — **CORS**. Ό,τι δεν βλέπει κανένας διακομιστής. */
   readonly browserReadable: boolean;
-}
-
-function shelfBucket(): Bucket {
-  return getAdminStorage().bucket(GCS_PUBLIC_MEDIA_BUCKET);
 }
 
 /**

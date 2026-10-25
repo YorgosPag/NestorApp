@@ -10,6 +10,8 @@
  * «αποθήκευση», δηλαδή για κανέναν.
  */
 
+// Πρώτο import: τα κεφάλια του ραφιού ΔΕΝ χτυπούν πραγματικό GCS (ήταν ~4 s κρύα πρώτη αποθήκευση).
+import '@/test-utils/public-shelf-double';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import {

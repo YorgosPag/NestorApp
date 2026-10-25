@@ -11,6 +11,7 @@
  * ⚠️ Mock μόνο τα τρία κεφάλια του ραφιού *(ίδιος λόγος με το `listing-shelf-withdrawal.test`)*.
  */
 
+import { publicShelfDouble } from '@/test-utils/public-shelf-double';
 import type { DocumentReference } from 'firebase-admin/firestore';
 
 import type { ListingMaterial } from '@/lib/listings/listing-material';
@@ -22,23 +23,10 @@ jest.mock('server-only', () => ({}));
 type ShelfReport = { outcome: 'reconciled' | 'failed'; published: never[]; removed: number; rejected: number };
 const settled = (): ShelfReport => ({ outcome: 'reconciled', published: [], removed: 0, rejected: 0 });
 
-const reconcilePublicShelf = jest.fn(async (..._args: unknown[]): Promise<ShelfReport> => settled());
-const reconcilePublicModelShelf = jest.fn(async (..._args: unknown[]): Promise<ShelfReport> => settled());
-const reconcilePublicVideoShelf = jest.fn(async (..._args: unknown[]): Promise<ShelfReport> => settled());
-const reconcilePublicTerrainShelf = jest.fn(async (..._args: unknown[]): Promise<ShelfReport> => settled());
-
-jest.mock('../public-shelf.service', () => ({
-  reconcilePublicShelf: (...args: unknown[]) => reconcilePublicShelf(...args),
-}));
-jest.mock('../public-shelf-model.service', () => ({
-  reconcilePublicModelShelf: (...args: unknown[]) => reconcilePublicModelShelf(...args),
-}));
-jest.mock('../public-shelf-video.service', () => ({
-  reconcilePublicVideoShelf: (...args: unknown[]) => reconcilePublicVideoShelf(...args),
-}));
-jest.mock('../public-shelf-terrain.service', () => ({
-  reconcilePublicTerrainShelf: (...args: unknown[]) => reconcilePublicTerrainShelf(...args),
-}));
+const reconcilePublicShelf = publicShelfDouble.image;
+const reconcilePublicModelShelf = publicShelfDouble.model;
+const reconcilePublicVideoShelf = publicShelfDouble.video;
+const reconcilePublicTerrainShelf = publicShelfDouble.terrain;
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { writeWithShelf } = require('../publish-public-listing-shelf') as

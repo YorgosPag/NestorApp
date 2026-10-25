@@ -27,6 +27,7 @@
  * και μια εξαίρεση εκεί ρίχνει **ΟΛΟΚΛΗΡΟ** το αρχείο με `Tests: 0 total`.
  */
 
+import { publicShelfDouble } from '@/test-utils/public-shelf-double';
 import {
   LISTING_MODEL_SHELF,
   LISTING_SHELF,
@@ -40,29 +41,10 @@ import type { PublicShelfSource } from '@/services/upload/utils/storage-path-pub
 import type { ListingMaterial } from '@/lib/listings/listing-material';
 import type { PublicListing } from '@/types/public-listing';
 
-type ShelfCall = [kind: { root: string; encoding: { kind: string } }, subjectId: string, sources: readonly unknown[]];
-
-const reconcilePublicShelf = jest.fn<Promise<unknown>, ShelfCall>();
-const reconcilePublicModelShelf = jest.fn<Promise<unknown>, ShelfCall>();
-const reconcilePublicVideoShelf = jest.fn<Promise<unknown>, ShelfCall>();
-const reconcilePublicTerrainShelf = jest.fn<Promise<unknown>, ShelfCall>();
-
-// 🔑 **ΚΑΙ ΤΑ ΔΥΟ κεφάλια μοκάρονται** — όχι μόνο για ταχύτητα: το κεφάλι του μοντέλου σέρνει
-//    τον ψήστη, δηλαδή **WASM** (`meshoptimizer`, `gltf-validator`). Αυτή η σουίτα ρωτά για
-//    **καλωδίωση**, όχι για ψήσιμο· το ψήσιμο έχει δική του άγκυρα με **αληθινό GLB**.
-jest.mock('../public-shelf.service', () => ({
-  reconcilePublicShelf: (...args: ShelfCall) => reconcilePublicShelf(...args),
-}));
-jest.mock('../public-shelf-model.service', () => ({
-  reconcilePublicModelShelf: (...args: ShelfCall) => reconcilePublicModelShelf(...args),
-}));
-// ADR-907 §10 — το τρίτο κεφάλι: η καλωδίωση ρωτιέται εδώ, το ψήσιμο στο `public-shelf-video-bake.test`.
-jest.mock('../public-shelf-video.service', () => ({
-  reconcilePublicVideoShelf: (...args: ShelfCall) => reconcilePublicVideoShelf(...args),
-}));
-jest.mock('../public-shelf-terrain.service', () => ({
-  reconcilePublicTerrainShelf: (...args: ShelfCall) => reconcilePublicTerrainShelf(...args),
-}));
+const reconcilePublicShelf = publicShelfDouble.image;
+const reconcilePublicModelShelf = publicShelfDouble.model;
+const reconcilePublicVideoShelf = publicShelfDouble.video;
+const reconcilePublicTerrainShelf = publicShelfDouble.terrain;
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { partitionListingSources, withdrawListingShelves, writeWithShelf } =

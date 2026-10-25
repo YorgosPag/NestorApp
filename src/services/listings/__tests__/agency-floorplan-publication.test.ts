@@ -24,35 +24,12 @@
  * μόνο τον καθαρό κανόνα θα ήταν **πράσινη πάνω σε λειτουργία που δεν υπάρχει**.
  */
 
+import { publicShelfDouble } from '@/test-utils/public-shelf-double';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { PUBLISHED_MEDIA_LIMIT } from '@/services/upload/utils/storage-path-public-shelf';
-import type { PublicShelfReport } from '../public-shelf.service';
 import type { AgencyMediaCandidate } from '../agency-media-publication';
 
-const reconcilePublicShelf = jest.fn<Promise<PublicShelfReport<unknown>>, [unknown, string, readonly unknown[]]>();
-
-jest.mock('../public-shelf.service', () => ({
-  reconcilePublicShelf: (...args: [unknown, string, readonly unknown[]]) => reconcilePublicShelf(...args),
-}));
-
-// 🔴 **ΤΟ ΔΕΥΤΕΡΟ ΚΕΦΑΛΙ ΜΟΚΑΡΕΤΑΙ ΜΑΖΙ ΜΕ ΤΟ ΠΡΩΤΟ** *(ADR-845 Φ4.2β)* — αλλιώς η σουίτα
-//    χτυπά **πραγματικό GCS** μέσω του αληθινού ραφιού μοντέλων. Δες το πλήρες σκεπτικό στο
-//    `publish-gallery-wiring.test`. Αυτή η σουίτα ρωτά για τις **ΚΑΤΟΨΕΙΣ**.
-jest.mock('../public-shelf-model.service', () => ({
-  reconcilePublicModelShelf: async () => ({
-    outcome: 'reconciled', published: [], removed: 0, rejected: 0,
-  }),
-}));
-// ADR-907 §10 — το τρίτο κεφάλι: αλλιώς το αληθινό θα ζητούσε κάδο (αργό και ασταθές υπό φόρτο, όπως το μοντέλο).
-jest.mock('../public-shelf-video.service', () => ({
-  reconcilePublicVideoShelf: async () => ({
-    outcome: 'reconciled', published: [], removed: 0, rejected: 0,
-  }),
-}));
-// ADR-920 Β3β — το κεφάλι του εδάφους: αλλιώς το αληθινό θα ζητούσε κάδο.
-jest.mock('../public-shelf-terrain.service', () => ({
-  reconcilePublicTerrainShelf: async () => ({ outcome: 'reconciled', published: [], removed: 0, rejected: 0 }),
-}));
+const reconcilePublicShelf = publicShelfDouble.image;
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { republishListing } = require('../publish-public-listing') as

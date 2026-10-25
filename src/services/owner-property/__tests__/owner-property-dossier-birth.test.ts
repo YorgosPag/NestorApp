@@ -18,11 +18,11 @@
  * | η δημοσίευση διαβάζει `media[]` σε αγγελία με φάκελο | Α41.4 |
  */
 
+import { publicShelfDouble } from '@/test-utils/public-shelf-double';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 type RecordCall = Record<string, unknown>;
 const recordChange = jest.fn<Promise<string | null>, [RecordCall]>();
-const shelfSources = jest.fn<void, [readonly { readonly privateStoragePath: string }[]]>();
 
 jest.mock('@/services/entity-audit.service', () => {
   const actual = jest.requireActual('@/services/entity-audit.service');
@@ -33,23 +33,6 @@ jest.mock('@/services/entity-audit.service', () => {
   }
   return { ...actual, EntityAuditService: RecordingAuditService };
 });
-jest.mock('@/services/listings/public-shelf.service', () => ({
-  reconcilePublicShelf: async (_kind: unknown, _id: string, sources: readonly { privateStoragePath: string }[]) => {
-    shelfSources(sources);
-    return { outcome: 'reconciled', published: [], removed: 0, rejected: 0 };
-  },
-}));
-jest.mock('@/services/listings/public-shelf-model.service', () => ({
-  reconcilePublicModelShelf: async () => ({ outcome: 'reconciled', published: [], removed: 0, rejected: 0 }),
-}));
-// ADR-907 §10 — το τρίτο κεφάλι του ραφιού (βίντεο): αλλιώς το αληθινό θα ζητούσε κάδο.
-jest.mock('@/services/listings/public-shelf-video.service', () => ({
-  reconcilePublicVideoShelf: async () => ({ outcome: 'reconciled', published: [], removed: 0, rejected: 0 }),
-}));
-// ADR-920 Β3β — το κεφάλι του εδάφους: αλλιώς το αληθινό θα ζητούσε κάδο.
-jest.mock('@/services/listings/public-shelf-terrain.service', () => ({
-  reconcilePublicTerrainShelf: async () => ({ outcome: 'reconciled', published: [], removed: 0, rejected: 0 }),
-}));
 jest.mock('@/services/mandate/showcase-presence.service', () => ({
   refreshShowcasePresence: async () => undefined,
 }));
@@ -77,7 +60,7 @@ function dossierAudits(): RecordCall[] {
 beforeEach(() => {
   recordChange.mockReset();
   recordChange.mockResolvedValue('eaud_test');
-  shelfSources.mockReset();
+  publicShelfDouble.image.mockClear();
 });
 
 describe('Α41.3 — αγγελία + φάκελος σε ΜΙΑ συναλλαγή: γέννηση ή σύνδεση, ποτέ ξένος', () => {
@@ -166,7 +149,7 @@ describe('Α41.4 — η βιτρίνα αγγελίας με φάκελο = τα
     const result = await write.createOwnerProperty(db as unknown as AdminFirestore, AUTHORSHIP, draft);
 
     expect(result.kind).toBe('saved');
-    const requested = shelfSources.mock.calls.flatMap(([sources]) => sources.map((s) => s.privateStoragePath));
+    const requested = publicShelfDouble.image.mock.calls.flatMap(([, , sources]) => sources.map((s) => s.privateStoragePath));
     expect(requested).toEqual(['people/user-1/declared.png']);
   });
 });

@@ -20,37 +20,11 @@
  * σειρά· η Φ3 τον απαντά με **αντιστάθμιση**, όχι με σειρά.
  */
 
+import { publicShelfDouble } from '@/test-utils/public-shelf-double';
 import type { PublicShelfReport } from '../public-shelf.service';
 import { LISTING_SHELF } from '@/services/upload/utils/public-shelf-kinds';
 
-const reconcilePublicShelf = jest.fn<Promise<PublicShelfReport<unknown>>, [unknown, string, readonly unknown[]]>();
-
-jest.mock('../public-shelf.service', () => ({
-  reconcilePublicShelf: (...args: [unknown, string, readonly unknown[]]) => reconcilePublicShelf(...args),
-}));
-
-// 🔴 **ΤΟ ΔΕΥΤΕΡΟ ΚΕΦΑΛΙ ΜΟΚΑΡΕΤΑΙ ΜΑΖΙ ΜΕ ΤΟ ΠΡΩΤΟ** *(ADR-845 Φ4.2β)*. Από τη Φ4.2β ο
-//    ενορχηστρωτής καλεί **δύο** ράφια. Χωρίς αυτό η σουίτα φτάνει στο **αληθινό** κεφάλι
-//    μοντέλου, που σέρνει `firebase-admin` και χτυπά **πραγματικό GCS**
-//    *(«The specified bucket does not exist»)* — δίκτυο μέσα σε unit test: **+8s** και
-//    **ασταθές υπό φόρτο** *(μετρημένο: έπεσε σε παράλληλο τρέξιμο, πέρασε μόνο του)*.
-// 🔑 Αυτή η σουίτα ρωτά για τη διαδρομή των **ΕΙΚΟΝΩΝ**· το ράφι μοντέλων έχει δικές του
-//    άγκυρες *(`listing-shelf-withdrawal.test` · `public-shelf-model-bake.test`)*.
-jest.mock('../public-shelf-model.service', () => ({
-  reconcilePublicModelShelf: async () => ({
-    outcome: 'reconciled', published: [], removed: 0, rejected: 0,
-  }),
-}));
-// ADR-907 §10 — το τρίτο κεφάλι: αλλιώς το αληθινό θα ζητούσε κάδο (αργό και ασταθές υπό φόρτο, όπως το μοντέλο).
-jest.mock('../public-shelf-video.service', () => ({
-  reconcilePublicVideoShelf: async () => ({
-    outcome: 'reconciled', published: [], removed: 0, rejected: 0,
-  }),
-}));
-// ADR-920 Β3β — το κεφάλι του εδάφους: αλλιώς το αληθινό θα ζητούσε κάδο.
-jest.mock('../public-shelf-terrain.service', () => ({
-  reconcilePublicTerrainShelf: async () => ({ outcome: 'reconciled', published: [], removed: 0, rejected: 0 }),
-}));
+const reconcilePublicShelf = publicShelfDouble.image;
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { writeListingProjection, withdrawPublicListing } = require('../publish-public-listing') as

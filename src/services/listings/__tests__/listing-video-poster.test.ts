@@ -15,6 +15,7 @@
  * - Ε8: `durationSec` / `width` / `height` του βίντεο χάνονται ή αντικαθίστανται από του εξωφύλλου στο γραμμένο έγγραφο.
  */
 
+import { publicShelfDouble } from '@/test-utils/public-shelf-double';
 import { fileCompanionPath } from '@/lib/files/file-companion-objects';
 import type { ListingMaterial } from '@/lib/listings/listing-material';
 import type { PublicShelfSource } from '@/services/upload/utils/storage-path-public-shelf';
@@ -22,25 +23,9 @@ import type { PublicListing } from '@/types/public-listing';
 
 import { splitVideoPosters, videoPosterSources } from '../listing-video-poster';
 
-type ShelfCall = [kind: unknown, subjectId: string, sources: readonly PublicShelfSource<ListingMaterial>[]];
-
-const reconcilePublicShelf = jest.fn<Promise<unknown>, ShelfCall>();
-const reconcilePublicModelShelf = jest.fn<Promise<unknown>, ShelfCall>();
-const reconcilePublicVideoShelf = jest.fn<Promise<unknown>, ShelfCall>();
-
-jest.mock('../public-shelf.service', () => ({
-  reconcilePublicShelf: (...args: ShelfCall) => reconcilePublicShelf(...args),
-}));
-jest.mock('../public-shelf-model.service', () => ({
-  reconcilePublicModelShelf: (...args: ShelfCall) => reconcilePublicModelShelf(...args),
-}));
-jest.mock('../public-shelf-video.service', () => ({
-  reconcilePublicVideoShelf: (...args: ShelfCall) => reconcilePublicVideoShelf(...args),
-}));
-// ADR-920 Β3β — το κεφάλι του εδάφους: αλλιώς το αληθινό θα ζητούσε κάδο.
-jest.mock('../public-shelf-terrain.service', () => ({
-  reconcilePublicTerrainShelf: async () => ({ outcome: 'reconciled', published: [], removed: 0, rejected: 0 }),
-}));
+const reconcilePublicShelf = publicShelfDouble.image;
+const reconcilePublicModelShelf = publicShelfDouble.model;
+const reconcilePublicVideoShelf = publicShelfDouble.video;
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { writeWithShelf } = require('../publish-public-listing-shelf') as typeof import('../publish-public-listing-shelf');

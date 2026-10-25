@@ -10,23 +10,12 @@
  * Firestore: η κοινή `FakeFirestore` (πραγματικές συναλλαγές). Τα ράφια μοκάρονται, αλλιώς χτυπούν πραγματικό GCS.
  */
 
-jest.mock('../public-shelf.service', () => ({
-  reconcilePublicShelf: async () => ({ outcome: 'reconciled', published: [], removed: 0, rejected: 0 }),
-}));
-jest.mock('../public-shelf-model.service', () => ({
-  reconcilePublicModelShelf: async () => ({ outcome: 'reconciled', published: [], removed: 0, rejected: 0 }),
-}));
-jest.mock('../public-shelf-video.service', () => ({
-  reconcilePublicVideoShelf: async () => ({ outcome: 'reconciled', published: [], removed: 0, rejected: 0 }),
-}));
-jest.mock('../public-shelf-terrain.service', () => ({
-  reconcilePublicTerrainShelf: async () => ({ outcome: 'reconciled', published: [], removed: 0, rejected: 0 }),
-}));
 jest.mock('@/services/mandate/showcase-presence.service', () => ({
   refreshShowcasePresence: async () => undefined,
 }));
 
 // eslint-disable-next-line import/first -- τα mocks πρέπει να δηλωθούν πριν τα imports
+import '@/test-utils/public-shelf-double';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';

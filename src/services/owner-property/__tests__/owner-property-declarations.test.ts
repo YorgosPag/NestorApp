@@ -7,6 +7,7 @@
  * @related services/owner-property/owner-property-declarations.service.ts · lib/objective-value/objective-value-declarations.ts
  */
 
+import '@/test-utils/public-shelf-double';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import type { ValueZoneVerdict } from '@/lib/market/value-zone-at-point';
@@ -26,20 +27,6 @@ jest.mock('@/services/entity-audit.service', () => {
 });
 jest.mock('@/services/market/value-zones.reader', () => ({
   readValueZoneAt: (position: unknown) => zoneVerdict(position),
-}));
-jest.mock('@/services/listings/public-shelf.service', () => ({
-  reconcilePublicShelf: async () => ({ outcome: 'reconciled', published: [], removed: 0, rejected: 0 }),
-}));
-jest.mock('@/services/listings/public-shelf-model.service', () => ({
-  reconcilePublicModelShelf: async () => ({ outcome: 'reconciled', published: [], removed: 0, rejected: 0 }),
-}));
-// ADR-907 §10 — το τρίτο κεφάλι του ραφιού (βίντεο): αλλιώς το αληθινό θα ζητούσε κάδο.
-jest.mock('@/services/listings/public-shelf-video.service', () => ({
-  reconcilePublicVideoShelf: async () => ({ outcome: 'reconciled', published: [], removed: 0, rejected: 0 }),
-}));
-// ADR-920 Β3β — το κεφάλι του εδάφους: αλλιώς το αληθινό θα ζητούσε κάδο.
-jest.mock('@/services/listings/public-shelf-terrain.service', () => ({
-  reconcilePublicTerrainShelf: async () => ({ outcome: 'reconciled', published: [], removed: 0, rejected: 0 }),
 }));
 jest.mock('@/services/mandate/showcase-presence.service', () => ({
   refreshShowcasePresence: async () => undefined,

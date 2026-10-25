@@ -28,29 +28,15 @@
  * | Α35 | «μη μου ξαναστείλετε» φράζει αιτήματα για τους ίδιους όρους, όχι τη συναίνεση | σύμπτυξη σε `absent` |
  */
 
+import { publicShelfDouble } from '@/test-utils/public-shelf-double';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
-type ShelfCall = [kind: unknown, subjectId: string, sources: readonly unknown[]];
 const EMPTY_REPORT = { outcome: 'reconciled', published: [], removed: 0, rejected: 0 };
-const reconcilePublicShelf = jest.fn<Promise<unknown>, ShelfCall>();
-const reconcilePublicModelShelf = jest.fn<Promise<unknown>, ShelfCall>();
+const reconcilePublicShelf = publicShelfDouble.image;
+const reconcilePublicModelShelf = publicShelfDouble.model;
 const recordOwnerPropertyWrite = jest.fn<Promise<void>, [unknown, { extraChanges?: readonly { field: string; newValue: unknown }[] }]>();
 const sendMandateInvitation = jest.fn<Promise<unknown>, [unknown, string, unknown]>();
 
-jest.mock('@/services/listings/public-shelf.service', () => ({
-  reconcilePublicShelf: (...args: ShelfCall) => reconcilePublicShelf(...args),
-}));
-jest.mock('@/services/listings/public-shelf-model.service', () => ({
-  reconcilePublicModelShelf: (...args: ShelfCall) => reconcilePublicModelShelf(...args),
-}));
-// ADR-907 §10 — το τρίτο κεφάλι του ραφιού (βίντεο): αλλιώς το αληθινό θα ζητούσε κάδο.
-jest.mock('@/services/listings/public-shelf-video.service', () => ({
-  reconcilePublicVideoShelf: async () => ({ outcome: 'reconciled', published: [], removed: 0, rejected: 0 }),
-}));
-// ADR-920 Β3β — το κεφάλι του εδάφους: αλλιώς το αληθινό θα ζητούσε κάδο.
-jest.mock('@/services/listings/public-shelf-terrain.service', () => ({
-  reconcilePublicTerrainShelf: async () => ({ outcome: 'reconciled', published: [], removed: 0, rejected: 0 }),
-}));
 jest.mock('@/services/mandate/showcase-presence.service', () => ({ refreshShowcasePresence: async () => undefined }));
 jest.mock('@/services/owner-property/owner-property-audit', () => ({
   recordOwnerPropertyWrite: (...args: Parameters<typeof recordOwnerPropertyWrite>) => recordOwnerPropertyWrite(...args),

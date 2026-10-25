@@ -22,6 +22,8 @@
  * χειρότερο από το πρόβλημα που λύνουμε. Η `Θ4` το κλειδώνει.
  */
 
+// Πρώτο import: τα κεφάλια του ραφιού ΔΕΝ χτυπούν πραγματικό GCS (ήταν ~4 s κρύα πρώτη αποθήκευση).
+import '@/test-utils/public-shelf-double';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { brokeredOwnerProperty } from '@/lib/owner-property/__tests__/owner-property-fixtures';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
