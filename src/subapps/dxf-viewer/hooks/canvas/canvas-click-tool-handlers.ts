@@ -63,9 +63,9 @@ import {
   addBreakline,
   removeBreakline,
   findBreaklineBySourceEntity,
-  getTopoBreaklines,
   getTopoPoints,
 } from '../../systems/topography/TopoPointStore';
+import { showTopoBreaklineHint } from './topo-breakline-hint';
 
 // ============================================================================
 // ROTATION ENTITY SELECTION (PRIORITY 1.3)
@@ -364,23 +364,14 @@ export function handleAreaLabelClick(
 // ============================================================================
 // TOPO BREAKLINE PICK (ADR-650 M2-Β — 1 κλικ: γραμμή → constraint, ξανά → αφαίρεση)
 // ============================================================================
-const TOPO_BREAKLINE_NS = 'dxf-viewer-shell';
-
-/** Status-prompt του εργαλείου (πάντα με το ζωντανό πλήθος constraints). */
-function setTopoBreaklineHint(key: string): void {
-  toolHintOverrideStore.setOverride(
-    i18n.t(`topoBreakline.status.${key}`, { ns: TOPO_BREAKLINE_NS, count: getTopoBreaklines().length }),
-  );
-}
-
 /**
  * ADR-650 M2-Β — ένα κλικ πάνω σε υπάρχουσα γραμμή (line/polyline/lwpolyline) την
  * καταχωρεί ως **breakline constraint** στο `TopoPointStore` (constrained edge στο CDT →
  * η επιφάνεια κρατά το κοφτό σκαλί). **Toggle**: δεύτερο κλικ στην ίδια γραμμή την αφαιρεί.
  *
- * Το υψόμετρο το αποφασίζει ο pure πυρήνας (`buildBreaklineFromEntity`): `lwpolyline.elevation`
- * → σταθερό z· αλλιώς **proximity** (z από το πλησιέστερο μετρημένο σημείο — Civil 3D pattern,
- * αφού το scene είναι 2D). Χωρίς φορτωμένα σημεία μια 2D γραμμή δεν μπορεί να υψομετρηθεί →
+ * Το υψόμετρο το αποφασίζει ο pure πυρήνας (`buildBreaklineFromEntity`): γραμμή με Z (SSoT
+ * `utils/entity-elevation` — ενιαίο ή ανά κορυφή, και από εισαγόμενο DXF) → standard· αλλιώς
+ * **proximity** (z από το πλησιέστερο μετρημένο σημείο — Civil 3D pattern). Χωρίς φορτωμένα σημεία μια 2D γραμμή δεν μπορεί να υψομετρηθεί →
  * ρητό μήνυμα, ΠΟΤΕ σιωπηλή αποτυχία.
  *
  * Καταναλώνει πάντα το κλικ (το εργαλείο μένει ενεργό — μαρκάρεις πολλές γραμμές στη σειρά).
@@ -397,7 +388,7 @@ export function handleTopoBreaklineClick(
   const tolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / getImmediateTransform().scale;
   const entityId = pickTopEntityAt(worldPoint, entities, isBreaklineCandidate, tolerance);
   if (!entityId) {
-    setTopoBreaklineHint('awaitingEntity');
+    showTopoBreaklineHint('awaitingEntity');
     return true;
   }
 
@@ -405,7 +396,7 @@ export function handleTopoBreaklineClick(
   if (existing) {
     removeBreakline(existing.id);
     p.universalSelection.replaceEntitySelection([]);
-    setTopoBreaklineHint('removed');
+    showTopoBreaklineHint('removed');
     return true;
   }
 
@@ -415,13 +406,13 @@ export function handleTopoBreaklineClick(
     ? buildBreaklineFromEntity(entity, getTopoPoints(), getTopoDisplayProjector())
     : null;
   if (!built) {
-    setTopoBreaklineHint('needsPoints');
+    showTopoBreaklineHint('needsPoints');
     return true;
   }
 
   addBreakline(built.vertices, built.closed, entityId);
   p.universalSelection.replaceEntitySelection([entityId]);
-  setTopoBreaklineHint(built.source === 'elevation' ? 'addedElevation' : 'addedProximity');
+  showTopoBreaklineHint(built.source === 'elevation' ? 'addedElevation' : 'addedProximity');
   dlog('handleTopoBreaklineClick', `breakline from ${entityId} (${built.source}, ${built.vertices.length} verts)`);
   return true;
 }

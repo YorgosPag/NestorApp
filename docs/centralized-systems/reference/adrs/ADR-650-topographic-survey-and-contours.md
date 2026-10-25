@@ -583,6 +583,25 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
 
 ## Changelog
 
+- **2026-10-25 (v38)** — **M2 μέρος Β: το status-prompt του εργαλείου ασυνεχειών παράγεται από το store**
+  ([ADR-920](./ADR-920-listing-plot-terrain.md) §13.8 «Βήμα Γ»). Το «· σύνολο: N» υπολογιζόταν μόνο μέσα στο κλικ, ενώ τις
+  ασυνέχειες γράφουν **πέντε** δρόμοι (κλικ · ribbon «Καθαρισμός» · έγκριση αυτόματων · επαναφορά επιπέδου ·
+  `topo-source-cascade`) ⇒ τέσσερις άφηναν μπαγιάτικο πλήθος. Τώρα `hooks/canvas/topo-breakline-hint.ts`: κείμενο =
+  f(τελευταία ενέργεια, `getTopoBreaklines().length`)· όσο είναι ενεργό το εργαλείο, **ένας** `subscribeTopo` ξαναγράφει
+  όταν αλλάξει η αναφορά του πίνακα ασυνεχειών (όχι σε σημεία/όριο/crop) και επαναφέρει την ενέργεια στο idle· το κλικ
+  γράφει τη δική του μετά τη μετάλλαξη (σύγχρονο notify) και κερδίζει. Κανένας γραφέας δεν καλεί hint. Το
+  `useTopoPickTool` πέρασε σε `useEffect` με cleanup: καθαρίζει prompt/hover **μόνο** όποιος ήταν ενεργός (το παλιό
+  `deactivate` έτρεχε και στο mount ως ανενεργό). i18n `topoBreakline.status.awaitingEntity` → ICU plural με πλήθος
+  (el + en). 8 tests `hooks/canvas/__tests__/topo-breakline-hint.test.ts` πάνω στο πραγματικό store.
+
+- **2026-10-25 (v37)** — **M2 μέρος Β: το υψόμετρο της ακμής θραύσης διαβάζεται από ΚΑΘΕ μορφή μέσω ενός SSoT.**
+  Το `buildBreaklineFromEntity` διάβαζε μόνο `isLWPolylineEntity(e) ? e.elevation` — αλλά εισαγόμενη LWPOLYLINE γίνεται
+  `polyline` και ο κωδικός 38 πετιόταν ([ADR-635](./ADR-635-autocad-dxf-import-entity-coverage.md) Φ C.29) ⇒ κάθε γραμμή
+  από DXF έπεφτε σιωπηλά σε proximity. Τώρα ρωτά το `utils/entity-elevation.entityVertexElevations`: ενιαίο `elevation`,
+  Z ανά κορυφή (3Δ πολυγραμμή τοπογράφου), ή LINE start/end. Ασυμφωνία μήκους (επεξεργασμένη γραμμή) ⇒ proximity, ποτέ
+  μετατοπισμένο z. Το «elevation = 0 είναι πραγματικό» ισχύει για γραμμές του viewer· στην **εισαγωγή** «Z = 0 παντού ⇒
+  2Δ» (Civil 3D / Carlson). 4 νέα tests στο `topo-breakline-pick.test.ts`.
+
 - **2026-10-25 (v36)** — **M5α: έκτος έλεγχος QA `breakline-conflict`** ([ADR-920](./ADR-920-listing-plot-terrain.md)
   §13.8 «Βήμα Τ.3»). Οι αντιφάσεις που ο builder λύνει από το v35 (τομή · κορυφή πάνω σε ακμή) γίνονται εύρημα με θέση
   WORLD, 3Δ στο υψόμετρο που κρατήθηκε, και την ακμή που ακυρώθηκε ως `#n`. **Κανένας δεύτερος τριγωνισμός**: ο όροφος 1

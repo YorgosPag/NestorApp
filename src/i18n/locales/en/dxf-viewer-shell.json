@@ -64,7 +64,7 @@
   },
   "topoBreakline": {
     "status": {
-      "awaitingEntity": "Pick a drawing line to use as a breakline",
+      "awaitingEntity": "{count, plural, =0 {Pick a drawing line to use as a breakline} other {Pick a drawing line to use as a breakline · total: #}}",
       "addedElevation": "Breakline added (elevation from the line) · total: {count}",
       "addedProximity": "Breakline added (elevation from the nearest points) · total: {count}",
       "removed": "Breakline removed · total: {count}",

@@ -17,34 +17,50 @@
  * @see ../canvas/canvas-click-topo-boundary — handleTopoBoundaryClick
  * @see ../../systems/topography/TopoPointStore — constraints + boundary SSoT
  */
-import { useCallback } from 'react';
+import { useEffect } from 'react';
 import { i18n } from '@/i18n';
-import { useToolLifecycle } from '../tools/useToolLifecycle';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { setHoveredEntity } from '../../systems/hover/HoverStore';
+import { startTopoBreaklineHintSync } from '../canvas/topo-breakline-hint';
 
 const NS = 'dxf-viewer-shell';
 
-/** Ο κοινός πυρήνας: prompt σε activate, καθάρισμα hover + prompt σε deactivate. */
-function useTopoPickTool(isActive: boolean, idleHintKey: string): void {
-  const activate = useCallback(() => {
-    toolHintOverrideStore.setOverride(i18n.t(idleHintKey, { ns: NS }));
-  }, [idleHintKey]);
+/** Ξεκινά το prompt του εργαλείου· επιστρέφει ό,τι πρέπει να σταματήσει στην απενεργοποίηση. */
+type StartHint = () => () => void;
 
-  const deactivate = useCallback(() => {
-    setHoveredEntity(null); // καθάρισε το hover-highlight όταν φεύγει το εργαλείο
-    toolHintOverrideStore.setOverride(null);
-  }, []);
-
-  useToolLifecycle(isActive, activate, deactivate);
+/**
+ * Ο κοινός πυρήνας: prompt όσο είναι ενεργό, καθάρισμα hover + prompt στην απενεργοποίηση.
+ *
+ * ADR-920 Β4.8 Γ — cleanup αντί για `useToolLifecycle`: καθαρίζει ΜΟΝΟ όποιος ήταν ενεργός. Το παλιό
+ * `deactivate` έτρεχε και στο mount ως ανενεργό (`setOverride(null)`) και μπορούσε να σβήσει prompt ξένου
+ * εργαλείου· επίσης η ζωντανή συνδρομή του hint χρειάζεται ζεύγος start/stop.
+ */
+function useTopoPickTool(isActive: boolean, startHint: StartHint): void {
+  useEffect(() => {
+    if (!isActive) return undefined;
+    const stopHint = startHint();
+    return () => {
+      stopHint();
+      setHoveredEntity(null); // καθάρισε το hover-highlight όταν φεύγει το εργαλείο
+      toolHintOverrideStore.setOverride(null);
+    };
+  }, [isActive, startHint]);
 }
 
-/** ADR-650 M2-Β — «Γραμμές ασυνέχειας» (breakline picking). */
+const noop = (): void => undefined;
+
+/** ADR-650 M6 — στατικό prompt του ορίου (το πλήθος δεν έχει νόημα: ένα όριο). */
+const startBoundaryHint: StartHint = () => {
+  toolHintOverrideStore.setOverride(i18n.t('topoBoundary.status.awaitingEntity', { ns: NS }));
+  return noop;
+};
+
+/** ADR-650 M2-Β — «Γραμμές ασυνέχειας» (breakline picking)· prompt πάντα με το ζωντανό πλήθος. */
 export function useTopoBreaklineTool(isActive: boolean): void {
-  useTopoPickTool(isActive, 'topoBreakline.status.awaitingEntity');
+  useTopoPickTool(isActive, startTopoBreaklineHintSync);
 }
 
 /** ADR-650 M6 (Γ) — «Όριο οικοπέδου» (volume boundary picking). */
 export function useTopoBoundaryTool(isActive: boolean): void {
-  useTopoPickTool(isActive, 'topoBoundary.status.awaitingEntity');
+  useTopoPickTool(isActive, startBoundaryHint);
 }
