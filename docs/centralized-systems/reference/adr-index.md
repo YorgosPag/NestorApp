@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 870 ADRs | Last Updated: 2026-10-25
+**📊 Stats**: 871 ADRs | Last Updated: 2026-10-25
 
 ---
 
@@ -905,6 +905,7 @@
 | **ADR-920** | Τοπογραφικό στην αγγελία οικοπέδου: ανάγλυφο 3D, ισοϋψείς και ενδεικτικός όγκος δόμησης | ✅ 🟠 PROPOSED — 2026-10-23 · Β0 (αποφάσεις + πλάνο) ✅ · **Β1 (καθαρός πυρήνας στο `src/lib/terrain/`) ✅** · **Β2 (συμβόλαιο + builder στιγμιοτύπου) ✅** · **Β3α (πόρτα server) ✅** · **Β3β (κρίκος 26 + δημόσιο ράφι + CHECK 3.105 + i18n) ✅** · **Β4 σε εξέλιξη** (Β4.1α ✅ · Β4.1β ✅ · Β4.2 ✅ · Β4.3+5 ✅ · Β4.6 ✅ · Β4.4 ✅ · Β4.7 ✅ · **Β4.8 σε εξέλιξη**, §13) · Β5–Β8 δεν ξεκίνησαν | 2026-10-23 | Marketplace / Public listing / Topography / 3D | [📄](./adrs/ADR-920-listing-plot-terrain.md) |
 | **ADR-921** | «Σχεδίαση Επιπέδων»: πρόληψη αντί για απόρριψη — ΕΝΑ SSoT «έτοιμο;» (όροφος + αναφορά + χρήστης) + γενική πύλη διαθεσιμότητας εργαλείων (`ToolAvailabilityStore`), γκρίζο κουμπί με αιτία, toast με διόρθωση «Εισαγωγή κάτοψης», σωστό μήνυμα ανά αιτία | ✅ 🟡 **ΥΛΟΠΟΙΗΜΕΝΟ σε κώδικα — uncommitted (2026-10-24)** · jest: δες §7 · **όχι** σε browser | 2026-10-24 | DXF Viewer / Overlays / Tools / UX | [📄](./adrs/ADR-921-overlay-drawing-readiness.md) |
 | **ADR-922** | Η εικόνα δημοσίευσης ενός DXF: παράγωγο PNG με καταγεγραμμένη κατάσταση (`publishRaster` ready/failed), ένας γραφέας με δύο εισόδους (`POST /api/files/{id}/publish-raster` + δίχτυ ασφαλείας δημοσίευσης), μονόχρωμη απόδοση αγγελίας 3000px με αναλογίες σχεδίου, ένας κριτής φόρμας/βιτρίνας (`imagePath`) | ✅ 🟡 **ΥΛΟΠΟΙΗΜΕΝΟ σε κώδικα — uncommitted (2026-10-24)** · jest: δες §8 · **όχι** σε browser · **χρειάζεται deploy κανόνων Firestore** | 2026-10-24 | Files / Listings / Owner property dossier / DXF | [📄](./adrs/ADR-922-dxf-publish-raster.md) |
+| **ADR-923** | Κατάλογος Προϊόντων Προμηθευτή (PIM) και Εκδότης Τιμοκαταλόγων | ✅ 📐 **ΣΧΕΔΙΑΣΜΟΣ — εγκεκριμένο, χωρίς κώδικα (2026-10-25)** · και οι 11 αποφάσεις του §11 πάρθηκαν · επόμενο: **Φάση 0** (μετρήσεις) πριν από οποιαδήποτε δέσμευση μηχανής | 2026-10-25 | Procurement / Network / Publishing / Data model | [📄](./adrs/ADR-923-supplier-product-catalog-pim.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
