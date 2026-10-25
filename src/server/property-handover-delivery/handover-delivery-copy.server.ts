@@ -42,7 +42,7 @@ import { handoverDocRef } from '@/services/property-handover/property-handover-p
 import type { DeliverableHandoverFile } from '@/services/property-handover/property-handover-set.server';
 import type { PropertyHandover } from '@/types/property-handover';
 
-import { deliveryLedgerRef, stageDeliveryLedgerRow, type HandoverLedgerProof } from './handover-delivery-ledger.server';
+import { deliveryLedgerRef, stageDeliveryLedgerRow, type HandoverLedgerProof, type HandoverSourceObject } from './handover-delivery-ledger.server';
 import { handoverEntityKey, type HandoverDossierTargets } from './handover-delivery-dossiers.server';
 
 /** Ο δρών της παράδοσης στο ιστορικό — ονομασμένος αυτοματισμός, ποτέ ο αγοραστής (δεν το ανέβασε εκείνος). */
@@ -70,6 +70,8 @@ export interface HandoverCopyContext {
 interface PreparedCopy {
   readonly item: HandoverDeliverableItem;
   readonly source: File;
+  /** Φ-Δ.7β — πού ζουν τα bytes της **πηγής** (μένει στη γραμμή: εντοπισμός και χωρίς την εγγραφή της). */
+  readonly sourceObject: HandoverSourceObject;
   readonly placement: FileStoragePlacement;
   readonly dossierId: string;
   readonly built: ReturnType<typeof buildPendingFileRecordData>;
@@ -109,7 +111,8 @@ async function prepareCopy(ctx: HandoverCopyContext, planned: PlannedHandoverCop
       crc32c: source.metadata.crc32c, size: Number(source.metadata.size), revisionOfFileId: planned.revisionOfFileId,
     },
   });
-  return { item, source, placement, dossierId, built, revisionOfFileId: planned.revisionOfFileId };
+  const sourceObject: HandoverSourceObject = { placement: fileStoragePlacementOf(data), path: storagePath };
+  return { item, source, sourceObject, placement, dossierId, built, revisionOfFileId: planned.revisionOfFileId };
 }
 
 /** Bytes → απόδειξη, για μία θέση. Επιστρέφει όσα **αποδείχτηκαν** πανομοιότυπα στον προορισμό. */
@@ -178,7 +181,7 @@ async function runCopyTransaction(ctx: HandoverCopyContext, copy: PreparedCopy, 
       sourceFileId: row.sourceFileId, copyFileId: row.copyFileId, crc32c: row.crc32c, size: row.size,
       companyId: ctx.handover.companyId, propertyId: ctx.handover.propertyId, handoverId: ctx.handover.id,
       recipientUserId: ctx.recipientUserId, dossierId: copy.dossierId, sourceGeneration: row.sourceGeneration ?? '',
-      revisionOfFileId: copy.revisionOfFileId, deliveredAt: nowISO(),
+      revisionOfFileId: copy.revisionOfFileId, deliveredAt: nowISO(), sourceObject: copy.sourceObject,
     });
     return { committed: true, preserved: stagePreservation(tx, item.file.doc.ref, sourceSnap.data(), ledgerRef.id) };
   });
@@ -189,7 +192,7 @@ async function commitCopy(ctx: HandoverCopyContext, copy: PreparedCopy): Promise
   const custody = { userId: ctx.recipientUserId };
   const row: HandoverLedgerProof = {
     sourceFileId: item.sourceFileId, copyFileId: built.fileId, crc32c: String(source.metadata.crc32c), size: Number(source.metadata.size),
-    sha256: null, sourceGeneration: String(source.metadata.generation ?? ''),
+    sha256: null, sourceGeneration: String(source.metadata.generation ?? ''), sourceObject: copy.sourceObject, recovery: null,
   };
   // 🧷 Φ-Δ.7α — bytes ΠΡΩΤΑ (ποτέ «διατηρείται στη βάση, ελεύθερο στον κάδο»)· ό,τι δεν κράτησε η βάση ξεκλειδώνεται μετά.
   await preserveObjectBytes(item.file.doc.data());

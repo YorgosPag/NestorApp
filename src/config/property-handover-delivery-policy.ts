@@ -44,3 +44,10 @@ export const HANDOVER_DELIVERY_CRON_HASH_BYTE_BUDGET = 2 * 1024 * 1024 * 1024;
 
 /** Πόσα βήματα πίσω ακολουθείται η αλυσίδα αναθεωρήσεων μιας πηγής (A → B → C) για το `revisionOfFileId`. */
 export const HANDOVER_DELIVERY_REVISION_CHAIN_LIMIT = 8;
+
+/**
+ * ADR-916 Φ-Δ.7β — η μίσθωση μιας ανάκτησης από το soft delete: όσο ισχύει, δεύτερη εκτέλεση **δεν** ξεκινά δεύτερη
+ * επαναφορά. Πάνω από την προθεσμία του cron (`HANDOVER_DELIVERY_CRON_DEADLINE_MS`), ώστε μια ζωντανή εκτέλεση να μη
+ * χάσει ποτέ τη μίσθωσή της· κάτω από τον κύκλο των 15′, ώστε μια κρασαρισμένη να συνεχιστεί στην επόμενη.
+ */
+export const HANDOVER_DELIVERY_RECOVERY_LEASE_MS = 10 * 60_000;

@@ -15,18 +15,19 @@ import 'server-only';
  * 🛡️ **Ποτέ δεν πετά**: αποτυχία γραμμής = `lastError`· η γραμμή μένει χωρίς sha256 και η επόμενη εκτέλεση ξαναδοκιμάζει.
  */
 
-import type { File } from '@google-cloud/storage';
+import type { Bucket, File } from '@google-cloud/storage';
 import type { DocumentData } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getErrorMessage } from '@/lib/error-utils';
 import { planHandoverHashing } from '@/lib/property-handover/handover-delivery-plan';
-import { fileRecordBucket } from '@/server/files/file-record-bucket';
+import { fileRecordBucket, fileStorageBucket } from '@/server/files/file-record-bucket';
 import { sha256OfStoredObject } from '@/server/storage/object-sha256.server';
 import { statObjects } from '@/server/storage/placement-copy';
 
 import { handoverCopyRecordRef, type HandoverCopyContext } from './handover-delivery-copy.server';
 import { recordDeliverySha256, type HandoverLedgerProof, type HandoverSha256Origin } from './handover-delivery-ledger.server';
+import { hasOpenRecovery, recoverDeliveredRow } from './handover-delivery-recovery.server';
 
 export interface HandoverHashBudget {
   readonly maxBytes: number;
@@ -51,11 +52,37 @@ export interface HandoverHashRun {
   readonly lastError: string | null;
 }
 
+/** Πού ζει ένα αντικείμενο: κάδος + όνομα. */
+interface StoredLocation {
+  readonly bucket: Bucket;
+  readonly path: string;
+}
+
 /** Μία θέση που **ίσως** κρατά τα παραδομένα bytes. `generation` ⇒ μόνο αυτή η γενιά γίνεται δεκτή. */
 interface HashCandidate {
   readonly origin: HandoverSha256Origin;
-  readonly record: DocumentData | undefined;
+  readonly location: StoredLocation | null;
   readonly generation: string | null;
+}
+
+/** Η θέση των bytes μιας εγγραφής — `null` αν λείπει η εγγραφή ή η διαδρομή της. */
+function locationOfRecord(record: DocumentData | undefined): StoredLocation | null {
+  const path: unknown = record?.storagePath;
+  if (record === undefined || typeof path !== 'string' || path === '') return null;
+  return { bucket: fileRecordBucket(record), path };
+}
+
+/**
+ * Η θέση της **πηγής**: από την εγγραφή της εταιρείας· αν η εγγραφή **λείπει** (σβήστηκε εκτός εφαρμογής), από τον
+ * εντοπιστή της γραμμής (Φ-Δ.7β) — η καρφωμένη γενιά εγγυάται ότι μετριούνται μόνο τα ίδια bytes. Εγγραφή **ξένου**
+ * ενοικιαστή ⇒ καμία θέση (ποτέ εφεδρεία πάνω από άρνηση ενοικιαστή).
+ */
+function sourceLocationOf(ctx: HandoverHashContext, row: HandoverLedgerProof, source: DocumentData | undefined): StoredLocation | null {
+  // Χωρίς γνωστή γενιά-πηγή δεν αποδεικνύεται ποια bytes παραδόθηκαν ⇒ καμία εφεδρεία.
+  if (row.sourceGeneration === null) return null;
+  if (source !== undefined) return source.companyId === ctx.handover.companyId ? locationOfRecord(source) : null;
+  const located = row.sourceObject;
+  return located === null ? null : { bucket: fileStorageBucket(located.placement), path: located.path };
 }
 
 /** Οι υποψήφιες κάθε γραμμής — εγγραφές μόνο του **σωστού** κατόχου (αγοραστής · μισθωτής), με **μία** ανάγνωση. */
@@ -70,24 +97,22 @@ async function candidatesOf(ctx: HandoverHashContext, rows: readonly HandoverLed
     const copy = snaps[i]?.data();
     const source = snaps[rows.length + i]?.data();
     return [row.sourceFileId, [
-      { origin: 'copy', record: copy?.userId === ctx.recipientUserId ? copy : undefined, generation: null },
-      // Χωρίς γνωστή γενιά-πηγή δεν αποδεικνύεται ποια bytes παραδόθηκαν ⇒ καμία εφεδρεία.
-      { origin: 'source', record: source?.companyId === ctx.handover.companyId && row.sourceGeneration !== null ? source : undefined, generation: row.sourceGeneration },
+      { origin: 'copy', location: copy?.userId === ctx.recipientUserId ? locationOfRecord(copy) : null, generation: null },
+      { origin: 'source', location: sourceLocationOf(ctx, row, source), generation: row.sourceGeneration },
     ]];
   }));
 }
 
-/** Το αντικείμενο μιας εγγραφής, με τα μεταδεδομένα της **τρέχουσας** γενιάς — `null` αν λείπει κάτι. */
-async function storedObjectOf(record: DocumentData | undefined): Promise<File | null> {
-  const path: unknown = record?.storagePath;
-  if (record === undefined || typeof path !== 'string' || path === '') return null;
-  const [file] = await statObjects(fileRecordBucket(record), [path]);
+/** Το αντικείμενο μιας θέσης, με τα μεταδεδομένα της **τρέχουσας** γενιάς — `null` αν λείπει κάτι. */
+async function storedObjectOf(location: StoredLocation | null): Promise<File | null> {
+  if (location === null) return null;
+  const [file] = await statObjects(location.bucket, [location.path]);
   return file ?? null;
 }
 
 /** Το sha256 μιας υποψήφιας — **μόνο** αν η γενιά της κρατά τα bytes της γραμμής (crc32c + μέγεθος, γενιά αν ζητήθηκε). */
 async function measureCandidate(row: HandoverLedgerProof, candidate: HashCandidate): Promise<string | null> {
-  const file = await storedObjectOf(candidate.record);
+  const file = await storedObjectOf(candidate.location);
   if (file === null) return null;
   const { crc32c, size, generation } = file.metadata;
   if (crc32c !== row.crc32c || Number(size) !== row.size) return null;
@@ -96,7 +121,10 @@ async function measureCandidate(row: HandoverLedgerProof, candidate: HashCandida
   return measured.kind === 'hashed' ? measured.sha256 : null;
 }
 
-/** Μία γραμμή: η πρώτη υποψήφια που αποδεικνύεται γράφεται **μία** φορά. `null` ⇒ καμία δεν αποδείχτηκε. */
+/**
+ * Μία γραμμή: η πρώτη υποψήφια που αποδεικνύεται γράφεται **μία** φορά. Καμία ζωντανή υποψήφια (χωρίς σφάλμα δικτύου —
+ * εκείνο πετά) ⇒ Φ-Δ.7β: ανάκτηση από το soft delete. `null` ⇒ τίποτα δεν αποδείχτηκε.
+ */
 async function hashRow(ctx: HandoverHashContext, row: HandoverLedgerProof, candidates: readonly HashCandidate[]): Promise<string | null> {
   for (const candidate of candidates) {
     const sha256 = await measureCandidate(row, candidate);
@@ -104,7 +132,20 @@ async function hashRow(ctx: HandoverHashContext, row: HandoverLedgerProof, candi
     const written = await recordDeliverySha256(ctx.adminDb, ctx.handover.id, { ...row, sha256, origin: candidate.origin });
     return written.kind === 'hashed' ? written.sha256 : null;
   }
-  return null;
+  return recoverDeliveredRow(ctx, row);
+}
+
+/**
+ * Φ-Δ.7β δίχτυ — γραμμές **με** sha256 αλλά ανοιχτό ημερολόγιο (η απόδειξη γράφτηκε, η επαναδιαγραφή όχι): κλείνουν, ώστε
+ * να μη μείνει **ποτέ** ζωντανό αντικείμενο που επαναφέραμε. Αποτυχία ⇒ η επόμενη εκτέλεση ξαναδοκιμάζει.
+ */
+async function settleOpenRecoveries(ctx: HandoverHashContext, rows: readonly HandoverLedgerProof[]): Promise<string | null> {
+  let lastError: string | null = null;
+  for (const row of rows) {
+    if (row.sha256 === null || !hasOpenRecovery(row)) continue;
+    await recoverDeliveredRow(ctx, row).catch((error: unknown) => { lastError = getErrorMessage(error); });
+  }
+  return lastError;
 }
 
 /**
@@ -131,5 +172,6 @@ export async function hashDeliveredRows(ctx: HandoverHashContext, rows: readonly
     }
   }
   const out = rows.map((row) => (row.sha256 !== null ? row : { ...row, sha256: proven.get(row.sourceFileId) ?? null }));
+  lastError = (await settleOpenRecoveries(ctx, out)) ?? lastError;
   return { rows: out, hashed: proven.size, pending: out.filter((row) => row.sha256 === null).length, unverifiable, lastError };
 }

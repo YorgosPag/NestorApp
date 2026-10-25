@@ -15,7 +15,7 @@ import { propertyHandoverFromDocument } from '@/lib/property-handover/property-h
 import { isPreserved } from '@/lib/files/file-hold';
 import { handoverCopyFileIdOf, handoverDeliveryIdOf, handoverDossierIdOf, propertyHandoverIdOf } from '@/lib/property-handover/property-handover-id';
 import { deliverHandoverFiles, type HandoverFileDeliveryRecorder } from '@/server/property-handover-delivery/handover-delivery.server';
-import { recordDeliverySha256 } from '@/server/property-handover-delivery/handover-delivery-ledger.server';
+import { claimDeliveryRecovery, recordDeliverySha256 } from '@/server/property-handover-delivery/handover-delivery-ledger.server';
 import { deliverDueHandoverFiles } from '@/services/property-handover/property-handover-delivery-trigger';
 import { runPropertyHandoverDeliveryQueue } from '@/services/property-handover/property-handover-delivery-queue.service';
 import { previewPropertyHandover } from '@/services/property-handover/property-handover-preview.server';
@@ -93,6 +93,7 @@ function seedHandover(patch: Record<string, unknown> = {}) {
 beforeEach(() => {
   fake = new FakeFirestore();
   store.clear();
+  bucket.softDeleted.clear();
   copies.length = 0;
   reads.length = 0;
   mockAudits.length = 0;
@@ -456,6 +457,176 @@ describe('Ζ67–Ζ73 — Φ-Δ.7α: η γενιά-πηγή ΔΙΑΤΗΡΕΙΤΑ
     expect(source('f_plan')?.preservedFor).toEqual(['phdl_other']);
     expect(bytesHeld('f_plan')).toBe(true);
   });
+});
+
+describe('Ζ74–Ζ81 — Φ-Δ.7β: η απόδειξη από το GCS soft delete (Ο13β (ii))', () => {
+  const copyPath = () => String(copyOf('f_plan')?.storagePath);
+  const softDeletedAt = (path: string) => bucket.softDeleted.get(path) ?? [];
+  const dropSourceRecord = () => db().collection(COLLECTIONS.FILES).doc('f_plan').delete();
+  /** Ο κόσμος «εκτός εφαρμογής»: ο αγοραστής έσβησε το αντίγραφο · κάποιος έλυσε το hold και έσβησε πηγή + εγγραφή. */
+  async function loseEverything(): Promise<void> {
+    await deliver(50, 0);
+    await bucket.file(copyPath()).delete();
+    store.set(sourcePath('f_plan'), { ...store.get(sourcePath('f_plan')), temporaryHold: false } as NonNullable<ReturnType<typeof store.get>>);
+    await bucket.file(sourcePath('f_plan')).delete();
+    await dropSourceRecord();
+  }
+  const realFile = bucket.file.bind(bucket);
+  const restores: number[] = [];
+  /** «Κρασάρισμα» μετά την επαναφορά / πριν την επαναδιαγραφή — ρίχνει μία φορά και ξαναγίνεται αθόρυβο. */
+  let restoreHook: () => void = () => undefined;
+  let generationDeleteHook: () => void = () => undefined;
+  const failOnce = (): (() => void) => {
+    let armed = true;
+    return () => {
+      if (!armed) return;
+      armed = false;
+      throw Object.assign(new Error('503 crash'), { code: 503 });
+    };
+  };
+  beforeEach(() => {
+    restores.length = 0;
+    restoreHook = () => undefined;
+    generationDeleteHook = () => undefined;
+    jest.spyOn(bucket, 'file').mockImplementation((path, opts) => {
+      const file = realFile(path, opts);
+      const { restore, delete: remove } = file;
+      file.restore = async (options) => {
+        const restored = await restore(options);
+        restores.push(Number(restored.generation));
+        restoreHook();
+        return restored;
+      };
+      file.delete = async (options) => {
+        if (options?.ifGenerationMatch !== undefined) generationDeleteHook();
+        return remove(options);
+      };
+      return file;
+    });
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it('Ζ74 — ο εντοπιστής της πηγής γράφεται ΣΤΗ ΓΕΝΝΗΣΗ της γραμμής (θέση + διαδρομή) · κανένα ημερολόγιο', async () => {
+    await deliver(50, 0);
+    expect(ledgerRow('f_plan')).toMatchObject({ sourceObject: { placement: 'legacy-default', path: sourcePath('f_plan') }, recovery: null });
+  });
+
+  it('🔴 Ζ75 — εγγραφή-πηγή σβησμένη εκτός εφαρμογής, bytes ζωντανά ⇒ μετριέται από τον εντοπιστή · ΚΑΜΙΑ επαναφορά', async () => {
+    await deliver(50, 0);
+    await bucket.file(copyPath()).delete();
+    await dropSourceRecord();
+    expect(await deliver()).toMatchObject({ kind: 'delivered' });
+    expect(ledgerRow('f_plan')).toMatchObject({ sha256: shaOf(bytesOf('f_plan')), sha256Of: 'source', recovery: null });
+    expect(restores).toEqual([]);
+  });
+
+  it('🔴 Ζ75β — εγγραφή-πηγή ΞΕΝΟΥ ενοικιαστή ⇒ ο εντοπιστής ΔΕΝ την παρακάμπτει: κανένα sha256 από την πηγή', async () => {
+    await deliver(50, 0);
+    await bucket.file(copyPath()).delete();
+    fake.seed(COLLECTIONS.FILES, 'f_plan', { ...docs(COLLECTIONS.FILES).f_plan, companyId: 'comp_beta' });
+    await deliver();
+    expect(ledgerRow('f_plan')).toMatchObject({ sha256: null, sha256Of: null });
+  });
+
+  it('🔴 Ζ76 — ούτε αντίγραφο ούτε πηγή ⇒ επαναφορά → μέτρηση → ΕΠΑΝΑΔΙΑΓΡΑΦΗ: μένει μόνο το sha256, ειλικρινές', async () => {
+    await loseEverything();
+    expect(await deliver()).toMatchObject({ kind: 'delivered' });
+    expect(ledgerRow('f_plan')).toMatchObject({ sha256: shaOf(bytesOf('f_plan')), sha256Of: 'restored-source' });
+    expect(ledgerRow('f_plan')?.recovery).toMatchObject({ restoredGeneration: String(restores[0]), settledAt: expect.any(String) });
+    expect(restores).toHaveLength(1);
+    // Ό,τι σβήστηκε ΜΕΝΕΙ σβησμένο — και η γενιά που γεννήσαμε ξανασβήστηκε.
+    expect(store.has(sourcePath('f_plan'))).toBe(false);
+    expect(softDeletedAt(sourcePath('f_plan')).map((object) => object.generation)).toContain(restores[0]);
+    await deliver();
+    expect(restores).toHaveLength(1);
+  });
+
+  it('🔴 Ζ77 — ζωντανό ΞΕΝΟ αντικείμενο στο όνομα ⇒ καμία επαναφορά από πάνω, καμία διαγραφή του, κανένα sha256', async () => {
+    await loseEverything();
+    const foreign = { crc32c: 'crc_f_plan', size: 1000, generation: 4242, bytes: Buffer.alloc(1000, 'ξένο') };
+    store.set(sourcePath('f_plan'), foreign);
+    expect(await deliver()).toMatchObject({ kind: 'delivering' });
+    expect(store.get(sourcePath('f_plan'))).toEqual(foreign);
+    expect(ledgerRow('f_plan')?.sha256).toBeNull();
+    expect(restores).toEqual([]);
+  });
+
+  it('🔴 Ζ77β — υιοθεσία ΜΟΝΟ για αντικείμενο γεννημένο ΜΕΤΑ τη μίσθωση: παλαιότερο ζωντανό με ίδια bytes ΔΕΝ είναι δικό μας', async () => {
+    await loseEverything();
+    const older = { crc32c: 'crc_f_plan', size: 1000, generation: 4242, bytes: Buffer.alloc(1000, 'ξένο'), timeCreated: '2025-12-01T00:00:00.000Z' };
+    store.set(sourcePath('f_plan'), older);
+    seedLedgerRecovery({ startedAt: '2026-01-01T00:00:00.000Z', restoredGeneration: null, settledAt: null });
+    await deliver();
+    expect(store.get(sourcePath('f_plan'))).toEqual(older);
+    expect(ledgerRow('f_plan')?.sha256).toBeNull();
+  });
+
+  it('🔴 Ζ78 — η soft-deleted γενιά ΔΕΝ είναι αυτή της γραμμής (άλλο crc32c) ή έληξε ⇒ τίποτα· μένει unverifiable (→ Φ-Δ.7γ)', async () => {
+    await loseEverything();
+    bucket.softDeleted.set(sourcePath('f_plan'), softDeletedAt(sourcePath('f_plan')).map((object) => ({ ...object, crc32c: 'άλλο' })));
+    expect(await deliver()).toMatchObject({ kind: 'delivering' });
+    expect(handover().fileDelivery?.unverifiable).toBe(1);
+    // Κλειστή ανάκτηση = τελική· καμία νέα επαναφορά σε κάθε εκτέλεση.
+    expect(await claimDeliveryRecovery(db(), HANDOVER, 'f_plan')).toEqual({ kind: 'settled' });
+    bucket.softDeleted.clear();
+    seedLedgerRecovery(null);
+    expect(await deliver()).toMatchObject({ kind: 'delivering' });
+    expect(ledgerRow('f_plan')).toMatchObject({ sha256: null, sha256Of: null });
+    expect(restores).toEqual([]);
+  });
+
+  it('🔴 Ζ79 — κρασάρισμα ΑΝΑΜΕΣΑ σε επαναφορά και ημερολόγιο ⇒ η επόμενη εκτέλεση ΥΙΟΘΕΤΕΙ τη δική μας γενιά · καμία δεύτερη', async () => {
+    await loseEverything();
+    restoreHook = failOnce();
+    await deliver();
+    expect(store.has(sourcePath('f_plan'))).toBe(true);
+    expect(ledgerRow('f_plan')?.recovery).toMatchObject({ restoredGeneration: null, settledAt: null });
+    seedLedgerRecovery({ startedAt: '2026-01-01T00:00:00.000Z', restoredGeneration: null, settledAt: null });
+    expect(await deliver()).toMatchObject({ kind: 'delivered' });
+    expect(ledgerRow('f_plan')).toMatchObject({ sha256: shaOf(bytesOf('f_plan')), sha256Of: 'restored-source' });
+    expect(restores).toHaveLength(1);
+    expect(store.has(sourcePath('f_plan'))).toBe(false);
+  });
+
+  it('🔴 Ζ79β — το όνομα ΞΑΝΑΓΡΑΦΕΤΑΙ ανάμεσα σε επαναφορά και μέτρηση (ίδιο crc32c, άλλα bytes) ⇒ ούτε μέτρηση ούτε διαγραφή του ξένου', async () => {
+    await loseEverything();
+    const forged = { crc32c: 'crc_f_plan', size: 1000, generation: 4243, bytes: Buffer.alloc(1000, 'πλαστό') };
+    restoreHook = () => { store.set(sourcePath('f_plan'), forged); };
+    await deliver();
+    expect(ledgerRow('f_plan')?.recovery).toMatchObject({ restoredGeneration: String(restores[0]), settledAt: expect.any(String) });
+    expect(ledgerRow('f_plan')?.sha256).toBeNull();
+    expect(store.get(sourcePath('f_plan'))).toEqual(forged);
+  });
+
+  it('🔴 Ζ80 — η απόδειξη γράφτηκε, η επαναδιαγραφή ΟΧΙ ⇒ το δίχτυ κλείνει το ημερολόγιο: ποτέ ορφανό ζωντανό αντικείμενο', async () => {
+    await loseEverything();
+    generationDeleteHook = failOnce();
+    await deliver();
+    expect(ledgerRow('f_plan')?.sha256).toBe(shaOf(bytesOf('f_plan')));
+    expect(store.has(sourcePath('f_plan'))).toBe(true);
+    expect(ledgerRow('f_plan')?.recovery).toMatchObject({ settledAt: null });
+    await deliver();
+    expect(store.has(sourcePath('f_plan'))).toBe(false);
+    expect(ledgerRow('f_plan')?.recovery).toMatchObject({ settledAt: expect.any(String) });
+  });
+
+  it('🔴 Ζ81 — δύο ταυτόχρονες εκτελέσεις ⇒ μία διεκδίκηση· η άλλη `busy` · ΜΙΑ επαναφορά', async () => {
+    await loseEverything();
+    expect(await claimDeliveryRecovery(db(), HANDOVER, 'f_plan')).toEqual({ kind: 'claimed', adoptSince: null });
+    expect(await claimDeliveryRecovery(db(), HANDOVER, 'f_plan')).toEqual({ kind: 'busy' });
+    await Promise.all([deliver(), deliver()]);
+    expect(restores).toEqual([]);
+    seedLedgerRecovery({ startedAt: '2026-01-01T00:00:00.000Z', restoredGeneration: null, settledAt: null });
+    await Promise.all([deliver(), deliver()]);
+    expect(restores).toHaveLength(1);
+    expect(ledgerRow('f_plan')?.sha256Of).toBe('restored-source');
+  });
+
+  /** Το ημερολόγιο της γραμμής, όπως θα το άφηνε μια παλιά εκτέλεση (ληγμένη μίσθωση). */
+  function seedLedgerRecovery(recovery: Record<string, unknown> | null): void {
+    const id = handoverDeliveryIdOf(HANDOVER, 'f_plan');
+    fake.seed(COLLECTIONS.PROPERTY_HANDOVER_DELIVERIES, id, { ...docs(COLLECTIONS.PROPERTY_HANDOVER_DELIVERIES)[id], recovery });
+  }
 });
 
 /** Ο κόσμος: ακίνητο με θέση στάθμευσης · κύριος φάκελος του αγοραστή · ολοκληρωμένη παράδοση · αρχεία με bytes. */
