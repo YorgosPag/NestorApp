@@ -100,8 +100,11 @@ describe('το κριτήριο εξόδου — η οικογένεια «Fan c
     expect(family.attributeIds).toEqual(MFP_ATTRIBUTES.map((attribute) => ids.get(attribute.code)));
     const cooling = fake.getData('catalog_attributes', ids.get('cooling_h') ?? '');
     expect(cooling).toEqual(expect.objectContaining({ measurementFamilyCodes: ['power'], companyId: 'comp-aries' }));
-    // 4 ομάδες + 11 ιδιότητες + 1 οικογένεια = 16 ίχνη, όλα στο βιβλίο του χώρου.
-    expect(recordTrackedEntityWrite).toHaveBeenCalledTimes(16);
+    // 4 ομάδες + μία ανά ιδιότητα του fixture + 1 οικογένεια = ένα ίχνος ανά εγγραφή, όλα στο βιβλίο του χώρου.
+    // Παράγεται από το fixture (όχι καρφωμένο): το fixture μεγάλωσε στη Φάση 2α (ADR-923 §5.10.1).
+    const groupCount = new Set(MFP_ATTRIBUTES.map((attribute) => attribute.groupId)).size;
+    expect(groupCount).toBe(4);
+    expect(recordTrackedEntityWrite).toHaveBeenCalledTimes(groupCount + MFP_ATTRIBUTES.length + 1);
   });
 });
 

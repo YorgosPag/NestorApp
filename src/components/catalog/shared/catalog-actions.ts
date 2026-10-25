@@ -48,6 +48,11 @@ export interface SaveDefinitionRequest<K extends CatalogDefinitionKind> {
   readonly definition: DefinitionOf<K>;
   /** Τι δείχνει η οθόνη μέχρι την απάντηση (με τα παράγωγα πεδία του είδους). */
   readonly optimistic: RecordOf<K>;
+  /**
+   * Η αναθεώρηση πάνω στην οποία χτίστηκε ο ορισμός (CAS). Επεξεργαστής ⇒ η βάση του **προχείρου** (`editor.baseRevision`)·
+   * άμεση πράξη πάνω σε ό,τι δείχνει η οθόνη τώρα (αναδιάταξη, επεξεργασία γραμμής) ⇒ παράλειψη = `existing.revision`.
+   */
+  readonly baseRevision?: number | null;
   readonly onSettled?: (outcome: CatalogOutcome<RecordOf<K>>) => void;
 }
 
@@ -57,6 +62,7 @@ export function saveDefinition<K extends CatalogDefinitionKind>(ops: CatalogOpti
   const operation: CatalogOperation<RecordOf<K>> = {
     key: existing?.id ?? newEntityKey(definition.code),
     optimistic: request.optimistic,
+    baseRevision: existing ? request.baseRevision ?? existing.revision : null,
     send: (revision) =>
       existing && revision !== null
         ? replaceCatalogDefinition(kind, existing.id, revision, definition)
@@ -76,6 +82,7 @@ export function deleteDefinition<K extends CatalogDefinitionKind>(
   ops.submit({
     key: record.id,
     optimistic: null,
+    baseRevision: record.revision,
     send: (revision) => deleteCatalogDefinition(kind, record.id, revision ?? record.revision),
     onSettled,
   });

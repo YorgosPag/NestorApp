@@ -51,6 +51,32 @@ describe('useDefinitionDraft — ποτέ σιωπηλή απώλεια του �
     expect(result.current.draft.label).toBe('v2 (άλλος)');
   });
 
+  it('βάση του CAS: καθαρό πρόχειρο ακολουθεί τη ζωντανή αναθεώρηση, βρώμικο κρατά αυτήν που ΔΙΑΒΑΣΕ ο άνθρωπος', () => {
+    const { result, rerender } = renderHook(({ b, rev }) => useDefinitionDraft<Def>(b, 'a', rev), {
+      initialProps: { b: { label: 'Ψύξη' }, rev: 1 },
+    });
+    rerender({ b: { label: 'Ψύξη (άλλος)' }, rev: 2 });
+    expect(result.current.baseRevision).toBe(2);
+    act(() => result.current.update({ label: 'δικό μου' }));
+    rerender({ b: { label: 'Ψύξη (τρίτος)' }, rev: 3 });
+    expect(result.current.baseRevision).toBe(2);
+    act(() => result.current.beginSave()({ ok: false, failure: failure('revisionMismatch') }));
+    expect(result.current.draft.label).toBe('Ψύξη (τρίτος)');
+    expect(result.current.baseRevision).toBe(3);
+  });
+
+  it('πρόχειρο σε αποστολή ΔΕΝ είναι «μη αποθηκευμένο» — ξαναγίνεται μόνο αν ο γραφέας αρνηθεί', () => {
+    const { result } = setup({ label: 'Ψύξη' });
+    act(() => result.current.update({ label: 'δικό μου' }));
+    expect(result.current.unsaved).toBe(true);
+    let settle: ReturnType<typeof result.current.beginSave> = () => undefined;
+    act(() => { settle = result.current.beginSave(); });
+    expect(result.current.dirty).toBe(true);
+    expect(result.current.unsaved).toBe(false);
+    act(() => settle({ ok: false, failure: failure('invalid') }));
+    expect(result.current.unsaved).toBe(true);
+  });
+
   it('άλλη οντότητα ⇒ νέο πρόχειρο, ακόμη κι αν το προηγούμενο ήταν βρώμικο', () => {
     const { result, rerender } = setup({ label: 'a' });
     act(() => result.current.update({ label: 'αλλαγή' }));

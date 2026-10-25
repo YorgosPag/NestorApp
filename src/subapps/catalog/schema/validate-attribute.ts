@@ -144,6 +144,9 @@ export function validateAttribute(
   if (!isCatalogCode(attribute.code)) collector.add('invalidCode', 'code');
   if (!hasAnyLocalizedText(attribute.labels)) collector.add('labelRequired', 'labels');
   if (attribute.unique && !isUniqueCapableAttributeType(attribute.type)) collector.add('uniqueNotSupported', 'unique');
+  // Η κράτηση μοναδικότητας (ADR-923 §5.10 Δ3) είναι ΜΙΑ τιμή ανά προϊόν: «μοναδικό ανά γλώσσα»
+  // θα έδινε δύο κωδικούς στο ίδιο SKU και κανένα κλειδί κράτησης (Akeneo: identifier ποτέ localizable).
+  if (attribute.unique && (attribute.localizable || attribute.scopable)) collector.add('uniqueLocalizedOrScoped', 'unique');
   if (attribute.localizable && !isLocalizableAttributeType(attribute.type)) {
     collector.add('localizableNotSupported', 'localizable');
   }

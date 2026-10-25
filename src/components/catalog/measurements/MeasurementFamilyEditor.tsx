@@ -43,8 +43,8 @@ interface MeasurementFamilyEditorProps {
 
 function useMeasurementEditor({ record, inUse, reportDirty }: MeasurementFamilyEditorProps) {
   const base = useMemo(() => (record ? measurementDraftOf(record) : emptyMeasurementDraft()), [record]);
-  const editor = useDefinitionDraft(base, record?.id ?? NEW_SELECTION);
-  useEffect(() => reportDirty(editor.dirty), [editor.dirty, reportDirty]);
+  const editor = useDefinitionDraft(base, record?.id ?? NEW_SELECTION, record?.revision ?? null);
+  useEffect(() => reportDirty(editor.unsaved), [editor.unsaved, reportDirty]);
   const locked = inUse && record !== null;
   const clientIssues = useMemo(() => validateMeasurementDraft(editor.draft, locked ? base : null), [editor.draft, locked, base]);
   // Ανέγγιχτη φόρμα δεν «κοκκινίζει»: τα ευρήματα φαίνονται από την πρώτη πληκτρολόγηση (ή την απάντηση του γραφέα).
@@ -67,6 +67,7 @@ export function MeasurementFamilyEditor(props: MeasurementFamilyEditorProps) {
       existing: record,
       definition: draft,
       optimistic: optimisticWire(draft, record, newEntityKey(draft.code)),
+      baseRevision: editor.baseRevision,
       onSettled: editor.beginSave<MeasurementFamilyRecord>((saved) => { if (!record) onCreated(saved.code); }),
     });
   const remove = record ? () => { deleteDefinition(ops, 'measurementFamily', record); onDeleted(); } : undefined;

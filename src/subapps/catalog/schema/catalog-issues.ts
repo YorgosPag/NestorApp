@@ -67,6 +67,37 @@ export const CATALOG_ISSUE_CODES = [
   'categoryCycle',
   'categoryDepthExceeded',
   'categoryParentUnknown',
+  // ── ιδιότητα (Φάση 2) ──
+  'uniqueLocalizedOrScoped',
+  // ── τιμές προϊόντων (Φάση 2α, ADR-923 §5.10) ──
+  'valueTypeMismatch',
+  'valueWrongLevel',
+  'valueChannelSlotInvalid',
+  'valueLocaleSlotInvalid',
+  'localeNotEnabled',
+  'valueEmpty',
+  'valueTooLong',
+  'valuePatternMismatch',
+  'valueNotNumber',
+  'valueTooManyDecimals',
+  'valueNegative',
+  'valueOutOfRange',
+  'optionUnknown',
+  'invalidDate',
+  'assetKindNotAllowed',
+  'tableColumnUnknown',
+  'tableKeyMissing',
+  'axisValueMissing',
+  'axisComboDuplicate',
+  'noValueConflict',
+  'noValueOnAxis',
+  // ── μοντέλα / προϊόντα / μέσα / ρυθμίσεις ──
+  'familyMismatch',
+  'variantSchemeUnknown',
+  'modelHierarchyInvalid',
+  'tooManyDescendants',
+  'assetRoleKindMismatch',
+  'channelLocalesRequired',
 ] as const;
 
 export type CatalogIssueCode = (typeof CATALOG_ISSUE_CODES)[number];

@@ -67,7 +67,7 @@ export function FamiliesContent() {
   const { library, ops, sorted, state } = useFamilies();
   const canManage = useCatalogCanManage();
   const unsaved = useUnsavedGuard();
-  const [selected, select] = useCatalogSelection('family');
+  const { selected, select, key: session, selectIfCurrent } = useCatalogSelection('family');
   const choose = useCallback((id: string | null) => unsaved.guard(() => select(id)), [unsaved, select]);
   const isNew = selected === NEW_SELECTION && canManage;
   const record = selected && !isNew ? ops.settled.find((family) => family.id === selected) ?? null : null;
@@ -88,13 +88,13 @@ export function FamiliesContent() {
         empty={{ icon: Boxes, title: t('families.emptyTitle'), description: t('families.emptyDescription') }}
         details={isNew || record ? (
           <FamilyEditor
-            key={record?.id ?? NEW_SELECTION}
+            key={session}
             record={record}
             families={ops.settled}
             library={library}
             ops={ops}
             canManage={canManage}
-            onCreated={(id) => select(id)}
+            onCreated={(id) => selectIfCurrent(session, id)}
             onDeleted={() => select(null)}
             reportDirty={unsaved.reportDirty}
           />

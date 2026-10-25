@@ -28,3 +28,11 @@ export type CatalogChannel = (typeof CATALOG_CHANNELS)[number];
 export function isCatalogChannel(value: unknown): value is CatalogChannel {
   return (CATALOG_CHANNELS as readonly unknown[]).includes(value);
 }
+
+/**
+ * Χάρτης **ανά κανάλι**, εξαντλητικός εκ κατασκευής (τα κλειδιά είναι το `CATALOG_CHANNELS`).
+ * Η μία ισχυροποίηση τύπου του `Object.fromEntries` ζει **εδώ**, όχι σε κάθε καταναλωτή.
+ */
+export function mapCatalogChannels<T>(build: (channel: CatalogChannel) => T): Record<CatalogChannel, T> {
+  return Object.fromEntries(CATALOG_CHANNELS.map((channel) => [channel, build(channel)])) as Record<CatalogChannel, T>;
+}

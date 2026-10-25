@@ -49,6 +49,22 @@ export const CATALOG_LIMITS = {
   maxLabelLength: 200,
   /** Μέγιστο μήκος περιγραφής (ανά γλώσσα). */
   maxDescriptionLength: 2000,
+  // ── Φάση 2: τιμές προϊόντων (ADR-923 §5.10) ──
+  /**
+   * Μέγιστοι απόγονοι (υπο-μοντέλα + παραλλαγές) ανά μοντέλο: η δέσμη παραλλαγών γράφεται σε
+   * **μία** συναλλαγή, κάτω από τη σύμβαση των 450 εγγραφών του repo (μαζί με κρατήσεις μοναδικότητας).
+   */
+  maxDescendantsPerModel: 200,
+  /** Μέγιστο μήκος τιμής `text` (Akeneo: 255· εδώ περισσότερο για ονόματα με προδιαγραφή). */
+  maxTextValueLength: 1000,
+  /** Μέγιστο μήκος τιμής `richText` (Akeneo textarea: 65.535). */
+  maxRichTextValueLength: 65535,
+  /** Μέγιστες γραμμές σε τιμή ιδιότητας-πίνακα (Akeneo table attribute: 100). */
+  maxTableValueRows: 100,
+  /** Μέγιστα σημαντικά ψηφία ποσού — πάνω από αυτό το double δεν κρατά την τιμή ακριβώς. */
+  maxAmountSignificantDigits: 15,
+  /** Μέγιστες κατηγορίες σε ένα μοντέλο ή προϊόν. */
+  maxCategoriesPerProduct: 50,
 } as const;
 
 /**

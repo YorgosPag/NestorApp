@@ -61,7 +61,7 @@ function InlineRename({ category, onDone, ops }: {
     finished.current = true;
     const trimmed = value.trim();
     if (trimmed.length > 0 && trimmed !== text(category.labels)) {
-      updateCategory(ops, category, { labels: { ...category.labels, [language]: trimmed }, mappings: category.mappings });
+      updateCategory(ops, category, category.revision, { labels: { ...category.labels, [language]: trimmed }, mappings: category.mappings });
     }
     onDone();
   };
@@ -130,7 +130,7 @@ export function CategoriesContent() {
   const { state, ops, sorted } = useCategories();
   const canManage = useCatalogCanManage();
   const unsaved = useUnsavedGuard();
-  const [selected, select] = useCatalogSelection('category');
+  const { selected, select, key: session, selectIfCurrent } = useCatalogSelection('category');
   const choose = useCallback((value: string | null) => unsaved.guard(() => select(value)), [unsaved, select]);
   const { isNew, parentId, id } = parseSelection(selected);
   const record = id ? ops.settled.find((category) => category.id === id) ?? null : null;
@@ -152,13 +152,13 @@ export function CategoriesContent() {
         empty={{ icon: FolderTree, title: t('categories.emptyTitle'), description: t('categories.emptyDescription') }}
         details={(isNew && canManage) || record ? (
           <CategoryEditor
-            key={selected ?? 'none'}
+            key={session}
             record={record}
             parentId={parentId}
             categories={sorted}
             ops={ops}
             canManage={canManage}
-            onCreated={(createdId) => select(createdId)}
+            onCreated={(createdId) => selectIfCurrent(session, createdId)}
             onAddChild={(id) => choose(`${NEW_CHILD_PREFIX}${id}`)}
             onDeleted={() => select(null)}
             reportDirty={unsaved.reportDirty}

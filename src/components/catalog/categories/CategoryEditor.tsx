@@ -61,8 +61,8 @@ function validateCategoryDraft(draft: CategoryDraft, codesTaken: ReadonlySet<str
 
 function useCategoryEditor({ record, categories, reportDirty }: CategoryEditorProps) {
   const base = useMemo<CategoryDraft>(() => (record ? { code: record.code, labels: record.labels, mappings: record.mappings } : EMPTY), [record]);
-  const editor = useDefinitionDraft(base, record?.id ?? 'new');
-  useEffect(() => reportDirty(editor.dirty), [editor.dirty, reportDirty]);
+  const editor = useDefinitionDraft(base, record?.id ?? 'new', record?.revision ?? null);
+  useEffect(() => reportDirty(editor.unsaved), [editor.unsaved, reportDirty]);
   const codes = useMemo(() => new Set(categories.map((category) => category.code)), [categories]);
   const clientIssues = useMemo(() => validateCategoryDraft(editor.draft, codes, record === null), [editor.draft, codes, record]);
   const issues = editor.dirty || editor.serverIssues.length > 0 ? [...clientIssues, ...editor.serverIssues] : [];
@@ -79,7 +79,7 @@ export function CategoryEditor(props: CategoryEditorProps) {
   const save = () => {
     const settle = editor.beginSave<CategoryRecord>((saved) => { if (!record) onCreated(saved.id); });
     if (record) {
-      updateCategory(ops, record, { labels: draft.labels, mappings: draft.mappings }, settle);
+      updateCategory(ops, record, editor.baseRevision ?? record.revision, { labels: draft.labels, mappings: draft.mappings }, settle);
       return;
     }
     const siblings = categories.filter((category) => category.parentId === parentId);

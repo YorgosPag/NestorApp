@@ -19,7 +19,7 @@ import { newEntityKey } from '../shared/catalog-actions';
 import { useCatalogCanManage, useCatalogFailureNotice, useCatalogText } from '../shared/catalog-ui-hooks';
 import { CatalogPageFrame } from '../shared/CatalogPageFrame';
 import { CatalogSplit } from '../shared/CatalogSplit';
-import { NEW_SELECTION, useCatalogSelection } from '../shared/use-catalog-selection';
+import { NEW_SELECTION, useCatalogSelection, type CatalogSelection } from '../shared/use-catalog-selection';
 import { useUnsavedGuard, type UnsavedGuard } from '../shared/use-unsaved-guard';
 import { isMeasurementFamilyInUse } from './measurement-draft';
 import { MeasurementConversionTester } from './MeasurementConversionTester';
@@ -42,10 +42,10 @@ interface DetailsProps {
   readonly library: CatalogLibrary;
   readonly canManage: boolean;
   readonly unsaved: UnsavedGuard;
-  readonly select: (code: string | null) => void;
+  readonly selection: CatalogSelection;
 }
 
-function MeasurementDetails({ family, isNew, library, canManage, unsaved, select }: DetailsProps) {
+function MeasurementDetails({ family, isNew, library, canManage, unsaved, selection }: DetailsProps) {
   if (!isNew && family?.source === 'platform') {
     return (
       <section className="flex flex-col gap-4 p-4">
@@ -58,13 +58,13 @@ function MeasurementDetails({ family, isNew, library, canManage, unsaved, select
   if (!isNew && record === null) return null;
   return (
     <MeasurementFamilyEditor
-      key={record?.id ?? NEW_SELECTION}
+      key={selection.key}
       record={record}
       inUse={record !== null && isMeasurementFamilyInUse(record.code, library.attributes)}
       ops={library.ops.measurementFamilies}
       canManage={canManage}
-      onCreated={(code) => select(code)}
-      onDeleted={() => select(null)}
+      onCreated={(code) => selection.selectIfCurrent(selection.key, code)}
+      onDeleted={() => selection.select(null)}
       reportDirty={unsaved.reportDirty}
     />
   );
@@ -75,7 +75,8 @@ export function MeasurementsContent() {
   const library = useCatalogLibrary(useCatalogFailureNotice());
   const canManage = useCatalogCanManage();
   const unsaved = useUnsavedGuard();
-  const [selected, select] = useCatalogSelection('family');
+  const selection = useCatalogSelection('family');
+  const { selected, select } = selection;
   const choose = useCallback((code: string | null) => unsaved.guard(() => select(code)), [unsaved, select]);
   const nameOf = useMeasurementFamilyName();
   const pendingCodes = usePendingCodes(library);
@@ -98,7 +99,7 @@ export function MeasurementsContent() {
         title={title}
         onClose={() => choose(null)}
         empty={{ icon: Ruler, title: t('measurement.emptyTitle'), description: t('measurement.emptyDescription') }}
-        details={<MeasurementDetails family={family} isNew={isNew} library={library} canManage={canManage} unsaved={unsaved} select={select} />}
+        details={<MeasurementDetails family={family} isNew={isNew} library={library} canManage={canManage} unsaved={unsaved} selection={selection} />}
       />
       {unsaved.dialog}
     </CatalogPageFrame>

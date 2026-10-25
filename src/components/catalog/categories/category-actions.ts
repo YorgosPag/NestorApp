@@ -46,6 +46,7 @@ export function moveCategory(ops: Ops, categories: readonly CategoryRecord[], mo
   ops.submit({
     key: node.id,
     optimistic: { ...node, parentId: move.parentId, orderKey, ancestorIds },
+    baseRevision: node.revision,
     send: (revision) => moveCatalogCategory(node.id, revision ?? node.revision, { parentId: move.parentId, orderKey }),
   });
 }
@@ -58,6 +59,7 @@ export function createCategory(ops: Ops, categories: readonly CategoryRecord[], 
   ops.submit({
     key,
     optimistic: optimisticWire(definition, null, key),
+    baseRevision: null,
     send: () => createCatalogCategory(input),
     onSettled,
   });
@@ -66,12 +68,15 @@ export function createCategory(ops: Ops, categories: readonly CategoryRecord[], 
 export function updateCategory(
   ops: Ops,
   category: CategoryRecord,
+  /** Η αναθεώρηση πάνω στην οποία χτίστηκε η αλλαγή (CAS) — όχι η ζωντανή. */
+  baseRevision: number,
   patch: { readonly labels: LocalizedText; readonly mappings: CatalogCategoryMappings },
   onSettled?: Settled,
 ): void {
   ops.submit({
     key: category.id,
     optimistic: { ...category, ...patch },
+    baseRevision,
     send: (revision) => updateCatalogCategory(category.id, revision ?? category.revision, patch),
     onSettled,
   });
@@ -81,6 +86,7 @@ export function deleteCategory(ops: Ops, category: CategoryRecord): void {
   ops.submit({
     key: category.id,
     optimistic: null,
+    baseRevision: category.revision,
     send: (revision) => deleteCatalogCategory(category.id, revision ?? category.revision),
   });
 }

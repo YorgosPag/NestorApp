@@ -13,9 +13,11 @@
  *     πίσω για όσο αργεί το snapshot μετά το 200).
  *  3. **εκκρεμή** — η πράξη που μόλις έκανε ο άνθρωπος.
  *
- * 🔑 **Χωρίς αγώνα**: οι πράξεις της **ίδιας** οντότητας τρέχουν **σειριακά** (`useSerialOptimistic`), και κάθε μία
- *    στέλνει τη **νεότερη** αναθεώρηση που ξέρουμε — max(στιγμιότυπο, τελευταία απάντηση). Δύο γρήγορες αλλαγές του
- *    ίδιου ανθρώπου δεν χτυπούν ποτέ 409 η μία στην άλλη· αλλαγή **άλλου** χτυπά, όπως πρέπει.
+ * 🔑 **Ο CAS στέλνει ό,τι ΔΙΑΒΑΣΕ ο άνθρωπος** (`baseRevision`, HTTP `If-Match`) — **ποτέ** το ζωντανό στιγμιότυπο: αυτό
+ *    έχει ήδη φέρει την αλλαγή του άλλου, άρα «η νεότερη γνωστή αναθεώρηση» = «πάτα σιωπηλά τον άλλον» (μετρημένο
+ *    ζωντανά σε δύο καρτέλες, ADR-923 §5.9.2). Η βάση προωθείται **μόνο** μέσα από την αλυσίδα των **δικών μας**
+ *    επιτυχημένων εγγραφών (`από → σε`): δύο γρήγορες αλλαγές του ίδιου ανθρώπου δεν χτυπούν 409 η μία στην άλλη·
+ *    αλλαγή **άλλου** χτυπά, όπως πρέπει. Οι πράξεις της ίδιας οντότητας τρέχουν **σειριακά** (`useSerialOptimistic`).
  * 🔑 **Αποτυχία ⇒ επαναφορά** (το εκκρεμές σβήνει, μένει το στιγμιότυπο) **και** ανάδραση: ο καλών παίρνει το
  *    αποτέλεσμα στο `onSettled` (ευρήματα δίπλα στο πεδίο), η οθόνη ειδοποιείται από το `onFailure`.
  */
@@ -40,7 +42,9 @@ export interface CatalogOperation<T> {
   readonly key: string;
   /** Τι δείχνει η οθόνη όσο εκκρεμεί· `null` = εξαφανίζεται (διαγραφή). */
   readonly optimistic: T | null;
-  /** Η εγγραφή, με τη νεότερη γνωστή αναθεώρηση (`null` για νέα οντότητα). */
+  /** Η αναθεώρηση πάνω στην οποία χτίστηκε η πράξη — ό,τι είδε ο άνθρωπος (`null` = δημιουργία). */
+  readonly baseRevision: number | null;
+  /** Η εγγραφή, με την αναθεώρηση του CAS: η βάση, προωθημένη **μόνο** από δικές μας εγγραφές (`null` = νέα). */
   readonly send: (expectedRevision: number | null) => Promise<T>;
   readonly onSettled?: (outcome: CatalogOutcome<T>) => void;
 }
@@ -88,6 +92,28 @@ function mergeView<T extends CatalogRecordLike>(
 
 const NO_PENDING: ReadonlyMap<string, never> = new Map();
 
+/** Η αλυσίδα των δικών μας εγγραφών ανά οντότητα: αναθεώρηση που ξεπεράσαμε → αναθεώρηση που γράψαμε. */
+export type OwnWriteChain = ReadonlyMap<number, number>;
+
+/** Η βάση, προωθημένη από τις **δικές μας** εγγραφές· ό,τι έγραψε άλλος δεν είναι ποτέ στην αλυσίδα. */
+export function fastForwardOwnWrites(chain: OwnWriteChain | undefined, base: number | null): number | null {
+  if (base === null || !chain) return base;
+  let revision = base;
+  for (let next = chain.get(revision); next !== undefined && next > revision; next = chain.get(revision)) revision = next;
+  return revision;
+}
+
+function useOwnWrites() {
+  const chains = useRef(new Map<string, Map<number, number>>());
+  const expectedFor = useCallback((key: string, base: number | null) => fastForwardOwnWrites(chains.current.get(key), base), []);
+  const record = useCallback((key: string, from: number | null, to: number) => {
+    if (from === null) return;
+    const chain = chains.current.get(key) ?? new Map<number, number>();
+    chains.current.set(key, chain.set(from, to));
+  }, []);
+  return useMemo(() => ({ expectedFor, record }), [expectedFor, record]);
+}
+
 function useConfirmed<T extends CatalogRecordLike>(records: readonly T[]) {
   const [confirmed, setConfirmed] = useState<ReadonlyMap<string, T>>(new Map());
   useEffect(() => {
@@ -102,21 +128,14 @@ export function useCatalogOptimistic<T extends CatalogRecordLike>(
   onFailure: (failure: CatalogFailure) => void,
 ): CatalogOptimistic<T> {
   const { confirmed, confirm } = useConfirmed(records);
-  const latest = useRef({ records, confirmed });
-  latest.current = { records, confirmed };
-
-  const revisionOf = useCallback((key: string): number | null => {
-    const snapshot = latest.current.records.find((record) => record.id === key)?.revision ?? 0;
-    const answered = latest.current.confirmed.get(key)?.revision ?? 0;
-    const known = Math.max(snapshot, answered);
-    return known > 0 ? known : null;
-  }, []);
+  const ownWrites = useOwnWrites();
 
   const run = useCallback(
     async (key: string, operation: CatalogOperation<T>): Promise<void> => {
       try {
-        const record = await operation.send(revisionOf(key));
-        latest.current = { ...latest.current, confirmed: new Map(latest.current.confirmed).set(record.id, record) };
+        const expected = ownWrites.expectedFor(key, operation.baseRevision);
+        const record = await operation.send(expected);
+        ownWrites.record(key, expected, record.revision);
         confirm(record);
         operation.onSettled?.({ ok: true, record });
       } catch (cause) {
@@ -125,7 +144,7 @@ export function useCatalogOptimistic<T extends CatalogRecordLike>(
         operation.onSettled?.({ ok: false, failure });
       }
     },
-    [revisionOf, confirm, onFailure],
+    [ownWrites, confirm, onFailure],
   );
 
   const { pending, submit: submitSerial } = useSerialOptimistic<CatalogOperation<T>>(run);

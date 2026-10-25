@@ -11,6 +11,9 @@
  * 🔑 **Καθαρό πρόχειρο ακολουθεί τη ζωντανή εγγραφή**: αν κάποιος άλλος αλλάξει την οντότητα όσο ο άνθρωπος απλώς
  *    κοιτά, βλέπει αμέσως τη νέα εκδοχή (Google Docs). **Βρώμικο** πρόχειρο δεν πατιέται σιωπηλά — η σύγκρουση λύνεται
  *    στην αποθήκευση (CAS ⇒ 409 ⇒ επαναφορά στη **νεότερη** βάση, με ειδοποίηση από τον καλούντα).
+ * 🔑 **`baseRevision` = η αναθεώρηση πάνω στην οποία χτίστηκε το πρόχειρο** — αυτήν στέλνει ο CAS (HTTP `If-Match`).
+ *    Ακολουθεί τη ζωντανή εγγραφή **μόνο** όσο το πρόχειρο την ακολουθεί· βρώμικο πρόχειρο κρατά ό,τι διάβασε ο
+ *    άνθρωπος, αλλιώς η αλλαγή του άλλου θα «νομιμοποιούσε» την αντικατάστασή της (μετρημένο ζωντανά, §5.9.2).
  * 🔑 Τα ευρήματα του **διακομιστή** σβήνουν με την πρώτη αλλαγή του ανθρώπου (αφορούσαν άλλο πρόχειρο).
  */
 
@@ -27,31 +30,50 @@ export interface DefinitionDraft<D> {
   readonly update: (next: D) => void;
   readonly discard: () => void;
   readonly dirty: boolean;
+  /**
+   * Βρώμικο **και όχι** σε αποστολή: ό,τι θα χανόταν αν ο άνθρωπος έφευγε τώρα. Αυτό δηλώνεται στον φύλακα — πρόχειρο
+   * που ήδη στέλνεται δεν είναι «μη αποθηκευμένο» (Gmail/Docs: η αποστολή συνεχίζει, η άρνηση έρχεται ως ειδοποίηση).
+   */
+  readonly unsaved: boolean;
+  /** Η αναθεώρηση πάνω στην οποία χτίστηκε το πρόχειρο (`null` = νέα οντότητα) — η βάση του CAS. */
+  readonly baseRevision: number | null;
   readonly status: DraftStatus;
   readonly serverIssues: readonly CatalogIssue[];
   /** Σημειώνει «στέλνεται» και επιστρέφει τον χειριστή του αποτελέσματος. */
   readonly beginSave: <R>(onSaved?: (record: R) => void) => (outcome: CatalogOutcome<R>) => void;
 }
 
-/** `identity` = ποια οντότητα επεξεργάζεται (id ή `new`): αλλαγή ⇒ νέο πρόχειρο από τη βάση. */
-export function useDefinitionDraft<D>(base: D, identity: string): DefinitionDraft<D> {
+interface Seen<D> {
+  readonly identity: string;
+  readonly base: D;
+  readonly revision: number | null;
+}
+
+/**
+ * `identity` = ποια οντότητα επεξεργάζεται (id ή `new`): αλλαγή ⇒ νέο πρόχειρο από τη βάση.
+ * `revision` = η αναθεώρηση της βάσης (`null` για νέα οντότητα).
+ */
+export function useDefinitionDraft<D>(base: D, identity: string, revision: number | null = null): DefinitionDraft<D> {
   const [draft, setDraft] = useState(base);
-  const [seen, setSeen] = useState({ identity, base });
+  const [seen, setSeen] = useState<Seen<D>>({ identity, base, revision });
+  const [baseRevision, setBaseRevision] = useState(revision);
   const [serverIssues, setServerIssues] = useState<readonly CatalogIssue[]>([]);
   const [status, setStatus] = useState<DraftStatus>('clean');
-  const latestBase = useRef(base);
-  latestBase.current = base;
+  const latest = useRef({ base, revision });
+  latest.current = { base, revision };
 
   // Προσαρμογή κατά την απόδοση (React: «adjusting state when a prop changes») — χωρίς effect, χωρίς τρεμόπαιγμα.
-  if (seen.identity !== identity || !dequal(seen.base, base)) {
+  if (seen.identity !== identity || seen.revision !== revision || !dequal(seen.base, base)) {
     const switched = seen.identity !== identity;
     const followLive = !switched && status !== 'saving' && dequal(draft, seen.base);
-    setSeen({ identity, base });
+    setSeen({ identity, base, revision });
     if (switched || followLive) {
       setDraft(base);
       setServerIssues([]);
       if (switched) setStatus('clean');
     }
+    // Η βάση του CAS προχωρά μόνο όταν το πρόχειρο ΕΙΝΑΙ η νέα εκδοχή (ακολούθησε, ή έγινε ίδιο — π.χ. η δική μας εγγραφή).
+    if (switched || followLive || dequal(draft, base)) setBaseRevision(revision);
   }
 
   const update = useCallback((next: D) => {
@@ -60,7 +82,8 @@ export function useDefinitionDraft<D>(base: D, identity: string): DefinitionDraf
     setStatus('dirty');
   }, []);
   const discard = useCallback(() => {
-    setDraft(latestBase.current);
+    setDraft(latest.current.base);
+    setBaseRevision(latest.current.revision);
     setServerIssues([]);
     setStatus('clean');
   }, []);
@@ -74,12 +97,14 @@ export function useDefinitionDraft<D>(base: D, identity: string): DefinitionDraf
         return;
       }
       setStatus('dirty');
-      if (outcome.failure.kind === 'revisionMismatch') setDraft(latestBase.current);
-      else setServerIssues(outcome.failure.issues);
+      if (outcome.failure.kind === 'revisionMismatch') {
+        setDraft(latest.current.base);
+        setBaseRevision(latest.current.revision);
+      } else setServerIssues(outcome.failure.issues);
     };
   }, []);
 
   const dirty = !dequal(draft, base);
   const shown: DraftStatus = status === 'saving' ? 'saving' : dirty ? 'dirty' : status === 'saved' ? 'saved' : 'clean';
-  return { draft, update, discard, dirty, status: shown, serverIssues, beginSave };
+  return { draft, update, discard, dirty, unsaved: shown === 'dirty', baseRevision, status: shown, serverIssues, beginSave };
 }

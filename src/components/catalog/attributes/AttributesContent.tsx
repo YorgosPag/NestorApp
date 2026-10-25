@@ -69,7 +69,7 @@ export function AttributesContent() {
   const canManage = useCatalogCanManage();
   const unsaved = useUnsavedGuard();
   const [groupsOpen, setGroupsOpen] = useState(false);
-  const [selected, select] = useCatalogSelection('attribute');
+  const { selected, select, key: session, selectIfCurrent } = useCatalogSelection('attribute');
   const choose = useCallback((id: string | null) => unsaved.guard(() => select(id)), [unsaved, select]);
   const moveAttribute = useMoveAttribute(library);
   const { isNew, record, blank, title, orderKeyAtEndOf } = useAttributeSelection(library, canManage, selected);
@@ -91,7 +91,7 @@ export function AttributesContent() {
         empty={{ icon: ListTree, title: t('attributes.emptyTitle'), description: t('attributes.emptyDescription') }}
         details={isNew || record ? (
           <AttributeEditor
-            key={record?.id ?? NEW_SELECTION}
+            key={session}
             record={record}
             blank={blank}
             groups={library.groups}
@@ -100,7 +100,7 @@ export function AttributesContent() {
             ops={library.ops.attributes}
             canManage={canManage}
             orderKeyAtEnd={orderKeyAtEndOf}
-            onCreated={(created) => select(created.id)}
+            onCreated={(created) => selectIfCurrent(session, created.id)}
             onDeleted={() => select(null)}
             reportDirty={unsaved.reportDirty}
           />

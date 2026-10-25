@@ -56,8 +56,8 @@ export interface AttributeEditorProps {
 function useAttributeEditor(props: AttributeEditorProps) {
   const { record, blank, groups, registry, families, reportDirty } = props;
   const base = useMemo(() => (record ? attributeDraftOf(record) : blank), [record, blank]);
-  const editor = useDefinitionDraft(base, record?.id ?? 'new');
-  useEffect(() => reportDirty?.(editor.dirty), [editor.dirty, reportDirty]);
+  const editor = useDefinitionDraft(base, record?.id ?? 'new', record?.revision ?? null);
+  useEffect(() => reportDirty?.(editor.unsaved), [editor.unsaved, reportDirty]);
   const groupIds = useMemo(() => new Set(groups.map((group) => group.id)), [groups]);
   const clientIssues = useMemo(() => validateAttributeDraft(editor.draft, registry, groupIds), [editor.draft, registry, groupIds]);
   const usedBy = useMemo(() => (record ? familiesUsing(record.id, families) : []), [record, families]);
@@ -141,6 +141,7 @@ export function AttributeEditor(props: AttributeEditorProps) {
     existing: record,
     definition: draft,
     optimistic: optimisticWire(storedAttributeOf(draft), record, newEntityKey(draft.code)),
+    baseRevision: editor.baseRevision,
     onSettled: editor.beginSave<AttributeRecord>((saved) => { if (!record) onCreated(saved); }),
   });
   const remove = record && onDeleted ? () => { deleteDefinition(ops, 'attribute', record); onDeleted(); } : undefined;

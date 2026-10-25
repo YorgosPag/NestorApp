@@ -20,6 +20,7 @@
  */
 
 import { toStandardUnit } from '../measurement/conversion';
+import { normalizeUniqueText } from '../values/normalize-unique';
 import type { MeasurementRegistry } from '../measurement/measurement-registry';
 import type { CatalogAttributeDefinition } from '../types/attribute';
 import type { ConsistencyRule, RuleSeverity } from '../types/family';
@@ -57,7 +58,9 @@ function evaluateUnique(rule: Extract<ConsistencyRule, { kind: 'unique' }>, inpu
   for (const row of input.rows) {
     const value = row.values[rule.attributeId];
     if (value === null || value === undefined) continue;
-    const key = `${typeof value}:${String(value)}`;
+    // Η ΙΔΙΑ κανονικοποίηση με την κράτηση `catalog_unique_values` (Δ3) — αλλιώς ο κανόνας θα
+    // έλεγε «μοναδικό» για « 016–15–001» ενώ η κράτηση θα το απέρριπτε ως διπλό.
+    const key = typeof value === 'string' ? `string:${normalizeUniqueText(value)}` : `${typeof value}:${String(value)}`;
     byValue.set(key, [...(byValue.get(key) ?? []), row.variantId]);
   }
   return [...byValue.values()]

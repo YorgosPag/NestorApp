@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 
 import { ApiClientError } from '@/lib/api/api-client-types';
-import { useCatalogOptimistic, type CatalogOperation } from '../useCatalogOptimistic';
+import { fastForwardOwnWrites, useCatalogOptimistic, type CatalogOperation } from '../useCatalogOptimistic';
 
 interface Row {
   readonly id: string;
@@ -29,7 +29,7 @@ describe('useCatalogOptimistic — αισιόδοξα, με CAS, χωρίς αγ
   it('η αλλαγή φαίνεται αμέσως και μένει ώσπου το στιγμιότυπο να τη φτάσει', async () => {
     const { result, rerender } = setup([row('a', 1, 'Ψύξη')]);
     const reply = deferred<Row>();
-    act(() => result.current.submit({ key: 'a', optimistic: row('a', 1, 'Ψύξη νέα'), send: () => reply.promise }));
+    act(() => result.current.submit({ key: 'a', optimistic: row('a', 1, 'Ψύξη νέα'), baseRevision: 1, send: () => reply.promise }));
     expect(result.current.view[0].label).toBe('Ψύξη νέα');
     await act(async () => reply.resolve(row('a', 2, 'Ψύξη νέα')));
     expect(result.current.view[0].label).toBe('Ψύξη νέα');
@@ -43,10 +43,32 @@ describe('useCatalogOptimistic — αισιόδοξα, με CAS, χωρίς αγ
     const op = (label: string, answer: number): CatalogOperation<Row> => ({
       key: 'a',
       optimistic: row('a', 3, label),
+      baseRevision: 3,
       send: async (revision) => { sent.push(revision); return row('a', answer, label); },
     });
     act(() => { result.current.submit(op('b', 4)); result.current.submit(op('c', 5)); });
     await waitFor(() => expect(sent).toEqual([3, 4]));
+  });
+
+  it('αλλαγή ΑΛΛΟΥ που έφερε το στιγμιότυπο ΔΕΝ μετακινεί τη βάση του CAS ⇒ ο γραφέας απαντά 409 (μετρημένο ζωντανά, §5.9.2)', async () => {
+    const { result, rerender } = setup([row('a', 1, 'Ψύξη')]);
+    rerender({ records: [row('a', 2, 'άλλος')] });
+    const sent: (number | null)[] = [];
+    act(() => result.current.submit({
+      key: 'a',
+      optimistic: row('a', 2, 'δικό μου'),
+      baseRevision: 1,
+      send: async (revision) => { sent.push(revision); return row('a', 3, 'δικό μου'); },
+    }));
+    await waitFor(() => expect(sent).toEqual([1]));
+  });
+
+  it('η αλυσίδα των δικών μας εγγραφών προωθεί μόνο ό,τι γράψαμε ΕΜΕΙΣ', () => {
+    const chain = new Map([[3, 4], [4, 5]]);
+    expect(fastForwardOwnWrites(chain, 3)).toBe(5);
+    expect(fastForwardOwnWrites(chain, 7)).toBe(7);
+    expect(fastForwardOwnWrites(undefined, 2)).toBe(2);
+    expect(fastForwardOwnWrites(chain, null)).toBeNull();
   });
 
   it('αποτυχία ⇒ επαναφορά στο στιγμιότυπο + ειδοποίηση + αποτέλεσμα στον καλούντα', async () => {
@@ -59,6 +81,7 @@ describe('useCatalogOptimistic — αισιόδοξα, με CAS, χωρίς αγ
     act(() => result.current.submit({
       key: 'a',
       optimistic: row('a', 1, 'δικό μου'),
+      baseRevision: 1,
       send: () => Promise.reject(conflict),
       onSettled: settled,
     }));
@@ -69,7 +92,7 @@ describe('useCatalogOptimistic — αισιόδοξα, με CAS, χωρίς αγ
 
   it('διαγραφή: εξαφανίζεται αμέσως και δεν ξαναεμφανίζεται πριν φύγει από το στιγμιότυπο', async () => {
     const { result, rerender } = setup([row('a', 1, 'x'), row('b', 1, 'y')]);
-    act(() => result.current.submit({ key: 'a', optimistic: null, send: async () => ({ ...row('a', 2, 'x'), isDeleted: true }) }));
+    act(() => result.current.submit({ key: 'a', optimistic: null, baseRevision: 1, send: async () => ({ ...row('a', 2, 'x'), isDeleted: true }) }));
     expect(result.current.view.map((item) => item.id)).toEqual(['b']);
     await waitFor(() => expect(result.current.pendingKeys.size).toBe(0));
     expect(result.current.view.map((item) => item.id)).toEqual(['b']);

@@ -40,14 +40,18 @@ export function trackedWriteChanges<T extends object>(
 }
 
 /**
- * **Η ενέργεια** — `created` στη γέννηση · `status_changed` όταν άλλαξε **μόνο** ο κύκλος ζωής
- * (`lifecycle` — το φίλτρο «κατάσταση» του `ActivityTab` τις ξεχωρίζει) · αλλιώς `updated`.
+ * **Η ενέργεια** — `created` στη γέννηση · `soft_deleted` / `restored` όταν γύρισε η σημαία `isDeleted`
+ * (soft delete — η διαγραφή **είναι** διαγραφή στο ιστορικό, όχι «ενημέρωση», ADR-923 §5.9.2) ·
+ * `status_changed` όταν άλλαξε **μόνο** ο κύκλος ζωής (`lifecycle` — το φίλτρο «κατάσταση» του `ActivityTab`
+ * τις ξεχωρίζει) · αλλιώς `updated`.
  */
 export function trackedWriteAction(
   before: object | null,
   changes: readonly AuditFieldChange[],
 ): AuditAction {
   if (before === null) return 'created';
+  const deletion = changes.find((change) => change.field === 'isDeleted');
+  if (deletion) return deletion.newValue === true ? 'soft_deleted' : 'restored';
   return changes.length > 0 && changes.every((change) => change.field === 'lifecycle')
     ? 'status_changed'
     : 'updated';

@@ -62,8 +62,8 @@ function duplicateCodeIssue(draft: CatalogFamilyDefinition, record: FamilyRecord
 
 function useFamilyEditor({ record, families, library, reportDirty }: FamilyEditorProps) {
   const base = useMemo(() => (record ? familyDraftOf(record) : emptyFamilyDraft()), [record]);
-  const editor = useDefinitionDraft(base, record?.id ?? 'new');
-  useEffect(() => reportDirty(editor.dirty), [editor.dirty, reportDirty]);
+  const editor = useDefinitionDraft(base, record?.id ?? 'new', record?.revision ?? null);
+  useEffect(() => reportDirty(editor.unsaved), [editor.unsaved, reportDirty]);
   const clientIssues = useMemo(
     () => [...validateFamilyDraft(editor.draft, library.attributeById, library.registry), ...duplicateCodeIssue(editor.draft, record, families)],
     [editor.draft, library.attributeById, library.registry, record, families],
@@ -85,6 +85,7 @@ export function FamilyEditor(props: FamilyEditorProps) {
     existing: record,
     definition: editor.draft,
     optimistic: optimisticWire(storedFamilyOf(editor.draft), record, newEntityKey(editor.draft.code)),
+    baseRevision: editor.baseRevision,
     onSettled: editor.beginSave<FamilyRecord>((saved) => { if (!record) onCreated(saved.id); }),
   });
   const remove = record ? () => { deleteDefinition(ops, 'family', record); onDeleted(); } : undefined;

@@ -2,6 +2,15 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **25/10 — Ο «ΑΥΣΤΗΡΟΣ» ΑΝΑΛΥΤΗΣ ΑΡΙΘΜΩΝ ΖΕΙ ΣΕ ΞΕΝΟ ΤΟΜΕΑ ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΑΥΣΤΗΡΟΣ** *(εύρημα ADR-923 Φ2α §5.10.1)*
+
+  **Τι:** το `parseStrictDecimal` ζει στο `src/lib/survey-record/survey-number.ts` αλλά το καταναλώνουν **5 τομείς**
+  (`SourcedFieldRow` · `survey-bindable-fields` · `document-body-values` · `energy-certificate/pea-text` · `survey-reconciliation`) ⇒
+  είναι γενικό SSoT σε λάθος σπίτι. **Και** δέχεται `Number("0x10") = 16` και `"1e3" = 1000` (καμία γραμματική πριν το `Number`).
+  **Θεραπεία:** μετακίνηση στο `src/lib/number/locale-number.ts` (re-export από το παλιό σημείο ή ενημέρωση 5 εισαγωγών) + γραμματική
+  όπως το `ENTERED_AMOUNT` του `src/subapps/catalog/values/decimal-amount.ts` (που τότε γίνεται καταναλωτής του, όχι δίδυμο).
+  ⚠️ Προσοχή στο `SourcedFieldRow` (αναλύει **ανά πληκτρολόγηση**: το «12,» δεν πρέπει να γίνει ξαφνικά `null` χωρίς απόφαση).
+
 - 🟡 **25/10 — Η ΠΥΛΗ ΔΕΙΚΤΩΝ ΤΟΥ ADMIN SDK ΕΙΝΑΙ ΤΥΦΛΗ ΣΕ ΕΡΩΤΗΜΑΤΑ ΜΕΣΑ ΣΕ ΣΥΝΑΛΛΑΓΗ (3.91)** *(ADR-923 §5.9.1, εύρημα της Φ1β)*
 
   **Τι:** το `scripts/_shared/firestore-query-chain.js` αγκυρώνει σε αλυσίδα που **τελειώνει** σε `.get()/.stream()/.onSnapshot()`

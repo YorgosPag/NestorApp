@@ -7,7 +7,7 @@
  * μπορεί να επαληθεύσει.
  */
 
-import { fnv1a32 } from '../fnv1a';
+import { fnv1a32, fnv1a64Hex } from '../fnv1a';
 
 describe('Α21.1 — είναι ΟΝΤΩΣ FNV-1a 32 bit (πρότυπα διανύσματα)', () => {
   it.each([
@@ -62,5 +62,21 @@ describe('Α21.1 — η κατανομή δεν ευνοεί συστηματι�
     expect(buckets.every((count) => count > 0)).toBe(true);
     // Χαλαρό όριο επίτηδες: φυλάει από «όλα σε έναν κουβά», όχι από στατιστικό θόρυβο.
     expect(Math.max(...buckets)).toBeLessThan(4_000 / 2);
+  });
+});
+
+describe('ADR-923 Δ7 — είναι ΟΝΤΩΣ FNV-1a 64 bit (πρότυπα διανύσματα)', () => {
+  it.each([
+    ['', 'cbf29ce484222325'], // το offset basis — η κενή είσοδος δεν το αλλάζει
+    ['a', 'af63dc4c8601ec8c'],
+    ['foobar', '85944171f73967e8'],
+  ])('fnv1a64Hex(%p) === %p', (input, expected) => {
+    expect(fnv1a64Hex(input)).toBe(expected);
+  });
+
+  it('πάντα 16 hex ψηφία, ακόμη και με αρχικά μηδενικά', () => {
+    for (let index = 0; index < 2_000; index += 1) {
+      expect(fnv1a64Hex(`k${index}`)).toMatch(/^[0-9a-f]{16}$/);
+    }
   });
 });
