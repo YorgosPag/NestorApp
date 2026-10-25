@@ -1941,6 +1941,9 @@
     }
   },
   "ribbon": {
+    "availability": {
+      "noPendingProposal": "Δεν υπάρχει πρόταση προς έλεγχο — πατήστε πρώτα «Δημιουργία»"
+    },
     "storeyGating": {
       "notRecommended": "Δεν συνηθίζεται σε αυτή τη στάθμη"
     },

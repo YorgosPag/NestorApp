@@ -35,7 +35,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-609-ribbon-mep-auto-bridge-ssot.md
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
@@ -44,12 +44,10 @@ import { CreateMepSystemCommand } from '../../../core/commands/entity-commands/C
 import { CreateMepSegmentsCommand } from '../../../core/commands/entity-commands/CreateMepSegmentsCommand';
 import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { getCurrentLayerId } from '../../../stores/LayerStore';
-import { resolveSceneUnits, type SceneUnits } from '../../../utils/scene-units';
-import {
-  recognizeSceneFromRegistry,
-  registerMepRecognition,
-  type RecognitionModel,
-} from '../../../systems/recognition';
+import type { SceneUnits } from '../../../utils/scene-units';
+import type { RecognitionModel } from '../../../systems/recognition';
+import { recognizeCurrentStorey } from './bridge/mep-storey-recognition';
+import { useGenerateReviewActions } from './bridge/use-generate-review-actions';
 import type {
   MepNetworkCommitPlan,
   ResolveMepSystemName,
@@ -169,14 +167,9 @@ export function createRibbonMepAutoBridge<
 
     // Generate — recognize the storey + auto-design → proposal ghost.
     const handleGenerate = useCallback((): void => {
-      const levelId = levelManager.currentLevelId;
-      if (!levelId) return;
-      const scene = levelManager.getLevelScene(levelId);
-      if (!scene) return;
-      const entities = scene.entities;
-      const sceneUnits = resolveSceneUnits(scene);
-      registerMepRecognition();
-      const model = recognizeSceneFromRegistry({ entities, storeyId: levelId, sceneUnits });
+      const storey = recognizeCurrentStorey(levelManager);
+      if (!storey) return;
+      const { entities, sceneUnits, model } = storey;
       const proposal = design(model, entities, sceneUnits);
       if (proposal.networks.length === 0) {
         store.reset();
@@ -218,15 +211,10 @@ export function createRibbonMepAutoBridge<
       store.reset();
     }, []);
 
-    const onAction = useCallback(
-      (action: string): void => {
-        if (action === actions.generate) return handleGenerate();
-        if (action === actions.accept) return handleAccept();
-        if (action === actions.reject) return handleReject();
-      },
-      [handleGenerate, handleAccept, handleReject],
-    );
-
-    return useMemo(() => ({ onAction }), [onAction]);
+    return useGenerateReviewActions(actions, {
+      onGenerate: handleGenerate,
+      onAccept: handleAccept,
+      onReject: handleReject,
+    });
   };
 }

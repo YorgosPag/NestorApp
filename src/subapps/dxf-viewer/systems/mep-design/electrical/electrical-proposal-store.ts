@@ -42,8 +42,17 @@ export interface ProposalReviewSummary {
   readonly skippedAlreadyCircuited: number;
 }
 
+/**
+ * Which auto-design produced the review. Strong (ADR-430) and weak (ADR-431) share this
+ * ONE store, so each bridge's Accept/Reject acts only on its own origin — otherwise
+ * «Αποδοχή Ισχυρών» would commit a weak-current proposal (and vice versa), and the
+ * ribbon would enable the wrong triad (ADR-444 §7.6).
+ */
+export type ElectricalProposalOrigin = 'strong' | 'weak';
+
 /** The proposal under review + the entities Accept will create + the ghost's wire paths. */
 export interface ElectricalProposalReview {
+  readonly origin: ElectricalProposalOrigin;
   readonly proposal: ProposalReviewSummary;
   /** Pre-built circuit systems (ids stable preview→commit) — Accept creates these. */
   readonly systemEntities: readonly MepSystemEntity[];
@@ -76,6 +85,8 @@ export const electricalProposalStore = {
   get(): ElectricalProposalReview | null {
     return store.get();
   },
+  /** Non-React subscription — for the ribbon Accept/Reject availability gate (ADR-444 §7.6). */
+  subscribe: store.subscribe,
 };
 
 /** React subscription. Returns the review under way, or `null` when idle. */

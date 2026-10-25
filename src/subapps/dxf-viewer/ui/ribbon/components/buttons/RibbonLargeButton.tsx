@@ -13,7 +13,11 @@ import { useRibbonDispatch } from '../../context/RibbonCommandContext';
 import { isCommandActive } from '../../utils/ribbon-active-state';
 import { RibbonButtonIcon } from './RibbonButtonIcon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../RibbonTooltip';
-import { useToolUnavailability } from '../../../../stores/ToolAvailabilityStore';
+import {
+  guardToolActivation,
+  isRibbonActionKey,
+  useToolUnavailability,
+} from '../../../../stores/ToolAvailabilityStore';
 
 interface RibbonLargeButtonProps {
   command: RibbonCommand;
@@ -47,6 +51,9 @@ const RibbonLargeButtonInner: React.FC<RibbonLargeButtonProps> = ({
       return;
     }
     if (command.action) {
+      // ADR-444 §7.6 — actions have no tool-activation gate downstream, so the button asks
+      // the SAME availability gate (e.g. «Αποδοχή» with no pending proposal → toast «γιατί»).
+      if (isRibbonActionKey(command.action) && !guardToolActivation(command.action)) return;
       onAction(command.action, command.actionData);
       return;
     }

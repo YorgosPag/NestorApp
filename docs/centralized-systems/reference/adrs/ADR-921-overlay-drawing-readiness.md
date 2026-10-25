@@ -145,3 +145,4 @@ i18n: `dxf-viewer-shell` → `overlayReadiness.{noLevel,noFloor,noBackground,noA
 | Έκδοση | Ημερομηνία | Αλλαγή |
 |---|---|---|
 | v1.0 | 2026-10-24 | Αρχική υλοποίηση (uncommitted) |
+| v1.1 | 2026-10-25 | `ToolAvailabilityStore` κλειδώνει και ribbon actions: κλειδί `AvailabilityKey = ToolType \| RibbonActionKey` (`<ns>.actions.<verb>`, `isRibbonActionKey`)· το `RibbonLargeButton` περνά τις actions από την ίδια πύλη. Πρώτος κάτοχος: Αποδοχή/Απόρριψη των αυτόματων Η/Μ (ADR-444 §7.6) |

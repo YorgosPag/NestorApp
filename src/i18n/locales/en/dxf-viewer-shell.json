@@ -1941,6 +1941,9 @@
     }
   },
   "ribbon": {
+    "availability": {
+      "noPendingProposal": "No proposal to review — run “Generate” first"
+    },
     "storeyGating": {
       "notRecommended": "Not typical on this level"
     },

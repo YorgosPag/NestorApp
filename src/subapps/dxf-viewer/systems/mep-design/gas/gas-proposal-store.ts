@@ -55,6 +55,8 @@ export const gasProposalStore = {
   get(): GasProposalReview | null {
     return store.get();
   },
+  /** Non-React subscription — for the ribbon Accept/Reject availability gate (ADR-444 §7.6). */
+  subscribe: store.subscribe,
 };
 
 /** React subscription. Returns the review under way, or `null` when idle. */

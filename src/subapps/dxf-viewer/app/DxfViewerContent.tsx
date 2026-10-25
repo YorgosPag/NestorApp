@@ -46,6 +46,7 @@ import { useResponsiveLayout } from '@/components/contacts/dynamic/hooks/useResp
 import { useDxfViewerCallbacks } from './useDxfViewerCallbacks';
 import { useDxfViewerEffects } from './useDxfViewerEffects';
 import { useToolAvailabilityNotifications } from './useToolAvailabilityNotifications';
+import { installMepProposalAvailability } from '../ui/ribbon/hooks/bridge/mep-proposal-availability';
 import { useDxfViewerNotifications } from '../hooks/useDxfViewerNotifications';
 import { useStructuralAutoAttach } from '../hooks/useStructuralAutoAttach';
 import { useColumnBeamPromote } from '../hooks/useColumnBeamPromote';
@@ -236,6 +237,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     showLayers, floatingRef,
   });
   useToolAvailabilityNotifications(notifications, wrappedHandleAction); // ADR-921 «γιατί δεν μπορώ;» + διόρθωση
+  React.useEffect(() => installMepProposalAvailability(), []); // ADR-444 §7.6 Αποδοχή/Απόρριψη μόνο με πρόταση
   // ✅ ADR-065 SRP: Extracted effects
   useDxfViewerEffects({
     activeTool, overlayMode, currentScene,

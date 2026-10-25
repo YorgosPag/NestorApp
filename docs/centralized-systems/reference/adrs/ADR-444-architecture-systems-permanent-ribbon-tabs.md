@@ -108,7 +108,8 @@ discipline re-grouping fixes a pre-existing mis-categorization. 49/49 ribbon-dat
 - «Αντικείμενα» (`draw.objects.group`, furniture/symbols) intentionally stays in Home →
   Draw — it is not a BIM discipline (Revit "Component").
 - Per-panel `visibilityKey` gating; merging duplicate `SK` shortcut.
-- Accept / Reject enabled only while a proposal is pending (see §7.6).
+- Gating Accept on the proposal's storey (a proposal generated on L1 stays acceptable after
+  switching to L2) — engine-side concern of ADR-426…432.
 
 ## 7. Icons — plan-symbol subject × action badge (2026-10-24)
 
@@ -182,11 +183,49 @@ is unchanged (pure extraction).
 - `MepToolIcon.test.tsx`: every subject × badge renders; all 30 subjects geometrically
   distinct; all geometry inside the viewBox; mask wiring; token round-trip + rejection.
 
-### 7.6 Next stage (proposed, not implemented)
+### 7.6 Accept / Reject only while a proposal is pending (2026-10-25)
 
-Revit / Office enable *Finish/Accept* and *Cancel/Reject* only while there is something to
-accept. The ribbon already supports per-panel `visibilityKey`; a follow-up can expose a
-«πρόταση σε εκκρεμότητα» predicate per auto-design engine and gate Accept/Reject on it.
+Revit (*Finish / Cancel*) and Office (*Accept / Reject*) enable the confirm pair only while
+there is something to confirm. Before this, all 8 triads kept ✓ / ✗ always clickable: with
+nothing pending they silently did nothing.
+
+**Mechanism — reuse, not a new one.** Per-panel `visibilityKey` was rejected: it HIDES the
+whole panel (Generate too) and makes the ribbon jump. The ADR-921 `ToolAvailabilityStore`
+already gives Revit-style *availability* (greyed + «why» tooltip, `aria-disabled` so the
+click still explains). Its key space was widened from `ToolType` to
+`AvailabilityKey = ToolType | RibbonActionKey` (`<ns>.actions.<verb>`, `isRibbonActionKey`).
+
+| Piece | Role |
+|---|---|
+| `*-proposal-store.ts` (×7) | expose `subscribe` (non-React) next to `get` |
+| `ui/ribbon/hooks/bridge/mep-proposal-availability.ts` | the ONE owner: `MEP_PROPOSAL_GATES` (8 triads) → `installMepProposalAvailability()` publishes `ribbon.availability.noPendingProposal` on `accept` + `reject` while idle; `generate` never gated |
+| `DxfViewerContent.tsx` | installs it once (effect; no shell re-render — ADR-040 CHECK 6C) |
+| `RibbonLargeButton.tsx` | action click → `guardToolActivation(action)` → central toast with the reason (same path as tools) |
+
+**Latent bug fixed on the way.** Strong (ADR-430) and weak (ADR-431) current share ONE
+`electricalProposalStore`, and both bridges' Accept/Reject read it blindly: «Αποδοχή» of the
+strong triad would commit a pending *weak* proposal (and Reject would discard it). The review
+now carries `origin: 'strong' | 'weak'`; each bridge acts only on its own origin and the gate
+enables only the matching pair.
+
+Guard: `mep-proposal-availability.test.ts` — idle ⇒ greyed, generate never gated, pending ⇒
+enabled, teardown, electrical origin isolation, gate refusal event, and **every**
+`.actions.accept|reject` on the six MEP tabs owned by exactly one gate.
+
+**One flow, not twins (CHECK 3.28).** The strong and weak electrical bridges were parallel
+copies of one Generate → review → accept flow, and the storey-recognition prelude existed a
+third time in `create-ribbon-mep-auto-bridge`. Extracted to `ui/ribbon/hooks/bridge/`:
+
+| SSoT | Used by |
+|---|---|
+| `mep-storey-recognition.ts` — `recognizeCurrentStorey(levelManager)` | pipe factory · electrical factory |
+| `use-generate-review-actions.ts` — the 3-key `onAction` dispatch | pipe factory · electrical factory |
+| `create-electrical-auto-bridge.ts` — the electrical flow, parametrised by `origin` | `useRibbonElectricalAutoBridge` · `useRibbonElectricalWeakAutoBridge` (now config only) |
+| `electrical-proposal-commit.ts` — `commitElectricalReview(origin, …)`: ONE `CompoundCommand`, own origin only | electrical factory |
+| `use-electrical-auto-bridge-deps.ts` — executor · translator · live systems | electrical factory |
+
+Guard: `electrical-proposal-commit.test.ts` — sibling's review never committed (and left under
+review) · empty review cleared without a transaction · own review = ONE compound command.
 
 ## Changelog
 
@@ -204,3 +243,12 @@ accept. The ribbon already supports per-panel `visibilityKey`; a follow-up can e
   `electricalStrong` + `electricalWeak`; NEW `electricalWeakAuto`; `electricalAuto` relabelled).
   New ribbon tokens `--ribbon-icon-accept|reject`. Plan helpers exported (pure extraction).
   §2 table brought in line with code (bathroom-auto-arrange was missing).
+- **2026-10-25** — v4 (Opus 5.5). §7.6 implemented: Accept / Reject of all 8 auto-design
+  triads available only while their proposal is pending, via the ADR-921 availability store
+  (key space widened to ribbon actions). Fixed strong/weak electrical cross-commit through the
+  shared proposal store (`origin`). i18n `ribbon.availability.noPendingProposal` (el/en).
+- **2026-10-25** — v4.1 (Opus 5.5). CHECK 3.28 blocked the §7.6 commit on two clones between
+  the strong/weak electrical bridges → `createElectricalAutoBridge` (the two hooks are config
+  only) + `recognizeCurrentStorey` / `useGenerateReviewActions` shared with the pipe factory
+  + `commitElectricalReview` (new test, 4/4). Behaviour unchanged; the strong bridge's no-op
+  `void getCurrentLayerId()` dropped. Ribbon bridge suites 262/262.
