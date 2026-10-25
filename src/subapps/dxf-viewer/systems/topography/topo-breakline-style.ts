@@ -67,6 +67,11 @@ export function breaklineDashPattern(
   return source ? PATTERN_BY_SOURCE[source] : null;
 }
 
+/** Stable identity of a pattern (`'solid'` for none) — one 3D material / one mesh group per distinct pattern. */
+export function breaklinePatternKey(pattern: BreaklineDashPattern | null): string {
+  return pattern ? `${pattern.dashPx}-${pattern.gapPx}` : 'solid';
+}
+
 /**
  * The SVG `stroke-dasharray` that DRAWS `pattern` with round caps at `widthPx`, or `null` for solid.
  *

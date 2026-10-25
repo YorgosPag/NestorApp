@@ -23,6 +23,7 @@ import type { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { UI_COLORS } from '../../config/color-config';
 import {
   breaklineFlatCapDash,
+  breaklinePatternKey,
   TOPO_BREAKLINE_STROKE_PX,
   TOPO_BREAKLINE_VERTEX_DOT_PX,
   TOPO_BREAKLINE_VERTEX_OUTLINE_PX,
@@ -38,11 +39,6 @@ const lineCatalog = createFatLineMaterialCatalog();
 type VertexDiscRole = 'outline' | 'fill';
 const discs = new Map<VertexDiscRole, ScreenDotMaterial>();
 
-/** Stable identity of a pattern — one core material per distinct pattern, `'solid'` for none. */
-export function topoBreaklinePatternKey(pattern: BreaklineDashPattern | null): string {
-  return pattern ? `${pattern.dashPx}-${pattern.gapPx}` : 'solid';
-}
-
 /** The dark CASING under every committed breakline — solid, one step heavier than the core. */
 export function getTopoBreaklineCasingMaterial3D(): LineMaterial {
   return lineCatalog.get('casing', {
@@ -55,7 +51,7 @@ export function getTopoBreaklineCasingMaterial3D(): LineMaterial {
 /** The yellow CORE in the breakline's provenance pattern (`null` = solid). */
 export function getTopoBreaklineCoreMaterial3D(pattern: BreaklineDashPattern | null): LineMaterial {
   const dash = breaklineFlatCapDash(pattern, TOPO_BREAKLINE_STROKE_PX.stroke);
-  return lineCatalog.get(`core:${topoBreaklinePatternKey(pattern)}`, {
+  return lineCatalog.get(`core:${breaklinePatternKey(pattern)}`, {
     widthPx: TOPO_BREAKLINE_STROKE_PX.stroke,
     color: new THREE.Color(UI_COLORS.TOPO_BREAKLINE).getHex(),
     polygonOffset: COPLANAR_LINE_POLYGON_OFFSET,

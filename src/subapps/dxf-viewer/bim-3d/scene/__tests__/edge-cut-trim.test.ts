@@ -3,7 +3,7 @@
  */
 
 import * as THREE from 'three';
-import { clipLineSegmentsToCutY, worldYRange } from '../edge-cut-trim';
+import { clipLineSegmentsToCutY, filterPointsBelowCutY, worldYRange } from '../edge-cut-trim';
 
 const I = new THREE.Matrix4(); // identity (local === world)
 
@@ -63,5 +63,18 @@ describe('worldYRange', () => {
     const { minY, maxY } = worldYRange(positions, m);
     expect(minY).toBeCloseTo(10, 6);
     expect(maxY).toBeCloseTo(14, 6);
+  });
+});
+
+describe('filterPointsBelowCutY — the point-set sibling (ADR-920 Β2 vertex discs)', () => {
+  it('keeps points at/below the cut, drops the ones above', () => {
+    const pts = [0, 1, 0, 0, 2, 0, 0, 3, 0];
+    expect(Array.from(filterPointsBelowCutY(pts, I, 2))).toEqual([0, 1, 0, 0, 2, 0]);
+  });
+
+  it('classifies in WORLD space — a dropped root (the terrain seat) shifts the threshold', () => {
+    const dropped = new THREE.Matrix4().makeTranslation(0, -0.5, 0);
+    // local y 2.4 → world 1.9 ≤ 2 kept; local y 2.6 → world 2.1 dropped. Output stays LOCAL.
+    expect(Array.from(filterPointsBelowCutY([0, 2.4, 0, 0, 2.6, 0], dropped, 2))).toEqual([0, 2.4, 0].map(Math.fround));
   });
 });

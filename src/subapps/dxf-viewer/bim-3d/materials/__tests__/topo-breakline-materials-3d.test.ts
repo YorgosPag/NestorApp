@@ -11,6 +11,7 @@ import { UI_COLORS } from '../../../config/color-config';
 import {
   breaklineDashPattern,
   breaklineFlatCapDash,
+  breaklinePatternKey,
   TOPO_BREAKLINE_STROKE_PX,
   TOPO_BREAKLINE_VERTEX_DOT_PX,
   TOPO_BREAKLINE_VERTEX_OUTLINE_PX,
@@ -23,7 +24,6 @@ import {
   getTopoBreaklineCasingMaterial3D,
   getTopoBreaklineCoreMaterial3D,
   getTopoBreaklineVertexMaterial3D,
-  topoBreaklinePatternKey,
 } from '../topo-breakline-materials-3d';
 
 const hex = (css: string): number => new THREE.Color(css).getHex();
@@ -75,7 +75,7 @@ describe('topo-breakline-materials-3d — το λεξιλόγιο φτάνει �
     const a = getTopoBreaklineCoreMaterial3D(breaklineDashPattern('proximity'));
     expect(getTopoBreaklineCoreMaterial3D({ dashPx: 8, gapPx: 4 })).toBe(a);
     expect(getTopoBreaklineCoreMaterial3D(null)).not.toBe(a);
-    expect(topoBreaklinePatternKey(null)).toBe('solid');
+    expect(breaklinePatternKey(null)).toBe('solid');
   });
 
   it('κουκκίδες: γέμισμα = διάμετρος 2Δ · περίγραμμα = + δαχτυλίδι και από τις δύο πλευρές', () => {

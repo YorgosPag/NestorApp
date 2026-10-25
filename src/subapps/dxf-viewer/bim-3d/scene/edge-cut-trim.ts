@@ -70,6 +70,25 @@ export function clipLineSegmentsToCutY(
 }
 
 /**
+ * The point-set sibling of {@link clipLineSegmentsToCutY}: keep only the points (`[x,y,z, …]`, local)
+ * at/below `worldCutY`. Same classification, same transform — so a vertex marker disappears exactly
+ * when the line it sits on is trimmed away (ADR-920 Β2: committed breakline vertex discs).
+ */
+export function filterPointsBelowCutY(
+  positions: ArrayLike<number>,
+  matrixWorld: THREE.Matrix4,
+  worldCutY: number,
+): Float32Array {
+  const p = new THREE.Vector3();
+  const out: number[] = [];
+  for (let i = 0; i + 2 < positions.length; i += 3) {
+    p.set(positions[i], positions[i + 1], positions[i + 2]).applyMatrix4(matrixWorld);
+    if (p.y <= worldCutY) out.push(positions[i], positions[i + 1], positions[i + 2]);
+  }
+  return new Float32Array(out);
+}
+
+/**
  * World-Y extent (min/max) of flat local positions under `matrixWorld`.
  * Used to classify an overlay as fully-below / crossing / fully-above the cut so
  * only the crossing overlays pay the trim+upload cost.
