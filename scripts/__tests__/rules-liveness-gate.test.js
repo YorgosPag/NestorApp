@@ -95,10 +95,13 @@ describe('Ζ — το ζωντανό δέντρο', () => {
   // `property_handover_invitations`: read/write `if false`) +2 (`bf6a1a6a` ADR-916 — `property_handover_deliveries`:
   // read/write `if false`) +2 (`3183c2bf` ADR-917 F3b — `project_budget_lines`: read/write `if false`) +2 (`2a5c4f55`
   // ADR-918 — `property_handover_protocols`: read/write `if false`) ⇒ 794. Το `92d7d427` (ADR-917 F4) ΜΕΤΕΤΡΕΨΕ κλάδους, ±0.
-  it('Ζ 🔑 0 ευρήματα — ΚΑΙ ο πληθυσμός είναι αυτός που μετρήθηκε (794 + 71 allow)', () => {
+  // 2026-10-25: +10 (ADR-923 Φ1β — πέντε συλλογές σχήματος καταλόγου `catalog_attributes` · `catalog_attribute_groups` ·
+  // `catalog_measurement_families` · `catalog_categories` · `catalog_families`: η καθεμία read με `isAuthenticated` +
+  // `isInternalUserOfCompany`, write `if false`) ⇒ 804.
+  it('Ζ 🔑 0 ευρήματα — ΚΑΙ ο πληθυσμός είναι αυτός που μετρήθηκε (804 + 71 allow)', () => {
     const result = sweep(ROOT);
     expect(result.violations).toEqual([]);
-    expect(result.perFile.map((f) => f.allows)).toEqual([794, 71]);
+    expect(result.perFile.map((f) => f.allows)).toEqual([804, 71]);
     expect(result.tally[GATE_STATES.COVERED]).toBeGreaterThan(600);
     expect(result.claimName).toBe('revokedSignIns');
   });

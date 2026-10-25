@@ -217,6 +217,13 @@ export const PERMISSIONS = {
   // Floorplans
   "floorplans:floorplans:process": true,
 
+  // Κατάλογος προμηθευτή — ΣΧΗΜΑ (ADR-923 §5.1 · §5.9): ιδιότητες, ομάδες, οικογένειες μέτρησης,
+  // κατηγορίες, οικογένειες προϊόντων. Δύο βαθμίδες όπως στο Akeneo (view ≠ edit catalog structure):
+  // το σχήμα το διαβάζουν όλοι οι υπάλληλοι, το αλλάζει ΜΟΝΟ όποιος κρατά τη δομή του καταλόγου —
+  // μια αλλαγή σχήματος αγγίζει κάθε προϊόν της οικογένειας.
+  "catalog:schema:view": true,
+  "catalog:schema:manage": true,
+
   // Orders (for vendors)
   "orders:orders:view": true,
   "deliveries:deliveries:view": true,

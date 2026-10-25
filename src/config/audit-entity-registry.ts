@@ -244,6 +244,15 @@ export const AUDIT_ENTITIES = {
   material: { collectionKey: 'MATERIALS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },
   framework_agreement: { collectionKey: 'FRAMEWORK_AGREEMENTS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },
 
+  // ── Κατάλογος προμηθευτή — σχήμα (ADR-923 §5.9) ───────────────────────────
+  // Βιβλίο `'company'` = ο χώρος του προμηθευτή. Κάθε γραφή περνά από το `src/server/catalog/**` (CHECK 3.106)
+  // και γράφει ίχνος μετά το commit (`recordTrackedEntityWrite`). `renamePropagation: false` — δεν ονομάζουν αρχεία.
+  catalog_attribute: { collectionKey: 'CATALOG_ATTRIBUTES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+  catalog_attribute_group: { collectionKey: 'CATALOG_ATTRIBUTE_GROUPS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+  catalog_measurement_family: { collectionKey: 'CATALOG_MEASUREMENT_FAMILIES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+  catalog_category: { collectionKey: 'CATALOG_CATEGORIES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+  catalog_family: { collectionKey: 'CATALOG_FAMILIES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+
   // ── Μηχανή κειμένου (ADR-651 / ADR-344) — server-only services ────────────
   text_template: { collectionKey: 'TEXT_TEMPLATES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },
   custom_dictionary_entry: { collectionKey: 'TEXT_CUSTOM_DICTIONARY', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },

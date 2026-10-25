@@ -95,6 +95,13 @@ const TRACKED_COLLECTION_KEYS = new Set([
   // ADR-917 Φ3β — γραμμή προϋπολογισμού έργου (audit entityType: 'project', βιβλίο 'company').
   // Κάθε γραφή περνά από το project-budget-lines.server.ts (ίχνος μετά το commit).
   'PROJECT_BUDGET_LINES',
+  // ADR-923 §5.9 — το σχήμα του καταλόγου προμηθευτή (audit entityType: 'catalog_*', βιβλίο 'company').
+  // Κάθε γραφή περνά από τη μηχανή `src/server/catalog/catalog-store.server.ts` (ίχνος μετά το commit).
+  'CATALOG_ATTRIBUTES',
+  'CATALOG_ATTRIBUTE_GROUPS',
+  'CATALOG_MEASUREMENT_FAMILIES',
+  'CATALOG_CATEGORIES',
+  'CATALOG_FAMILIES',
   // ADR-344 Phase 7.B — DXF text templates (audit entityType: 'text_template')
   'TEXT_TEMPLATES',
   // ADR-363 Phase 1D-C — BIM wall entities (audit via wall-audit-client.ts → /api/audit-trail/record)

@@ -2,11 +2,11 @@
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
   "metadata": {
-    "timestamp": "2026-10-25T08:46:13.831Z",
+    "timestamp": "2026-10-25T15:53:48.777Z",
     "properties": [
       {
         "name": "nestor:inputsFingerprint",
-        "value": "sha256:e4411fbdc6f79309c17cc49db6f393204e404bd38ceff47aa8738d888d55987b"
+        "value": "sha256:a2c4640ed8d0b3a27bf180c65c0389a5e224ae61f7c358f65442a3f01388b35c"
       }
     ]
   },
@@ -592,6 +592,106 @@
       "name": "@date-fns/tz",
       "version": "1.4.1",
       "purl": "pkg:npm/@date-fns/tz@1.4.1",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "nestor:surface",
+          "value": "unknown"
+        },
+        {
+          "name": "nestor:attribution",
+          "value": "surface-unknown"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/@dnd-kit/accessibility@3.1.1",
+      "name": "@dnd-kit/accessibility",
+      "version": "3.1.1",
+      "purl": "pkg:npm/@dnd-kit/accessibility@3.1.1",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "nestor:surface",
+          "value": "unknown"
+        },
+        {
+          "name": "nestor:attribution",
+          "value": "surface-unknown"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/@dnd-kit/core@6.3.1",
+      "name": "@dnd-kit/core",
+      "version": "6.3.1",
+      "purl": "pkg:npm/@dnd-kit/core@6.3.1",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "nestor:surface",
+          "value": "unknown"
+        },
+        {
+          "name": "nestor:attribution",
+          "value": "surface-unknown"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/@dnd-kit/sortable@10.0.0",
+      "name": "@dnd-kit/sortable",
+      "version": "10.0.0",
+      "purl": "pkg:npm/@dnd-kit/sortable@10.0.0",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "nestor:surface",
+          "value": "unknown"
+        },
+        {
+          "name": "nestor:attribution",
+          "value": "surface-unknown"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/@dnd-kit/utilities@3.2.2",
+      "name": "@dnd-kit/utilities",
+      "version": "3.2.2",
+      "purl": "pkg:npm/@dnd-kit/utilities@3.2.2",
       "scope": "optional",
       "licenses": [
         {

@@ -449,6 +449,18 @@ export const generateBimFamilyTypeId = () => enterpriseIdService.generateBimFami
 // Opening Component Library — Frame Presets (ADR-676)
 export const generateOpeningFramePresetId = () => enterpriseIdService.generateOpeningFramePresetId();
 
+// Κατάλογος προμηθευτή — σχήμα (ADR-923 §5.9): ντετερμινιστικά από (χώρος, κωδικός)
+export const generateDeterministicCatalogAttributeId = (companyId: string, code: string) =>
+  enterpriseIdService.generateDeterministicCatalogAttributeId(companyId, code);
+export const generateDeterministicCatalogAttributeGroupId = (companyId: string, code: string) =>
+  enterpriseIdService.generateDeterministicCatalogAttributeGroupId(companyId, code);
+export const generateDeterministicCatalogMeasurementFamilyId = (companyId: string, code: string) =>
+  enterpriseIdService.generateDeterministicCatalogMeasurementFamilyId(companyId, code);
+export const generateDeterministicCatalogCategoryId = (companyId: string, code: string) =>
+  enterpriseIdService.generateDeterministicCatalogCategoryId(companyId, code);
+export const generateDeterministicCatalogFamilyId = (companyId: string, code: string) =>
+  enterpriseIdService.generateDeterministicCatalogFamilyId(companyId, code);
+
 // Optimistic & Temporary
 export const generateOptimisticId = () => enterpriseIdService.generateOptimisticId();
 export const generateTempId = () => enterpriseIdService.generateTempId();

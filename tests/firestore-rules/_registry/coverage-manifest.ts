@@ -639,6 +639,40 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     testFile: 'tests/firestore-rules/suites/property-handovers.rules.test.ts',
     ...serverWrittenTenantInternalMatrix(),
   },
+  // ─── ADR-923 §5.9 — ΤΟ ΣΧΗΜΑ ΤΟΥ ΚΑΤΑΛΟΓΟΥ ΠΡΟΜΗΘΕΥΤΗ ──────────────────────
+  // Πέντε συλλογές, ΕΝΑ σύνορο: διαβάζει ο εσωτερικός χρήστης του χώρου, γράφει ΜΟΝΟ ο διακομιστής
+  // (`src/server/catalog/**`, CHECK 3.106) ⇒ η ίδια μήτρα με την παράδοση, ΚΑΜΙΑ νέα· κοινός βοηθός
+  // σουίτας (`_harness/server-written-tenant-suite.ts`) αντί για πέντε αντίγραφα.
+  {
+    collection: 'catalog_attributes',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/catalog-attributes.rules.test.ts',
+    ...serverWrittenTenantInternalMatrix(),
+  },
+  {
+    collection: 'catalog_attribute_groups',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/catalog-attribute-groups.rules.test.ts',
+    ...serverWrittenTenantInternalMatrix(),
+  },
+  {
+    collection: 'catalog_measurement_families',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/catalog-measurement-families.rules.test.ts',
+    ...serverWrittenTenantInternalMatrix(),
+  },
+  {
+    collection: 'catalog_categories',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/catalog-categories.rules.test.ts',
+    ...serverWrittenTenantInternalMatrix(),
+  },
+  {
+    collection: 'catalog_families',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/catalog-families.rules.test.ts',
+    ...serverWrittenTenantInternalMatrix(),
+  },
   {
     // ADR-916 Φ-Β — Η ΠΡΟΣΚΛΗΣΗ ΤΟΥ ΑΓΟΡΑΣΤΗ. `deny_all` όπως κάθε είδος του κοινού πυρήνα: ανάγνωση = email
     // ιδιωτών + `nonceHash`· γραφή = αποδοχή χωρίς σύνδεσμο, δηλαδή φάκελος σε λάθος λογαριασμό.

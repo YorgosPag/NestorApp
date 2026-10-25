@@ -6,6 +6,7 @@
  */
 
 import { DXF_BIM_ID_PREFIXES } from './enterprise-id-prefixes-dxf-bim';
+import { CATALOG_ID_PREFIXES } from './enterprise-id-prefixes-catalog';
 
 // Enterprise prefix mappings for namespace isolation
 export const ENTERPRISE_ID_PREFIXES = {
@@ -507,6 +508,9 @@ export const ENTERPRISE_ID_PREFIXES = {
 
   // DXF / CAD / BIM (ADR-344 · ADR-358 · ADR-362 · ADR-363 · ADR-366 · ADR-373 · ADR-676)
   ...DXF_BIM_ID_PREFIXES,
+
+  // Κατάλογος προμηθευτή — σχήμα (ADR-923 §5.9)
+  ...CATALOG_ID_PREFIXES,
 
   // Optimistic & Temporary
   OPTIMISTIC: 'opt',

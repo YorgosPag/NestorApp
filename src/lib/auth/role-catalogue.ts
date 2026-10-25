@@ -70,6 +70,9 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       // ADR-867 Ε1β — προσωπικό: αναλαμβάνει και απαντά (όχι επισκέπτης · `vendor` · `viewer`).
       "network:threads:respond",
       "admin_access",
+      // ADR-923 §5.1 — ο διαχειριστής κρατά τη ΔΟΜΗ του καταλόγου (σχήμα).
+      "catalog:schema:view",
+      "catalog:schema:manage",
       "users:users:view",
       "users:users:manage",
       "projects:projects:view",
@@ -273,6 +276,8 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "units:units:view",
       "notifications:notifications:view",
       "asset_packs:packs:use", // ADR-655
+      // ADR-923 §5.1 — ο υπάλληλος ΔΙΑΒΑΖΕΙ το σχήμα του καταλόγου· την αλλαγή του κρατά ο διαχειριστής.
+      "catalog:schema:view",
     ],
     level: 2,
     isProjectRole: false,

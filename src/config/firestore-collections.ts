@@ -1057,6 +1057,21 @@ export const COLLECTIONS = {
   FRAMEWORK_AGREEMENTS:
     process.env.NEXT_PUBLIC_FRAMEWORK_AGREEMENTS_COLLECTION || 'framework_agreements',
 
+  // 🗂️ SUPPLIER CATALOG — SCHEMA (ADR-923 §5.2 / §5.9). companyId-scoped· ο πελάτης ΜΟΝΟ διαβάζει,
+  //    γράφει ΜΟΝΟ το `src/server/catalog/**` (Admin SDK). IDs ντετερμινιστικά από (companyId, code).
+  /** Βιβλιοθήκη ιδιοτήτων. IDs via cattr_*. */
+  CATALOG_ATTRIBUTES: process.env.NEXT_PUBLIC_CATALOG_ATTRIBUTES_COLLECTION || 'catalog_attributes',
+  /** Ομάδες ιδιοτήτων (μία ανά ιδιότητα). IDs via cagrp_*. */
+  CATALOG_ATTRIBUTE_GROUPS:
+    process.env.NEXT_PUBLIC_CATALOG_ATTRIBUTE_GROUPS_COLLECTION || 'catalog_attribute_groups',
+  /** Οικογένειες μέτρησης του ΧΩΡΟΥ (οι της πλατφόρμας ζουν σε κώδικα). IDs via cmfam_*. */
+  CATALOG_MEASUREMENT_FAMILIES:
+    process.env.NEXT_PUBLIC_CATALOG_MEASUREMENT_FAMILIES_COLLECTION || 'catalog_measurement_families',
+  /** Δέντρο κατηγοριών (πολλά δέντρα, ancestorIds + fractional orderKey). IDs via ccat_*. */
+  CATALOG_CATEGORIES: process.env.NEXT_PUBLIC_CATALOG_CATEGORIES_COLLECTION || 'catalog_categories',
+  /** Οικογένειες προϊόντων (ένα έγγραφο ανά οικογένεια, παράγωγο attributeIds[]). IDs via cfam_*. */
+  CATALOG_FAMILIES: process.env.NEXT_PUBLIC_CATALOG_FAMILIES_COLLECTION || 'catalog_families',
+
   // 🪜 DXF STAIR TOOL — ADR-358 (companyId-scoped, Phase 1)
   /** Parametric stair entities, 11 kinds, IfcStair-aligned. FK → floorplans. IDs via stair_* prefix. */
   FLOORPLAN_STAIRS: process.env.NEXT_PUBLIC_FLOORPLAN_STAIRS_COLLECTION || 'floorplan_stairs',

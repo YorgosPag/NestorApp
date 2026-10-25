@@ -92,6 +92,8 @@ export {
   generateDeterministicNetworkActTeamId, generateDeterministicNetworkBlockId,
   generateDeterministicNetworkAwayId, generateNetworkMessageId, generateNetworkMessageRevisionId,
   generateDeterministicNetworkMessageId,
+  generateDeterministicCatalogAttributeId, generateDeterministicCatalogAttributeGroupId, generateDeterministicCatalogMeasurementFamilyId,
+  generateDeterministicCatalogCategoryId, generateDeterministicCatalogFamilyId,
   generateCommissionId, generatePaymentPlanId, generatePlanGroupId,
   generatePaymentRecordId, generateLoanId, generateChequeId, generatePhotoId,
   generateAttachmentId, generateFileId, generateDeterministicFileId, generateShareId, generateDispatchId, generatePendingId,

@@ -1195,6 +1195,13 @@ if (!process.env.SKIP_TOUR_PRESENCE_AUTHORITY)
 if (!process.env.SKIP_LISTING_TERRAIN_AUTHORITY)
   addThread('3.105', 'Listing terrain authority', 'scripts/check-listing-terrain-authority.js');
 
+// CHECK 3.106 (ADR-923 §5.9) — ο ένας γραφέας του σχήματος καταλόγου. «Γράφει κάποιος ιδιότητα · ομάδα · οικογένεια
+// μέτρησης · κατηγορία · οικογένεια ΕΞΩ από τη μηχανή `src/server/catalog/catalog-store.server.ts` — δηλαδή χωρίς
+// επικύρωση απέναντι στη βιβλιοθήκη, χωρίς CAS, χωρίς ίχνος;» Οι κανόνες κλείνουν τον πελάτη, όχι τον Admin SDK.
+// AST, ZERO-TOL, καμία baseline. 🔴 ΧΩΡΙΣ ΣΚΑΝΔΑΛΗ: νέος γραφέας γεννιέται οπουδήποτε· το προφίλτρο κρατά τη σάρωση φθηνή.
+if (!process.env.SKIP_CATALOG_SCHEMA_AUTHORITY)
+  addThread('3.106', 'Catalog schema authority', 'scripts/check-catalog-schema-authority.js');
+
 // CHECK 3.90 (ADR-868) — το ΕΝΑ σύνορο. «Υπάρχει δημόσιο endpoint που ΔΕΝ περνά από το `withAuth`;»
 // Κάθε `'use server'` είναι server action = δημόσιο POST. Στο δέντρο ζούσαν 7 τέτοια αρχεία, και
 // κανένα δεν επαλήθευε ταυτότητα: το AI inbox διάβαζε `messages` ΟΛΩΝ των εταιρειών με

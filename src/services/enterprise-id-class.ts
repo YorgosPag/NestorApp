@@ -27,12 +27,12 @@
 import { ENTERPRISE_ID_PREFIXES, type EnterpriseIdPrefix } from './enterprise-id-prefixes';
 import type { EnterpriseId, IdGenerationConfig } from './enterprise-id-types';
 import { deterministicUuid, deterministicV4Uuid } from './enterprise-id-deterministic';
-import { CompositeKeyIdGenerators } from './enterprise-id-composite-key-generators';
+import { CatalogIdGenerators } from './enterprise-id-catalog-generators';
 
 // Alias for compact generator methods
 const P = ENTERPRISE_ID_PREFIXES;
 
-export class EnterpriseIdService extends CompositeKeyIdGenerators {
+export class EnterpriseIdService extends CatalogIdGenerators {
   private readonly config: IdGenerationConfig;
   private readonly generatedIds = new Set<string>();
   private readonly cache = new Map<string, EnterpriseId>();

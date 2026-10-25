@@ -20,6 +20,9 @@ export const CATALOG_ISSUE_CODES = [
   'labelRequired',
   'tooMany',
   'unknownReference',
+  'codeImmutable',
+  'typeLockedInUse',
+  'unitLockedInUse',
   // ── οικογένεια μέτρησης ──
   'unitStandardMissing',
   'unitStandardNotIdentity',

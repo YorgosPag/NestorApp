@@ -168,6 +168,25 @@ interface AttributeDefinitionBase {
 
 export type CatalogAttributeDefinition = AttributeDefinitionBase & TypedAttributeConfig;
 
+/**
+ * Η αποθηκευμένη μορφή προσθέτει το **παράγωγο** `measurementFamilyCodes` (για `array-contains`: «ποιες
+ * ιδιότητες χρησιμοποιούν αυτή την οικογένεια μέτρησης;» — η ίδια η ιδιότητα **ή** στήλη πίνακά της).
+ * Το γράφει **μόνο** ο γραφέας από το `config`.
+ */
+export type StoredCatalogAttributeDefinition = CatalogAttributeDefinition & {
+  readonly measurementFamilyCodes: readonly string[];
+};
+
+/** Οι οικογένειες μέτρησης που χρησιμοποιεί μια ιδιότητα (η ίδια ή στήλες πίνακα), χωρίς διπλότυπα. */
+export function deriveAttributeMeasurementFamilyCodes(attribute: CatalogAttributeDefinition): string[] {
+  if (attribute.type === 'measurement') return [attribute.config.measurementFamilyCode];
+  if (attribute.type !== 'table') return [];
+  const codes = attribute.config.columns.flatMap((column) =>
+    column.type === 'measurement' ? [column.measurementFamilyCode] : [],
+  );
+  return [...new Set(codes)];
+}
+
 /** Ορισμός ιδιότητας συγκεκριμένου τύπου. */
 export type CatalogAttributeOfType<K extends AttributeType> = AttributeDefinitionBase & {
   readonly type: K;

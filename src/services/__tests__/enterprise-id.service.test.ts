@@ -326,6 +326,13 @@ describe('EnterpriseIdService', () => {
       // ADR-ACC-010 §2.1.1 Φ6 — ΜΙΑ περίοδος ανά (μισθωτής, κλειδί): η ταυτότητα ΕΙΝΑΙ η απομόνωση. Ο τυχαίος
       // `generateFiscalPeriodId` (χωρίς καλούντα) ΚΑΤΑΡΓΗΘΗΚΕ — τυχαίο id = δεύτερη «2026-12» που κανείς δεν κλειδώνει.
       'generateDeterministicFiscalPeriodId',
+      // ADR-923 §5.9 — ΜΙΑ οντότητα σχήματος ανά (χώρος, κωδικός): η ταυτότητα ΕΙΝΑΙ η μοναδικότητα του κωδικού.
+      // Τυχαίο id = δεύτερη ιδιότητα «cooling_h» στον ίδιο κατάλογο, που η εισαγωγή δεν θα ήξερε ποια να γεμίσει.
+      'generateDeterministicCatalogAttributeId',
+      'generateDeterministicCatalogAttributeGroupId',
+      'generateDeterministicCatalogMeasurementFamilyId',
+      'generateDeterministicCatalogCategoryId',
+      'generateDeterministicCatalogFamilyId',
     ];
 
     const WITH_RANDOM_SIBLING = DETERMINISTIC_GENERATORS.filter(
@@ -405,6 +412,14 @@ describe('EnterpriseIdService', () => {
       //    «κάθε γεννήτορας έχει χρυσό δείγμα» κοκκίνιζε από τότε.
       generateDeterministicPropertyHandoverDeliveryId: 'phdl_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
       generateDeterministicPropertyDossierId: 'pdos_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
+      // ADR-923 §5.9 — σχήμα καταλόγου, id από (χώρος, κωδικός)· δύο παράμετροι, ο `call()` δίνει μία ⇒ σπόρος
+      //    `catalog:<είδος>:anchor-seed:undefined`. Η άγκυρα φυλά ότι ο ΙΔΙΟΣ κωδικός δίνει το ΙΔΙΟ id διαχρονικά —
+      //    χωρίς αυτό, μια αλλαγή σπόρου θα έκανε κάθε υπάρχουσα ιδιότητα «άγνωστη» και θα επέτρεπε διπλότυπους κωδικούς.
+      generateDeterministicCatalogAttributeId: 'cattr_f2bffd92-cded-418f-8713-1478d48cf67e',
+      generateDeterministicCatalogAttributeGroupId: 'cagrp_f6b1f452-f0cb-44cb-83de-1e1fd5472454',
+      generateDeterministicCatalogMeasurementFamilyId: 'cmfam_1131f2d3-7c7b-4f5d-8767-fa0953e989da',
+      generateDeterministicCatalogCategoryId: 'ccat_83e0abf8-3a78-49c7-8bf0-fd35e5eace45',
+      generateDeterministicCatalogFamilyId: 'cfam_bee28522-2567-4959-848b-d4e2cc9288bc',
       // ADR-853 Ε3 Φάση 2 — τέσσερις παράμετροι, ο `call()` δίνει μία (σπόρος `anchor-seed:undefined:…`,
       //    ίδιο σκεπτικό με το `wacr`): το συμβόλαιο είναι «ίδιος σπόρος ⇒ ίδιο id, διαχρονικά».
       generateDeterministicIdempotencyRecordId: 'idr_4ad60692-1f51-41af-8816-c25429d2e5f9',

@@ -278,6 +278,21 @@
 | 132 | `ESCO_CACHE` | `system/esco_cache/occupations` | ADR-034 | ~3,039 EU ESCO επαγγέλματα (EL+EN) |
 | 133 | `ESCO_SKILLS_CACHE` | `system/esco_cache/skills` | ADR-132 | ~13,485 EU ESCO δεξιότητες (EL+EN) |
 
+### 3.23 Supplier Catalog — Schema (5) *(2026-10-25, ADR-923 Φ1β)*
+
+> ⚠️ Η αρίθμηση `#` αυτού του εγγράφου δεν συντηρήθηκε μετά τις 2026-03 (π.χ. το `FRAMEWORK_AGREEMENTS` λείπει)·
+> η ενότητα αριθμεί **τοπικά** (Κ1–Κ5) αντί να συνεχίσει μια αρίθμηση που δεν είναι πια αληθινή.
+> Όλες: `companyId`-scoped · ανάγνωση `isInternalUserOfCompany` · εγγραφή **μόνο** `src/server/catalog/catalog-store.server.ts`
+> (CHECK 3.106) · ids ντετερμινιστικά από `(companyId, code)` · χρονοσφραγίδες ISO · `revision` για CAS · ίχνος ADR-195.
+
+| # | COLLECTIONS Key | Firestore Name | ADR | Σημειώσεις |
+|---|----------------|----------------|-----|------------|
+| Κ1 | `CATALOG_ATTRIBUTES` | `catalog_attributes` | ADR-923 | Βιβλιοθήκη ιδιοτήτων (`cattr_*`) · παράγωγο `measurementFamilyCodes[]` |
+| Κ2 | `CATALOG_ATTRIBUTE_GROUPS` | `catalog_attribute_groups` | ADR-923 | Ομάδες ιδιοτήτων (`cagrp_*`) |
+| Κ3 | `CATALOG_MEASUREMENT_FAMILIES` | `catalog_measurement_families` | ADR-923 | Οικογένειες μέτρησης **του χώρου** (`cmfam_*`)· της πλατφόρμας ζουν σε κώδικα |
+| Κ4 | `CATALOG_CATEGORIES` | `catalog_categories` | ADR-923 | Δέντρα κατηγοριών (`ccat_*`) · `ancestorIds[]` · fractional `orderKey` |
+| Κ5 | `CATALOG_FAMILIES` | `catalog_families` | ADR-923 | Οικογένειες προϊόντων (`cfam_*`) · παράγωγο `attributeIds[]` |
+
 ---
 
 ## 4. Subcollections (25)

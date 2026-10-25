@@ -307,7 +307,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ### Pre-commit checks (summary):
 
 <!-- BEGIN GENERATED GATE INDEX — ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ ΣΤΟ ΧΕΡΙ. Πηγή: docs/gates/3.NN.md · αναπαραγωγή: npm run gate-index:generate
-     fingerprint: sha256:c11b7d1c5bb50035e5eb1ece764930efc84e044c25a70bfc01e2f734a4b9059c -->
+     fingerprint: sha256:812e061f77ceb9777590fc311f2e7517071c73c4ee58c23a33d11e2e2a348653 -->
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |
@@ -397,6 +397,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.103** | **Πύλη του μελανιού** (ADR-909) — «βάζει αυτός ο ζωγράφος χρώμα ή πάχος στον καμβά **ΧΩΡΙΣ να ρωτήσει την πολιτική εκτύπωσης**; (η πύλη pixels βλέπει μόνο ό,τι υπάρχει στο δείγμα της κ…» · `npm run test:paper-ink` · `SKIP_PAPER_INK=1` · 📘 `docs/gates/3.103.md` | ⛔ ZERO-TOL (Κ1–Κ4, `bim/renderers`) + 🔴 RATCHET κατά ταυτότη… | `.paper-ink-baseline.json` |
 | **3.104** | **Πύλη του ενός δρόμου της παρουσίας περιήγησης** (ADR-884) — «γράφει κάποιος περιήγηση ή λήψη **ΧΩΡΙΣ να ζητήσει επαναπροβολή της αγγελίας** — ή φτιάχνει κάποιος άλλος το `PublicListing.tour`; (το πεδίο είναι…» · `npm run test:tour-presence-authority` · `SKIP_TOUR_PRESENCE_AUTHORITY=1` · 📘 `docs/gates/3.104.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3+Κ4) | — |
 | **3.105** | **Πύλη του ενός γραφέα του εδάφους της αγγελίας** (ADR-920) — «γράφει κάποιος το `PublicListing.terrain` **έξω από τον ΕΝΑ binder** — γεννά πηγή εδάφους έξω από πόρτα που **ξαναπροβάλλει** — ή παράγει δημοσιεύσιμ…» · `npm run test:listing-terrain-authority` · `SKIP_LISTING_TERRAIN_AUTHORITY=1` · 📘 `docs/gates/3.105.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3+Κ4) | — |
+| **3.106** | **Πύλη του ενός γραφέα του σχήματος καταλόγου** (ADR-923) — «γράφει κάποιος ιδιότητα · ομάδα · οικογένεια μέτρησης · κατηγορία · οικογένεια **ΕΞΩ από τη μηχανή** — δηλαδή χωρίς επικύρωση απέναντι στη βιβλιοθήκη…» · `npm run test:catalog-schema-authority` · `SKIP_CATALOG_SCHEMA_AUTHORITY=1` · 📘 `docs/gates/3.106.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3+Κ4+Κ5) | — |
 
 **📘 Πλήρες ιστορικό ανά πύλη** (περιστατικά, μετρήσεις, «⚠️ ΜΗΝ», απορριφθείσες εναλλακτικές):
 `docs/gates/<αριθμός>.md` — ή `npm run gate:explain 3.63`.
@@ -410,8 +411,8 @@ Suggestion: Do /clear and give me the command again cleanly.
 φορές (N.12 · N.18 · CHECK 3.38). Στη γραμμή μένει ο **δείκτης**, και ο γεννήτορας
 επαληθεύει ότι **λύνεται**. Άνοιξε το JSON.
 
-📊 Πύλες που **τρέχουν**: **96** (εκτελεστής 88 + hook 21) ·
-γραμμές εδώ: **87** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
+📊 Πύλες που **τρέχουν**: **97** (εκτελεστής 89 + hook 21) ·
+γραμμές εδώ: **88** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
 *Αυτοί οι αριθμοί είναι **παραγόμενοι** — η προηγούμενη χειρόγραφη εκδοχή τους είχε ήδη*
 *αποκλίνει (έγραφε «48 γραμμές» και «61 πύλες»).*
 

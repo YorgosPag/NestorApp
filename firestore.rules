@@ -6308,6 +6308,35 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // =========================================================================
+    // 🗂️ ADR-923 §5.2 / §5.9 — ΤΟ ΣΧΗΜΑ ΤΟΥ ΚΑΤΑΛΟΓΟΥ ΠΡΟΜΗΘΕΥΤΗ (Φάση 1)
+    // =========================================================================
+    // Διαβάζει ΜΟΝΟ ο εσωτερικός χρήστης του χώρου· γράφει ΜΟΝΟ ο διακομιστής (`src/server/catalog/**`,
+    // CHECK 3.106). Γιατί όχι ο πελάτης: κάθε εγγραφή επικυρώνεται ΟΛΟΚΛΗΡΗ απέναντι στη βιβλιοθήκη
+    // μέσα σε συναλλαγή (κωδικός αμετάβλητος, τύπος κλειδωμένος όσο χρησιμοποιείται, κανένας κύκλος στο
+    // δέντρο, CAS στο `revision`) — τίποτα από αυτά δεν εκφράζεται σε κανόνα. Ο εξωτερικός πελάτης του
+    // χώρου ΔΕΝ διαβάζει: το δημόσιο πρόσωπο του καταλόγου είναι προβολή διακομιστή (§12), όχι το σχήμα.
+    match /catalog_attributes/{attributeId} {
+      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow write: if false;
+    }
+    match /catalog_attribute_groups/{groupId} {
+      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow write: if false;
+    }
+    match /catalog_measurement_families/{familyId} {
+      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow write: if false;
+    }
+    match /catalog_categories/{categoryId} {
+      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow write: if false;
+    }
+    match /catalog_families/{familyId} {
+      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow write: if false;
+    }
+
     // 🔒 ADR-894 §10.7 — ΖΩΝΤΑΝΗ ΣΥΝΔΕΣΗ. Η λίστα `users/{uid}/security/revoked_sign_ins` (ανακλημένα `auth_time`,
     // ΜΙΑ συσκευή τη φορά) προβάλλεται στο claim `revokedSignIns` από τον ΕΝΑ γραφέα claims (`set-claims-with-mirror`).
     // 0 αναγνώσεις ανά αίτημα· το ID token ζει ≤ 1 ώρα ⇒ ο κακόβουλος client της ανακλημένης συσκευής κόβεται σε

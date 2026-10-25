@@ -17,6 +17,13 @@ import {
 } from '@/lib/audit/audit-diff';
 import { formatAuditCoordinates } from '@/lib/audit/audit-coordinates';
 import { AUDIT_VALUE_CATALOGS } from '@/config/audit-value-catalogs';
+import {
+  CATALOG_ATTRIBUTE_GROUP_TRACKED_FIELDS,
+  CATALOG_ATTRIBUTE_TRACKED_FIELDS,
+  CATALOG_CATEGORY_TRACKED_FIELDS,
+  CATALOG_FAMILY_TRACKED_FIELDS,
+  CATALOG_MEASUREMENT_FAMILY_TRACKED_FIELDS,
+} from '@/config/audit-tracked-fields-catalog';
 import { BUILDING_OBJECTIVE_VALUE_FIELDS } from '@/lib/objective-value/building-objective-value-facts';
 import { OBJECTIVE_VALUE_DECLARED_FIELDS } from '@/lib/objective-value/objective-value-declarations';
 import { UNDECLARED_COMMON_CHARGES } from '@/lib/common-charges/common-charges';
@@ -1596,6 +1603,17 @@ export function getTrackedFieldsForEntityAuditType(
     // ADR-916 §5.2 — η παράδοση φακέλου από πώληση (βιβλίο `company`).
     case 'property_handover':
       return PROPERTY_HANDOVER_TRACKED_FIELDS;
+    // ADR-923 §5.9 — το σχήμα του καταλόγου προμηθευτή (βιβλίο `company`).
+    case 'catalog_attribute':
+      return CATALOG_ATTRIBUTE_TRACKED_FIELDS;
+    case 'catalog_attribute_group':
+      return CATALOG_ATTRIBUTE_GROUP_TRACKED_FIELDS;
+    case 'catalog_measurement_family':
+      return CATALOG_MEASUREMENT_FAMILY_TRACKED_FIELDS;
+    case 'catalog_category':
+      return CATALOG_CATEGORY_TRACKED_FIELDS;
+    case 'catalog_family':
+      return CATALOG_FAMILY_TRACKED_FIELDS;
     default:
       return null;
   }
