@@ -644,6 +644,21 @@
       "placeNotFound": "No such address was found. Try writing it differently.",
       "placeFailed": "Locating did not complete. Please try again shortly.",
       "placeDeclinedNote": "The property will appear in the list marked as having no stated location.",
+      "area": {
+        "legend": "Which area is it in?",
+        "help": "The address was only located to the municipality. Choose the area so the listing appears on its pages and in its searches. The map position does not change.",
+        "suggestion": "Suggested from your address: {name}",
+        "confirm": "Yes, it is there",
+        "placeholder": "Choose an area",
+        "none": "No area stated",
+        "loading": "Loading areas…",
+        "unavailable": "The areas could not be loaded. The listing still saves; you can state the area later.",
+        "groups": {
+          "6": "Municipal units",
+          "7": "Communities",
+          "8": "Settlements"
+        }
+      },
       "placeLinkLegend": "Which building or plot?",
       "placeLinkHelp": "Optional. If you point at it, your listing meets the people searching for THIS building — not just the area.",
       "landAreaLabel": "Land area (m²)",

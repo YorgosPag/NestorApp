@@ -11,6 +11,13 @@
  * Config file (data, no logic) — exempt from the 500-line rule.
  */
 
+/**
+ * «Two elevations at one position» is ONE rule here (ADR-650 v35), whether the two statements are survey shots or
+ * breaklines — so its Δz bands are declared once and both checks read them.
+ */
+const COINCIDENT_Z_MEDIUM_MM = 100;
+const COINCIDENT_Z_HIGH_MM = 1000;
+
 export const TOPO_QA_CONFIG = {
   // ── Elevation busts (surface-node outliers) ─────────────────────────────────
   /**
@@ -29,9 +36,9 @@ export const TOPO_QA_CONFIG = {
   /** Two points closer than 5 cm planimetrically are «the same spot» — candidates. */
   DUPLICATE_XY_TOLERANCE_MM: 50,
   /** …flagged only when their Z disagrees by more than 10 cm (a real contradiction). */
-  DUPLICATE_Z_INCOMPATIBLE_MM: 100,
+  DUPLICATE_Z_INCOMPATIBLE_MM: COINCIDENT_Z_MEDIUM_MM,
   /** ΔZ ≥ 1.00 m between coincident points ⇒ `high`. */
-  DUPLICATE_Z_HIGH_MM: 1000,
+  DUPLICATE_Z_HIGH_MM: COINCIDENT_Z_HIGH_MM,
 
   // ── Closed-ring validity (boundary / closed breaklines) ─────────────────────
   /** A ring with planimetric area below 1 m² is degenerate (a pick slip, not a plot). */
@@ -83,6 +90,19 @@ export const TOPO_QA_CONFIG = {
   INTERPOLATED_MIN_FRACTION: 0.25,
   /** More than half the plot resting on interpolation ⇒ `high`: the volume is mostly guesswork. */
   INTERPOLATED_HIGH_FRACTION: 0.5,
+
+  // ── Breakline elevation conflicts (ADR-920 Β4.8 Τ.3) ────────────────────────
+  /**
+   * The builder already dropped float-noise agreement (`elevationsAgree`) — what reaches QA is a REAL second elevation,
+   * and the overruled breakline has really been bent to the kept one. So nothing here is silent (unlike Carlson's
+   * «Highlight Crossing Breaklines» tolerance filter, which hides what is under it): the Δz only TRIAGES.
+   *
+   * The bands are the duplicate points' bands, on purpose — «two elevations at one position» is ONE rule in this
+   * system (`surveyFactsOf`, ADR-650 v35), and a 30 cm contradiction must not be `medium` as two shots yet `low` as
+   * two breaklines. Below `MEDIUM` ⇒ `low` (a glance), from `MEDIUM` ⇒ `medium`, from `HIGH` ⇒ `high`.
+   */
+  BREAKLINE_CONFLICT_MEDIUM_DZ_MM: COINCIDENT_Z_MEDIUM_MM,
+  BREAKLINE_CONFLICT_HIGH_DZ_MM: COINCIDENT_Z_HIGH_MM,
 
   // ── Report-wide cap ─────────────────────────────────────────────────────────
   /**

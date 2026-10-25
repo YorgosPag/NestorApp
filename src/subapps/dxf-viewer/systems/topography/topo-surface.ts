@@ -34,13 +34,18 @@
  */
 
 import { getTopoDefinition, getActiveCropRing } from './TopoPointStore';
-import { buildTin } from './tin-builder';
+import { buildTinWithReport } from './tin-builder';
 import { clipTinToBoundary } from './tin-clip-to-boundary';
-import type { TinSurface, TopoBoundary, TopoDefinition, TopoSurfaceId } from './topo-types';
+import type { TinBuildReport, TinSurface, TopoBoundary, TopoDefinition, TopoSurfaceId } from './topo-types';
 
+/**
+ * ADR-920 Β4.8 Τ.3 — floor 1 keeps the WHOLE build report, not just the surface: the builder's breakline decisions
+ * (crossings, vertices on breaklines) are produced by the same and only triangulation, and QA reads them from here.
+ * Re-running the builder to ask «what did you decide?» would be the second TIN this module exists to forbid.
+ */
 interface BuildMemo {
   readonly input: TopoDefinition;
-  readonly surface: TinSurface;
+  readonly report: TinBuildReport;
 }
 
 interface CropMemo {
@@ -71,13 +76,23 @@ const cropMemos = new Map<TopoSurfaceId, CropMemo>();
  * deliverable producer is covered too, not just today's).
  */
 export function getTopoSurfaceFull(id: TopoSurfaceId = 'existing'): TinSurface {
+  return getTopoBuildReport(id).surface;
+}
+
+/**
+ * What the ONE triangulation of the surveyed definition decided (ADR-920 Β4.8 Τ.3): its surface (== the instance
+ * {@link getTopoSurfaceFull} returns) plus the breakline elevation conflicts it resolved. Survey-level, never cropped —
+ * a contradiction in the measurement exists whether or not the site boundary happens to cover it. Positions are in the
+ * LOCAL frame of `report.surface.origin`.
+ */
+export function getTopoBuildReport(id: TopoSurfaceId = 'existing'): TinBuildReport {
   const input = getTopoDefinition(id);
   const memo = buildMemos.get(id);
-  if (memo && memo.input === input) return memo.surface;
+  if (memo && memo.input === input) return memo.report;
 
-  const surface = buildTin(input.points, input.breaklines);
-  buildMemos.set(id, { input, surface });
-  return surface;
+  const report = buildTinWithReport(input.points, input.breaklines);
+  buildMemos.set(id, { input, report });
+  return report;
 }
 
 /**

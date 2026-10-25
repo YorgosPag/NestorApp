@@ -33,6 +33,8 @@ export type {
   TinSurface,
   ContourSegment,
   ContourLine,
+  BreaklineElevationConflict,
+  TinBuildReport,
 } from '@/lib/terrain/terrain-types';
 
 /**

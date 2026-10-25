@@ -31,7 +31,8 @@ export type TopoQaKind =
   | 'boundary-closure'  // a closed ring that is degenerate / does not form a valid loop
   | 'self-intersection' // a closed ring whose edges cross themselves
   | 'missing-breakline' // a steep TIN edge with no breakline constraint (ridge/ditch?)
-  | 'boundary-coverage'; // the plot is not backed by measurement: a hole, or interpolation from afar
+  | 'boundary-coverage' // the plot is not backed by measurement: a hole, or interpolation from afar
+  | 'breakline-conflict'; // two breakline statements give ONE position two elevations (ADR-920 Β4.8 Τ.3)
 
 /**
  * One QA finding. `at` is WORLD canonical mm (ADR-462) — the same frame the contour

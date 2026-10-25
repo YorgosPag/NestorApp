@@ -583,6 +583,14 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
 
 ## Changelog
 
+- **2026-10-25 (v36)** — **M5α: έκτος έλεγχος QA `breakline-conflict`** ([ADR-920](./ADR-920-listing-plot-terrain.md)
+  §13.8 «Βήμα Τ.3»). Οι αντιφάσεις που ο builder λύνει από το v35 (τομή · κορυφή πάνω σε ακμή) γίνονται εύρημα με θέση
+  WORLD, 3Δ στο υψόμετρο που κρατήθηκε, και την ακμή που ακυρώθηκε ως `#n`. **Κανένας δεύτερος τριγωνισμός**: ο όροφος 1
+  του `topo-surface` κρατά πλέον ολόκληρο το `TinBuildReport` (`getTopoBuildReport`)· το `getTopoSurfaceFull` είναι η
+  επιφάνειά του (ίδιο instance — άγκυρα + μετάλλαξη). Σοβαρότητα από το Δz με τις **ίδιες** ζώνες με το `duplicate-point`
+  (`COINCIDENT_Z_*`, δηλωμένες μία φορά), αλλά **καμία σιωπή** κάτω από αυτές (`low`) — ο Carlson κρύβει ό,τι είναι κάτω
+  από την ανοχή, ενώ εδώ η ακμή έχει ήδη λυγίσει. UI: μηδέν αλλαγές (πάνελ, ⊙ 2Δ/3Δ, zoom-to είναι γενικά).
+  Tests `qa/__tests__/topo-breakline-conflicts` · μεταλλάξεις 8/8.
 - **2026-10-25 (v35)** — **Ο κινητήρας τριγωνισμού του `tin-builder`: `cdt2d` → Delaunator + Constrainautor**
   ([ADR-920](./ADR-920-listing-plot-terrain.md) §13.8 «Βήμα Τ»). **Ίδιο API** (`buildTin(points, breaklines, origin?)`),
   κανένας καταναλωτής δεν άλλαξε. Λόγος, μετρημένος σε σκέτο Node: ο `cdt2d` κάνει **κάθε** τεστ κύκλου με ακριβή
