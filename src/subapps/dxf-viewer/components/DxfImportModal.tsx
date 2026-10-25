@@ -172,7 +172,7 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({
         onClose();
     };
 
-    // Get enterprise modal configuration for nested modals
+    // Size/height/theme only — the layer is the shared Dialog's (ADR-780 scale), never an override here.
     const modalConfig = getModalConfig('DXF_IMPORT');
 
     // 🏢 ENTERPRISE: Get title based on supported file types
@@ -201,10 +201,7 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-            <DialogContent
-                className={modalConfig.className}
-                style={{ zIndex: modalConfig.zIndex }}
-            >
+            <DialogContent className={modalConfig.className}>
                 <DialogHeader>
                     <DialogTitle className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
                         <Upload className={`${getIconSize('title')} ${getModalIconColor('upload')}`} />

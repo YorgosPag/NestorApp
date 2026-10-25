@@ -21,12 +21,15 @@
  *  Σ4 — η σειρά της κλίμακας που υπόσχεται όλα τα παραπάνω, και η πλωτή παλέτα του DXF (αποδίδεται ΕΞΩ
  *       από την πλήρη οθόνη για να αιωρείται πάνω της) κάθεται ανάμεσα.
  *  Σ5 — ένθετος διάλογος: ίδιο σκαλί, και ο νεότερος είναι ΜΕΤΑ στο DOM ⇒ πάνω.
+ *  Σ6 — κανένας ΚΑΛΩΝ δεν αλλάζει τη στρώση της κάρτας (σάρωση πηγής σε όλο το `src/`).
  *
  * ⚠️ ΤΙ ΔΕΝ ΜΠΟΡΕΙ ΝΑ ΔΕΙ ΑΥΤΟ ΤΟ TEST: το jsdom δεν φορτώνει CSS, άρα ένας κανόνας του `globals.css`
  * που νικά την κλάση στο cascade (ήταν ακριβώς αυτό: `[data-radix-select-content]{z-index:1000}` έριχνε
  * κάθε Select από 1220 σε 1000) είναι αόρατος εδώ. Το φυλάει η CHECK 3.50 (`shadow-authority`, ZERO-TOL).
  */
 
+import * as fs from 'fs';
+import * as path from 'path';
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 
@@ -168,5 +171,46 @@ describe('Σ5 — μέσα στην οικογένεια νικά ο νεότε�
     expect(layerOf(parent)).toBe(FAMILY_ROLE);
     // Ίδιο σκαλί ⇒ αποφασίζει η σειρά στο DOM· ο νεότερος πρέπει να ακολουθεί.
     expect(parent.compareDocumentPosition(child) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+});
+
+/**
+ * Σ6 — το σκαλί ανήκει στη ΒΑΣΗ, όχι στον καλούντα (περιστατικό 2026-10-25, ADR-920 Τ.3 ζωντανή επαλήθευση).
+ *
+ * Τα Σ1–Σ5 ανοίγουν τα components ΧΩΡΙΣ props: δεν βλέπουν τι κάνει ένας καλών. Οι διάλογοι εισαγωγής DXF έβαζαν
+ * `style={{ zIndex: modalConfig.zIndex }}` (= 60, ιδιωτική σκάλα του viewer) στο `DialogContent`: το πέπλο έμενε στο
+ * `transientStack` (1095), η κάρτα έπεφτε στο 60 ⇒ το πέπλο ΣΚΕΠΑΖΕ την κάρτα, η οθόνη φαινόταν σκοτεινή και κάθε κλικ
+ * ήταν «κλικ έξω» (ίδιο σύμπτωμα με το Ζ3). Η CHECK 3.50 δεν το έβλεπε: ο αριθμός περνούσε από σταθερά JS.
+ * Μηδενική ανοχή σε όλο το `src/`: κανένα `DialogContent` / `AlertDialogContent` / `SheetContent` εκτός `components/ui`
+ * δεν δηλώνει δική του στρώση (inline `zIndex` ή κλάση `z-…`).
+ */
+describe('Σ6 — κανένας καλών δεν αλλάζει τη στρώση της κάρτας', () => {
+  const SRC = path.resolve(__dirname, '../../..');
+  const UI_PRIMITIVES = path.join(SRC, 'components', 'ui');
+  // Η ετικέτα ανοίγματος ως το ΔΙΚΟ της `>` — ένα `=>` μέσα σε prop δεν την κλείνει.
+  const CONTENT_TAG = /<(DialogContent|AlertDialogContent|SheetContent)\b(?:=>|[^>])*>/g;
+  const LAYER_OVERRIDE = /zIndex|(?:^|[\s"'`])-?z-(?:\d|\[)/;
+
+  function tsxFilesUnder(dir: string, out: string[] = []): string[] {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name !== 'node_modules' && entry.name !== '__tests__') tsxFilesUnder(full, out);
+      } else if (entry.name.endsWith('.tsx')) {
+        out.push(full);
+      }
+    }
+    return out;
+  }
+
+  test('καμία κάρτα διαλόγου στο src/ δεν παίρνει inline zIndex ή κλάση z-…', () => {
+    const offenders: string[] = [];
+    for (const file of tsxFilesUnder(SRC)) {
+      if (file.startsWith(UI_PRIMITIVES)) continue;
+      for (const match of fs.readFileSync(file, 'utf8').matchAll(CONTENT_TAG)) {
+        if (LAYER_OVERRIDE.test(match[0])) offenders.push(`${path.relative(SRC, file)}: ${match[0].slice(0, 120)}`);
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 });

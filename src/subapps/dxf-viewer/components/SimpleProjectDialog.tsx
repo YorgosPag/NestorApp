@@ -234,7 +234,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-        <DialogContent className={modalConfig.className} style={{ zIndex: modalConfig.zIndex }}>
+        <DialogContent className={modalConfig.className}>
           <DialogHeader className={MODAL_SPACING.SPACE.blockMedium}>
             <DialogTitle className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
               <Triangle className={`${getIconSize('title')} ${getModalIconColor('dxf_technical')}`} />

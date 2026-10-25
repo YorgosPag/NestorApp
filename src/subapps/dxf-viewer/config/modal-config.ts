@@ -115,31 +115,16 @@ export const MODAL_THEMES = {
 // ====================================================================
 
 /**
- * Centralized z-index values for proper modal layering
- * Based on design system standards and preventing conflicts
+ * ⚠️ ADR-780 — a Radix `Dialog` takes its layer from the ONE z-index scale (`--z-index-transient-stack`), for its
+ * overlay AND its content together. This file used to hand out a private ladder (BASE 50 · NESTED 60 · SYSTEM 70 …)
+ * that the DXF import dialogs applied as an inline `zIndex` on `DialogContent`: once the scale moved the overlay to
+ * 1095, the content stayed at 60 — the backdrop covered the dialog and every click on it «closed» the dialog as an
+ * outside click (the window looked dark and did nothing). The ladder is gone so it cannot be applied again; the
+ * anchor is `src/components/ui/__tests__/layer-contract.test.tsx` Σ6.
+ *
+ * What remains is the colour dialog's own shell (not a Radix Dialog, no shared overlay).
  */
 export const MODAL_Z_INDEX = {
-  // Base modal layer
-  BASE: 50,
-
-  // Nested modals (modal within modal)
-  NESTED: 60,
-
-  // Critical system modals (errors, confirmations)
-  SYSTEM: 70,
-
-  // Dropdown/Select/ComboBox portals (should be above modals)
-  DROPDOWN: 75,
-
-  // Toast notifications (should appear above all modals)
-  NOTIFICATIONS: 80,
-
-  // Dev tools and debug panels
-  DEBUG: 90,
-
-  // Emergency override (use sparingly)
-  EMERGENCY: 100,
-
   // 🏢 ENTERPRISE: Color Dialog Z-Index (maximum - above canvas crosshair overlays)
   // Note: These must be at maximum z-index level to appear above WebGL/Canvas overlays
   COLOR_DIALOG_CONTAINER: 2147483646,  // Just below max to allow stacking
@@ -159,7 +144,6 @@ export const MODAL_CONFIGURATIONS = {
     size: MODAL_SIZES.UPLOAD,
     height: MODAL_HEIGHTS.AUTO,
     theme: MODAL_THEMES.DARK_TECHNICAL,
-    zIndex: MODAL_Z_INDEX.NESTED,
     className: `${MODAL_SIZES.UPLOAD} ${MODAL_HEIGHTS.AUTO}`,
   },
 
@@ -168,7 +152,6 @@ export const MODAL_CONFIGURATIONS = {
     size: MODAL_SIZES.WIZARD,
     height: MODAL_HEIGHTS.STANDARD_SCROLL,
     theme: MODAL_THEMES.DARK_TECHNICAL,
-    zIndex: MODAL_Z_INDEX.BASE,
     className: `${MODAL_SIZES.WIZARD} ${MODAL_HEIGHTS.STANDARD_SCROLL}`,
   },
 
@@ -177,7 +160,6 @@ export const MODAL_CONFIGURATIONS = {
     size: MODAL_SIZES.SETTINGS,
     height: MODAL_HEIGHTS.TALL,
     theme: MODAL_THEMES.DEFAULT,
-    zIndex: MODAL_Z_INDEX.BASE,
     className: `${MODAL_SIZES.SETTINGS} ${MODAL_HEIGHTS.TALL}`,
   },
 
@@ -186,7 +168,6 @@ export const MODAL_CONFIGURATIONS = {
     size: MODAL_SIZES.CONFIRMATION,
     height: MODAL_HEIGHTS.AUTO,
     theme: MODAL_THEMES.DEFAULT,
-    zIndex: MODAL_Z_INDEX.SYSTEM,
     className: `${MODAL_SIZES.CONFIRMATION} ${MODAL_HEIGHTS.AUTO}`,
   },
 
@@ -195,7 +176,6 @@ export const MODAL_CONFIGURATIONS = {
     size: MODAL_SIZES.LARGE,
     height: MODAL_HEIGHTS.STANDARD_SCROLL,
     theme: MODAL_THEMES.DEFAULT,
-    zIndex: MODAL_Z_INDEX.BASE,
     className: `${MODAL_SIZES.LARGE} ${MODAL_HEIGHTS.STANDARD_SCROLL}`,
   },
 } as const;
@@ -232,13 +212,6 @@ export function buildModalClassName(config: {
   return classes.join(' ');
 }
 
-/**
- * Get z-index CSS class
- */
-export function getModalZIndex(level: keyof typeof MODAL_Z_INDEX): string {
-  return `z-[${MODAL_Z_INDEX[level]}]`;
-}
-
 // ====================================================================
 // TYPE EXPORTS
 // ====================================================================
@@ -246,7 +219,6 @@ export function getModalZIndex(level: keyof typeof MODAL_Z_INDEX): string {
 export type ModalSize = keyof typeof MODAL_SIZES;
 export type ModalHeight = keyof typeof MODAL_HEIGHTS;
 export type ModalTheme = keyof typeof MODAL_THEMES;
-export type ModalZIndex = keyof typeof MODAL_Z_INDEX;
 export type ModalConfiguration = keyof typeof MODAL_CONFIGURATIONS;
 
 // ====================================================================
