@@ -27,7 +27,7 @@
  */
 import * as THREE from 'three';
 import type { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js';
-import { createFatLineMesh, createSceneFatLineMaterial } from '../lines/scene-fat-line';
+import { COPLANAR_LINE_POLYGON_OFFSET, createFatLineMesh, createSceneFatLineMaterial } from '../lines/scene-fat-line';
 import { type LinePatternKey } from '../../config/bim-line-patterns';
 // ADR-510 Φ2C — 3D edges read the SAME unified mm catalog as 2D (SSoT), via the alias bridge.
 import { bimDashMm } from '../../config/bim-dash-resolver';
@@ -44,7 +44,7 @@ import { BIM_EDGE_COLOR_LIGHT_BG as DEFAULT_EDGE_COLOR } from './bim-edge-colors
  */
 const EDGE_OVERLAY_RENDER_ORDER = 1;
 
-/**
+/*
  * ADR-375 Phase C.7 (v2.22) — pull the edge lines slightly TOWARD the camera in
  * the depth buffer so they always win the depth test against their own coplanar
  * faces (Revit "Shaded with Edges"). `LineSegments2` expands the line in screen
@@ -52,9 +52,8 @@ const EDGE_OVERLAY_RENDER_ORDER = 1;
  * `depthTest:true` the equal/near-equal edge gets rejected and disappears. A
  * negative polygonOffset compensates. Magnitude kept modest so edges that sit
  * behind OTHER solids are still occluded (only-visible edges, no x-ray bleed).
+ * The value lives in `scene-fat-line` (`COPLANAR_LINE_POLYGON_OFFSET`), shared with the topo breaklines.
  */
-const EDGE_POLYGON_OFFSET_FACTOR = -2;
-const EDGE_POLYGON_OFFSET_UNITS = -4;
 
 /**
  * ADR-377 Phase E — px-dash → world-units (meters) conversion for 3D dashes.
@@ -163,7 +162,7 @@ export function buildEdgeOverlay(
     color: new THREE.Color(opts.color ?? DEFAULT_EDGE_COLOR).getHex(),
     depthTest: occlude,
     // v2.22 — pull edges forward so they win depth against their own faces.
-    polygonOffset: { factor: EDGE_POLYGON_OFFSET_FACTOR, units: EDGE_POLYGON_OFFSET_UNITS },
+    polygonOffset: COPLANAR_LINE_POLYGON_OFFSET,
     // ADR-377 Phase E — dashed edges (gaps discarded in the shader via USE_DASH).
     // computeLineDistances() below provides the along-edge distance the dash reads.
     dash,

@@ -51,9 +51,8 @@ import {
   AUTO_BREAKLINE_HALO_OPACITY,
   AUTO_BREAKLINE_STROKE_PX,
 } from '../../systems/topography/auto-breaklines/auto-breakline-review-style';
-import { bimEdgeResolutionStore } from '../edges/bim-edge-resolution-store';
-import { createSceneFatLineMaterial } from '../lines/scene-fat-line';
-import { getRoundDotTexture, disposeRoundDotTexture } from './round-dot-texture';
+import { createFatLineMaterialCatalog } from './fat-line-material-catalog';
+import { createScreenDotMaterial, type ScreenDotMaterial } from './screen-dot-material';
 
 /** Which approval state a candidate line is drawn in. Focus is a SECOND, independent signal. */
 export type AutoBreaklineLineKind = 'approved' | 'rejected';
@@ -62,13 +61,10 @@ export type AutoBreaklineLineKind = 'approved' | 'rejected';
 const APPROVAL_CACHE = new Map<AutoBreaklineLineKind, THREE.LineBasicMaterial>();
 
 /** Fat focus passes: the selection casing (one) and the core (one per approval state). */
-const FOCUS_CACHE = new Map<string, LineMaterial>();
+const focusCatalog = createFatLineMaterialCatalog();
 
 /** The corner markers of the focused candidate. One material, one focused candidate. */
-let dotsMaterial: THREE.PointsMaterial | null = null;
-
-/** Viewport subscriptions held by the cached materials — released only on full teardown. */
-const unsubscribes: (() => void)[] = [];
+let dots: ScreenDotMaterial | null = null;
 
 /** The review palette, resolved in one place so casing, core and markers can never disagree. */
 function autoBreaklineColor(kind: AutoBreaklineLineKind): string {
@@ -92,21 +88,14 @@ export function getAutoBreaklineMaterial3D(kind: AutoBreaklineLineKind): THREE.L
   return mat;
 }
 
-/** Build + cache a fat focus pass, holding on to its viewport subscription. */
+/** A fat focus pass — stays visible through the hill (see the module docblock). */
 function focusMaterial(key: string, color: string, widthPx: number, opacity?: number): LineMaterial {
-  let mat = FOCUS_CACHE.get(key);
-  if (!mat) {
-    const built = createSceneFatLineMaterial({
-      widthPx,
-      color: new THREE.Color(color).getHex(),
-      depthTest: false, // stays visible through the hill — see the module docblock
-      ...(opacity === undefined ? null : { opacity }),
-    });
-    mat = built.material;
-    unsubscribes.push(built.unsubscribe);
-    FOCUS_CACHE.set(key, mat);
-  }
-  return mat;
+  return focusCatalog.get(key, {
+    widthPx,
+    color: new THREE.Color(color).getHex(),
+    depthTest: false,
+    ...(opacity === undefined ? null : { opacity }),
+  });
 }
 
 /** The selection CASING — drawn first, under the core, in the app's selection colour. */
@@ -127,50 +116,22 @@ export function getAutoBreaklineFocusCoreMaterial3D(kind: AutoBreaklineLineKind)
   return focusMaterial(`core:${kind}`, autoBreaklineColor(kind), AUTO_BREAKLINE_STROKE_PX.focused);
 }
 
-/**
- * Corner markers along the focused candidate.
- *
- * `sizeAttenuation: false` → a constant on-screen size at any camera distance, exactly like the ⊙
- * marker and the 2D grips. `size` is applied in DEVICE pixels by three (`gl_PointSize = size`, no
- * ratio anywhere), so it tracks the viewport's pixel ratio here — otherwise the markers would be
- * half the intended size on a HiDPI screen, which is where a 4 px dot stops being findable.
- *
- * The disc comes from a shared generated texture rather than a `gl_PointCoord` discard: same round
- * result, antialiased rim instead of a crawling hard edge, and none of the `onBeforeCompile`
- * hazards ADR-689 records. `transparent` (not `alphaToCoverage`) because the markers never overlap
- * each other — `polyline-corner-vertices` emits each vertex once — so nothing can double-blend.
- */
+/** Corner markers along the focused candidate — constant on-screen size, through the hill. */
 export function getAutoBreaklinePointsMaterial3D(): THREE.PointsMaterial {
-  if (!dotsMaterial) {
-    const texture = getRoundDotTexture();
-    const mat = new THREE.PointsMaterial({
-      color: new THREE.Color(UI_COLORS.SELECTION_HIGHLIGHT).getHex(),
-      size: AUTO_BREAKLINE_CORNER_DOT_PX,
-      sizeAttenuation: false,
-      depthTest: false,
-      depthWrite: false,
-      transparent: true,
-      ...(texture ? { map: texture } : null),
-    });
-    const applyRatio = (): void => {
-      mat.size = AUTO_BREAKLINE_CORNER_DOT_PX * bimEdgeResolutionStore.getSize().pixelRatio;
-    };
-    applyRatio();
-    unsubscribes.push(bimEdgeResolutionStore.subscribe(applyRatio));
-    dotsMaterial = mat;
-  }
-  return dotsMaterial;
+  dots ??= createScreenDotMaterial({
+    color: UI_COLORS.SELECTION_HIGHLIGHT,
+    diameterPx: AUTO_BREAKLINE_CORNER_DOT_PX,
+    depthTest: false,
+  });
+  return dots.material;
 }
 
 /** Free every cached review material + its viewport subscription. Full app teardown only. */
 export function disposeAutoBreaklineMaterials3D(): void {
-  for (const unsubscribe of unsubscribes) unsubscribe();
-  unsubscribes.length = 0;
   for (const mat of APPROVAL_CACHE.values()) mat.dispose();
   APPROVAL_CACHE.clear();
-  for (const mat of FOCUS_CACHE.values()) mat.dispose();
-  FOCUS_CACHE.clear();
-  dotsMaterial?.dispose();
-  dotsMaterial = null;
-  disposeRoundDotTexture();
+  focusCatalog.dispose();
+  dots?.unsubscribe();
+  dots?.material.dispose();
+  dots = null;
 }

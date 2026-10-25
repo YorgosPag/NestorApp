@@ -22,6 +22,9 @@
  * ### Who uses it, and who deliberately does not
  * - `bim-3d/edges/bim-3d-edge-overlay-builder` — the «Shaded with Edges» silhouette overlay.
  * - `bim-3d/materials/auto-breakline-materials-3d` — the focused topo candidate's halo + core.
+ * - `bim-3d/materials/topo-breakline-materials-3d` — the COMMITTED breaklines (casing + core with a
+ *   SCREEN-px dash, `scene-fat-line-screen-dash`). Both topo palettes cache through
+ *   `materials/fat-line-material-catalog`, which owns the subscriptions this module hands back.
  * - ❌ `canvas-v2/webgl-lines/WebglLineLayerManager` (ADR-639 Στάδιο 5) **stays out, on purpose**:
  *   it is a different scene with a different resolution SSoT (its own 2D viewport, driven per
  *   rAF tick), per-bucket vertex colours, and an LOD `instanceCount` that this module has no
@@ -63,6 +66,14 @@ export interface FatLinePolygonOffset {
   readonly factor: number;
   readonly units: number;
 }
+
+/**
+ * The depth nudge for a fat line drawn ON its own coplanar surface — a BIM edge on its face (ADR-375
+ * C.7 v2.22), a breakline on its TIN edge (ADR-920 Β2). `LineSegments2` expands in screen space, which
+ * puts the fragment depth marginally BEHIND the surface, so under `depthTest:true` the line loses to
+ * the very face it lies on. Modest on purpose: a line behind ANOTHER solid is still occluded.
+ */
+export const COPLANAR_LINE_POLYGON_OFFSET: FatLinePolygonOffset = { factor: -2, units: -4 };
 
 export interface SceneFatLineMaterialParams {
   /** On-screen width in CSS px (pre-DPR). The pixel ratio is applied here, never by the caller. */

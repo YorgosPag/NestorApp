@@ -83,3 +83,15 @@ export function breaklineSvgDasharray(
   const visibleDash = Math.max(pattern.dashPx, widthPx);
   return `${visibleDash - widthPx} ${pattern.gapPx + widthPx}`;
 }
+
+/**
+ * The pattern as FLAT-ended dashes at `widthPx` (the 3D fat line: a dashed `LineMaterial` draws no caps),
+ * or `null` for solid. Flat ends add nothing, so the gap is the visible gap; only the binding rule applies —
+ * a dash is never shorter than the line is wide, which makes the `surface` dot a square as wide as the line.
+ */
+export function breaklineFlatCapDash(
+  pattern: BreaklineDashPattern | null,
+  widthPx: number,
+): BreaklineDashPattern | null {
+  return pattern ? { dashPx: Math.max(pattern.dashPx, widthPx), gapPx: pattern.gapPx } : null;
+}

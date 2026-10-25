@@ -16,6 +16,8 @@ import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store
 import type { TerrainSurfaceStyle } from '../../systems/topography/topo-types'; // ADR-650 M4 (types only)
 import { TOPO_MAJOR_COLOR, TOPO_MINOR_COLOR } from '../../systems/topography/contour-config'; // ADR-650 M10d
 import { disposeAutoBreaklineMaterials3D } from './auto-breakline-materials-3d'; // ADR-650 M8β/Γ v2
+import { disposeTopoBreaklineMaterials3D } from './topo-breakline-materials-3d'; // ADR-920 Β4.8 Β2
+import { disposeRoundDotTexture } from './round-dot-texture'; // shared by both breakline palettes
 import { getSectionHatchTexture } from '../systems/section/section-hatch-cap'; // ADR-665 M2 — earth poché
 import { buildMat } from './pbr-material-builder';
 import {
@@ -210,9 +212,15 @@ export function getTopoContourMaterial3D(isMajor: boolean, opacity = 1): THREE.L
  * (they grew a viewport subscription of their own); they are freed through the same single entry
  * point so no caller has to learn that the split happened. N.18 — this delegates, it does NOT
  * re-export: one import path per symbol.
+ *
+ * ADR-920 Β4.8 Β2 — the COMMITTED breakline materials (`topo-breakline-materials-3d`) join the same
+ * entry point, for the same reason.
  */
 export function disposeTerrainMaterials3D(): void {
   disposeAutoBreaklineMaterials3D();
+  disposeTopoBreaklineMaterials3D(); // ADR-920 Β4.8 Β2 — the committed breaklines
+  // The disc texture is SHARED by both palettes' markers, so it is freed once, after both.
+  disposeRoundDotTexture();
   for (const mat of TERRAIN_ANALYSIS_CACHE.values()) mat.dispose();
   TERRAIN_ANALYSIS_CACHE.clear();
   for (const mat of TERRAIN_SHADED_CACHE.values()) mat.dispose();
