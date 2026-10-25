@@ -19,6 +19,7 @@ import { createHash } from 'node:crypto';
 
 import { qrPngDataUrl } from '@/lib/qr/qr-code';
 import { handoverDeliveryDigest } from '@/lib/property-handover/handover-delivery-plan';
+import { handoverProtocolManifestSchemeOf } from '@/lib/property-handover/handover-protocol-manifest-parse';
 import type { SealSession } from '@/server/pdf-seal/seal-pdf.server';
 import type { SealFailure } from '@/server/pdf-seal/seal-signer.types';
 
@@ -45,12 +46,13 @@ async function unsealedMaterial(view: HandoverProtocolView, manifest: string): P
   const qrOf = (url: string | null): Promise<string | null> => (url === null ? Promise.resolve(null) : qrPngDataUrl(url, 'print', QR_WIDTH_PX));
   const [legalText, verification] = await Promise.all([qrOf(view.legalText.url), qrOf(view.verification.url)]);
   const rendered = await renderHandoverProtocolPdf(view, wording, { legalText, verification });
-  return attachHandoverProtocolManifest(rendered, manifest, new Date(view.issuedAt));
+  return attachHandoverProtocolManifest(rendered, manifest, new Date(view.issuedAt), handoverProtocolManifestSchemeOf(view.closed.length));
 }
 
 /** **Παράγει το σφραγισμένο Πρωτόκολλο.** Ποτέ δεν επιστρέφει ασφράγιστο PDF· ποτέ δεν ρίχνει για προβλέψιμη άρνηση. */
 export async function produceHandoverProtocolPdf(view: HandoverProtocolView, session: SealSession): Promise<HandoverProtocolPdfOutcome> {
-  const recomputed = await handoverDeliveryDigest(view.rows);
+  // Φ-Δ.7γ — και οι κλεισμένες γραμμές: το αποτύπωμα v3 τις δεσμεύει, όπως ο τρίτος θα το ξαναϋπολογίσει.
+  const recomputed = await handoverDeliveryDigest(view.rows, view.closed);
   if (recomputed !== view.ledgerDigest) return failed('digest-mismatch', `${view.protocolId}: ${recomputed ?? 'null'} ≠ ${view.ledgerDigest}`);
   const manifest = handoverProtocolManifestOf(view);
   const outcome = await session.seal(await unsealedMaterial(view, manifest), {

@@ -69,6 +69,10 @@ export function ProtocolManifestFacts({ manifest }: { readonly manifest: Handove
       {manifest.propertyLabel !== null && <ProtocolFact term={t('handoverVerify.facts.property')}>{manifest.propertyLabel}</ProtocolFact>}
       {manifest.recipientName !== null && <ProtocolFact term={t('handoverVerify.facts.recipient')}>{manifest.recipientName}</ProtocolFact>}
       <DeliveryFacts rows={delivery.files.length} bytes={delivery.totalBytes} digest={delivery.digest} legalTextVersion={manifest.legalText.version} />
+      {/* Φ-Δ.7γ — τίμια: παραδόθηκαν, αλλά δεν υπάρχει τιμή να συγκριθεί· ποτέ σιωπηλά εκτός μέτρησης. */}
+      {delivery.closed.length > 0 && (
+        <ProtocolFact term={t('handoverVerify.facts.closed')}>{t('handoverVerify.facts.closedValue', { count: delivery.closed.length })}</ProtocolFact>
+      )}
       <ProtocolFact term={t('handoverVerify.facts.code')}>
         <code className="break-all">{protocol.id}</code>
       </ProtocolFact>

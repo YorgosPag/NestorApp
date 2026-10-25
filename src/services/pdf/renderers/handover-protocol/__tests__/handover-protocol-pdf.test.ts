@@ -17,9 +17,21 @@ import { join } from 'path';
 import { legalDocumentInForce } from '@/lib/legal/legal-document-versions';
 import { operatorStatementOn } from '@/lib/platform-operator/operator-presentation';
 import { readProtocolLocally } from '@/components/handover-protocol-verify/protocol-local-read';
-import { HANDOVER_DELIVERY_DIGEST_SCHEME, handoverDeliveryDigest } from '@/lib/property-handover/handover-delivery-plan';
-import { parseHandoverProtocolManifest } from '@/lib/property-handover/handover-protocol-manifest-parse';
-import { handoverProtocolVerdictOf, registryAnswerOf } from '@/lib/property-handover/handover-protocol-verification';
+import {
+  HANDOVER_DELIVERY_DIGEST_SCHEME,
+  HANDOVER_DELIVERY_DIGEST_SCHEME_WITH_CLOSURES,
+  handoverDeliveryDigest,
+} from '@/lib/property-handover/handover-delivery-plan';
+import {
+  HANDOVER_PROTOCOL_MANIFEST_SCHEME,
+  HANDOVER_PROTOCOL_MANIFEST_SCHEME_WITH_CLOSURES,
+  parseHandoverProtocolManifest,
+} from '@/lib/property-handover/handover-protocol-manifest-parse';
+import {
+  assessHandoverProtocolManifest,
+  handoverProtocolVerdictOf,
+  registryAnswerOf,
+} from '@/lib/property-handover/handover-protocol-verification';
 import type { PropertyHandoverProtocol } from '@/types/property-handover-protocol';
 import { openSealSession } from '@/server/pdf-seal/seal-pdf.server';
 import { verifyPdfSeal } from '@/server/pdf-seal/verify-pdf-seal';
@@ -28,7 +40,12 @@ import { makeSigner, syntheticProvider, type SyntheticSigner } from '@/server/pd
 import { handoverProtocolManifestOf, readHandoverProtocolManifest } from '../handover-protocol-manifest';
 import { produceHandoverProtocolPdf } from '../handover-protocol-pdf.server';
 import { NO_HANDOVER_PROTOCOL_QR, renderHandoverProtocolPdf } from '../handover-protocol-pdf-renderer';
-import { handoverProtocolViewOf, type HandoverProtocolRow, type HandoverProtocolView } from '../handover-protocol-view';
+import {
+  handoverProtocolViewOf,
+  type HandoverProtocolClosedRow,
+  type HandoverProtocolRow,
+  type HandoverProtocolView,
+} from '../handover-protocol-view';
 import { HANDOVER_PROTOCOL_WORDING } from '../handover-protocol-wording';
 
 const warn = jest.fn();
@@ -72,6 +89,7 @@ async function viewOf(overrides: Partial<HandoverProtocolView> = {}): Promise<Ha
       url: 'https://nestorconstruct.gr/handover-protocol/verify/phpr_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
     },
     operator: operator.view,
+    closed: [],
     ...overrides,
   });
 }
@@ -254,5 +272,49 @@ describe('Γ41 — η πόρτα επαλήθευσης πάνω στο σφρα
   it('🔴 PDF χωρίς manifest (π.χ. σάρωση του χαρτιού) ⇒ no-manifest, καμία ερώτηση στο μητρώο', async () => {
     const blank = await renderHandoverProtocolPdf(view, HANDOVER_PROTOCOL_WORDING.el, NO_HANDOVER_PROTOCOL_QR);
     await expect(readProtocolLocally(new Blob([Uint8Array.from(blank)]))).resolves.toEqual({ kind: 'refused', reason: 'no-manifest' });
+  });
+});
+
+/** Φ-Δ.7γ (ADR-916 §5.23) — Ζ93–Ζ96: το Πρωτόκολλο με γραμμές κλεισμένες χωρίς πλήρες αποτύπωμα. */
+describe('Ζ93–Ζ96 — Φ-Δ.7γ: το Πρωτόκολλο με κλεισμένες γραμμές', () => {
+  const CLOSED: readonly HandoverProtocolClosedRow[] = [
+    { sourceFileId: 'file_omega', copyFileId: 'file_copy_9', crc32c: 'AAAAAA==', size: 4096, cause: 'bytes-gone', deliveredAt: '2026-10-21T07:35:00.000Z', name: 'Τοπογραφικό.pdf' },
+  ];
+  const closedView = async () => viewOf({ closed: CLOSED, ledgerDigest: (await handoverDeliveryDigest(ROWS, CLOSED)) ?? '' });
+
+  it('🔴 Ζ93 — χωρίς κλεισμένες γραμμές το manifest μένει v1 ΑΥΤΟΛΕΞΕΙ: καμία λίστα `closed`, ετικέτα αποτυπώματος v2', async () => {
+    const manifest = handoverProtocolManifestOf(await viewOf());
+    expect(JSON.parse(manifest)).toMatchObject({ schema: HANDOVER_PROTOCOL_MANIFEST_SCHEME, delivery: { scheme: HANDOVER_DELIVERY_DIGEST_SCHEME } });
+    expect(manifest).not.toContain('closed');
+  });
+
+  it('🔴 Ζ94 — με κλεισμένη γραμμή: manifest v2 · ετικέτα v3 · χωριστή λίστα · ο τρίτος το βρίσκει αυτοσυνεπές', async () => {
+    const view = await closedView();
+    const manifest = handoverProtocolManifestOf(view);
+    expect(JSON.parse(manifest)).toMatchObject({
+      schema: HANDOVER_PROTOCOL_MANIFEST_SCHEME_WITH_CLOSURES,
+      delivery: { scheme: HANDOVER_DELIVERY_DIGEST_SCHEME_WITH_CLOSURES, closedLine: 'C|sourceFileId|copyFileId|crc32c|size|cause', closed: [{ sourceFileId: 'file_omega', cause: 'bytes-gone' }] },
+    });
+    await expect(assessHandoverProtocolManifest(manifest)).resolves.toMatchObject({ kind: 'consistent' });
+    // Αλλαγή της αιτίας μιας κλεισμένης γραμμής στο manifest ⇒ ο τρίτος το βλέπει (το v3 τη δεσμεύει).
+    const tampered = JSON.parse(manifest);
+    tampered.delivery.closed[0].cause = 'source-unlocated';
+    await expect(assessHandoverProtocolManifest(JSON.stringify(tampered))).resolves.toMatchObject({ kind: 'digest-inconsistent' });
+  });
+
+  it('🔴 Ζ95 — το σφραγισμένο PDF τυπώνει τον ΔΕΥΤΕΡΟ πίνακα: κωδικός αιτίας + CRC32C, και το manifest v2 μέσα του', async () => {
+    const view = await closedView();
+    const sealed = await sealedOf(view);
+    const text = textOf(sealed.pdf);
+    expect(text).toContain(HANDOVER_PROTOCOL_WORDING.el.closedHeading);
+    expect(text).toContain('bytes-gone');
+    expect(text).toContain('AAAAAA==');
+    expect(text.replace(/\s+/g, '')).toContain(HANDOVER_DELIVERY_DIGEST_SCHEME_WITH_CLOSURES);
+    expect(parseHandoverProtocolManifest((await readHandoverProtocolManifest(sealed.pdf)) ?? '')?.delivery.closed).toHaveLength(1);
+  }, 60_000);
+
+  it('🔴 Ζ96 — αποτύπωμα που ΔΕΝ δεσμεύει την κλεισμένη γραμμή ⇒ digest-mismatch, τίποτα δεν σφραγίζεται', async () => {
+    const outcome = await produceHandoverProtocolPdf(await viewOf({ closed: CLOSED }), configured());
+    expect(outcome).toMatchObject({ kind: 'failed', reason: 'digest-mismatch' });
   });
 });

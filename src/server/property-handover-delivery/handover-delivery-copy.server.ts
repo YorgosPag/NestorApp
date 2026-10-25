@@ -27,7 +27,7 @@ import { FILE_COLLECTION } from '@/lib/files/file-custody';
 import { fileStoragePlacementOf, type FileStoragePlacement } from '@/lib/files/file-storage-placement';
 import { placementForNewFile } from '@/lib/files/new-file-placement';
 import { FieldValue } from '@/lib/firebaseAdmin';
-import { fileDeliveryStateOf, type PlannedHandoverCopy } from '@/lib/property-handover/handover-delivery-plan';
+import { stillOwedToRecipient, type PlannedHandoverCopy } from '@/lib/property-handover/handover-delivery-plan';
 import { isHandoverDeliverableDocument } from '@/lib/property-handover/handover-disposition';
 import { propertyHandoverFromDocument } from '@/lib/property-handover/property-handover-from-document';
 import { handoverCopyFileIdOf } from '@/lib/property-handover/property-handover-id';
@@ -55,8 +55,7 @@ export interface HandoverDeliverableItem {
 
 /** Οφείλει **ακόμη** η παράδοση αντιγραφή στον **ίδιο** παραλήπτη; — ανακλημένη (Φ-Δ.5) ή αλλαγή χεριών ⇒ όχι. */
 function stillOwedTo(raw: unknown, ctx: HandoverCopyContext): boolean {
-  const current = propertyHandoverFromDocument(raw, ctx.handover.id);
-  return current !== null && fileDeliveryStateOf(current) !== null && current.recipient?.userId === ctx.recipientUserId;
+  return stillOwedToRecipient(propertyHandoverFromDocument(raw, ctx.handover.id), ctx.recipientUserId);
 }
 
 export interface HandoverCopyContext {
@@ -181,7 +180,7 @@ async function runCopyTransaction(ctx: HandoverCopyContext, copy: PreparedCopy, 
       sourceFileId: row.sourceFileId, copyFileId: row.copyFileId, crc32c: row.crc32c, size: row.size,
       companyId: ctx.handover.companyId, propertyId: ctx.handover.propertyId, handoverId: ctx.handover.id,
       recipientUserId: ctx.recipientUserId, dossierId: copy.dossierId, sourceGeneration: row.sourceGeneration ?? '',
-      revisionOfFileId: copy.revisionOfFileId, deliveredAt: nowISO(), sourceObject: copy.sourceObject,
+      revisionOfFileId: copy.revisionOfFileId, deliveredAt: row.deliveredAt ?? nowISO(), sourceObject: copy.sourceObject,
     });
     return { committed: true, preserved: stagePreservation(tx, item.file.doc.ref, sourceSnap.data(), ledgerRef.id) };
   });
@@ -193,6 +192,7 @@ async function commitCopy(ctx: HandoverCopyContext, copy: PreparedCopy): Promise
   const row: HandoverLedgerProof = {
     sourceFileId: item.sourceFileId, copyFileId: built.fileId, crc32c: String(source.metadata.crc32c), size: Number(source.metadata.size),
     sha256: null, sourceGeneration: String(source.metadata.generation ?? ''), sourceObject: copy.sourceObject, recovery: null,
+    closure: null, deliveredAt: nowISO(),
   };
   // 🧷 Φ-Δ.7α — bytes ΠΡΩΤΑ (ποτέ «διατηρείται στη βάση, ελεύθερο στον κάδο»)· ό,τι δεν κράτησε η βάση ξεκλειδώνεται μετά.
   await preserveObjectBytes(item.file.doc.data());

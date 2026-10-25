@@ -15,12 +15,23 @@
  */
 
 import { isSha256Hex } from '@/lib/hash/sha256';
-import { isRecord } from '@/lib/type-guards';
+import { isOneOf, isRecord } from '@/lib/type-guards';
+import { HANDOVER_LINE_CLOSURE_CAUSES } from '@/types/property-handover-line-closure';
 
-import { HANDOVER_DELIVERY_DIGEST_SCHEME } from './handover-delivery-plan';
+import { handoverDeliveryDigestSchemeOf, type HandoverClosedDigestLineFields } from './handover-delivery-plan';
 
 /** Ετικέτα σχήματος του manifest — αλλαγή μορφής ⇒ νέα ετικέτα (ίδια αρχή με το αποτύπωμα). */
 export const HANDOVER_PROTOCOL_MANIFEST_SCHEME = 'nestor.handover-protocol-manifest.v1';
+
+/**
+ * Φ-Δ.7γ (ADR-916 §5.23) — το manifest **με** λίστα `delivery.closed` (γραμμές χωρίς πλήρες αποτύπωμα). Το σχήμα το ορίζει το
+ * περιεχόμενο: χωρίς κλεισμένη γραμμή γράφεται v1 **byte-προς-byte**, ώστε κάθε υπάρχων αναγνώστης να μένει σωστός.
+ */
+export const HANDOVER_PROTOCOL_MANIFEST_SCHEME_WITH_CLOSURES = 'nestor.handover-protocol-manifest.v2';
+
+/** Η ετικέτα του manifest ενός πίνακα — η ΜΙΑ επιλογή για γραφέα και αναγνώστη. */
+export const handoverProtocolManifestSchemeOf = (closedLines: number): string =>
+  closedLines === 0 ? HANDOVER_PROTOCOL_MANIFEST_SCHEME : HANDOVER_PROTOCOL_MANIFEST_SCHEME_WITH_CLOSURES;
 
 /** Μία γραμμή του πίνακα — τα τέσσερα πεδία του αποτυπώματος + το όνομα που είδε ο αγοραστής. */
 export interface HandoverProtocolManifestFile {
@@ -28,6 +39,12 @@ export interface HandoverProtocolManifestFile {
   readonly copyFileId: string;
   readonly sha256: string;
   readonly size: number;
+  readonly name: string | null;
+}
+
+/** Φ-Δ.7γ — μία κλεισμένη γραμμή: τα πεδία της γραμμής `C|…` του αποτυπώματος v3 + χρόνος παράδοσης και όνομα. */
+export interface HandoverProtocolManifestClosedFile extends HandoverClosedDigestLineFields {
+  readonly deliveredAt: string | null;
   readonly name: string | null;
 }
 
@@ -49,6 +66,8 @@ export interface HandoverProtocolManifest {
     readonly digest: string;
     readonly totalBytes: number;
     readonly files: readonly HandoverProtocolManifestFile[];
+    /** Φ-Δ.7γ — κενό σε κάθε manifest v1. */
+    readonly closed: readonly HandoverProtocolManifestClosedFile[];
   };
 }
 
@@ -79,16 +98,39 @@ function fileOf(raw: unknown): HandoverProtocolManifestFile | null {
   return { sourceFileId, copyFileId, sha256, size, name: textOrNull(name) };
 }
 
-function deliveryOf(raw: unknown): HandoverProtocolManifest['delivery'] | null {
-  if (!isRecord(raw) || raw.scheme !== HANDOVER_DELIVERY_DIGEST_SCHEME || !nonEmpty(raw.digest) || !isCount(raw.totalBytes)) return null;
-  if (!Array.isArray(raw.files) || raw.files.length === 0) return null;
-  const files: HandoverProtocolManifestFile[] = [];
-  for (const item of raw.files) {
-    const file = fileOf(item);
-    if (file === null) return null;
-    files.push(file);
+function closedFileOf(raw: unknown): HandoverProtocolManifestClosedFile | null {
+  if (!isRecord(raw)) return null;
+  const { sourceFileId, copyFileId, crc32c, size, cause, deliveredAt, name } = raw;
+  if (!nonEmpty(sourceFileId) || !nonEmpty(copyFileId) || !nonEmpty(crc32c) || !isCount(size)) return null;
+  if (!isOneOf(HANDOVER_LINE_CLOSURE_CAUSES, cause)) return null;
+  if ((deliveredAt !== null && typeof deliveredAt !== 'string') || (name !== null && typeof name !== 'string')) return null;
+  return { sourceFileId, copyFileId, crc32c, size, cause, deliveredAt: textOrNull(deliveredAt), name: textOrNull(name) };
+}
+
+/** Όλα ή τίποτα — μία αλλοιωμένη γραμμή ⇒ `null` (ποτέ πίνακας με σιωπηλά χαμένη γραμμή). */
+function listOf<T>(raw: unknown, itemOf: (item: unknown) => T | null): T[] | null {
+  if (!Array.isArray(raw)) return null;
+  const items: T[] = [];
+  for (const item of raw) {
+    const parsed = itemOf(item);
+    if (parsed === null) return null;
+    items.push(parsed);
   }
-  return { digest: raw.digest, totalBytes: raw.totalBytes, files };
+  return items;
+}
+
+/**
+ * Το `delivery` ενός manifest του σχήματος `schema`. v1: μόνο `files` (≥ 1), ετικέτα αποτυπώματος v2. v2: `closed` ≥ 1,
+ * ετικέτα v3, και τα `files` μπορεί να είναι κενά (όλες οι γραμμές έκλεισαν) — ποτέ όμως **και** τα δύο κενά.
+ */
+function deliveryOf(raw: unknown, schema: string): HandoverProtocolManifest['delivery'] | null {
+  if (!isRecord(raw) || !nonEmpty(raw.digest) || !isCount(raw.totalBytes)) return null;
+  const files = listOf(raw.files, fileOf);
+  const closed = schema === HANDOVER_PROTOCOL_MANIFEST_SCHEME ? [] : listOf(raw.closed, closedFileOf);
+  if (files === null || closed === null || files.length + closed.length === 0) return null;
+  // Το σχήμα του manifest και η ετικέτα του αποτυπώματος πρέπει να λένε το ΙΔΙΟ για το αν υπάρχουν κλεισμένες γραμμές.
+  if (schema !== handoverProtocolManifestSchemeOf(closed.length) || raw.scheme !== handoverDeliveryDigestSchemeOf(closed.length)) return null;
+  return { digest: raw.digest, totalBytes: raw.totalBytes, files, closed };
 }
 
 function legalTextOf(raw: unknown): HandoverProtocolManifest['legalText'] | null {
@@ -106,10 +148,10 @@ function jsonOf(text: string): unknown {
 /** **Διαβάζει το κείμενο του συνημμένου ως manifest.** `null` ⇒ «αυτό δεν είναι manifest Πρωτοκόλλου (v1)». */
 export function parseHandoverProtocolManifest(text: string): HandoverProtocolManifest | null {
   const raw = jsonOf(text);
-  if (!isRecord(raw) || raw.schema !== HANDOVER_PROTOCOL_MANIFEST_SCHEME) return null;
+  if (!isRecord(raw) || (raw.schema !== HANDOVER_PROTOCOL_MANIFEST_SCHEME && raw.schema !== HANDOVER_PROTOCOL_MANIFEST_SCHEME_WITH_CLOSURES)) return null;
   const protocol = protocolOf(raw.protocol);
   const legalText = legalTextOf(raw.legalText);
-  const delivery = deliveryOf(raw.delivery);
+  const delivery = deliveryOf(raw.delivery, raw.schema);
   if (protocol === null || legalText === null || delivery === null) return null;
   return {
     protocol,

@@ -25,6 +25,7 @@ import { operatorStatementOn, type OperatorStatementView } from '@/lib/platform-
 import { handoverDeliveryDigest } from '@/lib/property-handover/handover-delivery-plan';
 import type { HandoverProtocolPlan } from '@/lib/property-handover/handover-protocol-plan';
 import {
+  declaresClosedLines,
   handoverProtocolIssueDayOf,
   handoverProtocolLegalTextHref,
   handoverProtocolTermsOn,
@@ -32,11 +33,12 @@ import {
 import { readWorkspaceName } from '@/lib/workspace/workspace-catalog';
 import { handoverCopyRecordRef } from '@/server/property-handover-delivery/handover-delivery-copy.server';
 import { appurtenanceLabelOf } from '@/server/property-handover-delivery/handover-delivery-dossiers.server';
-import { readDeliveredRows } from '@/server/property-handover-delivery/handover-delivery-ledger.server';
+import { partitionLedger, readDeliveredRows } from '@/server/property-handover-delivery/handover-delivery-ledger.server';
 import { readCompanyLegalIdentity } from '@/services/company/company-legal-identity';
 import { loadConveyanceSubject } from '@/services/conveyance/conveyance-subject.server';
 import {
   handoverProtocolViewOf,
+  type HandoverProtocolClosedRow,
   type HandoverProtocolLegalText,
   type HandoverProtocolRow,
   type HandoverProtocolView,
@@ -52,6 +54,8 @@ export type HandoverProtocolRefusal =
   | 'legal-text-missing-clauses'
   | 'operator-undeclared'
   | 'ledger-moved'
+  /** Φ-Δ.7γ — ο πίνακας έχει κλεισμένη γραμμή, αλλά το κείμενο σε ισχύ δεν φέρει τη ρήτρα `closedLines` (αρχή 2). */
+  | 'legal-text-lacks-closures'
   | 'subject-missing'
   | 'issuer-unnamed';
 
@@ -65,6 +69,8 @@ const refused = (reason: HandoverProtocolRefusal, detail: string): Refused => ({
 interface ProtocolTerms {
   readonly legalText: HandoverProtocolLegalText;
   readonly operator: OperatorStatementView;
+  /** Φ-Δ.7γ — επιτρέπει το κείμενο γραμμές χωρίς πλήρες αποτύπωμα; (δεν μπαίνει στην όψη). */
+  readonly allowsClosures: boolean;
 }
 
 /** Κείμενο σε ισχύ + φορέας **της ημέρας έκδοσης** — ποτέ «το τελευταίο». */
@@ -77,7 +83,8 @@ function termsOn(issuedAt: string): ProtocolTerms | Refused {
   if (operator.kind !== 'declared') return refused('operator-undeclared', day);
   const { frozen, digest } = terms.version;
   const path = handoverProtocolLegalTextHref(frozen.version);
-  return { legalText: { version: frozen.version, digest, text: frozen.locales.el, path, url: publicUrl(path) }, operator: operator.view };
+  const legalText = { version: frozen.version, digest, text: frozen.locales.el, path, url: publicUrl(path) };
+  return { legalText, operator: operator.view, allowsClosures: declaresClosedLines(frozen) };
 }
 
 /** Τα ονόματα των αντιγράφων όπως τα βλέπει ο αγοραστής — **μία** ανάγνωση· μόνο εγγραφές του ίδιου κατόχου. */
@@ -91,14 +98,29 @@ async function copyNamesOf(adminDb: AdminFirestore, recipientUserId: string, cop
   }));
 }
 
-/** Οι γραμμές του πίνακα — **μόνο** αν το καθολικό δίνει ακόμη το αποτύπωμα που έκρινε το σχέδιο. */
-async function tableOf(adminDb: AdminFirestore, handover: PropertyHandover, recipientUserId: string, plan: DueHandoverProtocol): Promise<readonly HandoverProtocolRow[] | null> {
-  const rows = await readDeliveredRows(adminDb, handover);
-  if ((await handoverDeliveryDigest(rows)) !== plan.ledgerDigest) return null;
-  const names = await copyNamesOf(adminDb, recipientUserId, rows.map((row) => row.copyFileId));
-  return rows.flatMap((row) => (row.sha256 === null ? [] : [{
-    sourceFileId: row.sourceFileId, copyFileId: row.copyFileId, sha256: row.sha256, size: row.size, name: names.get(row.copyFileId) ?? null,
-  }]));
+interface ProtocolTable {
+  readonly rows: readonly HandoverProtocolRow[];
+  readonly closed: readonly HandoverProtocolClosedRow[];
+}
+
+/**
+ * Οι **δύο** πίνακες — **μόνο** αν το καθολικό δίνει ακόμη το αποτύπωμα που έκρινε το σχέδιο. Ο διαχωρισμός είναι ο ΕΝΑΣ
+ * (`partitionLedger`) που έκανε και η πρόοδος: αλλιώς το αποτύπωμα εδώ θα διέφερε από εκείνο που αποθηκεύτηκε.
+ */
+async function tableOf(adminDb: AdminFirestore, handover: PropertyHandover, recipientUserId: string, plan: DueHandoverProtocol): Promise<ProtocolTable | null> {
+  const { open, closed } = partitionLedger(await readDeliveredRows(adminDb, handover));
+  if ((await handoverDeliveryDigest(open, closed)) !== plan.ledgerDigest) return null;
+  const names = await copyNamesOf(adminDb, recipientUserId, [...open, ...closed].map((row) => row.copyFileId));
+  const nameOf = (copyFileId: string): string | null => names.get(copyFileId) ?? null;
+  return {
+    rows: open.flatMap((row) => (row.sha256 === null ? [] : [{
+      sourceFileId: row.sourceFileId, copyFileId: row.copyFileId, sha256: row.sha256, size: row.size, name: nameOf(row.copyFileId),
+    }])),
+    closed: closed.map((row) => ({
+      sourceFileId: row.sourceFileId, copyFileId: row.copyFileId, crc32c: row.crc32c, size: row.size, cause: row.cause,
+      deliveredAt: row.deliveredAt, name: nameOf(row.copyFileId),
+    })),
+  };
 }
 
 interface ProtocolParties {
@@ -135,13 +157,14 @@ export async function loadHandoverProtocolFacts(
   if (recipient === null || delivery === null) return refused('ledger-moved', handover.id);
   const terms = termsOn(issuedAt);
   if ('kind' in terms) return terms;
-  const [rows, parties] = await Promise.all([tableOf(adminDb, handover, recipient.userId, plan), partiesOf(adminDb, handover)]);
-  if (rows === null) return refused('ledger-moved', handover.id);
+  const [table, parties] = await Promise.all([tableOf(adminDb, handover, recipient.userId, plan), partiesOf(adminDb, handover)]);
+  if (table === null) return refused('ledger-moved', handover.id);
+  if (table.closed.length > 0 && !terms.allowsClosures) return refused('legal-text-lacks-closures', String(terms.legalText.version));
   if (parties === null) return refused('subject-missing', handover.propertyId);
   if (parties.issuerName === null) return refused('issuer-unnamed', handover.companyId);
   const verificationPath = handoverProtocolVerifyHref(plan.protocolId);
   const view = handoverProtocolViewOf({
-    protocolId: plan.protocolId, revision: plan.revision, issuedAt, ledgerDigest: plan.ledgerDigest, rows,
+    protocolId: plan.protocolId, revision: plan.revision, issuedAt, ledgerDigest: plan.ledgerDigest, ...table,
     verification: { path: verificationPath, url: publicUrl(verificationPath) },
     supersedes: plan.supersedesProtocolId === null ? null : { protocolId: plan.supersedesProtocolId, revision: plan.revision - 1 },
     ...parties, issuerName: parties.issuerName,
@@ -149,7 +172,8 @@ export async function loadHandoverProtocolFacts(
       saleCompletedAt: handover.completion?.at ?? null, invitationAcceptedAt: recipient.acceptedAt,
       deliveryStartedAt: delivery.startedAt, deliveryCompletedAt: delivery.completedAt,
     },
-    ...terms,
+    legalText: terms.legalText,
+    operator: terms.operator,
   });
   return { kind: 'ready', view };
 }

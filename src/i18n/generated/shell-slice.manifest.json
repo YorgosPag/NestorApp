@@ -22,8 +22,8 @@
     "src/i18n/generated/routes/ergaleia__antikeimeniki-axia.el.json": "f430b58d8427830f6f00eb4b807237852b5845a01ae9baf2b0500b42be47ffef",
     "src/i18n/generated/routes/handover-invite__token.el.json": "77391ee1f926f45a51ba8ed20018681580e5c4e00f2ed34038ef2f5b56080515",
     "src/i18n/generated/routes/handover-protocol.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
-    "src/i18n/generated/routes/handover-protocol__verify.el.json": "651720cebae67db38296ff3226ef8a0f812411cb84827beec30fa5f723885157",
-    "src/i18n/generated/routes/handover-protocol__verify__protocolId.el.json": "651720cebae67db38296ff3226ef8a0f812411cb84827beec30fa5f723885157",
+    "src/i18n/generated/routes/handover-protocol__verify.el.json": "bf46310bff0d59b1341fa8417b8e6b93a406aef159e5e0c2ff9d2152974233b3",
+    "src/i18n/generated/routes/handover-protocol__verify__protocolId.el.json": "bf46310bff0d59b1341fa8417b8e6b93a406aef159e5e0c2ff9d2152974233b3",
     "src/i18n/generated/routes/handover-protocol__versions.el.json": "b5985d2511b93344b355342677c84641c2bc629c80ca0b367778c17afd7800b7",
     "src/i18n/generated/routes/handover-protocol__versions__version.el.json": "0b0f52262c8ead9f7c4c7a282fee6c540b128f8a9a5c78716d351fd4681a6db4",
     "src/i18n/generated/routes/hours-question__token.el.json": "86ba92b35d6e4e4ba43e09267d5749b0ae21774b4dba41d9a4989d48872d0a72",
@@ -157,7 +157,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "8b1a81f43f71ad67b666dd48996805c3a129880b858d6e7c034a2aaf921c4bbe",
+  "inputsSha256": "c81a58f655776b23a5eef156912a483c6357383854a988486a5f01dc374405ce",
   "languages": [
     "el"
   ],
@@ -3439,6 +3439,8 @@
       "wants": {
         "legal": {
           "keys": [
+            "handoverVerify.facts.closed",
+            "handoverVerify.facts.closedValue",
             "handoverVerify.facts.code",
             "handoverVerify.facts.digest",
             "handoverVerify.facts.files",
@@ -3528,6 +3530,8 @@
       "wants": {
         "legal": {
           "keys": [
+            "handoverVerify.facts.closed",
+            "handoverVerify.facts.closedValue",
             "handoverVerify.facts.code",
             "handoverVerify.facts.digest",
             "handoverVerify.facts.files",
@@ -11821,7 +11825,7 @@
   ],
   "stats": {
     "matchedKeys": 265,
-    "sliceBytes": 822508
+    "sliceBytes": 822974
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

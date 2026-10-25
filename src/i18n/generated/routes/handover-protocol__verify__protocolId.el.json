@@ -2,6 +2,8 @@
   "legal": {
     "handoverVerify": {
       "facts": {
+        "closed": "Χωρίς πλήρες αποτύπωμα",
+        "closedValue": "{count, plural, one {# αρχείο} other {# αρχεία}} — παραδόθηκαν, χωρίς τιμή SHA-256 προς σύγκριση",
         "code": "Κωδικός",
         "digest": "Αποτύπωμα παράδοσης",
         "files": "Αρχεία",

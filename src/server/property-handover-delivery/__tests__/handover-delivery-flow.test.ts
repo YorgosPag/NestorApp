@@ -15,9 +15,10 @@ import { propertyHandoverFromDocument } from '@/lib/property-handover/property-h
 import { isPreserved } from '@/lib/files/file-hold';
 import { handoverCopyFileIdOf, handoverDeliveryIdOf, handoverDossierIdOf, propertyHandoverIdOf } from '@/lib/property-handover/property-handover-id';
 import { deliverHandoverFiles, type HandoverFileDeliveryRecorder } from '@/server/property-handover-delivery/handover-delivery.server';
-import { claimDeliveryRecovery, recordDeliverySha256 } from '@/server/property-handover-delivery/handover-delivery-ledger.server';
+import { claimDeliveryRecovery, recordDeliveryClosure, recordDeliverySha256 } from '@/server/property-handover-delivery/handover-delivery-ledger.server';
 import { deliverDueHandoverFiles } from '@/services/property-handover/property-handover-delivery-trigger';
 import { runPropertyHandoverDeliveryQueue } from '@/services/property-handover/property-handover-delivery-queue.service';
+import { closeHandoverLine } from '@/services/property-handover/property-handover-line-closure.service';
 import { previewPropertyHandover } from '@/services/property-handover/property-handover-preview.server';
 import { recordHandoverFileDelivery } from '@/services/property-handover/property-handover-progress-write';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
@@ -627,6 +628,142 @@ describe('Ζ74–Ζ81 — Φ-Δ.7β: η απόδειξη από το GCS soft de
     const id = handoverDeliveryIdOf(HANDOVER, 'f_plan');
     fake.seed(COLLECTIONS.PROPERTY_HANDOVER_DELIVERIES, id, { ...docs(COLLECTIONS.PROPERTY_HANDOVER_DELIVERIES)[id], recovery });
   }
+});
+
+describe('Ζ83–Ζ92 — Φ-Δ.7γ: κλείσιμο γραμμής χωρίς πλήρες αποτύπωμα (Ο13β (i))', () => {
+  const copyPath = () => String(copyOf('f_plan')?.storagePath);
+  const REASON = 'Ο αγοραστής έσβησε το αντίγραφο και η πηγή χάθηκε.';
+  const close = (patch: Partial<{ companyId: string; handoverId: string; sourceFileId: string }> = {}) => closeHandoverLine(db(), {
+    companyId: COMPANY, propertyId: PROPERTY, handoverId: HANDOVER, sourceFileId: 'f_plan', reason: REASON, performedBy: 'uid_office', ...patch,
+  });
+  const unproven = async () => (await previewPropertyHandover(db(), COMPANY, PROPERTY))?.handovers[0]?.unprovenLines ?? [];
+  /** Αντίγραφο σβησμένο · πηγή σβησμένη · η soft-deleted γενιά έληξε. `keepRecord` ⇒ η εγγραφή-πηγή μένει (μόνο τα bytes χάθηκαν). */
+  async function loseForever(keepRecord = false): Promise<void> {
+    await deliver(50, 0);
+    await bucket.file(copyPath()).delete();
+    store.set(sourcePath('f_plan'), { ...store.get(sourcePath('f_plan')), temporaryHold: false } as NonNullable<ReturnType<typeof store.get>>);
+    await bucket.file(sourcePath('f_plan')).delete();
+    if (!keepRecord) await db().collection(COLLECTIONS.FILES).doc('f_plan').delete();
+    bucket.softDeleted.clear();
+    expect(await deliver()).toMatchObject({ kind: 'delivering' });
+    expect(handover().fileDelivery?.unverifiable).toBe(1);
+  }
+
+  it('🔴 Ζ83 — bytes χαμένα οριστικά ⇒ η καρτέλα προσφέρει κλείσιμο ΜΕ την αιτία της μηχανής · η πόρτα κλείνει · η παράδοση ολοκληρώνεται με αποτύπωμα v3', async () => {
+    await loseForever();
+    expect(await unproven()).toEqual([expect.objectContaining({ sourceFileId: 'f_plan', offer: { kind: 'close', cause: 'bytes-gone' } })]);
+    expect(await close()).toEqual({ kind: 'closed' });
+    expect(ledgerRow('f_plan')).toMatchObject({ sha256: null, closure: { cause: 'bytes-gone', reason: REASON, closedBy: 'uid_office' } });
+    expect(await deliver()).toMatchObject({ kind: 'delivered' });
+    const open = Object.values(docs(COLLECTIONS.PROPERTY_HANDOVER_DELIVERIES))
+      .filter((row) => row.sourceFileId !== 'f_plan')
+      .map((row) => ({ sourceFileId: String(row.sourceFileId), copyFileId: String(row.copyFileId), sha256: String(row.sha256), size: Number(row.size) }));
+    const v2 = await handoverDeliveryDigest(open);
+    const v3 = await handoverDeliveryDigest(open, [{ sourceFileId: 'f_plan', copyFileId: handoverCopyFileIdOf(HANDOVER, 'f_plan'), crc32c: 'crc_f_plan', size: 1000, cause: 'bytes-gone' }]);
+    expect(handover().fileDelivery).toMatchObject({ state: 'delivered', unverifiable: 0, digest: v3 });
+    expect(v3).not.toBe(v2);
+    expect(await unproven()).toEqual([]);
+  });
+
+  it('🔴 Ζ84 — η soft-deleted γενιά υπάρχει ακόμη ⇒ `recovering`: ΚΑΝΕΝΑ κλείσιμο (η Φ-Δ.7β μπορεί ακόμη να αποδείξει)', async () => {
+    await deliver(50, 0);
+    await bucket.file(copyPath()).delete();
+    store.set(sourcePath('f_plan'), { ...store.get(sourcePath('f_plan')), temporaryHold: false } as NonNullable<ReturnType<typeof store.get>>);
+    await bucket.file(sourcePath('f_plan')).delete();
+    store.set(sourcePath('f_plan'), { crc32c: 'crc_f_plan', size: 1000, generation: 4242, bytes: Buffer.alloc(1000, 'ξένο') });
+    await deliver();
+    expect(handover().fileDelivery?.unverifiable).toBe(1);
+    expect(await unproven()).toEqual([expect.objectContaining({ offer: { kind: 'blocked', reason: 'recovering' } })]);
+    expect(await close()).toEqual({ kind: 'refused', reason: 'recovering' });
+    expect(ledgerRow('f_plan')?.closure).toBeNull();
+  });
+
+  it('🔴 Ζ85 — ζωντανά bytes (απλώς δεν μετρήθηκαν ακόμη) ⇒ `provable` · και η καρτέλα ΔΕΝ μετρά όσο δεν βρέθηκε μη επαληθεύσιμη', async () => {
+    await deliver(50, 0);
+    expect(await unproven()).toEqual([]);
+    expect(await close()).toEqual({ kind: 'refused', reason: 'provable' });
+  });
+
+  it('🔴 Ζ86 — γραμμή με sha256 ΔΕΝ κλείνει ποτέ — ούτε από την πόρτα, ούτε από τον γραφέα απευθείας', async () => {
+    await deliver();
+    expect(await close()).toEqual({ kind: 'refused', reason: 'proven' });
+    const row = ledgerRow('f_plan');
+    expect(await recordDeliveryClosure(db(), HANDOVER, {
+      sourceFileId: 'f_plan', crc32c: String(row?.crc32c), size: Number(row?.size), cause: 'bytes-gone', reason: REASON, closedBy: 'uid_office',
+    })).toEqual({ kind: 'refused', reason: 'proven' });
+  });
+
+  it('🔴 Ζ87 — δεύτερο κλείσιμο (διπλό κλικ · άλλο κλειδί) ⇒ `unchanged`: μία εγγραφή, ένα ίχνος', async () => {
+    await loseForever(true);
+    expect(await close()).toEqual({ kind: 'closed' });
+    const closedAt = (ledgerRow('f_plan')?.closure as { closedAt?: string } | null)?.closedAt;
+    expect(await close()).toEqual({ kind: 'unchanged' });
+    // Και ο ΙΔΙΟΣ ο γραφέας (δεύτερη άμυνα, πίσω από την κρίση της πόρτας): ήδη κλεισμένη ⇒ `unchanged`, καμία επανεγγραφή.
+    expect(await recordDeliveryClosure(db(), HANDOVER, {
+      sourceFileId: 'f_plan', crc32c: 'crc_f_plan', size: 1000, cause: 'source-unlocated', reason: 'άλλη αιτιολογία εδώ', closedBy: 'uid_other',
+    })).toEqual({ kind: 'unchanged' });
+    expect(ledgerRow('f_plan')?.closure).toMatchObject({ cause: 'bytes-gone', closedBy: 'uid_office', closedAt });
+    expect(mockAudits.filter((audit) => audit.action === 'handover_line_closure')).toHaveLength(1);
+  });
+
+  it('🔴 Ζ88 — κλεισμένη γραμμή: ο κατακερματισμός δεν την ξαναδιαβάζει, και sha256 που φτάνει αργότερα ΔΕΝ την ξανανοίγει', async () => {
+    await loseForever();
+    await close();
+    reads.length = 0;
+    await deliver();
+    expect(reads).toEqual([]);
+    expect(await recordDeliverySha256(db(), HANDOVER, { sourceFileId: 'f_plan', crc32c: 'crc_f_plan', size: 1000, sha256: shaOf(bytesOf('f_plan')), origin: 'copy' }))
+      .toEqual({ kind: 'refused' });
+    expect(ledgerRow('f_plan')).toMatchObject({ sha256: null, closure: { cause: 'bytes-gone' } });
+  });
+
+  it('🔴 Ζ89 — γραμμή χωρίς εντοπιστή (πριν τη Φ-Δ.7β) ⇒ αιτία `source-unlocated`, όχι `bytes-gone`', async () => {
+    await loseForever();
+    const id = handoverDeliveryIdOf(HANDOVER, 'f_plan');
+    fake.seed(COLLECTIONS.PROPERTY_HANDOVER_DELIVERIES, id, { ...docs(COLLECTIONS.PROPERTY_HANDOVER_DELIVERIES)[id], sourceObject: null });
+    expect(await unproven()).toEqual([expect.objectContaining({ offer: { kind: 'close', cause: 'source-unlocated' } })]);
+    expect(await close()).toEqual({ kind: 'closed' });
+    expect(ledgerRow('f_plan')?.closure).toMatchObject({ cause: 'source-unlocated' });
+  });
+
+  it('🔴 Ζ90 — η παράδοση ΑΝΑΚΛΗΘΗΚΕ ανάμεσα στη μέτρηση και τη συναλλαγή ⇒ ο γραφέας αρνείται `not-owed`', async () => {
+    await loseForever();
+    fake.seed(COLLECTIONS.PROPERTY_HANDOVERS, HANDOVER, { ...docs(COLLECTIONS.PROPERTY_HANDOVERS)[HANDOVER], lifecycle: 'withdrawn' });
+    expect(await recordDeliveryClosure(db(), HANDOVER, {
+      sourceFileId: 'f_plan', crc32c: 'crc_f_plan', size: 1000, cause: 'bytes-gone', reason: REASON, closedBy: 'uid_office',
+    })).toEqual({ kind: 'refused', reason: 'not-owed' });
+    expect(await close()).toEqual({ kind: 'refused', reason: 'not-owed' });
+    expect(ledgerRow('f_plan')?.closure).toBeNull();
+  });
+
+  it('🔴 Ζ91 — ξένος ενοικιαστής ή άγνωστη γραμμή ⇒ `line-unknown` (καμία πληροφορία ύπαρξης), τίποτα δεν γράφεται', async () => {
+    await loseForever();
+    expect(await close({ companyId: 'comp_beta' })).toEqual({ kind: 'refused', reason: 'line-unknown' });
+    expect(await close({ sourceFileId: 'f_nope' })).toEqual({ kind: 'refused', reason: 'line-unknown' });
+    expect(ledgerRow('f_plan')?.closure).toBeNull();
+  });
+
+  it('🔴 Ζ92α — ο ΓΡΑΦΕΑΣ λύνει τη διατήρηση στην ΙΔΙΑ συναλλαγή — όχι το δίχτυ της συμφιλίωσης που τρέχει μετά', async () => {
+    await loseForever(true);
+    expect(isPreserved(docs(COLLECTIONS.FILES).f_plan ?? {})).toBe(true);
+    expect(await recordDeliveryClosure(db(), HANDOVER, {
+      sourceFileId: 'f_plan', crc32c: 'crc_f_plan', size: 1000, cause: 'bytes-gone', reason: REASON, closedBy: 'uid_office',
+    })).toEqual({ kind: 'closed' });
+    expect(isPreserved(docs(COLLECTIONS.FILES).f_plan ?? {})).toBe(false);
+  });
+
+  it('🔴 Ζ92 — το κλείσιμο ΛΥΝΕΙ τη διατήρηση της πηγής στην ίδια συναλλαγή (Ο24: κανένα κλειδωμένο υπόλοιπο) + ίχνος στο αρχείο', async () => {
+    await loseForever(true);
+    expect(isPreserved(docs(COLLECTIONS.FILES).f_plan ?? {})).toBe(true);
+    await close();
+    expect(isPreserved(docs(COLLECTIONS.FILES).f_plan ?? {})).toBe(false);
+    expect(mockAudits.find((audit) => audit.action === 'handover_line_closure')).toMatchObject({
+      fileId: 'f_plan', performedBy: 'uid_office', metadata: { handoverId: HANDOVER, cause: 'bytes-gone', reason: REASON },
+    });
+    // Το δίχτυ της διατήρησης δεν την ξαναβάζει σε κλεισμένη γραμμή.
+    await deliver();
+    expect(isPreserved(docs(COLLECTIONS.FILES).f_plan ?? {})).toBe(false);
+  });
 });
 
 /** Ο κόσμος: ακίνητο με θέση στάθμευσης · κύριος φάκελος του αγοραστή · ολοκληρωμένη παράδοση · αρχεία με bytes. */

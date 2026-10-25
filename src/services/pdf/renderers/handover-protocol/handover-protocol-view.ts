@@ -15,7 +15,11 @@
 
 import type { FrozenLegalText } from '@/lib/legal/frozen-legal-document';
 import type { OperatorStatementView } from '@/lib/platform-operator/operator-presentation';
-import { inHandoverDigestOrder } from '@/lib/property-handover/handover-delivery-plan';
+import {
+  inHandoverClosedOrder,
+  inHandoverDigestOrder,
+  type HandoverClosedDigestLineFields,
+} from '@/lib/property-handover/handover-delivery-plan';
 
 /** Μία γραμμή του πίνακα = μία γραμμή του καθολικού, με sha256 (κανένα πρωτόκολλο χωρίς). */
 export interface HandoverProtocolRow {
@@ -24,6 +28,16 @@ export interface HandoverProtocolRow {
   readonly sha256: string;
   readonly size: number;
   /** Το όνομα του αντιγράφου όπως το βλέπει ο αγοραστής — `null` αν δεν διαβάστηκε (το αναγνωριστικό αρκεί). */
+  readonly name: string | null;
+}
+
+/**
+ * Φ-Δ.7γ (ADR-916 §5.23) — μία γραμμή **κλεισμένη χωρίς πλήρες αποτύπωμα**: παραδόθηκε (crc32c · μέγεθος · χρόνος), αλλά τα
+ * bytes χάθηκαν πριν μετρηθεί το sha256. Δεύτερος πίνακας, **ποτέ** ανάμεικτος με τον πρώτο (BagIt: εγγραφή manifest χωρίς
+ * checksum δεν υπάρχει). 🔒 Χωρίς αιτιολογία ή άνθρωπο — μόνο η αιτία που μέτρησε η μηχανή.
+ */
+export interface HandoverProtocolClosedRow extends HandoverClosedDigestLineFields {
+  readonly deliveredAt: string | null;
   readonly name: string | null;
 }
 
@@ -75,22 +89,26 @@ export interface HandoverProtocolView {
   /** Μόνο ονοματεπώνυμο (ρήτρα `personalData`). */
   readonly recipientName: string | null;
   readonly events: HandoverProtocolEvents;
-  /** Το αποτύπωμα v2 του καθολικού (ADR-916 §5.10). */
+  /** Το αποτύπωμα του καθολικού — v2 χωρίς κλεισμένες γραμμές, v3 με (ADR-916 §5.10 · §5.23). */
   readonly ledgerDigest: string;
   /** Με τη σειρά του αποτυπώματος. */
   readonly rows: readonly HandoverProtocolRow[];
+  /** Φ-Δ.7γ — οι κλεισμένες γραμμές, με τη σειρά τους· κενό ⇒ Πρωτόκολλο ίδιο με πριν (manifest v1, αποτύπωμα v2). */
+  readonly closed: readonly HandoverProtocolClosedRow[];
+  /** Τα bytes των αρχείων **με** SHA-256 — ό,τι επαληθεύεται (οι κλεισμένες δεν προσμετρώνται: δεν αποδεικνύονται). */
   readonly totalBytes: number;
   readonly legalText: HandoverProtocolLegalText;
   readonly verification: HandoverProtocolVerificationLink;
   readonly operator: OperatorStatementView;
 }
 
-export type HandoverProtocolViewInput = Omit<HandoverProtocolView, 'rows' | 'totalBytes'> & {
+export type HandoverProtocolViewInput = Omit<HandoverProtocolView, 'rows' | 'closed' | 'totalBytes'> & {
   readonly rows: readonly HandoverProtocolRow[];
+  readonly closed: readonly HandoverProtocolClosedRow[];
 };
 
 /** **Η όψη** — ταξινομεί τις γραμμές κατά bytes και αθροίζει τα bytes. Ίδια είσοδος ⇒ ίδια όψη, σε οποιαδήποτε σειρά. */
 export function handoverProtocolViewOf(input: HandoverProtocolViewInput): HandoverProtocolView {
   const rows = inHandoverDigestOrder(input.rows);
-  return { ...input, rows, totalBytes: rows.reduce((sum, row) => sum + row.size, 0) };
+  return { ...input, rows, closed: inHandoverClosedOrder(input.closed), totalBytes: rows.reduce((sum, row) => sum + row.size, 0) };
 }

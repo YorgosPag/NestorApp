@@ -30,6 +30,7 @@ import type { PropertyHandover, PropertyHandoverOfficeEntry } from '@/types/prop
 import { HANDOVER_MOVE_PRESENTATION } from './handover-office-presentation';
 import { HandoverInvitationRenewal } from './HandoverInvitationRenewal';
 import { HandoverStepTrack } from './HandoverStepTrack';
+import { HandoverUnprovenLines } from './HandoverUnprovenLines';
 import { HandoverWithdrawal } from './HandoverWithdrawal';
 
 const K = 'properties-detail:handover';
@@ -151,6 +152,7 @@ export function HandoverEntryCard({ entry, actions }: HandoverEntryCardProps): R
         <p className="m-0 text-sm text-muted-foreground">{t(`${K}.reason.${status.reason}.hint`, hintParams)}</p>
         <HandoverInvitationRenewal handoverId={handover.id} offer={status.renewal} actions={actions} />
         <HandoverWithdrawal handoverId={handover.id} offer={status.withdrawal} actions={actions} />
+        <HandoverUnprovenLines handoverId={handover.id} lines={entry.unprovenLines} actions={actions} />
         <HandoverSignals entry={entry} />
         <HandoverStepTrack steps={status.steps} />
         <HandoverFacts handover={handover} />

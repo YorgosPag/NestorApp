@@ -35,7 +35,7 @@ import type { PropertyHandover, PropertyHandoverFileDelivery, PropertyHandoverRe
 import { copyHandoverBatch, type HandoverCopyContext, type HandoverDeliverableItem } from './handover-delivery-copy.server';
 import { ensureHandoverDossiers } from './handover-delivery-dossiers.server';
 import { hashDeliveredRows, type HandoverHashRun } from './handover-delivery-hash.server';
-import { predecessorsOf, readDeliveredRows, type HandoverLedgerProof } from './handover-delivery-ledger.server';
+import { partitionLedger, predecessorsOf, readDeliveredRows, type HandoverLedgerProof } from './handover-delivery-ledger.server';
 import { reconcileHandoverPreservation } from './handover-delivery-preservation.server';
 
 const logger = createModuleLogger('PropertyHandoverDelivery');
@@ -109,12 +109,14 @@ async function progressOf(
 ): Promise<PropertyHandoverFileDelivery> {
   const now = nowISO();
   const { rows } = hashing;
+  // Φ-Δ.7γ — κλεισμένη γραμμή = παραδομένη χωρίς πλήρες αποτύπωμα: μετρά στο σύνολο και στο αποτύπωμα v3, όχι στις εκκρεμείς.
+  const { open, closed } = partitionLedger(rows);
   const state = run.failed === 0 && hashing.pending === 0 && rows.length >= total ? 'delivered' : 'delivering';
   const completedAt = state !== 'delivered' ? null : previous?.state === 'delivered' && previous.completedAt !== null ? previous.completedAt : now;
   return {
     state, delivered: rows.length, total, awaitingReview,
     bytes: rows.reduce((sum, row) => sum + row.size, 0),
-    digest: await handoverDeliveryDigest(rows),
+    digest: await handoverDeliveryDigest(open, closed),
     startedAt: previous?.startedAt ?? now,
     completedAt,
     lastError: state === 'delivered' ? null : run.lastError ?? hashing.lastError ?? previous?.lastError ?? null,

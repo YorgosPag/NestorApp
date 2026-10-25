@@ -126,24 +126,53 @@ export function drawProtocolEvents(page: ProtocolPage, y: number): number {
   ], top);
 }
 
-/** **Ο πίνακας αρχείων** — με τη σειρά του αποτυπώματος· πηγή · αντίγραφο · SHA-256 · bytes ανά γραμμή. */
-export function drawProtocolFiles(page: ProtocolPage, y: number): number {
-  const { pdf, view, wording } = page;
-  const top = heading(page, wording.filesHeading, y);
-  const { columns } = wording;
-  autoTable(pdf, {
+type FileTableColumns = NonNullable<Parameters<typeof autoTable>[1]['columnStyles']>;
+
+/** Ο ΕΝΑΣ πίνακας αρχείων του Πρωτοκόλλου — ίδια γραμματοσειρά, χρώματα, περιθώρια· επιστρέφει πού τελείωσε. */
+function fileTable(page: ProtocolPage, top: number, head: readonly string[], body: readonly string[][], columnStyles: FileTableColumns): number {
+  autoTable(page.pdf, {
     startY: top,
     margin: { left: MARGIN, right: MARGIN, top: page.layout.marginTop, bottom: page.layout.marginBottom },
-    head: [[columns.index, columns.file, columns.source, columns.copy, columns.sha256, columns.size]],
-    body: view.rows.map((row, i) => [
-      String(i + 1), row.name ?? wording.unnamed, chunk(row.sourceFileId, 21), chunk(row.copyFileId, 21), chunk(row.sha256, 32), bytesOf(row.size),
-    ]),
+    head: [[...head]],
+    body: body.map((row) => [...row]),
     styles: { font: 'Roboto', fontSize: 6.5, cellPadding: 1.2, textColor: SLATE_800, valign: 'top' },
     headStyles: { fillColor: PRIMARY, textColor: [255, 255, 255], fontSize: 7 },
-    columnStyles: { 0: { cellWidth: 7 }, 1: { cellWidth: 40 }, 2: { cellWidth: 31 }, 3: { cellWidth: 31 }, 4: { cellWidth: 43 }, 5: { cellWidth: 30, halign: 'right' } },
+    columnStyles,
     didParseCell: forceRobotoCell,
   });
-  return paragraph(page, wording.totals(view.rows.length, bytesOf(view.totalBytes)), yAfterTable(pdf, top, 10) + 3);
+  return yAfterTable(page.pdf, top, 10);
+}
+
+/** **Ο πίνακας αρχείων** — με τη σειρά του αποτυπώματος· πηγή · αντίγραφο · SHA-256 · bytes ανά γραμμή. */
+export function drawProtocolFiles(page: ProtocolPage, y: number): number {
+  const { view, wording } = page;
+  const top = heading(page, wording.filesHeading, y);
+  const { columns } = wording;
+  const after = fileTable(page, top, [columns.index, columns.file, columns.source, columns.copy, columns.sha256, columns.size],
+    view.rows.map((row, i) => [
+      String(i + 1), row.name ?? wording.unnamed, chunk(row.sourceFileId, 21), chunk(row.copyFileId, 21), chunk(row.sha256, 32), bytesOf(row.size),
+    ]),
+    { 0: { cellWidth: 7 }, 1: { cellWidth: 40 }, 2: { cellWidth: 31 }, 3: { cellWidth: 31 }, 4: { cellWidth: 43 }, 5: { cellWidth: 30, halign: 'right' } });
+  return paragraph(page, wording.totals(view.rows.length, bytesOf(view.totalBytes)), after + 3);
+}
+
+/**
+ * Φ-Δ.7γ (ADR-916 §5.23) — **ο δεύτερος πίνακας**: τα αρχεία χωρίς πλήρες αποτύπωμα, με CRC32C, χρόνο παράδοσης και αιτία.
+ * Κενός ⇒ τίποτα δεν σχεδιάζεται: Πρωτόκολλο χωρίς κλεισμένες γραμμές μένει ίδιο με πριν.
+ */
+export function drawProtocolClosedFiles(page: ProtocolPage, y: number): number {
+  const { view, wording } = page;
+  if (view.closed.length === 0) return y;
+  const top = heading(page, wording.closedHeading, y);
+  const columns = wording.closedColumns;
+  const after = fileTable(page, top, [columns.index, columns.file, columns.source, columns.copy, columns.crc32c, columns.size, columns.cause],
+    view.closed.map((row, i) => [
+      String(i + 1), `${row.name ?? wording.unnamed}
+${when(page, row.deliveredAt)}`, chunk(row.sourceFileId, 21), chunk(row.copyFileId, 21),
+      row.crc32c, bytesOf(row.size), `${wording.closedCauses[row.cause]} (${row.cause})`,
+    ]),
+    { 0: { cellWidth: 7 }, 1: { cellWidth: 34 }, 2: { cellWidth: 28 }, 3: { cellWidth: 28 }, 4: { cellWidth: 18 }, 5: { cellWidth: 22, halign: 'right' }, 6: { cellWidth: 45 } });
+  return paragraph(page, wording.closedNote, after + 3, 7.5);
 }
 
 /** **Το αποτύπωμα φακέλου** — ετικέτα σχήματος + SHA-256, αυτολεξεί όπως τα ξαναϋπολογίζει ο τρίτος. */

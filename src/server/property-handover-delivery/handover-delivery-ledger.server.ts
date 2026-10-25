@@ -12,8 +12,10 @@ import 'server-only';
  * ⛔ **Αμετάβλητο**: γραμμή γεννιέται με `tx.create` (ποτέ αντικατάσταση). **Μία και μόνη** εγγραφή **απόδειξης** μετά τη
  *    γέννηση (Φ-Γ2 Σ2): το `sha256` γεννιέται `null` και γράφεται **μία** φορά από τον κατακερματισμό — σε συναλλαγή που
  *    αρνείται αν η γραμμή δεν περιγράφει πια τα bytes που μετρήθηκαν (crc32c/μέγεθος), και δεν αντικαθιστά ποτέ υπάρχον.
- * 🧷 Φ-Δ.7β — **η μόνη άλλη εγγραφή**: το ημερολόγιο `recovery` της ανάκτησης από το soft delete. Δεν αγγίζει **ποτέ** πεδίο
- *    απόδειξης (crc32c · μέγεθος · γενιά · sha256)· υπάρχει για να μη μείνει ποτέ ορφανό αντικείμενο που επαναφέραμε.
+ * 🧷 Φ-Δ.7β — το ημερολόγιο `recovery` της ανάκτησης από το soft delete. Δεν αγγίζει **ποτέ** πεδίο απόδειξης (crc32c ·
+ *    μέγεθος · γενιά · sha256)· υπάρχει για να μη μείνει ποτέ ορφανό αντικείμενο που επαναφέραμε.
+ * 🧷 Φ-Δ.7γ — **η δεύτερη και τελευταία εγγραφή απόδειξης**: το `closure` — η γραμμή κλείνει **χωρίς** sha256 όταν τα bytes
+ *    χάθηκαν οριστικά. Αμοιβαία αποκλειόμενο με το sha256 (ό,τι γράφεται πρώτο κερδίζει, σε συναλλαγή), μία φορά, ποτέ αναίρεση.
  */
 
 import type { DocumentData, DocumentReference, Firestore as AdminFirestore, Transaction } from 'firebase-admin/firestore';
@@ -23,10 +25,22 @@ import { HANDOVER_DELIVERY_RECOVERY_LEASE_MS, HANDOVER_DELIVERY_REVISION_CHAIN_L
 import { nowISO } from '@/lib/date-local';
 import { isFileStoragePlacement, type FileStoragePlacement } from '@/lib/files/file-storage-placement';
 import { isSha256Hex } from '@/lib/hash/sha256';
-import type { HandoverDeliveredRow } from '@/lib/property-handover/handover-delivery-plan';
+import {
+  stillOwedToRecipient,
+  type HandoverClosedDigestLineFields,
+  type HandoverDeliveredRow,
+} from '@/lib/property-handover/handover-delivery-plan';
+import { propertyHandoverFromDocument } from '@/lib/property-handover/property-handover-from-document';
 import { handoverDeliveryIdOf } from '@/lib/property-handover/property-handover-id';
+import { isOneOf } from '@/lib/type-guards';
 import { reconcilePreservedBytes, stagePreservationRelease } from '@/services/file-record/file-preservation.service';
+import { handoverDocRef } from '@/services/property-handover/property-handover-progress-write';
 import type { PropertyHandover } from '@/types/property-handover';
+import {
+  HANDOVER_LINE_CLOSURE_CAUSES,
+  type HandoverLineClosureCause,
+  type HandoverLineClosureMark,
+} from '@/types/property-handover-line-closure';
 
 /** Μία γραμμή, όπως αποθηκεύεται στο `property_handover_deliveries/{phdl_*}`. */
 export interface HandoverDeliveryLedgerRow extends HandoverDeliveredRow {
@@ -47,6 +61,14 @@ export interface HandoverDeliveryLedgerRow extends HandoverDeliveredRow {
   readonly sourceObject: HandoverSourceObject | null;
   /** Φ-Δ.7β — το ημερολόγιο της ανάκτησης από το soft delete (`null` ⇒ δεν χρειάστηκε ποτέ). */
   readonly recovery: HandoverRecoveryJournal | null;
+  /** Φ-Δ.7γ — κλεισμένη χωρίς πλήρες αποτύπωμα (`null` ⇒ ανοιχτή ή αποδεδειγμένη). */
+  readonly closure: HandoverLedgerClosure | null;
+}
+
+/** Φ-Δ.7γ — το γεγονός όπως αποθηκεύεται: η αιτία της μηχανής + 🔒 η αιτιολογία και ο άνθρωπος (μόνο για το γραφείο). */
+export interface HandoverLedgerClosure extends HandoverLineClosureMark {
+  readonly reason: string;
+  readonly closedBy: string;
 }
 
 /**
@@ -73,6 +95,10 @@ export interface HandoverLedgerProof extends HandoverDeliveredRow {
   readonly sourceGeneration: string | null;
   readonly sourceObject: HandoverSourceObject | null;
   readonly recovery: HandoverRecoveryJournal | null;
+  /** Φ-Δ.7γ — μόνο ό,τι χρειάζονται κρίση και Πρωτόκολλο· η αιτιολογία δεν φεύγει από το καθολικό. */
+  readonly closure: HandoverLineClosureMark | null;
+  /** Φ-Δ.7γ — πότε αντιγράφηκε (τυπώνεται για τις κλεισμένες γραμμές)· `null` ⇒ αλλοιωμένο πεδίο. */
+  readonly deliveredAt: string | null;
 }
 
 const text = (value: unknown): string | null => (typeof value === 'string' && value !== '' ? value : null);
@@ -95,6 +121,13 @@ function recoveryOf(raw: unknown): HandoverRecoveryJournal | null {
   return { startedAt, restoredGeneration: text(fields.restoredGeneration), settledAt: text(fields.settledAt) };
 }
 
+/** Φ-Δ.7γ — αλλοιωμένο ή άγνωστη αιτία ⇒ `null`: η γραμμή μένει ανοιχτή (fail-closed — ποτέ σιωπηλό «κλεισμένη»). */
+export function closureMarkOf(raw: unknown): HandoverLineClosureMark | null {
+  const fields = fieldsOf(raw);
+  const closedAt = text(fields?.closedAt);
+  return fields !== null && closedAt !== null && isOneOf(HANDOVER_LINE_CLOSURE_CAUSES, fields.cause) ? { cause: fields.cause, closedAt } : null;
+}
+
 /** Πεδίο προς πεδίο — μια αλλοιωμένη γραμμή **δεν** μετρά ως παράδοση (ο εκτελεστής θα ξαναδεί το αντίγραφο). */
 function deliveredRowOf(raw: Record<string, unknown>): HandoverLedgerProof | null {
   const sourceFileId = text(raw.sourceFileId);
@@ -102,10 +135,34 @@ function deliveredRowOf(raw: Record<string, unknown>): HandoverLedgerProof | nul
   const crc32c = text(raw.crc32c);
   const { size } = raw;
   if (sourceFileId === null || copyFileId === null || crc32c === null || typeof size !== 'number') return null;
+  const sha256 = sha256Text(raw.sha256);
   return {
-    sourceFileId, copyFileId, crc32c, size, sha256: sha256Text(raw.sha256), sourceGeneration: text(raw.sourceGeneration),
+    sourceFileId, copyFileId, crc32c, size, sha256, sourceGeneration: text(raw.sourceGeneration),
     sourceObject: sourceObjectOf(raw.sourceObject), recovery: recoveryOf(raw.recovery),
+    // Αμοιβαία αποκλειόμενα: με sha256 η γραμμή είναι αποδεδειγμένη, ό,τι κι αν γράφει το `closure`.
+    closure: sha256 === null ? closureMarkOf(raw.closure) : null,
+    deliveredAt: text(raw.deliveredAt),
   };
+}
+
+/** Φ-Δ.7γ — μια κλεισμένη γραμμή με την αιτία της στην επιφάνεια: ό,τι δεσμεύει το αποτύπωμα v3 και τυπώνει το Πρωτόκολλο. */
+export type HandoverClosedLedgerRow = HandoverLedgerProof & HandoverClosedDigestLineFields & { readonly closedAt: string };
+
+/** Φ-Δ.7γ — οι γραμμές του αποτυπώματος σε **δύο** ομάδες: όσες αποδεικνύονται με sha256 (ή εκκρεμούν) και όσες έκλεισαν. */
+export interface HandoverLedgerPartition {
+  readonly open: readonly HandoverLedgerProof[];
+  readonly closed: readonly HandoverClosedLedgerRow[];
+}
+
+/** **Ο ΕΝΑΣ διαχωρισμός** — τον κάνουν η πρόοδος (αποτύπωμα) και το Πρωτόκολλο (πίνακες)· δύο φίλτρα θα διαφωνούσαν. */
+export function partitionLedger(rows: readonly HandoverLedgerProof[]): HandoverLedgerPartition {
+  const open: HandoverLedgerProof[] = [];
+  const closed: HandoverClosedLedgerRow[] = [];
+  for (const row of rows) {
+    if (row.closure === null) open.push(row);
+    else closed.push({ ...row, cause: row.closure.cause, closedAt: row.closure.closedAt });
+  }
+  return { open, closed };
 }
 
 /** **Ό,τι έχει παραδοθεί** για αυτή την παράδοση. */
@@ -129,9 +186,9 @@ export function deliveryLedgerRef(adminDb: AdminFirestore, handoverId: string, s
 export function stageDeliveryLedgerRow(
   tx: Transaction,
   ref: DocumentReference,
-  row: Omit<HandoverDeliveryLedgerRow, 'id' | 'sha256' | 'sha256Of' | 'hashedAt' | 'recovery'>,
+  row: Omit<HandoverDeliveryLedgerRow, 'id' | 'sha256' | 'sha256Of' | 'hashedAt' | 'recovery' | 'closure'>,
 ): void {
-  tx.create(ref, { id: ref.id, ...row, sha256: null, sha256Of: null, hashedAt: null, recovery: null });
+  tx.create(ref, { id: ref.id, ...row, sha256: null, sha256Of: null, hashedAt: null, recovery: null, closure: null });
 }
 
 /**
@@ -205,6 +262,8 @@ export async function recordDeliverySha256(adminDb: AdminFirestore, handoverId: 
     const [ledgerSnap, sourceSnap] = await Promise.all([tx.get(ref), tx.get(sourceRef)]);
     const data = ledgerSnap.data();
     if (data === undefined || data.crc32c !== measured.crc32c || data.size !== measured.size) return { kind: 'refused' };
+    // Φ-Δ.7γ — κλεισμένη γραμμή δεν ξανανοίγει: ό,τι γράφτηκε πρώτο (closure ή sha256) κερδίζει.
+    if (closureMarkOf(data.closure) !== null && sha256Text(data.sha256) === null) return { kind: 'refused' };
     const stored = sha256Text(data.sha256);
     stagePreservationRelease(tx, sourceRef, ownSourceData(sourceSnap.data(), data), ref.id);
     if (stored !== null) return { kind: 'hashed', sha256: stored };
@@ -212,6 +271,51 @@ export async function recordDeliverySha256(adminDb: AdminFirestore, handoverId: 
     return { kind: 'hashed', sha256: measured.sha256 };
   });
   if (outcome.kind === 'hashed') await reconcilePreservedBytes(sourceRef);
+  return outcome;
+}
+
+/** Φ-Δ.7γ — η έκβαση του κλεισίματος: `closed` (γράφτηκε τώρα) · `unchanged` (ήδη κλεισμένη) · ή άρνηση με λόγο. */
+export type DeliveryClosureWrite =
+  | { readonly kind: 'closed' | 'unchanged' }
+  | { readonly kind: 'refused'; readonly reason: 'line-unknown' | 'proven' | 'not-owed' };
+
+export interface DeliveryClosureInput extends Pick<HandoverDeliveredRow, 'sourceFileId' | 'crc32c' | 'size'> {
+  readonly cause: HandoverLineClosureCause;
+  readonly reason: string;
+  readonly closedBy: string;
+}
+
+/** Η κρίση **μέσα** στη συναλλαγή, πάνω σε φρέσκα έγγραφα — καθαρή, ώστε η συναλλαγή να μένει μόνο ανάγνωση + εγγραφή. */
+function closureVerdictOf(ledger: DocumentData | undefined, handoverRaw: unknown, input: DeliveryClosureInput, handoverId: string): DeliveryClosureWrite | 'write' {
+  if (ledger === undefined || ledger.crc32c !== input.crc32c || ledger.size !== input.size) return { kind: 'refused', reason: 'line-unknown' };
+  if (sha256Text(ledger.sha256) !== null) return { kind: 'refused', reason: 'proven' };
+  if (closureMarkOf(ledger.closure) !== null) return { kind: 'unchanged' };
+  const recipient = text(ledger.recipientUserId);
+  const owed = recipient !== null && stillOwedToRecipient(propertyHandoverFromDocument(handoverRaw, handoverId), recipient);
+  return owed ? 'write' : { kind: 'refused', reason: 'not-owed' };
+}
+
+/**
+ * **Κλείνει μια γραμμή χωρίς πλήρες αποτύπωμα — μία φορά** (Φ-Δ.7γ). Μέσα σε συναλλαγή που ξαναδιαβάζει γραμμή **και**
+ * παράδοση: sha256 στο μεταξύ ⇒ `proven` (η απόδειξη κερδίζει) · ανακλημένη/άλλος παραλήπτης ⇒ `not-owed` · ήδη κλεισμένη ⇒
+ * `unchanged`. Η αιτία **δεν** έρχεται από τον άνθρωπο: τη μέτρησε ο καλών λίγο πριν, και είναι οριστική (bytes που έσβησε
+ * το GCS δεν ξαναεμφανίζονται). 🧷 Φ-Δ.7α: καμία απόδειξη δεν θα γραφτεί πια ⇒ η πηγή βγαίνει από τη διατήρηση στην ίδια
+ * συναλλαγή (ίδιο ιδίωμα με το sha256) — αλλιώς τα bytes θα έμεναν κλειδωμένα για πάντα (Ο24).
+ */
+export async function recordDeliveryClosure(adminDb: AdminFirestore, handoverId: string, input: DeliveryClosureInput): Promise<DeliveryClosureWrite> {
+  const ref = deliveryLedgerRef(adminDb, handoverId, input.sourceFileId);
+  const sourceRef = deliverySourceRef(adminDb, input.sourceFileId);
+  const handoverRef = handoverDocRef(adminDb, handoverId);
+  const outcome = await adminDb.runTransaction(async (tx): Promise<DeliveryClosureWrite> => {
+    const [ledgerSnap, sourceSnap, handoverSnap] = await Promise.all([tx.get(ref), tx.get(sourceRef), tx.get(handoverRef)]);
+    const ledger = ledgerSnap.data();
+    const verdict = closureVerdictOf(ledger, handoverSnap.data(), input, handoverId);
+    if (verdict !== 'write') return verdict;
+    stagePreservationRelease(tx, sourceRef, ownSourceData(sourceSnap.data(), ledger), ref.id);
+    tx.update(ref, { closure: { cause: input.cause, reason: input.reason, closedBy: input.closedBy, closedAt: nowISO() } });
+    return { kind: 'closed' };
+  });
+  if (outcome.kind === 'closed') await reconcilePreservedBytes(sourceRef);
   return outcome;
 }
 

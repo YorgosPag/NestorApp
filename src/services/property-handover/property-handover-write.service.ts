@@ -92,7 +92,8 @@ const logger = createModuleLogger('PropertyHandoverWrite');
  * γραφείου (`office-renewal`, Φ-Δ.3) περνά από το {@link PropertyHandoverSyncRequest.renewal}, **όχι** από την αιτία.
  */
 export type PropertyHandoverSyncCause =
-  | 'property-write' | 'legal-phase' | 'acceptance' | 'reconcile' | 'office-renewal' | 'office-file-decision' | 'office-withdrawal';
+  | 'property-write' | 'legal-phase' | 'acceptance' | 'reconcile' | 'office-renewal' | 'office-file-decision' | 'office-withdrawal'
+  | 'office-line-closure';
 
 /**
  * Οι αιτίες που ξανακοιτούν και τις **παραδομένες** παραδόσεις: το δίχτυ (συμπληρώσεις, Δ5) και η απόφαση γραφείου ανά

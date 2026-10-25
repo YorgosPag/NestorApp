@@ -534,6 +534,41 @@
         "not-withdrawable": "The handover can no longer be withdrawn — the sale changed in the meantime. The tab was refreshed.",
         "handover-unknown": "The handover was not found. The tab was refreshed."
       }
+    },
+    "lineClosure": {
+      "heading": "Lines without proof",
+      "deliveredOn": "Delivered {date}",
+      "action": "Close without full fingerprint…",
+      "title": "Close the line without a full fingerprint?",
+      "cause": {
+        "bytes-gone": "The platform measured that this file’s data was permanently deleted both on your side and from the buyer’s file, and the recovery period has ended. The SHA-256 can no longer be computed.",
+        "source-unlocated": "The platform measured that both the source and the copy are missing, and the source location was not recorded at handover. The SHA-256 can no longer be computed."
+      },
+      "means": {
+        "listed": "The file will be listed separately on the Protocol as “without a full fingerprint”, with handover date, size, CRC32C and cause.",
+        "notCertified": "For this file the Protocol confirms only that it was made available to the buyer — not its exact content.",
+        "final": "Your reason stays with the office only. Closing cannot be undone; to correct it, upload the file again."
+      },
+      "reasonLabel": "Reason (at least {min} characters — kept by the office only)",
+      "confirmIrreversible": "I understand that closing cannot be undone.",
+      "confirmAction": "Close line",
+      "success": "The line was closed without a full fingerprint.",
+      "failed": "Closing did not complete. Please try again.",
+      "blocked": {
+        "not-owed": "The handover is no longer owed — no action is needed.",
+        "proven": "It has been proven in the meantime.",
+        "closed": "It has already been closed without a full fingerprint.",
+        "provable": "The data still exists — the platform will prove it on its own.",
+        "recovering": "Recovery from deleted data is still possible — the platform carries on by itself."
+      },
+      "refusal": {
+        "line-unknown": "The line was not found. The tab has been refreshed.",
+        "not-owed": "The handover is no longer owed — no action is needed. The tab has been refreshed.",
+        "proven": "It has been proven in the meantime. The tab has been refreshed.",
+        "closed": "It has already been closed without a full fingerprint. The tab has been refreshed.",
+        "provable": "The data still exists — the platform will prove it on its own. The tab has been refreshed.",
+        "recovering": "Recovery from deleted data is still possible — the platform carries on by itself. The tab has been refreshed."
+      }
     }
   }
 }

@@ -15,11 +15,12 @@
 import { jsPDF } from 'jspdf';
 
 import { formatOperatorDateTime } from '@/lib/operator-time-format';
-import { HANDOVER_DELIVERY_DIGEST_SCHEME } from '@/lib/property-handover/handover-delivery-plan';
+import { handoverDeliveryDigestSchemeOf } from '@/lib/property-handover/handover-delivery-plan';
 import { registerGreekFont } from '@/services/pdf/greek-font-loader';
 import { addReportPdfFooters, type PdfVerticalLayout } from '@/services/report-engine/report-pdf-chrome';
 
 import {
+  drawProtocolClosedFiles,
   drawProtocolDigest,
   drawProtocolEvents,
   drawProtocolFiles,
@@ -74,7 +75,8 @@ function drawBody(page: ProtocolPage, qr: HandoverProtocolQrCodes): void {
   y = drawProtocolParties(page, y);
   y = drawProtocolEvents(page, y);
   y = drawProtocolFiles(page, y);
-  y = drawProtocolDigest(page, y, HANDOVER_DELIVERY_DIGEST_SCHEME);
+  y = drawProtocolClosedFiles(page, y);
+  y = drawProtocolDigest(page, y, handoverDeliveryDigestSchemeOf(page.view.closed.length));
   y = drawProtocolTerms(page, y);
   y = drawProtocolTextReference(page, y, qr.legalText);
   drawProtocolVerification(page, y, qr.verification);

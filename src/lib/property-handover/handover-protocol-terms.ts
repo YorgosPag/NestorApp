@@ -33,6 +33,17 @@ export const HANDOVER_PROTOCOL_REQUIRED_CLAUSES = [
 
 export type HandoverProtocolRequiredClause = (typeof HANDOVER_PROTOCOL_REQUIRED_CLAUSES)[number];
 
+/**
+ * ADR-916 §5.23 Φ-Δ.7γ — **η ρήτρα που επιτρέπει γραμμές χωρίς πλήρες αποτύπωμα**. Πίνακας με κλεισμένη γραμμή εκδίδεται
+ * **μόνο** με κείμενο που τη φέρει: το v1 υπόσχεται «δεν έχουν αλλάξει από τότε» για **κάθε** αρχείο, άρα θα έλεγε ψέμα.
+ */
+export const HANDOVER_PROTOCOL_CLOSURE_CLAUSE = 'closedLines' as const;
+
+/** Φέρει το κείμενο τη ρήτρα των κλεισμένων γραμμών; — η ΜΙΑ ερώτηση του γραφέα (δίχτυ `legal-text-lacks-closures`). */
+export function declaresClosedLines(frozen: FrozenLegalDocument): boolean {
+  return clauseIdsOf(frozen).includes(HANDOVER_PROTOCOL_CLOSURE_CLAUSE);
+}
+
 export type HandoverProtocolTerms =
   | { readonly kind: 'in-force'; readonly version: LegalDocumentVersion }
   /** Καμία έκδοση σε ισχύ εκείνη την ημέρα — το Πρωτόκολλο περιμένει, δεν εφευρίσκει κείμενο. */

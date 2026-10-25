@@ -947,6 +947,8 @@ export const API_ROUTES = {
     HANDOVER_FILE_DECISION: (propertyId: string) => `/api/properties/${encodeURIComponent(propertyId)}/handover/file-decision` as const,
     /** ADR-916 §5.19 Φ-Δ.5 — «Ανάκληση παράδοσης» όταν η πώληση έπεσε μετά την ολοκλήρωση (`POST`, μη αναστρέψιμη). */
     HANDOVER_WITHDRAWAL: (propertyId: string) => `/api/properties/${encodeURIComponent(propertyId)}/handover/withdrawal` as const,
+    /** ADR-916 §5.23 Φ-Δ.7γ — κλείσιμο γραμμής παράδοσης χωρίς πλήρες αποτύπωμα (`POST`, μη αναστρέψιμο). */
+    HANDOVER_LINE_CLOSURE: (propertyId: string) => `/api/properties/${encodeURIComponent(propertyId)}/handover/line-closure` as const,
     TRASH: '/api/properties/trash',
     /** ADR-329 §3.9 — λίστα αρχείου (ίδιες γραμμές με τον κάδο, άλλη κατάσταση) */
     ARCHIVED: '/api/properties/archived',

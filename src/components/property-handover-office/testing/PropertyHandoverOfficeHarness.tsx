@@ -29,6 +29,7 @@ import type { PropertyHandoverOfficeEntry, PropertyHandoverPreview } from '@/typ
 import { HandoverEntryCard } from '../HandoverEntryCard';
 import { PropertyHandoverView } from '../PropertyHandoverView';
 import { scenarioPreviewFiles } from './handover-file-decision-scenarios';
+import { scenarioUnprovenLines } from './handover-line-closure-scenarios';
 import { HANDOVER_OFFICE_SCENARIOS, type HandoverOfficeScenario } from './handover-office-scenarios';
 
 /** Η κατάσταση ενός σεναρίου — από την **πραγματική** κρίση. */
@@ -37,6 +38,8 @@ function harnessEntryOf(scenario: HandoverOfficeScenario, index: number): Proper
     handover: { ...scenario.handover, id: `phov_${scenario.id}` },
     recipientName: index % 5 === 4 ? null : `Buyer ${index + 1}`,
     status: handoverOfficeStatusOf(scenario.handover, scenario.context),
+    // Φ-Δ.7γ — η λίστα εμφανίζεται εκεί όπου η μηχανή βρήκε μη επαληθεύσιμη γραμμή.
+    unprovenLines: scenario.id === 'unverifiable-rows' ? scenarioUnprovenLines(scenario.handover) : [],
   };
 }
 
@@ -56,9 +59,9 @@ const HARNESS_VIEWS: readonly { readonly id: string; readonly preview: PropertyH
   { id: 'whole-tab-empty', preview: { handovers: [], seal: { configured: true }, files: { deliver: [], review: [], internal: [] } } },
 ];
 
-/** Φ-Δ.3 · Φ-Δ.4 · Φ-Δ.5 — οι πράξεις του γραφείου **προσομοιωμένες**: κανένα αίτημα, καμία πρόσκληση, κανένα email. */
+/** Φ-Δ.3 · Φ-Δ.4 · Φ-Δ.5 · Φ-Δ.7γ — οι πράξεις του γραφείου **προσομοιωμένες**: κανένα αίτημα, καμία πρόσκληση, κανένα email. */
 const IDLE_ACTIONS: HandoverOfficeActions = {
-  busyId: null, renew: async () => undefined, decideFile: async () => true, withdraw: async () => true,
+  busyId: null, renew: async () => undefined, decideFile: async () => true, withdraw: async () => true, closeLine: async () => true,
 };
 
 /** «Νέα πρόσκληση» σε εξέλιξη — το κουμπί όπως το βλέπει ο άνθρωπος **ενώ** στέλνεται. */

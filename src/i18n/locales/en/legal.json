@@ -305,6 +305,8 @@
       "recipient": "Recipient",
       "files": "Files",
       "filesValue": "{count, plural, one {# file} other {# files}} · {size}",
+      "closed": "Without a full fingerprint",
+      "closedValue": "{count, plural, one {# file} other {# files}} — handed over, with no SHA-256 value to compare",
       "digest": "Delivery fingerprint",
       "legalText": "Terms text",
       "legalTextValue": "Version {version}"

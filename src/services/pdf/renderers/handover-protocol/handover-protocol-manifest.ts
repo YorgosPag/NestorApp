@@ -24,9 +24,12 @@ import {
   PDFString,
 } from 'pdf-lib';
 
-import { HANDOVER_DELIVERY_DIGEST_SCHEME } from '@/lib/property-handover/handover-delivery-plan';
+import { handoverDeliveryDigestSchemeOf } from '@/lib/property-handover/handover-delivery-plan';
 // Ο αναγνώστης (Σ6) κατέχει την ετικέτα: γραφέας και αναγνώστης δεν μπορούν να διαφωνήσουν στο σχήμα.
-import { HANDOVER_PROTOCOL_MANIFEST_SCHEME } from '@/lib/property-handover/handover-protocol-manifest-parse';
+import {
+  HANDOVER_PROTOCOL_MANIFEST_SCHEME,
+  handoverProtocolManifestSchemeOf,
+} from '@/lib/property-handover/handover-protocol-manifest-parse';
 import { HANDOVER_PROTOCOL_LEGAL_DOCUMENT } from '@/lib/property-handover/handover-protocol-terms';
 
 import type { HandoverProtocolView } from './handover-protocol-view';
@@ -36,10 +39,28 @@ export const HANDOVER_PROTOCOL_MANIFEST_NAME = 'manifest.json';
 
 const UTF8 = new TextEncoder();
 
-/** **Το manifest** — κάθε αντικείμενο γράφεται με **ρητή** σειρά κλειδιών, ποτέ με spread. */
+/** Η γραμμή `C|…` της συνταγής v3 — δηλώνεται στο manifest δίπλα στη γραμμή των αποδεδειγμένων. */
+const CLOSED_LINE_RECIPE = 'C|sourceFileId|copyFileId|crc32c|size|cause';
+
+/**
+ * Το `delivery` — v1 **αυτολεξεί** όταν δεν υπάρχουν κλεισμένες γραμμές· αλλιώς (Φ-Δ.7γ) ετικέτα v3, η συνταγή των κλεισμένων
+ * και η λίστα `closed`, **χωριστή** από τα `files` (BagIt: τα `files` μένουν αυτοτελώς επαληθεύσιμα).
+ */
+function deliveryOf(view: HandoverProtocolView) {
+  const files = view.rows.map((row) => ({ sourceFileId: row.sourceFileId, copyFileId: row.copyFileId, sha256: row.sha256, size: row.size, name: row.name }));
+  const base = { scheme: handoverDeliveryDigestSchemeOf(view.closed.length), line: 'sourceFileId|copyFileId|sha256|size' };
+  if (view.closed.length === 0) return { ...base, digest: view.ledgerDigest, totalBytes: view.totalBytes, files };
+  const closed = view.closed.map((row) => ({
+    sourceFileId: row.sourceFileId, copyFileId: row.copyFileId, crc32c: row.crc32c, size: row.size, cause: row.cause,
+    deliveredAt: row.deliveredAt, name: row.name,
+  }));
+  return { ...base, closedLine: CLOSED_LINE_RECIPE, digest: view.ledgerDigest, totalBytes: view.totalBytes, files, closed };
+}
+
+/** **Το manifest** — κάθε αντικείμενο γράφεται με **ρητή** σειρά κλειδιών (το `base` κρατά πρώτα `scheme`, `line`). */
 export function handoverProtocolManifestOf(view: HandoverProtocolView): string {
   const manifest = {
-    schema: HANDOVER_PROTOCOL_MANIFEST_SCHEME,
+    schema: handoverProtocolManifestSchemeOf(view.closed.length),
     protocol: {
       id: view.protocolId,
       revision: view.revision,
@@ -56,23 +77,23 @@ export function handoverProtocolManifestOf(view: HandoverProtocolView): string {
       deliveryCompletedAt: view.events.deliveryCompletedAt,
     },
     legalText: { document: HANDOVER_PROTOCOL_LEGAL_DOCUMENT, version: view.legalText.version, digest: view.legalText.digest, path: view.legalText.path },
-    delivery: {
-      scheme: HANDOVER_DELIVERY_DIGEST_SCHEME,
-      line: 'sourceFileId|copyFileId|sha256|size',
-      digest: view.ledgerDigest,
-      totalBytes: view.totalBytes,
-      files: view.rows.map((row) => ({ sourceFileId: row.sourceFileId, copyFileId: row.copyFileId, sha256: row.sha256, size: row.size, name: row.name })),
-    },
+    delivery: deliveryOf(view),
   };
   return `${JSON.stringify(manifest, null, 2)}\n`;
 }
 
 /** **Επισυνάπτει** το manifest (PDF/A-3 associated file). ⚠️ Μόνο **πριν** τη σφράγιση: ό,τι προστεθεί μετά τη σπάει. */
-export async function attachHandoverProtocolManifest(pdf: Uint8Array, manifest: string, issuedAt: Date): Promise<Uint8Array> {
+export async function attachHandoverProtocolManifest(
+  pdf: Uint8Array,
+  manifest: string,
+  issuedAt: Date,
+  /** Φ-Δ.7γ — η ετικέτα του manifest που επισυνάπτεται (`handoverProtocolManifestSchemeOf`)· v1 ⇒ PDF ίδιο με πριν. */
+  scheme: string = HANDOVER_PROTOCOL_MANIFEST_SCHEME,
+): Promise<Uint8Array> {
   const doc = await PDFDocument.load(pdf, { updateMetadata: false });
   await doc.attach(UTF8.encode(manifest), HANDOVER_PROTOCOL_MANIFEST_NAME, {
     mimeType: 'application/json',
-    description: HANDOVER_PROTOCOL_MANIFEST_SCHEME,
+    description: scheme,
     creationDate: issuedAt,
     modificationDate: issuedAt,
     afRelationship: AFRelationship.Data,

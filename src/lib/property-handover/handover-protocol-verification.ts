@@ -122,16 +122,17 @@ export type HandoverProtocolManifestAssessment =
   | { readonly kind: 'consistent'; readonly manifest: HandoverProtocolManifest };
 
 /**
- * **Αυτοσυνέπεια του πίνακα**: ο browser ξαναϋπολογίζει το αποτύπωμα v2 από τις γραμμές του manifest με τον **ίδιο**
+ * **Αυτοσυνέπεια του πίνακα**: ο browser ξαναϋπολογίζει το αποτύπωμα (v2 · v3 με κλεισμένες) από τις γραμμές του manifest με τον **ίδιο**
  * κώδικα που το υπολόγισε ο γραφέας, και ελέγχει το σύνολο bytes. Ασυνέπεια ⇒ κάποιος πείραξε τη λίστα.
  */
 export async function assessHandoverProtocolManifest(text: string | null): Promise<HandoverProtocolManifestAssessment> {
   if (text === null) return { kind: 'no-manifest' };
   const manifest = parseHandoverProtocolManifest(text);
   if (manifest === null) return { kind: 'manifest-invalid' };
-  const { files, digest, totalBytes } = manifest.delivery;
+  const { files, closed, digest, totalBytes } = manifest.delivery;
   const total = files.reduce((sum, file) => sum + file.size, 0);
-  const recomputed = await handoverDeliveryDigest(files);
+  // Φ-Δ.7γ — οι κλεισμένες γραμμές μπαίνουν στο αποτύπωμα v3: αφαίρεση ή αλλαγή μιας από αυτές φαίνεται εδώ.
+  const recomputed = await handoverDeliveryDigest(files, closed);
   return recomputed === digest && total === totalBytes ? { kind: 'consistent', manifest } : { kind: 'digest-inconsistent', manifest };
 }
 

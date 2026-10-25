@@ -26,6 +26,7 @@ import type {
   HandoverFileDecisionDisposition,
   HandoverFileDecisionOffer,
 } from './property-handover-file-decision';
+import type { HandoverUnprovenLine } from './property-handover-line-closure';
 import type { PropertyHandoverProtocolPointer } from './property-handover-protocol';
 
 /**
@@ -392,6 +393,11 @@ export interface PropertyHandoverOfficeEntry {
   /** Ονοματεπώνυμο της επαφής του **ίδιου** μισθωτή — ποτέ email · τηλέφωνο · ΑΦΜ. `null` ⇒ η επαφή δεν διαβάζεται. */
   readonly recipientName: string | null;
   readonly status: HandoverOfficeStatus;
+  /**
+   * Φ-Δ.7γ — οι γραμμές που η μηχανή **δεν** μπόρεσε να αποδείξει, με την προσφορά κλεισίματος της καθεμίας (από την **ίδια**
+   * κρίση με την πόρτα). Κενό όσο ο κατακερματισμός δεν έχει βρει μη επαληθεύσιμη γραμμή — η μέτρηση κοστίζει GCS.
+   */
+  readonly unprovenLines: readonly HandoverUnprovenLine[];
 }
 
 /** Η απάντηση της πόρτας προεπισκόπησης — ό,τι δεν είναι επιλέξιμο (κάδος · πρόχειρο · παλιά έκδοση) λείπει. */

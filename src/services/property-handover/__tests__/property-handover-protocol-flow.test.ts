@@ -233,6 +233,19 @@ describe('Γ36 — ό,τι ΔΕΝ εκδίδει Πρωτόκολλο, και γ
     nothingWritten();
   });
 
+  it('🔴 Ζ104 (Φ-Δ.7γ) — κλεισμένη γραμμή με κείμενο σε ισχύ το v1 ⇒ `legal-text-lacks-closures`: ποτέ Πρωτόκολλο που σιωπά γι\' αυτήν', async () => {
+    const closed = { sourceFileId: 'file_c', copyFileId: handoverCopyFileIdOf(HANDOVER, 'file_c'), crc32c: 'crc_file_c', size: 1000, cause: 'bytes-gone' as const };
+    fake.seed(COLLECTIONS.PROPERTY_HANDOVER_DELIVERIES, handoverDeliveryIdOf(HANDOVER, 'file_c'), {
+      ...closed, sha256: null, companyId: COMPANY, propertyId: PROPERTY, handoverId: HANDOVER, recipientUserId: BUYER, dossierId: MAIN_DOSSIER,
+      sourceGeneration: '5', revisionOfFileId: null, deliveredAt: AT, sha256Of: null, hashedAt: null,
+      closure: { cause: 'bytes-gone', reason: 'χάθηκαν και οι δύο πλευρές', closedBy: 'uid_office', closedAt: AT },
+    });
+    const digest = await handoverDeliveryDigest(['file_a', 'file_b'].map(ledgerRow), [closed]);
+    await seedHandover(['file_a', 'file_b'], { fileDelivery: { ...handover().fileDelivery, digest } });
+    expect(await issue()).toMatchObject({ kind: 'refused', reason: 'legal-text-lacks-closures' });
+    nothingWritten();
+  });
+
   it('🔴 χωρίς ρύθμιση παρόχου ⇒ `awaiting-seal-configuration`: τίποτα στο GCS ή στη βάση, ένα σήμα', async () => {
     const session = openSealSession({}, { fetchImpl: jest.fn(), env: {}, now: () => NOW });
     expect(await issue(session)).toEqual({ kind: 'awaiting-seal-configuration' });

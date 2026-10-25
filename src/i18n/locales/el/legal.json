@@ -305,6 +305,8 @@
       "recipient": "Παραλήπτης",
       "files": "Αρχεία",
       "filesValue": "{count, plural, one {# αρχείο} other {# αρχεία}} · {size}",
+      "closed": "Χωρίς πλήρες αποτύπωμα",
+      "closedValue": "{count, plural, one {# αρχείο} other {# αρχεία}} — παραδόθηκαν, χωρίς τιμή SHA-256 προς σύγκριση",
       "digest": "Αποτύπωμα παράδοσης",
       "legalText": "Κείμενο όρων",
       "legalTextValue": "Έκδοση {version}"

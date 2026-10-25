@@ -6,7 +6,8 @@ import 'server-only';
  *          τοποθέτηση, ατομικά με τη γραμμή) · handover-delivery-ledger.server.ts (η άρση, ατομικά με το sha256)
  * @module server/property-handover-delivery/handover-delivery-preservation.server
  *
- * 🔑 **Αναλλοίωτο**: *γραμμή καθολικού χωρίς sha256, σε παράδοση που ΟΦΕΙΛΕΤΑΙ ⇒ η πηγή της διατηρείται* — αλλιώς όχι.
+ * 🔑 **Αναλλοίωτο**: *γραμμή καθολικού χωρίς sha256 **και** χωρίς κλείσιμο (Φ-Δ.7γ), σε παράδοση που ΟΦΕΙΛΕΤΑΙ ⇒ η πηγή της
+ *    διατηρείται* — αλλιώς όχι.
  *    Οι δύο **κύριες** διαδρομές το κρατούν ατομικά (γέννηση γραμμής · εγγραφή sha256). Εδώ ζει η **συμφιλίωση** (Π5) για
  *    ό,τι δεν είναι γεγονός γραμμής:
  *    - η παράδοση **έπαψε να οφείλεται** (ανάκληση Φ-Δ.5 · ακύρωση πώλησης) ⇒ καμία απόδειξη δεν θα γραφτεί ποτέ ⇒ άρση·
@@ -28,7 +29,14 @@ import {
 } from '@/services/file-record/file-preservation.service';
 import type { PropertyHandover } from '@/types/property-handover';
 
-import { deliveryLedgerRef, deliverySourceRef, ownSourceData, readDeliveredRows, type HandoverLedgerProof } from './handover-delivery-ledger.server';
+import {
+  closureMarkOf,
+  deliveryLedgerRef,
+  deliverySourceRef,
+  ownSourceData,
+  readDeliveredRows,
+  type HandoverLedgerProof,
+} from './handover-delivery-ledger.server';
 
 const logger = createModuleLogger('PropertyHandoverPreservation');
 
@@ -55,7 +63,8 @@ async function settleRow(adminDb: AdminFirestore, handover: PropertyHandover, so
     const [ledgerSnap, sourceSnap] = await Promise.all([tx.get(ledgerRef), tx.get(sourceRef)]);
     const ledger = ledgerSnap.data();
     const source = ownSourceData(sourceSnap.data(), ledger);
-    const wanted = owed && ledger !== undefined && !isSha256Hex(ledger.sha256);
+    // Φ-Δ.7γ — κλεισμένη γραμμή: καμία απόδειξη δεν θα γραφτεί πια ⇒ άρση (δίχτυ της άρσης μέσα στο κλείσιμο).
+    const wanted = owed && ledger !== undefined && !isSha256Hex(ledger.sha256) && closureMarkOf(ledger.closure) === null;
     if (wanted) return stagePreservation(tx, sourceRef, source, ledgerRef.id) ? 'preserved' : 'unchanged';
     return stagePreservationRelease(tx, sourceRef, source, ledgerRef.id) ? 'released' : 'unchanged';
   });

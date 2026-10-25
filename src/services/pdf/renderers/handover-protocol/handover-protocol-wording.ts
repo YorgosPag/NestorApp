@@ -13,6 +13,7 @@
  */
 
 import type { HumanLanguage } from '@/i18n/languages';
+import type { HandoverLineClosureCause } from '@/types/property-handover-line-closure';
 
 export interface HandoverProtocolWording {
   readonly protocolNumber: string;
@@ -43,6 +44,20 @@ export interface HandoverProtocolWording {
     readonly size: string;
   };
   readonly totals: (files: number, bytes: string) => string;
+  /** Φ-Δ.7γ (ADR-916 §5.23) — ο πίνακας των αρχείων χωρίς πλήρες αποτύπωμα (η ρήτρα `closedLines` λέει τι σημαίνει). */
+  readonly closedHeading: string;
+  readonly closedColumns: {
+    readonly index: string;
+    readonly file: string;
+    readonly source: string;
+    readonly copy: string;
+    readonly crc32c: string;
+    readonly size: string;
+    readonly cause: string;
+  };
+  /** `Record` ⇒ νέα αιτία δεν μεταγλωττίζεται χωρίς ετικέτα· ο κωδικός τυπώνεται δίπλα (μπαίνει στο αποτύπωμα v3). */
+  readonly closedCauses: Readonly<Record<HandoverLineClosureCause, string>>;
+  readonly closedNote: string;
   readonly digestHeading: string;
   readonly digestScheme: string;
   readonly digestValue: string;
@@ -92,6 +107,21 @@ export const HANDOVER_PROTOCOL_WORDING: Readonly<Record<HumanLanguage, HandoverP
       size: 'Μέγεθος (bytes)',
     },
     totals: (files, bytes) => `Σύνολο: ${files} αρχεία · ${bytes} bytes`,
+    closedHeading: 'Αρχεία χωρίς πλήρες αποτύπωμα',
+    closedColumns: {
+      index: '#',
+      file: 'Αρχείο · παράδοση',
+      source: 'Αναγνωριστικό πηγής',
+      copy: 'Αναγνωριστικό αντιγράφου',
+      crc32c: 'CRC32C',
+      size: 'Μέγεθος (bytes)',
+      cause: 'Αιτία',
+    },
+    closedCauses: {
+      'bytes-gone': 'Τα δεδομένα διαγράφηκαν οριστικά και από τις δύο πλευρές',
+      'source-unlocated': 'Η θέση της πηγής δεν είχε καταγραφεί',
+    },
+    closedNote: 'Χωρίς τιμή SHA-256 — βλ. τη ρήτρα για τα αρχεία χωρίς πλήρες αποτύπωμα στους όρους.',
     digestHeading: 'Αποτύπωμα φακέλου',
     digestScheme: 'Ετικέτα σχήματος',
     digestValue: 'SHA-256',
@@ -134,6 +164,21 @@ export const HANDOVER_PROTOCOL_WORDING: Readonly<Record<HumanLanguage, HandoverP
       size: 'Size (bytes)',
     },
     totals: (files, bytes) => `Total: ${files} files · ${bytes} bytes`,
+    closedHeading: 'Files without a full fingerprint',
+    closedColumns: {
+      index: '#',
+      file: 'File · handover',
+      source: 'Source identifier',
+      copy: 'Copy identifier',
+      crc32c: 'CRC32C',
+      size: 'Size (bytes)',
+      cause: 'Cause',
+    },
+    closedCauses: {
+      'bytes-gone': 'The data was permanently deleted on both sides',
+      'source-unlocated': 'The source location was not recorded',
+    },
+    closedNote: 'No SHA-256 value — see the clause on files without a full fingerprint in the terms.',
     digestHeading: 'Dossier fingerprint',
     digestScheme: 'Scheme label',
     digestValue: 'SHA-256',

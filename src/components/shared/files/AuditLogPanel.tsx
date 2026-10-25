@@ -102,6 +102,8 @@ const ACTION_ICON_MAP: Record<FileAuditAction, LucideIcon> = {
   handover_protocol_issue: Stamp,
   // ADR-916 Φ-Δ.4 — απόφαση γραφείου: παραδίδεται / μένει εσωτερικό.
   handover_decision: Scale,
+  // ADR-916 Φ-Δ.7γ — η γραμμή παράδοσης έκλεισε χωρίς πλήρες αποτύπωμα (bytes χαμένα οριστικά).
+  handover_line_closure: Scale,
   approval_request: Send,
   approval_approve: CheckCircle,
   approval_reject: XCircle,
@@ -146,6 +148,7 @@ const ACTION_COLOR_MAP: Record<string, string> = {
   handover_receive: 'text-[hsl(var(--text-success))]',
   handover_protocol_issue: 'text-[hsl(var(--text-success))]',
   handover_decision: 'text-[hsl(var(--text-warning))]',
+  handover_line_closure: 'text-[hsl(var(--text-warning))]',
   approval_request: 'text-[hsl(var(--text-warning))]',
   approval_approve: 'text-[hsl(var(--text-success))]',
   approval_reject: 'text-destructive',

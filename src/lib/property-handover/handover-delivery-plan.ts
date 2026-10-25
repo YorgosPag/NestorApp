@@ -17,6 +17,7 @@
 import { sha256HexOfText } from '@/lib/hash/sha256';
 import { compareUtf8 } from '@/lib/string/byte-order';
 import type { PropertyHandover, PropertyHandoverFileDeliveryState } from '@/types/property-handover';
+import type { HandoverLineClosureCause } from '@/types/property-handover-line-closure';
 
 /** Οι καταστάσεις που περιμένουν τον εκτελεστή — το ερώτημα του cron (ισότητα στο `fileDeliveryState`). */
 export const HANDOVER_FILE_DELIVERY_QUEUE_STATES = ['pending', 'delivering'] as const satisfies readonly PropertyHandoverFileDeliveryState[];
@@ -31,6 +32,17 @@ export function fileDeliveryStateOf(
 ): PropertyHandoverFileDeliveryState | null {
   if (handover.lifecycle !== 'ready' || handover.recipient === null) return null;
   return handover.fileDelivery?.state ?? 'pending';
+}
+
+/**
+ * **Οφείλει ακόμη η παράδοση στον ΙΔΙΟ παραλήπτη;** — ανακλημένη (Φ-Δ.5), ακυρωμένη ή αλλαγή χεριών ⇒ όχι. Η ΜΙΑ ερώτηση
+ * που κάνουν μέσα στη συναλλαγή τους η αντιγραφή (Φ-Γ1) και το κλείσιμο γραμμής (Φ-Δ.7γ). `null` ⇒ η παράδοση δεν διαβάζεται.
+ */
+export function stillOwedToRecipient(
+  handover: Pick<PropertyHandover, 'lifecycle' | 'recipient' | 'fileDelivery'> | null,
+  recipientUserId: string,
+): boolean {
+  return handover !== null && fileDeliveryStateOf(handover) !== null && handover.recipient?.userId === recipientUserId;
 }
 
 /** Ένα παραδοτέο αρχείο σήμερα — ό,τι χρειάζεται η κρίση, τίποτα παραπάνω. */
@@ -99,6 +111,29 @@ export function planHandoverDelivery<T extends HandoverDeliverable>(input: Hando
  */
 export const HANDOVER_DELIVERY_DIGEST_SCHEME = 'nestor.handover-delivery.v2';
 
+/**
+ * Φ-Δ.7γ (ADR-916 §5.23) — η ετικέτα **όταν** ο πίνακας έχει γραμμές κλεισμένες χωρίς πλήρες αποτύπωμα. Το σχήμα το ορίζει
+ * το **περιεχόμενο**, όχι ημερομηνία: χωρίς κλεισμένη γραμμή το αποτύπωμα μένει v2 **byte-προς-byte**, άρα καμία υπάρχουσα
+ * παράδοση δεν γίνεται «due» για νέα αναθεώρηση και το παγωμένο κείμενο v1 μένει αληθές για κάθε πίνακα που περιγράφει.
+ */
+export const HANDOVER_DELIVERY_DIGEST_SCHEME_WITH_CLOSURES = 'nestor.handover-delivery.v3';
+
+/** Η ετικέτα που αντιστοιχεί σε έναν πίνακα — η ΜΙΑ επιλογή για αποτύπωμα, manifest και επαλήθευση. */
+export const handoverDeliveryDigestSchemeOf = (closedLines: number): string =>
+  closedLines === 0 ? HANDOVER_DELIVERY_DIGEST_SCHEME : HANDOVER_DELIVERY_DIGEST_SCHEME_WITH_CLOSURES;
+
+/** Τα πεδία μιας **κλεισμένης** γραμμής που δεσμεύει το αποτύπωμα v3 — το crc32c είναι η μόνη απόδειξη bytes που μένει. */
+export interface HandoverClosedDigestLineFields extends Pick<HandoverDeliveredRow, 'sourceFileId' | 'copyFileId' | 'crc32c' | 'size'> {
+  readonly cause: HandoverLineClosureCause;
+}
+
+/**
+ * Η γραμμή μιας κλεισμένης — `C|πηγή|αντίγραφο|crc32c|μέγεθος|αιτία`. Το πρόθεμα `C|` τη χωρίζει από τις αποδεδειγμένες
+ * (κανένα αναγνωριστικό αρχείου δεν είναι `C`), ώστε μια κλεισμένη γραμμή να μη διαβαστεί ποτέ ως αποδεδειγμένη.
+ */
+export const handoverClosedDigestLineOf = (row: HandoverClosedDigestLineFields): string =>
+  `C|${row.sourceFileId}|${row.copyFileId}|${row.crc32c}|${row.size}|${row.cause}`;
+
 /** Τα **τέσσερα** πεδία της γραμμής του αποτυπώματος — ό,τι χρειάζεται ο τρίτος, τίποτα παραπάνω (π.χ. όχι crc32c). */
 export type HandoverDigestLineFields = Pick<HandoverDeliveredRow, 'sourceFileId' | 'copyFileId' | 'size'> & { readonly sha256: string };
 
@@ -120,15 +155,25 @@ const isHashed = <R extends HandoverDigestInput>(row: R): row is R & { readonly 
  * 🔑 **Ταξινόμηση κατά bytes UTF-8** (Σ4), όπως το λέει αυτολεξεί το παγωμένο κείμενο (`handover-protocol` v1, βήμα 3):
  *    ποτέ `.sort()` (σειρά UTF-16). Για ASCII οι δύο ταυτίζονται ⇒ κανένα υπάρχον αποτύπωμα δεν άλλαξε.
  */
-export async function handoverDeliveryDigest(rows: readonly HandoverDigestInput[]): Promise<string | null> {
+export async function handoverDeliveryDigest(
+  rows: readonly HandoverDigestInput[],
+  closed: readonly HandoverClosedDigestLineFields[] = [],
+): Promise<string | null> {
   const hashed = rows.filter(isHashed);
-  if (rows.length === 0 || hashed.length < rows.length) return null;
-  return sha256HexOfText([HANDOVER_DELIVERY_DIGEST_SCHEME, ...inHandoverDigestOrder(hashed).map(handoverDigestLineOf)].join('\n'));
+  if (rows.length + closed.length === 0 || hashed.length < rows.length) return null;
+  // Φ-Δ.7γ — μία ταξινόμηση κατά bytes πάνω σε ΟΛΕΣ τις γραμμές· χωρίς κλεισμένες είναι ακριβώς η v2.
+  const lines = [...hashed.map(handoverDigestLineOf), ...closed.map(handoverClosedDigestLineOf)].sort(compareUtf8);
+  return sha256HexOfText([handoverDeliveryDigestSchemeOf(closed.length), ...lines].join('\n'));
 }
 
 /** **Οι γραμμές με τη σειρά του αποτυπώματος** — η ΜΙΑ σειρά για το digest **και** για τον πίνακα του Πρωτοκόλλου (Σ4). */
 export function inHandoverDigestOrder<R extends HandoverDigestLineFields>(rows: readonly R[]): readonly R[] {
   return [...rows].sort((a, b) => compareUtf8(handoverDigestLineOf(a), handoverDigestLineOf(b)));
+}
+
+/** Φ-Δ.7γ — οι κλεισμένες γραμμές με τη σειρά **τους** (κατά bytes της γραμμής v3): ο δεύτερος πίνακας του Πρωτοκόλλου. */
+export function inHandoverClosedOrder<R extends HandoverClosedDigestLineFields>(rows: readonly R[]): readonly R[] {
+  return [...rows].sort((a, b) => compareUtf8(handoverClosedDigestLineOf(a), handoverClosedDigestLineOf(b)));
 }
 
 export interface HandoverHashingPlan<R extends HandoverDeliveredRow> {

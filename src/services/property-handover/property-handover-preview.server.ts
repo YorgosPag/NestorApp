@@ -24,11 +24,12 @@ import { propertyHandoverSnapshotOf, type PropertyHandoverSnapshot } from '@/lib
 import { handoverOfficeStatusOf } from '@/lib/property-handover/handover-office-status';
 import { propertyHandoverFromDocument } from '@/lib/property-handover/property-handover-from-document';
 import { sealConfigurationOf } from '@/server/pdf-seal/seal-config.server';
-import { readDeliveredRows } from '@/server/property-handover-delivery/handover-delivery-ledger.server';
+import { readDeliveredRows, type HandoverLedgerProof } from '@/server/property-handover-delivery/handover-delivery-ledger.server';
 import type { PropertyHandover, PropertyHandoverOfficeEntry, PropertyHandoverPreview } from '@/types/property-handover';
 
 import { handoverRecipientNamesOf } from './property-handover-recipient-name.server';
-import { handoverSetPreviewFiles, loadHandoverSet } from './property-handover-set.server';
+import { handoverSetPreviewFiles, loadHandoverSet, type HandoverSet } from './property-handover-set.server';
+import { handoverUnprovenLinesOf } from './property-handover-unproven-lines.server';
 import { propertyHandoversQuery } from './property-handover-write.service';
 
 async function readSnapshot(adminDb: AdminFirestore, propertyId: string): Promise<PropertyHandoverSnapshot | null> {
@@ -40,9 +41,14 @@ async function readSnapshot(adminDb: AdminFirestore, propertyId: string): Promis
  * Φ-Δ.4 — οι πηγές που **έχουν** παραδοθεί, σε οποιαδήποτε παράδοση. Το **ίδιο** ερώτημα καθολικού με τον εκτελεστή
  * (`readDeliveredRows`, ήδη με δείκτη) — λίγες παραδόσεις ανά ακίνητο (μία ανά ιδιοκτήτη, Δ6).
  */
-async function deliveredSourceIdsOf(adminDb: AdminFirestore, handovers: readonly PropertyHandover[]): Promise<ReadonlySet<string>> {
+async function ledgersOf(adminDb: AdminFirestore, handovers: readonly PropertyHandover[]): Promise<ReadonlyMap<string, readonly HandoverLedgerProof[]>> {
   const rows = await Promise.all(handovers.map((handover) => readDeliveredRows(adminDb, handover)));
-  return new Set(rows.flat().map((row) => row.sourceFileId));
+  return new Map(handovers.map((handover, i) => [handover.id, rows[i] ?? []]));
+}
+
+/** Το όνομα κάθε πηγής του συνόλου, όπως το βλέπει το γραφείο — για τις γραμμές χωρίς απόδειξη (Φ-Δ.7γ). */
+function setNamesOf(set: HandoverSet): ReadonlyMap<string, string> {
+  return new Map([...set.deliver, ...set.review, ...set.internal].map((file) => [file.doc.id, file.preview.displayName]));
 }
 
 /** `null` ⇒ το ακίνητο δεν υπάρχει ή δεν ανήκει στον μισθωτή (ο καλών απαντά 404). */
@@ -61,14 +67,17 @@ export async function previewPropertyHandover(
     const handover = propertyHandoverFromDocument(doc.data(), doc.id);
     return handover ? [handover] : [];
   });
-  const names = await handoverRecipientNamesOf(adminDb, companyId, handovers.map((h) => h.recipientContactId));
-  const deliveredSourceIds = await deliveredSourceIdsOf(adminDb, handovers);
+  const recipientNames = await handoverRecipientNamesOf(adminDb, companyId, handovers.map((h) => h.recipientContactId));
+  const ledgers = await ledgersOf(adminDb, handovers);
+  const deliveredSourceIds = new Set([...ledgers.values()].flat().map((row) => row.sourceFileId));
+  const names = setNamesOf(set);
   const sealConfigured = sealConfigurationOf(process.env).kind === 'configured';
   const context = { snapshot, sealConfigured, nowValue: nowISO() };
-  const entries = handovers.map((handover): PropertyHandoverOfficeEntry => ({
+  const entries = await Promise.all(handovers.map(async (handover): Promise<PropertyHandoverOfficeEntry> => ({
     handover,
-    recipientName: names.get(handover.recipientContactId) ?? null,
+    recipientName: recipientNames.get(handover.recipientContactId) ?? null,
     status: handoverOfficeStatusOf(handover, context),
-  }));
+    unprovenLines: await handoverUnprovenLinesOf(adminDb, handover, ledgers.get(handover.id) ?? [], names),
+  })));
   return { handovers: entries, seal: { configured: sealConfigured }, files: handoverSetPreviewFiles(set, deliveredSourceIds) };
 }
