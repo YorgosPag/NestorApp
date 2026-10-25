@@ -37,9 +37,6 @@
  * @see docs/centralized-systems/reference/adrs/ADR-719-ambient-declaration-ssot.md
  */
 
-/** `cdt2d` (MIT) — Constrained Delaunay για το TIN. Καταναλωτής: `systems/topography/tin-builder.ts`. */
-/// <reference path="../subapps/dxf-viewer/systems/topography/cdt2d.d.ts" />
-
 /** `opentype.js` — γραμματοσειρές/glyph paths. Καταναλωτές: 8 αρχεία στο `text-engine/`. */
 /// <reference path="../subapps/dxf-viewer/text-engine/fonts/opentype.d.ts" />
 

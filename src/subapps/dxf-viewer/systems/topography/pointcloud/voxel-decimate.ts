@@ -1,7 +1,7 @@
 /**
  * ADR-650 M8α — Voxel decimation: millions of ground points → a survey-grade point set.
  *
- * The TIN must never see the raw cloud. `cdt2d` on 20M points is not a slow triangulation, it is a
+ * The TIN must never see the raw cloud. The triangulator on 20M points is not a slow triangulation, it is a
  * dead tab — and it would be pointless: a 0.5 m DTM does not get more accurate from 200 returns
  * per square metre, it just gets 200× heavier. So we do exactly what Civil 3D's «Point Cloud to
  * Surface» and PDAL's `filters.sample` do: bucket the ground points on a planimetric grid and keep

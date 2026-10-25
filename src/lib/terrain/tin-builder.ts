@@ -3,61 +3,42 @@
  *
  * Big-player pattern (Civil 3D / CASS): the surface is a Constrained Delaunay TIN,
  * NOT plain Delaunay — a breakline segment is only guaranteed to survive as a triangle
- * edge under CDT (ADR-650 §5). We use `cdt2d` (MIT, robust-predicates backed) for the
- * CDT; the marching step (contour-generator) runs over the triangles it returns.
+ * edge under CDT (ADR-650 §5). The engine is Delaunator + Constrainautor (`tin-triangulate`,
+ * ADR-920 Β4.8 Τ — it replaced `cdt2d`, ~×80 faster, same triangles wherever Delaunay is unique); the marching
+ * step (contour-generator) runs over the triangles it returns.
  *
  * Flow: survey points + breakline vertices → dedup → LOCAL positions + parallel Z →
- * constraint edges from breaklines → `cdt2d(positions, edges)` → {@link TinSurface}.
+ * breaklines resolved into edges the triangulator can always honour (crossings get a node,
+ * vertices on a breakline split it — `tin-breakline-resolve`) → triangulate → {@link TinSurface}.
  *
  * "False-flat" triangles (all three vertices at one Z) yield no contour crossing and are
  * counted for QA (the digitized-contour terrace trap, ADR-650 §5); with spot-point input
  * they are rare, and the contour generator additionally nudges levels off exact vertex Z.
  */
 
-import cdt2d, { type Cdt2dPoint, type Cdt2dEdge } from 'cdt2d';
-import type { TopoPoint, TopoPoint3D, Breakline, LocalOrigin, TinSurface, TopoBounds } from './terrain-types';
+import type {
+  TopoPoint,
+  TopoPoint3D,
+  Breakline,
+  LocalOrigin,
+  TinBuildReport,
+  TinPosition,
+  TinSurface,
+  TinTriangle,
+  TopoBounds,
+} from './terrain-types';
 import { computeLocalOrigin, ZERO_ORIGIN } from './topo-local-origin';
 import { surfacePointsOf } from './topo-point-elevation';
+import { createVertexAccumulator, planarBoundsOf, pushVertex, type CollectedVertices } from './tin-vertex-accumulator';
+import { resolveBreaklines } from './tin-breakline-resolve';
+import { triangulateConstrained } from './tin-triangulate';
 
-/**
- * Micrometre-grid key so coincident survey/breakline vertices merge to one TIN node.
- * Exported as the SSoT for «which LOCAL grid cell is this vertex in» — the QA topology
- * pass (ADR-650 M5α) reuses it to match a TIN edge back to a breakline segment, so the
- * two can never round differently and disagree about coincidence.
- */
-export function localVertexKey(localX: number, localY: number): string {
-  return `${Math.round(localX * 1000)}:${Math.round(localY * 1000)}`;
-}
-
-/**
- * The growing vertex table of a TIN under construction. Exported (with its factory and
- * {@link pushVertex}) because ADR-718's surface crop assembles a SECOND TIN from clipped triangle
- * pieces and must dedup on the **same** micrometre grid — two dedup rules would let the crop merge
- * vertices the builder kept apart (or the reverse), and the two surfaces would disagree about
- * where a shared edge is.
- */
-export interface CollectedVertices {
-  readonly positions: Cdt2dPoint[];
-  readonly elevations: number[];
-  readonly keyToIndex: Map<string, number>;
-}
-
-/** An empty vertex table. */
-export function createVertexAccumulator(): CollectedVertices {
-  return { positions: [], elevations: [], keyToIndex: new Map() };
-}
-
-/** Add one LOCAL vertex (deduped by grid key), returning its index. */
-export function pushVertex(acc: CollectedVertices, localX: number, localY: number, z: number): number {
-  const key = localVertexKey(localX, localY);
-  const existing = acc.keyToIndex.get(key);
-  if (existing !== undefined) return existing;
-  const index = acc.positions.length;
-  acc.positions.push([localX, localY]);
-  acc.elevations.push(z);
-  acc.keyToIndex.set(key, index);
-  return index;
-}
+export {
+  localVertexKey,
+  createVertexAccumulator,
+  pushVertex,
+  type CollectedVertices,
+} from './tin-vertex-accumulator';
 
 /**
  * Collect survey points + breakline vertices into deduped LOCAL positions + Z.
@@ -79,50 +60,20 @@ function collectVertices(
   return acc;
 }
 
-/** Build constraint edges (index pairs) from breaklines, closing rings when flagged. */
-function buildConstraintEdges(
-  breaklines: readonly Breakline[],
-  acc: CollectedVertices,
-  origin: LocalOrigin,
-): Cdt2dEdge[] {
-  const edges: Cdt2dEdge[] = [];
-  for (const bl of breaklines) {
-    const idx = bl.vertices.map((v) =>
-      acc.keyToIndex.get(localVertexKey(v.x - origin.x, v.y - origin.y)),
-    );
-    for (let i = 0; i < idx.length - 1; i++) {
-      const a = idx[i];
-      const b = idx[i + 1];
-      if (a !== undefined && b !== undefined && a !== b) edges.push([a, b]);
-    }
-    if (bl.closed && idx.length > 2) {
-      const first = idx[0];
-      const last = idx[idx.length - 1];
-      if (first !== undefined && last !== undefined && first !== last) edges.push([last, first]);
-    }
-  }
-  return edges;
-}
-
 /**
  * Local-frame planimetric bounds + world-frame vertical bounds. Exported for ADR-718: a cropped
  * surface has DIFFERENT bounds from the surveyed one, and stale bounds are not a cosmetic bug —
  * they drive camera fit and the ADR-635 culling window (ADR-537: one bad number blanks the 3D).
  */
-export function computeBounds(positions: readonly Cdt2dPoint[], elevations: readonly number[]): TopoBounds {
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+export function computeBounds(positions: readonly TinPosition[], elevations: readonly number[]): TopoBounds {
   let minZ = Infinity, maxZ = -Infinity;
-  for (const [x, y] of positions) {
-    if (x < minX) minX = x; if (x > maxX) maxX = x;
-    if (y < minY) minY = y; if (y > maxY) maxY = y;
-  }
   for (const z of elevations) { if (z < minZ) minZ = z; if (z > maxZ) maxZ = z; }
-  return { minX, minY, maxX, maxY, minZ, maxZ };
+  return { ...planarBoundsOf(positions), minZ, maxZ };
 }
 
 /** Count triangles whose three vertices share one elevation (false flats, §5). */
 export function countFlatTriangles(
-  triangles: ReadonlyArray<readonly [number, number, number]>,
+  triangles: ReadonlyArray<TinTriangle>,
   elevations: readonly number[],
 ): number {
   let count = 0;
@@ -130,6 +81,45 @@ export function countFlatTriangles(
     if (elevations[i] === elevations[j] && elevations[j] === elevations[k]) count++;
   }
   return count;
+}
+
+function surfaceOf(acc: CollectedVertices, triangles: TinTriangle[], origin: LocalOrigin): TinSurface {
+  return {
+    positions: acc.positions,
+    elevations: acc.elevations,
+    triangles,
+    origin,
+    bounds: computeBounds(acc.positions, acc.elevations),
+    flatTriangleCount: countFlatTriangles(triangles, acc.elevations),
+  };
+}
+
+/**
+ * {@link buildTin} plus what it decided that the surface cannot show: the breakline elevation conflicts it resolved
+ * and the constraint segments still refused (expected 0). QA and the owner's preview read this; everything else
+ * calls `buildTin`. ONE implementation — `buildTin` is this, minus the report.
+ */
+export function buildTinWithReport(
+  points: readonly TopoPoint[],
+  breaklines: readonly Breakline[] = [],
+  originArg?: LocalOrigin,
+): TinBuildReport {
+  const surfacePoints = surfacePointsOf(points);
+  const origin = originArg ?? computeLocalOrigin(surfacePoints, breaklines);
+  const acc = collectVertices(surfacePoints, breaklines, origin);
+
+  if (acc.positions.length < 3) {
+    const surface = surfaceOf(acc, [], acc.positions.length ? origin : ZERO_ORIGIN);
+    return { surface, breaklineConflicts: [], refusedSegmentCount: 0 };
+  }
+
+  const resolved = resolveBreaklines(breaklines, acc, origin);
+  const { triangles, refusedEdges } = triangulateConstrained(acc.positions, resolved.edges);
+  return {
+    surface: surfaceOf(acc, triangles, origin),
+    breaklineConflicts: resolved.conflicts,
+    refusedSegmentCount: refusedEdges.length,
+  };
 }
 
 /**
@@ -155,30 +145,5 @@ export function buildTin(
   breaklines: readonly Breakline[] = [],
   originArg?: LocalOrigin,
 ): TinSurface {
-  const surfacePoints = surfacePointsOf(points);
-  const origin = originArg ?? computeLocalOrigin(surfacePoints, breaklines);
-  const acc = collectVertices(surfacePoints, breaklines, origin);
-
-  if (acc.positions.length < 3) {
-    return {
-      positions: acc.positions,
-      elevations: acc.elevations,
-      triangles: [],
-      origin: acc.positions.length ? origin : ZERO_ORIGIN,
-      bounds: computeBounds(acc.positions, acc.elevations),
-      flatTriangleCount: 0,
-    };
-  }
-
-  const edges = buildConstraintEdges(breaklines, acc, origin);
-  const triangles = cdt2d(acc.positions, edges, { delaunay: true });
-
-  return {
-    positions: acc.positions,
-    elevations: acc.elevations,
-    triangles,
-    origin,
-    bounds: computeBounds(acc.positions, acc.elevations),
-    flatTriangleCount: countFlatTriangles(triangles, acc.elevations),
-  };
+  return buildTinWithReport(points, breaklines, originArg).surface;
 }

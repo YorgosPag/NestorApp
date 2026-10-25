@@ -1,0 +1,247 @@
+/**
+ * ADR-650 / ADR-920 Β4.8 Τ — breaklines → constraint edges the triangulator can ALWAYS honour.
+ *
+ * Measured 2026-10-25: two crossing breaklines made `cdt2d` cut holes in the surface and drop surveyed vertices, and
+ * the Delaunator constrainer refuses them outright. Neither is acceptable, and the big tools agree on why: a crossing
+ * states two elevations for one position. Trimble's breakline rule inserts a node at every intersection; Civil 3D asks
+ * which elevation wins (first / higher / lower / average); Carlson highlights crossings. Here:
+ *
+ * 1. A **crossing** gets a TIN node, and BOTH breaklines are split there — nothing is dropped. Its Z is the EARLIER
+ *    breakline's interpolation: the survey points' rule (`surveyFactsOf`: the first statement is kept).
+ * 2. A **vertex on a breakline** splits the breakline there (what `cdt2d` did) and keeps the vertex's own Z; a
+ *    breakline vertex that merges with an existing one (same position) keeps the existing Z — also reported.
+ * 3. Every DISAGREEMENT is returned as a {@link BreaklineElevationConflict} — the builder classifies strictly
+ *    (float noise only); how loud a given Δz is belongs to QA, not to the geometry.
+ *
+ * Predicates are EXACT (`robust-predicates`): whether a vertex is on a segment, or two segments cross, is never decided
+ * by rounding. The `orient2d` sign convention is irrelevant here — only «same side / opposite / zero» is used.
+ */
+
+import { orient2d } from 'robust-predicates';
+import type { Breakline, BreaklineElevationConflict, LocalOrigin, TinPosition } from './terrain-types';
+import { localVertexKey, pushVertex, type CollectedVertices } from './tin-vertex-accumulator';
+import { cellOf, cellsAlongSegment, createSegmentGrid, type SegmentGrid } from './tin-segment-grid';
+import type { TinEdge } from './tin-triangulate';
+
+/**
+ * Two interpolated elevations «agree» when they differ by float noise only. Deliberately NOT a survey tolerance: a
+ * declared Δz is reported as a conflict and QA decides its severity.
+ */
+const ELEVATION_AGREEMENT_RELATIVE = 1e-9;
+
+export function elevationsAgree(a: number, b: number): boolean {
+  return Math.abs(a - b) <= ELEVATION_AGREEMENT_RELATIVE * Math.max(1, Math.abs(a), Math.abs(b));
+}
+
+interface Segment {
+  readonly a: number;
+  readonly b: number;
+  readonly breaklineId: string;
+}
+
+/** A vertex that splits a segment, at parameter `t` ∈ (0, 1) from `a`. */
+interface SplitPoint {
+  readonly index: number;
+  readonly t: number;
+}
+
+interface ResolvedBreaklines {
+  readonly edges: TinEdge[];
+  readonly conflicts: BreaklineElevationConflict[];
+}
+
+function pairKey(a: number, b: number): string {
+  return a < b ? `${a}-${b}` : `${b}-${a}`;
+}
+
+/** Breaklines → index segments (rings closed), in input order; a repeated segment is kept once (the first). */
+function segmentsOf(breaklines: readonly Breakline[], acc: CollectedVertices, origin: LocalOrigin): Segment[] {
+  const segments: Segment[] = [];
+  const seen = new Set<string>();
+  const add = (a: number | undefined, b: number | undefined, breaklineId: string): void => {
+    if (a === undefined || b === undefined || a === b || seen.has(pairKey(a, b))) return;
+    seen.add(pairKey(a, b));
+    segments.push({ a, b, breaklineId });
+  };
+  for (const bl of breaklines) {
+    const idx = bl.vertices.map((v) => acc.keyToIndex.get(localVertexKey(v.x - origin.x, v.y - origin.y)));
+    for (let i = 0; i < idx.length - 1; i++) add(idx[i], idx[i + 1], bl.id);
+    if (bl.closed && idx.length > 2) add(idx[idx.length - 1], idx[0], bl.id);
+  }
+  return segments;
+}
+
+function orient(p: TinPosition, q: TinPosition, r: TinPosition): number {
+  return Math.sign(orient2d(p[0], p[1], q[0], q[1], r[0], r[1]));
+}
+
+/** Z of segment `s` at parameter `t`. */
+function zAlong(acc: CollectedVertices, s: Segment, t: number): number {
+  const za = acc.elevations[s.a];
+  return za + t * (acc.elevations[s.b] - za);
+}
+
+/** Parameter of the (collinear) point `p` along `s`. */
+function paramOf(acc: CollectedVertices, s: Segment, p: TinPosition): number {
+  const [ax, ay] = acc.positions[s.a];
+  const [bx, by] = acc.positions[s.b];
+  const dx = bx - ax;
+  const dy = by - ay;
+  return ((p[0] - ax) * dx + (p[1] - ay) * dy) / (dx * dx + dy * dy);
+}
+
+/** Bucket key → indices; one helper for both buckets (vertices, segments). */
+function pushBucket(buckets: Map<number, number[]>, cell: number, value: number): void {
+  const list = buckets.get(cell);
+  if (list) list.push(value);
+  else buckets.set(cell, [value]);
+}
+
+class Resolution {
+  readonly splits = new Map<number, SplitPoint[]>();
+  readonly conflicts: BreaklineElevationConflict[] = [];
+
+  constructor(readonly acc: CollectedVertices, readonly segments: readonly Segment[]) {}
+
+  split(segmentIndex: number, point: SplitPoint): void {
+    const list = this.splits.get(segmentIndex);
+    if (list) list.push(point);
+    else this.splits.set(segmentIndex, [point]);
+  }
+
+  /** Report `overruledZ` against what the surface keeps at `vertex`, when they disagree. */
+  check(kind: BreaklineElevationConflict['kind'], vertex: number, overruledZ: number, breaklineId: string): void {
+    const keptZ = this.acc.elevations[vertex];
+    if (elevationsAgree(keptZ, overruledZ)) return;
+    const [x, y] = this.acc.positions[vertex];
+    this.conflicts.push({ kind, x, y, keptZ, overruledZ, overruledBreaklineId: breaklineId });
+  }
+}
+
+/** Proper crossing (interiors only) of `s` and `u` → parameters along each, or `null`. */
+function crossingOf(acc: CollectedVertices, s: Segment, u: Segment): readonly [number, number] | null {
+  if (s.a === u.a || s.a === u.b || s.b === u.a || s.b === u.b) return null;
+  const [a, b, c, d] = [acc.positions[s.a], acc.positions[s.b], acc.positions[u.a], acc.positions[u.b]];
+  const o1 = orient(a, b, c);
+  const o2 = orient(a, b, d);
+  const o3 = orient(c, d, a);
+  const o4 = orient(c, d, b);
+  if (o1 === 0 || o2 === 0 || o3 === 0 || o4 === 0 || o1 === o2 || o3 === o4) return null;
+  const rx = b[0] - a[0], ry = b[1] - a[1];
+  const sx = d[0] - c[0], sy = d[1] - c[1];
+  const denom = rx * sy - ry * sx;
+  const qx = c[0] - a[0], qy = c[1] - a[1];
+  return [(qx * sy - qy * sx) / denom, (qx * ry - qy * rx) / denom];
+}
+
+/** Insert a node at the crossing of segments `i` (earlier) and `j`; split both; report the overruled Z. */
+function resolveCrossing(res: Resolution, i: number, j: number, ts: number, tu: number): void {
+  const s = res.segments[i];
+  const u = res.segments[j];
+  const [ax, ay] = res.acc.positions[s.a];
+  const [bx, by] = res.acc.positions[s.b];
+  const node = pushVertex(res.acc, ax + ts * (bx - ax), ay + ts * (by - ay), zAlong(res.acc, s, ts));
+  res.split(i, { index: node, t: ts });
+  res.split(j, { index: node, t: tu });
+  res.check('crossing', node, zAlong(res.acc, s, ts), s.breaklineId);
+  res.check('crossing', node, zAlong(res.acc, u, tu), u.breaklineId);
+}
+
+function segmentBuckets(res: Resolution, grid: SegmentGrid): Map<number, number[]> {
+  const buckets = new Map<number, number[]>();
+  res.segments.forEach((s, i) => {
+    for (const cell of cellsAlongSegment(grid, res.acc.positions[s.a], res.acc.positions[s.b])) pushBucket(buckets, cell, i);
+  });
+  return buckets;
+}
+
+/** Every proper crossing between two segments, each pair tested once, earlier segment first. */
+function resolveCrossings(res: Resolution, grid: SegmentGrid): void {
+  const tested = new Set<string>();
+  for (const list of segmentBuckets(res, grid).values()) {
+    for (let p = 0; p < list.length; p++) {
+      for (let q = p + 1; q < list.length; q++) {
+        const [i, j] = list[p] < list[q] ? [list[p], list[q]] : [list[q], list[p]];
+        const key = `${i}-${j}`;
+        if (tested.has(key)) continue;
+        tested.add(key);
+        const hit = crossingOf(res.acc, res.segments[i], res.segments[j]);
+        if (hit) resolveCrossing(res, i, j, hit[0], hit[1]);
+      }
+    }
+  }
+}
+
+/** Vertex `v` exactly on the interior of segment `s` → its parameter, else `null`. */
+function vertexOnSegment(acc: CollectedVertices, s: Segment, v: number): number | null {
+  if (v === s.a || v === s.b) return null;
+  const [a, b, p] = [acc.positions[s.a], acc.positions[s.b], acc.positions[v]];
+  if (orient(a, b, p) !== 0) return null;
+  const t = paramOf(acc, s, p);
+  return t > 0 && t < 1 ? t : null;
+}
+
+/** Every ORIGINAL vertex (index < `vertexCount`) lying on a segment splits it, keeping its own Z. */
+function resolveVerticesOnSegments(res: Resolution, grid: SegmentGrid, vertexCount: number): void {
+  const buckets = new Map<number, number[]>();
+  for (let v = 0; v < vertexCount; v++) pushBucket(buckets, cellOf(grid, ...res.acc.positions[v]), v);
+  res.segments.forEach((s, i) => {
+    for (const cell of cellsAlongSegment(grid, res.acc.positions[s.a], res.acc.positions[s.b])) {
+      for (const v of buckets.get(cell) ?? []) {
+        const t = vertexOnSegment(res.acc, s, v);
+        if (t === null) continue;
+        res.split(i, { index: v, t });
+        res.check('vertex-on-breakline', v, zAlong(res.acc, s, t), s.breaklineId);
+      }
+    }
+  });
+}
+
+/**
+ * A breakline VERTEX that landed on a position already taken (a survey point, an earlier breakline's vertex) was merged
+ * by the one dedup grid, which keeps the first elevation — report the breakline's own Z when it disagrees.
+ */
+function reportMergedBreaklineVertices(res: Resolution, breaklines: readonly Breakline[], origin: LocalOrigin): void {
+  for (const bl of breaklines) {
+    for (const v of bl.vertices) {
+      const index = res.acc.keyToIndex.get(localVertexKey(v.x - origin.x, v.y - origin.y));
+      if (index !== undefined) res.check('vertex-on-breakline', index, v.z, bl.id);
+    }
+  }
+}
+
+/** Each segment, cut at its split points (sorted along it), as unique edges. */
+function emitEdges(res: Resolution): TinEdge[] {
+  const edges: TinEdge[] = [];
+  const seen = new Set<string>();
+  res.segments.forEach((s, i) => {
+    const chain = [s.a, ...[...(res.splits.get(i) ?? [])].sort((p, q) => p.t - q.t).map((p) => p.index), s.b];
+    for (let k = 0; k < chain.length - 1; k++) {
+      const [a, b] = [chain[k], chain[k + 1]];
+      if (a === b || seen.has(pairKey(a, b))) continue;
+      seen.add(pairKey(a, b));
+      edges.push([a, b]);
+    }
+  });
+  return edges;
+}
+
+/**
+ * Resolve the breaklines against the collected vertices. MUTATES `acc` (crossing nodes are appended through the one
+ * dedup grid, `pushVertex`) — call it before the triangulation, once.
+ */
+export function resolveBreaklines(
+  breaklines: readonly Breakline[],
+  acc: CollectedVertices,
+  origin: LocalOrigin,
+): ResolvedBreaklines {
+  const segments = segmentsOf(breaklines, acc, origin);
+  const res = new Resolution(acc, segments);
+  reportMergedBreaklineVertices(res, breaklines, origin);
+  if (segments.length === 0) return { edges: [], conflicts: res.conflicts };
+  const grid = createSegmentGrid(acc.positions);
+  const vertexCount = acc.positions.length;
+  resolveCrossings(res, grid);
+  resolveVerticesOnSegments(res, grid, vertexCount);
+  return { edges: emitEdges(res), conflicts: res.conflicts };
+}

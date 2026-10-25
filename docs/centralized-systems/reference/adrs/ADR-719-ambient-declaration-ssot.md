@@ -107,7 +107,7 @@ vendors (Jest, Vitest, three, utif, Google Cloud). Ένα triple-slash reference
 
 | Πακέτο | Ιδιοκτήτης (SSoT) | Καταναλωτές |
 |---|---|---|
-| `cdt2d` | `systems/topography/cdt2d.d.ts` | subapp |
+| ~~`cdt2d`~~ | ~~`systems/topography/cdt2d.d.ts`~~ — **αφαιρέθηκε 2026-10-25** (το πακέτο έφυγε, ADR-920 Β4.8 Τ· οι αντικαταστάτες φέρνουν δικούς τους τύπους) | — |
 | `opentype.js` | `text-engine/fonts/opentype.d.ts` | subapp (8 αρχεία) |
 | `nspell` | `text-engine/spell/nspell.d.ts` | subapp (2) |
 | `utif` | `floorplan-background/providers/utif.d.ts` ⟵ **νέο** | subapp (1) |
@@ -190,3 +190,4 @@ __debugSnapResults?:          __debugSnapResults?:
 | Ημ/νία | Αλλαγή |
 |---|---|
 | 2026-07-28 | v1 — Αρχική έκδοση. 4 αντίγραφα εξαλείφθηκαν, 5 κενά ορατότητας έκλεισαν, bundle `test-modules.d.ts` καταργήθηκε, δύο γέφυρες, φύλακας 9 ελέγχων (2 mutation-verified), registry module. Βρέθηκε **τρίτο** program (`canvas-v2/tsconfig.json`) που απαριθμούσε διαδρομή αρχείου ξένης ιδιοκτησίας και είχε ήδη δικό του κενό· δείχνει πλέον στις γέφυρες. Η διπλοεγγραφή του `Window` καταγράφηκε ως ξεχωριστή εκκρεμότητα (§7). |
+| 2026-10-25 | Αφαιρέθηκε η ambient δήλωση του `cdt2d` (`systems/topography/cdt2d.d.ts`), η γραμμή `reference` της στη γέφυρα `src/types/dxf-viewer-ambient.d.ts` και το `cdt2d` από το `forbiddenPatterns`/`allowlist` του `.ssot-registry.json`: το πακέτο αφαιρέθηκε (ADR-920 Β4.8 Τ — Delaunator + Constrainautor, που φέρνουν **δικούς τους** τύπους, άρα καμία νέα ambient δήλωση). Φύλακας `ambient-declaration-ssot.test.ts` 9/9 ✅. |

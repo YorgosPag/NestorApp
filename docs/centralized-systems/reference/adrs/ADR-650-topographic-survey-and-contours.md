@@ -583,6 +583,34 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
 
 ## Changelog
 
+- **2026-10-25 (v35)** — **Ο κινητήρας τριγωνισμού του `tin-builder`: `cdt2d` → Delaunator + Constrainautor**
+  ([ADR-920](./ADR-920-listing-plot-terrain.md) §13.8 «Βήμα Τ»). **Ίδιο API** (`buildTin(points, breaklines, origin?)`),
+  κανένας καταναλωτής δεν άλλαξε. Λόγος, μετρημένος σε σκέτο Node: ο `cdt2d` κάνει **κάθε** τεστ κύκλου με ακριβή
+  αριθμητική (85 % του χρόνου στο `robust-sum`)· τα **προσαρμοστικά** κατηγορήματα Shewchuk δίνουν τα ίδια τρίγωνα
+  ~×80 φθηνότερα (1,7 s → 22 ms στα 10k σημεία).
+  **Άδειες** (από το `package.json` του εγκατεστημένου πακέτου, N.5): `delaunator@5.1.0` **ISC** ·
+  `@kninnug/constrainautor@4.1.0` **ISC** · `robust-predicates@3.0.3` **Unlicense** (τώρα άμεση εξάρτηση — ήταν ήδη στο
+  δέντρο μέσω `polygon-clipping`, CHECK 3.65 ✅). Ρητή έγκριση Giorgio 2026-10-25 (εξαίρεση από τη λίστα του N.5 για
+  αυτά τα τρία). Αφαιρέθηκαν: `cdt2d` + 8 μεταβατικά (`robust-sum/-subtract/-scale/-orientation/-in-sphere`,
+  `two-sum`, `two-product`, `binary-search-bounds`) · `systems/topography/cdt2d.d.ts` · η γραμμή του στη γέφυρα
+  `src/types/dxf-viewer-ambient.d.ts` και στο `.ssot-registry.json` (ADR-719).
+  **Νέα αρχεία στο `src/lib/terrain/`**: `tin-triangulate` (η ΜΙΑ κλήση στον κινητήρα· ο Delaunator δίνει
+  **δεξιόστροφα** τρίγωνα σε σύστημα y-πάνω — μετρημένο — και αντιστρέφονται εδώ, μία φορά) · `tin-breakline-resolve`
+  (ακμές θραύσης → ακμές που ο τριγωνισμός τιμά **πάντα**) · `tin-segment-grid` (ομοιόμορφο πλέγμα υποψηφίων) ·
+  `tin-vertex-accumulator` (ο πίνακας κορυφών εξήχθη για να μην κάνει κύκλο το resolver· re-export από τον builder).
+  🔴 **Εύρημα των tests χαρακτηρισμού**: με **τεμνόμενες** ακμές θραύσης ο `cdt2d` **έκοβε τρύπες** στην επιφάνεια
+  και **έχανε μετρημένες κορυφές**, σιωπηλά (το ADR έλεγε «κρατά ασυνέχειες»). Πλέον, όπως ο κανόνας ακμής του
+  Trimble Business Center: σε κάθε τομή μπαίνει **κόμβος** και σπάνε και οι δύο· κορυφή πάνω σε ακμή τη σπάει.
+  Δύο υψόμετρα στην ίδια θέση = **ο ίδιος κανόνας με τα αντιφατικά σημεία** (`surveyFactsOf`): κρατιέται η πρώτη
+  δήλωση και η άλλη **αναφέρεται** (`buildTinWithReport` → `BreaklineElevationConflict`: τομή · κορυφή πάνω σε ακμή ·
+  κορυφή ακμής πάνω σε σημείο). Κατηγορήματα **ακριβή**· ταξινόμηση αυστηρή (μόνο θόρυβος float = συμφωνία) — η
+  σοβαρότητα ενός Δz ανήκει στο QA. Η σήμανση στον viewer (πρότυπο Carlson «Highlight Crossing Breaklines») και στην
+  προεπισκόπηση είναι το επόμενο βήμα (ADR-920 Τ.3).
+  ⚠️ **Τι ΔΕΝ είναι ίδιο**: σε **ακριβή** κάνναβο (ομοκυκλικά τετράγωνα — DEM, αραιωμένο νέφος) οι δύο κινητήρες
+  διαλέγουν **άλλες** διαγωνίους· και οι δύο έγκυρο Delaunay, άρα οι ισοϋψείς εκεί αλλάζουν ελάχιστα. Το test
+  χαρακτηρισμού ελέγχει «κενός περιγεγραμμένος κύκλος», όχι tie-break.
+  Tests: `lib/terrain/__tests__/tin-builder-characterization` (10 + 2 που ήταν `it.failing` στον `cdt2d` και
+  **κοκκίνισαν** με τη διόρθωση) · `tin-breakline-resolve` (12) · μεταλλάξεις **10/10** με επαναφορά sha1.
 - **2026-10-23 (v31)** — **Οι parsers εισαγωγής στο `lib` → βλ. [ADR-920](./ADR-920-listing-plot-terrain.md) §13.1–§13.2.**
   Η φόρμα αγγελίας του ιδιοκτήτη διαβάζει τοπογραφικό στον browser χωρίς τον viewer. **Β4.1α**: οι parsers πινάκων
   (`topo-import-types` · `topo-text-lines` · `topo-delimited-reader` · `topo-excel-reader` · `topo-column-*` ·

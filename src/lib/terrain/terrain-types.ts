@@ -148,18 +148,24 @@ export interface TopoBounds {
   readonly maxZ: number;
 }
 
+/** A TIN vertex position `[localX, localY]` (LOCAL frame, canonical mm). */
+export type TinPosition = readonly [number, number];
+
+/** A TIN triangle `[i, j, k]` — vertex indices, counter-clockwise seen from above. */
+export type TinTriangle = readonly [number, number, number];
+
 /**
  * Immutable triangulated irregular network (the derived "surface object").
  *
- * Parallel-array layout (cdt2d-native, cache-friendly):
+ * Parallel-array layout (cache-friendly):
  *   - `positions[i]` = `[localX, localY]` of vertex i (LOCAL frame).
  *   - `elevations[i]` = Z of vertex i (WORLD Z — elevation is not offset).
  *   - `triangles[t]` = `[i, j, k]` vertex indices (CCW, constrained edges preserved).
  */
 export interface TinSurface {
-  readonly positions: ReadonlyArray<readonly [number, number]>;
+  readonly positions: ReadonlyArray<TinPosition>;
   readonly elevations: readonly number[];
-  readonly triangles: ReadonlyArray<readonly [number, number, number]>;
+  readonly triangles: ReadonlyArray<TinTriangle>;
   /** Re-projection back to world coordinates (LOCAL + origin = WORLD). */
   readonly origin: LocalOrigin;
   /** Local-frame planimetric + world-frame vertical bounds. */
@@ -169,6 +175,45 @@ export interface TinSurface {
    * Kept for QA/diagnostics; these produce no contour crossings (ADR-650 §5 trap).
    */
   readonly flatTriangleCount: number;
+}
+
+/**
+ * ADR-650 / ADR-920 Β4.8 Τ — one place where the breaklines state TWO elevations for ONE position, resolved by the
+ * builder and REPORTED (never silently). The rule is the survey points' rule (`surveyFactsOf`): the earlier statement
+ * is kept, the later one is overruled and named.
+ *
+ * - `crossing` — two breaklines cross between their vertices. A TIN node is inserted at the crossing so BOTH survive as
+ *   triangle edges (Trimble's breakline rule); its Z is the EARLIER breakline's interpolation (Civil 3D «first»).
+ * - `vertex-on-breakline` — a vertex already in the surface (a survey point, or an earlier breakline's vertex) lies ON a
+ *   breakline: on one of its segments (the breakline is split there) or on one of its own vertices (the two merge on the
+ *   one dedup grid). Either way the vertex keeps ITS elevation.
+ *
+ * Only DISAGREEMENTS are reported: two streams that join at the same elevation are a junction, not a problem.
+ */
+export interface BreaklineElevationConflict {
+  readonly kind: 'crossing' | 'vertex-on-breakline';
+  /** LOCAL frame (same as {@link TinSurface.positions}). */
+  readonly x: number;
+  readonly y: number;
+  /** The elevation the surface carries at this position. */
+  readonly keptZ: number;
+  /** What the overruled breakline's own interpolation said. */
+  readonly overruledZ: number;
+  readonly overruledBreaklineId: string;
+}
+
+/**
+ * Everything the builder decided on the way to a {@link TinSurface} that the surface itself cannot show. `buildTin`
+ * returns only the surface (unchanged API); QA and the owner's preview read this through `buildTinWithReport`.
+ */
+export interface TinBuildReport {
+  readonly surface: TinSurface;
+  readonly breaklineConflicts: readonly BreaklineElevationConflict[];
+  /**
+   * Constraint segments the triangulator still REFUSED after resolution (belt and suspenders — expected 0: every
+   * crossing and every vertex-on-segment is resolved before the constrainer runs). Counted, never silently dropped.
+   */
+  readonly refusedSegmentCount: number;
 }
 
 /** A single contour crossing segment within ONE triangle (LOCAL frame). */

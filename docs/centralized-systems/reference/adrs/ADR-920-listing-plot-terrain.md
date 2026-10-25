@@ -41,7 +41,7 @@
 
 | Ανάγκη | Υπάρχον | Συμπέρασμα |
 |---|---|---|
-| TIN | `dxf-viewer/systems/topography/tin-builder.ts` → `buildTin(points, breaklines)` (cdt2d, MIT, κρατά ασυνέχειες) | **Χρήση.** Καθαρό, χωρίς store |
+| TIN | `dxf-viewer/systems/topography/tin-builder.ts` → `buildTin(points, breaklines)` (cdt2d, MIT, κρατά ασυνέχειες — ⚠️ 2026-10-25: Delaunator + Constrainautor, ISC, βήμα Τ §13.8· ο cdt2d **ΔΕΝ** κρατούσε τεμνόμενες ασυνέχειες) | **Χρήση.** Καθαρό, χωρίς store |
 | Κοπή στο όριο | `tin-clip-to-boundary.ts` → `clipTinToBoundary` | Καθαρό, αλλά τραβά `bim/geometry/shared/polygon-utils` + `rendering/types/Types` |
 | Ισοϋψείς | `contour-generator.ts` (`generateContoursFromSurface`) · `marching-triangles.ts` · `contour-chainer.ts` · `graph-chain.ts` | **Χρήση.** Καθαρά, in-house |
 | Δειγματοληψία | `tin-sampler.ts` | Καθαρό |
@@ -164,7 +164,7 @@
 | Νέο σπίτι | Από | Σημείωση |
 |---|---|---|
 | `src/lib/terrain/terrain-types.ts` | `topography/topo-types.ts` | Μόνο οι γεωμετρικοί τύποι (`TopoPoint`, `TopoPoint3D`, `Breakline`, `LocalOrigin`, `TopoBounds`, `TinSurface`, `ContourSegment`, `ContourLine`). Οι τύποι του editor (ids επιφανειών, σύνδεσμος ορίου, κοπή, αποτέλεσμα όγκων, στυλ σκίασης) **μένουν** εκεί |
-| `src/lib/terrain/tin-builder.ts` · `tin-clip-to-boundary.ts` · `tin-sampler.ts` | ομώνυμα | `cdt2d` (MIT). Οι τύποι του ζουν ήδη στη γέφυρα του ADR-719 (`src/types/dxf-viewer-ambient.d.ts`), άρα το root τους βλέπει |
+| `src/lib/terrain/tin-builder.ts` · `tin-clip-to-boundary.ts` · `tin-sampler.ts` | ομώνυμα | `cdt2d` (MIT). Οι τύποι του ζουν ήδη στη γέφυρα του ADR-719 (`src/types/dxf-viewer-ambient.d.ts`), άρα το root τους βλέπει — ⚠️ 2026-10-25: αντικαταστάθηκε από `delaunator` + `@kninnug/constrainautor` (ISC, δικοί τους τύποι), βήμα Τ §13.8 |
 | `src/lib/terrain/contour-generator.ts` · `marching-triangles.ts` · `contour-chainer.ts` · `graph-chain.ts` | ομώνυμα | — |
 | `src/lib/terrain/topo-local-origin.ts` · `topo-point-elevation.ts` | ομώνυμα | — |
 | `src/lib/terrain/contour-config.ts` | `topography/contour-config.ts` | Μόνο `ContourConfig` + `DEFAULT_CONTOUR_CONFIG`. Η παρουσίαση DXF (στρώσεις, χρώματα, πάχη) μένει στον viewer |
@@ -796,9 +796,46 @@ swc (`transformIgnorePatterns`) — η διαφορά είναι του περι
 4. Για το `TerrainPreview`: ετικέτες σε **pixels οθόνης** (ο καλών μετρά πλάτος με `ResizeObserver`, κλάσεις 320/480/640/960 ⇒
    `labelHeightM` προς το μοντέλο) · αρνήσεις **ανάγνωσης αρχείου** και **στατιστικά αγοραστή** στο Β4.9.
 
-**Επόμενα**: τριγωνισμός (Τ) → ξαναμέτρηση / worker → `TerrainPreview` → πύλες (μαζί 3.22, 3.33) → κλείσιμο §13.8.
+**Βήμα Τ — ο τριγωνισμός του `buildTin`: `cdt2d` → Delaunator + Constrainautor** ✅ (2026-10-25 · ADR-650 v35)
+
+**Ίδιο API**, κανένας καταναλωτής δεν άλλαξε. Η σειρά ήταν: tests χαρακτηρισμού **πάνω στον `cdt2d`** (πράσινα πριν
+την αλλαγή) → αλλαγή → τα ίδια tests πράσινα.
+
+| Ελέγχθηκε (μετρημένο σε σκέτο Node, `cdt2d` vs νέος) | `cdt2d` | Delaunator + Constrainautor | Απόφαση |
+|---|---|---|---|
+| φορά τριγώνων | CCW | **CW** σε σύστημα y-πάνω | αντιστροφή στο `tin-triangulate`, μία φορά |
+| συνευθειακά · διπλά · κοίλο σχήμα | 0 τρίγωνα · 1 · κυρτό περίβλημα | ίδια | — |
+| ακριβής κάνναβος (ομοκυκλικά) | κάποιες διαγώνιοι | **άλλες** διαγώνιοι | και τα δύο έγκυρο Delaunay· το test ελέγχει «κενός κύκλος» |
+| ακμή θραύσης μέσα από κορυφή | τη σπάει | **εξαίρεση**, χάνει την ακμή | σπάσιμο στο `tin-breakline-resolve` |
+| **τεμνόμενες** ακμές θραύσης | 🔴 **τρύπες + χαμένες κορυφές**, σιωπηλά | εξαίρεση, κρατά την πρώτη | κόμβος στην τομή, σπάνε και οι δύο |
+
+**Η πολιτική για δύο υψόμετρα σε μία θέση** (έρευνα: Civil 3D «Resolve Crossing Breaklines» — υψηλότερο / χαμηλότερο /
+μέσο / νέο· Trimble Business Center — κόμβος σε κάθε τομή, «breaklines must not cross»· Carlson — «Highlight Crossing
+Breaklines» με φίλτρο ανοχής): **ο ίδιος κανόνας με τα αντιφατικά σημεία** του `surveyFactsOf` — κρατιέται η **πρώτη**
+δήλωση, η άλλη **ονομάζεται** (`buildTinWithReport` → `BreaklineElevationConflict`, τρία είδη: τομή · κορυφή πάνω σε
+ακμή · κορυφή ακμής πάνω σε σημείο — το τρίτο ήταν **κι αυτό σιωπηλό** ως σήμερα). Συμφωνία = μόνο θόρυβος float· η
+σοβαρότητα ενός Δz είναι δουλειά του QA, όχι της γεωμετρίας. Πέρα από τους τρεις: κατηγορήματα **ακριβή** (καμία τομή
+δεν χάνεται από στρογγυλοποίηση) και πλέγμα υποψηφίων (σχεδόν γραμμικό, όχι όλα τα ζεύγη).
+
+**Παράπλευρο εύρημα (boy scout, ADR-718)**: η κοπή στο όριο έβγαζε επικαλυπτόμενα τρίγωνα σε κοίλο όριο (Γ 300 → 304 m²)
+— κρυμμένο από την τύχη των διαγωνίων στον κάνναβο. Διορθώθηκε με `ring-convex-pieces` (όριο → κυρτά κομμάτια μία φορά).
+
+**Επαλήθευση**: 80 σουίτες / 876 tests (`lib/terrain` · viewer `systems/topography` · πόρτα εδάφους · `tin-to-three` ·
+φύλακας ambient) · μεταλλάξεις **10/10** με επαναφορά sha1 · CHECK 3.65 ✅ · 3.84 ✅ (ξαναπαράχθηκαν notices/SBOM:
+1083 → 1076 στοιχεία) · 3.28 ✅ (ένας δίδυμος βρόχος ορίων βρέθηκε και ενοποιήθηκε σε `planarBoundsOf`) · 3.79 ✅ ·
+3.80 ✅ · 3.70 ✅. Ενδεικτικά **στο jest** (φουσκωμένο — όχι χρόνος χρήστη): `prepareSurveyUpload` 10k ψυχρή
+**10,5 s → 0,82 s**· οι πραγματικοί αριθμοί στο 5β.
+
+⚠️ **Δεν ελέγχθηκε**: τύποι (N.17 — το Constrainautor δηλώνει τύπους με το **ίδιο του το `.ts`**, που το `skipLibCheck`
+δεν καλύπτει· θα φανεί στον έλεγχο του Giorgio / στο hook) · knip (3.22, βαρύ — στις πύλες του κλεισίματος).
+
+**Επόμενα**: **Τ.3** σήμανση των αντιφάσεων ακμών (QA `crossing-breakline` στον viewer + σήμανση στο `TerrainPreview`,
+πρότυπο `SurveyPointMark`) → **5β** ξαναμέτρηση / worker → `TerrainPreview` → πύλες (μαζί 3.22, 3.33) → κλείσιμο §13.8.
 
 ## Changelog
+- **2026-10-25 (v17)** — **Β4.8 βήμα Τ ✅** (§13.8): ο τριγωνισμός του `buildTin` έγινε Delaunator + Constrainautor
+  με ίδιο API (ADR-650 v35)· τεμνόμενες ακμές θραύσης → κόμβος + αναφορά αντιφάσεων (`buildTinWithReport`) αντί για
+  τις σιωπηλές τρύπες του `cdt2d`· αφαιρέθηκε το `cdt2d`. Παράπλευρα: η κοπή στο κοίλο όριο (ADR-718) διορθώθηκε.
 - **2026-10-24 (v16)** — **Β4.8 υπο-βήματα 3–4 ✅** (§13.8): tokens `--terrain-slope-*` + παλέτα· `TerrainContourMap` (SVG ·
   πίνακας κλάσεων που είναι και το υπόμνημα του χρώματος · υπόμνημα συμβόλων με `MapRampLegend` `kind: 'symbol'` · i18n
   `listing-detail:terrain.map`). Κεντρικοποιήσεις: `useSvgFragmentId` · `hatchTilePathData`.

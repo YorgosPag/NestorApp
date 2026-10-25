@@ -146,8 +146,13 @@ const config = {
   // `SyntaxError: Unexpected token 'export'` στη **συλλογή**, με `Tests: 0 total`.
   // ⚠️ Δηλαδή: **η μέτρηση του πακέτου δεν είναι μέτρηση του γραφήματός του.** Ό,τι
   // προστίθεται εδώ επαληθεύεται **τρέχοντας**, ποτέ διαβάζοντας `package.json`.
+  //
+  // `delaunator` και `robust-predicates` είναι ESM-only (`"type": "module"`, κανένα CJS build) — ο τριγωνισμός
+  // του TIN (ADR-920 Β4.8 Τ, `lib/terrain/tin-triangulate.ts` + `tin-breakline-resolve.ts`). Το
+  // `@kninnug/constrainautor` ΔΕΝ χρειάζεται εγγραφή: η συνθήκη `require` δίνει `.cjs` **χωρίς κανένα `require`**
+  // (τα κατηγορήματα είναι ενσωματωμένα — μετρημένο 2026-10-25).
   transformIgnorePatterns: [
-    'node_modules/(?!(?:\\.pnpm/[^/]+/node_modules/)?(?:three|jose|meshoptimizer|property-graph)/)'
+    'node_modules/(?!(?:\\.pnpm/[^/]+/node_modules/)?(?:three|jose|meshoptimizer|property-graph|delaunator|robust-predicates)/)'
   ],
   moduleDirectories: ['node_modules', '<rootDir>'],
   // 🔴 ΟΡΙΟ ΠΟΡΩΝ ΤΟΠΙΚΑ (2026-07-31) — ΜΗΝ το αφαιρέσεις.

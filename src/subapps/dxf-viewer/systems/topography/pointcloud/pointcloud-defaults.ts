@@ -28,7 +28,7 @@ export const CSF_DEFAULTS: CsfOptions = {
 
 /**
  * Decimation defaults. 0.5 m spacing on a 1-hectare plot yields ~40 000 points — dense enough
- * that the TIN captures every real break, thin enough that `cdt2d` runs in well under a second.
+ * that the TIN captures every real break, thin enough that the triangulation runs in well under a second.
  * `lowest` is the conservative DTM representative (see `VoxelRepresentative` doc).
  */
 export const VOXEL_DEFAULTS: VoxelDecimateOptions = {

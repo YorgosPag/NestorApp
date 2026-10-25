@@ -31,7 +31,8 @@ import type { PlanarPoint } from '@/lib/geometry/planar-polygon';
 import { clipPolygonByConvex2D } from '@/lib/geometry/planar-polygon-clip';
 import type { TinSurface } from './terrain-types';
 import { worldToLocal } from './topo-local-origin';
-import { fitDzPlane, dzAt, type DzVertex } from './dz-plane';
+import { fitDzPlane, dzAt, type DzPlane, type DzVertex } from './dz-plane';
+import { boxesOverlap, ringConvexPieces, type ConvexPiece } from './ring-convex-pieces';
 import {
   createVertexAccumulator,
   pushVertex,
@@ -61,10 +62,12 @@ export function clipTinToBoundary(
   // διαφορές που κρίνουν το «μέσα ή έξω» χάνονται στο float64 noise.
   const boundaryLocal = boundaryWorld.map((p) => worldToLocal(p, surface.origin));
 
+  // Το όριο γίνεται ΚΥΡΤΑ κομμάτια ΜΙΑ φορά (ADR-920 Β4.8 Τ): κυρτό ∩ κυρτό = κυρτό, άρα η βεντάλια είναι πάντα έγκυρη.
+  const pieces = ringConvexPieces(boundaryLocal);
   const acc = createVertexAccumulator();
   const triangles: [number, number, number][] = [];
   for (const tri of surface.triangles) {
-    appendClippedTriangle(surface, tri, boundaryLocal, acc, triangles);
+    appendClippedTriangle(surface, tri, pieces, acc, triangles);
   }
   if (triangles.length === 0) return emptyLike(surface);
 
@@ -92,23 +95,35 @@ function emptyLike(surface: TinSurface): TinSurface {
   };
 }
 
-/** Ένα τρίγωνο: τομή με το όριο → fan → κορυφές στον κοινό πίνακα. Εκφυλισμένο ⇒ σιωπηλά τίποτα. */
+/** Ένα τρίγωνο: τομή με κάθε κυρτό κομμάτι του ορίου → fan → κορυφές στον κοινό πίνακα. Εκφυλισμένο ⇒ σιωπηλά τίποτα. */
 function appendClippedTriangle(
   surface: TinSurface,
   [i, j, k]: readonly [number, number, number],
-  boundaryLocal: readonly PlanarPoint[],
+  pieces: readonly ConvexPiece[],
   acc: CollectedVertices,
   out: [number, number, number][],
 ): void {
   const corners = [localCorner(surface, i), localCorner(surface, j), localCorner(surface, k)];
   const plane = fitDzPlane(corners[0]!, corners[1]!, corners[2]!);
   if (!plane) return; // συνευθειακό: μηδενικό εμβαδόν, τίποτα να κρατηθεί
+  for (const boundaryPiece of pieces) {
+    if (!boxesOverlap(boundaryPiece, corners)) continue;
+    appendFan(clipPolygonByConvex2D(boundaryPiece.corners, corners), plane, acc, out);
+  }
+}
 
-  const piece = clipPolygonByConvex2D(boundaryLocal, corners);
-  if (piece.length < 3) return; // ολόκληρο εκτός ορίου
-
-  // Το κομμάτι είναι ΚΥΡΤΟ (τομή κυρτού τριγώνου με ημιεπίπεδα), οπότε η βεντάλια από την πρώτη
-  // κορυφή είναι εξ ορισμού έγκυρη τριγωνοποίηση — καμία ανάγκη να ξανακληθεί ο CDT.
+/**
+ * Ένα κομμάτι `κυρτό τρίγωνο ορίου ∩ τρίγωνο TIN` — ΚΥΡΤΟ εξ ορισμού (τομή δύο κυρτών), οπότε η βεντάλια από την
+ * πρώτη κορυφή είναι έγκυρη τριγωνοποίηση. ⚠️ Μέχρι το ADR-920 Β4.8 Τ το κομμάτι ήταν `ΟΛΟ το όριο ∩ τρίγωνο` και ο
+ * ισχυρισμός «κυρτό» ήταν ψευδής για κοίλο όριο (Γ-οικόπεδο 300 m² → 304 m², μετρημένο) — βλ. `ring-convex-pieces`.
+ */
+function appendFan(
+  piece: readonly PlanarPoint[],
+  plane: DzPlane,
+  acc: CollectedVertices,
+  out: [number, number, number][],
+): void {
+  if (piece.length < 3) return; // εκτός αυτού του κομματιού
   const indices = piece.map((p) => pushVertex(acc, p.x, p.y, dzAt(plane, p)));
   for (let f = 1; f + 1 < indices.length; f++) {
     const tri: [number, number, number] = [indices[0]!, indices[f]!, indices[f + 1]!];

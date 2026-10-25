@@ -2,11 +2,11 @@
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
   "metadata": {
-    "timestamp": "2026-10-16T10:50:09.850Z",
+    "timestamp": "2026-10-25T08:46:13.831Z",
     "properties": [
       {
         "name": "nestor:inputsFingerprint",
-        "value": "sha256:c85abb30c01a49b75d8aa8565ccd27f15c6703f7a6e4b0fddd74a984eda812ed"
+        "value": "sha256:e4411fbdc6f79309c17cc49db6f393204e404bd38ceff47aa8738d888d55987b"
       }
     ]
   },
@@ -3122,6 +3122,31 @@
         {
           "license": {
             "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "nestor:surface",
+          "value": "unknown"
+        },
+        {
+          "name": "nestor:attribution",
+          "value": "surface-unknown"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/@kninnug/constrainautor@4.1.0",
+      "name": "@kninnug/constrainautor",
+      "version": "4.1.0",
+      "purl": "pkg:npm/@kninnug/constrainautor@4.1.0",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "ISC"
           }
         }
       ],
@@ -11813,31 +11838,6 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/binary-search-bounds@2.0.5",
-      "name": "binary-search-bounds",
-      "version": "2.0.5",
-      "purl": "pkg:npm/binary-search-bounds@2.0.5",
-      "scope": "optional",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
-      "properties": [
-        {
-          "name": "nestor:surface",
-          "value": "unknown"
-        },
-        {
-          "name": "nestor:attribution",
-          "value": "surface-unknown"
-        }
-      ]
-    },
-    {
-      "type": "library",
       "bom-ref": "pkg:npm/binary@0.3.0",
       "name": "binary",
       "version": "0.3.0",
@@ -12417,31 +12417,6 @@
       "name": "canvg",
       "version": "3.0.11",
       "purl": "pkg:npm/canvg@3.0.11",
-      "scope": "optional",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
-      "properties": [
-        {
-          "name": "nestor:surface",
-          "value": "unknown"
-        },
-        {
-          "name": "nestor:attribution",
-          "value": "surface-unknown"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:npm/cdt2d@1.0.0",
-      "name": "cdt2d",
-      "version": "1.0.0",
-      "purl": "pkg:npm/cdt2d@1.0.0",
       "scope": "optional",
       "licenses": [
         {
@@ -13722,6 +13697,31 @@
         {
           "license": {
             "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "nestor:surface",
+          "value": "unknown"
+        },
+        {
+          "name": "nestor:attribution",
+          "value": "surface-unknown"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/delaunator@5.1.0",
+      "name": "delaunator",
+      "version": "5.1.0",
+      "purl": "pkg:npm/delaunator@5.1.0",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "ISC"
           }
         }
       ],
@@ -23463,56 +23463,6 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:npm/robust-in-sphere@1.2.1",
-      "name": "robust-in-sphere",
-      "version": "1.2.1",
-      "purl": "pkg:npm/robust-in-sphere@1.2.1",
-      "scope": "optional",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
-      "properties": [
-        {
-          "name": "nestor:surface",
-          "value": "unknown"
-        },
-        {
-          "name": "nestor:attribution",
-          "value": "surface-unknown"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:npm/robust-orientation@1.2.1",
-      "name": "robust-orientation",
-      "version": "1.2.1",
-      "purl": "pkg:npm/robust-orientation@1.2.1",
-      "scope": "optional",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
-      "properties": [
-        {
-          "name": "nestor:surface",
-          "value": "unknown"
-        },
-        {
-          "name": "nestor:attribution",
-          "value": "surface-unknown"
-        }
-      ]
-    },
-    {
-      "type": "library",
       "bom-ref": "pkg:npm/robust-predicates@3.0.3",
       "name": "robust-predicates",
       "version": "3.0.3",
@@ -23522,81 +23472,6 @@
         {
           "license": {
             "id": "Unlicense"
-          }
-        }
-      ],
-      "properties": [
-        {
-          "name": "nestor:surface",
-          "value": "unknown"
-        },
-        {
-          "name": "nestor:attribution",
-          "value": "surface-unknown"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:npm/robust-scale@1.0.2",
-      "name": "robust-scale",
-      "version": "1.0.2",
-      "purl": "pkg:npm/robust-scale@1.0.2",
-      "scope": "optional",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
-      "properties": [
-        {
-          "name": "nestor:surface",
-          "value": "unknown"
-        },
-        {
-          "name": "nestor:attribution",
-          "value": "surface-unknown"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:npm/robust-subtract@1.0.0",
-      "name": "robust-subtract",
-      "version": "1.0.0",
-      "purl": "pkg:npm/robust-subtract@1.0.0",
-      "scope": "optional",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
-      "properties": [
-        {
-          "name": "nestor:surface",
-          "value": "unknown"
-        },
-        {
-          "name": "nestor:attribution",
-          "value": "surface-unknown"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:npm/robust-sum@1.0.0",
-      "name": "robust-sum",
-      "version": "1.0.0",
-      "purl": "pkg:npm/robust-sum@1.0.0",
-      "scope": "optional",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
           }
         }
       ],
@@ -25542,56 +25417,6 @@
       "name": "tsx",
       "version": "4.21.0",
       "purl": "pkg:npm/tsx@4.21.0",
-      "scope": "optional",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
-      "properties": [
-        {
-          "name": "nestor:surface",
-          "value": "unknown"
-        },
-        {
-          "name": "nestor:attribution",
-          "value": "surface-unknown"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:npm/two-product@1.0.2",
-      "name": "two-product",
-      "version": "1.0.2",
-      "purl": "pkg:npm/two-product@1.0.2",
-      "scope": "optional",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
-      "properties": [
-        {
-          "name": "nestor:surface",
-          "value": "unknown"
-        },
-        {
-          "name": "nestor:attribution",
-          "value": "surface-unknown"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "bom-ref": "pkg:npm/two-sum@1.0.0",
-      "name": "two-sum",
-      "version": "1.0.0",
-      "purl": "pkg:npm/two-sum@1.0.0",
       "scope": "optional",
       "licenses": [
         {

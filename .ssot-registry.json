@@ -5456,7 +5456,7 @@
       "ssotFile": "src/types/dxf-viewer-ambient.d.ts",
       "description": "ADR-719 - ONE ambient declaration per untyped package, in ONE file, owned by the closest common point of its consumers. The repo has TWO overlapping TypeScript programs (root excludes src/subapps/dxf-viewer/** but pulls its production files in via import-chain; the subapp tsconfig sees only its own folder but pulls src/lib and src/services in the same way). A declare module never travels with an import-chain, so visibility must be granted explicitly - by a triple-slash reference from one of the two bridge files (src/types/dxf-viewer-ambient.d.ts for root->subapp, src/subapps/dxf-viewer/types/root-ambient.d.ts for subapp->root), NEVER by copying the declaration. Copies diverge silently and invisibly, because the two versions never meet in one program: before ADR-719 the subapp compiled 9 production files against a fake @google-cloud/storage whose Bucket.file() returned unknown. Also forbidden: re-bundling several vendors into one .d.ts - a reference pulls in a WHOLE file, so a bundle makes copying the only way to share one of its declarations. Structural guard: src/types/__tests__/ambient-declaration-ssot.test.ts.",
       "forbiddenPatterns": [
-        "declare module .(utif|opentype\\.js|nspell|cdt2d|three-gpu-pathtracer|pako|vitest|@jest/globals|@google-cloud/storage)."
+        "declare module .(utif|opentype\\.js|nspell|three-gpu-pathtracer|pako|vitest|@jest/globals|@google-cloud/storage)."
       ],
       "allowlist": [
         "src/types/google-cloud-storage.d.ts",
@@ -5464,7 +5464,6 @@
         "src/types/vitest.d.ts",
         "src/types/pako.d.ts",
         "src/types/__tests__/ambient-declaration-ssot.test.ts",
-        "src/subapps/dxf-viewer/systems/topography/cdt2d.d.ts",
         "src/subapps/dxf-viewer/text-engine/fonts/opentype.d.ts",
         "src/subapps/dxf-viewer/text-engine/spell/nspell.d.ts",
         "src/subapps/dxf-viewer/floorplan-background/providers/utif.d.ts",

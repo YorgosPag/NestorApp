@@ -2,7 +2,7 @@
  * ADR-650 M5α — coincident survey points with incompatible elevations.
  *
  * Two shots at (almost) the same X,Y that disagree in Z are a contradiction the TIN cannot
- * honour — cdt2d keeps only the FIRST (the dedup grid in tin-builder), so the second point's
+ * honour — the TIN keeps only the FIRST (the dedup grid in tin-builder), so the second point's
  * Z silently vanishes from the surface. Civil 3D flags these as «duplicate points»; here we
  * surface the pair and its ΔZ so the engineer decides which shot is right.
  *
