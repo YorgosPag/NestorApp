@@ -2364,6 +2364,20 @@
       "sqm": "τ.μ.",
       "viewMore": "Δείτε περισσότερα στο {company}!"
     },
+    "sortable": {
+      "cancelled": "Η μετακίνηση του «{label}» ακυρώθηκε.",
+      "collapse": "Κλείσιμο «{label}»",
+      "dropped": "Το «{label}» τοποθετήθηκε στη θέση {position} από {total}.",
+      "expand": "Άνοιγμα «{label}»",
+      "handle": "Μετακίνηση «{label}»",
+      "instructions": "Πατήστε Space για να σηκώσετε το στοιχείο. Μετακινήστε το με τα βέλη, πατήστε Space για να το αφήσετε ή Escape για ακύρωση.",
+      "over": "Το «{label}» βρίσκεται στη θέση {position} από {total}.",
+      "picked": "Σηκώθηκε το «{label}», θέση {position} από {total}.",
+      "refused": "Η μετακίνηση του «{label}» δεν επιτρέπεται εδώ.",
+      "treeInstructions": "Με το πληκτρολόγιο: Alt και βέλος πάνω ή κάτω αλλάζει θέση, Alt και δεξί βέλος το βάζει μέσα στο προηγούμενο, Alt και αριστερό βέλος το βγάζει ένα επίπεδο έξω.",
+      "treeMoved": "Το «{label}» μετακινήθηκε μέσα στο «{parent}».",
+      "treeMovedToRoot": "Το «{label}» μετακινήθηκε στο πρώτο επίπεδο."
+    },
     "spaces": {
       "cards": {
         "apartments": {
@@ -3361,6 +3375,10 @@
         "description": "Χρήστες, ρόλοι, ρυθμίσεις εταιρείας",
         "label": "Διαχείριση"
       },
+      "catalog": {
+        "description": "Προϊόντα, ιδιότητες, κατηγορίες, τιμοκατάλογοι",
+        "label": "Κατάλογος"
+      },
       "clients": {
         "description": "Επαφές, πωλήσεις, επικοινωνία",
         "label": "Πελάτες"
@@ -3535,6 +3553,10 @@
       "availableParking": "Διαθέσιμες Θέσεις Στάθμευσης",
       "availableProperties": "Διαθέσιμα Ακίνητα",
       "availableStorage": "Διαθέσιμες Αποθήκες",
+      "catalogAttributes": "Ιδιότητες",
+      "catalogCategories": "Κατηγορίες",
+      "catalogFamilies": "Οικογένειες",
+      "catalogMeasurements": "Μονάδες μέτρησης",
       "commonAreas": "Κοινόχρηστοι",
       "debug": "Αποσφαλμάτωση",
       "financialIntelligence": "Χρηματοοικονομική Ανάλυση",
@@ -3542,6 +3564,7 @@
       "mandates": "Εντολές πελατών",
       "parking": "Θέσεις Στάθμευσης",
       "procurement": "Προμήθειες",
+      "productCatalog": "Κατάλογος προϊόντων",
       "properties": "Ακίνητα",
       "sales": "Πωλήσεις",
       "soldProperties": "Πωληθέντα",

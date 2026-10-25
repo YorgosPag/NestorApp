@@ -1171,5 +1171,19 @@
   "listingAvailability": {
     "deliveryOn": "Delivery {promise}",
     "readyNow": "Available now"
+  },
+  "sortable": {
+    "handle": "Move “{label}”",
+    "instructions": "Press Space to pick up the item. Move it with the arrow keys, press Space to drop it or Escape to cancel.",
+    "picked": "Picked up “{label}”, position {position} of {total}.",
+    "over": "“{label}” is at position {position} of {total}.",
+    "dropped": "“{label}” was dropped at position {position} of {total}.",
+    "cancelled": "Moving “{label}” was cancelled.",
+    "treeInstructions": "With the keyboard: Alt plus up or down arrow changes position, Alt plus right arrow nests it in the previous item, Alt plus left arrow moves it one level out.",
+    "treeMoved": "“{label}” was moved into “{parent}”.",
+    "treeMovedToRoot": "“{label}” was moved to the top level.",
+    "refused": "“{label}” cannot be moved here.",
+    "expand": "Expand “{label}”",
+    "collapse": "Collapse “{label}”"
   }
 }

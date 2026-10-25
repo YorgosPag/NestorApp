@@ -35,10 +35,12 @@ const ALL_KNOWN_NODES = new Set<string>([
   ...ALL_JOBS.flatMap((job) => job.sidebar),
 ]);
 
-describe('ADR-748 Ε4.α — έξι δουλειές, με σταθερή ταυτότητα', () => {
-  it('το μητρώο έχει ακριβώς έξι εγγραφές', () => {
-    expect(JOB_ORDER).toHaveLength(6);
-    expect(Object.keys(JOBS)).toHaveLength(6);
+// 🔴 ΑΛΛΑΞΕ 2026-10-25: **6 → 7** — ADR-923 §5.1 (διορθωμένο): ο κατάλογος προϊόντων είναι **δουλειά** («Κατάλογος»),
+//    όχι ειδικότητα ούτε είδος εταιρείας. Η «Το κοινό μου» (Ε4.ζ) εξακολουθεί να ΜΗΝ έχει μπει (test παρακάτω).
+describe('ADR-748 Ε4.α + ADR-923 §5.1 — επτά δουλειές, με σταθερή ταυτότητα', () => {
+  it('το μητρώο έχει ακριβώς επτά εγγραφές', () => {
+    expect(JOB_ORDER).toHaveLength(7);
+    expect(Object.keys(JOBS)).toHaveLength(7);
   });
 
   it('το JOB_ORDER και το JOBS περιέχουν τα ίδια ids', () => {
@@ -49,11 +51,11 @@ describe('ADR-748 Ε4.α — έξι δουλειές, με σταθερή ταυ
     for (const [key, job] of Object.entries(JOBS)) expect(job.id).toBe(key);
   });
 
-  it('η σειρά είναι 1..6 χωρίς κενά και χωρίς διπλά (κανόνας ισοβαθμίας Ε7.δ)', () => {
-    expect(ALL_JOBS.map((job) => job.order).sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6]);
+  it('η σειρά είναι 1..7 χωρίς κενά και χωρίς διπλά (κανόνας ισοβαθμίας Ε7.δ)', () => {
+    expect(ALL_JOBS.map((job) => job.order).sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6, 7]);
   });
 
-  it('η έβδομη δουλειά («Το κοινό μου», Ε4.ζ) ΔΕΝ έχει μπει', () => {
+  it('η δουλειά «Το κοινό μου» (Ε4.ζ) ΔΕΝ έχει μπει', () => {
     const forbidden = ['audience', 'my_audience', 'public', 'website', 'social'];
     for (const id of JOB_ORDER) expect(forbidden).not.toContain(id);
   });

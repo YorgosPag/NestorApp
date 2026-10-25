@@ -75,10 +75,13 @@ export interface JobMenus {
  * που βάφει η οθόνη — η ίδια οικογένεια ελαττώματος με το «22 αντί για 9».
  */
 export function buildJobMenus(
-  permissions: readonly string[],
+  access: { readonly permissions: readonly string[]; readonly isBypass: boolean },
   capabilities: OrganizationCapabilityView,
 ): JobMenus {
-  const permissionList = [...permissions];
+  const permissionList = [...access.permissions];
+  // 🔑 ADR-923 Φάση 1γ — ο ρόλος bypass περνά τις πολιτικές δικαιώματος, όπως στον κριτή (`decideCapability`, βήμα 4).
+  //    Υποχρεωτικό, όχι προαιρετικό: οθόνη και πρόταση πρέπει να μετρούν το ΙΔΙΟ δέντρο (βλ. παρακάτω).
+  const { isBypass } = access;
   // 🔴 **ΤΟ ΤΡΙΤΟ ΦΙΛΤΡΟ ΕΦΑΡΜΟΖΕΤΑΙ ΕΔΩ, ΚΑΙ ΤΟ ΣΗΜΕΙΟ ΕΙΝΑΙ ΟΡΘΟΤΗΤΑ** (ADR-824 Φάση 4).
   //
   // Το «Αποκάλυψη κρυμμένων» παρακάτω επιστρέφει τα **αφιλτράριστα** δέντρα
@@ -95,9 +98,9 @@ export function buildJobMenus(
   // αυτόν που βάφει η οθόνη: το «22 αντί για 9» ξαναγεννημένο. Γι' αυτό η παράμετρος
   // είναι **υποχρεωτική** και όχι προαιρετική με προεπιλογή.
   return {
-    main: filterItemsByCapability<MenuLink, MenuGroup>(getMainMenuItems(permissionList), capabilities),
-    tools: filterItemsByCapability<MenuLink, MenuGroup>(getToolsMenuItems(permissionList), capabilities),
-    settings: filterItemsByCapability<MenuLink, MenuGroup>(getSettingsMenuItems(permissionList), capabilities),
+    main: filterItemsByCapability<MenuLink, MenuGroup>(getMainMenuItems(permissionList, undefined, isBypass), capabilities),
+    tools: filterItemsByCapability<MenuLink, MenuGroup>(getToolsMenuItems(permissionList, undefined, isBypass), capabilities),
+    settings: filterItemsByCapability<MenuLink, MenuGroup>(getSettingsMenuItems(permissionList, undefined, isBypass), capabilities),
   };
 }
 
@@ -139,7 +142,7 @@ export interface JobFilteredNavigation {
 }
 
 export function useJobFilteredNavigation(): JobFilteredNavigation {
-  const { permissions } = useEffectivePermissions();
+  const { permissions, isBypass } = useEffectivePermissions();
   const { activeJob, isRevealingHidden, setRevealingHidden } = useActiveJob();
   // ⚠️ **Το `settled` ΔΕΝ διαβάζεται εδώ, και είναι σκόπιμο.** Όσο δεν ξέρουμε, η όψη
   // λέει ήδη «μην προσφέρεις» — που είναι **ακριβώς** η σωστή απάντηση για ένα μενού:
@@ -148,7 +151,7 @@ export function useJobFilteredNavigation(): JobFilteredNavigation {
   const { view: capabilities } = useMyOrganizationCapabilities();
 
   const computed = useMemo(() => {
-    const menus = buildJobMenus(permissions, capabilities);
+    const menus = buildJobMenus({ permissions, isBypass }, capabilities);
     const results = {
       main: filterItemsByJob<MenuLink, MenuGroup>(menus.main, activeJob),
       tools: filterItemsByJob<MenuLink, MenuGroup>(menus.tools, activeJob),
@@ -156,7 +159,7 @@ export function useJobFilteredNavigation(): JobFilteredNavigation {
     };
     const summary = summarizeHidden([results.main, results.tools, results.settings]);
     return { menus, results, summary };
-  }, [permissions, activeJob, capabilities]);
+  }, [permissions, isBypass, activeJob, capabilities]);
 
   const onReveal = useCallback(() => setRevealingHidden(true), [setRevealingHidden]);
   const onStopRevealing = useCallback(() => setRevealingHidden(false), [setRevealingHidden]);
@@ -229,7 +232,7 @@ export function useJobSuggestion(dismissed: boolean): JobSuggestionOutcome | nul
   const { view: capabilities } = useMyOrganizationCapabilities();
 
   return useMemo(() => {
-    const menus = buildJobMenus(access.permissions, capabilities);
+    const menus = buildJobMenus(access, capabilities);
     return computeJobSuggestion({
       access,
       activeJob,

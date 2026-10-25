@@ -69,9 +69,9 @@ function input(overrides: Partial<JobAccessInput> = {}): JobAccessInput {
 // ============================================================================
 
 describe('Μ-1 — bypass ρόλος (roles.ts: super_admin έχει permissions: [])', () => {
-  it('παίρνει ΚΑΙ ΤΙΣ ΕΞΙ δουλειές, παρότι η λίστα permissions είναι κενή', () => {
+  it('παίρνει ΚΑΙ ΤΙΣ ΕΠΤΑ δουλειές, παρότι η λίστα permissions είναι κενή', () => {
     const access = resolveJobAccess(input({ isBypass: true, permissions: [] }));
-    expect(access).toHaveLength(6);
+    expect(access).toHaveLength(7); // 2026-10-25: 6 → 7 (ADR-923 §5.1 — «Κατάλογος»)
     expect(access.every((a) => a.decision === 'granted')).toBe(true);
   });
 

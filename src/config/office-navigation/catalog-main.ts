@@ -15,6 +15,7 @@
 import {
   AppWindow,
   Archive,
+  Boxes,
   Banknote,
   BarChart,
   BarChart3,
@@ -33,6 +34,7 @@ import {
   FileSignature,
   FileText,
   Filter,
+  FolderTree,
   GitCompareArrows,
   HardDrive,
   Home,
@@ -40,10 +42,13 @@ import {
   Landmark,
   Layout,
   Library,
+  ListTree,
+  Package,
   Phone,
   PieChart,
   PiggyBank,
   Receipt,
+  Ruler,
   Settings,
   Shield,
   ShoppingCart,
@@ -56,10 +61,18 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { AUTH_ROUTES } from '@/lib/routes';
 import { APP_ROUTES } from '@/lib/routes/appRoutes';
 import { PROPERTIES_SCREEN_PATH } from '@/lib/properties/legacy-spaces-address';
-import { ADMIN_ONLY, type CatalogEntry } from './catalog-types';
+import { CATALOG_PAGES } from '@/subapps/catalog/catalog-routes';
+import { ADMIN_ONLY, type CatalogEntry, type NavPolicy } from './catalog-types';
 
 /** Ένα κλειδί για κάθε «Επισκόπηση» ομάδας (Υ15). */
 const OVERVIEW = 'menu.overview';
+
+/**
+ * ADR-923 Φάση 1γ — ο κατάλογος προϊόντων. Η πολιτική **επιβάλλεται** (Υ18): ανάγνωση = κανόνες Firestore
+ * (`isInternalUserOfCompany`), εγγραφή = `catalog:schema:manage` στον γραφέα. Το `catalog:schema:view` το έχουν
+ * υπάλληλος + διαχειριστής· ο ρόλος bypass περνά (`resolve-office-navigation` — ίδιο με τον κριτή).
+ */
+const CATALOG_SCHEMA_VIEW: NavPolicy = { permissions: ['catalog:schema:view'] };
 
 export const MAIN_CATALOG = [
   // «Πίνακας Ελέγχου» — το ορατό κείμενο που έδινε ήδη η αλυσίδα συμπερασμού στο `/dashboard`.
@@ -92,6 +105,20 @@ export const MAIN_CATALOG = [
     ],
   },
   { kind: 'link', navLabelKey: 'sidebar.procurement', icon: ShoppingCart, href: '/procurement' },
+  // ADR-923 Φάση 1γ — δίπλα στις Προμήθειες: ο ίδιος κόσμος (υλικά ↔ προϊόντα), άλλος ιδιοκτήτης (αγοραστής ↔ πωλητής).
+  //                   Οικογένειες πρώτα: είναι ο στόχος· οι άλλες τρεις είναι τα υλικά από τα οποία χτίζεται.
+  {
+    kind: 'group',
+    id: 'productCatalog',
+    navLabelKey: 'sidebar.productCatalog',
+    icon: Package,
+    items: [
+      { kind: 'link', navLabelKey: 'sidebar.catalogFamilies', icon: Boxes, href: CATALOG_PAGES.families, policy: CATALOG_SCHEMA_VIEW },
+      { kind: 'link', navLabelKey: 'sidebar.catalogAttributes', icon: ListTree, href: CATALOG_PAGES.attributes, policy: CATALOG_SCHEMA_VIEW },
+      { kind: 'link', navLabelKey: 'sidebar.catalogCategories', icon: FolderTree, href: CATALOG_PAGES.categories, policy: CATALOG_SCHEMA_VIEW },
+      { kind: 'link', navLabelKey: 'sidebar.catalogMeasurements', icon: Ruler, href: CATALOG_PAGES.measurements, policy: CATALOG_SCHEMA_VIEW },
+    ],
+  },
   {
     kind: 'group',
     id: 'sales',

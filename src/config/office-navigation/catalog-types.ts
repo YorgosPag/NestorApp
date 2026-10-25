@@ -18,6 +18,9 @@ export const OFFICE_GROUP_IDS = [
   'accounting',
   'legal',
   'settings',
+  // ADR-923 Φάση 1γ — ο κατάλογος ΠΡΟΪΟΝΤΩΝ (PIM). ⚠️ Όχι `catalog`: σε αυτόν τον φάκελο «κατάλογος» σημαίνει
+  // ήδη τη λίστα της πλοήγησης (`catalog-main.ts` κ.λπ.) — ένα όνομα, δύο έννοιες, θα μπέρδευε κάθε αναγνώστη.
+  'productCatalog',
 ] as const;
 
 export type OfficeGroupId = (typeof OFFICE_GROUP_IDS)[number];

@@ -112,6 +112,10 @@
       "suggests": "Suggests: {job}",
       "noSuggestion": "Does not map to a specific job",
       "unclassifiedHint": "Free text — pick it from the list to get a job suggestion"
+    },
+    "catalog": {
+      "label": "Catalogue",
+      "description": "Products, attributes, categories, price lists"
     }
   },
   "sidebar": {
@@ -132,7 +136,12 @@
     "soldProperties": "Sold Properties",
     "financialIntelligence": "Financial Intelligence",
     "hierarchyLabel": "Hierarchy",
-    "agencyShowcase": "My showcase"
+    "agencyShowcase": "My showcase",
+    "productCatalog": "Product catalogue",
+    "catalogFamilies": "Families",
+    "catalogAttributes": "Attributes",
+    "catalogCategories": "Categories",
+    "catalogMeasurements": "Units of measure"
   },
   "reports": {
     "overview": "Executive Summary",

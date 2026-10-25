@@ -112,6 +112,10 @@
       "suggests": "Προτείνει: {job}",
       "noSuggestion": "Δεν αντιστοιχεί σε συγκεκριμένη δουλειά",
       "unclassifiedHint": "Γραμμένο ελεύθερα — διάλεξέ το από τη λίστα για πρόταση δουλειάς"
+    },
+    "catalog": {
+      "label": "Κατάλογος",
+      "description": "Προϊόντα, ιδιότητες, κατηγορίες, τιμοκατάλογοι"
     }
   },
   "sidebar": {
@@ -132,7 +136,12 @@
     "soldProperties": "Πωληθέντα",
     "financialIntelligence": "Χρηματοοικονομική Ανάλυση",
     "hierarchyLabel": "Ιεραρχία",
-    "agencyShowcase": "Η βιτρίνα μου"
+    "agencyShowcase": "Η βιτρίνα μου",
+    "productCatalog": "Κατάλογος προϊόντων",
+    "catalogFamilies": "Οικογένειες",
+    "catalogAttributes": "Ιδιότητες",
+    "catalogCategories": "Κατηγορίες",
+    "catalogMeasurements": "Μονάδες μέτρησης"
   },
   "reports": {
     "overview": "Διοικητική Σύνοψη",

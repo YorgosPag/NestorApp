@@ -1446,6 +1446,24 @@
       "status": "governed",
       "splitRequired": false,
       "targetNamespaces": []
+    },
+    {
+      "namespace": "catalog",
+      "owner": "catalog-domain",
+      "primarySurface": "catalog",
+      "stringClasses": [
+        "ui-chrome",
+        "forms",
+        "notifications",
+        "validation-errors"
+      ],
+      "budget": {
+        "maxLines": 800,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
     }
   ]
 }

@@ -104,6 +104,7 @@ export const SUPPORTED_NAMESPACES = [
   'legal',      // 🏢 Legal pages — privacy policy, terms, data deletion
   'legality',   // ADR-838 A17 — nomimotita os klimaka me proelefsi (orizontia)
   'document-registry', // ADR-915 F4g — mitroo lixeon eggrafon (/document-expiry)
+  'catalog',    // ADR-923 F1g — katalogos proionton (PIM): idiotites, oikogeneies, kategories, monades
   'reports',    // 🏢 Enterprise Reports System (ADR-265)
   'report-builder',         // 🏢 Dynamic Report Builder UI (ADR-268)
   'report-builder-domains', // 🏢 Report Builder domain/field labels (ADR-268)

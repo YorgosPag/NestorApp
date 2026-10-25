@@ -1171,5 +1171,19 @@
   "listingAvailability": {
     "deliveryOn": "Παράδοση {promise}",
     "readyNow": "Άμεσα διαθέσιμο"
+  },
+  "sortable": {
+    "handle": "Μετακίνηση «{label}»",
+    "instructions": "Πατήστε Space για να σηκώσετε το στοιχείο. Μετακινήστε το με τα βέλη, πατήστε Space για να το αφήσετε ή Escape για ακύρωση.",
+    "picked": "Σηκώθηκε το «{label}», θέση {position} από {total}.",
+    "over": "Το «{label}» βρίσκεται στη θέση {position} από {total}.",
+    "dropped": "Το «{label}» τοποθετήθηκε στη θέση {position} από {total}.",
+    "cancelled": "Η μετακίνηση του «{label}» ακυρώθηκε.",
+    "treeInstructions": "Με το πληκτρολόγιο: Alt και βέλος πάνω ή κάτω αλλάζει θέση, Alt και δεξί βέλος το βάζει μέσα στο προηγούμενο, Alt και αριστερό βέλος το βγάζει ένα επίπεδο έξω.",
+    "treeMoved": "Το «{label}» μετακινήθηκε μέσα στο «{parent}».",
+    "treeMovedToRoot": "Το «{label}» μετακινήθηκε στο πρώτο επίπεδο.",
+    "refused": "Η μετακίνηση του «{label}» δεν επιτρέπεται εδώ.",
+    "expand": "Άνοιγμα «{label}»",
+    "collapse": "Κλείσιμο «{label}»"
   }
 }
