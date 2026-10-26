@@ -126,7 +126,7 @@ function useClipboard<Row>(grid: DataGridController<Row>) {
   return { onCopy, onCut, onPaste };
 }
 
-function usePointer<Row>(grid: DataGridController<Row>) {
+function usePointer<Row>(grid: DataGridController<Row>, props: DataGridProps<Row>) {
   const dragging = useRef(false);
   const onCellPointerDown = useCallback((cell: GridCell, event: PointerEvent<HTMLElement>) => {
     if (event.button !== 0) return;
@@ -146,16 +146,18 @@ function usePointer<Row>(grid: DataGridController<Row>) {
   const onPointerUp = useCallback(() => { dragging.current = false; }, []);
   const onCellDoubleClick = useCallback((cell: GridCell) => {
     const snap = grid.snapshot();
-    if (snap.editable) grid.setState(beginEditing({ ...snap, state: { ...snap.state, selection: collapsedSelection(cell) } }, 'edit'));
-    else if (snap.rows[cell.row] !== undefined) grid.hasFocus.current = true;
-  }, [grid]);
+    if (snap.editable) { grid.setState(beginEditing({ ...snap, state: { ...snap.state, selection: collapsedSelection(cell) } }, 'edit')); return; }
+    // Πλέγμα μόνο για ανάγνωση (λίστα): το διπλό κλικ **ανοίγει** τη γραμμή — ίδιο με το `Enter`.
+    const row = snap.rows[cell.row];
+    if (row !== undefined) props.onActivateRow?.(row, cell.row);
+  }, [grid, props]);
   return { onCellPointerDown, onCellPointerEnter, onPointerUp, onCellDoubleClick };
 }
 
 export function useGridHandlers<Row>(grid: DataGridController<Row>, props: DataGridProps<Row>): GridHandlers {
   const onKeyDown = useKeyboard(grid, props);
   const clipboard = useClipboard(grid);
-  const pointer = usePointer(grid);
+  const pointer = usePointer(grid, props);
   const onInputChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     const snap = grid.snapshot();
     const typed = event.target.value;

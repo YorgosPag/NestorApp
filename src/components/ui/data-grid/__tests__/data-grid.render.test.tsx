@@ -264,5 +264,7 @@ describe('DataGrid — virtualization', () => {
     key('ArrowDown');
     key('Enter');
     expect(open).toHaveBeenCalledWith(expect.objectContaining({ id: 'r1' }), 1);
+    fireEvent.doubleClick(within(grid()).getAllByRole('gridcell')[0]);
+    expect(open).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'r0' }), 0);
   });
 });
