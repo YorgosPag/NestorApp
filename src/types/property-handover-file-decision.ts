@@ -26,6 +26,8 @@ export const HANDOVER_DISPOSITION_BASES = [
   'office-domain',
   'catalog',
   'category',
+  /** ADR-916 Φ-Γ3 — κοινό αρχείο κτιρίου/έργου χωρίς δήλωση `sharedHandover` ⇒ μένει στο γραφείο, ως να αποφασίσει. */
+  'shared-undeclared',
   'unrecognised',
 ] as const;
 export type HandoverDispositionBasis = (typeof HANDOVER_DISPOSITION_BASES)[number];

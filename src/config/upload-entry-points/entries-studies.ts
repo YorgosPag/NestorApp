@@ -110,6 +110,19 @@ export const STUDY_ENTRIES: UploadEntryPoint[] = [
     icon: 'BookOpen',
     order: 107,
     group: 'administrative',
+    sharedHandover: 'deliver', // ADR-916 Φ-Γ3 — δεσμεύει κάθε ιδιοκτήτη· η ΗΤΚ τον κρατά στον φάκελο της μονάδας
+  },
+  {
+    id: 'study-admin-ownership-shares',
+    purpose: 'study-ownership-shares',
+    domain: 'admin',
+    category: 'documents',
+    label: { el: 'Πίνακας Χιλιοστών', en: 'Ownership Shares Table' },
+    description: { el: 'Ποσοστά συνιδιοκτησίας και κατανομή δαπανών', en: 'Co-ownership shares and cost allocation' },
+    icon: 'Table',
+    order: 108,
+    group: 'administrative',
+    sharedHandover: 'deliver', // ADR-916 Φ-Γ3 — ΗΤΚ: «πίνακας χιλιοστών και μελέτη κατανομής δαπανών του κτιρίου»
   },
   {
     id: 'study-admin-other',
@@ -288,6 +301,7 @@ export const STUDY_ENTRIES: UploadEntryPoint[] = [
     order: 349,
     group: 'architectural',
     requiresCustomTitle: true,
+    sharedHandover: 'review', // ADR-916 Φ-Γ3 — «άλλο» κοινό έγγραφο: κανείς δεν ξέρει τι είναι χωρίς να το δει
   },
 
   // ========================================================================
@@ -361,6 +375,7 @@ export const STUDY_ENTRIES: UploadEntryPoint[] = [
     order: 449,
     group: 'structural',
     requiresCustomTitle: true,
+    sharedHandover: 'review', // ADR-916 Φ-Γ3 — «άλλο» κοινό έγγραφο: κανείς δεν ξέρει τι είναι χωρίς να το δει
   },
 
   // ========================================================================
@@ -471,6 +486,7 @@ export const STUDY_ENTRIES: UploadEntryPoint[] = [
     order: 549,
     group: 'mechanical',
     requiresCustomTitle: true,
+    sharedHandover: 'review', // ADR-916 Φ-Γ3 — «άλλο» κοινό έγγραφο: κανείς δεν ξέρει τι είναι χωρίς να το δει
   },
 
   // ========================================================================
@@ -520,6 +536,7 @@ export const STUDY_ENTRIES: UploadEntryPoint[] = [
     order: 619,
     group: 'energy',
     requiresCustomTitle: true,
+    sharedHandover: 'review', // ADR-916 Φ-Γ3 — «άλλο» κοινό έγγραφο: κανείς δεν ξέρει τι είναι χωρίς να το δει
   },
 
   // ========================================================================
@@ -536,6 +553,7 @@ export const STUDY_ENTRIES: UploadEntryPoint[] = [
     order: 700,
     group: 'site',
     handover: 'deliver', // ADR-916 §5.1 — ο ΦΑΥ παραδίδεται στον κύριο του έργου (ΠΔ 305/1996 άρθ. 3)
+    sharedHandover: 'deliver', // ADR-916 Φ-Γ3 — ο ΦΑΥ συνοδεύει το ΚΤΙΡΙΟ όσο ζει: κάθε ιδιοκτήτης
   },
   {
     id: 'study-site-waste',
@@ -581,6 +599,7 @@ export const STUDY_ENTRIES: UploadEntryPoint[] = [
     order: 704,
     group: 'site',
     handover: 'deliver', // ADR-916 §5.1 — η πυροπροστασία αφορά τον ιδιοκτήτη για όσο ζει το κτίριο
+    sharedHandover: 'deliver', // ADR-916 Φ-Γ3 — ίδιος λόγος, για κάθε ιδιοκτήτη του κτιρίου
   },
   {
     id: 'study-site-other',

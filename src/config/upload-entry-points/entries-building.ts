@@ -47,6 +47,7 @@ export const BUILDING_ENTRY_POINTS: UploadEntryPoint[] = [
       },
       icon: 'Camera',
       order: 3,
+      sharedHandover: 'deliver', // ADR-916 Φ-Γ3 — το κτίριο όπως παραδόθηκε: κοινό σε κάθε ιδιοκτήτη
     },
     // ------------------------------------------------------------------------
     // ΦΩΤΟΓΡΑΦΙΕΣ ΚΤΙΡΙΟΥ (Photos)
@@ -86,6 +87,7 @@ export const BUILDING_ENTRY_POINTS: UploadEntryPoint[] = [
       },
       icon: 'Camera',
       order: 6,
+      sharedHandover: 'deliver', // ADR-916 Φ-Γ3 — οι κοινόχρηστοι χώροι ανήκουν σε κάθε ιδιοκτήτη (κατ' ιδανικά μερίδια)
     },
     // ------------------------------------------------------------------------
     // ΒΙΝΤΕΟ ΚΤΙΡΙΟΥ (Videos)

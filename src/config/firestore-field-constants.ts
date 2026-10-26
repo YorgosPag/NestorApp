@@ -114,3 +114,14 @@ export type FieldName = typeof FIELDS[keyof typeof FIELDS];
 
 /** Key name in the FIELDS registry */
 export type FieldKey = keyof typeof FIELDS;
+
+// ============================================================================
+// QUERY LIMITS
+// ============================================================================
+
+/**
+ * Το όριο του Firestore για `in` / `array-contains-any` / `not-in` (30 τιμές). Ο ΕΝΑΣ αριθμός για κάθε τεμαχισμό
+ * λίστας ταυτοτήτων (`chunkArray`). ⚠️ Το παλιό όριο ήταν 10 — όσα σημεία το γράφουν ακόμη, απλώς κάνουν περισσότερα
+ * ερωτήματα από όσα χρειάζονται (σωστά, όχι λάθος).
+ */
+export const FIRESTORE_DISJUNCTION_LIMIT = 30;

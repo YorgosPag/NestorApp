@@ -36,6 +36,7 @@ export const PROJECT_ENTRY_POINTS: UploadEntryPoint[] = [
       },
       icon: 'FileCheck',
       order: 1,
+      sharedHandover: 'deliver', // ADR-916 Φ-Γ3 — ΗΤΚ: «στέλεχος της οικοδομικής άδειας του κτιρίου» στον φάκελο κάθε μονάδας
     },
     {
       id: 'environmental-approval',

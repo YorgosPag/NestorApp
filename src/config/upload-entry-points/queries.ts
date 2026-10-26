@@ -320,3 +320,12 @@ export function declaredHandoverOf(entry: UploadEntryPoint): HandoverDisposition
   if (entry.handover) return entry.handover;
   return entry.group ? getStudyGroupMeta(entry.group)?.handover : undefined;
 }
+
+/**
+ * ADR-916 Φ-Γ3 — η δηλωμένη απόφαση για **κοινό** αρχείο (κτίριο · έργο): δική της, αλλιώς της ομάδας μελετών·
+ * `undefined` ⇒ **καμία** δήλωση (ο καλών το κρατά στο γραφείο — ποτέ κληρονομιά από το `handover` της μονάδας).
+ */
+export function declaredSharedHandoverOf(entry: UploadEntryPoint): HandoverDisposition | undefined {
+  if (entry.sharedHandover) return entry.sharedHandover;
+  return entry.group ? getStudyGroupMeta(entry.group)?.sharedHandover : undefined;
+}

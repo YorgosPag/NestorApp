@@ -40,6 +40,13 @@ export interface StudyGroupMeta {
    * και πυροπροστασία (ο ΦΑΥ παραδίδεται στον κύριο του έργου — ΠΔ 305/1996 άρθ. 3).
    */
   readonly handover: HandoverDisposition;
+  /**
+   * ADR-916 Φ-Γ3 (Ο2) — η **ρητή** δήλωση της ομάδας για τα **κοινά** αρχεία (κτίριο · έργο), όπου ζουν οι μελέτες.
+   * Απούσα ⇒ καμία μελέτη της ομάδας δεν φεύγει αυτόματα, εκτός αν τη δηλώσει η ίδια (`sharedHandover` της θέσης).
+   * Δηλώνονται **μόνο** οι ομάδες που η ΗΤΚ / ο ΦΑΥ / τα O&M (Soft Landings) αποδίδουν στον ιδιοκτήτη — **όχι** οι
+   * διοικητικές (τίτλοι οικοπέδου με τους οικοπεδούχους), οι φορολογικές ή οι εργοταξιακές.
+   */
+  readonly sharedHandover?: HandoverDisposition;
 }
 
 // ─── Configuration ───────────────────────────────────────────────────────────
@@ -92,6 +99,7 @@ export const STUDY_GROUPS: readonly StudyGroupMeta[] = [
     iconBgClass: 'bg-accent',
     order: 3,
     handover: 'deliver',
+    sharedHandover: 'deliver', // ADR-916 Φ-Γ3 — αρχιτεκτονικά: ΗΤΚ (σχέδια της άδειας)
   },
   {
     group: 'structural',
@@ -108,6 +116,7 @@ export const STUDY_GROUPS: readonly StudyGroupMeta[] = [
     iconBgClass: 'bg-[hsl(var(--bg-warning))]/40',
     order: 4,
     handover: 'deliver',
+    sharedHandover: 'deliver', // ADR-916 Φ-Γ3 — στατικά: ΗΤΚ (σχέδια της άδειας)
   },
   {
     group: 'mechanical',
@@ -124,6 +133,7 @@ export const STUDY_GROUPS: readonly StudyGroupMeta[] = [
     iconBgClass: 'bg-destructive/10',
     order: 5,
     handover: 'deliver',
+    sharedHandover: 'deliver', // ADR-916 Φ-Γ3 — Η/Μ: λειτουργία & συντήρηση (O&M, Soft Landings)
   },
   {
     group: 'energy',
@@ -140,6 +150,7 @@ export const STUDY_GROUPS: readonly StudyGroupMeta[] = [
     iconBgClass: 'bg-[hsl(var(--bg-warning))]/40',
     order: 6,
     handover: 'deliver',
+    sharedHandover: 'deliver', // ADR-916 Φ-Γ3 — ΜΕΑ/ΚΕΝΑΚ · ΠΕΑ κτιρίου · θερμομόνωση: ΗΤΚ
   },
   {
     group: 'site',
