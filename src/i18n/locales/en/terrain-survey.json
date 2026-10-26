@@ -1,0 +1,113 @@
+{
+  "columns": {
+    "caption": "First rows of the file — choose what each column is",
+    "presetLabel": "Column order",
+    "presetPlaceholder": "Choose a format…",
+    "columnN": "Column {n}",
+    "roleOf": "What column “{column}” is",
+    "role": {
+      "x": "X (Easting)",
+      "y": "Y (Northing)",
+      "z": "Elevation",
+      "code": "Code",
+      "pointId": "Point no.",
+      "ignore": "— Ignore —"
+    },
+    "preset": {
+      "PNEZD": "PNEZD — No., Northing(Y), Easting(X), Elev., Description",
+      "PENZD": "PENZD — No., Easting(X), Northing(Y), Elev., Description",
+      "PNEZ": "PNEZ — No., Northing(Y), Easting(X), Elev.",
+      "PENZ": "PENZ — No., Easting(X), Northing(Y), Elev.",
+      "NEZ": "NEZ — Northing(Y), Easting(X), Elev.",
+      "ENZ": "ENZ — Easting(X), Northing(Y), Elev.",
+      "XYZ": "XYZ — X, Y, Elev.",
+      "XYZD": "XYZD — X, Y, Elev., Description"
+    }
+  },
+  "unit": {
+    "label": "File units",
+    "placeholder": "Choose units…",
+    "m": "Metres",
+    "mm": "Millimetres",
+    "ft": "Feet",
+    "declared": "The drawing declares its units — nothing to choose.",
+    "suggested": {
+      "greek-grid": "We suggested “{unit}”: the coordinates fall inside the Greek grid (EGSA '87). Change it if the file says otherwise.",
+      "extent": "We suggested “{unit}” from the size of the survey. Change it if the file says otherwise."
+    },
+    "needed": "We could not tell the file's units — choose them so the terrain can be computed."
+  },
+  "file": {
+    "typesHint": "CSV, TXT, XYZ, Excel (.xlsx) or DXF with points and elevations",
+    "reading": "Reading the file…",
+    "chosen": "File: {name}",
+    "reset": "Another file"
+  },
+  "read": {
+    "refusals": {
+      "xls-legacy": "This is an old Excel file (.xls), which cannot be read safely. Open it in Excel and save it as “Excel Workbook (.xlsx)” or as CSV.",
+      "dxf-binary": "This DXF is saved in binary form. Save it again from your CAD program as a text (ASCII) DXF.",
+      "unsupported": "This file format is not a survey we can read. Upload CSV, TXT, XYZ, Excel (.xlsx) or DXF.",
+      "unreadable": "The file could not be read — it may be damaged or locked by another program. Close it there and try again.",
+      "empty": "The file has no points. Check that you chose the survey file and not another drawing or sheet."
+    }
+  },
+  "points": {
+    "summary": "{points, plural, one {# point} other {# points}} · {withElevation} with elevation",
+    "noPosition": "Choose which columns are X and Y — without them there are no points.",
+    "skipped": "{count, plural, one {# row that is not a point was skipped} other {# rows that are not points were skipped}}: {rows}",
+    "skippedMore": "{rows} and {count} more",
+    "coincident": "{count, plural, one {# position was measured twice with the same elevation — one was kept} other {# positions were measured twice with the same elevation — one was kept}}",
+    "conflicting": "{count, plural, one {# position has two different elevations — marked on the map; check it with the surveyor} other {# positions have two different elevations — marked on the map; check them with the surveyor}}"
+  },
+  "buyer": {
+    "heading": "What buyers will see",
+    "intro": "The same figures that will be published, from the same computation. Your points and your file are never published — only the map and the statistics."
+  },
+  "declaration": {
+    "legend": "Survey declaration",
+    "surveyorName": "Land surveyor",
+    "surveyorNameHint": "As it will appear on the listing as the source of the survey.",
+    "surveyedOn": "Survey date",
+    "surveyedOnHint": "The day of the field measurement, not of drafting or sending.",
+    "rights": "I have the right to publish this survey (I made it or I have its author's permission).",
+    "rightsHint": "The declaration is kept with the survey. Only the map and the statistics are published, with the surveyor and the date as their source."
+  },
+  "publish": {
+    "action": "Publish to the listing",
+    "replace": "Replace the published survey",
+    "publishing": "Publishing…",
+    "listing": {
+      "published": "The terrain is published — the listing already shows it.",
+      "withdrawn": "The survey was saved, but the listing is not published right now; it will show once the listing is published again.",
+      "failed": "The survey was saved, but the listing has not been updated yet. It will update automatically — no need to send it again.",
+      "absent": "The survey was saved, but no listing was found to update.",
+      "unknown": "The survey was saved. We do not know yet whether the listing was updated — check it in a moment."
+    },
+    "refusals": {
+      "TERRAIN_SOURCE_REQUIRED": "No survey was sent — choose the file again and retry",
+      "TERRAIN_TYPE_UNSUPPORTED": "The survey was not sent in the format the server accepts — reload the page and try again",
+      "TERRAIN_SOURCE_EMPTY": "The survey arrived empty — check that you chose the right file",
+      "TERRAIN_SOURCE_TOO_LARGE": "The survey is larger than {maxMegabytes} MB — thin out the points and try again",
+      "TERRAIN_SOURCE_MALFORMED": "The survey data cannot be read or exceeds the limits (up to {maxPoints} points) — check the file and its coordinate columns",
+      "TERRAIN_DECLARATION_INVALID": "The declaration is incomplete — fill in the surveyor and the survey date, and confirm you have the right to publish",
+      "TERRAIN_SURVEY_DATE_IN_FUTURE": "The survey date is in the future — correct it and try again",
+      "TERRAIN_NOT_LAND": "Terrain relief is published only for plots and land parcels",
+      "TERRAIN_INSUFFICIENT_SURFACE": "The points do not form a ground surface — at least three points with elevation are needed, not all on one line",
+      "TERRAIN_EMPTY_AFTER_CLIP": "No part of the terrain falls inside the plot boundary — check that boundary and points share the same coordinate system",
+      "TERRAIN_TOO_DENSE": "The relief comes out above {maxTriangles} triangles — thin out the points and try again",
+      "TERRAIN_PUBLICATION_NOT_CAPABLE": "You do not have permission to publish material to listings",
+      "TERRAIN_NO_DOSSIER": "This listing has no property dossier to keep the survey in",
+      "TERRAIN_UPLOAD_FAILED": "Saving the survey failed on the server — try again",
+      "network": "We do not know whether the upload arrived — check your connection and press again; it will not be published twice.",
+      "rejected": "The server refused the survey for a reason we do not recognise — try again or contact us."
+    },
+    "unavailable": "To publish a survey, the listing needs a property dossier in your account, where the file is kept."
+  },
+  "current": {
+    "heading": "Published now",
+    "survey": "Surveyor: {name} · surveyed {date}",
+    "none": "The listing has no terrain relief yet. Upload the plot's survey — buyers will see the elevation difference, slopes and a contour map.",
+    "replaceHint": "A new survey replaces the published one."
+  }
+}

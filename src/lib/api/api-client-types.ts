@@ -328,8 +328,13 @@ export function isClientRefusal(cause: unknown): cause is ApiClientError {
   return ApiClientError.isApiClientError(cause) && cause.statusCode >= 400 && cause.statusCode < 500;
 }
 
-/** `network` = δεν ξέρουμε αν η αίτηση έφτασε· `rejected` = ο διακομιστής αρνήθηκε για λόγο **εκτός** της λίστας της πόρτας. */
-export type NamedRefusal<C extends string> = C | 'network' | 'rejected';
+/**
+ * `network` = δεν ξέρουμε αν η αίτηση έφτασε· `rejected` = ο διακομιστής αρνήθηκε για λόγο **εκτός** της λίστας της πόρτας.
+ * Οι δύο αρνήσεις που γεννά ο ίδιος ο client — κάθε κατάλογος μηνυμάτων πόρτας οφείλει κείμενο και γι' αυτές.
+ */
+export const CLIENT_REFUSALS = ['network', 'rejected'] as const;
+
+export type NamedRefusal<C extends string> = C | (typeof CLIENT_REFUSALS)[number];
 
 /**
  * **Ο λόγος άρνησης μιας πόρτας υλικού, από την ΚΛΕΙΣΤΗ λίστα της** (ADR-909 κάτοψη · ADR-920 τοπογραφικό).

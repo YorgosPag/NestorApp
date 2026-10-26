@@ -8,7 +8,7 @@
  *   Σ2  every code of the list is actually sent by the door — no phantom rows
  *   Σ3  every builder rejection maps to its own code (exhaustive, no two rejections share one)
  *   Σ4  `isTerrainRefusalCode` accepts only the list
- *   Σ5  every code has a human message in `el` AND `en` (`property-market` → `terrainPublication.refusals`),
+ *   Σ5  every code has a human message in `el` AND `en` (`terrain-survey` → `publish.refusals`, ADR-920 Β4.9),
  *       no message is orphaned, and every `{placeholder}` is the SAME in both languages and is a limit
  *       that `listing-terrain-config` owns — the copy never restates a number (Β3β, ADR-920 §12)
  *
@@ -19,14 +19,12 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import {
-  LISTING_TERRAIN_MAX_TRIANGLES,
-  LISTING_TERRAIN_SOURCE_MAX_BYTES,
-  LISTING_TERRAIN_SOURCE_MAX_POINTS,
-} from '../listing-terrain-config';
+import { CLIENT_REFUSALS } from '@/lib/api/api-client-types';
+
 import type { ListingTerrainRejection } from '../listing-terrain-types';
 import {
   TERRAIN_REFUSAL_CODES,
+  TERRAIN_REFUSAL_MESSAGE_LIMITS,
   isTerrainRefusalCode,
   refusalOfTerrainRejection,
 } from '../terrain-publication-contract';
@@ -46,20 +44,13 @@ const DOOR_SOURCE = [
 
 const REJECTIONS: readonly ListingTerrainRejection[] = ['insufficient-surface', 'empty-after-clip', 'too-dense'];
 
-/**
- * The values the UI interpolates — DERIVED from the config, so the copy never restates a number that
- * could drift. The owner form (Β4) and the viewer (Β5) pass exactly these.
- */
-const MESSAGE_LIMITS: Readonly<Record<string, number>> = {
-  maxMegabytes: LISTING_TERRAIN_SOURCE_MAX_BYTES / (1024 * 1024),
-  maxPoints: LISTING_TERRAIN_SOURCE_MAX_POINTS,
-  maxTriangles: LISTING_TERRAIN_MAX_TRIANGLES,
-};
+/** The values the UI interpolates — the contract's own table (`TERRAIN_REFUSAL_MESSAGE_LIMITS`), derived from the config. */
+const MESSAGE_LIMITS: Readonly<Record<string, number>> = TERRAIN_REFUSAL_MESSAGE_LIMITS;
 
 function refusalMessagesOf(language: 'el' | 'en'): Record<string, unknown> {
-  const file = join(SRC, 'i18n', 'locales', language, 'property-market.json');
-  const locale = JSON.parse(readFileSync(file, 'utf8')) as { terrainPublication?: { refusals?: Record<string, unknown> } };
-  return locale.terrainPublication?.refusals ?? {};
+  const file = join(SRC, 'i18n', 'locales', language, 'terrain-survey.json');
+  const locale = JSON.parse(readFileSync(file, 'utf8')) as { publish?: { refusals?: Record<string, unknown> } };
+  return locale.publish?.refusals ?? {};
 }
 
 /** ICU `{name}` placeholders, sorted. */
@@ -84,8 +75,10 @@ describe('ADR-920 Β3 — wire contract of the terrain publication', () => {
 
   it.each(['el', 'en'] as const)('Σ5 [%s] every code has a message, and no message is orphaned', (language) => {
     const messages = refusalMessagesOf(language);
-    expect(Object.keys(messages).sort()).toStrictEqual([...TERRAIN_REFUSAL_CODES].sort());
-    for (const code of TERRAIN_REFUSAL_CODES) {
+    // + οι δύο αρνήσεις του client: η οθόνη λαμβάνει `NamedRefusal`, άρα οφείλει μήνυμα για ΚΑΘΕ τιμή του.
+    const named = [...TERRAIN_REFUSAL_CODES, ...CLIENT_REFUSALS];
+    expect(Object.keys(messages).sort()).toStrictEqual([...named].sort());
+    for (const code of named) {
       expect(typeof messages[code]).toBe('string');
       expect(String(messages[code]).trim().length).toBeGreaterThan(10);
     }

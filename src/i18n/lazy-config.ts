@@ -118,6 +118,7 @@ export const SUPPORTED_NAMESPACES = [
   'building-tabs',          // 🏢 Building tab content (split from building — ADR-280)
   'buildingCode',           // 🏢 Building Code Module — ΝΟΚ Phase 2 (ADR-186)
   'surveyRecord',           // 📐 Survey Record card — ADR-759 Φ2
+  'terrain-survey',         // ⛰️ Εισαγωγή τοπογραφικού: στήλες/μονάδες (viewer + αγγελία), αρνήσεις, δήλωση Δ2 — ADR-920 Β4.9
   'common-sales',           // 🏢 Sales/e-commerce domain (split from common — ADR-280)
   'common-account',         // 🏢 User account/2FA (split from common — ADR-280)
   'common-audit',           // 🏢 Ετικέτες πεδίων ιστορικού (split from common — ADR-810)

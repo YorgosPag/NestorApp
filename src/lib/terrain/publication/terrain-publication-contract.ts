@@ -17,6 +17,11 @@
  * @module lib/terrain/publication/terrain-publication-contract
  */
 
+import {
+  LISTING_TERRAIN_MAX_TRIANGLES,
+  LISTING_TERRAIN_SOURCE_MAX_BYTES,
+  LISTING_TERRAIN_SOURCE_MAX_POINTS,
+} from './listing-terrain-config';
 import type { ListingTerrainRejection } from './listing-terrain-types';
 
 /** Multipart field names. The browser sends nothing else. */
@@ -27,6 +32,16 @@ export const TERRAIN_UPLOAD_FIELDS = {
   declaration: 'declaration',
   /** Optional: JSON array of the scene file ids the survey came from (DXF Viewer door) — provenance only. */
   sceneFileIds: 'sceneFileIds',
+} as const;
+
+/**
+ * The values the refusal messages interpolate (`terrain-survey:publish.refusals`) — DERIVED from the config, so the copy
+ * never restates a number that could drift. Every screen that names a refusal passes exactly these (ADR-920 Β4.9).
+ */
+export const TERRAIN_REFUSAL_MESSAGE_LIMITS = {
+  maxMegabytes: LISTING_TERRAIN_SOURCE_MAX_BYTES / (1024 * 1024),
+  maxPoints: LISTING_TERRAIN_SOURCE_MAX_POINTS,
+  maxTriangles: LISTING_TERRAIN_MAX_TRIANGLES,
 } as const;
 
 /** The only content type the door accepts for the source. */
