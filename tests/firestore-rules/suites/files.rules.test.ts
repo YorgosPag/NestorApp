@@ -62,6 +62,29 @@ function createdByFor(persona: (typeof COVERAGE.matrix)[number]['persona']): str
  * ℹ️ Ήταν τέσσερα: ο κάδος και η επαναφορά αφαιρέθηκαν από τους κανόνες (ADR-845 §7.17 Α4β) —
  * είναι πράξη διακομιστή. Ότι ο πελάτης ΑΡΝΕΙΤΑΙ το μετρά το μπλοκ «trash is a server act».
  */
+/**
+ * Τα κλειδιά του `measuredKeys()` — ένα ζεύγος (αποθηκευμένη · πλαστή) τιμή ανά κλειδί. Νέο μετρημένο κλειδί στους κανόνες
+ * χωρίς γραμμή εδώ = κανείς δεν απέδειξε ότι ο πελάτης δεν το γράφει.
+ */
+const MEASURED_FIELD_CASES = [
+  { key: 'imageDimensions', stored: { width: 3000, height: 4000 }, forged: { width: 9999, height: 1 } },
+  {
+    key: 'publishRaster',
+    stored: { status: 'failed', failure: 'unreadable', failedAt: '2026-10-24T00:00:00.000Z' },
+    forged: { status: 'ready', width: 3000, height: 2000, renderedAt: '2026-10-24T00:00:00.000Z' },
+  },
+  {
+    key: 'imageColour',
+    stored: { model: 'rgb', channels: 3, hasAlpha: false, bitsPerSample: 8, density: 72, profile: null },
+    forged: { model: 'cmyk', channels: 4, hasAlpha: false, bitsPerSample: 8, density: 300, profile: { name: 'Coated FOGRA39' } },
+  },
+  {
+    key: 'catalogRenditions',
+    stored: { status: 'failed', recipe: 1, failure: 'undecodable', failedAt: '2026-10-26T00:00:00.000Z' },
+    forged: { status: 'ready', recipe: 1, renderedAt: '2026-10-26T00:00:00.000Z' },
+  },
+] as const;
+
 const UPDATE_LEGS = [
   { leg: 'σύνδεση', seed: {}, base: { linkedTo: ['property:prop_1'] } },
   { leg: 'οριστικοποίηση', seed: { status: 'pending' }, base: { status: 'ready' } },
@@ -473,31 +496,33 @@ describe('files.rules — tenant_state_machine pattern', () => {
   // Ίδιο ιδίωμα και ίδιο πρόσωπο (`same_tenant_admin`) με το πάγωμα της δέσμευσης: κάθε `expectDeny` αποδίδεται
   // ΜΟΝΟ στη ρήτρα `measuredUnchanged`/`measuredBornAbsent`. 🔴 Η οριστικοποίηση (pending → ready) ήταν η ανοιχτή
   // πόρτα: χωρίς allowlist κλειδιών, ο πελάτης έγραφε ό,τι ήθελε μαζί με το `status`.
-  describe('measured freeze — οι διαστάσεις τις μετρά ο κάδος (ADR-899 §3.7)', () => {
+  // 🎨 ADR-923 §5.10.3 — ΙΔΙΑ λίστα για ΚΑΘΕ μετρημένο κλειδί (`measuredKeys()`): ο πίνακας τρέχει όλη τη σουίτα ανά κλειδί,
+  // ώστε ένα κλειδί που λείπει από τους κανόνες να κοκκινίζει ΟΝΟΜΑΣΤΙΚΑ.
+  describe.each(MEASURED_FIELD_CASES)('measured freeze — $key (ADR-899 §3.7 · ADR-922 · ADR-923 §5.10.3)', ({ key, stored: storedValue, forged }) => {
     const ADMIN_UID = PERSONA_CLAIMS.same_tenant_admin.uid;
-    const MEASURED = { imageDimensions: { width: 3000, height: 4000 } } as const;
-    const FORGED = { imageDimensions: { width: 9999, height: 1 } } as const;
+    const MEASURED = { [key]: storedValue };
+    const FORGED = { [key]: forged };
     const fileDoc = (docId: string) =>
       getContext(env, 'same_tenant_admin').firestore().collection('files').doc(docId);
 
     it.each(UPDATE_LEGS)('⛔ σκέλος $leg: γραφή/αλλαγή διαστάσεων ⇒ ΑΡΝΗΣΗ · το σκέτο φορτίο ⇒ ΕΠΙΤΡΕΠΕΤΑΙ', async ({ leg, seed, base }) => {
       const index = UPDATE_LEGS.findIndex((l) => l.leg === leg);
-      await seedFile(env, `measured-add-${index}`, { companyId: SAME_TENANT_COMPANY_ID, overrides: { ...seed } });
-      await seedFile(env, `measured-change-${index}`, { companyId: SAME_TENANT_COMPANY_ID, overrides: { ...seed, ...MEASURED } });
-      await expectDeny(fileDoc(`measured-add-${index}`).update({ ...base, ...FORGED }));
-      await expectDeny(fileDoc(`measured-change-${index}`).update({ ...base, ...FORGED }));
-      await expectAllow(fileDoc(`measured-change-${index}`).update(base));
+      await seedFile(env, `measured-add-${key}-${index}`, { companyId: SAME_TENANT_COMPANY_ID, overrides: { ...seed } });
+      await seedFile(env, `measured-change-${key}-${index}`, { companyId: SAME_TENANT_COMPANY_ID, overrides: { ...seed, ...MEASURED } });
+      await expectDeny(fileDoc(`measured-add-${key}-${index}`).update({ ...base, ...FORGED }));
+      await expectDeny(fileDoc(`measured-change-${key}-${index}`).update({ ...base, ...FORGED }));
+      await expectAllow(fileDoc(`measured-change-${key}-${index}`).update(base));
     });
 
     it('⛔ ΑΦΑΙΡΕΣΗ των διαστάσεων (ολόκληρο `set` χωρίς το κλειδί): ΑΡΝΗΣΗ', async () => {
-      await seedFile(env, 'measured-removed', { companyId: SAME_TENANT_COMPANY_ID, overrides: { ...MEASURED } });
+      await seedFile(env, `measured-removed-${key}`, { companyId: SAME_TENANT_COMPANY_ID, overrides: { ...MEASURED } });
       let stored: Record<string, unknown> = {};
       await withSeedContext(env, async (seedCtx) => {
-        stored = (await seedCtx.firestore().collection('files').doc('measured-removed').get()).data() ?? {};
+        stored = (await seedCtx.firestore().collection('files').doc(`measured-removed-${key}`).get()).data() ?? {};
       });
-      const { imageDimensions: _dropped, ...withoutDimensions } = stored;
-      await expectDeny(fileDoc('measured-removed').set({ ...withoutDimensions, linkedTo: ['property:prop_1'] }));
-      await expectAllow(fileDoc('measured-removed').set({ ...stored, linkedTo: ['property:prop_1'] }));
+      const withoutMeasured = Object.fromEntries(Object.entries(stored).filter(([field]) => field !== key));
+      await expectDeny(fileDoc(`measured-removed-${key}`).set({ ...withoutMeasured, linkedTo: ['property:prop_1'] }));
+      await expectAllow(fileDoc(`measured-removed-${key}`).set({ ...stored, linkedTo: ['property:prop_1'] }));
     });
 
     it('⛔ γέννηση με διαστάσεις «από κούνια»: ΑΡΝΗΣΗ · ✅ χωρίς', async () => {
@@ -513,8 +538,8 @@ describe('files.rules — tenant_state_machine pattern', () => {
         cdeReadReach: 'tenant',
         ...extra,
       });
-      await expectDeny(born('born-measured', { ...FORGED }));
-      await expectAllow(born('born-plain', {}));
+      await expectDeny(born(`born-measured-${key}`, { ...FORGED }));
+      await expectAllow(born(`born-plain-${key}`, {}));
     });
   });
 

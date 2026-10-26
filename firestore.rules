@@ -6440,8 +6440,12 @@ service cloud.firestore {
     // αλλαγή ΚΑΙ αφαίρεση· ένα σημείο για `files` και `files_personal`.
     // 🖼️ ADR-922 — `publishRaster`: η κατάσταση της εικόνας δημοσίευσης ενός DXF. Ένα `ready` γραμμένο από πελάτη θα
     //    έστελνε τη βιτρίνα σε PNG που δεν έφτιαξε ποτέ κανείς ⇒ ΜΟΝΟ `dxf-publish-raster.service` (Admin SDK).
+    // 🎨 ADR-923 §5.10.3 — `imageColour`: χρωματικός τύπος/προφίλ/πυκνότητα, από την ΙΔΙΑ μέτρηση με τις διαστάσεις.
+    //    Ένα «CMYK» γραμμένο από πελάτη θα έστελνε την έκδοση σε λάθος μετατροπή χρώματος.
+    //    `catalogRenditions`: η κατάσταση των αποδόσεων web/εκτύπωσης ενός μέσου καταλόγου. Ένα `ready` από πελάτη θα
+    //    επέτρεπε σύνδεση αρχείου χωρίς αποδόσεις ⇒ ΜΟΝΟ `catalog-asset-renditions.server` (Admin SDK).
     function measuredKeys() {
-      return ['imageDimensions', 'publishRaster'];
+      return ['imageDimensions', 'publishRaster', 'imageColour', 'catalogRenditions'];
     }
 
     function measuredUnchanged() {

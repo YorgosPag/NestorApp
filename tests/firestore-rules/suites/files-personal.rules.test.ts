@@ -241,6 +241,18 @@ describe('files_personal.rules — το προσωπικό αρχείο το α�
       await assertFails(citizen().collection(COLLECTION).doc(DOC_ID).update(forged));
     });
 
+    // 🎨 ADR-923 §5.10.3 — ΙΔΙΑ λίστα (`measuredKeys()`): χρώμα και αποδόσεις καταλόγου τα γράφει μόνο ο διακομιστής.
+    it.each([
+      ['imageColour', { model: 'cmyk', channels: 4, hasAlpha: false, bitsPerSample: 8, density: 300, profile: { name: 'Coated FOGRA39' } }],
+      ['catalogRenditions', { status: 'ready', recipe: 1, renderedAt: '2026-10-26T00:00:00.000Z' }],
+    ] as const)('🔑 ο κάτοχος δεν γράφει `%s`: γέννηση · οριστικοποίηση · αλλαγή → deny', async (key, value) => {
+      const forged = { [key]: value };
+      await assertFails(citizen().collection(COLLECTION).doc(`born-${key}`).set({ ...personalFilePayload(CITIZEN_UID, `born-${key}`), ...forged }));
+      await seedPersonalFile(env, `pending-${key}`, CITIZEN_UID, { status: 'pending' });
+      await assertFails(citizen().collection(COLLECTION).doc(`pending-${key}`).update({ status: 'ready', ...forged }));
+      await assertSucceeds(citizen().collection(COLLECTION).doc(`pending-${key}`).update({ status: 'ready' }));
+    });
+
     // 📅 ADR-915 Φ3 — ΙΔΙΑ λίστα γεγονότων εγγράφου με το `match /files` (`documentFactsKeys()`).
     it('🔑 ο κάτοχος δεν «ανανεώνει» έγγραφο: γέννηση · οριστικοποίηση · αλλαγή γεγονότων → deny', async () => {
       const forged = { documentFacts: { kind: 'energy-certificate', issuedOn: '2099-01-01', printedValidUntil: null,
