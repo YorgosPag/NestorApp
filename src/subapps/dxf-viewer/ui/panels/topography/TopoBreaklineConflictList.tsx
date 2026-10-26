@@ -70,28 +70,34 @@ interface ConflictItemsProps {
   readonly resolved?: boolean;
 }
 
+/**
+ * The list, then the Resolve form of the selected row UNDER it (Civil 3D vista: grid above, options below) — never
+ * inside the height-capped, scrolling list, where Apply would scroll out of sight (seen live, 2026-10-26).
+ */
 function ConflictItems({ rows, selectedKey, onSelect, breaklinesOf, resolved = false }: ConflictItemsProps): React.JSX.Element {
+  const selected = rows.find((c) => conflictKey(c) === selectedKey);
+  const lines = selected ? breaklinesOf(selected.surfaceId) : [];
   return (
-    <ul className={styles.qaList}>
-      {rows.map((c) => {
-        const key = conflictKey(c);
-        const lines = breaklinesOf(c.surfaceId);
-        return (
-          <li key={key}>
+    <>
+      <ul className={styles.qaList}>
+        {rows.map((c) => (
+          <li key={conflictKey(c)}>
             <TopoQaFlagRow
               flag={c.flag}
-              selected={key === selectedKey}
-              onFocus={() => { onSelect(key); focusConflict(c); }}
+              selected={c === selected}
+              onFocus={() => { onSelect(conflictKey(c)); focusConflict(c); }}
               focusHintKey={`${NS}.conflictFocusHint`}
               resolved={resolved}
             />
-            {key === selectedKey && (
-              <TopoBreaklineConflictResolve key={key} row={c} lineOf={(id) => lines.find((b) => b.id === id)} />
-            )}
           </li>
-        );
-      })}
-    </ul>
+        ))}
+      </ul>
+      {selected && (
+        <TopoBreaklineConflictResolve
+          key={conflictKey(selected)} row={selected} lineOf={(id) => lines.find((b) => b.id === id)}
+        />
+      )}
+    </>
   );
 }
 
@@ -100,13 +106,14 @@ function ResolveAllBar({ rows }: { readonly rows: readonly BreaklineConflictRow[
   const [rule, setRule] = React.useState<BulkRule>('higher');
   const count = [...bulkCrossingDecisions(rows, rule).values()].reduce((n, list) => n + list.length, 0);
   if (count < 2) return null;
+  // A group, not a <p>: the SegmentedControl renders a <div>, which a paragraph may not contain (hydration error, seen live).
   return (
-    <p className={styles.bkResolveRow}>
+    <div className={styles.bkResolveRow} role="group">
       <SegmentedControl value={rule} onValueChange={setRule} aria-label={t(`${NS}.resolve.ruleLabel`)}>
         {BULK_CROSSING_RULES.map((r) => <SegmentedControlItem key={r} value={r}>{t(`${NS}.resolve.rule.${r}`)}</SegmentedControlItem>)}
       </SegmentedControl>
       <Button type="button" size="sm" onClick={() => resolveAll(rows, rule)}>{t(`${NS}.resolve.all`, { count })}</Button>
-    </p>
+    </div>
   );
 }
 

@@ -58,10 +58,20 @@ const chooseRule = (rule: string): void => {
 };
 const apply = (): void => { fireEvent.click(screen.getByRole('button', { name: `${NS}.resolve.apply` })); };
 
+/** React reports invalid DOM nesting (a hydration error in the browser) only via console.error — never a failure. */
+const DOM_NESTING = /cannot be a descendant of|cannot contain a nested/;
+
 describe('ADR-920 Β3.6 — Resolve Crossing in the breakline list', () => {
+  let consoleError: jest.SpyInstance;
   beforeEach(() => {
     act(() => { clearTopo(); restoreBreaklineDisplay({ visible: true }); });
     getGlobalCommandHistory().clear();
+    consoleError = jest.spyOn(console, 'error');
+  });
+  afterEach(() => {
+    const nesting = consoleError.mock.calls.filter((args) => DOM_NESTING.test(String(args[0])));
+    consoleError.mockRestore();
+    expect(nesting).toEqual([]);
   });
 
   it('preview → Apply: the point gets the previewed Z, the conflict moves to «resolved», Ctrl+Z undoes it', () => {
