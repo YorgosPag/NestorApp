@@ -8,7 +8,7 @@
  * 🔑 Κάθε πίνακας είναι `Record<λεξιλόγιο, …>`: νέα άρνηση/κατάσταση **δεν μεταγλωττίζεται** χωρίς λέξεις.
  */
 
-import type { MediaLicensePurpose } from '@/constants/media-rights-vocabulary';
+import type { MediaLicensePurposeIn } from '@/constants/media-rights-vocabulary';
 import type { TourCaptureAudience, TourMilestone } from '@/constants/spatial-tour-vocabulary';
 import type { TourGeneralRefusal, TourViewSessionRefusal } from '@/lib/spatial-tour/tour-refusal-vocabulary';
 // ⚠️ TYPE-ONLY πέρα από το σύνορο του διακομιστή — σβήνεται στη μεταγλώττιση.
@@ -160,7 +160,8 @@ export const MILESTONE_KEY: Readonly<Record<TourMilestone, string>> = {
   handover: 'spatial-tour:milestone.handover',
 };
 
-export const LICENSE_PURPOSE_KEY: Readonly<Record<MediaLicensePurpose, string>> = {
+/** Οι σκοποί του πλαισίου `listing` (ADR-923 §5.10.3) — οι σκοποί καταλόγου έχουν δικές τους ετικέτες στον κατάλογο. */
+export const LICENSE_PURPOSE_KEY: Readonly<Record<MediaLicensePurposeIn<'listing'>, string>> = {
   'listing-marketing': 'spatial-tour:licensePurpose.listingMarketing',
   'owner-reuse': 'spatial-tour:licensePurpose.ownerReuse',
   unrestricted: 'spatial-tour:licensePurpose.unrestricted',

@@ -19,7 +19,7 @@ import { DatePickerField } from '@/components/ui/date-picker-field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { MEDIA_LICENSE_PURPOSES, type MediaLicensePurpose } from '@/constants/media-rights-vocabulary';
+import { MEDIA_LICENSE_CONTEXTS, type MediaLicensePurposeIn } from '@/constants/media-rights-vocabulary';
 import {
   TOUR_CAPTURE_AUDIENCES,
   TOUR_MILESTONES,
@@ -55,7 +55,7 @@ interface DeclarationDraft {
   audience: TourCaptureAudience;
   milestone: TourMilestone | typeof NO_MILESTONE;
   creatorName: string;
-  purpose: MediaLicensePurpose;
+  purpose: MediaLicensePurposeIn<'listing'>;
   termKind: LicenseTermKind;
   termUntil: Date | undefined;
 }
@@ -139,7 +139,7 @@ function DeclarationFields({ draft, patch }: { readonly draft: DeclarationDraft;
         <Input id="tour-upload-creator" value={draft.creatorName} onChange={(e) => patch({ creatorName: e.target.value })} required />
       </section>
       <LabeledSelect id="tour-upload-purpose" label={t(UPLOAD_KEYS.licensePurpose)} value={draft.purpose}
-        options={MEDIA_LICENSE_PURPOSES.map((value) => ({ value, label: t(LICENSE_PURPOSE_KEY[value]) }))}
+        options={MEDIA_LICENSE_CONTEXTS.listing.purposes.map((value) => ({ value, label: t(LICENSE_PURPOSE_KEY[value]) }))}
         onChange={(purpose) => patch({ purpose })} />
       <LabeledSelect id="tour-upload-term" label={t(UPLOAD_KEYS.licenseTerm)} value={draft.termKind}
         options={LICENSE_TERM_KINDS.map((value) => ({ value, label: t(LICENSE_TERM_KEY[value]) }))}

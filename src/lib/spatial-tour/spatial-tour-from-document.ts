@@ -322,7 +322,7 @@ export function tourCaptureFromDocument(raw: unknown, id: string): TourCapture |
   if (!isRecord(raw)) return null;
   const vocabulary = readCaptureVocabulary(raw);
   const signatory = readCaptureSignatory(raw.signatory);
-  const rights = readMediaRights(raw.rights);
+  const rights = readMediaRights(raw.rights, 'listing');
   const tileset = readTileset(raw.tileset);
   const redactions = readRedactions(raw.redactions);
   const faceScan = readFaceScan(raw.faceScan);

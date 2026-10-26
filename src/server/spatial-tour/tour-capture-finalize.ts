@@ -82,7 +82,7 @@ export function readCaptureDeclaration(raw: unknown, actorUid: string): TourCapt
   if (!isRecord(raw)) return null;
   const source = TOUR_UPLOAD_SOURCES.find((s) => s === raw.source);
   const milestone = raw.milestone ?? null;
-  const rights = readMediaRights(raw.rights);
+  const rights = readMediaRights(raw.rights, 'listing');
   const placementHint = readCapturePlacementHint(raw.placementHint);
   if (source === undefined || !isTourCaptureAudience(raw.audience) || rights === null || placementHint === undefined) return null;
   if (milestone !== null && !isTourMilestone(milestone)) return null;
