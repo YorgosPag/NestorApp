@@ -61,14 +61,29 @@ describe('resolveBreaklines through buildTinWithReport (ADR-920 Β4.8 Τ)', () =
     const report = buildTinWithReport(FRAME, [line('ridge', 0, 0, 3000, 1000, 100), line('ditch', 3000, 0, 0, 1000, 90)]);
     expect(zAt(report, 1500, 500)).toBe(100);
     expect(report.breaklineConflicts).toEqual([
-      { kind: 'crossing', x: 2500, y: 1500, keptZ: 100, overruledZ: 90, overruledBreaklineId: 'ditch' },
+      {
+        kind: 'crossing', x: 2500, y: 1500, keptZ: 100, overruledZ: 90,
+        overruledBreaklineId: 'ditch', keptBreaklineId: 'ridge',
+      },
     ]);
   });
 
   it('the input order decides which statement is kept (deterministic, like the survey points)', () => {
     const report = buildTinWithReport(FRAME, [line('ditch', 3000, 0, 0, 1000, 90), line('ridge', 0, 0, 3000, 1000, 100)]);
     expect(zAt(report, 1500, 500)).toBe(90);
-    expect(report.breaklineConflicts.map((c) => c.overruledBreaklineId)).toEqual(['ridge']);
+    // Β3.2 — the PAIR, both halves (Civil 3D «Crossing Breaklines»): who was kept AND who was overruled.
+    expect(report.breaklineConflicts.map((c) => [c.keptBreaklineId, c.overruledBreaklineId])).toEqual([['ditch', 'ridge']]);
+  });
+
+  it("an earlier breakline's VERTEX on a later breakline names the earlier one as kept (Β3.2)", () => {
+    const report = buildTinWithReport(FRAME, [line('drive', 1500, 500, 1500, 1500, 9), line('road', 0, 500, 3000, 500, 7)]);
+    expect(zAt(report, 1500, 500)).toBe(9);
+    expect(report.breaklineConflicts).toEqual([
+      {
+        kind: 'vertex-on-breakline', x: 2500, y: 1500, keptZ: 9, overruledZ: 7,
+        overruledBreaklineId: 'road', keptBreaklineId: 'drive',
+      },
+    ]);
   });
 
   it('a survey vertex ON a breakline splits it and keeps its measured Z; a disagreement is reported', () => {
@@ -81,6 +96,8 @@ describe('resolveBreaklines through buildTinWithReport (ADR-920 Β4.8 Τ)', () =
     expect(report.breaklineConflicts).toEqual([
       { kind: 'vertex-on-breakline', x: 2500, y: 1500, keptZ: 50, overruledZ: 20, overruledBreaklineId: 'slope' },
     ]);
+    // A measurement kept its Z — naming a breakline as «kept» would be a lie (Β3.2).
+    expect(report.breaklineConflicts[0]).not.toHaveProperty('keptBreaklineId');
   });
 
   it("a survey vertex on a breakline at the breakline's own elevation is silent", () => {
@@ -95,6 +112,8 @@ describe('resolveBreaklines through buildTinWithReport (ADR-920 Β4.8 Τ)', () =
     expect(report.breaklineConflicts).toEqual([
       { kind: 'vertex-on-breakline', x: 1000, y: 1000, keptZ: 3, overruledZ: 8, overruledBreaklineId: 'kerb' },
     ]);
+    // The merged vertex belongs to the survey point (collected first), not to the breakline that landed on it.
+    expect(report.breaklineConflicts[0]).not.toHaveProperty('keptBreaklineId');
   });
 
   it('a T-junction (one breakline ending on another) splits the through-line at the junction', () => {

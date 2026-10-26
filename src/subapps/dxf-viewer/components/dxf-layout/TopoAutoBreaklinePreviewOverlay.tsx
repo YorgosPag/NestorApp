@@ -10,7 +10,6 @@ import { UI_COLORS } from '../../config/color-config';
 // υποψήφιες, και μόνο το πάχος χάνεται σε μια πυκνή δέσμη. ADR-650 M8β/Γ v2: κοινό SSoT με το 3Δ —
 // από τότε που το 3Δ μπορεί να εκφράσει πάχος, δύο αντίγραφα των ίδιων αριθμών θα απόκλιναν.
 import {
-  AUTO_BREAKLINE_HALO_OPACITY as HALO_OPACITY,
   AUTO_BREAKLINE_STROKE_PX as STROKE_WIDTH,
 } from '../../systems/topography/auto-breaklines/auto-breakline-review-style';
 import type { Viewport } from '../../rendering/types/Types';
@@ -20,14 +19,11 @@ import { useTransformValue } from '../../systems/cursor/ImmediateTransformStore'
 import { useTopoDisplayProjector } from '../../systems/topography/useTopoDisplayProjector';
 import { breaklineScreenPath } from './topo-breakline-paint/topo-breakline-screen-path';
 import { TopoBreaklineStroke, type BreaklineStrokeSpec } from './topo-breakline-paint/TopoBreaklineStroke';
+import { BREAKLINE_FOCUS_HALO } from './topo-breakline-paint/breakline-focus-halo';
 
 interface Props {
   readonly viewport: Viewport;
 }
-
-const FOCUS_HALO: BreaklineStrokeSpec = {
-  color: UI_COLORS.SELECTION_HIGHLIGHT, widthPx: STROKE_WIDTH.halo, opacity: HALO_OPACITY,
-};
 
 function candidateStroke(approved: boolean, focused: boolean): BreaklineStrokeSpec {
   return {
@@ -87,7 +83,7 @@ export function TopoAutoBreaklinePreviewOverlay({ viewport }: Props) {
             key={candidate.id}
             d={d}
             stroke={candidateStroke(approved, focused)}
-            under={focused ? FOCUS_HALO : undefined}
+            under={focused ? BREAKLINE_FOCUS_HALO : undefined}
           />
         );
       })}

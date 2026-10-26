@@ -97,11 +97,37 @@ function pushBucket(buckets: Map<number, number[]>, cell: number, value: number)
   else buckets.set(cell, [value]);
 }
 
+/**
+ * ADR-920 Β3.2 — vertex index → the breakline that STATED it first (its Z is what the surface carries). Survey vertices
+ * (`index < surveyVertexCount`, collected first) have no owner: their Z is a measurement. A breakline vertex that merged
+ * with a survey point therefore stays unowned too — the measurement was there first.
+ */
+function vertexOwnersOf(
+  breaklines: readonly Breakline[],
+  acc: CollectedVertices,
+  origin: LocalOrigin,
+  surveyVertexCount: number,
+): Map<number, string> {
+  const owners = new Map<number, string>();
+  for (const bl of breaklines) {
+    for (const v of bl.vertices) {
+      const index = acc.keyToIndex.get(localVertexKey(v.x - origin.x, v.y - origin.y));
+      if (index !== undefined && index >= surveyVertexCount && !owners.has(index)) owners.set(index, bl.id);
+    }
+  }
+  return owners;
+}
+
 class Resolution {
   readonly splits = new Map<number, SplitPoint[]>();
   readonly conflicts: BreaklineElevationConflict[] = [];
 
-  constructor(readonly acc: CollectedVertices, readonly segments: readonly Segment[]) {}
+  constructor(
+    readonly acc: CollectedVertices,
+    readonly segments: readonly Segment[],
+    /** Who stated each vertex's kept Z — see {@link vertexOwnersOf}. Crossing nodes are added as they are created. */
+    readonly owners: Map<number, string>,
+  ) {}
 
   split(segmentIndex: number, point: SplitPoint): void {
     const list = this.splits.get(segmentIndex);
@@ -114,7 +140,11 @@ class Resolution {
     const keptZ = this.acc.elevations[vertex];
     if (elevationsAgree(keptZ, overruledZ)) return;
     const [x, y] = this.acc.positions[vertex];
-    this.conflicts.push({ kind, x, y, keptZ, overruledZ, overruledBreaklineId: breaklineId });
+    const keptBreaklineId = this.owners.get(vertex);
+    this.conflicts.push({
+      kind, x, y, keptZ, overruledZ, overruledBreaklineId: breaklineId,
+      ...(keptBreaklineId !== undefined && { keptBreaklineId }),
+    });
   }
 }
 
@@ -140,7 +170,11 @@ function resolveCrossing(res: Resolution, i: number, j: number, ts: number, tu: 
   const u = res.segments[j];
   const [ax, ay] = res.acc.positions[s.a];
   const [bx, by] = res.acc.positions[s.b];
+  const before = res.acc.positions.length;
   const node = pushVertex(res.acc, ax + ts * (bx - ax), ay + ts * (by - ay), zAlong(res.acc, s, ts));
+  // A NEW node carries the earlier breakline's Z, so that breakline owns it; a node that landed on an existing vertex
+  // (one dedup grid) keeps whoever stated that vertex.
+  if (node >= before) res.owners.set(node, s.breaklineId);
   res.split(i, { index: node, t: ts });
   res.split(j, { index: node, t: tu });
   res.check('crossing', node, zAlong(res.acc, s, ts), s.breaklineId);
@@ -228,15 +262,17 @@ function emitEdges(res: Resolution): TinEdge[] {
 
 /**
  * Resolve the breaklines against the collected vertices. MUTATES `acc` (crossing nodes are appended through the one
- * dedup grid, `pushVertex`) — call it before the triangulation, once.
+ * dedup grid, `pushVertex`) — call it before the triangulation, once. `surveyVertexCount` = how many of `acc`'s vertices
+ * the survey points produced (they are collected first): it is what tells a measured Z from a breakline's.
  */
 export function resolveBreaklines(
   breaklines: readonly Breakline[],
   acc: CollectedVertices,
   origin: LocalOrigin,
+  surveyVertexCount: number,
 ): ResolvedBreaklines {
   const segments = segmentsOf(breaklines, acc, origin);
-  const res = new Resolution(acc, segments);
+  const res = new Resolution(acc, segments, vertexOwnersOf(breaklines, acc, origin, surveyVertexCount));
   reportMergedBreaklineVertices(res, breaklines, origin);
   if (segments.length === 0) return { edges: [], conflicts: res.conflicts };
   const grid = createSegmentGrid(acc.positions);

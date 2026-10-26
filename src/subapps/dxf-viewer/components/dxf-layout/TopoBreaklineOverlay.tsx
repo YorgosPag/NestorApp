@@ -11,46 +11,45 @@
  * Όλες οι επιφάνειες (`TOPO_SURFACE_IDS`), όχι μόνο η `existing` — μια ασυνέχεια της `proposed` κόβει κι αυτή.
  * Σχεδιάζεται ΚΑΤΩ από τις υποψήφιες υπό έγκριση (σειρά mount): η πρόταση είναι η ερώτηση της στιγμής.
  *
- * ADR-040: standalone leaf· LOW-freq `subscribeTopo` + geo-reference, ΕΝΑΣ high-freq hook (transform).
+ * ADR-920 Β3.4 — «μάτι» + εστίαση από το `topo-breakline-display-store` (ίδιος store με το 3Δ layer και το
+ * ribbon toggle): κρυμμένες ⇒ τίποτα (ο ΟΡΙΣΜΟΣ μένει, η επιφάνεια κόβεται κανονικά — Surface ↔ Style)·
+ * η εστιασμένη σχεδιάζεται ΤΕΛΕΥΤΑΙΑ, με πάχος `focused` και την κοινή άλως (`committed-breakline-paint`) στη θέση
+ * του περιβλήματος — ίδια όψη με την εστιασμένη υποψήφια, το μοτίβο της πηγής z μένει.
+ *
+ * ADR-040: standalone leaf· LOW-freq `subscribeTopo` + display store + geo-reference, ΕΝΑΣ high-freq hook
+ * (transform).
  */
 import React, { useSyncExternalStore } from 'react';
 import { getTopoState, subscribeTopo } from '../../systems/topography/TopoPointStore';
 import { TOPO_SURFACE_IDS } from '../../systems/topography/topo-types';
 import {
-  breaklineDashPattern, breaklineSvgDasharray,
-  TOPO_BREAKLINE_STROKE_PX, TOPO_BREAKLINE_VERTEX_DOT_PX, TOPO_BREAKLINE_VERTEX_OUTLINE_PX,
-} from '../../systems/topography/topo-breakline-style';
+  getBreaklineDisplayState, subscribeBreaklineDisplay,
+} from '../../systems/topography/topo-breakline-display-store';
 import { useTopoDisplayProjector } from '../../systems/topography/useTopoDisplayProjector';
 import { useTransformValue } from '../../systems/cursor/ImmediateTransformStore';
-import { UI_COLORS } from '../../config/color-config';
 import type { Viewport } from '../../rendering/types/Types';
 import { breaklineScreenPath } from './topo-breakline-paint/topo-breakline-screen-path';
+import { TopoBreaklineStroke } from './topo-breakline-paint/TopoBreaklineStroke';
 import {
-  TopoBreaklineStroke, type BreaklineStrokeSpec, type BreaklineVertexDots,
-} from './topo-breakline-paint/TopoBreaklineStroke';
+  committedBreaklinePaint, COMMITTED_BREAKLINE_DOTS,
+} from './topo-breakline-paint/committed-breakline-paint';
 
 interface Props {
   readonly viewport: Viewport;
 }
 
-const CASING: BreaklineStrokeSpec = {
-  color: UI_COLORS.TOPO_BREAKLINE_CASING, widthPx: TOPO_BREAKLINE_STROKE_PX.casing,
-};
-
-const DOTS: BreaklineVertexDots = {
-  diameterPx: TOPO_BREAKLINE_VERTEX_DOT_PX,
-  fill: UI_COLORS.TOPO_BREAKLINE,
-  outline: UI_COLORS.TOPO_BREAKLINE_CASING,
-  outlinePx: TOPO_BREAKLINE_VERTEX_OUTLINE_PX,
-};
-
 export function TopoBreaklineOverlay({ viewport }: Props) {
   const state = useSyncExternalStore(subscribeTopo, getTopoState, getTopoState);
+  const display = useSyncExternalStore(subscribeBreaklineDisplay, getBreaklineDisplayState, getBreaklineDisplayState);
   const transform = useTransformValue();
   const projector = useTopoDisplayProjector();
 
-  const breaklines = TOPO_SURFACE_IDS.flatMap((id) => state.surfaces[id].breaklines);
-  if (breaklines.length === 0) return null;
+  if (!display.visible) return null;
+  const { focusedId } = display;
+  const all = TOPO_SURFACE_IDS.flatMap((id) => state.surfaces[id].breaklines);
+  if (all.length === 0) return null;
+  // SVG = painter's order: η εστιασμένη τελευταία ⇒ πάντα από πάνω, η άλως της δεν κρύβεται κάτω από τη διπλανή.
+  const breaklines = [...all.filter((b) => b.id !== focusedId), ...all.filter((b) => b.id === focusedId)];
 
   return (
     <svg
@@ -59,18 +58,15 @@ export function TopoBreaklineOverlay({ viewport }: Props) {
     >
       {breaklines.map((b) => {
         const path = breaklineScreenPath(b.vertices, b.closed ?? false, projector, transform, viewport);
+        const paint = committedBreaklinePaint(b.elevationSource, b.id === focusedId);
         return (
           <TopoBreaklineStroke
             key={b.id}
             d={path.d}
             vertices={path.vertices}
-            under={CASING}
-            stroke={{
-              color: UI_COLORS.TOPO_BREAKLINE,
-              widthPx: TOPO_BREAKLINE_STROKE_PX.stroke,
-              dash: breaklineSvgDasharray(breaklineDashPattern(b.elevationSource), TOPO_BREAKLINE_STROKE_PX.stroke),
-            }}
-            dots={DOTS}
+            under={paint.under}
+            stroke={paint.stroke}
+            dots={COMMITTED_BREAKLINE_DOTS}
           />
         );
       })}

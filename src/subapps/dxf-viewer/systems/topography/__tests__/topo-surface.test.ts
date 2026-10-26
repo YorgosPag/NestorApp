@@ -7,11 +7,12 @@
  * so the identity assertions below are the contract, not an optimisation detail.
  */
 
-import { setTopoPoints, addBreakline, clearTopo } from '../TopoPointStore';
+import { setTopoPoints, clearTopo } from '../TopoPointStore';
+import { seedBreakline } from './topo-breakline-fixtures';
 import { getTopoSurface, hasTopoSurface, invalidateTopoSurface } from '../topo-surface';
 import type { TopoPoint3D } from '../topo-types';
 
-// ADR-720 — `TopoPoint3D`: these feed `addBreakline`, which now requires elevations.
+// ADR-720 — `TopoPoint3D`: these feed `createBreakline`, which now requires elevations.
 const HILL: readonly TopoPoint3D[] = [
   { x: 0, y: 0, z: 0 },
   { x: 10_000, y: 0, z: 0 },
@@ -50,7 +51,7 @@ describe('getTopoSurface', () => {
     setTopoPoints(HILL);
     const before = getTopoSurface();
 
-    addBreakline([HILL[0]!, HILL[2]!]);
+    seedBreakline([HILL[0]!, HILL[2]!]);
 
     expect(getTopoSurface()).not.toBe(before);
   });

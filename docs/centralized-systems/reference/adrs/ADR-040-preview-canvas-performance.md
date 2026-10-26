@@ -113,6 +113,15 @@ SSoT γεωμετρίας: `canvas-v2/dxf-canvas/dxf-bitmap-cache-anchor.ts` (κ
 
 ## Changelog
 
+### 2026-10-26 — ADR-920 Β4.8 Β3: μάτι + εστίαση στο φύλλο `TopoBreaklineOverlay` (CHECK 6D)
+
+- **`TopoBreaklineOverlay`**: μία **χαμηλόσυχνη** συνδρομή ακόμα, `subscribeBreaklineDisplay` (γράφεται μόνο από το μάτι
+  και από κλικ στη λίστα, ποτέ ανά καρέ). Κρυφό ⇒ `null`· η εστιασμένη γραμμή σχεδιάζεται **τελευταία** με πάχος focus +
+  halo. Το υψίσυχνο hook παραμένει ένα (`useTransformValue`), ένα `<svg>` — κανόνας #4 τηρείται.
+- **`TopoAutoBreaklinePreviewOverlay`**: το τοπικό halo αντικαταστάθηκε από το κοινό `topo-breakline-paint/breakline-focus-halo.ts`·
+  καμία αλλαγή συνδρομής. Το `committed-breakline-paint.ts` (μοτίβο ανά πηγή z) το μοιράζονται overlay και swatch της λίστας.
+- Το shell (`CanvasLayerStack` / `CanvasSection`) **δεν** αγγίχτηκε.
+
 ### 2026-10-25 — ADR-920 Β4.8 Β1: νέο φύλλο `TopoBreaklineOverlay` + κοινός painter ασυνεχειών (CHECK 6B/6D)
 
 - **`TopoBreaklineOverlay`** (νέο, mount στο `canvas-layer-stack-2d-overlays-leaf.tsx` πριν από το

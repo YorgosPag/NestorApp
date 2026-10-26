@@ -1336,8 +1336,38 @@
         "missingBreakline": "Steep {angle}° fold with no constraint — a ridge/ditch breakline may be missing.",
         "coverageGap": "{percent}% of the plot is not covered by the surface — earthwork volumes there count as zero.",
         "interpolatedSupport": "{percent}% of the plot rests on interpolation from distant points ({points, plural, one {# measured point} other {# measured points}} inside the boundary) — excavation volumes there are guesswork.",
-        "breaklineCrossing": "Breaklines cross at different elevations: kept {kept}m, breakline #{line} said {overruled}m (difference {deviation}m).",
-        "breaklineVertexOn": "Breakline #{line} passes through a vertex at another elevation: kept {kept}m, the breakline said {overruled}m (difference {deviation}m)."
+        "breaklineCrossing": "Breaklines cross at different elevations: kept {kept}m{keptLine, select, none {} other { from #{keptLine}}}, breakline #{line} said {overruled}m (difference {deviation}m).",
+        "breaklineVertexOn": "Breakline #{line} passes through a vertex at another elevation: kept {kept}m {keptLine, select, none {(survey point)} other {(breakline #{keptLine})}}, the breakline said {overruled}m (difference {deviation}m)."
+      }
+    },
+    "breaklines": {
+      "count": "{count, plural, =0 {No breaklines} one {# breakline} other {# breaklines}}",
+      "hint": "The lines that cut the surface. Click = zoom to it in the drawing; removal is undone with Ctrl+Z.",
+      "show": "Show",
+      "hide": "Hide",
+      "hiddenNote": "Breaklines are hidden in plan and 3D — the surface is still cut by them.",
+      "empty": "No breaklines yet. Add them with the «Breaklines» tool or from «Automatic breaklines».",
+      "name": "#{label}{closed, select, yes { (closed)} other {}}",
+      "meta": "{source} · {length} m · {z} · {vertices, plural, one {# vertex} other {# vertices}}",
+      "zRange": "Z {min}–{max} m",
+      "zNone": "no elevation",
+      "source": {
+        "elevation": "elevation from the line",
+        "proximity": "elevation from the nearest points",
+        "surface": "elevation from the surface",
+        "unknown": "unknown elevation source"
+      },
+      "linkMissing": "The drawing line was deleted — its last shape is kept",
+      "conflictCount": "{count, plural, one {# conflict} other {# conflicts}}",
+      "focusHint": "Zoom to breakline {name}",
+      "remove": "Remove breakline {name}",
+      "removeHint": "Remove from the surface (Ctrl+Z to undo)",
+      "conflictsTitle": "{count, plural, one {# elevation conflict} other {# elevation conflicts}}",
+      "conflictsNone": "No conflicts — the breaklines agree wherever they meet.",
+      "conflictFocusHint": "Zoom to the conflict",
+      "surface": {
+        "existing": "Existing ground",
+        "proposed": "Proposed surface"
       }
     },
     "autoBreakline": {

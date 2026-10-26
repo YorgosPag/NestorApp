@@ -16,8 +16,12 @@
 import { getTerrain3DState } from '../../../systems/topography/terrain-3d-store';
 import { useActiveStoreyStore } from '../../../systems/levels/active-storey-store';
 import { useViewMode3DStore } from '../../stores/ViewMode3DStore';
-import { resolveActiveBuildingBaseElevationM, type ResolvedAxisCut } from '../cut-plane-3d';
-import { computeTerrainClipWorldY } from './terrain-clip-math';
+import {
+  resolveActiveBuildingBaseElevationM,
+  resolveAllAxisCuts,
+  type ResolvedAxisCut,
+} from '../cut-plane-3d';
+import { computeTerrainClipWorldY, lowestKeepBelowCutY } from './terrain-clip-math';
 
 /** ADR-665 — world-Y (metres) of the terrain's level cut from the live SSoT, or `null` when off. */
 export function resolveTerrainClipWorldY(): number | null {
@@ -40,4 +44,15 @@ export function resolveTerrainClipWorldY(): number | null {
 export function resolveTerrainCut(): ResolvedAxisCut | null {
   const worldY = resolveTerrainClipWorldY();
   return worldY === null ? null : { axis: 'z', worldCoordM: worldY, sign: 1 };
+}
+
+/**
+ * ADR-920 Β4.8 Β2.4 — world-Y (metres) of the `'topo'` scope's effective horizontal cut, from the live
+ * SSoT: the terrain's level cut and the building's Z cut, whichever is lower ({@link lowestKeepBelowCutY}).
+ * The SAME two planes `SectionSceneController` hands the topo scope, so a CPU-trimmed topo line stops
+ * exactly where the GPU cuts the hill. `null` = no horizontal cut.
+ */
+export function resolveTopoHorizontalCutWorldY(): number | null {
+  const zCut = resolveAllAxisCuts().find((cut) => cut.axis === 'z');
+  return lowestKeepBelowCutY([resolveTerrainClipWorldY(), zCut ? zCut.worldCoordM : null]);
 }

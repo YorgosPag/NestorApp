@@ -8,7 +8,8 @@
  * BOTH views. Nothing here edits the survey: the engineer certifies.
  *
  * Clicking a row zooms to the flag in whichever view is active (ADR-650 M5α.2) — the routing
- * itself is the shared {@link focusReviewTarget} SSoT (3D camera via the view-focus bus, 2D via
+ * itself is the topo {@link focusTopoReviewTarget} boundary (WORLD→DISPLAY, ADR-920 Β3.1) over the shared
+ * `focusReviewTarget` SSoT (3D camera via the view-focus bus, 2D via
  * the canonical `canvas-*` EventBus events, same path as the Z key). Mirror of
  * `ClashReportPanel.focusClash`, and for the same reason: a report row that silently does nothing
  * in one of the two views reads as a broken report.
@@ -20,26 +21,12 @@ import * as React from 'react';
 import { useTranslation } from '@/i18n';
 import { runTopoQa } from '../../../systems/topography/qa/run-topo-qa';
 import { topoQaStore, useTopoQaReport, useTopoQaSelectedFlagId } from '../../../systems/topography/qa/topo-qa-store';
-import type { TopoQaFlag, TopoQaSeverity } from '../../../systems/topography/qa/topo-qa-types';
+import type { TopoQaFlag } from '../../../systems/topography/qa/topo-qa-types';
 import type { TopoSurfaceId } from '../../../systems/topography/topo-types';
-import { focusReviewTarget, reviewFocusExtent } from '../../../systems/coordination/review-focus';
+import { focusTopoReviewTarget, TOPO_REVIEW_FOCUS_PAD_MM } from '../../../systems/topography/topo-review-focus';
 import { resolveTopoQaFlagWorld } from '../../../bim-3d/coordination/topo-qa-flag-world';
+import { TopoQaFlagRow } from './TopoQaFlagRow';
 import styles from './TopographyPanel.module.css';
-
-/**
- * Padding (canonical mm) around a clicked flag — a survey blunder is only legible next to its
- * neighbours (that is what makes it a blunder), hence 15 m, not the centimetres a clash needs.
- *
- * `flag.at` is a single WORLD-mm point, so the padded box is 30 m square and the derived 3D
- * half-extent is exactly the 15 m this panel used to carry as a second, hand-synced constant.
- */
-const TOPO_QA_FOCUS_PAD_MM = 15_000;
-
-const SEVERITY_CLASS: Readonly<Record<TopoQaSeverity, string>> = {
-  high: styles.qaHigh!,
-  medium: styles.qaMedium!,
-  low: styles.qaLow!,
-};
 
 /**
  * Zoom to a flag in whichever view is active (3D focus bus ⟷ 2D fit-to-bounds EventBus SSoT) and
@@ -63,35 +50,11 @@ function focusFlag(flag: TopoQaFlag, surfaceId: TopoSurfaceId): void {
   const preserveZoom = topoQaStore.getSelectedFlagId() !== null;
   topoQaStore.select(flag.id);
 
-  const extent = reviewFocusExtent([flag.at], TOPO_QA_FOCUS_PAD_MM);
-  if (!extent) return; // non-finite flag coordinates — highlight the row, move nothing
-
-  // The 3D conversion is a thunk: it samples the TIN, and in plan view that work is pure waste.
-  // It is the SAME resolver the 3D marker overlay uses, so the row and its own ⊙ can never point
-  // at different spots.
-  focusReviewTarget(extent, () => resolveTopoQaFlagWorld(flag, surfaceId), preserveZoom);
-}
-
-interface QaFlagRowProps {
-  readonly flag: TopoQaFlag;
-  readonly surfaceId: TopoSurfaceId;
-  readonly selected: boolean;
-}
-
-function QaFlagRow({ flag, surfaceId, selected }: QaFlagRowProps): React.JSX.Element {
-  const { t } = useTranslation('dxf-viewer-panels');
-  return (
-    <button
-      type="button"
-      className={`${styles.qaItem} ${SEVERITY_CLASS[flag.severity]} ${selected ? styles.qaItemSelected : ''}`}
-      onClick={() => focusFlag(flag, surfaceId)}
-      aria-label={t('topography.qa.focusHint')}
-      aria-current={selected ? 'true' : undefined}
-    >
-      <span className={styles.qaDot} aria-hidden="true" />
-      <span className={styles.qaMessage}>{t(flag.messageKey, flag.messageParams)}</span>
-    </button>
-  );
+  // `flag.at` is WORLD (ΕΓΣΑ): the topo boundary projects it for the 2D canvas (ADR-920 Β3.1 — before
+  // it, a geo-referenced project zoomed ~4·10⁵ mm off). Non-finite coordinates → nothing moves, the row
+  // still highlights. The 3D conversion stays a thunk and is the SAME resolver the 3D marker overlay uses,
+  // so the row and its own ⊙ can never point at different spots.
+  focusTopoReviewTarget([flag.at], TOPO_REVIEW_FOCUS_PAD_MM.point, () => resolveTopoQaFlagWorld(flag, surfaceId), preserveZoom);
 }
 
 export function TopoQaSection(): React.JSX.Element {
@@ -143,10 +106,11 @@ export function TopoQaSection(): React.JSX.Element {
           <ul className={styles.qaList}>
             {report.flags.map((flag) => (
               <li key={flag.id}>
-                <QaFlagRow
+                <TopoQaFlagRow
                   flag={flag}
-                  surfaceId={report.surfaceId}
                   selected={flag.id === selectedFlagId}
+                  onFocus={(f) => focusFlag(f, report.surfaceId)}
+                  focusHintKey="topography.qa.focusHint"
                 />
               </li>
             ))}

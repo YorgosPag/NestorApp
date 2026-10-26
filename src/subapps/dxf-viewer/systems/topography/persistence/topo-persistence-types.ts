@@ -28,6 +28,8 @@ import { TOPO_CROP_OFF } from '../topo-types';
 import type { ContourConfig, ContourDisplayStyle } from '../contour-config';
 import { DEFAULT_CONTOUR_CONFIG, DEFAULT_CONTOUR_DISPLAY_STYLE } from '../contour-config';
 import type { TopoBakedFrames } from '../topo-baked-frame-store';
+import type { BreaklineDisplayPrefs } from '../topo-breakline-display-store';
+import { DEFAULT_BREAKLINE_DISPLAY_PREFS } from '../topo-breakline-display-store';
 
 /** The two named surfaces a floor owns (Civil 3D collection): surveyed vs designed ground. */
 export type TopoSurfacesDefinition = Readonly<Record<TopoSurfaceId, TopoDefinition>>;
@@ -63,6 +65,8 @@ export interface TopoPersistedState {
    * δεν μαντεύει πλαίσιο, δεν μετακινεί, και σημαδεύει την ομάδα για ξανα-ψήσιμο.
    */
   readonly bakedFrames: TopoBakedFrames;
+  /** ADR-920 Β3.4 — the breakline «eye» (2D + 3D). Always present in memory. */
+  readonly breaklineDisplay: BreaklineDisplayPrefs;
 }
 
 /**
@@ -93,6 +97,11 @@ export interface TopoSurfaceDoc {
   readonly cutFill: TopoCutFillPrefs;
   /** ADR-650 §M10g — σφραγίδες πλαισίου ανά επίπεδο/ομάδα. Απούσα σε legacy έγγραφα. */
   readonly bakedFrames?: TopoBakedFrames;
+  /**
+   * ADR-920 Β3.4 — ορατότητα ασυνεχειών. **Απούσα σε legacy έγγραφα ⇒ ορατές**: ό,τι έβλεπε ο
+   * μηχανικός πριν υπάρξει το «μάτι», το βλέπει και μετά.
+   */
+  readonly breaklineDisplay?: BreaklineDisplayPrefs;
   /** Monotonic counter — informational (last-write-wins v1). */
   readonly version: number;
   readonly createdAt: Timestamp;
@@ -133,18 +142,14 @@ function stableStringify(value: unknown): string {
  * άλλους όγκους εκσκαφής από αυτούς που είδε στην οθόνη.
  *
  * `boundaryLink` **δεν** ανήκει εδώ: είναι εφήμερη παρατήρηση για τη σκηνή, δεν περσιστάρεται.
+ *
+ * ADR-920 Β3.4 — γι' αυτό η υπογραφή **χτίζεται από** το {@link topoSettingsDocFields} (ό,τι γράφεται στο
+ * έγγραφο) + τον ορισμό, αντί να απαριθμεί δεύτερη φορά τα ίδια πεδία: ο κανόνας παραπάνω ισχύει πλέον
+ * δομικά — πεδίο που προστίθεται στο έγγραφο μπαίνει αυτόματα και στην υπογραφή. Η έξοδος είναι ίδια
+ * byte-προς-byte με την παλιά απαρίθμηση (`stableStringify` = ανεξάρτητο σειράς κλειδιών).
  */
 export function topoStateSignature(state: TopoPersistedState): string {
-  return stableStringify({
-    surfaces: state.surfaces,
-    boundary: state.boundary,
-    crop: state.crop ?? TOPO_CROP_OFF,
-    contourConfig: state.contourConfig,
-    contourDisplayStyle: state.contourDisplayStyle,
-    terrain3d: state.terrain3d,
-    cutFill: state.cutFill,
-    bakedFrames: state.bakedFrames,
-  });
+  return stableStringify({ surfaces: state.surfaces, ...topoSettingsDocFields(state) });
 }
 
 /** Serialized byte size of the survey definition (drives the inline↔Storage decision). */
@@ -173,6 +178,7 @@ export function topoSettingsDocFields(state: TopoPersistedState): {
   terrain3d: TopoTerrain3DPrefs;
   cutFill: TopoCutFillPrefs;
   bakedFrames: TopoBakedFrames;
+  breaklineDisplay: BreaklineDisplayPrefs;
 } {
   return {
     boundary: state.boundary,
@@ -184,6 +190,7 @@ export function topoSettingsDocFields(state: TopoPersistedState): {
     // ADR-650 §M10g — γράφεται από την ΙΔΙΑ συνάρτηση με τα υπόλοιπα settings, ώστε create και
     // update να μη μπορούν να αποκλίνουν (ένα σπίτι για το «τι πάει στο έγγραφο»).
     bakedFrames: state.bakedFrames,
+    breaklineDisplay: state.breaklineDisplay,
   };
 }
 
@@ -207,6 +214,7 @@ export function docToTopoState(doc: TopoSurfaceDoc): TopoPersistedState {
     // ADR-650 §M10g — legacy έγγραφο: **καμία** σφραγίδα. Το `{}` δεν είναι «όλα εντάξει»,
     // είναι «δεν ξέρω» — και ο reconciler το διαβάζει έτσι (fail-closed).
     bakedFrames: doc.bakedFrames ?? {},
+    breaklineDisplay: doc.breaklineDisplay ?? DEFAULT_BREAKLINE_DISPLAY_PREFS,
   };
 }
 

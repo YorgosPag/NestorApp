@@ -20,8 +20,9 @@
 import { cascadeTopoSourceGeometry } from '../topo-source-cascade';
 import {
   clearTopo, getTopoBoundary, getTopoBoundaryLink, getTopoBreaklines,
-  setTopoBoundary, setTopoPoints, addBreakline,
+  setTopoBoundary, setTopoPoints,
 } from '../TopoPointStore';
+import { seedBreakline } from './topo-breakline-fixtures';
 import type { Entity } from '../../../types/entities';
 import type { ISceneManager } from '../../../core/commands/interfaces';
 import type { TopoPoint } from '../topo-types';
@@ -206,7 +207,7 @@ describe('ασυνέχειες — ο ΙΔΙΟΣ reconciler, όχι δίδυμο
   });
 
   it('η γραμμή-πηγή μετακινήθηκε ⇒ οι κορυφές της ασυνέχειας ακολουθούν', () => {
-    addBreakline(
+    seedBreakline(
       [{ x: 0, y: 0, z: 1 * M }, { x: 5 * M, y: 5 * M, z: 2 * M }],
       false,
       BREAKLINE_ID,
@@ -220,7 +221,7 @@ describe('ασυνέχειες — ο ΙΔΙΟΣ reconciler, όχι δίδυμο
   });
 
   it('id και sourceEntityId επιβιώνουν — αλλιώς το δεύτερο κλικ προσθέτει αντί να αφαιρεί', () => {
-    const id = addBreakline([{ x: 0, y: 0, z: M }, { x: 5 * M, y: 5 * M, z: M }], false, BREAKLINE_ID);
+    const id = seedBreakline([{ x: 0, y: 0, z: M }, { x: 5 * M, y: 5 * M, z: M }], false, BREAKLINE_ID);
     const moved = [{ x: 1 * M, y: 1 * M }, { x: 9 * M, y: 9 * M }];
 
     cascadeTopoSourceGeometry([BREAKLINE_ID], sceneWith(polyline(BREAKLINE_ID, moved, false)));
@@ -232,7 +233,7 @@ describe('ασυνέχειες — ο ΙΔΙΟΣ reconciler, όχι δίδυμο
 
   it('ίδιο σχήμα ⇒ ο ορισμός μένει ΤΟ ΙΔΙΟ αντικείμενο (αλλιώς ξανατρέχει ο CDT)', () => {
     // Όπως το γράφει το κλικ: 2Δ γραμμή ⇒ proximity (ADR-920 Β1 — η πηγή είναι μέρος της κατάστασης).
-    addBreakline(
+    seedBreakline(
       [{ x: 0, y: 0, z: M }, { x: 10 * M, y: 10 * M, z: 3 * M }], false, BREAKLINE_ID, 'existing', 'proximity',
     );
     const before = getTopoBreaklines();
@@ -244,7 +245,7 @@ describe('ασυνέχειες — ο ΙΔΙΟΣ reconciler, όχι δίδυμο
   });
 
   it('ADR-920 Β1 — η γραμμή απέκτησε Z ⇒ η πηγή περνά από proximity σε elevation', () => {
-    addBreakline(
+    seedBreakline(
       [{ x: 0, y: 0, z: M }, { x: 10 * M, y: 10 * M, z: 3 * M }], false, BREAKLINE_ID, 'existing', 'proximity',
     );
     const raised = { ...polyline(BREAKLINE_ID, [{ x: 0, y: 0 }, { x: 10 * M, y: 10 * M }], false), elevation: 2 * M };
@@ -257,7 +258,7 @@ describe('ασυνέχειες — ο ΙΔΙΟΣ reconciler, όχι δίδυμο
   });
 
   it('ADR-920 Β1 — παλιά αποθηκευμένη ασυνέχεια (χωρίς πηγή) τη μαθαίνει στο πρώτο πέρασμα', () => {
-    addBreakline([{ x: 0, y: 0, z: M }, { x: 10 * M, y: 10 * M, z: 3 * M }], false, BREAKLINE_ID);
+    seedBreakline([{ x: 0, y: 0, z: M }, { x: 10 * M, y: 10 * M, z: 3 * M }], false, BREAKLINE_ID);
 
     cascadeTopoSourceGeometry(
       [BREAKLINE_ID], sceneWith(polyline(BREAKLINE_ID, [{ x: 0, y: 0 }, { x: 10 * M, y: 10 * M }], false)),
@@ -267,7 +268,7 @@ describe('ασυνέχειες — ο ΙΔΙΟΣ reconciler, όχι δίδυμο
   });
 
   it('η γραμμή-πηγή διαγράφηκε ⇒ κρατά το τελευταίο σχήμα (ίδιος κανόνας με το όριο)', () => {
-    addBreakline([{ x: 0, y: 0, z: M }, { x: 5 * M, y: 5 * M, z: M }], false, BREAKLINE_ID);
+    seedBreakline([{ x: 0, y: 0, z: M }, { x: 5 * M, y: 5 * M, z: M }], false, BREAKLINE_ID);
     const before = getTopoBreaklines()[0];
 
     cascadeTopoSourceGeometry([BREAKLINE_ID], EMPTY_SCENE);
@@ -276,7 +277,7 @@ describe('ασυνέχειες — ο ΙΔΙΟΣ reconciler, όχι δίδυμο
   });
 
   it('ασυνέχεια χωρίς πηγή (auto-breakline) μένει ανέγγιχτη', () => {
-    addBreakline([{ x: 0, y: 0, z: M }, { x: 5 * M, y: 5 * M, z: M }]);
+    seedBreakline([{ x: 0, y: 0, z: M }, { x: 5 * M, y: 5 * M, z: M }]);
     const before = getTopoBreaklines();
 
     cascadeTopoSourceGeometry([BREAKLINE_ID], sceneWith(polyline(BREAKLINE_ID, SQUARE, false)));
@@ -286,7 +287,7 @@ describe('ασυνέχειες — ο ΙΔΙΟΣ reconciler, όχι δίδυμο
 
   it('καλύπτει ΚΑΙ την «proposed» επιφάνεια, όχι μόνο την «existing»', () => {
     setTopoPoints(SURVEY, 'proposed');
-    addBreakline([{ x: 0, y: 0, z: M }, { x: 5 * M, y: 5 * M, z: M }], false, BREAKLINE_ID, 'proposed');
+    seedBreakline([{ x: 0, y: 0, z: M }, { x: 5 * M, y: 5 * M, z: M }], false, BREAKLINE_ID, 'proposed');
     const moved = [{ x: 3 * M, y: 3 * M }, { x: 7 * M, y: 7 * M }];
 
     cascadeTopoSourceGeometry([BREAKLINE_ID], sceneWith(polyline(BREAKLINE_ID, moved, false)));
@@ -301,7 +302,7 @@ describe('ασυνέχειες — ο ΙΔΙΟΣ reconciler, όχι δίδυμο
 it('όριο και ασυνέχεια στο ΙΔΙΟ πέρασμα — ένας μηχανισμός για δύο ρόλους', () => {
   setTopoPoints(SURVEY);
   setTopoBoundary({ vertices: SQUARE, sourceEntityId: BOUNDARY_ID });
-  addBreakline([{ x: 0, y: 0, z: M }, { x: 5 * M, y: 5 * M, z: M }], false, BREAKLINE_ID);
+  seedBreakline([{ x: 0, y: 0, z: M }, { x: 5 * M, y: 5 * M, z: M }], false, BREAKLINE_ID);
   const movedLine = [{ x: 1 * M, y: 1 * M }, { x: 6 * M, y: 6 * M }];
 
   cascadeTopoSourceGeometry(

@@ -50,7 +50,7 @@ import type { TopoPoint, TopoPoint3D, BreaklineElevationSource } from './topo-ty
 /** Από πού προέκυψε το z της breakline (Civil 3D ορολογία). Ό,τι μπορεί να παραγάγει μια γραμμή του σχεδίου — το `surface` ανήκει μόνο στις αυτόματες (ένα λεξιλόγιο, ADR-920 Β1). */
 export type BreaklineSource = Exclude<BreaklineElevationSource, 'surface'>;
 
-/** Χτισμένη breakline, έτοιμη για `addBreakline`. */
+/** Χτισμένη breakline, έτοιμη για `createBreakline` (→ `SetTopoBreaklinesCommand`). */
 export interface BuiltBreakline {
   readonly vertices: readonly TopoPoint3D[];
   readonly closed: boolean;

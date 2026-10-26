@@ -60,11 +60,13 @@ import {
 } from '../../systems/topography/topo-breakline-pick';
 import { getTopoDisplayProjector } from '../../systems/topography/topo-display-frame';
 import {
-  addBreakline,
-  removeBreakline,
+  createBreakline,
   findBreaklineBySourceEntity,
   getTopoPoints,
 } from '../../systems/topography/TopoPointStore';
+// ADR-920 Β3.3 — add/remove go through the ONE undoable breakline command (Ctrl+Z restores them).
+import { SetTopoBreaklinesCommand } from '../../core/commands/entity-commands/SetTopoBreaklinesCommand';
+import { getGlobalCommandHistory } from '../../core/commands/CommandHistory';
 import { showTopoBreaklineHint } from './topo-breakline-hint';
 
 // ============================================================================
@@ -394,7 +396,8 @@ export function handleTopoBreaklineClick(
 
   const existing = findBreaklineBySourceEntity(entityId);
   if (existing) {
-    removeBreakline(existing.id);
+    const removal = SetTopoBreaklinesCommand.remove('existing', [existing.id]);
+    if (removal) getGlobalCommandHistory().execute(removal);
     p.universalSelection.replaceEntitySelection([]);
     showTopoBreaklineHint('removed');
     return true;
@@ -410,7 +413,9 @@ export function handleTopoBreaklineClick(
     return true;
   }
 
-  addBreakline(built.vertices, built.closed, entityId, 'existing', built.source);
+  const breakline = createBreakline(built.vertices, built.closed, entityId, built.source);
+  const addition = breakline ? SetTopoBreaklinesCommand.add('existing', [breakline]) : null;
+  if (addition) getGlobalCommandHistory().execute(addition);
   p.universalSelection.replaceEntitySelection([entityId]);
   showTopoBreaklineHint(built.source === 'elevation' ? 'addedElevation' : 'addedProximity');
   dlog('handleTopoBreaklineClick', `breakline from ${entityId} (${built.source}, ${built.vertices.length} verts)`);

@@ -93,6 +93,7 @@ import {
   TopoCropToBoundaryToggle,
   TopoCropShowOutsideToggle,
   TerrainVisibleToggle,
+  TopoBreaklinesVisibleToggle,
   TerrainStyleToggle,
   TerrainAutoClipToggle,
 } from './TopoRibbonToggleWidgets';
@@ -267,6 +268,8 @@ const TOPO_WIDGETS: Readonly<Record<string, WidgetFactory>> = {
   'topo-terrain-visible': () => <TerrainVisibleToggle key="topo-terrain-visible-widget" />,
   'topo-terrain-autoclip': () => <TerrainAutoClipToggle key="topo-terrain-autoclip-widget" />,
   'topo-terrain-style': () => <TerrainStyleToggle key="topo-terrain-style-widget" />,
+  // ADR-920 Β3.4 — «μάτι» ασυνεχειών (2Δ + 3Δ), μόνιμο tab + contextual.
+  'topo-breaklines-visible': () => <TopoBreaklinesVisibleToggle key="topo-breaklines-visible-widget" />,
   'topo-contour-interval': () => <ContourIntervalField key="topo-contour-interval-widget" />,
   'topo-contour-index': () => <ContourIndexField key="topo-contour-index-widget" />,
   'topo-grid-step': () => <GridStepField key="topo-grid-step-widget" />,

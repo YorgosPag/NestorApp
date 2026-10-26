@@ -5,7 +5,11 @@
  * cases where it is meaningless (toggle off / hill hidden / all-floors scope / no storey context).
  */
 
-import { computeTerrainClipWorldY, type TerrainClipInputs } from '../terrain-clip-math';
+import {
+  computeTerrainClipWorldY,
+  lowestKeepBelowCutY,
+  type TerrainClipInputs,
+} from '../terrain-clip-math';
 
 /** Ground floor of a building sitting on the site datum, hill visible, auto-clip on. */
 const BASE: TerrainClipInputs = {
@@ -77,5 +81,26 @@ describe('ADR-665 — computeTerrainClipWorldY: where the plane sits', () => {
 
   it('the ε bias is applied upward (kept side is BELOW the plane, no boundary shimmer)', () => {
     expect(computeTerrainClipWorldY({ ...BASE, floorElevationMm: 3000 })!).toBeGreaterThan(3);
+  });
+});
+
+describe('ADR-920 Β2.4 — lowestKeepBelowCutY: the topo scope\'s effective horizontal cut', () => {
+  it('no cut at all → null', () => {
+    expect(lowestKeepBelowCutY([])).toBeNull();
+    expect(lowestKeepBelowCutY([null, null])).toBeNull();
+  });
+
+  it('one cut → that cut, whichever source it comes from', () => {
+    expect(lowestKeepBelowCutY([3.001, null])).toBe(3.001);
+    expect(lowestKeepBelowCutY([null, 1.2])).toBe(1.2);
+  });
+
+  it('two keep-below cuts intersect into the LOWER one (terrain cut above a Z cut and vice versa)', () => {
+    expect(lowestKeepBelowCutY([3.001, 1.2])).toBe(1.2);
+    expect(lowestKeepBelowCutY([1.2, 3.001])).toBe(1.2);
+  });
+
+  it('a cut below the datum (negative world-Y) is still a cut, not «absent»', () => {
+    expect(lowestKeepBelowCutY([-2, 0])).toBe(-2);
   });
 });

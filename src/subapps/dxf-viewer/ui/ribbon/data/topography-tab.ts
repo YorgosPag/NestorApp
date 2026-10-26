@@ -95,8 +95,14 @@ export const TOPOGRAPHY_TAB: RibbonTab = {
       rows: [
         row([
           toolBtn('topoTab.breakline', `${K}.breakline.label`, 'topo-breakline', 'topo-breakline'),
+          // ADR-920 Β3.5 — η λίστα των δεσμευμένων (Prospector › Breaklines): πλήθος · Zoom To · αφαίρεση · συγκρούσεις.
+          topoAction('topoTab.breaklineList', `${K}.breaklineList.label`, 'topo-breakline-list', 'topo.breaklineList.open'),
           // ADR-662 Φ4 — καθαρισμός breaklines (ήταν στο αριστερό panel· ο tool δίπλα το γεννά).
           topoAction('topoTab.breaklineClear', `${K}.breakline.clear`, 'delete', 'topo.breakline.clear'),
+        ]),
+        // ADR-920 Β3.4 — «μάτι» ασυνεχειών: SMALL widget ⇒ δική του σειρά (ROW_LAYOUT), δίπλα στο εργαλείο.
+        row([
+          topoWidget('topoTab.breaklinesVisible', `${K}.breaklinesVisible.label`, 'topo-breaklines-visible'),
         ]),
         // Παράμετροι ισοϋψών (ισοδιάσταση / κύριες ανά / στυλ) — στοίβα δίπλα στα εργαλεία.
         row([

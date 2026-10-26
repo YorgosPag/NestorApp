@@ -21,7 +21,9 @@ import { getGridDisplayOptions, setTopoGridVisible } from '../systems/topography
 import { getNorthArrowOptions, setNorthArrowVisible } from '../systems/topography/north-arrow-store';
 import { getPointLabelOptions } from '../systems/topography/topo-point-label-store';
 import { getPointCloud3DState, setPointCloud3DVisible } from '../systems/topography/pointcloud-3d-store';
-import { setTopoBreaklines } from '../systems/topography/TopoPointStore';
+// ADR-920 Β3.3 — the clear is undoable (it used to wipe every breakline with no way back).
+import { SetTopoBreaklinesCommand } from '../core/commands/entity-commands/SetTopoBreaklinesCommand';
+import { getGlobalCommandHistory } from '../core/commands/CommandHistory';
 
 /** Everything the runner needs: the mount-time hooks, notifications, i18n, dialog opens. */
 export interface TopoRibbonDeps {
@@ -42,6 +44,8 @@ export interface TopoRibbonDeps {
   readonly openAutoBreakline: () => void;
   readonly openCutFill: () => void;
   readonly openCloud: () => void;
+  /** ADR-920 Β3.5 — «Ασυνέχειες επιφάνειας» (Civil 3D Prospector › Breaklines). */
+  readonly openBreaklineList: () => void;
 }
 
 /** i18n key prefix for the topo ribbon toast messages (dxf-viewer-shell namespace). */
@@ -80,9 +84,11 @@ export function runTopoRibbonAction(action: string, deps: TopoRibbonDeps): void 
     }
     // ADR-662 Φ4 — «Αυτόματες ασυνέχειες»: dialog με detect → review υποψηφίων → approve (§9).
     case 'topo.autoBreakline.open': return deps.openAutoBreakline();
+    case 'topo.breaklineList.open': return deps.openBreaklineList();
     // ADR-662 Φ4 — καθαρισμός breaklines (ήταν στο αριστερό panel· ο tool μένει στο ribbon).
     case 'topo.breakline.clear': {
-      setTopoBreaklines([]);
+      const clear = SetTopoBreaklinesCommand.clear('existing');
+      if (clear) getGlobalCommandHistory().execute(clear);
       deps.notify.success(deps.t(`${N}.breaklinesCleared`));
       return;
     }

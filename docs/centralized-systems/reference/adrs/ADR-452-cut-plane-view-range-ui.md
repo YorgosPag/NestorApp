@@ -140,6 +140,13 @@ faces), and the cut elevation is unified to a single FFL-relative frame across 2
 
 ## 8. Changelog
 
+- **2026-10-25** — Σημείωση (ADR-920 Β4.8 Β2.4): **νέος καταναλωτής του `edge-cut-trim`, έξω από τον controller.** Το
+  `TopoBreaklineLayer` (δεσμευμένες ασυνέχειες εδάφους, fat lines + κουκκίδες) κόβει τα buffers του με
+  `clipLineSegmentsToCutY` και το νέο αδελφάκι `filterPointsBelowCutY`. Δεν χρησιμοποιεί το `applyEdgeCutTrim` του
+  `SectionSceneController`, γιατί αυτό τρέχει **μόνο** στο `renderFrameWithCaps` (δηλ. μόνο με τομή κτιρίου) — η κοπή μόνο
+  του εδάφους (ADR-665) δεν το φτάνει ποτέ. Το ύψος κοπής βγαίνει από `resolveTopoHorizontalCutWorldY()` = min(κοπή εδάφους,
+  Z cut), τα ίδια δύο επίπεδα που ο controller δίνει στο `'topo'` scope. Το όριο του §7/ADR-455 ισχύει και εδώ: X/Y τομές και
+  section box δεν κόβουν fat lines.
 - **2026-06-19** — v2.19 (Giorgio «slab/structural two-tone», 4 ανεξάρτητα z-fight/render bugs που
   φάνηκαν μαζί στις πάνω παρειές — όλα browser-verified):
   1. **Coplanar core z-fight** (κύρια αιτία· *όχι* στο cut path): τα δομικά είναι μοντελοποιημένα

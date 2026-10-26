@@ -65,6 +65,8 @@ export const CONTEXTUAL_TOPO_SURFACE_TAB: RibbonTab = {
           buttons: [
             topoWidget('topoSurfaceTools.terrainVisible', `${K}.terrainVisible.label`, 'topo-terrain-visible'),
             topoWidget('topoSurfaceTools.terrainStyle', `${K}.terrainStyle.label`, 'topo-terrain-style'),
+            // ADR-920 Β3.4 — οι ασυνέχειες ανήκουν στην επιφάνεια (Civil 3D surface style): ίδιο widget/store.
+            topoWidget('topoSurfaceTools.breaklinesVisible', `${K}.breaklinesVisible.label`, 'topo-breaklines-visible'),
             // ADR-665 — κοπή του αναγλύφου στη στάθμη ενεργού ορόφου (το κτίριο μένει ακέραιο).
             topoWidget('topoSurfaceTools.terrainAutoClip', `${K}.terrainAutoClip.label`, 'topo-terrain-autoclip'),
           ],

@@ -49,6 +49,9 @@ import { subscribeContourDisplay } from '../../systems/topography/contour-displa
 import { subscribeTerrain3D } from '../../systems/topography/terrain-3d-store';
 import { subscribeCutFill } from '../../systems/topography/cut-fill-store';
 import { clearAllBakedFrames, subscribeBakedFrames } from '../../systems/topography/topo-baked-frame-store';
+import {
+  DEFAULT_BREAKLINE_DISPLAY_PREFS, subscribeBreaklineDisplay,
+} from '../../systems/topography/topo-breakline-display-store';
 
 export type TopoSaveState = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -82,6 +85,7 @@ const EMPTY_TOPO_STATE: TopoPersistedState = {
   terrain3d: { visible: false, style: 'shaded' },
   cutFill: { mode: 'datum', datumZMm: 0 },
   bakedFrames: {},
+  breaklineDisplay: DEFAULT_BREAKLINE_DISPLAY_PREFS,
 };
 
 export function useTopoPersistence(params: UseTopoPersistenceParams): UseTopoPersistenceResult {
@@ -300,6 +304,8 @@ export function useTopoPersistence(params: UseTopoPersistenceParams): UseTopoPer
       // σφραγίδα θα ζούσε μόνο στη μνήμη και το επόμενο reload θα έβλεπε «legacy» (fail-closed)
       // ένα προϊόν που μόλις ψήθηκε σωστά.
       subscribeBakedFrames(scheduleSave),
+      // ADR-920 Β3.4 — το «μάτι». Μια αλλαγή μόνο εστίασης δεν αλλάζει την υπογραφή ⇒ early-return.
+      subscribeBreaklineDisplay(scheduleSave),
     ];
     return () => {
       for (const u of unsubs) u();

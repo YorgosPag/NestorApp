@@ -7,12 +7,17 @@
  * never triangulates the survey a second time.
  */
 
-import { addBreakline, clearTopo, setTopoPoints } from '../../TopoPointStore';
+import { clearTopo, setTopoPoints } from '../../TopoPointStore';
+import { seedBreakline } from '../../__tests__/topo-breakline-fixtures';
 import { getTopoBuildReport, getTopoSurfaceFull, invalidateTopoSurface } from '../../topo-surface';
 import { buildTinWithReport } from '../../tin-builder';
 import type { Breakline, TopoPoint, TopoPoint3D } from '../../topo-types';
-import { breaklineConflictSeverity, checkBreaklineConflicts } from '../check-breakline-conflicts';
+import { breaklineConflictSeverity, checkBreaklineConflicts, KEPT_BY_SURVEY } from '../check-breakline-conflicts';
 import { runTopoQa } from '../run-topo-qa';
+import i18next from 'i18next';
+import ICU from 'i18next-icu';
+import el from '@/i18n/locales/el/dxf-viewer-panels.json';
+import en from '@/i18n/locales/en/dxf-viewer-panels.json';
 
 /** Far from the world origin on purpose: a forgotten LOCAL → WORLD shift is off by ~500 km, not by a rounding error. */
 const OX = 500_000_000;
@@ -45,7 +50,8 @@ describe('checkBreaklineConflicts', () => {
     expect(flag!.at.x).toBeCloseTo(OX + 5_000, 6);
     expect(flag!.at.y).toBeCloseTo(OY + 5_000, 6);
     expect(flag!.atZMm).toBeCloseTo(1_000, 6); // the KEPT (earlier) elevation — what the surface carries
-    expect(flag!.messageParams).toEqual({ line: 2, kept: '1.00', overruled: '3.00', deviation: '2.00' });
+    // Β3.2 — the PAIR: #1 kept its elevation, #2 was overruled.
+    expect(flag!.messageParams).toEqual({ line: 2, keptLine: 1, kept: '1.00', overruled: '3.00', deviation: '2.00' });
     expect(flag!.severity).toBe('high');
   });
 
@@ -58,7 +64,10 @@ describe('checkBreaklineConflicts', () => {
 
     expect(flags).toHaveLength(1);
     expect(flags[0]!.messageKey).toBe('topography.qa.flag.breaklineVertexOn');
-    expect(flags[0]!.messageParams).toEqual({ line: 1, kept: '0.00', overruled: '1.00', deviation: '1.00' });
+    // A survey point kept its Z — no breakline is named (the ICU `none` branch).
+    expect(flags[0]!.messageParams).toEqual({
+      line: 1, keptLine: KEPT_BY_SURVEY, kept: '0.00', overruled: '1.00', deviation: '1.00',
+    });
   });
 
   it('lists the largest Δz first', () => {
@@ -82,8 +91,8 @@ describe('breaklineConflictSeverity — the duplicate points\' bands, nothing hi
 describe('the report comes from the ONE build', () => {
   it('getTopoBuildReport().surface IS getTopoSurfaceFull() — no second triangulation', () => {
     setTopoPoints(SQUARE);
-    addBreakline(EAST_WEST);
-    addBreakline(northSouth(3_000));
+    seedBreakline(EAST_WEST);
+    seedBreakline(northSouth(3_000));
 
     const report = getTopoBuildReport();
     expect(getTopoSurfaceFull()).toBe(report.surface);
@@ -93,11 +102,44 @@ describe('the report comes from the ONE build', () => {
 
   it('runTopoQa surfaces the conflict in the report', () => {
     setTopoPoints(SQUARE);
-    addBreakline(EAST_WEST);
-    addBreakline(northSouth(3_000));
+    seedBreakline(EAST_WEST);
+    seedBreakline(northSouth(3_000));
 
     const conflicts = runTopoQa('existing').flags.filter((f) => f.kind === 'breakline-conflict');
     expect(conflicts).toHaveLength(1);
     expect(conflicts[0]!.messageParams.line).toBe(2);
+  });
+});
+
+/**
+ * ADR-920 Β3.2 — the pair reaches the engineer as TEXT. The messages gained an ICU `select` (`keptLine`: a number, or
+ * `none` for a survey point); a malformed branch would render the raw pattern, and no key-presence gate sees that.
+ * Rendered here through the REAL locale files and the REAL ICU plugin, both languages, both branches.
+ */
+describe('conflict messages render the pair (el + en, real ICU)', () => {
+  const instance = i18next.createInstance();
+
+  beforeAll(async () => {
+    await instance.use(new ICU()).init({
+      lng: 'el', fallbackLng: false, ns: ['p'], defaultNS: 'p',
+      resources: { el: { p: el }, en: { p: en } },
+    });
+  });
+
+  const crossing = () => flagsOf(SQUARE, [line('a', EAST_WEST), line('b', northSouth(3_000))])[0]!;
+  const onSurvey = () => flagsOf([...SQUARE, p(5_000, 5_000, 0)], [line('a', EAST_WEST)])[0]!;
+
+  it.each([
+    ['el', 'από τη #1', 'σημείο αποτύπωσης'],
+    ['en', 'from #1', 'survey point'],
+  ])('%s: a crossing names the kept line; a survey point is named as such', (lng, keptText, surveyText) => {
+    const t = instance.getFixedT(lng);
+    const a = crossing();
+    const b = onSurvey();
+    expect(t(a.messageKey, a.messageParams)).toContain(keptText);
+    expect(t(b.messageKey, b.messageParams)).toContain(surveyText);
+    for (const text of [t(a.messageKey, a.messageParams), t(b.messageKey, b.messageParams)]) {
+      expect(text).not.toMatch(/[{}]|keptLine|select/);
+    }
   });
 });

@@ -214,6 +214,12 @@ export interface BreaklineElevationConflict {
   /** What the overruled breakline's own interpolation said. */
   readonly overruledZ: number;
   readonly overruledBreaklineId: string;
+  /**
+   * ADR-920 Β4.8 Β3.2 — the breakline whose statement the surface KEPT, so the conflict reads as a PAIR (Civil 3D
+   * «Crossing Breaklines» lists both lines). Absent when the kept elevation is a SURVEY POINT's — a measurement is not a
+   * breakline, and naming one would be a lie. A new crossing node always has it (the earlier breakline set its Z).
+   */
+  readonly keptBreaklineId?: string;
 }
 
 /**

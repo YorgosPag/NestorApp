@@ -10,7 +10,7 @@
  * «δεν ξέρω πού είναι κατακόρυφα» δεν επιτρέπεται να γίνει «είναι στο μηδέν».
  */
 
-import { meanCandidateElevationMm } from '../auto-breakline-world';
+import { meanLineElevationMm } from '../auto-breakline-world';
 import type { AutoBreaklineCandidate } from '../../../systems/topography/auto-breaklines/auto-breakline-types';
 
 function withElevations(...zs: number[]): AutoBreaklineCandidate {
@@ -24,17 +24,17 @@ function withElevations(...zs: number[]): AutoBreaklineCandidate {
   };
 }
 
-describe('meanCandidateElevationMm', () => {
+describe('meanLineElevationMm', () => {
   it('averages the whole chain — not the first vertex', () => {
     // Άκρη δρόμου που κατεβαίνει 4 μ: η αγκύρωση είναι στη ΜΕΣΗ, όχι στο ψηλό άκρο.
-    expect(meanCandidateElevationMm(withElevations(10_000, 8_000, 6_000))).toBe(8_000);
+    expect(meanLineElevationMm(withElevations(10_000, 8_000, 6_000))).toBe(8_000);
   });
 
   it('ignores non-finite vertices instead of returning NaN', () => {
-    expect(meanCandidateElevationMm(withElevations(4_000, Number.NaN, 6_000))).toBe(5_000);
+    expect(meanLineElevationMm(withElevations(4_000, Number.NaN, 6_000))).toBe(5_000);
   });
 
   it('returns null when nothing can answer for the elevation', () => {
-    expect(meanCandidateElevationMm(withElevations(Number.NaN, Number.POSITIVE_INFINITY))).toBeNull();
+    expect(meanLineElevationMm(withElevations(Number.NaN, Number.POSITIVE_INFINITY))).toBeNull();
   });
 });

@@ -15,6 +15,7 @@ import {
 } from '../topo-persistence-types';
 import type { TopoSurfacesDefinition } from '../topo-persistence-types';
 import { TOPO_CROP_OFF } from '../../topo-types';
+import { DEFAULT_BREAKLINE_DISPLAY_PREFS } from '../../topo-breakline-display-store';
 
 const EMPTY_DEF = { points: [], breaklines: [] } as const;
 
@@ -28,6 +29,7 @@ function baseState(overrides: Partial<TopoPersistedState> = {}): TopoPersistedSt
     terrain3d: { visible: false, style: 'shaded' },
     cutFill: { mode: 'datum', datumZMm: 0 },
     bakedFrames: {},
+    breaklineDisplay: DEFAULT_BREAKLINE_DISPLAY_PREFS,
     ...overrides,
   };
 }
@@ -101,6 +103,8 @@ describe('topo-persistence-types', () => {
       // ADR-650 §M10g — legacy έγγραφο: ΚΑΜΙΑ σφραγίδα. Το `{}` σημαίνει «δεν ξέρω σε ποιο
       // πλαίσιο ψήθηκαν», όχι «όλα εντάξει» — ο reconciler θα το διαβάσει ως fail-closed.
       expect(state.bakedFrames).toEqual({});
+      // ADR-920 Β3.4 — legacy έγγραφο: οι ασυνέχειες ΟΡΑΤΕΣ, όπως πριν υπάρξει το «μάτι».
+      expect(state.breaklineDisplay).toEqual({ visible: true });
     });
 
     it('an offloaded doc yields empty surfaces until the blob is merged via withSurfaces', () => {
@@ -118,6 +122,28 @@ describe('topo-persistence-types', () => {
       expect(fields).not.toHaveProperty('surfaces');
       expect(fields.contourDisplayStyle).toBe('smooth');
       expect(fields.cutFill).toEqual({ mode: 'datum', datumZMm: 0 });
+    });
+
+    it('ADR-920 Β3.4 — γράφει το «μάτι» των ασυνεχειών (create και update από την ΙΔΙΑ συνάρτηση)', () => {
+      const fields = topoSettingsDocFields(baseState({ breaklineDisplay: { visible: false } }));
+      expect(fields.breaklineDisplay).toEqual({ visible: false });
+    });
+  });
+
+  describe('ADR-920 Β3.4 — breaklineDisplay round-trip', () => {
+    it('η υπογραφή ΑΛΛΑΖΕΙ με το «μάτι» — αλλιώς το debounced save δεν θα το έγραφε ποτέ', () => {
+      expect(topoStateSignature(baseState())).not.toBe(
+        topoStateSignature(baseState({ breaklineDisplay: { visible: false } })),
+      );
+    });
+
+    it('κρυμμένες ασυνέχειες επιβιώνουν σε save → load', () => {
+      const saved = baseState({ breaklineDisplay: { visible: false } });
+      const doc = { id: 't', companyId: 'c', projectId: 'p', floorplanId: 'f', version: 1,
+        surfaces: saved.surfaces, ...topoSettingsDocFields(saved) } as unknown as TopoSurfaceDoc;
+      const loaded = docToTopoState(doc);
+      expect(loaded.breaklineDisplay).toEqual({ visible: false });
+      expect(topoStateSignature(loaded)).toBe(topoStateSignature(saved));
     });
   });
 });

@@ -51,13 +51,15 @@ function collectVertices(
   points: readonly TopoPoint3D[],
   breaklines: readonly Breakline[],
   origin: LocalOrigin,
-): CollectedVertices {
+): { readonly acc: CollectedVertices; readonly surveyVertexCount: number } {
   const acc = createVertexAccumulator();
   for (const p of points) pushVertex(acc, p.x - origin.x, p.y - origin.y, p.z);
+  // ADR-920 Β3.2 — survey first, so every index below this is a MEASURED Z (the resolver names no breakline for it).
+  const surveyVertexCount = acc.positions.length;
   for (const bl of breaklines) {
     for (const v of bl.vertices) pushVertex(acc, v.x - origin.x, v.y - origin.y, v.z);
   }
-  return acc;
+  return { acc, surveyVertexCount };
 }
 
 /**
@@ -106,14 +108,14 @@ export function buildTinWithReport(
 ): TinBuildReport {
   const surfacePoints = surfacePointsOf(points);
   const origin = originArg ?? computeLocalOrigin(surfacePoints, breaklines);
-  const acc = collectVertices(surfacePoints, breaklines, origin);
+  const { acc, surveyVertexCount } = collectVertices(surfacePoints, breaklines, origin);
 
   if (acc.positions.length < 3) {
     const surface = surfaceOf(acc, [], acc.positions.length ? origin : ZERO_ORIGIN);
     return { surface, breaklineConflicts: [], refusedSegmentCount: 0 };
   }
 
-  const resolved = resolveBreaklines(breaklines, acc, origin);
+  const resolved = resolveBreaklines(breaklines, acc, origin, surveyVertexCount);
   const { triangles, refusedEdges } = triangulateConstrained(acc.positions, resolved.edges);
   return {
     surface: surfaceOf(acc, triangles, origin),

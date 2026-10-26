@@ -131,8 +131,12 @@ export function setTopoBreaklines(breaklines: readonly Breakline[], id: TopoSurf
 }
 
 /**
- * Add one breakline from an ordered vertex list, minting an enterprise id (ADR-017/N.6).
- * Returns the new breakline id. Vertices with fewer than 2 points are rejected (no id).
+ * Create one breakline record from an ordered vertex list, minting an enterprise id (ADR-017/N.6) — WITHOUT
+ * writing it. `null` for fewer than 2 vertices.
+ *
+ * ADR-920 Β3.3 — every write of a breakline goes through the undoable `SetTopoBreaklinesCommand` (the tool, the
+ * ribbon «Καθαρισμός», the approval of automatic candidates), so the store no longer offers a one-way add/remove
+ * beside it: a second door would be the one somebody uses next, and its write could not be undone.
  *
  * ADR-650 M2-Β: `sourceEntityId` records the scene entity the breakline was picked from,
  * so the tool can toggle it off on a second click and highlight it back.
@@ -142,29 +146,14 @@ export function setTopoBreaklines(breaklines: readonly Breakline[], id: TopoSurf
  * already guarantee it (`buildBreaklineFromEntity`, `chain-feature-edges`); the signature pins it
  * so the third one cannot arrive without one.
  */
-export function addBreakline(
+export function createBreakline(
   vertices: readonly TopoPoint3D[],
   closed = false,
   sourceEntityId?: string,
-  id: TopoSurfaceId = 'existing',
   elevationSource?: BreaklineElevationSource,
-): string | null {
+): Breakline | null {
   if (vertices.length < 2) return null;
-  const breaklineId = generateEntityId();
-  const breakline: Breakline = {
-    id: breaklineId, vertices: [...vertices], closed, sourceEntityId, elevationSource,
-  };
-  patchDefinition(id, { breaklines: [...getTopoBreaklines(id), breakline] });
-  return breaklineId;
-}
-
-/** Remove one breakline by id. No-op (and `false`) when the id is unknown. */
-export function removeBreakline(breaklineId: string, id: TopoSurfaceId = 'existing'): boolean {
-  const current = getTopoBreaklines(id);
-  const next = current.filter((b) => b.id !== breaklineId);
-  if (next.length === current.length) return false;
-  patchDefinition(id, { breaklines: next });
-  return true;
+  return { id: generateEntityId(), vertices: [...vertices], closed, sourceEntityId, elevationSource };
 }
 
 /** The breakline picked from a given scene entity, if any (ADR-650 M2-Β toggle). */

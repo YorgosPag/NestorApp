@@ -9,7 +9,7 @@
 import React, { useSyncExternalStore } from 'react';
 import {
   Undo, Redo, Trash2, PanelRight, Eye, BarChart3, Grid3X3, Crop, Scissors, Lasso, Pentagon, FileImage, Upload, FolderUp, Wand2, Download, Crosshair, FlaskConical, Activity, Sparkles, Layers, Maximize2, Bold, Italic, Underline, Strikethrough, Ruler, MoveHorizontal, MoveDiagonal2, Triangle, CircleDot, Diameter, Spline, CircleSlash, MoveUpRight, Rows3, Equal, Palette, Check, Pencil, RotateCcw, RefreshCw, Settings, Type, Construction, DoorOpen, Columns3, SquareDashed, RectangleHorizontal, TableProperties, Boxes, FileDown, Thermometer, Flame, Droplet, ArrowUpToLine, ArrowDownToLine, Unlink2, Lightbulb, Fence, Server, Armchair, Users, Car, Trees, Split, Info, Plug, Printer, Frame, Merge, Group, Ungroup, Syringe, Stamp, History, LibraryBig, Waypoints, MapPin, Tag, Mountain, ShieldCheck, Cloud, Box,
-  Link2, ImagePlus,
+  Link2, ImagePlus, ListOrdered,
 } from 'lucide-react';
 // ADR-581 Φ6 — reactive 2-state σύριγγα icon (empty ⇄ full) driven by the brush store.
 // Direct module import (ΟΧΙ barrel) → ο ribbon icon chunk δεν τραβά command classes.
@@ -437,6 +437,7 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'topo-contours': return <Waypoints width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'topo-breakline': return <Spline width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'topo-auto-breakline': return <Sparkles width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'topo-breakline-list': return <ListOrdered width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'topo-georef': return <MapPin width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'topo-labels': return <Tag width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'topo-boundary': return <Pentagon width={sizePx[size]} height={sizePx[size]} className={className} />;

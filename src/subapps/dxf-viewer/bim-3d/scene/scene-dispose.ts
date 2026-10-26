@@ -58,11 +58,8 @@ export interface SceneOverlayDisposeDeps {
   readonly gridFloor: SceneDisposable;
   /** Υπόβαθρο χάρτη — υφές πλακιδίων στην κάρτα γραφικών. */
   readonly basemapLayer: SceneDisposable;
-  readonly terrainLayer: SceneDisposable;
-  readonly terrainContourLayer: SceneDisposable;
-  readonly terrainCutCapLayer: SceneDisposable;
-  readonly pointCloudLayer: SceneDisposable;
-  readonly autoBreaklineLayer: SceneDisposable;
+  /** ADR-650/665/920 — the whole topo layer set (`createTopoSceneLayers`), torn down in its own order. */
+  readonly topoLayers: SceneDisposable;
 }
 
 export function disposeSceneOverlayLayers(deps: SceneOverlayDisposeDeps): void {
@@ -81,11 +78,7 @@ export function disposeSceneOverlayLayers(deps: SceneOverlayDisposeDeps): void {
   // Χωρίς αυτό, κάθε άνοιγμα/κλείσιμο της 3Δ προβολής αφήνει πίσω τις υφές των πλακιδίων στη
   // μνήμη της κάρτας γραφικών — διαρροή που δεν φαίνεται ως σφάλμα, μόνο ως σταδιακή επιβράδυνση.
   deps.basemapLayer.dispose();
-  deps.terrainLayer.dispose(); // ADR-650 M4 — drop store subs + free the terrain mesh geometry.
-  deps.terrainContourLayer.dispose(); // ADR-650 M10d — drop store subs + free the contour line geometry.
-  deps.terrainCutCapLayer.dispose(); // ADR-665 M2 — drop the storey/scope subs + free the cap geometry.
-  deps.pointCloudLayer.dispose(); // ADR-650 M8β/Β — drop store sub + free the cloud buffers + material.
-  deps.autoBreaklineLayer.dispose(); // ADR-650 M8β/Γ — drop the review sub + free the candidate lines.
+  deps.topoLayers.dispose(); // ADR-650/665/920 — every topo layer: drop its store subs + free its geometry.
   disposeMeshReveal(); // ADR-693 Φ2 — free any in-flight reveal veil (per-instance material + geometry).
 }
 

@@ -10,8 +10,8 @@
  * Deterministic, χωρίς LLM — μηδέν κόστος (ίδια πειθαρχία με το M5α «καμπανάκι», του οποίου
  * το pattern «τρέξε → δες → δράσε» ακολουθεί αυτούσιο αυτό το section).
  *
- * Το κλικ σε γραμμή πάει τη ΖΩΝΤΑΝΗ όψη στην υποψήφια — μέσω του κοινού {@link focusReviewTarget}
- * (2Δ EventBus / 3Δ κάμερα) — και τη σημειώνει ως «αυτήν κοιτάω», ώστε να ξεχωρίζει ταυτόχρονα εδώ
+ * Το κλικ σε γραμμή πάει τη ΖΩΝΤΑΝΗ όψη στην υποψήφια — μέσω του topo συνόρου {@link focusTopoReviewTarget}
+ * (WORLD→DISPLAY, ADR-920 Β3.1 · 2Δ EventBus / 3Δ κάμερα) — και τη σημειώνει ως «αυτήν κοιτάω», ώστε να ξεχωρίζει ταυτόχρονα εδώ
  * ΚΑΙ στον καμβά (2Δ overlay + 3Δ layer). Δύο ανεξάρτητες σημάνσεις ανά υποψήφια, ποτέ μία: το
  * τσεκάρισμα λέει «θα γραφτεί», το κλικ λέει «τη βλέπω» — βλ. `AutoBreaklineState`.
  *
@@ -32,18 +32,9 @@ import {
 } from '../../../systems/topography/auto-breaklines/auto-breakline-store';
 import type { AutoBreaklineCandidate } from '../../../systems/topography/auto-breaklines/auto-breakline-types';
 import { mmToMetreString } from '../../../systems/topography/qa/topo-qa-format';
-import { focusReviewTarget, reviewFocusExtent } from '../../../systems/coordination/review-focus';
-import { resolveAutoBreaklineCandidateWorld } from '../../../bim-3d/coordination/auto-breakline-world';
+import { focusTopoReviewTarget, TOPO_REVIEW_FOCUS_PAD_MM } from '../../../systems/topography/topo-review-focus';
+import { resolveTopoLineWorld } from '../../../bim-3d/coordination/auto-breakline-world';
 import styles from './TopographyPanel.module.css';
-
-/**
- * Περιθώριο (canonical mm) γύρω από την υποψήφια όταν εστιάζει η όψη (~5 μ).
- *
- * Μικρότερο από το 15 μ του QA με λόγο: το QA δείχνει ένα ΣΗΜΕΙΟ και χρειάζεται γείτονες για να
- * κριθεί· η υποψήφια είναι ολόκληρη ΓΡΑΜΜΗ — το πλαίσιό της ορίζεται από το ίδιο της το μήκος και
- * το περιθώριο απλώς την ξεκολλάει από την άκρη της οθόνης.
- */
-const FOCUS_PAD_MM = 5_000;
 
 /**
  * Πήγαινε την ενεργή όψη στην υποψήφια και σημείωσέ την ως «αυτήν κοιτάω» (ADR-650 M8β/Γ).
@@ -64,13 +55,13 @@ function focusCandidate(candidate: AutoBreaklineCandidate): void {
   const preserveZoom = autoBreaklineStore.getFocusedId() !== null;
   autoBreaklineStore.focus(candidate.id);
 
-  const extent = reviewFocusExtent(candidate.vertices, FOCUS_PAD_MM);
-  if (!extent) return; // μη πεπερασμένες συντεταγμένες — φώτισε τη γραμμή, μη μετακινήσεις τίποτα
-
-  // Thunk: η 3Δ μετατροπή διαβάζει projector + datum και σε κάτοψη είναι καθαρή σπατάλη. Είναι ο
-  // ΙΔΙΟΣ resolver που χρησιμοποιεί το 3Δ layer, ώστε η γραμμή της λίστας και η γραμμή στο έδαφος
-  // να μη δείχνουν ποτέ διαφορετικό σημείο.
-  focusReviewTarget(extent, () => resolveAutoBreaklineCandidateWorld(candidate, extent.centre), preserveZoom);
+  // Οι κορυφές είναι WORLD (ΕΓΣΑ): το topo σύνορο τις προβάλλει για τον 2Δ καμβά (ADR-920 Β3.1) και δίνει
+  // στον 3Δ resolver το WORLD κέντρο. Μη πεπερασμένες συντεταγμένες → φώτισε τη γραμμή, μη μετακινήσεις
+  // τίποτα. Thunk: η 3Δ μετατροπή σε κάτοψη είναι καθαρή σπατάλη· είναι ο ΙΔΙΟΣ resolver με το 3Δ layer.
+  focusTopoReviewTarget(
+    candidate.vertices, TOPO_REVIEW_FOCUS_PAD_MM.line,
+    (worldCentre) => resolveTopoLineWorld(candidate, worldCentre), preserveZoom,
+  );
 }
 
 interface RowProps {

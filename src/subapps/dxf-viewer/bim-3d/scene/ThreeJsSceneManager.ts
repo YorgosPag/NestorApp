@@ -7,11 +7,7 @@ import { DxfBackdropCache } from './dxf-backdrop-cache'; import type { HoverBeau
 import { BimSceneLayer } from './BimSceneLayer';
 import { Cinema4DGridFloor } from './grid/cinema4d-grid-floor'; // ADR-558 — Cinema-4D-style ground grid
 import { BasemapGroundLayer } from './basemap/BasemapGroundLayer'; // υπόβαθρο χάρτη (OSM) κάτω από τον κάναβο
-import type { TerrainSceneLayer } from './terrain/TerrainSceneLayer'; // ADR-650 M4 — topographic surface
-import type { TerrainContourLayer } from './terrain/TerrainContourLayer'; // ADR-650 M10d — draped 3D contours
-import type { TerrainCutCapLayer } from './terrain/TerrainCutCapLayer'; // ADR-665 M2 — earth poche cap
-import type { PointCloudSceneLayer } from './terrain/PointCloudSceneLayer'; // ADR-650 M8β/Β — point cloud
-import type { TopoAutoBreaklineCandidateLayer } from './terrain/TopoAutoBreaklineCandidateLayer'; // ADR-650 M8β/Γ
+import type { TopoSceneLayers } from './terrain/topo-scene-layers'; // ADR-650/665/920 — topo layer set
 import type { PerformanceCollector } from '../performance/PerformanceCollector'; import type { IdleDetector } from '../lighting/idle-detector';
 import type { QualityModulator } from '../lighting/quality-modulator'; import type { SSAOModulator } from '../lighting/ssao-modulator';
 import type { ShadowModulator } from '../lighting/shadow-modulator';
@@ -81,11 +77,7 @@ export class ThreeJsSceneManager {
   readonly bimLayer: BimSceneLayer;
   private readonly gridFloor: Cinema4DGridFloor; // ADR-558 — Cinema-4D-style ground grid (post-FX underlay)
   private readonly basemapLayer: BasemapGroundLayer; // υπόβαθρο χάρτη (post-FX underlay, κάτω από τον κάναβο)
-  private readonly terrainLayer: TerrainSceneLayer; // ADR-650 M4 — topographic surface (TIN → mesh)
-  private readonly terrainContourLayer: TerrainContourLayer; // ADR-650 M10d — draped 3D contour lines
-  private readonly terrainCutCapLayer: TerrainCutCapLayer; // ADR-665 M2 — earth poche on the level cut
-  private readonly pointCloudLayer: PointCloudSceneLayer; // ADR-650 M8β/Β — display-only point cloud
-  private readonly autoBreaklineLayer: TopoAutoBreaklineCandidateLayer; // ADR-650 M8β/Γ — υποψήφιες υπό έγκριση
+  private readonly topoLayers: TopoSceneLayers; // ADR-650/665/920 — surface · contours · cut cap · cloud · breaklines
   readonly dxfConverter: DxfToThreeConverter;
   readonly selectionHighlighter: BimSelectionHighlighter;
   // ADR-538 hover silhouette / ADR-539 per-face overlays (Cinema4D «Polygon Mode»).
@@ -201,11 +193,7 @@ export class ThreeJsSceneManager {
     this.faceHighlighter = parts.faceHighlighter; this.faceHoverHighlighter = parts.faceHoverHighlighter;
     this.stairSubElementHighlighter = parts.stairSubElementHighlighter; this.stairSubUnsub = parts.stairSubUnsub;
     this.buriedPartHighlighter = parts.buriedPartHighlighter; this.buriedPartUnsub = parts.buriedPartUnsub;
-    this.poi = parts.poi; this.gridFloor = parts.gridFloor; this.basemapLayer = parts.basemapLayer; this.terrainLayer = parts.terrainLayer;
-    this.terrainContourLayer = parts.terrainContourLayer;
-    this.terrainCutCapLayer = parts.terrainCutCapLayer;
-    this.pointCloudLayer = parts.pointCloudLayer;
-    this.autoBreaklineLayer = parts.autoBreaklineLayer;
+    this.poi = parts.poi; this.gridFloor = parts.gridFloor; this.basemapLayer = parts.basemapLayer; this.topoLayers = parts.topoLayers;
     this.animationManager = parts.animationManager; this.canonicalViewService = parts.canonicalViewService;
     this.keyboardFocusManager = parts.keyboardFocusManager; this.focusOutlineRenderer = parts.focusOutlineRenderer;
     this.focusUnsub = parts.focusUnsub; this.viewCube = parts.viewCube;
@@ -475,9 +463,7 @@ export class ThreeJsSceneManager {
       dxfBackdrop: this.dxfBackdrop, hoverBeautyCache: this.hoverBeautyCache,
       stairSubUnsub: this.stairSubUnsub, stairSubElementHighlighter: this.stairSubElementHighlighter,
       buriedPartUnsub: this.buriedPartUnsub, buriedPartHighlighter: this.buriedPartHighlighter,
-      gridFloor: this.gridFloor, basemapLayer: this.basemapLayer, terrainLayer: this.terrainLayer,
-      terrainContourLayer: this.terrainContourLayer, terrainCutCapLayer: this.terrainCutCapLayer,
-      pointCloudLayer: this.pointCloudLayer, autoBreaklineLayer: this.autoBreaklineLayer,
+      gridFloor: this.gridFloor, basemapLayer: this.basemapLayer, topoLayers: this.topoLayers,
     });
     // ADR-040 Phase XXIII — no rafHandle: BimViewport3D unregisters the scheduler BEFORE dispose(), so no in-flight tick races teardown.
     disposeSceneManagerResources({

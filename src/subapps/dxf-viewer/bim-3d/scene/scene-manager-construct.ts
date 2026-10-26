@@ -42,11 +42,7 @@ import { initViewCube } from './scene-setup';
 import { computeSceneFramingBounds } from './scene-framing-bounds';
 import { initBackgroundModeSubscription } from './scene-manager-actions';
 import { WaypointDragHandleRenderer } from '../animation/WaypointDragHandle';
-import { TerrainSceneLayer } from './terrain/TerrainSceneLayer'; // ADR-650 M4 — topographic surface
-import { TerrainContourLayer } from './terrain/TerrainContourLayer'; // ADR-650 M10d — draped 3D contours
-import { TerrainCutCapLayer } from './terrain/TerrainCutCapLayer'; // ADR-665 M2 — poché χώματος στην τομή
-import { PointCloudSceneLayer } from './terrain/PointCloudSceneLayer'; // ADR-650 M8β/Β — point cloud (display-only)
-import { TopoAutoBreaklineCandidateLayer } from './terrain/TopoAutoBreaklineCandidateLayer'; // ADR-650 M8β/Γ — υποψήφιες ασυνέχειες
+import { createTopoSceneLayers, type TopoSceneLayers } from './terrain/topo-scene-layers'; // ADR-650/665/920 — topo layer set
 
 export interface SceneManagerConstructDeps {
   readonly container: HTMLElement;
@@ -84,12 +80,8 @@ export interface SceneManagerParts {
   readonly poi: ReturnType<typeof createPoi>;
   readonly gridFloor: Cinema4DGridFloor;
   readonly basemapLayer: BasemapGroundLayer; // υπόβαθρο χάρτη — αδερφός του καννάβου, ένα σκαλί κάτω
-  readonly terrainLayer: TerrainSceneLayer; // ADR-650 M4 — topographic surface (TIN → mesh)
-  readonly terrainContourLayer: TerrainContourLayer; // ADR-650 M10d — draped contour lines (once, real z)
-  readonly terrainCutCapLayer: TerrainCutCapLayer; // ADR-665 M2 — earth poche on the level cut
-  readonly pointCloudLayer: PointCloudSceneLayer; // ADR-650 M8β/Β — display-only cloud (never geometry)
-  /** ADR-650 M8β/Γ — auto-breakline proposals under review (never the survey until approved). */
-  readonly autoBreaklineLayer: TopoAutoBreaklineCandidateLayer;
+  /** ADR-650/665/920 — surface · contours · cut cap · point cloud · candidate + committed breaklines. */
+  readonly topoLayers: TopoSceneLayers;
   readonly animationManager: AnimationManager;
   readonly canonicalViewService: CanonicalViewService;
   readonly keyboardFocusManager: KeyboardFocusManagerApi;
@@ -195,31 +187,10 @@ export function buildSceneManagerParts(deps: SceneManagerConstructDeps): SceneMa
   // ΠΡΙΝ υπάρξει ο controller, οπότε σκέτο `() => sectionController.applyState()` θα έριχνε TDZ.
   let reapplyTopoClip: (root: THREE.Object3D) => void = () => {};
 
-  // ADR-650 M4 — topographic surface. Subscribes to the survey + display stores itself and
-  // rebuilds its mesh from the ONE derived TIN (the same one the 2D contours are cut from).
-  const terrainLayer = new TerrainSceneLayer(scene, markDirty, (root) => reapplyTopoClip(root));
-
-  // ADR-650 M10d — οι ισοϋψείς της ΙΔΙΑΣ επιφάνειας ως draped γραμμές στο πραγματικό υψόμετρο (μία
-  // φορά, όχι ανά όροφο). Ξεχωριστό layer από το mesh: εμφανίζεται/κρύβεται μαζί με το έδαφος, αλλά
-  // είναι γραμμές (Revit Toposurface contours), ανεξάρτητο από το floor scope.
-  const terrainContourLayer = new TerrainContourLayer(scene, markDirty, (root) => reapplyTopoClip(root));
-
-  // ADR-665 M2 — η ΕΠΙΦΑΝΕΙΑ της τομής του εδάφους: poché χώματος αντί για κούφιο κέλυφος. Τρίτο
-  // αδερφάκι και όχι περιεχόμενο του terrain layer, γιατί ακούει τη ΣΤΑΘΜΗ (ενεργός όροφος +
-  // floor scope) που τα άλλα δύο δεν ακούν — και κάθεται σε άλλο clip scope (M2.6): η κοπή που τον
-  // γέννησε δεν τον τρώει, οι τομές του κτιρίου τον κόβουν. Ίδιο `reapplyTopoClip` καλλάκι: ένα
-  // φρέσκο υλικό ξεκινά με `clippingPlanes = null` και μόνο ο controller τα ξαναβάζει.
-  const terrainCutCapLayer = new TerrainCutCapLayer(scene, markDirty, (root) => reapplyTopoClip(root));
-
-  // ADR-650 M8β/Β — το νέφος σημείων του τελευταίου import. Ξεχωριστό layer από το έδαφος: το
-  // έδαφος είναι η ΜΕΤΡΗΜΕΝΗ επιφάνεια, το νέφος είναι display-only τεκμήριο (§6) — μπαίνουν και
-  // βγαίνουν ανεξάρτητα, και το νέφος δεν συμμετέχει ποτέ σε raycast/snap.
-  const pointCloudLayer = new PointCloudSceneLayer(scene, markDirty);
-
-  // ADR-650 M8β/Γ — οι ΠΡΟΤΕΙΝΟΜΕΝΕΣ γραμμές ασυνέχειας υπό έγκριση, ως draped γραμμές πάνω στο έδαφος.
-  // Ξεχωριστό layer από τις ισοϋψείς: οι ισοϋψείς είναι ΠΡΟΪΟΝ της αποτύπωσης, οι υποψήφιες είναι
-  // ΠΡΟΤΑΣΗ που ζει όσο κρατάει ο έλεγχος (§9) — μπαίνουν και βγαίνουν με το review store, όχι με το TIN.
-  const autoBreaklineLayer = new TopoAutoBreaklineCandidateLayer(scene, markDirty, (root) => reapplyTopoClip(root));
+  // ADR-650/665/920 — ολόκληρο το σύνολο των topo layers (επιφάνεια · ισοϋψείς · cap τομής · νέφος ·
+  // υποψήφιες + δεσμευμένες ασυνέχειες). Η σειρά κατασκευής/αποδέσμευσης και ο λόγος ύπαρξης του
+  // καθενός ζουν σε ΕΝΑ σημείο: `terrain/topo-scene-layers.ts`.
+  const topoLayers = createTopoSceneLayers(scene, markDirty, (root) => reapplyTopoClip(root));
 
   // Phase 4.2 — single animation manager (ADR-040 — ticked by the main RAF).
   const animationManager = createAnimationManager();
@@ -281,7 +252,7 @@ export function buildSceneManagerParts(deps: SceneManagerConstructDeps): SceneMa
     selectionHighlighter, hoverHighlighter, faceHighlighter, faceHoverHighlighter,
     stairSubElementHighlighter, stairSubUnsub,
     buriedPartHighlighter, buriedPartUnsub,
-    poi, gridFloor, basemapLayer, terrainLayer, terrainContourLayer, terrainCutCapLayer, pointCloudLayer, autoBreaklineLayer,
+    poi, gridFloor, basemapLayer, topoLayers,
     animationManager, canonicalViewService,
     keyboardFocusManager, focusOutlineRenderer, focusUnsub, viewCube,
     envStoreUnsub, bgModeUnsub, sectionController, waypointDragHandleRenderer,

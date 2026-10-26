@@ -58,7 +58,7 @@
     "src/subapps/dxf-viewer/snapping/orchestrator/__tests__/SnapOrchestrator.broad-phase-equivalence.test.ts": "2b13008ddd978943",
     "src/subapps/dxf-viewer/systems/explode/__tests__/explode-text.test.ts": "655f088073291f7f",
     "src/subapps/dxf-viewer/systems/selection/shared/__tests__/selection-combined-bounds.test.ts": "a4cdb0112eaea12e",
-    "src/subapps/dxf-viewer/systems/topography/__tests__/topo-bake-frame-seam.test.ts": "e5aadb99cda796ce",
+    "src/subapps/dxf-viewer/systems/topography/__tests__/topo-bake-frame-seam.test.ts": "d6739911e3c4c3ee",
     "src/subapps/dxf-viewer/text-engine/fonts/__tests__/_stub-font.ts": "de533f6e23547bbe",
     "src/subapps/dxf-viewer/text-engine/fonts/__tests__/glyph-tracking.test.ts": "7bf8a830c9ea64b0",
     "src/subapps/dxf-viewer/text-engine/fonts/__tests__/text-advance.test.ts": "c28568e1d061c1db",

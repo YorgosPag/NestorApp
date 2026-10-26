@@ -907,9 +907,77 @@ i18n `dxf-viewer-panels:topography.qa.flag.breaklineCrossing` / `.breaklineVerte
 (`components/dxf-layout/topo-breakline-paint/`) για δεσμευμένες **και** υποψήφιες· ο κοινός δρόμος WORLD→οθόνη διόρθωσε
 δύο overlays (υποψήφιες, ⊙ QA) που δεν πρόβαλλαν ΕΓΣΑ→DISPLAY.
 
-**Επόμενα**: **Β2** → **Β3** → **5γ** worker `TerrainPreview` → πύλες (μαζί 3.22) → κλείσιμο §13.8.
+**Βήμα Β2 — οι ασυνέχειες στην 3Δ** ✅ (2026-10-25 · ADR-650 v40 · ADR-452)
+
+| Υπο-βήμα | Τι | Αρχεία |
+|---|---|---|
+| Β2.0 | Λεξιλόγιο σε **ορατά px** + προσαρμογείς SVG (στρογγυλά άκρα: dash−w / gap+w) και 3Δ (επίπεδα)· κανόνας «παύλα ποτέ κοντύτερη από το πάχος». Διορθώνει το Ε2 (`8 4` → 11/1 με round caps) | `systems/topography/topo-breakline-style.ts` |
+| Β2.1 | Παύλα σε **px οθόνης** στο fat line (4 άγκυρες στο shader του three 0.170, pin test στο πραγματικό shader) | `bim-3d/lines/scene-fat-line{,-screen-dash}.ts` |
+| Β2.2 | Κοινός κατάλογος fat υλικών + `screen-dot-material` (εξαγωγή από τις υποψήφιες, N.18) · υλικά casing/core/κουκκίδων | `bim-3d/materials/` |
+| Β2.3 | Καθαρός μετατροπέας: πραγματικό z, projector + datum, crop με `coveredIntervals`, ομάδες ανά μοτίβο (≤ 3) · `filterPointsBelowCutY` | `bim-3d/converters/topo-breakline-to-three.ts` · `bim-3d/scene/edge-cut-trim.ts` |
+| Β2.4 | `TopoBreaklineLayer` + `resolveTopoHorizontalCutWorldY` + ομαδοποίηση των topo layers | `bim-3d/scene/terrain/{TopoBreaklineLayer,topo-scene-layers,terrain-clip-plane,terrain-clip-math}.ts` |
+
+Ευρήματα του audit του Β2.4:
+- **Α3** — η CPU κοπή των ακμών (ADR-452, `applyEdgeCutTrim`) τρέχει **μόνο** μέσα στο `renderFrameWithCaps`, δηλαδή μόνο με
+  τομή **κτιρίου**· η κοπή μόνο του εδάφους (η συνηθισμένη: αλλαγή ορόφου) δεν την ενεργοποιεί ποτέ. Γι' αυτό το layer κόβεται
+  μόνο του, με τα ίδια καθαρά `clipLineSegmentsToCutY` / `filterPointsBelowCutY`.
+- **Α6** — οι παχιές γραμμές θα έμπαιναν στο stencil parity όταν το section box τέμνει το έδαφος· `excludeFromSectionParity` σε κάθε pass.
+- **Α9** (καταγραφή, εκτός εμβέλειας) — το `resolveActiveBuildingBaseElevationM` διαβάζει `Bim3DEntitiesStore`, που δεν το ακούει
+  ούτε ο cap, ούτε ο controller, ούτε το νέο layer· αλλαγή της βάσης του κτιρίου χωρίς άλλο συμβάν αφήνει την κοπή στην παλιά στάθμη.
+- Γνωστό όριο: X/Y τομές + section box δεν κόβουν fat lines (ίδιο με τις ακμές, ADR-452/455).
+
+Επαλήθευση: 33 tests στο `scene/terrain` (layer · σύνολο · resolver) · 193 σουίτες / 1.756 tests (`bim-3d/{scene,converters,materials,lines}` +
+`systems/topography`) · μεταλλάξεις **5/5** με επαναφορά sha1 · 3.28 ✅ · ζωντανά: έδαφος on/off, κοπή στάθμης on/off (η ασυνέχεια
+των 3 m κόβεται μαζί με την κορυφογραμμή), καμία κονσόλα σφαλμάτων. Μη επαληθευμένα ζωντανά: τα μοτίβα διακεκομμένης/στικτής
+(τα δεδομένα δοκιμής έχουν μόνο συνεχείς) και το section box.
+
+**Βήμα Β3 — η λίστα «Ασυνέχειες επιφάνειας»** ✅ (2026-10-26 · ADR-650 v41 · ADR-040) — Civil 3D Prospector ›
+Definition › Breaklines **και** η vista «Crossing Breaklines» σε ένα πάνελ, χτισμένο μόνο πάνω σε ό,τι υπάρχει ήδη.
+
+| Υπο-βήμα | Τι | Αρχεία |
+|---|---|---|
+| Β3.0 | Επαλήθευση Ε5: το επίπεδο δοκιμής είναι «Χωρίς γεωαναφορά» (identity projector) ⇒ το σφάλμα 2Δ Zoom To αποδεικνύεται με test, όχι ζωντανά | — |
+| Β3.1 | **Zoom To SSoT**: `topoReviewFocusFrame` (pure, WORLD → DISPLAY κουτί + WORLD κέντρο) + `focusTopoReviewTarget(points, padMm, resolveWorld, preserveZoom)`· QA + αυτόματες ασυνέχειες περνούν από εκεί. `TOPO_REVIEW_FOCUS_PAD_MM = {point 15 m, line 5 m}` (οι τοπικές σταθερές των δύο sections διαγράφηκαν). Το `review-focus.ts` (DISPLAY, ModelFromDrawing) αμετάβλητο | `systems/topography/topo-review-focus.ts` |
+| Β3.2 | **Ζεύγος σύγκρουσης**: `BreaklineElevationConflict.keptBreaklineId?` (απόν ⇒ κράτησε σημείο αποτύπωσης)· owner κάθε κόμβου, και του νέου κόμβου διασταύρωσης· μήνυμα QA με ICU `select` (`keptLine`) | `src/lib/terrain/{terrain-types,tin-breakline-resolve,tin-builder}.ts` · `qa/check-breakline-conflicts.ts` |
+| Β3.3 | **Undo**: `SetTopoBreaklinesCommand` (`add` / `remove` / `clear`, snapshot, `null` όταν τίποτα δεν αλλάζει) — εργαλείο, ribbon «Καθαρισμός», έγκριση αυτόματων (Ν γραμμές = ΕΝΑ undo). Διαγράφηκαν `addBreakline`/`removeBreakline` (δεύτερη, μη αναιρέσιμη πόρτα) | `core/commands/entity-commands/SetTopoBreaklinesCommand.ts` · `TopoPointStore.ts` |
+| Β3.4 | **Μάτι + focus**: `topo-breakline-display-store` `{visible (αποθηκεύεται, προεπιλογή true), focusedId (εφήμερο)}`· 2Δ overlay `null` όταν κρυφό, η εστιασμένη γραμμή τελευταία με πάχος focus + halo (`BREAKLINE_FOCUS_HALO`, κοινό με τις υποψήφιες)· 3Δ πύλη `visible ∧ isLayerShown()` στη βάση των topo layers· toggle στο tab Τοπογραφία **και** στο contextual tab επιφάνειας· το hint του εργαλείου λέει «κρυφές» όσο είναι κρυφές | `topo-breakline-display-store.ts` · `TopoBreaklineOverlay.tsx` · `topo-scene-layer-support.ts` · `TopoBreaklineLayer.ts` · `TopoRibbonToggleWidgets.tsx` · `topo-breakline-hint.ts` |
+| Β3.5 | **Πάνελ**: pure `buildBreaklineInventory` (γραμμές: #n του QA, πηγή z σε λέξη, μήκος, εύρος Z, κορυφές, υγεία δεσμού, πλήθος συγκρούσεων· συγκρούσεις = **τα ίδια** flags με το QA) + `TopoBreaklineListSection/Row/PatternSwatch` + `TopoQaFlagRow` (εξαγωγή από το QA). Zoom To με περιθώριο γραμμής· κλικ σε σύγκρουση φωτίζει τη γραμμή που **λύγισε**· αφαίρεση = η ΜΙΑ αναιρέσιμη εντολή· κλείσιμο πάνελ ⇒ καμία γραμμή φωτισμένη. Πέμπτο `TopoReviewPanel` (slot 4) + κουμπί `topo.breaklineList.open` | `topo-breakline-inventory.ts` · `ui/panels/topography/TopoBreaklineList*.tsx` · `TopoQaFlagRow.tsx` · `app/TopoRibbonHost.tsx` |
+
+Αποφάσεις και ευρήματα:
+- **Τίποτα δεν παράγεται δεύτερη φορά**: γραμμές από τον ορισμό (`TopoPointStore`), συγκρούσεις από την αναφορά του **ενός**
+  τριγωνισμού (`getTopoBuildReport`, κανένα δεύτερο `buildTin`), ταξινόμηση/μήνυμα/σοβαρότητα από τα εξαγόμενα
+  `rankBreaklineConflicts` / `breaklineConflictFlag` / `breaklineLabelsOf` — το test καρφώνει την ισότητα με το `checkBreaklineConflicts`.
+- **Υγεία δεσμού derived**, ποτέ αποθηκευμένη: `live` / `missing` (σβήστηκε η πηγαία γραμμή — η επιφάνεια κρατά το τελευταίο
+  σχήμα, όπως στο Civil 3D, αλλά **το λέμε**) / `none` (εγκεκριμένη αυτόματη)· χωρίς σκηνή ⇒ `null`, ποτέ ψευδές «σβήστηκε».
+- **Το μάτι κρύβει, δεν αφαιρεί**: η επιφάνεια κόβεται ακόμα (σημείωση στο πάνελ + στο hint) — Civil 3D «Breaklines» component off.
+- Πέρα από το Prospector: Zoom To σε γραμμή του ορισμού (ζητείται στο AUGI από το 2008), η πηγή του z σε λέξη **και** ως
+  μοτίβο, η υγεία δεσμού, η σύγκρουση που φωτίζει τη γραμμή.
+- Σημάδι SSoT (N.0.2): ο resolver 3Δ των υποψηφίων έγινε κοινός — `resolveTopoLineWorld` / `meanLineElevationMm`
+  (`bim-3d/coordination/auto-breakline-world.ts`, πρώην `resolveAutoBreaklineCandidateWorld` / `meanCandidateElevationMm`)·
+  `committedBreaklinePaint` κοινό για overlay και swatch.
+- Persistence: προαιρετικό `breaklineDisplay` στο topo doc (απουσία ⇒ `visible: true`, παλιά έγγραφα αμετάβλητα· rules χωρίς
+  allowlist ⇒ κανένα deploy). Το `topoStateSignature` έγινε `stableStringify({surfaces, ...topoSettingsDocFields(state)})`:
+  δομικά πλήρες — κάθε νέο πεδίο ρυθμίσεων μπαίνει αυτόματα στο φίλτρο echo (έκλεισε και κλώνο jscpd).
+
+Επαλήθευση: 130 σουίτες / 1.327 tests (2 skipped) · μεταλλάξεις 4/4 (Β3.4) + 4/4 (Β3.5) με επαναφορά sha1 · 3.28 ✅ · CHECK
+3.43 αμετάβλητο (theme tokens). 
+Ζωντανά (Chrome, 2026-10-26): 3 γραμμές «άγνωστη πηγή» + 2 συγκρούσεις (1,00/3,00 · 3,00/2,00)· Zoom To 2Δ (εστιασμένη με halo) και 3Δ· κλικ σε σύγκρουση φωτίζει τη #2 που λύγισε με την κλίμακα διατηρημένη· μάτι 2Δ + 3Δ + ribbon συγχρονισμένα, `breaklineDisplay` στο έγγραφο, επιβιώνει reload· αφαίρεση → «Καμία σύγκρουση» → Ctrl+Z → 3 + 2 (έγγραφο ταυτόσημο με πριν)· κλείσιμο πάνελ σβήνει την εστίαση· «σβήστηκε» **αληθινό** (οι `polyline_0..2` δεν υπάρχουν στη σκηνή — επιβεβαιώθηκε επιλέγοντας κάτω από τη γραμμή)· 0 σφάλματα κονσόλας στις αλληλεπιδράσεις.
+Ανοιχτά (καταγραφή): Α10 το Zoom To πλαισιώνει όλον τον καμβά — το πλωτό πάνελ μπορεί να κρύψει άκρο της γραμμής·
+Α11 η εστίαση φαίνεται μόνο στην 2Δ· Α12 τα id του DXF import είναι ανά δείκτη (`polyline_${index}`) ⇒ μετά από **άλλο**
+αρχείο ο δεσμός μπορεί να βγει ψευδώς `live`. Στο commit: `npm run generate:i18n-types` (3.33) +
+`npm run text-measure:census` με το `.text-measure-census.json` στο ίδιο commit (3.64).
+
+**Επόμενα**: **Β3.6** (Resolve Crossing, προαιρετικό) → **5γ** worker `TerrainPreview` → πύλες (μαζί 3.22) → κλείσιμο §13.8.
 
 ## Changelog
+- **2026-10-26 (v21)** — **Β4.8 βήμα Β3 ✅** (§13.8, Β3.0–Β3.5): η λίστα «Ασυνέχειες επιφάνειας» — Zoom To SSoT
+  (`focusTopoReviewTarget`), ζεύγος σύγκρουσης (`keptBreaklineId`), undo (`SetTopoBreaklinesCommand`), μάτι + focus
+  (`topo-breakline-display-store`, 2Δ + 3Δ + ribbon + hint, αποθηκεύεται), πάνελ πάνω σε `buildBreaklineInventory` με τα
+  ίδια flags με το QA (ADR-650 v41 · ADR-040). Μετονομασία `resolveAutoBreaklineCandidateWorld` → `resolveTopoLineWorld`·
+  `topoStateSignature` δομικά πλήρες. Ζωντανά ✅ (Chrome)· ανοιχτά Α10–Α12· Β3.6 (Resolve Crossing) προαιρετικό.
+- **2026-10-25 (v20)** — **Β4.8 βήμα Β2 ✅** (§13.8): οι δεσμευμένες ασυνέχειες στην 3Δ — λεξιλόγιο σε ορατά px (+ fix Ε2),
+  παύλα σε px οθόνης στο fat line, `TopoBreaklineLayer` με CPU κοπή στη στάθμη του `'topo'` scope, εκτός stencil parity,
+  ομαδοποίηση των topo layers (ADR-650 v40 · ADR-452). Καταγράφηκαν Α3 (το trim του ADR-452 δεν τρέχει σε κοπή μόνο εδάφους) και Α9.
 - **2026-10-25 (v19)** — **Β4.8 υπο-βήμα 5β ✅** (§13.8): μετρήσεις σε σκέτο Node + LoAF στον viewer — ο CDT < 1 ms στα
   δεδομένα του viewer, η δημοσίευση 10k–29k 166–479 ms ⇒ worker **μόνο** στο 5γ, καμία αλλαγή στον viewer. Νέα βήματα
   ορατότητας ασυνεχειών (Γ → Β1 → Β2 → Β3)· **Γ ✅**: το hint του εργαλείου παράγεται από το store (ADR-650 v38)· **Β1 ✅**: οι ασυνέχειες φαίνονται στην κάτοψη, μοτίβο = πηγή του z, + fix προβολής 2 overlays (ADR-650 v39).

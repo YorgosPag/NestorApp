@@ -4,7 +4,7 @@
  * A CANDIDATE is not a breakline: it is a PROPOSAL, and it stays one until the engineer ticks
  * it and presses «Προσθήκη» (§9 — human-certifier; Civil 3D and CloudCompare both propose and
  * wait). Nothing in this module reaches the survey definition: only the panel's explicit
- * confirm calls `addBreakline`, which is where the enterprise id is minted (N.6). Hence the
+ * confirm calls `createBreakline`, which is where the enterprise id is minted (N.6). Hence the
  * candidate's own `id` is a transient, deterministic review key — never persisted.
  *
  * Types file (no logic) — exempt from the 500-line rule.
@@ -20,7 +20,7 @@ export interface AutoBreaklineCandidate {
    * Ordered vertices in WORLD canonical mm. When `closed`, the first is NOT repeated.
    *
    * ADR-720 — {@link TopoPoint3D}: these come straight off TIN nodes, which are elevated by
-   * construction, and they feed `addBreakline`, which requires elevations.
+   * construction, and they feed `createBreakline`, which requires elevations.
    */
   readonly vertices: readonly TopoPoint3D[];
   /** True when the chain returns to its start (a ring — e.g. the rim of a pond). */

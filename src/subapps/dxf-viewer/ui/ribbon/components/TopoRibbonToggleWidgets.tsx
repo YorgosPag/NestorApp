@@ -22,6 +22,7 @@ import {
   Boxes,
   EyeOff,
   Spline,
+  Route,
   Waypoints,
   Navigation,
   Mountain,
@@ -70,6 +71,11 @@ import {
   setTopoCrop,
   subscribeTopo,
 } from '../../../systems/topography/TopoPointStore';
+import {
+  getBreaklineDisplayState,
+  setBreaklinesVisible,
+  subscribeBreaklineDisplay,
+} from '../../../systems/topography/topo-breakline-display-store';
 import type { TopoBoundaryLink } from '../../../systems/topography/topo-types';
 import { useContourDisplay } from '../../../systems/topography/useContourDisplay';
 
@@ -184,6 +190,16 @@ const TERRAIN_VISIBLE = toggleConfig(
   Mountain, EyeOff, keys('terrainVisible'),
 );
 
+// ADR-920 Β3.4 — το «μάτι» των ασυνεχειών: ΙΔΙΟΣ store με το 2Δ overlay και το 3Δ layer (μία κατηγορία,
+// δύο όψεις — Revit VG). Ζει στο panel «Επιφάνεια» δίπλα στο εργαλείο ΚΑΙ στο contextual «Εμφάνιση».
+const BREAKLINES_VISIBLE = toggleConfig(
+  () => {
+    const st = React.useSyncExternalStore(subscribeBreaklineDisplay, getBreaklineDisplayState, getBreaklineDisplayState);
+    return { value: st.visible, toggle: () => setBreaklinesVisible(!getBreaklineDisplayState().visible) };
+  },
+  Route, EyeOff, keys('breaklinesVisible'),
+);
+
 const TERRAIN_STYLE = toggleConfig(
   () => {
     const st = React.useSyncExternalStore(subscribeTerrain3D, getTerrain3DState, getTerrain3DState);
@@ -269,6 +285,7 @@ export const ContourStyleToggle: React.FC = () => <RibbonToggleWidget config={CO
 export const NorthModeToggle: React.FC = () => <RibbonToggleWidget config={NORTH_MODE} />;
 export const CutFillModeToggle: React.FC = () => <RibbonToggleWidget config={CUTFILL_MODE} />;
 export const TerrainVisibleToggle: React.FC = () => <RibbonToggleWidget config={TERRAIN_VISIBLE} />;
+export const TopoBreaklinesVisibleToggle: React.FC = () => <RibbonToggleWidget config={BREAKLINES_VISIBLE} />;
 export const TerrainStyleToggle: React.FC = () => <RibbonToggleWidget config={TERRAIN_STYLE} />;
 export const TerrainAutoClipToggle: React.FC = () => <RibbonToggleWidget config={TERRAIN_AUTOCLIP} />;
 

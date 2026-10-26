@@ -583,6 +583,42 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
 
 ## Changelog
 
+- **2026-10-26 (v41)** — **M2 μέρος Β: η λίστα «Ασυνέχειες επιφάνειας»** ([ADR-920](./ADR-920-listing-plot-terrain.md) §13.8 «Βήμα Β3»).
+  Civil 3D Prospector › Breaklines + vista «Crossing Breaklines» σε ένα πάνελ (πέμπτο `TopoReviewPanel`, κουμπί στο tab
+  Τοπογραφία): μία γραμμή ανά ασυνέχεια με τον αριθμό #n του QA, πηγή του z σε λέξη **και** ως μοτίβο, μήκος, εύρος Z,
+  κορυφές, υγεία δεσμού (`live` / `missing` / `none`, derived από τη σκηνή) και πλήθος συγκρούσεων· από πάνω οι συγκρούσεις
+  ως **τα ίδια** flags με το QA (`rankBreaklineConflicts` / `breaklineConflictFlag` εξαγόμενα από το `check-breakline-conflicts`).
+  - **Ζεύγος σύγκρουσης**: `BreaklineElevationConflict.keptBreaklineId?` — ποια γραμμή κράτησε το υψόμετρο (απόν ⇒ σημείο
+    αποτύπωσης)· το μήνυμα QA το λέει με ICU `select`.
+  - **Zoom To SSoT** `topo-review-focus.ts` (WORLD → DISPLAY → WORLD κέντρο για την 3Δ) για QA, αυτόματες και λίστα·
+    `TOPO_REVIEW_FOCUS_PAD_MM`. Η πρώτη μετάβαση πλαισιώνει, οι επόμενες κρατούν την κλίμακα του μηχανικού.
+  - **Undo**: `SetTopoBreaklinesCommand` (add/remove/clear) — κάθε γραφέας ασυνεχειών περνά από το global history·
+    διαγράφηκαν `addBreakline`/`removeBreakline` του store.
+  - **Μάτι + focus**: `topo-breakline-display-store` (ορατότητα αποθηκεύεται στο topo doc ως `breaklineDisplay`, focus εφήμερο).
+    Κρύβει κάτοψη **και** 3Δ μαζί (`isLayerShown()` στη βάση των topo layers)· η επιφάνεια **κόβεται ακόμα** και το hint/πάνελ
+    το λένε. Η εστιασμένη γραμμή: πάχος focus + halo (`BREAKLINE_FOCUS_HALO`, κοινό με τις υποψήφιες).
+  - SSoT: `resolveAutoBreaklineCandidateWorld` / `meanCandidateElevationMm` → `resolveTopoLineWorld` / `meanLineElevationMm`
+    (η αναφορά στο v-entry της αγκύρωσης κάμερας πιο κάτω κρατά το παλιό όνομα, ιστορικά)· `topoStateSignature` =
+    `stableStringify({surfaces, ...topoSettingsDocFields})`, δομικά πλήρες για κάθε νέο πεδίο ρυθμίσεων.
+  - Επαλήθευση: 130 σουίτες / 1.327 tests · μεταλλάξεις 8/8 · 3.28 ✅ · ζωντανά ✅ (Chrome: λίστα, συγκρούσεις, Zoom To 2Δ/3Δ, μάτι + reload, αφαίρεση/Ctrl+Z, κονσόλα καθαρή).
+
+- **2026-10-25 (v40)** — **M2 μέρος Β: οι ασυνέχειες στην 3Δ** ([ADR-920](./ADR-920-listing-plot-terrain.md) §13.8 «Βήμα Β2»).
+  Μέχρι σήμερα η 3Δ έδειχνε μόνο τις **υποψήφιες**· οι δεσμευμένες ασυνέχειες, οι περιορισμοί από τους οποίους χτίζεται το TIN,
+  δεν σχεδιάζονταν. Τώρα `TopoBreaklineLayer` (πέμπτο `TopoSceneLayer`): ίδια πρόταση με την κάτοψη (κίτρινη σε σκούρο casing,
+  μοτίβο = πηγή του z, κουκκίδα σε κάθε κορυφή), κάθε γραμμή στο **δικό της** z (Civil 3D: η πηγαία 3D polyline) ⇒ μια
+  διασταύρωση με σύγκρουση φαίνεται ως απόκλιση από το έδαφος, δεν «απλώνεται» πάνω του. Ίδιος projector + datum + crop με το mesh.
+  - **Παύλες σε pixel οθόνης** (`scene-fat-line-screen-dash`, `onBeforeCompile` πάνω στο `LineMaterial`, ακριβείς και σε
+    προοπτική): ούτε το Civil 3D (μη συνεχής linetype σε 3D polyline) ούτε το three.js το κάνουν.
+  - 🔴 **Λανθάνον σφάλμα Β1**: με στρογγυλά άκρα πάχους 3 τα μοτίβα 2Δ γίνονταν σχεδόν ίδια (`8 4` → ορατό 11/1). Το
+    λεξιλόγιο (`topo-breakline-style`) έγινε **ορατά px** με δύο προσαρμογείς (SVG στρογγυλά άκρα · 3Δ επίπεδα).
+  - **Κοπή στη CPU**: `LineMaterial`/`PointsMaterial` δεν παίρνουν clip planes· το layer κόβει τα δικά του buffers στο
+    `resolveTopoHorizontalCutWorldY()` = min(κοπή εδάφους, Z cut), δηλαδή στα **ίδια** επίπεδα που κόβουν το έδαφος στη GPU.
+    Μόνο η στάθμη άλλαξε ⇒ ξανακόβει χωρίς ξαναπροβολή.
+  - **Εκτός stencil parity** (`LineSegments2` = `Mesh` με depthTest, χωρίς `bimId` — ίδια κλάση με τον cap, ADR-665 M2.7).
+  - Ομαδοποίηση: τα 6 topo layers σε `terrain/topo-scene-layers.ts` (ένα `SceneDisposable` στον manager, 499 → 485 γραμμές).
+  - Ζωντανά (Chrome): με κοπή στάθμης η ασυνέχεια των 3 m κόβεται **μαζί** με την κορυφογραμμή της, χωρίς κοπή εμφανίζεται·
+    έδαφος off ⇒ φεύγουν. ⚠️ Όριο, ίδιο με τις ακμές (ADR-452/455): οι κάθετες X/Y τομές και το section box δεν κόβουν fat lines.
+
 - **2026-10-25 (v39)** — **M2 μέρος Β: οι ασυνέχειες ΦΑΙΝΟΝΤΑΙ στην κάτοψη + η πηγή του υψομέτρου τους αποθηκεύεται**
   ([ADR-920](./ADR-920-listing-plot-terrain.md) §13.8 «Βήμα Β1»). Μέχρι σήμερα μια ασυνέχεια που έκοβε την επιφάνεια δεν
   σχεδιαζόταν πουθενά. Τώρα `TopoBreaklineOverlay`: **πάντα ορατές** όσο υπάρχουν (Civil 3D: η πηγή φαίνεται πάντα·

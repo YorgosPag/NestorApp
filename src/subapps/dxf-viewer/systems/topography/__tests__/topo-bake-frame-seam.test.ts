@@ -33,6 +33,7 @@ import { bakedGroupOfLayerName } from '../topo-baked-groups';
 import { clearAllBakedFrames } from '../topo-baked-frame-store';
 import { TOPO_CROP_OFF } from '../topo-types';
 import { DEFAULT_CONTOUR_CONFIG, DEFAULT_CONTOUR_DISPLAY_STYLE } from '../contour-config';
+import { DEFAULT_BREAKLINE_DISPLAY_PREFS } from '../topo-breakline-display-store';
 import type { Entity } from '../../../types/entities';
 import type { SceneModel, AnySceneEntity } from '../../../types/scene';
 
@@ -139,6 +140,7 @@ const LEGACY_DOC_STATE: TopoPersistedState = {
   terrain3d: { visible: false, style: 'shaded' },
   cutFill: { mode: 'datum', datumZMm: 0 },
   bakedFrames: {},
+  breaklineDisplay: DEFAULT_BREAKLINE_DISPLAY_PREFS,
 };
 
 describe('ADR-650 §M10g — ραφή ψησίματος → reconciler μέσα από τον ΑΛΗΘΙΝΟ store', () => {

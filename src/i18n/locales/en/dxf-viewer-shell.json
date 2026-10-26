@@ -68,7 +68,8 @@
       "addedElevation": "Breakline added (elevation from the line) · total: {count}",
       "addedProximity": "Breakline added (elevation from the nearest points) · total: {count}",
       "removed": "Breakline removed · total: {count}",
-      "needsPoints": "Load survey points first — a 2D line carries no elevation"
+      "needsPoints": "Load survey points first — a 2D line carries no elevation",
+      "whileHidden": "{message} · Breaklines are hidden — they will not show until you turn them on (Topography › Surface › Breaklines)"
     }
   },
   "topoBoundary": {
@@ -5047,6 +5048,10 @@
         "generate": {
           "label": "Generate contours"
         },
+        "breaklineList": {
+          "label": "Breakline list",
+          "dialogTitle": "Surface breaklines"
+        },
         "autoBreakline": {
           "label": "Auto breaklines",
           "dialogTitle": "Automatic Breaklines"
@@ -5165,6 +5170,13 @@
           "off": "Show",
           "tooltipOn": "Hide the 3D terrain relief",
           "tooltipOff": "Show the 3D terrain relief"
+        },
+        "breaklinesVisible": {
+          "label": "Breaklines",
+          "on": "Hide",
+          "off": "Show",
+          "tooltipOn": "Hide breaklines in plan and 3D (the surface is still cut by them)",
+          "tooltipOff": "Show breaklines in plan and 3D"
         },
         "terrainStyle": {
           "label": "Colouring",

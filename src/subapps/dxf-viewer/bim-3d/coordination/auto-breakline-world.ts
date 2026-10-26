@@ -28,21 +28,30 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { AutoBreaklineCandidate } from '../../systems/topography/auto-breaklines/auto-breakline-types';
+import type { TopoPoint3D } from '../../systems/topography/topo-types';
 import { getActiveVerticalDatumMm } from '../../systems/topography/vertical-datum';
 import { getActiveWorldToDisplayProjector } from '../../systems/geo-referencing/geo-reference-store';
 import { topoWorldPointToThree } from './topo-world-point-math';
 import type { WorldTriple } from '../viewport/plan-to-world-math';
 
 /**
- * Mean WORLD elevation (canonical mm) of a candidate's vertices, ignoring non-finite ones.
+ * ADR-920 Β3.5 — anything framed by its WORLD vertices: an auto-breakline CANDIDATE or a COMMITTED breakline. Both
+ * carry measured z on every vertex (chained from TIN edges · picked from a drawing line), so the same anchoring rule
+ * holds and the breakline list frames a committed line through this very resolver — never a twin.
+ */
+export interface TopoVertexLine {
+  readonly vertices: readonly TopoPoint3D[];
+}
+
+/**
+ * Mean WORLD elevation (canonical mm) of a line's vertices, ignoring non-finite ones.
  * `null` when not a single vertex has a usable Z — the caller must then not move the camera.
  * Pure: exported so the anchoring rule can be pinned by tests without a store.
  */
-export function meanCandidateElevationMm(candidate: AutoBreaklineCandidate): number | null {
+export function meanLineElevationMm(line: TopoVertexLine): number | null {
   let sum = 0;
   let count = 0;
-  for (const v of candidate.vertices) {
+  for (const v of line.vertices) {
     if (!Number.isFinite(v.z)) continue;
     sum += v.z;
     count += 1;
@@ -58,11 +67,11 @@ export function meanCandidateElevationMm(candidate: AutoBreaklineCandidate): num
  * `centre` comes from the caller's `reviewFocusExtent`, so the 2D fit and the 3D framing target the
  * very same spot; deriving it a second time here is exactly how the two would drift apart.
  */
-export function resolveAutoBreaklineCandidateWorld(
-  candidate: AutoBreaklineCandidate,
+export function resolveTopoLineWorld(
+  line: TopoVertexLine,
   centre: Point2D,
 ): WorldTriple | null {
-  const elevationMm = meanCandidateElevationMm(candidate);
+  const elevationMm = meanLineElevationMm(line);
   if (elevationMm === null) return null;
   return topoWorldPointToThree(centre, elevationMm, {
     projector: getActiveWorldToDisplayProjector(),

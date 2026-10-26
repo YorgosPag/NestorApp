@@ -168,10 +168,14 @@ export abstract class TopoSceneLayer<TInputs extends object> {
    * Contours belong to the surface — shown with it, hidden with it (Revit Toposurface parity) — so
    * the visibility gate lives here, once, for every topo layer. Cheap when hidden: an invisible
    * layer costs nothing on every survey edit.
+   *
+   * ADR-920 Β3.4 — the gate is `terrain visible ∧ isLayerShown()`: ONE gate, with a per-layer display toggle
+   * on top of the surface's own (a layer that has none keeps the default `true`). A hidden layer goes through
+   * the same clear path as a hidden terrain — never a second `if` inside a subclass's `rebuildGeometry`.
    */
   private rebuild(): void {
     if (this.disposed) return;
-    if (getTerrain3DState().visible) {
+    if (getTerrain3DState().visible && this.isLayerShown()) {
       this.rebuildGeometry();
     } else {
       this.clearContent();
@@ -179,6 +183,14 @@ export abstract class TopoSceneLayer<TInputs extends object> {
       this.markDirty();
     }
     this.onRebuilt(this.root);
+  }
+
+  /**
+   * ADR-920 Β3.4 — this layer's OWN display toggle, read at rebuild time (the subclass subscribes the store
+   * that owns it through `extra`). Default: no toggle of its own — shown whenever the terrain is.
+   */
+  protected isLayerShown(): boolean {
+    return true;
   }
 
   /**

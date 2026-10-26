@@ -15,7 +15,9 @@
 
 import type { TopoSurfaceId } from '../topo-types';
 import type { AutoBreaklineCandidate, AutoBreaklineReport } from './auto-breakline-types';
-import { getTopoBreaklines, addBreakline } from '../TopoPointStore';
+import { getTopoBreaklines, createBreakline } from '../TopoPointStore';
+import { SetTopoBreaklinesCommand } from '../../../core/commands/entity-commands/SetTopoBreaklinesCommand';
+import { getGlobalCommandHistory } from '../../../core/commands/CommandHistory';
 import { getTopoSurface } from '../topo-surface';
 import { findSteepUnconstrainedEdges } from './detect-feature-edges';
 import { chainFeatureEdges } from './chain-feature-edges';
@@ -45,23 +47,23 @@ export function detectAutoBreaklines(surfaceId: TopoSurfaceId = 'existing'): Aut
 }
 
 /**
- * Commit the candidates the engineer approved — one `addBreakline` each (enterprise id minted
+ * Commit the candidates the engineer approved — one `createBreakline` record each (enterprise id minted
  * there, N.6). The surface rebuilds itself off the changed definition (`topo-surface` memo),
  * so the very next `detectAutoBreaklines` no longer proposes what was just accepted: the
  * accepted edges are now CONSTRAINED, and constrained edges are not candidates. Idempotent by
  * construction — re-running the pass cannot duplicate a breakline.
  *
  * Returns the ids actually created (a candidate with fewer than 2 vertices cannot exist, but
- * `addBreakline` is the authority on that, not this caller).
+ * `createBreakline` is the authority on that, not this caller). All of them land as ONE undoable command.
  */
 export function acceptAutoBreaklines(
   candidates: readonly AutoBreaklineCandidate[],
   surfaceId: TopoSurfaceId = 'existing',
 ): string[] {
-  const created: string[] = [];
-  for (const candidate of candidates) {
-    const id = addBreakline(candidate.vertices, candidate.closed, undefined, surfaceId, 'surface');
-    if (id !== null) created.push(id);
-  }
-  return created;
+  // ADR-920 Β3.3 — N approvals = ONE undo: «Προσθήκη» is one decision of the engineer, and one Ctrl+Z takes
+  // all of it back (not the lines they approved together one by one).
+  const created = candidates.flatMap((c) => createBreakline(c.vertices, c.closed, undefined, 'surface') ?? []);
+  const command = SetTopoBreaklinesCommand.add(surfaceId, created);
+  if (command) getGlobalCommandHistory().execute(command);
+  return created.map((b) => b.id);
 }

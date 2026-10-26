@@ -28,7 +28,7 @@ import * as React from 'react';
 import { useTranslation } from '@/i18n';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Bell, Cloud, Mountain, Sparkles } from 'lucide-react';
+import { Bell, Cloud, ListOrdered, Mountain, Sparkles } from 'lucide-react';
 import { EventBus } from '../systems/events/EventBus';
 import { useTopoContours } from '../systems/topography/useTopoContours';
 import { useTopoGrid } from '../systems/topography/useTopoGrid';
@@ -50,13 +50,15 @@ import { TopoAutoBreaklineSection } from '../ui/panels/topography/TopoAutoBreakl
 import { TopoCutFillSection } from '../ui/panels/topography/TopoCutFillSection';
 import { TopoCloud3DSection } from '../ui/panels/topography/TopoCloud3DSection';
 import { TopoReviewPanel } from '../ui/panels/topography/TopoReviewPanel';
+// ADR-920 Β3.5 — η λίστα των ΔΕΣΜΕΥΜΕΝΩΝ ασυνεχειών: review surface (Zoom To / μάτι / αφαίρεση με τον καμβά ζωντανό).
+import { TopoBreaklineListSection } from '../ui/panels/topography/TopoBreaklineListSection';
 import { runTopoRibbonAction, type TopoRibbonDeps } from './topo-ribbon-actions';
 
 /**
  * Cascade slots for the review panels. Fixed per panel (not «order opened»): a panel must reopen
  * where the engineer last saw it, and a slot that shuffled with the open order would move it.
  */
-const REVIEW_SLOT = { qa: 0, autoBreakline: 1, cutFill: 2, cloud: 3 } as const;
+const REVIEW_SLOT = { qa: 0, autoBreakline: 1, cutFill: 2, cloud: 3, breaklineList: 4 } as const;
 
 export function TopoRibbonHost(): React.JSX.Element {
   const { t } = useTranslation('dxf-viewer-shell');
@@ -75,6 +77,7 @@ export function TopoRibbonHost(): React.JSX.Element {
   const [autoBreaklineOpen, setAutoBreaklineOpen] = React.useState(false);
   const [cutFillOpen, setCutFillOpen] = React.useState(false);
   const [cloudOpen, setCloudOpen] = React.useState(false);
+  const [breaklineListOpen, setBreaklineListOpen] = React.useState(false);
 
   // Fresh deps snapshot every render → the once-registered EventBus listener always
   // reads the latest hook callbacks / dialog openers (useEventCallback identity pattern).
@@ -90,6 +93,7 @@ export function TopoRibbonHost(): React.JSX.Element {
     openAutoBreakline: () => setAutoBreaklineOpen(true),
     openCutFill: () => setCutFillOpen(true),
     openCloud: () => setCloudOpen(true),
+    openBreaklineList: () => setBreaklineListOpen(true),
   };
 
   React.useEffect(() => EventBus.on('topo:ribbon-action', ({ action }) => {
@@ -160,6 +164,17 @@ export function TopoRibbonHost(): React.JSX.Element {
           testId="topo-cloud-panel"
         >
           <TopoCloud3DSection />
+        </TopoReviewPanel>
+      )}
+      {breaklineListOpen && (
+        <TopoReviewPanel
+          title={t('ribbon.commands.topo.breaklineList.dialogTitle')}
+          icon={<ListOrdered />}
+          onClose={() => setBreaklineListOpen(false)}
+          stackIndex={REVIEW_SLOT.breaklineList}
+          testId="topo-breakline-list-panel"
+        >
+          <TopoBreaklineListSection />
         </TopoReviewPanel>
       )}
     </>

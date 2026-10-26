@@ -48,3 +48,21 @@ export function computeTerrainClipWorldY(inputs: TerrainClipInputs): number | nu
     computeCutPlaneWorldY(floorElevationMm, 0, buildingBaseElevationM) + CUT_PLANE_KEEP_EPSILON_M
   );
 }
+
+/**
+ * ADR-920 Β4.8 Β2.4 — the HORIZONTAL cut the `'topo'` scope actually applies, as one world-Y.
+ *
+ * The scope is cut by the terrain's level plane AND by every building axis cut (ADR-665 composes
+ * `[terrainCut, ...axisCuts]`); of those, the horizontal ones — the terrain cut and the Z cut — both keep
+ * what is BELOW (`sign: 1`). Two keep-below half-spaces intersect into the lower one, so the effective cut
+ * is the minimum. `null` = nothing cuts horizontally.
+ *
+ * Consumers are the layers the GPU cannot clip (`LineMaterial` fat lines, `PointsMaterial` discs —
+ * `section-clip-applicator`): they trim on the CPU to this ONE value, so they stop at exactly the height
+ * where the hill under them is cut.
+ */
+export function lowestKeepBelowCutY(cuts: readonly (number | null)[]): number | null {
+  let lowest: number | null = null;
+  for (const y of cuts) if (y !== null && (lowest === null || y < lowest)) lowest = y;
+  return lowest;
+}
