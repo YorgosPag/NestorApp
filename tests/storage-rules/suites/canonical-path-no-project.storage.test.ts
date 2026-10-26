@@ -8,7 +8,8 @@
  *
  * Rule: read requires `isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin())`
  *       write requires `isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin())
- *                       && (isValidFileSize() || isListingVideoUpload())` — ADR-907 §10
+ *                       && (isValidFileSize() || isListingVideoUpload() || isCatalogAssetUpload())`
+ *                       — ADR-907 §10 · ADR-923 §5.10.3
  *       delete requires `isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin())`
  *
  * Note: write rule here adds an explicit `isAuthenticated()` check at the top
@@ -142,6 +143,31 @@ describe('canonical-path-no-project.storage — company_scoped_no_project patter
     it('Β8 το γενικό ταβάνι των 50 MB στέκει για κάθε άλλο αρχείο (ως σήμερα χωρίς άγκυρα)', async () => {
       await assertFails(upload(`${TEST_PATH}--big`, GENERAL_CAP, 'application/octet-stream'));
       await assertSucceeds(upload(`${TEST_PATH}--fits`, GENERAL_CAP - 1, 'application/octet-stream'));
+    });
+  });
+
+  // ADR-923 §5.10.3 — τα μέσα καταλόγου παίρνουν μεγαλύτερο ταβάνι (`isCatalogAssetUpload`), ΠΡΟΣΘΕΤΙΚΑ.
+  // ⚠️ Το ίδιο το ταβάνι (500 MB, `<=`) το φυλάει η άγκυρα κειμένου `catalog-asset-storage-ceiling.test.ts` απέναντι
+  //    στο `CATALOG_ASSET_UPLOAD_CEILING_BYTES`: ένα πραγματικό ανέβασμα 500 MB + 1 θα ήταν 1 GB μεταφοράς ανά εκτέλεση.
+  //    Εδώ αποδεικνύεται ότι το σκέλος είναι ΚΑΛΩΔΙΩΜΕΝΟ: περνά ό,τι το γενικό ταβάνι κόβει, και μόνο για `catalog_asset`.
+  describe('🔴 Γ — ταβάνι μεγέθους των μέσων καταλόγου (ADR-923 §5.10.3)', () => {
+    const catalogPath = (entityType: string, suffix: string): string =>
+      `companies/${COMPANY_ID}/entities/${entityType}/casst_test` +
+      `/domains/catalog/categories/models/files/file_${suffix}.rfa`;
+    const upload = (path: string, size: number, persona: StoragePersona = 'same_tenant_user') =>
+      getStorageContext(env, persona).storage().ref(path).put(PAYLOAD.subarray(0, size), { contentType: 'application/octet-stream' });
+
+    it('🔑 Γ1 μέσο καταλόγου πάνω από 50 MB ανεβαίνει — ο λόγος ύπαρξης του σκέλους', async () => {
+      await assertSucceeds(upload(catalogPath('catalog_asset', 'big'), OVER_GENERAL_CAP));
+    });
+
+    it('Γ2 …ΜΟΝΟ για `catalog_asset` — το ίδιο αρχείο σε άλλη οντότητα κόβεται', async () => {
+      await assertFails(upload(catalogPath('material', 'big'), OVER_GENERAL_CAP));
+    });
+
+    it('Γ3 το σκέλος ΔΕΝ ανοίγει ξένο χώρο ούτε ανώνυμο', async () => {
+      await assertFails(upload(catalogPath('catalog_asset', 'x'), OVER_GENERAL_CAP, 'cross_tenant_user'));
+      await assertFails(upload(catalogPath('catalog_asset', 'a'), OVER_GENERAL_CAP, 'anonymous'));
     });
   });
 });

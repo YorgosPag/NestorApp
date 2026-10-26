@@ -180,11 +180,20 @@ service firebase.storage {
                && request.resource.size <= 100 * 1024 * 1024;
       }
 
+      // 🗂️ ADR-923 §5.10.3 — τα μέσα καταλόγου παίρνουν ΜΕΓΑΛΥΤΕΡΟ ταβάνι, τίποτε άλλο (ίδιο ιδίωμα με το βίντεο).
+      // Το ταβάνι = το μέγιστο του `CATALOG_ASSET_MAX_BYTES` (`subapps/catalog/vocabulary/asset-files.ts`) — ΙΣΟ
+      // με εκείνο, άγκυρα `catalog-asset-storage-ceiling.test.ts`. Το όριο ΑΝΑ ΕΙΔΟΣ (εικόνα 200 MB · BIM 500 MB …)
+      // και ο τύπος του αρχείου κρίνονται στον server, στη σύνδεση με το μέσο (`attachCatalogAssetFile`).
+      function isCatalogAssetUpload() {
+        return entityType == 'catalog_asset'
+               && request.resource.size <= 500 * 1024 * 1024;
+      }
+
       // ✍️ WRITE: Company-scoped + size validation
       // 🏢 ENTERPRISE: Multi-tenant isolation
       allow write: if isAuthenticated()
                    && (belongsToCompany(companyId) || isSuperAdmin())
-                   && (isValidFileSize() || isListingVideoUpload());
+                   && (isValidFileSize() || isListingVideoUpload() || isCatalogAssetUpload());
 
       // 🗑️ DELETE: Company-scoped access
       allow delete: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
