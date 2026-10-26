@@ -57,6 +57,8 @@ export interface UseEntityFilesParams {
    * αντικαθιστά `domain`/`category`/`purpose` ως κριτής: ό,τι ανεβαίνει από την καρτέλα, φαίνεται σε αυτήν.
    */
   scopes?: readonly FileScope[];
+  /** ADR-916 Φ-Γ3 — καρτέλα-καταφύγιο: διαβάζει **και** ό,τι δεν διεκδικούν αυτές (`FilesTabScopePolicy.readsUnclaimedBy`). */
+  unclaimedBy?: readonly FileScope[];
   /** ADR-236 Phase 3: Filter unit floorplans by level floor ID */
   levelFloorId?: string;
   /** Auto-fetch on mount (default: true) */
@@ -134,6 +136,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
   const custody = useStableFileCustody(params.custody);
   // ADR-866 §2.10 Β1 — με εμβέλειες το ερώτημα δεν στενεύει κατά domain/category· κρίνει το ΕΝΑ φίλτρο ανάγνωσης.
   const scopes = internFileScopes(params.scopes);
+  const unclaimedBy = internFileScopes(params.unclaimedBy);
   const { domain, category } = readQueryNarrowing(params, scopes);
 
   // State
@@ -194,7 +197,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
       // 🏢 ENTERPRISE: Client-side purpose filtering (backward compatible)
       // Helper extracted to useEntityFiles-purpose-filter — see module docs
       // for META_TAB_PURPOSES and '*-floorplan' semantics (ADR-293 Phase 7).
-      const filterByPurpose = buildFileReadFilter(purpose, scopes);
+      const filterByPurpose = buildFileReadFilter(purpose, scopes, unclaimedBy);
 
       const filteredOwned = fetchedFiles
         .filter(FileRecordService.isVisibleInActiveLists)
@@ -240,7 +243,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
     } finally {
       setLoading(false);
     }
-  }, [entityType, entityId, custody, domain, category, purpose, scopes, levelFloorId]);
+  }, [entityType, entityId, custody, domain, category, purpose, scopes, unclaimedBy, levelFloorId]);
 
   // =========================================================================
   // 🏢 ADR-240: REAL-TIME LISTENER (Firestore onSnapshot) — `useEntityFilesRealtime`
@@ -269,6 +272,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
     category,
     purpose,
     scopes,
+    unclaimedBy,
     levelFloorId,
     onFiles: setFiles,
     onLoading: setLoading,

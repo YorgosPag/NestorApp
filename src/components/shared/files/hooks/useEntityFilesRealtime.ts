@@ -40,6 +40,8 @@ interface UseEntityFilesRealtimeParams {
   readonly purpose?: string;
   /** ADR-866 §2.10 Β1 — interned (`internFileScopes`): ίδια ταυτότητα για ίδιο περιεχόμενο, ασφαλές σε deps. */
   readonly scopes?: readonly FileScope[];
+  /** ADR-916 Φ-Γ3 — καρτέλα-καταφύγιο (interned, όπως τα `scopes`). */
+  readonly unclaimedBy?: readonly FileScope[];
   readonly levelFloorId?: string;
   readonly onFiles: (files: FileRecord[]) => void;
   readonly onLoading: (loading: boolean) => void;
@@ -65,7 +67,7 @@ function realtimeConstraints(params: UseEntityFilesRealtimeParams): QueryConstra
 }
 
 export function useEntityFilesRealtime(params: UseEntityFilesRealtimeParams): void {
-  const { enabled, entityType, entityId, custody, domain, category, purpose, scopes, levelFloorId } = params;
+  const { enabled, entityType, entityId, custody, domain, category, purpose, scopes, unclaimedBy, levelFloorId } = params;
 
   // Stable refs — avoids subscription re-creation on every render
   const purposeRef = useRef(purpose);
@@ -83,7 +85,7 @@ export function useEntityFilesRealtime(params: UseEntityFilesRealtimeParams): vo
     const unsubscribe = firestoreQueryService.subscribe<DocumentData>(
       FILE_COLLECTION[fileReadKindOf(custody)],
       (result: QueryResult<DocumentData>) => {
-        const filterByPurpose = buildFileReadFilter(purposeRef.current, scopes);
+        const filterByPurpose = buildFileReadFilter(purposeRef.current, scopes, unclaimedBy);
         const records = result.documents
           .map(doc => toFileRecord(doc))
           .filter((r): r is FileRecord => r !== null)
@@ -113,5 +115,5 @@ export function useEntityFilesRealtime(params: UseEntityFilesRealtimeParams): vo
     return () => {
       unsubscribe();
     };
-  }, [enabled, entityType, entityId, custody, domain, category, scopes, levelFloorId]);
+  }, [enabled, entityType, entityId, custody, domain, category, scopes, unclaimedBy, levelFloorId]);
 }

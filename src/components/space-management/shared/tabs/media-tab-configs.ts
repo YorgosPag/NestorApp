@@ -27,6 +27,11 @@ export interface MediaTabEntryPointScope {
   readonly offer: readonly string[];
   readonly read: readonly string[];
   readonly purposeAuthority: PurposeAuthority;
+  /**
+   * ADR-916 Φ-Γ3 — **καρτέλα-καταφύγιο**: οι αδελφές καρτέλες της ίδιας οντότητας. Η καρτέλα διαβάζει **επιπλέον** ό,τι
+   * δεν διαβάζει καμία από αυτές ⇒ κάθε αρχείο φαίνεται σε **ακριβώς μία** καρτέλα (`mediaTabScopePolicy`).
+   */
+  readonly shelterFor?: readonly MediaTabConfig[];
 }
 
 /** Presentational + storage configuration for a single media/files tab. */

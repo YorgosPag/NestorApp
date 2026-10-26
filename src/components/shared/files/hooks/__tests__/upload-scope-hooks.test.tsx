@@ -101,6 +101,41 @@ describe('Α38.1γ — useEntityFiles διαβάζει με τις εμβέλε�
 });
 
 /**
+ * Γ40β — ADR-916 Φ-Γ3: **η καρτέλα-καταφύγιο** (`unclaimedBy`) κρατά ό,τι δεν διεκδικεί καμία αδελφή — και στις **δύο**
+ * διαδρομές του hook (εφάπαξ ανάγνωση **και** ακροατής). Μετάλλαξη: ένα από τα δύο να μην περνά το `unclaimedBy` ⇒ 🔴.
+ */
+describe('Γ40β — useEntityFiles: η καρτέλα-καταφύγιο κρατά ό,τι δεν διεκδικεί καμία αδελφή', () => {
+  const DEED: FileScope = { domain: 'admin', category: 'documents', purpose: 'study-title-deed' };
+  const PHOTO: FileScope = { domain: 'sales', category: 'photos', purpose: 'interior' };
+  const FAY: FileScope = { domain: 'construction', category: 'documents', purpose: 'study-say-fay' };
+  const files = [fileWith('f_deed', DEED), fileWith('f_photo', PHOTO), fileWith('f_fay', FAY)];
+
+  it('εφάπαξ ανάγνωση: δικά της + αδιεκδίκητα, ΠΟΤΕ τα αρχεία αδελφής', async () => {
+    (FileRecordService.getFilesByEntity as jest.Mock).mockReset().mockResolvedValue(files);
+    const { result } = renderHook(() => useEntityFiles({
+      entityType: 'property_dossier', entityId: 'pdos_1', custody: { userId: 'uid_owner' }, scopes: [DEED], unclaimedBy: [PHOTO],
+    }));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.files.map((file) => file.id).sort()).toEqual(['f_deed', 'f_fay']);
+  });
+
+  it('ζωντανός ακροατής: η ΙΔΙΑ απάντηση', async () => {
+    let onData: ((result: { documents: FileRecord[] }) => void) | undefined;
+    (firestoreQueryService.subscribe as jest.Mock).mockImplementation((_key: string, data: typeof onData) => {
+      onData = data;
+      return jest.fn();
+    });
+    const { result } = renderHook(() => useEntityFiles({
+      entityType: 'property_dossier', entityId: 'pdos_1', custody: { userId: 'uid_owner' },
+      scopes: [DEED], unclaimedBy: [PHOTO], realtime: true,
+    }));
+    await waitFor(() => expect(onData).toBeDefined());
+    act(() => { onData?.({ documents: files }); });
+    expect(result.current.files.map((file) => file.id).sort()).toEqual(['f_deed', 'f_fay']);
+  });
+});
+
+/**
  * Α39.2 — ADR-866 §2.10.8 Β5: **ο ακροατής ΚΑΤΕΧΕΙ τη λίστα**. Στην παραγωγή το `refetch` μετά το ανέβασμα απαντιόταν
  * από την όψη του ίδιου ακροατή ~100ms **πριν** φτάσει η εγγραφή — και έσβηνε ό,τι είχε φέρει ο ακροατής.
  *

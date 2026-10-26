@@ -56,6 +56,12 @@ export interface UploadTabDefaults {
 export interface FilesTabScopePolicy {
   readonly readScopes: readonly FileScope[];
   readonly purposeAuthority: PurposeAuthority;
+  /**
+   * ADR-916 Φ-Γ3 — **η καρτέλα-καταφύγιο**: διαβάζει **επιπλέον** ό,τι **δεν** διεκδικούν αυτές οι εμβέλειες (οι
+   * εμβέλειες των αδελφών καρτελών). Έτσι κάθε αρχείο της οντότητας φαίνεται σε **ακριβώς μία** καρτέλα — ποτέ σε
+   * καμία. Παράλειψη ⇒ η καρτέλα διαβάζει **μόνο** τις δικές της εμβέλειες (ό,τι ίσχυε).
+   */
+  readonly readsUnclaimedBy?: readonly FileScope[];
 }
 
 type ScopeSource = Pick<UploadEntryPoint, 'domain' | 'category' | 'purpose'>;
@@ -103,15 +109,36 @@ export function matchesFileScopes(
 }
 
 /**
+ * **Διαβάζει η καρτέλα αυτό το αρχείο;** — οι δικές της εμβέλειες **ή**, για την καρτέλα-καταφύγιο, «δεν το διεκδικεί
+ * καμία αδελφή» (ADR-916 Φ-Γ3). Ο ΕΝΑΣ κριτής: τον ρωτούν το φίλτρο των hooks **και** το `propertyDossierFileTabOf`.
+ */
+export function matchesTabRead(
+  file: Pick<FileRecord, 'domain' | 'category' | 'purpose'>,
+  scopes: readonly FileScope[],
+  unclaimedBy: readonly FileScope[] | undefined,
+): boolean {
+  return matchesFileScopes(file, scopes) || (unclaimedBy !== undefined && !matchesFileScopes(file, unclaimedBy));
+}
+
+/**
  * **Το ΕΝΑ φίλτρο ανάγνωσης** — κοινό για φόρτωση (`useEntityFiles`) **και** realtime (`useEntityFilesRealtime`).
- * Με εμβέλειες κρίνουν αυτές· χωρίς, ο ιστορικός κανόνας σκοπού (`buildPurposeFilter`) αυτούσιος.
+ * Με εμβέλειες κρίνουν αυτές (+ το καταφύγιο, {@link matchesTabRead})· χωρίς, ο ιστορικός κανόνας σκοπού αυτούσιος.
  */
 export function buildFileReadFilter(
   purpose: string | undefined,
   scopes: readonly FileScope[] | undefined,
+  unclaimedBy?: readonly FileScope[],
 ): (file: Pick<FileRecord, 'domain' | 'category' | 'purpose'>) => boolean {
   if (!scopes) return buildPurposeFilter(purpose);
-  return (file) => matchesFileScopes(file, scopes);
+  return (file) => matchesTabRead(file, scopes, unclaimedBy);
+}
+
+/** Ό,τι περνά το κέλυφος στο `useEntityFiles` από την πολιτική της καρτέλας — ένα σημείο, όχι δύο πεδία με το χέρι. */
+export function tabReadParams(policy: FilesTabScopePolicy | undefined): {
+  readonly scopes?: readonly FileScope[];
+  readonly unclaimedBy?: readonly FileScope[];
+} {
+  return { scopes: policy?.readScopes, unclaimedBy: policy?.readsUnclaimedBy };
 }
 
 /**

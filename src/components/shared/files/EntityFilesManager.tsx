@@ -65,7 +65,7 @@ import { useFileUpload } from './hooks/useFileUpload';
 import { useFileDownload } from './hooks/useFileDownload';
 import { useEntityFilesSearch } from './hooks/useEntityFilesSearch';
 import { useStableFileCustody } from './hooks/useStableFileCustody';
-import { fileListIsLive, type FilesTabScopePolicy } from './utils/upload-scope';
+import { fileListIsLive, tabReadParams, type FilesTabScopePolicy } from './utils/upload-scope';
 
 // Components
 import { EntityFilesToolbar } from './EntityFilesToolbar';
@@ -192,7 +192,7 @@ export function EntityFilesManager({
     domain: fetchAllDomains ? undefined : domain,
     category: fetchAllDomains ? undefined : category,
     purpose: fetchAllDomains ? undefined : purpose,
-    scopes: scopePolicy?.readScopes,
+    ...tabReadParams(scopePolicy),
     levelFloorId,
     autoFetch: true,
     realtime: liveList,

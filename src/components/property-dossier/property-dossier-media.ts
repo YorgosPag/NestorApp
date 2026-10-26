@@ -32,7 +32,7 @@ import {
 import { floorplanTabKind } from '@/lib/property-dossier/property-dossier-view';
 import { propertyDossierMediaBinding } from '@/components/space-management/shared/tabs/entity-media-binding';
 import { mediaTabScopePolicy } from '@/components/space-management/shared/tabs/media-tab-scope';
-import { matchesFileScopes } from '@/components/shared/files/utils/upload-scope';
+import { matchesTabRead } from '@/components/shared/files/utils/upload-scope';
 import type { FileRecord } from '@/types/file-record';
 import type { PropertyDossier } from '@/types/property-dossier';
 
@@ -62,9 +62,20 @@ export function propertyDossierViewClass(type: PropertyDossier['type']): Propert
   return floorplanTabKind(type) === 'topographic' ? 'land' : 'building';
 }
 
-/** **Η ρύθμιση μιας καρτέλας αρχείων του φακέλου** — κοινή παρουσίαση + εύρος από την όψη του καταλόγου. */
-export function propertyDossierMediaTab(tab: PropertyDossierFileTab, type: PropertyDossier['type']): MediaTabConfig {
-  const viewClass = propertyDossierViewClass(type);
+/**
+ * ADR-916 Φ-Γ3 — **η καρτέλα-καταφύγιο του φακέλου**. Ό,τι δεν διεκδικεί καμία καρτέλα με τύπους, φαίνεται εδώ.
+ *
+ * 🔴 **Γιατί (μετρημένο 2026-10-25, πραγματικός κριτής)**: το αντίγραφο της παράδοσης κρατά `domain`/`category`/σκοπό
+ *    της **πηγής** (ίδιο έγγραφο, ADR-866 §3.1). ΦΑΥ · ΜΕΑ · πυροπροστασία · όλα τα αρχιτεκτονικά/στατικά/Η/Μ · φωτογραφίες
+ *    κοινόχρηστων — και αρχεία ακινήτου με σκοπό `video`/`photo`/`document`, πανοράματα, μοντέλα — **δεν** ταίριαζαν σε
+ *    καμία καρτέλα ⇒ παραδίδονταν **αόρατα**. Τώρα: κάθε αρχείο σε **ακριβώς μία** καρτέλα (Drive «Άλλα» · Procore «Γενικά»).
+ * 🔑 Αλλάζει **μόνο** το τι **φαίνεται** — ό,τι **προσφέρεται** για ανέβασμα μένει ίδιο.
+ */
+const DOSSIER_SHELTER_TAB: PropertyDossierFileTab = 'documents';
+const DOSSIER_TABS: readonly PropertyDossierFileTab[] = ['floorplan', 'documents', 'photos', 'videos'];
+
+/** Η ρύθμιση μιας καρτέλας **χωρίς** καταφύγιο — αυτό που διεκδικεί η ίδια. */
+function typedDossierMediaTab(tab: PropertyDossierFileTab, viewClass: PropertyDossierViewClass): MediaTabConfig {
   return {
     ...DOSSIER_TAB_PRESENTATION[tab],
     emptyKey: emptyKeyOf(tab, viewClass),
@@ -74,6 +85,15 @@ export function propertyDossierMediaTab(tab: PropertyDossierFileTab, type: Prope
       purposeAuthority: 'entry',
     },
   };
+}
+
+/** **Η ρύθμιση μιας καρτέλας αρχείων του φακέλου** — κοινή παρουσίαση + εύρος από την όψη του καταλόγου (+ καταφύγιο). */
+export function propertyDossierMediaTab(tab: PropertyDossierFileTab, type: PropertyDossier['type']): MediaTabConfig {
+  const viewClass = propertyDossierViewClass(type);
+  const typed = typedDossierMediaTab(tab, viewClass);
+  if (tab !== DOSSIER_SHELTER_TAB || typed.entryPointScope === undefined) return typed;
+  const shelterFor = DOSSIER_TABS.filter((other) => other !== tab).map((other) => typedDossierMediaTab(other, viewClass));
+  return { ...typed, entryPointScope: { ...typed.entryPointScope, shelterFor } };
 }
 
 /**
@@ -97,8 +117,8 @@ export function propertyDossierFileTabOf<T extends PropertyDossierFileTab>(
 ): T | null {
   const binding = propertyDossierMediaBinding(dossier);
   const match = tabs.find((tab) => {
-    const scopes = mediaTabScopePolicy(binding, propertyDossierMediaTab(tab, dossier.type))?.readScopes;
-    return scopes !== undefined && matchesFileScopes(file, scopes);
+    const policy = mediaTabScopePolicy(binding, propertyDossierMediaTab(tab, dossier.type));
+    return policy !== undefined && matchesTabRead(file, policy.readScopes, policy.readsUnclaimedBy);
   });
   return match ?? null;
 }

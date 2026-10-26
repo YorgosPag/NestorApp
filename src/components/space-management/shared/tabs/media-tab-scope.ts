@@ -10,6 +10,7 @@
 import { selectOfferedEntryPoints, type UploadEntryPoint } from '@/config/upload-entry-points';
 import {
   tabReadScopes,
+  type FileScope,
   type FilesTabScopePolicy,
   type UploadTabDefaults,
 } from '@/components/shared/files/utils/upload-scope';
@@ -51,16 +52,26 @@ export function mediaTabUploadDefaults(binding: ScopeBinding, media: MediaTabCon
   };
 }
 
+/** Οι **δικές** εμβέλειες ανάγνωσης μιας καρτέλας — από τους τύπους του `read`, με τον **ίδιο** επιλυτή με το ανέβασμα. */
+function ownReadScopes(binding: ScopeBinding, media: MediaTabConfig, read: readonly string[]): readonly FileScope[] {
+  const readable = selectOfferedEntryPoints({ entityType: binding.entityType, allowedEntryPointIds: read });
+  return tabReadScopes(readable, mediaTabUploadDefaults(binding, media));
+}
+
 /**
  * **Τι διαβάζει** η καρτέλα — παραγόμενο από τους τύπους του `read` μέσω του **ίδιου** επιλυτή με το ανέβασμα.
  * Χωρίς δηλωμένο εύρος ⇒ `undefined` (η καρτέλα διαβάζει με `domain`/`category`, ό,τι ίσχυε).
+ * Καρτέλα-καταφύγιο (`shelterFor`, ADR-916 Φ-Γ3) ⇒ διαβάζει **και** ό,τι δεν διαβάζει καμία αδελφή — οι αδελφές
+ * κρίνονται με τις **δικές** τους εμβέλειες μόνο (ποτέ καταφύγιο μέσα σε καταφύγιο).
  */
 export function mediaTabScopePolicy(binding: ScopeBinding, media: MediaTabConfig): FilesTabScopePolicy | undefined {
   const scope = media.entryPointScope;
   if (!scope) return undefined;
-  const readable = selectOfferedEntryPoints({ entityType: binding.entityType, allowedEntryPointIds: scope.read });
+  const siblings = scope.shelterFor?.flatMap((sibling) =>
+    sibling.entryPointScope ? ownReadScopes(binding, sibling, sibling.entryPointScope.read) : []);
   return {
     purposeAuthority: scope.purposeAuthority,
-    readScopes: tabReadScopes(readable, mediaTabUploadDefaults(binding, media)),
+    readScopes: ownReadScopes(binding, media, scope.read),
+    ...(siblings ? { readsUnclaimedBy: siblings } : {}),
   };
 }
