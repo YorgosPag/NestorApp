@@ -27,6 +27,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
+import { specByExt } from '@/config/file-types/classification-registry';
+
 // ============================================================================
 // CONTENT TYPE → ICON MAPPING
 // ============================================================================
@@ -166,13 +168,13 @@ export function getCategoryIconInfo(category?: string): FileIconInfo {
 }
 
 /**
- * Check if a file is previewable as an image (can be displayed directly).
+ * Is this file an image? (The thumbnail decides *how* to show it: proxy derivative or original.)
+ * The extension fallback asks the **file-type registry** — the hand-written list it replaced had no `tif`/`tiff`/`avif`,
+ * so a TIFF whose browser reported `type === ''` fell to the icon (ADR-923 §5.10.4).
  */
 export function isImageFile(ext?: string, contentType?: string): boolean {
   if (contentType?.startsWith('image/')) return true;
-  if (!ext) return false;
-  const normalized = ext.toLowerCase().replace(/^\./, '');
-  return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(normalized);
+  return specByExt(ext)?.category === 'image';
 }
 
 /**

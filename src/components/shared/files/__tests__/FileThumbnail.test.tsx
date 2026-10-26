@@ -8,15 +8,20 @@
  * - Μ4: το `onError` δεν προχωρά ⇒ σπασμένη εικόνα αντί για εφεδρεία.
  * - Μ5: τα px του πίνακα αποκλίνουν από την κλάση Tailwind του κουτιού.
  * - Μ6: εικόνα που δεν προεπισκοπείται (svg) χάνει το πρωτότυπο ως πηγή.
+ * - Μ7: TIFF χωρίς δρόμο προς το παράγωγο (χειρόγραφη λίστα καταλήξεων στο `isImageFile`).
+ * - Μ8: παροδική αστοχία του παραγώγου ⇒ μόνιμο εικονίδιο · ή επανάληψη χωρίς όριο / στο ίδιο `<img>` (κανένα αίτημα).
+ * - Μ9: η επανάληψη καθυστερεί διαθέσιμη εφεδρεία · ή ξαναδοκιμάζει στατικό πρωτότυπο.
  */
 
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 
 import { buildProxyPreview, buildProxyUrl } from '@/lib/storage/storage-object-url';
 
 import { FileThumbnail } from '../FileThumbnail';
 import { THUMBNAIL_SIZE_CONFIG, thumbnailCandidatesOf, type ThumbnailSize } from '../file-thumbnail-sources';
+import { THUMBNAIL_RETRY_DELAYS_MS } from '../use-thumbnail-candidate';
+import { isImageFile } from '../utils/file-icons';
 
 jest.mock('../hooks/usePdfThumbnail', () => ({
   usePdfThumbnail: (url: string | undefined, enabled: boolean) => ({
@@ -61,6 +66,51 @@ describe('FileThumbnail — παράγωγο του server, μέγεθος το�
     for (const { container, px } of Object.values(THUMBNAIL_SIZE_CONFIG)) {
       expect(Number(/\bw-(\d+)\b/.exec(container)?.[1]) * 4).toBe(px);
     }
+  });
+
+  it('🔴 Μ7 TIFF (ο browser δεν το αποκωδικοποιεί) ⇒ παράγωγο του server — και με κενό MIME, από την κατάληξη', () => {
+    const tiffPath = PATH.replace('.jpg', '.tif');
+    render(<FileThumbnail file={{ storagePath: tiffPath, contentType: 'image/tiff', ext: 'tif' }} displayName="cmyk" />);
+    expect(img().getAttribute('srcset')).toBe(buildProxyPreview(tiffPath).srcSet);
+    expect(isImageFile('tif', '')).toBe(true);
+    expect(isImageFile('TIFF')).toBe(true);
+    expect(isImageFile('pdf', '')).toBe(false);
+  });
+
+  describe('🔁 παροδική αστοχία του παραγώγου ≠ μόνιμο εικονίδιο (ADR-923 §5.10.4)', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('🔴 Μ8 εξαντλημένη λίστα ⇒ ξανά το ΙΔΙΟ URL σε ΝΕΟ <img>, με οπισθοχώρηση, και μετά οριστικά εικονίδιο', () => {
+      const { container } = render(<FileThumbnail file={PHOTO} displayName="φωτο" />);
+      const first = img();
+      fireEvent.error(first);
+      expect(screen.queryByRole('img')).toBeNull();
+      act(() => jest.advanceTimersByTime(THUMBNAIL_RETRY_DELAYS_MS[0] - 1));
+      expect(screen.queryByRole('img')).toBeNull();
+      act(() => jest.advanceTimersByTime(1));
+      expect(img().getAttribute('srcset')).toBe(buildProxyPreview(PATH).srcSet);
+      expect(img()).not.toBe(first);
+      for (const delay of THUMBNAIL_RETRY_DELAYS_MS.slice(1)) {
+        fireEvent.error(img());
+        act(() => jest.advanceTimersByTime(delay));
+        expect(screen.queryByRole('img')).not.toBeNull();
+      }
+      fireEvent.error(img());
+      act(() => jest.advanceTimersByTime(60_000));
+      expect(screen.queryByRole('img')).toBeNull();
+      expect(container.querySelector('svg')).not.toBeNull();
+    });
+
+    it('🔴 Μ9 η εφεδρεία (`_thumb`) προηγείται της αναμονής· πηγή χωρίς παράγωγο δεν ξαναδοκιμάζεται', () => {
+      render(<FileThumbnail file={{ ...PHOTO, thumbnailUrl: 'https://x.test/t.webp' }} displayName="φωτο" />);
+      fireEvent.error(img());
+      expect(img().getAttribute('src')).toBe('https://x.test/t.webp');
+      act(() => jest.advanceTimersByTime(60_000));
+      expect(img().getAttribute('src')).toBe('https://x.test/t.webp');
+      const svg = { storagePath: 'a/b.svg', contentType: 'image/svg+xml', ext: 'svg' };
+      expect(thumbnailCandidatesOf(svg, { isImage: true }, 40).some((candidate) => candidate.retryable)).toBe(false);
+    });
   });
 
   it('🔴 Μ6 svg (δεν προεπισκοπείται) ⇒ το πρωτότυπο ως πηγή · PDF ⇒ σελίδα 1 από το URL του αναγνώστη', () => {

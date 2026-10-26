@@ -15,7 +15,9 @@
  *      διαστάσεις είναι μετρημένες) — ο browser διαλέγει `w=320` σε DPR 2·
  *   2. `thumbnailUrl` (client `_thumb.webp`, ADR-899 §1) — **εφεδρεία** για εγγραφές χωρίς μονοπάτι·
  *   3. το πρωτότυπο — **μόνο** για εικόνα που δεν προεπισκοπείται (svg/gif: ο κωδικοποιητής δεν τις αγγίζει).
- * Κάθε `onError` προχωρά στην επόμενη· στο τέλος, εικονίδιο (ή σελίδα 1 του PDF).
+ * Κάθε `onError` προχωρά στην επόμενη· στο τέλος, εικονίδιο (ή σελίδα 1 του PDF). Όταν η λίστα **εξαντληθεί**
+ * ενώ περιείχε παράγωγο του server (`retryable`), το hook το ξαναζητά με οπισθοχώρηση — αλλιώς μία παροδική
+ * αστοχία γινόταν μόνιμο εικονίδιο (ADR-923 §5.10.4: η ψηφίδα του TIFF μετά από επανεκκίνηση του server).
  *
  * ⚠️ **Καθαρό module** — κανένα React, ώστε η σειρά να ελέγχεται χωρίς DOM.
  *
@@ -51,6 +53,12 @@ export interface ThumbnailCandidate {
   readonly src: string;
   readonly srcSet?: string;
   readonly sizes?: string;
+  /**
+   * Η πηγή **παράγεται κατ' απαίτηση** από τον server (ADR-899) ⇒ η αστοχία της μπορεί να είναι **παροδική**
+   * (`503 busy` με `Retry-After`, επανεκκίνηση, δίκτυο — ένα CMYK TIFF 23 MB κωδικοποιείται 8–10 s ψυχρό). Το
+   * `<img>` δεν βλέπει κατάσταση HTTP, άρα το «αξίζει ξανά;» το δηλώνει η **πηγή**, όχι ο μαντευτής του σφάλματος.
+   */
+  readonly retryable?: true;
 }
 
 export interface ThumbnailKind {
@@ -84,7 +92,12 @@ export function thumbnailCandidatesOf(
   const preview = resolved.kind === 'url' ? resolved.preview : null;
 
   if (kind.isImage && preview) {
-    candidates.push({ src: preview.src, srcSet: preview.srcSet, sizes: thumbnailSizesOf(box, resolved.dimensions) });
+    candidates.push({
+      src: preview.src,
+      srcSet: preview.srcSet,
+      sizes: thumbnailSizesOf(box, resolved.dimensions),
+      retryable: true,
+    });
   }
   if (nonEmpty(file.thumbnailUrl)) candidates.push({ src: file.thumbnailUrl });
   if (kind.isImage && !preview && resolved.kind === 'url') candidates.push({ src: resolved.url });
