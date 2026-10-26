@@ -476,7 +476,8 @@
         "office-domain": "Belongs to office operations (accounting, finance, brokerage, intake).",
         "catalog": "From the document type.",
         "category": "From the file category.",
-        "unrecognised": "Not recognised — fix the file's classification."
+        "unrecognised": "Not recognised — fix the file's classification.",
+        "shared-undeclared": "Shared building/project document with no declaration — stays with the office until you decide."
       }
     },
     "fileDecision": {

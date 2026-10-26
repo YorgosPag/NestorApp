@@ -298,6 +298,8 @@
     "classifying": "Classifying",
     "classificationFailed": "Classification failed",
     "handoverOrigin": "From the developer",
+    "handoverOriginBuilding": "From the developer · Building",
+    "handoverOriginProject": "From the developer · Project",
     "handoverProtocol": "Handover protocol · rev. {revision}",
     "record": "Record · cannot be deleted",
     "recordExplain": "Legal evidence of the handover. Kept unchanged — it cannot be moved to the bin or deleted, by anyone.",
