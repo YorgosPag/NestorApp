@@ -84,3 +84,68 @@ describe('the real write paths go through the history (Ctrl+Z)', () => {
     expect(getTopoBreaklines('existing')).toEqual([]);
   });
 });
+
+describe('SetTopoBreaklinesCommand — επίλυση συγκρούσεων (ADR-920 Β3.6)', () => {
+  const AT = { x: 500, y: 0 } as const;
+
+  it('resolve αποθηκεύει τον κανόνα στη γραμμή-ιδιοκτήτη· undo τον παίρνει πίσω', () => {
+    const [a, b] = [record(), record()];
+    setTopoBreaklines([a, b]);
+    const cmd = SetTopoBreaklinesCommand.resolve('existing', [
+      { ownerBreaklineId: b.id, resolution: { withBreaklineId: a.id, ...AT, rule: 'higher' } },
+    ])!;
+    cmd.execute();
+    expect(getTopoBreaklines('existing')[1].crossingResolutions).toEqual([{ withBreaklineId: a.id, ...AT, rule: 'higher' }]);
+    cmd.undo();
+    expect(getTopoBreaklines('existing')).toEqual([a, b]);
+  });
+
+  it('νέα απόφαση για το ΙΔΙΟ σημείο αντικαθιστά την παλιά — και όταν ήταν αποθηκευμένη στην ΑΛΛΗ γραμμή', () => {
+    const [a, b] = [record(), record()];
+    setTopoBreaklines([{ ...a, crossingResolutions: [{ withBreaklineId: b.id, ...AT, rule: 'lower' }] }, b]);
+    SetTopoBreaklinesCommand.resolve('existing', [
+      { ownerBreaklineId: b.id, resolution: { withBreaklineId: a.id, x: 503, y: 0, rule: 'specify', z: 7 } },
+    ])!.execute();
+    const [na, nb] = getTopoBreaklines('existing');
+    expect(na).not.toHaveProperty('crossingResolutions');
+    expect(nb.crossingResolutions).toEqual([{ withBreaklineId: a.id, x: 503, y: 0, rule: 'specify', z: 7 }]);
+  });
+
+  it('ίδια απόφαση ξανά = null (καμία κενή εγγραφή στο ιστορικό)', () => {
+    const [a, b] = [record(), record()];
+    const stored = { withBreaklineId: a.id, ...AT, rule: 'average' } as const;
+    setTopoBreaklines([a, { ...b, crossingResolutions: [stored] }]);
+    expect(SetTopoBreaklinesCommand.resolve('existing', [{ ownerBreaklineId: b.id, resolution: stored }])).toBeNull();
+  });
+
+  it('«Επίλυση όλων»: Ν αποφάσεις = ΕΝΑ undo', () => {
+    const [a, b, c] = [record(), record(), record()];
+    setTopoBreaklines([a, b, c]);
+    getGlobalCommandHistory().execute(SetTopoBreaklinesCommand.resolve('existing', [
+      { ownerBreaklineId: b.id, resolution: { withBreaklineId: a.id, ...AT, rule: 'higher' } },
+      { ownerBreaklineId: c.id, resolution: { withBreaklineId: a.id, x: 900, y: 0, rule: 'higher' } },
+    ])!);
+    expect(getTopoBreaklines('existing').filter((x) => x.crossingResolutions)).toHaveLength(2);
+    getGlobalCommandHistory().undo();
+    expect(getTopoBreaklines('existing')).toEqual([a, b, c]);
+  });
+
+  it('unresolve επιστρέφει στο «νικά η πρώτη» και αφαιρεί το κενό πεδίο· άγνωστο κλειδί = null', () => {
+    const [a, b] = [record(), record()];
+    setTopoBreaklines([a, { ...b, crossingResolutions: [{ withBreaklineId: a.id, ...AT, rule: 'higher' }] }]);
+    const key = { ownerBreaklineId: b.id, withBreaklineId: a.id, ...AT };
+    expect(SetTopoBreaklinesCommand.unresolve('existing', [{ ...key, x: 1 }])).toBeNull();
+    SetTopoBreaklinesCommand.unresolve('existing', [key])!.execute();
+    expect(getTopoBreaklines('existing')).toEqual([a, b]);
+  });
+
+  it('remove μιας γραμμής παίρνει μαζί τις αποφάσεις των άλλων ΓΙΑ αυτήν — ένα Ctrl+Z τα φέρνει όλα πίσω', () => {
+    const [a, b] = [record(), record()];
+    const withRule = { ...b, crossingResolutions: [{ withBreaklineId: a.id, ...AT, rule: 'higher' as const }] };
+    setTopoBreaklines([a, withRule]);
+    getGlobalCommandHistory().execute(SetTopoBreaklinesCommand.remove('existing', [a.id])!);
+    expect(getTopoBreaklines('existing')).toEqual([b]);
+    getGlobalCommandHistory().undo();
+    expect(getTopoBreaklines('existing')).toEqual([a, withRule]);
+  });
+});

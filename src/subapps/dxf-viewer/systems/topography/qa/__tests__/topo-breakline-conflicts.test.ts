@@ -12,7 +12,9 @@ import { seedBreakline } from '../../__tests__/topo-breakline-fixtures';
 import { getTopoBuildReport, getTopoSurfaceFull, invalidateTopoSurface } from '../../topo-surface';
 import { buildTinWithReport } from '../../tin-builder';
 import type { Breakline, TopoPoint, TopoPoint3D } from '../../topo-types';
-import { breaklineConflictSeverity, checkBreaklineConflicts, KEPT_BY_SURVEY } from '../check-breakline-conflicts';
+import {
+  breaklineConflictFlag, breaklineConflictSeverity, checkBreaklineConflicts, KEPT_BY_SURVEY, rankBreaklineConflicts,
+} from '../check-breakline-conflicts';
 import { runTopoQa } from '../run-topo-qa';
 import i18next from 'i18next';
 import ICU from 'i18next-icu';
@@ -141,5 +143,42 @@ describe('conflict messages render the pair (el + en, real ICU)', () => {
     for (const text of [t(a.messageKey, a.messageParams), t(b.messageKey, b.messageParams)]) {
       expect(text).not.toMatch(/[{}]|keptLine|select/);
     }
+  });
+});
+
+describe('ADR-920 Β3.6 — a conflict an engineer resolved is a decision, not a QA finding', () => {
+  const at = { x: OX + 5_000, y: OY + 5_000 };
+  const resolvedPair = (): Breakline[] => [
+    line('a', EAST_WEST),
+    { ...line('b', northSouth(3_000)), crossingResolutions: [{ withBreaklineId: 'a', ...at, rule: 'average' }] },
+  ];
+
+  it('QA drops it; the remaining flags keep their report ids', () => {
+    const third: Breakline = line('c', [p(2_000, 0, 5_000), p(2_000, 10_000, 5_000)]);
+    const breaklines = [...resolvedPair(), third];
+    const report = buildTinWithReport(SQUARE, breaklines);
+    expect(report.breaklineConflicts.filter((c) => c.resolution)).toHaveLength(1);
+    const flags = checkBreaklineConflicts(report.breaklineConflicts, breaklines, report.surface.origin);
+    expect(flags).toHaveLength(report.breaklineConflicts.length - 1);
+    const resolvedIndex = report.breaklineConflicts.findIndex((c) => c.resolution);
+    expect(flags.map((f) => f.id)).not.toContain(`breakline-conflict:${resolvedIndex}`);
+  });
+
+  it.each([['el', 'Μέσος όρος'], ['en', 'Use average']])('%s: the resolved message names the rule and the result', async (lng, ruleText) => {
+    const instance = i18next.createInstance();
+    await instance.use(new ICU()).init({
+      lng, fallbackLng: false, ns: ['p'], defaultNS: 'p', resources: { el: { p: el }, en: { p: en } },
+    });
+    const breaklines = resolvedPair();
+    const report = buildTinWithReport(SQUARE, breaklines);
+    const conflict = report.breaklineConflicts.find((c) => c.resolution)!;
+    const [flag] = checkBreaklineConflicts([{ ...conflict, resolution: undefined }], breaklines, report.surface.origin);
+    expect(flag!.messageParams).not.toHaveProperty('rule');
+    // Same ranking/flag helper the breakline list uses — the resolved branch:
+    const resolved = breaklineConflictFlag(rankBreaklineConflicts([conflict])[0]!, (id) => (id === 'a' ? 1 : 2), report.surface.origin);
+    const text = instance.t(resolved.messageKey, resolved.messageParams);
+    expect(text).toContain(ruleText);
+    expect(text).toContain('2.00'); // (1.00 + 3.00) / 2
+    expect(text).not.toMatch(/[{}]|select/);
   });
 });

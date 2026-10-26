@@ -19,12 +19,18 @@
  * @see ../../../systems/topography/TopoPointStore — `createBreakline` (η μία γέννηση εγγραφής, N.6)
  */
 
+import {
+  withCrossingResolution,
+  withoutCrossingResolutions,
+  withoutOrphanCrossingResolutions,
+} from '@/lib/terrain/breakline-crossing-rule';
+import type { BreaklineCrossingResolution, CrossingResolutionKey } from '@/lib/terrain/terrain-types';
 import type { Breakline, TopoSurfaceId } from '../../../systems/topography/topo-types';
 import { getTopoBreaklines, setTopoBreaklines } from '../../../systems/topography/TopoPointStore';
 import { BaseCommand } from '../base-command';
 
 /** Τι έκανε η εντολή — η περιγραφή του ιστορικού και ο λόγος ύπαρξης κάθε εργοστασίου. */
-export type TopoBreaklineEdit = 'add' | 'remove' | 'clear';
+export type TopoBreaklineEdit = 'add' | 'remove' | 'clear' | 'resolve' | 'unresolve';
 
 export class SetTopoBreaklinesCommand extends BaseCommand {
   readonly name = 'SetTopoBreaklines';
@@ -50,11 +56,14 @@ export class SetTopoBreaklinesCommand extends BaseCommand {
     );
   }
 
-  /** Αφαίρεσε τις ασυνέχειες με αυτά τα ids. `null` όταν καμία δεν υπάρχει. */
+  /**
+   * Αφαίρεσε τις ασυνέχειες με αυτά τα ids. `null` όταν καμία δεν υπάρχει. Β3.6: οι αποφάσεις επίλυσης των
+   * υπολοίπων που αφορούσαν τις αφαιρεμένες φεύγουν στο ΙΔΙΟ βήμα (ένα Ctrl+Z τα φέρνει όλα πίσω).
+   */
   static remove(surfaceId: TopoSurfaceId, ids: readonly string[]): SetTopoBreaklinesCommand | null {
     const drop = new Set(ids);
     const previous = getTopoBreaklines(surfaceId);
-    const next = previous.filter((b) => !drop.has(b.id));
+    const next = withoutOrphanCrossingResolutions(previous.filter((b) => !drop.has(b.id)));
     if (next.length === previous.length) return null;
     const removed = previous.filter((b) => drop.has(b.id)).map((b) => b.id);
     return new SetTopoBreaklinesCommand(surfaceId, previous, next, 'remove', removed);
@@ -65,6 +74,35 @@ export class SetTopoBreaklinesCommand extends BaseCommand {
     const previous = getTopoBreaklines(surfaceId);
     if (previous.length === 0) return null;
     return new SetTopoBreaklinesCommand(surfaceId, previous, [], 'clear', previous.map((b) => b.id));
+  }
+
+  /**
+   * ADR-920 Β3.6 — Civil 3D «Crossing Breaklines» › Resolve, για Ν σημεία συνάντησης σε ΕΝΑ βήμα (Ν = 1 από τη
+   * γραμμή μιας σύγκρουσης, Ν > 1 από το «Επίλυση όλων»). Κάθε απόφαση αντικαθιστά όποια υπήρχε για το ίδιο σημείο.
+   * `null` όταν όλες είναι ήδη αποθηκευμένες ακριβώς έτσι.
+   */
+  static resolve(
+    surfaceId: TopoSurfaceId,
+    decisions: readonly { readonly ownerBreaklineId: string; readonly resolution: BreaklineCrossingResolution }[],
+  ): SetTopoBreaklinesCommand | null {
+    const previous = getTopoBreaklines(surfaceId);
+    const next = decisions.reduce(
+      (acc, d) => withCrossingResolution(acc, d.ownerBreaklineId, d.resolution), previous,
+    );
+    if (next === previous) return null;
+    return new SetTopoBreaklinesCommand(
+      surfaceId, previous, next, 'resolve', [...new Set(decisions.map((d) => d.ownerBreaklineId))],
+    );
+  }
+
+  /** ADR-920 Β3.6 — πίσω στο «νικά η πρώτη» για αυτά τα σημεία (ή πέτα αποφάσεις που δεν εφαρμόζονται πια). */
+  static unresolve(surfaceId: TopoSurfaceId, keys: readonly CrossingResolutionKey[]): SetTopoBreaklinesCommand | null {
+    const previous = getTopoBreaklines(surfaceId);
+    const next = withoutCrossingResolutions(previous, keys);
+    if (next === previous) return null;
+    return new SetTopoBreaklinesCommand(
+      surfaceId, previous, next, 'unresolve', [...new Set(keys.map((k) => k.ownerBreaklineId))],
+    );
   }
 
   execute(): void {

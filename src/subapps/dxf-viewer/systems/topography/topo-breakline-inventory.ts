@@ -8,6 +8,10 @@
  *   - the current scene's entity ids — link health: does the drawing line a breakline was picked from still exist?
  *     (Civil 3D keeps the last shape silently when the source goes; we keep it AND say so — `topo-source-cascade`.)
  *
+ * ADR-920 Β3.6 — conflicts come in three states: OPEN (the default rule decided; QA flags it), RESOLVED (an engineer's
+ * rule decided; listed so it can be changed or reverted — Civil 3D forgets it), and stored decisions that no longer
+ * APPLY (partner gone / meeting point moved / lines now agree) — named, with the offer to drop them.
+ *
  * Pure — zero React/DOM/store: the caller passes the reports and the id set, so the whole derivation is testable and
  * there is no second `buildTin`. `null` scene ids ⇒ link `null` («cannot tell»), never a false «missing».
  *
@@ -17,10 +21,11 @@
 import type {
   Breakline, BreaklineElevationConflict, BreaklineElevationSource, LocalOrigin, TopoSurfaceId,
 } from './topo-types';
+import type { AppliedCrossingResolution, CrossingResolutionKey } from '@/lib/terrain/terrain-types';
 import { TOPO_SURFACE_IDS } from './topo-types';
 import type { TopoQaFlag } from './qa/topo-qa-types';
 import {
-  breaklineConflictFlag, breaklineLabelsOf, rankBreaklineConflicts,
+  breaklineConflictFlag, breaklineLabelsOf, conflictStatements, rankBreaklineConflicts,
 } from './qa/check-breakline-conflicts';
 import { calculatePolylineLength } from '../../rendering/entities/shared/geometry-polyline-utils';
 
@@ -44,7 +49,7 @@ export interface BreaklineInventoryRow {
   readonly zRangeMm: { readonly min: number; readonly max: number } | null;
   /** `null` = no scene to ask (cannot tell). */
   readonly link: BreaklineLinkHealth | null;
-  /** How many conflicts this breakline is part of, either side of the pair. */
+  /** How many OPEN conflicts this breakline is part of, either side of the pair (a resolved one is a decision). */
   readonly conflictCount: number;
 }
 
@@ -53,14 +58,35 @@ export interface BreaklineConflictRow {
   readonly surfaceId: TopoSurfaceId;
   /** The breakline that was bent to agree — the one the list highlights. */
   readonly overruledBreaklineId: string;
-  /** The other half of the pair; `null` when a survey point held the kept elevation. */
+  /**
+   * The other half of the pair; `null` when a survey point held the kept elevation — such a conflict takes no rule
+   * (the measurement wins, ADR-720 / ADR-920 Β3.6).
+   */
   readonly keptBreaklineId: string | null;
+  /** What each side SAID there (WORLD mm) — the input of every rule and of the preview. */
+  readonly statements: { readonly kept: number; readonly overruled: number };
+  /** What the surface carries there now (WORLD mm). */
+  readonly surfaceZ: number;
+  /** Β3.6 — the engineer's rule that decided it; `null` = the default («the earlier wins» / the measurement). */
+  readonly resolution: AppliedCrossingResolution | null;
+}
+
+/** ADR-920 Β3.6 — a stored decision that decided nothing in this build. */
+export interface UnappliedResolutionRow {
+  readonly surfaceId: TopoSurfaceId;
+  readonly key: CrossingResolutionKey;
+  /** #n of the two lines; the partner's raw id when it is gone (never a made-up number). */
+  readonly ownerLabel: string | number;
+  readonly withLabel: string | number;
 }
 
 export interface BreaklineInventory {
   readonly rows: readonly BreaklineInventoryRow[];
-  /** Largest Δz first within each surface (the QA order). */
+  /** OPEN conflicts, largest Δz first within each surface (the QA order). */
   readonly conflicts: readonly BreaklineConflictRow[];
+  /** Β3.6 — conflicts an engineer's rule decided, same order. */
+  readonly resolved: readonly BreaklineConflictRow[];
+  readonly unapplied: readonly UnappliedResolutionRow[];
 }
 
 /** One surface's inputs: its definition breaklines + its build report's conflicts and LOCAL origin. */
@@ -68,6 +94,8 @@ export interface BreaklineSurfaceInput {
   readonly breaklines: readonly Breakline[];
   readonly conflicts: readonly BreaklineElevationConflict[];
   readonly origin: LocalOrigin;
+  /** Β3.6 — the build report's `unappliedCrossingResolutions`. */
+  readonly unappliedResolutions: readonly CrossingResolutionKey[];
 }
 
 export interface BreaklineInventoryInput {
@@ -108,7 +136,7 @@ function surfaceRows(
   sceneEntityIds: ReadonlySet<string> | null,
 ): BreaklineInventoryRow[] {
   const labelOf = breaklineLabelsOf(input.breaklines);
-  const counts = conflictCountsOf(input.conflicts);
+  const counts = conflictCountsOf(input.conflicts.filter((c) => c.resolution === undefined));
   return input.breaklines.map((breakline) => {
     const closed = breakline.closed ?? false;
     return {
@@ -133,13 +161,26 @@ function surfaceConflicts(surfaceId: TopoSurfaceId, input: BreaklineSurfaceInput
     surfaceId,
     overruledBreaklineId: ranked.conflict.overruledBreaklineId,
     keptBreaklineId: ranked.conflict.keptBreaklineId ?? null,
+    statements: conflictStatements(ranked.conflict),
+    surfaceZ: ranked.conflict.keptZ,
+    resolution: ranked.conflict.resolution ?? null,
+  }));
+}
+
+function surfaceUnapplied(surfaceId: TopoSurfaceId, input: BreaklineSurfaceInput): UnappliedResolutionRow[] {
+  const labelOf = breaklineLabelsOf(input.breaklines);
+  return input.unappliedResolutions.map((key) => ({
+    surfaceId, key, ownerLabel: labelOf(key.ownerBreaklineId), withLabel: labelOf(key.withBreaklineId),
   }));
 }
 
 /** Every surface (`TOPO_SURFACE_IDS` order), rows in definition order, conflicts largest Δz first. */
 export function buildBreaklineInventory(input: BreaklineInventoryInput): BreaklineInventory {
+  const all = TOPO_SURFACE_IDS.flatMap((id) => surfaceConflicts(id, input.surfaces[id]));
   return {
     rows: TOPO_SURFACE_IDS.flatMap((id) => surfaceRows(id, input.surfaces[id], input.sceneEntityIds)),
-    conflicts: TOPO_SURFACE_IDS.flatMap((id) => surfaceConflicts(id, input.surfaces[id])),
+    conflicts: all.filter((c) => c.resolution === null),
+    resolved: all.filter((c) => c.resolution !== null),
+    unapplied: TOPO_SURFACE_IDS.flatMap((id) => surfaceUnapplied(id, input.surfaces[id])),
   };
 }

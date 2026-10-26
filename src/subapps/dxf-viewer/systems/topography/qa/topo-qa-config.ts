@@ -103,6 +103,13 @@ export const TOPO_QA_CONFIG = {
    */
   BREAKLINE_CONFLICT_MEDIUM_DZ_MM: COINCIDENT_Z_MEDIUM_MM,
   BREAKLINE_CONFLICT_HIGH_DZ_MM: COINCIDENT_Z_HIGH_MM,
+  /**
+   * ADR-920 Β3.6 — the resolve preview warns when a rule would change a line's GRADE next to the meeting point by more
+   * than this (rise / run): 0.25 = 1:4 ≈ 14°, the steepest a mown embankment is usually built. A Δz that is nothing
+   * over 20 m can be a cliff over 30 cm, and neither Civil 3D nor 12d shows that before Resolve. A warning, never a
+   * block — a kerb or a wall breakline legitimately kinks.
+   */
+  BREAKLINE_RESOLUTION_GRADE_WARN: 0.25,
 
   // ── Report-wide cap ─────────────────────────────────────────────────────────
   /**

@@ -9,7 +9,7 @@ import { buildBreaklineInventory, type BreaklineSurfaceInput } from '../topo-bre
 import { checkBreaklineConflicts } from '../qa/check-breakline-conflicts';
 import type { Breakline, BreaklineElevationConflict } from '../topo-types';
 
-const EMPTY: BreaklineSurfaceInput = { breaklines: [], conflicts: [], origin: { x: 0, y: 0 } };
+const EMPTY: BreaklineSurfaceInput = { breaklines: [], conflicts: [], origin: { x: 0, y: 0 }, unappliedResolutions: [] };
 const ORIGIN = { x: 400_000, y: 4_500_000 };
 
 const line = (id: string, extra: Partial<Breakline> = {}): Breakline => ({
@@ -28,7 +28,7 @@ const CONFLICTS: readonly BreaklineElevationConflict[] = [
   { kind: 'vertex-on-breakline', x: 30, y: 40, keptZ: 2_000, overruledZ: 3_000, overruledBreaklineId: 'bl_c' },
 ];
 
-const existing: BreaklineSurfaceInput = { breaklines: [A, B, C], conflicts: CONFLICTS, origin: ORIGIN };
+const existing: BreaklineSurfaceInput = { breaklines: [A, B, C], conflicts: CONFLICTS, origin: ORIGIN, unappliedResolutions: [] };
 
 describe('buildBreaklineInventory', () => {
   const inventory = buildBreaklineInventory({
@@ -92,5 +92,39 @@ describe('buildBreaklineInventory', () => {
       sceneEntityIds: null,
     });
     expect(flat.rows[0]?.zRangeMm).toBeNull();
+  });
+
+  it('Β3.6 — λυμένη σύγκρουση: ΟΧΙ στις ανοιχτές ούτε στο QA, ΝΑΙ στις λυμένες με τις δύο δηλώσεις και τον κανόνα', () => {
+    const key = { ownerBreaklineId: 'bl_b', withBreaklineId: 'bl_a', x: 1, y: 2 };
+    const resolvedConflict: BreaklineElevationConflict = {
+      ...CONFLICTS[0]!, keptZ: 1_050, resolution: { rule: 'higher', keptLineZ: 1_000, key },
+    };
+    const conflicts = [resolvedConflict, CONFLICTS[1]!];
+    const inv = buildBreaklineInventory({
+      surfaces: { existing: { ...existing, conflicts }, proposed: EMPTY }, sceneEntityIds: null,
+    });
+    expect(inv.conflicts.map((c) => c.overruledBreaklineId)).toEqual(['bl_c']);
+    expect(inv.conflicts.map((c) => c.flag)).toEqual(checkBreaklineConflicts(conflicts, [A, B, C], ORIGIN));
+    expect(inv.resolved).toHaveLength(1);
+    expect(inv.resolved[0]).toMatchObject({
+      statements: { kept: 1_000, overruled: 1_050 }, surfaceZ: 1_050, resolution: { rule: 'higher' },
+    });
+    expect(inv.resolved[0]!.flag.messageKey).toBe('topography.qa.flag.breaklineResolved');
+    // A decision is not a problem: the line counts only its OPEN conflicts.
+    expect(inv.rows.map((r) => r.conflictCount)).toEqual([0, 0, 1]);
+  });
+
+  it('Β3.6 — αποφάσεις που δεν εφαρμόζονται: με #n, ή το ωμό id όταν ο εταίρος λείπει', () => {
+    const inv = buildBreaklineInventory({
+      surfaces: {
+        existing: {
+          ...existing,
+          unappliedResolutions: [{ ownerBreaklineId: 'bl_b', withBreaklineId: 'bl_gone', x: 0, y: 0 }],
+        },
+        proposed: EMPTY,
+      },
+      sceneEntityIds: null,
+    });
+    expect(inv.unapplied.map((u) => [u.ownerLabel, u.withLabel])).toEqual([[2, 'bl_gone']]);
   });
 });
