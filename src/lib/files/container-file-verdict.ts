@@ -20,12 +20,18 @@ export type ContainerFileOwner =
   | { readonly kind: 'personal'; readonly userId: string }
   | { readonly kind: 'company'; readonly companyId: string };
 
+/**
+ * Ο τύπος που δέχεται το δοχείο: **ένα** MIME (ΠΚΑ = `application/pdf`), ή κριτής πάνω στο έγγραφο όταν το δοχείο
+ * δέχεται οικογένεια τύπων (μέσο καταλόγου: «εικόνα» = jpg · png · tiff …, ADR-923 §5.10.3).
+ */
+export type ExpectedContentType = string | ((data: Readonly<Record<string, unknown>>) => boolean);
+
 export interface ExpectedContainer {
   readonly owner: ContainerFileOwner;
   readonly entityType: string;
   /** `null` = το δοχείο δεν υπάρχει (π.χ. αγγελία χωρίς φάκελο) ⇒ κανένα αρχείο δεν του ανήκει. */
   readonly entityId: string | null;
-  readonly contentType: string;
+  readonly contentType: ExpectedContentType;
 }
 
 export interface ContainerFileRef {
@@ -58,6 +64,10 @@ export function isLiveFileRecord(data: { readonly isDeleted?: unknown; readonly 
   return data.isDeleted !== true && data.status === FILE_STATUS.READY;
 }
 
+function typeAccepted(data: Readonly<Record<string, unknown>>, expected: ExpectedContentType): boolean {
+  return typeof expected === 'string' ? stringField(data, 'contentType') === expected : expected(data);
+}
+
 function inContainer(data: Readonly<Record<string, unknown>>, expected: ExpectedContainer): boolean {
   return (
     expected.entityId !== null &&
@@ -81,7 +91,7 @@ export function judgeContainerFile(
   if (data === null || data.isDeleted === true) return { kind: 'refused', reason: 'file-missing' };
   if (!inContainer(data, expected)) return { kind: 'refused', reason: 'file-not-yours' };
   if (!isLiveFileRecord(data)) return { kind: 'refused', reason: 'file-not-ready' };
-  if (stringField(data, 'contentType') !== expected.contentType) return { kind: 'refused', reason: 'file-wrong-type' };
+  if (!typeAccepted(data, expected.contentType)) return { kind: 'refused', reason: 'file-wrong-type' };
 
   const storagePath = stringField(data, 'storagePath');
   if (storagePath === null) return { kind: 'refused', reason: 'file-not-ready' };

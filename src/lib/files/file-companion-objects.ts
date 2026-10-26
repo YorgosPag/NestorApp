@@ -59,6 +59,18 @@ export const FILE_COMPANION_KINDS = {
   dxfProcessedScene: { base: 'path', suffix: '.processed.json', home: 'beside-original' },
   /** Σκηνή του autosave του DXF Viewer (`canonicalScenePath`, ADR-293). */
   cadScene: { base: 'stem', suffix: '.scene.json', home: 'client-default' },
+  /**
+   * 🗂️ **Απόδοση web ενός μέσου καταλόγου** (ADR-923 §5.10.3) — sRGB, μέγιστη πλευρά 2048, χωρίς EXIF/GPS. Γραφέας:
+   * `catalog-asset-renditions.server` (διακομιστής, δίπλα στο πρωτότυπο).
+   * 🔑 **Χωρίς κατάληξη, επίτηδες**: η μορφή (JPEG αδιαφανές · PNG με διαφάνεια) αποφασίζεται από τα bytes και ζει στο
+   * `contentType` του αντικειμένου και στο `catalogRenditions` της εγγραφής — ένα είδος ανά **χρήση**, όχι ανά μορφή.
+   */
+  catalogWebRendition: { base: 'stem', suffix: '_catalog-web', home: 'beside-original' },
+  /**
+   * 🖨️ **Απόδοση εκτύπωσης ενός μέσου καταλόγου** (ADR-923 §5.10.3) — πλήρης ανάλυση, ο χρωματικός χώρος **διατηρείται**
+   * (CMYK μένει CMYK με το προφίλ του· late binding: η μετατροπή γίνεται μία φορά, στην έκδοση). Ίδιος γραφέας.
+   */
+  catalogPrintRendition: { base: 'stem', suffix: '_catalog-print', home: 'beside-original' },
 } as const satisfies Record<string, FileCompanionKindSpec>;
 
 export type FileCompanionKind = keyof typeof FILE_COMPANION_KINDS;

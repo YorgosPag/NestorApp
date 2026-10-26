@@ -34,14 +34,14 @@ import {
   finalizeFileRecordWithPolicy,
 } from '@/services/filesystem/file-mutation-gateway';
 import { getFileExtension } from '@/services/upload';
-import { uploadResumableToUrl } from '@/services/upload/utils/resumable-upload';
+import { uploadResumableToUrl, type ResumableUploadProgress } from '@/services/upload/utils/resumable-upload';
 
 const logger = createModuleLogger('upload-entity-file');
 
 /** Η αναμονή διάδοσης Firestore πριν το Storage — οι κανόνες αποθήκευσης διαβάζουν το `FileRecord`. */
 const FIRESTORE_PROPAGATION_MS = 300;
 
-interface EntityFileUploadSpec {
+export interface EntityFileUploadSpec {
   /** **Ποιος κατέχει** το αρχείο (ADR-866 §5.2) — ορίζει ρίζα Storage **και** διαμέρισμα Firestore. */
   readonly custody: FileCustody;
   readonly projectId?: string;
@@ -55,6 +55,8 @@ interface EntityFileUploadSpec {
   readonly createdBy: string;
   readonly uploaderName?: string;
   readonly customTitle?: string;
+  /** Ακατέργαστη πρόοδος των bytes (βήμα Β) — αρχεία εκατοντάδων MB (BIM, βίντεο) δεν περιμένουν «στα τυφλά». */
+  readonly onProgress?: (progress: ResumableUploadProgress) => void;
 }
 
 interface UploadedEntityFile {
@@ -120,7 +122,7 @@ export async function uploadEntityFile(spec: EntityFileUploadSpec, file: File): 
   //    δηλαδή σε δίκτυο κινητού ένα κόψιμο έριχνε ολόκληρη τη φωτογραφία του φακέλου. Η μικρογραφία μένει
   //    `uploadBytes`: λίγα KB, ένα αίτημα είναι η σωστή μονάδα.
   const storageRef = ref(storage, storagePath);
-  const downloadUrl = await uploadResumableToUrl(storageRef, file);
+  const downloadUrl = await uploadResumableToUrl(storageRef, file, spec.onProgress);
   const thumbnailUrl = await uploadThumbnail(file, storagePath);
   // Πριν το `ready`: όποιος δει έτοιμη εγγραφή βίντεο δικαιούται το εξώφυλλό της να κάθεται ήδη δίπλα της.
   await uploadVideoPoster(file, storagePath);

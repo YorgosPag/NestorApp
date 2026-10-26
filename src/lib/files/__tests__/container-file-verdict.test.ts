@@ -70,3 +70,17 @@ describe('Δ3 — κατάσταση και τύπος', () => {
     expect(judgeContainerFile('file_1', { ...personalFile, contentType: 'image/jpeg' }, PERSONAL)).toMatchObject({ reason: 'file-wrong-type' });
   });
 });
+
+describe('Δ4 — οικογένεια τύπων με κριτή (ADR-923 §5.10.3)', () => {
+  const images = (data: Readonly<Record<string, unknown>>): boolean => String(data.contentType).startsWith('image/');
+  const IMAGES: ExpectedContainer = { ...COMPANY, contentType: images };
+
+  it('ο κριτής αποφασίζει τον τύπο · η ιδιοκτησία και η ετοιμότητα κρίνονται ΠΡΙΝ από αυτόν', () => {
+    expect(judgeContainerFile('file_1', { ...companyFile, contentType: 'image/tiff' }, IMAGES).kind).toBe('accepted');
+    expect(judgeContainerFile('file_1', companyFile, IMAGES)).toEqual({ kind: 'refused', reason: 'file-wrong-type' });
+    expect(judgeContainerFile('file_1', { ...companyFile, contentType: 'image/png', companyId: 'c2' }, IMAGES))
+      .toEqual({ kind: 'refused', reason: 'file-not-yours' });
+    expect(judgeContainerFile('file_1', { ...companyFile, contentType: 'image/png', status: 'pending' }, IMAGES))
+      .toEqual({ kind: 'refused', reason: 'file-not-ready' });
+  });
+});

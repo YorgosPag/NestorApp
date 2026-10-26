@@ -51,6 +51,7 @@ import * as admin from 'firebase-admin';
 const db = admin.firestore();
 
 import { COLLECTIONS } from '../config/firestore-collections';
+import { isFileCompanionObjectName } from '../generated/lib/files/file-companion-objects';
 import type { FileStoragePlacement } from '../generated/lib/files/file-storage-placement';
 // ADR-916 Ο24 — το κλειδί ΚΑΙ το σχήμα του σημαδιού ζουν στην εφαρμογή (δεύτερη πηγή σημαδιών: άρση διατήρησης ορφανών).
 import { candidateDocId, orphanCandidateFields } from '../generated/lib/files/storage-orphan-candidate';
@@ -110,9 +111,11 @@ export async function markOrphanCandidateOnFinalize(object: FinalizedObject): Pr
   // Μόνο enterprise paths· temp/ και cad/ εξαιρούνται εξ ορισμού.
   if (!filePath.startsWith('companies/')) return;
 
-  // Companion thumbnails ({fileId}_thumb.{ext}) — παράγωγα, ζουν όσο ο γονιός τους.
+  // Συνοδευτικά (μικρογραφίες · εικόνα δημοσίευσης DXF · αποδόσεις καταλόγου …) — παράγωγα, ζουν όσο ο γονιός τους και
+  // τα σβήνει ο purge του γονιού. 🔴 Από το ΜΗΤΡΩΟ, όχι καρφωμένο `_thumb.` (ADR-923 §5.10.3): με το παλιό κριτήριο κάθε
+  // `.publish.png` / `_catalog-web` σημαδευόταν ως «ορφανό» και ο sweeper θα το έσβηνε κάτω από ζωντανό αρχείο.
   const fileName = filePath.split('/').pop();
-  if (!fileName || fileName.includes('_thumb.')) return;
+  if (!fileName || isFileCompanionObjectName(filePath)) return;
 
   // ADR-895 Α7: bucket-aware κρίση — ένα record σε ΑΛΛΟΝ κάδο δεν προστατεύει ΑΥΤΟ το αντικείμενο.
   const custody = await resolveCustody(db, filePath, {

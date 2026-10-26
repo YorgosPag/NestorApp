@@ -1,6 +1,6 @@
 // ⚠️ GENERATED — DO NOT EDIT. Verbatim projection of src/lib/files/file-companion-objects.ts (ADR-874 · CHECK 3.93).
 // Edit the source, then run: npm run generate:functions-projection
-// sha256:abff17b0243c1609046b29c148678411a496788b306d6e9b266a0670da1ea148
+// sha256:d134278c3c855e9fbabef0b40c2f7ab0dad936fbee0cf3ae35679a9601309627
 
 /**
  * 🧩 **ΤΑ ΣΥΝΟΔΕΥΤΙΚΑ ΑΝΤΙΚΕΙΜΕΝΑ ΕΝΟΣ ΑΡΧΕΙΟΥ** — το κλειστό μητρώο (ADR-899 §2.2 · ADR-191 document management).
@@ -63,6 +63,18 @@ export const FILE_COMPANION_KINDS = {
   dxfProcessedScene: { base: 'path', suffix: '.processed.json', home: 'beside-original' },
   /** Σκηνή του autosave του DXF Viewer (`canonicalScenePath`, ADR-293). */
   cadScene: { base: 'stem', suffix: '.scene.json', home: 'client-default' },
+  /**
+   * 🗂️ **Απόδοση web ενός μέσου καταλόγου** (ADR-923 §5.10.3) — sRGB, μέγιστη πλευρά 2048, χωρίς EXIF/GPS. Γραφέας:
+   * `catalog-asset-renditions.server` (διακομιστής, δίπλα στο πρωτότυπο).
+   * 🔑 **Χωρίς κατάληξη, επίτηδες**: η μορφή (JPEG αδιαφανές · PNG με διαφάνεια) αποφασίζεται από τα bytes και ζει στο
+   * `contentType` του αντικειμένου και στο `catalogRenditions` της εγγραφής — ένα είδος ανά **χρήση**, όχι ανά μορφή.
+   */
+  catalogWebRendition: { base: 'stem', suffix: '_catalog-web', home: 'beside-original' },
+  /**
+   * 🖨️ **Απόδοση εκτύπωσης ενός μέσου καταλόγου** (ADR-923 §5.10.3) — πλήρης ανάλυση, ο χρωματικός χώρος **διατηρείται**
+   * (CMYK μένει CMYK με το προφίλ του· late binding: η μετατροπή γίνεται μία φορά, στην έκδοση). Ίδιος γραφέας.
+   */
+  catalogPrintRendition: { base: 'stem', suffix: '_catalog-print', home: 'beside-original' },
 } as const satisfies Record<string, FileCompanionKindSpec>;
 
 export type FileCompanionKind = keyof typeof FILE_COMPANION_KINDS;

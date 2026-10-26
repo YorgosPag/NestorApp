@@ -14,6 +14,8 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
+import { FILE_COMPANION_KIND_NAMES, fileCompanionPath } from '../../generated/lib/files/file-companion-objects';
+
 const CLEANUP_SOURCE = readFileSync(join(__dirname, '..', 'orphan-cleanup.ts'), 'utf8');
 
 /**
@@ -195,6 +197,20 @@ describe('onStorageFinalize — καταγράφει τον κάδο του αν
     await onFinalize({ name: PATH, bucket: 'default-bucket', size: '10' });
 
     expect(setSpy).toHaveBeenCalledWith(expect.objectContaining({ size: 10 }), { merge: true });
+  });
+
+  // 🔴 ADR-923 §5.10.3 — το κριτήριο «συνοδευτικό» ήταν καρφωμένο `_thumb.` ⇒ `.publish.png` (ADR-922) και οι αποδόσεις
+  // καταλόγου σημαδεύονταν ως ορφανά. Πλέον από το ΜΗΤΡΩΟ: κάθε είδος, γνωστό σήμερα ή αυριανό.
+  it.each(FILE_COMPANION_KIND_NAMES)('συνοδευτικό `%s` ⇒ ΚΑΝΕΝΑ σημάδι, καμία κρίση κατοχής', async (kind) => {
+    const setSpy = jest.fn();
+    const resolveCustodySpy = jest.fn();
+    const onFinalize = loadWithMocks({ custody: undefined, setSpy, resolveCustodySpy });
+    const original = 'companies/c1/entities/catalog_asset/casst_x/domains/catalog/categories/photos/files/file_9.jpg';
+
+    await onFinalize({ name: fileCompanionPath(original, kind), bucket: 'default-bucket' });
+
+    expect(resolveCustodySpy).not.toHaveBeenCalled();
+    expect(setSpy).not.toHaveBeenCalled();
   });
 
   it('περνά το `object.bucket` στο `resolveCustody` ως bucketContext (bucket-aware επανέλεγχος)', async () => {

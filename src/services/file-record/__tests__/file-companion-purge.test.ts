@@ -101,8 +101,13 @@ describe('Μ — το μητρώο ονομάτων', () => {
       `${DIR}${DXF_ID}_poster.webp`,
       `${DXF}_thumb.png`,
       `${DXF}.thumbnail.png`,
+      // ADR-922 — η εικόνα δημοσίευσης DXF (το είδος μπήκε χωρίς γραμμή εδώ· διορθώθηκε στην ADR-923 §5.10.3).
+      `${DXF}.publish.png`,
       `${DXF}.processed.json`,
       `${DIR}${DXF_ID}.scene.json`,
+      // ADR-923 §5.10.3 — αποδόσεις μέσου καταλόγου, χωρίς κατάληξη (η μορφή ζει στο contentType).
+      `${DIR}${DXF_ID}_catalog-web`,
+      `${DIR}${DXF_ID}_catalog-print`,
     ]);
   });
 
