@@ -225,7 +225,7 @@
     "tooManyDescendants": "Up to {max} variants per model.",
     "assetRoleKindMismatch": "The asset role does not accept this kind of file.",
     "channelLocalesRequired": "Each channel needs at least one language.",
-    "consistencyRuleViolated": "The value breaks the consistency rule “{ruleId}”.",
+    "consistencyRuleViolated": "{kind, select, unique {The value repeats in another variant — the rule requires a unique value.} orderAcrossAttributes {This variant's values do not follow the order the rule sets (e.g. H ≥ M ≥ L).} monotonicAlongAxis {The value does not rise/fall with the axis as the rule sets.} compare {The value fails the comparison the rule sets.} other {The value breaks the consistency rule “{ruleId}”.}}",
     "fieldImmutable": "This field cannot change after creation.",
     "uniqueValueTaken": "The value is already used by another product.",
     "uniqueValueLooksLike": "The value looks like another product’s — check for look-alike characters.",
@@ -713,7 +713,8 @@
       "empty": "No products yet. Start with “New”.",
       "more": "Load more",
       "failed": "The list could not be loaded.",
-      "stale": "{count, plural, one {# row has} other {# rows have}} stale derived data (completeness or order) — recalculation needed."
+      "stale": "{count, plural, one {# row has} other {# rows have}} stale derived data (completeness or order) — recalculation needed.",
+      "unavailable": "No products are shown while the list fails to load."
     },
     "columns": {
       "image": "Image",

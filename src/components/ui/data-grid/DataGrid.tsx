@@ -143,7 +143,9 @@ export function DataGrid<Row>(props: DataGridProps<Row>): ReactNode {
 
   return (
     <section className={cn('flex min-h-0 flex-col', props.className)} onPointerUp={handlers.onPointerUp}>
-      <div ref={virtualRows.scrollRef} className="min-h-0 overflow-auto rounded-md border border-border">
+      {/* `contain: inline-size`: το φαρδύ table ΔΕΝ δηλώνει το min-content πλάτος του στους προγόνους (grid items με
+          `min-width:auto` φούσκωναν και έσπρωχναν τα κουμπιά της κεφαλίδας έξω από την οθόνη) — κυλά μέσα του. */}
+      <div ref={virtualRows.scrollRef} className="min-h-0 overflow-auto rounded-md border border-border [contain:inline-size]">
         <table ref={tableRef} role="grid" aria-label={props.label} aria-rowcount={props.rows.length + 1} aria-colcount={props.columns.length}
           aria-multiselectable aria-readonly={props.onChange ? undefined : true} tabIndex={-1}
           onKeyDown={handlers.onKeyDown} onCopy={handlers.onCopy} onCut={handlers.onCut} onPaste={handlers.onPaste}

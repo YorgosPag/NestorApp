@@ -142,7 +142,8 @@
     "catalogAttributes": "Ιδιότητες",
     "catalogCategories": "Κατηγορίες",
     "catalogMeasurements": "Μονάδες μέτρησης",
-    "catalogAssets": "Βιβλιοθήκη μέσων"
+    "catalogAssets": "Βιβλιοθήκη μέσων",
+    "catalogProducts": "Προϊόντα"
   },
   "reports": {
     "overview": "Διοικητική Σύνοψη",

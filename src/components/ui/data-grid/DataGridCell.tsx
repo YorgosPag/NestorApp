@@ -43,7 +43,7 @@ export interface DataGridCellProps {
   readonly choicesWord: string;
   readonly onInputChange: (event: ChangeEvent<HTMLInputElement>) => void;
   readonly onPointerDown: (cell: { row: number; col: number }, event: PointerEvent<HTMLElement>) => void;
-  readonly onPointerEnter: (cell: { row: number; col: number }) => void;
+  readonly onPointerEnter: (cell: { row: number; col: number }, event: PointerEvent<HTMLElement>) => void;
   readonly onDoubleClick: (cell: { row: number; col: number }) => void;
   readonly onOpenChoices: () => void;
   readonly choices?: ReactNode;
@@ -97,7 +97,7 @@ function DataGridCellImpl(props: DataGridCellProps) {
       aria-invalid={view.issues.length > 0 ? true : undefined}
       aria-describedby={describedBy}
       onPointerDown={(event) => props.onPointerDown(cell, event)}
-      onPointerEnter={() => props.onPointerEnter(cell)}
+      onPointerEnter={(event) => props.onPointerEnter(cell, event)}
       onDoubleClick={() => props.onDoubleClick(cell)}
       className={cn(
         'relative h-9 select-none border-b border-r border-border p-0 align-middle text-sm',

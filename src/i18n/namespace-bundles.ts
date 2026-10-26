@@ -70,3 +70,14 @@ export const AUDIT_TIMELINE_NAMESPACES = [
   'common-status',
   'common-validation',
 ] as const;
+
+/**
+ * Ο **κατάλογος προϊόντων** (ADR-923) — ένα namespace, ως bundle **επίτηδες**.
+ *
+ * 🔴 **ΓΙΑΤΙ BUNDLE ΚΑΙ ΟΧΙ `const CATALOG_NS = 'catalog'`** (ADR-923 §5.10.4 Β7): όλος ο κατάλογος παίρνει το `t` από
+ * **έναν** hook (`useCatalogText`). Με σταθερά module, το εργαλείο του κελύφους (ADR-744 §18, κληρονομιά ενός
+ * άλματος) έβλεπε το αρχείο του hook να δηλώνει **μηδέν** namespaces ⇒ καμία σελίδα του καταλόγου δεν μπορούσε να
+ * αποκτήσει route slice («κλειδιά χωρίς namespace» σε 20+ αρχεία) ⇒ ωμά κλειδιά στο πρώτο καρέ. Το bundle το
+ * διαβάζουν **και** το CHECK 3.8 **και** ο γεννήτορας — μία αλήθεια.
+ */
+export const CATALOG_NAMESPACES = ['catalog'] as const;

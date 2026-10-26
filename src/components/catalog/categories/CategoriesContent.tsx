@@ -31,6 +31,13 @@ import { useUnsavedGuard } from '../shared/use-unsaved-guard';
 import { categoryMoveIssues, moveCategory, updateCategory } from './category-actions';
 import { CategoryEditor } from './CategoryEditor';
 
+// 🔴 ADR-744 §18 · ADR-923 §5.10.4 Β7 — το `catalog` ΔΕΝ είναι στο κέλυφος: χωρίς το slice, ωμά κλειδιά στο πρώτο καρέ.
+// Καταχωρείται από client component (όχι από το `page.tsx`, που είναι Server Component).
+import routeSlice from '@/i18n/generated/routes/o__workspace__catalog__categories.el.json';
+import { registerRouteSlice } from '@/i18n/route-slice';
+
+registerRouteSlice(routeSlice);
+
 /** `new` = νέα ρίζα · `new:<id>` = νέα υποκατηγορία του `<id>`. */
 const NEW_CHILD_PREFIX = `${NEW_SELECTION}:`;
 

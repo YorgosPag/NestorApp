@@ -77,3 +77,22 @@ export function convertMeasurement(
   }
   return fromStandardUnit(family, toStandardUnit(family, value, fromUnitCode), toUnitCode);
 }
+
+/**
+ * Η τιμή με **ακριβώς** `decimals` δεκαδικά, στρογγυλεμένη **στο δεκαδικό** (μισό προς τα πάνω, μακριά από το μηδέν).
+ *
+ * 🔑 Το `toFixed` στρογγυλεύει το **δυαδικό** double: 2835 W → 2,835 kW αποθηκεύεται ως 2,83499… ⇒ «2,83», ενώ ο
+ * τυπωμένος κατάλογος (και το Excel) γράφει «2,84». Εδώ η μετατόπιση γίνεται στο **κείμενο** του αριθμού (εκθέτης),
+ * μετά τον καθαρισμό θορύβου — άρα στρογγυλεύεται ο αριθμός που **γράφτηκε**, όχι η δυαδική του προσέγγιση.
+ */
+export function toFixedDecimal(value: number, decimals: number): string {
+  requireFinite(value);
+  const shifted = shiftDecimal(stripFloatNoise(value), decimals);
+  return shiftDecimal(Math.sign(shifted) * Math.round(Math.abs(shifted)), -decimals).toFixed(decimals);
+}
+
+/** `value × 10^by` μέσω του **κειμένου** του αριθμού (μετατόπιση εκθέτη) — χωρίς πολλαπλασιασμό που προσθέτει θόρυβο. */
+function shiftDecimal(value: number, by: number): number {
+  const [mantissa, exponent = '0'] = String(value).split('e');
+  return Number(`${mantissa}e${Number(exponent) + by}`);
+}

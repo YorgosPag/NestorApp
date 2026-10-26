@@ -26,6 +26,13 @@ import { NEW_SELECTION, useCatalogSelection } from '../shared/use-catalog-select
 import { useUnsavedGuard } from '../shared/use-unsaved-guard';
 import { FamilyEditor } from './FamilyEditor';
 
+// 🔴 ADR-744 §18 · ADR-923 §5.10.4 Β7 — το `catalog` ΔΕΝ είναι στο κέλυφος: χωρίς το slice, ωμά κλειδιά στο πρώτο καρέ.
+// Καταχωρείται από client component (όχι από το `page.tsx`, που είναι Server Component).
+import routeSlice from '@/i18n/generated/routes/o__workspace__catalog__families.el.json';
+import { registerRouteSlice } from '@/i18n/route-slice';
+
+registerRouteSlice(routeSlice);
+
 function useFamilies() {
   const notice = useCatalogFailureNotice();
   const library = useCatalogLibrary(notice);

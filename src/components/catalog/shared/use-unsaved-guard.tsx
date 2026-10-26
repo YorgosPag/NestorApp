@@ -12,7 +12,7 @@
  * Ο επεξεργαστής δηλώνει μόνος του αν είναι βρώμικος (`reportDirty`)· η σελίδα δεν ξέρει τίποτα για πρόχειρα.
  */
 
-import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { clearUnsavedWork, markUnsavedWork } from '@/lib/app-version/unsaved-work-registry';
@@ -66,4 +66,24 @@ export function useUnsavedGuard(): UnsavedGuard {
     />
   );
   return { reportDirty, guard, dialog };
+}
+
+/**
+ * **Πολλά πρόχειρα, ένας φύλακας** — ένας επεξεργαστής με δύο ανεξάρτητα πρόχειρα (ιδιότητες · πλέγμα παραλλαγών)
+ * δηλώνει «βρώμικο» αν **οποιοδήποτε** είναι βρώμικο. Χωρίς αυτό, το «καθαρό» του ενός θα έσβηνε το «βρώμικο» του
+ * άλλου (μία boolean, δύο γραφείς). Κάθε μέρος παίρνει **σταθερό** reporter (ασφαλές ως εξάρτηση effect).
+ */
+export function useDirtyParts(report: (dirty: boolean) => void): (part: string) => (dirty: boolean) => void {
+  const [parts, setParts] = useState<Readonly<Record<string, boolean>>>({});
+  useEffect(() => report(Object.values(parts).some(Boolean)), [parts, report]);
+  return useMemo(() => {
+    const reporters = new Map<string, (dirty: boolean) => void>();
+    return (part: string) => {
+      const known = reporters.get(part);
+      if (known) return known;
+      const reporter = (dirty: boolean) => setParts((prev) => (prev[part] === dirty ? prev : { ...prev, [part]: dirty }));
+      reporters.set(part, reporter);
+      return reporter;
+    };
+  }, []);
 }

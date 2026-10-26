@@ -27,6 +27,13 @@ import { MeasurementFamilyEditor } from './MeasurementFamilyEditor';
 import { MeasurementFamilyList, useMeasurementFamilyName } from './MeasurementFamilyList';
 import { MeasurementUnitsTable } from './MeasurementUnitsTable';
 
+// 🔴 ADR-744 §18 · ADR-923 §5.10.4 Β7 — το `catalog` ΔΕΝ είναι στο κέλυφος: χωρίς το slice, ωμά κλειδιά στο πρώτο καρέ.
+// Καταχωρείται από client component (όχι από το `page.tsx`, που είναι Server Component).
+import routeSlice from '@/i18n/generated/routes/o__workspace__catalog__measurements.el.json';
+import { registerRouteSlice } from '@/i18n/route-slice';
+
+registerRouteSlice(routeSlice);
+
 /** Οι κωδικοί με εκκρεμή εγγραφή (υπάρχουσα: id · νέα: `new:<κωδικός>`). */
 function usePendingCodes(library: CatalogLibrary): ReadonlySet<string> {
   const { view, pendingKeys } = library.ops.measurementFamilies;

@@ -134,7 +134,8 @@ function judgeRules(input: AggregateJudgeInput): AggregateVerdict {
       violation.attributeIds.map((attributeId): CatalogIssue => ({
         code: 'consistencyRuleViolated',
         path: `${memberPath(variantId)}.values.${attributeId}`,
-        params: { ruleId: violation.ruleId },
+        // Το ΕΙΔΟΣ του κανόνα ταξιδεύει μαζί: το μήνυμα λέει «επαναλαμβάνεται», όχι το εσωτερικό «rule_1».
+        params: { ruleId: violation.ruleId, kind: violation.kind },
       })),
     ),
   );

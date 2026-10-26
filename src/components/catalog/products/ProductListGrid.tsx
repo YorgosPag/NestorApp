@@ -20,17 +20,19 @@ import type { CatalogListRow } from './product-list-rows';
 export interface ProductListGridProps extends ProductListContext {
   readonly rows: readonly CatalogListRow[];
   readonly onOpen: (row: CatalogListRow) => void;
+  /** Τι λέει το άδειο πλέγμα — εξαρτάται από την κατάσταση: «φορτώνει» ≠ «δεν υπάρχει κανένα» ≠ «δεν φορτώθηκε». */
+  readonly emptyText: string;
 }
 
 export function ProductListGrid(props: ProductListGridProps) {
   const { t, text } = useCatalogText();
   const gridWords = useCatalogGridWords();
-  const { rows, onOpen, families, assets, files, channel, locale, facetKeys } = props;
+  const { rows, onOpen, families, assets, files, channel, locale, facetKeys, emptyText } = props;
   const columns = useMemo(
     () => productListColumns({ families, assets, files, channel, locale, facetKeys }, { t, text }),
     [families, assets, files, channel, locale, facetKeys, t, text],
   );
-  const words = useMemo(() => ({ ...gridWords, empty: t('products.list.empty') }), [gridWords, t]);
+  const words = useMemo(() => ({ ...gridWords, empty: emptyText }), [gridWords, emptyText]);
   return (
     <DataGrid<CatalogListRow>
       label={t('products.list.label')}

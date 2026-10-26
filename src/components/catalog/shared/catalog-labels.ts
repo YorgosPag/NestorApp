@@ -38,8 +38,6 @@ import type {
 import type { AssetKind, AttributeType, ReferenceRelation } from '@/subapps/catalog/vocabulary/attribute-types';
 import type { CatalogChannel } from '@/subapps/catalog/vocabulary/channels';
 
-export const CATALOG_NS = 'catalog';
-
 /** Η γλώσσα κάθε πεδίου πολύγλωσσου κειμένου — δεμένη στο `HUMAN_LANGUAGES` (νέα γλώσσα ⇒ νέα λέξη, αλλιώς σπάει). */
 export const LANGUAGE_KEYS: Readonly<Record<HumanLanguage, string>> = {
   el: 'language.el',

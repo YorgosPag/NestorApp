@@ -44,10 +44,14 @@ export const EXPECTED_REVISION_PARAM = 'expectedRevision';
 
 /** Τμήματα σελίδων μέσα στον χώρο. */
 export const CATALOG_PAGES = {
+  /** Το ενιαίο πλέγμα προϊόντων + επεξεργαστής (ADR-923 §5.10.4 Β2/Β3) — η κύρια οθόνη, όπως στο Akeneo. */
+  products: '/catalog/products',
   families: '/catalog/families',
   attributes: '/catalog/attributes',
   categories: '/catalog/categories',
   measurements: '/catalog/measurements',
   /** Βιβλιοθήκη μέσων (ADR-923 §5.10.4). */
   assets: '/catalog/assets',
+  /** Κανάλια × γλώσσες (ADR-923 §5.10.4 Β5). */
+  settings: '/catalog/settings',
 } as const;

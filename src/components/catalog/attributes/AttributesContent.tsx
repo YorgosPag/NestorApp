@@ -29,6 +29,13 @@ import { AttributeGroupsDialog } from './AttributeGroupsDialog';
 import { AttributeLibraryList } from './AttributeLibraryList';
 import { useOrderKeyAtEnd } from './use-attribute-order';
 
+// 🔴 ADR-744 §18 · ADR-923 §5.10.4 Β7 — το `catalog` ΔΕΝ είναι στο κέλυφος: χωρίς το slice, ωμά κλειδιά στο πρώτο καρέ.
+// Καταχωρείται από client component (όχι από το `page.tsx`, που είναι Server Component).
+import routeSlice from '@/i18n/generated/routes/o__workspace__catalog__attributes.el.json';
+import { registerRouteSlice } from '@/i18n/route-slice';
+
+registerRouteSlice(routeSlice);
+
 /** Αναδιάταξη μέσα στην ομάδα: **μία** εγγραφή, αισιόδοξα. */
 function useMoveAttribute(library: CatalogLibrary) {
   return useCallback(

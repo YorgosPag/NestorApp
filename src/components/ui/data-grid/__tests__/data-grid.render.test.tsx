@@ -9,6 +9,8 @@ import { renderToString } from 'react-dom/server';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { emptyHistory, recordHistory, redoHistory, undoHistory, type History } from '@/lib/spreadsheet/grid-history';
 
+import { installPointerEvents } from '@/test-utils/pointer-event';
+
 import { DataGrid } from '../DataGrid';
 import type { DataGridChange, DataGridColumn, DataGridWords } from '../data-grid-types';
 import { DATA_GRID_ROW_PX, VIRTUALIZE_ABOVE_ROWS } from '../use-grid-virtual-rows';
@@ -266,5 +268,33 @@ describe('DataGrid — virtualization', () => {
     expect(open).toHaveBeenCalledWith(expect.objectContaining({ id: 'r1' }), 1);
     fireEvent.doubleClick(within(grid()).getAllByRole('gridcell')[0]);
     expect(open).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'r0' }), 0);
+  });
+});
+
+describe('DataGrid — ποντίκι (κλικ · σύρση εύρους)', () => {
+  beforeAll(() => installPointerEvents());
+  // 3 στήλες ανά γραμμή: το κελί (γραμμή, στήλη) στη θέση row * 3 + col.
+  const cellAt = (row: number, col: number) => within(grid()).getAllByRole('gridcell')[row * 3 + col];
+  const selected = () => within(grid()).getAllByRole('gridcell').flatMap((cell, index) => (cell.getAttribute('aria-selected') === 'true' ? [`${Math.floor(index / 3)},${index % 3}`] : []));
+
+  it('κλικ επιλέγει το κελί · σύρση με πατημένο κουμπί επεκτείνει σε ΕΥΡΟΣ', () => {
+    render(<Harness initial={seed(3)} />);
+    fireEvent.pointerDown(cellAt(1, 1), { button: 0, buttons: 1 });
+    expect(selected()).toEqual(['1,1']);
+    fireEvent.pointerEnter(cellAt(2, 2), { buttons: 1 });
+    expect(selected()).toEqual(['1,1', '1,2', '2,1', '2,2']);
+  });
+
+  it('🔴 κουμπί αφημένο ΕΞΩ από το πλέγμα (κανένα pointerup εδώ) ⇒ το πέρασμα πάνω από κελιά ΔΕΝ επεκτείνει', () => {
+    render(<Harness initial={seed(3)} />);
+    fireEvent.pointerDown(cellAt(0, 0), { button: 0, buttons: 1 });
+    fireEvent.pointerEnter(cellAt(2, 2), { buttons: 0 });
+    expect(selected()).toEqual(['0,0']);
+  });
+
+  it('δεξί κλικ ΔΕΝ μετακινεί την επιλογή', () => {
+    render(<Harness initial={seed(3)} />);
+    fireEvent.pointerDown(cellAt(2, 1), { button: 2, buttons: 2 });
+    expect(selected()).toEqual(['0,0']);
   });
 });

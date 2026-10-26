@@ -71,7 +71,7 @@ export interface GridHandlers {
   readonly onCut: (event: ClipboardEvent<HTMLElement>) => void;
   readonly onPaste: (event: ClipboardEvent<HTMLElement>) => void;
   readonly onCellPointerDown: (cell: GridCell, event: PointerEvent<HTMLElement>) => void;
-  readonly onCellPointerEnter: (cell: GridCell) => void;
+  readonly onCellPointerEnter: (cell: GridCell, event: PointerEvent<HTMLElement>) => void;
   readonly onPointerUp: () => void;
   readonly onCellDoubleClick: (cell: GridCell) => void;
   readonly choose: (text: string) => void;
@@ -138,7 +138,9 @@ function usePointer<Row>(grid: DataGridController<Row>, props: DataGridProps<Row
     grid.apply({ state: { ...committed.state, selection }, change: committed.change });
     dragging.current = true;
   }, [grid]);
-  const onCellPointerEnter = useCallback((cell: GridCell) => {
+  const onCellPointerEnter = useCallback((cell: GridCell, event: PointerEvent<HTMLElement>) => {
+    // Το κουμπί αφέθηκε ΕΞΩ από το πλέγμα (κανένα `pointerup` εδώ) ⇒ η σύρση τελείωσε· ρωτάμε το ίδιο το συμβάν.
+    if ((event.buttons & 1) === 0) dragging.current = false;
     if (!dragging.current) return;
     const snap = grid.snapshot();
     grid.setState({ ...snap.state, selection: extendSelectionTo(snap.state.selection, cell) });

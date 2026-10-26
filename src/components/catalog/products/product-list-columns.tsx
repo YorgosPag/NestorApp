@@ -63,7 +63,8 @@ function header(id: string, w: ProductListWords): Pick<Column, 'id' | 'header' |
 }
 
 function identityColumns(ctx: ProductListContext, w: ProductListWords): Column[] {
-  const kindKey = (row: CatalogListRow) => (row.kind === 'model' ? 'products.kind.productModel' : 'products.kind.product');
+  // Τα literals ΜΕΣΑ στην κλήση: έτσι τα βλέπει ο γεννήτορας του route slice (ADR-744) — συνάρτηση που ΕΠΙΣΤΡΕΦΕΙ κλειδί είναι «δυναμική t()».
+  const kindLabel = (row: CatalogListRow) => w.t(row.kind === 'model' ? 'products.kind.productModel' : 'products.kind.product');
   return [
     { ...header('image', w), width: 'xs', text: () => '',
       render: (row) => { const file = imageFileOf(row, ctx); return file ? <FileThumbnail file={file} displayName={rowIdentifier(row)} size="xs" /> : null; } },
@@ -72,8 +73,8 @@ function identityColumns(ctx: ProductListContext, w: ProductListWords): Column[]
     { ...header('label', w), width: 'lg', text: (row) => rowLabel(row) ?? '' },
     { ...header('family', w), width: 'md',
       text: (row) => { const family = ctx.families.get(row.record.familyId); return family ? w.text(family.labels, family.code) : ''; } },
-    { ...header('kind', w), width: 'sm', text: (row) => w.t(kindKey(row)),
-      render: (row) => <Badge variant={row.kind === 'model' ? 'secondary' : 'outline'}>{w.t(kindKey(row))}</Badge> },
+    { ...header('kind', w), width: 'sm', text: kindLabel,
+      render: (row) => <Badge variant={row.kind === 'model' ? 'secondary' : 'outline'}>{kindLabel(row)}</Badge> },
   ];
 }
 

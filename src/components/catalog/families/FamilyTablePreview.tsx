@@ -16,9 +16,32 @@ import { Merge } from 'lucide-react';
 import type { CatalogLibrary } from '@/hooks/catalog/useCatalogLibrary';
 import type { CatalogFamilyDefinition } from '@/subapps/catalog/types/family';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
-import { buildTablePreview, type PreviewRow } from './family-table-preview';
+import { buildTablePreview, type PreviewRow, type TablePreview } from './family-table-preview';
 
 const EMPTY_CELL = '·';
+
+/** Διαδοχικά **ίδια** κελιά ⇒ ένα, με `colSpan` (ο τυπωμένος πίνακας του φυλλαδίου). Κενά δεν συγχωνεύονται. */
+export function mergeAdjacent(cells: readonly string[]): { readonly text: string; readonly span: number }[] {
+  const runs: { text: string; span: number }[] = [];
+  for (const cell of cells) {
+    const last = runs[runs.length - 1];
+    if (last && cell !== '' && last.text === cell) last.span += 1;
+    else runs.push({ text: cell, span: 1 });
+  }
+  return runs;
+}
+
+function ValueCells({ row, columnCount }: { readonly row: Extract<PreviewRow, { kind: 'attribute' }>; readonly columnCount: number }) {
+  const cells = row.cells;
+  if (!cells) {
+    return row.merge === 'all'
+      ? <td colSpan={columnCount} className="px-2 py-1 text-center text-muted-foreground">{EMPTY_CELL}</td>
+      : <>{Array.from({ length: columnCount }, (_, index) => <td key={index} className="px-2 py-1 text-center text-muted-foreground">{EMPTY_CELL}</td>)}</>;
+  }
+  const allSame = cells.length > 0 && cells.every((cell) => cell === cells[0]);
+  const runs = row.merge === 'none' ? cells.map((text) => ({ text, span: 1 })) : row.merge === 'all' && allSame ? [{ text: cells[0], span: cells.length }] : mergeAdjacent(cells);
+  return <>{runs.map((run, index) => <td key={index} colSpan={run.span > 1 ? run.span : undefined} className="px-2 py-1 text-center">{run.text || EMPTY_CELL}</td>)}</>;
+}
 
 function PreviewBodyRow({ row, columnCount }: { readonly row: PreviewRow; readonly columnCount: number }) {
   const { t } = useCatalogText();
@@ -44,10 +67,26 @@ function PreviewBodyRow({ row, columnCount }: { readonly row: PreviewRow; readon
   return (
     <tr className="border-b">
       {label}
-      {row.merge === 'all'
-        ? <td colSpan={columnCount} className="px-2 py-1 text-center text-muted-foreground">{EMPTY_CELL}</td>
-        : Array.from({ length: columnCount }, (_, index) => <td key={index} className="px-2 py-1 text-center text-muted-foreground">{EMPTY_CELL}</td>)}
+      <ValueCells row={row} columnCount={columnCount} />
     </tr>
+  );
+}
+
+/** Ο **ένας** renderer πίνακα — προεπισκόπηση οικογένειας (δείγμα) και πίνακας μοντέλου (πραγματικές τιμές, Β6). */
+export function PreviewTable({ preview, title, id }: { readonly preview: TablePreview; readonly title: string; readonly id: string }) {
+  const { t } = useCatalogText();
+  const columnCount = Math.max(preview.columns.length, 1);
+  return (
+    <section className="flex flex-col gap-2" aria-labelledby={id}>
+      <h3 id={id} className="m-0 text-sm font-semibold text-foreground">{title}</h3>
+      <div className="overflow-x-auto rounded-md border [contain:inline-size]">
+        <table className="w-full border-collapse text-sm">
+          <caption className="sr-only">{title}</caption>
+          <tbody>{preview.rows.map((row) => <PreviewBodyRow key={row.id} row={row} columnCount={columnCount} />)}</tbody>
+        </table>
+      </div>
+      {preview.hiddenColumns > 0 ? <p className="m-0 text-xs text-muted-foreground">{t('families.table.moreColumns', { count: preview.hiddenColumns })}</p> : null}
+    </section>
   );
 }
 
@@ -58,17 +97,5 @@ export function FamilyTablePreview({ draft, library }: { readonly draft: Catalog
     [draft, library.attributeById, library.registry, text, t],
   );
   if (!preview) return null;
-  const columnCount = Math.max(preview.columns.length, 1);
-  return (
-    <section className="flex flex-col gap-2" aria-labelledby="family-table-preview-title">
-      <h3 id="family-table-preview-title" className="m-0 text-sm font-semibold text-foreground">{t('families.table.preview')}</h3>
-      <div className="overflow-x-auto rounded-md border">
-        <table className="w-full border-collapse text-sm">
-          <caption className="sr-only">{t('families.table.preview')}</caption>
-          <tbody>{preview.rows.map((row) => <PreviewBodyRow key={row.id} row={row} columnCount={columnCount} />)}</tbody>
-        </table>
-      </div>
-      {preview.hiddenColumns > 0 ? <p className="m-0 text-xs text-muted-foreground">{t('families.table.moreColumns', { count: preview.hiddenColumns })}</p> : null}
-    </section>
-  );
+  return <PreviewTable preview={preview} title={t('families.table.preview')} id="family-table-preview-title" />;
 }

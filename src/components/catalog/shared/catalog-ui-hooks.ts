@@ -15,16 +15,17 @@ import { useCallback } from 'react';
 
 import { useCapability } from '@/auth/hooks/useCapability';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { CATALOG_NAMESPACES } from '@/i18n/namespace-bundles';
 import { resolveHumanLanguage } from '@/i18n/languages';
 import { resolveLocalizedText, type LocalizedText } from '@/i18n/localized-text';
 import { useNotifications } from '@/providers/NotificationProvider';
 import type { CatalogFailure } from '@/services/catalog/catalog-failure';
 import { isGranted } from '@/types/capability-authority';
-import { CATALOG_NS, FAILURE_KEYS } from './catalog-labels';
+import { FAILURE_KEYS } from './catalog-labels';
 
 /** `t` του namespace + επίλυση πολύγλωσσων δεδομένων στη γλώσσα του UI. */
 export function useCatalogText() {
-  const { t, i18n } = useTranslation(CATALOG_NS);
+  const { t, i18n } = useTranslation(CATALOG_NAMESPACES);
   const language = resolveHumanLanguage(i18n.language);
   const text = useCallback(
     (value: LocalizedText | undefined, fallback = '') => resolveLocalizedText(value, language) || fallback,
@@ -35,7 +36,7 @@ export function useCatalogText() {
 
 /** Η μία ειδοποίηση αποτυχίας εγγραφής — ίδια λέξη για ίδιο είδος, σε κάθε οθόνη του καταλόγου. */
 export function useCatalogFailureNotice(): (failure: CatalogFailure) => void {
-  const { t } = useTranslation(CATALOG_NS);
+  const { t } = useTranslation(CATALOG_NAMESPACES);
   const { error, warning } = useNotifications();
   return useCallback(
     (failure: CatalogFailure) => {

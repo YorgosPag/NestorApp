@@ -142,7 +142,8 @@
     "catalogAttributes": "Attributes",
     "catalogCategories": "Categories",
     "catalogMeasurements": "Units of measure",
-    "catalogAssets": "Media library"
+    "catalogAssets": "Media library",
+    "catalogProducts": "Products"
   },
   "reports": {
     "overview": "Executive Summary",

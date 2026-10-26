@@ -99,6 +99,58 @@
   },
   "$dynamicKeyPolicy": "Every entry below answers ONE unresolvable `t(...)` call site in a shell module. The generator REFUSES to emit a slice while any such call is unclassified — that refusal is the guarantee. Each `reason` states a fact measured on 2026-07-31, not an assumption; re-verify it when you touch the file.",
   "dynamicKeyPolicy": {
+    "src/components/catalog/attributes/AttributeConfigFields.tsx": {
+      "keys": [
+        "catalog:attributes.mappings.etim",
+        "catalog:attributes.mappings.etimHint",
+        "catalog:attributes.mappings.bsdd",
+        "catalog:attributes.mappings.bsddHint",
+        "catalog:attributes.mappings.atoe",
+        "catalog:attributes.mappings.atoeHint"
+      ],
+      "reason": "ADR-923 §5.10.4 Β7 — έγινε ορατό στον generator όταν οι 7 σελίδες του καταλόγου απέκτησαν route slice (μέχρι τότε το `useCatalogText` ζητούσε `useTranslation(CATALOG_NS)` = σταθερά module ⇒ ο hook δήλωνε ΜΗΔΕΝ namespaces και κανένα αρχείο του καταλόγου δεν κρινόταν· τώρα bundle `CATALOG_NAMESPACES`). Η ΜΟΝΗ δυναμική κλήση είναι `t(labelKey)` / `t(hintKey)` (γρ. 98) μέσα στον τοπικό helper `text(key, labelKey, hintKey)`, που καλείται ΤΡΕΙΣ φορές (γρ. 109, 110, 117) με κυριολεκτικά `attributes.mappings.{etim,bsdd,atoe}` + `…Hint`. ΜΕΤΡΗΜΕΝΟ 2026-10-26 με grep στα σημεία κλήσης: ΕΞΙ κλειδιά, ΑΚΡΙΒΗ — όχι πρόθεμα `attributes.mappings` (10 κλειδιά, τα 4 τα γράφει κυριολεκτικά το ίδιο αρχείο). ⚠️ Νέα κλήση του `text(…)` ⇒ νέο κλειδί ΕΔΩ."
+    },
+    "src/components/catalog/attributes/AttributeScalarConfigFields.tsx": {
+      "keys": [
+        "catalog:attributes.config.minDate",
+        "catalog:attributes.config.maxDate"
+      ],
+      "reason": "ADR-923 §5.10.4 Β7 — έγινε ορατό στον generator όταν οι 7 σελίδες του καταλόγου απέκτησαν route slice (μέχρι τότε το `useCatalogText` ζητούσε `useTranslation(CATALOG_NS)` = σταθερά module ⇒ ο hook δήλωνε ΜΗΔΕΝ namespaces και κανένα αρχείο του καταλόγου δεν κρινόταν· τώρα bundle `CATALOG_NAMESPACES`). Η ΜΟΝΗ δυναμική κλήση είναι `t(labelKey)` (γρ. 138) στον τοπικό helper `dateField(key, labelKey)`, που καλείται ΔΥΟ φορές (γρ. 144) με κυριολεκτικά `attributes.config.minDate` / `maxDate`. ΜΕΤΡΗΜΕΝΟ 2026-10-26: δύο ΑΚΡΙΒΗ κλειδιά."
+    },
+    "src/components/catalog/families/FamilyRulesTab.tsx": {
+      "prefixes": [
+        "catalog:rules.severity",
+        "catalog:rules.direction"
+      ],
+      "reason": "ADR-923 §5.10.4 Β7 — έγινε ορατό στον generator όταν οι 7 σελίδες του καταλόγου απέκτησαν route slice (μέχρι τότε το `useCatalogText` ζητούσε `useTranslation(CATALOG_NS)` = σταθερά module ⇒ ο hook δήλωνε ΜΗΔΕΝ namespaces και κανένα αρχείο του καταλόγου δεν κρινόταν· τώρα bundle `CATALOG_NAMESPACES`). Η ΜΟΝΗ δυναμική κλήση είναι `t(keyOf(item))` (γρ. 43) στο γενικό `EnumSelect` του αρχείου· το `keyOf` δίνεται ΔΥΟ φορές, ΜΟΝΟ από τους πίνακες `DIRECTION_KEYS` (γρ. 55) και `SEVERITY_KEYS` (γρ. 113) του `catalog-labels.ts` (`Record<OrderDirection|RuleSeverity, string>`, εξαντλητικοί ως προς τον τύπο). ΜΕΤΡΗΜΕΝΟ 2026-10-26: `rules.severity` = {error, warning} · `rules.direction` = {ascending, descending} — τα προθέματα είναι ΑΚΡΙΒΗΣ απάντηση (4 κλειδιά), όχι σκούπα."
+    },
+    "src/components/catalog/measurements/MeasurementFamilyList.tsx": {
+      "prefixes": [
+        "catalog:measurement.family"
+      ],
+      "reason": "ADR-923 §5.10.4 Β7 — έγινε ορατό στον generator όταν οι 7 σελίδες του καταλόγου απέκτησαν route slice (μέχρι τότε το `useCatalogText` ζητούσε `useTranslation(CATALOG_NS)` = σταθερά module ⇒ ο hook δήλωνε ΜΗΔΕΝ namespaces και κανένα αρχείο του καταλόγου δεν κρινόταν· τώρα bundle `CATALOG_NAMESPACES`). Η ΜΟΝΗ δυναμική κλήση είναι `t(family.label.key)` (γρ. 24) στο `useMeasurementFamilyName`· το κλειδί υπάρχει ΜΟΝΟ για οικογένειες ΠΛΑΤΦΟΡΜΑΣ (`label.kind === 'i18n'`), και το παράγει ΜΟΝΟ το `platformFamilyLabel(code)` των `src/subapps/catalog/measurement/platform-families/*` ⇒ `measurement.family.<code>`. Οι οικογένειες ΧΩΡΟΥ έχουν κείμενο χρήστη, όχι κλειδί. ΜΕΤΡΗΜΕΝΟ 2026-10-26: `measurement.family` = 20 κλειδιά, ΟΛΑ ονόματα οικογενειών — το πρόθεμα είναι ακριβές. ⚠️ Χρειάζεται ΠΑΝΤΑ ολόκληρο: ο κατάλογος μονάδων είναι ανοιχτός σε κάθε σελίδα που δείχνει ιδιότητα μέτρησης."
+    },
+    "src/components/catalog/measurements/MeasurementUnitsEditor.tsx": {
+      "keys": [
+        "catalog:measurement.editor.standardOf",
+        "catalog:measurement.editor.codeOf",
+        "catalog:measurement.editor.symbolOf",
+        "catalog:measurement.editor.factorOf",
+        "catalog:measurement.editor.offsetOf",
+        "catalog:measurement.editor.uneceOf",
+        "catalog:measurement.editor.removeUnit"
+      ],
+      "reason": "ADR-923 §5.10.4 Β7 — έγινε ορατό στον generator όταν οι 7 σελίδες του καταλόγου απέκτησαν route slice (μέχρι τότε το `useCatalogText` ζητούσε `useTranslation(CATALOG_NS)` = σταθερά module ⇒ ο hook δήλωνε ΜΗΔΕΝ namespaces και κανένα αρχείο του καταλόγου δεν κρινόταν· τώρα bundle `CATALOG_NAMESPACES`). Η ΜΟΝΗ δυναμική κλήση είναι `t(key, { index })` (γρ. 47) στον τοπικό helper `label(key)` της γραμμής μονάδας, που καλείται ΕΠΤΑ φορές (γρ. 51–69) με κυριολεκτικά `measurement.editor.*Of` + `removeUnit`. ΜΕΤΡΗΜΕΝΟ 2026-10-26: επτά ΑΚΡΙΒΗ κλειδιά (το `measurement.editor` έχει 12 — τα υπόλοιπα 5 τα γράφουν κυριολεκτικά άλλα σημεία)."
+    },
+    "src/components/ui/sortable/SortableList.tsx": {
+      "keys": [
+        "common:sortable.picked",
+        "common:sortable.over",
+        "common:sortable.dropped",
+        "common:sortable.cancelled"
+      ],
+      "reason": "ADR-923 §5.10.4 Β7 — έγινε ορατό στον generator όταν οι 7 σελίδες του καταλόγου απέκτησαν route slice (μέχρι τότε το `useCatalogText` ζητούσε `useTranslation(CATALOG_NS)` = σταθερά module ⇒ ο hook δήλωνε ΜΗΔΕΝ namespaces και κανένα αρχείο του καταλόγου δεν κρινόταν· τώρα bundle `CATALOG_NAMESPACES`). Το ΚΟΙΝΟ `SortableList` (dnd-kit) φτάνει πλέον στατικά από τις σελίδες του καταλόγου (κατηγορίες · ομάδες ιδιοτήτων). Η ΜΟΝΗ δυναμική κλήση είναι `t(key, {…})` (γρ. 63) στον helper `say(key, …)` των ανακοινώσεων σύρσης, που καλείται ΤΕΣΣΕΡΙΣ φορές (γρ. 65–68) με κυριολεκτικά `sortable.{picked,over,dropped,cancelled}`. ΜΕΤΡΗΜΕΝΟ 2026-10-26: τέσσερα ΑΚΡΙΒΗ κλειδιά από τα 12 του `common:sortable` (όχι πρόθεμα: τα `tree*`/`refused`/`expand` είναι του δέντρου)."
+    },
     "src/components/sales/conveyance/ConveyanceChecklistRow.tsx": {
       "prefixes": ["conveyance:items"],
       "reason": "ADR-901 Φ2 · ADR-744 §26 — έγινε ορατό στον generator όταν η σελίδα υπόθεσης του επαγγελματία (τότε `/cases/[engagementId]`, από το ADR-901 §15 Γ2 δύο κελύφη: `/engagements/[engagementId]` · `/o/[workspace]/cases/[engagementId]` → `EngagedCaseContent`) απέκτησε route slice και έφτασε ΣΤΑΤΙΚΑ τη γραμμή λίστας. Οι δύο δυναμικές κλήσεις είναι `t(row.item.labelKey)` (γρ. 90, 123), και το `labelKey` έρχεται ΜΟΝΟ από τον κατάλογο `src/config/conveyance-checklist/items-*.ts` (`ChecklistItem.labelKey`, types.ts:126): 24 κυριολεκτικά `items.<id>.label` + 2 builders `items.${id}.label` (πωλητής/αγοραστής). ΜΕΤΡΗΜΕΝΟ 2026-10-03: το `conveyance:items` έχει 39 είδη και ΚΑΘΕ είδος έχει ΜΟΝΟ `label` (4.013 bytes) ⇒ το πρόθεμα είναι ΑΚΡΙΒΗΣ απάντηση, όχι σκούπα. ⚠️ Αν το `items.<id>` αποκτήσει δεύτερο πεδίο (περιγραφή/βοήθεια), στένεψε σε `keys` ανά είδος."
@@ -341,6 +393,97 @@
   },
   "$routeSlices": "ADR-744 §8 Φ4 — PER-ROUTE SLICES. Κλειστό σύνολο δηλώσεων: κάθε εγγραφή είναι διαδρομή που ζητά κλειδιά τα οποία το ΚΕΛΥΦΟΣ δεν έχει, και το artifact της οφείλει να μένει φρέσκο. 🏆 ΠΟΥ ΞΕΠΕΡΝΑΜΕ ΤΟΥΣ ΜΕΓΑΛΟΥΣ: το next-i18next ζητά `serverSideTranslations(locale, [...])` και το next-intl `pick(messages, [...])` — ΧΕΙΡΟΓΡΑΦΗ λίστα ανά σελίδα σε κάθε περίπτωση· το πειραματικό `useExtracted` του next-intl εξάγει αυτόματα αλλά δηλώνει ρητά ότι ΔΕΝ υποστηρίζει `t(variable)` ούτε `t` περασμένο σε άλλη συνάρτηση, δηλαδή σιωπά ακριβώς εκεί που αυτό το repo έχει 131 τέτοιες κλήσεις. Εδώ ΚΑΝΕΙΣ ΔΕΝ ΓΡΑΦΕΙ ΛΙΣΤΑ: το σύνολο παράγεται από τη στατική κλειστότητα εισαγωγών της σελίδας, και ο generator ΑΡΝΕΙΤΑΙ να εκπέμψει όσο υπάρχει ανεπίλυτη δυναμική κλήση. ⚠️ Η αυτόματη σάρωση «όλες οι σελίδες» απορρίφθηκε ΜΕ ΜΕΤΡΗΣΗ: η ένωσή τους δίνει 131 ανεπίλυτες `t()` που θα έπρεπε να δικαιολογηθούν μία-μία. ⚠️ ΤΟ ROUTE SLICE ΕΙΝΑΙ ΑΦΑΙΡΕΣΗ, ΟΧΙ ΕΝΩΣΗ: κρατά μόνο ό,τι το κέλυφος δεν απαντά ήδη — αλλιώς κάθε σελίδα θα ξανακουβαλούσε τα κοινά κλειδιά και το «per-route» θα ήταν ΜΕΓΑΛΥΤΕΡΟ από το σημερινό. ⚠️ ΚΑΝΕΝΑ guaranteedNamespaces σε route slice: το μητρώο μετανάστευσης είναι του ΚΕΛΥΦΟΥΣ και οφείλει να φτάσει στο μηδέν. 🔴 ADR-777 §8.43 — ΚΑΘΕ ΕΓΓΡΑΦΗ ΔΗΛΩΝΕΙ ΤΑΒΑΝΙ ΣΕ BYTES, ΚΑΙ ΕΛΕΓΧΕΤΑΙ. Ο αδελφός αυτού του μητρώου (`guaranteedNamespaces`) το έμαθε στο §8.38 όταν το `search-results` πήγε από δηλωμένα «~1,6 KB» σε 47.837 χωρίς τίποτα να κοκκινίσει· εδώ δεν υπήρχε ΚΑΝΕΝΑΣ αριθμός. ΔΥΟ ΑΝΕΞΑΡΤΗΤΟΙ ΚΑΝΟΝΕΣ, ΠΟΤΕ ΕΝΑΣ ΜΕ «Ή»: Κ1 = δομική αντιστροφή (slice >= κέλυφος ⇒ ΔΕΥΤΕΡΟ ΚΕΛΥΦΟΣ, zero-tolerance, κατώφλι ΠΑΡΑΓΟΜΕΝΟ από τον μηχανισμό ώστε κανένας αριθμός να μην το σιωπά) · Κ2 = αυτό εδώ το ταβάνι ανά εγγραφή. 🔴 ADR-744 §20 (2026-08-30) — ΤΟ ΤΑΒΑΝΙ ΕΠΑΨΕ ΝΑ ΔΗΛΩΝΕΤΑΙ, ΚΑΙ ΤΟ `budget` ΚΑΤΑΡΓΗΘΗΚΕ. Ως τότε κάθε εγγραφή δήλωνε `budget` σπαρμένο ως «σημερινό +25%, στρογγυλεμένο ανά 500» — ΣΤΙΓΜΙΟΤΥΠΟ, όχι κανόνας. Ένας αριθμός που δεν προκύπτει από κανόνα ΔΕΝ ΜΠΟΡΕΙ ΝΑ ΚΡΙΘΕΙ: όταν κοκκινίζει, κανείς δεν ξέρει αν φταίει η σελίδα ή ο αριθμός. Και ΕΙΧΑΝ ΣΑΠΙΣΕΙ, μετρημένο στη μετανάστευση: /pro/[alias] δήλωνε 3.400 και μετρούσε 1.797 (89% αχρησιμοποίητο)· /offers/[offerId] δήλωνε 19.000 και μετρούσε 11.494 (65%). Τζόγος τέτοιου μεγέθους κρύβει την επόμενη παλινδρόμηση στο ΙΔΙΟ σημείο — μάθημα ADR-598 (8× τζόγος επί 40 ημέρες). Ο άνθρωπος δηλώνει πλέον ΜΕΤΡΗΣΗ: { \"sealed\": <bytes>, \"sealedAt\": \"ΥΥΥΥ-ΜΜ-ΗΗ\", \"reason\": \"…\", \"history\": [ { \"from\", \"to\", \"at\", \"why\" } ] }, και το ταβάνι ΥΠΟΛΟΓΙΖΕΤΑΙ ως sealed × (1 + HEADROOM_PCT/100). 🔑 ΔΕΝ ΥΠΑΡΧΕΙ ΑΡΙΘΜΟΣ ΝΑ ΑΝΕΒΑΣΕΙΣ — η μόνη κίνηση είναι νέα ΣΦΡΑΓΙΣΗ, δηλαδή αλλαγή ΜΕΤΡΗΣΗΣ, και η αλυσίδα `history` ΟΦΕΙΛΕΙ ΝΑ ΚΛΕΙΝΕΙ ΑΡΙΘΜΗΤΙΚΑ (κάθε βήμα ξεκινά όπου τελείωσε το προηγούμενο, το τελευταίο καταλήγει ΑΚΡΙΒΩΣ στο `sealed`) — αλλιώς ΜΠΛΟΚΑΡΕΙ στη φόρτωση. 🏆 Είναι η πρακτική του Chromium (`Binary-Size:` footer: δεν υπάρχει απόλυτο ταβάνι, μόνο μεταβολή + γραμμένη αιτιολογία) ΜΕ ΤΟ ΚΕΝΟ ΤΗΣ ΚΛΕΙΣΤΟ: εκεί το footer δέχεται οποιοδήποτε κείμενο και κανείς δεν το επαληθεύει· εδώ η αιτιολογία δένεται με αριθμητική που ελέγχεται. Οι μετρήσεις: `npm run generate:i18n-shell-slice -- --measure` (δεν κρίνει, δεν γράφει)· η πύλη: `-- --dry-run`. ⚠️ ΜΗΝ γράψεις εντολή που σφραγίζει μόνη της — το `why` το γράφει ΑΝΘΡΩΠΟΣ, αλλιώς είναι «bump» με άλλο όνομα.",
   "routeSlices": {
+    "src/app/(app)/o/[workspace]/catalog/products/page.tsx": {
+      "sealed": 23465,
+      "sealedAt": "2026-10-26",
+      "history": [
+        {
+          "from": 0,
+          "to": 23465,
+          "at": "2026-10-26",
+          "why": "ΠΡΩΤΗ ΣΦΡΑΓΙΣΗ (ADR-923 §5.10.4 Β7). ΜΕΤΡΗΜΕΝΟ με `npm run generate:i18n-shell-slice -- --measure`: 23465 bytes, ΕΝΑ namespace (`catalog`), αφού αφαιρεθεί ό,τι απαντά ήδη το κέλυφος. Η διαδρομή δεν είχε ποτέ slice, γι' αυτό το `from` είναι 0. Το ταβάνι ΥΠΟΛΟΓΙΖΕΤΑΙ από αυτή τη σφράγιση (+25%) και δεν δηλώνεται πουθενά· νέα κλειστότητα ⇒ ΝΕΑ σφράγιση με μετρημένο λόγο."
+        }
+      ],
+      "reason": "ADR-923 §5.10.4 Β7 — ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ 2026-10-26 (Chrome, dev): η σελίδα `/catalog/products` έβαφε στο ΠΡΩΤΟ καρέ ωμά κλειδιά (`pages.products.title` · `pages.products.lead` · `products.jump.go` στα προϊόντα), επειδή το namespace `catalog` ΔΕΝ είναι στο κέλυφος και φτάνει μόνο όταν φορτωθεί το bundle — στον server ΠΟΤΕ. ⚠️ ΓΙΑΤΙ ΟΧΙ guaranteedNamespaces: το `catalog` το ζητούν ΜΟΝΟ οι 7 σελίδες του καταλόγου· στο κέλυφος θα ταξίδευε σε κάθε διαδρομή της εφαρμογής. ⚠️ ΓΙΑΤΙ ΟΧΙ next/dynamic: ωμό κλειδί είναι χειρότερο από spinner, και spinner δεν είναι πρώτο καρέ (ADR-777 Α19 κανόνας 30). Προϋπόθεση που ΕΚΛΕΙΣΕ ΣΤΗΝ ΙΔΙΑ ΑΛΛΑΓΗ: ο hook `useCatalogText` ζητά το bundle `CATALOG_NAMESPACES` (όχι σταθερά module), αλλιώς ο generator έβλεπε 20+ αρχεία «χωρίς namespace» και ΑΡΝΙΟΤΑΝ να κρίνει."
+    },
+    "src/app/(app)/o/[workspace]/catalog/assets/page.tsx": {
+      "sealed": 20080,
+      "sealedAt": "2026-10-26",
+      "history": [
+        {
+          "from": 0,
+          "to": 20080,
+          "at": "2026-10-26",
+          "why": "ΠΡΩΤΗ ΣΦΡΑΓΙΣΗ (ADR-923 §5.10.4 Β7). ΜΕΤΡΗΜΕΝΟ με `npm run generate:i18n-shell-slice -- --measure`: 20080 bytes, ΕΝΑ namespace (`catalog`), αφού αφαιρεθεί ό,τι απαντά ήδη το κέλυφος. Η διαδρομή δεν είχε ποτέ slice, γι' αυτό το `from` είναι 0. Το ταβάνι ΥΠΟΛΟΓΙΖΕΤΑΙ από αυτή τη σφράγιση (+25%) και δεν δηλώνεται πουθενά· νέα κλειστότητα ⇒ ΝΕΑ σφράγιση με μετρημένο λόγο."
+        }
+      ],
+      "reason": "ADR-923 §5.10.4 Β7 — ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ 2026-10-26 (Chrome, dev): η σελίδα `/catalog/assets` έβαφε στο ΠΡΩΤΟ καρέ ωμά κλειδιά (`pages.products.title` · `pages.products.lead` · `products.jump.go` στα προϊόντα), επειδή το namespace `catalog` ΔΕΝ είναι στο κέλυφος και φτάνει μόνο όταν φορτωθεί το bundle — στον server ΠΟΤΕ. ⚠️ ΓΙΑΤΙ ΟΧΙ guaranteedNamespaces: το `catalog` το ζητούν ΜΟΝΟ οι 7 σελίδες του καταλόγου· στο κέλυφος θα ταξίδευε σε κάθε διαδρομή της εφαρμογής. ⚠️ ΓΙΑΤΙ ΟΧΙ next/dynamic: ωμό κλειδί είναι χειρότερο από spinner, και spinner δεν είναι πρώτο καρέ (ADR-777 Α19 κανόνας 30). Προϋπόθεση που ΕΚΛΕΙΣΕ ΣΤΗΝ ΙΔΙΑ ΑΛΛΑΓΗ: ο hook `useCatalogText` ζητά το bundle `CATALOG_NAMESPACES` (όχι σταθερά module), αλλιώς ο generator έβλεπε 20+ αρχεία «χωρίς namespace» και ΑΡΝΙΟΤΑΝ να κρίνει."
+    },
+    "src/app/(app)/o/[workspace]/catalog/attributes/page.tsx": {
+      "sealed": 22701,
+      "sealedAt": "2026-10-26",
+      "history": [
+        {
+          "from": 0,
+          "to": 22701,
+          "at": "2026-10-26",
+          "why": "ΠΡΩΤΗ ΣΦΡΑΓΙΣΗ (ADR-923 §5.10.4 Β7). ΜΕΤΡΗΜΕΝΟ με `npm run generate:i18n-shell-slice -- --measure`: 22701 bytes, ΕΝΑ namespace (`catalog`), αφού αφαιρεθεί ό,τι απαντά ήδη το κέλυφος. Η διαδρομή δεν είχε ποτέ slice, γι' αυτό το `from` είναι 0. Το ταβάνι ΥΠΟΛΟΓΙΖΕΤΑΙ από αυτή τη σφράγιση (+25%) και δεν δηλώνεται πουθενά· νέα κλειστότητα ⇒ ΝΕΑ σφράγιση με μετρημένο λόγο."
+        }
+      ],
+      "reason": "ADR-923 §5.10.4 Β7 — ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ 2026-10-26 (Chrome, dev): η σελίδα `/catalog/attributes` έβαφε στο ΠΡΩΤΟ καρέ ωμά κλειδιά (`pages.products.title` · `pages.products.lead` · `products.jump.go` στα προϊόντα), επειδή το namespace `catalog` ΔΕΝ είναι στο κέλυφος και φτάνει μόνο όταν φορτωθεί το bundle — στον server ΠΟΤΕ. ⚠️ ΓΙΑΤΙ ΟΧΙ guaranteedNamespaces: το `catalog` το ζητούν ΜΟΝΟ οι 7 σελίδες του καταλόγου· στο κέλυφος θα ταξίδευε σε κάθε διαδρομή της εφαρμογής. ⚠️ ΓΙΑΤΙ ΟΧΙ next/dynamic: ωμό κλειδί είναι χειρότερο από spinner, και spinner δεν είναι πρώτο καρέ (ADR-777 Α19 κανόνας 30). Προϋπόθεση που ΕΚΛΕΙΣΕ ΣΤΗΝ ΙΔΙΑ ΑΛΛΑΓΗ: ο hook `useCatalogText` ζητά το bundle `CATALOG_NAMESPACES` (όχι σταθερά module), αλλιώς ο generator έβλεπε 20+ αρχεία «χωρίς namespace» και ΑΡΝΙΟΤΑΝ να κρίνει."
+    },
+    "src/app/(app)/o/[workspace]/catalog/categories/page.tsx": {
+      "sealed": 16241,
+      "sealedAt": "2026-10-26",
+      "history": [
+        {
+          "from": 0,
+          "to": 16241,
+          "at": "2026-10-26",
+          "why": "ΠΡΩΤΗ ΣΦΡΑΓΙΣΗ (ADR-923 §5.10.4 Β7). ΜΕΤΡΗΜΕΝΟ με `npm run generate:i18n-shell-slice -- --measure`: 16241 bytes, ΕΝΑ namespace (`catalog`), αφού αφαιρεθεί ό,τι απαντά ήδη το κέλυφος. Η διαδρομή δεν είχε ποτέ slice, γι' αυτό το `from` είναι 0. Το ταβάνι ΥΠΟΛΟΓΙΖΕΤΑΙ από αυτή τη σφράγιση (+25%) και δεν δηλώνεται πουθενά· νέα κλειστότητα ⇒ ΝΕΑ σφράγιση με μετρημένο λόγο."
+        }
+      ],
+      "reason": "ADR-923 §5.10.4 Β7 — ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ 2026-10-26 (Chrome, dev): η σελίδα `/catalog/categories` έβαφε στο ΠΡΩΤΟ καρέ ωμά κλειδιά (`pages.products.title` · `pages.products.lead` · `products.jump.go` στα προϊόντα), επειδή το namespace `catalog` ΔΕΝ είναι στο κέλυφος και φτάνει μόνο όταν φορτωθεί το bundle — στον server ΠΟΤΕ. ⚠️ ΓΙΑΤΙ ΟΧΙ guaranteedNamespaces: το `catalog` το ζητούν ΜΟΝΟ οι 7 σελίδες του καταλόγου· στο κέλυφος θα ταξίδευε σε κάθε διαδρομή της εφαρμογής. ⚠️ ΓΙΑΤΙ ΟΧΙ next/dynamic: ωμό κλειδί είναι χειρότερο από spinner, και spinner δεν είναι πρώτο καρέ (ADR-777 Α19 κανόνας 30). Προϋπόθεση που ΕΚΛΕΙΣΕ ΣΤΗΝ ΙΔΙΑ ΑΛΛΑΓΗ: ο hook `useCatalogText` ζητά το bundle `CATALOG_NAMESPACES` (όχι σταθερά module), αλλιώς ο generator έβλεπε 20+ αρχεία «χωρίς namespace» και ΑΡΝΙΟΤΑΝ να κρίνει."
+    },
+    "src/app/(app)/o/[workspace]/catalog/families/page.tsx": {
+      "sealed": 29503,
+      "sealedAt": "2026-10-26",
+      "history": [
+        {
+          "from": 0,
+          "to": 29503,
+          "at": "2026-10-26",
+          "why": "ΠΡΩΤΗ ΣΦΡΑΓΙΣΗ (ADR-923 §5.10.4 Β7). ΜΕΤΡΗΜΕΝΟ με `npm run generate:i18n-shell-slice -- --measure`: 29503 bytes, ΕΝΑ namespace (`catalog`), αφού αφαιρεθεί ό,τι απαντά ήδη το κέλυφος. Η διαδρομή δεν είχε ποτέ slice, γι' αυτό το `from` είναι 0. Το ταβάνι ΥΠΟΛΟΓΙΖΕΤΑΙ από αυτή τη σφράγιση (+25%) και δεν δηλώνεται πουθενά· νέα κλειστότητα ⇒ ΝΕΑ σφράγιση με μετρημένο λόγο."
+        }
+      ],
+      "reason": "ADR-923 §5.10.4 Β7 — ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ 2026-10-26 (Chrome, dev): η σελίδα `/catalog/families` έβαφε στο ΠΡΩΤΟ καρέ ωμά κλειδιά (`pages.products.title` · `pages.products.lead` · `products.jump.go` στα προϊόντα), επειδή το namespace `catalog` ΔΕΝ είναι στο κέλυφος και φτάνει μόνο όταν φορτωθεί το bundle — στον server ΠΟΤΕ. ⚠️ ΓΙΑΤΙ ΟΧΙ guaranteedNamespaces: το `catalog` το ζητούν ΜΟΝΟ οι 7 σελίδες του καταλόγου· στο κέλυφος θα ταξίδευε σε κάθε διαδρομή της εφαρμογής. ⚠️ ΓΙΑΤΙ ΟΧΙ next/dynamic: ωμό κλειδί είναι χειρότερο από spinner, και spinner δεν είναι πρώτο καρέ (ADR-777 Α19 κανόνας 30). Προϋπόθεση που ΕΚΛΕΙΣΕ ΣΤΗΝ ΙΔΙΑ ΑΛΛΑΓΗ: ο hook `useCatalogText` ζητά το bundle `CATALOG_NAMESPACES` (όχι σταθερά module), αλλιώς ο generator έβλεπε 20+ αρχεία «χωρίς namespace» και ΑΡΝΙΟΤΑΝ να κρίνει."
+    },
+    "src/app/(app)/o/[workspace]/catalog/measurements/page.tsx": {
+      "sealed": 18389,
+      "sealedAt": "2026-10-26",
+      "history": [
+        {
+          "from": 0,
+          "to": 18389,
+          "at": "2026-10-26",
+          "why": "ΠΡΩΤΗ ΣΦΡΑΓΙΣΗ (ADR-923 §5.10.4 Β7). ΜΕΤΡΗΜΕΝΟ με `npm run generate:i18n-shell-slice -- --measure`: 18389 bytes, ΕΝΑ namespace (`catalog`), αφού αφαιρεθεί ό,τι απαντά ήδη το κέλυφος. Η διαδρομή δεν είχε ποτέ slice, γι' αυτό το `from` είναι 0. Το ταβάνι ΥΠΟΛΟΓΙΖΕΤΑΙ από αυτή τη σφράγιση (+25%) και δεν δηλώνεται πουθενά· νέα κλειστότητα ⇒ ΝΕΑ σφράγιση με μετρημένο λόγο."
+        }
+      ],
+      "reason": "ADR-923 §5.10.4 Β7 — ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ 2026-10-26 (Chrome, dev): η σελίδα `/catalog/measurements` έβαφε στο ΠΡΩΤΟ καρέ ωμά κλειδιά (`pages.products.title` · `pages.products.lead` · `products.jump.go` στα προϊόντα), επειδή το namespace `catalog` ΔΕΝ είναι στο κέλυφος και φτάνει μόνο όταν φορτωθεί το bundle — στον server ΠΟΤΕ. ⚠️ ΓΙΑΤΙ ΟΧΙ guaranteedNamespaces: το `catalog` το ζητούν ΜΟΝΟ οι 7 σελίδες του καταλόγου· στο κέλυφος θα ταξίδευε σε κάθε διαδρομή της εφαρμογής. ⚠️ ΓΙΑΤΙ ΟΧΙ next/dynamic: ωμό κλειδί είναι χειρότερο από spinner, και spinner δεν είναι πρώτο καρέ (ADR-777 Α19 κανόνας 30). Προϋπόθεση που ΕΚΛΕΙΣΕ ΣΤΗΝ ΙΔΙΑ ΑΛΛΑΓΗ: ο hook `useCatalogText` ζητά το bundle `CATALOG_NAMESPACES` (όχι σταθερά module), αλλιώς ο generator έβλεπε 20+ αρχεία «χωρίς namespace» και ΑΡΝΙΟΤΑΝ να κρίνει."
+    },
+    "src/app/(app)/o/[workspace]/catalog/settings/page.tsx": {
+      "sealed": 16787,
+      "sealedAt": "2026-10-26",
+      "history": [
+        {
+          "from": 0,
+          "to": 16787,
+          "at": "2026-10-26",
+          "why": "ΠΡΩΤΗ ΣΦΡΑΓΙΣΗ (ADR-923 §5.10.4 Β7). ΜΕΤΡΗΜΕΝΟ με `npm run generate:i18n-shell-slice -- --measure`: 16787 bytes, ΕΝΑ namespace (`catalog`), αφού αφαιρεθεί ό,τι απαντά ήδη το κέλυφος. Η διαδρομή δεν είχε ποτέ slice, γι' αυτό το `from` είναι 0. Το ταβάνι ΥΠΟΛΟΓΙΖΕΤΑΙ από αυτή τη σφράγιση (+25%) και δεν δηλώνεται πουθενά· νέα κλειστότητα ⇒ ΝΕΑ σφράγιση με μετρημένο λόγο."
+        }
+      ],
+      "reason": "ADR-923 §5.10.4 Β7 — ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ 2026-10-26 (Chrome, dev): η σελίδα `/catalog/settings` έβαφε στο ΠΡΩΤΟ καρέ ωμά κλειδιά (`pages.products.title` · `pages.products.lead` · `products.jump.go` στα προϊόντα), επειδή το namespace `catalog` ΔΕΝ είναι στο κέλυφος και φτάνει μόνο όταν φορτωθεί το bundle — στον server ΠΟΤΕ. ⚠️ ΓΙΑΤΙ ΟΧΙ guaranteedNamespaces: το `catalog` το ζητούν ΜΟΝΟ οι 7 σελίδες του καταλόγου· στο κέλυφος θα ταξίδευε σε κάθε διαδρομή της εφαρμογής. ⚠️ ΓΙΑΤΙ ΟΧΙ next/dynamic: ωμό κλειδί είναι χειρότερο από spinner, και spinner δεν είναι πρώτο καρέ (ADR-777 Α19 κανόνας 30). Προϋπόθεση που ΕΚΛΕΙΣΕ ΣΤΗΝ ΙΔΙΑ ΑΛΛΑΓΗ: ο hook `useCatalogText` ζητά το bundle `CATALOG_NAMESPACES` (όχι σταθερά module), αλλιώς ο generator έβλεπε 20+ αρχεία «χωρίς namespace» και ΑΡΝΙΟΤΑΝ να κρίνει."
+    },
     "src/app/(app)/test-harness/listing-shapes/page.tsx": {
       "sealed": 2668,
       "sealedAt": "2026-08-30",

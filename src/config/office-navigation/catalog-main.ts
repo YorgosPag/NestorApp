@@ -53,6 +53,7 @@ import {
   Settings,
   Shield,
   ShoppingCart,
+  Tags,
   Target,
   UserCheck,
   Users,
@@ -74,6 +75,8 @@ const OVERVIEW = 'menu.overview';
  * υπάλληλος + διαχειριστής· ο ρόλος bypass περνά (`resolve-office-navigation` — ίδιο με τον κριτή).
  */
 const CATALOG_SCHEMA_VIEW: NavPolicy = { permissions: ['catalog:schema:view'] };
+/** Οι ρυθμίσεις **δομής** (κανάλια × γλώσσες) — Akeneo «manage structure», όχι «edit products». */
+const CATALOG_SCHEMA_MANAGE: NavPolicy = { permissions: ['catalog:schema:manage'] };
 
 export const MAIN_CATALOG = [
   // «Πίνακας Ελέγχου» — το ορατό κείμενο που έδινε ήδη η αλυσίδα συμπερασμού στο `/dashboard`.
@@ -114,11 +117,13 @@ export const MAIN_CATALOG = [
     navLabelKey: 'sidebar.productCatalog',
     icon: Package,
     items: [
+      { kind: 'link', navLabelKey: 'sidebar.catalogProducts', icon: Tags, href: CATALOG_PAGES.products, policy: CATALOG_SCHEMA_VIEW },
       { kind: 'link', navLabelKey: 'sidebar.catalogFamilies', icon: Boxes, href: CATALOG_PAGES.families, policy: CATALOG_SCHEMA_VIEW },
       { kind: 'link', navLabelKey: 'sidebar.catalogAttributes', icon: ListTree, href: CATALOG_PAGES.attributes, policy: CATALOG_SCHEMA_VIEW },
       { kind: 'link', navLabelKey: 'sidebar.catalogCategories', icon: FolderTree, href: CATALOG_PAGES.categories, policy: CATALOG_SCHEMA_VIEW },
       { kind: 'link', navLabelKey: 'sidebar.catalogMeasurements', icon: Ruler, href: CATALOG_PAGES.measurements, policy: CATALOG_SCHEMA_VIEW },
       { kind: 'link', navLabelKey: 'sidebar.catalogAssets', icon: Images, href: CATALOG_PAGES.assets, policy: CATALOG_SCHEMA_VIEW },
+      { kind: 'link', navLabelKey: 'menu.settings', icon: Settings, href: CATALOG_PAGES.settings, policy: CATALOG_SCHEMA_MANAGE },
     ],
   },
   {

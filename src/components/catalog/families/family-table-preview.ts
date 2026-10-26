@@ -45,7 +45,21 @@ export type PreviewRow =
       readonly unit: string | null;
       readonly filter: string | null;
       readonly merge: TableRowMergeMode;
+      /** Πραγματικές τιμές ανά στήλη (Β6) — `null` ⇒ δείγμα (προεπισκόπηση οικογένειας). Κενό = «·». */
+      readonly cells: readonly string[] | null;
     };
+
+/**
+ * **Πραγματικά δεδομένα** για τον ίδιο πίνακα (ADR-923 §5.10.4 Β6): μία στήλη ανά παραλλαγή, με τις ετικέτες των αξόνων
+ * της και το κείμενο κάθε ιδιότητας (στη μονάδα προβολής της γραμμής). Ίδιος builder, ίδιος renderer — η προεπισκόπηση
+ * της οικογένειας και ο πίνακας του μοντέλου δεν μπορούν να αποκλίνουν.
+ */
+export interface RealTableColumn {
+  readonly axes: ReadonlyMap<string, string>;
+  /** Οι κωδικοί επιλογής των αξόνων (για το φίλτρο γραμμής `axisFilter`). */
+  readonly axisCodes: ReadonlyMap<string, string>;
+  readonly valueOf: (attributeId: string, displayUnitCode: string | null) => string;
+}
 
 export interface TablePreview {
   /** Κάθε στήλη = ένας συνδυασμός τιμών αξόνων (axisId → ετικέτα τιμής). */
@@ -87,12 +101,22 @@ function filterLabel(row: Extract<FamilyTableRow, { kind: 'attribute' }>, librar
   return option ? words.text(option.labels, option.code) : row.axisFilter.optionCode;
 }
 
+function realCells(row: Extract<FamilyTableRow, { kind: 'attribute' }>, real: readonly RealTableColumn[] | null): string[] | null {
+  if (!real) return null;
+  return real.map((column) => {
+    const filter = row.axisFilter;
+    if (filter && column.axisCodes.get(filter.axisAttributeId) !== filter.optionCode) return '';
+    return column.valueOf(row.attributeId, row.displayUnitCode);
+  });
+}
+
 function previewRow(
   row: FamilyTableRow,
   columns: readonly ReadonlyMap<string, string>[],
   library: ReadonlyMap<string, AttributeRecord>,
   registry: MeasurementRegistry,
   words: PreviewWords,
+  real: readonly RealTableColumn[] | null,
 ): PreviewRow | null {
   if (row.kind === 'groupHeader') return { kind: 'groupHeader', id: row.id, label: words.text(row.labels) };
   const attribute = library.get(row.kind === 'axis' ? row.axisAttributeId : row.attributeId);
@@ -106,6 +130,7 @@ function previewRow(
     unit: unitOf(attribute, row.displayUnitCode, registry),
     filter: filterLabel(row, library, words),
     merge: row.merge,
+    cells: realCells(row, real),
   };
 }
 
@@ -114,14 +139,16 @@ export function buildTablePreview(
   library: ReadonlyMap<string, AttributeRecord>,
   registry: MeasurementRegistry,
   words: PreviewWords,
+  real: readonly RealTableColumn[] | null = null,
 ): TablePreview | null {
   const spec = draft.tableSpec;
   const scheme = spec ? draft.variantSchemes.find((candidate) => candidate.code === spec.variantSchemeCode) : undefined;
   if (!spec || !scheme) return null;
   const axes = scheme.levels.flatMap((level) => level.axisAttributeIds).flatMap((id) => library.get(id) ?? []);
-  const all = combinations(axes, registry, words);
-  const columns = all.slice(0, MAX_PREVIEW_COLUMNS);
-  const rows = spec.rows.flatMap((row) => previewRow(row, columns, library, registry, words) ?? []);
+  // Πραγματικά δεδομένα ⇒ **όλες** οι παραλλαγές (ο πίνακας του φυλλαδίου)· δείγμα ⇒ ως MAX_PREVIEW_COLUMNS.
+  const all = real ? real.map((column) => column.axes) : combinations(axes, registry, words);
+  const columns = real ? all : all.slice(0, MAX_PREVIEW_COLUMNS);
+  const rows = spec.rows.flatMap((row) => previewRow(row, columns, library, registry, words, real) ?? []);
   return { columns, hiddenColumns: all.length - columns.length, rows };
 }
 
