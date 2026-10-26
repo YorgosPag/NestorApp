@@ -44,7 +44,7 @@ describe('mediaLicenseStanding', () => {
 
 describe('readMediaRights', () => {
   it('✅ διαβάζει έγκυρα δικαιώματα', () => {
-    expect(readMediaRights(RIGHTS)).toEqual(RIGHTS);
+    expect(readMediaRights(RIGHTS, 'listing')).toEqual(RIGHTS);
   });
 
   it.each([
@@ -55,6 +55,6 @@ describe('readMediaRights', () => {
     ['άγνωστος σκοπός', { license: { purpose: 'anything', term: { kind: 'perpetual' } } }],
     ['εντολή χωρίς id', { license: { purpose: 'listing-marketing', term: { kind: 'mandate' } } }],
   ])('🔴 %s ⇒ null — εφευρημένος δικαιούχος θα ήταν ψευδής δήλωση', (_label, patch) => {
-    expect(readMediaRights({ ...RIGHTS, ...patch })).toBeNull();
+    expect(readMediaRights({ ...RIGHTS, ...patch }, 'listing')).toBeNull();
   });
 });

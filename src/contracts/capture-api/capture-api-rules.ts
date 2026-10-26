@@ -14,7 +14,7 @@
  */
 
 import { INVITATION_REDEEM_ACTIONS, INVITATION_REDEEM_REFUSED_STATUS } from '@/contracts/invitation-redeem-body';
-import { MAX_MEDIA_LICENSORS, MEDIA_LICENSE_PURPOSES, MEDIA_LICENSE_TERM_KINDS } from '@/constants/media-rights-vocabulary';
+import { MAX_MEDIA_LICENSORS, MEDIA_LICENSE_CONTEXTS } from '@/constants/media-rights-vocabulary';
 import { PLACE_SOURCES } from '@/constants/place-sources';
 import { PRODUCT_NAME } from '@/constants/product-identity';
 import {
@@ -113,8 +113,9 @@ export function captureApiRules() {
       roomMaxTypes: TOUR_ROOM_MAX_TYPES,
       roomLabelMax: TOUR_ROOM_LABEL_MAX,
       headingSources: TOUR_HEADING_SOURCES,
-      mediaLicensePurposes: MEDIA_LICENSE_PURPOSES,
-      mediaLicenseTermKinds: MEDIA_LICENSE_TERM_KINDS,
+      // Το πλαίσιο `listing` (ADR-923 §5.10.3): η εφαρμογή λήψης ακινήτων δεν βλέπει σκοπούς καταλόγου.
+      mediaLicensePurposes: MEDIA_LICENSE_CONTEXTS.listing.purposes,
+      mediaLicenseTermKinds: MEDIA_LICENSE_CONTEXTS.listing.termKinds,
       maxMediaLicensors: MAX_MEDIA_LICENSORS,
       invitationRedeemActions: INVITATION_REDEEM_ACTIONS,
     },

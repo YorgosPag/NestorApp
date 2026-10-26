@@ -22,7 +22,6 @@
 
 import { z } from 'zod/v4';
 
-import { MAX_MEDIA_LICENSORS, MEDIA_LICENSE_PURPOSES } from '@/constants/media-rights-vocabulary';
 import { PLACE_SOURCES } from '@/constants/place-sources';
 import {
   TOUR_CAPTURE_AUDIENCES,
@@ -37,18 +36,23 @@ import {
   TOUR_TILESET_STATES,
   TOUR_UPLOAD_SOURCES,
 } from '@/constants/spatial-tour-vocabulary';
+import {
+  IsoInstant,
+  MediaLicenseTermDateSchema,
+  MediaLicenseTermMandateSchema,
+  MediaLicenseTermPerpetualSchema,
+  MediaPartySchema,
+  NonBlankText,
+  mediaLicenseSchemaFor,
+  mediaLicenseTermSchemaFor,
+  mediaRightsSchemaFor,
+} from '@/lib/media-rights/media-rights-schema';
 import { TOUR_REFUSALS } from '@/lib/spatial-tour/tour-refusal-vocabulary';
 import { CORE_INVITATION_REFUSALS } from '@/types/invitation-core';
 
 // =============================================================================
 // 1. ΚΟΙΝΑ ΣΤΟΙΧΕΙΑ
 // =============================================================================
-
-/** Κείμενο με τουλάχιστον έναν μη-κενό χαρακτήρα — ο αναγνώστης του διακομιστή κάνει `trim` και απορρίπτει το κενό. */
-const NonBlankText = z.string().regex(/\S/);
-
-/** Στιγμή ISO-8601 σε UTC (`…Z`) — όπως τη γράφει ο διακομιστής (`toISOString`). */
-const IsoInstant = z.iso.datetime();
 
 /** Ακέραιος 64-bit — αλλιώς ο γεννήτορας Kotlin διαλέγει `Int` και ένα μελλοντικό ταβάνι > 2 GB θα ξεχείλιζε. */
 const Int64Positive = z.number().int().positive().meta({ format: 'int64' });
@@ -57,36 +61,12 @@ const Int64Positive = z.number().int().positive().meta({ format: 'int64' });
 // 2. ΤΑ ΔΙΚΑΙΩΜΑΤΑ ΤΟΥ ΜΕΣΟΥ (IPTC — `types/media-rights.ts`)
 // =============================================================================
 
-export const MediaPartySchema = z.object({
-  name: NonBlankText,
-  /** Ο λογαριασμός — `null` για πρόσωπο εκτός πλατφόρμας. Αν δοθεί για τον δημιουργό, **πρέπει** να είναι ο δράστης. */
-  userId: NonBlankText.nullable(),
-  url: NonBlankText.nullable(),
-});
-
-/**
- * Οι τρεις μορφές της διάρκειας — **χωριστά** ονομασμένες, ώστε το OpenAPI να τις δηλώσει ως `oneOf` με
- * `discriminator` και ο γεννήτορας Kotlin να βγάλει `sealed` ιεραρχία αντί για «ένα αντικείμενο με όλα προαιρετικά».
- */
-export const MediaLicenseTermPerpetualSchema = z.object({ kind: z.literal('perpetual') });
-export const MediaLicenseTermMandateSchema = z.object({ kind: z.literal('mandate'), mandateId: NonBlankText });
-export const MediaLicenseTermDateSchema = z.object({ kind: z.literal('date'), until: IsoInstant });
-
-export const MediaLicenseTermSchema = z.discriminatedUnion('kind', [
-  MediaLicenseTermPerpetualSchema,
-  MediaLicenseTermMandateSchema,
-  MediaLicenseTermDateSchema,
-]).meta({ discriminator: { propertyName: 'kind' } });
-
-export const MediaLicenseSchema = z.object({ purpose: z.enum(MEDIA_LICENSE_PURPOSES), term: MediaLicenseTermSchema });
-
-export const MediaRightsSchema = z.object({
-  creator: MediaPartySchema,
-  licensors: z.array(MediaPartySchema).max(MAX_MEDIA_LICENSORS),
-  copyrightNotice: NonBlankText,
-  webStatementOfRights: NonBlankText.nullable(),
-  license: MediaLicenseSchema,
-});
+// 🔑 Ο ορισμός ζει ΜΙΑ φορά (`lib/media-rights/media-rights-schema`, ADR-923 §5.10.3)· το συμβόλαιο τον καταναλώνει με το
+// πλαίσιο `listing` — ακριβώς τους σκοπούς και τις διάρκειες που είχε. Τα ονόματα μένουν ίδια: τα διαβάζει ο γεννήτορας.
+export { MediaLicenseTermDateSchema, MediaLicenseTermMandateSchema, MediaLicenseTermPerpetualSchema, MediaPartySchema };
+export const MediaLicenseTermSchema = mediaLicenseTermSchemaFor('listing');
+export const MediaLicenseSchema = mediaLicenseSchemaFor('listing');
+export const MediaRightsSchema = mediaRightsSchemaFor('listing');
 
 // =============================================================================
 // 3. ΕΝΑΡΞΗ ΑΝΕΒΑΣΜΑΤΟΣ — POST /api/spatial-tours/{kind}/{subjectId}/uploads

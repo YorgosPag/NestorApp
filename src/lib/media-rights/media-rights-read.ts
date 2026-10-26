@@ -11,9 +11,10 @@
  */
 
 import {
-  isMediaLicensePurpose,
-  isMediaLicenseTermKind,
+  isMediaLicensePurposeIn,
+  isMediaLicenseTermKindIn,
   MAX_MEDIA_LICENSORS,
+  type MediaLicenseContext,
 } from '@/constants/media-rights-vocabulary';
 import { text } from '@/lib/agency/showcase-read-primitives';
 import { normalizeToISO } from '@/lib/date-local';
@@ -27,8 +28,8 @@ function readParty(raw: unknown): MediaParty | null {
   return { name, userId: text(raw.userId), url: text(raw.url) };
 }
 
-function readTerm(raw: unknown): MediaLicenseTerm | null {
-  if (!isRecord(raw) || !isMediaLicenseTermKind(raw.kind)) return null;
+function readTerm(raw: unknown, context: MediaLicenseContext): MediaLicenseTerm | null {
+  if (!isRecord(raw) || !isMediaLicenseTermKindIn(context, raw.kind)) return null;
   switch (raw.kind) {
     case 'perpetual':
       return { kind: 'perpetual' };
@@ -49,15 +50,19 @@ function readLicensors(raw: unknown): MediaParty[] | null {
   return parties.every((party): party is MediaParty => party !== null) ? parties : null;
 }
 
-export function readMediaRights(raw: unknown): MediaRights | null {
+/**
+ * @param context το πλαίσιο του μέσου (ADR-923 §5.10.3): σκοπός ή διάρκεια **άλλου** πλαισίου ⇒ `null` — ένα μέσο αγγελίας με
+ *   «μεταπώληση από αντιπρόσωπο» δεν είναι αναγνώσιμη δήλωση δικαιωμάτων, είναι λάθος.
+ */
+export function readMediaRights(raw: unknown, context: MediaLicenseContext): MediaRights | null {
   if (!isRecord(raw) || !isRecord(raw.license)) return null;
   const creator = readParty(raw.creator);
   const licensors = readLicensors(raw.licensors ?? []);
   const copyrightNotice = text(raw.copyrightNotice);
   const purpose = raw.license.purpose;
-  const term = readTerm(raw.license.term);
+  const term = readTerm(raw.license.term, context);
   if (creator === null || licensors === null || copyrightNotice === null) return null;
-  if (!isMediaLicensePurpose(purpose) || term === null) return null;
+  if (!isMediaLicensePurposeIn(context, purpose) || term === null) return null;
   return {
     creator,
     licensors,
