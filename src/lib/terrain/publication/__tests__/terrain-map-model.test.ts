@@ -13,7 +13,8 @@ import { buildListingTerrainSnapshot } from '../listing-terrain-snapshot';
 import type { ListingTerrainContour, ListingTerrainSnapshot } from '../listing-terrain-types';
 import { contourLabelsOf, labelLengthM } from '../terrain-map-contours';
 import { scaleBarParts } from '../terrain-map-furniture';
-import { terrainMapModelOf } from '../terrain-map-model';
+import { LEGIBLE_SCREEN_TEXT_MIN_PX } from '@/lib/media/legible-screen-text';
+import { terrainMapModelOf, terrainMapWidthClassOf } from '../terrain-map-model';
 import { meshTriangles, sparseAreaPathData } from '../terrain-map-regions';
 
 const E0 = 400_000_000;
@@ -162,5 +163,25 @@ describe('furniture — north arrow and 1-2-5 scale bar', () => {
     for (const p of pathPoints(northArrow.pathData)) expect(p.y).toBeLessThan(viewBox.minY + viewBox.margin);
     expect(northArrow.letter.y).toBeGreaterThan(viewBox.minY);
     expect(scaleBar.y).toBeGreaterThan(viewBox.minY + viewBox.height - viewBox.margin);
+  });
+});
+
+describe('on a screen — labels in screen pixels (§13.8 decision 4, Β4.8 5γ)', () => {
+  it('the width is floored to its class · not measured ⇒ null · below the first class ⇒ the first', () => {
+    expect([0, Number.NaN, 300, 320, 479, 480, 700, 959, 2000].map(terrainMapWidthClassOf))
+      .toEqual([null, null, 320, 320, 320, 480, 640, 640, 960]);
+  });
+
+  it('never below the legible floor on screen — and the labels are placed for the height actually drawn', () => {
+    const paper = terrainMapModelOf(PLANE);
+    const narrow = terrainMapModelOf(PLANE, [], { widthPx: 320 });
+    const pxPerM = 320 / narrow.viewBox.width;
+    expect(paper.labelHeightM * pxPerM).toBeLessThan(LEGIBLE_SCREEN_TEXT_MIN_PX);
+    expect(narrow.labelHeightM * pxPerM).toBeGreaterThanOrEqual(LEGIBLE_SCREEN_TEXT_MIN_PX - 0.01);
+    expect(narrow.contourLabels).toEqual(contourLabelsOf(PLANE.contours, narrow.labelHeightM));
+  });
+
+  it('wide enough ⇒ the drawing’s own proportion, exactly as on paper', () => {
+    expect(terrainMapModelOf(PLANE, [], { widthPx: 960 })).toEqual(terrainMapModelOf(PLANE));
   });
 });

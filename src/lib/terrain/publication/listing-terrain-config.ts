@@ -78,6 +78,13 @@ export const LISTING_TERRAIN_MAP_NORTH_ARROW_FRACTION = 0.5;
 export const LISTING_TERRAIN_MAP_LABEL_FRACTION = 0.028;
 
 /**
+ * Width classes (css px) of an ON-SCREEN map (the owner's preview, §13.8 decision 4). The measured width is floored to a
+ * class, so the model is rebuilt only when the class changes — never on every pixel of a resize — and a label sized for
+ * the class is at least as large on the real, wider-or-equal screen. Below the first class the first one applies.
+ */
+export const LISTING_TERRAIN_MAP_WIDTH_CLASSES_PX: readonly number[] = [320, 480, 640, 960];
+
+/**
  * Advance width of one label character, in ems. Labels are digits (+ a decimal point) set in tabular figures, whose
  * advance is ≈ 0.55–0.6 em in common UI faces; the upper value keeps a label from overrunning its straight stretch.
  * ⚠️ An ESTIMATE in the pure model (no layout exists here, CHECK 3.64) — it only sizes the window a label needs.

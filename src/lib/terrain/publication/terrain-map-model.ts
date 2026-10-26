@@ -15,7 +15,9 @@
  * @module lib/terrain/publication/terrain-map-model
  */
 
-import { LISTING_TERRAIN_MAP_LABEL_FRACTION } from './listing-terrain-config';
+import { legibleDrawingTextSize } from '@/lib/media/legible-screen-text';
+
+import { LISTING_TERRAIN_MAP_LABEL_FRACTION, LISTING_TERRAIN_MAP_WIDTH_CLASSES_PX } from './listing-terrain-config';
 import { roundPublished } from './listing-terrain-frame';
 import type { SurveyPointMark } from '../survey-import/survey-upload-preparation';
 import type { ListingTerrainSnapshot } from './listing-terrain-types';
@@ -73,14 +75,42 @@ function contentPoints(snapshot: ListingTerrainSnapshot): SvgPoint[] {
   return points;
 }
 
-/** The 2D map of a published terrain snapshot. `marks` = the owner's preview only (never on the public listing). */
+/** Where the map is shown on a SCREEN: its width class (`terrainMapWidthClassOf`). Absent = paper / PDF / not measured. */
+export interface TerrainMapDisplay {
+  readonly widthPx: number;
+}
+
+/** A measured width (css px) → its class (`LISTING_TERRAIN_MAP_WIDTH_CLASSES_PX`, floored); `null` = not measured. */
+export function terrainMapWidthClassOf(widthPx: number): number | null {
+  if (!(widthPx > 0)) return null;
+  const classes = LISTING_TERRAIN_MAP_WIDTH_CLASSES_PX;
+  return classes.reduce((chosen, width) => (width <= widthPx ? width : chosen), classes[0] ?? widthPx);
+}
+
+/**
+ * Height of every map text: the drawing's share of the longer side, lifted on a screen to the legible floor
+ * (`legibleDrawingTextSize` — the SAME floor as the floor-plate labels). The SVG spans the width (`w-full h-auto`), so
+ * css px per metre = display width / view-box width. Computed BEFORE the labels are placed: the collision-free
+ * guarantee of `contourLabelsOf` holds for the height actually drawn.
+ */
+function labelHeightOf(viewBox: TerrainMapViewBox, display: TerrainMapDisplay | null): number {
+  const drawn = Math.max(viewBox.width, viewBox.height) * LISTING_TERRAIN_MAP_LABEL_FRACTION;
+  const scale = display === null ? null : display.widthPx / viewBox.width;
+  return roundPublished(legibleDrawingTextSize(drawn, scale));
+}
+
+/**
+ * The 2D map of a published terrain snapshot. `marks` = the owner's preview only (never on the public listing);
+ * `display` = an on-screen map of known width (§13.8 decision 4) — without it, the drawing's own proportions.
+ */
 export function terrainMapModelOf(
   snapshot: ListingTerrainSnapshot,
   marks: readonly SurveyPointMark[] = [],
+  display: TerrainMapDisplay | null = null,
 ): TerrainMapModel {
   const triangles = meshTriangles(snapshot.mesh);
   const viewBox = viewBoxOf(contentPoints(snapshot));
-  const labelHeightM = roundPublished(Math.max(viewBox.width, viewBox.height) * LISTING_TERRAIN_MAP_LABEL_FRACTION);
+  const labelHeightM = labelHeightOf(viewBox, display);
   return {
     viewBox,
     extentPathData: regionPathData(snapshot.mesh, triangles),

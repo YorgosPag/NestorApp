@@ -23,6 +23,7 @@ import { useSvgFragmentId } from '@/hooks/media/useSvgFragmentId';
 import { hatchTilePathData } from '@/lib/geometry/hatch-tile';
 import { FLOOR_PLATE_SELF_STATE, FLOOR_PLATE_STATES, type FloorPlateState } from '@/lib/listings/floor-plate/floor-plate-state';
 import { inPaintOrder, type FloorPlateImageSize, type FloorPlateShape } from '@/lib/listings/floor-plate/floor-plate-view';
+import { legibleDrawingTextSize } from '@/lib/media/legible-screen-text';
 import { cn } from '@/lib/utils';
 import { Link } from '@/lib/workspace/navigation';
 
@@ -39,25 +40,19 @@ const TILE_FRACTION = 0.014;
 const LABEL_MIN_FRACTION = 0.016;
 const LABEL_MAX_FRACTION = 0.034;
 const LABEL_HALO_RATIO = 0.22;
-/**
- * Κάτω από αυτό ο αριθμός **δεν διαβάζεται**: το ελάχιστο μέγεθος κειμένου της σελίδας, σε css px **στην οθόνη**, με το
- * σχέδιο σε ηρεμία. 🔴 Μετρημένο στην παραγωγή (ADR-907 §11.14): τα κλάσματα της εικόνας έδιναν 8,8 px στα 320 και
- * 11,2 px στα 390 — ο αριθμός είναι το μόνο που δένει το σχήμα με τη γραμμή της λίστας, και εκεί ακριβώς χανόταν.
- */
-const LABEL_MIN_SCREEN_PX = 12;
 /** Σκαλοπάτι μέτρησης του στρώματος (css px): το στρώμα ξαναζωγραφίζεται μόνο όταν το πλάτος αλλάξει σκαλοπάτι. */
 const LAYER_MEASURE_STEP_PX = 4;
 
 /**
  * **Το μέγεθος του αριθμού μιας μονάδας, σε μονάδες εικόνας** — όσο χωρά στο σχήμα, μέσα στα όρια του σχεδίου, και ποτέ
- * μικρότερο στην οθόνη από {@link LABEL_MIN_SCREEN_PX}.
+ * μικρότερο στην οθόνη από το πάτωμα `LEGIBLE_SCREEN_TEXT_MIN_PX` (ADR-907 §11.14).
  *
  * @param scale css px ανά μονάδα εικόνας, όπως αποδίδεται το στρώμα· `null` όσο δεν έχει μετρηθεί (SSR · jsdom) — τότε
  *   ισχύει το σχέδιο, χωρίς μαντεμένο πάτωμα.
  */
 export function unitLabelFontSize(clearance: number, base: number, scale: number | null): number {
   const drawn = Math.min(Math.max(clearance * 1.1, base * LABEL_MIN_FRACTION), base * LABEL_MAX_FRACTION);
-  return scale === null ? drawn : Math.max(drawn, LABEL_MIN_SCREEN_PX / scale);
+  return legibleDrawingTextSize(drawn, scale);
 }
 
 const SWATCH = { width: 28, height: 18, inset: 1, tile: 6 } as const;
