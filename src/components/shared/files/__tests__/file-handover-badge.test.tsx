@@ -24,6 +24,7 @@ type Subject = Pick<FileRecord, 'handoverOrigin' | 'handoverProtocolOf'>;
 
 const ORIGIN: NonNullable<FileRecord['handoverOrigin']> = {
   handoverId: 'phov_1', sourceFileId: 'file_company', issuerCompanyId: 'comp_1', crc32c: 'AAAAAA==', size: 10, revisionOfFileId: null,
+  sourceScope: 'unit',
 };
 const PROTOCOL: NonNullable<FileRecord['handoverProtocolOf']> = { protocolId: 'phpr_1', handoverId: 'phov_1', revision: 2 };
 
@@ -48,7 +49,19 @@ describe('Γ39 — σήμα παράδοσης γραμμής αρχείου', (
   it('🔴 αλλοιωμένο σημάδι Πρωτοκόλλου (αναθ. 0) ⇒ δεν διαβάζεται ως Πρωτόκολλο', () => {
     const forged = { handoverProtocolOf: { ...PROTOCOL, revision: 0 } } as Subject;
     expect(fileHandoverBadgeOf(forged)).toEqual({ kind: 'none' });
-    expect(fileHandoverBadgeOf({ ...forged, handoverOrigin: ORIGIN })).toEqual({ kind: 'origin' });
+    expect(fileHandoverBadgeOf({ ...forged, handoverOrigin: ORIGIN })).toEqual({ kind: 'origin', scope: 'unit' });
+  });
+
+  it('ADR-916 Φ-Γ3 — κοινό αρχείο κτιρίου/έργου ⇒ η λέξη λέει ΑΠΟ ΠΟΥ ήρθε', () => {
+    render(<FileHandoverBadge file={{ handoverOrigin: { ...ORIGIN, sourceScope: 'building' } }} />);
+    expect(screen.getByText('list.handoverOriginBuilding')).toBeInTheDocument();
+    expect(fileHandoverBadgeOf({ handoverOrigin: { ...ORIGIN, sourceScope: 'project' } })).toEqual({ kind: 'origin', scope: 'project' });
+  });
+
+  it('ADR-916 Φ-Γ3 — αντίγραφο πριν τη Φ-Γ3 (χωρίς sourceScope) ⇒ της μονάδας· άγνωστη τιμή ⇒ κανένα σήμα', () => {
+    const { sourceScope: _omitted, ...legacy } = ORIGIN;
+    expect(fileHandoverBadgeOf({ handoverOrigin: legacy } as Subject)).toEqual({ kind: 'origin', scope: 'unit' });
+    expect(fileHandoverBadgeOf({ handoverOrigin: { ...ORIGIN, sourceScope: 'floor' } } as unknown as Subject)).toEqual({ kind: 'none' });
   });
 
   it('κανένα σημάδι ⇒ τίποτα στην οθόνη', () => {

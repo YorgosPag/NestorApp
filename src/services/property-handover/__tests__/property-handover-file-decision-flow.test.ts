@@ -179,3 +179,56 @@ describe('Ζ25 · Ζ27 · Ζ28 — αρνήσεις της πόρτας', () => 
     expect(fake.writeLog()).toEqual([]);
   });
 });
+
+/**
+ * Γ43 — ADR-916 Φ-Γ3: η απόφαση πάνω σε **κοινό** αρχείο ισχύει για **κάθε** αγοραστή του κτιρίου. Δύο μονάδες στο ίδιο
+ * κτίριο, δύο παραδόσεις. Μεταλλάξεις: η συμφιλίωση μόνο του ενός ακινήτου · το «παραδόθηκε;» μόνο από το δικό του καθολικό.
+ */
+describe('Γ43 — κοινό αρχείο κτιρίου: μία απόφαση, όλες οι μονάδες', () => {
+  const PROPERTY_2 = 'prop_2';
+  const HANDOVER_2 = propertyHandoverIdOf(COMPANY, PROPERTY_2, 'cont_bob');
+  const handover2 = () => {
+    const found = propertyHandoverFromDocument(fake.getData(COLLECTIONS.PROPERTY_HANDOVERS, HANDOVER_2), HANDOVER_2);
+    if (found === null) throw new Error('no handover 2');
+    return found;
+  };
+  const copyOf2 = (sourceFileId: string) => fake.getData(COLLECTIONS.FILES_PERSONAL, handoverCopyFileIdOf(HANDOVER_2, sourceFileId));
+  const building = { type: 'building', id: 'bldg_1' };
+
+  beforeEach(() => {
+    fake.seed(COLLECTIONS.PROPERTIES, PROPERTY, {
+      ...fake.getData(COLLECTIONS.PROPERTIES, PROPERTY), buildingId: 'bldg_1',
+    });
+    fake.seed(COLLECTIONS.PROPERTIES, PROPERTY_2, {
+      companyId: COMPANY, name: 'Διαμέρισμα Β2', commercialStatus: 'sold', buildingId: 'bldg_1',
+      commercial: { owners: [{ contactId: 'cont_bob', ownershipPct: 100, role: 'buyer' }], legalPhase: 'final_signed' },
+    });
+    fake.seed(COLLECTIONS.PROPERTY_DOSSIERS, handoverDossierIdOf(HANDOVER_2), {
+      userId: 'uid_bob', label: 'Διαμέρισμα Β2', type: null, lifecycle: 'active', createdAt: AT, updatedAt: AT,
+      origin: { kind: 'handover', handoverId: HANDOVER_2, issuerCompanyId: COMPANY, issuerName: 'Κατασκευαστική Άλφα', acceptedAt: AT, handoverLifecycle: 'ready' },
+    });
+    fake.seed(COLLECTIONS.PROPERTY_HANDOVERS, HANDOVER_2, {
+      companyId: COMPANY, propertyId: PROPERTY_2, recipientContactId: 'cont_bob', lifecycle: 'ready',
+      completion: { source: 'final-contract', at: AT }, recipient: { userId: 'uid_bob', acceptedAt: AT, dossierId: handoverDossierIdOf(HANDOVER_2) },
+      invitation: null, fileDelivery: null, fileDeliveryState: 'pending', createdAt: AT, updatedAt: AT,
+    });
+    companyFile('f_fay', 'documents', { purpose: 'study-say-fay' }, building);
+    companyFile('f_progress', 'photos', { purpose: 'progress' }, building);
+  });
+
+  it('«Παραδίδεται» σε αδήλωτο κοινό αρχείο από τη μονάδα Α ⇒ φτάνει ΤΩΡΑ και στη μονάδα Β', async () => {
+    expect((await previewFile('f_progress')).row).toMatchObject({ basis: 'shared-undeclared' });
+    expect(await decide({ fileId: 'f_progress' })).toEqual({ kind: 'decided' });
+    expect(copyOf('f_progress')).toMatchObject({ handoverOrigin: { sourceScope: 'building' } });
+    expect(copyOf2('f_progress')).toMatchObject({ handoverOrigin: { sourceScope: 'building' } });
+  });
+
+  it('🔴 παραδόθηκε ΜΟΝΟ στη μονάδα Β ⇒ από τη μονάδα Α «μένει εσωτερικό» = `already-delivered` (ένα κοινό πακέτο για όλους)', async () => {
+    await deliverHandoverFiles(db(), handover2(), { maxFiles: 50, deadlineAt: null, maxHashBytes: 1_000_000 },
+      (input) => recordHandoverFileDelivery(db(), input));
+    expect(copyOf2('f_fay')).toBeDefined();
+    expect(copyOf('f_fay')).toBeUndefined();
+    expect((await previewFile('f_fay')).row).toMatchObject({ delivered: true });
+    expect(await decide({ fileId: 'f_fay', choice: 'internal' })).toEqual({ kind: 'refused', reason: 'already-delivered' });
+  });
+});

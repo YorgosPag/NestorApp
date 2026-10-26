@@ -15,8 +15,9 @@
  *   0. Πρωτόκολλο ⇒ `internal` · **απόφαση του γραφείου** (Φ-Δ.4, αιτιολογημένη — Purview override)
  *   1. εμπιστευτικό (`classification: confidential`) ⇒ `review` — ποτέ αυτόματα προς τα έξω (DLP)
  *   2. τομέας του **γραφείου** (λογιστική · οικονομικά · μεσιτεία · εισερχόμενα) ⇒ `internal`
- *   3. δήλωση καταλόγου (θέση ή ομάδα μελετών)
- *   4. κατηγορία
+ *   3. δήλωση καταλόγου (θέση ή ομάδα μελετών) — για **κοινό** αρχείο (κτίριο · έργο, Φ-Γ3) **μόνο** η δήλωση
+ *      `sharedHandover`, αλλιώς `internal` (`shared-undeclared`): δεδομένα τρίτων, φεύγουν μόνο ρητά
+ *   4. κατηγορία (μόνο αρχεία της μονάδας)
  *
  * Ό,τι **δεν** ταξινομείται είναι `review`: **ούτε** φεύγει σιωπηλά **ούτε** χάνεται σιωπηλά — το βλέπει το γραφείο.
  *
@@ -38,13 +39,14 @@ import {
   type FileStatus,
 } from '@/config/domain-constants';
 import { CDE_STATES, type CdeState } from '@/config/iso19650-constants';
-import { declaredHandoverOf, findCatalogEntryForFile } from '@/config/upload-entry-points/queries';
+import { declaredHandoverOf, declaredSharedHandoverOf, findCatalogEntryForFile } from '@/config/upload-entry-points/queries';
 import type { HandoverDisposition } from '@/config/upload-entry-points/types';
 import type { FileRecord } from '@/types/file-record';
 import type { HandoverDispositionBasis } from '@/types/property-handover-file-decision';
 
 import { readFileHandoverDecision } from './file-handover-decision';
 import { readFileHandoverProtocolOf } from './file-handover-origin';
+import { isSharedHandoverSource } from './handover-source-scope';
 
 /** Ό,τι χρειάζεται η κρίση από ένα αποθηκευμένο αρχείο — **τίποτα** παραπάνω. */
 export type HandoverCandidateFile = Pick<
@@ -125,6 +127,12 @@ export function handoverDispositionBasisOf(file: HandoverCandidateFile): Handove
   if (file.classification === FILE_CLASSIFICATIONS.CONFIDENTIAL) return { disposition: 'review', basis: 'confidential' };
   if (OFFICE_ONLY_DOMAINS.has(file.domain)) return { disposition: 'internal', basis: 'office-domain' };
   const entry = findCatalogEntryForFile(file.entityType, file);
+  // Φ-Γ3 (Ο2) — κοινό αρχείο (κτίριο · έργο): ΜΟΝΟ η ρητή δήλωση για τα κοινά· ούτε το `handover` της μονάδας ούτε η
+  // κατηγορία. Χωρίς δήλωση μένει στο γραφείο — ορατό στην καρτέλα με τον λόγο, ώστε το γραφείο να το αποφασίσει.
+  if (isSharedHandoverSource(file.entityType)) {
+    const shared = entry ? declaredSharedHandoverOf(entry) : undefined;
+    return shared !== undefined ? { disposition: shared, basis: 'catalog' } : { disposition: 'internal', basis: 'shared-undeclared' };
+  }
   const declared = entry ? declaredHandoverOf(entry) : undefined;
   if (declared !== undefined) return { disposition: declared, basis: 'catalog' };
   return { disposition: HANDOVER_DISPOSITION_BY_CATEGORY[file.category], basis: 'category' };

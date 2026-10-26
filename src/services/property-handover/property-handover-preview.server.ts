@@ -23,8 +23,13 @@ import { nowISO } from '@/lib/date-local';
 import { propertyHandoverSnapshotOf, type PropertyHandoverSnapshot } from '@/lib/property-handover/handover-plan';
 import { handoverOfficeStatusOf } from '@/lib/property-handover/handover-office-status';
 import { propertyHandoverFromDocument } from '@/lib/property-handover/property-handover-from-document';
+import { isSharedHandoverSource } from '@/lib/property-handover/handover-source-scope';
 import { sealConfigurationOf } from '@/server/pdf-seal/seal-config.server';
-import { readDeliveredRows, type HandoverLedgerProof } from '@/server/property-handover-delivery/handover-delivery-ledger.server';
+import {
+  readDeliveredRows,
+  sharedSourcesDeliveredAnywhere,
+  type HandoverLedgerProof,
+} from '@/server/property-handover-delivery/handover-delivery-ledger.server';
 import type { PropertyHandover, PropertyHandoverOfficeEntry, PropertyHandoverPreview } from '@/types/property-handover';
 
 import { handoverRecipientNamesOf } from './property-handover-recipient-name.server';
@@ -44,6 +49,22 @@ async function readSnapshot(adminDb: AdminFirestore, propertyId: string): Promis
 async function ledgersOf(adminDb: AdminFirestore, handovers: readonly PropertyHandover[]): Promise<ReadonlyMap<string, readonly HandoverLedgerProof[]>> {
   const rows = await Promise.all(handovers.map((handover) => readDeliveredRows(adminDb, handover)));
   return new Map(handovers.map((handover, i) => [handover.id, rows[i] ?? []]));
+}
+
+/**
+ * Οι πηγές που **έχουν** παραδοθεί — του ακινήτου από τα καθολικά του, και (Φ-Γ3) τα **κοινά** του κτιρίου/έργου σε
+ * οποιαδήποτε μονάδα: το **ίδιο** ερώτημα (`sharedSourcesDeliveredAnywhere`) με την πόρτα της απόφασης ⇒ ίδια προσφορά.
+ */
+async function deliveredSourceIdsOf(
+  adminDb: AdminFirestore,
+  companyId: string,
+  set: HandoverSet,
+  ledgers: ReadonlyMap<string, readonly HandoverLedgerProof[]>,
+): Promise<ReadonlySet<string>> {
+  const shared = [...set.deliver, ...set.review, ...set.internal]
+    .filter((file) => isSharedHandoverSource(file.preview.entityType)).map((file) => file.doc.id);
+  const elsewhere = shared.length === 0 ? new Set<string>() : await sharedSourcesDeliveredAnywhere(adminDb, companyId, shared);
+  return new Set([...[...ledgers.values()].flat().map((row) => row.sourceFileId), ...elsewhere]);
 }
 
 /** Το όνομα κάθε πηγής του συνόλου, όπως το βλέπει το γραφείο — για τις γραμμές χωρίς απόδειξη (Φ-Δ.7γ). */
@@ -69,7 +90,7 @@ export async function previewPropertyHandover(
   });
   const recipientNames = await handoverRecipientNamesOf(adminDb, companyId, handovers.map((h) => h.recipientContactId));
   const ledgers = await ledgersOf(adminDb, handovers);
-  const deliveredSourceIds = new Set([...ledgers.values()].flat().map((row) => row.sourceFileId));
+  const deliveredSourceIds = await deliveredSourceIdsOf(adminDb, companyId, set, ledgers);
   const names = setNamesOf(set);
   const sealConfigured = sealConfigurationOf(process.env).kind === 'configured';
   const context = { snapshot, sealConfigured, nowValue: nowISO() };

@@ -13,6 +13,8 @@
  * **Layering**: leaf — τύπος + καθαρός αναγνώστης, κανένα SDK.
  */
 
+import { readHandoverSourceScope, type HandoverSourceScope } from './handover-source-scope';
+
 export interface FileHandoverOrigin {
   readonly handoverId: string;
   /** Το αρχείο της εταιρείας από το οποίο έγινε το αντίγραφο (στιγμιότυπο — όχι ζωντανός σύνδεσμος, Δ2). */
@@ -24,6 +26,11 @@ export interface FileHandoverOrigin {
   readonly size: number;
   /** Νέα αναθεώρηση πηγής που είχε ήδη παραδοθεί ⇒ το **αντίγραφο** της προηγούμενης· αλλιώς `null`. */
   readonly revisionOfFileId: string | null;
+  /**
+   * ADR-916 Φ-Γ3 — **από πού** ήρθε: της μονάδας ή **κοινό** του κτιρίου/έργου (σήμα «Από την κατασκευάστρια · Κτίριο»).
+   * Απόν στο έγγραφο ⇒ `unit` (κάθε αντίγραφο πριν τη Φ-Γ3). ⛔ Ίδιος φρουρός κανόνα με όλο το πεδίο (`handoverOriginKeys`).
+   */
+  readonly sourceScope: HandoverSourceScope;
 }
 
 const nonEmptyString = (value: unknown): value is string => typeof value === 'string' && value.trim() !== '';
@@ -52,11 +59,14 @@ export function readFileHandoverProtocolOf(raw: unknown): FileHandoverProtocolOf
 /** **Διαβάζει** την προέλευση από ωμό έγγραφο αρχείου — `null` ⇒ «δεν είναι παραδομένο αρχείο». Ποτέ ισχυρισμός τύπου. */
 export function readFileHandoverOrigin(raw: unknown): FileHandoverOrigin | null {
   if (typeof raw !== 'object' || raw === null) return null;
-  const { handoverId, sourceFileId, issuerCompanyId, crc32c, size, revisionOfFileId } = raw as Record<string, unknown>;
+  const { handoverId, sourceFileId, issuerCompanyId, crc32c, size, revisionOfFileId, sourceScope } = raw as Record<string, unknown>;
   if (!nonEmptyString(handoverId) || !nonEmptyString(sourceFileId) || !nonEmptyString(issuerCompanyId)) return null;
   if (!nonEmptyString(crc32c) || typeof size !== 'number' || !Number.isInteger(size) || size < 0) return null;
+  const scope = readHandoverSourceScope(sourceScope);
+  if (scope === null) return null;
   return {
     handoverId, sourceFileId, issuerCompanyId, crc32c, size,
     revisionOfFileId: nonEmptyString(revisionOfFileId) ? revisionOfFileId : null,
+    sourceScope: scope,
   };
 }

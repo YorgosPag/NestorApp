@@ -20,20 +20,29 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { getStatusColor } from '@/lib/design-system';
 import { readFileHandoverOrigin, readFileHandoverProtocolOf } from '@/lib/property-handover/file-handover-origin';
+import type { HandoverSourceScope } from '@/lib/property-handover/handover-source-scope';
 import type { FileRecord } from '@/types/file-record';
 
 export type FileHandoverBadgeKind =
   | { readonly kind: 'protocol'; readonly revision: number }
-  | { readonly kind: 'origin' }
+  | { readonly kind: 'origin'; readonly scope: HandoverSourceScope }
   | { readonly kind: 'none' };
 
 type BadgeSubject = Pick<FileRecord, 'handoverOrigin' | 'handoverProtocolOf'>;
+
+/** ADR-916 Φ-Γ3 — η λέξη του σήματος ανά προέλευση (`Record` ⇒ ο μεταγλωττιστής αναγκάζει πληρότητα). */
+const ORIGIN_LABEL_KEY: Readonly<Record<HandoverSourceScope, string>> = {
+  unit: 'list.handoverOrigin',
+  building: 'list.handoverOriginBuilding',
+  project: 'list.handoverOriginProject',
+};
 
 /** **Ποιο σήμα** — καθαρή κρίση πάνω στα ωμά σημάδια· αλλοιωμένο σημάδι ⇒ σαν να μην υπάρχει. */
 export function fileHandoverBadgeOf(file: BadgeSubject): FileHandoverBadgeKind {
   const protocol = readFileHandoverProtocolOf(file.handoverProtocolOf);
   if (protocol !== null) return { kind: 'protocol', revision: protocol.revision };
-  return readFileHandoverOrigin(file.handoverOrigin) !== null ? { kind: 'origin' } : { kind: 'none' };
+  const origin = readFileHandoverOrigin(file.handoverOrigin);
+  return origin !== null ? { kind: 'origin', scope: origin.sourceScope } : { kind: 'none' };
 }
 
 export function FileHandoverBadge({ file }: { readonly file: BadgeSubject }): React.ReactElement | null {
@@ -45,7 +54,7 @@ export function FileHandoverBadge({ file }: { readonly file: BadgeSubject }): Re
   return (
     <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium leading-none ${getStatusColor('active', 'bg')}/15 ${getStatusColor('active', 'text')}`}>
       <Icon className={iconSizes.xs} aria-hidden="true" />
-      {badge.kind === 'protocol' ? t('list.handoverProtocol', { revision: badge.revision }) : t('list.handoverOrigin')}
+      {badge.kind === 'protocol' ? t('list.handoverProtocol', { revision: badge.revision }) : t(ORIGIN_LABEL_KEY[badge.scope])}
     </span>
   );
 }

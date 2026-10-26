@@ -3,9 +3,11 @@
  */
 
 import { getEntryPointsForEntity, findCatalogEntryForFile } from '@/config/upload-entry-points';
+import { STUDY_ENTRIES } from '@/config/upload-entry-points/entries-studies';
 import type { EntityType } from '@/config/domain-constants';
 import {
   handoverCandidateFromDocument,
+  handoverDispositionBasisOf,
   handoverDispositionOf,
   isHandoverEligible,
   selectHandoverFiles,
@@ -118,5 +120,64 @@ describe('Α5 — κάθε θέση καταλόγου ακινήτου/αποθ
   it('η αναζήτηση βρίσκει θέση και από `purpose` μόνο (το `entryPointId` λείπει στο 100% — ADR-916 §2.3)', () => {
     expect(findCatalogEntryForFile('property', { purpose: 'yde-declaration' })?.id).toBe('unit-yde-declaration');
     expect(findCatalogEntryForFile('property', { purpose: 'document' })).toBeUndefined();
+  });
+});
+
+/**
+ * Γ41 — ADR-916 Φ-Γ3 (Ο2): **κοινά** αρχεία κτιρίου/έργου φεύγουν ΜΟΝΟ με ρητή δήλωση `sharedHandover`. Ο χρυσός πίνακας
+ * είναι **η πολιτική** (εγκεκριμένη από τον Giorgio 2026-10-25, ΗΤΚ · ΦΑΥ · O&M): κάθε αλλαγή του ζητά ανθρώπινη απόφαση.
+ */
+describe('Γ41 — κοινά αρχεία κτιρίου/έργου: φεύγουν μόνο ρητά δηλωμένα', () => {
+  const SHARED_DELIVER = [
+    'building-common-areas-photo', 'building-permit', 'exterior-photo',
+    'study-admin-ownership-shares', 'study-admin-regulation',
+    'study-arch-3d', 'study-arch-coverage', 'study-arch-detail', 'study-arch-elevation', 'study-arch-floorplan', 'study-arch-section',
+    'study-energy-certificate', 'study-energy-insulation', 'study-energy-mea',
+    'study-mep-drainage', 'study-mep-electrical', 'study-mep-general', 'study-mep-heating', 'study-mep-hvac', 'study-mep-overview',
+    'study-mep-telecom', 'study-mep-water',
+    'study-site-fire-safety', 'study-site-say-fay',
+    'study-struct-analysis', 'study-struct-bearing', 'study-struct-formwork', 'study-struct-foundation', 'study-struct-reinforcement',
+  ];
+  const SHARED_REVIEW = ['study-arch-other', 'study-energy-other', 'study-mep-other', 'study-struct-other'];
+
+  /** Κάθε θέση που ένα αρχείο κτιρίου/έργου μπορεί να έχει — με `entryPointId` **και** μόνο με `purpose` (ADR-916 §2.3). */
+  function sharedVerdicts(byId: boolean): Map<string, string> {
+    const verdicts = new Map<string, string>();
+    for (const entityType of ['building', 'project'] as const) {
+      for (const entry of [...getEntryPointsForEntity(entityType), ...STUDY_ENTRIES]) {
+        const candidate = file({ entityType, purpose: entry.purpose, domain: entry.domain, category: entry.category, ...(byId ? { entryPointId: entry.id } : {}) });
+        const { disposition, basis } = handoverDispositionBasisOf(candidate);
+        verdicts.set(`${entityType}:${entry.id}`, `${disposition}/${basis}`);
+      }
+    }
+    return verdicts;
+  }
+
+  it.each([true, false])('ο χρυσός πίνακας — με entryPointId: %s', (byId) => {
+    const verdicts = [...sharedVerdicts(byId).entries()];
+    const ids = (wanted: string) => [...new Set(verdicts.filter(([, v]) => v.startsWith(wanted)).map(([key]) => key.split(':')[1]))].sort();
+    expect(ids('deliver/')).toEqual(SHARED_DELIVER);
+    expect(ids('review/')).toEqual(SHARED_REVIEW);
+    // ό,τι δεν δηλώθηκε μένει στο γραφείο, ΜΕ τον λόγο του (ορατό στην καρτέλα) — ή είναι τομέας του γραφείου
+    expect(verdicts.filter(([, v]) => v.startsWith('internal/')).every(([, v]) => v === 'internal/shared-undeclared' || v === 'internal/office-domain')).toBe(true);
+  });
+
+  it('🔴 ο τίτλος ιδιοκτησίας: της ΜΟΝΑΔΑΣ παραδίδεται, του ΕΡΓΟΥ (οικόπεδο · οικοπεδούχοι) ΜΕΝΕΙ στο γραφείο', () => {
+    const deed = { purpose: 'study-title-deed', domain: 'admin' as const, category: 'documents' as const };
+    expect(handoverDispositionOf(file({ ...deed, entityType: 'property' }))).toBe('deliver');
+    expect(handoverDispositionBasisOf(file({ ...deed, entityType: 'project' }))).toEqual({ disposition: 'internal', basis: 'shared-undeclared' });
+  });
+
+  it('η κατηγορία ΔΕΝ αποφασίζει για τα κοινά: φωτογραφία προόδου εργοταξίου ⇒ στο γραφείο', () => {
+    expect(handoverDispositionBasisOf(file({ entityType: 'project', purpose: 'construction', domain: 'construction', category: 'photos' })))
+      .toEqual({ disposition: 'internal', basis: 'shared-undeclared' });
+  });
+
+  it('η απόφαση γραφείου και το εμπιστευτικό ισχύουν ΚΑΙ στα κοινά (ίδια σειρά κανόνων)', () => {
+    const decided = { disposition: 'deliver' as const, reason: 'Το ζήτησε ο διαχειριστής', decidedBy: 'u', decidedAt: '2026-10-25T09:00:00.000Z' };
+    const progress = { entityType: 'project' as const, purpose: 'construction', domain: 'construction' as const, category: 'photos' as const };
+    expect(handoverDispositionBasisOf(file({ ...progress, handoverDecision: decided }))).toEqual({ disposition: 'deliver', basis: 'office-decision' });
+    expect(handoverDispositionBasisOf(file({ entityType: 'building', purpose: 'study-say-fay', domain: 'construction', classification: 'confidential' })))
+      .toEqual({ disposition: 'review', basis: 'confidential' });
   });
 });
