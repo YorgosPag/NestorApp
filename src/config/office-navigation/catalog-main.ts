@@ -35,6 +35,7 @@ import {
   FileText,
   Filter,
   FolderTree,
+  Images,
   GitCompareArrows,
   HardDrive,
   Home,
@@ -117,6 +118,7 @@ export const MAIN_CATALOG = [
       { kind: 'link', navLabelKey: 'sidebar.catalogAttributes', icon: ListTree, href: CATALOG_PAGES.attributes, policy: CATALOG_SCHEMA_VIEW },
       { kind: 'link', navLabelKey: 'sidebar.catalogCategories', icon: FolderTree, href: CATALOG_PAGES.categories, policy: CATALOG_SCHEMA_VIEW },
       { kind: 'link', navLabelKey: 'sidebar.catalogMeasurements', icon: Ruler, href: CATALOG_PAGES.measurements, policy: CATALOG_SCHEMA_VIEW },
+      { kind: 'link', navLabelKey: 'sidebar.catalogAssets', icon: Images, href: CATALOG_PAGES.assets, policy: CATALOG_SCHEMA_VIEW },
     ],
   },
   {

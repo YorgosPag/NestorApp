@@ -141,7 +141,8 @@
     "catalogFamilies": "Οικογένειες",
     "catalogAttributes": "Ιδιότητες",
     "catalogCategories": "Κατηγορίες",
-    "catalogMeasurements": "Μονάδες μέτρησης"
+    "catalogMeasurements": "Μονάδες μέτρησης",
+    "catalogAssets": "Βιβλιοθήκη μέσων"
   },
   "reports": {
     "overview": "Διοικητική Σύνοψη",

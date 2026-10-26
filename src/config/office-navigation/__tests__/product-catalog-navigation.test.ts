@@ -20,13 +20,14 @@ function catalogGroup(entries: readonly MenuEntry[]): MenuGroup | undefined {
 }
 
 describe('ADR-923 Φάση 1γ — η ομάδα «Κατάλογος προϊόντων»', () => {
-  it('Π1 — με `catalog:schema:view`: τέσσερα παιδιά, οικογένειες πρώτα', () => {
+  it('Π1 — με `catalog:schema:view`: πέντε παιδιά, οικογένειες πρώτα, βιβλιοθήκη μέσων τελευταία', () => {
     const group = catalogGroup(getMainMenuItems(['catalog:schema:view'], 'production'));
     expect(group?.items.map((item) => item.href)).toEqual([
       CATALOG_PAGES.families,
       CATALOG_PAGES.attributes,
       CATALOG_PAGES.categories,
       CATALOG_PAGES.measurements,
+      CATALOG_PAGES.assets,
     ]);
   });
 
@@ -36,7 +37,7 @@ describe('ADR-923 Φάση 1γ — η ομάδα «Κατάλογος προϊό
   });
 
   it('Π3 — ο ρόλος bypass τη βλέπει χωρίς κανένα permission', () => {
-    expect(catalogGroup(getMainMenuItems([], 'production', true))?.items).toHaveLength(4);
+    expect(catalogGroup(getMainMenuItems([], 'production', true))?.items).toHaveLength(5);
   });
 
   it('Π4 — ο bypass ΔΕΝ παρακάμπτει το περιβάλλον', () => {

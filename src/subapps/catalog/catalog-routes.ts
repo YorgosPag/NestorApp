@@ -29,7 +29,11 @@ export const CATALOG_API = {
     variants: (id: string) => `${API_ROOT}/product-models/${encodeURIComponent(id)}/variants`,
   },
   products: entity('products'),
-  assets: entity('assets'),
+  assets: {
+    ...entity('assets'),
+    /** Σύνδεση αρχείου (ή νέας έκδοσής του) με το μέσο — μέτρηση, αποδόσεις, CAS (ADR-923 §5.10.3). */
+    file: (id: string) => `${API_ROOT}/assets/${encodeURIComponent(id)}/file`,
+  },
   settings: `${API_ROOT}/settings`,
   /** Μία σελίδα της εργασίας επανυπολογισμού παραγώγων (δρομέας). */
   recomputeDerived: `${API_ROOT}/derived/recompute`,
@@ -44,4 +48,6 @@ export const CATALOG_PAGES = {
   attributes: '/catalog/attributes',
   categories: '/catalog/categories',
   measurements: '/catalog/measurements',
+  /** Βιβλιοθήκη μέσων (ADR-923 §5.10.4). */
+  assets: '/catalog/assets',
 } as const;
