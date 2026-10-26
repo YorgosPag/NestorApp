@@ -61,6 +61,14 @@
     "assets": {
       "title": "Media library",
       "lead": "Photos, drawings, datasheets, certificates and BIM objects of the catalogue, with their rights. Products point to the asset — a new file version does not touch them."
+    },
+    "settings": {
+      "title": "Catalog settings",
+      "lead": "Which languages each channel must be complete in. Every product's completeness is measured per channel × language."
+    },
+    "products": {
+      "title": "Products",
+      "lead": "Models with variants and simple products, in one list. Completeness is measured per channel × language."
     }
   },
   "attributeTypes": {
@@ -671,6 +679,171 @@
       "attachFile": "Upload file",
       "versions": "Versions ({count})",
       "current": "Current"
+    }
+  },
+  "settings": {
+    "matrixCaption": "Languages per channel",
+    "channel": "Channel",
+    "defaults": "No settings have been saved yet — showing the defaults.",
+    "usageUnknown": "Could not check whether the languages already have values — saving will check.",
+    "lock": {
+      "lastLocale": "Every channel needs at least one language.",
+      "inUse": "There are values in “{locale}” — it can't be removed from the last channel that uses it."
+    },
+    "recomputePrompt": "The languages changed — product completeness needs to be recalculated."
+  },
+  "recompute": {
+    "run": "Recalculate completeness",
+    "retry": "Try again",
+    "needsPermission": "Anyone who manages products can run it.",
+    "running": "Recalculating… {count, plural, one {# group} other {# groups}}",
+    "done": "Done — {count, plural, one {# group} other {# groups}}.",
+    "doneWithRejected": "Done — {count, plural, one {# group} other {# groups}}, {rejected} rejected.",
+    "failed": "Stopped after {count, plural, one {# group} other {# groups}}. Retrying is safe: nothing already done is rewritten."
+  },
+  "grid": {
+    "pasted": "Pasted {rows, plural, one {# row} other {# rows}} × {cols, plural, one {# column} other {# columns}}{appended, plural, =0 {} one {, # new row} other {, # new rows}}{clipped, plural, =0 {} other {, # cells did not fit}}{locked, plural, =0 {} one {, # locked cell skipped} other {, # locked cells skipped}}{rejected, plural, =0 {} one {, # value rejected} other {, # values rejected}}.",
+    "locked": "Locked — {reason}",
+    "choices": "Choices: {column}",
+    "empty": "No rows."
+  },
+  "products": {
+    "list": {
+      "label": "Product list",
+      "empty": "No products yet. Start with “New”.",
+      "more": "Load more",
+      "failed": "The list could not be loaded.",
+      "stale": "{count, plural, one {# row has} other {# rows have}} stale derived data (completeness or order) — recalculation needed."
+    },
+    "columns": {
+      "image": "Image",
+      "identifier": "Code",
+      "label": "Label",
+      "family": "Family",
+      "kind": "Type",
+      "completeness": "Completeness",
+      "variants": "Variants",
+      "updated": "Updated"
+    },
+    "kind": {
+      "productModel": "Model",
+      "product": "Simple"
+    },
+    "completeness": {
+      "summary": "{complete}/{total} complete",
+      "percent": "{percent}%",
+      "tone": {
+        "complete": "complete",
+        "partial": "incomplete",
+        "empty": "empty"
+      }
+    },
+    "matches": "{matching}/{total} match",
+    "filter": {
+      "family": "Family",
+      "allFamilies": "All families",
+      "sort": "Sort",
+      "sortUpdated": "Last updated",
+      "sortLabel": "Label / code",
+      "scope": "Completeness for",
+      "facets": "Filters",
+      "clearFacets": "Clear filters",
+      "yes": "Yes",
+      "no": "No",
+      "familyFirst": "Choose a family to filter by attributes."
+    },
+    "jump": {
+      "label": "Go to code",
+      "placeholder": "Model or product code",
+      "go": "Go",
+      "notFound": "“{code}” was not found."
+    },
+    "new": {
+      "button": "New",
+      "title": "New product",
+      "lead": "A model with variants (e.g. one series in 7 sizes) or a simple product without variants.",
+      "family": "Family",
+      "kind": "Type",
+      "kindModel": "Model with variants",
+      "kindSimple": "Simple product",
+      "scheme": "Variant scheme",
+      "code": "Model code",
+      "noScheme": "The family has no variant scheme — simple products only.",
+      "create": "Create",
+      "creating": "Creating…"
+    },
+    "editor": {
+      "breadcrumb": "Position in the model",
+      "familyMissing": "This product's family was not found.",
+      "notFound": "The product was not found or was deleted.",
+      "attributesTab": "Attributes",
+      "variantsTab": "Variants"
+    }
+  },
+  "values": {
+    "empty": "—",
+    "clear": "No value",
+    "yes": "Yes",
+    "no": "No",
+    "requiredFor": "Required for {channel}",
+    "perLanguage": "per language",
+    "perChannel": "per channel",
+    "definedIn": "Defined in {name}",
+    "noValue": {
+      "label": "Explicit absence of value",
+      "notApplicable": "Not applicable",
+      "unknown": "Unknown",
+      "notApplicableExplained": "Declared “not applicable” — counts as complete.",
+      "unknownExplained": "Declared “unknown” — incomplete, with a reason (the supplier does not provide it)."
+    },
+    "assets": {
+      "add": "Add asset",
+      "search": "Search assets",
+      "none": "No suitable asset.",
+      "remove": "Remove “{name}”",
+      "moveFirst": "Make “{name}” first"
+    },
+    "references": {
+      "code": "Product or model code",
+      "add": "Add",
+      "remove": "Remove “{name}”"
+    },
+    "table": {
+      "actions": "Row actions",
+      "removeRow": "Remove row",
+      "addRow": "New row"
+    }
+  },
+  "completeness": {
+    "title": "Completeness",
+    "cell": "{filled}/{required} · {percent}%",
+    "missingUnknown": "{name} (unknown)",
+    "unknownExplained": "“Unknown” = a declared gap with a reason: shown apart from fields that are simply missing.",
+    "notApplicableExplained": "“Not applicable” fields count as complete.",
+    "variants": "Variants: {complete}/{total} complete",
+    "levelExplained": "Counts only this level's attributes; the rest are set on the variants."
+  },
+  "variants": {
+    "title": "Variants ({count})",
+    "gridLabel": "Model variants",
+    "removeRow": "Remove variant",
+    "useEditor": "edited in the variant's editor",
+    "axisHeader": "{label} (axis)",
+    "conflicts": "{count, plural, one {# variant was} other {# variants were}} changed elsewhere meanwhile — the saved value was kept; your other changes remain.",
+    "unsaved": "Unsaved changes",
+    "clean": "No changes",
+    "save": "Save variants",
+    "generator": {
+      "open": "Generate variants",
+      "title": "Generate variants",
+      "lead": "Pick values for each axis; every combination becomes a new grid row, to fill in before saving.",
+      "listHint": "e.g. 500 L; 0.75 m³",
+      "preview": "{fresh, plural, one {# new variant} other {# new variants}} · {existing} already exist",
+      "add": "Add {count, plural, one {# row} other {# rows}}"
+    },
+    "table": {
+      "title": "Catalog table (with the grid's values)",
+      "noSpec": "The family has no catalog table defined."
     }
   }
 }
