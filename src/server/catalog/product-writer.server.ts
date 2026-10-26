@@ -13,6 +13,7 @@ import 'server-only';
 
 import type { AuthContext } from '@/lib/auth';
 import type { CatalogProductDefinition } from '@/subapps/catalog/types/product';
+import type { VariantBatch, VariantBatchResultOf } from '@/subapps/catalog/types/product-requests';
 import type {
   StoredCatalogProductDefinition,
   StoredCatalogProductModelDefinition,
@@ -77,21 +78,9 @@ export async function deleteCatalogProduct(ctx: AuthContext, id: string, expecte
 
 // ── Η δέσμη παραλλαγών ──────────────────────────────────────────────────────
 
-export type VariantUpsert =
-  | { readonly id: string | null; readonly expectedRevision: null; readonly definition: CatalogProductDefinition }
-  | { readonly id: string; readonly expectedRevision: number; readonly definition: CatalogProductDefinition };
-
-export interface VariantBatch {
-  readonly upserts: readonly VariantUpsert[];
-  readonly deletes: readonly { readonly id: string; readonly expectedRevision: number }[];
-}
-
-export interface VariantBatchResult {
-  /** Η ρίζα μετά τη δέσμη (ευρετήριο, περίληψη «5/7», ευρήματα κανόνων). */
-  readonly model: StoredModel;
-  /** Οι παραλλαγές που γράφτηκαν, με τη σειρά της δέσμης (δημιουργίες με το id που πήραν). */
-  readonly variants: readonly StoredProduct[];
-}
+// Τα συμβόλαια της δέσμης ζουν στο κοινό `types/product-requests` (ένας ορισμός για οθόνη και διακομιστή).
+export type { VariantBatch, VariantUpsert } from '@/subapps/catalog/types/product-requests';
+export type VariantBatchResult = VariantBatchResultOf<StoredModel, StoredProduct>;
 
 /** Κάθε παραλλαγή της δέσμης ανήκει **σε αυτό** το μοντέλο — αλλιώς είναι λάθος δέσμη, όχι μετακίνηση. */
 function assertBatchBelongs(modelId: string, batch: VariantBatch): void {

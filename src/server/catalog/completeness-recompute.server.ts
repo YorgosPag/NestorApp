@@ -27,24 +27,17 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AuthContext } from '@/lib/auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { commitAggregate } from './catalog-aggregate.server';
+import type { RecomputeRequest, RecomputeResult } from '@/subapps/catalog/types/product-requests';
+
 import { runCatalogTransaction } from './catalog-store.server';
 import { CatalogWriteError } from './catalog-write-error';
 
 /** Σύνολα ανά κλήση: ≤ 25 × (1 + 200) αναγνώσεις — καλά μέσα στο χρονικό όριο ενός αιτήματος. */
 export const RECOMPUTE_PAGE_SIZE = 25;
 
-export interface RecomputeRequest {
-  /** Μόνο μία οικογένεια (μετά από αλλαγή της)· `null` = όλος ο χώρος (μετά από αλλαγή ρυθμίσεων). */
-  readonly familyId: string | null;
-  readonly cursor: string | null;
-}
-
-export interface RecomputeResult {
-  readonly processed: number;
-  readonly rejected: number;
-  /** `null` = τέλος. */
-  readonly nextCursor: string | null;
-}
+// Τα συμβόλαια ζουν στο κοινό `types/product-requests` (ο πελάτης τα διαβάζει χωρίς `server-only`).
+// `familyId`: μόνο μία οικογένεια (μετά από αλλαγή της)· `null` = όλος ο χώρος (μετά από αλλαγή ρυθμίσεων).
+export type { RecomputeRequest, RecomputeResult } from '@/subapps/catalog/types/product-requests';
 
 type Phase = 'm' | 'p';
 

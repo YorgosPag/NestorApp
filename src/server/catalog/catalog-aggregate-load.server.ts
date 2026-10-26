@@ -13,7 +13,16 @@ import 'server-only';
  * @module server/catalog/catalog-aggregate-load.server
  */
 
-import type { AggregateMember, CatalogAggregate, ModelMember, ProductMember } from '@/subapps/catalog/aggregate/aggregate-model';
+import {
+  cascadeDeletes,
+  createdModelMember,
+  createdProductMember,
+  deletedMember,
+  unchangedMember,
+  updatedModelMember,
+  updatedProductMember,
+} from '@/subapps/catalog/aggregate/aggregate-members';
+import type { AggregateMember, CatalogAggregate } from '@/subapps/catalog/aggregate/aggregate-model';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
 import type { CatalogProductDefinition, CatalogProductModelDefinition, CatalogValueHolderKind } from '@/subapps/catalog/types/product';
 import type {
@@ -27,7 +36,6 @@ import {
   readForCreate,
   readForRandomCreate,
   readOwnedOrNull,
-  revisionAfterWrite,
   type CatalogTx,
   type CreateTarget,
   type StoredCatalogRecord,
@@ -96,13 +104,6 @@ function assertProductIdentity(current: StoredProduct, next: CatalogProductDefin
   if (current.modelId !== next.modelId) throw immutable('modelId');
 }
 
-function unchangedMember(member: StoredMember): AggregateMember {
-  const base = { id: member.record.id, revisionAfter: member.record.revision, changed: false };
-  return member.kind === 'productModel'
-    ? ({ ...base, kind: 'productModel', before: member.record, after: member.record } satisfies ModelMember)
-    : ({ ...base, kind: 'product', before: member.record, after: member.record } satisfies ProductMember);
-}
-
 /** Το μέλος που ορίζει μια αλλαγή ενημέρωσης/διαγραφής — υπάρχει, είναι του σωστού είδους, CAS. */
 function existingFor(stored: ReadonlyMap<string, StoredMember>, change: Extract<HolderChange, { readonly expectedRevision: number }>): StoredMember {
   const member = stored.get(change.id);
@@ -111,43 +112,26 @@ function existingFor(stored: ReadonlyMap<string, StoredMember>, change: Extract<
   return member;
 }
 
+// Η συναρμολόγηση μελών ζει στο κοινό `aggregate-members` (ίδια στην οθόνη, Β4)· εδώ μόνο οι ισχυρισμοί.
 function updatedMember(member: StoredMember, change: Extract<HolderChange, { readonly op: 'update' }>): AggregateMember {
-  const base = { id: member.record.id, revisionAfter: revisionAfterWrite(member.record.revision), changed: true };
   if (member.kind === 'productModel' && change.kind === 'productModel') {
     assertModelIdentity(member.record, change.definition);
-    return { ...base, kind: 'productModel', before: member.record, after: change.definition };
+    return updatedModelMember(member.record, change.definition);
   }
   if (member.kind === 'product' && change.kind === 'product') {
     assertProductIdentity(member.record, change.definition);
-    return { ...base, kind: 'product', before: member.record, after: change.definition };
+    return updatedProductMember(member.record, change.definition);
   }
   throw new CatalogWriteError('notFound', [], { id: change.id });
 }
 
-const deletedMember = (member: StoredMember): AggregateMember => {
-  const base = { id: member.record.id, revisionAfter: revisionAfterWrite(member.record.revision), changed: true, after: null };
-  return member.kind === 'productModel' ? { ...base, kind: 'productModel', before: member.record } : { ...base, kind: 'product', before: member.record };
-};
-
 async function createdMember(scope: CatalogTx, change: Extract<HolderChange, { readonly op: 'create' }>) {
   if (change.kind === 'productModel') {
     const target = await readForCreate(scope, 'productModel', change.definition.code);
-    const member: ModelMember = { id: target.id, kind: 'productModel', before: null, after: change.definition, revisionAfter: revisionAfterWrite(target.previousRevision), changed: true };
-    return { target, member };
+    return { target, member: createdModelMember(target.id, change.definition, target.previousRevision) };
   }
   const target = await readForRandomCreate(scope, 'product', change.requestedId);
-  const member: ProductMember = { id: target.id, kind: 'product', before: null, after: change.definition, revisionAfter: revisionAfterWrite(target.previousRevision), changed: true };
-  return { target, member };
-}
-
-/** Διαγραφή σε καταρράκτη: κάθε μέλος που έχει το διαγραμμένο ως πρόγονο. */
-function cascadeDeletes(stored: ReadonlyMap<string, StoredMember>, members: Map<string, AggregateMember>, deletedId: string): void {
-  const parentOf = (member: StoredMember) => (member.kind === 'productModel' ? member.record.parentId : member.record.modelId);
-  for (const member of stored.values()) {
-    if (parentOf(member) !== deletedId || members.get(member.record.id)?.after === null) continue;
-    members.set(member.record.id, deletedMember(member));
-    cascadeDeletes(stored, members, member.record.id);
-  }
+  return { target, member: createdProductMember(target.id, change.definition, target.previousRevision) };
 }
 
 /**

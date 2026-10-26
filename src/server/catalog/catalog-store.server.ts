@@ -38,6 +38,7 @@ import { enterpriseIdFromRequest } from '@/services/enterprise-id-parse';
 import type { CatalogRecord } from '@/subapps/catalog/types/catalog-record';
 import { CATALOG_KIND_SPECS, type CatalogKind, type CatalogKindIdentity } from './catalog-kinds';
 import { CatalogWriteError } from './catalog-write-error';
+import { revisionAfterWrite } from '@/subapps/catalog/aggregate/aggregate-members';
 
 /** Αποθηκευμένη εγγραφή: ορισμός + περίβλημα, χρονοσφραγίδες ISO. */
 export type StoredCatalogRecord<TDefinition> = CatalogRecord<TDefinition, string>;
@@ -69,9 +70,8 @@ export function catalogDocRef(db: Firestore, kind: CatalogKind, id: string): Doc
 }
 
 /** Η αναθεώρηση μετά από μία αλλαγή ανθρώπου — ο **ένας** κανόνας «+1», για μηχανή και αποτύπωμα πληρότητας. */
-export function revisionAfterWrite(previousRevision: number): number {
-  return previousRevision + 1;
-}
+// Ο κανόνας ζει στο κοινό `aggregate-members` — ίδιος για γραφέα, κρίση και οθόνη (ADR-923 §5.10.4 Β4).
+export { revisionAfterWrite };
 
 /**
  * Τρέχει τη δουλειά σε **μία** συναλλαγή και γράφει το ίχνος **κάθε** αλλαγής μετά το commit
