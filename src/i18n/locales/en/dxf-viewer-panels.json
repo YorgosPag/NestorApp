@@ -1174,33 +1174,6 @@
       "previewElevationSplit": "({withElevation} with elevation / {planimetric} planimetric)",
       "planimetricNote": "{planimetric, plural, one {# point has no elevation} other {# points have no elevation}}: they are imported normally — visible and snappable — but take no part in the surface. The surface is defined by {withElevation, plural, one {the # point with an elevation} other {the # points with elevations}}.",
       "previewSkipped": "{count, plural, one {# row will be skipped} other {# rows will be skipped}}",
-      "presetLabel": "Column order",
-      "presetPlaceholder": "Choose a format…",
-      "unitLabel": "File units",
-      "columnN": "Column {n}",
-      "unit": {
-        "m": "Metres",
-        "mm": "Millimetres",
-        "ft": "Feet"
-      },
-      "role": {
-        "x": "X (Easting)",
-        "y": "Y (Northing)",
-        "z": "Elevation",
-        "code": "Code",
-        "pointId": "Point no.",
-        "ignore": "— Ignore —"
-      },
-      "preset": {
-        "PNEZD": "PNEZD — No., Northing(Y), Easting(X), Elev., Description",
-        "PENZD": "PENZD — No., Easting(X), Northing(Y), Elev., Description",
-        "PNEZ": "PNEZ — No., Northing(Y), Easting(X), Elev.",
-        "PENZ": "PENZ — No., Easting(X), Northing(Y), Elev.",
-        "NEZ": "NEZ — Northing(Y), Easting(X), Elev.",
-        "ENZ": "ENZ — Easting(X), Northing(Y), Elev.",
-        "XYZ": "XYZ — X, Y, Elev.",
-        "XYZD": "XYZD — X, Y, Elev., Description"
-      },
       "error": {
         "read": "Could not read the file."
       }

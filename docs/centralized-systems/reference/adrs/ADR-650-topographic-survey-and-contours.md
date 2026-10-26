@@ -583,6 +583,13 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
 
 ## Changelog
 
+- **2026-10-26 (v43)** — **Ο πίνακας στηλών/μονάδας του οδηγού εισαγωγής μετακόμισε** ([ADR-920](./ADR-920-listing-plot-terrain.md) §13.9):
+  `TopoColumnMapTable` + `TopoUnitSelect` → `components/terrain/survey-import/SurveyColumnMapTable` + `SurveyUnitSelect`,
+  κοινά με την εισαγωγή τοπογραφικού της αγγελίας (ίδια ερώτηση, ίδιο `ColumnMapping` — N.18). Ο viewer (`TopoColumnMapStep` ·
+  `TopoCloudStep`) τα εισάγει· τα παλιά αρχεία διαγράφηκαν, όπως και οι κανόνες CSS που έμειναν χωρίς καταναλωτή. Κλειδιά
+  `dxf-viewer-panels:topography.import.{presetLabel,presetPlaceholder,unitLabel,columnN,unit,role,preset}` →
+  `terrain-survey:columns.*` / `terrain-survey:unit.*`. ⚠️ Ορατή αλλαγή: θεματικά tokens αντί για λευκά-διάφανα
+  περιγράμματα (ήταν αόρατα στο φωτεινό θέμα) και κείμενο 12 px αντί για 11 px (πάτωμα αναγνωσιμότητας, ADR-907).
 - **2026-10-26 (v42)** — **M2 μέρος Β: επίλυση διασταυρούμενων ασυνεχειών** ([ADR-920](./ADR-920-listing-plot-terrain.md) §13.8 «Βήμα Β3.6»).
   Civil 3D «Crossing Breaklines» › Use Higher / Lower / Average / Specify, ως **κανόνας** στον ορισμό
   (`Breakline.crossingResolutions`) που εφαρμόζει **ο ένας** resolver (`tin-breakline-resolve.ts`, πόρτα `decide`) σε κάθε

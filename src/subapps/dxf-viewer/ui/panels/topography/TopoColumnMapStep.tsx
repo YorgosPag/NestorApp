@@ -6,7 +6,7 @@
  * PENZD, …) or a per-column dropdown declares what each column MEANS, the preview grid
  * shows the file exactly as it is, and the point count updates live underneath.
  *
- * The grid itself is `TopoColumnMapTable` — shared with the ASCII point-cloud step since M8β/Δ,
+ * The grid itself is `SurveyColumnMapTable` (`components/terrain/survey-import`, ADR-920 Β4.9) — shared with the ASCII point-cloud step since M8β/Δ and with the listing,
  * because both roads ask the surveyor the same question and take the same `ColumnMapping` answer.
  * What stays HERE is what is specific to the table road: the live count underneath, which since
  * ADR-720 is `TopoImportPointSummary` — the same component the confirm step renders, so the two
@@ -14,7 +14,7 @@
  */
 
 import * as React from 'react';
-import { TopoColumnMapTable } from './TopoColumnMapTable';
+import { SurveyColumnMapTable } from '@/components/terrain/survey-import/SurveyColumnMapTable';
 import { TopoImportPointSummary } from './TopoImportPointSummary';
 import type { UseTopoImport } from './useTopoImport';
 import styles from './TopoImportWizard.module.css';
@@ -30,7 +30,7 @@ export function TopoColumnMapStep({ wizard }: Props): React.JSX.Element | null {
 
   return (
     <section className={styles.step}>
-      <TopoColumnMapTable
+      <SurveyColumnMapTable
         headers={table.headers}
         rows={table.rows}
         mapping={mapping}

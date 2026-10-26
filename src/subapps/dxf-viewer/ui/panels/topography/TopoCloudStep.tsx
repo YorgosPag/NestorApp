@@ -15,6 +15,8 @@
 
 import * as React from 'react';
 import { useTranslation } from '@/i18n';
+import { SurveyColumnMapTable } from '@/components/terrain/survey-import/SurveyColumnMapTable';
+import { SurveyUnitSelect } from '@/components/terrain/survey-import/SurveyUnitSelect';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PREVIEW_POINT_SIZE_PX } from '../../../systems/topography/pointcloud/pointcloud-defaults';
 import { isMappingComplete } from '../../../systems/topography/topo-column-mapping';
@@ -26,8 +28,6 @@ import type {
 } from '../../../systems/topography/pointcloud/pointcloud-types';
 import type { TopoUnit } from '../../../systems/topography/topo-import-types';
 import type { UseTopoImport } from './useTopoImport';
-import { TopoColumnMapTable } from './TopoColumnMapTable';
-import { TopoUnitSelect } from './TopoUnitSelect';
 import { drawCloudPreview } from './topo-cloud-preview-canvas';
 import styles from './TopoImportWizard.module.css';
 
@@ -107,7 +107,7 @@ function CloudColumnsFieldset({ wizard }: Props): React.JSX.Element | null {
       <legend className={styles.sectionTitle}>{t('topography.pointcloud.columns.title')}</legend>
       <p className={styles.hint}>{t('topography.pointcloud.columns.hint')}</p>
 
-      <TopoColumnMapTable
+      <SurveyColumnMapTable
         headers={[]}
         rows={cloudSample}
         mapping={cloudMapping}
@@ -152,7 +152,7 @@ function CloudUnitFieldset({ wizard }: Props): React.JSX.Element | null {
       <legend className={styles.sectionTitle}>{t('topography.pointcloud.unit.title')}</legend>
       <p className={styles.hint}>{t('topography.pointcloud.unit.hint')}</p>
 
-      <TopoUnitSelect unit={unit} disabled={busy} onUnit={wizard.setUnit} />
+      <SurveyUnitSelect unit={unit} disabled={busy} onUnit={wizard.setUnit} />
 
       {cloudSourceExtent && <CloudSpanReadout extent={cloudSourceExtent} selected={unit} />}
     </fieldset>
@@ -170,7 +170,7 @@ interface SpanReadoutProps {
  * is a plausible site. Deterministic (`unitSpanReadouts`), zero LLM.
  */
 function CloudSpanReadout({ extent, selected }: SpanReadoutProps): React.JSX.Element {
-  const { t } = useTranslation('dxf-viewer-panels');
+  const { t } = useTranslation(['dxf-viewer-panels', 'terrain-survey']);
   const readouts = unitSpanReadouts(extent);
 
   return (
@@ -182,7 +182,7 @@ function CloudSpanReadout({ extent, selected }: SpanReadoutProps): React.JSX.Ele
             key={r.unit}
             className={r.unit === selected ? styles.spanRowSelected : styles.spanRow}
           >
-            <dt>{t(`topography.import.unit.${r.unit}`)}</dt>
+            <dt>{t(`terrain-survey:unit.${r.unit}`)}</dt>
             <dd>
               {t('topography.pointcloud.unit.extent', {
                 width: formatMeters(r.widthMeters),
