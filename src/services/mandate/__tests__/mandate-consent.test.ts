@@ -17,6 +17,7 @@
  * **γίνεται δεκτός** όταν λείπει μόνο το κρίσιμο.
  */
 
+import '@/test-utils/public-shelf-double';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import {

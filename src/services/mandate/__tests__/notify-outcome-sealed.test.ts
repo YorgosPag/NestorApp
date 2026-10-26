@@ -25,6 +25,7 @@
  * τρέχουν **αληθινά** πάνω σε ψεύτικη βάση.
  */
 
+import '@/test-utils/public-shelf-double';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { validDraft } from '@/lib/owner-property/__tests__/owner-property-fixtures';

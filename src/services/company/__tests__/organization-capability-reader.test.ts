@@ -24,6 +24,7 @@
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
+import { EntityAuditService } from '@/services/entity-audit.service';
 import { readCapabilityApplicants } from '@/services/company/organization-capability.reader';
 import { declareBrokerage } from '@/services/company/organization-capability.service';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
@@ -159,6 +160,11 @@ describe('Κ12 — ο αναγνώστης του ρυθμιστή', () => {
 // ═══ Κ12ζ — ο γραφέας και ο αναγνώστης συμφωνούν στη ΔΙΑΔΡΟΜΗ ═══════════════
 
 describe('Κ12ζ — η απόκλιση που ΔΕΝ σκάει', () => {
+  // Ο γραφέας γράφει και ίχνος ελέγχου στη ΔΙΚΗ του βάση — εδώ κρίνεται μόνο ο αναγνώστης.
+  beforeEach(() => {
+    jest.spyOn(EntityAuditService, 'recordChange').mockResolvedValue('audit_1');
+  });
+
   test('δήλωση από τον ΠΡΑΓΜΑΤΙΚΟ γραφέα ⇒ ο ΠΡΑΓΜΑΤΙΚΟΣ αναγνώστης τη βρίσκει', async () => {
     // 🔑 Κανένα χειρόγραφο έγγραφο εδώ, επίτηδες: αν σπέρναμε το σχήμα με το χέρι, θα
     // επαναλαμβάναμε την ΥΠΟΘΕΣΗ και για τις δύο πλευρές, και η άγκυρα θα ήταν πράσινη

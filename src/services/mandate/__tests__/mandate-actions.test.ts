@@ -13,6 +13,7 @@
  * την εξαγόμενη συνάρτηση που καλεί **η πραγματική διαδρομή**.
  */
 
+import '@/test-utils/public-shelf-double';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';

@@ -26,6 +26,7 @@
  * νομίζουμε, όχι ότι **γράφεται** ό,τι θέλουμε.
  */
 
+import '@/test-utils/public-shelf-double';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { EntityAuditService } from '@/services/entity-audit.service';

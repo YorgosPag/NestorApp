@@ -17,6 +17,7 @@
  * το έγγραφο να περνά τον **ίδιο** φρουρό (`readShowcase`) που περνά και στην παραγωγή.
  */
 
+import '@/test-utils/public-shelf-double';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
