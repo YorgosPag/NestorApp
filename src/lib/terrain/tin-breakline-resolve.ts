@@ -12,13 +12,23 @@
  *    breakline vertex that merges with an existing one (same position) keeps the existing Z — also reported.
  * 3. Every DISAGREEMENT is returned as a {@link BreaklineElevationConflict} — the builder classifies strictly
  *    (float noise only); how loud a given Δz is belongs to QA, not to the geometry.
+ * 4. ADR-920 Β3.6 — where BOTH sides are breaklines, a stored engineer's rule (`Breakline.crossingResolutions`,
+ *    Civil 3D Higher / Lower / Average / Specify) replaces «the earlier wins» at that meeting point; the conflict is
+ *    still reported, carrying the resolution. A survey vertex is never overruled by a rule (ADR-720).
  *
  * Predicates are EXACT (`robust-predicates`): whether a vertex is on a segment, or two segments cross, is never decided
  * by rounding. The `orient2d` sign convention is irrelevant here — only «same side / opposite / zero» is used.
  */
 
 import { orient2d } from 'robust-predicates';
-import type { Breakline, BreaklineElevationConflict, LocalOrigin, TinPosition } from './terrain-types';
+import { crossingRuleZ, indexCrossingResolutions, type CrossingResolutionIndex } from './breakline-crossing-rule';
+import type {
+  Breakline,
+  BreaklineElevationConflict,
+  CrossingResolutionKey,
+  LocalOrigin,
+  TinPosition,
+} from './terrain-types';
 import { localVertexKey, pushVertex, type CollectedVertices } from './tin-vertex-accumulator';
 import { cellOf, cellsAlongSegment, createSegmentGrid, type SegmentGrid } from './tin-segment-grid';
 import type { TinEdge } from './tin-triangulate';
@@ -48,6 +58,8 @@ interface SplitPoint {
 interface ResolvedBreaklines {
   readonly edges: TinEdge[];
   readonly conflicts: BreaklineElevationConflict[];
+  /** ADR-920 Β3.6 — stored decisions that decided nothing in this build. */
+  readonly unappliedResolutions: CrossingResolutionKey[];
 }
 
 function pairKey(a: number, b: number): string {
@@ -127,6 +139,8 @@ class Resolution {
     readonly segments: readonly Segment[],
     /** Who stated each vertex's kept Z — see {@link vertexOwnersOf}. Crossing nodes are added as they are created. */
     readonly owners: Map<number, string>,
+    /** ADR-920 Β3.6 — the engineer's decisions, by pair + position. */
+    readonly decisions: CrossingResolutionIndex,
   ) {}
 
   split(segmentIndex: number, point: SplitPoint): void {
@@ -144,6 +158,33 @@ class Resolution {
     this.conflicts.push({
       kind, x, y, keptZ, overruledZ, overruledBreaklineId: breaklineId,
       ...(keptBreaklineId !== undefined && { keptBreaklineId }),
+    });
+  }
+
+  /**
+   * ADR-920 Β3.6 — the ONE door where an engineer's rule can decide a meeting point: `breaklineId` states
+   * `overruledZ` at `vertex`, which already carries its owner's Z. When BOTH sides are breaklines and a stored rule for
+   * that pair matches the position, the vertex takes the rule's Z (both lines then pass through it) and ONE conflict
+   * is reported with the resolution. A survey vertex is never decided by a rule — the measurement wins (ADR-720).
+   * Otherwise this is {@link check}.
+   */
+  decide(kind: BreaklineElevationConflict['kind'], vertex: number, overruledZ: number, breaklineId: string): void {
+    const keptLineZ = this.acc.elevations[vertex];
+    const keptBreaklineId = this.owners.get(vertex);
+    const [x, y] = this.acc.positions[vertex];
+    const found = keptBreaklineId === undefined || elevationsAgree(keptLineZ, overruledZ)
+      ? undefined
+      : this.decisions.find(keptBreaklineId, breaklineId, x, y);
+    if (keptBreaklineId === undefined || found === undefined) {
+      this.check(kind, vertex, overruledZ, breaklineId);
+      return;
+    }
+    const keptZ = crossingRuleZ(found.resolution, keptLineZ, overruledZ);
+    this.acc.elevations[vertex] = keptZ;
+    this.decisions.markApplied(found.key);
+    this.conflicts.push({
+      kind, x, y, keptZ, overruledZ, overruledBreaklineId: breaklineId, keptBreaklineId,
+      resolution: { rule: found.resolution.rule, keptLineZ, key: found.key },
     });
   }
 }
@@ -178,7 +219,7 @@ function resolveCrossing(res: Resolution, i: number, j: number, ts: number, tu: 
   res.split(i, { index: node, t: ts });
   res.split(j, { index: node, t: tu });
   res.check('crossing', node, zAlong(res.acc, s, ts), s.breaklineId);
-  res.check('crossing', node, zAlong(res.acc, u, tu), u.breaklineId);
+  res.decide('crossing', node, zAlong(res.acc, u, tu), u.breaklineId);
 }
 
 function segmentBuckets(res: Resolution, grid: SegmentGrid): Map<number, number[]> {
@@ -225,7 +266,7 @@ function resolveVerticesOnSegments(res: Resolution, grid: SegmentGrid, vertexCou
         const t = vertexOnSegment(res.acc, s, v);
         if (t === null) continue;
         res.split(i, { index: v, t });
-        res.check('vertex-on-breakline', v, zAlong(res.acc, s, t), s.breaklineId);
+        res.decide('vertex-on-breakline', v, zAlong(res.acc, s, t), s.breaklineId);
       }
     }
   });
@@ -239,7 +280,7 @@ function reportMergedBreaklineVertices(res: Resolution, breaklines: readonly Bre
   for (const bl of breaklines) {
     for (const v of bl.vertices) {
       const index = res.acc.keyToIndex.get(localVertexKey(v.x - origin.x, v.y - origin.y));
-      if (index !== undefined) res.check('vertex-on-breakline', index, v.z, bl.id);
+      if (index !== undefined) res.decide('vertex-on-breakline', index, v.z, bl.id);
     }
   }
 }
@@ -272,12 +313,19 @@ export function resolveBreaklines(
   surveyVertexCount: number,
 ): ResolvedBreaklines {
   const segments = segmentsOf(breaklines, acc, origin);
-  const res = new Resolution(acc, segments, vertexOwnersOf(breaklines, acc, origin, surveyVertexCount));
+  const decisions = indexCrossingResolutions(breaklines, origin);
+  const res = new Resolution(acc, segments, vertexOwnersOf(breaklines, acc, origin, surveyVertexCount), decisions);
   reportMergedBreaklineVertices(res, breaklines, origin);
-  if (segments.length === 0) return { edges: [], conflicts: res.conflicts };
-  const grid = createSegmentGrid(acc.positions);
-  const vertexCount = acc.positions.length;
-  resolveCrossings(res, grid);
-  resolveVerticesOnSegments(res, grid, vertexCount);
-  return { edges: emitEdges(res), conflicts: res.conflicts };
+  if (segments.length > 0) {
+    const grid = createSegmentGrid(acc.positions);
+    // Β3.6 — vertices before crossings: a rule may change an EXISTING vertex's Z, and a crossing interpolates from
+    // its segments' end vertices, so those must be final first. (Crossing nodes are new vertices: never on this list.)
+    resolveVerticesOnSegments(res, grid, acc.positions.length);
+    resolveCrossings(res, grid);
+  }
+  return {
+    edges: segments.length > 0 ? emitEdges(res) : [],
+    conflicts: res.conflicts,
+    unappliedResolutions: decisions.unapplied(),
+  };
 }

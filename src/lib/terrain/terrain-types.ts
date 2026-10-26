@@ -135,7 +135,34 @@ export interface Breakline {
    * guessed: absent on breaklines saved before this field existed ⇒ «unknown», not silently «elevation».
    */
   readonly elevationSource?: BreaklineElevationSource;
+  /**
+   * ADR-920 Β4.8 Β3.6 — the engineer's decisions for where THIS breakline meets another at a different elevation
+   * (Civil 3D «Crossing Breaklines» Resolve). Kept as RULES the resolver applies on every build — never baked into
+   * `vertices`: a live breakline re-derives its vertices from its source entity (`topo-source-cascade`), and a baked
+   * node would vanish silently. Absent ⇒ the default «earlier breakline wins».
+   */
+  readonly crossingResolutions?: readonly BreaklineCrossingResolution[];
 }
+
+/** ADR-920 Β4.8 Β3.6 — Civil 3D «Use Higher / Lower / Average / Specify Level», one vocabulary. */
+export type BreaklineCrossingRule = 'higher' | 'lower' | 'average' | 'specify';
+
+/**
+ * ADR-920 Β4.8 Β3.6 — one decision for ONE meeting point of ONE pair of breaklines. Stored on one of the two lines
+ * (either works: the resolver indexes by the unordered pair) and matched to the meeting point by position, within
+ * `CROSSING_RESOLUTION_MATCH_MM` — a crossing that moved further (its source was edited) is a different question, so
+ * the rule is reported as no longer applying instead of being applied somewhere it was never decided.
+ */
+export type BreaklineCrossingResolution = {
+  readonly withBreaklineId: string;
+  /** WORLD canonical mm — where the meeting point was when the engineer decided. */
+  readonly x: number;
+  readonly y: number;
+} & (
+  | { readonly rule: Exclude<BreaklineCrossingRule, 'specify'> }
+  /** WORLD canonical mm. */
+  | { readonly rule: 'specify'; readonly z: number }
+);
 
 /**
  * ADR-920 Β4.8 Β1 — the ONE vocabulary for a breakline's elevation provenance (Civil 3D keeps this in
@@ -220,6 +247,32 @@ export interface BreaklineElevationConflict {
    * breakline, and naming one would be a lie. A new crossing node always has it (the earlier breakline set its Z).
    */
   readonly keptBreaklineId?: string;
+  /**
+   * ADR-920 Β4.8 Β3.6 — present when an engineer's rule decided this meeting point. `keptZ` is then the RULE's result
+   * (still «what the surface carries»), and the two lines' own statements are `resolution.keptLineZ` and `overruledZ`.
+   */
+  readonly resolution?: AppliedCrossingResolution;
+}
+
+/** ADR-920 Β4.8 Β3.6 — the rule that decided a conflict, and the kept line's own statement it replaced. */
+export interface AppliedCrossingResolution {
+  readonly rule: BreaklineCrossingRule;
+  /** The `keptBreaklineId` line's own interpolation at the meeting point (WORLD mm). */
+  readonly keptLineZ: number;
+  /** Which stored decision this was — to change or revert it from the conflict row. */
+  readonly key: CrossingResolutionKey;
+}
+
+/**
+ * ADR-920 Β4.8 Β3.6 — the natural key of a stored decision: the breakline that holds it + its index there would be
+ * fragile, so the decision is named by what it IS (owner, partner, position).
+ */
+export interface CrossingResolutionKey {
+  readonly ownerBreaklineId: string;
+  readonly withBreaklineId: string;
+  /** WORLD canonical mm, as stored. */
+  readonly x: number;
+  readonly y: number;
 }
 
 /**
@@ -234,6 +287,12 @@ export interface TinBuildReport {
    * crossing and every vertex-on-segment is resolved before the constrainer runs). Counted, never silently dropped.
    */
   readonly refusedSegmentCount: number;
+  /**
+   * ADR-920 Β4.8 Β3.6 — stored decisions that decided NOTHING in this build: the partner is gone, the lines no longer
+   * meet within `CROSSING_RESOLUTION_MATCH_MM` of the stored position, or they now agree there. Reported, never
+   * re-targeted — the panel offers to drop them.
+   */
+  readonly unappliedCrossingResolutions: readonly CrossingResolutionKey[];
 }
 
 /** A single contour crossing segment within ONE triangle (LOCAL frame). */

@@ -583,6 +583,14 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
 
 ## Changelog
 
+- **2026-10-26 (v42)** — **M2 μέρος Β: επίλυση διασταυρούμενων ασυνεχειών** ([ADR-920](./ADR-920-listing-plot-terrain.md) §13.8 «Βήμα Β3.6»).
+  Civil 3D «Crossing Breaklines» › Use Higher / Lower / Average / Specify, ως **κανόνας** στον ορισμό
+  (`Breakline.crossingResolutions`) που εφαρμόζει **ο ένας** resolver (`tin-breakline-resolve.ts`, πόρτα `decide`) σε κάθε
+  χτίσιμο — όχι ψημένη κορυφή, γιατί το cascade ξαναπαράγει τις κορυφές μιας ζωντανής ασυνέχειας. Η σύγκρουση κουβαλά
+  `resolution`· το QA δεν τη μετρά ως εύρημα· η λίστα δείχνει ανοιχτές / λυμένες / αποφάσεις που δεν εφαρμόζονται πια·
+  προεπισκόπηση z + μετατόπισης + αλλαγής κλίσης (`BREAKLINE_RESOLUTION_GRADE_WARN`) πριν την εφαρμογή· «Επίλυση όλων»·
+  undo/redo μέσω `SetTopoBreaklinesCommand.resolve/unresolve`. Η 3Δ ασυνέχεια περνά από κάθε σημείο συνάντησης στο z της
+  επιφάνειας (`breaklinesAsCarried`). Σημείο αποτύπωσης ⇒ υπερισχύει η μέτρηση (ADR-720).
 - **2026-10-26 (v41)** — **M2 μέρος Β: η λίστα «Ασυνέχειες επιφάνειας»** ([ADR-920](./ADR-920-listing-plot-terrain.md) §13.8 «Βήμα Β3»).
   Civil 3D Prospector › Breaklines + vista «Crossing Breaklines» σε ένα πάνελ (πέμπτο `TopoReviewPanel`, κουμπί στο tab
   Τοπογραφία): μία γραμμή ανά ασυνέχεια με τον αριθμό #n του QA, πηγή του z σε λέξη **και** ως μοτίβο, μήκος, εύρος Z,

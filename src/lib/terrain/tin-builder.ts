@@ -31,6 +31,7 @@ import { computeLocalOrigin, ZERO_ORIGIN } from './topo-local-origin';
 import { surfacePointsOf } from './topo-point-elevation';
 import { createVertexAccumulator, planarBoundsOf, pushVertex, type CollectedVertices } from './tin-vertex-accumulator';
 import { resolveBreaklines } from './tin-breakline-resolve';
+import { indexCrossingResolutions } from './breakline-crossing-rule';
 import { triangulateConstrained } from './tin-triangulate';
 
 export {
@@ -112,7 +113,9 @@ export function buildTinWithReport(
 
   if (acc.positions.length < 3) {
     const surface = surfaceOf(acc, [], acc.positions.length ? origin : ZERO_ORIGIN);
-    return { surface, breaklineConflicts: [], refusedSegmentCount: 0 };
+    // Β3.6 — nothing was triangulated, so no stored decision decided anything.
+    const unapplied = indexCrossingResolutions(breaklines, origin).unapplied();
+    return { surface, breaklineConflicts: [], refusedSegmentCount: 0, unappliedCrossingResolutions: unapplied };
   }
 
   const resolved = resolveBreaklines(breaklines, acc, origin, surveyVertexCount);
@@ -121,6 +124,7 @@ export function buildTinWithReport(
     surface: surfaceOf(acc, triangles, origin),
     breaklineConflicts: resolved.conflicts,
     refusedSegmentCount: refusedEdges.length,
+    unappliedCrossingResolutions: resolved.unappliedResolutions,
   };
 }
 
