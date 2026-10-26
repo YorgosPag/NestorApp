@@ -2,11 +2,11 @@
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
   "metadata": {
-    "timestamp": "2026-10-25T15:53:48.777Z",
+    "timestamp": "2026-10-26T11:55:31.512Z",
     "properties": [
       {
         "name": "nestor:inputsFingerprint",
-        "value": "sha256:a2c4640ed8d0b3a27bf180c65c0389a5e224ae61f7c358f65442a3f01388b35c"
+        "value": "sha256:b5ac4113ddd9ec384356e02be3fa20c48663e57a9f0d849f1bff0051c4c03567"
       }
     ]
   },
@@ -8297,6 +8297,56 @@
         {
           "license": {
             "id": "Apache-2.0"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "nestor:surface",
+          "value": "unknown"
+        },
+        {
+          "name": "nestor:attribution",
+          "value": "surface-unknown"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/@tanstack/react-virtual@3.14.14",
+      "name": "@tanstack/react-virtual",
+      "version": "3.14.14",
+      "purl": "pkg:npm/@tanstack/react-virtual@3.14.14",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "nestor:surface",
+          "value": "unknown"
+        },
+        {
+          "name": "nestor:attribution",
+          "value": "surface-unknown"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/@tanstack/virtual-core@3.18.0",
+      "name": "@tanstack/virtual-core",
+      "version": "3.18.0",
+      "purl": "pkg:npm/@tanstack/virtual-core@3.18.0",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
           }
         }
       ],

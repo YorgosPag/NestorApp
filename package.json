@@ -581,6 +581,7 @@
     "@react-stately/color": "^3.9.2",
     "@resvg/resvg-js": "^2.6.2",
     "@sentry/nextjs": "10.45.0",
+    "@tanstack/react-virtual": "3.14.14",
     "@tiptap/core": "3.23.1",
     "@tiptap/extension-color": "^3",
     "@tiptap/extension-font-family": "^3",

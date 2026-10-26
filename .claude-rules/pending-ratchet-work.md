@@ -2,6 +2,25 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **26/10 — Η ΦΟΡΜΑ ΛΗΨΗΣ ΠΑΝΟΡΑΜΑΤΟΣ ΔΕΝ ΧΡΗΣΙΜΟΠΟΙΕΙ ΤΟ ΚΟΙΝΟ `MediaRightsFields`** *(ADR-923 §5.10.4 · N.0.2)*
+
+  **Τι:** το `src/components/spatial-tour/TourCaptureUploadForm.tsx` χτίζει τα δικαιώματα μόνο του (`declarationOf` · δικά του πεδία
+  δημιουργού/σκοπού/διάρκειας). Το γενικό SSoT υπάρχει πλέον: `lib/media-rights/media-rights-draft.ts` (πρόχειρο ⇄ `MediaRights`,
+  κρατά αδειοδότες/όρους web) + `components/shared/media-rights/MediaRightsFields<C>` (πλαίσιο `listing`/`catalog`). Ο κατάλογος το
+  χρησιμοποιεί· η λήψη πανοράματος όχι ⇒ δύο `declarationOf` για την ίδια δήλωση IPTC.
+  **Θεραπεία:** `DeclarationFields` ⇒ `MediaRightsFields<'listing'>` + `mediaRightsOf`· οι λέξεις από το `spatial-tour-labels.ts`
+  (`LICENSE_PURPOSE_KEY` είναι ήδη `Record<MediaLicensePurposeIn<'listing'>,…>`). Άγκυρα: η φόρμα παράγει **το ίδιο** `MediaRights`
+  με σήμερα (byte προς byte στο `declarationOf` test). ⚠️ Το `«έως ημερομηνία» χωρίς ημερομηνία` γίνεται πλέον εύρημα (σήμερα
+  γίνεται σιωπηλά «χωρίς λήξη»). **Μέγεθος:** ~1-2h, 2-3 αρχεία.
+
+- 🟡 **26/10 — Η ΠΡΟΘΕΣΗ ΠΛΗΚΤΡΩΝ ΠΛΕΓΜΑΤΟΣ ΖΕΙ ΜΟΝΟ ΣΤΟΝ DXF** *(ADR-923 §5.10.4 Στάδιο Β · N.0.2)*
+
+  **Τι:** το `dxf-viewer/ui/table-cell-editor/table-cell-key-intent.ts` (403 γραμμές) είναι η μόνη καθαρή «πλήκτρο ⇒ πρόθεση» τύπου
+  Excel στο repo, δεμένη σε τύπους DXF (`TableCursorMove` · `TableCellCursorMode`). Το γενικό πλέγμα δεδομένων της 2δ (Στάδιο Β,
+  `components/ui/data-grid/`) θα χρειαστεί το ίδιο ⇒ **γενικό** `lib/spreadsheet/grid-key-intent.ts` στο ίδιο ιδίωμα, και μετά ο DXF
+  να γίνει καταναλωτής του. **Θεραπεία:** μετάπτωση του DXF μετά το Στάδιο Β· CHECK 3.62 (δημόσια επιφάνεια) + οι άγκυρες του
+  table-cell-editor. **Μέγεθος:** > 1h, 4+ αρχεία.
+
 - 🟡 **25/10 — Ο «ΑΥΣΤΗΡΟΣ» ΑΝΑΛΥΤΗΣ ΑΡΙΘΜΩΝ ΖΕΙ ΣΕ ΞΕΝΟ ΤΟΜΕΑ ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΑΥΣΤΗΡΟΣ** *(εύρημα ADR-923 Φ2α §5.10.1)*
 
   **Τι:** το `parseStrictDecimal` ζει στο `src/lib/survey-record/survey-number.ts` αλλά το καταναλώνουν **5 τομείς**

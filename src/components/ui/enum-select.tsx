@@ -37,6 +37,8 @@ export interface EnumSelectProps<T extends string> {
   getLabel: (value: T) => string;
   /** Συνδέει το trigger με ένα εξωτερικό `<Label htmlFor>`. */
   id?: string;
+  /** Προσβάσιμο όνομα όταν **δεν** υπάρχει ορατή ετικέτα (κελί πίνακα/πλέγματος — η κεφαλίδα δεν ονομάζει το πεδίο). */
+  ariaLabel?: string;
   disabled?: boolean;
 }
 
@@ -46,6 +48,7 @@ export function EnumSelect<T extends string>({
   values,
   getLabel,
   id,
+  ariaLabel,
   disabled = false,
 }: EnumSelectProps<T>) {
   return (
@@ -57,7 +60,7 @@ export function EnumSelect<T extends string>({
         if (match !== undefined) onValueChange(match);
       }}
     >
-      <SelectTrigger id={id}>
+      <SelectTrigger id={id} aria-label={ariaLabel}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
