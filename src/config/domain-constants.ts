@@ -147,6 +147,12 @@ export const ENTITY_TYPES = {
    * προσωπικό χώρο· φτάνουν στην υπόθεση **μόνο** με transmittal (ADR-901 §5.8.1 · Φ4.4)
    */
   CONVEYANCE_CASE: 'conveyance_case',
+  /**
+   * Μέσο καταλόγου (`catalog_assets`) — φωτογραφία · σχέδιο · τεκμήριο · BIM · βίντεο προϊόντος. Το κλειδί αποθήκευσης
+   * κουβαλά μόνο αμετάβλητα (`catalog_asset:{assetId}`, ADR-709)· νέα έκδοση αρχείου = νέο `FileRecord` κάτω από το
+   * **ίδιο** μέσο (ADR-923 §5.10 Δ9 · §5.10.3)
+   */
+  CATALOG_ASSET: 'catalog_asset',
 } as const;
 
 export type EntityType = typeof ENTITY_TYPES[keyof typeof ENTITY_TYPES];
@@ -245,6 +251,11 @@ export const FILE_DOMAINS = {
    * Files in this domain are quarantined until classified and promoted to business entities
    */
   INGESTION: 'ingestion',
+  /**
+   * Κατάλογος προϊόντων προμηθευτή (ADR-923). Ξεχωριστό από το `SALES`: ένα φυλλάδιο κατασκευαστή δεν είναι έγγραφο
+   * πώλησης της εταιρείας, και το ερώτημα «τα μέσα του καταλόγου» δεν πρέπει να κατεβάζει συμβόλαια.
+   */
+  CATALOG: 'catalog',
 } as const;
 
 export type FileDomain = typeof FILE_DOMAINS[keyof typeof FILE_DOMAINS];

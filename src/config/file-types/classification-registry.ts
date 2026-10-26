@@ -52,6 +52,8 @@ export type FileCategory =
   | 'audio'
   | 'archive'
   | 'text'
+  /** Building model (IFC · Revit family) — ADR-923 §5.10.3. Never previewed in the browser. */
+  | 'bim'
   | 'unknown';
 
 /** Body-text extraction strategy run before the AI classification call. */
@@ -64,7 +66,11 @@ export type MediaDocumentType = 'video' | 'audio';
 export interface FileTypeSpec {
   /** Stable identifier (used by tests & logs). */
   readonly id: string;
-  /** Canonical + alias MIME types. */
+  /**
+   * Canonical + alias MIME types. **Empty** for a format with no registered MIME (Revit `.rfa`): the spec is then
+   * reachable by extension only and its canonical MIME is {@link UNKNOWN_MIME_TYPE} — an honest answer, never an
+   * invented `application/x-…` that another tool would not recognise.
+   */
   readonly mimeTypes: readonly string[];
   /** Lowercase extensions (no leading dot). */
   readonly extensions: readonly string[];
@@ -242,6 +248,26 @@ export const FILE_TYPE_REGISTRY: readonly FileTypeSpec[] = [
     previewType: 'image',
     category: 'image',
   },
+  // ADR-923 §5.10.4 — **TIFF** (το πρότυπο αρχείο εκτύπωσης: CMYK + ICC, 16 bit) και **AVIF**. Το `RASTER_IMAGE_TYPES`
+  // (προεπισκόπηση · διαστάσεις · αποδόσεις, `lib/images/image-dimensions.ts`) τα ήξερε ήδη ως εικόνες, αυτό το μητρώο όχι ⇒
+  // ένα TIFF ήταν «άγνωστο αρχείο» στον διαχειριστή και «άλλο είδος» στον κατάλογο. `classifiable: false`: τα μοντέλα
+  // όρασης δέχονται JPEG/PNG/WebP/GIF. Η προβολή στον browser περνά από το παράγωγο webp του διακομιστή (ADR-899).
+  {
+    id: 'image-tiff',
+    mimeTypes: ['image/tiff'],
+    extensions: ['tif', 'tiff'],
+    classifiable: false,
+    previewType: 'image',
+    category: 'image',
+  },
+  {
+    id: 'image-avif',
+    mimeTypes: ['image/avif'],
+    extensions: ['avif'],
+    classifiable: false,
+    previewType: 'image',
+    category: 'image',
+  },
   {
     id: 'svg',
     mimeTypes: ['image/svg+xml'],
@@ -282,6 +308,24 @@ export const FILE_TYPE_REGISTRY: readonly FileTypeSpec[] = [
     previewType: 'unsupported',
     category: 'archive',
   },
+  {
+    // IFC-SPF is an ISO 10303-21 (STEP) physical file; buildingSMART names `application/x-step` as its MIME.
+    id: 'ifc',
+    mimeTypes: ['application/x-step'],
+    extensions: ['ifc'],
+    classifiable: false,
+    previewType: 'unsupported',
+    category: 'bim',
+  },
+  {
+    // Autodesk publishes no MIME for Revit families — resolved by extension only (see `mimeTypes`).
+    id: 'rfa',
+    mimeTypes: [],
+    extensions: ['rfa'],
+    classifiable: false,
+    previewType: 'unsupported',
+    category: 'bim',
+  },
 ];
 
 /**
@@ -311,6 +355,12 @@ export const MIME_PREFIX_SPECS: readonly MimePrefixSpec[] = [
 // LOOKUP INDICES (built once at module load)
 // ============================================================================
 
+/**
+ * Emitted when no spec claims the extension — and the canonical MIME of a spec with no registered MIME.
+ * Declared before the index loop below, which reads it at module load.
+ */
+export const UNKNOWN_MIME_TYPE = 'application/octet-stream';
+
 const MIME_INDEX: Map<string, FileTypeSpec> = new Map();
 const EXT_INDEX: Map<string, FileTypeSpec> = new Map();
 /** extension → canonical MIME. Resolved once, validated against each spec. */
@@ -322,6 +372,7 @@ const EXT_MIME_INDEX: Map<string, string> = new Map();
  * the value has to be one the spec actually claims.
  */
 function resolveCanonicalMime(spec: FileTypeSpec, ext: string): string {
+  if (spec.mimeTypes.length === 0) return UNKNOWN_MIME_TYPE;
   if (spec.mimeTypes.length === 1) return spec.mimeTypes[0];
 
   const explicit = spec.canonicalMimeByExt?.[ext];
@@ -383,9 +434,6 @@ export function extractExtension(filename: string | undefined): string {
   if (dot < 0 || dot === filename.length - 1) return '';
   return filename.slice(dot + 1).toLowerCase();
 }
-
-/** Emitted when no spec claims the extension. */
-export const UNKNOWN_MIME_TYPE = 'application/octet-stream';
 
 /**
  * Filename from a URL — query string and fragment stripped, percent-escapes

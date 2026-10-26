@@ -7,7 +7,8 @@
     "legal": "Legal",
     "financial": "Financial",
     "brokerage": "Brokerage",
-    "ingestion": "Inbox"
+    "ingestion": "Inbox",
+    "catalog": "Product catalog"
   },
   "categories": {
     "photos": "Photo",

@@ -33,6 +33,7 @@ import {
   canonicalMimeForUrl,
   UNKNOWN_MIME_TYPE,
 } from '../classification-registry';
+import { RASTER_IMAGE_TYPES } from '@/lib/images/image-dimensions';
 
 // ============================================================================
 // Helper: enumerate literal members of the PreviewType union
@@ -62,6 +63,7 @@ const ALL_CATEGORIES: readonly FileCategory[] = [
   'audio',
   'archive',
   'text',
+  'bim',
   'unknown',
 ] as const;
 
@@ -437,11 +439,28 @@ describe('canonicalMimeByExt invariants', () => {
   });
 
   it('every canonical MIME round-trips back to its own spec', () => {
-    for (const spec of FILE_TYPE_REGISTRY) {
+    for (const spec of FILE_TYPE_REGISTRY.filter((s) => s.mimeTypes.length > 0)) {
       for (const ext of spec.extensions) {
         expect(specByMime(canonicalMimeForFilename(`file.${ext}`))?.id).toBe(spec.id);
       }
     }
+  });
+
+  it('a spec with no registered MIME answers octet-stream and is still found by its extension', () => {
+    const extOnly = FILE_TYPE_REGISTRY.filter((s) => s.mimeTypes.length === 0);
+    expect(extOnly.map((s) => s.id)).toEqual(['rfa']);
+    expect(canonicalMimeForFilename('door.rfa')).toBe(UNKNOWN_MIME_TYPE);
+    // The browser sends '' or octet-stream for a Revit family: the extension must still decide.
+    expect(specForFile(UNKNOWN_MIME_TYPE, 'door.rfa')?.id).toBe('rfa');
+    expect(specForFile('', 'door.rfa')?.id).toBe('rfa');
+  });
+
+  it('classifies IFC and Revit families as BIM, never previewable', () => {
+    for (const name of ['model.ifc', 'door.rfa']) {
+      expect(getFileCategory(undefined, name)).toBe('bim');
+      expect(getPreviewType(undefined, name)).toBe('unsupported');
+    }
+    expect(canonicalMimeForFilename('model.ifc')).toBe('application/x-step');
   });
 
   it('resolves the sibling extensions that array order would get wrong', () => {
@@ -477,12 +496,26 @@ describe('canonicalMimeForUrl', () => {
   });
 
   it('falls back for unknown or absent extensions', () => {
-    expect(canonicalMimeForUrl('https://x/scan.tiff')).toBe(UNKNOWN_MIME_TYPE);
+    expect(canonicalMimeForUrl('https://x/scan.xyz')).toBe(UNKNOWN_MIME_TYPE);
+    // ADR-923 §5.10.4: το TIFF δεν είναι πια «άγνωστο» — ήταν το παράδειγμα εδώ ακριβώς επειδή έλειπε από το μητρώο.
+    expect(canonicalMimeForUrl('https://x/scan.tiff')).toBe('image/tiff');
     expect(canonicalMimeForUrl('https://x/noext')).toBe(UNKNOWN_MIME_TYPE);
     expect(canonicalMimeForUrl(undefined)).toBe(UNKNOWN_MIME_TYPE);
   });
 
   it('honours a caller-supplied fallback', () => {
-    expect(canonicalMimeForUrl('https://x/scan.tiff', 'image/tiff')).toBe('image/tiff');
+    expect(canonicalMimeForUrl('https://x/scan.xyz', 'image/x-custom')).toBe('image/x-custom');
+  });
+});
+
+// ADR-923 §5.10.4 — δύο λεξιλόγια «τι είναι εικόνα» πρέπει να συμφωνούν: το `RASTER_IMAGE_TYPES` (προεπισκόπηση ·
+// διαστάσεις · αποδόσεις) και αυτό το μητρώο. Μετρημένο 2026-10-26: το TIFF ήταν ραστερ εκεί και «άγνωστο» εδώ.
+describe('raster image types ⇄ registry', () => {
+  it.each([...RASTER_IMAGE_TYPES].filter((mime) => mime !== 'image/jpg'))('%s is an image in the registry', (mime) => {
+    expect(specByMime(mime)?.category).toBe('image');
+  });
+
+  it.each(['tif', 'tiff', 'avif'])('.%s resolves to an image', (ext) => {
+    expect(specByExt(ext)?.category).toBe('image');
   });
 });

@@ -311,6 +311,7 @@
       "audio": "Audio file",
       "archive": "Archive",
       "text": "Text file",
+      "bim": "BIM model",
       "unknown": "File"
     }
   }

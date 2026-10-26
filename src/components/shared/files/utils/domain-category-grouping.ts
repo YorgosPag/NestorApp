@@ -41,6 +41,7 @@ const DOMAIN_ORDER: Readonly<Record<string, number>> = {
   [FILE_DOMAINS.BROKERAGE]: 6,
   [FILE_DOMAINS.FINANCIAL]: 7,
   [FILE_DOMAINS.INGESTION]: 8,
+  [FILE_DOMAINS.CATALOG]: 9,
 };
 
 const CATEGORY_ORDER: Readonly<Record<string, number>> = {
