@@ -108,6 +108,39 @@ beforeEach(() => {
   seedWorld();
 });
 
+/**
+ * Γ42 — ADR-916 Φ-Γ3 (Ο2): τα **κοινά** έγγραφα του κτιρίου/έργου είναι δεύτερη πηγή της ΙΔΙΑΣ κρίσης. Ο πραγματικός
+ * εκτελεστής και η πραγματική προεπισκόπηση — ίδιο σύνολο (Γ13), άρα ό,τι λέει η όψη είναι ό,τι αντιγράφεται.
+ */
+describe('Γ42 — κοινά έγγραφα κτιρίου/έργου: δεύτερη πηγή της ίδιας κρίσης', () => {
+  beforeEach(() => {
+    const property = docs(COLLECTIONS.PROPERTIES)[PROPERTY];
+    fake.seed(COLLECTIONS.PROPERTIES, PROPERTY, { ...property, buildingId: 'bldg_1', projectId: 'proj_1' });
+    companyFile('f_fay', 'documents', { type: 'building', id: 'bldg_1' }, { purpose: 'study-say-fay' });
+    companyFile('f_permit', 'permits', { type: 'project', id: 'proj_1' }, { domain: 'admin', purpose: 'permit' });
+    companyFile('f_deed', 'documents', { type: 'project', id: 'proj_1' }, { domain: 'admin', purpose: 'study-title-deed' });
+    companyFile('f_site', 'photos', { type: 'project', id: 'proj_1' }, { purpose: 'construction' });
+    companyFile('f_floor', 'floorplans', { type: 'floor', id: 'flr_1' }, { purpose: 'floor-floorplan' });
+  });
+
+  it('δηλωμένα κοινά ⇒ στον ΚΥΡΙΟ φάκελο με `sourceScope` · αδήλωτα και όροφος ⇒ ποτέ', async () => {
+    expect(await deliver()).toEqual({ kind: 'delivered', copied: 5, failed: 0 });
+    expect(copyOf('f_fay')).toMatchObject({ entityId: MAIN_DOSSIER, handoverOrigin: { sourceFileId: 'f_fay', sourceScope: 'building' } });
+    expect(copyOf('f_permit')).toMatchObject({ entityId: MAIN_DOSSIER, handoverOrigin: { sourceScope: 'project' } });
+    expect(copyOf('f_plan')).toMatchObject({ handoverOrigin: { sourceScope: 'unit' } });
+    for (const never of ['f_deed', 'f_site', 'f_floor']) expect(copyOf(never)).toBeUndefined();
+  });
+
+  it('η όψη του γραφείου λέει το ΙΔΙΟ — και δείχνει ΓΙΑΤΙ μένει στο γραφείο το αδήλωτο κοινό', async () => {
+    const preview = await previewPropertyHandover(db(), COMPANY, PROPERTY);
+    const ids = (bucketName: 'deliver' | 'review' | 'internal') => (preview?.files[bucketName] ?? []).map((row) => row.fileId).sort();
+    expect(ids('deliver')).toEqual(['f_fay', 'f_park', 'f_permit', 'f_photo', 'f_plan']);
+    const deed = preview?.files.internal.find((row) => row.fileId === 'f_deed');
+    expect(deed?.basis).toBe('shared-undeclared');
+    expect([...ids('deliver'), ...ids('review'), ...ids('internal')]).not.toContain('f_floor');
+  });
+});
+
 describe('Γ7 — ολοκληρωμένη πώληση + αποδεκτή πρόσκληση ⇒ τα παραδοτέα γίνονται αντίγραφα του αγοραστή', () => {
   it('μόνο τα `deliver` · εγγραφές personal `ready` με προέλευση · καθολικό · bytes · πρόοδος + προβολή στον φάκελο', async () => {
     expect(await deliver()).toEqual({ kind: 'delivered', copied: 3, failed: 0 });

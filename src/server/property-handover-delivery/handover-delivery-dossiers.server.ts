@@ -94,6 +94,10 @@ export async function ensureHandoverDossiers(
 ): Promise<HandoverDossierTargets> {
   const main = await readMainDossier(adminDb, recipient);
   const byEntity = new Map([[handoverEntityKey(ENTITY_TYPES.PROPERTY, subject.propertyId), main.id]]);
+  // Φ-Γ3 (Ο2) — τα κοινά του κτιρίου/έργου πάνε στον **κύριο** φάκελο: το κτίριο δεν έχει δικό του ΚΑΕΚ, ο αγοραστής
+  // κατέχει ιδανικά μερίδια μέσω της μονάδας του (το `sourceScope` του αντιγράφου λέει από πού ήρθε).
+  if (subject.buildingId) byEntity.set(handoverEntityKey(ENTITY_TYPES.BUILDING, subject.buildingId), main.id);
+  if (subject.projectId) byEntity.set(handoverEntityKey(ENTITY_TYPES.PROJECT, subject.projectId), main.id);
   for (const appurtenance of subject.appurtenances) {
     const dossierId = await ensureAppurtenanceDossier(adminDb, handover, main, appurtenance);
     if (dossierId !== null) byEntity.set(handoverEntityKey(appurtenance.entityType, appurtenance.entityId), dossierId);

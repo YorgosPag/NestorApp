@@ -20,10 +20,12 @@ import 'server-only';
  *    εφαρμογής) ⇒ πρόθεση άρσης της διατήρησης των bytes της. Όπως το `recovery`: δεν αγγίζει **ποτέ** πεδίο απόδειξης.
  */
 
-import type { DocumentData, DocumentReference, Firestore as AdminFirestore, Transaction } from 'firebase-admin/firestore';
+import type { DocumentData, DocumentReference, Firestore as AdminFirestore, Query, Transaction } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIRESTORE_DISJUNCTION_LIMIT } from '@/config/firestore-field-constants';
 import { HANDOVER_DELIVERY_RECOVERY_LEASE_MS, HANDOVER_DELIVERY_REVISION_CHAIN_LIMIT } from '@/config/property-handover-delivery-policy';
+import { chunkArray } from '@/lib/array-utils';
 import { nowISO } from '@/lib/date-local';
 import { isFileStoragePlacement, type FileStoragePlacement } from '@/lib/files/file-storage-placement';
 import { isSha256Hex } from '@/lib/hash/sha256';
@@ -201,6 +203,30 @@ export async function readDeliveredRows(adminDb: AdminFirestore, handover: Prope
 /** Η θέση της γραμμής — ντετερμινιστική από `(παράδοση, πηγή)`. */
 export function deliveryLedgerRef(adminDb: AdminFirestore, handoverId: string, sourceFileId: string): DocumentReference {
   return adminDb.collection(COLLECTIONS.PROPERTY_HANDOVER_DELIVERIES).doc(handoverDeliveryIdOf(handoverId, sourceFileId));
+}
+
+/**
+ * ADR-916 Φ-Γ3 — **οι γραμμές μιας ΚΟΙΝΗΣ πηγής σε ΟΠΟΙΑΔΗΠΟΤΕ παράδοση του μισθωτή**: ένα αρχείο κτιρίου/έργου φτάνει σε
+ * πολλές μονάδες, άρα το «παραδόθηκε;» δεν απαντιέται από τις παραδόσεις **ενός** ακινήτου. Μόνο ισότητες ⇒ συγχώνευση
+ * δεικτών ενός πεδίου, κανένας σύνθετος (CHECK 3.91, ίδιο σχήμα με το `readDeliveredRows`). ≤ 30 πηγές ανά ερώτημα.
+ */
+export function sharedSourceDeliveriesQuery(adminDb: AdminFirestore, companyId: string, sourceFileIds: readonly string[]): Query {
+  return adminDb.collection(COLLECTIONS.PROPERTY_HANDOVER_DELIVERIES)
+    .where('companyId', '==', companyId)
+    .where('sourceFileId', 'in', [...sourceFileIds]);
+}
+
+/** Ποιες από αυτές τις **κοινές** πηγές έχουν παραδοθεί σε οποιαδήποτε μονάδα — η ΙΔΙΑ απάντηση για όψη και πόρτα. */
+export async function sharedSourcesDeliveredAnywhere(
+  adminDb: AdminFirestore,
+  companyId: string,
+  sourceFileIds: readonly string[],
+): Promise<ReadonlySet<string>> {
+  const ids = [...new Set(sourceFileIds)];
+  const snapshots = await Promise.all(chunkArray(ids, FIRESTORE_DISJUNCTION_LIMIT)
+    .map((part) => sharedSourceDeliveriesQuery(adminDb, companyId, part).get()));
+  return new Set(snapshots.flatMap((snapshot) => snapshot.docs.map((doc) => text(doc.get('sourceFileId'))))
+    .filter((id): id is string => id !== null));
 }
 
 /** **Η γραμμή** — μέσα στη συναλλαγή που γεννά και το αντίγραφο (ποτέ το ένα χωρίς το άλλο). Γεννιέται χωρίς sha256. */

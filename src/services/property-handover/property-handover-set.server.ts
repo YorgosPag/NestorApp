@@ -14,21 +14,19 @@ import 'server-only';
  * ADR-199 `includedInSale`) το παράγει το `loadConveyanceSubject`, και τα αρχεία τα φέρνει το `queryOwnedTargetFileDocs`
  * — τα **ίδια** που διαβάζει η υπόθεση μεταβίβασης. Εδώ γίνεται μόνο η κρίση.
  *
- * ⚠️ **Μόνο τα αρχεία που ΚΑΤΕΧΕΙ το ακίνητο ή ένα παρακολούθημά του** — όχι τα συνδεδεμένα (`linkedTo`): ένα έγγραφο
- * **επαφής** (π.χ. ταυτότητα αγοραστή) μπορεί να είναι συνδεδεμένο με το ακίνητο. Κτίριο, έργο και συνδεδεμένα έρχονται
- * με δικό τους κανόνα (ADR-916 Ο2).
+ * ⚠️ **Μόνο τα αρχεία που ΚΑΤΕΧΟΥΝ** το ακίνητο, ένα παρακολούθημά του, το κτίριο ή το έργο του (Φ-Γ3) — όχι τα
+ * συνδεδεμένα (`linkedTo`): ένα έγγραφο **επαφής** (π.χ. ταυτότητα αγοραστή) μπορεί να είναι συνδεδεμένο με το ακίνητο.
  */
 
 import type { Firestore as AdminFirestore, QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
-import { ENTITY_TYPES } from '@/config/domain-constants';
 import {
   handoverCandidateFromDocument,
   selectHandoverFiles,
   type HandoverCandidateFile,
 } from '@/lib/property-handover/handover-disposition';
 import { handoverPreviewFileOf, handoverSetFileIdentityOf } from '@/lib/property-handover/handover-preview-file';
-import { queryOwnedTargetFileDocs, type EvidenceTarget } from '@/services/conveyance/conveyance-evidence.server';
+import { queryOwnedTargetFileDocs, subjectTargets } from '@/services/conveyance/conveyance-evidence.server';
 import { loadConveyanceSubject } from '@/services/conveyance/conveyance-subject.server';
 import type { ConveyanceCaseSubject } from '@/types/conveyance-case';
 import type { PropertyHandoverPreview, PropertyHandoverSetFileIdentity } from '@/types/property-handover';
@@ -55,13 +53,6 @@ export interface HandoverSet {
   readonly internal: readonly HandoverSetFile[];
 }
 
-/** Οι οντότητες της παράδοσης: το ακίνητο και ό,τι πωλείται μαζί του. */
-function handoverTargetsOf(subject: ConveyanceCaseSubject): readonly EvidenceTarget[] {
-  return [
-    { level: 'property', entityType: ENTITY_TYPES.PROPERTY, entityId: subject.propertyId },
-    ...subject.appurtenances.map((a): EvidenceTarget => ({ level: 'appurtenance', entityType: a.entityType, entityId: a.entityId })),
-  ];
-}
 
 function previewFileOf(doc: QueryDocumentSnapshot, candidate: HandoverCandidateFile | null): PropertyHandoverSetFileIdentity {
   const displayName: unknown = doc.get('displayName');
@@ -99,7 +90,9 @@ function judgeFiles(docs: readonly QueryDocumentSnapshot[]): Omit<HandoverSet, '
 export async function loadHandoverSet(adminDb: AdminFirestore, companyId: string, propertyId: string): Promise<HandoverSet | null> {
   const context = await loadConveyanceSubject(adminDb, companyId, propertyId);
   if (!context) return null;
-  const fileDocs = await queryOwnedTargetFileDocs(adminDb, companyId, handoverTargetsOf(context.subject));
+  // Φ-Γ3 (Ο2) — ακίνητο · παρακολουθήματα · **κτίριο · έργο** (`subjectTargets`, ο ΕΝΑΣ πίνακας με την υπόθεση
+  // μεταβίβασης). Τα κοινά κρίνονται με δικό τους κανόνα (`isSharedHandoverSource`). ⛔ Ο όροφος δεν είναι πηγή.
+  const fileDocs = await queryOwnedTargetFileDocs(adminDb, companyId, subjectTargets(context.subject));
   return { subject: context.subject, ...judgeFiles(fileDocs) };
 }
 

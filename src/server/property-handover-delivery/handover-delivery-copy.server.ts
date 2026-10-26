@@ -30,6 +30,7 @@ import { FieldValue } from '@/lib/firebaseAdmin';
 import { stillOwedToRecipient, type PlannedHandoverCopy } from '@/lib/property-handover/handover-delivery-plan';
 import { isHandoverDeliverableDocument } from '@/lib/property-handover/handover-disposition';
 import { propertyHandoverFromDocument } from '@/lib/property-handover/property-handover-from-document';
+import { handoverSourceScopeOf } from '@/lib/property-handover/handover-source-scope';
 import { handoverCopyFileIdOf } from '@/lib/property-handover/property-handover-id';
 import { buildProxyUrl } from '@/lib/storage/storage-object-url';
 import { custodyKindOfScope } from '@/lib/workspace/custody-scope';
@@ -108,6 +109,7 @@ async function prepareCopy(ctx: HandoverCopyContext, planned: PlannedHandoverCop
     handoverOrigin: {
       handoverId: ctx.handover.id, sourceFileId: item.sourceFileId, issuerCompanyId: ctx.handover.companyId,
       crc32c: source.metadata.crc32c, size: Number(source.metadata.size), revisionOfFileId: planned.revisionOfFileId,
+      sourceScope: handoverSourceScopeOf(candidate.entityType),
     },
   });
   const sourceObject: HandoverSourceObject = { placement: fileStoragePlacementOf(data), path: storagePath };

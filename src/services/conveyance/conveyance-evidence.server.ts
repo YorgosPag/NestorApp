@@ -19,8 +19,10 @@ import 'server-only';
 
 import type { DocumentData, Firestore, QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIRESTORE_DISJUNCTION_LIMIT } from '@/config/firestore-field-constants';
 import { ENTITY_TYPES, FILE_STATUS } from '@/config/domain-constants';
 import type { EvidenceLevel } from '@/config/conveyance-checklist/types';
+import { chunkArray } from '@/lib/array-utils';
 import { normalizeToISO } from '@/lib/date-local';
 import { readDocumentFactsView } from '@/lib/document-validity/document-facts';
 import { fileFingerprint } from '@/lib/conveyance/evidence-match';
@@ -30,9 +32,6 @@ import { readContainerState } from '@/lib/files/file-record-read';
 import { isContainerVisible, type CdeAudience } from '@/types/container-access';
 import { fileLinkTag } from '@/lib/files/file-link-tag';
 
-/** Όριο του Firestore για `in` / `array-contains-any`. */
-const FIRESTORE_DISJUNCTION_LIMIT = 30;
-
 /** Ένας στόχος αναζήτησης: σε ποιο επίπεδο, ποια οντότητα. */
 export interface EvidenceTarget {
   readonly level: EvidenceLevel;
@@ -40,12 +39,21 @@ export interface EvidenceTarget {
   readonly entityId: string;
 }
 
-/** Τα (επίπεδο, οντότητα) που ψάχνουμε για μία υπόθεση. */
-export function evidenceTargets(subject: ConveyanceCaseSubject, parties: ConveyanceCaseParties): readonly EvidenceTarget[] {
+/**
+ * Οι οντότητες του **θέματος**: ακίνητο → παρακολουθήματα → κτίριο → έργο. Ο ΕΝΑΣ πίνακας — τον μοιράζονται η υπόθεση
+ * μεταβίβασης **και** η παράδοση φακέλου (ADR-916 Φ-Γ3), ώστε το «σε ποιο κτίριο/έργο ανήκει» να απαντιέται μία φορά.
+ */
+export function subjectTargets(subject: ConveyanceCaseSubject): EvidenceTarget[] {
   const targets: EvidenceTarget[] = [{ level: 'property', entityType: ENTITY_TYPES.PROPERTY, entityId: subject.propertyId }];
   for (const a of subject.appurtenances) targets.push({ level: 'appurtenance', entityType: a.entityType, entityId: a.entityId });
   if (subject.buildingId) targets.push({ level: 'building', entityType: ENTITY_TYPES.BUILDING, entityId: subject.buildingId });
   if (subject.projectId) targets.push({ level: 'project', entityType: ENTITY_TYPES.PROJECT, entityId: subject.projectId });
+  return targets;
+}
+
+/** Τα (επίπεδο, οντότητα) που ψάχνουμε για μία υπόθεση. */
+export function evidenceTargets(subject: ConveyanceCaseSubject, parties: ConveyanceCaseParties): readonly EvidenceTarget[] {
+  const targets = subjectTargets(subject);
   // ADR-915 §22 — κάθε συμπωλητής: τα αρχεία της επαφής του· σε ποια γραμμή πέφτουν το αποφασίζει το `rowFiles`.
   for (const seller of parties.sellers) {
     if (seller.contactId) targets.push({ level: 'seller_contact', entityType: ENTITY_TYPES.CONTACT, entityId: seller.contactId });
@@ -166,11 +174,8 @@ export function evidenceOfFile(
   return uniqueEvidence(evidenceFrom(fileId, data, matched, audience)).sort((a, b) => evidenceKey(a).localeCompare(evidenceKey(b)));
 }
 
-function chunk<T>(items: readonly T[]): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < items.length; i += FIRESTORE_DISJUNCTION_LIMIT) chunks.push(items.slice(i, i + FIRESTORE_DISJUNCTION_LIMIT));
-  return chunks;
-}
+/** Κομμάτια στο όριο του `in` — ο ΕΝΑΣ τεμαχιστής (`chunkArray`) με το ΕΝΑ όριο. */
+const chunk = <T>(items: T[]): T[][] => chunkArray(items, FIRESTORE_DISJUNCTION_LIMIT);
 
 /**
  * **Τα ωμά έγγραφα των αρχείων που ΚΑΤΕΧΟΥΝ οι στόχοι** (μισθωτής · `ready`) — ένα ερώτημα ανά τύπο οντότητας

@@ -135,6 +135,7 @@ async function storeRecipientCopy(
     handoverOrigin: {
       handoverId: handover.id, sourceFileId: company.built.fileId, issuerCompanyId: handover.companyId,
       crc32c: String(company.file.metadata.crc32c), size: company.sizeBytes, revisionOfFileId: handover.protocol?.recipientFileId ?? null,
+      sourceScope: 'unit', // ADR-916 Φ-Γ3 — το Πρωτόκολλο αφορά ΑΥΤΗ την παράδοση, όχι το κτίριο
     },
   });
   const proven = await copyProvenPairs([{ source: company.file, destinationName: built.storagePath }], fileStorageBucket(placement));
