@@ -25,6 +25,8 @@ import {
 } from '@/lib/objective-value/objective-value-improve-subject';
 import type { EnergyCertificatePatch } from '@/lib/energy-certificate/energy-certificate';
 import type { EnergyCertificateImproveSubject } from '@/lib/energy-certificate/energy-certificate-improve-subject';
+import type { TerrainImproveSubject } from '@/lib/terrain/publication/terrain-improve-subject';
+import { ownerPropertyTerrainTarget } from '@/lib/terrain/publication/terrain-publish-target';
 import {
   setOwnerListingCommonCharges,
   setOwnerListingEnergyCertificate,
@@ -98,13 +100,30 @@ function useOwnerEnergyCertificateSubject(property: OwnerProperty): EnergyCertif
   );
 }
 
+/**
+ * Ο ιδιώτης ως κάτοχος της ενότητας «Τοπογραφικό» (ADR-920 Β4.9). Η πόρτα: `POST /api/owner-properties/[id]/terrain`
+ * — μόνο με προσωπική θεματοφυλακή και φάκελο (`ownerPropertyTerrainTarget`, οι ίδιες ερωτήσεις με την πόρτα). Η δημόσια
+ * αγγελία του ιδιώτη έχει την ταυτότητα της καταχώρησης (ίδια με τον σύνδεσμο `listingDetailHref(property.id)`).
+ */
+function useOwnerTerrainSubject(property: OwnerProperty): TerrainImproveSubject {
+  const { id, type, dossierId, authorUserId, authorCompanyId } = property;
+  return useMemo(
+    () => ({
+      target: ownerPropertyTerrainTarget({ id, type, dossierId, authorUserId, authorCompanyId }),
+      listingId: id,
+    }),
+    [id, type, dossierId, authorUserId, authorCompanyId],
+  );
+}
+
 /** **Η δέσμη των κατόχων** — ένας ανά ενότητα του καταχωρητή, φτιαγμένη μία φορά στη σελίδα. */
 export function useOwnerImproveSubjects(property: OwnerProperty): ImproveSubjects {
   const objectiveValue = useOwnerImproveSubject(property);
   const commonCharges = useOwnerCommonChargesSubject(property);
   const energyCertificate = useOwnerEnergyCertificateSubject(property);
+  const terrain = useOwnerTerrainSubject(property);
   return useMemo(
-    () => ({ objectiveValue, commonCharges, energyCertificate }),
-    [objectiveValue, commonCharges, energyCertificate],
+    () => ({ objectiveValue, commonCharges, energyCertificate, terrain }),
+    [objectiveValue, commonCharges, energyCertificate, terrain],
   );
 }

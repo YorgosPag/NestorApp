@@ -165,7 +165,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "ac8d0d893301938c7e02fb39d4e9ff187c14eb77ecfce4adf9a0a147a707d188",
+  "inputsSha256": "fafbe0b03df1893fbec19113e8800aeda8d2420149c12fd23e4eac19ba5ffb36",
   "languages": [
     "el"
   ],
@@ -13044,6 +13044,8 @@
             "improve.sections.commonCharges.lead",
             "improve.sections.energyCertificate.lead",
             "improve.sections.objectiveValue.lead",
+            "improve.sections.terrain.lead",
+            "improve.sections.terrain.loading",
             "improve.signInNeeded",
             "improve.suggested",
             "improve.visibility.frontageStays",

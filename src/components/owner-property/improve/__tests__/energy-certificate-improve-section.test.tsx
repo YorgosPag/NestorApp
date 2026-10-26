@@ -103,7 +103,7 @@ describe('Ε3 — ο καταχωρητής κρεμά την ενότητα μ�
     );
 
   it('κτίριο προς διάθεση ⇒ η ενότητα υπάρχει, ανάμεσα στα κοινόχρηστα και την αντικειμενική', () => {
-    expect(IMPROVE_SECTION_IDS).toEqual(['commonCharges', 'energyCertificate', 'objectiveValue']);
+    expect(IMPROVE_SECTION_IDS).toEqual(['commonCharges', 'energyCertificate', 'terrain', 'objectiveValue']);
     expect(sectionsOf(validOwnerProperty())).toContain('energyCertificate');
   });
 

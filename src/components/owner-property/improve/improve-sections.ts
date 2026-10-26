@@ -3,8 +3,8 @@
  * @related `OwnerListingImproveContent.tsx` (ο αναγνώστης) · ADR-842 §5 (οι οικογένειες χαρακτηριστικών που έρχονται)
  * @module components/owner-property/improve/improve-sections
  *
- * 🔑 **Καταχωρητής, όχι μονοκόμματη φόρμα** (απόφαση Giorgio): **τρεις** ενότητες σήμερα — τα κοινόχρηστα (ADR-777
- * §8.93), το ενεργειακό πιστοποιητικό (§8.94) και η αντικειμενική. Οι υπόλοιπες οικογένειες του ADR-842 (κατάσταση ·
+ * 🔑 **Καταχωρητής, όχι μονοκόμματη φόρμα** (απόφαση Giorgio): **τέσσερις** ενότητες σήμερα — τα κοινόχρηστα (ADR-777
+ * §8.93), το ενεργειακό πιστοποιητικό (§8.94), το τοπογραφικό (ADR-920 Β4.9, μόνο γη) και η αντικειμενική. Οι υπόλοιπες οικογένειες του ADR-842 (κατάσταση ·
  * δωμάτια/εμβαδά · συστήματα · παροχές)
  * μπαίνουν ως **μία γραμμή + ένα component**, χωρίς να αγγίξουν τη σελίδα ή τις άλλες ενότητες. Ο πίνακας είναι
  * **ολικός** (`Record`): νέο αναγνωριστικό στη λίστα ⇒ ο μεταγλωττιστής ζητά την ενότητα.
@@ -21,16 +21,19 @@ import { createElement, type ReactElement } from 'react';
 
 import type { CommonChargesImproveSubject } from '@/lib/common-charges/common-charges-improve-subject';
 import type { EnergyCertificateImproveSubject } from '@/lib/energy-certificate/energy-certificate-improve-subject';
+import { isLandProperty } from '@/constants/property-classification';
 import { objectiveValueFormOf } from '@/lib/objective-value/objective-value-form-of-type';
 import type { ObjectiveValueImproveSubject } from '@/lib/objective-value/objective-value-improve-subject';
+import type { TerrainImproveSubject } from '@/lib/terrain/publication/terrain-improve-subject';
 import type { PublicListing } from '@/types/public-listing';
 
 import { CommonChargesImproveSection } from './CommonChargesImproveSection';
 import { EnergyCertificateImproveSection } from './EnergyCertificateImproveSection';
 import { ObjectiveValueImproveSection } from './ObjectiveValueImproveSection';
+import { TerrainImproveSection } from './TerrainImproveSection';
 
 /** Η σειρά της λίστας = η σειρά στην οθόνη. Τα κοινόχρηστα πρώτα: μία απάντηση, και φαίνεται δίπλα στην τιμή. */
-export const IMPROVE_SECTION_IDS = ['commonCharges', 'energyCertificate', 'objectiveValue'] as const;
+export const IMPROVE_SECTION_IDS = ['commonCharges', 'energyCertificate', 'terrain', 'objectiveValue'] as const;
 export type ImproveSectionId = (typeof IMPROVE_SECTION_IDS)[number];
 
 /** Ο κάτοχος κάθε ενότητας (ιδιώτης ή γραφείο) — καμία ενότητα δεν ξέρει ποιο έγγραφο είναι. */
@@ -38,6 +41,7 @@ export interface ImproveSubjects {
   readonly commonCharges: CommonChargesImproveSubject;
   readonly energyCertificate: EnergyCertificateImproveSubject;
   readonly objectiveValue: ObjectiveValueImproveSubject;
+  readonly terrain: TerrainImproveSubject;
 }
 
 /**
@@ -61,6 +65,12 @@ export const IMPROVE_SECTIONS: Readonly<Record<ImproveSectionId, ImproveSectionD
     // ADR-777 §8.94 — ίδιο σχήμα: το «σηκώνει η διάθεση ΠΕΑ;» το έκρινε η προβολή (`LEGALITY_OFFER_MATRIX`, όχι γη).
     isApplicable: (listing) => listing.energyCertificate !== null,
     render: (subjects) => createElement(EnergyCertificateImproveSection, { subject: subjects.energyCertificate }),
+  },
+  terrain: {
+    // ADR-920 Β4.9 — Δ1: ανάγλυφο μόνο σε γη (οικόπεδο · αγροτεμάχιο), ο ΕΝΑΣ κριτής του τύπου. Μετά το ΠΕΑ (που η γη
+    // δεν έχει) και πριν την αντικειμενική: για οικόπεδο, το έδαφος είναι το πιο ουσιώδες που λείπει από την αγγελία.
+    isApplicable: (listing) => isLandProperty(listing.type),
+    render: (subjects) => createElement(TerrainImproveSection, { subject: subjects.terrain }),
   },
   objectiveValue: {
     // Ποια είδη αποτιμώνται το λέει ο ΕΝΑΣ πίνακας εντύπων — καμία δεύτερη λίστα ειδών εδώ.
