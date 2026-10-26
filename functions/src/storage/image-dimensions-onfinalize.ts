@@ -8,11 +8,11 @@
  * dual-write, συνημμένα AI) — αλλά **όλοι** ανεβάζουν bytes. Ο μόνος παρατηρητής που τους βλέπει όλους είναι ο κάδος.
  * Πρακτική Firebase «Resize Images» / Cloudinary: μέτρηση **στην εισαγωγή**.
  *
- * Ροή: raster τύπος & μονοπάτι εγγραφής αρχείου → κεφαλίδα **καρφωμένης γενιάς** (`probeImageDimensions`) →
+ * Ροή: raster τύπος & μονοπάτι εγγραφής αρχείου → κεφαλίδα **καρφωμένης γενιάς** (`probeImageRaster`) →
  *   (α) custom metadata του αντικειμένου με `ifGenerationMatch` — η μέτρηση **ζει με τη γενιά**· ο server τη διαβάζει
  *       δωρεάν από την κλήση μεταδεδομένων που κάνει ήδη (ADR-899 §3.3). Αλλαγή metadata = νέα *metageneration*, όχι
  *       γενιά ⇒ ETag παραγώγων άθικτο, **κανένα** νέο finalize.
- *   (β) `imageDimensions` στην εγγραφή, σε transaction, **μόνο** αν η εγγραφή δείχνει **αυτό** το αντικείμενο
+ *   (β) `imageDimensions` + `imageColour` (ADR-923 §5.10.3) στην εγγραφή, σε transaction, **μόνο** αν η εγγραφή δείχνει **αυτό** το αντικείμενο
  *       (`dimensionsRecordVerdict`) **στον ίδιο κάδο**.
  *
  * IDEMPOTENCY: επανάληψη γεγονότος ⇒ το metadata υπάρχει ήδη ⇒ έξοδος πριν από κάθε ανάγνωση· ίδια τιμή στην εγγραφή ⇒
@@ -36,12 +36,13 @@ import {
   imageDimensionsFromMetadata,
   imageDimensionsToMetadata,
   isRasterImageContentType,
-  type ImageDimensions,
 } from '../generated/lib/images/image-dimensions';
 import {
   dimensionsRecordVerdict,
-  probeImageDimensions,
+  imageFactsRecordUpdate,
+  probeImageRaster,
   type DimensionsRecordVerdict,
+  type ImageRasterFacts,
 } from '../generated/lib/images/stored-image-dimensions';
 import { fileStorageBucketNames } from './file-record-bucket';
 import { finalizedObjectOf, type FinalizedObject } from './finalized-object';
@@ -98,7 +99,7 @@ async function downloadOrNull(file: StorageFile, range?: { start: number; end: n
 async function recordOnDocument(
   ref: FileRecordRef,
   object: FinalizedObject & { readonly name: string },
-  measured: ImageDimensions,
+  measured: ImageRasterFacts,
 ): Promise<DimensionsRecordVerdict> {
   const db = admin.firestore();
   const docRef = db.collection(ref.collection).doc(ref.fileId);
@@ -107,7 +108,7 @@ async function recordOnDocument(
     const record = snap.exists ? (snap.data() ?? {}) : null;
     if (record !== null && !recordLivesIn(record, object.bucket)) return 'not-this-object';
     const verdict = dimensionsRecordVerdict(record, object.name, measured);
-    if (verdict === 'write') tx.update(docRef, { imageDimensions: measured });
+    if (verdict === 'write') tx.update(docRef, imageFactsRecordUpdate(measured));
     return verdict;
   });
 }
@@ -142,7 +143,7 @@ export async function recordImageDimensionsOnFinalize(object: FinalizedObject): 
   if (ref === null) return;
 
   const file = admin.storage().bucket(object.bucket).file(name, { generation });
-  const measured = await probeImageDimensions(
+  const measured = await probeImageRaster(
     {
       size: object.size,
       readHeader: (byteCount) => downloadOrNull(file, { start: 0, end: byteCount - 1 }),
@@ -156,7 +157,7 @@ export async function recordImageDimensionsOnFinalize(object: FinalizedObject): 
   }
 
   try {
-    await file.setMetadata({ metadata: imageDimensionsToMetadata(measured) }, { ifGenerationMatch: generation });
+    await file.setMetadata({ metadata: imageDimensionsToMetadata(measured.dimensions) }, { ifGenerationMatch: generation });
   } catch (error) {
     // Η γενιά άλλαξε ή χάθηκε στο μεταξύ ⇒ η μέτρηση περιγράφει bytes που δεν υπάρχουν πια· το νέο γεγονός μετρά τα νέα.
     if (isPreconditionFailed(error) || isNotFound(error)) return;
@@ -164,7 +165,8 @@ export async function recordImageDimensionsOnFinalize(object: FinalizedObject): 
   }
 
   const verdict = await recordOnDocument(ref, { ...object, name }, measured);
-  functions.logger.info(RECORD_OUTCOME[verdict], { name, verdict, width: measured.width, height: measured.height });
+  const { width, height } = measured.dimensions;
+  functions.logger.info(RECORD_OUTCOME[verdict], { name, verdict, width, height, colour: measured.colour?.model ?? null });
 }
 
 /** gen1 — ο κανονικός κάδος. Το gen2 της ΕΕ ζει στο `regional-storage-triggers.ts` (ίδιο σώμα). */

@@ -1,7 +1,8 @@
 import 'server-only';
 
 /**
- * @fileoverview 📐 **ΣΥΜΠΛΗΡΩΣΗ ΔΙΑΣΤΑΣΕΩΝ ΓΙΑ ΤΙΣ ΥΠΑΡΧΟΥΣΕΣ ΕΙΚΟΝΕΣ** — ό,τι ανέβηκε πριν από τον trigger (ADR-899 §3.7).
+ * @fileoverview 📐 **ΣΥΜΠΛΗΡΩΣΗ ΔΙΑΣΤΑΣΕΩΝ ΚΑΙ ΧΡΩΜΑΤΟΣ ΓΙΑ ΤΙΣ ΥΠΑΡΧΟΥΣΕΣ ΕΙΚΟΝΕΣ** — ό,τι ανέβηκε πριν από τον trigger
+ *   (ADR-899 §3.7) ή πριν μετριέται το χρώμα (ADR-923 §5.10.3).
  * @module server/files/image-dimensions-backfill
  * @related app/api/admin/backfill-image-dimensions (HTTP) · functions/storage/image-dimensions-onfinalize
  *          (ίδιος πυρήνας `lib/images/stored-image-dimensions`, ίδια ετυμηγορία — μόνο το I/O διαφέρει)
@@ -9,7 +10,8 @@ import 'server-only';
  * 🔑 **Ιδεμπότητη, μόνο όπου λείπει**: εγγραφή με έγκυρες διαστάσεις δεν διαβάζεται καν. **`storagePlacement`-aware**:
  *   ο κάδος από το `fileRecordBucket` (ADR-895) — άγνωστη θέση ⇒ ονομασμένη παράλειψη, ποτέ μαντεψιά.
  * 🔑 **Πρώτα το metadata του αντικειμένου**: αν ο trigger πρόλαβε να μετρήσει (εγγραφή που γράφτηκε **μετά** το
- *   ανέβασμα), η μέτρηση **δεν** ξαναγίνεται — αντιγράφεται.
+ *   ανέβασμα), η μέτρηση **δεν** ξαναγίνεται — αντιγράφεται. Το χρώμα **δεν** ζει στο metadata του αντικειμένου: εγγραφή
+ *   χωρίς `imageColour` διαβάζει την κεφαλίδα ούτως ή άλλως.
  * ⛔ **Γράφει στην παραγωγή** ⇒ τρέχει μόνο με ρητή εντολή (POST)· το GET μετρά και αναφέρει χωρίς καμία γραφή.
  */
 
@@ -23,9 +25,14 @@ import {
   imageDimensionsOf,
   imageDimensionsToMetadata,
   isRasterImageContentType,
-  type ImageDimensions,
 } from '@/lib/images/image-dimensions';
-import { dimensionsRecordVerdict, probeImageDimensions, type DimensionsRecordVerdict } from '@/lib/images/stored-image-dimensions';
+import {
+  dimensionsRecordVerdict,
+  imageFactsRecordUpdate,
+  probeImageRaster,
+  type DimensionsRecordVerdict,
+  type ImageRasterFacts,
+} from '@/lib/images/stored-image-dimensions';
 import {
   readStorageObjectGeneration,
   statStorageObject,
@@ -40,6 +47,7 @@ export interface BackfillCandidate {
   readonly storagePlacement?: unknown;
   readonly contentType?: unknown;
   readonly imageDimensions?: unknown;
+  readonly imageColour?: unknown;
 }
 
 /** Η έκβαση **ανά εγγραφή** — κλειστό σύνολο, για την αναφορά. */
@@ -50,19 +58,23 @@ export type ImageDimensionsBackfillOutcome =
   | 'unknown-placement'
   | 'generation-changed';
 
-/** Χρειάζεται μέτρηση; raster · με μονοπάτι · χωρίς έγκυρες διαστάσεις. */
-export function needsImageDimensions(record: BackfillCandidate): boolean {
+/** Χρειάζεται μέτρηση; raster · με μονοπάτι · χωρίς έγκυρες διαστάσεις **ή** χωρίς χρώμα. */
+export function needsImageMeasurement(record: BackfillCandidate): boolean {
   return (
     isRasterImageContentType(record.contentType) &&
     typeof record.storagePath === 'string' &&
     record.storagePath.length > 0 &&
-    imageDimensionsOf(record.imageDimensions) === null
+    (imageDimensionsOf(record.imageDimensions) === null || !hasRecordedColour(record))
   );
+}
+
+function hasRecordedColour(record: BackfillCandidate): boolean {
+  return record.imageColour !== null && typeof record.imageColour === 'object';
 }
 
 interface Measured {
   readonly kind: 'measured';
-  readonly dimensions: ImageDimensions;
+  readonly facts: ImageRasterFacts;
   /** Ήρθε από το metadata της γενιάς (ο trigger πρόλαβε) ⇒ καμία γραφή στο αντικείμενο. */
   readonly fromMetadata: boolean;
   readonly generation: string;
@@ -71,7 +83,10 @@ interface Measured {
 
 type Measurement = Measured | { readonly kind: 'absent' | 'not-measurable' | 'unknown-placement' };
 
-/** Οι διαστάσεις της **τρέχουσας** γενιάς — από το metadata αν υπάρχουν, αλλιώς από την κεφαλίδα. */
+/**
+ * Η μέτρηση της **τρέχουσας** γενιάς — οι διαστάσεις από το metadata αν υπάρχουν **και** η εγγραφή έχει ήδη χρώμα·
+ * αλλιώς από την κεφαλίδα (μία ανάγνωση δίνει και τα δύο).
+ */
 async function measure(path: string, record: BackfillCandidate): Promise<Measurement> {
   let bucket: Bucket;
   try {
@@ -81,8 +96,11 @@ async function measure(path: string, record: BackfillCandidate): Promise<Measure
   }
   const stat = await statStorageObject(path, { bucket });
   if (stat.kind === 'absent') return { kind: 'absent' };
-  if (stat.dimensions !== null) return { kind: 'measured', dimensions: stat.dimensions, fromMetadata: true, generation: stat.generation, bucket };
-  const dimensions = await probeImageDimensions(
+  const fromMetadata = stat.dimensions !== null;
+  if (stat.dimensions !== null && hasRecordedColour(record)) {
+    return { kind: 'measured', facts: { dimensions: stat.dimensions, colour: null }, fromMetadata, generation: stat.generation, bucket };
+  }
+  const facts = await probeImageRaster(
     {
       size: stat.size,
       readHeader: (byteCount) => readStorageObjectGeneration(path, stat.generation, { bucket, range: { start: 0, end: byteCount - 1 } }),
@@ -90,17 +108,17 @@ async function measure(path: string, record: BackfillCandidate): Promise<Measure
     },
     readImageMetadata,
   );
-  return dimensions === null
+  return facts === null
     ? { kind: 'not-measurable' }
-    : { kind: 'measured', dimensions, fromMetadata: false, generation: stat.generation, bucket };
+    : { kind: 'measured', facts, fromMetadata, generation: stat.generation, bucket };
 }
 
 /** Η εγγραφή — transaction, η ΙΔΙΑ ετυμηγορία με τον trigger (δείχνει ακόμη αυτό το αντικείμενο;). */
-async function recordDimensions(db: Firestore, ref: DocumentReference, path: string, dimensions: ImageDimensions): Promise<DimensionsRecordVerdict> {
+async function recordDimensions(db: Firestore, ref: DocumentReference, path: string, facts: ImageRasterFacts): Promise<DimensionsRecordVerdict> {
   return db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
-    const verdict = dimensionsRecordVerdict(snap.exists ? (snap.data() ?? {}) : null, path, dimensions);
-    if (verdict === 'write') tx.update(ref, { imageDimensions: dimensions });
+    const verdict = dimensionsRecordVerdict(snap.exists ? (snap.data() ?? {}) : null, path, facts);
+    if (verdict === 'write') tx.update(ref, imageFactsRecordUpdate(facts));
     return verdict;
   });
 }
@@ -120,12 +138,12 @@ export async function backfillImageDimensions(
   if (measured.kind !== 'measured') return measured.kind;
   if (dryRun) return 'write';
   if (!measured.fromMetadata) {
-    const write = await writeStorageObjectMetadataIfGeneration(path, measured.generation, imageDimensionsToMetadata(measured.dimensions), {
+    const write = await writeStorageObjectMetadataIfGeneration(path, measured.generation, imageDimensionsToMetadata(measured.facts.dimensions), {
       bucket: measured.bucket,
     });
     if (write === 'generation-changed') return 'generation-changed';
   }
-  return recordDimensions(db, ref, path, measured.dimensions);
+  return recordDimensions(db, ref, path, measured.facts);
 }
 
 /** Πόσα σφάλματα κρατά η αναφορά — τα υπόλοιπα μετριούνται μόνο. */
@@ -148,7 +166,7 @@ async function backfillCollection(db: Firestore, collection: string, dryRun: boo
     // Σειριακά: λίγες δεκάδες εικόνες, και κάθε μία = 1 stat + 128 KiB — καμία πίεση στον κάδο ή στη μνήμη.
     for (const doc of docs) {
       const record = doc.data();
-      if (!needsImageDimensions(record)) continue;
+      if (!needsImageMeasurement(record)) continue;
       tally.candidates += 1;
       try {
         const outcome = await backfillImageDimensions(db, doc.ref, record, dryRun);

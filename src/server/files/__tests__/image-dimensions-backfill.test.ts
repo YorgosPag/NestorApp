@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  *
- * @fileoverview **Συμπλήρωση διαστάσεων** (ADR-899 §3.7) — ανά εγγραφή, ίδιος πυρήνας με τον trigger.
+ * @fileoverview **Συμπλήρωση διαστάσεων και χρώματος** (ADR-899 §3.7 · ADR-923 §5.10.3) — ανά εγγραφή, ίδιος πυρήνας με τον trigger.
  *
  * Μεταλλάξεις που πρέπει να πιάσει:
  * - Σ1: εγγραφή με έγκυρες διαστάσεις / μη-raster / χωρίς μονοπάτι ξαναμετριέται.
@@ -9,6 +9,7 @@
  * - Σ3: μέτρηση που ο trigger ήδη έκανε (metadata γενιάς) ξαναδιαβάζει bytes ή ξαναγράφει metadata.
  * - Σ4: η κεφαλίδα διαβάζεται χωρίς καρφωμένη γενιά ή ως ολόκληρο αρχείο.
  * - Σ5: γενιά που άλλαξε στο μεταξύ ⇒ η εγγραφή γράφεται παρ' όλα αυτά · άγνωστη θέση μαντεύεται.
+ * - Σ6: εγγραφή με διαστάσεις αλλά χωρίς χρώμα (πριν τη 2γ) δεν ξαναμετριέται, ή ξαναγράφει metadata που ο trigger έγραψε.
  */
 
 const mockStat = jest.fn();
@@ -29,11 +30,12 @@ jest.mock('@/server/images/image-metadata', () => ({ readImageMetadata: (bytes: 
 
 import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
 
-import { backfillImageDimensions, needsImageDimensions } from '../image-dimensions-backfill';
+import { backfillImageDimensions, needsImageMeasurement } from '../image-dimensions-backfill';
 
 const PATH = 'companies/c1/entities/property/p1/domains/sales/categories/photos/files/file_1.jpg';
 const GENERATION = '1727000000123456789';
 const RECORD = { storagePath: PATH, contentType: 'image/jpeg' };
+const COLOUR = { model: 'rgb', channels: 3, hasAlpha: false, bitsPerSample: 8, density: 72, profile: null };
 
 const txGet = jest.fn();
 const txUpdate = jest.fn();
@@ -50,13 +52,15 @@ beforeEach(() => {
   txGet.mockResolvedValue({ exists: true, data: () => RECORD });
 });
 
-describe('needsImageDimensions', () => {
-  it('🔴 Σ1 μόνο raster · με μονοπάτι · χωρίς έγκυρες διαστάσεις', () => {
-    expect(needsImageDimensions(RECORD)).toBe(true);
-    expect(needsImageDimensions({ ...RECORD, imageDimensions: { width: 0, height: 5 } })).toBe(true);
-    expect(needsImageDimensions({ ...RECORD, imageDimensions: { width: 3000, height: 4000 } })).toBe(false);
-    expect(needsImageDimensions({ ...RECORD, contentType: 'application/pdf' })).toBe(false);
-    expect(needsImageDimensions({ ...RECORD, storagePath: '' })).toBe(false);
+describe('needsImageMeasurement', () => {
+  it('🔴 Σ1 μόνο raster · με μονοπάτι · χωρίς έγκυρες διαστάσεις ή χωρίς χρώμα', () => {
+    expect(needsImageMeasurement(RECORD)).toBe(true);
+    expect(needsImageMeasurement({ ...RECORD, imageDimensions: { width: 0, height: 5 }, imageColour: COLOUR })).toBe(true);
+    expect(needsImageMeasurement({ ...RECORD, imageDimensions: { width: 3000, height: 4000 }, imageColour: COLOUR })).toBe(false);
+    // 🔴 Σ6 διαστάσεις χωρίς χρώμα ⇒ ΧΡΕΙΑΖΕΤΑΙ μέτρηση
+    expect(needsImageMeasurement({ ...RECORD, imageDimensions: { width: 3000, height: 4000 } })).toBe(true);
+    expect(needsImageMeasurement({ ...RECORD, contentType: 'application/pdf' })).toBe(false);
+    expect(needsImageMeasurement({ ...RECORD, storagePath: '' })).toBe(false);
   });
 });
 
@@ -75,12 +79,25 @@ describe('backfillImageDimensions', () => {
     expect(txUpdate).not.toHaveBeenCalled();
   });
 
-  it('🔴 Σ3 ο trigger πρόλαβε (metadata γενιάς) ⇒ κανένα byte, καμία γραφή metadata, μόνο η εγγραφή', async () => {
+  it('🔴 Σ3 ο trigger πρόλαβε (metadata γενιάς) και το χρώμα υπάρχει ⇒ κανένα byte, καμία γραφή metadata, μόνο η εγγραφή', async () => {
     mockStat.mockResolvedValue({ kind: 'found', generation: GENERATION, contentType: 'image/jpeg', size: 1, dimensions: { width: 1013, height: 1800 } });
-    expect(await backfillImageDimensions(db, REF, RECORD, false)).toBe('write');
+    expect(await backfillImageDimensions(db, REF, { ...RECORD, imageColour: COLOUR }, false)).toBe('write');
     expect(mockRead).not.toHaveBeenCalled();
     expect(mockWriteMetadata).not.toHaveBeenCalled();
     expect(txUpdate).toHaveBeenCalledWith(REF, { imageDimensions: { width: 1013, height: 1800 } });
+  });
+
+  it('🔴 Σ6 διαστάσεις στο metadata αλλά ΧΩΡΙΣ χρώμα στην εγγραφή ⇒ κεφαλίδα, καμία γραφή metadata, γράφεται το χρώμα', async () => {
+    mockStat.mockResolvedValue({ kind: 'found', generation: GENERATION, contentType: 'image/jpeg', size: 1, dimensions: { width: 3000, height: 4000 } });
+    mockMetadata.mockResolvedValue({ width: 4000, height: 3000, orientation: 6, space: 'srgb', channels: 3, depth: 'uchar', density: 72 });
+    txGet.mockResolvedValue({ exists: true, data: () => ({ ...RECORD, imageDimensions: { width: 3000, height: 4000 } }) });
+    expect(await backfillImageDimensions(db, REF, { ...RECORD, imageDimensions: { width: 3000, height: 4000 } }, false)).toBe('write');
+    expect(mockRead).toHaveBeenCalledTimes(1);
+    expect(mockWriteMetadata).not.toHaveBeenCalled();
+    expect(txUpdate).toHaveBeenCalledWith(REF, {
+      imageDimensions: { width: 3000, height: 4000 },
+      imageColour: { ...COLOUR, profile: null },
+    });
   });
 
   it('🔴 Σ5 γενιά άλλαξε ⇒ καμία εγγραφή · άγνωστη θέση ⇒ ονομασμένη, χωρίς ανάγνωση', async () => {
