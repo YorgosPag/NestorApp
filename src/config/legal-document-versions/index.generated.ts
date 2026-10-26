@@ -12,5 +12,6 @@ import termsOfServiceV1 from './terms-of-service/v1.json';
 import dataDeletionV1 from './data-deletion/v1.json';
 import privateMarketingDisclosureV1 from './private-marketing-disclosure/v1.json';
 import handoverProtocolV1 from './handover-protocol/v1.json';
+import handoverProtocolV2 from './handover-protocol/v2.json';
 
-export const FROZEN_LEGAL_DOCUMENTS: readonly unknown[] = [privacyPolicyV1, termsOfServiceV1, dataDeletionV1, privateMarketingDisclosureV1, handoverProtocolV1];
+export const FROZEN_LEGAL_DOCUMENTS: readonly unknown[] = [privacyPolicyV1, termsOfServiceV1, dataDeletionV1, privateMarketingDisclosureV1, handoverProtocolV1, handoverProtocolV2];

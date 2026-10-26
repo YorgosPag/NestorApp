@@ -122,4 +122,16 @@ describe('Ζ103 — δίχτυ κειμένου: το παγωμένο v1 ΔΕΝ
     expect(v1.version.frozen.version).toBe(1);
     expect(declaresClosedLines(v1.version.frozen)).toBe(false);
   });
+
+  it('Ζ103β — το v2 (σε ισχύ από 2026-10-26) ΦΕΡΕΙ τη ρήτρα, και στις δύο γλώσσες, αμέσως μετά το `contentNotCertified`', () => {
+    const v2 = legalDocumentInForce('handover-protocol', '2026-10-26');
+    if (v2.kind !== 'in-force') throw new Error('fixture: κείμενο v2 λείπει');
+    expect(v2.version.frozen.version).toBe(2);
+    expect(declaresClosedLines(v2.version.frozen)).toBe(true);
+    for (const locale of ['el', 'en'] as const) {
+      const statements = v2.version.frozen.locales[locale].sections.find((s) => s.id === 'statements');
+      const ids = statements?.blocks.flatMap((b) => (b.kind === 'clause' ? [b.id] : [])) ?? [];
+      expect(ids.indexOf('closedLines')).toBe(ids.indexOf('contentNotCertified') + 1);
+    }
+  });
 });

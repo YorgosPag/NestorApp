@@ -33,6 +33,15 @@ import { isFileHeld } from '@/services/file-record/file-purge-helpers';
 import { fakeGcsBucket, type FakeGcsStore } from '@/test-utils/fake-gcs/fake-gcs-bucket';
 
 jest.mock('server-only', () => ({}));
+/**
+ * Η μέρα του **κειμένου** καρφωμένη ανά τεστ — η μέρα έκδοσης έρχεται από το ρολόι (`nowISO`), άρα χωρίς καρφίτσα η έκδοση
+ * κειμένου θα εξαρτιόταν από το πότε τρέχει η σουίτα. `null` ⇒ ο πραγματικός γραφέας· μηδενίζεται σε κάθε `beforeEach`.
+ */
+let mockTermsDay: string | null = null;
+jest.mock('@/lib/property-handover/handover-protocol-terms', () => {
+  const actual = jest.requireActual('@/lib/property-handover/handover-protocol-terms');
+  return { ...actual, handoverProtocolTermsOn: (day: string) => actual.handoverProtocolTermsOn(mockTermsDay ?? day) };
+});
 jest.mock('@/lib/telemetry', () => ({ createModuleLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }) }));
 jest.mock('@/lib/firebaseAdmin', () => ({ FieldValue: { serverTimestamp: () => '2026-10-22T10:00:00.000Z' } }));
 jest.mock('@/services/entity-audit-tracked-write', () => ({ recordTrackedEntityWrite: jest.fn(async (input: Record<string, unknown>) => { mockEntityAudits.push(input); }) }));
@@ -122,6 +131,7 @@ beforeAll(async () => {
 }, 30_000);
 
 beforeEach(async () => {
+  mockTermsDay = null;
   fake = new FakeFirestore();
   store.clear();
   copyHook = () => undefined;
@@ -149,6 +159,7 @@ const bytesAt = (path: unknown): Uint8Array => {
 
 describe('Γ35 — `delivered` ⇒ ΕΝΑ σφραγισμένο Πρωτόκολλο, ΔΥΟ αντίτυπα, μία συναλλαγή', () => {
   it('έκδοση: έγγραφο `phpr` · αρχείο εταιρείας (ΕΕ, σημάδι) · αρχείο αγοραστή (προέλευση) · δείκτης · προβολή · ίχνη', async () => {
+    mockTermsDay = '2026-10-22';
     const outcome = await issue();
     const protocolId = handoverProtocolIdOf(HANDOVER, handover().fileDelivery?.digest ?? '');
     expect(outcome).toEqual({ kind: 'issued', protocolId, revision: 1 });
@@ -233,7 +244,8 @@ describe('Γ36 — ό,τι ΔΕΝ εκδίδει Πρωτόκολλο, και γ
     nothingWritten();
   });
 
-  it('🔴 Ζ104 (Φ-Δ.7γ) — κλεισμένη γραμμή με κείμενο σε ισχύ το v1 ⇒ `legal-text-lacks-closures`: ποτέ Πρωτόκολλο που σιωπά γι\' αυτήν', async () => {
+  /** Φ-Δ.7γ — μία γραμμή κλεισμένη χωρίς πλήρες αποτύπωμα, δίπλα στις `file_a`/`file_b`, και το αποτύπωμα v3 στην παράδοση. */
+  async function seedClosedLine(): Promise<void> {
     const closed = { sourceFileId: 'file_c', copyFileId: handoverCopyFileIdOf(HANDOVER, 'file_c'), crc32c: 'crc_file_c', size: 1000, cause: 'bytes-gone' as const };
     fake.seed(COLLECTIONS.PROPERTY_HANDOVER_DELIVERIES, handoverDeliveryIdOf(HANDOVER, 'file_c'), {
       ...closed, sha256: null, companyId: COMPANY, propertyId: PROPERTY, handoverId: HANDOVER, recipientUserId: BUYER, dossierId: MAIN_DOSSIER,
@@ -242,9 +254,27 @@ describe('Γ36 — ό,τι ΔΕΝ εκδίδει Πρωτόκολλο, και γ
     });
     const digest = await handoverDeliveryDigest(['file_a', 'file_b'].map(ledgerRow), [closed]);
     await seedHandover(['file_a', 'file_b'], { fileDelivery: { ...handover().fileDelivery, digest } });
+  }
+
+  it('🔴 Ζ104 (Φ-Δ.7γ) — κλεισμένη γραμμή με κείμενο σε ισχύ το v1 ⇒ `legal-text-lacks-closures`: ποτέ Πρωτόκολλο που σιωπά γι\' αυτήν', async () => {
+    await seedClosedLine();
+    // Η μέρα έκδοσης έρχεται από το ρολόι· το δίχτυ κρίνεται με το κείμενο της 22/10 (v1), όποια μέρα κι αν τρέξει η σουίτα.
+    mockTermsDay = '2026-10-22';
     expect(await issue()).toMatchObject({ kind: 'refused', reason: 'legal-text-lacks-closures' });
     nothingWritten();
   });
+
+  it('🔴 Ζ104β (Φ-Δ.7γ) — κλεισμένη γραμμή με κείμενο σε ισχύ το v2 ⇒ Πρωτόκολλο εκδίδεται· η κλεισμένη ΧΩΡΙΣΤΑ στο manifest', async () => {
+    await seedClosedLine();
+    mockTermsDay = '2026-10-26';
+    expect(await issue()).toMatchObject({ kind: 'issued', revision: 1 });
+    const protocolId = handover().protocol?.protocolId ?? '';
+    expect(docs(COLLECTIONS.PROPERTY_HANDOVER_PROTOCOLS)[protocolId]).toMatchObject({ rows: 2, bytes: 2000, legalText: { version: 2 } });
+    const manifest = JSON.parse((await readHandoverProtocolManifest(bytesAt(companyRecord(protocolId)?.storagePath))) ?? '{}');
+    expect(manifest.delivery.files).toHaveLength(2);
+    expect(manifest.delivery.closed).toEqual([expect.objectContaining({ sourceFileId: 'file_c', cause: 'bytes-gone', crc32c: 'crc_file_c' })]);
+    expect(manifest.delivery.scheme).toBe('nestor.handover-delivery.v3');
+  }, 60_000);
 
   it('🔴 χωρίς ρύθμιση παρόχου ⇒ `awaiting-seal-configuration`: τίποτα στο GCS ή στη βάση, ένα σήμα', async () => {
     const session = openSealSession({}, { fetchImpl: jest.fn(), env: {}, now: () => NOW });

@@ -15,6 +15,12 @@
         "effectiveFrom": "2026-10-22",
         "material": true,
         "version": 1
+      },
+      {
+        "digest": "sha256:493e4c36333dd492437469c4dea7d0660d0810317fad39ff75f183fa8c68108a",
+        "effectiveFrom": "2026-10-26",
+        "material": true,
+        "version": 2
       }
     ],
     "privacy-policy": [
