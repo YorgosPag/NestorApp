@@ -385,3 +385,33 @@
 .bkRemove:focus-visible {
   opacity: 1;
 }
+
+/* ADR-920 Β4.8 Β3.6 — επίλυση σύγκρουσης (Civil 3D «Crossing Breaklines» › Resolve). Η λυμένη σύγκρουση είναι
+   ΑΠΟΦΑΣΗ, όχι εύρημα: ουδέτερη ταινία αντί για χρώμα σοβαρότητας. Θεματικά tokens (CHECK 3.43). */
+.qaResolved { border-left-color: hsl(var(--status-success)); }
+
+.bkResolve {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 2px 0 6px 9px;
+  padding: 6px 8px;
+  font-size: 11px;
+  border-left: 1px solid hsl(var(--border));
+}
+
+.bkResolveRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+
+/* Προεπισκόπηση πριν την εφαρμογή: z, μετατόπιση κάθε γραμμής, αλλαγή κλίσης. */
+.bkPreview {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-variant-numeric: tabular-nums;
+}

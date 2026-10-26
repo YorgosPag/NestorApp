@@ -1337,7 +1337,8 @@
         "coverageGap": "{percent}% of the plot is not covered by the surface — earthwork volumes there count as zero.",
         "interpolatedSupport": "{percent}% of the plot rests on interpolation from distant points ({points, plural, one {# measured point} other {# measured points}} inside the boundary) — excavation volumes there are guesswork.",
         "breaklineCrossing": "Breaklines cross at different elevations: kept {kept}m{keptLine, select, none {} other { from #{keptLine}}}, breakline #{line} said {overruled}m (difference {deviation}m).",
-        "breaklineVertexOn": "Breakline #{line} passes through a vertex at another elevation: kept {kept}m {keptLine, select, none {(survey point)} other {(breakline #{keptLine})}}, the breakline said {overruled}m (difference {deviation}m)."
+        "breaklineVertexOn": "Breakline #{line} passes through a vertex at another elevation: kept {kept}m {keptLine, select, none {(survey point)} other {(breakline #{keptLine})}}, the breakline said {overruled}m (difference {deviation}m).",
+        "breaklineResolved": "Resolved with «{rule, select, higher {Use higher} lower {Use lower} average {Use average} specify {Specify} other {—}}»: #{keptLine} × #{line} → {result}m (they said {kept}m and {overruled}m, difference {deviation}m)."
       }
     },
     "breaklines": {
@@ -1365,6 +1366,31 @@
       "conflictsTitle": "{count, plural, one {# elevation conflict} other {# elevation conflicts}}",
       "conflictsNone": "No conflicts — the breaklines agree wherever they meet.",
       "conflictFocusHint": "Zoom to the conflict",
+      "resolvedTitle": "{count, plural, one {# resolved conflict} other {# resolved conflicts}}",
+      "unappliedTitle": "{count, plural, one {# decision no longer applies} other {# decisions no longer apply}}",
+      "unappliedHint": "The lines changed (or one was removed) and no longer meet where you decided — or they now agree. A decision is never re-applied somewhere else blindly.",
+      "unappliedItem": "#{owner} × #{with}",
+      "unappliedDrop": "Delete decision",
+      "unappliedDropAll": "Delete all",
+      "resolve": {
+        "title": "Resolve conflict",
+        "ruleLabel": "Elevation at the meeting point",
+        "rule": {
+          "higher": "Use higher",
+          "lower": "Use lower",
+          "average": "Use average",
+          "specify": "Specify"
+        },
+        "specifyLabel": "Elevation (m)",
+        "invalid": "Enter an elevation in metres.",
+        "preview": "→ {z} m · #{keptLine} {shiftKept} m · #{line} {shiftLine} m",
+        "grade": "Grade change next to the point: up to {grade}%",
+        "steep": "⚠ Steep grade change next to the point: up to {grade}% — check it is intended.",
+        "apply": "Apply",
+        "revert": "Revert",
+        "surveyWins": "The elevation here is a surveyed point and it wins. Fix the point or the breakline.",
+        "all": "Resolve all ({count})"
+      },
       "surface": {
         "existing": "Existing ground",
         "proposed": "Proposed surface"

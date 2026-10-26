@@ -41,6 +41,17 @@ jest.mock('../../../../systems/topography/TopoPointStore', () => ({
   getTopoBreaklines: () => mockWorld.breaklines,
   getActiveCropRing: () => (mockWorld.cropRing ? { vertices: mockWorld.cropRing } : null),
 }));
+// ADR-920 Β3.6 — the ONE build report, memoised by definition identity as in production (real resolver, no survey points).
+jest.mock('../../../../systems/topography/topo-surface', () => {
+  const { buildTinWithReport } = jest.requireActual('@/lib/terrain/tin-builder');
+  let memo: { input: unknown; report: unknown } | null = null;
+  return {
+    getTopoBuildReport: () => {
+      if (memo?.input !== mockWorld.breaklines) memo = { input: mockWorld.breaklines, report: buildTinWithReport([], mockWorld.breaklines) };
+      return memo.report;
+    },
+  };
+});
 jest.mock('../../../../systems/topography/terrain-3d-store', () => ({
   subscribeTerrain3D: (cb: () => void) => mockSubscribe(cb),
   getTerrain3DState: () => ({ visible: mockWorld.visible }),
@@ -250,6 +261,20 @@ describe('TopoBreaklineLayer — κοπή στη στάθμη του topo scope 
     mockWorld.breaklines = [RISING];
     fire();
     expect(convert).toHaveBeenCalledTimes(2);
+  });
+
+  it('ADR-920 Β3.6 — η γραμμή περνά από το σημείο συνάντησης στο z της ΕΠΙΦΑΝΕΙΑΣ (κανόνας μηχανικού)', () => {
+    const ridge = line('ridge', [{ x: 0, y: 0, z: 1_000 }, { x: 10_000, y: 10_000, z: 1_000 }]);
+    const ditch = line('ditch', [{ x: 10_000, y: 0, z: 3_000 }, { x: 0, y: 10_000, z: 3_000 }], {
+      crossingResolutions: [{ withBreaklineId: 'ridge', x: 5_000, y: 5_000, rule: 'average' }],
+    });
+    mockWorld.breaklines = [ridge, ditch];
+    build();
+    const drawn = convert.mock.calls.at(-1)![0];
+    expect(drawn.map((b) => b.vertices[1])).toEqual([{ x: 5_000, y: 5_000, z: 2_000 }, { x: 5_000, y: 5_000, z: 2_000 }]);
+    // Ίδιος ορισμός ⇒ ίδια (carried) ταυτότητα ⇒ καμία δεύτερη προβολή.
+    fire();
+    expect(convert).toHaveBeenCalledTimes(1);
   });
 
   it('καμία αλλαγή (π.χ. άσχετη ρύθμιση απόδοσης) ⇒ ίδια παιδιά, καμία ανακατασκευή', () => {

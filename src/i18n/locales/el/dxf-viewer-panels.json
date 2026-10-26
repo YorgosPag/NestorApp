@@ -1337,7 +1337,8 @@
         "coverageGap": "Το {percent}% του οικοπέδου δεν καλύπτεται από την επιφάνεια — εκεί οι όγκοι χωματουργικών μετρούν μηδέν.",
         "interpolatedSupport": "Το {percent}% του οικοπέδου στηρίζεται σε παρεμβολή από μακρινά σημεία ({points, plural, one {# μετρημένο σημείο} other {# μετρημένα σημεία}} εντός του ορίου) — οι όγκοι εκσκαφής εκεί είναι εικασία.",
         "breaklineCrossing": "Γραμμές ασυνέχειας τέμνονται με διαφορετικό υψόμετρο: κρατήθηκε {kept}μ{keptLine, select, none {} other { από τη #{keptLine}}}, η #{line} έλεγε {overruled}μ (διαφορά {deviation}μ).",
-        "breaklineVertexOn": "Η γραμμή ασυνέχειας #{line} περνά από κορυφή με άλλο υψόμετρο: κρατήθηκε {kept}μ {keptLine, select, none {(σημείο αποτύπωσης)} other {(γραμμή #{keptLine})}}, η γραμμή έλεγε {overruled}μ (διαφορά {deviation}μ)."
+        "breaklineVertexOn": "Η γραμμή ασυνέχειας #{line} περνά από κορυφή με άλλο υψόμετρο: κρατήθηκε {kept}μ {keptLine, select, none {(σημείο αποτύπωσης)} other {(γραμμή #{keptLine})}}, η γραμμή έλεγε {overruled}μ (διαφορά {deviation}μ).",
+        "breaklineResolved": "Επιλύθηκε με «{rule, select, higher {Ψηλότερο} lower {Χαμηλότερο} average {Μέσος όρος} specify {Τιμή} other {—}}»: #{keptLine} × #{line} → {result}μ (έλεγαν {kept}μ και {overruled}μ, διαφορά {deviation}μ)."
       }
     },
     "breaklines": {
@@ -1365,6 +1366,31 @@
       "conflictsTitle": "{count, plural, one {# σύγκρουση υψομέτρου} other {# συγκρούσεις υψομέτρου}}",
       "conflictsNone": "Καμία σύγκρουση — οι γραμμές συμφωνούν όπου συναντώνται.",
       "conflictFocusHint": "Εστίαση στο σημείο της σύγκρουσης",
+      "resolvedTitle": "{count, plural, one {# επιλυμένη σύγκρουση} other {# επιλυμένες συγκρούσεις}}",
+      "unappliedTitle": "{count, plural, one {# απόφαση δεν εφαρμόζεται πια} other {# αποφάσεις δεν εφαρμόζονται πια}}",
+      "unappliedHint": "Οι γραμμές άλλαξαν (ή η μία αφαιρέθηκε) και δεν συναντώνται πια εκεί όπου αποφάσισες — ή συμφωνούν πλέον. Η απόφαση δεν εφαρμόζεται αλλού στα τυφλά.",
+      "unappliedItem": "#{owner} × #{with}",
+      "unappliedDrop": "Διαγραφή απόφασης",
+      "unappliedDropAll": "Διαγραφή όλων",
+      "resolve": {
+        "title": "Επίλυση σύγκρουσης",
+        "ruleLabel": "Υψόμετρο στο σημείο συνάντησης",
+        "rule": {
+          "higher": "Ψηλότερο",
+          "lower": "Χαμηλότερο",
+          "average": "Μέσος όρος",
+          "specify": "Τιμή"
+        },
+        "specifyLabel": "Υψόμετρο (μ)",
+        "invalid": "Γράψε ένα υψόμετρο σε μέτρα.",
+        "preview": "→ {z} μ · #{keptLine} {shiftKept} μ · #{line} {shiftLine} μ",
+        "grade": "Αλλαγή κλίσης δίπλα στο σημείο: έως {grade}%",
+        "steep": "⚠ Απότομη αλλαγή κλίσης δίπλα στο σημείο: έως {grade}% — έλεγξε ότι είναι σκόπιμη.",
+        "apply": "Εφαρμογή",
+        "revert": "Επαναφορά",
+        "surveyWins": "Το υψόμετρο εδώ είναι μέτρηση σημείου αποτύπωσης και υπερισχύει. Διόρθωσε το σημείο ή την ασυνέχεια.",
+        "all": "Επίλυση όλων ({count})"
+      },
       "surface": {
         "existing": "Υφιστάμενο έδαφος",
         "proposed": "Σχεδιασμένη επιφάνεια"

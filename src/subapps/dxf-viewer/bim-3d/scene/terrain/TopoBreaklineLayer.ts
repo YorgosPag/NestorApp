@@ -65,10 +65,16 @@ import {
   getBreaklineDisplayState, subscribeBreaklineDisplay,
 } from '../../../systems/topography/topo-breakline-display-store';
 import { resolveTopoHorizontalCutWorldY } from './terrain-clip-plane';
+import { getTopoBuildReport } from '../../../systems/topography/topo-surface';
+import { breaklinesAsCarried } from '@/lib/terrain/breakline-carried';
+import type { TinBuildReport } from '@/lib/terrain/terrain-types';
 
 /** Everything that changes what this layer draws. Compared by identity — see `sameInputs`. */
 interface BreaklineInputs {
-  /** Δ3 — only the surface the terrain mesh shows (`existing`). */
+  /**
+   * Δ3 — only the surface the terrain mesh shows (`existing`), AS THE SURFACE CARRIES THEM (ADR-920 Β3.6): every
+   * meeting point at the Z the resolver gave it, so the line never floats above or sinks below the ground it cuts.
+   */
   readonly breaklines: readonly Breakline[];
   readonly cropRing: readonly Point2D[] | null;
   readonly datumMm: number;
@@ -116,6 +122,13 @@ export class TopoBreaklineLayer extends TopoSceneLayer<BreaklineInputs> {
    */
   private projection: { readonly inputs: ProjectionInputs; readonly geometries: TopoBreaklineGeometries } | null = null;
 
+  /** Β3.6 — the carried breaklines and what they came from, so an unchanged definition keeps ONE identity. */
+  private carried: {
+    readonly definition: readonly Breakline[];
+    readonly report: TinBuildReport | null;
+    readonly lines: readonly Breakline[];
+  } | null = null;
+
   constructor(
     scene: THREE.Object3D,
     markDirty: () => void,
@@ -142,7 +155,7 @@ export class TopoBreaklineLayer extends TopoSceneLayer<BreaklineInputs> {
 
   protected rebuildGeometry(): void {
     const inputs: BreaklineInputs = {
-      breaklines: getTopoBreaklines('existing'),
+      breaklines: this.carriedBreaklines(),
       cropRing: getActiveCropRing()?.vertices ?? null,
       datumMm: getActiveVerticalDatumMm(),
       geoRef: getGeoReference(),
@@ -166,6 +179,20 @@ export class TopoBreaklineLayer extends TopoSceneLayer<BreaklineInputs> {
     }
     this.lastInputs = inputs;
     this.markDirty();
+  }
+
+  /**
+   * ADR-920 Β3.6 — the definition with its meeting points at the surface's Z (`breaklinesAsCarried`), from the ONE
+   * memoised build report (no second `buildTin`; none at all without breaklines). Memoised on the identities of both.
+   */
+  private carriedBreaklines(): readonly Breakline[] {
+    const definition = getTopoBreaklines('existing');
+    const report = definition.length > 0 ? getTopoBuildReport('existing') : null;
+    const last = this.carried;
+    if (last && last.definition === definition && last.report === report) return last.lines;
+    const lines = report ? breaklinesAsCarried(definition, report.breaklineConflicts, report.surface.origin) : definition;
+    this.carried = { definition, report, lines };
+    return lines;
   }
 
   /** The projected (uncut) geometry — reused while only the cut moves. */

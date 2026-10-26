@@ -24,14 +24,20 @@ interface TopoQaFlagRowProps {
   readonly onFocus: (flag: TopoQaFlag) => void;
   /** Accessible name of the click (`dxf-viewer-panels` key). */
   readonly focusHintKey: string;
+  /**
+   * ADR-920 Β3.6 — a finding an engineer's rule decided: neutral stripe instead of the severity colour (a red stripe on a
+   * settled decision would read as an open problem). The message itself says «resolved».
+   */
+  readonly resolved?: boolean;
 }
 
-export function TopoQaFlagRow({ flag, selected, onFocus, focusHintKey }: TopoQaFlagRowProps): React.JSX.Element {
+export function TopoQaFlagRow({ flag, selected, onFocus, focusHintKey, resolved = false }: TopoQaFlagRowProps): React.JSX.Element {
   const { t } = useTranslation('dxf-viewer-panels');
+  const tone = resolved ? styles.qaResolved : TOPO_SEVERITY_CLASS[flag.severity];
   return (
     <button
       type="button"
-      className={`${styles.qaItem} ${TOPO_SEVERITY_CLASS[flag.severity]} ${selected ? styles.qaItemSelected : ''}`}
+      className={`${styles.qaItem} ${tone} ${selected ? styles.qaItemSelected : ''}`}
       onClick={() => onFocus(flag)}
       aria-label={t(focusHintKey)}
       aria-current={selected ? 'true' : undefined}

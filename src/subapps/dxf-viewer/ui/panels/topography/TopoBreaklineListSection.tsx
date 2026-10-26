@@ -10,6 +10,8 @@
  *   - Remove = `SetTopoBreaklinesCommand` through the global history (Ctrl+Z restores it);
  *   - the eye + «αυτήν κοιτάω» = `topo-breakline-display-store` (same as the ribbon toggle, the 2D overlay, the 3D layer).
  *
+ * ADR-920 Β3.6 — the conflicts half (open · resolved · no-longer-applying, with Resolve) is `TopoBreaklineConflictList`.
+ *
  * Beyond Prospector: Zoom To on a definition breakline (asked for on AUGI since 2008), the z-source in words AND as a
  * line pattern, link health when the source line is gone, and a conflict click that ALSO lights the bent line.
  * Closing the panel drops the focus — the highlight belongs to the review, not to the drawing.
@@ -26,31 +28,36 @@ import {
 } from '../../../systems/topography/topo-breakline-display-store';
 import {
   buildBreaklineInventory,
-  type BreaklineConflictRow, type BreaklineInventoryRow, type BreaklineSurfaceInput,
+  type BreaklineInventoryRow, type BreaklineSurfaceInput,
 } from '../../../systems/topography/topo-breakline-inventory';
 import { getTopoBuildReport } from '../../../systems/topography/topo-surface';
 import { TOPO_SURFACE_IDS, type TopoSurfaceId } from '../../../systems/topography/topo-types';
 import { focusTopoReviewTarget, TOPO_REVIEW_FOCUS_PAD_MM } from '../../../systems/topography/topo-review-focus';
 import { resolveTopoLineWorld } from '../../../bim-3d/coordination/auto-breakline-world';
-import { resolveTopoQaFlagWorld } from '../../../bim-3d/coordination/topo-qa-flag-world';
 import { SetTopoBreaklinesCommand } from '../../../core/commands/entity-commands/SetTopoBreaklinesCommand';
 import { getGlobalCommandHistory } from '../../../core/commands/CommandHistory';
 import { useCurrentLevelScene } from '../../../systems/levels/useCurrentLevelScene';
 import { TopoBreaklineRow } from './TopoBreaklineRow';
-import { TopoQaFlagRow } from './TopoQaFlagRow';
+import { TopoBreaklineConflictList, type BreaklinesOf } from './TopoBreaklineConflictList';
 import styles from './TopographyPanel.module.css';
 
 const NS = 'topography.breaklines';
 const NO_CONFLICTS: BreaklineSurfaceInput['conflicts'] = [];
 const NO_ORIGIN: BreaklineSurfaceInput['origin'] = { x: 0, y: 0 };
+const NO_RESOLUTIONS: BreaklineSurfaceInput['unappliedResolutions'] = [];
 
 /** Definition + the ONE memoised build report per surface (no build at all for a surface without breaklines). */
 function surfaceInputs(state: ReturnType<typeof getTopoState>): Record<TopoSurfaceId, BreaklineSurfaceInput> {
   const entries = TOPO_SURFACE_IDS.map((id): [TopoSurfaceId, BreaklineSurfaceInput] => {
     const breaklines = state.surfaces[id].breaklines;
-    if (breaklines.length === 0) return [id, { breaklines, conflicts: NO_CONFLICTS, origin: NO_ORIGIN }];
+    if (breaklines.length === 0) return [id, { breaklines, conflicts: NO_CONFLICTS, origin: NO_ORIGIN, unappliedResolutions: NO_RESOLUTIONS }];
     const report = getTopoBuildReport(id);
-    return [id, { breaklines, conflicts: report.breaklineConflicts, origin: report.surface.origin }];
+    return [id, {
+      breaklines,
+      conflicts: report.breaklineConflicts,
+      origin: report.surface.origin,
+      unappliedResolutions: report.unappliedCrossingResolutions,
+    }];
   });
   return Object.fromEntries(entries) as Record<TopoSurfaceId, BreaklineSurfaceInput>;
 }
@@ -65,23 +72,11 @@ function focusBreakline(row: BreaklineInventoryRow): void {
   );
 }
 
-/** A conflict lights the BENT line and zooms to the spot where the two disagree. */
-function focusConflict(conflict: BreaklineConflictRow): void {
-  const preserveZoom = getBreaklineDisplayState().focusedId !== null;
-  setFocusedBreakline(conflict.overruledBreaklineId);
-  focusTopoReviewTarget(
-    [conflict.flag.at], TOPO_REVIEW_FOCUS_PAD_MM.point,
-    () => resolveTopoQaFlagWorld(conflict.flag, conflict.surfaceId), preserveZoom,
-  );
-}
-
 function removeBreakline(row: BreaklineInventoryRow): void {
   const command = SetTopoBreaklinesCommand.remove(row.surfaceId, [row.breakline.id]);
   if (command) getGlobalCommandHistory().execute(command);
   if (getBreaklineDisplayState().focusedId === row.breakline.id) setFocusedBreakline(null);
 }
-
-const conflictKey = (c: BreaklineConflictRow): string => `${c.surfaceId}:${c.flag.id}`;
 
 function useBreaklineInventory() {
   const state = React.useSyncExternalStore(subscribeTopo, getTopoState, getTopoState);
@@ -90,10 +85,12 @@ function useBreaklineInventory() {
     () => (scene ? new Set(scene.entities.map((e) => e.id)) : null),
     [scene],
   );
-  return React.useMemo(
+  const inventory = React.useMemo(
     () => buildBreaklineInventory({ surfaces: surfaceInputs(state), sceneEntityIds }),
     [state, sceneEntityIds],
   );
+  const breaklinesOf = React.useCallback<BreaklinesOf>((id) => state.surfaces[id].breaklines, [state]);
+  return { inventory, breaklinesOf };
 }
 
 interface HeaderProps {
@@ -118,34 +115,6 @@ function ListHeader({ count, visible }: HeaderProps): React.JSX.Element {
         <span>{toggleLabel}</span>
       </button>
     </header>
-  );
-}
-
-interface ConflictsProps {
-  readonly conflicts: readonly BreaklineConflictRow[];
-}
-
-function ConflictList({ conflicts }: ConflictsProps): React.JSX.Element {
-  const { t } = useTranslation('dxf-viewer-panels');
-  const [selectedKey, setSelectedKey] = React.useState<string | null>(null);
-  return (
-    <section className={styles.field} aria-labelledby="topo-breakline-conflicts-title">
-      <h4 id="topo-breakline-conflicts-title" className={styles.label}>
-        {t(`${NS}.conflictsTitle`, { count: conflicts.length })}
-      </h4>
-      <ul className={styles.qaList}>
-        {conflicts.map((c) => (
-          <li key={conflictKey(c)}>
-            <TopoQaFlagRow
-              flag={c.flag}
-              selected={conflictKey(c) === selectedKey}
-              onFocus={() => { setSelectedKey(conflictKey(c)); focusConflict(c); }}
-              focusHintKey={`${NS}.conflictFocusHint`}
-            />
-          </li>
-        ))}
-      </ul>
-    </section>
   );
 }
 
@@ -183,7 +152,7 @@ function BreaklineList({ rows, focusedId }: RowsProps): React.JSX.Element {
 
 export function TopoBreaklineListSection(): React.JSX.Element {
   const { t } = useTranslation('dxf-viewer-panels');
-  const inventory = useBreaklineInventory();
+  const { inventory, breaklinesOf } = useBreaklineInventory();
   const display = React.useSyncExternalStore(
     subscribeBreaklineDisplay, getBreaklineDisplayState, getBreaklineDisplayState,
   );
@@ -196,8 +165,8 @@ export function TopoBreaklineListSection(): React.JSX.Element {
       <p className={styles.subtitle}>{t(`${NS}.hint`)}</p>
       {!display.visible && <p className={styles.status}>{t(`${NS}.hiddenNote`)}</p>}
       {inventory.rows.length === 0 && <p className={styles.status}>{t(`${NS}.empty`)}</p>}
-      {inventory.conflicts.length > 0 && <ConflictList conflicts={inventory.conflicts} />}
-      {inventory.rows.length > 0 && inventory.conflicts.length === 0 && (
+      <TopoBreaklineConflictList inventory={inventory} breaklinesOf={breaklinesOf} />
+      {inventory.rows.length > 0 && inventory.conflicts.length === 0 && inventory.resolved.length === 0 && (
         <p className={styles.status}>{t(`${NS}.conflictsNone`)}</p>
       )}
       {inventory.rows.length > 0 && <BreaklineList rows={inventory.rows} focusedId={display.focusedId} />}
