@@ -13,12 +13,14 @@
 
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { CATALOG_API, EXPECTED_REVISION_PARAM } from '@/subapps/catalog/catalog-routes';
+import type { CatalogAssetDefinition } from '@/subapps/catalog/types/asset';
 import type { CatalogAttributeDefinition, StoredCatalogAttributeDefinition } from '@/subapps/catalog/types/attribute';
 import type { CatalogAttributeGroupDefinition } from '@/subapps/catalog/types/attribute-group';
 import type { CatalogWire } from '@/subapps/catalog/types/catalog-record';
 import type { CatalogCategoryDefinition, CatalogCategoryMappings } from '@/subapps/catalog/types/category';
 import type { CatalogFamilyDefinition, StoredCatalogFamilyDefinition } from '@/subapps/catalog/types/family';
 import type { WorkspaceMeasurementFamilyDefinition } from '@/subapps/catalog/types/measurement-family';
+import type { CatalogAssetInput } from '@/subapps/catalog/schema/zod/asset.schema';
 import type { LocalizedText } from '@/i18n/localized-text';
 
 // ── Οι εγγραφές όπως τις δίνει ο γραφέας (σύρμα: χρονοσφραγίδες ISO) ─────────
@@ -28,6 +30,7 @@ export type AttributeGroupRecord = CatalogWire<CatalogAttributeGroupDefinition>;
 export type MeasurementFamilyRecord = CatalogWire<WorkspaceMeasurementFamilyDefinition>;
 export type CategoryRecord = CatalogWire<CatalogCategoryDefinition>;
 export type FamilyRecord = CatalogWire<StoredCatalogFamilyDefinition>;
+export type AssetRecord = CatalogWire<CatalogAssetDefinition>;
 
 /** Τα είδη που γράφονται ως **ολόκληρος ορισμός** (δημιουργία · αντικατάσταση · διαγραφή). */
 export interface CatalogDefinitionKinds {
@@ -35,6 +38,8 @@ export interface CatalogDefinitionKinds {
   readonly attributeGroup: { readonly definition: CatalogAttributeGroupDefinition; readonly record: AttributeGroupRecord };
   readonly measurementFamily: { readonly definition: WorkspaceMeasurementFamilyDefinition; readonly record: MeasurementFamilyRecord };
   readonly family: { readonly definition: CatalogFamilyDefinition; readonly record: FamilyRecord };
+  /** Μέσο (ADR-923 §5.10 Δ9): ο ορισμός **χωρίς** `fileId` — το αρχείο το δένει **μόνο** η {@link attachCatalogAssetFile}. */
+  readonly asset: { readonly definition: CatalogAssetInput; readonly record: AssetRecord };
 }
 
 export type CatalogDefinitionKind = keyof CatalogDefinitionKinds;
@@ -49,6 +54,7 @@ const ROUTES: Readonly<Record<CatalogEntityKind, { readonly collection: string; 
   attributeGroup: CATALOG_API.attributeGroups,
   measurementFamily: CATALOG_API.measurementFamilies,
   family: CATALOG_API.families,
+  asset: CATALOG_API.assets,
   category: CATALOG_API.categories,
 };
 
@@ -116,4 +122,15 @@ export function moveCatalogCategory(
   target: { readonly parentId: string | null; readonly orderKey: string },
 ): Promise<CategoryRecord> {
   return apiClient.post<CategoryRecord>(CATALOG_API.categories.move(id), { expectedRevision, ...target });
+}
+
+// ── Μέσα: το αρχείο δένεται με δική του πράξη (ADR-923 §5.10.3) ─────────────
+
+/**
+ * `POST …/assets/[id]/file` — δένει ένα **ήδη ανεβασμένο** `FileRecord` αυτού του μέσου (ή νέα έκδοση του αρχείου).
+ * Ο διακομιστής μετρά το αντικείμενο, φτιάχνει τις αποδόσεις και κρίνει με το `judgeAssetFile`, την ίδια κρίση με
+ * την οθόνη. Ιδεμπότητο: ίδιο `fileId` ⇒ καμία νέα αναθεώρηση.
+ */
+export function attachCatalogAssetFile(id: string, expectedRevision: number, fileId: string): Promise<AssetRecord> {
+  return apiClient.post<AssetRecord>(CATALOG_API.assets.file(id), { expectedRevision, fileId });
 }
