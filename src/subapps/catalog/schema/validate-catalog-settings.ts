@@ -30,5 +30,7 @@ export function validateCatalogAsset(asset: CatalogAssetDefinition): readonly Ca
   if (!isKindAllowedForRole(asset.role, asset.kind)) {
     collector.add('assetRoleKindMismatch', 'kind', { role: asset.role, kind: asset.kind });
   }
+  // Ίδιο κριτήριο με το `NonBlankText` του σχήματος δικαιωμάτων — εδώ ως εύρημα στο πεδίο, όχι ως 400 χωρίς διαδρομή.
+  if (asset.rights.creator.name.trim().length === 0) collector.add('rightsCreatorRequired', 'rights.creator.name');
   return collector.issues;
 }

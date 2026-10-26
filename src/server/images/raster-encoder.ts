@@ -138,7 +138,10 @@ export interface RasterRenditionSpec {
 /** Μια απόδοση: bytes + ό,τι **μετρήθηκε στην έξοδο** (όχι ό,τι ζητήθηκε). */
 export interface RasterRendition extends RasterDerivative {
   readonly colour: ImageColour;
-  /** Η πηγή δεν είχε προφίλ ⇒ τα χρώματά της ερμηνεύτηκαν με υπόθεση (sRGB για RGB, γενικό CMYK για CMYK). */
+  /**
+   * Η πηγή δεν είχε προφίλ ⇒ υπόθεση: RGB ⇒ ερμηνεύτηκε ως sRGB (σε κάθε απόδοση) · CMYK ⇒ η μετατροπή σε sRGB (web)
+   * έγινε με γενικό CMYK, ενώ η εκτύπωση κρατά τους αριθμούς **χωρίς** προφίλ (late binding, output intent).
+   */
   readonly assumedProfile: boolean;
   /** Ο χρωματικός τύπος της πηγής κρατήθηκε (εκτύπωση)· `false` όταν η πηγή δεν μπορούσε να μείνει όπως ήταν. */
   readonly colourPreserved: boolean;
@@ -162,8 +165,13 @@ function applyColourTarget(pipeline: sharp.Sharp, target: ColourTarget, hasProfi
     case 'srgb':
       return pipeline.toColourspace('srgb').withIccProfile('srgb');
     case 'cmyk': {
+      // 🔴 ADR-923 §5.10.4 — CMYK **χωρίς** προφίλ μένει **χωρίς** προφίλ, με τους ίδιους αριθμούς. Για CMYK δεν
+      //    υπάρχει καθολική προεπιλογή (όπως το sRGB για το RGB): κατά PDF/X το ατεκμηρίωτο CMYK σημαίνει «στη συνθήκη
+      //    του output intent» — Photoshop «Don't color manage». Μέχρι 2026-10-26 εδώ ενσωματωνόταν το εσωτερικό προφίλ
+      //    του sharp («Chemical proof») ⇒ ΜΕΤΡΗΜΕΝΗ μετατόπιση (μέση απόκλιση pixel 12,35 έναντι 0,13) και μια **ψευδής**
+      //    δήλωση στο αρχείο: προφίλ που δεν έδωσε ποτέ κανείς. Η υπόθεση δηλώνεται στο `assumedProfile`, όχι στα bytes.
       const cmyk = pipeline.pipelineColourspace('cmyk').toColourspace('cmyk');
-      return hasProfile ? cmyk.keepIccProfile() : cmyk.withIccProfile('cmyk');
+      return hasProfile ? cmyk.keepIccProfile() : cmyk;
     }
     case 'rgb-keep':
       return hasProfile ? pipeline.keepIccProfile() : pipeline.withIccProfile('srgb');

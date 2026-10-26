@@ -111,6 +111,18 @@ export const CATALOG_ISSUE_CODES = [
   'attributeFlagLockedInUse',
   'optionLockedInUse',
   'localeLockedInUse',
+  // ── Φάση 2γ: σύνδεση αρχείου ↔ μέσου (ADR-923 §5.10.3) ──
+  'fileNotFound',
+  'fileForeignOwner',
+  'fileNotReady',
+  'fileKindMismatch',
+  'fileTypeConflict',
+  'fileTooLarge',
+  'renditionsNotReady',
+  'renditionsFailed',
+  // ── Φάση 2δ: δήλωση δικαιωμάτων μέσου (ADR-923 §5.10.4) ──
+  'rightsCreatorRequired',
+  'rightsTermDateRequired',
 ] as const;
 
 export type CatalogIssueCode = (typeof CATALOG_ISSUE_CODES)[number];

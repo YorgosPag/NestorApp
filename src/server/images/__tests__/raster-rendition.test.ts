@@ -43,6 +43,27 @@ async function meanSrgb(bytes: Buffer): Promise<readonly number[]> {
   return [...(await sharp(bytes).toColourspace('srgb').resize(1, 1).removeAlpha().raw().toBuffer())];
 }
 
+/** Μέση απόλυτη διαφορά καναλιών ανάμεσα σε δύο εικόνες, ίδιας κλίμακας. */
+async function meanAbsDiff(a: Buffer, b: Buffer): Promise<number> {
+  const raw = (bytes: Buffer) => sharp(bytes).resize(32, 32, { fit: 'fill' }).raw().toBuffer();
+  const [x, y] = await Promise.all([raw(a), raw(b)]);
+  let sum = 0;
+  for (let i = 0; i < x.length; i += 1) sum += Math.abs(x[i] - y[i]);
+  return sum / x.length;
+}
+
+describe('encodeRasterRendition — CMYK χωρίς προφίλ (ADR-923 §5.10.4, μετρημένο ζωντανά)', () => {
+  it('🔴 Ρ0 η εκτύπωση μένει CMYK ΧΩΡΙΣ προφίλ και με τους ΙΔΙΟΥΣ αριθμούς — κανένα προφίλ που δεν έδωσε κανείς', async () => {
+    const untagged = await rgbCanvas().toColourspace('cmyk').jpeg({ quality: 95, chromaSubsampling: '4:4:4' }).toBuffer();
+    expect((await sharp(untagged).metadata()).hasProfile).toBe(false);
+    const out = await render(untagged, PRINT);
+    expect(out.colour).toMatchObject({ model: 'cmyk', channels: 4, profile: null });
+    expect(out.assumedProfile).toBe(true);
+    expect(out.colourPreserved).toBe(true);
+    expect(await meanAbsDiff(untagged, out.bytes)).toBeLessThan(2);
+  });
+});
+
 describe('encodeRasterRendition — εκτύπωση (late binding)', () => {
   it('🔴 Ρ1 CMYK με προφίλ ⇒ μένει CMYK, με ΤΟ ΙΔΙΟ προφίλ', async () => {
     const cmyk = await rgbCanvas().toColourspace('cmyk').withIccProfile('cmyk').jpeg().toBuffer();
