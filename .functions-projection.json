@@ -12,6 +12,8 @@
     "lib/files/storage-orphan-candidate.ts",
     "lib/firestore/trashed-status.ts",
     "lib/idempotency/event-claim.ts",
+    "lib/images/icc-profile-name.ts",
+    "lib/images/image-colour.ts",
     "lib/images/image-dimensions.ts",
     "lib/images/stored-image-dimensions.ts",
     "lib/search/search-index-version.ts",

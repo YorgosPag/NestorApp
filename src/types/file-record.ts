@@ -17,8 +17,10 @@
  */
 
 import type { FileStoragePlacement } from '@/lib/files/file-storage-placement';
+import type { ImageColour } from '@/lib/images/image-colour';
 import type { ImageDimensions } from '@/lib/images/image-dimensions';
 import type { DxfPublishRaster } from '@/services/floorplans/dxf-publish-raster';
+import type { CatalogRenditions } from '@/subapps/catalog/renditions/catalog-renditions';
 import type { DocumentFacts } from '@/lib/document-validity/document-facts';
 import type { FileHandoverOrigin, FileHandoverProtocolOf } from '@/lib/property-handover/file-handover-origin';
 import type { FileHandoverDecision } from '@/lib/property-handover/file-handover-decision';
@@ -427,6 +429,22 @@ export interface FileRecord {
    * `imageDimensionsOf` (`lib/images/image-dimensions`), ποτέ επινοημένη αναλογία.
    */
   imageDimensions?: ImageDimensions;
+
+  /**
+   * 🎨 **Το χρώμα της εικόνας όπως το δηλώνει το αρχείο** — χρωματικός τύπος (RGB/CMYK/γκρι), κανάλια, διαφάνεια, bit,
+   * δηλωμένη πυκνότητα (ppi) και όνομα του ενσωματωμένου προφίλ ICC (ADR-923 §5.10.3). Από την **ίδια** ανάγνωση με το
+   * `imageDimensions` και τον ίδιο γραφέα (finalize trigger · συμπλήρωση)· ο client **δεν** το γράφει (`measuredKeys()`).
+   * ⚠️ Η πυκνότητα είναι **δήλωση**, όχι ποιότητα: αν αρκεί για εκτύπωση το κρίνει η έκδοση, στο τυπωμένο μέγεθος (Δ10).
+   */
+  imageColour?: ImageColour;
+
+  /**
+   * 🗂️ **Οι αποδόσεις ενός μέσου καταλόγου** (ADR-923 §5.10.3) — web (sRGB, 2048) και εκτύπωση (ο χώρος της πηγής,
+   * πλήρης ανάλυση), με την έκδοση της συνταγής και ό,τι **μετρήθηκε** στην έξοδο. Μόνο αρχεία με κάτοχο `catalog_asset`.
+   * Ο ΕΝΑΣ γραφέας: `server/catalog/catalog-asset-renditions.server` (Admin SDK)· ο client **δεν** το γράφει
+   * (`measuredKeys()`). Οι διαδρομές βγαίνουν από το μητρώο συνοδευτικών, ποτέ από εδώ.
+   */
+  catalogRenditions?: CatalogRenditions;
 
   /**
    * 🖼️ **Η εικόνα δημοσίευσης ενός DXF** (ADR-922) — η κατάσταση του παραγώγου (`ready` με διαστάσεις · `failed` με
