@@ -18,6 +18,13 @@ export interface WorkerRpcClientOptions<Q, R> {
   readonly spawn: () => WorkerLike | null;
   /** Ο **ίδιος** χειριστής στον κύριο νήμα, όταν δεν υπάρχει/έπεσε ο Worker. Χωρίς αυτόν ⇒ `failed`. */
   readonly fallback?: (body: Q) => Promise<R>;
+  /**
+   * Τα buffers του αιτήματος που **μετακομίζουν** στον Worker αντί να αντιγραφούν (structured clone ⇒ zero-copy). Δηλώνεται
+   * εδώ, όχι ανά κλήση, ώστε το `latestOnly` να μένει αμετάβλητο: ένα αίτημα που προσπεράστηκε δεν στάλθηκε ποτέ, άρα τα
+   * buffers του δεν αποσπάστηκαν. ⚠️ Μετά την αποστολή το buffer είναι **άδειο** στον κύριο νήμα — ο καλών φτιάχνει νέο ανά κλήση.
+   * Το δίχτυ λαμβάνει το σώμα ανέπαφο (καμία μεταφορά).
+   */
+  readonly transferOf?: (body: Q) => Transferable[];
 }
 
 export interface WorkerRpcClient<Q, R> {
@@ -25,6 +32,9 @@ export interface WorkerRpcClient<Q, R> {
   /** Τερματίζει τον Worker· οι εκκρεμείς κλήσεις λύνονται `failed`. */
   readonly dispose: () => void;
 }
+
+/** Το σφάλμα των κλήσεων που έμειναν εκκρεμείς στο `dispose` — ο καλών έφυγε, **δεν** απέτυχε η ερώτηση. */
+export const WORKER_RPC_DISPOSED = 'disposed';
 
 const errorText = (error: unknown): string => (error instanceof Error ? error.message : String(error));
 
@@ -97,13 +107,13 @@ export function createWorkerRpcClient<Q, R>(options: WorkerRpcClientOptions<Q, R
       if (target === null) return runFallback(options.fallback, body);
       return new Promise((resolve) => {
         const request: WorkerRpcRequest<Q> = { id: table.add(resolve), body };
-        target.postMessage(request);
+        target.postMessage(request, options.transferOf?.(body) ?? []);
       });
     },
     dispose: () => {
       worker?.terminate();
       worker = null;
-      table.failAll('disposed');
+      table.failAll(WORKER_RPC_DISPOSED);
     },
   };
 }

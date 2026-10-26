@@ -31,7 +31,8 @@ export type WorkerRpcResult<R> =
 
 /** Η ελάχιστη μορφή ενός Worker που χρειάζεται ο πελάτης — ο πραγματικός `Worker` την ικανοποιεί, και ο ψεύτικος των test. */
 export interface WorkerLike {
-  postMessage(message: unknown): void;
+  /** `transfer` = buffers που **μετακομίζουν** στον Worker (zero-copy) — μένουν άδεια σε αυτή την πλευρά. */
+  postMessage(message: unknown, transfer?: Transferable[]): void;
   addEventListener(type: 'message', listener: (event: MessageEvent) => void): void;
   addEventListener(type: 'error', listener: (event: ErrorEvent) => void): void;
   terminate(): void;

@@ -7,46 +7,14 @@
  * - αντιστοίχιση απαντήσεων με αριθμό, και όταν έρχονται **ανάποδα**
  * - σφάλμα χειριστή ⇒ `failed` με το μήνυμά του · κατάρρευση ⇒ ΟΛΑ τα εκκρεμή `failed`, οι επόμενες στο δίχτυ, καμία επαναγέννηση
  * - χωρίς Worker ⇒ δίχτυ · χωρίς δίχτυ ⇒ `worker-unavailable` · `dispose` ⇒ `disposed` + τερματισμός
+ * - `transferOf`: buffers μετακομίζουν (zero-copy) — όχι προς το δίχτυ
  * - `latestOnly`: 5 γρήγορα ⇒ εκτελούνται 1ο + 5ο, τα ενδιάμεσα `superseded` χωρίς να σταλούν
  */
 
 import { createWorkerRpcClient, latestOnly } from '../worker-rpc-client';
-import { serveWorkerRpc } from '../worker-rpc-host';
-import { absoluteWorkerUrl, type WorkerLike, type WorkerRpcResult, type WorkerRpcScope } from '../worker-rpc-protocol';
+import { absoluteWorkerUrl, type WorkerRpcResult } from '../worker-rpc-protocol';
 
-type Listener = (event: MessageEvent) => void;
-type ErrorListener = (event: ErrorEvent) => void;
-
-/** Ψεύτικος Worker: ό,τι στέλνει ο πελάτης φτάνει ασύγχρονα στον host, και αντίστροφα. */
-class FakeWorker implements WorkerLike {
-  readonly sent: unknown[] = [];
-  terminated = false;
-  private readonly toClient: Listener[] = [];
-  private readonly errors: ErrorListener[] = [];
-  private readonly toHost: Listener[] = [];
-
-  constructor(handle: (body: number) => Promise<number> | number) {
-    const scope: WorkerRpcScope = {
-      postMessage: (message) => { setTimeout(() => this.toClient.forEach((l) => l({ data: message } as MessageEvent)), 0); },
-      addEventListener: (_type, listener) => { this.toHost.push(listener); },
-    };
-    serveWorkerRpc(scope, handle);
-  }
-
-  postMessage(message: unknown): void {
-    this.sent.push(message);
-    setTimeout(() => this.toHost.forEach((l) => l({ data: message } as MessageEvent)), 0);
-  }
-
-  addEventListener(type: 'message' | 'error', listener: Listener | ErrorListener): void {
-    if (type === 'message') this.toClient.push(listener as Listener);
-    else this.errors.push(listener as ErrorListener);
-  }
-
-  terminate(): void { this.terminated = true; }
-
-  crash(message: string): void { this.errors.forEach((l) => l({ message } as ErrorEvent)); }
-}
+import { FakeWorker } from './fake-worker';
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const ok = (value: number): WorkerRpcResult<number> => ({ kind: 'ok', value });
@@ -54,12 +22,12 @@ const ok = (value: number): WorkerRpcResult<number> => ({ kind: 'ok', value });
 describe('createWorkerRpcClient', () => {
   it('ταυτόχρονες κλήσεις: κάθε απάντηση στον δικό της καλούντα — ακόμη κι όταν έρχονται ανάποδα', async () => {
     // Ο host είναι σειριακός· γι' αυτό οι καθυστερήσεις δείχνουν ότι η αντιστοίχιση γίνεται με αριθμό, όχι με σειρά.
-    const client = createWorkerRpcClient<number, number>({ spawn: () => new FakeWorker(async (n) => { await delay(10 - n); return n * 10; }) });
+    const client = createWorkerRpcClient<number, number>({ spawn: () => new FakeWorker<number, number>(async (n) => { await delay(10 - n); return n * 10; }) });
     await expect(Promise.all([client.call(1), client.call(2), client.call(3)])).resolves.toEqual([ok(10), ok(20), ok(30)]);
   });
 
   it('ο Worker γεννιέται στην ΠΡΩΤΗ κλήση και μόνο μία φορά', async () => {
-    const spawn = jest.fn(() => new FakeWorker((n) => n));
+    const spawn = jest.fn(() => new FakeWorker<number, number>((n) => n));
     const client = createWorkerRpcClient<number, number>({ spawn });
     expect(spawn).not.toHaveBeenCalled();
     await client.call(1);
@@ -68,13 +36,13 @@ describe('createWorkerRpcClient', () => {
   });
 
   it('σφάλμα του χειριστή ⇒ failed με το μήνυμά του (ποτέ κρέμασμα)', async () => {
-    const client = createWorkerRpcClient<number, number>({ spawn: () => new FakeWorker(() => { throw new Error('boom'); }) });
+    const client = createWorkerRpcClient<number, number>({ spawn: () => new FakeWorker<number, number>(() => { throw new Error('boom'); }) });
     await expect(client.call(1)).resolves.toEqual({ kind: 'failed', error: 'boom' });
   });
 
   it('κατάρρευση ⇒ ΟΛΑ τα εκκρεμή failed · οι επόμενες πάνε στο δίχτυ, χωρίς επαναγέννηση', async () => {
-    let worker: FakeWorker | null = null;
-    const spawn = jest.fn(() => (worker = new FakeWorker(async (n) => { await delay(50); return n; })));
+    let worker: FakeWorker<number, number> | null = null;
+    const spawn = jest.fn(() => (worker = new FakeWorker<number, number>(async (n) => { await delay(50); return n; })));
     const client = createWorkerRpcClient<number, number>({ spawn, fallback: async (n) => -n });
     const pending = [client.call(1), client.call(2)];
     worker?.crash('out of memory');
@@ -86,6 +54,23 @@ describe('createWorkerRpcClient', () => {
     expect(spawn).toHaveBeenCalledTimes(1);
   });
 
+  it('transferOf: το buffer ΜΕΤΑΚΟΜΙΖΕΙ (άδειο στον αποστολέα, ανέπαφο στον Worker) · το δίχτυ το παίρνει όπως είναι', async () => {
+    const sum = (body: Float64Array) => body.reduce((a, b) => a + b, 0);
+    const worker = new FakeWorker<Float64Array, number>(sum);
+    const client = createWorkerRpcClient<Float64Array, number>({ spawn: () => worker, transferOf: (body) => [body.buffer] });
+    const sent = new Float64Array([1, 2, 3]);
+    await expect(client.call(sent)).resolves.toEqual(ok(6));
+    expect(sent.byteLength).toBe(0);
+    expect(worker.transfers[0]).toHaveLength(1);
+
+    const kept = new Float64Array([4, 5]);
+    const viaFallback = createWorkerRpcClient<Float64Array, number>({
+      spawn: () => null, fallback: async (body) => sum(body), transferOf: (body) => [body.buffer],
+    });
+    await expect(viaFallback.call(kept)).resolves.toEqual(ok(9));
+    expect(kept.byteLength).toBe(16);
+  });
+
   it('χωρίς Worker ⇒ δίχτυ · χωρίς δίχτυ ⇒ worker-unavailable · δίχτυ που πετά ⇒ failed', async () => {
     await expect(createWorkerRpcClient<number, number>({ spawn: () => null, fallback: async (n) => n + 1 }).call(1)).resolves.toEqual(ok(2));
     await expect(createWorkerRpcClient<number, number>({ spawn: () => null }).call(1)).resolves.toEqual({ kind: 'failed', error: 'worker-unavailable' });
@@ -94,8 +79,8 @@ describe('createWorkerRpcClient', () => {
   });
 
   it('dispose ⇒ εκκρεμή disposed, τερματισμός · επόμενη κλήση γεννά ξανά (StrictMode)', async () => {
-    const workers: FakeWorker[] = [];
-    const client = createWorkerRpcClient<number, number>({ spawn: () => { const w = new FakeWorker(async (n) => { await delay(20); return n; }); workers.push(w); return w; } });
+    const workers: FakeWorker<number, number>[] = [];
+    const client = createWorkerRpcClient<number, number>({ spawn: () => { const w = new FakeWorker<number, number>(async (n) => { await delay(20); return n; }); workers.push(w); return w; } });
     const pending = client.call(1);
     client.dispose();
     await expect(pending).resolves.toEqual({ kind: 'failed', error: 'disposed' });
