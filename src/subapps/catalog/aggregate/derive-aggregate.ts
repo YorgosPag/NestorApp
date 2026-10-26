@@ -70,14 +70,15 @@ export function deriveAggregate(input: AggregateDeriveInput): ReadonlyMap<string
       result.set(member.id, { kind: 'product', derived });
       if (aggregate.rootId !== null) descendants[member.id] = descendantEntry(input, member, derived);
     } else {
-      result.set(member.id, { kind: 'productModel', derived: subModelDerived(schema, chain, ownOf(input, member)) });
+      const code = member.after?.code ?? '';
+      result.set(member.id, { kind: 'productModel', derived: subModelDerived(schema, chain, ownOf(input, member), code) });
       descendants[member.id] = descendantEntry(input, member, null);
     }
   }
   const root = aggregate.rootId === null ? undefined : aggregate.members.get(aggregate.rootId);
-  if (root?.after) {
+  if (root?.kind === 'productModel' && root.after) {
     const [rootLink] = chainOf(aggregate, root.id, 'after');
-    const derived = rootModelDerived(schema, rootLink, ownOf(input, root), descendants, input.findings);
+    const derived = rootModelDerived(schema, { ...rootLink, code: root.after.code }, ownOf(input, root), descendants, input.findings);
     result.set(root.id, { kind: 'productModel', derived });
   }
   return result;

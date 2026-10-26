@@ -113,3 +113,23 @@ export function productLabelOf(resolved: ResolvedValues, family: CatalogFamilyDe
   const text = value.text.trim();
   return text === '' ? null : text;
 }
+
+/**
+ * **Το αναγνωριστικό** ενός SKU (ADR-923 §5.10.4 Β2): η τιμή της **πρώτης** ιδιότητας `unique` της οικογένειας (σειρά
+ * δήλωσης) που έχει τιμή — ο κωδικός προμηθευτή, π.χ. «016-15-001». Το Akeneo έχει **μία** ιδιότητα-αναγνωριστικό·
+ * εδώ η μοναδικότητα είναι ιδιότητα ανά πεδίο (Δ3), οπότε «αναγνωριστικό» = η πρώτη δηλωμένη. Μόνο κείμενο/αριθμός
+ * (οι μόνοι τύποι που δέχονται `unique`, `UNIQUE_CAPABLE_ATTRIBUTE_TYPES`).
+ */
+export function productIdentifierOf(
+  resolved: ResolvedValues,
+  family: CatalogFamilyDefinition,
+  attributes: AttributeLookup,
+): string | null {
+  for (const binding of family.attributes) {
+    if (!attributes.get(binding.attributeId)?.unique) continue;
+    const value = readUnscopedSlot(resolved.values.get(binding.attributeId)?.slots);
+    const text = value?.type === 'text' ? value.text.trim() : value?.type === 'number' ? value.amount : '';
+    if (text) return text;
+  }
+  return null;
+}

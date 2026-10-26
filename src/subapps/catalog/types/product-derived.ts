@@ -47,6 +47,13 @@ export interface CatalogProductDerived extends CatalogHolderDerived {
   readonly rootModelId: string | null;
   /** Η ετικέτα από την ιδιότητα-ετικέτα της οικογένειας (Akeneo attribute_as_label) — λίστες και ιστορικό. */
   readonly label: string | null;
+  /** Η τιμή της πρώτης ιδιότητας `unique` της οικογένειας (κωδικός προμηθευτή) — λίστα, άλμα σε κωδικό (Β2). */
+  readonly identifier: string | null;
+  /**
+   * Κλειδί ταξινόμησης της λίστας (`catalogSortKey` της ετικέτας, αλλιώς του αναγνωριστικού): χωρίς τόνους, caseless,
+   * φυσική σειρά αριθμών. ⚠️ Το `orderBy` της Firestore **αποκλείει** έγγραφα χωρίς το πεδίο ⇒ πάντα γραμμένο (`''`).
+   */
+  readonly sortKey: string;
   /** Κλειδιά φίλτρων: `attr=option` · `attr:true|false` (Δ11). */
   readonly facetKeys: readonly string[];
   readonly completeness: CompletenessMatrix;
@@ -75,6 +82,10 @@ export type CatalogCompletenessSummary = Readonly<
 /** Τα παράγωγα ενός μοντέλου. Τα πεδία της αλυσίδας γεμίζουν **μόνο** στη ρίζα· στο υπο-μοντέλο είναι κενά. */
 export interface CatalogProductModelDerived extends CatalogHolderDerived {
   readonly rootModelId: string | null;
+  /** Η ετικέτα **του επιπέδου του** (ιδιότητα-ετικέτα, αν ανήκει σε αυτό ή σε πρόγονο) — αλλιώς `null` (η λίστα δείχνει κωδικό). */
+  readonly label: string | null;
+  /** `catalogSortKey` της ετικέτας, αλλιώς του κωδικού — η ίδια σειρά με τα απλά SKU στο ενιαίο πλέγμα. */
+  readonly sortKey: string;
   /**
    * Το ευρετήριο **όλων** των απογόνων (υπο-μοντέλα + SKU), ≤ 200 (`CATALOG_LIMITS.maxDescendantsPerModel`).
    * 🔑 Κάθε εγγραφή απογόνου **ξαναγράφει** τη ρίζα ⇒ όλες οι εγγραφές μιας οικογένειας παραλλαγών

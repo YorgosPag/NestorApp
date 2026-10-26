@@ -28,7 +28,8 @@ import type {
 } from '../types/product-derived';
 import { resolveInheritedValues, type InheritanceLink } from '../values/resolve-inherited';
 import { mapCatalogChannels } from '../vocabulary/channels';
-import { facetKeysOf, productLabelOf } from './holder-derived';
+import { facetKeysOf, productIdentifierOf, productLabelOf } from './holder-derived';
+import { catalogSortKey } from './sort-key';
 
 /** Ό,τι ξέρει ο γραφέας για το σχήμα τη στιγμή της εγγραφής — κοινό για όλη την αλυσίδα. */
 export interface CatalogSchemaSnapshot {
@@ -47,10 +48,14 @@ export function productChainDerived(
 ): CatalogProductDerived {
   const resolved = resolveInheritedValues(chain, schema.scheme);
   const completeness = computeCompleteness({ ...schema, resolved });
+  const label = productLabelOf(resolved, schema.family);
+  const identifier = productIdentifierOf(resolved, schema.family, schema.attributes);
   return {
     ...own,
     rootModelId: chain.length > 1 ? chain[0].id : null,
-    label: productLabelOf(resolved, schema.family),
+    label,
+    identifier,
+    sortKey: catalogSortKey(label ?? identifier),
     facetKeys: facetKeysOf(resolved),
     completeness,
     completenessHash: completenessInputsHash({ ...schema, chain }),
@@ -74,18 +79,26 @@ export function summarizeDescendants(
 }
 
 /** Τα παράγωγα της ρίζας: δικά της + ευρετήριο + περίληψη + ένωση facets + ευρήματα κανόνων. */
+/** Ετικέτα + κλειδί ταξινόμησης ενός μοντέλου πάνω στην αλυσίδα του (ρίζα ή ρίζα › υπο-μοντέλο). */
+function modelNaming(schema: CatalogSchemaSnapshot, resolved: ReturnType<typeof resolveInheritedValues>, code: string) {
+  const label = productLabelOf(resolved, schema.family);
+  return { label, sortKey: catalogSortKey(label ?? code) };
+}
+
 export function rootModelDerived(
   schema: CatalogSchemaSnapshot,
-  root: InheritanceLink,
+  root: InheritanceLink & { readonly code: string },
   own: CatalogHolderDerived,
   descendants: Readonly<Record<string, CatalogDescendantEntry>>,
   findings: readonly ConsistencyViolation[],
 ): CatalogProductModelDerived {
-  const facets = new Set(facetKeysOf(resolveInheritedValues([root], schema.scheme)));
+  const resolved = resolveInheritedValues([root], schema.scheme);
+  const facets = new Set(facetKeysOf(resolved));
   Object.values(descendants).forEach((entry) => entry.facetKeys.forEach((key) => facets.add(key)));
   return {
     ...own,
     rootModelId: null,
+    ...modelNaming(schema, resolved, root.code),
     descendants,
     summary: summarizeDescendants(descendants, schema.settings),
     facetKeys: [...facets].sort(),
@@ -101,7 +114,9 @@ export function subModelDerived(
   schema: CatalogSchemaSnapshot,
   chain: readonly InheritanceLink[],
   own: CatalogHolderDerived,
+  code: string,
 ): CatalogProductModelDerived {
-  const facetKeys = facetKeysOf(resolveInheritedValues(chain, schema.scheme));
-  return { ...own, rootModelId: chain[0].id, descendants: {}, summary: null, facetKeys, findings: [] };
+  const resolved = resolveInheritedValues(chain, schema.scheme);
+  const facetKeys = facetKeysOf(resolved);
+  return { ...own, rootModelId: chain[0].id, ...modelNaming(schema, resolved, code), descendants: {}, summary: null, facetKeys, findings: [] };
 }
