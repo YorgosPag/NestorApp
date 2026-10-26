@@ -239,6 +239,28 @@
         "conflicting": "Same position, different elevation",
         "coincident": "Repeated point"
       }
+    },
+    "stats": {
+      "area": "Surveyed area",
+      "areaValue": "{value} m²",
+      "elevation": "Elevation",
+      "elevationRange": "{min} – {max}",
+      "relief": "Elevation difference",
+      "meanSlope": "Average slope",
+      "maxSlope": "Steepest slope",
+      "downslope": "Falls towards",
+      "flat": "Practically flat — no main direction",
+      "contourInterval": "Contour interval",
+      "towards": {
+        "north": "the north",
+        "northeast": "the north-east",
+        "east": "the east",
+        "southeast": "the south-east",
+        "south": "the south",
+        "southwest": "the south-west",
+        "west": "the west",
+        "northwest": "the north-west"
+      }
     }
   }
 }
