@@ -94,7 +94,7 @@ export async function rebuildAllShowcaseMarks(
   let refused = 0;
 
   for (const source of sources) {
-    const outcome = await publishShowcaseMark(source.companyId, {
+    const outcome = await publishShowcaseMark(adminDb, source.companyId, {
       kind: source.kind,
       privateStoragePath: source.privateStoragePath,
     });

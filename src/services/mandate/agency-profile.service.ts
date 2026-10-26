@@ -357,7 +357,7 @@ export async function publishShowcase(
  * ο άνθρωπος ξαναπατά «Απόσυρση» — ορατή κατάσταση, με θεραπεία. Η αντίστροφη σειρά θα
  * άφηνε **ορφανά bytes** που καμία οθόνη δεν δείχνει και κανείς δεν ξέρει να σβήσει.
  *
- * ⚠️ Το `publishShowcaseMark(cid, null)` **υπήρχε ήδη** και έκανε ακριβώς αυτό: το
+ * ⚠️ Το `publishShowcaseMark(adminDb, cid, null)` **υπήρχε ήδη** και έκανε ακριβώς αυτό: το
  * κενό σύνολο αδειάζει το πρόθεμα. Δεν γράφτηκε καμία διαδρομή διαγραφής — είναι η
  * **ίδια** πράξη με άλλη τιμή.
  */
@@ -366,7 +366,7 @@ export async function withdrawAgencyProfile(
   companyId: string,
 ): Promise<AgencyProfileWriteResult> {
   try {
-    await publishShowcaseMark(companyId, null);
+    await publishShowcaseMark(adminDb, companyId, null);
     // 🔴 ADR-841 §7 Α21.16 — **ΚΑΙ ΤΑ ΚΑΝΑΛΙΑ, ΑΤΟΜΙΚΑ ΜΕ ΤΟ ΕΓΓΡΑΦΟ**. Δύο σκέτα `delete` θα
     //    άφηναν παράθυρο: μια αποθήκευση κάρτας που προλαβαίνει ανάμεσά τους ξαναγράφει τα
     //    κανάλια, και μένουν **τηλέφωνα ανθρώπου που ανακάλεσε τη συγκατάθεσή του**, χωρίς

@@ -52,15 +52,13 @@ const db = new FakeFirestore();
 jest.mock('@/lib/firebaseAdmin', () => ({
   getAdminStorage: () => ({ bucket: () => shelf }),
   getAdminBucket: () => privateBucket,
-  // 🔴 **Α21.12**: ο γραφέας καταγράφει πλέον **πού ήταν το πρωτότυπο**. Χωρίς αυτή τη
-  //    γραμμή η σουίτα θα έσκαγε σε `getAdminFirestore is not a function` — δηλαδή το
-  //    mock θα ήταν **στενότερο από τον κώδικα που δοκιμάζει**.
-  getAdminFirestore: () => db,
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { publishShowcaseMark, markSourceForCompany } = require('../showcase-mark-publication') as
   typeof import('../showcase-mark-publication');
+// 🔴 **Α21.12**: ο γραφέας καταγράφει πλέον **πού ήταν το πρωτότυπο** — στη βάση που του δίνει ο καλών.
+const adminDb = db as unknown as Parameters<typeof publishShowcaseMark>[0];
 
 // ---------------------------------------------------------------------------
 // Βοηθοί
@@ -141,7 +139,7 @@ describe('🏆 Κ2 — ΑΠΟ ΑΚΡΗ ΣΕ ΑΚΡΗ: η δήλωση γίνετ
   it('🔴 δημοσιεύει κάτω από `showcases/{companyId}/`, ΠΟΤΕ κάτω από `listings/`', async () => {
     const path = await putPrivateImage(COMPANY);
 
-    const outcome = await publishShowcaseMark(COMPANY, { kind: 'logo', privateStoragePath: path });
+    const outcome = await publishShowcaseMark(adminDb, COMPANY, { kind: 'logo', privateStoragePath: path });
 
     expect(outcome.kind).toBe('published');
     expect(shelfKeys().length).toBeGreaterThan(0);
@@ -156,7 +154,7 @@ describe('🏆 Κ2 — ΑΠΟ ΑΚΡΗ ΣΕ ΑΚΡΗ: η δήλωση γίνετ
   it('🔑 το σήμα φέρνει ΟΛΑ τα παράγωγα της δικής του κλίμακας — όχι της γκαλερί', async () => {
     const path = await putPrivateImage(COMPANY);
 
-    const outcome = await publishShowcaseMark(COMPANY, { kind: 'logo', privateStoragePath: path });
+    const outcome = await publishShowcaseMark(adminDb, COMPANY, { kind: 'logo', privateStoragePath: path });
     if (outcome.kind !== 'published') throw new Error('περίμενα δημοσίευση');
 
     expect(outcome.mark.image.sources.map((s) => s.width)).toEqual([
@@ -180,7 +178,7 @@ describe('🏆 Κ2 — ΑΠΟ ΑΚΡΗ ΣΕ ΑΚΡΗ: η δήλωση γίνετ
 
   it('τα αντικείμενα κουβαλούν τη ΔΙΚΗ ΤΟΥΣ συνταγή, όχι της γκαλερί', async () => {
     const path = await putPrivateImage(COMPANY);
-    await publishShowcaseMark(COMPANY, { kind: 'logo', privateStoragePath: path });
+    await publishShowcaseMark(adminDb, COMPANY, { kind: 'logo', privateStoragePath: path });
 
     // 🔴 Αν η συνταγή ήταν κοινή, τα παράγωγα του ενός είδους θα περνούσαν για έγκυρα
     //    του άλλου — και επειδή η γρήγορη διαδρομή δεν κατεβάζει bytes, ΑΟΡΑΤΑ.
@@ -204,7 +202,7 @@ describe('🏆 Κ2 — ΑΠΟ ΑΚΡΗ ΣΕ ΑΚΡΗ: η δήλωση γίνετ
     // ξαναπαραγόταν ποτέ** — η γρήγορη διαδρομή δεν αποκωδικοποιεί τίποτα.
     const path = await putPrivateImage(COMPANY);
 
-    await publishShowcaseMark(COMPANY, { kind: 'logo', privateStoragePath: path });
+    await publishShowcaseMark(adminDb, COMPANY, { kind: 'logo', privateStoragePath: path });
     const asLogo = [...shelf.objects.values()].map((o) => o.custom?.shelfRecipe);
 
     // 🔑 **ΓΙΑΤΙ ΜΗΔΕΝΙΖΕΤΑΙ ΤΟ ΡΑΦΙ — ΙΔΙΟΤΗΤΑ ΠΟΥ ΒΡΗΚΕ ΑΥΤΗ Η ΑΓΚΥΡΑ.** Το δείγμα
@@ -219,7 +217,7 @@ describe('🏆 Κ2 — ΑΠΟ ΑΚΡΗ ΣΕ ΑΚΡΗ: η δήλωση γίνετ
     // ⇒ Εδώ ρωτάμε *«τι γράφει μια ΚΑΘΑΡΗ δημοσίευση;»*, που είναι το ερώτημα της Α21.10.
     shelf.reset();
 
-    await publishShowcaseMark(COMPANY, { kind: 'portrait', privateStoragePath: path });
+    await publishShowcaseMark(adminDb, COMPANY, { kind: 'portrait', privateStoragePath: path });
     const asPortrait = [...shelf.objects.values()].map((o) => o.custom?.shelfRecipe);
 
     expect(new Set(asLogo).size).toBe(1);
@@ -229,13 +227,13 @@ describe('🏆 Κ2 — ΑΠΟ ΑΚΡΗ ΣΕ ΑΚΡΗ: η δήλωση γίνετ
 
   it('🔴 το `altKey` βγαίνει από το ΕΙΔΟΣ — λογότυπο ≠ πρόσωπο', async () => {
     const logoPath = await putPrivateImage(COMPANY, 'file_logo');
-    const logo = await publishShowcaseMark(COMPANY, {
+    const logo = await publishShowcaseMark(adminDb, COMPANY, {
       kind: 'logo',
       privateStoragePath: logoPath,
     });
     if (logo.kind !== 'published') throw new Error('περίμενα δημοσίευση');
 
-    const portrait = await publishShowcaseMark(COMPANY, {
+    const portrait = await publishShowcaseMark(adminDb, COMPANY, {
       kind: 'portrait',
       privateStoragePath: logoPath,
     });
@@ -252,10 +250,10 @@ describe('🏆 Κ2 — ΑΠΟ ΑΚΡΗ ΣΕ ΑΚΡΗ: η δήλωση γίνετ
 describe('🔑 Κ3 — Η ΑΠΟΣΥΡΣΗ ΕΡΧΕΤΑΙ ΔΩΡΕΑΝ: κενή δήλωση ⇒ το πρόθεμα ΑΔΕΙΑΖΕΙ', () => {
   it('`null` σβήνει ό,τι είχε δημοσιευτεί', async () => {
     const path = await putPrivateImage(COMPANY);
-    await publishShowcaseMark(COMPANY, { kind: 'logo', privateStoragePath: path });
+    await publishShowcaseMark(adminDb, COMPANY, { kind: 'logo', privateStoragePath: path });
     expect(shelfKeys().length).toBeGreaterThan(0);
 
-    const outcome = await publishShowcaseMark(COMPANY, null);
+    const outcome = await publishShowcaseMark(adminDb, COMPANY, null);
 
     expect(outcome).toEqual({ kind: 'cleared' });
     expect(shelfKeys()).toEqual([]);
@@ -264,10 +262,10 @@ describe('🔑 Κ3 — Η ΑΠΟΣΥΡΣΗ ΕΡΧΕΤΑΙ ΔΩΡΕΑΝ: κενή
   it('🔴 και ΔΕΝ αγγίζει το ράφι ΑΛΛΗΣ εταιρείας', async () => {
     const mine = await putPrivateImage(COMPANY);
     const theirs = await putPrivateImage(OTHER_COMPANY, 'file_theirs');
-    await publishShowcaseMark(COMPANY, { kind: 'logo', privateStoragePath: mine });
-    await publishShowcaseMark(OTHER_COMPANY, { kind: 'logo', privateStoragePath: theirs });
+    await publishShowcaseMark(adminDb, COMPANY, { kind: 'logo', privateStoragePath: mine });
+    await publishShowcaseMark(adminDb, OTHER_COMPANY, { kind: 'logo', privateStoragePath: theirs });
 
-    await publishShowcaseMark(COMPANY, null);
+    await publishShowcaseMark(adminDb, COMPANY, null);
 
     expect(shelfKeys().every((key) => key.startsWith(`showcases/${OTHER_COMPANY}/`))).toBe(true);
     expect(shelfKeys().length).toBeGreaterThan(0);
@@ -278,7 +276,7 @@ describe('🔴 Κ4 — Η ΑΡΝΗΣΗ ΕΙΝΑΙ ΟΝΟΜΑΣΤΙΚΗ, ΚΑΙ �
   it('ξένο μονοπάτι ⇒ ονομασμένη άρνηση, ΚΑΝΕΝΑ byte δεν διαβάζεται', async () => {
     await putPrivateImage(OTHER_COMPANY, 'file_theirs');
 
-    const outcome = await publishShowcaseMark(COMPANY, {
+    const outcome = await publishShowcaseMark(adminDb, COMPANY, {
       kind: 'logo',
       privateStoragePath: privatePath(OTHER_COMPANY, 'file_theirs'),
     });
@@ -291,10 +289,10 @@ describe('🔴 Κ4 — Η ΑΡΝΗΣΗ ΕΙΝΑΙ ΟΝΟΜΑΣΤΙΚΗ, ΚΑΙ �
     // Αν η άρνηση περνούσε από τη «συμφιλίωση με κενό σύνολο», ένα αίτημα με ξένο
     // μονοπάτι θα **έσβηνε το δικό μου** σήμα. Η άρνηση σταματά ΠΡΙΝ τον κάδο.
     const mine = await putPrivateImage(COMPANY);
-    await publishShowcaseMark(COMPANY, { kind: 'logo', privateStoragePath: mine });
+    await publishShowcaseMark(adminDb, COMPANY, { kind: 'logo', privateStoragePath: mine });
     const before = shelfKeys();
 
-    await publishShowcaseMark(COMPANY, {
+    await publishShowcaseMark(adminDb, COMPANY, {
       kind: 'logo',
       privateStoragePath: privatePath(OTHER_COMPANY),
     });
@@ -306,7 +304,7 @@ describe('🔴 Κ4 — Η ΑΡΝΗΣΗ ΕΙΝΑΙ ΟΝΟΜΑΣΤΙΚΗ, ΚΑΙ �
     const path = privatePath(COMPANY, 'file_broken');
     privateBucket.put(path, Buffer.from('δεν είναι εικόνα'));
 
-    const outcome = await publishShowcaseMark(COMPANY, { kind: 'logo', privateStoragePath: path });
+    const outcome = await publishShowcaseMark(adminDb, COMPANY, { kind: 'logo', privateStoragePath: path });
 
     expect(outcome).toEqual({ kind: 'refused', reason: 'showcase-mark-unpublishable' });
   });
@@ -316,10 +314,10 @@ describe('🔑 Κ5 — ΙΔΕΜΠΟΤΕΝΤΙΚΟΤΗΤΑ: ίδια δήλωση
   it('η δεύτερη κλήση δεν προσθέτει αντικείμενα', async () => {
     const path = await putPrivateImage(COMPANY);
 
-    await publishShowcaseMark(COMPANY, { kind: 'logo', privateStoragePath: path });
+    await publishShowcaseMark(adminDb, COMPANY, { kind: 'logo', privateStoragePath: path });
     const first = shelfKeys().sort();
 
-    await publishShowcaseMark(COMPANY, { kind: 'logo', privateStoragePath: path });
+    await publishShowcaseMark(adminDb, COMPANY, { kind: 'logo', privateStoragePath: path });
 
     expect(shelfKeys().sort()).toEqual(first);
   });
@@ -338,7 +336,7 @@ describe('🏆 Κ7 — ΤΟ ΣΥΣΤΗΜΑ ΘΥΜΑΤΑΙ ΠΟΥ ΗΤΑΝ ΤΟ �
     //    μαζικής αναπαραγωγής.
     const path = await putPrivateImage(COMPANY);
 
-    const outcome = await publishShowcaseMark(COMPANY, { kind: 'logo', privateStoragePath: path });
+    const outcome = await publishShowcaseMark(adminDb, COMPANY, { kind: 'logo', privateStoragePath: path });
     expect(outcome.kind).toBe('published');
 
     const saved = await db.collection(SOURCES).doc(COMPANY).get();
@@ -355,7 +353,7 @@ describe('🏆 Κ7 — ΤΟ ΣΥΣΤΗΜΑ ΘΥΜΑΤΑΙ ΠΟΥ ΗΤΑΝ ΤΟ �
     // προσπαθούσε να το δημοσιεύσει ξανά, για πάντα.
     const foreign = await putPrivateImage(OTHER_COMPANY, 'file_xeno');
 
-    const outcome = await publishShowcaseMark(COMPANY, {
+    const outcome = await publishShowcaseMark(adminDb, COMPANY, {
       kind: 'logo',
       privateStoragePath: foreign,
     });
@@ -370,10 +368,10 @@ describe('🏆 Κ7 — ΤΟ ΣΥΣΤΗΜΑ ΘΥΜΑΤΑΙ ΠΟΥ ΗΤΑΝ ΤΟ �
     //    διαφωνήσει μαζί της — και η διαφωνία θα ξαναέφερνε στον κόσμο εικόνα που ο
     //    άνθρωπος αφαίρεσε.
     const path = await putPrivateImage(COMPANY);
-    await publishShowcaseMark(COMPANY, { kind: 'logo', privateStoragePath: path });
+    await publishShowcaseMark(adminDb, COMPANY, { kind: 'logo', privateStoragePath: path });
     expect((await db.collection(SOURCES).doc(COMPANY).get()).exists).toBe(true);
 
-    await publishShowcaseMark(COMPANY, null);
+    await publishShowcaseMark(adminDb, COMPANY, null);
 
     expect((await db.collection(SOURCES).doc(COMPANY).get()).exists).toBe(false);
   });
@@ -382,8 +380,8 @@ describe('🏆 Κ7 — ΤΟ ΣΥΣΤΗΜΑ ΘΥΜΑΤΑΙ ΠΟΥ ΗΤΑΝ ΤΟ �
     const first = await putPrivateImage(COMPANY, 'file_proto');
     const second = await putPrivateImage(COMPANY, 'file_deutero');
 
-    await publishShowcaseMark(COMPANY, { kind: 'logo', privateStoragePath: first });
-    await publishShowcaseMark(COMPANY, { kind: 'portrait', privateStoragePath: second });
+    await publishShowcaseMark(adminDb, COMPANY, { kind: 'logo', privateStoragePath: first });
+    await publishShowcaseMark(adminDb, COMPANY, { kind: 'portrait', privateStoragePath: second });
 
     const all = db.all<{ privateStoragePath: string; kind: string }>(SOURCES);
     expect(all).toHaveLength(1);

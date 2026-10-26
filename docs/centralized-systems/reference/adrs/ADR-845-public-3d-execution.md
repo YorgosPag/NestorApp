@@ -2226,6 +2226,33 @@ hostname με καθάρισμα = χωριστό ADR.
 
 ## §10. Changelog
 
+### 2026-10-26 — **Καθολικό δίχτυ: κανένα unit test δεν μιλά σε πραγματικό Google Cloud** *(Opus 5.5)*
+
+Κλείνει το ⚠️ της 2026-10-25 (N.7.2 #4). Το double έκλεισε **μία** διαδρομή· η επόμενη σουίτα που θα το ξεχνούσε θα
+συνδεόταν ξανά στ' αλήθεια, με τα ADC του ανθρώπου.
+
+- **Δίχτυ** (`jest.setup.js`): `GOOGLE_APPLICATION_CREDENTIALS` προς αρχείο που **δεν υπάρχει**
+  (`NO-REAL-GOOGLE-CLOUD-IN-UNIT-TESTS.json`) ⇒ το `initializeApp` αποτυγχάνει σε ~0,1 s, και το όνομα του αρχείου φαίνεται
+  στο warning. Μετρημένο: χωρίς δίχτυ Storage `exists()` **9,8 s** + Firestore απάντηση από το **πραγματικό** API.
+- **Απορρίφθηκαν, μετρημένα**: φράγμα στο `net.Socket.prototype.connect` (σφάλμα με όνομα, αλλά Storage 4,9 s / Firestore
+  44 s, επειδή gaxios και gRPC ξαναδοκιμάζουν κάθε σφάλμα δικτύου)· ψεύτικο κλειδί υπηρεσίας (το SDK διαβάζει το PEM ήδη στο
+  `initializeApp` ⇒ ίδιο αποτέλεσμα με αρχείο στον δίσκο)· `STORAGE_EMULATOR_HOST` (~15 s, βλ. 2026-10-25).
+- **Ψευδώς θετικά: 0.** Οι σουίτες που φτάνουν στατικά στο `firebaseAdmin` χωρίς να το κάνουν mock είναι 255 (από 513). Με το
+  δίχτυ, 6 βγήκαν κόκκινες, όμως 3 από αυτές είναι κόκκινες και **χωρίς** το δίχτυ, με τα **ίδια** tests (A/B στο ίδιο
+  τρέξιμο). Οι άλλες 3 (`organization-capability` · `public-agency-identity` · `agency-profile`) ήταν σε **timeout 10 s
+  χωρίς** το δίχτυ: ίδια ασθένεια με το Θ0. Το δίχτυ τις **αποκάλυψε**, δεν τις χάλασε.
+- **Δύο ρίζες, όχι μία**: (α) τα κεφάλια του ραφιού μέσω του `publishShowcaseMark` ⇒ το double· (β) το `publishShowcaseMark`
+  διάβαζε το **καθολικό** `getAdminFirestore()` για τη σημείωση προέλευσης, ενώ και οι **4** καλούντες κρατούν `adminDb` ⇒ η
+  απόσυρση έγραφε σε **άλλη** βάση από το προφίλ που έσβηνε. Τώρα `publishShowcaseMark(adminDb, companyId, declaration)`.
+- **Double σε 7 ακόμη σουίτες** (οι 3 παραπάνω + `brokered-listing` · `notify-outcome-sealed` · `mandate-decision-notice` ·
+  `mandate-actions` · `mandate-consent`)· spy ελέγχου στο `organization-capability-reader`.
+- **Επαλήθευση**: 309 σουίτες / 4.506 tests με το δίχτυ ενεργό. Κόκκινες μένουν **μόνο** οι 5 που ήταν ήδη κόκκινες
+  (`cron-schedule` · `workspace-authority-gate` · `check-entity-audit-coverage` · `landing-tabpanel` ·
+  `agency-showcase-listings`: `ListingDeliveryBadge.tsx:33`), ίδιες A=B. `jscpd:diff` καθαρό.
+- **Υπόλοιπο, αθώο**: ~9 σουίτες (`network-messaging` · ρυθμίσεις ειδοποιήσεων · `listMemberWorkspaces` · `account-identities`)
+  φτάνουν ακόμη στο `getAdminFirestore()`. Με το δίχτυ αποτυγχάνουν **αμέσως**, και ο κώδικας το ανέχεται εκ σχεδιασμού
+  (`isFirebaseAdminAvailable` / try-catch). Δεν υπάρχει πια δίκτυο ούτε αναμονή.
+
 ### 2026-10-25 — **Τα tests χτυπούσαν πραγματικό GCS μέσω των κεφαλιών του ραφιού — ΕΝΑ test double** *(Opus 5.5)*
 
 **Η αιτία του «πρώτο test που αποθηκεύει εντολή κάνει ~4 s»** (`set-mandate-guard` Θ0 · `mandate-expiry` Λ1, timeout υπό

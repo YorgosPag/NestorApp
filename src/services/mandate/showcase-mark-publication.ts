@@ -30,8 +30,8 @@
  * ⚠️ **SERVER-ONLY**: το ράφι σέρνει `sharp` + Admin SDK.
  */
 
+import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { createModuleLogger } from '@/lib/telemetry';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import {
   forgetShowcaseMarkSource,
   recordShowcaseMarkSource,
@@ -115,8 +115,13 @@ export function markSourceForCompany(
  *
  * ⚠️ **Δεν πετά ποτέ** — ίδιο συμβόλαιο με τον γραφέα του ραφιού: αποτυχία εδώ **δεν**
  * ακυρώνει τη δημοσίευση της βιτρίνας. Επιστρέφεται **ονομασμένη**.
+ *
+ * 🔑 **Η βάση έρχεται από τον καλούντα** (2026-10-26): όλοι οι καλούντες κρατούν ήδη
+ * `adminDb`. Το καθολικό `getAdminFirestore()` εδώ έκανε την απόσυρση να γράφει σε
+ * **άλλη** βάση από το προφίλ που μόλις έσβηνε — στα tests, στο πραγματικό Firestore.
  */
 export async function publishShowcaseMark(
+  adminDb: AdminFirestore,
   companyId: string,
   declaration: ShowcaseMarkDeclaration | null,
 ): Promise<ShowcaseMarkOutcome> {
@@ -125,7 +130,7 @@ export async function publishShowcaseMark(
     // 🔑 **Η απόσυρση παίρνει τη σημείωση μαζί της** (Α21.12): μια προέλευση που
     //    επιβιώνει θα έκανε την επόμενη μαζική αναπαραγωγή να **αναστήσει** σήμα που ο
     //    άνθρωπος αφαίρεσε. Ίδια αρχή με το ράφι — «απόσυρση = το πρόθεμα αδειάζει».
-    await forgetShowcaseMarkSource(getAdminFirestore(), companyId);
+    await forgetShowcaseMarkSource(adminDb, companyId);
     return { kind: 'cleared' };
   }
 
@@ -156,7 +161,7 @@ export async function publishShowcaseMark(
   //    δημοσιεύτηκε θα έστελνε τη μελλοντική σάρωση να ξαναπαράγει κάτι που **δεν
   //    υπάρχει** — σιωπηλά, γιατί η αποτυχία θα φαινόταν ίδια με «δεν άλλαξε τίποτα».
   // ⚠️ **Δεν πετά**: αποτυχία εδώ δεν ακυρώνει σήμα που ήδη δημοσιεύτηκε σωστά.
-  await recordShowcaseMarkSource(getAdminFirestore(), companyId, declaration);
+  await recordShowcaseMarkSource(adminDb, companyId, declaration);
 
   return {
     kind: 'published',

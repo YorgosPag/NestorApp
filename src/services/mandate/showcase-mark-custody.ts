@@ -116,7 +116,7 @@ export async function declareShowcaseMark(
     // ── 3 · Τα bytes ─────────────────────────────────────────────────────
     // 🔑 Ο **υπάρχων** φρουρός κατοχής + ο **υπάρχων** καθαριστής EXIF/GPS. Καμία νέα
     //    μηχανή: αυτό το βήμα είναι **μία κλήση** σε ό,τι έχτισε η Φάση 1.
-    const outcome = await publishShowcaseMark(companyId, declaration);
+    const outcome = await publishShowcaseMark(adminDb, companyId, declaration);
 
     if (outcome.kind === 'refused') {
       // ⚠️ **Δύο αρνήσεις, δύο θεραπείες** (N.12): *«διάλεξε άλλο αρχείο»* απέναντι σε
@@ -177,7 +177,7 @@ export async function retractShowcaseMark(
 
     // 🔑 `null` ⇒ κενό σύνολο ⇒ το πρόθεμα `showcases/{companyId}/` **αδειάζει**. Καμία
     //    διαδρομή διαγραφής δεν γράφτηκε ποτέ — είναι η **ίδια** πράξη με άλλη τιμή.
-    await publishShowcaseMark(companyId, null);
+    await publishShowcaseMark(adminDb, companyId, null);
     await writeMark(adminDb, companyId, null);
     return { kind: 'retracted' };
   } catch (error) {

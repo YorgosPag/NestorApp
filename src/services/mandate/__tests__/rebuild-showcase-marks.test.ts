@@ -32,7 +32,6 @@ const db = new FakeFirestore();
 jest.mock('@/lib/firebaseAdmin', () => ({
   getAdminStorage: () => ({ bucket: () => shelf }),
   getAdminBucket: () => privateBucket,
-  getAdminFirestore: () => db,
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -65,7 +64,7 @@ async function putPrivateImage(companyId: string, fileId = 'file_mark'): Promise
 /** Δημοσιεύει κανονικά — δηλαδή αφήνει **και** τη σημείωση, όπως στην παραγωγή. */
 async function publishFor(companyId: string): Promise<void> {
   const path = await putPrivateImage(companyId);
-  const outcome = await publishShowcaseMark(companyId, { kind: 'logo', privateStoragePath: path });
+  const outcome = await publishShowcaseMark(asAdmin(db), companyId, { kind: 'logo', privateStoragePath: path });
   if (outcome.kind !== 'published') throw new Error(`περίμενα δημοσίευση για ${companyId}`);
 }
 

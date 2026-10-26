@@ -224,6 +224,28 @@ process.env.FIREBASE_STORAGE_BUCKET = 'test-project.appspot.com';
 process.env.FIREBASE_MESSAGING_SENDER_ID = '123456789';
 process.env.FIREBASE_APP_ID = '1:123456789:web:abcdef123456';
 
+// ---------------------------------------------------------------------------
+// Κανένα unit test δεν μιλά σε πραγματικό Google Cloud (ADR-845 §10).
+// ---------------------------------------------------------------------------
+// 🔴 ΜΕΤΡΗΜΕΝΟ 2026-10-26: σε μηχάνημα με Application Default Credentials (`gcloud auth
+// application-default login`) το Admin SDK συνδεόταν **στ' αλήθεια** στο Google Cloud με τα
+// διαπιστευτήρια του ανθρώπου — Storage `exists()` **9,8 s**, Firestore απάντηση
+// `PERMISSION_DENIED` από το πραγματικό API. Το `public-shelf-double` έκλεισε τη μία διαδρομή·
+// αυτό είναι το δίχτυ για την επόμενη.
+//
+// 🔑 Το ADC δείχνει σε αρχείο που **δεν υπάρχει** ⇒ το `initializeApp` αποτυγχάνει σε **~0,1 s**
+// και το όνομα του αρχείου εμφανίζεται στο warning (`[Firebase Admin] Default credentials failed`).
+// Χωρίς αυτό, η αναζήτηση ADC καταλήγει στο αρχείο του `gcloud` του ανθρώπου.
+//
+// ⚠️ ΑΠΟΡΡΙΦΘΗΚΑΝ (μετρημένα): `STORAGE_EMULATOR_HOST` σε κλειστή θύρα (~15 s backoff)·
+// φράγμα στο `net.Socket.prototype.connect` (σφάλμα με όνομα, αλλά Storage 4,9 s / Firestore
+// 44 s — gaxios και gRPC ξαναδοκιμάζουν κάθε σφάλμα δικτύου)· ψεύτικο κλειδί υπηρεσίας (το
+// SDK διαβάζει το PEM ήδη στο `initializeApp` ⇒ ίδιο αποτέλεσμα, με αρχείο στον δίσκο).
+process.env.GOOGLE_APPLICATION_CREDENTIALS = require('path').join(
+  __dirname,
+  'NO-REAL-GOOGLE-CLOUD-IN-UNIT-TESTS.json',
+);
+
 // Clean up after each test
 afterEach(() => {
   jest.clearAllMocks();
