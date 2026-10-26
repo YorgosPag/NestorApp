@@ -42,7 +42,16 @@ export function optimisticWire<D extends object>(stored: D, existing: CatalogWir
   };
 }
 
-export interface SaveDefinitionRequest<K extends CatalogDefinitionKind> {
+/**
+ * Η ταυτότητα μιας **νέας** εγγραφής. Είδη με κωδικό ⇒ ντετερμινιστικό id από τον κωδικό (ο διακομιστής το παράγει).
+ * Είδη **χωρίς** κωδικό (SKU, Δ3: τυχαίο id) ⇒ το id γεννιέται **στον πελάτη** και ο διακομιστής το **επαληθεύει**
+ * (ADR-866 επίπεδο Β) — έτσι η αισιόδοξη και η αποθηκευμένη εγγραφή έχουν το **ίδιο** id (η επιλογή δεν αναβοσβήνει).
+ */
+export type NewIdentity<K extends CatalogDefinitionKind> = DefinitionOf<K> extends { readonly code: string }
+  ? { readonly id?: undefined }
+  : { readonly id: string };
+
+interface SaveDefinitionBase<K extends CatalogDefinitionKind> {
   readonly kind: K;
   readonly existing: RecordOf<K> | null;
   readonly definition: DefinitionOf<K>;
@@ -56,17 +65,25 @@ export interface SaveDefinitionRequest<K extends CatalogDefinitionKind> {
   readonly onSettled?: (outcome: CatalogOutcome<RecordOf<K>>) => void;
 }
 
+export type SaveDefinitionRequest<K extends CatalogDefinitionKind> = SaveDefinitionBase<K> & NewIdentity<K>;
+
+function creationKey<K extends CatalogDefinitionKind>(request: SaveDefinitionRequest<K>): string {
+  if (typeof request.id === 'string') return request.id;
+  const { definition } = request;
+  return 'code' in definition && typeof definition.code === 'string' ? newEntityKey(definition.code) : newEntityKey('');
+}
+
 /** Δημιουργία (χωρίς υπάρχουσα) ή αντικατάσταση με CAS. */
 export function saveDefinition<K extends CatalogDefinitionKind>(ops: CatalogOptimistic<RecordOf<K>>, request: SaveDefinitionRequest<K>): void {
   const { kind, existing, definition } = request;
   const operation: CatalogOperation<RecordOf<K>> = {
-    key: existing?.id ?? newEntityKey(definition.code),
+    key: existing?.id ?? creationKey(request),
     optimistic: request.optimistic,
     baseRevision: existing ? request.baseRevision ?? existing.revision : null,
     send: (revision) =>
       existing && revision !== null
         ? replaceCatalogDefinition(kind, existing.id, revision, definition)
-        : createCatalogDefinition(kind, definition),
+        : createCatalogDefinition(kind, definition, request.id),
     onSettled: request.onSettled,
   };
   ops.submit(operation);

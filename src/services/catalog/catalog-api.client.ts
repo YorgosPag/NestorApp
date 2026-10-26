@@ -21,6 +21,15 @@ import type { CatalogCategoryDefinition, CatalogCategoryMappings } from '@/subap
 import type { CatalogFamilyDefinition, StoredCatalogFamilyDefinition } from '@/subapps/catalog/types/family';
 import type { WorkspaceMeasurementFamilyDefinition } from '@/subapps/catalog/types/measurement-family';
 import type { CatalogAssetInput } from '@/subapps/catalog/schema/zod/asset.schema';
+import type { CatalogSettingsDefinition } from '@/subapps/catalog/types/catalog-settings';
+import type { CatalogProductDefinition, CatalogProductModelDefinition } from '@/subapps/catalog/types/product';
+import type { StoredCatalogProductDefinition, StoredCatalogProductModelDefinition } from '@/subapps/catalog/types/product-derived';
+import type {
+  RecomputeRequest,
+  RecomputeResult,
+  VariantBatch,
+  VariantBatchResultOf,
+} from '@/subapps/catalog/types/product-requests';
 import type { LocalizedText } from '@/i18n/localized-text';
 
 // ── Οι εγγραφές όπως τις δίνει ο γραφέας (σύρμα: χρονοσφραγίδες ISO) ─────────
@@ -31,6 +40,12 @@ export type MeasurementFamilyRecord = CatalogWire<WorkspaceMeasurementFamilyDefi
 export type CategoryRecord = CatalogWire<CatalogCategoryDefinition>;
 export type FamilyRecord = CatalogWire<StoredCatalogFamilyDefinition>;
 export type AssetRecord = CatalogWire<CatalogAssetDefinition>;
+/** Μοντέλο / υπο-μοντέλο (ADR-923 §5.10.2) — τα `derived` τα γράφει **μόνο** ο διακομιστής. */
+export type ProductModelRecord = CatalogWire<StoredCatalogProductModelDefinition>;
+/** SKU ή απλό προϊόν (`modelId: null`). */
+export type ProductRecord = CatalogWire<StoredCatalogProductDefinition>;
+export type CatalogSettingsRecord = CatalogWire<CatalogSettingsDefinition>;
+export type VariantBatchResult = VariantBatchResultOf<ProductModelRecord, ProductRecord>;
 
 /** Τα είδη που γράφονται ως **ολόκληρος ορισμός** (δημιουργία · αντικατάσταση · διαγραφή). */
 export interface CatalogDefinitionKinds {
@@ -40,6 +55,9 @@ export interface CatalogDefinitionKinds {
   readonly family: { readonly definition: CatalogFamilyDefinition; readonly record: FamilyRecord };
   /** Μέσο (ADR-923 §5.10 Δ9): ο ορισμός **χωρίς** `fileId` — το αρχείο το δένει **μόνο** η {@link attachCatalogAssetFile}. */
   readonly asset: { readonly definition: CatalogAssetInput; readonly record: AssetRecord };
+  /** Μοντέλο: ο ορισμός **χωρίς** `derived` — τα παράγωγα τα υπολογίζει ο γραφέας του συνόλου. */
+  readonly productModel: { readonly definition: CatalogProductModelDefinition; readonly record: ProductModelRecord };
+  readonly product: { readonly definition: CatalogProductDefinition; readonly record: ProductRecord };
 }
 
 export type CatalogDefinitionKind = keyof CatalogDefinitionKinds;
@@ -55,12 +73,15 @@ const ROUTES: Readonly<Record<CatalogEntityKind, { readonly collection: string; 
   measurementFamily: CATALOG_API.measurementFamilies,
   family: CATALOG_API.families,
   asset: CATALOG_API.assets,
+  productModel: CATALOG_API.productModels,
+  product: CATALOG_API.products,
   category: CATALOG_API.categories,
 };
 
 /** `POST` — νέα οντότητα. Ο κωδικός γίνεται ταυτότητα (ντετερμινιστικό id στον διακομιστή). */
-export function createCatalogDefinition<K extends CatalogDefinitionKind>(kind: K, definition: DefinitionOf<K>): Promise<RecordOf<K>> {
-  return apiClient.post<RecordOf<K>>(ROUTES[kind].collection, { definition });
+/** `id`: **μόνο** για είδη με τυχαίο id (SKU) — προ-γεννημένο στον πελάτη, ο διακομιστής το επαληθεύει (ADR-866 Β). */
+export function createCatalogDefinition<K extends CatalogDefinitionKind>(kind: K, definition: DefinitionOf<K>, id?: string): Promise<RecordOf<K>> {
+  return apiClient.post<RecordOf<K>>(ROUTES[kind].collection, id === undefined ? { definition } : { definition, id });
 }
 
 /** `PUT` — αντικατάσταση ορισμού, με την αναθεώρηση που **διάβασε** ο πελάτης (CAS). */
@@ -133,4 +154,21 @@ export function moveCatalogCategory(
  */
 export function attachCatalogAssetFile(id: string, expectedRevision: number, fileId: string): Promise<AssetRecord> {
   return apiClient.post<AssetRecord>(CATALOG_API.assets.file(id), { expectedRevision, fileId });
+}
+
+// ── Προϊόντα: η δέσμη παραλλαγών · ρυθμίσεις · επανυπολογισμός (ADR-923 §5.10.2) ───────────
+
+/** **Μία** συναλλαγή: όλες οι παραλλαγές της δέσμης ή καμία (CAS ανά παραλλαγή). */
+export function saveCatalogVariants(modelId: string, batch: VariantBatch): Promise<VariantBatchResult> {
+  return apiClient.put<VariantBatchResult>(CATALOG_API.productModels.variants(modelId), batch);
+}
+
+/** Ρυθμίσεις (singleton): το **πρώτο** αποθηκευμένο έγγραφο ζητά `expectedRevision: 0`. */
+export function saveCatalogSettings(expectedRevision: number, definition: CatalogSettingsDefinition): Promise<CatalogSettingsRecord> {
+  return apiClient.put<CatalogSettingsRecord>(CATALOG_API.settings, { expectedRevision, definition });
+}
+
+/** **Μία** σελίδα της εργασίας επανυπολογισμού — ο καλών συνεχίζει ως `nextCursor === null`. */
+export function recomputeCatalogDerived(request: RecomputeRequest): Promise<RecomputeResult> {
+  return apiClient.post<RecomputeResult>(CATALOG_API.recomputeDerived, request);
 }

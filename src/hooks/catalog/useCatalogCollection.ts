@@ -26,6 +26,7 @@ import type {
   AssetRecord,
   AttributeGroupRecord,
   AttributeRecord,
+  CatalogSettingsRecord,
   CategoryRecord,
   FamilyRecord,
   MeasurementFamilyRecord,
@@ -42,6 +43,8 @@ export interface CatalogCollectionItems {
   readonly CATALOG_FAMILIES: FamilyRecord;
   /** Βιβλιοθήκη μέσων (ADR-923 §5.10.4) — μόνο ισότητες ⇒ κανένας σύνθετος δείκτης. */
   readonly CATALOG_ASSETS: AssetRecord;
+  /** Ρυθμίσεις (singleton, ADR-923 §5.10.4 Β5) — 0 ή 1 έγγραφο· το διαβάζει το `useCatalogSettings`. */
+  readonly CATALOG_SETTINGS: CatalogSettingsRecord;
 }
 
 export type CatalogCollectionKey = keyof CatalogCollectionItems;
@@ -62,6 +65,7 @@ const CACHES: CatalogCaches = {
   CATALOG_CATEGORIES: createStaleCache('catalog:categories'),
   CATALOG_FAMILIES: createStaleCache('catalog:families'),
   CATALOG_ASSETS: createStaleCache('catalog:assets'),
+  CATALOG_SETTINGS: createStaleCache('catalog:settings'),
 };
 
 function initialLoad<T>(cache: StaleCache<readonly T[]>, companyId: string | null): CatalogLoad<T> {
