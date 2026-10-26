@@ -57,6 +57,10 @@
     "families": {
       "title": "Product families",
       "lead": "The schema of each kind of product: attributes, variants, the catalogue table and the consistency rules."
+    },
+    "assets": {
+      "title": "Media library",
+      "lead": "Photos, drawings, datasheets, certificates and BIM objects of the catalogue, with their rights. Products point to the asset — a new file version does not touch them."
     }
   },
   "attributeTypes": {
@@ -224,7 +228,17 @@
     "attributeRemovalLockedInUse": "The attribute has values in this family’s products — it cannot be removed.",
     "attributeFlagLockedInUse": "The attribute has values — this setting cannot change.",
     "optionLockedInUse": "Option “{code}” is used by products — it cannot be removed.",
-    "localeLockedInUse": "There are values in language “{locale}” — it cannot be removed."
+    "localeLockedInUse": "There are values in language “{locale}” — it cannot be removed.",
+    "fileNotFound": "The file was not found or is in the trash.",
+    "fileForeignOwner": "The file was not uploaded for this asset.",
+    "fileNotReady": "The file upload has not finished.",
+    "fileKindMismatch": "This kind of asset does not accept this file.",
+    "fileTypeConflict": "The file extension and its type do not match — check the file.",
+    "fileTooLarge": "The file exceeds the {maxMb} MB limit for this kind of asset.",
+    "renditionsNotReady": "The web and print renditions are not ready yet.",
+    "renditionsFailed": "Renditions could not be created from this image — the file cannot be read or is too large.",
+    "rightsCreatorRequired": "Enter the creator of the asset (a person or a company).",
+    "rightsTermDateRequired": "Set the licence end date — or choose “no expiry”."
   },
   "measurement": {
     "family": {
@@ -529,6 +543,134 @@
       "title": "Duplicate “{name}”",
       "lead": "A new family with the same schema: attributes, variants, table and rules. It needs a new label and code.",
       "create": "Create copy"
+    }
+  },
+  "assets": {
+    "emptyTitle": "Select an asset",
+    "emptyDescription": "An asset is a catalogue file with a code, a role and rights. Drop files into “New assets” to start.",
+    "roles": {
+      "photo": "Photo",
+      "drawing": "Technical drawing",
+      "datasheet": "Datasheet",
+      "manual": "Manual",
+      "certificate": "Certificate",
+      "epd": "Environmental declaration (EPD)",
+      "bim": "BIM object",
+      "video": "Video"
+    },
+    "colour": {
+      "models": {
+        "rgb": "RGB",
+        "cmyk": "CMYK",
+        "grey": "Greyscale",
+        "lab": "Lab",
+        "other": "Other colour space"
+      },
+      "unnamedProfile": "Unnamed ICC profile",
+      "noProfile": "No embedded profile",
+      "density": "{ppi} ppi",
+      "bits": "{bits}-bit",
+      "alpha": "With transparency"
+    },
+    "renditions": {
+      "title": "Renditions",
+      "open": "Open",
+      "dimensions": "{width} × {height} px",
+      "colourPreserved": "The colour space of the source was kept",
+      "uses": {
+        "web": "Screen (web)",
+        "print": "Print"
+      },
+      "standing": {
+        "ready": "Ready",
+        "failed": "Failed",
+        "stale": "Pending"
+      },
+      "failures": {
+        "undecodable": "The image cannot be read (unsupported format or damaged file).",
+        "tooLarge": "The image is too large to render."
+      },
+      "refresh": "Refresh renditions",
+      "assumed": {
+        "rgb": "The source had no profile — colours were interpreted as sRGB",
+        "cmykWeb": "The source (CMYK) had no profile — the screen conversion used a generic CMYK profile",
+        "cmykPrint": "The source (CMYK) had no profile — the CMYK values were kept as they are; the publication sets the printing condition"
+      },
+      "colourPreservedWithProfile": "The colour space and profile of the source were kept"
+    },
+    "licence": {
+      "legend": "Rights",
+      "creator": "Creator",
+      "copyrightNotice": "Copyright notice",
+      "copyrightNoticeHint": "Empty ⇒ “© <year> <creator>”",
+      "purpose": "Permitted use",
+      "term": "Licence term",
+      "termUntil": "Licence end",
+      "termUntilPlaceholder": "Pick a date",
+      "purposes": {
+        "catalogPublication": "Publication in the catalogue",
+        "resellerReuse": "Use by resellers too",
+        "unrestricted": "Unrestricted"
+      },
+      "termKinds": {
+        "perpetual": "No expiry",
+        "date": "Until a date"
+      },
+      "standing": {
+        "active": "Licence active",
+        "expired": "Licence expired",
+        "mandateEnded": "Mandate ended"
+      }
+    },
+    "intake": {
+      "open": "New assets",
+      "title": "New assets",
+      "lead": "Each file becomes one asset. The code is suggested from the file name and the role from its type — change them before uploading. Files are uploaded as they are, without compression.",
+      "chooseFiles": "Choose or drag files here",
+      "dropHint": "Images (including print CMYK/TIFF), PDF, IFC/RFA, video",
+      "start": "Upload ({count})",
+      "retry": "Retry",
+      "remove": "Remove from the list",
+      "clearDone": "Clear completed",
+      "columns": {
+        "file": "File",
+        "code": "Code",
+        "label": "Label",
+        "role": "Role",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "stages": {
+        "create": "Creating asset",
+        "upload": "Uploading",
+        "attach": "Linking and renditions"
+      },
+      "status": {
+        "draft": "Ready to upload",
+        "queued": "Queued",
+        "done": "Done",
+        "failedAt": "Failed: {stage}"
+      }
+    },
+    "list": {
+      "search": "Search assets",
+      "allRoles": "All roles",
+      "none": "No assets.",
+      "noFile": "No file",
+      "renditionsFailed": "Renditions failed",
+      "licenceExpired": "Licence expired"
+    },
+    "editor": {
+      "label": "Label",
+      "description": "Description",
+      "role": "Role",
+      "kind": "File kind",
+      "file": "File",
+      "fileMissing": "No file linked yet.",
+      "replaceFile": "New file version",
+      "attachFile": "Upload file",
+      "versions": "Versions ({count})",
+      "current": "Current"
     }
   }
 }

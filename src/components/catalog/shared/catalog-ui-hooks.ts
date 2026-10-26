@@ -53,3 +53,9 @@ export function useCatalogCanManage(): boolean {
   const gate = useCapability('catalog:schema:manage');
   return !gate.pending && isGranted(gate.verdict);
 }
+
+/** Μπορεί αυτός ο άνθρωπος να **αλλάζει δεδομένα** (προϊόντα · μέσα); — Akeneo «edit products» ≠ «manage structure». */
+export function useCatalogCanManageProducts(): boolean {
+  const gate = useCapability('catalog:products:manage');
+  return !gate.pending && isGranted(gate.verdict);
+}

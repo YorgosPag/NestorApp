@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * @fileoverview **Η ζωντανή ανάγνωση μιας συλλογής σχήματος καταλόγου** — ένας μηχανισμός για τις πέντε (ADR-923 §5.9).
+ * @fileoverview **Η ζωντανή ανάγνωση μιας συλλογής του καταλόγου** — ένας μηχανισμός για όλες (ADR-923 §5.9 · §5.10.4).
  * @related services/firestore/firestore-query.service.ts (ADR-355 SSoT · ADR-361 equality guard) · lib/stale-cache.ts
  *   (ADR-300) · hooks/procurement/useFrameworkAgreements.ts (το ιδίωμα)
  * @module hooks/catalog/useCatalogCollection
@@ -23,6 +23,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { createStaleCache, type StaleCache } from '@/lib/stale-cache';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import type {
+  AssetRecord,
   AttributeGroupRecord,
   AttributeRecord,
   CategoryRecord,
@@ -32,13 +33,15 @@ import type {
 
 const logger = createModuleLogger('useCatalogCollection');
 
-/** Οι πέντε συλλογές του σχήματος και ο τύπος εγγραφής της καθεμιάς. */
+/** Οι συλλογές που διαβάζει η οθόνη ολόκληρες (σχήμα + βιβλιοθήκη μέσων) και ο τύπος εγγραφής της καθεμιάς. */
 export interface CatalogCollectionItems {
   readonly CATALOG_ATTRIBUTES: AttributeRecord;
   readonly CATALOG_ATTRIBUTE_GROUPS: AttributeGroupRecord;
   readonly CATALOG_MEASUREMENT_FAMILIES: MeasurementFamilyRecord;
   readonly CATALOG_CATEGORIES: CategoryRecord;
   readonly CATALOG_FAMILIES: FamilyRecord;
+  /** Βιβλιοθήκη μέσων (ADR-923 §5.10.4) — μόνο ισότητες ⇒ κανένας σύνθετος δείκτης. */
+  readonly CATALOG_ASSETS: AssetRecord;
 }
 
 export type CatalogCollectionKey = keyof CatalogCollectionItems;
@@ -58,6 +61,7 @@ const CACHES: CatalogCaches = {
   CATALOG_MEASUREMENT_FAMILIES: createStaleCache('catalog:measurement-families'),
   CATALOG_CATEGORIES: createStaleCache('catalog:categories'),
   CATALOG_FAMILIES: createStaleCache('catalog:families'),
+  CATALOG_ASSETS: createStaleCache('catalog:assets'),
 };
 
 function initialLoad<T>(cache: StaleCache<readonly T[]>, companyId: string | null): CatalogLoad<T> {

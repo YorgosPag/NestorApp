@@ -46,6 +46,8 @@ interface CatalogListItemProps {
   readonly primary: string;
   readonly secondary?: string;
   readonly icon?: LucideIcon;
+  /** Οπτικό στοιχείο στη θέση του εικονιδίου (π.χ. μικρογραφία μέσου) — κερδίζει το `icon`. */
+  readonly leading?: React.ReactNode;
   readonly badges?: readonly CatalogListBadge[];
   readonly selected: boolean;
   readonly pending?: boolean;
@@ -54,7 +56,7 @@ interface CatalogListItemProps {
   readonly handle?: React.ReactNode;
 }
 
-export function CatalogListItem({ primary, secondary, icon: Icon, badges = [], selected, pending = false, onSelect, handle }: CatalogListItemProps) {
+export function CatalogListItem({ primary, secondary, icon: Icon, leading, badges = [], selected, pending = false, onSelect, handle }: CatalogListItemProps) {
   const { t } = useCatalogText();
   return (
     <span className={cn('flex items-center gap-1 rounded-md', selected ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50')}>
@@ -66,7 +68,7 @@ export function CatalogListItem({ primary, secondary, icon: Icon, badges = [], s
         onClick={onSelect}
         className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        {Icon ? <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden /> : null}
+        {leading ?? (Icon ? <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden /> : null)}
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="truncate text-sm font-medium">{primary}</span>
           {secondary ? <span className="truncate font-mono text-xs text-muted-foreground">{secondary}</span> : null}
