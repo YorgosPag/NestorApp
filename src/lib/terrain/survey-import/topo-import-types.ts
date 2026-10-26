@@ -55,7 +55,7 @@ export interface RawTable {
 
 /** A named column order (e.g. PNEZD) the surveyor can pick instead of mapping by hand. */
 export interface OrderPreset {
-  /** Stable id — also the i18n key suffix under `topography.import.preset.*`. */
+  /** Stable id — also the i18n key suffix under `terrain-survey:columns.preset.*` (ADR-920 Β4.9). */
   readonly id: string;
   /** The literal field order, e.g. `['pointId','y','x','z','code']` for PNEZD. */
   readonly mapping: ColumnMapping;

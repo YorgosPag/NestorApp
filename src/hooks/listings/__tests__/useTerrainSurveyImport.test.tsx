@@ -18,7 +18,8 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { IDEMPOTENCY_KEY_HEADER } from '@/lib/api/idempotency/idempotency-contract';
 import type { TerrainPublishTarget } from '@/lib/terrain/publication/terrain-publish-target';
 
-import { useTerrainSurveyImport, type SurveyFileInput, type TerrainSurveyDraft } from '../useTerrainSurveyImport';
+import { useTerrainSurveyImport, type TerrainSurveyDraft } from '../useTerrainSurveyImport';
+import { SURVEY_CSV, surveyFileOf } from './terrain-survey-file-fixture';
 
 jest.mock('@/lib/api/enterprise-api-client', () => ({ apiClient: { post: jest.fn() } }));
 
@@ -26,25 +27,8 @@ const post = apiClient.post as jest.Mock;
 const TARGET: TerrainPublishTarget = { kind: 'owner-property', ownerPropertyId: 'ownp_1' };
 const DRAFT: TerrainSurveyDraft = { surveyorName: 'Τοπογράφος Α.Ε.', surveyedOn: '2026-09-01', rightsAffirmed: true };
 
-const CSV = [
-  'ΑΑ;Χ;Ψ;Υψόμετρο',
-  '1;450000,000;4200000,000;100,000',
-  '2;450030,000;4200000,000;101,000',
-  '3;450030,000;4200020,000;102,500',
-  '4;450000,000;4200020,000;101,500',
-  '5;450015,000;4200010,000;101,200',
-].join('\n');
-
-function fileOf(name: string, text: string, gate?: Promise<void>): SurveyFileInput {
-  const bytes = new TextEncoder().encode(text);
-  return {
-    name,
-    arrayBuffer: async () => {
-      await gate;
-      return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
-    },
-  };
-}
+const CSV = SURVEY_CSV;
+const fileOf = surveyFileOf;
 
 const keyOf = (call: unknown[]): string => (call[2] as { headers: Record<string, string> }).headers[IDEMPOTENCY_KEY_HEADER];
 

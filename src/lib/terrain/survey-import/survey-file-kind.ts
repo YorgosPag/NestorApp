@@ -21,6 +21,13 @@ const BINARY_DXF_SENTINEL = 'AutoCAD Binary DXF';
 
 const DELIMITED_EXTENSIONS: ReadonlySet<string> = new Set(['csv', 'txt', 'tsv', 'xyz', 'asc', 'prn', 'pnezd', 'penz', 'pts']);
 
+/**
+ * The file dialog's filter (`accept`) — DERIVED from the same lists the sniffer uses, so a dialog never hides a file the
+ * readers open. `.xls` and every DXF are offered on purpose: a legacy or binary file gets a NAMED refusal that says what
+ * to do, which helps more than a dialog that silently greys it out (ADR-920 Β4.9).
+ */
+export const SURVEY_FILE_ACCEPT = [...DELIMITED_EXTENSIONS, 'xlsx', 'xlsm', 'xls', 'dxf'].map((extension) => `.${extension}`).join(',');
+
 function startsWith(head: Uint8Array, magic: readonly number[]): boolean {
   return magic.every((byte, i) => head[i] === byte);
 }

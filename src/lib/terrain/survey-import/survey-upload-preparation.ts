@@ -6,7 +6,7 @@
  * The owner's preview must never promise what the server will refuse. So this runs, in the browser, the very checks
  * the door runs — the size of the encoded body (`TERRAIN_SOURCE_TOO_LARGE`), the shape and limits
  * (`TERRAIN_SOURCE_MALFORMED`), the surface (`TERRAIN_INSUFFICIENT_SURFACE` / `_TOO_DENSE`) — and speaks the same codes,
- * so one i18n table (`property-market:terrainPublication.refusals`) explains both.
+ * so one i18n table (`terrain-survey:publish.refusals`) explains both.
  *
  * It ALSO reports what the big tools resolve silently. The TIN keeps the FIRST of two points that share a position
  * (Revit keeps the highest); the owner is told how many coincide, and how many coincide with a DIFFERENT elevation —

@@ -110,7 +110,7 @@ function outcomeOf(data: unknown): TerrainPublishOutcome {
  * **Στείλε το προετοιμασμένο τοπογραφικό στην αγγελία.**
  *
  * ⚠️ Δεν πετά για λόγο που ο άνθρωπος μπορεί να διορθώσει — επιστρέφει **ονομασμένη** άρνηση από τον κλειστό
- * κατάλογο της πόρτας, ώστε το i18n να έχει μήνυμα για κάθε μία (`property-market:terrainPublication.refusals`).
+ * κατάλογο της πόρτας, ώστε το i18n να έχει μήνυμα για κάθε μία (`terrain-survey:publish.refusals`).
  */
 export async function publishListingTerrain(
   target: TerrainPublishTarget,
