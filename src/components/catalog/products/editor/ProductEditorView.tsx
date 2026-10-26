@@ -136,7 +136,7 @@ function HolderEditor(props: HolderEditorProps) {
         <aside><CompletenessPanel matrix={judgement.completeness} attributeById={props.ctx.library.attributeById} onJump={jump}
           variantSummary={'code' in record ? record.derived.summary : null} /></aside>
       </section>
-      <EditorFooter editor={editor} issues={issues} canManage={props.canManage} onSave={save} />
+      <EditorFooter editor={editor} issues={issues} authority="products" onSave={save} />
     </section>
   );
   return (

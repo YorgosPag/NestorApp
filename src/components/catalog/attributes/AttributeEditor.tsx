@@ -166,7 +166,7 @@ export function AttributeEditor(props: AttributeEditorProps) {
       <EditorFooter
         editor={editor}
         issues={clientIssues}
-        canManage={canManage}
+        authority="schema"
         onSave={save}
         onDelete={remove}
         record={record}

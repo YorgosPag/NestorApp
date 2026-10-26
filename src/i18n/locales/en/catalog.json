@@ -10,6 +10,7 @@
     "loadFailed": "The catalogue did not load. Check your connection and refresh the page.",
     "saving": "Saving…",
     "readOnly": "Read only — changing the schema requires catalogue management permission.",
+    "readOnlyProducts": "Read only — changing products and media requires product editing permission.",
     "save": "Save",
     "discard": "Discard changes",
     "delete": "Delete",

@@ -17,8 +17,11 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { LocalizedText } from '@/i18n/localized-text';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
-import { useCatalogText } from './catalog-ui-hooks';
+import { useCatalogAccess, useCatalogText, type CatalogAuthority } from './catalog-ui-hooks';
 import type { DefinitionDraft, DraftStatus } from './use-definition-draft';
+
+/** Η αιτιολογία λέει τη **δική** της δικαιοδοσία — όχι «σχήμα» σε όποιον επεξεργάζεται προϊόν. */
+const READ_ONLY_KEYS: Readonly<Record<CatalogAuthority, string>> = { schema: 'common.readOnly', products: 'common.readOnlyProducts' };
 
 const STATUS_KEYS: Readonly<Record<DraftStatus, string>> = {
   clean: 'editor.status.clean',
@@ -32,7 +35,8 @@ interface EditorFooterProps {
   readonly editor: Pick<DefinitionDraft<unknown>, 'status' | 'discard'>;
   /** Τα ευρήματα **του πελάτη** (κλειδώνουν την αποθήκευση). */
   readonly issues: readonly CatalogIssue[];
-  readonly canManage: boolean;
+  /** Ποια δικαιοδοσία κρίνει αυτόν τον επεξεργαστή — το υποσέλιδο τη **ρωτά** μόνο του (εκκρεμεί · ναι · όχι + αιτιολογία). */
+  readonly authority: CatalogAuthority;
   readonly onSave: () => void;
   /** Μόνο για υπάρχουσα οντότητα. */
   readonly onDelete?: () => void;
@@ -49,13 +53,16 @@ export interface EditorFooterAction {
   readonly disabled?: boolean;
 }
 
-export function EditorFooter({ editor, issues, canManage, onSave, onDelete, record, extraAction }: EditorFooterProps) {
+export function EditorFooter({ editor, issues, authority, onSave, onDelete, record, extraAction }: EditorFooterProps) {
   const { t, text } = useCatalogText();
   const { status, discard: onDiscard } = editor;
   const issueCount = issues.length;
   const deleteName = record ? text(record.labels, record.code) : '';
   const [confirmDelete, setConfirmDelete] = useState(false);
-  if (!canManage) return <p className="m-0 border-t px-4 py-3 text-sm text-muted-foreground">{t('common.readOnly')}</p>;
+  const access = useCatalogAccess(authority);
+  // Η ταυτότητα δεν έφτασε ⇒ ούτε κουμπί ούτε «μόνο ανάγνωση»: η άρνηση δεν έχει κριθεί ακόμη.
+  if (access === 'pending') return null;
+  if (access === 'denied') return <p className="m-0 border-t px-4 py-3 text-sm text-muted-foreground">{t(READ_ONLY_KEYS[authority])}</p>;
   const canSave = status === 'dirty' && issueCount === 0;
   return (
     <footer className="flex flex-wrap items-center gap-2 border-t bg-card px-4 py-3">

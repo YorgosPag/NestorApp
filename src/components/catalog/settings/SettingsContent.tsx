@@ -95,7 +95,7 @@ export function SettingsContent() {
         {recompute.needed || recompute.state.kind !== 'idle' ? (
           <RecomputePanel recompute={recompute} familyId={null} prompt={t('settings.recomputePrompt')} canRun={canRecompute} />
         ) : null}
-        <EditorFooter editor={editor} issues={issues} canManage={canManage} onSave={save} />
+        <EditorFooter editor={editor} issues={issues} authority="schema" onSave={save} />
       </section>
       {unsaved.dialog}
     </CatalogPageFrame>

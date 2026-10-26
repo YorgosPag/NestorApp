@@ -84,7 +84,7 @@ export function MeasurementFamilyEditor(props: MeasurementFamilyEditorProps) {
       <EditorFooter
         editor={editor}
         issues={clientIssues}
-        canManage={canManage}
+        authority="schema"
         onSave={save}
         onDelete={remove}
         record={record}

@@ -102,7 +102,7 @@ export function CategoryEditor(props: CategoryEditorProps) {
       <EditorFooter
         editor={editor}
         issues={clientIssues}
-        canManage={canManage}
+        authority="schema"
         onSave={save}
         onDelete={remove}
         record={record}

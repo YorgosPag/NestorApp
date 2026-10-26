@@ -113,7 +113,7 @@ export function AssetEditor(props: AssetEditorProps) {
         <AssetFilePanel asset={record} current={current} versions={versions} canManage={canManage} fileRow={fileRow}
           onReplace={onReplaceFile} onRetry={onRetryFile} onRefreshRenditions={onRefreshRenditions} />
       </section>
-      <EditorFooter editor={editor} issues={clientIssues} canManage={canManage} onSave={save} onDelete={remove} record={record} />
+      <EditorFooter editor={editor} issues={clientIssues} authority="products" onSave={save} onDelete={remove} record={record} />
     </section>
   );
 }

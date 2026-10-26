@@ -110,7 +110,7 @@ export function FamilyEditor(props: FamilyEditorProps) {
       <EditorFooter
         editor={editor}
         issues={clientIssues}
-        canManage={canManage}
+        authority="schema"
         onSave={save}
         onDelete={remove}
         record={record}

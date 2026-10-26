@@ -49,14 +49,27 @@ export function useCatalogFailureNotice(): (failure: CatalogFailure) => void {
   );
 }
 
-/** Μπορεί αυτός ο άνθρωπος να **αλλάζει** το σχήμα; (`pending` ⇒ όχι ακόμη — ποτέ κουμπί πριν την ταυτότητα.) */
-export function useCatalogCanManage(): boolean {
-  const gate = useCapability('catalog:schema:manage');
-  return !gate.pending && isGranted(gate.verdict);
+/** Οι δύο δικαιοδοσίες του καταλόγου — Akeneo «manage structure» ≠ «edit products» (προϊόντα · μέσα). */
+export type CatalogAuthority = 'schema' | 'products';
+
+const AUTHORITY_CAPABILITY = { schema: 'catalog:schema:manage', products: 'catalog:products:manage' } as const satisfies Record<CatalogAuthority, string>;
+
+/**
+ * Η ετυμηγορία **τριών** καταστάσεων: `pending` (η ταυτότητα δεν έφτασε — ούτε κουμπί ούτε «μόνο ανάγνωση») ·
+ * `granted` · `denied`. Ζωντανά (ADR-923 §5.10.5): το boolean έχανε το `pending` ⇒ «μόνο ανάγνωση» σε όποιον **έχει** δικαίωμα.
+ */
+export function useCatalogAccess(authority: CatalogAuthority): 'pending' | 'granted' | 'denied' {
+  const gate = useCapability(AUTHORITY_CAPABILITY[authority]);
+  if (gate.pending) return 'pending';
+  return isGranted(gate.verdict) ? 'granted' : 'denied';
 }
 
-/** Μπορεί αυτός ο άνθρωπος να **αλλάζει δεδομένα** (προϊόντα · μέσα); — Akeneo «edit products» ≠ «manage structure». */
+/** Μπορεί αυτός ο άνθρωπος να **αλλάζει** το σχήμα; (`pending` ⇒ όχι ακόμη — ποτέ κουμπί πριν την ταυτότητα.) */
+export function useCatalogCanManage(): boolean {
+  return useCatalogAccess('schema') === 'granted';
+}
+
+/** Μπορεί αυτός ο άνθρωπος να **αλλάζει δεδομένα** (προϊόντα · μέσα); */
 export function useCatalogCanManageProducts(): boolean {
-  const gate = useCapability('catalog:products:manage');
-  return !gate.pending && isGranted(gate.verdict);
+  return useCatalogAccess('products') === 'granted';
 }
