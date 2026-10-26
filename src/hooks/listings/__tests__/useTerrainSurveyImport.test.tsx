@@ -7,6 +7,9 @@
  *   Δ1  δήλωση που η πόρτα θα αρνιόταν ⇒ ίδιος κωδικός, ΚΑΜΙΑ αίτηση
  *   Δ2  δημοσίευση ⇒ `published` · ξανά με τα ίδια ⇒ το ΙΔΙΟ κλειδί · άλλη μονάδα ⇒ η επιτυχία δεν μένει στην οθόνη
  *   Δ3  χωρίς πόρτα (`null`) ⇒ δεν δημοσιεύεται τίποτα
+ *   Π1  (5γ) η ετυμηγορία έρχεται από τον Worker (εδώ: το ΙΔΙΟ δίχτυ, το jsdom δεν έχει Worker) · άλλη μονάδα ⇒ ΑΜΕΣΩΣ καμία
+ *       ετυμηγορία και καμία δημοσίευση, ο παλιός χάρτης μένει ορατός ως «ενημερώνεται» · μετά η νέα απάντηση
+ *   Π2  (5γ) πλάτος ⇒ κλάση ⇒ μόνο ξαναζωγράφισμα· η ετυμηγορία δεν χάνεται ποτέ στο μεταξύ
  */
 
 import { act, renderHook, waitFor } from '@testing-library/react';
@@ -53,6 +56,7 @@ beforeEach(() => {
 async function loaded(target: TerrainPublishTarget | null = TARGET) {
   const hook = renderHook(() => useTerrainSurveyImport(target));
   await act(() => hook.result.current.loadFile(fileOf('survey.csv', CSV)));
+  await waitFor(() => expect(hook.result.current.preview.updating).toBe(false));
   return hook;
 }
 
@@ -79,6 +83,7 @@ describe('Ε — από το αρχείο στην ετυμηγορία', () => 
 
     expect(result.current.fileName).toBe('survey.csv');
     expect(result.current.points.points).toHaveLength(5);
+    await waitFor(() => expect(result.current.preview.updating).toBe(false));
   });
 
   it('Ε3 χωρίς στήλη X δεν υπάρχει τίποτα να κριθεί', async () => {
@@ -111,6 +116,7 @@ describe('Δ — η δημοσίευση', () => {
 
     act(() => result.current.setUnit('mm'));
     expect(result.current.publication).toStrictEqual({ kind: 'idle' });
+    await waitFor(() => expect(result.current.preview.updating).toBe(false));
   });
 
   it('Δ3 χωρίς πόρτα δεν δημοσιεύεται τίποτα', async () => {
@@ -118,5 +124,31 @@ describe('Δ — η δημοσίευση', () => {
     expect(result.current.canPublish).toBe(false);
     await act(() => result.current.publish(DRAFT));
     expect(post).not.toHaveBeenCalled();
+  });
+});
+
+describe('Π — η προεπισκόπηση εκτός κύριου νήματος (5γ)', () => {
+  it('Π1 άλλη μονάδα ⇒ καμία ετυμηγορία ως τη νέα απάντηση, ο παλιός χάρτης μένει ορατός', async () => {
+    const { result } = await loaded();
+    const shown = result.current.preview.model;
+    expect(shown).not.toBeNull();
+
+    act(() => result.current.setUnit('mm'));
+    expect(result.current.preparation).toBeNull();
+    expect(result.current.canPublish).toBe(false);
+    expect(result.current.preview).toMatchObject({ model: shown, updating: true, failed: false });
+
+    await waitFor(() => expect(result.current.preview.updating).toBe(false));
+    expect(result.current.preparation).not.toBeNull();
+  });
+
+  it('Π2 πλάτος ⇒ μόνο ξαναζωγράφισμα, η ετυμηγορία μένει', async () => {
+    const { result } = await loaded();
+    const verdict = result.current.preparation;
+    act(() => result.current.setPreviewWidth(500));
+    expect(result.current.preparation).toBe(verdict);
+    expect(result.current.preview.updating).toBe(true);
+    await waitFor(() => expect(result.current.preview.updating).toBe(false));
+    expect(result.current.preparation).toStrictEqual(verdict); // ίση, όχι ίδια: από τον Worker έρχεται κλώνος
   });
 });

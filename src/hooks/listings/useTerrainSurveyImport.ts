@@ -10,7 +10,8 @@
  * ```
  * αρχείο ─→ readSurveyFile ─→ πίνακας (+ πρόταση στηλών) │ DXF │ άρνηση με όνομα
  *        ─→ αντιστοίχιση + μονάδα (δηλωμένη · προτεινόμενη · του ανθρώπου) ─→ σημεία mm
- *        ─→ prepareSurveyUpload ─→ ΙΔΙΑ ετυμηγορία με την πόρτα (προεπισκόπηση = απάντηση server)
+ *        ─→ prepareSurveyUpload ─→ ΙΔΙΑ ετυμηγορία με την πόρτα (προεπισκόπηση = απάντηση server) + ο χάρτης,
+ *           στον Web Worker (`useSurveyPreview`, 5γ) — η οθόνη δεν παγώνει ποτέ, ο χάρτης μένει ορατός όσο ενημερώνεται
  *        ─→ δήλωση Δ2 από τον ΙΔΙΟ κριτή με την πόρτα ─→ publishListingTerrain (ένα κλειδί ανά προετοιμασία)
  * ```
  *
@@ -21,6 +22,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { terrainMapWidthClassOf } from '@/lib/terrain/publication/terrain-map-model';
 import { judgeTerrainSurveyDeclaration } from '@/lib/terrain/publication/terrain-survey-declaration';
 import type { TerrainPublishTarget } from '@/lib/terrain/publication/terrain-publish-target';
 import { readSurveyFile, type SurveyFileRead } from '@/lib/terrain/survey-import/survey-file-read';
@@ -30,7 +32,7 @@ import {
   type SurveyPoints,
   type SurveyUnitDecision,
 } from '@/lib/terrain/survey-import/survey-points';
-import { prepareSurveyUpload, type SurveyUploadPreparation } from '@/lib/terrain/survey-import/survey-upload-preparation';
+import type { SurveyUploadPreparation } from '@/lib/terrain/survey-import/survey-upload-preparation';
 import type { ColumnMapping, ColumnRole, TopoUnit } from '@/lib/terrain/survey-import/topo-import-types';
 import { assignRole, padMapping } from '@/lib/terrain/survey-import/topo-mapping-edit';
 import { getOrderPresetMapping } from '@/lib/terrain/survey-import/topo-order-presets';
@@ -41,6 +43,8 @@ import {
   type TerrainListingOutcome,
   type TerrainPublishRefusal,
 } from '@/services/listings/publish-listing-terrain.client';
+
+import { useSurveyPreview, type SurveyPreviewState } from './useSurveyPreview';
 
 /** Ό,τι γράφει ο άνθρωπος στη δήλωση Δ2 — ακατέργαστο· το κρίνει ο κριτής της πόρτας, όχι η φόρμα. */
 export interface TerrainSurveyDraft {
@@ -66,8 +70,10 @@ export interface TerrainSurveyImportApi {
   readonly unit: TopoUnit | null;
   readonly unitDecision: SurveyUnitDecision | null;
   readonly points: SurveyPoints;
-  /** Η ετυμηγορία της πόρτας πάνω στα τρέχοντα σημεία· `null` όσο δεν υπάρχουν σημεία. */
+  /** Η ετυμηγορία της πόρτας πάνω στα τρέχοντα σημεία· `null` όσο δεν υπάρχουν σημεία ή όσο υπολογίζεται. */
   readonly preparation: SurveyUploadPreparation | null;
+  /** Ο χάρτης της προεπισκόπησης και η κατάστασή του (`useSurveyPreview`). */
+  readonly preview: Omit<SurveyPreviewState, 'preparation'>;
   readonly publication: TerrainSurveyPublication;
   /** Υπάρχει πόρτα, πέρασαν τα σημεία την ετυμηγορία, και δεν φεύγει ήδη αίτημα. */
   readonly canPublish: boolean;
@@ -75,6 +81,8 @@ export interface TerrainSurveyImportApi {
   readonly setRole: (columnIndex: number, role: ColumnRole) => void;
   readonly applyPreset: (presetId: string) => void;
   readonly setUnit: (unit: TopoUnit) => void;
+  /** Το μετρημένο πλάτος του χάρτη (css px) — ο χάρτης ξαναζωγραφίζεται μόνο όταν αλλάζει κλάση πλάτους. */
+  readonly setPreviewWidth: (widthPx: number) => void;
   readonly publish: (draft: TerrainSurveyDraft) => Promise<void>;
   readonly reset: () => void;
 }
@@ -167,9 +175,22 @@ function useSurveyPublication(target: TerrainPublishTarget | null, preparation: 
   return { view, publish, clear };
 }
 
+/** Οι αλλαγές αντιστοίχισης του ανθρώπου — μία στήλη ή ολόκληρη σειρά από προκαθορισμένη. */
+function useMappingEdits(setMapping: (update: (previous: ColumnMapping) => ColumnMapping) => void) {
+  const setRole = useCallback((columnIndex: number, role: ColumnRole) => {
+    setMapping((previous) => assignRole(previous, columnIndex, role));
+  }, [setMapping]);
+  const applyPreset = useCallback((presetId: string) => {
+    const preset = getOrderPresetMapping(presetId);
+    if (preset !== null) setMapping((previous) => padMapping(preset, previous.length));
+  }, [setMapping]);
+  return { setRole, applyPreset };
+}
+
 export function useTerrainSurveyImport(target: TerrainPublishTarget | null): TerrainSurveyImportApi {
   const [mapping, setMapping] = useState<ColumnMapping>([]);
   const [unit, setUnit] = useState<TopoUnit | null>(null);
+  const [previewWidthPx, setPreviewWidthPx] = useState<number | null>(null);
 
   const onRead = useCallback((read: SurveyFileRead) => {
     const proposed = read.road === 'table' ? read.proposedMapping : [];
@@ -181,17 +202,14 @@ export function useTerrainSurveyImport(target: TerrainPublishTarget | null): Ter
 
   const unitDecision = useMemo(() => (read === null ? null : surveyUnitDecision(read, mapping)), [read, mapping]);
   const points = useMemo(() => (read === null ? NO_POINTS : surveyPointsOf(read, mapping, unit)), [read, mapping, unit]);
-  const preparation = useMemo(() => (points.points.length === 0 ? null : prepareSurveyUpload(points.points)), [points]);
+  const { preparation, warm: warmPreview, ...preview } = useSurveyPreview(points.points, previewWidthPx);
+  // Ο Worker γεννιέται ΜΟΛΙΣ αρχίσει η ανάγνωση του αρχείου — η πρώτη προεπισκόπηση δεν πληρώνει την εκκίνησή του.
+  useEffect(() => { if (file.reading) warmPreview(); }, [file.reading, warmPreview]);
   const publication = useSurveyPublication(target, preparation);
   const { clear: clearPublication } = publication;
 
-  const setRole = useCallback((columnIndex: number, role: ColumnRole) => {
-    setMapping((previous) => assignRole(previous, columnIndex, role));
-  }, []);
-  const applyPreset = useCallback((presetId: string) => {
-    const preset = getOrderPresetMapping(presetId);
-    if (preset !== null) setMapping((previous) => padMapping(preset, previous.length));
-  }, []);
+  const { setRole, applyPreset } = useMappingEdits(setMapping);
+  const setPreviewWidth = useCallback((widthPx: number) => setPreviewWidthPx(terrainMapWidthClassOf(widthPx)), []);
   const reset = useCallback(() => {
     clearFile();
     clearPublication();
@@ -200,9 +218,9 @@ export function useTerrainSurveyImport(target: TerrainPublishTarget | null): Ter
   }, [clearFile, clearPublication]);
 
   return {
-    fileName: file.fileName, reading: file.reading, read, mapping, unit, unitDecision, points, preparation,
+    fileName: file.fileName, reading: file.reading, read, mapping, unit, unitDecision, points, preparation, preview,
     publication: publication.view,
     canPublish: target !== null && preparation?.ok === true && publication.view.kind !== 'publishing',
-    loadFile: file.load, setRole, applyPreset, setUnit, publish: publication.publish, reset,
+    loadFile: file.load, setRole, applyPreset, setUnit, setPreviewWidth, publish: publication.publish, reset,
   };
 }

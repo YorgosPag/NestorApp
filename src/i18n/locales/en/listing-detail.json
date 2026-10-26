@@ -216,6 +216,11 @@
       "indicative": "Slope classes are indicative: they help read the terrain and are not a construction cost estimate.",
       "north": "N",
       "metres": "{value} m",
+      "preview": {
+        "label": "Terrain preview",
+        "updating": "Updating the map…",
+        "failed": "The map could not be computed. Try again by changing a column or the unit."
+      },
       "slope": {
         "caption": "Slope classes and share of the area",
         "class": "Slope",
