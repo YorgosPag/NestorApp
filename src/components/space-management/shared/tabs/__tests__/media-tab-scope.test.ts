@@ -103,11 +103,11 @@ describe.each(KINDS)('Α38.1 — φάκελος «%s»: ό,τι ανεβαίνε
 });
 
 /**
- * ADR-916 Φ-Γ3 (Γ40) — **κάθε αρχείο του φακέλου σε ΑΚΡΙΒΩΣ ΜΙΑ καρτέλα**. Το αντίγραφο της παράδοσης κρατά το εύρος της
+ * ADR-916 Φ-Γ3 (Γ46) — **κάθε αρχείο του φακέλου σε ΑΚΡΙΒΩΣ ΜΙΑ καρτέλα**. Το αντίγραφο της παράδοσης κρατά το εύρος της
  * **πηγής**: μετρημένο 2026-10-25, ΦΑΥ · ΜΕΑ · αρχιτεκτονικά/στατικά/Η/Μ · φωτογραφίες κοινόχρηστων — και σκοποί ακινήτου
  * `video`/`photo`/`document` — δεν τα έβλεπε **καμία** καρτέλα. Ρωτά κάθε θέση του καταλόγου που μπορεί να παραδοθεί.
  */
-describe.each(KINDS)('Γ40 — φάκελος «%s»: κάθε παραδομένο αρχείο φαίνεται σε ακριβώς μία καρτέλα', (kind) => {
+describe.each(KINDS)('Γ46 — φάκελος «%s»: κάθε παραδομένο αρχείο φαίνεται σε ακριβώς μία καρτέλα', (kind) => {
   const sources = [ENTITY_TYPES.PROPERTY, ENTITY_TYPES.BUILDING, ENTITY_TYPES.PROJECT, ENTITY_TYPES.PARKING_SPOT, ENTITY_TYPES.STORAGE]
     .flatMap((entityType) => [...getEntryPointsForEntity(entityType), ...STUDY_ENTRIES]);
   const legacyPurposes: FileScope[] = [

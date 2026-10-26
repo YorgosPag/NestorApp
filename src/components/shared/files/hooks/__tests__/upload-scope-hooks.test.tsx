@@ -101,10 +101,10 @@ describe('Α38.1γ — useEntityFiles διαβάζει με τις εμβέλε�
 });
 
 /**
- * Γ40β — ADR-916 Φ-Γ3: **η καρτέλα-καταφύγιο** (`unclaimedBy`) κρατά ό,τι δεν διεκδικεί καμία αδελφή — και στις **δύο**
+ * Γ46β — ADR-916 Φ-Γ3: **η καρτέλα-καταφύγιο** (`unclaimedBy`) κρατά ό,τι δεν διεκδικεί καμία αδελφή — και στις **δύο**
  * διαδρομές του hook (εφάπαξ ανάγνωση **και** ακροατής). Μετάλλαξη: ένα από τα δύο να μην περνά το `unclaimedBy` ⇒ 🔴.
  */
-describe('Γ40β — useEntityFiles: η καρτέλα-καταφύγιο κρατά ό,τι δεν διεκδικεί καμία αδελφή', () => {
+describe('Γ46β — useEntityFiles: η καρτέλα-καταφύγιο κρατά ό,τι δεν διεκδικεί καμία αδελφή', () => {
   const DEED: FileScope = { domain: 'admin', category: 'documents', purpose: 'study-title-deed' };
   const PHOTO: FileScope = { domain: 'sales', category: 'photos', purpose: 'interior' };
   const FAY: FileScope = { domain: 'construction', category: 'documents', purpose: 'study-say-fay' };
