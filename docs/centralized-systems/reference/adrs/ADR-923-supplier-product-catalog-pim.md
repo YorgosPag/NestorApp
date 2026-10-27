@@ -1086,7 +1086,15 @@ SSoT (`CompanyProfile`/`buildIssuer`, `getContactDisplayName`)· (Α12) το δ�
   `.claude-rules/pending-ratchet-work.md`.
 - **(2)** Ζωντανή επαλήθευση στον Chrome: ✅ λεπτομέρεια «Εφαρμόζεται σε: CBL-001 — Καλώδιο · Όλα τα έργα» · η φόρμα δείχνει την εμβέλεια και
   την ισοπαλία «FWA-2026-001 — CBL-001 — Καλώδιο · όλα τα έργα · από 27/10/2026» με Αποθήκευση απενεργοποιημένη · «Επιλεγμένα» χωρίς έργο ⇒
-  «Επιλέξτε τουλάχιστον ένα έργο». Μένουν: αποθήκευση εμβέλειας έργου στη FWA-002, άρνηση PATCH του server, συνέπεια με την PO-0001.
+  «Επιλέξτε τουλάχιστον ένα έργο» · Έργα → «ΕΡΓΟ Α»: **μία** εναλλαγή, καμία κατάρρευση (μετά τη διόρθωση παρακάτω), η ισοπαλία φεύγει,
+  η Αποθήκευση ενεργοποιείται ⇒ αποθηκεύτηκε (εγκεκριμένη εγγραφή) ⇒ λεπτομέρεια «Έργα: ΕΡΓΟ Α» · Firestore `applicableProjectIds =
+  [proj_04a6b4bb…]`, `applicableMaterialIds = [mat_15c48c21…]` (CBL-001), κατηγορίες `null` · **άρνηση server** με ωμό PATCH:
+  `{applicableProjectIds:null}` ⇒ **400** «Ambiguous with active agreement(s) FWA-2026-001» (`assertNoTies`)· `{applicableMaterialIds:[]}` ⇒
+  **400** «an explicit selection must contain at least one entry» (`assertNoEmptySelection`)· Firestore **αμετάβλητο** (ίδιο `updatedAt`).
+  Μένει: συνέπεια με την PO-0001 (η σελίδα PO δεν φόρτωσε όσο ο dev server μεταγλώττιζε).
+- **(3)** 🟡 Η **αναμενόμενη** άρνηση επικύρωσης (400) γράφεται στο log ως `[ERROR]` με πλήρες stack από το `safeFirestoreOperation`
+  (`FrameworkAgreementValidationError`) — θόρυβος που κρύβει πραγματικά σφάλματα. Ένα 4xx πελάτη δεν είναι σφάλμα διακομιστή (πρακτική
+  Google SRE: τα σφάλματα πελάτη δεν «καίνε» προϋπολογισμό σφαλμάτων). Καταγράφεται, όχι για τώρα.
 
 **🔴→✅ Εύρημα της ζωντανής επαλήθευσης (υπήρχε από ADR-331 Phase B0, κοινό SSoT `components/ui/multi-combobox.tsx`):** μέσα σε `<form>` η
 επιλογή έργου ⇒ **«Maximum update depth exceeded»** (σελίδα σφάλματος).
