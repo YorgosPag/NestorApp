@@ -31,21 +31,47 @@ const BEFORE_CURE = '7ccfc4fd';
 
 const REGISTRY_REL = '.workspace-authority.json';
 
+/** Το ζωντανό μητρώο — η ΜΙΑ πηγή για το ποια αρχεία ορίζουν την απάντηση (βλ. `FIXTURE_FILES`). */
+const REGISTRY = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, REGISTRY_REL), 'utf8'));
+
+/** Το αρχείο ενός δηλωμένου αναγνώστη (`<κανάλι>@<αρχείο>`) — από το μητρώο, ποτέ χειρόγραφα. */
+const readerFile = (channel) => {
+  const reader = REGISTRY.readers.find(({ id }) => id.startsWith(`${channel}@`));
+  if (!reader) throw new Error(`το μητρώο δεν δηλώνει αναγνώστη για το κανάλι «${channel}».`);
+  return reader.id.slice(channel.length + 1);
+};
+
+/**
+ * Το **ΣΥΝΟΡΟ HTTP** — το αρχείο όπου διαβάζεται η κεφαλίδα και κρίνεται (το κανάλι της Φάσης 1).
+ *
+ * 🔴 **Παράγεται από το μητρώο** (2026-10-26): ήταν καρφωμένο `src/lib/auth/auth-context.ts`, και όταν ο κριτής
+ * μετακόμισε αυτούσιος στο `auth-context-workspace.ts` (ADR-787 §5.3 ζ, 2026-09-12 — το μητρώο ενημερώθηκε) οι
+ * Μ2/Κ8 μετάλλασσαν αρχείο **χωρίς** κριτή ⇒ «η μετάλλαξη ΔΕΝ άλλαξε τίποτα», κόκκινο στο `main` για έξι εβδομάδες.
+ */
+const HTTP_BOUNDARY = readerFile('http-header');
+
+/** Οι αναγνώστες που ζουν στο σύνορο HTTP — ό,τι θα έμενε χωρίς κριτή αν ο κριτής του φύγει. */
+const HTTP_BOUNDARY_READERS = REGISTRY.readers
+  .map(({ id }) => id).filter((id) => id.endsWith(`@${HTTP_BOUNDARY}`)).sort();
+
 /**
  * Τα αρχεία που **ορίζουν** την απάντηση — πραγματικά, αντιγραμμένα αυτούσια.
  *
- * Το `src/services/firestore/auth-context.ts` είναι **επίτηδες** μέσα: κουβαλά τη
- * **ζωντανή** ομωνυμία (`resolveEffectiveCompanyId` του πελάτη), ώστε το μίνι-repo να
- * μην είναι τεχνητά καθαρό.
+ * 🔴 **ΠΑΡΑΓΟΝΤΑΙ ΑΠΟ ΤΟ ΜΗΤΡΩΟ, ΠΟΤΕ ΧΕΙΡΟΓΡΑΦΑ** (2026-10-26): ο απαντητής, το λεξιλόγιο, και το αρχείο **κάθε**
+ * δηλωμένου αναγνώστη. Ένας αναγνώστης που μετακομίζει υποχρεώνει ήδη αλλαγή στο μητρώο (η πύλη τον βλέπει αλλιώς
+ * ως αδήλωτο) — άρα το μίνι-repo τον ακολουθεί **δωρεάν**. Η χειρόγραφη λίστα που ζούσε εδώ έμεινε στο παλιό αρχείο.
+ *
+ * Το `src/services/firestore/auth-context.ts` είναι **επίτηδες** μέσα, και είναι το ΜΟΝΟ χειρόγραφο: κουβαλά τη
+ * **ζωντανή** ομωνυμία (`resolveEffectiveCompanyId` του πελάτη), ώστε το μίνι-repo να μην είναι τεχνητά καθαρό —
+ * δεν είναι αναγνώστης, άρα το μητρώο σωστά δεν τον αναφέρει.
  */
-const FIXTURE_FILES = [
+const FIXTURE_FILES = [...new Set([
   REGISTRY_REL,
-  'src/lib/auth/workspace-membership.ts',
-  'src/types/workspace-membership.ts',
-  'src/lib/auth/auth-context.ts',
-  'src/services/ai-pipeline/shared/super-admin-resolver.ts',
+  REGISTRY.ssot.answerer,
+  REGISTRY.ssot.vocabulary,
+  ...REGISTRY.readers.map(({ id }) => id.slice(id.indexOf('@') + 1)),
   'src/services/firestore/auth-context.ts',
-];
+])];
 
 /** Το περιεχόμενο ενός αρχείου σε **καρφωμένο** commit. Σκάει σε κενή απάντηση. */
 function gitShow(commit, rel) {
@@ -63,6 +89,9 @@ function gitShow(commit, rel) {
  * `edits` = `{ 'σχετικό/μονοπάτι': (πηγή) => νέα πηγή }` — μία γραμμή, πραγματικό αρχείο.
  */
 function miniRepo(edits = {}, extraFiles = {}) {
+  // Μετάλλαξη σε αρχείο ΕΚΤΟΣ μίνι-repo θα αγνοούνταν σιωπηλά — άλλη μορφή του νεκρού test από κάτω.
+  const stray = Object.keys(edits).filter((rel) => !FIXTURE_FILES.includes(rel));
+  if (stray.length > 0) throw new Error(`μετάλλαξη εκτός μίνι-repo: ${stray.join(', ')}`);
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'wa358-'));
   for (const rel of FIXTURE_FILES) {
     let source = fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8');
@@ -168,10 +197,11 @@ describe('Μ — μεταλλάξεις στις εισόδους', () => {
 
   it('Μ2 — αν ο κριτής φύγει από το ΣΥΝΟΡΟ HTTP ⇒ ⛔ (το κανάλι της Φάσης 1)', () => {
     const m = run({
-      'src/lib/auth/auth-context.ts':
-        (s) => s.replace(/await decideMembership\(/, 'await Promise.resolve('),
+      [HTTP_BOUNDARY]: (s) => s.replace(/await decideMembership\(/, 'await Promise.resolve('),
     });
-    expect(newUnjudged(m)).toEqual(['http-header@src/lib/auth/auth-context.ts']);
+    // ΚΑΘΕ αναγνώστης του συνόρου μένει χωρίς κριτή — σήμερα η νέα κεφαλίδα ΚΑΙ η αποσυρόμενη (§5.3 ζ).
+    expect(newUnjudged(m).sort()).toEqual(HTTP_BOUNDARY_READERS);
+    expect(HTTP_BOUNDARY_READERS).toContain(`http-header@${HTTP_BOUNDARY}`);
   });
 
   it('Μ3 — ΝΕΟΣ αναγνώστης καναλιού, ΑΚΟΜΑ ΚΙ ΑΝ σωστός ⇒ νέα δήλωση (Κ2)', () => {
@@ -358,8 +388,7 @@ describe('Κ — κριτήρια και λογιστική', () => {
     // Ένα zero-tolerance που απορροφάται με ένα `--write-baseline` δεν είναι
     // zero-tolerance (πρότυπο CHECK 3.44).
     const m = run({
-      'src/lib/auth/auth-context.ts':
-        (s) => s.replace(/await decideMembership\(/, 'await Promise.resolve('),
+      [HTTP_BOUNDARY]: (s) => s.replace(/await decideMembership\(/, 'await Promise.resolve('),
     });
     expect(() => gate.buildPayload(m)).toThrow(/άρνηση εγγραφής baseline/);
   });
