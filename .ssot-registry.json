@@ -1625,7 +1625,7 @@
     "_comment_tier8": "=== TIER 8: ADR-314 PHASE A — CORE SSoT MODULES (2026-04-18) ===",
     "enterprise-id-convenience": {
       "ssotFile": "src/services/enterprise-id-convenience.ts",
-      "description": "All generate*Id() named functions must be declared ONLY in enterprise-id.service.ts (core) or enterprise-id-convenience.ts (barrel). No local wrappers/duplicates. Allowlist covers the sealed SSoT set + the React hook barrel (useEnterpriseIds) + the server-side composite-key ID generators (id-generation.ts — different purpose) + the deterministic search_documents key {entityType}_{entityId} (search-index-core.ts, ADR-874 — not an enterprise ID). ADR-314 Phase A.",
+      "description": "All generate*Id() named functions must be declared ONLY in enterprise-id.service.ts (core) or enterprise-id-convenience.ts (barrel, plus its catalog slice enterprise-id-convenience-catalog.ts — 500-line split, re-exported by the barrel). No local wrappers/duplicates. Allowlist covers the sealed SSoT set + the React hook barrel (useEnterpriseIds) + the server-side composite-key ID generators (id-generation.ts — different purpose) + the deterministic search_documents key {entityType}_{entityId} (search-index-core.ts, ADR-874 — not an enterprise ID). ADR-314 Phase A.",
       "forbiddenPatterns": [
         "(function|const)\\s+generate[A-Z][a-zA-Z]*Id\\b"
       ],
@@ -1634,6 +1634,7 @@
         "src/services/enterprise-id-class.ts",
         "src/services/enterprise-id-singleton.ts",
         "src/services/enterprise-id-convenience.ts",
+        "src/services/enterprise-id-convenience-catalog.ts",
         "src/services/enterprise-id-prefixes.ts",
         "src/services/enterprise-id-migration.service.ts",
         "src/hooks/useEnterpriseIds.ts",

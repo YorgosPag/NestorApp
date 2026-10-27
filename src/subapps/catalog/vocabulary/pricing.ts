@@ -30,6 +30,11 @@ export function isPublishedStatus(status: PriceListVersionStatus): boolean {
   return status === 'published' || status === 'superseded';
 }
 
+/** Από τι ξεκινά μια νέα πρόχειρη έκδοση: κενή, ή αντίγραφο της τελευταίας δημοσιευμένης (σπορά, ADR-923 §5.11 «3β»). */
+export const PRICE_VERSION_BASES = ['empty', 'latestPublished'] as const;
+
+export type PriceVersionBasis = (typeof PRICE_VERSION_BASES)[number];
+
 // ── Είδος τιμοκαταλόγου ──────────────────────────────────────────────────────
 
 export const PRICE_LIST_KINDS = ['sales', 'cost'] as const;
@@ -90,6 +95,25 @@ export const ORDER_QUANTITY_DECIMALS = 3;
  * χαμένο μηδενικό του ERP (×10 = +900%).
  */
 export const PRICE_CHANGE_FENCE_BP: BasisPoints = 2000;
+
+/**
+ * Τα όρια της παράκαμψης ανά τιμοκατάλογο (ADR-923 §5.11 απόφαση Β): κάτω από 5% κάθε ετήσια
+ * αναπροσαρμογή θα ζητούσε επιβεβαίωση (ο φράχτης θα γινόταν θόρυβος)· πάνω από 50% δεν πιάνει πια
+ * ούτε διπλασιασμό από λάθος.
+ */
+export const PRICE_CHANGE_FENCE_MIN_BP: BasisPoints = 500;
+export const PRICE_CHANGE_FENCE_MAX_BP: BasisPoints = 5000;
+
+/** Ο φράχτης που **ισχύει** για μια λίστα: η δική της παράκαμψη, αλλιώς της πλατφόρμας. */
+export function effectiveFenceBp(changeFenceBp: BasisPoints | null): BasisPoints {
+  return changeFenceBp ?? PRICE_CHANGE_FENCE_BP;
+}
+
+/**
+ * Γραμμές ανά συναλλαγή (δέσμη επικόλλησης · τμήμα σποράς έκδοσης). Κάτω από το όριο των 500 εγγραφών ανά
+ * συναλλαγή του Firestore, με περιθώριο για την έκδοση και τις υποδοχές της ίδιας συναλλαγής.
+ */
+export const PRICE_LINES_PER_TRANSACTION = 400;
 
 /** Βήματα σε αλυσίδα («50+10+5+2+2» είναι ήδη ακραίο). */
 export const MAX_DISCOUNT_STEPS = 5;

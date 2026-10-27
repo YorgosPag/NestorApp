@@ -1087,6 +1087,29 @@ export const COLLECTIONS = {
   CATALOG_UNIQUE_VALUES:
     process.env.NEXT_PUBLIC_CATALOG_UNIQUE_VALUES_COLLECTION || 'catalog_unique_values',
 
+  // 🗂️ SUPPLIER CATALOG — ΤΙΜΟΚΑΤΑΛΟΓΟΙ (ADR-923 §5.11 «3β»). Ίδιο σύνορο: ο πελάτης ΜΟΝΟ διαβάζει (εσωτερικός του
+  //    χώρου), γράφει ΜΟΝΟ η μηχανή (CHECK 3.106). Η τιμή προς ΑΛΛΟ κοινό βγαίνει μόνο από τον διακομιστή (§12 🔒).
+  /** Τιμοκατάλογοι (`sales` | `cost`, κοινό, φράχτης). IDs via cprl_* (από κωδικό). */
+  CATALOG_PRICE_LISTS: process.env.NEXT_PUBLIC_CATALOG_PRICE_LISTS_COLLECTION || 'catalog_price_lists',
+  /** Εκδόσεις — draft → published → superseded· η δημοσιευμένη ΑΜΕΤΑΒΛΗΤΗ. IDs via cplv_* (από λίστα + αριθμό). */
+  CATALOG_PRICE_LIST_VERSIONS:
+    process.env.NEXT_PUBLIC_CATALOG_PRICE_LIST_VERSIONS_COLLECTION || 'catalog_price_list_versions',
+  /** Γραμμές τιμών (λεπτά, χωρίς ΦΠΑ). IDs via cplln_* (από έκδοση + υποκείμενο ⇒ μία ανά υποκείμενο δομικά). */
+  CATALOG_PRICE_LIST_LINES:
+    process.env.NEXT_PUBLIC_CATALOG_PRICE_LIST_LINES_COLLECTION || 'catalog_price_list_lines',
+  /** Ομάδες έκπτωσης SKU («TOSH-CARR»). IDs via cdgrp_* (από κωδικό). */
+  CATALOG_DISCOUNT_GROUPS: process.env.NEXT_PUBLIC_CATALOG_DISCOUNT_GROUPS_COLLECTION || 'catalog_discount_groups',
+  /** Ομάδες πελάτη του προμηθευτή («χονδρέμπορος»). IDs via ccgrp_* (από κωδικό). */
+  CATALOG_CUSTOMER_GROUPS: process.env.NEXT_PUBLIC_CATALOG_CUSTOMER_GROUPS_COLLECTION || 'catalog_customer_groups',
+  /** Συμβαλλόμενος → ΜΙΑ ομάδα πελάτη. IDs via ccasg_* (από συμβαλλόμενο). */
+  CATALOG_CUSTOMER_ASSIGNMENTS:
+    process.env.NEXT_PUBLIC_CATALOG_CUSTOMER_ASSIGNMENTS_COLLECTION || 'catalog_customer_assignments',
+  /** Συνθήκες έκπτωσης (ομάδα × κοινό × ισχύς × κανόνας) — ανά ΧΩΡΟ, όχι ανά λίστα. IDs via cdcnd_* (τυχαία). */
+  CATALOG_DISCOUNT_CONDITIONS:
+    process.env.NEXT_PUBLIC_CATALOG_DISCOUNT_CONDITIONS_COLLECTION || 'catalog_discount_conditions',
+  /** Υποδοχές ασάφειας (συνθήκες · κοινό λίστας) — ευρετήριο του γραφέα, ΟΧΙ οντότητα: χωρίς ιστορικό. IDs via cpslt_*. */
+  CATALOG_PRICING_SLOTS: process.env.NEXT_PUBLIC_CATALOG_PRICING_SLOTS_COLLECTION || 'catalog_pricing_slots',
+
   // 🪜 DXF STAIR TOOL — ADR-358 (companyId-scoped, Phase 1)
   /** Parametric stair entities, 11 kinds, IfcStair-aligned. FK → floorplans. IDs via stair_* prefix. */
   FLOORPLAN_STAIRS: process.env.NEXT_PUBLIC_FLOORPLAN_STAIRS_COLLECTION || 'floorplan_stairs',

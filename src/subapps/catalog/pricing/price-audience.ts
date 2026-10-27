@@ -34,6 +34,11 @@ export function audienceSpecificity(audience: PriceAudience): number {
   return AUDIENCE_SPECIFICITY[audience.kind];
 }
 
+/** Σταθερό κλειδί ταυτότητας συμβαλλομένου: ίδιο κλειδί ⇔ ίδιος συμβαλλόμενος (κοινό `partner` + ανάθεση ομάδας). */
+export function pricingPartyKey(party: PricingPartyRef): string {
+  return party.kind === 'contact' ? `contact:${party.contactId}` : `workspace:${party.companyId}`;
+}
+
 /** Σταθερό κλειδί ταυτότητας κοινού: ίδιο κλειδί ⇔ ίδιο κοινό. */
 export function audienceIdentity(audience: PriceAudience): string {
   switch (audience.kind) {
@@ -43,8 +48,6 @@ export function audienceIdentity(audience: PriceAudience): string {
     case 'customerGroup':
       return `customerGroup:${audience.customerGroupId}`;
     case 'partner':
-      return audience.party.kind === 'contact'
-        ? `partner:contact:${audience.party.contactId}`
-        : `partner:workspace:${audience.party.companyId}`;
+      return `partner:${pricingPartyKey(audience.party)}`;
   }
 }

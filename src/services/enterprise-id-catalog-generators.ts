@@ -74,4 +74,43 @@ export abstract class CatalogIdGenerators extends CompositeKeyIdGenerators {
   generateDeterministicCatalogUniqueValueId(companyId: string, attributeId: string, uniqueKey: string): string {
     return this.mintDeterministicV4Id(P.CATALOG_UNIQUE_VALUE, `catalog:unique:${companyId}:${attributeId}:${uniqueKey}`);
   }
+
+  // ── Φάση 3β (ADR-923 §5.11) — τιμοκατάλογοι. Το «κλειδί» είναι κωδικός ή ΦΥΣΙΚΟ κλειδί (ίδιος τρόπος `code`) ──
+
+  generateDeterministicCatalogPriceListId(companyId: string, code: string): string {
+    return this.mintDeterministicV4Id(P.CATALOG_PRICE_LIST, seedOf('price-list', companyId, code));
+  }
+
+  /** Κλειδί = `priceListVersionKey(λίστα, αριθμός)` ⇒ δεύτερη «έκδοση 3» της ίδιας λίστας συγκρούεται στη συναλλαγή. */
+  generateDeterministicCatalogPriceListVersionId(companyId: string, versionKey: string): string {
+    return this.mintDeterministicV4Id(P.CATALOG_PRICE_LIST_VERSION, seedOf('price-list-version', companyId, versionKey));
+  }
+
+  /** Κλειδί = `priceListLineKey(έκδοση, υποκείμενο)` ⇒ μία γραμμή ανά υποκείμενο **δομικά**, και ιδεμπότητη αντιγραφή. */
+  generateDeterministicCatalogPriceListLineId(companyId: string, lineKey: string): string {
+    return this.mintDeterministicV4Id(P.CATALOG_PRICE_LIST_LINE, seedOf('price-list-line', companyId, lineKey));
+  }
+
+  generateDeterministicCatalogDiscountGroupId(companyId: string, code: string): string {
+    return this.mintDeterministicV4Id(P.CATALOG_DISCOUNT_GROUP, seedOf('discount-group', companyId, code));
+  }
+
+  generateDeterministicCatalogCustomerGroupId(companyId: string, code: string): string {
+    return this.mintDeterministicV4Id(P.CATALOG_CUSTOMER_GROUP, seedOf('customer-group', companyId, code));
+  }
+
+  /** Κλειδί = `pricingPartyKey(συμβαλλόμενος)` ⇒ **μία** ομάδα πελάτη ανά συμβαλλόμενο (SAP), δομικά. */
+  generateDeterministicCatalogCustomerAssignmentId(companyId: string, partyKey: string): string {
+    return this.mintDeterministicV4Id(P.CATALOG_CUSTOMER_ASSIGNMENT, seedOf('customer-assignment', companyId, partyKey));
+  }
+
+  /** Συνθήκη — **τυχαία**: δύο συνθήκες του ίδιου κοινού σε διαδοχικές περιόδους είναι νόμιμες. */
+  generateCatalogDiscountConditionId(): string {
+    return this.generateId(P.CATALOG_DISCOUNT_CONDITION).id;
+  }
+
+  /** Υποδοχή ασάφειας: όσοι μοιράζονται κλειδί **συγκρούονται** στη συναλλαγή (το ερώτημα δεν κλειδώνει «φαντάσματα»). */
+  generateDeterministicCatalogPricingSlotId(companyId: string, slotKey: string): string {
+    return this.mintDeterministicV4Id(P.CATALOG_PRICING_SLOT, seedOf('pricing-slot', companyId, slotKey));
+  }
 }
