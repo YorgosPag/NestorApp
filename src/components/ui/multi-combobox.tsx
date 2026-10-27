@@ -90,9 +90,11 @@ interface ItemProps {
  * ΣΥΝΘΕΤΙΚΟ `click` προς τα πάνω· αν το δεχτεί η γραμμή ⇒ ξαναεναλλάσσει ⇒ ατέρμονος βρόχος («Maximum update
  * depth», μετρημένο ζωντανά στη φόρμα σύμβασης-πλαισίου, ADR-923 §5.11 «3γ»). Και με `onCheckedChange` + click
  * της γραμμής, το κλικ στο κουτάκι εναλλάσσε ΔΥΟ φορές. Άγκυρα: `multi-combobox-in-form.test.tsx`.
+ * Γιατί CAPTURE: σε φόρμα το Radix κάνει `stopPropagation()` στο ΠΡΩΤΟΤΥΠΟ click του κουτιού και αφήνει να
+ * ανέβει μόνο η ηχώ του input — στη φάση bubble η γραμμή δεν θα έβλεπε ποτέ το αληθινό κλικ (0 εναλλαγές).
  */
 function MultiComboboxItem({ option, selected, focused, onToggle }: ItemProps) {
-  const handleClick = (event: React.MouseEvent<HTMLLIElement>) => {
+  const handleClickCapture = (event: React.MouseEvent<HTMLLIElement>) => {
     if (event.target instanceof HTMLInputElement) return;
     onToggle();
   };
@@ -104,7 +106,7 @@ function MultiComboboxItem({ option, selected, focused, onToggle }: ItemProps) {
         'flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm select-none',
         focused ? 'bg-accent text-accent-foreground' : 'hover:bg-accent hover:text-accent-foreground',
       )}
-      onClick={handleClick}
+      onClickCapture={handleClickCapture}
     >
       <Checkbox checked={selected} aria-hidden tabIndex={-1} className="pointer-events-none" />
       <span>{option.label}</span>
