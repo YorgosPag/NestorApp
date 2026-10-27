@@ -468,6 +468,55 @@
       "clear": "Show all"
     }
   },
+  "buyout": {
+    "title": "BOQ Coverage",
+    "subtitle": "Which BOQ items are covered by a purchase order, which are in progress and which have not started",
+    "status": {
+      "uncovered": "Uncovered",
+      "sourcing": "Out for quotes",
+      "ordering": "Being ordered",
+      "committed": "Covered"
+    },
+    "statusHint": {
+      "uncovered": "No purchase order and no open request for quotation",
+      "sourcing": "Included in an open request for quotation",
+      "ordering": "On a purchase order not yet sent to the supplier",
+      "committed": "On a purchase order that has been sent or received"
+    },
+    "summary": {
+      "ariaLabel": "Coverage summary by status",
+      "coveredValue": "Covered value: {covered} of {total}",
+      "coveredCount": "{covered} of {total} items",
+      "filterHint": "Select a status to filter"
+    },
+    "search": "Search item or code…",
+    "table": {
+      "ariaLabel": "BOQ items and their coverage",
+      "select": "Select",
+      "code": "Code",
+      "work": "Item",
+      "amount": "Budget",
+      "status": "Status",
+      "coveredBy": "Covered by",
+      "unpriced": "Unpriced",
+      "groupCoverage": "{covered}/{total} covered",
+      "groupOpenAmount": "Uncovered {amount}",
+      "selectItem": "Select item: {title}",
+      "selectGroup": "Select the uncovered items of category {category}",
+      "purchaseOrder": "Purchase order {number}",
+      "rfq": "Request: {title}"
+    },
+    "actions": {
+      "selected": "{count} selected",
+      "createRfq": "Request for quotation",
+      "clearSelection": "Clear selection",
+      "limit": "Up to {max} items per request for quotation — remove {excess}",
+      "inProgress": "{count} of the selected items are already out for quotes or being ordered"
+    },
+    "empty": "This project has no BOQ items",
+    "emptyFiltered": "No item matches the filters",
+    "error": "Failed to load BOQ coverage"
+  },
   "hub": {
     "pageLabel": "Procurement Hub",
     "vendorMaster": {
@@ -622,7 +671,11 @@
         "daysRemaining": "{count} days",
         "expired": "Expired",
         "vendor": "Vendor",
-        "scope": "Applies to"
+        "scope": "Applies to",
+        "scopeItems": "Items",
+        "scopeProjects": "Projects",
+        "scopeAllItems": "All items",
+        "scopeAllProjects": "All projects"
       },
       "status": {
         "draft": "Draft",
@@ -674,7 +727,40 @@
         "create": "Create",
         "saving": "Saving...",
         "saveFailed": "Saving failed. Please try again.",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "scope": {
+          "title": "Scope",
+          "hint": "When several agreements match a line, the most specific wins: material, then ATOE category, then all items; at the same level, the agreement with a project list.",
+          "items": {
+            "label": "Items",
+            "all": "All items",
+            "selected": "Selected",
+            "materials": "Materials",
+            "materialsPlaceholder": "Select materials...",
+            "noMaterials": "No materials found",
+            "categories": "ATOE categories",
+            "categoriesPlaceholder": "Select categories...",
+            "noCategories": "No categories found",
+            "unionHint": "A line is covered if its material is in the list or it belongs to one of the categories.",
+            "empty": "Select at least one material or category — or «All items»."
+          },
+          "projects": {
+            "label": "Projects",
+            "all": "All projects",
+            "selected": "Selected",
+            "placeholder": "Select projects...",
+            "none": "No projects found",
+            "empty": "Select at least one project — or «All projects»."
+          }
+        },
+        "tie": {
+          "activeTitle": "Tie with another active agreement — saving is not allowed",
+          "draftTitle": "If activated, this agreement would tie with an active agreement",
+          "explanation": "On a tie, no agreement discounts the line. Make one of them more specific (material or project list) or separate their validity periods.",
+          "point": "{agreement} — {item} · {project} · from {date}",
+          "anyItem": "all items",
+          "anyProject": "all projects"
+        }
       }
     },
     "spendAnalytics": {

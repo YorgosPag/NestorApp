@@ -36,7 +36,7 @@ const AGREEMENT_SORT_KEYS = ['name', 'number', 'status', 'date'] as const;
 
 interface AgreementSlimListProps {
   agreements: FrameworkAgreement[];
-  vendorNamesById: Map<string, string>;
+  vendorNamesById: ReadonlyMap<string, string>;
   loading: boolean;
   selectedAgreementId: string | undefined;
   onSelectAgreement: (agreement: FrameworkAgreement) => void;

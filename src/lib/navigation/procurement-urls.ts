@@ -8,11 +8,25 @@
  * `.ssot-registry.json` (added in S1).
  */
 
-import { typedHref } from '@/lib/workspace/route-worlds';
+import { typedHref, withQuery } from '@/lib/workspace/route-worlds';
 import { serializeFilterArray } from '@/lib/url-filters/multi-value';
 
-/** Οι τέσσερις όψεις της ενότητας προμηθειών ενός έργου (ADR-330 §5.1 S2). */
-export type ProjectProcurementSection = 'overview' | 'rfq' | 'quote' | 'po';
+/** Οι όψεις της ενότητας προμηθειών ενός έργου (ADR-330 §5.1 S2 · `coverage` = Buyout, S3.2). */
+export type ProjectProcurementSection = 'overview' | 'rfq' | 'quote' | 'po' | 'coverage';
+
+/**
+ * Πόσες εργασίες επιμέτρησης δέχεται ένα «αίτημα από επιμετρήσεις» — το όριο `in` του Firestore που επιβάλλει
+ * το `POST /api/rfqs/from-boq` (zod `.max(30)`). Δηλωμένο ΕΔΩ ώστε το UI να το λέει, όχι να το ανακαλύπτει ως 400.
+ */
+export const RFQ_FROM_BOQ_MAX_ITEMS = 30;
+
+/** Νέο αίτημα προσφοράς του έργου — με εργασίες επιμέτρησης, προσυμπληρωμένο από αυτές (ADR-327 P5-BOQ). */
+export function getNewRfqUrl(projectId: string, boqItemIds: readonly string[] = []) {
+  const query = new URLSearchParams({ projectId });
+  const boqItems = serializeFilterArray(boqItemIds);
+  if (boqItems !== undefined) query.set('boqItems', boqItems);
+  return withQuery('/procurement/rfqs/new', query.toString());
+}
 
 /**
  * Το κλειδί ερωτήματος του φίλτρου κατάστασης στις λίστες του έργου — ΕΝΑ όνομα για γραφέα (κάρτες

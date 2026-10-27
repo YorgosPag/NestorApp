@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useId } from 'react';
+import { useFormFields } from '@/hooks/useFormFields';
 import { X, Plus } from 'lucide-react';
 import {
   Dialog,
@@ -26,9 +27,8 @@ import {
 } from '@/components/ui/select';
 import { SearchableCombobox } from '@/components/ui/searchable-combobox';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { ATOE_MASTER_CATEGORIES } from '@/config/boq-categories';
-import { usePOSupplierContacts, supplierContactsToOptions } from '@/hooks/procurement/usePOSupplierContacts';
-import { getContactDisplayName } from '@/types/contacts/helpers';
+import { atoeCategoryOptions } from '@/lib/procurement/scope-options';
+import { usePOSupplierContacts, supplierContactsToOptions, supplierNamesById } from '@/hooks/procurement/usePOSupplierContacts';
 import {
   MAX_PREFERRED_SUPPLIERS,
   type Material,
@@ -105,10 +105,11 @@ export function MaterialFormDialog({
   onSubmit,
 }: MaterialFormDialogProps) {
   const { t } = useTranslation('procurement');
+  const categoryOptions = useMemo(() => atoeCategoryOptions((code) => t(`categories.${code}`)), [t]);
   const { suppliers } = usePOSupplierContacts();
 
   const formId = useId();
-  const [form, setForm] = useState<FormState>(emptyState());
+  const { form, setForm, update } = useFormFields<FormState>(emptyState);
   const [supplierPick, setSupplierPick] = useState<string>('');
 
   const supplierOptions = useMemo(
@@ -116,17 +117,7 @@ export function MaterialFormDialog({
     [suppliers, form.preferredSupplierContactIds],
   );
 
-  const supplierNameById = useMemo(() => {
-    const map = new Map<string, string>();
-    suppliers.forEach((c) => {
-      if (c.id) map.set(c.id, getContactDisplayName(c));
-    });
-    return map;
-  }, [suppliers]);
-
-  function update<K extends keyof FormState>(key: K, value: FormState[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  }
+  const supplierNameById = useMemo(() => supplierNamesById(suppliers), [suppliers]);
 
   function addSupplier(id: string) {
     if (!id) return;
@@ -261,10 +252,9 @@ export function MaterialFormDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {ATOE_MASTER_CATEGORIES.map((c) => (
-                  <SelectItem key={c.code} value={c.code}>
-                    <span className="font-mono text-xs mr-2">{c.code}</span>
-                    {t(`categories.${c.code}`, { defaultValue: '' }) || c.nameEL}
+                {categoryOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
                   </SelectItem>
                 ))}
               </SelectContent>

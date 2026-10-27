@@ -20,11 +20,11 @@ import { Label } from '@/components/ui/label';
 import { MultiCombobox, type MultiComboboxOption } from '@/components/ui/multi-combobox';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useProjectsList } from '@/hooks/useProjectsList';
-import { usePOSupplierContacts } from '@/hooks/procurement';
+import { usePOSupplierContacts, supplierContactsToOptions } from '@/hooks/procurement/usePOSupplierContacts';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import type { SpendAnalyticsFilters } from '@/services/procurement/aggregators/spendAnalyticsAggregator';
 import { getCurrentQuarterRange } from '@/lib/date/quarter-helpers';
-import { ATOE_MASTER_CATEGORIES } from '@/config/boq-categories';
+import { atoeCategoryOptions, projectsToOptions } from '@/lib/procurement/scope-options';
 
 
 const STATUS_VALUES = [
@@ -126,28 +126,10 @@ function FilterFields({ filters, onChange }: AnalyticsFiltersBarProps) {
   const { projects } = useProjectsList({ enabled: authReady });
   const { suppliers } = usePOSupplierContacts();
 
-  const projectOptions = useMemo<MultiComboboxOption[]>(
-    () => projects.map((p) => ({ value: p.id, label: p.name })),
-    [projects],
-  );
-  const supplierOptions = useMemo<MultiComboboxOption[]>(
-    () => suppliers.map((s) => ({
-      value: s.id ?? '',
-      label:
-        s.displayName ??
-        s.name ??
-        s.companyName ??
-        (s.firstName != null
-          ? [s.firstName, s.lastName].filter(Boolean).join(' ')
-          : null) ??
-        s.serviceName ??
-        s.id ??
-        '',
-    })),
-    [suppliers],
-  );
+  const projectOptions = useMemo<MultiComboboxOption[]>(() => projectsToOptions(projects), [projects]);
+  const supplierOptions = useMemo<MultiComboboxOption[]>(() => supplierContactsToOptions(suppliers), [suppliers]);
   const categoryOptions = useMemo<MultiComboboxOption[]>(
-    () => ATOE_MASTER_CATEGORIES.map(({ code }) => ({ value: code, label: t(`categories.${code}`) })),
+    () => atoeCategoryOptions((code) => t(`categories.${code}`)),
     [t],
   );
   const statusOptions = useMemo<MultiComboboxOption[]>(

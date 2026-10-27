@@ -7,7 +7,7 @@ import { generateRfqId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import admin from 'firebase-admin';
 import { normalizeToDate } from '@/lib/date-local';
-import type { RFQ, RfqStatus, CreateRfqDTO, UpdateRfqDTO, RfqFilters, RfqLine } from '../types/rfq';
+import type { RFQ, RfqStatus, CreateRfqDTO, UpdateRfqDTO, RfqFilters, RfqDraftLine, RfqFromBoqDraft } from '../types/rfq';
 import { RFQ_STATUS_TRANSITIONS } from '../types/rfq';
 import type { AuthContext } from '@/lib/auth';
 import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
@@ -366,7 +366,7 @@ export type { CancelRfqOptions } from './rfq-lifecycle-service';
 export async function createRfqFromBoqItems(
   ctx: AuthContext,
   boqItemIds: string[]
-): Promise<CreateRfqDTO> {
+): Promise<RfqFromBoqDraft> {
   if (boqItemIds.length === 0) {
     return { projectId: '', title: '', lines: [] };
   }
@@ -391,7 +391,7 @@ export async function createRfqFromBoqItems(
     const buildingId = firstItem.buildingId ?? null;
 
     const vendorIdSet = new Set<string>();
-    const lines: RfqLine[] = items.map((item, idx) => {
+    const lines: RfqDraftLine[] = items.map((item, idx) => {
       if (item.linkedContractorId) vendorIdSet.add(item.linkedContractorId);
 
       const tradeCode: TradeCode =
@@ -405,6 +405,7 @@ export async function createRfqFromBoqItems(
         quantity: item.estimatedQuantity,
         unit: item.unit as string,
         notes: item.description ?? null,
+        boqItemId: item.id,
       };
     });
 
@@ -414,7 +415,7 @@ export async function createRfqFromBoqItems(
       ? `RFQ — ${firstItem.categoryCode}`
       : `RFQ — ${projectId.slice(-6)}`;
 
-    const dto: CreateRfqDTO = {
+    const dto: RfqFromBoqDraft = {
       projectId,
       buildingId,
       title,

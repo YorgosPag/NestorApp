@@ -21,6 +21,7 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
 jest.mock('@/hooks/procurement/usePOSupplierContacts', () => ({
   usePOSupplierContacts: () => ({ suppliers: [], loading: false, error: null }),
   supplierContactsToOptions: () => [],
+  supplierNamesById: () => new Map<string, string>(),
 }));
 
 import { expectNoA11yViolations } from '@/test-utils/a11y';

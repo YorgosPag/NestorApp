@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo, useId } from 'react';
+import { useEffect, useMemo, useId } from 'react';
+import { useFormFields } from '@/hooks/useFormFields';
 import {
   Dialog,
   DialogContent,
@@ -25,7 +26,18 @@ import { SearchableCombobox } from '@/components/ui/searchable-combobox';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePOSupplierContacts, supplierContactsToOptions } from '@/hooks/procurement/usePOSupplierContacts';
 import { normalizeToDate, nowISO } from '@/lib/date-local';
+import { useAgreementScopeOptions } from '@/hooks/procurement/useAgreementScopeOptions';
 import { BreakpointsEditor } from './BreakpointsEditor';
+import { AgreementScopeFields } from './AgreementScopeFields';
+import { AgreementTieWarning } from './AgreementTieWarning';
+import { useAgreementTies } from './useAgreementTies';
+import {
+  EMPTY_SCOPE_FORM,
+  scopeFieldsFromForm,
+  scopeFormFromAgreement,
+  scopeFormIssues,
+  type AgreementScopeForm,
+} from './agreement-scope-form';
 import {
   FRAMEWORK_AGREEMENT_STATUSES,
   DISCOUNT_TYPES,
@@ -41,6 +53,8 @@ interface FormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initial: FrameworkAgreement | null;
+  /** Όλες οι συμβάσεις (ζωντανή συνδρομή) — για τον έλεγχο ισοπαλίας, ADR-923 §5.11 «3γ» Βήμα 2. */
+  agreements: readonly FrameworkAgreement[];
   onSubmit: (
     payload: CreateFrameworkAgreementDTO | UpdateFrameworkAgreementDTO,
     agreementId?: string,
@@ -60,6 +74,7 @@ interface FormState {
   discountType: DiscountType;
   flatDiscountPercent: string;
   volumeBreakpoints: VolumeBreakpoint[];
+  scope: AgreementScopeForm;
 }
 
 function emptyState(): FormState {
@@ -80,6 +95,7 @@ function emptyState(): FormState {
     discountType: 'flat',
     flatDiscountPercent: '',
     volumeBreakpoints: [],
+    scope: EMPTY_SCOPE_FORM,
   };
 }
 
@@ -103,6 +119,7 @@ function fromAgreement(a: FrameworkAgreement): FormState {
     flatDiscountPercent:
       a.flatDiscountPercent !== null ? String(a.flatDiscountPercent) : '',
     volumeBreakpoints: [...a.volumeBreakpoints],
+    scope: scopeFormFromAgreement(a),
   };
 }
 
@@ -110,22 +127,37 @@ export function FrameworkAgreementFormDialog({
   open,
   onOpenChange,
   initial,
+  agreements,
   onSubmit,
 }: FormDialogProps) {
   const { t } = useTranslation('procurement');
   const { suppliers } = usePOSupplierContacts();
+  const scopeOptions = useAgreementScopeOptions();
 
   const formId = useId();
-  const [form, setForm] = useState<FormState>(emptyState());
+  const { form, setForm, update } = useFormFields<FormState>(emptyState);
 
   const supplierOptions = useMemo(() => supplierContactsToOptions(suppliers), [suppliers]);
 
-  function update<K extends keyof FormState>(key: K, value: FormState[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  }
+  const scopeFields = useMemo(() => scopeFieldsFromForm(form.scope), [form.scope]);
+  const scopeIssues = scopeFormIssues(form.scope);
+  const ties = useAgreementTies(
+    {
+      id: initial?.id ?? null,
+      agreementNumber: form.agreementNumber,
+      vendorContactId: form.vendorContactId,
+      status: form.status,
+      validFrom: form.validFrom,
+      validUntil: form.validUntil,
+      ...scopeFields,
+    },
+    agreements,
+  );
+  const tieBlocks = form.status === 'active' && ties.length > 0;
 
   function buildPayload(): CreateFrameworkAgreementDTO | UpdateFrameworkAgreementDTO {
     return {
+      ...scopeFields,
       agreementNumber: form.agreementNumber.trim(),
       title: form.title.trim(),
       description: form.description.trim() || null,
@@ -149,7 +181,10 @@ export function FrameworkAgreementFormDialog({
     !!form.title.trim() &&
     !!form.vendorContactId &&
     !!form.validFrom &&
-    !!form.validUntil;
+    !!form.validUntil &&
+    !scopeIssues.itemsEmpty &&
+    !scopeIssues.projectsEmpty &&
+    !tieBlocks;
 
   const { submitting, error, handleSubmit, clearError } = useFormSubmission({
     submit: () => onSubmit(buildPayload(), initial?.id),
@@ -358,6 +393,13 @@ export function FrameworkAgreementFormDialog({
               onChange={(next) => update('volumeBreakpoints', next)}
             />
           )}
+
+          <AgreementScopeFields
+            value={form.scope}
+            onChange={(next) => update('scope', next)}
+            options={scopeOptions}
+          />
+          <AgreementTieWarning ties={ties} blocking={tieBlocks} options={scopeOptions} />
         </form>
 
         <FormActions

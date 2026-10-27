@@ -831,6 +831,8 @@ export const API_ROUTES = {
     PAYMENT_REPORT: (projectId: string) => `/api/projects/${projectId}/payment-report` as const,
     /** ADR-917 Φ2 — budget vs actual from source documents (BOQ + purchase orders) */
     COST_LEDGER: (projectId: string) => `/api/projects/${encodeURIComponent(projectId)}/cost-ledger` as const,
+    /** ADR-330 §5.1 S3.2 — buyout: every counted BOQ line with its PO / open-RFQ coverage */
+    BUYOUT: (projectId: string) => `/api/projects/${encodeURIComponent(projectId)}/buyout` as const,
     /** ADR-917 Φ3β — the project's budget lines (soft cost + allowances): list */
     BUDGET_LINES: (projectId: string) => `/api/projects/${encodeURIComponent(projectId)}/budget-lines` as const,
     /** ADR-917 Φ3β — ONE budget line per (project, cost code): set / archive */

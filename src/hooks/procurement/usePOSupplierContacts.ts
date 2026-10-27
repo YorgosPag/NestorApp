@@ -109,3 +109,15 @@ export function supplierContactsToOptions(
       secondaryLabel: c.type === 'company' ? c.companyName ?? undefined : undefined,
     }));
 }
+
+/**
+ * Προμηθευτές → `ταυτότητα → όνομα προβολής`, με την ίδια ονομασία με τις επιλογές. Ήταν γραμμένο
+ * δύο φορές (σελίδα συμβάσεων · φόρμα υλικού)· το CHECK 3.28 το είδε (ADR-923 §5.11 «3γ», Βήμα 2).
+ */
+export function supplierNamesById(suppliers: readonly Contact[]): ReadonlyMap<string, string> {
+  const names = new Map<string, string>();
+  for (const contact of suppliers) {
+    if (contact.id) names.set(contact.id, getContactDisplayName(contact));
+  }
+  return names;
+}

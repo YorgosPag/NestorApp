@@ -4,12 +4,12 @@
  * @module components/projects/procurement/ProjectProcurementTabs
  * @enterprise ADR-330 §5.1 S2 — Project Procurement RouteTabs SSoT
  *
- * Renders the 4 sub-tab strip (Overview / RFQ / Quote / PO) inside
+ * Renders the 5 sub-tab strip (Overview / RFQ / Quote / PO / Coverage — ADR-330 §5.1 S3.2) inside
  * `/projects/[id]/procurement/*`. URL-driven via RouteTabs (ADR-328 D8).
  */
 
 import { useMemo } from 'react';
-import { BarChart3, Send, FileText, Package } from 'lucide-react';
+import { BarChart3, Send, FileText, Package, ListChecks } from 'lucide-react';
 import { RouteTabs } from '@/components/ui/navigation/route-tabs';
 import type { TabsNavTab } from '@/components/ui/navigation/tabs-types';
 import { getProjectProcurementUrl } from '@/lib/navigation/procurement-urls';
@@ -48,6 +48,12 @@ export function ProjectProcurementTabs({
         labelKey: 'tabs.subtabs.procurement.po',
         icon: Package,
         iconColor: 'text-[hsl(var(--text-warning))]',
+      },
+      {
+        href: getProjectProcurementUrl(projectId, 'coverage'),
+        labelKey: 'tabs.subtabs.procurement.coverage',
+        icon: ListChecks,
+        iconColor: 'text-foreground',
       },
     ],
     [projectId],

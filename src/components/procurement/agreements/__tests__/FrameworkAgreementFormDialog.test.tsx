@@ -29,6 +29,17 @@ jest.mock('@/hooks/procurement/usePOSupplierContacts', () => ({
   usePOSupplierContacts: () => ({ suppliers: [], loading: false, error: null }),
   supplierContactsToOptions: () => [{ value: 'sup-1', label: 'ACME' }],
 }));
+// Τα δεδομένα εμβέλειας (υλικά · έργα) είναι συνδρομές Firestore — εδώ ελέγχεται η υποβολή, όχι η εμβέλεια.
+jest.mock('@/hooks/procurement/useAgreementScopeOptions', () => ({
+  useAgreementScopeOptions: () => ({
+    materialOptions: [],
+    categoryOptions: [],
+    projectOptions: [],
+    labelOfMaterial: (id: string) => id,
+    labelOfCategory: (code: string) => code,
+    labelOfProject: (id: string) => id,
+  }),
+}));
 
 import { expectNoA11yViolations } from '@/test-utils/a11y';
 import { pressEnterToSubmit } from '@/test-utils/implicit-submission';
@@ -44,7 +55,7 @@ const submitSpy = () => jest.fn<ReturnType<SubmitFn>, Parameters<SubmitFn>>();
 
 function renderDialog(onSubmit: SubmitFn) {
   return render(
-    <FrameworkAgreementFormDialog open onOpenChange={() => undefined} initial={null} onSubmit={onSubmit} />,
+    <FrameworkAgreementFormDialog open onOpenChange={() => undefined} initial={null} agreements={[]} onSubmit={onSubmit} />,
   );
 }
 

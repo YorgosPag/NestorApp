@@ -146,7 +146,7 @@ function makeRfqSnap(overrides: Partial<RFQ> = {}) {
 // TESTS
 // ============================================================================
 
-import { createRfq, updateRfq } from '../rfq-service';
+import { createRfq, createRfqFromBoqItems, updateRfq } from '../rfq-service';
 
 beforeEach(() => jest.clearAllMocks());
 
@@ -307,5 +307,23 @@ describe('updateRfq — Q31 status propagation', () => {
     await updateRfq(ctx, 'rfq_test123', { status: 'closed' });
 
     expect(mockRecomputeStatus).not.toHaveBeenCalled();
+  });
+});
+
+describe('createRfqFromBoqItems — ADR-327 P5-BOQ keeps the BOQ link (ADR-330 §5.1 S3.2)', () => {
+  it('every pre-filled line carries the boqItemId it came from — else the builder sends it ad-hoc', async () => {
+    const boqDoc = (id: string) => ({
+      id,
+      data: () => ({ companyId: 'co1', projectId: 'proj1', buildingId: null, categoryCode: 'OIK-2', title: `Εργασία ${id}`, estimatedQuantity: 3, unit: 'm2' }),
+    });
+    mockQuery.get.mockResolvedValueOnce({ docs: [boqDoc('boq_a'), boqDoc('boq_b')] });
+    const draft = await createRfqFromBoqItems(ctx, ['boq_a', 'boq_b']);
+    expect(draft.lines.map((l) => l.boqItemId)).toEqual(['boq_a', 'boq_b']);
+  });
+
+  it('a BOQ item of another tenant never becomes a line', async () => {
+    mockQuery.get.mockResolvedValueOnce({ docs: [{ id: 'boq_x', data: () => ({ companyId: 'other', projectId: 'p', title: 'x' }) }] });
+    const draft = await createRfqFromBoqItems(ctx, ['boq_x']);
+    expect(draft.lines).toEqual([]);
   });
 });

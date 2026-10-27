@@ -14,13 +14,15 @@ import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useRouter, usePathname } from '@/lib/workspace/navigation';
 import { declaredHref } from '@/lib/workspace/route-worlds';
-import { parseFilterArray } from '@/lib/url-filters/multi-value';
+import { parseFilterArray, serializeFilterArray } from '@/lib/url-filters/multi-value';
 import { PROCUREMENT_STATUS_PARAM } from '@/lib/navigation/procurement-urls';
 
 export interface StatusDrill<S extends string> {
   /** Οι έγκυρες καταστάσεις του URL· κενό ⇒ χωρίς φίλτρο. */
   statuses: readonly S[];
-  /** Αφαιρεί το φίλτρο χωρίς νέα εγγραφή ιστορικού. */
+  /** Γράφει το φίλτρο (κενό ⇒ αφαίρεση) χωρίς νέα εγγραφή ιστορικού. */
+  set: (statuses: readonly S[]) => void;
+  /** Αφαιρεί το φίλτρο — `set([])`. */
   clear: () => void;
 }
 
@@ -39,15 +41,19 @@ export function useStatusDrillParam<S extends string>(vocabulary: Readonly<Recor
     [raw, vocabulary],
   );
 
-  const clear = useCallback(() => {
+  const set = useCallback((next: readonly S[]) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.delete(PROCUREMENT_STATUS_PARAM);
+    const value = serializeFilterArray(next);
+    if (value === undefined) params.delete(PROCUREMENT_STATUS_PARAM);
+    else params.set(PROCUREMENT_STATUS_PARAM, value);
     const qs = params.toString();
     router.replace(declaredHref(
-      'usePathname() είναι ΗΔΗ η έγκυρη τρέχουσα σελίδα — αφαίρεση φίλτρου ερωτήματος, όχι νέος προορισμός.',
+      'usePathname() είναι ΗΔΗ η έγκυρη τρέχουσα σελίδα — αλλαγή φίλτρου ερωτήματος, όχι νέος προορισμός.',
       qs ? `${pathname}?${qs}` : pathname,
     ));
   }, [router, pathname, searchParams]);
 
-  return { statuses, clear };
+  const clear = useCallback(() => set([]), [set]);
+
+  return { statuses, set, clear };
 }

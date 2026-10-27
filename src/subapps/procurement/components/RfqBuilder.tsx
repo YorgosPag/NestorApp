@@ -27,7 +27,7 @@ import { AtoeCategoryCodeSelect } from './AtoeCategoryCodeSelect';
 import { LineItemsSection, type LineItemColumn } from './LineItemsSection';
 import { POProjectSelector } from '@/components/procurement/POEntitySelectors';
 import { getAtoeCodesForTrade, getTradeCodeForAtoeCategory } from '@/subapps/procurement/data/trades';
-import type { RfqLine, CreateRfqDTO, AwardMode, ReminderTemplate } from '@/subapps/procurement/types/rfq';
+import type { RfqLine, RfqDraftLine, CreateRfqDTO, AwardMode, ReminderTemplate } from '@/subapps/procurement/types/rfq';
 import type { CreateRfqLineDTO } from '@/subapps/procurement/types/rfq-line';
 import type { TradeCode } from '@/subapps/procurement/types/trade';
 import type { BOQItem } from '@/types/boq/boq';
@@ -57,7 +57,7 @@ export interface RfqBuilderInitialState {
   deadlineDate?: string;
   awardMode?: AwardMode;
   reminderTemplate?: ReminderTemplate;
-  lines?: RfqLine[];
+  lines?: RfqDraftLine[];
   invitedVendorIds?: string[];
 }
 
@@ -319,6 +319,11 @@ function boqItemToLine(item: BoqPick): FormLine {
   };
 }
 
+/** A pre-filled line stays a BOQ line when it came from one — else submit would send it ad-hoc (ADR-327 P5-BOQ). */
+function toFormLine(line: RfqDraftLine): FormLine {
+  return line.boqItemId ? { ...line, source: 'boq', boqItemId: line.boqItemId } : { ...line, source: 'ad_hoc' };
+}
+
 function useRfqFormState(initialState?: RfqBuilderInitialState) {
   const [form, setForm] = useState<FormState>(() => ({
     projectId: initialState?.projectId ?? '',
@@ -327,7 +332,7 @@ function useRfqFormState(initialState?: RfqBuilderInitialState) {
     deadlineDate: initialState?.deadlineDate ?? '',
     awardMode: initialState?.awardMode ?? 'whole_package',
     reminderTemplate: initialState?.reminderTemplate ?? 'standard',
-    lines: initialState?.lines?.map((l) => ({ ...l, source: 'ad_hoc' as const })) ?? [],
+    lines: initialState?.lines?.map(toFormLine) ?? [],
     invitedVendorIds: initialState?.invitedVendorIds ?? [],
   }));
 

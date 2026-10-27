@@ -17,6 +17,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useRfqs } from '@/subapps/procurement/hooks/useRfqs';
 import { RfqList } from '@/subapps/procurement/components/RfqList';
 import { RFQ_STATUS_TRANSITIONS } from '@/subapps/procurement/types/rfq';
+import { getNewRfqUrl } from '@/lib/navigation/procurement-urls';
 import { useStatusDrillParam } from './useStatusDrillParam';
 import { StatusDrillNotice } from './StatusDrillNotice';
 
@@ -36,7 +37,7 @@ export function ProjectRfqListClient({ projectId }: ProjectRfqListClientProps) {
   );
 
   const handleCreate = () => {
-    router.push(`/procurement/rfqs/new?projectId=${projectId}`);
+    router.push(getNewRfqUrl(projectId));
   };
 
   return (

@@ -14,8 +14,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { toast } from 'sonner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFrameworkAgreements } from '@/hooks/procurement/useFrameworkAgreements';
-import { usePOSupplierContacts } from '@/hooks/procurement/usePOSupplierContacts';
-import { getContactDisplayName } from '@/types/contacts';
+import { usePOSupplierContacts, supplierNamesById } from '@/hooks/procurement/usePOSupplierContacts';
 import type {
   FrameworkAgreement,
   CreateFrameworkAgreementDTO,
@@ -38,13 +37,7 @@ export default function AgreementsPage() {
   const [editing, setEditing] = useState<FrameworkAgreement | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<FrameworkAgreement | null>(null);
 
-  const vendorNamesById = useMemo(() => {
-    const map = new Map<string, string>();
-    suppliers.forEach((c) => {
-      if (c.id) map.set(c.id, getContactDisplayName(c));
-    });
-    return map;
-  }, [suppliers]);
+  const vendorNamesById = useMemo(() => supplierNamesById(suppliers), [suppliers]);
 
   const selectedAgreementId = searchParams.get('agreementId') ?? undefined;
 
@@ -189,6 +182,7 @@ export default function AgreementsPage() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         initial={editing}
+        agreements={agreements}
         onSubmit={handleSubmit}
       />
 

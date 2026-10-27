@@ -17,7 +17,7 @@ import { KpiPendingApprovalPos } from '../KpiPendingApprovalPos';
 import { KpiTotalCommittedSpend } from '../KpiTotalCommittedSpend';
 import { KpiBoqCoverage } from '../KpiBoqCoverage';
 import { getProjectProcurementUrl, PROCUREMENT_STATUS_PARAM } from '@/lib/navigation/procurement-urls';
-import { getProjectTabUrl } from '@/lib/navigation/project-urls';
+import { BUYOUT_OPEN_STATUSES } from '@/services/procurement/buyout/project-buyout';
 import { PO_AWAITING_APPROVAL_STATUSES, PO_COMMITTED_STATUSES } from '@/types/procurement';
 import { RFQ_OPEN_STATUSES } from '@/subapps/procurement/types/rfq';
 import type { ProjectProcurementStats } from '@/hooks/useProjectProcurementStats';
@@ -71,9 +71,11 @@ describe('Κάρτες Επισκόπησης — drill-down', () => {
     expect(new Set(statusesOf(href))).toEqual(new Set(expected));
   });
 
-  it('Κάλυψη Επιμετρήσεων με επιμετρήσεις ⇒ σύνδεσμος στην καρτέλα Επιμετρήσεων', () => {
+  it('Κάλυψη Επιμετρήσεων ⇒ «Κάλυψη» (Buyout) με ΟΛΕΣ τις μη καλυμμένες καταστάσεις', () => {
     render(<KpiBoqCoverage projectId={PROJECT_ID} stats={stats({ boqCoverage: { coveredCount: 0, totalCount: 49, percentage: 0 } })} />);
-    expect(screen.getByRole('link').getAttribute('href')).toBe(getProjectTabUrl(PROJECT_ID, 'measurements'));
+    const href = screen.getByRole('link').getAttribute('href');
+    expect(href?.startsWith(`/projects/${PROJECT_ID}/procurement/coverage?`)).toBe(true);
+    expect(new Set(statusesOf(href))).toEqual(new Set(BUYOUT_OPEN_STATUSES));
   });
 
   it.each([

@@ -214,6 +214,7 @@
     "defineRoute::/api/procurement/vendor-invites",
     "defineRoute::/api/projects/[projectId]/budget-lines",
     "defineRoute::/api/projects/[projectId]/budget-lines/[costCode]",
+    "defineRoute::/api/projects/[projectId]/buyout",
     "defineRoute::/api/projects/[projectId]/cost-ledger",
     "entityIdRoute::/api/properties/[id]",
     "runGuarded::/api/properties/[id]/energy-certificate-import",

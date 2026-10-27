@@ -18,6 +18,7 @@ import {
   softDeleteOwnedProcurementDoc,
 } from './procurement-owned-doc';
 import type { FrameworkAgreementDoc } from './framework-agreement-doc';
+import { assertAgreementScope } from './framework-agreement-scope-guard';
 import type {
   CreateFrameworkAgreementDTO,
   UpdateFrameworkAgreementDTO,
@@ -158,6 +159,33 @@ async function ensureAgreementNumberUnique(
   }
 }
 
+/**
+ * Το ΕΝΑ ερώτημα λίστας συμβάσεων (κοινό για τη λίστα και τον φύλακα εμβέλειας). Σε αντίθεση με το
+ * `listFrameworkAgreements`, **ρίχνει** σε αποτυχία: ένας έλεγχος ισοπαλίας που «δεν βρήκε τίποτα»
+ * επειδή απέτυχε η ανάγνωση θα άφηνε να περάσει ακριβώς ό,τι υπάρχει για να σταματήσει.
+ */
+async function queryAgreements(
+  db: FirebaseFirestore.Firestore,
+  companyId: string,
+  filters: FrameworkAgreementFilters,
+): Promise<FrameworkAgreementDoc[]> {
+  let query = db
+    .collection(COLLECTIONS.FRAMEWORK_AGREEMENTS)
+    .where('companyId', '==', companyId) as FirebaseFirestore.Query;
+  if (!filters.includeDeleted) query = query.where('isDeleted', '==', false);
+  if (filters.status) query = query.where('status', '==', filters.status);
+  if (filters.vendorContactId) query = query.where('vendorContactId', '==', filters.vendorContactId);
+  const snap = await query.orderBy('createdAt', 'desc').get();
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as FrameworkAgreementDoc));
+}
+
+/** Φύλακας εμβέλειας (ADR-923 §5.11 «3γ» Βήμα 2) πάνω στην τελική μορφή, πριν από την εγγραφή. */
+async function guardScope(db: FirebaseFirestore.Firestore, companyId: string, agreement: FrameworkAgreementDoc): Promise<void> {
+  await assertAgreementScope(db, companyId, agreement, () =>
+    queryAgreements(db, companyId, { vendorContactId: agreement.vendorContactId }),
+  );
+}
+
 /** Ο πόρος αυτού του αρχείου — ένα σημείο, ώστε το όνομα να μη διαφωνήσει ποτέ. */
 const subjectOf = (agreementId: string) =>
   ({ resource: PROCUREMENT_RESOURCE.FRAMEWORK_AGREEMENT, resourceId: agreementId }) as const;
@@ -230,6 +258,7 @@ export async function createFrameworkAgreement(
       updatedAt: now,
       createdBy: ctx.uid,
     };
+    await guardScope(db, ctx.companyId, agreement);
 
     await db
       .collection(COLLECTIONS.FRAMEWORK_AGREEMENTS)
@@ -279,22 +308,7 @@ export async function listFrameworkAgreements(
   filters: FrameworkAgreementFilters = {},
 ): Promise<FrameworkAgreementDoc[]> {
   return safeFirestoreOperation(async (db) => {
-    let query = db
-      .collection(COLLECTIONS.FRAMEWORK_AGREEMENTS)
-      .where('companyId', '==', ctx.companyId) as FirebaseFirestore.Query;
-
-    if (!filters.includeDeleted) {
-      query = query.where('isDeleted', '==', false);
-    }
-    if (filters.status) {
-      query = query.where('status', '==', filters.status);
-    }
-    if (filters.vendorContactId) {
-      query = query.where('vendorContactId', '==', filters.vendorContactId);
-    }
-
-    const snap = await query.orderBy('createdAt', 'desc').get();
-    let items = snap.docs.map((d) => ({ id: d.id, ...d.data() } as FrameworkAgreementDoc));
+    let items = await queryAgreements(db, ctx.companyId, filters);
 
     if (filters.search) {
       const q = filters.search.toLowerCase();
@@ -374,8 +388,9 @@ export async function updateFrameworkAgreement(
       updates.volumeBreakpoints = validateBreakpoints(dto.volumeBreakpoints);
     }
 
-    await ref.update(sanitizeForFirestore(updates));
     const next = { ...current, ...updates } as FrameworkAgreementDoc;
+    await guardScope(db, ctx.companyId, next);
+    await ref.update(sanitizeForFirestore(updates));
     safeFireAndForget(
       EntityAuditService.recordChange({
         entityType: ENTITY_TYPES.FRAMEWORK_AGREEMENT,

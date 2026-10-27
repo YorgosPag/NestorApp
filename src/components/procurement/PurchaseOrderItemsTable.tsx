@@ -33,7 +33,7 @@ import {
 import { cn } from '@/lib/design-system';
 import { Plus, Trash2 } from 'lucide-react';
 import { PROCUREMENT_UNIT_OPTIONS } from '@/config/procurement-units';
-import { ATOE_MASTER_CATEGORIES } from '@/config/boq-categories';
+import { atoeCategoryOptions, materialOptionLabel } from '@/lib/procurement/scope-options';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Material } from '@/subapps/procurement/types/material';
 
@@ -59,6 +59,28 @@ interface PurchaseOrderItemsTableProps {
   readOnly?: boolean;
 }
 
+interface UnitPriceInputProps {
+  readonly value: number;
+  readonly onChange: (unitPrice: number) => void;
+  readonly disabled: boolean;
+  readonly placeholder?: string;
+}
+
+/** Τιμή μονάδας γραμμής — ΜΙΑ φορά για πίνακα και κάρτα κινητού (CHECK 3.28, ADR-923 §5.11 «3γ»). */
+function UnitPriceInput({ value, onChange, disabled, placeholder }: UnitPriceInputProps) {
+  return (
+    <Input
+      type="number"
+      min={0}
+      step={0.01}
+      value={value || ''}
+      onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+      placeholder={placeholder}
+      disabled={disabled}
+    />
+  );
+}
+
 export function PurchaseOrderItemsTable({
   items,
   onUpdateItem,
@@ -68,6 +90,7 @@ export function PurchaseOrderItemsTable({
   readOnly = false,
 }: PurchaseOrderItemsTableProps) {
   const { t } = useTranslation('procurement');
+  const categoryOptions = atoeCategoryOptions((code) => t(`categories.${code}`));
 
   const materialsForCategory = (categoryCode: string) =>
     materials.filter((m) => m.atoeCategoryCode === categoryCode);
@@ -126,9 +149,9 @@ export function PurchaseOrderItemsTable({
                       <SelectValue placeholder={t('contributionTypePlaceholder')} />
                     </SelectTrigger>
                     <SelectContent className="min-w-[260px]">
-                      {ATOE_MASTER_CATEGORIES.map((c) => (
-                        <SelectItem key={c.code} value={c.code}>
-                          {c.code} — {t(`categories.${c.code}`)}
+                      {categoryOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -149,7 +172,7 @@ export function PurchaseOrderItemsTable({
                         <SelectItem value={MATERIAL_NONE}>—</SelectItem>
                         {materialsForCategory(item.categoryCode).map((m) => (
                           <SelectItem key={m.id} value={m.id}>
-                            {m.code} — {m.name}
+                            {materialOptionLabel(m)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -196,16 +219,9 @@ export function PurchaseOrderItemsTable({
                   </Select>
                 </TableCell>
                 <TableCell>
-                  <Input
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    value={item.unitPrice || ''}
-                    onChange={(e) =>
-                      onUpdateItem(item.tempId, {
-                        unitPrice: parseFloat(e.target.value) || 0,
-                      })
-                    }
+                  <UnitPriceInput
+                    value={item.unitPrice}
+                    onChange={(unitPrice) => onUpdateItem(item.tempId, { unitPrice })}
                     disabled={readOnly}
                   />
                 </TableCell>
@@ -274,9 +290,9 @@ export function PurchaseOrderItemsTable({
                   <SelectValue placeholder={t('contributionTypePlaceholder')} />
                 </SelectTrigger>
                 <SelectContent className="min-w-[260px]">
-                  {ATOE_MASTER_CATEGORIES.map((c) => (
-                    <SelectItem key={c.code} value={c.code}>
-                      {c.code} — {t(`categories.${c.code}`)}
+                  {categoryOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -298,7 +314,7 @@ export function PurchaseOrderItemsTable({
                     <SelectItem value={MATERIAL_NONE}>—</SelectItem>
                     {materialsForCategory(item.categoryCode).map((m) => (
                       <SelectItem key={m.id} value={m.id}>
-                        {m.code} — {m.name}
+                        {materialOptionLabel(m)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -347,16 +363,9 @@ export function PurchaseOrderItemsTable({
                   ))}
                 </SelectContent>
               </Select>
-              <Input
-                type="number"
-                min={0}
-                step={0.01}
-                value={item.unitPrice || ''}
-                onChange={(e) =>
-                  onUpdateItem(item.tempId, {
-                    unitPrice: parseFloat(e.target.value) || 0,
-                  })
-                }
+              <UnitPriceInput
+                value={item.unitPrice}
+                onChange={(unitPrice) => onUpdateItem(item.tempId, { unitPrice })}
                 placeholder={t('items.unitPriceShort')}
                 disabled={readOnly}
               />

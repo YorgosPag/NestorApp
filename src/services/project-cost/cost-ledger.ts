@@ -134,11 +134,22 @@ export interface CostLedgerRow {
   sources: CostLedgerSources;
 }
 
+/** A counted BOQ line referenced by a PO line — `committed` covers it, `pending` (draft/approved) is on its way */
+export interface BoqProcurementLink {
+  boqItemId: string;
+  poId: string;
+  poNumber: string;
+  stage: 'committed' | 'pending';
+}
+
 export interface CostLedger {
   rows: CostLedgerRow[];
   /** Counted BOQ lines — summary parents excluded (Λ7) */
   boqItemCount: number;
+  /** Distinct counted lines with a `committed` link — derived from `boqProcurementLinks` */
   coveredBoqItemCount: number;
+  /** ADR-330 §5.1 S3.2 — which PO covers which counted line (the buyout view reads these) */
+  boqProcurementLinks: BoqProcurementLink[];
   /** Summary parents left out of every sum (their children count) */
   excludedSummaryCount: number;
   /** Legacy group parents with no provable role — counted, but declared */
@@ -268,8 +279,13 @@ function addPurchaseOrderSource(row: CostLedgerRow, po: LedgerPurchaseOrder, amo
 
 /** Covered BOQ lines + each order's counted amount per code (the over-billing rule compares against it) */
 interface PurchaseOrderAccumulation {
-  coveredBoqIds: Set<string>;
+  /** One entry per (BOQ line, PO, stage) — duplicates within a PO collapse */
+  boqLinks: BoqProcurementLink[];
   poAmounts: Map<string, number>;
+}
+
+function pushBoqLink(links: Map<string, BoqProcurementLink>, link: BoqProcurementLink): void {
+  links.set(`${link.boqItemId}|${link.poId}|${link.stage}`, link);
 }
 
 function accumulatePurchaseOrders(
@@ -277,7 +293,7 @@ function accumulatePurchaseOrders(
   purchaseOrders: readonly LedgerPurchaseOrder[],
   accepts: (code: string) => boolean,
 ): PurchaseOrderAccumulation {
-  const coveredBoqIds = new Set<string>();
+  const boqLinks = new Map<string, BoqProcurementLink>();
   const poAmounts = new Map<string, number>();
   for (const po of purchaseOrders) {
     const committed = PO_COMMITTED_STATUSES.has(po.status);
@@ -292,13 +308,33 @@ function accumulatePurchaseOrders(
       if (pending) row.pending += amount;
       if (committed) row.committed += amount;
       if (delivered) row.delivered += amount;
-      if (committed && line.boqItemId) coveredBoqIds.add(line.boqItemId);
+      if (line.boqItemId) {
+        pushBoqLink(boqLinks, { boqItemId: line.boqItemId, poId: po.id, poNumber: po.poNumber, stage: committed ? 'committed' : 'pending' });
+      }
       addPurchaseOrderSource(row, po, amount);
       const key = purchaseOrderAmountKey(po.id, code);
       poAmounts.set(key, (poAmounts.get(key) ?? 0) + amount);
     }
   }
-  return { coveredBoqIds, poAmounts };
+  return { boqLinks: [...boqLinks.values()], poAmounts };
+}
+
+/**
+ * ADR-330 §5.1 S3.2 — links to COUNTED lines only (Λ7), and the per-row covered count derived FROM them:
+ * the overview's «covered» number and the buyout list can never disagree.
+ */
+function countBoqCoverage(
+  rows: Map<string, CostLedgerRow>,
+  links: readonly BoqProcurementLink[],
+  codeByBoqId: ReadonlyMap<string, string>,
+): { countedLinks: BoqProcurementLink[]; coveredBoqItemCount: number } {
+  const countedLinks = links.filter(link => codeByBoqId.has(link.boqItemId));
+  const covered = new Set(countedLinks.filter(link => link.stage === 'committed').map(link => link.boqItemId));
+  for (const boqId of covered) {
+    const code = codeByBoqId.get(boqId);
+    if (code !== undefined) rowFor(rows, code).coveredBoqItemCount += 1;
+  }
+  return { countedLinks, coveredBoqItemCount: covered.size };
 }
 
 function applyResolvedBudget(row: CostLedgerRow): void {
@@ -336,22 +372,16 @@ export function computeCostLedger(
   const codeByBoqId = accumulateBoq(rows, countable, accepts);
   attachExcludedSummaries(rows, excludedSummaries, accepts);
   accumulateBudgetLines(rows, budgetLines, accepts);
-  const { coveredBoqIds, poAmounts } = accumulatePurchaseOrders(rows, purchaseOrders, accepts);
+  const { boqLinks, poAmounts } = accumulatePurchaseOrders(rows, purchaseOrders, accepts);
   const expenses = accumulateExpenseDocuments(code => rowFor(rows, code), expenseDocuments, poAmounts, accepts);
   rows.forEach(applyResolvedBudget);
-
-  let coveredBoqItemCount = 0;
-  for (const boqId of coveredBoqIds) {
-    const code = codeByBoqId.get(boqId);
-    if (code === undefined) continue;
-    rowFor(rows, code).coveredBoqItemCount += 1;
-    coveredBoqItemCount += 1;
-  }
+  const { countedLinks, coveredBoqItemCount } = countBoqCoverage(rows, boqLinks, codeByBoqId);
 
   return {
     rows: [...rows.values()].sort((a, b) => compareCostCodes(a.categoryCode, b.categoryCode)),
     boqItemCount: codeByBoqId.size,
     coveredBoqItemCount,
+    boqProcurementLinks: countedLinks,
     excludedSummaryCount: excludedSummaries.length,
     unresolvedGroupRoleCount,
     expenses: { ...expenses, awaitingAllocationCount },

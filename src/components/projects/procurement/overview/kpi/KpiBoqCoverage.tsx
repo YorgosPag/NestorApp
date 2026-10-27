@@ -3,7 +3,8 @@
 import { Layers } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Progress } from '@/components/ui/progress';
-import { getProjectTabUrl } from '@/lib/navigation/project-urls';
+import { getProjectProcurementUrl } from '@/lib/navigation/procurement-urls';
+import { BUYOUT_OPEN_STATUSES } from '@/services/procurement/buyout/project-buyout';
 import type { ProjectProcurementStats } from '@/hooks/useProjectProcurementStats';
 import { KpiCard } from './KpiCard';
 
@@ -22,7 +23,7 @@ export function KpiBoqCoverage({ projectId, stats }: Props) {
     <KpiCard
       label={t('overview.kpi.boqCoverage.label')}
       icon={Layers}
-      href={hasBoq ? getProjectTabUrl(projectId, 'measurements') : undefined}
+      href={hasBoq ? getProjectProcurementUrl(projectId, 'coverage', { status: BUYOUT_OPEN_STATUSES }) : undefined}
     >
       {!hasBoq ? (
         <p className="text-xs text-muted-foreground">

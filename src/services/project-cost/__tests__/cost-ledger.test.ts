@@ -94,6 +94,27 @@ describe('computeCostLedger (ADR-917)', () => {
     expect(ledger.rows[0].coveredBoqItemCount).toBe(1);
   });
 
+  it('ADR-330 S3.2 — links: one per (line, PO, stage), counted lines only, draft = pending', () => {
+    const ordered = po('ordered', [line('OIK-2', 10, 'b1'), line('OIK-2', 10, 'b1'), line('OIK-2', 10, 'gone')], 'po_o');
+    const draft = po('draft', [line('OIK-2', 10, 'b2')], 'po_d');
+    const cancelled = po('cancelled', [line('OIK-2', 10, 'b2')], 'po_c');
+    const ledger = computeCostLedger([boq('b1', 'OIK-2'), boq('b2', 'OIK-2')], [ordered, draft, cancelled]);
+    expect(ledger.boqProcurementLinks).toEqual([
+      { boqItemId: 'b1', poId: 'po_o', poNumber: 'PO-po_o', stage: 'committed' },
+      { boqItemId: 'b2', poId: 'po_d', poNumber: 'PO-po_d', stage: 'pending' },
+    ]);
+  });
+
+  it('ADR-330 S3.2 — covered count IS the distinct committed links (overview card = buyout list)', () => {
+    const ledger = computeCostLedger(
+      [boq('b1', 'OIK-1'), boq('b2', 'OIK-2'), boq('b3', 'OIK-2')],
+      [po('ordered', [line('OIK-1', 1, 'b1'), line('OIK-2', 1, 'b2')]), po('closed', [line('OIK-2', 1, 'b2')]), po('approved', [line('OIK-2', 1, 'b3')])],
+    );
+    const committed = new Set(ledger.boqProcurementLinks.filter(link => link.stage === 'committed').map(link => link.boqItemId));
+    expect(ledger.coveredBoqItemCount).toBe(committed.size);
+    expect(ledger.coveredBoqItemCount).toBe(2);
+  });
+
   it('category filter applies to budget and commitments alike', () => {
     const { rows } = computeCostLedger(
       [boq('b1', 'OIK-1'), boq('b2', 'OIK-2')],

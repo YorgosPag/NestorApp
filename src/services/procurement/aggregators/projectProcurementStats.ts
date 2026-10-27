@@ -13,10 +13,10 @@ import 'server-only';
  */
 
 import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
 import { PO_AWAITING_APPROVAL_STATUSES, PO_COMMITTED_STATUSES } from '@/types/procurement';
-import { RFQ_OPEN_STATUSES, type RfqStatus } from '@/subapps/procurement/types/rfq';
+import { RFQ_OPEN_STATUSES } from '@/subapps/procurement/types/rfq';
 import { fetchProjectPurchaseOrders } from './project-purchase-orders';
+import { fetchProjectRfqs } from './project-boq-sourcing';
 
 // ============================================================================
 // TYPES
@@ -37,19 +37,12 @@ export async function computeProjectBasicStats(
   projectId: string,
 ): Promise<ProjectBasicStats> {
   return safeFirestoreOperation(async (db) => {
-    const [rfqSnap, purchaseOrders] = await Promise.all([
-      db
-        .collection(COLLECTIONS.RFQS)
-        .where('companyId', '==', companyId)
-        .where('projectId', '==', projectId)
-        .get(),
+    const [rfqs, purchaseOrders] = await Promise.all([
+      fetchProjectRfqs(db, companyId, projectId),
       fetchProjectPurchaseOrders(db, companyId, projectId),
     ]);
 
-    let openRfqCount = 0;
-    for (const doc of rfqSnap.docs) {
-      if (RFQ_OPEN_STATUSES.has((doc.data() as { status: RfqStatus }).status)) openRfqCount++;
-    }
+    const openRfqCount = rfqs.filter(rfq => RFQ_OPEN_STATUSES.has(rfq.status)).length;
 
     let pendingApprovalPoCount = 0;
     let totalCommittedSpend = 0;

@@ -17,6 +17,7 @@ import { useMemo } from 'react';
 import { SearchableCombobox, type FieldAccessibleName } from '@/components/ui/searchable-combobox';
 import type { ComboboxOption } from '@/components/ui/searchable-combobox-types';
 import { useFirestoreProjects, type FirestoreProject } from '@/hooks/useFirestoreProjects';
+import { projectOptionLabel } from '@/lib/procurement/scope-options';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
 import { usePOSupplierContacts, supplierContactsToOptions } from '@/hooks/procurement/usePOSupplierContacts';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -50,7 +51,7 @@ export function POProjectSelector({
     () =>
       projects.map((p) => ({
         value: p.id,
-        label: p.name || p.title || p.id,
+        label: projectOptionLabel(p),
         secondaryLabel: p.status,
       })),
     [projects]

@@ -13,6 +13,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { useRouter } from '@/lib/workspace/navigation';
+import { getNewRfqUrl } from '@/lib/navigation/procurement-urls';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAuth } from '@/hooks/useAuth';
 import { useCompanyId } from '@/hooks/useCompanyId';
@@ -176,9 +177,8 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
       });
       if (!proceed) return;
     }
-    const ids = filteredItems.map((i) => i.id).join(',');
-    router.push(`/procurement/rfqs/new?boqItems=${encodeURIComponent(ids)}&projectId=${encodeURIComponent(building.projectId)}`);
-  }, [filteredItems, router, confirm, t]);
+    router.push(getNewRfqUrl(building.projectId, filteredItems.map((i) => i.id)));
+  }, [filteredItems, router, confirm, t, building.projectId]);
 
   // --- LOADING STATE ---
 

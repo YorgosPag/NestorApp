@@ -10,7 +10,9 @@
 
 | Date | Changes |
 |------|---------|
+| 2026-10-27 | ✅ **S3.2 — υπο-καρτέλα «Κάλυψη» (Buyout)** (βλ. §5.1 S3.2): λίστα των μετρημένων εργασιών επιμέτρησης με **4** καταστάσεις (Ακάλυπτη · Σε προσφορές · Σε παραγγελία · Καλυμμένη), κάλυψη σε € και πλήθος, μαζικό «Αίτημα προσφοράς» (όριο 30 δηλωμένο), σύνδεσμοι προς PO/RFQ. Κάλυψη από τον ledger (ADR-917 `boqProcurementLinks`) ⇒ κάρτα και λίστα δεν αποκλίνουν. Η κάρτα 4 προσγειώνεται εδώ φιλτραρισμένη. Διορθώθηκε η απώλεια σύνδεσης RFQ↔BOQ (ADR-327 P5-BOQ). |
 | 2026-10-27 | ✅ **S3.1 — drill-down από τις κάρτες της Επισκόπησης** (βλ. §5.1 S3.1): κλικ σε κάρτα = **σύνδεσμος** προς την καρτέλα με φίλτρο στο URL (`?status=`), όχι φίλτρο επί τόπου (κάτω από τις κάρτες δεν υπάρχει λίστα — πρότυπο Procore/Stripe/Linear). Κάρτα με 0 ⇒ όχι σύνδεσμος. Ορισμοί KPI σε SSoT (`RFQ_OPEN_STATUSES`, `PO_AWAITING_APPROVAL_STATUSES`) που διαβάζουν **και** ο aggregator **και** η κάρτα. Οι 4 κάρτες ενοποιήθηκαν σε `KpiCard`. |
+| 2026-10-27 | ✅ **Phase 5 — εμβέλεια σύμβασης από το UI + άρνηση ισοπαλίας** (ADR-923 §5.11 «3γ» Βήμα 2): Είδη (υλικά ∪ ΑΤΟΕ) · Έργα · φύλακας server (ισοπαλία ενεργών, `[]`, άγνωστη ΑΤΟΕ, ξένες αναφορές). Βλ. «Architecture v3». |
 | 2026-10-27 | ✅ **Phase 5.5 v3 — πάγωμα όρων PO (ADR-923 §5.11 «3γ» Α9)**: η επεξεργασία κρατά τους αποθηκευμένους όρους ανά γραμμή (`carry`)· νέα τιμολόγηση μόνο ρητά (`redetermine` + audit)· CAS `expectedTotal` → 409. Βλ. «Architecture v3». |
 | 2026-10-27 | ✅ **Phase 5.5 v3 — διόρθωση στη ρίζα (ADR-923 §5.11 «3γ»)**: σύμβαση **ανά γραμμή** μέσω του ενός `selectMostSpecific` (ισοπαλία ⇒ καμία έκπτωση) · `[]` = κανένα · εύρος υλικών/ΑΤΟΕ ενεργό · κλίμακες ως group condition ανά PO · ΦΠΑ **μετά** την έκπτωση (`taxableAmount`, `total` = πληρωτέο) · ένα `po-totals` αντί για 5 αντίγραφα · `appliedFaId`/`faDiscountPercent`/`netTotal` → `appliedFaIds[]` + `faDiscount` γραμμής (0 έγγραφα) · `materialId` στο σχήμα PO (το Phase 4.5 CF δεν το έβλεπε ποτέ) · έκπτωση σε PDF/λεπτομέρεια/δημόσια σελίδα. Βλ. «Architecture v3». |
 | 2026-10-26 | 🔴 **Απόκλιση ADR ↔ κώδικα στην εφαρμογή εκπτώσεων FWA (Phase 5.5)**, μετρημένη στην αναγνώριση της ADR-923 Φάσης 3 (§5.11 Α1–Α4): float αριθμητική · έκπτωση **πάνω στον ΦΠΑ** · εύρος υλικών/ΑΤΟΕ που δεν διαβάζεται · `[]` = «όλα» αντίθετα με το «`[]`=none» αυτού του ADR. Μόνο τεκμηρίωση εδώ· η διόρθωση γίνεται στην ADR-923 Φάση 3γ (FWA πάνω στη μία μηχανή `src/lib/pricing/`). |
@@ -386,7 +388,7 @@ Sostituisce l'attuale `ProcurementProjectTab.tsx` (oggi 22 LOC, solo `RfqList`).
 | Ανοιχτά Αιτήματα | `rfq?status=` + `RFQ_OPEN_STATUSES` |
 | Παραγγελίες προς Έγκριση | `po?status=` + `PO_AWAITING_APPROVAL_STATUSES` |
 | Δεσμευμένη Δαπάνη | `po?status=` + `PO_COMMITTED_STATUSES` |
-| Κάλυψη Επιμετρήσεων | `getProjectTabUrl(id, 'measurements')` |
+| Κάλυψη Επιμετρήσεων | `coverage?status=` + `BUYOUT_OPEN_STATUSES` (S3.2) |
 
 **Κανόνες:**
 - **Ένα σύνολο, δύο αναγνώστες.** Ο aggregator (`projectProcurementStats`) και η κάρτα διαβάζουν το **ίδιο** σύνολο καταστάσεων ⇒ η λίστα δείχνει ΑΚΡΙΒΩΣ ό,τι μέτρησε η κάρτα. (Πριν: `'active'`/`'draft'` γραμμένα με το χέρι στον aggregator.)
@@ -395,9 +397,40 @@ Sostituisce l'attuale `ProcurementProjectTab.tsx` (oggi 22 LOC, solo `RfqList`).
 - **Λεξιλόγιο = πίνακας μεταβάσεων.** Το `useStatusDrillParam` δέχεται `RFQ_STATUS_TRANSITIONS` / `PO_STATUS_TRANSITIONS` (εξαντλητικά `Record`) και πετά άγνωστες τιμές ⇒ `?status=garbage` δεν αδειάζει τη λίστα.
 - **Μία διαδρομή φίλτρου PO.** Η λίστα PO περνά το φίλτρο στο υπάρχον drill overlay του ADR-331 (`usePurchaseOrders(drill)`), όχι σε δεύτερο μηχανισμό.
 
-**Αρχεία:** `lib/navigation/procurement-urls.ts` (`PROCUREMENT_STATUS_PARAM`, `filter` στο `getProjectProcurementUrl`) · `lib/navigation/project-urls.ts` (`measurements` στο `ProjectDeepLinkTab`) · `overview/kpi/KpiCard.tsx` (NEW, κοινό κέλυφος) + οι 4 κάρτες · `clients/useStatusDrillParam.ts` + `clients/StatusDrillNotice.tsx` (NEW) · `ProjectRfqListClient` / `ProjectPoListClient` · `RFQ_OPEN_STATUSES`, `PO_AWAITING_APPROVAL_STATUSES` · i18n `procurement.overview.drill.*`.
+**Αρχεία:** `lib/navigation/procurement-urls.ts` (`PROCUREMENT_STATUS_PARAM`, `filter` στο `getProjectProcurementUrl`) · `overview/kpi/KpiCard.tsx` (NEW, κοινό κέλυφος) + οι 4 κάρτες · `clients/useStatusDrillParam.ts` + `clients/StatusDrillNotice.tsx` (NEW) · `ProjectRfqListClient` / `ProjectPoListClient` · `RFQ_OPEN_STATUSES`, `PO_AWAITING_APPROVAL_STATUSES` · i18n `procurement.overview.drill.*`.
 
-**Ανοιχτό (όχι σε αυτό το βήμα):** η κάρτα «Κάλυψη Επιμετρήσεων» ανοίγει την καρτέλα Επιμετρήσεων **χωρίς** φίλτρο «ακάλυπτες». Αυτό το φίλτρο θέλει τα ακάλυπτα `boqItemId` στον client (σήμερα ζουν μόνο μέσα στο `computeCostLedger`), οπότε αγγίζει το cost ledger (ADR-917) και την καρτέλα Επιμετρήσεων.
+---
+
+#### S3.2 — Υπο-καρτέλα «Κάλυψη» (Buyout) ✅ 2026-10-27
+
+**Γιατί:** η κάρτα «Κάλυψη Επιμετρήσεων 0% · 0/49» δεν είχε πού να προσγειωθεί — η καρτέλα Επιμετρήσεων **δεν έχει λίστα εργασιών** (μόνο σύνολα ανά κτίριο/κατηγορία). Οι μεγάλοι (Procore **Buyout**) δεν βάζουν αυτή τη λίστα στην επιμέτρηση· τη βάζουν στις **προμήθειες**. Απόφαση Giorgio: «όπως οι μεγάλοι».
+
+**Πέρα από τους μεγάλους:**
+1. **Τέσσερις καταστάσεις, όχι δύο** (`BuyoutStatus`): Ακάλυπτη · Σε προσφορές (ανοιχτό RFQ) · Σε παραγγελία (PO draft/approved) · Καλυμμένη (PO committed). Οι δύο μεσαίες αποτρέπουν **διπλό αίτημα** για εργασία που ήδη τρέχει. Προτεραιότητα: committed > ordering > sourcing > uncovered.
+2. **Κάλυψη σε € και σε πλήθος** — «0/49» δεν λέει πόσα χρήματα μένουν ακάλυπτα (Procore «uncommitted budget»).
+3. **Κλείσιμο κύκλου** — επιλογή ακάλυπτων → «Αίτημα προσφοράς» (υπάρχουσα ροή `rfqs/new?boqItems=`), όριο 30 **δηλωμένο πριν** το κλικ, προειδοποίηση για εργασίες ήδη σε διαδικασία.
+4. **Ιχνηλασιμότητα** — κάθε γραμμή ονομάζει, ως σύνδεσμο, το PO / RFQ που την καλύπτει.
+
+**Μία αλήθεια:**
+```
+loadProjectCostLedger (ADR-917) ── boqProcurementLinks[] ─┐  (ο ledger ήδη υπολόγιζε την κάλυψη· τώρα την ΕΚΘΕΤΕΙ)
+fetchProjectBoqSourcing ── ανοιχτά RFQ → lines (source='boq') ─┤
+                                                              ▼
+                       deriveProjectBuyout (καθαρή) → GET /api/projects/[projectId]/buyout → useProjectBuyout
+```
+- `coveredBoqItemCount` **παράγεται** από τα committed links ⇒ κάρτα Επισκόπησης και λίστα δεν αποκλίνουν (άγκυρα).
+- Γραμμές = `rows[].sources.boqItems` = το **μετρημένο** σύνολο (χωρίς summary parents, Λ7) ⇒ σύνολο λίστας = παρονομαστής της κάρτας.
+- «Ανοιχτό RFQ» = εκτός `RFQ_LIFECYCLE_LOCKED_STATUSES` (ADR-335) — ο ίδιος ορισμός που κλειδώνει τις γραμμές.
+- Φίλτρο = ίδιο `?status=` + ίδιο `useStatusDrillParam` (νέο `set`) με τις άλλες λίστες· λεξιλόγιο `BUYOUT_STATUS_META`. Εδώ τα τσιπ **είναι** φίλτρα επί τόπου (η λίστα είναι από κάτω).
+- Αναζήτηση + επιλογή = τοπική κατάσταση· η επιλογή κλαδεύεται σε ό,τι είναι ακόμα επιλέξιμο όταν αλλάξουν τα δεδομένα.
+
+**Διόρθωση που χρειάστηκε (ADR-327 P5-BOQ):** το «Αίτημα από επιμετρήσεις» **έχανε τη σύνδεση** — γραμμές χωρίς `boqItemId`, ο builder τις έκανε `ad_hoc` ⇒ η κατάσταση «Σε προσφορές» θα ήταν ανέφικτη. Λύση: `RfqDraftLine`/`RfqFromBoqDraft` + ο builder κρατά `source:'boq'`.
+
+**Boy scout:** `fetchProjectRfqs` (ένα ερώτημα για KPIs + Buyout) · `getNewRfqUrl` (τέλος στα χειρόγραφα `/procurement/rfqs/new?…` σε `MeasurementsTabContent` και `ProjectRfqListClient`) · το προσωρινό `'measurements'` του `ProjectDeepLinkTab` (S3.1) αφαιρέθηκε.
+
+**Αρχεία:** `services/project-cost/cost-ledger.ts` · `services/procurement/aggregators/project-boq-sourcing.ts` (NEW) · `services/procurement/buyout/project-buyout.ts` (NEW) · `app/api/projects/[projectId]/buyout/route.ts` (NEW, fence έργου) · `hooks/useProjectBuyout.ts` (NEW) · `components/projects/procurement/buyout/*` (NEW: client, summary, table, action bar, badge, view helpers) · σελίδα `procurement/coverage` · 5η καρτέλα στο `ProjectProcurementTabs` · `API_ROUTES.PROJECTS.BUYOUT` · i18n `procurement.buyout.*` + `projects…procurement.coverage`.
+
+**Άγκυρες:** `cost-ledger.test.ts` (links · covered == committed) · `project-buyout.test.ts` (προτεραιότητα · σύνολα = ledger · unpriced · κανόνες προβολής/επιλογής) · `kpi-drill-down.test.tsx` (κάρτα 4 → coverage) · `rfq-service.test.ts` (from-BOQ κρατά `boqItemId` · ξένος tenant εκτός).
 
 ---
 
@@ -641,6 +674,11 @@ Sostituisce l'attuale `ProcurementProjectTab.tsx` (oggi 22 LOC, solo `RfqList`).
   *σημερινό* σύνολο συμβάσεων σε κάθε PATCH. Πλέον `carry` (προεπιλογή): κάθε γραμμή είναι `frozen` / `adjusted` (ίδια σύμβαση-πηγή, νέο ποσό) /
   `sourced`, με αντιστοίχιση πολυσυνόλου (`lib/procurement/po-pricing-carry.ts`)· `redetermine` μόνο ρητά (διάλογος «Επανατιμολόγηση», audit
   `procurement.po.repriced`)· αλλαγή προμηθευτή/έργου ⇒ όλες `sourced`· CAS `expectedTotal` → 409 `PO_PRICING_CHANGED` χωρίς εγγραφή.
+- **Εμβέλεια σύμβασης από το UI + άρνηση ισοπαλίας (ADR-923 §5.11 «3γ» Βήμα 2, 2026-10-27).**
+  - Η φόρμα σύμβασης αποκτά **Είδη** (υλικά ∪ κατηγορίες ΑΤΟΕ) και **Έργα**, και η λεπτομέρεια δείχνει «Εφαρμόζεται σε».
+  - Ισοπαλία δύο **ενεργών** συμβάσεων του ίδιου προμηθευτή (ίση ειδικότητα, επικαλυπτόμενη ισχύς) ⇒ ο `framework-agreement-scope-guard` **αρνείται**
+    την αποθήκευση, όπως το SAP. Η κρίση γίνεται με τον **ίδιο** `selectLineAgreement` της τιμολόγησης PO.
+  - Ο ίδιος φύλακας αρνείται επίσης: `[]` ως εύρος · άγνωστη κατηγορία ΑΤΟΕ · υλικό/έργο άλλης εταιρείας.
 - 🔴 **Phase 4.5, παράπλευρο εύρημα:** το `CreatePOItemSchema` **δεν** είχε `materialId` ⇒ το zod το πετούσε ⇒ το `materialPriceSyncOnPODelivery` δεν έβρισκε ποτέ υλικό.
   Διορθώθηκε (μαζί με το `duplicatePO`). Από εδώ και πέρα το CF **θα ενεργοποιείται** σε παράδοση PO με υλικό: πρώτη φορά στην πράξη.
 - Tamper guarantee: αμετάβλητη (και ισχυρότερη: ούτε το `total` γραμμής εμπιστεύεται ο server).

@@ -17,16 +17,18 @@
  * που υπάρχει σε πραγματική γραμμή, ούτε δείχνουν ισοπαλία που δεν θα συνέβαινε ποτέ.
  *
  * 🔑 **Χρόνος.** Αφού καμία τρίτη δεν κυριαρχεί στα σημεία, ισοπαλία με την άλλη = επικάλυψη ισχύος. Η
- * πρώτη κοινή στιγμή είναι η μεταγενέστερη από τις δύο αρχές· εκεί ρωτιέται ο επιλογέας.
+ * πρώτη κοινή στιγμή είναι η μεταγενέστερη από τις δύο αρχές· εκεί ρωτιέται ο επιλογέας, που κρίνει και
+ * την επικάλυψη (μετά τη λήξη ⇒ `expired`).
  *
  * 🔑 Η ελεγχόμενη σύμβαση θεωρείται **ενεργή** («θα συγκρουστεί αν ενεργοποιηθεί»)· ο εαυτός της
- * (η αποθηκευμένη εκδοχή στην επεξεργασία) εξαιρείται. Το αν η ισοπαλία **μπλοκάρει** το αποφασίζει ο
- * καλών (μόνο για ενεργή — `framework-agreement-scope-guard`).
+ * (η αποθηκευμένη εκδοχή στην επεξεργασία) εξαιρείται ρητά. Η μετάλλαξη «χωρίς εξαίρεση» είναι
+ * **ισοδύναμη** (η αποθηκευμένη εκδοχή δεν μπορεί να είναι ειδικότερη στα σημεία ελέγχου και η ταυτότητά
+ * της παραλείπεται)· το φίλτρο μένει για σαφήνεια. Το αν η ισοπαλία **μπλοκάρει** το αποφασίζει **μόνο**
+ * ο φύλακας (`framework-agreement-scope-guard`: μόνο για ενεργή).
  *
  * **Layering**: καθαρές συναρτήσεις, μηδέν I/O — ίδιες σε server και φόρμα.
  */
 
-import { windowsOverlap } from '@/lib/pricing/validity';
 import type { FrameworkAgreementLike } from '../types/framework-agreement';
 import { faValidity, selectLineAgreement, type FaLineContext } from './framework-agreement-discount';
 
@@ -65,11 +67,16 @@ function probeLines(fa: FrameworkAgreementLike): ProbeLine[] {
   return projects.flatMap((projectId) => itemProbes(fa).map((item) => ({ ...item, projectId })));
 }
 
-/** Η πρώτη κοινή στιγμή ισχύος, ή `null` αν δεν επικαλύπτονται / δεν διαβάζονται. */
+/**
+ * Η μεταγενέστερη από τις δύο αρχές — η μόνη στιγμή που χρειάζεται να ρωτηθεί ο επιλογέας. Αν οι ισχύες
+ * δεν επικαλύπτονται, εκείνη τη στιγμή η μία έχει ήδη λήξει και ο επιλογέας την απορρίπτει μόνος του
+ * (`expired`)· δεύτερος έλεγχος επικάλυψης εδώ θα ήταν δεύτερη αλήθεια (η μετάλλαξη ήταν ισοδύναμη).
+ * `null` = μη αναγνώσιμη ισχύς.
+ */
 function firstSharedInstant(draft: FrameworkAgreementLike, other: FrameworkAgreementLike): number | null {
   const draftWindow = faValidity(draft);
   const otherWindow = faValidity(other);
-  if (draftWindow === null || otherWindow === null || !windowsOverlap(draftWindow, otherWindow)) return null;
+  if (draftWindow === null || otherWindow === null) return null;
   return Math.max(draftWindow.fromMs ?? Number.MIN_SAFE_INTEGER, otherWindow.fromMs ?? Number.MIN_SAFE_INTEGER);
 }
 

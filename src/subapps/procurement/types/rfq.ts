@@ -77,6 +77,12 @@ export interface RfqLine {
   notes: string | null;
 }
 
+/**
+ * A pre-filled builder line that KEEPS its BOQ origin (ADR-327 P5-BOQ). Without `boqItemId` the builder sent it
+ * as ad-hoc, the RFQ lost its link to the measurement and the buyout view (ADR-330 §5.1 S3.2) could not see it.
+ */
+export type RfqDraftLine = RfqLine & { boqItemId?: string | null };
+
 // ============================================================================
 // RFQ ENTITY
 // ============================================================================
@@ -157,6 +163,9 @@ export interface CreateRfqDTO {
   /** Ad-hoc line definitions for Q29 escape-hatch path. */
   adHocLines?: import('./rfq-line').CreateRfqLineDTO[];
 }
+
+/** What `POST /api/rfqs/from-boq` returns: a builder pre-fill whose lines keep their BOQ origin. */
+export type RfqFromBoqDraft = CreateRfqDTO & { lines: RfqDraftLine[] };
 
 export interface UpdateRfqDTO {
   title?: string;

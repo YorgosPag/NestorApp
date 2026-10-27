@@ -10,6 +10,7 @@ import { getContactDisplayName } from '@/types/contacts';
 import { formatCurrency, formatDate } from '@/lib/intl-formatting';
 import { cn, getStatusColor } from '@/lib/design-system';
 import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
+import { AgreementScopeSummary } from './AgreementScopeSummary';
 import type {
   FrameworkAgreement,
   FrameworkAgreementStatus,
@@ -160,6 +161,10 @@ export function AgreementDetail({ agreement, onEdit, onDelete, onCreateNew }: Ag
             </table>
           )}
       </section>
+
+      <Separator />
+
+      <AgreementScopeSummary scope={agreement} />
     </article>
   );
 }

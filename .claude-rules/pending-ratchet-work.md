@@ -4221,6 +4221,16 @@
 
 ## Pending tasks (priority order)
 
+### 🔌 Hooks προμηθειών με ωμό `fetch` αντί για `apiClient` — χάνονται `errorCode`, ταυτότητα, ιδεμποτία (προτεραιότητα ΜΕΣΑΙΑ, 2026-10-27, ADR-923 §5.11 «3γ» Βήμα 2 · N.0.2)
+- **Τι**: το `useFrameworkAgreements` (`agreementRequest`), το `useMaterials` και το `useSupplierMetrics` καλούν `fetch('/api/procurement/…')` με χειρόγραφα URL, ενώ το `procurement-mutation-gateway` χρησιμοποιεί `apiClient` + `API_ROUTES.PROCUREMENT`. Συνέπειες:
+  - το σφάλμα φτάνει ως `new Error(json.error)` ⇒ **ωμό αγγλικό μήνυμα** στη φόρμα (π.χ. άρνηση ισοπαλίας συμβάσεων), κανένα `ApiClientError.errorCode`·
+  - κανένα `Idempotency-Key` στα POST.
+
+  Επιπλέον το `runProcurementMutation` χαρτογραφεί μόνο `conflictName`/`validationName` σε status, **χωρίς** κωδικό σφάλματος.
+- **Fix**:
+  1. `API_ROUTES.PROCUREMENT.AGREEMENTS` / `MATERIALS` και μετάβαση των hooks σε `apiClient`.
+  2. Κωδικοί σφαλμάτων (`FRAMEWORK_AGREEMENT_AMBIGUOUS` κ.λπ.) από το `runProcurementMutation` μέσω `ApiError(status, msg, code, details)`, με χαρτογράφηση σε i18n στη φόρμα, όπως το `PO_PRICING_CHANGED` του Α9.
+
 ### 👻 Ετικέτες κατάστασης ΑΟΡΑΤΕΣ — `getStatusColor(x,'bg')` + `getStatusColor(x,'text')` του ΙΔΙΟΥ token (προτεραιότητα ΥΨΗΛΗ, 2026-10-27, ADR-923 §5.11 «3γ» Α16 · ADR-770 · N.0.2)
 - **Τι**: μετρημένο στον browser (PO-0001): η ετικέτα «Πρόχειρο» έχει `color` = `background-color` = `rgb(36,99,235)` ⇒ κείμενο αόρατο. Από τη διόρθωση της 2026-10-10 στο `design-system.ts` (οι κλάσεις `bg-[hsl(var(--status-*))]` παράγουν πλέον CSS) κάθε σημείο που βάζει **και** `bg` **και** `text` του ίδιου token χωρίς διαφάνεια βγάζει συμπαγές κουτί. Σημεία (grep): `PurchaseOrderDetailsHeader.tsx:56` · `agreements/AgreementDetail.tsx:62` · `subapps/procurement/components/RfqList.tsx:44` · `QuoteStatusBadge.tsx:34` · `contacts/tabs/procurement/ContactPurchaseOrdersSection.tsx:44` · `PurchaseOrderKPIs.tsx:48-50` · `crm/notifications/notification-utils.ts:13-19` · `crm/leads/lead-detail/utils/status.ts:23` · `obligations/workspace/workflow.ts:55` (+ `ika/LiveWorkerMap.tsx`, `QrCodePanel.tsx` με το νεκρό `bg-opacity-10`). Επιπλέον το `PurchaseOrderDetailsHeader` πέφτει σε `status-info` για κάθε κατάσταση (`planned`/`pending`/`construction` δεν υπάρχουν στον χάρτη) και δείχνει `statusMeta.label.el` (ωμά ελληνικά, N.11).
 - **Fix**: ΕΝΑ SSoT `getStatusBadgeClasses(status)` (απαλό φόντο `/15` + κείμενο token, όπως ήδη τα `FilesList`/`FileRecordBadge`) στο `design-system.ts` και αντικατάσταση των ~12 σημείων· άγκυρα: η πύλη θεματικού ζευγαρώματος (CHECK 3.39) να απαγορεύει `bg`+`text` ίδιου status token χωρίς διαφάνεια. 4+ αρχεία, 5 πεδία ⇒ όχι επί τόπου.
