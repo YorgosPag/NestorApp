@@ -25,8 +25,11 @@ import { loadAndPricePurchaseOrder } from '@/lib/procurement/price-purchase-orde
 import {
   pricedRecord,
   type POPricedRecord,
+  type POPricing,
   type POPricingLine,
 } from '@/lib/procurement/price-purchase-order-pure';
+import { POPricingConflictError, type POCarryInput } from '@/lib/procurement/po-pricing-carry';
+import { minorFromMajor } from '@/lib/money/money';
 import {
   createPurchaseOrder,
   getPurchaseOrder,
@@ -78,6 +81,13 @@ interface POPricingRequest<TItem extends POPricingLine> {
   items: readonly TItem[];
   taxRate: number;
   atMs: number;
+  /** Επεξεργασία: οι όροι της αποθηκευμένης PO (ADR-923 «3γ», Α9). */
+  carry?: POCarryInput;
+}
+
+interface POPricingResult<TItem> {
+  record: POPricedRecord<TItem>;
+  pricing: POPricing;
 }
 
 /**
@@ -86,14 +96,32 @@ interface POPricingRequest<TItem extends POPricingLine> {
  */
 async function pricePOItems<TItem extends POPricingLine>(
   ctx: AuthContext,
-  request: POPricingRequest<TItem>,
-): Promise<POPricedRecord<TItem>> {
-  const pricing = await loadAndPricePurchaseOrder(ctx, request);
+  { carry, ...input }: POPricingRequest<TItem>,
+): Promise<POPricingResult<TItem>> {
+  const pricing = await loadAndPricePurchaseOrder(ctx, input, carry);
   const [invalid] = pricing.invalidLineIndexes;
   if (invalid !== undefined) {
     throw new Error(`Item ${invalid + 1}: quantity or unitPrice cannot be represented exactly`);
   }
-  return pricedRecord(request.items, pricing);
+  return { record: pricedRecord(input.items, pricing), pricing };
+}
+
+/** Compare-and-set στο πληρωτέο: ό,τι έδειξε η φόρμα είναι ό,τι αποθηκεύεται — αλλιώς τίποτα. */
+function assertExpectedTotal(expectedTotal: number | undefined, total: number): void {
+  if (expectedTotal === undefined) return;
+  if (minorFromMajor(expectedTotal) !== minorFromMajor(total)) throw new POPricingConflictError(expectedTotal, total);
+}
+
+/** Οι γραμμές που αντιστοιχούν σε αποθηκευμένες κρατούν το `id` τους· οι νέες παίρνουν καινούργιο. */
+function withStableItemIds(
+  items: readonly PurchaseOrderItem[],
+  pricing: POPricing,
+  stored: readonly PurchaseOrderItem[],
+): PurchaseOrderItem[] {
+  return items.map((item, index) => {
+    const storedIndex = pricing.lines[index]?.storedIndex ?? null;
+    return { ...item, id: storedIndex !== null ? stored[storedIndex].id : generatePOItemId() };
+  });
 }
 
 /** Ημερομηνία τιμολόγησης μιας υπάρχουσας PO = ημερομηνία εγγράφου (SAP pricing date). */
@@ -145,7 +173,7 @@ export async function createPO(
   if (validationError) throw new Error(validationError);
 
   // Phase 5.5 C.2 + ADR-923 «3γ» — συμβάσεις, εκπτώσεις και σύνολα υπολογίζονται εδώ, από τη βάση.
-  const priced = await pricePOItems(ctx, {
+  const { record: priced } = await pricePOItems(ctx, {
     supplierId: dto.supplierId,
     projectId: dto.projectId,
     items: dto.items,
@@ -218,25 +246,9 @@ export async function updatePO(
   if (dto.paymentTermsDays !== undefined) updates.paymentTermsDays = dto.paymentTermsDays ?? null;
   if (dto.supplierNotes !== undefined) updates.supplierNotes = dto.supplierNotes ?? null;
   if (dto.internalNotes !== undefined) updates.internalNotes = dto.internalNotes ?? null;
-  // Phase 5.5 C.2 + ADR-923 «3γ» — η τιμολόγηση τρέχει ΠΑΝΤΑ (γραμμές, έργο, προμηθευτής ή ΦΠΑ
-  // μπορεί να άλλαξαν) πάνω στις τελικές γραμμές, στην ημερομηνία του εγγράφου.
-  const items: PurchaseOrderItem[] = dto.items
-    ? dto.items.map((item) => ({
-        ...item,
-        id: generatePOItemId(),
-        quantityReceived: 0,
-        quantityRemaining: item.quantity,
-      }))
-    : po.items;
   const taxRate = dto.taxRate ?? po.taxRate;
-  const priced = await pricePOItems(ctx, {
-    supplierId: dto.supplierId ?? po.supplierId,
-    projectId: dto.projectId ?? po.projectId,
-    items,
-    taxRate,
-    atMs: pricingDateOf(po),
-  });
-  Object.assign(updates, financialUpdates(priced, taxRate));
+  const { record, pricing } = await priceEditedPO(ctx, po, dto);
+  Object.assign(updates, financialUpdates(record, taxRate));
 
   await updatePurchaseOrder(poId, updates);
 
@@ -244,6 +256,62 @@ export async function updatePO(
     poNumber: po.poNumber,
     fieldsChanged: Object.keys(updates).join(', '),
   });
+  await auditRepricing(ctx, po, dto, pricing, record.total);
+}
+
+/**
+ * ADR-923 «3γ» Α9 — η επεξεργασία ΚΡΑΤΑ τους όρους της PO (σύμβαση-πηγή ανά γραμμή,
+ * `po-pricing-carry`), στην ημερομηνία του εγγράφου. Νέα τιμολόγηση όλων μόνο με
+ * `pricingMode: 'redetermine'`. Άλλο πληρωτέο από αυτό που έδειξε η φόρμα ⇒ 409, καμία εγγραφή.
+ */
+async function priceEditedPO(
+  ctx: AuthContext,
+  po: PurchaseOrder,
+  dto: UpdatePurchaseOrderDTO,
+): Promise<POPricingResult<PurchaseOrderItem>> {
+  const items: PurchaseOrderItem[] = dto.items
+    ? dto.items.map((item) => ({ ...item, id: '', quantityReceived: 0, quantityRemaining: item.quantity }))
+    : po.items;
+  const { record, pricing } = await pricePOItems(ctx, {
+    supplierId: dto.supplierId ?? po.supplierId,
+    projectId: dto.projectId ?? po.projectId,
+    items,
+    taxRate: dto.taxRate ?? po.taxRate,
+    atMs: pricingDateOf(po),
+    carry: { stored: po, mode: dto.pricingMode ?? 'carry' },
+  });
+  assertExpectedTotal(dto.expectedTotal, record.total);
+  const stableItems = dto.items ? withStableItemIds(record.items, pricing, po.items) : record.items;
+  return { record: { ...record, items: stableItems }, pricing };
+}
+
+/** Ίχνος κάθε αλλαγής όρων: ρητή Επανατιμολόγηση, ή επεξεργασία που άλλαξε το πληρωτέο. */
+async function auditRepricing(
+  ctx: AuthContext,
+  po: PurchaseOrder,
+  dto: UpdatePurchaseOrderDTO,
+  pricing: POPricing,
+  newTotal: number,
+): Promise<void> {
+  const mode = dto.pricingMode ?? 'carry';
+  if (mode === 'carry' && newTotal === po.total) return;
+  await audit(ctx, 'procurement.po.repriced', po.id, {
+    poNumber: po.poNumber,
+    pricingMode: mode,
+    oldTotal: po.total,
+    newTotal,
+    repricedLines: pricing.repricedLineIndexes.length,
+  });
+  EntityAuditService.recordChange({
+    entityType: 'purchase_order',
+    entityId: po.id,
+    entityName: po.poNumber,
+    action: 'updated',
+    changes: [{ field: 'total', oldValue: po.total, newValue: newTotal, label: 'Total' }],
+    performedBy: ctx.uid,
+    performedByName: null,
+    companyId: ctx.companyId,
+  }).catch(() => {});
 }
 
 // ============================================================================

@@ -18,18 +18,22 @@ import 'server-only';
 import { listFrameworkAgreements } from '@/subapps/procurement/services/framework-agreement-service';
 import type { AuthContext } from '@/lib/auth';
 import { pricePurchaseOrder, type POPricing, type POPricingInput } from './price-purchase-order-pure';
+import type { POCarryInput } from './po-pricing-carry';
 
 /**
  * Φορτώνει τις συμβάσεις του προμηθευτή (φίλτρο `vendorContactId` στη βάση) και τιμολογεί την PO.
  * Χωρίς προμηθευτή ή έργο ⇒ τιμολόγηση χωρίς συμβάσεις (τα σύνολα υπολογίζονται πάντα).
+ * Οι μη ενεργές συμβάσεις φορτώνονται κι αυτές: μια γραμμή δεμένη σε σύμβαση που τερματίστηκε
+ * κρατά την κλίμακά της (`carry`, Α9)· η νέα επιλογή τις αποκλείει μόνη της.
  */
 export async function loadAndPricePurchaseOrder(
   ctx: AuthContext,
   input: POPricingInput,
+  carry?: POCarryInput,
 ): Promise<POPricing> {
   const agreements =
     input.supplierId && input.projectId
       ? await listFrameworkAgreements(ctx, { vendorContactId: input.supplierId })
       : [];
-  return pricePurchaseOrder(agreements, input);
+  return pricePurchaseOrder(agreements, input, carry);
 }

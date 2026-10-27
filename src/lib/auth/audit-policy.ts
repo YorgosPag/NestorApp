@@ -114,6 +114,7 @@ export const AUDIT_ACTION_TIER: Record<AuditAction, AuditTier> = {
   'procurement.po.ordered': 'compliance',
   'procurement.po.status_changed': 'compliance',
   'procurement.po.items_edited': 'compliance',
+  'procurement.po.repriced': 'compliance',
   'procurement.po.cancelled': 'compliance',
   'procurement.po.deleted': 'compliance',
   'procurement.po.delivery_recorded': 'compliance',

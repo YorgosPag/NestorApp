@@ -68,6 +68,7 @@ export const AUDIT_ACTIONS = {
   "procurement.po.ordered": true,
   "procurement.po.status_changed": true,
   "procurement.po.items_edited": true,
+  "procurement.po.repriced": true,
   "procurement.po.cancelled": true,
   "procurement.po.deleted": true,
   "procurement.po.delivery_recorded": true,

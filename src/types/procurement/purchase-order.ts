@@ -12,6 +12,8 @@
  * @see ADR-267 §4.1 (Purchase Order Entity)
  */
 
+import type { POPricingMode } from '@/lib/procurement/po-pricing-carry';
+
 // ============================================================================
 // STATUS & WORKFLOW
 // ============================================================================
@@ -332,6 +334,10 @@ export interface UpdatePurchaseOrderDTO {
   paymentTermsDays?: number | null;
   supplierNotes?: string | null;
   internalNotes?: string | null;
+  /** ADR-923 «3γ» Α9: `carry` (προεπιλογή) κρατά τους όρους · `redetermine` = ρητή Επανατιμολόγηση. */
+  pricingMode?: POPricingMode;
+  /** Το πληρωτέο που έδειξε η φόρμα· άλλο στον server ⇒ 409, καμία εγγραφή. */
+  expectedTotal?: number;
 }
 
 /** Record delivery — per item quantities */
@@ -353,6 +359,7 @@ export type ProcurementAuditAction =
   | 'procurement.po.ordered'
   | 'procurement.po.status_changed'
   | 'procurement.po.items_edited'
+  | 'procurement.po.repriced'
   | 'procurement.po.cancelled'
   | 'procurement.po.deleted'
   | 'procurement.po.delivery_recorded'

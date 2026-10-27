@@ -13,6 +13,7 @@
 
 import { z } from 'zod';
 import { poLineGrossMinor } from '@/lib/procurement/po-totals';
+import { PO_PRICING_MODES } from '@/lib/procurement/po-pricing-carry';
 
 /**
  * `materialId` ΠΡΕΠΕΙ να είναι εδώ: χωρίς αυτό το zod το πετούσε σιωπηλά (ADR-923 §5.11 «3γ», Α5) ⇒
@@ -49,3 +50,12 @@ export const CreatePOSchema = z.object({
 });
 
 export const UpdatePOSchema = CreatePOSchema.partial();
+
+/**
+ * Το σώμα του `PATCH ?action=update`: τα πεδία της PO + η πρόθεση τιμολόγησης (ADR-923 «3γ», Α9).
+ * Χωρίς `pricingMode` ⇒ `carry`: η επεξεργασία ΠΟΤΕ δεν ξανατιμολογεί σιωπηλά.
+ */
+export const UpdatePORequestSchema = UpdatePOSchema.extend({
+  pricingMode: z.enum(PO_PRICING_MODES).default('carry'),
+  expectedTotal: z.number().min(0).optional(),
+});

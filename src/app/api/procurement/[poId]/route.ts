@@ -31,7 +31,10 @@ import {
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import type { POCancellationReason, POVatRate } from '@/types/procurement';
-import { UpdatePOSchema } from '../_shared/po-schema';
+import { UpdatePORequestSchema } from '../_shared/po-schema';
+import { ApiError } from '@/lib/api/api-error-types';
+import { CONFLICT_STATUS, PO_PRICING_CONFLICT_CODE } from '@/config/versioning-config';
+import { POPricingConflictError } from '@/lib/procurement/po-pricing-carry';
 
 type PoParams = { poId: string };
 
@@ -134,7 +137,7 @@ export const PATCH = defineRoute<z.ZodTypeAny, PoParams>({
 
         case 'update':
         default: {
-          const parsed = safeParseBody(UpdatePOSchema, body);
+          const parsed = safeParseBody(UpdatePORequestSchema, body);
           if (parsed.error) return parsed.error;
           await updatePO(auth, poId, {
             ...parsed.data,
@@ -144,6 +147,13 @@ export const PATCH = defineRoute<z.ZodTypeAny, PoParams>({
         }
       }
     } catch (error) {
+      // ADR-923 «3γ» Α9: οι όροι άλλαξαν μετά την προεπισκόπηση ⇒ 409 με τα δύο σύνολα, καμία εγγραφή.
+      if (error instanceof POPricingConflictError) {
+        throw new ApiError(CONFLICT_STATUS, error.message, PO_PRICING_CONFLICT_CODE, {
+          expectedTotal: error.expectedTotal,
+          total: error.total,
+        });
+      }
       httpError(400, getErrorMessage(error));
     }
   },
