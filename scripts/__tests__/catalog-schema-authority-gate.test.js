@@ -96,6 +96,37 @@ describe('Κ6 — ο δρόμος των παραγώγων γράφει ΜΟΝ�
   });
 });
 
+describe('Κ1 + Κ2 + Κ6 — η ΤΙΜΟΛΟΓΗΣΗ (Φάση 3β, ADR-923 §5.11)', () => {
+  const PRICING = [
+    'CATALOG_PRICE_LISTS', 'CATALOG_PRICE_LIST_VERSIONS', 'CATALOG_PRICE_LIST_LINES', 'CATALOG_DISCOUNT_GROUPS',
+    'CATALOG_CUSTOMER_GROUPS', 'CATALOG_CUSTOMER_ASSIGNMENTS', 'CATALOG_DISCOUNT_CONDITIONS', 'CATALOG_PRICING_SLOTS',
+  ];
+
+  it('⛔ εγγραφή σε κάθε συλλογή τιμολόγησης έξω από τη μηχανή', () => {
+    for (const key of PRICING) {
+      expect(findingsOf(`await db.collection(COLLECTIONS.${key}).doc(id).set(data);`)).toEqual([gate.STATES.WRITE_OUTSIDE]);
+    }
+  });
+
+  it('⛔ `stageCopied(` (σπορά ΧΩΡΙΣ ίχνος) σε γραφέα — ✅ στη μηχανή συνόλου της έκδοσης', () => {
+    const copy = "stageCopied(scope, 'priceListLine', target, line);";
+    expect(findingsOf(copy, 'src/server/catalog/price-line-writer.server.ts')).toEqual([gate.STATES.DERIVED_OUTSIDE]);
+    expect(findingsOf(copy, gate.AGGREGATE)).toEqual([gate.STATES.DERIVED_OUTSIDE]);
+    expect(findingsOf(copy, gate.PRICE_AGGREGATE)).toEqual([]);
+  });
+
+  it('⛔ `stageDerived(` στον γραφέα γραμμών — ✅ στη μηχανή συνόλου της έκδοσης', () => {
+    const touch = "stageDerived(scope, 'priceListVersion', version, derived);";
+    expect(findingsOf(touch, 'src/server/catalog/price-line-writer.server.ts')).toEqual([gate.STATES.DERIVED_OUTSIDE]);
+    expect(findingsOf(touch, gate.PRICE_AGGREGATE)).toEqual([]);
+  });
+
+  it('⛔ `pricingSlotRef(` έξω από μηχανή/σχεδιαστή υποδοχών — ✅ στον σχεδιαστή (μόνο ανάγνωση)', () => {
+    expect(findingsOf('tx.delete(pricingSlotRef(db, id));')).toEqual([gate.STATES.DOC_REF_OUTSIDE]);
+    expect(findingsOf('await tx.get(pricingSlotRef(db, id));', gate.PRICING_SLOTS)).toEqual([]);
+  });
+});
+
 describe('Κ3 — εξαίρεση ΜΟΝΟ με λόγο', () => {
   const write = 'batch.set(db.collection(COLLECTIONS.CATALOG_FAMILIES).doc(id), family);';
 

@@ -2,6 +2,18 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **27/10 — ΤΟ VERIFIED FAKE ΔΕΝ ΞΕΡΕΙ ΔΡΟΜΕΑ-ΤΙΜΗ: `startAfter('τιμή')` με `orderBy(πεδίο)` ⇒ ΣΙΩΠΗΛΑ ΚΕΝΟ** *(εύρημα ADR-923 §5.11 «3β» · N.0.2)*
+
+  **Τι:** στο Admin SDK, `query.orderBy('k').startAfter(v)` = «μετά από την **τιμή** `v` του `k`» (και `startAfter(v, id)` με δεύτερο
+  `orderBy(documentId())`). Το fake (`src/test-utils/fake-firestore/refs.ts:141` · `query-engine.ts afterCursor`) δέχεται **ένα** όρισμα
+  και ερμηνεύει **κάθε** συμβολοσειρά ως **id εγγράφου** ⇒ με ταξινόμηση κατά πεδίο δεν βρίσκει id ⇒ `return []`. Μετρήθηκε: η σπορά
+  εκδόσεων της 3β αντέγραψε 400/401 γραμμές και δήλωσε «τέλος». Η 3β πέρασε σε δρομέα **κατά id** (ιδίωμα `completeness-recompute`),
+  άρα **δεν** επηρεάζεται πια. **Εκτεθειμένοι** όσοι περνούν δρομέα-τιμή: `lib/admin-keyset-page.ts:110` (`startAfter(value, id)`) ·
+  `network-messaging/thread-directory.ts:149` — όποιο test τους τρέχει πάνω στο fake βλέπει λάθος σελίδα.
+  **Θεραπεία:** (1) περίπτωση στο συμβόλαιο `contract/firestore-contract-queries.ts` («`startAfter(value[, id])` με `orderBy(πεδίο[,
+  __name__])` θέτει τη θέση κατά **τιμή**») — τρέχει **και** στον emulator· (2) `startAfter(...values)` στο fake, αντιστοίχιση ανά
+  `orderBy`. **Μέγεθος:** < 1h κώδικα αλλά αγγίζει το κοινό fake ⇒ αβέβαιο ⇒ απόφαση Giorgio.
+
 - 🟡 **26/10 — ~20 ΧΕΙΡΟΓΡΑΦΑ FIXTURES `PublicListing` ΠΑΛΙΩΝΟΥΝ ΣΕ ΚΑΘΕ ΝΕΟ ΠΕΔΙΟ ΤΟΥ ΣΧΗΜΑΤΟΣ** *(ADR-919 §7 · ADR-839 · N.0.2)*
 
   **Τι:** το `availability` του ADR-919 έριξε 2 σουίτες στο `main` (`TypeError … reading 'kind'`) επειδή το χειρόγραφο fixture το

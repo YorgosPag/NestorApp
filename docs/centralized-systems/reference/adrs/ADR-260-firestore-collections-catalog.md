@@ -299,6 +299,14 @@
 | Κ8 | `CATALOG_ASSETS` | `catalog_assets` | ADR-923 §5.10 Δ9 | Μέσα καταλόγου (`casst_*`, από κωδικό) · `MediaRights` · `fileId` μόνο από τη ροή ανεβάσματος (2γ) |
 | Κ9 | `CATALOG_SETTINGS` | `catalog_settings` | ADR-923 §5.10 Δ6 | **Ένα** έγγραφο ανά χώρο (`cset_*`) — γλώσσες ανά κανάλι |
 | Κ10 | `CATALOG_UNIQUE_VALUES` | `catalog_unique_values` | ADR-923 §5.10 Δ3 | Κρατήσεις μοναδικών τιμών (`cuval_*`, από χώρο + ιδιότητα + κανονικοποιημένη τιμή) — **ευρετήριο**, όχι οντότητα: χωρίς `revision`, χωρίς ιστορικό |
+| Κ11 | `CATALOG_PRICE_LISTS` | `catalog_price_lists` | ADR-923 §5.11 «3β» | Τιμοκατάλογοι (`cprl_*`, από κωδικό) · `sales` \| `cost` · κοινό (μία λίστα πώλησης ανά κοινό — υποδοχή) · `changeFenceBp` |
+| Κ12 | `CATALOG_PRICE_LIST_VERSIONS` | `catalog_price_list_versions` | ADR-923 §5.11 «3β» | Εκδόσεις (`cplv_*`, από λίστα + αριθμό) · `draft → published → superseded` (+`discarded`) · `seal` · παράγωγα `derived.linesRevision` / `derived.seed` |
+| Κ13 | `CATALOG_PRICE_LIST_LINES` | `catalog_price_list_lines` | ADR-923 §5.11 «3β» | Γραμμές (`cplln_*`, από έκδοση + υποκείμενο ⇒ μία ανά υποκείμενο δομικά) · λεπτά χωρίς ΦΠΑ · `derived.subjectKey` για σελίδες · αντιγραμμένες = **ένα** ίχνος στην έκδοση |
+| Κ14 | `CATALOG_DISCOUNT_GROUPS` | `catalog_discount_groups` | ADR-923 §5.11 «3β» | Ομάδες έκπτωσης SKU (`cdgrp_*`, από κωδικό) |
+| Κ15 | `CATALOG_CUSTOMER_GROUPS` | `catalog_customer_groups` | ADR-923 §5.11 «3β» | Ομάδες πελάτη (`ccgrp_*`, από κωδικό) |
+| Κ16 | `CATALOG_CUSTOMER_ASSIGNMENTS` | `catalog_customer_assignments` | ADR-923 §5.11 «3β» | Συμβαλλόμενος → **μία** ομάδα (`ccasg_*`, από συμβαλλόμενο) |
+| Κ17 | `CATALOG_DISCOUNT_CONDITIONS` | `catalog_discount_conditions` | ADR-923 §5.11 «3β» | Συνθήκες ανά **χώρο** (`cdcnd_*`, **τυχαίο**) · ομάδα × κοινό × ισχύς × κανόνας |
+| Κ18 | `CATALOG_PRICING_SLOTS` | `catalog_pricing_slots` | ADR-923 §5.11 «3β» | Υποδοχές ασάφειας (`cpslt_*`, από κλειδί υποδοχής) — **ευρετήριο** του γραφέα, όπως οι κρατήσεις: χωρίς `revision`, χωρίς ιστορικό |
 
 ---
 

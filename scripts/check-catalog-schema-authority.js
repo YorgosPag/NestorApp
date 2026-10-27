@@ -23,6 +23,9 @@
  *  Κ6 (Φάση 2β, ADR-923 §5.10 Θωράκιση 1) ο ΜΟΝΟΣ δρόμος για παράγωγα (`stageDerived`) γράφει ΜΟΝΟ `derived`:
  *     (α) το σώμα του δεν αγγίζει αναθεώρηση / σφραγίδα / ίχνος (αλλιώς κάθε επανυπολογισμός = ψευδή 409 + ψεύτικο
  *     ιστορικό), (β) τον καλεί ΜΟΝΟ η μηχανή του συνόλου (αλλιώς είναι πόρτα που γράφει χωρίς κρίση του συνόλου)
+ *     Φάση 3β (ADR-923 §5.11): η **έκδοση τιμοκαταλόγου** είναι επίσης μηχανή συνόλου (ρίζα των γραμμών της), και ο
+ *     δρόμος της **σποράς** (`stageCopied` — γραμμές αντιγραμμένες από αμετάβλητη έκδοση, ΧΩΡΙΣ ίχνος ανά γραμμή)
+ *     ανήκει στον ίδιο κανόνα (β): εκτός μηχανής συνόλου θα ήταν εγγραφή χωρίς ιστορικό
  *
  * @see ADR-923 §5.9 · docs/gates/3.106.md · αδελφή: CHECK 3.102
  */
@@ -50,11 +53,22 @@ const CATALOG_COLLECTIONS = [
   'COLLECTIONS.CATALOG_ASSETS',
   'COLLECTIONS.CATALOG_SETTINGS',
   'COLLECTIONS.CATALOG_UNIQUE_VALUES',
+  // Φάση 3β (ADR-923 §5.11) — η τιμολόγηση
+  'COLLECTIONS.CATALOG_PRICE_LISTS',
+  'COLLECTIONS.CATALOG_PRICE_LIST_VERSIONS',
+  'COLLECTIONS.CATALOG_PRICE_LIST_LINES',
+  'COLLECTIONS.CATALOG_DISCOUNT_GROUPS',
+  'COLLECTIONS.CATALOG_CUSTOMER_GROUPS',
+  'COLLECTIONS.CATALOG_CUSTOMER_ASSIGNMENTS',
+  'COLLECTIONS.CATALOG_DISCOUNT_CONDITIONS',
+  'COLLECTIONS.CATALOG_PRICING_SLOTS',
 ];
 /** Τα ονόματα των συλλογών στη βάση — για την πόρτα του MCP (Κ5). */
 const CATALOG_COLLECTION_NAMES = [
   'catalog_attributes', 'catalog_attribute_groups', 'catalog_measurement_families', 'catalog_categories', 'catalog_families',
   'catalog_product_models', 'catalog_products', 'catalog_assets', 'catalog_settings', 'catalog_unique_values',
+  'catalog_price_lists', 'catalog_price_list_versions', 'catalog_price_list_lines', 'catalog_discount_groups',
+  'catalog_customer_groups', 'catalog_customer_assignments', 'catalog_discount_conditions', 'catalog_pricing_slots',
 ];
 
 const STORE = 'src/server/catalog/catalog-store.server.ts';
@@ -64,13 +78,22 @@ const DIRECT_WRITE_DOOR = 'mcp-server/src/security/access-control.ts';
 
 const UNIQUE_RESERVATIONS = 'src/server/catalog/unique-reservations.server.ts';
 const AGGREGATE = 'src/server/catalog/catalog-aggregate.server.ts';
+/** Φάση 3β — η μηχανή συνόλου της έκδοσης τιμοκαταλόγου και ο σχεδιαστής των υποδοχών ασάφειας. */
+const PRICE_AGGREGATE = 'src/server/catalog/price-version-aggregate.server.ts';
+const PRICING_SLOTS = 'src/server/catalog/pricing-slots.server.ts';
 
 /** Ποια αρχεία επιτρέπεται να καλούν `catalogDocRef(` (Κ2) — η μηχανή γράφει, οι αναγνώσεις διαβάζουν. */
 const DOC_REF_USERS = new Set([STORE, LIBRARY_READS]);
 /** Οι αναφορές εγγράφου της μηχανής (Κ2) → ποια αρχεία τις καλούν. Η κράτηση διαβάζεται μόνο από τον σχεδιαστή της. */
-const DOC_REF_FUNCTIONS = { catalogDocRef: DOC_REF_USERS, uniqueValueRef: new Set([STORE, UNIQUE_RESERVATIONS]) };
+const DOC_REF_FUNCTIONS = {
+  catalogDocRef: DOC_REF_USERS,
+  uniqueValueRef: new Set([STORE, UNIQUE_RESERVATIONS]),
+  pricingSlotRef: new Set([STORE, PRICING_SLOTS]),
+};
 /** Ποιος καλεί τον δρόμο των παραγώγων (Κ6β): μόνο η μηχανή του συνόλου, που κρίνει το σύνολο πριν γράψει. */
-const DERIVED_USERS = new Set([STORE, AGGREGATE]);
+const DERIVED_USERS = new Set([STORE, AGGREGATE, PRICE_AGGREGATE]);
+/** Ποιος σπέρνει γραμμές χωρίς ίχνος ανά γραμμή (Κ6β, Φάση 3β): μόνο η μηχανή συνόλου της έκδοσης. */
+const COPIED_USERS = new Set([STORE, PRICE_AGGREGATE]);
 /** Ό,τι το σώμα του `stageDerived` ΔΕΝ πρέπει να αγγίζει (Κ6α). */
 const DERIVED_FORBIDDEN = ['revision', 'updatedAt', 'updatedBy', 'changes.push', 'recordTrackedEntityWrite'];
 
@@ -89,7 +112,18 @@ const WIRING = {
   'src/server/catalog/catalog-settings-writer.server.ts': ['runCatalogTransaction('],
   'src/server/catalog/completeness-recompute.server.ts': ['runCatalogTransaction(', 'commitAggregate('],
   [AGGREGATE]: ['judgeAggregate(', 'planUniqueReservations(', 'stageReservationPlan(', 'stageDerived('],
-  [KINDS]: CATALOG_COLLECTIONS.filter((key) => key !== 'COLLECTIONS.CATALOG_UNIQUE_VALUES'),
+  // Φάση 3β — τιμολόγηση: κάθε γραφέας στη συναλλαγή· η έκδοση κλειδώνει τις γραμμές της.
+  'src/server/catalog/price-list-writer.server.ts': ['runCatalogTransaction('],
+  'src/server/catalog/pricing-group-writer.server.ts': ['runCatalogTransaction('],
+  'src/server/catalog/customer-assignment-writer.server.ts': ['runCatalogTransaction('],
+  'src/server/catalog/discount-condition-writer.server.ts': ['runCatalogTransaction('],
+  'src/server/catalog/price-version-writer.server.ts': ['runCatalogTransaction('],
+  'src/server/catalog/price-line-writer.server.ts': ['runCatalogTransaction(', 'readDraftForLines(', 'stageLinesTouched('],
+  'src/server/catalog/price-publication.server.ts': ['runCatalogTransaction(', 'assertRevision('],
+  [PRICE_AGGREGATE]: ['stageDerived(', 'stageCopied(', "status !== 'draft'"],
+  [PRICING_SLOTS]: ['stagePricingSlot('],
+  // Οι υποδοχές (όπως οι κρατήσεις) δεν είναι είδη: ευρετήριο του γραφέα, χωρίς ιστορικό.
+  [KINDS]: CATALOG_COLLECTIONS.filter((key) => key !== 'COLLECTIONS.CATALOG_UNIQUE_VALUES' && key !== 'COLLECTIONS.CATALOG_PRICING_SLOTS'),
 };
 
 const WRITE_METHODS = new Set(['set', 'update', 'create', 'delete']);
@@ -115,7 +149,7 @@ const BLOCKING = [
 const DETAIL = {
   [STATES.WRITE_OUTSIDE]: `γράφει σχήμα καταλόγου έξω από τη μηχανή — πέρασε από τους γραφείς του \`src/server/catalog/\` (${STORE})`,
   [STATES.DOC_REF_OUTSIDE]: 'αναφορά εγγράφου της μηχανής (`catalogDocRef(`/`uniqueValueRef(`) εκτός δηλωμένων αρχείων — πόρτα γύρω από τη μηχανή',
-  [STATES.DERIVED_OUTSIDE]: '`stageDerived(` εκτός μηχανής συνόλου — γράφει παράγωγα χωρίς να κρίνει το σύνολο (Κ6β)',
+  [STATES.DERIVED_OUTSIDE]: '`stageDerived(` / `stageCopied(` εκτός μηχανής συνόλου — γράφει παράγωγα ή σπέρνει χωρίς ίχνος, χωρίς να κρίνει το σύνολο (Κ6β)',
 };
 
 /** Γράφει αυτή η κλήση σε συλλογή καταλόγου; */
@@ -146,6 +180,8 @@ function findingsIn(sf, rel) {
     else if (Object.entries(DOC_REF_FUNCTIONS).some(([fn, users]) => ast.isCallTo(node, fn) && !users.has(rel))) {
       findings.push(classify(sf, node, rel, STATES.DOC_REF_OUTSIDE));
     } else if (ast.isCallTo(node, 'stageDerived') && !DERIVED_USERS.has(rel)) {
+      findings.push(classify(sf, node, rel, STATES.DERIVED_OUTSIDE));
+    } else if (ast.isCallTo(node, 'stageCopied') && !COPIED_USERS.has(rel)) {
       findings.push(classify(sf, node, rel, STATES.DERIVED_OUTSIDE));
     }
   });
@@ -205,7 +241,7 @@ function wiringFindings(root) {
   return findings;
 }
 
-const RELEVANT = /COLLECTIONS\.CATALOG_|catalogDocRef\(|uniqueValueRef\(|stageDerived\(/;
+const RELEVANT = /COLLECTIONS\.CATALOG_|catalogDocRef\(|uniqueValueRef\(|pricingSlotRef\(|stageDerived\(|stageCopied\(/;
 
 function measure(opts = {}) {
   const root = opts.root || PROJECT_ROOT;
@@ -256,5 +292,5 @@ if (require.main === module) process.exit(main());
 
 module.exports = {
   measure, report, main, findingsIn, wiringFindings, directDoorOpen, derivedPathFindings,
-  STATES, BLOCKING, WIRING, STORE, AGGREGATE, DOC_REF_USERS, DIRECT_WRITE_DOOR, CATALOG_COLLECTIONS,
+  STATES, BLOCKING, WIRING, STORE, AGGREGATE, PRICE_AGGREGATE, PRICING_SLOTS, DOC_REF_USERS, DIRECT_WRITE_DOOR, CATALOG_COLLECTIONS,
 };
