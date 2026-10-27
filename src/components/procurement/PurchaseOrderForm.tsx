@@ -26,11 +26,10 @@ import { cn } from '@/lib/design-system';
 import { Save, X, AlertCircle } from 'lucide-react';
 import { PO_VAT_RATES } from '@/types/procurement';
 import type { PurchaseOrder, POVatRate } from '@/types/procurement';
-import { usePurchaseOrderForm } from '@/hooks/procurement';
-import { usePOFrameworkAgreement } from '@/hooks/procurement/usePOFrameworkAgreement';
+import { usePurchaseOrderForm, usePOPricing } from '@/hooks/procurement';
+import { POTotalsSummary } from './POTotalsSummary';
 import { useMaterials } from '@/hooks/procurement/useMaterials';
 import { PurchaseOrderItemsTable } from './PurchaseOrderItemsTable';
-import { formatPOCurrency } from './utils/procurement-format';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFormSubmission } from '@/hooks/useFormSubmission';
 import { POProjectSelector, POSupplierSelector, POBuildingSelector } from './POEntitySelectors';
@@ -60,28 +59,26 @@ export function PurchaseOrderForm({
     addItem,
     removeItem,
     updateItem,
-    totals,
     validationErrors,
     isValid,
     isEditMode,
     save,
   } = usePurchaseOrderForm(existingPO, initialProjectId);
 
-  const faInfo = usePOFrameworkAgreement(form.supplierId, form.projectId, totals.total);
+  const { pricing, agreementTitles } = usePOPricing({
+    supplierId: form.supplierId,
+    projectId: form.projectId,
+    items: form.items,
+    taxRate: form.taxRate,
+    documentDate: existingPO?.dateCreated ?? null,
+  });
   const { materials } = useMaterials();
 
   // ADR-598 «(η)»: ένας δρόμος υποβολής (κλικ + Enter) μέσω του SSoT. Νέα PO = `draft` ⇒ το Enter
   // σε πεδίο (implicit submission της HTML) δημιουργεί πρόχειρο, δεν αποστέλλει τίποτα.
   const { submitting, error, handleSubmit } = useFormSubmission({
     canSubmit: isValid,
-    submit: () => save(existingPO?.id, faInfo.activeFa
-      ? {
-          appliedFaId: faInfo.activeFa.id,
-          faDiscountPercent: faInfo.discountPercent,
-          faDiscountAmount: faInfo.discountAmount,
-          netTotal: faInfo.netTotal,
-        }
-      : { appliedFaId: null, faDiscountPercent: null, faDiscountAmount: null, netTotal: null }),
+    submit: () => save(existingPO?.id),
     onSuccess: (result) => {
       if (result.id && result.poNumber) onSuccess?.(result.id, result.poNumber);
     },
@@ -246,49 +243,12 @@ export function PurchaseOrderForm({
             materials={materials}
           />
 
-          {/* Totals */}
-          <div className="mt-4 flex justify-end">
-            <div className="w-full max-w-xs space-y-1 text-right">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">
-                  {t('form.subtotal')}
-                </span>
-                <span className="tabular-nums">{formatPOCurrency(totals.subtotal)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">
-                  {t('form.vatRate')} {form.taxRate}%
-                </span>
-                <span className="tabular-nums">{formatPOCurrency(totals.taxAmount)}</span>
-              </div>
-              <div className={cn(
-                'flex justify-between border-t pt-1 font-semibold',
-                faInfo.activeFa && 'text-muted-foreground font-normal text-sm',
-              )}>
-                <span>{t('form.grossTotal')}</span>
-                <span className="tabular-nums">{formatPOCurrency(totals.total)}</span>
-              </div>
-
-              {faInfo.activeFa && (
-                <>
-                  <div className="rounded-md border border-[hsl(var(--text-success))]/60 bg-[hsl(var(--bg-success))]/40 px-2 py-1 text-xs text-[hsl(var(--text-success))] text-left">
-                    {t('form.faBannerApplied', {
-                      title: faInfo.activeFa.title,
-                      percent: faInfo.discountPercent,
-                    })}
-                  </div>
-                  <div className="flex justify-between text-sm text-[hsl(var(--text-success))]">
-                    <span>{t('form.faDiscount')}</span>
-                    <span className="tabular-nums">−{formatPOCurrency(faInfo.discountAmount)}</span>
-                  </div>
-                  <div className="flex justify-between border-t pt-1 font-semibold text-[hsl(var(--text-success))]">
-                    <span>{t('form.netTotal')}</span>
-                    <span className="tabular-nums">{formatPOCurrency(faInfo.netTotal)}</span>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
+          <POTotalsSummary
+            totals={pricing.totals}
+            taxRate={form.taxRate}
+            agreementTitles={agreementTitles}
+            ambiguousLineCount={pricing.ambiguousLineIndexes.length}
+          />
         </CardContent>
       </Card>
 

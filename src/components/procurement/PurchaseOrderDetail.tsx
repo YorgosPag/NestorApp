@@ -23,6 +23,7 @@ import {
 import type { PurchaseOrder } from '@/types/procurement';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PurchaseOrderActions } from './PurchaseOrderActions';
+import { POTotalsSummary } from './POTotalsSummary';
 import { PurchaseOrderDetailsHeader } from './PurchaseOrderDetailsHeader';
 import { useFirestoreProjects } from '@/hooks/useFirestoreProjects';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
@@ -176,22 +177,16 @@ export function PurchaseOrderDetail({
             ))}
           </div>
 
-          <div className="mt-4 flex justify-end">
-            <div className="w-full max-w-xs space-y-1 text-right">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">{t('detail.subtotal')}</span>
-                <span className="tabular-nums">{formatPOCurrency(po.subtotal)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">{t('detail.vat')} {po.taxRate}%</span>
-                <span className="tabular-nums">{formatPOCurrency(po.taxAmount)}</span>
-              </div>
-              <div className="flex justify-between border-t pt-1 font-semibold text-base">
-                <span>{t('detail.total')}</span>
-                <span className="tabular-nums">{formatPOCurrency(po.total)}</span>
-              </div>
-            </div>
-          </div>
+          <POTotalsSummary
+            totals={{
+              subtotal: po.subtotal,
+              discountAmount: po.faDiscountAmount,
+              taxableAmount: po.taxableAmount,
+              taxAmount: po.taxAmount,
+              total: po.total,
+            }}
+            taxRate={po.taxRate}
+          />
         </CardContent>
       </Card>
 
