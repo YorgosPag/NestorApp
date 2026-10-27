@@ -21,7 +21,12 @@ import { useCatalogAccess, useCatalogText, type CatalogAuthority } from './catal
 import type { DefinitionDraft, DraftStatus } from './use-definition-draft';
 
 /** Η αιτιολογία λέει τη **δική** της δικαιοδοσία — όχι «σχήμα» σε όποιον επεξεργάζεται προϊόν. */
-const READ_ONLY_KEYS: Readonly<Record<CatalogAuthority, string>> = { schema: 'common.readOnly', products: 'common.readOnlyProducts' };
+const READ_ONLY_KEYS: Readonly<Record<CatalogAuthority, string>> = {
+  schema: 'common.readOnly',
+  products: 'common.readOnlyProducts',
+  pricing: 'common.readOnlyPricing',
+  pricingPublish: 'common.readOnlyPricingPublish',
+};
 
 const STATUS_KEYS: Readonly<Record<DraftStatus, string>> = {
   clean: 'editor.status.clean',

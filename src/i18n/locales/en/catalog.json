@@ -11,6 +11,8 @@
     "saving": "Saving…",
     "readOnly": "Read only — changing the schema requires catalogue management permission.",
     "readOnlyProducts": "Read only — changing products and media requires product editing permission.",
+    "readOnlyPricing": "Read only — changing prices requires pricing management permission.",
+    "readOnlyPricingPublish": "Read only — publishing a price version requires price publishing permission.",
     "save": "Save",
     "discard": "Discard changes",
     "delete": "Delete",
@@ -145,6 +147,7 @@
     "inUse": "It is used by another catalogue record and cannot change this way.",
     "immutable": "This field cannot change after creation.",
     "invalid": "The catalogue found problems — see the fields in red.",
+    "confirmationRequired": "Confirmation needed: review the difference and confirm what you saw.",
     "forbidden": "You are not allowed to change the catalogue.",
     "network": "The change did not reach the server. Check your connection and try again.",
     "unknown": "The change was not saved. Try again."
@@ -265,7 +268,14 @@
     "discountConditionAmbiguous": "Another condition covers the same audience and group in an overlapping period — which one would apply?",
     "versionNotDraft": "Only a draft version can be published or edited.",
     "versionValidFromRequired": "Set the date the version takes effect.",
-    "versionValidFromNotAfterPrevious": "The version must take effect after the latest published one."
+    "versionValidFromNotAfterPrevious": "The version must take effect after the latest published one.",
+    "costListHasAudience": "An internal cost price list is not offered to an audience.",
+    "fenceOutOfBounds": "The confirmation threshold must be between {min}% and {max}%.",
+    "priceListAudienceAmbiguous": "A sales price list already exists for the same audience — which one would apply?",
+    "versionSeeding": "Copying the lines from the base version has not finished.",
+    "fenceConfirmationRequired": "{count} lines change price beyond the threshold — review and confirm the difference before publishing.",
+    "fenceDigestStale": "The difference changed since you reviewed it — review it again.",
+    "unknownParty": "The party was not found in this workspace."
   },
   "measurement": {
     "family": {
@@ -358,7 +368,25 @@
       "kind": "Kind",
       "fileId": "File",
       "rights": "Rights",
-      "channelLocales": "Languages per channel"
+      "channelLocales": "Languages per channel",
+      "priceType": "Price type",
+      "audience": "Audience",
+      "changeFenceBp": "Confirmation threshold",
+      "number": "Version number",
+      "status": "Status",
+      "validFrom": "Valid from",
+      "validUntil": "Valid until",
+      "basedOnVersionId": "Base version",
+      "seal": "Publication seal",
+      "netPrice": "Net price",
+      "priceQuantity": "Price quantity",
+      "unitCode": "Unit",
+      "discountGroupId": "Discount group",
+      "subject": "Subject",
+      "breakdown": "Cost breakdown",
+      "customerGroupId": "Customer group",
+      "party": "Party",
+      "rule": "Discount rule"
     }
   },
   "attributes": {

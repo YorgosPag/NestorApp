@@ -21,6 +21,7 @@ import { resolveLocalizedText, type LocalizedText } from '@/i18n/localized-text'
 import { useNotifications } from '@/providers/NotificationProvider';
 import type { CatalogFailure } from '@/services/catalog/catalog-failure';
 import { isGranted } from '@/types/capability-authority';
+import { CATALOG_AUTHORITY_PERMISSIONS, type CatalogAuthority } from '@/subapps/catalog/vocabulary/catalog-authorities';
 import { FAILURE_KEYS } from './catalog-labels';
 
 /** `t` του namespace + επίλυση πολύγλωσσων δεδομένων στη γλώσσα του UI. */
@@ -49,17 +50,15 @@ export function useCatalogFailureNotice(): (failure: CatalogFailure) => void {
   );
 }
 
-/** Οι δύο δικαιοδοσίες του καταλόγου — Akeneo «manage structure» ≠ «edit products» (προϊόντα · μέσα). */
-export type CatalogAuthority = 'schema' | 'products';
-
-const AUTHORITY_CAPABILITY = { schema: 'catalog:schema:manage', products: 'catalog:products:manage' } as const satisfies Record<CatalogAuthority, string>;
+// Οι δικαιοδοσίες του καταλόγου — ο ΕΝΑΣ πίνακας, κοινός με τον διακομιστή (`vocabulary/catalog-authorities`).
+export type { CatalogAuthority } from '@/subapps/catalog/vocabulary/catalog-authorities';
 
 /**
  * Η ετυμηγορία **τριών** καταστάσεων: `pending` (η ταυτότητα δεν έφτασε — ούτε κουμπί ούτε «μόνο ανάγνωση») ·
  * `granted` · `denied`. Ζωντανά (ADR-923 §5.10.5): το boolean έχανε το `pending` ⇒ «μόνο ανάγνωση» σε όποιον **έχει** δικαίωμα.
  */
 export function useCatalogAccess(authority: CatalogAuthority): 'pending' | 'granted' | 'denied' {
-  const gate = useCapability(AUTHORITY_CAPABILITY[authority]);
+  const gate = useCapability(CATALOG_AUTHORITY_PERMISSIONS[authority]);
   if (gate.pending) return 'pending';
   return isGranted(gate.verdict) ? 'granted' : 'denied';
 }
