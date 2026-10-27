@@ -274,8 +274,11 @@ const VERSIONED_WRITE_RE = /\bwithVersionCheck(?:OnCurrent)?\s*\(/g;
  *
  * ⚠️ Only an INLINE array of literals is readable. A computed list (`targets.map(…)`) runs, but
  * yields no keys here — pinned by test Σ6, which requires every call site to be literal.
+ *
+ * ⚠️ An explicit type argument (`flushInBatches<Row>(…)`) is still a call — before 2026-10-26 the pattern required
+ * `(` right after the name, so a typed call was INVISIBLE (pinned by Σ7; Σ6 counts calls with an independent pattern).
  */
-const DECLARED_WRITE_RE = /\b(flushInBatches|openDeclaredBatch)\s*\(/g;
+const DECLARED_WRITE_RE = /\b(flushInBatches|openDeclaredBatch)\s*(?:<[^()]*>)?\s*\(/g;
 /** Where the declared list starts inside the call args, per primitive. */
 const DECLARED_LIST_ANCHOR = {
   flushInBatches: /\bcollections\s*:\s*\[/,

@@ -233,6 +233,13 @@ describe('δηλωμένο πεδίο γραφής — flushInBatches · openDec
     expect(keysOf(source)).toEqual(['FLOORS']);
   });
 
+  it('Σ7 — κλήση με ΡΗΤΟ όρισμα τύπου (`flushInBatches<Row>(…)`) είναι κι αυτή δήλωση — πριν 2026-10-26 ήταν ΑΟΡΑΤΗ', () => {
+    const source = `
+      await flushInBatches<FloorRow>(db, rows, { collections: [COLLECTIONS.FLOORS], apply: write });`;
+
+    expect(keysOf(source)).toEqual(['FLOORS']);
+  });
+
   it('Σ3 — δηλωμένη ΜΗ παρακολουθούμενη συλλογή δεν είναι γραφή· μικτή δήλωση δίνει μόνο τις παρακολουθούμενες', () => {
     expect(keysOf(`await flushInBatches(db, updates, { collections: [COLLECTIONS.FILES], batchSize: 400 });`)).toEqual([]);
     expect(keysOf(`await flushInBatches(db, updates, { collections: [SUBCOLLECTIONS.USER_SESSIONS] });`)).toEqual([]);
@@ -271,14 +278,25 @@ describe('δηλωμένο πεδίο γραφής — flushInBatches · openDec
       .filter((file) => file && !/__tests__|\.test\.|lib\/admin-batch-utils\.ts$/.test(file));
     const literal = /^(?:SUB)?COLLECTIONS\.[A-Z0-9_]+$/;
 
+    const code = new Map(files.map((file) =>
+      [file, stripCommentsAndStrings(fs.readFileSync(path.join(PROJECT_ROOT, file), 'utf8'))]));
     const sites = files.flatMap((file) =>
-      declaredWriteSites(stripCommentsAndStrings(fs.readFileSync(path.join(PROJECT_ROOT, file), 'utf8')))
-        .map((site) => ({ file, fn: site.fn, items: site.items })));
+      declaredWriteSites(code.get(file)).map((site) => ({ file, fn: site.fn, items: site.items })));
     const unreadable = sites.filter((site) =>
       site.items === null || site.items.length === 0 || !site.items.every((item) => literal.test(item)));
 
-    // Μετρημένο 2026-10-06: 8 κλήσεις `flushInBatches` (2 αλυσίδες + 6 μεταπτώσεις) + 4 `openDeclaredBatch`.
-    expect(sites.length).toBeGreaterThanOrEqual(12);
+    // 🔴 Ο ΠΑΡΟΝΟΜΑΣΤΗΣ ΠΑΡΑΓΕΤΑΙ, ΔΕΝ ΜΕΤΡΙΕΤΑΙ ΜΕ ΤΟ ΧΕΡΙ (2026-10-26). Εδώ ζούσε `>= 12` («μετρημένο 2026-10-06:
+    //    8 + 4»), και κοκκίνισε όταν το ADR-910 (`9bf4ba32`) μετέφερε ΝΟΜΙΜΑ δύο γραφές ορόφων σε συναλλαγή της
+    //    στοίβας — ο κώδικας σωστός, το test ψευδώς κόκκινο. Το ερώτημα δεν ήταν ποτέ «πόσες;» αλλά «ΤΙΣ ΕΙΔΕ ΟΛΕΣ ο
+    //    αναλυτής;». Μετριέται με ΑΛΛΟ κριτήριο από τον αναλυτή (δέχεται και `<Τύπο>` πριν την παρένθεση), ώστε κλήση
+    //    που ο αναλυτής δεν αναγνωρίζει να κοκκινίζει εδώ αντί να γίνεται αόρατη στην πύλη.
+    const callsIn = (file) =>
+      (code.get(file).match(/\b(?:flushInBatches|openDeclaredBatch)\s*(?:<[^()]*>)?\s*\(/g) || []).length;
+    const callers = files.filter((file) => callsIn(file) > 0);
+    const parsedIn = (file) => sites.filter((site) => site.file === file).length;
+
+    expect(callers.length).toBeGreaterThan(0); // μάρτυρας: ο βρόχος έχει τι να κρίνει
+    expect(callers.filter((file) => parsedIn(file) !== callsIn(file))).toEqual([]);
     expect(unreadable).toEqual([]);
   });
 });
