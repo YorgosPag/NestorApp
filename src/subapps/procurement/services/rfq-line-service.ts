@@ -20,10 +20,9 @@ import type {
   PublicRfqLine,
 } from '../types/rfq-line';
 import { toPublicRfqLine } from '../types/rfq-line';
+import { RFQ_FROM_BOQ_MAX_ITEMS } from '../types/rfq';
 
 const logger = createModuleLogger('RFQ_LINE_SERVICE');
-
-const BOQ_IN_LIMIT = 30;
 
 // ============================================================================
 // HELPERS
@@ -227,8 +226,8 @@ export async function snapshotFromBoq(
   return safeFirestoreOperation(async (db) => {
     const { startOrder, now } = await beginBulkInsert(db, rfqId, ctx.companyId);
 
-    // Firestore `in` max 30 — take first batch
-    const ids = boqItemIds.slice(0, BOQ_IN_LIMIT);
+    // Firestore `in` limit — the boundaries (zod) reject more, this is the last guard
+    const ids = boqItemIds.slice(0, RFQ_FROM_BOQ_MAX_ITEMS);
     const boqSnap = await db
       .collection(COLLECTIONS.BOQ_ITEMS)
       .where(admin.firestore.FieldPath.documentId(), 'in', ids)

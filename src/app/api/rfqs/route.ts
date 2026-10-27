@@ -8,7 +8,6 @@
 
 import 'server-only';
 
-import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
@@ -20,35 +19,9 @@ import { createRfq, listRfqs } from '@/subapps/procurement/services/rfq-service'
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
-import { TRADE_CODES } from '@/subapps/procurement/types/trade';
+import { CreateRfqSchema } from './_shared/rfq-schemas';
 
 const logger = createModuleLogger('RFQS_API');
-
-// ============================================================================
-// SCHEMAS
-// ============================================================================
-
-const RfqLineSchema = z.object({
-  id: z.string().min(1),
-  description: z.string().min(1).max(500),
-  trade: z.enum(TRADE_CODES),
-  categoryCode: z.string().max(30).nullable().default(null),
-  quantity: z.number().positive().nullable().default(null),
-  unit: z.string().max(20).nullable().default(null),
-  notes: z.string().max(500).nullable().default(null),
-});
-
-const CreateRfqSchema = z.object({
-  projectId: z.string().min(1),
-  buildingId: z.string().nullable().optional(),
-  title: z.string().min(1).max(200),
-  description: z.string().max(2000).nullable().optional(),
-  lines: z.array(RfqLineSchema).max(100).optional(),
-  deadlineDate: z.string().nullable().optional(),
-  awardMode: z.enum(['whole_package', 'cherry_pick']).default('whole_package'),
-  reminderTemplate: z.enum(['aggressive', 'standard', 'soft', 'off']).default('standard'),
-  comparisonTemplateId: z.string().nullable().optional(),
-});
 
 // ============================================================================
 // GET — List RFQs

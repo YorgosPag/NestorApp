@@ -264,17 +264,29 @@ describe('createRfq — Q29 sub-collection line writes', () => {
     expect(mockAddRfqLinesBulk).toHaveBeenCalledWith(ctx, 'rfq_test123', adhocLines);
   });
 
-  it('boqItemIds takes precedence over adHocLines', async () => {
-    const dto: CreateRfqDTO = {
-      projectId: 'proj1',
-      title: 'RFQ',
-      boqItemIds: ['boq1'],
-      adHocLines: [{ source: 'ad_hoc', description: 'x', trade: 'concrete' }],
-    };
+  it('🔴 ADR-330 §5.1 S3.2: a mixed form keeps BOTH — BOQ snapshot first, then the ad-hoc lines', async () => {
+    const order: string[] = [];
+    mockSnapshotFromBoq.mockImplementationOnce(async () => { order.push('boq'); return []; });
+    mockAddRfqLinesBulk.mockImplementationOnce(async () => { order.push('ad_hoc'); return []; });
+    const adHocLines = [{ source: 'ad_hoc' as const, description: 'x', trade: 'concrete' as const }];
+    const dto: CreateRfqDTO = { projectId: 'proj1', title: 'RFQ', boqItemIds: ['boq1'], adHocLines };
     await createRfq(ctx, dto);
 
-    expect(mockSnapshotFromBoq).toHaveBeenCalled();
-    expect(mockAddRfqLinesBulk).not.toHaveBeenCalled();
+    expect(mockSnapshotFromBoq).toHaveBeenCalledWith(ctx, 'rfq_test123', ['boq1'], 'materials_general');
+    expect(mockAddRfqLinesBulk).toHaveBeenCalledWith(ctx, 'rfq_test123', adHocLines);
+    expect(order).toEqual(['boq', 'ad_hoc']);
+  });
+});
+
+describe('createRfq — deadline (ADR-330 §5.1 S3.2)', () => {
+  it('🔴 the form deadline is stored — it used to be written null whatever was sent', async () => {
+    const rfq = await createRfq(ctx, { projectId: 'proj1', title: 'RFQ', deadlineDate: '2026-11-15' });
+    expect(rfq.deadlineDate).not.toBeNull();
+  });
+
+  it('no deadline ⇒ null', async () => {
+    const rfq = await createRfq(ctx, { projectId: 'proj1', title: 'RFQ', deadlineDate: null });
+    expect(rfq.deadlineDate).toBeNull();
   });
 });
 

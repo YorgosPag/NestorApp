@@ -6,9 +6,9 @@ import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 import { generateRfqId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import admin from 'firebase-admin';
-import { normalizeToDate } from '@/lib/date-local';
 import type { RFQ, RfqStatus, CreateRfqDTO, UpdateRfqDTO, RfqFilters, RfqDraftLine, RfqFromBoqDraft } from '../types/rfq';
-import { RFQ_STATUS_TRANSITIONS } from '../types/rfq';
+import { RFQ_STATUS_TRANSITIONS, RFQ_FROM_BOQ_MAX_ITEMS } from '../types/rfq';
+import { toDeadlineTimestamp, patchDeadlineTimestamp } from './procurement-timestamps';
 import type { AuthContext } from '@/lib/auth';
 import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { readOwnedProcurementDoc } from './procurement-owned-doc';
@@ -95,6 +95,20 @@ async function dispatchRfqInviteEmails(
 // CREATE
 // ============================================================================
 
+/**
+ * Sub-collection line writes — after the RFQ doc exists (Q29). A builder form may mix both kinds: BOQ snapshot
+ * first, then ad-hoc, each appended after the current max `displayOrder`, so neither overwrites the other's order.
+ * (Until ADR-330 §5.1 S3.2 this was `if/else` — the ad-hoc lines of a mixed form were silently lost.)
+ */
+async function writeCreatedRfqLines(ctx: AuthContext, rfqId: string, dto: CreateRfqDTO): Promise<void> {
+  if (dto.boqItemIds?.length) {
+    await snapshotFromBoq(ctx, rfqId, dto.boqItemIds, 'materials_general');
+  }
+  if (dto.adHocLines?.length) {
+    await addRfqLinesBulk(ctx, rfqId, dto.adHocLines);
+  }
+}
+
 export async function createRfq(
   ctx: AuthContext,
   dto: CreateRfqDTO
@@ -118,7 +132,7 @@ export async function createRfq(
       title: dto.title,
       description: dto.description ?? null,
       lines: dto.lines ?? [],
-      deadlineDate: null,
+      deadlineDate: toDeadlineTimestamp(dto.deadlineDate),
       status: 'draft',
       awardMode: dto.awardMode ?? 'whole_package',
       reminderTemplate: dto.reminderTemplate ?? 'standard',
@@ -197,12 +211,7 @@ export async function createRfq(
   if (!result) throw new Error('Failed to create RFQ');
   const { rfq, inviteMeta } = result;
 
-  // Sub-collection line writes — after RFQ doc exists (Q29)
-  if (dto.boqItemIds?.length) {
-    await snapshotFromBoq(ctx, rfq.id, dto.boqItemIds, 'materials_general');
-  } else if (dto.adHocLines?.length) {
-    await addRfqLinesBulk(ctx, rfq.id, dto.adHocLines);
-  }
+  await writeCreatedRfqLines(ctx, rfq.id, dto);
 
   // Email dispatch — fire-and-forget, does not block RFQ creation response (step h)
   if (inviteMeta.length > 0) {
@@ -309,9 +318,7 @@ export async function updateRfq(
       title: dto.title ?? current.title,
       description: dto.description !== undefined ? dto.description : current.description,
       lines: dto.lines ?? current.lines,
-      deadlineDate: dto.deadlineDate !== undefined
-        ? (dto.deadlineDate ? admin.firestore.Timestamp.fromDate(normalizeToDate(dto.deadlineDate) ?? new Date()) : null)
-        : current.deadlineDate,
+      deadlineDate: patchDeadlineTimestamp(dto.deadlineDate, current.deadlineDate),
       awardMode: dto.awardMode ?? current.awardMode,
       reminderTemplate: dto.reminderTemplate ?? current.reminderTemplate,
       status: (dto.status ?? current.status) as RfqStatus,
@@ -370,8 +377,8 @@ export async function createRfqFromBoqItems(
   if (boqItemIds.length === 0) {
     return { projectId: '', title: '', lines: [] };
   }
-  // Firestore `in` supports max 30 values
-  const ids = boqItemIds.slice(0, 30);
+  // Firestore `in` limit — the route's zod rejects more, this is the last guard
+  const ids = boqItemIds.slice(0, RFQ_FROM_BOQ_MAX_ITEMS);
 
   return safeFirestoreOperation(async (db) => {
     const snap = await db.collection(COLLECTIONS.BOQ_ITEMS)

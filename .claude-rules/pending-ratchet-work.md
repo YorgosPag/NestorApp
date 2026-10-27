@@ -4221,6 +4221,10 @@
 
 ## Pending tasks (priority order)
 
+### 📅 Μετατροπή ISO→`Timestamp` σε 2 ακόμη services → `toDeadlineTimestamp` (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-27, ADR-330 §5.1 S3.2 · N.0.2)
+- **Τι**: SSoT `src/subapps/procurement/services/procurement-timestamps.ts` (`toDeadlineTimestamp` / `patchDeadlineTimestamp`) πήρε τα 4 αντίγραφα των `rfq-service` + `sourcing-event-service`. Μένουν εκτός: `quote-service.ts:265` (`validUntil`, με **`!`** ⇒ μη αναγνώσιμη ημερομηνία = εξαίρεση, όχι «τώρα» — **διαφορετική σημασιολογία**, αποφάσισε πρώτα ποια είναι σωστή) · `material-service.ts:137` (`lastPurchaseDate`, ίδια σημασιολογία — δεν αγγίχθηκε γιατί το δέντρο υλικών το δούλευε άλλη συνεδρία).
+- **Fix**: μετονόμασε σε γενικό όνομα (π.χ. `toAdminTimestampOrNull`) αν μπουν μη-προθεσμίες, και πέρασε τα δύο. Μην «ενώσεις» σιωπηλά τη σημασιολογία του `quote-service`.
+
 ### 🔌 Hooks προμηθειών με ωμό `fetch` αντί για `apiClient` — χάνονται `errorCode`, ταυτότητα, ιδεμποτία (προτεραιότητα ΜΕΣΑΙΑ, 2026-10-27, ADR-923 §5.11 «3γ» Βήμα 2 · N.0.2)
 - **Τι**: το `useFrameworkAgreements` (`agreementRequest`), το `useMaterials` και το `useSupplierMetrics` καλούν `fetch('/api/procurement/…')` με χειρόγραφα URL, ενώ το `procurement-mutation-gateway` χρησιμοποιεί `apiClient` + `API_ROUTES.PROCUREMENT`. Συνέπειες:
   - το σφάλμα φτάνει ως `new Error(json.error)` ⇒ **ωμό αγγλικό μήνυμα** στη φόρμα (π.χ. άρνηση ισοπαλίας συμβάσεων), κανένα `ApiClientError.errorCode`·

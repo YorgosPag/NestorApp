@@ -12,7 +12,8 @@ import { AlertTriangle, Send, X } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useRouter } from '@/lib/workspace/navigation';
 import { Button } from '@/components/ui/button';
-import { getNewRfqUrl, RFQ_FROM_BOQ_MAX_ITEMS } from '@/lib/navigation/procurement-urls';
+import { getNewRfqUrl } from '@/lib/navigation/procurement-urls';
+import { RFQ_FROM_BOQ_MAX_ITEMS } from '@/subapps/procurement/types/rfq';
 
 interface BuyoutActionBarProps {
   projectId: string;

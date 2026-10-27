@@ -14,12 +14,6 @@ import { serializeFilterArray } from '@/lib/url-filters/multi-value';
 /** Οι όψεις της ενότητας προμηθειών ενός έργου (ADR-330 §5.1 S2 · `coverage` = Buyout, S3.2). */
 export type ProjectProcurementSection = 'overview' | 'rfq' | 'quote' | 'po' | 'coverage';
 
-/**
- * Πόσες εργασίες επιμέτρησης δέχεται ένα «αίτημα από επιμετρήσεις» — το όριο `in` του Firestore που επιβάλλει
- * το `POST /api/rfqs/from-boq` (zod `.max(30)`). Δηλωμένο ΕΔΩ ώστε το UI να το λέει, όχι να το ανακαλύπτει ως 400.
- */
-export const RFQ_FROM_BOQ_MAX_ITEMS = 30;
-
 /** Νέο αίτημα προσφοράς του έργου — με εργασίες επιμέτρησης, προσυμπληρωμένο από αυτές (ADR-327 P5-BOQ). */
 export function getNewRfqUrl(projectId: string, boqItemIds: readonly string[] = []) {
   const query = new URLSearchParams({ projectId });

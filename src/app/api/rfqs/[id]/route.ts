@@ -9,7 +9,6 @@
 
 import 'server-only';
 
-import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import {
   withStandardRateLimit,
@@ -19,32 +18,7 @@ import { rfqIdRoute } from '../_shared/rfq-id-route';
 import { getRfq, updateRfq, archiveRfq } from '@/subapps/procurement/services/rfq-service';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { rfqNotFoundResponse } from '../_shared/rfq-error-response';
-import { TRADE_CODES } from '@/subapps/procurement/types/trade';
-
-// ============================================================================
-// SCHEMAS
-// ============================================================================
-
-const RfqLineSchema = z.object({
-  id: z.string().min(1),
-  description: z.string().min(1).max(500),
-  trade: z.enum(TRADE_CODES),
-  categoryCode: z.string().max(30).nullable().default(null),
-  quantity: z.number().positive().nullable().default(null),
-  unit: z.string().max(20).nullable().default(null),
-  notes: z.string().max(500).nullable().default(null),
-});
-
-const UpdateRfqSchema = z.object({
-  title: z.string().min(1).max(200).optional(),
-  description: z.string().max(2000).nullable().optional(),
-  lines: z.array(RfqLineSchema).max(100).optional(),
-  deadlineDate: z.string().nullable().optional(),
-  status: z.enum(['draft', 'active', 'closed', 'archived']).optional(),
-  awardMode: z.enum(['whole_package', 'cherry_pick']).optional(),
-  reminderTemplate: z.enum(['aggressive', 'standard', 'soft', 'off']).optional(),
-  winnerQuoteId: z.string().nullable().optional(),
-});
+import { UpdateRfqSchema } from '../_shared/rfq-schemas';
 
 // ============================================================================
 // HANDLERS — ένα κέλυφος για τα τρία ρήματα (ADR-742 §7.8)

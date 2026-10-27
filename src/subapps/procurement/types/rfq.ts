@@ -145,6 +145,12 @@ export interface RFQ {
 // DTOs
 // ============================================================================
 
+/**
+ * Πόσες εργασίες επιμέτρησης χωρούν σε ΕΝΑ αίτημα προσφοράς — το όριο `in` του Firestore στο στιγμιότυπο BOQ.
+ * ΕΝΑ όνομα για UI (το λέει πριν το κλικ), σύνορο zod (`/api/rfqs`, `/api/rfqs/from-boq`) και services (ADR-330 §5.1 S3.2).
+ */
+export const RFQ_FROM_BOQ_MAX_ITEMS = 30;
+
 export interface CreateRfqDTO {
   projectId: string;
   buildingId?: string | null;
