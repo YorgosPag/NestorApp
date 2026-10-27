@@ -9,7 +9,7 @@
  * @see ADR-267 §Phase A
  */
 
-import { useCallback, useId } from 'react';
+import { useCallback, useId, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormActions } from '@/components/ui/form/FormActions';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,10 @@ import { PO_VAT_RATES } from '@/types/procurement';
 import type { PurchaseOrder, POVatRate } from '@/types/procurement';
 import { usePurchaseOrderForm, usePOPricing } from '@/hooks/procurement';
 import { POTotalsSummary } from './POTotalsSummary';
+import { PORepricingNotice } from './PORepricingNotice';
+import { PORepricingDialog } from './PORepricingDialog';
+import { ApiClientError } from '@/lib/api/api-client-types';
+import { PO_PRICING_CONFLICT_CODE } from '@/config/versioning-config';
 import { useMaterials } from '@/hooks/procurement/useMaterials';
 import { PurchaseOrderItemsTable } from './PurchaseOrderItemsTable';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -36,6 +40,19 @@ import { POProjectSelector, POSupplierSelector, POBuildingSelector } from './POE
 import { PODeliveryAddressField } from './PODeliveryAddressField';
 import type { FirestoreProject } from '@/hooks/useFirestoreProjects';
 import { formatAddressLine } from '@/types/project/address-helpers';
+
+/**
+ * ADR-923 «3γ» Α9: ο server αρνήθηκε (409) γιατί οι όροι άλλαξαν μετά την προεπισκόπηση. Η φόρμα
+ * έχει ήδη τη νέα τιμολόγηση (ζωντανή συνδρομή συμβάσεων) — εξηγεί, ώστε ο άνθρωπος να ξαναδεί.
+ */
+async function saveOrExplainConflict<T>(save: () => Promise<T>, conflictMessage: string): Promise<T> {
+  try {
+    return await save();
+  } catch (caught) {
+    if (caught instanceof ApiClientError && caught.errorCode === PO_PRICING_CONFLICT_CODE) throw new Error(conflictMessage);
+    throw caught;
+  }
+}
 
 interface PurchaseOrderFormProps {
   existingPO?: PurchaseOrder | null;
@@ -62,23 +79,29 @@ export function PurchaseOrderForm({
     validationErrors,
     isValid,
     isEditMode,
+    pricingMode,
+    setPricingMode,
     save,
   } = usePurchaseOrderForm(existingPO, initialProjectId);
 
-  const { pricing, agreementTitles } = usePOPricing({
+  // ADR-923 «3γ» Α9: στην επεξεργασία η PO κρατά τους όρους της· οι σημερινοί φαίνονται, δεν επιβάλλονται.
+  const { pricing, current, drift, agreementTitles, titleOf } = usePOPricing({
     supplierId: form.supplierId,
     projectId: form.projectId,
     items: form.items,
     taxRate: form.taxRate,
     documentDate: existingPO?.dateCreated ?? null,
+    stored: existingPO ?? null,
+    pricingMode,
   });
+  const [repricingOpen, setRepricingOpen] = useState(false);
   const { materials } = useMaterials();
 
   // ADR-598 «(η)»: ένας δρόμος υποβολής (κλικ + Enter) μέσω του SSoT. Νέα PO = `draft` ⇒ το Enter
   // σε πεδίο (implicit submission της HTML) δημιουργεί πρόχειρο, δεν αποστέλλει τίποτα.
   const { submitting, error, handleSubmit } = useFormSubmission({
     canSubmit: isValid,
-    submit: () => save(existingPO?.id),
+    submit: () => saveOrExplainConflict(() => save(existingPO?.id, pricing.totals.total), t('form.pricingConflict')),
     onSuccess: (result) => {
       if (result.id && result.poNumber) onSuccess?.(result.id, result.poNumber);
     },
@@ -243,6 +266,15 @@ export function PurchaseOrderForm({
             materials={materials}
           />
 
+          {isEditMode && (
+            <PORepricingNotice
+              pricingMode={pricingMode}
+              drift={drift}
+              onReview={() => setRepricingOpen(true)}
+              onUndo={() => setPricingMode('carry')}
+            />
+          )}
+
           <POTotalsSummary
             totals={pricing.totals}
             taxRate={form.taxRate}
@@ -251,6 +283,22 @@ export function PurchaseOrderForm({
           />
         </CardContent>
       </Card>
+
+      {drift && (
+        <PORepricingDialog
+          open={repricingOpen}
+          onOpenChange={setRepricingOpen}
+          kept={pricing}
+          current={current}
+          drift={drift}
+          descriptions={form.items.map((item) => item.description)}
+          titleOf={titleOf}
+          onConfirm={() => {
+            setPricingMode('redetermine');
+            setRepricingOpen(false);
+          }}
+        />
+      )}
 
       {/* Notes */}
       <Card>
@@ -293,8 +341,8 @@ export function PurchaseOrderForm({
             </span>
           </div>
           <ul className="mt-1 ml-6 list-disc text-sm text-destructive">
-            {validationErrors.map((err) => (
-              <li key={err}>{err}</li>
+            {validationErrors.map((issue) => (
+              <li key={`${issue.key}-${issue.line ?? 0}`}>{t(`form.validation.${issue.key}`, { line: issue.line })}</li>
             ))}
           </ul>
         </div>

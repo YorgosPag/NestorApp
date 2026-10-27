@@ -133,7 +133,16 @@
     "saveFailed": "The purchase order was not saved. Please try again.",
     "save": "Save",
     "create": "Create PO",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "pricingConflict": "Agreement terms changed while you were editing this order — nothing was saved. Review the new totals and save again.",
+    "validation": {
+      "projectRequired": "Select a project",
+      "supplierRequired": "Select a supplier",
+      "itemsRequired": "Add at least 1 item",
+      "descriptionRequired": "Item {line}: description is required",
+      "quantityPositive": "Item {line}: quantity must be greater than 0",
+      "categoryRequired": "Item {line}: ATOE code is required"
+    }
   },
   "detail": {
     "supplier": "Supplier",
@@ -681,5 +690,25 @@
       "noPOs": "No purchase orders yet",
       "noCategoryData": "No category data"
     }
+  },
+  "repricing": {
+    "drift": "{count, plural, one {Today's agreement terms would change # line ({delta}). The order keeps the terms it was issued with.} other {Today's agreement terms would change # lines ({delta}). The order keeps the terms it was issued with.}}",
+    "review": "Reprice…",
+    "pending": "The order will be saved with today's agreement terms.",
+    "undo": "Undo",
+    "dialogTitle": "Reprice order",
+    "dialogDescription": "The order keeps the terms it was issued with. Repricing applies today's agreement terms, at the document date.",
+    "line": "Line",
+    "lineNumber": "Line {line}",
+    "kept": "Now",
+    "current": "After repricing",
+    "terms": "{title}: −{percent}% ({amount})",
+    "noAgreement": "No agreement",
+    "ambiguous": "Agreements tie — no discount",
+    "removedAgreement": "Agreement no longer exists",
+    "keptTotal": "Payable now",
+    "currentTotal": "Payable after",
+    "keepTerms": "Keep terms",
+    "confirm": "Reprice"
   }
 }

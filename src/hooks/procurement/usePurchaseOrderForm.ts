@@ -21,6 +21,13 @@ import type {
   CreatePurchaseOrderDTO,
   UpdatePurchaseOrderDTO,
 } from '@/types/procurement';
+import type { POPricingMode } from '@/lib/procurement/po-pricing-carry';
+
+/** Ένα πρόβλημα επικύρωσης: κλειδί `form.validation.<key>` + αριθμός γραμμής όπου αφορά γραμμή. */
+export interface POFormIssue {
+  key: 'projectRequired' | 'supplierRequired' | 'itemsRequired' | 'descriptionRequired' | 'quantityPositive' | 'categoryRequired';
+  line?: number;
+}
 
 // ============================================================================
 // FORM STATE
@@ -153,18 +160,24 @@ export function usePurchaseOrderForm(existingPO?: PurchaseOrder | null, initialP
   // Τα σύνολα ΔΕΝ υπολογίζονται εδώ: τα δίνει η `usePOPricing` με την ίδια συνάρτηση του server
   // (ADR-923 §5.11 «3γ» — πριν ο τύπος ζούσε εδώ ως πέμπτο αντίγραφο, σε float).
 
+  // ── Pricing intent (ADR-923 «3γ», Α9) ──
+  // `carry` = η επεξεργασία κρατά τους όρους της PO· `redetermine` μόνο μετά από ρητή επιβεβαίωση.
+  const [pricingMode, setPricingMode] = useState<POPricingMode>('carry');
+
   // ── Validation ──
+  // Κλειδιά, όχι κείμενο (N.11): τα μεταφράζει η φόρμα στο `form.validation.*`.
 
   const validationErrors = useMemo(() => {
-    const errors: string[] = [];
-    if (!form.projectId) errors.push('Επιλέξτε έργο');
-    if (!form.supplierId) errors.push('Επιλέξτε προμηθευτή');
-    if (form.items.length === 0) errors.push('Προσθέστε τουλάχιστον 1 είδος');
+    const errors: POFormIssue[] = [];
+    if (!form.projectId) errors.push({ key: 'projectRequired' });
+    if (!form.supplierId) errors.push({ key: 'supplierRequired' });
+    if (form.items.length === 0) errors.push({ key: 'itemsRequired' });
 
     form.items.forEach((item, idx) => {
-      if (!item.description) errors.push(`Είδος ${idx + 1}: Περιγραφή απαιτείται`);
-      if (item.quantity <= 0) errors.push(`Είδος ${idx + 1}: Ποσότητα > 0`);
-      if (!item.categoryCode) errors.push(`Είδος ${idx + 1}: Κωδικός ΑΤΟΕ απαιτείται`);
+      const line = idx + 1;
+      if (!item.description) errors.push({ key: 'descriptionRequired', line });
+      if (item.quantity <= 0) errors.push({ key: 'quantityPositive', line });
+      if (!item.categoryCode) errors.push({ key: 'categoryRequired', line });
     });
 
     return errors;
@@ -198,11 +211,16 @@ export function usePurchaseOrderForm(existingPO?: PurchaseOrder | null, initialP
     internalNotes: form.internalNotes || null,
   }), [form]);
 
-  /** Persists the PO or throws. The caller's `useFormSubmission` guards validity and re-entry. */
-  const save = useCallback(async (poId?: string) => {
+  /**
+   * Persists the PO or throws. The caller's `useFormSubmission` guards validity and re-entry.
+   * `expectedTotal` = το πληρωτέο που δείχνει η φόρμα· ο server αρνείται (409) αν βγάλει άλλο.
+   */
+  const save = useCallback(async (poId: string | undefined, expectedTotal: number) => {
     const dto = buildDTO();
-    return savePurchaseOrderWithPolicy(poId ? dto as UpdatePurchaseOrderDTO : dto, poId);
-  }, [buildDTO]);
+    if (!poId) return savePurchaseOrderWithPolicy(dto);
+    const update: UpdatePurchaseOrderDTO = { ...dto, pricingMode, expectedTotal };
+    return savePurchaseOrderWithPolicy(update, poId);
+  }, [buildDTO, pricingMode]);
 
   // ── Reset ──
 
@@ -219,6 +237,8 @@ export function usePurchaseOrderForm(existingPO?: PurchaseOrder | null, initialP
     validationErrors,
     isValid,
     isEditMode,
+    pricingMode,
+    setPricingMode,
     save,
     reset,
   };
