@@ -6360,6 +6360,42 @@ service cloud.firestore {
       allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
       allow write: if false;
     }
+    // ADR-923 §5.11 «3β» — η ΤΙΜΟΛΟΓΗΣΗ, ίδιο σύνορο. 🔒 Τιμές ανά κοινό (ομάδες πελάτη, συνεργάτες, συνθήκες) ΔΕΝ
+    // διαβάζονται ΠΟΤΕ από άλλον χώρο ή ανώνυμο: η τιμή προς άλλο κοινό βγαίνει ΜΟΝΟ από τον διακομιστή (§12). Η
+    // δημοσιευμένη έκδοση είναι ΑΜΕΤΑΒΛΗΤΗ — το φυλάει ο γραφέας (η έκδοση κλειδώνει τις γραμμές της) και εδώ το
+    // `write: if false`. Οι υποδοχές ασάφειας (`catalog_pricing_slots`) είναι ευρετήριο του γραφέα, όπως οι κρατήσεις.
+    match /catalog_price_lists/{priceListId} {
+      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow write: if false;
+    }
+    match /catalog_price_list_versions/{versionId} {
+      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow write: if false;
+    }
+    match /catalog_price_list_lines/{lineId} {
+      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow write: if false;
+    }
+    match /catalog_discount_groups/{groupId} {
+      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow write: if false;
+    }
+    match /catalog_customer_groups/{groupId} {
+      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow write: if false;
+    }
+    match /catalog_customer_assignments/{assignmentId} {
+      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow write: if false;
+    }
+    match /catalog_discount_conditions/{conditionId} {
+      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow write: if false;
+    }
+    match /catalog_pricing_slots/{slotId} {
+      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow write: if false;
+    }
 
     // 🔒 ADR-894 §10.7 — ΖΩΝΤΑΝΗ ΣΥΝΔΕΣΗ. Η λίστα `users/{uid}/security/revoked_sign_ins` (ανακλημένα `auth_time`,
     // ΜΙΑ συσκευή τη φορά) προβάλλεται στο claim `revokedSignIns` από τον ΕΝΑ γραφέα claims (`set-claims-with-mirror`).

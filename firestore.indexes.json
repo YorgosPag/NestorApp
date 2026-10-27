@@ -9297,6 +9297,96 @@
         { "fieldPath": "attributeId", "order": "ASCENDING" },
         { "fieldPath": "skeleton", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "catalog_price_list_lines",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "versionId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_price_list_lines",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "discountGroupId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_price_list_versions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "priceListId", "order": "ASCENDING" },
+        { "fieldPath": "number", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_price_list_versions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "priceListId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_price_lists",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "kind", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_price_lists",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "audience.customerGroupId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_discount_conditions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_discount_conditions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "discountGroupId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_discount_conditions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "audience.customerGroupId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_customer_assignments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "customerGroupId", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": [

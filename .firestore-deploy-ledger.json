@@ -315,6 +315,20 @@
       "digest": "sha256:850eb1c7e2c97e58463f3bb12a5d2dde8ee61c723aae2e09618e3ffdf03c20a2",
       "source": "firestore.indexes.json",
       "target": "firestore:indexes"
+    },
+    {
+      "at": "2026-10-27",
+      "commit": "8416e856",
+      "digest": "sha256:0bc290a935f587e52349d38f24238ea299bc24a9d92ba2f0021ede0c0d2bb81b",
+      "source": "firestore.rules",
+      "target": "firestore:rules"
+    },
+    {
+      "at": "2026-10-27",
+      "commit": "8416e856",
+      "digest": "sha256:7eb50841c848477535c2e7a5a73fb67c8b255091bae7176ee9eee58deb3cbb7a",
+      "source": "firestore.indexes.json",
+      "target": "firestore:indexes"
     }
   ]
 }

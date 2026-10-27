@@ -705,6 +705,55 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...serverWrittenTenantInternalMatrix(),
   },
   {
+    // ADR-923 §5.11 «3β» — η ΤΙΜΟΛΟΓΗΣΗ: ίδιο σύνορο με σχήμα/δεδομένα (read εσωτερικός του χώρου, write = Admin SDK).
+    collection: 'catalog_price_lists',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/catalog-price-lists.rules.test.ts',
+    ...serverWrittenTenantInternalMatrix(),
+  },
+  {
+    collection: 'catalog_price_list_versions',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/catalog-price-list-versions.rules.test.ts',
+    ...serverWrittenTenantInternalMatrix(),
+  },
+  {
+    collection: 'catalog_price_list_lines',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/catalog-price-list-lines.rules.test.ts',
+    ...serverWrittenTenantInternalMatrix(),
+  },
+  {
+    collection: 'catalog_discount_groups',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/catalog-discount-groups.rules.test.ts',
+    ...serverWrittenTenantInternalMatrix(),
+  },
+  {
+    collection: 'catalog_customer_groups',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/catalog-customer-groups.rules.test.ts',
+    ...serverWrittenTenantInternalMatrix(),
+  },
+  {
+    collection: 'catalog_customer_assignments',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/catalog-customer-assignments.rules.test.ts',
+    ...serverWrittenTenantInternalMatrix(),
+  },
+  {
+    collection: 'catalog_discount_conditions',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/catalog-discount-conditions.rules.test.ts',
+    ...serverWrittenTenantInternalMatrix(),
+  },
+  {
+    collection: 'catalog_pricing_slots',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/catalog-pricing-slots.rules.test.ts',
+    ...serverWrittenTenantInternalMatrix(),
+  },
+  {
     // ADR-916 Φ-Β — Η ΠΡΟΣΚΛΗΣΗ ΤΟΥ ΑΓΟΡΑΣΤΗ. `deny_all` όπως κάθε είδος του κοινού πυρήνα: ανάγνωση = email
     // ιδιωτών + `nonceHash`· γραφή = αποδοχή χωρίς σύνδεσμο, δηλαδή φάκελος σε λάθος λογαριασμό.
     collection: 'property_handover_invitations',
