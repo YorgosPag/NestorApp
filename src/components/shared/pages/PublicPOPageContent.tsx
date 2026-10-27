@@ -21,14 +21,11 @@ import { cn, getStatusColor } from '@/lib/design-system';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { HeaderBar } from '@/components/ui/header-bar';
 import { Badge } from '@/components/ui/badge';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
 import { PO_STATUS_META } from '@/types/procurement';
 import type { PurchaseOrder } from '@/types/procurement';
 import { formatDate as formatLocaleDate } from '@/lib/intl-utils';
 import { POTotalsSummary } from '@/components/procurement/POTotalsSummary';
-import { formatPOCurrency } from '@/components/procurement/utils/procurement-format';
+import { POLineItemsView } from '@/components/procurement/POLineItemsView';
 
 // ============================================================================
 // HELPERS
@@ -164,28 +161,7 @@ export function PublicPOPageContent() {
             <CardTitle>{t('detail.items')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('items.description')}</TableHead>
-                  <TableHead className="text-right">{t('items.quantity')}</TableHead>
-                  <TableHead>{t('items.unit')}</TableHead>
-                  <TableHead className="text-right">{t('items.unitPrice')}</TableHead>
-                  <TableHead className="text-right">{t('items.total')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {po.items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.description}</TableCell>
-                    <TableCell className="text-right tabular-nums">{item.quantity}</TableCell>
-                    <TableCell>{item.unit}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatPOCurrency(item.unitPrice)}</TableCell>
-                    <TableCell className="text-right tabular-nums font-medium">{formatPOCurrency(item.total)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <POLineItemsView items={po.items} />
 
             <POTotalsSummary
               totals={{

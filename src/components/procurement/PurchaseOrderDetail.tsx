@@ -12,9 +12,6 @@
 import { lazy, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/design-system';
 import {
@@ -24,6 +21,7 @@ import type { PurchaseOrder } from '@/types/procurement';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PurchaseOrderActions } from './PurchaseOrderActions';
 import { POTotalsSummary } from './POTotalsSummary';
+import { POLineItemsView } from './POLineItemsView';
 import { PurchaseOrderDetailsHeader } from './PurchaseOrderDetailsHeader';
 import { useFirestoreProjects } from '@/hooks/useFirestoreProjects';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
@@ -135,34 +133,7 @@ export function PurchaseOrderDetail({
         </CardHeader>
         <CardContent>
           <div className="hidden md:block">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('items.description')}</TableHead>
-                  <TableHead className="text-right">{t('items.quantity')}</TableHead>
-                  <TableHead>{t('items.unit')}</TableHead>
-                  <TableHead className="text-right">{t('items.unitPrice')}</TableHead>
-                  <TableHead className="text-right">{t('items.total')}</TableHead>
-                  <TableHead>{t('items.category')}</TableHead>
-                  {showDelivery && <TableHead className="text-right">{t('items.delivery')}</TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {po.items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.description}</TableCell>
-                    <TableCell className="text-right tabular-nums">{item.quantity}</TableCell>
-                    <TableCell>{item.unit}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatPOCurrency(item.unitPrice)}</TableCell>
-                    <TableCell className="text-right tabular-nums font-medium">{formatPOCurrency(item.total)}</TableCell>
-                    <TableCell>{item.categoryCode}</TableCell>
-                    {showDelivery && (
-                      <TableCell className="text-right tabular-nums">{item.quantityReceived}/{item.quantity}</TableCell>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <POLineItemsView items={po.items} showCategory showDelivery={showDelivery} />
           </div>
 
           <div className="md:hidden space-y-2">
