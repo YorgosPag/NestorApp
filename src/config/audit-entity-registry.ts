@@ -259,6 +259,16 @@ export const AUDIT_ENTITIES = {
   catalog_product: { collectionKey: 'CATALOG_PRODUCTS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
   catalog_asset: { collectionKey: 'CATALOG_ASSETS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
   catalog_settings: { collectionKey: 'CATALOG_SETTINGS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+  // ADR-923 §5.11 «3β» — ΤΙΜΟΚΑΤΑΛΟΓΟΙ, ίδιο σύνορο. Οι γραμμές που ΑΝΤΙΓΡΑΦΟΝΤΑΙ από δημοσιευμένη έκδοση δεν γράφουν
+  // ίχνος η καθεμία (παράγωγο αμετάβλητης πηγής) — ένα ίχνος στην έκδοση. Οι υποδοχές ασάφειας (`catalog_pricing_slots`)
+  // ΔΕΝ είναι οντότητα — ευρετήριο του γραφέα, όπως οι κρατήσεις μοναδικότητας.
+  catalog_price_list: { collectionKey: 'CATALOG_PRICE_LISTS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+  catalog_price_list_version: { collectionKey: 'CATALOG_PRICE_LIST_VERSIONS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+  catalog_price_list_line: { collectionKey: 'CATALOG_PRICE_LIST_LINES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+  catalog_discount_group: { collectionKey: 'CATALOG_DISCOUNT_GROUPS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+  catalog_customer_group: { collectionKey: 'CATALOG_CUSTOMER_GROUPS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+  catalog_customer_assignment: { collectionKey: 'CATALOG_CUSTOMER_ASSIGNMENTS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+  catalog_discount_condition: { collectionKey: 'CATALOG_DISCOUNT_CONDITIONS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
 
   // ── Μηχανή κειμένου (ADR-651 / ADR-344) — server-only services ────────────
   text_template: { collectionKey: 'TEXT_TEMPLATES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },

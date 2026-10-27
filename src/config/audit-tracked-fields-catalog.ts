@@ -107,3 +107,29 @@ export const CATALOG_PRODUCT_TRACKED_FIELDS = {
 export const CATALOG_ASSET_TRACKED_FIELDS = defs(['role', 'kind', 'fileId', 'isDeleted'], ['labels', 'description', 'rights']);
 
 export const CATALOG_SETTINGS_TRACKED_FIELDS = defs([], ['channelLocales']);
+
+// ── Φάση 3β (ADR-923 §5.11) — τιμοκατάλογοι. Τα παράγωγα (`derived`: `linesRevision`, σπορά, κλειδιά δεικτών) ΔΕΝ
+//    παρακολουθούνται. Η σφραγίδα (`seal`) ναι: είναι η **πράξη** της δημοσίευσης, με ποιον φράχτη και τι επιβεβαιώθηκε.
+
+export const CATALOG_PRICE_LIST_TRACKED_FIELDS = defs(['kind', 'priceType', 'changeFenceBp', 'isDeleted'], ['labels', 'audience']);
+
+export const CATALOG_PRICE_LIST_VERSION_TRACKED_FIELDS = defs(
+  ['number', 'status', 'validFrom', 'basedOnVersionId', 'isDeleted'],
+  ['seal'],
+);
+
+export const CATALOG_PRICE_LIST_LINE_TRACKED_FIELDS = defs(
+  ['netPrice', 'priceQuantity', 'unitCode', 'discountGroupId', 'isDeleted'],
+  ['subject', 'breakdown'],
+);
+
+export const CATALOG_DISCOUNT_GROUP_TRACKED_FIELDS = defs(['isDeleted'], ['labels']);
+
+export const CATALOG_CUSTOMER_GROUP_TRACKED_FIELDS = defs(['isDeleted'], ['labels']);
+
+export const CATALOG_CUSTOMER_ASSIGNMENT_TRACKED_FIELDS = defs(['customerGroupId', 'isDeleted'], ['party']);
+
+export const CATALOG_DISCOUNT_CONDITION_TRACKED_FIELDS = defs(
+  ['discountGroupId', 'validFrom', 'validUntil', 'isDeleted'],
+  ['audience', 'rule'],
+);

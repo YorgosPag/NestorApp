@@ -98,7 +98,7 @@ async function recordChange(change: StagedChange, performedBy: string): Promise<
   await recordTrackedEntityWrite({
     entityType: spec.entityType,
     entityId: change.after.id,
-    entityName: entityNameOf(change.after),
+    entityName: spec.auditName ? spec.auditName(change.after as Readonly<Record<string, unknown>>) : entityNameOf(change.after),
     trackedFields: spec.trackedFields,
     before: change.before ? view(change.before) : null,
     after: view(change.after),
@@ -191,28 +191,48 @@ export async function readForRandomCreate(scope: CatalogTx, kind: CatalogKind, r
   return { id, previousRevision: 0 };
 }
 
-/** Το singleton του χώρου (ρυθμίσεις): ο στόχος και η τρέχουσα ενεργή εγγραφή, αν υπάρχει. */
-export async function readSingleton<TDefinition>(
-  scope: CatalogTx,
-  kind: CatalogKind,
-): Promise<{ readonly target: CreateTarget; readonly current: StoredCatalogRecord<TDefinition> | null }> {
-  const id = identityOf(kind, 'singleton').idOf(scope.ctx.companyId);
+/** Το id ενός είδους με ταυτότητα **φυσικού κλειδιού** σε αυτόν τον χώρο (χωρίς ανάγνωση). */
+export function naturalKeyId(scope: CatalogTx, kind: CatalogKind, key: string): string {
+  return identityOf(kind, 'code').idOf(scope.ctx.companyId, key);
+}
+
+/**
+ * Για **upsert** με ντετερμινιστικό id (ADR-923 §5.11 «3β»: γραμμή τιμοκαταλόγου = έκδοση + υποκείμενο): ο στόχος
+ * και η τρέχουσα **ενεργή** εγγραφή του χώρου, αν υπάρχει. Ίδιο έγγραφο με το `readForCreate`, χωρίς να ρίχνει: ο
+ * γραφέας αποφασίζει αν «υπάρχει» σημαίνει «αντικατάσταση» ή «διπλότυπο». Ξένο έγγραφο στο ίδιο id είναι αδύνατο
+ * (το id περιέχει τον χώρο), αλλά κρίνεται ξανά — ξένο ≡ ανύπαρκτο, ποτέ αντικατάσταση.
+ */
+export function readForUpsert<TDefinition>(scope: CatalogTx, kind: CatalogKind, key: string): Promise<TargetAndCurrent<TDefinition>> {
+  return readTargetAndCurrent<TDefinition>(scope, kind, naturalKeyId(scope, kind, key));
+}
+
+/** Ο στόχος μιας εγγραφής σε γνωστό id **και** η τρέχουσα ενεργή εγγραφή του χώρου — ο ένας δρόμος upsert/singleton. */
+interface TargetAndCurrent<TDefinition> {
+  readonly target: CreateTarget;
+  readonly current: StoredCatalogRecord<TDefinition> | null;
+}
+
+async function readTargetAndCurrent<TDefinition>(scope: CatalogTx, kind: CatalogKind, id: string): Promise<TargetAndCurrent<TDefinition>> {
   const snap = await scope.tx.get(catalogDocRef(scope.db, kind, id));
   const data = snap.data() as StoredCatalogRecord<TDefinition> | undefined;
   const current = data && !data.isDeleted && data.companyId === scope.ctx.companyId ? data : null;
   return { target: { id, previousRevision: data?.revision ?? 0 }, current };
 }
 
+/** Το singleton του χώρου (ρυθμίσεις): ο στόχος και η τρέχουσα ενεργή εγγραφή, αν υπάρχει. */
+export function readSingleton<TDefinition>(scope: CatalogTx, kind: CatalogKind): Promise<TargetAndCurrent<TDefinition>> {
+  return readTargetAndCurrent<TDefinition>(scope, kind, identityOf(kind, 'singleton').idOf(scope.ctx.companyId));
+}
+
 // ── Σκηνοθεσία εγγραφών (ΜΕΤΑ από όλες τις αναγνώσεις) ──────────────────────
 
-export function stageCreate<TDefinition extends object>(
+function freshRecord<TDefinition extends object>(
   scope: CatalogTx,
-  kind: CatalogKind,
   target: CreateTarget,
   definition: TDefinition,
 ): StoredCatalogRecord<TDefinition> {
   const { ctx, now } = scope;
-  const record: StoredCatalogRecord<TDefinition> = {
+  return {
     ...definition,
     id: target.id,
     companyId: ctx.companyId,
@@ -225,11 +245,38 @@ export function stageCreate<TDefinition extends object>(
     deletedAt: null,
     deletedBy: null,
   };
+}
+
+export function stageCreate<TDefinition extends object>(
+  scope: CatalogTx,
+  kind: CatalogKind,
+  target: CreateTarget,
+  definition: TDefinition,
+): StoredCatalogRecord<TDefinition> {
+  const record = freshRecord(scope, target, definition);
   const ref = catalogDocRef(scope.db, kind, target.id);
   // Νέο έγγραφο ⇒ `create()` (αρνείται υπάρχον — ζώνη ασφαλείας πάνω από την ανάγνωση)· διαγραμμένο ⇒ `set()`.
   if (target.previousRevision === 0) scope.tx.create(ref, record);
   else scope.tx.set(ref, record);
   scope.changes.push({ kind, before: null, after: record });
+  return record;
+}
+
+/**
+ * **Σπορά** από αμετάβλητη πηγή (ADR-923 §5.11 «3β»: «νέα έκδοση από την τρέχουσα» αντιγράφει χιλιάδες γραμμές
+ * δημοσιευμένης έκδοσης). Ίδιο περίβλημα με το `stageCreate`, αλλά **χωρίς ίχνος ανά εγγραφή**: η αντιγραφή δεν
+ * είναι αλλαγή κανενός ανθρώπου — το ίχνος της είναι **ένα**, στην έκδοση (`basedOnVersionId`). `set()` (όχι
+ * `create()`): η επανάληψη ενός τμήματος μετά από διακοπή γράφει **το ίδιο** έγγραφο με το ίδιο περιεχόμενο.
+ * ⛔ Μόνο η μηχανή συνόλου της έκδοσης την καλεί (CHECK 3.106 Κ6) — αλλιώς είναι εγγραφή χωρίς ιστορικό.
+ */
+export function stageCopied<TDefinition extends object>(
+  scope: CatalogTx,
+  kind: CatalogKind,
+  target: CreateTarget,
+  definition: TDefinition,
+): StoredCatalogRecord<TDefinition> {
+  const record = freshRecord(scope, target, definition);
+  scope.tx.set(catalogDocRef(scope.db, kind, target.id), record);
   return record;
 }
 
@@ -313,4 +360,37 @@ export function stageUniqueClaim(scope: CatalogTx, reservation: CatalogUniqueVal
 
 export function stageUniqueRelease(scope: CatalogTx, reservationId: string): void {
   scope.tx.delete(uniqueValueRef(scope.db, reservationId));
+}
+
+// ── Υποδοχές ασάφειας τιμολόγησης (ADR-923 §5.11 «3β») — ευρετήριο του γραφέα, ΟΧΙ οντότητα (χωρίς ιστορικό) ──
+
+/** Ένα μέλος υποδοχής: ποιος την κατέχει και πότε ισχύει (ημιανοιχτό `[validFrom, validUntil)`, `null` = ανοιχτό). */
+export interface CatalogPricingSlotMember {
+  readonly holderId: string;
+  readonly validFrom: string | null;
+  readonly validUntil: string | null;
+}
+
+/**
+ * Όσοι μοιράζονται **κλειδί υποδοχής** (`pricing-keys.ts`) δεν επιτρέπεται να επικαλύπτονται. Η συναλλαγή που
+ * γράφει μέλος **διαβάζει** το έγγραφο ⇒ δύο ταυτόχρονες εγγραφές συγκρούονται (ένα ερώτημα θα έχανε το
+ * «φάντασμα» που δεν έχει γραφτεί ακόμα).
+ */
+export interface CatalogPricingSlotDoc {
+  readonly id: string;
+  readonly companyId: string;
+  readonly slotKey: string;
+  readonly members: readonly CatalogPricingSlotMember[];
+  readonly updatedAt: string;
+}
+
+export function pricingSlotRef(db: Firestore, id: string): DocumentReference {
+  return db.collection(COLLECTIONS.CATALOG_PRICING_SLOTS).doc(id);
+}
+
+/** Γράφει τα μέλη της υποδοχής — **καμία** κενή υποδοχή δεν μένει πίσω (άδεια ⇒ διαγραφή). */
+export function stagePricingSlot(scope: CatalogTx, slot: Omit<CatalogPricingSlotDoc, 'updatedAt'>): void {
+  const ref = pricingSlotRef(scope.db, slot.id);
+  if (slot.members.length === 0) scope.tx.delete(ref);
+  else scope.tx.set(ref, { ...slot, updatedAt: scope.now });
 }

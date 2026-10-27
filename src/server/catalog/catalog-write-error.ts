@@ -10,23 +10,8 @@
 
 import { ApiError } from '@/lib/api/api-error-types';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
-
-export const CATALOG_WRITE_ERROR_KINDS = {
-  /** Ανύπαρκτο, διαγραμμένο ή ξένου χώρου — **ίδια** απάντηση και για τα τρία (ξένο ≡ ανύπαρκτο). */
-  notFound: 404,
-  /** Υπάρχει ήδη ενεργή οντότητα με αυτόν τον κωδικό. */
-  duplicateCode: 409,
-  /** Κάποιος άλλος άλλαξε την οντότητα από τότε που τη διάβασε ο πελάτης (CAS). */
-  revisionMismatch: 409,
-  /** Η οντότητα χρησιμοποιείται — η πράξη θα άφηνε ορφανές αναφορές. */
-  inUse: 409,
-  /** Αλλαγή πεδίου που είναι αμετάβλητο (κωδικός, ή τύπος ιδιότητας σε χρήση). */
-  immutable: 422,
-  /** Η σημασιολογική επικύρωση βρήκε ευρήματα. */
-  invalid: 422,
-} as const;
-
-export type CatalogWriteErrorKind = keyof typeof CATALOG_WRITE_ERROR_KINDS;
+// Ο πίνακας ειδών → status ζει στο κοινό `catalog-write-kinds` (ένας ορισμός για διακομιστή ΚΑΙ πελάτη).
+import { CATALOG_WRITE_ERROR_KINDS, type CatalogWriteErrorKind } from '@/subapps/catalog/schema/catalog-write-kinds';
 
 export class CatalogWriteError extends Error {
   constructor(

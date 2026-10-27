@@ -27,6 +27,13 @@ import {
   CATALOG_PRODUCT_MODEL_TRACKED_FIELDS,
   CATALOG_PRODUCT_TRACKED_FIELDS,
   CATALOG_SETTINGS_TRACKED_FIELDS,
+  CATALOG_PRICE_LIST_TRACKED_FIELDS,
+  CATALOG_PRICE_LIST_VERSION_TRACKED_FIELDS,
+  CATALOG_PRICE_LIST_LINE_TRACKED_FIELDS,
+  CATALOG_DISCOUNT_GROUP_TRACKED_FIELDS,
+  CATALOG_CUSTOMER_GROUP_TRACKED_FIELDS,
+  CATALOG_CUSTOMER_ASSIGNMENT_TRACKED_FIELDS,
+  CATALOG_DISCOUNT_CONDITION_TRACKED_FIELDS,
 } from '@/config/audit-tracked-fields-catalog';
 import { BUILDING_OBJECTIVE_VALUE_FIELDS } from '@/lib/objective-value/building-objective-value-facts';
 import { OBJECTIVE_VALUE_DECLARED_FIELDS } from '@/lib/objective-value/objective-value-declarations';
@@ -1626,6 +1633,21 @@ export function getTrackedFieldsForEntityAuditType(
       return CATALOG_ASSET_TRACKED_FIELDS;
     case 'catalog_settings':
       return CATALOG_SETTINGS_TRACKED_FIELDS;
+    // ADR-923 §5.11 «3β» — οι τιμοκατάλογοι (βιβλίο `company`).
+    case 'catalog_price_list':
+      return CATALOG_PRICE_LIST_TRACKED_FIELDS;
+    case 'catalog_price_list_version':
+      return CATALOG_PRICE_LIST_VERSION_TRACKED_FIELDS;
+    case 'catalog_price_list_line':
+      return CATALOG_PRICE_LIST_LINE_TRACKED_FIELDS;
+    case 'catalog_discount_group':
+      return CATALOG_DISCOUNT_GROUP_TRACKED_FIELDS;
+    case 'catalog_customer_group':
+      return CATALOG_CUSTOMER_GROUP_TRACKED_FIELDS;
+    case 'catalog_customer_assignment':
+      return CATALOG_CUSTOMER_ASSIGNMENT_TRACKED_FIELDS;
+    case 'catalog_discount_condition':
+      return CATALOG_DISCOUNT_CONDITION_TRACKED_FIELDS;
     default:
       return null;
   }

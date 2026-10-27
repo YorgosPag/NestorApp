@@ -75,6 +75,9 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "catalog:schema:manage",
       // ADR-923 §5.10 — και τα ΔΕΔΟΜΕΝΑ του (μοντέλα, SKU, μέσα). Σε ποιον άλλο ρόλο: απόφαση Giorgio (§11).
       "catalog:products:manage",
+      // ADR-923 §5.11 «3β» — και την ΤΙΜΟΛΟΓΗΣΗ (συντήρηση + δημοσίευση). Σε ποιον άλλο ρόλο: απόφαση Giorgio (§11).
+      "catalog:pricing:manage",
+      "catalog:pricing:publish",
       "users:users:view",
       "users:users:manage",
       "projects:projects:view",
