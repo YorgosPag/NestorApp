@@ -67,7 +67,7 @@ function itemScopeRank(fa: FrameworkAgreementLike, line: FaLineContext): number 
  * Το εύρος ισχύος στο ημιανοιχτό `[from, until)` της μηχανής. Το `validUntil` της σύμβασης είναι
  * **συμπεριληπτικό** («έως και») ⇒ `+1` ms κρατά ακριβώς τη σημασία του. `null` = μη αναγνώσιμο.
  */
-function faValidity(fa: FrameworkAgreementLike): ValidityWindow | null {
+export function faValidity(fa: FrameworkAgreementLike): ValidityWindow | null {
   const fromMs = normalizeToMillisOrNull(fa.validFrom);
   const until = normalizeToMillisOrNull(fa.validUntil);
   if (fromMs === null || until === null) {

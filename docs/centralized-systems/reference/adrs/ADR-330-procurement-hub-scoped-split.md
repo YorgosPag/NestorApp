@@ -10,6 +10,7 @@
 
 | Date | Changes |
 |------|---------|
+| 2026-10-27 | ✅ **Phase 5.5 v3 — πάγωμα όρων PO (ADR-923 §5.11 «3γ» Α9)**: η επεξεργασία κρατά τους αποθηκευμένους όρους ανά γραμμή (`carry`)· νέα τιμολόγηση μόνο ρητά (`redetermine` + audit)· CAS `expectedTotal` → 409. Βλ. «Architecture v3». |
 | 2026-10-27 | ✅ **Phase 5.5 v3 — διόρθωση στη ρίζα (ADR-923 §5.11 «3γ»)**: σύμβαση **ανά γραμμή** μέσω του ενός `selectMostSpecific` (ισοπαλία ⇒ καμία έκπτωση) · `[]` = κανένα · εύρος υλικών/ΑΤΟΕ ενεργό · κλίμακες ως group condition ανά PO · ΦΠΑ **μετά** την έκπτωση (`taxableAmount`, `total` = πληρωτέο) · ένα `po-totals` αντί για 5 αντίγραφα · `appliedFaId`/`faDiscountPercent`/`netTotal` → `appliedFaIds[]` + `faDiscount` γραμμής (0 έγγραφα) · `materialId` στο σχήμα PO (το Phase 4.5 CF δεν το έβλεπε ποτέ) · έκπτωση σε PDF/λεπτομέρεια/δημόσια σελίδα. Βλ. «Architecture v3». |
 | 2026-10-26 | 🔴 **Απόκλιση ADR ↔ κώδικα στην εφαρμογή εκπτώσεων FWA (Phase 5.5)**, μετρημένη στην αναγνώριση της ADR-923 Φάσης 3 (§5.11 Α1–Α4): float αριθμητική · έκπτωση **πάνω στον ΦΠΑ** · εύρος υλικών/ΑΤΟΕ που δεν διαβάζεται · `[]` = «όλα» αντίθετα με το «`[]`=none» αυτού του ADR. Μόνο τεκμηρίωση εδώ· η διόρθωση γίνεται στην ADR-923 Φάση 3γ (FWA πάνω στη μία μηχανή `src/lib/pricing/`). |
 | 2026-10-04 | 🔴 **Η καρτέλα «Προμήθειες» του έργου είναι ΣΥΝΔΕΣΜΟΣ, όχι component που ανακατευθύνει.** Το `ProcurementProjectTab` έκανε `router.replace` μέσα σε `useEffect`. Ο `UniversalTabsRenderer` κρατά κάθε καρτέλα που άνοιξε μία φορά στημένη (`forceMount`), οπότε στο πέρασμα πρόχειρο → πραγματικό έργο το component στηνόταν **κρυμμένο** και πετούσε τον άνθρωπο στο `/procurement/overview` χωρίς να το ζητήσει (μετρημένο ζωντανά). Τώρα: `href` στο `project-tabs-config` (πλοήγηση **στο κλικ**, πρότυπο Procore)· πρόχειρο έργο ⇒ η καρτέλα **ανενεργή**. Το `ProcurementProjectTab.tsx` **διαγράφηκε**. Νέο `getProjectProcurementUrl(projectId, section)` στο `lib/navigation/procurement-urls.ts` — το χρησιμοποιούν η καρτέλα και το `ProjectProcurementTabs` (έφυγαν 4 inline templates). Μηχανισμός: ADR-328. |
@@ -611,6 +612,10 @@ Sostituisce l'attuale `ProcurementProjectTab.tsx` (oggi 22 LOC, solo `RfqList`).
 - Αρχεία: `lib/procurement/price-purchase-order{,-pure}.ts` (αντικαθιστούν `recompute-fa-discount{,-pure}.ts`) · `hooks/procurement/usePOPricing.ts` (αντικαθιστά
   `usePOFrameworkAgreement`, καλεί την **ίδια** συνάρτηση με τον server) · `components/procurement/POTotalsSummary.tsx` (φόρμα · λεπτομέρεια · δημόσια σελίδα PO) · PDF με έκπτωση.
 - Ημερομηνία τιμολόγησης: νέα PO = τώρα· επεξεργασία = `dateCreated` (SAP pricing date).
+- **Πάγωμα όρων στην επεξεργασία (ADR-923 §5.11 «3γ» Α9, 2026-10-27):** η ημερομηνία τιμολόγησης **δεν** αρκεί — η `updatePO` ξανατιμολογούσε με το
+  *σημερινό* σύνολο συμβάσεων σε κάθε PATCH. Πλέον `carry` (προεπιλογή): κάθε γραμμή είναι `frozen` / `adjusted` (ίδια σύμβαση-πηγή, νέο ποσό) /
+  `sourced`, με αντιστοίχιση πολυσυνόλου (`lib/procurement/po-pricing-carry.ts`)· `redetermine` μόνο ρητά (διάλογος «Επανατιμολόγηση», audit
+  `procurement.po.repriced`)· αλλαγή προμηθευτή/έργου ⇒ όλες `sourced`· CAS `expectedTotal` → 409 `PO_PRICING_CHANGED` χωρίς εγγραφή.
 - 🔴 **Phase 4.5, παράπλευρο εύρημα:** το `CreatePOItemSchema` **δεν** είχε `materialId` ⇒ το zod το πετούσε ⇒ το `materialPriceSyncOnPODelivery` δεν έβρισκε ποτέ υλικό.
   Διορθώθηκε (μαζί με το `duplicatePO`). Από εδώ και πέρα το CF **θα ενεργοποιείται** σε παράδοση PO με υλικό: πρώτη φορά στην πράξη.
 - Tamper guarantee: αμετάβλητη (και ισχυρότερη: ούτε το `total` γραμμής εμπιστεύεται ο server).
