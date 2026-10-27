@@ -6,7 +6,8 @@
  *   ο αναγνώστης της διαδρομής βλέπει ποιο όριο ισχύει χωρίς να ανοίξει το factory.
  * - Δικαίωμα ανά **αρχή** (ADR-923 §5.1 · §5.10): `schema` ⇒ `catalog:schema:manage` (η δομή — προεπιλογή)·
  *   `products` ⇒ `catalog:products:manage` (τα δεδομένα: μοντέλα, SKU, μέσα, επανυπολογισμός). Akeneo: «edit
- *   products» ≠ «manage catalog structure».
+ *   products» ≠ «manage catalog structure». `pricing` / `pricingPublish` (ADR-923 §5.11 «3β»): συντήρηση τιμών ≠
+ *   δημοσίευση (SAP). Ο πίνακας ζει στο `vocabulary/catalog-authorities` — κοινός με τον πελάτη.
  * - `CatalogWriteError` ⇒ `ApiError` σε **ένα** σημείο (`toCatalogApiError`): ίδιο λάθος, ίδιος κωδικός, παντού.
  *
  * Οι αναγνώσεις **δεν** περνούν από εδώ: ο πελάτης διαβάζει απευθείας τη Firestore (κανόνες:
@@ -24,13 +25,11 @@ import type { AuthContext } from '@/lib/auth';
 import type { RateLimitCategory } from '@/lib/middleware/rate-limit-config';
 import { CatalogWriteError, toCatalogApiError } from '@/server/catalog/catalog-write-error';
 import { EXPECTED_REVISION_PARAM } from '@/subapps/catalog/catalog-routes';
+import { CATALOG_AUTHORITY_PERMISSIONS, type CatalogAuthority } from '@/subapps/catalog/vocabulary/catalog-authorities';
 import { expectedRevisionSchema } from '@/subapps/catalog/schema/zod/common.schema';
 
 /** Οι βαθμίδες που έχουν νόημα για εγγραφές σχήματος — ρητή δήλωση ανά διαδρομή. */
 type CatalogRateCategory = Extract<RateLimitCategory, 'STANDARD' | 'SENSITIVE'>;
-
-/** Ποια εξουσία κρίνει τη διαδρομή: η δομή του καταλόγου ή τα δεδομένα του. */
-export type CatalogAuthority = 'schema' | 'products';
 
 export interface CatalogRoutePolicy {
   readonly category: CatalogRateCategory;
@@ -39,11 +38,8 @@ export interface CatalogRoutePolicy {
 }
 
 const TIER_OF: Readonly<Record<CatalogRateCategory, RateLimitTier>> = { STANDARD: 'standard', SENSITIVE: 'sensitive' };
-const AUTH_OF: Readonly<Record<CatalogAuthority, { readonly permissions: 'catalog:schema:manage' | 'catalog:products:manage' }>> = {
-  schema: { permissions: 'catalog:schema:manage' },
-  products: { permissions: 'catalog:products:manage' },
-};
-const authOf = (policy: CatalogRoutePolicy) => AUTH_OF[policy.authority ?? 'schema'];
+// Ποια εξουσία κρίνει τη διαδρομή — ο ΕΝΑΣ πίνακας δικαιοδοσία → δικαίωμα (κοινός με τον πελάτη).
+const authOf = (policy: CatalogRoutePolicy) => ({ permissions: CATALOG_AUTHORITY_PERMISSIONS[policy.authority ?? 'schema'] });
 const FALLBACK_ERROR = 'Catalog schema write failed';
 
 type IdParams = { id: string };

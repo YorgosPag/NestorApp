@@ -37,6 +37,29 @@ export const CATALOG_API = {
   settings: `${API_ROOT}/settings`,
   /** Μία σελίδα της εργασίας επανυπολογισμού παραγώγων (δρομέας). */
   recomputeDerived: `${API_ROOT}/derived/recompute`,
+  // ── Φάση 3β (ADR-923 §5.11) — τιμολόγηση ──
+  priceLists: {
+    ...entity('price-lists'),
+    /** Νέα πρόχειρη έκδοση της λίστας (κενή ή «από την τρέχουσα»). */
+    versions: (id: string) => `${API_ROOT}/price-lists/${encodeURIComponent(id)}/versions`,
+  },
+  priceListVersions: {
+    item: entity('price-list-versions').item,
+    /** Η δέσμη γραμμών: μία συναλλαγή, CAS στο `linesRevision`. */
+    lines: (id: string) => `${API_ROOT}/price-list-versions/${encodeURIComponent(id)}/lines`,
+    /** Συνέχιση σποράς από τον δρομέα (ιδεμπότητη). */
+    seed: (id: string) => `${API_ROOT}/price-list-versions/${encodeURIComponent(id)}/seed`,
+    /** Η διαφορά από την τρέχουσα δημοσιευμένη + το αποτύπωμα του φράχτη. */
+    diff: (id: string) => `${API_ROOT}/price-list-versions/${encodeURIComponent(id)}/diff`,
+    publish: (id: string) => `${API_ROOT}/price-list-versions/${encodeURIComponent(id)}/publish`,
+    discard: (id: string) => `${API_ROOT}/price-list-versions/${encodeURIComponent(id)}/discard`,
+  },
+  discountGroups: entity('discount-groups'),
+  customerGroups: entity('customer-groups'),
+  customerAssignments: entity('customer-assignments'),
+  discountConditions: entity('discount-conditions'),
+  /** «Δες την τιμή σαν τον Χ» — εσωτερική προεπισκόπηση (3β απόφαση Δ). */
+  priceQuote: `${API_ROOT}/price-quote`,
 } as const;
 
 /** Η παράμετρος αναθεώρησης της διαγραφής (`DELETE …?expectedRevision=N`) — ένα όνομα για πελάτη και route. */
