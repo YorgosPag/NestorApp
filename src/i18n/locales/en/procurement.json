@@ -122,7 +122,6 @@
     "deliveryAddressTypeNoOptions": "No addresses available",
     "deliveryAddressTypeClear": "— Clear —",
     "items": "Order Items",
-    "subtotal": "Subtotal",
     "total": "Total",
     "notes": "Notes",
     "supplierNotes": "Supplier Notes (PDF)",
@@ -134,11 +133,7 @@
     "saveFailed": "The purchase order was not saved. Please try again.",
     "save": "Save",
     "create": "Create PO",
-    "cancel": "Cancel",
-    "faBannerApplied": "Framework Agreement: {title} · Discount {percent}%",
-    "faDiscount": "Agreement Discount",
-    "grossTotal": "Total",
-    "netTotal": "Net Total"
+    "cancel": "Cancel"
   },
   "detail": {
     "supplier": "Supplier",
@@ -149,8 +144,6 @@
     "paymentTerms": "Payment Terms",
     "paymentDays": "days",
     "items": "Items",
-    "subtotal": "Subtotal",
-    "vat": "VAT",
     "total": "Total",
     "notes": "Notes",
     "supplierNotesPdf": "Supplier Notes (PDF)",
@@ -167,6 +160,16 @@
     "notFound": "Not found",
     "emptyTitle": "Select a purchase order",
     "emptyDescription": "Click a purchase order to view its details"
+  },
+  "totals": {
+    "label": "Order totals",
+    "subtotal": "Subtotal",
+    "faDiscount": "Framework agreement discount",
+    "taxable": "Net amount",
+    "vat": "VAT {rate}%",
+    "total": "Total",
+    "faApplied": "Framework agreement: {titles}",
+    "faAmbiguous": "{count, plural, one {# line matches more than one agreement equally — no discount applied} other {# lines match more than one agreement equally — no discount applied}}"
   },
   "emptyState": {
     "title": "Create Purchase Order",

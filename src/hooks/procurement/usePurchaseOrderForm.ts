@@ -150,16 +150,8 @@ export function usePurchaseOrderForm(existingPO?: PurchaseOrder | null, initialP
     }));
   }, []);
 
-  // ── Computed totals ──
-
-  const totals = useMemo(() => {
-    const subtotal = form.items.reduce(
-      (sum, i) => sum + i.quantity * i.unitPrice, 0
-    );
-    const taxAmount = Math.round(subtotal * (form.taxRate / 100) * 100) / 100;
-    const total = Math.round((subtotal + taxAmount) * 100) / 100;
-    return { subtotal, taxAmount, total };
-  }, [form.items, form.taxRate]);
+  // Τα σύνολα ΔΕΝ υπολογίζονται εδώ: τα δίνει η `usePOPricing` με την ίδια συνάρτηση του server
+  // (ADR-923 §5.11 «3γ» — πριν ο τύπος ζούσε εδώ ως πέμπτο αντίγραφο, σε float).
 
   // ── Validation ──
 
@@ -207,11 +199,8 @@ export function usePurchaseOrderForm(existingPO?: PurchaseOrder | null, initialP
   }), [form]);
 
   /** Persists the PO or throws. The caller's `useFormSubmission` guards validity and re-entry. */
-  const save = useCallback(async (
-    poId?: string,
-    faExtra?: Pick<CreatePurchaseOrderDTO, 'appliedFaId' | 'faDiscountPercent' | 'faDiscountAmount' | 'netTotal'>,
-  ) => {
-    const dto = faExtra ? { ...buildDTO(), ...faExtra } : buildDTO();
+  const save = useCallback(async (poId?: string) => {
+    const dto = buildDTO();
     return savePurchaseOrderWithPolicy(poId ? dto as UpdatePurchaseOrderDTO : dto, poId);
   }, [buildDTO]);
 
@@ -227,7 +216,6 @@ export function usePurchaseOrderForm(existingPO?: PurchaseOrder | null, initialP
     addItem,
     removeItem,
     updateItem,
-    totals,
     validationErrors,
     isValid,
     isEditMode,

@@ -25,6 +25,8 @@ import type {
   CreatePurchaseOrderDTO,
   RecordDeliveryDTO,
 } from '@/types/procurement';
+import type { POItemInput } from '@/types/procurement/purchase-order';
+import type { POPricedRecord } from '@/lib/procurement/price-purchase-order-pure';
 import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
@@ -68,28 +70,28 @@ export async function getNextPONumber(companyId: string): Promise<string> {
 // CREATE
 // ============================================================================
 
+/**
+ * Γράφει μια νέα PO. Τα οικονομικά (`priced`) τα υπολογίζει **μόνο** ο service μέσω
+ * `pricePurchaseOrder` (ADR-923 §5.11 «3γ») — ο repository δεν έχει δικό του τύπο συνόλων.
+ */
 export async function createPurchaseOrder(
   companyId: string,
   userId: string,
-  dto: CreatePurchaseOrderDTO
+  dto: CreatePurchaseOrderDTO,
+  priced: POPricedRecord<POItemInput>
 ): Promise<{ id: string; poNumber: string }> {
   const id = generatePurchaseOrderId();
   const now = isoNow();
   const poNumber = await getNextPONumber(companyId);
 
   // Build items with IDs and zero delivery
-  const items = dto.items.map((item) => ({
+  const items = priced.items.map((item) => ({
     ...item,
     id: generatePOItemId(),
     quantityReceived: 0,
     quantityRemaining: item.quantity,
   }));
-
-  // Calculate totals
-  const subtotal = items.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0);
-  const taxRate = dto.taxRate;
-  const taxAmount = Math.round(subtotal * (taxRate / 100) * 100) / 100;
-  const total = Math.round((subtotal + taxAmount) * 100) / 100;
+  const { subtotal, discountAmount, taxableAmount, taxAmount, total } = priced;
 
   const doc: PurchaseOrder = {
     id,
@@ -102,7 +104,9 @@ export async function createPurchaseOrder(
     items,
     currency: 'EUR',
     subtotal,
-    taxRate,
+    faDiscountAmount: discountAmount,
+    taxableAmount,
+    taxRate: dto.taxRate,
     taxAmount,
     total,
     dateCreated: now,
@@ -120,10 +124,7 @@ export async function createPurchaseOrder(
     cancellationReason: null,
     cancellationComment: null,
     sourceQuoteId: dto.sourceQuoteId ?? null,
-    appliedFaId: dto.appliedFaId ?? null,
-    faDiscountPercent: dto.faDiscountPercent ?? null,
-    faDiscountAmount: dto.faDiscountAmount ?? null,
-    netTotal: dto.netTotal ?? null,
+    appliedFaIds: priced.appliedFaIds,
     createdBy: userId,
     approvedBy: null,
     updatedAt: now,

@@ -51,7 +51,7 @@ type LabelKey =
   | 'title' | 'poNumber' | 'date' | 'dateNeeded' | 'status'
   | 'from' | 'to' | 'vat' | 'address' | 'phone' | 'email'
   | 'itemNo' | 'description' | 'unit' | 'qty' | 'unitPrice' | 'lineTotal'
-  | 'subtotal' | 'vatAmount' | 'total' | 'paymentTerms' | 'days'
+  | 'subtotal' | 'faDiscount' | 'taxable' | 'vatAmount' | 'total' | 'paymentTerms' | 'days'
   | 'deliveryAddress' | 'notes' | 'terms' | 'page';
 
 const LABELS: Record<'el' | 'en', Record<LabelKey, string>> = {
@@ -73,7 +73,9 @@ const LABELS: Record<'el' | 'en', Record<LabelKey, string>> = {
     qty: 'Ποσ.',
     unitPrice: 'Τιμή',
     lineTotal: 'Σύνολο',
-    subtotal: 'Καθαρό Σύνολο',
+    subtotal: 'Υποσύνολο',
+    faDiscount: 'Έκπτωση Σύμβασης-Πλαίσιο',
+    taxable: 'Καθαρή Αξία',
     vatAmount: 'ΦΠΑ',
     total: 'ΓΕΝΙΚΟ ΣΥΝΟΛΟ',
     paymentTerms: 'Όροι Πληρωμής',
@@ -102,6 +104,8 @@ const LABELS: Record<'el' | 'en', Record<LabelKey, string>> = {
     unitPrice: 'Price',
     lineTotal: 'Total',
     subtotal: 'Subtotal',
+    faDiscount: 'Framework agreement discount',
+    taxable: 'Net amount',
     vatAmount: 'VAT',
     total: 'GRAND TOTAL',
     paymentTerms: 'Payment Terms',
@@ -322,7 +326,7 @@ function drawTotals(
   const L = LABELS[language];
   const rightX = LAYOUT.pageWidth - LAYOUT.marginRight;
 
-  y = ensureSpace(pdf, y, 30);
+  y = ensureSpace(pdf, y, 40);
   y += 4;
 
   pdf.setFont('Roboto', 'normal');
@@ -333,6 +337,16 @@ function drawTotals(
   pdf.text(L.subtotal, rightX - 55, y);
   pdf.text(formatEuro(po.subtotal), rightX, y, { align: 'right' });
   y += 5;
+
+  // Framework agreement discount — before VAT (ADR-923 §5.11 «3γ», EN 16931 BT-107/BT-109)
+  if (po.faDiscountAmount > 0) {
+    pdf.text(L.faDiscount, rightX - 55, y);
+    pdf.text(`−${formatEuro(po.faDiscountAmount)}`, rightX, y, { align: 'right' });
+    y += 5;
+    pdf.text(L.taxable, rightX - 55, y);
+    pdf.text(formatEuro(po.taxableAmount), rightX, y, { align: 'right' });
+    y += 5;
+  }
 
   // VAT
   pdf.text(`${L.vatAmount} (${po.taxRate}%)`, rightX - 55, y);

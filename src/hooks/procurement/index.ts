@@ -10,5 +10,5 @@ export { useSupplierMetrics, useSupplierComparison } from './useSupplierMetrics'
 export { usePOSupplierContacts } from './usePOSupplierContacts';
 export { useProcurementDashboard, type ProcurementDashboardStats, type CategorySpend, type MonthlyPoint } from './useProcurementDashboard';
 export { useFrameworkAgreements } from './useFrameworkAgreements';
-export { usePOFrameworkAgreement, type UsePOFrameworkAgreementResult } from './usePOFrameworkAgreement';
+export { usePOPricing } from './usePOPricing';
 export { useSpendAnalytics, type UseSpendAnalyticsReturn } from './useSpendAnalytics';

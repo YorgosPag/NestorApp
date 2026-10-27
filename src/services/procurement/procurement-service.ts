@@ -15,14 +15,18 @@ import {
   type UpdatePurchaseOrderDTO,
   type RecordDeliveryDTO,
   type PurchaseOrder,
+  type PurchaseOrderItem,
+  type POVatRate,
   type PurchaseOrderStatus,
   type ProcurementAuditAction,
 } from '@/types/procurement';
 import { EntityAuditService } from '@/services/entity-audit.service';
+import { loadAndPricePurchaseOrder } from '@/lib/procurement/price-purchase-order';
 import {
-  loadAndComputeFaDiscount,
-  computeGrossTotal,
-} from '@/lib/procurement/recompute-fa-discount';
+  pricedRecord,
+  type POPricedRecord,
+  type POPricingLine,
+} from '@/lib/procurement/price-purchase-order-pure';
 import {
   createPurchaseOrder,
   getPurchaseOrder,
@@ -37,7 +41,7 @@ import {
   type PriceHistoryEntry,
 } from './procurement-repository';
 import { generatePOItemId } from '@/services/enterprise-id.service';
-import { nowISO } from '@/lib/date-local';
+import { nowISO, normalizeToMillisOrNull } from '@/lib/date-local';
 
 // ============================================================================
 // VALIDATION
@@ -62,6 +66,56 @@ function validateCreateDTO(dto: CreatePurchaseOrderDTO): string | null {
   }
 
   return null;
+}
+
+// ============================================================================
+// PRICING — ο ΕΝΑΣ δρόμος προς τα οικονομικά μιας PO (ADR-923 §5.11 «3γ»)
+// ============================================================================
+
+interface POPricingRequest<TItem extends POPricingLine> {
+  supplierId: string;
+  projectId: string;
+  items: readonly TItem[];
+  taxRate: number;
+  atMs: number;
+}
+
+/**
+ * Τιμολογεί αυθεντικά (συμβάσεις από τη βάση, ποτέ από τον πελάτη) και αρνείται γραμμή που δεν
+ * αναπαρίσταται ακριβώς — καμία σιωπηλή στρογγύλευση ποσότητας ή τιμής.
+ */
+async function pricePOItems<TItem extends POPricingLine>(
+  ctx: AuthContext,
+  request: POPricingRequest<TItem>,
+): Promise<POPricedRecord<TItem>> {
+  const pricing = await loadAndPricePurchaseOrder(ctx, request);
+  const [invalid] = pricing.invalidLineIndexes;
+  if (invalid !== undefined) {
+    throw new Error(`Item ${invalid + 1}: quantity or unitPrice cannot be represented exactly`);
+  }
+  return pricedRecord(request.items, pricing);
+}
+
+/** Ημερομηνία τιμολόγησης μιας υπάρχουσας PO = ημερομηνία εγγράφου (SAP pricing date). */
+function pricingDateOf(po: PurchaseOrder): number {
+  return normalizeToMillisOrNull(po.dateCreated) ?? Date.now();
+}
+
+/** Τα οικονομικά πεδία μιας PO από την τιμολόγησή της. */
+function financialUpdates(
+  priced: POPricedRecord<PurchaseOrderItem>,
+  taxRate: POVatRate,
+): Partial<PurchaseOrder> {
+  return {
+    items: priced.items,
+    subtotal: priced.subtotal,
+    faDiscountAmount: priced.discountAmount,
+    taxableAmount: priced.taxableAmount,
+    taxRate,
+    taxAmount: priced.taxAmount,
+    total: priced.total,
+    appliedFaIds: priced.appliedFaIds,
+  };
 }
 
 // ============================================================================
@@ -90,28 +144,16 @@ export async function createPO(
   const validationError = validateCreateDTO(dto);
   if (validationError) throw new Error(validationError);
 
-  // Phase 5.5 (server-side validation, 2026-05-04) — recompute FA discount
-  // server-side from canonical framework_agreements collection. Any client-
-  // submitted FA fields on `dto` are discarded.
-  const grossTotal = computeGrossTotal(dto.items, dto.taxRate);
-  const faFields = await loadAndComputeFaDiscount(
-    ctx,
-    dto.supplierId,
-    dto.projectId,
-    grossTotal,
-  );
+  // Phase 5.5 C.2 + ADR-923 «3γ» — συμβάσεις, εκπτώσεις και σύνολα υπολογίζονται εδώ, από τη βάση.
+  const priced = await pricePOItems(ctx, {
+    supplierId: dto.supplierId,
+    projectId: dto.projectId,
+    items: dto.items,
+    taxRate: dto.taxRate,
+    atMs: Date.now(),
+  });
 
-  const result = await createPurchaseOrder(
-    ctx.companyId,
-    ctx.uid,
-    {
-      ...dto,
-      appliedFaId: faFields.appliedFaId,
-      faDiscountPercent: faFields.faDiscountPercent,
-      faDiscountAmount: faFields.faDiscountAmount,
-      netTotal: faFields.netTotal,
-    }
-  );
+  const result = await createPurchaseOrder(ctx.companyId, ctx.uid, dto, priced);
 
   await audit(ctx, 'procurement.po.created', result.id, {
     poNumber: result.poNumber,
@@ -176,54 +218,25 @@ export async function updatePO(
   if (dto.paymentTermsDays !== undefined) updates.paymentTermsDays = dto.paymentTermsDays ?? null;
   if (dto.supplierNotes !== undefined) updates.supplierNotes = dto.supplierNotes ?? null;
   if (dto.internalNotes !== undefined) updates.internalNotes = dto.internalNotes ?? null;
-  // Phase 5.5 (server-side validation, 2026-05-04) — the four FA fields
-  // (appliedFaId / faDiscountPercent / faDiscountAmount / netTotal) are NOT
-  // copied from `dto`. They are recomputed authoritatively below from the
-  // canonical framework_agreements collection.
-
-  // Recalculate items + totals if items changed
-  if (dto.items) {
-    const items = dto.items.map((item) => ({
-      ...item,
-      id: generatePOItemId(),
-      quantityReceived: 0,
-      quantityRemaining: item.quantity,
-    }));
-    updates.items = items;
-
-    const taxRate = dto.taxRate ?? po.taxRate;
-    const subtotal = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
-    const taxAmount = Math.round(subtotal * (taxRate / 100) * 100) / 100;
-
-    updates.subtotal = subtotal;
-    updates.taxRate = taxRate;
-    updates.taxAmount = taxAmount;
-    updates.total = Math.round((subtotal + taxAmount) * 100) / 100;
-  } else if (dto.taxRate !== undefined && dto.taxRate !== po.taxRate) {
-    // Tax rate changed without item changes — recalc tax
-    const taxAmount = Math.round(po.subtotal * (dto.taxRate / 100) * 100) / 100;
-    updates.taxRate = dto.taxRate;
-    updates.taxAmount = taxAmount;
-    updates.total = Math.round((po.subtotal + taxAmount) * 100) / 100;
-  }
-
-  // Phase 5.5 (server-side validation, 2026-05-04) — recompute FA discount
-  // server-side after totals settle. Always runs (cheap query) so any change to
-  // supplierId / projectId / items / taxRate is reflected and the doc cannot
-  // drift from the canonical framework_agreements state.
-  const supplierId = dto.supplierId ?? po.supplierId;
-  const projectId = dto.projectId ?? po.projectId;
-  const grossTotal = updates.total ?? po.total;
-  const faFields = await loadAndComputeFaDiscount(
-    ctx,
-    supplierId,
-    projectId,
-    grossTotal,
-  );
-  updates.appliedFaId = faFields.appliedFaId;
-  updates.faDiscountPercent = faFields.faDiscountPercent;
-  updates.faDiscountAmount = faFields.faDiscountAmount;
-  updates.netTotal = faFields.netTotal;
+  // Phase 5.5 C.2 + ADR-923 «3γ» — η τιμολόγηση τρέχει ΠΑΝΤΑ (γραμμές, έργο, προμηθευτής ή ΦΠΑ
+  // μπορεί να άλλαξαν) πάνω στις τελικές γραμμές, στην ημερομηνία του εγγράφου.
+  const items: PurchaseOrderItem[] = dto.items
+    ? dto.items.map((item) => ({
+        ...item,
+        id: generatePOItemId(),
+        quantityReceived: 0,
+        quantityRemaining: item.quantity,
+      }))
+    : po.items;
+  const taxRate = dto.taxRate ?? po.taxRate;
+  const priced = await pricePOItems(ctx, {
+    supplierId: dto.supplierId ?? po.supplierId,
+    projectId: dto.projectId ?? po.projectId,
+    items,
+    taxRate,
+    atMs: pricingDateOf(po),
+  });
+  Object.assign(updates, financialUpdates(priced, taxRate));
 
   await updatePurchaseOrder(poId, updates);
 
@@ -336,6 +349,7 @@ export async function duplicatePO(
       total: i.total,
       boqItemId: i.boqItemId,
       categoryCode: i.categoryCode,
+      materialId: i.materialId ?? null,
     })),
     taxRate: source.taxRate,
     dateNeeded: null,
