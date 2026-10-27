@@ -71,6 +71,11 @@ export const PO_DELIVERED_STATUSES: ReadonlySet<PurchaseOrderStatus> = new Set([
   'delivered', 'closed',
 ]);
 
+/** Awaiting approval — the overview KPI AND its drill-down read this one set (ADR-330 §5.1 S3.1) */
+export const PO_AWAITING_APPROVAL_STATUSES: ReadonlySet<PurchaseOrderStatus> = new Set([
+  'draft',
+]);
+
 /** Not yet sent to the supplier — Procore's «pending cost changes» (ADR-917 §4 Β) */
 export const PO_PENDING_STATUSES: ReadonlySet<PurchaseOrderStatus> = new Set([
   'draft', 'approved',

@@ -462,6 +462,10 @@
         "noBoq": "No BOQ items for this project"
       },
       "error": "Failed to load overview data"
+    },
+    "drill": {
+      "activeFilter": "Filtered by status: {statuses}",
+      "clear": "Show all"
     }
   },
   "hub": {

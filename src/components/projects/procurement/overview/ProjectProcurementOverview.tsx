@@ -46,19 +46,19 @@ export function ProjectProcurementOverview({ projectId }: Props) {
     <section aria-label={t('overview.kpi.committedSpend.label')} className="space-y-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <ComponentErrorBoundary>
-          {isLoading ? <KpiCardSkeleton /> : <KpiOpenRfqs stats={stats} />}
+          {isLoading ? <KpiCardSkeleton /> : <KpiOpenRfqs projectId={projectId} stats={stats} />}
         </ComponentErrorBoundary>
 
         <ComponentErrorBoundary>
-          {isLoading ? <KpiCardSkeleton /> : <KpiPendingApprovalPos stats={stats} />}
+          {isLoading ? <KpiCardSkeleton /> : <KpiPendingApprovalPos projectId={projectId} stats={stats} />}
         </ComponentErrorBoundary>
 
         <ComponentErrorBoundary>
-          {isLoading ? <KpiCardSkeleton /> : <KpiTotalCommittedSpend stats={stats} />}
+          {isLoading ? <KpiCardSkeleton /> : <KpiTotalCommittedSpend projectId={projectId} stats={stats} />}
         </ComponentErrorBoundary>
 
         <ComponentErrorBoundary>
-          {isLoading ? <KpiCardSkeleton /> : <KpiBoqCoverage stats={stats} />}
+          {isLoading ? <KpiCardSkeleton /> : <KpiBoqCoverage projectId={projectId} stats={stats} />}
         </ComponentErrorBoundary>
       </div>
 

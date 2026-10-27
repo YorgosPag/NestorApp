@@ -14,7 +14,8 @@ import 'server-only';
 
 import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { PO_COMMITTED_STATUSES } from '@/types/procurement';
+import { PO_AWAITING_APPROVAL_STATUSES, PO_COMMITTED_STATUSES } from '@/types/procurement';
+import { RFQ_OPEN_STATUSES, type RfqStatus } from '@/subapps/procurement/types/rfq';
 import { fetchProjectPurchaseOrders } from './project-purchase-orders';
 
 // ============================================================================
@@ -47,13 +48,13 @@ export async function computeProjectBasicStats(
 
     let openRfqCount = 0;
     for (const doc of rfqSnap.docs) {
-      if ((doc.data() as { status: string }).status === 'active') openRfqCount++;
+      if (RFQ_OPEN_STATUSES.has((doc.data() as { status: RfqStatus }).status)) openRfqCount++;
     }
 
     let pendingApprovalPoCount = 0;
     let totalCommittedSpend = 0;
     for (const po of purchaseOrders) {
-      if (po.status === 'draft') pendingApprovalPoCount++;
+      if (PO_AWAITING_APPROVAL_STATUSES.has(po.status)) pendingApprovalPoCount++;
       if (PO_COMMITTED_STATUSES.has(po.status)) totalCommittedSpend += po.total ?? 0;
     }
 

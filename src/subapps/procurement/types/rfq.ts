@@ -24,6 +24,9 @@ export const RFQ_LIFECYCLE_LOCKED_STATUSES: ReadonlySet<RfqStatus> = new Set<Rfq
   'archived',
 ]);
 
+/** «Ανοιχτό» αίτημα — αναμένει απαντήσεις. SSoT για το KPI της επισκόπησης ΚΑΙ το drill-down του (ADR-330 §5.1 S3.1). */
+export const RFQ_OPEN_STATUSES: ReadonlySet<RfqStatus> = new Set<RfqStatus>(['active']);
+
 // ADR-335 — Cancellation reason categories (free-text fallback via 'other').
 export type RfqCancellationReason =
   | 'project_change'

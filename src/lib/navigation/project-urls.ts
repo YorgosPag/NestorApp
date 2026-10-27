@@ -24,7 +24,7 @@ export const PROJECT_TAB_PARAM = 'tab';
  * Anchored by test: every member must be a selectable tab (`getSelectableProjectTabIds`) — else the link silently
  * lands on the default tab.
  */
-export type ProjectDeepLinkTab = 'locations' | 'budget';
+export type ProjectDeepLinkTab = 'locations' | 'budget' | 'measurements';
 
 function projectQuery(projectId: string, tab?: ProjectDeepLinkTab) {
   const query = new URLSearchParams({ [PROJECT_ID_PARAM]: projectId });

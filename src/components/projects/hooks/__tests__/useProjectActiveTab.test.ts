@@ -17,7 +17,7 @@ import { getSelectableProjectTabIds } from '@/config/project-tabs-config';
 import { getProjectTabUrl, type ProjectDeepLinkTab } from '@/lib/navigation/project-urls';
 
 /** Εξαντλητικό απέναντι στον τύπο: νέο μέλος του `ProjectDeepLinkTab` χωρίς γραμμή εδώ = σφάλμα τύπου. */
-const DEEP_LINK_TABS: Record<ProjectDeepLinkTab, true> = { locations: true, budget: true };
+const DEEP_LINK_TABS: Record<ProjectDeepLinkTab, true> = { locations: true, budget: true, measurements: true };
 
 function startAt(url: string): void {
   window.history.replaceState(null, '', url);
