@@ -27,6 +27,7 @@ const codes = (issues: readonly { code: string }[]): string[] => issues.map((iss
 
 const lineContext = { priceType: 'net_list' as const, discountGroupIds: new Set([TOSH_CARR]) };
 const conditionContext = { discountGroupIds: new Set([TOSH_CARR]), customerGroupIds: new Set([WHOLESALE]) };
+const listContext = { customerGroupIds: new Set([WHOLESALE]) };
 
 const costItem: PriceListLineDefinition = {
   versionId: 'v',
@@ -40,10 +41,30 @@ const costItem: PriceListLineDefinition = {
 
 describe('τιμοκατάλογος και γραμμές', () => {
   it('ο τιμοκατάλογος και οι γραμμές του fixture είναι έγκυρα', () => {
-    expect(validatePriceList(MFP_PRICE_LIST.definition)).toEqual([]);
+    expect(validatePriceList(MFP_PRICE_LIST.definition, listContext)).toEqual([]);
     for (const line of VERSION_1_LINES) expect(validatePriceListLine(line, lineContext)).toEqual([]);
     expect(validateVersionLines(VERSION_1_LINES)).toEqual([]);
     expect(validatePriceListLine(costItem, lineContext)).toEqual([]);
+  });
+
+  it('κοινό τιμοκαταλόγου (3β απόφαση Α): η λίστα κόστους δεν προσφέρεται· άγνωστη ομάδα πελάτη = unknownReference', () => {
+    const list = MFP_PRICE_LIST.definition;
+    expect(codes(validatePriceList({ ...list, kind: 'cost' }, listContext))).toEqual(['costListHasAudience']);
+    expect(validatePriceList({ ...list, kind: 'cost', audience: null }, listContext)).toEqual([]);
+    const known = { kind: 'customerGroup' as const, customerGroupId: WHOLESALE };
+    expect(validatePriceList({ ...list, audience: known }, listContext)).toEqual([]);
+    const unknown = validatePriceList({ ...list, audience: { kind: 'customerGroup', customerGroupId: 'ccgrp_x' } }, listContext);
+    expect(unknown).toEqual([{ code: 'unknownReference', path: 'audience.customerGroupId' }]);
+  });
+
+  it('φράχτης ανά λίστα (3β απόφαση Β): μέσα στα όρια 5%–50% συμπεριληπτικά, ακέραιες μονάδες βάσης', () => {
+    const list = MFP_PRICE_LIST.definition;
+    for (const changeFenceBp of [null, 500, 2000, 5000]) expect(validatePriceList({ ...list, changeFenceBp }, listContext)).toEqual([]);
+    for (const changeFenceBp of [499, 5001, 0, 1000.5]) {
+      expect(validatePriceList({ ...list, changeFenceBp }, listContext)).toEqual([
+        { code: 'fenceOutOfBounds', path: 'changeFenceBp', params: { min: 5, max: 50 } },
+      ]);
+    }
   });
 
   it('net_customer δεν δέχεται ομάδα έκπτωσης· άγνωστη ομάδα = unknownReference', () => {

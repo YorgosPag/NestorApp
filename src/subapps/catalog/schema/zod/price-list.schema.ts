@@ -20,6 +20,7 @@ import type {
   PriceListLineDefinition,
   PricingPartyRef,
 } from '../../types/price-list';
+import type { PriceLineInput } from '../../types/price-list-requests';
 import { PRICE_LIST_KINDS, PRICE_TYPES, isPriceQuantity, type PriceQuantity } from '../../vocabulary/pricing';
 import { catalogCodeSchema, entityIdSchema, labelsSchema, measurementUnitCodeSchema } from './common.schema';
 
@@ -31,13 +32,6 @@ const minorAmountSchema = z.number().int().nonnegative().max(Number.MAX_SAFE_INT
 const basisPointsSchema = z.number().int();
 
 const stepsSchema = z.array(basisPointsSchema);
-
-export const priceListDefinitionSchema: z.ZodType<PriceListDefinition, z.ZodTypeDef, unknown> = z.object({
-  code: catalogCodeSchema,
-  labels: labelsSchema,
-  kind: z.enum(PRICE_LIST_KINDS),
-  priceType: z.enum(PRICE_TYPES),
-});
 
 const subjectSchema: z.ZodType<PriceLineSubject, z.ZodTypeDef, unknown> = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('variant'), variantId: entityIdSchema }),
@@ -52,15 +46,24 @@ const breakdownSchema: z.ZodType<CostBreakdown, z.ZodTypeDef, unknown> = z.objec
   materialVariantId: entityIdSchema.nullable(),
 });
 
-export const priceListLineDefinitionSchema: z.ZodType<PriceListLineDefinition, z.ZodTypeDef, unknown> = z.object({
-  versionId: entityIdSchema,
+/** Τα πεδία της γραμμής **χωρίς** την έκδοση — κοινά για τον ορισμό και τη δέσμη του αιτήματος (η έκδοση = διαδρομή). */
+const priceLineFields = {
   subject: subjectSchema,
   netPrice: minorAmountSchema,
   priceQuantity: z.custom<PriceQuantity>(isPriceQuantity),
   unitCode: measurementUnitCodeSchema,
   discountGroupId: entityIdSchema.nullable(),
   breakdown: breakdownSchema.nullable(),
+};
+
+export const priceListLineDefinitionSchema: z.ZodType<PriceListLineDefinition, z.ZodTypeDef, unknown> = z.object({
+  versionId: entityIdSchema,
+  ...priceLineFields,
 });
+
+export const priceLineInputSchema: z.ZodType<PriceLineInput, z.ZodTypeDef, unknown> = z.object(priceLineFields);
+
+export { audienceSchema as priceAudienceSchema, isoInstantSchema, subjectSchema as priceLineSubjectSchema };
 
 export const discountGroupDefinitionSchema: z.ZodType<DiscountGroupDefinition, z.ZodTypeDef, unknown> = z.object({
   code: catalogCodeSchema,
@@ -88,6 +91,16 @@ const audienceSchema: z.ZodType<PriceAudience, z.ZodTypeDef, unknown> = z.discri
   z.object({ kind: z.literal('customerGroup'), customerGroupId: entityIdSchema }),
   z.object({ kind: z.literal('partner'), party: partyRefSchema }),
 ]);
+
+// Μετά το `audienceSchema`: ο τιμοκατάλογος δηλώνει κοινό (ADR-923 §5.11 απόφαση Α).
+export const priceListDefinitionSchema: z.ZodType<PriceListDefinition, z.ZodTypeDef, unknown> = z.object({
+  code: catalogCodeSchema,
+  labels: labelsSchema,
+  kind: z.enum(PRICE_LIST_KINDS),
+  priceType: z.enum(PRICE_TYPES),
+  audience: audienceSchema.nullable(),
+  changeFenceBp: basisPointsSchema.nullable(),
+});
 
 export const discountRuleSchema: z.ZodType<DiscountRule, z.ZodTypeDef, unknown> = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('chain'), steps: stepsSchema }),

@@ -19,7 +19,9 @@ import { normalizeToMillisOrNull } from '@/lib/date-local';
 import { isMinorAmount, sumMinor } from '@/lib/money/money';
 import {
   compareDiscountSteps,
+  effectivePercent,
   isDiscountSteps,
+  type BasisPoints,
   type DiscountRule,
   type DiscountTierBasis,
 } from '@/lib/pricing/discount-rule';
@@ -29,6 +31,7 @@ import { audienceIdentity } from '../pricing/price-audience';
 import { priceLineSubjectKey } from '../pricing/price-line-subject';
 import type {
   DiscountConditionDefinition,
+  PriceAudience,
   PriceListDefinition,
   PriceListLineDefinition,
   PriceType,
@@ -38,6 +41,8 @@ import {
   MAX_DISCOUNT_STEPS,
   MAX_DISCOUNT_TIERS,
   ORDER_QUANTITY_DECIMALS,
+  PRICE_CHANGE_FENCE_MAX_BP,
+  PRICE_CHANGE_FENCE_MIN_BP,
   acceptsDiscountGroups,
   isPriceQuantity,
 } from '../vocabulary/pricing';
@@ -48,15 +53,44 @@ export interface PriceLineContext {
   readonly discountGroupIds: ReadonlySet<string>;
 }
 
-export interface DiscountConditionContext {
-  readonly discountGroupIds: ReadonlySet<string>;
+export interface PriceListContext {
   readonly customerGroupIds: ReadonlySet<string>;
 }
 
-export function validatePriceList(list: PriceListDefinition): readonly CatalogIssue[] {
+export interface DiscountConditionContext extends PriceListContext {
+  readonly discountGroupIds: ReadonlySet<string>;
+}
+
+/** Η **μία** αναφορά κοινού σε ομάδα πελάτη — ίδιος έλεγχος για λίστα και συνθήκη. */
+function checkAudienceReference(
+  collector: IssueCollector,
+  audience: PriceAudience | null,
+  context: PriceListContext,
+  path: string,
+): void {
+  if (audience?.kind === 'customerGroup' && !context.customerGroupIds.has(audience.customerGroupId)) {
+    collector.add('unknownReference', `${path}.customerGroupId`);
+  }
+}
+
+function checkFence(collector: IssueCollector, changeFenceBp: BasisPoints | null): void {
+  if (changeFenceBp === null) return;
+  if (!Number.isInteger(changeFenceBp) || changeFenceBp < PRICE_CHANGE_FENCE_MIN_BP || changeFenceBp > PRICE_CHANGE_FENCE_MAX_BP) {
+    // Το μήνυμα μιλά σε ποσοστό (ο άνθρωπος δεν σκέφτεται σε μονάδες βάσης).
+    collector.add('fenceOutOfBounds', 'changeFenceBp', {
+      min: effectivePercent([PRICE_CHANGE_FENCE_MIN_BP]),
+      max: effectivePercent([PRICE_CHANGE_FENCE_MAX_BP]),
+    });
+  }
+}
+
+export function validatePriceList(list: PriceListDefinition, context: PriceListContext): readonly CatalogIssue[] {
   const collector = new IssueCollector();
   if (!isCatalogCode(list.code)) collector.add('invalidCode', 'code');
   if (!hasAnyLocalizedText(list.labels)) collector.add('labelRequired', 'labels');
+  if (list.kind === 'cost' && list.audience !== null) collector.add('costListHasAudience', 'audience');
+  checkAudienceReference(collector, list.audience, context, 'audience');
+  checkFence(collector, list.changeFenceBp);
   return collector.issues;
 }
 
@@ -162,10 +196,7 @@ function checkConditionReferences(
   if (condition.discountGroupId !== null && !context.discountGroupIds.has(condition.discountGroupId)) {
     collector.add('unknownReference', 'discountGroupId');
   }
-  const { audience } = condition;
-  if (audience.kind === 'customerGroup' && !context.customerGroupIds.has(audience.customerGroupId)) {
-    collector.add('unknownReference', 'audience.customerGroupId');
-  }
+  checkAudienceReference(collector, condition.audience, context, 'audience');
 }
 
 export function validateDiscountCondition(

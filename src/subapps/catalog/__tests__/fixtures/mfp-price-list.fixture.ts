@@ -26,7 +26,14 @@ export const PARTNER: PricingPartyRef = { kind: 'contact', contactId: 'cont_papa
 
 export const MFP_PRICE_LIST: PricedRecord<PriceListDefinition> = {
   id: 'cprl_gen',
-  definition: { code: 'gen', labels: { el: 'Γενικός τιμοκατάλογος' }, kind: 'sales', priceType: 'net_list' },
+  definition: {
+    code: 'gen',
+    labels: { el: 'Γενικός τιμοκατάλογος' },
+    kind: 'sales',
+    priceType: 'net_list',
+    audience: { kind: 'anonymous' },
+    changeFenceBp: null,
+  },
 };
 
 /** Τιμή λίστας έκδοσης 1, σε λεπτά, ανά μέγεθος MFP. */

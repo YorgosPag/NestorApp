@@ -43,6 +43,15 @@ export interface PriceListDefinition {
   readonly labels: LocalizedText;
   readonly kind: PriceListKind;
   readonly priceType: PriceType;
+  /**
+   * Σε ποιο κοινό **προσφέρεται** η λίστα (ADR-923 §5.11 απόφαση Α — commercetools price selection): ο
+   * διακομιστής διαλέγει για τον θεατή τη λίστα με το **ειδικότερο** κοινό που τον καλύπτει. `null` = δεν
+   * προσφέρεται σε κανέναν (πάντα για `cost`, που είναι εσωτερικός master). Νόμισμα **δεν** αποθηκεύεται:
+   * είναι το `MONEY_CURRENCY` της πλατφόρμας (μία αλήθεια).
+   */
+  readonly audience: PriceAudience | null;
+  /** Φράχτης δημοσίευσης αυτής της λίστας (SAP: ανοχή ανά τύπο συνθήκης)· `null` = ο της πλατφόρμας. */
+  readonly changeFenceBp: BasisPoints | null;
 }
 
 /** Η σφραγίδα της δημοσίευσης — γράφεται από τον γραφέα, ποτέ από το σώμα αιτήματος. */
@@ -51,6 +60,38 @@ export interface PriceListVersionSeal {
   readonly lineCount: number;
   readonly publishedAt: string;
   readonly publishedBy: string;
+  /** Ο φράχτης που **ίσχυε** τη στιγμή της δημοσίευσης — όχι ο σημερινός. */
+  readonly fenceBp: BasisPoints;
+  /** Πόσες γραμμές πέρασαν τον φράχτη (0 ⇒ καμία επιβεβαίωση). */
+  readonly fencedCount: number;
+  /** Το αποτύπωμα της φραγμένης διαφοράς που **επιβεβαίωσε** ο άνθρωπος· `null` αν δεν χρειάστηκε. */
+  readonly confirmedDiffDigest: string | null;
+}
+
+/**
+ * Παράγωγα της έκδοσης — τα γράφει **μόνο** ο γραφέας (`stageDerived`), χωρίς αναθεώρηση:
+ * - `linesRevision`: ανεβαίνει σε **κάθε** εγγραφή γραμμής. Η δημοσίευση κάνει CAS πάνω του, άρα δημοσιεύει
+ *   **ακριβώς** τις γραμμές της διαφοράς που είδε ο άνθρωπος.
+ * - `seed`: η αντιγραφή γραμμών από την έκδοση βάσης, σε τμήματα. Όσο `done = false`, η δημοσίευση αρνείται.
+ */
+export interface PriceListVersionDerived {
+  readonly linesRevision: number;
+  readonly seed: PriceVersionSeed | null;
+}
+
+/** Η πρόοδος της σποράς: πόσες γραμμές, μέχρι ποια γραμμή της πηγής (δρομέας = id εγγράφου), τελείωσε; */
+export interface PriceVersionSeed {
+  readonly fromVersionId: string;
+  readonly copied: number;
+  readonly cursor: string | null;
+  readonly done: boolean;
+}
+
+/** Παράγωγα της γραμμής για τους δείκτες (γραμμές ανά έκδοση · ιστορικό τιμής υποκειμένου). */
+export interface PriceListLineDerived {
+  readonly subjectKey: string;
+  readonly priceListId: string;
+  readonly versionNumber: number;
 }
 
 export interface PriceListVersionDefinition {
@@ -63,6 +104,11 @@ export interface PriceListVersionDefinition {
   /** Η έκδοση από την οποία αντιγράφηκαν οι γραμμές («νέα έκδοση από την τρέχουσα»). */
   readonly basedOnVersionId: string | null;
   readonly seal: PriceListVersionSeal | null;
+}
+
+/** Η έκδοση όπως αποθηκεύεται: ορισμός + παράγωγα του γραφέα. */
+export interface StoredPriceListVersionDefinition extends PriceListVersionDefinition {
+  readonly derived: PriceListVersionDerived;
 }
 
 // ── Γραμμή ───────────────────────────────────────────────────────────────────
@@ -101,6 +147,11 @@ export interface PriceListLineDefinition {
   readonly discountGroupId: string | null;
   /** Υποχρεωτική για `costItem`, απαγορευμένη για `variant`. */
   readonly breakdown: CostBreakdown | null;
+}
+
+/** Η γραμμή όπως αποθηκεύεται: ορισμός + παράγωγα για τους δείκτες. */
+export interface StoredPriceListLineDefinition extends PriceListLineDefinition {
+  readonly derived: PriceListLineDerived;
 }
 
 // ── Ομάδες ───────────────────────────────────────────────────────────────────

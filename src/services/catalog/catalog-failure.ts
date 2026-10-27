@@ -12,10 +12,11 @@
 
 import { ApiClientError, apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
 import { CATALOG_ISSUE_CODES, type CatalogIssue, type CatalogIssueCode } from '@/subapps/catalog/schema/catalog-issues';
+import { CATALOG_WRITE_ERROR_KIND_NAMES, type CatalogWriteErrorKind } from '@/subapps/catalog/schema/catalog-write-kinds';
 
-/** Τα είδη άρνησης του γραφέα — ίδια ονόματα με το `CATALOG_WRITE_ERROR_KINDS` του διακομιστή. */
-const WRITER_KINDS = ['notFound', 'duplicateCode', 'revisionMismatch', 'inUse', 'immutable', 'invalid'] as const;
-type WriterKind = (typeof WRITER_KINDS)[number];
+/** Τα είδη άρνησης του γραφέα — **ο ίδιος** πίνακας με τον διακομιστή (`catalog-write-kinds`), όχι αντίγραφο. */
+const WRITER_KINDS = CATALOG_WRITE_ERROR_KIND_NAMES;
+type WriterKind = CatalogWriteErrorKind;
 
 export const CATALOG_FAILURE_KINDS = [...WRITER_KINDS, 'forbidden', 'network', 'unknown'] as const;
 export type CatalogFailureKind = (typeof CATALOG_FAILURE_KINDS)[number];

@@ -142,6 +142,14 @@ export const CATALOG_ISSUE_CODES = [
   'versionNotDraft',
   'versionValidFromRequired',
   'versionValidFromNotAfterPrevious',
+  // ── Φάση 3β: αποθήκευση τιμοκαταλόγων (ADR-923 §5.11 «3β») ──
+  'costListHasAudience',
+  'fenceOutOfBounds',
+  'priceListAudienceAmbiguous',
+  'versionSeeding',
+  'fenceConfirmationRequired',
+  'fenceDigestStale',
+  'unknownParty',
 ] as const;
 
 export type CatalogIssueCode = (typeof CATALOG_ISSUE_CODES)[number];
