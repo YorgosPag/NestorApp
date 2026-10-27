@@ -52,6 +52,29 @@ function firstRunAfter(schedule: string, timezone: string, after: Date): Date | 
 }
 
 /**
+ * **Πέφτει προγραμματισμένη στιγμή μέσα στο λεπτό του `tick`;** — η ΜΙΑ απάντηση στο «ήρθε η ώρα;».
+ *
+ * 🔴 **Ένας κριτής για εργασίες ΚΑΙ για τον παλμό** (2026-10-26). Ο παλμός αποφάσιζε μόνος του με
+ * `tick.getMinutes() !== 0`, δηλαδή με **δεύτερη, χειρόγραφη** δήλωση του ίδιου προγράμματος. Όταν το §8.23 πύκνωσε
+ * τη σταθερά σε `*\/5`, η χειρόγραφη έμεινε ωριαία ⇒ το Sentry περίμενε check-in ανά 5′ και έπαιρνε ένα ανά ώρα.
+ *
+ * Ημιάνοιχτο διάστημα `[αρχή λεπτού, επόμενο λεπτό)`. Ρητά **αποκλειστικό** άνω άκρο αντί για `+ 59_999`: το
+ * δεύτερο θα ήταν σωστό μόνο επειδή οι στιγμές cron πέφτουν πάντα σε ακέραιο λεπτό — δηλαδή σωστό κατά σύμπτωση,
+ * και αόρατα λάθος αν κάποτε μπει έκφραση 6 πεδίων με δευτερόλεπτα.
+ *
+ * Από 1ms πριν την αρχή του λεπτού: το `nextRuns` είναι **αυστηρά μετά**, οπότε μια στιγμή ακριβώς στο :00.000 θα
+ * χανόταν αν ρωτούσαμε από την ίδια την αρχή — καμία εργασία δεν θα έτρεχε ποτέ στην ώρα της, μόνο ως μόνιμο
+ * catch-up ένα λεπτό αργότερα.
+ */
+export function isScheduledInMinute(schedule: string, timezone: string, tick: Date): boolean {
+  const startOfMinute = new Date(tick.getTime());
+  startOfMinute.setSeconds(0, 0);
+  const nextMinuteMs = startOfMinute.getTime() + 60_000;
+  const inThisMinute = firstRunAfter(schedule, timezone, new Date(startOfMinute.getTime() - 1));
+  return inThisMinute !== null && inThisMinute.getTime() < nextMinuteMs;
+}
+
+/**
  * Αποφασίζει αν μια εργασία οφείλεται στο τρέχον λεπτό.
  *
  * Δύο ανεξάρτητοι λόγοι:
@@ -76,23 +99,13 @@ export function isJobDue(
   tick: Date,
   lastSuccessAt: string | null
 ): CronDueVerdict {
-  const startOfMinute = new Date(tick.getTime());
-  startOfMinute.setSeconds(0, 0);
-  // Ημιάνοιχτο διάστημα [startOfMinute, nextMinute). Ρητά **αποκλειστικό** άνω άκρο
-  // αντί για `+ 59_999`: το δεύτερο θα ήταν σωστό μόνο επειδή οι στιγμές cron πέφτουν
-  // πάντα σε ακέραιο λεπτό — δηλαδή σωστό κατά σύμπτωση, και αόρατα λάθος αν κάποτε
-  // μπει έκφραση 6 πεδίων με δευτερόλεπτα.
-  const nextMinute = new Date(startOfMinute.getTime() + 60_000);
-
-  // ── 1. Κανονική εκτέλεση ──
-  // Από 1ms πριν την αρχή του λεπτού: το `nextRuns` είναι **αυστηρά μετά**, οπότε μια
-  // στιγμή ακριβώς στο :00.000 θα χανόταν αν ρωτούσαμε από την ίδια την αρχή. Αυτό το
-  // off-by-one θα σήμαινε ότι καμία εργασία δεν τρέχει ποτέ στην ώρα της — θα
-  // εμφανιζόταν μόνο ως μόνιμο catch-up ένα λεπτό αργότερα.
-  const inThisMinute = firstRunAfter(schedule, timezone, new Date(startOfMinute.getTime() - 1));
-  if (inThisMinute && inThisMinute.getTime() < nextMinute.getTime()) {
+  // ── 1. Κανονική εκτέλεση ── (ο ΕΝΑΣ κριτής του λεπτού, κοινός με τον παλμό)
+  if (isScheduledInMinute(schedule, timezone, tick)) {
     return { due: true, reason: 'scheduled' };
   }
+
+  const startOfMinute = new Date(tick.getTime());
+  startOfMinute.setSeconds(0, 0);
 
   // ── 2. Catch-up ──
   const graceStartMs = tick.getTime() - CATCHUP_GRACE_HOURS * 3_600_000;

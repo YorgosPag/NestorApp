@@ -27,6 +27,7 @@
 
 import * as Sentry from '@sentry/nextjs';
 
+import { isScheduledInMinute } from '@/lib/cron/cron-due';
 import type { CronJobResult } from '@/types/cron-schedule';
 
 /** Τα πεδία της εγγραφής που καθορίζουν πότε ένα check-in θεωρείται χαμένο. */
@@ -71,13 +72,14 @@ export async function runWithMonitor(
 /**
  * Χτύπημα καρδιάς για το **ίδιο το ρολόι**.
  *
- * Κάθε εργασία έχει δικό της monitor, αλλά όλες είναι ημερήσιες: αν πεθάνει η Coolify
- * Scheduled Task, θα περάσουν έως 24 ώρες μέχρι το πρώτο χαμένο check-in. Ο ωριαίος
- * heartbeat κόβει τον χρόνο ανίχνευσης σε ~1 ώρα.
+ * Κάθε εργασία έχει δικό της monitor· αν πεθάνει η Coolify Scheduled Task, **κανένα** δεν στέλνει check-in. Ο
+ * παλμός είναι ο ανιχνευτής «πέθανε το ρολόι», ανεξάρτητος από την υγεία κάθε εργασίας.
  *
- * Στέλνεται **μόνο** στην κορυφή της ώρας ώστε να ταιριάζει με το δηλωμένο `0 * * * *`:
- * ένα check-in κάθε λεπτό σε ωριαίο monitor θα το θεωρούσε το Sentry υπερβολικά συχνό
- * (όριο 6/λεπτό) και θα ήταν 1.440 check-ins/ημέρα χωρίς αντίκρισμα.
+ * 🔴 **Στέλνεται ΑΚΡΙΒΩΣ όταν το λέει το `schedule` που δηλώνεται στο Sentry — ποτέ με δεύτερη κρίση εδώ**
+ * (2026-10-26). Εδώ ζούσε `if (tick.getMinutes() !== 0) return;`, χειρόγραφο αντίγραφο του ωριαίου `0 * * * *`.
+ * Το ADR-777 §8.23 πύκνωσε τη σταθερά σε `*\/5` και το αντίγραφο έμεινε ωριαίο ⇒ το monitor περίμενε check-in
+ * ανά 5′ και έπαιρνε **ένα ανά ώρα** — δηλαδή ο ανιχνευτής του νεκρού ρολογιού φώναζε για ζωντανό ρολόι. Ο κριτής
+ * είναι πλέον ο ΙΔΙΟΣ με των εργασιών (`isScheduledInMinute`), άρα πρόγραμμα και αποστολή δεν μπορούν να αποκλίνουν.
  */
 export function sendHeartbeat(
   slug: string,
@@ -85,14 +87,13 @@ export function sendHeartbeat(
   timezone: string,
   tick: Date
 ): void {
-  if (tick.getMinutes() !== 0) return;
+  if (!isScheduledInMinute(schedule, timezone, tick)) return;
 
   Sentry.captureCheckIn(
     { monitorSlug: slug, status: 'ok' },
     {
       schedule: { type: 'crontab', value: schedule },
-      // Ανοχή 5 λεπτών: ο dispatcher χτυπά στο λεπτό :00, αλλά ένα tick μπορεί να
-      // καθυστερήσει όσο τρέχει μια προηγούμενη βαριά εργασία.
+      // Ανοχή 5 λεπτών: ένα tick μπορεί να καθυστερήσει όσο τρέχει μια προηγούμενη βαριά εργασία.
       checkinMargin: 5,
       maxRuntime: 1,
       timezone,

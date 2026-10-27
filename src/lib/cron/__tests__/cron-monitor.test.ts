@@ -18,6 +18,7 @@
  */
 
 import { buildMonitorConfig, sendHeartbeat, type CronMonitorSpec } from '@/lib/cron/cron-monitor';
+import { CRON_HEARTBEAT_SCHEDULE, CRON_HEARTBEAT_SLUG, CRON_TIMEZONE } from '@/config/cron-schedule';
 
 const captureCheckIn = jest.fn();
 
@@ -80,5 +81,35 @@ describe('sendHeartbeat', () => {
       sendHeartbeat('hb', '0 * * * *', 'Europe/Athens', new Date(`2026-07-15T10:${String(minute).padStart(2, '0')}:00.000Z`));
     }
     expect(captureCheckIn).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * 🔴 **Η ΑΠΟΣΤΟΛΗ ΑΚΟΛΟΥΘΕΙ ΤΟ ΔΗΛΩΜΕΝΟ ΠΡΟΓΡΑΜΜΑ — ΟΧΙ ΔΙΚΗ ΤΗΣ ΚΡΙΣΗ** (2026-10-26).
+ *
+ * Η αποστολή έκρινε με `getMinutes() !== 0` (ωριαία) ενώ στο Sentry δηλωνόταν `*\/5` από το ADR-777 §8.23: το
+ * monitor περίμενε check-in ανά 5′ και έπαιρνε ένα ανά ώρα. Οι δύο άγκυρες πάνω (με `0 * * * *`) ήταν **πράσινες**
+ * επειδή δοκίμαζαν το μόνο πρόγραμμα όπου οι δύο κρίσεις συμπίπτουν.
+ */
+describe('sendHeartbeat — ένας κριτής με το πρόγραμμα', () => {
+  const at = (minute: number): Date => new Date(`2026-07-15T10:${String(minute).padStart(2, '0')}:00.000Z`);
+
+  it('🔴 πρόγραμμα ανά 5′ ⇒ χτυπά στο :05, ΟΧΙ στο :07 (η ωριαία χειρόγραφη κρίση θα σιωπούσε στο :05)', () => {
+    sendHeartbeat('hb', '*/5 * * * *', 'Europe/Athens', at(7));
+    expect(captureCheckIn).not.toHaveBeenCalled();
+
+    sendHeartbeat('hb', '*/5 * * * *', 'Europe/Athens', at(5));
+    expect(captureCheckIn).toHaveBeenCalledTimes(1);
+  });
+
+  it('🔑 η σταθερά της παραγωγής: ΕΝΑ check-in σε κάθε tick μιας ώρας — όσα δηλώνονται στο Sentry', () => {
+    for (let minute = 0; minute < 60; minute += 1) {
+      sendHeartbeat(CRON_HEARTBEAT_SLUG, CRON_HEARTBEAT_SCHEDULE, CRON_TIMEZONE, at(minute));
+    }
+    expect(captureCheckIn).toHaveBeenCalledTimes(60);
+    expect(captureCheckIn).toHaveBeenLastCalledWith(
+      { monitorSlug: CRON_HEARTBEAT_SLUG, status: 'ok' },
+      expect.objectContaining({ schedule: { type: 'crontab', value: CRON_HEARTBEAT_SCHEDULE } }),
+    );
   });
 });
