@@ -94,7 +94,7 @@ function RfqLineRow({ line, locked, onDelete, t }: { line: RfqLine; locked: bool
   return (
     <tr className="border-b">
       <td className="py-1.5 pr-2">{line.description}</td>
-      <td className="py-1.5 pr-2 text-muted-foreground">{line.trade}</td>
+      <td className="py-1.5 pr-2 text-muted-foreground">{t(`trades.${line.trade}`)}</td>
       <td className="py-1.5 pr-2 text-muted-foreground">{line.quantity ?? '—'}</td>
       <td className="py-1.5 pr-2 text-muted-foreground">{line.unit ?? '—'}</td>
       <td className="py-1.5">

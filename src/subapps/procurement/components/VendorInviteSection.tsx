@@ -9,11 +9,14 @@ import { Badge } from '@/components/ui/badge';
 import type { BadgeVariantProps } from '@/components/ui/badge';
 import type { DeliveryChannel } from '../types/vendor-invite';
 import {
+  inviteMatchesFocus,
   isLiveInviteStatus,
   normalizeInviteStatus,
   vendorInviteDisplayStatus,
+  type InviteFocus,
   type VendorInviteDisplayStatus,
 } from '../utils/vendor-invite-status';
+import { StatusDrillNotice } from '@/components/projects/procurement/clients/StatusDrillNotice';
 import type { SetupLockState } from '@/subapps/procurement/utils/rfq-lock-state';
 import { useVendorInvites } from '../hooks/useVendorInvites';
 import { VendorInviteDialog } from './VendorInviteDialog';
@@ -180,9 +183,26 @@ interface VendorInviteSectionProps {
   rfq?: RFQ | null;
   lockState?: SetupLockState;
   onViewInvites?: () => void;
+  /**
+   * Φίλτρο εστίασης από τις κάρτες της σελίδας (ADR-330 §5.1 S3.3) — τα ΙΔΙΑ κατηγορήματα που μέτρησε η κάρτα.
+   * Κενό ⇒ όλες. Ορατό με `StatusDrillNotice` (κανένα κρυφό φίλτρο).
+   */
+  focus?: readonly InviteFocus[];
+  /** Η προθεσμία του RFQ σε ms — μέρος του κατηγορήματος «χρειάζεται προσοχή». */
+  deadlineMs?: number | null;
+  onClearFocus?: () => void;
 }
 
-export function VendorInviteSection({ rfqId, rfq, lockState = 'unlocked', onViewInvites }: VendorInviteSectionProps) {
+const NO_FOCUS: readonly InviteFocus[] = [];
+
+const FOCUS_LABEL_KEYS: Record<InviteFocus, string> = {
+  awaiting: 'rfqs.dashboard.setup.awaiting',
+  attention: 'rfqs.dashboard.setup.attention',
+};
+
+export function VendorInviteSection({
+  rfqId, rfq, lockState = 'unlocked', onViewInvites, focus = NO_FOCUS, deadlineMs = null, onClearFocus,
+}: VendorInviteSectionProps) {
   const { t } = useTranslation('quotes');
   const {
     invites, vendorContacts, loading, contactsLoading,
@@ -204,6 +224,11 @@ export function VendorInviteSection({ rfqId, rfq, lockState = 'unlocked', onView
     ),
     [invites],
   );
+
+  const visibleInvites = useMemo(() => {
+    const now = Date.now();
+    return invites.filter((i) => inviteMatchesFocus(i, focus, deadlineMs, now));
+  }, [invites, focus, deadlineMs]);
 
   const vendorNameMap = new Map(vendorContacts.map((c) => [c.id, c.displayName]));
 
@@ -235,6 +260,13 @@ export function VendorInviteSection({ rfqId, rfq, lockState = 'unlocked', onView
       ) : invites.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t('invites.empty')}</p>
       ) : (
+        <>
+        {onClearFocus && (
+          <StatusDrillNotice labels={focus.map((f) => t(FOCUS_LABEL_KEYS[f]))} onClear={onClearFocus} />
+        )}
+        {visibleInvites.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{t('invites.emptyFiltered')}</p>
+        ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
@@ -247,7 +279,7 @@ export function VendorInviteSection({ rfqId, rfq, lockState = 'unlocked', onView
               </tr>
             </thead>
             <tbody>
-              {invites.map((invite) => (
+              {visibleInvites.map((invite) => (
                 <InviteRow
                   key={invite.id}
                   invite={invite}
@@ -259,6 +291,8 @@ export function VendorInviteSection({ rfqId, rfq, lockState = 'unlocked', onView
             </tbody>
           </table>
         </div>
+        )}
+        </>
       )}
 
       <VendorInviteDialog

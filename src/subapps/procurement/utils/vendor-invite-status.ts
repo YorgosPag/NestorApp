@@ -76,3 +76,53 @@ export function vendorInviteDisplayStatus(
   if (isLiveInviteStatus(status) && expiresAt && expiresAt.getTime() <= nowMs) return 'expired';
   return status;
 }
+
+/** Η πρόσκληση όπως τη χρειάζονται τα κατηγορήματα εστίασης — μόνο ό,τι διαβάζουν. */
+type InviteForFocus = { readonly status: string; readonly expiresAt: unknown };
+
+/**
+ * **«Χρειάζεται προσοχή»** (ADR-330 §5.1 S3.3): ζωντανή πρόσκληση που **δεν** μπορεί πια να απαντηθεί
+ * εγκαίρως — έληξε ο σύνδεσμος, ή πέρασε η προθεσμία του RFQ χωρίς απάντηση.
+ *
+ * ⚠️ Ήταν γραμμένο **δύο** φορές με **διαφορετικό** ορισμό: η κάρτα ρωτούσε το παράγωγο `expired`, το badge
+ * της καρτέλας ρωτούσε `status === 'expired'` — τιμή που **δεν αποθηκεύεται ποτέ** ⇒ το badge δεν θα άναβε.
+ * Και οι δύο μετρούσαν «πέρασε η προθεσμία» μόνο για `pending`, όχι για `sent`/`opened` (εξίσου αναπάντητες).
+ */
+export function inviteNeedsAttention(invite: InviteForFocus, deadlineMs: number | null, nowMs: number): boolean {
+  const display = vendorInviteDisplayStatus(invite, nowMs);
+  if (display === 'expired') return true;
+  return isLiveInviteStatus(display) && deadlineMs !== null && nowMs > deadlineMs;
+}
+
+/** **«Αναμένουν απάντηση»**: ζωντανή πρόσκληση που μπορεί ακόμη να απαντηθεί εγκαίρως. */
+export function inviteAwaitingResponse(invite: InviteForFocus, deadlineMs: number | null, nowMs: number): boolean {
+  return isLiveInviteStatus(normalizeInviteStatus(invite.status)) && !inviteNeedsAttention(invite, deadlineMs, nowMs);
+}
+
+/**
+ * **Το λεξιλόγιο εστίασης της λίστας προσκλήσεων** (ADR-330 §5.1 S3.3) — ένα κατηγόρημα ανά τιμή, που
+ * διαβάζουν **και** η κάρτα (μέτρηση) **και** η λίστα (φίλτρο) ⇒ η λίστα δείχνει ΑΚΡΙΒΩΣ ό,τι μέτρησε η κάρτα.
+ * Τα κλειδιά είναι και το λεξιλόγιο του `?status=` (`useStatusDrillParam`).
+ */
+export const INVITE_FOCUS_PREDICATES = {
+  awaiting: inviteAwaitingResponse,
+  attention: inviteNeedsAttention,
+} as const satisfies Record<string, (invite: InviteForFocus, deadlineMs: number | null, nowMs: number) => boolean>;
+
+export type InviteFocus = keyof typeof INVITE_FOCUS_PREDICATES;
+
+/** Η πρόσκληση περνά το φίλτρο εστίασης; Κενό φίλτρο ⇒ όλες. */
+export function inviteMatchesFocus(
+  invite: InviteForFocus,
+  focus: readonly InviteFocus[],
+  deadlineMs: number | null,
+  nowMs: number,
+): boolean {
+  return focus.length === 0 || focus.some((f) => INVITE_FOCUS_PREDICATES[f](invite, deadlineMs, nowMs));
+}
+
+/** Απάντησε ο προμηθευτής (υπέβαλε **ή** αρνήθηκε) — ο αριθμητής του χωνιού «Προσκλήθηκαν → Απάντησαν». */
+export function inviteResponded(invite: { readonly status: string }): boolean {
+  const status = normalizeInviteStatus(invite.status);
+  return status === 'submitted' || status === 'declined';
+}

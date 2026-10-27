@@ -55,5 +55,6 @@ export function useStatusDrillParam<S extends string>(vocabulary: Readonly<Recor
 
   const clear = useCallback(() => set([]), [set]);
 
-  return { statuses, set, clear };
+  // Σταθερή ταυτότητα: οι καταναλωτές το βάζουν σε εξαρτήσεις `useMemo` (κάρτες της σελίδας RFQ, ADR-330 S3.3).
+  return useMemo(() => ({ statuses, set, clear }), [statuses, set, clear]);
 }

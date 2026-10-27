@@ -15,7 +15,7 @@ import React, { useMemo, useState, useCallback } from 'react';
 import { useRouter, usePathname } from '@/lib/workspace/navigation';
 import { declaredHref } from '@/lib/workspace/route-worlds';
 import { useSearchParams } from 'next/navigation';
-import { FileText, History, Loader2, Search, XCircle } from 'lucide-react';
+import { FileText, Search } from 'lucide-react';
 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -34,7 +34,7 @@ import { QuoteStatusQuickFilters } from '@/components/shared/TypeQuickFilters';
 import { QuoteListCard, QuoteGridCard } from '@/domain';
 import { EntityListColumn } from '@/core/containers';
 
-import type { Quote, QuoteStatus } from '@/subapps/procurement/types/quote';
+import { QUOTE_STATUSES, type Quote, type QuoteStatus } from '@/subapps/procurement/types/quote';
 import type { ScanQueueItem } from '../hooks/useScanQueue';
 import { useSortState } from '@/hooks/useSortState';
 import { matchesSearchTerm } from '@/lib/search/search';
@@ -46,6 +46,7 @@ import {
   DEFAULT_SORT_KEY,
 } from '../utils/quote-sort';
 import { matchesQuote } from '../utils/quote-search';
+import { ScanPlaceholderRow, SupersededVersionRow } from './QuoteListRows';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -70,66 +71,16 @@ interface QuoteListProps {
   onRemoveScan?: (clientId: string) => void;
   /** View mode — 'list' (default) renders QuoteListCard, 'grid' renders QuoteGridCard tiles */
   viewMode?: 'list' | 'grid';
+  /**
+   * Ελεγχόμενο φίλτρο κατάστασης (ADR-330 §5.1 S3.3): όταν δίνεται, τα τσιπ **και** οι κάρτες της σελίδας
+   * γράφουν την ΙΔΙΑ κατάσταση (π.χ. `?status=`)· αλλιώς η λίστα κρατά τοπική κατάσταση.
+   */
+  statusFilter?: readonly QuoteStatus[];
+  onStatusFilterChange?: (statuses: QuoteStatus[]) => void;
 }
 
-function ScanPlaceholderRow({
-  item,
-  onRetry,
-  onRemove,
-}: {
-  item: ScanQueueItem;
-  onRetry: () => void;
-  onRemove: () => void;
-}) {
-  const { t } = useTranslation(['quotes', 'common']);
-  const stageKeys = ['reading', 'extracting', 'validating'] as const;
-  const stageLabel = item.stage
-    ? t(`rfqs.scan.stage.${stageKeys[item.stage - 1]}`)
-    : t('rfqs.scan.stage.processing');
+const isQuoteStatus = (s: string): s is QuoteStatus => (QUOTE_STATUSES as readonly string[]).includes(s);
 
-  if (item.status === 'error') {
-    return (
-      <div className="flex items-center gap-2 px-3 py-2 rounded border border-destructive/50 bg-destructive/5 text-destructive text-xs">
-        <XCircle className="size-3 shrink-0" />
-        <span className="flex-1 truncate font-medium">{item.fileName}</span>
-        <span className="text-destructive/80">{t('rfqs.scan.placeholder.failed')}</span>
-        <button type="button" onClick={onRetry} className="underline hover:no-underline shrink-0">
-          {t('rfqs.scan.placeholder.retry')}
-        </button>
-        <button type="button" onClick={onRemove} className="underline hover:no-underline shrink-0">
-          {t('rfqs.scan.placeholder.delete')}
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex items-center gap-2 px-3 py-2 rounded border border-dashed border-primary/30 bg-primary/5 text-xs">
-      <Loader2 className="size-3 shrink-0 animate-spin text-primary" />
-      <span className="flex-1 truncate font-medium">{item.fileName}</span>
-      <span className="text-muted-foreground">{stageLabel}</span>
-    </div>
-  );
-}
-
-function SupersededVersionRow({ quote }: { quote: Quote }) {
-  const dateStr = (() => {
-    const ts = (quote.submittedAt ?? quote.createdAt) as { seconds: number } | null;
-    return ts?.seconds ? new Date(ts.seconds * 1000).toLocaleDateString('el-GR') : '—';
-  })();
-  return (
-    <div className="ml-4 flex items-center gap-2 px-3 py-1.5 rounded border border-dashed border-muted text-muted-foreground text-xs opacity-70">
-      <History className="size-3 shrink-0" />
-      <span className="font-mono">v{quote.version ?? 1}</span>
-      <span className="flex-1 truncate">{formatCurrencyRow(quote.totals.total)}</span>
-      <span>{dateStr}</span>
-    </div>
-  );
-}
-
-function formatCurrencyRow(n: number): string {
-  return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(n);
-}
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -145,6 +96,8 @@ export function QuoteList({
   onRetryScan,
   onRemoveScan,
   viewMode = 'list',
+  statusFilter,
+  onStatusFilterChange,
 }: QuoteListProps) {
   const { t } = useTranslation(['quotes', 'common']);
   const colors = useSemanticColors();
@@ -184,7 +137,10 @@ export function QuoteList({
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [showToolbar, setShowToolbar] = useState(false);
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [localStatuses, setLocalStatuses] = useState<string[]>([]);
+  const selectedStatuses = useMemo<string[]>(() => (statusFilter ? [...statusFilter] : localStatuses), [statusFilter, localStatuses]);
+  const setSelectedStatuses = (next: string[]) =>
+    onStatusFilterChange ? onStatusFilterChange(next.filter(isQuoteStatus)) : setLocalStatuses(next);
 
   // ──────────────────────────────────────────────────────────────
   // ──────────────────────────────────────────────────────────────

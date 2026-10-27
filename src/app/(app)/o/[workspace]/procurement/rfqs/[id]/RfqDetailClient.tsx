@@ -17,7 +17,14 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Badge } from '@/components/ui/badge';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { useVendorInvites } from '@/subapps/procurement/hooks/useVendorInvites';
-import { buildRfqDashboardStats } from '@/subapps/procurement/utils/rfq-dashboard-stats';
+import {
+  buildRfqDashboardStats,
+  countInvitesNeedingAttention,
+  rfqDeadlineMs,
+} from '@/subapps/procurement/utils/rfq-dashboard-stats';
+import { INVITE_FOCUS_PREDICATES } from '@/subapps/procurement/utils/vendor-invite-status';
+import { QUOTE_STATUS_TRANSITIONS } from '@/subapps/procurement/types/quote';
+import { useStatusDrillParam } from '@/components/projects/procurement/clients/useStatusDrillParam';
 import { PageHeader } from '@/core/headers';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 import { useQuotes } from '@/subapps/procurement/hooks/useQuotes';
@@ -127,26 +134,20 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
     () => Boolean(comparison?.recommendation) && !activeQuotes.some(q => q.status === 'accepted'),
     [comparison, activeQuotes],
   );
-
-  const setupAttentionCount = useMemo(() => {
-    const now = Date.now();
-    const deadline = rfq?.deadlineDate;
-    let deadlineMs: number | null = null;
-    if (deadline) {
-      if (typeof deadline === 'object' && 'seconds' in (deadline as object)) {
-        deadlineMs = (deadline as { seconds: number }).seconds * 1000;
-      } else {
-        const n = new Date(deadline as unknown as string).getTime();
-        if (!Number.isNaN(n)) deadlineMs = n;
-      }
-    }
-    return invites.filter(
-      i => i.status === 'expired' || (i.status === 'pending' && deadlineMs !== null && now > deadlineMs),
-    ).length;
-  }, [invites, rfq]);
+  // ADR-330 §5.1 S3.3: ΕΝΑ `?status=` ανά καρτέλα (το `handleTabChange` το καθαρίζει)· κάρτες + λίστα γράφουν το ίδιο.
+  const quoteFilter = useStatusDrillParam(QUOTE_STATUS_TRANSITIONS);
+  const inviteFilter = useStatusDrillParam(INVITE_FOCUS_PREDICATES);
+  const deadlineMs = useMemo(() => rfqDeadlineMs(rfq), [rfq]);
+  const setupAttentionCount = useMemo(
+    () => countInvitesNeedingAttention(invites, deadlineMs, Date.now()),
+    [invites, deadlineMs],
+  );
   const dashboardStats = useMemo(
-    () => buildRfqDashboardStats(rfq, activeQuotes, invites, comparison, activeTab, t),
-    [rfq, activeQuotes, invites, comparison, activeTab, t],
+    () => buildRfqDashboardStats({
+      rfq, lines, linesLoading, quotes: activeQuotes, invites, comparison, activeTab,
+      nowMs: Date.now(), quoteFilter, inviteFilter, onOpenQuote: handleComparisonDrillDown, t,
+    }),
+    [rfq, lines, linesLoading, activeQuotes, invites, comparison, activeTab, quoteFilter, inviteFilter, handleComparisonDrillDown, t],
   );
   const onFireAward = useCallback(async (winnerQuoteId: string, overrideReason: string | null) => {
     const res = await fetch(`/api/rfqs/${id}/award`, {
@@ -250,12 +251,13 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
     const sp = new URLSearchParams({ rfqId: id });
     if (rfq) {
       sp.set('projectId', rfq.projectId);
-      if (!rfqIsMultiTrade(rfq) && rfq.lines.length > 0) {
-        sp.set('trade', rfq.lines[0].trade);
+      // Q29: οι γραμμές ζουν στην υποσυλλογή — το legacy `rfq.lines` είναι άδειο στα νέα RFQ.
+      if (!rfqIsMultiTrade({ lines }) && lines.length > 0) {
+        sp.set('trade', lines[0].trade);
       }
     }
     return withQuery('/procurement/quotes/scan', sp.toString());
-  }, [id, rfq]);
+  }, [id, rfq, lines]);
   const handleQuoteCreated = async () => {
     setShowQuoteForm(false);
     await refetch();
@@ -368,6 +370,8 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
                 onSelectQuote={handleSelectQuote}
                 selectedQuoteId={selectedQuote?.id}
                 scanItems={scanQueue.items}
+                statusFilter={quoteFilter.statuses}
+                onStatusFilterChange={quoteFilter.set}
                 onRetryScan={scanQueue.retry}
                 onRemoveScan={scanQueue.remove}
               />
@@ -459,7 +463,8 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
               lockState={lockState}
             />
           </section>
-          <VendorInviteSection rfqId={id} rfq={rfq} lockState={lockState} onViewInvites={() => handleTabChange('setup')} />
+          <VendorInviteSection rfqId={id} rfq={rfq} lockState={lockState} onViewInvites={() => handleTabChange('setup')}
+            focus={inviteFilter.statuses} deadlineMs={deadlineMs} onClearFocus={inviteFilter.clear} />
         </TabsContent>
       </Tabs>
       <RfqDetailDialogs

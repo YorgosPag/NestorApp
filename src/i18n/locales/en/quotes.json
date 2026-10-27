@@ -484,10 +484,16 @@
         "recommendation": "System Recommendation"
       },
       "setup": {
-        "totalLines": "Total Lines",
-        "totalVolume": "Total Volume",
-        "invites": "Invitations",
-        "pending": "Pending"
+        "totalLines": "Lines",
+        "linesBySource": "{boq} take-off · {adHoc} manual",
+        "deadline": "Deadline",
+        "deadlineNotSet": "Not set",
+        "deadlinePassed": "Passed",
+        "awaiting": "Awaiting response",
+        "responded": "{responded} of {invited} responded",
+        "attention": "Need attention",
+        "linesAllBoq": "From take-off",
+        "linesAllAdHoc": "Manual"
       }
     },
     "mobile": {
@@ -1068,7 +1074,8 @@
         "expired": "Expired",
         "revoked": "Revoked"
       }
-    }
+    },
+    "emptyFiltered": "No invitations match the filter."
   },
   "comparison": {
     "title": "Quote Comparison",

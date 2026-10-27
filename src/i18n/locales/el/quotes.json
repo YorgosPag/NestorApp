@@ -484,10 +484,16 @@
         "recommendation": "Σύσταση Συστήματος"
       },
       "setup": {
-        "totalLines": "Σύνολο Γραμμών",
-        "totalVolume": "Συνολικός Όγκος",
-        "invites": "Προσκλήσεις",
-        "pending": "Εκκρεμείς"
+        "totalLines": "Γραμμές",
+        "linesBySource": "{boq} επιμέτρ. · {adHoc} χειροκ.",
+        "deadline": "Προθεσμία",
+        "deadlineNotSet": "Δεν έχει οριστεί",
+        "deadlinePassed": "Έληξε",
+        "awaiting": "Αναμένουν απάντηση",
+        "responded": "Απάντησαν {responded} από {invited}",
+        "attention": "Χρειάζονται προσοχή",
+        "linesAllBoq": "Από επιμετρήσεις",
+        "linesAllAdHoc": "Χειροκίνητες"
       }
     },
     "mobile": {
@@ -1068,7 +1074,8 @@
         "expired": "Έληξε",
         "revoked": "Ανακλήθηκε"
       }
-    }
+    },
+    "emptyFiltered": "Καμία πρόσκληση δεν ταιριάζει στο φίλτρο."
   },
   "comparison": {
     "title": "Σύγκριση Προσφορών",

@@ -6,6 +6,7 @@ import { declaredHref } from '@/lib/workspace/route-worlds';
 import { useSearchParams } from 'next/navigation';
 import { useIsMobile } from '@/hooks/useMobile';
 import type { Quote } from '../types/quote';
+import { PROCUREMENT_STATUS_PARAM } from '@/lib/navigation/procurement-urls';
 
 export type RfqTabValue = 'quotes' | 'comparison' | 'setup' | 'history';
 
@@ -89,6 +90,8 @@ export function useRfqUrlState({
     (nextTab: RfqTabValue) => {
       const params = new URLSearchParams(searchParams.toString());
       params.set('tab', nextTab);
+      // ADR-330 §5.1 S3.3: το `?status=` είναι φίλτρο της λίστας ΤΗΣ καρτέλας — δεν ταξιδεύει σε άλλη λίστα.
+      params.delete(PROCUREMENT_STATUS_PARAM);
       router.push(declaredHref('usePathname() είναι ΗΔΗ η έγκυρη τρέχουσα σελίδα — ενημέρωση ερωτήματος, όχι νέος προορισμός.', `${pathname}?${params.toString()}`));
     },
     [router, pathname, searchParams],
@@ -135,6 +138,8 @@ export function useRfqUrlState({
       const params = new URLSearchParams(searchParams.toString());
       params.set('tab', 'quotes');
       params.set('quote', quoteId);
+      // Άνοιγμα ΜΙΑΣ προσφοράς: φίλτρο λίστας που θα την έκρυβε φεύγει (η λίστα δείχνει την επιλογή).
+      params.delete(PROCUREMENT_STATUS_PARAM);
       router.push(declaredHref('usePathname() είναι ΗΔΗ η έγκυρη τρέχουσα σελίδα — ενημέρωση ερωτήματος, όχι νέος προορισμός.', `${pathname}?${params.toString()}`));
     },
     [router, pathname, searchParams],
