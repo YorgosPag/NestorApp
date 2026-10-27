@@ -10,6 +10,7 @@
 
 | Date | Changes |
 |------|---------|
+| 2026-10-27 | ✅ **Phase 5.5 v3 — διόρθωση στη ρίζα (ADR-923 §5.11 «3γ»)**: σύμβαση **ανά γραμμή** μέσω του ενός `selectMostSpecific` (ισοπαλία ⇒ καμία έκπτωση) · `[]` = κανένα · εύρος υλικών/ΑΤΟΕ ενεργό · κλίμακες ως group condition ανά PO · ΦΠΑ **μετά** την έκπτωση (`taxableAmount`, `total` = πληρωτέο) · ένα `po-totals` αντί για 5 αντίγραφα · `appliedFaId`/`faDiscountPercent`/`netTotal` → `appliedFaIds[]` + `faDiscount` γραμμής (0 έγγραφα) · `materialId` στο σχήμα PO (το Phase 4.5 CF δεν το έβλεπε ποτέ) · έκπτωση σε PDF/λεπτομέρεια/δημόσια σελίδα. Βλ. «Architecture v3». |
 | 2026-10-26 | 🔴 **Απόκλιση ADR ↔ κώδικα στην εφαρμογή εκπτώσεων FWA (Phase 5.5)**, μετρημένη στην αναγνώριση της ADR-923 Φάσης 3 (§5.11 Α1–Α4): float αριθμητική · έκπτωση **πάνω στον ΦΠΑ** · εύρος υλικών/ΑΤΟΕ που δεν διαβάζεται · `[]` = «όλα» αντίθετα με το «`[]`=none» αυτού του ADR. Μόνο τεκμηρίωση εδώ· η διόρθωση γίνεται στην ADR-923 Φάση 3γ (FWA πάνω στη μία μηχανή `src/lib/pricing/`). |
 | 2026-10-04 | 🔴 **Η καρτέλα «Προμήθειες» του έργου είναι ΣΥΝΔΕΣΜΟΣ, όχι component που ανακατευθύνει.** Το `ProcurementProjectTab` έκανε `router.replace` μέσα σε `useEffect`. Ο `UniversalTabsRenderer` κρατά κάθε καρτέλα που άνοιξε μία φορά στημένη (`forceMount`), οπότε στο πέρασμα πρόχειρο → πραγματικό έργο το component στηνόταν **κρυμμένο** και πετούσε τον άνθρωπο στο `/procurement/overview` χωρίς να το ζητήσει (μετρημένο ζωντανά). Τώρα: `href` στο `project-tabs-config` (πλοήγηση **στο κλικ**, πρότυπο Procore)· πρόχειρο έργο ⇒ η καρτέλα **ανενεργή**. Το `ProcurementProjectTab.tsx` **διαγράφηκε**. Νέο `getProjectProcurementUrl(projectId, section)` στο `lib/navigation/procurement-urls.ts` — το χρησιμοποιούν η καρτέλα και το `ProjectProcurementTabs` (έφυγαν 4 inline templates). Μηχανισμός: ADR-328. |
 | 2026-05-04 | ✅ **Phase C.3 — CF DEPLOYED** — `materialPriceSyncOnPODelivery` deployed to Firebase production (us-central1, Node.js 22, 1st Gen). Commit `da037920`. Phase 4.5 ora fully operational end-to-end. |
@@ -597,6 +598,22 @@ Sostituisce l'attuale `ProcurementProjectTab.tsx` (oggi 22 LOC, solo `RfqList`).
 > (Α3) 🔴 `applicableMaterialIds` / `applicableAtoeCategoryCodes` **αποθηκεύονται αλλά δεν διαβάζονται** στην επίλυση.
 > (Α4) η γραμμή «`[]`=none» παραπάνω **δεν** ισχύει: ο κώδικας (`length > 0`) κάνει το `[]` = **όλα**.
 > Διόρθωση στη ρίζα στην ADR-923 Φάση 3γ: η FWA γίνεται προσαρμογέας της **μίας** μηχανής εκπτώσεων (`src/lib/pricing/`).
+
+**Architecture v3 (ADR-923 §5.11 «3γ», 2026-10-27) — ΑΝΤΙΚΑΘΙΣΤΑ τα v1/v2 παραπάνω (ιστορικό):**
+- **Ανά γραμμή** (SAP condition determination): κάθε γραμμή PO παίρνει τη δική της σύμβαση από τον **ίδιο** `selectMostSpecific` του καταλόγου —
+  υλικό > ΑΤΟΕ > όλα, μετά λίστα έργων > όλα· ισοπαλία ⇒ **καμία** έκπτωση + προειδοποίηση στη φόρμα (ποτέ «η πρώτη»).
+- Εύρος: **`null` = όλα · `[]` = κανένα · λίστα = μέλος** (`scopeCovers`)· τα `applicableMaterialIds` / `applicableAtoeCategoryCodes` **διαβάζονται** (αρκεί ένα).
+- Κλίμακες: **group condition** — βάση = άθροισμα (εκτός ΦΠΑ) των γραμμών της ίδιας σύμβασης **στην ίδια PO**, όχι σωρευτική δαπάνη (αυτό θα ήταν rebate).
+- 🔴 **ΦΠΑ μετά την έκπτωση** (ν. 2859/2000 άρθ. 19 §5α · EN 16931): `subtotal` → `faDiscountAmount` → `taxableAmount` → `taxAmount` → `total` (= πληρωτέο).
+  Ένα `src/lib/procurement/po-totals.ts`, σε ακέραια λεπτά, αντί για 5 αντίγραφα σε float.
+- `PurchaseOrder`: **αφαιρέθηκαν** `appliedFaId` · `faDiscountPercent` · `netTotal` → `appliedFaIds: string[]` · `faDiscountAmount: number` · `taxableAmount: number`·
+  γραμμή `faDiscount: { agreementId, discountPercent, discountAmount } | null`. Τα DTO **δεν** δέχονται πια πεδία FA (ούτε `total` γραμμής — τα ξαναϋπολογίζει ο server).
+- Αρχεία: `lib/procurement/price-purchase-order{,-pure}.ts` (αντικαθιστούν `recompute-fa-discount{,-pure}.ts`) · `hooks/procurement/usePOPricing.ts` (αντικαθιστά
+  `usePOFrameworkAgreement`, καλεί την **ίδια** συνάρτηση με τον server) · `components/procurement/POTotalsSummary.tsx` (φόρμα · λεπτομέρεια · δημόσια σελίδα PO) · PDF με έκπτωση.
+- Ημερομηνία τιμολόγησης: νέα PO = τώρα· επεξεργασία = `dateCreated` (SAP pricing date).
+- 🔴 **Phase 4.5, παράπλευρο εύρημα:** το `CreatePOItemSchema` **δεν** είχε `materialId` ⇒ το zod το πετούσε ⇒ το `materialPriceSyncOnPODelivery` δεν έβρισκε ποτέ υλικό.
+  Διορθώθηκε (μαζί με το `duplicatePO`). Από εδώ και πέρα το CF **θα ενεργοποιείται** σε παράδοση PO με υλικό: πρώτη φορά στην πράξη.
+- Tamper guarantee: αμετάβλητη (και ισχυρότερη: ούτε το `total` γραμμής εμπιστεύεται ο server).
 
 **Files NEW Phase C.2 (3):** `src/lib/procurement/recompute-fa-discount.ts`, `recompute-fa-discount-pure.ts`, `__tests__/recompute-fa-discount.test.ts` (20 tests).
 
