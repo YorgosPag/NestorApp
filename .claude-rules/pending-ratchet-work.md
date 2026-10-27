@@ -2,6 +2,29 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **26/10 — ~20 ΧΕΙΡΟΓΡΑΦΑ FIXTURES `PublicListing` ΠΑΛΙΩΝΟΥΝ ΣΕ ΚΑΘΕ ΝΕΟ ΠΕΔΙΟ ΤΟΥ ΣΧΗΜΑΤΟΣ** *(ADR-919 §7 · ADR-839 · N.0.2)*
+
+  **Τι:** το `availability` του ADR-919 έριξε 2 σουίτες στο `main` (`TypeError … reading 'kind'`) επειδή το χειρόγραφο fixture το
+  ξέχασε — 4η φορά μετά τα `models`/`videos`/`floorPlates`. Τα fixtures **δεν τυποελέγχονται ποτέ** (`tsconfig` αποκλείει τα
+  `__tests__`, jest = `@swc/jest`). ✅ Το SSoT **υπάρχει** πλέον: `src/test-utils/public-listing-fixture.ts` — έγγραφο v1 μέσα από το
+  `publicListingFromDocument` (η ίδια πόρτα με την παραγωγή) ⇒ νέο πεδίο με κρίκο = μηδέν αλλαγές. Το χρησιμοποιούν ήδη
+  `landing-listing-fixture.ts` (3 σουίτες) + `agency-showcase-listings.test.tsx`.
+  **Θεραπεία:** μετάπτωση των υπολοίπων: `grep -rlE "\): PublicListing \{|: PublicListing = \{|as unknown as PublicListing" src` (~25
+  αρχεία, π.χ. `ListingDetailContent.test` · `LandingShowcase.test` · `listing-map-popup-gallery.test` · `media/__tests__/*`). Ανά
+  αρχείο: κράτα **μόνο** τα πεδία που κρίνει η σουίτα. **Μέγεθος:** > 1h, 4+ αρχεία.
+
+- 🟡 **26/10 — 261 ΣΟΥΙΤΕΣ ΜΟΚΑΡΟΥΝ ΧΕΙΡΟΓΡΑΦΑ ΤΟ `@/lib/firebaseAdmin` (≥8 ΣΧΗΜΑΤΑ) ΕΝΩ Ο VERIFIED FAKE ΥΠΑΡΧΕΙ** *(ADR-845 §10 · ADR-742 §7sexdecies · N.0.2)*
+
+  **Τι:** `getAdminFirestore: () => ({})` (23×) · `({ collection: mockCollection })` (11×) · `() => mockDb` κ.ά. — και μια ομάδα που
+  **δεν** το μοκάρει καθόλου και φτάνει στο αληθινό `getAdminFirestore()` (αποτυγχάνει πλέον αμέσως χάρη στο δίχτυ του
+  `jest.setup.js`, άρα δοκιμάζει μόνο τη διαδρομή «Admin λείπει»): network-messaging (thread-writer · act-team-writer · network-inbox ·
+  act-team-human-change · act-team-departure · thread-fanout) · notification settings store · `listMemberWorkspaces` ·
+  `account-identities` (tour-access-request) · `entity-audit` `resolveUserDisplayName`. Ο **verified fake**
+  `src/test-utils/fake-firestore/` (σουίτα συμβολαίου και στον emulator) υπάρχει ήδη.
+  **Θεραπεία:** **ΕΝΑ** `src/test-utils/admin-firestore-double.ts` (πρότυπο `public-shelf-double.ts`: μία γραμμή import, δένει τον
+  verified fake στο `getAdminFirestore`) → πρώτα η ομάδα «χωρίς mock» (ώστε να ελέγχει τη διαδρομή «Admin υπάρχει»), μετά ratchet
+  στα 261 ανά άγγιγμα. **Μέγεθος:** > 1h, 10+ αρχεία ⇒ απόφαση Giorgio για προτεραιότητα.
+
 - 🔴 **26/10 — Η ΚΑΝΟΝΙΚΟΠΟΙΗΣΗ ΑΝΑΖΗΤΗΣΗΣ ΣΠΑΕΙ ΤΟ ΤΕΛΙΚΟ ΣΙΓΜΑ ΣΤΑ ΚΕΦΑΛΑΙΑ** *(εύρημα ADR-923 §5.10.4 Β2 · N.0.2)*
 
   **Τι:** το `normalizeSearchText` (`src/lib/search/search.ts`) κάνει `stripDiacritics` (που περιέχει `ς→σ`) **πριν** από το
@@ -4186,10 +4209,6 @@
 
 ## Pending tasks (priority order)
 
-### 🔌 Τα unit tests ΜΠΟΡΟΥΝ να φτάσουν πραγματικό Google Cloud με τα ADC του μηχανήματος — κανένα καθολικό δίχτυ (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-25, ADR-845 §10 · N.7.2 #4)
-- **Τι**: όποια σουίτα φτάσει σε `getAdminStorage()` χωρίς double συνδέεται στ' αλήθεια στο GCS (μετρήθηκε: `Initialized with default credentials` → `bucket does not exist`, 4–19 s). Το `src/test-utils/public-shelf-double.ts` κλείνει **τα κεφάλια του ραφιού** (ήταν η αιτία του ~4 s Θ0/Λ1)· **δεν** εμποδίζει την επόμενη σουίτα που θα το ξεχάσει. Σήμερα **0** σουίτες της διαδρομής δημοσίευσης το κάνουν (μετρημένο σε 53).
-- **Fix (πρόταση)**: δίχτυ στο `jest.setup.js` που κάνει το Admin Storage/ADC να **αποτυγχάνει αμέσως και ονομαστικά** σε test (όχι `STORAGE_EMULATOR_HOST` σε κλειστή θύρα — μετρήθηκε ~15 s backoff). Αγγίζει καθολική ρύθμιση όλων των σουιτών ⇒ απόφαση Giorgio.
-
 ### 📐 DXF OCS (210/220/230) για CIRCLE / ARC / TEXT / MTEXT / HATCH — καθρεφτισμένα στοιχεία βγαίνουν ανάποδα (προτεραιότητα ΜΕΣΑΙΑ, 2026-10-25, ADR-635 Φ C.29 · N.0.2)
 - **Τι**: το SSoT `@/lib/dxf/dxf-ocs` (arbitrary axis) υπάρχει πλέον και το χρησιμοποιούν μόνο LWPOLYLINE / 2Δ POLYLINE. Οι υπόλοιπες επίπεδες οντότητες (CIRCLE, ARC, TEXT, MTEXT-εξώθηση, HATCH, ELLIPSE, INSERT) αγνοούν τα 210/220/230 ⇒ με εξώθηση (0,0,−1) (κοινό: MIRROR στο AutoCAD) το κέντρο/σημείο εισαγωγής βγαίνει με αντίθετο X και τα τόξα με ανάποδη φορά. `dxf-point-converter.ts` το αναφέρει ρητά ως «αγνοείται».
 - **Fix**: κάθε converter περνά τα OCS σημεία του από `dxfOcsToWcs` (ARC: και αναστροφή γωνιών για Az.z < 0). 6+ αρχεία σε converters + tests ανά τύπο → όχι επί τόπου (N.0.2 «4+ αρχεία»).
@@ -5150,6 +5169,7 @@ Closed via `hostWall.params.sceneUnits ?? 'mm'` frozen-context pattern σε **4 
 ## Changelog
 
 | Date       | Change |
+| 2026-10-26 | ✅ **ΚΑΘΟΛΙΚΟ ΔΙΧΤΥ ADC ΣΤΑ UNIT TESTS — ΕΚΛΕΙΣΕ (ADR-845 §10, Opus 5.5).** `jest.setup.js`: `GOOGLE_APPLICATION_CREDENTIALS` προς ανύπαρκτο αρχείο ⇒ `initializeApp` αποτυγχάνει σε ~0,1 s αντί για 9,8 s πραγματικού GCS. Απορρίφθηκαν μετρημένα: φράγμα socket (4,9 s / 44 s λόγω retries) · ψεύτικο κλειδί · emulator σε κλειστή θύρα. 255 σουίτες χωρίς mock του Admin: **0 ψευδώς θετικά** (A/B). Αποκαλύφθηκαν 3 σουίτες σε timeout από πραγματικό δίκτυο ⇒ double + `publishShowcaseMark(adminDb, …)` (έγραφε στο καθολικό Firestore). 309 σουίτες / 4.506 tests: κόκκινες μόνο οι 5 προϋπάρχουσες. |
 | 2026-10-25 | ✅ **ΠΡΩΤΟ TEST ΠΟΥ ΑΠΟΘΗΚΕΥΕΙ ΕΝΤΟΛΗ ~4 s — ΕΚΛΕΙΣΕ (ADR-845 §10, Opus 5.5).** Αιτία μετρημένη (cpu-prof ~15 s αδράνεια + χρονομέτρηση ανά κεφάλι): τα **τέσσερα κεφάλια του δημόσιου ραφιού** χτυπούσαν **πραγματικό GCS** με τα ADC του μηχανήματος. ΕΝΑ test double `src/test-utils/public-shelf-double.ts` αντικατέστησε **18** αντίγραφα των ίδιων `jest.mock` (+ οι 2 αργές σουίτες που το είχαν ξεχάσει). Θ0 4–8 s → 15 ms· 22 σουίτες/307 tests πράσινα. Boy Scout: δίδυμο `shelfBucket()` στο `public-shelf-provision.ts`. Νέα γραμμή: καθολικό δίχτυ για ADC σε tests. |
 | 2026-10-19 | ✅ **Ο ΚΑΝΟΝΑΣ ΑΝΑΓΝΩΣΗΣ ΤΗΣ ΔΙΑΘΕΣΗΣ ΕΓΙΝΕ ΕΝΑΣ — ΕΚΛΕΙΣΑΝ ΔΥΟ ΓΡΑΜΜΕΣ (ADR-777 §8.60.20.12, Opus 5.5).** (1) «02/09 — η διάθεση μπαίνει στο δημόσιο σχήμα με ωμό `as`» (ADR-842 Φ5): η προβολή γράφει πλέον `resolveCommercialStatus(property) ?? DEFAULT_COMMERCIAL_STATUS`. Οι τρεις προϋποθέσεις της γραμμής εκπληρώθηκαν: μέτρηση ζωντανά (19/19 ακίνητα, 19/19 αγγελίες ήδη κανονικά ⇒ καμία δημόσια τιμή δεν άλλαξε) · άγκυρα Δ1–Δ4 στο `public-listing-projection.test.ts` (μετάλλαξη: 8 κόκκινα) · καταναλωτής φίλτρου (`operationalStatusForListing`) πάνω στο υπερσύνολο, άρα καλύπτει τις επτά. (2) «19/10 — `commercialStatus ?? status` χειρόγραφο σε 8 σημεία»: και τα 7 σημεία κώδικα ζητούν το `resolveCommercialStatus` (`PropertyStatusLegend` · `PropertyQuickView` · `ListLayout` · `price-resolver` · `public-listing-projection` ×3) + το σχόλιο του `property-completion-stance`. ⚠️ Διόρθωση: η γραμμή έγραφε ότι αγγίζει «το mirror των Cloud Functions ⇒ deploy». **Ψευδές**: δεν υπάρχει καθρέφτης του `public-listing-projection` στο `functions/`. Jest σχετικών φακέλων 156 σουίτες / 3.012 tests πράσινα. |
 | 2026-10-16 | ✅ **ΜΗΝΥΜΑΤΑ ΑΡΝΗΣΗΣ ΠΕΡΙΟΔΟΥ ΣΕ ΕΛΛΗΝΙΚΟ ΚΕΙΜΕΝΟ — ΕΚΛΕΙΣΕ (ADR-ACC-010 §2.1.1 Φάση 7, Opus 5.5).** ΕΝΑ λεξιλόγιο `POSTING_PERIOD_DENIALS` (τράπεζα με `satisfies`, αποσβέσεις χωρίς `PERIOD_NOT_OPEN`) · ΕΝΑΣ κανόνας `postingPeriodDenialOf` · `ApiError(409, …, denial, details)` · κείμενο + ετικέτα μήνα (CLDR) στον πελάτη, el+en · `FiscalPeriod.label` αφαιρέθηκε. Βρέθηκε και διορθώθηκε: ομαδικό ταίριασμα τράπεζας ⇒ `PERIOD_CLOSED` για ανύπαρκτη περίοδο. Μεταλλάξεις 8/8. |

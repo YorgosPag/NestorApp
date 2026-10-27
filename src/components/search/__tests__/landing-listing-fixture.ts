@@ -14,42 +14,25 @@
  */
 
 import type { PublicListing } from '@/types/public-listing';
-import { UNDECLARED_LISTING_OBJECTIVE_VALUE } from '@/lib/objective-value/objective-value-declarations';
+import { publicListingFixture } from '@/test-utils/public-listing-fixture';
 
 export type LandingOfferKind = PublicListing['offerKinds'][number];
 
+/**
+ * 🔴 **Μόνο ό,τι διαφέρει μεταξύ των αγγελιών της σελίδας** — όλα τα άλλα πεδία τα δίνει το σύνορο ανάγνωσης
+ * (`publicListingFixture`). Μέχρι 2026-10-26 εδώ ζούσε χειρόγραφο αντίγραφο του σχήματος με `as unknown as`, που
+ * ξέχασε το `availability` του ADR-919 ⇒ `TypeError … reading 'kind'` στην κάρτα, και οι σουίτες κόκκινες στο `main`.
+ */
 export function landingListing(
   id: string,
   offerKinds: readonly LandingOfferKind[],
   mapped: boolean,
 ): PublicListing {
-  return {
-    id,
+  return publicListingFixture(id, {
     title: `Τ-${id}`,
-    gallery: [],
-    floorplans: [],
-    // Οι υποχρεωτικοί πίνακες μέσων του `PublicListing`: χωρίς αυτούς το `presentableModels` πετά.
-    models: [],
-    videos: [],
-    floorPlates: [],
-    terrain: null,
-    coverImage: null,
-    authorship: 'owner-declared',
-    commercial: { askingPrice: 100000, finalPrice: null, rentPrice: null, nightlyRate: null },
-    commercialStatus: 'for-sale',
     offerKinds,
     position: mapped
       ? { kind: 'known', provenance: 'manual', point: { lat: 38, lng: 23 }, outline: null }
       : { kind: 'unknown', reason: 'owner-declined' },
-    areaSqm: 90,
-    floor: null,
-    bedrooms: null,
-    legality: [],
-    agencyName: null,
-    agencyId: null,
-    availabilityTrack: null,
-    priceReduction: null,
-    objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
-    levelAreas: null,
-  } as unknown as PublicListing;
+  });
 }

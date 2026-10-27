@@ -20,7 +20,7 @@
  * μήνυμα διάλεξε η οθόνη;»*, όχι *«πώς μεταφράστηκε»* — εκείνο το φυλά η CHECK 3.8.
  */
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import React from 'react';
 
 import { AgencyProfileContent } from '../AgencyProfileContent';
@@ -30,8 +30,8 @@ import { formatLongDate } from '@/lib/intl-formatting';
 import type { PublicShowcase } from '@/types/agency-profile';
 import type { ShowcaseLocation } from '@/types/showcase-card';
 import { legalIdentityFixture, showcaseFixture, TRADE_CREDENTIAL } from '@/lib/agency/__fixtures__/showcase-fixture';
-import { UNASKED_LISTING_ATTRIBUTES, type PublicListing } from '@/types/public-listing';
-import { UNDECLARED_LISTING_OBJECTIVE_VALUE } from '@/lib/objective-value/objective-value-declarations';
+import type { PublicListing } from '@/types/public-listing';
+import { publicListingFixture } from '@/test-utils/public-listing-fixture';
 
 const ALFA = 'comp_alfa';
 
@@ -102,46 +102,18 @@ jest.mock('@/services/realtime/hooks/usePublicListings', () => ({
 
 const LISTINGS_REF: { current: typeof listingsState } = { current: listingsState };
 
+/**
+ * 🔑 Μόνο ό,τι κρίνει αυτή η σουίτα (γραφείο · ταυτότητα · τίτλος). Τα υπόλοιπα πεδία τα δίνει το σύνορο ανάγνωσης
+ * (`publicListingFixture`) — το χειρόγραφο αντίγραφο του σχήματος που ζούσε εδώ ήταν μία από τις λίστες που
+ * παλιώνουν σε κάθε νέο πεδίο (ADR-919 §7, 2026-10-26).
+ */
 function listingOf(id: string, title: string): PublicListing {
-  return {
-    id,
+  return publicListingFixture(id, {
     title,
-    projectedAt: '2026-09-01T09:28:43.769Z',
-    listedAt: { kind: 'unknown', reason: 'predates-record' },
-    // ADR-919 §7 — ποτέ απόν στο σχήμα· `unknown` = η κάρτα σιωπά για την παράδοση (§11).
-    availability: { kind: 'unknown' },
-    availabilityTrack: null,
-    priceReduction: null,
-    objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
-    levelAreas: null,
-    commercialStatus: 'for-sale',
-    commercial: { askingPrice: 200000, finalPrice: null, rentPrice: null, nightlyRate: null },
-    stay: null,
-    exchange: null,
-    coverImage: null,
-    gallery: [],
-    // ADR-777 — το σήμα χωρικών μέσων της κάρτας διαβάζει τα ράφια· κενά = κανένα σήμα.
-    models: [],
-    videos: [],
-    floorPlates: [],
-    tour: null,
-    type: 'apartment',
-    areaSqm: 90,
-    offerKinds: ['sell'],
-    position: { kind: 'unknown', reason: 'never-asked' },
-    place: null,
-    adminArea: null,
-    floor: null,
-    bedrooms: null,
-    // ✅ **ADR-842 Φ3** — τα 23 χαρακτηριστικά, ως **μία** ονομασμένη απουσία.
-    //    Οκτώ fixtures θα κρατούσαν ο καθένας τη δική του λίστα `null` — δηλαδή οκτώ
-    //    λίστες που συμφωνούν μέχρι την πρώτη προσθήκη πεδίου.
-    ...UNASKED_LISTING_ATTRIBUTES,
-    legality: [],
     authorship: 'agency',
     agencyName: PROFILE.displayName,
     agencyId: ALFA,
-  };
+  });
 }
 
 function paint(state: Partial<typeof listingsState>, profile: PublicShowcase = PROFILE): void {
@@ -311,12 +283,24 @@ describe('Κ. Κλειστή στο ΓΕΜΗ (ADR-841 §7 Α23.8)', () => {
     PROFILE_KEYS.cardEmailConfirmedOn,
   ] as const;
 
+  /**
+   * 🔴 **Μέτρηση ΜΕΣΑ στις κάρτες, όχι σε όλη τη σελίδα** (2026-10-26). Το ADR-896 §6 έβαλε **σωστά** την ίδια
+   * υπόδειξη «μόνο περιοχή» και στο γεγονός «Έδρα» — και το `getAllByText` σε όλη τη σελίδα μετρούσε 3 αντί για 2.
+   * Το ερώτημα της σουίτας είναι *«φαίνονται και τα δύο καταστήματα;»*, άρα μετριέται στην ενότητα των καρτών.
+   */
+  const expectEveryCardAreaOnly = (): void => {
+    const contact = screen.getByRole('region', { name: PROFILE_KEYS.cardTitle });
+    const cards = within(contact).getAllByRole('article');
+    expect(cards).toHaveLength(2);
+    for (const card of cards) expect(within(card).getByText(PROFILE_KEYS.cardAreaOnly)).toBeInTheDocument();
+  };
+
   it('🔴 Κ1 — κλειστή ⇒ ούτε «Εμφάνιση», ούτε «Αποθήκευση επαφής», ούτε μεσιτική υπενθύμιση — σε ΚΑΝΕΝΑ σημείο', () => {
     paint({ listings: [] }, showcaseWith('2026-09-14T11:00:00.000Z'));
 
     for (const key of CHANNEL_KEYS) expect(screen.queryByText(key)).not.toBeInTheDocument();
     // 🔑 Η σελίδα ΜΕΝΕΙ (GBP): και τα δύο καταστήματα με τη διεύθυνσή τους, και η ιστοσελίδα.
-    expect(screen.getAllByText(PROFILE_KEYS.cardAreaOnly)).toHaveLength(2);
+    expectEveryCardAreaOnly();
     expect(screen.getByText('alfa.gr')).toBeInTheDocument();
   });
 
@@ -326,7 +310,7 @@ describe('Κ. Κλειστή στο ΓΕΜΗ (ADR-841 §7 Α23.8)', () => {
 
     for (const key of CHANNEL_KEYS) expect(screen.queryAllByText(key).length).toBeGreaterThan(0);
     expect(screen.getAllByText(PROFILE_KEYS.cardShowPhone)).toHaveLength(2);
-    expect(screen.getAllByText(PROFILE_KEYS.cardAreaOnly)).toHaveLength(2);
+    expectEveryCardAreaOnly();
     expect(screen.getByText(PROFILE_KEYS.requestCta)).toBeInTheDocument();
   });
 
