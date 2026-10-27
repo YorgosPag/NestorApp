@@ -2,6 +2,7 @@
  * ADR-923 §5.10.4 Β5 — ο βρόχος επανυπολογισμού με **γενιές** (σφάλμα που βρέθηκε ζωντανά 2026-10-26: μετά από
  * «Ολοκληρώθηκε», δεύτερη αλλαγή γλωσσών δεν ξαναπρότεινε επανυπολογισμό).
  */
+import { StrictMode } from 'react';
 import { act, renderHook } from '@testing-library/react';
 
 import { useCatalogRecompute } from '../useCatalogRecompute';
@@ -68,5 +69,17 @@ describe('useCatalogRecompute', () => {
     await act(async () => { first.resolve({ processed: 25, rejected: 0, nextCursor: 'p:x' }); await running; });
     expect(result.current.state).toEqual({ kind: 'failed', processed: 25 });
     expect(result.current.needed).toBe(true);
+  });
+});
+
+describe('ADR-923 §5.10.5 — ζωντανό: «Επανυπολογισμός… 0 σύνολα» για πάντα', () => {
+  it('🔴 effects που ξανατρέχουν (StrictMode · Fast Refresh · Activity) ⇒ ο βρόχος ΟΛΟΚΛΗΡΩΝΕΤΑΙ, δεν μένει σε «running»', async () => {
+    recompute
+      .mockResolvedValueOnce({ processed: 1, rejected: 0, nextCursor: 'p:' })
+      .mockResolvedValueOnce({ processed: 1, rejected: 0, nextCursor: null });
+    const { result } = renderHook(() => useCatalogRecompute(), { wrapper: StrictMode });
+    await act(() => result.current.run(null));
+    expect(recompute).toHaveBeenCalledTimes(2);
+    expect(result.current.state).toEqual({ kind: 'done', processed: 2, rejected: 0 });
   });
 });

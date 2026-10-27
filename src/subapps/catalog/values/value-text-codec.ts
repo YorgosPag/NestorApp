@@ -89,9 +89,14 @@ function unitSuffix(compact: string, units: readonly UnitDef[]): { readonly unit
   return distinct.size === 1 ? loose[0] : null;
 }
 
+/** Γυμνός αριθμός (χωρίς μονάδα) ⇒ διαβάζεται στην **προεπιλεγμένη** μονάδα της ιδιότητας. Μία απάντηση για ανάγνωση και οθόνη. */
+export function isBareAmountText(text: string): boolean {
+  return /^[-−+]?[\d.,]+$/.test(unitForm(text.trim()));
+}
+
 function measurementParts(attribute: Attr<'measurement'>, text: string, ctx: ValueTextContext): { amountText: string; unitCode: string } | null {
   const compact = unitForm(text.trim());
-  if (/^[-−+]?[\d.,]+$/.test(compact)) return { amountText: compact, unitCode: attribute.config.defaultUnitCode };
+  if (isBareAmountText(text)) return { amountText: compact, unitCode: attribute.config.defaultUnitCode };
   const match = unitSuffix(compact, ctx.registry.get(attribute.config.measurementFamilyCode)?.units ?? []);
   return match ? { amountText: compact.slice(0, compact.length - match.form.length), unitCode: match.unit.code } : null;
 }

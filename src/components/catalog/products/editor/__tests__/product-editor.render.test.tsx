@@ -73,7 +73,7 @@ function renderField(holder: CatalogValueHolder, over: Partial<React.ComponentPr
   const onOpen = jest.fn();
   render(
     <TooltipProvider>
-      <AttributeValueField attributeId="cooling_h" attribute={record('cooling_h')} required isAxis={false} holder={holder}
+      <AttributeValueField attributeId="cooling_h" attribute={record('cooling_h')} required isAxis={false} holder={holder} saved={holder}
         resolved={resolveInheritedValues(mfpChain(MFP_VARIANTS[0], 0), scheme)} inheritedFrom={null}
         scope={{ channel: 'print', locale: 'el' }} env={env} issues={[]} disabled={false} onHolder={onHolder} onOpen={onOpen} {...over} />
     </TooltipProvider>,
@@ -88,6 +88,20 @@ describe('AttributeValueField', () => {
     fireEvent.change(input, { target: { value: '2,5 kW' } });
     fireEvent.keyDown(input, { key: 'Enter' });
     expect(onHolder).toHaveBeenCalledWith(expect.objectContaining({ values: { cooling_h: { '*': { '*': { type: 'measurement', amount: '2.5', unitCode: 'kW' } } } } }));
+  });
+
+  it('🔴 ζωντανό (ADR-923 §5.10.5): «1800 W» ΔΕΝ συνοδεύεται από «kW» — η ένδειξη = η μονάδα που ΥΠΟΘΕΤΕΙ ο γυμνός αριθμός', () => {
+    renderField(MFP_VARIANTS[0]);
+    const input = screen.getByLabelText('Ψυκτική ισχύς H') as HTMLInputElement;
+    expect(input.value).toMatch(/W$/);
+    expect(screen.queryByText('kW')).toBeNull();
+    fireEvent.change(input, { target: { value: '2,5' } });
+    expect(screen.getByText('kW')).toBeTruthy();
+  });
+
+  it('κενό πεδίο ⇒ η ένδειξη λέει σε ποια μονάδα θα διαβαστεί ο αριθμός', () => {
+    renderField({ values: {}, noValueReasons: {}, categoryIds: [] });
+    expect(screen.getByText('kW')).toBeTruthy();
   });
 
   it('🔴 απορριπτέο κείμενο ⇒ ΚΑΜΙΑ δέσμευση, μήνυμα δίπλα, το κείμενο μένει', () => {
@@ -107,6 +121,19 @@ describe('AttributeValueField', () => {
     const next = onHolder.mock.calls[0][0] as CatalogValueHolder;
     expect(next.noValueReasons).toEqual({ cooling_h: 'notApplicable' });
     expect(next.values.cooling_h).toBeUndefined();
+  });
+
+  it('🔴 ζωντανό (ADR-923 §5.10.5): ο ΑΞΟΝΑΣ είναι μόνο ανάγνωση, με λόγο — η τιμή του είναι η ταυτότητα της παραλλαγής', () => {
+    renderField(MFP_VARIANTS[0], { attributeId: 'size', attribute: record('size'), isAxis: true });
+    expect(screen.getByRole('combobox', { name: 'Μέγεθος' }).hasAttribute('disabled')).toBe(true);
+    expect(screen.getByText('values.axisLocked')).toBeTruthy();
+  });
+
+  it('🔴 ζωντανό (ADR-923 §5.10.5): 422 «η τιμή χρησιμοποιείται ήδη» ⇒ σύνδεσμος στο προϊόν που ΤΗΝ ΕΧΕΙ (ο διακομιστής στέλνει holderId)', async () => {
+    const issues = [{ code: 'uniqueValueTaken' as const, path: 'values.cooling_h', params: { holderId: 'cprod_owner' } }];
+    const { onOpen } = renderField(MFP_VARIANTS[0], { issues });
+    await userEvent.click(screen.getByRole('button', { name: 'values.openHolder' }));
+    expect(onOpen).toHaveBeenCalledWith('cprod_owner');
   });
 
   it('κληρονομημένη: τιμή γκρι + «Ορίζεται στο …» ανοίγει τον πρόγονο · κανένα πεδίο επεξεργασίας', async () => {

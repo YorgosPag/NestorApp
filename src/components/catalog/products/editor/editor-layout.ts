@@ -14,6 +14,11 @@ import type { CatalogFamilyDefinition, VariantScheme } from '@/subapps/catalog/t
 import { attributeOwnerDepth, isAxisOf } from '@/subapps/catalog/values/attribute-levels';
 import type { CatalogChannel } from '@/subapps/catalog/vocabulary/channels';
 
+/** Η ιδιότητα ενός ευρήματος πεδίου (`values.<id>…` · `noValueReasons.<id>`) — `null` για ό,τι δεν είναι πεδίο. */
+export function attributeIdOfIssuePath(path: string): string | null {
+  return /^(?:values|noValueReasons)\.([^.[]+)/.exec(path)?.[1] ?? null;
+}
+
 export interface EditorFieldPlan {
   readonly attributeId: string;
   readonly attribute: AttributeRecord;

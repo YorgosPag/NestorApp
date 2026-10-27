@@ -29,6 +29,7 @@
  * @see ADR-787 Φάση Β — η διόρθωση προηγείται της μετανάστευσης, χωριστά
  */
 
+import { StrictMode } from 'react';
 import { renderHook, act } from '@testing-library/react';
 
 import { useScanQueue } from '../useScanQueue';
@@ -164,5 +165,24 @@ describe('Σ4 — όσο λείπει το extractedData', () => {
 
     expect(result.current.items[0].status).toBe('pending');
     expect(onSuccess).not.toHaveBeenCalled();
+  });
+});
+
+describe('ADR-923 §5.10.5 (Boy Scout) — «ζει ακόμα;» μέσω του SSoT `useMountedRef`', () => {
+  it('🔴 effects που ξανατρέχουν (StrictMode · Fast Refresh) ⇒ η σάρωση ΟΛΟΚΛΗΡΩΝΕΤΑΙ — όχι σιωπηλή διακοπή του polling', async () => {
+    respondWith((url) =>
+      url.includes('/scan') ? scanAccepted('q1') : quoteBody({ vendorName: { value: 'ΑΦΟΙ Π.' } }),
+    );
+    const onSuccess = jest.fn();
+    const { result } = renderHook(() => useScanQueue({ onSuccess }), { wrapper: StrictMode });
+
+    await act(async () => {
+      const inFlight = result.current.enqueue(file);
+      await jest.advanceTimersByTimeAsync(POLL_MS + 50);
+      await inFlight;
+    });
+
+    expect(result.current.items[0].status).toBe('success');
+    expect(onSuccess).toHaveBeenCalledWith('q1');
   });
 });

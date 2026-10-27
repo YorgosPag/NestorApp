@@ -11,6 +11,7 @@ import {
   mergeListRows,
   modelRow,
   productRow,
+  recordIdentifier,
   rowCompleteness,
   rowIdentifier,
   rowMatches,
@@ -67,6 +68,14 @@ describe('στήλες', () => {
   it('κωδικός: του μοντέλου · αναγνωριστικό του SKU', () => {
     expect(rowIdentifier(modelRow(model('mfp_tm')))).toBe('mfp_tm');
     expect(rowIdentifier(productRow(product('cprod_x')))).toBe('016-15-001');
+  });
+
+  it('🔴 ζωντανό (ADR-923 §5.10.5): απλό προϊόν ΧΩΡΙΣ κωδικό ⇒ null (η οθόνη λέει «χωρίς κωδικό» — όχι κενό, όχι UUID) · ΕΝΑΣ κανόνας για λίστα και breadcrumb', () => {
+    const bare = product('cprod_new');
+    const unnamed = { ...bare, derived: { ...bare.derived, identifier: null } } as ProductRecord;
+    expect(rowIdentifier(productRow(unnamed))).toBeNull();
+    expect(recordIdentifier(unnamed)).toBeNull();
+    expect(recordIdentifier(model('mfp_tm'))).toBe('mfp_tm');
   });
 
   it('πληρότητα: μοντέλο «5/7» με τόνο · SKU ποσοστό (3/4 = 75%) · κανάλι χωρίς τη γλώσσα ⇒ null', () => {

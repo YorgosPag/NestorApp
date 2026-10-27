@@ -89,6 +89,7 @@ export const CATALOG_ISSUE_CODES = [
   'tableKeyMissing',
   'axisValueMissing',
   'axisComboDuplicate',
+  'axisValueImmutable',
   'noValueConflict',
   'noValueOnAxis',
   // ── μοντέλα / προϊόντα / μέσα / ρυθμίσεις ──
@@ -123,6 +124,24 @@ export const CATALOG_ISSUE_CODES = [
   // ── Φάση 2δ: δήλωση δικαιωμάτων μέσου (ADR-923 §5.10.4) ──
   'rightsCreatorRequired',
   'rightsTermDateRequired',
+  // ── Φάση 3: τιμοκατάλογοι, ομάδες έκπτωσης, συνθήκες (ADR-923 §5.11) ──
+  'priceAmountInvalid',
+  'priceQuantityInvalid',
+  'priceLineSubjectDuplicate',
+  'discountGroupNotAccepted',
+  'costBreakdownRequired',
+  'costBreakdownNotAllowed',
+  'costBreakdownMismatch',
+  'discountStepInvalid',
+  'discountTiersRequired',
+  'discountTierMinInvalid',
+  'discountTierDuplicate',
+  'discountTiersNotMonotonic',
+  'validityRangeInverted',
+  'discountConditionAmbiguous',
+  'versionNotDraft',
+  'versionValidFromRequired',
+  'versionValidFromNotAfterPrevious',
 ] as const;
 
 export type CatalogIssueCode = (typeof CATALOG_ISSUE_CODES)[number];

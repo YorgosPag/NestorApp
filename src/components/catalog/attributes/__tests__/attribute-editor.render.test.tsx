@@ -16,6 +16,7 @@ import { AttributeEditor } from '../AttributeEditor';
 
 jest.setTimeout(60_000);
 
+jest.mock('@/auth/hooks/useCapability', () => ({ useCapability: () => ({ pending: false, verdict: 'granted-by-role' }) }));
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'el' } }),
 }));

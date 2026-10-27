@@ -42,8 +42,19 @@ export function writeHolderValue<H extends CatalogValueHolder>(
   return { ...holder, values, noValueReasons };
 }
 
-/** Δήλωσε (ή άρε με `null`) «δεν εφαρμόζεται» / «άγνωστο» — σβήνει **όλες** τις τιμές της ιδιότητας (Δ5). */
-export function writeNoValueReason<H extends CatalogValueHolder>(holder: H, attributeId: string, reason: NoValueReason | null): H {
-  if (reason === null) return { ...holder, noValueReasons: withoutKey(holder.noValueReasons, attributeId) };
-  return { ...holder, values: withoutKey(holder.values, attributeId), noValueReasons: { ...holder.noValueReasons, [attributeId]: reason } };
+/**
+ * Δήλωσε (ή άρε με `null`) «δεν εφαρμόζεται» / «άγνωστο» — σβήνει **όλες** τις τιμές της ιδιότητας (Δ5).
+ * Η **άρση** επαναφέρει τις τιμές του `saved` (ο αποθηκευμένος φορέας): ο διακόπτης **αντιστρέφεται** — ζωντανά
+ * (ADR-923 §5.10.5) «Άγνωστο» → ξανά «Άγνωστο» άφηνε κενό το 4500 W, και η αποθήκευση θα το έσβηνε οριστικά.
+ */
+export function writeNoValueReason<H extends CatalogValueHolder>(holder: H, attributeId: string, reason: NoValueReason | null, saved: CatalogValueHolder | null): H {
+  if (reason !== null) {
+    return { ...holder, values: withoutKey(holder.values, attributeId), noValueReasons: { ...holder.noValueReasons, [attributeId]: reason } };
+  }
+  const restored = holder.values[attributeId] ? undefined : saved?.values[attributeId];
+  return {
+    ...holder,
+    values: restored ? { ...holder.values, [attributeId]: restored } : holder.values,
+    noValueReasons: withoutKey(holder.noValueReasons, attributeId),
+  };
 }

@@ -10,6 +10,7 @@
 
 | Date | Changes |
 |------|---------|
+| 2026-10-26 | 🔴 **Απόκλιση ADR ↔ κώδικα στην εφαρμογή εκπτώσεων FWA (Phase 5.5)**, μετρημένη στην αναγνώριση της ADR-923 Φάσης 3 (§5.11 Α1–Α4): float αριθμητική · έκπτωση **πάνω στον ΦΠΑ** · εύρος υλικών/ΑΤΟΕ που δεν διαβάζεται · `[]` = «όλα» αντίθετα με το «`[]`=none» αυτού του ADR. Μόνο τεκμηρίωση εδώ· η διόρθωση γίνεται στην ADR-923 Φάση 3γ (FWA πάνω στη μία μηχανή `src/lib/pricing/`). |
 | 2026-10-04 | 🔴 **Η καρτέλα «Προμήθειες» του έργου είναι ΣΥΝΔΕΣΜΟΣ, όχι component που ανακατευθύνει.** Το `ProcurementProjectTab` έκανε `router.replace` μέσα σε `useEffect`. Ο `UniversalTabsRenderer` κρατά κάθε καρτέλα που άνοιξε μία φορά στημένη (`forceMount`), οπότε στο πέρασμα πρόχειρο → πραγματικό έργο το component στηνόταν **κρυμμένο** και πετούσε τον άνθρωπο στο `/procurement/overview` χωρίς να το ζητήσει (μετρημένο ζωντανά). Τώρα: `href` στο `project-tabs-config` (πλοήγηση **στο κλικ**, πρότυπο Procore)· πρόχειρο έργο ⇒ η καρτέλα **ανενεργή**. Το `ProcurementProjectTab.tsx` **διαγράφηκε**. Νέο `getProjectProcurementUrl(projectId, section)` στο `lib/navigation/procurement-urls.ts` — το χρησιμοποιούν η καρτέλα και το `ProjectProcurementTabs` (έφυγαν 4 inline templates). Μηχανισμός: ADR-328. |
 | 2026-05-04 | ✅ **Phase C.3 — CF DEPLOYED** — `materialPriceSyncOnPODelivery` deployed to Firebase production (us-central1, Node.js 22, 1st Gen). Commit `da037920`. Phase 4.5 ora fully operational end-to-end. |
 | 2026-05-04 | ✅ **Phase C.1 + C.2 IMPLEMENTED** — Hardening server-side di Phase 4.5 + 5.5. **C.1 (Phase 4.5 → Cloud Function):** `materialPriceSyncOnPODelivery` su `onUpdate('purchase_orders/{poId}')`. Pure helpers `shouldTriggerSync` + `computeNewAvgPrice` testati (11 tests). Route-layer `services/procurement/material-price-sync.ts` rimosso — CF è SSoT canonico. **C.2 (Phase 5.5 → server-side validation in API route):** `loadAndComputeFaDiscount` chiamato in `createPO` + `updatePO` (procurement-service); 4 campi FA dal DTO ignorati e ricalcolati lato server da `framework_agreements`. Pure helpers `computeGrossTotal` + `computeFaDiscountFields` testati (20 tests). Tamper-proof: client non può falsificare `faDiscountPercent`. CF rejected per Phase 5.5 (request-time validation più veloce e standard SAP/Oracle/Procore). |
@@ -588,6 +589,14 @@ Sostituisce l'attuale `ProcurementProjectTab.tsx` (oggi 22 LOC, solo `RfqList`).
 - Flat discount: `grossTotal × discountPercent/100`
 - Volume breakpoints: highest `thresholdEur ≤ grossTotal` wins
 - Picks **first** matching FA (no "best" selection logic — vincolo locked dai test)
+
+> ⚠️ **Μετρημένο 2026-10-26 (ADR-923 §5.11 — ο κώδικας κερδίζει, το ADR διορθώνεται):**
+> (Α1) αριθμητική **float** σε ευρώ, όχι ακέραια λεπτά· «πρώτη που ταιριάζει» = εξάρτηση από τη σειρά ερωτήματος.
+> (Α2) 🔴 το `computeGrossTotal` είναι υποσύνολο **+ ΦΠΑ** ⇒ η έκπτωση εφαρμόζεται **και πάνω στον ΦΠΑ**, ο ΦΠΑ δεν ξαναϋπολογίζεται και το
+> `PO.total` μένει προ έκπτωσης· μόνο το `netTotal` την κουβαλά.
+> (Α3) 🔴 `applicableMaterialIds` / `applicableAtoeCategoryCodes` **αποθηκεύονται αλλά δεν διαβάζονται** στην επίλυση.
+> (Α4) η γραμμή «`[]`=none» παραπάνω **δεν** ισχύει: ο κώδικας (`length > 0`) κάνει το `[]` = **όλα**.
+> Διόρθωση στη ρίζα στην ADR-923 Φάση 3γ: η FWA γίνεται προσαρμογέας της **μίας** μηχανής εκπτώσεων (`src/lib/pricing/`).
 
 **Files NEW Phase C.2 (3):** `src/lib/procurement/recompute-fa-discount.ts`, `recompute-fa-discount-pure.ts`, `__tests__/recompute-fa-discount.test.ts` (20 tests).
 

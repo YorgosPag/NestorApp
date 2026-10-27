@@ -117,7 +117,14 @@ function useOwnWrites() {
 function useConfirmed<T extends CatalogRecordLike>(records: readonly T[]) {
   const [confirmed, setConfirmed] = useState<ReadonlyMap<string, T>>(new Map());
   useEffect(() => {
-    setConfirmed((prev) => (prev.size === 0 ? prev : stillAhead(prev, records)));
+    // Ίδια αναφορά όταν τίποτα δεν «έφτασε» (το `stillAhead` μόνο αφαιρεί ⇒ ίδιο μέγεθος = ίδιο περιεχόμενο): οι καλούντες
+    // περνούν ΝΕΟ πίνακα σε κάθε render (`[input.root]`) ⇒ νέο Map εδώ = νέο render = βρόχος, όσο η απάντηση προηγείται
+    // του στιγμιοτύπου (ADR-923 §5.10.5 — «Maximum update depth» σε αργό δίκτυο).
+    setConfirmed((prev) => {
+      if (prev.size === 0) return prev;
+      const next = stillAhead(prev, records);
+      return next.size === prev.size ? prev : next;
+    });
   }, [records]);
   const confirm = useCallback((record: T) => setConfirmed((prev) => new Map(prev).set(record.id, record)), []);
   return { confirmed, confirm };

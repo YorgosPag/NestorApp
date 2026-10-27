@@ -67,9 +67,12 @@ function identityColumns(ctx: ProductListContext, w: ProductListWords): Column[]
   const kindLabel = (row: CatalogListRow) => w.t(row.kind === 'model' ? 'products.kind.productModel' : 'products.kind.product');
   return [
     { ...header('image', w), width: 'xs', text: () => '',
-      render: (row) => { const file = imageFileOf(row, ctx); return file ? <FileThumbnail file={file} displayName={rowIdentifier(row)} size="xs" /> : null; } },
-    { ...header('identifier', w), width: 'md', sticky: true, text: rowIdentifier,
-      render: (row) => <span className="font-mono text-xs">{rowIdentifier(row)}</span> },
+      render: (row) => { const file = imageFileOf(row, ctx); return file ? <FileThumbnail file={file} displayName={rowIdentifier(row) ?? ''} size="xs" /> : null; } },
+    { ...header('identifier', w), width: 'md', sticky: true, text: (row) => rowIdentifier(row) ?? '',
+      render: (row) => {
+        const identifier = rowIdentifier(row);
+        return identifier ? <span className="font-mono text-xs">{identifier}</span> : <span className="text-xs italic text-muted-foreground">{w.t('products.noIdentifier')}</span>;
+      } },
     { ...header('label', w), width: 'lg', text: (row) => rowLabel(row) ?? '' },
     { ...header('family', w), width: 'md',
       text: (row) => { const family = ctx.families.get(row.record.familyId); return family ? w.text(family.labels, family.code) : ''; } },

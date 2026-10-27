@@ -273,6 +273,11 @@
         "title": "Energy performance certificate",
         "lead": "Visitors see the energy class, the energy use and the emissions, as written on your certificate."
       },
+      "terrain": {
+        "title": "Survey and relief",
+        "lead": "Upload the plot's topographic survey: buyers will see a contour and slope map, the elevation difference and which way the ground falls — what decides what can be built.",
+        "loading": "Loading the survey import…"
+      },
       "objectiveValue": {
         "title": "Objective value",
         "lead": "Buyers see the objective value as the law defines it. Every answer here narrows it, from a range to a single amount."

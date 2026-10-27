@@ -16,7 +16,7 @@ import { useCatalogReferenceLookup } from '@/hooks/catalog/useCatalogReferenceLo
 import { replaceCatalogDefinition, type ProductModelRecord, type ProductRecord } from '@/services/catalog/catalog-api.client';
 import { chainOf } from '@/subapps/catalog/aggregate/aggregate-model';
 import { editAggregate, modelDefinitionOf, productDefinitionOf, referenceTargetsOf, schemaSnapshotOf } from '@/subapps/catalog/aggregate/edit-aggregate';
-import { judgeAggregate, memberPath } from '@/subapps/catalog/aggregate/judge-aggregate';
+import { judgeAggregate, localizeMemberIssues, memberPath } from '@/subapps/catalog/aggregate/judge-aggregate';
 import type { StoredMemberShape } from '@/subapps/catalog/aggregate/aggregate-members';
 import { computeCompleteness } from '@/subapps/catalog/completeness/compute-completeness';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
@@ -63,7 +63,7 @@ function optimisticHolder(record: HolderRecord, draft: HolderDefinition): Holder
 /** Ευρήματα **αυτού** του μέλους χωρίς το πρόθεμα `variants.<id>.` (οι διαδρομές των πεδίων του φορέα). */
 function memberIssues(issues: readonly CatalogIssue[], id: string): CatalogIssue[] {
   const prefix = `${memberPath(id)}.`;
-  return issues.filter((issue) => issue.path.startsWith(prefix)).map((issue) => ({ ...issue, path: issue.path.slice(prefix.length) }));
+  return localizeMemberIssues(issues.filter((issue) => issue.path.startsWith(prefix)), id);
 }
 
 /** Το σχήμα παραλλαγών του συνόλου: της ρίζας (μοντέλα) · `null` για απλό προϊόν. */
@@ -99,7 +99,8 @@ export function useProductEditor(input: ProductEditorInput) {
   const editor = useDefinitionDraft<HolderDefinition>(base, record.id, settled.revision);
   useEffect(() => reportDirty(editor.unsaved), [editor.unsaved, reportDirty]);
   const judgement = useJudgement(input, editor.draft);
-  const issues = useMemo(() => [...(judgement?.own ?? []), ...editor.serverIssues], [judgement, editor.serverIssues]);
+  // Του διακομιστή: ίδια μετατροπή διαδρομής με του πελάτη ⇒ το 422 της κράτησης φτάνει ΣΤΟ πεδίο.
+  const issues = useMemo(() => [...(judgement?.own ?? []), ...localizeMemberIssues(editor.serverIssues, record.id)], [judgement, editor.serverIssues, record.id]);
 
   const save = () => {
     const draft = editor.draft;
@@ -112,5 +113,6 @@ export function useProductEditor(input: ProductEditorInput) {
     });
   };
 
-  return { editor, judgement, issues, save, record: settled, pending: ops.pendingKeys.has(record.id) };
+  // `saved` = ο ζωντανός ορισμός: εκεί επιστρέφει ο διακόπτης «δεν εφαρμόζεται / άγνωστο» όταν αίρεται.
+  return { editor, saved: base, judgement, issues, save, record: settled, pending: ops.pendingKeys.has(record.id) };
 }

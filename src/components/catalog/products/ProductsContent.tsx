@@ -63,14 +63,13 @@ interface ListSectionProps {
   readonly scope: ListScope;
   readonly onScope: (scope: ListScope) => void;
   readonly recompute: ReturnType<typeof useCatalogRecompute>;
-  readonly canManage: boolean;
   readonly onOpen: (id: string) => void;
 }
 
 /** Το άδειο πλέγμα ανά κατάσταση — η αποτυχία λέγεται ΜΙΑ φορά (το μήνυμα πάνω), όχι «κανένα προϊόν» από κάτω. */
 const EMPTY_LIST_KEYS = { loading: 'common.loading', ready: 'products.list.empty', failed: 'products.list.unavailable' } as const;
 
-function ProductListSection({ ctx, part, scope, onScope, recompute, canManage, onOpen }: ListSectionProps) {
+function ProductListSection({ ctx, part, scope, onScope, recompute, onOpen }: ListSectionProps) {
   const { t } = useCatalogText();
   const { staleCount } = part.list;
   return (
@@ -79,7 +78,7 @@ function ProductListSection({ ctx, part, scope, onScope, recompute, canManage, o
         settings={ctx.settings.definition} facetGroups={part.facetGroups} />
       {staleCount > 0 || recompute.state.kind !== 'idle' ? (
         <RecomputePanel recompute={recompute} familyId={part.filter.familyId} needed={staleCount > 0}
-          prompt={t('products.list.stale', { count: staleCount })} canRun={canManage} />
+          prompt={t('products.list.stale', { count: staleCount })} />
       ) : null}
       {part.list.state === 'failed' ? <p className="m-0 text-sm text-destructive" role="alert">{t('products.list.failed')}</p> : null}
       <ProductListGrid rows={part.list.rows} emptyText={t(EMPTY_LIST_KEYS[part.list.state])} families={ctx.familyById} assets={ctx.assetById} files={ctx.files.byId}
@@ -113,7 +112,7 @@ export function ProductsContent() {
         <ProductEditorView key={session} id={selected} ctx={ctx} canManage={canManage} scope={scope} onScope={setScope}
           onOpen={(id) => open(id)} onBack={() => open(null)} reportDirty={unsaved.reportDirty} />
       ) : (
-        <ProductListSection ctx={ctx} part={part} scope={scope} onScope={setScope} recompute={recompute} canManage={canManage} onOpen={(id) => open(id)} />
+        <ProductListSection ctx={ctx} part={part} scope={scope} onScope={setScope} recompute={recompute} onOpen={(id) => open(id)} />
       )}
       {canManage ? <NewProductDialog open={newOpen} onOpenChange={setNewOpen} families={ctx.families} onCreated={(target) => open(target.id)} /> : null}
       {unsaved.dialog}

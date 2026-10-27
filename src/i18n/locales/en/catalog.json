@@ -218,6 +218,7 @@
     "tableKeyMissing": "The row has no value in the key column.",
     "axisValueMissing": "An axis value is required — it defines the variant.",
     "axisComboDuplicate": "A variant with the same axis combination already exists.",
+    "axisValueImmutable": "The axis value is the variant's identity and cannot change once saved — for another value, create a new variant.",
     "noValueConflict": "Declared “no value” while a value exists — keep one of the two.",
     "noValueOnAxis": "An axis cannot be “no value”.",
     "familyMismatch": "The family or variant scheme does not match the model's.",
@@ -247,7 +248,24 @@
     "renditionsNotReady": "The web and print renditions are not ready yet.",
     "renditionsFailed": "Renditions could not be created from this image — the file cannot be read or is too large.",
     "rightsCreatorRequired": "Enter the creator of the asset (a person or a company).",
-    "rightsTermDateRequired": "Set the licence end date — or choose “no expiry”."
+    "rightsTermDateRequired": "Set the licence end date — or choose “no expiry”.",
+    "priceAmountInvalid": "Invalid amount — non-negative, at most two decimals.",
+    "priceQuantityInvalid": "The price applies per 1, 10, 100 or 1,000 units.",
+    "priceLineSubjectDuplicate": "This item already has a line in this version.",
+    "discountGroupNotAccepted": "A customer-price list does not take discount groups — the price is already final.",
+    "costBreakdownRequired": "A work item needs a material, labour and equipment breakdown.",
+    "costBreakdownNotAllowed": "A cost breakdown applies to work items only, not products.",
+    "costBreakdownMismatch": "Material + labour + equipment must add up to the unit price.",
+    "discountStepInvalid": "A percentage from 0 to 100, at most two decimals.",
+    "discountTiersRequired": "Add at least one tier.",
+    "discountTierMinInvalid": "Invalid tier threshold.",
+    "discountTierDuplicate": "Two tiers start at the same threshold ({min}).",
+    "discountTiersNotMonotonic": "The tier from {min} gives a smaller discount than the one before — buying more would cost more per unit.",
+    "validityRangeInverted": "The end must be after the start.",
+    "discountConditionAmbiguous": "Another condition covers the same audience and group in an overlapping period — which one would apply?",
+    "versionNotDraft": "Only a draft version can be published or edited.",
+    "versionValidFromRequired": "Set the date the version takes effect.",
+    "versionValidFromNotAfterPrevious": "The version must take effect after the latest published one."
   },
   "measurement": {
     "family": {
@@ -709,6 +727,7 @@
     "empty": "No rows."
   },
   "products": {
+    "noIdentifier": "No code yet",
     "list": {
       "label": "Product list",
       "empty": "No products yet. Start with “New”.",
@@ -791,6 +810,8 @@
     "perLanguage": "per language",
     "perChannel": "per channel",
     "definedIn": "Defined in {name}",
+    "openHolder": "Open the product that has it",
+    "axisLocked": "Variant axis — its identity; cannot change once saved.",
     "noValue": {
       "label": "Explicit absence of value",
       "notApplicable": "Not applicable",

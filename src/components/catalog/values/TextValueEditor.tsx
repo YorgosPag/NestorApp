@@ -14,7 +14,7 @@ import { useEffect, useState, type KeyboardEvent } from 'react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
-import { formatAttributeValue, parseAttributeText } from '@/subapps/catalog/values/value-text-codec';
+import { formatAttributeValue, isBareAmountText, parseAttributeText } from '@/subapps/catalog/values/value-text-codec';
 import type { AttributeType } from '@/subapps/catalog/vocabulary/attribute-types';
 import { cn } from '@/lib/utils';
 
@@ -23,9 +23,13 @@ import type { ValueEditorProps } from './value-editor-types';
 
 export type TextLikeType = Extract<AttributeType, 'text' | 'richText' | 'number' | 'measurement' | 'date'>;
 
-function unitHintOf(props: ValueEditorProps<TextLikeType>): string | null {
+/**
+ * Η μονάδα που **υποθέτει** ένας γυμνός αριθμός — μόνο όταν το κείμενο **είναι** γυμνός αριθμός ή κενό. Ζωντανά
+ * (ADR-923 §5.10.5) το «4500 W» στεκόταν δίπλα σε «kW»: η ένδειξη αντέλεγε την τιμή.
+ */
+function unitHintOf(props: ValueEditorProps<TextLikeType>, text: string): string | null {
   const { attribute, env } = props;
-  if (attribute.type !== 'measurement') return null;
+  if (attribute.type !== 'measurement' || (text.trim() !== '' && !isBareAmountText(text))) return null;
   const family = env.codec.registry.get(attribute.config.measurementFamilyCode);
   return family?.units.find((unit) => unit.code === attribute.config.defaultUnitCode)?.symbol ?? null;
 }
@@ -52,7 +56,7 @@ function useCommittedText(props: ValueEditorProps<TextLikeType>) {
 export function TextValueEditor(props: ValueEditorProps<TextLikeType>) {
   const message = useIssueMessage();
   const { text, issue, setText, commit } = useCommittedText(props);
-  const unit = unitHintOf(props);
+  const unit = unitHintOf(props, text);
   const issueId = `${props.id}-parse`;
   const describedBy = [props.describedBy, issue ? issueId : null].filter(Boolean).join(' ') || undefined;
   const shared = {

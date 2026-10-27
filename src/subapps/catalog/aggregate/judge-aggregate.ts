@@ -5,7 +5,8 @@
  *
  * Η σειρά του σχεδίου (handoff 2β §2), καθαρή και κοινή σε οθόνη και γραφέα:
  *   1. **τοποθέτηση** (σχήμα, βάθος, γονέας) — άκυρη ⇒ οι τιμές **δεν** κρίνονται (θα έδιναν ψευδή ευρήματα)·
- *   2. **τιμές** απέναντι στο σχήμα όπως είναι τώρα (`validateHolderValues`)·
+ *   2. **τιμές** απέναντι στο σχήμα όπως είναι τώρα (`validateHolderValues`) · τιμή άξονα **αποθηκευμένου** μέλους
+ *      αμετάβλητη (Akeneo `ImmutableVariantAxesValues`)·
  *   3. **όριο απογόνων** (≤ 200 — μία συναλλαγή)·
  *   4. **συνδυασμός αξόνων** μοναδικός ανάμεσα στα αδέλφια (Akeneo «already set on another variant»)·
  *   5. **κανόνες συνέπειας** πριν/μετά — απορρίπτεται **μόνο** ό,τι η εγγραφή εισάγει ή αγγίζει (Δ8).
@@ -18,12 +19,14 @@ import type { CatalogSchemaSnapshot } from '../derived/chain-derived';
 import { changedCells, judgeConsistency, toVariantValueRow } from '../rules/consistency-gate';
 import { evaluateConsistency, type ConsistencyViolation, type VariantValueRow } from '../rules/evaluate-consistency';
 import type { CatalogIssue } from '../schema/catalog-issues';
+import type { CatalogValueHolder } from '../types/product';
 import type { AssetLookup, ReferenceLookup } from '../schema/product-validation-context';
 import { checkDescendantBudget, placeProduct, placeProductModel, type PlacementResult } from '../schema/validate-product-placement';
 import { validateHolderValues } from '../schema/validate-product-values';
 import { axesAtDepth } from '../values/attribute-levels';
-import { axisClashIssues, findAxisCombinationClashes } from '../values/axis-combination';
+import { axisClashIssues, axisValueIdentity, findAxisCombinationClashes } from '../values/axis-combination';
 import { resolveInheritedValues } from '../values/resolve-inherited';
+import { readUnscopedSlot } from '../values/value-shape';
 import {
   chainOf,
   definitionOf,
@@ -57,6 +60,16 @@ export interface AggregateVerdict {
 /** Η διαδρομή ενός μέλους μέσα στα ευρήματα — μία, για κρίση, κρατήσεις και οθόνη. */
 export const memberPath = (memberId: string): string => `variants.${memberId}`;
 
+/**
+ * Τα ευρήματα **ενός** μέλους στη διαδρομή του πεδίου του (`variants.<id>.values.x` ⇒ `values.x`)· τα υπόλοιπα
+ * αμετάβλητα (άλλου μέλους ⇒ σύνοψη). Μία μετατροπή για πελάτη **και** διακομιστή — ζωντανά (ADR-923 §5.10.5) ο 422
+ * `uniqueValueTaken` της κράτησης έμενε με πρόθεμα ⇒ σιωπηλό πεδίο, ωμή διαδρομή στη σύνοψη.
+ */
+export function localizeMemberIssues(issues: readonly CatalogIssue[], memberId: string): CatalogIssue[] {
+  const prefix = `${memberPath(memberId)}.`;
+  return issues.map((issue) => (issue.path.startsWith(prefix) ? { ...issue, path: issue.path.slice(prefix.length) } : issue));
+}
+
 const prefixed = (memberId: string, issues: readonly CatalogIssue[]): CatalogIssue[] =>
   issues.map((issue) => ({ ...issue, path: `${memberPath(memberId)}.${issue.path}` }));
 
@@ -70,6 +83,24 @@ function placementOf(input: AggregateJudgeInput, member: AggregateMember): Place
   return member.after ? placeProduct(member.after, parentModel, schema.family) : null;
 }
 
+/**
+ * 2β: η τιμή άξονα ενός **αποθηκευμένου** μέλους είναι η ταυτότητά του — αλλαγή της = άλλο προϊόν με το ίδιο id (μια
+ * γραμμή BOQ που έδειχνε «MFP-34» θα έδειχνε σιωπηλά «MFP-51»). Ζωντανά (ADR-923 §5.10.5) ο επεξεργαστής και το πλέγμα
+ * την άφηναν επεξεργάσιμη· η **ανταλλαγή** δύο μεγεθών περνούσε και τον έλεγχο διπλού συνδυασμού. Σύγκριση στην
+ * **τυποποιημένη** ταυτότητα (`axisValueIdentity`): «500 L» → «0,5 m³» δεν είναι αλλαγή.
+ */
+function axisImmutabilityIssues(input: AggregateJudgeInput, member: AggregateMember): CatalogIssue[] {
+  const { before, after } = member;
+  if (!before || !after) return [];
+  const axisIds = axesAtDepth(input.schema.scheme, chainOf(input.aggregate, member.id, 'before').length - 1);
+  return axisIds.flatMap((axisId): CatalogIssue[] => {
+    const attribute = input.schema.attributes.get(axisId);
+    const identity = (holder: CatalogValueHolder) => (attribute ? axisValueIdentity(attribute, readUnscopedSlot(holder.values[axisId]), input.schema.registry) : null);
+    const was = identity(before);
+    return was !== null && was !== identity(after) ? [{ code: 'axisValueImmutable', path: `${memberPath(member.id)}.values.${axisId}` }] : [];
+  });
+}
+
 /** 1 + 2: τοποθέτηση και τιμές κάθε μέλους που **άλλαξε** ο άνθρωπος. */
 function judgeMembers(input: AggregateJudgeInput): CatalogIssue[] {
   const issues: CatalogIssue[] = [];
@@ -79,7 +110,7 @@ function judgeMembers(input: AggregateJudgeInput): CatalogIssue[] {
     issues.push(...prefixed(member.id, placement.issues));
     if (!placement.placement) continue;
     const context = { ...input.schema, ...input.refs, ...placement.placement };
-    issues.push(...prefixed(member.id, validateHolderValues(member.after, context)));
+    issues.push(...prefixed(member.id, validateHolderValues(member.after, context)), ...axisImmutabilityIssues(input, member));
   }
   return issues;
 }

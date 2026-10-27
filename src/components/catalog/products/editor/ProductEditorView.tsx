@@ -21,17 +21,18 @@ import type { StoredMemberShape } from '@/subapps/catalog/aggregate/aggregate-me
 import type { InheritanceLink } from '@/subapps/catalog/values/resolve-inherited';
 import type { CatalogChannel } from '@/subapps/catalog/vocabulary/channels';
 
-import { IssueSummary } from '../../shared/CatalogIssues';
+import { IssueSummary, type IssueLocation } from '../../shared/CatalogIssues';
 import { EditorFooter } from '../../shared/EditorFooter';
 import { useCatalogText } from '../../shared/catalog-ui-hooks';
 import { useDirtyParts } from '../../shared/use-unsaved-guard';
 import { useValueEditorEnv } from '../../values/use-value-editor-env';
 import type { ValueEditorEnv } from '../../values/value-editor-types';
 import { ScopeSelect, type ListScope } from '../ProductListToolbar';
+import { recordIdentifier } from '../product-list-rows';
 import type { ProductCatalogContext } from '../use-product-catalog-context';
 import { CompletenessPanel } from './CompletenessPanel';
 import { EditorGroupsTabs } from './EditorGroupsTabs';
-import { editorGroups, groupOfAttribute } from './editor-layout';
+import { attributeIdOfIssuePath, editorGroups, groupOfAttribute } from './editor-layout';
 import { useProductEditor, type HolderRecord } from './use-product-editor';
 import { VariantsPanel } from '../variants/VariantsPanel';
 import { variantColumnIds } from '../variants/variant-rows';
@@ -47,13 +48,13 @@ export interface ProductEditorViewProps {
   readonly reportDirty: (dirty: boolean) => void;
 }
 
-/** Όνομα κρίκου της αλυσίδας: κωδικός μοντέλου · αναγνωριστικό/ετικέτα SKU. */
+/** Όνομα κρίκου της αλυσίδας: ο κωδικός (ο ίδιος κανόνας με τη λίστα) · η ετικέτα · «χωρίς κωδικό» — ποτέ UUID. */
 function useNameOf(members: readonly StoredMemberShape[]) {
+  const { t } = useCatalogText();
   return useCallback((link: InheritanceLink): string => {
-    const member = members.find((candidate) => candidate.record.id === link.id);
-    if (member?.kind === 'productModel') return member.record.code;
-    return member?.record.derived?.identifier ?? member?.record.derived?.label ?? link.id;
-  }, [members]);
+    const record = members.find((candidate) => candidate.record.id === link.id)?.record;
+    return (record && (recordIdentifier(record) ?? record.derived?.label)) || t('products.noIdentifier');
+  }, [members, t]);
 }
 
 function Breadcrumb({ chain, nameOf, onOpen }: { readonly chain: readonly InheritanceLink[]; readonly nameOf: (link: InheritanceLink) => string; readonly onOpen: (id: string) => void }) {
@@ -93,6 +94,17 @@ function useEditorPlan(props: HolderEditorProps, judgement: Judgement | null) {
   return { plan, active, setActive, jump };
 }
 
+/** Η σύνοψη ευρημάτων ονομάζει την ιδιότητα και πηγαίνει στο πεδίο της (ίδιο `jump` με το πάνελ πληρότητας). */
+function useIssueLocator(props: HolderEditorProps, jump: ReturnType<typeof useEditorPlan>['jump']) {
+  const { text } = useCatalogText();
+  return useCallback((issue: { readonly path: string }): IssueLocation | null => {
+    const attributeId = attributeIdOfIssuePath(issue.path);
+    const attribute = attributeId ? props.ctx.library.attributeById.get(attributeId) : undefined;
+    if (!attributeId || !attribute) return null;
+    return { label: text(attribute.labels, attribute.code), onSelect: () => jump(attributeId, props.scope.channel, props.scope.locale) };
+  }, [props.ctx.library.attributeById, props.scope, jump, text]);
+}
+
 /**
  * Καρτέλες μοντέλου: Ιδιότητες · Παραλλαγές. **`forceMount`**: η αλλαγή καρτέλας ΔΕΝ είναι πράξη απόρριψης — ζωντανά, το
  * Radix έκανε unmount την ανενεργή καρτέλα και ένα πλέγμα με επικολλημένες τιμές χανόταν σιωπηλά (Ιδιότητες → πίσω).
@@ -120,17 +132,18 @@ function ModelTabs({ props, record, judgement, columnIds, env, attributes, repor
 function HolderEditor(props: HolderEditorProps) {
   const { t } = useCatalogText();
   const dirtyPart = useDirtyParts(props.reportDirty);
-  const { editor, judgement, issues, save, record } = useProductEditor({ record: props.record, rootId: props.rootId, members: props.members, ctx: props.ctx, reportDirty: dirtyPart('attributes') });
+  const { editor, saved, judgement, issues, save, record } = useProductEditor({ record: props.record, rootId: props.rootId, members: props.members, ctx: props.ctx, reportDirty: dirtyPart('attributes') });
   const nameOf = useNameOf(props.members);
   const env = useValueEditorEnv(props.ctx, judgement?.references.describe ?? ((target) => target.id));
   const { plan, active, setActive, jump } = useEditorPlan(props, judgement);
+  const locate = useIssueLocator(props, jump);
   if (!judgement) return <p className="m-0 p-4 text-sm text-muted-foreground">{t('products.editor.familyMissing')}</p>;
   const columnIds = 'code' in record ? variantColumnIds(judgement.schema.scheme, judgement.depth) : null;
   const attributes = (
     <section className="grid gap-4">
-      <IssueSummary issues={issues} title={t('editor.issuesTitle')} />
+      <IssueSummary issues={issues} title={t('editor.issuesTitle')} locate={locate} />
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <EditorGroupsTabs plan={plan} active={active} onActive={setActive} holder={editor.draft} resolved={judgement.resolved} chain={judgement.chain}
+        <EditorGroupsTabs plan={plan} active={active} onActive={setActive} holder={editor.draft} saved={saved} resolved={judgement.resolved} chain={judgement.chain}
           depth={judgement.depth} scope={props.scope} env={env} issues={issues} disabled={!props.canManage} nameOf={nameOf}
           onHolder={(holder) => editor.update({ ...editor.draft, ...holder })} onOpen={props.onOpen} />
         <aside><CompletenessPanel matrix={judgement.completeness} attributeById={props.ctx.library.attributeById} onJump={jump}

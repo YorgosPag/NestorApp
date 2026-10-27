@@ -45,16 +45,25 @@ function useDraft(input: VariantGridInput) {
   const base = useMemo(() => variantDraftOf(input.members, input.parentId), [input.members, input.parentId]);
   const [own, setOwn] = useState<VariantDraft | null>(null);
   const rebased = useMemo(() => (own ? rebaseVariantDraft(own, base) : { draft: base, conflicts: [] }), [own, base]);
+  const [notice, setNotice] = useState<readonly string[]>([]);
+  // Η σύγκρουση είναι **γεγονός**: το πρόχειρο υιοθετεί τη ζωντανή γραμμή (η χαμένη εκδοχή φεύγει) και η ειδοποίηση
+  // κρατιέται ως την αποθήκευση/απόρριψη. Ζωντανά (ADR-923 §5.10.5) «ξανανακαλυπτόταν» σε κάθε render και έμενε και ΜΕΤΑ
+  // την επιτυχή αποθήκευση. Προσαρμογή κατά την απόδοση (React), συγκλίνει: το υιοθετημένο πρόχειρο δεν συγκρούεται.
+  if (own && rebased.conflicts.length > 0) {
+    setOwn(rebased.draft);
+    setNotice((prev) => [...new Set([...prev, ...rebased.conflicts])]);
+  }
   const [history, setHistory] = useState<History<VariantDraft>>(emptyHistory());
   const change = (next: VariantDraft) => { setHistory((prev) => recordHistory(prev, { before: rebased.draft, after: next })); setOwn(next); };
   const step = (result: { history: History<VariantDraft>; apply: VariantDraft | null }) => { setHistory(result.history); if (result.apply) setOwn(result.apply); };
   return {
     draft: rebased.draft,
-    conflicts: rebased.conflicts,
+    conflicts: notice,
+    clearConflicts: () => setNotice([]),
     change,
     undo: () => step(undoHistory(history)),
     redo: () => step(redoHistory(history)),
-    discard: () => { setOwn(null); setHistory(emptyHistory()); },
+    discard: () => { setOwn(null); setHistory(emptyHistory()); setNotice([]); },
   };
 }
 
@@ -87,7 +96,7 @@ export function useVariantGrid(input: VariantGridInput) {
       optimistic: input.root,
       baseRevision: input.root.revision,
       send: () => saveCatalogVariants(input.parentId, batch).then((result) => result.model),
-      onSettled: (outcome: CatalogOutcome<ProductModelRecord>) => { if (!outcome.ok) setServerIssues(outcome.failure.issues); },
+      onSettled: (outcome: CatalogOutcome<ProductModelRecord>) => { if (outcome.ok) state.clearConflicts(); else setServerIssues(outcome.failure.issues); },
     });
   };
   // Τα ευρήματα του διακομιστή αφορούσαν το **προηγούμενο** πρόχειρο ⇒ σβήνουν με κάθε αλλαγή (αλλιώς το «Αποθήκευση»

@@ -184,6 +184,52 @@
       "threshold": 3,
       "reason": "Οι σκοποί άδειας χρήσης ενός μέσου (IPTC PLUS: σκοπός + διάρκεια — ADR-884 Φ0.14 · ADR-866 §5.6.1 · ADR-923 §5.10.3). Έγινε ρίζα όταν απέκτησε ΔΕΥΤΕΡΟ πλαίσιο: τα μέσα καταλόγου (catalog-publication · reseller-reuse) δίπλα στα μέσα αγγελίας (listing-marketing · owner-reuse). Το λεξιλόγιο είναι ΕΝΑ, τα πλαίσια (MEDIA_LICENSE_CONTEXTS) διαλέγουν υποσύνολα δεμένα με `satisfies` — και το πλαίσιο listing είναι το ΣΥΜΒΟΛΑΙΟ της εφαρμογής κινητού (CHECK 3.98): απαρίθμηση εκτός ρίζας θα μπορούσε να δείξει στην εφαρμογή λήψης ακινήτων «μεταπώληση από αντιπρόσωπο», ή να δεχτεί στο API σκοπό που καμία οθόνη δεν ξέρει να ονομάσει. Καταναλωτές: τα πλαίσια, το zod ανά πλαίσιο (media-rights-schema), ο αναγνώστης readMediaRights, οι ετικέτες της φόρμας λήψης (LICENSE_PURPOSE_KEY, δεμένο με MediaLicensePurposeIn<'listing'>). Κατώφλι 3: τα τρία σύνολα κάθε πλαισίου είναι ΑΚΡΙΒΩΣ τρεις τιμές.",
       "exemptions": []
+    },
+    {
+      "id": "catalog-price-version-status",
+      "root": "src/subapps/catalog/vocabulary/pricing.ts",
+      "rootSymbol": "PRICE_LIST_VERSION_STATUSES",
+      "typeName": "PriceListVersionStatus",
+      "derivedTypes": [],
+      "values": [
+        "draft",
+        "published",
+        "superseded",
+        "discarded"
+      ],
+      "threshold": 3,
+      "reason": "Ο κύκλος ζωής της έκδοσης τιμοκαταλόγου (ADR-923 §5.11): πρόχειρο → δημοσιευμένο (ΑΜΕΤΑΒΛΗΤΟ) → αντικατεστημένο, ή απορριφθέν. Η «ισχύς ως προς ημερομηνία» διαβάζει ΜΟΝΟ δημοσιευμένες/αντικατεστημένες (isPublishedStatus)· την απαριθμούν το zod της έκδοσης, ο γραφέας δημοσίευσης (3β) και οι ετικέτες της οθόνης (3δ). Χωρίς δεσμό, μια πέμπτη κατάσταση θα περνούσε από το API και η χρονογραμμή θα την αγνοούσε σιωπηλά ⇒ τιμή από λάθος έκδοση. Κατώφλι 3: οι λέξεις draft/published είναι γενικές (έγγραφα, αγγελίες) — μόνο τρεις μαζί σημαίνουν αυτό το λεξιλόγιο.",
+      "exemptions": []
+    },
+    {
+      "id": "catalog-price-audience",
+      "root": "src/subapps/catalog/vocabulary/pricing.ts",
+      "rootSymbol": "AUDIENCE_KINDS",
+      "typeName": "AudienceKind",
+      "derivedTypes": [],
+      "values": [
+        "anonymous",
+        "signedIn",
+        "customerGroup",
+        "partner"
+      ],
+      "threshold": 3,
+      "reason": "Τα κοινά τιμής και ορατότητας του καταλόγου (ADR-923 §12): ανώνυμος < συνδεδεμένος < ομάδα πελάτη < συνεργάτης — η σειρά ΕΙΝΑΙ ο καταρράκτης ειδικότητας (AUDIENCE_SPECIFICITY, Record δεμένο στη ρίζα). Το απαριθμούν το zod της συνθήκης, η κάλυψη θεατή (audienceCovers), η ταυτότητα κοινού για την απαγόρευση ασάφειας, και στη 3δ το «δες την τιμή σαν τον Χ». Χωρίς δεσμό, νέο κοινό στο API θα έμενε χωρίς βαθμό ειδικότητας ⇒ ισοπαλίες ή λάθος νικητής, δηλαδή λάθος τιμή σε άλλο κοινό (§12 🔒).",
+      "exemptions": []
+    },
+    {
+      "id": "catalog-price-type",
+      "root": "src/subapps/catalog/vocabulary/pricing.ts",
+      "rootSymbol": "PRICE_TYPES",
+      "typeName": "PriceType",
+      "derivedTypes": [],
+      "values": [
+        "net_list",
+        "net_customer"
+      ],
+      "threshold": 2,
+      "reason": "Ο τύπος τιμής του τιμοκαταλόγου κατά BMEcat (ADR-923 §5.11): net_list δέχεται ομάδες έκπτωσης, net_customer είναι ήδη η τελική τιμή του πελάτη και ΔΕΝ αναμιγνύεται (acceptsDiscountGroups). Το απαριθμούν το zod του τιμοκαταλόγου, ο επικυρωτής γραμμής, ο επιλυτής τιμής και η οθόνη· τρίτος τύπος χωρίς απόφαση εδώ θα έπαιρνε ή θα έχανε εκπτώσεις σιωπηλά. Κατώφλι 2: οι δύο λέξεις είναι μοναδικές στο repo.",
+      "exemptions": []
     }
   ]
 }

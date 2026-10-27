@@ -100,3 +100,21 @@ describe('useCatalogOptimistic — αισιόδοξα, με CAS, χωρίς αγ
     expect(result.current.view.map((item) => item.id)).toEqual(['b']);
   });
 });
+
+describe('ADR-923 §5.10.5 — κανένας βρόχος όσο η απάντηση προηγείται του στιγμιοτύπου', () => {
+  it('🔴 records ΝΕΟΣ πίνακας σε κάθε render (όπως `[input.root]`) + απάντηση μπροστά από το ζωντανό ⇒ τα renders ΣΤΑΜΑΤΟΥΝ', async () => {
+    const live = row('a', 1, 'Ψύξη');
+    let renders = 0;
+    const onFailure = jest.fn();
+    const { result } = renderHook(() => { renders += 1; return useCatalogOptimistic([live], onFailure); });
+    await act(async () => {
+      result.current.submit({ key: 'a', optimistic: row('a', 1, 'Ψύξη νέα'), baseRevision: 1, send: async () => row('a', 2, 'Ψύξη νέα') });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    const settled = renders;
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(renders).toBe(settled);
+    expect(renders).toBeLessThan(20);
+    expect(result.current.view[0].label).toBe('Ψύξη νέα');
+  });
+});

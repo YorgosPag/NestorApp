@@ -68,6 +68,32 @@ describe('editAggregate + judgeAggregate στον πελάτη', () => {
   });
 });
 
+describe('ADR-923 §5.10.5 — η τιμή άξονα ΑΠΟΘΗΚΕΥΜΕΝΗΣ παραλλαγής είναι αμετάβλητη (Akeneo ImmutableVariantAxesValues)', () => {
+  const withSize = (index: number, optionCode: string): CatalogProductDefinition => {
+    const variant = mfpVariant(index);
+    return { ...variant, values: { ...variant.values, size: { '*': { '*': { type: 'select', optionCode } } } } };
+  };
+
+  it('🔴 ΑΝΤΑΛΛΑΓΗ μεγεθών δύο παραλλαγών (περνά τον έλεγχο διπλού συνδυασμού) ⇒ axisValueImmutable ΣΤΟ ΚΕΛΙ του άξονα και των δύο', () => {
+    const updates = new Map([[mfpVariantId(0), withSize(0, MFP_SIZES[1])], [mfpVariantId(1), withSize(1, MFP_SIZES[0])]]);
+    const issues = judge(updates).issues;
+    expect(issues.filter((issue) => issue.code === 'axisValueImmutable').map((issue) => issue.path).sort()).toEqual([
+      `${memberPath(mfpVariantId(0))}.values.size`,
+      `${memberPath(mfpVariantId(1))}.values.size`,
+    ]);
+  });
+
+  it('η ΙΔΙΑ τιμή άξονα ξαναγραμμένη ⇒ καμία αλλαγή, κανένα εύρημα', () => {
+    expect(judge(new Map([[mfpVariantId(2), withSize(2, MFP_SIZES[2])]])).issues).toEqual([]);
+  });
+
+  it('ΝΕΑ παραλλαγή ορίζει ελεύθερα τον άξονα της (ο κανόνας αφορά μόνο ό,τι αποθηκεύτηκε)', () => {
+    const created = withSize(0, 'mfp_999');
+    const issues = judge(new Map(), [{ id: 'cprod_new', definition: created }]).issues;
+    expect(issues.some((issue) => issue.code === 'axisValueImmutable')).toBe(false);
+  });
+});
+
 describe('generateVariants', () => {
   const sizes = (codes: string[]) => ({ attributeId: 'size', values: codes.map((optionCode) => ({ type: 'select' as const, optionCode })) });
   const base = { attributes: MFP_ATTRIBUTE_MAP, registry: PLATFORM_MEASUREMENT_REGISTRY };

@@ -7,8 +7,9 @@
  * @see ADR-328 §5.H
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { useMountedRef } from '@/hooks/useMountedRef';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export interface ScanQueueItem {
@@ -86,9 +87,8 @@ function envelopeData(body: unknown): Record<string, unknown> | null {
 export function useScanQueue({ rfqId, projectId, onSuccess }: UseScanQueueOptions = {}): UseScanQueueResult {
   const { t } = useTranslation('quotes');
   const [items, setItems] = useState<ScanQueueItem[]>([]);
-  const mountedRef = useRef(true);
-
-  useEffect(() => () => { mountedRef.current = false; }, []);
+  // SSoT: το χειρόγραφο «μόνο cleanup» άφηνε ψευδές `false` μετά από effects που ξανατρέχουν ⇒ σιωπηλή διακοπή polling.
+  const mountedRef = useMountedRef();
 
   const patch = useCallback((clientId: string, update: Partial<ScanQueueItem>) => {
     setItems((prev) => prev.map((i) => (i.clientId === clientId ? { ...i, ...update } : i)));

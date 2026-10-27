@@ -10,6 +10,16 @@
 import type { FrameworkAgreementLike } from '../types/framework-agreement';
 import { normalizeToMillisOrNull } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
+import { majorFromMinor, minorFromMajor } from '@/lib/money/money';
+import {
+  applyDiscountSteps,
+  basisPointsFromPercent,
+  effectivePercent,
+  stepsForBasis,
+  type BasisPoints,
+  type DiscountRule,
+  type DiscountTier,
+} from '@/lib/pricing/discount-rule';
 
 const logger = createModuleLogger('FrameworkAgreementDiscount');
 
@@ -68,31 +78,54 @@ export function resolveActiveFa(
   );
 }
 
+/** Ποσοστό σύμβασης → αλυσίδα ενός βήματος· μη αναπαραστάσιμο ποσοστό ⇒ καμία έκπτωση, με διάγνωση. */
+function stepsOfPercent(fa: FrameworkAgreementLike, percent: number): BasisPoints[] {
+  const bp = basisPointsFromPercent(percent);
+  if (bp === null) {
+    logger.warn('Framework agreement has an unrepresentable discount percent — no discount applied', {
+      agreementId: fa.id,
+      percent,
+    });
+    return [];
+  }
+  return [bp];
+}
+
+/**
+ * Η σύμβαση ως κανόνας της ΜΙΑΣ μηχανής εκπτώσεων (ADR-923 §5.11): `flat` = αλυσίδα ενός
+ * βήματος · `volume_breakpoints` = κλίμακες πάνω στο **ποσό** (σε λεπτά).
+ */
+function faDiscountRule(fa: FrameworkAgreementLike): DiscountRule {
+  if (fa.discountType === 'flat') {
+    return { kind: 'chain', steps: stepsOfPercent(fa, fa.flatDiscountPercent ?? 0) };
+  }
+  const tiers: DiscountTier[] = [];
+  for (const breakpoint of fa.volumeBreakpoints) {
+    const min = minorFromMajor(breakpoint.thresholdEur);
+    if (min !== null) tiers.push({ min, steps: stepsOfPercent(fa, breakpoint.discountPercent) });
+  }
+  return { kind: 'tiers', basis: 'amount', tiers };
+}
+
 /**
  * Compute discount amount and net total for a given FA and gross total.
  * Volume breakpoints: finds the highest applicable threshold.
+ *
+ * Προσαρμογέας πάνω στη μία μηχανή (`lib/pricing/discount-rule`): η αριθμητική γίνεται σε
+ * ακέραια λεπτά, η υπογραφή σε ευρώ μένει για τους υπάρχοντες καλούντες.
  */
 export function computeFaDiscount(
   fa: FrameworkAgreementLike,
   grossTotal: number,
 ): FADiscountResult {
-  let discountPercent = 0;
+  const grossMinor = minorFromMajor(grossTotal);
+  if (grossMinor === null) return { discountPercent: 0, discountAmount: 0, netTotal: grossTotal };
 
-  if (fa.discountType === 'flat') {
-    discountPercent = fa.flatDiscountPercent ?? 0;
-  } else {
-    const sorted = [...fa.volumeBreakpoints].sort(
-      (a, b) => a.thresholdEur - b.thresholdEur,
-    );
-    for (const bp of sorted) {
-      if (grossTotal >= bp.thresholdEur) {
-        discountPercent = bp.discountPercent;
-      }
-    }
-  }
-
-  const discountAmount = Math.round(grossTotal * (discountPercent / 100) * 100) / 100;
-  const netTotal = Math.round((grossTotal - discountAmount) * 100) / 100;
-
-  return { discountPercent, discountAmount, netTotal };
+  const steps = stepsForBasis(faDiscountRule(fa), grossMinor);
+  const { discount, net } = applyDiscountSteps(grossMinor, steps);
+  return {
+    discountPercent: effectivePercent(steps),
+    discountAmount: majorFromMinor(discount),
+    netTotal: majorFromMinor(net),
+  };
 }

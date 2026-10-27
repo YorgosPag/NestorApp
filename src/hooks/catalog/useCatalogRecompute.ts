@@ -14,8 +14,9 @@
  * @module hooks/catalog/useCatalogRecompute
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
+import { useMountedRef } from '@/hooks/useMountedRef';
 import { recomputeCatalogDerived } from '@/services/catalog/catalog-api.client';
 
 export type CatalogRecomputeState =
@@ -58,8 +59,9 @@ export function useCatalogRecompute(): CatalogRecompute {
   const [generations, setGenerations] = useState<Generations>({ requested: 0, covered: 0 });
   const requested = useRef(0);
   const running = useRef(false);
-  const alive = useRef(true);
-  useEffect(() => () => { alive.current = false; }, []);
+  // SSoT `useMountedRef`: ξαναγράφει `true` στο mount. Το χειρόγραφο «μόνο cleanup» άφηνε ψευδές `false` μετά από
+  // effects που ξανατρέχουν (StrictMode · Fast Refresh · Activity) ⇒ ζωντανά «Επανυπολογισμός… 0 σύνολα» για πάντα.
+  const alive = useMountedRef();
 
   const invalidate = useCallback(() => {
     requested.current += 1;

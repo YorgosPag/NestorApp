@@ -3,7 +3,7 @@
  * renders (ζωντανά ο renderer «πάγωνε» στο άνοιγμα μοντέλου). Mock μόνο στα όρια I/O.
  */
 import React, { Profiler } from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { AttributeGroupRecord, AttributeRecord, FamilyRecord } from '@/services/catalog/catalog-api.client';
@@ -24,6 +24,7 @@ const members = [
 jest.mock('@/hooks/catalog/useCatalogAggregateRecords', () => ({
   useCatalogAggregateRecords: () => ({ state: 'ready', target: members[0].record, rootId: MFP_MODEL_ID, members }),
 }));
+jest.mock('@/auth/hooks/useCapability', () => ({ useCapability: () => ({ pending: false, verdict: 'granted-by-role' }) }));
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'el' } }),
 }));
@@ -115,5 +116,23 @@ describe('ProductEditorView — φρουρός βρόχου', () => {
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
     expect(field.value).not.toBe('400V-50Hz-3Ph');
     expect(reportDirty).toHaveBeenLastCalledWith(true);
+  });
+});
+
+describe('ProductEditorView — ρητή απουσία (Δ5)', () => {
+  it('🔴 ζωντανό (ADR-923 §5.10.5): «Άγνωστο» → ξανά «Άγνωστο» ⇒ η ΑΠΟΘΗΚΕΥΜΕΝΗ τιμή επιστρέφει, ο επεξεργαστής ξαναείναι καθαρός', async () => {
+    const reportDirty = jest.fn();
+    render(
+      <TooltipProvider>
+        <ProductEditorView id={MFP_MODEL_ID} ctx={context()} canManage scope={{ channel: 'print', locale: 'el' }} onScope={jest.fn()} onOpen={jest.fn()} onBack={jest.fn()} reportDirty={reportDirty} />
+      </TooltipProvider>,
+    );
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    const section = (document.getElementById('value-power_supply') as HTMLInputElement).closest('section') as HTMLElement;
+    fireEvent.click(within(section).getByRole('button', { name: 'values.noValue.unknown' }));
+    expect(document.getElementById('value-power_supply')).toBeNull();
+    fireEvent.click(within(section).getByRole('button', { name: 'values.noValue.unknown' }));
+    expect((document.getElementById('value-power_supply') as HTMLInputElement).value).toBe('230V-50Hz-1Ph');
+    expect(reportDirty).toHaveBeenLastCalledWith(false);
   });
 });

@@ -32,12 +32,25 @@ describe('writeHolderValue', () => {
 
   it('🔴 τιμή σβήνει τον λόγο απουσίας · λόγος σβήνει ΟΛΕΣ τις τιμές (ποτέ noValueConflict)', () => {
     const withValue = writeHolderValue(empty, 'd', localized, 'print', 'el', { type: 'text', text: 'α' });
-    const notApplicable = writeNoValueReason(withValue, 'd', 'notApplicable');
+    const notApplicable = writeNoValueReason(withValue, 'd', 'notApplicable', null);
     expect(notApplicable.values).toEqual({});
     expect(notApplicable.noValueReasons).toEqual({ d: 'notApplicable' });
     const back = writeHolderValue(notApplicable, 'd', localized, 'print', 'el', { type: 'text', text: 'β' });
     expect(back.noValueReasons).toEqual({});
-    expect(writeNoValueReason(back, 'd', null)).toEqual(back);
+    expect(writeNoValueReason(back, 'd', null, null)).toEqual(back);
+  });
+
+  it('🔴 ζωντανό (ADR-923 §5.10.5): «Άγνωστο» → ξανά «Άγνωστο» ΕΠΑΝΑΦΕΡΕΙ την αποθηκευμένη τιμή — ο διακόπτης αντιστρέφεται', () => {
+    const saved = writeHolderValue(empty, 'd', localized, 'print', 'el', { type: 'text', text: 'α' });
+    const unknown = writeNoValueReason(saved, 'd', 'unknown', saved);
+    expect(unknown.values).toEqual({});
+    expect(writeNoValueReason(unknown, 'd', null, saved)).toEqual(saved);
+  });
+
+  it('αποθηκευμένος λόγος χωρίς τιμή ⇒ η άρση αφήνει κενό · άλλη ιδιότητα του αποθηκευμένου ΔΕΝ μεταφέρεται', () => {
+    const saved = writeNoValueReason(writeHolderValue(empty, 'x', plain, 'print', 'el', { type: 'text', text: 'ξ' }), 'd', 'notApplicable', null);
+    const cleared = writeNoValueReason({ ...empty, noValueReasons: { d: 'unknown' } }, 'd', null, saved);
+    expect(cleared).toEqual(empty);
   });
 
   it('δεν αγγίζει τίποτα άλλο του φορέα (MFP παραλλαγή)', () => {

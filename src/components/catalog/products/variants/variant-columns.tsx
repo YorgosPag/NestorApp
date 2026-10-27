@@ -4,7 +4,8 @@
  *
  * Κάθε κελί περνά από τον **κοινό** κωδικοποιητή (`value-text-codec`) στη θέση **κανάλι × γλώσσα** της οθόνης — ό,τι
  * επικολλάς από Excel διαβάζεται όπως το πληκτρολογημένο στο πεδίο του επεξεργαστή. Τύποι χωρίς κειμενική μορφή
- * (αναφορά · πίνακας) κλειδώνουν με λόγο («μέσω του επεξεργαστή»). Η πληρότητα κάθε γραμμής, ζωντανά, μόνο για ανάγνωση.
+ * (αναφορά · πίνακας) κλειδώνουν με λόγο («μέσω του επεξεργαστή»)· ο **άξονας** αποθηκευμένης γραμμής κλειδώνει (η ταυτότητά
+ * της — ADR-923 §5.10.5). Η πληρότητα κάθε γραμμής, ζωντανά, μόνο για ανάγνωση.
  *
  * @module components/catalog/products/variants/variant-columns
  */
@@ -56,7 +57,10 @@ function attributeColumn(id: string, attribute: AttributeRecord, input: VariantC
       if (!parsed.ok) return { ok: false, issue: input.message({ code: parsed.issue, path: '', params: parsed.params }) };
       return { ok: true, row: { ...row, definition: writeHolderValue(row.definition, id, attribute, scope.channel, scope.locale, parsed.value) } };
     },
-    lock: () => (hasTextForm(attribute.type) ? null : { reason: words.t('variants.useEditor') }),
+    lock: (row) => {
+      if (!hasTextForm(attribute.type)) return { reason: words.t('variants.useEditor') };
+      return input.axisIds.includes(id) && row.stored !== null ? { reason: words.t('values.axisLocked') } : null;
+    },
     choices: attribute.type === 'select'
       ? () => attribute.config.options.map((option) => ({ text: option.code, label: words.text(option.labels, option.code) }))
       : undefined,

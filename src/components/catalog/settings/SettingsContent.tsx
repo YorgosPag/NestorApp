@@ -27,7 +27,7 @@ import { IssueSummary } from '../shared/CatalogIssues';
 import { CatalogPageFrame } from '../shared/CatalogPageFrame';
 import { EditorFooter } from '../shared/EditorFooter';
 import { RecomputePanel } from '../shared/RecomputePanel';
-import { useCatalogCanManage, useCatalogCanManageProducts, useCatalogFailureNotice, useCatalogText } from '../shared/catalog-ui-hooks';
+import { useCatalogCanManage, useCatalogFailureNotice, useCatalogText } from '../shared/catalog-ui-hooks';
 import { useDefinitionDraft } from '../shared/use-definition-draft';
 import { useUnsavedGuard } from '../shared/use-unsaved-guard';
 import { SettingsMatrix } from './SettingsMatrix';
@@ -63,7 +63,6 @@ export function SettingsContent() {
   const usage = useCatalogLocaleUsage();
   const recompute = useCatalogRecompute();
   const canManage = useCatalogCanManage();
-  const canRecompute = useCatalogCanManageProducts();
   const unsaved = useUnsavedGuard();
   const { reportDirty } = unsaved;
   useEffect(() => reportDirty(editor.unsaved), [editor.unsaved, reportDirty]);
@@ -93,7 +92,7 @@ export function SettingsContent() {
           onToggle={(channel, locale) => editor.update(toggleChannelLocale(editor.draft, channel, locale))} />
         <IssueSummary issues={[...issues, ...editor.serverIssues]} title={t('editor.issuesTitle')} />
         {recompute.needed || recompute.state.kind !== 'idle' ? (
-          <RecomputePanel recompute={recompute} familyId={null} prompt={t('settings.recomputePrompt')} canRun={canRecompute} />
+          <RecomputePanel recompute={recompute} familyId={null} prompt={t('settings.recomputePrompt')} />
         ) : null}
         <EditorFooter editor={editor} issues={issues} authority="schema" onSave={save} />
       </section>

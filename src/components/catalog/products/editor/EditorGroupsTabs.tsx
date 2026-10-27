@@ -23,6 +23,8 @@ export interface EditorGroupsTabsProps {
   readonly active: string;
   readonly onActive: (groupId: string) => void;
   readonly holder: CatalogValueHolder;
+  /** Ο αποθηκευμένος φορέας — η άρση «δεν εφαρμόζεται / άγνωστο» επαναφέρει τις τιμές του. */
+  readonly saved: CatalogValueHolder;
   readonly resolved: ResolvedValues;
   readonly chain: readonly InheritanceLink[];
   readonly depth: number;
@@ -62,7 +64,7 @@ export function EditorGroupsTabs(props: EditorGroupsTabsProps) {
             return (
               <AttributeValueField key={field.attributeId} attributeId={field.attributeId} attribute={field.attribute}
                 required={field.requiredChannels.includes(props.scope.channel)} isAxis={field.isAxis}
-                holder={props.holder} resolved={props.resolved} scope={props.scope} env={props.env} issues={props.issues}
+                holder={props.holder} saved={props.saved} resolved={props.resolved} scope={props.scope} env={props.env} issues={props.issues}
                 inheritedFrom={owner ? { id: owner.id, name: props.nameOf(owner) } : null}
                 disabled={props.disabled} onHolder={props.onHolder} onOpen={props.onOpen} />
             );

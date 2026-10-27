@@ -49,13 +49,30 @@ export function FieldIssues({ issues, path, exact = false, id }: FieldIssuesProp
   );
 }
 
+/** Πού ζει ένα εύρημα, με λέξεις: το όνομα του πεδίου και η μετάβαση σε αυτό. */
+export interface IssueLocation {
+  readonly label: string;
+  readonly onSelect: () => void;
+}
+
 interface IssueSummaryProps {
   readonly issues: readonly CatalogIssue[];
   readonly title: string;
+  /**
+   * Ονομάζει το πεδίο ενός ευρήματος (Akeneo: η σύνοψη σε πηγαίνει στην ιδιότητα). Χωρίς αυτό ⇒ η διαδρομή, όπως στους
+   * επεξεργαστές σχήματος. Ζωντανά (ADR-923 §5.10.5) το προϊόν έδειχνε `values.cattr_3a6f…` — ωμό UUID.
+   */
+  readonly locate?: (issue: CatalogIssue) => IssueLocation | null;
 }
 
-/** Όλα τα ευρήματα μαζί (π.χ. πάνω από τις καρτέλες) — με τη διαδρομή, για να βρίσκεται το σημείο. */
-export function IssueSummary({ issues, title }: IssueSummaryProps) {
+function IssuePlace({ issue, locate }: { readonly issue: CatalogIssue; readonly locate: IssueSummaryProps['locate'] }) {
+  const place = locate?.(issue) ?? null;
+  if (!place) return <code className="text-xs text-muted-foreground">{issue.path}</code>;
+  return <button type="button" className="text-xs font-medium underline underline-offset-2" onClick={place.onSelect}>{place.label}</button>;
+}
+
+/** Όλα τα ευρήματα μαζί (π.χ. πάνω από τις καρτέλες) — με το σημείο τους. */
+export function IssueSummary({ issues, title, locate }: IssueSummaryProps) {
   const message = useIssueMessage();
   if (issues.length === 0) return null;
   return (
@@ -64,7 +81,7 @@ export function IssueSummary({ issues, title }: IssueSummaryProps) {
       <ul className="m-0 mt-1 flex list-disc flex-col gap-0.5 pl-5 text-sm text-foreground">
         {issues.map((issue, index) => (
           <li key={`${issue.path}-${issue.code}-${index}`}>
-            {message(issue)} <code className="text-xs text-muted-foreground">{issue.path}</code>
+            {message(issue)} <IssuePlace issue={issue} locate={locate} />
           </li>
         ))}
       </ul>

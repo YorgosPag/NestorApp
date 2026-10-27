@@ -45,9 +45,18 @@ export function mergeListRows(
   );
 }
 
-/** Ό,τι γράφεται στη στήλη «Κωδικός»: ο κωδικός του μοντέλου · το αναγνωριστικό του SKU. */
-export function rowIdentifier(row: CatalogListRow): string {
-  return row.kind === 'model' ? row.record.code : row.record.derived.identifier ?? '';
+/**
+ * Ο κωδικός μιας εγγραφής: του μοντέλου · το αναγνωριστικό του SKU/απλού · `null` = δεν έχει ακόμη (η οθόνη λέει
+ * «χωρίς κωδικό»). **Ένας** κανόνας για λίστα και breadcrumb — ζωντανά (ADR-923 §5.10.5) το breadcrumb έδειχνε UUID
+ * και η λίστα κενό κελί για το ίδιο προϊόν.
+ */
+export function recordIdentifier(record: ProductModelRecord | ProductRecord): string | null {
+  return 'code' in record ? record.code : record.derived?.identifier ?? null;
+}
+
+/** Ό,τι γράφεται στη στήλη «Κωδικός». */
+export function rowIdentifier(row: CatalogListRow): string | null {
+  return recordIdentifier(row.record);
 }
 
 export function rowLabel(row: CatalogListRow): string | null {
