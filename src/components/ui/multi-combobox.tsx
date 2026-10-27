@@ -84,7 +84,18 @@ interface ItemProps {
   onToggle: () => void;
 }
 
+/**
+ * Η εναλλαγή ανήκει ΜΟΝΟ στη γραμμή· το κουτάκι είναι οπτική ένδειξη (`aria-hidden`, χωρίς δείκτη).
+ * 🔴 Μέσα σε `<form>` το Radix Checkbox αποδίδει κρυφό «bubble input» που σε κάθε αλλαγή `checked` στέλνει
+ * ΣΥΝΘΕΤΙΚΟ `click` προς τα πάνω· αν το δεχτεί η γραμμή ⇒ ξαναεναλλάσσει ⇒ ατέρμονος βρόχος («Maximum update
+ * depth», μετρημένο ζωντανά στη φόρμα σύμβασης-πλαισίου, ADR-923 §5.11 «3γ»). Και με `onCheckedChange` + click
+ * της γραμμής, το κλικ στο κουτάκι εναλλάσσε ΔΥΟ φορές. Άγκυρα: `multi-combobox-in-form.test.tsx`.
+ */
 function MultiComboboxItem({ option, selected, focused, onToggle }: ItemProps) {
+  const handleClick = (event: React.MouseEvent<HTMLLIElement>) => {
+    if (event.target instanceof HTMLInputElement) return;
+    onToggle();
+  };
   return (
     <li
       role="option"
@@ -93,9 +104,9 @@ function MultiComboboxItem({ option, selected, focused, onToggle }: ItemProps) {
         'flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm select-none',
         focused ? 'bg-accent text-accent-foreground' : 'hover:bg-accent hover:text-accent-foreground',
       )}
-      onClick={onToggle}
+      onClick={handleClick}
     >
-      <Checkbox checked={selected} onCheckedChange={() => onToggle()} aria-hidden tabIndex={-1} />
+      <Checkbox checked={selected} aria-hidden tabIndex={-1} className="pointer-events-none" />
       <span>{option.label}</span>
     </li>
   );
