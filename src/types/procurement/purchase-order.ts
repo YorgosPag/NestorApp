@@ -177,6 +177,9 @@ export interface PurchaseOrderItem {
   // Material Catalog link (ADR-330 Phase 4.5 — explicit FK, no ambiguous matching)
   materialId?: string | null;       // ref → materials/ — drives avgPrice auto-update on delivery
 
+  // Framework Agreement discount of THIS line (ADR-923 §5.11 «3γ» — server-computed, EN 16931 BT-136)
+  faDiscount?: POLineFaDiscount | null;
+
   // Delivery Tracking — Partial deliveries
   quantityReceived: number;         // default: 0
   quantityRemaining: number;        // quantity - quantityReceived (computed)
@@ -185,6 +188,16 @@ export interface PurchaseOrderItem {
 // ============================================================================
 // PURCHASE ORDER — CORE ENTITY
 // ============================================================================
+
+/**
+ * Έκπτωση Σύμβασης-Πλαίσιο σε μία γραμμή (EN 16931 BT-136/BT-138). Την υπολογίζει **μόνο** ο server
+ * (`lib/procurement/price-purchase-order`)· ποτέ δεν έρχεται από τον πελάτη.
+ */
+export interface POLineFaDiscount {
+  agreementId: string;              // fwa_* — η σύμβαση που νίκησε για τη γραμμή
+  discountPercent: number;          // ενιαία ένδειξη της αλυσίδας (προβολή)
+  discountAmount: number;           // € εκτός ΦΠΑ
+}
 
 /** Purchase Order document — Firestore: purchase_orders/{poId} */
 export interface PurchaseOrder {
@@ -203,12 +216,14 @@ export interface PurchaseOrder {
   // Line Items (embedded array — max ~30 items per PO typically)
   items: PurchaseOrderItem[];
 
-  // Financial Summary (computed, stored for query efficiency)
+  // Financial Summary (computed by lib/procurement/po-totals — ADR-923 §5.11 «3γ», EN 16931)
   currency: 'EUR';
-  subtotal: number;
+  subtotal: number;                 // Σ ποσότητα × τιμή των γραμμών
+  faDiscountAmount: number;         // Σ εκπτώσεων συμβάσεων (BT-107)
+  taxableAmount: number;            // subtotal − faDiscountAmount (BT-109)
   taxRate: POVatRate;
-  taxAmount: number;
-  total: number;
+  taxAmount: number;                // ΦΠΑ πάνω στη φορολογητέα αξία (BT-110)
+  total: number;                    // πληρωτέο = taxableAmount + taxAmount (BT-112)
 
   // Dates
   dateCreated: string;              // ISO
@@ -241,11 +256,8 @@ export interface PurchaseOrder {
   // Quote link (ADR-327 P5 — auto-generated from awarded quote)
   sourceQuoteId: string | null;
 
-  // Framework Agreement discount (ADR-330 Phase 5.5)
-  appliedFaId: string | null;
-  faDiscountPercent: number | null;
-  faDiscountAmount: number | null;
-  netTotal: number | null;
+  // Framework Agreements applied to at least one line (ADR-330 Phase 5.5 · ADR-923 «3γ»)
+  appliedFaIds: string[];
 
   // Metadata
   createdBy: string;                // userId
@@ -290,12 +302,15 @@ export interface BudgetOverviewItem {
 // FORM / API DTOs
 // ============================================================================
 
+/** Γραμμή όπως τη στέλνει ο πελάτης — η έκπτωση (`faDiscount`) την υπολογίζει μόνο ο server. */
+export type POItemInput = Omit<PurchaseOrderItem, 'id' | 'quantityReceived' | 'quantityRemaining' | 'faDiscount'>;
+
 /** Create PO — request payload */
 export interface CreatePurchaseOrderDTO {
   projectId: string;
   buildingId?: string | null;
   supplierId: string;
-  items: Omit<PurchaseOrderItem, 'id' | 'quantityReceived' | 'quantityRemaining'>[];
+  items: POItemInput[];
   taxRate: POVatRate;
   dateNeeded?: string | null;
   deliveryAddress?: string | null;
@@ -303,10 +318,6 @@ export interface CreatePurchaseOrderDTO {
   supplierNotes?: string | null;
   internalNotes?: string | null;
   sourceQuoteId?: string | null;
-  appliedFaId?: string | null;
-  faDiscountPercent?: number | null;
-  faDiscountAmount?: number | null;
-  netTotal?: number | null;
 }
 
 /** Update PO — partial update payload */
@@ -314,17 +325,13 @@ export interface UpdatePurchaseOrderDTO {
   projectId?: string;
   buildingId?: string | null;
   supplierId?: string;
-  items?: Omit<PurchaseOrderItem, 'id' | 'quantityReceived' | 'quantityRemaining'>[];
+  items?: POItemInput[];
   taxRate?: POVatRate;
   dateNeeded?: string | null;
   deliveryAddress?: string | null;
   paymentTermsDays?: number | null;
   supplierNotes?: string | null;
   internalNotes?: string | null;
-  appliedFaId?: string | null;
-  faDiscountPercent?: number | null;
-  faDiscountAmount?: number | null;
-  netTotal?: number | null;
 }
 
 /** Record delivery — per item quantities */

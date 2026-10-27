@@ -12,16 +12,28 @@
  */
 
 import { z } from 'zod';
+import { poLineGrossMinor } from '@/lib/procurement/po-totals';
 
-export const CreatePOItemSchema = z.object({
-  description: z.string().min(1).max(500),
-  quantity: z.number().positive(),
-  unit: z.string().min(1).max(20),
-  unitPrice: z.number().min(0),
-  total: z.number().min(0),
-  boqItemId: z.string().nullable().default(null),
-  categoryCode: z.string().min(1).max(20),
-});
+/**
+ * `materialId` ΠΡΕΠΕΙ να είναι εδώ: χωρίς αυτό το zod το πετούσε σιωπηλά (ADR-923 §5.11 «3γ», Α5) ⇒
+ * ούτε η σύμβαση ανά υλικό ούτε το `materialPriceSyncOnPODelivery` (ADR-330 Phase 4.5) έβρισκαν υλικό.
+ * Το `total` γραμμής το ξαναϋπολογίζει ο server· η τιμή του πελάτη δεν αποθηκεύεται.
+ */
+export const CreatePOItemSchema = z
+  .object({
+    description: z.string().min(1).max(500),
+    quantity: z.number().positive(),
+    unit: z.string().min(1).max(20),
+    unitPrice: z.number().min(0),
+    total: z.number().min(0),
+    boqItemId: z.string().nullable().default(null),
+    categoryCode: z.string().min(1).max(20),
+    materialId: z.string().min(1).nullable().default(null),
+  })
+  .refine((item) => poLineGrossMinor(item) !== null, {
+    message: 'quantity or unitPrice has more decimals than a purchase order line can carry',
+    path: ['quantity'],
+  });
 
 export const CreatePOSchema = z.object({
   projectId: z.string().min(1),
@@ -34,10 +46,6 @@ export const CreatePOSchema = z.object({
   paymentTermsDays: z.number().int().min(0).max(365).nullable().optional(),
   supplierNotes: z.string().max(2000).nullable().optional(),
   internalNotes: z.string().max(2000).nullable().optional(),
-  appliedFaId: z.string().nullable().optional(),
-  faDiscountPercent: z.number().min(0).max(100).nullable().optional(),
-  faDiscountAmount: z.number().min(0).nullable().optional(),
-  netTotal: z.number().min(0).nullable().optional(),
 });
 
 export const UpdatePOSchema = CreatePOSchema.partial();

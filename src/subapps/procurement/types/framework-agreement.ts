@@ -13,6 +13,7 @@
  *   - Vendor FK to `contacts` (supplier persona), single vendor per agreement
  *   - Scope filters: `applicableProjectIds`/`applicableMaterialIds`/
  *     `applicableAtoeCategoryCodes` — null = all, empty array = none, list = specific
+ *     (enforced by `scopeCovers` — ADR-923 §5.11 «3γ»; material/ATOE are line-level, either one matches)
  *   - Discount: `flat` percent OR `volume_breakpoints` (array, sorted ASC by threshold)
  */
 
@@ -30,7 +31,11 @@ export const DISCOUNT_TYPES = ['flat', 'volume_breakpoints'] as const;
 export type DiscountType = (typeof DISCOUNT_TYPES)[number];
 
 export interface VolumeBreakpoint {
-  /** Cumulative spend threshold in EUR — applies once running total reaches this value */
+  /**
+   * Κατώφλι σε € εκτός ΦΠΑ, πάνω στο **άθροισμα των γραμμών της ΙΔΙΑΣ παραγγελίας** που καλύπτει η
+   * σύμβαση (SAP group condition — ADR-923 §5.11 «3γ»). ΔΕΝ είναι σωρευτική δαπάνη πολλών παραγγελιών:
+   * αυτό θα ήταν rebate, άλλος μηχανισμός (εκκαθάριση εκ των υστέρων).
+   */
   thresholdEur: number;
   /** Discount % applied beyond this threshold (0–100) */
   discountPercent: number;
