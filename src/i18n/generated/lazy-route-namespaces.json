@@ -579,7 +579,8 @@
     "quotes",
     "reports-extended",
     "storage",
-    "toolbars"
+    "toolbars",
+    "uom"
   ],
   "Contacts": [
     "accounting",
@@ -641,7 +642,8 @@
     "reports-extended",
     "storage",
     "toolbars",
-    "trash"
+    "trash",
+    "uom"
   ],
   "CrmCalendar": [
     "accounting",
@@ -864,7 +866,8 @@
     "files-media",
     "floors",
     "textToolbar",
-    "tool-hints"
+    "tool-hints",
+    "uom"
   ],
   "EmailAnalytics": [
     "common",
@@ -1087,7 +1090,8 @@
     "storage",
     "surveyRecord",
     "toolbars",
-    "trash"
+    "trash",
+    "uom"
   ],
   "Properties": [
     "accounting",
@@ -1605,7 +1609,8 @@
     "quotes",
     "showcase",
     "storage",
-    "trash"
+    "trash",
+    "uom"
   ],
   "SpacesStorage": [
     "accounting",
@@ -1652,7 +1657,8 @@
     "quotes",
     "showcase",
     "storage",
-    "trash"
+    "trash",
+    "uom"
   ],
   "StorageDetail": [
     "floors",

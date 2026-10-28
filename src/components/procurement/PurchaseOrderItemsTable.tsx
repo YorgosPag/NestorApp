@@ -34,8 +34,8 @@ import {
 import { cn } from '@/lib/design-system';
 import { Plus, Trash2 } from 'lucide-react';
 import { PROCUREMENT_UNIT_OPTIONS } from '@/config/procurement-units';
-import { adoptedUom, resolveUom } from '@/lib/uom/uom-registry';
-import { useUomLabel } from '@/hooks/useUomLabel';
+import { adoptedUom } from '@/lib/uom/uom-registry';
+import { UomSelect } from '@/components/shared/UomSelect';
 import { atoeCategoryOptions, materialOptionLabel } from '@/lib/procurement/scope-options';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Material } from '@/subapps/procurement/types/material';
@@ -89,37 +89,6 @@ function LineNumberInput({ value, onChange, disabled, ariaLabel, placeholder, st
       placeholder={placeholder}
       disabled={disabled}
     />
-  );
-}
-
-interface UnitSelectProps {
-  readonly value: string;
-  readonly onChange: (unit: string) => void;
-  readonly disabled: boolean;
-}
-
-/**
- * Μονάδα γραμμής — ΜΙΑ φορά για πίνακα και κάρτα κινητού (ADR-923 §5.11 «3γ» Α10).
- * Η αποθηκευμένη γραφή λύνεται στον κανονικό κωδικό (`'τεμ'` ⇒ «Τεμάχιο»)· μονάδα εκτός λίστας (ή άγνωστη) μένει
- * **επιλογή**, ώστε η τιμή να μη χαθεί σιωπηλά επειδή η λίστα δεν την προσφέρει.
- */
-function UnitSelect({ value, onChange, disabled }: UnitSelectProps) {
-  const uomLabel = useUomLabel();
-  const selected = resolveUom(value) ?? value.trim();
-  const offList = selected !== '' && !(PROCUREMENT_UNIT_OPTIONS as readonly string[]).includes(selected);
-  return (
-    <Select value={selected} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger aria-label={uomLabel(selected, 'name')}>
-        {/* Κλειστό πεδίο = σύμβολο («τ.μ.»), λίστα = όνομα (SAP/Revit): το όνομα δεν χωράει στη στενή στήλη. */}
-        <SelectValue>{uomLabel(selected, 'symbol')}</SelectValue>
-      </SelectTrigger>
-      <SelectContent width="content">
-        {PROCUREMENT_UNIT_OPTIONS.map((code) => (
-          <SelectItem key={code} value={code}>{uomLabel(code, 'name')}</SelectItem>
-        ))}
-        {offList && <SelectItem value={selected}>{uomLabel(selected, 'name')}</SelectItem>}
-      </SelectContent>
-    </Select>
   );
 }
 
@@ -240,10 +209,12 @@ export function PurchaseOrderItemsTable({
                   />
                 </TableCell>
                 <TableCell>
-                  <UnitSelect
+                  <UomSelect
                     value={item.unit}
-                    onChange={(unit) => onUpdateItem(item.tempId, { unit })}
+                    onValueChange={(unit) => onUpdateItem(item.tempId, { unit })}
+                    units={PROCUREMENT_UNIT_OPTIONS}
                     disabled={readOnly}
+                    compact
                   />
                 </TableCell>
                 <TableCell>
@@ -372,10 +343,12 @@ export function PurchaseOrderItemsTable({
                 placeholder={t('items.quantityShort')}
                 disabled={readOnly}
               />
-              <UnitSelect
+              <UomSelect
                 value={item.unit}
-                onChange={(unit) => onUpdateItem(item.tempId, { unit })}
+                onValueChange={(unit) => onUpdateItem(item.tempId, { unit })}
+                units={PROCUREMENT_UNIT_OPTIONS}
                 disabled={readOnly}
+                compact
               />
               <LineNumberInput
                 value={item.unitPrice}

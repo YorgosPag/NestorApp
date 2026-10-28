@@ -7,16 +7,17 @@
  * ρητή σήμανση εκκρεμότητας. Το κλικ είναι μία κίνηση («πήγαινέ με εκεί και άνοιξε το έντυπο»),
  * γι' αυτό ολόκληρη η γραμμή είναι `<button>` — όχι γραμμή με κρυφό κουμπί δράσης στην άκρη.
  *
- * Οι ετικέτες μονάδων έρχονται από τα **υπάρχοντα** κλειδιά του dialog (`importedMeshBoq.units.*`)
- * και όχι από νέα: μία ανάθεση πρέπει να διαβάζεται το ίδιο όπου κι αν εμφανίζεται.
+ * Η ετικέτα μονάδας έρχεται από το ΕΝΑ μητρώο μονάδων (`useUomLabel`, ADR-923 §5.11 «3γ» 4γ): μία ανάθεση
+ * διαβάζεται το ίδιο στο πάνελ, στο dialog, στο BOQ και στην παραγγελία.
  *
  * @see ../../../bim/entities/imported-mesh/imported-mesh-panel-rows — `ImportedMeshRow`
- * @see ../../components/imported-mesh/ImportedMeshBoqDialog — ο ιδιοκτήτης των ετικετών μονάδων
+ * @see @/hooks/useUomLabel — η ετικέτα μονάδας
  */
 
 import { useMemo } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTranslation } from '@/i18n';
+import { useUomLabel } from '@/hooks/useUomLabel';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { ImportedMeshRow } from '../../../bim/entities/imported-mesh/imported-mesh-panel-rows';
 import {
@@ -34,8 +35,9 @@ export interface ImportedMeshListRowProps {
 }
 
 export function ImportedMeshListRow({ row, uploadId, onSelect }: ImportedMeshListRowProps) {
-  const { t } = useTranslation(['dxf-viewer-panels', 'dxf-viewer-shell']);
+  const { t } = useTranslation('dxf-viewer-panels');
   const colors = useSemanticColors();
+  const uomLabel = useUomLabel();
 
   // ADR-683 §mesh-load-missing-file — το `.glb` του κόμβου μπορεί να λείπει από το Storage (ορφανή
   // οντότητα): τότε το πλέγμα μένει μόνιμο placeholder κουτί. Το σημαίνουμε ρητά αντί για σιωπηλή
@@ -49,7 +51,7 @@ export function ImportedMeshListRow({ row, uploadId, onSelect }: ImportedMeshLis
   );
 
   const assignment = row.assigned
-    ? [row.categoryCode, row.unit ? t(`dxf-viewer-shell:importedMeshBoq.units.${row.unit}`) : null]
+    ? [row.categoryCode, row.unit ? uomLabel(row.unit) : null]
         .filter(Boolean)
         .join(' · ')
     : t('panels.importedMeshes.unassigned');

@@ -5,6 +5,7 @@
  *   δείχνει το όνομα. (Το όνομα δεν χωρά στη στενή στήλη.)
  * - Μ2: η τιμή του Select είναι ο **κανονικός** κωδικός — αλλιώς το `'τεμ'` γίνεται δεύτερο «Τεμάχιο» εκτός λίστας και κανένα
  *   από τα δύο δεν είναι το επιλεγμένο της λίστας (η ρίζα της «κενής» μονάδας του ζωντανού ελέγχου).
+ * - Μ3: άγνωστη αποθηκευμένη γραφή μένει ορατή επιλογή (ο επιλογέας είναι πλέον το κοινό `UomSelect`, 4γ).
  * - Α1: η τιμή `500` εμφανίζεται **ολόκληρη** σε πεδίο κειμένου (`NumericField`, ADR-706) — όχι σε `type="number"`, του
  *   οποίου τα βελάκια έκοβαν το «500» σε «50» στο κελί των 54px.
  * - Α2: «12,5» ⇒ `unitPrice: 12.5` (ελληνικό κόμμα)· Α3: μηδέν ⇒ κενό πεδίο.
@@ -65,9 +66,20 @@ describe('PurchaseOrderItemsTable — μονάδα και αριθμητικά �
     renderTable([line()]);
     await user.click(screen.getAllByRole('combobox', { name: 'name.pcs' })[0]);
 
-    const pcs = await screen.findAllByRole('option', { name: 'name.pcs' });
+    const pcs = await screen.findAllByRole('option', { name: 'name.pcs (symbol.pcs)' });
     expect(pcs).toHaveLength(1);
     expect(pcs[0]).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('Μ3: άγνωστη αποθηκευμένη μονάδα ⇒ μένει ορατή και επιλεγμένη (ποτέ σιωπηλό κενό)', async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    renderTable([line({ unit: 'καρότσι' })]);
+    const [trigger] = screen.getAllByRole('combobox', { name: 'καρότσι' });
+    expect(trigger).toHaveTextContent('καρότσι');
+    await user.click(trigger);
+
+    const offList = await screen.findByRole('option', { name: 'καρότσι' });
+    expect(offList).toHaveAttribute('aria-selected', 'true');
   });
 
   it('Α1: η τιμή 500 εμφανίζεται ολόκληρη, σε πεδίο κειμένου', () => {

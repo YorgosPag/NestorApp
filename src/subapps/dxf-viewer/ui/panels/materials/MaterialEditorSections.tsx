@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { UomSelect } from '@/components/shared/UomSelect';
 import { MaterialSwatch } from '../../components/shared/MaterialSwatch';
 // Type-only: the sections receive the resolved palette as a prop (`ReturnType<…>`);
 // they never call the hook themselves, so no runtime dependency is pulled in.
@@ -130,14 +131,13 @@ export function RequiredSection({
         </label>
         <label className="flex flex-col gap-1">
           <span className={labelClass}>{t('form.defaultUnit')}</span>
-          <Select value={form.defaultUnit} onValueChange={(v) => setField('defaultUnit', v as BimMaterialUnit)}>
-            <SelectTrigger size="sm"><SelectValue /></SelectTrigger>
-            <SelectContent className={DROPDOWN_CONTENT}>
-              {UNITS.map((u) => (
-                <SelectItem key={u} value={u}>{t(`units.${u}`)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <UomSelect
+            value={form.defaultUnit}
+            onValueChange={(v) => setField('defaultUnit', v as BimMaterialUnit)}
+            units={UNITS}
+            size="sm"
+            contentClassName={DROPDOWN_CONTENT}
+          />
         </label>
       </div>
       <label className="flex flex-col gap-1">

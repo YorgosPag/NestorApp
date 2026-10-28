@@ -1388,6 +1388,14 @@ src/
 
 ## Changelog
 
+### 2026-10-28 — ADR-923 §5.11 «3γ» 4γ: οι ετικέτες μονάδας του BOQ από το ΕΝΑ μητρώο
+- Πίνακας γραμμών (`BOQFloorGroup`), σύνολα ανά κατηγορία (`BOQCategoryAccordion`), παράγωγη τιμή σύνοψης (`BOQDerivedCostFieldset`) ⇒
+  **σύμβολο** μέσω `useUomLabel()`· λίστα μονάδας του επεξεργαστή (`BOQEditorFieldsets`) ⇒ το κοινό `components/shared/UomSelect`,
+  **«όνομα (σύμβολο)»** αντί για «σύμβολο (κωδικός)».
+- Σβήστηκε το αντίγραφο `building-tabs` → `tabs.measurements.units.*` (el/en). Τα σύμβολα του `uom.json` έγιναν πραγματικές συντομογραφίες
+  (`kg` · `t` · `lt` · `ώρ.` · `ημ.` · `κ.α.`), ώστε η στενή στήλη να μη χάσει τίποτα σε σχέση με πριν.
+- Test: `MeasurementsTabContent/__tests__/boq-unit-labels.test.tsx`.
+
 ### 2026-10-28 — ADR-923 §5.11 «3γ» Α10: ο τύπος μονάδας BOQ είναι πλέον **προβολή** του ΕΝΟΣ μητρώου μονάδων
 - `src/types/boq/units.ts`: `BOQ_MEASUREMENT_UNITS` (12 κωδικοί, **ίδιοι** με πριν) `satisfies readonly UomCode[]` και
   `BOQMeasurementUnit` παράγεται από αυτόν· `BOQ_PICKER_UNITS` = ό,τι προσφέρει ο επιλογέας (χωρίς `kWp`).

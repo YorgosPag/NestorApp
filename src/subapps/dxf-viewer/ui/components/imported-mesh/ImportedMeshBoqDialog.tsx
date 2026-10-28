@@ -29,6 +29,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Tag } from 'lucide-react';
 import { useTranslation } from '@/i18n';
+import { UomSelect } from '@/components/shared/UomSelect';
 import {
   Dialog,
   DialogContent,
@@ -225,14 +226,13 @@ export function ImportedMeshBoqDialog({
 
           <article className="space-y-1.5">
             <Label>{t(`${K}.fields.unit`)}</Label>
-            <Select value={draft.unit} onValueChange={(v) => update('unit', v)} disabled={units.length === 0}>
-              <SelectTrigger><SelectValue placeholder={t(`${K}.fields.unitPlaceholder`)} /></SelectTrigger>
-              <SelectContent>
-                {units.map((u) => (
-                  <SelectItem key={u} value={u}>{t(`${K}.units.${u}`)} ({u})</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <UomSelect
+              value={draft.unit}
+              onValueChange={(v) => update('unit', v)}
+              units={units}
+              disabled={units.length === 0}
+              placeholder={t(`${K}.fields.unitPlaceholder`)}
+            />
             {/* Η απουσία μονάδας ΕΞΗΓΕΙΤΑΙ πάντα: «λείπει» ≠ «ξεχάστηκε». */}
             {noUnits && <p className="text-xs text-destructive">{t(`${K}.noUnitsForArticle`)}</p>}
             {!noUnits && params?.measuredVolumeM3 === null && (

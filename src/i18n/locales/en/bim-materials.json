@@ -19,13 +19,6 @@
     "EI120": "EI120 (120 minutes)",
     "none": "No fire rating"
   },
-  "units": {
-    "m": "m (linear metres)",
-    "m2": "m² (square metres)",
-    "m3": "m³ (cubic metres)",
-    "kg": "kg (kilograms)",
-    "pcs": "pcs (pieces)"
-  },
   "scopes": {
     "company": "Company",
     "project": "Project",

@@ -4,7 +4,7 @@
  * Ήταν **τρία** λεξιλόγια (BOQ `'pcs'` · PO `'τεμ'` · RFQ `'τμχ'`) και **πέντε** αντίγραφα ετικετών — και κανένα όργανο
  * δεν τα έβλεπε (το CHECK 3.8 ρωτά «υπάρχει το κλειδί;», όχι «υπάρχει ήδη αλλού;»). Κλείνει η **κλάση**, όχι το δείγμα:
  * ελληνική γραφή μονάδας ή ετικέτα `…units.${…}` σε κώδικα ⇒ κόκκινο, εκτός από το κλειστό σύνολο — **με λόγο** ανά γραμμή.
- * Το σύνολο **μόνο μικραίνει** (4β · 4γ · 4δ του ADR).
+ * Το σύνολο **μόνο μικραίνει** (4γ ✅ · μένουν 4β · 4δ του ADR).
  *
  * Ο ΕΝΑΣ δρόμος: `resolveUom()` / `DEFAULT_UOM` (`lib/uom/uom-registry`) · `useUomLabel()` (UI) · `uomLabelIn()` (server).
  */
@@ -20,7 +20,6 @@ const PATTERNS: readonly RegExp[] = [
 ];
 
 const PENDING_4B = 'Λεξιλόγιο RFQ/προσφορών/πύλης προμηθευτή (`τμχ`) → ADR-923 «3γ» 4β.';
-const PENDING_4C = 'Αντίγραφο ετικετών μονάδας BOQ/BIM → ADR-923 «3γ» 4γ.';
 const PENDING_4D = 'Γραμμή εκτός προμηθειών με δική της προεπιλογή μονάδας → ADR-923 «3γ» 4δ.';
 
 /** Κλειστό σύνολο — αρχείο → λόγος. Κάθε προσθήκη χρειάζεται λόγο που αντέχει σε review. */
@@ -30,13 +29,6 @@ const ALLOWED: Readonly<Record<string, string>> = {
   'subapps/procurement/services/po-generation-service.ts': PENDING_4B,
   'subapps/procurement/services/quote-service.ts': PENDING_4B,
   'subapps/procurement/utils/units.ts': PENDING_4B,
-  'components/building-management/tabs/MeasurementsTabContent/BOQCategoryAccordion.tsx': PENDING_4C,
-  'components/building-management/tabs/MeasurementsTabContent/BOQDerivedCostFieldset.tsx': PENDING_4C,
-  'components/building-management/tabs/MeasurementsTabContent/BOQEditorFieldsets.tsx': PENDING_4C,
-  'components/building-management/tabs/MeasurementsTabContent/BOQFloorGroup.tsx': PENDING_4C,
-  'subapps/dxf-viewer/ui/panels/materials/MaterialEditorSections.tsx': PENDING_4C,
-  'subapps/dxf-viewer/ui/components/imported-mesh/ImportedMeshBoqDialog.tsx': PENDING_4C,
-  'subapps/dxf-viewer/ui/panels/imported-meshes/ImportedMeshListRow.tsx': PENDING_4C,
   'subapps/dxf-viewer/bim-3d/dimensions/Dim3DPropertiesPanel.tsx':
     'Μονάδες ΜΗΚΟΥΣ σχεδίου (mm/cm/m της διάστασης 3D) — άλλη έννοια από τη μονάδα ποσότητας· ADR-362.',
   'subapps/dxf-viewer/ui/components/export/ExportDialog.tsx':

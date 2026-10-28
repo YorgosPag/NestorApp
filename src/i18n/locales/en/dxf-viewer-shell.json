@@ -7822,13 +7822,6 @@
       "material": "Material",
       "materialNone": "— None —"
     },
-    "units": {
-      "pcs": "pcs",
-      "m": "m",
-      "m2": "m²",
-      "m3": "m³",
-      "kg": "kg"
-    },
     "materialNote": "Optional. The material brings a unit price from the library.",
     "openMeshNote": "This mesh is not a closed shell, so volume and weight units are not offered.",
     "noUnitsForArticle": "No unit fits: this article requires a quantity this geometry does not measure. Pick another article.",
