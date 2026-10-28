@@ -74,7 +74,8 @@ export interface BuildQuoteHeaderActionsParams {
 // INTERNALS
 // ============================================================================
 
-const AWARD_LOCKABLE: readonly QuoteStatus[] = ['submitted', 'under_review', 'rejected'];
+// `draft` (§8.5.4): με «Επιβεβαίωση» μπαίνει στη Σύγκριση — μετά την ανάθεση θα ήταν καθυστερημένη προσφορά.
+const AWARD_LOCKABLE: readonly QuoteStatus[] = ['draft', 'submitted', 'under_review', 'rejected'];
 
 const EDIT_LOCKED_STATUSES: readonly QuoteStatus[] = ['accepted', 'archived', 'superseded'];
 
@@ -132,6 +133,40 @@ export function buildQuoteHeaderActions(p: BuildQuoteHeaderActionsParams): Quote
   return { primaryActions, secondaryActions, overflowActions };
 }
 
+/**
+ * ADR-327 §8.5.4 — χειροκίνητη προσφορά (ο PM καταχωρεί ό,τι έστειλε ο προμηθευτής): ήταν ΜΟΝΟ «Επεξεργασία»
+ * ⇒ καμία διαδρομή προς τη Σύγκριση (μετρά `submitted/under_review/accepted`). Ίδια «Επιβεβαίωση» με τη σάρωση,
+ * επιτρεπτή μετάβαση `draft → under_review` (Ariba «submit on behalf of supplier»).
+ */
+function buildDraftPrimary(
+  p: BuildQuoteHeaderActionsParams,
+  locked: boolean,
+  awardTooltip: string | undefined,
+  offlineTooltip: string | undefined,
+): QuoteHeaderPrimaryAction[] {
+  return [
+    confirmAction(p, locked, awardTooltip, offlineTooltip),
+    {
+      id: 'edit', label: p.t('rfqs.quoteHeader.action.edit'), onClick: p.onEdit,
+      variant: 'outline', disabled: offlineTooltip !== undefined, disabledTooltip: offlineTooltip,
+    },
+  ];
+}
+
+/** «Επιβεβαίωση» → `under_review` — ΕΝΑ κουμπί για `submitted` (πύλη/σάρωση) και `draft` (χειροκίνητη). */
+function confirmAction(
+  p: BuildQuoteHeaderActionsParams,
+  locked: boolean,
+  awardTooltip: string | undefined,
+  offlineTooltip: string | undefined,
+): QuoteHeaderPrimaryAction {
+  return {
+    id: 'confirm', label: p.t('rfqs.quoteHeader.action.confirm'), onClick: p.onConfirm,
+    disabled: locked || offlineTooltip !== undefined,
+    disabledTooltip: offlineTooltip ?? awardTooltip,
+  };
+}
+
 function buildPrimary(
   p: BuildQuoteHeaderActionsParams,
   locked: boolean,
@@ -142,11 +177,7 @@ function buildPrimary(
   switch (p.quote.status) {
     case 'submitted':
       return [
-        {
-          id: 'confirm', label: p.t('rfqs.quoteHeader.action.confirm'), onClick: p.onConfirm,
-          disabled: locked || offline,
-          disabledTooltip: offlineTooltip ?? awardTooltip,
-        },
+        confirmAction(p, locked, awardTooltip, offlineTooltip),
         {
           id: 'reject', label: p.t('rfqs.quoteHeader.action.reject'), onClick: p.onReject,
           variant: 'outline', disabled: offline, disabledTooltip: offlineTooltip,
@@ -178,10 +209,7 @@ function buildPrimary(
         disabledTooltip: offlineTooltip ?? awardTooltip,
       }];
     case 'draft':
-      return [{
-        id: 'edit', label: p.t('rfqs.quoteHeader.action.edit'), onClick: p.onEdit,
-        disabled: offline, disabledTooltip: offlineTooltip,
-      }];
+      return buildDraftPrimary(p, locked, awardTooltip, offlineTooltip);
     default:
       return [];
   }

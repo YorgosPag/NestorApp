@@ -56,7 +56,7 @@ import { RfqDetailDialogs } from '@/subapps/procurement/components/RfqDetailDial
 import { RfqLinesPanel } from '@/subapps/procurement/components/RfqLinesPanel';
 import { SetupLockBanner } from '@/subapps/procurement/components/SetupLockBanner';
 import { deriveSetupLockState } from '@/subapps/procurement/utils/rfq-lock-state';
-import { rfqIsMultiTrade } from '@/subapps/procurement/types/rfq';
+import { rfqIsMultiTrade, rfqLeadTrade } from '@/subapps/procurement/types/rfq';
 import { useRfqRecord } from '@/subapps/procurement/hooks/useRfqRecord';
 import { DirtyFormProvider } from '@/providers/DirtyFormProvider';
 import { OfflineBanner } from '@/subapps/procurement/components/OfflineBanner';
@@ -348,7 +348,7 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
             <QuoteForm
               rfqId={id}
               projectId={rfq?.projectId}
-              trade={rfq?.trade}
+              trade={rfqLeadTrade({ lines }) ?? undefined}
               onSuccess={handleQuoteCreated}
               onCancel={() => setShowQuoteForm(false)}
             />

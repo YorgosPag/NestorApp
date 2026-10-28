@@ -5522,3 +5522,34 @@ Closed via `hostWall.params.sceneUnits ?? 'mm'` frozen-context pattern σε **4 
 και οι δύο καλούντες το εισάγουν.
 
 **Πώς επαληθεύεται ότι έκλεισε**: `grep -rn "function extractScene" src functions/src` δεν επιστρέφει τίποτα.
+
+---
+
+### 📥 `useRfqLines` / `listRfqLines` αγνοούν το `linesStorage: 'inline_legacy'` — ADR-327 §8.5.4 · 2026-10-28
+
+**Πού**: `src/subapps/procurement/hooks/useRfqLines.ts` (συνδρομή **μόνο** στην υποσυλλογή `lines`) και
+`services/rfq-line-service.ts` `listRfqLines` (ίδιο). Ο κανόνας αποθήκευσης ζει στο `rfqLinesLocation` /
+`resolvePublicRfqLines` (`types/rfq-line.ts`) και τον τηρούν **μόνο** οι αναγνώστες του server (`readRfqLines*`).
+
+**Συνέπεια**: σε παλιό RFQ με γραμμές inline, το `QuoteRfqBindingReview` (σάρωση + χειροκίνητη) και το «Γραμμές από
+το αίτημα» δεν βλέπουν καμία γραμμή ⇒ κρύβονται σιωπηλά· ο server (`assertPmRfqBinding`) διαβάζει σωστά.
+
+**Γιατί pending και όχι τώρα (N.0.2)**: το `useRfqLines` έχει **4+** καταναλωτές (σελίδα RFQ, builder, φόρμες) και
+γράφει κιόλας (`addLine`/`bulkAdd`) — η διόρθωση αγγίζει τη δομή ανάγνωσης/γραφής, όχι ένα σημείο.
+
+**Τι**: ο hook παίρνει το RFQ (`RfqLinesHolder`) και εφαρμόζει `resolvePublicRfqLines` — ή ξεχωριστός hook ανάγνωσης.
+
+**Πώς επαληθεύεται ότι έκλεισε**: test με RFQ `linesStorage: 'inline_legacy'` ⇒ το `QuoteRfqBindingReview` αποδίδει γραμμές.
+
+---
+
+### 🧭 Δύο κανόνες για «την ειδικότητα του RFQ» — ADR-327 §8.5.4 · 2026-10-28
+
+**Πού**: `RfqDetailClient.tsx` — ο σύνδεσμος σάρωσης βάζει `trade` μόνο όταν `!rfqIsMultiTrade` (1η γραμμή)· η
+χειροκίνητη φόρμα και η πύλη χρησιμοποιούν `rfqLeadTrade` (1η γραμμή **πάντα**, `types/rfq.ts` — «ONE rule»).
+
+**Γιατί pending**: απόφαση προϊόντος (σε πολυ-ειδικότητα RFQ, προεπιλογή ή κενό;) — όχι τεχνική.
+
+**Τι**: ένας κανόνας για όλες τις επιφάνειες του PM (π.χ. `rfqDefaultQuoteTrade`), δίπλα στο `rfqLeadTrade`.
+
+**Πώς επαληθεύεται ότι έκλεισε**: `grep -n "rfqIsMultiTrade" RfqDetailClient.tsx` δεν δίνει δεύτερο κανόνα ειδικότητας.

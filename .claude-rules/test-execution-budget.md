@@ -85,7 +85,8 @@ workerIdleMemoryLimit: '512MB',            // ανακύκλωση worker που
 |---|---|---|
 | **jest στοχευμένα** στα αρχεία που άγγιξες | 9–14s | ✅ **ο πράκτορας** — αποδεικνύει ότι δουλεύει |
 | **`npm run jscpd:diff <staged>`** | ~5s | ✅ **ο πράκτορας** — το απαιτεί ρητά ο **N.18** |
-| **i18n gates** *(`test:i18n-shell-slice`, `test:i18n-types-freshness`)* | 4–8s | ⚠️ **μόνο αν** άγγιξες locale JSON |
+| **i18n gates ελαφριές** *(`test:i18n-types-freshness` 3.33 · `test:i18n-namespace-reachability` 3.36 · `test:locale-dup-keys` 3.71)* | ~4s η καθεμία | ⚠️ **μόνο αν** άγγιξες locale JSON |
+| 🔴 **`test:i18n-shell-slice`** (3.34) | **~10′, 526 tests** *(μετρημένο 2026-10-28· η παλιά τιμή «4–8s» ήταν μπαγιάτικη)* | ❌ **ΠΟΤΕ ο πράκτορας** — γονάτισε το PC (Giorgio 2026-10-28). Το τρέχει το **pre-commit hook** (`scripts/git-hooks/pre-commit` → `check-i18n-shell-slice.js`). Ο πράκτορας τρέχει **μόνο** τον γεννήτορα `generate:i18n-shell-slice` |
 | **`test:registry-golden`** | **7,3s** *(ήταν 22–52s· ADR-749 αφαίρεσε τα subprocess του grep)* | ⚠️ **μόνο αν** άλλαξες regex στο `.ssot-registry.json` — **ΜΙΑ φορά** |
 | 🔴 **`ssot:audit`** | **84,4s** *(ήταν ~60′· ADR-749)* | ❌ **ΠΟΤΕ ο πράκτορας** — βλ. διόρθωση παρακάτω |
 | 🔴 **`ssot:baseline`** | ~60s | ❌ **ΠΟΤΕ ο πράκτορας** χωρίς εντολή — γράφει tracked αρχείο |
