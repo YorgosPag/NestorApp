@@ -13,6 +13,7 @@ import { normalizeBOQItem } from '@/services/measurements/boq-document-normalize
 import { createInitialState, buildBOQUpdatePayload } from '../useBOQEditorState';
 import { BOQDerivedCostFieldset, useSummaryPriceLock } from '../BOQDerivedCostFieldset';
 import { BOQFloorGroup } from '../BOQFloorGroup';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { derivedSummaryCosts } from '@/services/measurements/boq-cost-groups';
 import { formatCurrency } from '@/lib/intl-utils';
 
@@ -78,6 +79,7 @@ describe('BOQ table row of a summary (Α35)', () => {
         onStatusChange={jest.fn()}
         t={t}
       />,
+      { wrapper: TooltipProvider },
     );
     expect(screen.getByText('tabs.measurements.table.derivedFromLayers|{"count":2}')).toBeTruthy();
     expect(screen.getAllByText(formatCurrency(300)).length).toBeGreaterThan(0);

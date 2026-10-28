@@ -23,11 +23,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Badge, type BadgeVariantProps } from '@/components/ui/badge';
+import { IconButton } from '@/components/ui/icon-button';
 import { formatCurrency, formatNumber } from '@/lib/intl-utils';
 import { cn } from '@/lib/utils';
-import { Pencil, Trash2, Unlink } from 'lucide-react';
+import { Link2, Pencil, Trash2, Unlink } from 'lucide-react';
 import type { BOQItem, BOQItemStatus } from '@/types/boq';
 import type { MasterBOQCategory } from '@/config/boq-categories';
 import { findSubCategory } from '@/config/boq-subcategories';
@@ -68,20 +68,18 @@ interface BOQFloorGroupProps extends BOQRowActions {
 // STATUS BADGE STYLES
 // ============================================================================
 
-const STATUS_VARIANT: Record<BOQItemStatus, 'secondary' | 'default' | 'outline' | 'destructive'> = {
-  draft: 'secondary',
-  submitted: 'default',
-  approved: 'default',
-  certified: 'default',
-  locked: 'outline',
-};
+/**
+ * Κατάσταση ⇒ σημασιολογική παραλλαγή του `Badge` — το γέμισμα **και** το μετρημένο μελάνι του ζουν εκεί (`SOLID_FILL_INK`).
+ * ⛔ Όχι χειροποίητες κλάσεις χρώματος: το `text-primary` πάνω σε `bg-accent` ήταν **αόρατο** στο σκοτεινό θέμα (CHECK 3.38).
+ */
+type BadgeVariant = NonNullable<BadgeVariantProps['variant']>;
 
-const STATUS_CLASS: Record<BOQItemStatus, string> = {
-  draft: 'bg-muted text-muted-foreground',
-  submitted: 'bg-[hsl(var(--bg-info))]/20 text-primary',
-  approved: 'bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))]',
-  certified: 'bg-accent text-primary',
-  locked: 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]',
+const STATUS_VARIANT: Record<BOQItemStatus, BadgeVariant> = {
+  draft: 'muted',
+  submitted: 'info',
+  approved: 'success',
+  certified: 'purple',
+  locked: 'warning',
 };
 
 function getVarianceClass(percent: number): string {
@@ -204,13 +202,10 @@ function CategoryItemsTable({ items, totalCost, derivedCosts, categoryName, onEd
                   </p>
                 )}
                 {item.sourceType === 'bim-auto' && (
-                  <Badge
-                    variant="secondary"
-                    className={cn('text-xs mt-1', item.detached
-                      ? 'bg-muted text-muted-foreground'
-                      : 'bg-accent text-primary'
-                    )}
-                  >
+                  <Badge variant={item.detached ? 'muted' : 'outline'} className="text-xs mt-1 gap-1">
+                    {item.detached
+                      ? <Unlink className="h-3 w-3" aria-hidden="true" />
+                      : <Link2 className="h-3 w-3" aria-hidden="true" />}
                     {item.detached
                       ? t('tabs.measurements.badge.bimDetached')
                       : t('tabs.measurements.badge.bimAuto')}
@@ -247,47 +242,30 @@ function CategoryItemsTable({ items, totalCost, derivedCosts, categoryName, onEd
               </TableCell>
               <SummaryAwareCostCell cost={cost.totalCost} derived={derivedCosts.get(item.id)} mutedClass={colors.text.muted} t={t} />
               <TableCell className="text-center">
-                <Badge
-                  variant={STATUS_VARIANT[item.status]}
-                  className={cn('text-xs', STATUS_CLASS[item.status])}
-                >
+                <Badge variant={STATUS_VARIANT[item.status]} className="text-xs">
                   {t(`tabs.measurements.status.${item.status}`)}
                 </Badge>
               </TableCell>
               <TableCell>
-                <nav className="flex items-center justify-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => onEdit(item)}
-                    aria-label={t('tabs.measurements.actions.edit')}
-                    className="h-7 w-7"
-                  >
+                <div role="group" aria-label={t('tabs.measurements.table.actions')} className="flex items-center justify-center gap-1">
+                  <IconButton label={t('tabs.measurements.actions.edit')} onClick={() => onEdit(item)}>
                     <Pencil className="h-3.5 w-3.5" />
-                  </Button>
+                  </IconButton>
                   {item.sourceType === 'bim-auto' && !item.detached && onDetach && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onDetach(item)}
-                      aria-label={t('tabs.measurements.actions.detachFromBim')}
-                      className="h-7 w-7 text-primary hover:text-primary"
-                    >
+                    <IconButton label={t('tabs.measurements.actions.detachFromBim')} onClick={() => onDetach(item)}>
                       <Unlink className="h-3.5 w-3.5" />
-                    </Button>
+                    </IconButton>
                   )}
                   {item.status === 'draft' && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
+                    <IconButton
+                      label={t('tabs.measurements.actions.delete')}
                       onClick={() => onDelete(item)}
-                      aria-label={t('tabs.measurements.actions.delete')}
-                      className="h-7 w-7 text-destructive hover:text-destructive"
+                      className="text-destructive hover:text-destructive"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    </IconButton>
                   )}
-                </nav>
+                </div>
               </TableCell>
             </TableRow>
           );

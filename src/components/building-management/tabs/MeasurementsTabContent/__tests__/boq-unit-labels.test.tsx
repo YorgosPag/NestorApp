@@ -38,6 +38,7 @@ describe('BOQ — ετικέτες μονάδας από το μητρώο', () 
   it('Π1: γραμμή του πίνακα ⇒ σύμβολο', () => {
     render(
       <BOQFloorGroup items={[line]} derivedCosts={new Map()} categories={[]} onEdit={jest.fn()} onDelete={jest.fn()} onStatusChange={jest.fn()} t={t} />,
+      { wrapper: TooltipProvider },
     );
     expect(screen.getByText('symbol.m2')).toBeTruthy();
   });

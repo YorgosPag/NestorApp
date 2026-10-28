@@ -10,7 +10,7 @@
 
 import { useState } from 'react';
 import { AlertTriangle, ChevronDown, ChevronUp, X, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { Badge } from '@/components/ui/badge';
 import { useSemanticColors, type UseSemanticColorsReturn } from '@/hooks/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -96,22 +96,16 @@ export function ScheduleAlertBanner({
           {t(`alerts.severity.${worst}`)}
         </Badge>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7"
-          aria-label={t(refreshing ? 'alerts.refreshing' : 'alerts.refresh')}
+        <IconButton
+          label={t(refreshing ? 'alerts.refreshing' : 'alerts.refresh')}
           onClick={onRefresh}
           disabled={refreshing}
         >
           <RefreshCw className={cn('h-3.5 w-3.5', refreshing && 'animate-spin')} />
-        </Button>
+        </IconButton>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7"
-          aria-label={expanded ? t('alerts.collapse') : t('alerts.expand')}
+        <IconButton
+          label={expanded ? t('alerts.collapse') : t('alerts.expand')}
           aria-expanded={expanded}
           onClick={() => setExpanded(v => !v)}
         >
@@ -119,7 +113,7 @@ export function ScheduleAlertBanner({
             ? <ChevronUp className="h-3.5 w-3.5" />
             : <ChevronDown className="h-3.5 w-3.5" />
           }
-        </Button>
+        </IconButton>
       </header>
 
       {expanded && (
@@ -154,15 +148,13 @@ export function ScheduleAlertBanner({
                 <span className={cn('ml-1', colors.text.muted)}>— {alert.message}</span>
               </button>
 
-              <Button
-                variant="ghost"
-                size="icon"
+              <IconButton
                 className="h-6 w-6 shrink-0"
-                aria-label={t('alerts.dismissAlert', { title: alert.title })}
+                label={t('alerts.dismissAlert', { title: alert.title })}
                 onClick={() => onDismiss(alert.id)}
               >
                 <X className="h-3 w-3" />
-              </Button>
+              </IconButton>
             </li>
           ))}
         </ul>

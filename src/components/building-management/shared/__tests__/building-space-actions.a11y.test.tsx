@@ -125,3 +125,33 @@ describe('Κ1 — κουμπί-εικονίδιο χωρίς όνομα', () => 
     expect(offenders).toEqual([]);
   });
 });
+
+// ============================================================================
+// Κ2 — η ΑΔΕΛΦΗ κλάση: κουμπί-εικονίδιο ΜΕ όνομα αλλά ΧΩΡΙΣ tooltip (ADR-327, 2026-10-28)
+// ============================================================================
+// Το Κ1 ρωτά «έχει όνομα;» και περνούσε τα κουμπιά ενεργειών του BOQ (επεξεργασία · αποσύνδεση ·
+// διαγραφή) και του `ScheduleAlertBanner`: `aria-label` υπήρχε, tooltip όχι ⇒ ο αναγνώστης οθόνης
+// άκουγε το όνομα, ο άνθρωπος με ποντίκι έβλεπε σκέτο εικονίδιο. Ο μόνος δρόμος που δίνει ΚΑΙ τα δύο
+// από ΜΙΑ συμβολοσειρά είναι το `IconButton` (ή το `ToggleButton` για κουμπί με κατάσταση) — άρα
+// ωμό `<Button size="icon">` δεν γράφεται καθόλου σε αυτόν τον φάκελο.
+
+function rawIconButtons(code: string): string[] {
+  return buttonOpeningTags(code).filter((tag) => tag.startsWith('<Button') && ICON_SIZE.test(tag));
+}
+
+describe('Κ2 — κουμπί-εικονίδιο με όνομα αλλά χωρίς tooltip', () => {
+  const files = listRepoSourceFiles(SCOPE, ['.tsx']).filter((file) => !file.includes('/__tests__/'));
+
+  it('ο ανιχνευτής πιάνει το σχήμα — και αφήνει τους δύο νόμιμους δρόμους', () => {
+    expect(rawIconButtons('<Button size="icon" aria-label={t(\'x\')} onClick={go}><X /></Button>')).toHaveLength(1);
+    expect(rawIconButtons('<ToggleButton pressed={on} size="icon" label={l}><Map /></ToggleButton>')).toHaveLength(0);
+    expect(rawIconButtons('<Button size="sm">Κείμενο</Button>')).toHaveLength(0);
+  });
+
+  it('κανένα στο building-management — χρησιμοποίησε το IconButton', () => {
+    const offenders = files.flatMap((file) =>
+      rawIconButtons(readRepoCode(file)).map((tag) => `${file}: ${tag.replace(/\s+/g, ' ').slice(0, 90)}`),
+    );
+    expect(offenders).toEqual([]);
+  });
+});

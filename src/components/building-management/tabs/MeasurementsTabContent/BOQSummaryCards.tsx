@@ -67,7 +67,8 @@ export function BOQSummaryCards({ items }: BOQSummaryCardsProps) {
       labelKey: 'tabs.measurements.summary.materials',
       amount: totals.materialCost,
       icon: Package,
-      accentClass: 'text-primary',
+      // ⛔ ΟΧΙ `text-primary`: στο σκοτεινό θέμα `--primary` ≡ `--card` ⇒ το ποσό ήταν ΑΟΡΑΤΟ (CHECK 3.38, ADR-770).
+      accentClass: 'text-[hsl(var(--text-info))]',
     },
     {
       labelKey: 'tabs.measurements.summary.labor',
@@ -85,7 +86,7 @@ export function BOQSummaryCards({ items }: BOQSummaryCardsProps) {
       labelKey: 'tabs.measurements.summary.total',
       amount: totals.totalCost,
       icon: Calculator,
-      accentClass: 'text-primary',
+      accentClass: 'text-foreground',
     },
   ];
 
