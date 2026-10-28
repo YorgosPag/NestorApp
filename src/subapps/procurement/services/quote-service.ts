@@ -244,6 +244,10 @@ export async function updateQuote(
     if (dto.overrideReason) {
       newAudit.push(auditEntry(ctx.uid, 'risk_flag_override', null, dto.overrideReason));
     }
+    // ADR-327 §8.5 Γ — ποιος είναι ο προμηθευτής είναι γεγονός με ιστορικό (σάρωση → επαφή · πύλη χωρίς επαφή → επαφή).
+    if (dto.vendorContactId && dto.vendorContactId !== current.vendorContactId) {
+      newAudit.push(auditEntry(ctx.uid, 'vendor_contact_change', current.vendorContactId || null, dto.vendorContactId));
+    }
 
     const isFieldEdit = dto.lines !== undefined ||
       dto.paymentTerms !== undefined || dto.deliveryTerms !== undefined ||

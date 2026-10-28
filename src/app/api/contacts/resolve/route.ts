@@ -3,8 +3,9 @@
  *
  * Strategy (belt-and-suspenders per GOL):
  *   1. VAT match (deterministic — BG prefix stripped)
- *   2. Fuzzy name match (Greek/Latin tolerant)
- *   3. Create new company contact from extracted data
+ *   2. Email match (deterministic — ADR-327 §8.5 Γ: the invite e-mail of a portal vendor)
+ *   3. Fuzzy name match (Greek/Latin tolerant)
+ *   4. Create new company contact from extracted data
  *
  * Used by quote review page vendor-mismatch banner to switch vendorContactId.
  *
@@ -27,18 +28,15 @@ import { EntityAuditService } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { createContactServerSide, updateContactField } from '@/services/ai-pipeline/shared/contact-lookup-crud';
-import { fuzzyGreekMatch } from '@/services/ai-pipeline/shared/greek-text-utils';
 import { getErrorMessage } from '@/lib/error-utils';
 import { splitStreetAndNumber } from '@/utils/address/address-parse';
 import {
   ResolveContactSchema,
   normalizeVat,
-  stripLegalSuffix,
   resolveDisplayName,
-  storeContactEmail,
-  storeBankAccounts,
-  ensureSupplierPersona,
-  setContactLogoIfEmpty,
+  findContactByEmail,
+  findContactByName,
+  enrichMatchedContact,
 } from './resolve-helpers';
 
 async function handlePost(request: NextRequest): Promise<NextResponse> {
@@ -59,37 +57,15 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
         .get();
       const contacts = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Record<string, unknown> & { id: string }));
 
-      // ── VAT match (deterministic) ─────────────────────────────────────────
-      if (normalizedVat) {
-        const vatMatch = contacts.find(
-          (c) => normalizeVat(c['vatNumber'] as string | undefined) === normalizedVat,
-        );
-        if (vatMatch) {
-          try { await ensureSupplierPersona(vatMatch.id, companyId, ctx.uid); } catch (e) { logger.warn('ensureSupplierPersona failed (vat)', { error: getErrorMessage(e) }); }
-          if (bankAccounts?.length) { try { await storeBankAccounts(vatMatch.id, companyId, ctx.uid, bankAccounts, resolveDisplayName(vatMatch)); } catch (e) { logger.warn('storeBankAccounts failed (vat)', { error: getErrorMessage(e) }); } }
-          logger.info('Storing emails for VAT-matched contact', { contactId: vatMatch.id, emailCount: (emails ?? []).length, emails: emails ?? [] });
-          for (const em of emails ?? []) { if (em) { try { await storeContactEmail(vatMatch.id, companyId, ctx.uid, em); } catch (e) { logger.warn('storeContactEmail failed (vat)', { email: em, error: getErrorMessage(e) }); } } }
-          if (logoUrl) { try { await setContactLogoIfEmpty(vatMatch.id, companyId, ctx.uid, logoUrl); } catch (e) { logger.warn('setContactLogoIfEmpty failed (vat)', { error: getErrorMessage(e) }); } }
-          return NextResponse.json({ success: true, data: { contactId: vatMatch.id, displayName: resolveDisplayName(vatMatch), wasCreated: false } });
-        }
-      }
-
-      // ── Fuzzy name match ──────────────────────────────────────────────────
-      if (name) {
-        const stripped = stripLegalSuffix(name);
-        const nameMatch = contacts.find((c) => {
-          const cName = resolveDisplayName(c);
-          if (!cName) return false;
-          const cStripped = stripLegalSuffix(cName);
-          return fuzzyGreekMatch(cStripped, stripped) || fuzzyGreekMatch(stripped, cStripped);
-        });
-        if (nameMatch) {
-          try { await ensureSupplierPersona(nameMatch.id, companyId, ctx.uid); } catch (e) { logger.warn('ensureSupplierPersona failed (name)', { error: getErrorMessage(e) }); }
-          if (bankAccounts?.length) { try { await storeBankAccounts(nameMatch.id, companyId, ctx.uid, bankAccounts, resolveDisplayName(nameMatch)); } catch (e) { logger.warn('storeBankAccounts failed (name)', { error: getErrorMessage(e) }); } }
-          for (const em of emails ?? []) { if (em) { try { await storeContactEmail(nameMatch.id, companyId, ctx.uid, em); } catch (e) { logger.warn('storeContactEmail failed (name)', { email: em, error: getErrorMessage(e) }); } } }
-          if (logoUrl) { try { await setContactLogoIfEmpty(nameMatch.id, companyId, ctx.uid, logoUrl); } catch (e) { logger.warn('setContactLogoIfEmpty failed (name)', { error: getErrorMessage(e) }); } }
-          return NextResponse.json({ success: true, data: { contactId: nameMatch.id, displayName: resolveDisplayName(nameMatch), wasCreated: false } });
-        }
+      // ── VAT → email → fuzzy name: ντετερμινιστικά πρώτα (ADR-327 §8.5 Γ: το email της πρόσκλησης) ─────
+      const normalizedEmails = (emails ?? []).map((em) => em.trim().toLowerCase()).filter(Boolean);
+      const match =
+        (normalizedVat ? contacts.find((c) => normalizeVat(c['vatNumber'] as string | undefined) === normalizedVat) : undefined)
+        ?? findContactByEmail(contacts, normalizedEmails)
+        ?? (name ? findContactByName(contacts, name) : undefined);
+      if (match) {
+        await enrichMatchedContact(match.id, companyId, ctx.uid, resolveDisplayName(match), { emails, bankAccounts, logoUrl });
+        return NextResponse.json({ success: true, data: { contactId: match.id, displayName: resolveDisplayName(match), wasCreated: false } });
       }
 
       // ── Create new company contact ────────────────────────────────────────
@@ -145,11 +121,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
           });
         }
 
-        try { await ensureSupplierPersona(result.contactId, companyId, ctx.uid); } catch (e) { logger.warn('ensureSupplierPersona failed', { contactId: result.contactId, error: getErrorMessage(e) }); }
-        logger.info('Storing emails for new contact', { contactId: result.contactId, emailCount: (emails ?? []).length, emails: emails ?? [] });
-        for (const em of emails ?? []) { if (em) { try { await storeContactEmail(result.contactId, companyId, ctx.uid, em); } catch (e) { logger.warn('storeContactEmail failed', { email: em, error: getErrorMessage(e) }); } } }
-        if (logoUrl) { try { await setContactLogoIfEmpty(result.contactId, companyId, ctx.uid, logoUrl); } catch (e) { logger.warn('setContactLogoIfEmpty failed', { error: getErrorMessage(e) }); } }
-        if (bankAccounts?.length) { try { await storeBankAccounts(result.contactId, companyId, ctx.uid, bankAccounts, result.displayName ?? undefined); } catch (e) { logger.warn('storeBankAccounts failed', { error: getErrorMessage(e) }); } }
+        await enrichMatchedContact(result.contactId, companyId, ctx.uid, result.displayName ?? undefined, { emails, bankAccounts, logoUrl });
 
         return NextResponse.json({
           success: true,

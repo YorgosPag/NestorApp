@@ -14,6 +14,8 @@ import { BankAccountsServerService } from '@/services/banking/bank-accounts-serv
 import type { CurrencyCode } from '@/types/contacts/banking';
 import { createModuleLogger } from '@/lib/telemetry';
 import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
+import { fuzzyGreekMatch } from '@/services/ai-pipeline/shared/greek-text-utils';
+import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('ContactResolveRoute');
 
@@ -249,5 +251,64 @@ export async function storeBankAccounts(
     if (!result.success && !result.error.includes('already exists')) {
       logger.warn('Bank account store failed', { contactId, iban: b.iban, error: result.error });
     }
+  }
+}
+
+// ── Matching + enrichment (ONE path for every match kind and for a new contact) ─────
+
+type ContactRow = Record<string, unknown> & { id: string };
+
+/** Ντετερμινιστικό ταίριασμα με email (ADR-327 §8.5 Γ) — `emails[]` και το legacy `email`. */
+export function findContactByEmail(contacts: readonly ContactRow[], normalizedEmails: readonly string[]): ContactRow | undefined {
+  if (normalizedEmails.length === 0) return undefined;
+  const wanted = new Set(normalizedEmails);
+  return contacts.find((c) => {
+    const listed = Array.isArray(c['emails']) ? (c['emails'] as Array<{ email?: unknown }>) : [];
+    const all = [...listed.map((e) => e.email), c['email']];
+    return all.some((e) => typeof e === 'string' && wanted.has(e.trim().toLowerCase()));
+  });
+}
+
+/** Ασαφές ταίριασμα ονόματος (ελληνικά/λατινικά, χωρίς νομική μορφή). */
+export function findContactByName(contacts: readonly ContactRow[], name: string): ContactRow | undefined {
+  const stripped = stripLegalSuffix(name);
+  return contacts.find((c) => {
+    const cName = resolveDisplayName(c);
+    if (!cName) return false;
+    const cStripped = stripLegalSuffix(cName);
+    return fuzzyGreekMatch(cStripped, stripped) || fuzzyGreekMatch(stripped, cStripped);
+  });
+}
+
+interface EnrichmentInput {
+  emails?: readonly string[];
+  bankAccounts?: readonly BankAccountInput[];
+  logoUrl?: string | null;
+}
+
+/**
+ * Ό,τι μάθαμε για τον προμηθευτή πάει στην επαφή — **ποτέ** εις βάρος της απάντησης: κάθε βήμα είναι ανεξάρτητο,
+ * μια αποτυχία καταγράφεται και δεν ακυρώνει το ταίριασμα. (Ήταν αντιγραμμένο τρεις φορές στο route.)
+ */
+export async function enrichMatchedContact(
+  contactId: string,
+  companyId: string,
+  uid: string,
+  displayName: string | undefined,
+  input: EnrichmentInput,
+): Promise<void> {
+  const step = async (label: string, run: () => Promise<void>) => {
+    try { await run(); } catch (e) { logger.warn(`${label} failed`, { contactId, error: getErrorMessage(e) }); }
+  };
+  await step('ensureSupplierPersona', () => ensureSupplierPersona(contactId, companyId, uid));
+  if (input.bankAccounts?.length) {
+    await step('storeBankAccounts', () => storeBankAccounts(contactId, companyId, uid, [...input.bankAccounts!], displayName));
+  }
+  for (const em of input.emails ?? []) {
+    if (em) await step('storeContactEmail', () => storeContactEmail(contactId, companyId, uid, em));
+  }
+  if (input.logoUrl) {
+    const logoUrl = input.logoUrl;
+    await step('setContactLogoIfEmpty', () => setContactLogoIfEmpty(contactId, companyId, uid, logoUrl));
   }
 }

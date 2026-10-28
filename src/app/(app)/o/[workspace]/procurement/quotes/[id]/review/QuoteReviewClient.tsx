@@ -9,6 +9,7 @@ import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useQuote } from '@/subapps/procurement/hooks/useQuote';
 import { useContactById } from '@/hooks/useContactById';
+import { useBindQuoteVendor } from '@/subapps/procurement/hooks/useBindQuoteVendor';
 import { ExtractedDataReviewPanel } from '@/subapps/procurement/components/ExtractedDataReviewPanel';
 import { QuoteOriginalDocumentPanel } from '@/subapps/procurement/components/QuoteOriginalDocumentPanel';
 import { useAuth } from '@/auth/hooks/useAuth';
@@ -31,7 +32,7 @@ export function QuoteReviewClient({ id }: QuoteReviewClientProps) {
   const companyId = user?.companyId ?? '';
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [switchingVendor, setSwitchingVendor] = useState(false);
+  const { binding: switchingVendor, bind: bindVendor } = useBindQuoteVendor(id);
 
   const handleBack = useCallback(() => {
     if (quote?.rfqId && !quote.rfqId.startsWith('[')) {
@@ -86,38 +87,18 @@ export function QuoteReviewClient({ id }: QuoteReviewClientProps) {
     bankAccounts: Array<{ bankName: string; bic: string | null; iban: string; currency: string | null; accountHolder: string | null }> = [],
     logoUrl: string | null = null,
   ) => {
-    setSwitchingVendor(true);
     setSaveError(null);
     try {
-      const resolveRes = await fetch('/api/contacts/resolve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vatNumber: vat, name, phone, emails, logoUrl, vendorAddress, vendorCity, vendorPostalCode, vendorCountry, bankAccounts }),
+      const vendor = await bindVendor({
+        vatNumber: vat, name, phone, emails, logoUrl, vendorAddress, vendorCity, vendorPostalCode, vendorCountry, bankAccounts,
       });
-      if (!resolveRes.ok) throw new Error(await resolveRes.text());
-      const resolveJson = await resolveRes.json();
-      const contactId = resolveJson?.data?.contactId as string | undefined;
-      const wasCreated = resolveJson?.data?.wasCreated as boolean | undefined;
-      const resolvedName = resolveJson?.data?.displayName as string | undefined;
-      if (!contactId) throw new Error('No contactId returned');
-
-      if (wasCreated && resolvedName) {
-        toast.success(t('quotes.notifications.vendorCreated', { vendorName: resolvedName }));
+      if (vendor.wasCreated && vendor.displayName) {
+        toast.success(t('quotes.notifications.vendorCreated', { vendorName: vendor.displayName }));
       }
-
-      const patchRes = await fetch(`/api/quotes/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vendorContactId: contactId }),
-      });
-      if (!patchRes.ok) throw new Error(await patchRes.text());
-
       router.refresh();
       await refetch();
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : t('quotes.errors.updateFailed'));
-    } finally {
-      setSwitchingVendor(false);
     }
   };
 

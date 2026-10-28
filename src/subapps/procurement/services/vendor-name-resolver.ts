@@ -26,6 +26,7 @@ import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { Quote } from '../types/quote';
+import { quoteVendorDisplayName } from '../utils/quote-vendor-identity';
 
 const logger = createModuleLogger('VENDOR_NAME_RESOLVER');
 
@@ -73,16 +74,16 @@ export function pickContactDisplayName(data: admin.firestore.DocumentData): stri
   return null;
 }
 
+/** Σειρά: επαφή → στιγμιότυπο πρόσκλησης → σάρωση (`quoteVendorDisplayName`, ADR-327 §8.5 Γ) → ωμό id. */
 export function resolveVendorName(quote: Quote, lookup: Map<string, string>): string {
   const fromContact = lookup.get(quote.vendorContactId);
   if (fromContact) return fromContact;
-  const fromExtraction = quote.extractedData?.vendorName?.value;
-  if (typeof fromExtraction === 'string' && fromExtraction.trim().length > 0) {
-    logger.warn('Vendor name fell back to extracted data', {
-      quoteId: quote.id,
-      vendorContactId: quote.vendorContactId,
-    });
-    return fromExtraction.trim();
+  const fallback = quoteVendorDisplayName(quote);
+  if (fallback) {
+    if (!quote.vendorSnapshot) {
+      logger.warn('Vendor name fell back to extracted data', { quoteId: quote.id, vendorContactId: quote.vendorContactId });
+    }
+    return fallback;
   }
   logger.warn('Vendor name unresolved — using raw contact id', {
     quoteId: quote.id,
