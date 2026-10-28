@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Sparkles, AlertTriangle } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { quoteVendorLabel } from '@/subapps/procurement/utils/quote-vendor-identity';
 import { formatCurrency } from '@/lib/intl-formatting';
 import {
   COMPARISON_FACTOR_COLORS,
@@ -36,7 +37,7 @@ export function RecommendationCard({ recommendation, winner }: RecommendationCar
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex flex-wrap items-baseline gap-3">
-          <span className="text-lg font-semibold">{winner.vendorName}</span>
+          <span className="text-lg font-semibold">{quoteVendorLabel(winner.vendorName, t, winner.displayNumber)}</span>
           <span className="text-sm text-muted-foreground">
             {t('comparison.totalLabel')}: <span className="font-medium">{formatCurrency(winner.total)}</span>
           </span>

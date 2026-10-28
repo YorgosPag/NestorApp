@@ -26,6 +26,7 @@ import type {
   LevelingRowCoverage,
 } from '@/subapps/procurement/types/bid-leveling';
 import type { QuoteComparisonEntry } from '@/subapps/procurement/types/comparison';
+import { quoteVendorLabel } from '@/subapps/procurement/utils/quote-vendor-identity';
 import { LevelingPlugEditor } from './LevelingPlugEditor';
 
 interface Props {
@@ -52,7 +53,7 @@ export function BidLevelingTable({ leveling, entries }: Props) {
           <TableHeader>
             <TableRow>
               <TableHead className="min-w-[220px]">{t('comparison.leveling.lineHeader')}</TableHead>
-              {ordered.map((e) => <TableHead key={e.quoteId} className="min-w-[180px] text-right">{e.vendorName}</TableHead>)}
+              {ordered.map((e) => <TableHead key={e.quoteId} className="min-w-[180px] text-right">{quoteVendorLabel(e.vendorName, t, e.displayNumber)}</TableHead>)}
             </TableRow>
           </TableHeader>
           <TableBody>

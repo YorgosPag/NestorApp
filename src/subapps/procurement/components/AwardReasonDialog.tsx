@@ -15,6 +15,7 @@ import { useFormSubmission } from '@/hooks/useFormSubmission';
 import { useTranslation, type Translate } from '@/i18n/hooks/useTranslation';
 import { formatCurrency } from '@/lib/intl-formatting';
 import type { QuoteComparisonEntry } from '@/subapps/procurement/types/comparison';
+import { quoteVendorLabel } from '@/subapps/procurement/utils/quote-vendor-identity';
 
 // Per ADR-328 §5.X.3
 const CATEGORIES = [
@@ -143,9 +144,9 @@ export function AwardReasonDialog({
           {cheapestEntry && cheapestEntry.quoteId !== entry.quoteId && (
             <DialogDescription>
               {t('rfqs.awardReason.dialog.body', {
-                vendorName: entry.vendorName,
+                vendorName: quoteVendorLabel(entry.vendorName, t, entry.displayNumber),
                 selectedTotal: formatCurrency(entry.total),
-                cheapestVendorName: cheapestEntry.vendorName,
+                cheapestVendorName: quoteVendorLabel(cheapestEntry.vendorName, t, cheapestEntry.displayNumber),
                 cheapestTotal: formatCurrency(cheapestEntry.total),
               })}
             </DialogDescription>

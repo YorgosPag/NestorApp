@@ -6,6 +6,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { QuoteComparisonEntry, QuoteComparisonResult } from '../types/comparison';
 import type { Quote } from '../types/quote';
 import { isExpired } from '../utils/quote-expiration';
+import { quoteVendorLabel } from '../utils/quote-vendor-identity';
 
 // ADR-328 §5.F «Optimistic + Undo» award flow.
 // Named useAwardFlow (hook) rather than quote-award-service (plain module) because it
@@ -60,7 +61,7 @@ export function useAwardFlow({
 
       try {
         await onFireAward(entry.quoteId, overrideReason);
-        toast.success(t('rfqs.award.successToast', { vendor: entry.vendorName }), {
+        toast.success(t('rfqs.award.successToast', { vendor: quoteVendorLabel(entry.vendorName, t, entry.displayNumber) }), {
           duration: 8000,
           action: prevId ? { label: t('rfqs.award.undoButton'), onClick: () => void handleUndo() } : undefined,
         });

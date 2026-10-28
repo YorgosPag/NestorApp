@@ -20,7 +20,7 @@ import { QuoteOriginalDocumentPanel } from '@/subapps/procurement/components/Quo
 import { QuoteRfqAnswers } from '@/subapps/procurement/components/QuoteRfqAnswers';
 import type { Quote } from '@/subapps/procurement/types/quote';
 import { normalizeToDate } from '@/lib/date-local';
-import { quoteVendorDisplayName } from '@/subapps/procurement/utils/quote-vendor-identity';
+import { quoteVendorDisplayName, quoteVendorLabel } from '@/subapps/procurement/utils/quote-vendor-identity';
 import { QuoteVendorContactAction } from '@/subapps/procurement/components/QuoteVendorContactAction';
 import { useContactById } from '@/hooks/useContactById';
 import { getContactDisplayName } from '@/types/contacts/helpers';
@@ -43,7 +43,7 @@ export function QuoteDetailSummary({ quote }: QuoteDetailSummaryProps) {
   const companyId = user?.companyId ?? '';
 
   const contact = useContactById(quote.vendorContactId || null);
-  const vendorName = quoteVendorDisplayName(quote, contact ? getContactDisplayName(contact) : null) ?? t('quotes.vendor');
+  const vendorName = quoteVendorLabel(quoteVendorDisplayName(quote, contact ? getContactDisplayName(contact) : null), t);
 
   return (
     <article

@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency } from '@/lib/intl-formatting';
 import type { Quote } from '@/subapps/procurement/types/quote';
-import { quoteVendorDisplayName } from '@/subapps/procurement/utils/quote-vendor-identity';
+import { quoteVendorDisplayName, quoteVendorLabel } from '@/subapps/procurement/utils/quote-vendor-identity';
 
 // ============================================================================
 // PROPS
@@ -37,7 +37,7 @@ export function ComparisonWinnerBanner({
 }: ComparisonWinnerBannerProps) {
   const { t } = useTranslation('quotes');
 
-  const vendorName = quoteVendorDisplayName(winnerQuote) ?? '—';
+  const vendorName = quoteVendorLabel(quoteVendorDisplayName(winnerQuote), t, winnerQuote.displayNumber);
   const total = winnerQuote.totals?.total ?? 0;
 
   return (

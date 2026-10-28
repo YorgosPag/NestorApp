@@ -7,7 +7,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { QuoteStatusBadge } from '@/subapps/procurement/components/QuoteStatusBadge';
 import { formatCurrency } from '@/lib/intl-formatting';
 import type { Quote } from '@/subapps/procurement/types/quote';
-import { quoteVendorDisplayName } from '@/subapps/procurement/utils/quote-vendor-identity';
+import { quoteVendorDisplayName, quoteVendorLabel } from '@/subapps/procurement/utils/quote-vendor-identity';
 
 interface ComparisonEmptyStateProps {
   quotes: Quote[];
@@ -27,8 +27,9 @@ export function ComparisonEmptyState({
   const { t } = useTranslation('quotes');
   const singleQuote = quotes.length === 1 ? quotes[0] : null;
 
-  const vendorName =
-    (singleQuote ? quoteVendorDisplayName(singleQuote) : null) ?? t('quotes.vendor');
+  const vendorName = singleQuote
+    ? quoteVendorLabel(quoteVendorDisplayName(singleQuote), t, singleQuote.displayNumber)
+    : t('quotes.vendor');
   const deliveryTerms = singleQuote?.deliveryTerms ?? null;
 
   return (

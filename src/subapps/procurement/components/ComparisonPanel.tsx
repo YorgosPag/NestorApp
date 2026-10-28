@@ -12,6 +12,7 @@ import { formatCurrency } from '@/lib/intl-formatting';
 import { RecommendationCard } from './RecommendationCard';
 import { BidLevelingTable } from './BidLevelingTable';
 import { COMPARISON_TEMPLATES } from '@/subapps/procurement/types/comparison';
+import { quoteVendorLabel } from '@/subapps/procurement/utils/quote-vendor-identity';
 import {
   COMPARISON_FACTOR_COLORS,
   FLAG_TO_FACTOR,
@@ -200,7 +201,7 @@ function ComparisonRow({ entry, isRecommended, rfqAwarded, winnerQuoteId, onAwar
         {(isWinner || entry.rank === 1) && <Trophy className="inline h-4 w-4 text-[hsl(var(--text-success))]" />}
         {entry.rank}
       </TableCell>
-      <TableCell>{entry.vendorName}</TableCell>
+      <TableCell>{quoteVendorLabel(entry.vendorName, t, entry.displayNumber)}</TableCell>
       <TableCell className="text-right">
         <TcoTotalCell total={entry.total} tco={entry.tco} />
       </TableCell>

@@ -7,6 +7,7 @@
  */
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { quoteVendorLabel } from '@/subapps/procurement/utils/quote-vendor-identity';
 import {
   Dialog,
   DialogContent,
@@ -21,7 +22,9 @@ export type ExpiredAwardAction = 'request_renewal' | 'award_anyway' | 'cancel';
 
 export interface ExpiredAwardWarningDialogProps {
   open: boolean;
-  vendorName: string;
+  /** `null` = άγνωστος — η ετικέτα βγαίνει από το `quoteVendorLabel` (ADR-327 §8.5). */
+  vendorName: string | null;
+  quoteNumber: string;
   validUntilDate: string;
   daysAgo: number;
   onAction: (action: ExpiredAwardAction) => void;
@@ -30,6 +33,7 @@ export interface ExpiredAwardWarningDialogProps {
 export function ExpiredAwardWarningDialog({
   open,
   vendorName,
+  quoteNumber,
   validUntilDate,
   daysAgo,
   onAction,
@@ -42,7 +46,7 @@ export function ExpiredAwardWarningDialog({
         <DialogHeader>
           <DialogTitle>{t('rfqs.expiry.warningModal.title')}</DialogTitle>
           <DialogDescription>
-            {t('rfqs.expiry.warningModal.body', { vendor: vendorName, date: validUntilDate, daysAgo })}
+            {t('rfqs.expiry.warningModal.body', { vendor: quoteVendorLabel(vendorName, t, quoteNumber), date: validUntilDate, daysAgo })}
           </DialogDescription>
         </DialogHeader>
 
