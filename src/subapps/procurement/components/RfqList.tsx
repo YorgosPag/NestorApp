@@ -18,7 +18,7 @@ import {
   TableRow,
 } from '@/components/procurement/shared/procurement-table-parts';
 import { Plus, Search } from 'lucide-react';
-import { cn, getStatusColor } from '@/lib/design-system';
+import type { GridCardBadgeVariant } from '@/design-system/components/GridCard/GridCard.types';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { getRfqDetailUrl } from '@/lib/navigation/procurement-urls';
 import type { RFQ, RfqStatus } from '@/subapps/procurement/types/rfq';
@@ -27,22 +27,22 @@ import type { RFQ, RfqStatus } from '@/subapps/procurement/types/rfq';
 // RFQ STATUS BADGE
 // ============================================================================
 
-const RFQ_STATUS_SEMANTIC: Record<RfqStatus, string> = {
-  draft:     'pending',
-  active:    'active',
-  closed:    'completed',
-  cancelled: 'rejected',
-  archived:  'completed',
+/**
+ * Κατάσταση → παραλλαγή `Badge` (μετρημένο μελάνι, ADR-854 §3). Ως τις 2026-10-28 ήταν κατάσταση → token, με
+ * γέμισμα ΚΑΙ κείμενο από το ίδιο token ⇒ άδειο χάπι (ADR-327 changelog 2026-10-28).
+ */
+const RFQ_STATUS_BADGE_VARIANTS: Record<RfqStatus, GridCardBadgeVariant> = {
+  draft:     'secondary',
+  active:    'info',
+  closed:    'success',
+  cancelled: 'destructive',
+  archived:  'secondary',
 };
 
 function RfqStatusBadge({ status }: { status: RfqStatus }) {
   const { t } = useTranslation('quotes');
-  const semantic = RFQ_STATUS_SEMANTIC[status];
   return (
-    <Badge
-      variant="outline"
-      className={cn('font-medium', getStatusColor(semantic, 'bg'), getStatusColor(semantic, 'text'))}
-    >
+    <Badge variant={RFQ_STATUS_BADGE_VARIANTS[status]}>
       {t(`rfqs.statuses.${status}`)}
     </Badge>
   );

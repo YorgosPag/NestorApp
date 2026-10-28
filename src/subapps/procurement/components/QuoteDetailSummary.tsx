@@ -13,7 +13,7 @@
  */
 
 import { FileText } from 'lucide-react';
-import { formatCurrency } from '@/lib/intl-formatting';
+import { formatCurrency, formatDate } from '@/lib/intl-formatting';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { QuoteOriginalDocumentPanel } from '@/subapps/procurement/components/QuoteOriginalDocumentPanel';
@@ -24,6 +24,7 @@ import { quoteVendorDisplayName } from '@/subapps/procurement/utils/quote-vendor
 import { QuoteVendorContactAction } from '@/subapps/procurement/components/QuoteVendorContactAction';
 import { useContactById } from '@/hooks/useContactById';
 import { getContactDisplayName } from '@/types/contacts/helpers';
+import { useUomLabel } from '@/hooks/useUomLabel';
 
 interface QuoteDetailSummaryProps {
   quote: Quote;
@@ -31,12 +32,14 @@ interface QuoteDetailSummaryProps {
 
 function formatValidUntil(quote: Quote): string {
   const date = normalizeToDate(quote.validUntil);
-  return date ? date.toLocaleDateString('el-GR') : '—';
+  return date ? formatDate(date) : '—';
 }
 
 export function QuoteDetailSummary({ quote }: QuoteDetailSummaryProps) {
   const { t } = useTranslation('quotes');
   const { user } = useAuth();
+  // Βασική γραμμή με τη μονάδα του ΜΗΤΡΩΟΥ — όπως οι εναλλακτικές (`QuoteRfqAnswers`)· ως τις 2026-10-28 ωμό «m3».
+  const uomLabel = useUomLabel();
   const companyId = user?.companyId ?? '';
 
   const contact = useContactById(quote.vendorContactId || null);
@@ -96,7 +99,7 @@ export function QuoteDetailSummary({ quote }: QuoteDetailSummaryProps) {
               >
                 <span className="flex-1 truncate">{line.description}</span>
                 <span className="text-muted-foreground whitespace-nowrap">
-                  {line.quantity} {line.unit}
+                  {line.quantity} {uomLabel(line.unit)}
                 </span>
                 <span className="font-medium whitespace-nowrap">
                   {formatCurrency(line.lineTotal)}

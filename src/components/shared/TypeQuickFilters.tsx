@@ -328,7 +328,7 @@ export function POStatusQuickFilters(props: Omit<TypeQuickFiltersProps, 'options
 
 /**
  * Quote Status Options (για Προσφορές)
- * 🏢 ENTERPRISE: Mirrors QUOTE_STATUS_META (src/subapps/procurement/types/quote.ts)
+ * 🏢 ENTERPRISE: Mirrors `QuoteStatus` (src/subapps/procurement/types/quote.ts)
  * 🏢 ENTERPRISE: Labels via quotes namespace (filters.quoteStatus.*)
  */
 export const QUOTE_STATUS_OPTIONS: TypeFilterOption[] = [

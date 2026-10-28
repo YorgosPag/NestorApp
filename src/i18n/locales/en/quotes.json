@@ -83,7 +83,8 @@
       "accepted": "Accepted",
       "rejected": "Rejected",
       "expired": "Expired",
-      "archived": "Archived"
+      "archived": "Archived",
+      "superseded": "Superseded"
     },
     "sources": {
       "manual": "Manual",

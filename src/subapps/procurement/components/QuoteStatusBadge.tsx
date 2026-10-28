@@ -1,20 +1,18 @@
 'use client';
 
-import { Badge } from '@/components/ui/badge';
-import { cn, getStatusColor } from '@/lib/design-system';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { QuoteStatus } from '@/subapps/procurement/types/quote';
-import { QUOTE_STATUS_META } from '@/subapps/procurement/types/quote';
+/**
+ * Σήμα κατάστασης προσφοράς — ΙΔΙΑ παραλλαγή με τις κάρτες λίστας/πλέγματος (`QUOTE_STATUS_BADGE_VARIANTS`),
+ * ΙΔΙΟ μετρημένο μελάνι (`Badge` → `SOLID_FILL_INK`, ADR-854 §3).
+ *
+ * 🔴 Ως τις 2026-10-28 είχε δική του αντιστοίχιση χρώματος και έβαζε γέμισμα **και** κείμενο από το ΙΔΙΟ token
+ * (`bg-…status-warning` + `text-…status-warning`) ⇒ «Υποβλήθηκε» πορτοκαλί πάνω σε πορτοκαλί: άδειο χάπι στην
+ * κεφαλίδα κάθε προσφοράς (ADR-327 changelog 2026-10-28).
+ */
 
-const COLOR_TO_SEMANTIC: Record<string, string> = {
-  gray:   'pending',
-  blue:   'planned',
-  yellow: 'construction',
-  orange: 'reserved',
-  green:  'available',
-  red:    'cancelled',
-  purple: 'completed',
-};
+import { Badge } from '@/components/ui/badge';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { QUOTE_STATUS_BADGE_VARIANTS } from '@/domain/cards/quote/quote-card-model';
+import type { QuoteStatus } from '@/subapps/procurement/types/quote';
 
 interface QuoteStatusBadgeProps {
   status: QuoteStatus;
@@ -23,19 +21,8 @@ interface QuoteStatusBadgeProps {
 
 export function QuoteStatusBadge({ status, className }: QuoteStatusBadgeProps) {
   const { t } = useTranslation('quotes');
-  const meta = QUOTE_STATUS_META[status];
-  const semantic = COLOR_TO_SEMANTIC[meta.color] ?? 'pending';
-
   return (
-    <Badge
-      variant="outline"
-      className={cn(
-        'font-medium',
-        getStatusColor(semantic, 'bg'),
-        getStatusColor(semantic, 'text'),
-        className,
-      )}
-    >
+    <Badge variant={QUOTE_STATUS_BADGE_VARIANTS[status]} className={className}>
       {t(`quotes.statuses.${status}`)}
     </Badge>
   );

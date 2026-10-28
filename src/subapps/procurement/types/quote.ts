@@ -34,21 +34,6 @@ export const QUOTE_STATUS_TRANSITIONS: Record<QuoteStatus, QuoteStatus[]> = {
   superseded:     ['archived'],
 } as const;
 
-export const QUOTE_STATUS_META: Record<QuoteStatus, {
-  labelEl: string; labelEn: string;
-  color: 'gray' | 'blue' | 'yellow' | 'orange' | 'green' | 'red' | 'purple';
-}> = {
-  draft:          { labelEl: 'Πρόχειρο',        labelEn: 'Draft',          color: 'gray' },
-  sent_to_vendor: { labelEl: 'Απεστάλη',        labelEn: 'Sent to Vendor', color: 'blue' },
-  submitted:      { labelEl: 'Υποβλήθηκε',      labelEn: 'Submitted',      color: 'yellow' },
-  under_review:   { labelEl: 'Υπό Εξέταση',     labelEn: 'Under Review',   color: 'orange' },
-  accepted:       { labelEl: 'Εγκρίθηκε',       labelEn: 'Accepted',       color: 'green' },
-  rejected:       { labelEl: 'Απορρίφθηκε',     labelEn: 'Rejected',       color: 'red' },
-  expired:        { labelEl: 'Έληξε',            labelEn: 'Expired',        color: 'gray' },
-  archived:       { labelEl: 'Αρχειοθετήθηκε',  labelEn: 'Archived',       color: 'purple' },
-  superseded:     { labelEl: 'Αντικαταστάθηκε', labelEn: 'Superseded',     color: 'gray' },
-} as const;
-
 // ============================================================================
 // QUOTE SOURCE
 // ============================================================================

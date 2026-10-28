@@ -12,17 +12,10 @@
  */
 
 import { Package } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { cn, getStatusColor } from '@/lib/design-system';
 import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { PO_STATUS_META } from '@/types/procurement';
+import { PurchaseOrderStatusBadge } from '@/components/procurement/PurchaseOrderStatusBadge';
 import type { PurchaseOrder } from '@/types/procurement';
-
-const STATUS_SEMANTIC: Record<string, string> = {
-  gray: 'pending', blue: 'planned', yellow: 'construction',
-  orange: 'reserved', green: 'available', emerald: 'completed', red: 'cancelled',
-};
 
 interface PurchaseOrderDetailsHeaderProps {
   po: PurchaseOrder;
@@ -39,8 +32,6 @@ export function PurchaseOrderDetailsHeader({
 }: PurchaseOrderDetailsHeaderProps) {
   const { t } = useTranslation('procurement');
 
-  const statusMeta = PO_STATUS_META[po.status];
-  const sem = STATUS_SEMANTIC[statusMeta.color] ?? 'pending';
   const isCancelled = po.status === 'cancelled' || po.status === 'closed';
 
   return (
@@ -48,18 +39,7 @@ export function PurchaseOrderDetailsHeader({
       icon={Package}
       title={po.poNumber}
       variant="detailed"
-      titleAdornment={
-        <Badge
-          variant="outline"
-          className={cn(
-            'text-sm font-medium',
-            getStatusColor(sem, 'bg'),
-            getStatusColor(sem, 'text'),
-          )}
-        >
-          {statusMeta.label.el}
-        </Badge>
-      }
+      titleAdornment={<PurchaseOrderStatusBadge status={po.status} className="text-sm" />}
       actions={[
         ...(onCreateNew
           ? [createEntityAction('new', t('list.createPO'), onCreateNew)]

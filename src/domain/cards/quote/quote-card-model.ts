@@ -19,7 +19,7 @@ import { useContactById } from '@/hooks/useContactById';
 import { getContactDisplayName } from '@/types/contacts/helpers';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Quote, QuoteStatus } from '@/subapps/procurement/types/quote';
-import { QUOTE_STATUS_META } from '@/subapps/procurement/types/quote';
+import { quoteVendorDisplayName } from '@/subapps/procurement/utils/quote-vendor-identity';
 
 /** Status → badge variant (GridCardBadgeVariant ⊂ ListCardBadgeVariant → both shells). */
 export const QUOTE_STATUS_BADGE_VARIANTS: Record<QuoteStatus, GridCardBadgeVariant> = {
@@ -45,24 +45,21 @@ export function formatQuoteDate(ts: { seconds: number } | null | undefined): str
  * the `t` function, for a quote. Consumed by both Quote card views.
  */
 export function useQuoteCardCommon(quote: Quote) {
-  const { t, i18n } = useTranslation(['quotes']);
-  const contact = useContactById(quote.vendorContactId);
+  const { t } = useTranslation(['quotes']);
+  const contact = useContactById(quote.vendorContactId || null);
 
-  const vendorName = useMemo(() => {
-    const extracted = quote.extractedData?.vendorName?.value;
-    if (extracted) return extracted;
-    if (contact) return getContactDisplayName(contact);
-    return quote.vendorContactId;
-  }, [quote.extractedData, contact, quote.vendorContactId]);
-
-  const statusMeta = QUOTE_STATUS_META[quote.status];
-  const lang = (i18n.language?.startsWith('en') ? 'en' : 'el') as 'el' | 'en';
-  const statusLabel = lang === 'en' ? statusMeta.labelEn : statusMeta.labelEl;
+  // ADR-327 §8.5 Γ — ΟΙ κανόνες ονόματος (επαφή → στιγμιότυπο πρόσκλησης → σάρωση). Ως τις 2026-10-28 εδώ ζούσε
+  // δεύτερη σειρά (σάρωση → επαφή → ωμό `vendorContactId`): η προσφορά πύλης χωρίς επαφή έβγαινε ΧΩΡΙΣ προμηθευτή.
+  const vendorName = useMemo(
+    () => quoteVendorDisplayName(quote, contact ? getContactDisplayName(contact) : null) ?? '',
+    [quote, contact],
+  );
 
   return {
     t,
     vendorName,
-    statusLabel,
+    // Ίδια ετικέτα με το `QuoteStatusBadge` (i18n), όχι τα σκληροκωδικοποιημένα `labelEl/labelEn` του meta.
+    statusLabel: t(`quotes.statuses.${quote.status}`),
     statusVariant: QUOTE_STATUS_BADGE_VARIANTS[quote.status],
   };
 }

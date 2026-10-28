@@ -83,7 +83,8 @@
       "accepted": "Εγκρίθηκε",
       "rejected": "Απορρίφθηκε",
       "expired": "Έληξε",
-      "archived": "Αρχείο"
+      "archived": "Αρχείο",
+      "superseded": "Αντικαταστάθηκε"
     },
     "sources": {
       "manual": "Χειροκίνητη",

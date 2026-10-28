@@ -2,7 +2,6 @@
 
 import { useRouter } from '@/lib/workspace/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import {
   ProcurementRowLink,
   ProcurementTableNotice,
@@ -13,39 +12,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/procurement/shared/procurement-table-parts';
-import { cn, getStatusColor } from '@/lib/design-system';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency } from '@/lib/intl-formatting';
 import { getPoDetailUrl } from '@/lib/navigation/procurement-urls';
-import { PO_STATUS_META } from '@/types/procurement';
-import type { PurchaseOrder, PurchaseOrderStatus } from '@/types/procurement';
+import { PurchaseOrderStatusBadge } from '@/components/procurement/PurchaseOrderStatusBadge';
+import type { PurchaseOrder } from '@/types/procurement';
 
 interface ContactPurchaseOrdersSectionProps {
   purchaseOrders: PurchaseOrder[];
   loading: boolean;
-}
-
-const PO_STATUS_SEMANTIC: Record<string, string> = {
-  gray: 'pending',
-  blue: 'planned',
-  yellow: 'construction',
-  orange: 'reserved',
-  green: 'available',
-  emerald: 'completed',
-  red: 'cancelled',
-};
-
-function POStatusBadge({ status }: { status: PurchaseOrderStatus }) {
-  const meta = PO_STATUS_META[status];
-  const semantic = PO_STATUS_SEMANTIC[meta.color] ?? 'pending';
-  return (
-    <Badge
-      variant="outline"
-      className={cn('font-medium', getStatusColor(semantic, 'bg'), getStatusColor(semantic, 'text'))}
-    >
-      {meta.label.el}
-    </Badge>
-  );
 }
 
 export function ContactPurchaseOrdersSection({
@@ -98,7 +73,7 @@ export function ContactPurchaseOrdersSection({
                 >
                   <TableCell className="font-mono text-sm">{po.poNumber}</TableCell>
                   <TableCell>
-                    <POStatusBadge status={po.status} />
+                    <PurchaseOrderStatusBadge status={po.status} />
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {po.dateOrdered ?? '—'}
