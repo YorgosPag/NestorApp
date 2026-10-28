@@ -320,7 +320,8 @@
     "vendors": "Vendors",
     "materials": "Materials",
     "agreements": "Agreements",
-    "analytics": "Analytics"
+    "analytics": "Analytics",
+    "ariaLabel": "Procurement sections"
   },
   "header": {
     "title": "Procurement",

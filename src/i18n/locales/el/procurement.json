@@ -320,7 +320,8 @@
     "vendors": "Προμηθευτές",
     "materials": "Υλικά",
     "agreements": "Συμβάσεις",
-    "analytics": "Αναλυτικά"
+    "analytics": "Αναλυτικά",
+    "ariaLabel": "Ενότητες προμηθειών"
   },
   "header": {
     "title": "Προμήθειες",

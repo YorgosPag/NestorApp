@@ -14,6 +14,7 @@
 import { LayoutGrid, Users2, Layers, ScrollText, BarChart3, ClipboardList, FileText, Package } from 'lucide-react';
 import { RouteTabs } from '@/components/ui/navigation/route-tabs';
 import type { TabsNavTab } from '@/components/ui/navigation/tabs-types';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 const PROCUREMENT_TABS: readonly TabsNavTab[] = [
   {
@@ -72,11 +73,12 @@ export interface ProcurementSubNavProps {
 }
 
 export function ProcurementSubNav({ className }: ProcurementSubNavProps = {}) {
+  const { t } = useTranslation('procurement');
   return (
     <RouteTabs
       tabs={PROCUREMENT_TABS}
       i18nNamespace="procurement"
-      ariaLabel="Procurement sub-navigation"
+      ariaLabel={t('nav.ariaLabel')}
       className={className}
     />
   );
