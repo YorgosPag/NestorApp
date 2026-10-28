@@ -11,6 +11,7 @@
 import type { MatchingConfig } from '../../types/matching-config';
 import type { AmountBand, MatchTier } from '../../types/bank';
 import { editDistance } from '@/lib/string/edit-distance';
+import { roundMajor } from '@/lib/money/money';
 
 // ============================================================================
 // SCORING INPUT / OUTPUT TYPES
@@ -151,8 +152,8 @@ export function amountBandFor(txnAmount: number, tolerancePercent: number): Amou
   const p = Math.max(tolerancePercent, NEAR_EXACT_PERCENT) / 100;
   const max = p < 1 ? txnAmount / (1 - p) : Number.MAX_SAFE_INTEGER;
   return {
-    min: Math.max(0, roundCents(txnAmount / (1 + p)) - BAND_MARGIN),
-    max: roundCents(max) + BAND_MARGIN,
+    min: Math.max(0, roundMajor(txnAmount / (1 + p)) - BAND_MARGIN),
+    max: roundMajor(max) + BAND_MARGIN,
   };
 }
 
@@ -161,11 +162,7 @@ export function amountBandFor(txnAmount: number, tolerancePercent: number): Amou
  * (`findMatchingCombinations` κλαδεύει ό,τι το ξεπερνά), άρα αυτή είναι η πλήρης ζώνη μελών.
  */
 export function combinationBandFor(targetAmount: number, tolerancePercent: number): AmountBand {
-  return { min: 0, max: roundCents(targetAmount * (1 + tolerancePercent / 100)) + BAND_MARGIN };
-}
-
-function roundCents(value: number): number {
-  return Math.round(value * 100) / 100;
+  return { min: 0, max: roundMajor(targetAmount * (1 + tolerancePercent / 100)) + BAND_MARGIN };
 }
 
 /**

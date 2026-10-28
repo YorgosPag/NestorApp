@@ -51,6 +51,24 @@ export function minorFromMajor(major: number): MinorAmount | null {
   return Number.isSafeInteger(minor) ? minor : null;
 }
 
+/**
+ * **Ποσό ευρώ στρογγυλευμένο στο λεπτό** — για μοντέλα που αποθηκεύουν ακόμα ευρώ (προσφορές, σύγκριση,
+ * bid leveling · ADR-327). Ίδια διόρθωση `EPSILON` με {@link minorFromMajor}, αλλά **με πρόσημο**: διαφορές
+ * και καλύψεις κενού είναι νόμιμα αρνητικές. Στρογγύλευση **μακριά από το μηδέν** στο μισό (`-1.005 → -1.01`),
+ * συμμετρική ⇒ `roundMajor(-x) === -roundMajor(x)`.
+ *
+ * 🔴 Γιατί υπάρχει (ADR-327 changelog 2026-10-28): η προσφορά της πύλης αποθήκευσε `vatAmount: 21.599999999999998`
+ * — το `computeQuoteTotals` άθροιζε κινητή υποδιαστολή χωρίς στρογγύλευση, ενώ ο κινητήρας σύγκρισης είχε δικό
+ * του `roundCents` **χωρίς** διόρθωση (`1.005 → 1.00`).
+ *
+ * @returns τη μη πεπερασμένη τιμή αυτούσια — ο καλών αποφασίζει, η στρογγύλευση δεν «θεραπεύει» `NaN`.
+ */
+export function roundMajor(major: number): number {
+  if (!Number.isFinite(major)) return major;
+  const minor = Math.round((Math.abs(major) + Number.EPSILON) * MINOR_PER_MAJOR);
+  return (major < 0 ? -minor : minor) / MINOR_PER_MAJOR;
+}
+
 /** **Λεπτά → ευρώ**, μόνο για μορφοποίηση ή για πεδίο φόρμας. Ποτέ για αριθμητική. */
 export function majorFromMinor(minor: MinorAmount): number {
   return minor / MINOR_PER_MAJOR;

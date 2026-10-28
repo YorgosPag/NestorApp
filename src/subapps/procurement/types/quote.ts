@@ -1,5 +1,6 @@
 import type { Timestamp } from 'firebase/firestore';
 import type { TradeCode } from './trade';
+import { roundMajor } from '@/lib/money/money';
 
 // ============================================================================
 // QUOTE STATUS FSM — ADR-327 §5.1
@@ -364,14 +365,18 @@ export interface QuoteFilters {
  * `quotedTotal` is the fallback for lump-sum quotes where line prices are 0
  * (e.g. scanned invoices with a single grand total, no per-line prices).
  * When line prices sum to 0 and quotedTotal is set, the declared total is used directly.
+ *
+ * ΕΝΑΣ τύπος για server (υποβολή, `quote-service`) **και** client (φόρμες, πύλη `draftTotals`) — ό,τι βλέπει ο
+ * προμηθευτής πριν την υποβολή είναι ό,τι αποθηκεύεται. Ποσά στρογγυλευμένα στο λεπτό (`roundMajor`): ως τις
+ * 2026-10-28 αποθηκευόταν `vatAmount: 21.599999999999998` (ADR-327 changelog).
  */
 export function computeQuoteTotals(
-  lines: QuoteLine[],
+  lines: readonly Pick<QuoteLine, 'lineTotal' | 'vatRate'>[],
   quotedTotal: number | null = null
 ): Quote['totals'] {
-  const subtotal = lines.reduce((s, l) => s + l.lineTotal, 0);
-  const vatAmount = lines.reduce((s, l) => s + l.lineTotal * (l.vatRate / 100), 0);
-  const computedTotal = subtotal + vatAmount;
+  const subtotal = roundMajor(lines.reduce((s, l) => s + l.lineTotal, 0));
+  const vatAmount = roundMajor(lines.reduce((s, l) => s + l.lineTotal * (l.vatRate / 100), 0));
+  const computedTotal = roundMajor(subtotal + vatAmount);
   const dominantVatRate = lines[0]?.vatRate ?? 24;
   if (computedTotal === 0 && quotedTotal != null && quotedTotal > 0) {
     return { subtotal: quotedTotal, vatAmount: 0, total: quotedTotal, vatRate: dominantVatRate };

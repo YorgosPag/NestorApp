@@ -445,7 +445,8 @@ describe('guessMimeFromUrl (via extractData)', () => {
 
   it('treats an unrecognized extension as application/octet-stream — no image/file content added', async () => {
     mockFetchOk({ output_text: JSON.stringify(SAMPLE_EXTRACTED) });
-    await makeAnalyzer().extractData('https://x/scan.tiff', 'receipt');
+    // `.tiff` became a registered image type (a4e50d8b) — use an extension the registry does not know.
+    await makeAnalyzer().extractData('https://x/scan.qqz', 'receipt');
     const { options } = lastFetchCall();
     const content = JSON.parse(options.body).input[1].content;
     expect(content).toHaveLength(1);

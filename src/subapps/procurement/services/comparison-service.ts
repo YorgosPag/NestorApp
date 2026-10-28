@@ -13,7 +13,7 @@ import { getRfq, updateRfq } from './rfq-service';
 import { readRfqLines } from './rfq-line-service';
 import { buildBidLeveling } from '../utils/bid-leveling';
 import { cherryPickFromLeveling } from '../utils/cherry-pick';
-import { roundCents } from '../utils/round-cents';
+import { roundMajor } from '@/lib/money/money';
 import {
   COMPARISON_TEMPLATES,
   DEFAULT_COMPARISON_TEMPLATE_ID,
@@ -52,7 +52,7 @@ import { fetchVendorNames, resolveVendorName } from './vendor-name-resolver';
  */
 function levelingDeltaOf(quote: Quote, column: LevelingColumn | undefined): number {
   if (!column || column.lumpSum) return 0;
-  return roundCents((column.leveledNet - column.submittedNet) * (1 + quote.totals.vatRate / 100));
+  return roundMajor((column.leveledNet - column.submittedNet) * (1 + quote.totals.vatRate / 100));
 }
 
 function normalizeTco(quote: Quote, column: LevelingColumn | undefined): TcoNormalization {
@@ -63,10 +63,10 @@ function normalizeTco(quote: Quote, column: LevelingColumn | undefined): TcoNorm
     ? quote.laborIncluded
     : (quote.extractedData?.laborIncluded?.value ?? null);
   const rawTotal = quote.totals.total;
-  const vatDelta = vatIncluded === false ? roundCents(rawTotal * 0.24) : 0;
+  const vatDelta = vatIncluded === false ? roundMajor(rawTotal * 0.24) : 0;
   const levelingDelta = levelingDeltaOf(quote, column);
   return {
-    normalizedTotal: roundCents(rawTotal + vatDelta + levelingDelta),
+    normalizedTotal: roundMajor(rawTotal + vatDelta + levelingDelta),
     vatDelta,
     levelingDelta,
     laborFlag: laborIncluded === false,
@@ -207,7 +207,7 @@ async function buildEntries(
       vendorContactId: q.vendorContactId,
       total: q.totals.total,
       tco,
-      score: roundCents(score),
+      score: roundMajor(score),
       breakdown,
       rank: 0,
       flags: [],
@@ -241,7 +241,7 @@ function buildRecommendation(entries: QuoteComparisonEntry[]): ComparisonRecomme
     quoteId: top.quoteId,
     reason: buildReason(top, second),
     confidence: Math.min(1, Math.max(0, delta / 100)),
-    deltaFromSecond: roundCents(delta),
+    deltaFromSecond: roundMajor(delta),
   };
 }
 

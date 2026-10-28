@@ -30,7 +30,7 @@ import type {
   LevelingRowCoverage,
 } from '../types/bid-leveling';
 import { inferRfqLineId } from './rfq-line-binding';
-import { roundCents } from './round-cents';
+import { roundMajor } from '@/lib/money/money';
 
 type LevelingQuote = Pick<Quote, 'id' | 'lines' | 'alternates' | 'scopeResponses' | 'totals' | 'quotedTotal' | 'levelingPlugs'>;
 
@@ -70,7 +70,7 @@ function indexManualPlugs(quote: LevelingQuote, known: ReadonlySet<string>): Map
   const out = new Map<string, LevelingPlug>();
   for (const plug of quote.levelingPlugs ?? []) {
     if (!known.has(plug.rfqLineId) || !Number.isFinite(plug.amount) || plug.amount < 0) continue;
-    out.set(plug.rfqLineId, { amount: roundCents(plug.amount), source: 'manual', note: plug.note });
+    out.set(plug.rfqLineId, { amount: roundMajor(plug.amount), source: 'manual', note: plug.note });
   }
   return out;
 }
@@ -128,7 +128,7 @@ function pricedCell(cell: LevelingCell, line: QuoteLine, binding: LevelingBindin
   return {
     ...cell, state: 'priced', binding, quantity: line.quantity, unit: line.unit, unitPrice: line.unitPrice,
     lineTotal: line.lineTotal, note: line.notes, unitMismatch,
-    leveledAmount: roundCents(sameBasis ? line.unitPrice * (rfqLine.quantity ?? 0) : line.lineTotal),
+    leveledAmount: roundMajor(sameBasis ? line.unitPrice * (rfqLine.quantity ?? 0) : line.lineTotal),
     quantityDeviation: sameBasis ? line.quantity - (rfqLine.quantity ?? 0) : null,
   };
 }
@@ -156,7 +156,7 @@ function isComparablePrice(cell: LevelingCell): boolean {
 
 function plugFor(rfqLine: InternalRfqLine, cells: readonly LevelingCell[]): LevelingPlug | null {
   if (rfqLine.estimateUnitPrice != null && rfqLine.quantity != null) {
-    return { amount: roundCents(rfqLine.estimateUnitPrice * rfqLine.quantity), source: 'estimate', note: null };
+    return { amount: roundMajor(rfqLine.estimateUnitPrice * rfqLine.quantity), source: 'estimate', note: null };
   }
   const prices = cells.filter(isComparablePrice).map((c) => c.leveledAmount ?? 0);
   return prices.length > 0 ? { amount: Math.max(...prices), source: 'highest_bid', note: null } : null;
@@ -200,12 +200,12 @@ function buildRow(rfqLine: InternalRfqLine, indexes: readonly QuoteAnswerIndex[]
 
 function buildColumn(index: QuoteAnswerIndex, rows: readonly LevelingRow[]): LevelingColumn {
   const cells = rows.map((r) => r.cells.find((c) => c.quoteId === index.quote.id)).filter((c): c is LevelingCell => !!c);
-  const pricedAmount = roundCents(cells.reduce((s, c) => s + (c.state === 'priced' ? c.leveledAmount ?? 0 : 0), 0));
+  const pricedAmount = roundMajor(cells.reduce((s, c) => s + (c.state === 'priced' ? c.leveledAmount ?? 0 : 0), 0));
   const gaps = cells.filter((c) => c.state === 'excluded' || c.state === 'unanswered');
   const plugged = gaps.filter((c) => c.plug !== null);
-  const plugAmount = roundCents(plugged.reduce((s, c) => s + (c.plug?.amount ?? 0), 0));
-  const additionalAmount = roundCents(index.additional.reduce((s, l) => s + l.lineTotal, 0));
-  const submittedNet = roundCents(index.quote.totals.subtotal);
+  const plugAmount = roundMajor(plugged.reduce((s, c) => s + (c.plug?.amount ?? 0), 0));
+  const additionalAmount = roundMajor(index.additional.reduce((s, l) => s + l.lineTotal, 0));
+  const submittedNet = roundMajor(index.quote.totals.subtotal);
   return {
     quoteId: index.quote.id,
     submittedNet,
@@ -215,7 +215,7 @@ function buildColumn(index: QuoteAnswerIndex, rows: readonly LevelingRow[]): Lev
     unpluggedGaps: gaps.length - plugged.length,
     inferredBindings: index.inferred,
     lumpSum: index.lumpSum,
-    leveledNet: index.lumpSum ? submittedNet : roundCents(pricedAmount + plugAmount + additionalAmount),
+    leveledNet: index.lumpSum ? submittedNet : roundMajor(pricedAmount + plugAmount + additionalAmount),
   };
 }
 

@@ -9,7 +9,7 @@
  */
 
 import type { QuoteLevelingPlug } from '../types/quote';
-import { roundCents } from './round-cents';
+import { roundMajor } from '@/lib/money/money';
 
 export interface LevelingPlugChange {
   rfqLineId: string;
@@ -39,7 +39,7 @@ export function upsertLevelingPlug(
   if (change.amount === null) {
     return { plugs: others, changed: previous !== null, previous };
   }
-  const amount = roundCents(change.amount);
+  const amount = roundMajor(change.amount);
   const note = cleanNote(change.note);
   if (previous && previous.amount === amount && previous.note === note) {
     return { plugs: [...current], changed: false, previous };
