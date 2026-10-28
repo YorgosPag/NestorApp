@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 import { RecommendationCard } from './RecommendationCard';
 import { BidLevelingTable } from './BidLevelingTable';
 import { COMPARISON_TEMPLATES } from '@/subapps/procurement/types/comparison';
-import { quoteVendorLabel } from '@/subapps/procurement/utils/quote-vendor-identity';
+import { quoteVendorLabelsById } from '@/subapps/procurement/utils/quote-vendor-identity';
 import {
   COMPARISON_FACTOR_COLORS,
   FLAG_TO_FACTOR,
@@ -58,6 +58,7 @@ export function ComparisonPanel({
     if (!comparison.recommendation) return null;
     return comparison.quotes.find((e) => e.quoteId === comparison.recommendation!.quoteId) ?? null;
   }, [comparison]);
+  const vendorLabels = useMemo(() => quoteVendorLabelsById(comparison.quotes, t), [comparison.quotes, t]);
 
   const handleAwardClick = (entry: QuoteComparisonEntry) => {
     onAwardIntent(entry);
@@ -107,6 +108,7 @@ export function ComparisonPanel({
                 <ComparisonRow
                   key={entry.quoteId}
                   entry={entry}
+                  vendorLabel={vendorLabels.get(entry.quoteId) ?? ''}
                   isRecommended={recommended?.quoteId === entry.quoteId}
                   rfqAwarded={rfqAwarded}
                   winnerQuoteId={winnerQuoteId}
@@ -178,6 +180,8 @@ function TemplateSummary({ templateId, weights }: { templateId: string; weights:
 
 interface RowProps {
   entry: QuoteComparisonEntry;
+  /** Μοναδική μέσα στη σύγκριση (`quoteVendorLabelsById`) — ίδιο όνομα ⇒ + αριθμός προσφοράς. */
+  vendorLabel: string;
   isRecommended: boolean;
   rfqAwarded: boolean;
   winnerQuoteId?: string | null;
@@ -185,7 +189,7 @@ interface RowProps {
   onRowClick?: (quoteId: string) => void;
 }
 
-function ComparisonRow({ entry, isRecommended, rfqAwarded, winnerQuoteId, onAwardClick, onRowClick }: RowProps) {
+function ComparisonRow({ entry, vendorLabel, isRecommended, rfqAwarded, winnerQuoteId, onAwardClick, onRowClick }: RowProps) {
   const { t } = useTranslation('quotes');
   const clickable = !!onRowClick;
   const isWinner = winnerQuoteId === entry.quoteId;
@@ -213,7 +217,7 @@ function ComparisonRow({ entry, isRecommended, rfqAwarded, winnerQuoteId, onAwar
         {(isWinner || entry.rank === 1) && <Trophy className="inline h-4 w-4 text-[hsl(var(--text-success))]" />}
         {entry.rank}
       </TableCell>
-      <TableCell>{quoteVendorLabel(entry.vendorName, t, entry.displayNumber)}</TableCell>
+      <TableCell>{vendorLabel}</TableCell>
       <TableCell className="text-right">
         <TcoTotalCell total={entry.total} tco={entry.tco} />
       </TableCell>

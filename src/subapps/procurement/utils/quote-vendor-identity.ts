@@ -43,6 +43,34 @@ export function quoteVendorLabel(name: string | null | undefined, t: TFunction, 
   return number ? t('quotes.vendorUnknownWithQuote', { quote: number }) : t('quotes.vendorUnknown');
 }
 
+/** Μια στήλη/γραμμή σύγκρισης: ποια προσφορά, ποιο όνομα (ήδη λυμένο ή `null`), ποιος αριθμός. */
+export interface QuoteVendorPeer {
+  quoteId: string;
+  vendorName: string | null;
+  displayNumber?: string;
+}
+
+/**
+ * **Ετικέτες μέσα σε ΣΥΝΟΛΟ** (σύγκριση · leveling) — καθεμία μοναδική. Ο αριθμός μπαίνει όταν το όνομα **λείπει**
+ * (`quoteVendorLabel`) **ή επαναλαμβάνεται**: δύο προσφορές του ίδιου προμηθευτή (αναθεώρηση, χειροκίνητη + πύλη)
+ * ήταν δύο στήλες «Δοκιμαστικός Προμηθευτής Β» χωρίς τρόπο να ξεχωρίσουν (μετρημένο ζωντανά 2026-10-28, §8.5.4 ·
+ * Ariba «Supplier (Bid 2)»). Μοναδικό όνομα ⇒ σκέτο όνομα, όπως πριν.
+ */
+export function quoteVendorLabelsById(peers: readonly QuoteVendorPeer[], t: TFunction): Map<string, string> {
+  const counts = new Map<string, number>();
+  for (const peer of peers) {
+    const name = nonBlank(peer.vendorName);
+    if (name) counts.set(name, (counts.get(name) ?? 0) + 1);
+  }
+  return new Map(peers.map((peer) => {
+    const name = nonBlank(peer.vendorName);
+    const number = nonBlank(peer.displayNumber);
+    const repeated = name !== null && (counts.get(name) ?? 0) > 1 && number !== null;
+    const label = repeated ? t('quotes.vendorWithQuote', { vendor: name, quote: number }) : quoteVendorLabel(name, t, peer.displayNumber);
+    return [peer.quoteId, label] as const;
+  }));
+}
+
 /** Το όνομα **στην προσφώνηση** μηνύματος προς τον ίδιο τον προμηθευτή — ποτέ «άγνωστος» ούτε αριθμός προσφοράς. */
 export function quoteVendorAddressee(name: string | null | undefined, t: TFunction): string {
   return nonBlank(name) ?? t('quotes.vendorAddresseeFallback');

@@ -16,6 +16,7 @@ import {
   quoteVendorDisplayName,
   quoteVendorEmail,
   quoteVendorLabel,
+  quoteVendorLabelsById,
   vendorActorId,
   vendorSnapshotFromInvite,
 } from '../quote-vendor-identity';
@@ -87,5 +88,24 @@ describe('quoteVendorEmail', () => {
     expect(quoteVendorEmail({ vendorSnapshot: snapshot, extractedData: emails(['scan@x.gr']) })).toBe('b@example.invalid');
     expect(quoteVendorEmail({ vendorSnapshot: null, extractedData: emails(['scan@x.gr']) })).toBe('scan@x.gr');
     expect(quoteVendorEmail({ vendorSnapshot: { ...snapshot, email: null }, extractedData: null })).toBeNull();
+  });
+});
+
+describe('quoteVendorLabelsById (§8.5.4 — ετικέτες μοναδικές μέσα στη σύγκριση)', () => {
+  const tt = ((key: string, o?: { vendor?: string; quote?: string }) =>
+    [key, o?.vendor, o?.quote].filter(Boolean).join('|')) as unknown as TFunction;
+
+  it('ίδιο όνομα σε δύο προσφορές ⇒ + αριθμός · μοναδικό όνομα ⇒ σκέτο · άγνωστος ⇒ ο κανόνας του quoteVendorLabel', () => {
+    const labels = quoteVendorLabelsById([
+      { quoteId: 'a', vendorName: 'Προμηθευτής Β', displayNumber: 'QT-0002' },
+      { quoteId: 'b', vendorName: ' Προμηθευτής Β ', displayNumber: 'QT-0003' },
+      { quoteId: 'c', vendorName: 'Άλφα', displayNumber: 'QT-0004' },
+      { quoteId: 'd', vendorName: null, displayNumber: 'QT-0001' },
+    ], tt);
+    expect(labels.get('a')).toBe('quotes.vendorWithQuote|Προμηθευτής Β|QT-0002');
+    expect(labels.get('b')).toBe('quotes.vendorWithQuote|Προμηθευτής Β|QT-0003');
+    expect(labels.get('c')).toBe('Άλφα');
+    expect(labels.get('d')).toBe('quotes.vendorUnknownWithQuote|QT-0001');
+    expect(new Set(labels.values()).size).toBe(4);
   });
 });

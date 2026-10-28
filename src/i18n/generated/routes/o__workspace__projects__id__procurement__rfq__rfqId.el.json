@@ -544,6 +544,7 @@
       },
       "vendorUnknown": "Άγνωστος προμηθευτής",
       "vendorUnknownWithQuote": "Άγνωστος προμηθευτής · {quote}",
+      "vendorWithQuote": "{vendor} · {quote}",
       "warranty": "Εγγύηση"
     },
     "rfqs": {

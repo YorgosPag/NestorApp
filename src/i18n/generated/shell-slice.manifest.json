@@ -52,7 +52,7 @@
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "a19c529391a1d697f5756a80db37d565038ac951337c4e5d30ed8d9b3590cc49",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "e1c5896ab910b7f5515ef0a3991a4daae3ba7fc776c6291815cfeaddb51e2398",
     "src/i18n/generated/routes/o__workspace__listings__mandates__requests.el.json": "3b685808152db56cfc0ce4d50912bcd6166e986921ebb92e601cbef9936c0a0b",
-    "src/i18n/generated/routes/o__workspace__projects__id__procurement__rfq__rfqId.el.json": "022dc5d76e31e55b7f3b865a2870c6c611f8fad6767b57490d957a4244e45d88",
+    "src/i18n/generated/routes/o__workspace__projects__id__procurement__rfq__rfqId.el.json": "4107d2023fc0114fdb375dd9cf4e69a7969960424881c5b2a30b3a7d712d6256",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "ec24f1fdacbe102d81ef6e2b2c3ffde93e4e29b7857ac702db5ebfe1bb7c3867",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__card.el.json": "df1448a2bb4c85fc26bfbdcc903c7df7d53eaecd1d97fdc03e01a17528acfbae",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__licences.el.json": "833f1f75349ec3140684597ec67c5f6690725809f226b26eb378bb77f9358190",
@@ -166,7 +166,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "4e3d9d795b1ead72680b14c84d9d5d727a14c92105757e78ad21894887c35f72",
+  "inputsSha256": "c84bfaee9dd030d184689ab581699ddbbe91393f72cf22554d9b98517af45c8e",
   "languages": [
     "el"
   ],
@@ -11534,6 +11534,7 @@
             "quotes.vendorAddresseeFallback",
             "quotes.vendorUnknown",
             "quotes.vendorUnknownWithQuote",
+            "quotes.vendorWithQuote",
             "recipient",
             "responsiblePersons",
             "rfqs.history.empty",
@@ -15759,6 +15760,7 @@
             "quotes.vendorContact.notInContacts",
             "quotes.vendorUnknown",
             "quotes.vendorUnknownWithQuote",
+            "quotes.vendorWithQuote",
             "quotes.warranty",
             "recipient",
             "responsiblePersons",
@@ -21290,7 +21292,7 @@
   ],
   "stats": {
     "matchedKeys": 271,
-    "sliceBytes": 1081703
+    "sliceBytes": 1081751
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

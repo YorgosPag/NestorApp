@@ -26,7 +26,7 @@ import type {
   LevelingRowCoverage,
 } from '@/subapps/procurement/types/bid-leveling';
 import type { QuoteComparisonEntry } from '@/subapps/procurement/types/comparison';
-import { quoteVendorLabel } from '@/subapps/procurement/utils/quote-vendor-identity';
+import { quoteVendorLabelsById } from '@/subapps/procurement/utils/quote-vendor-identity';
 import { LevelingPlugEditor } from './LevelingPlugEditor';
 
 interface Props {
@@ -39,6 +39,7 @@ export function BidLevelingTable({ leveling, entries }: Props) {
   const { t } = useTranslation('quotes');
   const columns = new Map(leveling.columns.map((c) => [c.quoteId, c] as const));
   const ordered = entries.filter((e) => columns.has(e.quoteId));
+  const vendorLabels = quoteVendorLabelsById(ordered, t);
   return (
     <Card>
       <CardHeader>
@@ -53,7 +54,7 @@ export function BidLevelingTable({ leveling, entries }: Props) {
           <TableHeader>
             <TableRow>
               <TableHead className="min-w-[220px]">{t('comparison.leveling.lineHeader')}</TableHead>
-              {ordered.map((e) => <TableHead key={e.quoteId} className="min-w-[180px] text-right">{quoteVendorLabel(e.vendorName, t, e.displayNumber)}</TableHead>)}
+              {ordered.map((e) => <TableHead key={e.quoteId} className="min-w-[180px] text-right">{vendorLabels.get(e.quoteId)}</TableHead>)}
             </TableRow>
           </TableHeader>
           <TableBody>
