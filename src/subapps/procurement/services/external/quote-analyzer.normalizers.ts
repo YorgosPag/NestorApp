@@ -18,6 +18,7 @@ import type {
   RawExtractedQuote,
   RawSignatory,
 } from './quote-analyzer.schemas';
+import { structuredText, structuredTextList } from '@/lib/ai-structured-output';
 
 // ============================================================================
 // FIELD WRAPPER
@@ -46,13 +47,13 @@ export function buildEmptySignatory(): ExtractedSignatory {
 export function normalizeSignatory(raw: RawSignatory | undefined | null): ExtractedSignatory {
   if (!raw) return buildEmptySignatory();
   return {
-    firstName: field<string | null>(raw.firstName ?? null, raw.firstNameConfidence),
-    lastName: field<string | null>(raw.lastName ?? null, raw.lastNameConfidence),
-    role: field<string | null>(raw.role ?? null, raw.roleConfidence),
-    profession: field<string | null>(raw.profession ?? null, raw.professionConfidence),
-    mobile: field<string | null>(raw.mobile ?? null, raw.mobileConfidence),
-    email: field<string | null>(raw.email ?? null, raw.emailConfidence),
-    vatNumber: field<string | null>(raw.vatNumber ?? null, raw.vatNumberConfidence),
+    firstName: field<string | null>(structuredText(raw.firstName), raw.firstNameConfidence),
+    lastName: field<string | null>(structuredText(raw.lastName), raw.lastNameConfidence),
+    role: field<string | null>(structuredText(raw.role), raw.roleConfidence),
+    profession: field<string | null>(structuredText(raw.profession), raw.professionConfidence),
+    mobile: field<string | null>(structuredText(raw.mobile), raw.mobileConfidence),
+    email: field<string | null>(structuredText(raw.email), raw.emailConfidence),
+    vatNumber: field<string | null>(structuredText(raw.vatNumber), raw.vatNumberConfidence),
   };
 }
 
@@ -97,14 +98,14 @@ export function buildFallbackExtractedData(): ExtractedQuoteData {
 // ============================================================================
 
 function normalizeComponent(c: RawComponent, parentRowNumber: string | null, parentDescription: string): ExtractedQuoteLine {
-  const compDesc = c.description ?? '';
+  const compDesc = structuredText(c.description) ?? '';
   const merged = parentDescription && compDesc && !compDesc.includes(parentDescription)
     ? `${parentDescription} — ${compDesc}`
     : compDesc || parentDescription;
   return {
     description: { value: merged, confidence: c.descriptionConfidence ?? 0 },
     quantity: { value: c.quantity ?? 0, confidence: c.quantityConfidence ?? 0 },
-    unit: { value: c.unit ?? '', confidence: c.unitConfidence ?? 0 },
+    unit: { value: structuredText(c.unit) ?? '', confidence: c.unitConfidence ?? 0 },
     unitPrice: { value: c.unitPrice ?? 0, confidence: c.unitPriceConfidence ?? 0 },
     discountPercent: { value: c.discountPercent, confidence: c.discountPercentConfidence ?? 0 },
     vatRate: { value: c.vatRate ?? 24, confidence: c.vatRateConfidence ?? 0 },
@@ -117,7 +118,7 @@ export function normalizeLineItems(raw: RawExtractedQuote['lineItems']): Extract
   if (!Array.isArray(raw)) return [];
   const flat: ExtractedQuoteLine[] = [];
   for (const item of raw) {
-    const parentDesc = item.description ?? '';
+    const parentDesc = structuredText(item.description) ?? '';
     const components = Array.isArray(item.components) ? item.components : [];
     if (components.length === 0) {
       flat.push({
@@ -128,12 +129,12 @@ export function normalizeLineItems(raw: RawExtractedQuote['lineItems']): Extract
         discountPercent: { value: null, confidence: 0 },
         vatRate: { value: 24, confidence: 0 },
         lineTotal: { value: item.rowSubtotal ?? 0, confidence: item.rowSubtotalConfidence ?? 0 },
-        parentRowNumber: item.rowNumber ?? null,
+        parentRowNumber: structuredText(item.rowNumber),
       });
       continue;
     }
     for (const c of components) {
-      flat.push(normalizeComponent(c, item.rowNumber ?? null, parentDesc));
+      flat.push(normalizeComponent(c, structuredText(item.rowNumber), parentDesc));
     }
   }
   return flat;
@@ -165,33 +166,33 @@ export function normalizeExtracted(
     const v = typeof n === 'number' ? n : 0;
     return failed ? Math.min(VALIDATION_FAIL_CONFIDENCE_CAP, v) : v;
   };
-  let notesValue = raw.notes ?? null;
+  let notesValue = structuredText(raw.notes);
   if (failed) {
     notesValue = appendValidationIssuesToNotes(notesValue, validationIssues);
   } else if (softWarnings.length > 0) {
     notesValue = appendValidationIssuesToNotes(notesValue, softWarnings);
   }
   return {
-    vendorName: field<string | null>(raw.vendorName ?? null, c.vendorName),
-    vendorVat: field<string | null>(raw.vendorVat ?? null, c.vendorVat),
-    vendorPhone: field<string | null>(raw.vendorPhone ?? null, c.vendorPhone),
-    vendorEmails: field<string[]>(Array.isArray(raw.vendorEmails) ? raw.vendorEmails : [], c.vendorEmails),
-    vendorAddress: field<string | null>(raw.vendorAddress ?? null, c.vendorAddress),
-    vendorCity: field<string | null>(raw.vendorCity ?? null, c.vendorCity),
-    vendorPostalCode: field<string | null>(raw.vendorPostalCode ?? null, c.vendorPostalCode),
-    vendorCountry: field<string | null>(raw.vendorCountry ?? null, c.vendorCountry),
-    quoteDate: field<string | null>(raw.quoteDate ?? null, c.quoteDate),
-    validUntil: field<string | null>(raw.validUntil ?? null, c.validUntil),
-    quoteReference: field<string | null>(raw.quoteReference ?? null, c.quoteReference),
+    vendorName: field<string | null>(structuredText(raw.vendorName), c.vendorName),
+    vendorVat: field<string | null>(structuredText(raw.vendorVat), c.vendorVat),
+    vendorPhone: field<string | null>(structuredText(raw.vendorPhone), c.vendorPhone),
+    vendorEmails: field<string[]>(structuredTextList(raw.vendorEmails), c.vendorEmails),
+    vendorAddress: field<string | null>(structuredText(raw.vendorAddress), c.vendorAddress),
+    vendorCity: field<string | null>(structuredText(raw.vendorCity), c.vendorCity),
+    vendorPostalCode: field<string | null>(structuredText(raw.vendorPostalCode), c.vendorPostalCode),
+    vendorCountry: field<string | null>(structuredText(raw.vendorCountry), c.vendorCountry),
+    quoteDate: field<string | null>(structuredText(raw.quoteDate), c.quoteDate),
+    validUntil: field<string | null>(structuredText(raw.validUntil), c.validUntil),
+    quoteReference: field<string | null>(structuredText(raw.quoteReference), c.quoteReference),
     lineItems: normalizeLineItems(raw.lineItems),
     subtotal: field<number | null>(raw.subtotal ?? null, cap(c.subtotal)),
     vatAmount: field<number | null>(raw.vatAmount ?? null, cap(c.vatAmount)),
     totalAmount: field<number | null>(raw.totalAmount ?? null, cap(c.totalAmount)),
-    paymentTerms: field<string | null>(raw.paymentTerms ?? null, c.paymentTerms),
-    deliveryTerms: field<string | null>(raw.deliveryTerms ?? null, c.deliveryTerms),
-    warranty: field<string | null>(raw.warranty ?? null, c.warranty),
+    paymentTerms: field<string | null>(structuredText(raw.paymentTerms), c.paymentTerms),
+    deliveryTerms: field<string | null>(structuredText(raw.deliveryTerms), c.deliveryTerms),
+    warranty: field<string | null>(structuredText(raw.warranty), c.warranty),
     notes: field<string | null>(notesValue, c.notes),
-    tradeHint: field<string | null>(raw.tradeHint ?? null, c.tradeHint),
+    tradeHint: field<string | null>(structuredText(raw.tradeHint), c.tradeHint),
     pricingType: field<'unit_prices' | 'lump_sum' | 'mixed' | null>(
       (raw.pricingType as 'unit_prices' | 'lump_sum' | 'mixed' | null) ?? null,
       raw.pricingType != null ? 90 : 0,
@@ -200,10 +201,10 @@ export function normalizeExtracted(
     laborIncluded: field<boolean | null>(raw.laborIncluded ?? null, raw.laborIncludedConfidence ?? 0),
     vendorBankAccounts: (raw.vendorBankAccounts ?? []).map((b) => ({
       bankName: b.bankName,
-      bic: b.bic ?? null,
+      bic: structuredText(b.bic),
       iban: b.iban,
-      currency: b.currency ?? null,
-      accountHolder: b.accountHolder ?? null,
+      currency: structuredText(b.currency),
+      accountHolder: structuredText(b.accountHolder),
     })),
     signatory: normalizeSignatory(raw.signatory),
     detectedLanguage: raw.detectedLanguage ?? 'unknown',

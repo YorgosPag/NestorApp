@@ -16,6 +16,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { fuzzyGreekMatch } from '@/services/ai-pipeline/shared/greek-text-utils';
 import { getErrorMessage } from '@/lib/error-utils';
+import { isAbsentText } from '@/lib/ai-structured-output';
 
 const logger = createModuleLogger('ContactResolveRoute');
 
@@ -45,7 +46,9 @@ export const ResolveContactSchema = z.object({
 // ── Name / VAT helpers ────────────────────────────────────────────────────────
 
 export function normalizeVat(vat: string | null | undefined): string {
-  if (!vat) return '';
+  // «null»/«N/A» ως ΚΕΙΜΕΝΟ (έξοδος μοντέλου σε ήδη αποθηκευμένες σαρώσεις) δεν είναι ΑΦΜ: αλλιώς ταιριάζει με
+  // κάθε επαφή που το κουβαλά και γράφεται σε νέα (ADR-327, 2026-10-28 — `@/lib/ai-structured-output`).
+  if (!vat || isAbsentText(vat)) return '';
   return vat.replace(/^BG/i, '').replace(/\s/g, '').toLowerCase();
 }
 

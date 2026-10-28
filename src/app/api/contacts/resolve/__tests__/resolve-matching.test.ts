@@ -10,7 +10,7 @@ jest.mock('@/lib/firebaseAdmin', () => ({ getAdminFirestore: jest.fn(), FieldVal
 jest.mock('@/services/entity-audit.service', () => ({ EntityAuditService: { recordChange: jest.fn() } }));
 jest.mock('@/services/banking/bank-accounts-server.service', () => ({ BankAccountsServerService: {} }));
 
-import { findContactByEmail, findContactByName } from '../resolve-helpers';
+import { findContactByEmail, findContactByName, normalizeVat } from '../resolve-helpers';
 
 const CONTACTS = [
   { id: 'c1', displayName: 'Τσιμέντα Βορείου ΑΕ', emails: [{ email: 'sales@tsimenta.gr' }] },
@@ -31,5 +31,17 @@ describe('findContactByName', () => {
   it('Κ2 — ίδιο όνομα χωρίς νομική μορφή · ξένο όνομα όχι', () => {
     expect(findContactByName(CONTACTS, 'Τσιμέντα Βορείου')?.id).toBe('c1');
     expect(findContactByName(CONTACTS, 'Εντελώς Διαφορετικό')).toBeUndefined();
+  });
+});
+
+describe('normalizeVat', () => {
+  // ADR-327 (2026-10-28): σαρώσεις αποθήκευσαν το ΚΕΙΜΕΝΟ «null» ως ΑΦΜ — δεν είναι κλειδί ταύτισης.
+  it('🔴 Α1 — «null» / «N/A» / «—» ως κείμενο ⇒ κανένας ΑΦΜ (δεν ταιριάζει, δεν γράφεται)', () => {
+    for (const absent of ['null', 'NULL', 'N/A', '—', '  ']) expect(normalizeVat(absent)).toBe('');
+  });
+
+  it('Α2 — πραγματικός ΑΦΜ: χωρίς κενά, χωρίς πρόθεμα BG', () => {
+    expect(normalizeVat(' 094 019 245 ')).toBe('094019245');
+    expect(normalizeVat('BG123456789')).toBe('123456789');
   });
 });

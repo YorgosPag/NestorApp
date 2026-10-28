@@ -35,6 +35,7 @@ import {
   CLASSIFY_SYSTEM_PROMPT,
   EXTRACT_SYSTEM_PROMPT,
 } from './document-analyzer.schemas';
+import { structuredText } from '@/lib/ai-structured-output';
 
 // ============================================================================
 // CONSTANTS
@@ -230,7 +231,7 @@ export class OpenAIDocumentAnalyzer implements IDocumentAnalyzer {
   private normalizeExtractedData(raw: ExtractedDocumentData): ExtractedDocumentData {
     const lineItems: ExtractedLineItem[] = Array.isArray(raw.lineItems)
       ? raw.lineItems.map((item) => ({
-          description: item.description ?? '',
+          description: structuredText(item.description) ?? '',
           quantity: item.quantity ?? null,
           unitPrice: item.unitPrice ?? null,
           netAmount: item.netAmount ?? 0,
@@ -239,11 +240,11 @@ export class OpenAIDocumentAnalyzer implements IDocumentAnalyzer {
       : [];
 
     return {
-      issuerName: raw.issuerName ?? null,
-      issuerVatNumber: raw.issuerVatNumber ?? null,
-      issuerAddress: raw.issuerAddress ?? null,
-      documentNumber: raw.documentNumber ?? null,
-      issueDate: raw.issueDate ?? null,
+      issuerName: structuredText(raw.issuerName),
+      issuerVatNumber: structuredText(raw.issuerVatNumber),
+      issuerAddress: structuredText(raw.issuerAddress),
+      documentNumber: structuredText(raw.documentNumber),
+      issueDate: structuredText(raw.issueDate),
       netAmount: raw.netAmount ?? null,
       vatAmount: raw.vatAmount ?? null,
       grossAmount: raw.grossAmount ?? null,
