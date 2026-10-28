@@ -123,8 +123,11 @@ export function QuoteReviewClient({ id }: QuoteReviewClientProps) {
     }
   };
 
+  // ADR-327 §8.5.4 — σταθμός ελέγχου εγγράφου (έγγραφο | εξαγωγή): απλώνεται στην οθόνη, όπως οι οθόνες ελέγχου
+  // σάρωσης των Ariba/Rossum. Με `container max-w-7xl` σε 2400px το πάνελ ελέγχου έμενε ~613px (μετρημένο 2026-10-28).
+  // Το οριζόντιο κενό το δίνει το κέλυφος (ADR-797, CHECK 3.63) — όχι εδώ.
   return (
-    <main className="container mx-auto max-w-7xl space-y-4 py-6">
+    <main className="w-full space-y-4 py-6">
       <div className="flex items-center justify-between">
         <Button variant="ghost" size="sm" onClick={handleBack}>
           <ArrowLeft className="mr-1 h-4 w-4" />

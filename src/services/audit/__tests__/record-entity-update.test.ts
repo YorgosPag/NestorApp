@@ -85,4 +85,29 @@ describe('recordEntityUpdate', () => {
     expect(lifted.changes).toEqual([{ field: 'placeRef', oldValue: 'land_1', newValue: null, label: 'placeRef' }]);
     expect(untouched.changes).toEqual([]);
   });
+
+  it('Γ6 — όνομα οντότητας και πράξη από τον καλούντα όταν τα δίνει· αλλιώς `name` και `updated`', async () => {
+    const before = { status: 'draft', companyId: 'co_owner' };
+
+    await recordEntityUpdate({
+      entityType: 'quote', entityId: 'q_1', before, written: { status: 'under_review' }, ctx,
+      entityName: '#QT-0004', action: 'status_changed',
+    });
+    await recordEntityUpdate({ entityType: 'floor', entityId: 'flr_1', before: { name: 'Α', number: 1 }, written: { number: 2 }, ctx });
+
+    expect(recordChange.mock.calls[0][0]).toMatchObject({ entityName: '#QT-0004', action: 'status_changed' });
+    expect(recordChange.mock.calls[1][0]).toMatchObject({ entityName: 'Α', action: 'updated' });
+  });
+
+  it('Γ7 — ADR-327 §8.5 Γ: ο προμηθευτής της προσφοράς ΠΑΡΑΚΟΛΟΥΘΕΙΤΑΙ (id στην τιμή, ποτέ σιωπή)', async () => {
+    const result = await recordEntityUpdate({
+      entityType: 'quote', entityId: 'q_1',
+      before: { status: 'under_review', vendorContactId: 'cont_old', companyId: 'co_owner' },
+      written: { status: 'under_review', vendorContactId: 'cont_new' }, ctx,
+    });
+
+    expect(result.changes).toEqual([
+      { field: 'vendorContactId', oldValue: 'cont_old', newValue: 'cont_new', label: 'vendorContactId' },
+    ]);
+  });
 });

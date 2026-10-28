@@ -5568,14 +5568,45 @@ RFQ (entity audit) **δεν** δείχνει «Προμηθευτής: Δοκι�
 
 **Πώς επαληθεύεται ότι έκλεισε**: «Άλλαξε σε <προμηθευτή>» στον έλεγχο σάρωσης ⇒ γραμμή με ΟΝΟΜΑΤΑ στο Ιστορικό του RFQ.
 
+➕ **29/10 — ΚΩΔΙΚΑΣ ΕΚΛΕΙΣΕ, μένει ΜΟΝΟ η ζωντανή επαλήθευση** (θέλει έγκριση Giorgio: αλλαγή προμηθευτή σε προσφορά
+δοκιμής = αλλαγή δεδομένων). `updateQuote` → ο ΕΝΑΣ γραφέας `recordEntityUpdate` (+ `entityName`/`action`) με
+`QUOTE_TRACKED_FIELDS.vendorContactId` και νέο SSoT `server/lib/owned-contact-name-resolver.ts` (id στην τιμή + στιγμιότυπο
+ονόματος στην ετικέτα, κριτής μισθωτή). Άγκυρες: `quote-service-audit.test.ts` · `owned-contact-name-resolver.test.ts` ·
+`record-entity-update.test.ts` Γ6/Γ7 — 4/4 μεταλλάξεις. Λεπτομέρειες: ADR-327 changelog 2026-10-29.
+
 ---
 
 ### 🔎 Ευρήματα του ζωντανού ελέγχου σάρωσης που δεν διορθώθηκαν — ADR-327 §8.5.4 · 2026-10-28
 
-1. **Στενή στήλη «Περιγραφή»** στο `QuoteLineEditorTable` (έλεγχος σάρωσης, 2400px): ~40px ⇒ «Θερμ», «Κόλλ». Δεν
-   διερευνήθηκε (κατανομή πλάτους στηλών). Επαλήθευση: η περιγραφή διαβάζεται ολόκληρη σε 1280px.
-2. **Τύπος τηλεφώνου**: το `contacts/resolve` αποθήκευσε σταθερό Θεσσαλονίκης (`+30 2310…`) ως `type: 'mobile'`. Κλάση:
-   ταξινόμηση αριθμού (ελληνικά κινητά = `69…`). Επαλήθευση: resolve με `+30 2310 428900` ⇒ `type` ≠ `mobile`.
 3. **Ήδη αποθηκευμένο «null» ως κείμενο** στο `extractedData` σαρώσεων πριν τις 2026-10-28 (π.χ. QT-0004): το UI τα δείχνει.
    Το σύνορο (`lib/ai-structured-output`) καλύπτει μόνο νέες σαρώσεις· το `normalizeVat` αμύνεται ήδη. **ΜΗΝ** σιωπηλό backfill —
    απόφαση Giorgio (μετανάστευση με ιστορικό ή επανασάρωση).
+
+4. **Η ήδη αποθηκευμένη επαφή MACON ATEE** (`cont_e54b1931…`) κρατά ακόμη `+30 2310 428900` ως `type: 'mobile'` — η
+   θεραπεία (29/10, `server/lib/phone-line-type.ts`) ισχύει για **νέες** εγγραφές. Διόρθωση της αποθηκευμένης = αλλαγή
+   δεδομένων ⇒ μόνο με έγκριση Giorgio (με γραμμή ιστορικού, ποτέ σιωπηλά).
+
+---
+
+### ☎️ Ο ΤΥΠΟΣ ΤΗΛΕΦΩΝΟΥ ΑΠΟΦΑΣΙΖΕΤΑΙ ΑΚΟΜΗ ΧΕΙΡΟΓΡΑΦΑ ΕΞΩ ΑΠΟ ΤΟΝ SERVER — ADR-327 §8.5.4 · 2026-10-29
+
+**Τι έκλεισε**: οι **τρεις** server αποφάσεις (`buildContactDocument` · `updateContactField` · `resolvePhoneType`) ρωτούν
+πλέον το SSoT `src/server/lib/phone-line-type.ts` (`inferPhoneType`, libphonenumber `/max`). **Τι μένει** (δεν διορθώθηκε,
+N.0.2 — 4+ αρχεία, δύο περιοχές):
+1. **Πελάτης**: `createPhonesArray` (`utils/contactForm/extractors/arrays.ts`) και ο sanitizer
+   (`utils/contactForm/utils/data-cleaning.ts:237`) γράφουν `'mobile'` όταν λείπει πίνακας. Τα `/max` metadata (~145 KB) **δεν**
+   πρέπει να μπουν στο bundle — θεραπεία: απόφαση στον server (route αποθήκευσης) ή στο UI με ρητή επιλογή του ανθρώπου.
+2. **Δεύτερο λεξιλόγιο τύπων**: το `PHONE_COMPANY_MAP`/`PHONE_SERVICE_MAP`/`PHONE_DEFAULTS` του AI handler
+   (`contact-communication-types.ts`) γράφει `main`/`department`/`secretariat`/`sales`/`support` — τύποι που το UI
+   (`CommunicationConfigs`: `mobile/home/work/fax/other`) **δεν ξέρει**. Απόφαση: διεύρυνση του λεξιλογίου ή χαρτογράφηση.
+3. **Χειρόγραφος πίνακας κωδικών χώρας** στο `parsePhoneForStorage` (`contact-document-builder.ts`, CC3/CC2 λίστες) —
+   δεύτερος ορισμός της γνώσης του libphonenumber (ίδιο σχήμα με το `channel-phone.ts` §«ΓΙΑΤΙ ΒΙΒΛΙΟΘΗΚΗ»). Θέλει
+   προσοχή: αλλάζει το σχήμα αποθήκευσης (`countryCode` + `number`) — καλύπτεται από `contact-lookup.test.ts`.
+
+---
+
+### 🧪 Παλιωμένη πρόθεση άγκυρας: `record-entity-update.test.ts` Γ4 — ADR-195 · 2026-10-29
+
+Το Γ4 λέγεται «οντότητα **χωρίς μητρώο** ⇒ καμία γραμμή» αλλά χρησιμοποιεί `quote`, που **έχει** μητρώο (`status`, και από
+29/10 `vendorContactId`). Περνά μόνο επειδή το `name` δεν παρακολουθείται ⇒ δεν κρίνει πια αυτό που λέει. Θεραπεία: τύπος
+χωρίς μητρώο (δες `getTrackedFieldsForEntityAuditType` → `null`).
