@@ -14,6 +14,8 @@
       "additional": "Additional line (not requested)",
       "suggested": "Suggested",
       "selectLabel": "Requested line for: {description}",
+      "hintAction": "Which requested line does each quote line answer? Suggestions come from the ATOE code or an identical description — they are written only when you accept them and press “{action}”.",
+      "fromRfq": "{count, plural, one {Line from the request (#)} other {Lines from the request (#)}}",
       "errors": {
         "unknown_rfq_line": "A line is matched to a requested line that is not (or no longer) part of this request. Refresh the page and check the matching again.",
         "duplicate_answer": "Two answers point to the same requested line. Each requested line takes a single answer.",
