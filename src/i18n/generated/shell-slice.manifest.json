@@ -1,7 +1,7 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/lazy-route-namespaces.json": "9c7bf433a1bf5e015985462ef1fe3f5bf84513b7956c1bf0710e75cbd42ffb5e",
+    "src/i18n/generated/lazy-route-namespaces.json": "2cf0f1a09a0dc2e51b62e88cbcf0923017342abb19198c994c580c8694c85aca",
     "src/i18n/generated/routes/area__id.el.json": "f106788944901e33ca37a741bad7fde9ee19ecf6a4b23b7b13a19e0fb03cbc8e",
     "src/i18n/generated/routes/auth__action.el.json": "43a49dcb69050c49113a98b2a32eef16dcb6a4ed4f843ee9401ee65ab7ab5c00",
     "src/i18n/generated/routes/card-email__token.el.json": "46bb991ee24b3cb42dfa9c710624f71afd2198a3d64806f4e554658db414caa9",
@@ -83,7 +83,7 @@
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "9036017e6d14329a4ea85770427485f029ad3dac258547896db87ba304b14b66",
     "src/i18n/generated/routes/tour-captures.el.json": "4366e1da68c438c0bf803afebc878504ac67e4f388a111f4f522f89141acdaa4",
     "src/i18n/generated/routes/tour-invite__token.el.json": "aeec8bc36081f1b5a8c49674c18a1a367f5d97d69bad1124f15f0a1349d110cf",
-    "src/i18n/generated/routes/vendor__quote.el.json": "d8bc6a97a093f10a5f288b9503871c2e317586ed121cad623a8450574858af2d",
+    "src/i18n/generated/routes/vendor__quote.el.json": "783b5a341824fa4cf2f77b39006006e80c90c65e23a7d047aadc9e544be78c09",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
     "src/i18n/generated/shell-slice.el.json": "9456b1584529f7603946925085dc3145c7c7492cd313bb53d7bac7a71f2f1c93",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
@@ -165,7 +165,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "cb8cc9c4225cf46c8b87daa1d5b3b5e82b0aebe63e996cc27a92cb90c8b633dc",
+  "inputsSha256": "b7da4c8b871743c32afcce6824f23734997c303c203fc3f2866668e3d30adc72",
   "languages": [
     "el"
   ],
@@ -16438,7 +16438,7 @@
   ],
   "stats": {
     "matchedKeys": 265,
-    "sliceBytes": 1021519
+    "sliceBytes": 1021463
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

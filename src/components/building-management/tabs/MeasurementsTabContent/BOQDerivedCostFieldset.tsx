@@ -15,6 +15,7 @@
 import { useMemo } from 'react';
 import { formatCurrency } from '@/lib/intl-utils';
 import { cn } from '@/lib/utils';
+import { useUomLabel } from '@/hooks/useUomLabel';
 import { computeItemCost, derivedSummaryCosts, isSummaryBoqLine, type DerivedSummaryCost } from '@/services/measurements';
 import type { BOQItem } from '@/types/boq';
 import type { FieldsetCommon } from './BOQEditorFieldsets';
@@ -28,7 +29,8 @@ interface BOQDerivedCostFieldsetProps extends FieldsetCommon {
 }
 
 function DerivedFigures({ summary, derived, colors, t }: Omit<BOQDerivedCostFieldsetProps, 'layers'> & { derived: DerivedSummaryCost }) {
-  const unit = t(`tabs.measurements.units.${summary.unit}`);
+  const uomLabel = useUomLabel();
+  const unit = uomLabel(summary.unit);
   return (
     <dl className="grid grid-cols-2 gap-2 text-sm">
       <dt className={colors.text.muted}>{t('tabs.measurements.editor.derived.unitRate')}</dt>

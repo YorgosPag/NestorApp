@@ -456,19 +456,6 @@
         "noFloor": "Building-level",
         "totalsByCategory": "Totals by category"
       },
-      "units": {
-        "m": "m",
-        "m2": "sq.m",
-        "m3": "cu.m",
-        "kg": "kg",
-        "ton": "ton",
-        "pcs": "pcs",
-        "lt": "lt",
-        "set": "set",
-        "hr": "hr",
-        "day": "day",
-        "lump": "l.s."
-      },
       "varianceLevel": {
         "good": "Within limits",
         "warning": "Warning",

@@ -10,8 +10,8 @@
     "lt": "L",
     "ml": "mL",
     "hr": "h",
-    "day": "days",
-    "month": "months",
+    "day": "d",
+    "month": "mo",
     "set": "sets",
     "pair": "pairs",
     "bag": "bags",
@@ -20,7 +20,7 @@
     "roll": "rolls",
     "container": "containers",
     "pack": "packs",
-    "lump": "lump sum",
+    "lump": "LS",
     "kWp": "kWp"
   },
   "name": {
@@ -45,6 +45,6 @@
     "container": "Container",
     "pack": "Pack",
     "lump": "Lump sum",
-    "kWp": "Kilowatt peak (kWp)"
+    "kWp": "Kilowatt peak"
   }
 }

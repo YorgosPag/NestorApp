@@ -33,6 +33,7 @@ import type { MasterBOQCategory } from '@/config/boq-categories';
 import { findSubCategory } from '@/config/boq-subcategories';
 import { computeItemCost, computeVariance, computeBaselineDrift, groupBoqCost, type DerivedSummaryCost } from '@/services/measurements';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useUomLabel } from '@/hooks/useUomLabel';
 import '@/lib/design-system';
 
 // ============================================================================
@@ -171,6 +172,7 @@ interface CategoryItemsTableProps extends BOQRowActions {
 
 function CategoryItemsTable({ items, totalCost, derivedCosts, categoryName, onEdit, onDelete, onDetach, t }: CategoryItemsTableProps) {
   const colors = useSemanticColors();
+  const uomLabel = useUomLabel();
   return (
     <Table>
       <TableHeader>
@@ -235,7 +237,7 @@ function CategoryItemsTable({ items, totalCost, derivedCosts, categoryName, onEd
                 )}
               </TableCell>
               <TableCell className={cn("text-center text-xs", colors.text.muted)}>
-                {t(`tabs.measurements.units.${item.unit}`)}
+                {uomLabel(item.unit)}
               </TableCell>
               <TableCell className="text-right tabular-nums">
                 {formatNumber(item.estimatedQuantity, { maximumFractionDigits: 2 })}

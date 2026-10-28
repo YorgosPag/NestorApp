@@ -494,7 +494,8 @@
     "storage",
     "surveyRecord",
     "toolbars",
-    "trash"
+    "trash",
+    "uom"
   ],
   "CRMDashboard": [
     "accounting",
@@ -1161,7 +1162,8 @@
     "storage",
     "surveyRecord",
     "toolbars",
-    "trash"
+    "trash",
+    "uom"
   ],
   "PublicPO": [
     "procurement",

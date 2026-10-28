@@ -18,6 +18,7 @@ import { useMemo } from 'react';
 import { EnterpriseAccordion } from '@/components/ui/accordion';
 import type { EnterpriseAccordionItem } from '@/components/ui/accordion';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useUomLabel } from '@/hooks/useUomLabel';
 import { formatCurrency, formatNumber } from '@/lib/intl-utils';
 import { cn } from '@/lib/utils';
 import type { BOQItem, BOQItemStatus } from '@/types/boq';
@@ -90,6 +91,7 @@ export function BOQCategoryAccordion({
   derivedCosts,
 }: BOQCategoryAccordionProps) {
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const uomLabel = useUomLabel();
   const colors = useSemanticColors();
   const { floors } = useFloorsByBuilding(buildingId);
 
@@ -192,7 +194,7 @@ export function BOQCategoryAccordion({
               <li key={ct.code} className="flex items-center justify-between text-sm">
                 <span>{ct.code} — {ct.name}</span>
                 <span className="tabular-nums font-medium">
-                  {formatNumber(ct.quantity, { maximumFractionDigits: 2 })} {t(`tabs.measurements.units.${ct.unit}`)}
+                  {formatNumber(ct.quantity, { maximumFractionDigits: 2 })} {uomLabel(ct.unit)}
                 </span>
               </li>
             ))}

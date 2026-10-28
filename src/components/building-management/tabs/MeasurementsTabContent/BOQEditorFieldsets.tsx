@@ -18,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { InfoTooltip } from '@/components/ui/InfoTooltip';
 import { formatCurrency, formatNumber } from '@/lib/intl-utils';
 import { cn } from '@/lib/utils';
+import { UomSelect } from '@/components/shared/UomSelect';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { BOQItemStatus, BOQMeasurementUnit } from '@/types/boq';
 import type { EditorFormState } from './useBOQEditorState';
@@ -56,14 +57,7 @@ export function QuantitiesFieldset({ form, isEdit, allowedUnits, grossQuantity, 
             <Label>{t('tabs.measurements.editor.fields.measurementUnit')}</Label>
             <InfoTooltip content={t('tabs.measurements.editor.tooltips.measurementUnit')} />
           </div>
-          <Select value={form.unit} onValueChange={(v) => onUpdateField('unit', v as BOQMeasurementUnit)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {allowedUnits.map((u) => (
-                <SelectItem key={u} value={u}>{t(`tabs.measurements.units.${u}`)} ({u})</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <UomSelect value={form.unit} onValueChange={(v) => onUpdateField('unit', v as BOQMeasurementUnit)} units={allowedUnits} />
         </article>
         <article className="space-y-1.5">
           <div className="flex items-center gap-1">
