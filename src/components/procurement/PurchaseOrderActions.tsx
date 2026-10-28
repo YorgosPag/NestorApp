@@ -2,7 +2,7 @@
 'use client';
 
 /**
- * PO Action Buttons — PDF Export, Email Send, Share Link
+ * PO Action Buttons — PDF Export, Email Send, Share Link (`POShareLink`)
  *
  * Renders action toolbar for PO detail view.
  * Each action calls the corresponding API endpoint.
@@ -13,7 +13,7 @@
 
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileDown, Mail, Link2, Check, Loader2 } from 'lucide-react';
+import { FileDown, Mail, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -27,10 +27,8 @@ import type { PurchaseOrder } from '@/types/procurement';
 import { API_ROUTES } from '@/config/domain-constants';
 import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
 import { poPdfFilename } from '@/services/procurement/po-format';
-import {
-  createPurchaseOrderShareWithPolicy,
-  sendPurchaseOrderEmailWithPolicy,
-} from '@/services/procurement/procurement-mutation-gateway';
+import { sendPurchaseOrderEmailWithPolicy } from '@/services/procurement/procurement-mutation-gateway';
+import { POShareLinkButton } from './POShareLink';
 
 // ============================================================================
 // TYPES
@@ -68,33 +66,6 @@ function usePdfDownload(poId: string, poNumber: string) {
   }, [poId, poNumber]);
 
   return { download, status };
-}
-
-// ============================================================================
-// SHARE LINK
-// ============================================================================
-
-function useShareLink(poId: string) {
-  const [status, setStatus] = useState<ActionStatus>('idle');
-  const [shareUrl, setShareUrl] = useState<string | null>(null);
-
-  const createShare = useCallback(async () => {
-    setStatus('loading');
-    try {
-      const result = await createPurchaseOrderShareWithPolicy(poId);
-      const url = result.url;
-      setShareUrl(url);
-
-      await navigator.clipboard.writeText(url);
-      setStatus('success');
-      setTimeout(() => setStatus('idle'), 3000);
-    } catch {
-      setStatus('error');
-      setTimeout(() => setStatus('idle'), 3000);
-    }
-  }, [poId]);
-
-  return { createShare, status, shareUrl };
 }
 
 // ============================================================================
@@ -212,7 +183,6 @@ export function PurchaseOrderActions({ po }: PurchaseOrderActionsProps) {
   const { t } = useTranslation('procurement');
   const [emailOpen, setEmailOpen] = useState(false);
   const { download, status: pdfStatus } = usePdfDownload(po.id, po.poNumber);
-  const { createShare, status: shareStatus } = useShareLink(po.id);
 
   return (
     <>
@@ -241,21 +211,8 @@ export function PurchaseOrderActions({ po }: PurchaseOrderActionsProps) {
           {t('email.sendButton')}
         </Button>
 
-        {/* Share Link */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={createShare}
-          disabled={shareStatus === 'loading'}
-        >
-          {shareStatus === 'loading'
-            ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            : shareStatus === 'success'
-              ? <Check className="mr-2 h-4 w-4" />
-              : <Link2 className="mr-2 h-4 w-4" />
-          }
-          {shareStatus === 'success' ? t('share.copied') : t('share.createLink')}
-        </Button>
+        {/* Share Link — ADR-923 «3γ» Α15 */}
+        <POShareLinkButton poId={po.id} />
       </nav>
 
       <EmailSendDialog

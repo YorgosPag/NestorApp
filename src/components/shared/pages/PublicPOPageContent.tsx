@@ -22,7 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { HeaderBar } from '@/components/ui/header-bar';
 import { Badge } from '@/components/ui/badge';
 import { PO_STATUS_META } from '@/types/procurement';
-import type { PurchaseOrder } from '@/types/procurement';
+import type { PublicPurchaseOrder } from '@/services/procurement/po-public-projection';
 import { formatDate as formatLocaleDate } from '@/lib/intl-utils';
 import { POTotalsSummary } from '@/components/procurement/POTotalsSummary';
 import { POLineItemsView } from '@/components/procurement/POLineItemsView';
@@ -42,7 +42,7 @@ function formatDateOrDash(iso: string | null): string {
 
 type PageState =
   | { type: 'loading' }
-  | { type: 'ready'; po: PurchaseOrder }
+  | { type: 'ready'; po: PublicPurchaseOrder }
   | { type: 'expired'; message: string }
   | { type: 'error'; message: string };
 

@@ -16,6 +16,7 @@ import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import { generateShareId } from '@/services/enterprise-id.service';
 import type { PurchaseOrder } from '@/types/procurement';
+import { toPublicPurchaseOrder, type PublicPurchaseOrder } from './po-public-projection';
 
 const logger = createModuleLogger('PO_SHARE');
 
@@ -43,7 +44,7 @@ export interface CreateShareResult {
 
 export interface ValidateShareResult {
   valid: boolean;
-  po?: Omit<PurchaseOrder, 'internalNotes'>;
+  po?: PublicPurchaseOrder;
   error?: string;
 }
 
@@ -145,10 +146,8 @@ export async function validatePOShare(
       .update({ accessCount: FieldValue.increment(1) })
       .catch(() => { /* non-critical */ });
 
-    // Strip internal notes for public view
-    const { internalNotes: _stripped, ...publicPO } = po;
-
-    return { valid: true, po: publicPO };
+    // ADR-923 «3γ» Α12: explicit allowlist — never the stored document minus a denylist.
+    return { valid: true, po: toPublicPurchaseOrder(po) };
   } catch (err) {
     logger.error('PO share validation failed', { error: getErrorMessage(err) });
     return { valid: false, error: 'Validation failed' };

@@ -16,11 +16,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Copy, Link2, Plus } from 'lucide-react';
+import { ChevronDown, ChevronUp, Link2, Plus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
+import { CopyableLinkField } from '@/components/sharing/fields/CopyableLinkField';
 import { LinkLabelField, LinkTokenFields } from '@/components/ui/sharing/panels/link-token/LinkTokenForm';
 import type { LinkTokenDraft } from '@/components/ui/sharing/panels/link-token/types';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -86,12 +86,7 @@ export function MintedLinkCard({ minted, onCopy, onStartOver }: MintedLinkCardPr
   return (
     <section className="flex flex-col gap-2 rounded-lg border border-primary/40 p-3" aria-labelledby="share-link-minted-title">
       <h3 id="share-link-minted-title" className="text-sm font-semibold">{t('share.created')}</h3>
-      <span className="flex gap-2">
-        <Input readOnly value={minted.url} aria-label={t('share.linkUrl')} onFocus={(e) => e.currentTarget.select()} />
-        <Button type="button" variant="outline" onClick={onCopy}>
-          <Copy className="h-4 w-4 mr-1" />{t('share.copy')}
-        </Button>
-      </span>
+      <CopyableLinkField url={minted.url} fieldLabel={t('share.linkUrl')} copyLabel={t('share.copy')} onCopy={onCopy} />
       <p className={cn('text-xs', colors.text.muted)}>{t('share.shownOnce')}</p>
       <Button type="button" variant="ghost" size="sm" className="self-start" onClick={onStartOver}>
         <Plus className="h-4 w-4 mr-1" />{t('share.newLink')}
