@@ -780,3 +780,41 @@ describe('Χ — η αναπαραγωγή του ελεγκτή είναι ΟΛ
     }, 300_000);
   });
 });
+
+/**
+ * ADR-327 (2026-10-28) — Ρ: ΕΝΑ SLICE ΠΟΥ ΔΕΝ ΚΑΤΑΧΩΡΕΙΤΑΙ ΕΙΝΑΙ ΣΙΩΠΗΛΟ NO-OP.
+ *
+ * Η δήλωση στο `routeSlices` + το παραγόμενο artifact ΔΕΝ φτάνουν: αν κανένα module δεν κάνει
+ * `import …/routes/<id>.el.json` **και** `registerRouteSlice(…)`, ο generator και το CHECK 3.34 είναι
+ * πράσινα ενώ ο server βάφει ακόμη ωμά κλειδιά (hydration mismatch). Καμία πύλη δεν το ρωτούσε.
+ * Μετρήθηκε στη σελίδα του RFQ: η θεραπεία είναι ΤΡΙΑ βήματα και μόνο τα δύο ελέγχονταν.
+ */
+describe('Ρ — κάθε δηλωμένο route slice ΚΑΤΑΧΩΡΕΙΤΑΙ από κάποιο module', () => {
+  const { execFileSync } = require('node:child_process');
+  const { loadConfig } = require('../lib/i18n-shell-slice/config');
+
+  /** @returns {string[]} τα ids που κανένα module καταχώρισης δεν εισάγει */
+  function unregisteredSlices(ids, registrarSources) {
+    return ids.filter(id => !registrarSources.some(src => src.includes(`/routes/${id}.el.json`)));
+  }
+
+  function registrarSources() {
+    const out = execFileSync('git', ['grep', '-l', 'registerRouteSlice(', '--', 'src'], { cwd: REPO, encoding: 'utf8' });
+    // ⚠️ Εξαιρείται ΜΟΝΟ ο ορισμός (`src/i18n/route-slice.ts`) — όχι τα αφιερωμένα `*-route-slice.ts`
+    // των κλάδων (`mandate-consent-route-slice.ts`): αυτά ΕΙΝΑΙ καταχωρητές (μετρημένο ψευδώς θετικό 2/2).
+    return out.split('\n').filter(f => f && f !== 'src/i18n/route-slice.ts' && !/__tests__|\.test\./.test(f))
+      .map(f => fs.readFileSync(path.join(REPO, f), 'utf8'));
+  }
+
+  it('Ρ0 ΠΑΡΟΝΟΜΑΣΤΗΣ: id χωρίς εισαγωγέα αναφέρεται, id με εισαγωγέα όχι', () => {
+    const sources = ["import s from '@/i18n/generated/routes/a__b.el.json';\nregisterRouteSlice(s);"];
+    expect(unregisteredSlices(['a__b', 'c__d'], sources)).toEqual(['c__d']);
+  });
+
+  it('Ρ1 🔴 κάθε διαδρομή του `routeSlices` έχει module που εισάγει το slice της ΚΑΙ καλεί `registerRouteSlice`', () => {
+    const config = loadConfig(REPO);
+    const ids = Object.keys(config.routeSlices).map(page => RS.routeIdFor(page));
+    expect(ids.length).toBeGreaterThan(0);
+    expect(unregisteredSlices(ids, registrarSources())).toEqual([]);
+  });
+});
