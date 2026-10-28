@@ -13,7 +13,13 @@
       "acceptAll": "Accept suggestions",
       "additional": "Additional line (not requested)",
       "suggested": "Suggested",
-      "selectLabel": "Requested line for: {description}"
+      "selectLabel": "Requested line for: {description}",
+      "errors": {
+        "unknown_rfq_line": "A line is matched to a requested line that is not (or no longer) part of this request. Refresh the page and check the matching again.",
+        "duplicate_answer": "Two answers point to the same requested line. Each requested line takes a single answer.",
+        "unanswered_rfq_line": "A requested line has no answer.",
+        "unbound_alternate": "An alternate does not say which requested line it replaces."
+      }
     },
     "vendorContact": {
       "notInContacts": "This vendor is not in your contacts ({email}).",
@@ -877,7 +883,17 @@
         "failed": "Failed"
       },
       "sentBadge": "✉️ Notified on {date}",
-      "staleBadge": "✉️ Notified (stale)"
+      "staleBadge": "✉️ Notified (stale)",
+      "defaults": {
+        "winner": {
+          "subject": "Congratulations — your quote for {rfqTitle} was selected",
+          "body": "Dear {vendorName},\n\nWe are pleased to inform you that your quote ({quoteNumber}) for the request “{rfqTitle}” ({rfqNumber}) has been selected.\n\nWe will contact you shortly about the next steps and the purchase order.\n\nKind regards,\n{senderName}\n{companyName}"
+        },
+        "rejection": {
+          "subject": "Thank you for your quote for {rfqTitle}",
+          "body": "Dear {vendorName},\n\nThank you for your quote ({quoteNumber}) for the request “{rfqTitle}” ({rfqNumber}).\n\nAfter evaluation, we have selected another supplier on this occasion. We appreciate your interest and hope to work together in the future.\n\nKind regards,\n{senderName}\n{companyName}"
+        }
+      }
     },
     "invite": {
       "dialog": {

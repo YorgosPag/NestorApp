@@ -54,6 +54,8 @@ interface VendorRow {
   vendorName: string;
   subject: string;
   body: string;
+  /** Το προεπιλεγμένο θέμα ΑΥΤΗΣ της γραμμής — μέτρο του «άλλαξε από τον άνθρωπο;» (ADR-327). */
+  defaultSubject: string;
   checked: boolean;
   status: SendStatus;
   error: string | null;
@@ -96,7 +98,7 @@ export function VendorNotificationDialog({
 
   useEffect(() => {
     if (!open) return;
-    const now = new Date().toLocaleDateString('el-GR');
+    const now = formatDate(new Date());
     const rfqTitle = rfq?.title ?? '';
     const rfqNumber = (rfq as (typeof rfq & { displayNumber?: string }))?.displayNumber ?? '';
 
@@ -109,7 +111,7 @@ export function VendorNotificationDialog({
         const vendorName = quoteVendorLabel(knownName, t, q.displayNumber);
         const lastSentAt = normalizeToDate(q.lastNotifiedAt);
         const placeholders = { rfqTitle, rfqNumber, vendorName: quoteVendorAddressee(knownName, t), quoteNumber: q.displayNumber, senderName, companyName, date: now };
-        const content = buildDefaultTemplate(tmpl, placeholders);
+        const content = buildDefaultTemplate(tmpl, placeholders, t);
         return {
           quote: q,
           template: tmpl,
@@ -117,6 +119,7 @@ export function VendorNotificationDialog({
           vendorName,
           subject: content.subject,
           body: content.body,
+          defaultSubject: content.subject,
           checked: !lastSentAt,
           status: 'idle' as SendStatus,
           error: null,
@@ -148,7 +151,7 @@ export function VendorNotificationDialog({
             subject: row.subject,
             body: row.body,
             rfqId: rfq?.id ?? '',
-            customized: row.subject !== buildDefaultTemplate(row.template, {}).subject,
+            customized: row.subject !== row.defaultSubject,
           }),
         });
         if (!res.ok) {

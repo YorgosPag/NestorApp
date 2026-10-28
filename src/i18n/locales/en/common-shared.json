@@ -898,7 +898,10 @@
     "quoteScanCompleted": "Quote scan completed: {vendorName}",
     "vendorDeclined": "Vendor {vendorName} declined RFQ {rfqTitle}",
     "quoteSubmittedViaPortal": "New vendor quote submitted for RFQ {rfqTitle}",
-    "vendorEdited": "Vendor {vendorName} updated their quote"
+    "vendorEdited": "Vendor {vendorName} updated their quote",
+    "quoteScanCompletedUnknownVendor": "Quote scan completed — vendor not recognised",
+    "vendorDeclinedUnknownVendor": "A vendor declined RFQ {rfqTitle}",
+    "vendorEditedUnknownVendor": "A vendor updated their quote for RFQ {rfqTitle}"
   },
   "poNotifications": {
     "poApproved": "PO {poNumber} has been approved"

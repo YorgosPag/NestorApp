@@ -898,7 +898,10 @@
     "quoteScanCompleted": "Σάρωση προσφοράς ολοκληρώθηκε: {vendorName}",
     "vendorDeclined": "Ο προμηθευτής {vendorName} αρνήθηκε τη συμμετοχή στο RFQ {rfqTitle}",
     "quoteSubmittedViaPortal": "Νέα προσφορά υποβλήθηκε από προμηθευτή για το RFQ {rfqTitle}",
-    "vendorEdited": "Ο προμηθευτής {vendorName} ενημέρωσε την προσφορά του"
+    "vendorEdited": "Ο προμηθευτής {vendorName} ενημέρωσε την προσφορά του",
+    "quoteScanCompletedUnknownVendor": "Σάρωση προσφοράς ολοκληρώθηκε — ο προμηθευτής δεν αναγνωρίστηκε",
+    "vendorDeclinedUnknownVendor": "Ένας προμηθευτής αρνήθηκε τη συμμετοχή στο RFQ {rfqTitle}",
+    "vendorEditedUnknownVendor": "Ένας προμηθευτής ενημέρωσε την προσφορά του για το RFQ {rfqTitle}"
   },
   "poNotifications": {
     "poApproved": "Το PO {poNumber} εγκρίθηκε"
