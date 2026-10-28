@@ -18,9 +18,13 @@ export class TestPointerEvent extends MouseEvent {
   }
 }
 
-/** Καλείται σε `beforeAll`: `PointerEvent` + `setPointerCapture`/`releasePointerCapture` που δεν κάνουν τίποτα. */
+/**
+ * Καλείται σε `beforeAll`: `PointerEvent` + `setPointerCapture`/`releasePointerCapture`/`hasPointerCapture` που δεν κάνουν τίποτα
+ * (το `hasPointerCapture` το ζητά και το Radix Select για να ανοίξει τη λίστα).
+ */
 export function installPointerEvents(): void {
   globalThis.PointerEvent = TestPointerEvent as unknown as typeof PointerEvent;
   Element.prototype.setPointerCapture = () => undefined;
   Element.prototype.releasePointerCapture = () => undefined;
+  Element.prototype.hasPointerCapture = () => false;
 }

@@ -2,6 +2,16 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **28/10 — ΤΟ ΚΕΛΥΦΟΣ «id από το segment + `withAuth`» ΕΙΝΑΙ ΧΕΙΡΟΓΡΑΦΟ ΣΕ ΚΑΘΕ ROUTE `[id]`** *(εύρημα ADR-327 §8.5 · CHECK 3.28 · N.0.2)*
+
+  **Τι:** `async function handleX(request, segmentData?: { params: Promise<{ id: string }> }) { const { id } = await
+  segmentData!.params; const handler = withAuth(async (req, ctx, _cache) => …); return handler(request); }` — επαναλαμβάνεται
+  ανά ρήμα και ανά αρχείο. Το CHECK 3.28 το έπιασε ως κλώνο **μέσα** στο `api/quotes/[id]/route.ts` (GET ≡ DELETE) και λύθηκε
+  **τοπικά** (`quoteIdRoute`). Ίδιο ακριβώς σχήμα σε τουλάχιστον 8 αρχεία (`grep -rln "segmentData?: { params: Promise<{ id: string }> }"
+  src/app/api`: `rfqs/[id]/{comparison,award,invites,vendor-contacts}` · `accounting/apy-certificates/[id]/send-email` …).
+  **Θεραπεία:** ΕΝΑ `withAuthSegment<P>(run: (req, ctx, params: P) => …)` δίπλα στο `withAuth` (`src/lib/auth/`) → το `quoteIdRoute`
+  γίνεται κλήση του → ratchet ανά άγγιγμα. **Μέγεθος:** > 1h, 8+ αρχεία, αγγίζει το σύνορο auth ⇒ απόφαση Giorgio.
+
 - 🟡 **27/10 — ΤΟ VERIFIED FAKE ΔΕΝ ΞΕΡΕΙ ΔΡΟΜΕΑ-ΤΙΜΗ: `startAfter('τιμή')` με `orderBy(πεδίο)` ⇒ ΣΙΩΠΗΛΑ ΚΕΝΟ** *(εύρημα ADR-923 §5.11 «3β» · N.0.2)*
 
   **Τι:** στο Admin SDK, `query.orderBy('k').startAfter(v)` = «μετά από την **τιμή** `v` του `k`» (και `startAfter(v, id)` με δεύτερο
@@ -4220,6 +4230,17 @@
 ---
 
 ## Pending tasks (priority order)
+
+### ⬜ `bg-white` / `bg-black` = ΜΗ θεματική επιφάνεια κάτω από θεματικό κείμενο — τυφλό σημείο του CHECK 3.26 (προτεραιότητα ΥΨΗΛΗ, 2026-10-28, ADR-327 §8.5 · ADR-365 · ADR-770 · N.0.2)
+- **Τι**: η πύλη προμηθευτή (`app/(auth)/vendor/quote/`) είχε `bg-white` σε κάθε `<section>`/header/dialog με κείμενο `text-foreground`. Στο σκοτεινό θέμα (προεπιλογή) το `--foreground` είναι σχεδόν λευκό ⇒ **λευκό σε λευκό**: τίτλοι, ετικέτες πεδίων, κουμπιά «Περιλαμβάνεται/Εξαιρείται» αόρατα. **Διορθώθηκε εκεί** (10 σημεία / 4 αρχεία → `bg-card`), επαληθευμένο ζωντανά και στα δύο θέματα.
+- **Γιατί το πέρασε κάθε πύλη**: το CHECK 3.26 (ADR-365) μετρά **22 παλέτες × αποχρώσεις** — το `white`/`black` **δεν είναι παλέτα με απόχρωση**, άρα δεν μετριέται. Το 3.39 κοιτά το TS σύστημα χρωμάτων, όχι κλάσεις JSX· το 3.38 μόνο `text-primary`. Το κείμενο **κληρονομεί** χρώμα από άλλο στοιχείο από αυτό που βάζει το φόντο ⇒ κανένας έλεγχος «ανά στοιχείο» δεν το βλέπει.
+- **Πού**: μετρημένο 2026-10-28 — **94** `bg-white` σε **47** `.tsx` του `src/` (κάποια νόμιμα: προεπισκόπηση εκτύπωσης/χαρτί, καμβάς). Συγκέντρωση: `dxf-viewer/bim-3d/*`, `property-showcase`, `status-bar`.
+- **Fix**: (1) πρόσθεσε `white`/`black` (`bg-|text-|border-`) στο λεξιλόγιο του CHECK 3.26 ως ratchet κατά ταυτότητα — **όχι** reseed χωρίς Giorgio· (2) οι νόμιμες «χάρτινες» επιφάνειες δηλώνονται με λόγο (allowlist) ή περνούν σε token `--paper`· (3) τα υπόλοιπα → `bg-card` / `bg-background`.
+
+### 📧 Τρεις αναγνώστες «κύριο email επαφής» — `getPrimaryEmail` ≡ `getContactEmail` ≡ inline `resolveCustomer` (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-27, ADR-923 §5.11 «3γ» Βήμα 3 · N.0.2)
+- **Τι**: η ίδια ερώτηση «ποιο είναι το κύριο email της επαφής;» απαντιέται τρεις φορές, με **διαφορετική σειρά**: `getPrimaryEmail` (`types/contacts/helpers.ts:100`, πίνακας `emails[]` πρώτα, μετά τα legacy πεδία υπηρεσίας) · `getContactEmail` (`services/contacts/contact-name-resolver-types.ts:105`, legacy `email` **πρώτα**, 4 καταναλωτές RFQ/invites) · inline στο `resolveCustomer` (`services/sales-accounting/sales-accounting-helpers.ts:~105`). Επαφή με και `email` και `emails[]` παίρνει **άλλο** παραλήπτη ανάλογα με τη διαδρομή. Το ίδιο σχήμα και για ΑΦΜ/διεύθυνση στο `resolveCustomer` (flat `contact.address`, ενώ το μοντέλο έχει `addresses[]`).
+- **Fix**: μία σειρά προτεραιότητας (κύριο του `emails[]` → πρώτο → legacy), ΕΝΑΣ αναγνώστης· το `resolveCustomer` γίνεται καταναλωτής του `extractContactParty` (όπως το `po-document-parties`).
+- **Γιατί όχι τώρα**: αλλάζει παραλήπτη σε ζωντανές ροές RFQ/τιμολόγησης (εκτός εμβέλειας 3γ, και τα αρχεία RFQ τα δουλεύει άλλος agent).
 
 ### 📅 Μετατροπή ISO→`Timestamp` σε 2 ακόμη services → `toDeadlineTimestamp` (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-27, ADR-330 §5.1 S3.2 · N.0.2)
 - **Τι**: SSoT `src/subapps/procurement/services/procurement-timestamps.ts` (`toDeadlineTimestamp` / `patchDeadlineTimestamp`) πήρε τα 4 αντίγραφα των `rfq-service` + `sourcing-event-service`. Μένουν εκτός: `quote-service.ts:265` (`validUntil`, με **`!`** ⇒ μη αναγνώσιμη ημερομηνία = εξαίρεση, όχι «τώρα» — **διαφορετική σημασιολογία**, αποφάσισε πρώτα ποια είναι σωστή) · `material-service.ts:137` (`lastPurchaseDate`, ίδια σημασιολογία — δεν αγγίχθηκε γιατί το δέντρο υλικών το δούλευε άλλη συνεδρία).
