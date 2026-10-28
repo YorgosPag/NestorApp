@@ -36,7 +36,8 @@ function mergeAndSort(byId: Map<string, EntityAuditEntry[]>): EntityAuditEntry[]
 export function useRfqHistory({ rfqId, quoteIds }: UseRfqHistoryOptions): UseRfqHistoryReturn {
   const { user } = useAuth();
   const [entryMap, setEntryMap] = useState<Map<string, EntityAuditEntry[]>>(new Map());
-  const [isLoading, setIsLoading] = useState(false);
+  // ADR-327: με προσφορές, το ΠΡΩΤΟ render είναι ήδη «φορτώνει» — αλλιώς ένα καρέ «Δεν υπάρχει ιστορικό» πριν το effect.
+  const [isLoading, setIsLoading] = useState(quoteIds.length > 0);
   const [error, setError] = useState<string | null>(null);
   const isMounted = useRef(true);
 

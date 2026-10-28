@@ -23,18 +23,25 @@ import { groupEntriesByDate } from '@/components/shared/audit/activity-tab-helpe
 export interface RfqHistoryTabProps {
   rfqId: string;
   quotes: Quote[];
+  /**
+   * Οι προσφορές δεν έχουν φτάσει ακόμη. Το ιστορικό ζητείται ΑΝΑ προσφορά, άρα χωρίς αυτό η κενή λίστα
+   * θα διαβαζόταν «δεν υπάρχει ιστορικό» — ψευδής κενή κατάσταση (ADR-327, μετρημένο 2026-10-28).
+   */
+  quotesLoading: boolean;
 }
 
 // ============================================================================
 // COMPONENT
 // ============================================================================
 
-export function RfqHistoryTab({ rfqId, quotes }: RfqHistoryTabProps) {
+export function RfqHistoryTab({ rfqId, quotes, quotesLoading }: RfqHistoryTabProps) {
   const { t } = useTranslation(['quotes', 'common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const colors = useSemanticColors();
 
   const quoteIds = useMemo(() => quotes.map(q => q.id), [quotes]);
-  const { entries, isLoading, error } = useRfqHistory({ rfqId, quoteIds });
+  const history = useRfqHistory({ rfqId, quoteIds });
+  const { entries, error } = history;
+  const isLoading = quotesLoading || history.isLoading;
   const grouped = useMemo(() => groupEntriesByDate(entries, t), [entries, t]);
 
   return (

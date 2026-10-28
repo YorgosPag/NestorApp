@@ -347,6 +347,8 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
           {showQuoteForm && (
             <QuoteForm
               rfqId={id}
+              projectId={rfq?.projectId}
+              trade={rfq?.trade}
               onSuccess={handleQuoteCreated}
               onCancel={() => setShowQuoteForm(false)}
             />
@@ -431,7 +433,7 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
           )}
         </TabsContent>
         <TabsContent value="history" className="space-y-4">
-          <RfqHistoryTab rfqId={id} quotes={quotes} />
+          <RfqHistoryTab rfqId={id} quotes={quotes} quotesLoading={loading} />
         </TabsContent>
         <TabsContent value="setup" className="space-y-6">
           <SetupLockBanner
