@@ -10,8 +10,9 @@
  *   δημοσίευση (SAP). Ο πίνακας ζει στο `vocabulary/catalog-authorities` — κοινός με τον πελάτη.
  * - `CatalogWriteError` ⇒ `ApiError` σε **ένα** σημείο (`toCatalogApiError`): ίδιο λάθος, ίδιος κωδικός, παντού.
  *
- * Οι αναγνώσεις **δεν** περνούν από εδώ: ο πελάτης διαβάζει απευθείας τη Firestore (κανόνες:
- * `isInternalUserOfCompany`), όπως κάθε άλλη λίστα της εφαρμογής.
+ * Οι αναγνώσεις του **σχήματος/δεδομένων** δεν περνούν από εδώ: ο πελάτης διαβάζει απευθείας τη Firestore (κανόνες:
+ * `isInternalUserOfCompany`). ⚠️ **Εξαίρεση: οι ΤΙΜΕΣ** (ADR-923 §5.11 «3δ» Ζ) — `catalogReadRoute` με κριτή
+ * `pricingView`, γιατί κανόνας Firestore δεν βλέπει τα δικαιώματα του ρόλου· ζωντανές με σήματα όψεων (ADR-905).
  * @module app/api/catalog/_shared/catalog-route
  */
 
@@ -24,12 +25,12 @@ import { badRequest, created, defineRoute, ok, type RateLimitTier } from '@/lib/
 import type { AuthContext } from '@/lib/auth';
 import type { RateLimitCategory } from '@/lib/middleware/rate-limit-config';
 import { CatalogWriteError, toCatalogApiError } from '@/server/catalog/catalog-write-error';
-import { EXPECTED_REVISION_PARAM } from '@/subapps/catalog/catalog-routes';
+import { CURSOR_PARAM, EXPECTED_REVISION_PARAM } from '@/subapps/catalog/catalog-routes';
 import { CATALOG_AUTHORITY_PERMISSIONS, type CatalogAuthority } from '@/subapps/catalog/vocabulary/catalog-authorities';
-import { expectedRevisionSchema } from '@/subapps/catalog/schema/zod/common.schema';
+import { entityIdSchema, expectedRevisionSchema } from '@/subapps/catalog/schema/zod/common.schema';
 
 /** Οι βαθμίδες που έχουν νόημα για εγγραφές σχήματος — ρητή δήλωση ανά διαδρομή. */
-type CatalogRateCategory = Extract<RateLimitCategory, 'STANDARD' | 'SENSITIVE'>;
+type CatalogRateCategory = Extract<RateLimitCategory, 'HIGH' | 'STANDARD' | 'SENSITIVE'>;
 
 export interface CatalogRoutePolicy {
   readonly category: CatalogRateCategory;
@@ -37,7 +38,7 @@ export interface CatalogRoutePolicy {
   readonly authority?: CatalogAuthority;
 }
 
-const TIER_OF: Readonly<Record<CatalogRateCategory, RateLimitTier>> = { STANDARD: 'standard', SENSITIVE: 'sensitive' };
+const TIER_OF: Readonly<Record<CatalogRateCategory, RateLimitTier>> = { HIGH: 'high', STANDARD: 'standard', SENSITIVE: 'sensitive' };
 // Ποια εξουσία κρίνει τη διαδρομή — ο ΕΝΑΣ πίνακας δικαιοδοσία → δικαίωμα (κοινός με τον πελάτη).
 const authOf = (policy: CatalogRoutePolicy) => ({ permissions: CATALOG_AUTHORITY_PERMISSIONS[policy.authority ?? 'schema'] });
 const FALLBACK_ERROR = 'Catalog schema write failed';
@@ -93,6 +94,31 @@ export function catalogEntityRoute<TSchema extends z.ZodTypeAny, TResult>(
     fallbackError: FALLBACK_ERROR,
     handler: ({ auth, body, params }) => respond(ok, () => run(auth, params.id, body)),
   });
+}
+
+/**
+ * `GET /api/catalog/<όψη>` — ανάγνωση που κρίνει ο **ΕΝΑΣ** κριτής (ADR-923 §5.11 «3δ» Ζ). Τα `params` είναι τα
+ * τμήματα της διαδρομής, το `search` τα ερωτήματα (δρομέας σελίδας κ.λπ.) — η επικύρωσή τους ανήκει στον αναγνώστη.
+ */
+export function catalogReadRoute<TResult, TParams extends Record<string, string> = Record<string, never>>(
+  policy: CatalogRoutePolicy,
+  run: (auth: AuthContext, params: TParams, search: URLSearchParams) => Promise<TResult>,
+) {
+  return defineRoute<z.ZodTypeAny, TParams>({
+    rateLimit: TIER_OF[policy.category],
+    auth: authOf(policy),
+    fallbackError: FALLBACK_ERROR,
+    handler: ({ req, auth, params }) => respond(ok, () => run(auth, params, new URL(req.url).searchParams)),
+  });
+}
+
+/** Ο δρομέας σελίδας (`?cursor=<id εγγράφου>`): απών ⇒ πρώτη σελίδα· άκυρος ⇒ 400, ποτέ σιωπηλά «από την αρχή». */
+export function cursorParamOf(search: URLSearchParams): string | null {
+  const raw = search.get(CURSOR_PARAM);
+  if (raw === null) return null;
+  const parsed = entityIdSchema.safeParse(raw);
+  if (!parsed.success) badRequest(`${CURSOR_PARAM} is invalid`);
+  return parsed.data;
 }
 
 /** `DELETE /api/catalog/<συλλογή>/[id]?expectedRevision=N` — soft delete με CAS. */

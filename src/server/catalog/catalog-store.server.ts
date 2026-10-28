@@ -36,8 +36,10 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { recordTrackedEntityWrite } from '@/services/entity-audit-tracked-write';
 import { enterpriseIdFromRequest } from '@/services/enterprise-id-parse';
 import type { CatalogRecord } from '@/subapps/catalog/types/catalog-record';
+import { distinctPricingViews, pricingViewsOfWrite, type PricingView } from '@/subapps/catalog/pricing/pricing-view-key';
 import { CATALOG_KIND_SPECS, type CatalogKind, type CatalogKindIdentity } from './catalog-kinds';
 import { CatalogWriteError } from './catalog-write-error';
+import { signalPricingViewsInTx } from './pricing-view-signal.server';
 import { revisionAfterWrite } from '@/subapps/catalog/aggregate/aggregate-members';
 
 /** Αποθηκευμένη εγγραφή: ορισμός + περίβλημα, χρονοσφραγίδες ISO. */
@@ -57,6 +59,8 @@ export interface CatalogTx {
   readonly ctx: AuthContext;
   readonly now: string;
   readonly changes: StagedChange[];
+  /** Οι όψεις τιμών που άγγιξε η συναλλαγή (ADR-923 §5.11 «3δ» Ζ) — **κάθε** `stage*` τις σημειώνει, ακόμη και χωρίς ίχνος. */
+  readonly pricingViews: PricingView[];
 }
 
 /** Ο στόχος μιας δημιουργίας: το id και η αναθεώρηση που είχε (0 = ποτέ· > 0 = διαγραμμένο που ξαναγεννιέται). */
@@ -77,13 +81,16 @@ export { revisionAfterWrite };
  * Τρέχει τη δουλειά σε **μία** συναλλαγή και γράφει το ίχνος **κάθε** αλλαγής μετά το commit
  * (ADR-195· ίδιο πρότυπο με την παράδοση φακέλου). Το ίχνος αποτυγχάνει **σιωπηλά προς τον χρήστη**
  * (το `recordChange` καταγράφει και επιστρέφει) — η αποθήκευση έχει ήδη γίνει.
+ * Τα σήματα όψεων τιμών γράφονται **μέσα** στη συναλλαγή, μετά τη δουλειά (όλες οι αναγνώσεις έχουν γίνει): μία
+ * αύξηση ανά όψη, ποτέ αλλαγή χωρίς σήμα (ADR-905 §4.2).
  */
 export async function runCatalogTransaction<T>(ctx: AuthContext, work: (scope: CatalogTx) => Promise<T>): Promise<T> {
   const db = getAdminFirestore();
   let staged: StagedChange[] = [];
   const result = await db.runTransaction(async (tx) => {
-    const scope: CatalogTx = { db, tx, ctx, now: nowISO(), changes: [] };
+    const scope: CatalogTx = { db, tx, ctx, now: nowISO(), changes: [], pricingViews: [] };
     const value = await work(scope);
+    signalPricingViewsInTx(tx, db, ctx.companyId, distinctPricingViews(scope.pricingViews));
     staged = scope.changes;
     return value;
   });
@@ -226,6 +233,11 @@ export function readSingleton<TDefinition>(scope: CatalogTx, kind: CatalogKind):
 
 // ── Σκηνοθεσία εγγραφών (ΜΕΤΑ από όλες τις αναγνώσεις) ──────────────────────
 
+/** Κάθε γραφή εγγραφής σημειώνει τις όψεις τιμών που αγγίζει — ο **ένας** δρόμος προς το σήμα. */
+function noteWrite(scope: CatalogTx, kind: CatalogKind, record: object): void {
+  scope.pricingViews.push(...pricingViewsOfWrite(kind, record as Readonly<Record<string, unknown>>));
+}
+
 function freshRecord<TDefinition extends object>(
   scope: CatalogTx,
   target: CreateTarget,
@@ -259,6 +271,7 @@ export function stageCreate<TDefinition extends object>(
   if (target.previousRevision === 0) scope.tx.create(ref, record);
   else scope.tx.set(ref, record);
   scope.changes.push({ kind, before: null, after: record });
+  noteWrite(scope, kind, record);
   return record;
 }
 
@@ -277,6 +290,7 @@ export function stageCopied<TDefinition extends object>(
 ): StoredCatalogRecord<TDefinition> {
   const record = freshRecord(scope, target, definition);
   scope.tx.set(catalogDocRef(scope.db, kind, target.id), record);
+  noteWrite(scope, kind, record);
   return record;
 }
 
@@ -299,6 +313,7 @@ function stageRevision<TDefinition extends object>(
   };
   scope.tx.set(catalogDocRef(scope.db, kind, current.id), record);
   scope.changes.push({ kind, before: current, after: record });
+  noteWrite(scope, kind, record);
   return record;
 }
 
@@ -332,7 +347,9 @@ export function stageDerived<TDerived extends object, TDefinition extends { read
   derived: TDerived,
 ): StoredCatalogRecord<TDefinition> {
   scope.tx.update(catalogDocRef(scope.db, kind, current.id), { derived });
-  return { ...current, derived };
+  const record = { ...current, derived };
+  noteWrite(scope, kind, record);
+  return record;
 }
 
 // ── Κρατήσεις μοναδικών τιμών (Δ3) — ευρετήριο του γραφέα, ΟΧΙ οντότητα (χωρίς ιστορικό) ─────────────────

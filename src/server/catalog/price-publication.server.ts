@@ -101,7 +101,7 @@ async function readPlanInputs(ctx: AuthContext, versionId: string): Promise<Plan
   });
 }
 
-/** `GET /api/catalog/price-list-versions/[id]/diff` — ό,τι θα δει ο άνθρωπος πριν δημοσιεύσει. */
+/** `POST /api/catalog/price-list-versions/[id]/diff` (δεν γράφει τίποτα) — ό,τι θα δει ο άνθρωπος πριν δημοσιεύσει. */
 export async function previewPublication(ctx: AuthContext, versionId: string): Promise<PricePublicationPreview> {
   const { version, list } = await readPlanInputs(ctx, versionId);
   return (await planPublication(getAdminFirestore(), ctx, version, list)).preview;
