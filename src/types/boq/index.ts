@@ -18,7 +18,7 @@ export type {
   WastePolicy,
   SourceAuthority,
 } from './units';
-export { IFC_UNIT_MAP } from './units';
+export { IFC_UNIT_MAP, BOQ_PICKER_UNITS } from './units';
 
 // Core entities
 export type {

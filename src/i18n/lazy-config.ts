@@ -145,6 +145,7 @@ export const SUPPORTED_NAMESPACES = [
   'files-media',            // 🏢 Files floorplan/media/capture (split from files — ADR-280)
   'floorplan-overlays',     // 🏢 Multi-kind overlay roles + geometry labels (ADR-340 Phase 9)
   'floors',                 // 🏢 Floor/level labels — ONE formatter for every FloorRef (ADR-903)
+  'uom',                    // 🏢 Units of measure — ONE vocabulary (UN/ECE Rec 20) for BOQ/materials/PO/RFQ (ADR-923 §5.11 «3γ» Α10)
   'navigation-entities',    // 🏢 Navigation entities/filters (split from navigation — ADR-280)
   'hierarchy-navigator',    // 🏢 Ιεραρχικός πλοηγητής /navigation (split from navigation — ADR-744 §26)
   'reports-extended',       // 🏢 Reports CRM/spaces (split from reports — ADR-280)
@@ -363,6 +364,7 @@ export const CRITICAL_NAMESPACES: readonly Namespace[] = [
   'building-tabs',
   'buildingCode',
   'floors',             // ⬅️ ADR-903: η ΜΙΑ ετικέτα ορόφου — κάρτες/λίστες/πωλήσεις σε κάθε οθόνη (~0,6 KB)
+  'uom',                // ⬅️ ADR-923 Α10: η ΜΙΑ ετικέτα μονάδας — γραμμές PO/BOQ/RFQ σε ήδη ανοιχτές καρτέλες (~1,3 KB)
   'showcase',           // ⬅️ 2026-07-25: BuildingDetailsHeader action + storage/parking details
 
   // Projects & obligations

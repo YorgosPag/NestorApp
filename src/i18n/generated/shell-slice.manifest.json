@@ -111,7 +111,7 @@
     "lazyRoutes": {
       "compatNamespaces": "d7374cc4cc25adc3ae5ab1e4f74812d0f003be9b57b1ce1a9e39ae68e76de7f5",
       "registries": "8de0b011d6a12aef35d92d4bca042c75914672aa0b4f75afd5c818ea5523ece3",
-      "supportedNamespaces": "9e21d4096436e18db879412d6c6564ed1d306a16b2a7cb2d8f5b44dbdb69f08b"
+      "supportedNamespaces": "2c4f76ec7690e672cc99f7e24fc1e164ed22b30b28c52b6705ae97b23b20f527"
     },
     "namespaceBundles": {
       "AUDIT_TIMELINE_NAMESPACES": "18e38e5883fc36d385a27c7604dbf4144948e21b9761bdbee3c1dd700b95eb67",
@@ -165,7 +165,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "14f1b18747c99c00f1166befd98916eeee8b62812cb279a1e6a61da0b4df6155",
+  "inputsSha256": "93d646bd7c2cf43f8614798278a4232d20e72dbd9564bc7bd00e36133ae15412",
   "languages": [
     "el"
   ],

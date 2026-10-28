@@ -8,24 +8,31 @@
  * @see ADR-175 (Quantity Surveying / BOQ)
  */
 
+import type { UomCode } from '@/lib/uom/uom-registry';
+
 // ============================================================================
 // MEASUREMENT UNITS
 // ============================================================================
 
-/** Μονάδα μέτρησης ποσοτήτων BOQ — ISO standard + ελληνικά */
-export type BOQMeasurementUnit =
-  | 'm'       // μέτρα (γραμμικά)
-  | 'm2'      // τετραγωνικά μέτρα
-  | 'm3'      // κυβικά μέτρα
-  | 'kg'      // κιλά
-  | 'ton'     // τόνοι
-  | 'pcs'     // τεμάχια
-  | 'lt'      // λίτρα
-  | 'set'     // σετ
-  | 'hr'      // ώρες (εργατοώρες)
-  | 'day'     // ημέρες (μηχανημάτων)
-  | 'lump'    // κατ' αποκοπή
-  | 'kWp';    // kilowatt-peak (φωτοβολταϊκά)
+/**
+ * Μονάδα μέτρησης ποσοτήτων BOQ — **υποσύνολο του ΕΝΟΣ μητρώου** `lib/uom/uom-registry` (ADR-923 §5.11 «3γ» Α10).
+ *
+ * Οι κωδικοί BOQ είναι οι **εσωτερικοί** κωδικοί του μητρώου (πρότυπο SAP T006)· ο UN/ECE κωδικός, οι γραφές των
+ * άλλων λεξιλογίων (`'τεμ'`, `'m²'`) και οι ετικέτες ζουν **εκεί**. Αν αφαιρεθεί κωδικός από το μητρώο, ο
+ * κωδικός που δεν υπάρχει στο μητρώο **δεν μεταγλωττίζεται** (`satisfies`) — η σύζευξη είναι σκόπιμη.
+ */
+export const BOQ_MEASUREMENT_UNITS = [
+  'm', 'm2', 'm3', 'kg', 'ton', 'pcs', 'lt', 'set', 'hr', 'day', 'lump', 'kWp',
+] as const satisfies readonly UomCode[];
+
+export type BOQMeasurementUnit = (typeof BOQ_MEASUREMENT_UNITS)[number];
+
+/**
+ * Η λίστα **επιλογής** μονάδας BOQ (φόρμα υλικού · εφεδρεία του επεξεργαστή όταν η κατηγορία δεν ορίζει δικές της).
+ * Χωρίς `kWp`: το δηλώνει **μόνο** η κατηγορία φωτοβολταϊκών (`boq-categories` → `allowedUnits`).
+ * 🔴 Ήταν **δύο** πανομοιότυπα αντίγραφα (`MaterialFormDialog.BOQ_UNITS` · `useBOQEditorState.ALL_UNITS`, ADR-923 «3γ» Α10).
+ */
+export const BOQ_PICKER_UNITS: readonly BOQMeasurementUnit[] = BOQ_MEASUREMENT_UNITS.filter((unit) => unit !== 'kWp');
 
 // ============================================================================
 // IFC QUANTITY TYPES (BIM INTEGRATION)
