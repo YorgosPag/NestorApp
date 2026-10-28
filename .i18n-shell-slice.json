@@ -151,6 +151,35 @@
       ],
       "reason": "ADR-327 (2026-10-28) — έγινε ορατό από τη σελίδα RFQ (`QuoteForm` → `QuoteLineEditorTable`). Οι κλήσεις `t(v.errors.*)` (γρ. 148-186) διαβάζουν το `LineErrors` που παράγει ΜΟΝΟ το `validateLine` του `utils/line-validation.ts`· κάθε τιμή εκεί είναι κυριολεκτικό `rfqs.lineEdit.error.*` (description/quantity/unit/unitPrice/vatRate). ΜΕΤΡΗΜΕΝΟ 2026-10-28: το υποδέντρο έχει ΑΚΡΙΒΩΣ αυτά τα 5 κλειδιά — το πρόθεμα είναι ακριβής απάντηση. Ο μεταφραστής είναι `useTranslation('quotes')`."
     },
+    "src/app/(app)/o/[workspace]/procurement/quotes/[id]/review/QuoteReviewClient.tsx": {
+      "prefixes": [
+        "quotes:quotes.binding.errors"
+      ],
+      "reason": "ADR-327 §8.5.4 (2026-10-28) — έγινε ορατό όταν ο έλεγχος σάρωσης (`/procurement/quotes/[id]/review`) απέκτησε route slice. Η κλήση `t(bindingKey)` (γρ. 70) διαβάζει ΜΟΝΟ την επιστροφή του `rfqBindingErrorKey` (`utils/rfq-line-binding.ts`), κλειστός τύπος `quotes.binding.errors.${RfqBindingErrorCode}` — ίδια απάντηση με την εγγραφή του `QuoteForm.tsx` (4 κλειδιά, 4 κωδικοί). Εμφανίζεται μόνο μετά από αποτυχημένη αποθήκευση. Μεταφραστής `useTranslation('quotes')`."
+    },
+    "src/components/contacts/relationships/config/relationship-form-presets.ts": {
+      "prefixes": [
+        "contacts-relationships:relationships.types"
+      ],
+      "reason": "ADR-327 (2026-10-28) — έγινε ορατό από τον έλεγχο σάρωσης (`SignatoryProposalCard` → `RelationshipTypePicker`, που πλέον ζητά τις επιλογές από ΕΔΩ αντί για τοπικό χάρτη). Η κλήση `t(config.label)` (γρ. 46/55) διαβάζει ΜΟΝΟ το `label` του `getRelationshipTypeConfig` = `VISUAL_REGISTRY` (`utils/relationship-types.ts`). ΜΕΤΡΗΜΕΝΟ 2026-10-28: 35 ετικέτες, ΟΛΕΣ `relationships.types.*`, καμία απούσα από το `contacts-relationships` — το πρόθεμα είναι ακριβής απάντηση. Ο μεταφραστής τον δίνει ο καλών: `RelationshipTypePicker` και `RelationshipFormFields`, και οι δύο `useTranslation('contacts-relationships')`."
+    },
+    "src/utils/contactForm/utils/data-cleaning.ts": {
+      "keys": [
+        "contacts-form:validation.contactTypeRequired",
+        "contacts-form:validation.individual.firstNameRequired",
+        "contacts-form:validation.individual.lastNameRequired",
+        "contacts-form:validation.company.nameRequired",
+        "contacts-form:validation.company.vatRecommended",
+        "contacts-form:validation.service.nameRequired",
+        "contacts-form:validation.service.typeRequired",
+        "contacts-form:validation.individual.birthDateFuture",
+        "contacts-form:validation.individual.documentIssueDateFuture",
+        "contacts-form:validation.individual.documentDatesInvalid",
+        "contacts-form:validation.email.invalid",
+        "contacts-form:validation.phone.invalidFormat"
+      ],
+      "reason": "ADR-327 (2026-10-28) — έγινε ορατό από τον έλεγχο σάρωσης (`ContactsService` στην κλειστότητα). Ο τοπικός `t` (γρ. 22) καλεί `i18n.t(`validation.${key}`, { ns: 'contacts' })` και τον καλούν ΜΟΝΟ 12 κυριολεκτικά (γρ. 386-454, `validateContactData`). ⚠️ Το `contacts` ΔΕΝ έχει `validation`: το καθολικό remap του ADR-798 §13 (`namespace-compat.ts`: `contacts.validation → contacts-form`) το στέλνει στο `contacts-form`, όπου ΜΕΤΡΗΘΗΚΑΝ και τα 12 (el + en) — γι' αυτό δηλώνονται εκεί. Ακριβή κλειδιά, όχι πρόθεμα: το υποδέντρο έχει κι άλλα (`vat*`, `arrayValidation`) που δεν καλεί αυτό το αρχείο."
+    },
     "src/components/catalog/attributes/AttributeConfigFields.tsx": {
       "keys": [
         "catalog:attributes.mappings.etim",
@@ -698,6 +727,32 @@
         }
       ],
       "reason": "ADR-327 — Η ΣΕΛΙΔΑ ΤΟΥ ΑΙΤΗΜΑΤΟΣ ΠΡΟΣΦΟΡΑΣ (`/o/[workspace]/projects/[id]/procurement/rfq/[rfqId]`). 🔴 ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ 2026-10-28 (Chrome, dev): hydration mismatch σε ΚΑΘΕ ψυχρή φόρτωση — ο server έβαφε το ωμό `rfqs.detail.fallback.untitled` στον τίτλο (και κάθε κλειδί `quotes`/`procurement` της σελίδας), ο client το μεταφρασμένο ⇒ το React ξαναχτίζει όλο το δέντρο. Το `quotes` ΔΕΝ είναι στο κέλυφος. ⚠️ Καταχωρείται από το `RfqDetailClient` (client module, όχι από το `page.tsx` που είναι Server Component — εκεί η εγγραφή θα πήγαινε σε ΑΛΛΟ στιγμιότυπο i18next). Το `RfqDetailClient` υπηρετεί και το `/o/[workspace]/procurement/rfqs/[id]` με ΤΗΝ ΙΔΙΑ κλειστότητα, άρα το ίδιο slice καλύπτει και τις δύο διευθύνσεις — δεύτερη δήλωση θα ήταν δίδυμο artifact ίδιου περιεχομένου."
+    },
+    "src/app/(app)/o/[workspace]/procurement/quotes/scan/page.tsx": {
+      "sealed": 3948,
+      "sealedAt": "2026-10-28",
+      "history": [
+        {
+          "from": 0,
+          "to": 3948,
+          "at": "2026-10-28",
+          "why": "ADR-327 §8.5.4 (2026-10-28) — ΓΕΝΝΗΣΗ ΤΗΣ ΔΙΑΔΡΟΜΗΣ. Μετρημένο με `--measure`: 3948 bytes · 2,2% κελύφους · 3 ns [files, procurement, quotes]. Η φόρμα ανεβάσματος (αρχείο · έργο · προμηθευτής · ειδικότητα) — όλα στο πρώτο καρέ."
+        }
+      ],
+      "reason": "ADR-327 §8.5.4 — Η ΣΑΡΩΣΗ ΠΡΟΣΦΟΡΑΣ (`/o/[workspace]/procurement/quotes/scan`). 🔴 ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ 2026-10-28 (Chrome, dev, ψυχρή φόρτωση από το κουμπί «Σάρωση Προσφοράς (AI)» του RFQ): hydration mismatch — ο server έβαφε «Έργο», ο client το ωμό `quotes.project` (το `quotes` ΔΕΝ είναι στο κέλυφος) ⇒ το React ξαναχτίζει το δέντρο, και το αρχείο που είχε ήδη επιλεγεί ΧΑΝΕΤΑΙ. Ίδια κλάση με τη σελίδα του RFQ (ίδια ημέρα), επόμενο βήμα της ΙΔΙΑΣ ροής. Καταχωρείται από το ίδιο το `page.tsx` (είναι `'use client'`)."
+    },
+    "src/app/(app)/o/[workspace]/procurement/quotes/[id]/review/page.tsx": {
+      "sealed": 16230,
+      "sealedAt": "2026-10-28",
+      "history": [
+        {
+          "from": 0,
+          "to": 16230,
+          "at": "2026-10-28",
+          "why": "ADR-327 §8.5.4 (2026-10-28) — ΓΕΝΝΗΣΗ ΤΗΣ ΔΙΑΔΡΟΜΗΣ. Μετρημένο με `--measure`: 16230 bytes · 9,0% κελύφους · 7 ns [contacts, contacts-form, contacts-relationships, files, files-media, quotes, uom] — ΑΦΟΥ ταξινομήθηκαν οι 3 δυναμικές `t()` της κλειστότητας (`QuoteReviewClient` · `relationship-form-presets` · `data-cleaning`). Μεγάλο επειδή ο έλεγχος σάρωσης είναι ολόκληρη η επεξεργασία της προσφοράς: γραμμές με μονάδες (`uom`), δέσιμο σε γραμμές RFQ, ταυτότητα προμηθευτή και πρόταση υπογράφοντα (`contacts*`)."
+        }
+      ],
+      "reason": "ADR-327 §8.5.4 — Ο ΕΛΕΓΧΟΣ ΣΑΡΩΣΗΣ (`/o/[workspace]/procurement/quotes/[id]/review`). Το επόμενο καρέ μετά τη σάρωση: ο server αποδίδει το `QuoteReviewClient`, και χωρίς slice το `quotes` (μη-κέλυφος) θα έβαφε ωμά κλειδιά/mismatch σε ψυχρή φόρτωση — ίδια κλάση με τη σάρωση και το RFQ (2026-10-28). Καταχωρείται από το `QuoteReviewClient` (client module· το `page.tsx` είναι Server Component και εκεί η εγγραφή θα πήγαινε σε ΑΛΛΟ στιγμιότυπο i18next — ίδιο σκεπτικό με το `RfqDetailClient`)."
     },
     "src/app/(app)/o/[workspace]/cases/page.tsx": {
       "sealed": 5030,

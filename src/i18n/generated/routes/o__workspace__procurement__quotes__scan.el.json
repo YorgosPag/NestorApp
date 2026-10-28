@@ -1,0 +1,101 @@
+{
+  "files": {
+    "uploadButton": {
+      "loading": "Φόρτωση...",
+      "selectFile": "Επιλογή αρχείου"
+    },
+    "validation": {
+      "invalidFile": "Μη έγκυρο αρχείο"
+    }
+  },
+  "procurement": {
+    "form": {
+      "buildingDisabledNoProject": "Επιλέξτε πρώτα έργο",
+      "noBuilding": "Δεν βρέθηκαν κτίρια",
+      "noProject": "Δεν βρέθηκαν έργα",
+      "noSupplier": "Δεν βρέθηκαν προμηθευτές",
+      "selectBuilding": "Επιλέξτε Κτίριο (προαιρετικό)",
+      "selectProject": "Επιλέξτε Έργο",
+      "selectSupplier": "Επιλέξτε Προμηθευτή"
+    }
+  },
+  "quotes": {
+    "quotes": {
+      "cancel": "Ακύρωση",
+      "project": "Έργο",
+      "scan": {
+        "backToRfq": "Πίσω στο RFQ",
+        "chooseFileButton": "Επιλογή Αρχείου...",
+        "description": "Ανεβάστε εικόνα ή PDF προσφοράς για αυτόματη εξαγωγή στοιχείων.",
+        "fileTooLarge": "Το αρχείο υπερβαίνει το όριο των 10MB.",
+        "invalidMime": "Μη υποστηριζόμενος τύπος αρχείου.",
+        "missingFile": "Επιλέξτε αρχείο πρώτα",
+        "missingProject": "Επιλέξτε έργο",
+        "missingTrade": "Επιλέξτε ειδικότητα",
+        "missingVendor": "Επιλέξτε προμηθευτή",
+        "noFileChosen": "Δεν επιλέχθηκε αρχείο",
+        "processingFailed": "Αποτυχία επεξεργασίας AI",
+        "requiredHint": "Για να συνεχίσεις, επίλεξε επίσης:",
+        "selectFile": "Επιλογή Αρχείου",
+        "title": "Σάρωση Προσφοράς (AI)",
+        "uploadAndScan": "Ανέβασμα & Σάρωση",
+        "uploadHint": "Εικόνα (JPG/PNG/WEBP/HEIC) ή PDF, έως 10MB.",
+        "uploading": "Ανέβασμα..."
+      },
+      "trade": "Ειδικότητα",
+      "vendor": "Προμηθευτής"
+    },
+    "rfqs": {
+      "title": "Αιτήματα Προσφορών (RFQ)"
+    },
+    "trades": {
+      "allGroups": "Όλες",
+      "aluminum_frames": "Αλουμίνια / Κουφώματα Εξωτερικά",
+      "concrete": "Μπετόν / Μπετατζής",
+      "data_telecoms": "Δίκτυα Δεδομένων",
+      "demolition": "Κατεδάφιση / Εκσκαφή",
+      "electrical": "Ηλεκτρολογικά",
+      "elevator": "Ανελκυστήρας",
+      "equipment_rental": "Ενοικίαση Εξοπλισμού",
+      "facade": "Πρόσοψη / ETICS",
+      "fire_protection": "Πυρόσβεση / Πυρανίχνευση",
+      "flooring_wood": "Ξύλινα Δάπεδα / Parquet",
+      "formwork": "Ξυλότυπος",
+      "gas": "Φυσικό Αέριο",
+      "glazing": "Τζαμαδόρος / Υαλοπίνακες",
+      "groups": {
+        "claddings": "Επενδύσεις",
+        "external": "Εξωτερικά",
+        "finishing": "Φινίρισμα",
+        "frames": "Κουφώματα",
+        "networks": "Δίκτυα (Η/Μ)",
+        "services": "Υπηρεσίες / Logistics",
+        "special": "Ειδικές Εγκαταστάσεις",
+        "structure": "Σκελετός"
+      },
+      "gypsum": "Γυψοκαρτές / Οροφές",
+      "hvac": "Μηχανολογικά / HVAC",
+      "insulation": "Μονώσεις",
+      "interior_frames": "Εσωτερικά Κουφώματα / Πόρτες",
+      "landscaping": "Διαμόρφωση Εξωτερικών",
+      "marble": "Μάρμαρα / Φυσικός Λίθος",
+      "masonry": "Τοιχοποιία / Κτίστης",
+      "materials_general": "Υλικά (Γενικά)",
+      "noResults": "Δεν βρέθηκαν ειδικότητες",
+      "painting": "Ελαιοχρωματισμοί",
+      "plastering": "Σοβατίσματα",
+      "plumbing": "Υδραυλικά",
+      "pool": "Πισίνα",
+      "prefab": "Προκατασκευή / Μεταλλικές Κατ.",
+      "reinforcement": "Σιδεράς / Σιδηροπλέγματα",
+      "rolling_shutters": "Ρολά / Σήτες",
+      "roofing": "Στέγη / Κεραμοσκεπή",
+      "search": "Αναζήτηση ειδικότητας...",
+      "select": "Επιλέξτε ειδικότητα",
+      "tiling": "Πλακάκια / Κεραμικά",
+      "title": "Ειδικότητες",
+      "waterproofing": "Στεγανοποίηση / Ασφαλτικά",
+      "woodwork": "Ξυλουργικά / Έπιπλα"
+    }
+  }
+}
