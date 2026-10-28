@@ -11,6 +11,7 @@ import {
   adoptedUom,
   UOM_CODES,
   UOM_REGISTRY,
+  isSpelledOutUom,
   isUomCode,
   normalizeUomText,
   resolveUom,
@@ -47,6 +48,20 @@ describe('ακεραιότητα μητρώου', () => {
     const codes = UOM_CODES.map((code) => UOM_REGISTRY[code].unece).filter((c): c is string => c !== null);
     expect(new Set(codes).size).toBe(codes.length);
     for (const unece of codes) expect(unece).toMatch(/^(?:[A-Z0-9]{2,3}|X[A-Z0-9]{2})$/);
+  });
+
+  it('μονάδες-λέξεις (spelledOut) = μετρούμενα ουσιαστικά: συσκευασίες Rec 21 + σετ/ζεύγος — το σύμβολό τους σε κάθε γλώσσα είναι λέξη χωρίς τελεία', () => {
+    const spelled = UOM_CODES.filter((code) => UOM_REGISTRY[code].spelledOut);
+    expect(spelled).toEqual(['set', 'pair', 'bag', 'box', 'pallet', 'roll', 'container', 'pack']);
+    for (const code of spelled) {
+      for (const bundle of [elUom, enUom]) expect(bundle.symbol[code]).toMatch(/^\p{L}{3,}$/u);
+    }
+  });
+
+  it('isSpelledOutUom: κάθε γραφή της μονάδας-λέξης· όχι συντομογραφία, όχι άγνωστη', () => {
+    expect([isSpelledOutUom('σακ'), isSpelledOutUom('XBG'), isSpelledOutUom('ζεύγη')]).toEqual([true, true, true]);
+    expect([isSpelledOutUom('pcs'), isSpelledOutUom('τεμ'), isSpelledOutUom('lump')]).toEqual([false, false, false]);
+    expect([isSpelledOutUom('καρότσι'), isSpelledOutUom(null)]).toEqual([false, false]);
   });
 
   it('μόνο το kWp δεν έχει κωδικό UN/ECE (η Rec 20 έχει KWT = kW, όχι μέγιστη ισχύ)', () => {

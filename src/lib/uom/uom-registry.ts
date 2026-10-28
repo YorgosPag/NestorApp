@@ -37,6 +37,12 @@ interface UomDefinition {
   readonly unece: string | null;
   /** Γραφές που υπάρχουν ήδη αποθηκευμένες ή που πληκτρολογεί άνθρωπος· κανονικοποιούνται από το `normalizeUomText`. */
   readonly aliases: readonly string[];
+  /**
+   * **Η μονάδα γράφεται ως το ίδιο το μετρούμενο ουσιαστικό** («10 σακιά», «10 bags») — δεν υπάρχει συντομογραφία σε καμία
+   * γλώσσα (στο UCUM είναι σχόλιο σε άγκιστρα, `{bag}`, όχι σύμβολο). Οι λίστες δείχνουν τότε μόνο το όνομα, ποτέ
+   * «Σακί (σακιά)».
+   */
+  readonly spelledOut?: true;
 }
 
 export const UOM_REGISTRY: Readonly<Record<UomCode, UomDefinition>> = {
@@ -52,14 +58,14 @@ export const UOM_REGISTRY: Readonly<Record<UomCode, UomDefinition>> = {
   hr: { unece: 'HUR', aliases: ['ώρα', 'ώρες', 'h', 'hour', 'hours'] },
   day: { unece: 'DAY', aliases: ['ημέρα', 'ημέρες', 'μέρα', 'μέρες', 'd', 'days'] },
   month: { unece: 'MON', aliases: ['μήνας', 'μήνες', 'months'] },
-  set: { unece: 'SET', aliases: ['σετ', 'sets'] },
-  pair: { unece: 'PR', aliases: ['ζεύγ', 'ζεύγος', 'ζεύγη', 'pairs'] },
-  bag: { unece: 'XBG', aliases: ['σακ', 'σακί', 'σακιά', 'bags'] },
-  box: { unece: 'XBX', aliases: ['κουτ', 'κουτί', 'κουτιά', 'boxes'] },
-  pallet: { unece: 'XPX', aliases: ['παλ', 'παλέτα', 'παλέτες', 'pallets'] },
-  roll: { unece: 'XRO', aliases: ['ρολ', 'ρολό', 'ρολά', 'rolls'] },
-  container: { unece: 'XCN', aliases: ['δοχ', 'δοχείο', 'δοχεία', 'containers'] },
-  pack: { unece: 'XPK', aliases: ['πακέτο', 'πακέτα', 'package', 'packs'] },
+  set: { unece: 'SET', aliases: ['σετ', 'sets'], spelledOut: true },
+  pair: { unece: 'PR', aliases: ['ζεύγ', 'ζεύγος', 'ζεύγη', 'pairs'], spelledOut: true },
+  bag: { unece: 'XBG', aliases: ['σακ', 'σακί', 'σακιά', 'bags'], spelledOut: true },
+  box: { unece: 'XBX', aliases: ['κουτ', 'κουτί', 'κουτιά', 'boxes'], spelledOut: true },
+  pallet: { unece: 'XPX', aliases: ['παλ', 'παλέτα', 'παλέτες', 'pallets'], spelledOut: true },
+  roll: { unece: 'XRO', aliases: ['ρολ', 'ρολό', 'ρολά', 'rolls'], spelledOut: true },
+  container: { unece: 'XCN', aliases: ['δοχ', 'δοχείο', 'δοχεία', 'containers'], spelledOut: true },
+  pack: { unece: 'XPK', aliases: ['πακέτο', 'πακέτα', 'package', 'packs'], spelledOut: true },
   lump: { unece: 'LS', aliases: ["κατ' αποκοπή", 'κατ αποκοπή', 'lump sum'] },
   kWp: { unece: null, aliases: [] },
 };
@@ -116,6 +122,12 @@ export function resolveUom(raw: string | null | undefined): UomCode | null {
 export function adoptedUom(lineUnit: string, sourceUnit: string | null | undefined): string | null {
   if (!sourceUnit?.trim() || resolveUom(lineUnit) !== DEFAULT_UOM) return null;
   return resolveUom(sourceUnit) ?? sourceUnit.trim();
+}
+
+/** **Γράφεται η μονάδα ως λέξη;** (`spelledOut`) — `false` για άγνωστη γραφή. */
+export function isSpelledOutUom(raw: string | null | undefined): boolean {
+  const code = resolveUom(raw);
+  return code !== null && UOM_REGISTRY[code].spelledOut === true;
 }
 
 /** Ο κωδικός UN/ECE για εξαγωγή (EN 16931 BT-130)· `null` για άγνωστη μονάδα ή χωρίς ειλικρινή αντιστοίχιση. */

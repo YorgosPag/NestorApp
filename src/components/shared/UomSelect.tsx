@@ -6,6 +6,7 @@
  * @related hooks/useUomLabel · lib/uom/uom-registry · ADR-001 (`ui/select`)
  *
  * - Λίστα = **«όνομα (σύμβολο)»** («Τετραγωνικό μέτρο (τ.μ.)»): το όνομα για να διαλέξεις, το σύμβολο για να το αναγνωρίσεις στον πίνακα.
+ *   Μονάδα-λέξη του μητρώου (`spelledOut`: σακί, κουτί, σετ…) ⇒ **μόνο το όνομα** — το «σύμβολο» της είναι το πληθυντικό, όχι συντομογραφία.
  * - `compact` (στενή στήλη πίνακα): κλειστό πεδίο = **σύμβολο**, όνομα στο `aria-label`, λίστα σε πλάτος περιεχομένου.
  * - Ανεκτική ανάγνωση: αποθηκευμένη παλιά γραφή (`'τεμ'`) επιλέγει τον κανονικό κωδικό· τιμή εκτός `units` μένει **ορατή** ως επιλογή,
  *   ποτέ σιωπηλό κενό.
@@ -13,13 +14,15 @@
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useUomLabel } from '@/hooks/useUomLabel';
-import { resolveUom, type UomCode } from '@/lib/uom/uom-registry';
+import { isSpelledOutUom, resolveUom, type UomCode } from '@/lib/uom/uom-registry';
 
 interface UomSelectProps {
   readonly value: string;
   /** Πάντα κωδικός της λίστας (ή η αυτούσια τιμή εκτός λίστας) — ποτέ ετικέτα. */
   readonly onValueChange: (code: string) => void;
   readonly units: readonly UomCode[];
+  /** Για `<Label htmlFor>` της φόρμας. */
+  readonly id?: string;
   readonly disabled?: boolean;
   readonly placeholder?: string;
   readonly compact?: boolean;
@@ -28,7 +31,7 @@ interface UomSelectProps {
 }
 
 export function UomSelect({
-  value, onValueChange, units, disabled, placeholder, compact = false, size, contentClassName,
+  value, onValueChange, units, id, disabled, placeholder, compact = false, size, contentClassName,
 }: UomSelectProps) {
   const uomLabel = useUomLabel();
   const selected = resolveUom(value) ?? value.trim();
@@ -36,11 +39,12 @@ export function UomSelect({
   const itemLabel = (code: string) => {
     const name = uomLabel(code, 'name');
     const symbol = uomLabel(code);
-    return name === symbol ? name : `${name} (${symbol})`; // άγνωστη γραφή: ΜΙΑ φορά, όχι «καρότσι (καρότσι)»
+    // άγνωστη γραφή ή μονάδα-λέξη: ΜΙΑ φορά — όχι «καρότσι (καρότσι)», όχι «Σακί (σακιά)»
+    return name === symbol || isSpelledOutUom(code) ? name : `${name} (${symbol})`;
   };
   return (
     <Select value={selected} onValueChange={onValueChange} disabled={disabled}>
-      <SelectTrigger size={size} aria-label={compact ? uomLabel(selected, 'name') : undefined}>
+      <SelectTrigger id={id} size={size} aria-label={compact ? uomLabel(selected, 'name') : undefined}>
         {compact ? <SelectValue placeholder={placeholder}>{uomLabel(selected)}</SelectValue> : <SelectValue placeholder={placeholder} />}
       </SelectTrigger>
       <SelectContent width={compact ? 'content' : undefined} className={contentClassName}>
