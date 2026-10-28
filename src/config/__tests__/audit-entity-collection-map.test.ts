@@ -194,3 +194,27 @@ describe('ADR-864 Φ1β — Β5: βιβλίο `custody` και προβολές 
     }
   });
 });
+
+/**
+ * ADR-327 (2026-10-28) — Ε: κάθε οντότητα του μητρώου ΕΧΕΙ ΟΝΟΜΑ ΣΤΗΝ ΟΘΟΝΗ.
+ *
+ * Μετρημένο ζωντανά: η καρτέλα «Ιστορικό» του RFQ έβαφε `AUDIT.ENTITYTYPES.QUOTE` — ωμό κλειδί. Η ρίζα
+ * δεν ήταν η «προσφορά»: **37 από τις 53** οντότητες του `AUDIT_ENTITIES` δεν είχαν `audit.entityTypes.*`,
+ * γιατί το μητρώο μεγάλωνε και τα locales όχι (ίδια «desync» κλάση με το §4.9 παραπάνω — δύο λίστες,
+ * κανείς δεν τις έδενε). Το `AuditTimelineEntry` (`showEntityLink`) το ζητά για ΚΑΘΕ εγγραφή.
+ */
+describe('Ε — κάθε AuditEntityType έχει `audit.entityTypes.<τύπος>` και στις δύο γλώσσες', () => {
+  const LABELS = {
+    el: (require('@/i18n/locales/el/common.json') as { audit: { entityTypes: Record<string, string> } }).audit.entityTypes,
+    en: (require('@/i18n/locales/en/common.json') as { audit: { entityTypes: Record<string, string> } }).audit.entityTypes,
+  };
+
+  it('Ε0 ΠΑΡΟΝΟΜΑΣΤΗΣ: το μητρώο δεν είναι κενό', () => {
+    expect(AUDIT_ENTITY_TYPES.size).toBeGreaterThan(40);
+  });
+
+  it.each(['el', 'en'] as const)('Ε1 🔴 [%s] καμία οντότητα χωρίς ετικέτα (ούτε κενή)', (lang) => {
+    const missing = [...AUDIT_ENTITY_TYPES].filter((type) => !LABELS[lang][type]?.trim());
+    expect(missing).toEqual([]);
+  });
+});

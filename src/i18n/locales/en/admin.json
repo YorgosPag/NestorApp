@@ -825,6 +825,7 @@
       "reset": "Reset",
       "today": "Today",
       "yesterday": "Yesterday",
+      "unknownDate": "Unknown date",
       "loadMore": "Load more",
       "loadingMore": "Loading more...",
       "export": "Export",
