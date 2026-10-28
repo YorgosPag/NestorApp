@@ -96,7 +96,7 @@ import {
   networkServerOnlyMatrix,
   networkThreadMatrix,
 } from './coverage-matrices-network';
-import { viewSignalMatrix } from './coverage-matrices-view-signals';
+import { pricingViewSignalMatrix, viewSignalMatrix } from './coverage-matrices-view-signals';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -705,53 +705,62 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...serverWrittenTenantInternalMatrix(),
   },
   {
-    // ADR-923 §5.11 «3β» — η ΤΙΜΟΛΟΓΗΣΗ: ίδιο σύνορο με σχήμα/δεδομένα (read εσωτερικός του χώρου, write = Admin SDK).
+    // ADR-923 §5.11 «3β» — η ΤΙΜΟΛΟΓΗΣΗ: write = Admin SDK. «3δ» Ζ — και η ΑΝΑΓΝΩΣΗ κλείνει (`deny_all`, ίδιο για τις 8
+    // συλλογές): η προβολή (`catalog:pricing:view`) = ρόλος ∪ claim, την κρίνει ΜΟΝΟ ο διακομιστής (GET routes).
     collection: 'catalog_price_lists',
-    pattern: 'admin_write_only',
+    pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/catalog-price-lists.rules.test.ts',
-    ...serverWrittenTenantInternalMatrix(),
+    ...denyAllMatrix(),
   },
   {
     collection: 'catalog_price_list_versions',
-    pattern: 'admin_write_only',
+    pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/catalog-price-list-versions.rules.test.ts',
-    ...serverWrittenTenantInternalMatrix(),
+    ...denyAllMatrix(),
   },
   {
     collection: 'catalog_price_list_lines',
-    pattern: 'admin_write_only',
+    pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/catalog-price-list-lines.rules.test.ts',
-    ...serverWrittenTenantInternalMatrix(),
+    ...denyAllMatrix(),
   },
   {
     collection: 'catalog_discount_groups',
-    pattern: 'admin_write_only',
+    pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/catalog-discount-groups.rules.test.ts',
-    ...serverWrittenTenantInternalMatrix(),
+    ...denyAllMatrix(),
   },
   {
     collection: 'catalog_customer_groups',
-    pattern: 'admin_write_only',
+    pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/catalog-customer-groups.rules.test.ts',
-    ...serverWrittenTenantInternalMatrix(),
+    ...denyAllMatrix(),
   },
   {
     collection: 'catalog_customer_assignments',
-    pattern: 'admin_write_only',
+    pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/catalog-customer-assignments.rules.test.ts',
-    ...serverWrittenTenantInternalMatrix(),
+    ...denyAllMatrix(),
   },
   {
     collection: 'catalog_discount_conditions',
-    pattern: 'admin_write_only',
+    pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/catalog-discount-conditions.rules.test.ts',
-    ...serverWrittenTenantInternalMatrix(),
+    ...denyAllMatrix(),
   },
   {
     collection: 'catalog_pricing_slots',
-    pattern: 'admin_write_only',
+    pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/catalog-pricing-slots.rules.test.ts',
-    ...serverWrittenTenantInternalMatrix(),
+    ...denyAllMatrix(),
+  },
+  {
+    // ADR-923 §5.11 «3δ» Ζ · ADR-905 — σήμα ανά ΟΨΗ ΤΙΜΩΝ (μόνο αριθμός). Οι 8 συλλογές τιμολόγησης είναι πλέον
+    // `deny_all` (η προβολή κρίνεται ΜΟΝΟ στον διακομιστή)· εδώ `get` ο εσωτερικός χρήστης του χώρου, `list`/γραφή κανείς.
+    collection: 'catalog_pricing_view_signals',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/catalog-pricing-view-signals.rules.test.ts',
+    ...pricingViewSignalMatrix(),
   },
   {
     // ADR-916 Φ-Β — Η ΠΡΟΣΚΛΗΣΗ ΤΟΥ ΑΓΟΡΑΣΤΗ. `deny_all` όπως κάθε είδος του κοινού πυρήνα: ανάγνωση = email

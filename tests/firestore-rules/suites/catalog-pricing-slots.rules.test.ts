@@ -1,14 +1,15 @@
 /**
  * Firestore Rules — `catalog_pricing_slots` (ADR-923 §5.11 «3β» · υποδοχές ασάφειας)
  *
- * Σχήμα κανόνα: read = `isInternalUserOfCompany(companyId)` · write = `if false` (μόνο `src/server/catalog/**`).
+ * Σχήμα κανόνα: read = `if false` · write = `if false` — **και οι δύο** μόνο στον διακομιστή (ADR-923 §5.11 «3δ» Ζ:
+ * η προβολή τιμών κρίνεται από τον κριτή του διακομιστή, `pricing-views.server.ts`).
  * 🔑 Ευρετήριο του γραφέα, όχι οντότητα: γράφεται ΜΟΝΟ στην ίδια συναλλαγή με τη συνθήκη/λίστα.
  * @since 2026-10-27 (ADR-923 Φ3β)
  */
 
 import { FIRESTORE_RULES_COVERAGE } from '../_registry/coverage-manifest';
 import {
-  defineServerWrittenTenantAnchors,
+  defineServerOnlyTenantAnchors,
   defineServerWrittenTenantCell,
   useServerWrittenTenantEmulator,
   type TenantPayload,
@@ -21,10 +22,10 @@ const payload: TenantPayload = (companyId) => ({
   slotKey: 'condition:*:anonymous', members: [{ holderId: 'cdcnd_1', validFrom: null, validUntil: null }],
 });
 
-describe('catalog_pricing_slots.rules — διαβάζει ο χώρος, γράφει ο ΔΙΑΚΟΜΙΣΤΗΣ', () => {
+describe('catalog_pricing_slots.rules — διαβάζει ΚΑΙ γράφει ΜΟΝΟ ο ΔΙΑΚΟΜΙΣΤΗΣ', () => {
   const env = useServerWrittenTenantEmulator();
   for (const cell of COVERAGE.matrix) {
     defineServerWrittenTenantCell(env, cell, COVERAGE.collection, payload);
   }
-  defineServerWrittenTenantAnchors(env, COVERAGE.collection, payload);
+  defineServerOnlyTenantAnchors(env, COVERAGE.collection, payload);
 });

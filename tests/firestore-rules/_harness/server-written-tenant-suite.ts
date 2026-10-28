@@ -65,6 +65,12 @@ export function defineServerWrittenTenantAnchors(env: EnvAccessor, collection: s
     expect(snap.docs.map((doc) => doc.id)).toEqual([docId]);
   });
 
+  defineNoClientWriteAnchor(env, collection, payload);
+}
+
+/** Η άγκυρα εγγραφής που ισχύει για ΚΑΘΕ συλλογή που γράφει μόνο ο διακομιστής (διαβάζεται ή όχι από τον πελάτη). */
+function defineNoClientWriteAnchor(env: EnvAccessor, collection: string, payload: TenantPayload): void {
+  const docId = docIdOf(collection);
   it('🔴 ούτε ο διαχειριστής του ίδιου μισθωτή γράφει — η επικύρωση ζει μόνο στον ΕΝΑ γραφέα', async () => {
     await seed(env, collection, docId, payload(SAME_TENANT_COMPANY_ID));
     const col = getContext(env(), 'same_tenant_admin').firestore().collection(collection);
@@ -72,4 +78,24 @@ export function defineServerWrittenTenantAnchors(env: EnvAccessor, collection: s
     await assertFails(col.doc(`${collection}-forged`).set(payload(SAME_TENANT_COMPANY_ID)));
     await assertFails(col.doc(docId).delete());
   });
+}
+
+/**
+ * ADR-923 §5.11 «3δ» Ζ — συλλογή που **ούτε διαβάζεται** από τον πελάτη (`deny_all`): η εξουσιοδότηση προβολής
+ * (ρόλος ∪ claim) κρίνεται ΜΟΝΟ στον διακομιστή. Η άρνηση μετριέται πάνω σε **σπαρμένο** έγγραφο του **ίδιου**
+ * μισθωτή — χωρίς σπορά, η μετάλλαξη «ξανάνοιξε το `isInternalUserOfCompany`» θα έμενε πράσινη (μάθημα `mandate_requests`).
+ */
+export function defineServerOnlyTenantAnchors(env: EnvAccessor, collection: string, payload: TenantPayload): void {
+  const docId = docIdOf(collection);
+
+  it('🔴 ούτε ο ΙΔΙΟΣ ο χώρος διαβάζει απευθείας — ούτε έγγραφο, ούτε φιλτραρισμένη λίστα, ούτε ο super admin', async () => {
+    await seed(env, collection, docId, payload(SAME_TENANT_COMPANY_ID));
+    for (const persona of ['same_tenant_admin', 'same_tenant_user', 'super_admin'] as const) {
+      const col = getContext(env(), persona).firestore().collection(collection);
+      await assertFails(col.doc(docId).get());
+      await assertFails(col.where('companyId', '==', SAME_TENANT_COMPANY_ID).get());
+    }
+  });
+
+  defineNoClientWriteAnchor(env, collection, payload);
 }

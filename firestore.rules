@@ -6364,36 +6364,49 @@ service cloud.firestore {
     // διαβάζονται ΠΟΤΕ από άλλον χώρο ή ανώνυμο: η τιμή προς άλλο κοινό βγαίνει ΜΟΝΟ από τον διακομιστή (§12). Η
     // δημοσιευμένη έκδοση είναι ΑΜΕΤΑΒΛΗΤΗ — το φυλάει ο γραφέας (η έκδοση κλειδώνει τις γραμμές της) και εδώ το
     // `write: if false`. Οι υποδοχές ασάφειας (`catalog_pricing_slots`) είναι ευρετήριο του γραφέα, όπως οι κρατήσεις.
+    // 🔒 ADR-923 §5.11 «3δ» Ζ — ΚΑΙ Η ΑΝΑΓΝΩΣΗ ΚΛΕΙΝΕΙ: η προβολή τιμών (`catalog:pricing:view`) = δικαιώματα ΡΟΛΟΥ ∪ claim,
+    // και την κρίνει ΜΟΝΟ ο κριτής του διακομιστή (ADR-801). Ο κανόνας βλέπει μόνο τα επιπλέον του claim — θα χρειαζόταν
+    // ΤΡΙΤΟ αντίγραφο του καταλόγου ρόλων. Άρα: `read: if false` και οι τιμές βγαίνουν ΜΟΝΟ από τα GET routes
+    // (`pricing-views.server.ts`)· η οθόνη μένει ζωντανή με τα σήματα `catalog_pricing_view_signals` (ADR-905).
     match /catalog_price_lists/{priceListId} {
-      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow read: if false;
       allow write: if false;
     }
     match /catalog_price_list_versions/{versionId} {
-      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow read: if false;
       allow write: if false;
     }
     match /catalog_price_list_lines/{lineId} {
-      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow read: if false;
       allow write: if false;
     }
     match /catalog_discount_groups/{groupId} {
-      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow read: if false;
       allow write: if false;
     }
     match /catalog_customer_groups/{groupId} {
-      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow read: if false;
       allow write: if false;
     }
     match /catalog_customer_assignments/{assignmentId} {
-      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow read: if false;
       allow write: if false;
     }
     match /catalog_discount_conditions/{conditionId} {
-      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow read: if false;
       allow write: if false;
     }
     match /catalog_pricing_slots/{slotId} {
-      allow read: if isAuthenticated() && isInternalUserOfCompany(resource.data.companyId);
+      allow read: if false;
+      allow write: if false;
+    }
+    // 📡 ADR-923 §5.11 «3δ» Ζ · ADR-905 — ΣΗΜΑ ΑΝΑ ΟΨΗ ΤΙΜΩΝ: μόνο `{ companyId, view, revision, changedAt }`, ΠΟΤΕ τιμή.
+    // GET για τα μέλη του χώρου (ίδιο σύνορο με τον κατάλογο) — `resource == null` κρατά τον listener ζωντανό πριν από
+    // την πρώτη αύξηση (ανύπαρκτο έγγραφο = τίποτα να διαρρεύσει). `list`/γραφή: ΠΟΤΕ — γράφει ΜΟΝΟ η μηχανή του καταλόγου.
+    match /catalog_pricing_view_signals/{signalId} {
+      allow get: if isAuthenticated()
+                 && (resource == null || isInternalUserOfCompany(resource.data.companyId));
+      allow list: if false;
       allow write: if false;
     }
 

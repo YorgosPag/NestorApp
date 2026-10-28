@@ -20,7 +20,7 @@
  */
 
 import { cell } from './coverage-matrices';
-import { defineMatrix, type CoverageDefinition } from './coverage-completeness';
+import { defineMatrix, overrideDefinition, type CoverageDefinition } from './coverage-completeness';
 import { ALL_PERSONAS, type Persona } from './personas';
 
 /** Οι πιστοποιημένοι — ο `anonymous` κόβεται νωρίτερα (`missing_claim`), πάντα. */
@@ -47,4 +47,13 @@ export function viewSignalMatrix(): CoverageDefinition {
       cell('anonymous', operation, 'deny', 'missing_claim'),
     ]),
   ]);
+}
+
+/**
+ * ADR-923 §5.11 «3δ» Ζ — `catalog_pricing_view_signals`: ίδιο σχήμα με τον {@link viewSignalMatrix}, με **ένα** δέλτα —
+ * το σύνορο είναι του **καταλόγου** (`isInternalUserOfCompany`), όχι του χώρου γενικά: ο εξωτερικός χρήστης του ίδιου
+ * μισθωτή δεν διαβάζει ούτε τον χρονισμό των τιμών (`insufficient_role`).
+ */
+export function pricingViewSignalMatrix(): CoverageDefinition {
+  return overrideDefinition(viewSignalMatrix(), [cell('external_user', 'read', 'deny', 'insufficient_role')], 'pricingViewSignalMatrix');
 }
