@@ -33,7 +33,7 @@ export function DeclineDialog({ onConfirm, onCancel }: Props) {
       role="dialog"
       aria-modal="true"
     >
-      <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
+      <div className="w-full max-w-md rounded-lg bg-card shadow-xl">
         <header className="border-b border-border px-5 py-4">
           <h2 className="text-base font-semibold text-foreground">{t('vendor-portal:decline.title')}</h2>
           <p className="mt-1 text-xs text-muted-foreground">{t('vendor-portal:decline.subtitle')}</p>
@@ -56,7 +56,7 @@ export function DeclineDialog({ onConfirm, onCancel }: Props) {
             type="button"
             onClick={onCancel}
             disabled={busy}
-            className="rounded-md border border-border bg-white px-3 py-1.5 text-sm text-foreground hover:bg-accent disabled:opacity-50"
+            className="rounded-md border border-border bg-card px-3 py-1.5 text-sm text-foreground hover:bg-accent disabled:opacity-50"
           >
             {t('vendor-portal:decline.cancel')}
           </button>

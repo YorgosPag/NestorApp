@@ -17,7 +17,8 @@ import type { i18n } from 'i18next';
 import { VendorPortalForm } from './VendorPortalForm';
 import { DeclineDialog } from './DeclineDialog';
 import { SuccessState } from './SuccessState';
-import type { InitialData, QuoteLineDraft, QuoteSnapshot, VendorPortalActionError } from './types';
+import type { InitialData, QuoteSnapshot, VendorPortalActionError } from './types';
+import { initialVendorDraft } from './vendor-quote-draft';
 import type { VendorPortalIntent } from '@/subapps/procurement/services/vendor-portal-links';
 import { vendorPortalAction, vendorPortalFetch } from './vendor-portal-api';
 
@@ -72,29 +73,11 @@ export function VendorPortalClient({ token, initialData, initialQuote, initialIn
     }
   };
 
-  const initialLines: QuoteLineDraft[] = useMemo(() => {
-    if (existingQuote?.lines?.length) {
-      return existingQuote.lines.map((l) => ({
-        description: l.description,
-        quantity: String(l.quantity),
-        unit: l.unit,
-        unitPrice: String(l.unitPrice),
-        vatRate: l.vatRate,
-        notes: l.notes ?? '',
-      }));
-    }
-    if (initialData.rfq.lines.length > 0) {
-      return initialData.rfq.lines.map((l) => ({
-        description: l.description,
-        quantity: l.quantity != null ? String(l.quantity) : '',
-        unit: l.unit ?? 'τμχ',
-        unitPrice: '',
-        vatRate: 24,
-        notes: '',
-      }));
-    }
-    return [{ description: '', quantity: '', unit: 'τμχ', unitPrice: '', vatRate: 24, notes: '' }];
-  }, [existingQuote, initialData.rfq.lines]);
+  // ADR-327 §8.5 — μία απάντηση ανά γραμμή RFQ (+ εναλλακτικές, πρόσθετες), από τον ΕΝΑ καθαρό κατασκευαστή.
+  const initialDraft = useMemo(
+    () => initialVendorDraft(initialData.rfq.lines, existingQuote, initialData.rfq.responseLock),
+    [existingQuote, initialData.rfq.lines, initialData.rfq.responseLock],
+  );
 
   const onSubmit = async (formData: FormData) => {
     setPhase('submitting');
@@ -141,7 +124,7 @@ export function VendorPortalClient({ token, initialData, initialQuote, initialIn
     // οθόνης τα κατέχει το layout (`ShellSurface`). `self-start`: η πύλη είναι μακριά φόρμα, όχι
     // κεντραρισμένη κάρτα — ξεκινά από πάνω.
     <section className="w-full self-start bg-muted">
-      <header className="sticky top-0 z-10 border-b border-border bg-white">
+      <header className="sticky top-0 z-10 border-b border-border bg-card">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
           <div>
             <p className="text-xs uppercase tracking-wide text-muted-foreground">{t('vendor-portal:page.subtitle')}</p>
@@ -150,7 +133,7 @@ export function VendorPortalClient({ token, initialData, initialQuote, initialIn
           <button
             type="button"
             onClick={switchLanguage}
-            className="rounded-md border border-border bg-white px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
+            className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
             aria-label="Switch language"
           >
             {t('vendor-portal:page.languageToggle')}
@@ -173,7 +156,7 @@ export function VendorPortalClient({ token, initialData, initialQuote, initialIn
         ) : (
           <VendorPortalForm
             initialData={initialData}
-            initialLines={initialLines}
+            initialDraft={initialDraft}
             existingQuote={existingQuote}
             phase={phase === 'submitting' ? 'submitting' : 'editing'}
             actionError={actionError}
@@ -199,7 +182,7 @@ function DeclinedState({ locale }: { locale: 'el' | 'en' }) {
   const { t } = useTranslation(['vendor-portal']);
   const _ = locale;
   return (
-    <section className="rounded-lg border border-border bg-white p-8 text-center shadow-sm">
+    <section className="rounded-lg border border-border bg-card p-8 text-center shadow-sm">
       <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted text-foreground">
         ✓
       </div>

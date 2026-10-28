@@ -46,7 +46,31 @@
     "warrantyHint": "e.g. 2 years materials + labor",
     "validUntil": "Quote Valid Until",
     "notes": "Notes",
-    "notesHint": "Additional information or conditions"
+    "notesHint": "Additional information or conditions",
+    "requested": "Requested: {quantity} {unit}",
+    "lock": {
+      "hint": "Quantity and unit were set by the requester — enter the unit price only. For a different solution, propose an alternate.",
+      "setByRequester": "set by the requester"
+    },
+    "answerNote": "Note",
+    "answer": {
+      "legend": "Your answer for this line",
+      "priced": "Price it",
+      "included": "Included",
+      "excluded": "Excluded",
+      "includedHint": "Included in which price? (e.g. \"in line 2\")",
+      "excludedHint": "Why is it excluded? (e.g. \"outside our scope\")"
+    },
+    "alternate": {
+      "title": "Alternate proposal",
+      "add": "Propose an alternate",
+      "remove": "Remove alternate",
+      "hint": "Not counted in the quote total — the project manager may select it instead of the base line."
+    },
+    "additional": {
+      "title": "Additional lines",
+      "hint": "Anything else your price includes that was not requested. Counted in the total."
+    }
   },
   "attachments": {
     "title": "Attachments",
@@ -108,7 +132,9 @@
     "editWindowClosed": "Editing closed",
     "editWindowClosedBody": "The editing period for your quote has ended. Please contact the project manager for changes.",
     "linkMissing": "Open the link from your email",
-    "linkMissingBody": "This page only opens from the personal link in your invitation."
+    "linkMissingBody": "This page only opens from the personal link in your invitation.",
+    "validationAnswers": "Enter quantity and price for every line you price — or choose \"Included\" / \"Excluded\".",
+    "validationAlternate": "Enter description, quantity and price for every alternate — or remove it."
   },
   "security": {
     "warning": "⚠️ This link is personal. Do not forward it.",

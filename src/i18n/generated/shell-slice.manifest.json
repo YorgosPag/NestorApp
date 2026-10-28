@@ -83,7 +83,7 @@
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "9036017e6d14329a4ea85770427485f029ad3dac258547896db87ba304b14b66",
     "src/i18n/generated/routes/tour-captures.el.json": "4366e1da68c438c0bf803afebc878504ac67e4f388a111f4f522f89141acdaa4",
     "src/i18n/generated/routes/tour-invite__token.el.json": "aeec8bc36081f1b5a8c49674c18a1a367f5d97d69bad1124f15f0a1349d110cf",
-    "src/i18n/generated/routes/vendor__quote.el.json": "413f934a43a5be908bb20d0c0c0c92d312922631921b3363e9c49b3200b7a7ae",
+    "src/i18n/generated/routes/vendor__quote.el.json": "d8bc6a97a093f10a5f288b9503871c2e317586ed121cad623a8450574858af2d",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
     "src/i18n/generated/shell-slice.el.json": "9456b1584529f7603946925085dc3145c7c7492cd313bb53d7bac7a71f2f1c93",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
@@ -165,7 +165,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "7c8c9e0f55e4fb72ab4b051c6424d143dab27acb76aefaa70668da42a183b274",
+  "inputsSha256": "cb8cc9c4225cf46c8b87daa1d5b3b5e82b0aebe63e996cc27a92cb90c8b633dc",
   "languages": [
     "el"
   ],
@@ -16249,6 +16249,34 @@
     "vendor__quote": {
       "page": "src/app/(auth)/vendor/quote/page.tsx",
       "wants": {
+        "uom": {
+          "keys": [
+            "symbol.bag",
+            "symbol.box",
+            "symbol.container",
+            "symbol.day",
+            "symbol.g",
+            "symbol.hr",
+            "symbol.kWp",
+            "symbol.kg",
+            "symbol.lt",
+            "symbol.lump",
+            "symbol.m",
+            "symbol.m2",
+            "symbol.m3",
+            "symbol.ml",
+            "symbol.month",
+            "symbol.pack",
+            "symbol.pair",
+            "symbol.pallet",
+            "symbol.pcs",
+            "symbol.roll",
+            "symbol.set",
+            "symbol.ton"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "vendor-portal": {
           "keys": [
             "actions.decline",
@@ -16291,19 +16319,37 @@
             "errors.tokenInvalidBody",
             "errors.tokenRevoked",
             "errors.tokenRevokedBody",
+            "errors.validationAlternate",
+            "errors.validationAnswers",
             "errors.validationLines",
             "form.addLine",
+            "form.additional.hint",
+            "form.additional.title",
+            "form.alternate.add",
+            "form.alternate.hint",
+            "form.alternate.remove",
+            "form.alternate.title",
+            "form.answer.excluded",
+            "form.answer.excludedHint",
+            "form.answer.included",
+            "form.answer.includedHint",
+            "form.answer.legend",
+            "form.answer.priced",
+            "form.answerNote",
             "form.deliveryTerms",
             "form.deliveryTermsHint",
             "form.description",
             "form.lineTotal",
             "form.linesTitle",
+            "form.lock.hint",
+            "form.lock.setByRequester",
             "form.notes",
             "form.notesHint",
             "form.paymentTerms",
             "form.paymentTermsHint",
             "form.quantity",
             "form.removeLine",
+            "form.requested",
             "form.subtotal",
             "form.termsTitle",
             "form.total",
@@ -16392,7 +16438,7 @@
   ],
   "stats": {
     "matchedKeys": 265,
-    "sliceBytes": 1018930
+    "sliceBytes": 1021519
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

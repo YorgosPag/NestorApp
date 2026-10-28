@@ -8,29 +8,29 @@
  * @enterprise ADR-327 §7
  */
 
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import {
+  VENDOR_QUOTE_ALLOWED_MIME as ALLOWED_MIME,
+  VENDOR_QUOTE_MAX_FILE_BYTES as MAX_FILE_BYTES,
+  VENDOR_QUOTE_MAX_IMAGES as MAX_IMAGES,
+  VENDOR_QUOTE_MAX_PDFS as MAX_PDFS,
+} from '@/subapps/procurement/config/vendor-quote-attachments';
 import type {
   InitialData,
-  QuoteLineDraft,
   QuoteSnapshot,
   VendorPortalActionError,
+  VendorQuoteDraft,
 } from './types';
-
-const MAX_FILE_BYTES = 10 * 1024 * 1024;
-const MAX_IMAGES = 5;
-const MAX_PDFS = 1;
-const ALLOWED_MIME = new Set([
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp',
-  'application/pdf',
-]);
+import { toSubmissionPayload, validateDraft, type DraftValidationError } from './vendor-quote-draft';
+import { useVendorQuoteDraft } from './useVendorQuoteDraft';
+import { VendorPortalAnswers } from './VendorPortalAnswers';
+import { VendorPortalAdditionalLines } from './VendorPortalAdditionalLines';
 
 interface Props {
   initialData: InitialData;
-  initialLines: QuoteLineDraft[];
+  /** ADR-327 §8.5 — μία απάντηση ανά γραμμή RFQ + εναλλακτικές + πρόσθετες (`initialVendorDraft`). */
+  initialDraft: VendorQuoteDraft;
   existingQuote: QuoteSnapshot | null;
   phase: 'editing' | 'submitting';
   actionError: VendorPortalActionError | null;
@@ -43,7 +43,7 @@ interface Props {
 
 export function VendorPortalForm({
   initialData,
-  initialLines,
+  initialDraft,
   existingQuote,
   phase,
   actionError,
@@ -57,7 +57,13 @@ export function VendorPortalForm({
   const actionErrorText: Readonly<Record<VendorPortalActionError, string>> = {
     submitFailed: t('vendor-portal:errors.submitFailed'),
   };
-  const [lines, setLines] = useState<QuoteLineDraft[]>(initialLines);
+  const validationText: Readonly<Record<DraftValidationError, string>> = {
+    validationLines: t('vendor-portal:errors.validationLines'),
+    validationAnswers: t('vendor-portal:errors.validationAnswers'),
+    validationAlternate: t('vendor-portal:errors.validationAlternate'),
+  };
+  const { draft, actions, totals } = useVendorQuoteDraft(initialDraft);
+  const rfqLines = initialData.rfq.lines;
   const [paymentTerms, setPaymentTerms] = useState(existingQuote?.paymentTerms ?? '');
   const [deliveryTerms, setDeliveryTerms] = useState(existingQuote?.deliveryTerms ?? '');
   const [warranty, setWarranty] = useState(existingQuote?.warranty ?? '');
@@ -67,23 +73,8 @@ export function VendorPortalForm({
   );
   const [files, setFiles] = useState<File[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
-  const [validationError, setValidationError] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<DraftValidationError | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
-
-  const totals = useMemo(() => computeTotals(lines), [lines]);
-
-  const updateLine = (idx: number, patch: Partial<QuoteLineDraft>) => {
-    setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
-  };
-  const removeLine = (idx: number) => {
-    setLines((prev) => prev.filter((_, i) => i !== idx));
-  };
-  const addLine = () => {
-    setLines((prev) => [
-      ...prev,
-      { description: '', quantity: '', unit: 'τμχ', unitPrice: '', vatRate: 24, notes: '' },
-    ]);
-  };
 
   const onFilePick = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFileError(null);
@@ -125,34 +116,17 @@ export function VendorPortalForm({
     e.preventDefault();
     setValidationError(null);
 
-    if (lines.length === 0) {
-      setValidationError(t('vendor-portal:errors.validationLines'));
+    const invalid = validateDraft(draft);
+    if (invalid) {
+      setValidationError(invalid);
       return;
     }
-    const cleanLines = lines
-      .map((l) => ({
-        description: l.description.trim(),
-        quantity: Number(l.quantity),
-        unit: l.unit.trim() || 'τμχ',
-        unitPrice: Number(l.unitPrice),
-        vatRate: l.vatRate,
-        notes: l.notes.trim() || null,
-      }))
-      .filter(
-        (l) =>
-          l.description &&
-          Number.isFinite(l.quantity) &&
-          l.quantity > 0 &&
-          Number.isFinite(l.unitPrice) &&
-          l.unitPrice >= 0,
-      );
-    if (cleanLines.length === 0) {
-      setValidationError(t('vendor-portal:errors.validationLines'));
-      return;
-    }
+    const payload = toSubmissionPayload(draft, rfqLines);
 
     const formData = new FormData();
-    formData.set('lines', JSON.stringify(cleanLines));
+    formData.set('lines', JSON.stringify(payload.lines));
+    formData.set('alternates', JSON.stringify(payload.alternates));
+    formData.set('scopeResponses', JSON.stringify(payload.scopeResponses));
     if (paymentTerms.trim()) formData.set('paymentTerms', paymentTerms.trim());
     if (deliveryTerms.trim()) formData.set('deliveryTerms', deliveryTerms.trim());
     if (warranty.trim()) formData.set('warranty', warranty.trim());
@@ -169,24 +143,23 @@ export function VendorPortalForm({
     <form ref={formRef} onSubmit={submit} className="space-y-6">
       <RfqSummary initialData={initialData} formattedExpiresAt={formattedExpiresAt} />
 
-      <Section title={t('vendor-portal:form.linesTitle')}>
-        <ul className="space-y-3">
-          {lines.map((line, idx) => (
-            <LineRow
-              key={idx}
-              line={line}
-              onChange={(patch) => updateLine(idx, patch)}
-              onRemove={lines.length > 1 ? () => removeLine(idx) : null}
-            />
-          ))}
-        </ul>
-        <button
-          type="button"
-          onClick={addLine}
-          className="mt-3 rounded-md border border-dashed border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
-        >
-          + {t('vendor-portal:form.addLine')}
-        </button>
+      {rfqLines.length > 0 && (
+        <Section title={t('vendor-portal:rfq.linesTitle')}>
+          <VendorPortalAnswers
+            rfqLines={rfqLines}
+            answers={draft.answers}
+            alternates={draft.alternates}
+            actions={actions}
+            responseLock={initialData.rfq.responseLock}
+          />
+        </Section>
+      )}
+
+      <Section title={rfqLines.length > 0 ? t('vendor-portal:form.additional.title') : t('vendor-portal:form.linesTitle')}>
+        {rfqLines.length > 0 && (
+          <p className="mb-2 text-xs text-muted-foreground">{t('vendor-portal:form.additional.hint')}</p>
+        )}
+        <VendorPortalAdditionalLines lines={draft.additional} actions={actions} keepAtLeastOne={rfqLines.length === 0} />
         <TotalsBox totals={totals} />
       </Section>
 
@@ -276,7 +249,7 @@ export function VendorPortalForm({
 
       {(validationError || actionError) && (
         <div className="rounded-md border border-[hsl(var(--text-error))]/60 bg-[hsl(var(--bg-error))]/40 px-4 py-3 text-sm text-destructive">
-          {validationError ?? (actionError && actionErrorText[actionError])}
+          {validationError ? validationText[validationError] : actionError && actionErrorText[actionError]}
           {errorReason && <span className="ml-2 text-xs text-destructive">[{errorReason}]</span>}
         </div>
       )}
@@ -287,7 +260,7 @@ export function VendorPortalForm({
             type="button"
             onClick={onDeclineRequest}
             disabled={isSubmitting}
-            className="rounded-md border border-border bg-white px-4 py-2 text-sm font-medium text-foreground hover:bg-accent disabled:opacity-50"
+            className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-accent disabled:opacity-50"
           >
             {t('vendor-portal:actions.decline')}
           </button>
@@ -306,7 +279,7 @@ export function VendorPortalForm({
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-lg border border-border bg-white p-4 shadow-sm">
+    <section className="rounded-lg border border-border bg-card p-4 shadow-sm">
       <h2 className="mb-3 text-sm font-semibold text-foreground">{title}</h2>
       {children}
     </section>
@@ -331,7 +304,7 @@ function RfqSummary({
 }) {
   const { t } = useTranslation(['vendor-portal']);
   return (
-    <section className="rounded-lg border border-border bg-white p-4 shadow-sm">
+    <section className="rounded-lg border border-border bg-card p-4 shadow-sm">
       <p className="text-xs uppercase tracking-wide text-muted-foreground">
         {t('vendor-portal:intro.rfqLabel')}
       </p>
@@ -349,104 +322,7 @@ function RfqSummary({
         <dt>{t('vendor-portal:page.expiresOn', { date: formattedExpiresAt })}</dt>
         <dd></dd>
       </dl>
-      {initialData.rfq.lines.length > 0 && (
-        <div className="mt-4">
-          <p className="text-xs font-medium text-foreground">{t('vendor-portal:rfq.linesTitle')}</p>
-          <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
-            {initialData.rfq.lines.map((l) => (
-              <li key={l.id}>
-                · {l.description}
-                {l.quantity != null ? ` — ${l.quantity} ${l.unit ?? ''}` : ''}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </section>
-  );
-}
-
-function LineRow({
-  line,
-  onChange,
-  onRemove,
-}: {
-  line: QuoteLineDraft;
-  onChange: (patch: Partial<QuoteLineDraft>) => void;
-  onRemove: (() => void) | null;
-}) {
-  const { t } = useTranslation(['vendor-portal']);
-  return (
-    <li className="rounded-md border border-border p-3">
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-12">
-        <label className="sm:col-span-12 block">
-          <span className="text-xs font-medium text-foreground">{t('vendor-portal:form.description')}</span>
-          <input
-            value={line.description}
-            onChange={(e) => onChange({ description: e.target.value })}
-            className="mt-1 w-full rounded-md border border-border px-3 py-2 text-sm"
-            required
-          />
-        </label>
-        <label className="sm:col-span-3 block">
-          <span className="text-xs font-medium text-foreground">{t('vendor-portal:form.quantity')}</span>
-          <input
-            type="number"
-            min="0"
-            step="any"
-            inputMode="decimal"
-            value={line.quantity}
-            onChange={(e) => onChange({ quantity: e.target.value })}
-            className="mt-1 w-full rounded-md border border-border px-3 py-2 text-sm"
-            required
-          />
-        </label>
-        <label className="sm:col-span-3 block">
-          <span className="text-xs font-medium text-foreground">{t('vendor-portal:form.unit')}</span>
-          <input
-            value={line.unit}
-            onChange={(e) => onChange({ unit: e.target.value })}
-            className="mt-1 w-full rounded-md border border-border px-3 py-2 text-sm"
-          />
-        </label>
-        <label className="sm:col-span-3 block">
-          <span className="text-xs font-medium text-foreground">{t('vendor-portal:form.unitPrice')}</span>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            inputMode="decimal"
-            value={line.unitPrice}
-            onChange={(e) => onChange({ unitPrice: e.target.value })}
-            className="mt-1 w-full rounded-md border border-border px-3 py-2 text-sm"
-            required
-          />
-        </label>
-        <label className="sm:col-span-3 block">
-          <span className="text-xs font-medium text-foreground">{t('vendor-portal:form.vatRate')}</span>
-          <select
-            value={line.vatRate}
-            onChange={(e) => onChange({ vatRate: Number(e.target.value) as 0 | 6 | 13 | 24 })}
-            className="mt-1 w-full rounded-md border border-border px-3 py-2 text-sm"
-          >
-            <option value={24}>24%</option>
-            <option value={13}>13%</option>
-            <option value={6}>6%</option>
-            <option value={0}>0%</option>
-          </select>
-        </label>
-        <div className="sm:col-span-12 flex items-center justify-between text-xs text-muted-foreground">
-          <span>
-            {t('vendor-portal:form.lineTotal')}: <strong>{computeLineTotal(line).toFixed(2)} €</strong>
-          </span>
-          {onRemove && (
-            <button type="button" onClick={onRemove} className="text-destructive hover:underline">
-              {t('vendor-portal:form.removeLine')}
-            </button>
-          )}
-        </div>
-      </div>
-    </li>
   );
 }
 
@@ -462,22 +338,4 @@ function TotalsBox({ totals }: { totals: { subtotal: number; vatAmount: number; 
       <dd className="text-right font-semibold text-foreground">{totals.total.toFixed(2)} €</dd>
     </dl>
   );
-}
-
-function computeLineTotal(l: QuoteLineDraft): number {
-  const q = Number(l.quantity);
-  const p = Number(l.unitPrice);
-  if (!Number.isFinite(q) || !Number.isFinite(p)) return 0;
-  return q * p;
-}
-
-function computeTotals(lines: QuoteLineDraft[]) {
-  let subtotal = 0;
-  let vatAmount = 0;
-  for (const l of lines) {
-    const lt = computeLineTotal(l);
-    subtotal += lt;
-    vatAmount += lt * (l.vatRate / 100);
-  }
-  return { subtotal, vatAmount, total: subtotal + vatAmount };
 }
