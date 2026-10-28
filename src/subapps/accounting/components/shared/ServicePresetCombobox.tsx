@@ -18,6 +18,8 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import type { ServicePreset } from '@/subapps/accounting/types';
+import { useUomLabel } from '@/hooks/useUomLabel';
+import { formatAccountingCurrency } from '../../utils/format';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -53,6 +55,7 @@ export function ServicePresetCombobox({
 }: ServicePresetComboboxProps) {
   const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
+  const uomLabel = useUomLabel();
   const [open, setOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -202,7 +205,7 @@ export function ServicePresetCombobox({
               >
                 <span className="font-medium">{preset.description}</span>
                 <span className={cn("text-xs", colors.text.muted)}>
-                  {preset.unit} · {preset.unitPrice > 0 ? `${preset.unitPrice}€` : t('servicePresets.variablePrice')} · {t('common.vatRates.standard').includes(String(preset.vatRate)) ? `${preset.vatRate}%` : `${preset.vatRate}%`}
+                  {uomLabel(preset.unit)} · {preset.unitPrice > 0 ? formatAccountingCurrency(preset.unitPrice) : t('servicePresets.variablePrice')} · {preset.vatRate}%
                 </span>
               </li>
             ))}

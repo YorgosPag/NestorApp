@@ -20,6 +20,8 @@ import { Badge } from '@/components/ui/badge';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { createStaleCache } from '@/lib/stale-cache';
 import { cn } from '@/lib/utils';
+import { useUomLabel } from '@/hooks/useUomLabel';
+import { formatAccountingCurrency } from '../../../utils/format';
 
 const invoiceDetailsCache = createStaleCache<Invoice>('accounting-invoice-detail-view');
 
@@ -31,6 +33,7 @@ interface InvoiceDetailsProps {
 export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
   const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
+  const uomLabel = useUomLabel();
   const router = useRouter();
   const { user } = useAuth();
   const { profile: companyProfile } = useCompanySetup();
@@ -221,11 +224,11 @@ export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
               <div className="flex-1">
                 <p className="text-sm font-medium">{item.description}</p>
                 <p className={cn("text-xs", colors.text.muted)}>
-                  {item.quantity} × {item.unit} @ €{item.unitPrice.toFixed(2)} | ΦΠΑ {item.vatRate}%
+                  {item.quantity} × {uomLabel(item.unit)} @ {formatAccountingCurrency(item.unitPrice)} | {t('invoices.vatLabel')} {item.vatRate}%
                 </p>
               </div>
               <span className="font-medium">
-                €{item.netAmount.toFixed(2)}
+                {formatAccountingCurrency(item.netAmount)}
               </span>
             </div>
           ))}

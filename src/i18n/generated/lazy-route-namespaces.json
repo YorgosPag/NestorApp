@@ -196,7 +196,8 @@
     "contacts-core",
     "contacts-form",
     "contacts-lifecycle",
-    "contacts-relationships"
+    "contacts-relationships",
+    "uom"
   ],
   "AccountingInvoices": [
     "accounting",
@@ -216,7 +217,8 @@
     "files-media",
     "filters",
     "procurement",
-    "quotes"
+    "quotes",
+    "uom"
   ],
   "AccountingJournal": [
     "accounting",
@@ -257,7 +259,8 @@
     "contacts-core",
     "contacts-form",
     "contacts-lifecycle",
-    "contacts-relationships"
+    "contacts-relationships",
+    "uom"
   ],
   "AccountingReconciliation": [
     "accounting",
@@ -327,7 +330,8 @@
     "contacts-form",
     "contacts-lifecycle",
     "contacts-relationships",
-    "filters"
+    "filters",
+    "uom"
   ],
   "AccountingVAT": [
     "accounting",

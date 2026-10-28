@@ -19,6 +19,7 @@ import 'server-only';
 import { defineRoute, ok, badRequest } from '@/lib/api/define-route';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import type { ServicePreset } from '@/subapps/accounting/types';
+import { toStoredUom } from '@/lib/uom/uom-registry';
 
 // =============================================================================
 // VALIDATION
@@ -96,7 +97,7 @@ export const PUT = defineRoute({
     const presets = (body as Array<Partial<ServicePreset>>).map((p, i) => ({
       presetId: p.presetId!,
       description: p.description!.trim(),
-      unit: p.unit!.trim(),
+      unit: toStoredUom(p.unit),
       unitPrice: p.unitPrice!,
       vatRate: p.vatRate!,
       mydataCode: p.mydataCode!,

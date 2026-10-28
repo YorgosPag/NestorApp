@@ -5,7 +5,8 @@
  */
 
 import type jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import autoTable, { type Styles } from 'jspdf-autotable';
+import { forceRobotoCell, yAfterTable } from '@/services/report-engine/report-pdf-chrome';
 import { formatAccountingCurrency, formatAccountingDate } from '../../utils/format';
 import type { Invoice, InvoiceLineItem } from '../../types';
 import {
@@ -13,6 +14,16 @@ import {
   ensureSpace, drawHR, setColor, formatIBAN,
   drawPaymentStamp, buildColumnStyles
 } from './invoice-pdf-constants';
+import { uomLabelIn } from '@/lib/uom/uom-label-bundle';
+import type { HumanLanguage } from '@/i18n/languages';
+
+/** Το τιμολόγιο εκδίδεται στα ελληνικά (όπως όλες οι ετικέτες του `invoice-pdf-constants`)· η μονάδα ακολουθεί το έγγραφο. */
+const INVOICE_DOCUMENT_LANGUAGE: HumanLanguage = 'el';
+
+/** Το σώμα των πινάκων του τιμολογίου (γραμμές · τράπεζες) — ΕΝΑ στυλ. */
+const TABLE_BODY_STYLES = {
+  fontSize: 7.5, font: 'Roboto', cellPadding: 1.5, textColor: [COLORS.gray[0], COLORS.gray[1], COLORS.gray[2]],
+} satisfies Partial<Styles>;
 
 /**
  * §1: Header — Logo + Issuer info + Invoice type/number/dates
@@ -164,7 +175,7 @@ export function drawLineItemsTable(pdf: jsPDF, invoice: Invoice, startY: number)
     const discountAmount = expectedNet - li.netAmount;
     const discountPct = expectedNet > 0 ? (discountAmount / expectedNet) * 100 : 0;
 
-    const row: string[] = [String(li.lineNumber), li.description, li.unit, String(li.quantity), formatAccountingCurrency(li.unitPrice)];
+    const row: string[] = [String(li.lineNumber), li.description, uomLabelIn(li.unit, INVOICE_DOCUMENT_LANGUAGE), String(li.quantity), formatAccountingCurrency(li.unitPrice)];
     if (hasDiscount) row.push(discountAmount > 0.01 ? `${discountPct.toFixed(0)}%` : '-');
     row.push(`${li.vatRate}%`, formatAccountingCurrency(li.netAmount));
     return row;
@@ -172,14 +183,13 @@ export function drawLineItemsTable(pdf: jsPDF, invoice: Invoice, startY: number)
 
   autoTable(pdf, {
     head: [headers], body, startY: y, theme: 'grid',
-    styles: { fontSize: 7.5, font: 'Roboto', cellPadding: 1.5, textColor: [COLORS.gray[0], COLORS.gray[1], COLORS.gray[2]] },
+    styles: TABLE_BODY_STYLES,
     headStyles: { fillColor: [COLORS.navyDark[0], COLORS.navyDark[1], COLORS.navyDark[2]], textColor: [255, 255, 255], fontSize: 7, halign: 'center' },
     columnStyles: buildColumnStyles(colWidths, hasDiscount),
-    didParseCell: (data) => { data.cell.styles.font = 'Roboto'; },
+    didParseCell: forceRobotoCell,
   });
 
-  const finalY = (pdf as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
-  return finalY + 3;
+  return yAfterTable(pdf, y, 0) + 3;
 }
 
 /**
@@ -267,14 +277,13 @@ export function drawBankAccountsSection(
 
   autoTable(pdf, {
     head: [[LABELS.bank, LABELS.iban]], body, startY: y + 7, theme: 'plain',
-    styles: { fontSize: 7.5, font: 'Roboto', cellPadding: 1.5, textColor: [COLORS.gray[0], COLORS.gray[1], COLORS.gray[2]] },
+    styles: TABLE_BODY_STYLES,
     headStyles: { fillColor: [240, 240, 240], textColor: [COLORS.navy[0], COLORS.navy[1], COLORS.navy[2]], fontSize: 7 },
     columnStyles: { 0: { cellWidth: 45 }, 1: { cellWidth: 65 } },
-    didParseCell: (data) => { data.cell.styles.font = 'Roboto'; },
+    didParseCell: forceRobotoCell,
   });
 
-  const finalY = (pdf as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
-  return finalY + 3;
+  return yAfterTable(pdf, y, 0) + 3;
 }
 
 /**

@@ -10,12 +10,15 @@
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, no inline styles, semantic HTML
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useId } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { HeaderBar } from '@/components/ui/header-bar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { UomSelect } from '@/components/shared/UomSelect';
+import { useUomLabel } from '@/hooks/useUomLabel';
+import { DEFAULT_UOM, UOM_CODES, toStoredUom, type UomCode } from '@/lib/uom/uom-registry';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
@@ -34,18 +37,21 @@ import { cn } from '@/lib/utils';
 // DEFAULT PRESETS — 10 τυπικές υπηρεσίες μηχανικού
 // ============================================================================
 
-function createDefaultPresets(t: (key: string) => string): ServicePreset[] {
+/** Χρέωση ανά ώρα (επίβλεψη, συμβουλευτική) — κωδικός του μητρώου, ποτέ μεταφρασμένη ετικέτα. */
+const PER_HOUR: UomCode = 'hr';
+
+function createDefaultPresets(): ServicePreset[] {
   return [
-    { presetId: generateServicePresetId(), description: 'ΠΕΑ — Πιστοποιητικό Ενεργειακής Απόδοσης', unit: t('units.pieces'), unitPrice: 250, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 0 },
-    { presetId: generateServicePresetId(), description: 'Αρχιτεκτονική Μελέτη', unit: t('units.pieces'), unitPrice: 0, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 1 },
-    { presetId: generateServicePresetId(), description: 'Έκδοση Οικοδομικής Άδειας', unit: t('units.pieces'), unitPrice: 0, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 2 },
-    { presetId: generateServicePresetId(), description: 'Τοπογραφικό Διάγραμμα', unit: t('units.pieces'), unitPrice: 0, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 3 },
-    { presetId: generateServicePresetId(), description: 'Επίβλεψη Εργασιών', unit: t('units.hours'), unitPrice: 80, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 4 },
-    { presetId: generateServicePresetId(), description: 'Στατική Μελέτη', unit: t('units.pieces'), unitPrice: 0, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 5 },
-    { presetId: generateServicePresetId(), description: 'Μηχανολογική (Η/Μ) Μελέτη', unit: t('units.pieces'), unitPrice: 0, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 6 },
-    { presetId: generateServicePresetId(), description: 'Ενεργειακή Μελέτη', unit: t('units.pieces'), unitPrice: 0, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 7 },
-    { presetId: generateServicePresetId(), description: 'Τεχνική Συμβουλευτική', unit: t('units.hours'), unitPrice: 60, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 8 },
-    { presetId: generateServicePresetId(), description: 'Ηλεκτρολογική Μελέτη', unit: t('units.pieces'), unitPrice: 0, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 9 },
+    { presetId: generateServicePresetId(), description: 'ΠΕΑ — Πιστοποιητικό Ενεργειακής Απόδοσης', unit: DEFAULT_UOM, unitPrice: 250, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 0 },
+    { presetId: generateServicePresetId(), description: 'Αρχιτεκτονική Μελέτη', unit: DEFAULT_UOM, unitPrice: 0, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 1 },
+    { presetId: generateServicePresetId(), description: 'Έκδοση Οικοδομικής Άδειας', unit: DEFAULT_UOM, unitPrice: 0, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 2 },
+    { presetId: generateServicePresetId(), description: 'Τοπογραφικό Διάγραμμα', unit: DEFAULT_UOM, unitPrice: 0, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 3 },
+    { presetId: generateServicePresetId(), description: 'Επίβλεψη Εργασιών', unit: PER_HOUR, unitPrice: 80, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 4 },
+    { presetId: generateServicePresetId(), description: 'Στατική Μελέτη', unit: DEFAULT_UOM, unitPrice: 0, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 5 },
+    { presetId: generateServicePresetId(), description: 'Μηχανολογική (Η/Μ) Μελέτη', unit: DEFAULT_UOM, unitPrice: 0, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 6 },
+    { presetId: generateServicePresetId(), description: 'Ενεργειακή Μελέτη', unit: DEFAULT_UOM, unitPrice: 0, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 7 },
+    { presetId: generateServicePresetId(), description: 'Τεχνική Συμβουλευτική', unit: PER_HOUR, unitPrice: 60, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 8 },
+    { presetId: generateServicePresetId(), description: 'Ηλεκτρολογική Μελέτη', unit: DEFAULT_UOM, unitPrice: 0, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 9 },
   ];
 }
 
@@ -62,7 +68,7 @@ interface NewPresetFormState {
 
 const INITIAL_FORM: NewPresetFormState = {
   description: '',
-  unit: '',
+  unit: DEFAULT_UOM,
   unitPrice: '0',
   vatRate: 24,
 };
@@ -74,6 +80,8 @@ const INITIAL_FORM: NewPresetFormState = {
 export function ServicePresetsSection() {
   const { t } = useTranslation(['accounting', 'accounting-tax-offices', 'accounting-setup']);
   const colors = useSemanticColors();
+  const uomLabel = useUomLabel();
+  const fieldId = useId();
   const { presets, loading, saving, error, savePresets } = useServicePresets();
 
   const [localPresets, setLocalPresets] = useState<ServicePreset[]>([]);
@@ -108,7 +116,7 @@ export function ServicePresetsSection() {
     const newPreset: ServicePreset = {
       presetId: generateServicePresetId(),
       description: form.description.trim(),
-      unit: form.unit.trim() || t('units.pieces'),
+      unit: toStoredUom(form.unit),
       unitPrice: parseFloat(form.unitPrice) || 0,
       vatRate: form.vatRate,
       mydataCode: 'category1_3' as MyDataIncomeType,
@@ -121,7 +129,7 @@ export function ServicePresetsSection() {
     setForm(INITIAL_FORM);
     setShowForm(false);
     handleSave(updated);
-  }, [form, localPresets, handleSave, t]);
+  }, [form, localPresets, handleSave]);
 
   const handleDeletePreset = useCallback((presetId: string) => {
     const updated = localPresets.filter((p) => p.presetId !== presetId);
@@ -152,7 +160,7 @@ export function ServicePresetsSection() {
         ? {
             ...p,
             description: editForm.description.trim(),
-            unit: editForm.unit.trim() || t('units.pieces'),
+            unit: toStoredUom(editForm.unit),
             unitPrice: parseFloat(editForm.unitPrice) || 0,
             vatRate: editForm.vatRate,
           }
@@ -162,13 +170,13 @@ export function ServicePresetsSection() {
     setEditingId(null);
     setEditForm(INITIAL_FORM);
     handleSave(updated);
-  }, [editingId, editForm, localPresets, handleSave, t]);
+  }, [editingId, editForm, localPresets, handleSave]);
 
   const handleLoadDefaults = useCallback(() => {
-    const defaults = createDefaultPresets(t);
+    const defaults = createDefaultPresets();
     setLocalPresets(defaults);
     handleSave(defaults);
-  }, [handleSave, t]);
+  }, [handleSave]);
 
   if (loading) {
     return (
@@ -238,11 +246,12 @@ export function ServicePresetsSection() {
                   />
                 </fieldset>
                 <fieldset>
-                  <Label>{t('forms.unit')}</Label>
-                  <Input
+                  <Label htmlFor={`${fieldId}-unit`}>{t('forms.unit')}</Label>
+                  <UomSelect
+                    id={`${fieldId}-unit`}
                     value={form.unit}
-                    onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))}
-                    placeholder={t('units.pieces')}
+                    onValueChange={(code) => setForm((f) => ({ ...f, unit: code }))}
+                    units={UOM_CODES}
                   />
                 </fieldset>
                 <fieldset>
@@ -301,9 +310,12 @@ export function ServicePresetsSection() {
                       />
                     </fieldset>
                     <fieldset>
-                      <Input
+                      <UomSelect
                         value={editForm.unit}
-                        onChange={(e) => setEditForm((f) => ({ ...f, unit: e.target.value }))}
+                        onValueChange={(code) => setEditForm((f) => ({ ...f, unit: code }))}
+                        units={UOM_CODES}
+                        ariaLabel={t('forms.unit')}
+                        compact
                       />
                     </fieldset>
                     <fieldset>
@@ -328,7 +340,7 @@ export function ServicePresetsSection() {
                   /* View mode */
                   <>
                     <span className="flex-1 text-sm font-medium truncate">{preset.description}</span>
-                    <span className={cn("text-xs whitespace-nowrap", colors.text.muted)}>{preset.unit}</span>
+                    <span className={cn("text-xs whitespace-nowrap", colors.text.muted)}>{uomLabel(preset.unit)}</span>
                     <span className={cn("text-xs whitespace-nowrap", colors.text.muted)}>
                       {formatAccountingCurrency(preset.unitPrice)}
                     </span>
