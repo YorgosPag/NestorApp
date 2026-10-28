@@ -15,6 +15,7 @@ import {
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { PurchaseOrderItem } from '@/types/procurement';
 import { formatPOCurrency } from './utils/procurement-format';
+import { useUomLabel } from '@/hooks/useUomLabel';
 
 interface POLineItemsViewProps {
   items: readonly PurchaseOrderItem[];
@@ -24,6 +25,7 @@ interface POLineItemsViewProps {
 
 export function POLineItemsView({ items, showCategory = false, showDelivery = false }: POLineItemsViewProps) {
   const { t } = useTranslation('procurement');
+  const uomLabel = useUomLabel();
 
   return (
     <Table>
@@ -43,7 +45,7 @@ export function POLineItemsView({ items, showCategory = false, showDelivery = fa
           <TableRow key={item.id}>
             <TableCell className="font-medium">{item.description}</TableCell>
             <TableCell className="text-right tabular-nums">{item.quantity}</TableCell>
-            <TableCell>{item.unit}</TableCell>
+            <TableCell>{uomLabel(item.unit)}</TableCell>
             <TableCell className="text-right tabular-nums">{formatPOCurrency(item.unitPrice)}</TableCell>
             <TableCell className="text-right tabular-nums font-medium">{formatPOCurrency(item.total)}</TableCell>
             {showCategory && <TableCell>{item.categoryCode}</TableCell>}

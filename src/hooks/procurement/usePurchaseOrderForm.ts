@@ -22,6 +22,7 @@ import type {
   UpdatePurchaseOrderDTO,
 } from '@/types/procurement';
 import type { POPricingMode } from '@/lib/procurement/po-pricing-carry';
+import { DEFAULT_UOM } from '@/lib/uom/uom-registry';
 
 /** Ένα πρόβλημα επικύρωσης: κλειδί `form.validation.<key>` + αριθμός γραμμής όπου αφορά γραμμή. */
 export interface POFormIssue {
@@ -61,7 +62,7 @@ const EMPTY_ITEM: POFormItem = {
   tempId: '',
   description: '',
   quantity: 1,
-  unit: 'τεμ',
+  unit: DEFAULT_UOM,
   unitPrice: 0,
   boqItemId: null,
   categoryCode: '',

@@ -1014,7 +1014,8 @@
     "common-shared",
     "common-status",
     "common-validation",
-    "procurement"
+    "procurement",
+    "uom"
   ],
   "Projects": [
     "accounting",
@@ -1163,7 +1164,8 @@
     "trash"
   ],
   "PublicPO": [
-    "procurement"
+    "procurement",
+    "uom"
   ],
   "ReportsBuilder": [
     "common",

@@ -13,6 +13,7 @@ import { formatEuro, formatPoDate } from './po-format';
 import autoTable from 'jspdf-autotable';
 import { registerGreekFont } from '@/services/pdf/greek-font-loader';
 import type { PurchaseOrder, PurchaseOrderItem } from '@/types/procurement';
+import { uomLabelIn } from '@/lib/uom/uom-label-bundle';
 
 // ============================================================================
 // TYPES
@@ -275,7 +276,7 @@ function drawLineItems(
   const tableData = po.items.map((item: PurchaseOrderItem, idx: number) => [
     String(idx + 1),
     item.description,
-    item.unit,
+    uomLabelIn(item.unit, language),
     String(item.quantity),
     formatEuro(item.unitPrice),
     formatEuro(item.total),

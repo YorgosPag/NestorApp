@@ -609,19 +609,6 @@
         "saving": "Saving...",
         "saveFailed": "Saving failed. Please try again.",
         "cancel": "Cancel"
-      },
-      "units": {
-        "m": "m",
-        "m2": "m²",
-        "m3": "m³",
-        "kg": "kg",
-        "ton": "tons",
-        "pcs": "pcs",
-        "lt": "L",
-        "set": "set",
-        "hr": "hours",
-        "day": "days",
-        "lump": "lump sum"
       }
     },
     "rfq": {

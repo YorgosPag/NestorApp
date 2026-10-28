@@ -13,6 +13,7 @@ import type { PurchaseOrder, PurchaseOrderItem } from '@/types/procurement';
 import { PRODUCT_NAME } from '@/constants/product-identity';
 import { escapeHtml } from '@/lib/html/escape-html';
 import { formatEuro, formatPoDate } from './po-format';
+import { uomLabelIn } from '@/lib/uom/uom-label-bundle';
 
 // ============================================================================
 // TYPES
@@ -92,7 +93,7 @@ function buildItemsTable(
       <tr style="border-bottom:1px solid ${BRAND.border};">
         <td style="padding:6px 8px;text-align:center;color:${BRAND.grayLight}">${idx + 1}</td>
         <td style="padding:6px 8px;">${escapeHtml(item.description)}</td>
-        <td style="padding:6px 8px;text-align:right;">${item.quantity}</td>
+        <td style="padding:6px 8px;text-align:right;">${item.quantity} ${escapeHtml(uomLabelIn(item.unit, lang))}</td>
         <td style="padding:6px 8px;text-align:right;">${formatEuro(item.unitPrice)}</td>
         <td style="padding:6px 8px;text-align:right;font-weight:600;">${formatEuro(item.total)}</td>
       </tr>`

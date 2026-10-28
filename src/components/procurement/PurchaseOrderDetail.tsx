@@ -28,6 +28,7 @@ import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
 import { useContactById } from '@/hooks/useContactById';
 import { getContactDisplayName } from '@/types/contacts/helpers';
 import { formatPOCurrency, formatPODate } from './utils/procurement-format';
+import { useUomLabel } from '@/hooks/useUomLabel';
 
 const ActivityTab = lazy(() =>
   import('@/components/shared/audit/ActivityTab').then((m) => ({ default: m.ActivityTab }))
@@ -53,6 +54,7 @@ export function PurchaseOrderDetail({
   onExportPDF: _onExportPDF, onCopyText,
 }: PurchaseOrderDetailProps) {
   const { t } = useTranslation('procurement');
+  const uomLabel = useUomLabel();
 
   // Resolve IDs → display names
   const { projects } = useFirestoreProjects();
@@ -141,7 +143,7 @@ export function PurchaseOrderDetail({
               <div key={item.id} className="rounded-lg border p-3 space-y-1">
                 <p className="font-medium">{item.description}</p>
                 <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>{item.quantity} {item.unit} × {formatPOCurrency(item.unitPrice)}</span>
+                  <span>{item.quantity} {uomLabel(item.unit)} × {formatPOCurrency(item.unitPrice)}</span>
                   <span className="font-semibold text-foreground tabular-nums">{formatPOCurrency(item.total)}</span>
                 </div>
               </div>
