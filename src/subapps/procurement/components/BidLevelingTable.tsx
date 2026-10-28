@@ -125,6 +125,8 @@ function PricedCell({ cell, isLowest }: { cell: LevelingCell; isLowest: boolean 
       {cell.unitMismatch && (
         <span className="text-[10px] text-[hsl(var(--text-warning))]">{t('comparison.leveling.unitMismatch')}</span>
       )}
+      {/* Άλλη μονάδα ⇒ στο σύνολο μετρά η κάλυψη, όχι η τιμή του κελιού (`countsAsGap`, ADR-327 §8.5.4). */}
+      {cell.unitMismatch && <PlugDetails cell={cell} />}
       {cell.quantityDeviation !== null && cell.quantityDeviation !== 0 && (
         <span className="text-[10px] text-[hsl(var(--text-warning))]">
           {t('comparison.leveling.quantityDeviation', { quantity: formatNumber(cell.quantity ?? 0), unit: uomLabel(cell.unit) })}
@@ -144,25 +146,33 @@ function GapCell({ cell }: { cell: LevelingCell }) {
     excluded: t('comparison.leveling.state.excluded'),
     unanswered: t('comparison.leveling.state.unanswered'),
   };
-  const plugText: Readonly<Record<LevelingPlugSource, (amount: string) => string>> = {
-    manual: (amount) => t('comparison.leveling.plug.manual', { amount }),
-    estimate: (amount) => t('comparison.leveling.plug.estimate', { amount }),
-    highest_bid: (amount) => t('comparison.leveling.plug.highestBid', { amount }),
-  };
   if (cell.state === 'priced') return null;
   const isGap = cell.state !== 'included';
   return (
     <>
       <span className={isGap ? 'text-[hsl(var(--text-warning))]' : 'text-muted-foreground'}>{stateText[cell.state]}</span>
-      {isGap && (
-        <span className="text-[10px] text-muted-foreground tabular-nums">
-          {cell.plug ? plugText[cell.plug.source](formatCurrency(cell.plug.amount)) : t('comparison.leveling.plug.none')}
-        </span>
-      )}
-      {isGap && cell.plug?.source === 'manual' && cell.plug.note && (
+      {isGap && <PlugDetails cell={cell} />}
+    </>
+  );
+}
+
+/** Η κάλυψη ενός κελιού που στο σύνολο λογίζεται ως κενό (`countsAsGap`): ποσό με πηγή · σημείωση PM · επεξεργασία. */
+function PlugDetails({ cell }: { cell: LevelingCell }) {
+  const { t } = useTranslation('quotes');
+  const plugText: Readonly<Record<LevelingPlugSource, (amount: string) => string>> = {
+    manual: (amount) => t('comparison.leveling.plug.manual', { amount }),
+    estimate: (amount) => t('comparison.leveling.plug.estimate', { amount }),
+    highest_bid: (amount) => t('comparison.leveling.plug.highestBid', { amount }),
+  };
+  return (
+    <>
+      <span className="text-[10px] text-muted-foreground tabular-nums">
+        {cell.plug ? plugText[cell.plug.source](formatCurrency(cell.plug.amount)) : t('comparison.leveling.plug.none')}
+      </span>
+      {cell.plug?.source === 'manual' && cell.plug.note && (
         <span className="text-[10px] italic text-muted-foreground">{cell.plug.note}</span>
       )}
-      {isGap && <LevelingPlugEditor cell={cell} />}
+      <LevelingPlugEditor cell={cell} />
     </>
   );
 }

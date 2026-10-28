@@ -17,6 +17,12 @@ import type { QuoteLine } from '@/subapps/procurement/types/quote';
 import { rfqBindingErrorKey } from '@/subapps/procurement/utils/rfq-line-binding';
 import { fetchJson, jsonRequest } from '@/lib/api/fetch-json';
 import { getErrorMessage } from '@/lib/error-utils';
+// 🔴 ADR-744 §15 · ADR-327 §8.5.4 — το `quotes` ΔΕΝ είναι στο κέλυφος: χωρίς το slice, ψυχρή φόρτωση ⇒ hydration
+// mismatch (μετρημένο 2026-10-28: `rfqs.title` ωμό στον client). Client module, όχι `page.tsx` (Server Component).
+import routeSlice from '@/i18n/generated/routes/o__workspace__procurement__quotes__id__review.el.json';
+import { registerRouteSlice } from '@/i18n/route-slice';
+
+registerRouteSlice(routeSlice);
 
 interface QuoteReviewClientProps {
   id: string;

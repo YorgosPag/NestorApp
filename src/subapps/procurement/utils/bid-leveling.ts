@@ -154,6 +154,16 @@ function isComparablePrice(cell: LevelingCell): boolean {
   return cell.state === 'priced' && !cell.unitMismatch && cell.leveledAmount !== null;
 }
 
+/**
+ * Κελί που στο ΣΥΝΟΛΟ λογίζεται ως κενό: αναπάντητο, «εξαιρείται» — ή τιμή σε **άλλη μονάδα** (m² σε γραμμή m³).
+ * Η τελευταία δεν είναι συγκρίσιμη τιμή: μετρημένο 2026-10-28 (σάρωση τιμοκαταλόγου, ποσότητα 0 τ.μ. σε γραμμή 2 m³)
+ * το ωμό `lineTotal` (0 €) έμπαινε στο εξισορροπημένο σύνολο ⇒ «Φθηνότερος» νικητής με 0 €. Το κελί κρατά την τιμή
+ * του προμηθευτή και τη σημαία· το σύνολο παίρνει την ΙΔΙΑ ορατή κάλυψη με κάθε κενό (το κενό δεν κερδίζει ποτέ).
+ */
+export function countsAsGap(cell: LevelingCell): boolean {
+  return cell.state === 'excluded' || cell.state === 'unanswered' || (cell.state === 'priced' && cell.unitMismatch);
+}
+
 function plugFor(rfqLine: InternalRfqLine, cells: readonly LevelingCell[]): LevelingPlug | null {
   if (rfqLine.estimateUnitPrice != null && rfqLine.quantity != null) {
     return { amount: roundMajor(rfqLine.estimateUnitPrice * rfqLine.quantity), source: 'estimate', note: null };
@@ -184,7 +194,7 @@ function buildRow(rfqLine: InternalRfqLine, indexes: readonly QuoteAnswerIndex[]
   const answered = indexes.map((index) => answerCell(index, rfqLine));
   const automatic = plugFor(rfqLine, answered);
   const byQuote = new Map(indexes.map((index) => [index.quote.id, index] as const));
-  const cells = answered.map((c) => (c.state === 'excluded' || c.state === 'unanswered'
+  const cells = answered.map((c) => (countsAsGap(c)
     ? { ...c, plug: gapPlug(byQuote.get(c.quoteId), rfqLine.id, automatic) }
     : c));
   return {
@@ -200,8 +210,8 @@ function buildRow(rfqLine: InternalRfqLine, indexes: readonly QuoteAnswerIndex[]
 
 function buildColumn(index: QuoteAnswerIndex, rows: readonly LevelingRow[]): LevelingColumn {
   const cells = rows.map((r) => r.cells.find((c) => c.quoteId === index.quote.id)).filter((c): c is LevelingCell => !!c);
-  const pricedAmount = roundMajor(cells.reduce((s, c) => s + (c.state === 'priced' ? c.leveledAmount ?? 0 : 0), 0));
-  const gaps = cells.filter((c) => c.state === 'excluded' || c.state === 'unanswered');
+  const pricedAmount = roundMajor(cells.reduce((s, c) => s + (c.state === 'priced' && !countsAsGap(c) ? c.leveledAmount ?? 0 : 0), 0));
+  const gaps = cells.filter(countsAsGap);
   const plugged = gaps.filter((c) => c.plug !== null);
   const plugAmount = roundMajor(plugged.reduce((s, c) => s + (c.plug?.amount ?? 0), 0));
   const additionalAmount = roundMajor(index.additional.reduce((s, l) => s + l.lineTotal, 0));

@@ -11,6 +11,7 @@
  * Κ8 γραμμή που ΚΑΝΕΙΣ δεν καλύπτει ⇒ `coverage: 'none'`, κενό χωρίς ποσό μετριέται ·
  * Κ9 cherry pick από τον ίδιο πίνακα — με αξίες γραμμής, όχι με τιμές μονάδας ασύμβατων μονάδων ·
  * Κ10 κάλυψη του PM (`manual`) υπερισχύει της αυτόματης, την κρατά δίπλα, μετρά στο σύνολο · σε γραμμή με τιμή αγνοείται.
+ * Κ11 τιμή σε ΑΛΛΗ μονάδα ⇒ στο ΣΥΝΟΛΟ λογίζεται ως κενό (ίδια ορατή κάλυψη) — ποτέ «φθηνότερος με 0 €».
  */
 
 import type { Quote, QuoteLine, RfqScopeResponse } from '../../types/quote';
@@ -147,5 +148,31 @@ describe('cherryPickFromLeveling', () => {
     // Άγνωστος ⇒ `null` (η οθόνη βάζει την ετικέτα) — ποτέ το ωμό quoteId.
     expect(cherryPickFromLeveling(leveling, new Map()).lineWinners.map((w) => w.winnerVendorName)).toEqual([null, null]);
     expect(result).toMatchObject({ totalIfCherryPick: 180, totalIfWholePackage: 200, savingsFromSplit: 20, uncoveredLines: 0 });
+  });
+
+  /**
+   * Κ11 — ADR-327 §8.5.4, μετρημένο ζωντανά 2026-10-28: σαρωμένος τιμοκατάλογος (MACON ATEE) χωρίς ποσότητες, δεμένος
+   * ρητά σε γραμμή «2 m³»: 0 τ.μ. × 3,37 € ⇒ το ωμό 0 € έμπαινε στο εξισορροπημένο σύνολο ⇒ «Φθηνότερος» νικητής.
+   */
+  it('🔴 Κ11 — άλλη μονάδα: το κελί κρατά την τιμή του και τη σημαία· το ΣΥΝΟΛΟ παίρνει κάλυψη, όχι 0 €', () => {
+    const M3 = rfqLine('M3', 2, 'm3');
+    const fair = quote('F', [qLine('M3', 2, 'm3', 60)]);
+    const scan = quote('S', [qLine('M3', 0, 'm2', 3.37)]);
+    const { rows, columns } = buildBidLeveling([M3], [fair, scan]);
+    expect(rows[0].cells[1]).toMatchObject({
+      state: 'priced', unitMismatch: true, leveledAmount: 0, plug: { amount: 120, source: 'highest_bid' },
+    });
+    expect(rows[0].cells[0].plug).toBeNull();
+    expect(rows[0].lowestQuoteId).toBe('F');
+    expect(columns[1]).toMatchObject({ pricedAmount: 0, plugs: { count: 1, amount: 120 }, leveledNet: 120 });
+    expect(columns[0]).toMatchObject({ pricedAmount: 120, plugs: { count: 0, amount: 0 }, leveledNet: 120 });
+  });
+
+  it('Κ11β — η κάλυψη του PM μετρά και σε κελί άλλης μονάδας (ο PM κάνει την αναγωγή)', () => {
+    const M3 = rfqLine('M3', 2, 'm3');
+    const plug = { rfqLineId: 'M3', amount: 50, note: 'αναγωγή', setBy: 'u1', setAt: null as never };
+    const scan = quote('S', [qLine('M3', 0, 'm2', 3.37)], { levelingPlugs: [plug] });
+    const { columns } = buildBidLeveling([M3], [scan]);
+    expect(columns[0]).toMatchObject({ plugs: { count: 1, amount: 50 }, leveledNet: 50 });
   });
 });

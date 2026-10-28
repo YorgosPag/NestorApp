@@ -20,6 +20,13 @@ import {
 } from '@/components/procurement/POEntitySelectors';
 import { TRADE_CODES } from '@/subapps/procurement/types/trade';
 import type { TradeCode } from '@/subapps/procurement/types/trade';
+// 🔴 ADR-744 §15 · ADR-327 §8.5.4 — το `quotes` ΔΕΝ είναι στο κέλυφος: χωρίς το slice, ψυχρή φόρτωση ⇒ hydration
+// mismatch (μετρημένο 2026-10-28: «Έργο» στον server, `quotes.project` στον client) — και το React ξαναχτίζει το
+// δέντρο, χάνοντας το αρχείο που είχε ήδη επιλεγεί.
+import routeSlice from '@/i18n/generated/routes/o__workspace__procurement__quotes__scan.el.json';
+import { registerRouteSlice } from '@/i18n/route-slice';
+
+registerRouteSlice(routeSlice);
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const ALLOWED_MIME = new Set([
