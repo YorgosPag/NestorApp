@@ -252,6 +252,7 @@ export function ServicePresetsSection() {
                     value={form.unit}
                     onValueChange={(code) => setForm((f) => ({ ...f, unit: code }))}
                     units={UOM_CODES}
+                    compact
                   />
                 </fieldset>
                 <fieldset>

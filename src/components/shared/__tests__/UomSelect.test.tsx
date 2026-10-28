@@ -9,6 +9,7 @@
  * - Υ2: το `id` φτάνει στο πεδίο ⇒ το `<Label htmlFor>` της φόρμας του δίνει όνομα.
  * - Υ3: `compact` σε μισή στήλη φόρμας (υλικό BIM — ζωντανά το «Τετραγωνικό…» κοβόταν) ⇒ σύμβολο ορατό, όνομα μονάδας ως
  *   `sr-only` τιμή, και **κανένα** `aria-label` που θα έκρυβε την ετικέτα της φόρμας.
+ * - Υ4: η λίστα είναι **πάντα** σε πλάτος περιεχομένου (ADR-001 «Content width») — όχι μόνο με `compact`.
  */
 
 import { render, screen, within } from '@testing-library/react';
@@ -56,5 +57,15 @@ describe('UomSelect', () => {
     expect(trigger).not.toHaveAttribute('aria-label');
     expect(within(trigger).getByText('symbol.m2')).toHaveAttribute('aria-hidden', 'true');
     expect(within(trigger).getByText('name.m2')).toHaveClass('sr-only');
+  });
+
+  it('Υ4: λίστα σε πλάτος περιεχομένου ΚΑΙ χωρίς compact (ζωντανά το «Τετραγωνικό…» κοβόταν σε γραμμή τιμολογίου)', async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    render(<UomSelect value="m2" units={['m2', 'pcs']} onValueChange={jest.fn()} />);
+    await user.click(screen.getByRole('combobox'));
+    const listbox = await screen.findByRole('listbox');
+    const classes = listbox.className.split(/\s+/);
+    expect(classes).toContain('w-auto');
+    expect(classes).not.toContain('w-[var(--radix-select-trigger-width)]');
   });
 });
