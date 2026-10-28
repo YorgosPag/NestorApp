@@ -26,6 +26,7 @@ import type {
   LevelingRowCoverage,
 } from '@/subapps/procurement/types/bid-leveling';
 import type { QuoteComparisonEntry } from '@/subapps/procurement/types/comparison';
+import { LevelingPlugEditor } from './LevelingPlugEditor';
 
 interface Props {
   leveling: BidLevelingResult;
@@ -142,6 +143,7 @@ function GapCell({ cell }: { cell: LevelingCell }) {
     unanswered: t('comparison.leveling.state.unanswered'),
   };
   const plugText: Readonly<Record<LevelingPlugSource, (amount: string) => string>> = {
+    manual: (amount) => t('comparison.leveling.plug.manual', { amount }),
     estimate: (amount) => t('comparison.leveling.plug.estimate', { amount }),
     highest_bid: (amount) => t('comparison.leveling.plug.highestBid', { amount }),
   };
@@ -155,6 +157,10 @@ function GapCell({ cell }: { cell: LevelingCell }) {
           {cell.plug ? plugText[cell.plug.source](formatCurrency(cell.plug.amount)) : t('comparison.leveling.plug.none')}
         </span>
       )}
+      {isGap && cell.plug?.source === 'manual' && cell.plug.note && (
+        <span className="text-[10px] italic text-muted-foreground">{cell.plug.note}</span>
+      )}
+      {isGap && <LevelingPlugEditor cell={cell} />}
     </>
   );
 }

@@ -9,7 +9,8 @@
  * Κ6 εναλλακτικές δίπλα στη γραμμή, ΠΟΤΕ στο σύνολο · πρόσθετες στο σύνολο, χωριστά ·
  * Κ7 lump sum ⇒ «περιλαμβάνονται όλα» (πρότυπο Procore), εξισορροπημένο = υποβληθέν ·
  * Κ8 γραμμή που ΚΑΝΕΙΣ δεν καλύπτει ⇒ `coverage: 'none'`, κενό χωρίς ποσό μετριέται ·
- * Κ9 cherry pick από τον ίδιο πίνακα — με αξίες γραμμής, όχι με τιμές μονάδας ασύμβατων μονάδων.
+ * Κ9 cherry pick από τον ίδιο πίνακα — με αξίες γραμμής, όχι με τιμές μονάδας ασύμβατων μονάδων ·
+ * Κ10 κάλυψη του PM (`manual`) υπερισχύει της αυτόματης, την κρατά δίπλα, μετρά στο σύνολο · σε γραμμή με τιμή αγνοείται.
  */
 
 import type { Quote, QuoteLine, RfqScopeResponse } from '../../types/quote';
@@ -32,7 +33,7 @@ const qLine = (rfqLineId: string | null | undefined, quantity: number, unit: str
 
 type LevelQuote = Parameters<typeof buildBidLeveling>[1][number];
 
-function quote(id: string, lines: QuoteLine[], extra: Partial<Pick<Quote, 'alternates' | 'scopeResponses' | 'quotedTotal'>> = {}): LevelQuote {
+function quote(id: string, lines: QuoteLine[], extra: Partial<Pick<Quote, 'alternates' | 'scopeResponses' | 'quotedTotal' | 'levelingPlugs'>> = {}): LevelQuote {
   const subtotal = lines.reduce((s, l) => s + l.lineTotal, 0);
   return {
     id, lines, quotedTotal: null, scopeResponses: [], ...extra,
@@ -46,6 +47,19 @@ const L1 = rfqLine('L1', 10, 'm2');
 const L2 = rfqLine('L2', 5, 'pcs', 20);
 
 describe('buildBidLeveling', () => {
+  it('Κ10 — κάλυψη του PM: υπερισχύει, κρατά την αυτόματη, μετρά στο σύνολο · σε γραμμή με τιμή αγνοείται', () => {
+    const plug = (rfqLineId: string, amount: number) => ({ rfqLineId, amount, note: 'τιμή αγοράς', setBy: 'u1', setAt: null as never });
+    const a = quote('A', [qLine('L1', 10, 'm2', 10)], {
+      scopeResponses: [excluded('L2')], levelingPlugs: [plug('L2', 75), plug('L1', 999), plug('FOREIGN', 5)],
+    });
+    const { rows, columns } = buildBidLeveling([L1, L2], [a]);
+    expect(rows[1].cells[0].plug).toEqual({
+      amount: 75, source: 'manual', note: 'τιμή αγοράς', automatic: { amount: 100, source: 'estimate', note: null },
+    });
+    expect(rows[0].cells[0]).toMatchObject({ state: 'priced', plug: null });
+    expect(columns[0]).toMatchObject({ plugs: { count: 1, amount: 75 }, leveledNet: 175 });
+  });
+
   it('Κ1 — ενώνει με rfqLineId και ισοσταθμίζει στην ποσότητα του RFQ', () => {
     const a = quote('A', [qLine('L1', 10, 'm2', 10), qLine('L2', 5, 'τεμ', 15)]);
     const b = quote('B', [qLine('L1', 8, 'τ.μ.', 12), qLine('L2', 5, 'pcs', 16)]);

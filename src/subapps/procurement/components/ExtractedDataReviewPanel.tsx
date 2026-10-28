@@ -34,6 +34,7 @@ import type {
 import type { Contact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { ConfidenceBadge, FieldRow, EditableFieldRow } from './extracted-data-review-helpers';
+import { QuoteRfqBindingReview } from './QuoteRfqBindingReview';
 
 // ============================================================================
 // MAIN PANEL
@@ -148,7 +149,8 @@ export function ExtractedDataReviewPanel({
         line.description !== s.description ||
         line.quantity !== s.quantity ||
         line.unit !== s.unit ||
-        line.unitPrice !== s.unitPrice
+        line.unitPrice !== s.unitPrice ||
+        line.rfqLineId !== s.rfqLineId // ADR-327 §8.5 — αποδοχή δεσίματος (undefined → null/id) είναι αλλαγή
       );
     });
   }, [lines]);
@@ -370,6 +372,9 @@ export function ExtractedDataReviewPanel({
             onChange={handleLinesChange}
             onValidationChange={handleValidationChange}
           />
+          {quote.rfqId && !quote.rfqId.startsWith('[') && (
+            <QuoteRfqBindingReview rfqId={quote.rfqId} lines={lines} onChange={handleLinesChange} />
+          )}
           <div className="mt-2 flex justify-end gap-4 text-sm">
             <span className="text-muted-foreground">{t('quotes.subtotal')}: {totals.subtotal.toFixed(2)}</span>
             <span className="text-muted-foreground">{t('quotes.vatAmount')}: {totals.vatAmount.toFixed(2)}</span>

@@ -860,6 +860,20 @@ export const API_ROUTES = {
     SUPPLIER_COMPARISON: '/api/procurement/supplier-metrics/comparison',
   },
 
+  // ── RFQs (ADR-327) ────────────────────────────────────────────────────
+  RFQS: {
+    /** `PATCH` — ρυθμίσεις του αιτήματος (π.χ. §8.5 Β κλείδωμα ποσότητας/μονάδας) */
+    BY_ID: (rfqId: string) => `/api/rfqs/${rfqId}` as const,
+  },
+
+  // ── Quotes (ADR-327) ──────────────────────────────────────────────────
+  QUOTES: {
+    /** `PATCH` — π.χ. §8.5 Γ δέσιμο σε επαφή (`vendorContactId`) */
+    BY_ID: (quoteId: string) => `/api/quotes/${quoteId}` as const,
+    /** `PUT` — κάλυψη κενού του PM ανά γραμμή RFQ (§8.5 bid leveling «plug») */
+    LEVELING_PLUGS: (quoteId: string) => `/api/quotes/${quoteId}/leveling-plugs` as const,
+  },
+
   // ── Buildings ─────────────────────────────────────────────────────────
   BUILDINGS: {
     LIST: '/api/buildings',
@@ -1006,6 +1020,8 @@ export const API_ROUTES = {
      * εκείνη απαντά «τι κατέχει **αυτή**», αυτή «ποιοι κατέχουν **πόσα**».
      */
     OWNER_PROPERTY_STATS: '/api/contacts/owner-property-stats',
+    /** Εύρεση-ή-δημιουργία επαφής προμηθευτή: ΑΦΜ → email → όνομα → νέα (ADR-327 §8.5 Γ) */
+    RESOLVE: '/api/contacts/resolve',
     SEARCH_INDIVIDUALS: '/api/contacts/search-individuals',
     SEARCH_FOR_SHARE: '/api/contacts/search-for-share',
     IDENTITY_IMPACT_PREVIEW: (id: string) => `/api/contacts/${id}/identity-impact-preview` as const,
