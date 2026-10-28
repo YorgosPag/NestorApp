@@ -428,6 +428,18 @@ describe('contact-lookup', () => {
       expect(updated!.phones).toBeDefined();
     });
 
+    it('ADR-327 §8.5.4 — σταθερό εταιρείας ⇒ «εργασία», κινητό ⇒ «κινητό» (ποτέ καρφωτό `mobile`)', async () => {
+      const kit = setupFirestore({ cont_co: { type: 'company', companyName: 'MACON ATEE', companyId: COMPANY_ID } });
+
+      await updateContactField('cont_co', 'phone', '+30 2310 428900', 'Admin');
+      const landline = kit.getData('contacts', 'cont_co')!.phones as { _arrayUnion: Array<{ type: string }> };
+      await updateContactField('cont_co', 'phone', '6971234567', 'Admin');
+      const mobile = kit.getData('contacts', 'cont_co')!.phones as { _arrayUnion: Array<{ type: string }> };
+
+      expect(landline._arrayUnion[0].type).toBe('work');
+      expect(mobile._arrayUnion[0].type).toBe('mobile');
+    });
+
     it('should update email field using arrayUnion pattern', async () => {
       const kit = setupFirestore({ cont_001: DIMITRIS });
 
@@ -669,6 +681,18 @@ describe('contact-lookup', () => {
       });
 
       expect(result.displayName).toBe('Test ΑΕ');
+    });
+
+    it('ADR-327 §8.5.4 — η επαφή από σάρωση με ΣΤΑΘΕΡΟ γεννιέται με «εργασία», όχι «κινητό»', async () => {
+      const kit = setupFirestore({});
+
+      await createContactServerSide({
+        firstName: '', lastName: '', email: null, phone: '+30 2310 428900', type: 'company',
+        companyId: COMPANY_ID, companyName: 'MACON ATEE', createdBy: 'Admin',
+      });
+
+      const [doc] = Object.values(kit.getAllDocs('contacts')) as Array<{ phones: Array<{ type: string }> }>;
+      expect(doc.phones[0].type).toBe('work');
     });
   });
 });

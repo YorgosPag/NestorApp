@@ -38,6 +38,8 @@ import 'server-only';
 
 import { FieldValue } from 'firebase-admin/firestore';
 
+import { inferPhoneType } from '@/server/lib/phone-line-type';
+
 import type { CreateContactParams } from './contact-lookup-types';
 
 // ============================================================================
@@ -133,7 +135,13 @@ export function buildContactDocument(params: CreateContactParams): BuiltContact 
         ? [{ email: params.email, type: 'work', isPrimary: true }]
         : [],
       phones: parsedPhone
-        ? [{ number: parsedPhone.number, ...(parsedPhone.countryCode ? { countryCode: parsedPhone.countryCode } : {}), type: 'mobile', isPrimary: true }]
+        ? [{
+          number: parsedPhone.number,
+          ...(parsedPhone.countryCode ? { countryCode: parsedPhone.countryCode } : {}),
+          // ADR-327 §8.5.4 — σταθερό ≠ κινητό: ο τύπος από τα metadata του αριθμού, όχι καρφωτός.
+          type: inferPhoneType(params.phone ?? '', params.type, 'mobile'),
+          isPrimary: true,
+        }]
         : [],
       addresses: [],
       companyId: params.companyId,

@@ -11,6 +11,7 @@
  */
 
 import type { SocialMediaInfo } from '@/types/contacts/contracts';
+import { inferPhoneType, phoneOwnerKindOf } from '@/server/lib/phone-line-type';
 // ============================================================================
 // ENTITY-AWARE TYPE MAPS — Different types per contact entity (individual/company/service)
 // SSoT: CommunicationConfigs.ts defines UI types; these maps resolve AI label→type
@@ -104,9 +105,9 @@ export function resolvePhoneType(label: string, entity: ContactEntity, phoneNumb
     : entity === 'service' ? PHONE_SERVICE_MAP
     : PHONE_INDIVIDUAL_MAP;
   if (map[label]) return map[label];
-  // Individual: auto-detect by Greek prefix (2xx = home/landline, 69x = mobile)
+  // Individual: ο τύπος από τα metadata του αριθμού (SSoT) — όχι πρόθεμα `2…`, που έχανε `+30 2…` και κάθε ξένο.
   if (entity === 'individual') {
-    return phoneNumber.startsWith('2') ? 'home' : 'mobile';
+    return inferPhoneType(phoneNumber, 'individual', 'mobile');
   }
   return PHONE_DEFAULTS[entity];
 }
@@ -124,10 +125,7 @@ export function resolveWebsiteType(label: string, entity: ContactEntity): string
 }
 /** Determine entity type from Firestore contact data */
 export function getContactEntity(contactData: Record<string, unknown>): ContactEntity {
-  const t = String(contactData.type ?? 'individual');
-  if (t === 'company') return 'company';
-  if (t === 'service') return 'service';
-  return 'individual';
+  return phoneOwnerKindOf(contactData.type);
 }
 /** Check if a label was resolved via an entity-aware map (to decide if label should be stored) */
 export function resolvedInMap(label: string, entity: ContactEntity, commType: 'phone' | 'email' | 'website'): boolean {

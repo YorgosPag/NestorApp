@@ -26,6 +26,7 @@ import type { EntitySyncAction, SyncEntityType } from '@/services/realtime/types
 import { SYNC_SOURCE_AI_AGENT } from '@/services/realtime/types';
 
 import { buildContactDocument, parsePhoneForStorage } from './contact-document-builder';
+import { inferPhoneType, phoneOwnerKindOf } from '@/server/lib/phone-line-type';
 import type { CreateContactParams, CreateContactResult } from './contact-lookup-types';
 import { checkContactDuplicates } from './contact-lookup-search';
 
@@ -86,7 +87,8 @@ async function applyContactFieldMutation(params: {
   readonly contactId: string;
   readonly field: string;
   readonly updatedBy: string;
-  readonly fieldUpdates: Record<string, unknown>;
+  /** Χτίζεται **μετά** την ανάγνωση: η εγγραφή μπορεί να εξαρτάται από το έγγραφο (π.χ. τύπος τηλεφώνου ανά κάτοχο). */
+  readonly fieldUpdates: (existing: Readonly<Record<string, unknown>>) => Record<string, unknown>;
   readonly toChange: (oldValue: AuditFieldChange['oldValue']) => AuditFieldChange;
   readonly logMessage: string;
 }): Promise<void> {
@@ -95,17 +97,16 @@ async function applyContactFieldMutation(params: {
   const adminDb = getAdminFirestore();
   const docRef = adminDb.collection(COLLECTIONS.CONTACTS).doc(contactId);
 
-  const updateData: Record<string, unknown> = {
-    updatedAt: FieldValue.serverTimestamp(),
-    lastModifiedBy: updatedBy,
-    ...fieldUpdates,
-  };
-
   // ADR-195: canonical entity audit trail (SSoT) — fetch existing for companyId + displayName + oldValue
   const existingSnap = await docRef.get();
   const existingData: Record<string, unknown> = existingSnap.exists
     ? (existingSnap.data() ?? {})
     : {};
+  const updateData: Record<string, unknown> = {
+    updatedAt: FieldValue.serverTimestamp(),
+    lastModifiedBy: updatedBy,
+    ...fieldUpdates(existingData),
+  };
   const previous = existingData[field];
   const oldValue =
     typeof previous === 'string' || typeof previous === 'number' || typeof previous === 'boolean'
@@ -130,7 +131,7 @@ async function applyContactFieldMutation(params: {
 }
 
 /** Τι γράφεται στο πεδίο όταν **προστίθεται** τιμή (arrayUnion για τα πολλαπλά). */
-function buildFieldAddition(field: string, value: string): Record<string, unknown> {
+function buildFieldAddition(field: string, value: string, existing: Readonly<Record<string, unknown>>): Record<string, unknown> {
   if (!ARRAY_FIELDS.has(field)) return { [field]: value };
 
   if (field === 'phone') {
@@ -139,7 +140,8 @@ function buildFieldAddition(field: string, value: string): Record<string, unknow
       phones: FieldValue.arrayUnion({
         number: parsed.number,
         ...(parsed.countryCode ? { countryCode: parsed.countryCode } : {}),
-        type: 'mobile',
+        // ADR-327 §8.5.4 — σταθερό ≠ κινητό, και το σταθερό εταιρείας είναι «εργασία».
+        type: inferPhoneType(value, phoneOwnerKindOf(existing.type), 'mobile'),
         isPrimary: false,
       }),
     };
@@ -184,7 +186,7 @@ export async function updateContactField(
     contactId,
     field,
     updatedBy,
-    fieldUpdates: buildFieldAddition(field, value),
+    fieldUpdates: (existing) => buildFieldAddition(field, value, existing),
     toChange: (oldValue) => ({ field, oldValue, newValue: value, label: field }),
     logMessage: 'Contact field updated',
   });
@@ -205,7 +207,7 @@ export async function removeContactField(
     contactId,
     field,
     updatedBy,
-    fieldUpdates: buildFieldClearing(field),
+    fieldUpdates: () => buildFieldClearing(field),
     toChange: () => ({ field, oldValue: null, newValue: null, label: `Διαγραφή ${field}` }),
     logMessage: 'Contact field removed',
   });
