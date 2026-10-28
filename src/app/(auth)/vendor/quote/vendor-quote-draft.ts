@@ -15,7 +15,8 @@ import { DEFAULT_UOM, resolveUom } from '@/lib/uom/uom-registry';
 import { inferRfqLineId } from '@/subapps/procurement/utils/rfq-line-binding';
 import { lockedFieldsOf, UNLOCKED_RESPONSE } from '@/subapps/procurement/utils/rfq-response-lock';
 import type { RfqResponseLock } from '@/subapps/procurement/types/rfq';
-import type { QuoteLine, RfqScopeResponse } from '@/subapps/procurement/types/quote';
+import { computeQuoteTotals, type QuoteLine, type RfqScopeResponse } from '@/subapps/procurement/types/quote';
+import { quoteLineTotal } from '@/subapps/procurement/utils/quote-line-total';
 import type { PublicRfqLine } from '@/subapps/procurement/types/rfq-line';
 import type {
   AdditionalLineDraft,
@@ -140,21 +141,22 @@ export function initialVendorDraft(
 // TOTALS + VALIDATION
 // ============================================================================
 
-function amountOf(line: Pick<QuoteLineDraft, 'quantity' | 'unitPrice'>): number {
-  const total = Number(line.quantity) * Number(line.unitPrice);
+/** Σύνολο γραμμής με τον ΙΔΙΟ τύπο που γράφει ο server (`quoteLineTotal`)· μισοσυμπληρωμένη γραμμή ⇒ 0. */
+export function draftLineTotal(line: Pick<QuoteLineDraft, 'quantity' | 'unitPrice'>): number {
+  const total = quoteLineTotal(Number(line.quantity), Number(line.unitPrice));
   return Number.isFinite(total) ? total : 0;
 }
 
-export function draftLineTotal(line: Pick<QuoteLineDraft, 'quantity' | 'unitPrice'>): number {
-  return amountOf(line);
-}
-
-/** Η ΒΑΣΙΚΗ προσφορά: τιμολογημένες απαντήσεις + πρόσθετες. Οι εναλλακτικές ΔΕΝ μετρούν (ADR-327 §8.5). */
+/**
+ * Η ΒΑΣΙΚΗ προσφορά: τιμολογημένες απαντήσεις + πρόσθετες. Οι εναλλακτικές ΔΕΝ μετρούν (ADR-327 §8.5).
+ * Ο ΙΔΙΟΣ υπολογισμός με τον server (`computeQuoteTotals`) ⇒ ό,τι βλέπει ο προμηθευτής είναι ό,τι αποθηκεύεται.
+ */
 export function draftTotals(draft: VendorQuoteDraft): { subtotal: number; vatAmount: number; total: number } {
   const counted = [...draft.answers.filter((a) => a.answer === 'priced'), ...draft.additional];
-  const subtotal = counted.reduce((s, l) => s + amountOf(l), 0);
-  const vatAmount = counted.reduce((s, l) => s + amountOf(l) * (l.vatRate / 100), 0);
-  return { subtotal, vatAmount, total: subtotal + vatAmount };
+  const { subtotal, vatAmount, total } = computeQuoteTotals(
+    counted.map((l) => ({ lineTotal: draftLineTotal(l), vatRate: l.vatRate })),
+  );
+  return { subtotal, vatAmount, total };
 }
 
 function isPriceable(line: Pick<QuoteLineDraft, 'quantity' | 'unitPrice'>): boolean {

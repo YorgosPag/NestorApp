@@ -10,6 +10,8 @@
 
 import React, { useState, useRef } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { formatCurrency } from '@/lib/intl-formatting';
+import { formatFileSize } from '@/utils/file-validation';
 import {
   VENDOR_QUOTE_ALLOWED_MIME as ALLOWED_MIME,
   VENDOR_QUOTE_MAX_FILE_BYTES as MAX_FILE_BYTES,
@@ -232,7 +234,7 @@ export function VendorPortalForm({
                   {' · '}
                   {f.name}
                   {' · '}
-                  {(f.size / 1024).toFixed(0)} KB
+                  {formatFileSize(f.size)}
                 </span>
                 <button
                   type="button"
@@ -331,11 +333,11 @@ function TotalsBox({ totals }: { totals: { subtotal: number; vatAmount: number; 
   return (
     <dl className="mt-4 grid grid-cols-2 gap-1 rounded-md bg-muted px-4 py-3 text-sm">
       <dt className="text-muted-foreground">{t('vendor-portal:form.subtotal')}</dt>
-      <dd className="text-right text-foreground">{totals.subtotal.toFixed(2)} €</dd>
+      <dd className="text-right text-foreground">{formatCurrency(totals.subtotal)}</dd>
       <dt className="text-muted-foreground">{t('vendor-portal:form.vatAmount')}</dt>
-      <dd className="text-right text-foreground">{totals.vatAmount.toFixed(2)} €</dd>
+      <dd className="text-right text-foreground">{formatCurrency(totals.vatAmount)}</dd>
       <dt className="font-semibold text-foreground">{t('vendor-portal:form.total')}</dt>
-      <dd className="text-right font-semibold text-foreground">{totals.total.toFixed(2)} €</dd>
+      <dd className="text-right font-semibold text-foreground">{formatCurrency(totals.total)}</dd>
     </dl>
   );
 }

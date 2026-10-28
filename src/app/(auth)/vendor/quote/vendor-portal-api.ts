@@ -2,9 +2,13 @@
  * Τα αιτήματα της πύλης προμηθευτή προς το API — **ΕΝΑ** σημείο (ADR-876 §5).
  *
  * 🔑 Το διαπιστευτήριο ταξιδεύει **μόνο** σε `Authorization: Bearer`, ποτέ στη διαδρομή: ζούσε
- * στο `/api/vendor/quote/<token>` (×3 fetch), δηλαδή σε κάθε access log. Οι πράξεις με σώμα JSON
- * κουβαλούν `Idempotency-Key` (CHECK 3.92), ώστε μια επανάληψη μετά από χαμένη απάντηση να
- * αναπαράγεται αντί να ξαναεκτελείται.
+ * στο `/api/vendor/quote/<token>` (×3 fetch), δηλαδή σε κάθε access log. **Κάθε** πράξη — JSON **και**
+ * multipart (υποβολή προσφοράς) — κουβαλά `Idempotency-Key` (CHECK 3.92), ώστε μια επανάληψη μετά από
+ * χαμένη απάντηση να αναπαράγεται αντί να ξαναεκτελείται.
+ *
+ * 🔴 Ως τις 2026-10-28 η υποβολή έφευγε **χωρίς** κλειδί: σε ζωντανή δοκιμή μία υποβολή (ένα POST στο
+ * δίκτυο του browser) έγραψε **δύο** φορές — δημιουργία + «επεξεργασία» 110″ μετά, με νέα ids γραμμών,
+ * ψεύτικη γραμμή `portal_edited` και δεύτερη ειδοποίηση PM (ADR-327 changelog 2026-10-28).
  *
  * @module app/(auth)/vendor/quote/vendor-portal-api
  */
@@ -27,20 +31,22 @@ function authorization(token: string): Record<string, string> {
   return { Authorization: `Bearer ${token}` };
 }
 
-/** Αίτημα με σώμα `FormData` (υποβολή προσφοράς) ή χωρίς σώμα (ανάγνωση). */
+/** Οι κεφαλίδες μιας **πράξης**: σύνδεσμος + ένα `Idempotency-Key` ανά πράξη — ΕΝΑ σημείο για JSON και multipart. */
+function actionHeaders(token: string): Record<string, string> {
+  return { ...authorization(token), [IDEMPOTENCY_KEY_HEADER]: generateIdempotencyKey() };
+}
+
+/** Αίτημα με σώμα `FormData` (υποβολή προσφοράς — πράξη, με κλειδί) ή χωρίς σώμα (ανάγνωση). */
 export function vendorPortalFetch(token: string, init: { method: 'GET' } | { method: 'POST'; body: FormData }) {
-  return fetch(VENDOR_PORTAL_API, { ...init, headers: authorization(token), cache: 'no-store' });
+  const headers = init.method === 'GET' ? authorization(token) : actionHeaders(token);
+  return fetch(VENDOR_PORTAL_API, { ...init, headers, cache: 'no-store' });
 }
 
 /** Πράξη με σώμα JSON — πάντα με `Idempotency-Key`, ένα ανά πράξη. */
 export function vendorPortalAction(token: string, endpoint: Exclude<VendorPortalEndpoint, ''>, body: unknown) {
   return fetch(`${VENDOR_PORTAL_API}${endpoint}`, {
     method: 'POST',
-    headers: {
-      ...authorization(token),
-      'content-type': 'application/json',
-      [IDEMPOTENCY_KEY_HEADER]: generateIdempotencyKey(),
-    },
+    headers: { ...actionHeaders(token), 'content-type': 'application/json' },
     body: JSON.stringify(body),
     cache: 'no-store',
   });

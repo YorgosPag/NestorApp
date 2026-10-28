@@ -285,15 +285,33 @@ export const formatCurrency = (
 ): string => {
   const locale = getCurrentLocale();
 
+  // Ακέραιο ⇒ «124 €» · δεκαδικό ⇒ ΠΑΝΤΑ δύο ψηφία «111,60 €». Με `minimumFractionDigits: 0` έβγαινε
+  // «111,6 €» — γραφή ποσού που δεν χρησιμοποιεί κανένα λογιστικό σύστημα (ADR-327 changelog 2026-10-28).
   const defaultOptions: Intl.NumberFormatOptions = {
     style: 'currency',
     currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    trailingZeroDisplay: 'stripIfInteger',
   };
 
-  return new Intl.NumberFormat(locale, { ...defaultOptions, ...options }).format(amount);
+  return new Intl.NumberFormat(locale, currencyOptionsOf(defaultOptions, options)).format(amount);
 };
+
+/**
+ * Συγχώνευση με τις επιλογές του καλούντος χωρίς `RangeError`: όποιος ζητά λιγότερα δεκαδικά
+ * (`maximumFractionDigits: 0`) κατεβάζει και το ελάχιστο· όποιος ορίζει ρητά ελάχιστο κρατά τα μηδενικά του.
+ */
+function currencyOptionsOf(
+  defaults: Intl.NumberFormatOptions,
+  options: Intl.NumberFormatOptions | undefined,
+): Intl.NumberFormatOptions {
+  const merged = { ...defaults, ...options };
+  if (options?.minimumFractionDigits !== undefined) merged.trailingZeroDisplay = 'auto';
+  const max = merged.maximumFractionDigits;
+  if (max !== undefined && (merged.minimumFractionDigits ?? 0) > max) merged.minimumFractionDigits = max;
+  return merged;
+}
 
 /**
  * Format number according to current locale

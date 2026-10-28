@@ -13,6 +13,7 @@
 
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { formatCurrency } from '@/lib/intl-formatting';
 import type { LockedFields } from '@/subapps/procurement/utils/rfq-response-lock';
 import type { QuoteLineDraft } from './types';
 import { draftLineTotal } from './vendor-quote-draft';
@@ -62,7 +63,7 @@ export function VendorPortalLineFields({ line, onChange, locked }: Props) {
         <p className="col-span-2 text-xs text-muted-foreground sm:col-span-12">{t('vendor-portal:form.lock.hint')}</p>
       )}
       <p className="col-span-2 text-xs text-muted-foreground sm:col-span-12">
-        {t('vendor-portal:form.lineTotal')}: <strong>{draftLineTotal(line).toFixed(2)} €</strong>
+        {t('vendor-portal:form.lineTotal')}: <strong>{formatCurrency(draftLineTotal(line))}</strong>
       </p>
     </fieldset>
   );
