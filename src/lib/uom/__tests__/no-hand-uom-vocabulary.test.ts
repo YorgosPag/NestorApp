@@ -4,7 +4,7 @@
  * Ήταν **τρία** λεξιλόγια (BOQ `'pcs'` · PO `'τεμ'` · RFQ `'τμχ'`) και **πέντε** αντίγραφα ετικετών — και κανένα όργανο
  * δεν τα έβλεπε (το CHECK 3.8 ρωτά «υπάρχει το κλειδί;», όχι «υπάρχει ήδη αλλού;»). Κλείνει η **κλάση**, όχι το δείγμα:
  * ελληνική γραφή μονάδας ή ετικέτα `…units.${…}` σε κώδικα ⇒ κόκκινο, εκτός από το κλειστό σύνολο — **με λόγο** ανά γραμμή.
- * Το σύνολο **μόνο μικραίνει** (4γ ✅ · μένουν 4β · 4δ του ADR).
+ * Το σύνολο **μόνο μικραίνει** (4γ ✅ · 4δ ✅ · μένει το 4β του ADR).
  *
  * Ο ΕΝΑΣ δρόμος: `resolveUom()` / `DEFAULT_UOM` (`lib/uom/uom-registry`) · `useUomLabel()` (UI) · `uomLabelIn()` (server).
  */
@@ -20,7 +20,6 @@ const PATTERNS: readonly RegExp[] = [
 ];
 
 const PENDING_4B = 'Λεξιλόγιο RFQ/προσφορών/πύλης προμηθευτή (`τμχ`) → ADR-923 «3γ» 4β.';
-const PENDING_4D = 'Γραμμή εκτός προμηθειών με δική της προεπιλογή μονάδας → ADR-923 «3γ» 4δ.';
 
 /** Κλειστό σύνολο — αρχείο → λόγος. Κάθε προσθήκη χρειάζεται λόγο που αντέχει σε review. */
 const ALLOWED: Readonly<Record<string, string>> = {
@@ -33,8 +32,6 @@ const ALLOWED: Readonly<Record<string, string>> = {
     'Μονάδες ΜΗΚΟΥΣ σχεδίου (mm/cm/m της διάστασης 3D) — άλλη έννοια από τη μονάδα ποσότητας· ADR-362.',
   'subapps/dxf-viewer/ui/components/export/ExportDialog.tsx':
     'Μονάδες ΣΧΕΔΙΟΥ της εξαγωγής DXF (INSUNITS) — άλλη έννοια από τη μονάδα ποσότητας.',
-  'services/ai-pipeline/tools/handlers/procurement-handler.ts': PENDING_4D,
-  'services/sales-accounting/sales-accounting-helpers.ts': PENDING_4D,
   'lib/document-body/document-body-values.ts':
     'Αναλυτής ΕΛΕΥΘΕΡΟΥ κειμένου νομικών εγγράφων («120 τ.μ.») — γραφές που ψάχνει μέσα σε πρόζα, όχι λεξιλόγιο τιμών.',
   'services/ai-pipeline/agentic-reply-utils.ts':

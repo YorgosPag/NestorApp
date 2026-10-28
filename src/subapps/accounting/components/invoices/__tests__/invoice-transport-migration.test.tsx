@@ -50,6 +50,8 @@ jest.mock('@/lib/api/enterprise-api-client', () => ({
 
 jest.mock('@/hooks/useAuth', () => ({ useAuth: () => ({ user: { uid: 'u1' } }) }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (k: string) => k }) }));
+// Η ετικέτα μονάδας (ADR-923 4δ) δεν αφορά αυτό το test — αυτούσια η αποθηκευμένη γραφή.
+jest.mock('@/hooks/useUomLabel', () => ({ useUomLabel: () => (raw: string | null | undefined) => raw ?? '' }));
 jest.mock('@/lib/workspace/navigation', () => ({
   useRouter: () => ({ push: jest.fn(), back: jest.fn() }),
   Link: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,

@@ -1,14 +1,17 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { UomSelect } from '@/components/shared/UomSelect';
+import { UOM_CODES, toStoredUom } from '@/lib/uom/uom-registry';
+import { newInvoiceLineItem } from './invoice-line-defaults';
 import { VATRateSelector } from '../../shared/VATRateSelector';
 import { ServicePresetCombobox } from '../../shared/ServicePresetCombobox';
-import type { InvoiceLineItem, MyDataIncomeType, ServicePreset } from '@/subapps/accounting/types';
+import type { InvoiceLineItem, ServicePreset } from '@/subapps/accounting/types';
 import { formatAccountingCurrency } from '../../../utils/format';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -24,22 +27,13 @@ interface LineItemsEditorProps {
 export function LineItemsEditor({ lineItems, onLineItemsChange, presets }: LineItemsEditorProps) {
   const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   const colors = useSemanticColors();
+  const fieldId = useId();
 
-  const DEFAULT_LINE_ITEM: InvoiceLineItem = {
-    lineNumber: 1,
-    description: '',
-    quantity: 1,
-    unit: t('units.pieces'),
-    unitPrice: 0,
-    vatRate: 24,
-    netAmount: 0,
-    mydataCode: 'category1_3' as MyDataIncomeType,
-  };
 
   const addItem = useCallback(() => {
     onLineItemsChange([
       ...lineItems,
-      { ...DEFAULT_LINE_ITEM, lineNumber: lineItems.length + 1 },
+      newInvoiceLineItem(lineItems.length + 1),
     ]);
   }, [lineItems, onLineItemsChange]);
 
@@ -73,7 +67,7 @@ export function LineItemsEditor({ lineItems, onLineItemsChange, presets }: LineI
         const newItem: InvoiceLineItem = {
           ...item,
           description: preset.description,
-          unit: preset.unit,
+          unit: toStoredUom(preset.unit),
           unitPrice: preset.unitPrice,
           vatRate: preset.vatRate,
           mydataCode: preset.mydataCode,
@@ -137,10 +131,12 @@ export function LineItemsEditor({ lineItems, onLineItemsChange, presets }: LineI
               </fieldset>
 
               <fieldset>
-                <Label>{t('forms.unit')}</Label>
-                <Input
+                <Label htmlFor={`${fieldId}-unit-${index}`}>{t('forms.unit')}</Label>
+                <UomSelect
+                  id={`${fieldId}-unit-${index}`}
                   value={item.unit}
-                  onChange={(e) => updateItem(index, 'unit', e.target.value)}
+                  onValueChange={(code) => updateItem(index, 'unit', code)}
+                  units={UOM_CODES}
                 />
               </fieldset>
 

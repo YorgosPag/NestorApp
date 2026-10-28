@@ -30,12 +30,12 @@ import type {
   InvoiceCustomer,
   InvoiceIssuer,
   PaymentMethod,
-  MyDataIncomeType,
 } from '@/subapps/accounting/types';
 import { nowISO } from '@/lib/date-local';
 import { useTranslation as usePolicyTranslation } from '@/i18n/hooks/useTranslation';
 import { POLICY_ERROR_NAMESPACES } from '@/lib/policy/policy-error-translator';
 import { invoiceSubmitErrorMessage } from './invoice-submit-error';
+import { newInvoiceLineItem } from './invoice-line-defaults';
 
 interface InvoiceFormProps {
   onSuccess: (invoiceId: string) => void;
@@ -155,16 +155,6 @@ export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: Invo
   const { presets } = useServicePresets();
   const { profile: companyProfile } = useCompanySetup();
 
-  const DEFAULT_LINE_ITEM: InvoiceLineItem = {
-    lineNumber: 1,
-    description: '',
-    quantity: 1,
-    unit: t('units.pieces'),
-    unitPrice: 0,
-    vatRate: 24,
-    netAmount: 0,
-    mydataCode: 'category1_3' as MyDataIncomeType,
-  };
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -178,7 +168,7 @@ export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: Invo
           issueDate: nowISO().split('T')[0],
           dueDate: '',
           customer: { ...DEFAULT_CUSTOMER },
-          lineItems: [{ ...DEFAULT_LINE_ITEM }],
+          lineItems: [newInvoiceLineItem(1)],
           paymentMethod: 'bank_transfer',
           withholdingRate: 0,
           notes: '',

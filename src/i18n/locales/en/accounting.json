@@ -716,14 +716,6 @@
     "bank_statement": "Bank Statement",
     "other": "Other"
   },
-  "units": {
-    "pieces": "pcs",
-    "hours": "hours",
-    "days": "days",
-    "meters": "m",
-    "squareMeters": "sq.m.",
-    "kg": "kg"
-  },
   "dashboard": {
     "title": "Accounting Dashboard",
     "loading": "Loading dashboard...",
