@@ -5,7 +5,7 @@
  *
  * Γιατί όχι `useUomLabel`: ο ΕΝΑΣ μορφοποιητής (`formatUom`) καλεί `` t(`${form}.${code}`) `` — δυναμικό κλειδί που
  * ο γεννήτορας του route slice **δεν** λύνει, και η πύλη ανοίγει από email, ψυχρή, χωρίς κέλυφος (CHECK 3.34 / 3.51).
- * Ο κατάλογος κωδικών μένει ο ΕΝΑΣ (`UOM_CODES`)· ο τύπος `Record<UomCode, …>` αναγκάζει νέα μονάδα να πάρει
+ * Ο κατάλογος κωδικών μένει ο ΕΝΑΣ (`UOM_CODES` · λίστα = `PROCUREMENT_UNIT_OPTIONS`)· ο τύπος `Record<UomCode, …>` αναγκάζει νέα μονάδα να πάρει
  * ετικέτα **και εδώ** (σφάλμα μεταγλώττισης, όχι σιωπηλό κενό).
  *
  * @module app/(auth)/vendor/quote/useVendorUomOptions
@@ -14,7 +14,8 @@
 
 import { useMemo } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { UOM_CODES, resolveUom, type UomCode } from '@/lib/uom/uom-registry';
+import { resolveUom, type UomCode } from '@/lib/uom/uom-registry';
+import { PROCUREMENT_UNIT_OPTIONS } from '@/config/procurement-units';
 
 export interface VendorUomOption {
   value: string;
@@ -29,7 +30,8 @@ function useUomSymbols(): Readonly<Record<UomCode, string>> {
     ml: t('uom:symbol.ml'), hr: t('uom:symbol.hr'), day: t('uom:symbol.day'), month: t('uom:symbol.month'),
     set: t('uom:symbol.set'), pair: t('uom:symbol.pair'), bag: t('uom:symbol.bag'), box: t('uom:symbol.box'),
     pallet: t('uom:symbol.pallet'), roll: t('uom:symbol.roll'), container: t('uom:symbol.container'),
-    pack: t('uom:symbol.pack'), lump: t('uom:symbol.lump'), kWp: t('uom:symbol.kWp'),
+    pack: t('uom:symbol.pack'), lump: t('uom:symbol.lump'), point: t('uom:symbol.point'), kW: t('uom:symbol.kW'),
+    kWp: t('uom:symbol.kWp'),
   }), [t]);
 }
 
@@ -42,11 +44,14 @@ export function useVendorUomLabel(): (raw: string | null | undefined) => string 
   };
 }
 
-/** Οι επιλογές της λίστας· μια άγνωστη τρέχουσα τιμή μένει **πρώτη** επιλογή, ώστε να μη χαθεί. */
+/** Οι επιλογές της λίστας = η ΙΔΙΑ λίστα της αλυσίδας προμηθειών (RFQ → προσφορά → παραγγελία)· μια άγνωστη τρέχουσα τιμή μένει **πρώτη** επιλογή, ώστε να μη χαθεί. */
 export function useVendorUomOptions(current: string): VendorUomOption[] {
   const symbols = useUomSymbols();
   return useMemo(() => {
-    const known = UOM_CODES.map((code) => ({ value: code, label: symbols[code] }));
-    return resolveUom(current) || !current ? known : [{ value: current, label: current }, ...known];
+    const known = PROCUREMENT_UNIT_OPTIONS.map((code) => ({ value: code, label: symbols[code] }));
+    if (!current || (PROCUREMENT_UNIT_OPTIONS as readonly string[]).includes(current)) return known;
+    // εκτός λίστας: κωδικός του μητρώου (π.χ. `kWp`) με την ετικέτα του· άγνωστη γραφή αυτούσια
+    const code = resolveUom(current);
+    return [{ value: current, label: code ? symbols[code] : current }, ...known];
   }, [symbols, current]);
 }

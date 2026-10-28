@@ -8,6 +8,9 @@
  * Γραμμής»)· ποσότητα με το SSoT `NumericField` (ADR-706, όχι `type="number"`). Διαγραφή:
  * `useInFlightAction` ανά γραμμή, ορατό σφάλμα (πριν: αθόρυβη αποτυχία) και κουμπί με όνομα
  * (πριν: μόνο εικονίδιο).
+ *
+ * ADR-923 §5.11 «3γ» 4β — μονάδα: `UomSelect` του ΕΝΟΣ μητρώου, **χωρίς** «Άλλο» (SAP/Oracle: μονάδα μόνο από το
+ * μητρώο)· η προεπιλογή έρχεται από την ειδικότητα (`defaultUomForTrade`) μέχρι να διαλέξει άνθρωπος.
  */
 
 import { useCallback, useId, useState } from 'react';
@@ -15,14 +18,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { NumericField } from '@/components/ui/numeric-field';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectSeparator,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { UomSelect } from '@/components/shared/UomSelect';
 import { FormActions } from '@/components/ui/form/FormActions';
 import { Plus, Trash2, Loader2 } from 'lucide-react';
 import { useTranslation, type Translate } from '@/i18n/hooks/useTranslation';
@@ -30,8 +26,10 @@ import { useFormSubmission } from '@/hooks/useFormSubmission';
 import { useInFlightAction } from '@/hooks/useInFlightAction';
 import { getErrorMessage } from '@/lib/error-utils';
 import { TradeSelector } from './TradeSelector';
-import { getAtoeCodesForTrade } from '@/subapps/procurement/data/trades';
-import { UNITS, OTHER_UNIT } from '@/subapps/procurement/utils/units';
+import { defaultUomForTrade, getAtoeCodesForTrade } from '@/subapps/procurement/data/trades';
+import { PROCUREMENT_UNIT_OPTIONS } from '@/config/procurement-units';
+import { DEFAULT_UOM } from '@/lib/uom/uom-registry';
+import { useUomLabel } from '@/hooks/useUomLabel';
 import type { RfqLine, CreateRfqLineDTO } from '@/subapps/procurement/types/rfq-line';
 import type { TradeCode } from '@/subapps/procurement/types/trade';
 import type { SetupLockState } from '@/subapps/procurement/utils/rfq-lock-state';
@@ -59,17 +57,26 @@ interface NewLineState {
   trade: TradeCode;
   /** ADR-706: number model, 0 = "not entered" (rendered blank, sent as `null`). */
   quantity: number;
+  /** Κωδικός του μητρώου μονάδων — μόνο από τη λίστα, ποτέ ελεύθερο κείμενο (ADR-923 §5.11 «3γ» 4β). */
   unit: string;
-  customUnit: boolean;
+  /** Η μονάδα ακολουθεί την ειδικότητα μέχρι να τη διαλέξει άνθρωπος — τότε δεν αντικαθίσταται σιωπηλά. */
+  unitFromTrade: boolean;
 }
+
+const EMPTY_TRADE: TradeCode = 'concrete';
 
 const EMPTY_LINE: NewLineState = {
   description: '',
-  trade: 'concrete',
+  trade: EMPTY_TRADE,
   quantity: 0,
-  unit: UNITS[0],
-  customUnit: false,
+  unit: defaultUomForTrade(EMPTY_TRADE) ?? DEFAULT_UOM,
+  unitFromTrade: true,
 };
+
+/** Αλλαγή ειδικότητας: η μονάδα της ειδικότητας, εκτός αν ο άνθρωπος έχει ήδη διαλέξει. */
+function withTrade(line: NewLineState, trade: TradeCode): NewLineState {
+  return line.unitFromTrade ? { ...line, trade, unit: defaultUomForTrade(trade) ?? DEFAULT_UOM } : { ...line, trade };
+}
 
 function toLineDto(line: NewLineState): CreateRfqLineDTO {
   return {
@@ -78,7 +85,7 @@ function toLineDto(line: NewLineState): CreateRfqLineDTO {
     trade: line.trade,
     categoryCode: getAtoeCodesForTrade(line.trade)[0] ?? null,
     quantity: line.quantity > 0 ? line.quantity : null,
-    unit: line.customUnit ? line.unit.trim() || null : line.unit || null,
+    unit: line.unit || null,
   };
 }
 
@@ -88,6 +95,7 @@ function toLineDto(line: NewLineState): CreateRfqLineDTO {
 
 function RfqLineRow({ line, locked, onDelete, t }: { line: RfqLine; locked: boolean; onDelete: (id: string) => Promise<void>; t: Translate }) {
   const { isRunning, run } = useInFlightAction();
+  const uomLabel = useUomLabel();
   const remove = useCallback(async () => {
     try {
       await run(() => onDelete(line.id));
@@ -101,7 +109,7 @@ function RfqLineRow({ line, locked, onDelete, t }: { line: RfqLine; locked: bool
       <td className="py-1.5 pr-2">{line.description}</td>
       <td className="py-1.5 pr-2 text-muted-foreground">{t(`trades.${line.trade}`)}</td>
       <td className="py-1.5 pr-2 text-muted-foreground">{line.quantity ?? '—'}</td>
-      <td className="py-1.5 pr-2 text-muted-foreground">{line.unit ?? '—'}</td>
+      <td className="py-1.5 pr-2 text-muted-foreground">{line.unit ? uomLabel(line.unit) : '—'}</td>
       <td className="py-1.5">
         <Button
           size="icon"
@@ -147,6 +155,7 @@ function RfqLinesTable({ lines, locked, onDelete, t }: { lines: RfqLine[]; locke
 function useNewLineForm(onAdd: RfqLinesPanelProps['onAdd'], onDone: () => void, t: Translate) {
   const [line, setLine] = useState<NewLineState>(EMPTY_LINE);
   const update = useCallback((patch: Partial<NewLineState>) => setLine((p) => ({ ...p, ...patch })), []);
+  const setTrade = useCallback((trade: TradeCode) => setLine((p) => withTrade(p, trade)), []);
   const canSubmit = line.description.trim() !== '';
 
   const submission = useFormSubmission({
@@ -156,45 +165,30 @@ function useNewLineForm(onAdd: RfqLinesPanelProps['onAdd'], onDone: () => void, 
     errorFallback: t('rfqs.errors.addLineFailed'),
   });
 
-  return { line, update, canSubmit, submission };
+  return { line, update, setTrade, canSubmit, submission };
 }
 
 function UnitField({ line, update, t }: { line: NewLineState; update: (p: Partial<NewLineState>) => void; t: Translate }) {
   return (
-    <div className="flex flex-col gap-1">
-      <Select
-        value={line.customUnit ? OTHER_UNIT : line.unit}
-        onValueChange={(val) => update(val === OTHER_UNIT ? { customUnit: true, unit: '' } : { customUnit: false, unit: val })}
-      >
-        <SelectTrigger aria-label={t('rfqs.lineUnit')} className="h-9 w-24 text-sm"><SelectValue /></SelectTrigger>
-        <SelectContent>
-          {UNITS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-          <SelectSeparator />
-          <SelectItem value={OTHER_UNIT}>{t('rfqs.lineEdit.unitOption.other')}</SelectItem>
-        </SelectContent>
-      </Select>
-      {line.customUnit && (
-        <Input
-          aria-label={t('rfqs.lineUnit')}
-          placeholder={t('rfqs.lineEdit.unitOption.otherPlaceholder')}
-          value={line.unit}
-          onChange={(e) => update({ unit: e.target.value })}
-          className="h-7 w-24 text-xs"
-        />
-      )}
-    </div>
+    <UomSelect
+      value={line.unit}
+      onValueChange={(unit) => update({ unit, unitFromTrade: false })}
+      units={PROCUREMENT_UNIT_OPTIONS}
+      ariaLabel={t('rfqs.lineUnit')}
+      compact
+    />
   );
 }
 
 function NewLineForm({ onAdd, onClose, t }: { onAdd: RfqLinesPanelProps['onAdd']; onClose: () => void; t: Translate }) {
-  const { line, update, canSubmit, submission } = useNewLineForm(onAdd, onClose, t);
+  const { line, update, setTrade, canSubmit, submission } = useNewLineForm(onAdd, onClose, t);
   const formId = `${useId()}-form`;
   return (
     <section className="space-y-2 rounded-md border p-3">
       {/* Χωρίς ορατές ετικέτες: κάθε πεδίο ονομάζεται με το κείμενο της στήλης του (ADR-598 G11). */}
       <form id={formId} onSubmit={submission.handleSubmit} className="grid grid-cols-1 gap-2 sm:grid-cols-4">
         <Input aria-label={t('rfqs.lineDescription')} placeholder={t('rfqs.lineDescription')} value={line.description} onChange={(e) => update({ description: e.target.value })} className="sm:col-span-2" />
-        <TradeSelector aria-label={t('rfqs.lineTrade')} value={line.trade} onChange={(trade) => update({ trade })} />
+        <TradeSelector aria-label={t('rfqs.lineTrade')} value={line.trade} onChange={setTrade} />
         <div className="flex gap-2">
           <NumericField
             aria-label={t('rfqs.lineQuantity')}

@@ -4,7 +4,7 @@
  * Ήταν **τρία** λεξιλόγια (BOQ `'pcs'` · PO `'τεμ'` · RFQ `'τμχ'`) και **πέντε** αντίγραφα ετικετών — και κανένα όργανο
  * δεν τα έβλεπε (το CHECK 3.8 ρωτά «υπάρχει το κλειδί;», όχι «υπάρχει ήδη αλλού;»). Κλείνει η **κλάση**, όχι το δείγμα:
  * ελληνική γραφή μονάδας ή ετικέτα `…units.${…}` σε κώδικα ⇒ κόκκινο, εκτός από το κλειστό σύνολο — **με λόγο** ανά γραμμή.
- * Το σύνολο **μόνο μικραίνει** (4γ ✅ · 4δ ✅ · μένει το 4β του ADR).
+ * Το σύνολο **μόνο μικραίνει** (4γ ✅ · 4δ ✅ · 4β ✅ — έμειναν μόνο ΑΛΛΕΣ έννοιες, με λόγο).
  *
  * Ο ΕΝΑΣ δρόμος: `resolveUom()` / `DEFAULT_UOM` (`lib/uom/uom-registry`) · `useUomLabel()` (UI) · `uomLabelIn()` (server).
  */
@@ -19,12 +19,8 @@ const PATTERNS: readonly RegExp[] = [
   /units\.\$\{/u, // ετικέτα μονάδας από δικό του αντίγραφο namespace
 ];
 
-const PENDING_4B = 'Λεξιλόγιο RFQ/προσφορών/πύλης προμηθευτή (`τμχ`) → ADR-923 «3γ» 4β.';
-
 /** Κλειστό σύνολο — αρχείο → λόγος. Κάθε προσθήκη χρειάζεται λόγο που αντέχει σε review. */
 const ALLOWED: Readonly<Record<string, string>> = {
-  'subapps/procurement/data/trades.ts': PENDING_4B,
-  'subapps/procurement/utils/units.ts': PENDING_4B,
   'subapps/dxf-viewer/bim-3d/dimensions/Dim3DPropertiesPanel.tsx':
     'Μονάδες ΜΗΚΟΥΣ σχεδίου (mm/cm/m της διάστασης 3D) — άλλη έννοια από τη μονάδα ποσότητας· ADR-362.',
   'subapps/dxf-viewer/ui/components/export/ExportDialog.tsx':

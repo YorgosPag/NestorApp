@@ -943,11 +943,7 @@
         "zeroQuantityWithPrice": "Quantity 0 — free sample or mistake?"
       },
       "totalAuto": "Auto",
-      "totalOverride": "Override",
-      "unitOption": {
-        "other": "Other...",
-        "otherPlaceholder": "e.g. barrel, cart"
-      }
+      "totalOverride": "Override"
     },
     "quoteEdit": {
       "warning": {

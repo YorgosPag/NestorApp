@@ -13,7 +13,8 @@
  * - εσωτερικός = οι κωδικοί BOQ (ADR-175), που ήδη γράφουν υλικά · BIM · BOQ — άρα κανένας από τους 13 καταναλωτές
  *   του `BOQMeasurementUnit` δεν αλλάζει·
  * - ISO = **UN/ECE Rec 20** (EN 16931 BT-130 · Peppol), και **Rec 21 με πρόθεμα `X`** για συσκευασίες (`XBG` σακί…)·
- * - `null` μόνο όπου δεν υπάρχει ειλικρινής αντιστοίχιση (`kWp`: η Rec 20 έχει `KWT` = kW, **όχι** μέγιστη ισχύ ΦΒ).
+ * - `null` μόνο όπου δεν υπάρχει ειλικρινής αντιστοίχιση (`kWp`: η Rec 20 έχει `KWT` = kW, **όχι** μέγιστη ισχύ ΦΒ ·
+ *   `point`: η Rec 20 δεν έχει σημείο εγκατάστασης).
  *
  * 🧠 **Εξυπνότερο από μετάπτωση — ανεκτική ανάγνωση (Postel)**: κάθε αποθηκευμένη γραφή (`'τεμ'`, `'τμχ'`, `'m²'`,
  * `'τ.μ.'`, `'H87'`) λύνεται στον **ίδιο** κωδικό από το `resolveUom`· οι νέες εγγραφές γράφουν τον κανονικό. Κανένα
@@ -27,7 +28,7 @@
 export const UOM_CODES = [
   'pcs', 'm', 'm2', 'm3', 'kg', 'ton', 'g', 'lt', 'ml',
   'hr', 'day', 'month', 'set', 'pair', 'bag', 'box', 'pallet', 'roll', 'container', 'pack',
-  'lump', 'kWp',
+  'lump', 'point', 'kW', 'kWp',
 ] as const;
 
 export type UomCode = (typeof UOM_CODES)[number];
@@ -63,12 +64,12 @@ export const UOM_REGISTRY: Readonly<Record<UomCode, UomDefinition>> = {
   m2: { unece: 'MTK', aade: 5, aliases: ['μ2', 'τ.μ.', 'sqm', 'τετραγωνικό μέτρο'] },
   m3: { unece: 'MTQ', aade: 6, aliases: ['μ3', 'κ.μ.', 'cbm', 'κυβικό μέτρο'] },
   kg: { unece: 'KGM', aade: 2, aliases: ['κιλό', 'κιλά', 'χγρ', 'kilogram'] },
-  ton: { unece: 'TNE', aade: null, aliases: ['τόνος', 'τόνοι', 't', 'tn', 'tonne'] },
+  ton: { unece: 'TNE', aade: null, aliases: ['τόνος', 'τόνοι', 'τν', 't', 'tn', 'tonne'] },
   g: { unece: 'GRM', aade: null, aliases: ['γρ', 'gr', 'γραμμάριο', 'gram'] },
   lt: { unece: 'LTR', aade: 3, aliases: ['l', 'λίτρο', 'λίτρα', 'litre', 'liter'] },
   ml: { unece: 'MLT', aade: null, aliases: ['millilitre', 'milliliter'] },
-  hr: { unece: 'HUR', aade: null, aliases: ['ώρα', 'ώρες', 'h', 'hour', 'hours'] },
-  day: { unece: 'DAY', aade: null, aliases: ['ημέρα', 'ημέρες', 'μέρα', 'μέρες', 'd', 'days'] },
+  hr: { unece: 'HUR', aade: null, aliases: ['ώρα', 'ώρες', 'ώρ', 'h', 'hour', 'hours'] },
+  day: { unece: 'DAY', aade: null, aliases: ['ημέρα', 'ημέρες', 'ημ', 'μέρα', 'μέρες', 'd', 'days'] },
   month: { unece: 'MON', aade: null, aliases: ['μήνας', 'μήνες', 'months'] },
   set: { unece: 'SET', aade: null, aliases: ['σετ', 'sets'], spelledOut: true },
   pair: { unece: 'PR', aade: null, aliases: ['ζεύγ', 'ζεύγος', 'ζεύγη', 'pairs'], spelledOut: true },
@@ -79,6 +80,10 @@ export const UOM_REGISTRY: Readonly<Record<UomCode, UomDefinition>> = {
   container: { unece: 'XCN', aade: null, aliases: ['δοχ', 'δοχείο', 'δοχεία', 'containers'], spelledOut: true },
   pack: { unece: 'XPK', aade: null, aliases: ['πακέτο', 'πακέτα', 'package', 'packs'], spelledOut: true },
   lump: { unece: 'LS', aade: null, aliases: ["κατ' αποκοπή", 'κατ αποκοπή', 'lump sum'] },
+  // Σημείο ηλεκτρολογικής/δικτυακής εγκατάστασης (πρίζα, φωτιστικό, λήψη δεδομένων): μετρούμενο ουσιαστικό — η Rec 20
+  // **δεν** έχει «point» (μόνο τυπογραφικά `N3`/`H82`), και το `C62` («one») θα ήταν ψεύτικη ακρίβεια (μετρημένο 2026-10-28).
+  point: { unece: null, aade: null, aliases: ['σημ', 'σημείο', 'σημεία', 'points'], spelledOut: true },
+  kW: { unece: 'KWT', aade: null, aliases: ['κιλοβάτ', 'kilowatt', 'kilowatts'] },
   kWp: { unece: null, aade: null, aliases: [] },
 };
 

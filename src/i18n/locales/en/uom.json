@@ -21,6 +21,8 @@
     "container": "containers",
     "pack": "packs",
     "lump": "LS",
+    "point": "points",
+    "kW": "kW",
     "kWp": "kWp"
   },
   "name": {
@@ -45,6 +47,8 @@
     "container": "Container",
     "pack": "Pack",
     "lump": "Lump sum",
+    "point": "Point",
+    "kW": "Kilowatt",
     "kWp": "Kilowatt peak"
   }
 }

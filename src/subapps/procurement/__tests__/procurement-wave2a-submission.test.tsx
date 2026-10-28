@@ -97,6 +97,32 @@ describe('RfqLinesPanel', () => {
     expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ description: 'Οπλισμός', quantity: 2.5, source: 'ad_hoc' }));
   });
 
+  it('Γ3 (ADR-923 «3γ» 4β): η μονάδα = κωδικός μητρώου από την ειδικότητα (σκυρόδεμα m3 → ενοικίαση day), χωρίς «Άλλο»', async () => {
+    const onAdd = jest.fn(async () => LINE);
+    render(<RfqLinesPanel rfqId="r1" lines={[]} loading={false} onAdd={onAdd} onDelete={jest.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'rfqs.addLine' }));
+    expect(screen.getByRole('combobox', { name: 'rfqs.lineUnit' })).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('rfqs.lineEdit.unitOption.otherPlaceholder')).not.toBeInTheDocument();
+
+    const description = screen.getByLabelText('rfqs.lineDescription');
+    fireEvent.change(description, { target: { value: 'Σκυρόδεμα' } });
+    act(() => { pressEnterToSubmit(description); });
+    await waitFor(() => expect(onAdd).toHaveBeenLastCalledWith(expect.objectContaining({ unit: 'm3' })));
+
+    // η φόρμα κλείνει μετά την προσθήκη ⇒ ξανά, με άλλη ειδικότητα
+    fireEvent.click(await screen.findByRole('button', { name: 'rfqs.addLine' }));
+    fireEvent.change(screen.getByLabelText('trade'), { target: { value: 'equipment_rental' } });
+    const second = screen.getByLabelText('rfqs.lineDescription');
+    fireEvent.change(second, { target: { value: 'Γερανός' } });
+    act(() => { pressEnterToSubmit(second); });
+    await waitFor(() => expect(onAdd).toHaveBeenLastCalledWith(expect.objectContaining({ unit: 'day', trade: 'equipment_rental' })));
+  });
+
+  it('Γ4: ο πίνακας δείχνει την ετικέτα του κωδικού (uom:symbol.m3), όχι τον ωμό κωδικό', () => {
+    render(<RfqLinesPanel rfqId="r1" lines={[LINE]} loading={false} onAdd={jest.fn()} onDelete={jest.fn()} />);
+    expect(screen.getByRole('cell', { name: 'symbol.m3' })).toBeInTheDocument();
+  });
+
   it('Γ2: διαγραφή — κουμπί με όνομα· αποτυχία ⇒ ορατό toast', async () => {
     const onDelete = jest.fn(async () => { throw new Error('permission-denied'); });
     render(<RfqLinesPanel rfqId="r1" lines={[LINE]} loading={false} onAdd={jest.fn()} onDelete={onDelete} />);

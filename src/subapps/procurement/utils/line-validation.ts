@@ -5,7 +5,6 @@
  * @module subapps/procurement/utils/line-validation
  */
 
-import { isKnownUnit } from './units';
 import { parseGreekDecimal } from '@/lib/number/greek-decimal';
 import type { QuoteLine } from '@/subapps/procurement/types/quote';
 
@@ -69,9 +68,9 @@ export function validateLine(
     errors.quantity = 'rfqs.lineEdit.error.quantityInvalid';
   }
 
+  // Κενή μονάδα = σφάλμα. Παλιά γραφή εκτός μητρώου ΔΕΝ είναι σφάλμα (ανεκτική ανάγνωση, ADR-923 §5.11 «3γ» 4β):
+  // η λίστα (`UomSelect`) τη δείχνει αυτούσια· νέα τιμή έρχεται μόνο από τη λίστα.
   if (!line.unit || line.unit.trim().length === 0) {
-    errors.unit = 'rfqs.lineEdit.error.unitRequired';
-  } else if (!isKnownUnit(line.unit) && line.unit.trim().length === 0) {
     errors.unit = 'rfqs.lineEdit.error.unitRequired';
   }
 

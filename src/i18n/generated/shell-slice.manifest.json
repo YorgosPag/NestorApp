@@ -83,7 +83,7 @@
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "9036017e6d14329a4ea85770427485f029ad3dac258547896db87ba304b14b66",
     "src/i18n/generated/routes/tour-captures.el.json": "4366e1da68c438c0bf803afebc878504ac67e4f388a111f4f522f89141acdaa4",
     "src/i18n/generated/routes/tour-invite__token.el.json": "aeec8bc36081f1b5a8c49674c18a1a367f5d97d69bad1124f15f0a1349d110cf",
-    "src/i18n/generated/routes/vendor__quote.el.json": "783b5a341824fa4cf2f77b39006006e80c90c65e23a7d047aadc9e544be78c09",
+    "src/i18n/generated/routes/vendor__quote.el.json": "9008d70d1eecfbd00d960c695b3edd9299aca580f46373c00ccfc67a4c2bd9cf",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
     "src/i18n/generated/shell-slice.el.json": "c352417737d487c3f8390fd5ea52241f1596700fc584dd46defdd3ac63c1dac0",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
@@ -165,7 +165,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "92d17d88ddfa7a8d94a47f97ab134edf9a80d3390d78d202ef8c3fac541e525f",
+  "inputsSha256": "c6c13e4efc1103c23f6aedd921e325ea5c46a1a84f13c9adb54ddb2e7d5b5de9",
   "languages": [
     "el"
   ],
@@ -16257,6 +16257,7 @@
             "symbol.day",
             "symbol.g",
             "symbol.hr",
+            "symbol.kW",
             "symbol.kWp",
             "symbol.kg",
             "symbol.lt",
@@ -16270,6 +16271,7 @@
             "symbol.pair",
             "symbol.pallet",
             "symbol.pcs",
+            "symbol.point",
             "symbol.roll",
             "symbol.set",
             "symbol.ton"
@@ -16438,7 +16440,7 @@
   ],
   "stats": {
     "matchedKeys": 271,
-    "sliceBytes": 1021779
+    "sliceBytes": 1021828
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

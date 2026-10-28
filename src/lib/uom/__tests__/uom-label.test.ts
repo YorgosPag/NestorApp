@@ -14,7 +14,7 @@ describe('formatUom', () => {
   });
 
   it('άγνωστη μονάδα ⇒ αυτούσια (ορατή, όχι κενό)', () => {
-    expect(formatUom('  σημεία ', echo)).toBe('σημεία');
+    expect(formatUom('  καρότσι ', echo)).toBe('καρότσι');
   });
 
   it('απούσα ⇒ κενό', () => {

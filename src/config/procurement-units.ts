@@ -13,7 +13,14 @@
 
 import type { UomCode } from '@/lib/uom/uom-registry';
 
-/** Οι μονάδες της γραμμής παραγγελίας (Procore/SAP: λίστα, όχι ελεύθερο κείμενο). */
+/**
+ * Οι μονάδες της **αλυσίδας προμηθειών** — ΜΙΑ λίστα για αίτημα προσφοράς, προσφορά, πύλη προμηθευτή και παραγγελία
+ * (SAP/Oracle: μονάδα μόνο από το μητρώο, ποτέ ελεύθερο κείμενο· η γραμμή περνά από έγγραφο σε έγγραφο **χωρίς** να βγει
+ * εκτός λίστας). Περιέχει κάθε `defaultUnits` των ειδικοτήτων (`procurement/data/trades.ts`) — το φυλάει test.
+ * Μονάδα που λείπει **προστίθεται στο μητρώο και εδώ**, όχι από τον χρήστη.
+ */
 export const PROCUREMENT_UNIT_OPTIONS: readonly UomCode[] = [
-  'pcs', 'm', 'm2', 'm3', 'kg', 'ton', 'lt', 'bag', 'box', 'pallet', 'roll', 'pair', 'container', 'set',
+  'pcs', 'm', 'm2', 'm3', 'kg', 'ton', 'g', 'lt', 'ml', 'point', 'kW',
+  'hr', 'day', 'month', 'lump',
+  'set', 'pair', 'bag', 'box', 'pallet', 'roll', 'container', 'pack',
 ];

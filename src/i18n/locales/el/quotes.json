@@ -943,11 +943,7 @@
         "zeroQuantityWithPrice": "Ποσότητα 0 — δωρεάν δείγμα ή λάθος;"
       },
       "totalAuto": "Auto",
-      "totalOverride": "Override",
-      "unitOption": {
-        "other": "Άλλο...",
-        "otherPlaceholder": "π.χ. βαρέλι, καρότσι"
-      }
+      "totalOverride": "Override"
     },
     "quoteEdit": {
       "warning": {

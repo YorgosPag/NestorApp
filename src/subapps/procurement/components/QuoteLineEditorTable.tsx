@@ -4,18 +4,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectSeparator,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { UomSelect } from '@/components/shared/UomSelect';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { X, Lock, Unlock } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { UNITS, OTHER_UNIT, isKnownUnit } from '@/subapps/procurement/utils/units';
+import { PROCUREMENT_UNIT_OPTIONS } from '@/config/procurement-units';
 import { validateLine, collectInconsistencies } from '@/subapps/procurement/utils/line-validation';
 import type { QuoteLine, ExtractedQuoteLine } from '@/subapps/procurement/types/quote';
 
@@ -63,12 +56,6 @@ export function QuoteLineEditorTable({
 
   // Set of row indices with user-overridden lineTotal (not auto-computed)
   const [overriddenRows, setOverriddenRows] = useState<Set<number>>(new Set());
-  // Set of row indices using custom (non-UNITS) unit input
-  const [customUnitRows, setCustomUnitRows] = useState<Set<number>>(() => {
-    const initial = new Set<number>();
-    lines.forEach((line, i) => { if (!isKnownUnit(line.unit)) initial.add(i); });
-    return initial;
-  });
 
   const lineConfidence = useCallback((idx: number): number | null => {
     const ec = extractedLineItems?.[idx];
@@ -106,7 +93,6 @@ export function QuoteLineEditorTable({
   const removeLine = useCallback((index: number) => {
     onChange(lines.filter((_, i) => i !== index));
     setOverriddenRows((prev) => { const s = new Set(prev); s.delete(index); return s; });
-    setCustomUnitRows((prev) => { const s = new Set(prev); s.delete(index); return s; });
   }, [lines, onChange]);
 
   const toggleOverride = useCallback((index: number) => {
@@ -122,16 +108,6 @@ export function QuoteLineEditorTable({
       return s;
     });
   }, [lines, updateLine]);
-
-  const handleUnitSelect = useCallback((index: number, value: string) => {
-    if (value === OTHER_UNIT) {
-      setCustomUnitRows((prev) => new Set(prev).add(index));
-      updateLine(index, { unit: '' });
-    } else {
-      setCustomUnitRows((prev) => { const s = new Set(prev); s.delete(index); return s; });
-      updateLine(index, { unit: value });
-    }
-  }, [updateLine]);
 
   if (lines.length === 0) {
     return <p className="text-sm text-muted-foreground">{t('quotes.scan.noLinesExtracted')}</p>;
@@ -159,8 +135,6 @@ export function QuoteLineEditorTable({
             const v = validations[i];
             const conf = lineConfidence(i);
             const isOverridden = overriddenRows.has(i);
-            const isCustomUnit = customUnitRows.has(i);
-            const unitSelectValue = isCustomUnit ? OTHER_UNIT : (isKnownUnit(line.unit) ? line.unit : OTHER_UNIT);
 
             const rowNumber = extractedLineItems?.[i]?.parentRowNumber ?? String(i + 1);
 
@@ -191,22 +165,15 @@ export function QuoteLineEditorTable({
                   )}
                 </td>
                 <td className="w-28 py-1 pr-2">
-                  <Select value={unitSelectValue} onValueChange={(val) => handleUnitSelect(i, val)}>
-                    <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {UNITS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-                      <SelectSeparator />
-                      <SelectItem value={OTHER_UNIT}>{t('rfqs.lineEdit.unitOption.other')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {isCustomUnit && (
-                    <Input
-                      value={line.unit}
-                      onChange={(e) => updateLine(i, { unit: e.target.value })}
-                      placeholder={t('rfqs.lineEdit.unitOption.otherPlaceholder')}
-                      className="mt-1 h-7 text-xs"
-                    />
-                  )}
+                  {/* ADR-923 §5.11 «3γ» 4β: μονάδα μόνο από το μητρώο (SAP/Oracle) — παλιά γραφή εκτός λίστας μένει ορατή */}
+                  <UomSelect
+                    value={line.unit}
+                    onValueChange={(unit) => updateLine(i, { unit })}
+                    units={PROCUREMENT_UNIT_OPTIONS}
+                    ariaLabel={t('quotes.unit')}
+                    size="sm"
+                    compact
+                  />
                   {v.errors.unit && <p className="mt-0.5 text-xs text-destructive">{t(v.errors.unit)}</p>}
                 </td>
                 <td className="w-24 py-1 pr-2">

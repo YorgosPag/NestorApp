@@ -64,7 +64,11 @@ export interface Trade {
   labelEl: string;
   labelEn: string;
   relatedAtoeCategories: string[];
-  defaultUnits: string[];
+  /**
+   * Κωδικοί του μητρώου μονάδων (`lib/uom/uom-registry`) — η πρώτη = προεπιλογή νέας γραμμής RFQ. Παλιά έγγραφα μπορεί να
+   * κρατούν γραφές (`'τεμ'`, `'m²'`): ανεκτική ανάγνωση μέσω `resolveUom`, καμία μετάπτωση (ADR-923 §5.11 «3γ» 4β).
+   */
+  defaultUnits: readonly string[];
   isActive: boolean;
   sortOrder: number;
   companyId: string | null;
