@@ -325,6 +325,7 @@ export const generateVendorLogoFileId = (quoteId: string) =>
 // Multi-Vendor extension (ADR-327 §17 Q28-Q31, 2026-04-29)
 export const generateSourcingEventId = () => enterpriseIdService.generateSourcingEventId();
 export const generateRfqLineId = () => enterpriseIdService.generateRfqLineId();
+export const generateQuoteLineId = () => enterpriseIdService.generateQuoteLineId(); // ADR-327 §8.5
 
 // Material Catalog (ADR-330 Phase 4)
 export const generateMaterialId = () => enterpriseIdService.generateMaterialId();

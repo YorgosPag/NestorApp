@@ -493,6 +493,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   // Quotes & RFQ — Multi-Vendor extension (ADR-327 §17 Q28-Q31, 2026-04-29)
   SOURCING_EVENT: 'srcev',    // §17 Q31: parent collection multi-trade RFQ package (HYBRID A-Enhanced)
   RFQ_LINE: 'rfqln',          // §17 Q29: sub-collection rfqs/{rfqId}/lines/{lineId} (HYBRID Γ BOQ-first)
+  QUOTE_LINE: 'qtln',         // ADR-327 §8.5: γραμμή προσφοράς (μέσα στο έγγραφο `quotes/{id}`, δεμένη σε γραμμή RFQ)
 
   // Material Catalog (ADR-330 Phase 4)
   MATERIAL: 'mat',            // company-wide material master with ATOE FK + preferred suppliers

@@ -122,7 +122,7 @@ export {
   generateQuoteId, generateRfqId, generateVendorInviteId, generateTradeId,
   generateVendorInviteCredentialId,
   generateVendorLogoFileId,
-  generateSourcingEventId, generateRfqLineId,
+  generateSourcingEventId, generateRfqLineId, generateQuoteLineId,
   generateMaterialId,
   generateFrameworkAgreementId,
   generateTextTemplateId, generateDrawingRevisionId, generateDeterministicDrawingRevisionId,

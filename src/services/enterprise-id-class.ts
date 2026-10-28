@@ -391,6 +391,7 @@ export class EnterpriseIdService extends CatalogIdGenerators {
   generateTradeId(): string { return this.generateId(P.TRADE).id; }
   generateSourcingEventId(): string { return this.generateId(P.SOURCING_EVENT).id; }
   generateRfqLineId(): string { return this.generateId(P.RFQ_LINE).id; }
+  generateQuoteLineId(): string { return this.generateId(P.QUOTE_LINE).id; }
 
   // Material Catalog (ADR-330 Phase 4)
   generateMaterialId(): string { return this.generateId(P.MATERIAL).id; }

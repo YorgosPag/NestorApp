@@ -1,3 +1,5 @@
+import type { BidLevelingResult } from './bid-leveling';
+
 // ============================================================================
 // COMPARISON WEIGHTS & TEMPLATES — ADR-327 §17 Q11
 // ============================================================================
@@ -30,6 +32,12 @@ export interface TcoNormalization {
   warrantyText: string | null;
   vatIncluded: boolean | null;
   laborIncluded: boolean | null;
+  /**
+   * ADR-327 §8.5 — εξισορρόπηση γραμμών (με ΦΠΑ): εξισορροπημένο − υποβληθέν καθαρό, επί (1 + ΦΠΑ).
+   * Θετικό = η προσφορά άφησε κενά (καλύφθηκαν με ορατό ποσό) ή τιμολόγησε μικρότερη ποσότητα από το RFQ.
+   * Ήδη μέσα στο `normalizedTotal`.
+   */
+  levelingDelta: number;
 }
 
 // ============================================================================
@@ -73,6 +81,8 @@ export interface QuoteComparisonResult {
   weights: ComparisonWeights;
   templateId: string;
   computedAt: string;
+  /** ADR-327 §8.5 — ο πίνακας γραμμή RFQ × προσφορά (κενός όταν το RFQ δεν έχει γραμμές). */
+  leveling: BidLevelingResult;
 }
 
 // ============================================================================
@@ -80,17 +90,22 @@ export interface QuoteComparisonResult {
 // ============================================================================
 
 export interface LineWinner {
+  rfqLineId: string;
   lineDescription: string;
   categoryCode: string | null;
   winnerQuoteId: string;
   winnerVendorName: string;
   winnerUnitPrice: number;
+  /** Η συγκρίσιμη αξία της γραμμής (τιμή μονάδας × ποσότητα RFQ). */
+  winnerAmount: number;
   savings: number;
   savingsPercent: number;
 }
 
 export interface CherryPickResult {
   lineWinners: LineWinner[];
+  /** Γραμμές RFQ χωρίς καμία συγκρίσιμη τιμή — εκτός του `totalIfCherryPick`. */
+  uncoveredLines: number;
   totalIfCherryPick: number;
   totalIfWholePackage: number;
   savingsFromSplit: number;
