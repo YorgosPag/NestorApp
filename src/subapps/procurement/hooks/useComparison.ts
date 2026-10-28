@@ -51,19 +51,25 @@ export function useComparison(
   const [error, setError] = useState<string | null>(null);
 
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // ADR-327: οι refetch ΕΠΙΚΑΛΥΠΤΟΝΤΑΙ (χειροκίνητος μετά από ενέργεια + debounced από τη συνδρομή).
+  // Μόνο η ΤΕΛΕΥΤΑΙΑ αίτηση γράφει — ποτέ παλιά σύγκριση πάνω από νεότερη, ποτέ `loading=false` νωρίς.
+  const requestSeqRef = useRef(0);
 
   const refetch = useCallback(async () => {
     if (!rfqId) return;
+    const seq = ++requestSeqRef.current;
+    const isLatest = () => seq === requestSeqRef.current;
     try {
       setLoading(true);
       const data = await fetchComparison(rfqId, { templateId, cherryPick: cherryPickOpt });
+      if (!isLatest()) return;
       setComparison(data.comparison);
       setCherryPick(data.cherryPick);
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load comparison');
+      if (isLatest()) setError(e instanceof Error ? e.message : 'Failed to load comparison');
     } finally {
-      setLoading(false);
+      if (isLatest()) setLoading(false);
     }
   }, [rfqId, templateId, cherryPickOpt]);
 
