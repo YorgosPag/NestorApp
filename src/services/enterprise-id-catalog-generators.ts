@@ -113,4 +113,9 @@ export abstract class CatalogIdGenerators extends CompositeKeyIdGenerators {
   generateDeterministicCatalogPricingSlotId(companyId: string, slotKey: string): string {
     return this.mintDeterministicV4Id(P.CATALOG_PRICING_SLOT, seedOf('pricing-slot', companyId, slotKey));
   }
+
+  /** Σήμα όψης τιμών (ADR-905): γραφέας και listener **υπολογίζουν** το id — κανένα ερώτημα, κανένα `list`. */
+  generateDeterministicCatalogPricingViewSignalId(companyId: string, viewKey: string): string {
+    return this.mintDeterministicV4Id(P.CATALOG_PRICING_VIEW_SIGNAL, seedOf('pricing-view-signal', companyId, viewKey));
+  }
 }

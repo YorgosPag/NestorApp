@@ -35,4 +35,7 @@ export const CATALOG_ID_PREFIXES = {
   CATALOG_CUSTOMER_ASSIGNMENT: 'ccasg',    // catalog_customer_assignments — συμβαλλόμενος → ΜΙΑ ομάδα (από συμβαλλόμενο)
   CATALOG_DISCOUNT_CONDITION: 'cdcnd',     // catalog_discount_conditions — ΤΥΧΑΙΟ: καμία φυσική ταυτότητα (ίδιο κοινό, άλλη περίοδος)
   CATALOG_PRICING_SLOT: 'cpslt',           // catalog_pricing_slots — υποδοχή ασάφειας (ευρετήριο γραφέα, ΟΧΙ οντότητα)
+  // ── Φάση 3δ (ADR-923 §5.11 «3δ» Ζ · ADR-905) ──
+  CATALOG_PRICING_VIEW_SIGNAL: 'cpvs',     // catalog_pricing_view_signals — σήμα ΜΙΑΣ όψης τιμών (μόνο αριθμός) — ντετερμινιστικό
+
 } as const;

@@ -232,6 +232,10 @@ export const PERMISSIONS = {
   // συντήρηση συνθηκών ≠ αποδέσμευση. Χωριστά, ώστε να δοθεί η συντήρηση σε υπάλληλο χωρίς να του δοθεί η δημοσίευση.
   "catalog:pricing:manage": true,
   "catalog:pricing:publish": true,
+  // ADR-923 §5.11 «3δ» απόφαση Ζ — η ΠΡΟΒΟΛΗ τιμών (λίστες · εκδόσεις · γραμμές · ομάδες · συνθήκες). SAP: προβολή
+  // συνθηκών (VK13) ≠ συντήρηση (VK11/12)· commercetools: `view_*` ≠ `manage_*`. Επιβάλλεται ΜΟΝΟ στον διακομιστή
+  // (GET routes) — οι συλλογές είναι `read: false`, γιατί κανόνας Firestore δεν βλέπει τα δικαιώματα του ρόλου.
+  "catalog:pricing:view": true,
 
   // Orders (for vendors)
   "orders:orders:view": true,

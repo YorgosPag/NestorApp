@@ -46,3 +46,5 @@ export const generateDeterministicCatalogCustomerAssignmentId = (companyId: stri
 export const generateCatalogDiscountConditionId = () => enterpriseIdService.generateCatalogDiscountConditionId();
 export const generateDeterministicCatalogPricingSlotId = (companyId: string, slotKey: string) =>
   enterpriseIdService.generateDeterministicCatalogPricingSlotId(companyId, slotKey);
+export const generateDeterministicCatalogPricingViewSignalId = (companyId: string, viewKey: string) =>
+  enterpriseIdService.generateDeterministicCatalogPricingViewSignalId(companyId, viewKey);

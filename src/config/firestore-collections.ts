@@ -1109,6 +1109,11 @@ export const COLLECTIONS = {
     process.env.NEXT_PUBLIC_CATALOG_DISCOUNT_CONDITIONS_COLLECTION || 'catalog_discount_conditions',
   /** Υποδοχές ασάφειας (συνθήκες · κοινό λίστας) — ευρετήριο του γραφέα, ΟΧΙ οντότητα: χωρίς ιστορικό. IDs via cpslt_*. */
   CATALOG_PRICING_SLOTS: process.env.NEXT_PUBLIC_CATALOG_PRICING_SLOTS_COLLECTION || 'catalog_pricing_slots',
+  /**
+   * Σήματα όψεων τιμών (ADR-923 §5.11 «3δ» Ζ · ADR-905) — **μόνο αριθμός**, ποτέ τιμή. Οι τιμές διαβάζονται ΜΟΝΟ από τον
+   * διακομιστή· ο πελάτης ακούει εδώ πότε να ξαναρωτήσει. Γράφει ΜΟΝΟ η μηχανή του καταλόγου. IDs via cpvs_*.
+   */
+  CATALOG_PRICING_VIEW_SIGNALS: process.env.NEXT_PUBLIC_CATALOG_PRICING_VIEW_SIGNALS_COLLECTION || 'catalog_pricing_view_signals',
 
   // 🪜 DXF STAIR TOOL — ADR-358 (companyId-scoped, Phase 1)
   /** Parametric stair entities, 11 kinds, IfcStair-aligned. FK → floorplans. IDs via stair_* prefix. */

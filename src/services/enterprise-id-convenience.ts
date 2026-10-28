@@ -470,6 +470,7 @@ export {
   generateDeterministicCatalogCustomerAssignmentId,
   generateCatalogDiscountConditionId,
   generateDeterministicCatalogPricingSlotId,
+  generateDeterministicCatalogPricingViewSignalId,
 } from './enterprise-id-convenience-catalog';
 
 // Optimistic & Temporary
