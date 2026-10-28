@@ -117,15 +117,17 @@ export function SearchableCombobox({
     const matchingOption = options.find((o) => o.value === value);
     if (matchingOption) {
       setInputValue(matchingOption.label);
-    } else if (value) {
-      // Free text or value not yet in options (e.g. lazy-loading)
+    } else if (value && !(isLoading && !allowFreeText)) {
+      // Free text, or a value that is not in the (loaded) options — stays visible, never a silent blank
       setInputValue(value);
     } else {
+      // Χωρίς ελεύθερο κείμενο η τιμή είναι ΤΑΥΤΟΤΗΤΑ (`proj_…`), όχι κείμενο: όσο φορτώνουν οι επιλογές δείχνουμε τον
+      // spinner, ποτέ το ωμό id (μετρημένο ζωντανά 2026-10-28, ~12 s «proj_04a6…» στο «Έργο», ADR-327 §8.5.4).
       setInputValue('');
     }
     // Ό,τι γράφτηκε εδώ ήρθε από έξω — δεν το κατέχει ο χρήστης.
     isSystemProvidedRef.current = true;
-  }, [value, options, open]);
+  }, [value, options, open, isLoading, allowFreeText]);
 
   // Debounced filtering
   useEffect(() => {
