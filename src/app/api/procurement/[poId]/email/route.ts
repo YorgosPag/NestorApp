@@ -13,6 +13,7 @@ import { defineRoute, ok, badRequest, notFound, httpError } from '@/lib/api/defi
 import { getPO } from '@/services/procurement';
 import { ownedPO, poResource } from '../../_shared/po-ownership';
 import { sendPurchaseOrderEmail } from '@/services/procurement/po-email-service';
+import { resolvePODocumentParties } from '@/services/procurement/po-document-parties';
 import { resolveContactDepartmentEmail } from '@/services/org-structure/org-routing-resolver';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
@@ -58,20 +59,17 @@ export const POST = defineRoute<z.ZodTypeAny, { poId: string }>({
     }
     logger.info('PO email resolver', { poId, emailSource, supplierId: po.supplierId ?? null });
 
+    // ADR-923 §5.11 «3γ» Α11 — τα μέρη του εγγράφου από ΕΝΑ SSoT (κοινό με το PDF). Το `recipientName`
+    // είναι ο **άνθρωπος** που χαιρετά το μήνυμα, όχι ο συμβαλλόμενος — ο προμηθευτής έρχεται από την επαφή του.
+    const parties = await resolvePODocumentParties(auth, po);
+    if (!parties.ok) httpError(422, parties.reason);
+
     const result = await sendPurchaseOrderEmail({
       po,
       recipientEmail,
       recipientName,
-      companyInfo: {
-        name: 'Pagonis Construction', // TODO: Load from company profile
-        vatNumber: '',
-        address: '',
-        phone: '',
-        email: '',
-      },
-      supplierInfo: {
-        name: recipientName,
-      },
+      companyInfo: parties.companyInfo,
+      supplierInfo: parties.supplierInfo,
       language,
     });
 

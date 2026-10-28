@@ -14,6 +14,9 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getPO } from '@/services/procurement';
 import { ownedPO, poResource } from '../../_shared/po-ownership';
 import { generatePurchaseOrderPdf } from '@/services/procurement/po-pdf-generator';
+import { resolvePODocumentParties } from '@/services/procurement/po-document-parties';
+import { poPdfFilename } from '@/services/procurement/po-format';
+import { attachmentDisposition } from '@/lib/http/content-disposition';
 import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 
@@ -40,28 +43,27 @@ async function handleGet(
           );
         }
 
+        // ADR-923 §5.11 «3γ» Α11 — τα μέρη του εγγράφου από ΕΝΑ SSoT (κοινό με το email).
+        const parties = await resolvePODocumentParties(ctx, po);
+        if (!parties.ok) {
+          return NextResponse.json(
+            { success: false, error: parties.reason },
+            { status: 422 }
+          );
+        }
+
         const pdfBytes = await generatePurchaseOrderPdf({
           po,
-          companyInfo: {
-            name: 'Pagonis Construction', // TODO: Load from company profile
-            vatNumber: '',
-            address: '',
-            phone: '',
-            email: '',
-          },
-          supplierInfo: {
-            name: po.supplierId, // TODO: Resolve from contacts
-          },
+          companyInfo: parties.companyInfo,
+          supplierInfo: parties.supplierInfo,
           language: lang,
         });
-
-        const filename = `${po.poNumber}.pdf`;
 
         return new NextResponse(Buffer.from(pdfBytes), {
           status: 200,
           headers: {
             'Content-Type': 'application/pdf',
-            'Content-Disposition': `attachment; filename="${filename}"`,
+            'Content-Disposition': attachmentDisposition(poPdfFilename(po.poNumber)),
           },
         });
       } catch (err) {

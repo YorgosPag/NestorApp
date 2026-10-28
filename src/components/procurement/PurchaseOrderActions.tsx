@@ -26,6 +26,7 @@ import { Label } from '@/components/ui/label';
 import type { PurchaseOrder } from '@/types/procurement';
 import { API_ROUTES } from '@/config/domain-constants';
 import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
+import { poPdfFilename } from '@/services/procurement/po-format';
 import {
   createPurchaseOrderShareWithPolicy,
   sendPurchaseOrderEmailWithPolicy,
@@ -45,7 +46,7 @@ type ActionStatus = 'idle' | 'loading' | 'success' | 'error';
 // PDF DOWNLOAD
 // ============================================================================
 
-function usePdfDownload(poId: string) {
+function usePdfDownload(poId: string, poNumber: string) {
   const [status, setStatus] = useState<ActionStatus>('idle');
 
   const download = useCallback(async (lang: 'el' | 'en' = 'el') => {
@@ -57,14 +58,14 @@ function usePdfDownload(poId: string) {
       if (!res.ok) throw new Error(res.statusText);
 
       const blob = await res.blob();
-      triggerExportDownload({ blob, filename: [poId, 'pdf'].join('.') });
+      triggerExportDownload({ blob, filename: poPdfFilename(poNumber) });
       setStatus('success');
       setTimeout(() => setStatus('idle'), 2000);
     } catch {
       setStatus('error');
       setTimeout(() => setStatus('idle'), 3000);
     }
-  }, [poId]);
+  }, [poId, poNumber]);
 
   return { download, status };
 }
@@ -210,7 +211,7 @@ function EmailSendDialog({ open, onClose, poId, poNumber }: EmailDialogProps) {
 export function PurchaseOrderActions({ po }: PurchaseOrderActionsProps) {
   const { t } = useTranslation('procurement');
   const [emailOpen, setEmailOpen] = useState(false);
-  const { download, status: pdfStatus } = usePdfDownload(po.id);
+  const { download, status: pdfStatus } = usePdfDownload(po.id, po.poNumber);
   const { createShare, status: shareStatus } = useShareLink(po.id);
 
   return (

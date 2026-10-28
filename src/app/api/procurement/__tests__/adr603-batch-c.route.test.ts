@@ -129,6 +129,9 @@ jest.mock('@/subapps/procurement/services/rfq-service', () => ({
 jest.mock('@/subapps/procurement/services/quote-service', () => ({
   listQuotes: jest.fn(async () => []),
 }));
+jest.mock('@/subapps/procurement/services/rfq-line-service', () => ({
+  readRfqLinesPublic: jest.fn(async () => []),
+}));
 
 // ---- invoice-match ---------------------------------------------------------
 var matchSvc = {
@@ -158,6 +161,12 @@ jest.mock('@/services/procurement', () => ({
 }));
 jest.mock('@/services/procurement/po-email-service', () => ({
   sendPurchaseOrderEmail: (...a: unknown[]) => emailSvc.sendPurchaseOrderEmail(...a),
+}));
+// ADR-923 §5.11 «3γ» Α11 — τα μέρη του εγγράφου από ΕΝΑ SSoT (κοινό PDF + email).
+var PARTIES_OK = { ok: true, companyInfo: { name: 'Co', vatNumber: '801832652', address: '', phone: '', email: '' }, supplierInfo: { name: 'Supplier' } };
+var partiesSvc = { resolvePODocumentParties: jest.fn(async (): Promise<unknown> => PARTIES_OK) };
+jest.mock('@/services/procurement/po-document-parties', () => ({
+  resolvePODocumentParties: (...a: unknown[]) => partiesSvc.resolvePODocumentParties(...a),
 }));
 jest.mock('@/services/org-structure/org-routing-resolver', () => ({
   resolveContactDepartmentEmail: (...a: unknown[]) => emailSvc.resolveContactDepartmentEmail(...a),
@@ -201,6 +210,7 @@ beforeEach(() => {
   emailSvc.getPO.mockResolvedValue({ companyId: 'comp_1', supplierId: null, poNumber: 'PO-1' });
   emailSvc.sendPurchaseOrderEmail.mockResolvedValue({ success: true, messageId: 'msg_1' });
   emailSvc.resolveContactDepartmentEmail.mockResolvedValue(null);
+  partiesSvc.resolvePODocumentParties.mockResolvedValue(PARTIES_OK);
 });
 
 // ===========================================================================
@@ -345,6 +355,23 @@ describe('[poId]/email — POST', () => {
     const res = (await emailPost(req(`${BASE}/po_1/email`, validBody), seg)) as Envelope;
     expect(res.status).toBe(404);
     expect((await res.json()).error).toBe('PO not found');
+  });
+
+  it('supplier contact unresolvable → 422, nothing sent (no invented party)', async () => {
+    partiesSvc.resolvePODocumentParties.mockResolvedValue({ ok: false, reason: 'supplier_missing' });
+    const res = (await emailPost(req(`${BASE}/po_1/email`, validBody), seg)) as Envelope;
+    expect(res.status).toBe(422);
+    expect((await res.json()).error).toBe('supplier_missing');
+    expect(emailSvc.sendPurchaseOrderEmail).not.toHaveBeenCalled();
+  });
+
+  it('parties from the SSoT reach the email service', async () => {
+    await emailPost(req(`${BASE}/po_1/email`, validBody), seg);
+    expect(emailSvc.sendPurchaseOrderEmail).toHaveBeenCalledWith(expect.objectContaining({
+      companyInfo: PARTIES_OK.companyInfo,
+      supplierInfo: PARTIES_OK.supplierInfo,
+      recipientName: 'Acme',
+    }));
   });
 
   it('send failure → 500 with service error', async () => {

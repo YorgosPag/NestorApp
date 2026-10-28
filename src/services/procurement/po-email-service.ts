@@ -25,6 +25,7 @@ import {
   type POPdfCompanyInfo,
   type POPdfSupplierInfo,
 } from './po-pdf-generator';
+import { poPdfFilename } from './po-format';
 
 const logger = createModuleLogger('PO_EMAIL');
 
@@ -129,11 +130,7 @@ export async function sendPurchaseOrderEmail(
     });
 
     // 3. Build filename
-    const sanitizedSupplier = supplierInfo.name
-      .replace(/[<>:"/\\|?*]/g, '')
-      .replace(/\s+/g, '_')
-      .substring(0, 50);
-    const pdfFilename = `${po.poNumber}_${sanitizedSupplier}.pdf`;
+    const pdfFilename = poPdfFilename(po.poNumber, supplierInfo.name);
 
     // 4. Send via Mailgun
     const result = await sendReplyViaMailgun({
