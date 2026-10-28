@@ -4,8 +4,8 @@
  *
  * Lives outside `quote-service.ts` because vendor portal has no `AuthContext` —
  * vendor identity is bound to the HMAC token, not Firebase auth. We therefore
- * write the Quote document directly with Admin SDK and a synthetic
- * `vendor:{contactId}` actor in the audit trail.
+ * write the Quote document directly with Admin SDK and a synthetic actor in the audit
+ * trail — `vendor:{contactId}`, or `vendor:invite:{inviteId}` without a contact (`vendorActorId`, §8.5 Γ).
  *
  * @module subapps/procurement/services/vendor-portal-submit-service
  * @enterprise ADR-327 §7 + §11 — Phase 3 Vendor Portal
@@ -31,13 +31,19 @@ import type {
   QuoteAttachment,
   QuoteAuditEntry,
   QuoteLine,
+  QuoteVendorSnapshot,
+  RfqScopeResponse,
 } from '../types/quote';
 import { computeQuoteTotals } from '../types/quote';
+import { vendorActorId } from '../utils/quote-vendor-identity';
 
 const logger = createModuleLogger('VENDOR_PORTAL_SUBMIT_SERVICE');
 
 export interface SubmissionPayload {
   lines: QuoteLine[];
+  /** ADR-327 §8.5 — ήδη επικυρωμένα απέναντι στις γραμμές RFQ από το route (`checkRfqLineAnswers`). */
+  alternates: QuoteLine[];
+  scopeResponses: RfqScopeResponse[];
   paymentTerms: string | null;
   deliveryTerms: string | null;
   warranty: string | null;
@@ -74,14 +80,14 @@ async function readOwnedPortalQuote(owner: PortalQuoteOwner, quoteId: string): P
 }
 
 function vendorAudit(
-  vendorContactId: string,
+  actor: string,
   action: string,
   detail: string | null,
   ipHash: string,
 ): QuoteAuditEntry {
   return {
     timestamp: adminTimestampAsClient(),
-    userId: `vendor:${vendorContactId}`,
+    userId: actor,
     action,
     previousValue: null,
     newValue: detail,
@@ -100,6 +106,8 @@ export interface PersistArgs {
   rfqTrade: Quote['trade'];
   vendorContactId: string;
   inviteId: string;
+  /** ADR-327 §8.5 Γ — ποιος υπέβαλε, από την πρόσκληση· γράφεται στη δημιουργία, δεν ξαναγράφεται. */
+  vendorSnapshot: QuoteVendorSnapshot;
   ipHash: string;
   userAgent: string;
   payload: SubmissionPayload;
@@ -129,10 +137,11 @@ export async function persistVendorQuote(args: PersistArgs): Promise<{ quoteId: 
 
   const now = adminTimestampAsClient();
   const totals = computeQuoteTotals(payload.lines);
+  const actor = vendorActorId({ vendorContactId, inviteId });
   const audit = vendorAudit(
-    vendorContactId,
+    actor,
     isFirstSubmission ? 'portal_submitted' : 'portal_edited',
-    `lines=${payload.lines.length}; total=${totals.total.toFixed(2)}; ua=${userAgent.slice(0, 80)}`,
+    `lines=${payload.lines.length}; alternates=${payload.alternates.length}; scope=${payload.scopeResponses.length}; total=${totals.total.toFixed(2)}; ua=${userAgent.slice(0, 80)}`,
     ipHash,
   );
 
@@ -147,10 +156,13 @@ export async function persistVendorQuote(args: PersistArgs): Promise<{ quoteId: 
       buildingId: rfqBuildingId,
       companyId,
       vendorContactId,
+      vendorSnapshot: args.vendorSnapshot,
       trade: rfqTrade,
       source: 'portal',
       status: 'submitted',
       lines: payload.lines,
+      alternates: payload.alternates,
+      scopeResponses: payload.scopeResponses,
       totals,
       validUntil: payload.validUntil,
       paymentTerms: payload.paymentTerms,
@@ -171,7 +183,7 @@ export async function persistVendorQuote(args: PersistArgs): Promise<{ quoteId: 
       auditTrail: [
         {
           timestamp: now,
-          userId: `vendor:${vendorContactId}`,
+          userId: actor,
           action: 'created',
           previousValue: null,
           newValue: 'submitted',
@@ -184,7 +196,7 @@ export async function persistVendorQuote(args: PersistArgs): Promise<{ quoteId: 
       submitterIp: ipHash,
       createdAt: now,
       updatedAt: now,
-      createdBy: `vendor:${vendorContactId}`,
+      createdBy: actor,
     };
     await safeFirestoreOperation<void>(async (db) => {
       await db
@@ -205,6 +217,8 @@ export async function persistVendorQuote(args: PersistArgs): Promise<{ quoteId: 
       .update(
         sanitizeForFirestore({
           lines: payload.lines,
+          alternates: payload.alternates,
+          scopeResponses: payload.scopeResponses,
           totals,
           paymentTerms: payload.paymentTerms,
           deliveryTerms: payload.deliveryTerms,

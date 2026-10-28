@@ -3,8 +3,15 @@
  * @module app/(auth)/vendor/quote/types
  */
 
-import type { TradeCode } from '@/subapps/procurement/types/trade';
-import type { QuoteAttachment, QuoteLine, QuoteStatus } from '@/subapps/procurement/types/quote';
+import type { PublicRfqLine } from '@/subapps/procurement/types/rfq-line';
+import type { RfqResponseLock } from '@/subapps/procurement/types/rfq';
+import type {
+  QuoteAttachment,
+  QuoteLine,
+  QuoteStatus,
+  RfqScopeResponse,
+  RfqScopeResponseKind,
+} from '@/subapps/procurement/types/quote';
 import type { VendorInvitePermits } from '@/subapps/procurement/services/vendor-invite-resolver';
 
 export interface InitialInvite {
@@ -18,21 +25,15 @@ export interface InitialInvite {
   permits: VendorInvitePermits;
 }
 
-export interface InitialRfqLine {
-  id: string;
-  description: string;
-  trade: TradeCode;
-  quantity: number | null;
-  unit: string | null;
-  notes: string | null;
-}
-
 export interface InitialRfq {
   id: string;
   title: string;
   description: string | null;
-  lines: InitialRfqLine[];
+  /** The vendor-safe projection — the SAME type the server builds (`readRfqLinesPublic`), not a hand copy. */
+  lines: PublicRfqLine[];
   deadlineDate: string | null;
+  /** ADR-327 §8.5 Β — ήδη επιλυμένο από τον server (`resolveResponseLock`). */
+  responseLock: RfqResponseLock;
 }
 
 export interface InitialData {
@@ -46,13 +47,42 @@ export interface QuoteLineDraft {
   quantity: string;
   unit: string;
   unitPrice: string;
-  vatRate: 0 | 6 | 13 | 24;
+  vatRate: QuoteLine['vatRate'];
   notes: string;
+}
+
+/** ADR-327 §8.5 — πώς απαντά ο προμηθευτής σε μια ζητούμενη γραμμή (Procore: Amount · Include · Exclude). */
+export type RfqAnswerKind = 'priced' | RfqScopeResponseKind;
+
+/** Η απάντηση σε ΜΙΑ γραμμή RFQ. Η περιγραφή ΔΕΝ είναι εδώ: ανήκει στη γραμμή RFQ (ο server την επιβάλλει). */
+export interface RfqAnswerDraft extends Omit<QuoteLineDraft, 'description'> {
+  rfqLineId: string;
+  answer: RfqAnswerKind;
+}
+
+/** Εναλλακτική — δεμένη στη γραμμή RFQ που θα αντικαθιστούσε· ΕΚΤΟΣ συνόλου. */
+export interface AlternateDraft extends QuoteLineDraft {
+  key: string;
+  rfqLineId: string;
+}
+
+/** Πρόσθετη γραμμή του προμηθευτή (δεν ζητήθηκε). */
+export interface AdditionalLineDraft extends QuoteLineDraft {
+  key: string;
+}
+
+/** Όλη η προσφορά υπό σύνταξη. */
+export interface VendorQuoteDraft {
+  answers: RfqAnswerDraft[];
+  alternates: AlternateDraft[];
+  additional: AdditionalLineDraft[];
 }
 
 export interface QuoteSnapshot {
   id: string;
   lines: QuoteLine[];
+  alternates: QuoteLine[];
+  scopeResponses: RfqScopeResponse[];
   totals: { subtotal: number; vatAmount: number; total: number; vatRate: number };
   paymentTerms: string | null;
   deliveryTerms: string | null;

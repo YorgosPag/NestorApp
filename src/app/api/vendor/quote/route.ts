@@ -32,6 +32,7 @@ import {
   markInviteSubmitted,
 } from '@/subapps/procurement/services/vendor-invite-service';
 import { getRfq } from '@/subapps/procurement/services/rfq-service';
+import { readRfqLinesPublic } from '@/subapps/procurement/services/rfq-line-service';
 import { vendorInvitePermits } from '@/subapps/procurement/services/vendor-invite-resolver';
 import { vendorQuoteEditWindowEnd } from '@/subapps/procurement/utils/vendor-invite-status';
 import {
@@ -41,12 +42,16 @@ import {
 import { dispatchProcurementNotification } from '@/server/notifications/notification-orchestrator';
 import { NOTIFICATION_EVENT_TYPES, NOTIFICATION_ENTITY_TYPES } from '@/config/notification-events';
 import type { Quote } from '@/subapps/procurement/types/quote';
-import type { RFQ } from '@/subapps/procurement/types/rfq';
+import { rfqLeadTrade, type RFQ, type RfqResponseLock } from '@/subapps/procurement/types/rfq';
+import type { PublicRfqLine } from '@/subapps/procurement/types/rfq-line';
 import {
   vendorPortalError,
   withVendorLinkDoor,
   type OpenVendorInvite,
 } from '@/server/vendor-portal/vendor-link-door';
+import { applyRfqLineAuthority, checkRfqLineAnswers } from '@/subapps/procurement/utils/rfq-line-binding';
+import { resolveResponseLock } from '@/subapps/procurement/utils/rfq-response-lock';
+import { vendorSnapshotFromInvite } from '@/subapps/procurement/utils/quote-vendor-identity';
 import { readFiles, readSubmission, type ParsedSubmission, type PreparedFiles } from './parsing';
 import { uploadVendorFiles } from './upload';
 
@@ -89,14 +94,20 @@ function inviteView(opened: OpenVendorInvite) {
   };
 }
 
-/** Μόνο ό,τι χρειάζεται η φόρμα — καμία εσωτερική σημείωση RFQ (τιμές, BOQ, προέλευση). */
-function rfqView(rfq: RFQ) {
+/**
+ * Μόνο ό,τι χρειάζεται η φόρμα — καμία εσωτερική σημείωση RFQ (τιμές, BOQ, προέλευση).
+ * Οι γραμμές έρχονται ΗΔΗ καθαρισμένες από τον ΕΝΑ αναγνώστη (`readRfqLinesPublic`, ADR-327 Q29):
+ * μέχρι 2026-10-27 εδώ διαβαζόταν το legacy `rfq.lines`, που στα νέα RFQ είναι `[]` ⇒ άδεια φόρμα.
+ */
+function rfqView(rfq: RFQ, lines: PublicRfqLine[]) {
   return {
     id: rfq.id,
     title: rfq.title,
     description: rfq.description,
-    lines: rfq.lines.map(({ id, description, trade, quantity, unit, notes }) => ({ id, description, trade, quantity, unit, notes })),
+    lines,
     deadlineDate: rfq.deadlineDate?.toDate().toISOString() ?? null,
+    /** §8.5 Β — η πύλη δείχνει τα κλειδωμένα πεδία μόνο-ανάγνωσης· η επιβολή γίνεται στο `bindSubmission`. */
+    responseLock: resolveResponseLock(rfq),
   };
 }
 
@@ -106,6 +117,8 @@ function quoteView(existing: ExistingQuote) {
   return {
     id: data.id,
     lines: data.lines,
+    alternates: data.alternates ?? [],
+    scopeResponses: data.scopeResponses ?? [],
     totals: data.totals,
     paymentTerms: data.paymentTerms,
     deliveryTerms: data.deliveryTerms,
@@ -126,13 +139,13 @@ const baseGET = withVendorLinkDoor({ purpose: 'read' }, async (_request, opened)
   const rfq = await getRfq(invite.companyId, invite.rfqId);
   if (!rfq) return vendorPortalError('rfq_not_found', 404);
   recordPortalVisit(opened);
-  const existing =
-    invite.status === 'submitted'
-      ? await findExistingPortalQuote(invite)
-      : null;
+  const [lines, existing] = await Promise.all([
+    readRfqLinesPublic(rfq),
+    invite.status === 'submitted' ? findExistingPortalQuote(invite) : null,
+  ]);
   return NextResponse.json({
     success: true,
-    data: { invite: inviteView(opened), rfq: rfqView(rfq), quote: quoteView(existing) },
+    data: { invite: inviteView(opened), rfq: rfqView(rfq, lines), quote: quoteView(existing) },
   });
 });
 
@@ -173,11 +186,26 @@ function notifyPm(opened: OpenVendorInvite, rfq: RFQ, quoteId: string, isFirstSu
   });
 }
 
+/**
+ * ADR-327 §8.5 — οι απαντήσεις **απέναντι στις γραμμές του RFQ της πρόσκλησης** (ποτέ εμπιστοσύνη στον client):
+ * ξένο/διπλό id ή αναπάντητη γραμμή ⇒ 400 `binding:<code>`. Μετά: η γραμμή RFQ είναι η αυθεντία του ΤΙ ζητήθηκε.
+ */
+function bindSubmission(
+  submission: ParsedSubmission,
+  lines: readonly PublicRfqLine[],
+  lock: RfqResponseLock,
+): { submission: ParsedSubmission } | { error: NextResponse } {
+  const error = checkRfqLineAnswers(lines, submission, { requireEveryLine: lines.length > 0 });
+  if (error) return { error: vendorPortalError(`binding:${error.code}`, 400) };
+  return { submission: { ...submission, ...applyRfqLineAuthority(lines, submission, lock) } };
+}
+
 /** Αρχεία + προσφορά. Ίδιο `quoteId` σε κάθε επανάληψη: η δεύτερη αποστολή γίνεται επεξεργασία, όχι δεύτερη προσφορά. */
 async function saveSubmission(
   request: NextRequest,
   opened: OpenVendorInvite,
   rfq: RFQ,
+  lines: readonly PublicRfqLine[],
   submission: ParsedSubmission,
   files: PreparedFiles['files'],
   editWindowEnd: Date,
@@ -186,8 +214,8 @@ async function saveSubmission(
   const existing = await findExistingPortalQuote(invite);
   const quoteId = existing?.id ?? generateQuoteId();
   const newAttachments = await uploadVendorFiles(invite.companyId, quoteId, invite.id, invite.vendorContactId, files);
-  // Multi-trade RFQs: tag with the dominant trade (first line); line-less RFQs → materials_general.
-  const dominantTrade: Quote['trade'] = rfq.lines[0]?.trade ?? 'materials_general';
+  // Multi-trade RFQs: tag with the lead trade (first line); line-less RFQs → materials_general.
+  const dominantTrade: Quote['trade'] = rfqLeadTrade({ lines }) ?? 'materials_general';
   await persistVendorQuote({
     isFirstSubmission: invite.status !== 'submitted',
     quoteId,
@@ -198,6 +226,7 @@ async function saveSubmission(
     rfqTrade: dominantTrade,
     vendorContactId: invite.vendorContactId,
     inviteId: invite.id,
+    vendorSnapshot: vendorSnapshotFromInvite(invite),
     ipHash: clientIpFingerprint(clientIpOf(request.headers)),
     userAgent: request.headers.get('user-agent') ?? 'unknown',
     payload: submission,
@@ -220,12 +249,15 @@ const basePOST = withVendorLinkDoor({ purpose: 'submit' }, async (request, opene
 
   const rfq = await getRfq(invite.companyId, invite.rfqId);
   if (!rfq) return vendorPortalError('rfq_not_found', 404);
+  const rfqLines = await readRfqLinesPublic(rfq);
+  const bound = bindSubmission(submission, rfqLines, resolveResponseLock(rfq));
+  if ('error' in bound) return bound.error;
 
   // ΜΙΑ στιγμή λήξης για προσφορά + πρόσκληση + απάντηση (ADR-876 §5 Σ17). Σε επεξεργασία μένει η αρχική.
   // (Επεξεργασία ⇒ ο αναλυτής εγγυάται ανοιχτό παράθυρο, άρα `editWindowExpiresAt` υπάρχει.)
   const editWindowEnd =
     (!isFirstSubmission && invite.editWindowExpiresAt?.toDate()) || vendorQuoteEditWindowEnd(Date.now());
-  const quoteId = await saveSubmission(request, opened, rfq, submission, filesResult.files, editWindowEnd);
+  const quoteId = await saveSubmission(request, opened, rfq, rfqLines, bound.submission, filesResult.files, editWindowEnd);
   if (isFirstSubmission) await markInviteSubmitted(invite.id, editWindowEnd, quoteId);
   notifyPm(opened, rfq, quoteId, isFirstSubmission);
 
