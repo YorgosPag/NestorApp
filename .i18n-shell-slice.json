@@ -139,6 +139,12 @@
       ],
       "reason": "ADR-327 / ADR-923 «3γ» (2026-10-28) — έγινε ορατό από τη σελίδα RFQ (πίνακας γραμμών, `UomSelect`). Η ΜΟΝΗ δυναμική κλήση `t(`${form}.${code}`)` (γρ. 21) έχει `form: UomLabelForm = 'symbol' | 'name'` (εξαντλητικό ως προς τον τύπο) και `code` από το `resolveUom` (ένα από τα `UOM_CODES`)· ο μεταφραστής είναι του namespace `uom` (`useUomLabel` → `useTranslation('uom')`). ΜΕΤΡΗΜΕΝΟ 2026-10-28: το `uom.json` έχει ΑΚΡΙΒΩΣ τα δύο υποδέντρα `symbol` και `name` — τα προθέματα είναι όλο το namespace, ακριβής απάντηση, όχι σκούπα. Άγνωστη μονάδα ⇒ η αυτούσια γραφή (ποτέ κλειδί)."
     },
+    "src/subapps/procurement/components/QuoteForm.tsx": {
+      "prefixes": [
+        "quotes:quotes.binding.errors"
+      ],
+      "reason": "ADR-327 §8.5.4 (2026-10-28) — η χειροκίνητη «Νέα Προσφορά» μέσα στο RFQ απέκτησε το `QuoteRfqBindingReview` και απόρριψη δεσίματος από τον server. Η κλήση `t(bindingKey)` διαβάζει ΜΟΝΟ την επιστροφή του `rfqBindingErrorKey` (`utils/rfq-line-binding.ts`), που είναι κλειστός τύπος `quotes.binding.errors.${RfqBindingErrorCode}` — ΜΕΤΡΗΜΕΝΟ 2026-10-28: το υποδέντρο έχει ΑΚΡΙΒΩΣ τα 4 κλειδιά των 4 κωδικών, το πρόθεμα είναι ακριβής απάντηση. Εμφανίζεται μόνο μετά από αποτυχημένη υποβολή (ποτέ στο πρώτο καρέ)· δηλώνεται ακριβές. Μεταφραστής `useTranslation('quotes')`."
+    },
     "src/subapps/procurement/components/QuoteLineEditorTable.tsx": {
       "prefixes": [
         "quotes:rfqs.lineEdit.error"

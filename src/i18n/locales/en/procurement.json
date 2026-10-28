@@ -203,7 +203,15 @@
     "readOnly": "Read-only access",
     "revoke": "Revoke Link",
     "revokeConfirm": "Are you sure you want to revoke this share link?",
-    "noInternalNotes": "Internal notes are hidden in shared view"
+    "noInternalNotes": "Internal notes are hidden in shared view",
+    "dialogTitle": "Share link",
+    "dialogDescription": "Anyone with the link can view this order without signing in, read-only. Internal notes are hidden.",
+    "linkLabel": "Order link",
+    "creating": "Creating link…",
+    "copiedShort": "Copied",
+    "copyFailed": "The link was created but not copied. Copy it from the field.",
+    "createFailed": "Could not create the link.",
+    "retry": "Try again"
   },
   "pdf": {
     "exportButton": "Export PDF",
