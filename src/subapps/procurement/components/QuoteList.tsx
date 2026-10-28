@@ -12,9 +12,8 @@
  */
 
 import React, { useMemo, useState, useCallback } from 'react';
-import { useRouter, usePathname } from '@/lib/workspace/navigation';
-import { declaredHref } from '@/lib/workspace/route-worlds';
-import { useSearchParams } from 'next/navigation';
+import { useLiveSearchParams } from '@/hooks/useUrlQuery';
+import { replaceUrlSearchParams } from '@/lib/url-query-state';
 import { FileText, Search } from 'lucide-react';
 
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -102,9 +101,8 @@ export function QuoteList({
 }: QuoteListProps) {
   const { t } = useTranslation(['quotes', 'common']);
   const colors = useSemanticColors();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
+  // ADR-327: ταξινόμηση + αναζήτηση στη διεύθυνση ΧΩΡΙΣ πλοήγηση (ήταν `router.replace` ⇒ γύρος RSC ανά πλήκτρο).
+  const searchParams = useLiveSearchParams();
   // RFQ mode: URL-persistent sort + search (activated when onSelectQuote is provided)
   const isRfqMode = !!onSelectQuote;
 
@@ -114,24 +112,18 @@ export function QuoteList({
     isRfqMode && (VALID_SORT_KEYS as readonly string[]).includes(sortParam ?? '')
       ? (sortParam as SortKey)
       : DEFAULT_SORT_KEY;
-  const handleUrlSortChange = useCallback(
-    (newSort: string) => {
-      const params = new URLSearchParams(searchParams.toString());
+  const handleUrlSortChange = useCallback((newSort: string) => {
+    replaceUrlSearchParams((params) => {
       if (newSort === DEFAULT_SORT_KEY) params.delete('sort');
       else params.set('sort', newSort);
-      router.replace(declaredHref('usePathname() είναι ΗΔΗ η έγκυρη τρέχουσα σελίδα — ενημέρωση ερωτήματος, όχι νέος προορισμός.', `${pathname}?${params.toString()}`));
-    },
-    [router, pathname, searchParams],
-  );
-  const handleUrlSearchChange = useCallback(
-    (value: string) => {
-      const params = new URLSearchParams(searchParams.toString());
+    });
+  }, []);
+  const handleUrlSearchChange = useCallback((value: string) => {
+    replaceUrlSearchParams((params) => {
       if (value) params.set('q', value);
       else params.delete('q');
-      router.replace(declaredHref('usePathname() είναι ΗΔΗ η έγκυρη τρέχουσα σελίδα — ενημέρωση ερωτήματος, όχι νέος προορισμός.', `${pathname}?${params.toString()}`));
-    },
-    [router, pathname, searchParams],
-  );
+    });
+  }, []);
   // Legacy state (standalone mode + CompactToolbar)
   const { sortBy, sortOrder, onSortChange } = useSortState<'date' | 'number' | 'status' | 'value'>('date');
   const [selectedItems, setSelectedItems] = useState<string[]>([]);

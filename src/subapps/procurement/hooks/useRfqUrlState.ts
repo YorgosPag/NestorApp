@@ -1,10 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { useRouter, usePathname } from '@/lib/workspace/navigation';
-import { declaredHref } from '@/lib/workspace/route-worlds';
-import { useSearchParams } from 'next/navigation';
 import { useIsMobile } from '@/hooks/useMobile';
+import { useLiveSearchParams } from '@/hooks/useUrlQuery';
+import { pushUrlSearchParams, replaceUrlSearchParams } from '@/lib/url-query-state';
 import type { Quote } from '../types/quote';
 import { PROCUREMENT_STATUS_PARAM } from '@/lib/navigation/procurement-urls';
 
@@ -59,21 +58,26 @@ interface UseRfqUrlStateResult {
   handleToggleComments: () => void;
 }
 
+/**
+ * Η κατάσταση της σελίδας RFQ στη διεύθυνση (`tab` · `quote` · `pdf` · `comments`).
+ *
+ * 🔴 ADR-327 (2026-10-28) — ΑΛΛΑΖΕΙ ΧΩΡΙΣ ΠΛΟΗΓΗΣΗ. Ως τότε κάθε αλλαγή περνούσε από `router.push/replace` ⇒ γύρος
+ * RSC της σελίδας σε ΚΑΘΕ κλικ καρτέλας (μετρημένο: 3,5 s στον dev· σε απασχολημένο server η καρτέλα «πάγωνε» — το
+ * περιστατικό του handoff). Ο App Router δεν έχει shallow routing· η επίσημη διέξοδος είναι το native History API,
+ * δηλαδή το SSoT `@/lib/url-query-state` (γραφή) + `useLiveSearchParams` (ανάγνωση, ζωντανή και στον dev).
+ * Η σημασιολογία ιστορικού μένει ίδια: καρτέλα + «άνοιξε προσφορά» = push (§5.D.3), τα υπόλοιπα = replace.
+ */
 export function useRfqUrlState({
   quotes,
   quotesLoading,
 }: UseRfqUrlStateOptions): UseRfqUrlStateResult {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const searchParams = useLiveSearchParams();
   const isMobile = useIsMobile();
 
   const tabParam = searchParams.get('tab');
   const quoteParam = searchParams.get('quote');
-  const pdfParam = searchParams.get('pdf');
-  const commentsParam = searchParams.get('comments');
-  const pdfOpen = pdfParam === '1';
-  const commentsOpen = commentsParam === '1';
+  const pdfOpen = searchParams.get('pdf') === '1';
+  const commentsOpen = searchParams.get('comments') === '1';
 
   const activeTab = useMemo<RfqTabValue>(
     () => resolveDefaultTab(quotes.length, quotesLoading, tabParam),
@@ -86,80 +90,73 @@ export function useRfqUrlState({
     return found ?? resolveDefaultQuote(quotes);
   }, [quoteParam, quotes]);
 
-  const handleTabChange = useCallback(
-    (nextTab: RfqTabValue) => {
-      const params = new URLSearchParams(searchParams.toString());
+  const handleTabChange = useCallback((nextTab: RfqTabValue) => {
+    pushUrlSearchParams((params) => {
       params.set('tab', nextTab);
       // ADR-330 §5.1 S3.3: το `?status=` είναι φίλτρο της λίστας ΤΗΣ καρτέλας — δεν ταξιδεύει σε άλλη λίστα.
       params.delete(PROCUREMENT_STATUS_PARAM);
-      router.push(declaredHref('usePathname() είναι ΗΔΗ η έγκυρη τρέχουσα σελίδα — ενημέρωση ερωτήματος, όχι νέος προορισμός.', `${pathname}?${params.toString()}`));
-    },
-    [router, pathname, searchParams],
-  );
+    });
+  }, []);
 
   const handleSelectQuote = useCallback(
     (quote: Quote | null) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (quote) params.set('quote', quote.id);
-      else params.delete('quote');
-      const url = declaredHref('usePathname() είναι ΗΔΗ η έγκυρη τρέχουσα σελίδα — ενημέρωση ερωτήματος, όχι νέος προορισμός.', `${pathname}?${params.toString()}`);
+      const write = (params: URLSearchParams) => {
+        if (quote) params.set('quote', quote.id);
+        else params.delete('quote');
+      };
       // Mobile: push so back-gesture restores list (§5.E.4)
-      if (isMobile) router.push(url);
-      else router.replace(url);
+      if (isMobile) pushUrlSearchParams(write);
+      else replaceUrlSearchParams(write);
     },
-    [router, pathname, searchParams, isMobile],
+    [isMobile],
   );
 
   const handleTogglePdf = useCallback(() => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (pdfOpen) {
-      params.delete('pdf');
-    } else {
-      params.set('pdf', '1');
-      params.delete('comments'); // mutually exclusive with comments drawer
-    }
-    router.replace(declaredHref('usePathname() είναι ΗΔΗ η έγκυρη τρέχουσα σελίδα — ενημέρωση ερωτήματος, όχι νέος προορισμός.', `${pathname}?${params.toString()}`));
-  }, [router, pathname, searchParams, pdfOpen]);
+    replaceUrlSearchParams((params) => {
+      if (pdfOpen) {
+        params.delete('pdf');
+      } else {
+        params.set('pdf', '1');
+        params.delete('comments'); // mutually exclusive with comments drawer
+      }
+    });
+  }, [pdfOpen]);
 
   const handleToggleComments = useCallback(() => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (commentsOpen) {
-      params.delete('comments');
-    } else {
-      params.set('comments', '1');
-      params.delete('pdf');
-    }
-    router.replace(declaredHref('usePathname() είναι ΗΔΗ η έγκυρη τρέχουσα σελίδα — ενημέρωση ερωτήματος, όχι νέος προορισμός.', `${pathname}?${params.toString()}`));
-  }, [router, pathname, searchParams, commentsOpen]);
+    replaceUrlSearchParams((params) => {
+      if (commentsOpen) {
+        params.delete('comments');
+      } else {
+        params.set('comments', '1');
+        params.delete('pdf');
+      }
+    });
+  }, [commentsOpen]);
 
   // Single push: tab=quotes + quote=id — one history entry (§5.D.3)
-  const handleComparisonDrillDown = useCallback(
-    (quoteId: string) => {
-      const params = new URLSearchParams(searchParams.toString());
+  const handleComparisonDrillDown = useCallback((quoteId: string) => {
+    pushUrlSearchParams((params) => {
       params.set('tab', 'quotes');
       params.set('quote', quoteId);
       // Άνοιγμα ΜΙΑΣ προσφοράς: φίλτρο λίστας που θα την έκρυβε φεύγει (η λίστα δείχνει την επιλογή).
       params.delete(PROCUREMENT_STATUS_PARAM);
-      router.push(declaredHref('usePathname() είναι ΗΔΗ η έγκυρη τρέχουσα σελίδα — ενημέρωση ερωτήματος, όχι νέος προορισμός.', `${pathname}?${params.toString()}`));
-    },
-    [router, pathname, searchParams],
-  );
+    });
+  }, []);
 
   // Self-correct stale ?quote= param (e.g. deleted quote in URL after refresh).
-  // Fires once when loading completes. Always router.replace — silent, no history.
+  // Fires once when loading completes. Always replace — silent, no history.
   const correctedRef = useRef(false);
   useEffect(() => {
     if (quotesLoading) { correctedRef.current = false; return; }
     if (correctedRef.current) return;
     correctedRef.current = true;
     const expectedId = selectedQuote?.id ?? null;
-    const currentId = quoteParam;
-    if (currentId === expectedId) return;
-    const params = new URLSearchParams(searchParams.toString());
-    if (expectedId) params.set('quote', expectedId);
-    else params.delete('quote');
-    router.replace(declaredHref('usePathname() είναι ΗΔΗ η έγκυρη τρέχουσα σελίδα — ενημέρωση ερωτήματος, όχι νέος προορισμός.', `${pathname}?${params.toString()}`));
-  }, [quotesLoading, selectedQuote, quoteParam, searchParams, pathname, router]);
+    if (quoteParam === expectedId) return;
+    replaceUrlSearchParams((params) => {
+      if (expectedId) params.set('quote', expectedId);
+      else params.delete('quote');
+    });
+  }, [quotesLoading, selectedQuote, quoteParam]);
 
   return { activeTab, selectedQuote, pdfOpen, commentsOpen, handleTabChange, handleSelectQuote, handleComparisonDrillDown, handleTogglePdf, handleToggleComments };
 }

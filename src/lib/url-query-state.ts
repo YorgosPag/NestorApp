@@ -166,10 +166,14 @@ export function getServerUrlQuerySnapshot(): string {
 export function replaceUrlQueryString(query: string): void {
   if (typeof window === 'undefined') return;
 
+  window.history.replaceState(window.history.state, '', sameDocumentUrl(query));
+}
+
+/** Η τρέχουσα διεύθυνση με άλλο query — `pathname` + `hash` ίδια. Ο ΕΝΑΣ τρόπος για replace ΚΑΙ push. */
+function sameDocumentUrl(query: string): string {
   const normalized = query.startsWith('?') ? query.slice(1) : query;
   const { pathname, hash } = window.location;
-  const url = normalized ? `${pathname}?${normalized}${hash}` : `${pathname}${hash}`;
-  window.history.replaceState(window.history.state, '', url);
+  return normalized ? `${pathname}?${normalized}${hash}` : `${pathname}${hash}`;
 }
 
 /**
@@ -231,4 +235,20 @@ export function replaceUrlSearchParams(mutate: (params: URLSearchParams) => void
   const params = currentSearchParams();
   mutate(params);
   replaceUrlQueryString(params.toString());
+}
+
+/**
+ * Όπως το {@link replaceUrlSearchParams}, αλλά **προσθέτει** καταχώριση ιστορικού — για αλλαγή που ο άνθρωπος
+ * διαβάζει ως **προορισμό** (καρτέλα μιας σελίδας-χώρου εργασίας, «άνοιξε αυτή την προσφορά»), ώστε το «Πίσω» να
+ * γυρίζει στην προηγούμενη. Καμία πλοήγηση, κανένας γύρος στον server.
+ *
+ * 🔴 ΜΕΤΡΗΜΕΝΟ (ADR-327, 2026-10-28): η σελίδα RFQ άλλαζε καρτέλα με `router.push('?tab=…')` ⇒ **γύρος RSC 3,5 s**
+ * στον dev ανά κλικ (σε απασχολημένο server: «πάγωμα» της καρτέλας). Ο App Router δεν έχει shallow routing.
+ */
+export function pushUrlSearchParams(mutate: (params: URLSearchParams) => void): void {
+  if (typeof window === 'undefined') return;
+
+  const params = currentSearchParams();
+  mutate(params);
+  window.history.pushState(window.history.state, '', sameDocumentUrl(params.toString()));
 }

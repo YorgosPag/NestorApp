@@ -21,7 +21,8 @@
  * @see ADR-332 — D21 · ADR-400 · ADR-777 §8.60.21.7
  */
 
-import { useSyncExternalStore } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   getServerUrlQuerySnapshot,
   getUrlQuerySnapshot,
@@ -42,6 +43,19 @@ export function useUrlQuery(serverQuery?: string): string {
     getUrlQuerySnapshot,
     serverQuery === undefined ? getServerUrlQuerySnapshot : () => withQuestionMark(serverQuery),
   );
+}
+
+/**
+ * Τα ζωντανά search params ως **σταθερό** `URLSearchParams` (νέο αντικείμενο μόνο όταν αλλάξει η διεύθυνση) — με το
+ * query του **αιτήματος** για server/ενυδάτωση (ADR-840 §7.7). Για σελίδες που **αποφασίζουν τι αποδίδουν** από τη
+ * διεύθυνση και τη γράφουν με το `@/lib/url-query-state` (καμία πλοήγηση, κανένας γύρος στον server).
+ *
+ * 🔑 Εξήχθη όταν το ίδιο ζεύγος `useUrlQuery(useSearchParams()?.toString())` + `new URLSearchParams(…)` έφτανε τα
+ * πέντε σημεία (ADR-327, 2026-10-28: η σελίδα RFQ έκανε `router.push` σε κάθε αλλαγή καρτέλας ⇒ 3,5 s γύρος RSC).
+ */
+export function useLiveSearchParams(): URLSearchParams {
+  const query = useUrlQuery(useSearchParams()?.toString());
+  return useMemo(() => new URLSearchParams(query), [query]);
 }
 
 /** Ίδια μορφή με το `location.search`: `?…` ή κενό — αλλιώς ο server και ο πελάτης θα διαφωνούσαν στην ενυδάτωση. */

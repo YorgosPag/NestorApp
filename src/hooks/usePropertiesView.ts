@@ -15,10 +15,9 @@
  *    server/ενυδάτωσης (αλλιώς η κάτοψη θα ζωγραφιζόταν πρώτα ως πλέγμα).
  */
 
-import { useCallback, useMemo } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useCallback } from 'react';
 
-import { useUrlQuery } from '@/hooks/useUrlQuery';
+import { useLiveSearchParams } from '@/hooks/useUrlQuery';
 import {
   PROPERTIES_SELECTED_PARAM,
   PROPERTIES_VIEW,
@@ -40,8 +39,7 @@ export interface PropertiesViewState {
 
 export function usePropertiesView(): PropertiesViewState {
   // Το query του αιτήματος για server/ενυδάτωση — αλλιώς η πρώτη ζωγραφιά θα ήταν η κενή κατάσταση.
-  const query = useUrlQuery(useSearchParams()?.toString());
-  const params = useMemo(() => new URLSearchParams(query), [query]);
+  const params = useLiveSearchParams();
 
   const setView = useCallback((view: PropertiesView, selectedId?: string | null) => {
     replaceUrlSearchParams((live) => {

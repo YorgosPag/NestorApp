@@ -20,9 +20,8 @@
  */
 
 import { useCallback, useMemo } from 'react';
-import { useSearchParams } from 'next/navigation';
 
-import { useUrlQuery } from '@/hooks/useUrlQuery';
+import { useLiveSearchParams } from '@/hooks/useUrlQuery';
 import { parsePropertyFilters, writePropertyFilters } from '@/lib/properties/property-filters-url';
 import { reconcileLocationSelection, type LocatedProperty } from '@/lib/properties/property-location';
 import { replaceUrlSearchParams } from '@/lib/url-query-state';
@@ -39,11 +38,11 @@ export interface PropertyFiltersUrlState {
  */
 export function usePropertyFiltersUrlState(catalog: readonly LocatedProperty[]): PropertyFiltersUrlState {
   // Το query του αιτήματος για server/ενυδάτωση — αλλιώς η πρώτη ζωγραφιά θα ήταν η κενή κατάσταση.
-  const query = useUrlQuery(useSearchParams()?.toString());
+  const params = useLiveSearchParams();
 
   const filters = useMemo(
-    () => reconcileLocationSelection(parsePropertyFilters(new URLSearchParams(query)), catalog),
-    [query, catalog],
+    () => reconcileLocationSelection(parsePropertyFilters(params), catalog),
+    [params, catalog],
   );
 
   const updateFilters = useCallback(

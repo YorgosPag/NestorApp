@@ -11,9 +11,8 @@
  */
 
 import { useCallback, useMemo } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { useRouter, usePathname } from '@/lib/workspace/navigation';
-import { declaredHref } from '@/lib/workspace/route-worlds';
+import { useLiveSearchParams } from '@/hooks/useUrlQuery';
+import { replaceUrlSearchParams } from '@/lib/url-query-state';
 import { parseFilterArray, serializeFilterArray } from '@/lib/url-filters/multi-value';
 import { PROCUREMENT_STATUS_PARAM } from '@/lib/navigation/procurement-urls';
 
@@ -31,10 +30,8 @@ export interface StatusDrill<S extends string> {
  *   ΕΙΝΑΙ το λεξιλόγιο, χωρίς δεύτερη χειρόγραφη λίστα. Σταθερά επιπέδου module.
  */
 export function useStatusDrillParam<S extends string>(vocabulary: Readonly<Record<S, unknown>>): StatusDrill<S> {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const raw = searchParams.get(PROCUREMENT_STATUS_PARAM);
+  // ADR-327: γραφή ΧΩΡΙΣ πλοήγηση (`url-query-state`) — ήταν `router.replace` ⇒ γύρος RSC σε κάθε κλικ φίλτρου.
+  const raw = useLiveSearchParams().get(PROCUREMENT_STATUS_PARAM);
 
   const statuses = useMemo(
     () => parseFilterArray(raw).filter((s): s is S => Object.prototype.hasOwnProperty.call(vocabulary, s)),
@@ -42,16 +39,12 @@ export function useStatusDrillParam<S extends string>(vocabulary: Readonly<Recor
   );
 
   const set = useCallback((next: readonly S[]) => {
-    const params = new URLSearchParams(searchParams.toString());
-    const value = serializeFilterArray(next);
-    if (value === undefined) params.delete(PROCUREMENT_STATUS_PARAM);
-    else params.set(PROCUREMENT_STATUS_PARAM, value);
-    const qs = params.toString();
-    router.replace(declaredHref(
-      'usePathname() είναι ΗΔΗ η έγκυρη τρέχουσα σελίδα — αλλαγή φίλτρου ερωτήματος, όχι νέος προορισμός.',
-      qs ? `${pathname}?${qs}` : pathname,
-    ));
-  }, [router, pathname, searchParams]);
+    replaceUrlSearchParams((params) => {
+      const value = serializeFilterArray(next);
+      if (value === undefined) params.delete(PROCUREMENT_STATUS_PARAM);
+      else params.set(PROCUREMENT_STATUS_PARAM, value);
+    });
+  }, []);
 
   const clear = useCallback(() => set([]), [set]);
 
