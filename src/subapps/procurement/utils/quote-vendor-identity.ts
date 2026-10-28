@@ -48,6 +48,23 @@ export function quoteVendorAddressee(name: string | null | undefined, t: TFuncti
   return nonBlank(name) ?? t('quotes.vendorAddresseeFallback');
 }
 
+/**
+ * **Ο τίτλος ειδοποίησης που ονομάζει τον προμηθευτή** — server, χωρίς `t` (ADR-327, 2026-10-28). Γνωστό όνομα ⇒ το
+ * `known` κλειδί με `vendorName`· άγνωστο ⇒ το `unknown` κλειδί (δική του διατύπωση, χωρίς `{vendorName}`). Πριν: ο
+ * καλών έβαζε `?? quoteId` (ωμό αναγνωριστικό στον τίτλο) ή κενό όνομα από πρόσκληση χωρίς όνομα ΚΑΙ email.
+ * Δύο ρητά κλειδιά, όχι συρραφή: το CHECK 3.8 βλέπει κάθε κλειδί κυριολεκτικά.
+ */
+export function vendorNotificationTitle(
+  name: string | null | undefined,
+  keys: { readonly known: string; readonly unknown: string },
+  params: Readonly<Record<string, string>> = {},
+): { titleKey: string; titleParams: Record<string, string> } {
+  const known = nonBlank(name);
+  return known
+    ? { titleKey: keys.known, titleParams: { ...params, vendorName: known } }
+    : { titleKey: keys.unknown, titleParams: { ...params } };
+}
+
 /** Το email του προμηθευτή: στιγμιότυπο πρόσκλησης (πύλη) → σάρωση. Πριν: ρωτούσε **μόνο** τη σάρωση. */
 export function quoteVendorEmail(quote: Pick<Quote, 'vendorSnapshot' | 'extractedData'>): string | null {
   return nonBlank(quote.vendorSnapshot?.email) ?? nonBlank(quote.extractedData?.vendorEmails?.value?.[0]);

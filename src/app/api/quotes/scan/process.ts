@@ -16,6 +16,8 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { applyExtractedData, updateQuote } from '@/subapps/procurement/services/quote-service';
 import { extractAndUploadVendorLogo } from '@/subapps/procurement/services/logo-extractor';
 import { dispatchProcurementNotification } from '@/server/notifications/notification-orchestrator';
+import { notificationFallbackTitle } from '@/server/notifications/notification-title';
+import { vendorNotificationTitle } from '@/subapps/procurement/utils/quote-vendor-identity';
 import { NOTIFICATION_EVENT_TYPES, NOTIFICATION_ENTITY_TYPES } from '@/config/notification-events';
 import type { IQuoteAnalyzer } from '@/subapps/procurement/types/quote-analyzer';
 import type { AuthContext } from '@/lib/auth';
@@ -66,19 +68,18 @@ export async function processScanAsync(
       lines: extracted.lineItems.length,
     });
 
-    const vendorName = extracted.vendorName?.value ?? quoteId;
+    // ADR-327: ποτέ ωμό `quoteId` ως «όνομα» (ήταν `?? quoteId`)· ο τίτλος από ΕΝΑ κλειδί, όχι δεύτερο ελληνικό κείμενο.
+    const title = vendorNotificationTitle(extracted.vendorName?.value, {
+      known: 'common-shared:quoteNotifications.quoteScanCompleted',
+      unknown: 'common-shared:quoteNotifications.quoteScanCompletedUnknownVendor',
+    });
     void dispatchProcurementNotification(
       NOTIFICATION_EVENT_TYPES.PROCUREMENT_QUOTE_SCAN_COMPLETED,
       ctx.uid,
       ctx.companyId,
-      `Σάρωση προσφοράς ολοκληρώθηκε: ${vendorName}`,
+      notificationFallbackTitle(title.titleKey, title.titleParams),
       `quote_scan_${quoteId}`,
-      {
-        entityId: quoteId,
-        entityType: NOTIFICATION_ENTITY_TYPES.QUOTE,
-        titleKey: 'common-shared:quoteNotifications.quoteScanCompleted',
-        titleParams: { vendorName },
-      },
+      { entityId: quoteId, entityType: NOTIFICATION_ENTITY_TYPES.QUOTE, ...title },
     );
   } catch (error) {
     const message = getErrorMessage(error, 'Quote AI scan failed');

@@ -25,7 +25,8 @@ import {
   withVendorLinkDoor,
   type OpenVendorInvite,
 } from '@/server/vendor-portal/vendor-link-door';
-import { vendorSnapshotFromInvite } from '@/subapps/procurement/utils/quote-vendor-identity';
+import { vendorNotificationTitle, vendorSnapshotFromInvite } from '@/subapps/procurement/utils/quote-vendor-identity';
+import { notificationFallbackTitle } from '@/server/notifications/notification-title';
 
 const logger = createModuleLogger('VENDOR_PORTAL_DECLINE_API');
 
@@ -44,18 +45,18 @@ function notifyPm(opened: OpenVendorInvite): void {
     try {
       const rfq = await getRfq(invite.companyId, invite.rfqId);
       if (!rfq) return;
+      // ADR-327: ΕΝΑ κλειδί → τίτλος· πρόσκληση χωρίς όνομα ΚΑΙ email ⇒ «ένας προμηθευτής», ποτέ κενό όνομα.
+      const title = vendorNotificationTitle(vendorSnapshotFromInvite(invite).name, {
+        known: 'common-shared:quoteNotifications.vendorDeclined',
+        unknown: 'common-shared:quoteNotifications.vendorDeclinedUnknownVendor',
+      }, { rfqTitle: rfq.title });
       await dispatchProcurementNotification(
         NOTIFICATION_EVENT_TYPES.PROCUREMENT_VENDOR_DECLINED,
         rfq.createdBy,
         invite.companyId,
-        `Ο προμηθευτής αρνήθηκε το RFQ ${rfq.title}`,
+        notificationFallbackTitle(title.titleKey, title.titleParams),
         `${invite.id}_decline_${Date.now()}`,
-        {
-          entityId: invite.rfqId,
-          entityType: NOTIFICATION_ENTITY_TYPES.RFQ,
-          titleKey: 'common-shared:quoteNotifications.vendorDeclined',
-          titleParams: { vendorName: vendorSnapshotFromInvite(invite).name, rfqTitle: rfq.title },
-        },
+        { entityId: invite.rfqId, entityType: NOTIFICATION_ENTITY_TYPES.RFQ, ...title },
       );
     } catch (err) {
       logger.warn('PM decline notification failed (non-blocking)', {

@@ -33,6 +33,7 @@ import {
 import type { EnqueueMessageParams } from '@/server/comms/orchestrator';
 import { queueNotificationEmail } from '@/server/notifications/notification-email-leg';
 import { loadUserNotificationSettings } from '@/server/notifications/user-notification-settings-store';
+import { renderNotificationTitle } from '@/server/notifications/notification-title';
 import { categorySettingEnabled } from '@/services/user-notification-settings/notification-preference-policy';
 import {
   type UserNotificationSettings,
@@ -247,6 +248,10 @@ export async function dispatchNotification(request: DispatchRequest): Promise<Di
 
   // 5. Use severity from request or default from mapping
   const severity = request.severity ?? mapping.defaultSeverity;
+  // ADR-327: με `titleKey`, ο τίτλος (εφεδρεία κάρτας + θέμα email) αποδίδεται από το ΙΔΙΟ κλειδί, στη γλώσσα του
+  // παραλήπτη — όχι το ελεύθερο κείμενο του καλούντα (ήταν σκληροκωδικοποιημένα ελληνικά).
+  const recipientTitle =
+    renderNotificationTitle(request.titleKey, request.titleParams, settings.language) ?? title;
 
   // 6. Prepare notification data
   const notificationData = {
@@ -254,7 +259,7 @@ export async function dispatchNotification(request: DispatchRequest): Promise<Di
     userId: recipientId,
     createdAt: FieldValue.serverTimestamp(),
     severity,
-    title,
+    title: recipientTitle,
     body: body ?? null,
     channel: NOTIFICATION_CHANNELS.IN_APP,
     delivery: { ...DEFAULT_DELIVERY },
@@ -310,7 +315,7 @@ export async function dispatchNotification(request: DispatchRequest): Promise<Di
     eventType,
     settings,
     isMandatory: mapping.isMandatory,
-    subject: title,
+    subject: recipientTitle,
     // 🔴 **ΤΟ ΚΕΝΟ ΜΕΝΕΙ ΚΕΝΟ** (ADR-777 §8.54). Ήταν `body ?? title`, και η μία
     // λέξη `??` έφτανε: **γέμιζε ένα κενό με αντίγραφο**, δηλαδή αποθήκευε στην
     // ουρά την **εφεδρεία** αντί για την αλήθεια «αυτό το μήνυμα δεν έχει σώμα».

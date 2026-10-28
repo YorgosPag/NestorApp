@@ -51,7 +51,8 @@ import {
 } from '@/server/vendor-portal/vendor-link-door';
 import { applyRfqLineAuthority, checkRfqLineAnswers } from '@/subapps/procurement/utils/rfq-line-binding';
 import { resolveResponseLock } from '@/subapps/procurement/utils/rfq-response-lock';
-import { vendorSnapshotFromInvite } from '@/subapps/procurement/utils/quote-vendor-identity';
+import { vendorNotificationTitle, vendorSnapshotFromInvite } from '@/subapps/procurement/utils/quote-vendor-identity';
+import { notificationFallbackTitle } from '@/server/notifications/notification-title';
 import { readFiles, readSubmission, type ParsedSubmission, type PreparedFiles } from './parsing';
 import { uploadVendorFiles } from './upload';
 
@@ -157,25 +158,22 @@ function notifyPm(opened: OpenVendorInvite, rfq: RFQ, quoteId: string, isFirstSu
   const { invite } = opened;
   after(async () => {
     try {
-      const titleParams: Record<string, string> = isFirstSubmission
-        ? { rfqTitle: rfq.title }
-        : { vendorName: vendorSnapshotFromInvite(invite).name, rfqTitle: rfq.title };
+      // ADR-327: ΕΝΑ κλειδί → τίτλος (εφεδρεία + email)· πρόσκληση χωρίς όνομα ΚΑΙ email ⇒ «ένας προμηθευτής», ποτέ κενό.
+      const title = isFirstSubmission
+        ? { titleKey: 'common-shared:quoteNotifications.quoteSubmittedViaPortal', titleParams: { rfqTitle: rfq.title } }
+        : vendorNotificationTitle(vendorSnapshotFromInvite(invite).name, {
+            known: 'common-shared:quoteNotifications.vendorEdited',
+            unknown: 'common-shared:quoteNotifications.vendorEditedUnknownVendor',
+          }, { rfqTitle: rfq.title });
       await dispatchProcurementNotification(
         isFirstSubmission
           ? NOTIFICATION_EVENT_TYPES.PROCUREMENT_QUOTE_RECEIVED
           : NOTIFICATION_EVENT_TYPES.PROCUREMENT_QUOTE_EDITED,
         rfq.createdBy,
         invite.companyId,
-        isFirstSubmission ? `Νέα προσφορά για ${rfq.title}` : 'Ο προμηθευτής ενημέρωσε την προσφορά',
+        notificationFallbackTitle(title.titleKey, title.titleParams),
         `${invite.id}_${isFirstSubmission ? 'submit' : 'edit'}_${Date.now()}`,
-        {
-          entityId: quoteId,
-          entityType: NOTIFICATION_ENTITY_TYPES.QUOTE,
-          titleKey: isFirstSubmission
-            ? 'common-shared:quoteNotifications.quoteSubmittedViaPortal'
-            : 'common-shared:quoteNotifications.vendorEdited',
-          titleParams,
-        },
+        { entityId: quoteId, entityType: NOTIFICATION_ENTITY_TYPES.QUOTE, ...title },
       );
     } catch (err) {
       logger.warn('PM notification failed (non-blocking)', {
