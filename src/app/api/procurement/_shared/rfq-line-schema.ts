@@ -18,6 +18,7 @@
 
 import { z } from 'zod';
 import { TRADE_CODES } from '@/subapps/procurement/types/trade';
+import { toStoredUom } from '@/lib/uom/uom-registry';
 
 export const RfqLineItemSchema = z.object({
   source: z.enum(['boq', 'ad_hoc']),
@@ -26,7 +27,9 @@ export const RfqLineItemSchema = z.object({
   trade: z.enum(TRADE_CODES),
   categoryCode: z.string().nullable().optional(),
   quantity: z.number().nullable().optional(),
-  unit: z.string().max(20).nullable().optional(),
+  /** Ο ΕΝΑΣ κανόνας εισόδου (`toStoredUom`): «m³»/«τεμ» → κανονικός κωδικός· κενό = καμία μονάδα (`null`), ποτέ προεπιλογή. */
+  unit: z.string().max(20).nullable().optional()
+    .transform((unit) => (unit === undefined ? undefined : unit?.trim() ? toStoredUom(unit) : null)),
   unitPrice: z.number().min(0).nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
   displayOrder: z.number().int().min(0).optional(),

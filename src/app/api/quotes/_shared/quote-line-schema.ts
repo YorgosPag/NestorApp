@@ -11,6 +11,7 @@
 import 'server-only';
 
 import { z } from 'zod';
+import { toStoredUom } from '@/lib/uom/uom-registry';
 
 /**
  * quantity μπορεί να είναι 0 στην επεξεργασία — η AI εξαγωγή πινάκων πολλών επιπέδων δίνει γραμμές-γονείς /
@@ -21,7 +22,8 @@ export const QuoteLineSchema = z.object({
   description: z.string().min(1).max(500),
   categoryCode: z.string().max(30).nullable().default(null),
   quantity: z.number().min(0),
-  unit: z.string().min(1).max(20),
+  /** Ο ΕΝΑΣ κανόνας εισόδου (`toStoredUom`, όπως σάρωση + πύλη): «τεμ»/«m³» γράφονται ως κανονικός κωδικός. */
+  unit: z.string().min(1).max(20).transform(toStoredUom),
   unitPrice: z.number().min(0),
   vatRate: z.union([z.literal(0), z.literal(6), z.literal(13), z.literal(24)]),
   lineTotal: z.number().min(0),

@@ -25,6 +25,8 @@ import { BoqLinePicker } from './BoqLinePicker';
 import { VendorPickerSection } from './VendorPickerSection';
 import { AtoeCategoryCodeSelect } from './AtoeCategoryCodeSelect';
 import { LineItemsSection, type LineItemColumn } from './LineItemsSection';
+import { UomSelect } from '@/components/shared/UomSelect';
+import { PROCUREMENT_UNIT_OPTIONS } from '@/config/procurement-units';
 import { POProjectSelector } from '@/components/procurement/POEntitySelectors';
 import { getAtoeCodesForTrade, getTradeCodeForAtoeCategory } from '@/subapps/procurement/data/trades';
 import type { RfqLine, RfqDraftLine, CreateRfqDTO, AwardMode, ReminderTemplate } from '@/subapps/procurement/types/rfq';
@@ -121,12 +123,15 @@ function RfqLineRow({ line, index, onUpdate, onRemove }: RfqLineRowProps) {
         />
       </td>
       <td className="py-1 pr-2 w-20">
-        <Input
-          aria-label={t('rfqs.lineUnit')}
+        {/* Μονάδα ΜΟΝΟ από το μητρώο: ελεύθερο κείμενο εδώ γέννησε «m³» δίπλα στο «m3» της BOQ (ADR-327 §8.5.4). */}
+        <UomSelect
           value={line.unit ?? ''}
-          onChange={(e) => onUpdate(index, 'unit', e.target.value || null)}
-          className="h-8 text-sm"
+          onValueChange={(unit) => onUpdate(index, 'unit', unit)}
+          units={PROCUREMENT_UNIT_OPTIONS}
+          ariaLabel={t('rfqs.lineUnit')}
           placeholder={t('rfqs.unitPlaceholder')}
+          size="sm"
+          compact
         />
       </td>
       <td className="py-1">
