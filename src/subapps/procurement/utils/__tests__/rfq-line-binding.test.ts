@@ -7,12 +7,14 @@
  * Κ4 εναλλακτική χωρίς γραμμή ⇒ `unbound_alternate` ·
  * Κ5 η γραμμή RFQ είναι αυθεντία του ΤΙ ζητήθηκε (περιγραφή + κωδικός)· η εναλλακτική κρατά τη δική της περιγραφή ·
  * Κ6 συμπέρασμα δεσίματος μόνο όταν είναι ΜΟΝΑΔΙΚΟ ·
+ * Κ8 (§8.5.4) `binding:<code>` του server → κλειδί i18n· άγνωστος κωδικός / άλλο σφάλμα ⇒ `null` (κανένα ωμό κείμενο ως κλειδί).
+ * Κ9 (§8.5.4) φόρμα από το αίτημα: μία ΡΗΤΑ δεμένη γραμμή ανά ΑΝΑΠΑΝΤΗΤΗ γραμμή RFQ· δεύτερη κλήση ⇒ `[]`.
  * Κ7 πρόταση στον έλεγχο: τα ρητά κρατιούνται και δεσμεύουν· το συμπέρασμα προτείνει μόνο ΕΛΕΥΘΕΡΗ γραμμή, μία φορά.
  */
 
 import type { QuoteLine } from '../../types/quote';
 import type { PublicRfqLine } from '../../types/rfq-line';
-import { applyRfqLineAuthority, checkRfqLineAnswers, inferRfqLineId, proposeRfqLineBindings, type RfqLineAnswers } from '../rfq-line-binding';
+import { applyRfqLineAuthority, checkRfqLineAnswers, inferRfqLineId, proposeRfqLineBindings, rfqBindingErrorKey, draftLinesForUnansweredRfqLines, type RfqLineAnswers } from '../rfq-line-binding';
 
 const rfqLine = (id: string, description: string, categoryCode: string | null = null): PublicRfqLine => ({
   id, description, trade: 'demolition', categoryCode, quantity: 1, unit: 'pcs', notes: null, displayOrder: 0,
@@ -96,5 +98,28 @@ describe('proposeRfqLineBindings', () => {
     expect(proposals.map((p) => [p.lineId, p.rfqLineId, p.origin])).toEqual([
       ['a', 'L1', 'suggested'], ['b', 'L2', 'explicit'], ['c', null, 'none'], ['d', null, 'none'], ['e', null, 'explicit'],
     ]);
+  });
+});
+
+describe('Κ8 rfqBindingErrorKey', () => {
+  it('κάθε γνωστός κωδικός → κλειδί · άγνωστος / άλλο σφάλμα / μη-Error ⇒ null', () => {
+    expect(rfqBindingErrorKey(new Error('binding:duplicate_answer'))).toBe('quotes.binding.errors.duplicate_answer');
+    expect(rfqBindingErrorKey(new Error('binding:unknown_rfq_line'))).toBe('quotes.binding.errors.unknown_rfq_line');
+    expect(rfqBindingErrorKey(new Error('binding:made_up'))).toBeNull();
+    expect(rfqBindingErrorKey(new Error('Invalid transition'))).toBeNull();
+    expect(rfqBindingErrorKey('binding:duplicate_answer')).toBeNull();
+  });
+});
+
+describe('Κ9 draftLinesForUnansweredRfqLines', () => {
+  it('μόνο οι αναπάντητες, ρητά δεμένες, με περιγραφή/κωδικό της γραμμής RFQ · ιδεμπότητο', () => {
+    const drafts = draftLinesForUnansweredRfqLines(RFQ, [line('L1')]);
+    expect(drafts).toEqual([{ rfqLineId: 'L2', description: 'Μεταφορά μπάζων', categoryCode: null, quantity: 1, unit: 'pcs' }]);
+    expect(draftLinesForUnansweredRfqLines(RFQ, [line('L1'), ...drafts])).toEqual([]);
+  });
+
+  it('γραμμή RFQ χωρίς επιμέτρηση ⇒ 1 + προεπιλεγμένη μονάδα (η νέα προσφορά απαιτεί ποσότητα > 0)', () => {
+    const bare = { ...rfqLine('L3', 'Κατ’ αποκοπή'), quantity: null, unit: null };
+    expect(draftLinesForUnansweredRfqLines([bare], [])).toMatchObject([{ quantity: 1, unit: 'pcs' }]);
   });
 });

@@ -6,7 +6,7 @@
  *
  * Τίποτα δεν γράφεται σιωπηλά: η πρόταση φαίνεται ως «πρόταση» μέχρι να την αποδεχτεί ο PM («Αποδοχή προτάσεων» ή
  * επιλογή σε γραμμή). Τότε γράφονται **όλες** οι γραμμές μαζί (δεμένη ή πρόσθετη) — η προσφορά γίνεται ρητά δεμένη και
- * ο κινητήρας leveling σταματά να μαντεύει. Η αποθήκευση είναι του γονέα («Επιβεβαίωση»).
+ * ο κινητήρας leveling σταματά να μαντεύει. Η αποθήκευση είναι του γονέα — η ετικέτα του κουμπιού του έρχεται ως `saveActionLabel`.
  *
  * @module subapps/procurement/components/QuoteRfqBindingReview
  */
@@ -29,6 +29,8 @@ interface Props {
   rfqId: string;
   lines: QuoteLine[];
   onChange: (lines: QuoteLine[]) => void;
+  /** Η ετικέτα του κουμπιού που ΓΡΑΦΕΙ το δέσιμο σε αυτή την επιφάνεια («Επιβεβαίωση» σάρωσης · «Αποθήκευση» φόρμας). */
+  saveActionLabel: string;
 }
 
 /** Γράφει ΟΛΕΣ τις γραμμές: την επιλογή του PM όπου υπάρχει, αλλιώς την πρόταση (ή πρόσθετη). */
@@ -38,7 +40,7 @@ function applyBindings(lines: QuoteLine[], proposals: readonly RfqBindingProposa
   return lines.map((line) => ({ ...line, rfqLineId: chosen.get(line.id) ?? null }));
 }
 
-export function QuoteRfqBindingReview({ rfqId, lines, onChange }: Props) {
+export function QuoteRfqBindingReview({ rfqId, lines, onChange, saveActionLabel }: Props) {
   const { t } = useTranslation('quotes');
   const { lines: rfqRecords } = useRfqLines(rfqId);
   const rfqLines = useMemo(() => rfqRecords.map(toPublicRfqLine), [rfqRecords]);
@@ -61,7 +63,7 @@ export function QuoteRfqBindingReview({ rfqId, lines, onChange }: Props) {
           </Button>
         )}
       </header>
-      <p className="text-xs text-muted-foreground">{t('quotes.binding.hint')}</p>
+      <p className="text-xs text-muted-foreground">{t('quotes.binding.hintAction', { action: saveActionLabel })}</p>
       <ul className="divide-y divide-border">
         {lines.map((line, index) => (
           <BindingRow

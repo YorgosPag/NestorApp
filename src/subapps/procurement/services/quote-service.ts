@@ -5,6 +5,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 import { generateQuoteId, generateOptimisticId } from '@/services/enterprise-id.service';
 import { getNextQuoteNumber } from './quote-counters';
+import { assertPmRfqBinding } from './quote-rfq-binding-guard';
 import { quoteChangeStamp } from './quote-change-stamp';
 import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeToDate, compareInstantsDesc } from '@/lib/date-local';
@@ -81,6 +82,12 @@ async function loadOwnedQuote(
   );
 }
 
+/** `validUntil` του DTO (ISO / κενό) → Timestamp — ΜΙΑ μετατροπή για δημιουργία και επεξεργασία. */
+function toValidUntil(value: string | null | undefined): admin.firestore.Timestamp | null {
+  const date = value ? normalizeToDate(value) : null;
+  return date ? admin.firestore.Timestamp.fromDate(date) : null;
+}
+
 // ============================================================================
 // CREATE
 // ============================================================================
@@ -89,6 +96,8 @@ export async function createQuote(
   ctx: AuthContext,
   dto: CreateQuoteDTO
 ): Promise<Quote> {
+  // ADR-327 §8.5.4 — δέσιμο γραμμών χειροκίνητης προσφοράς: οι ίδιοι κανόνες με την πύλη, ΠΡΙΝ από αριθμό/εγγραφή.
+  await assertPmRfqBinding(ctx.companyId, dto.rfqId ?? null, { lines: dto.lines ?? [], alternates: [], scopeResponses: [] });
   return safeFirestoreOperation(async (db) => {
     const id = generateQuoteId();
     const displayNumber = await getNextQuoteNumber(ctx.companyId);
@@ -109,10 +118,10 @@ export async function createQuote(
       lines,
       totals: computeQuoteTotals(lines),
       quotedTotal: null,
-      validUntil: null,
+      validUntil: toValidUntil(dto.validUntil), // ήταν `null` σταθερά: η ημερομηνία της φόρμας χανόταν σιωπηλά
       paymentTerms: dto.paymentTerms ?? null,
       deliveryTerms: dto.deliveryTerms ?? null,
-      warranty: null,
+      warranty: dto.warranty ?? null,
       notes: dto.notes ?? null,
       attachments: [],
       extractedData: null,
@@ -237,6 +246,12 @@ export async function updateQuote(
       }
     }
 
+    if (dto.lines !== undefined) {
+      // ADR-327 §8.5.4 — αποδοχή δεσίματος στον έλεγχο σάρωσης / επεξεργασία: απέναντι στις γραμμές του RFQ της προσφοράς.
+      await assertPmRfqBinding(ctx.companyId, current.rfqId, {
+        lines: dto.lines, alternates: current.alternates ?? [], scopeResponses: current.scopeResponses ?? [],
+      });
+    }
     const newLines = dto.lines ?? current.lines;
     const newQuotedTotal = dto.quotedTotal !== undefined ? dto.quotedTotal : (current.quotedTotal ?? null);
     const newAudit = [...current.auditTrail];
@@ -268,7 +283,7 @@ export async function updateQuote(
       warranty: dto.warranty !== undefined ? dto.warranty : current.warranty,
       notes: dto.notes !== undefined ? dto.notes : current.notes,
       validUntil: dto.validUntil !== undefined
-        ? (dto.validUntil ? admin.firestore.Timestamp.fromDate(normalizeToDate(dto.validUntil)!) : null)
+        ? toValidUntil(dto.validUntil)
         : current.validUntil,
       vatIncluded: dto.vatIncluded !== undefined ? dto.vatIncluded : current.vatIncluded,
       laborIncluded: dto.laborIncluded !== undefined ? dto.laborIncluded : current.laborIncluded,

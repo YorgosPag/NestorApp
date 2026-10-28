@@ -33,6 +33,7 @@ import type {
 } from '@/subapps/procurement/types/quote';
 import type { Contact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import type { VendorIdentityInput } from '@/subapps/procurement/hooks/useBindQuoteVendor';
 import { ConfidenceBadge, FieldRow, EditableFieldRow } from './extracted-data-review-helpers';
 import { QuoteRfqBindingReview } from './QuoteRfqBindingReview';
 
@@ -40,24 +41,27 @@ import { QuoteRfqBindingReview } from './QuoteRfqBindingReview';
 // MAIN PANEL
 // ============================================================================
 
+/** «Ο προμηθευτής του PDF δεν είναι αυτός» — η ΜΙΑ υπογραφή, για το panel και όποιον το τροφοδοτεί. */
+export type SwitchVendorHandler = (
+  name: string | null,
+  vat: string | null,
+  phone: string | null,
+  emails: string[],
+  vendorAddress: string | null,
+  vendorCity: string | null,
+  vendorPostalCode: string | null,
+  vendorCountry: string | null,
+  bankAccounts: NonNullable<VendorIdentityInput['bankAccounts']>,
+  logoUrl: string | null,
+) => Promise<void>;
+
 export interface ExtractedDataReviewPanelProps {
   quote: Quote;
   supplierContact?: Contact | null;
   onConfirm: (lines: QuoteLine[]) => Promise<void> | void;
   onReject?: () => Promise<void> | void;
   onGoBack?: () => void;
-  onSwitchVendor?: (
-    name: string | null,
-    vat: string | null,
-    phone: string | null,
-    emails: string[],
-    vendorAddress: string | null,
-    vendorCity: string | null,
-    vendorPostalCode: string | null,
-    vendorCountry: string | null,
-    bankAccounts: Array<{ bankName: string; bic: string | null; iban: string; currency: string | null; accountHolder: string | null }>,
-    logoUrl: string | null,
-  ) => Promise<void>;
+  onSwitchVendor?: SwitchVendorHandler;
   isSaving?: boolean;
   isSwitchingVendor?: boolean;
 }
@@ -373,7 +377,12 @@ export function ExtractedDataReviewPanel({
             onValidationChange={handleValidationChange}
           />
           {quote.rfqId && !quote.rfqId.startsWith('[') && (
-            <QuoteRfqBindingReview rfqId={quote.rfqId} lines={lines} onChange={handleLinesChange} />
+            <QuoteRfqBindingReview
+              rfqId={quote.rfqId}
+              lines={lines}
+              onChange={handleLinesChange}
+              saveActionLabel={t('quotes.scan.confirm')}
+            />
           )}
           <div className="mt-2 flex justify-end gap-4 text-sm">
             <span className="text-muted-foreground">{t('quotes.subtotal')}: {totals.subtotal.toFixed(2)}</span>

@@ -16,6 +16,7 @@ import { normalizeGreekText } from '@/utils/greek-text';
 import type { QuoteLine, RfqScopeResponse } from '../types/quote';
 import type { PublicRfqLine } from '../types/rfq-line';
 import type { RfqResponseLock } from '../types/rfq';
+import { DEFAULT_UOM } from '@/lib/uom/uom-registry';
 import { quoteLineTotal } from './quote-line-total';
 import { lockedFieldsOf, UNLOCKED_RESPONSE } from './rfq-response-lock';
 
@@ -36,6 +37,24 @@ export type RfqBindingErrorCode =
 export interface RfqBindingError {
   code: RfqBindingErrorCode;
   rfqLineId: string | null;
+}
+
+const RFQ_BINDING_ERROR_CODES: readonly RfqBindingErrorCode[] = [
+  'unknown_rfq_line', 'duplicate_answer', 'unanswered_rfq_line', 'unbound_alternate',
+];
+
+/** Το κλειδί i18n (`quotes` namespace) για κάθε κωδικό — ο server στέλνει `binding:<code>`, ποτέ κείμενο. */
+export type RfqBindingErrorKey = `quotes.binding.errors.${RfqBindingErrorCode}`;
+
+/**
+ * Σφάλμα αποθήκευσης → κλειδί i18n, όταν είναι απόρριψη δεσίματος (`binding:<code>`) — αλλιώς `null` (ο καλών δείχνει
+ * το δικό του μήνυμα). Ένα σημείο για κάθε επιφάνεια του PM που γράφει `rfqLineId`: ο ωμός κωδικός δεν φτάνει στον άνθρωπο.
+ */
+export function rfqBindingErrorKey(error: unknown): RfqBindingErrorKey | null {
+  const message = error instanceof Error ? error.message : '';
+  const code = message.startsWith('binding:') ? message.slice('binding:'.length) : '';
+  const known = RFQ_BINDING_ERROR_CODES.find((c) => c === code);
+  return known ? `quotes.binding.errors.${known}` : null;
 }
 
 /** Οι γραμμές RFQ που η προσφορά απαντά **με τιμή ή χωρίς** — μία φορά η καθεμία. */
@@ -184,4 +203,32 @@ export function proposeRfqLineBindings(
     taken.add(inferred);
     return { lineId: line.id, rfqLineId: inferred, origin: 'suggested' };
   });
+}
+
+// ============================================================================
+// DRAFT — χειροκίνητη προσφορά μέσα σε RFQ: η φόρμα ξεκινά από το αίτημα
+// ============================================================================
+
+/** Τα πεδία που η γραμμή RFQ δίνει στη γραμμή προσφοράς· τιμή/ΦΠΑ/id τα βάζει ο καλών. */
+export type RfqDraftLine = Pick<QuoteLine, 'rfqLineId' | 'description' | 'categoryCode' | 'quantity' | 'unit'>;
+
+/**
+ * §8.5.4 — **η φόρμα από το αίτημα** (Procore bid form · Ariba line items): μία γραμμή, **ρητά** δεμένη, για κάθε γραμμή
+ * RFQ που η προσφορά δεν απαντά ακόμη. Ιδεμπότητο: δεύτερη κλήση με το αποτέλεσμα της πρώτης ⇒ `[]`. Το δέσιμο είναι
+ * **δεδομένο**, όχι συμπέρασμα — κανένας κωδικός ΑΤΟΕ που μάντεψε η φόρμα δεν γίνεται «τεκμήριο» για το `inferRfqLineId`.
+ */
+export function draftLinesForUnansweredRfqLines(
+  rfqLines: readonly PublicRfqLine[],
+  lines: readonly Pick<QuoteLine, 'rfqLineId'>[],
+): RfqDraftLine[] {
+  const answered = new Set(lines.flatMap((l) => (l.rfqLineId ? [l.rfqLineId] : [])));
+  return rfqLines
+    .filter((r) => !answered.has(r.id))
+    .map((r) => ({
+      rfqLineId: r.id,
+      description: r.description,
+      categoryCode: r.categoryCode,
+      quantity: r.quantity ?? 1, // γραμμή χωρίς επιμέτρηση = 1 κατ' αποκοπή (η νέα προσφορά απαιτεί ποσότητα > 0)
+      unit: r.unit ?? DEFAULT_UOM,
+    }));
 }

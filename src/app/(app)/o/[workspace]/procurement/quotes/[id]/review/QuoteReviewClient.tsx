@@ -10,10 +10,13 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useQuote } from '@/subapps/procurement/hooks/useQuote';
 import { useContactById } from '@/hooks/useContactById';
 import { useBindQuoteVendor } from '@/subapps/procurement/hooks/useBindQuoteVendor';
-import { ExtractedDataReviewPanel } from '@/subapps/procurement/components/ExtractedDataReviewPanel';
+import { ExtractedDataReviewPanel, type SwitchVendorHandler } from '@/subapps/procurement/components/ExtractedDataReviewPanel';
 import { QuoteOriginalDocumentPanel } from '@/subapps/procurement/components/QuoteOriginalDocumentPanel';
 import { useAuth } from '@/auth/hooks/useAuth';
 import type { QuoteLine } from '@/subapps/procurement/types/quote';
+import { rfqBindingErrorKey } from '@/subapps/procurement/utils/rfq-line-binding';
+import { fetchJson, jsonRequest } from '@/lib/api/fetch-json';
+import { getErrorMessage } from '@/lib/error-utils';
 
 interface QuoteReviewClientProps {
   id: string;
@@ -55,37 +58,22 @@ export function QuoteReviewClient({ id }: QuoteReviewClientProps) {
       if (quote && quote.status !== 'under_review') {
         body.status = 'under_review';
       }
-      const res = await fetch(`/api/quotes/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || `Update failed: ${res.status}`);
-      }
+      await fetchJson(`/api/quotes/${id}`, jsonRequest('PATCH', body));
       toast.success(t('quotes.saveSuccess'), {
         description: quote?.displayNumber ? `${t('quotes.number')}: ${quote.displayNumber}` : undefined,
       });
       router.refresh();
       handleBack();
     } catch (e) {
-      setSaveError(e instanceof Error ? e.message : t('quotes.errors.updateFailed'));
+      // ADR-327 §8.5.4 — απόρριψη δεσίματος από τον server: μήνυμα για άνθρωπο, όχι `binding:<code>`.
+      const bindingKey = rfqBindingErrorKey(e);
+      setSaveError(bindingKey ? t(bindingKey) : getErrorMessage(e, t('quotes.errors.updateFailed')));
       setSaving(false);
     }
   };
 
-  const handleSwitchVendor = async (
-    name: string | null,
-    vat: string | null,
-    phone: string | null,
-    emails: string[],
-    vendorAddress: string | null,
-    vendorCity: string | null,
-    vendorPostalCode: string | null,
-    vendorCountry: string | null,
-    bankAccounts: Array<{ bankName: string; bic: string | null; iban: string; currency: string | null; accountHolder: string | null }> = [],
-    logoUrl: string | null = null,
+  const handleSwitchVendor: SwitchVendorHandler = async (
+    name, vat, phone, emails, vendorAddress, vendorCity, vendorPostalCode, vendorCountry, bankAccounts = [], logoUrl = null,
   ) => {
     setSaveError(null);
     try {
