@@ -35,6 +35,8 @@ import { UNITS, OTHER_UNIT } from '@/subapps/procurement/utils/units';
 import type { RfqLine, CreateRfqLineDTO } from '@/subapps/procurement/types/rfq-line';
 import type { TradeCode } from '@/subapps/procurement/types/trade';
 import type { SetupLockState } from '@/subapps/procurement/utils/rfq-lock-state';
+import type { RFQ } from '@/subapps/procurement/types/rfq';
+import { RfqResponseLockControl } from './RfqResponseLockControl';
 
 // ============================================================================
 // TYPES
@@ -47,6 +49,9 @@ interface RfqLinesPanelProps {
   onAdd: (dto: CreateRfqLineDTO) => Promise<RfqLine>;
   onDelete: (lineId: string) => Promise<void>;
   lockState?: SetupLockState;
+  /** ADR-327 §8.5 Β — το RFQ για τη ρύθμιση κλειδώματος απάντησης· ο γονέας κρατά το ενημερωμένο (`onRfqSaved`). */
+  rfq?: RFQ | null;
+  onRfqSaved?: (rfq: RFQ) => void;
 }
 
 interface NewLineState {
@@ -221,7 +226,7 @@ function NewLineForm({ onAdd, onClose, t }: { onAdd: RfqLinesPanelProps['onAdd']
 // COMPONENT
 // ============================================================================
 
-export function RfqLinesPanel({ lines, loading, onAdd, onDelete, lockState = 'unlocked' }: RfqLinesPanelProps) {
+export function RfqLinesPanel({ lines, loading, onAdd, onDelete, lockState = 'unlocked', rfq, onRfqSaved }: RfqLinesPanelProps) {
   const locked = lockState !== 'unlocked';
   const { t } = useTranslation('quotes');
   const [showForm, setShowForm] = useState(false);
@@ -237,6 +242,7 @@ export function RfqLinesPanel({ lines, loading, onAdd, onDelete, lockState = 'un
 
   return (
     <section className="space-y-3">
+      {rfq && onRfqSaved && <RfqResponseLockControl rfq={rfq} disabled={locked} onSaved={onRfqSaved} />}
       {lines.length === 0 && !showForm && <p className="text-sm text-muted-foreground">{t('rfqs.linesEmpty')}</p>}
       {lines.length > 0 && <RfqLinesTable lines={lines} locked={locked} onDelete={onDelete} t={t} />}
       {showForm && <NewLineForm onAdd={onAdd} onClose={() => setShowForm(false)} t={t} />}

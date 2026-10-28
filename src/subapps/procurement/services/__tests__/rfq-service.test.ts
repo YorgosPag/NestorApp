@@ -322,6 +322,37 @@ describe('updateRfq — Q31 status propagation', () => {
   });
 });
 
+describe('responseLock — ADR-327 §8.5 Β', () => {
+  it('γεννιέται κλειδωμένο από επιμέτρηση, ελεύθερο από ad-hoc · ρητή τιμή του DTO κερδίζει', async () => {
+    expect((await createRfq(ctx, { projectId: 'p', title: 'B', boqItemIds: ['boq1'] })).responseLock)
+      .toEqual({ quantity: true, unit: true });
+    expect((await createRfq(ctx, { projectId: 'p', title: 'E' })).responseLock).toEqual({ quantity: false, unit: false });
+    expect((await createRfq(ctx, { projectId: 'p', title: 'X', boqItemIds: ['b'], responseLock: { quantity: false, unit: true } })).responseLock)
+      .toEqual({ quantity: false, unit: true });
+  });
+
+  it('αλλαγή ⇒ γραμμή ιστορικού· ίδια τιμή ⇒ καμία (ιδεμποτικό)', async () => {
+    mockDocRef.get.mockResolvedValueOnce(makeRfqSnap({ status: 'active' }));
+    const changed = await updateRfq(ctx, 'rfq_test123', { responseLock: { quantity: true, unit: false } });
+    expect(changed.responseLock).toEqual({ quantity: true, unit: false });
+    expect(changed.auditTrail.at(-1)).toMatchObject({
+      action: 'response_lock_change', detail: 'quantity:off,unit:off → quantity:on,unit:off',
+    });
+
+    mockDocRef.get.mockResolvedValueOnce(makeRfqSnap({ status: 'active', responseLock: { quantity: true, unit: false } }));
+    const same = await updateRfq(ctx, 'rfq_test123', { responseLock: { quantity: true, unit: false } });
+    expect(same.auditTrail.some((e) => e.action === 'response_lock_change')).toBe(false);
+  });
+
+  it('μετά την ανάθεση οι όροι δεν αλλάζουν', async () => {
+    mockDocRef.get.mockResolvedValueOnce(makeRfqSnap({ status: 'active', winnerQuoteId: 'qt_1' }));
+    // (το mock του `safeFirestoreOperation` καταπίνει το σφάλμα — ο πραγματικός το ξαναρίχνει· εδώ: καμία εγγραφή)
+    mockDocRef.update.mockClear();
+    await updateRfq(ctx, 'rfq_test123', { responseLock: { quantity: true, unit: true } });
+    expect(mockDocRef.update).not.toHaveBeenCalled();
+  });
+});
+
 describe('createRfqFromBoqItems — ADR-327 P5-BOQ keeps the BOQ link (ADR-330 §5.1 S3.2)', () => {
   it('every pre-filled line carries the boqItemId it came from — else the builder sends it ad-hoc', async () => {
     const boqDoc = (id: string) => ({

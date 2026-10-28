@@ -127,6 +127,11 @@ export interface RFQ {
   respondedCount?: number;
   /** Migration breadcrumb for line-storage source (Q29 sub-collection). */
   linesStorage?: RfqLineSource | 'inline_legacy' | null;
+  /**
+   * ADR-327 §8.5 Β — what the vendor may NOT change on a base answer (Procore «Unit & Quantity Lock»).
+   * Absent/`null` (pre-§8.5 documents) = unlocked. Read ONLY through `resolveResponseLock`.
+   */
+  responseLock?: RfqResponseLock | null;
 
   // --- ADR-335 lifecycle (cancellation metadata) ---
   /** Reason category when status === 'cancelled'. */
@@ -139,6 +144,19 @@ export interface RFQ {
   cancelledBy?: string | null;
   /** Whether vendors with active invites were notified at cancel time. */
   cancellationNotifiedVendors?: boolean | null;
+}
+
+// ============================================================================
+// RESPONSE LOCK — ADR-327 §8.5 Β
+// ============================================================================
+
+/**
+ * Κλείδωμα της **βασικής** απάντησης σε γραμμή RFQ: ο προμηθευτής τιμολογεί την ποσότητα/μονάδα της
+ * γραμμής, δεν τις αλλάζει. Οι εναλλακτικές μένουν ελεύθερες (είναι άλλο προϊόν). Κανόνες: `utils/rfq-response-lock.ts`.
+ */
+export interface RfqResponseLock {
+  quantity: boolean;
+  unit: boolean;
 }
 
 // ============================================================================
@@ -162,6 +180,8 @@ export interface CreateRfqDTO {
   reminderTemplate?: ReminderTemplate;
   comparisonTemplateId?: string | null;
   invitedVendorIds?: string[];
+  /** ADR-327 §8.5 Β — absent on create ⇒ `defaultResponseLock(linesStorage)`. */
+  responseLock?: RfqResponseLock;
   /** Optional parent sourcing event for multi-trade packages (Q31). */
   sourcingEventId?: string | null;
   /** BOQ item IDs for sub-collection snapshot lines (Q29 BOQ-first path). */
@@ -182,6 +202,8 @@ export interface UpdateRfqDTO {
   reminderTemplate?: ReminderTemplate;
   status?: RfqStatus;
   winnerQuoteId?: string | null;
+  /** ADR-327 §8.5 Β — absent on create ⇒ `defaultResponseLock(linesStorage)`. */
+  responseLock?: RfqResponseLock;
 }
 
 export interface RfqFilters {

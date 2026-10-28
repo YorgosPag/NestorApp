@@ -35,6 +35,12 @@ const RfqInlineLinesSchema = z.array(RfqInlineLineSchema).max(RFQ_INLINE_LINES_M
 /** Q29 escape hatch — sub-collection lines typed by hand; a BOQ line travels as `boqItemIds`, never here. */
 const AdHocLineSchema = RfqLineItemSchema.omit({ boqItemId: true }).extend({ source: z.literal('ad_hoc') });
 
+/** ADR-327 §8.5 Β — Procore «Unit & Quantity Lock». Absent on create ⇒ `defaultResponseLock(linesStorage)`. */
+const RfqResponseLockSchema = z.object({
+  quantity: z.boolean(),
+  unit: z.boolean(),
+}).strict();
+
 export const CreateRfqSchema = z.object({
   projectId: z.string().min(1),
   buildingId: z.string().nullable().optional(),
@@ -49,6 +55,7 @@ export const CreateRfqSchema = z.object({
   adHocLines: z.array(AdHocLineSchema).min(1).max(RFQ_INLINE_LINES_MAX).optional(),
   invitedVendorIds: z.array(z.string().min(1)).max(RFQ_INVITED_VENDORS_MAX).optional(),
   sourcingEventId: z.string().min(1).nullable().optional(),
+  responseLock: RfqResponseLockSchema.optional(),
 });
 
 export const UpdateRfqSchema = z.object({
@@ -60,4 +67,5 @@ export const UpdateRfqSchema = z.object({
   awardMode: z.enum(['whole_package', 'cherry_pick']).optional(),
   reminderTemplate: z.enum(['aggressive', 'standard', 'soft', 'off']).optional(),
   winnerQuoteId: z.string().nullable().optional(),
+  responseLock: RfqResponseLockSchema.optional(),
 });

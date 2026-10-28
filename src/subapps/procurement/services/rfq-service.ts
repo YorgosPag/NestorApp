@@ -9,6 +9,13 @@ import admin from 'firebase-admin';
 import type { RFQ, RfqStatus, CreateRfqDTO, UpdateRfqDTO, RfqFilters, RfqDraftLine, RfqFromBoqDraft } from '../types/rfq';
 import { RFQ_STATUS_TRANSITIONS, RFQ_FROM_BOQ_MAX_ITEMS } from '../types/rfq';
 import { toDeadlineTimestamp, patchDeadlineTimestamp } from './procurement-timestamps';
+import {
+  defaultResponseLock,
+  describeResponseLock,
+  resolveResponseLock,
+  sameResponseLock,
+} from '../utils/rfq-response-lock';
+import { deriveSetupLockState } from '../utils/rfq-lock-state';
 import type { AuthContext } from '@/lib/auth';
 import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { readOwnedProcurementDoc } from './procurement-owned-doc';
@@ -154,6 +161,8 @@ export async function createRfq(
       invitedVendorCount: invitedVendorIds.length,
       respondedCount: 0,
       linesStorage,
+      // ADR-327 §8.5 Β — γραμμένο ΤΗ ΣΤΙΓΜΗ της δημιουργίας (επιμέτρηση ⇒ κλειδωμένο), ποτέ συμπέρασμα αργότερα.
+      responseLock: dto.responseLock ?? defaultResponseLock(linesStorage),
     };
 
     const needsBatch = invitedVendorIds.length > 0 || !!dto.sourcingEventId;
@@ -289,6 +298,23 @@ export async function getRfq(
 // UPDATE
 // ============================================================================
 
+/**
+ * ADR-327 §8.5 Β — αλλαγή κλειδώματος απάντησης: μόνο όταν **αλλάζει** (ιδεμποτικό), με γραμμή ιστορικού
+ * `response_lock_change` (`quantity:off,unit:off → quantity:on,unit:on`).
+ */
+function responseLockChange(current: RFQ, dto: UpdateRfqDTO) {
+  if (!dto.responseLock) return null;
+  const before = resolveResponseLock(current);
+  const next = { quantity: dto.responseLock.quantity, unit: dto.responseLock.unit };
+  if (sameResponseLock(before, next)) return null;
+  // Ίδιο σύνορο με το UI (`deriveSetupLockState`): μετά την ανάθεση ή σε κλειστό κύκλο ζωής, οι όροι δεν αλλάζουν.
+  if (deriveSetupLockState(current, []) !== 'unlocked') throw new Error('RFQ setup is locked: response lock cannot change');
+  return {
+    next,
+    audit: { action: 'response_lock_change', detail: `${describeResponseLock(before)} → ${describeResponseLock(next)}` },
+  };
+}
+
 export async function updateRfq(
   ctx: AuthContext,
   rfqId: string,
@@ -313,6 +339,8 @@ export async function updateRfq(
         detail: `${current.status} → ${dto.status}`,
       });
     }
+    const lockChange = responseLockChange(current, dto);
+    if (lockChange) newAudit.push({ timestamp: admin.firestore.Timestamp.now(), userId: ctx.uid, ...lockChange.audit });
 
     const updates: Partial<RFQ> = {
       title: dto.title ?? current.title,
@@ -323,6 +351,7 @@ export async function updateRfq(
       reminderTemplate: dto.reminderTemplate ?? current.reminderTemplate,
       status: (dto.status ?? current.status) as RfqStatus,
       winnerQuoteId: dto.winnerQuoteId !== undefined ? dto.winnerQuoteId : current.winnerQuoteId,
+      ...(lockChange ? { responseLock: lockChange.next } : {}),
       auditTrail: newAudit,
       updatedAt: admin.firestore.Timestamp.now(),
     };

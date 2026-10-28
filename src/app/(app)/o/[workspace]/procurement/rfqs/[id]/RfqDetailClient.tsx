@@ -461,6 +461,8 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
               onAdd={addLine}
               onDelete={deleteLine}
               lockState={lockState}
+              rfq={rfq}
+              onRfqSaved={setRfq}
             />
           </section>
           <VendorInviteSection rfqId={id} rfq={rfq} lockState={lockState} onViewInvites={() => handleTabChange('setup')}
