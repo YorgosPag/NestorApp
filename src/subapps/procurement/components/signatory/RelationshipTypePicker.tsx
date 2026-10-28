@@ -14,7 +14,7 @@
  * 1:1 to the server-side `commit-signatory` request body.
  */
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,52 +27,42 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { RELATIONSHIP_METADATA } from '@/types/contacts/relationships/core/relationship-metadata';
+import { getRelationshipTypeOptions } from '@/components/contacts/relationships/config/relationship-form-presets';
+import type { ContactType } from '@/types/contacts/contracts';
 import type { RelationshipType } from '@/types/contacts/relationships/core/relationship-types';
 import type { RelationshipTypeChoice } from './types';
 
 const CUSTOM_SENTINEL = '__custom__';
 
-const STATIC_TYPE_KEYS = Object.keys(RELATIONSHIP_METADATA) as RelationshipType[];
-
 interface RelationshipTypePickerProps {
   value: RelationshipTypeChoice | null;
   onChange: (next: RelationshipTypeChoice | null) => void;
   disabled?: boolean;
-  /** i18n key prefix for static type labels (e.g. 'relationships.types'). */
-  staticLabelPrefix?: string;
+  /**
+   * Τύπος επαφής του ΠΡΟΜΗΘΕΥΤΗ — η πηγή της σχέσης (`commit-signatory-service`: προμηθευτής → υπογράφων).
+   * Ο υπογράφων είναι πάντα φυσικό πρόσωπο. Προεπιλογή `company`: η σάρωση προσφοράς δένει εταιρεία.
+   */
+  vendorContactType?: ContactType;
 }
 
 /**
- * Static keys are stored in code as snake_case (e.g. 'board_member') but the
- * el locale uses camelCase keys for some entries (e.g. 'boardMember'). Map
- * once here so the labels render correctly without locale rewrites.
+ * Οι επιλογές τύπου έρχονται από το SSoT των σχέσεων επαφής (`getRelationshipTypeOptions`: πίνακας ADR-372 +
+ * `VISUAL_REGISTRY`) — ΟΧΙ από δικό μας κατάλογο. Ο παλιός τοπικός χάρτης `STATIC_KEY_TO_I18N` πρόσφερε ΟΛΟ το
+ * `RELATIONSHIP_METADATA`, μαζί με τους τύπους ακινήτου (ADR-244) που δεν έχουν ετικέτα σχέσης ⇒ ωμά κλειδιά.
  */
-const STATIC_KEY_TO_I18N: Record<RelationshipType, string> = {
-  employee: 'employee', manager: 'manager', director: 'director', executive: 'executive',
-  intern: 'intern', contractor: 'contractor', consultant: 'consultant',
-  shareholder: 'shareholder', board_member: 'boardMember', chairman: 'chairman',
-  ceo: 'ceo', representative: 'representative', partner: 'partner',
-  vendor: 'vendor', client: 'client',
-  civil_servant: 'civilServant', elected_official: 'electedOfficial',
-  appointed_official: 'appointedOfficial', department_head: 'departmentHead',
-  ministry_official: 'ministryOfficial', mayor: 'mayor', deputy_mayor: 'deputyMayor',
-  regional_governor: 'regionalGovernor', advisor: 'advisor', mentor: 'mentor',
-  protege: 'protege', colleague: 'colleague', supplier: 'supplier',
-  customer: 'customer', competitor: 'competitor', business_contact: 'businessContact',
-  friend: 'friend', family: 'family', other: 'other',
-  property_buyer: 'propertyBuyer', property_co_buyer: 'propertyCoBuyer',
-  property_landowner: 'propertyLandowner',
-};
-
 export function RelationshipTypePicker({
   value,
   onChange,
   disabled = false,
-  staticLabelPrefix = 'relationships.types',
+  vendorContactType = 'company',
 }: RelationshipTypePickerProps) {
   const { t } = useTranslation('contacts-relationships');
   const { t: tQuotes } = useTranslation('quotes');
+  const staticValue = value?.kind === 'static' ? value.type : undefined;
+  const typeOptions = useMemo(
+    () => getRelationshipTypeOptions(vendorContactType, t, staticValue, 'individual'),
+    [vendorContactType, t, staticValue],
+  );
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [customLabel, setCustomLabel] = useState('');
   const [customReverse, setCustomReverse] = useState('');
@@ -118,9 +108,9 @@ export function RelationshipTypePicker({
           <SelectValue placeholder={tQuotes('quotes.signatory.relationshipTypePlaceholder')} />
         </SelectTrigger>
         <SelectContent>
-          {STATIC_TYPE_KEYS.map((typeKey) => (
-            <SelectItem key={typeKey} value={typeKey}>
-              {t(`${staticLabelPrefix}.${STATIC_KEY_TO_I18N[typeKey]}`)}
+          {typeOptions.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
             </SelectItem>
           ))}
           <SelectItem value={CUSTOM_SENTINEL}>

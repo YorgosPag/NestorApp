@@ -161,7 +161,10 @@ export const getAvailableRelationshipTypes = (
   _colors?: ReturnType<typeof useSemanticColors>
 ): string[] => {
   if (targetType) {
-    return getRelationshipTypesForCrossing(sourceType, targetType);
+    // Ο πίνακας ADR-372 ξέρει και τους τύπους ακινήτου (ADR-244, `PROPERTY_CROSSINGS`), που ΔΕΝ
+    // προσφέρονται εδώ — ίδιο φίλτρο με τον κλάδο μόνο-πηγής. Χωρίς αυτό: `property_buyer` ωμό στο dropdown
+    // εταιρεία → φυσικό πρόσωπο (καμία ετικέτα στο `VISUAL_REGISTRY`, μετρημένο 2026-10-28, ADR-327).
+    return getRelationshipTypesForCrossing(sourceType, targetType).filter(type => type in VISUAL_REGISTRY);
   }
   // Backward-compat: filter by source only (reads SSoT `allowedFor`).
   return Object.keys(VISUAL_REGISTRY).filter(type => {
