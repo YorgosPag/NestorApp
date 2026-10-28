@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { BarChart2, Trophy, Award, AlertTriangle, ChevronRight, Truck, HardHat, ShieldCheck } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency } from '@/lib/intl-formatting';
+import { cn } from '@/lib/utils';
 import { RecommendationCard } from './RecommendationCard';
 import { BidLevelingTable } from './BidLevelingTable';
 import { COMPARISON_TEMPLATES } from '@/subapps/procurement/types/comparison';
@@ -28,7 +29,12 @@ import type {
 interface ComparisonPanelProps {
   comparison: QuoteComparisonResult;
   cherryPick: CherryPickResult | null;
-  loading: boolean;
+  /**
+   * Ανανέωση σε πτήση ΕΝΩ υπάρχει ήδη `comparison` — stale-while-revalidate: το περιεχόμενο ΜΕΝΕΙ
+   * (`aria-busy`), ποτέ δεν αντικαθίσταται από «Φόρτωση…». Η ΠΡΩΤΗ φόρτωση (χωρίς `comparison`) είναι
+   * του καλούντα: {@link ComparisonPanelLoading}.
+   */
+  refreshing: boolean;
   rfqAwarded: boolean;
   winnerQuoteId?: string | null;
   awardMode: 'whole_package' | 'cherry_pick';
@@ -39,7 +45,7 @@ interface ComparisonPanelProps {
 export function ComparisonPanel({
   comparison,
   cherryPick,
-  loading,
+  refreshing,
   rfqAwarded,
   winnerQuoteId,
   awardMode,
@@ -57,10 +63,6 @@ export function ComparisonPanel({
     onAwardIntent(entry);
   };
 
-  if (loading) {
-    return <PanelShell title={t('comparison.title')}>{t('quotes.loading')}</PanelShell>;
-  }
-
   if (comparison.quoteCount === 0) {
     return (
       <PanelShell title={t('comparison.title')}>
@@ -70,7 +72,7 @@ export function ComparisonPanel({
   }
 
   return (
-    <div className="space-y-4">
+    <div className={cn('space-y-4 transition-opacity', refreshing && 'opacity-70')} aria-busy={refreshing}>
       {comparison.recommendation && recommended && (
         <RecommendationCard recommendation={comparison.recommendation} winner={recommended} />
       )}
@@ -127,6 +129,16 @@ export function ComparisonPanel({
 // ============================================================================
 // SUBCOMPONENTS
 // ============================================================================
+
+/**
+ * Η κατάσταση «φορτώνει» της σύγκρισης — ΜΙΑ, για όποιον τη χρειαστεί (ADR-327).
+ * Ο καλών τη δείχνει ΚΑΙ πριν υπάρξει `comparison` (προσφορές ή σύγκριση ακόμη σε πτήση):
+ * ποτέ ψευδές «καμία προσφορά», ποτέ κενή περιοχή.
+ */
+export function ComparisonPanelLoading() {
+  const { t } = useTranslation('quotes');
+  return <PanelShell title={t('comparison.title')}>{t('quotes.loading')}</PanelShell>;
+}
 
 function PanelShell({ title, children }: { title: string; children: React.ReactNode }) {
   return (

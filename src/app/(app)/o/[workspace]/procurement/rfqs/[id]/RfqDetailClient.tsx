@@ -47,7 +47,7 @@ import { QuoteRightPane } from '@/subapps/procurement/components/QuoteRightPane'
 import { RfqHistoryTab } from '@/subapps/procurement/components/RfqHistoryTab';
 import { buildQuoteHeaderActions } from '@/subapps/procurement/utils/quote-header-actions';
 import { QuoteForm } from '@/subapps/procurement/components/QuoteForm';
-import { ComparisonPanel } from '@/subapps/procurement/components/ComparisonPanel';
+import { ComparisonPanel, ComparisonPanelLoading } from '@/subapps/procurement/components/ComparisonPanel';
 import { ComparisonEmptyState } from '@/subapps/procurement/components/ComparisonEmptyState';
 import { SourcingEventSummaryCard } from '@/subapps/procurement/components/SourcingEventSummaryCard';
 import { VendorInviteSection } from '@/subapps/procurement/components/VendorInviteSection';
@@ -396,7 +396,9 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
               onNotifyVendors={() => setNotifyDialogOpen(true)}
             />
           )}
-          {activeQuotes.length < 2 ? (
+          {loading ? (
+            <ComparisonPanelLoading />
+          ) : activeQuotes.length < 2 ? (
             <ComparisonEmptyState
               quotes={activeQuotes}
               onNewQuote={() => setShowQuoteForm(true)}
@@ -413,11 +415,11 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
                   currentRfqId={id}
                 />
               )}
-              {comparison && (
+              {!comparison ? <ComparisonPanelLoading /> : (
                 <ComparisonPanel
                   comparison={comparison}
                   cherryPick={cherryPick}
-                  loading={comparisonLoading}
+                  refreshing={comparisonLoading}
                   rfqAwarded={!!effectiveWinnerId}
                   awardMode={rfq?.awardMode ?? 'whole_package'}
                   onAwardIntent={handleAwardIntent}
