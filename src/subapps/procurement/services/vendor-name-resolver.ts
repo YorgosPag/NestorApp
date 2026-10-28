@@ -74,8 +74,11 @@ export function pickContactDisplayName(data: admin.firestore.DocumentData): stri
   return null;
 }
 
-/** Σειρά: επαφή → στιγμιότυπο πρόσκλησης → σάρωση (`quoteVendorDisplayName`, ADR-327 §8.5 Γ) → ωμό id. */
-export function resolveVendorName(quote: Quote, lookup: Map<string, string>): string {
+/**
+ * Σειρά: επαφή → στιγμιότυπο πρόσκλησης → σάρωση (`quoteVendorDisplayName`, ADR-327 §8.5 Γ) → `null`.
+ * Ποτέ ωμό id (2026-10-28): το `null` γίνεται κείμενο ΜΟΝΟ στην οθόνη, από το `quoteVendorLabel`.
+ */
+export function resolveVendorName(quote: Quote, lookup: Map<string, string>): string | null {
   const fromContact = lookup.get(quote.vendorContactId);
   if (fromContact) return fromContact;
   const fallback = quoteVendorDisplayName(quote);
@@ -85,9 +88,9 @@ export function resolveVendorName(quote: Quote, lookup: Map<string, string>): st
     }
     return fallback;
   }
-  logger.warn('Vendor name unresolved — using raw contact id', {
+  logger.warn('Vendor name unresolved — UI shows the "unknown vendor" label', {
     quoteId: quote.id,
     vendorContactId: quote.vendorContactId,
   });
-  return quote.vendorContactId;
+  return null;
 }

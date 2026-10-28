@@ -185,7 +185,7 @@ async function buildEntries(
   const maxNormTotal = Math.max(...normTotals);
 
   const vendorScores = await Promise.all(
-    quotes.map((q) => computeVendorScore(companyId, q.vendorContactId, resolvedNames.get(q.id) ?? q.vendorContactId))
+    quotes.map((q) => computeVendorScore(companyId, q.vendorContactId, resolvedNames.get(q.id) ?? ''))
   );
 
   const partial: QuoteComparisonEntry[] = quotes.map((q, idx) => {
@@ -203,7 +203,8 @@ async function buildEntries(
       breakdown.delivery * weights.delivery;
     return {
       quoteId: q.id,
-      vendorName: resolvedNames.get(q.id) ?? q.vendorContactId,
+      displayNumber: q.displayNumber,
+      vendorName: resolvedNames.get(q.id) ?? null,
       vendorContactId: q.vendorContactId,
       total: q.totals.total,
       tco,

@@ -53,7 +53,10 @@ export interface QuoteScoreBreakdown {
 
 export interface QuoteComparisonEntry {
   quoteId: string;
-  vendorName: string;
+  /** Το αρχείο των προσφορών (π.χ. QT-0001) — δίνει ταυτότητα στον άγνωστο προμηθευτή (`quoteVendorLabel`). */
+  displayNumber: string;
+  /** `null` = άγνωστος (ADR-327 §8.5). Εμφάνιση ΜΟΝΟ μέσω `quoteVendorLabel` — ποτέ απευθείας. */
+  vendorName: string | null;
   vendorContactId: string;
   total: number;
   tco: TcoNormalization;
@@ -94,7 +97,8 @@ export interface LineWinner {
   lineDescription: string;
   categoryCode: string | null;
   winnerQuoteId: string;
-  winnerVendorName: string;
+  /** `null` = άγνωστος — ίδιο συμβόλαιο με το `QuoteComparisonEntry.vendorName`. */
+  winnerVendorName: string | null;
   winnerUnitPrice: number;
   /** Η συγκρίσιμη αξία της γραμμής (τιμή μονάδας × ποσότητα RFQ). */
   winnerAmount: number;

@@ -23,6 +23,9 @@
       "failed": "Η προσθήκη στις επαφές απέτυχε"
     },
     "vendor": "Προμηθευτής",
+    "vendorUnknown": "Άγνωστος προμηθευτής",
+    "vendorUnknownWithQuote": "Άγνωστος προμηθευτής · {quote}",
+    "vendorAddresseeFallback": "συνεργάτη",
     "trade": "Ειδικότητα",
     "source": "Πηγή",
     "status": "Κατάσταση",

@@ -144,6 +144,8 @@ describe('cherryPickFromLeveling', () => {
     const result = cherryPickFromLeveling(leveling, new Map([['A', 'Άλφα'], ['B', 'Βήτα']]));
     expect(result.lineWinners.map((w) => [w.rfqLineId, w.winnerVendorName, w.winnerAmount, w.savings]))
       .toEqual([['L1', 'Άλφα', 100, 20], ['L2', 'Βήτα', 80, 70]]);
+    // Άγνωστος ⇒ `null` (η οθόνη βάζει την ετικέτα) — ποτέ το ωμό quoteId.
+    expect(cherryPickFromLeveling(leveling, new Map()).lineWinners.map((w) => w.winnerVendorName)).toEqual([null, null]);
     expect(result).toMatchObject({ totalIfCherryPick: 180, totalIfWholePackage: 200, savingsFromSplit: 20, uncoveredLines: 0 });
   });
 });

@@ -14,6 +14,7 @@
 
 import type { Quote, QuoteVendorSnapshot } from '../types/quote';
 import type { VendorInvite } from '../types/vendor-invite';
+import type { TFunction } from 'i18next';
 
 type VendorFacts = Pick<Quote, 'vendorContactId' | 'vendorSnapshot' | 'extractedData'>;
 
@@ -27,6 +28,29 @@ export function quoteVendorDisplayName(quote: VendorFacts, contactName?: string 
   return nonBlank(contactName)
     ?? nonBlank(quote.vendorSnapshot?.name)
     ?? nonBlank(quote.extractedData?.vendorName?.value);
+}
+
+/**
+ * **Η ΜΟΝΗ ετικέτα «άγνωστος» στην οθόνη** (ADR-327 §8.5 — 2026-10-28). Το `null` μένει στα δεδομένα (είναι γεγονός,
+ * όχι κείμενο)· εδώ γίνεται κείμενο. `quoteNumber` = όπου ο αριθμός **δεν** φαίνεται ήδη δίπλα (σύγκριση, leveling,
+ * διάλογοι, toasts) ⇒ δύο άγνωστοι στην ίδια σύγκριση ξεχωρίζουν· η κάρτα/κεφαλίδα που ήδη έχει τίτλο τον αριθμό
+ * τον παραλείπει. Πριν: κάθε καλών διάλεγε δικό του fallback (`''` · `'—'` · «Προμηθευτής» · ωμό `vendorContactId`).
+ */
+export function quoteVendorLabel(name: string | null | undefined, t: TFunction, quoteNumber?: string): string {
+  const known = nonBlank(name);
+  if (known) return known;
+  const number = nonBlank(quoteNumber);
+  return number ? t('quotes.vendorUnknownWithQuote', { quote: number }) : t('quotes.vendorUnknown');
+}
+
+/** Το όνομα **στην προσφώνηση** μηνύματος προς τον ίδιο τον προμηθευτή — ποτέ «άγνωστος» ούτε αριθμός προσφοράς. */
+export function quoteVendorAddressee(name: string | null | undefined, t: TFunction): string {
+  return nonBlank(name) ?? t('quotes.vendorAddresseeFallback');
+}
+
+/** Το email του προμηθευτή: στιγμιότυπο πρόσκλησης (πύλη) → σάρωση. Πριν: ρωτούσε **μόνο** τη σάρωση. */
+export function quoteVendorEmail(quote: Pick<Quote, 'vendorSnapshot' | 'extractedData'>): string | null {
+  return nonBlank(quote.vendorSnapshot?.email) ?? nonBlank(quote.extractedData?.vendorEmails?.value?.[0]);
 }
 
 /** Η προσφορά **δεν** είναι δεμένη σε επαφή ⇒ ο PM μπορεί να την προσθέσει στις επαφές. */

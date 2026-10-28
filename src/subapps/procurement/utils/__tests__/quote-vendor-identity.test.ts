@@ -4,12 +4,18 @@
  * Κ1 σειρά πηγών: επαφή → στιγμιότυπο πρόσκλησης → σάρωση → `null` (ποτέ ωμό id) · κενά κείμενα δεν μετρούν ·
  * Κ2 ενεργός στο ιστορικό: `vendor:{contactId}` ή, χωρίς επαφή, `vendor:invite:{inviteId}` — ποτέ σκέτο `vendor:` ·
  * Κ3 στιγμιότυπο από την πρόσκληση: όνομα → (χωρίς όνομα) email · ποτέ `undefined`.
+ * Κ4 ετικέτα οθόνης: όνομα, αλλιώς «άγνωστος» (+ αριθμός προσφοράς όταν δοθεί) — ποτέ κενό, ποτέ ωμό id ·
+ * Κ5 προσφώνηση email: όνομα, αλλιώς ουδέτερη — ποτέ «άγνωστος» ούτε αριθμός · Κ6 email: πρόσκληση → σάρωση.
  */
 
+import type { TFunction } from 'i18next';
 import type { Quote } from '../../types/quote';
 import {
   quoteLacksVendorContact,
+  quoteVendorAddressee,
   quoteVendorDisplayName,
+  quoteVendorEmail,
+  quoteVendorLabel,
   vendorActorId,
   vendorSnapshotFromInvite,
 } from '../quote-vendor-identity';
@@ -52,5 +58,34 @@ describe('vendorSnapshotFromInvite', () => {
       .toEqual({ name: 'a@b.gr', email: 'a@b.gr', inviteId: 'vi_2' });
     expect(vendorSnapshotFromInvite({ id: 'vi_3', recipientName: null, recipientEmail: null }))
       .toEqual({ name: '', email: null, inviteId: 'vi_3' });
+  });
+});
+
+/** Ο stub επιστρέφει «κλειδί» ή «κλειδί|αριθμός» — η δοκιμή βλέπει ΠΟΙΟ κλειδί ζητήθηκε και με ΤΙ. */
+const t = ((key: string, opts?: { quote?: string }) => (opts?.quote ? `${key}|${opts.quote}` : key)) as unknown as TFunction;
+
+describe('quoteVendorLabel', () => {
+  it('Κ4 — όνομα, αλλιώς «άγνωστος» με/χωρίς αριθμό· ποτέ κενό', () => {
+    expect(quoteVendorLabel(' Άλφα ', t, 'QT-0001')).toBe('Άλφα');
+    expect(quoteVendorLabel(null, t, 'QT-0001')).toBe('quotes.vendorUnknownWithQuote|QT-0001');
+    expect(quoteVendorLabel('  ', t, 'QT-0001')).toBe('quotes.vendorUnknownWithQuote|QT-0001');
+    expect(quoteVendorLabel(undefined, t)).toBe('quotes.vendorUnknown');
+    expect(quoteVendorLabel(null, t, ' ')).toBe('quotes.vendorUnknown');
+  });
+});
+
+describe('quoteVendorAddressee', () => {
+  it('Κ5 — όνομα, αλλιώς ουδέτερη προσφώνηση', () => {
+    expect(quoteVendorAddressee('Άλφα', t)).toBe('Άλφα');
+    expect(quoteVendorAddressee(null, t)).toBe('quotes.vendorAddresseeFallback');
+  });
+});
+
+describe('quoteVendorEmail', () => {
+  const emails = (list: string[]) => ({ vendorEmails: { value: list, confidence: 90 } }) as unknown as Quote['extractedData'];
+  it('Κ6 — πρόσκληση → σάρωση → null', () => {
+    expect(quoteVendorEmail({ vendorSnapshot: snapshot, extractedData: emails(['scan@x.gr']) })).toBe('b@example.invalid');
+    expect(quoteVendorEmail({ vendorSnapshot: null, extractedData: emails(['scan@x.gr']) })).toBe('scan@x.gr');
+    expect(quoteVendorEmail({ vendorSnapshot: { ...snapshot, email: null }, extractedData: null })).toBeNull();
   });
 });

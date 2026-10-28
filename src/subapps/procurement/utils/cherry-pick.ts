@@ -16,7 +16,7 @@ function comparableCells(row: LevelingRow): LevelingCell[] {
   return row.cells.filter((c) => c.state === 'priced' && !c.unitMismatch && c.leveledAmount !== null);
 }
 
-function winnerOf(row: LevelingRow, vendorNames: ReadonlyMap<string, string>): LineWinner | null {
+function winnerOf(row: LevelingRow, vendorNames: ReadonlyMap<string, string | null>): LineWinner | null {
   const cells = comparableCells(row);
   const win = cells.find((c) => c.quoteId === row.lowestQuoteId);
   if (!win) return null;
@@ -27,7 +27,7 @@ function winnerOf(row: LevelingRow, vendorNames: ReadonlyMap<string, string>): L
     lineDescription: row.description,
     categoryCode: row.categoryCode,
     winnerQuoteId: win.quoteId,
-    winnerVendorName: vendorNames.get(win.quoteId) ?? win.quoteId,
+    winnerVendorName: vendorNames.get(win.quoteId) ?? null,
     winnerUnitPrice: win.unitPrice ?? 0,
     winnerAmount: winAmount,
     savings: roundMajor(worstAmount - winAmount),
@@ -38,7 +38,7 @@ function winnerOf(row: LevelingRow, vendorNames: ReadonlyMap<string, string>): L
 /** `vendorNames`: quoteId → όνομα (από τα entries της σύγκρισης — ΕΝΑΣ resolver ονομάτων). */
 export function cherryPickFromLeveling(
   leveling: BidLevelingResult,
-  vendorNames: ReadonlyMap<string, string>,
+  vendorNames: ReadonlyMap<string, string | null>,
 ): CherryPickResult {
   const lineWinners = leveling.rows
     .map((row) => winnerOf(row, vendorNames))

@@ -23,6 +23,9 @@
       "failed": "Adding to contacts failed"
     },
     "vendor": "Vendor",
+    "vendorUnknown": "Unknown vendor",
+    "vendorUnknownWithQuote": "Unknown vendor · {quote}",
+    "vendorAddresseeFallback": "Sir or Madam",
     "trade": "Trade",
     "source": "Source",
     "status": "Status",
