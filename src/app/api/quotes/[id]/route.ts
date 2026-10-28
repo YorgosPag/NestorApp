@@ -20,6 +20,7 @@ import {
 import { getQuote, updateQuote, archiveQuote } from '@/subapps/procurement/services/quote-service';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
+import { QuoteLineSchema } from '@/app/api/quotes/_shared/quote-line-schema';
 import { QUOTE_STATUSES } from '@/subapps/procurement/types/quote';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -28,21 +29,6 @@ const logger = createModuleLogger('QuoteRoute');
 // ============================================================================
 // SCHEMAS
 // ============================================================================
-
-const QuoteLineSchema = z.object({
-  id: z.string().min(1),
-  description: z.string().min(1).max(500),
-  categoryCode: z.string().max(30).nullable().default(null),
-  // quantity may be 0 — AI extraction of multi-row tables can yield parent
-  // rows / sub-totals / descriptive rows where quantity is intentionally
-  // empty. The user removes them in review if needed (X button).
-  quantity: z.number().min(0),
-  unit: z.string().min(1).max(20),
-  unitPrice: z.number().min(0),
-  vatRate: z.union([z.literal(0), z.literal(6), z.literal(13), z.literal(24)]),
-  lineTotal: z.number().min(0),
-  notes: z.string().max(500).nullable().default(null),
-});
 
 const UpdateQuoteSchema = z.object({
   status: z.enum(QUOTE_STATUSES).optional(),
@@ -63,81 +49,74 @@ const UpdateQuoteSchema = z.object({
 });
 
 // ============================================================================
+// ROUTE SHELL — ΕΝΑ σημείο για «id από το segment + withAuth» (ήταν τρία αντίγραφα, CHECK 3.28)
+// ============================================================================
+
+type QuoteIdHandler = (req: NextRequest, ctx: AuthContext, id: string) => Promise<NextResponse>;
+
+function quoteIdRoute(run: QuoteIdHandler) {
+  return async (request: NextRequest, segmentData?: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
+    const { id } = await segmentData!.params;
+    const handler = withAuth(
+      async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => run(req, ctx, id),
+    );
+    return handler(request);
+  };
+}
+
+function badRequest(error: unknown): NextResponse {
+  return NextResponse.json({ success: false, error: getErrorMessage(error) }, { status: 400 });
+}
+
+// ============================================================================
 // GET
 // ============================================================================
 
-async function handleGet(
-  request: NextRequest,
-  segmentData?: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
-  const { id } = await segmentData!.params;
-  const handler = withAuth(
-    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const quote = await getQuote(ctx.companyId, id);
-        if (!quote) return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 });
-        return NextResponse.json({ success: true, data: quote });
-      } catch (error) {
-        logger.error('GET /api/quotes/[id] — Firestore failure', {
-          quoteId: id,
-          companyId: ctx.companyId,
-          error: getErrorMessage(error),
-        });
-        return NextResponse.json(
-          { success: false, error: 'Service unavailable' },
-          { status: 503 },
-        );
-      }
-    }
-  );
-  return handler(request);
-}
+const handleGet = quoteIdRoute(async (_req, ctx, id) => {
+  try {
+    const quote = await getQuote(ctx.companyId, id);
+    if (!quote) return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 });
+    return NextResponse.json({ success: true, data: quote });
+  } catch (error) {
+    logger.error('GET /api/quotes/[id] — Firestore failure', {
+      quoteId: id,
+      companyId: ctx.companyId,
+      error: getErrorMessage(error),
+    });
+    return NextResponse.json(
+      { success: false, error: 'Service unavailable' },
+      { status: 503 },
+    );
+  }
+});
 
 // ============================================================================
 // PATCH
 // ============================================================================
 
-async function handlePatch(
-  request: NextRequest,
-  segmentData?: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
-  const { id } = await segmentData!.params;
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const parsed = safeParseBody(UpdateQuoteSchema, await req.json());
-        if (parsed.error) return parsed.error;
-        const updated = await updateQuote(ctx, id, parsed.data);
-        return NextResponse.json({ success: true, data: updated });
-      } catch (error) {
-        return NextResponse.json({ success: false, error: getErrorMessage(error) }, { status: 400 });
-      }
-    }
-  );
-  return handler(request);
-}
+const handlePatch = quoteIdRoute(async (req, ctx, id) => {
+  try {
+    const parsed = safeParseBody(UpdateQuoteSchema, await req.json());
+    if (parsed.error) return parsed.error;
+    const updated = await updateQuote(ctx, id, parsed.data);
+    return NextResponse.json({ success: true, data: updated });
+  } catch (error) {
+    return badRequest(error);
+  }
+});
 
 // ============================================================================
 // DELETE — soft delete
 // ============================================================================
 
-async function handleDelete(
-  request: NextRequest,
-  segmentData?: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
-  const { id } = await segmentData!.params;
-  const handler = withAuth(
-    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        await archiveQuote(ctx, id);
-        return NextResponse.json({ success: true });
-      } catch (error) {
-        return NextResponse.json({ success: false, error: getErrorMessage(error) }, { status: 400 });
-      }
-    }
-  );
-  return handler(request);
-}
+const handleDelete = quoteIdRoute(async (_req, ctx, id) => {
+  try {
+    await archiveQuote(ctx, id);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return badRequest(error);
+  }
+});
 
 // ============================================================================
 // EXPORTS

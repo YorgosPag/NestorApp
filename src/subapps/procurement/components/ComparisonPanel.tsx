@@ -10,6 +10,7 @@ import { BarChart2, Trophy, Award, AlertTriangle, ChevronRight, Truck, HardHat, 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency } from '@/lib/intl-formatting';
 import { RecommendationCard } from './RecommendationCard';
+import { BidLevelingTable } from './BidLevelingTable';
 import { COMPARISON_TEMPLATES } from '@/subapps/procurement/types/comparison';
 import {
   COMPARISON_FACTOR_COLORS,
@@ -115,6 +116,9 @@ export function ComparisonPanel({
         </CardContent>
       </Card>
 
+      {comparison.leveling.rows.length > 0 && (
+        <BidLevelingTable leveling={comparison.leveling} entries={comparison.quotes} />
+      )}
     </div>
   );
 }
@@ -142,12 +146,7 @@ function TemplateSummary({ templateId, weights }: { templateId: string; weights:
   const meta = COMPARISON_TEMPLATES[templateId];
   const label = meta ? (i18n.language === 'el' ? meta.labelEl : meta.labelEn) : templateId;
   const fmt = (n: number) => `${Math.round(n * 100)}%`;
-  const factors: Array<[keyof QuoteComparisonEntry['breakdown'], string]> = [
-    ['price', t('comparison.factors.price')],
-    ['supplier', t('comparison.factors.supplier')],
-    ['terms', t('comparison.factors.terms')],
-    ['delivery', t('comparison.factors.delivery')],
-  ];
+  const factors = useFactorLabels();
 
   return (
     <p className="text-xs text-muted-foreground">
@@ -241,14 +240,19 @@ function ComparisonRow({ entry, isRecommended, rfqAwarded, winnerQuoteId, onAwar
   );
 }
 
-function BreakdownBars({ breakdown }: { breakdown: QuoteComparisonEntry['breakdown'] }) {
+/** Οι τέσσερις παράγοντες βαθμολογίας με την ετικέτα τους — ΜΙΑ λίστα για περίληψη προτύπου και μπάρες. */
+function useFactorLabels(): Array<[keyof QuoteComparisonEntry['breakdown'], string]> {
   const { t } = useTranslation('quotes');
-  const items: Array<[keyof QuoteComparisonEntry['breakdown'], string]> = [
+  return [
     ['price', t('comparison.factors.price')],
     ['supplier', t('comparison.factors.supplier')],
     ['terms', t('comparison.factors.terms')],
     ['delivery', t('comparison.factors.delivery')],
   ];
+}
+
+function BreakdownBars({ breakdown }: { breakdown: QuoteComparisonEntry['breakdown'] }) {
+  const items = useFactorLabels();
   return (
     <div className="grid grid-cols-1 gap-1 min-w-[280px]">
       {items.map(([key, label]) => (
@@ -294,13 +298,20 @@ function FlagsRow({ flags }: { flags: QuoteComparisonEntry['flags'] }) {
 
 function TcoTotalCell({ total, tco }: { total: number; tco: TcoNormalization }) {
   const { t } = useTranslation('quotes');
-  if (tco.vatDelta <= 0) return <span>{formatCurrency(total)}</span>;
+  if (tco.vatDelta <= 0 && tco.levelingDelta === 0) return <span>{formatCurrency(total)}</span>;
   return (
     <div className="flex flex-col items-end gap-0.5">
       <span>{formatCurrency(tco.normalizedTotal)}</span>
-      <span className="text-[10px] text-[hsl(var(--text-warning))] tabular-nums">
-        +{formatCurrency(tco.vatDelta)} {t('comparison.tco.vatDeltaLabel')}
-      </span>
+      {tco.vatDelta > 0 && (
+        <span className="text-[10px] text-[hsl(var(--text-warning))] tabular-nums">
+          +{formatCurrency(tco.vatDelta)} {t('comparison.tco.vatDeltaLabel')}
+        </span>
+      )}
+      {tco.levelingDelta !== 0 && (
+        <span className="text-[10px] text-[hsl(var(--text-warning))] tabular-nums">
+          {tco.levelingDelta > 0 ? '+' : '−'}{formatCurrency(Math.abs(tco.levelingDelta))} {t('comparison.tco.levelingDeltaLabel')}
+        </span>
+      )}
     </div>
   );
 }
@@ -350,6 +361,11 @@ function CherryPickCard({ result }: { result: CherryPickResult }) {
             whole: formatCurrency(result.totalIfWholePackage),
           })}
         </p>
+        {result.uncoveredLines > 0 && (
+          <p className="text-xs text-muted-foreground">
+            {t('comparison.cherryPick.uncovered', { count: result.uncoveredLines })}
+          </p>
+        )}
         {result.savingsFromSplit > 0 && (
           <p className="font-medium text-primary">
             {t('comparison.cherryPick.savings', {

@@ -10,6 +10,10 @@ import { calculateSupplierMetrics } from '@/services/procurement/supplier-metric
 import { listQuotes, updateQuote } from './quote-service';
 import { generatePoFromAwardedQuote } from './po-generation-service';
 import { getRfq, updateRfq } from './rfq-service';
+import { readRfqLines } from './rfq-line-service';
+import { buildBidLeveling } from '../utils/bid-leveling';
+import { cherryPickFromLeveling } from '../utils/cherry-pick';
+import { roundCents } from '../utils/round-cents';
 import {
   COMPARISON_TEMPLATES,
   DEFAULT_COMPARISON_TEMPLATE_ID,
@@ -21,10 +25,10 @@ import type {
   QuoteScoreBreakdown,
   ComparisonRecommendation,
   CherryPickResult,
-  LineWinner,
   TcoNormalization,
 } from '../types/comparison';
-import type { Quote, QuoteLine, QuoteStatus } from '../types/quote';
+import type { BidLevelingResult, LevelingColumn } from '../types/bid-leveling';
+import type { Quote, QuoteStatus } from '../types/quote';
 import type { AuthContext } from '@/lib/auth';
 
 const logger = createModuleLogger('COMPARISON_SERVICE');
@@ -42,7 +46,16 @@ import { fetchVendorNames, resolveVendorName } from './vendor-name-resolver';
 // TCO NORMALIZATION — ADR-331
 // ============================================================================
 
-function normalizeTco(quote: Quote): TcoNormalization {
+/**
+ * ADR-327 §8.5 — η εξισορρόπηση γραμμών σε τελικό ποσό: (εξισορροπημένο − υποβληθέν) καθαρό, επί (1 + ΦΠΑ).
+ * Lump sum / χωρίς στήλη leveling ⇒ 0 (δεν ισοσταθμίζεται ανά γραμμή).
+ */
+function levelingDeltaOf(quote: Quote, column: LevelingColumn | undefined): number {
+  if (!column || column.lumpSum) return 0;
+  return roundCents((column.leveledNet - column.submittedNet) * (1 + quote.totals.vatRate / 100));
+}
+
+function normalizeTco(quote: Quote, column: LevelingColumn | undefined): TcoNormalization {
   const vatIncluded = quote.vatIncluded !== undefined
     ? quote.vatIncluded
     : (quote.extractedData?.vatIncluded?.value ?? null);
@@ -50,10 +63,12 @@ function normalizeTco(quote: Quote): TcoNormalization {
     ? quote.laborIncluded
     : (quote.extractedData?.laborIncluded?.value ?? null);
   const rawTotal = quote.totals.total;
-  const vatDelta = vatIncluded === false ? Math.round(rawTotal * 0.24 * 100) / 100 : 0;
+  const vatDelta = vatIncluded === false ? roundCents(rawTotal * 0.24) : 0;
+  const levelingDelta = levelingDeltaOf(quote, column);
   return {
-    normalizedTotal: Math.round((rawTotal + vatDelta) * 100) / 100,
+    normalizedTotal: roundCents(rawTotal + vatDelta + levelingDelta),
     vatDelta,
+    levelingDelta,
     laborFlag: laborIncluded === false,
     deliveryFlag: !quote.deliveryTerms || quote.deliveryTerms.trim() === '',
     warrantyText: quote.warranty ?? null,
@@ -157,12 +172,14 @@ function buildReason(top: QuoteComparisonEntry, second: QuoteComparisonEntry | n
 async function buildEntries(
   companyId: string,
   quotes: Quote[],
-  weights: ComparisonWeights
+  weights: ComparisonWeights,
+  leveling: BidLevelingResult,
 ): Promise<QuoteComparisonEntry[]> {
   const names = await fetchVendorNames(companyId, quotes.map((q) => q.vendorContactId));
   const resolvedNames = new Map(quotes.map((q) => [q.id, resolveVendorName(q, names)] as const));
 
-  const tcoMap = new Map(quotes.map((q) => [q.id, normalizeTco(q)] as const));
+  const columns = new Map(leveling.columns.map((c) => [c.quoteId, c] as const));
+  const tcoMap = new Map(quotes.map((q) => [q.id, normalizeTco(q, columns.get(q.id))] as const));
   const normTotals = quotes.map((q) => tcoMap.get(q.id)!.normalizedTotal);
   const minNormTotal = Math.min(...normTotals);
   const maxNormTotal = Math.max(...normTotals);
@@ -190,7 +207,7 @@ async function buildEntries(
       vendorContactId: q.vendorContactId,
       total: q.totals.total,
       tco,
-      score: Math.round(score * 100) / 100,
+      score: roundCents(score),
       breakdown,
       rank: 0,
       flags: [],
@@ -224,7 +241,7 @@ function buildRecommendation(entries: QuoteComparisonEntry[]): ComparisonRecomme
     quoteId: top.quoteId,
     reason: buildReason(top, second),
     confidence: Math.min(1, Math.max(0, delta / 100)),
-    deltaFromSecond: Math.round(delta * 100) / 100,
+    deltaFromSecond: roundCents(delta),
   };
 }
 
@@ -241,8 +258,9 @@ export async function computeRfqComparison(
   const rfq = await getRfq(companyId, rfqId);
   if (!rfq) throw new Error(`RFQ ${rfqId} not found`);
 
-  const all = await listQuotes(companyId, { rfqId });
+  const [all, rfqLines] = await Promise.all([listQuotes(companyId, { rfqId }), readRfqLines(rfq)]);
   const quotes = all.filter((q) => COMPARABLE_STATUSES.has(q.status));
+  const leveling = buildBidLeveling(rfqLines, quotes);
 
   const templateId = options.templateId ?? rfq.comparisonTemplateId ?? DEFAULT_COMPARISON_TEMPLATE_ID;
   const weights =
@@ -251,7 +269,7 @@ export async function computeRfqComparison(
     COMPARISON_TEMPLATES[DEFAULT_COMPARISON_TEMPLATE_ID].weights;
 
   const entries = quotes.length > 0
-    ? await buildEntries(companyId, quotes, weights)
+    ? await buildEntries(companyId, quotes, weights, leveling)
     : [];
 
   return {
@@ -263,80 +281,18 @@ export async function computeRfqComparison(
     weights,
     templateId,
     computedAt: nowISO(),
+    leveling,
   };
 }
 
 // ============================================================================
-// CHERRY-PICK (per-line winners)
+// CHERRY-PICK (per-line winners) — derived from the leveling, ADR-327 §8.5
 // ============================================================================
 
-function lineKey(line: QuoteLine): string {
-  if (line.categoryCode) return `code:${line.categoryCode}`;
-  return `desc:${line.description.trim().toLowerCase()}`;
-}
-
-export async function computeCherryPick(
-  companyId: string,
-  rfqId: string
-): Promise<CherryPickResult> {
-  const all = await listQuotes(companyId, { rfqId });
-  const quotes = all.filter((q) => COMPARABLE_STATUSES.has(q.status));
-  if (quotes.length === 0) {
-    return {
-      lineWinners: [],
-      totalIfCherryPick: 0,
-      totalIfWholePackage: 0,
-      savingsFromSplit: 0,
-      savingsPercent: 0,
-    };
-  }
-
-  const names = await fetchVendorNames(companyId, quotes.map((q) => q.vendorContactId));
-
-  const byKey = new Map<string, Array<{ quote: Quote; line: QuoteLine }>>();
-  for (const q of quotes) {
-    for (const line of q.lines) {
-      const key = lineKey(line);
-      const list = byKey.get(key) ?? [];
-      list.push({ quote: q, line });
-      byKey.set(key, list);
-    }
-  }
-
-  const lineWinners: LineWinner[] = [];
-  let totalCherry = 0;
-
-  for (const [, candidates] of byKey) {
-    candidates.sort((a, b) => a.line.unitPrice - b.line.unitPrice);
-    const win = candidates[0];
-    const worst = candidates[candidates.length - 1];
-    const savings = (worst.line.unitPrice - win.line.unitPrice) * win.line.quantity;
-    const savingsPct = worst.line.unitPrice > 0
-      ? ((worst.line.unitPrice - win.line.unitPrice) / worst.line.unitPrice) * 100
-      : 0;
-    lineWinners.push({
-      lineDescription: win.line.description,
-      categoryCode: win.line.categoryCode,
-      winnerQuoteId: win.quote.id,
-      winnerVendorName: names.get(win.quote.vendorContactId) ?? win.quote.vendorContactId,
-      winnerUnitPrice: win.line.unitPrice,
-      savings: Math.round(savings * 100) / 100,
-      savingsPercent: Math.round(savingsPct * 100) / 100,
-    });
-    totalCherry += win.line.unitPrice * win.line.quantity;
-  }
-
-  const totalWhole = Math.min(...quotes.map((q) => q.totals.subtotal));
-  const savingsFromSplit = Math.max(0, totalWhole - totalCherry);
-  const savingsPercent = totalWhole > 0 ? (savingsFromSplit / totalWhole) * 100 : 0;
-
-  return {
-    lineWinners,
-    totalIfCherryPick: Math.round(totalCherry * 100) / 100,
-    totalIfWholePackage: Math.round(totalWhole * 100) / 100,
-    savingsFromSplit: Math.round(savingsFromSplit * 100) / 100,
-    savingsPercent: Math.round(savingsPercent * 100) / 100,
-  };
+/** Ανάθεση ανά γραμμή από την ΙΔΙΑ σύγκριση (κανένα δεύτερο διάβασμα, ΕΝΑ σύνολο ονομάτων). */
+export function computeCherryPick(comparison: QuoteComparisonResult): CherryPickResult {
+  const names = new Map(comparison.quotes.map((q) => [q.quoteId, q.vendorName] as const));
+  return cherryPickFromLeveling(comparison.leveling, names);
 }
 
 // ============================================================================

@@ -20,6 +20,7 @@ import { createQuote, listQuotes } from '@/subapps/procurement/services/quote-se
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
+import { QuoteLineCreateSchema } from '@/app/api/quotes/_shared/quote-line-schema';
 import { TRADE_CODES } from '@/subapps/procurement/types/trade';
 import { QUOTE_STATUSES } from '@/subapps/procurement/types/quote';
 import type { QuoteStatus } from '@/subapps/procurement/types/quote';
@@ -30,18 +31,6 @@ const logger = createModuleLogger('QUOTES_API');
 // SCHEMAS
 // ============================================================================
 
-const QuoteLineSchema = z.object({
-  id: z.string().min(1),
-  description: z.string().min(1).max(500),
-  categoryCode: z.string().max(30).nullable().default(null),
-  quantity: z.number().positive(),
-  unit: z.string().min(1).max(20),
-  unitPrice: z.number().min(0),
-  vatRate: z.union([z.literal(0), z.literal(6), z.literal(13), z.literal(24)]),
-  lineTotal: z.number().min(0),
-  notes: z.string().max(500).nullable().default(null),
-});
-
 const CreateQuoteSchema = z.object({
   rfqId: z.string().nullable().optional(),
   projectId: z.string().min(1),
@@ -49,7 +38,7 @@ const CreateQuoteSchema = z.object({
   vendorContactId: z.string().min(1),
   trade: z.enum(TRADE_CODES),
   source: z.enum(['manual', 'scan', 'portal', 'email_inbox']).default('manual'),
-  lines: z.array(QuoteLineSchema).max(200).optional(),
+  lines: z.array(QuoteLineCreateSchema).max(200).optional(),
   validUntil: z.string().nullable().optional(),
   paymentTerms: z.string().max(500).nullable().optional(),
   deliveryTerms: z.string().max(500).nullable().optional(),

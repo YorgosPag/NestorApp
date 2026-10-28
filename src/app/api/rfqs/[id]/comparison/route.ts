@@ -39,7 +39,8 @@ async function handleGet(
         }
 
         const comparison = await computeRfqComparison(ctx.companyId, id, { templateId });
-        const cherryPick = includeCherryPick ? await computeCherryPick(ctx.companyId, id) : null;
+        // ADR-327 §8.5 — derived from the SAME comparison (its leveling + vendor names), no second read.
+        const cherryPick = includeCherryPick ? computeCherryPick(comparison) : null;
 
         return NextResponse.json({ success: true, data: { comparison, cherryPick } });
       } catch (error) {
