@@ -17,6 +17,7 @@ import { Warehouse } from 'lucide-react';
 
 import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
 import { ListDetailsSplit } from '../ListDetailsSplit';
+import { mockViewport } from '@/test-utils/viewport';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -53,6 +54,8 @@ const peekPanel = () => document.querySelector<HTMLElement>('[data-details-peek]
 describe('Λ — λίστα + λεπτομέρειες', () => {
   beforeEach(() => {
     mobile = false;
+    // Το φύλλο ρωτά το πλάτος μόνο του (`useViewportClass`, ADR-912 §12.20)· ίδια απάντηση με το `useIsMobile` εδώ.
+    mockViewport(false);
     mounts.details = 0;
   });
 
@@ -66,6 +69,7 @@ describe('Λ — λίστα + λεπτομέρειες', () => {
 
   it('🔴 Λ2 — κινητό χωρίς επιλογή: ΜΟΝΟ η λίστα· οι λεπτομέρειες δεν στήνονται πουθενά', () => {
     mobile = true;
+    mockViewport(true);
     renderSplit({ sheetOpen: false });
 
     expect(screen.getAllByRole('list', { name: 'λίστα' })).toHaveLength(1);
@@ -75,6 +79,7 @@ describe('Λ — λίστα + λεπτομέρειες', () => {
 
   it('🔴 Λ3 — κινητό με επιλογή: οι λεπτομέρειες ζουν στο ΦΥΛΛΟ, ΜΙΑ φορά, και η περιοχή της λίστας κρύβεται', () => {
     mobile = true;
+    mockViewport(true);
     renderSplit({ sheetOpen: true });
 
     expect(sheet()).not.toBeNull();
@@ -91,6 +96,7 @@ describe('Λ — λίστα + λεπτομέρειες', () => {
 
   it('Λ5 — ο ✕ του φύλλου καλεί το κλείσιμο της σελίδας', async () => {
     mobile = true;
+    mockViewport(true);
     const onCloseSheet = jest.fn();
     renderSplit({ sheetOpen: true, onCloseSheet });
 
@@ -109,6 +115,7 @@ describe('Λ — λίστα + λεπτομέρειες', () => {
     unmount();
 
     mobile = true;
+    mockViewport(true);
     mounts.details = 0;
     renderSplit({ sheetOpen: true, peek: true });
     expect(sheet()).not.toBeNull();
@@ -169,6 +176,7 @@ describe('Λ — λίστα + λεπτομέρειες', () => {
     closed.unmount();
 
     mobile = true;
+    mockViewport(true);
     renderSplit({ sheetOpen: true, peek: true });
     expect(separators()).toHaveLength(0);
   });

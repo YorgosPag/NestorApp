@@ -8,7 +8,7 @@
  * 🔑 Η θεραπεία είναι δομική: ό,τι **δηλώνει** η κεφαλίδα αποδίδεται στην μπάρα του φύλλου, από το ίδιο component.
  */
 
-/* global describe, it, expect, jest */
+/* global describe, it, expect, jest, beforeEach */
 
 import { render as renderAlone, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -22,6 +22,7 @@ import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { useUnsavedEdits } from '@/hooks/useUnsavedEdits';
 import { hasUnsavedWork } from '@/lib/app-version/unsaved-work-registry';
 import { MobileDetailsSlideIn } from '../MobileDetailsSlideIn';
+import { mockViewport } from '@/test-utils/viewport';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -35,6 +36,9 @@ jest.mock('next/navigation', () => ({
 }));
 
 const TITLE = 'Κτίριο Α';
+
+// Το φύλλο υπάρχει ΜΟΝΟ σε στενή οθόνη (ADR-912 §12.20) — εδώ ελέγχεται η μπάρα του, άρα στενή.
+beforeEach(() => mockViewport(true));
 
 /**
  * Όπως στην εφαρμογή: η ερώτηση εξόδου ζει στον ΕΝΑ ξενιστή της ρίζας, όχι μέσα στο φύλλο (ADR-912 §12.12).

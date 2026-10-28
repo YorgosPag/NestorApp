@@ -6,6 +6,7 @@ import { captureFocusReturnTarget, returnFocus, type FocusReturnTarget } from '@
 import { enterModalSurface } from '@/lib/a11y/modal-surface';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { DirtyFormProvider } from '@/providers/DirtyFormProvider';
+import { useViewportClass } from '@/hooks/media/useViewportClass';
 import { cn } from '@/lib/utils';
 import { DetailsSheetFrame } from './details-sheet-frame';
 
@@ -24,8 +25,13 @@ interface MobileDetailsSlideInProps {
  *   περιεχόμενο αποδίδει τις ενέργειές του στη θυρίδα της, μέσω `details-sheet-actions`.
  */
 export function MobileDetailsSlideIn({ isOpen, ...sheet }: MobileDetailsSlideInProps) {
-  const canPortal = useCanPortal();
-  if (!isOpen || !canPortal) return null;
+  // 🔑 **Μόνο σε στενή οθόνη ΥΠΑΡΧΕΙ** (ADR-912 §12.20). Οι ξενιστές αποδίδουν ΚΑΙ τη διάταξη desktop ΚΑΙ αυτό το
+  //   φύλλο· με σκέτο `md:hidden` το περιεχόμενο **προσαρτιόταν δύο φορές** σε φαρδιά οθόνη — μετρημένο 2026-10-28 στις
+  //   Επαφές: δύο `<input id="taxOffice">` (το `<label htmlFor>` ονομάζει μόνο το πρώτο ⇒ ανώνυμο combobox, ADR-598
+  //   G11), διπλή φόρμα `inline-contact-form`, διπλές συνδρομές Firestore. «Κρυμμένο» ≠ «δεν υπάρχει».
+  //   `measuring` (διακομιστής + καρέ ενυδάτωσης) ⇒ τίποτα — η ίδια απάντηση που έδινε το παλιό `useCanPortal`.
+  const viewport = useViewportClass();
+  if (!isOpen || viewport !== 'narrow') return null;
   // Το ανοιχτό φύλλο είναι δικό του component: οι παρατηρητές του δένονται σε στοιχεία που υπάρχουν από το πρώτο render.
   // `DirtyFormProvider`: η εμβέλεια όπου οι φόρμες του φύλλου δηλώνουν αν έχουν αλλαγές — ο ✕ ρωτά ΑΥΤΗΝ (ADR-912 §12.5).
   // 🔑 Portal στο `body` (όπως κάθε Radix Dialog/Sheet): ένα `fixed inset-0` είναι πλήρης οθόνη ΜΟΝΟ αν κανένας πρόγονος
@@ -33,13 +39,6 @@ export function MobileDetailsSlideIn({ isOpen, ...sheet }: MobileDetailsSlideInP
   //   στην καρτέλα «Έγγραφα» το `backdrop-blur-sm` του δοχείου καρτελών έκανε το φύλλο 356×5153 στη μέση της σελίδας.
   //   Το context και τα γεγονότα της React ακολουθούν το δέντρο της React, όχι του DOM — τίποτα άλλο δεν αλλάζει.
   return createPortal(<DirtyFormProvider><OpenDetailsSheet {...sheet} /></DirtyFormProvider>, document.body);
-}
-
-const subscribeNever = () => () => undefined;
-
-/** Υπάρχει `document.body`; Ο διακομιστής και το καρέ ενυδάτωσης λένε «όχι» (καμία ασυμφωνία markup)· μετά «ναι». */
-function useCanPortal(): boolean {
-  return React.useSyncExternalStore(subscribeNever, () => true, () => false);
 }
 
 /**

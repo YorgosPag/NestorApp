@@ -7,13 +7,14 @@
  * ⚠️ Το jsdom δεν έχει διάταξη: εδώ αποδεικνύεται η **συμπεριφορά** (αδράνεια · κύλιση · focus), όχι το z.
  */
 
-/* global describe, it, expect, jest, afterEach */
+/* global describe, it, expect, jest, afterEach, beforeEach */
 
 import { useState } from 'react';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { MobileDetailsSlideIn } from '../MobileDetailsSlideIn';
+import { mockViewport } from '@/test-utils/viewport';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -37,6 +38,8 @@ function Page() {
 }
 
 const pageRoot = () => screen.getByTestId('bar').closest('[inert]');
+
+beforeEach(() => mockViewport(true));
 
 afterEach(() => {
   document.head.querySelectorAll('style[data-test-md-hidden]').forEach((el) => el.remove());
@@ -83,5 +86,20 @@ describe('Μ — το φύλλο του κινητού ως modal επιφάνε
       window.dispatchEvent(new Event('resize'));
     });
     expect(pageRoot()).not.toBeNull();
+  });
+
+  /**
+   * 🔴 Μ4 — ADR-912 §12.20. Οι ξενιστές αποδίδουν ΚΑΙ τη διάταξη desktop ΚΑΙ το φύλλο· με σκέτο `md:hidden` το
+   * περιεχόμενο ζούσε ΔΥΟ φορές σε φαρδιά οθόνη. Μετρημένο 2026-10-28 στις Επαφές: δύο `<input id="taxOffice">` ⇒ το
+   * `<label htmlFor>` ονομάζει μόνο το πρώτο ⇒ ανώνυμο combobox (ADR-598 G11), διπλή φόρμα, διπλές συνδρομές.
+   */
+  it('🔴 Μ4 — φαρδιά οθόνη ⇒ το περιεχόμενο του φύλλου ΔΕΝ προσαρτάται (ούτε κρυμμένο)', async () => {
+    mockViewport(false);
+    render(<Page />);
+    await userEvent.click(screen.getByRole('button', { name: 'Συμβόλαιο.pdf' }));
+
+    expect(screen.queryByRole('dialog', { hidden: true })).toBeNull();
+    expect(screen.queryByText('θεατής')).toBeNull();
+    expect(pageRoot()).toBeNull();
   });
 });
