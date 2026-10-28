@@ -19,7 +19,7 @@ import { useContactById } from '@/hooks/useContactById';
 import { getContactDisplayName } from '@/types/contacts/helpers';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Quote, QuoteStatus } from '@/subapps/procurement/types/quote';
-import { quoteVendorDisplayName } from '@/subapps/procurement/utils/quote-vendor-identity';
+import { quoteVendorDisplayName, quoteVendorLabel } from '@/subapps/procurement/utils/quote-vendor-identity';
 
 /** Status → badge variant (GridCardBadgeVariant ⊂ ListCardBadgeVariant → both shells). */
 export const QUOTE_STATUS_BADGE_VARIANTS: Record<QuoteStatus, GridCardBadgeVariant> = {
@@ -51,8 +51,8 @@ export function useQuoteCardCommon(quote: Quote) {
   // ADR-327 §8.5 Γ — ΟΙ κανόνες ονόματος (επαφή → στιγμιότυπο πρόσκλησης → σάρωση). Ως τις 2026-10-28 εδώ ζούσε
   // δεύτερη σειρά (σάρωση → επαφή → ωμό `vendorContactId`): η προσφορά πύλης χωρίς επαφή έβγαινε ΧΩΡΙΣ προμηθευτή.
   const vendorName = useMemo(
-    () => quoteVendorDisplayName(quote, contact ? getContactDisplayName(contact) : null) ?? '',
-    [quote, contact],
+    () => quoteVendorLabel(quoteVendorDisplayName(quote, contact ? getContactDisplayName(contact) : null), t),
+    [quote, contact, t],
   );
 
   return {

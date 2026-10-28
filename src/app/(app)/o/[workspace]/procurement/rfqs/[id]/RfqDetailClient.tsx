@@ -24,6 +24,7 @@ import {
 } from '@/subapps/procurement/utils/rfq-dashboard-stats';
 import { INVITE_FOCUS_PREDICATES } from '@/subapps/procurement/utils/vendor-invite-status';
 import { QUOTE_STATUS_TRANSITIONS } from '@/subapps/procurement/types/quote';
+import { quoteVendorDisplayName, quoteVendorLabel } from '@/subapps/procurement/utils/quote-vendor-identity';
 import { useStatusDrillParam } from '@/components/projects/procurement/clients/useStatusDrillParam';
 import { PageHeader } from '@/core/headers';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
@@ -124,8 +125,8 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
   const winnerVendorName = useMemo(() => {
     if (!rfq?.winnerQuoteId) return undefined;
     const winner = activeQuotes.find((q) => q.id === rfq.winnerQuoteId);
-    return winner?.extractedData?.vendorName?.value ?? undefined;
-  }, [rfq, activeQuotes]);
+    return winner ? quoteVendorLabel(quoteVendorDisplayName(winner), t, winner.displayNumber) : undefined;
+  }, [rfq, activeQuotes, t]);
   const underReviewCount = useMemo(
     () => activeQuotes.filter(q => q.status === 'under_review').length,
     [activeQuotes],

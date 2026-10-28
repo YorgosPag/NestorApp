@@ -16,6 +16,7 @@ import {
   type InviteFocus,
   type VendorInviteDisplayStatus,
 } from '../utils/vendor-invite-status';
+import { quoteVendorLabel } from '../utils/quote-vendor-identity';
 import { StatusDrillNotice } from '@/components/projects/procurement/clients/StatusDrillNotice';
 import type { SetupLockState } from '@/subapps/procurement/utils/rfq-lock-state';
 import { useVendorInvites } from '../hooks/useVendorInvites';
@@ -236,11 +237,12 @@ export function VendorInviteSection({
     (invite: ReturnType<typeof useVendorInvites>['invites'][number]): string => {
       if (invite.recipientName) return invite.recipientName;
       if (invite.vendorContactId) {
-        return vendorNameMap.get(invite.vendorContactId) ?? invite.vendorContactId;
+        const contactName = vendorNameMap.get(invite.vendorContactId);
+        if (contactName) return contactName;
       }
-      return invite.recipientEmail ?? '—';
+      return quoteVendorLabel(invite.recipientEmail, t);
     },
-    [vendorNameMap],
+    [vendorNameMap, t],
   );
 
   return (

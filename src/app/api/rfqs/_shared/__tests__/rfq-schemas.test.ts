@@ -14,7 +14,7 @@ import { RFQ_FROM_BOQ_MAX_ITEMS, type CreateRfqDTO } from '@/subapps/procurement
 const DTO_KEYS = {
   projectId: true, buildingId: true, title: true, description: true, lines: true, deadlineDate: true,
   awardMode: true, reminderTemplate: true, comparisonTemplateId: true, invitedVendorIds: true,
-  sourcingEventId: true, boqItemIds: true, adHocLines: true,
+  sourcingEventId: true, boqItemIds: true, adHocLines: true, responseLock: true,
 } satisfies Record<keyof CreateRfqDTO, true>;
 
 /** Ό,τι στέλνει το `RfqBuilder` για μικτή φόρμα (γραμμή BOQ + χειροκίνητη) με προμηθευτή και πακέτο. */

@@ -34,7 +34,12 @@ import {
   buildDefaultTemplate,
   type NotificationTemplate,
 } from '@/subapps/procurement/templates/vendorNotificationDefaults';
-import { quoteVendorDisplayName } from '@/subapps/procurement/utils/quote-vendor-identity';
+import {
+  quoteVendorAddressee,
+  quoteVendorDisplayName,
+  quoteVendorEmail,
+  quoteVendorLabel,
+} from '@/subapps/procurement/utils/quote-vendor-identity';
 
 // ============================================================================
 // TYPES
@@ -72,13 +77,6 @@ function detectTemplate(quote: Quote): NotificationTemplate {
   return quote.status === 'accepted' ? 'winner' : 'rejection';
 }
 
-function resolveVendorEmail(quote: Quote): string {
-  return quote.extractedData?.vendorEmails?.value?.[0] ?? '';
-}
-
-function resolveVendorName(quote: Quote): string {
-  return quoteVendorDisplayName(quote) ?? quote.vendorContactId ?? '—';
-}
 
 // ============================================================================
 // COMPONENT
@@ -106,10 +104,11 @@ export function VendorNotificationDialog({
       .filter((q) => q.status !== 'superseded' && (q.status === 'accepted' || q.status === 'rejected'))
       .map((q) => {
         const tmpl = detectTemplate(q);
-        const email = resolveVendorEmail(q);
-        const vendorName = resolveVendorName(q);
+        const email = quoteVendorEmail(q) ?? '';
+        const knownName = quoteVendorDisplayName(q);
+        const vendorName = quoteVendorLabel(knownName, t, q.displayNumber);
         const lastSentAt = normalizeToDate(q.lastNotifiedAt);
-        const placeholders = { rfqTitle, rfqNumber, vendorName, quoteNumber: q.displayNumber, senderName, companyName, date: now };
+        const placeholders = { rfqTitle, rfqNumber, vendorName: quoteVendorAddressee(knownName, t), quoteNumber: q.displayNumber, senderName, companyName, date: now };
         const content = buildDefaultTemplate(tmpl, placeholders);
         return {
           quote: q,
@@ -126,7 +125,7 @@ export function VendorNotificationDialog({
       });
 
     setRows(initial);
-  }, [open, quotes, rfq, senderName, companyName]);
+  }, [open, quotes, rfq, senderName, companyName, t]);
 
   const checkedCount = rows.filter((r) => r.checked && r.status === 'idle').length;
   const anySending = rows.some((r) => r.status === 'sending');

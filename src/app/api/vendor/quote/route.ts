@@ -159,7 +159,7 @@ function notifyPm(opened: OpenVendorInvite, rfq: RFQ, quoteId: string, isFirstSu
     try {
       const titleParams: Record<string, string> = isFirstSubmission
         ? { rfqTitle: rfq.title }
-        : { vendorName: invite.recipientName ?? invite.vendorContactId, rfqTitle: rfq.title };
+        : { vendorName: vendorSnapshotFromInvite(invite).name, rfqTitle: rfq.title };
       await dispatchProcurementNotification(
         isFirstSubmission
           ? NOTIFICATION_EVENT_TYPES.PROCUREMENT_QUOTE_RECEIVED

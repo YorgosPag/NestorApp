@@ -9,6 +9,7 @@
 import { useId, useState } from 'react';
 import { EmailMessageFields } from './EmailMessageFields';
 import { useTranslation, type Translate } from '@/i18n/hooks/useTranslation';
+import { quoteVendorAddressee } from '@/subapps/procurement/utils/quote-vendor-identity';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { FormDialog } from '@/components/ui/form/FormDialog';
@@ -17,7 +18,8 @@ import { useFormSubmission } from '@/hooks/useFormSubmission';
 export interface QuoteRenewalRequestDialogProps {
   open: boolean;
   vendorEmail: string;
-  vendorName: string;
+  /** `null` = άγνωστος ⇒ ουδέτερη προσφώνηση (`quoteVendorAddressee`), ποτέ id. */
+  vendorName: string | null;
   rfqTitle: string;
   quoteNumber: string;
   validUntilDate: string;
@@ -33,7 +35,7 @@ function useRenewalForm(props: QuoteRenewalRequestDialogProps, t: Translate) {
   const { vendorEmail, onSend } = props;
   const [subject, setSubject] = useState(() => t('rfqs.expiry.renewal.subjectDefault', { rfqTitle: props.rfqTitle }));
   const [body, setBody] = useState(() => t('rfqs.expiry.renewal.bodyDefault', {
-    vendorName: props.vendorName,
+    vendorName: quoteVendorAddressee(props.vendorName, t),
     quoteNumber: props.quoteNumber,
     originalValidUntil: props.validUntilDate,
     total: props.total,

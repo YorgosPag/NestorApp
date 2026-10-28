@@ -24,6 +24,7 @@ import type { StatusDrill } from '@/components/projects/procurement/clients/useS
 import { normalizeToMillisOrNull, deadlineDaysLeft } from '@/lib/date-local';
 import { formatCurrency, formatDate, formatDeadlineRelative } from '@/lib/intl-formatting';
 import type { Quote, QuoteStatus } from '@/subapps/procurement/types/quote';
+import { quoteVendorDisplayName, quoteVendorLabel } from '@/subapps/procurement/utils/quote-vendor-identity';
 import type { VendorInvite } from '@/subapps/procurement/types/vendor-invite';
 import type { QuoteComparisonResult } from '@/subapps/procurement/types/comparison';
 import type { RFQ } from '@/subapps/procurement/types/rfq';
@@ -73,13 +74,15 @@ function filterCard<S extends string>(
   return { pressed, onActivate: () => drill.set(pressed ? [] : [value]) };
 }
 
-interface PricedQuote { readonly id: string; readonly total: number; readonly vendorName: string | null }
+interface PricedQuote {
+  readonly id: string; readonly displayNumber: string; readonly total: number; readonly vendorName: string | null;
+}
 
 function pricedQuotes(quotes: readonly Quote[]): PricedQuote[] {
   return quotes.flatMap((q) => {
     const total = q.totals?.total;
     if (typeof total !== 'number' || total <= 0) return [];
-    return [{ id: q.id, total, vendorName: q.extractedData?.vendorName?.value ?? null }];
+    return [{ id: q.id, displayNumber: q.displayNumber, total, vendorName: quoteVendorDisplayName(q) }];
   });
 }
 
@@ -93,12 +96,12 @@ function extremeQuote(priced: readonly PricedQuote[], pick: 'min' | 'max'): Pric
 /** Κάρτα που ονομάζει **μία** προσφορά ⇒ την ανοίγει (πρότυπο «Apparent low» του BuildingConnected). */
 function quoteCard(
   title: string, quote: PricedQuote | null, icon: DashboardStat['icon'], color: DashboardStat['color'],
-  onOpenQuote: (id: string) => void,
+  onOpenQuote: (id: string) => void, t: TFunction,
 ): DashboardStat {
   if (!quote) return { title, value: '—', icon, color };
   return {
     title, value: formatCurrency(quote.total, 'EUR', { maximumFractionDigits: 0 }),
-    description: quote.vendorName ?? undefined, icon, color,
+    description: quoteVendorLabel(quote.vendorName, t, quote.displayNumber), icon, color,
     onActivate: () => onOpenQuote(quote.id),
   };
 }
@@ -113,7 +116,7 @@ function quotesTab({ quotes, quoteFilter, onOpenQuote, t }: RfqDashboardInput): 
       ...filterCard(quoteFilter, 'under_review', underReview) },
     { title: t('rfqs.dashboard.quotes.accepted'), value: accepted, icon: CheckCircle, color: 'green',
       ...filterCard(quoteFilter, 'accepted', accepted) },
-    quoteCard(t('rfqs.dashboard.quotes.bestPrice'), best, TrendingDown, 'cyan', onOpenQuote),
+    quoteCard(t('rfqs.dashboard.quotes.bestPrice'), best, TrendingDown, 'cyan', onOpenQuote, t),
   ];
 }
 
@@ -125,12 +128,12 @@ function comparisonTab({ quotes, comparison, onOpenQuote, t }: RfqDashboardInput
   const recId = comparison?.recommendation?.quoteId ?? null;
   const recEntry = recId ? comparison?.quotes.find((e) => e.quoteId === recId) ?? null : null;
   return [
-    quoteCard(t('rfqs.dashboard.comparison.bestPrice'), best, TrendingDown, 'green', onOpenQuote),
-    quoteCard(t('rfqs.dashboard.comparison.worstPrice'), worst, TrendingUp, 'red', onOpenQuote),
+    quoteCard(t('rfqs.dashboard.comparison.bestPrice'), best, TrendingDown, 'green', onOpenQuote, t),
+    quoteCard(t('rfqs.dashboard.comparison.worstPrice'), worst, TrendingUp, 'red', onOpenQuote, t),
     { title: t('rfqs.dashboard.comparison.priceDiff'),
       value: diff !== null ? formatCurrency(diff, 'EUR', { maximumFractionDigits: 0 }) : '—',
       icon: ArrowDownUp, color: 'orange' },
-    { title: t('rfqs.dashboard.comparison.recommendation'), value: recEntry?.vendorName ?? '—',
+    { title: t('rfqs.dashboard.comparison.recommendation'), value: recEntry ? quoteVendorLabel(recEntry.vendorName, t, recEntry.displayNumber) : '—',
       icon: Sparkles, color: 'purple', ...(recEntry ? { onActivate: () => onOpenQuote(recEntry.quoteId) } : {}) },
   ];
 }

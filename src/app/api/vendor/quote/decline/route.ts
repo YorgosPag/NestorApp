@@ -25,6 +25,7 @@ import {
   withVendorLinkDoor,
   type OpenVendorInvite,
 } from '@/server/vendor-portal/vendor-link-door';
+import { vendorSnapshotFromInvite } from '@/subapps/procurement/utils/quote-vendor-identity';
 
 const logger = createModuleLogger('VENDOR_PORTAL_DECLINE_API');
 
@@ -53,7 +54,7 @@ function notifyPm(opened: OpenVendorInvite): void {
           entityId: invite.rfqId,
           entityType: NOTIFICATION_ENTITY_TYPES.RFQ,
           titleKey: 'common-shared:quoteNotifications.vendorDeclined',
-          titleParams: { vendorName: invite.recipientName ?? invite.vendorContactId, rfqTitle: rfq.title },
+          titleParams: { vendorName: vendorSnapshotFromInvite(invite).name, rfqTitle: rfq.title },
         },
       );
     } catch (err) {

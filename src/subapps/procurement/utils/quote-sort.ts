@@ -1,4 +1,5 @@
 import type { Quote, QuoteStatus } from '../types/quote';
+import { quoteVendorDisplayName } from './quote-vendor-identity';
 import { compareInstantsDesc } from '@/lib/date-local';
 
 // NOTE: 'expired' IS a status in our FSM (quote.ts) — ADR §5.BB overlay is a separate UI concern
@@ -44,8 +45,9 @@ function compareByRecency(a: Quote, b: Quote): number {
 }
 
 function compareByVendor(a: Quote, b: Quote): number {
-  const aName = a.extractedData?.vendorName?.value ?? a.vendorContactId;
-  const bName = b.extractedData?.vendorName?.value ?? b.vendorContactId;
+  const aName = quoteVendorDisplayName(a);
+  const bName = quoteVendorDisplayName(b);
+  if (aName === null || bName === null) return aName === bName ? 0 : aName === null ? 1 : -1;
   return aName.localeCompare(bName, 'el', { sensitivity: 'base' });
 }
 

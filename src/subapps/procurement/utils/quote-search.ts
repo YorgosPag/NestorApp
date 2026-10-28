@@ -1,6 +1,7 @@
 import { normalizeSearchText } from '@/lib/search/search';
 import { parseLocaleNumber } from '@/lib/number/locale-number';
 import type { Quote } from '../types/quote';
+import { quoteVendorDisplayName } from './quote-vendor-identity';
 import { normalizeToDate } from '@/lib/date-local';
 
 export type SearchPattern = 'quote-number' | 'date' | 'numeric' | 'free-text';
@@ -54,7 +55,7 @@ function matchesNumeric(quote: Quote, numericValue: number): boolean {
 }
 
 function matchesFreeText(quote: Quote, tokens: string[]): boolean {
-  const vendorName = quote.extractedData?.vendorName?.value ?? '';
+  const vendorName = quoteVendorDisplayName(quote) ?? '';
   const lineDescs = quote.lines.map((l) => l.description).join(' ');
   const fields = [
     vendorName,

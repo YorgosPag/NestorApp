@@ -11,7 +11,7 @@ import { formatValidUntilDate, daysUntilExpiry } from '@/subapps/procurement/uti
 import type { Quote } from '@/subapps/procurement/types/quote';
 import type { RFQ, RfqCancellationReason } from '@/subapps/procurement/types/rfq';
 import type { QuoteComparisonEntry } from '@/subapps/procurement/types/comparison';
-import { quoteVendorDisplayName } from '@/subapps/procurement/utils/quote-vendor-identity';
+import { quoteVendorDisplayName, quoteVendorEmail } from '@/subapps/procurement/utils/quote-vendor-identity';
 
 interface RfqDetailDialogsProps {
   rfqId: string;
@@ -20,7 +20,7 @@ interface RfqDetailDialogsProps {
   quotes: Quote[];
   pendingEntry: QuoteComparisonEntry | null;
   cheapestEntry: QuoteComparisonEntry | null;
-  pendingExpiredEntry: { quoteId: string; vendorName: string } | null;
+  pendingExpiredEntry: Pick<QuoteComparisonEntry, 'quoteId' | 'vendorName' | 'displayNumber'> | null;
   pendingExpiredQuote: Quote | null;
   pendingDetection: {
     detection: Parameters<typeof QuoteRevisionDetectedDialog>[0]['detection'];
@@ -68,6 +68,7 @@ export function RfqDetailDialogs(p: RfqDetailDialogsProps) {
         <ExpiredAwardWarningDialog
           open
           vendorName={p.pendingExpiredEntry.vendorName}
+          quoteNumber={p.pendingExpiredEntry.displayNumber}
           validUntilDate={p.pendingExpiredQuote ? formatValidUntilDate(p.pendingExpiredQuote) : ''}
           daysAgo={p.pendingExpiredQuote ? Math.abs(daysUntilExpiry(p.pendingExpiredQuote) ?? 0) : 0}
           onAction={(action) => {
@@ -81,8 +82,8 @@ export function RfqDetailDialogs(p: RfqDetailDialogsProps) {
       {p.renewalQuote && (
         <QuoteRenewalRequestDialog
           open
-          vendorEmail={p.renewalQuote.extractedData?.vendorEmails?.value?.[0] ?? ''}
-          vendorName={quoteVendorDisplayName(p.renewalQuote) ?? p.renewalQuote.vendorContactId}
+          vendorEmail={quoteVendorEmail(p.renewalQuote) ?? ''}
+          vendorName={quoteVendorDisplayName(p.renewalQuote)}
           rfqTitle={p.rfq?.title ?? p.rfqId}
           quoteNumber={p.renewalQuote.displayNumber}
           validUntilDate={formatValidUntilDate(p.renewalQuote)}
