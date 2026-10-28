@@ -10,6 +10,7 @@
 
 import { safeJsonParse } from "@/lib/json-utils";
 import { formatDate, formatRelativeTime } from "@/lib/intl-utils";
+import { calendarDayLabel, groupByCalendarDay } from "@/lib/audit/calendar-day-groups";
 import type { AuditAction, EntityAuditEntry } from "@/types/audit-trail";
 import type { QuantitySpec } from "@/constants/quantity-specs";
 import { formatQuantityValue } from "./audit-quantity-format";
@@ -302,53 +303,24 @@ export function formatDisplayValue(
   return String(value);
 }
 
-/** Create a YYYY-MM-DD key from a date */
-function toDateKey(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
-/** Group entries by calendar date */
+/**
+ * Ομαδοποίηση του χρονολογίου ανά ημέρα — λεπτός προσαρμογέας πάνω στο SSoT `groupByCalendarDay` (ADR-327).
+ * Οι σχετικές ετικέτες έρχονται από το `audit.dateGroups.*` (ήταν σκληροκωδικοποιημένα ελληνικά — N.11).
+ */
 export function groupEntriesByDate(
   entries: EntityAuditEntry[],
+  t: (key: string) => string,
 ): { dateLabel: string; dateKey: string; entries: EntityAuditEntry[] }[] {
-  if (entries.length === 0) return [];
-
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  const todayKey = toDateKey(today);
-  const yesterdayKey = toDateKey(yesterday);
-
-  const groups = new Map<string, EntityAuditEntry[]>();
-
-  for (const entry of entries) {
-    const dateKey = entry.timestamp
-      ? toDateKey(new Date(entry.timestamp))
-      : "unknown";
-    const existing = groups.get(dateKey);
-    if (existing) {
-      existing.push(entry);
-    } else {
-      groups.set(dateKey, [entry]);
-    }
-  }
-
-  return Array.from(groups.entries()).map(([dateKey, dayEntries]) => {
-    let dateLabel: string;
-    if (dateKey === todayKey) {
-      dateLabel = "Σήμερα";
-    } else if (dateKey === yesterdayKey) {
-      dateLabel = "Χθες";
-    } else if (dateKey === "unknown") {
-      dateLabel = "Άγνωστη ημερομηνία";
-    } else {
-      const [y, m, d] = dateKey.split("-");
-      dateLabel = formatDate(new Date(Number(y), Number(m) - 1, Number(d)));
-    }
-
-    return { dateLabel, dateKey, entries: dayEntries };
-  });
+  const labels = {
+    today: t("audit.dateGroups.today"),
+    yesterday: t("audit.dateGroups.yesterday"),
+    unknown: t("audit.dateGroups.unknown"),
+  };
+  return groupByCalendarDay(entries, (entry) => entry.timestamp).map((group) => ({
+    dateKey: group.dateKey,
+    dateLabel: calendarDayLabel(group, labels, (date) => formatDate(date)),
+    entries: group.entries,
+  }));
 }
 
 /** Compute statistics from entries */

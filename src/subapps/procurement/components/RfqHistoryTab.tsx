@@ -12,45 +12,9 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import type { Quote } from '../types/quote';
-import type { EntityAuditEntry } from '@/types/audit-trail';
-
-// ============================================================================
-// DATE GROUPING
-// ============================================================================
-
-type DayGroup = { dateKey: string; dateLabel: string; entries: EntityAuditEntry[] };
-
-function toDateKey(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-function groupByDate(entries: EntityAuditEntry[]): DayGroup[] {
-  if (entries.length === 0) return [];
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const todayKey = toDateKey(today);
-  const yesterdayKey = toDateKey(yesterday);
-  const map = new Map<string, EntityAuditEntry[]>();
-  for (const entry of entries) {
-    const key = entry.timestamp ? toDateKey(new Date(entry.timestamp)) : todayKey;
-    const group = map.get(key);
-    if (group) group.push(entry);
-    else map.set(key, [entry]);
-  }
-  return Array.from(map.entries()).map(([dateKey, dayEntries]) => {
-    let dateLabel: string;
-    if (dateKey === todayKey) dateLabel = 'Σήμερα';
-    else if (dateKey === yesterdayKey) dateLabel = 'Χθες';
-    else {
-      const [y, m, d] = dateKey.split('-');
-      dateLabel = new Date(Number(y), Number(m) - 1, Number(d)).toLocaleDateString('el-GR', {
-        day: 'numeric', month: 'long', year: 'numeric',
-      });
-    }
-    return { dateKey, dateLabel, entries: dayEntries };
-  });
-}
+// ADR-327: η ομαδοποίηση ανά ημέρα ζει ΜΙΑ φορά (`lib/audit/calendar-day-groups`) — εδώ υπήρχε δίδυμο με
+// σκληροκωδικοποιημένα «Σήμερα»/«Χθες» και `'el-GR'`.
+import { groupEntriesByDate } from '@/components/shared/audit/activity-tab-helpers';
 
 // ============================================================================
 // PROPS
@@ -71,7 +35,7 @@ export function RfqHistoryTab({ rfqId, quotes }: RfqHistoryTabProps) {
 
   const quoteIds = useMemo(() => quotes.map(q => q.id), [quotes]);
   const { entries, isLoading, error } = useRfqHistory({ rfqId, quoteIds });
-  const grouped = useMemo(() => groupByDate(entries), [entries]);
+  const grouped = useMemo(() => groupEntriesByDate(entries, t), [entries, t]);
 
   return (
     <section className="space-y-4">

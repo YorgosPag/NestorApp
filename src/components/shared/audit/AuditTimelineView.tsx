@@ -91,8 +91,8 @@ export function AuditTimelineView({
   );
 
   const groupedEntries = React.useMemo(
-    () => groupEntriesByDate(filteredEntries),
-    [filteredEntries],
+    () => groupEntriesByDate(filteredEntries, t),
+    [filteredEntries, t],
   );
 
   return (

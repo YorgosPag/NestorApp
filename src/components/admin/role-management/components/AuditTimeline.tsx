@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
+import { calendarDayLabel, groupByCalendarDay } from '@/lib/audit/calendar-day-groups';
 import type { FrontendAuditEntry } from '../types';
 import { AUDIT_ACTION_DISPLAY } from '../types';
 
@@ -26,44 +27,13 @@ interface AuditTimelineProps {
   onFilterByTarget: (targetId: string) => void;
 }
 
-interface DateGroup {
-  label: string;
-  entries: FrontendAuditEntry[];
-}
-
 // =============================================================================
 // HELPERS
 // =============================================================================
 
-function getDateLabel(isoDate: string, today: string, yesterday: string): string {
-  const date = new Date(isoDate);
-  const now = new Date();
-  const todayStr = now.toISOString().slice(0, 10);
-  const yesterdayDate = new Date(now);
-  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-  const yesterdayStr = yesterdayDate.toISOString().slice(0, 10);
-
-  const dateStr = date.toISOString().slice(0, 10);
-
-  if (dateStr === todayStr) return today;
-  if (dateStr === yesterdayStr) return yesterday;
+/** Πλήρης ημερομηνία με ημέρα εβδομάδας για τις παλαιότερες ομάδες (ίδια μορφή με πριν). */
+function formatEarlierDay(date: Date): string {
   return date.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-}
-
-function groupByDate(entries: FrontendAuditEntry[], today: string, yesterday: string): DateGroup[] {
-  const groups = new Map<string, FrontendAuditEntry[]>();
-
-  for (const entry of entries) {
-    const label = getDateLabel(entry.timestamp, today, yesterday);
-    const existing = groups.get(label);
-    if (existing) {
-      existing.push(entry);
-    } else {
-      groups.set(label, [entry]);
-    }
-  }
-
-  return Array.from(groups.entries()).map(([label, items]) => ({ label, entries: items }));
 }
 
 function formatTime(isoDate: string): string {
@@ -101,20 +71,26 @@ export function AuditTimeline({ entries, onFilterByActor, onFilterByTarget }: Au
   const { t } = useTranslation('admin');
   const colors = useSemanticColors();
 
-  const groups = useMemo(
-    () => groupByDate(
-      entries,
-      t('roleManagement.auditTab.today', 'Today'),
-      t('roleManagement.auditTab.yesterday', 'Yesterday')
-    ),
-    [entries, t]
-  );
+  // ADR-327: ΤΟΠΙΚΗ ημέρα μέσω του SSoT — εδώ η ομαδοποίηση γινόταν σε UTC (`toISOString`), οπότε στην Ελλάδα μια
+  // εγγραφή μετά τα μεσάνυχτα έπεφτε στην προηγούμενη ημέρα.
+  const groups = useMemo(() => {
+    const labels = {
+      today: t('roleManagement.auditTab.today'),
+      yesterday: t('roleManagement.auditTab.yesterday'),
+      unknown: t('roleManagement.auditTab.unknownDate'),
+    };
+    return groupByCalendarDay(entries, (entry) => entry.timestamp).map((group) => ({
+      key: group.dateKey,
+      label: calendarDayLabel(group, labels, formatEarlierDay),
+      entries: group.entries,
+    }));
+  }, [entries, t]);
 
   if (entries.length === 0) {
     return (
       <section className="py-12 text-center">
         <p className={colors.text.muted}>
-          {t('roleManagement.auditTab.noEntries', 'No audit log entries found.')}
+          {t('roleManagement.auditTab.noEntries')}
         </p>
       </section>
     );
@@ -123,7 +99,7 @@ export function AuditTimeline({ entries, onFilterByActor, onFilterByTarget }: Au
   return (
     <section className="space-y-6">
       {groups.map((group) => (
-        <article key={group.label}>
+        <article key={group.key}>
           <h3 className={cn("mb-3 text-sm font-semibold uppercase tracking-wider", colors.text.muted)}>
             {group.label}
           </h3>
