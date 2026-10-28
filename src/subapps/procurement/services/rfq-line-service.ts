@@ -18,9 +18,11 @@ import type {
   CreateRfqLineDTO,
   UpdateRfqLineDTO,
   PublicRfqLine,
+  RfqLinesHolder,
+  InternalRfqLine,
 } from '../types/rfq-line';
-import { toPublicRfqLine } from '../types/rfq-line';
-import { RFQ_FROM_BOQ_MAX_ITEMS } from '../types/rfq';
+import { toPublicRfqLine, toPublicLine, rfqLinesLocation, resolveInternalRfqLines } from '../types/rfq-line';
+import { RFQ_FROM_BOQ_MAX_ITEMS, type RFQ } from '../types/rfq';
 
 const logger = createModuleLogger('RFQ_LINE_SERVICE');
 
@@ -262,18 +264,56 @@ export async function snapshotFromBoq(
 // READ
 // ============================================================================
 
+/**
+ * The ONE query of `rfqs/{id}/lines`, ordered. The parent's ownership is proven by the caller;
+ * each line is ALSO fenced on its own denormalized `companyId` (belt-and-suspenders, as `snapshotFromBoq`).
+ */
+async function fetchSubcollectionLines(
+  db: FirebaseFirestore.Firestore,
+  rfqId: string,
+  companyId: string,
+): Promise<RfqLine[]> {
+  const snap = await linesRef(db, rfqId).orderBy('displayOrder', 'asc').get();
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() } as RfqLine))
+    .filter((line) => line.companyId === companyId);
+}
+
 export async function listRfqLines(
   ctx: AuthContext,
   rfqId: string,
 ): Promise<RfqLine[]> {
   return safeFirestoreOperation(async (db) => {
     await assertOwnedRfq(db, rfqId, ctx.companyId);
-
-    const snap = await linesRef(db, rfqId)
-      .orderBy('displayOrder', 'asc')
-      .get();
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() } as RfqLine));
+    return fetchSubcollectionLines(db, rfqId, ctx.companyId);
   }, []);
+}
+
+/**
+ * «The lines of an RFQ», vendor-safe — the ONE reader every surface outside the PM's own page uses
+ * (vendor portal GET + POST, package aggregate). Honours `linesStorage` (ADR-327 Q29) through
+ * `resolveInternalRfqLines`, and strips `unitPrice`/`boqItemId`/`source`/`companyId` (`toPublicLine`).
+ *
+ * Takes an RFQ ALREADY loaded with its ownership check (`getRfq`) — no second parent read.
+ * 🔴 NO fallback: a failed read throws. A silent `[]` here is exactly the bug it replaces —
+ * a vendor pricing an empty form.
+ */
+export async function readRfqLinesPublic(
+  rfq: RfqLinesHolder & Pick<RFQ, 'id' | 'companyId'>,
+): Promise<PublicRfqLine[]> {
+  return (await readRfqLines(rfq)).map(toPublicLine);
+}
+
+/**
+ * The SAME reader, PM side: the lines + the internal estimate (bid leveling plugs, ADR-327 §8.5).
+ * ⚠️ NEVER on a vendor surface — those call `readRfqLinesPublic`, which strips the estimate.
+ */
+export async function readRfqLines(
+  rfq: RfqLinesHolder & Pick<RFQ, 'id' | 'companyId'>,
+): Promise<InternalRfqLine[]> {
+  if (rfqLinesLocation(rfq) === 'inline') return resolveInternalRfqLines(rfq, []);
+  const lines = await safeFirestoreOperation((db) => fetchSubcollectionLines(db, rfq.id, rfq.companyId));
+  return resolveInternalRfqLines(rfq, lines);
 }
 
 export async function listRfqLinesPublic(

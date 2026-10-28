@@ -18,6 +18,8 @@
 ### Changelog
 | Date | Changes |
 |------|---------|
+| 2026-10-28 | 🟢 **§8.5 ΝΕΟ — Bid leveling ανά γραμμή RFQ (Α του handoff 27/10).** Η `QuoteLine` απέκτησε `rfqLineId` και η σύγκριση ενώνει πλέον με **αυτό**, όχι με περιγραφή/`categoryCode` (το `lineKey` καταργήθηκε). **Μοντέλο** (Procore Base Bid / Alternates / Include-Exclude · BuildingConnected Additional Items): `Quote.lines` = βασική προσφορά (απαντήσεις σε γραμμές RFQ + πρόσθετες με `rfqLineId: null`) · `Quote.alternates` = εναλλακτικές δεμένες στη γραμμή που αντικαθιστούν, **εκτός** `totals`/PO · `Quote.scopeResponses` = «περιλαμβάνεται»/«εξαιρείται» με αιτιολογία και στιγμιότυπο περιγραφής. **Server = αυθεντία**: `checkRfqLineAnswers` απέναντι στο `readRfqLinesPublic` της πρόσκλησης (ξένο/διπλό id, αναπάντητη γραμμή ⇒ 400 `binding:<code>`) · `applyRfqLineAuthority` (περιγραφή + ΑΤΟΕ από τη γραμμή RFQ). **Leveling** (`utils/bid-leveling.ts`, καθαρό): αξία = τιμή μονάδας × ποσότητα **του RFQ** · μονάδες μέσω `resolveUom` (m ≠ m² ⇒ `unitMismatch`) · κενά καλυμμένα με **ορατή πηγή** (εκτίμηση PM, αλλιώς η υψηλότερη συγκρίσιμη) · lump sum = «όλα περιλαμβάνονται» · παλιές/σαρωμένες προσφορές δένονται **με συμπέρασμα, σημαδεμένο**. Το TCO (`levelingDelta`) και το cherry pick (`utils/cherry-pick.ts`) διαβάζουν τον ΙΔΙΟ πίνακα. **Πύλη**: μία απάντηση ανά γραμμή RFQ (Τιμολογώ/Περιλαμβάνεται/Εξαιρείται), εναλλακτικές ανά γραμμή, πρόσθετες γραμμές, μονάδα = λίστα του μητρώου UoM (τέλος το `'τμχ'`, ADR-923 «3γ» 4β για την πύλη). **PM**: πίνακας `BidLevelingTable` στη σύγκριση + `QuoteRfqAnswers` στην καρτέλα. **SSoT**: ΕΝΑΣ αναγνώστης γραμμών, δύο προβολές (`readRfqLines` PM με εκτίμηση / `readRfqLinesPublic` χωρίς) · ΕΝΑ zod `QuoteLineSchema` (ήταν 2 — το zod θα έσβηνε το `rfqLineId` σε κάθε επεξεργασία PM) · ΕΝΑ config ορίων συνημμένων (ήταν 2) · `generateQuoteLineId` (`qtln`, αντί για `Date.now()`). Tests: `bid-leveling` (10) · `rfq-line-binding` (6) · `vendor-quote-draft` (6). ⏳ **Ανοιχτά**: Β (κλείδωμα ποσότητας/μονάδας) · Γ (ταυτότητα προμηθευτή χωρίς επαφή) · χειροκίνητη κάλυψη κενού από τον PM · πρόταση δεσίματος στον έλεγχο σαρωμένης προσφοράς · ζωντανός έλεγχος πύλης. |
+| 2026-10-27 | 🔴 **§7 πύλη προμηθευτή + §17 Q29/Q31 — ο προμηθευτής τιμολογούσε ΑΔΕΙΑ φόρμα.** Από το Q29 οι γραμμές ζουν στην υποσυλλογή `rfqs/{id}/lines`· το inline `RFQ.lines` είναι legacy και `[]` σε κάθε νέο RFQ. Τρεις καταναλωτές διάβαζαν ακόμη το inline: (1) `GET /api/vendor/quote` (payload της φόρμας ⇒ **0 γραμμές** στον προμηθευτή) · (2) `POST /api/vendor/quote` (`rfqTrade` της προσφοράς ⇒ πάντα `materials_general`) · (3) `sourcing-events/[eventId]/aggregate` (`trade` γραμμής **και** `tradeCount` του πακέτου ⇒ `null` / 0). **Επαληθεύτηκε πριν τον κώδικα** στη Firestore: `rfq_67959c09-…` → `lines: []`, `linesStorage: 'boq'`, υποσυλλογή 1 γραμμή· σύνολο 2 RFQ, **0** `inline_legacy`. **SSoT audit**: το strip υπήρχε ήδη (`toPublicRfqLine`, `types/rfq-line.ts`) και επαναχρησιμοποιήθηκε· το `listRfqLinesPublic` υπήρχε αλλά **κανείς δεν το καλούσε** και θέλει `AuthContext`, που η πύλη (ο σύνδεσμος ΕΙΝΑΙ η ταυτότητα) δεν έχει. **Λύση — ΕΝΑΣ αναγνώστης**: `readRfqLinesPublic(rfq)` στο `rfq-line-service.ts` (δέχεται RFQ ήδη φορτωμένο με έλεγχο ιδιοκτησίας από το `getRfq`) · ο κανόνας «πού ζουν οι γραμμές» είναι **καθαρή** συνάρτηση `rfqLinesLocation` + `resolvePublicRfqLines` δίπλα στο `toPublicRfqLine`: `'inline_legacy'` ⇒ inline· **χωρίς** breadcrumb (έγγραφο προ-Q29) **με** inline περιεχόμενο ⇒ inline· οτιδήποτε άλλο ⇒ υποσυλλογή. ⚠️ Το `null` **δεν** σημαίνει inline: το `linesStorage` γράφεται ΜΙΑ φορά στη δημιουργία, και RFQ που δημιουργήθηκε χωρίς γραμμές και γέμισε μετά μέσω `/lines` έχει τις γραμμές του στην υποσυλλογή. 🔴 **Χωρίς fallback**: αποτυχία ανάγνωσης ⇒ σφάλμα, ΠΟΤΕ σιωπηλό `[]` (αυτό ακριβώς ήταν το σφάλμα). Ένα κοινό ερώτημα `fetchSubcollectionLines` για `listRfqLines` + νέο αναγνώστη, με φράχτη ανά γραμμή στο αποκανονικοποιημένο `companyId`. `rfqLeadTrade` (πρώτη γραμμή) στο `types/rfq.ts` = ΕΝΑΣ κανόνας για την ειδικότητα προσφοράς και τη γραμμή του aggregate· `rfqIsMultiTrade` δέχεται πλέον και τη δημόσια προβολή. Ο τύπος της πύλης `InitialRfqLine` (χειρόγραφο αντίγραφο) αντικαταστάθηκε από το `PublicRfqLine`. Η πύλη δείχνει πλέον και το `notes` της γραμμής (στις γραμμές BOQ = η περιγραφή εργασίας — όπως το «Description» του line item στο Procore bid form). **Έρευνα**: Procore Bidding — ο bidder βλέπει τα line items του bid form και, με «Lock Quantity / Unit of Measure», συμπληρώνει **μόνο** τιμή μονάδας· BuildingConnected — το bid form του GC με γραμμές, ο υπεργολάβος απαντά ανά γραμμή· εκτιμήσεις/προϋπολογισμός δεν εμφανίζονται στον bidder. **Άγκυρα**: `services/__tests__/rfq-line-service.test.ts` «readRfqLinesPublic — honours linesStorage (Q29)» (boq + inline `[]` ⇒ γραμμές χωρίς εσωτερικά πεδία · `null` ⇒ υποσυλλογή · ξένος tenant κόβεται · `inline_legacy` χωρίς ερώτημα · προ-Q29 · αποτυχία ⇒ ρίχνει) + `rfqLeadTrade`. **Ζωντανή επαλήθευση (Chrome, localhost)**: πρόσκληση `copy_link` (κανένα email — `providerMessageId: null`) `vi_f4edc58c-537a-4b85-8ef7-5a35f33a723a` στο `rfq_67959c09-…` → η πύλη δείχνει «Ζητούμενα είδη: ΔΟΚΙΜΗ — επιμέτρηση ελέγχου αρχείου — 1 m3» και η φόρμα προσυμπληρώνεται (περιγραφή · 1 · m3 · τιμή κενή)· `GET /api/vendor/quote` 200 και μετά από ανανέωση. **Υποβολή** (νέος σύνδεσμος αντιγραφής, τιμή 100 €/m3) → `qt_34bac87b-…` (`QT-0001`) με **`trade: 'demolition'`** (πριν: `materials_general`), 1 γραμμή, σύνολο 124 €. ⚠️ **Εύρημα (προϋπάρχον, δεν αγγίχτηκε)**: πρόσκληση με `manualEmail` (χωρίς επαφή) ⇒ η προσφορά γράφεται με `vendorContactId: ""` και `auditTrail.userId: "vendor:"` — προσφορά χωρίς ταυτότητα προμηθευτή. **Ανοιχτά (απόφαση Giorgio)**: η γραμμή προσφοράς **δεν** κρατά `rfqLineId` ⇒ η σύγκριση δεν μπορεί να ευθυγραμμίσει ανά γραμμή RFQ (Procore bid leveling)· δεν υπάρχει κλείδωμα ποσότητας/μονάδας στην πύλη· ο client `useRfqLines` διαβάζει μόνο την υποσυλλογή (0 `inline_legacy` σήμερα). |
 | 2026-10-27 | 🔴 **§17 Q28-Q31 — το `POST /api/rfqs` πετούσε σιωπηλά γραμμές, προμηθευτές και πακέτο από την πρώτη μέρα.** Το `CreateRfqSchema` (zod `z.object`, που αφαιρεί αδήλωτα κλειδιά) δεν δήλωνε `boqItemIds` / `adHocLines` / `invitedVendorIds` / `sourcingEventId`, ενώ το `CreateRfqDTO` και το `RfqBuilder` τα στέλνουν ⇒ κάθε RFQ της φόρμας: 201, `lines: []`, άδεια υποσυλλογή, κανένα fan-out (Q28), καμία σύνδεση με sourcing event (Q31). Αόρατο στα tests γιατί καλούσαν το `createRfq` απευθείας. Μαζί: η προθεσμία γραφόταν πάντα `null` στη δημιουργία · `boqItemIds` **και** `adHocLines` γράφονται πλέον **και τα δύο** (ήταν `else if` — η Q29 είναι «BOQ-first + ad-hoc», όχι «ή»). Νέο SSoT `src/app/api/rfqs/_shared/rfq-schemas.ts` · `procurement-timestamps.ts` · όριο `RFQ_FROM_BOQ_MAX_ITEMS` στο `types/rfq.ts`. Βρέθηκε στη ζωντανή επαλήθευση του ADR-330 §5.1 S3.2. Άγκυρες: `rfq-schemas.test.ts` · `rfq-service.test.ts`. |
 | 2026-10-27 | 🔴 **P5-BOQ — το «Αίτημα από επιμετρήσεις» έχανε τη σύνδεση με την επιμέτρηση.** Το `createRfqFromBoqItems` γύριζε γραμμές **χωρίς** `boqItemId` και το `RfqBuilder` έκανε **κάθε** αρχική γραμμή `ad_hoc` ⇒ στο submit δεν πήγαινε `boqItemIds`, το RFQ δεν είχε γραμμές `source:'boq'` και καμία οθόνη δεν μπορούσε να ξέρει ότι η εργασία είναι σε προσφορές. Διόρθωση: τύπος `RfqDraftLine` / `RfqFromBoqDraft` (γραμμή που **κρατά** την προέλευσή της) · ο builder κρατά `source:'boq'` όταν υπάρχει `boqItemId` ⇒ `snapshotFromBoq`. Το URL της ροής ζει πλέον στο `getNewRfqUrl` (`procurement-urls`, όριο `RFQ_FROM_BOQ_MAX_ITEMS = 30` δηλωμένο). Αφορμή: ADR-330 §5.1 S3.2 (Buyout). Άγκυρα: `rfq-service.test.ts` › createRfqFromBoqItems. |
 | 2026-09-24 | 🔴 **§7 — ΜΙΑ ΠΡΟΣΚΛΗΣΗ = ΜΙΑ ΑΠΑΝΤΗΣΗ ([ADR-876 §5.8](./ADR-876-credential-link-surfaces.md) Σ19).** Επαληθευμένο στον browser (emulator): η προσφορά της πύλης βρισκόταν με ερώτημα `(rfqId, vendorContactId)`· με χειροκίνητο email το `vendorContactId` είναι `''`, άρα ο **δεύτερος** προμηθευτής του ίδιου RFQ **έγραφε πάνω** στην προσφορά του πρώτου (1178 € → 620 €) και ο πρώτος θα έβλεπε τις τιμές του δεύτερου. Τώρα: `VendorInvite.quoteId` γράφεται στην πρώτη υποβολή και η προσφορά διαβάζεται **με ταυτότητα** (φράχτης εταιρείας + RFQ, κανένας δείκτης)· εφεδρεία ερωτήματος μόνο με πραγματική επαφή (Φ7). Επίσης (Σ17): το παράθυρο επεξεργασίας των 72ω (Q8) ήταν γραμμένο **3 φορές** με 3 `Date.now()` → `VENDOR_QUOTE_EDIT_WINDOW_HOURS` + μία στιγμή ανά υποβολή σε προσφορά + πρόσκληση. |
@@ -211,6 +213,7 @@ Quote (1 RFQ → N Quotes, 1 ad-hoc Quote without RFQ)
  └─ auditTrail: AuditEntry[]
 
 QuoteLine
+ ├─ rfqLineId?                 ← §8.5: η γραμμή RFQ που απαντά (null = πρόσθετη)
  ├─ description
  ├─ categoryCode: ATOECode?    ← UNIVERSAL JOIN με BOQ + PO
  ├─ quantity, unit
@@ -549,6 +552,41 @@ interface QuoteComparisonResult {
   };
 }
 ```
+
+### 8.5 Bid leveling ανά γραμμή RFQ (2026-10-28)
+
+**Ερώτημα**: «ποια προσφορά είναι φθηνότερη **για το ίδιο αντικείμενο**;». Η σύγκριση συνόλων το απαντά λάθος: όποιος αφήνει γραμμές
+απλήρωτες φαίνεται φθηνότερος. Ο Procore και το BuildingConnected το λύνουν με bid leveling ανά γραμμή της φόρμας.
+
+**Μοντέλο απάντησης** (μία ανά γραμμή RFQ):
+
+| Απάντηση | Πού ζει | Στο σύνολο της προσφοράς | Στο leveling |
+|---|---|---|---|
+| Τιμή | `Quote.lines[]` με `rfqLineId` | ναι | τιμή μονάδας × ποσότητα RFQ |
+| Περιλαμβάνεται | `Quote.scopeResponses[]` | — | 0 |
+| Εξαιρείται | `Quote.scopeResponses[]` + αιτιολογία | — | κάλυψη κενού (ορατή πηγή) |
+| Εναλλακτική | `Quote.alternates[]` με `rfqLineId` | **όχι** (ούτε PO) | δίπλα στη γραμμή, όχι στο σύνολο |
+| Πρόσθετη | `Quote.lines[]` με `rfqLineId: null` | ναι | χωριστή γραμμή αθροίσματος |
+
+**Κάλυψη κενού** (σειρά): εκτίμηση PM (`RfqLine.unitPrice` × ποσότητα — μόνο PM side, ποτέ στην πύλη) → υψηλότερη συγκρίσιμη τιμή άλλου
+(συντηρητικό). Χωρίς πηγή ⇒ μετριέται ως `unpluggedGaps` και το σύνολο δηλώνεται «κάτω όριο».
+
+**Πού ξεπερνάμε τους μεγάλους**: (1) η πύλη απαιτεί **ρητή** απάντηση σε κάθε γραμμή — η σιωπή δεν επιτρέπεται, το κενό είναι δήλωση ·
+(2) εναλλακτική **δεμένη** στη γραμμή που αντικαθιστά (στο BuildingConnected πάει χύμα στα Additional Items) · (3) αυτόματη κάλυψη κενού με
+ορατή πηγή αντί για χειροκίνητο plug · (4) έλεγχος μονάδας μέσω μητρώου UoM — m με m² δεν συγκρίνονται ποτέ · (5) παλιές/σαρωμένες προσφορές
+δένονται με συμπέρασμα **σημαδεμένο** (`binding: 'inferred'`), ποτέ γραμμένο πίσω σιωπηλά.
+
+**Αρχεία**: `types/bid-leveling.ts` · `utils/bid-leveling.ts` · `utils/rfq-line-binding.ts` · `utils/cherry-pick.ts` ·
+`components/BidLevelingTable.tsx` · `components/QuoteRfqAnswers.tsx` · πύλη: `vendor-quote-draft.ts`, `VendorPortalAnswers.tsx`,
+`VendorPortalAdditionalLines.tsx`, `VendorPortalLineFields.tsx`, `useVendorUomOptions.ts`.
+
+**Επόμενα (σχεδιασμένα μαζί)**:
+- **Β — Κλείδωμα ποσότητας/μονάδας** (Procore «Lock Quantity / UoM», ανά ενότητα Base/Alternates): `RFQ.responseLock { quantity, unit }`·
+  ο server **ξαναγράφει** τις κλειδωμένες τιμές από τη γραμμή RFQ μέσα στο `applyRfqLineAuthority` (ένα σημείο), η πύλη τις δείχνει
+  μόνο-ανάγνωσης· οι εναλλακτικές μένουν ελεύθερες.
+- **Γ — Ταυτότητα χωρίς επαφή** (BuildingConnected «Unknown Company» / `placeholderCompanyName`): `Quote.vendorSnapshot { name, email,
+  inviteId }` από την πρόσκληση · resolver επαφή → snapshot → εξαγωγή · audit `vendor:invite:{id}` · ενέργεια «Προσθήκη στις επαφές» που
+  δένει την προσφορά — καμία αυτόματη δημιουργία επαφής.
 
 ---
 

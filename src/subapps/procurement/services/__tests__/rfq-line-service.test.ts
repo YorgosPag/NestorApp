@@ -161,9 +161,12 @@ import {
   snapshotFromBoq,
   listRfqLines,
   listRfqLinesPublic,
+  readRfqLinesPublic,
   updateRfqLine,
   deleteRfqLine,
 } from '../rfq-line-service';
+import { rfqLinesLocation } from '../../types/rfq-line';
+import { rfqLeadTrade } from '../../types/rfq';
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -306,6 +309,73 @@ describe('deleteRfqLine', () => {
     mockLineDocRef.get.mockResolvedValueOnce(makeLineSnap());
     await deleteRfqLine(ctx, 'rfq1', 'rfqln_1');
     expect(mockLineDocRef.delete).toHaveBeenCalled();
+  });
+});
+
+// ADR-327 Q29 anchor (2026-10-27): the vendor portal + package aggregate read the lines through
+// `readRfqLinesPublic`. Before, they read the legacy `rfq.lines` — `[]` on every new RFQ ⇒ the vendor
+// priced an EMPTY form. These cases fail if any reader goes back to the inline array.
+describe('readRfqLinesPublic — honours linesStorage (Q29)', () => {
+  const legacyLine = {
+    id: 'inl1', description: 'Legacy line', trade: 'plumbing', categoryCode: 'OIK-9',
+    quantity: 3, unit: 'm', notes: null,
+  } as unknown as RfqLine;
+
+  function rfqWith(linesStorage: 'boq' | 'ad_hoc' | 'inline_legacy' | null | undefined, lines: RfqLine[] = []) {
+    return { id: 'rfq1', companyId: 'co1', linesStorage, lines };
+  }
+
+  it("linesStorage 'boq' + inline [] → the sub-collection lines, vendor-safe", async () => {
+    mockLinesCollection.get.mockResolvedValueOnce({
+      docs: [makeLineSnap({ id: 'l1', unitPrice: 99, boqItemId: 'boq1', source: 'boq', notes: 'Spec' })],
+    });
+
+    const lines = await readRfqLinesPublic(rfqWith('boq'));
+
+    expect(lines).toEqual([{
+      id: 'l1', description: 'Test line', trade: 'concrete', categoryCode: null,
+      quantity: 10, unit: 'm²', notes: 'Spec', displayOrder: 0,
+    }]);
+    expect(mockLinesCollection.orderBy).toHaveBeenCalledWith('displayOrder', 'asc');
+  });
+
+  it('linesStorage null (created empty, filled later via /lines) → the sub-collection', async () => {
+    mockLinesCollection.get.mockResolvedValueOnce({ docs: [makeLineSnap({ id: 'l1' })] });
+    expect((await readRfqLinesPublic(rfqWith(null))).map((l) => l.id)).toEqual(['l1']);
+  });
+
+  it('drops a sub-collection line of ANOTHER tenant (line-level fence)', async () => {
+    mockLinesCollection.get.mockResolvedValueOnce({
+      docs: [makeLineSnap({ id: 'mine' }), makeLineSnap({ id: 'theirs', companyId: 'co_other' })],
+    });
+    expect((await readRfqLinesPublic(rfqWith('ad_hoc'))).map((l) => l.id)).toEqual(['mine']);
+  });
+
+  it("'inline_legacy' → the inline array, made whole (array order = displayOrder), no query", async () => {
+    const lines = await readRfqLinesPublic(rfqWith('inline_legacy', [legacyLine]));
+    expect(lines).toEqual([{
+      id: 'inl1', description: 'Legacy line', trade: 'plumbing', categoryCode: 'OIK-9',
+      quantity: 3, unit: 'm', notes: null, displayOrder: 0,
+    }]);
+    expect(mockLinesCollection.get).not.toHaveBeenCalled();
+  });
+
+  it('no breadcrumb (pre-Q29 doc) with inline content → inline; without content → sub-collection', () => {
+    expect(rfqLinesLocation({ lines: [legacyLine] })).toBe('inline');
+    expect(rfqLinesLocation({ lines: [] })).toBe('subcollection');
+    expect(rfqLinesLocation({ linesStorage: 'boq', lines: [legacyLine] })).toBe('subcollection');
+  });
+
+  it('a failed read THROWS — never a silent empty form', async () => {
+    mockLinesCollection.get.mockRejectedValueOnce(new Error('unavailable'));
+    await expect(readRfqLinesPublic(rfqWith('boq'))).rejects.toThrow('unavailable');
+  });
+});
+
+describe('rfqLeadTrade', () => {
+  it('first line wins; line-less → null', () => {
+    expect(rfqLeadTrade({ lines: [{ trade: 'demolition' }, { trade: 'concrete' }] })).toBe('demolition');
+    expect(rfqLeadTrade({ lines: [] })).toBeNull();
   });
 });
 

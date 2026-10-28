@@ -194,9 +194,23 @@ export interface RfqFilters {
 // HELPERS
 // ============================================================================
 
-export function rfqIsMultiTrade(rfq: Pick<RFQ, 'lines'>): boolean {
+/** Any line list — sub-collection records or the vendor-safe projection (`PublicRfqLine`). */
+interface TradedLines {
+  readonly lines: readonly { readonly trade: TradeCode }[];
+}
+
+export function rfqIsMultiTrade(rfq: TradedLines): boolean {
   const trades = new Set(rfq.lines.map((l) => l.trade));
   return trades.size > 1;
+}
+
+/**
+ * The trade an RFQ is filed under: its FIRST line (lines ordered by `displayOrder`); `null` when line-less.
+ * ONE rule for the vendor quote's `trade` and the package aggregate row — pass the lines of
+ * `readRfqLinesPublic`, NEVER the legacy inline `RFQ.lines` (ADR-327 Q29).
+ */
+export function rfqLeadTrade(rfq: TradedLines): TradeCode | null {
+  return rfq.lines[0]?.trade ?? null;
 }
 
 // ============================================================================

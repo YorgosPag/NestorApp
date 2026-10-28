@@ -10,7 +10,8 @@ import { defineRoute, ok, notFound } from '@/lib/api/define-route';
 import { getSourcingEvent } from '@/subapps/procurement/services/sourcing-event-service';
 import { getRfq } from '@/subapps/procurement/services/rfq-service';
 import { listQuotes } from '@/subapps/procurement/services/quote-service';
-import type { RfqStatus } from '@/subapps/procurement/types/rfq';
+import { readRfqLinesPublic } from '@/subapps/procurement/services/rfq-line-service';
+import { rfqLeadTrade, type RfqStatus } from '@/subapps/procurement/types/rfq';
 import type { SourcingEventStatus } from '@/subapps/procurement/types/sourcing-event';
 import type { QuoteStatus } from '@/subapps/procurement/types/quote';
 
@@ -72,10 +73,11 @@ export const GET = defineRoute<import('zod').ZodTypeAny, { eventId: string }>({
       }),
     );
 
+    // ADR-327 Q29: the lines live in the sub-collection — the legacy `rfq.lines` is `[]` on new RFQs.
+    const rfqLines = await Promise.all(rfqs.map((rfq) => readRfqLinesPublic(rfq)));
+
     const uniqueVendors = new Set(rfqs.flatMap((r) => r.invitedVendorIds));
-    const uniqueTrades = new Set(
-      rfqs.flatMap((r) => r.lines.map((l) => l.trade)).filter(Boolean),
-    );
+    const uniqueTrades = new Set(rfqLines.flatMap((lines) => lines.map((l) => l.trade)));
 
     const definedTotals = bestTotals.filter((t): t is number => t !== null);
     const isPartialTotal = definedTotals.length < rfqs.length;
@@ -96,7 +98,7 @@ export const GET = defineRoute<import('zod').ZodTypeAny, { eventId: string }>({
       rfqs: rfqs.map((rfq, i) => ({
         rfqId: rfq.id,
         title: rfq.title,
-        trade: rfq.lines[0]?.trade ?? null,
+        trade: rfqLeadTrade({ lines: rfqLines[i] }),
         status: rfq.status,
         bestQuoteTotal: bestTotals[i],
         winnerQuoteId: rfq.winnerQuoteId,
