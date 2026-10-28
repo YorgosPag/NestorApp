@@ -24,6 +24,7 @@ import type { BaseTabDef, TabsNavTab } from './tabs-types';
 export interface RouteTabsProps {
   tabs: readonly TabsNavTab[];
   i18nNamespace: string;
+  /** Ήδη μεταφρασμένο από τον καταναλωτή με κυριολεκτικό `t('…')` — ποτέ ωμό κείμενο (N.11, ADR-327). */
   ariaLabel: string;
   className?: string;
 }

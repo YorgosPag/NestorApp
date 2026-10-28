@@ -19,6 +19,7 @@ const { collectSourceFiles } = require('../module-graph/scan-config');
 const {
   loadNamespaceBundles,
   extractNamespaces,
+  extractHandedNamespaces,
   extractTCalls,
   stripComments,
 } = require('../i18n-namespace-extract');
@@ -111,7 +112,11 @@ function analyseFile(projectRoot, relFile, graph, context) {
     source,
     importSpecs,
     // ⚠️ Τα bundles είναι καθολική είσοδος (E), ίδια σε όλο το πέρασμα ⇒ κλειδί μόνο το κείμενο.
-    namespaces: memo.once(abs, 'namespaces', source, () => extractNamespaces(source, context.bundles)),
+    // ADR-327 · ADR-744 §18 — ΚΑΙ όσα το αρχείο ΠΑΡΑΔΙΔΕΙ (`i18nNamespace="x"`): αλλιώς ο γενικός
+    // μεταφραστής (`RouteTabs`) δεν έχει γείτονα που δηλώνει, και τα κλειδιά του πέφτουν ωμά στο SSR.
+    namespaces: memo.once(abs, 'namespaces', source, () => [
+      ...new Set([...extractNamespaces(source, context.bundles), ...extractHandedNamespaces(source)]),
+    ]),
     ...surface,
     excluded: false,
   };

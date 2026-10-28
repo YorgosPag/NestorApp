@@ -196,6 +196,35 @@ function extractNamespaces(content, bundles) {
 }
 
 /**
+ * ADR-744 §18 · ADR-327 — τα namespaces που ένα αρχείο **ΠΑΡΑΔΙΔΕΙ** σε γενικό μεταφραστή
+ * μέσω της σύμβασης `i18nNamespace` (`<RouteTabs i18nNamespace="projects">`, `i18nNamespace: 'filters'`).
+ *
+ * 🔴 ΜΕΤΡΗΜΕΝΟ 2026-10-28: το `RouteTabs` καλεί `useTranslation(i18nNamespace)` (prop ⇒ μηδέν δήλωση)
+ * και ο εισαγωγέας του `ProjectProcurementTabs` (layout ⇒ ρίζα κελύφους) **επίσης** μηδέν — άρα η
+ * κληρονομιά του §18 (ένα άλμα, μόνο από γείτονα που ΔΗΛΩΝΕΙ) δεν έβρισκε τίποτα, τα
+ * `tabs.subtabs.procurement.*` έμεναν εκτός slice και ο server έβαφε **ωμό**
+ * `tabs.subtabs.procurement.overview` ⇒ hydration mismatch σε **κάθε** σελίδα προμηθειών έργου.
+ * Το namespace ήταν γραμμένο **κυριολεκτικά** στο αρχείο που περνά τα κλειδιά — απλώς κανείς δεν το διάβαζε.
+ *
+ * ⚠️ ΧΩΡΙΣΤΑ από το {@link extractNamespaces}, όχι τέταρτη μορφή μέσα του: εκείνο απαντά «τι
+ * **φορτώνει** αυτό το αρχείο για τα ΔΙΚΑ του `t()`» και το CHECK 3.8 έχει baseline κομμένη στα
+ * μέτρα του. Εδώ η ερώτηση είναι «ποιο namespace **ονομάζει** για κλειδιά που μεταφράζει άλλος» —
+ * καταναλωτής η απόδοση κλειδιών του κελύφους/route slices (`plan.js`), όπου η υπερ-απόδοση κλαδεύεται.
+ *
+ * @param {string} content source of a .ts/.tsx file (σχόλια ήδη κομμένα)
+ * @returns {string[]} de-duplicated namespace list
+ */
+function extractHandedNamespaces(content) {
+  const handed = new Set();
+  for (const m of content.matchAll(
+    /\bi18nNamespace\s*(?:=\s*\{?\s*|:\s*)['"]([a-zA-Z0-9_-]+)['"]/g,
+  )) {
+    handed.add(m[1]);
+  }
+  return [...handed];
+}
+
+/**
  * Extract every `t('literal')` call — static string keys only.
  *
  * MOVED HERE from scripts/check-i18n-missing-keys.js (ADR-744). It lived there
@@ -313,6 +342,7 @@ module.exports = {
   loadCompatNamespaces,
   withCompatNamespaces,
   extractNamespaces,
+  extractHandedNamespaces,
   extractTCalls,
   extractExplicitTCalls,
   stripComments,

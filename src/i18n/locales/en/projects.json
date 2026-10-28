@@ -594,6 +594,7 @@
         "po": "Purchase Orders",
         "coverage": "Coverage",
         "backToProject": "Back to Project",
+        "navLabel": "Project procurement sections",
         "overviewComingSoon": "Overview lands in the next session.",
         "actions": {
           "newRfq": "New Request for Quote",

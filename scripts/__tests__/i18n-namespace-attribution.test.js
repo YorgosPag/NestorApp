@@ -372,3 +372,46 @@ describe('Π — το πραγματικό δέντρο', () => {
     expect(hook).not.toMatch(/^ {4}t,$/m);
   });
 });
+
+/* ============================================================================
+ * Κ-RT — ΤΟ NAMESPACE ΠΟΥ ΠΑΡΑΔΙΔΕΤΑΙ ΩΣ PROP (ADR-327, μετρημένο 2026-10-28)
+ * ============================================================================
+ * `ProjectProcurementTabs` (layout ⇒ ρίζα κελύφους) → `<RouteTabs i18nNamespace="projects">` →
+ * `useTranslation(i18nNamespace)` + `t(tab.labelKey)`. Κανείς από τους δύο δεν «δήλωνε» namespace,
+ * άρα τα `tabs.subtabs.procurement.*` έμεναν εκτός slice ⇒ ωμό κλειδί στο SSR ⇒ hydration mismatch.
+ */
+const GENERIC_TABS = `import { useTranslation } from '@/i18n/hooks/useTranslation';${NL}`
+  + `export function RouteTabs({ tabs, i18nNamespace }) { const { t } = useTranslation(i18nNamespace);${NL}`
+  + `  return tabs.map((tab) => t(tab.labelKey)); }${NL}`;
+const TABS_CONSUMER = `import { RouteTabs } from './route-tabs';${NL}`
+  + `const TABS = [{ labelKey: 'tabs.subtabs.procurement.overview' }];${NL}`
+  + `export function Sub() { return RouteTabs({ tabs: TABS, i18nNamespace: 'projects' }); }${NL}`;
+
+describe('Κ-RT — namespace που παραδίδεται σε γενικό μεταφραστή', () => {
+  it('το `i18nNamespace` του καταναλωτή ΔΗΛΩΝΕΙ ⇒ ο γενικός μεταφραστής κληρονομεί, το κλειδί προσγειώνεται', () => {
+    const { plan } = miniRepo({
+      'src/app/layout.tsx': LAYOUT('Sub', '../sub'),
+      'src/sub.tsx': TABS_CONSUMER,
+      'src/route-tabs.tsx': GENERIC_TABS,
+      'src/i18n/hooks/useTranslation.ts': USE_TRANSLATION_STUB,
+    });
+    expect(unattributed(plan)).toEqual([]);
+    expect(keysFor(plan, 'projects')).toContain('tabs.subtabs.procurement.overview');
+  });
+
+  it('ο εξαγωγέας διαβάζει JSX prop, JSX έκφραση και πεδίο αντικειμένου — και τίποτα δυναμικό', () => {
+    const { extractHandedNamespaces } = require('../lib/i18n-namespace-extract');
+    expect(extractHandedNamespaces('<RouteTabs i18nNamespace="projects" />')).toEqual(['projects']);
+    expect(extractHandedNamespaces("<RouteTabs i18nNamespace={'procurement'} />")).toEqual(['procurement']);
+    expect(extractHandedNamespaces("const c = { i18nNamespace: 'filters' };")).toEqual(['filters']);
+    expect(extractHandedNamespaces('<X i18nNamespace={ns} />')).toEqual([]);
+  });
+
+  it('ΑΓΚΥΡΑ ΣΤΟ ΠΑΡΑΓΟΜΕΝΟ: το κέλυφος περιέχει τις υπο-καρτέλες προμηθειών έργου', () => {
+    const slice = JSON.parse(fs.readFileSync(path.join(REPO, 'src/i18n/generated/shell-slice.el.json'), 'utf8'));
+    const procurement = slice.projects?.tabs?.subtabs?.procurement ?? {};
+    for (const key of ['overview', 'rfq', 'quote', 'po', 'coverage', 'navLabel']) {
+      expect(procurement[key]).toEqual(expect.any(String));
+    }
+  });
+});

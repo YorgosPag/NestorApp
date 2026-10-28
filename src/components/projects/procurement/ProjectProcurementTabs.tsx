@@ -12,7 +12,27 @@ import { useMemo } from 'react';
 import { BarChart3, Send, FileText, Package, ListChecks } from 'lucide-react';
 import { RouteTabs } from '@/components/ui/navigation/route-tabs';
 import type { TabsNavTab } from '@/components/ui/navigation/tabs-types';
-import { getProjectProcurementUrl } from '@/lib/navigation/procurement-urls';
+import {
+  getProjectProcurementUrl,
+  type ProjectProcurementSection,
+} from '@/lib/navigation/procurement-urls';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+
+/**
+ * 🔑 ΣΕ ΕΠΙΠΕΔΟ MODULE, ΟΧΙ ΜΕΣΑ ΣΤΟ `useMemo` (ADR-327 · ADR-744 §18). Αυτό το αρχείο το αποδίδει
+ * **layout** ⇒ ρίζα κελύφους, και ο generator του slice λύνει το `t(tab.labelKey)` του `RouteTabs` από τα
+ * literals δηλώσεων **module** (`harvestPropertyValues`). Όσο οι καρτέλες ζούσαν μέσα στη συνάρτηση, τα
+ * `tabs.subtabs.procurement.*` έλειπαν από το slice και ο server έβαφε ωμό κλειδί ⇒ hydration mismatch.
+ */
+const PROCUREMENT_SUBTABS: ReadonlyArray<
+  Omit<TabsNavTab, 'href'> & { readonly section: ProjectProcurementSection }
+> = [
+  { section: 'overview', labelKey: 'tabs.subtabs.procurement.overview', icon: BarChart3, iconColor: 'text-primary' },
+  { section: 'rfq', labelKey: 'tabs.subtabs.procurement.rfq', icon: Send, iconColor: 'text-foreground' },
+  { section: 'quote', labelKey: 'tabs.subtabs.procurement.quote', icon: FileText, iconColor: 'text-[hsl(var(--text-warning))]' },
+  { section: 'po', labelKey: 'tabs.subtabs.procurement.po', icon: Package, iconColor: 'text-[hsl(var(--text-warning))]' },
+  { section: 'coverage', labelKey: 'tabs.subtabs.procurement.coverage', icon: ListChecks, iconColor: 'text-foreground' },
+];
 
 export interface ProjectProcurementTabsProps {
   projectId: string;
@@ -23,39 +43,12 @@ export function ProjectProcurementTabs({
   projectId,
   className,
 }: ProjectProcurementTabsProps) {
+  const { t } = useTranslation('projects');
   const tabs = useMemo<readonly TabsNavTab[]>(
-    () => [
-      {
-        href: getProjectProcurementUrl(projectId, 'overview'),
-        labelKey: 'tabs.subtabs.procurement.overview',
-        icon: BarChart3,
-        iconColor: 'text-primary',
-      },
-      {
-        href: getProjectProcurementUrl(projectId, 'rfq'),
-        labelKey: 'tabs.subtabs.procurement.rfq',
-        icon: Send,
-        iconColor: 'text-foreground',
-      },
-      {
-        href: getProjectProcurementUrl(projectId, 'quote'),
-        labelKey: 'tabs.subtabs.procurement.quote',
-        icon: FileText,
-        iconColor: 'text-[hsl(var(--text-warning))]',
-      },
-      {
-        href: getProjectProcurementUrl(projectId, 'po'),
-        labelKey: 'tabs.subtabs.procurement.po',
-        icon: Package,
-        iconColor: 'text-[hsl(var(--text-warning))]',
-      },
-      {
-        href: getProjectProcurementUrl(projectId, 'coverage'),
-        labelKey: 'tabs.subtabs.procurement.coverage',
-        icon: ListChecks,
-        iconColor: 'text-foreground',
-      },
-    ],
+    () => PROCUREMENT_SUBTABS.map(({ section, ...tab }) => ({
+      ...tab,
+      href: getProjectProcurementUrl(projectId, section),
+    })),
     [projectId],
   );
 
@@ -63,7 +56,7 @@ export function ProjectProcurementTabs({
     <RouteTabs
       tabs={tabs}
       i18nNamespace="projects"
-      ariaLabel="Project procurement sub-navigation"
+      ariaLabel={t('tabs.subtabs.procurement.navLabel')}
       className={className}
     />
   );
