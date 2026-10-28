@@ -60,10 +60,18 @@ export const CATALOG_API = {
   discountConditions: entity('discount-conditions'),
   /** «Δες την τιμή σαν τον Χ» — εσωτερική προεπισκόπηση (3β απόφαση Δ). */
   priceQuote: `${API_ROOT}/price-quote`,
+  /**
+   * Όψεις τιμών (ADR-923 §5.11 «3δ» Ζ) — η ΜΟΝΗ πόρτα ανάγνωσης τιμών (`GET`, κριτής `pricingView`). Οι λίστες διαβάζονται
+   * στο `priceLists.collection`, οι γραμμές στο `priceListVersions.lines(id)`· εδώ η όψη εκπτώσεων.
+   */
+  discounts: `${API_ROOT}/discounts`,
 } as const;
 
 /** Η παράμετρος αναθεώρησης της διαγραφής (`DELETE …?expectedRevision=N`) — ένα όνομα για πελάτη και route. */
 export const EXPECTED_REVISION_PARAM = 'expectedRevision';
+
+/** Ο δρομέας σελίδας μιας όψης (`GET …?cursor=<id εγγράφου>`) — ένα όνομα για πελάτη και route. */
+export const CURSOR_PARAM = 'cursor';
 
 /** Τμήματα σελίδων μέσα στον χώρο. */
 export const CATALOG_PAGES = {
