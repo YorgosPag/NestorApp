@@ -24,10 +24,3 @@ export function viewSignalId(view: CaseViewKey): string {
 export function clientViewSignalDoc(view: CaseViewKey): DocumentReference {
   return doc(db, COLLECTIONS.CONVEYANCE_VIEW_SIGNALS, viewSignalId(view));
 }
-
-/** Το σύνορο: μόνο ο αριθμός — ό,τι άλλο κι αν έγραφε κάποτε το έγγραφο, δεν διαβάζεται. */
-export function viewSignalRevisionOf(raw: unknown): number | null {
-  if (typeof raw !== 'object' || raw === null) return null;
-  const revision = (raw as { readonly revision?: unknown }).revision;
-  return typeof revision === 'number' && Number.isFinite(revision) ? revision : null;
-}

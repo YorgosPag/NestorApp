@@ -38,7 +38,8 @@ import {
 import type { ConveyanceCaseView } from '@/types/conveyance-case';
 import { useServerViewSignal, type ServerViewSignalSource } from '@/services/realtime/hooks/use-server-view-signal';
 import { useCompanyId } from '@/hooks/useCompanyId';
-import { clientViewSignalDoc, viewSignalId, viewSignalRevisionOf } from '@/lib/conveyance/view-signal-client-ref';
+import { clientViewSignalDoc, viewSignalId } from '@/lib/conveyance/view-signal-client-ref';
+import { viewSignalRevisionOf } from '@/services/realtime/view-signal-revision';
 import type { HostCaseView } from '@/lib/conveyance/view-signal-key';
 import { isOlderHostView } from '@/lib/conveyance/case-view-freshness';
 

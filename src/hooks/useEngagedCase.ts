@@ -19,7 +19,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
-import { clientViewSignalDoc, viewSignalId, viewSignalRevisionOf } from '@/lib/conveyance/view-signal-client-ref';
+import { clientViewSignalDoc, viewSignalId } from '@/lib/conveyance/view-signal-client-ref';
+import { viewSignalRevisionOf } from '@/services/realtime/view-signal-revision';
 import type { EngagementCaseView } from '@/lib/conveyance/view-signal-key';
 import { isOlderEngagedView } from '@/lib/conveyance/case-view-freshness';
 import { useServerViewSignal, type ServerViewSignalSource } from '@/services/realtime/hooks/use-server-view-signal';
