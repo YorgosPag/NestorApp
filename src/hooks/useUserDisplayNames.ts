@@ -21,6 +21,15 @@ export function seedUserNameCache(uid: string, name: string): void {
   if (uid && name) sessionCache.set(uid, name);
 }
 
+/**
+ * Imperative resolver for event-time callers (e.g. live-change toasts) that learn
+ * the UID only when the event fires. Shares the session cache with the hook.
+ * Returns `''` when the name cannot be resolved — callers choose their own fallback, never the raw UID.
+ */
+export function resolveUserDisplayName(uid: string): Promise<string> {
+  return uid ? resolveUid(uid) : Promise.resolve('');
+}
+
 async function resolveUid(uid: string): Promise<string> {
   if (sessionCache.has(uid)) return sessionCache.get(uid)!;
   try {

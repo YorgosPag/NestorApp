@@ -67,6 +67,11 @@ export function vendorActorId(identity: { vendorContactId: string; inviteId: str
   return contactId ? `vendor:${contactId}` : `vendor:invite:${identity.inviteId}`;
 }
 
+/** Ο ενεργός είναι ο προμηθευτής (πύλη), όχι εσωτερικός χρήστης ⇒ **δεν** αναζητείται στο `users/{uid}`. */
+export function isVendorActorId(actorId: string): boolean {
+  return actorId.startsWith('vendor:');
+}
+
 /** Το στιγμιότυπο από την πρόσκληση (όνομα που έδωσε ο PM ή της επαφής τη στιγμή της πρόσκλησης · email). */
 export function vendorSnapshotFromInvite(
   invite: Pick<VendorInvite, 'id' | 'recipientName' | 'recipientEmail'>,

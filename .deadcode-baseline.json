@@ -1,16 +1,14 @@
 {
-  "generated": "2026-09-10T00:00:00.000Z",
+  "generated": "2026-10-28T11:40:54.962Z",
   "knipVersion": "6",
   "files": [
-    "src/components/properties/dialogs/PropertyDeletionGuardDialog.tsx",
     "src/services/dxf-overlay-item-mutation-gateway.ts",
     "src/services/security/EnterpriseSecurityService.ts",
     "src/services/security/security-defaults.ts",
     "src/services/security/security-types.ts",
     "src/subapps/procurement/components/ConflictDialog.tsx",
-    "src/subapps/procurement/hooks/useLiveChangeToasts.ts",
     "src/subapps/procurement/hooks/useTradeRegistry.ts",
     "src/subapps/procurement/services/trade-registry.ts"
   ],
-  "fileCount": 9
+  "fileCount": 7
 }

@@ -620,7 +620,15 @@
       "poCreated": "{actor} created a purchase order",
       "lineEdited": "{actor} edited an RFQ line",
       "aggregated": "{actor} made {count} changes",
-      "viewAction": "View"
+      "viewAction": "View",
+      "newQuoteNoTotal": "New quote: {vendor}",
+      "newQuotesAggregated": "{count} new quotes",
+      "unattributed": {
+        "quoteConfirmed": "Quote confirmed: {vendor}",
+        "quoteAwarded": "Winner selected: {vendor}",
+        "quoteRejected": "Quote rejected: {vendor}",
+        "aggregated": "{count} changes made"
+      }
     },
     "sort": {
       "label": "Sort",

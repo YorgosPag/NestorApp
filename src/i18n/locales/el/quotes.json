@@ -620,7 +620,15 @@
       "poCreated": "Η/Ο {actor} δημιούργησε παραγγελία",
       "lineEdited": "Η/Ο {actor} τροποποίησε γραμμή RFQ",
       "aggregated": "Η/Ο {actor} έκανε {count} αλλαγές",
-      "viewAction": "Δες"
+      "viewAction": "Δες",
+      "newQuoteNoTotal": "Νέα προσφορά: {vendor}",
+      "newQuotesAggregated": "{count} νέες προσφορές",
+      "unattributed": {
+        "quoteConfirmed": "Επιβεβαιώθηκε προσφορά: {vendor}",
+        "quoteAwarded": "Επιλέχθηκε νικητής: {vendor}",
+        "quoteRejected": "Απορρίφθηκε προσφορά: {vendor}",
+        "aggregated": "Έγιναν {count} αλλαγές"
+      }
     },
     "sort": {
       "label": "Ταξινόμηση",

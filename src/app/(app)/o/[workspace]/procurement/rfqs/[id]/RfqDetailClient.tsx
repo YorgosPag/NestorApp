@@ -35,6 +35,7 @@ import { useRfqLines } from '@/subapps/procurement/hooks/useRfqLines';
 import { useSourcingEventAggregate } from '@/subapps/procurement/hooks/useSourcingEventAggregate';
 import { useRfqUrlState, type RfqTabValue } from '@/subapps/procurement/hooks/useRfqUrlState';
 import { useAwardFlow } from '@/subapps/procurement/hooks/useAwardFlow';
+import { useLiveChangeToasts } from '@/subapps/procurement/hooks/useLiveChangeToasts';
 import { useQuoteRevision } from '@/subapps/procurement/hooks/useQuoteRevision';
 import { QuoteRevisionDetectedDialog } from '@/subapps/procurement/components/QuoteRevisionDetectedDialog';
 import { ExpiredAwardWarningDialog } from '@/subapps/procurement/components/ExpiredAwardWarningDialog';
@@ -121,6 +122,7 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
     handleTogglePdf,
     handleToggleComments,
   } = useRfqUrlState({ quotes: activeQuotes, quotesLoading: loading });
+  useLiveChangeToasts({ rfqId: id, quotes, ready: !loading, onView: handleComparisonDrillDown }); // ADR-328 §5.J.5
   const lockState = useMemo(() => deriveSetupLockState(rfq, activeQuotes), [rfq, activeQuotes]);
   const winnerVendorName = useMemo(() => {
     if (!rfq?.winnerQuoteId) return undefined;
