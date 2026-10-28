@@ -1528,6 +1528,15 @@ export const PROJECT_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
 export const CONTACT_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(CONTACT_TRACKED_FIELDS_RAW, CONTACT_COLLECTION_DEFS);
 
+// ============================================================================
+// QUOTE TRACKED FIELDS (ADR-327 §8.5.4 — η κατάσταση με το ΔΙΚΟ της λεξιλόγιο)
+// ============================================================================
+
+/** Η ετικέτα πεδίου `status` λύνεται ήδη· ο κατάλογος τιμών είναι της **προσφοράς** (όχι του έργου). */
+export const QUOTE_TRACKED_FIELDS: Record<string, TrackedFieldDef> = {
+  status: { kind: 'scalar', label: 'status', enumCatalog: AUDIT_VALUE_CATALOGS.quoteStatus },
+};
+
 /**
  * Return the tracked-fields registry for a given `AuditEntityType`, or `null`
  * if no registry exists.
@@ -1546,6 +1555,8 @@ export function getTrackedFieldsForEntityAuditType(
       return FLOOR_TRACKED_FIELDS;
     case 'property':
       return PROPERTY_TRACKED_FIELDS;
+    case 'quote':
+      return QUOTE_TRACKED_FIELDS;
     case 'project':
       return PROJECT_TRACKED_FIELDS;
     case 'contact':

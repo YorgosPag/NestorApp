@@ -123,6 +123,11 @@ export const AUDIT_VALUE_CATALOGS: Readonly<Record<string, AuditCatalogRef>> = {
   // για να την ελέγχει η πύλη 3.14 (ύπαρξη · ισοτιμία el/en · μόνο camelCase).
   propertyStatus: { ns: 'properties-enums', path: 'status' },
 
+  // ── ADR-327 §8.5.4: η `status` της **προσφοράς** — το ιστορικό του RFQ έγραφε «Πρόχειρο → under_review» (ζωντανά
+  // 2026-10-28): μόνο το `draft` υπήρχε στη γενική εφεδρεία `common:audit.values`. camelCase (πύλη 3.14)· ο resolver
+  // γεφυρώνει την αποθηκευμένη `under_review` → `underReview`.
+  quoteStatus: { ns: 'quotes', path: 'quotes.auditStatuses' },
+
   // ── ADR-916 §5.2: ο κύκλος ζωής της **παράδοσης φακέλου** — δικό του λεξιλόγιο (`awaiting-completion` · `ready` ·
   // `cancelled`), άρα **όχι** στο κοινό `lifecycle` (που κρατά αγγελία και διάθεση). Δείχνει εδώ το
   // `PROPERTY_HANDOVER_TRACKED_FIELDS.lifecycle.enumCatalog` (μόνο camelCase — ο resolver κανονικοποιεί).
