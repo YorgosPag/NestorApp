@@ -1087,10 +1087,38 @@ jest στις περιοχές που άγγιξα: 38 σουίτες / 258 πρ
    (`SalesSpaceSidebar`), επειδή το `handleSelectProperty` είναι εναλλαγή. Λειτουργεί· ένα ρητό `clearSelection` στην
    κατάσταση θα ήταν καθαρότερο.
 
+### 12.21 Το φύλλο κινητού ΔΕΝ υπάρχει σε φαρδιά οθόνη *(2026-10-28, εύρημα ζωντανού ελέγχου ADR-327)*
+
+🔴 **Η αφορμή, μετρημένη 2026-10-28 στις Επαφές (2400px)**: «Νέα Επαφή → Εταιρεία» ⇒ η κονσόλα έδειξε
+`[SearchableCombobox] unnamed combobox — no <label htmlFor="taxOffice">` (ADR-598 G11). Η ετικέτα **υπήρχε**· το DOM
+είχε **δύο** `<input id="taxOffice">` — και δύο `inline-contact-form`, `companyName`, `tradeName`, `vatNumber`,
+`gemiNumber`. Το δεύτερο αντίγραφο ζούσε μέσα στο `MobileDetailsSlideIn` (`role="dialog"`, `md:hidden`, πλάτος 0).
+Το `<label htmlFor>` λύνεται με `getElementById` ⇒ ονομάζει **μόνο το πρώτο** ⇒ το δεύτερο combobox ανώνυμο.
+
+**Η κλάση**: οι ξενιστές (Επαφές · Κτίρια · Εργασίες CRM · Κέντρο Προμηθειών · Έργα · Αρχεία · Στάθμευση ·
+Αποθήκες · Ακίνητα) αποδίδουν **και** τη διάταξη desktop **και** το φύλλο, με `isOpen` χωρίς έλεγχο πλάτους (μόνο το
+`ListDetailsSplit` έλεγχε `isMobile`). «Κρυμμένο με CSS» ≠ «δεν υπάρχει»: διπλά `id`, διπλή φόρμα, διπλές συνδρομές
+Firestore, διπλά `useEffect`.
+
+**Η θεραπεία, σε ΕΝΑ σημείο**: το `MobileDetailsSlideIn` ρωτά το SSoT πλάτους `useViewportClass()` και αποδίδει
+**μόνο** σε `'narrow'`. Το `'measuring'` (διακομιστής + καρέ ενυδάτωσης) δίνει `null` — την ίδια απάντηση με το
+παλιό `useCanPortal`, που αφαιρέθηκε. Κατώφλι: το ΕΝΑ `MOBILE_BREAKPOINT` (768 = Tailwind `md`), όχι δεύτερος αριθμός.
+Το `useIsDisplayed` (αδράνεια μόνο όσο το φύλλο ΦΑΙΝΕΤΑΙ, §12.16) **μένει** ως δεύτερη γραμμή άμυνας.
+
+⚠️ **ΜΗΝ** ξαναβάλεις την απόφαση στους ξενιστές (`isOpen={isMobile && …}`): εννέα αντίγραφα της ίδιας ερώτησης —
+ακριβώς ό,τι επέτρεψε στα οκτώ να την ξεχάσουν.
+
+**Άγκυρα**: `mobile-details-sheet-modality.test.tsx` **Μ4** (φαρδιά ⇒ ούτε dialog ούτε περιεχόμενο στο DOM)·
+μετάλλαξη `viewport !== 'narrow'` → `viewport === 'measuring'` ⇒ Μ4 κόκκινο (1/4). Τα test του φύλλου δηλώνουν
+πλέον στενή οθόνη (`mockViewport(true)`): `details-sheet-actions` · `mobile-details-sheet-modality` ·
+`list-details-split` (ακολουθεί τη μεταβλητή `mobile`). `core/layouts/__tests__` 40/40.
+**Ζωντανά**: Επαφές → Νέα → Εταιρεία ⇒ μία φόρμα, ένα combobox Δ.Ο.Υ., κανένα σφάλμα κονσόλας.
+
 ## Changelog
 
 | Date | Change |
 |---|---|
+| 2026-10-28 | **§12.21 — το φύλλο κινητού δεν υπάρχει σε φαρδιά οθόνη.** Εύρημα ζωντανού ελέγχου (ADR-327): στις Επαφές η φόρμα «Νέα Εταιρεία» προσαρτιόταν ΔΥΟ φορές (desktop + κρυμμένο `md:hidden` φύλλο) ⇒ διπλά `id` ⇒ ανώνυμο combobox Δ.Ο.Υ. (ADR-598 G11). `MobileDetailsSlideIn`: `useCanPortal` → `useViewportClass() === 'narrow'` — ένα σημείο για 9 ξενιστές. Μ4 + μετάλλαξη 1/4· `core/layouts` 40/40· ζωντανά ✓. |
 | 2026-10-19 | **§12.20 — πλέγμα πωλήσεων: κλικ σε κάρτα ⇒ λεπτομέρειες** (στιγμιότυπο Giorgio 390px). Ο `SalesListPageShell` απέδιδε λίστα **ή** πλέγμα, και οι λεπτομέρειες ζούσαν μόνο στο sidebar της λίστας ⇒ στο πλέγμα καμία επιφάνεια, στις 4 σελίδες. `renderList` → `renderSplit(grid?)`· `SalesSidebar` + `SalesSpaceSidebar`: χειρόγραφο split → `ListDetailsSplit` (`peek` με `grid`)· Boy Scout: διπλό interface των sidebars χώρων → `SalesSpaceSidebarProps<T>`. `sales-grid-details.test.tsx` 5/5, μετάλλαξη 2/5. Ζωντανά (κινητό): πλέγμα → κλικ ⇒ φύλλο ✓. Desktop peek **αμέτρητο ζωντανά** (dev server 9–12 GB, χωρίς απόκριση). |
 | 2026-10-19 | **§12.19 — συνέπειες με το panel ανοιχτό**: (1) κάρτες επαφών κομμένες (γραμμές 97px για 186px) ⇒ `CATALOG_ROW_PACKING += auto-rows-max` στο SSoT, αφαίρεση του τοπικού αντιγράφου στο `PropertyCardGrid` (ADR-784 §12.1)· (2) μονάδες της v4 (px) σε 3 split γραμμένα ως ποσοστά (`FilesPreviewSplit` · `FileManagerPageContent` · `ReconciliationPageContent`) ⇒ `"40%"`· φρουρός `resizable-size-units.test.ts`. Ζωντανά: 0/15 κομμένες κάρτες· Διαχείριση Αρχείων 15px/25px ⇒ ≥307px/≥511px. |
 | 2026-10-19 | **§12.19 — πλάτος του side peek που σέρνεται** (στιγμιότυπο Giorgio): νέο `core/layouts/details-peek-split.tsx` πάνω στο SSoT `ui/resizable` + `resizable-persistence` + `resizable-column-store`. px ανά συσκευή (`STORAGE_KEYS.DETAILS_PEEK_COLUMN`), όρια 384/640/1600, πλέγμα ≥320px. `DetailsPeekPanel` χωρίς σταθερό πλάτος (`DETAILS_PEEK_WIDTH` αφαιρέθηκε). i18n `common-actions:actions.resizeDetails`. Λ10 + μετάλλαξη. Ζωντανά: σύρσιμο 640 ⇒ 1040, το πλάτος διατηρείται στο επόμενο άνοιγμα. **Διόρθωση**: οι αναφορές «§12.17» του side peek (10 αρχεία + changelog) ⇒ §12.19, γιατί ο §12.17 είναι άλλη ενότητα. |

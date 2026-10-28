@@ -25,7 +25,7 @@ interface MobileDetailsSlideInProps {
  *   περιεχόμενο αποδίδει τις ενέργειές του στη θυρίδα της, μέσω `details-sheet-actions`.
  */
 export function MobileDetailsSlideIn({ isOpen, ...sheet }: MobileDetailsSlideInProps) {
-  // 🔑 **Μόνο σε στενή οθόνη ΥΠΑΡΧΕΙ** (ADR-912 §12.20). Οι ξενιστές αποδίδουν ΚΑΙ τη διάταξη desktop ΚΑΙ αυτό το
+  // 🔑 **Μόνο σε στενή οθόνη ΥΠΑΡΧΕΙ** (ADR-912 §12.21). Οι ξενιστές αποδίδουν ΚΑΙ τη διάταξη desktop ΚΑΙ αυτό το
   //   φύλλο· με σκέτο `md:hidden` το περιεχόμενο **προσαρτιόταν δύο φορές** σε φαρδιά οθόνη — μετρημένο 2026-10-28 στις
   //   Επαφές: δύο `<input id="taxOffice">` (το `<label htmlFor>` ονομάζει μόνο το πρώτο ⇒ ανώνυμο combobox, ADR-598
   //   G11), διπλή φόρμα `inline-contact-form`, διπλές συνδρομές Firestore. «Κρυμμένο» ≠ «δεν υπάρχει».

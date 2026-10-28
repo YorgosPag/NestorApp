@@ -54,7 +54,7 @@ const peekPanel = () => document.querySelector<HTMLElement>('[data-details-peek]
 describe('Λ — λίστα + λεπτομέρειες', () => {
   beforeEach(() => {
     mobile = false;
-    // Το φύλλο ρωτά το πλάτος μόνο του (`useViewportClass`, ADR-912 §12.20)· ίδια απάντηση με το `useIsMobile` εδώ.
+    // Το φύλλο ρωτά το πλάτος μόνο του (`useViewportClass`, ADR-912 §12.21)· ίδια απάντηση με το `useIsMobile` εδώ.
     mockViewport(false);
     mounts.details = 0;
   });
