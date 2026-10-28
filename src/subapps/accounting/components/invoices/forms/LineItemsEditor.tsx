@@ -137,6 +137,7 @@ export function LineItemsEditor({ lineItems, onLineItemsChange, presets }: LineI
                   value={item.unit}
                   onValueChange={(code) => updateItem(index, 'unit', code)}
                   units={UOM_CODES}
+                  compact
                 />
               </fieldset>
 
