@@ -14,7 +14,10 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { generateTempId } from '@/services/enterprise-id.service';
-import { savePurchaseOrderWithPolicy } from '@/services/procurement/procurement-mutation-gateway';
+import {
+  createPurchaseOrderWithPolicy,
+  updatePurchaseOrderWithPolicy,
+} from '@/services/procurement/procurement-mutation-gateway';
 import type {
   PurchaseOrder,
   POVatRate,
@@ -218,9 +221,9 @@ export function usePurchaseOrderForm(existingPO?: PurchaseOrder | null, initialP
    */
   const save = useCallback(async (poId: string | undefined, expectedTotal: number) => {
     const dto = buildDTO();
-    if (!poId) return savePurchaseOrderWithPolicy(dto);
+    if (!poId) return createPurchaseOrderWithPolicy(dto);
     const update: UpdatePurchaseOrderDTO = { ...dto, pricingMode, expectedTotal };
-    return savePurchaseOrderWithPolicy(update, poId);
+    return updatePurchaseOrderWithPolicy(poId, update);
   }, [buildDTO, pricingMode]);
 
   // ── Reset ──

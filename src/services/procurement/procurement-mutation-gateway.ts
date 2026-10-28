@@ -6,10 +6,14 @@ import type {
   UpdatePurchaseOrderDTO,
 } from '@/types/procurement';
 
-interface PurchaseOrderSaveResult {
-  id?: string;
-  poNumber?: string;
-}
+/**
+ * What a PO save tells the caller (ADR-923 §5.11 «3γ» Α13) — never `{}`.
+ * `created` carries the project the server stored, so the caller opens the NEW document;
+ * `updated` tells the caller to leave edit mode and reload.
+ */
+export type PurchaseOrderSaveResult =
+  | { readonly kind: 'created'; readonly id: string; readonly poNumber: string; readonly projectId: string }
+  | { readonly kind: 'updated'; readonly id: string };
 
 interface PurchaseOrderShareResult {
   shareId: string;
@@ -28,19 +32,21 @@ interface PurchaseOrderEmailResult {
   messageId?: string;
 }
 
-export async function savePurchaseOrderWithPolicy(
-  input: CreatePurchaseOrderDTO | UpdatePurchaseOrderDTO,
-  poId?: string,
+export async function createPurchaseOrderWithPolicy(
+  input: CreatePurchaseOrderDTO,
 ): Promise<PurchaseOrderSaveResult> {
-  if (poId) {
-    await apiClient.patch(API_ROUTES.PROCUREMENT.ACTION(poId, 'update'), input);
-    emitSpendAnalyticsInvalidate();
-    return {};
-  }
-
-  const result = await apiClient.post<PurchaseOrderSaveResult>(API_ROUTES.PROCUREMENT.LIST, input);
+  const { id, poNumber } = await apiClient.post<{ id: string; poNumber: string }>(API_ROUTES.PROCUREMENT.LIST, input);
   emitSpendAnalyticsInvalidate();
-  return result;
+  return { kind: 'created', id, poNumber, projectId: input.projectId };
+}
+
+export async function updatePurchaseOrderWithPolicy(
+  poId: string,
+  input: UpdatePurchaseOrderDTO,
+): Promise<PurchaseOrderSaveResult> {
+  await apiClient.patch(API_ROUTES.PROCUREMENT.ACTION(poId, 'update'), input);
+  emitSpendAnalyticsInvalidate();
+  return { kind: 'updated', id: poId };
 }
 
 export async function createPurchaseOrderShareWithPolicy(

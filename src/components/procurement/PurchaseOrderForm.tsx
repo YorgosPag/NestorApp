@@ -40,6 +40,7 @@ import { POProjectSelector, POSupplierSelector, POBuildingSelector } from './POE
 import { PODeliveryAddressField } from './PODeliveryAddressField';
 import type { FirestoreProject } from '@/hooks/useFirestoreProjects';
 import { formatAddressLine } from '@/types/project/address-helpers';
+import type { PurchaseOrderSaveResult } from '@/services/procurement/procurement-mutation-gateway';
 
 /**
  * ADR-923 «3γ» Α9: ο server αρνήθηκε (409) γιατί οι όροι άλλαξαν μετά την προεπισκόπηση. Η φόρμα
@@ -57,7 +58,8 @@ async function saveOrExplainConflict<T>(save: () => Promise<T>, conflictMessage:
 interface PurchaseOrderFormProps {
   existingPO?: PurchaseOrder | null;
   initialProjectId?: string;
-  onSuccess?: (id: string, poNumber: string) => void;
+  /** Always called after a successful save — `created` or `updated` (ADR-923 «3γ» Α13). */
+  onSuccess?: (saved: PurchaseOrderSaveResult) => void;
   onCancel?: () => void;
 }
 
@@ -102,10 +104,10 @@ export function PurchaseOrderForm({
   const { submitting, error, handleSubmit } = useFormSubmission({
     canSubmit: isValid,
     submit: () => saveOrExplainConflict(() => save(existingPO?.id, pricing.totals.total), t('form.pricingConflict')),
-    onSuccess: (result) => {
-      if (result.id && result.poNumber) onSuccess?.(result.id, result.poNumber);
-    },
+    onSuccess,
     errorFallback: t('form.saveFailed'),
+    // A new PO navigates to its page: keep the lock until the route changes (no second PO on a 2nd click).
+    keepLockedOnSuccess: !isEditMode,
   });
 
   /**

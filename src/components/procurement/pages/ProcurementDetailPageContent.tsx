@@ -21,6 +21,7 @@ const QUERY_ACTION = 'action';
 import { PurchaseOrderDetail } from '@/components/procurement/PurchaseOrderDetail';
 import { PurchaseOrderForm } from '@/components/procurement/PurchaseOrderForm';
 import type { PurchaseOrder } from '@/types/procurement';
+import type { PurchaseOrderSaveResult } from '@/services/procurement/procurement-mutation-gateway';
 
 async function fetchPO(poId: string): Promise<PurchaseOrder | null> {
   const res = await fetch(`/api/procurement/${poId}`);
@@ -45,20 +46,22 @@ export function ProcurementDetailPageContent() {
     : undefined;
   const [editMode, setEditMode] = useState(isNew);
 
-  const { data: po, loading, refetch } = useAsyncData<PurchaseOrder | null>({
+  const { data: po, loading, refetch, silentRefetch } = useAsyncData<PurchaseOrder | null>({
     fetcher: () => (isNew ? Promise.resolve(null) : fetchPO(poId)),
     deps: [poId],
     enabled: !isNew,
   });
 
-  const handleSuccess = useCallback((id: string) => {
-    const pid = po?.projectId ?? initialProjectId ?? pathProjectId;
-    if (pid) {
-      router.push(getPoDetailUrl(pid, id));
-    } else {
-      router.push('/procurement');
+  // ADR-923 «3γ» Α13 (Coupa/Ariba): saving an edit returns to the document with fresh data;
+  // creating opens the NEW document under the project chosen in the form, not the hub.
+  const handleSuccess = useCallback(async (saved: PurchaseOrderSaveResult) => {
+    if (saved.kind === 'updated') {
+      await silentRefetch(); // the form stays up (no spinner) until the saved document is back
+      setEditMode(false);
+      return;
     }
-  }, [router, po?.projectId, initialProjectId, pathProjectId]);
+    router.push(getPoDetailUrl(saved.projectId, saved.id));
+  }, [router, silentRefetch]);
 
   const handleCancel = useCallback(() => {
     if (isNew) {

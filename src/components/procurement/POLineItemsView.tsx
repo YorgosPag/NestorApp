@@ -17,8 +17,12 @@ import type { PurchaseOrderItem } from '@/types/procurement';
 import { formatPOCurrency } from './utils/procurement-format';
 import { useUomLabel } from '@/hooks/useUomLabel';
 
+/** What the table reads — the internal line and the public projection (ADR-923 «3γ» Α12) both fit. */
+export type POLineItemViewModel = Pick<PurchaseOrderItem, 'id' | 'description' | 'quantity' | 'unit' | 'unitPrice' | 'total'>
+  & Partial<Pick<PurchaseOrderItem, 'categoryCode' | 'quantityReceived'>>;
+
 interface POLineItemsViewProps {
-  items: readonly PurchaseOrderItem[];
+  items: readonly POLineItemViewModel[];
   showCategory?: boolean;
   showDelivery?: boolean;
 }
