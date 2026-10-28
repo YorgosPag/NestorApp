@@ -136,6 +136,7 @@ export function RequiredSection({
             onValueChange={(v) => setField('defaultUnit', v as BimMaterialUnit)}
             units={UNITS}
             size="sm"
+            compact
             contentClassName={DROPDOWN_CONTENT}
           />
         </label>

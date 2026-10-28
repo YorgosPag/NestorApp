@@ -213,6 +213,7 @@ export function PurchaseOrderItemsTable({
                     value={item.unit}
                     onValueChange={(unit) => onUpdateItem(item.tempId, { unit })}
                     units={PROCUREMENT_UNIT_OPTIONS}
+                    ariaLabel={t('items.unit')}
                     disabled={readOnly}
                     compact
                   />
@@ -347,6 +348,7 @@ export function PurchaseOrderItemsTable({
                 value={item.unit}
                 onValueChange={(unit) => onUpdateItem(item.tempId, { unit })}
                 units={PROCUREMENT_UNIT_OPTIONS}
+                ariaLabel={t('items.unit')}
                 disabled={readOnly}
                 compact
               />

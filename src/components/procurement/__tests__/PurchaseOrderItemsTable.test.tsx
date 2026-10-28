@@ -1,8 +1,8 @@
 /**
  * @file ADR-923 §5.11 «3γ» Α10 — η γραμμή παραγγελίας στον ζωντανό έλεγχο.
  *
- * - Μ1: παλιά γραφή `'τεμ'` ⇒ το κλειστό πεδίο δείχνει το **σύμβολο** του κανονικού κωδικού (`symbol.pcs`)· η λίστα
- *   δείχνει το όνομα. (Το όνομα δεν χωρά στη στενή στήλη.)
+ * - Μ1: παλιά γραφή `'τεμ'` ⇒ το κλειστό πεδίο δείχνει το **σύμβολο** του κανονικού κωδικού (`symbol.pcs`), το όνομα είναι
+ *   `sr-only` **τιμή**, και το πεδίο ονομάζεται από τη **στήλη** (`items.unit`) — ποτέ από την τιμή (WAI-ARIA).
  * - Μ2: η τιμή του Select είναι ο **κανονικός** κωδικός — αλλιώς το `'τεμ'` γίνεται δεύτερο «Τεμάχιο» εκτός λίστας και κανένα
  *   από τα δύο δεν είναι το επιλεγμένο της λίστας (η ρίζα της «κενής» μονάδας του ζωντανού ελέγχου).
  * - Μ3: άγνωστη αποθηκευμένη γραφή μένει ορατή επιλογή (ο επιλογέας είναι πλέον το κοινό `UomSelect`, 4γ).
@@ -12,7 +12,7 @@
  */
 
 import * as React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
@@ -54,17 +54,20 @@ function renderTable(items: Item[], onUpdateItem: Props['onUpdateItem'] = jest.f
 const priceFields = (): HTMLInputElement[] => screen.getAllByLabelText<HTMLInputElement>('items.unitPrice');
 
 describe('PurchaseOrderItemsTable — μονάδα και αριθμητικά πεδία', () => {
-  it('Μ1: παλιά γραφή «τεμ» ⇒ σύμβολο του κανονικού κωδικού στο κλειστό πεδίο', () => {
+  it('Μ1: παλιά γραφή «τεμ» ⇒ σύμβολο ορατό, όνομα ως τιμή για αναγνώστη οθόνης, πεδίο με όνομα της στήλης', () => {
     renderTable([line()]);
-    const triggers = screen.getAllByRole('combobox', { name: 'name.pcs' });
+    const triggers = screen.getAllByRole('combobox', { name: 'items.unit' });
     expect(triggers.length).toBeGreaterThan(0);
-    for (const trigger of triggers) expect(trigger).toHaveTextContent('symbol.pcs');
+    for (const trigger of triggers) {
+      expect(within(trigger).getByText('symbol.pcs')).toHaveAttribute('aria-hidden', 'true');
+      expect(within(trigger).getByText('name.pcs')).toHaveClass('sr-only');
+    }
   });
 
   it('Μ2: «τεμ» στη λίστα ⇒ ΕΝΑ «Τεμάχιο», επιλεγμένο (όχι δεύτερη επιλογή «εκτός λίστας»)', async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
     renderTable([line()]);
-    await user.click(screen.getAllByRole('combobox', { name: 'name.pcs' })[0]);
+    await user.click(screen.getAllByRole('combobox', { name: 'items.unit' })[0]);
 
     const pcs = await screen.findAllByRole('option', { name: 'name.pcs (symbol.pcs)' });
     expect(pcs).toHaveLength(1);
@@ -74,8 +77,8 @@ describe('PurchaseOrderItemsTable — μονάδα και αριθμητικά �
   it('Μ3: άγνωστη αποθηκευμένη μονάδα ⇒ μένει ορατή και επιλεγμένη (ποτέ σιωπηλό κενό)', async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
     renderTable([line({ unit: 'καρότσι' })]);
-    const [trigger] = screen.getAllByRole('combobox', { name: 'καρότσι' });
-    expect(trigger).toHaveTextContent('καρότσι');
+    const [trigger] = screen.getAllByRole('combobox', { name: 'items.unit' });
+    expect(within(trigger).getByText('καρότσι', { selector: '[aria-hidden="true"]' })).toBeTruthy();
     await user.click(trigger);
 
     const offList = await screen.findByRole('option', { name: 'καρότσι' });

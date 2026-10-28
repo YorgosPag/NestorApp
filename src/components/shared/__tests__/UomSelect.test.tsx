@@ -7,9 +7,11 @@
  * - Υ1: μονάδα με συντομογραφία ⇒ «όνομα (σύμβολο)»· μονάδα-λέξη του μητρώου (`spelledOut`) ⇒ **μόνο το όνομα**
  *   (όχι «Σακί (σακιά)» — το «σύμβολο» της είναι το πληθυντικό, όχι συντομογραφία).
  * - Υ2: το `id` φτάνει στο πεδίο ⇒ το `<Label htmlFor>` της φόρμας του δίνει όνομα.
+ * - Υ3: `compact` σε μισή στήλη φόρμας (υλικό BIM — ζωντανά το «Τετραγωνικό…» κοβόταν) ⇒ σύμβολο ορατό, όνομα μονάδας ως
+ *   `sr-only` τιμή, και **κανένα** `aria-label` που θα έκρυβε την ετικέτα της φόρμας.
  */
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
@@ -41,5 +43,18 @@ describe('UomSelect', () => {
       </>,
     );
     expect(screen.getByRole('combobox', { name: 'Μονάδα' })).toBeTruthy();
+  });
+
+  it('Υ3: compact σε φόρμα ⇒ όνομα πεδίου = η ετικέτα (όχι η τιμή), σύμβολο ορατό, όνομα μονάδας ως sr-only τιμή', () => {
+    render(
+      <label>
+        <span>Μονάδα</span>
+        <UomSelect value="m2" units={['m2']} onValueChange={jest.fn()} compact />
+      </label>,
+    );
+    const trigger = screen.getByRole('combobox', { name: /^Μονάδα/ });
+    expect(trigger).not.toHaveAttribute('aria-label');
+    expect(within(trigger).getByText('symbol.m2')).toHaveAttribute('aria-hidden', 'true');
+    expect(within(trigger).getByText('name.m2')).toHaveClass('sr-only');
   });
 });
