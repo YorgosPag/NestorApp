@@ -5,6 +5,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 import { generateQuoteId, generateOptimisticId } from '@/services/enterprise-id.service';
 import { getNextQuoteNumber } from './quote-counters';
+import { quoteChangeStamp } from './quote-change-stamp';
 import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeToDate, compareInstantsDesc } from '@/lib/date-local';
 import admin from 'firebase-admin';
@@ -126,7 +127,7 @@ export async function createQuote(
       submitterIp: null,
       linkedPoId: null,
       createdAt: now,
-      updatedAt: now,
+      ...quoteChangeStamp(ctx.uid, now),
       createdBy: ctx.uid,
     };
 
@@ -276,7 +277,7 @@ export async function updateQuote(
       overriddenBy: dto.overrideReason ? ctx.uid : current.overriddenBy,
       vendorContactId: dto.vendorContactId ?? current.vendorContactId,
       auditTrail: newAudit,
-      updatedAt: admin.firestore.Timestamp.now(),
+      ...quoteChangeStamp(ctx.uid),
     };
 
     await ref.update(sanitizeForFirestore(updates));
@@ -397,7 +398,7 @@ export async function applyExtractedData(
       acceptanceMode: shouldAutoSubmit ? 'auto' : 'manual',
       status: shouldAutoSubmit ? 'submitted' : current.status,
       auditTrail: newAudit,
-      updatedAt: admin.firestore.Timestamp.now(),
+      ...quoteChangeStamp(ctx.uid),
     };
 
     await ref.update(sanitizeForFirestore(updates));

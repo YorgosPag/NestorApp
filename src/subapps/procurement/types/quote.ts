@@ -283,6 +283,11 @@ export interface Quote {
   linkedPoId: string | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;
+  /**
+   * ADR-328 §5.J.5 — ποιος έκανε την **τελευταία** εγγραφή: uid εσωτερικού χρήστη ή `vendor:…` (πύλη, `vendorActorId`).
+   * Γράφεται ΜΟΝΟ από το `quoteChangeStamp` (server) / `nextVersionFields` (client). Λείπει ⇒ παλιό έγγραφο ⇒ «άγνωστο».
+   */
+  updatedBy?: string;
   createdBy: string;
   // §5.AA versioning fields (Phase 9)
   version?: number;

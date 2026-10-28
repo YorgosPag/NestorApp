@@ -36,6 +36,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { TRADE_CODES } from '@/subapps/procurement/types/trade';
 import type { TradeCode } from '@/subapps/procurement/types/trade';
 import { createQuote } from '@/subapps/procurement/services/quote-service';
+import { quoteChangeStamp } from '@/subapps/procurement/services/quote-change-stamp';
 import { createOpenAIQuoteAnalyzer } from '@/subapps/procurement/services/external/openai-quote-analyzer';
 import { QuoteAnalyzerStub } from '@/subapps/procurement/services/external/quote-analyzer.stub';
 import type { IQuoteAnalyzer } from '@/subapps/procurement/types/quote-analyzer';
@@ -178,7 +179,7 @@ async function uploadAndAttach(
 
   await safeFirestoreOperation(async (db) => {
     await db.collection(COLLECTIONS.QUOTES).doc(quote.id).update(
-      sanitizeForFirestore({ attachments: admin.firestore.FieldValue.arrayUnion(attachment) }),
+      sanitizeForFirestore({ attachments: admin.firestore.FieldValue.arrayUnion(attachment), ...quoteChangeStamp(ctx.uid) }),
     );
   });
 

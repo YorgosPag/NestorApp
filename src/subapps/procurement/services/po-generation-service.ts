@@ -1,6 +1,5 @@
 import 'server-only';
 
-import admin from 'firebase-admin';
 import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
@@ -8,6 +7,7 @@ import { createPO } from '@/services/procurement/procurement-service';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { AuthContext } from '@/lib/auth';
 import type { Quote, QuoteLine } from '../types/quote';
+import { quoteChangeStamp } from './quote-change-stamp';
 import type { POVatRate } from '@/types/procurement';
 
 const logger = createModuleLogger('PO_GENERATION_SERVICE');
@@ -62,7 +62,7 @@ export async function generatePoFromAwardedQuote(
     await db.collection(COLLECTIONS.QUOTES).doc(winner.id).update(
       sanitizeForFirestore({
         linkedPoId: poId,
-        updatedAt: admin.firestore.Timestamp.now(),
+        ...quoteChangeStamp(ctx.uid),
       })
     );
   }, undefined);

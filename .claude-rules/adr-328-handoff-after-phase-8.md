@@ -94,8 +94,8 @@ Per §7.12 validation checklist:
 ## Phase 9 scaffolding already present (Phase 5)
 
 - `quote-versioning-service.ts` — `ConflictError`, `assertVersionMatches`, `nextVersionFields`, `runVersionedUpdate`; needs `supersede()`, `revertSupersede()`, `createRevision()` added
-- `ConflictDialog.tsx` — generic conflict dialog, already wired
-- `useLiveChangeToasts.ts` — live change toasts, already wired
+- `ConflictDialog.tsx` — generic conflict dialog. ⚠️ **ΔΙΟΡΘΩΣΗ 2026-10-28: ΔΕΝ ήταν ποτέ συνδεδεμένο** (κανένας εισαγωγέας, στο `.deadcode-baseline.json`)· όταν συνδεθεί, το `conflict.actor` είναι ωμό uid ⇒ όνομα μέσω `useUserDisplayNames`.
+- `useLiveChangeToasts.ts` — live change toasts. ⚠️ **ΔΙΟΡΘΩΣΗ 2026-10-28: η γραμμή έγραφε «already wired» — ΨΕΥΔΕΣ** (κανένας εισαγωγέας από τη Φάση 5 ως τις 2026-10-28). Συνδέθηκε στις 2026-10-28 στο `RfqDetailClient` — βλ. ADR-328 §5.J.5.1.
 
 ## Suggested model for Phase 9
 

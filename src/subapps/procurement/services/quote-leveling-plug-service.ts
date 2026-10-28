@@ -25,6 +25,7 @@ import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 import type { AuthContext } from '@/lib/auth';
 import type { Quote, QuoteAuditEntry, QuoteLevelingPlug } from '../types/quote';
 import { PROCUREMENT_RESOURCE, requireOwnedSnapshot } from './procurement-owned-doc';
+import { quoteChangeStamp } from './quote-change-stamp';
 import { getRfq } from './rfq-service';
 import { readRfqLines } from './rfq-line-service';
 import { describePlugValue, upsertLevelingPlug, type LevelingPlugChange } from '../utils/leveling-plugs';
@@ -68,7 +69,7 @@ export async function setQuoteLevelingPlug(
       tx.update(ref, sanitizeForFirestore({
         levelingPlugs: upsert.plugs,
         auditTrail: [...(current.auditTrail ?? []), plugAudit(ctx.uid, change, upsert.previous)],
-        updatedAt: now,
+        ...quoteChangeStamp(ctx.uid, now),
       }));
       return { ...upsert, displayNumber: current.displayNumber };
     });

@@ -36,6 +36,7 @@ import type {
 } from '../types/quote';
 import { computeQuoteTotals } from '../types/quote';
 import { vendorActorId } from '../utils/quote-vendor-identity';
+import { quoteChangeStamp } from './quote-change-stamp';
 
 const logger = createModuleLogger('VENDOR_PORTAL_SUBMIT_SERVICE');
 
@@ -195,7 +196,7 @@ export async function persistVendorQuote(args: PersistArgs): Promise<{ quoteId: 
       submittedAt: now,
       submitterIp: ipHash,
       createdAt: now,
-      updatedAt: now,
+      ...quoteChangeStamp(actor),
       createdBy: actor,
     };
     await safeFirestoreOperation<void>(async (db) => {
@@ -234,7 +235,7 @@ export async function persistVendorQuote(args: PersistArgs): Promise<{ quoteId: 
             editedAt: now,
             changes: `lines=${payload.lines.length};total=${totals.total.toFixed(2)}`,
           }),
-          updatedAt: now,
+          ...quoteChangeStamp(actor),
         }),
       );
   }, undefined);
