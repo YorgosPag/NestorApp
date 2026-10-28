@@ -34,6 +34,7 @@ import {
   buildDefaultTemplate,
   type NotificationTemplate,
 } from '@/subapps/procurement/templates/vendorNotificationDefaults';
+import { quoteVendorDisplayName } from '@/subapps/procurement/utils/quote-vendor-identity';
 
 // ============================================================================
 // TYPES
@@ -76,7 +77,7 @@ function resolveVendorEmail(quote: Quote): string {
 }
 
 function resolveVendorName(quote: Quote): string {
-  return quote.extractedData?.vendorName?.value ?? quote.vendorContactId ?? '—';
+  return quoteVendorDisplayName(quote) ?? quote.vendorContactId ?? '—';
 }
 
 // ============================================================================

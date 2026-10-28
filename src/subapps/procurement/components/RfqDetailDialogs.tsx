@@ -11,6 +11,7 @@ import { formatValidUntilDate, daysUntilExpiry } from '@/subapps/procurement/uti
 import type { Quote } from '@/subapps/procurement/types/quote';
 import type { RFQ, RfqCancellationReason } from '@/subapps/procurement/types/rfq';
 import type { QuoteComparisonEntry } from '@/subapps/procurement/types/comparison';
+import { quoteVendorDisplayName } from '@/subapps/procurement/utils/quote-vendor-identity';
 
 interface RfqDetailDialogsProps {
   rfqId: string;
@@ -81,7 +82,7 @@ export function RfqDetailDialogs(p: RfqDetailDialogsProps) {
         <QuoteRenewalRequestDialog
           open
           vendorEmail={p.renewalQuote.extractedData?.vendorEmails?.value?.[0] ?? ''}
-          vendorName={p.renewalQuote.extractedData?.vendorName?.value ?? p.renewalQuote.vendorContactId}
+          vendorName={quoteVendorDisplayName(p.renewalQuote) ?? p.renewalQuote.vendorContactId}
           rfqTitle={p.rfq?.title ?? p.rfqId}
           quoteNumber={p.renewalQuote.displayNumber}
           validUntilDate={formatValidUntilDate(p.renewalQuote)}

@@ -7,6 +7,21 @@
     "list": "Quote List",
     "empty": "No quotes found",
     "number": "Number",
+    "binding": {
+      "title": "Match to the request lines",
+      "hint": "Which requested line does each quote line answer? Suggestions come from the ATOE code or an identical description — they are written only when you accept them and press “Confirm”.",
+      "acceptAll": "Accept suggestions",
+      "additional": "Additional line (not requested)",
+      "suggested": "Suggested",
+      "selectLabel": "Requested line for: {description}"
+    },
+    "vendorContact": {
+      "notInContacts": "This vendor is not in your contacts ({email}).",
+      "add": "Add to contacts",
+      "created": "Contact “{vendorName}” created and linked to the quote",
+      "linked": "Quote linked to the existing contact “{vendorName}”",
+      "failed": "Adding to contacts failed"
+    },
     "vendor": "Vendor",
     "trade": "Trade",
     "source": "Source",
@@ -225,6 +240,10 @@
           "name": "same name"
         }
       }
+    },
+    "rfqAnswers": {
+      "title": "Answers without a price",
+      "alternatesTitle": "Alternate proposals (not in the total)"
     }
   },
   "header": {
@@ -378,6 +397,13 @@
     "quotesSection": "Received Quotes",
     "noQuotes": "No quotes received yet",
     "unitPlaceholder": "pcs",
+    "responseLock": {
+      "title": "What the vendor can change",
+      "hint": "Locked field = the vendor prices the line's quantity/unit and enters the unit price only. Alternates stay free. Applies to every new submission or edit.",
+      "quantity": "Lock quantity",
+      "unit": "Lock unit of measure",
+      "saveFailed": "The lock setting was not saved"
+    },
     "linesEmpty": "No lines found",
     "multiTrade": {
       "toggle": "Multiple trades as a package",
@@ -1130,12 +1156,14 @@
       "vatDeltaLabel": "VAT",
       "laborWarning": "Labor not included",
       "deliveryWarning": "Delivery not in price",
-      "warrantyLabel": "Warranty"
+      "warrantyLabel": "Warranty",
+      "levelingDeltaLabel": "line leveling"
     },
     "cherryPick": {
       "title": "Per-Line Award — Potential Savings",
       "summary": "Cherry-pick total: {cherry} · Whole-package total: {whole}",
-      "savings": "Potential savings {amount} ({percent}%)"
+      "savings": "Potential savings {amount} ({percent}%)",
+      "uncovered": "Lines without a comparable price (not in the sum): {count}"
     },
     "sourcingEvent": {
       "cardTitle": "Procurement Package",
@@ -1148,6 +1176,50 @@
       "bestQuoteColumn": "Best Quote",
       "noQuotes": "—",
       "currentRfq": "Current"
+    },
+    "leveling": {
+      "title": "Line-by-line comparison",
+      "subtitle": "Line value = unit price × requested quantity, the same basis for everyone. Every gap is filled with a visible amount so totals compare fairly. Amounts exclude VAT.",
+      "lineHeader": "Requested line",
+      "lowest": "Lowest line price",
+      "unitMismatch": "Different unit — not comparable",
+      "quantityDeviation": "Priced {quantity} {unit}",
+      "inferred": "Matched by inference",
+      "alternate": "Alternate: {description} — {amount}",
+      "state": {
+        "included": "Included",
+        "excluded": "Excluded",
+        "unanswered": "No answer"
+      },
+      "plug": {
+        "manual": "Filled with your amount: {amount}",
+        "estimate": "Filled with your estimate: {amount}",
+        "highestBid": "Filled with the highest bid: {amount}",
+        "none": "No fill amount"
+      },
+      "plugEditor": {
+        "set": "Set fill",
+        "edit": "Change fill",
+        "amount": "Fill amount (net, €)",
+        "automatic": "Automatic fill: {amount}",
+        "noAutomatic": "No automatic fill for this line",
+        "note": "Reason",
+        "reset": "Back to automatic",
+        "save": "Save",
+        "failed": "The fill was not saved"
+      },
+      "coverage": {
+        "partial": "Gaps in some quotes",
+        "none": "No quote covers it"
+      },
+      "footer": {
+        "submitted": "Submitted (net)",
+        "additional": "Additional lines",
+        "plugs": "Gap fills",
+        "leveled": "Leveled total (net)",
+        "lumpSum": "Lump sum — no line breakdown",
+        "unplugged": "Gaps without amount: {count} — total is a lower bound"
+      }
     }
   }
 }

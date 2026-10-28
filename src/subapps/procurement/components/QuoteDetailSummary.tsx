@@ -17,8 +17,13 @@ import { formatCurrency } from '@/lib/intl-formatting';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { QuoteOriginalDocumentPanel } from '@/subapps/procurement/components/QuoteOriginalDocumentPanel';
+import { QuoteRfqAnswers } from '@/subapps/procurement/components/QuoteRfqAnswers';
 import type { Quote } from '@/subapps/procurement/types/quote';
 import { normalizeToDate } from '@/lib/date-local';
+import { quoteVendorDisplayName } from '@/subapps/procurement/utils/quote-vendor-identity';
+import { QuoteVendorContactAction } from '@/subapps/procurement/components/QuoteVendorContactAction';
+import { useContactById } from '@/hooks/useContactById';
+import { getContactDisplayName } from '@/types/contacts/helpers';
 
 interface QuoteDetailSummaryProps {
   quote: Quote;
@@ -34,7 +39,8 @@ export function QuoteDetailSummary({ quote }: QuoteDetailSummaryProps) {
   const { user } = useAuth();
   const companyId = user?.companyId ?? '';
 
-  const vendorName = quote.extractedData?.vendorName?.value ?? t('quotes.vendor');
+  const contact = useContactById(quote.vendorContactId || null);
+  const vendorName = quoteVendorDisplayName(quote, contact ? getContactDisplayName(contact) : null) ?? t('quotes.vendor');
 
   return (
     <article
@@ -47,6 +53,9 @@ export function QuoteDetailSummary({ quote }: QuoteDetailSummaryProps) {
       >
         <div className="space-y-1 min-w-0">
           <h2 className="text-lg font-semibold truncate">{vendorName}</h2>
+          {quote.vendorSnapshot?.email && (
+            <p className="text-xs text-muted-foreground truncate">{quote.vendorSnapshot.email}</p>
+          )}
           <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
             <span>{t(`quotes.sources.${quote.source}`)}</span>
             <span>·</span>
@@ -60,6 +69,8 @@ export function QuoteDetailSummary({ quote }: QuoteDetailSummaryProps) {
           </span>
         </div>
       </section>
+
+      <QuoteVendorContactAction quote={quote} />
 
       {companyId && (
         <QuoteOriginalDocumentPanel
@@ -95,6 +106,8 @@ export function QuoteDetailSummary({ quote }: QuoteDetailSummaryProps) {
           </ul>
         )}
       </section>
+
+      <QuoteRfqAnswers quote={quote} />
 
       <section
         aria-label={t('quotes.subtotal')}

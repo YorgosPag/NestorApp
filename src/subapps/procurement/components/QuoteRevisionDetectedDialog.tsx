@@ -23,6 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/intl-formatting';
 import type { Quote } from '../types/quote';
 import type { DuplicateDetectionResult } from '../utils/quote-duplicate-detection';
+import { quoteVendorDisplayName } from '@/subapps/procurement/utils/quote-vendor-identity';
 
 export type RevisionDecision = 'revision' | 'separate' | 'cancel_import';
 
@@ -52,7 +53,7 @@ export function QuoteRevisionDetectedDialog({
   const [decision, setDecision] = useState<RevisionDecision>('revision');
 
   const existingVendor =
-    existingQuote.extractedData?.vendorName?.value ?? existingQuote.vendorContactId;
+    quoteVendorDisplayName(existingQuote) ?? existingQuote.vendorContactId;
   const signalLabels = detection.signals
     .map((s) => t(`rfqs.revisionDialog.signals.${s}`))
     .join(', ');

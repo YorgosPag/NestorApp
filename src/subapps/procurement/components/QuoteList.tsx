@@ -51,6 +51,7 @@ import { ScanPlaceholderRow, SupersededVersionRow } from './QuoteListRows';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
+import { quoteVendorDisplayName } from '@/subapps/procurement/utils/quote-vendor-identity';
 
 interface QuoteListProps {
   quotes: Quote[];
@@ -195,7 +196,7 @@ export function QuoteList({
       .filter((q) => {
         if (selectedStatuses.length > 0 && !selectedStatuses.includes(q.status as QuoteStatus)) return false;
         if (searchTerm) {
-          const extractedVendor = q.extractedData?.vendorName?.value ?? '';
+          const extractedVendor = quoteVendorDisplayName(q) ?? '';
           return matchesSearchTerm([q.displayNumber, q.vendorContactId, q.trade, extractedVendor, q.id], searchTerm);
         }
         return true;
