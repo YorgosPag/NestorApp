@@ -62,6 +62,8 @@ const CATALOG_COLLECTIONS = [
   'COLLECTIONS.CATALOG_CUSTOMER_ASSIGNMENTS',
   'COLLECTIONS.CATALOG_DISCOUNT_CONDITIONS',
   'COLLECTIONS.CATALOG_PRICING_SLOTS',
+  // Φάση 3δ (ADR-923 §5.11 «3δ» Ζ · ADR-905) — τα σήματα όψεων τιμών: γράφει ΜΟΝΟ ο γραφέας τους, καλεσμένος από τη μηχανή
+  'COLLECTIONS.CATALOG_PRICING_VIEW_SIGNALS',
 ];
 /** Τα ονόματα των συλλογών στη βάση — για την πόρτα του MCP (Κ5). */
 const CATALOG_COLLECTION_NAMES = [
@@ -69,6 +71,7 @@ const CATALOG_COLLECTION_NAMES = [
   'catalog_product_models', 'catalog_products', 'catalog_assets', 'catalog_settings', 'catalog_unique_values',
   'catalog_price_lists', 'catalog_price_list_versions', 'catalog_price_list_lines', 'catalog_discount_groups',
   'catalog_customer_groups', 'catalog_customer_assignments', 'catalog_discount_conditions', 'catalog_pricing_slots',
+  'catalog_pricing_view_signals',
 ];
 
 const STORE = 'src/server/catalog/catalog-store.server.ts';
@@ -81,6 +84,8 @@ const AGGREGATE = 'src/server/catalog/catalog-aggregate.server.ts';
 /** Φάση 3β — η μηχανή συνόλου της έκδοσης τιμοκαταλόγου και ο σχεδιαστής των υποδοχών ασάφειας. */
 const PRICE_AGGREGATE = 'src/server/catalog/price-version-aggregate.server.ts';
 const PRICING_SLOTS = 'src/server/catalog/pricing-slots.server.ts';
+/** Φάση 3δ — ο ΕΝΑΣ γραφέας των σημάτων όψεων τιμών (ADR-905): τον καλεί ΜΟΝΟ η μηχανή, μέσα στη συναλλαγή. */
+const PRICING_VIEW_SIGNALS = 'src/server/catalog/pricing-view-signal.server.ts';
 
 /** Ποια αρχεία επιτρέπεται να καλούν `catalogDocRef(` (Κ2) — η μηχανή γράφει, οι αναγνώσεις διαβάζουν. */
 const DOC_REF_USERS = new Set([STORE, LIBRARY_READS]);
@@ -89,6 +94,7 @@ const DOC_REF_FUNCTIONS = {
   catalogDocRef: DOC_REF_USERS,
   uniqueValueRef: new Set([STORE, UNIQUE_RESERVATIONS]),
   pricingSlotRef: new Set([STORE, PRICING_SLOTS]),
+  pricingViewSignalRef: new Set([PRICING_VIEW_SIGNALS]),
 };
 /** Ποιος καλεί τον δρόμο των παραγώγων (Κ6β): μόνο η μηχανή του συνόλου, που κρίνει το σύνολο πριν γράψει. */
 const DERIVED_USERS = new Set([STORE, AGGREGATE, PRICE_AGGREGATE]);
@@ -99,7 +105,8 @@ const DERIVED_FORBIDDEN = ['revision', 'updatedAt', 'updatedBy', 'changes.push',
 
 /** Κάθε δηλωμένος γραφέας, με το πώς ΑΠΟΔΕΙΚΝΥΕΙ ότι περνά από τη μηχανή (Κ4). Κλειστό σύνολο. */
 const WIRING = {
-  [STORE]: ['runTransaction(', 'recordTrackedEntityWrite('],
+  // Φάση 3δ: η μηχανή ΟΦΕΙΛΕΙ να σηματοδοτεί — αλλιώς γραφή τιμών χωρίς σήμα = οθόνη μπαγιάτικη ως το F5 (ADR-905 §4.2).
+  [STORE]: ['runTransaction(', 'recordTrackedEntityWrite(', 'signalPricingViewsInTx(', 'noteWrite('],
   'src/server/catalog/attribute-writer.server.ts': ['runCatalogTransaction('],
   'src/server/catalog/attribute-group-writer.server.ts': ['runCatalogTransaction('],
   'src/server/catalog/measurement-family-writer.server.ts': ['runCatalogTransaction('],
@@ -122,8 +129,11 @@ const WIRING = {
   'src/server/catalog/price-publication.server.ts': ['runCatalogTransaction(', 'assertRevision('],
   [PRICE_AGGREGATE]: ['stageDerived(', 'stageCopied(', "status !== 'draft'"],
   [PRICING_SLOTS]: ['stagePricingSlot('],
+  [PRICING_VIEW_SIGNALS]: ['FieldValue.increment(1)'],
   // Οι υποδοχές (όπως οι κρατήσεις) δεν είναι είδη: ευρετήριο του γραφέα, χωρίς ιστορικό.
-  [KINDS]: CATALOG_COLLECTIONS.filter((key) => key !== 'COLLECTIONS.CATALOG_UNIQUE_VALUES' && key !== 'COLLECTIONS.CATALOG_PRICING_SLOTS'),
+  [KINDS]: CATALOG_COLLECTIONS.filter(
+    (key) => !['COLLECTIONS.CATALOG_UNIQUE_VALUES', 'COLLECTIONS.CATALOG_PRICING_SLOTS', 'COLLECTIONS.CATALOG_PRICING_VIEW_SIGNALS'].includes(key),
+  ),
 };
 
 const WRITE_METHODS = new Set(['set', 'update', 'create', 'delete']);
@@ -241,7 +251,7 @@ function wiringFindings(root) {
   return findings;
 }
 
-const RELEVANT = /COLLECTIONS\.CATALOG_|catalogDocRef\(|uniqueValueRef\(|pricingSlotRef\(|stageDerived\(|stageCopied\(/;
+const RELEVANT = /COLLECTIONS\.CATALOG_|catalogDocRef\(|uniqueValueRef\(|pricingSlotRef\(|pricingViewSignalRef\(|stageDerived\(|stageCopied\(/;
 
 function measure(opts = {}) {
   const root = opts.root || PROJECT_ROOT;
@@ -292,5 +302,5 @@ if (require.main === module) process.exit(main());
 
 module.exports = {
   measure, report, main, findingsIn, wiringFindings, directDoorOpen, derivedPathFindings,
-  STATES, BLOCKING, WIRING, STORE, AGGREGATE, PRICE_AGGREGATE, PRICING_SLOTS, DOC_REF_USERS, DIRECT_WRITE_DOOR, CATALOG_COLLECTIONS,
+  STATES, BLOCKING, WIRING, STORE, AGGREGATE, PRICE_AGGREGATE, PRICING_SLOTS, PRICING_VIEW_SIGNALS, DOC_REF_USERS, DIRECT_WRITE_DOOR, CATALOG_COLLECTIONS,
 };
