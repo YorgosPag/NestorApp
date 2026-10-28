@@ -28,14 +28,21 @@ import { PROCUREMENT_RESOURCE, requireOwnedSnapshot } from './procurement-owned-
 import { quoteChangeStamp } from './quote-change-stamp';
 import { getRfq } from './rfq-service';
 import { readRfqLines } from './rfq-line-service';
-import { describePlugValue, upsertLevelingPlug, type LevelingPlugChange } from '../utils/leveling-plugs';
+import {
+  describePlugValue,
+  levelingPlugAuditChange,
+  upsertLevelingPlug,
+  type LevelingPlugChange,
+} from '../utils/leveling-plugs';
 
-/** Η γραμμή RFQ πρέπει να ανήκει στο RFQ ΑΥΤΗΣ της προσφοράς. */
-async function assertRfqLine(ctx: AuthContext, rfqId: string | null, rfqLineId: string): Promise<void> {
+/** Η γραμμή RFQ πρέπει να ανήκει στο RFQ ΑΥΤΗΣ της προσφοράς· επιστρέφει την ταυτότητά της για το ιστορικό. */
+async function assertRfqLine(ctx: AuthContext, rfqId: string | null, rfqLineId: string): Promise<{ id: string; label: string }> {
   const rfq = rfqId ? await getRfq(ctx.companyId, rfqId) : null;
   if (!rfq) throw new Error('Quote is not linked to an RFQ: leveling plugs need RFQ lines');
   const lines = await readRfqLines(rfq);
-  if (!lines.some((l) => l.id === rfqLineId)) throw new Error(`RFQ line ${rfqLineId} does not belong to RFQ ${rfqId}`);
+  const line = lines.find((l) => l.id === rfqLineId);
+  if (!line) throw new Error(`RFQ line ${rfqLineId} does not belong to RFQ ${rfqId}`);
+  return { id: line.id, label: line.description };
 }
 
 function plugAudit(uid: string, change: LevelingPlugChange, previous: QuoteLevelingPlug | null): QuoteAuditEntry {
@@ -59,7 +66,7 @@ export async function setQuoteLevelingPlug(
     const ref = db.collection(COLLECTIONS.QUOTES).doc(quoteId);
     const subject = { resource: PROCUREMENT_RESOURCE.QUOTE, resourceId: quoteId } as const;
     const peek = requireOwnedSnapshot<Quote>(await ref.get(), ctx.companyId, subject);
-    await assertRfqLine(ctx, peek.rfqId, change.rfqLineId);
+    const line = await assertRfqLine(ctx, peek.rfqId, change.rfqLineId);
 
     const result = await db.runTransaction(async (tx) => {
       const current = requireOwnedSnapshot<Quote>(await tx.get(ref), ctx.companyId, subject);
@@ -80,11 +87,11 @@ export async function setQuoteLevelingPlug(
         entityId: quoteId,
         entityName: `#${result.displayNumber}`,
         action: 'updated',
-        changes: [{
-          field: `levelingPlugs.${change.rfqLineId}`,
-          oldValue: result.previous?.amount ?? null,
-          newValue: change.amount,
-        }],
+        changes: [levelingPlugAuditChange(
+          result.previous,
+          result.plugs.find((p) => p.rfqLineId === change.rfqLineId) ?? null,
+          line,
+        )],
         performedBy: ctx.uid,
         performedByName: null,
         companyId: ctx.companyId,

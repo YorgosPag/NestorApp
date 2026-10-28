@@ -1,6 +1,11 @@
 {
   "audit": {
     "fields": {
+      "quote": {
+        "levelingPlugs": "Κάλυψη κενού"
+      },
+      "levelingPlugAmount": "Ποσό (καθαρό, €)",
+      "levelingPlugNote": "Αιτιολογία",
       "firstName": "Όνομα",
       "lastName": "Επώνυμο",
       "fatherName": "Πατρώνυμο",

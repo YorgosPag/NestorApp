@@ -1,6 +1,11 @@
 {
   "audit": {
     "fields": {
+      "quote": {
+        "levelingPlugs": "Gap plug"
+      },
+      "levelingPlugAmount": "Amount (net, €)",
+      "levelingPlugNote": "Rationale",
       "firstName": "First Name",
       "lastName": "Last Name",
       "fatherName": "Father's Name",

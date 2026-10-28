@@ -9,6 +9,7 @@
  */
 
 import type { QuoteLevelingPlug } from '../types/quote';
+import type { AuditCollectionOp, AuditFieldChange } from '@/types/audit-trail';
 import { roundMajor } from '@/lib/money/money';
 
 export interface LevelingPlugChange {
@@ -45,6 +46,38 @@ export function upsertLevelingPlug(
     return { plugs: [...current], changed: false, previous };
   }
   return { plugs: [...others, { rfqLineId: change.rfqLineId, amount, note, ...stamp }], changed: true, previous };
+}
+
+/**
+ * Η γραμμή του **entity audit** (ADR-195) για μια αλλαγή κάλυψης — ως αλλαγή **συλλογής**, όχι ως ωμό πεδίο.
+ *
+ * Μετρημένο ζωντανά (2026-10-28, ADR-327): το ιστορικό έγραφε `levelingPlugs.rfqln_…: 150 → —` — διαδρομή πεδίου με
+ * αναγνωριστικό μέσα, που κανένα μητρώο ετικετών δεν μπορεί να λύσει, χωρίς τη γραμμή και χωρίς την αιτιολογία.
+ * Τώρα: `field` σταθερό (`levelingPlugs` → `audit.fields.quote.levelingPlugs`), η γραμμή ως `itemKey`/`itemLabel`,
+ * ποσό + αιτιολογία ως υπο-αλλαγές. Αριθμοί, όχι μορφοποιημένο κείμενο: το ιστορικό είναι αμετάβλητο, η μορφή του
+ * θεατή όχι.
+ */
+export function levelingPlugAuditChange(
+  previous: Pick<QuoteLevelingPlug, 'amount' | 'note'> | null,
+  next: Pick<QuoteLevelingPlug, 'amount' | 'note'> | null,
+  line: { id: string; label: string },
+): AuditFieldChange {
+  const op: AuditCollectionOp = previous === null ? 'added' : next === null ? 'removed' : 'modified';
+  const oldNote = previous?.note ?? null;
+  const newNote = next?.note ?? null;
+  return {
+    field: 'levelingPlugs',
+    kind: 'collection',
+    op,
+    itemKey: line.id,
+    itemLabel: line.label,
+    oldValue: previous?.amount ?? null,
+    newValue: next?.amount ?? null,
+    subChanges: [
+      { subField: 'levelingPlugAmount', oldValue: previous?.amount ?? null, newValue: next?.amount ?? null },
+      ...(oldNote !== newNote ? [{ subField: 'levelingPlugNote', oldValue: oldNote, newValue: newNote }] : []),
+    ],
+  };
 }
 
 /** Γραμμή ιστορικού: `1.200,00 → 950,00` ως μηχανικά σταθερό κείμενο (`1200 → 950`, `— → 950`, `950 → —`). */
