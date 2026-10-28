@@ -14,6 +14,8 @@ import { EntityAuditService } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { toStoredUom } from '@/lib/uom/uom-registry';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
+import { recordEntityUpdate } from '@/services/audit/record-entity-update';
+import { ownedContactNameResolver } from '@/server/lib/owned-contact-name-resolver';
 import {
   PROCUREMENT_RESOURCE,
   loadOwnedProcurementDoc,
@@ -297,18 +299,19 @@ export async function updateQuote(
     };
 
     await ref.update(sanitizeForFirestore(updates));
-    if (dto.status && dto.status !== current.status) {
-      safeFireAndForget(EntityAuditService.recordChange({
-        entityType: ENTITY_TYPES.QUOTE,
-        entityId: quoteId,
-        entityName: `#${current.displayNumber}`,
-        action: 'status_changed',
-        changes: [{ field: 'status', oldValue: current.status, newValue: dto.status }],
-        performedBy: ctx.uid,
-        performedByName: null,
-        companyId: ctx.companyId,
-      }), 'quote-service.statusChange');
-    }
+    // ADR-195 · ADR-327 §8.5 Γ — ΕΝΑΣ γραφέας, ΤΟ μητρώο (`QUOTE_TRACKED_FIELDS`): η διαφορά κρίνεται απέναντι στο
+    // αποθηκευμένο έγγραφο, και ο προμηθευτής γράφεται id-στην-τιμή + όνομα-στην-ετικέτα (όχι ωμό `cont_…`).
+    // Δεν πετά (`recordChange` καταπίνει)· αναμένεται ώστε η γραμμή να υπάρχει όταν απαντήσει το PATCH.
+    await recordEntityUpdate({
+      entityType: ENTITY_TYPES.QUOTE,
+      entityId: quoteId,
+      entityName: `#${current.displayNumber}`,
+      action: dto.status && dto.status !== current.status ? 'status_changed' : 'updated',
+      before: { ...current },
+      written: { ...updates },
+      ctx,
+      resolvers: { vendorContactId: ownedContactNameResolver(db, current.companyId) },
+    });
     return { ...current, ...updates };
   });
 }

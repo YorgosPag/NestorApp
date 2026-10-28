@@ -255,6 +255,8 @@
     "priceAmountInvalid": "Invalid amount — non-negative, at most two decimals.",
     "priceQuantityInvalid": "The price applies per 1, 10, 100 or 1,000 units.",
     "priceLineSubjectDuplicate": "This item already has a line in this version.",
+    "priceLineSubjectRequired": "Enter the item code.",
+    "priceLineSkuUnknown": "No active item has this code.",
     "discountGroupNotAccepted": "A customer-price list does not take discount groups — the price is already final.",
     "costBreakdownRequired": "A work item needs a material, labour and equipment breakdown.",
     "costBreakdownNotAllowed": "A cost breakdown applies to work items only, not products.",

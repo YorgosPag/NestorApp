@@ -27,7 +27,7 @@ import { getTrackedFieldsForEntityAuditType } from '@/config/audit-tracked-field
 import type { AuthContext } from '@/lib/auth';
 import { createModuleLogger } from '@/lib/telemetry';
 import { EntityAuditService } from '@/services/entity-audit.service';
-import type { AuditEntityType, AuditFieldChange } from '@/types/audit-trail';
+import type { AuditAction, AuditEntityType, AuditFieldChange } from '@/types/audit-trail';
 
 const logger = createModuleLogger('RecordEntityUpdate');
 
@@ -41,6 +41,16 @@ export interface EntityUpdateAuditInput {
   readonly ctx: AuthContext;
   /** Πεδίο → όνομα προς εμφάνιση της τιμής του (ξένα κλειδιά). Η τιμή μένει η ταυτότητα. */
   readonly resolvers?: Readonly<Record<string, (value: unknown) => Promise<string | null>>>;
+  /**
+   * Το όνομα της οντότητας στη γραμμή, όταν **δεν** είναι το πεδίο `name` (π.χ. η προσφορά ονομάζεται
+   * `#QT-0004` από το `displayNumber`). Χωρίς αυτό ⇒ `written.name` → `before.name`.
+   */
+  readonly entityName?: string | null;
+  /**
+   * Η πράξη της γραμμής — ο καλών την ξέρει (π.χ. `status_changed` όταν άλλαξε η κατάσταση, ώστε το ιστορικό να
+   * δείχνει το σωστό εικονίδιο/φίλτρο). Χωρίς αυτό ⇒ `updated`.
+   */
+  readonly action?: AuditAction;
 }
 
 export interface EntityUpdateAuditResult {
@@ -82,8 +92,8 @@ export async function recordEntityUpdate(input: EntityUpdateAuditInput): Promise
   const auditId = await EntityAuditService.recordChange({
     entityType,
     entityId,
-    entityName: textOf(written.name) ?? textOf(before.name),
-    action: 'updated',
+    entityName: input.entityName ?? textOf(written.name) ?? textOf(before.name),
+    action: input.action ?? 'updated',
     changes,
     performedBy: ctx.uid,
     performedByName: ctx.email ?? null,

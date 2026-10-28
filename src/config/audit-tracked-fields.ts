@@ -1535,6 +1535,9 @@ export const CONTACT_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
 /** Η ετικέτα πεδίου `status` λύνεται ήδη· ο κατάλογος τιμών είναι της **προσφοράς** (όχι του έργου). */
 export const QUOTE_TRACKED_FIELDS: Record<string, TrackedFieldDef> = {
   status: { kind: 'scalar', label: 'status', enumCatalog: AUDIT_VALUE_CATALOGS.quoteStatus },
+  // ADR-327 §8.5 Γ — ποιος είναι ο προμηθευτής (σάρωση → επαφή · «Άλλαξε σε …»). Ξένο κλειδί: ο γραφέας
+  // (`updateQuote`) δίνει το όνομα με `ownedContactNameResolver` ⇒ id στην τιμή + στιγμιότυπο ονόματος στην ετικέτα.
+  vendorContactId: { kind: 'scalar', label: 'vendorContactId' },
 };
 
 /**

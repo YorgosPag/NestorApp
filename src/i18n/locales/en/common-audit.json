@@ -2,7 +2,8 @@
   "audit": {
     "fields": {
       "quote": {
-        "levelingPlugs": "Gap plug"
+        "levelingPlugs": "Gap plug",
+        "vendorContactId": "Vendor"
       },
       "levelingPlugAmount": "Amount (net, €)",
       "levelingPlugNote": "Rationale",

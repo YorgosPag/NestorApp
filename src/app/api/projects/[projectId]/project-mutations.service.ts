@@ -26,6 +26,7 @@ import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import { EntityAuditService, resolveUserDisplayName } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { PROJECT_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
+import { ownedContactNameResolver } from '@/server/lib/owned-contact-name-resolver';
 import { loadOwnedProject } from '../_shared/project-owned-doc';
 import { invalidateProjectCaches } from '../_shared/project-cache';
 import { ProjectUpdateSchema } from './project-mutations.types';
@@ -136,13 +137,8 @@ export async function handleUpdateProject(
     cleanData,
     PROJECT_TRACKED_FIELDS,
     {
-      linkedCompanyId: async (id) => {
-        if (!id || typeof id !== 'string') return null;
-        const snap = await getAdminFirestore().collection(COLLECTIONS.CONTACTS).doc(id).get();
-        if (!snap.exists) return null;
-        const name = snap.data()?.companyName;
-        return typeof name === 'string' && name.trim() ? name.trim() : null;
-      },
+      // ADR-195 — ο ΕΝΑΣ επιλυτής επαφής: κριτής μισθωτή (ξένη ≡ ανύπαρκτη) + ο κανόνας ονόματος του SSoT.
+      linkedCompanyId: ownedContactNameResolver(getAdminFirestore(), projectCompanyId),
     },
   );
 
