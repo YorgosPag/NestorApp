@@ -56,10 +56,19 @@ import { RfqDetailDialogs } from '@/subapps/procurement/components/RfqDetailDial
 import { RfqLinesPanel } from '@/subapps/procurement/components/RfqLinesPanel';
 import { SetupLockBanner } from '@/subapps/procurement/components/SetupLockBanner';
 import { deriveSetupLockState } from '@/subapps/procurement/utils/rfq-lock-state';
-import { rfqIsMultiTrade, type RFQ } from '@/subapps/procurement/types/rfq';
+import { rfqIsMultiTrade } from '@/subapps/procurement/types/rfq';
+import { useRfqRecord } from '@/subapps/procurement/hooks/useRfqRecord';
 import { DirtyFormProvider } from '@/providers/DirtyFormProvider';
 import { OfflineBanner } from '@/subapps/procurement/components/OfflineBanner';
 import { useConnectivity } from '@/hooks/useConnectivity';
+// 🔴 ADR-744 §15 · ADR-327 — το `quotes` ΔΕΝ είναι στο κέλυφος: χωρίς το slice, ωμά κλειδιά στο SSR ⇒ hydration mismatch.
+// Καταχωρείται ΕΔΩ (client module), όχι στο `page.tsx` (Server Component = άλλο στιγμιότυπο i18next). Το ίδιο
+// slice καλύπτει και το `/procurement/rfqs/[id]` — ίδια κλειστότητα (`RfqDetailClient`).
+import routeSlice from '@/i18n/generated/routes/o__workspace__projects__id__procurement__rfq__rfqId.el.json';
+import { registerRouteSlice } from '@/i18n/route-slice';
+
+registerRouteSlice(routeSlice);
+
 interface RfqDetailClientProps {
   id: string;
 }
@@ -83,30 +92,7 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
   const { lines, loading: linesLoading, addLine, deleteLine } = useRfqLines(id);
   const [showQuoteForm, setShowQuoteForm] = useState(false);
   const [showDashboard, setShowDashboard] = useState(false);
-  const [rfq, setRfq] = useState<RFQ | null>(null);
-  const [projectName, setProjectName] = useState<string | null>(null);
-
-  const fetchRfq = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/rfqs/${id}`);
-      if (!res.ok) return;
-      const json = await res.json();
-      const rfqData = (json?.data ?? null) as RFQ | null;
-      setRfq(rfqData);
-      if (rfqData?.projectId) {
-        const pRes = await fetch(`/api/projects/${rfqData.projectId}`).catch(() => null);
-        if (pRes?.ok) {
-          const pJson = await pRes.json().catch(() => ({}));
-          setProjectName((pJson?.data?.name as string | undefined) ?? null);
-        }
-      }
-    } catch {
-      // silent — page renders without project name subtitle
-    }
-  }, [id]);
-  useEffect(() => {
-    void fetchRfq();
-  }, [fetchRfq]);
+  const { rfq, projectName, setRfq, refetch: fetchRfq } = useRfqRecord(id);
   const cherryPickEnabled = rfq?.awardMode === 'cherry_pick';
   const { comparison, cherryPick, loading: comparisonLoading, refetch: refetchComparison } =
     useComparison(id, { cherryPick: cherryPickEnabled });

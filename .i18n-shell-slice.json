@@ -99,6 +99,52 @@
   },
   "$dynamicKeyPolicy": "Every entry below answers ONE unresolvable `t(...)` call site in a shell module. The generator REFUSES to emit a slice while any such call is unclassified — that refusal is the guarantee. Each `reason` states a fact measured on 2026-07-31, not an assumption; re-verify it when you touch the file.",
   "dynamicKeyPolicy": {
+    "src/components/core/CompactToolbar/CompactToolbar.tsx": {
+      "keys": [
+        "quotes:list.searchPlaceholder",
+        "quotes:list.createQuote",
+        "common:tooltips.editSelected",
+        "common:tooltips.deleteSelected",
+        "common-shared:toolbar.labels.share",
+        "common-shared:toolbar.labels.favoritesManagement"
+      ],
+      "prefixes": [
+        "common-shared:toolbar.tooltips"
+      ],
+      "reason": "ADR-327 (2026-10-28) — έγινε ορατό όταν η σελίδα του RFQ απέκτησε route slice (το `QuoteList` αποδίδει το `CompactToolbar` στο ΠΡΩΤΟ καρέ, `hidden md:block`). Οι δύο δυναμικές κλήσεις `t(placeholder)` (γρ. 30) και `t(tooltipKey)` (γρ. 44) διαβάζουν ΜΟΝΟ από το `config` που δίνει ο καλών — `config.searchPlaceholder` και `config.tooltips.*` του `createToolbarConfig` (`configs.ts`). ΜΕΤΡΗΜΕΝΟ 2026-10-28 για τη ΜΟΝΗ διαμόρφωση της κλειστότητας, το `quotesToolbarConfig`: placeholder `quotes:list.searchPlaceholder` · tooltips `quotes:list.createQuote` (`NEW_ITEM_TOOLTIP_BY_TYPE`) · `tooltips.editSelected`/`deleteSelected` (common) · `toolbar.labels.share`/`favoritesManagement` · και τα 12 `toolbar.tooltips.*` του common-shared (όλο το υποδέντρο, γι' αυτό πρόθεμα). Οι αποτυχημένες μεταφράσεις επιστρέφουν το ΙΔΙΟ το κλειδί (`translated !== placeholder`), άρα χωρίς slice βάφεται ωμό. ⚠️ ΑΝΑ ΑΡΧΕΙΟ, όχι ανά διαμόρφωση: όποια νέα διαδρομή με route slice αποδίδει ΑΛΛΗ διαμόρφωση (`buildingsConfig`, `vendorsConfig` …) οφείλει να προσθέσει ΕΔΩ τα δικά της κλειδιά."
+    },
+    "src/components/core/CompactToolbar/CompactToolbarActions.tsx": {
+      "keys": [
+        "common-shared:toolbar.sort.date.asc",
+        "common-shared:toolbar.sort.date.desc",
+        "common-shared:toolbar.sort.number.asc",
+        "common-shared:toolbar.sort.number.desc",
+        "common-shared:toolbar.sort.status.asc",
+        "common-shared:toolbar.sort.status.desc",
+        "common-shared:toolbar.sort.value.asc",
+        "common-shared:toolbar.sort.value.desc"
+      ],
+      "reason": "ADR-327 (2026-10-28) — ίδια γέννηση με το `CompactToolbar.tsx`. Οι κλήσεις `t(sortOption.ascLabel)`/`t(sortOption.descLabel)` (γρ. 252/255) διαβάζουν το `config.sortOptions`, που το δίνει ΜΟΝΟ το `getSortOptionsForType(type)` του `filter-definitions.ts`. ΜΕΤΡΗΜΕΝΟ 2026-10-28: για `quotes` (κοινός κλάδος με `procurement`) = {date, number, status, value} × {asc, desc} = ΑΚΡΙΒΩΣ 8 κλειδιά — όχι πρόθεμα `toolbar.sort` (16 κλειδιά, τα μισά άλλων τύπων). Το dropdown είναι κλειστό στο πρώτο καρέ, αλλά το περιεχόμενο του Radix menu ανήκει στην ίδια κλειστότητα· δηλώνεται ακριβές. ⚠️ Νέα διαμόρφωση σε διαδρομή με slice ⇒ τα δικά της κλειδιά ΕΔΩ."
+    },
+    "src/components/shared/audit/audit-timeline-entry.tsx": {
+      "reason": "ADR-327 (2026-10-28) — έγινε ορατό από την καρτέλα «Ιστορικό» της σελίδας RFQ. Η κλήση `t(countryKey)` (γρ. 225) ελέγχει `countryResult !== countryKey` και αλλιώς επιστρέφει `undefined` ⇒ ο καλών δείχνει την ΑΠΟΘΗΚΕΥΜΕΝΗ τιμή, ποτέ το κλειδί. Επιπλέον οι γραμμές ιστορικού έρχονται από fetch ΜΕΤΑ τη φόρτωση (καμία στο SSR HTML). Δομικά ανίκανη να βάψει ωμό κλειδί — τίποτα να κοπεί."
+    },
+    "src/components/shared/audit/audit-value-resolver.ts": {
+      "reason": "ADR-327 (2026-10-28) — ίδια γέννηση με το `audit-timeline-entry.tsx`. Το `tryTranslate` (γρ. 64-71) καλεί `i18next.exists(key, opts)` ΠΡΙΝ από το `t(key, opts)` και επιστρέφει `undefined` σε απουσία ή ηχώ του κλειδιού — ίδιο σχήμα με το `NotificationProvider`. Δομικά ανίκανο να βάψει ωμό κλειδί, και τα δεδομένα του είναι μόνο client-side (ιστορικό μετά από fetch)."
+    },
+    "src/lib/uom/uom-label.ts": {
+      "prefixes": [
+        "uom:symbol",
+        "uom:name"
+      ],
+      "reason": "ADR-327 / ADR-923 «3γ» (2026-10-28) — έγινε ορατό από τη σελίδα RFQ (πίνακας γραμμών, `UomSelect`). Η ΜΟΝΗ δυναμική κλήση `t(`${form}.${code}`)` (γρ. 21) έχει `form: UomLabelForm = 'symbol' | 'name'` (εξαντλητικό ως προς τον τύπο) και `code` από το `resolveUom` (ένα από τα `UOM_CODES`)· ο μεταφραστής είναι του namespace `uom` (`useUomLabel` → `useTranslation('uom')`). ΜΕΤΡΗΜΕΝΟ 2026-10-28: το `uom.json` έχει ΑΚΡΙΒΩΣ τα δύο υποδέντρα `symbol` και `name` — τα προθέματα είναι όλο το namespace, ακριβής απάντηση, όχι σκούπα. Άγνωστη μονάδα ⇒ η αυτούσια γραφή (ποτέ κλειδί)."
+    },
+    "src/subapps/procurement/components/QuoteLineEditorTable.tsx": {
+      "prefixes": [
+        "quotes:rfqs.lineEdit.error"
+      ],
+      "reason": "ADR-327 (2026-10-28) — έγινε ορατό από τη σελίδα RFQ (`QuoteForm` → `QuoteLineEditorTable`). Οι κλήσεις `t(v.errors.*)` (γρ. 148-186) διαβάζουν το `LineErrors` που παράγει ΜΟΝΟ το `validateLine` του `utils/line-validation.ts`· κάθε τιμή εκεί είναι κυριολεκτικό `rfqs.lineEdit.error.*` (description/quantity/unit/unitPrice/vatRate). ΜΕΤΡΗΜΕΝΟ 2026-10-28: το υποδέντρο έχει ΑΚΡΙΒΩΣ αυτά τα 5 κλειδιά — το πρόθεμα είναι ακριβής απάντηση. Ο μεταφραστής είναι `useTranslation('quotes')`."
+    },
     "src/components/catalog/attributes/AttributeConfigFields.tsx": {
       "keys": [
         "catalog:attributes.mappings.etim",
@@ -633,6 +679,19 @@
         }
       ],
       "reason": "ADR-777 §8.39. 🔴 ΓΕΝΝΗΘΗΚΕ ΑΠΟ ΤΗ ΜΕΤΑΚΟΜΙΣΗ ΤΟΥ §8.38, ΚΑΙ ΜΕΤΡΗΘΗΚΕ ΠΡΙΝ ΠΡΟΣΓΕΙΩΘΕΙ: όσο το λεξιλόγιο ζούσε μέσα στο `search-results`, ταξίδευε ΟΛΟΚΛΗΡΟ σε 141 διαδρομές και **κάθε** οθόνη ζήτησης/προσφοράς/εντολής το είχε σύγχρονα — κατά τύχη. Βγάζοντάς το από το μητρώο, οι οθόνες αυτές θα έβαφαν ωμά κλειδιά στο πρώτο καρέ: **η μία κλάση ωμού κλειδιού ανταλλαγμένη με άλλη**, που είναι ακριβώς ό,τι το ADR-744 §8 απαγορεύει. Το per-route slice δίνει τα ίδια bytes **μόνο εδώ**. — Ο ΚΑΤΑΛΟΓΟΣ ΤΟΥ ΙΔΙΩΤΗ (`/offers`). Δείχνει κατάσταση κύκλου ζωής και τις πράξεις απόσυρσης/επαναφοράς: κείμενο που ο άνθρωπος διαβάζει **πριν** πατήσει."
+    },
+    "src/app/(app)/o/[workspace]/projects/[id]/procurement/rfq/[rfqId]/page.tsx": {
+      "sealed": 43325,
+      "sealedAt": "2026-10-28",
+      "history": [
+        {
+          "from": 0,
+          "to": 43325,
+          "at": "2026-10-28",
+          "why": "ADR-327 (2026-10-28) — ΓΕΝΝΗΣΗ ΤΗΣ ΔΙΑΔΡΟΜΗΣ. Μετρημένο με `--measure`: 43325 bytes · 24,4% κελύφους · 9 ns [common-audit, common-shared, crm, files, files-media, filters, procurement, quotes, uom] — ΑΦΟΥ ταξινομήθηκαν οι 10 δυναμικές `t()` της κλειστότητας (6 αρχεία στο `dynamicKeyPolicy`· το `uom` μπήκε με τα προθέματα του `uom-label.ts`). Μεγάλο επειδή η σελίδα του RFQ είναι ΟΛΟΚΛΗΡΟΣ ο χώρος εργασίας της προμήθειας (προσφορές · σύγκριση · ρύθμιση · ιστορικό σε καρτέλες της ΙΔΙΑΣ σελίδας, με την ενεργή καρτέλα στη διεύθυνση — κάθε καρτέλα μπορεί να είναι το πρώτο καρέ)."
+        }
+      ],
+      "reason": "ADR-327 — Η ΣΕΛΙΔΑ ΤΟΥ ΑΙΤΗΜΑΤΟΣ ΠΡΟΣΦΟΡΑΣ (`/o/[workspace]/projects/[id]/procurement/rfq/[rfqId]`). 🔴 ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ 2026-10-28 (Chrome, dev): hydration mismatch σε ΚΑΘΕ ψυχρή φόρτωση — ο server έβαφε το ωμό `rfqs.detail.fallback.untitled` στον τίτλο (και κάθε κλειδί `quotes`/`procurement` της σελίδας), ο client το μεταφρασμένο ⇒ το React ξαναχτίζει όλο το δέντρο. Το `quotes` ΔΕΝ είναι στο κέλυφος. ⚠️ Καταχωρείται από το `RfqDetailClient` (client module, όχι από το `page.tsx` που είναι Server Component — εκεί η εγγραφή θα πήγαινε σε ΑΛΛΟ στιγμιότυπο i18next). Το `RfqDetailClient` υπηρετεί και το `/o/[workspace]/procurement/rfqs/[id]` με ΤΗΝ ΙΔΙΑ κλειστότητα, άρα το ίδιο slice καλύπτει και τις δύο διευθύνσεις — δεύτερη δήλωση θα ήταν δίδυμο artifact ίδιου περιεχομένου."
     },
     "src/app/(app)/o/[workspace]/cases/page.tsx": {
       "sealed": 5030,

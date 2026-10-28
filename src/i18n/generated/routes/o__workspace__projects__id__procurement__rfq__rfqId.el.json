@@ -1,0 +1,1113 @@
+{
+  "common-audit": {
+    "audit": {
+      "retiredFieldNotice": "Το πεδίο δεν υπάρχει πλέον στο μητρώο — εμφανίζεται το όνομα που είχε καταγραφεί τη στιγμή της αλλαγής."
+    }
+  },
+  "common-shared": {
+    "filters": {
+      "all": "Όλες",
+      "channels": {
+        "all": "Όλα",
+        "allTooltip": "Εμφάνιση όλων των καναλιών",
+        "ariaLabel": "Φίλτρα καναλιών",
+        "email": "Email",
+        "emailTooltip": "Email μηνύματα",
+        "sms": "SMS",
+        "smsTooltip": "SMS μηνύματα",
+        "telegram": "Telegram",
+        "telegramTooltip": "Telegram μηνύματα"
+      },
+      "common": {
+        "area": "Εμβαδόν",
+        "building": "Κτίριο",
+        "level": "Επίπεδο",
+        "price": "Τιμή",
+        "project": "Έργο",
+        "search": "Αναζήτηση",
+        "type": "Τύπος",
+        "updateDate": "Ημ/νία Ενημέρωσης"
+      },
+      "contactTypes": {
+        "all": "Όλες",
+        "allTooltip": "Εμφάνιση όλων των επαφών",
+        "ariaLabel": "Φίλτρα τύπου επαφής",
+        "company": "Εταιρεία",
+        "individual": "Φυσικό",
+        "service": "Υπηρεσία"
+      },
+      "filterBy": "Φιλτράρισμα:",
+      "propertyTypes": {
+        "all": "Όλες",
+        "allTooltip": "Εμφάνιση όλων των τύπων",
+        "apartment": "Διαμέρισμα",
+        "apartmentTooltip": "Διαμέρισμα",
+        "ariaLabel": "Φίλτρα τύπου ακινήτου",
+        "maisonette": "Μεζονέτα",
+        "maisonetteTooltip": "Μεζονέτα",
+        "office": "Γραφείο",
+        "officeTooltip": "Γραφείο",
+        "shop": "Κατάστημα",
+        "shopTooltip": "Κατάστημα",
+        "studio": "Studio",
+        "studioTooltip": "Studio / Γκαρσονιέρα"
+      },
+      "title": "Φίλτρα",
+      "typeAriaLabel": "Φίλτρα τύπου",
+      "typeLabel": "Τύπος:"
+    },
+    "toolbar": {
+      "labels": {
+        "favoritesManagement": "Διαχείριση αγαπημένων",
+        "share": "Κοινοποίηση"
+      },
+      "search": {
+        "placeholder": "Αναζήτηση..."
+      },
+      "sort": {
+        "date": {
+          "asc": "Παλαιότερα πρώτα",
+          "desc": "Νεότερα πρώτα"
+        },
+        "number": {
+          "asc": "Αύξουσα κατά αριθμό",
+          "desc": "Φθίνουσα κατά αριθμό"
+        },
+        "status": {
+          "asc": "Κατάσταση (Α-Ω)",
+          "desc": "Κατάσταση (Ω-Α)"
+        },
+        "value": {
+          "asc": "Αύξουσα κατά αξία",
+          "desc": "Φθίνουσα κατά αξία"
+        }
+      },
+      "tooltips": {
+        "archive": "Αρχειοθέτηση",
+        "copy": "Αντιγραφή",
+        "exportData": "Εξαγωγή δεδομένων",
+        "favorites": "Προσθήκη στα αγαπημένα",
+        "filters": "Φίλτρα",
+        "help": "Βοήθεια",
+        "importData": "Εισαγωγή δεδομένων",
+        "preview": "Προεπισκόπηση",
+        "refreshData": "Ανανέωση δεδομένων",
+        "reports": "Αναφορές",
+        "settings": "Ρυθμίσεις",
+        "sorting": "Ταξινόμηση"
+      },
+      "ui": {
+        "clearAllCount": "Καθαρισμός ({count})",
+        "itemsSelected": "{count} επιλεγμένα"
+      }
+    }
+  },
+  "crm": {
+    "tasks": {
+      "quickFilters": {
+        "all": "Όλα",
+        "allTooltip": "Εμφάνιση όλων των δραστηριοτήτων",
+        "ariaLabel": "Γρήγορα φίλτρα εργασιών",
+        "completed": "Ολοκληρωμένα",
+        "completedTooltip": "Ολοκληρωμένες εργασίες",
+        "inProgress": "Σε εξέλιξη",
+        "inProgressTooltip": "Εργασίες σε εξέλιξη",
+        "overdue": "Εκπρόθεσμα",
+        "overdueTooltip": "Εκπρόθεσμες εργασίες",
+        "pending": "Εκκρεμείς",
+        "pendingTooltip": "Εκκρεμείς εργασίες",
+        "today": "Σήμερα",
+        "todayTooltip": "Εργασίες για σήμερα"
+      }
+    }
+  },
+  "files": {
+    "floorplan": {
+      "processingInProgress": "Επεξεργασία σε εξέλιξη"
+    },
+    "list": {
+      "download": "Λήψη"
+    },
+    "pdf": {
+      "fullscreen": "Πλήρης οθόνη",
+      "loadFailed": "Το PDF δεν μπόρεσε να ανοίξει. Δοκιμάστε ξανά ή κατεβάστε το αρχείο.",
+      "loading": "Φόρτωση PDF...",
+      "nextPage": "Επόμενη σελίδα",
+      "previousPage": "Προηγούμενη σελίδα"
+    },
+    "preview": {
+      "docxError": "Δεν ήταν δυνατή η προεπισκόπηση του εγγράφου",
+      "docxLoading": "Φόρτωση εγγράφου...",
+      "dxfEmpty": "Το σχέδιο δεν περιέχει οντότητες προς εμφάνιση",
+      "dxfError": "Δεν ήταν δυνατή η προεπισκόπηση του σχεδίου DXF",
+      "dxfLoading": "Ανάλυση σχεδίου DXF...",
+      "excelError": "Δεν ήταν δυνατή η προεπισκόπηση του αρχείου Excel",
+      "excelLoading": "Φόρτωση αρχείου Excel...",
+      "fitToWidth": "Προσαρμογή στο πλάτος",
+      "htmlError": "Δεν ήταν δυνατή η προεπισκόπηση του αρχείου HTML",
+      "htmlLoading": "Φόρτωση αρχείου HTML...",
+      "rotate": "Περιστροφή",
+      "txtError": "Δεν ήταν δυνατή η προεπισκόπηση του αρχείου κειμένου",
+      "txtLoading": "Φόρτωση αρχείου κειμένου...",
+      "unsupported": "Δεν υποστηρίζεται προεπισκόπηση για αυτόν τον τύπο αρχείου.",
+      "xmlError": "Δεν ήταν δυνατή η προεπισκόπηση του αρχείου XML",
+      "xmlLoading": "Φόρτωση αρχείου XML...",
+      "zoomIn": "Μεγέθυνση",
+      "zoomOut": "Σμίκρυνση"
+    },
+    "technical": {
+      "unavailable": "Μη διαθέσιμο"
+    }
+  },
+  "files-media": {
+    "floorplan": {
+      "sceneError": "Σφάλμα φόρτωσης σκηνής"
+    }
+  },
+  "filters": {
+    "clearFilters": "Καθαρισμός"
+  },
+  "procurement": {
+    "filters": {
+      "agreementStatus": {
+        "active": "Ενεργές",
+        "activeTooltip": "Ενεργές συμβάσεις σε ισχύ",
+        "all": "Όλες",
+        "allTooltip": "Εμφάνιση όλων των συμβάσεων",
+        "draft": "Πρόχειρες",
+        "draftTooltip": "Πρόχειρες συμβάσεις (μη ενεργές ακόμη)",
+        "expired": "Ληγμένες",
+        "expiredTooltip": "Συμβάσεις που έχουν λήξει",
+        "expiring": "Λήγουν",
+        "expiringTooltip": "Συμβάσεις που λήγουν τις επόμενες 30 ημέρες"
+      },
+      "agreementStatusAriaLabel": "Φίλτρα κατάστασης σύμβασης",
+      "materialStatus": {
+        "all": "Όλα",
+        "allTooltip": "Εμφάνιση όλων των υλικών",
+        "inactive": "Ανενεργά",
+        "inactiveTooltip": "Υλικά χωρίς αγορές πάνω από 180 ημέρες",
+        "no_supplier": "Χωρίς προμηθευτή",
+        "no_supplierTooltip": "Υλικά χωρίς ορισμένους προτιμώμενους προμηθευτές",
+        "recently_used": "Πρόσφατα",
+        "recently_usedTooltip": "Υλικά με αγορά τις τελευταίες 90 ημέρες"
+      },
+      "materialStatusAriaLabel": "Φίλτρα κατάστασης υλικού",
+      "poStatus": {
+        "all": "Όλες",
+        "allTooltip": "Εμφάνιση όλων των παραγγελιών",
+        "approved": "Εγκεκριμένες",
+        "approvedTooltip": "Εγκεκριμένες παραγγελίες (έτοιμες για αποστολή)",
+        "cancelled": "Ακυρωμένες",
+        "cancelledTooltip": "Ακυρωμένες παραγγελίες",
+        "closed": "Ολοκληρωμένες",
+        "closedTooltip": "Έχουν τιμολογηθεί και κλείσει",
+        "delivered": "Παραδοθείσες",
+        "deliveredTooltip": "Έχουν παραληφθεί πλήρως",
+        "draft": "Πρόχειρες",
+        "draftTooltip": "Πρόχειρες παραγγελίες (μη εγκεκριμένες)",
+        "ordered": "Παραγγελμένες",
+        "orderedTooltip": "Έχουν αποσταλεί στον προμηθευτή",
+        "partially_delivered": "Μερική Παραλαβή",
+        "partially_deliveredTooltip": "Έχει παραληφθεί μέρος της παραγγελίας"
+      },
+      "poStatusAriaLabel": "Φίλτρα κατάστασης παραγγελίας",
+      "vendorStatus": {
+        "active": "Ενεργοί",
+        "activeTooltip": "Προμηθευτές με παραγγελίες τους τελευταίους 12 μήνες",
+        "all": "Όλοι",
+        "allTooltip": "Εμφάνιση όλων των προμηθευτών",
+        "inactive": "Ανενεργοί",
+        "inactiveTooltip": "Προμηθευτές χωρίς πρόσφατες παραγγελίες",
+        "new": "Νέοι",
+        "newTooltip": "Προμηθευτές που προστέθηκαν τις τελευταίες 30 ημέρες",
+        "preferred": "Προτιμώμενοι",
+        "preferredTooltip": "Κορυφαίοι προμηθευτές βάσει συνολικής δαπάνης"
+      },
+      "vendorStatusAriaLabel": "Φίλτρα κατάστασης προμηθευτή"
+    },
+    "form": {
+      "buildingDisabledNoProject": "Επιλέξτε πρώτα έργο",
+      "noBuilding": "Δεν βρέθηκαν κτίρια",
+      "noProject": "Δεν βρέθηκαν έργα",
+      "noSupplier": "Δεν βρέθηκαν προμηθευτές",
+      "selectBuilding": "Επιλέξτε Κτίριο (προαιρετικό)",
+      "selectProject": "Επιλέξτε Έργο",
+      "selectSupplier": "Επιλέξτε Προμηθευτή"
+    },
+    "overview": {
+      "drill": {
+        "activeFilter": "Φίλτρο κατάστασης: {statuses}",
+        "clear": "Εμφάνιση όλων"
+      }
+    }
+  },
+  "quotes": {
+    "comparison": {
+      "action": "Ενέργεια",
+      "awardBtn": "Ανάδειξη",
+      "breakdown": "Ανάλυση",
+      "cherryPick": {
+        "savings": "Δυνατή εξοικονόμηση {amount} ({percent}%)",
+        "summary": "Σύνολο ανά γραμμή: {cherry} · Σύνολο πακέτου: {whole}",
+        "title": "Επιλογή ανά Γραμμή — Δυνατά Οφέλη",
+        "uncovered": "Γραμμές χωρίς συγκρίσιμη τιμή (εκτός του αθροίσματος): {count}"
+      },
+      "confidence": "Εμπιστοσύνη",
+      "empty": "Δεν υπάρχουν συγκρίσιμες προσφορές για αυτό το αίτημα.",
+      "factors": {
+        "delivery": "Παράδοση",
+        "price": "Τιμή",
+        "supplier": "Προμηθευτής",
+        "terms": "Όροι"
+      },
+      "flags": {
+        "best_terms": "Καλύτεροι Όροι",
+        "cheapest": "Φθηνότερος",
+        "fastest_delivery": "Γρηγορότερη Παράδοση",
+        "most_reliable": "Πιο Αξιόπιστος",
+        "risk_low_score": "Χαμηλό Σκορ Προμηθευτή"
+      },
+      "flagsHeader": "Επισημάνσεις",
+      "leveling": {
+        "alternate": "Εναλλακτική: {description} — {amount}",
+        "coverage": {
+          "none": "Καμία προσφορά δεν την καλύπτει",
+          "partial": "Κενά σε κάποιες προσφορές"
+        },
+        "footer": {
+          "additional": "Πρόσθετες γραμμές",
+          "leveled": "Εξισορροπημένο σύνολο (καθαρό)",
+          "lumpSum": "Κατ’ αποκοπή — χωρίς ανάλυση ανά γραμμή",
+          "plugs": "Κάλυψη κενών",
+          "submitted": "Υποβληθέν (καθαρό)",
+          "unplugged": "Κενά χωρίς ποσό: {count} — το σύνολο είναι κάτω όριο"
+        },
+        "inferred": "Αντιστοίχιση κατά συμπέρασμα",
+        "lineHeader": "Ζητούμενη γραμμή",
+        "lowest": "Χαμηλότερη τιμή γραμμής",
+        "plug": {
+          "estimate": "Κάλυψη με την εκτίμησή σας: {amount}",
+          "highestBid": "Κάλυψη με την υψηλότερη προσφορά: {amount}",
+          "manual": "Κάλυψη που ορίσατε: {amount}",
+          "none": "Χωρίς ποσό κάλυψης"
+        },
+        "plugEditor": {
+          "amount": "Ποσό κάλυψης (καθαρό, €)",
+          "automatic": "Αυτόματη κάλυψη: {amount}",
+          "edit": "Αλλαγή κάλυψης",
+          "failed": "Η κάλυψη δεν αποθηκεύτηκε",
+          "noAutomatic": "Δεν υπάρχει αυτόματη κάλυψη για αυτή τη γραμμή",
+          "note": "Αιτιολογία",
+          "reset": "Επαναφορά στην αυτόματη",
+          "save": "Αποθήκευση",
+          "set": "Ορισμός κάλυψης"
+        },
+        "quantityDeviation": "Τιμολόγησε {quantity} {unit}",
+        "state": {
+          "excluded": "Εξαιρείται",
+          "included": "Περιλαμβάνεται",
+          "unanswered": "Χωρίς απάντηση"
+        },
+        "subtitle": "Αξία γραμμής = τιμή μονάδας × ζητούμενη ποσότητα, ίδια βάση για όλους. Κάθε κενό καλύπτεται με ορατό ποσό, ώστε το σύνολο να είναι συγκρίσιμο. Ποσά χωρίς ΦΠΑ.",
+        "title": "Σύγκριση ανά γραμμή",
+        "unitMismatch": "Άλλη μονάδα — μη συγκρίσιμο"
+      },
+      "reasons": {
+        "balanced_score": "Ισορροπημένη βαθμολογία",
+        "best_terms": "Καλύτεροι όροι",
+        "cheapest": "Φθηνότερος",
+        "fastest_delivery": "Γρηγορότερη παράδοση",
+        "most_reliable": "Πιο αξιόπιστος",
+        "narrow_lead": "Οριακός νικητής",
+        "strong_lead": "Σαφής νικητής"
+      },
+      "recommendation": {
+        "title": "Πρόταση Συστήματος"
+      },
+      "riskWarning": "Ο νικητής έχει επισημάνσεις κινδύνου — απαιτείται αιτιολόγηση.",
+      "scoreLabel": "Σκορ",
+      "sourcingEvent": {
+        "bestQuoteColumn": "Βέλτιστη Προσφορά",
+        "bestTotal": "Βέλτιστο Σύνολο Πακέτου",
+        "cardTitle": "Πακέτο Προμήθειας",
+        "currentRfq": "Τρέχον",
+        "noQuotes": "—",
+        "partialHint": "Μερικό — δεν έχουν εισαχθεί προσφορές σε όλα τα RFQ",
+        "rfqsCount": "{count} RFQ",
+        "tradeColumn": "Ειδικότητα",
+        "tradesCount": "{count} ειδικότητες",
+        "vendorsCount": "{count} vendors"
+      },
+      "tco": {
+        "deliveryWarning": "Μεταφορά εκτός τιμής",
+        "laborWarning": "Δεν περιλαμβάνει εργατικά",
+        "levelingDeltaLabel": "εξισορρόπηση γραμμών",
+        "vatDeltaLabel": "ΦΠΑ",
+        "warrantyLabel": "Εγγύηση"
+      },
+      "template": "Πρότυπο",
+      "title": "Σύγκριση Προσφορών",
+      "totalLabel": "Σύνολο"
+    },
+    "detail": {
+      "archiveQuote": "Αρχειοθέτηση Προσφοράς",
+      "editQuote": "Επεξεργασία Προσφοράς"
+    },
+    "filters": {
+      "quoteStatus": {
+        "accepted": "Εγκεκριμένες",
+        "acceptedTooltip": "Έχουν εγκριθεί",
+        "all": "Όλες",
+        "allTooltip": "Εμφάνιση όλων των προσφορών",
+        "archived": "Αρχειοθετημένες",
+        "archivedTooltip": "Έχουν αρχειοθετηθεί",
+        "draft": "Πρόχειρες",
+        "draftTooltip": "Πρόχειρες προσφορές (μη απεσταλμένες)",
+        "expired": "Ληγμένες",
+        "expiredTooltip": "Έχουν λήξει — απαιτείται απόφαση (ανανέωση/αρχειοθέτηση)",
+        "rejected": "Απορριφθείσες",
+        "rejectedTooltip": "Έχουν απορριφθεί",
+        "sent_to_vendor": "Απεσταλμένες",
+        "sent_to_vendorTooltip": "Έχουν αποσταλεί στον προμηθευτή — αναμονή υποβολής",
+        "submitted": "Υποβληθείσες",
+        "submittedTooltip": "Νέα προσφορά υποβλήθηκε — απαιτεί έλεγχο",
+        "under_review": "Υπό Εξέταση",
+        "under_reviewTooltip": "Σε εξέλιξη αξιολόγηση — απαιτείται απόφαση"
+      },
+      "quoteStatusAriaLabel": "Φίλτρα κατάστασης προσφοράς"
+    },
+    "invites": {
+      "button": "Πρόσκληση Προμηθευτή",
+      "confirmRevoke": "Να ανακληθεί η πρόσκληση;",
+      "copyLink": "Αντιγραφή Συνδέσμου",
+      "empty": "Δεν υπάρχουν προσκλήσεις ακόμη",
+      "emptyFiltered": "Καμία πρόσκληση δεν ταιριάζει στο φίλτρο.",
+      "errors": {
+        "copyFailed": "Αποτυχία έκδοσης συνδέσμου",
+        "linksFailed": "Αποτυχία φόρτωσης συνδέσμων"
+      },
+      "linkCopied": "Αντιγράφηκε!",
+      "links": {
+        "confirmRevoke": "Να ανακληθεί αυτός ο σύνδεσμος; Οι υπόλοιποι σύνδεσμοι της πρόσκλησης μένουν ενεργοί.",
+        "empty": "Δεν υπάρχουν σύνδεσμοι",
+        "expiresAt": "Λήγει",
+        "hint": "Κάθε σύνδεσμος εκδίδεται μία φορά και ανακαλείται χωριστά. Η αντιγραφή βγάζει νέο σύνδεσμο — οι προηγούμενοι μένουν ενεργοί.",
+        "issuedAt": "Εκδόθηκε",
+        "lastUsed": "Τελευταία χρήση",
+        "loading": "Φόρτωση συνδέσμων…",
+        "never": "Ποτέ",
+        "origin": {
+          "copy_link": "Αντιγραφή",
+          "email_resend": "Επαναποστολή",
+          "invite_email": "Email πρόσκλησης",
+          "rfq_fanout": "Email πρόσκλησης (RFQ)",
+          "self_service": "Αίτημα προμηθευτή"
+        },
+        "revoke": "Ανάκληση συνδέσμου",
+        "state": {
+          "active": "Ενεργός",
+          "expired": "Έληξε",
+          "revoked": "Ανακλήθηκε"
+        },
+        "title": "Σύνδεσμοι πρόσκλησης",
+        "toggle": "Σύνδεσμοι"
+      },
+      "revoke": "Ανάκληση",
+      "statuses": {
+        "declined": "Αρνήθηκε",
+        "expired": "Έληξε",
+        "opened": "Ανοίχθηκε",
+        "pending": "Σε εκκρεμότητα",
+        "revoked": "Αποσύρθηκε",
+        "sent": "Απεστάλη",
+        "submitted": "Υποβλήθηκε"
+      },
+      "table": {
+        "actions": "Ενέργειες",
+        "channel": "Κανάλι",
+        "expires": "Λήξη",
+        "status": "Κατάσταση",
+        "vendor": "Προμηθευτής"
+      },
+      "title": "Προσκλήσεις Προμηθευτών"
+    },
+    "list": {
+      "allQuotes": "Όλες οι προσφορές",
+      "ariaLabel": "Λίστα προσφορών",
+      "cardAriaLabel": "Προσφορά {number} από {vendor}",
+      "createQuote": "Νέα Προσφορά",
+      "dateLabel": "Ημερομηνία",
+      "emptyDescription": "Σαρώστε την πρώτη προσφορά για να ξεκινήσετε.",
+      "emptyTitle": "Δεν υπάρχουν προσφορές",
+      "entityName": "Προσφορές",
+      "requiresAction": "Απαιτούν ενέργεια",
+      "searchPlaceholder": "Αναζήτηση προσφοράς, προμηθευτή ή ειδικότητας...",
+      "totalLabel": "Σύνολο",
+      "validUntilLabel": "Ισχύει έως",
+      "vendorLabel": "Προμηθευτής"
+    },
+    "quotes": {
+      "actions": {
+        "addLine": "Προσθήκη Γραμμής",
+        "removeLine": "Αφαίρεση"
+      },
+      "cancel": "Ακύρωση",
+      "categoryCode": "Κατηγορία ΑΤΟΕ",
+      "categoryCodePlaceholder": "Κωδ. ΑΤΟΕ",
+      "create": "Νέα Προσφορά",
+      "deliveryTerms": "Όροι Παράδοσης",
+      "errors": {
+        "createFailed": "Αποτυχία δημιουργίας προσφοράς",
+        "updateFailed": "Αποτυχία ενημέρωσης προσφοράς"
+      },
+      "lineActions": "Ενέργειες",
+      "lineDescription": "Περιγραφή",
+      "lineTotal": "Σύνολο Γραμμής",
+      "lines": "Γραμμές Προσφοράς",
+      "loading": "Φόρτωση...",
+      "noCategoryCode": "—",
+      "notes": "Σημειώσεις",
+      "paymentTerms": "Όροι Πληρωμής",
+      "project": "Έργο",
+      "quantity": "Ποσότητα",
+      "rfq": "RFQ",
+      "rfqAnswers": {
+        "alternatesTitle": "Εναλλακτικές προτάσεις (εκτός συνόλου)",
+        "title": "Απαντήσεις χωρίς τιμή"
+      },
+      "scan": {
+        "confidence": "Αξιοπιστία",
+        "noLinesExtracted": "Δεν εξήχθησαν γραμμές. Προσθέστε χειροκίνητα.",
+        "originalDocument": {
+          "badge": "Πρωτότυπο",
+          "download": "Λήψη",
+          "empty": "Χωρίς συνημμένο",
+          "openExternal": "Άνοιγμα σε νέα καρτέλα",
+          "title": "Πρωτότυπο Έγγραφο"
+        },
+        "rowNumber": "Α/Α",
+        "scanFromRfq": "Σάρωση Προσφοράς (AI)",
+        "scanFromRfqHint": "Ανέβασε προσφορά εικόνα/PDF — η AI εξάγει αυτόματα τα στοιχεία."
+      },
+      "sources": {
+        "email_inbox": "Email",
+        "manual": "Χειροκίνητη",
+        "portal": "Portal Προμηθευτή",
+        "scan": "Σάρωση"
+      },
+      "statuses": {
+        "accepted": "Εγκρίθηκε",
+        "archived": "Αρχείο",
+        "draft": "Πρόχειρο",
+        "expired": "Έληξε",
+        "rejected": "Απορρίφθηκε",
+        "sent_to_vendor": "Απεστάλη",
+        "submitted": "Υποβλήθηκε",
+        "superseded": "Αντικαταστάθηκε",
+        "under_review": "Υπό Εξέταση"
+      },
+      "submit": "Αποθήκευση",
+      "submitting": "Αποθήκευση…",
+      "subtotal": "Υποσύνολο",
+      "titleSingle": "Προσφορά",
+      "total": "Σύνολο",
+      "trade": "Ειδικότητα",
+      "unit": "Μονάδα",
+      "unitPrice": "Τιμή Μον.",
+      "validUntil": "Ισχύει έως",
+      "vatAmount": "ΦΠΑ",
+      "vatRate": "ΦΠΑ %",
+      "vendor": "Προμηθευτής",
+      "vendorAddresseeFallback": "συνεργάτη",
+      "vendorContact": {
+        "add": "Προσθήκη στις επαφές",
+        "created": "Δημιουργήθηκε η επαφή «{vendorName}» και δέθηκε στην προσφορά",
+        "failed": "Η προσθήκη στις επαφές απέτυχε",
+        "linked": "Η προσφορά δέθηκε στην υπάρχουσα επαφή «{vendorName}»",
+        "notInContacts": "Ο προμηθευτής δεν είναι στις επαφές σας ({email})."
+      },
+      "vendorUnknown": "Άγνωστος προμηθευτής",
+      "vendorUnknownWithQuote": "Άγνωστος προμηθευτής · {quote}",
+      "warranty": "Εγγύηση"
+    },
+    "rfqs": {
+      "actions": {
+        "activate": "Αποστολή σε Vendors"
+      },
+      "addLine": "Προσθήκη Γραμμής",
+      "addingLine": "Προσθήκη…",
+      "award": {
+        "createPO": "Δημιουργία Εντολής Αγοράς",
+        "errorRetry": "Επανάληψη",
+        "errorToast": "Η κατακύρωση απέτυχε. Δοκίμασε ξανά.",
+        "lockedBadge": "Κατακυρώθηκε",
+        "successToast": "Κατακυρώθηκε στον {vendor}",
+        "undoButton": "Αναίρεση",
+        "undoneToast": "Η κατακύρωση αναιρέθηκε",
+        "winnerBanner": {
+          "title": "Νικητής: {vendor}"
+        }
+      },
+      "awardReason": {
+        "cancelButton": "Ακύρωση",
+        "category": {
+          "better_delivery": "Καλύτεροι όροι παράδοσης",
+          "better_quality": "Καλύτερη ποιότητα / εγγύηση",
+          "certifications": "Απαιτούμενες πιστοποιήσεις",
+          "existing_relationship": "Υφιστάμενη συνεργασία",
+          "inclusions": "Συμπεριλαμβανόμενα",
+          "other": "Άλλος λόγος",
+          "past_consistency": "Ιστορικό συνέπειας",
+          "stock_availability": "Διαθεσιμότητα αποθέματος"
+        },
+        "confirmButton": "Επιβεβαίωση κατακύρωσης",
+        "dialog": {
+          "body": "Κατακυρώνεις στον {vendorName} ({selectedTotal}) αντί για τη φθηνότερη επιλογή {cheapestVendorName} ({cheapestTotal}). Παρακαλώ αιτιολόγησε την επιλογή σου.",
+          "title": "Γιατί επιλέγεις αυτόν τον προμηθευτή;"
+        },
+        "label": {
+          "category": "Κατηγορία λόγου",
+          "note": "Πρόσθετες σημειώσεις (προαιρετικά)",
+          "noteRequired": "Πρόσθετες σημειώσεις (υποχρεωτικά)"
+        },
+        "placeholder": {
+          "note": {
+            "certifications": "π.χ. Πιστοποίηση ISO 9001, πληροί τις προδιαγραφές του έργου",
+            "consistency": "π.χ. Χωρίς καθυστερήσεις ή ποιοτικά προβλήματα σε προηγούμενες παραγγελίες",
+            "delivery": "π.χ. Ο προμηθευτής εγγυάται παράδοση εντός 5 εργάσιμων ημερών",
+            "inclusions": "π.χ. Η τιμή περιλαμβάνει εγκατάσταση και εκπαίδευση",
+            "other": "Περίγραψε τον λόγο επιλογής αυτού του προμηθευτή...",
+            "quality": "π.χ. Το προϊόν συνοδεύεται από εκτεταμένη εγγύηση και πιστοποίηση ποιότητας",
+            "relationship": "π.χ. Αξιόπιστος συνεργάτης με 3+ χρόνια συνεργασίας",
+            "stock": "π.χ. Διαθέσιμο σε απόθεμα, άμεση παράδοση"
+          }
+        }
+      },
+      "cancel": "Ακύρωση",
+      "cancelDialog": {
+        "confirmCancel": "Ακύρωση RFQ",
+        "descriptionActive": "Αυτό το ενεργό RFQ θα σημανθεί ως ακυρωμένο. Απαιτείται αιτιολογία.",
+        "descriptionDraft": "Αυτό το πρόχειρο RFQ θα σημανθεί ως ακυρωμένο. Δεν χρειάζεται αιτιολογία.",
+        "detailLabel": "Λεπτομέρειες",
+        "detailPlaceholder": "Προαιρετική περιγραφή (υποχρεωτική για \"Άλλο\")",
+        "keepRfq": "Διατήρηση",
+        "notifyVendorsLabel": "Ειδοποίηση προμηθευτών με ενεργές προσκλήσεις",
+        "reasonLabel": "Αιτιολογία",
+        "reasonPlaceholder": "Επίλεξε αιτιολογία...",
+        "reasons": {
+          "budget_cut": "Περικοπή budget",
+          "duplicate": "Διπλό RFQ",
+          "no_responses": "Καμία απάντηση",
+          "other": "Άλλο",
+          "project_change": "Αλλαγή έργου",
+          "wrong_scope": "Λάθος αντικείμενο"
+        },
+        "submitting": "Ακύρωση...",
+        "title": "Ακύρωση RFQ"
+      },
+      "comments": {
+        "add": "Προσθήκη",
+        "addFailed": "Το σχόλιο δεν προστέθηκε. Δοκιμάστε ξανά.",
+        "cancel": "Ακύρωση",
+        "closeAria": "Κλείσιμο σχολίων",
+        "composerLabel": "Νέο σχόλιο",
+        "confirmDelete": "Διαγραφή σχολίου;",
+        "delete": "Διαγραφή",
+        "edit": "Επεξεργασία",
+        "edited": "επεξεργάστηκε",
+        "empty": "Δεν υπάρχουν σχόλια ακόμα",
+        "internalOnly": "Εσωτερικά — μη ορατά στον προμηθευτή",
+        "placeholder": "Γράψτε σχόλιο... (@ για αναφορά συνεργάτη)",
+        "save": "Αποθήκευση",
+        "title": "Σχόλια"
+      },
+      "comparison": {
+        "empty": {
+          "one": {
+            "body": "Πρόσθεσε δεύτερη προσφορά για να ενεργοποιηθεί η σύγκριση.",
+            "currentLabel": "Τρέχουσα προσφορά",
+            "title": "Έχεις 1 προσφορά — χρειάζονται τουλάχιστον 2 για σύγκριση",
+            "viewDetails": "Δες λεπτομέρειες"
+          },
+          "zero": {
+            "body": "Όταν λάβεις προσφορές από προμηθευτές, εδώ θα εμφανιστεί η σύγκρισή τους με σκορ, τιμές και προτεινόμενο νικητή.",
+            "title": "Δεν υπάρχουν προσφορές για σύγκριση"
+          }
+        },
+        "rowAriaLabel": "Δες λεπτομέρειες προσφοράς"
+      },
+      "dashboard": {
+        "comparison": {
+          "bestPrice": "Καλύτερη Τιμή",
+          "priceDiff": "Διαφορά (€)",
+          "recommendation": "Σύσταση Συστήματος",
+          "worstPrice": "Χειρότερη Τιμή"
+        },
+        "quotes": {
+          "accepted": "Εγκρίθηκαν",
+          "bestPrice": "Καλύτερη Τιμή",
+          "total": "Συνολικές Προσφορές",
+          "underReview": "Υπό Εξέταση"
+        },
+        "setup": {
+          "attention": "Χρειάζονται προσοχή",
+          "awaiting": "Αναμένουν απάντηση",
+          "deadline": "Προθεσμία",
+          "deadlineNotSet": "Δεν έχει οριστεί",
+          "deadlinePassed": "Έληξε",
+          "linesAllAdHoc": "Χειροκίνητες",
+          "linesAllBoq": "Από επιμετρήσεις",
+          "linesBySource": "{boq} επιμέτρ. · {adHoc} χειροκ.",
+          "responded": "Απάντησαν {responded} από {invited}",
+          "totalLines": "Γραμμές"
+        },
+        "toggle": "Εναλλαγή πίνακα στατιστικών"
+      },
+      "deleteLine": "Διαγραφή γραμμής: {description}",
+      "detail": {
+        "action": {
+          "archive": "Αρχειοθέτηση",
+          "cancel": "Ακύρωση",
+          "close": "Κλείσιμο",
+          "reopen": "Επανεκκίνηση"
+        },
+        "confirm": {
+          "archive": "Σίγουρα θέλεις να αρχειοθετήσεις αυτό το RFQ;",
+          "close": "Σίγουρα θέλεις να κλείσεις αυτό το RFQ; Δεν θα μπορούν να σταλούν νέες προσφορές.",
+          "reopen": "Σίγουρα θέλεις να επανεκκινήσεις αυτό το RFQ; Ο νικητής θα διαγραφεί."
+        },
+        "errors": {
+          "archiveFailed": "Αποτυχία αρχειοθέτησης RFQ",
+          "cancelFailed": "Αποτυχία ακύρωσης RFQ",
+          "closeFailed": "Αποτυχία κλεισίματος RFQ",
+          "reopenBlockedByPo": "Ακύρωσε πρώτα την Παραγγελία Αγοράς για να επανεκκινήσεις το RFQ",
+          "reopenFailed": "Αποτυχία επανεκκίνησης RFQ"
+        },
+        "fallback": {
+          "untitled": "Αίτημα Προσφοράς"
+        },
+        "projectLink": {
+          "aria": "Δες σελίδα έργου: {projectName}"
+        },
+        "toast": {
+          "archived": "Το RFQ αρχειοθετήθηκε",
+          "cancelled": "Το RFQ ακυρώθηκε",
+          "closed": "Το RFQ έκλεισε",
+          "reopened": "Το RFQ επανεκκινήθηκε"
+        }
+      },
+      "editDialog": {
+        "cancel": "Ακύρωση",
+        "headerSection": "Στοιχεία Προσφοράς",
+        "inclusionsSection": "Περιλαμβάνει",
+        "laborIncluded": "Εργατικά περιλαμβάνονται",
+        "linesSection": "Γραμμές Προσφοράς",
+        "lockedTooltip": "Εγκεκριμένη προσφορά — επαναφέρετε για επεξεργασία",
+        "placeholders": {
+          "deliveryTerms": "π.χ. FCA αποθήκη",
+          "paymentTerms": "π.χ. 30 ημέρες",
+          "warranty": "π.χ. 12 μήνες"
+        },
+        "save": "Αποθήκευση",
+        "saving": "Αποθήκευση...",
+        "title": "Επεξεργασία Προσφοράς",
+        "vatIncluded": "ΦΠΑ περιλαμβάνεται"
+      },
+      "errors": {
+        "addLineFailed": "Η προσθήκη της γραμμής απέτυχε",
+        "deleteLineFailed": "Η διαγραφή της γραμμής απέτυχε"
+      },
+      "expiry": {
+        "badge": {
+          "expired": "⏳ Έληξε στις {date}",
+          "expiringSoon": "⚠️ Λήγει σε {days} ημέρες"
+        },
+        "banner": {
+          "requestRenewalCta": "Ζήτησε ανανέωση",
+          "title": "Η προσφορά έληξε στις {date} (πριν {daysAgo} ημέρα)",
+          "titlePlural": "Η προσφορά έληξε στις {date} (πριν {daysAgo} ημέρες)"
+        },
+        "renewal": {
+          "bodyDefault": "Αγαπητέ {vendorName},\n\nΗ προσφορά σας {quoteNumber} με ισχύ έως {originalValidUntil} έχει λήξει.\n\nΕίναι ακόμη έγκυρη η τιμή των {total} €; Αν ναι, παρακαλούμε στείλτε ανανέωση. Αν όχι, στείλτε αναθεωρημένη προσφορά.\n\nΜε εκτίμηση,\n{senderName}",
+          "bodyLabel": "Μήνυμα",
+          "cancelButton": "Ακύρωση",
+          "dialogTitle": "Ζήτηση ανανέωσης προσφοράς",
+          "sendButton": "Στείλε email",
+          "sendFailed": "Η αποστολή του αιτήματος ανανέωσης απέτυχε",
+          "sendingButton": "Αποστολή...",
+          "subjectDefault": "Ανανέωση προσφοράς για: {rfqTitle}",
+          "subjectLabel": "Θέμα",
+          "toLabel": "Προς"
+        },
+        "warningModal": {
+          "awardAnyway": "Award παρόλα αυτά",
+          "body": "Η προσφορά του {vendor} έληξε στις {date} (πριν {daysAgo} ημέρες). Ο vendor μπορεί να μην τηρήσει την τιμή.",
+          "cancel": "Ακύρωση",
+          "requestRenewal": "Ζήτησε ανανέωση από vendor",
+          "title": "Η προσφορά έχει λήξει"
+        }
+      },
+      "history": {
+        "empty": "Δεν υπάρχει ιστορικό ακόμα",
+        "emptyDesc": "Οι ενέργειες σε αυτή την προσφορά θα εμφανιστούν εδώ"
+      },
+      "invite": {
+        "addAdhocButton": "+ Προσθήκη",
+        "adhocPlaceholder": "contact@newvendor.gr",
+        "alreadyInvited": {
+          "action": "Δες προσκλήσεις",
+          "banner": "{count} προμηθευτές έχουν ήδη προσκληθεί για αυτό το RFQ."
+        },
+        "body": {
+          "label": "Μήνυμα"
+        },
+        "cancel": "Ακύρωση",
+        "deadline": {
+          "label": "Προθεσμία απάντησης",
+          "preset": {
+            "14d": "14 ημέρες",
+            "3d": "3 ημέρες",
+            "5d": "5 ημέρες",
+            "7d": "7 ημέρες",
+            "custom": "Προσαρμοσμένη..."
+          }
+        },
+        "dialog": {
+          "title": "Στείλε πρόσκληση για: «{rfqTitle}»"
+        },
+        "errors": {
+          "invalidEmail": "Μη έγκυρο email",
+          "partialFailed": "Απέτυχαν {failed} από {total} προσκλήσεις. Όσες στάλθηκαν αφαιρέθηκαν από την επιλογή· ξαναδοκίμασε για τις υπόλοιπες.",
+          "sendFailed": "Η αποστολή των προσκλήσεων απέτυχε"
+        },
+        "removeAdhoc": "Αφαίρεση {email}",
+        "section": {
+          "adHoc": "Πρόσθεσε email απευθείας",
+          "allVendors": "Όλοι οι προμηθευτές",
+          "suggested": "⭐ Προτεινόμενοι"
+        },
+        "sendButton": "Στείλε σε {count} προμηθευτές",
+        "subject": {
+          "label": "Θέμα"
+        }
+      },
+      "lineActions": "Ενέργειες",
+      "lineDescription": "Περιγραφή",
+      "lineEdit": {
+        "error": {
+          "descriptionRequired": "Η περιγραφή είναι υποχρεωτική",
+          "priceInvalid": "Η τιμή πρέπει να είναι αριθμός",
+          "quantityInvalid": "Η ποσότητα πρέπει να είναι ≥ 0",
+          "unitRequired": "Επίλεξε μονάδα μέτρησης",
+          "vatRateRequired": "Επίλεξε συντελεστή ΦΠΑ"
+        },
+        "totalAuto": "Auto",
+        "totalOverride": "Override",
+        "warning": {
+          "negativePrice": "Αρνητική τιμή — βεβαιωθείτε ότι είναι discount line",
+          "quantityMismatch": "Ο vendor προσφέρει {vendorQty} αντί για {requestedQty} που ζητήσατε",
+          "totalMismatch": "Σύνολο δεν ταιριάζει με qty × τιμή. Στο PDF: {statedTotal}, υπολογισμός: {computedTotal}",
+          "zeroQuantityWithPrice": "Ποσότητα 0 — δωρεάν δείγμα ή λάθος;"
+        }
+      },
+      "lineQuantity": "Ποσότητα",
+      "lineTrade": "Ειδικότητα",
+      "lineUnit": "Μονάδα",
+      "lines": "Γραμμές Αιτήματος",
+      "linesEmpty": "Δεν υπάρχουν γραμμές",
+      "live": {
+        "aggregated": "Η/Ο {actor} έκανε {count} αλλαγές",
+        "newQuote": "Νέα προσφορά: {vendor} — {total}",
+        "newQuoteNoTotal": "Νέα προσφορά: {vendor}",
+        "newQuotesAggregated": "{count} νέες προσφορές",
+        "quoteAwarded": "Η/Ο {actor} επέλεξε νικητή: {vendor}",
+        "quoteConfirmed": "Η/Ο {actor} επιβεβαίωσε προσφορά: {vendor}",
+        "quoteRejected": "Η/Ο {actor} απέρριψε προσφορά: {vendor}",
+        "unattributed": {
+          "aggregated": "Έγιναν {count} αλλαγές",
+          "quoteAwarded": "Επιλέχθηκε νικητής: {vendor}",
+          "quoteConfirmed": "Επιβεβαιώθηκε προσφορά: {vendor}",
+          "quoteRejected": "Απορρίφθηκε προσφορά: {vendor}"
+        },
+        "viewAction": "Δες"
+      },
+      "loading": "Φόρτωση...",
+      "mobile": {
+        "backToList": "Πίσω στη λίστα"
+      },
+      "noQuotes": "Δεν υπάρχουν ακόμη προσφορές",
+      "notify": {
+        "body": {
+          "label": "Μήνυμα"
+        },
+        "dialog": {
+          "cancel": "Ακύρωση",
+          "editMessage": "Επεξεργασία μηνύματος",
+          "subtitle": "Επίλεξε ποιους θα ενημερώσεις και έλεγξε τα μηνύματα.",
+          "title": "Ενημέρωση προμηθευτών"
+        },
+        "lastSent": {
+          "at": "Εστάλη στις {date}",
+          "never": "Ποτέ"
+        },
+        "send": {
+          "button": "Αποστολή σε {count} προμηθευτές",
+          "sending": "Αποστολή..."
+        },
+        "sentBadge": "✉️ Ενημερώθηκε στις {date}",
+        "staleBadge": "✉️ Ενημερώθηκε (παλαιό)",
+        "status": {
+          "failed": "Απέτυχε",
+          "sending": "Σε αποστολή",
+          "sent": "Εστάλη"
+        },
+        "subject": {
+          "label": "Θέμα"
+        },
+        "template": {
+          "rejection": "Πρότυπο: Απόρριψη",
+          "winner": "Πρότυπο: Επιβεβαίωση"
+        },
+        "triggerButton": "Ενημέρωσε προμηθευτές",
+        "triggerButtonResend": "Ξανά ενημέρωση"
+      },
+      "offline": {
+        "banner": "Δεν υπάρχει σύνδεση — προσπάθεια επανασύνδεσης...",
+        "recovered": "Σύνδεση αποκαταστάθηκε",
+        "requiresConnection": "Απαιτείται σύνδεση για αυτή την ενέργεια"
+      },
+      "pdfPanel": {
+        "closeAria": "Κλείσιμο PDF"
+      },
+      "quoteHeader": {
+        "action": {
+          "approve": "Έγκριση Νικητή",
+          "confirm": "Επιβεβαίωση",
+          "createPo": "Δημιουργία Παραγγελίας",
+          "delete": "Διαγραφή",
+          "duplicate": "Αντιγραφή ως νέα",
+          "edit": "Επεξεργασία",
+          "reject": "Απόρριψη",
+          "restore": "Επαναφορά",
+          "viewPo": "Δες Παραγγελία"
+        },
+        "tooltip": {
+          "comingSoon": "Έρχεται σύντομα",
+          "comments": "Σχολιασμός",
+          "disabledByAward": "Έχει ήδη επιλεγεί νικητής",
+          "download": "Λήψη αρχικού PDF",
+          "hidePdf": "Κλείσε αρχικό PDF",
+          "viewPdf": "Δες αρχικό PDF"
+        }
+      },
+      "responseLock": {
+        "hint": "Κλειδωμένο πεδίο = ο προμηθευτής τιμολογεί την ποσότητα/μονάδα της γραμμής και συμπληρώνει μόνο τιμή μονάδας. Οι εναλλακτικές μένουν ελεύθερες. Ισχύει για κάθε νέα υποβολή ή επεξεργασία.",
+        "quantity": "Κλείδωμα ποσότητας",
+        "saveFailed": "Η ρύθμιση κλειδώματος δεν αποθηκεύτηκε",
+        "title": "Τι αλλάζει ο προμηθευτής",
+        "unit": "Κλείδωμα μονάδας μέτρησης"
+      },
+      "revisionDialog": {
+        "body": "Η προσφορά που σαρώθηκε μοιάζει με υπάρχουσα. Επίλεξε τι θέλεις να κάνεις.",
+        "confirmButton": "Επιβεβαίωση",
+        "existingQuote": "Υπάρχουσα προσφορά",
+        "matchingSignals": "Συμπίπτουν",
+        "newQuote": "Νέα προσφορά",
+        "options": {
+          "cancelImport": "Ακύρωσε import — διπλό σκαν κατά λάθος",
+          "revision": "Ανανέωση — αντικατέστησε την παλιά",
+          "separate": "Ξεχωριστή προσφορά — κράτα και τις δύο"
+        },
+        "signals": {
+          "email": "Email",
+          "name": "Όνομα",
+          "taxId": "ΑΦΜ"
+        },
+        "title": "Πιθανή ανανέωση προσφοράς",
+        "vendorLabel": "Vendor",
+        "warning": {
+          "hasPO": "Δεν μπορεί να αντικατασταθεί — υπάρχει ενεργή παραγγελία αγοράς. Ακύρωσε πρώτα την παραγγελία.",
+          "isWinner": "Προσοχή: Η υπάρχουσα προσφορά έχει κατακυρωθεί. Αν ανανεωθεί, το award θα μεταφερθεί στη νέα version."
+        }
+      },
+      "scan": {
+        "placeholder": {
+          "delete": "Διαγραφή",
+          "failed": "Αποτυχία επεξεργασίας",
+          "retry": "Δοκίμασε ξανά"
+        },
+        "stage": {
+          "extracting": "Εξαγωγή στοιχείων με AI...",
+          "processing": "Επεξεργασία...",
+          "reading": "Ανάγνωση PDF...",
+          "validating": "Επικύρωση δεδομένων..."
+        },
+        "toast": {
+          "processingMultiple": "Επεξεργασία {count} αρχείων ({done}/{count} έτοιμο)",
+          "processingSingle": "Επεξεργασία αρχείου..."
+        }
+      },
+      "search": {
+        "empty": {
+          "suggestion": {
+            "price": "Τιμή (π.χ. 12500)",
+            "quoteNumber": "Αριθμό προσφοράς (π.χ. Q-2026-0042)",
+            "vendor": "Όνομα προμηθευτή (π.χ. Thermoland)"
+          },
+          "suggestionsTitle": "Δοκίμασε να ψάξεις με:",
+          "title": "Δεν βρέθηκαν προσφορές με «{query}»"
+        }
+      },
+      "selectQuoteHint": "Επιλέξτε μία προσφορά για να δείτε τις λεπτομέρειες",
+      "setup": {
+        "banner": {
+          "awardLocked": "Οι ρυθμίσεις έχουν κλειδωθεί από την επιλογή νικητή ({vendor})",
+          "cancelPo": "Ακύρωση Παραγγελίας",
+          "lifecycleLocked": {
+            "archived": "Το RFQ είναι στο αρχείο — μόνο για ανάγνωση",
+            "cancelled": "Το RFQ ακυρώθηκε — μόνο για ανάγνωση",
+            "closed": "Το RFQ είναι κλειστό — μόνο για ανάγνωση"
+          },
+          "poLocked": "Έχει δημιουργηθεί παραγγελία ({poNumber}) — ρύθμιση κλειδωμένη",
+          "revertAward": "Αναίρεση Νικητή",
+          "viewPo": "Δες Παραγγελία"
+        }
+      },
+      "sort": {
+        "label": "Ταξινόμηση",
+        "option": {
+          "priceAsc": "Φθηνότερη πρώτα",
+          "priceDesc": "Ακριβότερη πρώτα",
+          "recent": "Πιο πρόσφατες",
+          "statusPriceDefault": "Κατάσταση + Τιμή (προεπιλογή)",
+          "vendorAsc": "Προμηθευτής (Α-Ω)"
+        }
+      },
+      "tabs": {
+        "badges": {
+          "recommendation": "εκκρεμεί επιλογή νικητή",
+          "setupAttention": "προσκλήσεις που χρειάζονται προσοχή",
+          "underReview": "προσφορές υπό εξέταση"
+        },
+        "comparison": "Σύγκριση",
+        "history": "Ιστορικό",
+        "quotes": "Προσφορές",
+        "setup": "Ρύθμιση RFQ"
+      },
+      "unsaved": {
+        "body": "Αν κλείσετε, οι αλλαγές θα χαθούν.",
+        "discard": "Απόρριψη αλλαγών",
+        "keep": "Συνέχεια επεξεργασίας",
+        "title": "Έχετε μη αποθηκευμένες αλλαγές"
+      },
+      "versioning": {
+        "collapseButton": "Απόκρυψη παλαιότερων versions",
+        "expandButton": "Εμφάνιση παλαιότερων versions"
+      }
+    },
+    "trades": {
+      "allGroups": "Όλες",
+      "aluminum_frames": "Αλουμίνια / Κουφώματα Εξωτερικά",
+      "concrete": "Μπετόν / Μπετατζής",
+      "data_telecoms": "Δίκτυα Δεδομένων",
+      "demolition": "Κατεδάφιση / Εκσκαφή",
+      "electrical": "Ηλεκτρολογικά",
+      "elevator": "Ανελκυστήρας",
+      "equipment_rental": "Ενοικίαση Εξοπλισμού",
+      "facade": "Πρόσοψη / ETICS",
+      "fire_protection": "Πυρόσβεση / Πυρανίχνευση",
+      "flooring_wood": "Ξύλινα Δάπεδα / Parquet",
+      "formwork": "Ξυλότυπος",
+      "gas": "Φυσικό Αέριο",
+      "glazing": "Τζαμαδόρος / Υαλοπίνακες",
+      "groups": {
+        "claddings": "Επενδύσεις",
+        "external": "Εξωτερικά",
+        "finishing": "Φινίρισμα",
+        "frames": "Κουφώματα",
+        "networks": "Δίκτυα (Η/Μ)",
+        "services": "Υπηρεσίες / Logistics",
+        "special": "Ειδικές Εγκαταστάσεις",
+        "structure": "Σκελετός"
+      },
+      "gypsum": "Γυψοκαρτές / Οροφές",
+      "hvac": "Μηχανολογικά / HVAC",
+      "insulation": "Μονώσεις",
+      "interior_frames": "Εσωτερικά Κουφώματα / Πόρτες",
+      "landscaping": "Διαμόρφωση Εξωτερικών",
+      "marble": "Μάρμαρα / Φυσικός Λίθος",
+      "masonry": "Τοιχοποιία / Κτίστης",
+      "materials_general": "Υλικά (Γενικά)",
+      "noResults": "Δεν βρέθηκαν ειδικότητες",
+      "painting": "Ελαιοχρωματισμοί",
+      "plastering": "Σοβατίσματα",
+      "plumbing": "Υδραυλικά",
+      "pool": "Πισίνα",
+      "prefab": "Προκατασκευή / Μεταλλικές Κατ.",
+      "reinforcement": "Σιδεράς / Σιδηροπλέγματα",
+      "rolling_shutters": "Ρολά / Σήτες",
+      "roofing": "Στέγη / Κεραμοσκεπή",
+      "search": "Αναζήτηση ειδικότητας...",
+      "select": "Επιλέξτε ειδικότητα",
+      "tiling": "Πλακάκια / Κεραμικά",
+      "title": "Ειδικότητες",
+      "waterproofing": "Στεγανοποίηση / Ασφαλτικά",
+      "woodwork": "Ξυλουργικά / Έπιπλα"
+    }
+  },
+  "uom": {
+    "name": {
+      "bag": "Σακί",
+      "box": "Κουτί",
+      "container": "Δοχείο",
+      "day": "Ημέρα",
+      "g": "Γραμμάριο",
+      "hr": "Ώρα",
+      "kW": "Κιλοβάτ",
+      "kWp": "Κιλοβάτ αιχμής",
+      "kg": "Κιλό",
+      "lt": "Λίτρο",
+      "lump": "Κατ' αποκοπή",
+      "m": "Μέτρο",
+      "m2": "Τετραγωνικό μέτρο",
+      "m3": "Κυβικό μέτρο",
+      "ml": "Χιλιοστόλιτρο",
+      "month": "Μήνας",
+      "pack": "Πακέτο",
+      "pair": "Ζεύγος",
+      "pallet": "Παλέτα",
+      "pcs": "Τεμάχιο",
+      "point": "Σημείο",
+      "roll": "Ρολό",
+      "set": "Σετ",
+      "ton": "Τόνος"
+    },
+    "symbol": {
+      "bag": "σακιά",
+      "box": "κουτιά",
+      "container": "δοχεία",
+      "day": "ημ.",
+      "g": "g",
+      "hr": "ώρ.",
+      "kW": "kW",
+      "kWp": "kWp",
+      "kg": "kg",
+      "lt": "lt",
+      "lump": "κ.α.",
+      "m": "μ.",
+      "m2": "τ.μ.",
+      "m3": "κ.μ.",
+      "ml": "ml",
+      "month": "μήν.",
+      "pack": "πακέτα",
+      "pair": "ζεύγη",
+      "pallet": "παλέτες",
+      "pcs": "τεμ.",
+      "point": "σημεία",
+      "roll": "ρολά",
+      "set": "σετ",
+      "ton": "t"
+    }
+  }
+}
