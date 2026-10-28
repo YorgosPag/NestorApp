@@ -15,6 +15,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AuthContext } from '@/lib/auth';
 import type { POVatRate, PurchaseOrderStatus, CreatePurchaseOrderDTO } from '@/types/procurement';
 import { PO_VAT_RATES } from '@/types/procurement';
+import { toStoredUom } from '@/lib/uom/uom-registry';
 import { createPO, getPO, listPOs } from '@/services/procurement';
 import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { findContactByName } from '../../shared/contact-lookup';
@@ -311,7 +312,7 @@ export class ProcurementHandler implements ToolHandler {
 
       const description = String(item.description ?? '').trim();
       const quantity = Number(item.quantity);
-      const unit = String(item.unit ?? 'τεμ').trim();
+      const unit = toStoredUom(typeof item.unit === 'string' ? item.unit : null);
       const unitPrice = Number(item.unitPrice);
       const categoryCode = String(item.categoryCode ?? '').trim();
 

@@ -222,7 +222,7 @@ describe('ProcurementHandler', () => {
       expect(result.data.taxRate).toBe(13);
     });
 
-    it('defaults unit to τεμ when not provided', async () => {
+    it('defaults unit to the registry default (pcs) when not provided', async () => {
       mockCreatePO.mockResolvedValue({ id: 'po_new', poNumber: 'PO-0001' });
 
       await handler.execute('create_purchase_order', {
@@ -233,7 +233,24 @@ describe('ProcurementHandler', () => {
 
       const createCall = mockCreatePO.mock.calls[0];
       const dto = createCall[1];
-      expect(dto.items[0].unit).toBe('τεμ');
+      expect(dto.items[0].unit).toBe('pcs');
+    });
+
+    it('stores the canonical unit code — Greek spelling resolves, unknown spelling stays visible (ADR-923 «3γ» 4δ)', async () => {
+      mockCreatePO.mockResolvedValue({ id: 'po_new', poNumber: 'PO-0001' });
+
+      await handler.execute('create_purchase_order', {
+        supplierId: 'supp_001',
+        projectId: 'proj_001',
+        items: [
+          { description: 'Τσιμέντο', quantity: 10, unit: 'σακ', unitPrice: 8, categoryCode: 'OIK-2' },
+          { description: 'Πλακίδια', quantity: 40, unit: 'τ.μ.', unitPrice: 12, categoryCode: 'OIK-2' },
+          { description: 'Μεταφορά', quantity: 2, unit: 'καρότσι', unitPrice: 30, categoryCode: 'OIK-2' },
+        ],
+      }, adminCtx);
+
+      const dto = mockCreatePO.mock.calls[0][1];
+      expect(dto.items.map((item: { unit: string }) => item.unit)).toEqual(['bag', 'm2', 'καρότσι']);
     });
   });
 

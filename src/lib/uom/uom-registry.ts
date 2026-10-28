@@ -32,9 +32,21 @@ export const UOM_CODES = [
 
 export type UomCode = (typeof UOM_CODES)[number];
 
+/**
+ * **ΑΑΔΕ myDATA** `invoiceDetails.measurementUnit` (xs:int, προαιρετικό) — Παράρτημα 8.13 του myDATA REST API (v1.0.9):
+ * 1 Τεμάχια · 2 Κιλά · 3 Λίτρα · 4 Μέτρα · 5 Τετραγωνικά μέτρα · 6 Κυβικά μέτρα. Το **7** («Τεμάχια_Λοιπές περιπτώσεις»)
+ * **δεν** είναι αντιστοίχιση μονάδας: ισχύει μόνο σε δελτία αποστολής και απαιτεί `otherMeasurementUnitTitle/Quantity`.
+ */
+export type AadeMeasurementUnit = 1 | 2 | 3 | 4 | 5 | 6;
+
 interface UomDefinition {
   /** UN/ECE Rec 20 (ή Rec 21 με `X`) — ο κωδικός που φεύγει προς τρίτους· `null` όταν δεν υπάρχει ειλικρινής. */
   readonly unece: string | null;
+  /**
+   * Ο κωδικός της ΑΑΔΕ (myDATA) — `null` όταν η μονάδα δεν είναι στη λίστα της. **Ποτέ** σιωπηλή μετατροπή
+   * (τόνος ≠ «2 Κιλά» χωρίς να πολλαπλασιαστεί η ποσότητα): το πεδίο είναι προαιρετικό, η απουσία είναι ειλικρινής.
+   */
+  readonly aade: AadeMeasurementUnit | null;
   /** Γραφές που υπάρχουν ήδη αποθηκευμένες ή που πληκτρολογεί άνθρωπος· κανονικοποιούνται από το `normalizeUomText`. */
   readonly aliases: readonly string[];
   /**
@@ -46,28 +58,28 @@ interface UomDefinition {
 }
 
 export const UOM_REGISTRY: Readonly<Record<UomCode, UomDefinition>> = {
-  pcs: { unece: 'H87', aliases: ['τεμ', 'τμχ', 'τεμάχιο', 'τεμάχια', 'pc', 'piece', 'pieces', 'ea', 'each', 'C62'] },
-  m: { unece: 'MTR', aliases: ['μ', 'μέτρο', 'μέτρα', 'meter', 'metre'] },
-  m2: { unece: 'MTK', aliases: ['μ2', 'τ.μ.', 'sqm', 'τετραγωνικό μέτρο'] },
-  m3: { unece: 'MTQ', aliases: ['μ3', 'κ.μ.', 'cbm', 'κυβικό μέτρο'] },
-  kg: { unece: 'KGM', aliases: ['κιλό', 'κιλά', 'χγρ', 'kilogram'] },
-  ton: { unece: 'TNE', aliases: ['τόνος', 'τόνοι', 't', 'tn', 'tonne'] },
-  g: { unece: 'GRM', aliases: ['γρ', 'gr', 'γραμμάριο', 'gram'] },
-  lt: { unece: 'LTR', aliases: ['l', 'λίτρο', 'λίτρα', 'litre', 'liter'] },
-  ml: { unece: 'MLT', aliases: ['millilitre', 'milliliter'] },
-  hr: { unece: 'HUR', aliases: ['ώρα', 'ώρες', 'h', 'hour', 'hours'] },
-  day: { unece: 'DAY', aliases: ['ημέρα', 'ημέρες', 'μέρα', 'μέρες', 'd', 'days'] },
-  month: { unece: 'MON', aliases: ['μήνας', 'μήνες', 'months'] },
-  set: { unece: 'SET', aliases: ['σετ', 'sets'], spelledOut: true },
-  pair: { unece: 'PR', aliases: ['ζεύγ', 'ζεύγος', 'ζεύγη', 'pairs'], spelledOut: true },
-  bag: { unece: 'XBG', aliases: ['σακ', 'σακί', 'σακιά', 'bags'], spelledOut: true },
-  box: { unece: 'XBX', aliases: ['κουτ', 'κουτί', 'κουτιά', 'boxes'], spelledOut: true },
-  pallet: { unece: 'XPX', aliases: ['παλ', 'παλέτα', 'παλέτες', 'pallets'], spelledOut: true },
-  roll: { unece: 'XRO', aliases: ['ρολ', 'ρολό', 'ρολά', 'rolls'], spelledOut: true },
-  container: { unece: 'XCN', aliases: ['δοχ', 'δοχείο', 'δοχεία', 'containers'], spelledOut: true },
-  pack: { unece: 'XPK', aliases: ['πακέτο', 'πακέτα', 'package', 'packs'], spelledOut: true },
-  lump: { unece: 'LS', aliases: ["κατ' αποκοπή", 'κατ αποκοπή', 'lump sum'] },
-  kWp: { unece: null, aliases: [] },
+  pcs: { unece: 'H87', aade: 1, aliases: ['τεμ', 'τμχ', 'τεμάχιο', 'τεμάχια', 'pc', 'piece', 'pieces', 'ea', 'each', 'C62'] },
+  m: { unece: 'MTR', aade: 4, aliases: ['μ', 'μέτρο', 'μέτρα', 'meter', 'metre'] },
+  m2: { unece: 'MTK', aade: 5, aliases: ['μ2', 'τ.μ.', 'sqm', 'τετραγωνικό μέτρο'] },
+  m3: { unece: 'MTQ', aade: 6, aliases: ['μ3', 'κ.μ.', 'cbm', 'κυβικό μέτρο'] },
+  kg: { unece: 'KGM', aade: 2, aliases: ['κιλό', 'κιλά', 'χγρ', 'kilogram'] },
+  ton: { unece: 'TNE', aade: null, aliases: ['τόνος', 'τόνοι', 't', 'tn', 'tonne'] },
+  g: { unece: 'GRM', aade: null, aliases: ['γρ', 'gr', 'γραμμάριο', 'gram'] },
+  lt: { unece: 'LTR', aade: 3, aliases: ['l', 'λίτρο', 'λίτρα', 'litre', 'liter'] },
+  ml: { unece: 'MLT', aade: null, aliases: ['millilitre', 'milliliter'] },
+  hr: { unece: 'HUR', aade: null, aliases: ['ώρα', 'ώρες', 'h', 'hour', 'hours'] },
+  day: { unece: 'DAY', aade: null, aliases: ['ημέρα', 'ημέρες', 'μέρα', 'μέρες', 'd', 'days'] },
+  month: { unece: 'MON', aade: null, aliases: ['μήνας', 'μήνες', 'months'] },
+  set: { unece: 'SET', aade: null, aliases: ['σετ', 'sets'], spelledOut: true },
+  pair: { unece: 'PR', aade: null, aliases: ['ζεύγ', 'ζεύγος', 'ζεύγη', 'pairs'], spelledOut: true },
+  bag: { unece: 'XBG', aade: null, aliases: ['σακ', 'σακί', 'σακιά', 'bags'], spelledOut: true },
+  box: { unece: 'XBX', aade: null, aliases: ['κουτ', 'κουτί', 'κουτιά', 'boxes'], spelledOut: true },
+  pallet: { unece: 'XPX', aade: null, aliases: ['παλ', 'παλέτα', 'παλέτες', 'pallets'], spelledOut: true },
+  roll: { unece: 'XRO', aade: null, aliases: ['ρολ', 'ρολό', 'ρολά', 'rolls'], spelledOut: true },
+  container: { unece: 'XCN', aade: null, aliases: ['δοχ', 'δοχείο', 'δοχεία', 'containers'], spelledOut: true },
+  pack: { unece: 'XPK', aade: null, aliases: ['πακέτο', 'πακέτα', 'package', 'packs'], spelledOut: true },
+  lump: { unece: 'LS', aade: null, aliases: ["κατ' αποκοπή", 'κατ αποκοπή', 'lump sum'] },
+  kWp: { unece: null, aade: null, aliases: [] },
 };
 
 /** Η μονάδα μιας νέας γραμμής όταν κανείς δεν διάλεξε άλλη. */
@@ -115,6 +127,14 @@ export function resolveUom(raw: string | null | undefined): UomCode | null {
 }
 
 /**
+ * **Τι γράφεται στο έγγραφο** για μια μονάδα που ήρθε ως ελεύθερη γραφή (εργαλείο AI · API · φόρμα): ο κανονικός κωδικός·
+ * άγνωστη γραφή **αυτούσια** (ορατή, ποτέ ψεύτικη αντιστοίχιση)· κενή ⇒ `DEFAULT_UOM`. Ο ΕΝΑΣ κανόνας εισόδου.
+ */
+export function toStoredUom(raw: string | null | undefined): string {
+  return resolveUom(raw) ?? (raw?.trim() || DEFAULT_UOM);
+}
+
+/**
  * **Υιοθετεί η γραμμή τη μονάδα της πηγής;** (υλικό · γραμμή BOQ) — μόνο όσο η γραμμή έχει ακόμη την **προεπιλογή**·
  * μονάδα που διάλεξε άνθρωπος δεν αντικαθίσταται σιωπηλά. Επιστρέφει τη νέα τιμή (κανονικός κωδικός, ή η άγνωστη γραφή
  * της πηγής αυτούσια) ή `null` = «άφησέ τη».
@@ -134,4 +154,10 @@ export function isSpelledOutUom(raw: string | null | undefined): boolean {
 export function uneceCodeOf(raw: string | null | undefined): string | null {
   const code = resolveUom(raw);
   return code === null ? null : UOM_REGISTRY[code].unece;
+}
+
+/** Ο κωδικός ΑΑΔΕ για το `measurementUnit` του myDATA· `null` = το πεδίο **παραλείπεται** (άγνωστη ή εκτός λίστας μονάδα). */
+export function aadeMeasurementUnitOf(raw: string | null | undefined): AadeMeasurementUnit | null {
+  const code = resolveUom(raw);
+  return code === null ? null : UOM_REGISTRY[code].aade;
 }

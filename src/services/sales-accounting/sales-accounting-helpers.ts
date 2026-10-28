@@ -25,6 +25,7 @@ import type {
   SaleLineItem,
 } from './types';
 import { nowISO } from '@/lib/date-local';
+import { DEFAULT_UOM } from '@/lib/uom/uom-registry';
 
 // ============================================================================
 // CONSTANTS
@@ -327,7 +328,7 @@ export function buildInvoiceInput(params: BuildInvoiceInputParams): CreateInvoic
           lineNumber: idx + 1,
           description: buildLineDescription(params.type, item),
           quantity: 1,
-          unit: 'τεμ',
+          unit: DEFAULT_UOM,
           unitPrice: lineNet,
           vatRate: VAT_RATE,
           netAmount: lineNet,
@@ -339,7 +340,7 @@ export function buildInvoiceInput(params: BuildInvoiceInputParams): CreateInvoic
           lineNumber: 1,
           description: params.description,
           quantity: 1,
-          unit: 'τεμ',
+          unit: DEFAULT_UOM,
           unitPrice: params.netAmount,
           vatRate: VAT_RATE,
           netAmount: params.netAmount,

@@ -24,6 +24,11 @@
  * @see ADR-171 (Autonomous AI Agent)
  */
 
+import { UOM_CODES } from '@/lib/uom/uom-registry';
+
+/** Οι κωδικοί του ΕΝΟΣ μητρώου μονάδων (ADR-923 «3γ» 4δ) — όχι χειρόγραφη λίστα. */
+const UOM_CODE_LIST = UOM_CODES.join(', ');
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -1043,7 +1048,7 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
       name: 'create_purchase_order',
       description:
         'Create a new purchase order (PO) for a supplier. Resolves supplier and project by name if IDs not known. '
-        + 'Items must include description, quantity, unit (e.g. τεμ, m², kg), unitPrice, and categoryCode (ATOE code like OIK-1). '
+        + 'Items must include description, quantity, unit (a unit code such as pcs, m2, kg), unitPrice, and categoryCode (ATOE code like OIK-1). '
         + 'Returns the created PO number. Admin-only.',
       parameters: {
         type: 'object',
@@ -1072,7 +1077,7 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
               properties: {
                 description: { type: 'string', description: 'Item description (e.g. Τσιμεντοσανίδα 12mm)' },
                 quantity: { type: 'number', description: 'Quantity to order' },
-                unit: { type: 'string', description: 'Unit of measure (τεμ, m, m², m³, kg, ton, lt, σακ, κουτ, παλ, ρολ, ζεύγ, δοχ, σετ)' },
+                unit: { type: 'string', description: `Unit of measure code: ${UOM_CODE_LIST}. Greek spellings (τεμ, σακ, τ.μ.) are also accepted.` },
                 unitPrice: { type: 'number', description: 'Price per unit in EUR' },
                 categoryCode: { type: 'string', description: 'ATOE category code (OIK-1 through OIK-12)' },
               },

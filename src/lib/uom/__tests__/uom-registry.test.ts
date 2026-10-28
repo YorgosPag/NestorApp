@@ -8,6 +8,7 @@ import { BOQ_MEASUREMENT_UNITS, BOQ_PICKER_UNITS } from '@/types/boq/units';
 import { PROCUREMENT_UNIT_OPTIONS } from '@/config/procurement-units';
 import {
   DEFAULT_UOM,
+  aadeMeasurementUnitOf,
   adoptedUom,
   UOM_CODES,
   UOM_REGISTRY,
@@ -15,6 +16,7 @@ import {
   isUomCode,
   normalizeUomText,
   resolveUom,
+  toStoredUom,
   uneceCodeOf,
   type UomCode,
 } from '../uom-registry';
@@ -88,6 +90,22 @@ describe('resolveUom — ανεκτική ανάγνωση κάθε παλιού
     expect(uneceCodeOf('m²')).toBe('MTK');
     expect(uneceCodeOf('kWp')).toBeNull();
     expect(uneceCodeOf('σημεία')).toBeNull();
+  });
+
+  it('toStoredUom: γραφή → κανονικός κωδικός · άγνωστη αυτούσια · κενή ⇒ DEFAULT_UOM', () => {
+    expect([toStoredUom('τεμ'), toStoredUom(' σακ '), toStoredUom('m²')]).toEqual(['pcs', 'bag', 'm2']);
+    expect(toStoredUom('  καρότσι ')).toBe('καρότσι');
+    expect([toStoredUom(''), toStoredUom('   '), toStoredUom(undefined), toStoredUom(null)]).toEqual([
+      DEFAULT_UOM, DEFAULT_UOM, DEFAULT_UOM, DEFAULT_UOM,
+    ]);
+  });
+
+  it('aadeMeasurementUnitOf: Παράρτημα 8.13 myDATA (1–6) — καμία σιωπηλή μετατροπή, ποτέ το 7 των δελτίων', () => {
+    expect(['τεμ', 'kg', 'λίτρα', 'μέτρα', 'τ.μ.', 'κ.μ.'].map(aadeMeasurementUnitOf)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect([aadeMeasurementUnitOf('ton'), aadeMeasurementUnitOf('ώρες'), aadeMeasurementUnitOf('σακ')]).toEqual([null, null, null]);
+    expect(aadeMeasurementUnitOf('σημεία')).toBeNull();
+    const assigned = UOM_CODES.map((code) => UOM_REGISTRY[code].aade).filter((value) => value !== null);
+    expect(new Set(assigned).size).toBe(assigned.length);
   });
 
   it('isUomCode δέχεται μόνο κανονικό κωδικό, όχι γραφή', () => {

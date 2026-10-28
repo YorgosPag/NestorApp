@@ -195,3 +195,4 @@ SalesAccountingBridge (Server Service)
 | 2026-03-11 | Firestore composite indexes deployed |
 | 2026-03-11 | VERIFIED in production — invoices, emails, UI card all working |
 | 2026-03-13 | Centralization audit: accounting-notification.ts — replaced hardcoded `/ 1.24` with `VAT_DIVISOR` derived from `GREEK_VAT_RATES` (vat-config.ts SSoT). Tax compliance fix. |
+| 2026-10-28 | ADR-923 «3γ» 4δ: η γραμμή τιμολογίου πώλησης γράφει τον **κωδικό** μονάδας του μητρώου (`DEFAULT_UOM` = `pcs`) αντί για τη χειρόγραφη γραφή `'τεμ'` (`sales-accounting-helpers.ts`). Παλιά τιμολόγια με «τεμ» διαβάζονται ως `pcs` από το `resolveUom` — καμία μετάπτωση. |

@@ -1191,6 +1191,35 @@ SSoT (`CompanyProfile`/`buildIssuer`, `getContactDisplayName`)· (Α12) το δ�
   ορατό (`aria-hidden`) + όνομα μονάδας ως `sr-only` **τιμή**· το όνομα του πεδίου το δίνει ο καλών — `<label>` στη φόρμα,
   `ariaLabel` (νέα ιδιότητα) στο κελί του πίνακα (PO: `items.unit`, όπως ήδη η ποσότητα/τιμή). Tests: `UomSelect` Υ3 · PO Μ1–Μ3.
 
+**3γ Βήμα 4δ — ✅ χειριστής AI + τιμολόγια: κωδικός στην αποθήκευση, ετικέτα στην εμφάνιση· κωδικός ΑΑΔΕ στο μητρώο (2026-10-28).**
+Το handoff το περιέγραφε ως «δύο αρχεία με `'τεμ'`». Το SSoT audit (grep) βρήκε σοβαρότερο πρόβλημα:
+- 🔴 **Τα τιμολόγια αποθήκευαν ΜΕΤΑΦΡΑΣΜΕΝΗ ετικέτα.** `InvoiceForm` · `LineItemsEditor` · `ServicePresetsSection` έγραφαν στο έγγραφο
+  `t('units.pieces')` ⇒ «τεμ» από χρήστη με ελληνική UI, «pcs» από χρήστη με αγγλική, και το PDF/οι λεπτομέρειες τύπωναν ό,τι ήταν αποθηκευμένο.
+  Η μονάδα ήταν ελεύθερο `<Input>`. Πρότυπο SAP (T006): **κωδικός** στην αποθήκευση, κείμενο ανά γλώσσα μόνο στην εμφάνιση.
+  ⇒ προεπιλογή `DEFAULT_UOM` · επιλογέας `UomSelect` (με `<Label htmlFor>` — πριν η ετικέτα δεν έδενε με το πεδίο) · εμφάνιση με `useUomLabel`
+  (λεπτομέρειες τιμολογίου, combobox και λίστα προκαθορισμένων υπηρεσιών) και `uomLabelIn(…, 'el')` στο PDF (ελληνικό τιμολόγιο, όπως οι
+  υπόλοιπες ετικέτες του). Το αντίγραφο `accounting.json` → `units` **σβήστηκε** (el/en): μένει ΕΝΑ, το `uom.json`.
+  Παλιά τιμολόγια/προκαθορισμένες με «τεμ», «pcs» ή «ώρες»: **καμία μετάπτωση** — τα διαβάζει το `resolveUom`.
+- **ΕΝΑΣ κανόνας εισόδου — `toStoredUom()` στο μητρώο**: «γραφή → κανονικός κωδικός, άγνωστη αυτούσια, κενή ⇒ `DEFAULT_UOM`». Ήταν ήδη
+  γραμμένος **δύο** φορές (`vendor-quote-draft.ts` `draftUnit` · `api/vendor/quote/parsing.ts` `readUnit`) και το 4δ θα έγραφε τρίτο.
+  Καταναλωτές: χειριστής AI (`procurement-handler.ts`: «σακ» → `bag`), αντιγραφή προκαθορισμένης υπηρεσίας σε γραμμή, αποθήκευση
+  προκαθορισμένων (UI **και** server `api/accounting/setup/presets` — δίχτυ ασφαλείας). ⏳ Τα δύο δίδυμα του vendor portal περνούν στο
+  `toStoredUom` στο **4β** (περιοχή άλλου agent).
+- Ο ορισμός του εργαλείου AI (`agentic-tool-definitions.ts`) παράγει τη λίστα μονάδων από το `UOM_CODES` — όχι χειρόγραφη λίστα.
+- `sales-accounting-helpers.ts` (γέφυρα πώλησης → τιμολόγιο, ADR-198): `'τεμ'` → `DEFAULT_UOM`.
+- **Boy Scout**: το `DEFAULT_LINE_ITEM` ήταν αντιγραμμένο σε `InvoiceForm` και `LineItemsEditor` ⇒ ΕΝΑ `invoice-line-defaults.ts`
+  (`newInvoiceLineItem`) · χειρόγραφο «ΦΠΑ» στις λεπτομέρειες → `invoices.vatLabel` (N.11) · `€…toFixed(2)` → `formatAccountingCurrency` ·
+  ταυτολογικός τριαδικός (`… ? x% : x%`) στο combobox → `x%`.
+- 🧠 **Κωδικός ΑΑΔΕ στο μητρώο (πέρα από τον SAP)**: ιδιότητα `aade` δίπλα στο `unece` + `aadeMeasurementUnitOf()`. Πηγή: myDATA REST API
+  v1.0.9, Παράρτημα 8.13 + changelog («Addition of … Meters, Square Meters, Cubic Meters, Pieces_Other Cases») + Remark 9:
+  1 τεμάχια · 2 κιλά · 3 λίτρα · 4 μέτρα · 5 τ.μ. · 6 κ.μ. Το **7** («Τεμάχια_Λοιπές») **δεν** αντιστοιχίζεται: ισχύει μόνο σε δελτία και
+  απαιτεί `otherMeasurementUnitTitle/Quantity`. Τόνος/ώρες/σακιά ⇒ `null` = το προαιρετικό πεδίο **παραλείπεται** — ποτέ σιωπηλή μετατροπή
+  (τόνος ≠ «κιλά» χωρίς πολλαπλασιασμό της ποσότητας). Σήμερα **δεν** υπάρχει serializer myDATA στον κώδικα· όταν γραφτεί, ρωτά το μητρώο.
+- **Φρουρός**: τα δύο `PENDING_4D` βγήκαν από το `ALLOWED` του `no-hand-uom-vocabulary` — μένει μόνο το 4β.
+- **Tests**: `uom-registry.test.ts` +2 (`toStoredUom` · `aadeMeasurementUnitOf` με μοναδικότητα κωδικών) · `procurement-handler.test.ts`
+  (προεπιλογή `pcs` · νέο: «σακ»/«τ.μ.»/άγνωστη) · νέο `LineItemsEditor.units.test.tsx` (Λ1 νέα γραμμή `pcs` · Λ2 «τεμ» ⇒ επιλεγμένο `pcs` με
+  όνομα πεδίου · Λ3 επιλογή γράφει κωδικό · Λ4 προκαθορισμένη «ώρες» ⇒ `hr`).
+
 ## 6. Απορριφθείσες εναλλακτικές
 
 | Εναλλακτική | Γιατί όχι |
@@ -1515,6 +1544,7 @@ SSoT (`CompanyProfile`/`buildIssuer`, `getContactDisplayName`)· (Α12) το δ�
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| 2026-10-28 | **3γ Βήμα 4δ ✅** (§5.11 «3γ»): τα τιμολόγια αποθηκεύουν **κωδικό** μονάδας, όχι μεταφρασμένη ετικέτα (`UomSelect` + `useUomLabel` + `uomLabelIn` στο PDF) · `toStoredUom()` = ο ΕΝΑΣ κανόνας εισόδου (χειριστής AI · προκαθορισμένες υπηρεσίες · server) · ιδιότητα `aade` (myDATA 1–6) + `aadeMeasurementUnitOf` · σβήστηκε το `accounting.json` → `units` · `newInvoiceLineItem` στη θέση 2 αντιγράφων |
 | 2026-10-28 | **3γ 4γ — μονάδες-λέξεις** (§5.11 «3γ», απόφαση (α)): `spelledOut` στο μητρώο + `isSpelledOutUom` · η λίστα του `UomSelect` δείχνει «Σακί», όχι «Σακί (σακιά)» · ο επιλογέας του `MaterialFormDialog` (5ος χειροποίητος) → `UomSelect` |
 | 2026-10-28 | **3γ Βήμα 4γ ✅** (§5.11 «3γ»): ετικέτες μονάδας BOQ/BIM από το `useUomLabel` · σβήστηκαν 3 αντίγραφα (`building-tabs` · `bim-materials` · `dxf-viewer-shell`) · σύμβολα σε πραγματικές συντομογραφίες (`kg` · `t` · `ώρ.` · `κ.α.`) · **ΕΝΑ** `UomSelect` στη θέση 4 επιλογέων (εύρημα CHECK 3.28) · 778/778 · μεταλλάξεις 10/10 |
 | 2026-10-28 | **3γ Βήμα 4α — Α10 ✅** (§5.11 «3γ»): μητρώο μονάδων `lib/uom` (SAP T006: εσωτερικός κωδικός = BOQ · UN/ECE Rec 20 · κείμενα στο `uom.json`) · `resolveUom` ανεκτική ανάγνωση, **καμία** μετάπτωση · φρουρός `no-hand-uom-vocabulary` · ζωντανά ✅ (CBL-001 ⇒ «Τεμάχιο», όχι κενό) · 3 ευρήματα ζωντανού ελέγχου: «500»→«50» (`LineNumberInput` πάνω στο `NumericField`, ADR-706), σύμβολο στο κλειστό πεδίο, κομμένη λίστα (`width="content"`) · 455/455 + 303/303 · μεταλλάξεις 13/13 + 5/5 |
