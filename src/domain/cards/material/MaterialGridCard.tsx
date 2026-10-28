@@ -23,6 +23,7 @@ import type {
 
 import { formatCurrency, formatDate } from '@/lib/intl-formatting';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useUomLabel } from '@/hooks/useUomLabel';
 
 import type { Material } from '@/subapps/procurement/types/material';
 
@@ -42,13 +43,13 @@ export function MaterialGridCard({
   className,
 }: MaterialGridCardProps) {
   const { t } = useTranslation('procurement');
+  const uomLabel = useUomLabel();
 
   const categoryLabel =
     t(`categories.${material.atoeCategoryCode}`, { defaultValue: '' }) ||
     material.atoeCategoryCode;
 
-  const unitLabel =
-    t(`hub.materialCatalog.units.${material.unit}`, { defaultValue: '' }) || material.unit;
+  const unitLabel = uomLabel(material.unit);
 
   const subtitle = `${material.code} · ${unitLabel}`;
 

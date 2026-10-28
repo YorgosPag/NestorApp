@@ -35,11 +35,8 @@ import {
   type CreateMaterialDTO,
   type UpdateMaterialDTO,
 } from '@/subapps/procurement/types/material';
-import type { BOQMeasurementUnit } from '@/types/boq';
-
-const BOQ_UNITS: BOQMeasurementUnit[] = [
-  'm', 'm2', 'm3', 'kg', 'ton', 'pcs', 'lt', 'set', 'hr', 'day', 'lump',
-];
+import { BOQ_PICKER_UNITS, type BOQMeasurementUnit } from '@/types/boq';
+import { useUomLabel } from '@/hooks/useUomLabel';
 
 interface MaterialFormDialogProps {
   open: boolean;
@@ -105,6 +102,7 @@ export function MaterialFormDialog({
   onSubmit,
 }: MaterialFormDialogProps) {
   const { t } = useTranslation('procurement');
+  const uomLabel = useUomLabel();
   const categoryOptions = useMemo(() => atoeCategoryOptions((code) => t(`categories.${code}`)), [t]);
   const { suppliers } = usePOSupplierContacts();
 
@@ -216,9 +214,9 @@ export function MaterialFormDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {BOQ_UNITS.map((u) => (
+                  {BOQ_PICKER_UNITS.map((u) => (
                     <SelectItem key={u} value={u}>
-                      {t(`hub.materialCatalog.units.${u}`, { defaultValue: '' }) || u}
+                      {uomLabel(u, 'name')}
                     </SelectItem>
                   ))}
                 </SelectContent>

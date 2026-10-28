@@ -5,6 +5,7 @@ import { Layers, Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useUomLabel } from '@/hooks/useUomLabel';
 import { usePOSupplierContacts } from '@/hooks/procurement/usePOSupplierContacts';
 import { getContactDisplayName } from '@/types/contacts';
 import { formatCurrency, formatDate } from '@/lib/intl-formatting';
@@ -20,14 +21,14 @@ interface MaterialDetailProps {
 
 export function MaterialDetail({ material, onEdit, onDelete, onCreateNew }: MaterialDetailProps) {
   const { t } = useTranslation('procurement');
+  const uomLabel = useUomLabel();
   const { suppliers } = usePOSupplierContacts();
 
   const categoryLabel =
     t(`categories.${material.atoeCategoryCode}`, { defaultValue: '' }) ||
     material.atoeCategoryCode;
 
-  const unitLabel =
-    t(`hub.materialCatalog.units.${material.unit}`, { defaultValue: '' }) || material.unit;
+  const unitLabel = uomLabel(material.unit);
 
   const preferredSupplierNames = useMemo(() => {
     const nameMap = new Map(suppliers.map((c) => [c.id ?? '', getContactDisplayName(c)]));
