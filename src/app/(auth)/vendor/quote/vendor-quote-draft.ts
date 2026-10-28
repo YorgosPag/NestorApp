@@ -11,7 +11,7 @@
  */
 
 import { generateOptimisticId } from '@/services/enterprise-id.service';
-import { DEFAULT_UOM, resolveUom } from '@/lib/uom/uom-registry';
+import { DEFAULT_UOM, toStoredUom } from '@/lib/uom/uom-registry';
 import { inferRfqLineId } from '@/subapps/procurement/utils/rfq-line-binding';
 import { lockedFieldsOf, UNLOCKED_RESPONSE } from '@/subapps/procurement/utils/rfq-response-lock';
 import type { RfqResponseLock } from '@/subapps/procurement/types/rfq';
@@ -30,11 +30,6 @@ import type {
 /** Κλειστό σύνολο ⇒ στατική `t()` ανά μέλος στη φόρμα (ADR-877 §6). */
 export type DraftValidationError = 'validationLines' | 'validationAnswers' | 'validationAlternate';
 
-/** Η μονάδα όπως τη λέει το μητρώο — άγνωστη γραφή μένει αυτούσια· κενή ⇒ `DEFAULT_UOM`. */
-export function draftUnit(raw: string | null | undefined): string {
-  return resolveUom(raw) ?? (raw?.trim() || DEFAULT_UOM);
-}
-
 export function emptyLineDraft(): QuoteLineDraft {
   return { description: '', quantity: '', unit: DEFAULT_UOM, unitPrice: '', vatRate: 24, notes: '' };
 }
@@ -49,7 +44,7 @@ export function newAlternate(rfqLine: PublicRfqLine): AlternateDraft {
     key: generateOptimisticId(),
     rfqLineId: rfqLine.id,
     quantity: rfqLine.quantity != null ? String(rfqLine.quantity) : '',
-    unit: draftUnit(rfqLine.unit),
+    unit: toStoredUom(rfqLine.unit),
   };
 }
 
@@ -57,7 +52,7 @@ function lineToDraft(line: QuoteLine): QuoteLineDraft {
   return {
     description: line.description,
     quantity: String(line.quantity),
-    unit: draftUnit(line.unit),
+    unit: toStoredUom(line.unit),
     unitPrice: String(line.unitPrice),
     vatRate: line.vatRate,
     notes: line.notes ?? '',
@@ -84,7 +79,7 @@ function freshAnswer(rfqLine: PublicRfqLine): RfqAnswerDraft {
     rfqLineId: rfqLine.id,
     answer: 'priced',
     quantity: rfqLine.quantity != null ? String(rfqLine.quantity) : '',
-    unit: draftUnit(rfqLine.unit),
+    unit: toStoredUom(rfqLine.unit),
     unitPrice: '',
     vatRate: 24,
     notes: '',
@@ -97,7 +92,7 @@ function withLock(answer: RfqAnswerDraft, rfqLine: PublicRfqLine, lock: RfqRespo
   return {
     ...answer,
     quantity: locked.quantity !== null ? String(locked.quantity) : answer.quantity,
-    unit: locked.unit !== null ? draftUnit(locked.unit) : answer.unit,
+    unit: locked.unit !== null ? toStoredUom(locked.unit) : answer.unit,
   };
 }
 

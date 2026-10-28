@@ -9,6 +9,9 @@ import type { AuthContext } from '@/lib/auth';
 import type { Quote, QuoteLine } from '../types/quote';
 import { quoteChangeStamp } from './quote-change-stamp';
 import type { POVatRate } from '@/types/procurement';
+import { toStoredUom, type UomCode } from '@/lib/uom/uom-registry';
+
+const LUMP_SUM_UOM: UomCode = 'lump';
 
 const logger = createModuleLogger('PO_GENERATION_SERVICE');
 
@@ -18,7 +21,7 @@ function mapLine(line: QuoteLine) {
   return {
     description: line.description || '-',
     quantity: line.quantity || 1,
-    unit: line.unit || 'τεμ',
+    unit: toStoredUom(line.unit),
     unitPrice: line.unitPrice || 0,
     total: line.lineTotal || 0,
     boqItemId: null as string | null,
@@ -40,7 +43,8 @@ export async function generatePoFromAwardedQuote(
     : [{
         description: winner.displayNumber,
         quantity: 1,
-        unit: 'τεμ',
+        // ολόκληρη η προσφορά σε μία γραμμή = τίμημα κατ' αποκοπή (UN/ECE `LS`), όχι «ένα τεμάχιο»
+        unit: LUMP_SUM_UOM,
         unitPrice: winner.totals.total,
         total: winner.totals.total,
         boqItemId: null as string | null,

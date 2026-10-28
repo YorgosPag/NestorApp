@@ -23,10 +23,7 @@ const PENDING_4B = 'Λεξιλόγιο RFQ/προσφορών/πύλης προ�
 
 /** Κλειστό σύνολο — αρχείο → λόγος. Κάθε προσθήκη χρειάζεται λόγο που αντέχει σε review. */
 const ALLOWED: Readonly<Record<string, string>> = {
-  'subapps/procurement/components/QuoteForm.tsx': PENDING_4B,
   'subapps/procurement/data/trades.ts': PENDING_4B,
-  'subapps/procurement/services/po-generation-service.ts': PENDING_4B,
-  'subapps/procurement/services/quote-service.ts': PENDING_4B,
   'subapps/procurement/utils/units.ts': PENDING_4B,
   'subapps/dxf-viewer/bim-3d/dimensions/Dim3DPropertiesPanel.tsx':
     'Μονάδες ΜΗΚΟΥΣ σχεδίου (mm/cm/m της διάστασης 3D) — άλλη έννοια από τη μονάδα ποσότητας· ADR-362.',

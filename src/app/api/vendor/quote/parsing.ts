@@ -20,7 +20,7 @@ import {
   VENDOR_QUOTE_MAX_PDFS as MAX_PDFS,
 } from '@/subapps/procurement/config/vendor-quote-attachments';
 import { generateQuoteLineId } from '@/services/enterprise-id.service';
-import { DEFAULT_UOM, resolveUom } from '@/lib/uom/uom-registry';
+import { toStoredUom } from '@/lib/uom/uom-registry';
 import { RFQ_SCOPE_RESPONSES, type QuoteLine, type RfqScopeResponse } from '@/subapps/procurement/types/quote';
 import type { SubmissionPayload } from '@/subapps/procurement/services/vendor-portal-submit-service';
 import { quoteLineTotal } from '@/subapps/procurement/utils/quote-line-total';
@@ -36,12 +36,6 @@ function readRfqLineId(value: unknown): string | null {
 
 function readNote(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value.trim().slice(0, MAX_NOTE_LENGTH) : null;
-}
-
-/** Η μονάδα όπως τη λέει το ΜΗΤΡΩΟ (`resolveUom`) — άγνωστη γραφή μένει ορατή αυτούσια· κενή ⇒ `DEFAULT_UOM`. */
-function readUnit(value: unknown): string {
-  const raw = typeof value === 'string' ? value.trim() : '';
-  return resolveUom(raw) ?? (raw || DEFAULT_UOM);
 }
 
 function parseLineItem(raw: unknown): QuoteLine | null {
@@ -60,7 +54,7 @@ function parseLineItem(raw: unknown): QuoteLine | null {
     description,
     categoryCode: null,
     quantity,
-    unit: readUnit(item.unit),
+    unit: toStoredUom(typeof item.unit === 'string' ? item.unit : null),
     unitPrice,
     vatRate,
     lineTotal: quoteLineTotal(quantity, unitPrice),

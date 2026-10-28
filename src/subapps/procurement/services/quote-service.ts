@@ -11,6 +11,7 @@ import { normalizeToDate, compareInstantsDesc } from '@/lib/date-local';
 import admin from 'firebase-admin';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
+import { toStoredUom } from '@/lib/uom/uom-registry';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 import {
   PROCUREMENT_RESOURCE,
@@ -333,7 +334,7 @@ function materializeQuoteLines(extracted: ExtractedQuoteData): QuoteLine[] {
       description: item.description.value || '',
       categoryCode: null,
       quantity: qty || 0,
-      unit: item.unit.value || 'τμχ',
+      unit: toStoredUom(item.unit.value),
       unitPrice: price || 0,
       vatRate,
       lineTotal: total || 0,

@@ -33,6 +33,7 @@ import { computeQuoteTotals } from '@/subapps/procurement/types/quote';
 import { getAtoeCodesForTrade } from '@/subapps/procurement/data/trades';
 import type { QuoteLine, CreateQuoteDTO } from '@/subapps/procurement/types/quote';
 import type { TradeCode } from '@/subapps/procurement/types/trade';
+import { DEFAULT_UOM } from '@/lib/uom/uom-registry';
 
 // ============================================================================
 // TYPES
@@ -56,7 +57,7 @@ const EMPTY_LINE: Omit<QuoteLine, 'id'> = {
   description: '',
   categoryCode: null,
   quantity: 1,
-  unit: 'τεμ',
+  unit: DEFAULT_UOM,
   unitPrice: 0,
   vatRate: 24,
   lineTotal: 0,
