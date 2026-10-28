@@ -15,15 +15,21 @@ export type LevelingBinding = 'explicit' | 'inferred';
 
 /**
  * Από πού ήρθε το ποσό που καλύπτει ένα κενό — **πάντα ορατό**, ποτέ σιωπηλό:
+ * `manual` = ο PM το όρισε για ΑΥΤΗ την προσφορά (`Quote.levelingPlugs`, με σημείωση και ιστορικό — BuildingConnected
+ * «plug») · **υπερισχύει** των αυτόματων ·
  * `estimate` = η εσωτερική εκτίμηση του PM (`RfqLine.unitPrice` × ποσότητα) ·
  * `highest_bid` = η ΥΨΗΛΟΤΕΡΗ συγκρίσιμη τιμή άλλου προμηθευτή στην ίδια γραμμή (συντηρητικό: το κενό δεν
  * «κερδίζει» ποτέ φθηνότερα από όσο θα κόστιζε να καλυφθεί).
  */
-export type LevelingPlugSource = 'estimate' | 'highest_bid';
+export type LevelingPlugSource = 'manual' | 'estimate' | 'highest_bid';
 
 export interface LevelingPlug {
   amount: number;
   source: LevelingPlugSource;
+  /** Μόνο `manual`: η αιτιολογία του PM (π.χ. «τιμή αγοράς Β' τριμήνου»). */
+  note: string | null;
+  /** Μόνο σε `manual`: η αυτόματη κάλυψη που θα ίσχυε — ο PM βλέπει πόσο απέχει. */
+  automatic?: LevelingPlug | null;
 }
 
 export interface LevelingAlternate {

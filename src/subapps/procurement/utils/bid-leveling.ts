@@ -8,7 +8,8 @@
  *    (`resolveUom`: m ≠ m²) σημαδεύονται αντί να «συγκρίνονται».
  * 3. **Τα κενά δεν κερδίζουν**: «εξαιρείται»/αναπάντητο καλύπτεται με ποσό **ορατής πηγής** — εκτίμηση PM, αλλιώς
  *    η υψηλότερη συγκρίσιμη τιμή άλλου (συντηρητικό). Ο Procore/BuildingConnected το αφήνουν σε χειροκίνητο plug·
- *    εδώ το εξισορροπημένο σύνολο είναι δίκαιο **από την πρώτη ματιά**.
+ *    εδώ το εξισορροπημένο σύνολο είναι δίκαιο **από την πρώτη ματιά** — και ο PM ΕΠΙΠΛΕΟΝ ορίζει δικό του ποσό
+ *    (`manual`, με σημείωση), που υπερισχύει αλλά κρατά δίπλα την αυτόματη για σύγκριση.
  * 4. Εναλλακτικές μένουν **δίπλα** στη γραμμή που αντικαθιστούν — ποτέ μέσα στο σύνολο.
  *
  * @module subapps/procurement/utils/bid-leveling
@@ -31,7 +32,7 @@ import type {
 import { inferRfqLineId } from './rfq-line-binding';
 import { roundCents } from './round-cents';
 
-type LevelingQuote = Pick<Quote, 'id' | 'lines' | 'alternates' | 'scopeResponses' | 'totals' | 'quotedTotal'>;
+type LevelingQuote = Pick<Quote, 'id' | 'lines' | 'alternates' | 'scopeResponses' | 'totals' | 'quotedTotal' | 'levelingPlugs'>;
 
 interface QuoteAnswerIndex {
   quote: LevelingQuote;
@@ -41,6 +42,8 @@ interface QuoteAnswerIndex {
   additional: QuoteLine[];
   inferred: number;
   lumpSum: boolean;
+  /** Οι καλύψεις κενού που όρισε ο PM για ΑΥΤΗ την προσφορά, ανά γραμμή RFQ. */
+  manualPlugs: Map<string, LevelingPlug>;
 }
 
 /** Προσφορά του §8.5: δηλώνει ρητά τις απαντήσεις της (η πύλη γράφει ΠΑΝΤΑ `scopeResponses`, έστω `[]`). */
@@ -63,6 +66,15 @@ function groupAlternates(quote: LevelingQuote): Map<string, QuoteLine[]> {
   return out;
 }
 
+function indexManualPlugs(quote: LevelingQuote, known: ReadonlySet<string>): Map<string, LevelingPlug> {
+  const out = new Map<string, LevelingPlug>();
+  for (const plug of quote.levelingPlugs ?? []) {
+    if (!known.has(plug.rfqLineId) || !Number.isFinite(plug.amount) || plug.amount < 0) continue;
+    out.set(plug.rfqLineId, { amount: roundCents(plug.amount), source: 'manual', note: plug.note });
+  }
+  return out;
+}
+
 function indexQuote(quote: LevelingQuote, rfqLines: readonly InternalRfqLine[]): QuoteAnswerIndex {
   const known = new Set(rfqLines.map((l) => l.id));
   const explicit = isExplicitlyBound(quote);
@@ -79,7 +91,10 @@ function indexQuote(quote: LevelingQuote, rfqLines: readonly InternalRfqLine[]):
     }
   }
   const scope = new Map((quote.scopeResponses ?? []).map((r) => [r.rfqLineId, r] as const));
-  return { quote, base, scope, alternates: groupAlternates(quote), additional, inferred, lumpSum: isLumpSum(quote) };
+  return {
+    quote, base, scope, alternates: groupAlternates(quote), additional, inferred, lumpSum: isLumpSum(quote),
+    manualPlugs: indexManualPlugs(quote, known),
+  };
 }
 
 // ============================================================================
@@ -141,10 +156,16 @@ function isComparablePrice(cell: LevelingCell): boolean {
 
 function plugFor(rfqLine: InternalRfqLine, cells: readonly LevelingCell[]): LevelingPlug | null {
   if (rfqLine.estimateUnitPrice != null && rfqLine.quantity != null) {
-    return { amount: roundCents(rfqLine.estimateUnitPrice * rfqLine.quantity), source: 'estimate' };
+    return { amount: roundCents(rfqLine.estimateUnitPrice * rfqLine.quantity), source: 'estimate', note: null };
   }
   const prices = cells.filter(isComparablePrice).map((c) => c.leveledAmount ?? 0);
-  return prices.length > 0 ? { amount: Math.max(...prices), source: 'highest_bid' } : null;
+  return prices.length > 0 ? { amount: Math.max(...prices), source: 'highest_bid', note: null } : null;
+}
+
+/** Η κάλυψη ΕΝΟΣ κενού: του PM για αυτή την προσφορά (κρατά δίπλα την αυτόματη) → αλλιώς η αυτόματη της γραμμής. */
+function gapPlug(index: QuoteAnswerIndex | undefined, rfqLineId: string, automatic: LevelingPlug | null): LevelingPlug | null {
+  const manual = index?.manualPlugs.get(rfqLineId);
+  return manual ? { ...manual, automatic } : automatic;
 }
 
 function rowCoverage(cells: readonly LevelingCell[]): LevelingRowCoverage {
@@ -161,8 +182,11 @@ function lowestOf(cells: readonly LevelingCell[]): string | null {
 
 function buildRow(rfqLine: InternalRfqLine, indexes: readonly QuoteAnswerIndex[]): LevelingRow {
   const answered = indexes.map((index) => answerCell(index, rfqLine));
-  const plug = plugFor(rfqLine, answered);
-  const cells = answered.map((c) => (c.state === 'excluded' || c.state === 'unanswered' ? { ...c, plug } : c));
+  const automatic = plugFor(rfqLine, answered);
+  const byQuote = new Map(indexes.map((index) => [index.quote.id, index] as const));
+  const cells = answered.map((c) => (c.state === 'excluded' || c.state === 'unanswered'
+    ? { ...c, plug: gapPlug(byQuote.get(c.quoteId), rfqLine.id, automatic) }
+    : c));
   return {
     rfqLineId: rfqLine.id, description: rfqLine.description, categoryCode: rfqLine.categoryCode,
     quantity: rfqLine.quantity, unit: rfqLine.unit, cells,

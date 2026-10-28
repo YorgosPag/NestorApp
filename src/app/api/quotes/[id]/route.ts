@@ -10,9 +10,8 @@
 import 'server-only';
 
 import { z } from 'zod';
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { NextResponse } from 'next/server';
+import { quoteIdRoute, quoteBadRequest } from '@/app/api/quotes/_shared/quote-id-route';
 import {
   withStandardRateLimit,
   withSensitiveRateLimit,
@@ -49,26 +48,6 @@ const UpdateQuoteSchema = z.object({
 });
 
 // ============================================================================
-// ROUTE SHELL — ΕΝΑ σημείο για «id από το segment + withAuth» (ήταν τρία αντίγραφα, CHECK 3.28)
-// ============================================================================
-
-type QuoteIdHandler = (req: NextRequest, ctx: AuthContext, id: string) => Promise<NextResponse>;
-
-function quoteIdRoute(run: QuoteIdHandler) {
-  return async (request: NextRequest, segmentData?: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
-    const { id } = await segmentData!.params;
-    const handler = withAuth(
-      async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => run(req, ctx, id),
-    );
-    return handler(request);
-  };
-}
-
-function badRequest(error: unknown): NextResponse {
-  return NextResponse.json({ success: false, error: getErrorMessage(error) }, { status: 400 });
-}
-
-// ============================================================================
 // GET
 // ============================================================================
 
@@ -101,7 +80,7 @@ const handlePatch = quoteIdRoute(async (req, ctx, id) => {
     const updated = await updateQuote(ctx, id, parsed.data);
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
-    return badRequest(error);
+    return quoteBadRequest(error);
   }
 });
 
@@ -114,7 +93,7 @@ const handleDelete = quoteIdRoute(async (_req, ctx, id) => {
     await archiveQuote(ctx, id);
     return NextResponse.json({ success: true });
   } catch (error) {
-    return badRequest(error);
+    return quoteBadRequest(error);
   }
 });
 

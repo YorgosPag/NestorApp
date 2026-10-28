@@ -70,6 +70,34 @@ export interface QuoteLine {
   vatRate: 0 | 6 | 13 | 24;
   lineTotal: number;
   notes: string | null;
+  /**
+   * ADR-327 §8.5 — **the RFQ line this line answers**. Bid leveling joins on THIS, never on description.
+   * - in `Quote.lines`: `string` = the base answer to that RFQ line (at most ONE per RFQ line);
+   *   `null`/absent = an item the vendor ADDED (BuildingConnected «Additional Items»), or a pre-§8.5 quote
+   *   (the leveling engine then *infers* a binding and says so — `LevelingCell.binding = 'inferred'`).
+   * - in `Quote.alternates`: the RFQ line the alternate would REPLACE — always set.
+   */
+  rfqLineId?: string | null;
+}
+
+// ============================================================================
+// RFQ LINE ANSWERS WITHOUT A PRICE — ADR-327 §8.5 (Procore Include/Exclude)
+// ============================================================================
+
+/**
+ * `included` = the vendor covers the RFQ line inside another price (no separate amount).
+ * `excluded` = the vendor does NOT bid it — a scope gap the leveling engine plugs, visibly.
+ */
+export const RFQ_SCOPE_RESPONSES = ['included', 'excluded'] as const;
+export type RfqScopeResponseKind = (typeof RFQ_SCOPE_RESPONSES)[number];
+
+export interface RfqScopeResponse {
+  rfqLineId: string;
+  /** Η περιγραφή της γραμμής RFQ τη στιγμή της απάντησης — επιβάλλεται από τον server (`applyRfqLineAuthority`), ώστε η προσφορά να είναι αυτοτελές έγγραφο. */
+  description: string;
+  response: RfqScopeResponseKind;
+  /** The vendor's reason / qualification («εκτός αντικειμένου», «περιλαμβάνεται στη γρ. 3»). */
+  note: string | null;
 }
 
 // ============================================================================
@@ -181,6 +209,31 @@ export interface QuoteAttachment {
 }
 
 // ============================================================================
+// VENDOR IDENTITY AS SUBMITTED — ADR-327 §8.5 Γ
+// ============================================================================
+
+/**
+ * Ποιος υπέβαλε, **όπως ήταν τη στιγμή της υποβολής** — από την πρόσκληση, όχι από ερώτημα.
+ * Γράφεται σε ΚΑΘΕ προσφορά πύλης (με επαφή ή χωρίς): η προσφορά είναι αυτοτελές έγγραφο, όπως ο προμηθευτής
+ * στο PO. Πρόσκληση χωρίς επαφή (χειροκίνητο email) ⇒ αυτή είναι η ΜΟΝΗ ταυτότητα μέχρι ο PM να τη δέσει σε επαφή
+ * (BuildingConnected «Unknown Company» → «Add to directory»). Ποτέ αυτόματη δημιουργία επαφής.
+ */
+export interface QuoteVendorSnapshot {
+  name: string;
+  email: string | null;
+  inviteId: string;
+}
+
+/** ADR-327 §8.5 — μία κάλυψη κενού του PM ανά γραμμή RFQ (καθαρό ποσό, χωρίς ΦΠΑ — όπως όλο το leveling). */
+export interface QuoteLevelingPlug {
+  rfqLineId: string;
+  amount: number;
+  note: string | null;
+  setBy: string;
+  setAt: Timestamp;
+}
+
+// ============================================================================
 // QUOTE ENTITY
 // ============================================================================
 
@@ -195,7 +248,23 @@ export interface Quote {
   trade: TradeCode;
   source: QuoteSource;
   status: QuoteStatus;
+  /** The BASE bid — what the buyer gets by awarding the whole quote. Feeds totals and the PO. */
   lines: QuoteLine[];
+  /**
+   * ADR-327 §8.5 — vendor-proposed substitutes, each bound (`rfqLineId`) to the RFQ line it would replace.
+   * Kept OUT of `lines` on purpose: they are options, so they never enter `totals` or the generated PO
+   * (Procore keeps Alternates in their own section for the same reason). Absent on pre-§8.5 quotes.
+   */
+  alternates?: QuoteLine[];
+  /** ADR-327 §8.5 — RFQ lines answered WITHOUT a price (included elsewhere / excluded). */
+  scopeResponses?: RfqScopeResponse[];
+  /** ADR-327 §8.5 Γ — portal quotes only. Read the display name ONLY via `quoteVendorDisplayName`. */
+  vendorSnapshot?: QuoteVendorSnapshot | null;
+  /**
+   * ADR-327 §8.5 — PM-set gap plugs (BuildingConnected «plug»): the PM's amount for an RFQ line THIS vendor excluded or
+   * left unanswered. PM analysis, never vendor data — the portal never writes it. Writer: `quote-leveling-plug-service`.
+   */
+  levelingPlugs?: QuoteLevelingPlug[];
   totals: {
     subtotal: number;
     vatAmount: number;
