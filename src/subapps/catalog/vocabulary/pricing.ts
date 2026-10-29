@@ -41,11 +41,19 @@ export const PRICE_LIST_KINDS = ['sales', 'cost'] as const;
 
 export type PriceListKind = (typeof PRICE_LIST_KINDS)[number];
 
+export function isPriceListKind(value: unknown): value is PriceListKind {
+  return (PRICE_LIST_KINDS as readonly unknown[]).includes(value);
+}
+
 // ── Τύπος τιμής (BMEcat) ─────────────────────────────────────────────────────
 
 export const PRICE_TYPES = ['net_list', 'net_customer'] as const;
 
 export type PriceType = (typeof PRICE_TYPES)[number];
+
+export function isPriceType(value: unknown): value is PriceType {
+  return (PRICE_TYPES as readonly unknown[]).includes(value);
+}
 
 /** Δέχεται ο τύπος τιμής ομάδες έκπτωσης; Μόνο ο τιμοκατάλογος **λίστας**. */
 export function acceptsDiscountGroups(priceType: PriceType): boolean {

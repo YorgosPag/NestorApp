@@ -7,7 +7,29 @@ const refusal = (status: number, body: unknown) =>
 describe('catalogFailureOf — η μία ερμηνεία της άρνησης του γραφέα', () => {
   it('409 CAS: «άλλαξε από άλλον», με την τρέχουσα αναθεώρηση του διακομιστή', () => {
     const failure = catalogFailureOf(refusal(409, { errorCode: 'catalog.revisionMismatch', issues: [], currentRevision: 7 }));
-    expect(failure).toEqual({ kind: 'revisionMismatch', issues: [], currentRevision: 7 });
+    expect(failure).toEqual({ kind: 'revisionMismatch', issues: [], currentRevision: 7, fence: null });
+  });
+
+  it('409 φράχτη: το ΦΡΕΣΚΟ αποτύπωμα και το πλήθος φτάνουν στην οθόνη (Γ3)', () => {
+    const body = {
+      errorCode: 'catalog.confirmationRequired',
+      issues: [{ code: 'fenceDigestStale', path: 'confirmedDiffDigest' }],
+      diffDigest: '0123456789abcdef',
+      fencedCount: 3,
+    };
+    const failure = catalogFailureOf(refusal(409, body));
+    expect(failure.kind).toBe('confirmationRequired');
+    expect(failure.fence).toEqual({ diffDigest: '0123456789abcdef', fencedCount: 3 });
+  });
+
+  it('αποτύπωμα με λάθος σχήμα (από το δίκτυο) ΔΕΝ γίνεται δεκτό', () => {
+    const body = { errorCode: 'catalog.confirmationRequired', issues: [], diffDigest: 'not-a-digest', fencedCount: 3 };
+    expect(catalogFailureOf(refusal(409, body)).fence).toBeNull();
+  });
+
+  it('το αποτύπωμα διαβάζεται ΜΟΝΟ στο confirmationRequired', () => {
+    const body = { errorCode: 'catalog.revisionMismatch', issues: [], diffDigest: '0123456789abcdef', fencedCount: 3 };
+    expect(catalogFailureOf(refusal(409, body)).fence).toBeNull();
   });
 
   it('422: τα ευρήματα φτάνουν ως κωδικοί με διαδρομή — για το πεδίο τους', () => {

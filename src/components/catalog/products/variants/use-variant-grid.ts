@@ -13,7 +13,6 @@
 import { useMemo, useState } from 'react';
 
 import { useCatalogOptimistic, type CatalogOutcome } from '@/hooks/catalog/useCatalogOptimistic';
-import { emptyHistory, recordHistory, redoHistory, undoHistory, type History } from '@/lib/spreadsheet/grid-history';
 import { generateCatalogProductId } from '@/services/enterprise-id-convenience';
 import { saveCatalogVariants, type ProductModelRecord } from '@/services/catalog/catalog-api.client';
 import type { StoredMemberShape } from '@/subapps/catalog/aggregate/aggregate-members';
@@ -28,6 +27,7 @@ import type { ProductValues } from '@/subapps/catalog/types/product';
 import { resolveInheritedValues } from '@/subapps/catalog/values/resolve-inherited';
 
 import { useCatalogFailureNotice } from '../../shared/catalog-ui-hooks';
+import { useRebasedDraft } from '../../shared/use-rebased-draft';
 import type { ListScope } from '../ProductListToolbar';
 import { isDraftDirty, newVariantRows, rebaseVariantDraft, variantBatchOf, variantDraftOf, variantEdits, type VariantDraft, type VariantRow } from './variant-rows';
 
@@ -41,30 +41,10 @@ export interface VariantGridInput {
   readonly scope: ListScope;
 }
 
+/** Πρόχειρο + rebase + συγκρούσεις-γεγονός + ιστορικό: το κοινό ιδίωμα (`use-rebased-draft`). */
 function useDraft(input: VariantGridInput) {
   const base = useMemo(() => variantDraftOf(input.members, input.parentId), [input.members, input.parentId]);
-  const [own, setOwn] = useState<VariantDraft | null>(null);
-  const rebased = useMemo(() => (own ? rebaseVariantDraft(own, base) : { draft: base, conflicts: [] }), [own, base]);
-  const [notice, setNotice] = useState<readonly string[]>([]);
-  // Η σύγκρουση είναι **γεγονός**: το πρόχειρο υιοθετεί τη ζωντανή γραμμή (η χαμένη εκδοχή φεύγει) και η ειδοποίηση
-  // κρατιέται ως την αποθήκευση/απόρριψη. Ζωντανά (ADR-923 §5.10.5) «ξανανακαλυπτόταν» σε κάθε render και έμενε και ΜΕΤΑ
-  // την επιτυχή αποθήκευση. Προσαρμογή κατά την απόδοση (React), συγκλίνει: το υιοθετημένο πρόχειρο δεν συγκρούεται.
-  if (own && rebased.conflicts.length > 0) {
-    setOwn(rebased.draft);
-    setNotice((prev) => [...new Set([...prev, ...rebased.conflicts])]);
-  }
-  const [history, setHistory] = useState<History<VariantDraft>>(emptyHistory());
-  const change = (next: VariantDraft) => { setHistory((prev) => recordHistory(prev, { before: rebased.draft, after: next })); setOwn(next); };
-  const step = (result: { history: History<VariantDraft>; apply: VariantDraft | null }) => { setHistory(result.history); if (result.apply) setOwn(result.apply); };
-  return {
-    draft: rebased.draft,
-    conflicts: notice,
-    clearConflicts: () => setNotice([]),
-    change,
-    undo: () => step(undoHistory(history)),
-    redo: () => step(redoHistory(history)),
-    discard: () => { setOwn(null); setHistory(emptyHistory()); setNotice([]); },
-  };
+  return useRebasedDraft<VariantDraft>(base, rebaseVariantDraft);
 }
 
 function useJudgement(input: VariantGridInput, draft: VariantDraft) {

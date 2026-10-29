@@ -77,6 +77,8 @@ const OVERVIEW = 'menu.overview';
 const CATALOG_SCHEMA_VIEW: NavPolicy = { permissions: ['catalog:schema:view'] };
 /** Οι ρυθμίσεις **δομής** (κανάλια × γλώσσες) — Akeneo «manage structure», όχι «edit products». */
 const CATALOG_SCHEMA_MANAGE: NavPolicy = { permissions: ['catalog:schema:manage'] };
+/** Οι τιμές έχουν **δικό** τους δικαίωμα προβολής (SAP VK13 ≠ VK11 · ADR-923 §5.11 «3δ» Ζ) — όχι το δικαίωμα σχήματος. */
+const CATALOG_PRICING_VIEW: NavPolicy = { permissions: ['catalog:pricing:view'] };
 
 export const MAIN_CATALOG = [
   // «Πίνακας Ελέγχου» — το ορατό κείμενο που έδινε ήδη η αλυσίδα συμπερασμού στο `/dashboard`.
@@ -123,6 +125,7 @@ export const MAIN_CATALOG = [
       { kind: 'link', navLabelKey: 'sidebar.catalogCategories', icon: FolderTree, href: CATALOG_PAGES.categories, policy: CATALOG_SCHEMA_VIEW },
       { kind: 'link', navLabelKey: 'sidebar.catalogMeasurements', icon: Ruler, href: CATALOG_PAGES.measurements, policy: CATALOG_SCHEMA_VIEW },
       { kind: 'link', navLabelKey: 'sidebar.catalogAssets', icon: Images, href: CATALOG_PAGES.assets, policy: CATALOG_SCHEMA_VIEW },
+      { kind: 'link', navLabelKey: 'sidebar.catalogPriceLists', icon: Receipt, href: CATALOG_PAGES.priceLists, policy: CATALOG_PRICING_VIEW },
       { kind: 'link', navLabelKey: 'menu.settings', icon: Settings, href: CATALOG_PAGES.settings, policy: CATALOG_SCHEMA_MANAGE },
     ],
   },

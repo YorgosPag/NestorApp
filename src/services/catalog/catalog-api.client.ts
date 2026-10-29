@@ -8,7 +8,10 @@
  *    ξανά στον γραφέα (αυθεντία). Αυτό το αρχείο μόνο **μεταφέρει**: διαδρομή, ρήμα, σώμα — ένα σημείο ανά πράξη.
  * 🔑 **`apiClient`, όχι `fetch`**: στέλνει `Idempotency-Key` (CHECK 3.92), κουβαλά τον χώρο, κρατά το σώμα της
  *    άρνησης (`errorBody`) ώστε τα ευρήματα να φτάσουν δίπλα στο πεδίο τους.
- * 🔑 **Οι αναγνώσεις δεν περνούν από εδώ**: η οθόνη ακούει απευθείας τη Firestore (`useCatalogCollection`).
+ * 🔑 **Οι αναγνώσεις δεν περνούν από εδώ**: η οθόνη ακούει απευθείας τη Firestore (`useCatalogCollection`) — **εκτός** από
+ *    τις τιμές, που διαβάζονται μόνο από τις όψεις του διακομιστή (ADR-923 §5.11 «3δ» Ζ, `catalog-pricing-api.client`).
+ * 🔑 Οι **ορισμοί** της τιμολόγησης (τιμοκατάλογος · ομάδες · αναθέσεις · συνθήκες) γράφονται όπως κάθε ορισμός, εδώ· οι
+ *    **πράξεις** της έκδοσης (γραμμές · σπορά · δημοσίευση) ζουν στο `catalog-pricing-api.client`.
  */
 
 import { apiClient } from '@/lib/api/enterprise-api-client';
@@ -30,6 +33,20 @@ import type {
   VariantBatch,
   VariantBatchResultOf,
 } from '@/subapps/catalog/types/product-requests';
+import type {
+  CustomerAssignmentDefinition,
+  CustomerGroupDefinition,
+  DiscountConditionDefinition,
+  DiscountGroupDefinition,
+  PriceListDefinition,
+} from '@/subapps/catalog/types/price-list';
+import type {
+  CustomerAssignmentWire,
+  CustomerGroupWire,
+  DiscountConditionWire,
+  DiscountGroupWire,
+  PriceListWire,
+} from '@/subapps/catalog/types/pricing-views';
 import type { LocalizedText } from '@/i18n/localized-text';
 
 // ── Οι εγγραφές όπως τις δίνει ο γραφέας (σύρμα: χρονοσφραγίδες ISO) ─────────
@@ -58,6 +75,14 @@ export interface CatalogDefinitionKinds {
   /** Μοντέλο: ο ορισμός **χωρίς** `derived` — τα παράγωγα τα υπολογίζει ο γραφέας του συνόλου. */
   readonly productModel: { readonly definition: CatalogProductModelDefinition; readonly record: ProductModelRecord };
   readonly product: { readonly definition: CatalogProductDefinition; readonly record: ProductRecord };
+  // ── Τιμολόγηση (ADR-923 §5.11) — οι εγγραφές φτάνουν από τις όψεις του διακομιστή, ποτέ από τη Firestore ──
+  readonly priceList: { readonly definition: PriceListDefinition; readonly record: PriceListWire };
+  readonly discountGroup: { readonly definition: DiscountGroupDefinition; readonly record: DiscountGroupWire };
+  readonly customerGroup: { readonly definition: CustomerGroupDefinition; readonly record: CustomerGroupWire };
+  /** Ταυτότητα = ο συμβαλλόμενος (ντετερμινιστικό id στον διακομιστή, `pricingPartyKey`). */
+  readonly customerAssignment: { readonly definition: CustomerAssignmentDefinition; readonly record: CustomerAssignmentWire };
+  /** Τυχαίο id, προ-γεννημένο στον πελάτη και επαληθευμένο στον διακομιστή (Γ5). */
+  readonly discountCondition: { readonly definition: DiscountConditionDefinition; readonly record: DiscountConditionWire };
 }
 
 export type CatalogDefinitionKind = keyof CatalogDefinitionKinds;
@@ -76,6 +101,11 @@ const ROUTES: Readonly<Record<CatalogEntityKind, { readonly collection: string; 
   productModel: CATALOG_API.productModels,
   product: CATALOG_API.products,
   category: CATALOG_API.categories,
+  priceList: CATALOG_API.priceLists,
+  discountGroup: CATALOG_API.discountGroups,
+  customerGroup: CATALOG_API.customerGroups,
+  customerAssignment: CATALOG_API.customerAssignments,
+  discountCondition: CATALOG_API.discountConditions,
 };
 
 /** `POST` — νέα οντότητα. Ο κωδικός γίνεται ταυτότητα (ντετερμινιστικό id στον διακομιστή). */

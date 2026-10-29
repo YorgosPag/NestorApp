@@ -51,7 +51,7 @@ export function useCatalogFailureNotice(): (failure: CatalogFailure) => void {
 }
 
 // Οι δικαιοδοσίες του καταλόγου — ο ΕΝΑΣ πίνακας, κοινός με τον διακομιστή (`vocabulary/catalog-authorities`).
-export type { CatalogAuthority } from '@/subapps/catalog/vocabulary/catalog-authorities';
+export type { CatalogAuthority, CatalogWriteAuthority } from '@/subapps/catalog/vocabulary/catalog-authorities';
 
 /**
  * Η ετυμηγορία **τριών** καταστάσεων: `pending` (η ταυτότητα δεν έφτασε — ούτε κουμπί ούτε «μόνο ανάγνωση») ·

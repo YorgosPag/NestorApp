@@ -85,4 +85,6 @@ export const CATALOG_PAGES = {
   assets: '/catalog/assets',
   /** Κανάλια × γλώσσες (ADR-923 §5.10.4 Β5). */
   settings: '/catalog/settings',
+  /** Τιμοκατάλογοι · εκδόσεις · γραμμές · δημοσίευση (ADR-923 §5.11 «3δ» Τμήμα 1) — προβολή με `catalog:pricing:view`. */
+  priceLists: '/catalog/price-lists',
 } as const;

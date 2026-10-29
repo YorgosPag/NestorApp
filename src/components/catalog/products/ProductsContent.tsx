@@ -21,6 +21,7 @@ import { RecomputePanel } from '../shared/RecomputePanel';
 import { useCatalogCanManageProducts, useCatalogText } from '../shared/catalog-ui-hooks';
 import { useCatalogSelection } from '../shared/use-catalog-selection';
 import { useUnsavedGuard } from '../shared/use-unsaved-guard';
+import { uniqueAttributeRefsOf } from './catalog-code-jump';
 import { CodeJumpField } from './CodeJumpField';
 import { NewProductDialog } from './NewProductDialog';
 import { ProductListGrid } from './ProductListGrid';
@@ -53,7 +54,7 @@ function useListPart(ctx: ReturnType<typeof useProductCatalogContext>) {
   const list = useProductList({ filter, families: ctx.familyById, attributes: ctx.library.attributeById, settings: ctx.settings.definition });
   const family = filter.familyId ? ctx.familyById.get(filter.familyId) ?? null : null;
   const facetGroups = useMemo(() => (family ? facetGroupsOf(family, ctx.library.attributeById) : []), [family, ctx.library.attributeById]);
-  const uniqueAttributes = useMemo(() => ctx.library.attributes.filter((attribute) => attribute.unique).map((attribute) => ({ id: attribute.id, type: attribute.type })), [ctx.library.attributes]);
+  const uniqueAttributes = useMemo(() => uniqueAttributeRefsOf(ctx.library.attributes), [ctx.library.attributes]);
   return { filter, setFilter, list, facetGroups, uniqueAttributes };
 }
 

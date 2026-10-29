@@ -35,6 +35,11 @@ export interface UniqueAttributeRef {
   readonly type: AttributeType;
 }
 
+/** Οι ιδιότητες που κρατούν μοναδική τιμή (κωδικός · EAN) — όπου ψάχνει το άλμα, με τη σειρά της βιβλιοθήκης. */
+export function uniqueAttributeRefsOf(attributes: readonly (UniqueAttributeRef & { readonly unique: boolean })[]): UniqueAttributeRef[] {
+  return attributes.filter((attribute) => attribute.unique).map(({ id, type }) => ({ id, type }));
+}
+
 const isLive = (doc: Readonly<Record<string, unknown>> | null): boolean => doc !== null && doc.isDeleted !== true;
 
 /** Η τιμή που θα είχε ένα πεδίο `unique` αν ο άνθρωπος έγραψε αυτόν τον κωδικό. */

@@ -12,17 +12,15 @@ import { useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useCompanyId } from '@/hooks/useCompanyId';
-import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 
 import { useCatalogText } from '../shared/catalog-ui-hooks';
-import { resolveCatalogCode, type CodeJumpReader, type CodeJumpTarget, type UniqueAttributeRef } from './catalog-code-jump';
+import { resolveCatalogCode, type CodeJumpTarget, type UniqueAttributeRef } from './catalog-code-jump';
+import { catalogCodeReader } from './use-catalog-code-resolver';
 
 export interface CodeJumpFieldProps {
   readonly uniqueAttributes: readonly UniqueAttributeRef[];
   readonly onFound: (target: CodeJumpTarget) => void;
 }
-
-const read: CodeJumpReader = (collection, id) => firestoreQueryService.getById<Record<string, unknown>>(collection, id);
 
 export function CodeJumpField({ uniqueAttributes, onFound }: CodeJumpFieldProps) {
   const { t } = useCatalogText();
@@ -37,7 +35,7 @@ export function CodeJumpField({ uniqueAttributes, onFound }: CodeJumpFieldProps)
     setBusy(true);
     setMissing(null);
     try {
-      const target = await resolveCatalogCode(companyId, code, uniqueAttributes, read);
+      const target = await resolveCatalogCode(companyId, code, uniqueAttributes, catalogCodeReader);
       if (target) { onFound(target); setCode(''); } else setMissing(code.trim());
     } finally {
       setBusy(false);

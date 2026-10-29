@@ -17,11 +17,11 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { LocalizedText } from '@/i18n/localized-text';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
-import { useCatalogAccess, useCatalogText, type CatalogAuthority } from './catalog-ui-hooks';
+import { useCatalogAccess, useCatalogText, type CatalogWriteAuthority } from './catalog-ui-hooks';
 import type { DefinitionDraft, DraftStatus } from './use-definition-draft';
 
 /** Η αιτιολογία λέει τη **δική** της δικαιοδοσία — όχι «σχήμα» σε όποιον επεξεργάζεται προϊόν. */
-const READ_ONLY_KEYS: Readonly<Record<CatalogAuthority, string>> = {
+const READ_ONLY_KEYS: Readonly<Record<CatalogWriteAuthority, string>> = {
   schema: 'common.readOnly',
   products: 'common.readOnlyProducts',
   pricing: 'common.readOnlyPricing',
@@ -41,7 +41,7 @@ interface EditorFooterProps {
   /** Τα ευρήματα **του πελάτη** (κλειδώνουν την αποθήκευση). */
   readonly issues: readonly CatalogIssue[];
   /** Ποια δικαιοδοσία κρίνει αυτόν τον επεξεργαστή — το υποσέλιδο τη **ρωτά** μόνο του (εκκρεμεί · ναι · όχι + αιτιολογία). */
-  readonly authority: CatalogAuthority;
+  readonly authority: CatalogWriteAuthority;
   readonly onSave: () => void;
   /** Μόνο για υπάρχουσα οντότητα. */
   readonly onDelete?: () => void;

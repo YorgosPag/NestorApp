@@ -19,7 +19,9 @@ import {
   type DefinitionOf,
   type RecordOf,
 } from '@/services/catalog/catalog-api.client';
+import { pricingPartyKey } from '@/subapps/catalog/pricing/price-audience';
 import type { CatalogWire } from '@/subapps/catalog/types/catalog-record';
+import type { PricingPartyRef } from '@/subapps/catalog/types/price-list';
 
 export const newEntityKey = (code: string): string => `new:${code}`;
 
@@ -46,8 +48,9 @@ export function optimisticWire<D extends object>(stored: D, existing: CatalogWir
  * Η ταυτότητα μιας **νέας** εγγραφής. Είδη με κωδικό ⇒ ντετερμινιστικό id από τον κωδικό (ο διακομιστής το παράγει).
  * Είδη **χωρίς** κωδικό (SKU, Δ3: τυχαίο id) ⇒ το id γεννιέται **στον πελάτη** και ο διακομιστής το **επαληθεύει**
  * (ADR-866 επίπεδο Β) — έτσι η αισιόδοξη και η αποθηκευμένη εγγραφή έχουν το **ίδιο** id (η επιλογή δεν αναβοσβήνει).
+ * Είδη με **φυσικό κλειδί** που δεν είναι κωδικός (ανάθεση ομάδας: ο συμβαλλόμενος) ⇒ όπως ο κωδικός, το id το παράγει ο διακομιστής.
  */
-export type NewIdentity<K extends CatalogDefinitionKind> = DefinitionOf<K> extends { readonly code: string }
+export type NewIdentity<K extends CatalogDefinitionKind> = DefinitionOf<K> extends { readonly code: string } | { readonly party: PricingPartyRef }
   ? { readonly id?: undefined }
   : { readonly id: string };
 
@@ -67,10 +70,15 @@ interface SaveDefinitionBase<K extends CatalogDefinitionKind> {
 
 export type SaveDefinitionRequest<K extends CatalogDefinitionKind> = SaveDefinitionBase<K> & NewIdentity<K>;
 
+/** Το φυσικό κλειδί μιας νέας εγγραφής — ο κωδικός, ή ο συμβαλλόμενος της ανάθεσης (ίδιο κλειδί με τον γραφέα). */
+function naturalKeyOf(definition: object): string {
+  if ('code' in definition && typeof definition.code === 'string') return definition.code;
+  if ('party' in definition) return pricingPartyKey(definition.party as PricingPartyRef);
+  return '';
+}
+
 function creationKey<K extends CatalogDefinitionKind>(request: SaveDefinitionRequest<K>): string {
-  if (typeof request.id === 'string') return request.id;
-  const { definition } = request;
-  return 'code' in definition && typeof definition.code === 'string' ? newEntityKey(definition.code) : newEntityKey('');
+  return typeof request.id === 'string' ? request.id : newEntityKey(naturalKeyOf(request.definition));
 }
 
 /** Δημιουργία (χωρίς υπάρχουσα) ή αντικατάσταση με CAS. */

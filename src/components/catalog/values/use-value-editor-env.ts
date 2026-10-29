@@ -11,21 +11,19 @@
 import { useMemo } from 'react';
 
 import { useCompanyId } from '@/hooks/useCompanyId';
-import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import type { CatalogReferenceTarget } from '@/subapps/catalog/types/product';
 
 import { useCatalogText } from '../shared/catalog-ui-hooks';
-import { resolveCatalogCode, type CodeJumpReader } from '../products/catalog-code-jump';
+import { resolveCatalogCode, uniqueAttributeRefsOf } from '../products/catalog-code-jump';
+import { catalogCodeReader } from '../products/use-catalog-code-resolver';
 import type { ProductCatalogContext } from '../products/use-product-catalog-context';
 import type { ValueEditorEnv } from './value-editor-types';
-
-const read: CodeJumpReader = (collection, id) => firestoreQueryService.getById<Record<string, unknown>>(collection, id);
 
 export function useValueEditorEnv(ctx: ProductCatalogContext, describe: (target: CatalogReferenceTarget) => string): ValueEditorEnv {
   const { t, text, language } = useCatalogText();
   const companyId = useCompanyId()?.companyId ?? null;
   return useMemo((): ValueEditorEnv => {
-    const uniqueAttributes = ctx.library.attributes.filter((attribute) => attribute.unique).map((attribute) => ({ id: attribute.id, type: attribute.type }));
+    const uniqueAttributes = uniqueAttributeRefsOf(ctx.library.attributes);
     return {
       codec: {
         registry: ctx.library.registry,
@@ -40,7 +38,7 @@ export function useValueEditorEnv(ctx: ProductCatalogContext, describe: (target:
       files: ctx.files.byId,
       text,
       references: {
-        resolve: async (code) => (companyId ? resolveCatalogCode(companyId, code, uniqueAttributes, read) : null),
+        resolve: async (code) => (companyId ? resolveCatalogCode(companyId, code, uniqueAttributes, catalogCodeReader) : null),
         describe,
       },
     };

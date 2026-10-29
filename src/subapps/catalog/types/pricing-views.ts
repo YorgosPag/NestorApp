@@ -39,6 +39,12 @@ export interface PriceLinesPageView {
   readonly freshness: ViewFreshness;
   readonly version: PriceListVersionWire;
   readonly lines: readonly PriceListLineWire[];
+  /**
+   * Το αναγνωριστικό (κωδικός SKU) κάθε **ζωντανής** παραλλαγής της σελίδας, κατά `variantId` — από την **ίδια** συναλλαγή
+   * (commercetools: `expand`). Χωρίς αυτό ο πελάτης θα διάβαζε ένα έγγραφο ανά γραμμή (4.000 γραμμές = 4.000 αναγνώσεις).
+   * Απουσία κλειδιού ⇒ η παραλλαγή **δεν ζει πια** (διαγράφηκε μετά τη γραμμή) — η οθόνη το λέει, δεν το κρύβει.
+   */
+  readonly skuIdentifiers: Readonly<Record<string, string>>;
   /** `null` ⇒ τελευταία σελίδα. */
   readonly nextCursor: string | null;
 }

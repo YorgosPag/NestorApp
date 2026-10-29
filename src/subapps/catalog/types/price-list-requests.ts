@@ -50,6 +50,11 @@ export interface PricePublicationPreview {
   readonly diff: PriceVersionDiff;
   /** Αποτύπωμα της **φραγμένης** διαφοράς — `null` αν καμία γραμμή δεν πέρασε τον φράχτη. */
   readonly diffDigest: string | null;
+  /**
+   * Ο κωδικός SKU κάθε ζωντανής παραλλαγής της διαφοράς (και των **αφαιρεμένων**, που υπάρχουν μόνο στην προηγούμενη
+   * έκδοση), κατά `variantId` — ο άνθρωπος επιβεβαιώνει **κωδικούς**, όχι εσωτερικά id. Ίδιο `expand` με την όψη γραμμών.
+   */
+  readonly skuIdentifiers: Readonly<Record<string, string>>;
 }
 
 /** `POST …/price-list-versions/[id]/publish` — CAS στην έκδοση **και** στις γραμμές, και επιβεβαίωση ό,τι είδες. */

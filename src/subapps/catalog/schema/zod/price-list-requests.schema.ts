@@ -44,7 +44,11 @@ export const createCustomerGroupBodySchema = createBody(customerGroupDefinitionS
 export const updateCustomerGroupBodySchema = updateBody(customerGroupDefinitionSchema);
 export const createCustomerAssignmentBodySchema = createBody(customerAssignmentDefinitionSchema);
 export const updateCustomerAssignmentBodySchema = updateBody(customerAssignmentDefinitionSchema);
-export const createDiscountConditionBodySchema = createBody(discountConditionDefinitionSchema);
+/**
+ * Η συνθήκη δεν έχει κωδικό (τυχαίο id `cdcnd`) ⇒ ο πελάτης **μπορεί** να προ-γεννήσει το id της αισιόδοξης εγγραφής και ο
+ * διακομιστής το **επαληθεύει** (ADR-866 επ. Β · ADR-923 §5.11 «3δ» Γ5) — το ίδιο ιδίωμα με τα SKU (`createProductRequestSchema`).
+ */
+export const createDiscountConditionBodySchema = createBody(discountConditionDefinitionSchema).extend({ id: entityIdSchema.optional() });
 export const updateDiscountConditionBodySchema = updateBody(discountConditionDefinitionSchema);
 
 export const createPriceVersionBodySchema: z.ZodType<CreatePriceVersionRequest, z.ZodTypeDef, unknown> = z.object({

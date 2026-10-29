@@ -256,6 +256,8 @@ export const ISSUE_KEYS: Readonly<Record<CatalogIssueCode, string>> = {
   priceAmountInvalid: 'issues.priceAmountInvalid',
   priceQuantityInvalid: 'issues.priceQuantityInvalid',
   priceLineSubjectDuplicate: 'issues.priceLineSubjectDuplicate',
+  priceLineSubjectRequired: 'issues.priceLineSubjectRequired',
+  priceLineSkuUnknown: 'issues.priceLineSkuUnknown',
   discountGroupNotAccepted: 'issues.discountGroupNotAccepted',
   costBreakdownRequired: 'issues.costBreakdownRequired',
   costBreakdownNotAllowed: 'issues.costBreakdownNotAllowed',

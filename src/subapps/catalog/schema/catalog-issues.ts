@@ -128,6 +128,9 @@ export const CATALOG_ISSUE_CODES = [
   'priceAmountInvalid',
   'priceQuantityInvalid',
   'priceLineSubjectDuplicate',
+  // 3δ (πλέγμα γραμμών): ο κωδικός λείπει · δεν αντιστοιχεί σε ζωντανό SKU — κρίνονται στον πελάτη πριν από την αποστολή.
+  'priceLineSubjectRequired',
+  'priceLineSkuUnknown',
   'discountGroupNotAccepted',
   'costBreakdownRequired',
   'costBreakdownNotAllowed',
