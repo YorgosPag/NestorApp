@@ -19,6 +19,9 @@
  * @module lib/contact/phone-type-vocabulary
  */
 
+import { contactOwnerKindOf, type ContactOwnerKind } from './contact-owner-kind';
+import { isOfferedBy, isVocabularyMember } from './owned-type-vocabulary';
+
 /** Όλοι οι τύποι τηλεφώνου που μπορεί να έχει αποθηκευμένη επαφή (CHECK 3.73 — ρίζα `phone-type`). */
 export const PHONE_TYPES = [
   'mobile', 'home', 'work', 'main', 'department', 'secretariat', 'sales', 'support', 'helpdesk', 'fax', 'internal', 'other',
@@ -26,13 +29,11 @@ export const PHONE_TYPES = [
 
 export type PhoneType = (typeof PHONE_TYPES)[number];
 
-/** Τίνος είναι ο αριθμός — καθορίζει ποιο υποσύνολο του λεξιλογίου προσφέρεται. */
-export type PhoneOwnerKind = 'individual' | 'company' | 'service';
+/** Τίνος είναι ο αριθμός — ψευδώνυμο του ΕΝΟΣ άξονα κατόχου (`contact-owner-kind.ts`), κοινού με email/ιστοσελίδα/social. */
+export type PhoneOwnerKind = ContactOwnerKind;
 
-/** Ο κάτοχος από το πεδίο `type` ενός εγγράφου επαφής — άγνωστο/λείπει ⇒ πρόσωπο (η ιστορική προεπιλογή). */
-export function phoneOwnerKindOf(contactType: unknown): PhoneOwnerKind {
-  return contactType === 'company' || contactType === 'service' ? contactType : 'individual';
-}
+/** Ο κάτοχος από το πεδίο `type` ενός εγγράφου επαφής — ψευδώνυμο του `contactOwnerKindOf`. */
+export const phoneOwnerKindOf = contactOwnerKindOf;
 
 /**
  * Οι τύποι που **προσφέρει** κάθε κάτοχος, με τη σειρά της λίστας της φόρμας. Κυριολεκτικοί πίνακες (`as const`) ώστε
@@ -62,10 +63,10 @@ export const DEFAULT_PHONE_TYPE: Readonly<Record<PhoneOwnerKind, PhoneType>> = {
 
 /** `true` όταν η τιμή ανήκει στη ρίζα — το σύνορο εισόδου από φόρμα/εξωτερικά δεδομένα, αντί για τυφλό `as`. */
 export function isPhoneType(value: unknown): value is PhoneType {
-  return typeof value === 'string' && (PHONE_TYPES as readonly string[]).includes(value);
+  return isVocabularyMember(PHONE_TYPES, value);
 }
 
 /** `true` όταν ο τύπος ανήκει στο υποσύνολο του κατόχου — αλλιώς η φόρμα θα τον έδειχνε κενό. */
 export function isPhoneTypeOfferedFor(type: string, owner: PhoneOwnerKind): type is PhoneType {
-  return (PHONE_TYPES_BY_OWNER[owner] as readonly string[]).includes(type);
+  return isOfferedBy<PhoneType>(PHONE_TYPES_BY_OWNER, owner, type);
 }

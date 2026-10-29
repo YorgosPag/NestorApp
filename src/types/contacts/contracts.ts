@@ -3,6 +3,9 @@ import type { StoredAddressPosition } from '@/types/address-position';
 import type { DeclaredOccupation } from '@/types/professional-identity';
 import type { ContactNameReview } from '@/lib/contacts/contact-name-review';
 import type { PhoneType } from '@/lib/contact/phone-type-vocabulary';
+import type { EmailType } from '@/lib/contact/email-type-vocabulary';
+import type { WebsiteType } from '@/lib/contact/website-type-vocabulary';
+import type { SocialMediaType, SocialPlatform } from '@/lib/contact/social-media-type-vocabulary';
 
 export type FirestoreishTimestamp = Date | { toDate: () => Date };
 
@@ -263,8 +266,8 @@ export interface ServiceContact extends BaseContact {
 // Auxiliary Types
 export interface EmailInfo {
   email: string;
-  /** Extended with org-routing literals (ADR-326 Phase 4) */
-  type: 'personal' | 'work' | 'invoice' | 'notification' | 'support' | 'other';
+  /** Ρίζα `EmailType` (`invoice`/`notification` = δρομολόγηση οργανογράμματος, ADR-326 Phase 4) · ADR-327 §8.5.4: εταιρεία/υπηρεσία γράφουν `general/info/…`, που ο παλιός τύπος δεν ήξερε. */
+  type: EmailType;
   isPrimary: boolean;
   label?: string;
 }
@@ -318,25 +321,18 @@ export interface AddressInfo extends StoredAddressPosition {
 
 export interface WebsiteInfo {
   url: string;
-  type: 'personal' | 'company' | 'portfolio' | 'blog' | 'other';
+  /** Ρίζα `WebsiteType` (ADR-327 §8.5.4) — εταιρεία `corporate/eshop…`, υπηρεσία `official/eServices…`. */
+  type: WebsiteType;
   label?: string;
 }
 
 export interface SocialMediaInfo {
-  platform:
-    | 'facebook'
-    | 'twitter'
-    | 'linkedin'
-    | 'instagram'
-    | 'youtube'
-    | 'github'
-    | 'tiktok'
-    | 'whatsapp'
-    | 'telegram'
-    | 'other';
+  /** Ρίζα `SocialPlatform` (ADR-327 §8.5.4). */
+  platform: SocialPlatform;
   username: string;
   url?: string;
-  type?: 'personal' | 'professional' | 'business' | 'official' | 'informational' | 'corporate' | 'marketing' | 'other';
+  /** Ρίζα `SocialMediaType` (ADR-327 §8.5.4). */
+  type?: SocialMediaType;
   label?: string;
 }
 

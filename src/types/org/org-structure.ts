@@ -6,6 +6,7 @@
 
 import type { FirestoreishTimestamp } from '@/types/contacts/contracts';
 import type { PhoneType } from '@/lib/contact/phone-type-vocabulary';
+import type { EmailType } from '@/lib/contact/email-type-vocabulary';
 import type { DepartmentCode } from '@/config/department-codes';
 import type { NotificationEventCode } from '@/config/notification-events';
 
@@ -14,7 +15,8 @@ import type { NotificationEventCode } from '@/config/notification-events';
 
 export interface OrgEmailInfo {
   email: string;
-  type: 'personal' | 'work' | 'invoice' | 'notification' | 'support' | 'other';
+  /** Ρίζα `EmailType` (ADR-327 §8.5.4) — ένα λεξιλόγιο με τα email επαφής. */
+  type: EmailType;
   isPrimary: boolean;
   label?: string;
 }
