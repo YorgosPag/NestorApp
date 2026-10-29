@@ -25,6 +25,7 @@ import { ENERGY_CLASSES, isEnergyClass, type EnergyClass } from '@/constants/ene
 import { isLandProperty } from '@/constants/property-classification';
 import { documentKindSpec } from '@/config/document-validity/document-validity';
 import { normalizeCalendarDay, normalizeToMillisOrNull, utcDateOf } from '@/lib/date-local';
+import { calendarDaySchema } from '@/lib/date/calendar-day-schema';
 import { ruleExpiresOn } from '@/lib/document-validity/document-expiry';
 import { raisedClaimKinds } from '@/lib/legality/legality-offer-matrix';
 import { isPlainRecord } from '@/lib/type-guards';
@@ -188,7 +189,7 @@ export function certificateValidUntil(issuedOn: string | null): string | null {
 // ΔΙΟΡΘΩΣΗ — μερική: αλλάζουν ΜΟΝΟ τα κλειδιά που στάλθηκαν· ρητό `null` = «σβήσε την απάντηση»
 // ============================================================================
 
-const calendarDaySchema = z.string().refine((day) => normalizeCalendarDay(day) === day);
+// Η ημερομηνία έκδοσης: υπαρκτή `YYYY-MM-DD` — το κοινό σχήμα (ADR-919), όχι τοπικό αντίγραφο.
 
 /** Ολόκληρο το μπλοκ — η φόρμα της εταιρείας το στέλνει ακέραιο. `.strict()`: άγνωστο κλειδί ⇒ απόρριψη. */
 export const energyCertificateSchema = z
