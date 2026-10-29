@@ -9,6 +9,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { generateDeterministicCatalogPricingViewSignalId } from '@/services/enterprise-id.service';
 import { PRICING_VIEW_MAX_AGE_MS } from '@/subapps/catalog/pricing/pricing-view-freshness';
 import { pricingViewKey, type PricingView } from '@/subapps/catalog/pricing/pricing-view-key';
+import { PARTNER } from '@/subapps/catalog/__tests__/fixtures/mfp-price-list.fixture';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { ARIES, RIVAL, rejectionOf } from './catalog-writer-seed';
 import { seedPricing, version1Inputs } from './catalog-pricing-seed';
@@ -26,6 +27,7 @@ import { readDiscountsView, readPriceLinesPage, readPriceListsView } from '../pr
 /* eslint-enable import/first */
 
 const SIGNALS = 'catalog_pricing_view_signals';
+const PARTNER_CONTACT_ID = PARTNER.kind === 'contact' ? PARTNER.contactId : '';
 const LISTS: PricingView = { kind: 'lists' };
 const DISCOUNTS: PricingView = { kind: 'discounts' };
 
@@ -128,5 +130,16 @@ describe('οι όψεις κουβαλούν την αναθεώρηση του 
     expect(Object.values(page.skuIdentifiers).every((identifier) => identifier.length > 0)).toBe(true);
     expect(page.freshness.revision).toBe(revisionOf(ARIES.companyId, { kind: 'list', priceListId: seeded.priceListId }));
     expect((await rejectionOf(readPriceLinesPage(RIVAL, draft.id, null, NOW))).kind).toBe('notFound');
+  });
+
+  it('όψη εκπτώσεων: το όνομα κάθε επαφής-συμβαλλομένου από την ίδια συναλλαγή (expand) — ανώνυμη ⇒ κανένα κλειδί', async () => {
+    await seedPricing(fake);
+    expect((await readDiscountsView(ARIES, NOW)).partyNames).toEqual({});
+    fake.seed('contacts', PARTNER_CONTACT_ID, { id: PARTNER_CONTACT_ID, companyId: ARIES.companyId, type: 'individual', firstName: 'Γιώργος', lastName: 'Παπαδόπουλος' });
+    const view = await readDiscountsView(ARIES, NOW);
+    expect(view.partyNames).toEqual({ [`contact:${PARTNER_CONTACT_ID}`]: 'Γιώργος Παπαδόπουλος' });
+    // Η επαφή πέρασε σε άλλο χώρο ⇒ ξένη ≡ ανύπαρκτη: το όνομα δεν φεύγει ποτέ.
+    fake.seed('contacts', PARTNER_CONTACT_ID, { id: PARTNER_CONTACT_ID, companyId: RIVAL.companyId, type: 'individual', firstName: 'Γιώργος' });
+    expect((await readDiscountsView(ARIES, NOW)).partyNames).toEqual({});
   });
 });

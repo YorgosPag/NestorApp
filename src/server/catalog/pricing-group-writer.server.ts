@@ -11,9 +11,10 @@ import 'server-only';
  * @module server/catalog/pricing-group-writer.server
  */
 
-import { hasAnyLocalizedText } from '@/i18n/localized-text';
 import type { AuthContext } from '@/lib/auth';
+import { validatePricingGroup } from '@/subapps/catalog/schema/validate-pricing';
 import type { CustomerGroupDefinition, DiscountGroupDefinition } from '@/subapps/catalog/types/price-list';
+import type { PricingGroupKind } from '@/subapps/catalog/vocabulary/pricing';
 import {
   assertCodeUnchanged,
   assertRevision,
@@ -29,8 +30,8 @@ import {
 import { assertNoIssues, CatalogWriteError } from './catalog-write-error';
 import { customerGroupInUse, discountGroupInUse } from './pricing-usage-reads.server';
 
-/** Τα δύο είδη ομάδας — κλειστό σύνολο· νέο είδος χωρίς ερώτηση χρήσης σπάει τη μεταγλώττιση. */
-export type PricingGroupKind = 'discountGroup' | 'customerGroup';
+/** Τα δύο είδη ομάδας — κλειστό σύνολο (ρίζα στο λεξιλόγιο)· νέο είδος χωρίς ερώτηση χρήσης σπάει τη μεταγλώττιση. */
+export type { PricingGroupKind };
 
 /** Το κοινό σχήμα — ο τύπος κάθε είδους είναι **ταυτόσημος** (επιβεβαιώνεται εδώ, στη μεταγλώττιση). */
 type PricingGroupDefinition = DiscountGroupDefinition & CustomerGroupDefinition;
@@ -42,12 +43,13 @@ const IN_USE: Readonly<Record<PricingGroupKind, (scope: CatalogTx, id: string) =
 
 type StoredGroup = StoredCatalogRecord<PricingGroupDefinition>;
 
-function assertLabelled(definition: PricingGroupDefinition): void {
-  assertNoIssues(hasAnyLocalizedText(definition.labels) ? [] : [{ code: 'labelRequired', path: 'labels' }]);
+/** Η **ίδια** επικύρωση με τη φόρμα (`validatePricingGroup`) — κωδικός + ετικέτα. */
+function assertGroupValid(definition: PricingGroupDefinition): void {
+  assertNoIssues(validatePricingGroup(definition));
 }
 
 export async function createPricingGroup(ctx: AuthContext, kind: PricingGroupKind, definition: PricingGroupDefinition): Promise<StoredGroup> {
-  assertLabelled(definition);
+  assertGroupValid(definition);
   return runCatalogTransaction(ctx, async (scope) => {
     const target = await readForCreate(scope, kind, definition.code);
     return stageCreate(scope, kind, target, { code: definition.code, labels: definition.labels });
@@ -61,7 +63,7 @@ export async function updatePricingGroup(
   expectedRevision: number,
   definition: PricingGroupDefinition,
 ): Promise<StoredGroup> {
-  assertLabelled(definition);
+  assertGroupValid(definition);
   return runCatalogTransaction(ctx, async (scope) => {
     const current = await readOwned<PricingGroupDefinition>(scope, kind, id);
     assertRevision(current, expectedRevision);

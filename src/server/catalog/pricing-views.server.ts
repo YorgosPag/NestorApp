@@ -18,7 +18,11 @@ import type { Query } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AuthContext } from '@/lib/auth';
+import { extractContactDisplayName } from '@/server/lib/contact-doc-fields';
+import { readOwnedContactDocsInTransaction } from '@/server/lib/owned-contact-docs';
+import { pricingPartyKey } from '@/subapps/catalog/pricing/price-audience';
 import { pricingFreshUntil } from '@/subapps/catalog/pricing/pricing-view-freshness';
+import type { PriceAudience, PricingPartyRef } from '@/subapps/catalog/types/price-list';
 import type { DiscountsView, PriceLinesPageView, PriceListsView, PriceListWire } from '@/subapps/catalog/types/pricing-views';
 import { isPublishedStatus, PRICE_LINES_PER_TRANSACTION } from '@/subapps/catalog/vocabulary/pricing';
 import { readOwned, runCatalogTransaction, type CatalogTx } from './catalog-store.server';
@@ -73,6 +77,26 @@ export function readDiscountsView(ctx: AuthContext, nowMs = Date.now()): Promise
     ]);
     const bounds = conditions.flatMap((condition) => [condition.validFrom, condition.validUntil]);
     const freshness = { revision, freshUntil: pricingFreshUntil(nowMs, bounds) };
-    return { freshness, asOf: asOfOf(nowMs), discountGroups, customerGroups, assignments, conditions };
+    const parties = [...assignments.map((assignment) => assignment.party), ...conditions.flatMap((condition) => partiesOf(condition.audience))];
+    const partyNames = await readPartyNames(scope, parties);
+    return { freshness, asOf: asOfOf(nowMs), discountGroups, customerGroups, assignments, conditions, partyNames };
   });
+}
+
+const partiesOf = (audience: PriceAudience): readonly PricingPartyRef[] => (audience.kind === 'partner' ? [audience.party] : []);
+
+/**
+ * Όνομα ανά `pricingPartyKey` για τις **επαφές** — **μία** `getAll` στη συναλλαγή της όψης, με τον ΕΝΑ κριτή «τίνος»
+ * (`readOwnedContactDocsInTransaction`: ξένη ≡ ανύπαρκτη) και τον ΕΝΑ κανόνα ονόματος (`extractContactDisplayName`).
+ * Ο χώρος-συνεργάτης δεν ονομάζεται εδώ: κανένα πεδίο άλλου χώρου δεν φεύγει (ADR-862 Φ4 θα δώσει το όνομα της σύνδεσης).
+ */
+async function readPartyNames(scope: CatalogTx, parties: readonly PricingPartyRef[]): Promise<Readonly<Record<string, string>>> {
+  const contactIds = parties.flatMap((party) => (party.kind === 'contact' ? [party.contactId] : []));
+  const contacts = await readOwnedContactDocsInTransaction(scope.tx, scope.db, scope.ctx.companyId, contactIds);
+  const names: Record<string, string> = {};
+  for (const [contactId, data] of contacts) {
+    const name = extractContactDisplayName(data).trim();
+    if (name !== '') names[pricingPartyKey({ kind: 'contact', contactId })] = name;
+  }
+  return names;
 }
