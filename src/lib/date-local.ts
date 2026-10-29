@@ -1,4 +1,7 @@
-
+// Σχετικές διαδρομές επίτηδες: το αρχείο το εισάγουν και scripts χωρίς το alias `@/`
+// (`scripts/_shared/timestamp-readability.ts` · `scripts/lib/market-data-refresh/refresh-gates.ts`).
+import { addMonthsClampedUtc } from './date/calendar-arithmetic';
+import { positiveMod } from './number/positive-mod';
 
 /**
  * Current timestamp as ISO 8601 string.
@@ -236,19 +239,10 @@ export function addMonthsUTC(iso: string, months: number): string | null {
   const start = normalizeToDate(iso);
   if (start === null || !Number.isInteger(months)) return null;
 
-  const day = start.getUTCDate();
-  // 🔑 Στην **1η** του μήνα καμία ημερομηνία δεν ξεχειλίζει — κάθε μήνας έχει 1η.
-  //    Μετακινούμε πρώτα τον μήνα με ασφάλεια, και **μετά** βάζουμε την ημέρα.
-  const moved = new Date(start.getTime());
-  moved.setUTCDate(1);
-  moved.setUTCMonth(moved.getUTCMonth() + months);
-
-  const lastDayOfTarget = new Date(
-    Date.UTC(moved.getUTCFullYear(), moved.getUTCMonth() + 1, 0),
-  ).getUTCDate();
-
-  moved.setUTCDate(Math.min(day, lastDayOfTarget));
-  return moved.toISOString();
+  // 🔑 Το ψαλίδισμα ζει σε **ένα** σημείο (`addMonthsClampedUtc`, ADR-915 Φ1 · N.0.2). Εκείνο
+  //    δουλεύει σε ημερομηνίες και επιστρέφει μεσάνυχτα UTC· εδώ ξαναβάζουμε την ώρα της αφετηρίας.
+  const moved = addMonthsClampedUtc(start, months);
+  return new Date(moved.getTime() + positiveMod(start.getTime(), MS_PER_DAY)).toISOString();
 }
 
 /**
