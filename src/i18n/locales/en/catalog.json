@@ -76,6 +76,10 @@
     "priceLists": {
       "title": "Price lists",
       "lead": "Sales and cost price lists with versions. Each version is valid from a date until the next published one; price changes go through a preview before they are published."
+    },
+    "discounts": {
+      "title": "Discounts",
+      "lead": "Who gets which discount: product discount groups × audience, with a validity period. The most specific condition wins; two conditions for the same cell and the same period are not allowed."
     }
   },
   "attributeTypes": {
@@ -1053,6 +1057,112 @@
       "retry": "Start again",
       "done": "The version was published.",
       "close": "Close"
+    },
+    "discounts": {
+      "newCondition": "New condition",
+      "tabs": {
+        "conditions": "Conditions",
+        "groups": "Groups"
+      },
+      "verdict": {
+        "valid": "Current",
+        "notYetValid": "Upcoming",
+        "expired": "Expired"
+      },
+      "matrix": {
+        "caption": "Discount condition table: discount group by audience",
+        "lead": "Click a cell to view or set its discount.",
+        "groupHeader": "Discount group",
+        "allGroups": "All groups",
+        "effective": "−{effective}%",
+        "range": "−{lowest}% … −{highest}%",
+        "tiers": "{count, plural, one {# tier} other {# tiers}}",
+        "partners": "{count, plural, one {# partner} other {# partners}}",
+        "notNow": "Not now",
+        "upcoming": "{count, plural, one {# upcoming} other {# upcoming}}",
+        "ambiguous": "Ambiguous",
+        "emptyCell": "{cell}: no condition — define one",
+        "unplaced": "{count, plural, one {# condition points} other {# conditions point}} to a group that no longer exists."
+      },
+      "periods": {
+        "title": "Periods of this cell",
+        "new": "New period",
+        "empty": "No saved condition in this cell."
+      },
+      "period": {
+        "between": "{from} – {last}",
+        "from": "From {from}",
+        "until": "Until {last}",
+        "always": "No time limit"
+      },
+      "rule": {
+        "label": "Discount rule",
+        "kind": {
+          "chain": "Chain",
+          "tiers": "Tiers"
+        },
+        "chainLabel": "Discounts (%)",
+        "chainHint": "E.g. “50 + 10”: first −50%, then −10% on the remainder (−55% in total, not −60%). Up to 5 steps, up to two decimals. Empty = no discount.",
+        "chainPlaceholder": "50 + 10",
+        "step": "−{percent}%",
+        "total": "⇒ −{effective}% in total",
+        "none": "No discount",
+        "single": "−{effective}%",
+        "chainHeadline": "{chain} ⇒ −{effective}%",
+        "tiersHeadline": "{count, plural, one {# tier} other {# tiers}}, −{lowest}% … −{highest}%",
+        "unreadable": "Invalid rule",
+        "basisLabel": "Tiers measure",
+        "basisHint": "The highest tier the order line reaches applies.",
+        "basis": {
+          "quantity": "Line quantity",
+          "amount": "Line amount"
+        },
+        "tierFromQuantity": "From quantity",
+        "tierFromAmount": "From amount (€)",
+        "addTier": "Add tier",
+        "removeTier": "Remove tier {number}"
+      },
+      "example": {
+        "title": "Example",
+        "net": "⇒ net {net} (discount {discount})",
+        "fromQuantity": "From {min}",
+        "fromAmount": "From {min}"
+      },
+      "editor": {
+        "newTitle": "New condition",
+        "discountGroup": "Discount group",
+        "discountGroupHint": "“All groups” applies to every line, unless a more specific condition exists for its group.",
+        "audienceHint": "Who it applies to. A partner beats a customer group, a group beats signed-in users, signed-in users beat anonymous visitors.",
+        "validFrom": "Valid from",
+        "validFromNone": "Always",
+        "lastDay": "Last day of validity",
+        "lastDayHint": "Valid for that whole day too.",
+        "lastDayNone": "No end",
+        "ambiguityTitle": "Conflicts with another condition — which one would apply?",
+        "openConflict": "Open: {rule}, {period}"
+      },
+      "groups": {
+        "discountGroups": "Discount groups",
+        "customerGroups": "Customer groups",
+        "newDiscountGroup": "New discount group",
+        "newCustomerGroup": "New customer group",
+        "discountHint": "A group of products sharing a discount (e.g. “TOSH-CARR”). Each list price line declares its group.",
+        "customerHint": "A group of customers sharing terms (e.g. “Wholesaler”). Each contact belongs to at most one group.",
+        "usage": "{count, plural, one {# use} other {# uses}}",
+        "emptyTitle": "Select a group",
+        "emptyDescription": "Discount groups group products, customer groups group customers; conditions combine them."
+      },
+      "members": {
+        "title": "Members",
+        "empty": "This group has no members yet.",
+        "add": "Add to group",
+        "move": "Move here",
+        "alreadyHere": "Already a member of this group.",
+        "alreadyIn": "Already in group “{group}” — each contact belongs to one group.",
+        "unknownGroup": "unknown group",
+        "unnamed": "Unnamed contact",
+        "remove": "Remove: {name}"
+      }
     }
   }
 }

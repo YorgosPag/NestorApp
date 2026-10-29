@@ -144,7 +144,8 @@
     "catalogMeasurements": "Units of measure",
     "catalogAssets": "Media library",
     "catalogProducts": "Products",
-    "catalogPriceLists": "Price lists"
+    "catalogPriceLists": "Price lists",
+    "catalogDiscounts": "Discounts"
   },
   "reports": {
     "overview": "Executive Summary",

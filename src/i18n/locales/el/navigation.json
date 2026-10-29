@@ -144,7 +144,8 @@
     "catalogMeasurements": "Μονάδες μέτρησης",
     "catalogAssets": "Βιβλιοθήκη μέσων",
     "catalogProducts": "Προϊόντα",
-    "catalogPriceLists": "Τιμοκατάλογοι"
+    "catalogPriceLists": "Τιμοκατάλογοι",
+    "catalogDiscounts": "Εκπτώσεις"
   },
   "reports": {
     "overview": "Διοικητική Σύνοψη",
