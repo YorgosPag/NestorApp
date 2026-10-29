@@ -10,9 +10,11 @@
  * @module services/ai-pipeline/tools/handlers/contact-communication-types
  */
 
-import type { SocialMediaInfo } from '@/types/contacts/contracts';
 import { inferPhoneType } from '@/server/lib/phone-line-type';
 import { phoneOwnerKindOf, type PhoneOwnerKind, type PhoneType } from '@/lib/contact/phone-type-vocabulary';
+import { DEFAULT_EMAIL_TYPE, type EmailType } from '@/lib/contact/email-type-vocabulary';
+import { DEFAULT_WEBSITE_TYPE, type WebsiteType } from '@/lib/contact/website-type-vocabulary';
+import type { SocialPlatform } from '@/lib/contact/social-media-type-vocabulary';
 // ============================================================================
 // ENTITY-AWARE TYPE MAPS — Different types per contact entity (individual/company/service)
 // SSoT: CommunicationConfigs.ts defines UI types; these maps resolve AI label→type
@@ -44,81 +46,82 @@ const PHONE_SERVICE_MAP: Record<string, PhoneType> = {
   'helpdesk': 'helpdesk', 'κέντρο': 'helpdesk',
   'fax': 'fax', 'φαξ': 'fax',
 };
-// ── EMAIL TYPE MAPS ──
-const EMAIL_INDIVIDUAL_MAP: Record<string, string> = {
+// ── EMAIL TYPE MAPS ── (δεμένοι στη ρίζα `EmailType`· υποσύνολο κατόχου = άγκυρα, ADR-327 §8.5.4)
+const EMAIL_INDIVIDUAL_MAP: Record<string, EmailType> = {
   'προσωπικό': 'personal', 'personal': 'personal', 'προσωπικά': 'personal',
   'εργασία': 'work', 'δουλειά': 'work', 'work': 'work', 'γραφείο': 'work',
 };
-const EMAIL_COMPANY_MAP: Record<string, string> = {
+const EMAIL_COMPANY_MAP: Record<string, EmailType> = {
   'γενικό': 'general', 'general': 'general', 'εργασία': 'general', 'work': 'general',
   'τμήμα': 'department', 'department': 'department',
   'πωλήσεις': 'sales', 'sales': 'sales',
   'υποστήριξη': 'support', 'support': 'support',
   'πληροφορίες': 'info', 'info': 'info',
 };
-const EMAIL_SERVICE_MAP: Record<string, string> = {
+const EMAIL_SERVICE_MAP: Record<string, EmailType> = {
   'γενικό': 'general', 'general': 'general', 'εργασία': 'general', 'work': 'general',
   'τμήμα': 'department', 'department': 'department',
   'γραμματεία': 'secretariat', 'secretariat': 'secretariat',
   'πληροφορίες': 'info', 'info': 'info',
 };
-// ── WEBSITE TYPE MAPS ──
-const WEBSITE_INDIVIDUAL_MAP: Record<string, string> = {
+// ── WEBSITE TYPE MAPS ── (δεμένοι στη ρίζα `WebsiteType`)
+const WEBSITE_INDIVIDUAL_MAP: Record<string, WebsiteType> = {
   'personal': 'personal', 'προσωπικό': 'personal', 'προσωπική': 'personal',
   'company': 'company', 'εταιρικό': 'company', 'εταιρεία': 'company',
   'portfolio': 'portfolio', 'blog': 'blog',
 };
-const WEBSITE_COMPANY_MAP: Record<string, string> = {
+const WEBSITE_COMPANY_MAP: Record<string, WebsiteType> = {
   'εταιρική': 'corporate', 'corporate': 'corporate', 'εταιρικό': 'corporate',
   'company': 'corporate', 'personal': 'corporate',
   'eshop': 'eshop', 'e-shop': 'eshop', 'κατάστημα': 'eshop',
   'blog': 'blog', 'ιστολόγιο': 'blog',
 };
-const WEBSITE_SERVICE_MAP: Record<string, string> = {
+const WEBSITE_SERVICE_MAP: Record<string, WebsiteType> = {
   'επίσημη': 'official', 'official': 'official', 'personal': 'official', 'company': 'official',
   'eservices': 'eServices', 'ηλεκτρονικές': 'eServices',
   'portal': 'portal', 'πύλη': 'portal',
 };
 // ── SOCIAL MEDIA PLATFORM MAP (same for all entity types) ──
-export const SOCIAL_PLATFORM_MAP: Record<string, SocialMediaInfo['platform']> = {
+const SOCIAL_PLATFORM_MAP: Record<string, SocialPlatform> = {
   'facebook': 'facebook', 'fb': 'facebook',
   'twitter': 'twitter', 'x': 'twitter',
   'linkedin': 'linkedin',
   'instagram': 'instagram', 'insta': 'instagram',
   'youtube': 'youtube',
   'github': 'github',
-  'tiktok': 'other',
-  'whatsapp': 'other',
-  'telegram': 'other',
+  'tiktok': 'tiktok',
+  'whatsapp': 'whatsapp',
+  'telegram': 'telegram',
 };
-// ── ENTITY-AWARE DEFAULTS ──
-const EMAIL_DEFAULTS: Record<ContactEntity, string> = {
-  individual: 'personal', company: 'general', service: 'general',
-};
-const WEBSITE_DEFAULTS: Record<ContactEntity, string> = {
-  individual: 'personal', company: 'corporate', service: 'official',
-};
+// ── ENTITY-AWARE DEFAULTS ── ζουν στις ρίζες (`DEFAULT_EMAIL_TYPE` / `DEFAULT_WEBSITE_TYPE`), όχι εδώ.
 /** Οι χάρτες ετικέτας→τύπου ανά κάτοχο — εκτίθενται για την άγκυρα «κάθε τιμή ∈ υποσύνολο του κατόχου». */
 export const PHONE_LABEL_MAPS: Readonly<Record<ContactEntity, Readonly<Record<string, PhoneType>>>> = {
   individual: PHONE_INDIVIDUAL_MAP, company: PHONE_COMPANY_MAP, service: PHONE_SERVICE_MAP,
 };
+export const EMAIL_LABEL_MAPS: Readonly<Record<ContactEntity, Readonly<Record<string, EmailType>>>> = {
+  individual: EMAIL_INDIVIDUAL_MAP, company: EMAIL_COMPANY_MAP, service: EMAIL_SERVICE_MAP,
+};
+export const WEBSITE_LABEL_MAPS: Readonly<Record<ContactEntity, Readonly<Record<string, WebsiteType>>>> = {
+  individual: WEBSITE_INDIVIDUAL_MAP, company: WEBSITE_COMPANY_MAP, service: WEBSITE_SERVICE_MAP,
+};
+/** ΕΝΑΣ τρόπος ανάγνωσης χάρτη: μόνο ΔΙΚΑ του κλειδιά (`'constructor'` δεν είναι ετικέτα — `map[label]` θα έδινε συνάρτηση). */
+function lookupOwn<T extends string>(map: Readonly<Record<string, T>>, label: string): T | undefined {
+  return Object.hasOwn(map, label) ? map[label] : undefined;
+}
 // ── RESOLVER FUNCTIONS ──
 export function resolvePhoneType(label: string, entity: ContactEntity, phoneNumber: string): PhoneType {
   // Χωρίς γνωστή ετικέτα ⇒ το SSoT συναγωγής (πρόσωπο: από τον αριθμό· εταιρεία/υπηρεσία: η προεπιλογή του κατόχου).
-  const map = PHONE_LABEL_MAPS[entity];
-  return Object.hasOwn(map, label) ? map[label] : inferPhoneType(phoneNumber, entity);
+  return lookupOwn(PHONE_LABEL_MAPS[entity], label) ?? inferPhoneType(phoneNumber, entity);
 }
-export function resolveEmailType(label: string, entity: ContactEntity): string {
-  const map = entity === 'company' ? EMAIL_COMPANY_MAP
-    : entity === 'service' ? EMAIL_SERVICE_MAP
-    : EMAIL_INDIVIDUAL_MAP;
-  return map[label] ?? EMAIL_DEFAULTS[entity];
+export function resolveEmailType(label: string, entity: ContactEntity): EmailType {
+  return lookupOwn(EMAIL_LABEL_MAPS[entity], label) ?? DEFAULT_EMAIL_TYPE[entity];
 }
-export function resolveWebsiteType(label: string, entity: ContactEntity): string {
-  const map = entity === 'company' ? WEBSITE_COMPANY_MAP
-    : entity === 'service' ? WEBSITE_SERVICE_MAP
-    : WEBSITE_INDIVIDUAL_MAP;
-  return map[label] ?? WEBSITE_DEFAULTS[entity];
+export function resolveWebsiteType(label: string, entity: ContactEntity): WebsiteType {
+  return lookupOwn(WEBSITE_LABEL_MAPS[entity], label) ?? DEFAULT_WEBSITE_TYPE[entity];
+}
+/** Η πλατφόρμα μιας ετικέτας — `undefined` όταν δεν είναι γνωστή (τότε η ετικέτα αποθηκεύεται ως `label`). */
+export function resolveSocialPlatform(label: string): SocialPlatform | undefined {
+  return lookupOwn(SOCIAL_PLATFORM_MAP, label);
 }
 /** Determine entity type from Firestore contact data */
 export function getContactEntity(contactData: Record<string, unknown>): ContactEntity {
@@ -126,10 +129,6 @@ export function getContactEntity(contactData: Record<string, unknown>): ContactE
 }
 /** Check if a label was resolved via an entity-aware map (to decide if label should be stored) */
 export function resolvedInMap(label: string, entity: ContactEntity, commType: 'phone' | 'email' | 'website'): boolean {
-  const maps: Record<string, Record<ContactEntity, Record<string, string>>> = {
-    phone: { individual: PHONE_INDIVIDUAL_MAP, company: PHONE_COMPANY_MAP, service: PHONE_SERVICE_MAP },
-    email: { individual: EMAIL_INDIVIDUAL_MAP, company: EMAIL_COMPANY_MAP, service: EMAIL_SERVICE_MAP },
-    website: { individual: WEBSITE_INDIVIDUAL_MAP, company: WEBSITE_COMPANY_MAP, service: WEBSITE_SERVICE_MAP },
-  };
-  return !!maps[commType][entity][label];
+  const maps = { phone: PHONE_LABEL_MAPS, email: EMAIL_LABEL_MAPS, website: WEBSITE_LABEL_MAPS } as const;
+  return lookupOwn<string>(maps[commType][entity], label) !== undefined;
 }

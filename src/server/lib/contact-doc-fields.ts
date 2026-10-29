@@ -24,6 +24,8 @@
 
 import 'server-only';
 
+import { isEmailType, type EmailType } from '@/lib/contact/email-type-vocabulary';
+
 /**
  * Το όνομα που βλέπει ο άνθρωπος για μια επαφή, από το ωμό έγγραφό της.
  *
@@ -54,7 +56,8 @@ export function extractContactDisplayName(data: FirebaseFirestore.DocumentData):
 /** Μια εγγραφή email επαφής, κανονικοποιημένη από ωμό `DocumentData`. */
 export interface ContactEmailEntry {
   readonly email: string;
-  readonly type: string;
+  /** Ρίζα `EmailType` — άγνωστη αποθηκευμένη τιμή ⇒ `other` (ADR-327 §8.5.4). */
+  readonly type: EmailType;
   readonly isPrimary: boolean;
 }
 
@@ -81,7 +84,7 @@ export function extractContactEmails(
     .filter((e: Record<string, unknown>) => typeof e?.email === 'string' && e.email.length > 0)
     .map((e: Record<string, unknown>) => ({
       email: String(e.email),
-      type: String(e.type ?? 'other'),
+      type: isEmailType(e.type) ? e.type : 'other',
       isPrimary: Boolean(e.isPrimary),
     }));
 }

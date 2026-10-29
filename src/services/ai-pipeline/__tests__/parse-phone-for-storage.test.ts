@@ -7,7 +7,7 @@
 // Isolate pure function without Firestore dependencies
 jest.mock('server-only', () => ({}));
 jest.mock('@/lib/firebaseAdmin', () => ({ getAdminFirestore: jest.fn(), FieldValue: {} }));
-jest.mock('firebase-admin/firestore', () => ({ FieldValue: {} }));
+jest.mock('firebase-admin/firestore', () => ({ FieldValue: { serverTimestamp: () => 'ts' } }));
 jest.mock('@/config/firestore-collections', () => ({ COLLECTIONS: {}, SYSTEM_DOCS: {} }));
 jest.mock('@/config/domain-constants', () => ({ ENTITY_TYPES: {} }));
 jest.mock('@/lib/telemetry/Logger', () => ({ createModuleLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn() }) }));
@@ -17,7 +17,7 @@ jest.mock('@/services/entity-audit.service', () => ({ EntityAuditService: { reco
 jest.mock('@/services/realtime/types', () => ({ SYNC_SOURCE_AI_AGENT: 'ai-agent' }));
 jest.mock('../shared/contact-lookup-search', () => ({ checkContactDuplicates: jest.fn() }));
 
-import { parsePhoneForStorage } from '../shared/contact-document-builder';
+import { buildContactDocument, parsePhoneForStorage } from '../shared/contact-document-builder';
 
 describe('parsePhoneForStorage', () => {
   describe('00-prefix (international dialing)', () => {
@@ -95,5 +95,21 @@ describe('parsePhoneForStorage', () => {
       const result = parsePhoneForStorage('00999123');
       expect(result.number).toBeDefined();
     });
+  });
+});
+
+/**
+ * ΑΓΚΥΡΑ (ADR-327 §8.5.4) — το email ενός νέου εγγράφου επαφής μένει στο υποσύνολο του ΚΑΤΟΧΟΥ. Ο builder έγραφε
+ * `work` σε κάθε κάτοχο ⇒ σε εταιρεία κενή λίστα «Τύπος» (ίδιο σχήμα με το τηλέφωνο της MACON ATEE).
+ */
+describe('buildContactDocument — τύπος email ανά κάτοχο', () => {
+  const base = { firstName: '', lastName: '', phone: null, companyId: 'comp_1', createdBy: 'u1' };
+  const emailTypeOf = (type: 'individual' | 'company', email: string) =>
+    (buildContactDocument({ ...base, type, email, companyName: 'X' }).doc.emails as Array<{ type: string }>)[0]?.type;
+
+  it('εταιρεία: `info@` ⇒ info · άλλο ⇒ general (ΠΟΤΕ work)· πρόσωπο ⇒ work', () => {
+    expect(emailTypeOf('company', 'info@macon.gr')).toBe('info');
+    expect(emailTypeOf('company', 'nikos@macon.gr')).toBe('general');
+    expect(emailTypeOf('individual', 'info@nikolaou.gr')).toBe('work');
   });
 });

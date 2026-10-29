@@ -24,7 +24,7 @@ import { nowISO } from '@/lib/date-local';
 
 import {
   type ContactEntity,
-  SOCIAL_PLATFORM_MAP,
+  resolveSocialPlatform,
   resolvePhoneType,
   resolveEmailType,
   resolveWebsiteType,
@@ -320,13 +320,14 @@ export class ContactHandler implements ToolHandler {
       if (currentSocial.some(s => s.username === value || s.url === value)) {
         return { success: false, error: `Το social media ${value} υπάρχει ήδη.` };
       }
-      const platform = SOCIAL_PLATFORM_MAP[label] ?? 'other';
+      const knownPlatform = resolveSocialPlatform(label);
+      const platform = knownPlatform ?? 'other';
       const { isValidUrl } = await import('@/lib/validation/email-validation');
       const newEntry = {
         platform,
         username: value,
         ...(isValidUrl(value) ? { url: value } : {}),
-        ...(label && !SOCIAL_PLATFORM_MAP[label] ? { label } : {}),
+        ...(label && knownPlatform === undefined ? { label } : {}),
       };
       updatePayload.socialMedia = [...currentSocial, newEntry];
     }

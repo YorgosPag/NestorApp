@@ -39,6 +39,7 @@ import 'server-only';
 import { FieldValue } from 'firebase-admin/firestore';
 
 import { inferPhoneType } from '@/server/lib/phone-line-type';
+import { inferEmailType } from '@/lib/contact/email-type-vocabulary';
 
 import type { CreateContactParams } from './contact-lookup-types';
 
@@ -131,8 +132,9 @@ export function buildContactDocument(params: CreateContactParams): BuiltContact 
       ...(params.type === 'company' && params.companyName
         ? { companyName: params.companyName }
         : {}),
+      // ADR-327 §8.5.4 — μέσα στο υποσύνολο του κατόχου: εταιρεία `info@` ⇒ `info`, πρόσωπο ⇒ `work` (όπως πριν).
       emails: params.email
-        ? [{ email: params.email, type: 'work', isPrimary: true }]
+        ? [{ email: params.email, type: inferEmailType(params.email, params.type, 'work'), isPrimary: true }]
         : [],
       phones: parsedPhone
         ? [{

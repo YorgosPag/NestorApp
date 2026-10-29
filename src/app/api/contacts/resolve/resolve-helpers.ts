@@ -14,6 +14,8 @@ import { BankAccountsServerService } from '@/services/banking/bank-accounts-serv
 import type { CurrencyCode } from '@/types/contacts/banking';
 import { createModuleLogger } from '@/lib/telemetry';
 import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
+import { contactOwnerKindOf } from '@/lib/contact/contact-owner-kind';
+import { inferEmailType } from '@/lib/contact/email-type-vocabulary';
 import { fuzzyGreekMatch } from '@/services/ai-pipeline/shared/greek-text-utils';
 import { getErrorMessage } from '@/lib/error-utils';
 import { isAbsentText } from '@/lib/ai-structured-output';
@@ -147,15 +149,6 @@ async function recordContactChange(
 
 // ── Email storage ─────────────────────────────────────────────────────────────
 
-function inferEmailType(email: string): string {
-  const prefix = email.split('@')[0].toLowerCase();
-  if (['sales', 'sale'].includes(prefix)) return 'sales';
-  if (['info', 'information', 'contact'].includes(prefix)) return 'info';
-  if (['support', 'help'].includes(prefix)) return 'support';
-  if (['hr', 'humanresources'].includes(prefix)) return 'department';
-  return 'general';
-}
-
 export async function storeContactEmail(
   contactId: string,
   companyId: string,
@@ -168,7 +161,9 @@ export async function storeContactEmail(
   const currentEmails = (data.emails ?? []) as Array<{ email: string }>;
   const normalized = email.toLowerCase().trim();
   if (currentEmails.some((e) => e.email.toLowerCase() === normalized)) return;
-  const emailType = inferEmailType(email);
+  // ADR-327 §8.5.4 — ο ΕΝΑΣ κανόνας (`lib/contact/email-type-vocabulary`): το τοπικό αντίγραφο έγραφε `general`/`info`
+  // και σε ΠΡΟΣΩΠΟ, τιμή που η φόρμα του δεν προσφέρει ⇒ κενή λίστα «Τύπος».
+  const emailType = inferEmailType(email, contactOwnerKindOf(data.type), 'work');
   await docRef.update({
     emails: FieldValue.arrayUnion({ email: normalized, type: emailType, isPrimary: currentEmails.length === 0 }),
     updatedAt: FieldValue.serverTimestamp(),

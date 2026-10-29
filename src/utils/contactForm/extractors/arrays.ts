@@ -12,6 +12,7 @@ import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { EmailInfo, PhoneInfo } from '@/types/contacts';
 import EnterpriseContactSaver, { type EnterpriseContactData } from '@/utils/contacts/EnterpriseContactSaver';
 import { DEFAULT_PHONE_TYPE, type PhoneOwnerKind, type PhoneType } from '@/lib/contact/phone-type-vocabulary';
+import { inferEmailType, type EmailType } from '@/lib/contact/email-type-vocabulary';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -20,7 +21,7 @@ import { DEFAULT_PHONE_TYPE, type PhoneOwnerKind, type PhoneType } from '@/lib/c
 /** Email entry in Contact model format */
 interface EmailEntry {
   email: string;
-  type: 'work' | 'personal' | 'other';
+  type: EmailType;
   isPrimary: boolean;
 }
 
@@ -39,10 +40,11 @@ interface PhoneEntry {
  * Create emails array from form email field
  *
  * @param email - Email string from form
+ * @param emailType - Τύπος από τη ρίζα `EmailType` — ο καλών δίνει τον τύπο του ΚΑΤΟΧΟΥ (ADR-327 §8.5.4)
  * @returns Emails array in Contact model format
  */
-export function createEmailsArray(email: string): EmailEntry[] {
-  return email ? [{ email, type: 'work', isPrimary: true }] : [];
+export function createEmailsArray(email: string, emailType: EmailType): EmailEntry[] {
+  return email ? [{ email, type: emailType, isPrimary: true }] : [];
 }
 
 /**
@@ -83,7 +85,7 @@ export function buildEnterpriseContactArrays(
 
   const emails = enterpriseData.emails && enterpriseData.emails.length > 0
     ? enterpriseData.emails
-    : createEmailsArray(formData.email);
+    : createEmailsArray(formData.email, inferEmailType(formData.email, owner, 'work'));
 
   const phones = enterpriseData.phones && enterpriseData.phones.length > 0
     ? enterpriseData.phones

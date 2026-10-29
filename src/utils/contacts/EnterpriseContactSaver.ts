@@ -13,6 +13,8 @@
 
 import type { CompanyAddress, ContactFormData } from '@/types/ContactFormTypes';
 import type { Contact, AddressInfo, WebsiteInfo, PhoneInfo, EmailInfo, SocialMediaInfo } from '@/types/contacts';
+import { contactOwnerKindOf } from '@/lib/contact/contact-owner-kind';
+import { DEFAULT_WEBSITE_TYPE, type WebsiteType } from '@/lib/contact/website-type-vocabulary';
 import { generateAddressId } from '@/services/enterprise-id.service';
 
 import { createModuleLogger } from '@/lib/telemetry';
@@ -332,16 +334,10 @@ export class EnterpriseContactSaver {
    * array path would otherwise classify the same website differently depending on which door
    * the value came through.
    */
-  static getWebsiteTypeForContactType(contactType: string): 'personal' | 'company' | 'other' {
-    switch (contactType) {
-      case 'individual':
-        return 'personal';
-      case 'company':
-      case 'service':
-        return 'company';
-      default:
-        return 'other';
-    }
+  static getWebsiteTypeForContactType(contactType: string): WebsiteType {
+    // ADR-327 §8.5.4 — η προεπιλογή του ΚΑΤΟΧΟΥ από τη ρίζα: το `company` που γραφόταν σε εταιρεία ΚΑΙ υπηρεσία δεν
+    // το προσφέρει καμία από τις δύο φόρμες (`corporate…` / `official…`) ⇒ κενή λίστα «Τύπος».
+    return DEFAULT_WEBSITE_TYPE[contactOwnerKindOf(contactType)];
   }
 
   /**

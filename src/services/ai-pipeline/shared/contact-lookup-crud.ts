@@ -28,6 +28,7 @@ import { SYNC_SOURCE_AI_AGENT } from '@/services/realtime/types';
 import { buildContactDocument, parsePhoneForStorage } from './contact-document-builder';
 import { inferPhoneType } from '@/server/lib/phone-line-type';
 import { phoneOwnerKindOf } from '@/lib/contact/phone-type-vocabulary';
+import { inferEmailType } from '@/lib/contact/email-type-vocabulary';
 import type { CreateContactParams, CreateContactResult } from './contact-lookup-types';
 import { checkContactDuplicates } from './contact-lookup-search';
 
@@ -152,7 +153,8 @@ function buildFieldAddition(field: string, value: string, existing: Readonly<Rec
     return {
       emails: FieldValue.arrayUnion({
         email: value.toLowerCase().trim(),
-        type: 'work',
+        // ADR-327 §8.5.4 — ίδιο SSoT με τον builder: πάντα μέσα στο υποσύνολο του κατόχου.
+        type: inferEmailType(value, phoneOwnerKindOf(existing.type), 'work'),
         isPrimary: false,
       }),
     };
