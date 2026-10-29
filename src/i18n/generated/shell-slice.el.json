@@ -3405,11 +3405,6 @@
       "roleManagement": "Διαχείριση Ρόλων",
       "setup": "Ρύθμιση Admin"
     },
-    "badges": {
-      "enterprise": "ENTERPRISE",
-      "new": "Νέο",
-      "pro": "PRO"
-    },
     "crm": {
       "calendar": "Ημερολόγιο",
       "communications": "Επικοινωνίες",
@@ -3616,6 +3611,7 @@
       "catalogCategories": "Κατηγορίες",
       "catalogFamilies": "Οικογένειες",
       "catalogMeasurements": "Μονάδες μέτρησης",
+      "catalogPriceLists": "Τιμοκατάλογοι",
       "catalogProducts": "Προϊόντα",
       "commonAreas": "Κοινόχρηστοι",
       "debug": "Αποσφαλμάτωση",
@@ -3739,7 +3735,6 @@
       "shortcuts": "Συντομεύσεις"
     },
     "user": {
-      "email": "user@example.com",
       "title": "Χρήστης"
     }
   },

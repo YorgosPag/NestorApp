@@ -72,6 +72,10 @@
     "products": {
       "title": "Products",
       "lead": "Models with variants and simple products, in one list. Completeness is measured per channel × language."
+    },
+    "priceLists": {
+      "title": "Price lists",
+      "lead": "Sales and cost price lists with versions. Each version is valid from a date until the next published one; price changes go through a preview before they are published."
     }
   },
   "attributeTypes": {
@@ -159,7 +163,7 @@
     "tooMany": "Up to {max}.",
     "unknownReference": "Points to something that does not exist.",
     "codeImmutable": "The code cannot change after creation.",
-    "typeLockedInUse": "The type cannot change while the attribute is used by a family.",
+    "typeLockedInUse": "Cannot change while in use.",
     "unitLockedInUse": "The family is in use: existing units and the standard cannot change — you can only add new ones.",
     "unitStandardMissing": "Choose the standard unit.",
     "unitStandardNotIdentity": "The standard unit must have factor 1 and offset 0.",
@@ -897,6 +901,158 @@
     "table": {
       "title": "Catalog table (with the grid's values)",
       "noSpec": "The family has no catalog table defined."
+    }
+  },
+  "pricing": {
+    "noView": "Prices are not shown — viewing price lists requires the price view permission.",
+    "kinds": {
+      "sales": "Sales",
+      "salesHint": "Offered to an audience (anonymous, signed-in, a customer group or a partner).",
+      "cost": "Cost",
+      "costHint": "Internal cost price list — not offered to any audience."
+    },
+    "priceTypes": {
+      "netList": "Net list price",
+      "netListHint": "Accepts discounts per discount group.",
+      "netCustomer": "Net customer price",
+      "netCustomerHint": "Final price — accepts no discounts."
+    },
+    "audience": {
+      "label": "Audience",
+      "hint": "Who the list is offered to. A viewer sees the list with the most specific audience that covers them.",
+      "none": "No audience",
+      "anonymous": "Anonymous visitors",
+      "signedIn": "Signed-in users",
+      "customerGroup": "Customer group",
+      "partner": "Partner",
+      "customerGroupPick": "Choose a customer group",
+      "noCustomerGroups": "There are no customer groups yet.",
+      "partnerContact": "Contact",
+      "partnerWorkspace": "Partner workspace",
+      "partnerWorkspaceUnavailable": "A workspace can be chosen only from connected partners (an accepted collaboration invitation) — workspace connections are not available yet."
+    },
+    "versionStatus": {
+      "draft": "Draft",
+      "published": "Published",
+      "superseded": "Superseded",
+      "discarded": "Discarded"
+    },
+    "versions": {
+      "basis": {
+        "empty": "Empty",
+        "latestPublished": "From the current one"
+      },
+      "phase": {
+        "past": "Expired",
+        "current": "Current",
+        "future": "Upcoming"
+      },
+      "tab": "Versions",
+      "lead": "Every price change happens in a draft version and takes effect from the date it is published — old prices stay as history.",
+      "new": "New version",
+      "newTitle": "New price version",
+      "newLead": "Start empty or from the latest published version and change only what changes.",
+      "create": "Create",
+      "createFailed": "The version was not created. Try again.",
+      "basisLabel": "Basis",
+      "basisHint": "“From the current one” copies every line of the latest published version.",
+      "validFrom": "Valid from",
+      "validFromHint": "Checked at publication: it must be after the start of the latest published version.",
+      "validFromNone": "No date",
+      "number": "Version {number}",
+      "range": "{from} → {until}",
+      "openEnded": "open-ended",
+      "lineCount": "{count, plural, one {# line} other {# lines}}",
+      "today": "Today · {date}",
+      "publishedTitle": "Published",
+      "nonePublished": "No published version yet.",
+      "draftsTitle": "Drafts",
+      "discardedTitle": "{count, plural, one {# discarded version} other {# discarded versions}}",
+      "seeding": "Copying lines — {count, plural, one {# copied} other {# copied}}.",
+      "continueSeed": "Continue",
+      "openLines": "Lines",
+      "discard": "Discard",
+      "discardTitle": "Discard version {number}?",
+      "discardDescription": "The draft version and its lines will never be published. It stays in the history as discarded."
+    },
+    "list": {
+      "newList": "New price list",
+      "salesSection": "Sales",
+      "costSection": "Cost",
+      "emptyTitle": "Choose a price list",
+      "emptyDescription": "Choose a price list from the list or create a new one.",
+      "validFrom": "Valid from {date}",
+      "notPublished": "Not published",
+      "draftPending": "Draft",
+      "futurePending": "Upcoming"
+    },
+    "general": {
+      "tab": "General",
+      "kind": "Kind",
+      "priceType": "Price type",
+      "lockedHint": "Kind and price type lock once the list has a version — published prices keep the meaning they were published with.",
+      "fence": "Own confirmation threshold (%)",
+      "fenceHint": "A price change above this percentage requires explicit confirmation on publishing. Without its own threshold, the platform’s {percent}% applies.",
+      "newTitle": "New price list"
+    },
+    "lines": {
+      "tab": "Lines",
+      "versionLabel": "Version",
+      "noVersion": "There is no version yet — create one in the “Versions” tab.",
+      "gridLabel": "Price lines of version {number}",
+      "columns": {
+        "sku": "SKU code",
+        "unit": "Unit",
+        "priceQuantity": "Per",
+        "netPrice": "Net price (€)",
+        "discountGroup": "Discount group",
+        "perOne": "Price per 1"
+      },
+      "per": "per {quantity}",
+      "resolving": "Looking up code",
+      "skuLocked": "The code of a saved line does not change — remove the line and add a new one.",
+      "breakdownLocked": "A work item's price is the sum of its breakdown.",
+      "removeRow": "Remove line",
+      "readOnlyPublished": "Read only — a published version does not change. To change prices, create a new version.",
+      "readOnlySeeding": "Read only while lines are being copied — continue the copy in the “Versions” tab.",
+      "conflicts": "{count, plural, one {# line was} other {# lines were}} changed elsewhere meanwhile ({codes}) — the saved price was kept; your other changes remain.",
+      "save": "Save lines",
+      "saving": "Saving…",
+      "saved": "{count, plural, one {# change saved} other {# changes saved}}.",
+      "savedPartial": "Saved {saved} of {total} — the rest were not sent. Check and try again.",
+      "unsaved": "Unsaved changes",
+      "clean": "Everything saved",
+      "retry": "Try again"
+    },
+    "publish": {
+      "open": "Publish…",
+      "title": "Publish version {number}",
+      "lead": "Set when it takes effect, review what changes against the current published version, and publish.",
+      "validFromHint": "The new version cuts off the previous one from this date.",
+      "preview": "Preview changes",
+      "loading": "Computing the difference…",
+      "publishing": "Publishing…",
+      "diffTitle": "What changes",
+      "summary": "{changed} changed · {added} new · {removed} removed · {unchanged} unchanged",
+      "noChanges": "No difference from the current published version.",
+      "hidden": "{count, plural, one {and # more change} other {and # more changes}} below the threshold — no confirmation needed.",
+      "unknownSku": "SKU that no longer exists",
+      "overFence": "Above the threshold",
+      "fromOrToZero": "From or to zero",
+      "kind": {
+        "added": "New",
+        "removed": "Removed",
+        "changed": "Changed"
+      },
+      "confirm": "I confirm {count, plural, one {the # change} other {the # changes}} above the {fence} threshold (or from/to zero).",
+      "notice": {
+        "fenceChanged": "The lines changed meanwhile and the difference above the threshold is now different — review it again and confirm.",
+        "changedMeanwhile": "Someone else changed the version meanwhile — start again with the current data."
+      },
+      "submit": "Publish",
+      "retry": "Start again",
+      "done": "The version was published.",
+      "close": "Close"
     }
   }
 }

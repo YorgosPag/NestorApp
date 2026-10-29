@@ -143,7 +143,8 @@
     "catalogCategories": "Categories",
     "catalogMeasurements": "Units of measure",
     "catalogAssets": "Media library",
-    "catalogProducts": "Products"
+    "catalogProducts": "Products",
+    "catalogPriceLists": "Price lists"
   },
   "reports": {
     "overview": "Executive Summary",
@@ -291,14 +292,8 @@
     "quotes": "Quotes",
     "rfqs": "Requests for Quotation"
   },
-  "badges": {
-    "new": "New",
-    "pro": "PRO",
-    "enterprise": "ENTERPRISE"
-  },
   "user": {
-    "title": "User",
-    "email": "user@example.com"
+    "title": "User"
   },
   "toolbar": {
     "labels": {
