@@ -21,6 +21,7 @@ import {
   emitSyncSignalIfMapped,
   logger,
 } from '../executor-shared';
+import { aiAgentAuditActor, aiAgentStamp } from '../../shared/ai-performer';
 import { classifyContactDocument } from './contact-document-classifier';
 import { nowISO } from '@/lib/date-local';
 import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
@@ -176,7 +177,8 @@ export class AttachmentHandler implements ToolHandler {
       ...(spec.setsPrimaryPhoto ? { photoURL: fileRecord.downloadUrl } : {}),
       multiplePhotoURLs: FieldValue.arrayUnion(fileRecord.downloadUrl),
       updatedAt: FieldValue.serverTimestamp(),
-      lastModifiedBy: attribution,
+      // ADR-195 — η σφραγίδα που διαβάζει ο CDC (`shared/ai-performer`).
+      ...aiAgentStamp(ctx),
     });
 
     await auditWrite(ctx, COLLECTIONS.CONTACTS, contactId, spec.auditAction, {
@@ -190,8 +192,7 @@ export class AttachmentHandler implements ToolHandler {
       entityName: contactDisplayName,
       action: 'updated',
       changes: [{ field: spec.auditedField, oldValue: null, newValue: fileRecord.downloadUrl, label: spec.changeLabel }],
-      performedBy: ctx.channelSenderId || 'system',
-      performedByName: attribution,
+      ...aiAgentAuditActor(ctx),
       companyId: ctx.companyId,
     });
     emitSyncSignalIfMapped(COLLECTIONS.CONTACTS, 'UPDATED', contactId, ctx.companyId);

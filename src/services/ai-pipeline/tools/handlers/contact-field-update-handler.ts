@@ -8,7 +8,6 @@
  * @see SPEC-257E (Contact Management)
  */
 
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { CONTACT_UPDATABLE_FIELDS } from '../agentic-tool-definitions';
 import type { ContactUpdatableField } from '../agentic-tool-definitions';
@@ -16,9 +15,10 @@ import {
   type AgenticContext,
   type ToolResult,
   auditWrite,
-  buildAttribution,
   logger,
 } from '../executor-shared';
+import { loadAgentContact } from './agent-contact-doc';
+import { aiAgentPerformer } from '../../shared/ai-performer';
 
 const ESCO_PROTECTED = ['profession', 'escoUri', 'escoLabel', 'iscoCode', 'escoSkills'];
 
@@ -75,13 +75,9 @@ export async function executeUpdateContactField(
     }
   }
 
-  const db = getAdminFirestore();
-  const docSnap = await db.collection(COLLECTIONS.CONTACTS).doc(contactId).get();
-  if (!docSnap.exists) {
-    return { success: false, error: `Η επαφή ${contactId} δεν βρέθηκε.` };
-  }
-
-  const existingData = docSnap.data() as Record<string, unknown>;
+  const contact = await loadAgentContact(contactId);
+  if (!contact.found) return contact.result;
+  const existingData = contact.data;
 
   // FIND-R: Block individual-only fields on company contacts
   if (existingData.type === 'company' && INDIVIDUAL_ONLY_FIELDS.includes(field)) {
@@ -94,16 +90,16 @@ export async function executeUpdateContactField(
   const { updateContactField, emitEntitySyncSignal } = await import(
     '@/services/ai-pipeline/shared/contact-lookup'
   );
-  await updateContactField(contactId, field, value, buildAttribution(ctx));
+  await updateContactField(contactId, field, value, aiAgentPerformer(ctx));
 
   // Auto-sync displayName when name fields change
   if (field === 'firstName' || field === 'lastName') {
     const newFirst = field === 'firstName' ? value : String(existingData.firstName ?? '');
     const newLast = field === 'lastName' ? value : String(existingData.lastName ?? '');
     const newDisplayName = `${newFirst} ${newLast}`.trim();
-    await updateContactField(contactId, 'displayName', newDisplayName, buildAttribution(ctx));
+    await updateContactField(contactId, 'displayName', newDisplayName, aiAgentPerformer(ctx));
   } else if (field === 'companyName' && existingData.type === 'company') {
-    await updateContactField(contactId, 'displayName', value, buildAttribution(ctx));
+    await updateContactField(contactId, 'displayName', value, aiAgentPerformer(ctx));
   }
 
   await auditWrite(ctx, COLLECTIONS.CONTACTS, contactId, 'update', { [field]: value });

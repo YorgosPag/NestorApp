@@ -25,6 +25,9 @@ jest.mock('@/config/firestore-collections', () => ({
 jest.mock('@/config/domain-constants', () => ({
   FILE_STATUS: { READY: 'ready' },
   ENTITY_TYPES: { CONTACT: 'contact' },
+  // ADR-195 — ο φορέας του βοηθού (`shared/ai-performer`) ζητά την ταυτότητα της διεργασίας.
+  SYSTEM_IDENTITY: { ID: 'system', AI_AGENT_ID: 'system:ai-agent', DISPLAY_NAME: 'System' },
+  isSystemActorId: (id: string) => id === 'system' || id.startsWith('system:'),
 }));
 
 jest.mock('firebase-admin/firestore', () => ({

@@ -103,9 +103,11 @@ describe('parsePhoneForStorage', () => {
  * `work` σε κάθε κάτοχο ⇒ σε εταιρεία κενή λίστα «Τύπος» (ίδιο σχήμα με το τηλέφωνο της MACON ATEE).
  */
 describe('buildContactDocument — τύπος email ανά κάτοχο', () => {
-  const base = { firstName: '', lastName: '', phone: null, companyId: 'comp_1', createdBy: 'u1' };
+  // Ο `domain-constants` είναι mock εδώ ⇒ φορέας σε κυριολεκτική μορφή (ο builder δέχεται ήδη λυμένο).
+  const performer = { kind: 'process', processId: 'system', onBehalfOf: null } as const;
+  const base = { firstName: '', lastName: '', phone: null, companyId: 'comp_1', performer };
   const emailTypeOf = (type: 'individual' | 'company', email: string) =>
-    (buildContactDocument({ ...base, type, email, companyName: 'X' }).doc.emails as Array<{ type: string }>)[0]?.type;
+    (buildContactDocument({ ...base, type, email, companyName: 'X' }, { id: 'system', name: 'System' }).doc.emails as Array<{ type: string }>)[0]?.type;
 
   it('εταιρεία: `info@` ⇒ info · άλλο ⇒ general (ΠΟΤΕ work)· πρόσωπο ⇒ work', () => {
     expect(emailTypeOf('company', 'info@macon.gr')).toBe('info');

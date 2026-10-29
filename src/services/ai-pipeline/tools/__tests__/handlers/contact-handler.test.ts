@@ -410,7 +410,8 @@ describe('ContactHandler', () => {
         'cont_001',
         'documentNumber',
         'ΑΚ 582946',
-        expect.any(String),
+        // ADR-195 — φορέας, όχι ελεύθερο κείμενο: ο βοηθός ως διεργασία της μηχανής.
+        expect.objectContaining({ kind: 'process', processId: 'system:ai-agent' }),
       );
     });
 

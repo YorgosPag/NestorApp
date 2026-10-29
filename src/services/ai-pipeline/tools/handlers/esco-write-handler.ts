@@ -6,7 +6,6 @@
  * @see ADR-132 (ESCO Integration)
  */
 
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { EntityAuditService } from '@/services/entity-audit.service';
@@ -15,10 +14,11 @@ import {
   type AgenticContext,
   type ToolResult,
   auditWrite,
-  buildAttribution,
   logger,
 } from '../executor-shared';
+import { loadAgentContact } from './agent-contact-doc';
 import { nowISO } from '@/lib/date-local';
+import { aiAgentAuditActor, aiAgentStamp } from '../../shared/ai-performer';
 
 /**
  * Execute set_contact_esco — Write ESCO occupation and/or skills to a contact.
@@ -38,15 +38,13 @@ export async function executeSetContactEsco(
     return { success: false, error: 'contactId is required.' };
   }
 
-  const db = getAdminFirestore();
-  const docSnap = await db.collection(COLLECTIONS.CONTACTS).doc(contactId).get();
-  if (!docSnap.exists) {
-    return { success: false, error: `Η επαφή ${contactId} δεν βρέθηκε.` };
-  }
+  const contact = await loadAgentContact(contactId);
+  if (!contact.found) return contact.result;
 
   const updateData: Record<string, unknown> = {
     updatedAt: nowISO(),
-    lastModifiedBy: buildAttribution(ctx),
+    // ADR-195 — η σφραγίδα που διαβάζει ο CDC (`shared/ai-performer`).
+    ...aiAgentStamp(ctx),
   };
   const changes: string[] = [];
 
@@ -145,7 +143,7 @@ export async function executeSetContactEsco(
       }
 
       // ── MERGE with existing skills (deduplicate by URI or label) ──
-      const contactData = docSnap.data() as Record<string, unknown>;
+      const contactData = contact.data;
       const existing = Array.isArray(contactData.escoSkills)
         ? (contactData.escoSkills as Array<{ uri: string; label: string }>)
         : [];
@@ -162,11 +160,11 @@ export async function executeSetContactEsco(
     return { success: false, error: 'Provide profession and/or skills to update.' };
   }
 
-  await db.collection(COLLECTIONS.CONTACTS).doc(contactId).update(updateData);
+  await contact.ref.update(updateData);
   await auditWrite(ctx, COLLECTIONS.CONTACTS, contactId, 'update', updateData);
 
   // ADR-195: canonical entity audit trail (SSoT)
-  const existingData = docSnap.data() as Record<string, unknown>;
+  const existingData = contact.data;
   const escoChanges: AuditFieldChange[] = [];
   if (profession) {
     escoChanges.push({
@@ -186,8 +184,7 @@ export async function executeSetContactEsco(
       entityName: String(existingData.displayName ?? null) || null,
       action: 'updated',
       changes: escoChanges,
-      performedBy: ctx.channelSenderId || 'system',
-      performedByName: buildAttribution(ctx),
+      ...aiAgentAuditActor(ctx),
       companyId: ctx.companyId,
     });
   }

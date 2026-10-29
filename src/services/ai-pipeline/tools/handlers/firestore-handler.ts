@@ -28,6 +28,7 @@ import {
   MAX_QUERY_RESULTS,
   DEFAULT_QUERY_LIMIT,
 } from '../executor-shared';
+import { aiAgentStamp } from '../../shared/ai-performer';
 import { filterContactByTab, resolveContactType } from '../contact-tab-filter';
 import { resolveOwnedToolDoc } from '../tool-tenant-guard';
 import {
@@ -278,6 +279,8 @@ export class FirestoreHandler implements ToolHandler {
       companyId: ctx.companyId,
       updatedAt: nowISO(),
       lastModifiedBy: buildAttribution(ctx),
+      // ADR-195 — η σφραγίδα φορέα (ο CDC των επαφών τη διαβάζει· `shared/ai-performer`).
+      ...aiAgentStamp(ctx),
     };
 
     if (mode === 'create') {

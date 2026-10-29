@@ -7,8 +7,7 @@
  * @see ADR-171 (Autonomous AI Agent)
  */
 
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, type DocumentReference } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { EntityAuditService } from '@/services/entity-audit.service';
@@ -18,9 +17,10 @@ import {
   type ToolHandler,
   type ToolResult,
   auditWrite,
-  buildAttribution,
   logger,
 } from '../executor-shared';
+import { aiAgentAuditActor, aiAgentStamp } from '../../shared/ai-performer';
+import { loadAgentContact } from './agent-contact-doc';
 
 /** ADR-195: local wrapper that records a CONTACT entity audit entry (SSoT). */
 async function recordContactAudit(
@@ -36,8 +36,7 @@ async function recordContactAudit(
     entityName,
     action,
     changes,
-    performedBy: ctx.channelSenderId || 'system',
-    performedByName: buildAttribution(ctx),
+    ...aiAgentAuditActor(ctx),
     companyId: ctx.companyId,
   });
 }
@@ -111,10 +110,8 @@ export class ActivityHandler implements ToolHandler {
     contactId: string,
     ctx: AgenticContext
   ): Promise<ToolResult> {
-    const kadCode = String(args.kadCode ?? '').trim();
-    if (!kadCode) {
-      return { success: false, error: 'kadCode is required for add.' };
-    }
+    const kadCode = requiredKadCode(args, 'add');
+    if (typeof kadCode !== 'string') return kadCode;
 
     // Validate KAD code
     const validCodes = await loadKadCodes();
@@ -125,20 +122,13 @@ export class ActivityHandler implements ToolHandler {
     const description = await lookupKadDescription(kadCode);
     const activityType = String(args.activityType ?? 'secondary') as 'primary' | 'secondary';
 
-    const db = getAdminFirestore();
-    const docRef = db.collection(COLLECTIONS.CONTACTS).doc(contactId);
-    const docSnap = await docRef.get();
-
-    if (!docSnap.exists) {
-      return { success: false, error: `Η επαφή ${contactId} δεν βρέθηκε.` };
-    }
-
-    const data = docSnap.data() as Record<string, unknown>;
-    if (data.type !== 'company') {
+    const contact = await loadAgentContact(contactId);
+    if (!contact.found) return contact.result;
+    if (contact.data.type !== 'company') {
       return { success: false, error: 'Οι δραστηριότητες ΚΑΔ αφορούν μόνο εταιρείες, όχι φυσικά πρόσωπα.' };
     }
 
-    const activities = (Array.isArray(data.activities) ? data.activities : []) as KadActivity[];
+    const activities = activitiesOf(contact.data);
 
     // Check duplicate
     if (activities.some(a => a.code === kadCode)) {
@@ -152,25 +142,10 @@ export class ActivityHandler implements ToolHandler {
       }
     }
 
-    const newActivity: KadActivity = {
-      code: kadCode,
-      description: description ?? kadCode,
-      type: activityType,
-    };
-    activities.push(newActivity);
+    activities.push({ code: kadCode, description: description ?? kadCode, type: activityType });
 
-    await docRef.update({
-      activities,
-      updatedAt: FieldValue.serverTimestamp(),
-      updatedBy: buildAttribution(ctx),
-    });
-
-    await auditWrite(ctx, COLLECTIONS.CONTACTS, contactId, 'update', {
-      action: 'add_activity', kadCode, activityType,
-    });
-    await recordContactAudit(ctx, contactId, String(data.displayName ?? null) || null, 'updated', [
-      { field: 'activities', oldValue: null, newValue: `+${kadCode} (${activityType})`, label: 'Δραστηριότητα ΚΑΔ' },
-    ]);
+    await writeActivities(ctx, contactId, contact, activities, { action: 'add_activity', kadCode, activityType },
+      { field: 'activities', oldValue: null, newValue: `+${kadCode} (${activityType})`, label: 'Δραστηριότητα ΚΑΔ' });
 
     logger.info('KAD activity added via AI agent', {
       contactId, kadCode, activityType, requestId: ctx.requestId,
@@ -185,16 +160,9 @@ export class ActivityHandler implements ToolHandler {
   // ── LIST ──
 
   private async handleList(contactId: string): Promise<ToolResult> {
-    const db = getAdminFirestore();
-    const docSnap = await db.collection(COLLECTIONS.CONTACTS).doc(contactId).get();
-
-    if (!docSnap.exists) {
-      return { success: false, error: `Η επαφή ${contactId} δεν βρέθηκε.` };
-    }
-
-    const data = docSnap.data() as Record<string, unknown>;
-    const activities = (Array.isArray(data.activities) ? data.activities : []) as KadActivity[];
-
+    const contact = await loadAgentContact(contactId);
+    if (!contact.found) return contact.result;
+    const activities = activitiesOf(contact.data);
     return { success: true, data: activities, count: activities.length };
   }
 
@@ -205,39 +173,20 @@ export class ActivityHandler implements ToolHandler {
     contactId: string,
     ctx: AgenticContext
   ): Promise<ToolResult> {
-    const kadCode = String(args.kadCode ?? '').trim();
-    if (!kadCode) {
-      return { success: false, error: 'kadCode is required for remove.' };
-    }
+    const kadCode = requiredKadCode(args, 'remove');
+    if (typeof kadCode !== 'string') return kadCode;
 
-    const db = getAdminFirestore();
-    const docRef = db.collection(COLLECTIONS.CONTACTS).doc(contactId);
-    const docSnap = await docRef.get();
-
-    if (!docSnap.exists) {
-      return { success: false, error: `Η επαφή ${contactId} δεν βρέθηκε.` };
-    }
-
-    const data = docSnap.data() as Record<string, unknown>;
-    const activities = (Array.isArray(data.activities) ? data.activities : []) as KadActivity[];
+    const contact = await loadAgentContact(contactId);
+    if (!contact.found) return contact.result;
+    const activities = activitiesOf(contact.data);
     const filtered = activities.filter(a => a.code !== kadCode);
 
     if (filtered.length === activities.length) {
       return { success: false, error: `Ο ΚΑΔ ${kadCode} δεν βρέθηκε στις δραστηριότητες.` };
     }
 
-    await docRef.update({
-      activities: filtered,
-      updatedAt: FieldValue.serverTimestamp(),
-      updatedBy: buildAttribution(ctx),
-    });
-
-    await auditWrite(ctx, COLLECTIONS.CONTACTS, contactId, 'update', {
-      action: 'remove_activity', kadCode,
-    });
-    await recordContactAudit(ctx, contactId, String(data.displayName ?? null) || null, 'updated', [
-      { field: 'activities', oldValue: kadCode, newValue: null, label: 'Δραστηριότητα ΚΑΔ' },
-    ]);
+    await writeActivities(ctx, contactId, contact, filtered, { action: 'remove_activity', kadCode },
+      { field: 'activities', oldValue: kadCode, newValue: null, label: 'Δραστηριότητα ΚΑΔ' });
 
     return { success: true, data: { contactId, removedCode: kadCode, remaining: filtered.length } };
   }
@@ -249,24 +198,14 @@ export class ActivityHandler implements ToolHandler {
     contactId: string,
     ctx: AgenticContext
   ): Promise<ToolResult> {
-    const kadCode = String(args.kadCode ?? '').trim();
-    if (!kadCode) {
-      return { success: false, error: 'kadCode is required for set_primary.' };
-    }
+    const kadCode = requiredKadCode(args, 'set_primary');
+    if (typeof kadCode !== 'string') return kadCode;
 
-    const db = getAdminFirestore();
-    const docRef = db.collection(COLLECTIONS.CONTACTS).doc(contactId);
-    const docSnap = await docRef.get();
+    const contact = await loadAgentContact(contactId);
+    if (!contact.found) return contact.result;
+    const activities = activitiesOf(contact.data);
 
-    if (!docSnap.exists) {
-      return { success: false, error: `Η επαφή ${contactId} δεν βρέθηκε.` };
-    }
-
-    const data = docSnap.data() as Record<string, unknown>;
-    const activities = (Array.isArray(data.activities) ? data.activities : []) as KadActivity[];
-
-    const target = activities.find(a => a.code === kadCode);
-    if (!target) {
+    if (!activities.some(a => a.code === kadCode)) {
       return { success: false, error: `Ο ΚΑΔ ${kadCode} δεν βρέθηκε. Πρόσθεσέ τον πρώτα.` };
     }
 
@@ -275,19 +214,42 @@ export class ActivityHandler implements ToolHandler {
       a.type = a.code === kadCode ? 'primary' : 'secondary';
     }
 
-    await docRef.update({
-      activities,
-      updatedAt: FieldValue.serverTimestamp(),
-      updatedBy: buildAttribution(ctx),
-    });
-
-    await auditWrite(ctx, COLLECTIONS.CONTACTS, contactId, 'update', {
-      action: 'set_primary_activity', kadCode,
-    });
-    await recordContactAudit(ctx, contactId, String(data.displayName ?? null) || null, 'updated', [
-      { field: 'activities', oldValue: null, newValue: `primary=${kadCode}`, label: 'Κύρια δραστηριότητα' },
-    ]);
+    await writeActivities(ctx, contactId, contact, activities, { action: 'set_primary_activity', kadCode },
+      { field: 'activities', oldValue: null, newValue: `primary=${kadCode}`, label: 'Κύρια δραστηριότητα' });
 
     return { success: true, data: { contactId, primaryCode: kadCode, totalActivities: activities.length } };
   }
+}
+
+// ============================================================================
+// SHARED STEPS (ήταν τριπλά αντίγραφα — CHECK 3.28)
+// ============================================================================
+
+/** Ο κωδικός ΚΑΔ του ορίσματος — ή η άρνηση που επιστρέφεται αυτούσια. */
+function requiredKadCode(args: Record<string, unknown>, operation: string): string | ToolResult {
+  const kadCode = String(args.kadCode ?? '').trim();
+  return kadCode || { success: false, error: `kadCode is required for ${operation}.` };
+}
+
+function activitiesOf(data: Record<string, unknown>): KadActivity[] {
+  return (Array.isArray(data.activities) ? data.activities : []) as KadActivity[];
+}
+
+/** ΜΙΑ εγγραφή του πίνακα δραστηριοτήτων: έγγραφο (με σφραγίδα φορέα) + ίχνος AI + Ιστορικό. */
+async function writeActivities(
+  ctx: AgenticContext,
+  contactId: string,
+  contact: { readonly ref: DocumentReference; readonly data: Record<string, unknown> },
+  activities: KadActivity[],
+  trace: Record<string, unknown>,
+  change: AuditFieldChange,
+): Promise<void> {
+  await contact.ref.update({
+    activities,
+    updatedAt: FieldValue.serverTimestamp(),
+    // ADR-195 — η σφραγίδα που διαβάζει ο CDC (`shared/ai-performer`).
+    ...aiAgentStamp(ctx),
+  });
+  await auditWrite(ctx, COLLECTIONS.CONTACTS, contactId, 'update', trace);
+  await recordContactAudit(ctx, contactId, String(contact.data.displayName ?? null) || null, 'updated', [change]);
 }

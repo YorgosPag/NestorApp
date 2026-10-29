@@ -17,10 +17,10 @@ import {
   type ToolResult,
   AI_ERRORS,
   auditWrite,
-  buildAttribution,
   logger,
 } from '../executor-shared';
 import { nowISO } from '@/lib/date-local';
+import { aiAgentAuditActor, aiAgentPerformer, aiAgentStamp } from '../../shared/ai-performer';
 
 import {
   type ContactEntity,
@@ -115,7 +115,7 @@ export class ContactHandler implements ToolHandler {
         type: contactType as 'individual' | 'company',
         companyId: ctx.companyId,
         companyName: companyName ?? undefined,
-        createdBy: buildAttribution(ctx),
+        performer: aiAgentPerformer(ctx),
         skipDuplicateCheck,
       });
 
@@ -135,8 +135,7 @@ export class ContactHandler implements ToolHandler {
         entityName: result.displayName,
         action: 'created',
         changes: creationChanges,
-        performedBy: ctx.channelSenderId || 'system',
-        performedByName: buildAttribution(ctx),
+        ...aiAgentAuditActor(ctx),
         companyId: ctx.companyId,
       });
 
@@ -250,7 +249,8 @@ export class ContactHandler implements ToolHandler {
 
     const updatePayload: Record<string, unknown> = {
       updatedAt: nowISO(),
-      lastModifiedBy: buildAttribution(ctx),
+      // ADR-195 — η σφραγίδα που διαβάζει ο CDC (`shared/ai-performer`).
+      ...aiAgentStamp(ctx),
     };
 
     if (fieldType === 'phone') {
@@ -343,8 +343,7 @@ export class ContactHandler implements ToolHandler {
       entityName: String(contactData.displayName ?? null) || null,
       action: 'updated',
       changes: [{ field: fieldType, oldValue: null, newValue: value, label: fieldType }],
-      performedBy: ctx.channelSenderId || 'system',
-      performedByName: buildAttribution(ctx),
+      ...aiAgentAuditActor(ctx),
       companyId: ctx.companyId,
     });
 
