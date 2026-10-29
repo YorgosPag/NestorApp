@@ -139,7 +139,7 @@ export function buildContactDocument(params: CreateContactParams): BuiltContact 
           number: parsedPhone.number,
           ...(parsedPhone.countryCode ? { countryCode: parsedPhone.countryCode } : {}),
           // ADR-327 §8.5.4 — σταθερό ≠ κινητό: ο τύπος από τα metadata του αριθμού, όχι καρφωτός.
-          type: inferPhoneType(params.phone ?? '', params.type, 'mobile'),
+          type: inferPhoneType(params.phone ?? '', params.type),
           isPrimary: true,
         }]
         : [],

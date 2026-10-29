@@ -26,7 +26,8 @@ import type { EntitySyncAction, SyncEntityType } from '@/services/realtime/types
 import { SYNC_SOURCE_AI_AGENT } from '@/services/realtime/types';
 
 import { buildContactDocument, parsePhoneForStorage } from './contact-document-builder';
-import { inferPhoneType, phoneOwnerKindOf } from '@/server/lib/phone-line-type';
+import { inferPhoneType } from '@/server/lib/phone-line-type';
+import { phoneOwnerKindOf } from '@/lib/contact/phone-type-vocabulary';
 import type { CreateContactParams, CreateContactResult } from './contact-lookup-types';
 import { checkContactDuplicates } from './contact-lookup-search';
 
@@ -140,8 +141,8 @@ function buildFieldAddition(field: string, value: string, existing: Readonly<Rec
       phones: FieldValue.arrayUnion({
         number: parsed.number,
         ...(parsed.countryCode ? { countryCode: parsed.countryCode } : {}),
-        // ADR-327 §8.5.4 — σταθερό ≠ κινητό, και το σταθερό εταιρείας είναι «εργασία».
-        type: inferPhoneType(value, phoneOwnerKindOf(existing.type), 'mobile'),
+        // ADR-327 §8.5.4 — πάντα μέσα στο υποσύνολο του κατόχου (εταιρεία ⇒ `main`, πρόσωπο ⇒ από τον αριθμό).
+        type: inferPhoneType(value, phoneOwnerKindOf(existing.type)),
         isPrimary: false,
       }),
     };

@@ -11,6 +11,7 @@
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { EmailInfo, PhoneInfo } from '@/types/contacts';
 import EnterpriseContactSaver, { type EnterpriseContactData } from '@/utils/contacts/EnterpriseContactSaver';
+import { DEFAULT_PHONE_TYPE, type PhoneOwnerKind, type PhoneType } from '@/lib/contact/phone-type-vocabulary';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -26,7 +27,7 @@ interface EmailEntry {
 /** Phone entry in Contact model format */
 interface PhoneEntry {
   number: string;
-  type: 'mobile' | 'work' | 'home' | 'fax';
+  type: PhoneType;
   isPrimary: boolean;
 }
 
@@ -48,10 +49,10 @@ export function createEmailsArray(email: string): EmailEntry[] {
  * Create phones array from form phone field
  *
  * @param phone - Phone string from form
- * @param phoneType - Phone type ('mobile' | 'work')
+ * @param phoneType - Τύπος από τη ρίζα `PhoneType` — ο καλών δίνει την προεπιλογή του ΚΑΤΟΧΟΥ (ADR-327 §8.5.4)
  * @returns Phones array in Contact model format
  */
-export function createPhonesArray(phone: string, phoneType: 'mobile' | 'work' = 'mobile'): PhoneEntry[] {
+export function createPhonesArray(phone: string, phoneType: PhoneType = DEFAULT_PHONE_TYPE.individual): PhoneEntry[] {
   return phone ? [{ number: phone, type: phoneType, isPrimary: true }] : [];
 }
 
@@ -71,7 +72,8 @@ export function createPhonesArray(phone: string, phoneType: 'mobile' | 'work' = 
  */
 export function buildEnterpriseContactArrays(
   formData: ContactFormData,
-  fallbackPhoneType: 'mobile' | 'work' = 'mobile',
+  // ADR-327 §8.5.4 — ο ΚΑΤΟΧΟΣ, όχι τύπος: εταιρεία/υπηρεσία περνούσαν `'work'`, που η φόρμα τους δεν προσφέρει ⇒ κενό.
+  owner: PhoneOwnerKind = 'individual',
 ): {
   enterpriseData: EnterpriseContactData;
   emails: EmailInfo[];
@@ -85,7 +87,7 @@ export function buildEnterpriseContactArrays(
 
   const phones = enterpriseData.phones && enterpriseData.phones.length > 0
     ? enterpriseData.phones
-    : createPhonesArray(formData.phone, fallbackPhoneType);
+    : createPhonesArray(formData.phone, DEFAULT_PHONE_TYPE[owner]);
 
   return { enterpriseData, emails, phones };
 }

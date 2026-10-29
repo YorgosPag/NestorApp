@@ -54,7 +54,7 @@ export function mapServiceFormData(formData: ContactFormData): MappedServiceCont
   const logoURL = extractLogoURL(formData, 'service');
   const photoURL = extractPhotoURL(formData, 'service representative');
   const multiplePhotoURLs = extractMultiplePhotoURLs(formData); // 📸 Multiple photos για services
-  const { enterpriseData, emails, phones } = buildEnterpriseContactArrays(formData, 'work');
+  const { enterpriseData, emails, phones } = buildEnterpriseContactArrays(formData, 'service');
 
   // 🔧 FIX: Support both serviceName (old) and name (service-config) fields
   const serviceName = formData.serviceName || formData.name || '';

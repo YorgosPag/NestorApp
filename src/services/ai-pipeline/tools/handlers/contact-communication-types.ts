@@ -11,23 +11,25 @@
  */
 
 import type { SocialMediaInfo } from '@/types/contacts/contracts';
-import { inferPhoneType, phoneOwnerKindOf } from '@/server/lib/phone-line-type';
+import { inferPhoneType } from '@/server/lib/phone-line-type';
+import { phoneOwnerKindOf, type PhoneOwnerKind, type PhoneType } from '@/lib/contact/phone-type-vocabulary';
 // ============================================================================
 // ENTITY-AWARE TYPE MAPS — Different types per contact entity (individual/company/service)
 // SSoT: CommunicationConfigs.ts defines UI types; these maps resolve AI label→type
 // ============================================================================
 
-export type ContactEntity = 'individual' | 'company' | 'service';
+/** Ο κάτοχος — ΕΝΑΣ ορισμός με το λεξιλόγιο τύπου τηλεφώνου (`lib/contact/phone-type-vocabulary.ts`). */
+export type ContactEntity = PhoneOwnerKind;
 
-// ── PHONE TYPE MAPS ──
-const PHONE_INDIVIDUAL_MAP: Record<string, string> = {
+// ── PHONE TYPE MAPS ── (τιμές δεμένες στη ρίζα `PhoneType`· ότι ανήκουν στο υποσύνολο του κατόχου το φυλάει άγκυρα)
+const PHONE_INDIVIDUAL_MAP: Record<string, PhoneType> = {
   'εργασία': 'work', 'δουλειά': 'work', 'work': 'work', 'γραφείο': 'work',
   'σπίτι': 'home', 'home': 'home',
   'κινητό': 'mobile', 'mobile': 'mobile',
   'σταθερό': 'home', 'landline': 'home',
   'fax': 'fax', 'φαξ': 'fax',
 };
-const PHONE_COMPANY_MAP: Record<string, string> = {
+const PHONE_COMPANY_MAP: Record<string, PhoneType> = {
   'κύριο': 'main', 'main': 'main', 'κεντρικό': 'main', 'εργασία': 'main', 'work': 'main',
   'τμήμα': 'department', 'department': 'department',
   'γραμματεία': 'secretariat', 'secretariat': 'secretariat',
@@ -35,7 +37,7 @@ const PHONE_COMPANY_MAP: Record<string, string> = {
   'υποστήριξη': 'support', 'support': 'support',
   'fax': 'fax', 'φαξ': 'fax',
 };
-const PHONE_SERVICE_MAP: Record<string, string> = {
+const PHONE_SERVICE_MAP: Record<string, PhoneType> = {
   'κύριο': 'main', 'main': 'main', 'κεντρικό': 'main', 'εργασία': 'main', 'work': 'main',
   'τμήμα': 'department', 'department': 'department',
   'γραμματεία': 'secretariat', 'secretariat': 'secretariat',
@@ -90,26 +92,21 @@ export const SOCIAL_PLATFORM_MAP: Record<string, SocialMediaInfo['platform']> = 
   'telegram': 'other',
 };
 // ── ENTITY-AWARE DEFAULTS ──
-const PHONE_DEFAULTS: Record<ContactEntity, string> = {
-  individual: 'mobile', company: 'main', service: 'main',
-};
 const EMAIL_DEFAULTS: Record<ContactEntity, string> = {
   individual: 'personal', company: 'general', service: 'general',
 };
 const WEBSITE_DEFAULTS: Record<ContactEntity, string> = {
   individual: 'personal', company: 'corporate', service: 'official',
 };
+/** Οι χάρτες ετικέτας→τύπου ανά κάτοχο — εκτίθενται για την άγκυρα «κάθε τιμή ∈ υποσύνολο του κατόχου». */
+export const PHONE_LABEL_MAPS: Readonly<Record<ContactEntity, Readonly<Record<string, PhoneType>>>> = {
+  individual: PHONE_INDIVIDUAL_MAP, company: PHONE_COMPANY_MAP, service: PHONE_SERVICE_MAP,
+};
 // ── RESOLVER FUNCTIONS ──
-export function resolvePhoneType(label: string, entity: ContactEntity, phoneNumber: string): string {
-  const map = entity === 'company' ? PHONE_COMPANY_MAP
-    : entity === 'service' ? PHONE_SERVICE_MAP
-    : PHONE_INDIVIDUAL_MAP;
-  if (map[label]) return map[label];
-  // Individual: ο τύπος από τα metadata του αριθμού (SSoT) — όχι πρόθεμα `2…`, που έχανε `+30 2…` και κάθε ξένο.
-  if (entity === 'individual') {
-    return inferPhoneType(phoneNumber, 'individual', 'mobile');
-  }
-  return PHONE_DEFAULTS[entity];
+export function resolvePhoneType(label: string, entity: ContactEntity, phoneNumber: string): PhoneType {
+  // Χωρίς γνωστή ετικέτα ⇒ το SSoT συναγωγής (πρόσωπο: από τον αριθμό· εταιρεία/υπηρεσία: η προεπιλογή του κατόχου).
+  const map = PHONE_LABEL_MAPS[entity];
+  return Object.hasOwn(map, label) ? map[label] : inferPhoneType(phoneNumber, entity);
 }
 export function resolveEmailType(label: string, entity: ContactEntity): string {
   const map = entity === 'company' ? EMAIL_COMPANY_MAP

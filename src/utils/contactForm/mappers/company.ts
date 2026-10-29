@@ -65,7 +65,7 @@ export function mapCompanyFormData(formData: ContactFormData): MappedCompanyCont
   const logoURL = extractLogoURL(formData, 'company');
   const photoURL = extractPhotoURL(formData, 'company representative'); // 🔧 FIX: Εξαγωγή φωτογραφίας εκπροσώπου
   const multiplePhotoURLs = extractMultiplePhotoURLs(formData); // 📸 Multiple photos για companies
-  const { enterpriseData, emails, phones } = buildEnterpriseContactArrays(formData, 'work');
+  const { enterpriseData, emails, phones } = buildEnterpriseContactArrays(formData, 'company');
 
   // 🔍 DEBUG: Final mapped object
   const result: MappedCompanyContactData = {

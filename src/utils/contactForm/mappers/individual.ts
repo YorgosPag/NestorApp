@@ -106,7 +106,7 @@ export function mapActivePersonas(formData: ContactFormData): PersonaData[] {
 export function mapIndividualFormData(formData: ContactFormData): MappedIndividualContactData {
   const multiplePhotoURLs = extractMultiplePhotoURLs(formData);
   const photoURL = extractPhotoURL(formData, 'individual');
-  const { enterpriseData, emails, phones } = buildEnterpriseContactArrays(formData, 'mobile');
+  const { enterpriseData, emails, phones } = buildEnterpriseContactArrays(formData, 'individual');
 
   logger.info('MAP INDIVIDUAL: extractPhotoURL returned', {
     photoURLValue: photoURL,

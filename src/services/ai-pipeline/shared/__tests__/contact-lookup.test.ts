@@ -428,16 +428,22 @@ describe('contact-lookup', () => {
       expect(updated!.phones).toBeDefined();
     });
 
-    it('ADR-327 §8.5.4 — σταθερό εταιρείας ⇒ «εργασία», κινητό ⇒ «κινητό» (ποτέ καρφωτό `mobile`)', async () => {
-      const kit = setupFirestore({ cont_co: { type: 'company', companyName: 'MACON ATEE', companyId: COMPANY_ID } });
+    it('ADR-327 §8.5.4 — ο τύπος ανήκει στο υποσύνολο του κατόχου: εταιρεία ⇒ «κεντρικό»· πρόσωπο ⇒ σταθερό «σπίτι», κινητό «κινητό»', async () => {
+      const kit = setupFirestore({
+        cont_co: { type: 'company', companyName: 'MACON ATEE', companyId: COMPANY_ID },
+        cont_pe: { type: 'individual', firstName: 'Νίκη', companyId: COMPANY_ID },
+      });
+      const typeOf = (id: string) => (kit.getData('contacts', id)!.phones as { _arrayUnion: Array<{ type: string }> })._arrayUnion[0].type;
 
+      // Ο ζωντανός έλεγχος 29/10: `work` (και `mobile`) σε εταιρεία ⇒ η λίστα «Τύπος» της φόρμας εταιρείας ΚΕΝΗ.
       await updateContactField('cont_co', 'phone', '+30 2310 428900', 'Admin');
-      const landline = kit.getData('contacts', 'cont_co')!.phones as { _arrayUnion: Array<{ type: string }> };
+      expect(typeOf('cont_co')).toBe('main');
       await updateContactField('cont_co', 'phone', '6971234567', 'Admin');
-      const mobile = kit.getData('contacts', 'cont_co')!.phones as { _arrayUnion: Array<{ type: string }> };
-
-      expect(landline._arrayUnion[0].type).toBe('work');
-      expect(mobile._arrayUnion[0].type).toBe('mobile');
+      expect(typeOf('cont_co')).toBe('main');
+      await updateContactField('cont_pe', 'phone', '+30 2310 428900', 'Admin');
+      expect(typeOf('cont_pe')).toBe('home');
+      await updateContactField('cont_pe', 'phone', '6971234567', 'Admin');
+      expect(typeOf('cont_pe')).toBe('mobile');
     });
 
     it('should update email field using arrayUnion pattern', async () => {
@@ -683,7 +689,7 @@ describe('contact-lookup', () => {
       expect(result.displayName).toBe('Test ΑΕ');
     });
 
-    it('ADR-327 §8.5.4 — η επαφή από σάρωση με ΣΤΑΘΕΡΟ γεννιέται με «εργασία», όχι «κινητό»', async () => {
+    it('ADR-327 §8.5.4 — η εταιρεία από σάρωση (MACON ATEE) γεννιέται με «κεντρικό» — τύπο που η φόρμα της προσφέρει', async () => {
       const kit = setupFirestore({});
 
       await createContactServerSide({
@@ -692,7 +698,7 @@ describe('contact-lookup', () => {
       });
 
       const [doc] = Object.values(kit.getAllDocs('contacts')) as Array<{ phones: Array<{ type: string }> }>;
-      expect(doc.phones[0].type).toBe('work');
+      expect(doc.phones[0].type).toBe('main');
     });
   });
 });

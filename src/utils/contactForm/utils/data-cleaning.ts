@@ -16,6 +16,7 @@ import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import i18n from '@/i18n/config';
 
 import { createModuleLogger } from '@/lib/telemetry';
+import { DEFAULT_PHONE_TYPE, phoneOwnerKindOf } from '@/lib/contact/phone-type-vocabulary';
 const logger = createModuleLogger('DataCleaning');
 
 // 🏢 ENTERPRISE: Helper function to get translated validation message
@@ -234,7 +235,8 @@ export function sanitizeContactData(contactData: ContactDataRecord): ContactData
       if (sanitized.phone && typeof sanitized.phone === 'string' && sanitized.phone.trim()) {
         sanitized.phones = [{
           number: sanitized.phone.trim(),
-          type: 'mobile' as const,
+          // ADR-327 §8.5.4 — η προεπιλογή του ΚΑΤΟΧΟΥ (εταιρεία ⇒ `main`), όχι `mobile` για όλους.
+          type: DEFAULT_PHONE_TYPE[phoneOwnerKindOf(sanitized.type)],
           isPrimary: true
         }];
         fieldsWithDefaults++;
@@ -291,6 +293,20 @@ export function sanitizeContactData(contactData: ContactDataRecord): ContactData
 }
 
 /**
+ * **Τι σημαίνει «ο χρήστης το άδειασε»** — ΕΝΑΣ ορισμός (ADR-323 · ADR-327 §8.5.4).
+ *
+ * `null`, κείμενο μόνο με κενά, κενός πίνακας. Το ρωτούν **δύο** σημεία που πρέπει να
+ * συμφωνούν: ο καθαριστής της ενημέρωσης (⇒ `deleteField()`) και η διαφορά της συνεδρίας
+ * επεξεργασίας από τη βάση (`edit-session-diff.ts`: «κενό» δίπλα σε «απόν» ΔΕΝ είναι αλλαγή).
+ * Αν διαφωνούσαν, ένα πεδίο θα μπορούσε να μετρά ως αλλαγή χωρίς να γράφει τίποτα — ή αντίστροφα.
+ */
+export function isClearedFormValue(value: unknown): boolean {
+  if (value === null) return true;
+  if (typeof value === 'string') return value.trim() === '';
+  return Array.isArray(value) && value.length === 0;
+}
+
+/**
  * Sanitize a partial contact update payload (ADR-323).
  *
  * Unlike `sanitizeContactData` (used on CREATE — drops empty fields so the new
@@ -330,20 +346,8 @@ export function sanitizeContactForUpdate(
     // undefined → skip (Firestore rejects undefined, and no-op keeps existing value)
     if (value === undefined) return;
 
-    // Explicit null → treat as explicit clear
-    if (value === null) {
-      fieldsToDelete.push(key);
-      return;
-    }
-
-    // Empty string → explicit clear
-    if (typeof value === 'string' && value.trim() === '') {
-      fieldsToDelete.push(key);
-      return;
-    }
-
-    // Empty array → explicit clear
-    if (Array.isArray(value) && value.length === 0) {
+    // null / κενό κείμενο / κενός πίνακας → ρητό σβήσιμο (ΕΝΑΣ ορισμός: `isClearedFormValue`)
+    if (isClearedFormValue(value)) {
       fieldsToDelete.push(key);
       return;
     }
