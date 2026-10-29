@@ -59,7 +59,7 @@ function ScheduleStep({ driver, flow }: { readonly driver: Driver; readonly flow
       <CatalogField label={t('pricing.versions.validFrom')} hint={t('pricing.publish.validFromHint')}>
         {({ id }) => <DatePickerField id={id} value={value} placeholder={t('pricing.versions.validFromNone')} onSelect={(date) => driver.setValidFrom(date ? date.toISOString() : null)} />}
       </CatalogField>
-      {flow.issue ? <p className="m-0 text-sm text-destructive" role="alert">{message({ code: flow.issue, path: 'validFrom' })}</p> : null}
+      {driver.issue ? <p className="m-0 text-sm text-destructive" role="alert">{message({ code: driver.issue, path: 'validFrom' })}</p> : null}
     </section>
   );
 }

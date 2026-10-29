@@ -12,7 +12,7 @@
  *    (γεγονός εκτός σειράς).
  */
 
-import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 
 import { useMountedRef } from '@/hooks/useMountedRef';
 import { catalogFailureOf } from '@/services/catalog/catalog-failure';
@@ -64,10 +64,16 @@ export function usePublishFlow({ version, versions, onChanged }: PublishFlowInpu
   useFlowDriver(flow, dispatch, version.id, validFrom, onChanged);
 
   /** Η ημερομηνία κρίνεται **στον πελάτη** με την ΙΔΙΑ κρίση με τον γραφέα — γνωστή άρνηση δεν στέλνεται. */
+  const judged = useMemo(
+    () => judgeVersionPublication({ id: version.id, number: version.number, status: version.status, validFrom }, versions),
+    [version, versions, validFrom],
+  );
   const schedule = useCallback(() => {
-    const issue = judgeVersionPublication({ id: version.id, number: version.number, status: version.status, validFrom }, versions);
-    dispatch({ type: 'schedule', issue, needsSave: validFrom !== version.validFrom });
-  }, [version, versions, validFrom]);
+    dispatch({ type: 'schedule', issue: judged, needsSave: validFrom !== version.validFrom });
+  }, [judged, validFrom, version.validFrom]);
+  // Το εύρημα φαίνεται μόνο αφού ο άνθρωπος ΠΡΟΣΠΑΘΗΣΕ (`flow.issue`), αλλά λέει την κρίση της **τρέχουσας** ημερομηνίας —
+  // όχι το στιγμιότυπο του κλικ: αλλιώς μετά την επιλογή ημέρας έμενε «Ορίστε από πότε ισχύει» (Σ3, ζωντανά).
+  const issue = flow.step === 'schedule' && flow.issue !== null ? judged : null;
 
   /** Νέα αρχή πάνω στη **ζωντανή** έκδοση (η όψη έχει ήδη ανανεωθεί από το σήμα). */
   const restart = useCallback((notice: 'changedMeanwhile' | null) => {
@@ -75,5 +81,5 @@ export function usePublishFlow({ version, versions, onChanged }: PublishFlowInpu
     dispatch({ type: 'restart', revision: version.revision, notice });
   }, [version]);
 
-  return { flow, dispatch, validFrom, setValidFrom, schedule, restart };
+  return { flow, dispatch, validFrom, setValidFrom, issue, schedule, restart };
 }
