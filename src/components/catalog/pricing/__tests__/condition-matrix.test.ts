@@ -106,13 +106,28 @@ describe('condition-matrix — SAP condition table: ομάδα έκπτωσης 
 
 describe('ruleHeadline — τι γράφει το κελί', () => {
   it('«50 + 10» ⇒ −55%: τα βήματα ΠΟΛΛΑΠΛΑΣΙΑΖΟΝΤΑΙ, δεν προστίθενται', () => {
-    expect(ruleHeadline(chain(5000, 1000))).toEqual({ kind: 'chain', steps: [5000, 1000], effective: 55 });
+    expect(ruleHeadline(chain(5000, 1000))).toEqual({ kind: 'chain', steps: [5000, 1000], figure: { kind: 'single', percent: 55 } });
   });
 
   it('κλίμακες ⇒ πλήθος + εύρος · άκυρο βήμα ⇒ unreadable, ποτέ NaN%', () => {
     const tiers = { kind: 'tiers', basis: 'quantity', tiers: [{ min: 0, steps: [500] }, { min: 10, steps: [1000, 500] }] } as const;
-    expect(ruleHeadline(tiers)).toEqual({ kind: 'tiers', count: 2, lowest: 5, highest: 14.5 });
+    expect(ruleHeadline(tiers)).toEqual({ kind: 'tiers', count: 2, figure: { kind: 'range', lowest: 5, highest: 14.5 } });
     expect(ruleHeadline(chain(Number.NaN))).toEqual({ kind: 'unreadable' });
     expect(ruleHeadline({ kind: 'tiers', basis: 'amount', tiers: [] })).toEqual({ kind: 'unreadable' });
+  });
+
+  // 🔴 Ζωντανό εύρημα (ADR-923 «3δ» ζωντανή επαλήθευση): νέα συνθήκη έγραφε «−0%» στο κελί και κλίμακα «−0% … −0%» —
+  //    το κελί είχε ΔΙΚΟ του κλάδο απόδοσης, χωρίς το «χωρίς έκπτωση» του κανόνα σε λέξεις.
+  it('μηδέν ⇒ «χωρίς έκπτωση», ποτέ «−0%» — σε αλυσίδα ΚΑΙ σε κλίμακες', () => {
+    expect(ruleHeadline(chain())).toEqual({ kind: 'chain', steps: [], figure: { kind: 'none' } });
+    expect(ruleHeadline({ kind: 'tiers', basis: 'quantity', tiers: [{ min: 0, steps: [] }] }))
+      .toEqual({ kind: 'tiers', count: 1, figure: { kind: 'none' } });
+  });
+
+  it('ίδια άκρα ⇒ ΕΝΑ ποσοστό · κάτω άκρο 0 ⇒ εύρος από το 0 (οι λέξεις: «έως −10%»)', () => {
+    const same = { kind: 'tiers', basis: 'quantity', tiers: [{ min: 0, steps: [1000] }, { min: 10, steps: [1000] }] } as const;
+    expect(ruleHeadline(same)).toEqual({ kind: 'tiers', count: 2, figure: { kind: 'single', percent: 10 } });
+    const fromZero = { kind: 'tiers', basis: 'quantity', tiers: [{ min: 0, steps: [] }, { min: 10, steps: [1000] }] } as const;
+    expect(ruleHeadline(fromZero)).toEqual({ kind: 'tiers', count: 2, figure: { kind: 'range', lowest: 0, highest: 10 } });
   });
 });

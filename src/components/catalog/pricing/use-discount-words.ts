@@ -19,7 +19,7 @@ import type { DiscountConditionDefinition, PriceAudience } from '@/subapps/catal
 import { pricingPartyKey } from '@/subapps/catalog/pricing/price-audience';
 import type { CustomerGroupWire } from '@/subapps/catalog/types/pricing-views';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
-import { ruleHeadline } from './condition-matrix';
+import { ruleHeadline, type DiscountFigure } from './condition-matrix';
 import { chainTextOf } from './discount-chain-input';
 import { pickerOfLastDay, pickerOfValidFrom } from './discount-condition-draft';
 import { AUDIENCE_KIND_KEYS } from './pricing-labels';
@@ -38,20 +38,31 @@ export interface DiscountWords {
   readonly audience: (audience: PriceAudience) => string;
 }
 
+/**
+ * **Οι λέξεις του σχήματος ποσοστού** ({@link DiscountFigure}) — η ΜΙΑ απόδοση για κελί πίνακα και κανόνα με λέξεις· το
+ * πρόσημο ζει εδώ και στα locale, ποτέ σε μηδέν («−0%»).
+ */
+export function useDiscountFigure(): (figure: DiscountFigure) => string {
+  const { t } = useCatalogText();
+  return useCallback((figure: DiscountFigure): string => {
+    if (figure.kind === 'none') return t('pricing.discounts.rule.none');
+    if (figure.kind === 'single') return t('pricing.discounts.figure.single', { percent: formatDiscountPercent(figure.percent) });
+    if (figure.lowest <= 0) return t('pricing.discounts.figure.upTo', { highest: formatDiscountPercent(figure.highest) });
+    return t('pricing.discounts.figure.range', { lowest: formatDiscountPercent(figure.lowest), highest: formatDiscountPercent(figure.highest) });
+  }, [t]);
+}
+
 export function useDiscountWords(customerGroups: readonly CustomerGroupWire[], partyNames: Readonly<Record<string, string>>): DiscountWords {
   const { t, text } = useCatalogText();
+  const figureText = useDiscountFigure();
   const rule = useCallback((value: DiscountRule): string => {
     const headline = ruleHeadline(value);
     if (headline.kind === 'unreadable') return t('pricing.discounts.rule.unreadable');
-    if (headline.kind === 'tiers') {
-      return t('pricing.discounts.rule.tiersHeadline', {
-        count: headline.count, lowest: formatDiscountPercent(headline.lowest), highest: formatDiscountPercent(headline.highest),
-      });
-    }
-    if (headline.steps.length === 0) return t('pricing.discounts.rule.none');
-    if (headline.steps.length === 1) return t('pricing.discounts.rule.single', { effective: formatDiscountPercent(headline.effective) });
-    return t('pricing.discounts.rule.chainHeadline', { chain: chainTextOf(headline.steps, formatDiscountPercent), effective: formatDiscountPercent(headline.effective) });
-  }, [t]);
+    const figure = figureText(headline.figure);
+    if (headline.kind === 'tiers') return t('pricing.discounts.rule.tiersHeadline', { count: headline.count, figure });
+    if (headline.steps.length < 2 || headline.figure.kind === 'none') return figure;
+    return t('pricing.discounts.rule.chainHeadline', { chain: chainTextOf(headline.steps, formatDiscountPercent), figure });
+  }, [t, figureText]);
   const period = useCallback(({ validFrom, validUntil }: Pick<DiscountConditionDefinition, 'validFrom' | 'validUntil'>): string => {
     const from = pickerOfValidFrom(validFrom);
     const last = pickerOfLastDay(validUntil);

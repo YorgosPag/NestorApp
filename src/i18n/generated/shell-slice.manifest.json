@@ -42,7 +42,7 @@
     "src/i18n/generated/routes/o__workspace__catalog__assets.el.json": "9b6e403f48859386fa678432fd5065a95fd648c0c5c387d76f32a6dcd6b05716",
     "src/i18n/generated/routes/o__workspace__catalog__attributes.el.json": "42635d6cab36e4c618a079b72cb92eb54a37f267667fcf7b0837ca215321da9a",
     "src/i18n/generated/routes/o__workspace__catalog__categories.el.json": "1e05575e73a68fb541de60ad04ff97a4ab7698e50b2ea6c9cdd1f3ab5c22b57e",
-    "src/i18n/generated/routes/o__workspace__catalog__discounts.el.json": "6a3a2df0552768928ced17532a61968a20a5e8621656dcacf1100eb13e3b36c0",
+    "src/i18n/generated/routes/o__workspace__catalog__discounts.el.json": "f06df3fa421af924d4759974b168825e127c54b9755ce6c8dc486f6682a36131",
     "src/i18n/generated/routes/o__workspace__catalog__families.el.json": "103d04300748b6b1159dc7054cf44776d3358b87850b9e28f7a0468bf387238d",
     "src/i18n/generated/routes/o__workspace__catalog__measurements.el.json": "fd84b11f6c5a76c6adb4461f7935a8dc0e9e3b3ce1fd5ec7e0674af2a71cb87d",
     "src/i18n/generated/routes/o__workspace__catalog__price-lists.el.json": "8428a0e8d50a0068dd787e47f839211fa997cf0919e1ad910471b339ad4a79d5",
@@ -170,7 +170,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "2a81cf216858dc87017142de62f847fafa765ea5aa892ba0aa91f0ea2bfcb439",
+  "inputsSha256": "223739cff0908847b45eab06f7e707205a10d4586cf21e2acedaa66b5554d7f1",
   "languages": [
     "el"
   ],
@@ -7908,6 +7908,9 @@
             "pricing.discounts.example.fromQuantity",
             "pricing.discounts.example.net",
             "pricing.discounts.example.title",
+            "pricing.discounts.figure.range",
+            "pricing.discounts.figure.single",
+            "pricing.discounts.figure.upTo",
             "pricing.discounts.groups.customerGroups",
             "pricing.discounts.groups.customerHint",
             "pricing.discounts.groups.discountGroups",
@@ -7920,13 +7923,11 @@
             "pricing.discounts.matrix.allGroups",
             "pricing.discounts.matrix.ambiguous",
             "pricing.discounts.matrix.caption",
-            "pricing.discounts.matrix.effective",
             "pricing.discounts.matrix.emptyCell",
             "pricing.discounts.matrix.groupHeader",
             "pricing.discounts.matrix.lead",
             "pricing.discounts.matrix.notNow",
             "pricing.discounts.matrix.partners",
-            "pricing.discounts.matrix.range",
             "pricing.discounts.matrix.tiers",
             "pricing.discounts.matrix.unplaced",
             "pricing.discounts.matrix.upcoming",
@@ -7961,7 +7962,6 @@
             "pricing.discounts.rule.label",
             "pricing.discounts.rule.none",
             "pricing.discounts.rule.removeTier",
-            "pricing.discounts.rule.single",
             "pricing.discounts.rule.step",
             "pricing.discounts.rule.tierFromAmount",
             "pricing.discounts.rule.tierFromQuantity",
@@ -23823,7 +23823,7 @@
   ],
   "stats": {
     "matchedKeys": 271,
-    "sliceBytes": 1170067
+    "sliceBytes": 1170066
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

@@ -21,7 +21,7 @@ import { useCatalogText } from '../shared/catalog-ui-hooks';
 import { cellKeyOf, ruleHeadline, type ConditionMatrix as Matrix, type MatrixCell, type MatrixColumn, type MatrixRow } from './condition-matrix';
 import { chainTextOf } from './discount-chain-input';
 import { AUDIENCE_KIND_ICONS, AUDIENCE_KIND_KEYS } from './pricing-labels';
-import { formatDiscountPercent } from './use-discount-words';
+import { formatDiscountPercent, useDiscountFigure } from './use-discount-words';
 
 interface ConditionMatrixProps {
   readonly matrix: Matrix;
@@ -48,6 +48,7 @@ function useArrowNavigation() {
 
 function CellFigure({ cell }: { readonly cell: MatrixCell }) {
   const { t } = useCatalogText();
+  const figureText = useDiscountFigure();
   if (cell.current.length > 1) {
     return <span className="text-sm font-semibold">{t('pricing.discounts.matrix.partners', { count: cell.current.length })}</span>;
   }
@@ -55,18 +56,14 @@ function CellFigure({ cell }: { readonly cell: MatrixCell }) {
   if (!current) return <span className="text-sm text-muted-foreground">{t('pricing.discounts.matrix.notNow')}</span>;
   const headline = ruleHeadline(current.definition.rule);
   if (headline.kind === 'unreadable') return <span className="text-sm text-muted-foreground">{t('pricing.discounts.rule.unreadable')}</span>;
-  if (headline.kind === 'tiers') {
-    return (
-      <span className="flex flex-col">
-        <span className="text-base font-semibold tabular-nums">{t('pricing.discounts.matrix.range', { lowest: formatDiscountPercent(headline.lowest), highest: formatDiscountPercent(headline.highest) })}</span>
-        <span className="text-xs text-muted-foreground">{t('pricing.discounts.matrix.tiers', { count: headline.count })}</span>
-      </span>
-    );
-  }
+  // Μεγάλο το σχήμα του ποσοστού (η ΙΔΙΑ απόδοση με τον κανόνα σε λέξεις), μικρά οι κλίμακες ή τα βήματα.
+  const detail = headline.kind === 'tiers'
+    ? t('pricing.discounts.matrix.tiers', { count: headline.count })
+    : headline.steps.length > 1 ? chainTextOf(headline.steps, formatDiscountPercent) : null;
   return (
     <span className="flex flex-col">
-      <span className="text-base font-semibold tabular-nums">{t('pricing.discounts.matrix.effective', { effective: formatDiscountPercent(headline.effective) })}</span>
-      {headline.steps.length > 1 ? <span className="text-xs tabular-nums text-muted-foreground">{chainTextOf(headline.steps, formatDiscountPercent)}</span> : null}
+      <span className="text-base font-semibold tabular-nums">{figureText(headline.figure)}</span>
+      {detail ? <span className="text-xs tabular-nums text-muted-foreground">{detail}</span> : null}
     </span>
   );
 }

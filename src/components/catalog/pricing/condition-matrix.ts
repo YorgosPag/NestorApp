@@ -176,9 +176,25 @@ export function buildConditionMatrix(input: ConditionMatrixInput): ConditionMatr
 
 // ── Η ένδειξη ενός κανόνα ────────────────────────────────────────────────────
 
+/**
+ * **Το σχήμα του ποσοστού** — η ΜΙΑ απόφαση «πώς λέγεται» μια έκπτωση, για κελί, περιόδους και σύνδεσμο ασάφειας.
+ * Μηδέν ⇒ `none` («Χωρίς έκπτωση», ποτέ «−0%») · ίδια άκρα ⇒ `single` (ποτέ «−5% … −5%») · κάτω άκρο 0 ⇒ `range`
+ * με `lowest: 0`, που οι λέξεις λένε «έως −15%» (ποτέ «−0% … −15%»).
+ */
+export type DiscountFigure =
+  | { readonly kind: 'none' }
+  | { readonly kind: 'single'; readonly percent: number }
+  | { readonly kind: 'range'; readonly lowest: number; readonly highest: number };
+
+export function discountFigureOf(lowest: number, highest: number): DiscountFigure {
+  if (highest <= 0) return { kind: 'none' };
+  if (lowest === highest) return { kind: 'single', percent: highest };
+  return { kind: 'range', lowest, highest };
+}
+
 export type RuleHeadline =
-  | { readonly kind: 'chain'; readonly steps: readonly BasisPoints[]; readonly effective: number }
-  | { readonly kind: 'tiers'; readonly count: number; readonly lowest: number; readonly highest: number }
+  | { readonly kind: 'chain'; readonly steps: readonly BasisPoints[]; readonly figure: DiscountFigure }
+  | { readonly kind: 'tiers'; readonly count: number; readonly figure: DiscountFigure }
   | { readonly kind: 'unreadable' };
 
 /**
@@ -187,9 +203,11 @@ export type RuleHeadline =
  */
 export function ruleHeadline(rule: DiscountRule): RuleHeadline {
   if (rule.kind === 'chain') {
-    return isDiscountSteps(rule.steps) ? { kind: 'chain', steps: rule.steps, effective: effectivePercent(rule.steps) } : { kind: 'unreadable' };
+    if (!isDiscountSteps(rule.steps)) return { kind: 'unreadable' };
+    const effective = effectivePercent(rule.steps);
+    return { kind: 'chain', steps: rule.steps, figure: discountFigureOf(effective, effective) };
   }
   if (rule.tiers.length === 0 || !rule.tiers.every((tier) => isDiscountSteps(tier.steps))) return { kind: 'unreadable' };
   const percents = rule.tiers.map((tier) => effectivePercent(tier.steps));
-  return { kind: 'tiers', count: rule.tiers.length, lowest: Math.min(...percents), highest: Math.max(...percents) };
+  return { kind: 'tiers', count: rule.tiers.length, figure: discountFigureOf(Math.min(...percents), Math.max(...percents)) };
 }

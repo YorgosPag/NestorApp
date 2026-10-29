@@ -1074,8 +1074,6 @@
         "lead": "Πατήστε ένα κελί για να δείτε ή να ορίσετε την έκπτωσή του.",
         "groupHeader": "Ομάδα έκπτωσης",
         "allGroups": "Όλες οι ομάδες",
-        "effective": "−{effective}%",
-        "range": "−{lowest}% … −{highest}%",
         "tiers": "{count, plural, one {# κλίμακα} other {# κλίμακες}}",
         "partners": "{count, plural, one {# συνεργάτης} other {# συνεργάτες}}",
         "notNow": "Όχι τώρα",
@@ -1095,6 +1093,11 @@
         "until": "Έως {last}",
         "always": "Χωρίς χρονικό όριο"
       },
+      "figure": {
+        "single": "−{percent}%",
+        "range": "−{lowest}% … −{highest}%",
+        "upTo": "έως −{highest}%"
+      },
       "rule": {
         "label": "Κανόνας έκπτωσης",
         "kind": {
@@ -1107,9 +1110,8 @@
         "step": "−{percent}%",
         "total": "⇒ συνολικά −{effective}%",
         "none": "Χωρίς έκπτωση",
-        "single": "−{effective}%",
-        "chainHeadline": "{chain} ⇒ −{effective}%",
-        "tiersHeadline": "{count, plural, one {# κλίμακα} other {# κλίμακες}}, −{lowest}% … −{highest}%",
+        "chainHeadline": "{chain} ⇒ {figure}",
+        "tiersHeadline": "{count, plural, one {# κλίμακα} other {# κλίμακες}}, {figure}",
         "unreadable": "Μη έγκυρος κανόνας",
         "basisLabel": "Οι κλίμακες μετρούν",
         "basisHint": "Ισχύει η υψηλότερη κλίμακα που φτάνει η γραμμή της παραγγελίας.",

@@ -214,6 +214,11 @@
           "net": "⇒ καθαρή {net} (έκπτωση {discount})",
           "title": "Παράδειγμα"
         },
+        "figure": {
+          "range": "−{lowest}% … −{highest}%",
+          "single": "−{percent}%",
+          "upTo": "έως −{highest}%"
+        },
         "groups": {
           "customerGroups": "Ομάδες πελατών",
           "customerHint": "Ομάδα πελατών με κοινούς όρους (π.χ. «Χονδρέμπορος»). Κάθε επαφή ανήκει σε μία ομάδα το πολύ.",
@@ -229,13 +234,11 @@
           "allGroups": "Όλες οι ομάδες",
           "ambiguous": "Ασάφεια",
           "caption": "Πίνακας συνθηκών έκπτωσης: ομάδα έκπτωσης ανά κοινό",
-          "effective": "−{effective}%",
           "emptyCell": "{cell}: καμία συνθήκη — ορισμός νέας",
           "groupHeader": "Ομάδα έκπτωσης",
           "lead": "Πατήστε ένα κελί για να δείτε ή να ορίσετε την έκπτωσή του.",
           "notNow": "Όχι τώρα",
           "partners": "{count, plural, one {# συνεργάτης} other {# συνεργάτες}}",
-          "range": "−{lowest}% … −{highest}%",
           "tiers": "{count, plural, one {# κλίμακα} other {# κλίμακες}}",
           "unplaced": "{count, plural, one {# συνθήκη δείχνει} other {# συνθήκες δείχνουν}} σε ομάδα που δεν υπάρχει πια.",
           "upcoming": "{count, plural, one {# μελλοντική} other {# μελλοντικές}}"
@@ -271,7 +274,7 @@
           },
           "basisHint": "Ισχύει η υψηλότερη κλίμακα που φτάνει η γραμμή της παραγγελίας.",
           "basisLabel": "Οι κλίμακες μετρούν",
-          "chainHeadline": "{chain} ⇒ −{effective}%",
+          "chainHeadline": "{chain} ⇒ {figure}",
           "chainHint": "Π.χ. «50 + 10»: πρώτα −50%, μετά −10% στο υπόλοιπο (συνολικά −55%, όχι −60%). Έως 5 βήματα, έως δύο δεκαδικά. Κενό = χωρίς έκπτωση.",
           "chainLabel": "Εκπτώσεις (%)",
           "chainPlaceholder": "50 + 10",
@@ -282,11 +285,10 @@
           "label": "Κανόνας έκπτωσης",
           "none": "Χωρίς έκπτωση",
           "removeTier": "Αφαίρεση κλίμακας {number}",
-          "single": "−{effective}%",
           "step": "−{percent}%",
           "tierFromAmount": "Από ποσό (€)",
           "tierFromQuantity": "Από ποσότητα",
-          "tiersHeadline": "{count, plural, one {# κλίμακα} other {# κλίμακες}}, −{lowest}% … −{highest}%",
+          "tiersHeadline": "{count, plural, one {# κλίμακα} other {# κλίμακες}}, {figure}",
           "total": "⇒ συνολικά −{effective}%",
           "unreadable": "Μη έγκυρος κανόνας"
         },

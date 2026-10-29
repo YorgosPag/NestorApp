@@ -1074,8 +1074,6 @@
         "lead": "Click a cell to view or set its discount.",
         "groupHeader": "Discount group",
         "allGroups": "All groups",
-        "effective": "−{effective}%",
-        "range": "−{lowest}% … −{highest}%",
         "tiers": "{count, plural, one {# tier} other {# tiers}}",
         "partners": "{count, plural, one {# partner} other {# partners}}",
         "notNow": "Not now",
@@ -1095,6 +1093,11 @@
         "until": "Until {last}",
         "always": "No time limit"
       },
+      "figure": {
+        "single": "−{percent}%",
+        "range": "−{lowest}% … −{highest}%",
+        "upTo": "up to −{highest}%"
+      },
       "rule": {
         "label": "Discount rule",
         "kind": {
@@ -1107,9 +1110,8 @@
         "step": "−{percent}%",
         "total": "⇒ −{effective}% in total",
         "none": "No discount",
-        "single": "−{effective}%",
-        "chainHeadline": "{chain} ⇒ −{effective}%",
-        "tiersHeadline": "{count, plural, one {# tier} other {# tiers}}, −{lowest}% … −{highest}%",
+        "chainHeadline": "{chain} ⇒ {figure}",
+        "tiersHeadline": "{count, plural, one {# tier} other {# tiers}}, {figure}",
         "unreadable": "Invalid rule",
         "basisLabel": "Tiers measure",
         "basisHint": "The highest tier the order line reaches applies.",
