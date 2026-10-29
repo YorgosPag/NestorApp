@@ -106,7 +106,12 @@ describe('parseDateOrDefault', () => {
     expect(parseDateOrDefault('not-a-date', '2026-01-01')).toBe('2026-01-01');
   });
 
-  it('accepts calendar-invalid date (no strict calendar check)', () => {
-    expect(parseDateOrDefault('2026-02-30', '2026-01-01')).toBe('2026-02-30');
+  it('returns fallback for a day that does not exist (ADR-919)', () => {
+    expect(parseDateOrDefault('2026-02-30', '2026-01-01')).toBe('2026-01-01');
+    expect(parseDateOrDefault('2026-13-01', '2026-01-01')).toBe('2026-01-01');
+  });
+
+  it('accepts a leap day', () => {
+    expect(parseDateOrDefault('2028-02-29', '2026-01-01')).toBe('2028-02-29');
   });
 });

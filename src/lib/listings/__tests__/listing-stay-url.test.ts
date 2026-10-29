@@ -91,6 +91,8 @@ describe('Μ — `writeListingStayWindow`: τα δύο άκρα ΜΑΖΙ ή ΚΑ
     ['ανάποδο', { checkIn: '2026-10-08', checkOut: '2026-10-05' }],
     ['με ώρα', { checkIn: '2026-10-05T10:00:00Z', checkOut: '2026-10-08' }],
     ['ανύπαρκτη μέρα', { checkIn: '2026-02-31', checkOut: '2026-03-02' }],
+    // ADR-919: η V8 κυλά την 30/02 στις 02/03 ⇒ «σωστό» διάστημα ως τις 05/03· μόνο ο κριτής ύπαρξης το κόβει.
+    ['ανύπαρκτη μέρα που ο Date κυλά σε σωστό διάστημα', { checkIn: '2027-02-30', checkOut: '2027-03-05' }],
   ])('🔴 %s ⇒ ΣΒΗΝΕΤΑΙ, ποτέ δεν γράφεται μισό', (_label, window) => {
     const after = written(writeListingStayWindow, window, 'in=2026-01-01&out=2026-01-03');
     expect(after.has('in')).toBe(false);
@@ -104,6 +106,12 @@ describe('Μ — `writeListingStayWindow`: τα δύο άκρα ΜΑΖΙ ή ΚΑ
 
   it('🔴 μισό ζεύγος στη διεύθυνση ⇒ καμία ερώτηση', () => {
     expect(readListingStayWindow(new URLSearchParams('in=2026-10-05'))).toBeNull();
+  });
+
+  it('🔴 ανύπαρκτη μέρα στη διεύθυνση ⇒ καμία ερώτηση (ADR-919)', () => {
+    expect(readListingStayWindow(new URLSearchParams('in=2027-02-30&out=2027-03-05'))).toBeNull();
+    expect(readListingStayWindow(new URLSearchParams('in=2028-02-29&out=2028-03-02')))
+      .toEqual({ checkIn: '2028-02-29', checkOut: '2028-03-02' });
   });
 });
 

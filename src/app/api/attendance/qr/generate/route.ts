@@ -23,6 +23,7 @@ import { generateDailyQrToken } from '@/services/attendance/qr-token-service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { nowISO } from '@/lib/date-local';
+import { isCalendarDay } from '@/lib/date/calendar-day';
 
 const logger = createModuleLogger('api/attendance/qr/generate');
 
@@ -68,10 +69,10 @@ const basePOST = async (request: NextRequest) => {
         // Default to today in YYYY-MM-DD format
         const date = body.date ?? nowISO().slice(0, 10);
 
-        // Validate date format
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        // An existing calendar day — `2027-02-30` gets a 400, not a token for a day that never comes (ADR-919)
+        if (!isCalendarDay(date)) {
           return NextResponse.json(
-            { success: false, error: 'date must be in YYYY-MM-DD format' },
+            { success: false, error: 'date must be an existing calendar day in YYYY-MM-DD format' },
             { status: 400 }
           );
         }

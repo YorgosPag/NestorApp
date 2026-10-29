@@ -13,11 +13,11 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { parseFilterArray } from '@/lib/url-filters/multi-value';
 import { emitSpendAnalyticsInvalidate } from '@/lib/cache/spend-analytics-bus';
 import type { PurchaseOrder, AnalyticsDrillFilters } from '@/types/procurement';
+import { isCalendarDay } from '@/lib/date/calendar-day';
 
-/** Validate YYYY-MM-DD format; returns null for absent/invalid params. */
+/** An existing calendar day `YYYY-MM-DD` (`2027-02-30` is not one, ADR-919); `null` for absent/invalid params. */
 function parseDateParam(s: string | null): string | null {
-  if (!s) return null;
-  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
+  return isCalendarDay(s) ? s : null;
 }
 
 const API_BASE = '/api/procurement';

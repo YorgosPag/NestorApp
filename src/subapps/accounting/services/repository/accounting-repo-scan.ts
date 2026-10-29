@@ -19,6 +19,7 @@ import type { DocumentData, Firestore, Query } from 'firebase-admin/firestore';
 
 import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import { processAdminBatch, BATCH_SIZE_READ } from '@/lib/admin-batch-utils';
+import { isCalendarDay } from '@/lib/date/calendar-day';
 
 import type { PeriodRange } from '../../types/common';
 
@@ -28,8 +29,6 @@ import type { PeriodRange } from '../../types/common';
  */
 export const LEDGER_SCAN_CEILING = 100_000;
 
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-
 /** Η εμβέλεια ξεπέρασε το ανώτατο όριο — ο υπολογισμός ΔΕΝ θα έβγαινε πλήρης, άρα δεν βγαίνει καθόλου. */
 export class LedgerScanLimitError extends Error {
   constructor(readonly ledger: string, readonly scope: unknown, readonly ceiling: number) {
@@ -38,9 +37,12 @@ export class LedgerScanLimitError extends Error {
   }
 }
 
-/** Τα όρια περιόδου είναι `YYYY-MM-DD` και `from <= to` — αλλιώς η σύγκριση συμβολοσειρών θα έλεγε ψέματα. */
+/**
+ * Τα όρια περιόδου είναι **υπαρκτές** ημέρες `YYYY-MM-DD` και `from <= to` — αλλιώς η σύγκριση συμβολοσειρών θα
+ * έλεγε ψέματα (ένα `…-02-30` θα «έκλεινε» Φεβρουάριο που δεν υπάρχει· κριτής: `isCalendarDay`, ADR-919).
+ */
 export function assertLedgerPeriod(ledger: string, period: PeriodRange): void {
-  if (!ISO_DATE.test(period.from) || !ISO_DATE.test(period.to)) {
+  if (!isCalendarDay(period.from) || !isCalendarDay(period.to)) {
     throw new Error(`${ledger} period must be YYYY-MM-DD: ${period.from}..${period.to}`);
   }
   if (period.from > period.to) {

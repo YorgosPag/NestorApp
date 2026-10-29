@@ -26,6 +26,7 @@
  */
 
 import { OPERATOR_TIME_ZONE } from '@/constants/platform-operator';
+import { hasCalendarDayShape, parseCalendarDay } from '@/lib/date/calendar-day';
 import { resolveHumanLanguage, type HumanLanguage } from '@/i18n/languages';
 
 /** Ό,τι μπορεί να σημαίνει «πότε» σε ένα πρότυπο. */
@@ -38,17 +39,16 @@ export type OperatorTimeValue = Date | string | number;
  */
 const INTL_LOCALE: Readonly<Record<HumanLanguage, string>> = { el: 'el-GR', en: 'en-GB' };
 
-const CALENDAR_DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
-
 const DATE: Intl.DateTimeFormatOptions = { day: '2-digit', month: '2-digit', year: 'numeric' };
 const DATE_TIME: Intl.DateTimeFormatOptions = { ...DATE, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' };
 const WEEKDAY_DATE: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'numeric' };
 
 /** Τιμή → στιγμή· `null` όταν δεν διαβάζεται (το πρότυπο δεν ρίχνει ποτέ `RangeError`). */
 function toInstant(value: OperatorTimeValue): Date | null {
-  if (typeof value === 'string') {
-    const day = CALENDAR_DAY.exec(value);
-    if (day) return new Date(Date.UTC(Number(day[1]), Number(day[2]) - 1, Number(day[3]), 12));
+  if (typeof value === 'string' && hasCalendarDayShape(value)) {
+    const day = parseCalendarDay(value);
+    // Ανύπαρκτη μέρα (`2027-02-30`) ⇒ γράφεται αυτούσια, ποτέ κυλισμένη στις 2 Μαρτίου (ADR-919).
+    return day === null ? null : new Date(Date.UTC(day.year, day.month - 1, day.day, 12));
   }
   const instant = value instanceof Date ? value : new Date(value);
   return Number.isNaN(instant.getTime()) ? null : instant;

@@ -11,6 +11,8 @@
  * @see ADR-331 §4 D7, D12 — URL state SSoT + multi-select filters
  */
 
+import { isCalendarDay } from '@/lib/date/calendar-day';
+
 /** Parses a comma-separated query param into a trimmed string array. */
 export function parseFilterArray(param: string | null | undefined): string[] {
   if (!param) return [];
@@ -28,10 +30,9 @@ export function serializeFilterArray(values: readonly string[] | null | undefine
 }
 
 /**
- * Returns `param` if it matches `YYYY-MM-DD`, else `fallback`.
- * Light validation — does not check calendar validity (Feb 30 passes).
+ * Returns `param` if it is an existing calendar day `YYYY-MM-DD`, else `fallback`.
+ * `2027-02-30` falls back — the project's one judge (`isCalendarDay`, ADR-919).
  */
 export function parseDateOrDefault(param: string | null | undefined, fallback: string): string {
-  if (!param) return fallback;
-  return /^\d{4}-\d{2}-\d{2}$/.test(param) ? param : fallback;
+  return isCalendarDay(param) ? param : fallback;
 }

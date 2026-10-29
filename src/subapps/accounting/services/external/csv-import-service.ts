@@ -19,6 +19,7 @@ import type {
 import { getSupportedBanks, getParserConfig } from '../config/csv-parsers';
 import { isoNow } from '../repository/firestore-helpers';
 import { parseLocaleNumber, type DecimalSeparator } from '@/lib/number/locale-number';
+import { isCalendarDay } from '@/lib/date/calendar-day';
 
 // ============================================================================
 // PARSED TRANSACTION TYPE (fields NOT set by CSV parser)
@@ -386,16 +387,16 @@ function parseAutoDate(raw: string): string | null {
   const trimmed = raw.trim().replace(/"/g, '');
   if (!trimmed) return null;
 
+  // Μόνο ΥΠΑΡΚΤΗ ημέρα (ADR-919): μια γραμμή «31/02/2026» δεν γίνεται κίνηση τράπεζας με ανύπαρκτη ημερομηνία
+  // αξίας — μένει έξω όπως κάθε άλλη αδιάβαστη ημερομηνία.
   const dmyMatch = trimmed.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})$/);
   if (dmyMatch) {
     const [, day, month, year] = dmyMatch;
-    return `${year}-${month?.padStart(2, '0')}-${day?.padStart(2, '0')}`;
+    const iso = `${year}-${month?.padStart(2, '0')}-${day?.padStart(2, '0')}`;
+    return isCalendarDay(iso) ? iso : null;
   }
 
-  const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (isoMatch) return trimmed;
-
-  return null;
+  return isCalendarDay(trimmed) ? trimmed : null;
 }
 
 function parseAutoAmount(raw: string): number | null {

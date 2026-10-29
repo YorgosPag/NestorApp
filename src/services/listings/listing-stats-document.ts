@@ -14,6 +14,8 @@ import 'server-only';
  * περνά από εδώ, και ό,τι δεν ταιριάζει **απορρίπτεται** αντί να γίνει `NaN` σε άθροισμα.
  */
 
+// Ημέρα = **υπαρκτή** `YYYY-MM-DD` (ADR-919): ένα κλειδί `2027-02-30` δεν είναι ημέρα αγοράς, άρα δεν αθροίζεται.
+import { isCalendarDay } from '@/lib/date/calendar-day';
 import type { ListingViewDaily } from '@/lib/listings/listing-stats';
 
 /** `listing_stats/{lsta_*}` — η ψυχρή σύνοψη. Γράφει **μόνο** το cron. */
@@ -37,8 +39,6 @@ export interface StoredListingViewShard {
   readonly views: number;
 }
 
-const DAY = /^\d{4}-\d{2}-\d{2}$/;
-
 function isCount(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0;
 }
@@ -53,7 +53,7 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 function readDaily(value: unknown): ListingViewDaily {
   const record = asRecord(value);
   if (record === null) return {};
-  return Object.fromEntries(Object.entries(record).filter(([day, views]) => DAY.test(day) && isCount(views)));
+  return Object.fromEntries(Object.entries(record).filter(([day, views]) => isCalendarDay(day) && isCount(views)));
 }
 
 /** Διάβασε μια σύνοψη, ή `null` αν το έγγραφο δεν είναι σύνοψη. */
@@ -73,7 +73,7 @@ export function readStoredListingViewShard(raw: unknown): StoredListingViewShard
   const record = asRecord(raw);
   if (record === null) return null;
   const { propertyId, day, views } = record;
-  if (typeof propertyId !== 'string' || typeof day !== 'string' || !DAY.test(day) || !isCount(views)) return null;
+  if (typeof propertyId !== 'string' || !isCalendarDay(day) || !isCount(views)) return null;
   return { propertyId, day, views };
 }
 
