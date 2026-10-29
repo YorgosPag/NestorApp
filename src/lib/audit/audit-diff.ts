@@ -18,6 +18,7 @@
  */
 
 import type { AuditFieldChange, AuditSubChange } from '@/types/audit-trail';
+import { sortKeysDeep } from '@/lib/sort-keys-deep';
 // ADR-852 §4 — το ΣΧΗΜΑ του πεδίου ζει δίπλα, σε δικό του αρχείο: αυτό εδώ είναι η
 // ΜΗΧΑΝΗ (συγκρίνει καταστάσεις), εκείνο είναι το ΣΧΗΜΑ (τι ξέρουμε για ένα πεδίο).
 // Επανεξάγεται αμέσως παρακάτω ⇒ καμία διαδρομή import δεν άλλαξε για κανέναν.
@@ -120,18 +121,11 @@ export function flattenForTracking(
 /**
  * Recursively sort object keys so two structurally-equal objects serialize
  * to the same string regardless of key insertion order.
+ *
+ * Το κοινό πρωτογενές `sortKeysDeep` (ADR-919 §9), με το ιστορικό όνομα του audit ώστε καμία
+ * διαδρομή import να μην αλλάξει. Import (δεσμεύει τοπικά) + `export const` (CHECK 3.70).
  */
-export function sortKeys(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(sortKeys);
-  if (value !== null && typeof value === 'object') {
-    const sorted: Record<string, unknown> = {};
-    for (const key of Object.keys(value as Record<string, unknown>).sort()) {
-      sorted[key] = sortKeys((value as Record<string, unknown>)[key]);
-    }
-    return sorted;
-  }
-  return value;
-}
+export const sortKeys = sortKeysDeep;
 
 /**
  * Serialize a value to a comparable primitive for diffing.

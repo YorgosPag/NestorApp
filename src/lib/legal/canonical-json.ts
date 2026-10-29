@@ -10,23 +10,15 @@
  * τελικό newline. Μην «βελτιώσεις» τη μορφή: αλλάζει κάθε αποτύπωμα και σπάει την
  * αποδειξιμότητα κάθε δημοσιευμένης έκδοσης.
  *
+ * Η ταξινόμηση κλειδιών είναι το κοινό πρωτογενές `sortKeysDeep` (ADR-919 §9 — πριν ζούσε εδώ
+ * ως ιδιωτικό `sortDeep`, δίδυμο του `sortKeys` του audit).
+ *
  * @module lib/legal/canonical-json
  * @see ADR-861 §7
  */
 
-const byKey = ([a]: readonly [string, unknown], [b]: readonly [string, unknown]): number =>
-  a < b ? -1 : a > b ? 1 : 0;
-
-function sortDeep(node: unknown): unknown {
-  if (Array.isArray(node)) return node.map(sortDeep);
-  if (node === null || typeof node !== 'object') return node;
-  return Object.fromEntries(
-    Object.entries(node)
-      .sort(byKey)
-      .map(([key, value]) => [key, sortDeep(value)]),
-  );
-}
+import { sortKeysDeep } from '@/lib/sort-keys-deep';
 
 export function canonicalJson(value: unknown): string {
-  return `${JSON.stringify(sortDeep(value), null, 2).replace(/\r\n/g, '\n')}\n`;
+  return `${JSON.stringify(sortKeysDeep(value), null, 2).replace(/\r\n/g, '\n')}\n`;
 }
