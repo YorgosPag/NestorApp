@@ -46,6 +46,7 @@ import type {
   AcceptanceOutcome,
   Refusal,
 } from '@/services/mandate/mandate-acceptance-types';
+import { userPerformer } from '@/lib/audit/audit-performer';
 
 const logger = createModuleLogger('mandate-acceptance-prepare');
 
@@ -81,7 +82,7 @@ export async function prepare(
   // ♻️ Υπάρχουσα καρτέλα ή καινούρια — ο ΕΝΑΣ κριτής (`services/contact/account-contact-resolver`, ADR-884 Κ3β):
   //    `findContactByEmail`, ποτέ ασαφής ταύτιση ονόματος· αποτυχία ανάγνωσης = άρνηση, όχι «γράψε καινούρια».
   const contact = await resolveAccountContact({
-    identity, companyId: input.agencyCompanyId, createdBy: input.deciderUid,
+    identity, companyId: input.agencyCompanyId, performer: userPerformer(input.deciderUid),
   });
   if ('kind' in contact) return contact;
 

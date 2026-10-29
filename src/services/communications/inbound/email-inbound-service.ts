@@ -19,6 +19,8 @@ import {
   isMessageIntentAnalysis,
 } from '@/schemas/ai-analysis';
 import { generateGlobalMessageDocId } from '@/server/lib/id-generation';
+import { processPerformer } from '@/lib/audit/audit-performer';
+import { auditActorOf, performerStamp, resolveProcessPerformer } from '@/server/lib/performer-stamp';
 import { dispatchNotification } from '@/server/notifications/notification-orchestrator';
 import { viewDestination } from '@/lib/notifications/notification-destination';
 import { APP_ROUTES } from '@/lib/routes/appRoutes';
@@ -202,6 +204,8 @@ async function ensureContactForSender(companyId: string, sender: ParsedAddress):
 
   const adminDb = getAdminFirestore();
   const { firstName, lastName } = splitName(sender.name || sender.email.split('@')[0]);
+  // ADR-195 — η διεργασία της εισερχόμενης αλληλογραφίας ως φορέας (σφραγίδα CDC + γραμμή υπηρεσίας).
+  const performer = resolveProcessPerformer(processPerformer(SYSTEM_IDENTITY.EMAIL_INBOUND_ID));
 
   const newContact = {
     type: 'individual' as const,
@@ -212,7 +216,8 @@ async function ensureContactForSender(companyId: string, sender: ParsedAddress):
     displayName: `${firstName} ${lastName}`.trim(),
     name: `${firstName} ${lastName}`.trim(),
     companyId,
-    createdBy: SYSTEM_IDENTITY.ID,
+    createdBy: performer.id,
+    ...performerStamp(performer),
     emails: [
       {
         email: sender.email,
@@ -244,8 +249,7 @@ async function ensureContactForSender(companyId: string, sender: ParsedAddress):
       { field: 'email', oldValue: null, newValue: sender.email, label: 'Email' },
       { field: 'type', oldValue: null, newValue: 'individual', label: 'Τύπος' },
     ],
-    performedBy: SYSTEM_IDENTITY.ID,
-    performedByName: 'Inbound Email Pipeline',
+    ...auditActorOf(performer),
     companyId,
   });
 

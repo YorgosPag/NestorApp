@@ -23,6 +23,7 @@ import 'server-only';
 import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
 
 import { accountContactName } from '@/lib/contacts/contact-name-review';
+import { userPerformer } from '@/lib/audit/audit-performer';
 import { tourAccessRequestFromDocument } from '@/lib/spatial-tour/spatial-tour-from-document';
 import { readAccountIdentities, type AccountIdentity } from '@/server/auth/account-identities';
 import {
@@ -72,7 +73,7 @@ export async function prepareTourAccessContacts(
     if (await alreadyLinked(input.tourRef, uid)) return [uid, { kind: 'already-linked' }];
     const identity = contactIdentityOf(identities.get(uid));
     if (identity === null) return [uid, { kind: 'none' }];
-    const resolved = await resolveAccountContact({ identity, companyId: input.companyId, createdBy: input.deciderUid });
+    const resolved = await resolveAccountContact({ identity, companyId: input.companyId, performer: userPerformer(input.deciderUid) });
     return [uid, 'kind' in resolved ? { kind: 'unavailable' } : { kind: 'resolved', contact: resolved }];
   }));
   return new Map(entries);

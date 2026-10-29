@@ -19,6 +19,8 @@ import {
 } from '@/services/ai-pipeline/duplicate-contact-keyboard';
 import { getFeedbackService } from '@/services/ai-pipeline/feedback-service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { SYSTEM_IDENTITY } from '@/config/domain-constants';
+import { processPerformer } from '@/lib/audit/audit-performer';
 import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('TelegramCallbackActions');
@@ -200,7 +202,8 @@ export async function handleDuplicateContactCallback(
           type: rc.contactType as 'individual' | 'company',
           companyId: pending.companyId,
           companyName: rc.companyName ?? undefined,
-          createdBy: 'AI Agent (admin — button)',
+          // ADR-195 — ο βοηθός, από κουμπί του καναλιού (η εκκρεμότητα δεν κρατά ταυτότητα ανθρώπου).
+          performer: processPerformer(SYSTEM_IDENTITY.AI_AGENT_ID),
           skipDuplicateCheck: true,
         });
 

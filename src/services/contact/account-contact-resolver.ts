@@ -24,6 +24,8 @@ import { ENTITY_TYPES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { buildContactDocument } from '@/services/ai-pipeline/shared/contact-document-builder';
+import { resolvePerformer } from '@/server/lib/performer-stamp';
+import type { AuditPerformer } from '@/lib/audit/audit-performer';
 import { findContactByEmail } from '@/services/ai-pipeline/shared/contact-lookup-search';
 import { generateContactId } from '@/services/enterprise-id-convenience';
 import type { ContactNameReview } from '@/lib/contacts/contact-name-review';
@@ -50,13 +52,13 @@ export interface ResolvedAccountContact {
 
 export type AccountContactResolution = ResolvedAccountContact | { readonly kind: 'unavailable' };
 
-/** **Υπάρχουσα καρτέλα, ή καινούρια** — για το γραφείο `companyId`, με συντάκτη `createdBy`. */
+/** **Υπάρχουσα καρτέλα, ή καινούρια** — για το γραφείο `companyId`, με φορέα `performer` (ADR-195). */
 export async function resolveAccountContact(input: {
   readonly identity: AccountContactIdentity;
   readonly companyId: string;
-  readonly createdBy: string;
+  readonly performer: AuditPerformer;
 }): Promise<AccountContactResolution> {
-  const { identity, companyId, createdBy } = input;
+  const { identity, companyId } = input;
   try {
     const existing = await findContactByEmail(identity.email, companyId);
     if (existing !== null) return { contactId: existing.contactId, doc: null, displayName: existing.name };
@@ -69,6 +71,7 @@ export async function resolveAccountContact(input: {
   }
 
   // 🔴 `setDoc` + γεννήτορας του `enterprise-id` (N.6) — **ΠΟΤΕ** `addDoc`.
+  // Ο φορέας λύνεται **εδώ** (ασύγχρονα), ώστε η συναλλαγή του καλούντα να γράψει έτοιμη σφραγίδα.
   const built = buildContactDocument({
     firstName: identity.givenName,
     lastName: identity.familyName,
@@ -76,12 +79,12 @@ export async function resolveAccountContact(input: {
     phone: null,
     type: 'individual',
     companyId,
-    createdBy,
+    performer: input.performer,
     // Ο έλεγχος διπλοτύπου έγινε **ήδη**, με το σωστό ερώτημα — η σημαία δηλώνει την πρόθεση.
     skipDuplicateCheck: true,
     vatNumber: identity.vatNumber,
     nameReview: identity.nameReview ?? null,
-  });
+  }, await resolvePerformer(input.performer));
   return { contactId: generateContactId(), doc: built.doc, displayName: built.displayName };
 }
 
@@ -114,7 +117,8 @@ export async function recordAccountContactBirth(input: {
         { field: input.origin.field, oldValue: null, newValue: input.origin.value, label: input.origin.label },
       ],
       performedBy: input.performedBy,
-      performedByName: input.performedBy,
+      // ADR-195 — ποτέ uid στη θέση ονόματος: το όνομα το λύνει το SSoT από το `/users/{uid}`.
+      performedByName: null,
       companyId: input.companyId,
     });
   } catch (error) {

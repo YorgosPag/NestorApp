@@ -29,6 +29,8 @@ import { ENTITY_TYPES } from '@/config/domain-constants';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { createContactServerSide, updateContactField } from '@/services/ai-pipeline/shared/contact-lookup-crud';
 import { getErrorMessage } from '@/lib/error-utils';
+import { userPerformer } from '@/lib/audit/audit-performer';
+import { resolvePerformer, performerStamp } from '@/server/lib/performer-stamp';
 import { splitStreetAndNumber } from '@/utils/address/address-parse';
 import {
   ResolveContactSchema,
@@ -48,6 +50,8 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
       const { vatNumber, name, phone, emails, logoUrl, vendorAddress, vendorCity, vendorPostalCode, vendorCountry, bankAccounts } = parsed.data;
       const normalizedVat = normalizeVat(vatNumber);
       const companyId = ctx.companyId;
+      // ADR-195 — ο ΕΝΑΣ φορέας κάθε εγγραφής αυτής της αίτησης (σφραγίδα CDC + γραμμή Ιστορικού).
+      const actor = userPerformer(ctx.uid, ctx.email ?? null);
       const adminDb = getAdminFirestore();
 
       const snap = await adminDb
@@ -64,7 +68,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
         ?? findContactByEmail(contacts, normalizedEmails)
         ?? (name ? findContactByName(contacts, name) : undefined);
       if (match) {
-        await enrichMatchedContact(match.id, companyId, ctx.uid, resolveDisplayName(match), { emails, bankAccounts, logoUrl });
+        await enrichMatchedContact(match.id, companyId, actor, resolveDisplayName(match), { emails, bankAccounts, logoUrl });
         return NextResponse.json({ success: true, data: { contactId: match.id, displayName: resolveDisplayName(match), wasCreated: false } });
       }
 
@@ -79,12 +83,12 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
           email: null,  // stored separately via storeContactEmail with inferred type
           phone: phone ?? null,
           companyId,
-          createdBy: ctx.uid,
+          performer: actor,
           skipDuplicateCheck: false,
         });
 
         if (normalizedVat) {
-          await updateContactField(result.contactId, 'vatNumber', normalizedVat, ctx.uid);
+          await updateContactField(result.contactId, 'vatNumber', normalizedVat, actor);
         }
 
         if (vendorAddress || vendorCity) {
@@ -103,11 +107,12 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
             type: 'work',
             isPrimary: true,
           };
+          const performer = await resolvePerformer(actor);
           const docRef = adminDb.collection(COLLECTIONS.CONTACTS).doc(result.contactId);
           await docRef.update({
             addresses: FieldValue.arrayUnion(addressEntry),
             updatedAt: FieldValue.serverTimestamp(),
-            lastModifiedBy: ctx.uid,
+            ...performerStamp(performer),
           });
           await EntityAuditService.recordChange({
             entityType: ENTITY_TYPES.CONTACT,
@@ -115,13 +120,13 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
             entityName: result.displayName ?? null,
             action: 'updated',
             changes: [{ field: 'addresses', oldValue: null, newValue: JSON.stringify(addressEntry), label: 'addresses' }],
-            performedBy: ctx.uid,
-            performedByName: ctx.uid,
+            performedBy: performer.id,
+            performedByName: performer.name,
             companyId,
           });
         }
 
-        await enrichMatchedContact(result.contactId, companyId, ctx.uid, result.displayName ?? undefined, { emails, bankAccounts, logoUrl });
+        await enrichMatchedContact(result.contactId, companyId, actor, result.displayName ?? undefined, { emails, bankAccounts, logoUrl });
 
         return NextResponse.json({
           success: true,

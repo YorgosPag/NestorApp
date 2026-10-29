@@ -19,6 +19,8 @@ import { inferEmailType } from '@/lib/contact/email-type-vocabulary';
 import { fuzzyGreekMatch } from '@/services/ai-pipeline/shared/greek-text-utils';
 import { getErrorMessage } from '@/lib/error-utils';
 import { isAbsentText } from '@/lib/ai-structured-output';
+import type { AuditPerformer } from '@/lib/audit/audit-performer';
+import { performerStamp, resolvePerformer, type ResolvedPerformer } from '@/server/lib/performer-stamp';
 
 const logger = createModuleLogger('ContactResolveRoute');
 
@@ -131,7 +133,7 @@ async function openOwnedContact(
 async function recordContactChange(
   contactId: string,
   data: FirebaseFirestore.DocumentData,
-  uid: string,
+  performer: ResolvedPerformer,
   companyId: string,
   change: { field: string; newValue: string; label: string },
 ): Promise<void> {
@@ -141,8 +143,8 @@ async function recordContactChange(
     entityName: resolveDisplayName(data as Record<string, unknown>),
     action: 'updated',
     changes: [{ ...change, oldValue: null }],
-    performedBy: uid,
-    performedByName: uid,
+    performedBy: performer.id,
+    performedByName: performer.name,
     companyId,
   });
 }
@@ -152,7 +154,7 @@ async function recordContactChange(
 export async function storeContactEmail(
   contactId: string,
   companyId: string,
-  uid: string,
+  performer: ResolvedPerformer,
   email: string,
 ): Promise<void> {
   const owned = await openOwnedContact(contactId, companyId);
@@ -167,9 +169,9 @@ export async function storeContactEmail(
   await docRef.update({
     emails: FieldValue.arrayUnion({ email: normalized, type: emailType, isPrimary: currentEmails.length === 0 }),
     updatedAt: FieldValue.serverTimestamp(),
-    lastModifiedBy: uid,
+    ...performerStamp(performer),
   });
-  await recordContactChange(contactId, data, uid, companyId, {
+  await recordContactChange(contactId, data, performer, companyId, {
     field: 'emails',
     newValue: `${normalized} (${emailType})`,
     label: 'Email',
@@ -181,13 +183,13 @@ export async function storeContactEmail(
 export async function setContactLogoIfEmpty(
   contactId: string,
   companyId: string,
-  uid: string,
+  performer: ResolvedPerformer,
   logoUrl: string,
 ): Promise<void> {
   const owned = await openOwnedContact(contactId, companyId);
   if (owned === null) return;
   if (owned.data.logoURL) return;
-  await owned.ref.update({ logoURL: logoUrl, updatedAt: FieldValue.serverTimestamp(), lastModifiedBy: uid });
+  await owned.ref.update({ logoURL: logoUrl, updatedAt: FieldValue.serverTimestamp(), ...performerStamp(performer) });
 }
 
 // ── Supplier persona ──────────────────────────────────────────────────────────
@@ -197,7 +199,7 @@ const SUPPLIER_PERSONA = { personaType: 'supplier', status: 'active', supplierCa
 export async function ensureSupplierPersona(
   contactId: string,
   companyId: string,
-  uid: string,
+  performer: ResolvedPerformer,
 ): Promise<void> {
   const owned = await openOwnedContact(contactId, companyId);
   if (owned === null) return;
@@ -208,9 +210,9 @@ export async function ensureSupplierPersona(
     personas: FieldValue.arrayUnion(SUPPLIER_PERSONA),
     personaTypes: FieldValue.arrayUnion('supplier'),
     updatedAt: FieldValue.serverTimestamp(),
-    lastModifiedBy: uid,
+    ...performerStamp(performer),
   });
-  await recordContactChange(contactId, data, uid, companyId, {
+  await recordContactChange(contactId, data, performer, companyId, {
     field: 'personaTypes',
     newValue: 'supplier',
     label: 'Persona',
@@ -291,22 +293,24 @@ interface EnrichmentInput {
 export async function enrichMatchedContact(
   contactId: string,
   companyId: string,
-  uid: string,
+  /** Ο φορέας (ADR-195) — λύνεται **μία** φορά για όλα τα βήματα. */
+  actor: AuditPerformer,
   displayName: string | undefined,
   input: EnrichmentInput,
 ): Promise<void> {
+  const performer = await resolvePerformer(actor);
   const step = async (label: string, run: () => Promise<void>) => {
     try { await run(); } catch (e) { logger.warn(`${label} failed`, { contactId, error: getErrorMessage(e) }); }
   };
-  await step('ensureSupplierPersona', () => ensureSupplierPersona(contactId, companyId, uid));
+  await step('ensureSupplierPersona', () => ensureSupplierPersona(contactId, companyId, performer));
   if (input.bankAccounts?.length) {
-    await step('storeBankAccounts', () => storeBankAccounts(contactId, companyId, uid, [...input.bankAccounts!], displayName));
+    await step('storeBankAccounts', () => storeBankAccounts(contactId, companyId, performer.id, [...input.bankAccounts!], displayName));
   }
   for (const em of input.emails ?? []) {
-    if (em) await step('storeContactEmail', () => storeContactEmail(contactId, companyId, uid, em));
+    if (em) await step('storeContactEmail', () => storeContactEmail(contactId, companyId, performer, em));
   }
   if (input.logoUrl) {
     const logoUrl = input.logoUrl;
-    await step('setContactLogoIfEmpty', () => setContactLogoIfEmpty(contactId, companyId, uid, logoUrl));
+    await step('setContactLogoIfEmpty', () => setContactLogoIfEmpty(contactId, companyId, performer, logoUrl));
   }
 }

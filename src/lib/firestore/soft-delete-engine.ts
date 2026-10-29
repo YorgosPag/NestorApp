@@ -34,7 +34,9 @@ import { extractEntityName, loadLifecycleTarget, type LifecycleTarget } from "./
 import { ARCHIVE, RETIREMENTS, TRASH, type Retirement } from "./lifecycle-retirements";
 import { LIFECYCLE_EFFECTS, type ReinstatePatch } from "./lifecycle-effects";
 import { SYSTEM_IDENTITY, isSystemActorId } from "@/config/domain-constants";
-import { EntityAuditService, resolveUserDisplayName } from "@/services/entity-audit.service";
+import { EntityAuditService } from "@/services/entity-audit.service";
+import { performerFromActorId } from "@/lib/audit/audit-performer";
+import { stampPerformer } from "@/server/lib/performer-stamp";
 import { isCdcAuditDuplicate } from "@/config/audit-cdc-coverage";
 // Imported from its defining module rather than through `ApiErrorHandler`,
 // which re-exports it but pulls in the whole `next/server` surface with it.
@@ -87,19 +89,14 @@ interface LifecycleActor {
   readonly cause?: AuditCause;
 }
 
-/** Το όνομα του δράστη όπως σφραγίζεται στο έγγραφο· η μηχανή δεν είναι χρήστης προς αναζήτηση. */
-async function resolveActorName(actor: LifecycleActor): Promise<string | null> {
-  if (isSystemActorId(actor.uid)) return SYSTEM_IDENTITY.DISPLAY_NAME;
-  return resolveUserDisplayName(actor.uid, actor.name ?? null);
-}
-
-/** Οι σφραγίδες `_lastModified*` — ο CDC αποδίδει τη γραφή στον πραγματικό δράστη (ADR-195 Phase 1). */
-function performerStamps(uid: string, resolvedName: string | null): Record<string, unknown> {
+/**
+ * Οι σφραγίδες `_lastModified*` — ο CDC αποδίδει τη γραφή στον πραγματικό δράστη (ADR-195).
+ * Το όνομα λύνει το SSoT `server/lib/performer-stamp` (η μηχανή δεν είναι χρήστης προς αναζήτηση).
+ */
+async function performerStamps(actor: LifecycleActor): Promise<Record<string, unknown>> {
   return {
     updatedAt: FieldValue.serverTimestamp(),
-    _lastModifiedBy: uid,
-    _lastModifiedByName: resolvedName,
-    _lastModifiedAt: FieldValue.serverTimestamp(),
+    ...(await stampPerformer(performerFromActorId(actor.uid, actor.name))),
   };
 }
 
@@ -198,7 +195,7 @@ async function retire(
     ...(comingFrom
       ? { [comingFrom.atField]: FieldValue.delete(), [comingFrom.byField]: FieldValue.delete() }
       : {}),
-    ...performerStamps(actor.uid, await resolveActorName(actor)),
+    ...(await performerStamps(actor)),
   });
 
   recordStatusTransition(
@@ -274,7 +271,7 @@ async function writeReinstatement(
     [from.byField]: FieldValue.delete(),
     restoredAt: FieldValue.serverTimestamp(),
     restoredBy: actor.uid,
-    ...performerStamps(actor.uid, await resolveActorName(actor)),
+    ...(await performerStamps(actor)),
   });
 }
 

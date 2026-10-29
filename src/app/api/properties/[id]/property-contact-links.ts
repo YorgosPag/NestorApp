@@ -20,6 +20,11 @@ import type { PropertyOwnerRole } from '@/types/ownership-table';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { nowISO } from '@/lib/date-local';
+import { processPerformer } from '@/lib/audit/audit-performer';
+import { auditActorOf, performerStamp, resolveProcessPerformer } from '@/server/lib/performer-stamp';
+
+/** Παρενέργεια πώλησης/κράτησης — η μηχανή είναι ο φορέας (ADR-195). */
+const CLIENT_PERSONA_PERFORMER = resolveProcessPerformer(processPerformer());
 
 const logger = createModuleLogger('PropertyContactLinks');
 
@@ -203,6 +208,7 @@ export async function activateClientPersona(
   await contactRef.update({
     personas: [...personas, newPersona],
     updatedAt: FieldValue.serverTimestamp(),
+    ...performerStamp(CLIENT_PERSONA_PERFORMER),
   });
 
   logger.info('Client persona auto-activated', { contactId });
@@ -231,8 +237,7 @@ export async function activateClientPersona(
           label: 'Ενεργοποίηση Πελάτη',
         },
       ],
-      performedBy: 'system',
-      performedByName: 'Αυτόματη Ενεργοποίηση',
+      ...auditActorOf(CLIENT_PERSONA_PERFORMER),
       companyId,
     });
   }

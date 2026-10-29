@@ -25,6 +25,8 @@ import { EntityAuditService } from '@/services/entity-audit.service';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { getErrorMessage } from '@/lib/error-utils';
 import { nowISO } from '@/lib/date-local';
+import { userPerformer } from '@/lib/audit/audit-performer';
+import { auditActorOf, performerStamp, resolvePerformer } from '@/server/lib/performer-stamp';
 import type { PersonaData } from '@/types/contacts/personas';
 import { checkContactAccess } from '@/app/api/contacts/_shared/contact-ownership';
 import { contactNotFoundResponse } from '@/app/api/contacts/_shared/contact-not-found-response';
@@ -103,7 +105,9 @@ async function handlePatch(
           });
         }
 
-        await contactRef.update({ personas, updatedAt: nowISO() });
+        // ADR-195 — ο ΕΝΑΣ φορέας: σφραγίδα CDC + γραμμή υπηρεσίας, ποτέ uid στη θέση ονόματος.
+        const performer = await resolvePerformer(userPerformer(ctx.uid, ctx.email));
+        await contactRef.update({ personas, updatedAt: nowISO(), ...performerStamp(performer) });
 
         const entityName = `${(data.firstName as string) ?? ''} ${(data.lastName as string) ?? ''}`.trim() || contactId;
 
@@ -118,8 +122,7 @@ async function handlePatch(
             newValue: insuranceClassNumber,
             label: 'Ασφαλιστική Κλάση',
           }],
-          performedBy: ctx.uid,
-          performedByName: ctx.uid,
+          ...auditActorOf(performer),
           companyId: ctx.companyId,
         });
 
