@@ -17,6 +17,8 @@
  * `softDeleted` (ο κάδος έχει soft delete, όπως οι πραγματικοί μας)· `get({ softDeleted, generation })` δίνει **μόνο**
  * μεταδεδομένα (ή `404`)· `restore({ generation, ifGenerationMatch: 0 })` ⇒ **νέα** γενιά + `timeCreated`, `412` σε ζωντανό,
  * `404` σε ανύπαρκτη· `delete({ ifGenerationMatch })` ⇒ `412` σε άλλη γενιά, `404` σε απούσα.
+ * 📸 ADR-884 Φ0.8 — το ανέβασμα λήψης 360° (`server/spatial-tour/tour-capture-*`): `exists()` · `download()` (λείπει ⇒
+ * `404`) · `createResumableUpload({ origin, metadata })` ⇒ URL συνεδρίας, με καταγραφή μέσω `onResumableUpload`.
  */
 
 import { createHash } from 'crypto';
@@ -66,6 +68,15 @@ export interface FakeGcsBucketOptions {
   readonly heldSaveCode?: 403 | 412;
   /** Φ-Δ.7β — κάθε επαναφορά, **μετά** τη γέννηση της νέας γενιάς (για «κρασάρισμα» ή καταγραφή). */
   readonly onRestore?: (call: { readonly path: string; readonly generation: number; readonly restoredGeneration: number }) => void;
+  /** ADR-884 Φ0.8 — κάθε άνοιγμα συνεδρίας resumable upload (ποιος κάδος/διαδρομή, από πού, πόσα bytes δηλώθηκαν). */
+  readonly onResumableUpload?: (call: FakeGcsResumableUploadCall) => void;
+}
+
+export interface FakeGcsResumableUploadCall {
+  readonly bucket: string;
+  readonly path: string;
+  readonly origin: string;
+  readonly contentLength: number;
 }
 
 /** Φ-Δ.7β — αυτό που δίνει το `get({ softDeleted: true })`: όνομα + μεταδεδομένα της soft-deleted γενιάς, τίποτα άλλο. */
@@ -76,6 +87,8 @@ export interface FakeGcsSoftDeletedFile {
 
 interface FakeGcsPreconditions {
   readonly ifGenerationMatch?: number;
+  /** Χωρίς αποτέλεσμα στο fake: απόν αντικείμενο χωρίς προϋπόθεση γενιάς **ήδη** δεν δίνει σφάλμα. */
+  readonly ignoreNotFound?: boolean;
 }
 
 /** Μέγεθος κομματιού της ψεύτικης ροής — μικρό επίτηδες, ώστε κάθε αρχείο να φτάνει σε **πολλά** κομμάτια. */
@@ -101,6 +114,10 @@ export interface FakeGcsFile {
   /** Φ-Δ.7β — μόνο `{ softDeleted: true, generation }` (τα μεταδεδομένα της soft-deleted γενιάς). */
   get(options: { readonly softDeleted: true; readonly generation: number }): Promise<[FakeGcsSoftDeletedFile]>;
   restore(options: { readonly generation: number } & FakeGcsPreconditions): Promise<FakeGcsObject>;
+  exists(): Promise<[boolean]>;
+  /** Όλα τα bytes μαζί· λείπει ⇒ `code: 404`. */
+  download(): Promise<[Buffer]>;
+  createResumableUpload(options: { readonly origin: string; readonly metadata: { readonly contentLength: number } }): Promise<[string]>;
 }
 
 export interface FakeGcsBucket {
@@ -129,6 +146,7 @@ const softDeletedOf = (softDeleted: FakeGcsSoftDeletedStore, path: string, gener
 
 export function fakeGcsBucket(store: FakeGcsStore, name: string, options: FakeGcsBucketOptions = {}): FakeGcsBucket {
   let nextGeneration = 1000;
+  let resumableSessions = 0;
   const softDeleted: FakeGcsSoftDeletedStore = new Map();
   /** Σβήνει το ζωντανό **και** το κρατά soft-deleted (όπως οι κάδοι μας, 7 ημέρες). */
   const softDelete = (path: string): void => {
@@ -215,6 +233,17 @@ export function fakeGcsBucket(store: FakeGcsStore, name: string, options: FakeGc
         store.set(path, restored);
         options.onRestore?.({ path, generation, restoredGeneration: nextGeneration });
         return restored;
+      },
+      exists: async () => [store.has(path)],
+      download: async () => {
+        const bytes = store.get(path)?.bytes;
+        if (bytes === undefined) throw coded(404, path);
+        return [Buffer.from(bytes)];
+      },
+      createResumableUpload: async ({ origin, metadata }) => {
+        resumableSessions += 1;
+        options.onResumableUpload?.({ bucket: name, path, origin, contentLength: metadata.contentLength });
+        return [`https://storage.example/upload?bucket=${name}&session=${resumableSessions}`];
       },
     }),
     getFiles: async ({ prefix }) => [[...store.keys()].filter((key) => key.startsWith(prefix)).map((key) => bucket.file(key))],
