@@ -132,3 +132,10 @@ describe('ADR-332 D27 Β-ΙΙ Φ0 — το customFields δεν αντικαθί�
     expect(updateDocCalls[0]['customFields']).toBe(DELETE_SENTINEL);
   });
 });
+
+describe('ADR-323 · ADR-327 §8.5.4 — κενή διαφορά ⇒ καμία εγγραφή', () => {
+  it('Αποθήκευση χωρίς αλλαγές δεν φτάνει στο `updateDoc` (ούτε σφραγίδες `_lastModified*`)', async () => {
+    await ContactsService.updateContactFromForm(CONTACT_ID, {});
+    expect(updateDocCalls).toHaveLength(0);
+  });
+});

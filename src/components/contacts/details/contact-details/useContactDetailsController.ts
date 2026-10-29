@@ -31,6 +31,7 @@ import {
   SUBCOLLECTION_TABS,
 } from './contact-details-helpers';
 import { usePersonaToggle } from './usePersonaToggle';
+import { useEditSessionState } from './useEditSessionState';
 import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
 const logger = createModuleLogger('ContactDetails');
 
@@ -85,12 +86,7 @@ export function useContactDetailsController({
   const contactNotifications = useContactNotifications();
   const photoModal = useGlobalPhotoPreview();
   const [isEditing, setIsEditing] = useState(false);
-  const [editedData, setEditedData] = useState<Partial<ContactFormData>>({});
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  // ADR-323: το `editedData` ΕΙΝΑΙ η διαφορά από το αποθηκευμένο ⇒ μη κενό = αλλαγές που θα χαθούν. Το ρωτά ο ✕ του
-  // φύλλου κινητού πριν απορρίψει (ADR-912 §12.5).
-  const hasUnsavedEdits = isEditing && Object.keys(editedData).length > 0;
-  useReportUnsavedEdits(hasUnsavedEdits);
   const [optimisticPersonas, setOptimisticPersonas] = useState<OptimisticPersonaState | null>(null);
   const [savedPhotoURLs, setSavedPhotoURLs] = useState<{ logoURL?: string; photoURL?: string }>({});
   const [pendingSave, setPendingSave] = useState(false);
@@ -114,15 +110,6 @@ export function useContactDetailsController({
       sessionStorage.setItem(`contact-tab-${contact.id}`, activeTab);
     }
   }, [activeTab, contact?.id]);
-
-  useEffect(() => {
-    setIsEditing(false);
-    setEditedData({});
-    setValidationErrors({});
-    setSavedPhotoURLs({});
-    setOptimisticPersonas(null);
-    setPendingSave(false);
-  }, [contact?.id]);
 
   useEffect(() => {
     if (!contact || (!savedPhotoURLs.logoURL && !savedPhotoURLs.photoURL)) {
@@ -173,6 +160,24 @@ export function useContactDetailsController({
 
     return formData;
   }, [contact, optimisticPersonas, savedPhotoURLs]);
+
+  // ADR-323 · ADR-327 §8.5.4: το `editedData` ΕΙΝΑΙ η διαφορά από τη βάση — ο setter κρατά μόνο ό,τι διαφέρει
+  // (`useEditSessionState`), όσο ολόκληρη φόρμα κι αν του δώσει μια ενότητα. Μη κενό = αλλαγές που θα χαθούν·
+  // το ρωτά ο ✕ του φύλλου κινητού πριν απορρίψει (ADR-912 §12.5).
+  const [editedData, setEditedData] = useEditSessionState(enhancedFormData);
+  const hasUnsavedEdits = isEditing && Object.keys(editedData).length > 0;
+  useReportUnsavedEdits(hasUnsavedEdits);
+
+  useEffect(() => {
+    setIsEditing(false);
+    setEditedData({});
+    setValidationErrors({});
+    setSavedPhotoURLs({});
+    setOptimisticPersonas(null);
+    setPendingSave(false);
+    // Μόνο αλλαγή επαφής ξεκινά καθαρή συνεδρία· ο setter αλλάζει ταυτότητα με τη βάση.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contact?.id]);
 
   const getEditedFormData = useCallback((): ContactFormData | null => {
     if (!contact) {

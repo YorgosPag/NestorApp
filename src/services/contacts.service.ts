@@ -281,6 +281,8 @@ export class ContactsService {
   }
 
   static async updateContactFromForm(id: string, formData: Partial<ContactFormData>): Promise<void> {
+    // ADR-323 · ADR-327 §8.5.4: κενή διαφορά = τίποτα να γραφτεί — ούτε σφραγίδες, ούτε γραμμή CDC (Google Docs).
+    if (Object.keys(formData).length === 0) return;
     const existingContact = await this.getContact(id);
     if (!existingContact) throw new Error('Contact not found');
 
