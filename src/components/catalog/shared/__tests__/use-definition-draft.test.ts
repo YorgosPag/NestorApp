@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 
 import type { CatalogFailure } from '@/services/catalog/catalog-failure';
-import { useDefinitionDraft } from '../use-definition-draft';
+import { useDefinitionDraft, useShownIssues } from '../use-definition-draft';
 
 interface Def { readonly label: string }
 
@@ -12,8 +12,16 @@ const failure = (kind: CatalogFailure['kind'], issues: CatalogFailure['issues'] 
   fence: null,
 });
 
+/** Υπάρχουσα οντότητα (αναθεώρηση 1) — `null` σημαίνει «νέα» κατά το συμβόλαιο του hook. */
 function setup(base: Def, identity = 'a') {
-  return renderHook(({ b, id }) => useDefinitionDraft<Def>(b, id), { initialProps: { b: base, id: identity } });
+  return renderHook(({ b, id }) => useDefinitionDraft<Def>(b, id, 1), { initialProps: { b: base, id: identity } });
+}
+
+const EMPTY: Def = { label: '' };
+
+/** Νέα οντότητα: η βάση μένει η κενή φόρμα ώσπου να αλλάξει η επιλογή (όπως στις οθόνες). */
+function setupNew() {
+  return renderHook(({ id }) => useDefinitionDraft<Def>(EMPTY, id, null), { initialProps: { id: 'new' } });
 }
 
 describe('useDefinitionDraft — ποτέ σιωπηλή απώλεια του προχείρου', () => {
@@ -84,5 +92,57 @@ describe('useDefinitionDraft — ποτέ σιωπηλή απώλεια του �
     rerender({ b: { label: 'b' }, id: 'b' });
     expect(result.current.draft.label).toBe('b');
     expect(result.current.status).toBe('clean');
+  });
+});
+
+describe('useDefinitionDraft — Σ2 (ζωντανά): η νέα οντότητα ξέρει τι ΕΓΙΝΕ', () => {
+  it('σε αποστολή και μετά την επιτυχία: `created` = ό,τι στάλθηκε, όχι «βρώμικο», όχι «μη αποθηκευμένο»', () => {
+    const { result } = setupNew();
+    act(() => result.current.update({ label: 'MFP' }));
+    expect(result.current.created).toBeNull();
+    let settle: ReturnType<typeof result.current.beginSave> = () => undefined;
+    act(() => { settle = result.current.beginSave(); });
+    expect(result.current.created).toEqual({ label: 'MFP' });
+    expect([result.current.dirty, result.current.unsaved]).toEqual([false, false]);
+    act(() => settle({ ok: true, record: { label: 'MFP' } }));
+    expect([result.current.status, result.current.dirty, result.current.unsaved]).toEqual(['saved', false, false]);
+  });
+
+  it('άρνηση ⇒ τίποτα δεν δημιουργήθηκε: `created` null, το πρόχειρο ξανά «μη αποθηκευμένο»', () => {
+    const { result } = setupNew();
+    act(() => result.current.update({ label: 'MFP' }));
+    let settle: ReturnType<typeof result.current.beginSave> = () => undefined;
+    act(() => { settle = result.current.beginSave(); });
+    act(() => settle({ ok: false, failure: failure('invalid') }));
+    expect(result.current.created).toBeNull();
+    expect(result.current.unsaved).toBe(true);
+  });
+
+  it('υπάρχουσα οντότητα ⇒ ποτέ `created`· άλλη επιλογή ⇒ καθαρίζει', () => {
+    const existing = setup({ label: 'a' });
+    act(() => { existing.result.current.beginSave(); });
+    expect(existing.result.current.created).toBeNull();
+    const fresh = setupNew();
+    act(() => fresh.result.current.update({ label: 'MFP' }));
+    act(() => { fresh.result.current.beginSave(); });
+    fresh.rerender({ id: 'new#2' });
+    expect(fresh.result.current.created).toBeNull();
+  });
+});
+
+describe('useShownIssues — ανέγγιχτη φόρμα δεν «κοκκινίζει» (ΕΝΑ σημείο για οκτώ επεξεργαστές)', () => {
+  const client = [{ code: 'labelRequired' as const, path: 'labels' }, { code: 'discountConditionAmbiguous' as const, path: 'rule' }];
+  const server = [{ code: 'invalidCode' as const, path: 'code' }];
+  const shown = (dirty: boolean, serverIssues: typeof server, immediate?: (issue: (typeof client)[number]) => boolean) =>
+    renderHook(() => useShownIssues({ dirty, serverIssues }, client, immediate)).result.current.map((issue) => issue.code);
+
+  it('ανέγγιχτη ⇒ τίποτα· βρώμικη ή με απάντηση του γραφέα ⇒ πελάτη + διακομιστή', () => {
+    expect(shown(false, [])).toEqual([]);
+    expect(shown(true, [])).toEqual(['labelRequired', 'discountConditionAmbiguous']);
+    expect(shown(false, server)).toEqual(['labelRequired', 'discountConditionAmbiguous', 'invalidCode']);
+  });
+
+  it('`immediate` ⇒ μόνο αυτά φαίνονται ΑΜΕΣΑ σε ανέγγιχτη φόρμα', () => {
+    expect(shown(false, [], (issue) => issue.code === 'discountConditionAmbiguous')).toEqual(['discountConditionAmbiguous']);
   });
 });

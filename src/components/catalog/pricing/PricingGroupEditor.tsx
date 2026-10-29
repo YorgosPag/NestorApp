@@ -23,7 +23,7 @@ import { useCatalogAccess, useCatalogText } from '../shared/catalog-ui-hooks';
 import { EditorFooter } from '../shared/EditorFooter';
 import { LocalizedTextField } from '../shared/LocalizedTextField';
 import { NEW_SELECTION } from '../shared/use-catalog-selection';
-import { useDefinitionDraft } from '../shared/use-definition-draft';
+import { useDefinitionDraft, useShownIssues } from '../shared/use-definition-draft';
 import { emptyGroupDraft, groupDraftIssues, groupDraftOf, type PricingGroupDefinition, type PricingGroupWire } from './pricing-group-draft';
 import { PRICING_GROUP_HINT_KEYS } from './pricing-labels';
 import type { DiscountsWorkspace } from './use-discounts-workspace';
@@ -65,10 +65,11 @@ function useGroupEditor({ record, siblings, reportDirty }: PricingGroupEditorPro
   const base = useMemo(() => (record ? groupDraftOf(record) : emptyGroupDraft()), [record]);
   const editor = useDefinitionDraft(base, record?.id ?? NEW_SELECTION, record?.revision ?? null);
   useEffect(() => reportDirty(editor.unsaved), [editor.unsaved, reportDirty]);
-  const clientIssues = useMemo(() => groupDraftIssues(editor.draft, siblings, record), [editor.draft, siblings, record]);
-  const touched = editor.dirty || editor.serverIssues.length > 0;
-  const issues = useMemo(() => (touched ? [...clientIssues, ...editor.serverIssues] : []), [touched, clientIssues, editor.serverIssues]);
-  return { editor, issues, clientIssues };
+  const clientIssues = useMemo(
+    () => groupDraftIssues(editor.draft, siblings, record, editor.created),
+    [editor.draft, siblings, record, editor.created],
+  );
+  return { editor, issues: useShownIssues(editor, clientIssues), clientIssues };
 }
 
 export function PricingGroupEditor(props: PricingGroupEditorProps) {

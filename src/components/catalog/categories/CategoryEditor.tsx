@@ -25,8 +25,9 @@ import { isCatalogCode } from '@/subapps/catalog/vocabulary/catalog-limits';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
 import { CatalogCodeField, CatalogField } from '../shared/CatalogFormFields';
 import { EditorFooter } from '../shared/EditorFooter';
+import { isEditorSelf } from '../shared/editor-self';
 import { LocalizedTextField } from '../shared/LocalizedTextField';
-import { useDefinitionDraft } from '../shared/use-definition-draft';
+import { useDefinitionDraft, useShownIssues } from '../shared/use-definition-draft';
 import { orderKeyAtEnd } from '../shared/catalog-ordering';
 import { createCategory, deleteCategory, updateCategory } from './category-actions';
 
@@ -63,10 +64,12 @@ function useCategoryEditor({ record, categories, reportDirty }: CategoryEditorPr
   const base = useMemo<CategoryDraft>(() => (record ? { code: record.code, labels: record.labels, mappings: record.mappings } : EMPTY), [record]);
   const editor = useDefinitionDraft(base, record?.id ?? 'new', record?.revision ?? null);
   useEffect(() => reportDirty(editor.unsaved), [editor.unsaved, reportDirty]);
-  const codes = useMemo(() => new Set(categories.map((category) => category.code)), [categories]);
+  const codes = useMemo(
+    () => new Set(categories.filter((category) => !isEditorSelf(category, record, editor.created)).map((category) => category.code)),
+    [categories, record, editor.created],
+  );
   const clientIssues = useMemo(() => validateCategoryDraft(editor.draft, codes, record === null), [editor.draft, codes, record]);
-  const issues = editor.dirty || editor.serverIssues.length > 0 ? [...clientIssues, ...editor.serverIssues] : [];
-  return { editor, clientIssues, issues };
+  return { editor, clientIssues, issues: useShownIssues(editor, clientIssues) };
 }
 
 export function CategoryEditor(props: CategoryEditorProps) {

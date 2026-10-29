@@ -12,6 +12,7 @@ const context = (over: Partial<PriceListDraftContext> = {}): PriceListDraftConte
   lists: [],
   record: null,
   hasVersions: false,
+  created: null,
   ...over,
 });
 
@@ -42,6 +43,17 @@ describe('price-list-draft — ό,τι θα έλεγε ο γραφέας, πρι
     const self = list('mfp', { audience: WHOLESALE });
     expect(codes(draft, context({ record: self, lists: [self] }))).toEqual([]);
     expect(codes(draft, context({ lists: [list('gone', { audience: WHOLESALE }, true)] }))).toEqual([]);
+  });
+
+  it('Σ2 (ζωντανά): νέα λίστα που ΗΔΗ στάλθηκε δεν συγκρούεται με τον εαυτό της — ούτε αισιόδοξη ούτε αποθηκευμένη', () => {
+    const draft = { ...valid, audience: WHOLESALE };
+    const optimistic = list('new:mfp', { code: 'mfp', audience: WHOLESALE });
+    const stored = list('plst_server', { code: 'mfp', audience: WHOLESALE });
+    expect(codes(draft, context({ lists: [optimistic], created: draft }))).toEqual([]);
+    expect(codes(draft, context({ lists: [stored], created: draft }))).toEqual([]);
+    // Πριν από την αποστολή, ή άλλη λίστα στο ίδιο κοινό ⇒ η ασάφεια μένει.
+    expect(codes(draft, context({ lists: [stored] }))).toEqual(['priceListAudienceAmbiguous@audience']);
+    expect(codes(draft, context({ lists: [stored, list('other', { audience: WHOLESALE })], created: draft }))).toEqual(['priceListAudienceAmbiguous@audience']);
   });
 
   it('συνεργάτης χωρίς επιλεγμένη επαφή ⇒ το ίδιο εύρημα με τον γραφέα (κενό id δεν υπάρχει)', () => {

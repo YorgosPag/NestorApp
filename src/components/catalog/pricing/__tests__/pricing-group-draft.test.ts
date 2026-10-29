@@ -29,10 +29,16 @@ describe('επιλογή στη διεύθυνση — το είδος ταξι�
 
 describe('πρόχειρο ομάδας — ό,τι θα έλεγε ο γραφέας', () => {
   it('κωδικός + ετικέτα, και ο διπλός κωδικός ΜΟΝΟ για νέα, ΜΟΝΟ στο ίδιο είδος', () => {
-    expect(groupDraftIssues(emptyGroupDraft(), [], null).map((issue) => issue.code)).toEqual(['invalidCode', 'labelRequired']);
+    expect(groupDraftIssues(emptyGroupDraft(), [], null, null).map((issue) => issue.code)).toEqual(['invalidCode', 'labelRequired']);
     const draft = { code: 'wholesale', labels: { el: 'Χ' } };
-    expect(groupDraftIssues(draft, [WHOLESALE], null)).toEqual([{ code: 'duplicateCode', path: 'code', params: { code: 'wholesale' } }]);
-    expect(groupDraftIssues(draft, [WHOLESALE], WHOLESALE)).toEqual([]);
+    expect(groupDraftIssues(draft, [WHOLESALE], null, null)).toEqual([{ code: 'duplicateCode', path: 'code', params: { code: 'wholesale' } }]);
+    expect(groupDraftIssues(draft, [WHOLESALE], WHOLESALE, null)).toEqual([]);
+  });
+
+  it('Σ2: νέα ομάδα που ΗΔΗ στάλθηκε δεν είναι «διπλός κωδικός» του εαυτού της', () => {
+    const draft = { code: 'wholesale', labels: { el: 'Χ' } };
+    expect(groupDraftIssues(draft, [WHOLESALE], null, draft)).toEqual([]);
+    expect(groupDraftIssues(draft, [group('new:wholesale', 'wholesale')], null, draft)).toEqual([]);
   });
 });
 

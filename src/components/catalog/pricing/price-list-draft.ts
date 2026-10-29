@@ -18,6 +18,7 @@ import { validatePriceList } from '@/subapps/catalog/schema/validate-pricing';
 import type { PriceAudience, PriceListDefinition } from '@/subapps/catalog/types/price-list';
 import type { PriceListWire } from '@/subapps/catalog/types/pricing-views';
 import type { PriceListKind } from '@/subapps/catalog/vocabulary/pricing';
+import { isEditorSelf } from '../shared/editor-self';
 
 export function emptyPriceListDraft(): PriceListDefinition {
   return { code: '', labels: {}, kind: 'sales', priceType: 'net_list', audience: null, changeFenceBp: null };
@@ -43,6 +44,8 @@ export interface PriceListDraftContext {
   readonly record: PriceListWire | null;
   /** Η λίστα έχει έκδοση ⇒ είδος και τύπος τιμής κλειδώνουν. */
   readonly hasVersions: boolean;
+  /** Η νέα λίστα που ο επεξεργαστής ήδη έστειλε (`useDefinitionDraft.created`) — ο εαυτός του, όχι «άλλη λίστα». */
+  readonly created: PriceListDefinition | null;
 }
 
 function lockedMeaningIssues(draft: PriceListDefinition, context: PriceListDraftContext): CatalogIssue[] {
@@ -59,7 +62,7 @@ function audienceAmbiguityIssues(draft: PriceListDefinition, context: PriceListD
   const slot = priceListAudienceSlotKey(draft.audience);
   const taken = context.lists.some(
     (other) =>
-      other.id !== context.record?.id &&
+      !isEditorSelf(other, context.record, context.created) &&
       !other.isDeleted &&
       other.kind === 'sales' &&
       other.audience !== null &&

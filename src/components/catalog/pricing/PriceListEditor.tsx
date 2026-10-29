@@ -20,7 +20,7 @@ import { deleteDefinition, newEntityKey, optimisticWire, saveDefinition } from '
 import { useCatalogAccess } from '../shared/catalog-ui-hooks';
 import { EditorFooter } from '../shared/EditorFooter';
 import { NEW_SELECTION } from '../shared/use-catalog-selection';
-import { useDefinitionDraft } from '../shared/use-definition-draft';
+import { useDefinitionDraft, useShownIssues } from '../shared/use-definition-draft';
 import { emptyPriceListDraft, priceListDraftIssues, priceListDraftOf } from './price-list-draft';
 import { PriceListGeneralTab } from './PriceListGeneralTab';
 
@@ -42,12 +42,10 @@ function usePriceListEditor({ record, lists, hasVersions, customerGroups, report
   useEffect(() => reportDirty(editor.unsaved), [editor.unsaved, reportDirty]);
   const customerGroupIds = useMemo(() => new Set(customerGroups.map((group) => group.id)), [customerGroups]);
   const clientIssues = useMemo(
-    () => priceListDraftIssues(editor.draft, { customerGroupIds, lists, record, hasVersions }),
-    [editor.draft, customerGroupIds, lists, record, hasVersions],
+    () => priceListDraftIssues(editor.draft, { customerGroupIds, lists, record, hasVersions, created: editor.created }),
+    [editor.draft, customerGroupIds, lists, record, hasVersions, editor.created],
   );
-  const touched = editor.dirty || editor.serverIssues.length > 0;
-  const issues = useMemo(() => (touched ? [...clientIssues, ...editor.serverIssues] : []), [touched, clientIssues, editor.serverIssues]);
-  return { editor, issues, clientIssues };
+  return { editor, issues: useShownIssues(editor, clientIssues), clientIssues };
 }
 
 export function PriceListEditor(props: PriceListEditorProps) {

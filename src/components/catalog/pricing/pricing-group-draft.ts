@@ -17,6 +17,7 @@ import { validatePricingGroup } from '@/subapps/catalog/schema/validate-pricing'
 import type { CustomerGroupDefinition, PricingPartyRef } from '@/subapps/catalog/types/price-list';
 import type { CustomerAssignmentWire, CustomerGroupWire, DiscountGroupWire } from '@/subapps/catalog/types/pricing-views';
 import { PRICING_GROUP_KINDS, type PricingGroupKind } from '@/subapps/catalog/vocabulary/pricing';
+import { isEditorSelf } from '../shared/editor-self';
 
 /** Ίδιο σχήμα για τα δύο είδη (ο γραφέας το επιβεβαιώνει στη μεταγλώττιση). */
 export type PricingGroupDefinition = CustomerGroupDefinition;
@@ -47,8 +48,10 @@ export function groupDraftIssues(
   draft: PricingGroupDefinition,
   siblings: readonly PricingGroupWire[],
   record: PricingGroupWire | null,
+  /** Η νέα ομάδα που ο επεξεργαστής ήδη έστειλε (`useDefinitionDraft.created`) — ο εαυτός του, όχι διπλός κωδικός. */
+  created: PricingGroupDefinition | null,
 ): readonly CatalogIssue[] {
-  const taken = siblings.some((other) => other.id !== record?.id && !other.isDeleted && other.code === draft.code);
+  const taken = siblings.some((other) => !isEditorSelf(other, record, created) && !other.isDeleted && other.code === draft.code);
   const duplicate: CatalogIssue[] = record === null && taken ? [{ code: 'duplicateCode', path: 'code', params: { code: draft.code } }] : [];
   return [...validatePricingGroup(draft), ...duplicate];
 }
