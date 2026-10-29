@@ -13,9 +13,11 @@ interface SaveSnapshot {
   readonly type: string;
   readonly firstName?: string;
   readonly companyName?: string;
+  /** Τα πεδία του dirty diff (ADR-323) που έφτασαν στον γραφέα — ταξινομημένα. */
+  readonly dirtyKeys: readonly string[];
 }
 
-type HarnessScenario = 'individual' | 'company';
+type HarnessScenario = 'individual' | 'company' | 'server-company';
 
 function buildIndividualContact(): IndividualContact {
   return {
@@ -62,8 +64,37 @@ function buildCompanyContact(): CompanyContact {
   };
 }
 
+/**
+ * Επαφή εταιρείας όπως τη γράφει ο **server** (σάρωση προσφοράς · `api/contacts/resolve`):
+ * διεύθυνση χωρίς `id`/`label`, `customFields: null`. Ελέγχει ότι η φόρμα που ανοίγει και
+ * αποθηκεύεται πάνω της στέλνει **μόνο** ό,τι άλλαξε ο άνθρωπος (ADR-327 §8.5.4 · ADR-323).
+ */
+function buildServerCompanyContact(): CompanyContact {
+  return {
+    ...buildCompanyContact(),
+    id: 'contact_e2e_server_company',
+    companyName: 'Server Supplier ATEE',
+    vatNumber: '094201577',
+    legalForm: undefined,
+    taxOffice: undefined,
+    phones: [{ number: '2310428900', countryCode: '+30', type: 'main', isPrimary: true }],
+    emails: [{ email: 'info@example.invalid', type: 'info', isPrimary: true }],
+    addresses: [{
+      street: 'Απόλλωνος', city: 'Θεσσαλονίκη', postalCode: '55535',
+      country: 'GR', type: 'work', isPrimary: true,
+    }],
+  };
+}
+
 function resolveScenario(value: string | null): HarnessScenario {
-  return value === 'company' ? 'company' : 'individual';
+  if (value === 'company' || value === 'server-company') return value;
+  return 'individual';
+}
+
+function buildScenarioContact(scenario: HarnessScenario): Contact {
+  if (scenario === 'company') return buildCompanyContact();
+  if (scenario === 'server-company') return buildServerCompanyContact();
+  return buildIndividualContact();
 }
 
 export function ContactMutationHarness() {
@@ -73,9 +104,7 @@ export function ContactMutationHarness() {
   const [updateEvents, setUpdateEvents] = useState(0);
   const [lastSave, setLastSave] = useState<SaveSnapshot | null>(null);
 
-  const contact = useMemo<Contact>(() => (
-    scenario === 'company' ? buildCompanyContact() : buildIndividualContact()
-  ), [scenario]);
+  const contact = useMemo<Contact>(() => buildScenarioContact(scenario), [scenario]);
 
   useEffect(() => {
     setSaveCount(0);
@@ -95,6 +124,7 @@ export function ContactMutationHarness() {
         type: String(formData.type ?? ''),
         firstName: typeof formData.firstName === 'string' ? formData.firstName : undefined,
         companyName: typeof formData.companyName === 'string' ? formData.companyName : undefined,
+        dirtyKeys: Object.keys(formData).sort(),
       });
     };
 

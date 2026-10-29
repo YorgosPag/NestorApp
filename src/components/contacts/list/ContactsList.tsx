@@ -28,6 +28,7 @@ import type { ShareData } from '@/components/ui/email-sharing/EmailShareForm';
 import type { ContactShareMeta } from '@/types/sharing';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { formatPhoneDisplay } from '@/utils/contacts/formatPhoneDisplay';
+import { DEFAULT_PHONE_TYPE, phoneOwnerKindOf } from '@/lib/contact/phone-type-vocabulary';
 import { DEFAULT_STORED_COUNTRY_CODE, isGreekAddressCountry } from '@/utils/address/country-codes';
 import { formatGreekPostalCode } from '@/utils/address/postal-code';
 // 🏢 ENTERPRISE: Centralized data exchange (SSoT - DataExportService/DataImportService)
@@ -210,7 +211,7 @@ export function ContactsList({
           contactData.emails = [{ email: record.primaryEmail, type: 'work', isPrimary: true }];
         }
         if (record.primaryPhone) {
-          contactData.phones = [{ number: record.primaryPhone, type: 'mobile', isPrimary: true }];
+          contactData.phones = [{ number: record.primaryPhone, type: DEFAULT_PHONE_TYPE[phoneOwnerKindOf(record.type)], isPrimary: true }];
         }
 
         // Address

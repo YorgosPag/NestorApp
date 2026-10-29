@@ -14,6 +14,7 @@ import { calendarDayLabel, groupByCalendarDay } from "@/lib/audit/calendar-day-g
 import type { AuditAction, EntityAuditEntry } from "@/types/audit-trail";
 import type { QuantitySpec } from "@/constants/quantity-specs";
 import { formatQuantityValue } from "./audit-quantity-format";
+import type { PhoneType } from "@/lib/contact/phone-type-vocabulary";
 
 export interface Stats {
   total: number;
@@ -23,21 +24,29 @@ export interface Stats {
   uniqueUsers: number;
 }
 
-/** Translate enum-like type values to Greek for audit display */
-const TYPE_LABELS: Record<string, string> = {
-  // Phone types (individual)
+/**
+ * Ετικέτες τύπου τηλεφώνου για το Ιστορικό — δεμένες στη ρίζα `PhoneType` (ADR-327 §8.5.4, CHECK 3.73): τύπος χωρίς
+ * ετικέτα είναι σφάλμα μεταγλώττισης, όχι ωμή τιμή στη γραμμή ιστορικού (το `internal` έλειπε ⇒ έβγαινε ωμό).
+ */
+const PHONE_TYPE_DISPLAY: Record<PhoneType, string> = {
   mobile: "Κινητό",
   home: "Σπίτι",
   work: "Εργασία",
-  fax: "Φαξ",
-  other: "Άλλο",
-  // Phone types (company/service)
   main: "Κεντρικό",
   department: "Τμήμα",
   secretariat: "Γραμματεία",
   sales: "Πωλήσεις",
   support: "Υποστήριξη",
   helpdesk: "Γραμμή Βοήθειας",
+  fax: "Φαξ",
+  internal: "Εσωτερικό",
+  other: "Άλλο",
+};
+
+/** Translate enum-like type values to Greek for audit display */
+const TYPE_LABELS: Record<string, string> = {
+  // Phone types — από τη ρίζα, ΕΝΑΣ πίνακας
+  ...PHONE_TYPE_DISPLAY,
   // Email types
   personal: "Προσωπικό",
   general: "Γενικό",

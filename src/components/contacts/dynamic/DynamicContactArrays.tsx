@@ -3,9 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import '@/lib/design-system';
 import { UniversalCommunicationManager } from '@/components/contacts/dynamic/UniversalCommunicationManager';
-import type { CommunicationItem, ContactEntityType } from '@/components/contacts/dynamic/communication';
+import type { ContactEntityType } from '@/components/contacts/dynamic/communication';
 import { getEntityAwareCommunicationConfig } from '@/components/contacts/dynamic/communication';
 import type { PhoneInfo, EmailInfo, WebsiteInfo, SocialMediaInfo } from '@/types/contacts';
+import {
+  phonesToCommunicationItems, emailsToCommunicationItems, websitesToCommunicationItems, socialToCommunicationItems,
+  communicationItemsToPhones, communicationItemsToEmails, communicationItemsToWebsites, communicationItemsToSocial,
+} from '@/components/contacts/dynamic/communication/utils/communication-item-mappers';
 
 // ============================================================================
 // 🏢 ENTERPRISE DYNAMIC CONTACT ARRAYS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΗ ΕΚΔΟΣΗ
@@ -36,88 +40,6 @@ export interface DynamicContactArraysProps {
   onWebsitesChange?: (websites: WebsiteInfo[]) => void;
   onSocialMediaChange?: (socialMedia: SocialMediaInfo[]) => void;
 }
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-/**
- * 🔄 MAPPER FUNCTIONS - Μετατρέπουν τα legacy types σε CommunicationItem format
- */
-
-const phonesToCommunicationItems = (phones: PhoneInfo[]): CommunicationItem[] =>
-  Array.isArray(phones) ? phones.map(phone => ({
-    type: phone.type,
-    label: phone.label,
-    isPrimary: phone.isPrimary,
-    number: phone.number,
-    countryCode: phone.countryCode,
-    extension: phone.extension
-  })) : [];
-
-const emailsToCommunicationItems = (emails: EmailInfo[]): CommunicationItem[] =>
-  Array.isArray(emails) ? emails.map(email => ({
-    type: email.type,
-    label: email.label,
-    isPrimary: email.isPrimary,
-    email: email.email
-  })) : [];
-
-const websitesToCommunicationItems = (websites: WebsiteInfo[]): CommunicationItem[] =>
-  Array.isArray(websites) ? websites.map(website => ({
-    type: website.type,
-    label: website.label,
-    url: website.url
-  })) : [];
-
-const socialToCommunicationItems = (
-  socialMedia: SocialMediaInfo[],
-  defaultType: string = 'personal'
-): CommunicationItem[] =>
-  Array.isArray(socialMedia) ? socialMedia.map(social => ({
-    type: social.type || defaultType,
-    label: social.label,
-    username: social.username,
-    url: social.url,
-    platform: social.platform
-  })) : [];
-
-const communicationItemsToPhones = (items: CommunicationItem[]): PhoneInfo[] =>
-  Array.isArray(items) ? items.map(item => {
-    const ext = (item.extension as string | undefined)?.trim();
-    return {
-      number: item.number || '',
-      type: item.type as PhoneInfo['type'],
-      isPrimary: item.isPrimary || false,
-      label: item.label || '',
-      countryCode: item.countryCode || '+30',
-      ...(ext ? { extension: ext } : {})
-    };
-  }) : [];
-
-const communicationItemsToEmails = (items: CommunicationItem[]): EmailInfo[] =>
-  Array.isArray(items) ? items.map(item => ({
-    email: item.email || '',
-    type: item.type as EmailInfo['type'],
-    isPrimary: item.isPrimary || false,
-    label: item.label || ''
-  })) : [];
-
-const communicationItemsToWebsites = (items: CommunicationItem[]): WebsiteInfo[] =>
-  Array.isArray(items) ? items.map(item => ({
-    url: item.url || '',
-    type: item.type as WebsiteInfo['type'],
-    label: item.label || ''
-  })) : [];
-
-const communicationItemsToSocial = (items: CommunicationItem[]): SocialMediaInfo[] =>
-  Array.isArray(items) ? items.map(item => ({
-    platform: (item.platform || 'other') as SocialMediaInfo['platform'],
-    username: item.username || '',
-    url: item.url || '',
-    type: (item.type || 'personal') as SocialMediaInfo['type'],
-    label: item.label || ''
-  })) : [];
 
 // ============================================================================
 // MAIN COMPONENT
@@ -163,7 +85,7 @@ export function DynamicContactArrays({
         items={phonesToCommunicationItems(normalizedPhones)}
         disabled={disabled}
         onChange={(items) => {
-          const phones = communicationItemsToPhones(items);
+          const phones = communicationItemsToPhones(items, contactType);
           onPhonesChange?.(phones);
         }}
       />

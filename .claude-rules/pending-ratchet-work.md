@@ -5230,6 +5230,11 @@ Closed via `hostWall.params.sceneUnits ?? 'mm'` frozen-context pattern σε **4 
 ## Changelog
 
 | Date       | Change |
+|------------|--------|
+| 2026-10-29 | ✅ **🏢 ΘΟΡΥΒΟΣ 1ης ΑΠΟΘΗΚΕΥΣΗΣ — ΕΚΛΕΙΣΕ (ρίζα ≠ υπόθεση)** (ADR-327 §8.5.4 (δ), Opus 5.5): μετρημένο ότι η ρίζα ήταν ο setter της φόρμας (~120 κλειδιά ως «dirty diff»), όχι το σχήμα του server. `edit-session-diff.ts` + `useEditSessionState.ts` (dirty = διαφέρει από τη βάση) + κενή διαφορά ⇒ καμία εγγραφή. 6/6 μεταλλάξεις· ζωντανά `dirtyKeys: ["phones"]`. Το `performedByName: ctx.uid` μεταφέρθηκε στο 🧑. |
+| 2026-10-29 | ✅ **ΕΠΑΦΗ MACON ATEE: ΑΦΜ + ΤΥΠΟΣ ΤΗΛΕΦΩΝΟΥ — ΕΚΛΕΙΣΕ** (ADR-327 §8.5.4, έγκριση Giorgio, Opus 5.5): από τη φόρμα Επαφών ⇒ `vatNumber: 094201577` (τιμολόγιο ΤΔΑ 13267· `isValidGreekVat` ✓, κανένα διπλότυπο) + `phones[0].type: main`· γραμμή Ιστορικού «από Georgios Pagonis». Αφαιρέθηκε όλο το μπλοκ «🔎 Ευρήματα…» (ήταν το τελευταίο σημείο). ➕ Νέο εκκρεμές 🏢 (μη κανονικό σχήμα εταιρείας από server ⇒ θόρυβος στην 1η αποθήκευση) + προσθήκη στο 🏷️ (πίνακες ως αφαίρεση+προσθήκη). |
+| 2026-10-29 | ✅ **«null»-ΚΕΙΜΕΝΟ ΣΤΟ ΑΠΟΘΗΚΕΥΜΕΝΟ `extractedData` — ΕΚΛΕΙΣΕ** (ADR-327 §8.5.4, εντολή Giorgio): `migrate-quote-extracted-absent-text.ts --execute` ⇒ QT-0004 (8 πεδία) καθαρίστηκε + σφραγίδα `normalizationVersion: 2`· επαναληπτικό dry-run: 4/4 τρέχουσα, **0** με «null». |
+| 2026-10-29 | ✅ **ΑΛΛΑΓΗ ΠΡΟΜΗΘΕΥΤΗ ΣΤΟ ΙΣΤΟΡΙΚΟ — ΕΚΛΕΙΣΕ ζωντανά** (ADR-327 §8.5.4, Opus 5.5): QT-0004 MACON → Δοκιμαστικός Β → MACON (έγκριση Α) ⇒ RFQ «Ιστορικό» με ονόματα· Firestore: ids στις τιμές, ονόματα στις ετικέτες. ✅ **☎️ #1 + #2 — ΕΚΛΕΙΣΑΝ**: ΕΝΑ λεξιλόγιο τύπου τηλεφώνου (`lib/contact/phone-type-vocabulary.ts`, CHECK 3.73 `phone-type`, 39 δεμένες δηλώσεις)· το SSoT της ίδιας μέρας έγραφε `work` σε εταιρεία = κενή λίστα ⇒ πλέον `main`. ➕ Νέα: 🧑 Ιστορικό επαφής χωρίς χρήστη · 🏷️ ωμές ετικέτες CDC · 📧 ίδια κλάση για email/web · 🌐 ωμά ελληνικά στο Ιστορικό. |
 | 2026-10-26 | ✅ **ΚΑΘΟΛΙΚΟ ΔΙΧΤΥ ADC ΣΤΑ UNIT TESTS — ΕΚΛΕΙΣΕ (ADR-845 §10, Opus 5.5).** `jest.setup.js`: `GOOGLE_APPLICATION_CREDENTIALS` προς ανύπαρκτο αρχείο ⇒ `initializeApp` αποτυγχάνει σε ~0,1 s αντί για 9,8 s πραγματικού GCS. Απορρίφθηκαν μετρημένα: φράγμα socket (4,9 s / 44 s λόγω retries) · ψεύτικο κλειδί · emulator σε κλειστή θύρα. 255 σουίτες χωρίς mock του Admin: **0 ψευδώς θετικά** (A/B). Αποκαλύφθηκαν 3 σουίτες σε timeout από πραγματικό δίκτυο ⇒ double + `publishShowcaseMark(adminDb, …)` (έγραφε στο καθολικό Firestore). 309 σουίτες / 4.506 tests: κόκκινες μόνο οι 5 προϋπάρχουσες. |
 | 2026-10-25 | ✅ **ΠΡΩΤΟ TEST ΠΟΥ ΑΠΟΘΗΚΕΥΕΙ ΕΝΤΟΛΗ ~4 s — ΕΚΛΕΙΣΕ (ADR-845 §10, Opus 5.5).** Αιτία μετρημένη (cpu-prof ~15 s αδράνεια + χρονομέτρηση ανά κεφάλι): τα **τέσσερα κεφάλια του δημόσιου ραφιού** χτυπούσαν **πραγματικό GCS** με τα ADC του μηχανήματος. ΕΝΑ test double `src/test-utils/public-shelf-double.ts` αντικατέστησε **18** αντίγραφα των ίδιων `jest.mock` (+ οι 2 αργές σουίτες που το είχαν ξεχάσει). Θ0 4–8 s → 15 ms· 22 σουίτες/307 tests πράσινα. Boy Scout: δίδυμο `shelfBucket()` στο `public-shelf-provision.ts`. Νέα γραμμή: καθολικό δίχτυ για ADC σε tests. |
 | 2026-10-19 | ✅ **Ο ΚΑΝΟΝΑΣ ΑΝΑΓΝΩΣΗΣ ΤΗΣ ΔΙΑΘΕΣΗΣ ΕΓΙΝΕ ΕΝΑΣ — ΕΚΛΕΙΣΑΝ ΔΥΟ ΓΡΑΜΜΕΣ (ADR-777 §8.60.20.12, Opus 5.5).** (1) «02/09 — η διάθεση μπαίνει στο δημόσιο σχήμα με ωμό `as`» (ADR-842 Φ5): η προβολή γράφει πλέον `resolveCommercialStatus(property) ?? DEFAULT_COMMERCIAL_STATUS`. Οι τρεις προϋποθέσεις της γραμμής εκπληρώθηκαν: μέτρηση ζωντανά (19/19 ακίνητα, 19/19 αγγελίες ήδη κανονικά ⇒ καμία δημόσια τιμή δεν άλλαξε) · άγκυρα Δ1–Δ4 στο `public-listing-projection.test.ts` (μετάλλαξη: 8 κόκκινα) · καταναλωτής φίλτρου (`operationalStatusForListing`) πάνω στο υπερσύνολο, άρα καλύπτει τις επτά. (2) «19/10 — `commercialStatus ?? status` χειρόγραφο σε 8 σημεία»: και τα 7 σημεία κώδικα ζητούν το `resolveCommercialStatus` (`PropertyStatusLegend` · `PropertyQuickView` · `ListLayout` · `price-resolver` · `public-listing-projection` ×3) + το σχόλιο του `property-completion-stance`. ⚠️ Διόρθωση: η γραμμή έγραφε ότι αγγίζει «το mirror των Cloud Functions ⇒ deploy». **Ψευδές**: δεν υπάρχει καθρέφτης του `public-listing-projection` στο `functions/`. Jest σχετικών φακέλων 156 σουίτες / 3.012 tests πράσινα. |
@@ -5556,52 +5561,65 @@ Closed via `hostWall.params.sceneUnits ?? 'mm'` frozen-context pattern σε **4 
 
 ---
 
-### 📜 Αλλαγή προμηθευτή προσφοράς ΑΟΡΑΤΗ στο Ιστορικό — ADR-327 §8.5 Γ · ADR-195 · 2026-10-28
-
-**Πού**: `useBindQuoteVendor` → `PATCH /api/quotes/{id}` γράφει `vendor_contact_change` στο **ενσωματωμένο** `auditTrail`
-της προσφοράς· το `QUOTE_TRACKED_FIELDS` (`config/audit-tracked-fields.ts`) έχει μόνο `status` ⇒ η καρτέλα «Ιστορικό» του
-RFQ (entity audit) **δεν** δείχνει «Προμηθευτής: Δοκιμαστικός Β → MACON ATEE». Μετρημένο ζωντανά (QT-0004).
-
-**Γιατί pending (N.0.2)**: σκέτο `vendorContactId: scalar` θα έγραφε **ωμά** `cont_…` στο ιστορικό — χειρότερο. Χρειάζεται
-προβολέας αναφοράς οντότητας (id → όνομα επαφής) στο `TrackedFieldDef` ή στιγμιότυπο ονόματος στη γραμμή — σχεδιαστική
-απόφαση του ADR-195, όχι ένα σημείο.
-
-**Πώς επαληθεύεται ότι έκλεισε**: «Άλλαξε σε <προμηθευτή>» στον έλεγχο σάρωσης ⇒ γραμμή με ΟΝΟΜΑΤΑ στο Ιστορικό του RFQ.
-
-➕ **29/10 — ΚΩΔΙΚΑΣ ΕΚΛΕΙΣΕ, μένει ΜΟΝΟ η ζωντανή επαλήθευση** (θέλει έγκριση Giorgio: αλλαγή προμηθευτή σε προσφορά
-δοκιμής = αλλαγή δεδομένων). `updateQuote` → ο ΕΝΑΣ γραφέας `recordEntityUpdate` (+ `entityName`/`action`) με
-`QUOTE_TRACKED_FIELDS.vendorContactId` και νέο SSoT `server/lib/owned-contact-name-resolver.ts` (id στην τιμή + στιγμιότυπο
-ονόματος στην ετικέτα, κριτής μισθωτή). Άγκυρες: `quote-service-audit.test.ts` · `owned-contact-name-resolver.test.ts` ·
-`record-entity-update.test.ts` Γ6/Γ7 — 4/4 μεταλλάξεις. Λεπτομέρειες: ADR-327 changelog 2026-10-29.
-
----
-
-### 🔎 Ευρήματα του ζωντανού ελέγχου σάρωσης που δεν διορθώθηκαν — ADR-327 §8.5.4 · 2026-10-28
-
-3. **Ήδη αποθηκευμένο «null» ως κείμενο** στο `extractedData` σαρώσεων πριν τις 2026-10-28 (π.χ. QT-0004): το UI τα δείχνει.
-   Το σύνορο (`lib/ai-structured-output`) καλύπτει μόνο νέες σαρώσεις· το `normalizeVat` αμύνεται ήδη. **ΜΗΝ** σιωπηλό backfill —
-   απόφαση Giorgio (μετανάστευση με ιστορικό ή επανασάρωση).
-
-4. **Η ήδη αποθηκευμένη επαφή MACON ATEE** (`cont_e54b1931…`) κρατά ακόμη `+30 2310 428900` ως `type: 'mobile'` — η
-   θεραπεία (29/10, `server/lib/phone-line-type.ts`) ισχύει για **νέες** εγγραφές. Διόρθωση της αποθηκευμένης = αλλαγή
-   δεδομένων ⇒ μόνο με έγκριση Giorgio (με γραμμή ιστορικού, ποτέ σιωπηλά).
-
----
-
 ### ☎️ Ο ΤΥΠΟΣ ΤΗΛΕΦΩΝΟΥ ΑΠΟΦΑΣΙΖΕΤΑΙ ΑΚΟΜΗ ΧΕΙΡΟΓΡΑΦΑ ΕΞΩ ΑΠΟ ΤΟΝ SERVER — ADR-327 §8.5.4 · 2026-10-29
 
 **Τι έκλεισε**: οι **τρεις** server αποφάσεις (`buildContactDocument` · `updateContactField` · `resolvePhoneType`) ρωτούν
 πλέον το SSoT `src/server/lib/phone-line-type.ts` (`inferPhoneType`, libphonenumber `/max`). **Τι μένει** (δεν διορθώθηκε,
 N.0.2 — 4+ αρχεία, δύο περιοχές):
-1. **Πελάτης**: `createPhonesArray` (`utils/contactForm/extractors/arrays.ts`) και ο sanitizer
-   (`utils/contactForm/utils/data-cleaning.ts:237`) γράφουν `'mobile'` όταν λείπει πίνακας. Τα `/max` metadata (~145 KB) **δεν**
-   πρέπει να μπουν στο bundle — θεραπεία: απόφαση στον server (route αποθήκευσης) ή στο UI με ρητή επιλογή του ανθρώπου.
-2. **Δεύτερο λεξιλόγιο τύπων**: το `PHONE_COMPANY_MAP`/`PHONE_SERVICE_MAP`/`PHONE_DEFAULTS` του AI handler
-   (`contact-communication-types.ts`) γράφει `main`/`department`/`secretariat`/`sales`/`support` — τύποι που το UI
-   (`CommunicationConfigs`: `mobile/home/work/fax/other`) **δεν ξέρει**. Απόφαση: διεύρυνση του λεξιλογίου ή χαρτογράφηση.
 3. **Χειρόγραφος πίνακας κωδικών χώρας** στο `parsePhoneForStorage` (`contact-document-builder.ts`, CC3/CC2 λίστες) —
    δεύτερος ορισμός της γνώσης του libphonenumber (ίδιο σχήμα με το `channel-phone.ts` §«ΓΙΑΤΙ ΒΙΒΛΙΟΘΗΚΗ»). Θέλει
    προσοχή: αλλάζει το σχήμα αποθήκευσης (`countryCode` + `number`) — καλύπτεται από `contact-lookup.test.ts`.
+
+➕ **29/10 (β) — έκλεισαν τα παλιά 1 και 2.** Η βάση του 2 ήταν **λάθος**: το UI ξέρει `main/department/…` (overrides
+εταιρείας/υπηρεσίας)· **ο τύπος `PhoneInfo` και ο server** δεν τα ήξεραν. Ρίζα `lib/contact/phone-type-vocabulary.ts`
+(`PHONE_TYPES` + `PHONE_TYPES_BY_OWNER` + `DEFAULT_PHONE_TYPE`, CHECK 3.73 `phone-type`)· δεμένα: `PhoneInfo`/`OrgPhoneInfo`/
+`PhoneEntry`, `CommunicationConfigs`, ετικέτες, χάρτες AI, `inferPhoneType` (εταιρεία/υπηρεσία ⇒ `main`), εφεδρείες πελάτη
+(mappers · sanitizer · εισαγωγή λίστας), Ιστορικό (`PHONE_TYPE_DISPLAY`). Μένει μόνο το 3.
+
+---
+
+### 🧑 Ιστορικό επαφής ΧΩΡΙΣ χρήστη όταν γράφει ο server — ADR-195 · 2026-10-29
+
+**Μετρημένο ζωντανά** (MACON ATEE, καρτέλα «Ιστορικό»): καμία γραμμή δεν λέει «από …». Αιτία: οι server γραφείς επαφών
+(Admin SDK — `api/contacts/resolve` · `contact-lookup-crud` · `buildContactDocument` κ.ά.) **δεν** σφραγίζουν
+`_lastModifiedBy`/`_lastModifiedByName` ⇒ ο CDC (`functions/src/audit/contact-audit-trigger.ts`) γράφει `cdc_unknown`, και το
+`dedupDualWrite` (`services/audit/dedup-dual-write.ts`) κρατά τη **CDC** γραμμή αντί της service, που **έχει** τον χρήστη.
+**Γιατί pending (N.0.2)**: πολλοί server γραφείς + Cloud Function (deploy στο Firebase, όχι στο push). **Θεραπεία**: ΕΝΑΣ
+βοηθός σφραγίδας για κάθε server εγγραφή επαφής (όπως το `ContactsService.updateContact` στον πελάτη) + άγκυρα «κάθε
+`set/update` σε `contacts` περνά από αυτόν». **Κλείνει όταν**: νέα σάρωση ⇒ το Ιστορικό της νέας επαφής λέει «από <χρήστης>».
+➕ **29/10 (δ)** — ίδια οικογένεια: το `api/contacts/resolve/route.ts` γράφει `performedByName: ctx.uid` (uid στη θέση ονόματος)
+στη γραμμή ιστορικού της διεύθυνσης. Η θεραπεία του βοηθού σφραγίδας πρέπει να δίνει και **όνομα**, όχι μόνο uid.
+
+---
+
+### 🏷️ Ετικέτες CDC επαφής: ωμά κλειδιά και τιμές στο Ιστορικό — ADR-195 · 2026-10-29
+
+**Μετρημένο ζωντανά** (MACON ATEE): `displayName: — → MACON ATEE`, `lastModifiedBy: — → Χρήστης` (ωμά κλειδιά, και το
+`lastModifiedBy` δεν είναι αλλαγή που ενδιαφέρει άνθρωπο), «Προστέθηκε Ρόλοι (Personas): (άγνωστο)», `2310428900 — mobile`
+(ωμός τύπος στο `itemLabel`), λογότυπο ως εσωτερικό URL `/api/storage/file/…`. Πού: `functions/src/audit/ignored-fields.ts`
+(`lastModifiedBy` χωρίς `_` δεν αγνοείται) + `labelFields`/`itemLabel` του CDC + ετικέτες πεδίων. **Θέλει deploy Functions.**
+➕ **29/10 (γ)** — μετρημένο ζωντανά: αλλαγή **ενός** πεδίου στοιχείου πίνακα (τύπος τηλεφώνου `mobile → main`) φαίνεται ως
+«Αφαιρέθηκε Τηλέφωνα: 2310428900 — mobile» + «Προστέθηκε Τηλέφωνα: 2310428900 — main» (διαφορά ολόκληρου αντικειμένου, όχι
+κατά ταυτότητα στοιχείου). Και `customFields.companyAddresses` εμφανίζεται ως ωμό κλειδί. Ίδιο deploy Functions.
+
+---
+
+### 📧 Ίδια κλάση με το ☎️ για email / ιστοσελίδα — ADR-327 §8.5.4 · 2026-10-29
+
+Το λεξιλόγιο τύπου **email** και **ιστοσελίδας** ανά κάτοχο ζει ακόμη σε χωριστές δηλώσεις (`CommunicationConfigs` overrides ·
+`EMAIL_*_MAP`/`WEBSITE_*_MAP` του AI · `EmailInfo['type']`). Απτό σύμπτωμα: `buildContactDocument` γράφει email εταιρείας με
+`type: 'work'` — τιμή που η φόρμα εταιρείας (`general/department/sales/support/info/other`) **δεν** προσφέρει ⇒ κενή λίστα,
+ακριβώς όπως το τηλέφωνο της MACON. Θεραπεία: ίδιο πρότυπο με το `lib/contact/phone-type-vocabulary.ts` (ρίζα + υποσύνολα ανά
+κάτοχο + CHECK 3.73). Επίσης `communicationItemsToEmails/Websites/Social` κάνουν ακόμη τυφλό `as` (`communication-item-mappers.ts`).
+
+---
+
+### 🌐 Ωμά ελληνικά στις ετικέτες τύπων του Ιστορικού — N.11 · 2026-10-29
+
+`components/shared/audit/activity-tab-helpers.ts` (`TYPE_LABELS`, `PHONE_TYPE_DISPLAY`, `NESTED_KEY_LABELS`) — ελληνικά
+καρφωμένα με `eslint-disable custom/no-hardcoded-strings` ⇒ στα αγγλικά το Ιστορικό δείχνει ελληνικά. Τα τηλέφωνα είναι πλέον
+**δεμένα** στη ρίζα `PhoneType` (το `internal` έλειπε ⇒ έβγαινε ωμό), αλλά οι **λέξεις** πρέπει να έρθουν από τα locale
+(`communication.phoneTypes.*` κ.λπ., που υπάρχουν ήδη). Ο helper είναι καθαρός (χωρίς `t`) ⇒ θέλει πέρασμα translator.
 
 ---
 

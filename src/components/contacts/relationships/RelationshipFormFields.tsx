@@ -25,6 +25,9 @@ import { UniversalCommunicationManager } from '@/components/contacts/dynamic/Uni
 import { getEntityAwareCommunicationConfig } from '@/components/contacts/dynamic/communication';
 import type { CommunicationItem } from '@/components/contacts/dynamic/communication';
 import type { PhoneInfo, EmailInfo } from '@/types/contacts';
+import {
+  phonesToCommunicationItems, emailsToCommunicationItems, communicationItemsToPhones, communicationItemsToEmails,
+} from '@/components/contacts/dynamic/communication/utils/communication-item-mappers';
 import { formatPhoneDisplay } from '@/utils/contacts/formatPhoneDisplay';
 import type { ContactType } from '@/types/contacts/contracts';
 import type { RelationshipFormData } from './types/relationship-manager.types';
@@ -59,49 +62,6 @@ export interface RelationshipFormFieldsProps {
     };
   };
 }
-
-// ============================================================================
-// MAPPER FUNCTIONS — Phone/Email ↔ CommunicationItem
-// ============================================================================
-
-const phonesToCommunicationItems = (phones: PhoneInfo[]): CommunicationItem[] =>
-  Array.isArray(phones) ? phones.map(phone => ({
-    type: phone.type,
-    label: phone.label,
-    isPrimary: phone.isPrimary,
-    number: phone.number,
-    countryCode: phone.countryCode,
-    extension: phone.extension
-  })) : [];
-
-const emailsToCommunicationItems = (emails: EmailInfo[]): CommunicationItem[] =>
-  Array.isArray(emails) ? emails.map(email => ({
-    type: email.type,
-    label: email.label,
-    isPrimary: email.isPrimary,
-    email: email.email
-  })) : [];
-
-const communicationItemsToPhones = (items: CommunicationItem[]): PhoneInfo[] =>
-  Array.isArray(items) ? items.map(item => {
-    const ext = (item.extension as string | undefined)?.trim();
-    return {
-      number: item.number || '',
-      type: item.type as PhoneInfo['type'],
-      isPrimary: item.isPrimary || false,
-      label: item.label || '',
-      countryCode: item.countryCode || '+30',
-      ...(ext ? { extension: ext } : {})
-    };
-  }) : [];
-
-const communicationItemsToEmails = (items: CommunicationItem[]): EmailInfo[] =>
-  Array.isArray(items) ? items.map(item => ({
-    email: item.email || '',
-    type: item.type as EmailInfo['type'],
-    isPrimary: item.isPrimary || false,
-    label: item.label || ''
-  })) : [];
 
 // ============================================================================
 // COMPONENT
@@ -230,7 +190,7 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
   );
 
   const handlePhonesChange = useCallback((items: CommunicationItem[]) => {
-    const phones = communicationItemsToPhones(items);
+    const phones = communicationItemsToPhones(items, contactType);
     const primaryPhone = phones.find(p => p.isPrimary) || phones[0];
     setFormData(prev => ({
       ...prev,
@@ -240,7 +200,7 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
         businessPhone: formatPhoneDisplay(primaryPhone)
       }
     }));
-  }, [setFormData]);
+  }, [setFormData, contactType]);
 
   const handleEmailsChange = useCallback((items: CommunicationItem[]) => {
     const emails = communicationItemsToEmails(items);

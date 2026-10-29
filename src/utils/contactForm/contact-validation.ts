@@ -26,11 +26,27 @@ export interface ContactValidationResult {
 // INTERNAL HELPERS
 // ============================================================================
 
+/**
+ * Το namespace που ΚΑΤΕΧΕΙ τα κλειδιά σφάλματος αυτού του validator (και του `communication-array-validation`).
+ *
+ * 🔴 Μετρημένο ζωντανά 2026-10-29 (ADR-327 §8.5.4): η φόρμα ΕΤΑΙΡΕΙΑΣ έδειχνε κάτω από το ΑΦΜ το ωμό
+ * `validation.company.nameAndVatRequired` — ο `GenericFormRenderer` μεταφράζει στο `forms`, οι renderers προσώπου/
+ * υπηρεσίας στο `contacts-form`. Το κλειδί ήταν σωστό· έλειπε **ποιανού** είναι. Το δηλώνει πλέον η πηγή του
+ * (`ns:key`), ώστε να λύνεται ίδια σε κάθε renderer, toast ή ειδοποίηση.
+ */
+export const CONTACT_VALIDATION_NAMESPACE = 'contacts-form';
+
+/** Κλειδί σφάλματος → πλήρες `contacts-form:…` (ιδεμποτικό: ήδη πλήρες κλειδί μένει ως έχει). */
+function qualifyErrorKey(key: string): string {
+  return key.includes(':') ? key : `${CONTACT_VALIDATION_NAMESPACE}:${key}`;
+}
+
 function buildValidationResult(fieldErrors: Record<string, string>): ContactValidationResult {
-  const errorFields = Object.keys(fieldErrors);
+  const qualified = Object.fromEntries(Object.entries(fieldErrors).map(([field, key]) => [field, qualifyErrorKey(key)]));
+  const errorFields = Object.keys(qualified);
   return {
     isValid: errorFields.length === 0,
-    fieldErrors,
+    fieldErrors: qualified,
     firstErrorField: errorFields[0],
   };
 }
@@ -39,6 +55,23 @@ function setFieldError(fieldErrors: Record<string, string>, fieldName: string, e
   if (!fieldErrors[fieldName]) {
     fieldErrors[fieldName] = errorKey;
   }
+}
+
+/**
+ * Το κοινό τέλος των τριών validators: σφάλμα πινάκων επικοινωνίας (στο πεδίο του) + αποτέλεσμα με πλήρη κλειδιά.
+ * Ήταν αντιγραμμένο αυτούσιο τρεις φορές (jscpd, 2026-10-29).
+ */
+function finishValidation(formData: ContactFormData, fieldErrors: Record<string, string>): ContactValidationResult {
+  const arrayResult = validateCommunicationArrays(formData);
+  if (!arrayResult.valid && arrayResult.errorKey) {
+    const k = arrayResult.errorKey.toLowerCase();
+    const field = k.includes('phone') ? 'phones'
+      : k.includes('email') ? 'emails'
+      : k.includes('url') ? 'websites'
+      : 'communication';
+    setFieldError(fieldErrors, field, arrayResult.errorKey);
+  }
+  return buildValidationResult(fieldErrors);
 }
 
 function validateIndividualField(formData: ContactFormData, fieldName: string): string | undefined {
@@ -112,6 +145,11 @@ function validateServiceField(formData: ContactFormData, fieldName: string): str
 // ============================================================================
 
 export function validateContactField(formData: ContactFormData, fieldName: string): string | undefined {
+  const key = validateFieldByType(formData, fieldName);
+  return key === undefined ? undefined : qualifyErrorKey(key);
+}
+
+function validateFieldByType(formData: ContactFormData, fieldName: string): string | undefined {
   switch (formData.type) {
     case 'individual':
       return validateIndividualField(formData, fieldName);
@@ -149,17 +187,7 @@ export function validateIndividualContact(formData: ContactFormData): ContactVal
   const expiryDateError = validateIndividualField(formData, 'documentExpiryDate');
   if (expiryDateError) setFieldError(fieldErrors, 'documentExpiryDate', expiryDateError);
 
-  const arrayResult = validateCommunicationArrays(formData);
-  if (!arrayResult.valid && arrayResult.errorKey) {
-    const k = arrayResult.errorKey;
-    const field = k.toLowerCase().includes('phone') ? 'phones'
-      : k.toLowerCase().includes('email') ? 'emails'
-      : k.toLowerCase().includes('url') ? 'websites'
-      : 'communication';
-    setFieldError(fieldErrors, field, arrayResult.errorKey);
-  }
-
-  return buildValidationResult(fieldErrors);
+  return finishValidation(formData, fieldErrors);
 }
 
 export function validateCompanyContact(formData: ContactFormData): ContactValidationResult {
@@ -174,17 +202,7 @@ export function validateCompanyContact(formData: ContactFormData): ContactValida
     setFieldError(fieldErrors, 'vatNumber', vatError);
   }
 
-  const arrayResult = validateCommunicationArrays(formData);
-  if (!arrayResult.valid && arrayResult.errorKey) {
-    const k = arrayResult.errorKey;
-    const field = k.toLowerCase().includes('phone') ? 'phones'
-      : k.toLowerCase().includes('email') ? 'emails'
-      : k.toLowerCase().includes('url') ? 'websites'
-      : 'communication';
-    setFieldError(fieldErrors, field, arrayResult.errorKey);
-  }
-
-  return buildValidationResult(fieldErrors);
+  return finishValidation(formData, fieldErrors);
 }
 
 export function validateServiceContact(formData: ContactFormData): ContactValidationResult {
@@ -196,15 +214,5 @@ export function validateServiceContact(formData: ContactFormData): ContactValida
     setFieldError(fieldErrors, 'name', serviceNameError);
   }
 
-  const arrayResult = validateCommunicationArrays(formData);
-  if (!arrayResult.valid && arrayResult.errorKey) {
-    const k = arrayResult.errorKey;
-    const field = k.toLowerCase().includes('phone') ? 'phones'
-      : k.toLowerCase().includes('email') ? 'emails'
-      : k.toLowerCase().includes('url') ? 'websites'
-      : 'communication';
-    setFieldError(fieldErrors, field, arrayResult.errorKey);
-  }
-
-  return buildValidationResult(fieldErrors);
+  return finishValidation(formData, fieldErrors);
 }
