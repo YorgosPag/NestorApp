@@ -4251,10 +4251,6 @@
 - **Fix**: μία σειρά προτεραιότητας (κύριο του `emails[]` → πρώτο → legacy), ΕΝΑΣ αναγνώστης· το `resolveCustomer` γίνεται καταναλωτής του `extractContactParty` (όπως το `po-document-parties`).
 - **Γιατί όχι τώρα**: αλλάζει παραλήπτη σε ζωντανές ροές RFQ/τιμολόγησης (εκτός εμβέλειας 3γ, και τα αρχεία RFQ τα δουλεύει άλλος agent).
 
-### 📅 Μετατροπή ISO→`Timestamp` σε 2 ακόμη services → `toDeadlineTimestamp` (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-27, ADR-330 §5.1 S3.2 · N.0.2)
-- **Τι**: SSoT `src/subapps/procurement/services/procurement-timestamps.ts` (`toDeadlineTimestamp` / `patchDeadlineTimestamp`) πήρε τα 4 αντίγραφα των `rfq-service` + `sourcing-event-service`. Μένουν εκτός: `quote-service.ts:265` (`validUntil`, με **`!`** ⇒ μη αναγνώσιμη ημερομηνία = εξαίρεση, όχι «τώρα» — **διαφορετική σημασιολογία**, αποφάσισε πρώτα ποια είναι σωστή) · `material-service.ts:137` (`lastPurchaseDate`, ίδια σημασιολογία — δεν αγγίχθηκε γιατί το δέντρο υλικών το δούλευε άλλη συνεδρία).
-- **Fix**: μετονόμασε σε γενικό όνομα (π.χ. `toAdminTimestampOrNull`) αν μπουν μη-προθεσμίες, και πέρασε τα δύο. Μην «ενώσεις» σιωπηλά τη σημασιολογία του `quote-service`.
-
 ### 🔌 Hooks προμηθειών με ωμό `fetch` αντί για `apiClient` — χάνονται `errorCode`, ταυτότητα, ιδεμποτία (προτεραιότητα ΜΕΣΑΙΑ, 2026-10-27, ADR-923 §5.11 «3γ» Βήμα 2 · N.0.2)
 - **Τι**: το `useFrameworkAgreements` (`agreementRequest`), το `useMaterials` και το `useSupplierMetrics` καλούν `fetch('/api/procurement/…')` με χειρόγραφα URL, ενώ το `procurement-mutation-gateway` χρησιμοποιεί `apiClient` + `API_ROUTES.PROCUREMENT`. Συνέπειες:
   - το σφάλμα φτάνει ως `new Error(json.error)` ⇒ **ωμό αγγλικό μήνυμα** στη φόρμα (π.χ. άρνηση ισοπαλίας συμβάσεων), κανένα `ApiClientError.errorCode`·
@@ -4286,10 +4282,6 @@
 - **Τι**: γεννήθηκε `src/lib/properties/unsaved-property.ts` (`UNSAVED_PROPERTY_ID` + `isPersistedPropertyId`) και το χρησιμοποιούν ήδη οι θύρες ΠΕΑ και τοπογραφικού. Χειρόγραφα για **ακίνητο**: `app/api/properties/[id]/route.ts:93` · `features/property-details/PropertyDetailsContent.tsx:411` · `hooks/properties/usePropertyMediaCounts.ts:84,122` · `components/building-management/dialogs/UnitQuickCreateSheet.tsx:66`.
 - **Fix**: εισαγωγή του SSoT σε καθένα. ⚠️ **ΟΧΙ** τα `'__new__'` κτιρίου (`BuildingQuickCreateSheet` `TEMP_BUILDING_ID`), μέλους (`MemberEditor`) ή διεύθυνσης (`AddressMap`): άλλη οντότητα, άλλη ερώτηση — ίδια συμβολοσειρά κατά σύμπτωση.
 
-### 🔤 Δύο υλοποιήσεις «ταξινόμησε τα κλειδιά αναδρομικά» — `sortDeep` (canonical-json) ≡ `sortKeys` (audit-diff) (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-23, ADR-919 §9 · N.0.2)
-- **Τι**: το `sortDeep` στο `src/lib/legal/canonical-json.ts` και το `sortKeys` στο `src/lib/audit/audit-diff.ts` κάνουν το ίδιο (αναδρομή σε πίνακες/αντικείμενα, σειρά μονάδων UTF-16). Βρέθηκε στο βήμα 5 του ADR-919, όπου επαναχρησιμοποιήθηκε το `canonicalJson`.
-- **Fix**: ένα πρωτογενές `sortKeysDeep` σε ουδέτερο `src/lib/` (όχι `legal` ούτε `audit`), που το εισάγουν και τα δύο. ⚠️ Το `canonical-json` είναι **παγωμένη μορφή** (αποτυπώματα νομικών εκδόσεων, ADR-861 §7): μετά την αλλαγή πρέπει να μείνει πράσινο το `legal-document-versions.test.ts`, που ελέγχει bytes-ισότητα. Γι' αυτό δεν διορθώθηκε επί τόπου (ξένα αρχεία, κοινό working tree).
-
 ### 📅 Έλεγχος «ημερολογιακή ημέρα ISO» — ~14 χειρόγραφα `/^\d{4}-\d{2}-\d{2}$/`, κανένα δεν ελέγχει ότι η ημέρα ΥΠΑΡΧΕΙ (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-23, ADR-919 · N.0.2)
 - **Τι**: το ίδιο regex γραμμένο ξεχωριστά σε `listing-stats-document.ts`, `url-filters/multi-value.ts`, `operator-readiness.ts`, `listing-stay-url.ts`, `demand-form-values.ts`, `conveyance/*` (2), `accounting-day.ts`, `accounting-repo-scan.ts`, `quote-search.ts`, `attendance/qr/generate/route.ts`, `purchase-orders/page.tsx`, κ.ά. Όλα δέχονται `2027-02-30`.
 - **Fix**: εξαγωγή του `parseCalendarDay` (σήμερα ιδιωτικό στο `src/lib/listings/availability-window.ts`, πάνω στο `daysInMonth` του `lib/date/calendar-arithmetic.ts`) σε `lib/date/calendar-day.ts` με `isCalendarDay()`, και μετάβαση των καλούντων ένα-ένα (με zod `.refine` όπου είναι σχήμα). Πρόσεξε: κάποιοι δέχονται και κενό (`demand-form-values`) ή πρόθεμα χωρίς `$` (`audit-value-resolver`, `payment-plan`) — άλλη σημασία, μην τα ενοποιήσεις τυφλά.
@@ -4308,10 +4300,6 @@
 - **Περιστατικό**: γραμμές που πλοηγούν/επιλέγουν με `onClick` χωρίς `href`: `components/procurement/shared/procurement-table-parts.tsx` (`ProcurementRowLink`, 4 καταναλωτές) · `components/reports/core/ReportTable.tsx` (`onRowClick`: `ReportResults`, `ComparisonPanel`, `RfqDetailClient` drill-down) · `ReportAgingTable` · `GroupedTreeGrid` · `construction/portfolio/PortfolioTable.tsx` (→ κτίριο) · `sales/payments/ChequeTable.tsx` · accounting (`InvoiceRow`, `TransactionsPanel`, `MatchingPanel`, `APYCertificatesList`) · `admin/bim-diagnostics/DiagnosticsList.tsx`.
 - **Έρευνα** (Roselli «Don't Turn a Table into an ARIA Grid…» 2023, ενημ. 2026 · GOV.UK table · Agriculture DS · GitHub): ποτέ click handler στο `<tr>`, ποτέ `role=grid` για αυτό. **Ένας** πραγματικός `<a>`/`<button>` στο κύριο κελί (`th scope=row`). Αν θέλεις όλη τη γραμμή: `::after { position:absolute; inset:0 }` στον σύνδεσμο + `position:relative` στο `<tr>` (WebKit το διόρθωσε 04/2026, Chrome/Firefox OK). **Όχι** stretch όταν η γραμμή έχει κι άλλα controls (ή `relative z-10` σε αυτά). Φύλακας επιλογής κειμένου (Heydon Pickering, Cards).
 - **Fix**: ΕΝΑ SSoT εξάρτημα/κλάση (π.χ. `STRETCHED_LINK_CLASS` στο `lib/ui/link-style.ts`, που ήδη επαναλαμβάνεται ως literal στα `ListingCard`, `ListingMapPopup`, `PropertyCard`) + μετάβαση ανά αρχείο. Οι γραμμές **επιλογής** (accounting matching) θέλουν `<button>`/checkbox, όχι σύνδεσμο. 13 αρχεία, 5+ περιοχές ⇒ N.8.
-
-### ↔️ Τέσσερις παρακάμψεις πλάτους `SelectContent` στο DXF → `width="content"` (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-20, ADR-001 «Content width» · N.0.2)
-- Το `ui/select` απέκτησε `<SelectContent width="content">` (token `dropdown.content.widthFitContent`). Πριν, τέσσερα αρχεία έγραφαν μόνα τους `w-auto min-w-[var(--radix-select-trigger-width)]` με **διαφορετικά** όρια: `ui/bim-properties/BimPropertyRow.tsx` (24rem) · `ui/panels/entourage/EntouragePalette.tsx` (260px) · `ui/panels/materials/MaterialEditorSections.tsx` (χωρίς όριο ⇒ μπορεί να βγει από την οθόνη) · `ui/ribbon/components/buttons/RibbonCombobox.tsx` (28rem).
-- **Fix**: `width="content"` και αφαίρεση του `className`· αν κάποιο πάνελ χρειάζεται στενότερο όριο, δεύτερο token, όχι τοπική κλάση. Αγγίζει DXF (CHECK 6D) ⇒ χωριστό βήμα.
 
 ### 🗂️ Ετικέτες πράξεων ιστορικού αρχείου — ΚΑΜΙΑ από τις ~45 `FileAuditAction` δεν έχει κλειδί i18n (προτεραιότητα ΜΕΣΑΙΑ, 2026-10-20, ADR-916 Φ-Γ1 · N.0.2)
 - **Περιστατικό**: το `AuditLogPanel` αποδίδει `t(\`audit.action.${entry.action}\`, entry.action)` — **ωμή εφεδρεία** με το ίδιο το κλειδί. Μετρημένο: το `files.json` (el/en) έχει `audit.{title, noEntries, file*}` αλλά **κανένα** `audit.action.*` ⇒ ο άνθρωπος βλέπει `storage_relocate`, `cde_supersede`, `handover_receive` αυτολεξεί. Το CHECK 3.97 το κρύβει επειδή η εφεδρεία δεν είναι literal.
@@ -4427,11 +4415,6 @@
 - **Θεραπεία**: ~38 κλειδιά (ένα ανά `FileAuditAction`) σε el + en, και η κλήση **χωρίς** εφεδρεία. Άγκυρα: κάθε μέλος του τύπου έχει κλειδί και στις δύο γλώσσες (ο `ACTION_ICON_MAP` είναι ήδη `Record<FileAuditAction, …>`, άρα το κλειστό σύνολο υπάρχει).
 - **Μέγεθος**: ~1h, ξένος τομέας (ADR-191) ⇒ όχι επί τόπου.
 
-### 📅 `addMonthsClampedUtc` — δεύτερη υλοποίηση του `addMonthsUTC` (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-14, ADR-915 Φ1 · N.0.2)
-- **Τι**: `lib/date/calendar-arithmetic.ts` `addMonthsClampedUtc(Date, n)` + `addYearsClampedUtc` κάνουν **το ίδιο ψαλίδισμα** με το κανονικό `lib/date-local.ts` `addMonthsUTC(iso, n)` (31/1+1 ⇒ 28/2), με άλλη υπογραφή (`Date` αντί για ISO).
-- **Καταναλωτές** (grep 2026-10-14): `lib/stay/stay-rules.ts` · `subapps/dxf-viewer/bim/table/table-fill-series-generate.ts` — δύο ξένοι τομείς, γι' αυτό όχι επί τόπου.
-- **Θεραπεία**: το `addMonthsClampedUtc` να αναθέτει στο `addMonthsUTC` (ή το αντίστροφο, με μία υλοποίηση)· άγκυρα 31/1, 29/2, αρνητικοί μήνες **πριν και μετά**.
-
 ### ⭕ `useBorderTokens().radius.X` μέσα σε `className` — **τιμή CSS**, όχι κλάση (προτεραιότητα ΜΕΣΑΙΑ, 2026-10-14, ADR-777 §8.96.5 · N.0.2)
 - **Ρίζα**: το `radius` του hook είναι το `coreBorderRadius` (`full: '9999px'`, `lg: '0.75rem'`)· οι κλάσεις είναι στο **`radiusClass`**. Μέσα σε template `className` το `${radius.full}` γίνεται ωμό «9999px» ⇒ **καμία** στρογγύλευση, σιωπηλά.
 - **Διορθώθηκε**: `components/ui/radio-group.tsx` (τα radio ήταν τετράγωνα σαν checkbox σε ΟΛΗ την εφαρμογή) + άγκυρα `components/ui/__tests__/radio-group.test.tsx` (μετάλλαξη 1/1).
@@ -4488,16 +4471,6 @@
     `lib/listings/listing-map-mark.ts` · `lib/listings/model-declaration-metadata.ts` · `subapps/dxf-viewer/systems/basemap/basemap-placement-schema.ts`
 - **Διόρθωση**: `import { isFiniteNumber, isPlainRecord } from '@/lib/type-guards'` + σβήσιμο της τοπικής (ελέγξτε ότι το σώμα είναι
   **ταυτόσημο** — ένα `isRecord` που δέχεται πίνακες ΔΕΝ είναι το ίδιο). 10+ αρχεία σε 6 τομείς ⇒ εδώ, όχι στο commit του ADR-889 Φ4 (N.0.2).
-
-### 🔢 `clamp` — επτά τοπικά αντίγραφα έξω από το SSoT (προτεραιότητα ΧΑΜΗΛΗ, 2026-09-28, ADR-884 Φ2στ-γ §4.14)
-- **Τι**: η οικογένεια `clamp` προωθήθηκε στο `src/lib/geometry/scalar.ts` (το `subapps/dxf-viewer/utils/scalar-math.ts`
-  επανεξάγει — πρότυπο `lib/geometry/angle.ts`). Μένουν **τοπικές** δηλώσεις `function clamp(value, min, max)` σε:
-  `components/shared/addresses/editor/helpers/rankSuggestions.ts` · `components/ui/floating/floating-panel-geometry.ts` ·
-  `services/ai-pipeline/modules/uc-017-gantt-ai/analyzers/photo-progress-analyzer.ts` · `services/report-engine/evm-calculator.ts` ·
-  `subapps/dxf-viewer/bim/table/formula/catalog/formula-insert-text.ts` · `…/ui/ribbon/components/table/table-size-grid-keyboard.ts`
-  (το `bim/table/table-cell-run-ops.ts` έχει **άλλη** υπογραφή `clamp(value, limit)` — όχι διπλότυπο).
-- **Διόρθωση**: `import { clamp } from '@/lib/geometry/scalar'` (μέσα στο subapp: από το `utils/scalar-math`) + σβήσιμο της τοπικής·
-  ταυτόσημη σημασιολογία (`Math.max(min, Math.min(max, value))`). 4+ αρχεία σε 4 τομείς ⇒ εδώ, όχι στο ίδιο commit (N.0.2).
 
 ### 📐 Επίπεδη γεωμετρία — τα υπόλοιπα αντίγραφα έξω από το `lib/geometry` (προτεραιότητα ΧΑΜΗΛΗ, 2026-09-28, ADR-884 Φ2στ-γ Γ3)
 - **Έγινε ήδη (Γ3α)**: SSoT `src/lib/geometry/planar-polygon.ts` (εμβαδόν · σημείο-μέσα · αυτοτομή · `segmentsIntersect` ·
@@ -5231,6 +5204,8 @@ Closed via `hostWall.params.sceneUnits ?? 'mm'` frozen-context pattern σε **4 
 
 | Date       | Change |
 |------------|--------|
+| 2026-10-29 | ✅ **ΠΕΝΤΕ ΜΙΚΡΑ ΔΙΠΛΟΤΥΠΑ — ΕΚΛΕΙΣΑΝ (εντολή Giorgio «από τα μικρότερα», Opus 5.5).** (1) **`clamp`**: 4 τοπικά → `@/lib/geometry/scalar` (`rankSuggestions` · `floating-panel-geometry` · `photo-progress-analyzer` · `evm-calculator`). Τα άλλα δύο **δεν** είναι διπλότυπα: `formula-insert-text` (trunc + NaN⇒max) · `table-size-grid-keyboard` (αντίστροφη σειρά ⇒ κερδίζει το `max` όταν min>max). (2) **`SelectContent width="content"`** στα 4 DXF (`BimPropertyRow` · `EntouragePalette` · `MaterialEditorSections` + περιττό `contentClassName` στο `UomSelect` · `RibbonCombobox`)· αφαιρέθηκαν και τα νεκρά `whitespace-nowrap` (το `labelFit` τα υπερισχύει). ⚠️ Τα όρια 24rem/260px έγιναν το κοινό `min(28rem, διαθέσιμο)` — **δεν** ελέγχθηκε οπτικά. (3) **`addMonthsUTC` → αναθέτει στο `addMonthsClampedUtc`** + ξαναβάζει την ώρα της αφετηρίας (`positiveMod(ms, MS_PER_DAY)`)· σχετικά imports επίτηδες (το εισάγουν scripts χωρίς alias). Άγκυρα `date-local-add-months.test.ts` (31/1, 29/2, αρνητικοί, ώρα, πριν το 1970). (4) **`sortKeysDeep`** (`src/lib/sort-keys-deep.ts`, NEW): `canonical-json` + `audit-diff` (`export const sortKeys = sortKeysDeep`)· `legal-document-versions.test.ts` πράσινο (bytes). Μένει το αντίγραφο του `functions/src/audit/deep-diff.ts` (άλλο πακέτο). (5) **`toAdminTimestampOrNull` / `patchAdminTimestamp`** (μετονομασία του `toDeadlineTimestamp`) + `material-service` `lastPurchaseDate` (2 αντίγραφα)· το `quote-service` `toValidUntil` μένει χωριστό (μη αναγνώσιμη ⇒ `null`). Jest: 13 σουίτες / 365 tests πράσινα. ⚠️ `jscpd:diff` **δεν** έτρεξε (το `npx` αποτυγχάνει σε UNC cwd) — θα το τρέξει το pre-commit. |
+| 2026-10-29 | ✅ **📧 + 🌐 + 💬 ΛΕΞΙΛΟΓΙΟ ΤΥΠΟΥ EMAIL / ΙΣΤΟΣΕΛΙΔΑΣ / SOCIAL ΑΝΑ ΚΑΤΟΧΟ — ΕΚΛΕΙΣΕ** (ADR-327 §8.5.4 (ε), Opus 5.5): ρίζες `email-type` · `website-type` · `social-media-type` (ίδιο πρότυπο με το ☎️, ένας άξονας κατόχου `contact-owner-kind.ts`) + ΕΝΑΣ κανόνας `inferEmailType`· 7 γραφείς εκτός υποσυνόλου διορθώθηκαν (AI builder/lookup-crud, resolve, φόρμα, λίστα, σάρωση προσφοράς, saver ιστοσελίδας, seed)· mappers χωρίς τυφλό `as`· Ιστορικό ένας πίνακας ανά λεξιλόγιο. CHECK 3.73 +3 λεξιλόγια + νέα κατάσταση `bound-elsewhere` (ADR-812). Δεδομένα: 0/22 εκτός υποσυνόλου. 10/10 μεταλλάξεις σκοτώθηκαν. Ζωντανός έλεγχος εκκρεμεί (dev server 403). Νέο μπλοκ 💬 για την πλατφόρμα. |
 | 2026-10-29 | ✅ **🏢 ΘΟΡΥΒΟΣ 1ης ΑΠΟΘΗΚΕΥΣΗΣ — ΕΚΛΕΙΣΕ (ρίζα ≠ υπόθεση)** (ADR-327 §8.5.4 (δ), Opus 5.5): μετρημένο ότι η ρίζα ήταν ο setter της φόρμας (~120 κλειδιά ως «dirty diff»), όχι το σχήμα του server. `edit-session-diff.ts` + `useEditSessionState.ts` (dirty = διαφέρει από τη βάση) + κενή διαφορά ⇒ καμία εγγραφή. 6/6 μεταλλάξεις· ζωντανά `dirtyKeys: ["phones"]`. Το `performedByName: ctx.uid` μεταφέρθηκε στο 🧑. |
 | 2026-10-29 | ✅ **ΕΠΑΦΗ MACON ATEE: ΑΦΜ + ΤΥΠΟΣ ΤΗΛΕΦΩΝΟΥ — ΕΚΛΕΙΣΕ** (ADR-327 §8.5.4, έγκριση Giorgio, Opus 5.5): από τη φόρμα Επαφών ⇒ `vatNumber: 094201577` (τιμολόγιο ΤΔΑ 13267· `isValidGreekVat` ✓, κανένα διπλότυπο) + `phones[0].type: main`· γραμμή Ιστορικού «από Georgios Pagonis». Αφαιρέθηκε όλο το μπλοκ «🔎 Ευρήματα…» (ήταν το τελευταίο σημείο). ➕ Νέο εκκρεμές 🏢 (μη κανονικό σχήμα εταιρείας από server ⇒ θόρυβος στην 1η αποθήκευση) + προσθήκη στο 🏷️ (πίνακες ως αφαίρεση+προσθήκη). |
 | 2026-10-29 | ✅ **«null»-ΚΕΙΜΕΝΟ ΣΤΟ ΑΠΟΘΗΚΕΥΜΕΝΟ `extractedData` — ΕΚΛΕΙΣΕ** (ADR-327 §8.5.4, εντολή Giorgio): `migrate-quote-extracted-absent-text.ts --execute` ⇒ QT-0004 (8 πεδία) καθαρίστηκε + σφραγίδα `normalizationVersion: 2`· επαναληπτικό dry-run: 4/4 τρέχουσα, **0** με «null». |
@@ -5604,13 +5579,18 @@ N.0.2 — 4+ αρχεία, δύο περιοχές):
 
 ---
 
-### 📧 Ίδια κλάση με το ☎️ για email / ιστοσελίδα — ADR-327 §8.5.4 · 2026-10-29
+### 💬 Η «πλατφόρμα social» είναι ΔΙΑΤΟΜΕΑΚΟ λεξιλόγιο χωρίς ρίζα — ADR-327 §8.5.4 · 2026-10-29
 
-Το λεξιλόγιο τύπου **email** και **ιστοσελίδας** ανά κάτοχο ζει ακόμη σε χωριστές δηλώσεις (`CommunicationConfigs` overrides ·
-`EMAIL_*_MAP`/`WEBSITE_*_MAP` του AI · `EmailInfo['type']`). Απτό σύμπτωμα: `buildContactDocument` γράφει email εταιρείας με
-`type: 'work'` — τιμή που η φόρμα εταιρείας (`general/department/sales/support/info/other`) **δεν** προσφέρει ⇒ κενή λίστα,
-ακριβώς όπως το τηλέφωνο της MACON. Θεραπεία: ίδιο πρότυπο με το `lib/contact/phone-type-vocabulary.ts` (ρίζα + υποσύνολα ανά
-κάτοχο + CHECK 3.73). Επίσης `communicationItemsToEmails/Websites/Social` κάνουν ακόμη τυφλό `as` (`communication-item-mappers.ts`).
+Η ρίζα `SOCIAL_PLATFORMS` (`lib/contact/social-media-type-vocabulary.ts`) δένει πλέον τις Επαφές (`SocialMediaInfo.platform`,
+ετικέτες, χάρτης AI, mapper). Με δοκιμαστική εγγραφή στο CHECK 3.73 (κατώφλι 6) η πύλη βρήκε **9 αδέσμευτα σώματα σε 5 αρχεία
+και 4 τομείς**: `property-showcase/types.ts` + `ShowcaseHeader.tsx` (`ShowcaseSocialPlatform`, 7 τιμές) ·
+`services/company/company-branding-resolver.ts` (ΔΕΥΤΕΡΟ `ShowcaseSocialPlatform` + `SOCIAL_PLATFORMS` + `SOCIAL_BASE_URL` —
+διαβάζει τα social της **επαφής** εταιρείας και κάνει `tiktok/whatsapp/telegram` ⇒ `other`) ·
+`services/email-templates/base-email-template.ts` (`EmailSocialPlatform` + `SOCIAL_DISPLAY`) ·
+`lib/social-platform-system/platform-config*.ts` (`SocialPlatformType` — στόχοι **κοινοποίησης**, έχει και `email`: άλλο
+λεξιλόγιο, θέλει δηλωμένη εξαίρεση με λόγο) · `contacts/.../socialUrlGenerator.ts` (`SocialPlatform`, 7 τιμές). Θεραπεία:
+`Extract<SocialPlatform, …>` για τα υποσύνολα της βιτρίνας/branding/email, ένα `ShowcaseSocialPlatform` αντί για δύο, εγγραφή
+`social-platform` στο `.domain-vocabulary.json`. **>1 ώρα, 4 τομείς** ⇒ εδώ (N.0.2).
 
 ---
 

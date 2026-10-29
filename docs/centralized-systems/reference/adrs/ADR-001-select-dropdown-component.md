@@ -79,4 +79,6 @@ option· μετάλλαξη ⇒ 2 🔴). Πλήρες ιστορικό: ADR-744 
 - Πότε: λίστες ονομάτων μεταβλητού μήκους (έργα, επαφές). Όχι για σύντομα enum.
 
 **Άγκυρα**: `src/components/ui/__tests__/select-content-width.test.tsx` (κλάσεις στο αποδοθέν DOM).
-Εκκρεμεί: μετάβαση των 4 παρακάμψεων DXF → `.claude-rules/pending-ratchet-work.md`.
+✅ **2026-10-29**: οι 4 παρακάμψεις DXF πέρασαν σε `width="content"` (`BimPropertyRow` · `EntouragePalette` ·
+`MaterialEditorSections` · `RibbonCombobox`)· τα τοπικά όρια 24rem / 260px έγιναν το κοινό όριο του token, και
+τα `whitespace-nowrap` στα items αφαιρέθηκαν (νεκρά — το `labelFit` του span υπερισχύει).
