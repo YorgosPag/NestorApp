@@ -79,7 +79,10 @@ export function isCalendarDay(value: unknown): value is string {
   return parseCalendarDay(value) !== null;
 }
 
-/** Συνιστώσες ⇒ `YYYY-MM-DD` (μηδενικά μπροστά, και στο έτος). Δεν κρίνει — ο καλών έχει ήδη υπαρκτή ημέρα. */
-export function formatCalendarDay(year: number, month: number, day: number): string {
+/**
+ * Συνιστώσες ⇒ `YYYY-MM-DD` (μηδενικά μπροστά, και στο έτος). Δεν κρίνει — ο καλών έχει ήδη υπαρκτή ημέρα.
+ * ⚠️ Σειριοποίηση, **όχι** εμφάνιση: για «29/02/2028» στον άνθρωπο υπάρχει το `formatCalendarDay` (`lib/intl-formatting`).
+ */
+export function isoCalendarDay(year: number, month: number, day: number): string {
   return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }

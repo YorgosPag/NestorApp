@@ -18,7 +18,7 @@
  *
  * Καθαρό, μηδέν I/O, καμία εξάρτηση σε React/Firestore — ο Λ2 το φτάνει (άγκυρα καθαρότητας).
  */
-import { calendarDayExists, formatCalendarDay } from '@/lib/date/calendar-day';
+import { calendarDayExists, isoCalendarDay } from '@/lib/date/calendar-day';
 import {
   matchCalendarName,
   type CalendarNameForm,
@@ -77,7 +77,7 @@ const isPlausibleYear = (year: number): boolean => year >= MIN_YEAR && year <= M
 function fullDate(year: number, month: number, day: number): ParsedSurveyDate | null {
   if (!isPlausibleYear(year)) return null;
   if (!calendarDayExists(year, month, day)) return null;
-  return { iso: formatCalendarDay(year, month, day), precision: 'day', year };
+  return { iso: isoCalendarDay(year, month, day), precision: 'day', year };
 }
 
 /** Αριθμητικές μορφές: `30/7/2026` · `30-07-2026` · `30.7.2026` · `2026-07-30`. */

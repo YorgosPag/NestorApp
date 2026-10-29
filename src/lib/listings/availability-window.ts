@@ -22,7 +22,7 @@
 
 import { daysInMonth } from '@/lib/date/calendar-arithmetic';
 // «Υπάρχει η ημέρα;» — ο κριτής γεννήθηκε εδώ και μετακόμισε στο SSoT (η 2027-02-30 απορρίπτεται, δεν κυλά στον Μάρτιο).
-import { formatCalendarDay, parseCalendarDay } from '@/lib/date/calendar-day';
+import { isoCalendarDay, parseCalendarDay } from '@/lib/date/calendar-day';
 import type {
   AvailabilityPrecision,
   AvailabilityWindow,
@@ -49,13 +49,13 @@ export function availabilityWindowOf(
   const anchor = parseCalendarDay(anchorIso);
   if (anchor === null) return null;
   if (precision === 'day') {
-    const day = formatCalendarDay(anchor.year, anchor.month, anchor.day);
+    const day = isoCalendarDay(anchor.year, anchor.month, anchor.day);
     return { start: day, end: day };
   }
   const [firstMonth, lastMonth] = monthSpan(precision, anchor.month);
   return {
-    start: formatCalendarDay(anchor.year, firstMonth, 1),
-    end: formatCalendarDay(anchor.year, lastMonth, daysInMonth(anchor.year, lastMonth)),
+    start: isoCalendarDay(anchor.year, firstMonth, 1),
+    end: isoCalendarDay(anchor.year, lastMonth, daysInMonth(anchor.year, lastMonth)),
   };
 }
 

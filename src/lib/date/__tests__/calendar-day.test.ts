@@ -9,7 +9,7 @@ import { z } from 'zod';
 
 import {
   calendarDayExists,
-  formatCalendarDay,
+  isoCalendarDay,
   hasCalendarDayShape,
   isCalendarDay,
   parseCalendarDay,
@@ -88,17 +88,17 @@ describe('hasCalendarDayShape', () => {
   });
 });
 
-describe('formatCalendarDay', () => {
+describe('isoCalendarDay', () => {
   it('μηδενικά μπροστά, και στο έτος', () => {
-    expect(formatCalendarDay(2027, 9, 3)).toBe('2027-09-03');
-    expect(formatCalendarDay(99, 1, 1)).toBe('0099-01-01');
+    expect(isoCalendarDay(2027, 9, 3)).toBe('2027-09-03');
+    expect(isoCalendarDay(99, 1, 1)).toBe('0099-01-01');
   });
 
   it('είναι το αντίστροφο του parseCalendarDay', () => {
     for (const value of ACCEPTED) {
       const day = parseCalendarDay(value);
       expect(day).not.toBeNull();
-      expect(formatCalendarDay(day!.year, day!.month, day!.day)).toBe(value);
+      expect(isoCalendarDay(day!.year, day!.month, day!.day)).toBe(value);
     }
   });
 });
