@@ -132,6 +132,16 @@
     "src/components/shared/audit/audit-value-resolver.ts": {
       "reason": "ADR-327 (2026-10-28) — ίδια γέννηση με το `audit-timeline-entry.tsx`. Το `tryTranslate` (γρ. 64-71) καλεί `i18next.exists(key, opts)` ΠΡΙΝ από το `t(key, opts)` και επιστρέφει `undefined` σε απουσία ή ηχώ του κλειδιού — ίδιο σχήμα με το `NotificationProvider`. Δομικά ανίκανο να βάψει ωμό κλειδί, και τα δεδομένα του είναι μόνο client-side (ιστορικό μετά από fetch)."
     },
+    "src/components/shared/audit/audit-value-words.ts": {
+      "prefixes": [
+        "common:boolean.yes",
+        "common:boolean.no",
+        "common-photos:photo.photo",
+        "properties-enums:units.sqm",
+        "contacts-relationships:communication.display.extensionShort"
+      ],
+      "reason": "ADR-195 (ζ) (2026-10-29) — η `t(key, { ns })` (γρ. 21) διαβάζει ΜΟΝΟ το `AUDIT_VALUE_WORDS` του `config/audit-value-vocabularies.ts`: κλειστό αντικείμενο `as const` με ΑΚΡΙΒΩΣ 5 λέξεις (yes · no · photo · sqm · extension), καθεμία με ρητό ns. Δηλώνονται ακριβή, όχι πρόθεμα. ⚠️ Νέα λέξη στο `AUDIT_VALUE_WORDS` ⇒ και εδώ."
+    },
     "src/lib/uom/uom-label.ts": {
       "prefixes": [
         "uom:symbol",
@@ -2115,6 +2125,10 @@
       "namespaces": ["building"],
       "reason": "`namespace = 'building'` — και οι 2 καλούντες (GeneralTabContent, GeneralProjectTab) παραλείπουν το prop. CRITICAL."
     },
+    "src/components/shared/audit/useAuditVocabulary.ts": {
+      "namespaces": ["addresses", "contacts-form", "contacts-relationships", "floors", "forms", "listing-detail", "projects", "properties-detail", "properties-enums", "quotes"],
+      "reason": "ADR-195 (ζ) — `useTranslation(auditVocabularyNamespaces(entityType))`: η λίστα ΠΑΡΑΓΕΤΑΙ από τα tracked πεδία κάθε τύπου οντότητας. ΜΕΤΡΗΜΕΝΟ 2026-10-29 εκτελώντας τη συνάρτηση και για τους 26 τύπους του `getTrackedFieldsForEntityAuditType` (+ `null` ⇒ κενό): η ένωση είναι ακριβώς αυτά τα 10. ⚠️ Νέος κατάλογος σε tracked πεδίο ⇒ ξαναμέτρησε."
+    },
     "src/components/showcase-core/ShowcaseClient.tsx": {
       "namespaces": ["showcase"],
       "reason": "`config.i18nNamespace`, υποχρεωτικό πεδίο· και τα 5 config (building/parking/project/storage/property showcase) γράφουν `showcase`. CRITICAL."
@@ -2134,28 +2148,28 @@
     "AdminLandingHeroes": ["landing-heroes-admin"],
     "AdminOwnershipVerifications": ["property-market"],
     "AdminRoleManagement": ["admin-member-exit"],
-    "Buildings": ["common-audit", "iso19650", "model-freshness", "objective-value", "org-structure", "property-market", "surveyRecord"],
-    "CompanySettings": ["common-audit", "iso19650", "org-structure"],
-    "Contacts": ["common-audit", "iso19650", "org-structure"],
+    "Buildings": ["common-audit", "iso19650", "listing-detail", "model-freshness", "objective-value", "org-structure", "property-market", "surveyRecord"],
+    "CompanySettings": ["common-audit", "iso19650", "listing-detail", "org-structure"],
+    "Contacts": ["common-audit", "iso19650", "listing-detail", "org-structure"],
     "CrmTaskDetail": ["tasks"],
-    "DXFViewer": ["common-audit"],
+    "DXFViewer": ["common-audit", "listing-detail"],
     "FileManager": ["iso19650"],
     "Navigation": ["hierarchy-navigator"],
-    "Projects": ["common-audit", "iso19650", "org-structure", "surveyRecord"],
-    "Properties": ["common-audit", "iso19650", "model-freshness", "objective-value", "org-structure", "property-market", "surveyRecord"],
+    "Projects": ["common-audit", "iso19650", "listing-detail", "org-structure", "surveyRecord"],
+    "Properties": ["common-audit", "iso19650", "listing-detail", "model-freshness", "objective-value", "org-structure", "property-market", "surveyRecord"],
     "ReportsBuilder": ["report-builder", "report-builder-domains", "saved-reports"],
     "ReportsCashFlow": ["cash-flow"],
-    "SalesAvailableParking": ["common-audit"],
-    "SalesAvailableProperties": ["common-audit"],
-    "SalesAvailableStorage": ["common-audit"],
-    "SalesSold": ["common-audit"],
+    "SalesAvailableParking": ["common-audit", "listing-detail"],
+    "SalesAvailableProperties": ["common-audit", "listing-detail"],
+    "SalesAvailableStorage": ["common-audit", "listing-detail"],
+    "SalesSold": ["common-audit", "listing-detail"],
     "SharedFile": ["spatial-tour"],
-    "SpacesParking": ["common-audit", "iso19650"],
-    "SpacesStorage": ["common-audit", "iso19650"]
+    "SpacesParking": ["common-audit", "iso19650", "listing-detail"],
+    "SpacesStorage": ["common-audit", "iso19650", "listing-detail"]
   },
   "lazyRouteMountSeal": {
-    "count": 45,
-    "at": "2026-10-05",
-    "why": "Πρώτη σφράγιση, ΜΕΤΡΗΜΕΝΗ: 45 ζεύγη σε 22 διαδρομές / 17 namespaces. Τα 44 είναι όσα μέτρησε η §27.2· το 45ο (AccountSecurity → market-contracts) βρέθηκε από την απάντηση στο OpenDataAttribution, που ο κοινός εξαγωγέας δεν έβλεπε. Τα 18 από τα 45 (Buildings 7 · PropertiesManagement 7 · Projects 4) έρχονται από το ίδιο σχήμα — πίνακας που εισάγει στατικά κάθε καρτέλα (buildingMappings / propertiesMappings / projectMappings): ο διαχωρισμός τους είναι η θεραπεία, όχι μεγαλύτερος αριθμός. Στόχος: μόνο ό,τι ζωγραφίζει στο πρώτο καρέ. — 2026-10-15 (ADR-840 Σ3): τα 7 ζεύγη του PropertiesManagement ΜΕΤΑΚΟΜΙΣΑΝ στο Properties αυτούσια — η λίστα με τον επιθεωρητή έγινε όψη της ΜΙΑΣ οθόνης ακινήτων και η τεμπέλικη είσοδος PropertiesManagement διαγράφηκε (καμία διαδρομή δεν τη ζητούσε). Ίδιο πλήθος (45), καμία νέα λήψη: ίδιο UI, άλλη διαδρομή. Η θεραπεία (τεμπέλικες καρτέλες στο propertiesMappings) μένει ανοιχτή όπως πριν."
+    "count": 57,
+    "at": "2026-10-29",
+    "why": "Πρώτη σφράγιση, ΜΕΤΡΗΜΕΝΗ: 45 ζεύγη σε 22 διαδρομές / 17 namespaces. Τα 44 είναι όσα μέτρησε η §27.2· το 45ο (AccountSecurity → market-contracts) βρέθηκε από την απάντηση στο OpenDataAttribution, που ο κοινός εξαγωγέας δεν έβλεπε. Τα 18 από τα 45 (Buildings 7 · PropertiesManagement 7 · Projects 4) έρχονται από το ίδιο σχήμα — πίνακας που εισάγει στατικά κάθε καρτέλα (buildingMappings / propertiesMappings / projectMappings): ο διαχωρισμός τους είναι η θεραπεία, όχι μεγαλύτερος αριθμός. Στόχος: μόνο ό,τι ζωγραφίζει στο πρώτο καρέ. — 2026-10-15 (ADR-840 Σ3): τα 7 ζεύγη του PropertiesManagement ΜΕΤΑΚΟΜΙΣΑΝ στο Properties αυτούσια — η λίστα με τον επιθεωρητή έγινε όψη της ΜΙΑΣ οθόνης ακινήτων και η τεμπέλικη είσοδος PropertiesManagement διαγράφηκε (καμία διαδρομή δεν τη ζητούσε). Ίδιο πλήθος (45), καμία νέα λήψη: ίδιο UI, άλλη διαδρομή. Η θεραπεία (τεμπέλικες καρτέλες στο propertiesMappings) μένει ανοιχτή όπως πριν. — 2026-10-29 (ADR-195 (ζ)): 45 → 57, +12 ζεύγη `→ listing-detail` (Buildings · CompanySettings · Contacts · DXFViewer · Projects · Properties · SalesAvailable×3 · SalesSold · SpacesParking · SpacesStorage). Πηγή ΜΙΑ: το `useAuditVocabulary` του Ιστορικού, που φορτώνει τα λεξιλόγια τιμών (απάντηση στο lazyRouteOpaqueNamespaces). Το `listing-detail` το χρειάζεται ΜΟΝΟ ο τύπος `property` (`AUDIT_PROPERTY_ATTRIBUTE_CATALOG`)· τα άλλα 9 namespaces της απάντησης είναι ήδη στην εκκίνηση. Σφράγιση με ρητή εντολή Giorgio για commit. ⚠️ Θεραπεία ανοιχτή: τεμπέλικη φόρτωση του Ιστορικού (το `t` ήδη ξαναζωγραφίζει όταν φτάσει το λεξιλόγιο) ⇒ τα 12 σβήνονται και η σφράγιση ΚΑΤΕΒΑΙΝΕΙ."
   }
 }

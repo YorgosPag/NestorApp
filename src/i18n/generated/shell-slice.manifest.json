@@ -1,7 +1,7 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/lazy-route-namespaces.json": "539a39274743878d71547d3f901db3e138c1e3fa7bfa07be9c640fea2f6b661d",
+    "src/i18n/generated/lazy-route-namespaces.json": "d6bdd10064436617d24edbd09c0519a14555b8dcf6bd5732f4d447c8a61d6005",
     "src/i18n/generated/routes/area__id.el.json": "f106788944901e33ca37a741bad7fde9ee19ecf6a4b23b7b13a19e0fb03cbc8e",
     "src/i18n/generated/routes/auth__action.el.json": "43a49dcb69050c49113a98b2a32eef16dcb6a4ed4f843ee9401ee65ab7ab5c00",
     "src/i18n/generated/routes/card-email__token.el.json": "46bb991ee24b3cb42dfa9c710624f71afd2198a3d64806f4e554658db414caa9",
@@ -56,7 +56,7 @@
     "src/i18n/generated/routes/o__workspace__listings__mandates__requests.el.json": "3b685808152db56cfc0ce4d50912bcd6166e986921ebb92e601cbef9936c0a0b",
     "src/i18n/generated/routes/o__workspace__procurement__quotes__id__review.el.json": "b188e8db16ac690666949d5ca6c746f758af7171f75fdceda15e5755825ce9af",
     "src/i18n/generated/routes/o__workspace__procurement__quotes__scan.el.json": "29ae0139a3b76c01464de8f1fb2d8d0a8ec423c106b1127d08122f3d26d5294e",
-    "src/i18n/generated/routes/o__workspace__projects__id__procurement__rfq__rfqId.el.json": "9ecbdf1e6b1d83758d8f350ba8d5c7a96c29bb9113e6d6531243caf1580dcf16",
+    "src/i18n/generated/routes/o__workspace__projects__id__procurement__rfq__rfqId.el.json": "dadd0aa1ac156406f4facb985747d92eea385fd74d357b6aa9a9f960fa48c319",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "ec24f1fdacbe102d81ef6e2b2c3ffde93e4e29b7857ac702db5ebfe1bb7c3867",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__card.el.json": "df1448a2bb4c85fc26bfbdcc903c7df7d53eaecd1d97fdc03e01a17528acfbae",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__licences.el.json": "833f1f75349ec3140684597ec67c5f6690725809f226b26eb378bb77f9358190",
@@ -96,13 +96,13 @@
   "generator": "scripts/generate-i18n-shell-slice.js",
   "globalInputs": {
     "config": {
-      "dynamicKeyPolicy": "4bcc78adab11ba26b48b6312f38b1b86dfacd60bf93fb62c95e12d13220dbb9f",
+      "dynamicKeyPolicy": "b584c7f69ca9990fb2937eb83eb343a7d36e5af7cf9566710c38885e5e2d01d3",
       "excludeConsumers": "ecebd6bc1406940ab137955fb5581ebf4cc378110974da937ae7bceffbf0c690",
       "extraShellRoots": "e896723bb8314edbc0e6b1d29139d801efa84e645aa08aaf56f673af45b291ad",
       "guaranteedNamespaces": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d",
       "keyConstants": "db6b5eab44ffe652bbc9ca7d3aafb873bdac2ed339eaca29eeb35744177c6be7",
       "languages": "afe30b1f6e4e52b9eee8baf27b28a75ced4d23a86538e022f9e2d9708d2c51af",
-      "lazyRouteOpaqueNamespaces": "2e6fdb0f92e3f2662035cd701b7ac7300d342b8124929f93e9aa32088c6e0e12",
+      "lazyRouteOpaqueNamespaces": "87d6b7e9278d96e830e3f5ade9b71e314a53f5d46c7d735cbb087eb4ae8dc167",
       "lazyRouteRegistries": "70bded58e6a83e4d2e5e3d2c594b8cfe466e0dfe7d73fa2d4e9e97fce23ad110",
       "localesDir": "a7045bc6e57a2ccd3b4834f975b27f55d6b1b2ace4e9df3ac06ebeced4b9590d",
       "outputDir": "3912195b17692b5eaf099bb5accb2bcf870fd0f9f4bd626e02929a8fa741d7ba",
@@ -170,7 +170,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "c6d56bde23c216290628209bd2a179bfb3ac3990cf18d2f05f72c64fe33c3bd5",
+  "inputsSha256": "378bd961c4333db2cec89878ca16a71c8279de47b15a6c142e568d0d82eed008",
   "languages": [
     "el"
   ],
@@ -14180,6 +14180,8 @@
             "audit.collection",
             "audit.entityTypes",
             "audit.values",
+            "boolean.no",
+            "boolean.yes",
             "rfqs.scan.stage",
             "viewMode.mobile"
           ],
@@ -16046,6 +16048,7 @@
             "audit.collection",
             "audit.entityTypes",
             "audit.values",
+            "photo.photo",
             "viewMode.mobile"
           ],
           "whole": false
@@ -17426,6 +17429,13 @@
           ],
           "whole": false
         },
+        "contacts-relationships": {
+          "keys": [],
+          "prefixes": [
+            "communication.display.extensionShort"
+          ],
+          "whole": false
+        },
         "crm": {
           "keys": [
             "45/35",
@@ -18041,6 +18051,13 @@
             "Φωτογραφία Προφίλ"
           ],
           "prefixes": [],
+          "whole": false
+        },
+        "properties-enums": {
+          "keys": [],
+          "prefixes": [
+            "units.sqm"
+          ],
           "whole": false
         },
         "quotes": {
@@ -23930,7 +23947,7 @@
   ],
   "stats": {
     "matchedKeys": 271,
-    "sliceBytes": 1170339
+    "sliceBytes": 1170540
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

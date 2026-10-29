@@ -107,6 +107,13 @@
       }
     }
   },
+  "contacts-relationships": {
+    "communication": {
+      "display": {
+        "extensionShort": "εσωτ."
+      }
+    }
+  },
   "crm": {
     "tasks": {
       "quickFilters": {
@@ -245,6 +252,11 @@
         "activeFilter": "Φίλτρο κατάστασης: {statuses}",
         "clear": "Εμφάνιση όλων"
       }
+    }
+  },
+  "properties-enums": {
+    "units": {
+      "sqm": "τ.μ."
     }
   },
   "quotes": {

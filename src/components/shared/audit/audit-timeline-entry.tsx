@@ -17,7 +17,7 @@
 // επιφάνεια. Η εμφώλευση των κλειδιών έμεινε ίδια — μηδέν αλλαγή στα τρία δυναμικά
 // κλειδιά παρακάτω, άρα μηδέν ρίσκο ωμού κλειδιού.
 import { AUDIT_TIMELINE_NAMESPACES } from '@/i18n/namespace-bundles';
-import React from "react";
+import React, { useMemo } from "react";
 import { Link } from '@/lib/workspace/navigation';
 import { declaredHref } from '@/lib/workspace/route-worlds';
 import { getEntityHref, type LinkableEntityType } from '@/lib/navigation/entity-href';
@@ -36,8 +36,10 @@ import { cn } from "@/lib/utils";
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ACTION_MAP } from "./activity-tab-config";
-import { formatFieldAwareValue, formatStorageUrl } from "./activity-tab-helpers";
-import { resolveAuditValue } from "./audit-value-resolver";
+import { formatFieldAwareValue, formatStorageUrl, type AuditValueFormat } from "./activity-tab-helpers";
+import { resolveAuditValue, resolveDeclaredAuditValue } from "./audit-value-resolver";
+import { auditValueWords } from "./audit-value-words";
+import { useAuditVocabulary } from "./useAuditVocabulary";
 import type { AuditCatalogRef } from "@/config/audit-value-catalogs";
 // 🏢 ADR-852 Φ2 — ο περιγραφέας του πεδίου: ζωντανή ετικέτα + τίμιο στιγμιότυπο.
 // Καθαρές συναρτήσεις, εκτός React ⇒ η άγκυρα της Φ7 τις καρφώνει χωρίς render.
@@ -165,6 +167,9 @@ export function AuditTimelineEntry({
 }: AuditTimelineEntryProps) {
   const entry = sanitizeEntry(rawEntry);
   const { t } = useTranslation(AUDIT_TIMELINE_NAMESPACES);
+  // ADR-195 (ζ) — τα λεξιλόγια τιμών ΑΥΤΗΣ της οντότητας, παραγόμενα από τις δηλώσεις της (ποτέ «όποιος τα φόρτωσε»).
+  const vocabT = useAuditVocabulary(entry.entityType);
+  const words = useMemo(() => auditValueWords(vocabT), [vocabT]);
   const floorLabel = useFloorLabel();
   const colors = useSemanticColors();
   const config = ACTION_MAP[entry.action] ?? ACTION_MAP.updated;
@@ -213,9 +218,9 @@ export function AuditTimelineEntry({
    * ISO-date fallbacks; the country-code map is layered on top for non-enum
    * fields (e.g. `birthCountry`).
    */
-  const makeFieldTranslator = (field: string, catalog: AuditCatalogRef | undefined) =>
+  const withValueFallbacks = (resolve: (v: string) => string | undefined) =>
     (v: string): string | undefined => {
-      const resolved = resolveAuditValue(field, v, t, catalog);
+      const resolved = resolve(v);
       if (resolved) return resolved;
 
       if (FIREBASE_UID_RE.test(v)) return t('audit.userRef');
@@ -227,6 +232,11 @@ export function AuditTimelineEntry({
       }
       return undefined;
     };
+  const makeFieldTranslator = (field: string, catalog: AuditCatalogRef | undefined) =>
+    withValueFallbacks((v) => resolveAuditValue(field, v, vocabT, catalog));
+  // Υπο-πεδίο: ΜΟΝΟ ο κατάλογος που δηλώνει η συλλογή (`itemCatalogs`) — ποτέ ο κατάλογος του ονόματος.
+  const makeSubFieldTranslator = (catalog: AuditCatalogRef | undefined) =>
+    withValueFallbacks((v) => resolveDeclaredAuditValue(catalog, v, vocabT));
 
   return (
     <li className="relative pb-5 pl-8 last:pb-0">
@@ -323,14 +333,22 @@ export function AuditTimelineEntry({
               // undefined`), άρα οτιδήποτε αλλοιωμένο από legacy Firestore είναι **αδρανές
               // εκ κατασκευής**, χωρίς φρουρό.
               const quantity = def?.quantity ?? change.quantity;
+              const valueFormat: AuditValueFormat = {
+                ...words,
+                translateValue: translateFieldValue,
+                quantity,
+                floorLabel,
+                itemCatalogs: def?.itemCatalogs,
+                nestedKeyCatalog: def?.nestedKeyCatalog,
+              };
 
               // ── Collection-aware rendering (ADR-195 Phase 11) ──
               if (change.kind === 'collection' && change.op) {
                 // safeStr: itemLabel/itemKey may be objects in legacy Firestore records
                 const rawLabel = safeStr(change.itemLabel ?? change.itemKey ?? '');
                 const itemLabel: string = rawLabel !== ''
-                  ? (resolveAuditValue(change.field, rawLabel, t, def?.enumCatalog)
-                      ?? (rawLabel.includes('firebasestorage.googleapis.com') ? formatStorageUrl(rawLabel) : rawLabel))
+                  ? (resolveAuditValue(change.field, rawLabel, vocabT, def?.enumCatalog)
+                      ?? (rawLabel.includes('firebasestorage.googleapis.com') ? formatStorageUrl(rawLabel, words.word('photo')) : rawLabel))
                   : safeStr(t('audit.collection.emptyItem') as unknown);
                 const rawMessage = t(`audit.collection.${change.op}`, {
                   field: fieldLabel,
@@ -355,7 +373,11 @@ export function AuditTimelineEntry({
                               storedLabel: sub.label,
                               translate: t,
                             }).text;
-                            const translateSubValue = makeFieldTranslator(sub.subField, undefined);
+                            const subFormat: AuditValueFormat = {
+                              ...words,
+                              translateValue: makeSubFieldTranslator(def?.itemCatalogs?.[sub.subField]),
+                              floorLabel,
+                            };
                             return (
                               <li key={`${sub.subField}-${si}`}>
                                 <span className={colors.text.muted}>
@@ -368,11 +390,11 @@ export function AuditTimelineEntry({
                                     "line-through",
                                   )}
                                 >
-                                  {formatFieldAwareValue(sub.subField, sub.oldValue, translateSubValue, undefined, floorLabel)}
+                                  {formatFieldAwareValue(sub.subField, sub.oldValue, subFormat)}
                                 </span>
                                 {" → "}
                                 <span className="font-medium text-foreground">
-                                  {formatFieldAwareValue(sub.subField, sub.newValue, translateSubValue, undefined, floorLabel)}
+                                  {formatFieldAwareValue(sub.subField, sub.newValue, subFormat)}
                                 </span>
                               </li>
                             );
@@ -416,13 +438,13 @@ export function AuditTimelineEntry({
                   >
                     {change.oldValueLabel
                       ? safeStr(change.oldValueLabel as unknown)
-                      : formatFieldAwareValue(change.field, change.oldValue, translateFieldValue, quantity, floorLabel)}
+                      : formatFieldAwareValue(change.field, change.oldValue, valueFormat)}
                   </span>
                   {" → "}
                   <span className="font-medium text-foreground">
                     {change.newValueLabel
                       ? safeStr(change.newValueLabel as unknown)
-                      : formatFieldAwareValue(change.field, change.newValue, translateFieldValue, quantity, floorLabel)}
+                      : formatFieldAwareValue(change.field, change.newValue, valueFormat)}
                   </span>
                 </li>
               );

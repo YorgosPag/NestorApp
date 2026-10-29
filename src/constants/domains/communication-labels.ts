@@ -15,6 +15,13 @@ import type { EmailTypeLabels } from '@/lib/contact/email-type-vocabulary';
 import type { WebsiteTypeLabels } from '@/lib/contact/website-type-vocabulary';
 import type { SocialMediaTypeLabels, SocialPlatform } from '@/lib/contact/social-media-type-vocabulary';
 
+/**
+ * Το namespace όπου λύνονται **όλα** τα κλειδιά αυτού του αρχείου (`communication.*`). Ζει δίπλα στα κλειδιά επειδή
+ * είναι ιδιότητά τους: ο αναγνώστης που δεν φορτώνει το namespace της φόρμας (το Ιστορικό, ADR-195 (ζ)) το ζητά από
+ * εδώ, όχι από δεύτερη δήλωση. Η άγκυρα `audit-value-vocabularies.test.ts` Λ1 το επαληθεύει πάνω στα JSON.
+ */
+export const COMMUNICATION_LABELS_NS = 'contacts-relationships';
+
 // ============================================================================
 // INDIVIDUAL COMMUNICATION TYPES
 // ============================================================================
