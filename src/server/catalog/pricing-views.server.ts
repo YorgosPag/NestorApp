@@ -23,7 +23,7 @@ import type { DiscountsView, PriceLinesPageView, PriceListsView, PriceListWire }
 import { isPublishedStatus, PRICE_LINES_PER_TRANSACTION } from '@/subapps/catalog/vocabulary/pricing';
 import { readOwned, runCatalogTransaction, type CatalogTx } from './catalog-store.server';
 import type { StoredPriceLine, StoredPriceVersion } from './price-version-aggregate.server';
-import { readListVersions, versionLinesPage } from './price-version-reads.server';
+import { readListVersions, readSkuIdentifiers, versionLinesPage } from './price-version-reads.server';
 import { readPricingViewRevisionInTx } from './pricing-view-signal.server';
 
 /** Οι ενεργές εγγραφές μιας συλλογής ρυθμίσεων του χώρου (λίγες δεκάδες — ίδια πρακτική με το σχήμα του καταλόγου). */
@@ -47,6 +47,7 @@ export function readPriceListsView(ctx: AuthContext, nowMs = Date.now()): Promis
 }
 
 /** `list:{id}` — μία σελίδα γραμμών μιας έκδοσης, μετά τον δρομέα (id εγγράφου). */
+/** Κωδικός SKU ανά `variantId` για τις ζωντανές παραλλαγές της σελίδας — **μία** `getAll` στη συναλλαγή της όψης. */
 export function readPriceLinesPage(ctx: AuthContext, versionId: string, cursor: string | null, nowMs = Date.now()): Promise<PriceLinesPageView> {
   return runCatalogTransaction(ctx, async (scope) => {
     const version = await readOwned<StoredPriceVersion>(scope, 'priceListVersion', versionId);
@@ -55,7 +56,8 @@ export function readPriceLinesPage(ctx: AuthContext, versionId: string, cursor: 
     const snap = await scope.tx.get(versionLinesPage(scope.db, ctx.companyId, version.id, cursor));
     const lines = snap.docs.map((doc) => doc.data() as StoredPriceLine);
     const nextCursor = lines.length === PRICE_LINES_PER_TRANSACTION ? lines[lines.length - 1].id : null;
-    return { freshness: { revision, freshUntil: pricingFreshUntil(nowMs, []) }, version, lines, nextCursor };
+    const skuIdentifiers = await readSkuIdentifiers(scope, lines.map((line) => line.subject));
+    return { freshness: { revision, freshUntil: pricingFreshUntil(nowMs, []) }, version, lines, skuIdentifiers, nextCursor };
   });
 }
 

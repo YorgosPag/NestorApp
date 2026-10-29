@@ -10,5 +10,5 @@ import { createDiscountConditionBodySchema } from '@/subapps/catalog/schema/zod/
 import { catalogCreateRoute } from '../_shared/catalog-route';
 
 export const POST = catalogCreateRoute({ category: 'STANDARD', authority: 'pricing' }, createDiscountConditionBodySchema, (auth, body) =>
-  createDiscountCondition(auth, body.definition),
+  createDiscountCondition(auth, body.definition, body.id ?? null),
 );

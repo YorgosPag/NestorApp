@@ -69,10 +69,15 @@ const definitionOf = (definition: DiscountConditionDefinition): DiscountConditio
   rule: definition.rule,
 });
 
-export async function createDiscountCondition(ctx: AuthContext, definition: DiscountConditionDefinition): Promise<StoredCondition> {
+/** `requestedId`: το προ-γεννημένο id του πελάτη (αισιόδοξη οθόνη) — ελέγχεται, ποτέ δεν εμπιστεύεται (Γ5). */
+export async function createDiscountCondition(
+  ctx: AuthContext,
+  definition: DiscountConditionDefinition,
+  requestedId: string | null = null,
+): Promise<StoredCondition> {
   return runCatalogTransaction(ctx, async (scope) => {
     await assertConditionValid(scope, definition);
-    const target = await readForRandomCreate(scope, 'discountCondition', null);
+    const target = await readForRandomCreate(scope, 'discountCondition', requestedId);
     const slot = await readPricingSlot(scope, conditionSlotKey(definition));
     assertNoIssues(conditionSlotIssues(slot, target.id, definition));
     const stored = stageCreate(scope, 'discountCondition', target, definitionOf(definition));

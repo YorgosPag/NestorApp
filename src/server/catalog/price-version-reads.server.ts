@@ -16,7 +16,10 @@ import { FieldPath, type Firestore, type Query } from 'firebase-admin/firestore'
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { PriceVersionRef } from '@/subapps/catalog/pricing/version-timeline';
+import type { PriceLineSubject } from '@/subapps/catalog/types/price-list';
+import type { StoredCatalogProductDefinition } from '@/subapps/catalog/types/product-derived';
 import { PRICE_LINES_PER_TRANSACTION } from '@/subapps/catalog/vocabulary/pricing';
+import { readActiveByIds } from './catalog-library-reads.server';
 import type { CatalogTx } from './catalog-store.server';
 import type { StoredPriceLine, StoredPriceVersion } from './price-version-aggregate.server';
 
@@ -80,4 +83,15 @@ export async function readVersionLines(db: Firestore, companyId: string, version
     if (page.length < PRICE_LINES_PER_TRANSACTION) return lines;
     cursor = page[page.length - 1].id;
   }
+}
+
+/**
+ * Ο κωδικός SKU κάθε **ζωντανής** παραλλαγής των υποκειμένων, κατά `variantId` — **μία** `getAll` μέσα στη συναλλαγή
+ * (commercetools: `expand`). Κοινό για την όψη γραμμών και την προεπισκόπηση δημοσίευσης: χωρίς αυτό ο πελάτης θα διάβαζε
+ * ένα έγγραφο ανά γραμμή. Απουσία κλειδιού ⇒ η παραλλαγή **δεν ζει πια** — η οθόνη το λέει, δεν το κρύβει.
+ */
+export async function readSkuIdentifiers(scope: CatalogTx, subjects: readonly PriceLineSubject[]): Promise<Record<string, string>> {
+  const variantIds = subjects.flatMap((subject) => (subject.kind === 'variant' ? [subject.variantId] : []));
+  const products = await readActiveByIds<StoredCatalogProductDefinition>(scope, 'product', variantIds);
+  return Object.fromEntries([...products].map(([id, product]) => [id, product.derived?.identifier ?? id]));
 }

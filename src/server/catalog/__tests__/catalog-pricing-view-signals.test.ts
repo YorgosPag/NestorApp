@@ -122,6 +122,10 @@ describe('οι όψεις κουβαλούν την αναθεώρηση του 
     expect(page.lines).toHaveLength(inputs.length);
     expect(page.nextCursor).toBeNull();
     expect(page.version.derived.linesRevision).toBe(1);
+    // Κάθε ζωντανή παραλλαγή της σελίδας έρχεται με τον κωδικό της — καμία ανάγνωση ανά γραμμή στον πελάτη.
+    const variantIds = page.lines.flatMap((line) => (line.subject.kind === 'variant' ? [line.subject.variantId] : []));
+    expect(Object.keys(page.skuIdentifiers).sort()).toEqual([...new Set(variantIds)].sort());
+    expect(Object.values(page.skuIdentifiers).every((identifier) => identifier.length > 0)).toBe(true);
     expect(page.freshness.revision).toBe(revisionOf(ARIES.companyId, { kind: 'list', priceListId: seeded.priceListId }));
     expect((await rejectionOf(readPriceLinesPage(RIVAL, draft.id, null, NOW))).kind).toBe('notFound');
   });

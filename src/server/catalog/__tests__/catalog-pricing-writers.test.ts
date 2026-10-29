@@ -7,7 +7,7 @@
 import type { Firestore } from 'firebase-admin/firestore';
 
 import { applyDiscountSteps } from '@/lib/pricing/discount-rule';
-import { generateDeterministicCatalogPricingSlotId } from '@/services/enterprise-id.service';
+import { generateCatalogDiscountConditionId, generateDeterministicCatalogPricingSlotId } from '@/services/enterprise-id.service';
 import { conditionSlotKey } from '@/subapps/catalog/pricing/pricing-keys';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import {
@@ -169,6 +169,10 @@ describe('φράχτης — «επιβεβαιώνεις ό,τι είδες» (
     const preview = await previewPublication(ARIES, draft.id);
     expect(preview.diff.fenced).toBe(1);
     expect(preview.diffDigest).toMatch(/^[0-9a-f]{16}$/);
+    // Ο άνθρωπος επιβεβαιώνει ΚΩΔΙΚΟΥΣ: κάθε παραλλαγή της διαφοράς έρχεται με το αναγνωριστικό της (ίδιο `expand` με τις γραμμές).
+    const variantIds = preview.diff.changes.flatMap((change) => [change.before, change.after].flatMap((line) => (line?.subject.kind === 'variant' ? [line.subject.variantId] : [])));
+    expect(variantIds.length).toBeGreaterThan(0);
+    expect(Object.keys(preview.skuIdentifiers).sort()).toEqual([...new Set(variantIds)].sort());
   });
 
   it('⛔ χωρίς επιβεβαίωση ⇒ 409 fenceConfirmationRequired · ⛔ λάθος αποτύπωμα ⇒ fenceDigestStale', async () => {
@@ -240,6 +244,18 @@ describe('ασάφεια = άρνηση αποθήκευσης, και υπό τ
     const november = { validFrom: '2026-11-01T00:00:00.000Z', validUntil: '2026-12-01T00:00:00.000Z' };
     const promo = realCondition({ ...WHOLESALE_TOSH_CARR.definition, ...november, audience: { kind: 'anonymous' } }, seeded);
     await expect(createDiscountCondition(ARIES, promo)).resolves.toEqual(expect.objectContaining({ validFrom: november.validFrom }));
+  });
+
+  it('✅ Γ5: το id που προ-γέννησε ο πελάτης ΚΡΑΤΙΕΤΑΙ · ⛔ ξένο πρόθεμα ή ήδη υπάρχον αρνείται', async () => {
+    const seeded = await seedPricing(fake);
+    const november = { validFrom: '2026-11-01T00:00:00.000Z', validUntil: '2026-12-01T00:00:00.000Z' };
+    const promo = realCondition({ ...WHOLESALE_TOSH_CARR.definition, ...november, audience: { kind: 'anonymous' } }, seeded);
+    const requested = generateCatalogDiscountConditionId();
+    await expect(createDiscountCondition(ARIES, promo, requested)).resolves.toEqual(expect.objectContaining({ id: requested }));
+    const foreign = await rejectionOf(createDiscountCondition(ARIES, { ...promo, audience: { kind: 'signedIn' } }, 'prod_not-a-condition'));
+    expect(foreign.issues).toEqual([{ code: 'invalidCode', path: 'id' }]);
+    const reused = await rejectionOf(createDiscountCondition(ARIES, { ...promo, audience: { kind: 'signedIn' } }, requested));
+    expect(reused.kind).toBe('duplicateCode');
   });
 
   it('⛔ δεύτερη λίστα πώλησης για το ΙΔΙΟ κοινό · ⛔ λίστα κόστους με κοινό', async () => {

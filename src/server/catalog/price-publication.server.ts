@@ -33,7 +33,7 @@ import { effectiveFenceBp } from '@/subapps/catalog/vocabulary/pricing';
 import { assertRevision, readOwned, runCatalogTransaction, stageReplace, type CatalogTx } from './catalog-store.server';
 import { CatalogWriteError } from './catalog-write-error';
 import { assertSeeded, versionDefinitionOf, type StoredPriceLine, type StoredPriceVersion } from './price-version-aggregate.server';
-import { readListVersions, readListVersionsSnapshot, readVersionLines, versionRefOf } from './price-version-reads.server';
+import { readListVersions, readListVersionsSnapshot, readSkuIdentifiers, readVersionLines, versionRefOf } from './price-version-reads.server';
 
 /** Μόνο ο **ορισμός** της γραμμής (χωρίς περίβλημα/παράγωγα) — ό,τι συγκρίνει η διαφορά και σφραγίζει το hash. */
 function lineDefinitionOf(line: StoredPriceLine): PriceListLineDefinition {
@@ -50,8 +50,11 @@ function linesHashOf(lines: readonly StoredPriceLine[]): string {
   return fnv1a64Hex(canonicalJson(ordered.map((line) => ({ ...lineDefinitionOf(line), versionId: null }))));
 }
 
+/** Η προεπισκόπηση όπως την κρίνει ο φράχτης — χωρίς τους κωδικούς SKU, που είναι μόνο για την οθόνη. */
+type PublicationPreviewCore = Omit<PricePublicationPreview, 'skuIdentifiers'>;
+
 interface PublicationPlan {
-  readonly preview: PricePublicationPreview;
+  readonly preview: PublicationPreviewCore;
   readonly linesHash: string;
   readonly lineCount: number;
 }
@@ -77,7 +80,7 @@ async function planPublication(
   const fenced = diff.changes.filter((change) => change.exceedsFence);
   const diffDigest =
     fenced.length === 0 ? null : fnv1a64Hex(canonicalJson({ previousVersionId: previous?.id ?? null, fenceBp, fenced }));
-  const preview: PricePublicationPreview = {
+  const preview: PublicationPreviewCore = {
     versionId: version.id,
     previousVersionId: previous?.id ?? null,
     linesRevision: version.derived.linesRevision,
@@ -104,11 +107,14 @@ async function readPlanInputs(ctx: AuthContext, versionId: string): Promise<Plan
 /** `POST /api/catalog/price-list-versions/[id]/diff` (δεν γράφει τίποτα) — ό,τι θα δει ο άνθρωπος πριν δημοσιεύσει. */
 export async function previewPublication(ctx: AuthContext, versionId: string): Promise<PricePublicationPreview> {
   const { version, list } = await readPlanInputs(ctx, versionId);
-  return (await planPublication(getAdminFirestore(), ctx, version, list)).preview;
+  const { preview } = await planPublication(getAdminFirestore(), ctx, version, list);
+  const subjects = preview.diff.changes.flatMap((change) => [change.before, change.after].flatMap((line) => (line ? [line.subject] : [])));
+  const skuIdentifiers = await runCatalogTransaction(ctx, (scope) => readSkuIdentifiers(scope, subjects));
+  return { ...preview, skuIdentifiers };
 }
 
 /** Ο φράχτης: φραγμένη διαφορά ⇒ χρειάζεται **το ίδιο** αποτύπωμα που είδε ο άνθρωπος. */
-function assertFenceConfirmed(preview: PricePublicationPreview, confirmed: string | null): void {
+function assertFenceConfirmed(preview: PublicationPreviewCore, confirmed: string | null): void {
   if (preview.diffDigest === null) return;
   const details = { fencedCount: preview.diff.fenced, diffDigest: preview.diffDigest };
   const path = 'confirmedDiffDigest';
