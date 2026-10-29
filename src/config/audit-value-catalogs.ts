@@ -31,6 +31,12 @@ export interface AuditCatalogRef {
   readonly ns: string;
   /** Dot-path inside the namespace JSON to the enum catalog object. */
   readonly path: string;
+  /**
+   * ADR-195 (ζ) — διαδρομές που ρωτιούνται **μετά** το `path`, με τη σειρά. Για λεξιλόγιο που ζει σε
+   * πίνακες ανά κάτοχο (τύποι τηλεφώνου ιδιώτη · εταιρείας · υπηρεσίας): η γραμμή ιστορικού δεν ξέρει
+   * τον κάτοχο, και η άγκυρα Λ2 αποδεικνύει ότι η ίδια τιμή έχει την ίδια λέξη σε όλους.
+   */
+  readonly fallbackPaths?: readonly string[];
 }
 
 /**

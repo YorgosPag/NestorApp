@@ -18,6 +18,17 @@ import {
 import { formatAuditCoordinates } from '@/lib/audit/audit-coordinates';
 import { AUDIT_VALUE_CATALOGS } from '@/config/audit-value-catalogs';
 import {
+  AUDIT_ADDRESS_TYPE_CATALOG,
+  AUDIT_AREA_PARTS_CATALOG,
+  AUDIT_EMAIL_TYPE_CATALOG,
+  AUDIT_KAD_TYPE_CATALOG,
+  AUDIT_PHONE_TYPE_CATALOG,
+  AUDIT_PROPERTY_ATTRIBUTE_CATALOG,
+  AUDIT_SOCIAL_MEDIA_TYPE_CATALOG,
+  AUDIT_SOCIAL_PLATFORM_CATALOG,
+  AUDIT_WEBSITE_TYPE_CATALOG,
+} from '@/config/audit-value-vocabularies';
+import {
   CATALOG_ASSET_TRACKED_FIELDS,
   CATALOG_ATTRIBUTE_GROUP_TRACKED_FIELDS,
   CATALOG_ATTRIBUTE_TRACKED_FIELDS,
@@ -442,6 +453,8 @@ export const ADDRESS_COLLECTION_DEF: CollectionDef = {
   trackSubFields: ADDRESS_TRACK_SUB_FIELDS,
   subFieldValues: { coordinates: formatAuditCoordinates },
   subFieldLabelScope: 'address',
+  // ADR-195 (ζ) — ο τύπος διεύθυνσης έχει ΔΙΚΟ του λεξιλόγιο (όχι τον κατάλογο του ονόματος `type`).
+  itemCatalogs: { type: AUDIT_ADDRESS_TYPE_CATALOG },
 };
 
 const PROJECT_COLLECTION_DEFS: Record<string, CollectionDef> = {
@@ -486,6 +499,7 @@ const CONTACT_COLLECTION_DEFS: Record<string, CollectionDef> = {
     keyBy: 'email',
     labelFields: ['email'],
     trackSubFields: ['email', 'type', 'isPrimary', 'label'],
+    itemCatalogs: { type: AUDIT_EMAIL_TYPE_CATALOG },
   },
   phones: {
     kind: 'collection',
@@ -493,6 +507,7 @@ const CONTACT_COLLECTION_DEFS: Record<string, CollectionDef> = {
     keyBy: 'number',
     labelFields: ['number'],
     trackSubFields: ['number', 'type', 'isPrimary', 'label', 'countryCode'],
+    itemCatalogs: { type: AUDIT_PHONE_TYPE_CATALOG },
   },
   websites: {
     kind: 'collection',
@@ -500,6 +515,7 @@ const CONTACT_COLLECTION_DEFS: Record<string, CollectionDef> = {
     keyBy: 'url',
     labelFields: ['url'],
     trackSubFields: ['url', 'type', 'label'],
+    itemCatalogs: { type: AUDIT_WEBSITE_TYPE_CATALOG },
   },
   socialMedia: {
     kind: 'collection',
@@ -507,6 +523,7 @@ const CONTACT_COLLECTION_DEFS: Record<string, CollectionDef> = {
     keyBy: ['platform', 'username'],
     labelFields: ['platform', 'username'],
     trackSubFields: ['platform', 'username', 'url', 'type', 'label'],
+    itemCatalogs: { type: AUDIT_SOCIAL_MEDIA_TYPE_CATALOG, platform: AUDIT_SOCIAL_PLATFORM_CATALOG },
   },
   addresses: {
     kind: 'collection',
@@ -521,6 +538,7 @@ const CONTACT_COLLECTION_DEFS: Record<string, CollectionDef> = {
       'decentAdmin', 'majorGeo', 'settlement', 'settlementId',
       'community', 'municipalUnit',
     ],
+    itemCatalogs: { type: AUDIT_ADDRESS_TYPE_CATALOG },
   },
   children: {
     kind: 'collection',
@@ -610,6 +628,11 @@ const PROPERTY_COLLECTION_DEFS: Record<string, CollectionDef> = {
 const PROPERTY_FIELD_DEFS: Record<string, TrackedFieldDef> = {
   // Το `status` ως όνομα πεδίου το κρατά ο κατάλογος του **έργου**· το ακίνητο έχει δικό του λεξιλόγιο.
   status: { kind: 'scalar', label: 'status', enumCatalog: AUDIT_VALUE_CATALOGS.propertyStatus },
+  // ADR-195 (ζ) — τα ονόματα των κλειδιών των αντικειμένων: από το λεξιλόγιο, όχι από καθολικό πίνακα του μορφοποιητή.
+  areas: { kind: 'scalar', label: 'areas', nestedKeyCatalog: AUDIT_AREA_PARTS_CATALOG },
+  layout: { kind: 'scalar', label: 'layout', nestedKeyCatalog: AUDIT_PROPERTY_ATTRIBUTE_CATALOG },
+  finishes: { kind: 'scalar', label: 'finishes', nestedKeyCatalog: AUDIT_PROPERTY_ATTRIBUTE_CATALOG },
+  systemsOverride: { kind: 'scalar', label: 'systemsOverride', nestedKeyCatalog: AUDIT_PROPERTY_ATTRIBUTE_CATALOG },
   // ADR-919 §11 — «διαθέσιμο από»: σκαλί 1 του επιλυτή, υπερισχύει της υπόσχεσης του κτιρίου.
   availabilityDeclaration: { kind: 'scalar', label: 'availabilityDeclaration', value: formatAuditAvailabilityDeclaration },
 };
@@ -1421,6 +1444,8 @@ const OWNER_PROPERTY_COLLECTION_DEFS: Record<string, CollectionDef> = {
     label: 'offers',
     keyBy: 'id',
     labelFields: ['kind'],
+    // ADR-195 (ζ) — το υπο-πεδίο ρωτά ΜΟΝΟ τον δηλωμένο κατάλογο (ήταν σιωπηρά ο κατάλογος του ονόματος `lifecycle`).
+    itemCatalogs: { lifecycle: AUDIT_VALUE_CATALOGS.lifecycle },
     trackSubFields: [
       'lifecycle',
       'askingPrice',
@@ -1524,9 +1549,19 @@ export const PROPERTY_HANDOVER_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
 export const PROJECT_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(PROJECT_TRACKED_FIELDS_RAW, PROJECT_COLLECTION_DEFS);
 
+/** Βαθμωτά της επαφής που θέλουν περισσότερα από ετικέτα — ADR-195 (ζ): ο ΚΑΔ αποθηκεύεται ως πίνακας αντικειμένων. */
+const CONTACT_FIELD_DEFS: Record<string, TrackedFieldDef> = {
+  'customFields.activities': {
+    kind: 'scalar',
+    // Η ετικέτα ζει ΜΙΑ φορά, στο `CONTACT_TRACKED_FIELDS_RAW` (λύνεται από το `common-audit`).
+    label: CONTACT_TRACKED_FIELDS_RAW['customFields.activities'],
+    itemCatalogs: { type: AUDIT_KAD_TYPE_CATALOG },
+  },
+};
+
 /** Contact audit registry — `field → TrackedFieldDef`. */
 export const CONTACT_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
-  mergeDefs(CONTACT_TRACKED_FIELDS_RAW, CONTACT_COLLECTION_DEFS);
+  mergeDefs(CONTACT_TRACKED_FIELDS_RAW, { ...CONTACT_COLLECTION_DEFS, ...CONTACT_FIELD_DEFS });
 
 // ============================================================================
 // QUOTE TRACKED FIELDS (ADR-327 §8.5.4 — η κατάσταση με το ΔΙΚΟ της λεξιλόγιο)

@@ -306,6 +306,10 @@
     "addActivity": "Add KAD",
     "removeActivity": "Remove KAD",
     "chamber": "Chamber / GEMI Office",
+    "types": {
+      "primary": "Primary",
+      "secondary": "Secondary"
+    },
     "confirmRemove": {
       "title": "Remove secondary KAD",
       "message": "Removing KAD {code} will affect future contact usage in searches, profiles, and accounting flows that read live data.",

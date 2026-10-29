@@ -132,11 +132,14 @@ export interface CompanyAddress
   neighborhood?: string;
 }
 
+/** Η ρίζα του τύπου δραστηριότητας ΚΑΔ — λέξεις στο `forms:kad.types.*` (ADR-195 (ζ): το Ιστορικό τις ζητά από εκεί). */
+export const KAD_ACTIVITY_TYPES = ['primary', 'secondary'] as const;
+
 /** Single KAD activity entry — primary or secondary */
 export interface KadActivity {
   code: string;
   description: string;
-  type: 'primary' | 'secondary';
+  type: (typeof KAD_ACTIVITY_TYPES)[number];
   activeFrom?: string;
 }
 

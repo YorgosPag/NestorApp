@@ -30,6 +30,8 @@
 import i18next from 'i18next';
 
 import { getAuditValueCatalog, type AuditCatalogRef } from '@/config/audit-value-catalogs';
+import { calendarDateOfDateKey } from '@/lib/calendar/date-key';
+import { formatDate } from '@/lib/intl-utils';
 
 /**
  * Minimal subset of the react-i18next `t` function signature used here.
@@ -80,23 +82,23 @@ function tryTranslate(
  * χάρτης ανά όνομα δεν μπορεί να τις ξεχωρίσει.
  */
 function lookupInCatalog(
-  field: string,
+  catalog: AuditCatalogRef | undefined,
   value: string,
   t: AuditTranslator,
-  declared: AuditCatalogRef | undefined,
 ): string | undefined {
-  const catalog = declared ?? getAuditValueCatalog(field);
   if (!catalog) return undefined;
 
   const opts = { ns: catalog.ns };
-
-  const direct = tryTranslate(`${catalog.path}.${value}`, opts, t);
-  if (direct) return direct;
-
   const camel = toCamelCase(value);
-  if (camel !== value) {
-    const normalized = tryTranslate(`${catalog.path}.${camel}`, opts, t);
-    if (normalized) return normalized;
+
+  for (const path of [catalog.path, ...(catalog.fallbackPaths ?? [])]) {
+    const direct = tryTranslate(`${path}.${value}`, opts, t);
+    if (direct) return direct;
+
+    if (camel !== value) {
+      const normalized = tryTranslate(`${path}.${camel}`, opts, t);
+      if (normalized) return normalized;
+    }
   }
 
   return undefined;
@@ -112,16 +114,16 @@ function lookupInAuditValues(value: string, t: AuditTranslator): string | undefi
   return translated && translated !== key ? translated : undefined;
 }
 
-/** ISO-8601 date → localised display string. */
+/**
+ * ISO-8601 date → η ημερομηνία στη γλώσσα **του θεατή** (ADR-195 (ζ): ήταν καρφωμένο `el-GR`, άρα ο Άγγλος έβλεπε
+ * ελληνική μορφή). Σκέτη ημέρα `YYYY-MM-DD` ⇒ η **ίδια** τοπική ημέρα (`calendarDateOfDateKey`): το `new Date(key)`
+ * είναι μεσάνυχτα UTC, δηλαδή η **προηγούμενη** ημέρα για θεατή δυτικά του Greenwich.
+ */
 function formatIsoDate(value: string): string | undefined {
   if (!/^\d{4}-\d{2}-\d{2}/.test(value)) return undefined;
-  const date = new Date(value);
+  const date = calendarDateOfDateKey(value) ?? new Date(value);
   if (Number.isNaN(date.getTime())) return undefined;
-  return date.toLocaleDateString('el-GR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
+  return formatDate(date);
 }
 
 /**
@@ -142,13 +144,44 @@ export function resolveAuditValue(
   t: AuditTranslator,
   catalog?: AuditCatalogRef,
 ): string | undefined {
-  const direct = lookupInCatalog(field, value, t, catalog);
+  return resolveWithCatalog(catalog ?? getAuditValueCatalog(field), value, t);
+}
+
+/**
+ * ADR-195 (ζ) — η τιμή **υπο-πεδίου** ρωτά ΜΟΝΟ τον κατάλογο που δηλώνει η συλλογή της (`itemCatalogs`), **ποτέ** τον
+ * κατάλογο του ονόματος: ο χάρτης ανά όνομα περιγράφει πεδία **πρώτου** επιπέδου, και το `phones[].type` περνούσε από
+ * τον κατάλογο του `type` — τους τύπους **ακινήτου**. Αδήλωτο υπο-πεδίο ⇒ γενική πτώση ⇒ ωμή τιμή, **ορατά**.
+ */
+export function resolveDeclaredAuditValue(
+  catalog: AuditCatalogRef | undefined,
+  value: string,
+  t: AuditTranslator,
+): string | undefined {
+  return resolveWithCatalog(catalog, value, t);
+}
+
+/** Η λέξη μιας τιμής **μόνο** από τον κατάλογο — χωρίς πτώσεις (ο μορφοποιητής δείχνει την τιμή όταν λείπει). */
+export function translateCatalogValue(
+  catalog: AuditCatalogRef | undefined,
+  value: string,
+  t: AuditTranslator,
+): string | undefined {
+  return lookupInCatalog(catalog, value, t);
+}
+
+/** Η σειρά επίλυσης της κεφαλίδας του αρχείου, για ήδη επιλεγμένο κατάλογο. */
+function resolveWithCatalog(
+  catalog: AuditCatalogRef | undefined,
+  value: string,
+  t: AuditTranslator,
+): string | undefined {
+  const direct = lookupInCatalog(catalog, value, t);
   if (direct) return direct;
 
   if (value.includes(' — ')) {
     const [head, ...rest] = value.split(' — ');
     const translatedHead =
-      lookupInCatalog(field, head, t, catalog) ?? lookupInAuditValues(head, t);
+      lookupInCatalog(catalog, head, t) ?? lookupInAuditValues(head, t);
     if (translatedHead) return `${translatedHead} — ${rest.join(' — ')}`;
   }
 
