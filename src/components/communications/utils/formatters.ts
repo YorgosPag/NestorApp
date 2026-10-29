@@ -1,5 +1,5 @@
 import { Mail, Phone, MessageSquare, Send } from 'lucide-react';
-import { formatDateTime } from '@/lib/intl-utils';
+import { formatRelativeTime } from '@/lib/intl-formatting';
 import { normalizeToDate } from '@/lib/date-local';
 
 export const getCommunicationTypeIcon = (type: string) => ({
@@ -19,21 +19,14 @@ export const getDirectionLabel = (direction: string) =>
   direction === 'inbound' ? 'communications.direction.inbound' : 'communications.direction.outbound';
 
 
+/**
+ * «Πριν από Χ» στη γλώσσα του αναγνώστη — ανάθεση στο SSoT `formatRelativeTime` (ADR-894).
+ *
+ * 🔴 Ήταν τοπικό αντίγραφο που επέστρεφε **ωμά κλειδιά** (`common.time.minutesAgo`, χωρίς καν τον αριθμό), και το
+ * `CommunicationsHistory` τα αποδίδει **χωρίς** `t()` ⇒ ο άνθρωπος έβλεπε το κλειδί αυτολεξεί.
+ */
 export const getRelativeTime = (timestamp: Date | string | number | { toDate?: () => Date } | null | undefined) => {
   if (!timestamp) return '';
-  try {
-    const date = normalizeToDate(timestamp);
-    if (!date) return '';
-    const now = new Date();
-    const diffInMinutes = Math.floor((+now - +date) / (1000 * 60));
-    if (diffInMinutes < 1) return 'common.time.justNow';
-    if (diffInMinutes < 60) return 'common.time.minutesAgo';
-    const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) return 'common.time.hoursAgo';
-    const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 7) return 'common.time.daysAgo';
-    return formatDateTime(date);
-  } catch {
-    return '';
-  }
+  const date = normalizeToDate(timestamp);
+  return date ? formatRelativeTime(date) : '';
 };

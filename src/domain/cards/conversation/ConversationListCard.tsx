@@ -20,8 +20,8 @@ import { Mail, MessageSquare, Clock } from 'lucide-react';
 import { ListCard } from '@/design-system';
 import type { StatItem } from '@/design-system';
 
-import { formatDateTime } from '@/lib/intl-utils';
 import { truncateText } from '@/lib/obligations-utils';
+import { getInboxRelativeTime } from '@/components/crm/inbox/inbox-relative-time';
 
 import { CONVERSATION_STATUS } from '@/types/conversations';
 import { COMMUNICATION_CHANNELS } from '@/types/communications';
@@ -88,29 +88,6 @@ const STATUS_VARIANTS: Record<string, ListCardBadgeVariant> = {
   [CONVERSATION_STATUS.SPAM]: 'destructive',
 };
 
-// =============================================================================
-// 🏢 HELPER FUNCTIONS
-// =============================================================================
-
-/**
- * Get relative time string
- */
-function getRelativeTime(
-  timestamp: string | Date | undefined,
-  t: (key: string, options?: Record<string, unknown>) => string
-): string {
-  if (!timestamp) return '';
-
-  const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
-  const now = new Date();
-  const diffHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-
-  if (diffHours < 1) return t('inbox.time.now');
-  if (diffHours < 24) return t('inbox.time.hoursAgo', { hours: Math.floor(diffHours) });
-  if (diffHours < 48) return t('inbox.time.yesterday');
-
-  return formatDateTime(date);
-}
 
 // =============================================================================
 // 🏢 COMPONENT
@@ -172,7 +149,7 @@ export function ConversationListCard({
       value: conversation.channel.toUpperCase(),
     });
 
-    const relativeTime = getRelativeTime(conversation.audit.updatedAt, t);
+    const relativeTime = getInboxRelativeTime(conversation.audit.updatedAt, t);
     if (relativeTime) {
       items.push({
         icon: Clock,

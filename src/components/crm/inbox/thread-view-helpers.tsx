@@ -7,7 +7,6 @@ import '@/lib/design-system';
 import React, { useCallback } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { formatDateTime } from '@/lib/intl-utils';
 import { User, Bot, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { MessageListItem } from '@/hooks/inbox/useInboxApi';
@@ -18,19 +17,8 @@ const _logger = createModuleLogger('ThreadView');
 // HELPER FUNCTIONS
 // ============================================================================
 
-export function getRelativeTime(
-  timestamp: string,
-  t: (key: string, options?: Record<string, unknown>) => string
-): string {
-  if (!timestamp) return '';
-  const date = new Date(timestamp);
-  const now = new Date();
-  const diffHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-  if (diffHours < 1) return t('inbox.time.now');
-  if (diffHours < 24) return t('inbox.time.hoursAgo', { hours: Math.floor(diffHours) });
-  if (diffHours < 48) return t('inbox.time.yesterday');
-  return formatDateTime(date);
-}
+/** Ο ΕΝΑΣ κανόνας «πότε» του inbox — με το ιστορικό όνομα, ώστε καμία διαδρομή import να μην αλλάξει. */
+export { getInboxRelativeTime as getRelativeTime } from './inbox-relative-time';
 
 export function getSenderIcon(senderType: string, iconSizes: ReturnType<typeof useIconSizes>) {
   switch (senderType) {

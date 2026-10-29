@@ -7,8 +7,8 @@ import '@/lib/design-system';
 import React from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { formatDateTime } from '@/lib/intl-utils';
 import { truncateText } from '@/lib/obligations-utils';
+import { getInboxRelativeTime } from './inbox/inbox-relative-time';
 import { CommonBadge } from '@/core/badges';
 import { HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { ChevronRight } from 'lucide-react';
@@ -39,16 +39,8 @@ export function getChannelColorClasses(channel: string, colors: ReturnType<typeo
   }
 }
 
-export function getRelativeTime(timestamp: string, t: (key: string, options?: Record<string, unknown>) => string): string {
-  if (!timestamp) return '';
-  const date = new Date(timestamp);
-  const now = new Date();
-  const diffHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-  if (diffHours < 1) return t('inbox.time.now');
-  if (diffHours < 24) return t('inbox.time.hoursAgo', { hours: Math.floor(diffHours) });
-  if (diffHours < 48) return t('inbox.time.yesterday');
-  return formatDateTime(date);
-}
+/** Ο ΕΝΑΣ κανόνας «πότε» του inbox (`./inbox/inbox-relative-time`)· το όνομα μένει για το `UnifiedInbox`. */
+export const getRelativeTime = getInboxRelativeTime;
 
 // ============================================================================
 // CONVERSATION LIST ITEM
