@@ -8,7 +8,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import admin from 'firebase-admin';
 import type { RFQ, RfqStatus, CreateRfqDTO, UpdateRfqDTO, RfqFilters, RfqDraftLine, RfqFromBoqDraft } from '../types/rfq';
 import { RFQ_STATUS_TRANSITIONS, RFQ_FROM_BOQ_MAX_ITEMS } from '../types/rfq';
-import { toDeadlineTimestamp, patchDeadlineTimestamp } from './procurement-timestamps';
+import { toAdminTimestampOrNull, patchAdminTimestamp } from './procurement-timestamps';
 import {
   defaultResponseLock,
   describeResponseLock,
@@ -139,7 +139,7 @@ export async function createRfq(
       title: dto.title,
       description: dto.description ?? null,
       lines: dto.lines ?? [],
-      deadlineDate: toDeadlineTimestamp(dto.deadlineDate),
+      deadlineDate: toAdminTimestampOrNull(dto.deadlineDate),
       status: 'draft',
       awardMode: dto.awardMode ?? 'whole_package',
       reminderTemplate: dto.reminderTemplate ?? 'standard',
@@ -346,7 +346,7 @@ export async function updateRfq(
       title: dto.title ?? current.title,
       description: dto.description !== undefined ? dto.description : current.description,
       lines: dto.lines ?? current.lines,
-      deadlineDate: patchDeadlineTimestamp(dto.deadlineDate, current.deadlineDate),
+      deadlineDate: patchAdminTimestamp(dto.deadlineDate, current.deadlineDate),
       awardMode: dto.awardMode ?? current.awardMode,
       reminderTemplate: dto.reminderTemplate ?? current.reminderTemplate,
       status: (dto.status ?? current.status) as RfqStatus,

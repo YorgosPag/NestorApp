@@ -6,7 +6,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 import { generateMaterialId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
-import { normalizeToDate } from '@/lib/date-local';
+import { toAdminTimestampOrNull } from './procurement-timestamps';
 import { ATOE_MASTER_CATEGORIES } from '@/config/boq-categories';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
@@ -133,9 +133,7 @@ export async function createMaterial(
       preferredSupplierContactIds: preferred,
       avgPrice: dto.avgPrice ?? null,
       lastPrice: dto.lastPrice ?? null,
-      lastPurchaseDate: dto.lastPurchaseDate
-        ? admin.firestore.Timestamp.fromDate(normalizeToDate(dto.lastPurchaseDate) ?? new Date())
-        : null,
+      lastPurchaseDate: toAdminTimestampOrNull(dto.lastPurchaseDate),
       isDeleted: false,
       createdAt: now,
       updatedAt: now,
@@ -260,11 +258,7 @@ export async function updateMaterial(
     if (dto.avgPrice !== undefined) updates.avgPrice = dto.avgPrice;
     if (dto.lastPrice !== undefined) updates.lastPrice = dto.lastPrice;
     if (dto.lastPurchaseDate !== undefined) {
-      updates.lastPurchaseDate = dto.lastPurchaseDate
-        ? admin.firestore.Timestamp.fromDate(
-            normalizeToDate(dto.lastPurchaseDate) ?? new Date(),
-          )
-        : null;
+      updates.lastPurchaseDate = toAdminTimestampOrNull(dto.lastPurchaseDate);
     }
 
     await ref.update(sanitizeForFirestore(updates));

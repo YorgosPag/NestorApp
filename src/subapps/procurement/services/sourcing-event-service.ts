@@ -6,7 +6,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 import { generateSourcingEventId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
-import { toDeadlineTimestamp, patchDeadlineTimestamp } from './procurement-timestamps';
+import { toAdminTimestampOrNull, patchAdminTimestamp } from './procurement-timestamps';
 import type { AuthContext } from '@/lib/auth';
 import {
   PROCUREMENT_RESOURCE,
@@ -59,7 +59,7 @@ export async function createSourcingEvent(
       rfqIds: [],
       rfqCount: 0,
       closedRfqCount: 0,
-      deadlineDate: toDeadlineTimestamp(dto.deadlineDate),
+      deadlineDate: toAdminTimestampOrNull(dto.deadlineDate),
       createdAt: now,
       updatedAt: now,
       createdBy: ctx.uid,
@@ -148,7 +148,7 @@ export async function updateSourcingEvent(
       title: dto.title ?? current.title,
       description: dto.description !== undefined ? dto.description : current.description,
       status: (dto.status ?? current.status) as SourcingEventStatus,
-      deadlineDate: patchDeadlineTimestamp(dto.deadlineDate, current.deadlineDate),
+      deadlineDate: patchAdminTimestamp(dto.deadlineDate, current.deadlineDate),
       updatedAt: admin.firestore.Timestamp.now(),
     };
 
