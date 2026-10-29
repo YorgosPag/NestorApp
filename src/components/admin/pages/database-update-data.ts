@@ -7,6 +7,10 @@
  */
 
 import { CONTACT_INFO, ContactInfoUtils } from '@/config/contact-info-config';
+// ADR-327 §8.5.4 — τα δείγματα γράφουν το ΙΔΙΟ σχήμα με την εφαρμογή: `number` (όχι `phone`) και τύπους από τις ρίζες.
+import type { EmailInfo, PhoneInfo } from '@/types/contacts';
+import { DEFAULT_EMAIL_TYPE } from '@/lib/contact/email-type-vocabulary';
+import { DEFAULT_PHONE_TYPE } from '@/lib/contact/phone-type-vocabulary';
 import { safeJsonParse } from '@/lib/json-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -49,8 +53,8 @@ export const NEW_CONTACTS = [
     tags: ['οικοπεδούχος', 'αντιπαροχή'],
     status: 'active',
     isFavorite: false,
-    emails: [{ email: ContactInfoUtils.generateEmail('Eleni', 'Papadopoulos'), type: 'personal', isPrimary: true }],
-    phones: [{ phone: ContactInfoUtils.generatePhone('mobile'), type: 'mobile', isPrimary: true }],
+    emails: [{ email: ContactInfoUtils.generateEmail('Eleni', 'Papadopoulos'), type: 'personal', isPrimary: true }] satisfies EmailInfo[],
+    phones: [{ number: ContactInfoUtils.generatePhone('mobile'), type: 'mobile', isPrimary: true }] satisfies PhoneInfo[],
     profession: 'Συνταξιούχος',
     notes: 'Οικοπεδούχος με αντιπαροχή 3 διαμερισμάτων'
   },
@@ -61,8 +65,8 @@ export const NEW_CONTACTS = [
     tags: ['οικοπεδούχος', 'αντιπαροχή'],
     status: 'active',
     isFavorite: false,
-    emails: [{ email: ContactInfoUtils.generateEmail('Giannis', 'Konstantinou'), type: 'personal', isPrimary: true }],
-    phones: [{ phone: ContactInfoUtils.generatePhone('mobile'), type: 'mobile', isPrimary: true }],
+    emails: [{ email: ContactInfoUtils.generateEmail('Giannis', 'Konstantinou'), type: 'personal', isPrimary: true }] satisfies EmailInfo[],
+    phones: [{ number: ContactInfoUtils.generatePhone('mobile'), type: 'mobile', isPrimary: true }] satisfies PhoneInfo[],
     profession: 'Μηχανικός',
     notes: 'Οικοπεδούχος με αντιπαροχή 2 διαμερισμάτων'
   },
@@ -73,8 +77,8 @@ export const NEW_CONTACTS = [
     tags: ['αγοραστής', 'πελάτης'],
     status: 'active',
     isFavorite: true,
-    emails: [{ email: ContactInfoUtils.generateEmail('Maria', 'Alexandrou'), type: 'personal', isPrimary: true }],
-    phones: [{ phone: ContactInfoUtils.generatePhone('mobile'), type: 'mobile', isPrimary: true }],
+    emails: [{ email: ContactInfoUtils.generateEmail('Maria', 'Alexandrou'), type: 'personal', isPrimary: true }] satisfies EmailInfo[],
+    phones: [{ number: ContactInfoUtils.generatePhone('mobile'), type: 'mobile', isPrimary: true }] satisfies PhoneInfo[],
     profession: 'Ιατρός',
     notes: 'Αγόρασε διαμέρισμα 85τμ στον 4ο όροφο'
   },
@@ -84,8 +88,8 @@ export const NEW_CONTACTS = [
     tags: ['εταιρεία', 'ενοικιαστής', 'γραφεία'],
     status: 'active',
     isFavorite: true,
-    emails: [{ email: CONTACT_INFO.DEMO_EMAIL_BUSINESS, type: 'business', isPrimary: true }],
-    phones: [{ phone: ContactInfoUtils.generatePhone('business'), type: 'business', isPrimary: true }],
+    emails: [{ email: CONTACT_INFO.DEMO_EMAIL_BUSINESS, type: DEFAULT_EMAIL_TYPE.company, isPrimary: true }] satisfies EmailInfo[],
+    phones: [{ number: ContactInfoUtils.generatePhone('business'), type: DEFAULT_PHONE_TYPE.company, isPrimary: true }] satisfies PhoneInfo[],
     industry: 'Τεχνολογία',
     vatNumber: '999888777',
     notes: 'Ενοικιάζει γραφειακό χώρο 150τμ'

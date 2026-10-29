@@ -96,7 +96,7 @@ export function DynamicContactArrays({
         items={emailsToCommunicationItems(normalizedEmails)}
         disabled={disabled}
         onChange={(items) => {
-          const emails = communicationItemsToEmails(items);
+          const emails = communicationItemsToEmails(items, contactType);
           onEmailsChange?.(emails);
         }}
       />
@@ -107,7 +107,7 @@ export function DynamicContactArrays({
         items={websitesToCommunicationItems(websites)}
         disabled={disabled}
         onChange={(items) => {
-          const websites = communicationItemsToWebsites(items);
+          const websites = communicationItemsToWebsites(items, contactType);
           onWebsitesChange?.(websites);
         }}
       />
@@ -118,7 +118,7 @@ export function DynamicContactArrays({
         items={socialToCommunicationItems(socialMedia, socialConfig.defaultType)}
         disabled={disabled}
         onChange={(items) => {
-          const social = communicationItemsToSocial(items);
+          const social = communicationItemsToSocial(items, contactType);
           onSocialMediaChange?.(social);
         }}
       />

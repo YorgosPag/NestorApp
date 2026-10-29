@@ -15,6 +15,9 @@ import type { AuditAction, EntityAuditEntry } from "@/types/audit-trail";
 import type { QuantitySpec } from "@/constants/quantity-specs";
 import { formatQuantityValue } from "./audit-quantity-format";
 import type { PhoneType } from "@/lib/contact/phone-type-vocabulary";
+import type { EmailType } from "@/lib/contact/email-type-vocabulary";
+import type { WebsiteType } from "@/lib/contact/website-type-vocabulary";
+import type { SocialMediaType } from "@/lib/contact/social-media-type-vocabulary";
 
 export interface Stats {
   total: number;
@@ -43,36 +46,59 @@ const PHONE_TYPE_DISPLAY: Record<PhoneType, string> = {
   other: "Άλλο",
 };
 
-/** Translate enum-like type values to Greek for audit display */
-const TYPE_LABELS: Record<string, string> = {
-  // Phone types — από τη ρίζα, ΕΝΑΣ πίνακας
-  ...PHONE_TYPE_DISPLAY,
-  // Email types
+/*
+ * ADR-327 §8.5.4 — ένας πίνακας ΑΝΑ λεξιλόγιο, δεμένος στη ρίζα του (CHECK 3.73). Ήταν ΕΝΑΣ επίπεδος
+ * `Record<string, string>` όπου λέξεις τηλεφώνου/email/ιστοσελίδας/social μοιράζονταν κλειδιά: λάθος κλειδί
+ * (`ecommerce` αντί για `eshop`) περνούσε σιωπηλά και έβγαινε ωμή τιμή. Κάθε κλάδος του μορφοποιητή ξέρει ΤΙ
+ * μορφοποιεί, άρα ρωτά ΤΟΝ πίνακά του. `Partial`: λέξη που λείπει (π.χ. `invoice`) δείχνει την τιμή — η μετάβαση των
+ * λέξεων σε locale είναι το εκκρεμές 🌐 (N.11), όχι νέες ωμές λέξεις εδώ.
+ */
+const EMAIL_TYPE_DISPLAY: Partial<Record<EmailType, string>> = {
   personal: "Προσωπικό",
+  work: "Εργασία",
   general: "Γενικό",
+  department: "Τμήμα",
+  secretariat: "Γραμματεία",
+  sales: "Πωλήσεις",
+  support: "Υποστήριξη",
   info: "Πληροφορίες",
-  billing: "Λογιστήριο",
-  complaints: "Παράπονα",
-  // KAD activity types
-  primary: "Κύρια",
-  secondary: "Δευτερεύουσα",
-  // Address types
-  headquarters: "Έδρα",
-  branch: "Υποκατάστημα",
-  warehouse: "Αποθήκη",
-  // Website types
+  other: "Άλλο",
+};
+
+const WEBSITE_TYPE_DISPLAY: Partial<Record<WebsiteType, string>> = {
+  personal: "Προσωπικό",
   company: "Εταιρική",
   corporate: "Εταιρική",
-  ecommerce: "E-shop",
+  eshop: "E-shop",
   portfolio: "Portfolio",
   blog: "Blog",
-  // Social media types
+  official: "Επίσημο",
+  other: "Άλλο",
+};
+
+const SOCIAL_MEDIA_TYPE_DISPLAY: Partial<Record<SocialMediaType, string>> = {
+  personal: "Προσωπικό",
   professional: "Επαγγελματικό",
   business: "Επιχειρηματικό",
+  corporate: "Εταιρική",
+  marketing: "Marketing",
   official: "Επίσημο",
   informational: "Ενημερωτικό",
-  marketing: "Marketing",
+  other: "Άλλο",
 };
+
+/** Τύποι δραστηριότητας ΚΑΔ. */
+const KAD_TYPE_DISPLAY: Readonly<Record<string, string>> = {
+  primary: "Κύρια",
+  secondary: "Δευτερεύουσα",
+};
+
+/** Η λέξη ενός τύπου από τον πίνακα του λεξιλογίου του — άγνωστη τιμή ⇒ η ίδια η τιμή (ποτέ κενό). */
+function typeLabelOf(table: Readonly<Partial<Record<string, string>>>, value: unknown): string {
+  if (!value) return "";
+  const key = String(value);
+  return (Object.hasOwn(table, key) ? table[key] : undefined) ?? key;
+}
 
 /** Nested object key labels for human-readable display */
 const NESTED_KEY_LABELS: Record<string, string> = {
@@ -116,7 +142,7 @@ function formatKnownEntity(obj: Record<string, unknown>): string | null {
     const code = obj.countryCode ? `${obj.countryCode} ` : "";
     const num = String(obj.number || "");
     const ext = obj.extension ? ` εσωτ. ${String(obj.extension).trim()}` : "";
-    const typeLabel = obj.type ? TYPE_LABELS[String(obj.type)] ?? String(obj.type) : "";
+    const typeLabel = typeLabelOf(PHONE_TYPE_DISPLAY, obj.type);
     const details = [typeLabel, obj.label].filter(Boolean).join(", ");
     const suffix = details ? ` (${details})` : "";
     return num ? `${code}${num}${ext}${suffix}` : null;
@@ -124,7 +150,7 @@ function formatKnownEntity(obj: Record<string, unknown>): string | null {
   // EmailInfo → "user@example.com (Προσωπικό)"
   if ("email" in obj) {
     const email = String(obj.email || "");
-    const typeLabel = obj.type ? TYPE_LABELS[String(obj.type)] ?? String(obj.type) : "";
+    const typeLabel = typeLabelOf(EMAIL_TYPE_DISPLAY, obj.type);
     const details = [typeLabel, obj.label].filter(Boolean).join(", ");
     const suffix = details ? ` (${details})` : "";
     return email ? `${email}${suffix}` : null;
@@ -132,7 +158,7 @@ function formatKnownEntity(obj: Record<string, unknown>): string | null {
   // WebsiteInfo → "https://example.com (Εταιρική, Κύρια)"
   if ("url" in obj && !("platform" in obj)) {
     const url = String(obj.url || "");
-    const typeLabel = obj.type ? TYPE_LABELS[String(obj.type)] ?? String(obj.type) : "";
+    const typeLabel = typeLabelOf(WEBSITE_TYPE_DISPLAY, obj.type);
     const details = [typeLabel, obj.label].filter(Boolean).join(", ");
     const suffix = details ? ` (${details})` : "";
     return url ? `${url}${suffix}` : null;
@@ -141,7 +167,7 @@ function formatKnownEntity(obj: Record<string, unknown>): string | null {
   if ("platform" in obj && ("username" in obj || "url" in obj)) {
     const parts: string[] = [];
     if (obj.username) parts.push(`@${obj.username}`);
-    const typeLabel = obj.type ? TYPE_LABELS[String(obj.type)] ?? String(obj.type) : "";
+    const typeLabel = typeLabelOf(SOCIAL_MEDIA_TYPE_DISPLAY, obj.type);
     const details = [obj.platform, typeLabel, obj.label].filter(Boolean).join(", ");
     if (details) parts.push(`(${details})`);
     if (obj.url) parts.push(`— ${obj.url}`);
@@ -151,7 +177,7 @@ function formatKnownEntity(obj: Record<string, unknown>): string | null {
   if ("code" in obj && "description" in obj) {
     const code = String(obj.code || "");
     const desc = String(obj.description || "");
-    const typeLabel = obj.type ? TYPE_LABELS[String(obj.type)] ?? String(obj.type) : "";
+    const typeLabel = typeLabelOf(KAD_TYPE_DISPLAY, obj.type);
     const suffix = typeLabel ? ` (${typeLabel})` : "";
     return code ? `${code} — ${desc}${suffix}` : desc || null;
   }

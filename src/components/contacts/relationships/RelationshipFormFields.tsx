@@ -203,7 +203,7 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
   }, [setFormData, contactType]);
 
   const handleEmailsChange = useCallback((items: CommunicationItem[]) => {
-    const emails = communicationItemsToEmails(items);
+    const emails = communicationItemsToEmails(items, contactType);
     const primaryEmail = emails.find(e => e.isPrimary) || emails[0];
     setFormData(prev => ({
       ...prev,
@@ -213,7 +213,7 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
         businessEmail: primaryEmail?.email || ''
       }
     }));
-  }, [setFormData]);
+  }, [setFormData, contactType]);
 
   // ============================================================================
   // RENDER HELPERS

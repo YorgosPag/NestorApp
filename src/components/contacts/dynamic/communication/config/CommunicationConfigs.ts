@@ -12,6 +12,10 @@
 import { COMMUNICATION_ICONS } from './CommunicationIcons';
 import type { CommunicationType, CommunicationConfig, CommunicationConfigRecord } from '../types/CommunicationTypes';
 import { DEFAULT_PHONE_TYPE, PHONE_TYPES_BY_OWNER } from '@/lib/contact/phone-type-vocabulary';
+import { DEFAULT_EMAIL_TYPE, EMAIL_TYPES_BY_OWNER } from '@/lib/contact/email-type-vocabulary';
+import { DEFAULT_WEBSITE_TYPE, WEBSITE_TYPES_BY_OWNER } from '@/lib/contact/website-type-vocabulary';
+import { DEFAULT_SOCIAL_MEDIA_TYPE, SOCIAL_MEDIA_TYPES_BY_OWNER } from '@/lib/contact/social-media-type-vocabulary';
+import type { ContactOwnerKind } from '@/lib/contact/contact-owner-kind';
 import {
   PHONE_TYPE_LABELS,
   EMAIL_TYPE_LABELS,
@@ -40,9 +44,10 @@ function typeOptions<T extends string>(values: readonly T[], labels: Readonly<Re
 }
 
 /**
- * Contact entity type — determines which communication type options to show
+ * Contact entity type — determines which communication type options to show.
+ * Ψευδώνυμο του ΕΝΟΣ άξονα κατόχου (`lib/contact/contact-owner-kind.ts`, ADR-327 §8.5.4).
  */
-export type ContactEntityType = 'individual' | 'company' | 'service';
+export type ContactEntityType = ContactOwnerKind;
 
 // ============================================================================
 // MAIN COMMUNICATION CONFIGURATIONS
@@ -85,12 +90,8 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
     title: 'communication.sections.emails',
     icon: COMMUNICATION_ICONS.email,
     fields: { primary: 'email' },
-    types: [
-      { value: 'personal', label: EMAIL_TYPE_LABELS.personal },
-      { value: 'work', label: EMAIL_TYPE_LABELS.work },
-      { value: 'other', label: EMAIL_TYPE_LABELS.other }
-    ],
-    defaultType: 'personal',
+    types: typeOptions(EMAIL_TYPES_BY_OWNER.individual, EMAIL_TYPE_LABELS),
+    defaultType: DEFAULT_EMAIL_TYPE.individual,
     placeholder: 'communication.placeholders.email',
     labelPlaceholder: 'communication.placeholders.emailLabel',
     supportsPrimary: true,
@@ -105,14 +106,8 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
     title: 'communication.sections.websites',
     icon: COMMUNICATION_ICONS.website,
     fields: { primary: 'url' },
-    types: [
-      { value: 'personal', label: WEBSITE_TYPE_LABELS.personal },
-      { value: 'company', label: WEBSITE_TYPE_LABELS.company },
-      { value: 'portfolio', label: WEBSITE_TYPE_LABELS.portfolio },
-      { value: 'blog', label: WEBSITE_TYPE_LABELS.blog },
-      { value: 'other', label: WEBSITE_TYPE_LABELS.other }
-    ],
-    defaultType: 'personal',
+    types: typeOptions(WEBSITE_TYPES_BY_OWNER.individual, WEBSITE_TYPE_LABELS),
+    defaultType: DEFAULT_WEBSITE_TYPE.individual,
     placeholder: 'communication.placeholders.website',
     labelPlaceholder: 'communication.placeholders.websiteLabel',
     supportsPrimary: false,
@@ -128,12 +123,7 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
     icon: COMMUNICATION_ICONS.social,
     fields: { primary: 'username', secondary: 'platform' },
     // 🎯 ΤΥΠΟΙ ΧΡΗΣΗΣ για το "Τύπος" dropdown
-    types: [
-      { value: 'personal', label: SOCIAL_MEDIA_TYPE_LABELS.personal },
-      { value: 'professional', label: SOCIAL_MEDIA_TYPE_LABELS.professional },
-      { value: 'business', label: SOCIAL_MEDIA_TYPE_LABELS.business },
-      { value: 'other', label: SOCIAL_MEDIA_TYPE_LABELS.other }
-    ],
+    types: typeOptions(SOCIAL_MEDIA_TYPES_BY_OWNER.individual, SOCIAL_MEDIA_TYPE_LABELS),
     // 🎯 ΠΛΑΤΦΟΡΜΕΣ για το "Πλατφόρμα" dropdown
     platformTypes: [
       { value: 'linkedin', label: SOCIAL_PLATFORM_LABELS.linkedin },
@@ -147,7 +137,7 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
       { value: 'telegram', label: SOCIAL_PLATFORM_LABELS.telegram },
       { value: 'other', label: SOCIAL_PLATFORM_LABELS.other }
     ],
-    defaultType: 'personal',
+    defaultType: DEFAULT_SOCIAL_MEDIA_TYPE.individual,
     placeholder: 'communication.placeholders.username',
     labelPlaceholder: 'communication.placeholders.socialLabel',
     supportsPrimary: false,
@@ -284,31 +274,16 @@ const SERVICE_TYPE_OVERRIDES: Partial<Record<CommunicationType, { types: { value
     defaultType: DEFAULT_PHONE_TYPE.service
   },
   email: {
-    types: [
-      { value: 'general', label: SERVICE_EMAIL_TYPE_LABELS.general },
-      { value: 'department', label: SERVICE_EMAIL_TYPE_LABELS.department },
-      { value: 'secretariat', label: SERVICE_EMAIL_TYPE_LABELS.secretariat },
-      { value: 'info', label: SERVICE_EMAIL_TYPE_LABELS.info },
-      { value: 'other', label: SERVICE_EMAIL_TYPE_LABELS.other }
-    ],
-    defaultType: 'general'
+    types: typeOptions(EMAIL_TYPES_BY_OWNER.service, SERVICE_EMAIL_TYPE_LABELS),
+    defaultType: DEFAULT_EMAIL_TYPE.service
   },
   website: {
-    types: [
-      { value: 'official', label: SERVICE_WEBSITE_TYPE_LABELS.official },
-      { value: 'eServices', label: SERVICE_WEBSITE_TYPE_LABELS.eServices },
-      { value: 'portal', label: SERVICE_WEBSITE_TYPE_LABELS.portal },
-      { value: 'other', label: SERVICE_WEBSITE_TYPE_LABELS.other }
-    ],
-    defaultType: 'official'
+    types: typeOptions(WEBSITE_TYPES_BY_OWNER.service, SERVICE_WEBSITE_TYPE_LABELS),
+    defaultType: DEFAULT_WEBSITE_TYPE.service
   },
   social: {
-    types: [
-      { value: 'official', label: SERVICE_SOCIAL_MEDIA_TYPE_LABELS.official },
-      { value: 'informational', label: SERVICE_SOCIAL_MEDIA_TYPE_LABELS.informational },
-      { value: 'other', label: SERVICE_SOCIAL_MEDIA_TYPE_LABELS.other }
-    ],
-    defaultType: 'official'
+    types: typeOptions(SOCIAL_MEDIA_TYPES_BY_OWNER.service, SERVICE_SOCIAL_MEDIA_TYPE_LABELS),
+    defaultType: DEFAULT_SOCIAL_MEDIA_TYPE.service
   }
 };
 
@@ -318,32 +293,16 @@ const COMPANY_TYPE_OVERRIDES: Partial<Record<CommunicationType, { types: { value
     defaultType: DEFAULT_PHONE_TYPE.company
   },
   email: {
-    types: [
-      { value: 'general', label: COMPANY_EMAIL_TYPE_LABELS.general },
-      { value: 'department', label: COMPANY_EMAIL_TYPE_LABELS.department },
-      { value: 'sales', label: COMPANY_EMAIL_TYPE_LABELS.sales },
-      { value: 'support', label: COMPANY_EMAIL_TYPE_LABELS.support },
-      { value: 'info', label: COMPANY_EMAIL_TYPE_LABELS.info },
-      { value: 'other', label: COMPANY_EMAIL_TYPE_LABELS.other }
-    ],
-    defaultType: 'general'
+    types: typeOptions(EMAIL_TYPES_BY_OWNER.company, COMPANY_EMAIL_TYPE_LABELS),
+    defaultType: DEFAULT_EMAIL_TYPE.company
   },
   website: {
-    types: [
-      { value: 'corporate', label: COMPANY_WEBSITE_TYPE_LABELS.corporate },
-      { value: 'eshop', label: COMPANY_WEBSITE_TYPE_LABELS.eshop },
-      { value: 'blog', label: COMPANY_WEBSITE_TYPE_LABELS.blog },
-      { value: 'other', label: COMPANY_WEBSITE_TYPE_LABELS.other }
-    ],
-    defaultType: 'corporate'
+    types: typeOptions(WEBSITE_TYPES_BY_OWNER.company, COMPANY_WEBSITE_TYPE_LABELS),
+    defaultType: DEFAULT_WEBSITE_TYPE.company
   },
   social: {
-    types: [
-      { value: 'corporate', label: COMPANY_SOCIAL_MEDIA_TYPE_LABELS.corporate },
-      { value: 'marketing', label: COMPANY_SOCIAL_MEDIA_TYPE_LABELS.marketing },
-      { value: 'other', label: COMPANY_SOCIAL_MEDIA_TYPE_LABELS.other }
-    ],
-    defaultType: 'corporate'
+    types: typeOptions(SOCIAL_MEDIA_TYPES_BY_OWNER.company, COMPANY_SOCIAL_MEDIA_TYPE_LABELS),
+    defaultType: DEFAULT_SOCIAL_MEDIA_TYPE.company
   }
 };
 

@@ -25,6 +25,8 @@ import { QuoteLineEditorTable } from '@/subapps/procurement/components/QuoteLine
 import { SignatoryProposalCard } from '@/subapps/procurement/components/signatory/SignatoryProposalCard';
 import { formatEuro } from '@/lib/number/greek-decimal';
 import { ContactsService } from '@/services/contacts.service';
+import { contactOwnerKindOf } from '@/lib/contact/contact-owner-kind';
+import { emailEntriesFromAddresses } from '@/lib/contact/email-entries';
 import type {
   ExtractedQuoteData,
   FieldWithConfidence,
@@ -125,11 +127,8 @@ export function ExtractedDataReviewPanel({
         companyVatNumber: vendorEdits.vat,
         vatNumber: vendorEdits.vat,
         phone: vendorEdits.phone,
-        emails: emailsArray.map((email, i) => ({
-          email,
-          type: 'work' as const,
-          isPrimary: i === 0,
-        })),
+        // ADR-327 §8.5.4 — ίδια διεύθυνση κρατά τύπο/ετικέτα· νέα ⇒ μέσα στο υποσύνολο του κατόχου (όχι `work`).
+        emails: emailEntriesFromAddresses(emailsArray, supplierContact.emails, contactOwnerKindOf(supplierContact.type)),
       };
       await ContactsService.updateExistingContactFromForm(supplierContact, formDataDiff);
       toast.success(t('quotes.scan.vendorEdit.saved', { defaultValue: '' }));
