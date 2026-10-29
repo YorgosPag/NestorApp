@@ -73,12 +73,11 @@ const SelectFilterField: React.FC<{
       <SelectTrigger size="sm" aria-label={ariaLabel} className="min-w-[88px] flex-1 text-[11px]">
         <SelectValue />
       </SelectTrigger>
-      {/* Το canonical content κλειδώνει πλάτος = trigger· εδώ ξεκλειδώνουμε ώστε τα μακριά
-          ελληνικά labels να χωρούν πλήρως (fit-content, με min = trigger & λογικό max). */}
-      <SelectContent className="w-auto min-w-[var(--radix-select-trigger-width)] max-w-[260px]">
+      {/* ADR-001 «Content width»: τα μακριά ελληνικά labels χωρούν πλήρως (≥ trigger, κοινό όριο, τύλιγμα). */}
+      <SelectContent width="content">
         <SelectItem value={LIBRARY_FILTER_ALL}>{allLabel}</SelectItem>
         {options.map((o) => (
-          <SelectItem key={o.value} value={o.value} className="whitespace-nowrap">
+          <SelectItem key={o.value} value={o.value}>
             {o.label}
           </SelectItem>
         ))}

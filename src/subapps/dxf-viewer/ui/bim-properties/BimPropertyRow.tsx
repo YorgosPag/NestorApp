@@ -106,7 +106,7 @@ export function BimPropertyRow({
         <SelectTrigger size="sm" aria-label={label} className="w-36 shrink-0">
           <SelectValue placeholder={MIXED_PLACEHOLDER} />
         </SelectTrigger>
-        <SelectContent className="w-auto min-w-[var(--radix-select-trigger-width)] max-w-[24rem]">
+        <SelectContent width="content">
           {groupOptions(options).map((group, groupIndex) => (
             // key = η ετικέτα της ομάδας· `groupIndex` καλύπτει τις ανώνυμες (label === null),
             // που μπορούν να είναι πολλές όταν αναμιγνύονται grouped/ungrouped options.

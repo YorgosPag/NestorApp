@@ -84,13 +84,8 @@ const CATEGORIES: BimMaterialCategory[] = [
 const FIRE_RATINGS: BimMaterialFireRating[] = ['none', 'EI30', 'EI60', 'EI90', 'EI120'];
 const UNITS: BimMaterialUnit[] = ['m', 'm2', 'm3', 'kg', 'pcs'];
 
-/**
- * Το `SelectContent` (ADR-001 Radix) κλειδώνει by-default στο ΑΚΡΙΒΕΣ πλάτος του trigger, οπότε
- * μεγάλες ελληνικές ετικέτες (π.χ. «Μόνωση (Θερμική / Ηχητική)») κόβονταν στις στενές στήλες του
- * grid. Εδώ αφήνουμε το dropdown να μεγαλώνει ΩΣ το περιεχόμενό του (≥ πλάτος trigger). Localized —
- * δεν αλλάζει το enterprise default του Select.
- */
-const DROPDOWN_CONTENT = 'w-auto min-w-[var(--radix-select-trigger-width)]';
+// Τα dropdown εδώ χρησιμοποιούν `<SelectContent width="content">` (ADR-001 «Content width»): μεγάλες
+// ελληνικές ετικέτες (π.χ. «Μόνωση (Θερμική / Ηχητική)») δεν κόβονται στις στενές στήλες του grid.
 
 export interface SectionProps {
   form: FormState;
@@ -122,7 +117,7 @@ export function RequiredSection({
           <span className={labelClass}>{t('form.category')}</span>
           <Select value={form.category} onValueChange={(v) => setField('category', v as BimMaterialCategory)}>
             <SelectTrigger size="sm"><SelectValue /></SelectTrigger>
-            <SelectContent className={DROPDOWN_CONTENT}>
+            <SelectContent width="content">
               {CATEGORIES.map((c) => (
                 <SelectItem key={c} value={c}>{t(`categories.${c}`)}</SelectItem>
               ))}
@@ -137,7 +132,6 @@ export function RequiredSection({
             units={UNITS}
             size="sm"
             compact
-            contentClassName={DROPDOWN_CONTENT}
           />
         </label>
       </div>
@@ -150,7 +144,7 @@ export function RequiredSection({
           <span className={labelClass}>{t('form.scope')}</span>
           <Select value={form.scope} onValueChange={(v) => setField('scope', v as Exclude<BimMaterialScope, 'system'>)}>
             <SelectTrigger size="sm"><SelectValue /></SelectTrigger>
-            <SelectContent className={DROPDOWN_CONTENT}>
+            <SelectContent width="content">
               <SelectItem value="company">{t('scopes.company')}</SelectItem>
               <SelectItem value="project">{t('scopes.project')}</SelectItem>
             </SelectContent>
@@ -184,7 +178,7 @@ export function DimensionsSection({ form, setField, inputClass, labelClass, t }:
         <span className={labelClass}>{t('form.fireRating')}</span>
         <Select value={form.fireRating} onValueChange={(v) => setField('fireRating', v as BimMaterialFireRating)}>
           <SelectTrigger size="sm"><SelectValue /></SelectTrigger>
-          <SelectContent className={DROPDOWN_CONTENT}>
+          <SelectContent width="content">
             {FIRE_RATINGS.map((fr) => (
               <SelectItem key={fr} value={fr}>{t(`fireRatings.${fr}`)}</SelectItem>
             ))}
