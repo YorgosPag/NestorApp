@@ -38,7 +38,7 @@ import type { TrackedFieldDef } from '@/lib/audit/tracked-field-def';
 import { formatCollectionItemLabel, formatFieldAwareValue, type AuditValueFormat } from '../activity-tab-helpers';
 import { auditVocabularyNamespaces, vocabularyNamespacesOf } from '../audit-vocabulary-namespaces';
 import { auditValueWords } from '../audit-value-words';
-import { resolveDeclaredAuditValue, translateCatalogValue } from '../audit-value-resolver';
+import { resolveAuditValue, resolveDeclaredAuditValue, translateCatalogValue } from '../audit-value-resolver';
 
 type Lang = 'el' | 'en';
 const LANGS: readonly Lang[] = ['el', 'en'];
@@ -219,6 +219,13 @@ describe('Λ6 — η ετικέτα στοιχείου που γράφει η μ
     ['en', 'contact', 'customFields.activities', 'secondary', 'Secondary'],
   ] as const)('%s · %s.%s · «%s»', (lang, entityType, field, raw, expected) =>
     inLang(lang, () => expect(formatCollectionItemLabel(raw, formatFor(entityType, field))).toBe(expected)),
+  );
+
+  it.each([['el', 'Κύρια'], ['en', 'Main']] as const)('customFields.activityType (%s) — «main» από τον δηλωμένο κατάλογο', (lang, word) =>
+    inLang(lang, () => {
+      const def = getTrackedFieldsForEntityAuditType('contact')?.['customFields.activityType'];
+      expect(resolveAuditValue('customFields.activityType', 'main', t, def?.enumCatalog)).toBe(word);
+    }),
   );
 
   it('πεδίο χωρίς δηλωμένο λεξιλόγιο ⇒ αυτούσια (καμία μαντεψιά)', () => {

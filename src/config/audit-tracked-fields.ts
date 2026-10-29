@@ -20,6 +20,7 @@ import { AUDIT_VALUE_CATALOGS } from '@/config/audit-value-catalogs';
 import {
   AUDIT_ADDRESS_TYPE_CATALOG,
   AUDIT_AREA_PARTS_CATALOG,
+  AUDIT_COMPANY_ACTIVITY_TYPE_CATALOG,
   AUDIT_EMAIL_TYPE_CATALOG,
   AUDIT_KAD_TYPE_CATALOG,
   AUDIT_PHONE_TYPE_CATALOG,
@@ -1556,6 +1557,12 @@ const CONTACT_FIELD_DEFS: Record<string, TrackedFieldDef> = {
     // Η ετικέτα ζει ΜΙΑ φορά, στο `CONTACT_TRACKED_FIELDS_RAW` (λύνεται από το `common-audit`).
     label: CONTACT_TRACKED_FIELDS_RAW['customFields.activities'],
     itemCatalogs: { type: AUDIT_KAD_TYPE_CATALOG },
+  },
+  // Ζωντανός έλεγχος 29/10: «Τύπος Δραστηριότητας: — → main» — η λέξη υπήρχε, κανείς δεν την είχε δηλώσει.
+  'customFields.activityType': {
+    kind: 'scalar',
+    label: CONTACT_TRACKED_FIELDS_RAW['customFields.activityType'],
+    enumCatalog: AUDIT_COMPANY_ACTIVITY_TYPE_CATALOG,
   },
 };
 

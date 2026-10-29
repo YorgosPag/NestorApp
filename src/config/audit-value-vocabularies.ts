@@ -87,6 +87,12 @@ export const AUDIT_SOCIAL_PLATFORM_CATALOG = catalogOfLabelTables(COMMUNICATION_
 /** Τύπος δραστηριότητας ΚΑΔ — ρίζα `KAD_ACTIVITY_TYPES` (`types/ContactFormTypes.ts`). */
 export const AUDIT_KAD_TYPE_CATALOG: AuditCatalogRef = { ns: 'forms', path: 'kad.types' };
 
+/**
+ * Τύπος δραστηριότητας **εταιρείας** (ΓΕΜΗ, `customFields.activityType`: `main|secondary`) — ⚠️ ΑΛΛΗ ρίζα από τον τύπο ΚΑΔ
+ * (`primary|secondary`)· η ενοποίησή τους είναι το εκκρεμές 🏷️′ #2, όχι σιωπηλή αντιστοίχιση εδώ.
+ */
+export const AUDIT_COMPANY_ACTIVITY_TYPE_CATALOG: AuditCatalogRef = { ns: 'forms', path: 'options.activityTypes' };
+
 /** Τύπος διεύθυνσης — έργου **και** επαφής (`ProjectAddressType` · `ContactAddressType`), ένας πίνακας λέξεων. */
 export const AUDIT_ADDRESS_TYPE_CATALOG: AuditCatalogRef = { ns: 'addresses', path: 'types' };
 
