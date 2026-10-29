@@ -33,6 +33,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const { stableStringify, sha256 } = require('../i18n-shell-slice/slice-build');
+const { toLf } = require('../text-eol');
 
 const ROOT = path.resolve(__dirname, '..', '..', '..');
 
@@ -308,7 +309,7 @@ const PIPELINE = Object.freeze({
  * bytes θα έβγαζε **ψευδή** απόκλιση ανάλογα με το **μηχάνημα**. Κανονικοποίηση διαφοράς όπως το
  * Argo CD (`diff normalization`): συγκρίνεται **σημασία**, όχι τέχνημα του checkout.
  */
-const normalizeEol = (text) => (typeof text === 'string' ? text.replace(/\r\n/g, '\n') : text);
+const normalizeEol = (text) => (typeof text === 'string' ? toLf(text) : text);
 
 /**
  * **Ποια απόδοση γραμμών του `text` έχει το αποτύπωμα `digest`;** — τα bytes που ταιριάζουν, ή

@@ -26,6 +26,7 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
 const { SPAWN_OUTCOME, classifySpawnResult } = require('../spawn-outcome');
+const { toLf } = require('../text-eol');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..');
 const MAX_BUFFER = 64 * 1024 * 1024;
@@ -99,7 +100,7 @@ function runLicenseInventory({ cwd = PROJECT_ROOT, command = PNPM_LICENSES_COMMA
 
 // ─── Lockfile ──────────────────────────────────────────────────────────────
 
-const normalizeNewlines = (text) => text.replace(/\r\n/g, '\n');
+const normalizeNewlines = toLf;
 
 /**
  * Το lockfile **του commit**: `staged` = το blob του ευρετηρίου (`git show :pnpm-lock.yaml`,

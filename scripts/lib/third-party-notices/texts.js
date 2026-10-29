@@ -34,6 +34,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const spdx = require('../license-policy/spdx');
+const { toCanonicalText } = require('../text-eol');
 
 /** Ο φάκελος των **κανονικών** κειμένων ανά SPDX id — SSoT για ό,τι δεν κουβαλά το πακέτο. */
 const CANONICAL_DIR = 'licenses';
@@ -77,7 +78,7 @@ const TEXT_SOURCE = Object.freeze({
 });
 
 /** Καθαρίζει BOM και κανονικοποιεί τερματισμούς γραμμής — ποτέ δεν αλλάζει το περιεχόμενο. */
-const normalize = (text) => text.replace(/^﻿/, '').replace(/\r\n/g, '\n').trimEnd();
+const normalize = (text) => toCanonicalText(text, { stripBom: true, trimEnd: true });
 
 /**
  * Τα αρχεία απόδοσης **μέσα** στον κατάλογο ενός πακέτου, ταξινομημένα ώστε το `LICENSE` να

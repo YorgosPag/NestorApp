@@ -19,10 +19,11 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { toLf } = require('./text-eol');
 
 const STATES = { FRESH: 'fresh', STALE: 'stale', MISSING: 'missing', ORPHAN: 'orphan', INVALID: 'invalid' };
 
-const readLf = (abs) => fs.readFileSync(abs, 'utf8').replace(/\r\n/g, '\n');
+const readLf = (abs) => toLf(fs.readFileSync(abs, 'utf8'));
 
 /** Κάθε αρχείο κάτω από το `outputRoot`, ως σχετική διαδρομή με `/`. */
 function listGenerated(root, outputRoot) {
