@@ -5195,6 +5195,7 @@ Closed via `hostWall.params.sceneUnits ?? 'mm'` frozen-context pattern σε **4 
 
 | Date       | Change |
 |------------|--------|
+| 2026-10-29 | ✅ **🧑 ΙΣΤΟΡΙΚΟ ΕΠΑΦΗΣ ΧΩΡΙΣ ΧΡΗΣΤΗ ΟΤΑΝ ΓΡΑΦΕΙ Ο SERVER — ΕΚΛΕΙΣΕ** (ADR-195 (στ), Opus 5.5): ΕΝΑΣ τύπος φορέα (`lib/audit/audit-performer.ts`: άνθρωπος | διεργασία εκ μέρους ανθρώπου) + ΕΝΑΣ βοηθός σφραγίδας (`server/lib/performer-stamp.ts`, απορρόφησε το δίδυμο του `soft-delete-engine`) + φορέας του AI (`ai-pipeline/shared/ai-performer.ts`, έσβησε 5 αντίγραφα του `channelSenderId || 'system'`). Όλοι οι runtime γραφείς επαφών (resolve · AI CRUD/εργαλεία · builder · περιήγηση · εντολές πώλησης · email · υπογράφων · ΙΚΑ · ενεργοποίηση πελάτη) σφραγίζουν `_lastModifiedBy`/`_lastModifiedByName` αντί του ωμού `lastModifiedBy`· η ρίζα `resolvePerformerDisplayName` δεν κρατά πια uid ως όνομα· οθόνη «Βοηθός AI · για {name}» (el+en). Άγκυρα κλάσης Σ0–Σ4 + Φ1–Φ6 + Δ7· μεταλλάξεις 9/9. Χωρίς deploy Functions. Boy Scout (CHECK 3.28 θα μπλόκαρε τα αγγιγμένα αρχεία): ΕΝΑΣ φορτωτής επαφής των εργαλείων AI (`agent-contact-doc.ts`, 6 αντίγραφα) + κοινά βήματα του `activity-handler` + `admin-command-protocol.ts` (uc-015/016). `jscpd:diff` καθαρό (39 αρχεία)· ai-pipeline 81/81. Νέα μπλοκ 🧑′ (μεταπτώσεις μέσω envelope) και 🧩 (11 UC modules). |
 | 2026-10-29 | ✅ **ΤΡΙΑ ΑΚΟΜΗ — ΕΚΛΕΙΣΑΝ / ΜΕΡΙΚΩΣ (εντολή Giorgio «συνέχισε», Opus 5.5).** (1) **🕐 `getRelativeTime`**: τα 3 του inbox ήταν αυτολεξεί ίδια και **σκόπιμα** όχι `Intl` (μετά τις 48 ώρες δείχνουν ημερομηνία) ⇒ ΕΝΑΣ κανόνας `components/crm/inbox/inbox-relative-time.ts` (`getInboxRelativeTime`), με επανεξαγωγή του ιστορικού ονόματος από `thread-view-helpers` / `unified-inbox-helpers`· άγκυρα `inbox-relative-time.test.ts`. 🔴 Το 4ο (`communications/utils/formatters`) επέστρεφε **ωμά κλειδιά** (`common.time.minutesAgo`, χωρίς αριθμό) που το `CommunicationsHistory` αποδίδει **χωρίς `t()`** ⇒ ο χρήστης έβλεπε το κλειδί· πλέον αναθέτει στο `formatRelativeTime` (**δεν** ελέγχθηκε στον browser). (2) **🧪 τρίτο fake bucket**: το κοινό `fake-gcs-bucket` απέκτησε `exists` · `download` · `createResumableUpload` (+ `onResumableUpload`)· το `tour-capture-upload.test.ts` τρέχει πάνω σε τρία `fakeGcsBucket` (8 σουίτες του fake / 158 tests πράσινα). (3) **↩️ EOL**: `scripts/lib/text-eol.js` + 4 από 6 (η οικογένεια i18n-shell-slice μένει — βλ. γραμμή). Jest: `firestore-deploy-*` 5/5 · `third-party-notices` · `text-eol` πράσινα· `license-policy` Δ1-Δ3 + `capture-api-contract` Γ4 κόκκινα **μόνο λόγω UNC** (spawn `pnpm` / διαδρομή «μέσα στο repo») — όχι από την αλλαγή. |
 | 2026-10-29 | ✅ **ΠΕΝΤΕ ΜΙΚΡΑ ΔΙΠΛΟΤΥΠΑ — ΕΚΛΕΙΣΑΝ (εντολή Giorgio «από τα μικρότερα», Opus 5.5).** (1) **`clamp`**: 4 τοπικά → `@/lib/geometry/scalar` (`rankSuggestions` · `floating-panel-geometry` · `photo-progress-analyzer` · `evm-calculator`). Τα άλλα δύο **δεν** είναι διπλότυπα: `formula-insert-text` (trunc + NaN⇒max) · `table-size-grid-keyboard` (αντίστροφη σειρά ⇒ κερδίζει το `max` όταν min>max). (2) **`SelectContent width="content"`** στα 4 DXF (`BimPropertyRow` · `EntouragePalette` · `MaterialEditorSections` + περιττό `contentClassName` στο `UomSelect` · `RibbonCombobox`)· αφαιρέθηκαν και τα νεκρά `whitespace-nowrap` (το `labelFit` τα υπερισχύει). ⚠️ Τα όρια 24rem/260px έγιναν το κοινό `min(28rem, διαθέσιμο)` — **δεν** ελέγχθηκε οπτικά. (3) **`addMonthsUTC` → αναθέτει στο `addMonthsClampedUtc`** + ξαναβάζει την ώρα της αφετηρίας (`positiveMod(ms, MS_PER_DAY)`)· σχετικά imports επίτηδες (το εισάγουν scripts χωρίς alias). Άγκυρα `date-local-add-months.test.ts` (31/1, 29/2, αρνητικοί, ώρα, πριν το 1970). (4) **`sortKeysDeep`** (`src/lib/sort-keys-deep.ts`, NEW): `canonical-json` + `audit-diff` (`export const sortKeys = sortKeysDeep`)· `legal-document-versions.test.ts` πράσινο (bytes). Μένει το αντίγραφο του `functions/src/audit/deep-diff.ts` (άλλο πακέτο). (5) **`toAdminTimestampOrNull` / `patchAdminTimestamp`** (μετονομασία του `toDeadlineTimestamp`) + `material-service` `lastPurchaseDate` (2 αντίγραφα)· το `quote-service` `toValidUntil` μένει χωριστό (μη αναγνώσιμη ⇒ `null`). Jest: 13 σουίτες / 365 tests πράσινα. ⚠️ `jscpd:diff` **δεν** έτρεξε (το `npx` αποτυγχάνει σε UNC cwd) — θα το τρέξει το pre-commit. |
 | 2026-10-29 | ✅ **📧 + 🌐 + 💬 ΛΕΞΙΛΟΓΙΟ ΤΥΠΟΥ EMAIL / ΙΣΤΟΣΕΛΙΔΑΣ / SOCIAL ΑΝΑ ΚΑΤΟΧΟ — ΕΚΛΕΙΣΕ** (ADR-327 §8.5.4 (ε), Opus 5.5): ρίζες `email-type` · `website-type` · `social-media-type` (ίδιο πρότυπο με το ☎️, ένας άξονας κατόχου `contact-owner-kind.ts`) + ΕΝΑΣ κανόνας `inferEmailType`· 7 γραφείς εκτός υποσυνόλου διορθώθηκαν (AI builder/lookup-crud, resolve, φόρμα, λίστα, σάρωση προσφοράς, saver ιστοσελίδας, seed)· mappers χωρίς τυφλό `as`· Ιστορικό ένας πίνακας ανά λεξιλόγιο. CHECK 3.73 +3 λεξιλόγια + νέα κατάσταση `bound-elsewhere` (ADR-812). Δεδομένα: 0/22 εκτός υποσυνόλου. 10/10 μεταλλάξεις σκοτώθηκαν. Ζωντανός έλεγχος εκκρεμεί (dev server 403). Νέο μπλοκ 💬 για την πλατφόρμα. |
@@ -5545,17 +5546,26 @@ N.0.2 — 4+ αρχεία, δύο περιοχές):
 
 ---
 
-### 🧑 Ιστορικό επαφής ΧΩΡΙΣ χρήστη όταν γράφει ο server — ADR-195 · 2026-10-29
+### 🧑′ Μαζικές μεταπτώσεις επαφών ΧΩΡΙΣ σφραγίδα φορέα — ADR-195 · 2026-10-29
 
-**Μετρημένο ζωντανά** (MACON ATEE, καρτέλα «Ιστορικό»): καμία γραμμή δεν λέει «από …». Αιτία: οι server γραφείς επαφών
-(Admin SDK — `api/contacts/resolve` · `contact-lookup-crud` · `buildContactDocument` κ.ά.) **δεν** σφραγίζουν
-`_lastModifiedBy`/`_lastModifiedByName` ⇒ ο CDC (`functions/src/audit/contact-audit-trigger.ts`) γράφει `cdc_unknown`, και το
-`dedupDualWrite` (`services/audit/dedup-dual-write.ts`) κρατά τη **CDC** γραμμή αντί της service, που **έχει** τον χρήστη.
-**Γιατί pending (N.0.2)**: πολλοί server γραφείς + Cloud Function (deploy στο Firebase, όχι στο push). **Θεραπεία**: ΕΝΑΣ
-βοηθός σφραγίδας για κάθε server εγγραφή επαφής (όπως το `ContactsService.updateContact` στον πελάτη) + άγκυρα «κάθε
-`set/update` σε `contacts` περνά από αυτόν». **Κλείνει όταν**: νέα σάρωση ⇒ το Ιστορικό της νέας επαφής λέει «από <χρήστης>».
-➕ **29/10 (δ)** — ίδια οικογένεια: το `api/contacts/resolve/route.ts` γράφει `performedByName: ctx.uid` (uid στη θέση ονόματος)
-στη γραμμή ιστορικού της διεύθυνσης. Η θεραπεία του βοηθού σφραγίδας πρέπει να δίνει και **όνομα**, όχι μόνο uid.
+Το 🧑 έκλεισε για κάθε **runtime** γραφέα (`server/lib/performer-stamp.ts`, άγκυρα
+`server/lib/__tests__/contact-writer-performer-stamp.test.ts`). Μένουν οι **μεταπτώσεις** που γράφουν επαφές μέσω
+`flushInBatches` / `batch.update(doc.ref)` χωρίς `ctx` (ο envelope του ADR-704 δεν τον περνά): `migrate-address-labels` ·
+`migrate-postal-codes` · `search-backfill` (`migrateContactTenants`). Κάθε εκτέλεση γεννά γραμμές CDC με `cdc_unknown`.
+**Γιατί pending (N.0.2)**: θέλει αλλαγή του envelope (ADR-704) ώστε να δίνει φορέα σε κάθε μετάπτωση — 4+ αρχεία, άλλη περιοχή.
+**Θεραπεία**: ο envelope δίνει `AuditPerformer` (ο διαχειριστής που την τρέχει) και το `flushInBatches` προσθέτει `performerStamp`
+όταν η συλλογή είναι CDC-παρακολουθούμενη (`audit-cdc-coverage`). Η άγκυρα πρέπει τότε να καλύψει και τη μορφή `doc.ref`.
+**Κλείνει όταν**: μετάπτωση σε δοκιμαστική επαφή ⇒ γραμμή Ιστορικού «από <διαχειριστή>».
+
+---
+
+### 🧩 Το πρωτόκολλο εντολής διαχειριστή είναι αντιγραμμένο σε 11 UC modules — N.0.2 · CHECK 3.28 · 2026-10-29
+
+Πρόταση μίας αυτόματα εγκρίσιμης ενέργειας · επιλογή της εγκεκριμένης στην εκτέλεση · επιβεβαίωση από παρενέργειες:
+αυτολεξεί ίδια σε **13** modules (`grep -rl "modifiedActions ?? ctx.proposal?.suggestedActions" services/ai-pipeline/modules`).
+Τα uc-015/uc-016 πέρασαν στο `services/ai-pipeline/shared/admin-command-protocol.ts` (το CHECK 3.28 μπλόκαρε το άγγιγμά τους).
+**Γιατί pending**: 11 αρχεία, >1 ώρα. **Θεραπεία**: κάθε module περνά στα `autoApprovedProposal` · `approvedAction` ·
+`acknowledgeBySideEffect` όταν αγγιχτεί. **Κλείνει όταν**: το παραπάνω grep δίνει μόνο το `admin-command-protocol.ts`.
 
 ---
 
