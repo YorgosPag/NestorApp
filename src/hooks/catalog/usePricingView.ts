@@ -16,7 +16,7 @@
  *    απαντήσει ο γραφέας)· ο καλών καλεί `release()` όταν αδειάσει η ουρά του.
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { useIdentityGatedResource } from '@/hooks/useIdentityGatedResource';
@@ -25,6 +25,7 @@ import { pricingViewSignalSource } from '@/services/catalog/pricing-view-signal.
 import { useServerViewSignal, type ServerViewSignalSource } from '@/services/realtime/hooks/use-server-view-signal';
 import { viewSignalRevisionOf } from '@/services/realtime/view-signal-revision';
 import type { PricingView } from '@/subapps/catalog/pricing/pricing-view-key';
+import type { CatalogLoadState } from './useCatalogCollection';
 import type { ViewFreshness } from '@/types/server-view';
 
 export interface FreshView {
@@ -118,4 +119,33 @@ export function usePricingView<V extends FreshView>(input: PricingViewInput<V>):
   if (loaded === null) return { current: { state: 'loading' }, reload, revalidate, release };
   if (loaded.kind === 'failed') return { current: { state: 'failed', failure: loaded.failure }, reload, revalidate, release };
   return { current: { state: 'ready', view: shown ?? loaded.view }, reload, revalidate, release };
+}
+
+/**
+ * **Το «κράτημα» της ανανέωσης όσο εκκρεμούν αισιόδοξες εγγραφές** — η ΜΙΑ σύνδεση `isHeld` ↔ `release` για κάθε οθόνη
+ * τιμών (τιμοκατάλογοι · εκπτώσεις). Δύο βήματα, επειδή η όψη χρειάζεται το `isHeld` **πριν** υπάρξουν οι ουρές της,
+ * και οι ουρές χτίζονται **πάνω** στην όψη:
+ *   1. `const hold = usePendingHold()` → `useXView(hold.isHeld)`·
+ *   2. μετά τις ουρές: `useReleaseWhenSettled(hold, εκκρεμή, view.release)`.
+ */
+export interface PendingHold {
+  readonly isHeld: () => boolean;
+  readonly held: { current: boolean };
+}
+
+export function usePendingHold(): PendingHold {
+  const held = useRef(false);
+  const isHeld = useCallback(() => held.current, []);
+  return useMemo(() => ({ isHeld, held }), [isHeld]);
+}
+
+/** Κρατά την ανανέωση όσο `pending > 0`· όταν αδειάσουν **όλες** οι ουρές, η ανανέωση που περίμενε προχωρά. */
+export function useReleaseWhenSettled(hold: PendingHold, pending: number, release: () => void): void {
+  hold.held.current = pending > 0;
+  useEffect(() => { if (pending === 0) release(); }, [pending, release]);
+}
+
+/** Η κατάσταση φόρτωσης του πλαισίου σελίδας (`CatalogPageFrame`) από μια όψη τιμών. */
+export function pricingLoadState<V>(current: PricingViewState<V>): CatalogLoadState {
+  return current.state;
 }

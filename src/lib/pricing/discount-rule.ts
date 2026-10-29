@@ -49,6 +49,11 @@ export type DiscountRule =
       readonly tiers: readonly DiscountTier[];
     };
 
+export type DiscountRuleKind = DiscountRule['kind'];
+
+/** Τα είδη κανόνα — η ρίζα για ό,τι τα απαριθμεί (επιλογέας)· ο τύπος δήλωσης: είδος που δεν υπάρχει στον κανόνα δεν μεταγλωττίζεται. */
+export const DISCOUNT_RULE_KINDS: readonly DiscountRuleKind[] = ['chain', 'tiers'];
+
 /** Αποτέλεσμα εφαρμογής σε λεπτά: `discount + net === gross`, πάντα. */
 export interface DiscountApplication {
   readonly discount: MinorAmount;

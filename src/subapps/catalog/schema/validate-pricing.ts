@@ -30,7 +30,9 @@ import { isEmptyWindow, windowsOverlap, type ValidityWindow } from '@/lib/pricin
 import { audienceIdentity } from '../pricing/price-audience';
 import { priceLineSubjectKey } from '../pricing/price-line-subject';
 import type {
+  CustomerGroupDefinition,
   DiscountConditionDefinition,
+  DiscountGroupDefinition,
   PriceAudience,
   PriceListDefinition,
   PriceListLineDefinition,
@@ -91,6 +93,14 @@ export function validatePriceList(list: PriceListDefinition, context: PriceListC
   if (list.kind === 'cost' && list.audience !== null) collector.add('costListHasAudience', 'audience');
   checkAudienceReference(collector, list.audience, context, 'audience');
   checkFence(collector, list.changeFenceBp);
+  return collector.issues;
+}
+
+/** Ομάδα έκπτωσης **ή** ομάδα πελάτη (ίδιο σχήμα): κωδικός + ετικέτα — ο ίδιος έλεγχος σε φόρμα και γραφέα. */
+export function validatePricingGroup(group: DiscountGroupDefinition | CustomerGroupDefinition): readonly CatalogIssue[] {
+  const collector = new IssueCollector();
+  if (!isCatalogCode(group.code)) collector.add('invalidCode', 'code');
+  if (!hasAnyLocalizedText(group.labels)) collector.add('labelRequired', 'labels');
   return collector.issues;
 }
 

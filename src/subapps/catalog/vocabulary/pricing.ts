@@ -77,6 +77,16 @@ export const AUDIENCE_SPECIFICITY: Readonly<Record<AudienceKind, number>> = {
   partner: 3,
 };
 
+// ── Είδος ομάδας ─────────────────────────────────────────────────────────────
+
+/**
+ * Οι δύο ομάδες της τιμολόγησης — **ίδιο σχήμα** (κωδικός + ετικέτες), άλλος ρόλος: ομάδα έκπτωσης SKU (DATANORM
+ * Rabattgruppe, «TOSH-CARR») · ομάδα πελάτη (SAP ομάδα τιμής πελάτη, «χονδρέμπορος»). Ένας γραφέας, ένας επεξεργαστής.
+ */
+export const PRICING_GROUP_KINDS = ['discountGroup', 'customerGroup'] as const;
+
+export type PricingGroupKind = (typeof PRICING_GROUP_KINDS)[number];
+
 // ── Υποκείμενο γραμμής ───────────────────────────────────────────────────────
 
 export const PRICE_LINE_SUBJECT_KINDS = ['variant', 'costItem'] as const;

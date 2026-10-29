@@ -8,11 +8,13 @@
  * ⚠️ Κυριολεκτικά κλειδιά (όχι template): οι γεννήτορες i18n (route slice · CHECK 3.8) τα λύνουν στατικά.
  */
 
-import { Archive, CircleDot, Clock, Globe, Handshake, Minus, PencilLine, Plus, RefreshCw, Trash2, UserCheck, Users, type LucideIcon } from 'lucide-react';
+import { Archive, CircleDot, Clock, Globe, Handshake, Layers, Link2, Minus, PencilLine, Percent, Plus, RefreshCw, Tags, Trash2, UserCheck, Users, type LucideIcon } from 'lucide-react';
 
 import type { BadgeVariantProps } from '@/components/ui/badge';
+import type { DiscountRuleKind, DiscountTierBasis } from '@/lib/pricing/discount-rule';
+import type { ValidityVerdict } from '@/lib/pricing/validity';
 import type { PriceLineChangeKind } from '@/subapps/catalog/pricing/diff-price-versions';
-import type { AudienceKind, PriceListKind, PriceListVersionStatus, PriceType, PriceVersionBasis } from '@/subapps/catalog/vocabulary/pricing';
+import type { AudienceKind, PriceListKind, PriceListVersionStatus, PriceType, PriceVersionBasis, PricingGroupKind } from '@/subapps/catalog/vocabulary/pricing';
 import type { TimelinePhase } from './price-list-summary';
 
 type BadgeVariant = NonNullable<BadgeVariantProps['variant']>;
@@ -101,3 +103,61 @@ export const CHANGE_KIND_ICONS: Readonly<Record<PriceLineChangeKind, LucideIcon>
   removed: Minus,
   changed: RefreshCw,
 };
+
+/** Η ισχύς μιας συνθήκης έκπτωσης τη στιγμή της όψης — λέξη, εικονίδιο, απόχρωση (ίδια γλώσσα με τη χρονογραμμή εκδόσεων). */
+export const VALIDITY_VERDICT_KEYS: Readonly<Record<ValidityVerdict, string>> = {
+  valid: 'pricing.discounts.verdict.valid',
+  notYetValid: 'pricing.discounts.verdict.notYetValid',
+  expired: 'pricing.discounts.verdict.expired',
+};
+
+export const VALIDITY_VERDICT_ICONS: Readonly<Record<ValidityVerdict, LucideIcon>> = {
+  valid: CircleDot,
+  notYetValid: Clock,
+  expired: Archive,
+};
+
+export const VALIDITY_VERDICT_BADGES: Readonly<Record<ValidityVerdict, BadgeVariant>> = {
+  valid: 'default',
+  notYetValid: 'secondary',
+  expired: 'outline',
+};
+
+export const DISCOUNT_RULE_KIND_KEYS: Readonly<Record<DiscountRuleKind, string>> = {
+  chain: 'pricing.discounts.rule.kind.chain',
+  tiers: 'pricing.discounts.rule.kind.tiers',
+};
+
+export const DISCOUNT_RULE_KIND_ICONS: Readonly<Record<DiscountRuleKind, LucideIcon>> = {
+  chain: Link2,
+  tiers: Layers,
+};
+
+export const TIER_BASIS_KEYS: Readonly<Record<DiscountTierBasis, string>> = {
+  quantity: 'pricing.discounts.rule.basis.quantity',
+  amount: 'pricing.discounts.rule.basis.amount',
+};
+
+/** Τα δύο είδη ομάδας τιμολόγησης — ενότητα της λίστας, «νέα», υπόδειξη, εικονίδιο. */
+export const PRICING_GROUP_KIND_KEYS: Readonly<Record<PricingGroupKind, string>> = {
+  discountGroup: 'pricing.discounts.groups.discountGroups',
+  customerGroup: 'pricing.discounts.groups.customerGroups',
+};
+
+export const PRICING_GROUP_NEW_KEYS: Readonly<Record<PricingGroupKind, string>> = {
+  discountGroup: 'pricing.discounts.groups.newDiscountGroup',
+  customerGroup: 'pricing.discounts.groups.newCustomerGroup',
+};
+
+export const PRICING_GROUP_HINT_KEYS: Readonly<Record<PricingGroupKind, string>> = {
+  discountGroup: 'pricing.discounts.groups.discountHint',
+  customerGroup: 'pricing.discounts.groups.customerHint',
+};
+
+export const PRICING_GROUP_ICONS: Readonly<Record<PricingGroupKind, LucideIcon>> = {
+  discountGroup: Tags,
+  customerGroup: Users,
+};
+
+/** Το εικονίδιο της έκπτωσης (σελίδα, κενή κατάσταση). */
+export const DISCOUNT_ICON: LucideIcon = Percent;

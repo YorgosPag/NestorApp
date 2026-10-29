@@ -15,7 +15,7 @@
 import { priceListAudienceSlotKey } from '@/subapps/catalog/pricing/pricing-keys';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
 import { validatePriceList } from '@/subapps/catalog/schema/validate-pricing';
-import type { PriceListDefinition } from '@/subapps/catalog/types/price-list';
+import type { PriceAudience, PriceListDefinition } from '@/subapps/catalog/types/price-list';
 import type { PriceListWire } from '@/subapps/catalog/types/pricing-views';
 import type { PriceListKind } from '@/subapps/catalog/vocabulary/pricing';
 
@@ -68,9 +68,12 @@ function audienceAmbiguityIssues(draft: PriceListDefinition, context: PriceListD
   return taken ? [{ code: 'priceListAudienceAmbiguous', path: 'audience' }] : [];
 }
 
-/** Συνεργάτης χωρίς επιλεγμένο συμβαλλόμενο — ο γραφέας θα έλεγε `unknownParty` (κενό id δεν υπάρχει). */
-function partyPresenceIssues(draft: PriceListDefinition): CatalogIssue[] {
-  const party = draft.audience?.kind === 'partner' ? draft.audience.party : null;
+/**
+ * Συνεργάτης χωρίς επιλεγμένο συμβαλλόμενο — ο γραφέας θα έλεγε `unknownParty` (κενό id δεν υπάρχει). Ένας έλεγχος για
+ * κάθε κοινό: λίστας **και** συνθήκης έκπτωσης.
+ */
+export function audiencePartyPresenceIssues(audience: PriceAudience | null): CatalogIssue[] {
+  const party = audience?.kind === 'partner' ? audience.party : null;
   const missing = party !== null && (party.kind === 'contact' ? party.contactId : party.companyId) === '';
   return missing ? [{ code: 'unknownParty', path: 'audience.party' }] : [];
 }
@@ -79,7 +82,7 @@ function partyPresenceIssues(draft: PriceListDefinition): CatalogIssue[] {
 export function priceListDraftIssues(draft: PriceListDefinition, context: PriceListDraftContext): readonly CatalogIssue[] {
   return [
     ...validatePriceList(draft, { customerGroupIds: context.customerGroupIds }),
-    ...partyPresenceIssues(draft),
+    ...audiencePartyPresenceIssues(draft.audience),
     ...lockedMeaningIssues(draft, context),
     ...audienceAmbiguityIssues(draft, context),
   ];

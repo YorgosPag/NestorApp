@@ -87,4 +87,6 @@ export const CATALOG_PAGES = {
   settings: '/catalog/settings',
   /** Τιμοκατάλογοι · εκδόσεις · γραμμές · δημοσίευση (ADR-923 §5.11 «3δ» Τμήμα 1) — προβολή με `catalog:pricing:view`. */
   priceLists: '/catalog/price-lists',
+  /** Ομάδες έκπτωσης · ομάδες πελατών · πίνακας συνθηκών (ADR-923 §5.11 «3δ» Τμήμα 2) — προβολή με `catalog:pricing:view`. */
+  discounts: '/catalog/discounts',
 } as const;

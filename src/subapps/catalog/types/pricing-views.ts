@@ -57,4 +57,11 @@ export interface DiscountsView {
   readonly customerGroups: readonly CustomerGroupWire[];
   readonly assignments: readonly CustomerAssignmentWire[];
   readonly conditions: readonly DiscountConditionWire[];
+  /**
+   * Το όνομα κάθε **επαφής** που αναφέρουν αναθέσεις και κοινά `partner`, κατά `pricingPartyKey` — από την **ίδια**
+   * συναλλαγή (commercetools: `expand`, ίδιο ιδίωμα με τα `skuIdentifiers`). Χωρίς αυτό η ομάδα πελατών θα έδειχνε
+   * ωμά id ή θα φόρτωνε όλες τις επαφές. Απουσία κλειδιού ⇒ η επαφή δεν ζει πια (ή δεν είναι του χώρου) — η οθόνη το λέει.
+   * ⚠️ Στιγμιότυπο της ανάγνωσης: μετονομασία επαφής **δεν** αυξάνει το σήμα της όψης (φαίνεται στην επόμενη ανάγνωση).
+   */
+  readonly partyNames: Readonly<Record<string, string>>;
 }

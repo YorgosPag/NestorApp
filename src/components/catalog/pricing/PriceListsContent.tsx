@@ -12,14 +12,13 @@
  * 🔑 Η επιλογή ζει στη διεύθυνση (`?list=<κωδικός>`) — ο κωδικός είναι σταθερός από τη δημιουργία (το id τον ακολουθεί).
  */
 
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Plus, Receipt } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { useCatalogOptimistic, type CatalogOptimistic } from '@/hooks/catalog/useCatalogOptimistic';
 import { useDiscountsView, usePriceListsView } from '@/hooks/catalog/usePriceListViews';
-import type { PricingViewState } from '@/hooks/catalog/usePricingView';
-import type { CatalogLoadState } from '@/hooks/catalog/useCatalogCollection';
+import { pricingLoadState, usePendingHold, useReleaseWhenSettled } from '@/hooks/catalog/usePricingView';
 import type { CustomerGroupWire, DiscountGroupWire, PriceListsView, PriceListWire } from '@/subapps/catalog/types/pricing-views';
 import { useCatalogAccess, useCatalogFailureNotice, useCatalogText } from '../shared/catalog-ui-hooks';
 import { CatalogPageFrame } from '../shared/CatalogPageFrame';
@@ -39,21 +38,14 @@ const NO_LISTS: readonly PriceListWire[] = [];
 const NO_GROUPS: readonly CustomerGroupWire[] = [];
 const NO_DISCOUNT_GROUPS: readonly DiscountGroupWire[] = [];
 
-function loadStateOf<V>(current: PricingViewState<V>): CatalogLoadState {
-  return current.state === 'failed' ? 'failed' : current.state;
-}
-
 /** Οι αισιόδοξες εγγραφές λιστών πάνω στην όψη, με το «κράτημα» της ανανέωσης όσο εκκρεμούν. */
 function usePriceListsWorkspace() {
-  const held = useRef(false);
-  const isHeld = useCallback(() => held.current, []);
-  const lists = usePriceListsView(isHeld);
+  const hold = usePendingHold();
+  const lists = usePriceListsView(hold.isHeld);
   const discounts = useDiscountsView();
   const view: PriceListsView | null = lists.current.state === 'ready' ? lists.current.view : null;
   const ops = useCatalogOptimistic(view?.lists ?? NO_LISTS, useCatalogFailureNotice());
-  held.current = ops.pendingKeys.size > 0;
-  const { release } = lists;
-  useEffect(() => { if (ops.pendingKeys.size === 0) release(); }, [ops.pendingKeys, release]);
+  useReleaseWhenSettled(hold, ops.pendingKeys.size, lists.release);
   const groups = discounts.current.state === 'ready' ? discounts.current.view : null;
   const forbidden = lists.current.state === 'failed' && lists.current.failure.kind === 'forbidden';
   return { lists, view, ops, customerGroups: groups?.customerGroups ?? NO_GROUPS, discountGroups: groups?.discountGroups ?? NO_DISCOUNT_GROUPS, forbidden };
@@ -114,7 +106,7 @@ export function PriceListsContent() {
     <CatalogPageFrame
       title={t('pages.priceLists.title')}
       lead={t('pages.priceLists.lead')}
-      state={forbidden ? 'ready' : loadStateOf(lists.current)}
+      state={forbidden ? 'ready' : pricingLoadState(lists.current)}
       actions={canManage && view ? (
         <Button type="button" onClick={() => choose(NEW_SELECTION)}><Plus className="mr-1 h-4 w-4" aria-hidden />{t('pricing.list.newList')}</Button>
       ) : null}
