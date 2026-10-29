@@ -19,6 +19,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { PaymentPlanService } from '@/services/payment-plan.service';
 import type { CreatePaymentPlanInput, UpdatePaymentPlanInput } from '@/types/payment-plan';
 import { propertyRoute, failure } from '@/app/api/properties/_shared/property-route';
+import { installmentDueDateSchema } from '@/app/api/properties/_shared/installment-due-date';
 
 // =============================================================================
 // VALIDATION SCHEMAS — ADR-252 Phase 3 Security Hardening
@@ -29,7 +30,7 @@ const installmentSchema = z.object({
   type: z.enum(['reservation', 'down_payment', 'stage_payment', 'final_payment', 'custom']),
   amount: z.number().positive().max(100_000_000),
   percentage: z.number().min(0).max(100),
-  dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}/, 'Invalid date format (expected YYYY-MM-DD)'),
+  dueDate: installmentDueDateSchema,
   notes: z.string().max(2000).optional(),
 });
 

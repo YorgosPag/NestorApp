@@ -18,6 +18,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { PaymentPlanService } from '@/services/payment-plan.service';
 import type { CreateInstallmentInput, UpdateInstallmentInput } from '@/types/payment-plan';
 import { propertyRoute, failure } from '@/app/api/properties/_shared/property-route';
+import { INSTALLMENT_DUE_DATE_ERROR, isInstallmentDueDate } from '@/app/api/properties/_shared/installment-due-date';
 
 const PATH = '/api/properties/[id]/payment-plan/installments';
 
@@ -39,6 +40,7 @@ function addInstallmentProblem(body: AddInstallmentBody): string | null {
   if (!label || !type || amount === undefined || percentage === undefined || !dueDate) {
     return 'installment must include label, type, amount, percentage, dueDate';
   }
+  if (!isInstallmentDueDate(dueDate)) return INSTALLMENT_DUE_DATE_ERROR;
 
   // 🛡️ ADR-249 P2-2: Defense-in-depth — basic amount sanity check
   if (typeof amount !== 'number' || amount <= 0) return 'Installment amount must be a positive number';
@@ -87,6 +89,9 @@ export const PATCH = withStandardRateLimit(propertyRoute({
   handle: async ({ req, ctx, propertyId }) => {
     const body = (await req.json()) as UpdateInstallmentBody;
     if (!body.planId || body.index === undefined) return failure(INDEX_REQUIRED, 400);
+    // Μερική διόρθωση: χωρίς `dueDate` η λήξη μένει ως έχει· με `dueDate`, ο ίδιος κριτής με τη δημιουργία.
+    const dueDate = body.updates?.dueDate;
+    if (dueDate !== undefined && !isInstallmentDueDate(dueDate)) return failure(INSTALLMENT_DUE_DATE_ERROR, 400);
 
     const result = await PaymentPlanService.updateInstallment(
       propertyId,
