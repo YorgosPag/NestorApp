@@ -1129,6 +1129,12 @@ bytes** (+74 %) για **κάθε** αγγελία. Θεραπεία = `next/dyn
 έκδοση· (γ) το `src/types/i18n.ts` είναι παραγόμενο από **όλα** τα locales ⇒ η αναγέννηση περιέχει και ξένα κλειδιά σε εξέλιξη.
 
 ## Changelog
+- **2026-10-29** — **Β4.7 κατάλοιπο ✅**: οι 4 χειρόγραφοι αναγνώστες `'__new__'` για **ακίνητο** περνούν στο SSoT
+  `lib/properties/unsaved-property` — `api/properties/[id]` PATCH · `PropertyDetailsContent` (auto-save) · `usePropertyMediaCounts` (2×)
+  → `isPersistedPropertyId` · `UnitQuickCreateSheet` → `UNSAVED_PROPERTY_ID`. Το audit βρήκε **5 ακόμη** εκτός λίστας:
+  `property-mutation-gateway` (4 φρουροί) · `usePropertyMutationImpactGuard` → `isPersistedPropertyId`. Και **τρίτο αντίγραφο της τιμής**:
+  `UNSAVED_PROPERTY_ID` = `DRAFT_ENTITY_ID` (`lib/draft-entity-id`, ADR-777 §8.31.12) · `NEW_PROPERTY_SELECTION_ID` = `UNSAVED_PROPERTY_ID`.
+  Τα `'__new__'` κτιρίου/μέλους/διεύθυνσης μένουν σκόπιμα.
 - **2026-10-26 (v26)** — **Β4.9 ✅** (§13.9): η ενότητα «Τοπογραφικό» στο «Βελτίωσε την αγγελία σου» (μόνο γη)· κοινό πάνελ
   `components/terrain/survey-import/` (αρχείο · στήλες/μονάδες · «αυτό θα δει ο αγοραστής» · Δ2 · δημοσίευση · «δημοσιευμένο τώρα»)·
   στατιστικά αγοραστή `TerrainStatsList` · αρνήσεις ανάγνωσης με την πράξη · γραμμές που παραλείφθηκαν με αριθμό · νέος χώρος

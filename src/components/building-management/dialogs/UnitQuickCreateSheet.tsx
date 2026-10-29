@@ -29,6 +29,7 @@ import { DIALOG_SCROLL } from '@/styles/design-tokens';
  */
 import { PropertyDetailSurface } from '@/features/property-detail-surface/PropertyDetailSurface';
 import type { Property } from '@/types/property-viewer';
+import { UNSAVED_PROPERTY_ID } from '@/lib/properties/unsaved-property';
 import type { FloorData, ViewerPassthroughProps } from '@/features/properties-sidebar/types';
 import type { Building } from '@/types/building/contracts';
 import type { FloorRecord } from '@/components/building-management/tabs/property-tab-constants';
@@ -63,7 +64,7 @@ export function UnitQuickCreateSheet({
   }, [onCreated, onOpenChange]);
 
   const blankUnit = useMemo<Property>(() => ({
-    id: '__new__',
+    id: UNSAVED_PROPERTY_ID,
     name: '',
     type: '',
     // SSoT default: a blank unit is `unavailable` (not on market), never reserved.

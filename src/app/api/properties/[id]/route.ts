@@ -26,6 +26,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { requirePropertyInTenantScope, type PropertyAccessIntent } from '@/lib/auth/tenant-isolation';
 import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
+import { isPersistedPropertyId } from '@/lib/properties/unsaved-property';
 import {
   activateClientPersona,
   autoCreatePropertyContactLinks,
@@ -90,7 +91,7 @@ export const PATCH = entityIdRoute<ApiSuccessResponse<PropertyMutationResult>>({
   permissions: 'properties:properties:update',
   missingIdMessage: 'Property ID is required',
   handler: async ({ req: request, ctx, adminDb, id }) => {
-      if (id === '__new__') throw new ApiError(400, 'Cannot update placeholder property — save it first');
+      if (!isPersistedPropertyId(id)) throw new ApiError(400, 'Cannot update placeholder property — save it first');
 
       try {
         // 🛡️ ADR-281 · ADR-329 §3.9: αποσυρμένο ακίνητο δεν επεξεργάζεται (`write` ⇒ 409). Ο καθρέφτης

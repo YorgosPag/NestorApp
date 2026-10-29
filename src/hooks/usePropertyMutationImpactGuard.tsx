@@ -18,6 +18,7 @@ import type { PropertyMutationImpactPreview } from '@/types/property-mutation-im
 import { PropertyMutationImpactDialog } from '@/components/properties/dialogs/PropertyMutationImpactDialog';
 import { runGuardedAction, type GuardResult } from '@/hooks/impact-guard/guard-result';
 import { useImpactDecision } from '@/hooks/impact-guard/useImpactDecision';
+import { isPersistedPropertyId } from '@/lib/properties/unsaved-property';
 
 interface PropertyMutationPreviewTarget {
   readonly id: string;
@@ -52,7 +53,7 @@ export function usePropertyMutationImpactGuard(
   const previewBeforeMutate = useCallback(
     (updates: Record<string, unknown>, action: () => Promise<void>): Promise<GuardResult> => {
       // Ακίνητο που δεν υπάρχει ακόμη: δεν υπάρχουν εξαρτήσεις να προβλεφθούν.
-      if (!propertyId || propertyId === '__new__') return runGuardedAction(action);
+      if (!isPersistedPropertyId(propertyId)) return runGuardedAction(action);
 
       return guard({
         fetchPreview: () =>

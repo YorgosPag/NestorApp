@@ -24,9 +24,10 @@ import { useEffect, useRef } from 'react';
 
 import { PROPERTIES_SELECTED_PARAM } from '@/lib/properties/property-filters-url';
 import { replaceUrlSearchParams } from '@/lib/url-query-state';
+import { UNSAVED_PROPERTY_ID } from '@/lib/properties/unsaved-property';
 
 /** Η ταυτότητα του προτύπου δημιουργίας — ποτέ στη διεύθυνση. */
-export const NEW_PROPERTY_SELECTION_ID = '__new__';
+export const NEW_PROPERTY_SELECTION_ID = UNSAVED_PROPERTY_ID;
 
 interface SelectableProperty {
   readonly id: string;

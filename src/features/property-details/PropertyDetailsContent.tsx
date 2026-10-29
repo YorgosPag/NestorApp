@@ -50,6 +50,7 @@ import { translatePropertyMutationError } from '@/services/property/property-mut
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { evaluateFloorTypeCompatibility } from '@/services/property/property-field-rules';
+import { isPersistedPropertyId } from '@/lib/properties/unsaved-property';
 import { PROPERTY_CARD_COLORS } from './components/property-fields-constants';
 import '@/lib/design-system';
 
@@ -408,7 +409,7 @@ export function PropertyDetailsContent({
         activeLevelId={activeLevelId}
         onActiveLevelChange={setActiveLevelId}
         onAutoSaveFields={(fields) => {
-          if (resolvedProperty?.id && resolvedProperty.id !== '__new__') {
+          if (isPersistedPropertyId(resolvedProperty?.id)) {
             void safeOnUpdateProperty(resolvedProperty.id, fields);
           }
         }}

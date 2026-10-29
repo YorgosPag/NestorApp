@@ -38,6 +38,7 @@ import { isFieldLocked, lockedFieldsAttempted, REVERT_ALLOWED_FIELDS } from '@/l
 import type { ObjectiveValueDeclarationsPatch } from '@/lib/objective-value/objective-value-declarations';
 import type { ObjectiveValueWriteOutcome } from '@/lib/objective-value/objective-value-improve-subject';
 import { objectiveValueWriteFailureOf } from '@/lib/objective-value/objective-value-write-failure';
+import { isPersistedPropertyId } from '@/lib/properties/unsaved-property';
 
 type PropertyMutationIntent =
   | 'create'
@@ -166,7 +167,7 @@ function assertKnownPropertyContext(context: PropertyMutationContext): void {
     return;
   }
 
-  if (!context.propertyId || context.propertyId === '__new__') {
+  if (!isPersistedPropertyId(context.propertyId)) {
     throw new PropertyMutationPolicyError('Cannot mutate an unsaved property.');
   }
 
@@ -303,7 +304,7 @@ export async function revertPropertySaleWithPolicy({
   currentProperty,
   updates,
 }: GuardedPropertyRevertInput): Promise<{ success: boolean }> {
-  if (!propertyId || propertyId === '__new__') {
+  if (!isPersistedPropertyId(propertyId)) {
     throw new PropertyMutationPolicyError('Cannot mutate an unsaved property.');
   }
   if (!currentProperty) {
@@ -379,7 +380,7 @@ export async function updatePropertyLinkedSpacesWithPolicy({
 export async function deletePropertyWithPolicy({
   propertyId,
 }: GuardedPropertyDeleteInput): Promise<{ success: boolean }> {
-  if (!propertyId || propertyId === '__new__') {
+  if (!isPersistedPropertyId(propertyId)) {
     throw new PropertyMutationPolicyError('Cannot delete an unsaved property.');
   }
 
@@ -393,7 +394,7 @@ export async function updatePropertyCoverageWithPolicy({
   propertyId,
   coverage,
 }: GuardedPropertyCoverageInput): Promise<{ success: boolean }> {
-  if (!propertyId || propertyId === '__new__') {
+  if (!isPersistedPropertyId(propertyId)) {
     throw new PropertyMutationPolicyError('Cannot update coverage for an unsaved property.');
   }
 

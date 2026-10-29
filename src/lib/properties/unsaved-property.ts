@@ -5,10 +5,12 @@
  *
  * Η φόρμα δημιουργίας (`PropertyFieldsBlock`) κρατά το ακίνητο με id `'__new__'` ώσπου να σωθεί. Τέτοιο ακίνητο δεν έχει
  * έγγραφα, πόρτες υλικού ή αγγελία ⇒ όποια θύρα ρωτά «πού ανεβαίνει;» απαντά `null` και η οθόνη δεν δείχνει κουμπί.
- * ⚠️ Υπάρχουν ακόμη χειρόγραφα `'__new__'` — μεταφέρονται εδώ στο άγγιγμα (`.claude-rules/pending-ratchet-work.md`).
+ * Η τιμή είναι η γενική ψευδο-ταυτότητα `DRAFT_ENTITY_ID` (`lib/draft-entity-id`, ADR-777 §8.31.12) — εδώ ζει μόνο η κρίση για ακίνητο.
  */
 
-export const UNSAVED_PROPERTY_ID = '__new__';
+import { DRAFT_ENTITY_ID } from '@/lib/draft-entity-id';
+
+export const UNSAVED_PROPERTY_ID = DRAFT_ENTITY_ID;
 
 /** Έχει το ακίνητο πραγματική ταυτότητα στη βάση; (`undefined` / `null` / κενό / δείκτης θέσης ⇒ όχι.) */
 export function isPersistedPropertyId(id: string | null | undefined): id is string {

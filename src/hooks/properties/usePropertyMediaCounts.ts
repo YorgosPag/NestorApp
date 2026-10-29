@@ -37,6 +37,7 @@ import {
 } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { isPersistedPropertyId } from '@/lib/properties/unsaved-property';
 
 const logger = createModuleLogger('usePropertyMediaCounts');
 
@@ -81,7 +82,7 @@ export function usePropertyMediaCounts(
   // ── Photos subscription ──────────────────────────────────────────────
   useEffect(() => {
     if (authLoading) return;
-    if (!user || !companyId || !propertyId || propertyId === '__new__') {
+    if (!user || !companyId || !isPersistedPropertyId(propertyId)) {
       setPhotos(0);
       setPhotosLoading(false);
       return;
@@ -119,7 +120,7 @@ export function usePropertyMediaCounts(
   // ── Floorplan subscription ───────────────────────────────────────────
   useEffect(() => {
     if (authLoading) return;
-    if (!user || !companyId || !propertyId || propertyId === '__new__') {
+    if (!user || !companyId || !isPersistedPropertyId(propertyId)) {
       setFloorplan(0);
       setFloorplanLoading(false);
       return;
