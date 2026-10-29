@@ -30,6 +30,15 @@ describe('daysInMonth', () => {
     expect(daysInMonth(2000, 2)).toBe(29);
     expect(daysInMonth(1900, 2)).toBe(28);
   });
+
+  /** `Date.UTC(0, …)` = 1900 (μη δίσεκτο)· το ISO έτος 0000 είναι δίσεκτο. */
+  it('δεν διαβάζει τα διψήφια έτη ως 19xx', () => {
+    expect(daysInMonth(0, 2)).toBe(29);
+    expect(daysInMonth(100, 2)).toBe(28);
+    expect(daysInMonth(99, 2)).toBe(28);
+    expect(daysInMonth(96, 2)).toBe(29);
+    expect(daysInMonth(99, 1)).toBe(31);
+  });
 });
 
 describe('addMonthsClampedUtc', () => {

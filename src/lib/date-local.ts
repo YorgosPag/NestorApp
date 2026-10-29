@@ -1,6 +1,7 @@
 // Σχετικές διαδρομές επίτηδες: το αρχείο το εισάγουν και scripts χωρίς το alias `@/`
 // (`scripts/_shared/timestamp-readability.ts` · `scripts/lib/market-data-refresh/refresh-gates.ts`).
 import { addMonthsClampedUtc } from './date/calendar-arithmetic';
+import { calendarDayExists, isCalendarDay } from './date/calendar-day';
 import { positiveMod } from './number/positive-mod';
 
 /**
@@ -51,14 +52,6 @@ export function localDateOf(date: Date): string {
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
-/** Υπάρχει αυτή η μέρα στο ημερολόγιο; (πιάνει 31/02, 30/02 σε δίσεκτο, μήνα 13) */
-function isRealCalendarDay(year: number, month: number, day: number): boolean {
-  if (month < 1 || month > 12 || day < 1) return false;
-  const probe = new Date(Date.UTC(year, month - 1, day));
-  return probe.getUTCFullYear() === year
-    && probe.getUTCMonth() === month - 1
-    && probe.getUTCDate() === day;
-}
 
 /**
  * **Ημερολογιακή ημέρα σε κανονική μορφή `YYYY-MM-DD`** — ή `null` αν δεν είναι ημέρα.
@@ -82,15 +75,13 @@ function isRealCalendarDay(year: number, month: number, day: number): boolean {
 export function normalizeCalendarDay(raw: unknown): string | null {
   if (typeof raw !== 'string') return null;
 
-  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
-  if (iso) {
-    return isRealCalendarDay(Number(iso[1]), Number(iso[2]), Number(iso[3])) ? raw : null;
-  }
+  // «Υπάρχει η μέρα;» — ένας κριτής για όλο το έργο (`lib/date/calendar-day`, ADR-919).
+  if (isCalendarDay(raw)) return raw;
 
   const eu = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(raw);
   if (eu) {
     const [, day, month, year] = eu;
-    return isRealCalendarDay(Number(year), Number(month), Number(day))
+    return calendarDayExists(Number(year), Number(month), Number(day))
       ? `${year}-${month}-${day}`
       : null;
   }

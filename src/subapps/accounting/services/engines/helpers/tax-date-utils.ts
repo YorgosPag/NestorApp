@@ -7,6 +7,8 @@
  * @see ADR-ACC-009 Tax Engine
  */
 
+import { isLeapYear } from '@/lib/date/calendar-arithmetic';
+
 /**
  * Ημέρα του έτους (1-366) για ένα ISO date string.
  *
@@ -20,14 +22,8 @@ export function getDayOfYear(date: string): number {
   return Math.round(ms / (1000 * 60 * 60 * 24)) + 1;
 }
 
-/**
- * Δίσεκτο έτος;
- *
- * Κανόνας: div 4 AND (NOT div 100) OR div 400
- */
-export function isLeapYear(year: number): boolean {
-  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
-}
+/** Δίσεκτο έτος; — ο κανόνας ζει μία φορά, στο `lib/date/calendar-arithmetic` (ADR-919 · N.0.2). */
+export { isLeapYear };
 
 /** Πόσο από τη χρήση έχει περάσει σε μια ημερομηνία αναφοράς, και ο συντελεστής αναγωγής σε ολόκληρο έτος. */
 export interface YearToDateProgress {

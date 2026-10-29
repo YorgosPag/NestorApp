@@ -48,6 +48,7 @@ import {
   type ValueSetCriterionKey,
 } from './listing-criterion-asking';
 import { keepKnownValues } from './listing-criterion-values';
+import { isCalendarDay } from '@/lib/date/calendar-day';
 import { levelBoundKey, parseLevelBoundKey, type LevelBound, type LevelRange } from '@/lib/floor/floor-level-range';
 import { LISTING_SELECTED_PARAM } from '@/lib/listings/listing-focus';
 import { SEARCH_REGION_PARAM } from '@/lib/listings/listing-search-area';
@@ -254,21 +255,14 @@ export function readFiniteNumber(params: URLSearchParams, key: string): number |
   return Number.isFinite(value) ? value : null;
 }
 
-const CALENDAR_DAY = /^\d{4}-\d{2}-\d{2}$/;
-
 /**
- * Ημέρα ημερολογίου `YYYY-MM-DD` — **μορφή**, όχι υπαρκτότητα.
+ * Διεύθυνση → **υπαρκτή** ημέρα ημερολογίου `YYYY-MM-DD`, ή `null`. Ο ΕΝΑΣ αναγνώστης ημέρας (διαμονή + όριο παράδοσης).
  *
- * 🔴 **Regex και όχι αναγνώστης στιγμών**: εκείνος δέχεται και `2026-08-10T12:00:00Z`, και μια στιγμή με **ώρα**
- * σε σύγκριση ημερών αλλάζει σιωπηλά τη σημασία της. Το `2026-02-31` περνά εδώ· όποιος χρειάζεται υπαρκτή ημέρα
- * (το παράθυρο διαμονής) την κόβει μετά με το `intervalShape`. Για τις λεξικογραφικές συγκρίσεις του ορίου
- * παράδοσης η μορφή αρκεί.
+ * 🔴 Ο κριτής είναι το SSoT `isCalendarDay` (`lib/date/calendar-day`, ADR-919), **όχι** αναγνώστης στιγμών: εκείνος
+ * δέχεται και `2026-08-10T12:00:00Z`, και μια στιγμή με **ώρα** σε σύγκριση ημερών αλλάζει σιωπηλά τη σημασία της.
+ * Το `?checkin=2027-02-30` δεν υπάρχει και αγνοείται εδώ, στην πόρτα — πριν (μόνο regex) περνούσε, και η V8 το
+ * κυλούσε στον Μάρτιο μέσα στο `intervalShape`.
  */
-export function isCalendarDay(raw: string): boolean {
-  return CALENDAR_DAY.test(raw);
-}
-
-/** Διεύθυνση → ημέρα ημερολογίου, ή `null`. Ο ΕΝΑΣ αναγνώστης ημέρας (διαμονή + όριο παράδοσης). */
 export function readCalendarDay(params: URLSearchParams, key: string): string | null {
   const raw = params.get(key)?.trim() ?? '';
   return isCalendarDay(raw) ? raw : null;

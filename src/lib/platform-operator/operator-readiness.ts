@@ -36,6 +36,8 @@ import {
   type OperatorSeat,
 } from '@/constants/platform-operator';
 import { canonicalGemiNumber } from '@/lib/company/gemi-number';
+// Υπαρκτή ημερολογιακή μέρα — το σχήμα **και** η ύπαρξη (`2026-02-30` δεν υπάρχει): ο ένας κριτής (ADR-919).
+import { isCalendarDay } from '@/lib/date/calendar-day';
 import { isValidEmail } from '@/lib/validation/email-validation';
 import { isValidGreekVat } from '@/lib/validation/greek-vat-number';
 import { isValidGreekPostalCode } from '@/utils/address/postal-code';
@@ -68,14 +70,6 @@ export type LaunchReadiness =
   | { readonly status: 'pending'; readonly day: CalendarDay }
   | { readonly status: 'incomplete'; readonly day: CalendarDay; readonly problems: readonly RecordProblem[] };
 
-const CALENDAR_DAY_SHAPE = /^\d{4}-\d{2}-\d{2}$/;
-
-/** Υπαρκτή ημερολογιακή μέρα; — το σχήμα **και** η ύπαρξη (`2026-02-30` δεν υπάρχει). */
-function isCalendarDay(value: string): boolean {
-  if (!CALENDAR_DAY_SHAPE.test(value)) return false;
-  const parsed = new Date(`${value}T00:00:00Z`);
-  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
-}
 
 const blank = (value: string): boolean => value.trim().length === 0;
 

@@ -12,22 +12,25 @@
  */
 
 import { localDateOf, MS_PER_DAY, utcDateOf } from '@/lib/date-local';
+import { isCalendarDay, parseCalendarDay } from '@/lib/date/calendar-day';
 import type { IsoWeekday } from '@/lib/calendar/weekly-hours';
-
-const DATE_KEY = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 /** Μεσάνυχτα UTC της ημέρας — `null` για κακογραμμένη **ή ανύπαρκτη** ημέρα (30 Φεβρουαρίου). */
 function utcMidnightOf(key: string): number | null {
-  const match = DATE_KEY.exec(key);
-  if (match === null) return null;
-  const midnight = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
-  // Το `Date.UTC` «διορθώνει» σιωπηλά το 2026-02-30 σε 2026-03-02 — η σύγκριση το πιάνει.
+  const day = parseCalendarDay(key);
+  if (day === null) return null;
+  const midnight = Date.UTC(day.year, day.month - 1, day.day);
+  // Το `Date.UTC` διαβάζει τα έτη 0-99 ως 19xx — η επιστροφή στο ίδιο κλειδί τα κρατά έξω από την αριθμητική.
   return utcDateOf(midnight) === key ? midnight : null;
 }
 
-/** Υπαρκτή ημερολογιακή ημέρα `YYYY-MM-DD`. */
+/**
+ * Υπαρκτή ημερολογιακή ημέρα `YYYY-MM-DD` — το όνομα του λεξιλογίου «κλειδί ημέρας» για τον **έναν** κριτή του
+ * έργου (`isCalendarDay`, `lib/date/calendar-day`, ADR-919). Ο κανόνας δεν ζει εδώ: το `date-local` τον χρειάζεται
+ * και δεν μπορεί να εισάγει από αυτό το αρχείο (που το εισάγει).
+ */
 export function isDateKey(value: unknown): value is string {
-  return typeof value === 'string' && utcMidnightOf(value) !== null;
+  return isCalendarDay(value);
 }
 
 /** Η ημέρα `days` μετά (αρνητικό = πριν) — `null` για άκυρο κλειδί. */
@@ -53,9 +56,9 @@ export function isoWeekdayOfDateKey(key: string): IsoWeekday | null {
 
 /** Κλειδί → τοπική `Date` της **ίδιας** ημέρας, για επιλογέα ημερομηνίας. Αντίστροφο του `localDateOf`. */
 export function calendarDateOfDateKey(key: string): Date | null {
-  const match = DATE_KEY.exec(key);
-  if (match === null || !isDateKey(key)) return null;
-  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  const day = parseCalendarDay(key);
+  if (day === null) return null;
+  const date = new Date(day.year, day.month - 1, day.day);
   return localDateOf(date) === key ? date : null;
 }
 

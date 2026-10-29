@@ -21,35 +21,13 @@
  */
 
 import { daysInMonth } from '@/lib/date/calendar-arithmetic';
+// «Υπάρχει η ημέρα;» — ο κριτής γεννήθηκε εδώ και μετακόμισε στο SSoT (η 2027-02-30 απορρίπτεται, δεν κυλά στον Μάρτιο).
+import { formatCalendarDay, parseCalendarDay } from '@/lib/date/calendar-day';
 import type {
   AvailabilityPrecision,
   AvailabilityWindow,
   ListingAvailability,
 } from '@/types/listing-availability';
-
-const CALENDAR_DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
-
-interface CalendarDay {
-  readonly year: number;
-  readonly month: number;
-  readonly day: number;
-}
-
-/** `YYYY-MM-DD` που υπάρχει **στο ημερολόγιο** (η 2027-02-30 απορρίπτεται, δεν κυλά στον Μάρτιο). */
-function parseCalendarDay(iso: string): CalendarDay | null {
-  const parts = CALENDAR_DAY.exec(iso);
-  if (parts === null) return null;
-  const year = Number(parts[1]);
-  const month = Number(parts[2]);
-  const day = Number(parts[3]);
-  if (month < 1 || month > 12) return null;
-  if (day < 1 || day > daysInMonth(year, month)) return null;
-  return { year, month, day };
-}
-
-function formatCalendarDay(year: number, month: number, day: number): string {
-  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-}
 
 /** Οι μήνες (1-based) που καλύπτει η ακρίβεια γύρω από τον μήνα της άγκυρας. */
 function monthSpan(precision: AvailabilityPrecision, month: number): readonly [number, number] {

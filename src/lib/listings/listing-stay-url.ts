@@ -22,7 +22,8 @@
  */
 
 import { intervalShape } from '@/lib/date-local';
-import { isCalendarDay, readCalendarDay, readFiniteNumber } from '@/lib/criteria/listing-criteria-url';
+import { readCalendarDay, readFiniteNumber } from '@/lib/criteria/listing-criteria-url';
+import { isCalendarDay } from '@/lib/date/calendar-day';
 import { isWholeGuestCount, isWholePetCount } from '@/lib/offers/offer-amount';
 
 /**
