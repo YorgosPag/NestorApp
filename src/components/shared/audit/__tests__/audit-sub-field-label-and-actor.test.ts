@@ -143,6 +143,18 @@ describe('δράστης', () => {
 
     expect(name).toBe('System');
   });
+
+  it.each(LANGUAGES)('Δ7 🔴 [%s] ο βοηθός AI λέει ΚΑΙ τη μηχανή ΚΑΙ τον άνθρωπο «εκ μέρους» (ADR-195, 2026-10-29)', (language, translate) => {
+    const t = (key: string, params: Record<string, string> = {}) => {
+      const text = translate(key);
+      return typeof text === 'string' ? text.replace(/\{(\w+)\}/g, (_m, name: string) => params[name] ?? '') : text;
+    };
+    const behalf = resolveActorName({ performedBy: SYSTEM_IDENTITY.AI_AGENT_ID, performedByName: 'Νίκος Κ.', translate: t });
+    expect(behalf).toBe(language === 'el' ? 'Βοηθός AI · για Νίκος Κ.' : 'AI assistant · for Νίκος Κ.');
+    // Χωρίς άνθρωπο (στιγμιότυπο της μηχανής) ⇒ το όνομα της διεργασίας, όχι «για System».
+    const alone = resolveActorName({ performedBy: SYSTEM_IDENTITY.AI_AGENT_ID, performedByName: SYSTEM_IDENTITY.DISPLAY_NAME, translate: t });
+    expect(alone).toBe(language === 'el' ? 'Σύστημα · βοηθός AI' : 'System · AI assistant');
+  });
 });
 
 describe('αιτία παράγωγης εγγραφής', () => {

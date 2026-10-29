@@ -823,7 +823,10 @@
       "addressPosition": "Σύστημα · εντοπισμός θέσης",
       "ingestion": "Σύστημα · εισαγωγή αρχείων",
       "floorStack": "Σύστημα · στοίβα ορόφων",
-      "floorRef": "Σύστημα · συγχρονισμός ορόφου"
+      "floorRef": "Σύστημα · συγχρονισμός ορόφου",
+      "aiAgent": "Σύστημα · βοηθός AI",
+      "aiAgentFor": "Βοηθός AI · για {name}",
+      "emailInbound": "Σύστημα · εισερχόμενο email"
     },
     "cause": {
       "byUserOnEntity": "λόγω αλλαγής από {name} στο «{entity}»",

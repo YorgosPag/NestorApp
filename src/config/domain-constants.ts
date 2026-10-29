@@ -41,11 +41,18 @@ export const SYSTEM_IDENTITY = {
   FLOOR_STACK_ID: 'system:floor-stack',
   /** Το αντίγραφο ορόφου σε ό,τι φιλοξενεί: ακίνητα · θέσεις · αποθήκες (ADR-903 §6) */
   FLOOR_REF_ID: 'system:floor-ref',
+  /** Ο βοηθός AI (εργαλεία · εντολές διαχειριστή · κουμπιά καναλιού) — γράφει **εκ μέρους** ανθρώπου (ADR-195) */
+  AI_AGENT_ID: 'system:ai-agent',
+  /** Η εισερχόμενη αλληλογραφία: επαφή από άγνωστο αποστολέα (ADR-195) */
+  EMAIL_INBOUND_ID: 'system:email-inbound',
   /** Display name for system messages */
   DISPLAY_NAME: 'System',
   /** System type identifier */
   TYPE: 'system',
 } as const;
+
+/** Η ταυτότητα της μηχανής: `system` ή `system:<διεργασία>`. */
+export type SystemActorId = typeof SYSTEM_IDENTITY.ID | `${typeof SYSTEM_IDENTITY.ID}:${string}`;
 
 /**
  * Είναι αυτός ο δράστης η **μηχανή**; — `system` ή οποιοδήποτε `system:<διεργασία>`.
@@ -53,7 +60,7 @@ export const SYSTEM_IDENTITY = {
  * 🔑 Η απόφαση παίρνεται από την **ταυτότητα**, ποτέ από το εμφανιζόμενο όνομα: το όνομα είναι
  * στιγμιότυπο γραμμένο σε μία γλώσσα, η ταυτότητα είναι σταθερή.
  */
-export function isSystemActorId(actorId: string | null | undefined): boolean {
+export function isSystemActorId(actorId: string | null | undefined): actorId is SystemActorId {
   return actorId === SYSTEM_IDENTITY.ID || (actorId?.startsWith(`${SYSTEM_IDENTITY.ID}:`) ?? false);
 }
 

@@ -1449,6 +1449,9 @@
       },
       "actors": {
         "addressPosition": "Σύστημα · εντοπισμός θέσης",
+        "aiAgent": "Σύστημα · βοηθός AI",
+        "aiAgentFor": "Βοηθός AI · για {name}",
+        "emailInbound": "Σύστημα · εισερχόμενο email",
         "floorRef": "Σύστημα · συγχρονισμός ορόφου",
         "floorStack": "Σύστημα · στοίβα ορόφων",
         "ingestion": "Σύστημα · εισαγωγή αρχείων",

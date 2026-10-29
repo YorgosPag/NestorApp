@@ -14,7 +14,7 @@
 
 import { SYSTEM_IDENTITY, isSystemActorId } from '@/config/domain-constants';
 import type { EntityAuditEntry } from '@/types/audit-trail';
-import { translated, type Translate } from './audit-field-descriptor';
+import { translated } from './audit-field-descriptor';
 
 /** Το γενικό όνομα της μηχανής — και η πτώση κάθε διεργασίας χωρίς δικό της. */
 const SYSTEM_ACTOR_KEY = 'audit.actors.system';
@@ -25,6 +25,16 @@ const SYSTEM_ACTOR_KEYS: Readonly<Record<string, string>> = {
   [SYSTEM_IDENTITY.INGESTION_ID]: 'audit.actors.ingestion',
   [SYSTEM_IDENTITY.FLOOR_STACK_ID]: 'audit.actors.floorStack',
   [SYSTEM_IDENTITY.FLOOR_REF_ID]: 'audit.actors.floorRef',
+  [SYSTEM_IDENTITY.AI_AGENT_ID]: 'audit.actors.aiAgent',
+  [SYSTEM_IDENTITY.EMAIL_INBOUND_ID]: 'audit.actors.emailInbound',
+};
+
+/**
+ * Διεργασίες που ενεργούν **εκ μέρους** ανθρώπου (ADR-195 · `server/lib/performer-stamp`): εκεί το
+ * στιγμιότυπο ονόματος **είναι ο άνθρωπος**, όχι η μηχανή ⇒ «Βοηθός AI · για Νίκο».
+ */
+const ON_BEHALF_ACTOR_KEYS: Readonly<Record<string, string>> = {
+  [SYSTEM_IDENTITY.AI_AGENT_ID]: 'audit.actors.aiAgentFor',
 };
 
 /**
@@ -63,7 +73,7 @@ export interface ResolveActorNameParams {
   readonly performedBy: string;
   /** Το όνομα όπως **γράφτηκε τότε** — για άνθρωπο η αλήθεια, για μηχανή στιγμιότυπο. */
   readonly performedByName: string | null;
-  readonly translate: Translate;
+  readonly translate: TranslateWithParams;
 }
 
 /** Το όνομα του δράστη για την οθόνη· `null` ⇒ δεν υπάρχει τίποτα να ειπωθεί. */
@@ -73,10 +83,21 @@ export function resolveActorName({
   translate,
 }: ResolveActorNameParams): string | null {
   if (!isSystemActorId(performedBy)) return performedByName;
+  const onBehalf = onBehalfName(performedBy, performedByName, translate);
+  if (onBehalf) return onBehalf;
   const processKey = SYSTEM_ACTOR_KEYS[performedBy];
   return (
     (processKey ? translated(translate, processKey) : undefined) ??
     translated(translate, SYSTEM_ACTOR_KEY) ??
     performedByName
   );
+}
+
+/** «Διεργασία · για <άνθρωπο>» — μόνο όταν η διεργασία το δηλώνει **και** το στιγμιότυπο δεν είναι η ίδια η μηχανή. */
+function onBehalfName(performedBy: string, performedByName: string | null, translate: TranslateWithParams): string | null {
+  const key = ON_BEHALF_ACTOR_KEYS[performedBy];
+  const name = performedByName?.trim();
+  if (!key || !name || name === SYSTEM_IDENTITY.DISPLAY_NAME) return null;
+  const text = translate(key, { name });
+  return typeof text === 'string' && text !== '' && text !== key ? text : null;
 }

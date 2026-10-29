@@ -151,8 +151,9 @@ async function resolvePerformerDisplayName(
   uid: string,
   currentName: string | null,
 ): Promise<string | null> {
-  // Keep special names as-is (not an email, not null)
-  if (currentName && !currentName.includes('@')) return currentName;
+  // Keep special names as-is (not an email, not null). 🔴 ADR-195: όνομα ΙΣΟ με την ταυτότητα
+  // δεν είναι όνομα — είναι uid που πέρασε στη θέση του (resolve · ΙΚΑ · AI) ⇒ αναζήτηση.
+  if (currentName && !currentName.includes('@') && currentName !== uid) return currentName;
 
   try {
     const db = getAdminFirestore();
