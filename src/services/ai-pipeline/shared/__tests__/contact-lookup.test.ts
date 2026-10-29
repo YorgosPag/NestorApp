@@ -64,6 +64,8 @@ jest.mock('@/services/realtime/types', () => ({
 
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { SYSTEM_IDENTITY } from '@/config/domain-constants';
+import { processPerformer } from '@/lib/audit/audit-performer';
 import {
   findContactByEmail,
   findContactByPhone,
@@ -82,6 +84,8 @@ import {
 // ============================================================================
 
 const COMPANY_ID = 'comp_test_001';
+/** ADR-195 — ο βοηθός εκ μέρους του διαχειριστή (σύγχρονος φορέας: καμία ανάγνωση `/users`). */
+const ADMIN = processPerformer(SYSTEM_IDENTITY.AI_AGENT_ID, 'Admin');
 
 function setupFirestore(contacts: Record<string, Record<string, unknown>>) {
   const kit = new FakeFirestore();
@@ -411,17 +415,20 @@ describe('contact-lookup', () => {
     it('should update scalar field directly', async () => {
       const kit = setupFirestore({ cont_001: DIMITRIS });
 
-      await updateContactField('cont_001', 'vatNumber', '999888777', 'Admin');
+      await updateContactField('cont_001', 'vatNumber', '999888777', ADMIN);
 
       const updated = kit.getData('contacts', 'cont_001');
       expect(updated!.vatNumber).toBe('999888777');
-      expect(updated!.lastModifiedBy).toBe('Admin');
+      // ADR-195 — η σφραγίδα που διαβάζει ο CDC, όχι το ωμό `lastModifiedBy`.
+      expect(updated!._lastModifiedBy).toBe(SYSTEM_IDENTITY.AI_AGENT_ID);
+      expect(updated!._lastModifiedByName).toBe('Admin');
+      expect(updated!.lastModifiedBy).toBeUndefined();
     });
 
     it('should update phone field using arrayUnion pattern', async () => {
       const kit = setupFirestore({ cont_001: DIMITRIS });
 
-      await updateContactField('cont_001', 'phone', '6999111222', 'Admin');
+      await updateContactField('cont_001', 'phone', '6999111222', ADMIN);
 
       const updated = kit.getData('contacts', 'cont_001');
       // FieldValue.arrayUnion is mocked, so the phones field gets the mock value
@@ -436,20 +443,20 @@ describe('contact-lookup', () => {
       const typeOf = (id: string) => (kit.getData('contacts', id)!.phones as { _arrayUnion: Array<{ type: string }> })._arrayUnion[0].type;
 
       // Ο ζωντανός έλεγχος 29/10: `work` (και `mobile`) σε εταιρεία ⇒ η λίστα «Τύπος» της φόρμας εταιρείας ΚΕΝΗ.
-      await updateContactField('cont_co', 'phone', '+30 2310 428900', 'Admin');
+      await updateContactField('cont_co', 'phone', '+30 2310 428900', ADMIN);
       expect(typeOf('cont_co')).toBe('main');
-      await updateContactField('cont_co', 'phone', '6971234567', 'Admin');
+      await updateContactField('cont_co', 'phone', '6971234567', ADMIN);
       expect(typeOf('cont_co')).toBe('main');
-      await updateContactField('cont_pe', 'phone', '+30 2310 428900', 'Admin');
+      await updateContactField('cont_pe', 'phone', '+30 2310 428900', ADMIN);
       expect(typeOf('cont_pe')).toBe('home');
-      await updateContactField('cont_pe', 'phone', '6971234567', 'Admin');
+      await updateContactField('cont_pe', 'phone', '6971234567', ADMIN);
       expect(typeOf('cont_pe')).toBe('mobile');
     });
 
     it('should update email field using arrayUnion pattern', async () => {
       const kit = setupFirestore({ cont_001: DIMITRIS });
 
-      await updateContactField('cont_001', 'email', 'New@Example.Com', 'Admin');
+      await updateContactField('cont_001', 'email', 'New@Example.Com', ADMIN);
 
       const updated = kit.getData('contacts', 'cont_001');
       expect(updated!.emails).toBeDefined();
@@ -464,7 +471,7 @@ describe('contact-lookup', () => {
     it('should clear scalar field to null', async () => {
       const kit = setupFirestore({ cont_001: DIMITRIS });
 
-      await removeContactField('cont_001', 'vatNumber', 'Admin');
+      await removeContactField('cont_001', 'vatNumber', ADMIN);
 
       const updated = kit.getData('contacts', 'cont_001');
       expect(updated!.vatNumber).toBeNull();
@@ -473,7 +480,7 @@ describe('contact-lookup', () => {
     it('should clear phone array', async () => {
       const kit = setupFirestore({ cont_001: DIMITRIS });
 
-      await removeContactField('cont_001', 'phone', 'Admin');
+      await removeContactField('cont_001', 'phone', ADMIN);
 
       const updated = kit.getData('contacts', 'cont_001');
       expect(updated!.phones).toEqual([]);
@@ -482,7 +489,7 @@ describe('contact-lookup', () => {
     it('should clear email array', async () => {
       const kit = setupFirestore({ cont_001: DIMITRIS });
 
-      await removeContactField('cont_001', 'email', 'Admin');
+      await removeContactField('cont_001', 'email', ADMIN);
 
       const updated = kit.getData('contacts', 'cont_001');
       expect(updated!.emails).toEqual([]);
@@ -628,7 +635,7 @@ describe('contact-lookup', () => {
         phone: '6971111111',
         type: 'individual',
         companyId: COMPANY_ID,
-        createdBy: 'Admin',
+        performer: ADMIN,
       });
 
       expect(result.contactId).toBeDefined();
@@ -650,7 +657,7 @@ describe('contact-lookup', () => {
           phone: null,
           type: 'individual',
           companyId: COMPANY_ID,
-          createdBy: 'Admin',
+          performer: ADMIN,
         }),
       ).rejects.toThrow('DUPLICATE_CONTACT');
     });
@@ -665,7 +672,7 @@ describe('contact-lookup', () => {
         phone: null,
         type: 'individual',
         companyId: COMPANY_ID,
-        createdBy: 'Admin',
+        performer: ADMIN,
         skipDuplicateCheck: true,
       });
 
@@ -683,7 +690,7 @@ describe('contact-lookup', () => {
         type: 'company',
         companyId: COMPANY_ID,
         companyName: 'Test ΑΕ',
-        createdBy: 'Admin',
+        performer: ADMIN,
       });
 
       expect(result.displayName).toBe('Test ΑΕ');
@@ -694,7 +701,7 @@ describe('contact-lookup', () => {
 
       await createContactServerSide({
         firstName: '', lastName: '', email: null, phone: '+30 2310 428900', type: 'company',
-        companyId: COMPANY_ID, companyName: 'MACON ATEE', createdBy: 'Admin',
+        companyId: COMPANY_ID, companyName: 'MACON ATEE', performer: ADMIN,
       });
 
       const [doc] = Object.values(kit.getAllDocs('contacts')) as Array<{ phones: Array<{ type: string }> }>;

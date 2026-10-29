@@ -41,6 +41,8 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { inferPhoneType } from '@/server/lib/phone-line-type';
 import { inferEmailType } from '@/lib/contact/email-type-vocabulary';
 
+import { performerStamp, type ResolvedPerformer } from '@/server/lib/performer-stamp';
+
 import type { CreateContactParams } from './contact-lookup-types';
 
 // ============================================================================
@@ -113,7 +115,11 @@ export interface BuiltContact {
  *
  * CRITICAL: every optional field uses `?? null` — Firestore rejects `undefined`.
  */
-export function buildContactDocument(params: CreateContactParams): BuiltContact {
+export function buildContactDocument(
+  params: CreateContactParams,
+  /** Ο φορέας **ήδη λυμένος** (`resolvePerformer`) — ο builder μένει σύγχρονος, χωράει σε συναλλαγή. */
+  performer: ResolvedPerformer,
+): BuiltContact {
   const displayName = params.type === 'company'
     ? params.companyName ?? `${params.firstName} ${params.lastName}`.trim()
     : `${params.firstName} ${params.lastName}`.trim();
@@ -147,8 +153,9 @@ export function buildContactDocument(params: CreateContactParams): BuiltContact 
         : [],
       addresses: [],
       companyId: params.companyId,
-      createdBy: params.createdBy,
-      lastModifiedBy: params.createdBy,
+      createdBy: performer.id,
+      // ADR-195 — η σφραγίδα που διαβάζει ο CDC (όχι το ωμό `lastModifiedBy`, που γινόταν «αλλαγή» στο Ιστορικό).
+      ...performerStamp(performer),
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
       tags: null,

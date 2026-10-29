@@ -31,6 +31,8 @@ import { phoneOwnerKindOf } from '@/lib/contact/phone-type-vocabulary';
 import { inferEmailType } from '@/lib/contact/email-type-vocabulary';
 import type { CreateContactParams, CreateContactResult } from './contact-lookup-types';
 import { checkContactDuplicates } from './contact-lookup-search';
+import type { AuditPerformer } from '@/lib/audit/audit-performer';
+import { performerStamp, resolvePerformer, type ResolvedPerformer } from '@/server/lib/performer-stamp';
 
 const logger = createModuleLogger('PIPELINE_CONTACT_CRUD');
 
@@ -51,7 +53,7 @@ async function recordContactFieldChange(args: {
   readonly contactId: string;
   readonly existingData: Record<string, unknown>;
   readonly change: AuditFieldChange;
-  readonly updatedBy: string;
+  readonly performer: ResolvedPerformer;
 }): Promise<void> {
   const companyId = String(args.existingData.companyId ?? '');
   if (!companyId) return;
@@ -62,8 +64,8 @@ async function recordContactFieldChange(args: {
     entityName: String(args.existingData.displayName ?? null) || null,
     action: 'updated',
     changes: [args.change],
-    performedBy: args.updatedBy,
-    performedByName: args.updatedBy,
+    performedBy: args.performer.id,
+    performedByName: args.performer.name,
     companyId,
   });
 }
@@ -88,13 +90,14 @@ async function recordContactFieldChange(args: {
 async function applyContactFieldMutation(params: {
   readonly contactId: string;
   readonly field: string;
-  readonly updatedBy: string;
+  readonly performer: AuditPerformer;
   /** Χτίζεται **μετά** την ανάγνωση: η εγγραφή μπορεί να εξαρτάται από το έγγραφο (π.χ. τύπος τηλεφώνου ανά κάτοχο). */
   readonly fieldUpdates: (existing: Readonly<Record<string, unknown>>) => Record<string, unknown>;
   readonly toChange: (oldValue: AuditFieldChange['oldValue']) => AuditFieldChange;
   readonly logMessage: string;
 }): Promise<void> {
-  const { contactId, field, updatedBy, fieldUpdates, toChange, logMessage } = params;
+  const { contactId, field, fieldUpdates, toChange, logMessage } = params;
+  const performer = await resolvePerformer(params.performer);
 
   const adminDb = getAdminFirestore();
   const docRef = adminDb.collection(COLLECTIONS.CONTACTS).doc(contactId);
@@ -106,7 +109,8 @@ async function applyContactFieldMutation(params: {
     : {};
   const updateData: Record<string, unknown> = {
     updatedAt: FieldValue.serverTimestamp(),
-    lastModifiedBy: updatedBy,
+    // ADR-195 — η σφραγίδα που διαβάζει ο CDC (`server/lib/performer-stamp`).
+    ...performerStamp(performer),
     ...fieldUpdates(existingData),
   };
   const previous = existingData[field];
@@ -121,14 +125,14 @@ async function applyContactFieldMutation(params: {
     contactId,
     existingData,
     change: toChange(oldValue),
-    updatedBy,
+    performer,
   });
 
   logger.info(logMessage, {
     contactId,
     field,
     isArray: ARRAY_FIELDS.has(field),
-    updatedBy,
+    performedBy: performer.id,
   });
 }
 
@@ -177,18 +181,18 @@ function buildFieldClearing(field: string): Record<string, unknown> {
  * - Array fields (phone, email): uses `FieldValue.arrayUnion()` — adds without overwrite
  * - Scalar fields (vatNumber, profession, etc.): direct `.update({ [field]: value })`
  *
- * Always updates `updatedAt` and `lastModifiedBy`.
+ * Always updates `updatedAt` and the performer stamp (`_lastModified*`, ADR-195).
  */
 export async function updateContactField(
   contactId: string,
   field: string,
   value: string,
-  updatedBy: string
+  performer: AuditPerformer
 ): Promise<void> {
   await applyContactFieldMutation({
     contactId,
     field,
-    updatedBy,
+    performer,
     fieldUpdates: (existing) => buildFieldAddition(field, value, existing),
     toChange: (oldValue) => ({ field, oldValue, newValue: value, label: field }),
     logMessage: 'Contact field updated',
@@ -204,12 +208,12 @@ export async function updateContactField(
 export async function removeContactField(
   contactId: string,
   field: string,
-  updatedBy: string
+  performer: AuditPerformer
 ): Promise<void> {
   await applyContactFieldMutation({
     contactId,
     field,
-    updatedBy,
+    performer,
     fieldUpdates: () => buildFieldClearing(field),
     toChange: () => ({ field, oldValue: null, newValue: null, label: `Διαγραφή ${field}` }),
     logMessage: 'Contact field removed',
@@ -316,7 +320,8 @@ export async function createContactServerSide(
   // The shape lives in `contact-document-builder` because the ADR-827 Σ3 acceptance
   // transaction needs the *same* document and cannot call this function (it writes on
   // its own). One builder, two writers — never two builders (ADR-749).
-  const { displayName, doc: contactDoc } = buildContactDocument(params);
+  const performer = await resolvePerformer(params.performer);
+  const { displayName, doc: contactDoc } = buildContactDocument(params, performer);
 
   // ── Step 4: Generate enterprise ID ──
   const contactId = generateContactId();
@@ -341,8 +346,8 @@ export async function createContactServerSide(
     entityName: displayName,
     action: 'created',
     changes: creationChanges,
-    performedBy: params.createdBy,
-    performedByName: params.createdBy,
+    performedBy: performer.id,
+    performedByName: performer.name,
     companyId: params.companyId,
   });
 
@@ -351,7 +356,7 @@ export async function createContactServerSide(
     displayName,
     type: params.type,
     companyId: params.companyId,
-    createdBy: params.createdBy,
+    createdBy: performer.id,
   });
 
   emitEntitySyncSignal('contacts', 'CREATED', contactId, params.companyId);

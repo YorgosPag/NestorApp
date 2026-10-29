@@ -27,7 +27,8 @@ import type {
   InvoiceIssuer,
 } from './invoice-entity-extractor';
 import type { AgenticContext } from './tools/executor-shared';
-import { buildAttribution, auditWrite } from './tools/executor-shared';
+import { auditWrite } from './tools/executor-shared';
+import { aiAgentAuditActor, aiAgentStamp } from './shared/ai-performer';
 import type { ChatHistoryMessage } from './chat-history-service';
 import { nowISO } from '@/lib/date-local';
 
@@ -180,14 +181,14 @@ export async function autoEnrichFromInvoice(
 
   // Apply update
   updatePayload.updatedAt = nowISO();
-  updatePayload.lastModifiedBy = buildAttribution(ctx);
 
-  await db.collection(COLLECTIONS.CONTACTS).doc(contactId).update(updatePayload);
+  // ADR-195 — η σφραγίδα που διαβάζει ο CDC· έξω από το `updatePayload`, που μετριέται ως «αλλαγές».
+  await db.collection(COLLECTIONS.CONTACTS).doc(contactId).update({ ...updatePayload, ...aiAgentStamp(ctx) });
   await auditWrite(ctx, COLLECTIONS.CONTACTS, contactId, 'auto_enrich_invoice', updatePayload);
 
   // ADR-195: canonical entity audit trail (SSoT)
   const enrichmentChanges: AuditFieldChange[] = Object.entries(updatePayload)
-    .filter(([k]) => k !== 'updatedAt' && k !== 'lastModifiedBy')
+    .filter(([k]) => k !== 'updatedAt')
     .map(([field, value]) => ({
       field,
       oldValue: null,
@@ -203,8 +204,7 @@ export async function autoEnrichFromInvoice(
       entityName: displayName,
       action: 'updated',
       changes: enrichmentChanges,
-      performedBy: ctx.channelSenderId || 'system',
-      performedByName: buildAttribution(ctx),
+      ...aiAgentAuditActor(ctx),
       companyId: ctx.companyId,
     });
   }
@@ -212,7 +212,7 @@ export async function autoEnrichFromInvoice(
   logger.info('Contact auto-enriched from invoice', {
     contactId,
     displayName,
-    fieldsSet: Object.keys(updatePayload).filter(k => k !== 'updatedAt' && k !== 'lastModifiedBy'),
+    fieldsSet: Object.keys(updatePayload).filter(k => k !== 'updatedAt'),
     matchedEntity: entity === ctx.invoiceEntities.issuer ? 'issuer' : 'customer',
   });
 }

@@ -12,7 +12,7 @@
 
 import 'server-only';
 
-import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
+import { acknowledgeBySideEffect, approvedAction, autoApprovedProposal } from '../../shared/admin-command-protocol';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import {
   findContactByEmail,
@@ -35,6 +35,7 @@ import type {
   PipelineIntentTypeValue,
 } from '@/types/ai-pipeline';
 import { nowISO } from '@/lib/date-local';
+import { adminCommandPerformer } from '../../shared/ai-performer';
 
 const logger = createModuleLogger('UC_015_ADMIN_CREATE_CONTACT');
 
@@ -141,38 +142,23 @@ export class AdminCreateContactModule implements IUCModule {
       ? `Υπάρχει ήδη επαφή "${duplicate.name}" με email ${lookup?.email ?? ''} (ID: ${duplicate.contactId})`
       : `Δημιουργία επαφής: ${displayName}${emailLabel}`;
 
-    return {
-      messageId: ctx.intake.id,
-      suggestedActions: [
-        {
-          type: 'admin_create_contact_action',
-          params: {
-            firstName: lookup?.firstName ?? null,
-            lastName: lookup?.lastName ?? null,
-            email: lookup?.email ?? null,
-            phone: lookup?.phone ?? null,
-            contactType: lookup?.contactType ?? 'individual',
-            companyId: lookup?.companyId ?? ctx.companyId,
-            duplicateContactId: duplicate?.contactId ?? null,
-            duplicateContactName: duplicate?.name ?? null,
-            channel: ctx.intake.channel,
-            telegramChatId: (ctx.intake.rawPayload.chatId as string) ?? null,
-          },
-        },
-      ],
-      requiredApprovals: [],
-      autoApprovable: true,
-      summary,
-      schemaVersion: PIPELINE_PROTOCOL_CONFIG.SCHEMA_VERSION,
-    };
+    return autoApprovedProposal(ctx, 'admin_create_contact_action', {
+      firstName: lookup?.firstName ?? null,
+      lastName: lookup?.lastName ?? null,
+      email: lookup?.email ?? null,
+      phone: lookup?.phone ?? null,
+      contactType: lookup?.contactType ?? 'individual',
+      companyId: lookup?.companyId ?? ctx.companyId,
+      duplicateContactId: duplicate?.contactId ?? null,
+      duplicateContactName: duplicate?.name ?? null,
+    }, summary);
   }
 
   // ── Step 6: EXECUTE ──
 
   async execute(ctx: PipelineContext): Promise<ExecutionResult> {
     try {
-      const actions = ctx.approval?.modifiedActions ?? ctx.proposal?.suggestedActions ?? [];
-      const action = actions.find(a => a.type === 'admin_create_contact_action');
+      const action = approvedAction(ctx, 'admin_create_contact_action');
 
       if (!action) {
         return { success: false, sideEffects: [], error: 'No admin_create_contact_action found' };
@@ -206,8 +192,6 @@ export class AdminCreateContactModule implements IUCModule {
       }
 
       // ── Case 2: Create new contact ──
-      const adminName = ctx.adminCommandMeta?.adminIdentity.displayName ?? 'Admin';
-
       const createParams: CreateContactParams = {
         firstName,
         lastName,
@@ -215,7 +199,7 @@ export class AdminCreateContactModule implements IUCModule {
         phone,
         type: contactType === 'company' ? 'company' : 'individual',
         companyId: ctx.companyId,
-        createdBy: adminName,
+        performer: adminCommandPerformer(ctx.adminCommandMeta),
       };
 
       const result = await createContactServerSide(createParams);
@@ -313,10 +297,7 @@ export class AdminCreateContactModule implements IUCModule {
   // ── Step 7: ACKNOWLEDGE ──
 
   async acknowledge(ctx: PipelineContext): Promise<AcknowledgmentResult> {
-    const confirmSent = ctx.executionResult?.sideEffects?.some(
-      (se: string) => se.startsWith('confirm_sent:') || se.startsWith('contact_created:')
-    ) ?? false;
-    return { sent: confirmSent, channel: ctx.intake.channel };
+    return acknowledgeBySideEffect(ctx, 'contact_created:');
   }
 
   async healthCheck(): Promise<boolean> {

@@ -252,7 +252,8 @@ describe('AdminUpdateContactModule (UC-016)', () => {
     expect(result.success).toBe(true);
 
     // Verify field was updated
-    expect(mockUpdateContactField).toHaveBeenCalledWith('ct_001', 'phone', '6912345678', '\u0393\u03b9\u03ce\u03c1\u03b3\u03bf\u03c2');
+    // ADR-195 — ο διαχειριστής χωρίς Firebase uid ⇒ ο βοηθός ΕΚ ΜΕΡΟΥΣ του (όχι όνομα στη θέση ταυτότητας).
+    expect(mockUpdateContactField).toHaveBeenCalledWith('ct_001', 'phone', '6912345678', expect.objectContaining({ kind: 'process', processId: 'system:ai-agent', onBehalfOf: '\u0393\u03b9\u03ce\u03c1\u03b3\u03bf\u03c2' }));
 
     // Verify sync signal emitted
     expect(mockEmitEntitySyncSignal).toHaveBeenCalledWith('contacts', 'UPDATED', 'ct_001', 'comp_pagonis');
@@ -298,7 +299,7 @@ describe('AdminUpdateContactModule (UC-016)', () => {
     expect(result.success).toBe(true);
 
     // Verify field was removed (not updated)
-    expect(mockRemoveContactField).toHaveBeenCalledWith('ct_001', 'phone', '\u0393\u03b9\u03ce\u03c1\u03b3\u03bf\u03c2');
+    expect(mockRemoveContactField).toHaveBeenCalledWith('ct_001', 'phone', expect.objectContaining({ kind: 'process', processId: 'system:ai-agent', onBehalfOf: '\u0393\u03b9\u03ce\u03c1\u03b3\u03bf\u03c2' }));
     expect(mockUpdateContactField).not.toHaveBeenCalled();
 
     // Verify sync signal emitted

@@ -32,6 +32,8 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
+import { userPerformer } from '@/lib/audit/audit-performer';
+import { auditActorOf, performerStamp, resolvePerformer } from '@/server/lib/performer-stamp';
 import {
   resolveSignatory,
   type SignatoryInput,
@@ -95,6 +97,8 @@ async function createIndividualContact(
   esco: { escoUri: string | null; escoLabel: string | null; iscoCode: string | null },
   ctx: AuthContext
 ): Promise<string> {
+  // ADR-195 — ο φορέας λύνεται ΠΡΙΝ από την εγγραφή: σφραγίδα CDC + γραμμή υπηρεσίας από το ΙΔΙΟ όνομα.
+  const performer = await resolvePerformer(userPerformer(ctx.uid, ctx.email ?? null));
   return safeFirestoreOperation(async (db) => {
     const id = generateContactId();
     const now = admin.firestore.Timestamp.now();
@@ -132,7 +136,8 @@ async function createIndividualContact(
       createdBy: ctx.uid,
     };
 
-    await db.collection(COLLECTIONS.CONTACTS).doc(id).set(sanitizeForFirestore(contact));
+    // Η σφραγίδα ΕΞΩ από τον καθαριστή: το `serverTimestamp()` είναι sentinel, όχι δεδομένο.
+    await db.collection(COLLECTIONS.CONTACTS).doc(id).set({ ...sanitizeForFirestore(contact), ...performerStamp(performer) });
     safeFireAndForget(
       EntityAuditService.recordChange({
         entityType: ENTITY_TYPES.CONTACT,
@@ -140,8 +145,7 @@ async function createIndividualContact(
         entityName: `${sig.firstName ?? ''} ${sig.lastName ?? ''}`.trim() || id,
         action: 'created',
         changes: [],
-        performedBy: ctx.uid,
-        performedByName: null,
+        ...auditActorOf(performer),
         companyId: ctx.companyId,
       }),
       'commit-signatory-service.createSignatory',

@@ -10,6 +10,7 @@
  */
 
 import type { ContactNameReview } from '@/lib/contacts/contact-name-review';
+import type { AuditPerformer } from '@/lib/audit/audit-performer';
 
 /** Result of a successful contact match */
 export interface ContactMatch {
@@ -55,7 +56,12 @@ export interface CreateContactParams {
   type: 'individual' | 'company';
   companyId: string;
   companyName?: string;
-  createdBy: string;
+  /**
+   * Ο **φορέας** της δημιουργίας (ADR-195) — άνθρωπος ή διεργασία εκ μέρους ανθρώπου. Γράφεται ως
+   * `createdBy` (ταυτότητα) **και** ως σφραγίδα `_lastModified*` που διαβάζει ο CDC. Ήταν ελεύθερο
+   * string που άλλοτε ήταν uid κι άλλοτε «AI Agent (…)» ⇒ το Ιστορικό έδειχνε uid ως όνομα.
+   */
+  performer: AuditPerformer;
   skipDuplicateCheck?: boolean;
   /**
    * ΑΦΜ — **αποτυπωμα**, οχι ξενο κλειδι (ADR-827 §8.3/§8.5).

@@ -17,7 +17,7 @@
 
 import 'server-only';
 
-import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
+import { acknowledgeBySideEffect, approvedAction, autoApprovedProposal } from '../../shared/admin-command-protocol';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import {
   FIELD_KEYWORDS,
@@ -54,6 +54,7 @@ import type {
   PipelineIntentTypeValue,
 } from '@/types/ai-pipeline';
 import { nowISO } from '@/lib/date-local';
+import { adminCommandPerformer } from '../../shared/ai-performer';
 
 const logger = createModuleLogger('UC_016_ADMIN_UPDATE_CONTACT');
 
@@ -203,46 +204,31 @@ export class AdminUpdateContactModule implements IUCModule {
       summary = `Ενημέρωση: +${lookup?.detectedField?.greekLabel ?? '?'} ${lookup?.detectedValue ?? '?'} στον ${lookup?.resolvedContact?.name ?? '?'}`;
     }
 
-    return {
-      messageId: ctx.intake.id,
-      suggestedActions: [
-        {
-          type: 'admin_update_contact_action',
-          params: {
-            contactId: lookup?.resolvedContact?.contactId ?? null,
-            contactName: lookup?.resolvedContact?.name ?? null,
-            field: lookup?.detectedField?.firestoreField ?? null,
-            fieldLabel: lookup?.detectedField?.greekLabel ?? null,
-            value: lookup?.detectedValue ?? null,
-            action: lookup?.action ?? 'set',
-            resolvedViaSession: lookup?.resolvedViaSession ?? false,
-            error: (hasError || hasMultiple)
-              ? (lookup?.error ?? null)
-              : null,
-            multipleMatches: hasMultiple
-              ? lookup!.multipleMatches.map(c => ({
-                  contactId: c.contactId,
-                  name: c.name,
-                }))
-              : null,
-            channel: ctx.intake.channel,
-            telegramChatId: (ctx.intake.rawPayload.chatId as string) ?? null,
-          },
-        },
-      ],
-      requiredApprovals: [],
-      autoApprovable: true,
-      summary,
-      schemaVersion: PIPELINE_PROTOCOL_CONFIG.SCHEMA_VERSION,
-    };
+    return autoApprovedProposal(ctx, 'admin_update_contact_action', {
+      contactId: lookup?.resolvedContact?.contactId ?? null,
+      contactName: lookup?.resolvedContact?.name ?? null,
+      field: lookup?.detectedField?.firestoreField ?? null,
+      fieldLabel: lookup?.detectedField?.greekLabel ?? null,
+      value: lookup?.detectedValue ?? null,
+      action: lookup?.action ?? 'set',
+      resolvedViaSession: lookup?.resolvedViaSession ?? false,
+      error: (hasError || hasMultiple)
+        ? (lookup?.error ?? null)
+        : null,
+      multipleMatches: hasMultiple
+        ? lookup!.multipleMatches.map(c => ({
+            contactId: c.contactId,
+            name: c.name,
+          }))
+        : null,
+    }, summary);
   }
 
   // ── Step 6: EXECUTE ──
 
   async execute(ctx: PipelineContext): Promise<ExecutionResult> {
     try {
-      const actions = ctx.approval?.modifiedActions ?? ctx.proposal?.suggestedActions ?? [];
-      const action = actions.find(a => a.type === 'admin_update_contact_action');
+      const action = approvedAction(ctx, 'admin_update_contact_action');
 
       if (!action) {
         return { success: false, sideEffects: [], error: 'No admin_update_contact_action found' };
@@ -294,36 +280,23 @@ export class AdminUpdateContactModule implements IUCModule {
       // ── Case 3: Valid update or remove ──
       if (!contactId || !field) {
         const msg = errorMsg ?? 'Ελλιπή στοιχεία για ενημέρωση.';
-        await sendChannelReply({
-          channel: ctx.intake.channel,
-          ...extractChannelIds(ctx),
-          subject: 'Ενημέρωση επαφής',
-          textBody: msg,
-          requestId: ctx.requestId,
-        });
-        return { success: true, sideEffects: ['error_reply_sent'] };
+        return replyUpdateError(ctx, msg);
       }
 
       // For SET mode, value is required
       if (actionMode === 'set' && !value) {
         const msg = errorMsg ?? `Δεν αναγνωρίστηκε η τιμή για "${fieldLabel ?? field}".`;
-        await sendChannelReply({
-          channel: ctx.intake.channel,
-          ...extractChannelIds(ctx),
-          subject: 'Ενημέρωση επαφής',
-          textBody: msg,
-          requestId: ctx.requestId,
-        });
-        return { success: true, sideEffects: ['error_reply_sent'] };
+        return replyUpdateError(ctx, msg);
       }
 
-      const adminName = ctx.adminCommandMeta?.adminIdentity.displayName ?? 'Admin';
+      // ADR-195 — ο διαχειριστής ως φορέας (uid όταν είναι γνωστός), ποτέ όνομα στη θέση ταυτότητας.
+      const performer = adminCommandPerformer(ctx.adminCommandMeta);
       const sideEffects: string[] = [];
       const ackLines: string[] = [];
 
       if (actionMode === 'remove') {
         // ── REMOVE mode ──
-        await removeContactField(contactId, field, adminName);
+        await removeContactField(contactId, field, performer);
         emitEntitySyncSignal('contacts', 'UPDATED', contactId, ctx.companyId);
         sideEffects.push(`contact_field_removed:${contactId}:${field}`);
 
@@ -336,7 +309,7 @@ export class AdminUpdateContactModule implements IUCModule {
         ackLines.push(`Αφαιρέθηκε ${fieldLabel ?? field} από ${contactName ?? 'επαφή'}.`);
       } else {
         // ── SET mode ──
-        await updateContactField(contactId, field, value!, adminName);
+        await updateContactField(contactId, field, value!, performer);
         emitEntitySyncSignal('contacts', 'UPDATED', contactId, ctx.companyId);
         sideEffects.push(`contact_updated:${contactId}:${field}`);
 
@@ -398,10 +371,7 @@ export class AdminUpdateContactModule implements IUCModule {
   // ── Step 7: ACKNOWLEDGE ──
 
   async acknowledge(ctx: PipelineContext): Promise<AcknowledgmentResult> {
-    const confirmSent = ctx.executionResult?.sideEffects?.some(
-      (se: string) => se.startsWith('confirm_sent:') || se.startsWith('contact_updated:')
-    ) ?? false;
-    return { sent: confirmSent, channel: ctx.intake.channel };
+    return acknowledgeBySideEffect(ctx, 'contact_updated:');
   }
 
   async healthCheck(): Promise<boolean> {
@@ -410,3 +380,15 @@ export class AdminUpdateContactModule implements IUCModule {
 }
 
 // Helpers extracted to admin-update-contact-helpers.ts (ADR-065 Phase 6)
+
+/** Η εντολή δεν εκτελείται: ο διαχειριστής μαθαίνει γιατί, στο κανάλι του (ήταν δύο αντίγραφα — CHECK 3.28). */
+async function replyUpdateError(ctx: PipelineContext, msg: string): Promise<ExecutionResult> {
+  await sendChannelReply({
+    channel: ctx.intake.channel,
+    ...extractChannelIds(ctx),
+    subject: 'Ενημέρωση επαφής',
+    textBody: msg,
+    requestId: ctx.requestId,
+  });
+  return { success: true, sideEffects: ['error_reply_sent'] };
+}
