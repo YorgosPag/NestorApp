@@ -163,6 +163,11 @@ export interface ExtractedQuoteData {
   detectedLanguage: string;
   overallConfidence: number;
   vendorLogoUrl?: string | null;
+  /**
+   * Με ποιους κανόνες κανονικοποίησης γράφτηκε (ADR-327 §8.5.4) — λείπει ⇒ πριν τις 2026-10-28.
+   * SSoT: `QUOTE_EXTRACTION_NORMALIZATION_VERSION` (`services/external/quote-extraction-version.ts`).
+   */
+  normalizationVersion?: number;
 }
 
 // ============================================================================

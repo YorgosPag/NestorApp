@@ -7,10 +7,14 @@
  * Σχήμα εισόδου = ΤΟ ΜΕΤΡΗΜΕΝΟ (όχι επινοημένο).
  */
 
-/* global describe, it, expect */
+/* global describe, it, expect, jest */
 
 import { normalizeExtracted } from '../quote-analyzer.normalizers';
 import type { RawExtractedQuote, RawSignatory } from '../quote-analyzer.schemas';
+import {
+  QUOTE_EXTRACTION_NORMALIZATION_VERSION, STORED_NULLABLE_TEXT_FIELDS, extractionNeedsUpgrade, normalizeStoredExtractedData,
+} from '../quote-extraction-version';
+import type { ExtractedQuoteData } from '../../../types/quote';
 
 const SIGNATORY: RawSignatory = {
   firstName: 'Νίκη', firstNameConfidence: 95,
@@ -97,5 +101,66 @@ describe('normalizeExtracted — το κείμενο «null» του μοντέ�
     expect(out.vendorName.value).toBe('MACON ATEE');
     expect(out.vendorPostalCode.value).toBe('55535');
     expect(out.paymentTerms.value).toBe('μετρητά');
+  });
+});
+
+/**
+ * Ό,τι ΗΔΗ αποθηκεύτηκε με τους παλιούς κανόνες (QT-0004 και παλιότερες σαρώσεις) — 2026-10-29.
+ * Η «παλιά εγγραφή» δεν επινοείται: είναι ο ΙΔΙΟΣ `normalizeExtracted` με τον παλιό κανόνα `raw.x ?? null`
+ * (το `structuredText` γίνεται ταυτοτικό), δηλαδή ακριβώς ό,τι έγραφε ο κώδικας πριν τις 28/10.
+ */
+function legacyStoredExtraction(raw: RawExtractedQuote): ExtractedQuoteData {
+  let legacy: ExtractedQuoteData | undefined;
+  jest.isolateModules(() => {
+    jest.doMock('@/lib/ai-structured-output', () => ({
+      structuredText: (v: string | null | undefined) => v ?? null,
+      structuredTextList: (v: readonly (string | null | undefined)[] | null | undefined) =>
+        (v ?? []).filter((x): x is string => typeof x === 'string'),
+    }));
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const legacyModule = require('../quote-analyzer.normalizers') as typeof import('../quote-analyzer.normalizers');
+    legacy = legacyModule.normalizeExtracted(raw);
+  });
+  if (!legacy) throw new Error('legacy extraction not produced');
+  const { normalizationVersion: _dropped, ...withoutVersion } = legacy;
+  return withoutVersion;
+}
+
+describe('αποθηκευμένες εξαγωγές — αναβάθμιση στην τρέχουσα έκδοση', () => {
+  const legacy = legacyStoredExtraction(RAW);
+
+  it('🔴 Α1 — η παλιά εγγραφή ΠΡΑΓΜΑΤΙΚΑ κρατούσε το κείμενο "null" (αλλιώς η άγκυρα δεν κρίνει τίποτα)', () => {
+    expect(legacy.vendorVat.value).toBe('null');
+    expect(legacy.signatory.email.value).toBe('null');
+    expect(extractionNeedsUpgrade(legacy)).toBe(true);
+  });
+
+  it('🔴 Α2 — ΣΗΜΕΙΟ ΣΤΑΘΕΡΟΤΗΤΑΣ: αναβάθμιση(παλιά εγγραφή) ≡ ό,τι γράφει σήμερα η σάρωση', () => {
+    expect(normalizeStoredExtractedData(legacy)).toEqual(normalizeExtracted(RAW));
+  });
+
+  it('Α3 — ιδεμποτική, και η νέα εγγραφή είναι ήδη στην τρέχουσα έκδοση', () => {
+    const once = normalizeStoredExtractedData(legacy);
+    expect(normalizeStoredExtractedData(once)).toEqual(once);
+    expect(normalizeExtracted(RAW).normalizationVersion).toBe(QUOTE_EXTRACTION_NORMALIZATION_VERSION);
+    expect(extractionNeedsUpgrade(once)).toBe(false);
+  });
+
+  it('Α4 — η confidence ΔΕΝ αλλάζει (provenance)· πεδίο που λείπει ΔΕΝ εφευρίσκεται', () => {
+    const upgraded = normalizeStoredExtractedData(legacy);
+    expect(upgraded.vendorVat.confidence).toBe(legacy.vendorVat.confidence);
+    const { signatory: _s, vendorBankAccounts: _b, ...preAdr336 } = legacy;
+    const old = normalizeStoredExtractedData(preAdr336 as ExtractedQuoteData);
+    expect('signatory' in old).toBe(false);
+    expect('vendorBankAccounts' in old).toBe(false);
+  });
+
+  it('Α5 — ΦΡΑΓΜΑ ΑΠΟΚΛΙΣΗΣ: κάθε πεδίο κειμένου κεφαλίδας της σάρωσης είναι στη λίστα της μετάπτωσης', () => {
+    const fresh = normalizeExtracted(RAW);
+    const textFields = Object.entries(fresh)
+      .filter(([, v]) => typeof v === 'object' && v !== null && 'value' in v && 'confidence' in v)
+      .filter(([k]) => !['vendorEmails', 'subtotal', 'vatAmount', 'totalAmount', 'pricingType', 'vatIncluded', 'laborIncluded'].includes(k))
+      .map(([k]) => k);
+    expect([...STORED_NULLABLE_TEXT_FIELDS].sort()).toEqual(textFields.sort());
   });
 });

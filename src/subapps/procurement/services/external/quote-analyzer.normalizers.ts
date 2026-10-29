@@ -19,6 +19,7 @@ import type {
   RawSignatory,
 } from './quote-analyzer.schemas';
 import { structuredText, structuredTextList } from '@/lib/ai-structured-output';
+import { QUOTE_EXTRACTION_NORMALIZATION_VERSION } from './quote-extraction-version';
 
 // ============================================================================
 // FIELD WRAPPER
@@ -90,6 +91,7 @@ export function buildFallbackExtractedData(): ExtractedQuoteData {
     signatory: buildEmptySignatory(),
     detectedLanguage: 'unknown',
     overallConfidence: 0,
+    normalizationVersion: QUOTE_EXTRACTION_NORMALIZATION_VERSION,
   };
 }
 
@@ -209,5 +211,6 @@ export function normalizeExtracted(
     signatory: normalizeSignatory(raw.signatory),
     detectedLanguage: raw.detectedLanguage ?? 'unknown',
     overallConfidence,
+    normalizationVersion: QUOTE_EXTRACTION_NORMALIZATION_VERSION,
   };
 }
