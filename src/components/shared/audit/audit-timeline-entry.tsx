@@ -36,7 +36,7 @@ import { cn } from "@/lib/utils";
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ACTION_MAP } from "./activity-tab-config";
-import { formatFieldAwareValue, formatStorageUrl, type AuditValueFormat } from "./activity-tab-helpers";
+import { formatCollectionItemLabel, formatFieldAwareValue, formatStorageUrl, type AuditValueFormat } from "./activity-tab-helpers";
 import { resolveAuditValue, resolveDeclaredAuditValue } from "./audit-value-resolver";
 import { auditValueWords } from "./audit-value-words";
 import { useAuditVocabulary } from "./useAuditVocabulary";
@@ -346,10 +346,14 @@ export function AuditTimelineEntry({
               if (change.kind === 'collection' && change.op) {
                 // safeStr: itemLabel/itemKey may be objects in legacy Firestore records
                 const rawLabel = safeStr(change.itemLabel ?? change.itemKey ?? '');
-                const itemLabel: string = rawLabel !== ''
-                  ? (resolveAuditValue(change.field, rawLabel, vocabT, def?.enumCatalog)
-                      ?? (rawLabel.includes('firebasestorage.googleapis.com') ? formatStorageUrl(rawLabel, words.word('photo')) : rawLabel))
-                  : safeStr(t('audit.collection.emptyItem') as unknown);
+                // Πρώτα τα δηλωμένα λεξιλόγια των στοιχείων (ο τύπος ζει στην ΟΥΡΑ: «2310428900 — mobile»), μετά ο κατάλογος.
+                const healedLabel = formatCollectionItemLabel(rawLabel, valueFormat);
+                const itemLabel: string = rawLabel === ''
+                  ? safeStr(t('audit.collection.emptyItem') as unknown)
+                  : healedLabel !== rawLabel
+                    ? healedLabel
+                    : (resolveAuditValue(change.field, rawLabel, vocabT, def?.enumCatalog)
+                        ?? (rawLabel.includes('firebasestorage.googleapis.com') ? formatStorageUrl(rawLabel, words.word('photo')) : rawLabel));
                 const rawMessage = t(`audit.collection.${change.op}`, {
                   field: fieldLabel,
                   item: itemLabel,

@@ -63,6 +63,20 @@ function nestedKeyWord(format: AuditValueFormat, key: string): string {
   return format.catalogWord(format.nestedKeyCatalog, key) ?? key;
 }
 
+/**
+ * Η ετικέτα στοιχείου συλλογής όπως τη γράφει η μηχανή (`"2310428900 — mobile"`, `"headquarters — Απόλλωνος"`): κάθε
+ * τμήμα που είναι τιμή ενός **δηλωμένου** λεξιλογίου του πεδίου γίνεται λέξη, τα υπόλοιπα (αριθμός, οδός) μένουν ως έχουν.
+ * Ζωντανή επίλυση ⇒ θεραπεύει και τις **ήδη γραμμένες** εγγραφές (ADR-852 §3.1). Χωρίς δήλωση ⇒ αυτούσια.
+ */
+export function formatCollectionItemLabel(rawLabel: string, format: AuditValueFormat): string {
+  const catalogs = Object.values(format.itemCatalogs ?? {});
+  if (catalogs.length === 0) return rawLabel;
+  return rawLabel
+    .split(" — ")
+    .map((segment) => catalogs.map((catalog) => format.catalogWord(catalog, segment)).find(Boolean) ?? segment)
+    .join(" — ");
+}
+
 /** «(λέξη τύπου, ετικέτα)» — κοινό επίθεμα τηλεφώνου / email / ιστοσελίδας. */
 function typeSuffix(format: AuditValueFormat, obj: Record<string, unknown>): string {
   const details = [itemWord(format, "type", obj.type), obj.label].filter(Boolean).join(", ");

@@ -35,7 +35,7 @@ import { CONTACT_ADDRESS_TYPES } from '@/types/contacts/address-types';
 import { PROJECT_ADDRESS_TYPES } from '@/types/project/addresses';
 import type { TrackedFieldDef } from '@/lib/audit/tracked-field-def';
 
-import { formatFieldAwareValue, type AuditValueFormat } from '../activity-tab-helpers';
+import { formatCollectionItemLabel, formatFieldAwareValue, type AuditValueFormat } from '../activity-tab-helpers';
 import { auditVocabularyNamespaces, vocabularyNamespacesOf } from '../audit-vocabulary-namespaces';
 import { auditValueWords } from '../audit-value-words';
 import { resolveDeclaredAuditValue, translateCatalogValue } from '../audit-value-resolver';
@@ -208,6 +208,22 @@ describe('Λ4 — ο μορφοποιητής γράφει λέξεις του �
         .toBe(kad);
     }),
   );
+});
+
+describe('Λ6 — η ετικέτα στοιχείου που γράφει η μηχανή θεραπεύεται στην ανάγνωση (πραγματικές ετικέτες CDC)', () => {
+  it.each([
+    ['el', 'contact', 'phones', '2310428900 — mobile', '2310428900 — Κινητό'],
+    ['en', 'contact', 'phones', '2310428900 — main', '2310428900 — Main'],
+    ['el', 'contact', 'emails', 'info@macon.gr — info', 'info@macon.gr — Πληροφορίες'],
+    ['el', 'contact', 'addresses', 'headquarters — Απόλλωνος, Λαγκαδά Πυλαίας', 'Έδρα — Απόλλωνος, Λαγκαδά Πυλαίας'],
+    ['en', 'contact', 'customFields.activities', 'secondary', 'Secondary'],
+  ] as const)('%s · %s.%s · «%s»', (lang, entityType, field, raw, expected) =>
+    inLang(lang, () => expect(formatCollectionItemLabel(raw, formatFor(entityType, field))).toBe(expected)),
+  );
+
+  it('πεδίο χωρίς δηλωμένο λεξιλόγιο ⇒ αυτούσια (καμία μαντεψιά)', () => {
+    expect(formatCollectionItemLabel('supplier', formatFor('contact', 'personaTypes'))).toBe('supplier');
+  });
 });
 
 describe('Λ5 — καμία λέξη μέσα στον κώδικα του Ιστορικού', () => {
