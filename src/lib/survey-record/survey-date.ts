@@ -18,7 +18,7 @@
  *
  * Καθαρό, μηδέν I/O, καμία εξάρτηση σε React/Firestore — ο Λ2 το φτάνει (άγκυρα καθαρότητας).
  */
-import { daysInMonth } from '@/lib/date/calendar-arithmetic';
+import { calendarDayExists, formatCalendarDay } from '@/lib/date/calendar-day';
 import {
   matchCalendarName,
   type CalendarNameForm,
@@ -68,20 +68,16 @@ const MAX_YEAR = 2100;
 
 const isPlausibleYear = (year: number): boolean => year >= MIN_YEAR && year <= MAX_YEAR;
 
-// 🔴 ADR-828 §1 — το `daysInMonth` («ώστε η *31/02* να **μην** γίνει σιωπηλά 3 Μαρτίου»)
-// μετακόμισε στο `@/lib/date/calendar-arithmetic`: η σειρά ημερομηνιών της λαβής συμπλήρωσης
-// χρειάζεται **τον ίδιο** κανόνα ψαλιδίσματος, και δύο αντίγραφά του θα ήταν δύο σημεία που
-// μπορούν να μάθουν διαφορετικό τέλος μήνα — διαφορά που φαίνεται στην **τιμή**, όχι στην όψη.
-
-const iso = (year: number, month: number, day: number): string =>
-  `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+// 🔴 ADR-828 §1 · ADR-919 — «υπάρχει η ημέρα;» («ώστε η *31/02* να **μην** γίνει σιωπηλά 3 Μαρτίου»)
+// ζει στο `@/lib/date/calendar-day`, πάνω στο `daysInMonth` της λαβής συμπλήρωσης: δύο αντίγραφα
+// θα ήταν δύο σημεία που μπορούν να μάθουν διαφορετικό τέλος μήνα — διαφορά που φαίνεται στην
+// **τιμή**, όχι στην όψη.
 
 /** Πλήρης ημερομηνία, όταν και οι τρεις συνιστώσες στέκουν ως ημερολόγιο. */
 function fullDate(year: number, month: number, day: number): ParsedSurveyDate | null {
   if (!isPlausibleYear(year)) return null;
-  if (month < 1 || month > 12) return null;
-  if (day < 1 || day > daysInMonth(year, month)) return null;
-  return { iso: iso(year, month, day), precision: 'day', year };
+  if (!calendarDayExists(year, month, day)) return null;
+  return { iso: formatCalendarDay(year, month, day), precision: 'day', year };
 }
 
 /** Αριθμητικές μορφές: `30/7/2026` · `30-07-2026` · `30.7.2026` · `2026-07-30`. */

@@ -16,6 +16,7 @@
 import { z } from 'zod';
 import { CONVEYANCE_FACT_IDS } from '@/config/conveyance-checklist/types';
 import { REVIEW_VERDICTS } from '@/types/conveyance-case';
+import { calendarDaySchema } from '@/lib/date/calendar-day-schema';
 import { MAX_CASE_SELLERS } from './case-parties';
 
 const MAX_REASON_LENGTH = 1000;
@@ -23,7 +24,8 @@ const MAX_ID_LENGTH = 200;
 
 const reasonSchema = z.string().trim().min(1).max(MAX_REASON_LENGTH);
 const itemIdSchema = z.string().min(1).max(MAX_ID_LENGTH);
-const dateKeySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+/** Υπαρκτή ημέρα (ADR-919): η `2027-02-30` ως ημερομηνία υπογραφής/έκδοσης απορρίπτεται (400), δεν αποθηκεύεται. */
+const dateKeySchema = calendarDaySchema;
 
 const conveyanceCommandSchema = z.discriminatedUnion('type', [
   z.object({

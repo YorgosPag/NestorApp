@@ -46,6 +46,7 @@
 
 import { z } from 'zod';
 import { geoPointSchema, optionalNumberSchema } from '@/lib/forms/form-primitives';
+import { isCalendarDay } from '@/lib/date/calendar-day';
 import { levelBoundOfSelect, levelRangePairs } from '@/lib/floor/floor-level-range';
 import {
   EMPTY_STAY_NIGHTS_FORM,
@@ -143,12 +144,13 @@ export const PLACE_KINDS_NOT_IN_FORM = [] as const satisfies readonly DemandPlac
 const optionalNumber = optionalNumberSchema;
 
 /**
- * Ημερομηνία ISO `YYYY-MM-DD` ή κενό. **Ποτέ `Date`** — βλ. {@link DemandTiming}.
+ * **Υπαρκτή** ημερομηνία ISO `YYYY-MM-DD` ή κενό. **Ποτέ `Date`** — βλ. {@link DemandTiming}.
  *
- * Μένει **τοπικό** επίτηδες: έχει έναν καταναλωτή, και ένα πρωτόγονο με έναν
- * καταναλωτή δεν είναι κοινό λεξιλόγιο.
+ * Το «ή κενό» (= «δεν έθεσα ημερομηνία») μένει **τοπικό** επίτηδες: έχει έναν καταναλωτή, και ένα
+ * πρωτόγονο με έναν καταναλωτή δεν είναι κοινό λεξιλόγιο. Το «υπάρχει η ημέρα;» **δεν** είναι τοπικό —
+ * είναι ο ένας κριτής του έργου (`isCalendarDay`, ADR-919): η `2027-02-30` δεν περνά.
  */
-const isoDate = z.string().trim().regex(/^(\d{4}-\d{2}-\d{2})?$/);
+const isoDate = z.string().trim().refine((value) => value === '' || isCalendarDay(value));
 
 const geoPoint = geoPointSchema;
 

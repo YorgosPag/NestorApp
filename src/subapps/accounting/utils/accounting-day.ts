@@ -9,13 +9,12 @@
  */
 
 import { athensClockAt } from '@/lib/calendar/weekly-hours';
+import { hasCalendarDayShape, isCalendarDay } from '@/lib/date/calendar-day';
 
 /** Η ημερολογιακή ημέρα της Αθήνας τη στιγμή `now`. */
 export function accountingToday(now: Date = new Date()): string {
   return athensClockAt(now).dateKey;
 }
-
-const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * Η λογιστική ημέρα (`YYYY-MM-DD`) μιας ημερομηνίας εγγραφής — ή `null` αν δεν είναι πραγματική ημερομηνία.
@@ -24,10 +23,7 @@ const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
  * Το `2026-02-30` / `2026-13-01` απορρίπτεται — αλλιώς ο «μήνας 13» θα έπεφτε στην περίοδο κλεισίματος.
  */
 export function accountingDayOf(value: string): string | null {
-  if (DATE_KEY.test(value)) {
-    const probe = new Date(`${value}T00:00:00Z`);
-    return !Number.isNaN(probe.getTime()) && probe.toISOString().slice(0, 10) === value ? value : null;
-  }
+  if (hasCalendarDayShape(value)) return isCalendarDay(value) ? value : null;
   const instant = new Date(value);
   return Number.isNaN(instant.getTime()) ? null : accountingToday(instant);
 }

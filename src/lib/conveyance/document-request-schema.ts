@@ -10,6 +10,7 @@
 
 import { z } from 'zod';
 
+import { calendarDaySchema } from '@/lib/date/calendar-day-schema';
 import { LEGAL_ENGAGEMENT_ROLES } from '@/types/engagement';
 import type { ConveyanceDocumentRequest } from '@/types/conveyance-document-request';
 
@@ -25,7 +26,7 @@ const documentRequestSchema = z.object({
   requesterRole: accountRole,
   requesterUid: nonEmpty,
   recipient: accountRole,
-  dayKey: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  dayKey: calendarDaySchema,
   requestedAt: nonEmpty,
   notifiedAt: z.string().nullable(),
 });

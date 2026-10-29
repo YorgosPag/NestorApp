@@ -8,6 +8,7 @@
  * ως όρισμα, ο κανόνας «ένας από τους τρεις + πρόσθετα η στέγη» γράφεται μία φορά.
  */
 
+import { parseCalendarDay } from '@/lib/date/calendar-day';
 import {
   CO_OWNERSHIP_FACTOR,
   EXPROPRIATED_FACTOR,
@@ -35,25 +36,17 @@ export function bandFactor(bands: readonly Band[], value: number): number {
 // ΠΑΛΑΙΟΤΗΤΑ ΚΑΤΑ ΝΟΜΟ (άρθ. 2 §20)
 // ============================================================================
 
-const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
-
-function parseIsoDate(value: string): { y: number; m: number; d: number } | null {
-  const match = ISO_DATE.exec(value);
-  if (match === null) return null;
-  return { y: Number(match[1]), m: Number(match[2]), d: Number(match[3]) };
-}
-
 /**
  * Έτη παλαιότητας όπως τα μετρά ο νόμος: αρχίζουν **δύο έτη μετά** την έκδοση (ή την τελευταία αναθεώρηση) της
  * οικοδομικής άδειας· υπόλοιπο **μικρότερο** του εξαμήνου δεν μετρά, εξάμηνο και πάνω μετρά ως έτος.
- * `null` αν κάποια ημερομηνία δεν είναι `YYYY-MM-DD`.
+ * `null` αν κάποια ημερομηνία δεν είναι **υπαρκτή** `YYYY-MM-DD` (η `2027-02-30` δεν είναι — ADR-919).
  */
 export function legalAgeYears(permitIsoDate: string, valuationIsoDate: string): number | null {
-  const permit = parseIsoDate(permitIsoDate);
-  const valuation = parseIsoDate(valuationIsoDate);
+  const permit = parseCalendarDay(permitIsoDate);
+  const valuation = parseCalendarDay(valuationIsoDate);
   if (permit === null || valuation === null) return null;
-  const startYear = permit.y + 2;
-  const months = (valuation.y - startYear) * 12 + (valuation.m - permit.m) - (valuation.d < permit.d ? 1 : 0);
+  const startYear = permit.year + 2;
+  const months = (valuation.year - startYear) * 12 + (valuation.month - permit.month) - (valuation.day < permit.day ? 1 : 0);
   if (months <= 0) return 0;
   const years = Math.floor(months / 12);
   return months % 12 >= 6 ? years + 1 : years;

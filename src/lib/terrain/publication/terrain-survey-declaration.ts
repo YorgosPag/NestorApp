@@ -18,6 +18,7 @@
  * @module lib/terrain/publication/terrain-survey-declaration
  */
 
+import { isCalendarDay } from '@/lib/date/calendar-day';
 import { LISTING_TERRAIN_SURVEYOR_NAME_MAX } from './listing-terrain-config';
 import type { TerrainRefusalCode } from './terrain-publication-contract';
 
@@ -31,17 +32,6 @@ export interface TerrainSurveyDeclaration {
   readonly surveyedOn: string;
   /** «I have the right to publish a derivative of this survey» — answered, never assumed. */
   readonly rightsAffirmed: true;
-}
-
-const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
-
-/** A real calendar day (`2026-02-30` is not one), as `YYYY-MM-DD`. */
-function isCalendarDate(value: string): boolean {
-  const match = ISO_DATE.exec(value);
-  if (match === null) return false;
-  const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
-  const date = new Date(Date.UTC(year, month - 1, day));
-  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -58,7 +48,8 @@ export function readTerrainSurveyDeclaration(value: unknown): TerrainSurveyDecla
 
   const name = surveyorName.trim();
   if (name.length === 0 || name.length > LISTING_TERRAIN_SURVEYOR_NAME_MAX) return null;
-  if (!isCalendarDate(surveyedOn)) return null;
+  // A real calendar day (`2026-02-30` is not one) — the project's one judge (ADR-919).
+  if (!isCalendarDay(surveyedOn)) return null;
 
   return { surveyorName: name, surveyedOn, rightsAffirmed: true };
 }
