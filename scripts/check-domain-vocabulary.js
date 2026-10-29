@@ -84,6 +84,42 @@ function loadConfig(configPath = CONFIG_PATH) {
   return cfg;
 }
 
+/**
+ * ΜΙΑ ανάγνωση ανά αρχείο, για ΟΛΑ τα λεξιλόγια (2026-10-29).
+ *
+ * 🔴 Μέχρι σήμερα ο βρόχος ξαναδιάβαζε ΟΛΟ το δέντρο από τον δίσκο μία φορά ΑΝΑ
+ * λεξιλόγιο: 18 × 21.580 = ~388.000 αναγνώσεις, 104s μόνη της ⇒ timeout 120s
+ * δίπλα στις άλλες πύλες. Το κόστος μεγάλωνε γραμμικά με το μητρώο, άρα κάθε νέο
+ * λεξιλόγιο έφερνε την πύλη πιο κοντά στο SKIP_ (μάθημα CHECK 3.52).
+ * Εδώ το προφίλτρο κρίνεται για όλα τα λεξιλόγια στο ΙΔΙΟ πέρασμα και κρατιούνται
+ * μόνο οι υποψήφιοι (~2.200 αρχεία). Η σειρά αρχείων ανά λεξιλόγιο μένει ίδια.
+ * Με `noPrefilter` όλα τα λεξιλόγια μοιράζονται ΤΟΝ ΙΔΙΟ πίνακα (ένα αντίγραφο).
+ */
+function readCandidates(files, vocabularies, noPrefilter) {
+  const all = [];
+  const byVocab = new Map(vocabularies.map(v => [v, noPrefilter ? all : []]));
+  for (const abs of files) {
+    let text;
+    try {
+      text = fs.readFileSync(abs, 'utf8');
+    } catch {
+      continue;
+    }
+    if (noPrefilter) {
+      all.push({ abs, text });
+      continue;
+    }
+    for (const vocab of vocabularies) {
+      let seen = 0;
+      for (const value of vocab.values) {
+        if (text.includes(value) && ++seen >= vocab.threshold) break;
+      }
+      if (seen >= vocab.threshold) byVocab.get(vocab).push({ abs, text });
+    }
+  }
+  return byVocab;
+}
+
 function measure(opts = {}) {
   const root = opts.root || PROJECT_ROOT;
   const cfg = opts.config || loadConfig(opts.configPath);
@@ -97,6 +133,8 @@ function measure(opts = {}) {
     if (!(s in tally)) throw new Error(`ΑΓΝΩΣΤΗ ΚΑΤΑΣΤΑΣΗ: ${s}`);
     tally[s] += 1;
   };
+
+  const candidates = readCandidates(files, cfg.vocabularies, opts.noPrefilter);
 
   for (const vocab of cfg.vocabularies) {
     const rootAbs = path.join(root, vocab.root);
@@ -153,22 +191,9 @@ function measure(opts = {}) {
     // ⚠️ Παρακάμπτεται ΜΟΝΟ ο κόμβος της ρίζας, ονομαστικά — το `verifyRoot` την
     // έχει ήδη κρίνει παραπάνω, και χωρίς αυτή την εξαίρεση θα μετριόταν δεύτερη
     // φορά ως `untyped-vocabulary` (η ρίζα ΔΕΝ αναφέρει τον εαυτό της στον τύπο της).
-    for (const abs of files) {
+    for (const { abs, text } of candidates.get(vocab)) {
       const rel = toPosix(path.relative(root, abs));
       const skipSymbol = rel === vocab.root ? vocab.rootSymbol : null;
-      let text;
-      try {
-        text = fs.readFileSync(abs, 'utf8');
-      } catch {
-        continue;
-      }
-      if (!opts.noPrefilter) {
-        let seen = 0;
-        for (const value of vocab.values) {
-          if (text.includes(value) && ++seen >= vocab.threshold) break;
-        }
-        if (seen < vocab.threshold) continue;
-      }
       let hits;
       try {
         hits = scanFile(abs, text, vocab, rel);

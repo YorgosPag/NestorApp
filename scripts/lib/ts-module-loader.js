@@ -12,14 +12,35 @@
  *
  * ⚠️ `skipProject: true` — σκόπιμα: τα αρχεία που φορτώνονται εδώ είναι **χωρίς εισαγωγές**
  * (ή εκτός `tsconfig`), και θέλουμε τιμές, όχι έλεγχο τύπων (N.17).
- * ⚠️ Καμία ανάλυση ψευδωνύμων `@/`: ό,τι φορτώνεται εδώ **δεν** πρέπει να τα χρησιμοποιεί.
+ * 🔑 Το ψευδώνυμο `@/*` → `src/*` (`tsconfig.base.json` · `jest.config.js`) λύνεται εδώ (2026-10-29).
+ * Μέχρι τότε ο κανόνας ήταν «ό,τι φορτώνεται εδώ ΔΕΝ χρησιμοποιεί `@/`» — μια συνθήκη που
+ * κανείς δεν έβλεπε από το αρχείο που φορτώνεται: το `constants/platform-operator.ts` απέκτησε
+ * εισαγωγές από το SSoT ημερομηνιών και η CHECK 3.85 έσπασε με `Cannot find module`.
+ * ⚠️ Μόνο το `@/`· όποιο άλλο ψευδώνυμο θέλει πρώτα γραμμή στο `tsconfig.base.json`.
  *
  * @module scripts/lib/ts-module-loader
  */
 
 'use strict';
 
+const Module = require('module');
+const path = require('path');
+
+const SRC_ROOT = path.resolve(__dirname, '..', '..', 'src');
+const ALIAS_PREFIX = '@/';
+
 let registered = false;
+
+/** `@/x` → `<repo>/src/x`, για κάθε `require` της διεργασίας — όπως ο `moduleNameMapper` του jest. */
+function registerSrcAlias() {
+  const resolve = Module._resolveFilename;
+  Module._resolveFilename = function resolveSrcAlias(request, ...rest) {
+    const target = request.startsWith(ALIAS_PREFIX)
+      ? path.join(SRC_ROOT, request.slice(ALIAS_PREFIX.length))
+      : request;
+    return resolve.call(this, target, ...rest);
+  };
+}
 
 /** Ενεργοποιεί τη μεταγλώττιση TypeScript για `require()`, μία φορά ανά διεργασία. */
 function registerTypeScript() {
@@ -36,6 +57,7 @@ function registerTypeScript() {
       moduleResolution: 'node',
     },
   });
+  registerSrcAlias();
   registered = true;
 }
 
