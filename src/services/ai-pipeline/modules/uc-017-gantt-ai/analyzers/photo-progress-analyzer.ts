@@ -10,6 +10,7 @@ import { getOpenAIProvider } from '@/services/ai/openai-provider';
 import { AI_ANALYSIS_DEFAULTS } from '@/config/ai-analysis-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
+import { clamp } from '@/lib/geometry/scalar';
 import type { PhotoProgressResult } from '../gantt-ai-types';
 
 const logger = createModuleLogger('UC_017_PHOTO_ANALYZER');
@@ -94,8 +95,4 @@ function parsePhotoResponse(text: string): PhotoProgressResult {
   } catch {
     return FALLBACK_RESULT;
   }
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
 }

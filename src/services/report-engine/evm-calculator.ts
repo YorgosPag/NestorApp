@@ -16,6 +16,7 @@ import type { BuildingMilestone } from '@/types/building/milestone';
 import { computeItemCost, computeItemActualCost } from '@/services/measurements/cost-engine';
 import { countableBoqLines } from '@/services/measurements/boq-line-role';
 import { sumBy } from '@/utils/collection-utils';
+import { clamp } from '@/lib/geometry/scalar';
 
 // ============================================================================
 // TYPES
@@ -80,11 +81,6 @@ export function getTrafficLight(index: number): TrafficLight {
   if (index >= 0.95) return 'green';
   if (index >= 0.85) return 'amber';
   return 'red';
-}
-
-/** Clamp value between min and max */
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
 }
 
 /** Get elapsed fraction of a phase as of a given date (0-1) */

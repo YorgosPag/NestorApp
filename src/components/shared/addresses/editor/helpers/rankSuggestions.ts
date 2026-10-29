@@ -23,6 +23,7 @@
  */
 
 import { distanceMeters } from '@/lib/geo/geo-distance';
+import { clamp } from '@/lib/geometry/scalar';
 import type {
   GeocodingAlternative,
   GeocodingApiResponse,
@@ -63,10 +64,6 @@ const DEFAULTS = {
 // `overpass-housenumber`. Η αλλαγή σε 6 371 008,8 είναι **1,4·10⁻⁶** σχετικά και
 // **ομοιόμορφος** συντελεστής κλίμακας ⇒ η **κατάταξη** εδώ μένει κατά λέξη ίδια
 // (το `proximityCapM` είναι το μόνο απόλυτο κατώφλι, και 5 km ± 7 mm).
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
 
 /**
  * Coerces a flat `GeocodingAlternative` (no nested alternatives) into the full
