@@ -47,7 +47,7 @@ function passthroughOps(): CatalogOptimistic<AssetRecord> {
     submit: (op: CatalogOperation<AssetRecord>) => {
       op.send(op.baseRevision).then(
         (saved) => op.onSettled?.({ ok: true, record: saved }),
-        () => op.onSettled?.({ ok: false, failure: { kind: 'network', issues: [], currentRevision: null } }),
+        () => op.onSettled?.({ ok: false, failure: { kind: 'network', issues: [], currentRevision: null, fence: null } }),
       );
     },
   };

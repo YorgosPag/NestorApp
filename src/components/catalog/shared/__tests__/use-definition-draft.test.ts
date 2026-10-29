@@ -9,6 +9,7 @@ const failure = (kind: CatalogFailure['kind'], issues: CatalogFailure['issues'] 
   kind,
   issues,
   currentRevision: null,
+  fence: null,
 });
 
 function setup(base: Def, identity = 'a') {
