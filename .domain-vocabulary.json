@@ -230,6 +230,33 @@
       "threshold": 2,
       "reason": "Ο τύπος τιμής του τιμοκαταλόγου κατά BMEcat (ADR-923 §5.11): net_list δέχεται ομάδες έκπτωσης, net_customer είναι ήδη η τελική τιμή του πελάτη και ΔΕΝ αναμιγνύεται (acceptsDiscountGroups). Το απαριθμούν το zod του τιμοκαταλόγου, ο επικυρωτής γραμμής, ο επιλυτής τιμής και η οθόνη· τρίτος τύπος χωρίς απόφαση εδώ θα έπαιρνε ή θα έχανε εκπτώσεις σιωπηλά. Κατώφλι 2: οι δύο λέξεις είναι μοναδικές στο repo.",
       "exemptions": []
+    },
+    {
+      "id": "phone-type",
+      "root": "src/lib/contact/phone-type-vocabulary.ts",
+      "rootSymbol": "PHONE_TYPES",
+      "typeName": "PhoneType",
+      "derivedTypes": [
+        "OfferedPhoneType",
+        "PhoneTypeLabels"
+      ],
+      "values": [
+        "mobile",
+        "home",
+        "work",
+        "main",
+        "department",
+        "secretariat",
+        "sales",
+        "support",
+        "helpdesk",
+        "fax",
+        "internal",
+        "other"
+      ],
+      "threshold": 5,
+      "reason": "Ο τύπος τηλεφώνου επαφής (ADR-327 §8.5.4). Ήταν ΕΞΙ δηλώσεις που διαφωνούσαν (PhoneInfo, OrgPhoneInfo, PhoneEntry, CommunicationConfigs, χάρτες AI, server): η φόρμα εταιρείας προσφέρει main/department/…, ο τύπος PhoneInfo δεν τα ήξερε και ο server έγραφε work ⇒ ΚΕΝΗ λίστα «Τύπος» στη MACON ATEE (μετρημένο ζωντανά 2026-10-29). Ένα σύνολο, υποσύνολα ανά κάτοχο (PHONE_TYPES_BY_OWNER), όπως το Google People API και το vCard RFC 6350/7852. Κατώφλι 5: λέξεις όπως work/other/support/department/sales εμφανίζονται και στο λεξιλόγιο email εταιρείας (4 κοινές).",
+      "exemptions": []
     }
   ]
 }

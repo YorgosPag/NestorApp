@@ -5,6 +5,7 @@
  */
 
 import type { FirestoreishTimestamp } from '@/types/contacts/contracts';
+import type { PhoneType } from '@/lib/contact/phone-type-vocabulary';
 import type { DepartmentCode } from '@/config/department-codes';
 import type { NotificationEventCode } from '@/config/notification-events';
 
@@ -20,7 +21,7 @@ export interface OrgEmailInfo {
 
 export interface OrgPhoneInfo {
   number: string;
-  type: 'mobile' | 'home' | 'work' | 'fax' | 'internal' | 'other';
+  type: PhoneType;
   isPrimary: boolean;
   label?: string;
   countryCode?: string;

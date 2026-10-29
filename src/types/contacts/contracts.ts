@@ -2,6 +2,7 @@
 import type { StoredAddressPosition } from '@/types/address-position';
 import type { DeclaredOccupation } from '@/types/professional-identity';
 import type { ContactNameReview } from '@/lib/contacts/contact-name-review';
+import type { PhoneType } from '@/lib/contact/phone-type-vocabulary';
 
 export type FirestoreishTimestamp = Date | { toDate: () => Date };
 
@@ -270,8 +271,8 @@ export interface EmailInfo {
 
 export interface PhoneInfo {
   number: string;
-  /** Extended with 'internal' for PBX extensions (ADR-326 Phase 4) */
-  type: 'mobile' | 'home' | 'work' | 'fax' | 'internal' | 'other';
+  /** Ρίζα `PhoneType` (`internal` = PBX, ADR-326 Phase 4) · ADR-327 §8.5.4: εταιρεία/υπηρεσία γράφουν `main/department/…`, που ο παλιός τύπος δεν ήξερε. */
+  type: PhoneType;
   isPrimary: boolean;
   label?: string;
   countryCode?: string;

@@ -8,6 +8,9 @@
  * @consumers CommunicationConfigs.ts
  */
 
+// ADR-327 §8.5.4 — οι πίνακες τύπου τηλεφώνου δένονται στη ρίζα `PhoneType` (CHECK 3.73).
+import type { PhoneTypeLabels } from '@/lib/contact/phone-type-vocabulary';
+
 // ============================================================================
 // INDIVIDUAL COMMUNICATION TYPES
 // ============================================================================
@@ -19,7 +22,7 @@ export const PHONE_TYPE_LABELS = {
   fax: 'communication.phoneTypes.fax',
   internal: 'communication.phoneTypes.internal',
   other: 'communication.phoneTypes.other'
-} as const;
+} as const satisfies PhoneTypeLabels<'individual'>;
 
 export const EMAIL_TYPE_LABELS = {
   personal: 'communication.emailTypes.personal',
@@ -69,7 +72,7 @@ export const SERVICE_PHONE_TYPE_LABELS = {
   helpdesk: 'communication.servicePhoneTypes.helpdesk',
   fax: 'communication.servicePhoneTypes.fax',
   other: 'communication.servicePhoneTypes.other'
-} as const;
+} as const satisfies PhoneTypeLabels<'service'>;
 
 export const SERVICE_EMAIL_TYPE_LABELS = {
   general: 'communication.serviceEmailTypes.general',
@@ -104,7 +107,7 @@ export const COMPANY_PHONE_TYPE_LABELS = {
   support: 'communication.companyPhoneTypes.support',
   fax: 'communication.companyPhoneTypes.fax',
   other: 'communication.companyPhoneTypes.other'
-} as const;
+} as const satisfies PhoneTypeLabels<'company'>;
 
 export const COMPANY_EMAIL_TYPE_LABELS = {
   general: 'communication.companyEmailTypes.general',

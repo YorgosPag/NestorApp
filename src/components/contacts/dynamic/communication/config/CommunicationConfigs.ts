@@ -11,6 +11,7 @@
 // 🏢 ENTERPRISE: Single source of truth for communication icons
 import { COMMUNICATION_ICONS } from './CommunicationIcons';
 import type { CommunicationType, CommunicationConfig, CommunicationConfigRecord } from '../types/CommunicationTypes';
+import { DEFAULT_PHONE_TYPE, PHONE_TYPES_BY_OWNER } from '@/lib/contact/phone-type-vocabulary';
 import {
   PHONE_TYPE_LABELS,
   EMAIL_TYPE_LABELS,
@@ -29,6 +30,14 @@ import {
   COMPANY_WEBSITE_TYPE_LABELS,
   COMPANY_SOCIAL_MEDIA_TYPE_LABELS
 } from '@/constants/property-statuses-enterprise';
+
+/**
+ * Επιλογές λίστας από ένα **λεξιλόγιο-ρίζα** και τον πίνακα ετικετών του: ο τύπος `T` βγαίνει από τις τιμές, άρα τιμή
+ * χωρίς ετικέτα είναι σφάλμα μεταγλώττισης, όχι κενή γραμμή στη φόρμα (ADR-327 §8.5.4).
+ */
+function typeOptions<T extends string>(values: readonly T[], labels: Readonly<Record<T, string>>): { value: T; label: string }[] {
+  return values.map((value) => ({ value, label: labels[value] }));
+}
 
 /**
  * Contact entity type — determines which communication type options to show
@@ -60,14 +69,8 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
     title: 'communication.sections.phones',
     icon: COMMUNICATION_ICONS.phone,
     fields: { primary: 'number', secondary: 'countryCode' },
-    types: [
-      { value: 'mobile', label: PHONE_TYPE_LABELS.mobile },
-      { value: 'home', label: PHONE_TYPE_LABELS.home },
-      { value: 'work', label: PHONE_TYPE_LABELS.work },
-      { value: 'fax', label: PHONE_TYPE_LABELS.fax },
-      { value: 'other', label: PHONE_TYPE_LABELS.other }
-    ],
-    defaultType: 'mobile',
+    types: typeOptions(PHONE_TYPES_BY_OWNER.individual, PHONE_TYPE_LABELS),
+    defaultType: DEFAULT_PHONE_TYPE.individual,
     placeholder: 'communication.placeholders.phone',
     labelPlaceholder: 'communication.placeholders.phoneLabel',
     supportsPrimary: true,
@@ -277,15 +280,8 @@ export function getPlatformOptions(type: CommunicationType): { value: string; la
  */
 const SERVICE_TYPE_OVERRIDES: Partial<Record<CommunicationType, { types: { value: string; label: string }[]; defaultType: string }>> = {
   phone: {
-    types: [
-      { value: 'main', label: SERVICE_PHONE_TYPE_LABELS.main },
-      { value: 'department', label: SERVICE_PHONE_TYPE_LABELS.department },
-      { value: 'secretariat', label: SERVICE_PHONE_TYPE_LABELS.secretariat },
-      { value: 'helpdesk', label: SERVICE_PHONE_TYPE_LABELS.helpdesk },
-      { value: 'fax', label: SERVICE_PHONE_TYPE_LABELS.fax },
-      { value: 'other', label: SERVICE_PHONE_TYPE_LABELS.other }
-    ],
-    defaultType: 'main'
+    types: typeOptions(PHONE_TYPES_BY_OWNER.service, SERVICE_PHONE_TYPE_LABELS),
+    defaultType: DEFAULT_PHONE_TYPE.service
   },
   email: {
     types: [
@@ -318,16 +314,8 @@ const SERVICE_TYPE_OVERRIDES: Partial<Record<CommunicationType, { types: { value
 
 const COMPANY_TYPE_OVERRIDES: Partial<Record<CommunicationType, { types: { value: string; label: string }[]; defaultType: string }>> = {
   phone: {
-    types: [
-      { value: 'main', label: COMPANY_PHONE_TYPE_LABELS.main },
-      { value: 'department', label: COMPANY_PHONE_TYPE_LABELS.department },
-      { value: 'secretariat', label: COMPANY_PHONE_TYPE_LABELS.secretariat },
-      { value: 'sales', label: COMPANY_PHONE_TYPE_LABELS.sales },
-      { value: 'support', label: COMPANY_PHONE_TYPE_LABELS.support },
-      { value: 'fax', label: COMPANY_PHONE_TYPE_LABELS.fax },
-      { value: 'other', label: COMPANY_PHONE_TYPE_LABELS.other }
-    ],
-    defaultType: 'main'
+    types: typeOptions(PHONE_TYPES_BY_OWNER.company, COMPANY_PHONE_TYPE_LABELS),
+    defaultType: DEFAULT_PHONE_TYPE.company
   },
   email: {
     types: [
