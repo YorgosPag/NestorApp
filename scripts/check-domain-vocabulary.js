@@ -62,7 +62,7 @@
 const fs = require('fs');
 const path = require('path');
 const PROJECT_ROOT = path.resolve(__dirname, '..');
-const { STATES, BLOCKING, MIN_REASON, scanFile, verifyRoot } = require('./lib/domain-vocabulary/scan');
+const { STATES, BLOCKING, MIN_REASON, scanFile, verifyRoot, boundToSibling } = require('./lib/domain-vocabulary/scan');
 const { collectSourceFiles } = require('./lib/module-graph/scan-config');
 const { toPosix } = require('./lib/module-graph/resolve-specifier');
 
@@ -177,11 +177,14 @@ function measure(opts = {}) {
       }
       for (const hit of hits) {
         if (hit.name === skipSymbol) continue; // η ίδια η ρίζα — κρίθηκε από το verifyRoot
-        const state = hit.state === STATES.UNTYPED_VOCABULARY && exemptions.has(rel)
-          ? STATES.DECLARED_EXEMPT
-          : hit.state;
+        const sibling = hit.state === STATES.UNTYPED_VOCABULARY ? boundToSibling(hit, cfg.vocabularies) : null;
+        const state = sibling !== null
+          ? STATES.BOUND_ELSEWHERE
+          : hit.state === STATES.UNTYPED_VOCABULARY && exemptions.has(rel)
+            ? STATES.DECLARED_EXEMPT
+            : hit.state;
         bump(state);
-        if (state !== STATES.BOUND) findings.push({ ...hit, state, vocabulary: vocab.id });
+        if (state !== STATES.BOUND) findings.push({ ...hit, state, vocabulary: vocab.id, ...(sibling ? { boundTo: sibling } : {}) });
       }
     }
   }
@@ -199,7 +202,7 @@ function report(result, log = console.log) {
   // τυπώνεται διαβάζεται ως «δεν υπάρχει τέτοιος έλεγχος» (μάθημα CHECK 3.48).
   for (const s of BLOCKING) log(`   ⛔ ${s.padEnd(24)} ${tally[s]}`);
   log('');
-  for (const s of [STATES.ROOT, STATES.BOUND, STATES.DECLARED_EXEMPT]) {
+  for (const s of [STATES.ROOT, STATES.BOUND, STATES.BOUND_ELSEWHERE, STATES.DECLARED_EXEMPT]) {
     log(`   ✅ ${s.padEnd(24)} ${tally[s]}`);
   }
   const blocking = findings.filter(f => BLOCKING.includes(f.state));

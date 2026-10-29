@@ -283,6 +283,74 @@ describe('CHECK 3.73 — Μ12: το ΑΡΧΕΙΟ ΤΗΣ ΡΙΖΑΣ δεν είν
   });
 });
 
+describe('CHECK 3.73 — Μ13: λεξιλόγια-ΑΔΕΛΦΙΑ που μοιράζονται λέξεις', () => {
+  /**
+   * 🔴 **ΤΟ ΚΕΝΟ ΠΟΥ ΕΚΛΕΙΣΕ (2026-10-29, ADR-327 §8.5.4).** Ο τύπος email και ο τύπος τηλεφώνου μοιράζονται έξι
+   * λέξεις (`work/support/department/sales/secretariat/other`). Η πύλη ρωτούσε μόνο «δεμένο στη ΔΙΚΗ μου ρίζα;» ⇒
+   * κατήγγελλε την **ίδια τη ρίζα** του email ως «αδέσμευτο τηλέφωνο». Οι διέξοδοι που υπήρχαν τύφλωναν: εξαίρεση
+   * ΟΛΟΚΛΗΡΟΥ αρχείου, ή κατώφλι τόσο ψηλό που χάνει πραγματικά σώματα.
+   *
+   * Το αδέλφι εδώ μοιράζεται **τέσσερις** λέξεις με το `project-status` (= το κατώφλι του).
+   */
+  const SIBLING_REL = 'src/lib/sibling-vocabulary.ts';
+  const SIBLING = {
+    id: 'sibling-stage',
+    root: SIBLING_REL,
+    rootSymbol: 'SIBLING_STAGES',
+    typeName: 'SiblingStage',
+    values: ['planning', 'in_progress', 'completed', 'on_hold', 'review'],
+    threshold: 5,
+    reason: 'Αδελφό λεξιλόγιο μόνο για την άγκυρα Μ13 — μοιράζεται τέσσερις λέξεις με το project-status.',
+  };
+
+  function writeSibling(extraLines = []) {
+    const p = path.join(tmpRoot, SIBLING_REL);
+    fs.mkdirSync(path.dirname(p), { recursive: true });
+    fs.writeFileSync(p, [
+      "export const SIBLING_STAGES = ['planning', 'in_progress', 'completed', 'on_hold', 'review'] as const;",
+      'export type SiblingStage = (typeof SIBLING_STAGES)[number];',
+      'export const SIBLING_ICONS: Readonly<Record<SiblingStage, string>> = {',
+      "  planning: 'a', in_progress: 'b', completed: 'c', on_hold: 'd', review: 'e',",
+      '};',
+      ...extraLines,
+      '',
+    ].join(EOL));
+    return p;
+  }
+
+  const runWithSibling = () => run(tmpRoot, { files: [...filesOf(tmpRoot), path.join(tmpRoot, SIBLING_REL)] });
+
+  it('Μ13α — ρίζα αδελφού + σώμα δεμένο στο αδελφό ⇒ bound-elsewhere, ΟΧΙ μπλοκ (και μετριούνται)', () => {
+    writeSibling();
+    mutateConfig(tmpRoot, cfg => { cfg.vocabularies.push(SIBLING); });
+    const r = runWithSibling();
+    expect(blocking(r)).toEqual([]);
+    expect(r.tally[STATES.BOUND_ELSEWHERE]).toBe(2);
+    const siblings = r.findings.filter(f => f.state === STATES.BOUND_ELSEWHERE);
+    expect(siblings.map(f => f.name).sort()).toEqual(['SIBLING_ICONS', 'SIBLING_STAGES']);
+    for (const f of siblings) expect(f.boundTo).toBe('sibling-stage');
+  });
+
+  it('Μ13β ΠΑΡΟΝΟΜΑΣΤΗΣ — τα ΙΔΙΑ αρχεία χωρίς εγγραφή του αδελφού ⇒ ΜΠΛΟΚ (ο κανόνας είναι που τα σώζει)', () => {
+    writeSibling();
+    const found = blocking(runWithSibling());
+    expect(found.map(f => f.name).sort()).toEqual(['SIBLING_ICONS', 'SIBLING_STAGES']);
+    for (const f of found) expect(f.state).toBe(STATES.UNTYPED_VOCABULARY);
+  });
+
+  it('Μ13γ — δίπλα σε εγγεγραμμένο αδελφό, σώμα δεμένο σε ΜΗ εγγεγραμμένο τύπο ΜΠΛΟΚΑΡΕΙ', () => {
+    writeSibling([
+      "type Loose = 'planning' | 'in_progress' | 'completed' | 'on_hold';",
+      'export const LOOSE_ICONS: Readonly<Record<Loose, string>> = {',
+      "  planning: 'a', in_progress: 'b', completed: 'c', on_hold: 'd',",
+      '};',
+    ]);
+    mutateConfig(tmpRoot, cfg => { cfg.vocabularies.push(SIBLING); });
+    const found = blocking(runWithSibling());
+    expect(found.map(f => f.name).sort()).toEqual(['LOOSE_ICONS', 'Loose']);
+  });
+});
+
 describe('CHECK 3.73 — συμβόλαια', () => {
   it('Κ1 — κλειστή λογιστική: άγνωστη κατάσταση ⇒ throw ΜΕ ΟΝΟΜΑ', () => {
     const r = run(tmpRoot);

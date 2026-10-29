@@ -257,6 +257,80 @@
       "threshold": 5,
       "reason": "Ο τύπος τηλεφώνου επαφής (ADR-327 §8.5.4). Ήταν ΕΞΙ δηλώσεις που διαφωνούσαν (PhoneInfo, OrgPhoneInfo, PhoneEntry, CommunicationConfigs, χάρτες AI, server): η φόρμα εταιρείας προσφέρει main/department/…, ο τύπος PhoneInfo δεν τα ήξερε και ο server έγραφε work ⇒ ΚΕΝΗ λίστα «Τύπος» στη MACON ATEE (μετρημένο ζωντανά 2026-10-29). Ένα σύνολο, υποσύνολα ανά κάτοχο (PHONE_TYPES_BY_OWNER), όπως το Google People API και το vCard RFC 6350/7852. Κατώφλι 5: λέξεις όπως work/other/support/department/sales εμφανίζονται και στο λεξιλόγιο email εταιρείας (4 κοινές).",
       "exemptions": []
+    },
+    {
+      "id": "email-type",
+      "root": "src/lib/contact/email-type-vocabulary.ts",
+      "rootSymbol": "EMAIL_TYPES",
+      "typeName": "EmailType",
+      "derivedTypes": [
+        "OfferedEmailType",
+        "EmailTypeLabels"
+      ],
+      "values": [
+        "personal",
+        "work",
+        "general",
+        "department",
+        "secretariat",
+        "sales",
+        "support",
+        "info",
+        "invoice",
+        "notification",
+        "other"
+      ],
+      "threshold": 3,
+      "reason": "Ο τύπος email επαφής (ADR-327 §8.5.4, ίδια κλάση με το phone-type). Ο τύπος EmailInfo δεν ήξερε general/info/sales/department/secretariat — ΑΠΟΘΗΚΕΥΜΕΝΑ (MACON info, τρεις εταιρείες general) — και οι γραφείς διαφωνούσαν: το AI έγραφε work σε εταιρεία, το resolve general/info σε πρόσωπο ⇒ κενή λίστα «Τύπος» και στις δύο κατευθύνσεις (μετρημένο 2026-10-29). Ένα σύνολο, υποσύνολα ανά κάτοχο (EMAIL_TYPES_BY_OWNER), ένας κανόνας inferEmailType — όπως το Google People API και το vCard RFC 6350 EMAIL;TYPE.",
+      "exemptions": []
+    },
+    {
+      "id": "website-type",
+      "root": "src/lib/contact/website-type-vocabulary.ts",
+      "rootSymbol": "WEBSITE_TYPES",
+      "typeName": "WebsiteType",
+      "derivedTypes": [
+        "OfferedWebsiteType",
+        "WebsiteTypeLabels"
+      ],
+      "values": [
+        "personal",
+        "company",
+        "portfolio",
+        "blog",
+        "corporate",
+        "eshop",
+        "official",
+        "eServices",
+        "portal",
+        "other"
+      ],
+      "threshold": 3,
+      "reason": "Ο τύπος ιστοσελίδας επαφής (ADR-327 §8.5.4). Ο WebsiteInfo δεν ήξερε corporate/eshop/official/eServices/portal που γράφουν οι φόρμες εταιρείας/υπηρεσίας, και ο EnterpriseContactSaver έγραφε company σε εταιρεία ΚΑΙ υπηρεσία — τιμή που καμία από τις δύο φόρμες δεν προσφέρει ⇒ κενή λίστα. Ένα σύνολο, υποσύνολα ανά κάτοχο, όπως το Url.type του Google People API.",
+      "exemptions": []
+    },
+    {
+      "id": "social-media-type",
+      "root": "src/lib/contact/social-media-type-vocabulary.ts",
+      "rootSymbol": "SOCIAL_MEDIA_TYPES",
+      "typeName": "SocialMediaType",
+      "derivedTypes": [
+        "OfferedSocialMediaType",
+        "SocialMediaTypeLabels"
+      ],
+      "values": [
+        "personal",
+        "professional",
+        "business",
+        "corporate",
+        "marketing",
+        "official",
+        "informational",
+        "other"
+      ],
+      "threshold": 3,
+      "reason": "Ο τύπος λογαριασμού social επαφής (ADR-327 §8.5.4) — η τελευταία της κλάσης phone/email/website. Δηλωνόταν στον τύπο SocialMediaInfo, στις λίστες του CommunicationConfigs και στις ετικέτες χωριστά, και ο mapper της φόρμας έκανε τυφλό as με προεπιλογή personal, που η φόρμα εταιρείας/υπηρεσίας δεν προσφέρει.",
+      "exemptions": []
     }
   ]
 }

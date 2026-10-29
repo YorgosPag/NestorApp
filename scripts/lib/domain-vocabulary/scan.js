@@ -33,6 +33,7 @@ const ts = require(path.join(process.cwd(), 'node_modules', 'typescript'));
 const STATES = {
   ROOT: 'root',
   BOUND: 'bound',
+  BOUND_ELSEWHERE: 'bound-elsewhere',
   DECLARED_EXEMPT: 'declared-exempt',
   UNTYPED_VOCABULARY: 'untyped-vocabulary',
   ORPHAN_DECLARATION: 'orphan-declaration',
@@ -104,6 +105,28 @@ function enumeratedValues(node) {
   return [];
 }
 
+/**
+ * Σε ΠΟΙΟ άλλο εγγεγραμμένο λεξιλόγιο ανήκει μια δήλωση που είναι αδέσμευτη για το λεξιλόγιο που σαρώνεται· `null` αν σε κανένα.
+ *
+ * 🔴 **ΓΙΑΤΙ (2026-10-29, ADR-327 §8.5.4)**: λεξιλόγια του ίδιου τομέα μοιράζονται λέξεις — ο τύπος email και ο
+ * τύπος τηλεφώνου έχουν έξι κοινές (`work/support/department/sales/secretariat/other`). Χωρίς αυτή την ερώτηση η
+ * πύλη κατήγγελλε την **ίδια τη ρίζα** του email ως «αδέσμευτο τηλέφωνο», και κάθε `Record<EmailType, …>` μαζί. Οι
+ * δύο διέξοδοι που υπήρχαν τύφλωναν: εξαίρεση **ολόκληρου αρχείου**, ή κατώφλι τόσο ψηλό που χάνει πραγματικά σώματα.
+ *
+ * Δεμένη σε αδελφό = ο μεταγλωττιστής την ελέγχει ήδη απέναντι σε ΜΙΑ ρίζα — η απόκλιση είναι ήδη μη εκφράσιμη.
+ * Δεμένη σε τύπο που **δεν** είναι εγγεγραμμένος δεν σώζεται εδώ: μένει `untyped-vocabulary`.
+ */
+function boundToSibling(hit, vocabularies) {
+  const identifiers = new Set((hit.typeSurface || '').match(IDENTIFIER) || []);
+  // Χωρίς `if (other.id === selfId) continue`: εύρημα αδέσμευτο για το σαρωμένο λεξιλόγιο δεν μπορεί να είναι δεμένο σε αυτό
+  // (θα ήταν `bound`), και η ρίζα του παρακάμπτεται πριν — η γραμμή ήταν ισοδύναμη μετάλλαξη (M11, 2026-10-29).
+  for (const other of vocabularies) {
+    if (hit.file === other.root && hit.name === other.rootSymbol) return other.id;
+    if ([...bindingNames(other)].some(b => identifiers.has(b))) return other.id;
+  }
+  return null;
+}
+
 /** Σάρωση ενός αρχείου έναντι ενός λεξιλογίου. */
 function scanFile(file, text, vocab, relPath) {
   const sf = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true,
@@ -171,4 +194,4 @@ function verifyRoot(rootText, rootFile, vocab) {
   return { ok: true, declared };
 }
 
-module.exports = { STATES, BLOCKING, MIN_REASON, scanFile, verifyRoot, enumeratedValues, typeSurfaceOf };
+module.exports = { STATES, BLOCKING, MIN_REASON, scanFile, verifyRoot, enumeratedValues, typeSurfaceOf, boundToSibling };
