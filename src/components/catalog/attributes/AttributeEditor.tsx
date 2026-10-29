@@ -33,7 +33,7 @@ import { CatalogCodeField, CatalogField, SwitchField } from '../shared/CatalogFo
 import { IssueSummary } from '../shared/CatalogIssues';
 import { EditorFooter } from '../shared/EditorFooter';
 import { LocalizedTextField } from '../shared/LocalizedTextField';
-import { useDefinitionDraft } from '../shared/use-definition-draft';
+import { useDefinitionDraft, useShownIssues } from '../shared/use-definition-draft';
 import { AttributeConfigFields, AttributeMappingsFields } from './AttributeConfigFields';
 import { attributeDraftOf, familiesUsing, storedAttributeOf, validateAttributeDraft, withAttributeType } from './attribute-draft';
 
@@ -61,9 +61,7 @@ function useAttributeEditor(props: AttributeEditorProps) {
   const groupIds = useMemo(() => new Set(groups.map((group) => group.id)), [groups]);
   const clientIssues = useMemo(() => validateAttributeDraft(editor.draft, registry, groupIds), [editor.draft, registry, groupIds]);
   const usedBy = useMemo(() => (record ? familiesUsing(record.id, families) : []), [record, families]);
-  // Ανέγγιχτη φόρμα δεν «κοκκινίζει»: τα ευρήματα φαίνονται από την πρώτη πληκτρολόγηση (ή την απάντηση του γραφέα).
-  const shown = editor.dirty || editor.serverIssues.length > 0 ? [...clientIssues, ...editor.serverIssues] : [];
-  return { editor, clientIssues, usedBy, issues: shown };
+  return { editor, clientIssues, usedBy, issues: useShownIssues(editor, clientIssues) };
 }
 
 function TypeAndGroupFields({ draft, update, props, typeLocked, disabled, issues }: {

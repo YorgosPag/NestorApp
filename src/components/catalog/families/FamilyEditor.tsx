@@ -25,7 +25,8 @@ import { deleteDefinition, newEntityKey, optimisticWire, saveDefinition } from '
 import { useCatalogText } from '../shared/catalog-ui-hooks';
 import { IssueSummary } from '../shared/CatalogIssues';
 import { EditorFooter } from '../shared/EditorFooter';
-import { useDefinitionDraft } from '../shared/use-definition-draft';
+import { isEditorSelf } from '../shared/editor-self';
+import { useDefinitionDraft, useShownIssues } from '../shared/use-definition-draft';
 import type { FamilyTabProps } from './AttributePicker';
 import { FamilyAttributesTab } from './FamilyAttributesTab';
 import { FamilyDuplicateDialog } from './FamilyDuplicateDialog';
@@ -54,9 +55,15 @@ export interface FamilyEditorProps {
   readonly reportDirty: (dirty: boolean) => void;
 }
 
-function duplicateCodeIssue(draft: CatalogFamilyDefinition, record: FamilyRecord | null, families: readonly FamilyRecord[]): readonly CatalogIssue[] {
+function duplicateCodeIssue(
+  draft: CatalogFamilyDefinition,
+  record: FamilyRecord | null,
+  families: readonly FamilyRecord[],
+  created: CatalogFamilyDefinition | null,
+): readonly CatalogIssue[] {
   const collector = new IssueCollector();
-  if (!record && families.some((family) => family.code === draft.code)) collector.add('duplicateCode', 'code', { code: draft.code });
+  const taken = families.some((family) => family.code === draft.code && !isEditorSelf(family, record, created));
+  if (!record && taken) collector.add('duplicateCode', 'code', { code: draft.code });
   return collector.issues;
 }
 
@@ -65,10 +72,13 @@ function useFamilyEditor({ record, families, library, reportDirty }: FamilyEdito
   const editor = useDefinitionDraft(base, record?.id ?? 'new', record?.revision ?? null);
   useEffect(() => reportDirty(editor.unsaved), [editor.unsaved, reportDirty]);
   const clientIssues = useMemo(
-    () => [...validateFamilyDraft(editor.draft, library.attributeById, library.registry), ...duplicateCodeIssue(editor.draft, record, families)],
-    [editor.draft, library.attributeById, library.registry, record, families],
+    () => [
+      ...validateFamilyDraft(editor.draft, library.attributeById, library.registry),
+      ...duplicateCodeIssue(editor.draft, record, families, editor.created),
+    ],
+    [editor.draft, library.attributeById, library.registry, record, families, editor.created],
   );
-  const issues = editor.dirty || editor.serverIssues.length > 0 ? [...clientIssues, ...editor.serverIssues] : [];
+  const issues = useShownIssues(editor, clientIssues);
   const inFamily = useMemo(() => familyAttributes(editor.draft, library.attributeById), [editor.draft, library.attributeById]);
   return { editor, clientIssues, issues, inFamily, counts: issueCountByTab(issues) };
 }

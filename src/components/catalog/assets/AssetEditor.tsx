@@ -30,7 +30,7 @@ import { useCatalogText } from '../shared/catalog-ui-hooks';
 import { FieldIssues } from '../shared/CatalogIssues';
 import { EditorFooter } from '../shared/EditorFooter';
 import { LocalizedTextField } from '../shared/LocalizedTextField';
-import { useDefinitionDraft } from '../shared/use-definition-draft';
+import { useDefinitionDraft, useShownIssues } from '../shared/use-definition-draft';
 import { assetDraftIssues, assetDraftOf, assetInputOf, type AssetDraft } from './asset-draft';
 import { fileFactsOfRecord, type IntakeRow } from './asset-intake-model';
 import { ASSET_ROLE_KEYS, LICENSE_STANDING_KEYS } from './asset-labels';
@@ -64,8 +64,7 @@ function useAssetEditor({ record, current, reportDirty }: AssetEditorProps) {
     [editor.draft, input, record, current],
   );
   const rightsIssues = mediaRightsDraftIssues(editor.draft.rights);
-  const issues = editor.dirty || editor.serverIssues.length > 0 ? [...clientIssues, ...editor.serverIssues] : [];
-  return { editor, input, clientIssues, rightsIssues, issues };
+  return { editor, input, clientIssues, rightsIssues, issues: useShownIssues(editor, clientIssues) };
 }
 
 export function AssetEditor(props: AssetEditorProps) {

@@ -19,11 +19,11 @@ import { Plus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { ListDetailsSplit } from '@/core/layouts';
-import type { DiscountConditionDefinition, PriceAudience } from '@/subapps/catalog/types/price-list';
+import type { PriceAudience } from '@/subapps/catalog/types/price-list';
 import { useCatalogAccess, useCatalogText } from '../shared/catalog-ui-hooks';
 import { NEW_SELECTION, type CatalogSelection } from '../shared/use-catalog-selection';
 import type { UnsavedGuard } from '../shared/use-unsaved-guard';
-import { buildConditionMatrix, cellKeyOf, columnKeyOf, rowKeyOf, type MatrixColumn, type MatrixRow } from './condition-matrix';
+import { buildConditionMatrix, cellKeyOf, columnKeyOf, rowKeyOf, type MatrixColumn, type MatrixDraft, type MatrixRow } from './condition-matrix';
 import { ConditionMatrix } from './ConditionMatrix';
 import { ConditionPeriods } from './ConditionPeriods';
 import { DEFAULT_CONDITION_SEED, type ConditionSeed } from './discount-condition-draft';
@@ -44,11 +44,11 @@ function audienceOfColumn(column: MatrixColumn): PriceAudience {
   return { kind: column.kind };
 }
 
-/** Το πρόχειρο του ανοιχτού επεξεργαστή, δεμένο στη συνεδρία επιλογής που το γέννησε. */
+/** Το πρόχειρο του ανοιχτού επεξεργαστή (με την ταυτότητά του), δεμένο στη συνεδρία επιλογής που το γέννησε. */
 function useSessionDraft(sessionKey: string) {
-  const [draft, setDraft] = useState<{ readonly key: string; readonly definition: DiscountConditionDefinition } | null>(null);
-  const report = useCallback((definition: DiscountConditionDefinition) => setDraft({ key: sessionKey, definition }), [sessionKey]);
-  return { definition: draft?.key === sessionKey ? draft.definition : null, report };
+  const [draft, setDraft] = useState<{ readonly key: string; readonly value: MatrixDraft } | null>(null);
+  const report = useCallback((value: MatrixDraft) => setDraft({ key: sessionKey, value }), [sessionKey]);
+  return { value: draft?.key === sessionKey ? draft.value : null, report };
 }
 
 function useConditionsPanel({ workspace, selection, unsaved }: ConditionsPanelProps) {
@@ -59,12 +59,12 @@ function useConditionsPanel({ workspace, selection, unsaved }: ConditionsPanelPr
   const record = !isNew && selection.selected ? conditions.settled.find((condition) => condition.id === selection.selected) ?? null : null;
   const open = isNew || record !== null;
   const draft = useSessionDraft(selection.key);
-  const definition = open ? draft.definition : null;
+  const shownDraft = open ? draft.value : null;
   const matrix = useMemo(() => buildConditionMatrix({
     discountGroups: discountGroups.view, customerGroups: customerGroups.view, conditions: conditions.view,
-    draft: definition ? { id: record?.id ?? null, definition } : null, nowMs: workspace.nowMs,
-  }), [discountGroups.view, customerGroups.view, conditions.view, definition, record, workspace.nowMs]);
-  const located = definition ?? record ?? (isNew ? seed : null);
+    draft: shownDraft, nowMs: workspace.nowMs,
+  }), [discountGroups.view, customerGroups.view, conditions.view, shownDraft, workspace.nowMs]);
+  const located = shownDraft?.definition ?? record ?? (isNew ? seed : null);
   const selectedCell = located ? cellKeyOf(rowKeyOf(located.discountGroupId), columnKeyOf(located.audience)) : null;
   const startNew = (next: ConditionSeed) => { setSeed(next); selection.select(NEW_SELECTION); };
   const onCell = (row: MatrixRow, column: MatrixColumn) => unsaved.guard(() => {

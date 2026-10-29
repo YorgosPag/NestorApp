@@ -4,7 +4,6 @@ import {
   ALL_GROUPS_ROW,
   buildConditionMatrix,
   cellKeyOf,
-  DRAFT_CONDITION_ID,
   PARTNER_COLUMN,
   ruleHeadline,
   type ConditionMatrixInput,
@@ -75,10 +74,18 @@ describe('condition-matrix — SAP condition table: ομάδα έκπτωσης 
 
   it('ασάφεια με το ΠΡΟΧΕΙΡΟ, ζωντανά — και σημειώνονται ΚΑΙ οι δύο πλευρές (ισοπαλία ≠ «η πρώτη»)', () => {
     const conditions = [condition('stored', { validFrom: '2026-11-01T00:00:00.000Z' })];
-    const draft = { id: null, definition: definition({ validFrom: '2026-12-01T00:00:00.000Z' }) };
+    const draft = { id: 'dcnd_new', definition: definition({ validFrom: '2026-12-01T00:00:00.000Z' }) };
     const cell = buildConditionMatrix(input({ conditions, draft })).cells.get(cellKeyOf('dgrp_tosh', 'anonymous'));
     expect(cell?.ambiguous).toBe(true);
-    expect(cell?.entries.filter((entry) => entry.ambiguous).map((entry) => entry.id).sort()).toEqual([DRAFT_CONDITION_ID, 'stored'].sort());
+    expect(cell?.entries.filter((entry) => entry.ambiguous).map((entry) => entry.id).sort()).toEqual(['dcnd_new', 'stored'].sort());
+  });
+
+  it('Σ2 (ζωντανά): νέα συνθήκη σε αποστολή — το πρόχειρο αντικαθιστά την ΑΙΣΙΟΔΟΞΗ εγγραφή του, όχι «ασάφεια με τον εαυτό του»', () => {
+    const conditions = [condition('dcnd_new', {})];
+    const draft = { id: 'dcnd_new', definition: definition({}) };
+    const cell = buildConditionMatrix(input({ conditions, draft })).cells.get(cellKeyOf('dgrp_tosh', 'anonymous'));
+    expect(cell?.entries.map((entry) => [entry.id, entry.isDraft, entry.ambiguous])).toEqual([['dcnd_new', true, false]]);
+    expect(cell?.ambiguous).toBe(false);
   });
 
   it('το πρόχειρο μιας αποθηκευμένης την ΑΝΤΙΚΑΘΙΣΤΑ (δεν συγκρούεται με τον εαυτό της) — και μετακομίζει κελί', () => {

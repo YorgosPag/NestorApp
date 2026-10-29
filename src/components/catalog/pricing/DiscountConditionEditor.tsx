@@ -19,14 +19,14 @@ import React, { useEffect, useMemo, useState } from 'react';
 import type { CatalogOptimistic } from '@/hooks/catalog/useCatalogOptimistic';
 import { generateCatalogDiscountConditionId } from '@/services/enterprise-id-convenience';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
-import type { DiscountConditionDefinition } from '@/subapps/catalog/types/price-list';
 import type { CustomerGroupWire, DiscountConditionWire, DiscountGroupWire } from '@/subapps/catalog/types/pricing-views';
 import { deleteDefinition, optimisticWire, saveDefinition } from '../shared/catalog-actions';
 import { IssueSummary, type IssueLocation } from '../shared/CatalogIssues';
 import { useCatalogAccess, useCatalogText } from '../shared/catalog-ui-hooks';
 import { EditorFooter } from '../shared/EditorFooter';
 import { NEW_SELECTION } from '../shared/use-catalog-selection';
-import { useDefinitionDraft } from '../shared/use-definition-draft';
+import { useDefinitionDraft, useShownIssues } from '../shared/use-definition-draft';
+import type { MatrixDraft } from './condition-matrix';
 import { ConditionScopeFields } from './ConditionScopeFields';
 import { conditionDefinitionOf, conditionDraftIssues, emptyConditionDraft, type ConditionSeed } from './discount-condition-draft';
 import { DiscountRuleField } from './DiscountRuleField';
@@ -40,8 +40,8 @@ export interface DiscountConditionEditorProps {
   readonly discountGroups: readonly DiscountGroupWire[];
   readonly customerGroups: readonly CustomerGroupWire[];
   readonly words: DiscountWords;
-  /** Το πρόχειρο, για τον πίνακα (ζωντανή θέση + ασάφεια). */
-  readonly onDraft: (definition: DiscountConditionDefinition) => void;
+  /** Το πρόχειρο **με την ταυτότητά του**, για τον πίνακα (ζωντανή θέση + ασάφεια). */
+  readonly onDraft: (draft: MatrixDraft) => void;
   readonly onCreated: (id: string) => void;
   readonly onDeleted: () => void;
   /** Άνοιγμα μιας άλλης συνθήκης (ο σύνδεσμος της ασάφειας). */
@@ -52,22 +52,24 @@ export interface DiscountConditionEditorProps {
 function useConditionEditor({ record, seed, ops, discountGroups, customerGroups, onDraft, reportDirty }: DiscountConditionEditorProps) {
   const base = useMemo(() => (record ? conditionDefinitionOf(record) : emptyConditionDraft(seed)), [record, seed]);
   const editor = useDefinitionDraft(base, record?.id ?? NEW_SELECTION, record?.revision ?? null);
+  // Η ταυτότητα γεννιέται στον πελάτη (Δ3) ⇒ αισιόδοξη και αποθηκευμένη έχουν το ΙΔΙΟ id: αυτό είναι ο εαυτός, από την
+  // πρώτη στιγμή — στον έλεγχο ασάφειας ΚΑΙ στον πίνακα — αλλιώς η νέα συνθήκη σε αποστολή θα ήταν «ασαφής» με τον
+  // εαυτό της (Σ2, ADR-923 §5.11).
+  const [newId] = useState(generateCatalogDiscountConditionId);
+  const id = record?.id ?? newId;
   useEffect(() => reportDirty(editor.unsaved), [editor.unsaved, reportDirty]);
-  useEffect(() => onDraft(editor.draft), [editor.draft, onDraft]);
+  useEffect(() => onDraft({ id, definition: editor.draft }), [id, editor.draft, onDraft]);
   const clientIssues = useMemo(() => conditionDraftIssues(editor.draft, {
     discountGroupIds: new Set(discountGroups.map((group) => group.id)),
     customerGroupIds: new Set(customerGroups.map((group) => group.id)),
     conditions: ops.view,
-    selfId: record?.id ?? null,
-  }), [editor.draft, discountGroups, customerGroups, ops.view, record]);
-  // Η ασάφεια φαίνεται ΑΜΕΣΑ (ακόμη και σε ανέγγιχτη φόρμα: το κελί είναι ήδη κόκκινο)· τα υπόλοιπα από την πρώτη αλλαγή.
-  const touched = editor.dirty || editor.serverIssues.length > 0;
-  const issues = useMemo(
-    () => (touched ? [...clientIssues, ...editor.serverIssues] : clientIssues.filter((issue) => issue.code === 'discountConditionAmbiguous')),
-    [touched, clientIssues, editor.serverIssues],
-  );
-  return { editor, issues, clientIssues };
+    selfId: id,
+  }), [editor.draft, discountGroups, customerGroups, ops.view, id]);
+  return { editor, issues: useShownIssues(editor, clientIssues, isAmbiguity), clientIssues, id };
 }
+
+/** Η ασάφεια φαίνεται ΑΜΕΣΑ (ακόμη και σε ανέγγιχτη φόρμα: το κελί είναι ήδη κόκκινο)· τα υπόλοιπα από την πρώτη αλλαγή. */
+const isAmbiguity = (issue: CatalogIssue): boolean => issue.code === 'discountConditionAmbiguous';
 
 /** Η ασάφεια ονομάζει την **άλλη** συνθήκη με λέξεις και την ανοίγει. */
 function useConflictLocator(conditions: readonly DiscountConditionWire[], words: DiscountWords, onOpen: (id: string) => void) {
@@ -83,11 +85,9 @@ function useConflictLocator(conditions: readonly DiscountConditionWire[], words:
 export function DiscountConditionEditor(props: DiscountConditionEditorProps) {
   const { record, ops, words, onCreated, onDeleted } = props;
   const { t } = useCatalogText();
-  const { editor, issues, clientIssues } = useConditionEditor(props);
-  const [newId] = useState(generateCatalogDiscountConditionId);
+  const { editor, issues, clientIssues, id } = useConditionEditor(props);
   const locate = useConflictLocator(ops.view, words, props.onOpen);
   const disabled = useCatalogAccess('pricing') !== 'granted';
-  const id = record?.id ?? newId;
   const save = () =>
     saveDefinition(ops, {
       kind: 'discountCondition',
@@ -100,7 +100,7 @@ export function DiscountConditionEditor(props: DiscountConditionEditorProps) {
     });
   const remove = record ? () => { deleteDefinition(ops, 'discountCondition', record); onDeleted(); } : undefined;
   const deleteName = record ? { labels: {}, code: `${words.audience(record.audience)} · ${words.period(record)}` } : null;
-  const ambiguity = issues.filter((issue) => issue.code === 'discountConditionAmbiguous');
+  const ambiguity = issues.filter(isAmbiguity);
   return (
     <section className="flex flex-col">
       <section className="flex flex-col gap-4 p-4">

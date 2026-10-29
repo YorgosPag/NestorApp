@@ -29,8 +29,6 @@ import { conditionDefinitionOf } from './discount-condition-draft';
 export const ALL_GROUPS_ROW = '*';
 /** Η μία στήλη των συνεργατών. */
 export const PARTNER_COLUMN = 'partner';
-/** Το id του **νέου** προχείρου μέσα στον πίνακα (δεν έχει ακόμη id). */
-export const DRAFT_CONDITION_ID = 'draft';
 
 export interface MatrixRow {
   readonly key: string;
@@ -70,8 +68,12 @@ export interface ConditionMatrix {
 }
 
 export interface MatrixDraft {
-  /** `null` = νέα συνθήκη. */
-  readonly id: string | null;
+  /**
+   * Η ταυτότητα του επεξεργαστή — **και για νέα** συνθήκη: γεννιέται στον πελάτη (Δ3) και είναι ίδια σε αισιόδοξη και
+   * αποθηκευμένη. Γι' αυτό το πρόχειρο **αντικαθιστά** την εγγραφή που μόλις έστειλε, αντί να κάθεται δίπλα της στο ίδιο
+   * κελί ως «ασάφεια με τον εαυτό του» (Σ2, ζωντανή επαλήθευση — το παλιό `id: null` ⇒ σταθερό `'draft'` το επέτρεπε).
+   */
+  readonly id: string;
   readonly definition: DiscountConditionDefinition;
 }
 
@@ -113,8 +115,7 @@ function overlaid(input: ConditionMatrixInput): { readonly id: string; readonly 
   const stored = live.map((condition) => ({ id: condition.id, definition: conditionDefinitionOf(condition), isDraft: false }));
   const { draft } = input;
   if (draft === null) return stored;
-  const id = draft.id ?? DRAFT_CONDITION_ID;
-  return [...stored.filter((entry) => entry.id !== id), { id, definition: draft.definition, isDraft: true }];
+  return [...stored.filter((entry) => entry.id !== draft.id), { id: draft.id, definition: draft.definition, isDraft: true }];
 }
 
 /** Ποιες συνθήκες είναι σε ασάφεια — ανά υποδοχή (ίδιο κλειδί με τον γραφέα), **και οι δύο** πλευρές κάθε σύγκρουσης. */

@@ -23,7 +23,7 @@ import { useCatalogText } from '../shared/catalog-ui-hooks';
 import { CatalogCodeField, SwitchField } from '../shared/CatalogFormFields';
 import { EditorFooter } from '../shared/EditorFooter';
 import { LocalizedTextField } from '../shared/LocalizedTextField';
-import { useDefinitionDraft } from '../shared/use-definition-draft';
+import { useDefinitionDraft, useShownIssues } from '../shared/use-definition-draft';
 import { NEW_SELECTION } from '../shared/use-catalog-selection';
 import { emptyMeasurementDraft, measurementDraftOf, validateMeasurementDraft } from './measurement-draft';
 import { MeasurementConversionTester } from './MeasurementConversionTester';
@@ -47,9 +47,7 @@ function useMeasurementEditor({ record, inUse, reportDirty }: MeasurementFamilyE
   useEffect(() => reportDirty(editor.unsaved), [editor.unsaved, reportDirty]);
   const locked = inUse && record !== null;
   const clientIssues = useMemo(() => validateMeasurementDraft(editor.draft, locked ? base : null), [editor.draft, locked, base]);
-  // Ανέγγιχτη φόρμα δεν «κοκκινίζει»: τα ευρήματα φαίνονται από την πρώτη πληκτρολόγηση (ή την απάντηση του γραφέα).
-  const touched = editor.dirty || editor.serverIssues.length > 0;
-  const issues = useMemo(() => (touched ? [...clientIssues, ...editor.serverIssues] : []), [touched, clientIssues, editor.serverIssues]);
+  const issues = useShownIssues(editor, clientIssues);
   const lockedCodes = useMemo(() => new Set(locked ? base.units.map((unit) => unit.code) : []), [locked, base]);
   return { editor, issues, clientIssues, lockedCodes };
 }
