@@ -8,7 +8,7 @@
  * intensity gradient (green → red as aging increases).
  */
 
-import { getStatusColor } from '@/lib/design-system';
+import { getStatusColor, getStatusSolidClass, getStatusSurfaceClass } from '@/lib/design-system';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -64,12 +64,18 @@ export interface ReportAgingTableProps {
 // Constants
 // ---------------------------------------------------------------------------
 
-const BUCKET_INTENSITY = [
-  `${getStatusColor('available', 'bg')}/10`,   // 0-30: healthy
-  `${getStatusColor('reserved', 'bg')}/10`,    // 31-60: attention
-  `${getStatusColor('construction', 'bg')}/10`,// 61-90: concerning
-  `${getStatusColor('error', 'bg')}/10`,       // 91-120: critical
-  `${getStatusColor('error', 'bg')}/20`,       // 120+: severe
+/**
+ * Κελί θερμικού χάρτη = επιφάνεια + το μελάνι ΠΑΝΩ της, σε ΕΝΑ ρόλο. Κλιμάκωση απαλό → συμπαγές (Atlassian Lozenge
+ * subtle → bold) για το 120+, αντί για «περισσότερη διαφάνεια».
+ * 🔴 Ως τις 2026-10-29: σύνθεση κλάσης με `/10`·`/20` μετά την κλήση ⇒ το Tailwind δεν την είδε ποτέ (καμία δεν υπάρχει
+ * αυτούσια στο `src/`) ⇒ διάφανο κελί και μελάνι `--status-*` πάνω στην κάρτα: 2,02:1 (success, φωτεινό) — ADR-770.
+ */
+const BUCKET_CELL = [
+  getStatusSurfaceClass('available'),     // 0-30: healthy
+  getStatusSurfaceClass('reserved'),      // 31-60: attention
+  getStatusSurfaceClass('construction'),  // 61-90: concerning
+  getStatusSurfaceClass('error'),         // 91-120: critical
+  getStatusSolidClass('error'),           // 120+: severe
 ];
 
 const BUCKET_TEXT = [
@@ -159,8 +165,7 @@ export function ReportAgingTable({
                     key={i}
                     className={cn(
                       'text-center tabular-nums',
-                      colorScale && hasValue && BUCKET_INTENSITY[i],
-                      colorScale && hasValue && BUCKET_TEXT[i],
+                      colorScale && hasValue && BUCKET_CELL[i],
                     )}
                   >
                     {showAmounts && hasValue ? formatter(amount) : ''}

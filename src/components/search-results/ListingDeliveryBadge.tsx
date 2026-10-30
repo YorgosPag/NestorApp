@@ -29,7 +29,7 @@ interface ListingDeliveryBadgeProps {
 }
 
 export function ListingDeliveryBadge({ availability, className = '' }: ListingDeliveryBadgeProps) {
-  const { t } = useTranslation(['common', 'common-shared']);
+  const { t } = useTranslation('common');
   if (availability.kind !== 'scheduled') return null;
   const promise = availabilityPromisePhrase(availability, t, getCurrentLocale());
   return <p className={`text-xs text-muted-foreground ${className}`.trim()}>{t('common:listingAvailability.deliveryOn', { promise })}</p>;

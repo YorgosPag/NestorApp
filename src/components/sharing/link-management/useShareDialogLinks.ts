@@ -49,7 +49,7 @@ export interface UseShareDialogLinksResult {
 export function useShareDialogLinks({
   enabled, onCopySuccess, ...mintOptions
 }: UseShareDialogLinksOptions): UseShareDialogLinksResult {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const notifications = useNotifications();
   const [draft, setDraft] = useState<LinkTokenDraft>(INITIAL_LINK_TOKEN_DRAFT);
   const [error, setError] = useState<string | null>(null);

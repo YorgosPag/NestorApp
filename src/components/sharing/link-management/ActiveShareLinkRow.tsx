@@ -39,7 +39,7 @@ export interface ActiveShareLinkRowProps {
 }
 
 function useRowFacts(link: ShareLinkSummary): readonly string[] {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const creator = link.createdBy.name ?? t('share.links.unknownCreator');
   const facts = [
     link.createdAt
@@ -57,7 +57,7 @@ function useRowFacts(link: ShareLinkSummary): readonly string[] {
 }
 
 function StateBadges({ link, isCurrent }: Pick<ActiveShareLinkRowProps, 'link' | 'isCurrent'>): React.ReactElement {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   return (
     <>
       {isCurrent && <Badge variant="secondary">{t('share.links.thisLink')}</Badge>}
@@ -80,7 +80,7 @@ function StateBadges({ link, isCurrent }: Pick<ActiveShareLinkRowProps, 'link' |
 export function ActiveShareLinkRow({
   link, isCurrent, busy, onEdit, onRevoke, children,
 }: ActiveShareLinkRowProps): React.ReactElement {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const colors = useSemanticColors();
   const facts = useRowFacts(link);
   const title = link.label ?? t('share.links.unlabeled');

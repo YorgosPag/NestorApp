@@ -8,13 +8,11 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePOSupplierContacts } from '@/hooks/procurement/usePOSupplierContacts';
 import { getContactDisplayName } from '@/types/contacts';
 import { formatCurrency, formatDate } from '@/lib/intl-formatting';
-import { cn, getStatusColor } from '@/lib/design-system';
+import { cn } from '@/lib/design-system';
+import { AGREEMENT_STATUS_BADGE_VARIANTS } from '@/domain/cards/agreement/agreement-card-model';
 import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
 import { AgreementScopeSummary } from './AgreementScopeSummary';
-import type {
-  FrameworkAgreement,
-  FrameworkAgreementStatus,
-} from '@/subapps/procurement/types/framework-agreement';
+import type { FrameworkAgreement } from '@/subapps/procurement/types/framework-agreement';
 
 interface AgreementDetailProps {
   agreement: FrameworkAgreement;
@@ -22,13 +20,6 @@ interface AgreementDetailProps {
   onDelete: (agreement: FrameworkAgreement) => void;
   onCreateNew?: () => void;
 }
-
-const STATUS_SEMANTIC: Record<FrameworkAgreementStatus, string> = {
-  draft:      'pending',
-  active:     'available',
-  expired:    'reserved',
-  terminated: 'cancelled',
-};
 
 function daysUntil(ts: { toDate: () => Date }): number {
   const ms = ts.toDate().getTime() - Date.now();
@@ -46,7 +37,6 @@ export function AgreementDetail({ agreement, onEdit, onDelete, onCreateNew }: Ag
 
   const remaining = daysUntil(agreement.validUntil);
   const isExpired = remaining < 0;
-  const sem = STATUS_SEMANTIC[agreement.status];
 
   return (
     <article className="flex flex-col gap-5">
@@ -56,14 +46,9 @@ export function AgreementDetail({ agreement, onEdit, onDelete, onCreateNew }: Ag
         subtitle={agreement.agreementNumber}
         variant="detailed"
         titleAdornment={
-          <Badge
-            variant="outline"
-            className={cn(
-              'text-sm font-medium',
-              getStatusColor(sem, 'bg'),
-              getStatusColor(sem, 'text'),
-            )}
-          >
+          // ΙΔΙΑ παραλλαγή με την κάρτα λίστας/πλέγματος· το `Badge` δίνει το μετρημένο μελάνι (`SOLID_FILL_INK`).
+          // Ως τις 2026-10-29: `getStatusColor(x,'bg')` + `getStatusColor(x,'text')` ⇒ άδειο χρωματιστό χάπι (ADR-770).
+          <Badge variant={AGREEMENT_STATUS_BADGE_VARIANTS[agreement.status]} className="text-sm">
             {t(`hub.frameworkAgreements.status.${agreement.status}`)}
           </Badge>
         }

@@ -43,7 +43,7 @@ export function ShareLinkCreatePanel({
   draft, onDraftChange, onCreateAndCopy, minting, policy,
 }: ShareLinkCreatePanelProps): React.ReactElement {
   const missingLabel = policy?.labelRequired === true && draft.label.trim() === '';
-  const { t } = useTranslation(['files', 'common', 'files-media']);
+  const { t } = useTranslation(['files', 'common']);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
@@ -81,7 +81,7 @@ export interface MintedLinkCardProps {
 }
 
 export function MintedLinkCard({ minted, onCopy, onStartOver }: MintedLinkCardProps): React.ReactElement {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const colors = useSemanticColors();
   return (
     <section className="flex flex-col gap-2 rounded-lg border border-primary/40 p-3" aria-labelledby="share-link-minted-title">

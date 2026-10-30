@@ -53,7 +53,7 @@ function refusalReason(error: unknown): string | null {
 }
 
 function useLinkEditor(state: UseShareLinksResult) {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const notifications = useNotifications();
   const [editing, setEditing] = useState<{ link: ShareLinkSummary; draft: LinkTokenDraft } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -82,7 +82,7 @@ function useLinkEditor(state: UseShareLinksResult) {
 }
 
 function useRevocation(state: UseShareLinksResult, currentShareId: string | null) {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const notifications = useNotifications();
   const [target, setTarget] = useState<RevokeTarget | null>(null);
   const [busy, setBusy] = useState(false);
@@ -110,7 +110,7 @@ function useRevocation(state: UseShareLinksResult, currentShareId: string | null
 }
 
 export function ActiveShareLinksList({ state, currentShareId, policy }: ActiveShareLinksListProps): React.ReactElement {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const colors = useSemanticColors();
   const editor = useLinkEditor(state);
   const revocation = useRevocation(state, currentShareId);

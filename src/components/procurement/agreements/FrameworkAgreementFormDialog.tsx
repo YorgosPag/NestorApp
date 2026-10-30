@@ -25,7 +25,8 @@ import {
 import { SearchableCombobox } from '@/components/ui/searchable-combobox';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePOSupplierContacts, supplierContactsToOptions } from '@/hooks/procurement/usePOSupplierContacts';
-import { normalizeToDate, nowISO } from '@/lib/date-local';
+import { normalizeToDate, todayLocalDate } from '@/lib/date-local';
+import { addMonthsToDateKey } from '@/lib/calendar/date-key';
 import { useAgreementScopeOptions } from '@/hooks/procurement/useAgreementScopeOptions';
 import { BreakpointsEditor } from './BreakpointsEditor';
 import { AgreementScopeFields } from './AgreementScopeFields';
@@ -78,10 +79,10 @@ interface FormState {
 }
 
 function emptyState(): FormState {
-  const today = nowISO().slice(0, 10);
-  const yearLater = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .slice(0, 10);
+  // Τοπική ημέρα του χρήστη (όχι UTC) · «ένα έτος» = η ίδια ημέρα του επόμενου έτους (29/2 ⇒ 28/2), όχι 365 × 24 ώρες
+  // — σε δίσεκτο διάστημα εκείνο έδινε μία ημέρα νωρίτερα.
+  const today = todayLocalDate();
+  const yearLater = addMonthsToDateKey(today, 12) ?? today;
   return {
     agreementNumber: '',
     title: '',

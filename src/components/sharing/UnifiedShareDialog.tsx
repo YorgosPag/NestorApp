@@ -159,7 +159,7 @@ export function UnifiedShareDialog({
   shareUrl,
   onDirectEmailShare,
 }: UnifiedShareDialogProps): React.ReactElement {
-  const { t } = useTranslation(['files', 'common', 'common-shared', 'properties-detail']);
+  const { t } = useTranslation(['files', 'common', 'properties-detail']);
   const { t: tShell } = useTranslation('common-shared');
   const flow = useShareDialogLinks({
     entityType, entityId, preSubmit, showcaseMeta, contactMeta, fileMeta, onCopySuccess,
