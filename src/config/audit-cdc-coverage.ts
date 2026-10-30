@@ -26,6 +26,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-195-entity-audit-trail.md
  */
 
+import { auditEntitySpec } from '@/config/audit-entity-registry';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AuditAction } from '@/types/audit-trail';
 
 /**
@@ -33,6 +35,24 @@ import type { AuditAction } from '@/types/audit-trail';
  * Σήμερα: μόνο οι επαφές.
  */
 export const CDC_COVERED_ENTITY_TYPES: ReadonlySet<string> = new Set<string>(['contact']);
+
+/**
+ * Οι **συλλογές** όπου ακούει ο CDC — ΠΑΡΑΓΩΓΟ των τύπων παραπάνω μέσω του μητρώου οντοτήτων, ποτέ δεύτερη λίστα.
+ *
+ * Ο CDC διαβάζει τον δράστη από το ίδιο το έγγραφο (`_lastModifiedBy` / `_lastModifiedByName`), άρα κάθε
+ * μαζικός γραφέας που αγγίζει αυτές τις συλλογές **οφείλει** σφραγίδα φορέα — αλλιώς η γραμμή Ιστορικού
+ * γράφεται `cdc_unknown` (ADR-195 · ADR-704, 2026-10-30: `flushInBatches` / `openDeclaredBatch`).
+ *
+ * Τύπος CDC χωρίς δική του συλλογή ⇒ σφάλμα κατά τη φόρτωση: σιωπηλή παράλειψη θα έκρυβε ακριβώς τη συλλογή
+ * που χρειάζεται σφραγίδα.
+ */
+export const CDC_WATCHED_COLLECTIONS: ReadonlySet<string> = new Set<string>(
+  [...CDC_COVERED_ENTITY_TYPES].map((type) => {
+    const key = auditEntitySpec(type)?.collectionKey;
+    if (!key) throw new Error(`CDC entity type "${type}" has no collection in the audit entity registry`);
+    return COLLECTIONS[key];
+  }),
+);
 
 /**
  * Ενέργειες για τις οποίες ο CDC παράγει **ισοδύναμη** εγγραφή με το service layer.

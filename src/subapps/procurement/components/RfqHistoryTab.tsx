@@ -35,7 +35,7 @@ export interface RfqHistoryTabProps {
 // ============================================================================
 
 export function RfqHistoryTab({ rfqId, quotes, quotesLoading }: RfqHistoryTabProps) {
-  const { t } = useTranslation(['quotes', 'common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(['quotes', 'common']);
   const colors = useSemanticColors();
 
   const quoteIds = useMemo(() => quotes.map(q => q.id), [quotes]);

@@ -971,6 +971,9 @@ export const API_ROUTES = {
     FLOORPLAN: (propertyId: string) => `/api/properties/${propertyId}/floorplan` as const,
     /** ADR-920 Β3α — το τοπογραφικό της αγγελίας οικοπέδου *(πηγή JSON + δήλωση Δ2, μία αίτηση)*. */
     TERRAIN: (propertyId: string) => `/api/properties/${encodeURIComponent(propertyId)}/terrain` as const,
+    /** ADR-920 — εισαγωγή ΠΕΑ στο ακίνητο του γραφείου (ίδιο συμβόλαιο με το `OWNER_PROPERTIES.ENERGY_CERTIFICATE_IMPORT`). */
+    ENERGY_CERTIFICATE_IMPORT: (propertyId: string) =>
+      `/api/properties/${encodeURIComponent(propertyId)}/energy-certificate-import` as const,
     /** ADR-845 §7.17 Α5β — «συμφωνεί η δημόσια αγγελία με το τρέχον υλικό;» (`GET`) · ενημέρωση τώρα (`POST`). */
     LISTING_MEDIA: (propertyId: string) => `/api/properties/${propertyId}/listing-media` as const,
     /** ADR-916 §5.5 · §5.15 — η καρτέλα «Παράδοση»: παραδόσεις με την κρίση τους + αρχεία κριμένα (`GET`). */
@@ -989,9 +992,27 @@ export const API_ROUTES = {
   },
 
   // ── Αγγελίες ιδιοκτήτη (`owner_properties`, ADR-777) ───────────────────
-  // ⚠️ Πέντε πελάτες χτίζουν ακόμη αυτές τις διαδρομές με χειρόγραφο κείμενο — μετακινούνται εδώ στο άγγιγμα
-  //    (`.claude-rules/pending-ratchet-work.md`).
   OWNER_PROPERTIES: {
+    LIST: '/api/owner-properties',
+    /** Ο κατάλογος εντολών του γραφείου (ADR-777). */
+    BROKERED: '/api/owner-properties/brokered',
+    /** Στατιστικά του χαρτοφυλακίου του ιδιοκτήτη. */
+    STATS: '/api/owner-properties/stats',
+    /** ADR-900 §3.8 — απόδειξη κυριότητας. */
+    OWNERSHIP_VERIFICATION: (ownerPropertyId: string) =>
+      `/api/owner-properties/${encodeURIComponent(ownerPropertyId)}/ownership-verification` as const,
+    /** Υπογεγραμμένος σύνδεσμος ενός τεκμηρίου εντολής. */
+    MANDATE_EVIDENCE: (ownerPropertyId: string, evidenceId: string) =>
+      `/api/owner-properties/${encodeURIComponent(ownerPropertyId)}/mandate-evidence/${encodeURIComponent(evidenceId)}` as const,
+    /** ADR-835 §20 — ημερολόγιο διαμονών. */
+    STAY_CALENDAR: (ownerPropertyId: string) =>
+      `/api/owner-properties/${encodeURIComponent(ownerPropertyId)}/stay-calendar` as const,
+    /** ADR-835 §22 — κανάλια διαμονών. */
+    STAY_CHANNELS: (ownerPropertyId: string) =>
+      `/api/owner-properties/${encodeURIComponent(ownerPropertyId)}/stay-channels` as const,
+    /** ADR-920 — εισαγωγή ΠΕΑ στον φάκελο του ιδιοκτήτη (ίδιο συμβόλαιο με το `PROPERTIES.ENERGY_CERTIFICATE_IMPORT`). */
+    ENERGY_CERTIFICATE_IMPORT: (ownerPropertyId: string) =>
+      `/api/owner-properties/${encodeURIComponent(ownerPropertyId)}/energy-certificate-import` as const,
     /** ADR-920 Β4.3+5 — το τοπογραφικό στον φάκελο του ιδιοκτήτη (ίδιο συμβόλαιο με το `PROPERTIES.TERRAIN`). */
     TERRAIN: (ownerPropertyId: string) => `/api/owner-properties/${encodeURIComponent(ownerPropertyId)}/terrain` as const,
   },
@@ -1152,10 +1173,14 @@ export const API_ROUTES = {
   ACCOUNTING: {
     INVOICES: {
       LIST: '/api/accounting/invoices',
+      // ADR-ACC-010 §2.1.1 — κάρτες σύνοψης πάνω σε ΟΛΗ την εμβέλεια των φίλτρων της λίστας (ίδιες παράμετροι με το LIST)
+      SUMMARY: '/api/accounting/invoices/summary',
       BY_ID: (id: string) => `/api/accounting/invoices/${id}` as const,
       SEND_EMAIL: (id: string) => `/api/accounting/invoices/${id}/send-email` as const,
     },
     JOURNAL: '/api/accounting/journal',
+    // ADR-ACC-010 §2.1.1 — κάρτες σύνοψης πάνω σε ΟΛΗ την εμβέλεια των φίλτρων της λίστας (ίδιες παράμετροι)
+    JOURNAL_SUMMARY: '/api/accounting/journal/summary',
     VAT: { SUMMARY: '/api/accounting/vat/summary' },
     TAX: {
       ESTIMATE: '/api/accounting/tax/estimate',
@@ -1163,6 +1188,7 @@ export const API_ROUTES = {
     },
     BANK: {
       TRANSACTIONS: '/api/accounting/bank/transactions',
+      TRANSACTIONS_SUMMARY: '/api/accounting/bank/transactions/summary',
       IMPORT: '/api/accounting/bank/import',
       CANDIDATES: '/api/accounting/bank/candidates',
       MATCH: '/api/accounting/bank/match',
@@ -1186,10 +1212,13 @@ export const API_ROUTES = {
     },
     APY_CERTIFICATES: {
       LIST: '/api/accounting/apy-certificates',
+      // ADR-ACC-020 — προεπισκόπηση υπολογισμού (GET · ?customerId&fiscalYear)· το POST του LIST τρέχει τον ίδιο υπολογισμό
+      DRAFT: '/api/accounting/apy-certificates/draft',
       BY_ID: (id: string) => `/api/accounting/apy-certificates/${id}` as const,
       SEND_EMAIL: (id: string) => `/api/accounting/apy-certificates/${id}/send-email` as const,
     },
     FIXED_ASSETS: '/api/accounting/assets',
+    FIXED_ASSETS_SUMMARY: '/api/accounting/assets/summary',
     // ADR-ACC-010 §2.1.1 Φ5 — αποσβέσεις χρήσης: GET προεπισκόπηση · POST καταχώριση · POST αναίρεση
     DEPRECIATION_RUN: '/api/accounting/assets/depreciation-run',
     DEPRECIATION_REVERSAL: '/api/accounting/assets/depreciation-run/reversal',

@@ -10,6 +10,13 @@
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import type { DomainDefinition } from './report-builder-types';
 import { docAgeDays } from './report-computed-days';
+import {
+  compareInstallmentDueDays,
+  installmentDaysPastDue,
+  installmentDueDay,
+  installmentToday,
+  isInstallmentPastDue,
+} from '@/lib/payment-plan/installment-due-day';
 
 // ============================================================================
 // Enum Constants (SSoT — match Firestore data)
@@ -66,20 +73,18 @@ function getUnpaidInstallments(installments: InstallmentLike[]): InstallmentLike
   return installments.filter((i) => !SETTLED_STATUSES.has(i.status ?? ''));
 }
 
+/** Η νωρίτερη ανεξόφλητη λήξη, ως **ημέρα** (ADR-234) — `null` αν καμία δεν διαβάζεται. */
+function earliestUnpaidDueDay(doc: Record<string, unknown>): string | null {
+  const days = getUnpaidInstallments(getInstallments(doc))
+    .map((inst) => installmentDueDay(inst.dueDate))
+    .filter((day): day is string => day !== null)
+    .sort(compareInstallmentDueDays);
+  return days[0] ?? null;
+}
+
+/** Ολόκληρες ημέρες Αθήνας μετά τη νωρίτερη ανεξόφλητη λήξη (ΑΚ 241: η ημέρα λήξης δεν είναι καθυστέρηση). */
 function computeDaysOverdue(doc: Record<string, unknown>): number {
-  const unpaid = getUnpaidInstallments(getInstallments(doc));
-  if (unpaid.length === 0) return 0;
-  const now = Date.now();
-  let earliest = Infinity;
-  for (const inst of unpaid) {
-    if (inst.dueDate) {
-      const due = new Date(inst.dueDate).getTime();
-      if (due < earliest) earliest = due;
-    }
-  }
-  if (earliest === Infinity) return 0;
-  const diffMs = now - earliest;
-  return diffMs > 0 ? Math.floor(diffMs / 86_400_000) : 0;
+  return installmentDaysPastDue(earliestUnpaidDueDay(doc), installmentToday());
 }
 
 function computeAgingBucket(doc: Record<string, unknown>): string | null {
@@ -101,10 +106,10 @@ function computeCompletionPct(doc: Record<string, unknown>): number | null {
 }
 
 function computeOverdueAmount(doc: Record<string, unknown>): number {
-  const now = Date.now();
+  const today = installmentToday();
   let total = 0;
   for (const inst of getUnpaidInstallments(getInstallments(doc))) {
-    if (inst.dueDate && new Date(inst.dueDate).getTime() < now) {
+    if (isInstallmentPastDue(inst.dueDate, today)) {
       const remaining = (inst.amount ?? 0) - (inst.paidAmount ?? 0);
       if (remaining > 0) total += remaining;
     }
@@ -113,21 +118,14 @@ function computeOverdueAmount(doc: Record<string, unknown>): number {
 }
 
 function computeNextDueDate(doc: Record<string, unknown>): string | null {
-  const unpaid = getUnpaidInstallments(getInstallments(doc));
-  let earliest: string | null = null;
-  for (const inst of unpaid) {
-    if (inst.dueDate && (!earliest || inst.dueDate < earliest)) {
-      earliest = inst.dueDate;
-    }
-  }
-  return earliest;
+  return earliestUnpaidDueDay(doc);
 }
 
 function computeNextDueAmount(doc: Record<string, unknown>): number | null {
   const nextDate = computeNextDueDate(doc);
   if (!nextDate) return null;
   const unpaid = getUnpaidInstallments(getInstallments(doc));
-  const match = unpaid.find((i) => i.dueDate === nextDate);
+  const match = unpaid.find((i) => installmentDueDay(i.dueDate) === nextDate);
   if (!match) return null;
   return (match.amount ?? 0) - (match.paidAmount ?? 0);
 }

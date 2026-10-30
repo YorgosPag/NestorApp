@@ -13,7 +13,9 @@
 import {
   PLATFORM_OPERATORS,
   calendarDayOf,
+  calendarDaysUntil,
   endOfCalendarDay,
+  operatorDayOf,
   operatorOn,
   type OperatorRecord,
 } from '@/constants/platform-operator';
@@ -99,6 +101,54 @@ describe('Τ — «έως τη μέρα Χ» = τέλος της Χ, ώρα Ελ
     const end = endOfCalendarDay('2026-09-30');
     expect(calendarDayOf(end)).toBe('2026-09-30');
     expect(calendarDayOf(new Date(end.getTime() + 1))).toBe('2026-10-01');
+  });
+});
+
+describe('Ο — operatorDayOf: η ημέρα φορέα μιας αποθηκευμένης ημερομηνίας (λογιστική · λήξεις δόσεων)', () => {
+  it('σκέτη ημέρα ⇒ αυτούσια, χωρίς μετατροπή ζώνης', () => {
+    expect(operatorDayOf('2026-12-01')).toBe('2026-12-01');
+    expect(operatorDayOf('2028-02-29')).toBe('2028-02-29');
+  });
+
+  it('στιγμή ⇒ η ημέρα της στην Αθήνα (`…T23:30Z` = επόμενη ημέρα)', () => {
+    expect(operatorDayOf('2026-11-30T23:30:00.000Z')).toBe('2026-12-01');
+    expect(operatorDayOf('2026-07-14T20:59:00.000Z')).toBe('2026-07-14');
+  });
+
+  it.each(['2026-02-30', '2026-13-01', '', 'όχι ημερομηνία'])('μη πραγματική ⇒ null: %s', (value) => {
+    expect(operatorDayOf(value)).toBeNull();
+  });
+
+  it('Firestore Timestamp / Date / σειριοποιημένο { seconds } ⇒ η ημέρα του στην Αθήνα (εργασίες CRM)', () => {
+    const instant = new Date('2026-11-04T23:30:00.000Z');
+    expect(operatorDayOf({ toDate: () => instant })).toBe('2026-11-05');
+    expect(operatorDayOf(instant)).toBe('2026-11-05');
+    expect(operatorDayOf({ seconds: instant.getTime() / 1000, nanoseconds: 0 })).toBe('2026-11-05');
+  });
+
+  it.each([null, undefined, {}, Number.NaN])('μη αναγνώσιμη τιμή ⇒ null: %p', (value) => {
+    expect(operatorDayOf(value)).toBeNull();
+  });
+});
+
+describe('Η — calendarDaysUntil: ημέρες ΗΜΕΡΟΛΟΓΙΟΥ ως ημέρα-προθεσμία', () => {
+  // 01:00 ώρα Ελλάδας της 5/11 (χειμώνας, UTC+2)
+  const at0100 = new Date('2026-11-04T23:00:00.000Z');
+
+  it('🔴 την ίδια την ημέρα στις 01:00 ⇒ 0 («σήμερα»), όχι 1 όπως το ceil(ms/24h)', () => {
+    expect(calendarDaysUntil('2026-11-05', at0100)).toBe(0);
+  });
+
+  it('αύριο ⇒ 1 · χθες ⇒ −1 · πάνω από αλλαγή ώρας μετρά ημέρες, όχι 24ωρα', () => {
+    expect(calendarDaysUntil('2026-11-06', at0100)).toBe(1);
+    expect(calendarDaysUntil('2026-11-04', at0100)).toBe(-1);
+    expect(calendarDaysUntil('2026-10-26', new Date('2026-10-24T12:00:00.000Z'))).toBe(2);
+  });
+
+  it('στιγμή ⇒ η ημέρα της στην Αθήνα · μη αναγνώσιμη ⇒ null', () => {
+    expect(calendarDaysUntil('2026-11-05T23:30:00.000Z', at0100)).toBe(1);
+    expect(calendarDaysUntil(undefined, at0100)).toBeNull();
+    expect(calendarDaysUntil('2026-02-30', at0100)).toBeNull();
   });
 });
 

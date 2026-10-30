@@ -41,6 +41,10 @@
  * @see ADR-861 — η απόφαση, οι φέτες και τα δηλωμένα όρια
  */
 
+import { hasCalendarDayShape, isCalendarDay } from '@/lib/date/calendar-day';
+import { normalizeToDate } from '@/lib/date-local';
+import { daysBetweenDateKeys } from '@/lib/calendar/date-key';
+
 /** Ημερολογιακή μέρα `YYYY-MM-DD` — λεξικογραφική σύγκριση = χρονολογική. */
 export type CalendarDay = string;
 
@@ -155,6 +159,33 @@ export function calendarDayOf(instant: Date, timeZone: string = OPERATOR_TIME_ZO
   const part = (type: Intl.DateTimeFormatPartTypes): string =>
     parts.find((p) => p.type === type)?.value ?? '';
   return `${part('year')}-${part('month')}-${part('day')}`;
+}
+
+/**
+ * **Η ημέρα φορέα μιας αποθηκευμένης ημερομηνίας** — για πεδία που είναι ημέρα αλλά ιστορικά γράφτηκαν και ως στιγμή.
+ * Σκέτη ημέρα ⇒ αυτούσια (ΚΑΜΙΑ μετατροπή ζώνης)· στιγμή με ώρα ⇒ η ημέρα της **στη ζώνη του φορέα**
+ * (`2026-11-04T23:30:00Z` = 5 Νοεμβρίου στην Ελλάδα)· ανύπαρκτη ημέρα (`2026-02-30`) ή μη αναγνώσιμη τιμή ⇒ `null`
+ * — **όχι** στιγμή για τον `Date`, που θα την κυλούσε στις 2 Μαρτίου.
+ * Δέχεται και ό,τι διαβάζει το `normalizeToDate` (Firestore `Timestamp` · `Date` · σειριοποιημένο `{ seconds }` · epoch ms):
+ * πεδία όπως το `dueDate` εργασιών CRM γράφονται άλλοτε `Timestamp` κι άλλοτε `YYYY-MM-DD` — **μία** κρίση για όλα.
+ */
+export function operatorDayOf(value: unknown, timeZone: string = OPERATOR_TIME_ZONE): CalendarDay | null {
+  if (typeof value === 'string' && hasCalendarDayShape(value)) return isCalendarDay(value) ? value : null;
+  const instant = normalizeToDate(value);
+  return instant === null ? null : calendarDayOf(instant, timeZone);
+}
+
+/**
+ * **Πόσες ημέρες ΗΜΕΡΟΛΟΓΙΟΥ μέχρι μια ημέρα-προθεσμία** (ολοκλήρωση · τέλος φάσης · ορόσημο) — προσημασμένο:
+ * `0` = σήμερα, αρνητικό = πέρασε, `null` = δεν διαβάζεται. Και οι δύο ημέρες στη ζώνη του φορέα.
+ *
+ * 🔑 **Όχι `Math.ceil(ms / 24h)`**: η ημέρα `2026-11-05` διαβάζεται ως μεσάνυχτα UTC (= 02:00 Αθήνα)· στις 01:00 της
+ * ίδιας ημέρας ο λόγος δίνει «1», ενώ η απάντηση είναι «σήμερα». Η ημέρα μετριέται σε ημέρες, όπως στο ημερολόγιο.
+ * Για προθεσμία-**στιγμή** («λήγει σε 6η21ω ⇒ 7») ο κανόνας είναι το `deadlineDaysLeft` (`lib/date-local`).
+ */
+export function calendarDaysUntil(value: unknown, now: Date = new Date(), timeZone: string = OPERATOR_TIME_ZONE): number | null {
+  const day = operatorDayOf(value, timeZone);
+  return day === null ? null : daysBetweenDateKeys(calendarDayOf(now, timeZone), day);
 }
 
 /** Πόσο μπροστά από το UTC είναι η ζώνη **εκείνη τη στιγμή** (ms) — από το Intl, ποτέ σταθερό +2/+3. */

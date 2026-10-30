@@ -12,7 +12,10 @@
  * Αυτό το test κλειδώνει και τις δύο κατευθύνσεις.
  */
 
+import { COLLECTIONS } from '@/config/firestore-collections';
+import { auditEntitySpec } from '@/config/audit-entity-registry';
 import {
+  CDC_WATCHED_COLLECTIONS,
   CDC_COVERED_ENTITY_TYPES,
   CDC_EQUIVALENT_ACTIONS,
   isCdcAuditDuplicate,
@@ -52,5 +55,19 @@ describe('CDC audit coverage — SSoT', () => {
 
   it('άγνωστος entityType δεν σιγάζεται ποτέ (fail-safe προς την καταγραφή)', () => {
     expect(isCdcAuditDuplicate('totally-unknown-entity', 'soft_deleted')).toBe(false);
+  });
+});
+
+describe('CDC_WATCHED_COLLECTIONS — οι συλλογές που διαβάζουν τη σφραγίδα φορέα (2026-10-30)', () => {
+  it('🔴 οι επαφές είναι μέσα (αλλιώς οι μεταπτώσεις γράφουν πάλι `cdc_unknown`)', () => {
+    expect(CDC_WATCHED_COLLECTIONS.has(COLLECTIONS.CONTACTS)).toBe(true);
+  });
+
+  it('🔑 ΠΑΡΑΓΩΓΟ, όχι δεύτερη λίστα: μία συλλογή ανά τύπο CDC, από το μητρώο οντοτήτων', () => {
+    const derived = [...CDC_COVERED_ENTITY_TYPES].map((type) => {
+      const key = auditEntitySpec(type)?.collectionKey;
+      return key ? COLLECTIONS[key] : undefined;
+    });
+    expect([...CDC_WATCHED_COLLECTIONS].sort()).toEqual([...derived].sort());
   });
 });
