@@ -59,10 +59,11 @@ const fs = require('node:fs');
  * Load firestore.indexes.json and index its entries by collectionGroup.
  *
  * @param {string} indexesFilePath Absolute path to firestore.indexes.json.
+ * @param {?object} [input] η είσοδος της πύλης (ADR-924): με `--index` το μανιφέστο ΤΟΥ COMMIT· χωρίς αυτήν ο δίσκος
  * @returns {Map<string, IndexEntry[]>} Map from collection name → index entries.
  */
-function loadIndexCatalog(indexesFilePath) {
-  const raw = fs.readFileSync(indexesFilePath, 'utf8');
+function loadIndexCatalog(indexesFilePath, input = null) {
+  const raw = input ? input.readRequired(indexesFilePath) : fs.readFileSync(indexesFilePath, 'utf8');
   const parsed = JSON.parse(raw);
   const indexes = Array.isArray(parsed.indexes) ? parsed.indexes : [];
 

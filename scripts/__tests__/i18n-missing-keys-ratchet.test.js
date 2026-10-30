@@ -178,7 +178,8 @@ describe('Β — ΜΙΑ μηχανή μετράει, όχι δύο', () => {
   it('Β6 — και οι ΔΥΟ καταναλωτές καλούν την ίδια collectMissingKeys', () => {
     for (const f of ['check-i18n-missing-keys.js', 'generate-i18n-keys-baseline.js']) {
       const src = fs.readFileSync(path.join(REPO, 'scripts', f), 'utf8');
-      expect(src).toMatch(/collectMissingKeys\(content, DEPS\)/);
+      // η πύλη χτίζει τα deps ανά ΕΙΣΟΔΟ (ADR-924: `--index` ⇒ τα locale του commit) — ίδια μηχανή, άλλο όνομα
+      expect(src).toMatch(/collectMissingKeys\(content, (?:DEPS|deps)\)/);
       expect(src).not.toMatch(/function\s+extractTCalls\s*\(/);
     }
   });

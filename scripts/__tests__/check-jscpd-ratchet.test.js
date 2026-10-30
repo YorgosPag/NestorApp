@@ -542,3 +542,43 @@ export function ${fnName}(rows: string[]) {
     expect(cfg.ignorePattern).toEqual([expect.not.stringMatching(/^\^/)]);
   });
 });
+
+/**
+ * ADR-924 Φ5 — `--diff --index`: ο jscpd κρίνει τα σταδιοποιημένα ΟΠΩΣ ΘΑ ΔΕΣΜΕΥΤΟΥΝ (στιγμιότυπο του ευρετηρίου), όχι τον
+ * δίσκο. Προσωρινό repo μέσω `GIT_DIR`/`GIT_WORK_TREE` — το ευρετήριο του repo δεν αγγίζεται ποτέ.
+ */
+describe('Φ5 — --diff --index κρίνει το COMMIT', () => {
+  const ROOT = path.resolve(__dirname, '..', '..');
+  const body = (name) => `export function ${name}(items) {\n${Array.from({ length: 14 }, (_, i) =>
+    `  const value${i} = items.map((item) => item.weight * ${i + 2} + item.offset - ${i});`).join('\n')}\n  return items;\n}\n`;
+  const unique = (name) => `export const ${name} = () => '${name}';\n`;
+  let tmp;
+  beforeEach(() => { tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jscpd-index-')); });
+  afterEach(() => fs.rmSync(tmp, { recursive: true, force: true }));
+
+  function runIndexed({ staged, disk }) {
+    const git = (...args) => spawnSync('git', ['-C', tmp, ...args], { encoding: 'utf8' });
+    git('init', '-q');
+    fs.mkdirSync(path.join(tmp, 'src'), { recursive: true });
+    for (const [rel, text] of Object.entries(staged)) fs.writeFileSync(path.join(tmp, rel), text);
+    git('add', '-A');
+    for (const [rel, text] of Object.entries(disk)) fs.writeFileSync(path.join(tmp, rel), text);
+    const env = { ...process.env, GIT_DIR: path.join(tmp, '.git'), GIT_WORK_TREE: tmp };
+    return spawnSync(process.execPath, [SCRIPT_UNDER_TEST, '--diff', '--index', 'src/a.ts', 'src/b.ts'],
+      { cwd: ROOT, encoding: 'utf8', env }).status;
+  }
+
+  it('κλώνος ΜΟΝΟ στο σταδιοποιημένο (ο δίσκος τον «διόρθωσε») ⇒ ΜΠΛΟΚ', () => {
+    expect(runIndexed({
+      staged: { 'src/a.ts': body('first'), 'src/b.ts': body('second') },
+      disk: { 'src/b.ts': unique('second') },
+    })).toBe(1);
+  }, 120000);
+
+  it('κλώνος ΜΟΝΟ σε ξένη αστάδιοποίητη αλλαγή του δίσκου ⇒ ΠΕΡΝΑ', () => {
+    expect(runIndexed({
+      staged: { 'src/a.ts': body('first'), 'src/b.ts': unique('second') },
+      disk: { 'src/b.ts': body('second') },
+    })).toBe(0);
+  }, 120000);
+});

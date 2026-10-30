@@ -47,11 +47,21 @@
 
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
 const ts = require('typescript');
+const { openGateInput } = require('../lib/gate-input');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
+
+/**
+ * Η είσοδος ΠΡΟΕΠΙΛΟΓΗΣ: ο δίσκος του repo (σουίτες, fixtures, `npm run`). Κάθε φορτωτής δέχεται προαιρετικά την
+ * είσοδο μιας πύλης (ADR-924): με `--index` οι κατάλογοι διαβάζονται από το COMMIT, όχι από τον δίσκο.
+ */
+let diskInput = null;
+function projectInput() {
+  diskInput = diskInput || openGateInput({ root: PROJECT_ROOT });
+  return diskInput;
+}
 
 const COLLECTIONS_FILE = path.join(PROJECT_ROOT, 'src', 'config', 'firestore-collections.ts');
 const TENANT_CONFIG_FILE = path.join(PROJECT_ROOT, 'src', 'services', 'firestore', 'tenant-config.ts');
@@ -74,8 +84,8 @@ const DEFAULT_TENANT_CONFIG = Object.freeze({ mode: 'companyId', fieldName: 'com
  * @param {string} file
  * @returns {ts.SourceFile}
  */
-function parseFile(file) {
-  const src = fs.readFileSync(file, 'utf8');
+function parseFile(file, input = projectInput()) {
+  const src = input.readRequired(file);
   return ts.createSourceFile(file, src, ts.ScriptTarget.Latest, true);
 }
 
@@ -111,10 +121,10 @@ function extractFallbackString(expr) {
  * @param {string} varName
  * @returns {Map<string, string>}
  */
-function loadStringRecord(file, varName) {
+function loadStringRecord(file, varName, input = projectInput()) {
   /** @type {Map<string, string>} */
   const map = new Map();
-  for (const prop of recordPropertiesOf(parseFile(file), varName)) {
+  for (const prop of recordPropertiesOf(parseFile(file, input), varName)) {
     const value = extractFallbackString(prop.initializer);
     if (value !== null) map.set(prop.name.getText(), value);
   }
@@ -159,13 +169,14 @@ function recordPropertiesOf(sf, varName) {
  * Το CHECK 3.35 τα χρειάζεται (το `.collection()` του Admin SDK δέχεται και
  * υποσυλλογές) και είναι **ratchet**, άρα ζητά ρητά `{ includeSubcollections: true }`.
  *
- * @param {{includeSubcollections?: boolean}} [opts]
+ * @param {{includeSubcollections?: boolean, input?: object}} [opts] `input` = η είσοδος της πύλης (ADR-924)
  * @returns {Map<string, string>}
  */
 function loadCollectionsMap(opts = {}) {
-  const collections = loadStringRecord(COLLECTIONS_FILE, 'COLLECTIONS');
+  const input = opts.input || projectInput();
+  const collections = loadStringRecord(COLLECTIONS_FILE, 'COLLECTIONS', input);
   if (opts.includeSubcollections) {
-    const sub = loadStringRecord(COLLECTIONS_FILE, 'SUBCOLLECTIONS');
+    const sub = loadStringRecord(COLLECTIONS_FILE, 'SUBCOLLECTIONS', input);
     for (const [k, v] of sub) if (!collections.has(k)) collections.set(k, v);
   }
   return collections;
@@ -175,8 +186,8 @@ function loadCollectionsMap(opts = {}) {
  * `FIELDS.COMPANY_ID` → `'companyId'` (ADR-245B).
  * @returns {Map<string, string>}
  */
-function loadFieldConstants() {
-  return loadStringRecord(FIELD_CONSTANTS_FILE, 'FIELDS');
+function loadFieldConstants(input = projectInput()) {
+  return loadStringRecord(FIELD_CONSTANTS_FILE, 'FIELDS', input);
 }
 
 /**
@@ -187,10 +198,10 @@ function loadFieldConstants() {
  *
  * @returns {Map<string, {mode: string, fieldName: string}>}
  */
-function loadTenantOverrides() {
+function loadTenantOverrides(input = projectInput()) {
   /** @type {Map<string, {mode: string, fieldName: string}>} */
   const map = new Map();
-  for (const prop of recordPropertiesOf(parseFile(TENANT_CONFIG_FILE), 'TENANT_OVERRIDES')) {
+  for (const prop of recordPropertiesOf(parseFile(TENANT_CONFIG_FILE, input), 'TENANT_OVERRIDES')) {
     if (!ts.isObjectLiteralExpression(prop.initializer)) continue;
     const entry = { ...DEFAULT_TENANT_CONFIG };
     for (const sub of prop.initializer.properties) {
@@ -215,11 +226,11 @@ function loadTenantOverrides() {
  *
  * @returns {Map<string, string[]>}
  */
-function loadReadPathFields() {
+function loadReadPathFields(input = projectInput()) {
   /** @type {Map<string, string[]>} */
   const map = new Map();
-  if (!fs.existsSync(READ_SCOPE_CONFIG_FILE)) return map;
-  for (const prop of recordPropertiesOf(parseFile(READ_SCOPE_CONFIG_FILE), 'READ_PATH_FIELDS')) {
+  if (!input.exists(READ_SCOPE_CONFIG_FILE)) return map;
+  for (const prop of recordPropertiesOf(parseFile(READ_SCOPE_CONFIG_FILE, input), 'READ_PATH_FIELDS')) {
     const arr = unwrapAsExpression(prop.initializer);
     if (!arr || !ts.isArrayLiteralExpression(arr)) continue;
     map.set(prop.name.getText(), arr.elements.filter(ts.isStringLiteral).map((e) => e.text));
@@ -375,20 +386,15 @@ const CUSTODY_PARTITION_ROOT = path.join(PROJECT_ROOT, 'src', 'lib');
 /** Η σειρά των κλάδων — ίδια με το `CUSTODY_KINDS` του `lib/workspace/custody-scope.ts`. */
 const CUSTODY_KINDS = Object.freeze(['company', 'personal']);
 
-/** @type {Map<string, string[]>|null} */
-let partitionsCache = null;
+/** Μία ανακάλυψη ανά ΕΙΣΟΔΟ για την πραγματική ρίζα (οι πύλες σαρώνουν εκατοντάδες αρχεία). */
+const partitionsCache = new WeakMap();
 
-/** @param {string} dir @param {string[]} out */
-function collectTsFiles(dir, out) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (entry.name !== '__tests__' && entry.name !== 'node_modules') collectTsFiles(full, out);
-    } else if (/\.tsx?$/.test(entry.name) && !/\.(test|spec)\.tsx?$/.test(entry.name)) {
-      out.push(full);
-    }
-  }
-  return out;
+/** Τα `.ts`/`.tsx` (όχι tests) κάτω από `dir` — από την ΕΙΣΟΔΟ (ADR-924 Φ3: ήταν δικός του `readdirSync`). */
+function collectTsFiles(dir, input) {
+  return input.files([dir], {
+    accept: (rel) => /\.tsx?$/.test(rel) && !/\.(test|spec)\.tsx?$/.test(rel),
+    pruneDir: (sub) => /(^|\/)__tests__\/$/.test(sub),
+  });
 }
 
 /**
@@ -426,16 +432,17 @@ function partitionKeysOf(init) {
  * διαμέρισμα ελέγχεται χωρίς να θυμηθεί κανείς να το δηλώσει εδώ.
  *
  * @param {string} [root]
+ * @param {object} [input] η είσοδος της πύλης (ADR-924)
  * @returns {Map<string, string[]>}
  */
-function loadCustodyPartitions(root = CUSTODY_PARTITION_ROOT) {
-  // Μία ανακάλυψη ανά διεργασία για την πραγματική ρίζα (οι πύλες σαρώνουν εκατοντάδες αρχεία).
-  if (root === CUSTODY_PARTITION_ROOT && partitionsCache) return partitionsCache;
+function loadCustodyPartitions(root = CUSTODY_PARTITION_ROOT, input = projectInput()) {
+  const cacheable = root === CUSTODY_PARTITION_ROOT;
+  if (cacheable && partitionsCache.has(input)) return partitionsCache.get(input);
   /** @type {Map<string, string[]>} */
   const map = new Map();
-  if (root === CUSTODY_PARTITION_ROOT) partitionsCache = map;
-  for (const file of collectTsFiles(root, [])) {
-    const src = fs.readFileSync(file, 'utf8');
+  if (cacheable) partitionsCache.set(input, map);
+  for (const file of collectTsFiles(root, input)) {
+    const src = input.readRequired(file);
     if (!src.includes('satisfies CustodyPartition')) continue;
     const sf = ts.createSourceFile(file, src, ts.ScriptTarget.Latest, true);
     (function visit(node) {
@@ -597,6 +604,7 @@ function enclosingScope(node) {
 }
 
 module.exports = {
+  projectInput,
   hasReasonedExemption,
   findReasonedExemption,
   allExemptionLines,

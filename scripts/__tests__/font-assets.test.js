@@ -384,10 +384,12 @@ describe('Ζ — το zero-tolerance ΜΠΛΟΚΑΡΕΙ όντως', () => {
     const src = require('node:fs').readFileSync(
       path.join(__dirname, '..', 'check-font-assets.js'), 'utf8',
     );
-    const guard = src.indexOf('enforceZeroTolerance(process.argv');
-    const ratchetCall = src.indexOf('runSetRatchetCli({');
-    expect(guard).toBeGreaterThan(-1);
-    expect(guard).toBeLessThan(ratchetCall);
+    // ADR-924 §8.8: το CLI δίνει τον φρουρό στο SSoT, που τον καλεί ΠΡΙΝ το ratchet — ελέγχονται ΚΑΙ τα δύο.
+    expect(src).toMatch(/runZeroTolerantSetRatchetCli\(\{[\s\S]*\}, enforceZeroTolerance\)/);
+    const ssot = require('node:fs').readFileSync(path.join(__dirname, '..', 'lib', 'ratchet-baseline.js'), 'utf8');
+    const body = ssot.slice(ssot.indexOf('function runZeroTolerantSetRatchetCli'));
+    expect(body.indexOf('enforce(')).toBeGreaterThan(-1);
+    expect(body.indexOf('enforce(')).toBeLessThan(body.indexOf('runSetRatchetCli('));
   });
 
   it('Ζ6: η σπορά ΑΡΝΕΙΤΑΙ να κλειδώσει μπλοκάρουσα κατάσταση σε baseline', () => {

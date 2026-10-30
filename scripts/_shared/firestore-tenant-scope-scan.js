@@ -50,10 +50,11 @@
 
 'use strict';
 
-const fs = require('node:fs');
+
 const ts = require('typescript');
 
 const {
+  projectInput,
   loadCollectionsMap,
   loadFieldConstants,
   loadTenantOverrides,
@@ -132,19 +133,21 @@ const EXEMPT_RE = /tenant-scope-exempt:\s*\S+/;
  * Φτιάξε το αντικείμενο συμφραζομένων **μία φορά** ανά εκτέλεση (τα JSON/AST των
  * καταλόγων δεν αλλάζουν μεταξύ αρχείων).
  *
+ * `input` = η είσοδος της πύλης (ADR-924) — η ΜΙΑ πηγή κειμένου· προεπιλογή ο δίσκος του repo.
  * @returns {{collections: Map<string,string>, fields: Map<string,string>, tenant: Map<string,object>}}
  */
-function createScanContext() {
+function createScanContext(input = projectInput()) {
   return {
+    input,
     // Υποσυλλογές ΝΑΙ: το `.collection()` του Admin SDK τις δέχεται εξίσου.
     // (Το CHECK 3.15 τις αφήνει έξω επίτηδες — βλ. loadCollectionsMap.)
-    collections: loadCollectionsMap({ includeSubcollections: true }),
-    fields: loadFieldConstants(),
-    tenant: loadTenantOverrides(),
+    collections: loadCollectionsMap({ includeSubcollections: true, input }),
+    fields: loadFieldConstants(input),
+    tenant: loadTenantOverrides(input),
     // ADR-866 §2.6.7 — `X[kind]` διαμερίσματος κατόχου ⇒ ένας κλάδος ανά κάτοχο.
-    partitions: loadCustodyPartitions(),
+    partitions: loadCustodyPartitions(undefined, input),
     // Ο ΚΟΙΝΟΣ αναλυτής αλυσίδας (ADR-870), φτιαγμένος **μία** φορά ανά εκτέλεση.
-    chain: createChainContext(),
+    chain: createChainContext(input),
   };
 }
 
@@ -663,7 +666,7 @@ function collectStaleExemptions(filePath, lines, sites, consumed) {
  * @returns {Site[]}
  */
 function scanFile(filePath, ctx) {
-  const src = fs.readFileSync(filePath, 'utf8');
+  const src = ctx.input.readRequired(filePath);
   // CRLF-ανθεκτικό: το working tree είναι Windows (core.autocrlf=true).
   const lines = src.split(/\r?\n/);
   // ScriptKind ρητά: τα fixtures των tests λήγουν σε `.fixture` ώστε να μην τα

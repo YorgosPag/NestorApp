@@ -42,10 +42,11 @@
 
 'use strict';
 
-const fs = require('node:fs');
+
 const ts = require('typescript');
 
 const {
+  projectInput,
   loadCollectionsMap,
   loadFieldConstants,
   loadCustodyPartitions,
@@ -109,12 +110,16 @@ const TENANT_FIELD = 'companyId';
  * @property {boolean}     rootUnknown
  */
 
-/** Φτιάξε τα συμφραζόμενα **μία** φορά ανά εκτέλεση (τα JSON/AST δεν αλλάζουν ανά αρχείο). */
-function createChainContext() {
+/**
+ * Φτιάξε τα συμφραζόμενα **μία** φορά ανά εκτέλεση (τα JSON/AST δεν αλλάζουν ανά αρχείο). `input` = η είσοδος της
+ * πύλης (ADR-924) — η ΜΙΑ πηγή κειμένου για καταλόγους ΚΑΙ σαρωμένα αρχεία· προεπιλογή ο δίσκος του repo.
+ */
+function createChainContext(input = projectInput()) {
   return {
-    collections: loadCollectionsMap({ includeSubcollections: true }),
-    fields: loadFieldConstants(),
-    partitions: loadCustodyPartitions(),
+    input,
+    collections: loadCollectionsMap({ includeSubcollections: true, input }),
+    fields: loadFieldConstants(input),
+    partitions: loadCustodyPartitions(undefined, input),
   };
 }
 
@@ -250,7 +255,7 @@ function callsToClauses(calls, fieldConstants, scope, inheritedBranch) {
  * @returns {ChainSite[]}
  */
 function scanFileChains(filePath, ctx, opts = {}) {
-  const src = fs.readFileSync(filePath, 'utf8');
+  const src = ctx.input.readRequired(filePath);
   if (!/\.collection(Group)?\s*\(/.test(src) && !hasRootHelper(src)) return [];
 
   const sf = ts.createSourceFile(filePath, src, ts.ScriptTarget.Latest, true,

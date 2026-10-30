@@ -351,6 +351,50 @@ describe('CHECK 3.73 — Μ13: λεξιλόγια-ΑΔΕΛΦΙΑ που μοιρ
   });
 });
 
+describe('CHECK 3.73 — Μ15: δεσμός κατά ΤΑΥΤΟΤΗΤΑ, όχι κατά ορθογραφία', () => {
+  /**
+   * 🔴 **ΤΟ ΚΕΝΟ ΠΟΥ ΕΚΛΕΙΣΕ (2026-10-30, ADR-327 §8.5.4).** Ο δεσμός κρινόταν από το ΟΝΟΜΑ του τύπου. Το
+   * `socialUrlGenerator.ts` δήλωνε ΔΙΚΟ του `type SocialPlatform = 'linkedin' | …` (7 τιμές, η ρίζα έχει 10) και οι
+   * δύο πίνακες `Record<SocialPlatform, string>` δίπλα του μετριούνταν `bound` — σε τοπικό αντίγραφο, όχι στη ρίζα.
+   */
+  const REL = 'src/lib/shadow-probe.ts';
+  const write = lines => {
+    const p = path.join(tmpRoot, REL);
+    fs.mkdirSync(path.dirname(p), { recursive: true });
+    fs.writeFileSync(p, [...lines, ''].join(EOL));
+  };
+  const runProbe = () => run(tmpRoot, { files: [...filesOf(tmpRoot), path.join(tmpRoot, REL)] });
+  const TABLE = [
+    'export const PROBE_ICONS: Readonly<Record<ProjectStatus, string>> = {',
+    "  planning: 'a', in_progress: 'b', completed: 'c', on_hold: 'd', cancelled: 'e',",
+    '};',
+  ];
+
+  it('Μ15α — ΤΟΠΙΚΟ ομώνυμο της ρίζας ΣΚΙΑΖΕΙ ⇒ ο πίνακας δίπλα του ΜΠΛΟΚΑΡΕΙ', () => {
+    write(["export type ProjectStatus = 'planning' | 'done';", ...TABLE]);
+    const found = blocking(runProbe());
+    expect(found.map(f => f.name)).toEqual(['PROBE_ICONS']);
+    expect(found[0].shadowed).toEqual(['ProjectStatus']);
+  });
+
+  it('Μ15β ΠΑΡΟΝΟΜΑΣΤΗΣ — ο ΙΔΙΟΣ πίνακας με εισαγωγή της ρίζας ΠΕΡΝΑ (ο κανόνας είναι που τον κόβει)', () => {
+    write(["import type { ProjectStatus } from '@/constants/project-statuses';", ...TABLE]);
+    expect(blocking(runProbe())).toEqual([]);
+  });
+
+  it('Μ15γ — ΠΑΡΑΓΩΓΟ που ορίζεται στο αρχείο του ΔΕΝ είναι σκιά (καμία υπερ-ευαισθησία)', () => {
+    mutateConfig(tmpRoot, cfg => { cfg.vocabularies[0].derivedTypes = [...(cfg.vocabularies[0].derivedTypes || []), 'ProbeStatus']; });
+    write([
+      "import type { ProjectStatus } from '@/constants/project-statuses';",
+      "export type ProbeStatus = Exclude<ProjectStatus, 'deleted'>;",
+      'export const PROBE_ICONS: Readonly<Record<ProbeStatus, string>> = {',
+      "  planning: 'a', in_progress: 'b', completed: 'c', on_hold: 'd', cancelled: 'e',",
+      '};',
+    ]);
+    expect(blocking(runProbe())).toEqual([]);
+  });
+});
+
 describe('CHECK 3.73 — συμβόλαια', () => {
   it('Κ1 — κλειστή λογιστική: άγνωστη κατάσταση ⇒ throw ΜΕ ΟΝΟΜΑ', () => {
     const r = run(tmpRoot);

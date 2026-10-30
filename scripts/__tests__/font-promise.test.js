@@ -200,11 +200,12 @@ describe('CHECK 3.67 — υπόσχεται ο πίνακας όψη που δε
      */
     it('Ζ5: το CLI καλεί τον φρουρό ΠΡΙΝ το ratchet', () => {
       const src = fs.readFileSync(path.join(__dirname, '..', 'check-font-promise.js'), 'utf8');
-      const guard = src.indexOf('enforceZeroTolerance(process.argv');
-      const ratchetCall = src.indexOf('runSetRatchetCli({');
-      expect(guard).toBeGreaterThan(-1);
-      expect(ratchetCall).toBeGreaterThan(-1);
-      expect(guard).toBeLessThan(ratchetCall);
+      // ADR-924 §8.8: το CLI δίνει τον φρουρό στο SSoT, που τον καλεί ΠΡΙΝ το ratchet — ελέγχονται ΚΑΙ τα δύο.
+      expect(src).toMatch(/runZeroTolerantSetRatchetCli\(\{[\s\S]*\}, enforceZeroTolerance\)/);
+      const ssot = fs.readFileSync(path.join(__dirname, '..', 'lib', 'ratchet-baseline.js'), 'utf8');
+      const body = ssot.slice(ssot.indexOf('function runZeroTolerantSetRatchetCli'));
+      expect(body.indexOf('enforce(')).toBeGreaterThan(-1);
+      expect(body.indexOf('enforce(')).toBeLessThan(body.indexOf('runSetRatchetCli('));
     });
   });
 });

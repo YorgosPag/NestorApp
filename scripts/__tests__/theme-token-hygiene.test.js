@@ -337,3 +337,58 @@ describe('Ο5ε — κανένα πατημένο κουμπί γραμμένο 
     expect(role.DECLARED_OPEN_STATES['src/components/ui/toggle.tsx']).toBeUndefined();
   });
 });
+
+// ─── Ο6 — γέμισμα = μελάνι (ίδιο `--status-*` στο ίδιο στοιχείο) ─────────────────
+
+describe('Ο6 — καμία ετικέτα κατάστασης με γέμισμα και μελάνι από το ΙΔΙΟ token', () => {
+  const same = require('../lib/contrast/same-token-fill-ink');
+
+  test('Ο6 — σε ΟΛΟ το src/ μόνο τα δηλωμένα, με ΑΚΡΙΒΕΣ πλήθος', () => {
+    const files = collectSourceFiles(path.join(REPO_ROOT, 'src'));
+    expect(files.length).toBeGreaterThan(1000); // αλλιώς το πράσινο θα σήμαινε «δεν κοίταξα»
+    const found = new Map();
+    for (const full of files) {
+      const hits = same.findSameTokenFillInk(fs.readFileSync(full, 'utf8'), full);
+      if (hits.length > 0) found.set(path.relative(REPO_ROOT, full).replace(/\\/g, '/'), hits);
+    }
+    expect(same.sameTokenViolations(found)).toEqual([]);
+  });
+
+  test('Ο6 ΜΕΤΑΛΛΑΞΗ — κάθε μορφή της 2026-10-29 πιάνεται', () => {
+    const src = [
+      "const a = () => cn(getStatusColor('info', 'bg'), getStatusColor('info', 'text'));",
+      "const b = () => [getStatusColor(s, 'bg'), getStatusColor(s, 'text')].join(' ');",
+      "const c = <Badge className={cn('x', getStatusColor(sem, 'bg'), getStatusColor(sem, 'text'))} />;",
+      "const d = `${getStatusColor('available', 'bg')}/15 ${getStatusColor('available', 'text')}`;",
+      "const e = { draft: 'bg-[hsl(var(--status-info))] text-[hsl(var(--status-info))]' };",
+      "const f = <div className={getStatusColor('info', 'bg')}><p className={getStatusColor('info', 'text')} /></div>;",
+      "const fill = getStatusColor('error', 'bg');",
+      "const g = <span className={cn(fill, getStatusColor('error', 'text'))} />;",
+    ].join('\n');
+    const lines = same.findSameTokenFillInk(src, 'm.tsx').map((h) => h.line);
+    expect(lines).toEqual(expect.arrayContaining([1, 2, 3, 4, 5, 6, 8]));
+  });
+
+  test('Ο6 ΜΕΤΑΛΛΑΞΗ — ΟΧΙ: ρόλοι, διαφορετικά tokens, πίνακας tokens, γειτονικά στοιχεία', () => {
+    const src = [
+      "const a = <Badge variant={getStatusBadgeVariant('info')} />;",
+      "const b = cn(getStatusSurfaceClass('error'), getStatusSolidClass('success'));",
+      "const c = cn(getStatusColor('info', 'bg'), getStatusColor('error', 'text'));",
+      "const T = { 'status-info': { bg: 'bg-[hsl(var(--status-info))]', text: 'text-[hsl(var(--status-info))]' } };",
+      "const d = <><span className={getStatusColor('info', 'bg')} /><span className={getStatusColor('info', 'text')} /></>;",
+      "const e = 'bg-[hsl(var(--status-info))]/15 text-[hsl(var(--status-info))]';",
+    ].join('\n');
+    expect(same.findSameTokenFillInk(src, 'n.tsx')).toEqual([]);
+  });
+
+  test('Ο6 ΜΕΤΑΛΛΑΞΗ — δηλωμένο +1 ⇒ ⛔ · δηλωμένο −1 ⇒ «μίκρυνε τη δήλωση» · αδήλωτο ⇒ ⛔', () => {
+    const hit = { line: 1, kind: 'return', tokens: ['info'], text: 'x' };
+    const out = same.sameTokenViolations(
+      new Map([['src/a.tsx', [hit, hit]], ['src/c.tsx', [hit]]]),
+      { 'src/a.tsx': 1, 'src/b.tsx': 2 },
+    ).join('\n');
+    expect(out).toMatch(/src\/a\.tsx:1/);
+    expect(out).toMatch(/src\/b\.tsx: δηλωμένα 2, βρέθηκαν 0/);
+    expect(out).toMatch(/src\/c\.tsx:1/);
+  });
+});

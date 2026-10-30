@@ -210,6 +210,54 @@ describe('Δ — η παραγωγή από τον εκτελεστή', () => {
   });
 });
 
+describe('Φ4 — το μητρώο περιβάλλοντος · η κλειστότητα bash · το στατικό ratchet (ADR-924 §8.11)', () => {
+  const { countRawReads, measureRawReads, compareRawReads } = require('../lib/gate-commit-view/raw-reads');
+  const gate = id => ({ id, script: `scripts/g${id}.js`, args: "'--index'", asksIndex: true, reader: true, missing: false });
+  const REASON = 'περιγράφει το εγκατεστημένο περιβάλλον, που χτίστηκε από τον δίσκο — όχι το commit';
+  const statesOf = environment => Object.fromEntries(judge({ gates: [gate('3.1')], declared: {}, environment, baseline: [] })
+    .map(r => [r.id, r.state]));
+
+  test('Κ10 — ανάγνωση περιβάλλοντος: με αρχεία+λόγο ⇒ καμία γραμμή · χωρίς λόγο ⇒ ⛔ reasonless · άγνωστη πύλη ⇒ ⛔ orphan', () => {
+    expect(statesOf({ '3.1': { files: ['package.json'], reason: REASON } })).toEqual({ '3.1': STATES.COMMIT_VIEW });
+    expect(statesOf({ '3.1': { files: ['package.json'], reason: 'λόγος' } })['3.1 (environment)']).toBe(STATES.REASONLESS);
+    expect(statesOf({ '3.1': { files: [], reason: REASON } })['3.1 (environment)']).toBe(STATES.REASONLESS);
+    expect(statesOf({ '3.9': { files: ['x'], reason: REASON } })['3.9 (environment)']).toBe(STATES.ORPHAN);
+  });
+
+  test('Δ3 — bash: ο αναγνώστης σε βιβλιοθήκη που γίνεται `source` μετρά (commit-source.sh)', () => {
+    const files = {
+      'scripts/a.sh': 'source "$(dirname "${BASH_SOURCE[0]}")/lib/commit-source.sh"\n',
+      'scripts/lib/commit-source.sh': 'read_source() { git show ":$1"; }\n',
+      'scripts/b.sh': 'source "$(dirname "${BASH_SOURCE[0]}")/lib/other.sh"\n',
+      'scripts/lib/other.sh': 'cat "$1"\n',
+    };
+    const source = { has: rel => rel in files, readText: rel => (rel in files ? files[rel] : null) };
+    const reader = script => classifyDispatch({ id: '3.1', script, args: "'--index'" }, source).reader;
+    expect([reader('scripts/a.sh'), reader('scripts/b.sh')]).toEqual([true, false]);
+  });
+
+  test('Ρ1 — μέτρηση: `fs.x(` και αποδομημένο `x(`, ποτέ σε σχόλιο', () => {
+    expect(countRawReads("fs.readFileSync(a);\nconst t = existsSync(b) && statSync(b);\n// fs.readFileSync(c)\n * readdirSync(d)\n"))
+      .toBe(3);
+  });
+
+  test('Ρ2 — η κλειστότητα: μόνο scripts/, χωρίς τις αυθεντίες της εισόδου', () => {
+    const files = {
+      'scripts/g.js': "require('./lib/x'); require('./lib/gate-input');\nfs.readFileSync(1);\n",
+      'scripts/lib/x.js': 'fs.existsSync(1); fs.statSync(2);\n',
+      'scripts/lib/gate-input.js': 'fs.readFileSync(9); fs.readFileSync(9);\n',
+    };
+    const source = { has: rel => rel in files, readText: rel => (rel in files ? files[rel] : null) };
+    expect(measureRawReads(['scripts/g.js'], source)).toEqual({ 'scripts/g.js': 1, 'scripts/lib/x.js': 2 });
+  });
+
+  test('Ρ3 — ratchet: περισσότερα ή νέο αρχείο ⇒ grown (μπλοκ) · λιγότερα ⇒ shrunk (κλείδωσε)', () => {
+    const { grown, shrunk } = compareRawReads({ a: 3, b: 1, n: 1 }, { a: 2, b: 2 });
+    expect(grown).toEqual([{ file: 'a', from: 2, to: 3 }, { file: 'n', from: 0, to: 1 }]);
+    expect(shrunk).toEqual([{ file: 'b', from: 2, to: 1 }]);
+  });
+});
+
 describe('Ζ — το ζωντανό δέντρο', () => {
   const rows = judge(takeInventory(diskSource(ROOT)));
 

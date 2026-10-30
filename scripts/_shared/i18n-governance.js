@@ -13,8 +13,12 @@ const RUNTIME_ONLY_LANGUAGES = ['pseudo'];
 const SUPPORTED_LANGUAGES = [...SUPPORTED_LOCALES, ...RUNTIME_ONLY_LANGUAGES];
 const SOURCE_GLOBS = ['src', 'app', 'subapps'].map((segment) => path.join(ROOT_DIR, segment));
 
-function readText(filePath) {
-  return fs.readFileSync(filePath, 'utf8');
+/**
+ * `input` (ADR-924) = η είσοδος μιας πύλης — με `--index` το κείμενο ΤΟΥ COMMIT· λείπει ⇒ σφάλμα με όνομα, όπως ο δίσκος.
+ * Χωρίς αυτήν: ο δίσκος (γεννήτορες, εργαλεία).
+ */
+function readText(filePath, input = null) {
+  return input ? input.readRequired(filePath) : fs.readFileSync(filePath, 'utf8');
 }
 
 function readJson(filePath) {
@@ -29,22 +33,23 @@ function getLocaleDir(locale) {
 // getLocaleFiles() resolves a locale name; listJsonFiles() takes an arbitrary
 // directory so tooling can point at a fixture dir without re-deriving the
 // filter+sort (that sort order IS part of the generated-types contract).
-function listJsonFiles(dirPath) {
-  if (!fs.existsSync(dirPath)) {
+function listJsonFiles(dirPath, input = null) {
+  const names = input ? (input.children(dirPath)?.files ?? null) : (fs.existsSync(dirPath) ? fs.readdirSync(dirPath) : null);
+  if (names === null) {
     return [];
   }
 
-  return fs.readdirSync(dirPath)
+  return names
     .filter((name) => name.endsWith('.json'))
     .sort();
 }
 
-function getLocaleFiles(locale) {
-  return listJsonFiles(getLocaleDir(locale));
+function getLocaleFiles(locale, input = null) {
+  return listJsonFiles(getLocaleDir(locale), input);
 }
 
-function getNamespacesForLocale(locale) {
-  return getLocaleFiles(locale).map((fileName) => path.basename(fileName, '.json'));
+function getNamespacesForLocale(locale, input = null) {
+  return getLocaleFiles(locale, input).map((fileName) => path.basename(fileName, '.json'));
 }
 
 function flattenSchema(value, trail = [], acc = new Map()) {
@@ -136,8 +141,8 @@ function stripLineComments(block) {
     .join('\n');
 }
 
-function parseConstArray(filePath, exportName) {
-  const source = readText(filePath);
+function parseConstArray(filePath, exportName, input = null) {
+  const source = readText(filePath, input);
   const pattern = new RegExp(`export const ${exportName} = \\[(.*?)\\] as const;`, 's');
   const match = source.match(pattern);
 
@@ -165,8 +170,8 @@ const LOADER_CASE_PATTERN =
  *
  * @returns {{ el: Array<{namespace: string, dir: string, file: string}>, en: Array }}
  */
-function parseNamespaceLoaders(filePath) {
-  const source = readText(filePath);
+function parseNamespaceLoaders(filePath, input = null) {
+  const source = readText(filePath, input);
   const result = {};
 
   for (const [language, functionName] of Object.entries(LOADER_FUNCTIONS)) {
@@ -182,8 +187,8 @@ function parseNamespaceLoaders(filePath) {
   return result;
 }
 
-function parseTranslationNamespaceUnion(filePath) {
-  const source = readText(filePath);
+function parseTranslationNamespaceUnion(filePath, input = null) {
+  const source = readText(filePath, input);
   const match = source.match(/export type TranslationNamespace = ([^;]+);/);
 
   if (!match) {

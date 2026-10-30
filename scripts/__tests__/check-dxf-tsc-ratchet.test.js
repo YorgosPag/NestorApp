@@ -363,3 +363,16 @@ describe('committed baseline', () => {
     expect(summed).toBe(b.totalErrors);
   });
 });
+
+describe('ADR-924 Φ5 — το smoke κρίνει τη baseline ΤΗΣ ΕΙΣΟΔΟΥ (`--index` ⇒ του commit)', () => {
+  const view = (text) => ({ read: () => text });
+
+  test('με είσοδο: η baseline της όψης — ακόμη κι αν ο δίσκος δεν την έχει', () => {
+    const parsed = loadBaseline(path.join(os.tmpdir(), 'nope-dxf-tsc.json'), view('{"totalErrors":1,"byFile":{}}'));
+    expect(parsed.totalErrors).toBe(1);
+  });
+
+  test('με είσοδο που ΔΕΝ την έχει (σβησμένη στο commit) ⇒ null, ποτέ «υπάρχει στον δίσκο»', () => {
+    expect(loadBaseline(path.join(__dirname, '..', '..', '.dxf-tsc-baseline.json'), view(null))).toBeNull();
+  });
+});

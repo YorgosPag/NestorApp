@@ -402,9 +402,10 @@ describe('Β-Κ — το κριτήριο της ΦΑΣΗΣ Β', () => {
     expect(v.state).toBe('declared-bleed');
   });
 
-  it('Β-Κ6: οι γειτονιές ΠΑΡΑΓΟΝΤΑΙ από τον δίσκο — καμία χειρόγραφη λίστα στην πύλη', () => {
+  it('Β-Κ6: οι γειτονιές ΠΑΡΑΓΟΝΤΑΙ από το δέντρο — καμία χειρόγραφη λίστα στην πύλη', () => {
     const gate = fs.readFileSync(GATE, 'utf8');
-    expect(gate).toContain('readdirSync(APP_ROOT');
+    // ADR-924: από την ΕΙΣΟΔΟ της πύλης (δίσκος, ή με `--index` η όψη του commit) — όχι ωμό `readdirSync`.
+    expect(gate).toContain('input.children(APP_ROOT)');
     // ⛔ Καμία κυριολεκτική ονομασία γειτονιάς ως δεδομένο ελέγχου.
     const code = gate.slice(gate.indexOf('function routeGroups'));
     expect(code).not.toMatch(/\['\(app\)'|"\(app\)"\s*,/);
