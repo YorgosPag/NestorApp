@@ -48,7 +48,7 @@ interface UseVideoPlayerParams {
 }
 
 export function useVideoPlayerState({ onEnded, onError }: UseVideoPlayerParams) {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);

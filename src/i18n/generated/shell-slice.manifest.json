@@ -54,9 +54,9 @@
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "a19c529391a1d697f5756a80db37d565038ac951337c4e5d30ed8d9b3590cc49",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "e1c5896ab910b7f5515ef0a3991a4daae3ba7fc776c6291815cfeaddb51e2398",
     "src/i18n/generated/routes/o__workspace__listings__mandates__requests.el.json": "3b685808152db56cfc0ce4d50912bcd6166e986921ebb92e601cbef9936c0a0b",
-    "src/i18n/generated/routes/o__workspace__procurement__quotes__id__review.el.json": "b188e8db16ac690666949d5ca6c746f758af7171f75fdceda15e5755825ce9af",
+    "src/i18n/generated/routes/o__workspace__procurement__quotes__id__review.el.json": "d8563e4a0dcfaad6078bd7eda941b51a36a49b5f646eb99c354d883ccea208e0",
     "src/i18n/generated/routes/o__workspace__procurement__quotes__scan.el.json": "29ae0139a3b76c01464de8f1fb2d8d0a8ec423c106b1127d08122f3d26d5294e",
-    "src/i18n/generated/routes/o__workspace__projects__id__procurement__rfq__rfqId.el.json": "44abc0f4fd078db7760b12d9a4224c66886e6de9216f67252b3b0349b24ff9dd",
+    "src/i18n/generated/routes/o__workspace__projects__id__procurement__rfq__rfqId.el.json": "506b3227d0b10073327fc131ebd0702a0c73de0b927a9b634e82c50d1d72d777",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "ec24f1fdacbe102d81ef6e2b2c3ffde93e4e29b7857ac702db5ebfe1bb7c3867",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__card.el.json": "df1448a2bb4c85fc26bfbdcc903c7df7d53eaecd1d97fdc03e01a17528acfbae",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__licences.el.json": "833f1f75349ec3140684597ec67c5f6690725809f226b26eb378bb77f9358190",
@@ -170,7 +170,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "c172e3b6c6d02825df4f53cccd8b2c56b9c8ee31e19ea474692ee818223b6391",
+  "inputsSha256": "000928c8ccd2ab07d78080cef4654f91894dc4411fabe2df98a3dc4fdb0c6c1f",
   "languages": [
     "el"
   ],
@@ -13310,9 +13310,6 @@
         },
         "files-media": {
           "keys": [
-            "floorplan.processingInProgress",
-            "floorplan.sceneError",
-            "list.download",
             "pdf.fullscreen",
             "pdf.loadFailed",
             "pdf.loading",
@@ -13331,12 +13328,10 @@
             "preview.rotate",
             "preview.txtError",
             "preview.txtLoading",
-            "preview.unsupported",
             "preview.xmlError",
             "preview.xmlLoading",
             "preview.zoomIn",
-            "preview.zoomOut",
-            "technical.unavailable"
+            "preview.zoomOut"
           ],
           "prefixes": [],
           "whole": false
@@ -17660,9 +17655,6 @@
         },
         "files-media": {
           "keys": [
-            "floorplan.processingInProgress",
-            "floorplan.sceneError",
-            "list.download",
             "pdf.fullscreen",
             "pdf.loadFailed",
             "pdf.loading",
@@ -17681,12 +17673,10 @@
             "preview.rotate",
             "preview.txtError",
             "preview.txtLoading",
-            "preview.unsupported",
             "preview.xmlError",
             "preview.xmlLoading",
             "preview.zoomIn",
-            "preview.zoomOut",
-            "technical.unavailable"
+            "preview.zoomOut"
           ],
           "prefixes": [],
           "whole": false
@@ -23962,7 +23952,7 @@
   ],
   "stats": {
     "matchedKeys": 271,
-    "sliceBytes": 1170644
+    "sliceBytes": 1170416
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

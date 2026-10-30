@@ -243,7 +243,7 @@ export function DeleteConfirmDialog(
 export function SoftDeleteConfirmDialog(
   props: Omit<ConfirmDialogProps, 'variant'> & { variant?: ConfirmDialogVariant }
 ) {
-  const { t } = useTranslation(['common', 'common-actions']);
+  const { t } = useTranslation('common');
 
   return (
     <ConfirmDialog

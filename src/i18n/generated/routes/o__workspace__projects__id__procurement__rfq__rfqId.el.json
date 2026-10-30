@@ -171,11 +171,6 @@
       "unavailable": "Μη διαθέσιμο"
     }
   },
-  "files-media": {
-    "floorplan": {
-      "sceneError": "Σφάλμα φόρτωσης σκηνής"
-    }
-  },
   "filters": {
     "clearFilters": "Καθαρισμός"
   },

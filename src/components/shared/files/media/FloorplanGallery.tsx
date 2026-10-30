@@ -67,7 +67,7 @@ export function FloorplanGallery({
   projectId = null,
   layout = 'flow',
 }: FloorplanGalleryProps) {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   // Canvas refs for DXF/PDF rendering (inline + fullscreen)

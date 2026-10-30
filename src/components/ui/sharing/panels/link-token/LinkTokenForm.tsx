@@ -69,7 +69,7 @@ interface DraftProps {
 // ============================================================================
 
 export function LinkLabelField({ draft, onDraftChange, policy }: DraftProps): React.ReactElement {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const colors = useSemanticColors();
   const required = policy?.labelRequired === true;
   return (
@@ -105,7 +105,7 @@ export interface LinkTokenFieldsProps extends DraftProps {
 }
 
 function PasswordField({ draft, onDraftChange, mode, hasPassword }: LinkTokenFieldsProps): React.ReactElement {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const colors = useSemanticColors();
   const editing = mode === 'edit';
   return (
@@ -139,7 +139,7 @@ function PasswordField({ draft, onDraftChange, mode, hasPassword }: LinkTokenFie
 
 export function LinkTokenFields(props: LinkTokenFieldsProps): React.ReactElement {
   const { draft, onDraftChange, mode = 'create' } = props;
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const colors = useSemanticColors();
   const patch = (partial: Partial<LinkTokenDraft>): void => onDraftChange({ ...draft, ...partial });
 
@@ -215,7 +215,7 @@ export function LinkTokenForm({
   disabled = false,
   ...fields
 }: LinkTokenFormProps): React.ReactElement {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   return (
     <form
       onSubmit={(e) => {

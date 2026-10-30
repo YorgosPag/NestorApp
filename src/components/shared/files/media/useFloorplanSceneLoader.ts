@@ -229,7 +229,7 @@ export function useFloorplanSceneLoader(
   isDxf: boolean,
   fileExt: string,
 ): FloorplanSceneLoaderResult {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const [loadedScene, setLoadedScene] = useState<DxfSceneData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [sceneError, setSceneError] = useState<string | null>(null);

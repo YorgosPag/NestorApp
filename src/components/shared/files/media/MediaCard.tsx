@@ -138,7 +138,7 @@ export function MediaCard({
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const borders = useBorderTokens();
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
 
   const [imageLoaded, setImageLoaded] = useState(false);
 

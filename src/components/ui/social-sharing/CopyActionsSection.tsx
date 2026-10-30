@@ -191,18 +191,16 @@ export const CopyActionsSection: React.FC<CopyActionsProps> = ({
       designSystem.presets.button.outline,
 
       // State-specific styles using design system
+      // Επιφάνεια + μελάνι σε ΕΝΑ ρόλο (ADR-770): ως τις 2026-10-29 `bg` + `text` του ΙΔΙΟΥ token ⇒ το «Αντιγράφηκε!»
+      // ήταν συμπαγές πράσινο κουμπί χωρίς ορατό κείμενο.
       isCopied && designSystem.cn(
         designSystem.getStatusColor('success', 'border'),
-        designSystem.getStatusColor('success', 'bg'),
-        designSystem.getStatusColor('success', 'text'),
-        // Enterprise semantic success styling via design system
+        designSystem.getStatusSurfaceClass('success'),
       ),
 
       hasError && designSystem.cn(
         designSystem.getStatusColor('error', 'border'),
-        designSystem.getStatusColor('error', 'bg'),
-        designSystem.getStatusColor('error', 'text'),
-        // Enterprise semantic error styling via design system
+        designSystem.getStatusSurfaceClass('error'),
       ),
 
       !isCopied && !hasError && designSystem.cn(
@@ -320,14 +318,10 @@ export const CopyActionsSection: React.FC<CopyActionsProps> = ({
       {(errors.url || errors.text) && (
         <aside className={designSystem.cn(
           "p-3 rounded-lg",
-          designSystem.getStatusColor('error', 'bg'),
-          // Enterprise semantic error background
+          // Επιφάνεια + μελάνι σε ΕΝΑ ρόλο· το κείμενο το κληρονομεί (ως τις 2026-10-29 κόκκινο σε κόκκινο, ADR-770).
+          designSystem.getStatusSurfaceClass('error'),
         )} role="alert" aria-label={t('copy.copyErrors')}>
-          <p className={designSystem.cn(
-            designSystem.getTypographyClass('sm'),
-            designSystem.getStatusColor('error', 'text'),
-            // Enterprise semantic error text
-          )}>
+          <p className={designSystem.getTypographyClass('sm')}>
             {errors.url || errors.text}
           </p>
         </aside>

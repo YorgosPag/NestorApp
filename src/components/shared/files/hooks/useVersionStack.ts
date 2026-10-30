@@ -29,7 +29,7 @@ function versionNumbers(versions: readonly FileVersionEntry[]): ReadonlyMap<stri
 
 /** Η ανακοίνωση της έκβασης — μεταφρασμένη, ποτέ ωμό όνομα αιτίας (N.11). */
 function useAnnounce(): (outcome: PromoteVersionOutcome) => void {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const { success, error: showError } = useNotifications();
   return useCallback((outcome: PromoteVersionOutcome) => {
     if (outcome.kind === 'promoted') {

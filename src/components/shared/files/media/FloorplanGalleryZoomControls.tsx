@@ -37,7 +37,7 @@ export function FloorplanGalleryZoomControls({
   onOpenFullscreen,
   onCloseFullscreen,
 }: FloorplanGalleryZoomControlsProps) {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 
