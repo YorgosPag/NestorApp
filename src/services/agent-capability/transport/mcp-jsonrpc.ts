@@ -23,6 +23,8 @@
  * @see ADR-734 §8.4
  */
 
+import { isPlainRecord } from '@/lib/type-guards';
+
 // ============================================================================
 // ΤΥΠΟΙ
 // ============================================================================
@@ -91,10 +93,6 @@ export const JSON_RPC_ERROR = {
 // ΑΝΑΛΥΣΗ
 // ============================================================================
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function isValidId(value: unknown): value is JsonRpcId {
   return typeof value === 'string' || (typeof value === 'number' && Number.isFinite(value));
 }
@@ -109,7 +107,7 @@ function isValidId(value: unknown): value is JsonRpcId {
  * έβλεπε σφάλμα εκεί που ακολούθησε το πρωτόκολλο.
  */
 export function parseJsonRpcMessage(raw: unknown): ParsedMessage {
-  if (!isPlainObject(raw)) {
+  if (!isPlainRecord(raw)) {
     return {
       kind: 'invalid',
       id: null,
@@ -135,7 +133,7 @@ export function parseJsonRpcMessage(raw: unknown): ParsedMessage {
     };
   }
 
-  const params = isPlainObject(raw.params) ? raw.params : undefined;
+  const params = isPlainRecord(raw.params) ? raw.params : undefined;
 
   if (!('id' in raw) || raw.id === null) {
     return { kind: 'notification', notification: { jsonrpc: '2.0', method: raw.method, params } };

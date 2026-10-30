@@ -40,6 +40,7 @@ import type {
   DispatchDestination,
   DispatchRequest,
 } from '@/server/notifications/notification-orchestrator';
+import { plainRecordOrNull } from '@/lib/type-guards';
 
 /** Η ετικέτα μιας επανάληψης: μικρά λατινικά, ψηφία, παύλες — γίνεται μέρος ταυτότητας. */
 const REPLAY_TAG = /^[a-z0-9][a-z0-9-]{0,39}$/;
@@ -80,7 +81,7 @@ type Fields = Readonly<Record<string, unknown>>;
 type Action = DestinationAction;
 
 function fieldsOf(value: unknown): Fields {
-  return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Fields) : {};
+  return plainRecordOrNull(value) ?? {};
 }
 
 function textOf(value: unknown): string | undefined {

@@ -1,4 +1,5 @@
 import type { TFunction } from 'i18next';
+import { isPlainRecord } from '@/lib/type-guards';
 
 const VALUE_SEPARATOR = ' · ';
 const LIST_SEPARATOR = ', ';
@@ -12,10 +13,6 @@ function parse(raw: string): unknown {
   } catch {
     return raw;
   }
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function readNumber(source: JsonRecord, key: string): number | null {
@@ -38,7 +35,7 @@ function readStringArray(source: JsonRecord, key: string): string[] {
 
 function formatAreas(t: TFunction, raw: string): string {
   const value = parse(raw);
-  if (!isRecord(value)) {
+  if (!isPlainRecord(value)) {
     return raw;
   }
   const sqm = t('properties-enums:units.sqm');
@@ -54,7 +51,7 @@ function formatAreas(t: TFunction, raw: string): string {
 
 function formatLayout(t: TFunction, raw: string): string {
   const value = parse(raw);
-  if (!isRecord(value)) {
+  if (!isPlainRecord(value)) {
     return raw;
   }
   const segments: string[] = [];
@@ -73,15 +70,23 @@ function formatLayout(t: TFunction, raw: string): string {
   return segments.length > 0 ? segments.join(VALUE_SEPARATOR) : raw;
 }
 
-function formatOrientations(t: TFunction, raw: string): string {
+/**
+ * A stored JSON array of enum codes → their labels; anything else stays raw.
+ * ⚠️ The caller owns the `t(...)` call: the key keeps its static prefix where the i18n extractors can read it.
+ */
+function formatEnumList(raw: string, labelOf: (code: string) => string): string {
   const value = parse(raw);
   if (!Array.isArray(value)) {
     return raw;
   }
   const labels = value
     .filter((entry): entry is string => typeof entry === 'string')
-    .map((entry) => t(`properties-enums:units.orientation.${entry}`, { defaultValue: entry }));
+    .map(labelOf);
   return labels.length > 0 ? labels.join(LIST_SEPARATOR) : raw;
+}
+
+function formatOrientations(t: TFunction, raw: string): string {
+  return formatEnumList(raw, (entry) => t(`properties-enums:units.orientation.${entry}`, { defaultValue: entry }));
 }
 
 function formatType(t: TFunction, raw: string): string {
@@ -94,7 +99,7 @@ function formatCondition(t: TFunction, raw: string): string {
 
 function formatEnergy(t: TFunction, raw: string): string {
   const value = parse(raw);
-  if (!isRecord(value)) {
+  if (!isPlainRecord(value)) {
     return raw;
   }
   const energyClass = readString(value, 'class');
@@ -106,7 +111,7 @@ function formatEnergy(t: TFunction, raw: string): string {
 
 function formatSystemsOverride(t: TFunction, raw: string): string {
   const value = parse(raw);
-  if (!isRecord(value)) {
+  if (!isPlainRecord(value)) {
     return raw;
   }
   const segments: string[] = [];
@@ -127,7 +132,7 @@ function formatSystemsOverride(t: TFunction, raw: string): string {
 
 function formatFinishes(t: TFunction, raw: string): string {
   const value = parse(raw);
-  if (!isRecord(value)) {
+  if (!isPlainRecord(value)) {
     return raw;
   }
   const segments: string[] = [];
@@ -155,14 +160,7 @@ function formatFinishes(t: TFunction, raw: string): string {
 }
 
 function formatFeatureArray(t: TFunction, raw: string, bucket: 'interior' | 'security'): string {
-  const value = parse(raw);
-  if (!Array.isArray(value)) {
-    return raw;
-  }
-  const labels = value
-    .filter((entry): entry is string => typeof entry === 'string')
-    .map((entry) => t(`properties-enums:features.${bucket}.${entry}`, { defaultValue: entry }));
-  return labels.length > 0 ? labels.join(LIST_SEPARATOR) : raw;
+  return formatEnumList(raw, (entry) => t(`properties-enums:features.${bucket}.${entry}`, { defaultValue: entry }));
 }
 
 function formatCommercialStatus(t: TFunction, raw: string): string {
@@ -174,7 +172,7 @@ const SHOW_RENT_PRICE: ReadonlySet<string> = new Set(['for-rent', 'for-sale-and-
 
 function formatCommercialObject(t: TFunction, raw: string, commercialStatus?: string): string {
   const value = parse(raw);
-  if (!isRecord(value)) {
+  if (!isPlainRecord(value)) {
     return raw;
   }
 
@@ -210,7 +208,7 @@ function formatCommercialObject(t: TFunction, raw: string, commercialStatus?: st
   const owners = value['owners'];
   if (Array.isArray(owners) && owners.length > 0) {
     const ownerNames = owners
-      .filter(isRecord)
+      .filter(isPlainRecord)
       .map((owner) => {
         const name = readString(owner, 'name');
         const pct = readNumber(owner, 'ownershipPct');
@@ -246,7 +244,7 @@ function formatLinkedSpaces(t: TFunction, raw: string): string {
   if (!Array.isArray(value)) {
     return raw;
   }
-  const entries = value.filter(isRecord);
+  const entries = value.filter(isPlainRecord);
   if (entries.length === 0) {
     return t('properties:impactGuard.emptyValue');
   }

@@ -76,6 +76,17 @@ export function isPlainRecord(value: unknown): value is Record<string, unknown> 
 }
 
 /**
+ * Reader for **stored / served** JSON: the object, or `null` when it is not a JSON object (absent, `null`, array, scalar).
+ *
+ * The ONE «object or nothing» — chains like `plainRecordOrNull(plainRecordOrNull(body)?.data)` read nested payloads
+ * without a cast. Private copies (`objectOf` · `asRecord` · `record` · `fieldsOf`) each ended in `value as Record<…>`.
+ * @see ADR-225 — sibling of `trimmedStringOrNull`
+ */
+export function plainRecordOrNull(value: unknown): Record<string, unknown> | null {
+  return isPlainRecord(value) ? value : null;
+}
+
+/**
  * Type guard: a finite number (rejects `NaN`, `±Infinity` and non-numbers).
  * @see ADR-889 §11 — extracted from the private copies of the market file readers (N.0.2)
  */

@@ -36,6 +36,7 @@ import { PropertyListingTab } from '@/components/properties/tabs/PropertyListing
 import { PropertyObjectiveValuePanel } from '@/components/properties/detail/PropertyObjectiveValuePanel';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { AuditEntityType } from '@/types/audit-trail';
+import { isRecord } from '@/lib/type-guards';
 
 /**
  * **Η περιήγηση φορτώνεται με όριο** (`React.lazy`) — ADR-744 §27. Με στατική εισαγωγή το `SpatialTourPanel` έβαζε το
@@ -59,10 +60,6 @@ function TabLoading(): React.ReactElement {
 
 function isProperty(value: unknown): value is Property {
   return typeof value === 'object' && value !== null && 'id' in value;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
 }
 
 function resolveSelectedProperty(props: PropertyTabComponentProps): Property | null {

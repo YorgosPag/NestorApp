@@ -19,6 +19,7 @@
  */
 
 import { z } from 'zod/v4';
+import { isPlainRecord } from '@/lib/type-guards';
 
 /** Ένα σχήμα JSON, όπως το βγάζει το zod — δέντρο αντικειμένων. */
 export type JsonSchemaNode = { [key: string]: unknown };
@@ -26,7 +27,7 @@ export type JsonSchemaNode = { [key: string]: unknown };
 const COMPONENT_PREFIX = '#/components/schemas/';
 
 function isNode(value: unknown): value is JsonSchemaNode {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return isPlainRecord(value);
 }
 
 /** Η σταθερή τιμή του διακριτή μέσα σε ένα μέλος (`properties.kind.const`), ή `null`. */

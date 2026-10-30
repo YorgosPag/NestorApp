@@ -26,6 +26,7 @@ import { OID } from './cms-primitives';
 import type { CscConfiguration } from './seal-config.server';
 import type { SealSignatureAlgorithm, SealSigner, SealSignerResult } from './seal-signer.types';
 import { jsonOf, postJson, postOnce, type SealCall, type SealTransport } from './seal-transport.server';
+import { plainRecordOrNull } from '@/lib/type-guards';
 
 /** Περιθώριο πριν τη λήξη του token — ποτέ κλήση με token που λήγει «στη διαδρομή». */
 const TOKEN_EXPIRY_MARGIN_MS = 60_000;
@@ -49,10 +50,6 @@ function failedFrom(call: Exclude<SealCall, { kind: 'ok' }>, step: string): Fail
 
 const rejected = (detail: string): Failed => ({ kind: 'failed', reason: 'signer-rejected', detail });
 
-function record(value: unknown): Readonly<Record<string, unknown>> | null {
-  return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
-}
-
 function strings(value: unknown): readonly string[] | null {
   return Array.isArray(value) && value.every((item): item is string => typeof item === 'string') ? value : null;
 }
@@ -70,12 +67,12 @@ interface CredentialInfo {
 }
 
 function parseCredentialInfo(json: unknown): CredentialInfo | null {
-  const body = record(json);
-  const certificates = strings(record(body?.cert)?.certificates);
+  const body = plainRecordOrNull(json);
+  const certificates = strings(plainRecordOrNull(body?.cert)?.certificates);
   if (certificates === null || certificates.length === 0) return null;
   const chain = certificates.map(base64Bytes);
   if (chain.some((der) => der === null)) return null;
-  return { chain: chain.filter((der): der is Uint8Array => der !== null), keyAlgorithms: strings(record(body?.key)?.algo) ?? [] };
+  return { chain: chain.filter((der): der is Uint8Array => der !== null), keyAlgorithms: strings(plainRecordOrNull(body?.key)?.algo) ?? [] };
 }
 
 /** `signAlgo`: σύνθετο OID αν το credential το δηλώνει (ή δεν δηλώνει τίποτα)· αλλιώς το OID του κλειδιού. */
@@ -95,7 +92,7 @@ class CscSession implements SealSigner {
 
   private async authorizationServer(): Promise<string> {
     const call = await postJson(this.transport, `${this.config.baseUrl}/info`, {});
-    const oauth2 = call.kind === 'ok' ? record(call.json)?.oauth2 : undefined;
+    const oauth2 = call.kind === 'ok' ? plainRecordOrNull(call.json)?.oauth2 : undefined;
     return typeof oauth2 === 'string' && oauth2.startsWith('https://') ? oauth2.replace(/\/+$/, '') : this.config.baseUrl;
   }
 
@@ -111,7 +108,7 @@ class CscSession implements SealSigner {
       body: form.toString(),
     });
     if (call.kind !== 'ok') return failedFrom(call, 'oauth2/token');
-    const body = record(jsonOf(call.body));
+    const body = plainRecordOrNull(jsonOf(call.body));
     const value = body?.access_token;
     if (typeof value !== 'string' || value.length === 0) return rejected('oauth2/token: χωρίς access_token');
     const lifetime = typeof body?.expires_in === 'number' ? body.expires_in : DEFAULT_TOKEN_LIFETIME_S;
@@ -149,11 +146,11 @@ class CscSession implements SealSigner {
     const common = { credentialID: this.config.credentialId, hashes, hashAlgorithmOID: OID.sha256 };
     const authorized = await this.call('credentials/authorize', { ...common, numSignatures: 1 });
     if (authorized.kind === 'failed') return authorized;
-    const sad = record(authorized.value)?.SAD;
+    const sad = plainRecordOrNull(authorized.value)?.SAD;
     if (typeof sad !== 'string' || sad.length === 0) return rejected('credentials/authorize: χωρίς SAD (απαιτεί PIN/OTP;)');
     const signed = await this.call('signatures/signHash', { ...common, SAD: sad, signAlgo: cscSignAlgorithm(algorithm, info.value.keyAlgorithms) });
     if (signed.kind === 'failed') return signed;
-    const signatures = strings(record(signed.value)?.signatures);
+    const signatures = strings(plainRecordOrNull(signed.value)?.signatures);
     const signature = signatures?.length === 1 ? base64Bytes(signatures[0]) : null;
     return signature === null ? rejected('signatures/signHash: όχι ακριβώς μία αναγνώσιμη υπογραφή') : { kind: 'ok', value: signature };
   }

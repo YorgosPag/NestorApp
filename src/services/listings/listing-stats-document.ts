@@ -17,6 +17,7 @@ import 'server-only';
 // Ημέρα = **υπαρκτή** `YYYY-MM-DD` (ADR-919): ένα κλειδί `2027-02-30` δεν είναι ημέρα αγοράς, άρα δεν αθροίζεται.
 import { isCalendarDay } from '@/lib/date/calendar-day';
 import type { ListingViewDaily } from '@/lib/listings/listing-stats';
+import { plainRecordOrNull } from '@/lib/type-guards';
 
 /** `listing_stats/{lsta_*}` — η ψυχρή σύνοψη. Γράφει **μόνο** το cron. */
 export interface StoredListingStats {
@@ -43,22 +44,16 @@ function isCount(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0;
 }
 
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
-}
-
 /** Κράτα μόνο καθαρά ζεύγη (ημέρα, πλήθος) — ό,τι άλλο πετιέται, ποτέ δεν αθροίζεται. */
 function readDaily(value: unknown): ListingViewDaily {
-  const record = asRecord(value);
+  const record = plainRecordOrNull(value);
   if (record === null) return {};
   return Object.fromEntries(Object.entries(record).filter(([day, views]) => isCalendarDay(day) && isCount(views)));
 }
 
 /** Διάβασε μια σύνοψη, ή `null` αν το έγγραφο δεν είναι σύνοψη. */
 export function readStoredListingStats(raw: unknown): StoredListingStats | null {
-  const record = asRecord(raw);
+  const record = plainRecordOrNull(raw);
   if (record === null || typeof record.propertyId !== 'string') return null;
   return {
     propertyId: record.propertyId,
@@ -70,7 +65,7 @@ export function readStoredListingStats(raw: unknown): StoredListingStats | null 
 
 /** Διάβασε ένα shard, ή `null` αν δεν είναι shard. */
 export function readStoredListingViewShard(raw: unknown): StoredListingViewShard | null {
-  const record = asRecord(raw);
+  const record = plainRecordOrNull(raw);
   if (record === null) return null;
   const { propertyId, day, views } = record;
   if (typeof propertyId !== 'string' || !isCalendarDay(day) || !isCount(views)) return null;

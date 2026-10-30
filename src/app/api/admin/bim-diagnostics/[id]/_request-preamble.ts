@@ -26,6 +26,8 @@
 import 'server-only';
 
 import { NextResponse } from 'next/server';
+import type { AuthContext } from '@/lib/auth';
+import type { AuthenticatedHandler } from '@/lib/auth/middleware';
 
 /** Η ετυμηγορία ενός επικυρωτή σώματος — το σχήμα που ήδη μιλούν και οι δύο διαδρομές. */
 export type BodyVerdict<T> =
@@ -71,4 +73,33 @@ export async function readDiagnosticRequest<T>(
   }
 
   return { ok: true, diagId, body: validation.body };
+}
+
+/** Το περιβάλλον διαδρομής `…/[id]` όπως το παραδίδει το Next. */
+export interface DiagnosticRouteContext {
+  params: Promise<{ id: string }>;
+}
+
+/** Ό,τι βλέπει ο γραφέας: **μόνο** επικυρωμένα δεδομένα — ποτέ το ακατέργαστο αίτημα. */
+export interface DiagnosticWrite<T> {
+  readonly diagId: string;
+  readonly body: T;
+  readonly ctx: AuthContext;
+}
+
+/**
+ * 🔑 Ο handler ενός γραφέα διαγνωστικού: το προοίμιο τρέχει **πριν** και η απόρριψή του επιστρέφεται αυτούσια.
+ * Κλείνει και το περίβλημα που έμενε δίδυμο μετά το `readDiagnosticRequest` (CHECK 3.28, ADR-225 Phase 2).
+ */
+export function diagnosticHandler<T, R>(
+  validateBody: (raw: unknown) => BodyVerdict<T>,
+  write: (input: DiagnosticWrite<T>) => Promise<NextResponse<R>>,
+): AuthenticatedHandler<R, DiagnosticRouteContext> {
+  return async (request, ctx, _cache, routeContext) => {
+    const preamble = await readDiagnosticRequest(request, routeContext, validateBody);
+    if (!preamble.ok) {
+      return preamble.response;
+    }
+    return write({ diagId: preamble.diagId, body: preamble.body, ctx });
+  };
 }

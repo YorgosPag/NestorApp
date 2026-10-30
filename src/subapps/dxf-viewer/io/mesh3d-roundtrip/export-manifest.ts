@@ -31,6 +31,7 @@ import type * as THREE from 'three';
 import { resolveBimMeshIdentity } from '../../export/core/mesh3d/mesh3d-identity';
 import { stripHiddenPrefix } from '../../export/core/mesh3d/mesh3d-naming';
 import { computeGeometryFingerprint, type GeometryFingerprint, type GeometrySignature, type Vec3M } from './geometry-hash';
+import { isPlainRecord } from '@/lib/type-guards';
 
 /** Έκδοση σχήματος. Αλλαγή **ασύμβατη** ⇒ νέο string, ώστε ένα παλιό manifest να απορρίπτεται ρητά. */
 export const NESTOR_MANIFEST_SCHEMA = 'nestor-export/1';
@@ -163,10 +164,6 @@ export function serialiseManifest(manifest: NestorExportManifest): string {
   return `${JSON.stringify(manifest, null, 2)}\n`;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function readString(source: Record<string, unknown>, key: string): string | null {
   const value = source[key];
   return typeof value === 'string' ? value : null;
@@ -185,7 +182,7 @@ function readVec3(source: Record<string, unknown>, key: string): Vec3M | null {
 }
 
 function parseSignature(value: unknown): GeometrySignature | null {
-  if (!isRecord(value)) return null;
+  if (!isPlainRecord(value)) return null;
   const vertexCount = readNumber(value, 'vertexCount');
   const triangleCount = readNumber(value, 'triangleCount');
   const areaM2 = readNumber(value, 'areaM2');
@@ -197,7 +194,7 @@ function parseSignature(value: unknown): GeometrySignature | null {
 }
 
 function parseEntity(value: unknown): ManifestEntity | null {
-  if (!isRecord(value)) return null;
+  if (!isPlainRecord(value)) return null;
   const meshName = readString(value, 'meshName');
   if (meshName === null) return null;
   return {
@@ -217,7 +214,7 @@ function parseEntity(value: unknown): ManifestEntity | null {
  * Κρατά μόνο string→string ζεύγη· κανένα έγκυρο ζεύγος → `undefined` (όχι άδειο object).
  */
 function parseMaterialsByFace(value: unknown): Record<string, string> | undefined {
-  if (!isRecord(value)) return undefined;
+  if (!isPlainRecord(value)) return undefined;
   const out: Record<string, string> = {};
   for (const [key, name] of Object.entries(value)) {
     if (typeof name === 'string') out[key] = name;
@@ -237,7 +234,7 @@ export function parseExportManifest(text: string): NestorExportManifest | null {
   } catch {
     return null;
   }
-  if (!isRecord(raw)) return null;
+  if (!isPlainRecord(raw)) return null;
   if (readString(raw, 'schema') !== NESTOR_MANIFEST_SCHEMA) return null;
   if (!Array.isArray(raw['entities'])) return null;
 
@@ -259,7 +256,7 @@ export function parseExportManifest(text: string): NestorExportManifest | null {
  * Κρατά μόνο string→string ζεύγη — κάθε άλλο αγνοείται σιωπηλά.
  */
 function parseMaterials(value: unknown): Record<string, string> {
-  if (!isRecord(value)) return {};
+  if (!isPlainRecord(value)) return {};
   const out: Record<string, string> = {};
   for (const [name, hex] of Object.entries(value)) {
     if (typeof hex === 'string') out[name] = hex;

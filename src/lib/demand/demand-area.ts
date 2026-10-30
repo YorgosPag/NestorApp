@@ -20,6 +20,7 @@ import {
 import type { GeoDrawnArea, GeoOutline, GeoPoint } from '@/types/geo/coordinates';
 // ⚠️ ΜΟΝΟ τύπος: το `types/property-demand.ts` εισάγει από εδώ τα invariants — εισαγωγή τιμής θα ήταν κύκλος.
 import type { DemandPlace } from '@/types/property-demand';
+import { isPlainRecord } from '@/lib/type-guards';
 
 /** Οι τρόποι που μια σχεδιασμένη περιοχή ζήτησης είναι άκυρη — υποσύνολο του `DEMAND_INVARIANTS`. */
 export type DemandAreaInvariant = 'area-empty' | 'outline-degenerate' | 'area-too-many' | 'area-too-large';
@@ -111,6 +112,6 @@ export function withAreaShapes(stored: unknown): unknown {
 
 /** Ένα αποθηκευμένο σχήμα → ο δακτύλιός του (δέχεται και γυμνό πίνακα: ό,τι είναι ήδη στη μνήμη). */
 function ringOf(shape: unknown): unknown {
-  if (typeof shape === 'object' && shape !== null && !Array.isArray(shape) && 'ring' in shape) return shape.ring;
+  if (isPlainRecord(shape) && 'ring' in shape) return shape.ring;
   return shape;
 }

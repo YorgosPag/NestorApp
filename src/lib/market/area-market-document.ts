@@ -23,19 +23,14 @@ import {
   type AreaMarketSnapshot,
   type AreaUnderConstruction,
 } from '@/types/area-market';
-
-type DocumentData = Readonly<Record<string, unknown>>;
-
-function isRecord(value: unknown): value is DocumentData {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+import { isPlainRecord } from '@/lib/type-guards';
 
 function isOfferSummary(value: unknown): boolean {
-  return isRecord(value)
+  return isPlainRecord(value)
     && typeof value.listings === 'number'
     && typeof value.counted === 'number'
-    && isRecord(value.excluded)
-    && isRecord(value.segments);
+    && isPlainRecord(value.excluded)
+    && isPlainRecord(value.segments);
 }
 
 /**
@@ -43,7 +38,7 @@ function isOfferSummary(value: unknown): boolean {
  * αγγελία (`readStoredAvailability`, ξαναχτίζει το διάστημα)· ό,τι δεν στέκει είναι απουσία.
  */
 function underConstructionOf(value: unknown): AreaUnderConstruction | null {
-  if (!isRecord(value) || typeof value.count !== 'number' || !Number.isInteger(value.count) || value.count < 1) return null;
+  if (!isPlainRecord(value) || typeof value.count !== 'number' || !Number.isInteger(value.count) || value.count < 1) return null;
   const next = readStoredAvailability(value.next);
   return next.kind === 'scheduled' ? { count: value.count, next } : null;
 }
@@ -53,10 +48,10 @@ function underConstructionOf(value: unknown): AreaUnderConstruction | null {
  * 🔑 Χαλασμένο **προαιρετικό** πεδίο ρίχνει **μόνο το πεδίο**: οι τιμές της περιοχής δεν χάνονται για μια γραμμή.
  */
 export function areaMarketSnapshotFromDocument(data: unknown): AreaMarketSnapshot | null {
-  if (!isRecord(data) || data.schemaVersion !== AREA_MARKET_SNAPSHOT_SCHEMA_VERSION) return null;
+  if (!isPlainRecord(data) || data.schemaVersion !== AREA_MARKET_SNAPSHOT_SCHEMA_VERSION) return null;
   if (typeof data.areaId !== 'string' || typeof data.day !== 'string' || typeof data.listingCount !== 'number') return null;
   const offers = data.offers;
-  if (!isRecord(offers) || !ASKING_OFFERS.every((offer) => isOfferSummary(offers[offer]))) return null;
+  if (!isPlainRecord(offers) || !ASKING_OFFERS.every((offer) => isOfferSummary(offers[offer]))) return null;
   const underConstruction = underConstructionOf(data.underConstruction);
   return {
     schemaVersion: AREA_MARKET_SNAPSHOT_SCHEMA_VERSION,
@@ -71,7 +66,7 @@ export function areaMarketSnapshotFromDocument(data: unknown): AreaMarketSnapsho
 
 /** Έγγραφο `area_market_runs` ⇒ σημάδι εκτέλεσης, ή `null`. */
 export function areaMarketRunFromDocument(data: unknown): AreaMarketRun | null {
-  if (!isRecord(data) || data.schemaVersion !== AREA_MARKET_SNAPSHOT_SCHEMA_VERSION) return null;
+  if (!isPlainRecord(data) || data.schemaVersion !== AREA_MARKET_SNAPSHOT_SCHEMA_VERSION) return null;
   if (typeof data.day !== 'string' || typeof data.completedAt !== 'string') return null;
   if (typeof data.areas !== 'number' || typeof data.listings !== 'number' || typeof data.unassigned !== 'number') return null;
   if (typeof data.truncated !== 'boolean') return null;
@@ -83,27 +78,27 @@ export const AREA_MARKET_SERIES_PAGE_FIELDS = ['schemaVersion', 'areaId', 'point
 
 /** Έγγραφο `area_market_series` (ή η προβολή του σελίδας) ⇒ σημεία, ή `null`. */
 export function areaMarketSeriesPointsFromDocument(data: unknown): AreaMarketSeriesPoints | null {
-  if (!isRecord(data) || data.schemaVersion !== AREA_MARKET_SERIES_SCHEMA_VERSION) return null;
-  if (typeof data.areaId !== 'string' || !isRecord(data.points)) return null;
+  if (!isPlainRecord(data) || data.schemaVersion !== AREA_MARKET_SERIES_SCHEMA_VERSION) return null;
+  if (typeof data.areaId !== 'string' || !isPlainRecord(data.points)) return null;
   return data.points as unknown as AreaMarketSeriesPoints;
 }
 
 /** Ολόκληρο έγγραφο `area_market_series` (με το βιβλίο) ⇒ σειρά, ή `null` — για τον γραφέα. */
 export function areaMarketSeriesFromDocument(data: unknown): AreaMarketSeries | null {
-  if (areaMarketSeriesPointsFromDocument(data) === null || !isRecord(data)) return null;
+  if (areaMarketSeriesPointsFromDocument(data) === null || !isPlainRecord(data)) return null;
   const book = data.book;
-  if (!isRecord(book) || typeof book.month !== 'string' || !isRecord(book.offers)) return null;
+  if (!isPlainRecord(book) || typeof book.month !== 'string' || !isPlainRecord(book.offers)) return null;
   const offers = book.offers;
-  if (!ASKING_OFFERS.every((offer) => isRecord(offers[offer]))) return null;
+  if (!ASKING_OFFERS.every((offer) => isPlainRecord(offers[offer]))) return null;
   // Ο ΜΟΝΟΣ ισχυρισμός τύπου της συλλογής — μετά τον έλεγχο του σχήματος.
   return data as unknown as AreaMarketSeries;
 }
 
 /** Έγγραφο `area_market_maps` ⇒ χάρτης τιμών, ή `null` (άλλη εκδοχή / χαλασμένο — ποτέ «καμία περιοχή»). */
 export function areaMarketMapFromDocument(data: unknown): AreaMarketMap | null {
-  if (!isRecord(data) || data.schemaVersion !== AREA_MARKET_MAP_SCHEMA_VERSION || typeof data.day !== 'string') return null;
+  if (!isPlainRecord(data) || data.schemaVersion !== AREA_MARKET_MAP_SCHEMA_VERSION || typeof data.day !== 'string') return null;
   const offers = data.offers;
-  if (!isRecord(offers)) return null;
+  if (!isPlainRecord(offers)) return null;
   const sale = readPriceMapAreas(offers.sale);
   const rent = readPriceMapAreas(offers.rent);
   if (sale === null || rent === null) return null;

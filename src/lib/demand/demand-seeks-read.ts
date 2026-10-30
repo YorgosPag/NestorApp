@@ -42,6 +42,7 @@ import {
   type DemandSeek,
   type StayParty,
 } from '@/types/property-demand';
+import { isPlainRecord } from '@/lib/type-guards';
 
 /** Το αποτέλεσμα — **ονομασμένο**, ποτέ `null` που σημαίνει πολλά. */
 export type SeeksRead =
@@ -70,11 +71,6 @@ function rangeFrom(min: unknown, max: unknown): DemandAmountRange | null {
   return low === undefined || high === undefined ? null : { min: low, max: high };
 }
 
-/** Αντικείμενο αποθηκευμένο — όχι πίνακας, όχι `null`. */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 /**
  * Τα κατοικίδια της παρέας (ADR-777 §8.60.21): **απόντα ⇒ 0** — κάθε παρέα πριν τις 2026-09-18,
  * άρα καμία μετανάστευση· χαλασμένα ⇒ `undefined` (όλη η εναλλακτική αδιάβαστη, ποτέ σιωπηλό 0).
@@ -87,7 +83,7 @@ function petsFrom(value: unknown): number | undefined {
 /** Η παρέα — απούσα ⇒ `null` (καμία)· χαλασμένη ⇒ `undefined`. Το **νόημα** το κρίνουν τα αναλλοίωτα. */
 function partyFrom(value: unknown): StayParty | null | undefined {
   if (value === null || value === undefined) return null;
-  if (!isRecord(value)) return undefined;
+  if (!isPlainRecord(value)) return undefined;
   const [adults, children, infants] = [value.adults, value.children, value.infants].map(amountOrNull);
   const pets = petsFrom(value.pets);
   if (adults == null || children == null || infants == null || pets === undefined) return undefined;
@@ -97,7 +93,7 @@ function partyFrom(value: unknown): StayParty | null | undefined {
 /** Το εύρος νυχτών — απόν ⇒ χωρίς όριο· χαλασμένο ⇒ `null`. */
 function nightsFrom(value: unknown): DemandAmountRange | null {
   if (value === null || value === undefined) return NO_NIGHTS_RANGE;
-  return isRecord(value) ? rangeFrom(value.min, value.max) : null;
+  return isPlainRecord(value) ? rangeFrom(value.min, value.max) : null;
 }
 
 /**
@@ -112,7 +108,7 @@ function shortStayFrom(range: DemandAmountRange, stored: Record<string, unknown>
 
 /** Μία εναλλακτική του **νέου** σχήματος — `null` όταν δεν διαβάζεται. */
 function seekFrom(value: unknown): DemandSeek | null {
-  if (!isRecord(value)) return null;
+  if (!isPlainRecord(value)) return null;
   const { kind, price, landownerShareMax } = value;
   if (!isOfferKind(kind)) return null;
   if (kind === 'exchange') {
@@ -121,7 +117,7 @@ function seekFrom(value: unknown): DemandSeek | null {
     const share = amountOrNull(landownerShareMax);
     return share === undefined ? null : exchangeSeek(share);
   }
-  if (!isRecord(price)) return null;
+  if (!isPlainRecord(price)) return null;
   const range = rangeFrom(price.min, price.max);
   if (range === null) return null;
   return kind === 'leaseShort' ? shortStayFrom(range, value) : demandSeek(kind, range);

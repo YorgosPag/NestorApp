@@ -47,7 +47,7 @@ import { normalizeToISO } from '@/lib/date-local';
 import { readSignatory } from '@/lib/listings/model-declaration-metadata';
 import { readMediaRights } from '@/lib/media-rights/media-rights-read';
 import { readProfessionalAttestation } from '@/lib/professional/professional-attestation';
-import { isRecord } from '@/lib/type-guards';
+import { isFiniteNumber, isRecord } from '@/lib/type-guards';
 import { readCapturePlacementHint, readTourLevelKey } from '@/lib/spatial-tour/tour-capture-placement-hint';
 import { normalizeTourRoom } from '@/lib/spatial-tour/tour-room';
 import { custodyOnly, custodyScopeFromData } from '@/lib/workspace/custody-scope';
@@ -75,8 +75,6 @@ import type {
   TourSpaceOutline,
   TourSubject,
 } from '@/types/spatial-tour';
-
-const isFiniteNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 
 /** Πίνακας όπου **κάθε** στοιχείο διαβάζεται — αλλιώς `null` (κανένα σιωπηλό πέταγμα). */
 function readAll<T>(raw: unknown, read: (item: unknown) => T | null): T[] | null {

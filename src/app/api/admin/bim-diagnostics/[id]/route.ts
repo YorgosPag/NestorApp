@@ -32,13 +32,14 @@ import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import { nowISO } from '@/lib/date-local';
 import { BYPASS_ROLES } from '@/lib/auth/roles';
-import { readDiagnosticRequest } from './_request-preamble';
+import { diagnosticHandler } from './_request-preamble';
 import { canTransition, TRIAGE_STATUSES } from '@/app/(app)/admin/bim-diagnostics/lib/triage-fsm';
 import type {
   PerformanceDiagnostic,
   TriageHistoryEntry,
   TriageStatus,
 } from '@/types/performance-diagnostic';
+import { isPlainRecord } from '@/lib/type-guards';
 
 const logger = createModuleLogger('ADMIN_BIM_DIAGNOSTICS_PATCH');
 
@@ -70,16 +71,12 @@ interface ErrorBody {
 // VALIDATION
 // ============================================================================
 
-function isPlainObject(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null && !Array.isArray(v);
-}
-
 function isTriageStatus(v: unknown): v is TriageStatus {
   return typeof v === 'string' && (TRIAGE_STATUSES as ReadonlyArray<string>).includes(v);
 }
 
 function validateBody(raw: unknown): { ok: true; body: PatchBody } | { ok: false; reason: string } {
-  if (!isPlainObject(raw)) return { ok: false, reason: 'Body must be a JSON object' };
+  if (!isPlainRecord(raw)) return { ok: false, reason: 'Body must be a JSON object' };
   const { status, transitionNote, assignedSuperAdminId } = raw as Record<string, unknown>;
 
   const body: PatchBody = {};
@@ -113,23 +110,8 @@ function validateBody(raw: unknown): { ok: true; body: PatchBody } | { ok: false
 // HANDLER
 // ============================================================================
 
-interface RouteContext {
-  params: Promise<{ id: string }>;
-}
-
-const handlePatch: AuthenticatedHandler<PatchResponse | ErrorBody, RouteContext> = async (
-  request,
-  ctx,
-  _cache,
-  routeContext,
-) => {
-  const preamble = await readDiagnosticRequest(request, routeContext, validateBody);
-  if (!preamble.ok) {
-    return preamble.response;
-  }
-  const { diagId } = preamble;
-
-  const { status: targetStatus, transitionNote, assignedSuperAdminId: targetAssignee } = preamble.body;
+const handlePatch = diagnosticHandler<PatchBody, PatchResponse | ErrorBody>(validateBody, async ({ diagId, body, ctx }) => {
+  const { status: targetStatus, transitionNote, assignedSuperAdminId: targetAssignee } = body;
   const performerUid = ctx.uid;
 
   try {
@@ -267,7 +249,7 @@ const handlePatch: AuthenticatedHandler<PatchResponse | ErrorBody, RouteContext>
     logger.error('PATCH bim-diagnostics failed', { diagId, error: msg });
     return NextResponse.json({ error: 'Failed to update diagnostic' }, { status: 500 });
   }
-};
+});
 
 export const PATCH = withStandardRateLimit(
   withAuth(handlePatch as AuthenticatedHandler<PatchResponse | ErrorBody>, { requiredGlobalRoles: BYPASS_ROLES }),

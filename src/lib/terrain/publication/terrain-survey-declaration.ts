@@ -21,6 +21,7 @@
 import { isCalendarDay } from '@/lib/date/calendar-day';
 import { LISTING_TERRAIN_SURVEYOR_NAME_MAX } from './listing-terrain-config';
 import type { TerrainRefusalCode } from './terrain-publication-contract';
+import { isPlainRecord } from '@/lib/type-guards';
 
 /** The ONE name of the metadata key — writer and reader both take it from here. */
 export const TERRAIN_DECLARATION_METADATA_KEY = 'nestorTerrainDeclaration';
@@ -34,13 +35,9 @@ export interface TerrainSurveyDeclaration {
   readonly rightsAffirmed: true;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 /** The declaration as a structure, or `null` when it is not one. Trims the name — the only normalisation. */
 export function readTerrainSurveyDeclaration(value: unknown): TerrainSurveyDeclaration | null {
-  if (!isRecord(value)) return null;
+  if (!isPlainRecord(value)) return null;
   const { surveyorName, surveyedOn, rightsAffirmed } = value;
 
   if (rightsAffirmed !== true) return null;

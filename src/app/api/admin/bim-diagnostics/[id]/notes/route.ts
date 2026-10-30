@@ -27,8 +27,9 @@ import { EntityAuditService } from '@/services/entity-audit.service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import { BYPASS_ROLES } from '@/lib/auth/roles';
-import { readDiagnosticRequest } from '../_request-preamble';
+import { diagnosticHandler } from '../_request-preamble';
 import type { PerformanceDiagnostic } from '@/types/performance-diagnostic';
+import { isPlainRecord } from '@/lib/type-guards';
 
 const logger = createModuleLogger('ADMIN_BIM_DIAGNOSTICS_NOTES');
 
@@ -47,35 +48,16 @@ interface ErrorBody {
   error: string;
 }
 
-interface RouteContext {
-  params: Promise<{ id: string }>;
-}
-
-function isPlainObject(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null && !Array.isArray(v);
-}
-
 function validateBody(raw: unknown): { ok: true; body: PutBody } | { ok: false; reason: string } {
-  if (!isPlainObject(raw)) return { ok: false, reason: 'Body must be a JSON object' };
+  if (!isPlainRecord(raw)) return { ok: false, reason: 'Body must be a JSON object' };
   const { note } = raw as Record<string, unknown>;
   if (typeof note !== 'string') return { ok: false, reason: 'note must be string' };
   if (note.length > MAX_NOTE_LENGTH) return { ok: false, reason: 'note too long' };
   return { ok: true, body: { note } };
 }
 
-const handlePut: AuthenticatedHandler<PutResponse | ErrorBody, RouteContext> = async (
-  request,
-  ctx,
-  _cache,
-  routeContext,
-) => {
-  const preamble = await readDiagnosticRequest(request, routeContext, validateBody);
-  if (!preamble.ok) {
-    return preamble.response;
-  }
-  const { diagId } = preamble;
-
-  const newNote = preamble.body.note;
+const handlePut = diagnosticHandler<PutBody, PutResponse | ErrorBody>(validateBody, async ({ diagId, body, ctx }) => {
+  const newNote = body.note;
   const newNoteValue: string | null = newNote.length === 0 ? null : newNote;
 
   try {
@@ -121,7 +103,7 @@ const handlePut: AuthenticatedHandler<PutResponse | ErrorBody, RouteContext> = a
     logger.error('PUT bim-diagnostics notes failed', { diagId, error: msg });
     return NextResponse.json({ error: 'Failed to save note' }, { status: 500 });
   }
-};
+});
 
 export const PUT = withStandardRateLimit(
   withAuth(handlePut as AuthenticatedHandler<PutResponse | ErrorBody>, { requiredGlobalRoles: BYPASS_ROLES }),

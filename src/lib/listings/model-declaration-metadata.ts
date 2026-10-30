@@ -59,6 +59,7 @@ import {
   type ModelPublicationDeclaration,
   type ModelSignatory,
 } from './listing-model-declaration';
+import { isFiniteNumber, isPlainRecord } from '@/lib/type-guards';
 
 /**
  * **Το ΕΝΑ όνομα του κλειδιού**, γραμμένο μία φορά.
@@ -134,7 +135,7 @@ export function decodeModelDeclaration(raw: unknown): ModelPublicationDeclaratio
     return null;
   }
 
-  if (!isRecord(parsed)) return null;
+  if (!isPlainRecord(parsed)) return null;
 
   // ⚠️ **Σταθερές, όχι επαναλαμβανόμενη πρόσβαση σε πεδίο**: το `parsed` δηλώθηκε `let` *(το
   //    `try` το απαιτεί)*, και η στένωση τύπου πάνω σε ιδιότητα μεταβλητού δεσμού δεν
@@ -162,15 +163,6 @@ export function decodeModelDeclaration(raw: unknown): ModelPublicationDeclaratio
 // Οι αναγνώστες — **ένας ανά σχήμα**, κανένας πάνω από 40 γραμμές (N.7.1)
 // ---------------------------------------------------------------------------
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-/** Πεπερασμένος αριθμός — ⛔ **ποτέ** `NaN`/`Infinity`: το `JSON.parse` τα φέρνει ως `null`. */
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value);
-}
-
 /**
  * Τριάδα μέτρων — το {@link Vec3M} του {@link GeometryFingerprint}, **στοιχείο-στοιχείο**.
  *
@@ -188,7 +180,7 @@ function readVec3(value: unknown): Vec3M | null {
 }
 
 export function readSignatory(value: unknown): ModelSignatory | null {
-  if (!isRecord(value)) return null;
+  if (!isPlainRecord(value)) return null;
   const { name, discipline, studiedAt } = value;
 
   if (typeof name !== 'string') return null;
@@ -203,7 +195,7 @@ export function readSignatory(value: unknown): ModelSignatory | null {
 }
 
 function readLedger(value: unknown): ModelGeometryLedger | null {
-  if (!isRecord(value)) return null;
+  if (!isPlainRecord(value)) return null;
 
   const { meshCount, triangleCount, materialCount, textureCount } = value;
   if (!isFiniteNumber(meshCount)) return null;
@@ -224,8 +216,8 @@ function readLedger(value: unknown): ModelGeometryLedger | null {
 
 /** `undefined` = **δεν είναι αποτύπωμα**· `null` δεν επιστρέφεται ποτέ από εδώ. */
 function readFingerprint(value: unknown): GeometryFingerprint | undefined {
-  if (!isRecord(value) || typeof value.hash !== 'string') return undefined;
-  if (!isRecord(value.signature)) return undefined;
+  if (!isPlainRecord(value) || typeof value.hash !== 'string') return undefined;
+  if (!isPlainRecord(value.signature)) return undefined;
 
   const s = value.signature;
   const sizeM = readVec3(s.sizeM);

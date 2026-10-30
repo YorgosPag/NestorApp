@@ -33,6 +33,7 @@ import {
   type RegistrySeat,
   type RegistryStatus,
 } from '@/types/company-registry';
+import { isPlainRecord } from '@/lib/type-guards';
 
 type Loose = Readonly<Record<string, unknown>>;
 
@@ -51,7 +52,7 @@ const STORED: Dialect = { postalCode: 'postalCode', label: 'label' };
 const ACTIVITIES: readonly RegistryActivity[] = ['active', 'inactive', 'unknown'];
 
 function isLoose(value: unknown): value is Loose {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return isPlainRecord(value);
 }
 
 function text(value: unknown): string | null {

@@ -18,6 +18,7 @@ import { degToRad } from '@/lib/geometry/angle';
 import { isPortraitDimensions } from '@/lib/images/image-dimensions';
 import { horizontalFovFromExif } from '@/lib/listings/photo-capture-spot';
 import { readImageDimensions } from '@/server/images/image-metadata';
+import { isPlainRecord } from '@/lib/type-guards';
 
 export type CompassReference = 'true' | 'magnetic';
 
@@ -30,10 +31,6 @@ export interface PhotoCaptureFacts {
 
 const NO_FACTS: PhotoCaptureFacts = { fovRad: null, compass: null };
 const EXIF_TAGS = ['FocalLengthIn35mmFormat', 'GPSImgDirection', 'GPSImgDirectionRef'];
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
 
 /** Όρθια **όπως τη βλέπει ο θεατής** — από το ΕΝΑ SSoT διαστάσεων (μετά τον προσανατολισμό EXIF, ADR-899 §3.7). */
 async function isPortrait(bytes: Buffer): Promise<boolean | null> {
@@ -54,7 +51,7 @@ export async function readPhotoCaptureFacts(bytes: Buffer): Promise<PhotoCapture
       exifr.parse(bytes, { tiff: true, exif: true, gps: true, xmp: false, icc: false, iptc: false, pick: EXIF_TAGS }),
       isPortrait(bytes),
     ]);
-    const tags = isRecord(parsed) ? parsed : {};
+    const tags = isPlainRecord(parsed) ? parsed : {};
     return {
       fovRad: portrait === null ? null : horizontalFovFromExif(tags.FocalLengthIn35mmFormat, portrait),
       compass: compassOf(tags),

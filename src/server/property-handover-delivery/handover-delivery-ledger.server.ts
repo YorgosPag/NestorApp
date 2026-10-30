@@ -38,7 +38,7 @@ import { propertyHandoverFromDocument } from '@/lib/property-handover/property-h
 import { handoverDeliveryIdOf } from '@/lib/property-handover/property-handover-id';
 import { orphanReleaseIntentOf, orphanReleaseOf } from '@/lib/property-handover/handover-orphan-release-journal';
 import { createModuleLogger } from '@/lib/telemetry';
-import { isOneOf } from '@/lib/type-guards';
+import { isOneOf, plainRecordOrNull } from '@/lib/type-guards';
 import { reconcilePreservedBytes, stagePreservationRelease } from '@/services/file-record/file-preservation.service';
 import { handoverDocRef } from '@/services/property-handover/property-handover-progress-write';
 import type { PropertyHandover } from '@/types/property-handover';
@@ -116,19 +116,17 @@ export interface HandoverLedgerProof extends HandoverDeliveredRow {
 
 const text = (value: unknown): string | null => (typeof value === 'string' && value !== '' ? value : null);
 const sha256Text = (value: unknown): string | null => (isSha256Hex(value) ? value : null);
-const fieldsOf = (value: unknown): Record<string, unknown> | null =>
-  typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
 
 /** Αλλοιωμένος εντοπιστής ⇒ `null` (καμία ανάκτηση) — ποτέ μαντεψιά κάδου. */
 export function sourceObjectOf(raw: unknown): HandoverSourceObject | null {
-  const fields = fieldsOf(raw);
+  const fields = plainRecordOrNull(raw);
   const path = text(fields?.path);
   return fields !== null && isFileStoragePlacement(fields.placement) && path !== null ? { placement: fields.placement, path } : null;
 }
 
 /** Αλλοιωμένο ημερολόγιο ⇒ `null`: η επόμενη εκτέλεση το ξαναγράφει από την αρχή (η επαναφορά είναι `ifGenerationMatch: 0`). */
 function recoveryOf(raw: unknown): HandoverRecoveryJournal | null {
-  const fields = fieldsOf(raw);
+  const fields = plainRecordOrNull(raw);
   const startedAt = text(fields?.startedAt);
   if (fields === null || startedAt === null) return null;
   return { startedAt, restoredGeneration: text(fields.restoredGeneration), settledAt: text(fields.settledAt) };
@@ -145,7 +143,7 @@ export function recoveryInFlight(raw: unknown): boolean {
 
 /** Φ-Δ.7γ — αλλοιωμένο ή άγνωστη αιτία ⇒ `null`: η γραμμή μένει ανοιχτή (fail-closed — ποτέ σιωπηλό «κλεισμένη»). */
 export function closureMarkOf(raw: unknown): HandoverLineClosureMark | null {
-  const fields = fieldsOf(raw);
+  const fields = plainRecordOrNull(raw);
   const closedAt = text(fields?.closedAt);
   return fields !== null && closedAt !== null && isOneOf(HANDOVER_LINE_CLOSURE_CAUSES, fields.cause) ? { cause: fields.cause, closedAt } : null;
 }

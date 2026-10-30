@@ -29,11 +29,11 @@ import { EntityAuditService } from '@/services/entity-audit.service';
 import { withRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
+import { isPlainRecord } from '@/lib/type-guards';
+import { readSessionRequest, sessionRateLimitKey } from '../_session-request';
 
 const logger = createModuleLogger('BIM_TELEMETRY_ERASE');
 
-const SESSION_HEADER = 'x-bim-session-id';
-const SESSION_ID_REGEX = /^[a-f0-9]{64}$/;
 const DELETE_PAGE_SIZE = 200;
 
 interface EraseBody {
@@ -46,10 +46,6 @@ interface EraseResponse {
 
 interface ErrorBody {
   error: string;
-}
-
-function isPlainObject(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
 /**
@@ -83,19 +79,13 @@ async function deleteAllForSession(sessionId: string): Promise<number> {
 }
 
 async function handlePost(request: NextRequest): Promise<NextResponse<EraseResponse | ErrorBody>> {
-  const headerSession = request.headers.get(SESSION_HEADER);
-  if (!headerSession || !SESSION_ID_REGEX.test(headerSession)) {
-    return NextResponse.json({ error: 'Missing or malformed session id' }, { status: 400 });
+  const preamble = await readSessionRequest(request);
+  if (!preamble.ok) {
+    return preamble.response;
   }
+  const { sessionId: headerSession, raw } = preamble;
 
-  let raw: unknown;
-  try {
-    raw = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
-
-  if (!isPlainObject(raw) || (raw as unknown as EraseBody).sessionId !== headerSession) {
+  if (!isPlainRecord(raw) || (raw as unknown as EraseBody).sessionId !== headerSession) {
     return NextResponse.json({ error: 'Session id mismatch' }, { status: 400 });
   }
 
@@ -127,8 +117,5 @@ async function handlePost(request: NextRequest): Promise<NextResponse<EraseRespo
 
 export const POST = withRateLimit(handlePost, {
   category: 'HEAVY',
-  getKey: (req) => {
-    const sid = req.headers.get(SESSION_HEADER);
-    return sid && SESSION_ID_REGEX.test(sid) ? `telemetry-erase:${sid}` : null;
-  },
+  getKey: sessionRateLimitKey('telemetry-erase'),
 });

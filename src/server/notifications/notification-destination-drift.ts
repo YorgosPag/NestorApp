@@ -36,6 +36,7 @@ import {
   type NotificationDestination,
 } from '@/lib/notifications/notification-destination';
 import { workspaceRefKey, type WorkspaceRef } from '@/types/workspace-membership';
+import { plainRecordOrNull } from '@/lib/type-guards';
 
 /** Ό,τι κοιτάζει ο ανιχνευτής σε ένα έγγραφο ειδοποίησης **με** προορισμό. */
 export interface StoredNotification {
@@ -92,7 +93,7 @@ export type DriftVerdict =
 type Fields = Readonly<Record<string, unknown>>;
 
 function fieldsOf(value: unknown): Fields {
-  return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Fields) : {};
+  return plainRecordOrNull(value) ?? {};
 }
 
 function textOf(value: unknown): string | null {

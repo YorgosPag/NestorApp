@@ -35,6 +35,7 @@ import { z } from 'zod';
 import { degToRad, normalizeAngleRad } from '@/lib/geometry/angle';
 
 import { readDeclaredFileMap, sameDeclaredFileMap, withDeclaredFileEntry } from './declared-file-map';
+import { isPlainRecord } from '@/lib/type-guards';
 
 // ============================================================================
 // 1. ΤΟ ΣΗΜΕΙΟ ΛΗΨΗΣ
@@ -107,7 +108,7 @@ export function declaredCaptureSpotsSchema(limit: number) {
  * **ίδια** δήλωση, και ένα ιστορικό έγγραφο με την πρώτη δεν πρέπει να χάσει το σημείο του.
  */
 export function readPhotoCaptureSpot(value: unknown): PhotoCaptureSpot | null {
-  const normalised = isRecord(value) && typeof value.headingRad === 'number'
+  const normalised = isPlainRecord(value) && typeof value.headingRad === 'number'
     ? { ...value, headingRad: normalizeAngleRad(value.headingRad) }
     : value;
   const parsed = photoCaptureSpotSchema.safeParse(normalised);
@@ -204,8 +205,4 @@ function horizontalFovFromFocal35(focal35mm: number, frameMm = FILM_35MM_WIDTH_M
 export function horizontalFovFromExif(focal35mm: unknown, portrait: boolean): number | null {
   if (typeof focal35mm !== 'number' || !Number.isFinite(focal35mm) || focal35mm <= 0) return null;
   return horizontalFovFromFocal35(focal35mm, portrait ? FILM_35MM_HEIGHT_MM : FILM_35MM_WIDTH_MM);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }

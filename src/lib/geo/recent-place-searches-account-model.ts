@@ -30,6 +30,7 @@ import {
   toRecentPlace,
   type RecentPlaceSearch,
 } from './recent-place-searches-model';
+import { isFiniteNumber } from '@/lib/type-guards';
 
 export const ACCOUNT_PLACE_SEARCHES_SCHEMA_VERSION = 1;
 
@@ -80,10 +81,6 @@ export function accountKeyOf(keyOrLabel: string): string | null {
   const key = placeSearchKey(keyOrLabel);
   if (key === '' || key.length > ACCOUNT_KEY_MAX_LENGTH || RESERVED_FIELD_NAME.test(key)) return null;
   return key;
-}
-
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value);
 }
 
 function parseEntries(raw: unknown): Record<string, RecentPlaceSearch> {

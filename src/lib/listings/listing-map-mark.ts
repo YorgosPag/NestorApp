@@ -23,6 +23,7 @@ import type { GeoOutline, GeoPoint } from '@/types/geo/coordinates';
 import type { ListingPosition } from '@/types/public-listing';
 
 import { LISTING_UNCERTAINTY_KM, listingMapShape, type ListingMapShape } from './listing-map-shape';
+import { isFiniteNumber } from '@/lib/type-guards';
 
 /** Κάθε σχήμα που **ζωγραφίζεται** — το `none` δεν έχει σημάδι, μπαίνει στον μετρητή (Α5 §4.1). */
 export type MappedListingShape = Exclude<ListingMapShape, 'none'>;
@@ -59,10 +60,6 @@ export function listingMapMark(position: ListingPosition): ListingMapMark | null
     return { shape, point, outline: position.outline.map(copyPoint) };
   }
   return { shape, point };
-}
-
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value);
 }
 
 function parsePoint(raw: unknown): GeoPoint | null {

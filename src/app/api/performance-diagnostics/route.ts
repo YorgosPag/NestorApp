@@ -38,6 +38,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { uploadPublicFile } from '@/services/storage-admin/public-upload.service';
 import { FieldValue } from 'firebase-admin/firestore';
 import type { AuditAction } from '@/types/audit-trail';
+import { isPlainRecord } from '@/lib/type-guards';
 
 const logger = createModuleLogger('PERFORMANCE_DIAGNOSTICS_ENDPOINT');
 
@@ -68,17 +69,13 @@ interface ErrorBody {
 // VALIDATION
 // ============================================================================
 
-function isPlainObject(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null && !Array.isArray(v);
-}
-
 function validateBody(raw: unknown): { ok: true; body: DiagnosticRequestBody } | { ok: false; reason: string } {
-  if (!isPlainObject(raw)) return { ok: false, reason: 'Body must be a JSON object' };
+  if (!isPlainRecord(raw)) return { ok: false, reason: 'Body must be a JSON object' };
 
   const { projectId, metrics, renderMode, comment, source, screenshotBase64 } = raw as Record<string, unknown>;
 
   if (projectId !== null && typeof projectId !== 'string') return { ok: false, reason: 'projectId must be string|null' };
-  if (!isPlainObject(metrics)) return { ok: false, reason: 'metrics must be object' };
+  if (!isPlainRecord(metrics)) return { ok: false, reason: 'metrics must be object' };
   if (typeof renderMode !== 'string' || renderMode.length === 0) return { ok: false, reason: 'renderMode required' };
   if (comment !== null && typeof comment !== 'string') return { ok: false, reason: 'comment must be string|null' };
   if (source !== 'manual' && source !== 'auto_submit') return { ok: false, reason: 'source must be manual|auto_submit' };

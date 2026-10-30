@@ -28,6 +28,7 @@
 import type { GeoBoundingBox, GeoOutline, GeoPoint, GeoRegion } from '@/types/geo/coordinates';
 import { geoJsonRings } from './geo-geojson';
 import { geoRingsNearestEdgeMetres, isPointInGeoRings } from './geo-ring';
+import { isFiniteNumber } from '@/lib/type-guards';
 
 /** Όπου ζουν τα αρχεία ορίων — κάτω από `public/`, άρα σερβίρονται στατικά. */
 export const ADMIN_BOUNDARIES_DIR = 'data/admin-boundaries';
@@ -102,10 +103,6 @@ export function adminBoundaryFileName(adminId: string): string {
 /** Η δημόσια διαδρομή του ορίου — ό,τι ζητά ο browser. */
 export function adminBoundaryPath(adminId: string): string {
   return `/${ADMIN_BOUNDARIES_DIR}/${adminBoundaryFileName(adminId)}`;
-}
-
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value);
 }
 
 function readBoundingBox(value: unknown): GeoBoundingBox | null {

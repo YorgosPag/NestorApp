@@ -45,23 +45,18 @@ import {
   type AvailabilityPrecision,
   type ListingAvailability,
 } from '@/types/listing-availability';
+import { isPlainRecord } from '@/lib/type-guards';
 
 // ============================================================================
 // Η ΑΠΟΘΗΚΕΥΜΕΝΗ ΔΗΛΩΣΗ — ωμό έγγραφο → τύπος, ή τίποτα
 // ============================================================================
-
-type DeclarationRecord = Readonly<Record<string, unknown>>;
-
-function isRecord(raw: unknown): raw is DeclarationRecord {
-  return typeof raw === 'object' && raw !== null && !Array.isArray(raw);
-}
 
 function isAvailabilityPrecision(raw: unknown): raw is AvailabilityPrecision {
   return typeof raw === 'string' && (AVAILABILITY_PRECISIONS as readonly string[]).includes(raw);
 }
 
 function declarationValueOf(raw: unknown): AvailabilityDeclaration | null {
-  if (!isRecord(raw) || !isAvailabilityPrecision(raw.precision) || typeof raw.anchor !== 'string') return null;
+  if (!isPlainRecord(raw) || !isAvailabilityPrecision(raw.precision) || typeof raw.anchor !== 'string') return null;
   return { precision: raw.precision, anchor: raw.anchor };
 }
 
@@ -80,7 +75,7 @@ function isConfidence(raw: unknown): raw is number {
  * διαβάζεται ποτέ ως «εγκρίθηκε».
  */
 export function readAvailabilityDeclaration(raw: unknown): SourcedAttribute<AvailabilityDeclaration> | null {
-  if (!isRecord(raw) || typeof raw.at !== 'string') return null;
+  if (!isPlainRecord(raw) || typeof raw.at !== 'string') return null;
   const value = declarationValueOf(raw.value);
   if (value === null) return null;
   if (raw.provenance === 'declared') return { provenance: 'declared', value, at: raw.at };

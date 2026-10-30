@@ -35,17 +35,12 @@ import {
   type EmailDeliveryPurpose,
   type EmailFailureEvidence,
 } from '@/types/email-delivery';
-
-type Json = Record<string, unknown>;
+import { plainRecordOrNull } from '@/lib/type-guards';
 
 const SUPPRESSION_CODES: ReadonlySet<number> = new Set([605, 606, 607]);
 const POLICY_REASONS: ReadonlySet<string> = new Set(['espblock', 'blacklisted', 'greylisted']);
 const RECIPIENT_REASONS: ReadonlySet<string> = new Set(['bounce', 'hardfail']);
 const ABSENT_WITHOUT_ENHANCED: ReadonlySet<number> = new Set([550, 551, 553]);
-
-function objectOf(value: unknown): Json | null {
-  return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Json) : null;
-}
 
 function textOf(value: unknown): string | null {
   return typeof value === 'string' && value.trim() !== '' ? value.trim() : null;
@@ -101,7 +96,7 @@ function recipientOf(value: unknown): string | null {
 
 /** Τα πεδία υπογραφής του σώματος JSON (`signature.{timestamp,token,signature}`). */
 export function readMailgunSignatureFields(body: unknown): MailgunSignatureFields {
-  const signature = objectOf(objectOf(body)?.signature);
+  const signature = plainRecordOrNull(plainRecordOrNull(body)?.signature);
   const timestamp = signature?.timestamp;
   return {
     timestamp: typeof timestamp === 'number' ? String(timestamp) : textOf(timestamp) ?? undefined,
@@ -112,19 +107,19 @@ export function readMailgunSignatureFields(body: unknown): MailgunSignatureField
 
 /** **Το συμβάν** — ή `null` αν δεν είναι συμβάν παράδοσης που καταλαβαίνουμε. */
 export function readMailgunEvent(body: unknown): EmailDeliveryEvent | null {
-  const data = objectOf(objectOf(body)?.['event-data']);
+  const data = plainRecordOrNull(plainRecordOrNull(body)?.['event-data']);
   const kind = kindOf(textOf(data?.event), textOf(data?.severity));
   const providerEventId = textOf(data?.id);
   const occurredAt = occurredAtOf(data?.timestamp);
   const recipient = recipientOf(data?.recipient);
   if (data === null || kind === null || providerEventId === null || occurredAt === null || recipient === null) return null;
 
-  const status = objectOf(data['delivery-status']);
+  const status = plainRecordOrNull(data['delivery-status']);
   const providerReason = textOf(data.reason);
   const smtpCode = numberOf(status?.code);
   const enhancedCode = textOf(status?.['enhanced-code']);
-  const variables = objectOf(data['user-variables']);
-  const headers = objectOf(objectOf(data.message)?.headers);
+  const variables = plainRecordOrNull(data['user-variables']);
+  const headers = plainRecordOrNull(plainRecordOrNull(data.message)?.headers);
   const failing = kind === 'failed' || kind === 'deferred';
 
   return {

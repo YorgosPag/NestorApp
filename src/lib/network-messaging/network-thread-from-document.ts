@@ -30,10 +30,8 @@ import {
   type NetworkThread,
   type NetworkThreadTopic,
 } from '@/types/network-thread';
+import { isRecord } from '@/lib/type-guards';
 
-type Raw = Readonly<Record<string, unknown>>;
-
-const isRecord = (value: unknown): value is Raw => typeof value === 'object' && value !== null;
 const str = (value: unknown): string | null => (typeof value === 'string' && value !== '' ? value : null);
 const strOrNull = (value: unknown): string | null => (typeof value === 'string' ? value : null);
 const boolOrNull = (value: unknown): boolean | null => (typeof value === 'boolean' ? value : null);

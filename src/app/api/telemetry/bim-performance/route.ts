@@ -33,12 +33,12 @@ import { withRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import { FieldValue } from 'firebase-admin/firestore';
+import { isPlainRecord } from '@/lib/type-guards';
+import { readSessionRequest, sessionRateLimitKey } from './_session-request';
 
 const logger = createModuleLogger('BIM_TELEMETRY_INGEST');
 
-const SESSION_HEADER = 'x-bim-session-id';
 const MAX_BATCH_SIZE = 20;
-const SESSION_ID_REGEX = /^[a-f0-9]{64}$/;
 
 // ============================================================================
 // TYPES
@@ -70,23 +70,19 @@ interface ErrorBody {
 // VALIDATION
 // ============================================================================
 
-function isPlainObject(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null && !Array.isArray(v);
-}
-
 function validateSample(raw: unknown, sessionId: string): TelemetrySample | null {
-  if (!isPlainObject(raw)) return null;
+  if (!isPlainRecord(raw)) return null;
   const r = raw as Record<string, unknown>;
   if (r.sessionId !== sessionId) return null;
   if (typeof r.timestamp !== 'number') return null;
   if (typeof r.renderMode !== 'string') return null;
-  if (!isPlainObject(r.browser) || !isPlainObject(r.os)) return null;
-  if (!isPlainObject(r.metrics)) return null;
+  if (!isPlainRecord(r.browser) || !isPlainRecord(r.os)) return null;
+  if (!isPlainRecord(r.metrics)) return null;
   return r as unknown as TelemetrySample;
 }
 
 function validateBody(raw: unknown, sessionId: string): TelemetrySample[] | null {
-  if (!isPlainObject(raw)) return null;
+  if (!isPlainRecord(raw)) return null;
   const samples = (raw as unknown as IngestBody).samples;
   if (!Array.isArray(samples) || samples.length === 0 || samples.length > MAX_BATCH_SIZE) {
     return null;
@@ -105,17 +101,11 @@ function validateBody(raw: unknown, sessionId: string): TelemetrySample[] | null
 // ============================================================================
 
 async function handlePost(request: NextRequest): Promise<NextResponse<IngestResponse | ErrorBody>> {
-  const sessionId = request.headers.get(SESSION_HEADER);
-  if (!sessionId || !SESSION_ID_REGEX.test(sessionId)) {
-    return NextResponse.json({ error: 'Missing or malformed session id' }, { status: 400 });
+  const preamble = await readSessionRequest(request);
+  if (!preamble.ok) {
+    return preamble.response;
   }
-
-  let raw: unknown;
-  try {
-    raw = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
+  const { sessionId, raw } = preamble;
 
   const samples = validateBody(raw, sessionId);
   if (!samples) {
@@ -157,8 +147,5 @@ async function handlePost(request: NextRequest): Promise<NextResponse<IngestResp
 // share buckets across all anonymous traffic).
 export const POST = withRateLimit(handlePost, {
   category: 'STANDARD',
-  getKey: (req) => {
-    const sid = req.headers.get(SESSION_HEADER);
-    return sid && SESSION_ID_REGEX.test(sid) ? `telemetry:${sid}` : null;
-  },
+  getKey: sessionRateLimitKey('telemetry'),
 });

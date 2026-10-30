@@ -16,6 +16,7 @@ import type { FloorPlateUnit, ListingFloorPlate } from '@/types/public-listing';
 
 import { readFloorPlateOutline } from './floor-plate-outline';
 import { FLOOR_PLATE_SELF_STATE, isFloorPlateState } from './floor-plate-state';
+import { isRecord } from '@/lib/type-guards';
 
 /**
  * **Μία** κάτοψη ορόφου ανά αγγελία — μια μονάδα βρίσκεται σε έναν όροφο.
@@ -34,10 +35,6 @@ export const LISTING_FLOOR_PLATE_MAX_COUNT = 1;
  * — το όριο είναι δηλωμένο πάνω σε τρεις πραγματικές μονάδες, όχι σε πραγματικό υπόγειο.
  */
 export const FLOOR_PLATE_MAX_UNITS = 64;
-
-function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
-  return typeof value === 'object' && value !== null;
-}
 
 /** Μία μονάδα όπως θα τη διαβάσει ο επισκέπτης: αναγνώσιμο περίγραμμα, γνωστή κατάσταση, σύνδεσμος μόνο αν έχει τιμή. */
 function isPublishableUnit(unit: unknown): unit is FloorPlateUnit {

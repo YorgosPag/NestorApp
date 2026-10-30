@@ -33,6 +33,7 @@ import {
   type CommercialStatus,
 } from '@/constants/commercial-statuses';
 import type { CommercialPriceField } from '@/lib/properties/commercial-draft';
+import { isPlainRecord } from '@/lib/type-guards';
 
 /** Ένα ποσό: θετικό ή ρητό `null` («δεν δηλώνεται πια»). Ίδιο ανώτατο όριο με το παλιό `price`. */
 const amount = z.number().positive().max(999_999_999).nullable().optional();
@@ -74,8 +75,8 @@ const EDITOR_AMOUNT_FIELDS: readonly CommercialPriceField[] = ['askingPrice', 'r
  */
 function amountPaths(commercial: unknown, stored: unknown): Record<string, number | null> {
   const paths: Record<string, number | null> = {};
-  if (!isRecord(commercial)) return paths;
-  const current = isRecord(stored) ? stored : {};
+  if (!isPlainRecord(commercial)) return paths;
+  const current = isPlainRecord(stored) ? stored : {};
   for (const field of EDITOR_AMOUNT_FIELDS) {
     const value = commercial[field];
     const valid = value === null || (typeof value === 'number' && value > 0);
@@ -83,10 +84,6 @@ function amountPaths(commercial: unknown, stored: unknown): Record<string, numbe
     if (valid && value !== (current[field] ?? null)) paths[`commercial.${field}`] = value;
   }
   return paths;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /**

@@ -40,6 +40,7 @@ import type {
   BackgroundTransform,
   CalibrationData,
 } from '@/subapps/dxf-viewer/floorplan-background/providers/types';
+import { isFiniteNumber } from '@/lib/type-guards';
 
 const logger = createModuleLogger('FloorplanBackgroundIdRoute');
 
@@ -52,10 +53,6 @@ interface RouteContext {
 // ============================================================================
 // HELPERS
 // ============================================================================
-
-function isFiniteNumber(v: unknown): v is number {
-  return typeof v === 'number' && Number.isFinite(v);
-}
 
 function isTransform(v: unknown): v is BackgroundTransform {
   if (!v || typeof v !== 'object') return false;
