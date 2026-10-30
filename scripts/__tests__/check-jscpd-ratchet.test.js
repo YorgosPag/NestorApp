@@ -547,10 +547,13 @@ export function ${fnName}(rows: string[]) {
  * ADR-924 Φ5 — `--diff --index`: ο jscpd κρίνει τα σταδιοποιημένα ΟΠΩΣ ΘΑ ΔΕΣΜΕΥΤΟΥΝ (στιγμιότυπο του ευρετηρίου), όχι τον
  * δίσκο. Προσωρινό repo μέσω `GIT_DIR`/`GIT_WORK_TREE` — το ευρετήριο του repo δεν αγγίζεται ποτέ.
  */
+// Ένας κορμός ~14 γραμμών, πολύ πάνω από minTokens:50: δύο κλήσεις με άλλο όνομα = κλώνος (Φ5 · §10).
+const cloneBody = (name) => `export function ${name}(items) {\n${Array.from({ length: 14 }, (_, i) =>
+  `  const value${i} = items.map((item) => item.weight * ${i + 2} + item.offset - ${i});`).join('\n')}\n  return items;\n}\n`;
+
 describe('Φ5 — --diff --index κρίνει το COMMIT', () => {
   const ROOT = path.resolve(__dirname, '..', '..');
-  const body = (name) => `export function ${name}(items) {\n${Array.from({ length: 14 }, (_, i) =>
-    `  const value${i} = items.map((item) => item.weight * ${i + 2} + item.offset - ${i});`).join('\n')}\n  return items;\n}\n`;
+  const body = cloneBody;
   const unique = (name) => `export const ${name} = () => '${name}';\n`;
   let tmp;
   beforeEach(() => { tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jscpd-index-')); });
@@ -653,4 +656,47 @@ describe('§9 — --diff κρίνει τον ΝΕΟ κώδικα, όχι ό,τι
     expect(r.status).toBe(0);
     expect(r.out).not.toMatch(/pre-existing/);
   }, 120000);
+});
+
+/**
+ * ADR-584 §10 — ένα ΜΕΓΑΛΟ commit δεν σπάει την πύλη. Η λίστα σάρωσης περνούσε από argv μέσα από cmd.exe
+ * (`shell: true`, όριο ~8191 χαρακτήρες): 122 απόλυτες διαδρομές στιγμιοτύπου ⇒ «The command line is too long»,
+ * καμία αναφορά, fail-closed σε ΚΑΘΕ μεγάλο commit (2026-10-30). Η άγκυρα ελέγχει πρώτα ότι το fixture ΞΕΠΕΡΝΑ το
+ * όριο — αλλιώς ένα πράσινο εδώ δεν θα απέδειχνε τίποτα.
+ */
+describe('§10 — --diff --index με εκατοντάδες αρχεία (όριο γραμμής εντολής)', () => {
+  const ROOT = path.resolve(__dirname, '..', '..');
+  const CMD_EXE_LIMIT = 8191;
+  const FILLERS = 160;
+  const DIR = 'src/a-deliberately-long-directory-name/to-inflate-every-snapshot-path';
+  const body = cloneBody;
+  let tmp;
+  beforeEach(() => { tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jscpd-many-')); });
+  afterEach(() => fs.rmSync(tmp, { recursive: true, force: true }));
+
+  it('σαρώνει όλη τη λίστα και ΒΡΙΣΚΕΙ τον κλώνο — όχι «scan failed»', () => {
+    const files = {
+      'src/a.ts': body('first'),
+      'src/b.ts': body('second'),
+      ...Object.fromEntries(Array.from({ length: FILLERS }, (_, i) =>
+        [`${DIR}/filler-module-number-${i}.ts`, `export const filler${i} = () => ${i};\n`])),
+    };
+    const rels = Object.keys(files);
+    expect(rels.map((f) => path.join(os.tmpdir(), 'jscpd-snapshot-xxxxxx', f)).join(' ').length)
+      .toBeGreaterThan(CMD_EXE_LIMIT);
+
+    const git = (...args) => spawnSync('git', ['-C', tmp, ...args], { encoding: 'utf8' });
+    git('init', '-q');
+    fs.mkdirSync(path.join(tmp, DIR), { recursive: true });
+    for (const [rel, text] of Object.entries(files)) fs.writeFileSync(path.join(tmp, rel), text);
+    git('add', '-A');
+    const env = { ...process.env, GIT_DIR: path.join(tmp, '.git'), GIT_WORK_TREE: tmp };
+    const r = spawnSync(process.execPath, [SCRIPT_UNDER_TEST, '--diff', '--index', ...rels],
+      { cwd: ROOT, encoding: 'utf8', env });
+    const out = `${r.stdout}${r.stderr}`;
+
+    expect(out).not.toMatch(/scan failed/);
+    expect(r.status).toBe(1);
+    expect(out).toMatch(/1 clone\(s\) introduced by this change/);
+  }, 180000);
 });

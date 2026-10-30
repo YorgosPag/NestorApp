@@ -1,7 +1,7 @@
 # ADR-584: Token-based Copy/Paste Clone Ratchet (jscpd) — CHECK 3.28
 
 ## Status
-✅ **ACTIVE — 2026-07-08 — BASELINE 4548 clones (3.92%) over src/** — Layer 1 (pre-commit diff gate) + Layer 2 (CI full-repo ratchet) live. Baseline: `.jscpd-baseline.json`. Config SSoT: `.jscpdrc.json`. Engine: `scripts/check-jscpd-ratchet.js` (+ 39 Jest tests). CI: `.github/workflows/jscpd-ratchet.yml`.
+✅ **ACTIVE — 2026-07-08 — BASELINE 4548 clones (3.92%) over src/** — Layer 1 (pre-commit diff gate) + Layer 2 (CI full-repo ratchet) live. Baseline: `.jscpd-baseline.json`. Config SSoT: `.jscpdrc.json`. Engine: `scripts/check-jscpd-ratchet.js` (+ 52 Jest tests, 2026-10-30). CI: `.github/workflows/jscpd-ratchet.yml`.
 
 **Related:**
 - **ADR-314** (SSoT Discover Ratchet, CHECK 3.18) — the name/regex-based detector this ADR complements. CHECK 3.18 finds duplicate *names* and registry gaps; CHECK 3.28 finds duplicate *token sequences* regardless of name. Both run; neither replaces the other.
@@ -67,6 +67,15 @@ Zero-tolerance on new intra-diff clones (Giorgio's choice: *hybrid* gate). Escap
 
 **Άγκυρες:** `scripts/__tests__/git-changed-lines.test.js` (parser με παγίδες + πραγματικό git: cached, δίσκος, untracked, μετονομασία, καθαρή μετακίνηση, fail-closed) · Group §9 στο `check-jscpd-ratchet.test.js` (α προϋπάρχων ⇒ ΠΕΡΝΑ · β αντιγραφή ⇒ ΜΠΛΟΚ · γ ραφή ⇒ ΜΠΛΟΚ · δ καθαρό).
 
+### §10 — Η λίστα σάρωσης ταξιδεύει σε αρχείο, όχι στη γραμμή εντολής (2026-10-30)
+**Πρόβλημα (μετρημένο):** το commit της ομάδας accounting (**122** αρχεία) μπλόκαρε με `CHECK 3.28 (diff) — scan failed: jscpd produced no report. The command line is too long.` **Κανένας κλώνος δεν κρίθηκε.** Το `runScanner` περνούσε κάθε αρχείο ως όρισμα στο `npx jscpd` με `shell: true` ⇒ περνά από `cmd.exe`, με όριο **~8.191 χαρακτήρες**· με `--index` οι διαδρομές είναι **απόλυτες** μέσα στο στιγμιότυπο του `%TEMP%` (ADR-924 Φ5). Το fail-closed δούλεψε σωστά (κανένα σιωπηλό πράσινο), αλλά η πύλη αρνιόταν **κάθε** μεγάλο commit — και η μόνη «διέξοδος» θα ήταν `SKIP_JSCPD_DIFF` ή κομμάτιασμα σε μικρά commits, δηλαδή ακριβώς η εκπαίδευση στην παράκαμψη που έκλεισε το §9.
+
+**Πρακτική των μεγάλων — argfile:** `javac @argfiles`, MSVC/GCC response files (`@file`), `tsconfig` `"files"` — όταν η λίστα εισόδων είναι μη φραγμένη, ταξιδεύει σε **αρχείο**. Εδώ: το `writeScanConfig` γράφει προσωρινό config = `.jscpdrc.json` (το SSoT, αυτούσιο) **+ `path: [απόλυτες διαδρομές]`** δίπλα στην αναφορά, και η argv μένει σταθερού μήκους. Ίδιος δρόμος και για `--full`/`--write-baseline` (μία υλοποίηση, όχι δύο).
+
+**Απορρίφθηκαν:** (α) κομμάτιασμα σε παρτίδες — χάνει τους κλώνους **ανάμεσα** σε παρτίδες (ο jscpd κρίνει ζεύγη μέσα σε μία σάρωση)· (β) σάρωση του φακέλου του στιγμιοτύπου — λύνει μόνο το `--index`, όχι το χειροκίνητο `--diff <αρχεία>` του N.18· (γ) `shell: false` — μεταθέτει το όριο στα ~32.767 του `CreateProcess`, δεν το καταργεί.
+
+**Επαλήθευση:** probe σε jscpd 5.0.11 — `path` στο config ⇒ **ίδιες** πηγές και **ίδιοι** κλώνοι με τα ορίσματα, και 152 αρχεία χωρίς σφάλμα· `--full` πριν/μετά = **1469 = 1469**. Άγκυρα: Group §10 στο `check-jscpd-ratchet.test.js` (162 αρχεία με μακριές διαδρομές, **προϋπόθεση** ότι ξεπερνούν τους 8.191 χαρακτήρες, + ένα ζεύγος κλώνων ⇒ πρέπει να ΜΠΛΟΚΑΡΕΙ με «introduced», όχι «scan failed»). **Κόκκινη στον παλιό κώδικα** (αντίγραφο του `HEAD`, όχι μετάλλαξη επί τόπου) με το **ίδιο** μήνυμα της παραγωγής.
+
 ### Resolved open decisions (Giorgio, 2026-07-08)
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
@@ -95,11 +104,11 @@ Before declaring any centralization "done", the agent runs `npm run jscpd:diff <
           └───────────────┬───────────────────────┘
                           │
              scripts/check-jscpd-ratchet.js
-             parseArgs · runScanner(jscpd) · parseSummary
+             parseArgs · runScanner(jscpd, argfile §10) · parseSummary
              loadBaseline · compare · writeBaseline
              runDiff · runFull · runSmoke
                           │
-             scripts/__tests__/check-jscpd-ratchet.test.js  (39 tests)
+             scripts/__tests__/check-jscpd-ratchet.test.js  (52 tests)
 ```
 
 **npm scripts:**
@@ -121,6 +130,8 @@ Before declaring any centralization "done", the agent runs `npm run jscpd:diff <
 ---
 
 ## Changelog
+
+- **2026-10-30 (β)** — **§10: η λίστα σάρωσης ταξιδεύει σε argfile (config `path`), όχι στην argv.** Ρίζα: commit 122 αρχείων ⇒ `The command line is too long` (όριο `cmd.exe`, `shell: true`) ⇒ καμία αναφορά ⇒ fail-closed σε κάθε μεγάλο commit. `check-jscpd-ratchet.js`: NEW `writeScanConfig` (`.jscpdrc.json` + `path`), το `runScanner` δεν βάζει πια διαδρομές στην argv. Test: Group §10 (κόκκινο στον παλιό κώδικα, πράσινο στον νέο) + boy-scout: ο κορμός-κλώνος των Φ5/§10 έγινε ΕΝΑ `cloneBody`. **Verified:** `test:jscpd` **52/52**· `--full` **1469** πριν και μετά.
 
 - **2026-10-30** — **§9: το Layer 1 κρίνει τον νέο κώδικα (SonarQube Clean as You Code · Tricorder).** Ρίζα: 19 ομάδες commit μπλοκαρισμένες από **προϋπάρχοντες** κλώνους (accounting: 20/22 ταυτόσημοι στο HEAD). NEW `scripts/lib/git-changed-lines.js` (`createChangedLineIndex` · `parseUnifiedZero` · `parseNameStatus`)· `check-jscpd-ratchet.js`: `classifyClones` / `reportIntroduced` / `reportPreexisting` (εξαγωγή του `runDiff` κάτω από 40 γραμμές)· `git-index-snapshot.js`: εξάγει το `runGit` (μία υλοποίηση, όχι δίδυμο) + boy-scout: το JSDoc του `grepFiles` είχε καταλήξει πάνω από το `listStagedPaths`· `pre-commit`: ο δείκτης έλεγε **ADR-583** (βιβλιοθήκη συμβόλων) — διορθώθηκε σε ADR-584. Δύο ελαττώματα του **πρώτου** σχεδίου τα έπιασαν οι άγκυρες πριν φύγει τίποτα: (α) το pathspec έκανε τη μετονομασία «προσθήκη», (β) η καθαρή μετακίνηση θα έπεφτε στο fail-closed. **Οι 2 πραγματικά νέοι κλώνοι** του accounting (`services/export`) δεν καλύπτονται από αυτή την αλλαγή — διορθώνονται στον κώδικα.
 

@@ -104,6 +104,20 @@ Config (SSoT): ${path.relative(PROJECT_ROOT, CONFIG_FILE)}
 `);
 }
 
+// The scan list travels in a throwaway config (`path`), NEVER in argv — the
+// argfile pattern (javac @argfiles, tsconfig "files"). argv goes through
+// cmd.exe (shell:true), whose ~8191-char limit a 122-file commit of absolute
+// snapshot paths overflowed: "The command line is too long", no report, and
+// the gate failed closed on EVERY large commit (ADR-584 §10, 2026-10-30).
+// Paths are made absolute: the temp config does not live at the repo root.
+function writeScanConfig(paths, outputDir) {
+  const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+  const scanConfig = path.join(outputDir, 'jscpd-scan-config.json');
+  const scanPaths = paths.map((p) => path.resolve(PROJECT_ROOT, p));
+  fs.writeFileSync(scanConfig, JSON.stringify({ ...config, path: scanPaths }));
+  return scanConfig;
+}
+
 // Spawn jscpd over `paths`, return the parsed JSON report object. Writes the
 // report to a throwaway temp dir so we never pollute the repo. Runs via `npx`
 // with shell:true for cross-platform bin resolution (mirrors check-deadcode).
@@ -111,13 +125,12 @@ function runScanner(paths, opts = {}) {
   const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jscpd-run-'));
   const args = [
     'jscpd',
-    ...paths,
-    '--config', CONFIG_FILE,
+    '--config', writeScanConfig(paths, outputDir),
     '--reporters', 'json',
     '--output', outputDir,
     '--silent',
   ];
-  // Passing individual files as positional args makes jscpd blank the report
+  // Passing individual files (argv or config `path`) makes jscpd blank the report
   // `name` field; --absolute repopulates it (so the diff gate can name the
   // offending pair). It does not change the clone COUNT, only the labels.
   if (opts.absolute) args.push('--absolute');
