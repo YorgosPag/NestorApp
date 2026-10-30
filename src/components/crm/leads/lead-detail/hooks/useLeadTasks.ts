@@ -16,7 +16,7 @@ export function useLeadTasks(leadId: string) {
   const [tasks, setTasks] = useState<CrmTask[]>(leadTasksCache.get(leadId) ?? []);
   const [loading, setLoading] = useState(!leadTasksCache.hasLoaded(leadId));
   const [error, setError] = useState<string | null>(null);
-  const { t } = useTranslation(['crm', 'crm-inbox']);
+  const { t } = useTranslation('crm');
 
   const fetchTasks = useCallback(async (signal?: AbortSignal) => {
     if (!leadId) {

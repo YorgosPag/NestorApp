@@ -22,7 +22,7 @@ import '@/lib/design-system';
 
 export default function LeadsList({ refreshTrigger }: { refreshTrigger?: number | string | boolean | null }) {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation(['crm', 'crm-inbox']);
+  const { t } = useTranslation('crm');
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();

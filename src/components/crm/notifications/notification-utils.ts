@@ -1,24 +1,26 @@
 'use client';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { cn, getStatusColor } from '@/lib/design-system';
-import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+import { getStatusBadgeVariant } from '@/lib/design-system';
+import type { BadgeVariant } from '@/core/types/BadgeTypes';
 
 export const useNotificationUtils = () => {
-  const { t } = useTranslation(['crm', 'crm-inbox']);
+  const { t } = useTranslation('crm');
 
-  const getTypeStyles = (type: string) => {
+  // Παραλλαγή `Badge` (γέμισμα + μετρημένο μελάνι), ΟΧΙ κλάσεις: ως τις 2026-10-29 γέμισμα και κείμενο από το
+  // ΙΔΙΟ token ⇒ αόρατη ετικέτα (ADR-770).
+  const getTypeVariant = (type: string): BadgeVariant => {
     switch(type) {
       case 'new_lead':
-        return cn(getStatusColor('info', 'bg'), getStatusColor('info', 'text'));
+        return getStatusBadgeVariant('info');
       case 'task_due':
-        return cn(getStatusColor('warning', 'bg'), getStatusColor('warning', 'text'));
+        return getStatusBadgeVariant('warning');
       case 'meeting_reminder':
-        return cn(getStatusColor('pending', 'bg'), getStatusColor('pending', 'text'));
+        return getStatusBadgeVariant('pending');
       case 'contract_signed':
-        return cn(getStatusColor('success', 'bg'), getStatusColor('success', 'text'));
+        return getStatusBadgeVariant('success');
       default:
-        return cn(COLOR_BRIDGE.bg.secondary, COLOR_BRIDGE.text.secondary);
+        return 'secondary';
     }
   };
 
@@ -38,7 +40,7 @@ export const useNotificationUtils = () => {
   };
 
   return {
-    getTypeStyles,
+    getTypeVariant,
     getTypeLabel
   };
 };

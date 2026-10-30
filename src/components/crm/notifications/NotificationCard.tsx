@@ -8,7 +8,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 
 export const CrmNotificationCard = ({ notification }: { notification: CrmNotificationData }) => {
   const { quick, radiusClass } = useBorderTokens();
-  const { getTypeStyles, getTypeLabel } = useNotificationUtils();
+  const { getTypeVariant, getTypeLabel } = useNotificationUtils();
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();
 
@@ -37,9 +37,9 @@ export const CrmNotificationCard = ({ notification }: { notification: CrmNotific
             <CommonBadge
               status="company"
               customLabel={getTypeLabel(notification.type)}
-              variant="outline"
+              variant={getTypeVariant(notification.type)}
               size="sm"
-              className={cn('text-xs', getTypeStyles(notification.type))}
+              className="text-xs"
             />
           </div>
           <span className={cn('text-xs', colors.text.secondary)}>{notification.time}</span>

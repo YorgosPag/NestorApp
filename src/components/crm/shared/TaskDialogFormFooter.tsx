@@ -37,7 +37,7 @@ export function TaskDialogFormFooter({
   submitting,
   submitDisabled = false,
 }: TaskDialogFormFooterProps) {
-  const { t } = useTranslation(['crm', 'crm-inbox']);
+  const { t } = useTranslation('crm');
   const sp = useSpacingTokens();
 
   return (

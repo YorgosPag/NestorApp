@@ -58,7 +58,7 @@ interface DisplayTeam {
 
 export function CrmTeamsPageContent() {
   const logger = createModuleLogger('crm/teams');
-  const { t } = useTranslation(['crm', 'crm-inbox']);
+  const { t } = useTranslation('crm');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { user: _user } = useAuth();

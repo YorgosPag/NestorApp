@@ -51,7 +51,7 @@ function getActivityId(activity: ActivityItem): string {
 }
 
 export function TasksPageContent() {
-  const { t } = useTranslation(['crm', 'crm-inbox']);
+  const { t } = useTranslation('crm');
   const layout = useLayoutClasses();
   const sectionSpacing = getSpacingClass('m', 'md', 'b');
   const { isAuthenticated, loading: authLoading } = useAuth();

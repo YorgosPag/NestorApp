@@ -45,7 +45,7 @@ const crmSectionKeys: ReadonlyArray<{
 export function CrmHubPageContent() {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const { t } = useTranslation(['crm', 'crm-inbox']);
+  const { t } = useTranslation('crm');
   const pagePadding = getSpacingClass('p', 'lg');
   const sectionMargin = getSpacingClass('m', 'lg', 'b');
 
