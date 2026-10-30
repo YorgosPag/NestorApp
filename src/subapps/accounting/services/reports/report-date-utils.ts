@@ -5,9 +5,20 @@
  * @created 2026-03-30
  * @see DECISIONS-PHASE-2.md Q9 (Presets + Custom)
  * @compliance CLAUDE.md Enterprise Standards — zero `any`
+ *
+ * 📅 **Όλη η αριθμητική σε κλειδιά ημέρας `YYYY-MM-DD`, ποτέ σε `Date`** (2026-10-29, ADR-919 κατάλοιπα 📅′):
+ * - «Τώρα» = η λογιστική ημέρα **Αθήνας** (`accountingToday`), όχι το `new Date()` του διακομιστή (UTC): στον Netcup
+ *   ο «τρέχων μήνας» άλλαζε στις 02:00/03:00 ώρα Ελλάδας, και η 1η του μήνα μετρούσε στον προηγούμενο.
+ * - Μετατοπίσεις μηνών/ετών **ψαλιδισμένες** (`addMonthsToDateKey`, ADR-828 §1): η σύγκριση έτους με το 29/2/2028
+ *   δίνει 28/2/2027 — το παλιό `toISO(y − 1, …)` έγραφε την ανύπαρκτη 29/2/2027.
+ * - Καμία ανάγνωση `new Date('YYYY-MM-DD')` με τοπικά getters (μεσάνυχτα UTC ⇒ «χθες» δυτικά του Greenwich).
  */
 
 import type { ReportDateFilter, ReportDatePreset, ResolvedPeriods } from '../../types/reports';
+import { daysInMonth } from '@/lib/date/calendar-arithmetic';
+import { isCalendarDay, isoCalendarDay, parseCalendarDay } from '@/lib/date/calendar-day';
+import { addDaysToDateKey, addMonthsToDateKey, daysBetweenDateKeys } from '@/lib/calendar/date-key';
+import { accountingToday } from '../../utils/accounting-day';
 
 // ============================================================================
 // PRESET RESOLUTION
@@ -17,14 +28,18 @@ import type { ReportDateFilter, ReportDatePreset, ResolvedPeriods } from '../../
  * Resolve a date preset (or custom range) to three periods for comparative analysis.
  *
  * Returns: current, previousPeriod (MoM/QoQ), yearOverYear (same period last year).
+ * `now` εγχέεται για τα tests· προεπιλογή η τρέχουσα στιγμή.
  */
-export function resolveReportPeriods(filter: ReportDateFilter): ResolvedPeriods {
-  const current = resolvePresetToRange(filter);
+export function resolveReportPeriods(filter: ReportDateFilter, now: Date = new Date()): ResolvedPeriods {
+  const current = resolvePresetToRange(filter, now);
   const previousPeriod = shiftPeriodBack(current, filter.preset);
   const yearOverYear = shiftYearBack(current);
 
   return { current, previousPeriod, yearOverYear };
 }
+
+/** Μέγιστο εύρος προσαρμοσμένης περιόδου, σε **ημερολογιακούς** μήνες (5 έτη). */
+const MAX_CUSTOM_RANGE_MONTHS = 60;
 
 /** Validate a ReportDateFilter, return error message or null */
 export function validateDateFilter(filter: ReportDateFilter): string | null {
@@ -35,12 +50,15 @@ export function validateDateFilter(filter: ReportDateFilter): string | null {
     if (!filter.customFrom || !filter.customTo) {
       return 'Custom preset requires both customFrom and customTo';
     }
+    // Υπαρκτές ημέρες `YYYY-MM-DD` — το `2026-02-30` δεν είναι όριο περιόδου (ADR-919).
+    if (!isCalendarDay(filter.customFrom) || !isCalendarDay(filter.customTo)) {
+      return 'customFrom and customTo must be existing calendar days (YYYY-MM-DD)';
+    }
     if (filter.customFrom > filter.customTo) {
       return 'customFrom must be before customTo';
     }
-    const diffMs = new Date(filter.customTo).getTime() - new Date(filter.customFrom).getTime();
-    const fiveYearsMs = 5 * 365.25 * 24 * 60 * 60 * 1000;
-    if (diffMs > fiveYearsMs) {
+    const latestTo = addMonthsToDateKey(filter.customFrom, MAX_CUSTOM_RANGE_MONTHS);
+    if (latestTo !== null && filter.customTo > latestTo) {
       return 'Date range cannot exceed 5 years';
     }
   }
@@ -61,32 +79,27 @@ interface DateRange {
   to: string;
 }
 
-function resolvePresetToRange(filter: ReportDateFilter): DateRange {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth(); // 0-based
+function resolvePresetToRange(filter: ReportDateFilter, now: Date): DateRange {
+  const today = accountingToday(now);
+  // Το `accountingToday` δίνει πάντα υπαρκτή ημέρα.
+  const { year, month } = parseCalendarDay(today) as { year: number; month: number };
+  const quarter = Math.ceil(month / 3); // 1–4
 
   switch (filter.preset) {
     case 'this_month':
       return monthRange(year, month);
     case 'last_month':
-      return month === 0
-        ? monthRange(year - 1, 11)
-        : monthRange(year, month - 1);
+      return month === 1 ? monthRange(year - 1, 12) : monthRange(year, month - 1);
     case 'this_quarter':
-      return quarterRange(year, Math.floor(month / 3));
-    case 'last_quarter': {
-      const q = Math.floor(month / 3);
-      return q === 0
-        ? quarterRange(year - 1, 3)
-        : quarterRange(year, q - 1);
-    }
+      return quarterRange(year, quarter);
+    case 'last_quarter':
+      return quarter === 1 ? quarterRange(year - 1, 4) : quarterRange(year, quarter - 1);
     case 'this_year':
       return yearRange(year);
     case 'last_year':
       return yearRange(year - 1);
     case 'ytd':
-      return { from: toISO(year, 0, 1), to: toISO(year, month, now.getDate()) };
+      return { from: isoCalendarDay(year, 1, 1), to: today };
     case 'custom':
       return { from: filter.customFrom!, to: filter.customTo! };
   }
@@ -94,68 +107,47 @@ function resolvePresetToRange(filter: ReportDateFilter): DateRange {
 
 /** Shift a period back by one sequential unit (month→prev month, quarter→prev quarter) */
 function shiftPeriodBack(current: DateRange, preset: ReportDatePreset): DateRange {
-  const fromDate = new Date(current.from);
-  const toDate = new Date(current.to);
-  const durationMs = toDate.getTime() - fromDate.getTime();
-  const durationDays = Math.round(durationMs / (24 * 60 * 60 * 1000));
+  const durationDays = daysBetweenDateKeys(current.from, current.to) ?? 0;
 
   if (isMonthPreset(preset) || durationDays <= 31) {
-    return shiftMonths(fromDate, -1);
+    return shiftMonths(current.from, -1);
   }
   if (isQuarterPreset(preset) || (durationDays > 31 && durationDays <= 92)) {
-    return shiftMonths(fromDate, -3);
+    return shiftMonths(current.from, -3);
   }
   // Year or custom > quarter: shift by same duration
-  return shiftMonths(fromDate, -12);
+  return shiftMonths(current.from, -12);
 }
 
-/** Shift period back by exactly one year */
+/** Shift period back by exactly one year — ψαλιδισμένο (29/2 ⇒ 28/2), ποτέ ανύπαρκτη ημέρα. */
 function shiftYearBack(current: DateRange): DateRange {
-  const fromDate = new Date(current.from);
-  const toDate = new Date(current.to);
   return {
-    from: toISO(fromDate.getFullYear() - 1, fromDate.getMonth(), fromDate.getDate()),
-    to: toISO(toDate.getFullYear() - 1, toDate.getMonth(), toDate.getDate()),
+    from: addMonthsToDateKey(current.from, -12) ?? current.from,
+    to: addMonthsToDateKey(current.to, -12) ?? current.to,
   };
 }
 
-function shiftMonths(fromDate: Date, months: number): DateRange {
-  const newFrom = new Date(fromDate);
-  newFrom.setMonth(newFrom.getMonth() + months);
-  const newTo = new Date(newFrom);
-  // End of that month
-  newTo.setMonth(newTo.getMonth() + Math.abs(months));
-  newTo.setDate(newTo.getDate() - 1);
-  return {
-    from: formatDateLocalISO(newFrom),
-    to: formatDateLocalISO(newTo),
-  };
+/** Η περίοδος `|months|` μηνών που ξεκινά `months` μήνες από το `from` (ως την παραμονή του επόμενου ορίου). */
+function shiftMonths(from: string, months: number): DateRange {
+  const newFrom = addMonthsToDateKey(from, months) ?? from;
+  const nextStart = addMonthsToDateKey(newFrom, Math.abs(months)) ?? newFrom;
+  return { from: newFrom, to: addDaysToDateKey(nextStart, -1) ?? newFrom };
 }
 
+/** Μήνας **1-based**. */
 function monthRange(year: number, month: number): DateRange {
-  const lastDay = new Date(year, month + 1, 0).getDate();
-  return { from: toISO(year, month, 1), to: toISO(year, month, lastDay) };
+  return { from: isoCalendarDay(year, month, 1), to: isoCalendarDay(year, month, daysInMonth(year, month)) };
 }
 
+/** Τρίμηνο **1–4**. */
 function quarterRange(year: number, quarter: number): DateRange {
-  const startMonth = quarter * 3;
+  const startMonth = (quarter - 1) * 3 + 1;
   const endMonth = startMonth + 2;
-  const lastDay = new Date(year, endMonth + 1, 0).getDate();
-  return { from: toISO(year, startMonth, 1), to: toISO(year, endMonth, lastDay) };
+  return { from: isoCalendarDay(year, startMonth, 1), to: isoCalendarDay(year, endMonth, daysInMonth(year, endMonth)) };
 }
 
 function yearRange(year: number): DateRange {
-  return { from: toISO(year, 0, 1), to: toISO(year, 11, 31) };
-}
-
-function toISO(year: number, month: number, day: number): string {
-  const m = String(month + 1).padStart(2, '0');
-  const d = String(day).padStart(2, '0');
-  return `${year}-${m}-${d}`;
-}
-
-function formatDateLocalISO(date: Date): string {
-  return toISO(date.getFullYear(), date.getMonth(), date.getDate());
+  return { from: isoCalendarDay(year, 1, 1), to: isoCalendarDay(year, 12, 31) };
 }
 
 function isMonthPreset(preset: ReportDatePreset): boolean {

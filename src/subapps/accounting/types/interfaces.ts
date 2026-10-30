@@ -153,6 +153,8 @@ export interface IAccountingRepository {
   deleteJournalEntry(entryId: string): Promise<void>;
   /** ΣΕΛΙΔΑ για την οθόνη. ⚠️ ΟΧΙ για υπολογισμούς — βλ. `collectJournalEntries`. */
   listJournalEntries(filters: JournalEntryFilters, page?: PageRequest): Promise<PaginatedResult<JournalEntry>>;
+  /** ΟΛΗ η εμβέλεια των φίλτρων της λίστας — για τα σύνολα της οθόνης (κάρτες σύνοψης), όχι η σελίδα. */
+  collectJournalEntryList(filters: JournalEntryFilters): Promise<JournalEntry[]>;
   /** «Αναφέρει κάποια εγγραφή την κατηγορία;» — ύπαρξη, όχι σελίδα· πετά σε σφάλμα (ποτέ «όχι» από σφάλμα). */
   hasJournalEntriesInCategory(categoryCode: string): Promise<boolean>;
   /** ΟΛΕΣ οι εγγραφές της εμβέλειας, για υπολογισμό· πετά σε σφάλμα ή υπέρβαση ορίου, ποτέ μερικό. */
@@ -165,6 +167,8 @@ export interface IAccountingRepository {
   updateInvoice(invoiceId: string, updates: UpdateInvoiceInput): Promise<void>;
   /** ΣΕΛΙΔΑ για την οθόνη. ⚠️ ΟΧΙ για υπολογισμούς — βλ. `collectInvoices` (ADR-ACC-010 §2.1.1). */
   listInvoices(filters: InvoiceFilters, page?: PageRequest): Promise<PaginatedResult<Invoice>>;
+  /** ΟΛΗ η εμβέλεια των φίλτρων της λίστας — για τα σύνολα της οθόνης (κάρτες σύνοψης), όχι η σελίδα. */
+  collectInvoiceList(filters: InvoiceFilters): Promise<Invoice[]>;
   /** ΟΛΑ τα παραστατικά ως το `asOf` (πελάτη ή εταιρείας), για υπολογισμό απαιτήσεων — πετά, ποτέ μερικό. */
   collectInvoices(query: InvoiceLedgerQuery): Promise<Invoice[]>;
   getNextInvoiceNumber(seriesCode: string): Promise<number>;
@@ -184,6 +188,8 @@ export interface IAccountingRepository {
   updateBankTransaction(transactionId: string, updates: Partial<BankTransaction>): Promise<void>;
   /** ΣΕΛΙΔΑ για την οθόνη. ⚠️ ΟΧΙ για υπολογισμούς (ADR-ACC-010 §2.1.1). */
   listBankTransactions(filters: BankTransactionFilters, page?: PageRequest): Promise<PaginatedResult<BankTransaction>>;
+  /** ΟΛΗ η εμβέλεια των φίλτρων της λίστας — για τα σύνολα της οθόνης (κάρτες σύνοψης), όχι η σελίδα. */
+  collectBankTransactionList(filters: BankTransactionFilters): Promise<BankTransaction[]>;
   /** ΟΛΕΣ οι κινήσεις μιας εμβέλειας, για υπολογισμό — πετά, ποτέ μερικό (§2.1.1). */
   collectBankTransactions(query: BankLedgerQuery): Promise<BankTransaction[]>;
 
@@ -203,6 +209,8 @@ export interface IAccountingRepository {
   updateFixedAsset(assetId: string, updates: Partial<FixedAsset>): Promise<void>;
   /** ΣΕΛΙΔΑ για την οθόνη. ⚠️ ΟΧΙ για υπολογισμούς (ADR-ACC-010 §2.1.1). */
   listFixedAssets(filters: FixedAssetFilters, page?: PageRequest): Promise<PaginatedResult<FixedAsset>>;
+  /** ΟΛΗ η εμβέλεια των φίλτρων της λίστας — για τα σύνολα της οθόνης (κάρτες σύνοψης), όχι η σελίδα. */
+  collectFixedAssetList(filters: FixedAssetFilters): Promise<FixedAsset[]>;
   /** ΟΛΑ τα πάγια μιας εμβέλειας, για υπολογισμό αποσβέσεων — πετά, ποτέ μερικό (§2.1.1 Φάση 4). */
   collectFixedAssets(query: FixedAssetLedgerQuery): Promise<FixedAsset[]>;
   /**

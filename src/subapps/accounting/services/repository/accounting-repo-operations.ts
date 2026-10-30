@@ -35,7 +35,7 @@ import type { TenantContext } from '../../types/common';
 import { depreciationRateFor } from '../config/depreciation-config';
 
 import { sanitizeForFirestore, isoNow } from './firestore-helpers';
-import { readAccountingListPage } from './accounting-repo-list';
+import { readAccountingListPage, scanAccountingList } from './accounting-repo-list';
 import { BANK_TRANSACTION_LIST, FIXED_ASSET_LIST } from './accounting-list-specs';
 
 // ============================================================================
@@ -94,6 +94,11 @@ export function listBankTransactions(
   page: PageRequest = FIRST_PAGE
 ): Promise<PaginatedResult<BankTransaction>> {
   return readAccountingListPage(tenant, BANK_TRANSACTION_LIST, filters, page, (data) => data as BankTransaction);
+}
+
+/** ΟΛΗ η εμβέλεια της λίστας (ίδια φίλτρα/δείκτες με το `listBankTransactions`) — για τα σύνολα της οθόνης. */
+export function collectBankTransactionList(tenant: TenantContext, filters: BankTransactionFilters): Promise<BankTransaction[]> {
+  return scanAccountingList(tenant, BANK_TRANSACTION_LIST, filters, (data) => data as BankTransaction);
 }
 
 export async function getBankAccounts(tenant: TenantContext): Promise<BankAccountConfig[]> {
@@ -190,6 +195,11 @@ export function listFixedAssets(
   page: PageRequest = FIRST_PAGE
 ): Promise<PaginatedResult<FixedAsset>> {
   return readAccountingListPage(tenant, FIXED_ASSET_LIST, filters, page, (data) => data as FixedAsset);
+}
+
+/** ΟΛΗ η εμβέλεια της λίστας (ίδια φίλτρα/δείκτες με το `listFixedAssets`) — για τα σύνολα της οθόνης. */
+export function collectFixedAssetList(tenant: TenantContext, filters: FixedAssetFilters): Promise<FixedAsset[]> {
+  return scanAccountingList(tenant, FIXED_ASSET_LIST, filters, (data) => data as FixedAsset);
 }
 
 export async function getDepreciationRecords(

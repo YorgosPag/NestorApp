@@ -28,11 +28,16 @@ import {
 import {
   UnsupportedListFilterError,
   buildListQuery,
+  scanAccountingList,
   type AccountingListSpec,
   type ListFilters,
 } from '../accounting-repo-list';
+import { scanLedger, type LedgerScan } from '../accounting-repo-scan';
 
 jest.mock('@/lib/firebaseAdmin', () => ({ safeFirestoreOperation: jest.fn() }));
+jest.mock('../accounting-repo-scan', () => ({ scanLedger: jest.fn(async () => []) }));
+
+const mockedScan = scanLedger as jest.MockedFunction<typeof scanLedger>;
 
 const INDEXES = readCompositeIndexes();
 
@@ -93,5 +98,53 @@ describe('Λ — κάθε δηλωμένος συνδυασμός φίλτρων
     expect(deadFilters(INVOICE_LIST)).toEqual([]);
     expect(deadFilters(BANK_TRANSACTION_LIST)).toEqual([]);
     expect(deadFilters(FIXED_ASSET_LIST)).toEqual([]);
+  });
+});
+
+/**
+ * 🔴 Η ΣΑΡΩΣΗ των καρτών σύνοψης (`scanAccountingList`) — το `.get()` της ζει στο `processAdminBatch`, άρα ούτε αυτήν
+ * βλέπει το CHECK 3.91. Εκτελείται ο ΠΡΑΓΜΑΤΙΚΟΣ `build` που παραδίδεται στο `scanLedger`, για ΚΑΘΕ δηλωμένο
+ * συνδυασμό: ίδιος δείκτης με τη σελίδα, και κανένα `.limit` (ο καταγραφέας δεν έχει `limit` ⇒ θα έσκαγε) — η σύνοψη
+ * δεν μπορεί να εξαρτηθεί από μέγεθος σελίδας.
+ */
+const TENANT = { companyId: 'comp_a', userId: 'u_1' };
+
+function scanShapeOf<F extends ListFilters<F>>(spec: AccountingListSpec<F>, keys: readonly (keyof F & string)[]): RecordedQueryShape {
+  mockedScan.mockClear();
+  const filters = Object.fromEntries(keys.map((key) => [key, SAMPLE])) as F;
+  void scanAccountingList(TENANT, spec, filters, (data) => data);
+  const [scan] = mockedScan.mock.calls[0] as [LedgerScan<unknown>];
+  return recordQueryShape<Query>((recorder) =>
+    scan.build({ collection: (name: string) => (name === spec.collection ? recorder : null) } as never));
+}
+
+function scanCasesOf<F extends ListFilters<F>>(label: string, spec: AccountingListSpec<F>): Case[] {
+  return spec.shapes.map((keys): Case => [`${label} · [${keys.join(', ')}]`, spec.collection, scanShapeOf(spec, keys)]);
+}
+
+describe('Σ — η σάρωση σύνοψης ΚΑΘΕ λίστας πατά στον ΙΔΙΟ δείκτη με τη σελίδα', () => {
+  const SCAN_CASES: readonly Case[] = [
+    ...scanCasesOf('ημερολόγιο', JOURNAL_LIST),
+    ...scanCasesOf('τιμολόγια', INVOICE_LIST),
+    ...scanCasesOf('τράπεζα', BANK_TRANSACTION_LIST),
+    ...scanCasesOf('πάγια', FIXED_ASSET_LIST),
+  ];
+
+  it.each(SCAN_CASES)('Σ-1 %s', (_label, collection, shape) => {
+    expect(shape.equality).toContain('companyId');
+    expect(shape.range.size).toBe(0);
+    expect(indexesForShape(INDEXES, collection, shape).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('Σ-2 σάρωση ≡ σελίδα: ίδιο σχήμα ερωτήματος για κάθε συνδυασμό (ίδια έγγραφα ⇒ κάρτα = λίστα ως το τέλος)', () => {
+    expect(SCAN_CASES.map(([, collection, s]) => [collection, s]))
+      .toEqual(CASES.map(([, collection, s]) => [collection, s]));
+  });
+
+  it('Σ-3 συνδυασμός ΕΚΤΟΣ συνόλου ⇒ UnsupportedListFilterError ΠΡΙΝ από τη βάση (καμία σάρωση)', () => {
+    mockedScan.mockClear();
+    expect(() => scanAccountingList(TENANT, INVOICE_LIST, { type: 'service_invoice' }, (data) => data))
+      .toThrow(UnsupportedListFilterError);
+    expect(mockedScan).not.toHaveBeenCalled();
   });
 });

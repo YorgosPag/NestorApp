@@ -35,7 +35,7 @@ import type { TenantContext } from '../../types/common';
 
 import { sanitizeForFirestore, isoNow } from './firestore-helpers';
 import { accountingDocId } from './accounting-doc-ids';
-import { readAccountingListPage } from './accounting-repo-list';
+import { readAccountingListPage, scanAccountingList } from './accounting-repo-list';
 import { INVOICE_LIST, JOURNAL_LIST } from './accounting-list-specs';
 
 // ============================================================================
@@ -123,6 +123,11 @@ export function listJournalEntries(
 ): Promise<PaginatedResult<JournalEntry>> {
   return readAccountingListPage(tenant, JOURNAL_LIST, filters, page, (data) =>
     applyJournalDefaults(data as JournalEntry));
+}
+
+/** ΟΛΗ η εμβέλεια της λίστας (ίδια φίλτρα/δείκτες με το `listJournalEntries`) — για τα σύνολα της οθόνης, ποτέ μερικό. */
+export function collectJournalEntryList(tenant: TenantContext, filters: JournalEntryFilters): Promise<JournalEntry[]> {
+  return scanAccountingList(tenant, JOURNAL_LIST, filters, (data) => applyJournalDefaults(data as JournalEntry));
 }
 
 /**
@@ -235,6 +240,11 @@ export function listInvoices(
   page: PageRequest = FIRST_PAGE
 ): Promise<PaginatedResult<Invoice>> {
   return readAccountingListPage(tenant, INVOICE_LIST, filters, page, (data) => data as Invoice);
+}
+
+/** ΟΛΗ η εμβέλεια της λίστας (ίδια φίλτρα/δείκτες με το `listInvoices`) — για τα σύνολα της οθόνης, ποτέ μερικό. */
+export function collectInvoiceList(tenant: TenantContext, filters: InvoiceFilters): Promise<Invoice[]> {
+  return scanAccountingList(tenant, INVOICE_LIST, filters, (data) => data as Invoice);
 }
 
 export async function getInvoiceSeries(tenant: TenantContext): Promise<InvoiceSeries[]> {

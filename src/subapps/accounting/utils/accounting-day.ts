@@ -9,7 +9,7 @@
  */
 
 import { athensClockAt } from '@/lib/calendar/weekly-hours';
-import { hasCalendarDayShape, isCalendarDay } from '@/lib/date/calendar-day';
+import { operatorDayOf } from '@/constants/platform-operator';
 
 /** Η ημερολογιακή ημέρα της Αθήνας τη στιγμή `now`. */
 export function accountingToday(now: Date = new Date()): string {
@@ -21,9 +21,8 @@ export function accountingToday(now: Date = new Date()): string {
  * Σκέτη ημέρα ⇒ αυτούσια (ΚΑΜΙΑ μετατροπή ζώνης: το `new Date('2026-12-01').getMonth()` δίνει Νοέμβριο σε κάθε
  * ζώνη δυτικά του UTC)· στιγμή με ώρα ⇒ η ημέρα της ΑΘΗΝΑΣ (`…T23:30:00Z` = 1η του επόμενου μήνα στην Ελλάδα).
  * Το `2026-02-30` / `2026-13-01` απορρίπτεται — αλλιώς ο «μήνας 13» θα έπεφτε στην περίοδο κλεισίματος.
+ * Ο κανόνας είναι του έργου (`operatorDayOf`, ζώνη φορέα = Αθήνα) — τον μοιράζονται και οι λήξεις δόσεων (ADR-234).
  */
 export function accountingDayOf(value: string): string | null {
-  if (hasCalendarDayShape(value)) return isCalendarDay(value) ? value : null;
-  const instant = new Date(value);
-  return Number.isNaN(instant.getTime()) ? null : accountingToday(instant);
+  return operatorDayOf(value);
 }

@@ -113,6 +113,8 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
     financial.deleteJournalEntry(this.tenant, entryId);
   listJournalEntries = (filters: JournalEntryFilters, page?: PageRequest) =>
     financial.listJournalEntries(this.tenant, filters, page);
+  collectJournalEntryList = (filters: JournalEntryFilters) =>
+    financial.collectJournalEntryList(this.tenant, filters);
   hasJournalEntriesInCategory = (categoryCode: string) =>
     financial.hasJournalEntriesInCategory(this.tenant, categoryCode);
   collectJournalEntries = (query: JournalLedgerQuery) =>
@@ -129,6 +131,8 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
     financial.updateInvoice(this.tenant, invoiceId, updates);
   listInvoices = (filters: InvoiceFilters, page?: PageRequest) =>
     financial.listInvoices(this.tenant, filters, page);
+  collectInvoiceList = (filters: InvoiceFilters) =>
+    financial.collectInvoiceList(this.tenant, filters);
   collectInvoices = (query: InvoiceLedgerQuery) =>
     invoiceLedger.collectInvoices(this.tenant, query);
   getNextInvoiceNumber = (seriesCode: string) =>
@@ -191,6 +195,8 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
     operations.updateBankTransaction(this.tenant, transactionId, updates);
   listBankTransactions = (filters: BankTransactionFilters, page?: PageRequest) =>
     operations.listBankTransactions(this.tenant, filters, page);
+  collectBankTransactionList = (filters: BankTransactionFilters) =>
+    operations.collectBankTransactionList(this.tenant, filters);
   collectBankTransactions = (query: BankLedgerQuery) =>
     bankLedger.collectBankTransactions(this.tenant, query);
 
@@ -215,6 +221,8 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
     operations.updateFixedAsset(this.tenant, assetId, updates);
   listFixedAssets = (filters: FixedAssetFilters, page?: PageRequest) =>
     operations.listFixedAssets(this.tenant, filters, page);
+  collectFixedAssetList = (filters: FixedAssetFilters) =>
+    operations.collectFixedAssetList(this.tenant, filters);
   collectFixedAssets = (query: FixedAssetLedgerQuery) =>
     fixedAssetLedger.collectFixedAssets(this.tenant, query);
   postDepreciation = (request: DepreciationPostingRequest) =>

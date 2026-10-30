@@ -29,6 +29,8 @@ import type { PageRequest, PaginatedResult } from '@/lib/pagination';
 
 import type { TenantContext } from '../../types/common';
 
+import { scanLedger } from './accounting-repo-scan';
+
 /** Τιμή φίλτρου λίστας — μόνο ισότητα. */
 export type ListFilterValue = string | number;
 
@@ -117,4 +119,29 @@ export async function readAccountingListPage<F extends ListFilters<F>, T>(
       map,
     }),
   );
+}
+
+/**
+ * **ΟΛΗ η εμβέλεια μιας λίστας** — για τα σύνολα της οθόνης (ADR-ACC-010 §2.1.1 «κάρτες σύνοψης»).
+ *
+ * 🔑 Ίδιο spec, ίδια φίλτρα, ίδια ταξινόμηση με τη {@link readAccountingListPage} ⇒ **ίδιοι δείκτες** και ίδιο σύνολο
+ *    εγγράφων: η κάρτα «Σύνολο» δεν μπορεί να μετρά άλλα έγγραφα από όσα δείχνει η λίστα όταν ξετυλιχτεί ως το τέλος.
+ *    Ο μηχανισμός (cursor, χωρίς fallback, όριο που πετά) είναι το SSoT `scanLedger`.
+ */
+export function scanAccountingList<F extends ListFilters<F>, T>(
+  tenant: TenantContext,
+  spec: AccountingListSpec<F>,
+  filters: F,
+  map: (data: DocumentData) => T,
+): Promise<T[]> {
+  // Η άρνηση του πελάτη (φίλτρα) κρίνεται ΠΡΙΝ από τη βάση — ίδια με τη σελίδα.
+  const scope = Object.fromEntries(supportedFilters(spec, filters));
+  return scanLedger({
+    ledger: `${spec.collection} list`,
+    scope,
+    build: (db) =>
+      buildListQuery(db.collection(spec.collection), tenant.companyId, spec, filters)
+        .orderBy(spec.order.field, spec.order.direction),
+    map,
+  });
 }
