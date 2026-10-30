@@ -23,6 +23,29 @@
 
 const { judgeLegalDocuments } = require('./lib/legal-documents/judge');
 const { loadWorld } = require('./lib/legal-documents/world');
+const { INPUTS, pathsFor } = require('./lib/legal-documents/model');
+const { materializeTypeScriptClosure } = require('./lib/ts-module-loader');
+
+/**
+ * Ο κόσμος της πύλης. Με `--index` (hook, ADR-924) κρίνεται ό,τι **θα δεσμευτεί**: modules, η κλειστότητα
+ * των εισαγωγών τους, locales και εκδόσεις από στιγμιότυπο του ευρετηρίου.
+ * 🔴 Μετρημένο 2026-10-29: ξένη αστάδιοποίητη εισαγωγή στο `platform-operator.ts` μπλόκαρε commit που
+ * δεν άγγιζε κανένα νομικό κείμενο — η πύλη έκρινε τον δίσκο, όχι το commit.
+ */
+function judgeWorld(argv) {
+  if (!argv.includes('--index')) {
+    const world = loadWorld();
+    return { world, findings: judgeLegalDocuments(world) };
+  }
+  const snapshot = materializeTypeScriptClosure({ entries: INPUTS.modules, extra: INPUTS.data });
+  try {
+    // ⚠️ Η κρίση ΜΕΣΑ στη ζωή του στιγμιοτύπου: ο κριτής διαβάζει τις παγωμένες εκδόσεις νωχελικά.
+    const world = loadWorld(pathsFor(snapshot.root));
+    return { world, findings: judgeLegalDocuments(world) };
+  } finally {
+    snapshot.dispose();
+  }
+}
 
 function report(world, findings) {
   const docs = (world.manifest && world.manifest.documents) || {};
@@ -42,8 +65,7 @@ function main(argv) {
     console.warn('⚠️ CHECK 3.85 παρακάμφθηκε (SKIP_LEGAL_DOCUMENTS) — αιτιολόγησέ το στον Giorgio.');
     return 0;
   }
-  const world = loadWorld();
-  const findings = judgeLegalDocuments(world);
+  const { world, findings } = judgeWorld(argv);
   report(world, findings);
   if (argv.includes('--report') || findings.length === 0) {
     if (findings.length === 0) console.log('✅ CHECK 3.85 — καθαρό');

@@ -735,6 +735,17 @@ if (!process.env.SKIP_ONE_VERSION && allFiles.length > 0)
 if (!process.env.SKIP_GATE_INVENTORY)
   addThread('3.66', 'Gate inventory', 'scripts/check-gate-inventory.js', allFiles);
 
+// CHECK 3.107 — ΠΥΛΗ ΤΗΣ ΟΨΗΣ ΤΟΥ COMMIT (ADR-924). «Κρίνει αυτή η πύλη ό,τι ΘΑ ΔΕΣΜΕΥΤΕΙ — ή
+// τον δίσκο, όπου ζει και η ξένη αστάδιοποίητη δουλειά;»
+// 🔴 Μετρημένο 2026-10-29: commit 4 αρχείων μπλοκαρίστηκε από 3.6 · 3.73 · 3.85 για αλλαγές που
+// ΔΕΝ ήταν μέσα του. Το SSoT (`git-index-snapshot.js`) υπήρχε από 27/09· 3 πύλες στις 89 το ρωτούσαν.
+// ⚠️ Το κριτήριο είναι ΔΙΠΛΟ: `--index` εδώ ΚΑΙ κλειστότητα `require` προς το SSoT — σημαία χωρίς
+// αναγνώστη είναι διακόσμηση (⛔ flag-without-reader). 🔴 RATCHET κατά ταυτότητα για το χρέος.
+// ⚠️ ΚΑΜΙΑ ΣΚΑΝΔΑΛΗ: το πλήρες είναι 89 κλειστότητες `require` (~1s) — όπως η 3.66, η μερική
+// ανάλυση θα ήταν δεύτερη αυθεντία.
+if (!process.env.SKIP_GATE_COMMIT_VIEW)
+  addThread('3.107', 'Gate commit view', 'scripts/check-gate-commit-view.js', ['--index']);
+
 // CHECK 3.67 — ΠΥΛΗ ΤΗΣ ΥΠΟΣΧΕΣΗΣ ΓΡΑΜΜΑΤΟΣΕΙΡΑΣ (ADR-803). «Υπόσχεται ο πίνακας
 // υποκατάστασης όψη που ΔΕΝ φορτώνεται ΠΟΤΕ;»
 // 🔴 ΜΕΤΡΗΜΕΝΟ 25/08: ο FONT_SUBSTITUTION_TABLE υπόσχεται 5 οικογένειες, το
@@ -833,7 +844,7 @@ if (!process.env.SKIP_LOCALE_DUPLICATE_KEYS)
 // ⚠️ Το προφίλτρο κειμένου (17,9s → ~3s) είναι ΑΣΦΑΛΕΣ δομικά: δήλωση που απαριθμεί ≥K
 // τιμές ΠΡΕΠΕΙ να τις περιέχει ως bytes. Επαληθευμένο: ταυτόσημη λογιστική με/χωρίς.
 if (!process.env.SKIP_DOMAIN_VOCABULARY) {
-  addThread('3.73', 'Domain vocabulary', 'scripts/check-domain-vocabulary.js', []);
+  addThread('3.73', 'Domain vocabulary', 'scripts/check-domain-vocabulary.js', ['--index']);
 }
 
 // CHECK 3.81 — ΠΥΛΗ ΤΑΥΤΟΤΗΤΑΣ ΠΡΟΪΟΝΤΟΣ (ADR-857 Φ8). «Λέει κάθε σημείο που ονομάζει το
@@ -904,7 +915,7 @@ if (!process.env.SKIP_THIRD_PARTY_NOTICES) {
 // άλλαξε (vs HEAD) · Κ4 ακολουθία · Κ5 μάρτυρας φορέα (κλείνει τη φύλαξη append-only του ADR-861 Σ2)
 // · Κ6 αλλαγή φορέα χωρίς έκδοση · Κ7 ευρετήριο. Πλήρες ~1s ⇒ καμία σκανδάλη (πρότυπο 3.84).
 if (!process.env.SKIP_LEGAL_DOCUMENTS) {
-  addThread('3.85', 'Legal document versions', 'scripts/check-legal-documents.js', []);
+  addThread('3.85', 'Legal document versions', 'scripts/check-legal-documents.js', ['--index']);
 }
 
 // CHECK 3.74 — ΤΟ ΣΥΝΟΡΟ ΑΝΑΓΝΩΣΗΣ ΤΗΣ ΔΗΜΟΣΙΑΣ ΠΡΟΒΟΛΗΣ (ADR-839). «Διαβάζει κάποιος

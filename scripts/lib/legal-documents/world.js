@@ -64,19 +64,23 @@ function readHeadManifest() {
   }
 }
 
-function loadWorld() {
-  const { ids, outlines, locales } = M.loadOutlines();
-  const manifest = M.loadManifest();
+/**
+ * @param {object} [p] τα μονοπάτια (`M.pathsFor`) — του repo, ή του στιγμιοτύπου του commit (ADR-924).
+ *        Το `headManifest` διαβάζεται ΠΑΝΤΑ από το git του repo: η βάση δεν ζει στο στιγμιότυπο.
+ */
+function loadWorld(p = M.paths) {
+  const { ids, outlines, locales } = M.loadOutlines(p);
+  const manifest = M.loadManifest(p);
   return {
     ids,
     outlines,
     locales,
-    legalByLocale: M.loadLegalByLocale(locales),
+    legalByLocale: M.loadLegalByLocale(locales, p),
     manifest,
     headManifest: readHeadManifest(),
-    readFrozenBytes: M.readFrozenBytes,
-    operators: M.loadOperators(),
-    indexText: fs.existsSync(M.paths.index) ? fs.readFileSync(M.paths.index, 'utf8') : null,
+    readFrozenBytes: (id, version) => M.readFrozenBytes(id, version, p),
+    operators: M.loadOperators(p),
+    indexText: fs.existsSync(p.index) ? fs.readFileSync(p.index, 'utf8') : null,
     expectedIndexText: renderIndex(manifest, ids),
   };
 }

@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 871 ADRs | Last Updated: 2026-10-25
+**📊 Stats**: 872 ADRs | Last Updated: 2026-10-29
 
 ---
 
@@ -906,6 +906,7 @@
 | **ADR-921** | «Σχεδίαση Επιπέδων»: πρόληψη αντί για απόρριψη — ΕΝΑ SSoT «έτοιμο;» (όροφος + αναφορά + χρήστης) + γενική πύλη διαθεσιμότητας εργαλείων (`ToolAvailabilityStore`), γκρίζο κουμπί με αιτία, toast με διόρθωση «Εισαγωγή κάτοψης», σωστό μήνυμα ανά αιτία | ✅ 🟡 **ΥΛΟΠΟΙΗΜΕΝΟ σε κώδικα — uncommitted (2026-10-24)** · jest: δες §7 · **όχι** σε browser | 2026-10-24 | DXF Viewer / Overlays / Tools / UX | [📄](./adrs/ADR-921-overlay-drawing-readiness.md) |
 | **ADR-922** | Η εικόνα δημοσίευσης ενός DXF: παράγωγο PNG με καταγεγραμμένη κατάσταση (`publishRaster` ready/failed), ένας γραφέας με δύο εισόδους (`POST /api/files/{id}/publish-raster` + δίχτυ ασφαλείας δημοσίευσης), μονόχρωμη απόδοση αγγελίας 3000px με αναλογίες σχεδίου, ένας κριτής φόρμας/βιτρίνας (`imagePath`) | ✅ 🟡 **ΥΛΟΠΟΙΗΜΕΝΟ σε κώδικα — uncommitted (2026-10-24)** · jest: δες §8 · **όχι** σε browser · **χρειάζεται deploy κανόνων Firestore** | 2026-10-24 | Files / Listings / Owner property dossier / DXF | [📄](./adrs/ADR-922-dxf-publish-raster.md) |
 | **ADR-923** | Κατάλογος Προϊόντων Προμηθευτή (PIM) και Εκδότης Τιμοκαταλόγων | 🚧 **ΣΕ ΥΛΟΠΟΙΗΣΗ** · Φάση 0 ✅ (Typst · gpt-4o) · Φάση 1 ✅ (σχήμα + UI, ζωντανή επαλήθευση) · Φάση 2: 2α ✅ πυρήνας τιμών · 2β ✅ αποθήκευση/διακομιστής · **2γ ✅ μέσα και αποδόσεις** (late binding εκτύπωσης, χρώμα/ICC, σύνδεση αρχείου, άδειες ανά πλαίσιο — §5.10.3) · επόμενο: **2δ** UI | 2026-10-26 | Procurement / Network / Publishing / Data model | [📄](./adrs/ADR-923-supplier-product-catalog-pim.md) |
+| **ADR-924** | Οι πύλες κρίνουν το COMMIT, όχι τον δίσκο | ✅ ✅ **ΥΛΟΠΟΙΗΘΗΚΕ (2026-10-29)** · SSoT `createCommitView` · `materializeTypeScriptClosure` · μεταφορά 3.6 · 3.73 · 3.85 · CHECK 3.107 (ratchet: **84** πύλες ακόμη στον δίσκο) | 2026-10-29 | Tooling / Pre-commit gates | [📄](./adrs/ADR-924-gate-commit-view.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

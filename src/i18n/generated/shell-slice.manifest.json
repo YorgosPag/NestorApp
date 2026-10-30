@@ -125,7 +125,7 @@
     },
     "toolchain": {
       "npm:typescript": "8c88727f359f0423e1665ce0dec0cb6fa9e927b8e0baae7748605e14a394e5af",
-      "scripts/lib/git-index-snapshot.js": "c63757241559ad7546ef7361b387df646e5ad7ef3f550bc8c97f6280ad37ac69",
+      "scripts/lib/git-index-snapshot.js": "a4d85fe726287faa77fef8988b13fba2657e0ad47dea6eedb522426fd50aa2fa",
       "scripts/lib/i18n-namespace-extract.js": "b116e4b7a7e4152942e55c8fcea80594c81fda17b81782a731c2229128bebca5",
       "scripts/lib/i18n-shell-slice/config.js": "dd00e098d1a5263d79cce60f6049d402887478cb49d9708f2b5b9d7d0d4cf5b1",
       "scripts/lib/i18n-shell-slice/constant-resolution.js": "48ea41bcc60262e92a0f02c29b6e487af01ef41621b7ed08bcaad7b88d13e48c",
@@ -145,7 +145,7 @@
       "scripts/lib/i18n-shell-slice/shell-closure.js": "7ddd227deec17a85f63dc68fa962490adb62fbc27ec3648b9f65fedb121c7191",
       "scripts/lib/i18n-shell-slice/shell-roots.js": "aa0f71c4b358400c105fd18aba2e47ac970abe759fc48eb6af29506a938e5c5c",
       "scripts/lib/i18n-shell-slice/slice-build.js": "3910e7e013f2edfc83e8cd663e2019c42e96b9825944ffd68ddc5ead9afb609d",
-      "scripts/lib/i18n-shell-slice/source-cache.js": "efd40914d6b24a7310d2731c6b6a66b112bb2ca2cb1d7a1e7449b14421368553",
+      "scripts/lib/i18n-shell-slice/source-cache.js": "e698d0b24079ad26721f183c11fc3d90a0e7aee361b0ddd5b8a9ef808c0b988d",
       "scripts/lib/module-graph/build-graph.js": "6b1bee7c6063231300d5c23824ac8f2b3269fd3b6706059f1a4ec9f745048540",
       "scripts/lib/module-graph/classify-exports.js": "aacae292cc0981db53066fdfb59b5b45a2477e472d177c9873d630aeb4505a9f",
       "scripts/lib/module-graph/index.js": "c5f613d25d9d6d720feab21f3c8cef35389d1322718cbb222ecba8401ba391e7",
@@ -170,7 +170,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "4d675f65f98ff5404feaf1541a8fe31bf9e8eea1a2040e44f1c6f863da0c5669",
+  "inputsSha256": "c172e3b6c6d02825df4f53cccd8b2c56b9c8ee31e19ea474692ee818223b6391",
   "languages": [
     "el"
   ],

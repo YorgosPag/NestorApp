@@ -63,13 +63,52 @@ const fs = require('fs');
 const path = require('path');
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const { STATES, BLOCKING, MIN_REASON, scanFile, verifyRoot, boundToSibling } = require('./lib/domain-vocabulary/scan');
-const { collectSourceFiles } = require('./lib/module-graph/scan-config');
+const { collectSourceFiles, isAnalysedSourcePath } = require('./lib/module-graph/scan-config');
 const { toPosix } = require('./lib/module-graph/resolve-specifier');
+const { createCommitView } = require('./lib/git-index-snapshot');
 
-const CONFIG_PATH = path.join(PROJECT_ROOT, '.domain-vocabulary.json');
+const CONFIG_REL = '.domain-vocabulary.json';
+const CONFIG_PATH = path.join(PROJECT_ROOT, CONFIG_REL);
+const SCANNED_ROOTS = /^(src|packages)\//;
+
+/** Η πηγή του ΔΙΣΚΟΥ — η προεπιλογή (σουίτα, `npm run`). */
+function diskSource(root) {
+  return {
+    files: collectSourceFiles(root),
+    readText(abs) {
+      try {
+        return fs.readFileSync(abs, 'utf8');
+      } catch {
+        return null;
+      }
+    },
+  };
+}
+
+/**
+ * Η ΟΨΗ ΤΟΥ COMMIT (`--index`, ADR-924) — ό,τι θα δεσμευτεί, όχι ό,τι τυχαίνει να είναι στον δίσκο.
+ * 🔴 Μετρημένο 2026-10-29: με τον δίσκο, ξένη αστάδιοποίητη δουλειά (νέο λεξιλόγιο στο μητρώο, αρχεία
+ * που δεν είχαν σταδιοποιηθεί) έκρινε commits που δεν την περιείχαν — και αντίστροφα, ένα αρχείο
+ * σταδιοποιημένο με αδέσμευτη απαρίθμηση θα περνούσε αν ο δίσκος είχε ήδη τη διόρθωση.
+ */
+function commitSource(root) {
+  const view = createCommitView({
+    repoRoot: root,
+    include: rel => rel === CONFIG_REL || (SCANNED_ROOTS.test(rel) && isAnalysedSourcePath(rel)),
+  });
+  return {
+    files: view.files.filter(rel => rel !== CONFIG_REL).map(rel => toPosix(path.join(root, rel))),
+    readText: abs => view.readText(toPosix(path.relative(root, abs))),
+  };
+}
 
 function loadConfig(configPath = CONFIG_PATH) {
-  const cfg = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  return parseConfig(fs.readFileSync(configPath, 'utf8'));
+}
+
+function parseConfig(text) {
+  if (text === null) throw new Error(`${CONFIG_REL} λείπει από την πηγή — το μητρώο είναι μέρος της πύλης`);
+  const cfg = JSON.parse(text);
   if (!Array.isArray(cfg.vocabularies) || cfg.vocabularies.length === 0) {
     throw new Error('.domain-vocabulary.json: κενό vocabularies — φρουρός χωρίς πληθυσμό δεν είναι φρουρός');
   }
@@ -95,16 +134,12 @@ function loadConfig(configPath = CONFIG_PATH) {
  * μόνο οι υποψήφιοι (~2.200 αρχεία). Η σειρά αρχείων ανά λεξιλόγιο μένει ίδια.
  * Με `noPrefilter` όλα τα λεξιλόγια μοιράζονται ΤΟΝ ΙΔΙΟ πίνακα (ένα αντίγραφο).
  */
-function readCandidates(files, vocabularies, noPrefilter) {
+function readCandidates(files, readText, vocabularies, noPrefilter) {
   const all = [];
   const byVocab = new Map(vocabularies.map(v => [v, noPrefilter ? all : []]));
   for (const abs of files) {
-    let text;
-    try {
-      text = fs.readFileSync(abs, 'utf8');
-    } catch {
-      continue;
-    }
+    const text = readText(abs);
+    if (text === null) continue;
     if (noPrefilter) {
       all.push({ abs, text });
       continue;
@@ -122,8 +157,9 @@ function readCandidates(files, vocabularies, noPrefilter) {
 
 function measure(opts = {}) {
   const root = opts.root || PROJECT_ROOT;
-  const cfg = opts.config || loadConfig(opts.configPath);
-  const files = opts.files || collectSourceFiles(root);
+  const source = opts.source || diskSource(root);
+  const cfg = opts.config || (opts.source ? parseConfig(source.readText(path.join(root, CONFIG_REL))) : loadConfig(opts.configPath));
+  const files = opts.files || source.files;
   if (!opts.files && files.length < 1000) {
     throw new Error(`ΦΡΟΥΡΟΣ: μόνο ${files.length} αρχεία σαρώθηκαν — η σάρωση δεν κοίταξε`);
   }
@@ -134,18 +170,19 @@ function measure(opts = {}) {
     tally[s] += 1;
   };
 
-  const candidates = readCandidates(files, cfg.vocabularies, opts.noPrefilter);
+  const candidates = readCandidates(files, source.readText, cfg.vocabularies, opts.noPrefilter);
 
   for (const vocab of cfg.vocabularies) {
     const rootAbs = path.join(root, vocab.root);
     // 1. Η ΡΙΖΑ ΟΡΙΖΕΙ ΑΚΟΜΗ ΤΟ ΛΕΞΙΛΟΓΙΟ; Χωρίς αυτό κάθε άλλη ετυμηγορία
     //    κρίνεται έναντι μητρώου που δεν αντιστοιχεί σε κώδικα — fail-closed.
-    if (!fs.existsSync(rootAbs)) {
+    const rootText = source.readText(rootAbs);
+    if (rootText === null) {
       bump(STATES.ROOT_DRIFT);
       findings.push({ state: STATES.ROOT_DRIFT, vocabulary: vocab.id, file: vocab.root, detail: 'η ρίζα δεν υπάρχει' });
       continue;
     }
-    const verdict = verifyRoot(fs.readFileSync(rootAbs, 'utf8'), rootAbs, vocab);
+    const verdict = verifyRoot(rootText, rootAbs, vocab);
     if (!verdict.ok) {
       bump(STATES.ROOT_DRIFT);
       findings.push({ state: STATES.ROOT_DRIFT, vocabulary: vocab.id, file: vocab.root, detail: verdict.reason });
@@ -156,7 +193,7 @@ function measure(opts = {}) {
     // 2. Οι δηλωμένες εξαιρέσεις υπάρχουν και έχουν λόγο;
     const exemptions = new Map((vocab.exemptions || []).map(e => [e.file, e]));
     for (const [file, entry] of exemptions) {
-      if (!fs.existsSync(path.join(root, file))) {
+      if (source.readText(path.join(root, file)) === null) {
         bump(STATES.ORPHAN_DECLARATION);
         findings.push({ state: STATES.ORPHAN_DECLARATION, vocabulary: vocab.id, file,
           detail: 'δηλωμένη εξαίρεση για αρχείο που δεν υπάρχει' });
@@ -250,12 +287,12 @@ function report(result, log = console.log) {
   return blocking.length;
 }
 
-function main() {
+function main(argv = process.argv.slice(2)) {
   if (process.env.SKIP_DOMAIN_VOCABULARY === '1') {
     console.log('⏭️  CHECK 3.73 παραλείφθηκε (SKIP_DOMAIN_VOCABULARY=1)');
     return 0;
   }
-  const result = measure();
+  const result = measure(argv.includes('--index') ? { source: commitSource(PROJECT_ROOT) } : {});
   const blocking = report(result);
   if (blocking > 0) {
     console.log('');
@@ -270,4 +307,4 @@ function main() {
 }
 
 if (require.main === module) process.exit(main());
-module.exports = { measure, report, main, loadConfig, STATES, BLOCKING };
+module.exports = { measure, report, main, loadConfig, diskSource, commitSource, STATES, BLOCKING };

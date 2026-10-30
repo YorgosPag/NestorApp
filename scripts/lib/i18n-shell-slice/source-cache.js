@@ -36,7 +36,7 @@ const path = require('node:path');
 
 const MG = require('../module-graph');
 const { collectSourceFiles, isAnalysedSourcePath } = require('../module-graph/scan-config');
-const { listIndexEntries, listTreeEntries, listWorktreeDivergence, readIndexTexts } = require('../git-index-snapshot');
+const { createCommitView, listTreeEntries, readIndexTexts } = require('../git-index-snapshot');
 const { stableStringify, sha256, toLf } = require('./slice-build');
 
 /**
@@ -87,26 +87,21 @@ function createDiskSources(root) {
  */
 function createIndexSources({ repoRoot, root }) {
   const prefix = `${MG.toPosix(root)}/`;
-  const entries = new Map([...listIndexEntries({ repoRoot })].filter(([rel]) => isWalkedSource(rel)));
-  const divergent = [...listWorktreeDivergence({ repoRoot })].filter(rel => entries.has(rel));
-  const fromIndex = readIndexTexts({ repoRoot, entries: divergent.map(rel => [rel, entries.get(rel)]) });
+  const view = createCommitView({ repoRoot, include: isWalkedSource });
   const relOf = abs => (abs.startsWith(prefix) ? abs.slice(prefix.length) : null);
   const readText = memoize(abs => {
     const rel = relOf(abs);
-    if (rel === null || !entries.has(rel)) return null;
-    if (fromIndex.has(rel)) return fromIndex.get(rel);
-    const disk = path.join(repoRoot, rel);
-    return fs.existsSync(disk) ? fs.readFileSync(disk, 'utf8') : null;
+    return rel === null ? null : view.readText(rel);
   });
   return {
     root,
-    files: [...entries.keys()].sort().map(rel => `${prefix}${rel}`),
+    files: view.files.map(rel => `${prefix}${rel}`),
     readText,
     keyOf(abs) {
       const rel = relOf(abs);
-      return rel !== null && entries.has(rel) ? `${entries.get(rel)} ${rel}` : null;
+      return rel !== null && view.has(rel) ? `${view.entries.get(rel)} ${rel}` : null;
     },
-    stats: () => ({ source: 'index', divergent: divergent.length }),
+    stats: () => ({ source: 'index', divergent: view.divergent }),
   };
 }
 

@@ -20,8 +20,27 @@ YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
+# `--index` (ο hook, ADR-924): κρίνεται το κείμενο ΤΟΥ COMMIT (`git show :file`), όχι του δίσκου.
+# 🔴 Μετρημένο 2026-10-29: commit με ΚΑΘΑΡΟ σταδιοποιημένο `audit-value-vocabularies.ts` μπλοκαρίστηκε
+#    για ελληνικό `throw` που ζούσε ΜΟΝΟ σε ξένη αστάδιοποίητη δουλειά στο ίδιο αρχείο.
+# Χωρίς τη σημαία: ο δίσκος (σουίτα · χειροκίνητη εκτέλεση σε αρχεία εκτός ευρετηρίου).
+INDEX_MODE=0
+if [[ "$1" == "--index" ]]; then
+    INDEX_MODE=1
+    shift
+fi
+
 FILES="$@"
 BASELINE_FILE=".i18n-ui-strings-baseline.json"
+
+# Υπάρχει το αρχείο στην πηγή που κρίνεται;
+has_source() {
+    if [[ "$INDEX_MODE" -eq 1 ]]; then
+        git cat-file -e ":$1" 2>/dev/null
+    else
+        [[ -f "$1" ]]
+    fi
+}
 VIOLATIONS=""
 RATCHET_UPDATES=""
 HAS_BLOCK=0
@@ -47,8 +66,13 @@ HAS_BLOCK=0
 #    («`${idBase}-<πεδίο>`: η <Label> ονομάζει το combobox»). Τώρα ρωτά το ΕΝΑ SSoT
 #    `stripComments` (`scripts/lib/i18n-namespace-extract.js`, ήδη σε 5 πύλες): σβήνει `//`
 #    ΚΑΙ `/* */`, κρατά offsets + αλλαγές γραμμής, και δεν τρώει το `//` ενός URL σε string.
+STRIP_FROM_STDIN="let s='';process.stdin.setEncoding('utf8');process.stdin.on('data',c=>{s+=c}).on('end',()=>process.stdout.write(require('./scripts/lib/i18n-namespace-extract').stripComments(s)))"
 strip_comments() {
-    node -e "process.stdout.write(require('./scripts/lib/i18n-namespace-extract').stripComments(require('fs').readFileSync(process.argv[1], 'utf8')))" "$1" 2>/dev/null
+    if [[ "$INDEX_MODE" -eq 1 ]]; then
+        git show ":$1" 2>/dev/null | node -e "$STRIP_FROM_STDIN" 2>/dev/null
+    else
+        node -e "$STRIP_FROM_STDIN" < "$1" 2>/dev/null
+    fi
 }
 
 # Hardcoded UI violations of a file as `line:text`, one per line, sorted by line.
@@ -103,7 +127,7 @@ show_violations() {
 }
 
 for file in $FILES; do
-    [[ ! -f "$file" ]] && continue
+    has_source "$file" || continue
 
     # EXEMPT patterns (same as defaultValue hook + extras)
     #

@@ -23,16 +23,28 @@ const { requireTypeScript } = require('../ts-module-loader');
 
 const ROOT = path.resolve(__dirname, '..', '..', '..');
 
-const paths = {
-  root: ROOT,
-  outlines: path.join(ROOT, 'src', 'constants', 'legal-documents.ts'),
-  operators: path.join(ROOT, 'src', 'constants', 'platform-operator.ts'),
-  versionsDir: path.join(ROOT, 'src', 'config', 'legal-document-versions'),
-  manifest: path.join(ROOT, 'src', 'config', 'legal-document-versions', 'manifest.json'),
-  index: path.join(ROOT, 'src', 'config', 'legal-document-versions', 'index.generated.ts'),
-  locale: (locale) => path.join(ROOT, 'src', 'i18n', 'locales', locale, 'legal.json'),
-  frozen: (id, version) => path.join(ROOT, 'src', 'config', 'legal-document-versions', id, `v${version}.json`),
+/** Οι είσοδοι της πύλης, σχετικές με τη ρίζα — η ΜΙΑ λίστα για δίσκο ΚΑΙ στιγμιότυπο (ADR-924). */
+const INPUTS = {
+  modules: ['src/constants/legal-documents.ts', 'src/constants/platform-operator.ts'],
+  data: ['src/config/legal-document-versions', 'src/i18n/locales'],
 };
+
+/** Τα μονοπάτια κάτω από μια ρίζα — το repo (προεπιλογή) ή το στιγμιότυπο του commit (`--index`). */
+function pathsFor(root) {
+  const versionsDir = path.join(root, 'src', 'config', 'legal-document-versions');
+  return {
+    root,
+    outlines: path.join(root, INPUTS.modules[0]),
+    operators: path.join(root, INPUTS.modules[1]),
+    versionsDir,
+    manifest: path.join(versionsDir, 'manifest.json'),
+    index: path.join(versionsDir, 'index.generated.ts'),
+    locale: (locale) => path.join(root, 'src', 'i18n', 'locales', locale, 'legal.json'),
+    frozen: (id, version) => path.join(versionsDir, id, `v${version}.json`),
+  };
+}
+
+const paths = pathsFor(ROOT);
 
 /** Σχετική διαδρομή με `/` — για μηνύματα και για `git show`. */
 const rel = (absolute) => path.relative(ROOT, absolute).replace(/\\/g, '/');
@@ -123,13 +135,13 @@ function buildFrozen({ id, version, effectiveFrom, material, changeNote, text, o
 
 // ── Ανάγνωση δίσκου ──────────────────────────────────────────────────────────
 
-function loadOutlines() {
-  const mod = requireTypeScript(paths.outlines);
+function loadOutlines(p = paths) {
+  const mod = requireTypeScript(p.outlines);
   return { ids: mod.LEGAL_DOCUMENT_IDS, outlines: mod.LEGAL_DOCUMENT_OUTLINES, locales: mod.LEGAL_DOCUMENT_LOCALES };
 }
 
-function loadOperators() {
-  const mod = requireTypeScript(paths.operators);
+function loadOperators(p = paths) {
+  const mod = requireTypeScript(p.operators);
   return {
     history: mod.PLATFORM_OPERATORS,
     recordOn: (day) => {
@@ -140,23 +152,25 @@ function loadOperators() {
   };
 }
 
-function loadLegalByLocale(locales) {
+function loadLegalByLocale(locales, p = paths) {
   const out = {};
-  for (const locale of locales) out[locale] = JSON.parse(fs.readFileSync(paths.locale(locale), 'utf8'));
+  for (const locale of locales) out[locale] = JSON.parse(fs.readFileSync(p.locale(locale), 'utf8'));
   return out;
 }
 
-function loadManifest() {
-  if (!fs.existsSync(paths.manifest)) return { documents: {} };
-  return JSON.parse(fs.readFileSync(paths.manifest, 'utf8'));
+function loadManifest(p = paths) {
+  if (!fs.existsSync(p.manifest)) return { documents: {} };
+  return JSON.parse(fs.readFileSync(p.manifest, 'utf8'));
 }
 
-function readFrozenBytes(id, version) {
-  const file = paths.frozen(id, version);
+function readFrozenBytes(id, version, p = paths) {
+  const file = p.frozen(id, version);
   return fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null;
 }
 
 module.exports = {
+  INPUTS,
+  pathsFor,
   paths,
   rel,
   digestOf,

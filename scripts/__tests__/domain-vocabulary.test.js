@@ -413,3 +413,38 @@ describe('CHECK 3.73 — συμβόλαια', () => {
     }
   });
 });
+
+/**
+ * ADR-924 — Μ14: με `--index` η πύλη κρίνει ό,τι ΘΑ ΔΕΣΜΕΥΤΕΙ. Το μίνι-repo γίνεται git repo και η ΙΔΙΑ
+ * μετάλλαξη ζει μία φορά ΜΟΝΟ στον δίσκο, μία ΜΟΝΟ στο ευρετήριο.
+ * 🔴 Το περιστατικό (2026-10-29): ξένη αστάδιοποίητη δουλειά (δύο νέα λεξιλόγια) έκρινε commit που δεν την περιείχε.
+ */
+describe('CHECK 3.73 — Μ14: όψη του commit (ADR-924)', () => {
+  const { spawnSync } = require('child_process');
+  const UNBOUND = ['src/domain/cards/project/useProjectCardModel.ts',
+    'Record<ProjectStatus, GridCardBadgeVariant>', 'Record<string, GridCardBadgeVariant>'];
+  const git = (root, ...args) => spawnSync('git', ['-C', root, ...args], { encoding: 'utf8' });
+  const stageAll = root => { git(root, 'init', '-q'); git(root, 'add', '-A'); };
+  const fromIndex = root => gate.measure({ root, files: filesOf(root), source: gate.commitSource(root) });
+
+  it('Μ14α — καθαρό ΣΤΑΔΙΟΠΟΙΗΜΕΝΟ + αδέσμευτη απαρίθμηση ΜΟΝΟ στον δίσκο ⇒ ΠΕΡΝΑ (ο δίσκος την πιάνει)', () => {
+    stageAll(tmpRoot);
+    mutate(tmpRoot, ...UNBOUND);
+    expect(blocking(fromIndex(tmpRoot))).toEqual([]);
+    expect(blocking(run(tmpRoot)).map(f => f.state)).toContain(STATES.UNTYPED_VOCABULARY);
+  });
+
+  it('Μ14β — αδέσμευτη απαρίθμηση ΣΤΑΔΙΟΠΟΙΗΜΕΝΗ + καθαρός δίσκος ⇒ ΜΠΛΟΚ (ο δίσκος δεν κρύβει πια το commit)', () => {
+    const clean = fs.readFileSync(path.join(tmpRoot, UNBOUND[0]), 'utf8');
+    mutate(tmpRoot, ...UNBOUND);
+    stageAll(tmpRoot);
+    fs.writeFileSync(path.join(tmpRoot, UNBOUND[0]), clean);
+    expect(blocking(fromIndex(tmpRoot)).map(f => f.state)).toContain(STATES.UNTYPED_VOCABULARY);
+    expect(blocking(run(tmpRoot))).toEqual([]);
+  });
+
+  it('Μ14γ ΠΑΡΟΝΟΜΑΣΤΗΣ — η όψη ΚΟΙΤΑΖΕΙ: ίδια λογιστική με τον δίσκο σε καθαρό δέντρο', () => {
+    stageAll(tmpRoot);
+    expect(fromIndex(tmpRoot).tally).toEqual(run(tmpRoot).tally);
+  });
+});

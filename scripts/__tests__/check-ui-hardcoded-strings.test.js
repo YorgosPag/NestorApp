@@ -52,3 +52,41 @@ describe('N.11 — the gate judges CODE, never comments', () => {
     expect(r.code).toBe(1);
   });
 });
+
+/**
+ * ADR-924 — `--index`: η πύλη κρίνει ό,τι ΘΑ ΔΕΣΜΕΥΤΕΙ. Προσωρινό repo μέσω `GIT_DIR`/`GIT_WORK_TREE`
+ * (το cwd μένει στη ρίζα για το SSoT `stripComments`) — το ευρετήριο του repo δεν αγγίζεται ποτέ.
+ * 🔴 Το περιστατικό: καθαρό σταδιοποιημένο αρχείο μπλοκαρίστηκε από ξένη αστάδιοποίητη δουλειά.
+ */
+describe('ADR-924 — --index judges the COMMIT, never the disk', () => {
+  const CLEAN = 'export const W = () => <span>{t(\'save\')}</span>;\n';
+  const DIRTY = 'export const W = () => <span>Αποθήκευση</span>;\n';
+
+  function runIndexGate({ staged, disk }) {
+    const git = (...args) => spawnSync('git', ['-C', tmp, ...args], { encoding: 'utf8' });
+    git('init', '-q');
+    const file = path.join(tmp, 'Widget.tsx');
+    if (staged !== null) {
+      fs.writeFileSync(file, staged, 'utf8');
+      git('add', 'Widget.tsx');
+    }
+    fs.writeFileSync(file, disk, 'utf8');
+    const env = { ...process.env, GIT_DIR: path.join(tmp, '.git'), GIT_WORK_TREE: tmp };
+    const r = spawnSync('bash', [GATE, '--index', 'Widget.tsx'], { cwd: ROOT, encoding: 'utf8', env });
+    return { code: r.status, out: `${r.stdout}${r.stderr}` };
+  }
+
+  test('clean STAGED + dirty foreign work on disk ⇒ PASS (the 2026-10-29 incident)', () => {
+    expect(runIndexGate({ staged: CLEAN, disk: DIRTY }).code).toBe(0);
+  });
+
+  test('dirty STAGED + clean disk ⇒ BLOCK (the disk can no longer hide what is committed)', () => {
+    const r = runIndexGate({ staged: DIRTY, disk: CLEAN });
+    expect(r.code).toBe(1);
+    expect(r.out).toMatch(/Αποθήκευση/);
+  });
+
+  test('file NOT in the index (untracked) ⇒ not judged — it is not in the commit', () => {
+    expect(runIndexGate({ staged: null, disk: DIRTY }).code).toBe(0);
+  });
+});

@@ -16,6 +16,25 @@ NC='\033[0m'
 
 echo -e "${YELLOW}🔍 Running pre-commit checks...${NC}"
 
+# ─── UNC → mapped drive ───────────────────────────────────────────────────────
+# Από δεύτερο PC το repo ανοίγει ως δίσκος δικτύου (π.χ. N: → \\giorgio-pc\Nestor_Pagonis)
+# και το git τρέχει το hook με cwd τη UNC διαδρομή. Κάθε `spawnSync(..., { shell: true })`
+# περνά από cmd.exe, που ΔΕΝ δέχεται UNC cwd («UNC paths are not supported») και πέφτει
+# σιωπηλά σε C:\Windows → τα scripts δεν βρίσκουν τα αρχεία. Μία μετάβαση εδώ, στο γράμμα
+# δίσκου, διορθώνει όλα τα scripts μαζί. Το `net use` γράφει `X:  \\server\share` σε κάθε locale.
+case "$PWD" in
+    //*)
+        UNC_ROOT=$(cygpath -w "$PWD" | tr '[:upper:]' '[:lower:]')
+        MAPPED_DRIVE=$(net use 2>/dev/null | tr -d '\r' | grep -oE '[A-Z]: +\\\\[^ ]+' \
+            | while read -r drive share; do
+                [[ "$(echo "$share" | tr '[:upper:]' '[:lower:]')" == "$UNC_ROOT" ]] && echo "$drive" && break
+            done)
+        if [[ -n "$MAPPED_DRIVE" ]]; then
+            cd "$(cygpath -u "$MAPPED_DRIVE\\")" || exit 1
+        fi
+        ;;
+esac
+
 # ─── Staged file sets ─────────────────────────────────────────────────────────
 STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
 # CHECK 3.79 (ADR-858): σκίαση γεννιέται ΜΟΝΟ όταν εμφανίζεται αρχείο — προσθήκη ή
@@ -141,7 +160,7 @@ if [[ -n "$TS_FILES" ]]; then
         if [[ $? -ne 0 ]]; then exit 1; fi
     fi
     if [[ -f "scripts/check-ui-hardcoded-strings.sh" ]]; then
-        bash scripts/check-ui-hardcoded-strings.sh $TS_FILES
+        bash scripts/check-ui-hardcoded-strings.sh --index $TS_FILES
         if [[ $? -ne 0 ]]; then exit 1; fi
     fi
 fi

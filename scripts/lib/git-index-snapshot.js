@@ -37,13 +37,13 @@ function runGit(repoRoot, args, input) {
 }
 
 /**
- * @param {{repoRoot: string, pathspecs: string[], into?: string}} options pathspecs = αρχεία ή φάκελοι,
+ * @param {{repoRoot: string, pathspecs: string[], into?: string, rawBytes?: boolean}} options pathspecs = αρχεία ή φάκελοι,
  *   σχετικοί με τη ρίζα. `into` = ΥΠΑΡΧΟΝ στιγμιότυπο που συμπληρώνεται (ADR-744 §32.12: το CHECK 3.51
  *   μαθαίνει ποια modules χρειάζεται μόνο ΑΦΟΥ διαβάσει config/aliases από το ίδιο στιγμιότυπο)· τότε το
  *   `dispose` δεν σβήνει τίποτα — ανήκει σε όποιον το δημιούργησε.
  * @returns {{root: string, files: string[], dispose: () => void}}
  */
-function materializeIndex({ repoRoot, pathspecs, into }) {
+function materializeIndex({ repoRoot, pathspecs, into, rawBytes = false }) {
   // ⚠️ Τα pathspecs ΔΕΝ περνούν ως ορίσματα: ~900 αρχεία κλειστότητας (CHECK 3.51) = ENAMETOOLONG στα Windows.
   // Μία `ls-files` για όλο το ευρετήριο (~30k, μετρημένο <1s) και φίλτρο εδώ: ακριβές αρχείο ή πρόθεμα φακέλου.
   const exact = new Set(pathspecs.map(spec => spec.replace(/\\/g, '/').replace(/\/+$/, '')));
@@ -61,7 +61,11 @@ function materializeIndex({ repoRoot, pathspecs, into }) {
   try {
     if (files.length > 0) {
       const prefix = `${root.replace(/\\/g, '/')}/`;
-      runGit(repoRoot, ['checkout-index', '-f', '-z', '--stdin', `--prefix=${prefix}`], `${files.join('\0')}\0`);
+      // `rawBytes` (ADR-924): τα bytes του blob αυτούσια — χωρίς αυτό, με `core.autocrlf=true` ένα LF αρχείο
+      // γράφεται CRLF και μια πύλη που συγκρίνει bytes (CHECK 3.85: παγωμένες εκδόσεις, παραγόμενο ευρετήριο)
+      // κρίνει κάτι που ΔΕΝ θα δεσμευτεί. Μετρημένο: 7 ψευδή ευρήματα.
+      const eol = rawBytes ? ['-c', 'core.autocrlf=false', '-c', 'core.eol=lf'] : [];
+      runGit(repoRoot, [...eol, 'checkout-index', '-f', '-z', '--stdin', `--prefix=${prefix}`], `${files.join('\0')}\0`);
     }
   } catch (error) {
     dispose();
@@ -153,6 +157,39 @@ function readIndexTexts({ repoRoot, entries }) {
 }
 
 /**
+ * **Η ΟΨΗ ΤΟΥ COMMIT χωρίς στιγμιότυπο** (ADR-924) — για πύλες που σαρώνουν ΟΛΟ το δέντρο, όπου το
+ * `materializeIndex` θα αντέγραφε ~21k αρχεία. Αρχεία = το ευρετήριο (untracked λείπουν, σταδιοποιημένη
+ * διαγραφή λείπει). Κείμενο = ο δίσκος, **εκτός** από όσα αποκλίνουν από το ευρετήριο: εκείνα διαβάζονται
+ * ως blob, όλα μαζί σε ΕΝΑ spawn. Σε δέντρο χωρίς ξένη δουλειά το κόστος είναι δύο εντολές git.
+ * ⚠️ Τα blobs έρχονται με EOL του ευρετηρίου (LF), ο δίσκος με του checkout — δες `readIndexTexts`.
+ * 🧹 Εξήχθη από το `createIndexSources` του i18n-shell-slice (N.0.2), που μένει καταναλωτής του.
+ * @param {{repoRoot: string, include?: (rel: string) => boolean}} options
+ * @returns {{entries: Map<string, string>, files: string[], has: (rel: string) => boolean,
+ *            readText: (rel: string) => ?string, divergent: number}}
+ */
+function createCommitView({ repoRoot, include = () => true }) {
+  const entries = new Map([...listIndexEntries({ repoRoot })].filter(([rel]) => include(rel)));
+  const divergent = [...listWorktreeDivergence({ repoRoot })].filter(rel => entries.has(rel));
+  const fromIndex = readIndexTexts({ repoRoot, entries: divergent.map(rel => [rel, entries.get(rel)]) });
+  const readText = (rel) => {
+    if (!entries.has(rel)) return null;
+    if (fromIndex.has(rel)) return fromIndex.get(rel);
+    try {
+      return fs.readFileSync(path.join(repoRoot, rel), 'utf8');
+    } catch {
+      return null;
+    }
+  };
+  return {
+    entries,
+    files: [...entries.keys()].sort(),
+    has: rel => entries.has(rel),
+    readText,
+    divergent: divergent.length,
+  };
+}
+
+/**
  * ADR-744 §32 Β2 — `μονοπάτι → blob sha` **ενός commit** (π.χ. `HEAD`, ο γονέας αυτού που φτιάχνεται),
  * περιορισμένο στα `paths`. Μονοπάτι που δεν υπάρχει στο commit (νέο αρχείο) απλώς λείπει.
  * ⚠️ Τα μονοπάτια ΔΕΝ περνούν ως ορίσματα (ENAMETOOLONG, βλ. `materializeIndex`): ΕΝΑ `ls-tree -r`
@@ -180,5 +217,5 @@ function listTreeEntries({ repoRoot, rev = 'HEAD', paths }) {
 
 module.exports = {
   materializeIndex, writeIndexBlob, readIndexText, listIndexEntries, listWorktreeDivergence, readIndexTexts,
-  listTreeEntries,
+  createCommitView, listTreeEntries,
 };
