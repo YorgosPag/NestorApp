@@ -10,10 +10,12 @@
  *
  * Two layers, mirroring CHECK 3.18 / CHECK 3.22 (deadcode):
  *
- *   --diff   (pre-commit, Layer 1)  Scan ONLY the staged src files. Any clone
- *            found among them is a same-commit sibling clone (the classic
- *            "centralize A, then write B+C as parallel twins") → BLOCK.
- *            Zero-tolerance on new intra-diff clones. Fast (a handful of files).
+ *   --diff   (pre-commit, Layer 1)  Scan ONLY the staged src files. A clone
+ *            that touches a line this change wrote is a same-commit clone (the
+ *            classic "centralize A, then write B+C as parallel twins") → BLOCK.
+ *            A clone already in HEAD, untouched, is reported but NOT blocking
+ *            (ADR-584 §9 — "new code", SonarQube Clean as You Code); Layer 2
+ *            ratchets it. Zero-tolerance on introduced clones.
  *
  *   --full   (CI + opt-in local, Layer 2)  Scan all of src/, read the total
  *            clone count from the JSON report, compare against
@@ -52,6 +54,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
+const { createChangedLineIndex } = require('./lib/git-changed-lines');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const DEFAULT_BASELINE_FILE = path.join(PROJECT_ROOT, '.jscpd-baseline.json');
@@ -263,8 +266,53 @@ function runFull() {
   process.exit(1);
 }
 
-// Pre-commit Layer 1: scan only the staged files. Because the scan set IS the
-// diff, every clone jscpd reports is a same-commit clone → block, listing pairs.
+/** jscpd duplicate → { lines, tokens, a, b } με σχετικά μονοπάτια (ρίζα = το στιγμιότυπο ή το repo). */
+function toClone(d, scanRoot) {
+  const side = (f) => ({ rel: normalizeName(f.name, scanRoot), start: f.start, end: f.end });
+  return { lines: d.lines, tokens: d.tokens, a: side(d.firstFile), b: side(d.secondFile) };
+}
+
+/**
+ * ADR-584 §9 — «νέος κώδικας» (SonarQube Clean as You Code · Tricorder): ένας κλώνος ΕΙΣΑΓΕΤΑΙ από την αλλαγή όταν
+ * έστω μία πλευρά του τέμνει γραμμή που άλλαξε (νέο αρχείο = όλες· καθαρή διαγραφή = η ραφή της). Αλλιώς ΠΡΟΫΠΗΡΧΕ:
+ * τον βλέπει η σάρωση μόνο επειδή αγγίχτηκε το αρχείο, και τον μετρά το Layer 2 (ratchet πλήθους στο CI).
+ */
+function classifyClones(dups, scanRoot, { index }) {
+  const clones = dups.map((d) => toClone(d, scanRoot));
+  if (clones.length === 0) return { introduced: [], preexisting: [] };
+  const paths = [...new Set(clones.flatMap((c) => [c.a.rel, c.b.rel]))];
+  const { touches } = createChangedLineIndex({ repoRoot: PROJECT_ROOT, paths, cached: index });
+  const isIntroduced = (c) => touches(c.a.rel, c.a.start, c.a.end) || touches(c.b.rel, c.b.start, c.b.end);
+  return { introduced: clones.filter(isIntroduced), preexisting: clones.filter((c) => !isIntroduced(c)) };
+}
+
+function printClones(print, clones) {
+  for (const c of clones.slice(0, 15)) {
+    print(`   • ${c.lines} lines / ${c.tokens} tokens`);
+    print(`       ${c.a.rel}:${c.a.start}-${c.a.end}`);
+    print(`       ${c.b.rel}:${c.b.start}-${c.b.end}`);
+  }
+  if (clones.length > 15) print(`   … and ${clones.length - 15} more.`);
+}
+
+function reportPreexisting(preexisting) {
+  if (preexisting.length === 0) return;
+  console.log(`ℹ️  CHECK 3.28 (diff) — ${preexisting.length} pre-existing clone(s) in the touched files (already in HEAD,`);
+  console.log(`   not introduced by this change — not blocking; Layer 2 ratchets them). Boy-scout candidates:`);
+  printClones(console.log, preexisting);
+}
+
+function reportIntroduced(introduced) {
+  console.error(`❌ CHECK 3.28 (diff) FAIL — ${introduced.length} clone(s) introduced by this change:`);
+  printClones(console.error, introduced);
+  console.error(``);
+  console.error(`These clones touch lines this change wrote. Extract the shared logic into ONE`);
+  console.error(`module and import it from both — do not ship parallel twins.`);
+  console.error(`Emergency skip (justify to Giorgio): SKIP_JSCPD_DIFF=1 git commit ...`);
+}
+
+// Pre-commit Layer 1: scan the staged files whole (a clone may pair a new line with
+// an untouched one), then block ONLY the clones that touch changed lines (ADR-584 §9).
 function runDiff(files, { index = false } = {}) {
   const snapshot = index
     ? stagedSnapshot(files)
@@ -275,36 +323,24 @@ function runDiff(files, { index = false } = {}) {
     process.exit(0);
   }
 
-  let report;
+  let classified;
   try {
-    report = runScanner(scanFiles, { absolute: true });
+    const report = runScanner(scanFiles, { absolute: true });
+    classified = classifyClones(report.duplicates || [], snapshot.root, { index });
   } catch (e) {
-    // A tooling failure must not silently pass. Report and fail closed.
-    console.error(`❌ CHECK 3.28 (diff) — jscpd failed: ${e.message}`);
+    // A tooling failure (jscpd or git) must not silently pass. Report and fail closed.
+    console.error(`❌ CHECK 3.28 (diff) — scan failed: ${e.message}`);
     process.exit(1);
   } finally {
     snapshot.dispose();
   }
 
-  const dups = report.duplicates || [];
-  if (dups.length === 0) {
-    console.log(`✅ CHECK 3.28 (diff) — no new clones in ${scanFiles.length} staged file(s).`);
+  reportPreexisting(classified.preexisting);
+  if (classified.introduced.length === 0) {
+    console.log(`✅ CHECK 3.28 (diff) — no clones introduced in ${scanFiles.length} staged file(s).`);
     process.exit(0);
   }
-
-  console.error(`❌ CHECK 3.28 (diff) FAIL — ${dups.length} new clone(s) inside this commit:`);
-  for (const d of dups.slice(0, 15)) {
-    const a = `${normalizeName(d.firstFile.name, snapshot.root)}:${d.firstFile.start}-${d.firstFile.end}`;
-    const b = `${normalizeName(d.secondFile.name, snapshot.root)}:${d.secondFile.start}-${d.secondFile.end}`;
-    console.error(`   • ${d.lines} lines / ${d.tokens} tokens`);
-    console.error(`       ${a}`);
-    console.error(`       ${b}`);
-  }
-  if (dups.length > 15) console.error(`   … and ${dups.length - 15} more.`);
-  console.error(``);
-  console.error(`These files duplicate each other. Extract the shared logic into ONE`);
-  console.error(`module and import it from both — do not ship parallel twins.`);
-  console.error(`Emergency skip (justify to Giorgio): SKIP_JSCPD_DIFF=1 git commit ...`);
+  reportIntroduced(classified.introduced);
   process.exit(1);
 }
 
@@ -339,6 +375,7 @@ module.exports = {
   runScanner,
   runFull,
   runDiff,
+  classifyClones,
   runSmoke,
   printHelp,
   main,

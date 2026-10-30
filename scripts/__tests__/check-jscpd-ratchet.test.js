@@ -582,3 +582,75 @@ describe('Φ5 — --diff --index κρίνει το COMMIT', () => {
     })).toBe(0);
   }, 120000);
 });
+
+/**
+ * ADR-584 §9 — «νέος κώδικας»: μπλοκάρει ΜΟΝΟ κλώνος που τέμνει γραμμή που έγραψε η αλλαγή. Ο κλώνος που ζει ήδη στο
+ * HEAD αναφέρεται, δεν μπλοκάρει (τον μετρά το Layer 2). Προσωρινό repo ΜΕ commit βάσης — το repo του έργου δεν αγγίζεται.
+ */
+describe('§9 — --diff κρίνει τον ΝΕΟ κώδικα, όχι ό,τι βρήκε στο αρχείο', () => {
+  const ROOT = path.resolve(__dirname, '..', '..');
+  const LINE = (i) => `  const value${i} = items.map((item) => item.weight * ${i + 2} + item.offset - ${i});`;
+  const SEAM = (i) => `  if (items.length === ${i * 97 + 13}) throw new Error('seam${i}');`;
+  const fn = (name, lines) => `export function ${name}(items) {\n${lines.join('\n')}\n  return items;\n}\n`;
+  const body = (name) => fn(name, Array.from({ length: 14 }, (_, i) => LINE(i)));
+  // Ο ΙΔΙΟΣ κορμός, με μια διαφορετική γραμμή ανάμεσα σε κάθε δύο: καμία συνεχής ακολουθία ≥ 50 tokens ⇒ όχι κλώνος.
+  const seamed = (name) => fn(name, Array.from({ length: 14 }, (_, i) => [LINE(i), SEAM(i)]).flat());
+  const unique = (name) => `export const ${name} = () => '${name}';\n`;
+  const TAIL = 'export const tailMarker = 1;\n';
+  let tmp;
+  beforeEach(() => { tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jscpd-newcode-')); });
+  afterEach(() => fs.rmSync(tmp, { recursive: true, force: true }));
+
+  function runChange({ committed, staged }) {
+    const git = (...args) => spawnSync('git', ['-C', tmp, '-c', 'user.email=t@example.invalid', '-c', 'user.name=t', ...args],
+      { encoding: 'utf8' });
+    git('init', '-q');
+    fs.mkdirSync(path.join(tmp, 'src'), { recursive: true });
+    for (const [rel, text] of Object.entries(committed)) fs.writeFileSync(path.join(tmp, rel), text);
+    git('add', '-A');
+    git('commit', '-q', '-m', 'base');
+    for (const [rel, text] of Object.entries(staged)) fs.writeFileSync(path.join(tmp, rel), text);
+    git('add', '-A');
+    const env = { ...process.env, GIT_DIR: path.join(tmp, '.git'), GIT_WORK_TREE: tmp };
+    const r = spawnSync(process.execPath, [SCRIPT_UNDER_TEST, '--diff', '--index', 'src/a.ts', 'src/b.ts'],
+      { cwd: ROOT, encoding: 'utf8', env });
+    return { status: r.status, out: `${r.stdout}${r.stderr}` };
+  }
+
+  it('(α) κλώνος ήδη στο HEAD, αλλαγή ΕΞΩ από αυτόν ⇒ ΠΕΡΝΑ, και τον αναφέρει ως προϋπάρχοντα', () => {
+    const r = runChange({
+      committed: { 'src/a.ts': body('first'), 'src/b.ts': body('second') },
+      staged: { 'src/a.ts': body('first') + TAIL },
+    });
+    expect(r.status).toBe(0);
+    expect(r.out).toMatch(/1 pre-existing clone/);
+  }, 120000);
+
+  it('(β) αντιγραφή ΥΠΑΡΧΟΝΤΟΣ κώδικα σε άλλο αρχείο ⇒ ΜΠΛΟΚ (η μία πλευρά είναι νέα)', () => {
+    const r = runChange({
+      committed: { 'src/a.ts': body('first'), 'src/b.ts': unique('second') },
+      staged: { 'src/b.ts': body('second') },
+    });
+    expect(r.status).toBe(1);
+    expect(r.out).toMatch(/introduced by this change/);
+  }, 120000);
+
+  it('(γ) ΜΟΝΟ διαγραφές που ενώνουν δύο μισά σε κλώνο ⇒ ΜΠΛΟΚ (η ραφή μετρά ως αλλαγή)', () => {
+    // Το TAIL δίνει στο b ΚΑΙ μια προσθήκη έξω από τον κλώνο: χωρίς αυτό, το fail-closed («άλλαξε, κανένα hunk») θα
+    // έπιανε την περίπτωση για λάθος λόγο και η άγκυρα δεν θα φύλαγε τον κανόνα της ραφής.
+    const r = runChange({
+      committed: { 'src/a.ts': body('first'), 'src/b.ts': seamed('second') },
+      staged: { 'src/b.ts': body('second') + TAIL },
+    });
+    expect(r.status).toBe(1);
+  }, 120000);
+
+  it('(δ) κανένας κλώνος ⇒ ΠΕΡΝΑ χωρίς αναφορά προϋπαρχόντων', () => {
+    const r = runChange({
+      committed: { 'src/a.ts': body('first'), 'src/b.ts': unique('second') },
+      staged: { 'src/b.ts': unique('second') + TAIL },
+    });
+    expect(r.status).toBe(0);
+    expect(r.out).not.toMatch(/pre-existing/);
+  }, 120000);
+});

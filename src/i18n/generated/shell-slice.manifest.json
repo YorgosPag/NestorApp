@@ -127,7 +127,7 @@
       "npm:typescript": "8c88727f359f0423e1665ce0dec0cb6fa9e927b8e0baae7748605e14a394e5af",
       "scripts/lib/gate-input.js": "e5362bc1b591accab3cece5e2295a6bb92dfbc3b832c0cd6c55928ae57f624ff",
       "scripts/lib/gate-trap.js": "fb3dee19dd96ed85be2b1c2233e0d6e39ee8d39eeafa26be299a17c5ca709b77",
-      "scripts/lib/git-index-snapshot.js": "a4002e18926463dd7084711d0e089b1b36dfd1c0937d704a9091bad47000405b",
+      "scripts/lib/git-index-snapshot.js": "90895c99706fec18bcf449f531ee9af11d37c25b1aa0106aa1fa2cf2f728c832",
       "scripts/lib/i18n-namespace-extract.js": "6d98ca31338ee20e8f830df7ab806a0c2eb50a219b9c4412c80881860015baf8",
       "scripts/lib/i18n-shell-slice/config.js": "dd00e098d1a5263d79cce60f6049d402887478cb49d9708f2b5b9d7d0d4cf5b1",
       "scripts/lib/i18n-shell-slice/constant-resolution.js": "48ea41bcc60262e92a0f02c29b6e487af01ef41621b7ed08bcaad7b88d13e48c",
@@ -173,7 +173,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "231d3c77461e43026c26b5825881125726bba0a5e2e21f91be817e33a7068548",
+  "inputsSha256": "9e4c413b818883af530d17ba81b12ccd1f975161978c2ac1d7591ed0dbf1e1eb",
   "languages": [
     "el"
   ],

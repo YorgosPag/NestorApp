@@ -643,27 +643,24 @@
   handler (`*/showcase/email`, `*/showcase/pdf`, `contacts/*/identity-impact-preview`, `contacts/*/address-positions`,
   `telemetry/bim-performance*`) — δεν παίρνουν ούτε ιδεμποτία ούτε το ενιαίο σύνορο. `npm run idempotency-boundary:report`.
 
-- 🟠 **21/09 — ΤΟ CHECK 3.28 `--diff` ΛΕΕΙ «new clone» ΧΩΡΙΣ ΝΑ ΕΛΕΓΧΕΙ ΑΝ ΕΙΝΑΙ ΝΕΟΣ**
+- 🟡 **30/10 — ACCOUNTING: 20 ΠΡΟΫΠΑΡΧΟΝΤΕΣ ΚΛΩΝΟΙ (boy-scout, ΟΧΙ φραγμός πια)** *(ADR-584 §9)*
 
-  **Μετρημένο, όχι υπόθεση.** Το `scripts/check-jscpd-ratchet.js --diff` σαρώνει **μόνο** τα
-  staged αρχεία και μπλοκάρει σε **κάθε** κλώνο (το λέει η κεφαλίδα του: *«Scan ONLY the
-  staged src files. Any clone → BLOCK»*). **Δεν συγκρίνει με το HEAD.** Άρα ένας κλώνος που
-  ζει στο δέντρο **από πριν** μπλοκάρει το commit τη στιγμή που αγγίζεις το αρχείο για
-  **οποιονδήποτε** λόγο — ακόμη και για να προσθέσεις **σχόλιο** — ενώ το μήνυμα λέει
-  «**new** clone(s) inside this commit». Είναι **ψευδές** σε αυτή την περίπτωση.
+  Το CHECK 3.28 `--diff` τους **αναφέρει** (δεν μπλοκάρει) όποτε αγγίζονται τα αρχεία τους. Μετρημένο 30/10, HEAD
+  vs δέντρο: **ταυτόσημοι στο HEAD**. Ομάδες: `MemberRow`↔`ShareholderRow`/`PartnerRow` (6) ·
+  `SendReminderEmailDialog`↔`SendInvoiceEmailDialog`/`CancelInvoiceDialog` (6) · `Documents`/`EFKA`/`VAT`/`Journal`
+  `PageContent` (4) · `TaxDashboard`/`TaxEstimateCard`/`VATReportCard` (3) · `CustomCategoriesSection` εσωτερικός (1).
+  Ίδιο είδος: `src/services/ai-pipeline/pipeline-queue-service.ts` (2 κλώνοι, `claimNextPipelineItems` ↔
+  `claimRetryablePipelineItems` — εξαγωγή `claimEachAtomically` + `npm run test:ai-pipeline:all`, N.10).
+  **Μέγεθος:** > 1h, 15+ αρχεία UI ⇒ δική του δουλειά. Λίστα πάντα φρέσκια: `npm run jscpd:diff <αρχεία>`.
 
-  🔴 **Αναπαραγωγή, επαληθευμένη**: `src/services/ai-pipeline/pipeline-queue-service.ts`
-  έχει **2 κλώνους / 35 γρ. (8,06%)** — `claimNextPipelineItems` vs
-  `claimRetryablePipelineItems`, το ίδιο σκελετό «ατομική διεκδίκηση με optimistic
-  re-check». **Υπάρχουν ήδη στο HEAD** (`git show HEAD:… | jscpd` ⇒ ίδια 2). Η μόνη μου
-  αλλαγή εκεί είναι **σχόλια εξαίρεσης**, και παρ' όλα αυτά το 3.28 μπλοκάρει.
+- 🟡 **30/10 — ΕΞΑΓΩΓΕΙΣ ΑΝΑΦΟΡΩΝ: ΚΑΘΕ ΤΟΜΕΑΣ ΜΕ ΔΙΚΗ ΤΟΥ ΣΩΛΗΝΩΣΗ** *(ADR-584 §9 · ADR-ACC-010 changelog 30/10)*
 
-  **Δύο δρόμοι, απόφαση δική σου:** (α) **εξαγωγή** κοινού βοηθού διεκδίκησης
-  (`claimEachAtomically(adminDb, docs, {expectedStatus, decide})`) — πραγματική διόρθωση,
-  αλλά είναι **συναλλακτικός κώδικας παραγωγής** στο ai-pipeline ⇒ υποχρεωτικά
-  `npm run test:ai-pipeline:all` (N.10)· (β) `SKIP_JSCPD_DIFF=1` για **αυτό** το commit με
-  τεκμηρίωση ότι ο κλώνος **προϋπήρχε**. ⚠️ Το (β) είναι σωστό **μόνο** επειδή η μη-νεότητα
-  **αποδείχθηκε** — όχι επειδή είναι βολικό.
+  Το accounting απέκτησε **μία** σωλήνωση (`services/export/report-export.ts`: ισοπέδωση μία φορά · σειριοποιητής
+  ανά μορφή φορτωμένος κατ' απαίτηση · ένας κανόνας ονόματος · μία λήψη). Οι **άλλοι** τομείς ξαναγράφουν το ίδιο
+  σχήμα: `services/report-engine/*-exporter` · `payment-export` · `milestone-export` · `gantt-export` ·
+  `dxf-viewer/bim/schedule/exporters`. Ακόμη και το `triggerBlobDownload` ζει στο `gantt-export-utils` (λάθος σπίτι).
+  **Πρόταση:** `src/lib/export/` — συμβόλαιο `Serializer<Doc>` + `exportDocument(format, doc)` + `triggerBlobDownload`,
+  και το accounting γίνεται ο πρώτος καταναλωτής. **Μέγεθος:** > 1h, 10+ αρχεία, 5 τομείς ⇒ απόφαση Giorgio.
 
 - ✅ **21/09 — ΤΑ ΔΥΟ ΕΥΡΗΜΑΤΑ ΚΡΙΘΗΚΑΝ: ΕΝΑ ΗΤΑΝ ΧΕΙΡΟΤΕΡΟ, ΤΟ ΑΛΛΟ ΔΕΝ ΥΠΗΡΧΕ** (ADR-747 §13.8)
 
@@ -3934,7 +3931,7 @@
   - ⚠️ **ΞΕΧΩΡΙΣΤΟ commit από το μηχανικό de-dup — είναι ορατή αλλαγή**: τα midpoint grips σε Foundation/Beam/MepFixture/MepManifold/MepRadiator γίνονται πράσινα (`GripColorManager`: cold `edge` → `EDGE_GRIP_COLOR`) + κρύβονται με τον διακόπτη «Midpoints». Δηλαδή αποκτούν τη συμπεριφορά που έχουν **ήδη όλες οι άλλες οντότητες** — αλλά ο Giorgio πρέπει να ξέρει ποιο commit το έκανε.
   - **Verification: `jscpd:diff` 7 αρχεία **5 → 3**· 443/443 GREEN (renderers+visibility+grips)· 0 orphan imports.** Το **1 από τα 5 ήταν δικό μου νέο δίδυμο** (ίδιο ιδιωτικό `tracePolygon` bind σε 2 αρχεία) → inline-αρίστηκε. **Τα 3 υπόλοιπα δεν εξάγονται χωρίς base class**: render-prologue (guard+`determinePhase`+halo → θέλει `beginPhasedBodyRender`, βλ. γραμμή 102) · υπογραφές `getGrips`/`hitTest` · οι horizontal/vertical κλάδοι του `drawParallelLines` (προϋπάρχον, δεν αγγίχθηκε). **ΟΧΙ tsc (N.17).** 🔴 Giorgio commit: `bim-polygon-render.ts` + `text-rendering-config.ts` + 5 renderers (FloorFinish/SpaceSeparator/ThermalSpace/WallCovering/Foundation) + ADR-584 + αυτό το αρχείο. ⚠️ Χρειάζεται `SKIP_JSCPD_DIFF=1` (βλ. περιορισμό `--diff` παρακάτω).
 
-**ℹ️ Περιορισμός CHECK 3.28 `--diff` (τεκμηρίωση, όχι bug προς fix τώρα):** το `--diff` σαρώνει **ΟΛΟΚΛΗΡΑ** τα staged αρχεία και θεωρεί κάθε clone μεταξύ τους «same-commit clone». Σε commit που αγγίζει 15+ sibling renderers (π.χ. cross-cutting SSoT swap), αναφέρει τα **προϋπάρχοντα** δομικά δίδυμα ως νέα → false-positive FAIL ακόμα κι όταν το diff **μειώνει** duplication. Το Layer 2 (`jscpd-ratchet.yml`, full scan vs baseline) δεν έχει αυτό το πρόβλημα.
+**✅ ΛΥΘΗΚΕ 30/10 (ADR-584 §9):** το `--diff` μπλοκάρει πλέον **μόνο** κλώνους που τέμνουν γραμμές που έγραψε το commit· οι προϋπάρχοντες αναφέρονται, δεν μπλοκάρουν — **καμία** ανάγκη για `SKIP_JSCPD_DIFF=1` στα παρακάτω σενάρια. *Ιστορικό:* **ℹ️ Περιορισμός CHECK 3.28 `--diff`:** το `--diff` σάρωνε **ΟΛΟΚΛΗΡΑ** τα staged αρχεία και θεωρούσε κάθε clone μεταξύ τους «same-commit clone». Σε commit που αγγίζει 15+ sibling renderers (π.χ. cross-cutting SSoT swap), αναφέρει τα **προϋπάρχοντα** δομικά δίδυμα ως νέα → false-positive FAIL ακόμα κι όταν το diff **μειώνει** duplication. Το Layer 2 (`jscpd-ratchet.yml`, full scan vs baseline) δεν έχει αυτό το πρόβλημα.
 
 - ✅ **CHECK 3.28 cross-file clone — BIM renderers **hover-halo** (ομάδα Α): DONE (2026-07-16, Opus 4.8, N.18 + ADR-584· UNCOMMITTED).** **ΚΑΝΕΝΑ νέο SSoT δεν χρειάστηκε για τα 10** — το `paintPolygonHoverHalo` υπήρχε ήδη· και, όπως έλεγε σωστά το handoff, **καμία αλλαγή base class** (ελεύθερη συνάρτηση). **Μετάβαση 12 renderers / 12 halo sites.** **10 καθαρά κλειστά footprints** (MepBoiler/MepFitting/MepFixture/MepManifold/MepRadiator/MepSegment/MepUnderfloor/MepWaterHeater/Roof/SlabOpening) → `paintPolygonHoverHalo(this.ctx, (p) => this.worldToScreen(p), verts, phaseState.phase === 'highlighted')` — byte-ταυτόσημο, **μηδενική οπτική αλλαγή**. **2 ΔΕΝ ιχνηλατούν πολύγωνο** (εδώ το handoff ήταν αισιόδοξο): ο **Beam** ιχνηλατεί τα **multi-subpath** κομμάτια του ADR-458 cutback (`buildPiecesPath`), το **Railing** μια **ΑΝΟΙΧΤΗ** πολυγραμμή — το `paintPolygonHoverHalo` θα τα έκλεινε (φάντασμα γραμμής end→start στο κιγκλίδωμα). Άρα το **στυλ** του glow (το πραγματικά διπλότυπο μέρος) βγήκε σε **νέο primitive `paintHoverHalo(ctx, highlighted, trace)`** — κατέχει save/glow-style/stroke/restore, δέχεται path-only `trace` callback· το `paintPolygonHoverHalo` είναι πλέον wrapper μιας γραμμής πάνω του → οι σταθερές του glow δηλώνονται **μία φορά** και σερβίρουν **κάθε** σχήμα halo. **2 σκόπιμα εκτός**: (α) **MepSegment riser (:299)** — screen-space `arc()`, τρέχει *μέσα* σε ξένο save/restore και τελειώνει με hardcoded `globalAlpha = 1` αντί restore → το save/restore του SSoT θα επανέφερε τον **κληρονομημένο** alpha = πραγματική (αν και απίθανη) αλλαγή συμπεριφοράς μέσα σε de-dup commit· (β) **ομάδα Β** — βλ. ανοιχτό ερώτημα 2 παραπάνω (**δεν** είναι clone· ανήκει στη Γ). Καθαρίστηκαν 9 orphan `HOVER_HIGHLIGHT` imports + `RENDER_LINE_WIDTHS` από SlabOpening. **Verification: `jscpd:diff` 13 αρχεία 40→26 clones· 248/248 renderer+visibility tests (23 suites) GREEN· `grep -rn glowExtraWidth` αφήνει μόνο SSoT + Β(4) + Γ(Stair/Wall) + riser — μηδέν επιζώντες ομάδας Α· 0 orphan imports.** **ΟΧΙ tsc (N.17).** 🔴 Giorgio commit: bim-polygon-render.ts + 12 renderers + ADR-584 + αυτό το αρχείο. ⚠️ Χρειάζεται `SKIP_JSCPD_DIFF=1` (το diff **μειώνει** duplication· βλ. περιορισμό `--diff` παραπάνω).
 
@@ -5319,6 +5316,7 @@ Closed via `hostWall.params.sceneUnits ?? 'mm'` frozen-context pattern σε **4 
 
 | Date       | Change |
 |------------|--------|
+| 2026-10-30 | ✅ **CHECK 3.28 `--diff` «new clone» ΧΩΡΙΣ ΝΑ ΕΛΕΓΧΕΙ ΑΝ ΕΙΝΑΙ ΝΕΟΣ — ΕΚΛΕΙΣΕ** (ADR-584 §9, Opus 5.5). Πρακτική SonarQube Clean as You Code / Tricorder: μπλοκάρει **μόνο** κλώνος που τέμνει γραμμή που έγραψε η αλλαγή (νέο αρχείο = όλες · καθαρή διαγραφή = η ραφή · fail-closed)· οι προϋπάρχοντες αναφέρονται. NEW `scripts/lib/git-changed-lines.js`. Accounting: **20/22 προϋπάρχοντες ⇒ πλέον ενημερωτικοί**, οι **2 νέοι** λύθηκαν στον κώδικα (σωλήνωση εξαγωγής `report-export.ts` + `tableColumns`). Άγκυρες: `git-changed-lines.test.js` + §9 στο `check-jscpd-ratchet.test.js` (64/64) · **6/6 μεταλλάξεις**. |
 | 2026-10-30 | ✅ **🗂️ ΜΙΑ ΔΗΛΩΣΗ ΟΙΚΟΓΕΝΕΙΑΣ NAMESPACES — ΕΠΙΠΕΔΟ (α) ΕΚΛΕΙΣΕ** (ADR-280 §11 · CHECK 3.108, Opus 5.5). Η κλάση ήταν **~650 λίστες σε 10 οικογένειες**, όχι 92 του κτιρίου. Η πηγή υπήρχε ήδη (`COMPAT_NAMESPACE_MAP` → `resolveAllNamespaces`) ⇒ κανένα νέο SSoT. Codemod `--fix` **με απόδειξη ισοδυναμίας ανά κλήση**: η σειρά είναι σειρά προτεραιότητας και μετρήθηκαν ~25 κοινά φύλλα· «τι ζητά το αρχείο» = ο ταξινομητής AST του 3.34 + διαφυγή του `t` (190/588). 658 αναδιατυπώσεις / 588 αρχεία· 654/654 ζεύγη ξαναποδείχθηκαν από το `git diff` (το πρώτο πέρασμα είχε 3 χωρίς πλήρη απόδειξη ⇒ επανήλθαν). Πύλη ⛔ Κ1-Κ3 + 🔴 ratchet `order-bearing` (5). 21 άγκυρες· 7/7 μεταλλάξεις· 3.8 Layer 2 χωρίς νέα παράβαση· 811/811 tests των αγγιγμένων modules. Το (β) → νέο μπλοκ 🗂️ (β). ⚠️ commit: `generate:i18n-shell-slice:index` (ήταν ήδη μπαγιάτικο από ξένες αλλαγές toolchain/catalog) · ζωντανός έλεγχος εκκρεμεί (dev server κλειστός). |
 | 2026-10-30 | 🟡 **⬜ `bg-white`/`bg-black` — βήμα (3) ΕΓΙΝΕ** (claude-6e, Opus 5.5). 194 γραμμές / 92 αρχεία ταξινομημένα μία-μία· ~90% νόμιμα (πέπλα, χαρτί, εικόνες, ρητά ζεύγη). Διορθώθηκαν 3 πραγματικά: σκιώδες `COLOR_BRIDGE` στο `dxf-viewer/config/modal-colors.ts` (λευκό σε λευκό στα πεδία των modal του DXF, σκοτεινό θέμα) → πραγματικό SSoT + άγκυρα με μετάλλαξη · `OrgStructureTab` hover λευκό σε `bg-card` (φωτεινό) → `BUTTON_ACCENT_HOVER` · τερματικό μετανάστευσης 3,2:1 (φωτεινό) → θεματική επιφάνεια. Μένει: πύλη (βήμα 1 — τα `scripts/` τα είχε άλλη συνεδρία· πρόταση: κρίση **μίξης**, όχι κάθε `bg-white`) · `--paper` · νεκρό `user-type.ts`. |
 | 2026-10-30 | ✅ **🧾 ΔΡΟΜΕΑΣ KEYSET — ΕΚΛΕΙΣΕ** (claude-6e, Opus 5.5). SSoT `lib/admin-keyset-page` + `kind: 'timestamp'` · `map(data, id)` · `InvalidPageTokenError.code` (αποτύπωμα λογιστικής αμετάβλητο — άγκυρα Κ-T6). Ιστορικό ρόλων → keyset (TTL ⇒ πρώτη σελίδα σιωπηλά) + 400 σε `limit`/ημερομηνίες. **Νέο εύρημα**: ιστορικό οντότητας — άγκυρα ανύπαρκτη/ξένη ⇒ 400. 🔴 Ιστορικό εταιρείας **ήταν σπασμένο** (χωρίς `orderBy` + `offset=id` ⇒ NaN ⇒ η ουρά δεν φαινόταν ποτέ): άγκυρα + σάρωση με όριο + ΕΝΑΣ κριτής φίλτρων πελάτη/διακομιστή (`lib/audit/global-audit-filter`). `thread-directory`: ήδη σωστό, δεν μετακομίζει. Κανένας νέος δείκτης. jest (UNC): 11 σουίτες — 204/204 ✓ (ένα λάθος του ίδιου του test, όριο βρόχου, διορθώθηκε· `global-audit-tail` 19/19). Ανοιχτά: ημέρα Αθήνας · `LIST_ERROR_CODES` · dedup στο όριο παρτίδας · export. |

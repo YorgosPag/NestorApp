@@ -180,9 +180,10 @@ if [[ -n "$TS_FILES" ]]; then
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# PHASE 0.6: SYNC — CHECK 3.28 jscpd clone diff gate (ADR-583)
-# Token-based copy/paste detector on the STAGED src files only. Blocks
-# same-commit sibling clones ("centralize A, write B+C as twins") that the
+# PHASE 0.6: SYNC — CHECK 3.28 jscpd clone diff gate (ADR-584)
+# Token-based copy/paste detector on the STAGED src files only. Blocks clones
+# that touch lines this commit wrote (ADR-584 §9 — clones already in HEAD are
+# reported, not blocking) — same-commit sibling clones ("centralize A, write B+C as twins") that the
 # name/regex-based CHECK 3.18 is structurally blind to. Run sequentially here
 # (not inside run-checks-parallel.js) because jscpd spawns child processes,
 # which deadlock inside the Node worker_threads pool — same reason as Phase 0.5.
@@ -198,7 +199,7 @@ if [[ -z "${SKIP_JSCPD_DIFF:-}" ]] && [[ -f "scripts/check-jscpd-ratchet.js" ]] 
         node scripts/check-jscpd-ratchet.js --diff --index $JSCPD_DIFF_FILES
         if [[ $? -ne 0 ]]; then
             echo ""
-            echo -e "${YELLOW}  CHECK 3.28 — token-based clone(s) introduced by this commit (ADR-583).${NC}"
+            echo -e "${YELLOW}  CHECK 3.28 — token-based clone(s) introduced by this commit (ADR-584).${NC}"
             echo -e "${YELLOW}  Diagnose the whole repo: npm run jscpd:scan${NC}"
             echo -e "${YELLOW}  Emergency skip (justify to Giorgio): SKIP_JSCPD_DIFF=1 git commit ...${NC}"
             exit 1

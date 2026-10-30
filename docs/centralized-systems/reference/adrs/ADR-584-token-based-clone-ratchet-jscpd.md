@@ -33,7 +33,7 @@ The chosen tool is **jscpd** (v5.0.11, **MIT** — verified via `npm view jscpd 
 Add **CHECK 3.28 — token-based clone ratchet** as a **two-layer** gate that mirrors CHECK 3.18 / CHECK 3.22, **reusing the existing ratchet framework** (baseline-load → scan → compare → smoke/full modes → Jest suite) rather than inventing a new one.
 
 ### Layer 1 — pre-commit diff gate (`--diff`)
-`scripts/git-hooks/pre-commit` Phase 0.6 runs jscpd over **only the staged src files**. Because the scan set *is* the diff, every clone jscpd reports is a **same-commit sibling clone** → **BLOCK**, listing the offending file pairs and line ranges. This is the direct guarantee against Giorgio's failure mode (α).
+`scripts/git-hooks/pre-commit` Phase 0.6 runs jscpd over **only the staged src files** (whole files — a clone may pair a new line with an untouched one). A clone that **touches a line this commit wrote** is a **same-commit clone** → **BLOCK**, listing the offending file pairs and line ranges. A clone already in `HEAD` and untouched is **reported, not blocking** (§9). This is the direct guarantee against Giorgio's failure mode (α).
 
 Runs **sequentially in bash**, NOT inside `run-checks-parallel.js`, because jscpd spawns child processes which deadlock inside the Node `worker_threads` pool — the same reason Phase 0.5 (hardcoded-strings) runs sequentially.
 
@@ -50,6 +50,22 @@ Zero-tolerance on new intra-diff clones (Giorgio's choice: *hybrid* gate). Escap
 ⚠️ **Το pattern είναι παγίδα — μετρημένο, όχι υποθετικό** (άγκυρα: Group 11 του `check-jscpd-ratchet.test.js`, 2/2 μεταλλάξεις κόκκινες):
 - `[\s\S]*?` αντί για `[^;]*?` ⇒ ένα side-effect import (`import 'x';`, χωρίς `from`) **καταπίνει τον κώδικα** μέχρι το πρώτο string `from '…'` ⇒ **έκρυψε πραγματικό δίδυμο 60 tokens** (1 → 0).
 - `^import` (χωρίς `/m`, το `^` = αρχή **αρχείου**) ⇒ αφαιρεί **μόνο το πρώτο** import· σε αρχεία με `'use client'` πρώτο **κανένα**. Το πρώτο fixture πέρασε **για λάθος λόγο** (το πρώτο import του ήταν το μεγάλο πολυγραμμικό).
+
+### §9 — Το Layer 1 κρίνει τον ΝΕΟ κώδικα, όχι ό,τι βρήκε στο αρχείο (2026-10-30)
+**Πρόβλημα (μετρημένο):** το `--diff` σάρωνε ολόκληρα τα staged αρχεία και μπλόκαρε **κάθε** κλώνο ανάμεσά τους ως «new clone inside this commit». Στο accounting (117 αλλαγμένα αρχεία, HEAD vs working tree με τη μηχανή της πύλης): **20 από 22** κλώνοι **προϋπήρχαν με ταυτόσημο κείμενο** — η μόνη αλλαγή στα αρχεία τους ήταν **μία** γραμμή `useTranslation` έξω από τον κλώνο. Συνέπεια: **19 ομάδες commit μπλοκαρισμένες** και η μόνη «διέξοδος» ήταν `SKIP_JSCPD_DIFF=1` (καταγεγραμμένη επανειλημμένα στο `pending-ratchet-work.md`: 16/07 renderers, 21/09 ai-pipeline) — δηλαδή η πύλη εκπαίδευε στην παράκαμψη.
+
+**Πρακτική των μεγάλων:** SonarQube *Clean as You Code* — η συνθήκη διπλοτύπων της πύλης ποιότητας εφαρμόζεται στον **νέο κώδικα**, και η Sonar **συστήνει ρητά να μην** μπαίνουν συνθήκες σε όλο τον κώδικα· Google Tricorder — ευρήματα **μόνο σε αλλαγμένες γραμμές** του CL. Το συνολικό χρέος μένει στο ratchet (εδώ: Layer 2).
+
+**Απόφαση:** κλώνος **ΕΙΣΑΓΕΤΑΙ** ⇔ έστω μία πλευρά του τέμνει γραμμή που έγραψε η αλλαγή → BLOCK. Αλλιώς **ΠΡΟΫΠΗΡΧΕ** → τυπώνεται ως «Boy-scout candidates», **δεν** μπλοκάρει. SSoT: `scripts/lib/git-changed-lines.js` (`createChangedLineIndex`), πάνω στα υπάρχοντα `runGit`/`listTreeEntries` του `git-index-snapshot.js`.
+
+**Πιο αυστηρό από τη Sonar σε τρία σημεία** (η Sonar μετρά πυκνότητα· εμείς κρίνουμε **ζεύγη**):
+1. **Αντιγραφή υπάρχοντος κώδικα** σε άλλο αρχείο: η νέα πλευρά τέμνει αλλαγμένες γραμμές ⇒ BLOCK, παρότι η άλλη πλευρά είναι «παλιά».
+2. **Ραφή καθαρής διαγραφής** (`@@ +c,0 @@` ⇒ γραμμές `c..c+1`): σβήνοντας ό,τι ξεχώριζε δύο μισά, γεννιέται κλώνος **χωρίς καμία προστιθέμενη γραμμή** ⇒ BLOCK.
+3. **Fail-closed**: αρχείο «αλλαγμένο» χωρίς αναγνώσιμο hunk ⇒ όλο αλλαγμένο· σφάλμα git ⇒ η πύλη αποτυγχάνει, ποτέ σιωπηλό πράσινο.
+
+**Ορθότητα βάσης:** `--index` ⇒ ευρετήριο vs `HEAD` (ό,τι θα δεσμευτεί, ADR-924 Φ5)· χωρίς ⇒ δίσκος vs `HEAD`· repo χωρίς commit ⇒ κενό δέντρο (όλα νέα)· untracked ⇒ όλο νέο. ⚠️ Το diff τρέχει **χωρίς pathspec, επίτηδες (μετρημένο)**: περιορισμένο στο νέο όνομα, το git δεν βλέπει το παλιό ⇒ μετονομασία = «προσθήκη». Μετονομασία με αλλαγές ⇒ μόνο οι αλλαγμένες γραμμές· καθαρή μετακίνηση (`R100`) ⇒ τίποτα.
+
+**Άγκυρες:** `scripts/__tests__/git-changed-lines.test.js` (parser με παγίδες + πραγματικό git: cached, δίσκος, untracked, μετονομασία, καθαρή μετακίνηση, fail-closed) · Group §9 στο `check-jscpd-ratchet.test.js` (α προϋπάρχων ⇒ ΠΕΡΝΑ · β αντιγραφή ⇒ ΜΠΛΟΚ · γ ραφή ⇒ ΜΠΛΟΚ · δ καθαρό).
 
 ### Resolved open decisions (Giorgio, 2026-07-08)
 | Decision | Choice | Rationale |
@@ -105,6 +121,8 @@ Before declaring any centralization "done", the agent runs `npm run jscpd:diff <
 ---
 
 ## Changelog
+
+- **2026-10-30** — **§9: το Layer 1 κρίνει τον νέο κώδικα (SonarQube Clean as You Code · Tricorder).** Ρίζα: 19 ομάδες commit μπλοκαρισμένες από **προϋπάρχοντες** κλώνους (accounting: 20/22 ταυτόσημοι στο HEAD). NEW `scripts/lib/git-changed-lines.js` (`createChangedLineIndex` · `parseUnifiedZero` · `parseNameStatus`)· `check-jscpd-ratchet.js`: `classifyClones` / `reportIntroduced` / `reportPreexisting` (εξαγωγή του `runDiff` κάτω από 40 γραμμές)· `git-index-snapshot.js`: εξάγει το `runGit` (μία υλοποίηση, όχι δίδυμο) + boy-scout: το JSDoc του `grepFiles` είχε καταλήξει πάνω από το `listStagedPaths`· `pre-commit`: ο δείκτης έλεγε **ADR-583** (βιβλιοθήκη συμβόλων) — διορθώθηκε σε ADR-584. Δύο ελαττώματα του **πρώτου** σχεδίου τα έπιασαν οι άγκυρες πριν φύγει τίποτα: (α) το pathspec έκανε τη μετονομασία «προσθήκη», (β) η καθαρή μετακίνηση θα έπεφτε στο fail-closed. **Οι 2 πραγματικά νέοι κλώνοι** του accounting (`services/export`) δεν καλύπτονται από αυτή την αλλαγή — διορθώνονται στον κώδικα.
 
 - **2026-09-21** — **§8 imports ≠ διπλότυπο + εκστρατεία procurement (ADR-598 §3): 8 δίδυμα → 0.** Πλήρες `src/` (Layer 2): **1.757 / baseline 2.641**. Αποσύνθεση **μετρημένη**, όχι εκτιμημένη: χωρίς το `ignorePattern` = **1.880** ⇒ **−123 (6,5%) είναι imports**, τα **−761** είναι δουλειά άλλων από τις 25/07. 🔒 **Baseline κλειδώθηκε 2641 → 1788** (εντολή Giorgio) — μετρημένη σε **HEAD + μόνο αυτή τη δουλειά** (`git archive HEAD src` + επικάλυψη των 21 αρχείων, `JSCPD_SCAN_ROOT`), **όχι** στο κοινό δέντρο (1.757: τα −31 είναι ξένη ακομίτιστη δουλειά — κλείδωμα πάνω της θα κοκκίνιζε το CI αν εκείνη δεν έμπαινε). Πρακτική PHPStan/presubmit: η baseline μετριέται στο **δέντρο που θα γίνει commit**. ⚠️ **Ίδιο commit με το `.jscpdrc.json`**: χωρίς `ignorePattern` η μέτρηση = 1911 ⇒ κόκκινο.
   Τα 8 δίδυμα (FWA↔Material · Quote↔Rfq ×5 · PO↔Rfq) + 3 που φάνηκαν στην πορεία (Invite↔Renewal↔Notification · project-field Quote↔Rfq · Award↔RfqCancel) λύθηκαν με **SSoT, όχι με αναδιάταξη**: `hooks/useFormSubmission` · `ui/form/FormActions` · `FormField` με render-prop id · `procurement/components/{AtoeCategoryCodeSelect,LineItemsSection,EmailMessageFields}`. Τα δύο που ήταν **καθαρά imports** τα έκλεισε το §8 — **με απόδειξη** ότι το (β) πραγματικό δίδυμο κάτω από ίδια imports **εξακολουθεί** να μπλοκάρει.

@@ -230,13 +230,6 @@ function listTreeEntries({ repoRoot, rev = 'HEAD', paths }) {
 }
 
 /**
- * ADR-924 Φ2 — τα tracked αρχεία **κειμένου** (`-I`) που περιέχουν `needle` (σταθερή συμβολοσειρά, ή πίνακας = «οποιαδήποτε»),
- * με την ΙΔΙΑ μηχανή του git και στις δύο όψεις: `cached` ⇒ το κείμενο του ευρετηρίου, αλλιώς του δίσκου. Ποτέ untracked.
- * `git grep` βγαίνει 1 όταν δεν βρει τίποτα — δεν είναι σφάλμα.
- * @param {{repoRoot: string, needle: string|string[], pathspecs?: string[], cached?: boolean}} options
- * @returns {string[]} σχετικά posix μονοπάτια
- */
-/**
  * Τα σταδιοποιημένα μονοπάτια (προστέθηκαν · αντιγράφηκαν · άλλαξαν · μετονομάστηκαν — ΟΧΙ σβησμένα), σχετικά posix.
  * ΤΟ ΕΝΑ σημείο της σκανδάλης «τι αγγίζει αυτό το commit» (ADR-924 Φ3: ήταν εννέα αντίγραφα του ίδιου `git diff`).
  *
@@ -250,6 +243,13 @@ function listStagedPaths({ repoRoot }) {
   return runGit(repoRoot, ['diff', '--cached', '--name-only', '-z', '--diff-filter=ACMR']).split('\0').filter(Boolean);
 }
 
+/**
+ * ADR-924 Φ2 — τα tracked αρχεία **κειμένου** (`-I`) που περιέχουν `needle` (σταθερή συμβολοσειρά, ή πίνακας = «οποιαδήποτε»),
+ * με την ΙΔΙΑ μηχανή του git και στις δύο όψεις: `cached` ⇒ το κείμενο του ευρετηρίου, αλλιώς του δίσκου. Ποτέ untracked.
+ * `git grep` βγαίνει 1 όταν δεν βρει τίποτα — δεν είναι σφάλμα.
+ * @param {{repoRoot: string, needle: string|string[], pathspecs?: string[], cached?: boolean}} options
+ * @returns {string[]} σχετικά posix μονοπάτια
+ */
 function grepFiles({ repoRoot, needle, pathspecs = [], cached = false }) {
   const needles = (Array.isArray(needle) ? needle : [needle]).flatMap(n => ['-e', n]);
   const args = ['grep', '-l', '-I', '--fixed-strings', '-z', ...(cached ? ['--cached'] : []), ...needles, '--', ...pathspecs];
@@ -283,5 +283,5 @@ function takeCommitSnapshot({ repoRoot }) {
 module.exports = {
   materializeIndex, writeIndexBlob, readIndexText, listIndexEntries, listWorktreeDivergence, readIndexTexts,
   readIndexBlobs, grepFiles, listStagedPaths,
-  createCommitView, takeCommitSnapshot, listTreeEntries,
+  createCommitView, takeCommitSnapshot, listTreeEntries, runGit,
 };
