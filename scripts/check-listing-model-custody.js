@@ -69,6 +69,7 @@ const path = require('node:path');
 
 const { GATE_STATES, GUARD_STATES } = require('./lib/listing-model-custody/contract.js');
 const { sweep } = require('./lib/listing-model-custody/gate.js');
+const { commitInput } = require('./lib/gate-input');
 const { DOOR_STATES, REGISTRY_STATES } = require('./lib/listing-model-custody/material-doors-contract.js');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
@@ -152,7 +153,7 @@ function main(argv = process.argv) {
     /\.tsx?$/.test(f) || f.includes('listing-model-custody') || f.includes('check-listing-model-custody');
   if (staged.length > 0 && !staged.some(affects)) return 0;
 
-  const result = sweep(REPO_ROOT);
+  const result = sweep(REPO_ROOT, commitInput(REPO_ROOT, argv));
   printLedger(result);
 
   if (result.violations.length === 0) {

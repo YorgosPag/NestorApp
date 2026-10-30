@@ -20,11 +20,11 @@
 
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
 
 const ratchet = require('./lib/ratchet-baseline');
 const { walkScope } = require('./lib/i18n-raw-fallback/ratchet');
+const { openGateInput } = require('./lib/gate-input');
 const { sourceFileOf, ts } = require('./lib/write-authority/ast');
 const { findSinkAssignments, SINKS } = require('./lib/paper-ink/detect');
 const { judge, STATES } = require('./lib/paper-ink/judge');
@@ -35,8 +35,8 @@ const BASELINE_FILE = path.join(ROOT, '.paper-ink-baseline.json');
 /** Πρόφιλτρο ΧΩΡΙΣ απώλεια: εύρημα απαιτεί το όνομα ενός νεροχύτη στο κείμενο. */
 const SINK_NAME = new RegExp([...SINKS].join('|'));
 
-function readRegistry() {
-  const registry = JSON.parse(fs.readFileSync(REGISTRY_FILE, 'utf8'));
+function readRegistry(input) {
+  const registry = input.readJson(REGISTRY_FILE);
   for (const key of ['approved', 'kinds', 'zones', 'exceptions']) {
     if (typeof registry[key] !== 'object' || registry[key] === null) throw new Error(`μητρώο χωρίς «${key}»`);
   }
@@ -44,33 +44,35 @@ function readRegistry() {
 }
 
 /** Εξάγει το αρχείο ένα όνομα ως συνάρτηση ή σταθερά; (AST — ένα σχόλιο που το ονομάζει δεν μετρά) */
-function exportsName(file, name) {
-  const abs = path.join(ROOT, file);
-  if (!fs.existsSync(abs)) return false;
+function exportsName(file, name, input) {
+  const text = input.read(file);
+  if (text === null) return false;
   const exported = (st) => (st.modifiers || []).some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
-  return sourceFileOf(abs, fs.readFileSync(abs, 'utf8')).statements.some((st) => exported(st) && (
+  return sourceFileOf(path.join(ROOT, file), text).statements.some((st) => exported(st) && (
     (ts.isFunctionDeclaration(st) && st.name && st.name.text === name)
     || (ts.isVariableStatement(st) && st.declarationList.declarations.some((d) => d.name.getText() === name))));
 }
 
-function scanZones(registry) {
+function scanZones(registry, input) {
   const approved = new Set(Object.keys(registry.approved));
   const scanned = [];
   for (const [zone, dirs] of Object.entries(registry.zones)) {
-    for (const file of dirs.flatMap((dir) => walkScope(ROOT, dir))) {
-      const text = fs.readFileSync(path.join(ROOT, file), 'utf8');
+    for (const file of dirs.flatMap((dir) => walkScope(ROOT, dir, input))) {
+      const text = input.read(file);
       if (SINK_NAME.test(text)) scanned.push({ file, zone, assignments: findSinkAssignments(text, file, approved) });
     }
   }
   return scanned;
 }
 
-function measure() {
-  const registry = readRegistry();
+/** `opts.input` = η είσοδος της πύλης (ADR-924· προεπιλογή ο δίσκος της `ROOT`, το `main` δίνει την όψη του commit). */
+function measure(opts = {}) {
+  const input = opts.input || openGateInput({ root: ROOT });
+  const registry = readRegistry(input);
   const missing = Object.entries(registry.approved)
-    .filter(([name, home]) => !exportsName(home, name))
+    .filter(([name, home]) => !exportsName(home, name, input))
     .map(([name, home]) => `${name} — το ${home} δεν το εξάγει`);
-  return { ...judge(registry, scanZones(registry), missing), zones: registry.zones };
+  return { ...judge(registry, scanZones(registry, input), missing), zones: registry.zones };
 }
 
 function printReport(m) {
@@ -104,9 +106,10 @@ const DESCRIPTOR = {
   adr: 'ADR-909 §6.9 (CHECK 3.103)',
   skipEnv: 'SKIP_PAPER_INK',
   baselineFile: BASELINE_FILE,
+  root: ROOT,
   labels: { violations: 'αναθέσεις που δεν κρίθηκαν', declarations: 'εξαιρέσεις με λόγο' },
   commands: { report: 'npm run paper-ink:report', baseline: 'npm run paper-ink:baseline', seed: 'npm run paper-ink:baseline' },
-  measure,
+  measure: (_args, input) => measure({ input }),
   buildPayload,
   printReport,
   refusals: (m) => m.refused.map((r) => `${r.state}: ${r.detail}`),

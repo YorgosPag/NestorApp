@@ -36,13 +36,11 @@
 
 'use strict';
 
-const fs = require('fs');
-const path = require('path');
+const ast = require('./lib/write-authority/ast');
+const { openGateInput } = require('./lib/gate-input');
+const { defineScanGate } = require('./lib/write-authority/gate-runner');
 
-const PROJECT_ROOT = path.resolve(__dirname, '..');
-const ts = require(path.join(PROJECT_ROOT, 'node_modules', 'typescript'));
-const { collectSourceFiles } = require('./lib/module-graph/scan-config');
-const { toPosix } = require('./lib/module-graph/resolve-specifier');
+const { ts, PROJECT_ROOT, sourceFileOf, chainNodes } = ast;
 
 const REF_FILE = 'src/services/network-messaging/network-thread-ref.ts';
 /**
@@ -137,18 +135,18 @@ const AUDIENCE_CALLS = new Set([
 const MESSAGE_CALLS = new Set(['networkThreadMessages', 'networkRetractionRef', 'networkRevisionRef']);
 
 const WRITE_METHODS = new Set(['set', 'update', 'create', 'delete', 'add']);
-const EXEMPT = /network-thread-authority-exempt:\s*(\S.*)?$/;
+const exemptions = ast.exemptionsFor('network-thread-authority-exempt');
 
 const STATES = {
   REF: 'ref-file',
   CONSUMER: 'declared-consumer',
-  EXEMPT: 'exempt-with-reason',
+  EXEMPT: ast.EXEMPTION_STATES.EXEMPT,
   PATH_OUTSIDE_REF: 'thread-path-outside-ref',
   UNDECLARED_CONSUMER: 'undeclared-thread-consumer',
   SECOND_AUDIENCE_WRITER: 'second-audience-writer',
   SECOND_MESSAGE_WRITER: 'second-message-writer',
   PROJECTION_UNASKED: 'audience-projection-unasked',
-  EXEMPT_NO_REASON: 'exempt-without-reason',
+  EXEMPT_NO_REASON: ast.EXEMPTION_STATES.EXEMPT_NO_REASON,
   SOURCE_DRIFT: 'source-drift',
   CLIENT_REF_WRITES: 'client-ref-writes',
 };
@@ -162,31 +160,6 @@ const BLOCKING = [
   STATES.SOURCE_DRIFT,
   STATES.CLIENT_REF_WRITES,
 ];
-
-function sourceFileOf(absPath, text) {
-  return ts.createSourceFile(absPath, text, ts.ScriptTarget.Latest, true,
-    /\.tsx$/.test(absPath) ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
-}
-
-const lineOf = (sf, node) => sf.getLineAndCharacterOfPosition(node.getStart()).line + 1;
-
-/** Η εξαίρεση της γραμμής από πάνω: `null` αν δεν υπάρχει, αλλιώς ο λόγος (μπορεί κενός). */
-function exemptionAbove(sf, node) {
-  const above = sf.text.split(/\r?\n/)[lineOf(sf, node) - 2] || '';
-  const match = above.match(EXEMPT);
-  return match ? (match[1] || '').trim() : null;
-}
-
-/** Ο αριστερός κρίκος μιας αλυσίδας κλήσεων/προσβάσεων — κάθε κόμβος, από έξω προς τα μέσα. */
-function chainNodes(node) {
-  const nodes = [];
-  for (let current = node; current; ) {
-    nodes.push(current);
-    if (ts.isCallExpression(current) || ts.isPropertyAccessExpression(current)) current = current.expression;
-    else break;
-  }
-  return nodes;
-}
 
 const callName = (node) =>
   ts.isCallExpression(node) && ts.isIdentifier(node.expression) ? node.expression.text : null;
@@ -239,13 +212,7 @@ function refAliases(sf, names) {
   return aliases;
 }
 
-function classifyByExemption(sf, node, rel, blockingState, detail) {
-  const reason = exemptionAbove(sf, node);
-  if (reason === null) return { state: blockingState, file: rel, line: lineOf(sf, node), detail };
-  return reason.length > 0
-    ? { state: STATES.EXEMPT, file: rel }
-    : { state: STATES.EXEMPT_NO_REASON, file: rel, line: lineOf(sf, node), detail: 'εξαίρεση ΧΩΡΙΣ λόγο' };
-}
+const classifyByExemption = exemptions.classify;
 
 /** Κ1 + Κ2 + Κ3 + Κ4 για ένα αρχείο. */
 function findingsIn(sf, rel) {
@@ -294,23 +261,23 @@ function consumerFinding(sf, node, rel) {
 }
 
 /** Κ5 + Κ6. */
-function wiringFindings(root) {
+function wiringFindings(root, input = openGateInput({ root })) {
   const findings = [];
   for (const declared of [REF_FILE, CLIENT_REF_FILE, AUDIENCE_WRITER, MESSAGE_WRITER, ...PROJECTION_CONSUMERS]) {
-    if (!fs.existsSync(path.join(root, declared))) {
+    if (!input.exists(declared)) {
       findings.push({ state: STATES.SOURCE_DRIFT, file: declared, detail: 'δηλωμένο αρχείο που ΔΕΝ ΥΠΑΡΧΕΙ' });
     }
   }
   // Κ7 — ο τόπος του πελάτη διαβάζει μόνο.
-  const clientRef = path.join(root, CLIENT_REF_FILE);
-  if (fs.existsSync(clientRef) && CLIENT_WRITE_CALLS.test(stripComments(fs.readFileSync(clientRef, 'utf8')))) {
+  const clientRef = input.read(CLIENT_REF_FILE);
+  if (clientRef !== null && CLIENT_WRITE_CALLS.test(stripComments(clientRef))) {
     findings.push({ state: STATES.CLIENT_REF_WRITES, file: CLIENT_REF_FILE,
       detail: 'ο τόπος μονοπατιών του ΠΕΛΑΤΗ εισάγει/καλεί γραφή — κάθε πράξη περνά από διαδρομή (`network-thread.client.ts`)' });
   }
   for (const consumer of PROJECTION_CONSUMERS) {
-    const abs = path.join(root, consumer);
-    if (!fs.existsSync(abs)) continue;
-    const code = stripComments(fs.readFileSync(abs, 'utf8'));
+    const text = input.read(consumer);
+    if (text === null) continue;
+    const code = stripComments(text);
     if (!PROJECTION_CALLS.some((call) => code.includes(call))) {
       findings.push({ state: STATES.PROJECTION_UNASKED, file: consumer,
         detail: `δεν καλεί ${PROJECTION_CALLS.map((c) => `\`${c}\``).join(' / ')} — η ομάδα αλλάζει και το ακροατήριο μένει να λέει ψέματα` });
@@ -328,50 +295,21 @@ function stripComments(text) {
   return text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 }
 
-function measure(opts = {}) {
-  const root = opts.root || PROJECT_ROOT;
-  const files = (opts.codeFiles || collectSourceFiles(root, ['src'])).filter((f) => !/__tests__|\.test\.|\.spec\./.test(f));
-  if (!opts.codeFiles && files.length < 1000) throw new Error(`ΦΡΟΥΡΟΣ: μόνο ${files.length} αρχεία — η σάρωση δεν κοίταξε`);
-  const findings = [];
-  for (const abs of files) {
-    let text;
-    try { text = fs.readFileSync(abs, 'utf8'); } catch { continue; }
-    if (!RELEVANT.test(text)) continue;
-    findings.push(...findingsIn(sourceFileOf(abs, text), toPosix(path.relative(root, abs))));
-  }
-  findings.push(...(opts.skipWiring ? [] : wiringFindings(root)));
-  const tally = Object.fromEntries(Object.values(STATES).map((s) => [s, findings.filter((f) => f.state === s).length]));
-  return { findings, tally, examined: files.length };
-}
-
-function report(result, log = console.log) {
-  const { tally, findings } = result;
-  log('');
-  log('💬 CHECK 3.89 — Πύλη της αρχής του νήματος (ADR-867 Β4)');
-  log(`   αρχεία που εξετάστηκαν: ${result.examined}`);
-  log('');
-  for (const s of BLOCKING) log(`   ⛔ ${s.padEnd(30)} ${tally[s]}`);
-  for (const s of [STATES.REF, STATES.CONSUMER, STATES.EXEMPT]) log(`   ✅ ${s.padEnd(30)} ${tally[s]}`);
-  const blocking = findings.filter((f) => BLOCKING.includes(f.state));
-  for (const f of blocking) log(`   ⛔ ${f.state}  ${f.file}${f.line ? ':' + f.line : ''}\n        ${f.detail}`);
-  if (blocking.length) {
-    log('\n   ΘΕΡΑΠΕΙΑ: ακροατήριο → `writeActThread` / `touchOwnAudience`· μήνυμα →');
-    log('   `sendNetworkMessage`. ⚠️ ΜΗΝ προσθέσεις καταναλωτή «επειδή βολεύει».');
-  }
-  return blocking.length;
-}
-
-function main() {
-  if (process.env.SKIP_NETWORK_THREAD_AUTHORITY === '1') {
-    console.log('⏭️  CHECK 3.89 παραλείφθηκε (SKIP_NETWORK_THREAD_AUTHORITY=1)');
-    return 0;
-  }
-  const blocking = report(measure());
-  console.log(blocking > 0
-    ? `\n❌ CHECK 3.89 ΑΠΕΤΥΧΕ — ${blocking} μπλοκάρουσα(ες) παραβίαση(εις)\n`
-    : '\n✅ CHECK 3.89 — ακροατήριο και μηνύματα γράφονται ΜΟΝΟ από τον έναν γραφέα\n');
-  return blocking > 0 ? 1 : 0;
-}
+const { measure, report, main } = defineScanGate({
+  projectRoot: PROJECT_ROOT, relevant: RELEVANT, findingsIn, wiringFindings, states: STATES,
+  check: '3.89', skipEnv: 'SKIP_NETWORK_THREAD_AUTHORITY',
+  ok: 'ακροατήριο και μηνύματα γράφονται ΜΟΝΟ από τον έναν γραφέα',
+  report: {
+    title: '💬 CHECK 3.89 — Πύλη της αρχής του νήματος (ADR-867 Β4)',
+    blocking: BLOCKING,
+    healthy: [STATES.REF, STATES.CONSUMER, STATES.EXEMPT],
+    width: 30,
+    remedy: [
+      'ΘΕΡΑΠΕΙΑ: ακροατήριο → `writeActThread` / `touchOwnAudience`· μήνυμα →',
+      '`sendNetworkMessage`. ⚠️ ΜΗΝ προσθέσεις καταναλωτή «επειδή βολεύει».',
+    ],
+  },
+});
 
 if (require.main === module) process.exit(main());
 

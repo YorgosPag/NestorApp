@@ -38,13 +38,15 @@
 
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
 
 const { findDuplicateKeys, dottedName } = require('./lib/i18n/duplicate-keys');
+const { commitInput } = require('./lib/gate-input');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
-const LOCALES_DIR = path.join(PROJECT_ROOT, 'src', 'i18n', 'locales');
+const LOCALES_DIR = 'src/i18n/locales';
+/** `src/i18n/locales/<γλώσσα>/<ns>.json` — ακριβώς ένα επίπεδο κάτω από τη γλώσσα. */
+const LOCALE_FILE = /^src\/i18n\/locales\/[^/]+\/[^/]+\.json$/;
 
 /** ⚠️ Κλειστό σύνολο, fail-closed: άγνωστη κατάσταση ⇒ `throw` με όνομα. */
 const STATES = {
@@ -54,16 +56,9 @@ const STATES = {
 };
 const BLOCKING = [STATES.DUPLICATE, STATES.UNPARSABLE];
 
-function localeFiles() {
-  const out = [];
-  let langs;
-  try { langs = fs.readdirSync(LOCALES_DIR, { withFileTypes: true }); } catch { return out; }
-  for (const lang of langs) {
-    if (!lang.isDirectory()) continue;
-    const dir = path.join(LOCALES_DIR, lang.name);
-    for (const f of fs.readdirSync(dir)) if (f.endsWith('.json')) out.push(path.join(dir, f));
-  }
-  return out.sort();
+/** Κάθε locale JSON — από την ΕΙΣΟΔΟ (ADR-924 Φ3: ήταν δικός του `readdirSync`). */
+function localeFiles(input) {
+  return input.files([LOCALES_DIR], { accept: (rel) => LOCALE_FILE.test(rel) }).sort();
 }
 
 /**
@@ -74,29 +69,25 @@ function localeFiles() {
  * μπορεί να το δημιουργήσει. Δεν υπάρχει το μονοπάτι «σπάει αρχείο που κανείς δεν
  * σταδιοποίησε» που αναγκάζει το CHECK 3.70 να κλιμακώνεται.
  */
-function listStagedLocales() {
-  try {
-    return require('node:child_process')
-      .execSync('git diff --cached --name-only --diff-filter=ACMR', { cwd: PROJECT_ROOT, encoding: 'utf8' })
-      .split('\n').map((s) => s.trim()).filter(Boolean)
-      .filter((p) => p.startsWith('src/i18n/locales/') && p.endsWith('.json'))
-      .map((p) => path.resolve(PROJECT_ROOT, p))
-      .filter((p) => fs.existsSync(p));
-  } catch { return []; }
+function listStagedLocales(input) {
+  return input.staged((rel) => rel.startsWith(`${LOCALES_DIR}/`) && rel.endsWith('.json')).filter(input.exists);
 }
 
-/** ⚠️ Πλήρης έλεγχος ~2,0s (206 αρχεία)· σταδιοποιημένα ~0,3s. */
-function measure(argv = []) {
+/**
+ * ⚠️ Πλήρης έλεγχος ~2,0s (206 αρχεία)· σταδιοποιημένα ~0,3s.
+ * `input` = η είσοδος (ADR-924): με `--index` (εκτελεστής) το κείμενο ΤΟΥ COMMIT, όχι του δίσκου.
+ */
+function measure(argv = [], input = commitInput(PROJECT_ROOT, argv)) {
   const full = argv.includes('--all') || argv.includes('--report');
-  const files = full ? localeFiles() : listStagedLocales();
+  const files = full ? localeFiles(input) : listStagedLocales(input);
   const tally = Object.fromEntries(Object.values(STATES).map((s) => [s, 0]));
   const violations = [];
 
   for (const abs of files) {
-    const rel = path.relative(PROJECT_ROOT, abs).split(path.sep).join('/');
+    const rel = input.rel(abs);
     let dups;
     try {
-      dups = findDuplicateKeys(fs.readFileSync(abs, 'utf8'));
+      dups = findDuplicateKeys(input.read(abs));
     } catch (e) {
       tally[STATES.UNPARSABLE]++;
       violations.push({ file: rel, state: STATES.UNPARSABLE, detail: e.message });

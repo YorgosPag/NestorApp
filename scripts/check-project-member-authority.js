@@ -27,13 +27,11 @@
 
 'use strict';
 
-const fs = require('fs');
-const path = require('path');
+const ast = require('./lib/write-authority/ast');
+const { openGateInput } = require('./lib/gate-input');
+const { defineScanGate } = require('./lib/write-authority/gate-runner');
 
-const PROJECT_ROOT = path.resolve(__dirname, '..');
-const ts = require(path.join(PROJECT_ROOT, 'node_modules', 'typescript'));
-const { collectSourceFiles } = require('./lib/module-graph/scan-config');
-const { toPosix } = require('./lib/module-graph/resolve-specifier');
+const { ts, PROJECT_ROOT, sourceFileOf, chainNodes, isCallTo, isCreation } = ast;
 
 const REF_FILE = 'src/lib/auth/project-member-ref.ts';
 const WRITER = 'src/lib/auth/project-member-write.ts';
@@ -51,19 +49,19 @@ const READERS = {
 const POLICY_CONSUMERS = [BIRTH, BACKFILL];
 
 const WRITE_METHODS = new Set(['set', 'update', 'create', 'delete', 'add']);
-const EXEMPT = /project-member-authority-exempt:\s*(\S.*)?$/;
+const exemptions = ast.exemptionsFor('project-member-authority-exempt');
 
 const STATES = {
   WRITER: 'writer',
   READER: 'declared-reader',
   BIRTH: 'project-birth',
-  EXEMPT: 'exempt-with-reason',
+  EXEMPT: ast.EXEMPTION_STATES.EXEMPT,
   PATH_OUTSIDE_REF: 'members-path-outside-ref',
   UNDECLARED_CONSUMER: 'undeclared-members-consumer',
   READER_WRITES: 'reader-writes-members',
   SECOND_BIRTH: 'second-project-birth',
   POLICY_UNASKED: 'staffing-policy-unasked',
-  EXEMPT_NO_REASON: 'exempt-without-reason',
+  EXEMPT_NO_REASON: ast.EXEMPTION_STATES.EXEMPT_NO_REASON,
   SOURCE_DRIFT: 'source-drift',
 };
 const BLOCKING = [
@@ -71,42 +69,8 @@ const BLOCKING = [
   STATES.POLICY_UNASKED, STATES.EXEMPT_NO_REASON, STATES.SOURCE_DRIFT,
 ];
 
-function sourceFileOf(absPath, text) {
-  return ts.createSourceFile(absPath, text, ts.ScriptTarget.Latest, true,
-    /\.tsx$/.test(absPath) ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
-}
-
-const lineOf = (sf, node) => sf.getLineAndCharacterOfPosition(node.getStart()).line + 1;
-
-/** Η εξαίρεση της γραμμής από πάνω: `null` αν δεν υπάρχει, αλλιώς ο λόγος (μπορεί κενός). */
-function exemptionAbove(sf, node) {
-  const above = sf.text.split(/\r?\n/)[lineOf(sf, node) - 2] || '';
-  const match = above.match(EXEMPT);
-  return match ? (match[1] || '').trim() : null;
-}
-
-/** Ο αριστερός κρίκος μιας αλυσίδας κλήσεων/προσβάσεων — κάθε κόμβος, από έξω προς τα μέσα. */
-function chainNodes(node) {
-  const nodes = [];
-  for (let current = node; current; ) {
-    nodes.push(current);
-    if (ts.isCallExpression(current) || ts.isPropertyAccessExpression(current)) current = current.expression;
-    else break;
-  }
-  return nodes;
-}
-
-const isCallTo = (node, name) => ts.isCallExpression(node) && ts.isIdentifier(node.expression)
-  && node.expression.text === name;
-
 /** Είναι αυτή η κλήση `X.collection(COLLECTIONS.PROJECTS)` (ή `collection(db, COLLECTIONS.PROJECTS)`); */
-function isProjectsCollection(node) {
-  if (!ts.isCallExpression(node)) return false;
-  const callee = node.expression;
-  const named = (ts.isPropertyAccessExpression(callee) && callee.name.text === 'collection')
-    || (ts.isIdentifier(callee) && callee.text === 'collection');
-  return named && node.arguments.some((arg) => arg.getText() === 'COLLECTIONS.PROJECTS');
-}
+const isProjectsCollection = (node) => ast.isCollectionOf(node, 'COLLECTIONS.PROJECTS');
 
 /** Οι μεταβλητές του αρχείου που κρατούν αναφορά εγγράφου/συλλογής έργων. */
 function projectRefIdentifiers(sf) {
@@ -120,15 +84,6 @@ function projectRefIdentifiers(sf) {
   return names;
 }
 
-/** `.set(x)` χωρίς δεύτερο όρισμα `{ merge: true }` ⇒ δημιουργία/αντικατάσταση. */
-function isCreation(call, method) {
-  if (method === 'create') return true;
-  if (method !== 'set') return false;
-  const options = call.arguments[call.arguments.length - 1];
-  const hasMerge = call.arguments.length > 1 && options !== call.arguments[0] && ts.isObjectLiteralExpression(options)
-    && options.properties.some((p) => p.name && /merge|mergeFields/.test(p.name.getText()));
-  return !hasMerge;
-}
 
 /** `doc(db, COLLECTIONS.PROJECTS, …)` του client SDK. */
 const isProjectsDocCall = (node) => isCallTo(node, 'doc')
@@ -162,13 +117,7 @@ function writesMembers(call) {
   return chainNodes(call.expression.expression).some((n) => isCallTo(n, 'projectMembersCollection'));
 }
 
-function classifyByExemption(sf, node, rel, blockingState, detail) {
-  const reason = exemptionAbove(sf, node);
-  if (reason === null) return { state: blockingState, file: rel, line: lineOf(sf, node), detail };
-  return reason.length > 0
-    ? { state: STATES.EXEMPT, file: rel }
-    : { state: STATES.EXEMPT_NO_REASON, file: rel, line: lineOf(sf, node), detail: 'εξαίρεση ΧΩΡΙΣ λόγο' };
-}
+const classifyByExemption = exemptions.classify;
 
 /** Κ1 + Κ2 + Κ3 για ένα αρχείο. */
 function findingsIn(sf, rel) {
@@ -204,16 +153,16 @@ function consumerFinding(sf, node, rel) {
 }
 
 /** Κ4 + ύπαρξη δηλωμένων αρχείων. */
-function wiringFindings(root) {
+function wiringFindings(root, input = openGateInput({ root })) {
   const findings = [];
   for (const declared of [REF_FILE, WRITER, BIRTH, POLICY, BACKFILL, ...Object.keys(READERS)]) {
-    if (!fs.existsSync(path.join(root, declared))) {
+    if (!input.exists(declared)) {
       findings.push({ state: STATES.SOURCE_DRIFT, file: declared, detail: 'δηλωμένο αρχείο που ΔΕΝ ΥΠΑΡΧΕΙ' });
     }
   }
   for (const consumer of POLICY_CONSUMERS) {
-    const abs = path.join(root, consumer);
-    if (fs.existsSync(abs) && !fs.readFileSync(abs, 'utf8').includes('initialProjectTeam(')) {
+    const text = input.read(consumer);
+    if (text !== null && !text.includes('initialProjectTeam(')) {
       findings.push({ state: STATES.POLICY_UNASKED, file: consumer,
         detail: 'δεν ρωτά την `initialProjectTeam` — η αρχική ομάδα αποφασίζεται αλλού ή πουθενά' });
     }
@@ -223,50 +172,21 @@ function wiringFindings(root) {
 
 const RELEVANT = /PROJECT_MEMBERS|projectMembersCollection|COLLECTIONS\.PROJECTS/;
 
-function measure(opts = {}) {
-  const root = opts.root || PROJECT_ROOT;
-  const files = (opts.codeFiles || collectSourceFiles(root, ['src'])).filter((f) => !/__tests__|\.test\.|\.spec\./.test(f));
-  if (!opts.codeFiles && files.length < 1000) throw new Error(`ΦΡΟΥΡΟΣ: μόνο ${files.length} αρχεία — η σάρωση δεν κοίταξε`);
-  const findings = [];
-  for (const abs of files) {
-    let text;
-    try { text = fs.readFileSync(abs, 'utf8'); } catch { continue; }
-    if (!RELEVANT.test(text)) continue;
-    findings.push(...findingsIn(sourceFileOf(abs, text), toPosix(path.relative(root, abs))));
-  }
-  findings.push(...(opts.skipWiring ? [] : wiringFindings(root)));
-  const tally = Object.fromEntries(Object.values(STATES).map((s) => [s, findings.filter((f) => f.state === s).length]));
-  return { findings, tally, examined: files.length };
-}
-
-function report(result, log = console.log) {
-  const { tally, findings } = result;
-  log('');
-  log('👥 CHECK 3.88 — Πύλη της αρχής της ομάδας έργου (ADR-862 Φ0 Β14)');
-  log(`   αρχεία που εξετάστηκαν: ${result.examined}`);
-  log('');
-  for (const s of BLOCKING) log(`   ⛔ ${s.padEnd(30)} ${tally[s]}`);
-  for (const s of [STATES.WRITER, STATES.READER, STATES.BIRTH, STATES.EXEMPT]) log(`   ✅ ${s.padEnd(30)} ${tally[s]}`);
-  const blocking = findings.filter((f) => BLOCKING.includes(f.state));
-  for (const f of blocking) log(`   ⛔ ${f.state}  ${f.file}${f.line ? ':' + f.line : ''}\n        ${f.detail}`);
-  if (blocking.length) {
-    log('\n   ΘΕΡΑΠΕΙΑ: μέλη → `enrollProjectMembers` / `updateProjectMember` / `removeProjectMember`·');
-    log('   νέο έργο → `writeProjectBirth`. ⚠️ ΜΗΝ προσθέσεις αναγνώστη «επειδή βολεύει».');
-  }
-  return blocking.length;
-}
-
-function main() {
-  if (process.env.SKIP_PROJECT_MEMBER_AUTHORITY === '1') {
-    console.log('⏭️  CHECK 3.88 παραλείφθηκε (SKIP_PROJECT_MEMBER_AUTHORITY=1)');
-    return 0;
-  }
-  const blocking = report(measure());
-  console.log(blocking > 0
-    ? `\n❌ CHECK 3.88 ΑΠΕΤΥΧΕ — ${blocking} μπλοκάρουσα(ες) παραβίαση(εις)\n`
-    : '\n✅ CHECK 3.88 — τα μέλη έργου γράφονται ΜΟΝΟ από τον γραφέα, κάθε έργο γεννιέται με ομάδα\n');
-  return blocking > 0 ? 1 : 0;
-}
+const { measure, report, main } = defineScanGate({
+  projectRoot: PROJECT_ROOT, relevant: RELEVANT, findingsIn, wiringFindings, states: STATES,
+  check: '3.88', skipEnv: 'SKIP_PROJECT_MEMBER_AUTHORITY',
+  ok: 'τα μέλη έργου γράφονται ΜΟΝΟ από τον γραφέα, κάθε έργο γεννιέται με ομάδα',
+  report: {
+    title: '👥 CHECK 3.88 — Πύλη της αρχής της ομάδας έργου (ADR-862 Φ0 Β14)',
+    blocking: BLOCKING,
+    healthy: [STATES.WRITER, STATES.READER, STATES.BIRTH, STATES.EXEMPT],
+    width: 30,
+    remedy: [
+      'ΘΕΡΑΠΕΙΑ: μέλη → `enrollProjectMembers` / `updateProjectMember` / `removeProjectMember`·',
+      'νέο έργο → `writeProjectBirth`. ⚠️ ΜΗΝ προσθέσεις αναγνώστη «επειδή βολεύει».',
+    ],
+  },
+});
 
 if (require.main === module) process.exit(main());
 

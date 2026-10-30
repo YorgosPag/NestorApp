@@ -67,8 +67,9 @@
  * @module scripts/check-shell-boundary
  */
 
-const fs = require('node:fs');
 const path = require('node:path');
+const { openGateInput, INDEX_FLAG } = require('./lib/gate-input');
+const { orderedTally } = require('./lib/gate-ledger');
 
 const TREE = require('./lib/shell-boundary/tree');
 const PS = require('./lib/shell-boundary/public-surface');
@@ -115,10 +116,10 @@ const OWNER_STATES = Object.freeze({
 });
 const OWNER_BLOCKING = [OWNER_STATES.MISSING, OWNER_STATES.WITHOUT_SHELL];
 
-function loadConfig(projectRoot) {
-  const file = path.join(projectRoot, CONFIG_FILE);
-  if (!fs.existsSync(file)) throw new Error(`CHECK 3.52: λείπει το ${CONFIG_FILE}`);
-  const cfg = JSON.parse(fs.readFileSync(file, 'utf8'));
+function loadConfig(projectRoot, input = openGateInput({ root: projectRoot })) {
+  const text = input.read(CONFIG_FILE);
+  if (text === null) throw new Error(`CHECK 3.52: λείπει το ${CONFIG_FILE}`);
+  const cfg = JSON.parse(text);
   for (const field of ['owner', 'shellSymbols', 'groups', 'publicDataHooks']) {
     if (!(field in cfg)) throw new Error(`CHECK 3.52: ${CONFIG_FILE} — λείπει το πεδίο «${field}»`);
   }
@@ -126,8 +127,8 @@ function loadConfig(projectRoot) {
 }
 
 /** Τα groups του δίσκου έναντι των δηλώσεων — και προς τις ΔΥΟ κατευθύνσεις. */
-function auditGroups(projectRoot, cfg) {
-  const onDisk = TREE.enumerateRootGroups(projectRoot, APP_DIR);
+function auditGroups(projectRoot, cfg, input) {
+  const onDisk = TREE.enumerateRootGroups(projectRoot, APP_DIR, input);
   const declared = Object.keys(cfg.groups);
   const findings = [];
   for (const group of onDisk) {
@@ -149,12 +150,12 @@ function auditGroups(projectRoot, cfg) {
  * `public-surface.js` δήλωνε ήδη ότι «*το κείμενο βρίσκει, ο AST αποφασίζει*» — ίσχυε
  * για τον Κ2 και **όχι** για τον Κ3. *Ένα σχόλιο που δηλώνει κάλυψη δεν είναι κάλυψη.*
  */
-function auditShellSymbols(projectRoot, cfg) {
+function auditShellSymbols(projectRoot, cfg, input) {
   const hits = PS.shellImportSites(
     projectRoot,
     cfg.owner,
     cfg.shellSymbols,
-    PS.createResolveContext(projectRoot),
+    PS.createResolveContext(projectRoot, input),
   );
   return hits.map(rel => {
     if (rel === cfg.owner) return { state: SYMBOL_STATES.OWNER_SITE, file: rel };
@@ -164,9 +165,8 @@ function auditShellSymbols(projectRoot, cfg) {
 }
 
 /** Κ3 (β) — ο ιδιοκτήτης υπάρχει ΚΑΙ εισάγει το κέλυφος ΑΜΕΣΑ. */
-function auditOwner(projectRoot, cfg, symbolFindings) {
-  const abs = path.join(projectRoot, cfg.owner);
-  if (!fs.existsSync(abs)) return { state: OWNER_STATES.MISSING, file: cfg.owner };
+function auditOwner(projectRoot, cfg, symbolFindings, input) {
+  if (!input.exists(cfg.owner)) return { state: OWNER_STATES.MISSING, file: cfg.owner };
   const sites = symbolFindings.filter(f => f.state === SYMBOL_STATES.OWNER_SITE);
   if (sites.length === 0) return { state: OWNER_STATES.WITHOUT_SHELL, file: cfg.owner };
   return { state: OWNER_STATES.OK, file: cfg.owner };
@@ -191,31 +191,21 @@ function classifyPage(pageRel, ctx) {
   return { state: wears ? PAGE_STATES.SHELL_PAGE : PAGE_STATES.BARE_PAGE, file: pageRel, group };
 }
 
-/** 🔴 Κλειστή λογιστική, fail-closed: άγνωστη κατάσταση ⇒ `throw` ΜΕ ΟΝΟΜΑ. */
-function tally(findings, order, label) {
-  const ledger = Object.fromEntries(order.map(s => [s, 0]));
-  for (const f of findings) {
-    if (!(f.state in ledger)) throw new Error(`CHECK 3.52: άγνωστη κατάσταση «${f.state}» στη λογιστική ${label}`);
-    ledger[f.state] += 1;
-  }
-  const summed = order.reduce((acc, s) => acc + ledger[s], 0);
-  if (summed !== findings.length) {
-    throw new Error(`CHECK 3.52: η λογιστική ${label} δεν κλείνει (${summed} ≠ ${findings.length})`);
-  }
-  return ledger;
-}
+/** 🔴 Κλειστή λογιστική, fail-closed: άγνωστη κατάσταση ⇒ `throw` ΜΕ ΟΝΟΜΑ (SSoT `gate-ledger`). */
+const tally = (findings, order, label) => orderedTally(findings, order, '3.52', label);
 
-function analyse(projectRoot, { withPublicSurface = true } = {}) {
-  const cfg = loadConfig(projectRoot);
-  const layouts = TREE.enumerateLayouts(projectRoot, APP_DIR);
-  const pages = TREE.enumeratePages(projectRoot, APP_DIR);
+/** `input` = η είσοδος (ADR-924) — προεπιλογή ο δίσκος· με `--index` η όψη του commit (δομή ΚΑΙ σύμβολα). */
+function analyse(projectRoot, { withPublicSurface = true, input = openGateInput({ root: projectRoot }) } = {}) {
+  const cfg = loadConfig(projectRoot, input);
+  const layouts = TREE.enumerateLayouts(projectRoot, APP_DIR, input);
+  const pages = TREE.enumeratePages(projectRoot, APP_DIR, input);
 
-  const groupFindings = auditGroups(projectRoot, cfg);
-  const symbolFindings = auditShellSymbols(projectRoot, cfg);
-  const ownerFinding = auditOwner(projectRoot, cfg, symbolFindings);
+  const groupFindings = auditGroups(projectRoot, cfg, input);
+  const symbolFindings = auditShellSymbols(projectRoot, cfg, input);
+  const ownerFinding = auditOwner(projectRoot, cfg, symbolFindings, input);
 
   const publicReaching = withPublicSurface
-    ? PS.computePublicReaching(projectRoot, cfg.publicDataHooks)
+    ? PS.computePublicReaching(projectRoot, cfg.publicDataHooks, input)
     : null;
 
   const ctx = {
@@ -284,7 +274,7 @@ function main(argv) {
 
   if (!all && staged.length > 0 && !triggers(staged)) return 0;
 
-  const result = analyse(projectRoot);
+  const result = analyse(projectRoot, { input: openGateInput({ root: projectRoot, index: argv.includes(INDEX_FLAG) }) });
 
   if (report) {
     console.log('\nCHECK 3.52 — απογραφή συνόρου κελύφους');

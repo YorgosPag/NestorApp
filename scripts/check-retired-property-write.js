@@ -31,13 +31,13 @@
 
 'use strict';
 
-const fs = require('fs');
 const path = require('path');
 
-const PROJECT_ROOT = path.resolve(__dirname, '..');
-const ts = require(path.join(PROJECT_ROOT, 'node_modules', 'typescript'));
-const { collectSourceFiles } = require('./lib/module-graph/scan-config');
+const ast = require('./lib/write-authority/ast');
 const { toPosix } = require('./lib/module-graph/resolve-specifier');
+const { scanScope, tallyOf, gateEntry } = require('./lib/write-authority/gate-runner');
+
+const { ts, PROJECT_ROOT, sourceFileOf, lineOf, isCallTo } = ast;
 
 const GUARD = 'requirePropertyInTenantScope';
 /** Το ΕΝΑ κέλυφος των διαδρομών ακινήτου: `propertyRoute({ …, intent })` προωθεί το `intent` στον φρουρό. */
@@ -82,14 +82,6 @@ const BLOCKING = [
   STATES.EXEMPT_NO_REASON, STATES.STALE, STATES.CLAIM_FALSE,
 ];
 
-function sourceFileOf(absPath, text) {
-  return ts.createSourceFile(absPath, text, ts.ScriptTarget.Latest, true,
-    /\.tsx$/.test(absPath) ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
-}
-
-const lineOf = (sf, node) => sf.getLineAndCharacterOfPosition(node.getStart()).line + 1;
-const isCallTo = (node, name) => ts.isCallExpression(node) && ts.isIdentifier(node.expression)
-  && node.expression.text === name;
 const isStringLiteral = (n) => ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n);
 /** Ο φρουρός ή το κέλυφος που τον καλεί: και τα δύο δηλώνουν `intent` στο πρώτο τους όρισμα. */
 const isGuardCall = (node) => isCallTo(node, GUARD) || isCallTo(node, SHELL);
@@ -214,12 +206,17 @@ function functionCalls(sf, name, callees) {
 }
 
 /** Ο ισχυρισμός «φτάνει στο loadShowcaseSources» — επαληθευμένος στον κώδικα, όχι στο λόγο. */
-function claimFindings(root, rel, via, routeSf) {
+/** Το AST ενός αρχείου της εισόδου, ή `null` αν δεν υπάρχει στην όψη που κρίνεται. */
+function sourceFileAt(input, rel) {
+  const text = input.read(rel);
+  return text === null ? null : sourceFileOf(path.join(input.root, rel), text);
+}
+
+function claimFindings(input, rel, via, routeSf) {
   const bad = (detail) => [{ state: STATES.CLAIM_FALSE, file: rel, detail }];
   if (!routeSf || !visitCalls(routeSf, via)) return bad(`το route δεν καλεί \`${via}\``);
-  const helpersAbs = path.join(root, HELPERS);
-  if (!fs.existsSync(helpersAbs)) return bad(`λείπει το ${HELPERS}`);
-  const helpersSf = sourceFileOf(helpersAbs, fs.readFileSync(helpersAbs, 'utf8'));
+  const helpersSf = sourceFileAt(input, HELPERS);
+  if (!helpersSf) return bad(`λείπει το ${HELPERS}`);
   if (!functionCalls(helpersSf, SHOWCASE_GATE, [ASSERT])) return bad(`η \`${SHOWCASE_GATE}\` ΔΕΝ καλεί \`${ASSERT}(\``);
   if (via !== SHOWCASE_GATE && !functionCalls(helpersSf, via, [SHOWCASE_GATE, ASSERT])) {
     return bad(`η \`${via}\` δεν καλεί \`${SHOWCASE_GATE}\` ούτε \`${ASSERT}\``);
@@ -235,11 +232,10 @@ function visitCalls(sf, name) {
 }
 
 /** Κ3: κάθε δηλωμένη εγγραφή υπάρχει, χρειάζεται ακόμη, και ο ισχυρισμός της στέκει. */
-function declaredFindings(root, declared, factsByRel) {
+function declaredFindings(input, declared, factsByRel) {
   const findings = [];
   for (const [rel, entry] of Object.entries(declared)) {
-    const abs = path.join(root, rel);
-    if (!fs.existsSync(abs)) {
+    if (!input.exists(rel)) {
       findings.push({ state: STATES.STALE, file: rel, detail: 'δηλωμένη διαδρομή που ΔΕΝ ΥΠΑΡΧΕΙ — σβήσε την εγγραφή' });
       continue;
     }
@@ -248,48 +244,46 @@ function declaredFindings(root, declared, factsByRel) {
     if (!needed) {
       findings.push({ state: STATES.STALE, file: rel, detail: 'δηλωμένη αλλά ΔΕΝ χρειάζεται πια (φρουρός/assert/εξαίρεση ή κανένας μεταλλακτικός handler) — σβήσε την εγγραφή' });
     } else if (entry.via) {
-      findings.push(...claimFindings(root, rel, entry.via, sourceFileOf(abs, fs.readFileSync(abs, 'utf8'))));
+      findings.push(...claimFindings(input, rel, entry.via, sourceFileAt(input, rel)));
     }
   }
   return findings;
 }
 
 /** Ο ισχυρισμός «το κέλυφος καλεί τον φρουρό» — επαληθευμένος, αφού η Κ2 τον εμπιστεύεται. */
-function shellFindings(root, usedBy) {
+function shellFindings(input, usedBy) {
   if (!usedBy) return [];
   const bad = (detail) => [{ state: STATES.CLAIM_FALSE, file: usedBy, detail }];
-  const abs = path.join(root, SHELL_FILE);
-  if (!fs.existsSync(abs)) return bad(`καλεί \`${SHELL}\` αλλά λείπει το ${SHELL_FILE}`);
-  const sf = sourceFileOf(abs, fs.readFileSync(abs, 'utf8'));
+  const sf = sourceFileAt(input, SHELL_FILE);
+  if (!sf) return bad(`καλεί \`${SHELL}\` αλλά λείπει το ${SHELL_FILE}`);
   return functionCalls(sf, SHELL, [GUARD]) ? [] : bad(`η \`${SHELL}\` ΔΕΝ καλεί \`${GUARD}(\``);
 }
 
-function scanRoute(root, abs, rel, declared, factsByRel, findings) {
-  const facts = routeFacts(sourceFileOf(abs, fs.readFileSync(abs, 'utf8')));
+function scanRoute(sf, rel, declared, factsByRel, findings) {
+  const facts = routeFacts(sf);
   factsByRel.set(rel, facts);
   findings.push(...routeFindings(rel, facts, declared));
 }
 
 function measure(opts = {}) {
-  const root = opts.root || PROJECT_ROOT;
+  const { root, input, files } = scanScope(opts, PROJECT_ROOT);
   const declared = opts.declared || UNGUARDED_ROUTES;
-  const files = (opts.codeFiles || collectSourceFiles(root, ['src'])).filter((f) => !/__tests__|\.test\.|\.spec\./.test(f));
-  if (!opts.codeFiles && files.length < 1000) throw new Error(`ΦΡΟΥΡΟΣ: μόνο ${files.length} αρχεία — η σάρωση δεν κοίταξε`);
   const findings = [];
   const factsByRel = new Map();
   let shellUser = null;
   for (const abs of files) {
     const rel = toPosix(path.relative(root, abs));
-    let text;
-    try { text = fs.readFileSync(abs, 'utf8'); } catch { continue; }
-    if (text.includes(GUARD) || text.includes(SHELL)) findings.push(...guardCallFindings(sourceFileOf(abs, text), rel));
-    if (ROUTE_RE.test(rel)) scanRoute(root, abs, rel, declared, factsByRel, findings);
-    if (!shellUser && ROUTE_RE.test(rel) && visitCalls(sourceFileOf(abs, text), SHELL)) shellUser = rel;
+    const text = input.read(abs);
+    if (text === null) continue;
+    let sf = null;   // ΕΝΑ AST ανά αρχείο, και μόνο αν το χρειαστεί κάποιος έλεγχος (~16k αρχεία, λίγα σχετικά)
+    const parsed = () => (sf = sf || sourceFileOf(abs, text));
+    if (text.includes(GUARD) || text.includes(SHELL)) findings.push(...guardCallFindings(parsed(), rel));
+    if (ROUTE_RE.test(rel)) scanRoute(parsed(), rel, declared, factsByRel, findings);
+    if (!shellUser && ROUTE_RE.test(rel) && visitCalls(parsed(), SHELL)) shellUser = rel;
   }
-  findings.push(...shellFindings(root, shellUser));
-  findings.push(...declaredFindings(root, declared, factsByRel));
-  const tally = Object.fromEntries(Object.values(STATES).map((s) => [s, findings.filter((f) => f.state === s).length]));
-  return { findings, tally, examined: files.length, routes: factsByRel.size };
+  findings.push(...shellFindings(input, shellUser));
+  findings.push(...declaredFindings(input, declared, factsByRel));
+  return { findings, tally: tallyOf(findings, STATES), examined: files.length, routes: factsByRel.size };
 }
 
 function report(result, log = console.log) {
@@ -309,17 +303,10 @@ function report(result, log = console.log) {
   return blocking.length;
 }
 
-function main() {
-  if (process.env.SKIP_RETIRED_PROPERTY_WRITE === '1') {
-    console.log('⏭️  CHECK 3.100 παραλείφθηκε (SKIP_RETIRED_PROPERTY_WRITE=1)');
-    return 0;
-  }
-  const blocking = report(measure());
-  console.log(blocking > 0
-    ? `\n❌ CHECK 3.100 ΑΠΕΤΥΧΕ — ${blocking} μπλοκάρουσα(ες) παραβίαση(εις)\n`
-    : '\n✅ CHECK 3.100 — κάθε διαδρομή που γράφει σε ακίνητο ρωτά αν είναι αποσυρμένο\n');
-  return blocking > 0 ? 1 : 0;
-}
+const { main } = gateEntry({
+  projectRoot: PROJECT_ROOT, measure, report, check: '3.100', skipEnv: 'SKIP_RETIRED_PROPERTY_WRITE',
+  ok: 'κάθε διαδρομή που γράφει σε ακίνητο ρωτά αν είναι αποσυρμένο',
+});
 
 if (require.main === module) process.exit(main());
 

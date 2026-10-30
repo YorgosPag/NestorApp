@@ -28,11 +28,9 @@
 
 'use strict';
 
-const fs = require('fs');
-const path = require('path');
-
 const ast = require('./lib/write-authority/ast');
 const { defineRegistryGate } = require('./lib/write-authority/gate-runner');
+const { openGateInput } = require('./lib/gate-input');
 const { MATERIAL_DOORS, DOOR_COVER } = require('./lib/listing-model-custody/material-doors-contract');
 
 const { ts, PROJECT_ROOT, calleeName } = ast;
@@ -58,8 +56,8 @@ const BLOCKING = [
   STATES.STRAY_DERIVATION, STATES.NO_REASON, STATES.SOURCE_DRIFT,
 ];
 
-function loadRegistry(root) {
-  return JSON.parse(fs.readFileSync(path.join(root, REGISTRY_FILE), 'utf8'));
+function loadRegistry(root, input = openGateInput({ root })) {
+  return input.readJson(REGISTRY_FILE);
 }
 
 /** `(x)` · `x as T` · `x satisfies T` · `x!` ⇒ `x`. */
@@ -133,10 +131,10 @@ function judgeDeclaration(file, reason, doesIt, okState) {
 }
 
 /** Κ1 (η άλλη μεριά) + Κ2 (ζωντανή πόρτα) + Κ4. Αρχείο εκτός προφίλτρου = ΜΗΔΕΝ, ποτέ σιωπή. */
-function declaredFindings(root, registry, factsByFile) {
+function declaredFindings(root, registry, factsByFile, input = openGateInput({ root })) {
   const factsOf = (file) => factsByFile.get(file) || { sourced: [], judged: [], calls: [] };
   const declared = [registry.binder, ...Object.keys(registry.schemaLinks), ...Object.keys(registry.derivationOwners)];
-  const missing = declared.filter((f) => !fs.existsSync(path.join(root, f)));
+  const missing = declared.filter((f) => !input.exists(f));
   const findings = missing.map((file) => ({ state: STATES.SOURCE_DRIFT, file, detail: 'δηλωμένο αρχείο που ΔΕΝ ΥΠΑΡΧΕΙ' }));
   const live = (file) => !missing.includes(file);
   if (live(registry.binder)) findings.push(judgeDeclaration(registry.binder, null, factsOf(registry.binder).sourced.length > 0, STATES.BINDER));

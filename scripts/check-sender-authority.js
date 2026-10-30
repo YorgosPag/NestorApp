@@ -39,15 +39,15 @@
  */
 'use strict';
 
-const fs = require('fs');
 const path = require('path');
 
-const PROJECT_ROOT = path.resolve(__dirname, '..');
-const ts = require(path.join(PROJECT_ROOT, 'node_modules', 'typescript'));
-const { collectSourceFiles } = require('./lib/module-graph/scan-config');
+const ast = require('./lib/write-authority/ast');
+const { openGateInput, MIN_PRODUCTION_SOURCES } = require('./lib/gate-input');
 const { toPosix } = require('./lib/module-graph/resolve-specifier');
+const { scanScope, gateEntry, printFindingsReport } = require('./lib/write-authority/gate-runner');
 
-const REGISTRY_PATH = path.join(PROJECT_ROOT, '.ssot-registry.json');
+const { ts, PROJECT_ROOT, sourceFileOf, lineOf } = ast;
+const REGISTRY_FILE = '.ssot-registry.json';
 const REGISTRY_MODULE = 'sender-identity';
 const ROOT_FILE = 'src/services/company/sender-identity.ts';
 
@@ -109,17 +109,6 @@ const BLOCKING = [
 // ============================================================================
 // AST — parse-only
 // ============================================================================
-
-function sourceFileOf(absPath, text) {
-  return ts.createSourceFile(
-    absPath, text, ts.ScriptTarget.Latest, true,
-    /\.tsx$/.test(absPath) ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
-  );
-}
-
-function lineOf(sf, node) {
-  return sf.getLineAndCharacterOfPosition(node.getStart()).line + 1;
-}
 
 /**
  * **Κ1 — `process.env.X` όπου X ανήκει στο κλειστό σύνολο.**
@@ -237,8 +226,8 @@ function rootExportNames(sf) {
 // Η ΜΕΤΡΗΣΗ
 // ============================================================================
 
-function loadAllowlist(registryPath = REGISTRY_PATH) {
-  const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
+function loadAllowlist(input = openGateInput({ root: PROJECT_ROOT })) {
+  const registry = input.readJson(REGISTRY_FILE);
   const mod = registry.modules?.[REGISTRY_MODULE];
   if (!mod) {
     throw new Error(`.ssot-registry.json: λείπει το module «${REGISTRY_MODULE}» — η πύλη δεν έχει δηλώσεις`);
@@ -247,21 +236,23 @@ function loadAllowlist(registryPath = REGISTRY_PATH) {
 }
 
 function measure(opts = {}) {
-  const root = opts.root || PROJECT_ROOT;
-  const { allowlist, patterns } = opts.registry || loadAllowlist(opts.registryPath);
+  // ⚠️ ΚΑΙ τα tests: η 3.83 κρίνει κάθε αρχείο του `src/` (ένα test που συνθέτει «Όνομα <διεύθυνση>» είναι παραβίαση).
+  const { root, input, files } = scanScope(opts, PROJECT_ROOT,
+    (scanned) => scanned.sources(['src'], { minimum: MIN_PRODUCTION_SOURCES }));
+  const { allowlist, patterns } = opts.registry || loadAllowlist(input);
   const allowed = new Set(allowlist);
 
   const tally = Object.fromEntries(Object.values(STATES).map((s) => [s, 0]));
   const findings = [];
 
   // ── Κ3: η ρίζα ───────────────────────────────────────────────────────────
-  const rootAbs = path.join(root, ROOT_FILE);
-  if (!fs.existsSync(rootAbs)) {
+  const rootText = input.read(ROOT_FILE);
+  if (rootText === null) {
     tally[STATES.ROOT_DRIFT] += 1;
     findings.push({ state: STATES.ROOT_DRIFT, file: ROOT_FILE, detail: 'η ρίζα δεν υπάρχει' });
     return { findings, tally, examined: 0 };
   }
-  const rootSf = sourceFileOf(rootAbs, fs.readFileSync(rootAbs, 'utf8'));
+  const rootSf = sourceFileOf(path.join(root, ROOT_FILE), rootText);
   const exported = rootExportNames(rootSf);
   const missing = ROOT_EXPORTS.filter((name) => !exported.has(name));
   if (missing.length > 0) {
@@ -275,16 +266,11 @@ function measure(opts = {}) {
   }
 
   // ── Κ1 + Κ2 + παρονομαστής ───────────────────────────────────────────────
-  const files = opts.codeFiles || collectSourceFiles(root, ['src']);
-  if (!opts.codeFiles && files.length < 1000) {
-    throw new Error(`ΦΡΟΥΡΟΣ: μόνο ${files.length} αρχεία σαρώθηκαν — η σάρωση δεν κοίταξε`);
-  }
-
   for (const abs of files) {
     const rel = toPosix(path.relative(root, abs));
     if (rel === ROOT_FILE) continue;                       // η ρίζα ΟΡΙΖΕΙ την απάντηση
-    let text;
-    try { text = fs.readFileSync(abs, 'utf8'); } catch { continue; }
+    const text = input.read(abs);
+    if (text === null) continue;
     // Προφίλτρο **ασφαλές δομικά**: ό,τι δεν περιέχει καν το κείμενο δεν μπορεί να έχει κόμβο.
     if (!text.includes('process.env.') && !text.includes('<${')) {
       if (text.includes('sender-identity')) {
@@ -319,7 +305,7 @@ function measure(opts = {}) {
 
   // ── Κ4: ο παρονομαστής — δήλωση που δεν προστατεύει τίποτα ────────────────
   for (const rel of allowlist) {
-    if (!fs.existsSync(path.join(root, rel))) {
+    if (!input.exists(rel)) {
       tally[STATES.ORPHAN_ALLOWLIST] += 1;
       findings.push({
         state: STATES.ORPHAN_ALLOWLIST, file: rel,
@@ -352,55 +338,25 @@ function measure(opts = {}) {
 }
 
 function report(result, log = console.log) {
-  const { tally, findings } = result;
-  log('');
-  log('✉️  CHECK 3.83 — Πύλη αρχής του αποστολέα (ADR-857 Φ9)');
-  log('');
-  log(`   αρχεία που εξετάστηκαν: ${result.examined}`);
-  log(`   μεταβλητές του κλειστού συνόλου: ${SENDER_ENV_VARS.length} — ${SENDER_ENV_VARS.join(' · ')}`);
-  log('');
-  for (const s of BLOCKING) log(`   ⛔ ${s.padEnd(24)} ${tally[s]}`);
-  log('');
-  for (const s of [STATES.ROOT, STATES.ALLOWED, STATES.CONSUMER]) {
-    log(`   ✅ ${s.padEnd(24)} ${tally[s]}`);
-  }
-
-  const blocking = findings.filter((f) => BLOCKING.includes(f.state));
-  if (blocking.length) {
-    log('');
-    log('   ── ΕΥΡΗΜΑΤΑ ──');
-    for (const f of blocking) {
-      log(`   ⛔ ${f.state}  ${f.file}${f.line ? ':' + f.line : ''}`);
-      log(`        ${f.detail}`);
-    }
-    log('');
-    log('   ΘΕΡΑΠΕΙΑ — σχεδόν πάντα η πρώτη:');
-    log("     (1) ΡΩΤΑ ΤΗ ΡΙΖΑ:  import { resolveSenderHeader } from '@/services/company/sender-identity'");
-    log('     (2) Αν η τιμή έρχεται από ΒΑΣΗ: `adoptStoredSenderHeader(...)` — ρητή υιοθεσία που ξανακαθαρίζει.');
-    log('     ⚠️ ΜΗΝ λύσεις κόκκινο προσθέτοντας αρχείο στο allowlist «επειδή βολεύει»:');
-    log('        το allowlist σημαίνει «ΕΔΩ ζει η απάντηση», όχι «εδώ επιτρέπεται εξαίρεση».');
-  }
-  return blocking.length;
+  return printFindingsReport(result, {
+    title: '✉️  CHECK 3.83 — Πύλη αρχής του αποστολέα (ADR-857 Φ9)',
+    subtitle: `μεταβλητές του κλειστού συνόλου: ${SENDER_ENV_VARS.length} — ${SENDER_ENV_VARS.join(' · ')}`,
+    blocking: BLOCKING,
+    healthy: [STATES.ROOT, STATES.ALLOWED, STATES.CONSUMER],
+    remedy: [
+      'ΘΕΡΑΠΕΙΑ — σχεδόν πάντα η πρώτη:',
+      "  (1) ΡΩΤΑ ΤΗ ΡΙΖΑ:  import { resolveSenderHeader } from '@/services/company/sender-identity'",
+      '  (2) Αν η τιμή έρχεται από ΒΑΣΗ: `adoptStoredSenderHeader(...)` — ρητή υιοθεσία που ξανακαθαρίζει.',
+      '  ⚠️ ΜΗΝ λύσεις κόκκινο προσθέτοντας αρχείο στο allowlist «επειδή βολεύει»:',
+      '     το allowlist σημαίνει «ΕΔΩ ζει η απάντηση», όχι «εδώ επιτρέπεται εξαίρεση».',
+    ],
+  }, log);
 }
 
-function main() {
-  if (process.env.SKIP_SENDER_AUTHORITY === '1') {
-    console.log('⏭️  CHECK 3.83 παραλείφθηκε (SKIP_SENDER_AUTHORITY=1)');
-    return 0;
-  }
-  const result = measure();
-  const blocking = report(result);
-  if (blocking > 0) {
-    console.log('');
-    console.log(`❌ CHECK 3.83 ΑΠΕΤΥΧΕ — ${blocking} μπλοκάρουσα(ες) παραβίαση(εις)`);
-    console.log('');
-    return 1;
-  }
-  console.log('');
-  console.log('✅ CHECK 3.83 — ο αποστολέας αποφασίζεται ΜΟΝΟ στη ρίζα');
-  console.log('');
-  return 0;
-}
+const { main } = gateEntry({
+  projectRoot: PROJECT_ROOT, measure, report, check: '3.83', skipEnv: 'SKIP_SENDER_AUTHORITY',
+  ok: 'ο αποστολέας αποφασίζεται ΜΟΝΟ στη ρίζα',
+});
 
 if (require.main === module) process.exit(main());
 module.exports = {

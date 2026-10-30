@@ -36,12 +36,13 @@
  * If no such file exists, the check reports the miss.
  * =============================================================================
  */
-const fs = require('fs');
 const path = require('path');
+const { commitInput } = require('./lib/gate-input');
 
 const REPO_ROOT = path.join(__dirname, '..');
-const REGISTRY_FILE = path.join(REPO_ROOT, 'src/config/notification-keys.ts');
-const LOCALE_ROOT = path.join(REPO_ROOT, 'src/i18n/locales');
+// ADR-924: σχετικά με τη ρίζα — κάθε ανάγνωση περνά από την ΕΙΣΟΔΟ (`--index` ⇒ η όψη του commit).
+const REGISTRY_FILE = 'src/config/notification-keys.ts';
+const LOCALE_ROOT = 'src/i18n/locales';
 const LANGS = ['el', 'en'];
 
 const RED = '\x1b[0;31m';
@@ -79,24 +80,23 @@ function extractLeafKeys(source) {
 // ---------------------------------------------------------------------------
 // Key resolution against locale files.
 // ---------------------------------------------------------------------------
-const localeCache = new Map();
-
-function loadLocaleFile(lang, ns) {
-  const cacheKey = `${lang}:${ns}`;
-  if (localeCache.has(cacheKey)) return localeCache.get(cacheKey);
-  const filePath = path.join(LOCALE_ROOT, lang, `${ns}.json`);
-  if (!fs.existsSync(filePath)) {
-    localeCache.set(cacheKey, null);
-    return null;
-  }
-  try {
-    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    localeCache.set(cacheKey, parsed);
-    return parsed;
-  } catch (err) {
-    localeCache.set(cacheKey, null);
-    return null;
-  }
+/** Αναγνώστης locale ΜΙΑΣ εισόδου, με cache — λείπει ή δεν είναι JSON ⇒ `null`. */
+function localeLoader(input) {
+  const cache = new Map();
+  return (lang, ns) => {
+    const cacheKey = `${lang}:${ns}`;
+    if (!cache.has(cacheKey)) {
+      const text = input.read(`${LOCALE_ROOT}/${lang}/${ns}.json`);
+      let parsed = null;
+      try {
+        parsed = text === null ? null : JSON.parse(text);
+      } catch {
+        parsed = null;
+      }
+      cache.set(cacheKey, parsed);
+    }
+    return cache.get(cacheKey);
+  };
 }
 
 function splitKey(fullKey) {
@@ -125,7 +125,7 @@ function resolvePath(obj, dottedPath) {
   return node;
 }
 
-function verifyKey(fullKey) {
+function verifyKey(fullKey, loadLocaleFile) {
   const { ns, path: subpath } = splitKey(fullKey);
   const errors = [];
   for (const lang of LANGS) {
@@ -144,56 +144,73 @@ function verifyKey(fullKey) {
   return errors;
 }
 
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
-if (!fs.existsSync(REGISTRY_FILE)) {
-  console.log(`${YELLOW}  ⏭  notification-keys.ts not found — skipping${NC}`);
-  process.exit(0);
+/**
+ * Τα κλειδιά του μητρώου και τα σφάλματά τους — από την ΕΙΣΟΔΟ (ADR-924 Φ3).
+ * `null` ⇒ το μητρώο λείπει (παράλειψη, όπως πάντα).
+ */
+function measure(input = commitInput(REPO_ROOT)) {
+  const source = input.read(REGISTRY_FILE);
+  if (source === null) return null;
+  const loadLocaleFile = localeLoader(input);
+  const keys = extractLeafKeys(source).sort();
+  return { keys, findings: keys.map((fullKey) => ({ fullKey, errors: verifyKey(fullKey, loadLocaleFile) })) };
 }
 
-const source = fs.readFileSync(REGISTRY_FILE, 'utf8');
-const keys = extractLeafKeys(source);
-
-if (keys.length === 0) {
-  console.log(`${YELLOW}  ⏭  NOTIFICATION_KEYS has no leaves — nothing to verify${NC}`);
-  process.exit(0);
-}
-
-let problems = 0;
-for (const fullKey of keys.sort()) {
-  const errors = verifyKey(fullKey);
-  if (errors.length === 0) continue;
-  problems += errors.length;
-  for (const err of errors) {
-    if (err.kind === 'missing-file') {
-      console.log(
-        `${RED}  🚫 '${fullKey}' — locale file missing: src/i18n/locales/${err.lang}/${err.ns}.json${NC}`,
-      );
-    } else if (err.kind === 'missing-key') {
-      console.log(
-        `${RED}  🚫 '${fullKey}' — key not found in ${err.lang}/${err.ns}.json (path: ${err.subpath})${NC}`,
-      );
-    } else if (err.kind === 'not-a-string') {
-      console.log(
-        `${RED}  🚫 '${fullKey}' — ${err.lang}/${err.ns}.json: ${err.subpath} is not a string leaf${NC}`,
-      );
-    }
+function printError(fullKey, err) {
+  if (err.kind === 'missing-file') {
+    console.log(
+      `${RED}  🚫 '${fullKey}' — locale file missing: src/i18n/locales/${err.lang}/${err.ns}.json${NC}`,
+    );
+  } else if (err.kind === 'missing-key') {
+    console.log(
+      `${RED}  🚫 '${fullKey}' — key not found in ${err.lang}/${err.ns}.json (path: ${err.subpath})${NC}`,
+    );
+  } else if (err.kind === 'not-a-string') {
+    console.log(
+      `${RED}  🚫 '${fullKey}' — ${err.lang}/${err.ns}.json: ${err.subpath} is not a string leaf${NC}`,
+    );
   }
 }
 
-if (problems > 0) {
-  console.log('');
-  console.log(
-    `${RED}  ❌ Notification keys locale integrity FAILED — ${problems} problem(s) across ${keys.length} registered keys${NC}`,
-  );
-  console.log(
-    `${YELLOW}     Fix: add the missing keys to the affected locale JSON files (el AND en).${NC}`,
-  );
-  process.exit(1);
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
+function main() {
+  const measured = measure();
+  if (measured === null) {
+    console.log(`${YELLOW}  ⏭  notification-keys.ts not found — skipping${NC}`);
+    return 0;
+  }
+  const { keys, findings } = measured;
+  if (keys.length === 0) {
+    console.log(`${YELLOW}  ⏭  NOTIFICATION_KEYS has no leaves — nothing to verify${NC}`);
+    return 0;
+  }
+  let problems = 0;
+  for (const { fullKey, errors } of findings) {
+    problems += errors.length;
+    for (const err of errors) printError(fullKey, err);
+  }
+  return report(problems, keys.length);
 }
 
-console.log(
-  `${GREEN}  ✅ Notification keys locale integrity: ${keys.length} key(s) resolve in both el+en locales${NC}`,
-);
-process.exit(0);
+function report(problems, keyCount) {
+  if (problems > 0) {
+    console.log('');
+    console.log(
+      `${RED}  ❌ Notification keys locale integrity FAILED — ${problems} problem(s) across ${keyCount} registered keys${NC}`,
+    );
+    console.log(
+      `${YELLOW}     Fix: add the missing keys to the affected locale JSON files (el AND en).${NC}`,
+    );
+    return 1;
+  }
+  console.log(
+    `${GREEN}  ✅ Notification keys locale integrity: ${keyCount} key(s) resolve in both el+en locales${NC}`,
+  );
+  return 0;
+}
+
+if (require.main === module) process.exit(main());
+
+module.exports = { measure };

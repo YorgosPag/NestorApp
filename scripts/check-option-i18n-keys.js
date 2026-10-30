@@ -43,32 +43,28 @@
  * Usage: node scripts/check-option-i18n-keys.js file1.ts file2.ts ...
  * =============================================================================
  */
-const fs = require('fs');
 const path = require('path');
+const { commitInput } = require('./lib/gate-input');
+const labels = require('./lib/i18n/config-label-keys');
 
-const REPO_ROOT = path.join(__dirname, '..');
-const LOCALE_DIR = path.join(REPO_ROOT, 'src', 'i18n', 'locales', 'el');
-const BASELINE_FILE = path.join(REPO_ROOT, '.option-i18n-keys-baseline.json');
+const { KEY_SHAPE, EL_LOCALE_DIR: LOCALE_DIR, lineOf } = labels;
+const BASELINE_FILE = '.option-i18n-keys-baseline.json';
 
 const RED = '\x1b[0;31m';
 const GREEN = '\x1b[0;32m';
-const YELLOW = '\x1b[1;33m';
 const NC = '\x1b[0m';
 
 // ---------------------------------------------------------------------------
 // Locale index — load every el/*.json once and flatten to a Set of dotted keys.
 // ---------------------------------------------------------------------------
-let localeKeySet = null;
-
-function buildLocaleIndex() {
-  if (localeKeySet) return localeKeySet;
-  localeKeySet = new Set();
-  if (!fs.existsSync(LOCALE_DIR)) return localeKeySet;
-  for (const file of fs.readdirSync(LOCALE_DIR)) {
+function buildLocaleIndex(input) {
+  const localeKeySet = new Set();
+  const listing = input.children(LOCALE_DIR);
+  if (!listing) return localeKeySet;
+  for (const file of listing.files) {
     if (!file.endsWith('.json')) continue;
     try {
-      const data = JSON.parse(fs.readFileSync(path.join(LOCALE_DIR, file), 'utf8'));
-      flatten(data, '', localeKeySet);
+      flatten(JSON.parse(input.read(`${LOCALE_DIR}/${file}`)), '', localeKeySet);
     } catch {
       // corrupt JSON — ignored here, other checks will catch it
     }
@@ -93,19 +89,12 @@ function flatten(obj, prefix, sink) {
 // Candidate extraction — find i18n key literals in option/label configurations.
 // ---------------------------------------------------------------------------
 /**
- * A string qualifies as a candidate i18n key when it has at least one dot
- * and looks like a dotted identifier (ASCII letters, digits, underscores).
- * This deliberately filters out URLs, file paths, regex fragments, etc.
- */
-const KEY_SHAPE = /^[a-z][a-zA-Z0-9_]*(\.[a-zA-Z0-9_]+){1,}$/;
-
-/**
  * Extract candidate keys from a source file. We look for two common shapes:
  *
  *   1. `label: 'a.b.c'` — the MODAL_SELECT_* option array pattern.
- *   2. `foo: 'a.b.c'` inside a `_LABELS` const — the dropdown-misc-labels pattern.
+ *   2. `foo: 'a.b.c'` inside a `_LABELS` const — the dropdown-misc-labels pattern (`config-label-keys`).
  *
- * Returns an array of { key, line } entries.
+ * Returns an array of { key, index } entries.
  */
 function extractCandidates(content) {
   const out = [];
@@ -113,119 +102,47 @@ function extractCandidates(content) {
   // Shape 1: `label: '...'` or `label: "..."`
   const labelRegex = /\blabel\s*:\s*['"]([^'"]+)['"]/g;
   for (const m of content.matchAll(labelRegex)) {
-    const value = m[1];
-    if (KEY_SHAPE.test(value)) {
-      out.push({ key: value, index: m.index });
-    }
+    if (KEY_SHAPE.test(m[1])) out.push({ key: m[1], index: m.index });
   }
 
-  // Shape 2: values inside *_LABELS const objects — only scan inside such blocks.
-  // We use a coarse lexical window: from `export const FOO_LABELS = {` up to the
-  // matching closing `}`. Good enough for constants files.
-  const labelsBlockRegex = /export\s+const\s+[A-Z][A-Z0-9_]*_LABELS\s*=\s*\{([\s\S]*?)\n\}\s*as\s+const;?/g;
-  for (const block of content.matchAll(labelsBlockRegex)) {
-    const body = block[1];
-    const baseIndex = block.index + block[0].indexOf(body);
-    const entryRegex = /['"]([^'"]+)['"]\s*,?/g;
-    for (const m of body.matchAll(entryRegex)) {
-      const value = m[1];
-      if (KEY_SHAPE.test(value)) {
-        out.push({ key: value, index: baseIndex + m.index });
-      }
-    }
-  }
-
+  out.push(...labels.labelsBlockCandidates(content));
   return out;
 }
 
-function getLineNumber(content, index) {
-  return content.substring(0, index).split('\n').length;
-}
-
-function normalizePath(p) {
-  return p.replace(/\\/g, '/');
-}
-
-/**
- * Files this check cares about. Everything else is skipped fast.
- */
-function isInScope(file) {
-  const norm = normalizePath(file);
-  if (!/\.(ts|tsx)$/.test(norm)) return false;
-  if (/(__tests__|\.test\.|\.spec\.|\.stories\.|\.d\.ts$)/.test(norm)) return false;
-  if (norm.startsWith('scripts/')) return false;
-  return (
-    norm.startsWith('src/config/') ||
-    /src\/subapps\/[^/]+\/config\/modal-select(\/|\.)/.test(norm) ||
-    /src\/constants\/domains\/dropdown-[a-z-]+\.ts$/.test(norm)
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Baseline handling
-// ---------------------------------------------------------------------------
-let baseline = { files: {} };
-if (fs.existsSync(BASELINE_FILE)) {
-  try {
-    baseline = JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf8'));
-    if (!baseline.files) baseline.files = {};
-  } catch {
-    baseline = { files: {} };
-  }
+/** Οι ορφανές ετικέτες ενός αρχείου: υποψήφιοι που δεν υπάρχουν σε κανένα `el/*.json`. */
+function orphansOf(content, localeKeys) {
+  return extractCandidates(content)
+    .filter(({ key }) => !localeKeys.has(key))
+    .map(({ key, index }) => ({ key, line: lineOf(content, index) }));
 }
 
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
-const files = process.argv.slice(2);
-const localeKeys = buildLocaleIndex();
-let hasBlock = false;
-let totalChecked = 0;
+/**
+ * `files` = τα σταδιοποιημένα. `input` = η είσοδος (ADR-924): με `--index` (εκτελεστής) τα locale, η baseline και τα
+ * αρχεία ΤΟΥ COMMIT, όχι του δίσκου.
+ */
+function run(files, input = commitInput(path.join(__dirname, '..'))) {
+  const localeKeys = buildLocaleIndex(input);
+  const scanned = labels.scanConfigLabels(files, input, (content) => orphansOf(content, localeKeys));
+  const hasBlock = labels.judgeConfigLabels(scanned, input, {
+    baselineFile: BASELINE_FILE,
+    noun: 'option i18n orphans',
+    newNoun: 'new orphan option i18n key(s)',
+    describeHit: ({ key }) => `'${key}' — not present in any src/i18n/locales/el/*.json`,
+  });
 
-for (const file of files) {
-  if (!fs.existsSync(file)) continue;
-  if (!isInScope(file)) continue;
-  totalChecked += 1;
-
-  const content = fs.readFileSync(file, 'utf8');
-  const candidates = extractCandidates(content);
-  if (candidates.length === 0) continue;
-
-  const orphans = [];
-  for (const { key, index } of candidates) {
-    if (!localeKeys.has(key)) {
-      orphans.push({ key, line: getLineNumber(content, index) });
-    }
+  if (hasBlock) {
+    console.log(`${RED}  ❌ Option-label i18n key check FAILED — add keys to locale JSON or remove orphaned labels${NC}`);
+    return 1;
   }
-
-  if (orphans.length === 0) continue;
-
-  const normFile = normalizePath(file);
-  const baselineCount = baseline.files[normFile] || 0;
-  const currentCount = orphans.length;
-
-  if (currentCount <= baselineCount) {
-    if (currentCount < baselineCount) {
-      console.log(`${GREEN}  📉 ${normFile}: ${baselineCount} → ${currentCount} (-${baselineCount - currentCount}) option i18n orphans${NC}`);
-    }
-    continue;
+  if (scanned.length > 0) {
+    console.log(`${GREEN}  ✅ Option i18n keys: all ${scanned.length} config file(s) have resolvable labels${NC}`);
   }
-
-  hasBlock = true;
-  const newCount = currentCount - baselineCount;
-  console.log(`${RED}  🚫 ${normFile}: ${newCount} new orphan option i18n key(s)${NC}`);
-  const showKeys = orphans.slice(-newCount);
-  for (const { key, line } of showKeys) {
-    console.log(`${YELLOW}     Line ${line}: '${key}' — not present in any src/i18n/locales/el/*.json${NC}`);
-  }
+  return 0;
 }
 
-if (hasBlock) {
-  console.log(`${RED}  ❌ Option-label i18n key check FAILED — add keys to locale JSON or remove orphaned labels${NC}`);
-  process.exit(1);
-}
+if (require.main === module) process.exit(run(process.argv.slice(2).filter((a) => !a.startsWith('--'))));
 
-if (totalChecked > 0) {
-  console.log(`${GREEN}  ✅ Option i18n keys: all ${totalChecked} config file(s) have resolvable labels${NC}`);
-}
-process.exit(0);
+module.exports = { run, extractCandidates };

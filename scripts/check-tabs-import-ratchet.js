@@ -34,14 +34,13 @@
 
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
+const { walkAst, parseJsx } = require('./lib/jsx-ast');
+const ratchet = require('./lib/per-file-ratchet');
 
-process.chdir(path.resolve(__dirname, '..'));
-
+// ADR-924: κάθε ανάγνωση από την ΕΙΣΟΔΟ — με `--index` (εκτελεστής) το κείμενο ΤΟΥ COMMIT, όχι του δίσκου.
+const ROOT = path.resolve(__dirname, '..');
 const BASELINE_FILE = '.tabs-import-baseline.json';
-const WRITE_BASELINE = process.argv.includes('--write-baseline');
-const SCAN_ALL = process.argv.includes('--all');
 
 const DEPRECATED_IMPORT_SOURCE = '@/components/ui/navigation/TabsComponents';
 const DEPRECATED_IMPORT_SYMBOLS = new Set([
@@ -63,96 +62,62 @@ function isAllowlisted(filePath) {
   return ALLOWLIST.some((p) => norm === p || norm.startsWith(p));
 }
 
-// ─── AST walker ──────────────────────────────────────────────────────────────
+const isTsx = (file) => /\.(tsx)$/.test(file);
+const inScope = (file) => isTsx(file) && !isAllowlisted(file);
 
-function walk(node, visitor) {
-  if (!node || typeof node !== 'object') return;
-  visitor(node);
-  for (const key of Object.keys(node)) {
-    const child = node[key];
-    if (Array.isArray(child)) {
-      child.forEach((c) => walk(c, visitor));
-    } else if (child && typeof child === 'object' && child.type) {
-      walk(child, visitor);
-    }
-  }
+// ─── Detection ───────────────────────────────────────────────────────────────
+
+/** Detector A: deprecated import — κάθε σύμβολο του παλιού μονοπατιού. */
+function deprecatedImports(node) {
+  return (node.specifiers || [])
+    .filter((spec) => spec.type === 'ImportSpecifier'
+      && spec.imported?.type === 'Identifier'
+      && DEPRECATED_IMPORT_SYMBOLS.has(spec.imported.name))
+    .map((spec) => ({ kind: 'import', line: spec.loc?.start?.line ?? '?', symbol: spec.imported.name }));
 }
 
-function findViolations(filePath) {
-  const src = fs.readFileSync(filePath, 'utf8');
-  let parser;
-  try {
-    parser = require('@typescript-eslint/parser');
-  } catch {
-    return [];
+/** Η συμβολοσειρά του `variant=` (κυριολεκτικό ή `{'…'}`)· αλλιώς `null`. */
+function variantValue(node) {
+  const variantAttr = (node.attributes || []).find(
+    (attr) =>
+      attr.type === 'JSXAttribute' &&
+      attr.name?.type === 'JSXIdentifier' &&
+      attr.name.name === 'variant',
+  );
+  const valueNode = variantAttr?.value;
+  if (!valueNode) return null;
+  if (valueNode.type === 'Literal' && typeof valueNode.value === 'string') return valueNode.value;
+  if (
+    valueNode.type === 'JSXExpressionContainer' &&
+    valueNode.expression?.type === 'Literal' &&
+    typeof valueNode.expression.value === 'string'
+  ) {
+    return valueNode.expression.value;
   }
+  return null;
+}
 
-  let ast;
-  try {
-    ast = parser.parse(src, {
-      jsx: true,
-      range: true,
-      loc: true,
-      errorOnUnknownASTType: false,
-    });
-  } catch {
-    return [];
-  }
+function findViolations(src) {
+  const ast = parseJsx(src);
+  if (!ast) return [];
 
   const violations = [];
 
-  walk(ast, (node) => {
-    // Detector A: deprecated import
+  walkAst(ast, (node) => {
     if (
       node.type === 'ImportDeclaration' &&
       node.source?.type === 'Literal' &&
       node.source.value === DEPRECATED_IMPORT_SOURCE
     ) {
-      for (const spec of node.specifiers || []) {
-        if (
-          spec.type === 'ImportSpecifier' &&
-          spec.imported?.type === 'Identifier' &&
-          DEPRECATED_IMPORT_SYMBOLS.has(spec.imported.name)
-        ) {
-          violations.push({
-            kind: 'import',
-            line: spec.loc?.start?.line ?? '?',
-            symbol: spec.imported.name,
-          });
-        }
-      }
+      violations.push(...deprecatedImports(node));
       return;
     }
 
     // Detector B: <TabsNav variant="radix">
     if (node.type !== 'JSXOpeningElement') return;
     const nameNode = node.name;
-    if (
-      !nameNode ||
-      nameNode.type !== 'JSXIdentifier' ||
-      nameNode.name !== DEPRECATED_JSX_TAG
-    ) {
-      return;
-    }
-    const variantAttr = (node.attributes || []).find(
-      (attr) =>
-        attr.type === 'JSXAttribute' &&
-        attr.name?.type === 'JSXIdentifier' &&
-        attr.name.name === 'variant',
-    );
-    if (!variantAttr || !variantAttr.value) return;
-    const valueNode = variantAttr.value;
-    let stringValue = null;
-    if (valueNode.type === 'Literal' && typeof valueNode.value === 'string') {
-      stringValue = valueNode.value;
-    } else if (
-      valueNode.type === 'JSXExpressionContainer' &&
-      valueNode.expression?.type === 'Literal' &&
-      typeof valueNode.expression.value === 'string'
-    ) {
-      stringValue = valueNode.expression.value;
-    }
-    if (stringValue === DEPRECATED_JSX_VARIANT_VALUE) {
+    if (!nameNode || nameNode.type !== 'JSXIdentifier' || nameNode.name !== DEPRECATED_JSX_TAG) return;
+    if (variantValue(node) === DEPRECATED_JSX_VARIANT_VALUE) {
       violations.push({
         kind: 'jsx-variant-radix',
         line: node.loc?.start?.line ?? '?',
@@ -164,143 +129,36 @@ function findViolations(filePath) {
   return violations;
 }
 
-// ─── File collection ─────────────────────────────────────────────────────────
-
-function collectAllFiles(dir) {
-  const out = [];
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name === 'node_modules') continue;
-    const full = path.join(dir, entry.name).replace(/\\/g, '/');
-    if (entry.isDirectory()) {
-      out.push(...collectAllFiles(full));
-    } else if (/\.(tsx)$/.test(entry.name)) {
-      out.push(full);
-    }
-  }
-  return out;
-}
-
-function collectFiles() {
-  if (SCAN_ALL || WRITE_BASELINE) {
-    return collectAllFiles('src');
-  }
-  const explicit = process.argv.slice(2).filter((a) => !a.startsWith('--'));
-  return explicit.length ? explicit : [];
-}
-
-// ─── Baseline helpers ────────────────────────────────────────────────────────
-
-function loadBaseline() {
-  if (!fs.existsSync(BASELINE_FILE)) return {};
-  try {
-    return JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf8')).files ?? {};
-  } catch {
-    return {};
-  }
-}
-
-function writeBaseline(files) {
-  const baseline = {};
-  let totalViolations = 0;
-  let totalFiles = 0;
-  for (const f of files) {
-    if (isAllowlisted(f)) continue;
-    const v = findViolations(f);
-    if (v.length > 0) {
-      baseline[f] = v.length;
-      totalViolations += v.length;
-      totalFiles++;
-    }
-  }
-  const out = {
-    _meta: {
-      description:
-        'Tabs SSoT import ratchet (CHECK 3.24, ADR-328). Deprecated TabsContainer/ToolbarTabs/TabsOnlyTriggers imports + <TabsNav variant="radix">.',
-      generated: new Date().toISOString(),
-      totalViolations,
-      totalFiles,
-      rule: 'New code must import BaseTabs/StateTabs/RouteTabs directly.',
-    },
-    files: baseline,
-  };
-  fs.writeFileSync(BASELINE_FILE, JSON.stringify(out, null, 2) + '\n');
-  console.log(`✅ Baseline written: ${BASELINE_FILE}`);
-  console.log(`   Files: ${totalFiles} | Violations: ${totalViolations}`);
-}
-
 // ─── Main ────────────────────────────────────────────────────────────────────
 
-const RED = '\x1b[31m';
-const GREEN = '\x1b[32m';
-const YELLOW = '\x1b[33m';
-const NC = '\x1b[0m';
+const { yellow: YELLOW, nc: NC } = ratchet.BANNER_COLORS;
 
-const files = collectFiles();
+/** Η πύλη ως `run(argv, input)` πάνω στο κοινό CLI (ADR-924: `--index` ⇒ η όψη του commit). */
+const run = ratchet.defineBannerGate({
+  root: ROOT,
+  baselineFile: BASELINE_FILE,
+  inScope,
+  findHits: findViolations,
+  collectAll: (scope) => ratchet.scopeFiles(scope, ['src'], isTsx),
+  meta: {
+    description:
+      'Tabs SSoT import ratchet (CHECK 3.24, ADR-328). Deprecated TabsContainer/ToolbarTabs/TabsOnlyTriggers imports + <TabsNav variant="radix">.',
+    rule: 'New code must import BaseTabs/StateTabs/RouteTabs directly.',
+  },
+  banner: {
+    downTitle: 'Tabs SSoT violations reduced',
+    downCommand: 'tabs-import:baseline',
+    blockedTitle: 'Tabs SSoT (CHECK 3.24, ADR-328)',
+    blockedSubtitle: 'Use BaseTabs/StateTabs/RouteTabs from @/components/ui/navigation/',
+    newNoun: 'deprecated tabs reference(s)',
+    describeHit: ({ line, kind, symbol }) => `line ${line} [${kind}]: ${symbol}`,
+  },
+  printFix() {
+    console.log(`  ${YELLOW}Fix: import StateTabs/RouteTabs/BaseTabs from${NC}`);
+    console.log(`       @/components/ui/navigation/{state-tabs,route-tabs,base-tabs}\n`);
+  },
+});
 
-if (WRITE_BASELINE) {
-  writeBaseline(files.length ? files : collectAllFiles('src'));
-  process.exit(0);
-}
+if (require.main === module) process.exit(run());
 
-if (!files.length) process.exit(0);
-
-const baseline = loadBaseline();
-let hasBlock = false;
-const blocked = [];
-const improved = [];
-
-for (const file of files) {
-  if (!fs.existsSync(file)) continue;
-  if (!/\.(tsx)$/.test(file)) continue;
-  if (isAllowlisted(file)) continue;
-
-  const violations = findViolations(file);
-  const current = violations.length;
-  const base = baseline[file] ?? 0;
-
-  if (current === 0 && base === 0) continue;
-  if (current < base) {
-    improved.push({ file, from: base, to: current });
-    continue;
-  }
-  if (current === base) continue;
-
-  hasBlock = true;
-  const isNew = base === 0;
-  blocked.push({ file, current, base, isNew, violations });
-}
-
-if (improved.length) {
-  console.log(`\n${GREEN}═══════════════════════════════════════════════════════════════${NC}`);
-  console.log(`${GREEN}  🎯 RATCHET DOWN — Tabs SSoT violations reduced${NC}`);
-  console.log(`${GREEN}═══════════════════════════════════════════════════════════════${NC}`);
-  for (const { file, from, to } of improved) {
-    console.log(`  ✅ ${file}: ${from} → ${to} (-${from - to})`);
-  }
-  console.log(`\n  ${YELLOW}Run after commit: npm run tabs-import:baseline${NC}\n`);
-}
-
-if (hasBlock) {
-  console.log(`\n${RED}═══════════════════════════════════════════════════════════════${NC}`);
-  console.log(`${RED}  🚫 COMMIT BLOCKED — Tabs SSoT (CHECK 3.24, ADR-328)${NC}`);
-  console.log(`${RED}  Use BaseTabs/StateTabs/RouteTabs from @/components/ui/navigation/${NC}`);
-  console.log(`${RED}═══════════════════════════════════════════════════════════════${NC}\n`);
-  for (const { file, current, base, isNew, violations } of blocked) {
-    if (isNew) {
-      console.log(`  ❌ ${file} (NEW FILE — zero tolerance)`);
-      console.log(`     Found ${current} deprecated tabs reference(s)`);
-    } else {
-      console.log(`  ❌ ${file}`);
-      console.log(`     Baseline: ${base} → Current: ${current} (+${current - base})`);
-    }
-    for (const { line, kind, symbol } of violations) {
-      console.log(`     line ${line} [${kind}]: ${symbol}`);
-    }
-    console.log();
-  }
-  console.log(`  ${YELLOW}Fix: import StateTabs/RouteTabs/BaseTabs from${NC}`);
-  console.log(`       @/components/ui/navigation/{state-tabs,route-tabs,base-tabs}\n`);
-  process.exit(1);
-}
-
-process.exit(0);
+module.exports = { run, findViolations };

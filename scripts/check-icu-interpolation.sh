@@ -29,6 +29,12 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
+# `--index` (ο εκτελεστής, ADR-924): κρίνονται τα locale και η baseline ΤΟΥ COMMIT, όχι του δίσκου.
+# shellcheck source=lib/commit-source.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/commit-source.sh"
+commit_source_parse "$@"
+set -- "${COMMIT_SOURCE_ARGS[@]}"
+
 FILES="$@"
 BASELINE_FILE=".icu-violations-baseline.json"
 HAS_BLOCK=0
@@ -38,7 +44,7 @@ RATCHET_UPDATES=""
 count_violations() {
     local file="$1"
     local result
-    result=$(grep -coE '\{\{[a-zA-Z_]+\}\}' "$file" 2>/dev/null || echo "0")
+    result=$(read_source "$file" | grep -coE '\{\{[a-zA-Z_]+\}\}' 2>/dev/null || echo "0")
     # Trim whitespace/newlines (Windows compat)
     echo "$result" | tr -d '[:space:]'
 }
@@ -46,13 +52,13 @@ count_violations() {
 # Get baseline count for a file
 get_baseline_count() {
     local file="$1"
-    if [[ ! -f "$BASELINE_FILE" ]]; then
+    if ! has_source "$BASELINE_FILE"; then
         echo "0"
         return
     fi
     local normalized="${file//\\//}"
     local result
-    result=$(grep -oE "\"$normalized\":\s*[0-9]+" "$BASELINE_FILE" 2>/dev/null \
+    result=$(read_source "$BASELINE_FILE" | grep -oE "\"$normalized\":\s*[0-9]+" 2>/dev/null \
         | grep -oE "[0-9]+$" \
         | head -1 \
         || echo "0")
@@ -60,7 +66,7 @@ get_baseline_count() {
 }
 
 for file in $FILES; do
-    [[ ! -f "$file" ]] && continue
+    has_source "$file" || continue
 
     # Only locale JSON files
     echo "$file" | grep -qE 'src/i18n/locales/.*\.json$' || continue
@@ -100,7 +106,9 @@ done
 # ── ΚΑΝΟΝΑΣ 2 (ZERO TOL, ADR-867 2026-09-22): κλειδί με επίθημα πληθυντικού (`foo_one` / `foo_other` …) ──
 # Το i18next-icu ΔΕΝ τα λύνει: με βάση δίπλα ⇒ πάντα η βάση («1 αδιάβαστες»), χωρίς βάση ⇒ ωμό κλειδί.
 # Η μία λίστα + η εξήγηση ζουν στο scripts/lib/i18n-runtime-dialect.js — ΜΗΝ τη ξαναγράψεις εδώ σε regex.
-if ! node scripts/lib/i18n-runtime-dialect.js $FILES; then
+INDEX_FLAG=""
+[[ "$COMMIT_SOURCE_INDEX" -eq 1 ]] && INDEX_FLAG="--index"
+if ! node scripts/lib/i18n-runtime-dialect.js $INDEX_FLAG $FILES; then
     echo -e "${RED}  ❌ ICU plural: κλειδί με επίθημα _one/_other — ο πληθυντικός γράφεται ΜΕΣΑ στο κλειδί (ICU)${NC}"
     HAS_BLOCK=1
 fi

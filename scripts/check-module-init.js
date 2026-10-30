@@ -39,6 +39,7 @@ const path = require('node:path');
 
 const { buildGraph, findSCCs, PROJECT_ROOT } = require('./lib/module-init/graph');
 const { judgeSCCs } = require('./lib/module-init/judge');
+const { commitInput } = require('./lib/gate-input');
 
 const BASELINE = path.join(PROJECT_ROOT, '.module-init-baseline.json');
 
@@ -47,8 +48,9 @@ const rel = (abs) => path.relative(PROJECT_ROOT, abs).split(path.sep).join('/');
 /** Ταυτότητα: **ποιος διαβάζει ΤΙ από ποιον**. Ο αριθμός γραμμής ΔΕΝ μπαίνει (μετακίνηση ≠ νέα). */
 const identityOf = (f) => `${rel(f.from)}→${rel(f.to)}|${f.names.join(',')}`;
 
-function measure() {
-  const { graph, sources, files } = buildGraph();
+/** `input` = η είσοδος (ADR-924) — με `--index` (εκτελεστής) ο γράφος του commit. */
+function measure(input = undefined) {
+  const { graph, sources, files } = buildGraph(input);
   const sccs = findSCCs(graph);
   const findings = judgeSCCs(sccs, graph, sources).map((f) => ({
     from: rel(f.from),
@@ -65,9 +67,10 @@ function measure() {
   };
 }
 
-function loadBaseline() {
-  if (!fs.existsSync(BASELINE)) return null;
-  return new Set(JSON.parse(fs.readFileSync(BASELINE, 'utf8')).findings.map(identityOf));
+function loadBaseline(input = undefined) {
+  const text = input ? input.read(BASELINE) : (fs.existsSync(BASELINE) ? fs.readFileSync(BASELINE, 'utf8') : null);
+  if (text === null) return null;
+  return new Set(JSON.parse(text).findings.map(identityOf));
 }
 
 function writeBaseline(m) {
@@ -99,7 +102,8 @@ function main() {
     return;
   }
 
-  const m = measure();
+  const input = commitInput(PROJECT_ROOT);
+  const m = measure(input);
 
   if (process.argv.includes('--write-baseline')) return writeBaseline(m);
 
@@ -110,7 +114,7 @@ function main() {
     return;
   }
 
-  const known = loadBaseline();
+  const known = loadBaseline(input);
   if (known === null) {
     console.error('❌ CHECK 3.80 — λείπει baseline. Σπείρε τη: npm run module-init:baseline');
     process.exit(1);

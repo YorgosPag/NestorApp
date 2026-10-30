@@ -80,6 +80,7 @@
 const path = require('node:path');
 
 const { BLOCKING, LEDGER_STATES, sweep } = require('./lib/one-version/gate.js');
+const { commitInput } = require('./lib/gate-input');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 const GREEN = '\x1b[0;32m';
@@ -162,7 +163,7 @@ function main(argv = process.argv) {
   const staged = argv.slice(2).filter((a) => !a.startsWith('--'));
   if (staged.length > 0 && !staged.some(affects)) return 0;
 
-  const { ledgers, violations } = sweep(REPO_ROOT);
+  const { ledgers, violations } = sweep(REPO_ROOT, commitInput(REPO_ROOT, argv));
   printLedger(ledgers);
 
   if (violations.length === 0) {

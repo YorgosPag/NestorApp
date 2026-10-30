@@ -31,14 +31,13 @@
 
 'use strict';
 
-const fs   = require('node:fs');
 const path = require('node:path');
+const { walkAst, parseJsx } = require('./lib/jsx-ast');
+const ratchet = require('./lib/per-file-ratchet');
 
-process.chdir(path.resolve(__dirname, '..'));
-
+// ADR-924: κάθε ανάγνωση από την ΕΙΣΟΔΟ — με `--index` (εκτελεστής) το κείμενο ΤΟΥ COMMIT, όχι του δίσκου.
+const ROOT = path.resolve(__dirname, '..');
 const BASELINE_FILE = '.native-tooltip-baseline.json';
-const WRITE_BASELINE = process.argv.includes('--write-baseline');
-const SCAN_ALL       = process.argv.includes('--all');
 
 // HTML elements — lowercase JSX tags that produce DOM nodes
 const HTML_ELEMENTS = new Set([
@@ -65,45 +64,18 @@ const HTML_ELEMENTS = new Set([
   'svg','path','circle','rect','line','polyline','polygon','g','defs','use','text',
 ]);
 
-// ─── AST walker ──────────────────────────────────────────────────────────────
+const isTsx = (file) => /\.(tsx)$/.test(file);
 
-function walk(node, visitor) {
-  if (!node || typeof node !== 'object') return;
-  visitor(node);
-  for (const key of Object.keys(node)) {
-    const child = node[key];
-    if (Array.isArray(child)) {
-      child.forEach(c => walk(c, visitor));
-    } else if (child && typeof child === 'object' && child.type) {
-      walk(child, visitor);
-    }
-  }
-}
+// ─── Detection ───────────────────────────────────────────────────────────────
 
-function findNativeTooltips(filePath) {
-  const src = fs.readFileSync(filePath, 'utf8');
-  let parser;
-  try {
-    parser = require('@typescript-eslint/parser');
-  } catch {
-    return [];
-  }
-
-  let ast;
-  try {
-    ast = parser.parse(src, {
-      jsx: true,
-      range: true,
-      loc: true,
-      errorOnUnknownASTType: false,
-    });
-  } catch {
-    return [];
-  }
+/** Κάθε `title=` σε στοιχείο HTML του κειμένου. */
+function findNativeTooltips(src) {
+  const ast = parseJsx(src);
+  if (!ast) return [];
 
   const violations = [];
 
-  walk(ast, node => {
+  walkAst(ast, node => {
     if (node.type !== 'JSXOpeningElement') return;
 
     // Only lowercase (HTML) elements
@@ -130,147 +102,37 @@ function findNativeTooltips(filePath) {
   return violations;
 }
 
-// ─── File collection ─────────────────────────────────────────────────────────
-
-function collectFiles() {
-  if (SCAN_ALL || WRITE_BASELINE) {
-    return collectAllFiles('src');
-  }
-  const explicit = process.argv.slice(2).filter(a => !a.startsWith('--'));
-  return explicit.length ? explicit : [];
-}
-
-function collectAllFiles(dir) {
-  const out = [];
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name === 'node_modules') continue;
-    const full = path.join(dir, entry.name).replace(/\\/g, '/');
-    if (entry.isDirectory()) {
-      out.push(...collectAllFiles(full));
-    } else if (/\.(tsx)$/.test(entry.name)) {
-      out.push(full);
-    }
-  }
-  return out;
-}
-
-// ─── Baseline helpers ─────────────────────────────────────────────────────────
-
-function loadBaseline() {
-  if (!fs.existsSync(BASELINE_FILE)) return {};
-  try {
-    return JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf8')).files ?? {};
-  } catch { return {}; }
-}
-
-function writeBaseline(files) {
-  const baseline = {};
-  let totalViolations = 0;
-  let totalFiles = 0;
-
-  for (const f of files) {
-    const violations = findNativeTooltips(f);
-    if (violations.length > 0) {
-      baseline[f] = violations.length;
-      totalViolations += violations.length;
-      totalFiles++;
-    }
-  }
-
-  const out = {
-    _meta: {
-      description: 'Native HTML title= tooltip ratchet (CHECK 3.23)',
-      generated: new Date().toISOString(),
-      totalViolations,
-      totalFiles,
-      rule: 'title= on HTML elements must use centralized Tooltip component',
-    },
-    files: baseline,
-  };
-  fs.writeFileSync(BASELINE_FILE, JSON.stringify(out, null, 2) + '\n');
-  console.log(`✅ Baseline written: ${BASELINE_FILE}`);
-  console.log(`   Files: ${totalFiles} | Violations: ${totalViolations}`);
-}
-
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-const RED    = '\x1b[31m';
-const GREEN  = '\x1b[32m';
-const YELLOW = '\x1b[33m';
-const NC     = '\x1b[0m';
+const { yellow: YELLOW, nc: NC } = ratchet.BANNER_COLORS;
 
-const files = collectFiles();
+/** `run(argv, input)` — με `--index` (εκτελεστής) κρίνεται το κείμενο ΤΟΥ COMMIT, όχι του δίσκου (ADR-924). */
+const run = ratchet.defineBannerGate({
+  root: ROOT,
+  baselineFile: BASELINE_FILE,
+  inScope: isTsx,
+  findHits: findNativeTooltips,
+  collectAll: (scope) => ratchet.scopeFiles(scope, ['src'], isTsx),
+  meta: {
+    description: 'Native HTML title= tooltip ratchet (CHECK 3.23)',
+    rule: 'title= on HTML elements must use centralized Tooltip component',
+  },
+  banner: {
+    downTitle: 'Native tooltip violations reduced',
+    downCommand: 'native-tooltip:baseline',
+    blockedTitle: 'Native HTML Tooltip (CHECK 3.23)',
+    blockedSubtitle: 'Replace title= on HTML elements with centralized Tooltip',
+    newNoun: 'native tooltip(s)',
+    describeHit: ({ line, tag }) => `line ${line}: <${tag} title=…>`,
+  },
+  printFix() {
+    console.log(`  ${YELLOW}Fix: replace <element title={x}> with:${NC}`);
+    console.log(`       <Tooltip><TooltipTrigger>…</TooltipTrigger>`);
+    console.log(`       <TooltipContent>{x}</TooltipContent></Tooltip>`);
+    console.log(`  ${YELLOW}Or for info icons: <InfoTooltip content={x} />${NC}\n`);
+  },
+});
 
-if (WRITE_BASELINE) {
-  writeBaseline(files.length ? files : collectAllFiles('src'));
-  process.exit(0);
-}
+if (require.main === module) process.exit(run());
 
-if (!files.length) process.exit(0);
-
-const baseline = loadBaseline();
-let hasBlock = false;
-const blocked = [];
-const improved = [];
-
-for (const file of files) {
-  if (!fs.existsSync(file)) continue;
-  if (!/\.(tsx)$/.test(file)) continue;
-
-  const violations = findNativeTooltips(file);
-  const current    = violations.length;
-  const base       = baseline[file] ?? 0;
-
-  if (current === 0 && base === 0) continue;
-
-  if (current < base) {
-    improved.push({ file, from: base, to: current });
-    continue;
-  }
-
-  if (current === base) continue;
-
-  // current > base OR (current > 0 && base === 0 → new file)
-  hasBlock = true;
-  const isNew = base === 0;
-  blocked.push({ file, current, base, isNew, violations });
-}
-
-if (improved.length) {
-  console.log(`\n${GREEN}═══════════════════════════════════════════════════════════════${NC}`);
-  console.log(`${GREEN}  🎯 RATCHET DOWN — Native tooltip violations reduced${NC}`);
-  console.log(`${GREEN}═══════════════════════════════════════════════════════════════${NC}`);
-  for (const { file, from, to } of improved) {
-    console.log(`  ✅ ${file}: ${from} → ${to} (-${from - to})`);
-  }
-  console.log(`\n  ${YELLOW}Run after commit: npm run native-tooltip:baseline${NC}\n`);
-}
-
-if (hasBlock) {
-  console.log(`\n${RED}═══════════════════════════════════════════════════════════════${NC}`);
-  console.log(`${RED}  🚫 COMMIT BLOCKED — Native HTML Tooltip (CHECK 3.23)${NC}`);
-  console.log(`${RED}  Replace title= on HTML elements with centralized Tooltip${NC}`);
-  console.log(`${RED}═══════════════════════════════════════════════════════════════${NC}\n`);
-
-  for (const { file, current, base, isNew, violations } of blocked) {
-    if (isNew) {
-      console.log(`  ❌ ${file} (NEW FILE — zero tolerance)`);
-      console.log(`     Found ${current} native tooltip(s)`);
-    } else {
-      console.log(`  ❌ ${file}`);
-      console.log(`     Baseline: ${base} → Current: ${current} (+${current - base})`);
-    }
-    for (const { line, tag } of violations) {
-      console.log(`     line ${line}: <${tag} title=…>`);
-    }
-    console.log();
-  }
-
-  console.log(`  ${YELLOW}Fix: replace <element title={x}> with:${NC}`);
-  console.log(`       <Tooltip><TooltipTrigger>…</TooltipTrigger>`);
-  console.log(`       <TooltipContent>{x}</TooltipContent></Tooltip>`);
-  console.log(`  ${YELLOW}Or for info icons: <InfoTooltip content={x} />${NC}\n`);
-  process.exit(1);
-}
-
-process.exit(0);
+module.exports = { run, findNativeTooltips };

@@ -48,6 +48,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
+const { openGateInput, commitInput } = require('./lib/gate-input');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const DEFAULT_BASELINE_FILE = path.join(PROJECT_ROOT, '.ssot-discover-baseline.json');
@@ -76,6 +77,7 @@ function parseArgs(argv) {
     if (a === '--full') out.full = true;
     else if (a === '--write-baseline') out.writeBaseline = true;
     else if (a === '--help' || a === '-h') out.help = true;
+    else if (a === '--index') out.index = true;   // ADR-924: η baseline από την όψη του commit (`commitInput`)
     else throw new Error(`Unknown argument: ${a}`);
   }
   if (process.env.SSOT_DISCOVER_FULL === '1') out.full = true;
@@ -143,12 +145,17 @@ function parseSummary(output) {
   };
 }
 
-function loadBaseline(filePath = getBaselineFile()) {
-  if (!fs.existsSync(filePath)) {
+/**
+ * `input` (ADR-924) = η είσοδος της πύλης — με `--index` η baseline ΤΟΥ COMMIT· προεπιλογή ο δίσκος.
+ * ⚠️ Δηλωμένο όριο: η ΠΛΗΡΗΣ σάρωση (`--full`, opt-in τοπικά · Layer 2 στο CI πάνω στο checkout) είναι ο bash σαρωτής
+ *    πάνω στον δίσκο — η σημαία αλλάζει μόνο ποια baseline συγκρίνεται.
+ */
+function loadBaseline(filePath = getBaselineFile(), input = openGateInput({ root: PROJECT_ROOT })) {
+  const raw = input.read(filePath);
+  if (raw === null) {
     return null;
   }
   try {
-    const raw = fs.readFileSync(filePath, 'utf8');
     const parsed = JSON.parse(raw);
     for (const m of TRACKED_METRICS) {
       if (typeof parsed[m] !== 'number') {
@@ -193,9 +200,10 @@ function compare(baseline, current) {
   return raises;
 }
 
-function runFull() {
+/** Η baseline της εισόδου, ή έξοδος 1 με όνομα (λείπει / άκυρη) — ΚΟΙΝΟ προοίμιο του smoke και του full. */
+function requireBaseline(input) {
   const baselineFile = getBaselineFile();
-  const baseline = loadBaseline(baselineFile);
+  const baseline = loadBaseline(baselineFile, input);
   if (!baseline) {
     console.error(`❌ CHECK 3.18 — baseline missing: ${path.relative(PROJECT_ROOT, baselineFile)}`);
     console.error(`   Run: npm run ssot:discover:baseline`);
@@ -206,6 +214,11 @@ function runFull() {
     console.error(`   Run: npm run ssot:discover:baseline`);
     process.exit(1);
   }
+  return baseline;
+}
+
+function runFull(input = openGateInput({ root: PROJECT_ROOT })) {
+  const baseline = requireBaseline(input);
 
   const t0 = Date.now();
   const output = runScanner();
@@ -235,19 +248,8 @@ function runFull() {
   process.exit(1);
 }
 
-function runSmoke() {
-  const baselineFile = getBaselineFile();
-  const baseline = loadBaseline(baselineFile);
-  if (!baseline) {
-    console.error(`❌ CHECK 3.18 — baseline missing: ${path.relative(PROJECT_ROOT, baselineFile)}`);
-    console.error(`   Run: npm run ssot:discover:baseline`);
-    process.exit(1);
-  }
-  if (baseline.__invalid) {
-    console.error(`❌ CHECK 3.18 — baseline invalid: ${baseline.__invalid}`);
-    console.error(`   Run: npm run ssot:discover:baseline`);
-    process.exit(1);
-  }
+function runSmoke(input = openGateInput({ root: PROJECT_ROOT })) {
+  const baseline = requireBaseline(input);
   console.log(
     `✅ CHECK 3.18 smoke — baseline OK (duplicates:${baseline.duplicateExports} antiPatterns:${baseline.antiPatterns} unprotected:${baseline.unprotected}). Full scan runs in CI.`
   );
@@ -266,11 +268,13 @@ function main() {
     writeBaseline(counts);
     process.exit(0);
   }
+  // ADR-924: με `--index` (εκτελεστής) η baseline ΤΟΥ COMMIT — όχι μια ξένη αστάδιοποίητη ανανέωσή της
+  const input = commitInput(PROJECT_ROOT);
   if (args.full) {
-    runFull();
+    runFull(input);
     return;
   }
-  runSmoke();
+  runSmoke(input);
 }
 
 // Exported for Jest test suite (scripts/__tests__/check-ssot-discover-ratchet.test.js).

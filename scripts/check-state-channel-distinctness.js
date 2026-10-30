@@ -60,6 +60,7 @@
 
 const { hexToRgb, worstCvdDeltaE, deltaE } = require('./lib/contrast/cvd');
 const { readStateMarkFamilies, COLOR_CONFIG_PATH } = require('./lib/contrast/state-marks');
+const { commitInput } = require('./lib/gate-input');
 
 /**
  * Το ίδιο κατώφλι με το CHECK 3.32 — **επίτηδες**. Δύο κατώφλια για την ίδια ερώτηση («είναι
@@ -145,7 +146,7 @@ function main() {
 
   let families;
   try {
-    families = readStateMarkFamilies();
+    families = readStateMarkFamilies(process.cwd(), commitInput(process.cwd()));
   } catch (err) {
     console.error(C.red(`  [FAIL] Ανάγνωση ${COLOR_CONFIG_PATH}: ${err.message}`));
     return 1;

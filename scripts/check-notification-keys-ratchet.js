@@ -49,11 +49,12 @@
  *        node scripts/check-notification-keys-ratchet.js --all
  * =============================================================================
  */
-const fs = require('fs');
 const path = require('path');
+const { commitInput } = require('./lib/gate-input');
+const ratchet = require('./lib/per-file-ratchet');
 
 const REPO_ROOT = path.join(__dirname, '..');
-const BASELINE_FILE = path.join(REPO_ROOT, '.notification-keys-baseline.json');
+const BASELINE_FILE = '.notification-keys-baseline.json';
 
 const RED = '\x1b[0;31m';
 const GREEN = '\x1b[0;32m';
@@ -117,101 +118,44 @@ function countViolations(content) {
 }
 
 // ---------------------------------------------------------------------------
-// Full scan (used by --all and the baseline generator)
+// Main — κάθε ανάγνωση από την ΕΙΣΟΔΟ (ADR-924 Φ3: `--index` ⇒ το κείμενο ΤΟΥ COMMIT, όχι του δίσκου)
 // ---------------------------------------------------------------------------
-function walkSrc(dir, out = []) {
-  const abs = path.join(REPO_ROOT, dir);
-  if (!fs.existsSync(abs)) return out;
-  for (const entry of fs.readdirSync(abs, { withFileTypes: true })) {
-    const rel = path.join(dir, entry.name).replace(/\\/g, '/');
-    if (entry.isDirectory()) {
-      if (['node_modules', '.next', '__tests__'].includes(entry.name)) continue;
-      walkSrc(rel, out);
-    } else if (/\.(ts|tsx)$/.test(entry.name) && isInScope(rel)) {
-      out.push(rel);
-    }
-  }
-  return out;
-}
+function run(args = process.argv.slice(2), input = commitInput(REPO_ROOT, args)) {
+  const wantAll = args.includes('--all');
+  const files = wantAll
+    ? ratchet.scopeFiles(input, ['src'], isInScope, ratchet.pruneTestDirs)
+    : args.filter((a) => !a.startsWith('--'));
+  const scanned = ratchet.scanFiles(files, { input, inScope: isInScope, findHits: countViolations });
+  const hasBlock = ratchet.printLineVerdict(scanned, ratchet.loadFileCounts(BASELINE_FILE, input), {
+    noun: 'raw notification keys',
+    newNoun: 'new raw notification key call(s)',
+    describeHit: ({ method, key }) => `notifications.${method}('${key}') — replace with domain hook`,
+  });
 
-// ---------------------------------------------------------------------------
-// Baseline handling
-// ---------------------------------------------------------------------------
-function loadBaseline() {
-  if (!fs.existsSync(BASELINE_FILE)) return { files: {} };
-  try {
-    const data = JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf8'));
-    return { files: data.files ?? {} };
-  } catch {
-    return { files: {} };
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
-const args = process.argv.slice(2);
-const wantAll = args.includes('--all');
-const files = wantAll ? walkSrc('src') : args.filter((a) => !a.startsWith('--'));
-
-const baseline = loadBaseline();
-let hasBlock = false;
-let totalChecked = 0;
-let totalViolations = 0;
-
-for (const file of files) {
-  if (!fs.existsSync(file)) continue;
-  if (!isInScope(file)) continue;
-  totalChecked += 1;
-
-  const content = fs.readFileSync(file, 'utf8');
-  const hits = countViolations(content);
-  if (hits.length === 0) continue;
-
-  const normFile = normalizePath(file);
-  const baselineCount = baseline.files[normFile] ?? 0;
-  const currentCount = hits.length;
-  totalViolations += currentCount;
-
-  if (currentCount <= baselineCount) {
-    if (currentCount < baselineCount) {
-      console.log(
-        `${GREEN}  📉 ${normFile}: ${baselineCount} → ${currentCount} (-${baselineCount - currentCount}) raw notification keys${NC}`,
-      );
-    }
-    continue;
-  }
-
-  hasBlock = true;
-  const newCount = currentCount - baselineCount;
-  console.log(
-    `${RED}  🚫 ${normFile}: ${newCount} new raw notification key call(s) (total ${currentCount}, baseline ${baselineCount})${NC}`,
-  );
-  for (const { method, key, line } of hits.slice(-newCount)) {
+  if (hasBlock) {
+    console.log('');
     console.log(
-      `${YELLOW}     Line ${line}: notifications.${method}('${key}') — replace with domain hook${NC}`,
+      `${RED}  ❌ Notification keys ratchet FAILED — route callers through use{Contact,Project}Notifications${NC}`,
+    );
+    console.log(
+      `${YELLOW}     SSoT: src/config/notification-keys.ts | Dispatchers: src/hooks/notifications/${NC}`,
+    );
+    return 1;
+  }
+
+  const totalViolations = scanned.reduce((sum, { hits }) => sum + hits.length, 0);
+  if (wantAll) {
+    console.log(
+      `${GREEN}  ✅ Notification keys ratchet: ${scanned.length} files scanned, ${totalViolations} grandfathered violations${NC}`,
+    );
+  } else if (scanned.length > 0) {
+    console.log(
+      `${GREEN}  ✅ Notification keys: no new raw-key violations (${scanned.length} file(s) in scope)${NC}`,
     );
   }
+  return 0;
 }
 
-if (hasBlock) {
-  console.log('');
-  console.log(
-    `${RED}  ❌ Notification keys ratchet FAILED — route callers through use{Contact,Project}Notifications${NC}`,
-  );
-  console.log(
-    `${YELLOW}     SSoT: src/config/notification-keys.ts | Dispatchers: src/hooks/notifications/${NC}`,
-  );
-  process.exit(1);
-}
+if (require.main === module) process.exit(run());
 
-if (wantAll) {
-  console.log(
-    `${GREEN}  ✅ Notification keys ratchet: ${totalChecked} files scanned, ${totalViolations} grandfathered violations${NC}`,
-  );
-} else if (totalChecked > 0) {
-  console.log(
-    `${GREEN}  ✅ Notification keys: no new raw-key violations (${totalChecked} file(s) in scope)${NC}`,
-  );
-}
-process.exit(0);
+module.exports = { run, countViolations, isInScope };

@@ -75,13 +75,9 @@ const path = require('node:path');
 
 const { GATE_STATES } = require('./lib/navigation-boundary/contract.js');
 const { BLOCKING, sweep } = require('./lib/navigation-boundary/gate.js');
+const { ledgerRow, ledgerTitle, runLedgerGate, runAsScript } = require('./lib/import-boundary/cli');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
-const GREEN = '[0;32m';
-const RED = '[0;31m';
-const YELLOW = '[1;33m';
-const DIM = '[2m';
-const NC = '[0m';
 
 /** Η σειρά είναι συμβόλαιο: πρώτα ό,τι μπλοκάρει, ώστε να μην κρύβεται. */
 const FILE_ORDER = [
@@ -116,58 +112,30 @@ const ADVICE = [
  * πληρώσει οκτώ φορές.
  */
 function printLedger({ fileTally, ownerTally, population, declared }) {
-  const row = (tally, state) => {
-    const mark = BLOCKING.includes(state) ? (tally[state] > 0 ? '⛔' : '✅') : '  ';
-    console.log(`${DIM}     ${mark} ${state.padEnd(24)} ${String(tally[state]).padStart(7)}${NC}`);
-  };
-  console.log(`${DIM}  CHECK 3.61 — σύνορο πλοήγησης · ΑΡΧΕΙΑ (${population})${NC}`);
-  for (const state of FILE_ORDER) row(fileTally, state);
-  console.log(`${DIM}  CHECK 3.61 — ΔΗΛΩΣΕΙΣ ιδιοκτησίας (${declared})${NC}`);
-  for (const state of OWNER_ORDER) row(ownerTally, state);
+  ledgerTitle(`CHECK 3.61 — σύνορο πλοήγησης · ΑΡΧΕΙΑ (${population})`);
+  for (const state of FILE_ORDER) ledgerRow(fileTally, state, BLOCKING);
+  ledgerTitle(`CHECK 3.61 — ΔΗΛΩΣΕΙΣ ιδιοκτησίας (${declared})`);
+  for (const state of OWNER_ORDER) ledgerRow(ownerTally, state, BLOCKING);
 }
 
+/**
+ * ⚠️ Η σκανδάλη δεν αντιφάσκει με το «πάντα πλήρης»: κόβει μόνο την περίπτωση όπου η παράβαση είναι **δομικά
+ * αδύνατη** (κανένα σταδιοποιημένο `.ts`/`.tsx`) — και ο κώδικας της πύλης είναι σκανδάλη (CHECK 3.43 · 3.57).
+ */
 function main(argv = process.argv) {
-  if (process.env.SKIP_NAVIGATION_BOUNDARY) return 0;
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Η ΣΚΑΝΔΑΛΗ — αποφασίζει **ΑΝ** τρέχει, ποτέ **ΠΟΣΟ** σαρώνει
-  // ─────────────────────────────────────────────────────────────────────────
-  // ⚠️ Δεν αντιφάσκει με το «πάντα πλήρης»: όταν τρέχει, σαρώνει **ΟΛΟ** το
-  //    δέντρο. Η σκανδάλη κόβει μόνο την περίπτωση όπου η παράβαση είναι
-  //    **δομικά αδύνατη** — αν δεν σταδιοποιήθηκε κανένα `.ts`/`.tsx`, κανείς
-  //    δεν μπορεί να έχει γράψει νέα εισαγωγή.
-  // ⚠️ Και ο **ίδιος ο κώδικας της πύλης** είναι σκανδάλη: αλλαγή στο κριτήριο
-  //    ή στο κλειστό σύνολο πρέπει να **ασκεί** το κριτήριο, αλλιώς περνά χωρίς
-  //    να δοκιμαστεί ποτέ (μάθημα CHECK 3.43 · 3.57).
-  const staged = argv.slice(2).filter((a) => !a.startsWith('--'));
-  const affects = (f) =>
-    /\.tsx?$/.test(f) || f.includes('navigation-boundary/') || f.includes('check-navigation-boundary');
-  if (staged.length > 0 && !staged.some(affects)) return 0;
-
-  const result = sweep(REPO_ROOT);
-  const { violations } = result;
-  printLedger(result);
-
-  if (violations.length === 0) {
-    console.log(`${GREEN}  ✅ CHECK 3.61 — κάθε σημείο πλοήγησης ζητά το σύνορο${NC}`);
-    return 0;
-  }
-
-  console.log(`${RED}  🚫 CHECK 3.61 — ${violations.length} παράκαμψη(εις) του συνόρου:${NC}`);
-  for (const v of violations) {
-    console.log(`${YELLOW}     [${v.state}] ${v.rel} — ${v.detail}${NC}`);
-  }
-  for (const line of ADVICE) console.log(`${DIM}     ${line}${NC}`);
-  return 1;
+  return runLedgerGate({
+    check: '3.61',
+    skipEnv: 'SKIP_NAVIGATION_BOUNDARY',
+    root: REPO_ROOT,
+    affects: (f) => /\.tsx?$/.test(f) || f.includes('navigation-boundary/') || f.includes('check-navigation-boundary'),
+    sweep: (input) => sweep(REPO_ROOT, undefined, input),
+    printLedger,
+    ok: 'κάθε σημείο πλοήγησης ζητά το σύνορο',
+    found: (n) => `${n} παράκαμψη(εις) του συνόρου`,
+    advice: ADVICE,
+  }, argv);
 }
 
-if (require.main === module) {
-  try {
-    process.exit(main());
-  } catch (error) {
-    console.error(`${RED}⛔ CHECK 3.61 — ${error.message}${NC}`);
-    process.exit(1);
-  }
-}
+if (require.main === module) runAsScript(main, '3.61');
 
 module.exports = { FILE_ORDER, OWNER_ORDER, main, printLedger };

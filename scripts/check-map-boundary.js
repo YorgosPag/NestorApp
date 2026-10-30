@@ -58,13 +58,9 @@ const path = require('node:path');
 
 const { BOUNDARY_MODULE, BOUNDARY_STATES, GATE_STATES } = require('./lib/map-boundary/contract.js');
 const { BLOCKING, sweep } = require('./lib/map-boundary/gate.js');
+const { ledgerRow, ledgerTitle, runLedgerGate, runAsScript } = require('./lib/import-boundary/cli');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
-const GREEN = '[0;32m';
-const RED = '[0;31m';
-const YELLOW = '[1;33m';
-const DIM = '[2m';
-const NC = '[0m';
 
 /** Η σειρά είναι συμβόλαιο: πρώτα ό,τι μπλοκάρει, ώστε να μην κρύβεται. */
 const FILE_ORDER = [
@@ -111,58 +107,32 @@ const ADVICE = [
  * πληρώσει πάνω από πέντε φορές.
  */
 function printLedger({ fileTally, ownerTally, selfTally, population, declared, consumers }) {
-  const row = (tally, state) => {
-    const mark = BLOCKING.includes(state) ? (tally[state] > 0 ? '⛔' : '✅') : '  ';
-    console.log(`${DIM}     ${mark} ${state.padEnd(24)} ${String(tally[state]).padStart(7)}${NC}`);
-  };
-  console.log(`${DIM}  CHECK 3.75 — σύνορο χάρτη · Κ1 ΑΡΧΕΙΑ (${population})${NC}`);
-  for (const state of FILE_ORDER) row(fileTally, state);
-  console.log(`${DIM}  CHECK 3.75 — Κ1′ ΔΗΛΩΣΕΙΣ ιδιοκτησίας (${declared})${NC}`);
-  for (const state of OWNER_ORDER) row(ownerTally, state);
-  console.log(`${DIM}  CHECK 3.75 — Κ2+Κ3 ΤΟ ΙΔΙΟ ΤΟ ΣΥΝΟΡΟ (καταναλωτές: ${consumers})${NC}`);
-  for (const state of SELF_ORDER) row(selfTally, state);
+  ledgerTitle(`CHECK 3.75 — σύνορο χάρτη · Κ1 ΑΡΧΕΙΑ (${population})`);
+  for (const state of FILE_ORDER) ledgerRow(fileTally, state, BLOCKING);
+  ledgerTitle(`CHECK 3.75 — Κ1′ ΔΗΛΩΣΕΙΣ ιδιοκτησίας (${declared})`);
+  for (const state of OWNER_ORDER) ledgerRow(ownerTally, state, BLOCKING);
+  ledgerTitle(`CHECK 3.75 — Κ2+Κ3 ΤΟ ΙΔΙΟ ΤΟ ΣΥΝΟΡΟ (καταναλωτές: ${consumers})`);
+  for (const state of SELF_ORDER) ledgerRow(selfTally, state, BLOCKING);
 }
 
+/**
+ * ⚠️ Η σκανδάλη κόβει μόνο την περίπτωση όπου η παράβαση είναι **δομικά αδύνατη** (κανένα σταδιοποιημένο
+ * `.ts`/`.tsx`) — και ο κώδικας της πύλης είναι σκανδάλη (μάθημα CHECK 3.43 · 3.57).
+ */
 function main(argv = process.argv) {
-  if (process.env.SKIP_MAP_BOUNDARY) return 0;
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Η ΣΚΑΝΔΑΛΗ — αποφασίζει **ΑΝ** τρέχει, ποτέ **ΠΟΣΟ** σαρώνει
-  // ─────────────────────────────────────────────────────────────────────────
-  // ⚠️ Κόβει μόνο την περίπτωση όπου η παράβαση είναι **δομικά αδύνατη**: αν δεν
-  //    σταδιοποιήθηκε κανένα `.ts`/`.tsx`, κανείς δεν μπορεί να έγραψε νέα
-  //    εισαγωγή. Και ο **ίδιος ο κώδικας της πύλης** είναι σκανδάλη: αλλαγή στο
-  //    κριτήριο ή στο κλειστό σύνολο πρέπει να **ασκεί** το κριτήριο, αλλιώς
-  //    περνά χωρίς να δοκιμαστεί ποτέ (μάθημα CHECK 3.43 · 3.57).
-  const staged = argv.slice(2).filter((a) => !a.startsWith('--'));
-  const affects = (f) =>
-    /\.tsx?$/.test(f) || f.includes('map-boundary/') || f.includes('check-map-boundary');
-  if (staged.length > 0 && !staged.some(affects)) return 0;
-
-  const result = sweep(REPO_ROOT);
-  const { violations } = result;
-  printLedger(result);
-
-  if (violations.length === 0) {
-    console.log(`${GREEN}  ✅ CHECK 3.75 — κάθε χάρτης έρχεται μαζί με το στυλ του${NC}`);
-    return 0;
-  }
-
-  console.log(`${RED}  🚫 CHECK 3.75 — ${violations.length} εύρημα(τα):${NC}`);
-  for (const v of violations) {
-    console.log(`${YELLOW}     [${v.state}] ${v.rel} — ${v.detail}${NC}`);
-  }
-  for (const line of ADVICE) console.log(`${DIM}     ${line}${NC}`);
-  return 1;
+  return runLedgerGate({
+    check: '3.75',
+    skipEnv: 'SKIP_MAP_BOUNDARY',
+    root: REPO_ROOT,
+    affects: (f) => /\.tsx?$/.test(f) || f.includes('map-boundary/') || f.includes('check-map-boundary'),
+    sweep: (input) => sweep(REPO_ROOT, undefined, input),
+    printLedger,
+    ok: 'κάθε χάρτης έρχεται μαζί με το στυλ του',
+    found: (n) => `${n} εύρημα(τα)`,
+    advice: ADVICE,
+  }, argv);
 }
 
-if (require.main === module) {
-  try {
-    process.exit(main());
-  } catch (error) {
-    console.error(`${RED}⛔ CHECK 3.75 — ${error.message}${NC}`);
-    process.exit(1);
-  }
-}
+if (require.main === module) runAsScript(main, '3.75');
 
 module.exports = { FILE_ORDER, OWNER_ORDER, SELF_ORDER, main, printLedger };

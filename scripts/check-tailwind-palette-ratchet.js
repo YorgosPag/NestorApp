@@ -54,12 +54,14 @@
  * Reference: ADR-365 §2.3 (allowlist), §3.2 (regex spec), §3.3 (this check)
  * =============================================================================
  */
-const fs = require('fs');
 const path = require('path');
+const { commitInput } = require('./lib/gate-input');
+const ratchet = require('./lib/per-file-ratchet');
 
 const REPO_ROOT = path.join(__dirname, '..');
-const REGISTRY_FILE = path.join(REPO_ROOT, '.ssot-registry.json');
-const BASELINE_FILE = path.join(REPO_ROOT, '.tailwind-palette-baseline.json');
+// ADR-924: σχετικά με τη ρίζα — κάθε ανάγνωση περνά από την ΕΙΣΟΔΟ
+const REGISTRY_FILE = '.ssot-registry.json';
+const BASELINE_FILE = '.tailwind-palette-baseline.json';
 const MODULE_NAME = 'tailwind-hardcoded-palette';
 
 const RED = '\x1b[0;31m';
@@ -124,45 +126,44 @@ const INVALID_SHADE_REGEX = new RegExp(
 );
 
 // ---------------------------------------------------------------------------
-// Registry-driven allowlist + global exempt patterns
+// Registry-driven allowlist + global exempt patterns — από την ΕΙΣΟΔΟ (ADR-924: `--index` ⇒ το μητρώο ΤΟΥ COMMIT)
 // ---------------------------------------------------------------------------
-function loadRegistry() {
-  if (!fs.existsSync(REGISTRY_FILE)) {
-    console.error(`${RED}❌ Registry missing: ${REGISTRY_FILE}${NC}`);
+function loadRegistry(input) {
+  if (!input.exists(REGISTRY_FILE)) {
+    console.error(`${RED}❌ Registry missing: ${path.join(REPO_ROOT, REGISTRY_FILE)}${NC}`);
     process.exit(2);
   }
-  const data = JSON.parse(fs.readFileSync(REGISTRY_FILE, 'utf8'));
+  const data = input.readJson(REGISTRY_FILE);
   const mod = data.modules?.[MODULE_NAME];
   if (!mod) {
-    console.error(`${RED}❌ Module '${MODULE_NAME}' missing from ${REGISTRY_FILE}${NC}`);
+    console.error(`${RED}❌ Module '${MODULE_NAME}' missing from ${path.join(REPO_ROOT, REGISTRY_FILE)}${NC}`);
     process.exit(2);
   }
   const exemptRegex = data.exemptPatterns ? new RegExp(data.exemptPatterns) : null;
   return { allowlist: mod.allowlist || [], exemptRegex };
 }
 
-const { allowlist: ALLOWLIST, exemptRegex: EXEMPT_REGEX } = loadRegistry();
-
 function normalizePath(p) {
   return p.replace(/\\/g, '/');
 }
 
-function isAllowlisted(file) {
-  const norm = normalizePath(file);
-  return ALLOWLIST.some((entry) => {
-    const e = normalizePath(entry);
-    if (e.endsWith('/')) return norm.startsWith(e);
-    return norm === e;
-  });
-}
-
-function isInScope(file) {
-  const norm = normalizePath(file);
-  if (!/\.(ts|tsx)$/.test(norm)) return false;
-  if (!norm.startsWith('src/')) return false;
-  if (EXEMPT_REGEX && EXEMPT_REGEX.test(norm)) return false;
-  if (isAllowlisted(file)) return false;
-  return true;
+/** Το πεδίο της πύλης, από το μητρώο της εισόδου: `.ts`/`.tsx` του `src/`, εκτός εξαιρέσεων και allowlist. */
+function scopeOf({ allowlist, exemptRegex }) {
+  const isAllowlisted = (file) => {
+    const norm = normalizePath(file);
+    return allowlist.some((entry) => {
+      const e = normalizePath(entry);
+      if (e.endsWith('/')) return norm.startsWith(e);
+      return norm === e;
+    });
+  };
+  return (file) => {
+    const norm = normalizePath(file);
+    if (!/\.(ts|tsx)$/.test(norm)) return false;
+    if (!norm.startsWith('src/')) return false;
+    if (exemptRegex && exemptRegex.test(norm)) return false;
+    return !isAllowlisted(file);
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -203,102 +204,42 @@ function countInvalidShades(content) {
   return hits;
 }
 
-// ---------------------------------------------------------------------------
-// Full src/ walk
-// ---------------------------------------------------------------------------
-function walkSrc(dir, out = []) {
-  const abs = path.join(REPO_ROOT, dir);
-  if (!fs.existsSync(abs)) return out;
-  for (const entry of fs.readdirSync(abs, { withFileTypes: true })) {
-    const rel = path.join(dir, entry.name).replace(/\\/g, '/');
-    if (entry.isDirectory()) {
-      if (['node_modules', '.next', '__tests__'].includes(entry.name)) continue;
-      walkSrc(rel, out);
-    } else if (/\.(ts|tsx)$/.test(entry.name) && isInScope(rel)) {
-      out.push(rel);
-    }
-  }
-  return out;
-}
-
-// ---------------------------------------------------------------------------
-// Baseline IO
-// ---------------------------------------------------------------------------
-function loadBaseline() {
-  if (!fs.existsSync(BASELINE_FILE)) return { files: {} };
-  try {
-    const data = JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf8'));
-    return { files: data.files ?? {} };
-  } catch {
-    return { files: {} };
-  }
-}
-
-function writeBaseline(fileCounts) {
-  const sortedFiles = Object.fromEntries(
-    Object.entries(fileCounts).sort(([a], [b]) => a.localeCompare(b)),
-  );
-  const totalViolations = Object.values(fileCounts).reduce((a, b) => a + b, 0);
-  const payload = {
-    _meta: {
-      module: MODULE_NAME,
-      description:
-        'Tailwind raw palette utilities baseline. Ratchet enforced via CHECK 3.26 (ADR-365). ' +
-        'Counts can only decrease per-file. New files: zero tolerance.',
-      adr: 'ADR-365',
-      generatedAt: new Date().toISOString(),
-      totalFiles: Object.keys(sortedFiles).length,
-      totalViolations,
+/**
+ * Σάρωση από την ΕΙΣΟΔΟ: τα ευρήματα παλέτας ανά αρχείο (το ratchet) ΚΑΙ οι ανύπαρκτες αποχρώσεις (μηδενική ανοχή),
+ * σε ΜΙΑ ανάγνωση ανά αρχείο. `files` = ορίσματα, ή (χωρίς) όλο το `src/`.
+ */
+function scan(input, inScope, files = ratchet.scopeFiles(input, ['src'], inScope, ratchet.pruneTestDirs)) {
+  const invalidByFile = new Map();
+  const scanned = ratchet.scanFiles(files, {
+    input,
+    inScope,
+    findHits: (text, rel) => {
+      invalidByFile.set(rel, countInvalidShades(text));
+      return countViolations(text);
     },
-    files: sortedFiles,
-  };
-  fs.writeFileSync(BASELINE_FILE, JSON.stringify(payload, null, 2) + '\n', 'utf8');
-  return { totalFiles: Object.keys(sortedFiles).length, totalViolations };
+  });
+  return { scanned, invalidByFile };
 }
 
 // ---------------------------------------------------------------------------
-// Main
+// Modes
 // ---------------------------------------------------------------------------
-const args = process.argv.slice(2);
-const wantAll = args.includes('--all') || args.includes('--audit');
-const wantReport = args.includes('--report');
-const wantBaseline = args.includes('--baseline') || args.includes('--write-baseline');
-
-if (wantBaseline) {
-  const files = walkSrc('src');
-  const fileCounts = {};
-  for (const file of files) {
-    const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
-    const hits = countViolations(content);
-    if (hits.length > 0) fileCounts[normalizePath(file)] = hits.length;
-  }
-  const { totalFiles, totalViolations } = writeBaseline(fileCounts);
-  console.log(
-    `${GREEN}✅ Baseline written: ${BASELINE_FILE}${NC}\n` +
-    `${GREEN}   ${totalFiles} files / ${totalViolations} violations${NC}`,
-  );
-  process.exit(0);
+function writeBaseline(scanned) {
+  ratchet.writeModuleBaseline(BASELINE_FILE, scanned, {
+    module: MODULE_NAME,
+    adr: 'ADR-365',
+    description:
+      'Tailwind raw palette utilities baseline. Ratchet enforced via CHECK 3.26 (ADR-365). ' +
+      'Counts can only decrease per-file. New files: zero tolerance.',
+  }, REPO_ROOT);
 }
 
-if (wantReport || wantAll) {
-  const files = walkSrc('src');
-  const entries = [];
-  let totalViolations = 0;
-  let totalInvalidShades = 0;
-  const invalidEntries = [];
-  for (const file of files) {
-    const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
-    const invalid = countInvalidShades(content);
-    if (invalid.length > 0) {
-      totalInvalidShades += invalid.length;
-      invalidEntries.push({ file: normalizePath(file), invalid });
-    }
-    const hits = countViolations(content);
-    if (hits.length === 0) continue;
-    totalViolations += hits.length;
-    entries.push({ file: normalizePath(file), hits });
-  }
-  entries.sort((a, b) => b.hits.length - a.hits.length || a.file.localeCompare(b.file));
+function audit({ scanned, invalidByFile }, wantReport) {
+  const entries = ratchet.rankByCount(scanned);
+  const totalViolations = entries.reduce((sum, { hits }) => sum + hits.length, 0);
+  const invalidEntries = scanned.map(({ file }) => ({ file, invalid: invalidByFile.get(file) }))
+    .filter(({ invalid }) => invalid.length > 0);
+  const totalInvalidShades = invalidEntries.reduce((sum, { invalid }) => sum + invalid.length, 0);
 
   if (wantReport) {
     for (const { file, hits } of entries) {
@@ -323,96 +264,57 @@ if (wantReport || wantAll) {
       `${RED}🚫 Invalid shades: ${invalidEntries.length} files / ${totalInvalidShades} non-existent classes (emit no CSS)${NC}`,
     );
   }
-  process.exit(0);
 }
 
-// Default: ratchet mode — scan provided args (staged files from pre-commit).
-const stagedFiles = args.filter((a) => !a.startsWith('--'));
-
-if (stagedFiles.length === 0) {
-  // Nothing to check (e.g. commit with no staged TS files in src/).
-  process.exit(0);
-}
-
-const baseline = loadBaseline();
-let hasBlock = false;
-let totalChecked = 0;
-let totalViolations = 0;
-const reductions = [];
-
-for (const file of stagedFiles) {
-  const abs = path.isAbsolute(file) ? file : path.join(REPO_ROOT, file);
-  if (!fs.existsSync(abs)) continue;
-  const rel = normalizePath(path.relative(REPO_ROOT, abs));
-  if (!isInScope(rel)) continue;
-  totalChecked += 1;
-
-  const content = fs.readFileSync(abs, 'utf8');
-
-  // Zero-tolerance: invalid-shade typos (e.g. green-707) emit no CSS — always block.
-  const invalid = countInvalidShades(content);
-  if (invalid.length > 0) {
-    hasBlock = true;
-    console.log(
-      `${RED}  🚫 ${rel}: ${invalid.length} invalid Tailwind shade(s) — non-existent class, emits NO CSS${NC}`,
-    );
-    for (const { match, line, palette, shade } of invalid) {
-      console.log(
-        `${YELLOW}     Line ${line}: ${match} — shade '${shade}' not in ${palette} palette (valid: ${SHADES.join(',')})${NC}`,
-      );
-    }
-  }
-
-  const hits = countViolations(content);
-  if (hits.length === 0) continue;
-
-  const baselineCount = baseline.files[rel] ?? 0;
-  const currentCount = hits.length;
-  totalViolations += currentCount;
-
-  if (currentCount <= baselineCount) {
-    if (currentCount < baselineCount) {
-      reductions.push(
-        `${GREEN}  📉 ${rel}: ${baselineCount} → ${currentCount} (-${baselineCount - currentCount}) raw palette utilities${NC}`,
-      );
-    }
-    continue;
-  }
-
-  hasBlock = true;
-  const newCount = currentCount - baselineCount;
+/** Zero-tolerance: invalid-shade typos (e.g. green-707) emit no CSS — always block. */
+function printInvalidShades(file, invalid) {
+  if (invalid.length === 0) return false;
   console.log(
-    `${RED}  🚫 ${rel}: ${newCount} new raw palette utility/-ies (total ${currentCount}, baseline ${baselineCount})${NC}`,
+    `${RED}  🚫 ${file}: ${invalid.length} invalid Tailwind shade(s) — non-existent class, emits NO CSS${NC}`,
   );
-  for (const { match, line } of hits.slice(-newCount)) {
+  for (const { match, line, palette, shade } of invalid) {
     console.log(
-      `${YELLOW}     Line ${line}: ${match} — replace with semantic token (ADR-365 §3.1)${NC}`,
+      `${YELLOW}     Line ${line}: ${match} — shade '${shade}' not in ${palette} palette (valid: ${SHADES.join(',')})${NC}`,
     );
   }
+  return true;
 }
 
-for (const line of reductions) console.log(line);
+function ratchetMode(input, inScope, stagedFiles) {
+  const { scanned, invalidByFile } = scan(input, inScope, stagedFiles);
+  const hasBlock = ratchet.printLineVerdict(scanned, ratchet.loadFileCounts(BASELINE_FILE, input), {
+    noun: 'raw palette utilities',
+    newNoun: 'new raw palette utility/-ies',
+    describeHit: ({ match }) => `${match} — replace with semantic token (ADR-365 §3.1)`,
+    deferReductions: true,
+    extra: ({ file }) => printInvalidShades(file, invalidByFile.get(file)),
+  });
 
-if (hasBlock) {
-  console.log('');
-  console.log(
-    `${RED}  ❌ Tailwind palette ratchet FAILED — replace raw utilities with semantic tokens${NC}`,
-  );
-  console.log(
-    `${YELLOW}     Mapping: docs/centralized-systems/reference/adrs/ADR-365-tailwind-semantic-palette-enforcement.md §3.1${NC}`,
-  );
-  console.log(
-    `${YELLOW}     SSoT: src/design-system/color-bridge.ts (COLOR_BRIDGE) + src/design-system/semantics/colors.ts (semanticColors)${NC}`,
-  );
-  console.log(
-    `${YELLOW}     After legit cleanup: npm run tailwind-palette:baseline${NC}`,
-  );
-  process.exit(1);
+  return ratchet.concludeLineRatchet(hasBlock, scanned.length, {
+    failLines: [
+      `${RED}  ❌ Tailwind palette ratchet FAILED — replace raw utilities with semantic tokens${NC}`,
+      `${YELLOW}     Mapping: docs/centralized-systems/reference/adrs/ADR-365-tailwind-semantic-palette-enforcement.md §3.1${NC}`,
+      `${YELLOW}     SSoT: src/design-system/color-bridge.ts (COLOR_BRIDGE) + src/design-system/semantics/colors.ts (semanticColors)${NC}`,
+      `${YELLOW}     After legit cleanup: npm run tailwind-palette:baseline${NC}`,
+    ],
+    okLine: `${GREEN}  ✅ Tailwind palette: no new raw-utility violations (${scanned.length} file(s) in scope)${NC}`,
+  });
 }
 
-if (totalChecked > 0) {
-  console.log(
-    `${GREEN}  ✅ Tailwind palette: no new raw-utility violations (${totalChecked} file(s) in scope)${NC}`,
-  );
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
+/** `input` = η είσοδος (ADR-924): με `--index` (εκτελεστής) το μητρώο, η baseline και το κείμενο ΤΟΥ COMMIT. */
+function run(args = process.argv.slice(2), input = commitInput(REPO_ROOT, args)) {
+  const inScope = scopeOf(loadRegistry(input));
+  return ratchet.runLineModes(args, {
+    baseline: () => writeBaseline(scan(input, inScope).scanned),
+    audit: (wantReport) => audit(scan(input, inScope), wantReport),
+    // ratchet mode — scan provided args (staged files from pre-commit)
+    ratchet: (stagedFiles) => ratchetMode(input, inScope, stagedFiles),
+  });
 }
-process.exit(0);
+
+if (require.main === module) process.exit(run());
+
+module.exports = { run, countViolations, countInvalidShades, scopeOf };

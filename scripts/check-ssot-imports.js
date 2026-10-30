@@ -42,7 +42,7 @@
 
 'use strict';
 
-const fs = require('node:fs');
+const { openGateInput, INDEX_FLAG } = require('./lib/gate-input');
 
 const { loadRegistry, normalizePath, TS_EXT_RE, REGISTRY_FILE } = require('./lib/ssot/registry');
 const { analyzeFile } = require('./lib/ssot/scan');
@@ -71,14 +71,13 @@ const NC = '\x1b[0m';
  * @param {RegExp} exemptRe
  * @returns {import('./lib/ssot/baseline').FileVerdict|null} null = παραλείπεται
  */
-function checkFile(file, modules, baselineFiles, exemptRe) {
-  if (!fs.existsSync(file)) return null;
+function checkFile(file, modules, baselineFiles, exemptRe, input = openGateInput({ root: process.cwd() })) {
+  // ADR-924 — το κείμενο ΤΗΣ ΟΨΗΣ: με `--index` το σταδιοποιημένο, όχι μια ξένη αστάδιοποίητη αλλαγή του ίδιου αρχείου.
   if (!TS_EXT_RE.test(file)) return null;
-
   const normalized = normalizePath(file);
   if (exemptRe.test(normalized)) return null;
-
-  const content = fs.readFileSync(file, 'utf8');
+  const content = input.read(file);
+  if (content === null) return null;
   // `collect` μόνο όταν χρειάζεται εμφάνιση — αλλά η ανάλυση είναι ένα πέρασμα,
   // οπότε τη μαζεύουμε πάντα: τα staged αρχεία είναι λίγα.
   const { counts, findings } = analyzeFile(content, normalized, modules, { collect: true });
@@ -188,13 +187,14 @@ async function main() {
 
   const files = argv.filter(a => !a.startsWith('--'));
   if (files.length === 0) process.exit(0);
+  const input = openGateInput({ root: process.cwd(), index: argv.includes(INDEX_FLAG) });
 
   // Fail CLOSED: και τα δύο είναι tracked αρχεία. Η απουσία τους σημαίνει
   // χαλασμένο checkout ή λάθος cwd — ποτέ «δεν υπάρχει τίποτα να επιβληθεί».
   // Ο παλιός κώδικας προειδοποιούσε κι έβγαινε με 0, απενεργοποιώντας σιωπηλά
   // και τα 420 modules (ADR-294, 2026-07-16).
   for (const [file, label] of [[REGISTRY_FILE, 'μητρώο'], [BASELINE_FILE, 'baseline']]) {
-    if (!fs.existsSync(file)) {
+    if (!input.exists(file)) {
       console.log(`${RED}  ❌ Το CHECK 3.7 δεν μπορεί να τρέξει — δεν βρέθηκε το SSoT ${label}: ${file}${NC}`);
       console.log(`${YELLOW}     Είναι tracked στο git· επανάφερέ το αντί να παρακάμψεις τον έλεγχο.${NC}`);
       process.exit(1);
@@ -203,15 +203,15 @@ async function main() {
 
   let exemptRe, modules, baselineFiles;
   try {
-    ({ exemptRe, modules } = loadRegistry(REGISTRY_FILE));
-    ({ files: baselineFiles } = loadBaseline(BASELINE_FILE));
+    ({ exemptRe, modules } = loadRegistry(REGISTRY_FILE, input));
+    ({ files: baselineFiles } = loadBaseline(BASELINE_FILE, input));
   } catch (err) {
     console.log(`${RED}  ❌ Το CHECK 3.7 δεν μπορεί να τρέξει — ${err.message}${NC}`);
     process.exit(1);
   }
 
   const results = files
-    .map(f => checkFile(f, modules, baselineFiles, exemptRe))
+    .map(f => checkFile(f, modules, baselineFiles, exemptRe, input))
     .filter(Boolean);
 
   renderOutput(results);

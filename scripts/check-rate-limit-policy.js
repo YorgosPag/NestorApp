@@ -55,8 +55,9 @@ const MARK = {
   [STATES.VIA_FACTORY]: '✅',
 };
 
-function measure() {
-  const inventory = takeInventory(PROJECT_ROOT);
+/** `input` = η είσοδος (ADR-924) — ο `runSetRatchetCli` δίνει την όψη του commit με `--index`. */
+function measure(_args = [], input = undefined) {
+  const inventory = takeInventory(PROJECT_ROOT, {}, input);
   const verdict = judge(inventory);
   return { inventory, verdict, violationIds: verdict.violationIds, declarations: verdict.declarations };
 }

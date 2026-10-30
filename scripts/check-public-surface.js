@@ -59,19 +59,20 @@
 
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
-const { runSetRatchetCli, PROJECT_ROOT } = require('./lib/ratchet-baseline');
+const { runGuardedSetRatchetCli, PROJECT_ROOT } = require('./lib/ratchet-baseline');
+const { openGateInput } = require('./lib/gate-input');
 const { scanPublicSurface, STATES, BLOCKING, GUARDED_PREFIX } = require('./lib/public-surface/scan');
 
 const MANIFEST = path.join(PROJECT_ROOT, '.dxf-viewer-public-api.json');
 const BASELINE = path.join(PROJECT_ROOT, '.public-surface-baseline.json');
 
-function loadManifest() {
-  if (!fs.existsSync(MANIFEST)) {
+function loadManifest(input) {
+  const text = input.read(MANIFEST);
+  if (text === null) {
     throw new Error(`λείπει το μανιφέστο: ${path.relative(PROJECT_ROOT, MANIFEST)}`);
   }
-  const raw = JSON.parse(fs.readFileSync(MANIFEST, 'utf8'));
+  const raw = JSON.parse(text);
   if (!Array.isArray(raw.surface)) throw new Error('το μανιφέστο δεν έχει πίνακα `surface`');
   return raw;
 }
@@ -82,8 +83,10 @@ function loadManifest() {
  * είχε ήδη γράψει τη baseline — δηλαδή η πύλη θα άφηνε πίσω της σπαρμένο αρχείο και
  * σφάλμα, κατάσταση που διαβάζεται ως «η πύλη είναι χαλασμένη» ενώ ήταν η **σύμβαση**.
  */
-function measure() {
-  const m = scanPublicSurface({ projectRoot: PROJECT_ROOT, manifest: loadManifest() });
+/** `opts.input` = η είσοδος (ADR-924) — προεπιλογή ο δίσκος· ο εκτελεστής δίνει την όψη του commit. */
+function measure(opts = {}) {
+  const input = opts.input || openGateInput({ root: PROJECT_ROOT });
+  const m = scanPublicSurface({ projectRoot: PROJECT_ROOT, manifest: loadManifest(input), input, codeFiles: opts.codeFiles });
   return { ...m, violations: m.blocking, violationIds: m.blocking.map((f) => f.id) };
 }
 
@@ -148,7 +151,7 @@ const DESCRIPTOR = {
   adr: 'ADR-796 (CHECK 3.62)',
   skipEnv: 'SKIP_PUBLIC_SURFACE',
   baselineFile: BASELINE,
-  measure: () => measure(),
+  measure: (_args, input) => measure({ input }),
   buildPayload,
   printReport,
   violationId: (x) => x,
@@ -171,31 +174,26 @@ const DESCRIPTOR = {
   },
 };
 
-async function main() {
-  if (process.env.SKIP_PUBLIC_SURFACE === '1') {
-    console.log('  ⏭ CHECK 3.62 παραλείφθηκε (SKIP_PUBLIC_SURFACE=1)');
-    return process.exit(0);
-  }
-  const args = process.argv.slice(2);
-  const explicit = args.includes('--report') || args.includes('--write-baseline') || args.includes('--all');
-  const staged = args.filter((a) => !a.startsWith('-'));
-  if (!explicit && staged.length > 0 && !triggers(staged)) return process.exit(0);
+function printBlocking(m) {
+  console.error(`\n❌ CHECK 3.62 — ${m.blocking.length} παραβίαση(εις) δημόσιας επιφάνειας:\n`);
+  for (const e of m.blocking.slice(0, 25)) console.error(`   🚫 [${e.state}] ${e.detail}`);
+  if (m.blocking.length > 25) console.error(`   … και ${m.blocking.length - 25} ακόμη`);
+  console.error('\n   Θεραπεία (αδήλωτη): δήλωσε το σύμβολο στο `.dxf-viewer-public-api.json` ΜΕ ΛΟΓΟ,');
+  console.error('                       ή σταμάτα να το ζητάς από έξω.');
+  console.error('   Θεραπεία (ορφανή):   σβήσε τη γραμμή — η επιφάνεια ΣΥΡΡΙΚΝΩΘΗΚΕ, καλό είναι.');
+  console.error('   ⛔ ΜΗΝ φτιάξεις barrel για να «περάσει»: μετρημένα λάθος (Atlassian −75% build time).');
+}
 
-  if (!args.includes('--report') && !args.includes('--write-baseline')) {
-    const m = measure();
-    console.log(ledgerLine(m));
-    if (m.blocking.length > 0) {
-      console.error(`\n❌ CHECK 3.62 — ${m.blocking.length} παραβίαση(εις) δημόσιας επιφάνειας:\n`);
-      for (const e of m.blocking.slice(0, 25)) console.error(`   🚫 [${e.state}] ${e.detail}`);
-      if (m.blocking.length > 25) console.error(`   … και ${m.blocking.length - 25} ακόμη`);
-      console.error('\n   Θεραπεία (αδήλωτη): δήλωσε το σύμβολο στο `.dxf-viewer-public-api.json` ΜΕ ΛΟΓΟ,');
-      console.error('                       ή σταμάτα να το ζητάς από έξω.');
-      console.error('   Θεραπεία (ορφανή):   σβήσε τη γραμμή — η επιφάνεια ΣΥΡΡΙΚΝΩΘΗΚΕ, καλό είναι.');
-      console.error('   ⛔ ΜΗΝ φτιάξεις barrel για να «περάσει»: μετρημένα λάθος (Atlassian −75% build time).');
-      return process.exit(1);
-    }
-  }
-  return runSetRatchetCli(DESCRIPTOR, process.argv);
+/** 🧹 ADR-924 §8.8: ΜΙΑ μέτρηση για φρουρό ΚΑΙ ratchet (ήταν δύο πλήρεις σαρώσεις, ~40s η καθεμία). */
+function main(argv = process.argv) {
+  return runGuardedSetRatchetCli({
+    descriptor: DESCRIPTOR,
+    check: '3.62',
+    triggers: (staged) => triggers(staged),
+    ledgerLine,
+    blockingOf: (m) => m.blocking,
+    printBlocking,
+  }, argv);
 }
 
 if (require.main === module) {

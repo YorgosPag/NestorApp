@@ -59,8 +59,8 @@
 
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
+const { openGateInput, commitInput } = require('./lib/gate-input');
 
 const { judgeAll, STATES, ZERO_TOLERANCE, ALL_STATES } = require('./lib/prerender/judge');
 
@@ -87,15 +87,14 @@ const DECLARED_GAPS = Object.freeze([STATES.OPTED_OUT]);
  * Η ανάλυση είναι **πάντα πλήρης** όταν πυροδοτεί: μια μερική είναι αναληθής,
  * γιατί το ερώτημα είναι για την **κλειστότητα**, όχι για το αρχείο.
  */
-function shouldRun(stagedFiles) {
+function shouldRun(stagedFiles, input = openGateInput({ root: PROJECT_ROOT })) {
   return stagedFiles.some(file => {
     const posix = file.split(path.sep).join('/');
     if (posix.startsWith('src/app/')) return true;
     if (posix.startsWith('scripts/lib/prerender/') || posix.endsWith('check-prerender-bailout.js')) return true;
     if (!/\.(t|j)sx?$/.test(posix)) return false;
-    const abs = path.join(PROJECT_ROOT, posix);
-    if (!fs.existsSync(abs)) return true; // διαγραφή ⇒ μπορεί να έσβησε φρουρό
-    const text = fs.readFileSync(abs, 'utf8');
+    const text = input.read(posix);
+    if (text === null) return true; // διαγραφή ⇒ μπορεί να έσβησε φρουρό
     return text.includes('useSearchParams') || text.includes('Suspense');
   });
 }
@@ -161,9 +160,11 @@ function main() {
   if (process.env.SKIP_PRERENDER_BAILOUT === '1') process.exit(0);
 
   const staged = process.argv.slice(2).filter(arg => !arg.startsWith('--'));
-  if (!SCAN_ALL && !REPORT && !shouldRun(staged)) process.exit(0);
+  // ADR-924 — με `--index` (εκτελεστής) σκανδάλη ΚΑΙ κρίση κοιτούν το commit, όχι τον δίσκο.
+  const input = commitInput(PROJECT_ROOT);
+  if (!SCAN_ALL && !REPORT && !shouldRun(staged, input)) process.exit(0);
 
-  const { records, census } = judgeAll(PROJECT_ROOT);
+  const { records, census } = judgeAll(PROJECT_ROOT, input);
   if (records.length === 0) {
     console.error(`${RED}${CHECK}: δεν βρέθηκε καμία ρίζα κάτω από src/app — η πύλη ΑΡΝΕΙΤΑΙ να πει «καθαρό».${NC}`);
     process.exit(1);

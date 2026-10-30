@@ -16,6 +16,7 @@ const path = require('node:path');
 
 const { CLAIM_SOURCE_FILE, GATE_STATES, LIVENESS_PREDICATE, RULES_FILES } = require('./lib/rules-liveness/contract.js');
 const { BLOCKING, sweep } = require('./lib/rules-liveness/gate.js');
+const { commitInput } = require('./lib/gate-input');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 const GREEN = '\x1b[0;32m';
@@ -51,7 +52,7 @@ function main(argv = process.argv, root = REPO_ROOT) {
     || f.includes('check-rules-sign-in-liveness');
   if (staged.length > 0 && !staged.some(affects)) return 0;
 
-  const result = sweep(root);
+  const result = sweep(root, commitInput(root, argv).readRequired);
   printLedger(result);
   if (result.violations.length === 0) {
     console.log(`${GREEN}  ✅ CHECK 3.96: κάθε allow περνά από το ${LIVENESS_PREDICATE}()${NC}`);

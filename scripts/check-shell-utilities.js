@@ -89,11 +89,11 @@
 
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
 
 const TREE = require('./lib/shell-boundary/tree');
 const { createReachability, toPosix, importBindings } = require('./lib/shell-utilities/reach');
+const { openGateInput, INDEX_FLAG } = require('./lib/gate-input');
 
 const RED = '\x1b[31m';
 const GREEN = '\x1b[32m';
@@ -186,32 +186,22 @@ const OWNER_ORDER = [...OWNER_BLOCKING, OWNER_STATES.OK];
 
 // ---------------------------------------------------------------------------
 
-function loadConfig(projectRoot) {
-  const file = path.join(projectRoot, CONFIG_FILE);
-  if (!fs.existsSync(file)) {
+function loadConfig(projectRoot, input = openGateInput({ root: projectRoot })) {
+  const text = input.read(CONFIG_FILE);
+  if (text === null) {
     // fail-closed: «δεν βρήκα το συμβόλαιο» ΠΟΤΕ «άρα όλα καλά».
     throw new Error(`CHECK 3.72: λείπει το ${CONFIG_FILE}`);
   }
-  const cfg = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const cfg = JSON.parse(text);
   for (const key of ['owner', 'universalSymbols', 'groupsWithoutUtilities', 'pagesWithoutUtilities']) {
     if (cfg[key] === undefined) throw new Error(`CHECK 3.72: το ${CONFIG_FILE} δεν δηλώνει «${key}»`);
   }
   return cfg;
 }
 
-/** Κάθε αρχείο του `src/`, ως posix — ο γράφος το θέλει ολόκληρο. */
-function collectFiles(projectRoot, dir = 'src', out = []) {
-  const abs = path.join(projectRoot, dir);
-  for (const e of fs.readdirSync(abs, { withFileTypes: true })) {
-    const rel = `${dir}/${e.name}`;
-    if (e.isDirectory()) {
-      if (e.name === 'node_modules') continue;
-      collectFiles(projectRoot, rel, out);
-    } else if (/\.(ts|tsx|js|jsx|mjs|cjs)$/.test(e.name)) {
-      out.push(toPosix(path.join(projectRoot, rel)));
-    }
-  }
-  return out;
+/** Κάθε αρχείο του `src/`, ως απόλυτο posix — ο γράφος το θέλει ολόκληρο· από την ΕΙΣΟΔΟ (ADR-924 Φ3). */
+function collectFiles(projectRoot, input = openGateInput({ root: projectRoot })) {
+  return input.files(['src'], { accept: (rel) => /\.(ts|tsx|js|jsx|mjs|cjs)$/.test(rel) });
 }
 
 /**
@@ -227,13 +217,12 @@ function collectFiles(projectRoot, dir = 'src', out = []) {
  * το αρχείο. Κριτήριο κειμένου θα κοκκίνιζε πάνω στην **τεκμηρίωση της
  * θεραπείας** — το σχήμα `Κ7β` του CHECK 3.50.
  */
-function auditSymbols(projectRoot, cfg, reach, files) {
+function auditSymbols(projectRoot, cfg, reach, files, input = openGateInput({ root: projectRoot })) {
   const owner = toPosix(path.join(projectRoot, cfg.owner));
   const findings = [];
   for (const file of files) {
-    let text;
-    try { text = fs.readFileSync(file, 'utf8'); } catch { continue; }
-    if (!cfg.universalSymbols.some((s) => text.includes(s))) continue;
+    const text = input.read(file);
+    if (text === null || !cfg.universalSymbols.some((s) => text.includes(s))) continue;
 
     const mod = reach.graph.modules.get(file);
     if (mod === undefined) continue;
@@ -376,24 +365,30 @@ function tally(findings, order, label) {
   return ledger;
 }
 
-function analyse(projectRoot, { readFile } = {}) {
-  const cfg = loadConfig(projectRoot);
-  const files = collectFiles(projectRoot);
+/**
+ * `input` = η είσοδος (ADR-924): με `--index` (εκτελεστής) τα αρχεία, το κείμενο και το tsconfig ΤΟΥ COMMIT.
+ * `readFile` = ένεση των αγκυρών για τον γράφο (προεπιλογή: η είσοδος).
+ */
+function analyse(projectRoot, { readFile, input = openGateInput({ root: projectRoot }) } = {}) {
+  const cfg = loadConfig(projectRoot, input);
+  const files = collectFiles(projectRoot, input);
   const reach = createReachability({
     projectRoot,
     files,
-    readFile: readFile ?? ((f) => fs.readFileSync(f, 'utf8')),
+    // ⚠️ λείπει ⇒ throw, ΠΟΤΕ '' — ο γράφος κάνει το «δεν διαβάζεται» απουσία module (owner-missing, όχι «κενό»)
+    readFile: readFile ?? input.readRequired,
+    readText: input.read,
   });
 
   const owner = toPosix(path.join(projectRoot, cfg.owner));
-  const layouts = TREE.enumerateLayouts(projectRoot, APP_DIR);
-  const pages = TREE.enumeratePages(projectRoot, APP_DIR);
-  const groupsOnDisk = TREE.enumerateRootGroups(projectRoot, APP_DIR);
+  const layouts = TREE.enumerateLayouts(projectRoot, APP_DIR, input);
+  const pages = TREE.enumeratePages(projectRoot, APP_DIR, input);
+  const groupsOnDisk = TREE.enumerateRootGroups(projectRoot, APP_DIR, input);
 
   const ctx = { projectRoot: toPosix(projectRoot), cfg, reach, owner, layouts };
   const pageFindings = pages.map((p) => classifyPage(p, ctx));
   const declFindings = auditDeclarations(cfg, pageFindings, groupsOnDisk);
-  const symbolFindings = auditSymbols(projectRoot, cfg, reach, files);
+  const symbolFindings = auditSymbols(projectRoot, cfg, reach, files, input);
   const ownerFinding = auditOwner(projectRoot, cfg, reach);
 
   return {
@@ -458,7 +453,7 @@ function main(argv) {
   const staged = argv.filter((a) => !a.startsWith('-'));
   if (!all && staged.length > 0 && !triggers(staged)) return 0;
 
-  const result = analyse(projectRoot);
+  const result = analyse(projectRoot, { input: openGateInput({ root: projectRoot, index: argv.includes(INDEX_FLAG) }) });
 
   if (report) {
     console.log('\nCHECK 3.72 — απογραφή καθολικών δυνατοτήτων (ADR-809)');

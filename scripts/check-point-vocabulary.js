@@ -61,11 +61,10 @@
 
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
 const { stripComments } = require('./lib/i18n-namespace-extract');
-const { runSetRatchetCli, PROJECT_ROOT } = require('./lib/ratchet-baseline');
-const { collectSourceFiles } = require('./lib/module-graph/scan-config');
+const { runGuardedSetRatchetCli, PROJECT_ROOT } = require('./lib/ratchet-baseline');
+const { openGateInput } = require('./lib/gate-input');
 const { toPosix } = require('./lib/module-graph/resolve-specifier');
 
 const REGISTRY = path.join(PROJECT_ROOT, '.point-vocabulary.json');
@@ -100,10 +99,10 @@ function declaresType(code, name) {
   return re.test(code);
 }
 
-function loadRegistry(registryPath = REGISTRY) {
+function loadRegistry(registryPath = REGISTRY, input = openGateInput({ root: PROJECT_ROOT })) {
   let raw;
   try {
-    raw = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
+    raw = input.readJson(registryPath);
   } catch (e) {
     throw new Error(`το μητρώο δεν διαβάζεται (${rel(registryPath)}): ${e.message}`);
   }
@@ -153,8 +152,10 @@ function vocabularyProbe(registry) {
 function scanDeclarations(registry, opts = {}) {
   const vocabulary = [...vocabularyOf(registry)];
   const probe = vocabularyProbe(registry);
-  const files = opts.files || collectSourceFiles(opts.root || PROJECT_ROOT);
-  const readFile = opts.readFile || ((f) => fs.readFileSync(f, 'utf8'));
+  // ADR-924 — αρχεία ΚΑΙ κείμενο από την ΕΙΣΟΔΟ (με `--index`: η όψη του commit)· ίδιες ρίζες με το `collectSourceFiles`.
+  const input = opts.input || openGateInput({ root: opts.root || PROJECT_ROOT });
+  const files = opts.files || opts.codeFiles || input.sources(['src', 'packages']);
+  const readFile = opts.readFile || ((f) => input.read(f));
   const root = opts.root || PROJECT_ROOT;
   const found = [];
   for (const abs of files) {
@@ -164,7 +165,7 @@ function scanDeclarations(registry, opts = {}) {
     } catch {
       continue;
     }
-    if (!probe.test(raw)) continue; // ⚡ το 99% του δέντρου σταματά εδώ
+    if (raw === null || !probe.test(raw)) continue; // ⚡ το 99% του δέντρου σταματά εδώ
     const code = stripComments(raw);
     for (const name of vocabulary) {
       if (declaresType(code, name)) found.push({ file: toPosix(path.relative(root, abs)), name });
@@ -220,8 +221,9 @@ function tally(entries) {
 }
 
 function measure(opts = {}) {
-  const registry = opts.registry || loadRegistry(opts.registryPath);
-  const found = scanDeclarations(registry, opts);
+  const input = opts.input || openGateInput({ root: opts.root || PROJECT_ROOT });
+  const registry = opts.registry || loadRegistry(opts.registryPath, input);
+  const found = scanDeclarations(registry, { ...opts, input });
   const { entries, shared } = classify(found, registry);
   const ledger = tally(entries);
   return {
@@ -281,7 +283,7 @@ const TRIGGER_RE = [
  * αλλιώς θα άφηνε ορφανή δήλωση αόρατη — ή (γ) σταδιοποιημένο αρχείο δηλώνει όνομα του
  * λεξιλογίου. Η λίστα ριζών **παράγεται** από το μητρώο, ποτέ γραμμένη με το χέρι.
  */
-function triggers(files, registry) {
+function triggers(files, registry, input = openGateInput({ root: PROJECT_ROOT })) {
   const owners = new Set(registry.owners.map((o) => toPosix(o.file)));
   const vocabulary = [...vocabularyOf(registry)];
   return files.some((f) => {
@@ -291,7 +293,9 @@ function triggers(files, registry) {
     if (!/\.tsx?$/.test(p)) return false;
     let code;
     try {
-      code = stripComments(fs.readFileSync(path.join(PROJECT_ROOT, p), 'utf8'));
+      const text = input.read(p);
+      if (text === null) return false;
+      code = stripComments(text);
     } catch {
       return false;
     }
@@ -303,7 +307,7 @@ const DESCRIPTOR = {
   adr: 'ADR-792 (CHECK 3.59)',
   skipEnv: 'SKIP_POINT_VOCABULARY',
   baselineFile: BASELINE,
-  measure: () => measure(),
+  measure: (_args, input) => measure({ input }),
   buildPayload,
   printReport,
   violationId: (x) => x,
@@ -325,38 +329,30 @@ const DESCRIPTOR = {
   },
 };
 
-async function main() {
-  if (process.env.SKIP_POINT_VOCABULARY === '1') {
-    console.log('  ⏭ CHECK 3.59 παραλείφθηκε (SKIP_POINT_VOCABULARY=1)');
-    return process.exit(0);
-  }
-  const args = process.argv.slice(2);
-  const explicit = args.includes('--report') || args.includes('--write-baseline') || args.includes('--all');
-  const staged = args.filter((a) => !a.startsWith('-'));
-  const registry = loadRegistry();
-  if (!explicit && staged.length > 0 && !triggers(staged, registry)) return process.exit(0);
-
-  if (!args.includes('--report') && !args.includes('--write-baseline')) {
-    const m = measure();
-    // ⚠️ Τυπώνεται ΚΑΙ ΣΤΟ ΜΗΔΕΝ: ένα «0» που δεν φαίνεται διαβάζεται ως «δεν κοίταξα».
-    console.log(ledgerLine(m));
-    if (m.blocking.length > 0) {
-      console.error(`\n❌ CHECK 3.59 — ${m.blocking.length} παραβίαση(εις) λεξιλογίου σημείου:\n`);
-      for (const e of m.blocking) {
-        if (e.state === 'undeclared-owner') {
-          console.error(`   🚫 ${e.file} ορίζει «${e.name}» χωρίς να είναι δηλωμένη ρίζα.`);
-        } else {
-          console.error(`   🚫 ${e.file} ΔΕΝ ορίζει πια «${e.name}», αλλά το μητρώο το δηλώνει.`);
-        }
-      }
-      console.error('\n   Θεραπεία (αδήλωτη ρίζα): κάνε import από την υπάρχουσα ρίζα — μην ορίσεις δεύτερη.');
-      console.error('   Θεραπεία (ορφανή δήλωση): σβήσε τη γραμμή από το `.point-vocabulary.json`.');
-      console.error('   ⛔ ΜΗΝ σβήσεις όνομα από το μητρώο για να «περάσει»: το όνομα βγαίνει από την');
-      console.error('      εμβέλεια και ο δεύτερος ορισμός γίνεται ΑΟΡΑΤΟΣ (ADR-792 §6).');
-      return process.exit(1);
+function printBlocking(m) {
+  console.error(`\n❌ CHECK 3.59 — ${m.blocking.length} παραβίαση(εις) λεξιλογίου σημείου:\n`);
+  for (const e of m.blocking) {
+    if (e.state === 'undeclared-owner') {
+      console.error(`   🚫 ${e.file} ορίζει «${e.name}» χωρίς να είναι δηλωμένη ρίζα.`);
+    } else {
+      console.error(`   🚫 ${e.file} ΔΕΝ ορίζει πια «${e.name}», αλλά το μητρώο το δηλώνει.`);
     }
   }
-  return runSetRatchetCli(DESCRIPTOR, process.argv);
+  console.error('\n   Θεραπεία (αδήλωτη ρίζα): κάνε import από την υπάρχουσα ρίζα — μην ορίσεις δεύτερη.');
+  console.error('   Θεραπεία (ορφανή δήλωση): σβήσε τη γραμμή από το `.point-vocabulary.json`.');
+  console.error('   ⛔ ΜΗΝ σβήσεις όνομα από το μητρώο για να «περάσει»: το όνομα βγαίνει από την');
+  console.error('      εμβέλεια και ο δεύτερος ορισμός γίνεται ΑΟΡΑΤΟΣ (ADR-792 §6).');
+}
+
+function main(argv = process.argv) {
+  return runGuardedSetRatchetCli({
+    descriptor: DESCRIPTOR,
+    check: '3.59',
+    triggers: (staged, input) => triggers(staged, loadRegistry(REGISTRY, input), input),
+    ledgerLine,
+    blockingOf: (m) => m.blocking,
+    printBlocking,
+  }, argv);
 }
 
 if (require.main === module) {

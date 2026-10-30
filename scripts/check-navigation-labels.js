@@ -20,17 +20,18 @@
  * `office-navigation-integrity.test.ts`· αυτό είναι το γρήγορο φρένο του hook.
  *
  * EXIT: 0 — όλα τα κλειδιά λύνονται και στις δύο γλώσσες · 1 — τουλάχιστον ένα όχι.
- * Usage: node scripts/check-navigation-labels.js   (πάντα πλήρης σάρωση· αγνοεί ορίσματα)
+ * Usage: node scripts/check-navigation-labels.js [--index]   (πάντα πλήρης σάρωση)
+ *   `--index` (εκτελεστής, ADR-924): κατάλογος και locales από την ΟΨΗ ΤΟΥ COMMIT, όχι τον δίσκο.
  * =============================================================================
  */
-const fs = require('fs');
 const path = require('path');
+const { commitInput } = require('./lib/gate-input');
 
 const ROOT = path.join(__dirname, '..');
-const CATALOG_DIR = path.join(ROOT, 'src', 'config', 'office-navigation');
+const CATALOG_DIR = 'src/config/office-navigation';
 const LOCALE = {
-  el: path.join(ROOT, 'src', 'i18n', 'locales', 'el', 'navigation.json'),
-  en: path.join(ROOT, 'src', 'i18n', 'locales', 'en', 'navigation.json'),
+  el: 'src/i18n/locales/el/navigation.json',
+  en: 'src/i18n/locales/en/navigation.json',
 };
 
 const RED = '\x1b[0;31m';
@@ -43,12 +44,12 @@ function fail(msg) {
   process.exit(1);
 }
 
-function catalogFiles() {
-  if (!fs.existsSync(CATALOG_DIR)) fail(`check-navigation-labels: λείπει ο κατάλογος ${CATALOG_DIR}`);
-  return fs
-    .readdirSync(CATALOG_DIR)
+function catalogFiles(input) {
+  const listing = input.children(CATALOG_DIR);
+  if (!listing) fail(`check-navigation-labels: λείπει ο κατάλογος ${CATALOG_DIR}`);
+  return listing.files
     .filter((name) => /^catalog-.+\.ts$/.test(name))
-    .map((name) => path.join(CATALOG_DIR, name));
+    .map((name) => `${CATALOG_DIR}/${name}`);
 }
 
 /** `const NAME = 'value'` του αρχείου — οι μόνες μη-κυριολεκτικές τιμές που δεχόμαστε. */
@@ -61,8 +62,8 @@ function fileConstants(src) {
 }
 
 /** Κάθε `navLabelKey:` του αρχείου → κλειδί, ή σημείωση ότι δεν διαβάζεται. */
-function extractTitleKeys(file) {
-  const src = fs.readFileSync(file, 'utf8');
+function extractTitleKeys(file, input) {
+  const src = input.readRequired(file);
   const constants = fileConstants(src);
   const found = [];
   const re = /navLabelKey\s*:\s*(?:['"]([^'"]+)['"]|([A-Za-z_$][\w$]*))/g;
@@ -85,11 +86,11 @@ function resolveKey(obj, dottedKey) {
   return typeof cur === 'string' ? cur : undefined;
 }
 
-function loadLocales() {
+function loadLocales(input) {
   const out = {};
   for (const [lang, file] of Object.entries(LOCALE)) {
     try {
-      out[lang] = JSON.parse(fs.readFileSync(file, 'utf8'));
+      out[lang] = input.readJson(file);
     } catch (err) {
       fail(`check-navigation-labels: δεν διαβάζεται το ${file} — ${err.message}`);
     }
@@ -97,14 +98,15 @@ function loadLocales() {
   return out;
 }
 
-function main() {
-  const locales = loadLocales();
-  const entries = catalogFiles().flatMap(extractTitleKeys);
+/** Κάθε τίτλος στήλης και οι παραβάσεις του — από την ΕΙΣΟΔΟ (ADR-924 Φ3: ήταν `readdirSync` + `readFileSync`). */
+function measure(input = commitInput(ROOT)) {
+  const locales = loadLocales(input);
+  const entries = catalogFiles(input).flatMap((file) => extractTitleKeys(file, input));
   if (entries.length === 0) fail('check-navigation-labels: 0 `navLabelKey` βρέθηκαν — ο έλεγχος δεν κοίταξε τίποτα');
 
   const violations = [];
   for (const entry of entries) {
-    const where = `${path.relative(ROOT, entry.file)}:${entry.line}`;
+    const where = `${entry.file}:${entry.line}`;
     if (entry.key === null) {
       violations.push(`${where} — navLabelKey: ${entry.raw} (ούτε κυριολεκτικό ούτε const του αρχείου — δεν επαληθεύεται)`);
       continue;
@@ -112,7 +114,11 @@ function main() {
     const missing = Object.keys(LOCALE).filter((lang) => !resolveKey(locales[lang], entry.key));
     if (missing.length > 0) violations.push(`${where} — "${entry.key}" λείπει από: ${missing.join(', ')}`);
   }
+  return { entries, violations };
+}
 
+function main() {
+  const { entries, violations } = measure();
   if (violations.length > 0) {
     console.error(`${RED}❌ CHECK 3.11 — ${violations.length} τίτλος(οι) στήλης χωρίς μετάφραση:${NC}`);
     for (const v of violations) console.error(`   ${CYAN}${v}${NC}`);
@@ -123,4 +129,6 @@ function main() {
   console.log(`${GREEN}✅ CHECK 3.11 — ${entries.length} τίτλοι (${unique} κλειδιά) λύνονται σε el + en${NC}`);
 }
 
-main();
+if (require.main === module) main();
+
+module.exports = { measure };

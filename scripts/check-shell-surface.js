@@ -83,10 +83,10 @@
 
 'use strict';
 
-const fs = require('fs');
 const path = require('path');
 
 const { runSetRatchetCli } = require('./lib/ratchet-baseline');
+const { openGateInput } = require('./lib/gate-input');
 const {
   OUTER_PADDING,
   stripComments,
@@ -137,11 +137,12 @@ const relative = (p) => path.relative(REPO, p).split(path.sep).join('/');
  */
 const violationId = (v) => `${v.route}|${v.state}`;
 
-function readRegistry() {
-  if (!fs.existsSync(REGISTRY)) {
+function readRegistry(input) {
+  const text = input.read(REGISTRY);
+  if (text === null) {
     throw new Error(`λείπει το μητρώο ${relative(REGISTRY)}`);
   }
-  const raw = JSON.parse(fs.readFileSync(REGISTRY, 'utf8'));
+  const raw = JSON.parse(text);
 
   // ⛔ Ο λόγος είναι ΥΠΟΧΡΕΩΤΙΚΟΣ (πρότυπο CHECK 3.35/3.58). Μια εξαίρεση χωρίς
   //    λόγο είναι εξαίρεση που κανείς δεν μπορεί να αποσύρει.
@@ -200,9 +201,9 @@ function readRegistry() {
 }
 
 /** Το κείμενο ενός αρχείου χωρίς σχόλια, ή `null` αν δεν υπάρχει. */
-function readClean(file) {
-  if (!fs.existsSync(file)) return null;
-  return stripComments(fs.readFileSync(file, 'utf8'));
+function readClean(input, file) {
+  const text = input.read(file);
+  return text === null ? null : stripComments(text);
 }
 
 /**
@@ -218,10 +219,10 @@ function readClean(file) {
  * `data-shell-surface`»): εκείνος ήταν ικανοποιημένος από ένα **χειρόγραφο**
  * attribute — δηλαδή ακριβώς από τη δεύτερη αυθεντία που το ADR απαγορεύει.
  */
-function judgeOwnership() {
-  const prim = readClean(PRIMITIVE);
+function judgeOwnership(input) {
+  const prim = readClean(input, PRIMITIVE);
   if (prim === null) throw new Error(`το primitive δεν βρέθηκε: ${relative(PRIMITIVE)}`);
-  const own = readClean(OWNER);
+  const own = readClean(input, OWNER);
   if (own === null) throw new Error(`ο ιδιοκτήτης δεν βρέθηκε: ${relative(OWNER)}`);
 
   const primitiveRoot = exportedRootOf(prim) || { classAttr: '' };
@@ -238,12 +239,10 @@ function judgeOwnership() {
   };
 }
 
-/** Οι γειτονιές, **παραγμένες** από τον δίσκο. Ποτέ χειρόγραφη λίστα. */
-function routeGroups() {
-  return fs
-    .readdirSync(APP_ROOT, { withFileTypes: true })
-    .filter((e) => e.isDirectory() && /^\(.+\)$/.test(e.name))
-    .map((e) => e.name)
+/** Οι γειτονιές, **παραγμένες** από την είσοδο (με `--index`: το commit). Ποτέ χειρόγραφη λίστα. */
+function routeGroups(input) {
+  return ((input.children(APP_ROOT) || { dirs: [] }).dirs)
+    .filter((name) => /^\(.+\)$/.test(name))
     .sort();
 }
 
@@ -269,26 +268,26 @@ function routeGroups() {
  * ⚠️ Ήταν γραμμένο ΤΡΕΙΣ φορές (CHECK 3.28 το έπιασε 2026-09-25) — τρεις γραφές του ίδιου
  * κανόνα είναι τρεις ευκαιρίες να αποκλίνουν στο βάθος του άλματος.
  */
-function layoutReaches(src, pattern) {
+function layoutReaches(src, pattern, input) {
   if (pattern.test(src)) return true;
   for (const imp of namedImports(src)) {
-    const target = resolveAlias(imp.spec, REPO);
+    const target = resolveAlias(imp.spec, REPO, input);
     if (!target) continue;
     if (!imp.names.some((n) => src.includes(`<${n}`))) continue;
-    const child = readClean(target);
+    const child = readClean(input, target);
     if (child && pattern.test(child)) return true;
   }
   return false;
 }
 
-function judgeGroupCorridor(group, withoutCorridor) {
+function judgeGroupCorridor(group, withoutCorridor, input) {
   const layoutFile = path.join(APP_ROOT, group, 'layout.tsx');
-  const src = readClean(layoutFile);
+  const src = readClean(input, layoutFile);
   if (src === null) {
     return { state: 'group-without-layout', detail: `η γειτονιά ${group} δεν έχει layout.tsx` };
   }
 
-  const found = layoutReaches(src, /<\s*ShellSurface\b/);
+  const found = layoutReaches(src, /<\s*ShellSurface\b/, input);
 
   const declared = Object.prototype.hasOwnProperty.call(withoutCorridor, group);
   if (found && declared) {
@@ -323,16 +322,16 @@ function judgeGroupCorridor(group, withoutCorridor) {
  * «χωρίς κάδρο» ενώ το layout φέρει κάδρο είναι δύο αλήθειες που διαφωνούν
  * (ADR-749) — όχι «εντάξει επειδή το ένα από τα δύο περνά».
  */
-function judgeGroupFrame(group, withoutFrame) {
+function judgeGroupFrame(group, withoutFrame, input) {
   const layoutFile = path.join(APP_ROOT, group, 'layout.tsx');
-  const src = readClean(layoutFile);
+  const src = readClean(input, layoutFile);
   if (src === null) {
     return { state: 'frame-without-layout', detail: `η γειτονιά ${group} δεν έχει layout.tsx` };
   }
 
   // ΕΝΑ άλμα, ίδιο συμβόλαιο με τον διάδρομο: το κάδρο γράφεται στο layout ή στο
   // κέλυφος που αυτό εισάγει άμεσα.
-  const found = layoutReaches(src, /data-shell-frame/);
+  const found = layoutReaches(src, /data-shell-frame/, input);
 
   const declared = Object.prototype.hasOwnProperty.call(withoutFrame, group);
   if (found && declared) {
@@ -350,16 +349,18 @@ function judgeGroupFrame(group, withoutFrame) {
 }
 
 /** Δηλώνει η γειτονιά **μέτρο γραμμής** στον διάδρομό της; (για την αντίφαση Υ3) */
-function groupDeclaresMeasure(group) {
+function groupDeclaresMeasure(group, input) {
   const layoutFile = path.join(APP_ROOT, group, 'layout.tsx');
-  const src = readClean(layoutFile);
+  const src = readClean(input, layoutFile);
   if (src === null) return false;
-  return layoutReaches(src, /<\s*ShellSurface\b[^>]*measure\s*=/);
+  return layoutReaches(src, /<\s*ShellSurface\b[^>]*measure\s*=/, input);
 }
 
-function measure() {
-  const registry = readRegistry();
-  const ownership = judgeOwnership();
+/** `opts.input` = η είσοδος (ADR-924) — προεπιλογή ο δίσκος· ο εκτελεστής δίνει την όψη του commit. */
+function measure(opts = {}) {
+  const input = opts.input || openGateInput({ root: REPO });
+  const registry = readRegistry(input);
+  const ownership = judgeOwnership(input);
 
   const tally = Object.create(null);
   const groupTally = Object.create(null);
@@ -402,9 +403,9 @@ function measure() {
   }
 
   // ⛔ Κ4 — η κάθε γειτονιά, παραγμένη από τον δίσκο.
-  const groups = routeGroups();
+  const groups = routeGroups(input);
   for (const group of groups) {
-    const verdict = judgeGroupCorridor(group, registry.withoutCorridor);
+    const verdict = judgeGroupCorridor(group, registry.withoutCorridor, input);
     groupTally[verdict.state] = (groupTally[verdict.state] || 0) + 1;
     if (verdict.state !== 'corridor-owned' && verdict.state !== 'corridor-declared-absent') {
       flag(group, verdict.state, `src/app/${group}/layout.tsx`, verdict.detail);
@@ -420,7 +421,7 @@ function measure() {
 
   // ⛔ Υ1 — Η ΑΥΘΕΝΤΙΑ ΤΟΥ ΥΨΟΥΣ. Ίδιο σχήμα, ΞΕΧΩΡΙΣΤΟ ερώτημα.
   for (const group of groups) {
-    const verdict = judgeGroupFrame(group, registry.withoutFrame);
+    const verdict = judgeGroupFrame(group, registry.withoutFrame, input);
     frameVerdicts.set(group, verdict.state);
     frameTally[verdict.state] = (frameTally[verdict.state] || 0) + 1;
     if (verdict.state !== 'frame-owned' && verdict.state !== 'frame-declared-manual') {
@@ -439,14 +440,14 @@ function measure() {
   let pages = 0;
   for (const group of groups) {
     // Μία φορά ανά γειτονιά, όχι ανά σελίδα: το μέτρο δηλώνεται στον διάδρομο.
-    const groupHasMeasure = groupDeclaresMeasure(group);
+    const groupHasMeasure = groupDeclaresMeasure(group, input);
     // ⚠️ Ο Υ4 ρωτά «η γειτονιά κατέχει ΗΔΗ ύψος;» — και η απάντηση έρχεται από
     //    το ΙΔΙΟ κατάστιχο που μόλις γέμισε ο Υ1, ποτέ από δεύτερη κρίση: δύο
     //    κλήσεις του ίδιου κριτή είναι δύο ευκαιρίες να διαφωνήσουν (ADR-749).
     const groupOwnsHeight = frameVerdicts.get(group) !== 'frame-without-owner';
-    for (const page of collectPages(path.join(APP_ROOT, group))) {
+    for (const page of collectPages(path.join(APP_ROOT, group), [], input)) {
       pages += 1;
-      const verdict = classifyPage(page, REPO);
+      const verdict = classifyPage(page, REPO, input);
       const route =
         relative(page).replace(`src/app/${group}`, '').replace(/\/page\.tsx$/, '') || '/';
 
@@ -539,13 +540,13 @@ function measure() {
   }
 
   // ⛔ Κ6 — η στήλη του μέτρου δεν δέχεται οριζόντιο κενό (ADR-797 §Φ.Κ6).
-  for (const hit of findMeasureColumnGaps(REPO)) {
+  for (const hit of findMeasureColumnGaps(REPO, input)) {
     flag(`${hit.file}:${hit.line}`, 'measure-column-gap', hit.file,
       `«${hit.klass}» σε πλέγμα μέτρου — τρεις στήλες ⇒ δύο column-gaps που στο κινητό ΞΕΠΕΡΝΟΥΝ την οθόνη· γράψε gap-y-*`);
   }
 
   // ⛔ Κ7 — bleed ΜΟΝΟ στο στενό: κλειστό σύνολο ΚΑΙ προς τις δύο κατευθύνσεις (ADR-797 · ADR-912 §12.17).
-  const narrowBleedFiles = findNarrowBleedFiles(REPO);
+  const narrowBleedFiles = findNarrowBleedFiles(REPO, input);
   for (const file of narrowBleedFiles) {
     declarations.push(`narrow:${file}`);
     if (!registry.narrowBleed[file]) {
@@ -734,11 +735,11 @@ function printReport(m) {
   }
 }
 
-runSetRatchetCli({
+const DESCRIPTOR = {
   adr: 'ADR-797 (CHECK 3.63)',
   skipEnv: 'SKIP_SHELL_SURFACE',
   baselineFile: BASELINE,
-  measure,
+  measure: (_args, input) => measure({ input }),
   buildPayload,
   printReport,
   violationId: (v) => violationId(v),
@@ -759,4 +760,10 @@ runSetRatchetCli({
       `Δήλωσέ την με λόγο στο ${relative(REGISTRY)} και ξανατρέξε.`,
     ],
   },
-});
+};
+
+// ⚠️ ΦΡΟΥΡΟΣ `require.main`: χωρίς αυτόν η απαίτηση του module ΕΤΡΕΧΕ την πύλη (και `process.exit`) — η άγκυρα
+//    Δ1 της εισόδου (ADR-924) δεν μπορούσε να καλέσει το `measure`. Ο εκτελεστής τον τιμά (`worker-check-runner`).
+if (require.main === module) runSetRatchetCli(DESCRIPTOR);
+
+module.exports = { measure, DESCRIPTOR };

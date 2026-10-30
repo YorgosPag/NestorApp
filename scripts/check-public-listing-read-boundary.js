@@ -98,13 +98,14 @@
 
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
 const ts = require('typescript');
 
+const { openGateInput, commitInput } = require('./lib/gate-input');
+const { isTypeScriptSource } = require('./lib/module-graph/scan-config');
+
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const SRC = path.join(PROJECT_ROOT, 'src');
-const BS = path.sep;
 
 const RED = '\x1b[0;31m';
 const GREEN = '\x1b[0;32m';
@@ -339,15 +340,9 @@ const EXEMPT_PATTERNS = [/__tests__\//, /\.test\.tsx?$/, /\.spec\.tsx?$/];
  *    ελεγχόμενο δέντρο αποδεικνύεται μόνο όταν σπάσει η παραγωγή — που είναι
  *    ακριβώς το πώς έφτασε εδώ το ADR-839.
  */
-function collectSourceFiles(dir, root = PROJECT_ROOT, acc = []) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (entry.name !== 'node_modules' && entry.name !== '.next') collectSourceFiles(full, root, acc);
-    } else if (/\.tsx?$/.test(entry.name) && !/\.d\.ts$/.test(entry.name)) {
-      acc.push(path.relative(root, full).split(BS).join('/'));
-    }
-  }
+function collectSourceFiles(dir, root = PROJECT_ROOT, acc = [], input = openGateInput({ root })) {
+  // ADR-924 Φ3 — από την ΕΙΣΟΔΟ (ήταν τρίτο αντίγραφο του ίδιου περιπατητή, δίδυμο των 3.61 · 3.75).
+  acc.push(...input.files([dir], { accept: isTypeScriptSource }).map(input.rel));
   return acc;
 }
 
@@ -456,7 +451,7 @@ function isOffence(assertion, boundary) {
  * @returns {Map<string, {k1: {file: string, line: number}[], consumers: string[]}>}
  *          κλειδί = `typeName` της γραμμής.
  */
-function scanFiles(files, root = PROJECT_ROOT, boundaries = BOUNDARIES) {
+function scanFiles(files, root = PROJECT_ROOT, boundaries = BOUNDARIES, input = openGateInput({ root })) {
   const lanes = boundaries.map((boundary) => ({
     boundary,
     assertion: assertionOf(boundary.typeName),
@@ -468,7 +463,7 @@ function scanFiles(files, root = PROJECT_ROOT, boundaries = BOUNDARIES) {
   for (const rel of files) {
     if (isExempt(rel)) continue;
 
-    const source = fs.readFileSync(path.join(root, rel), 'utf8');
+    const source = input.read(rel) ?? '';
     const interested = lanes.filter(
       (lane) =>
         rel !== lane.boundary.custodian &&
@@ -502,8 +497,8 @@ function scanFiles(files, root = PROJECT_ROOT, boundaries = BOUNDARIES) {
 //    είναι ακριβώς ο δεύτερος κριτής που το ADR-749 τιμωρεί.
 // ---------------------------------------------------------------------------
 
-function measureK1(files, root = PROJECT_ROOT, boundary = BOUNDARIES[0]) {
-  return scanFiles(files, root, [boundary]).get(boundary.typeName).k1;
+function measureK1(files, root = PROJECT_ROOT, boundary = BOUNDARIES[0], input = undefined) {
+  return scanFiles(files, root, [boundary], input).get(boundary.typeName).k1;
 }
 
 /**
@@ -512,8 +507,8 @@ function measureK1(files, root = PROJECT_ROOT, boundary = BOUNDARIES[0]) {
  * Επιστρέφει τη λίστα (όχι απλώς πλήθος) ώστε η αναφορά να λέει **ποιοι** — μια
  * πύλη που λέει μόνο «0» αφήνει τον άνθρωπο να ψάχνει τι έσπασε.
  */
-function measureK2(files, root = PROJECT_ROOT, boundary = BOUNDARIES[0]) {
-  return scanFiles(files, root, [boundary]).get(boundary.typeName).consumers;
+function measureK2(files, root = PROJECT_ROOT, boundary = BOUNDARIES[0], input = undefined) {
+  return scanFiles(files, root, [boundary], input).get(boundary.typeName).consumers;
 }
 
 // ---------------------------------------------------------------------------
@@ -524,16 +519,16 @@ function main() {
     return 0;
   }
 
-  const files = collectSourceFiles(SRC);
-  const missing = BOUNDARIES.filter(
-    (boundary) => !fs.existsSync(path.join(PROJECT_ROOT, boundary.custodian))
-  );
+  // ADR-924 — με `--index` (εκτελεστής) τα αρχεία, το κείμενο και τα σύνορα κρίνονται στο commit.
+  const input = commitInput(PROJECT_ROOT);
+  const files = collectSourceFiles(SRC, PROJECT_ROOT, [], input);
+  const missing = BOUNDARIES.filter((boundary) => !input.exists(boundary.custodian));
   for (const boundary of missing) {
     console.error(`${RED}❌ CHECK 3.74 — λείπει το ίδιο το σύνορο: ${boundary.custodian}${NC}`);
   }
 
   const present = BOUNDARIES.filter((boundary) => !missing.includes(boundary));
-  const measured = scanFiles(files, PROJECT_ROOT, present);
+  const measured = scanFiles(files, PROJECT_ROOT, present, input);
   let failed = missing.length > 0;
 
   for (const boundary of present) {

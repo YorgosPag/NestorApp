@@ -24,10 +24,10 @@
 
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
 
 const P = require('./lib/build-parity/parity');
+const { commitInput } = require('./lib/gate-input');
 
 const CHECK = 'CHECK 3.57 (ADR-788)';
 const PROJECT_ROOT = path.join(__dirname, '..');
@@ -36,10 +36,11 @@ const REGISTRY = path.join(PROJECT_ROOT, '.ci-gate-tiers.json');
 const DIM = '\x1b[2m';
 const NC = '\x1b[0m';
 
-function measure(projectRoot = PROJECT_ROOT) {
-  const registry = JSON.parse(fs.readFileSync(path.join(projectRoot, '.ci-gate-tiers.json'), 'utf8'));
+/** `input` = η είσοδος (ADR-924): με `--index` (εκτελεστής) το μητρώο και τα workflows ΤΟΥ COMMIT. */
+function measure(projectRoot = PROJECT_ROOT, input = commitInput(projectRoot)) {
+  const registry = input.readJson('.ci-gate-tiers.json');
   const tier1 = P.tierOneFiles(registry);
-  const callers = P.findBuildCallers(projectRoot);
+  const callers = P.findBuildCallers(projectRoot, input);
   const { records, canonical } = P.judge(callers, tier1);
   return { records, canonical, byState: P.census(records), tier1: [...tier1] };
 }

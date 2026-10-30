@@ -48,6 +48,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { commitInput } = require('./lib/gate-input');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const SCAN_ROOT = path.join(PROJECT_ROOT, 'src');
@@ -72,19 +73,24 @@ const SKIP_DIRS = new Set([
  */
 const isDeclaration = (name) => name.endsWith('.d.ts') || name.endsWith('.d.mts');
 
-/** Όλα τα αρχεία του `src/`, ως μονοπάτια σχετικά με τη ρίζα του έργου. */
-function collectFiles(dir, out = []) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name.startsWith('.') && entry.name !== '.well-known') continue;
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (SKIP_DIRS.has(entry.name)) continue;
-      collectFiles(full, out);
-    } else if (entry.isFile()) {
-      out.push(full);
-    }
-  }
-  return out;
+/** Κρυφό όνομα (`.foo`) — εκτός bundle, εκτός από το `.well-known`. */
+const isHidden = (name) => name.startsWith('.') && name !== '.well-known';
+
+/**
+ * Τα υποψήφια επίλυσης αρχεία του `src/` — από την ΕΙΣΟΔΟ (ADR-924 Φ3: ήταν δικός του `readdirSync`), σε μορφή
+ * **πλατφόρμας** (`path.resolve`): τα κλειδιά και οι στόχοι της προσιτότητας χτίζονται με `path.*` (πρότυπο 3.80).
+ */
+function collectFiles(input) {
+  return input.files([path.relative(PROJECT_ROOT, SCAN_ROOT)], {
+    accept: (rel) => {
+      const base = path.posix.basename(rel);
+      return !isHidden(base) && RESOLVE_ORDER.includes(path.posix.extname(base)) && !isDeclaration(base);
+    },
+    pruneDir: (dir) => {
+      const name = path.posix.basename(dir);
+      return SKIP_DIRS.has(name) || isHidden(name);
+    },
+  }).map((abs) => path.resolve(abs));
 }
 
 const rel = (abs) => path.relative(PROJECT_ROOT, abs).split(path.sep).join('/');
@@ -115,17 +121,13 @@ function winnerOf(files) {
  * Μετρημένο: το κριτήριο αυτό έριξε τα ευρήματα από **18** σε **17** και αφαίρεσε το
  * **μοναδικό** ψευδώς θετικό — δηλαδή το σύνολο που μένει είναι γνήσιο κατά **100%**.
  */
-function collectExplicitSpecifiers(files) {
+function collectExplicitSpecifiers(files, input) {
   const IMPORT_RE = /(?:from\s*|import\s*\(\s*|require\s*\(\s*)['"]([^'"]+)['"]/g;
   /** Απόλυτα μονοπάτια-στόχοι, **όπως τα έγραψε ο καλών** (με ό,τι επέκταση έβαλε ή δεν έβαλε). */
   const targets = new Set();
   for (const file of files) {
-    let text;
-    try {
-      text = fs.readFileSync(file, 'utf8');
-    } catch {
-      continue; // δυαδικό ή απρόσιτο — δεν περιέχει imports
-    }
+    const text = input.read(file);
+    if (text === null) continue; // απρόσιτο — δεν περιέχει imports
     for (const m of text.matchAll(IMPORT_RE)) {
       const spec = m[1];
       let abs;
@@ -159,11 +161,9 @@ function isReachedExplicitly(shadowedAbs, targets) {
   return targets.has(withExt) || targets.has(noExt);
 }
 
-function measure() {
-  const files = collectFiles(SCAN_ROOT).filter((f) => {
-    const base = path.basename(f);
-    return RESOLVE_ORDER.includes(path.extname(f)) && !isDeclaration(base);
-  });
+/** `input` = η είσοδος (ADR-924): με `--index` (εκτελεστής) τα αρχεία ΤΟΥ COMMIT — untracked δεν σκιάζουν τίποτα. */
+function measure(input = commitInput(PROJECT_ROOT)) {
+  const files = collectFiles(input);
 
   // ── Κ1: δύο επεκτάσεις, ένα κλειδί (`x/foo.ts` + `x/foo.tsx`) ──────────────────────────
   const byStem = new Map();
@@ -204,7 +204,7 @@ function measure() {
   // πέρασμα να μη διαβάζει ποτέ 16.000 αρχεία.
   let survivors = violations;
   if (violations.length > 0) {
-    const specifiers = collectExplicitSpecifiers(files);
+    const specifiers = collectExplicitSpecifiers(files, input);
     survivors = [];
     for (const v of violations) {
       const stillHidden = v.shadowed.filter(
@@ -223,10 +223,10 @@ const BASELINE = path.join(PROJECT_ROOT, '.shadowed-modules-baseline.json');
 /** Σταθερή ταυτότητα παραβίασης — ό,τι χρειάζεται για «είναι ΑΥΤΗ η ίδια;». */
 const identityOf = (v) => `${v.rule}|${v.specifier}|${v.shadowed.slice().sort().join(',')}`;
 
-function loadBaseline() {
-  if (!fs.existsSync(BASELINE)) return new Set();
-  const raw = JSON.parse(fs.readFileSync(BASELINE, 'utf8'));
-  return new Set(raw.violations.map(identityOf));
+function loadBaseline(input = commitInput(PROJECT_ROOT)) {
+  const text = input.read(BASELINE);
+  if (text === null) return new Set();
+  return new Set(JSON.parse(text).violations.map(identityOf));
 }
 
 function writeBaseline(violations) {
@@ -251,14 +251,15 @@ function main() {
     return;
   }
 
-  const { scanned, violations } = measure();
+  const input = commitInput(PROJECT_ROOT);
+  const { scanned, violations } = measure(input);
 
   if (process.argv.includes('--write-baseline')) {
     // Κ1 ΠΟΤΕ στη baseline: αν υπάρχει, πρέπει να λυθεί, όχι να κλειδωθεί.
     return writeBaseline(violations.filter((v) => v.rule !== 'extension-shadow'));
   }
 
-  const known = loadBaseline();
+  const known = loadBaseline(input);
   // ⛔ Κ1 — zero-tolerance ΠΑΝΤΑ (`x/foo.ts` + `x/foo.tsx`): η ρίζα του περιστατικού, και
   //        μετρημένα **μηδέν** εμφανίσεις μετά τον καθαρισμό της 2026-09-12.
   // 🔴 Κ2 — ratchet κατά ταυτότητα (`x/foo.ts` + `x/foo/index.ts`): **13** προϋπάρχουσες,

@@ -21,10 +21,12 @@
 
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
 const ts = require('typescript');
+// Το όνομα που καλείται: `f(...)` ⇒ `f` · `a.b(...)` ⇒ `b` — το ΚΟΙΝΟ εργαλείο AST των πυλών (ADR-924 §8.4).
+const { calleeName } = require('./lib/write-authority/ast');
 const { compareSets, loadBaseline, writeBaselineFile, rel } = require('./lib/ratchet-baseline');
+const { openGateInput, INDEX_FLAG } = require('./lib/gate-input');
 
 const REPO = path.resolve(__dirname, '..');
 const BASELINE_FILE = path.join(REPO, '.idempotency-boundary-baseline.json');
@@ -55,31 +57,18 @@ const LAYER = 'runIdempotently';
 
 // ─── ΑΡΧΕΙΑ ──────────────────────────────────────────────────────────────────
 
-function walk(root, dir, out) {
-  const abs = path.join(root, dir);
-  if (!fs.existsSync(abs)) return out;
-  for (const entry of fs.readdirSync(abs, { withFileTypes: true })) {
-    const relPath = `${dir}/${entry.name}`;
-    if (entry.isDirectory()) walk(root, relPath, out);
-    else if (/\.tsx?$/.test(entry.name) && !TEST_PATH.test(relPath)) out.push(relPath);
-  }
-  return out;
+/** Τα `.ts`/`.tsx` (όχι tests) ενός φακέλου — από την ΕΙΣΟΔΟ (ADR-924 Φ3: ήταν δικό της `readdirSync`). */
+function sourcesUnder(input, dir) {
+  return input.files([dir], { accept: (rel) => /\.tsx?$/.test(rel) && !TEST_PATH.test(rel) }).map(input.rel);
 }
 
-function parse(root, file) {
-  const text = fs.readFileSync(path.join(root, file), 'utf8');
+function parse(root, file, input = openGateInput({ root })) {
+  const text = input.read(file) ?? '';
   return { text, source: ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true) };
 }
 
 // ─── AST ─────────────────────────────────────────────────────────────────────
 
-/** Το όνομα που καλείται: `f(...)` ⇒ `f` · `a.b(...)` ⇒ `b`. */
-function calleeName(call) {
-  const e = call.expression;
-  if (ts.isIdentifier(e)) return e.text;
-  if (ts.isPropertyAccessExpression(e)) return e.name.text;
-  return null;
-}
 
 function callsIn(node, names) {
   let found = 0;
@@ -151,23 +140,24 @@ function naturalWithoutReason(p) {
 }
 
 /** Κ2: κάθε ρίζα καλεί το στρώμα όσες φορές δηλώνει. */
-function rootsWithoutLayer(root) {
+function rootsWithoutLayer(root, input = openGateInput({ root })) {
   return ROOTS.flatMap((r) => {
-    if (!fs.existsSync(path.join(root, r.file))) {
+    if (!input.exists(r.file)) {
       return [{ gate: 'Κ2', file: r.file, line: 1, detail: `λείπει το αρχείο της ρίζας \`${r.name}\`` }];
     }
-    const count = callsIn(parse(root, r.file).source, new Set([LAYER]));
+    const count = callsIn(parse(root, r.file, input).source, new Set([LAYER]));
     return count >= r.calls ? [] : [{ gate: 'Κ2', file: r.file, line: 1, detail: `\`${r.name}\`: ${count}/${r.calls} κλήσεις \`${LAYER}\`` }];
   });
 }
 
 // ─── ΜΕΤΡΗΣΗ ─────────────────────────────────────────────────────────────────
 
-function measure(root = REPO) {
-  const files = SCAN_ROOTS.flatMap((dir) => walk(root, dir, []));
-  const parsed = files.map((file) => ({ file, ...parse(root, file) }));
+/** `input` = η είσοδος (ADR-924) — προεπιλογή ο δίσκος της `root`· με `--index` η όψη του commit. */
+function measure(root = REPO, input = openGateInput({ root })) {
+  const files = SCAN_ROOTS.flatMap((dir) => sourcesUnder(input, dir));
+  const parsed = files.map((file) => ({ file, ...parse(root, file, input) }));
   const boundaries = discoverBoundaries(parsed);
-  const zeroTol = [...parsed.flatMap(naturalWithoutReason), ...rootsWithoutLayer(root)];
+  const zeroTol = [...parsed.flatMap(naturalWithoutReason), ...rootsWithoutLayer(root, input)];
   const outside = parsed
     .filter((p) => p.file.startsWith(`${ROUTE_ROOT}/`) && p.file.endsWith('/route.ts') && MUTATING.test(p.text))
     .filter((p) => callsIn(p.source, boundaries) === 0)
@@ -188,7 +178,8 @@ function printZeroTol(zeroTol) {
 
 function main(argv = process.argv.slice(2)) {
   if (process.env.SKIP_IDEMPOTENCY_BOUNDARY) return 0;
-  const m = measure();
+  const input = openGateInput({ root: REPO, index: argv.includes(INDEX_FLAG) });
+  const m = measure(REPO, input);
   if (argv.includes('--report')) {
     console.log(`CHECK 3.92 — σύνορα (${m.boundaries.length}): ${m.boundaries.join(', ')}`);
     console.log(`Κ1/Κ2 παραβάσεις: ${m.zeroTol.length} · Κ3 routes εκτός συνόρου: ${m.outside.length}`);
@@ -201,7 +192,7 @@ function main(argv = process.argv.slice(2)) {
     console.log(`✅ Baseline: ${rel(BASELINE_FILE)} — ${m.outside.length} routes εκτός συνόρου`);
     return 0;
   }
-  const baseline = loadBaseline(BASELINE_FILE);
+  const baseline = loadBaseline(BASELINE_FILE, [], input);
   if (!baseline || baseline.__invalid || !Array.isArray(baseline.outside)) {
     console.error(`❌ CHECK 3.92 — baseline χαλασμένη ή απούσα: ${rel(BASELINE_FILE)} (npm run idempotency-boundary:baseline)`);
     return 1; // fail-closed: ποτέ «καθαρό» χωρίς baseline

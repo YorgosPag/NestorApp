@@ -48,8 +48,8 @@
 
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
+const ratchet = require('./lib/per-file-ratchet');
 
 if (require.main === module) {
   process.chdir(path.resolve(__dirname, '..'));
@@ -157,82 +157,26 @@ function findPageContentViolations(src) {
   return out;
 }
 
-function findViolations(filePath) {
-  if (!fs.existsSync(filePath)) return [];
+/** Τα ευρήματα ενός αρχείου του πεδίου — το κείμενο από την ΕΙΣΟΔΟ (ADR-924 Φ3), ποτέ από τον δίσκο εδώ. */
+function findViolations(src, filePath) {
   if (isAllowlisted(filePath)) return [];
-  const src = fs.readFileSync(filePath, 'utf8');
   if (isHookFile(filePath)) return findHookViolations(src);
   if (isPageContentFile(filePath)) return findPageContentViolations(src);
   return [];
 }
 
+const inScope = (file) => isInScope(file) && !isAllowlisted(file);
+
 // ─── File collection ─────────────────────────────────────────────────────────
 
-function collectAllFiles(dir, out = []) {
-  if (!fs.existsSync(dir)) return out;
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name === 'node_modules' || entry.name === '__tests__') continue;
-    const full = norm(path.join(dir, entry.name));
-    if (entry.isDirectory()) {
-      collectAllFiles(full, out);
-    } else if (/\.(ts|tsx)$/.test(entry.name) && isInScope(full)) {
-      out.push(full);
-    }
-  }
-  return out;
-}
-
-function collectFiles({ scanAll, args }) {
-  if (scanAll) return collectAllFiles('src');
-  const explicit = args.filter((a) => !a.startsWith('--')).map(norm);
-  return explicit.filter((f) => isInScope(f));
-}
-
-// ─── Baseline ────────────────────────────────────────────────────────────────
-
-function loadBaseline() {
-  if (!fs.existsSync(BASELINE_FILE)) return {};
-  try {
-    return JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf8')).files ?? {};
-  } catch {
-    return {};
-  }
-}
-
-function writeBaseline(files) {
-  const baseline = {};
-  let totalViolations = 0;
-  let totalFiles = 0;
-  for (const f of files) {
-    if (isAllowlisted(f)) continue;
-    const v = findViolations(f);
-    if (v.length > 0) {
-      baseline[f] = v.length;
-      totalViolations += v.length;
-      totalFiles += 1;
-    }
-  }
-  const out = {
-    _meta: {
-      description:
-        'No-navigation-flash ratchet (CHECK 3.25, ADR-267/ADR-300). Hooks must use createStaleCache + silentInitialFetch; PageContent must not gate render on isNamespaceReady or bare `if (loading)` <Loader2>.',
-      generated: new Date().toISOString(),
-      totalViolations,
-      totalFiles,
-      rule: 'List-fetch hooks → ADR-300 stale-cache. PageContents → no namespace guard, no bare loading-only Loader2 returns.',
-    },
-    files: baseline,
-  };
-  fs.writeFileSync(BASELINE_FILE, JSON.stringify(out, null, 2) + '\n');
-  return { totalViolations, totalFiles };
+/** Κάθε αρχείο του πεδίου κάτω από το `src/` — από την ΕΙΣΟΔΟ (`__tests__` κλαδεύεται, όπως πάντα). */
+function collectAllFiles(input) {
+  return ratchet.scopeFiles(input, ['src'], isInScope, ratchet.pruneTestDirs);
 }
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 
-const RED = '\x1b[31m';
-const GREEN = '\x1b[32m';
-const YELLOW = '\x1b[33m';
-const NC = '\x1b[0m';
+const { yellow: YELLOW, nc: NC } = ratchet.BANNER_COLORS;
 
 function parseArgs(argv) {
   return {
@@ -242,95 +186,43 @@ function parseArgs(argv) {
   };
 }
 
-function run(argv = process.argv) {
-  const opts = parseArgs(argv);
-  if (opts.writeBaseline) {
-    const files = collectAllFiles('src');
-    const { totalViolations, totalFiles } = writeBaseline(files);
-    console.log(`✅ Baseline written: ${BASELINE_FILE}`);
-    console.log(`   Files: ${totalFiles} | Violations: ${totalViolations}`);
-    return 0;
-  }
-  const files = collectFiles(opts);
-  if (!files.length) return 0;
+function printFix() {
+  console.log(`  ${YELLOW}Fix:${NC}`);
+  console.log(`    A. import { createStaleCache } from '@/lib/stale-cache';`);
+  console.log(`       + initialData: cache.get() ?? []`);
+  console.log(`       + silentInitialFetch: cache.hasLoaded()`);
+  console.log(`    B. Remove if (!isNamespaceReady) early-return:`);
+  console.log(`       sister pages (Contacts/Buildings/Orders) render without it.`);
+  console.log(`    C. Use <PageLoadingState> guarded by`);
+  console.log(`       (loading && data.length === 0) — not bare if (loading).`);
+  console.log();
+}
 
-  const baseline = loadBaseline();
-  let hasBlock = false;
-  const blocked = [];
-  const improved = [];
+/** Η πύλη πάνω στο κοινό CLI — ρίζα = ο τρέχων φάκελος τη στιγμή της κλήσης (οι σουίτες τρέχουν σε προσωρινό δέντρο). */
+const gate = ratchet.defineBannerGate({
+  baselineFile: BASELINE_FILE,
+  inScope,
+  findHits: findViolations,
+  collectAll: collectAllFiles,
+  meta: {
+    description:
+      'No-navigation-flash ratchet (CHECK 3.25, ADR-267/ADR-300). Hooks must use createStaleCache + silentInitialFetch; PageContent must not gate render on isNamespaceReady or bare `if (loading)` <Loader2>.',
+    rule: 'List-fetch hooks → ADR-300 stale-cache. PageContents → no namespace guard, no bare loading-only Loader2 returns.',
+  },
+  banner: {
+    downTitle: 'No-flash violations reduced',
+    downCommand: 'no-flash:baseline',
+    blockedTitle: 'No-Navigation-Flash (CHECK 3.25, ADR-267/300)',
+    blockedSubtitle: 'Wire hooks to ADR-300 stale-cache; remove namespace/loader guards',
+    newNoun: 'flash-pattern violation(s)',
+    describeHit: ({ line, kind, symbol }) => `line ${line} [${kind}]: ${symbol}`,
+  },
+  printFix,
+});
 
-  for (const file of files) {
-    if (!fs.existsSync(file)) continue;
-    if (!isInScope(file)) continue;
-    if (isAllowlisted(file)) continue;
-    const violations = findViolations(file);
-    const current = violations.length;
-    const base = baseline[file] ?? 0;
-    if (current === 0 && base === 0) continue;
-    if (current < base) {
-      improved.push({ file, from: base, to: current });
-      continue;
-    }
-    if (current === base) continue;
-    hasBlock = true;
-    blocked.push({ file, current, base, isNew: base === 0, violations });
-  }
-
-  if (improved.length) {
-    console.log(
-      `\n${GREEN}═══════════════════════════════════════════════════════════════${NC}`
-    );
-    console.log(`${GREEN}  🎯 RATCHET DOWN — No-flash violations reduced${NC}`);
-    console.log(
-      `${GREEN}═══════════════════════════════════════════════════════════════${NC}`
-    );
-    for (const { file, from, to } of improved) {
-      console.log(`  ✅ ${file}: ${from} → ${to} (-${from - to})`);
-    }
-    console.log(`\n  ${YELLOW}Run after commit: npm run no-flash:baseline${NC}\n`);
-  }
-
-  if (hasBlock) {
-    console.log(
-      `\n${RED}═══════════════════════════════════════════════════════════════${NC}`
-    );
-    console.log(
-      `${RED}  🚫 COMMIT BLOCKED — No-Navigation-Flash (CHECK 3.25, ADR-267/300)${NC}`
-    );
-    console.log(
-      `${RED}  Wire hooks to ADR-300 stale-cache; remove namespace/loader guards${NC}`
-    );
-    console.log(
-      `${RED}═══════════════════════════════════════════════════════════════${NC}\n`
-    );
-    for (const { file, current, base, isNew, violations } of blocked) {
-      if (isNew) {
-        console.log(`  ❌ ${file} (NEW FILE — zero tolerance)`);
-        console.log(`     Found ${current} flash-pattern violation(s)`);
-      } else {
-        console.log(`  ❌ ${file}`);
-        console.log(
-          `     Baseline: ${base} → Current: ${current} (+${current - base})`
-        );
-      }
-      for (const { line, kind, symbol } of violations) {
-        console.log(`     line ${line} [${kind}]: ${symbol}`);
-      }
-      console.log();
-    }
-    console.log(`  ${YELLOW}Fix:${NC}`);
-    console.log(`    A. import { createStaleCache } from '@/lib/stale-cache';`);
-    console.log(`       + initialData: cache.get() ?? []`);
-    console.log(`       + silentInitialFetch: cache.hasLoaded()`);
-    console.log(`    B. Remove if (!isNamespaceReady) early-return:`);
-    console.log(`       sister pages (Contacts/Buildings/Orders) render without it.`);
-    console.log(`    C. Use <PageLoadingState> guarded by`);
-    console.log(`       (loading && data.length === 0) — not bare if (loading).`);
-    console.log();
-    return 1;
-  }
-
-  return 0;
+/** `input` = η είσοδος (ADR-924): με `--index` (εκτελεστής) το κείμενο ΤΟΥ COMMIT, όχι του δίσκου. */
+function run(argv = process.argv, input = undefined) {
+  return gate(parseArgs(argv).args, input);
 }
 
 if (require.main === module) {
@@ -353,10 +245,7 @@ module.exports = {
   isInScope,
   isAllowlisted,
   // io
-  loadBaseline,
-  writeBaseline,
   collectAllFiles,
-  collectFiles,
   // cli
   parseArgs,
   run,

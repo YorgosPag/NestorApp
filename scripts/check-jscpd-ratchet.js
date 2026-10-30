@@ -78,6 +78,7 @@ function parseArgs(argv) {
     else if (a === '--diff') out.diff = true;
     else if (a === '--write-baseline') out.writeBaseline = true;
     else if (a === '--help' || a === '-h') out.help = true;
+    else if (a === '--index') out.index = true;   // ADR-924 Φ5: το --diff κρίνει τα σταδιοποιημένα ΟΠΩΣ θα δεσμευτούν
     else if (a.startsWith('--')) throw new Error(`Unknown argument: ${a}`);
     else out.files.push(a);
   }
@@ -138,13 +139,31 @@ function runScanner(paths, opts = {}) {
 }
 
 // Turn a jscpd `--absolute` name (possibly with the Windows \\?\ long-path
-// prefix) into a clean repo-relative path for the block message.
-function normalizeName(name) {
+// prefix) into a clean repo-relative path for the block message. `scanRoot` =
+// the materialized index snapshot when the gate judges the commit (ADR-924).
+function normalizeName(name, scanRoot = PROJECT_ROOT) {
   if (!name) return '(unknown)';
   let p = String(name).replace(/^\\\\\?\\/, '').replace(/\\/g, '/');
-  const root = PROJECT_ROOT.replace(/\\/g, '/') + '/';
-  if (p.startsWith(root)) p = p.slice(root.length);
+  for (const base of new Set([scanRoot, PROJECT_ROOT])) {
+    const root = base.replace(/\\/g, '/') + '/';
+    if (p.toLowerCase().startsWith(root.toLowerCase())) return p.slice(root.length);
+  }
   return p;
+}
+
+/**
+ * ADR-924 Φ5 — τα σταδιοποιημένα αρχεία ΟΠΩΣ ΘΑ ΔΕΣΜΕΥΤΟΥΝ: υλοποιημένα από το ευρετήριο σε προσωρινό φάκελο
+ * (`materializeIndex`, ΕΝΑ spawn) και ο jscpd τρέχει ΕΚΕΙ. Χωρίς αυτό, κλώνος σε ξένη αστάδιοποίητη αλλαγή μπλόκαρε, και
+ * κλώνος στο σταδιοποιημένο κείμενο που ο δίσκος είχε ήδη «διορθώσει» περνούσε.
+ * @returns {{root: string, files: string[], dispose: () => void}}
+ */
+function stagedSnapshot(files) {
+  const { materializeIndex, listIndexEntries } = require('./lib/git-index-snapshot');
+  const tracked = listIndexEntries({ repoRoot: PROJECT_ROOT });
+  const inIndex = files.map((f) => f.replace(/\\/g, '/')).filter((f) => tracked.has(f));
+  if (inIndex.length === 0) return { root: PROJECT_ROOT, files: [], dispose: () => {} };
+  const snapshot = materializeIndex({ repoRoot: PROJECT_ROOT, pathspecs: inIndex });
+  return { root: snapshot.root, files: inIndex.map((f) => path.join(snapshot.root, f)), dispose: snapshot.dispose };
 }
 
 function parseSummary(report) {
@@ -205,7 +224,8 @@ function compare(baseline, current) {
   return raises;
 }
 
-function runFull() {
+/** Η baseline, ή έξοδος 1 με όνομα (λείπει / άκυρη) — ΚΟΙΝΟ προοίμιο του full και του smoke. */
+function requireBaseline() {
   const baselineFile = getBaselineFile();
   const baseline = loadBaseline(baselineFile);
   if (!baseline || baseline.__invalid) {
@@ -213,6 +233,11 @@ function runFull() {
     console.error(`   Run: npm run jscpd:baseline`);
     process.exit(1);
   }
+  return baseline;
+}
+
+function runFull() {
+  const baseline = requireBaseline();
 
   const t0 = Date.now();
   const current = parseSummary(runScanner([getScanRoot()]));
@@ -240,8 +265,11 @@ function runFull() {
 
 // Pre-commit Layer 1: scan only the staged files. Because the scan set IS the
 // diff, every clone jscpd reports is a same-commit clone → block, listing pairs.
-function runDiff(files) {
-  const scanFiles = files.filter((f) => fs.existsSync(path.join(PROJECT_ROOT, f)));
+function runDiff(files, { index = false } = {}) {
+  const snapshot = index
+    ? stagedSnapshot(files)
+    : { root: PROJECT_ROOT, files: files.filter((f) => fs.existsSync(path.join(PROJECT_ROOT, f))), dispose: () => {} };
+  const scanFiles = snapshot.files;
   if (scanFiles.length === 0) {
     console.log('✅ CHECK 3.28 (diff) — no staged src files to scan.');
     process.exit(0);
@@ -254,6 +282,8 @@ function runDiff(files) {
     // A tooling failure must not silently pass. Report and fail closed.
     console.error(`❌ CHECK 3.28 (diff) — jscpd failed: ${e.message}`);
     process.exit(1);
+  } finally {
+    snapshot.dispose();
   }
 
   const dups = report.duplicates || [];
@@ -264,8 +294,8 @@ function runDiff(files) {
 
   console.error(`❌ CHECK 3.28 (diff) FAIL — ${dups.length} new clone(s) inside this commit:`);
   for (const d of dups.slice(0, 15)) {
-    const a = `${normalizeName(d.firstFile.name)}:${d.firstFile.start}-${d.firstFile.end}`;
-    const b = `${normalizeName(d.secondFile.name)}:${d.secondFile.start}-${d.secondFile.end}`;
+    const a = `${normalizeName(d.firstFile.name, snapshot.root)}:${d.firstFile.start}-${d.firstFile.end}`;
+    const b = `${normalizeName(d.secondFile.name, snapshot.root)}:${d.secondFile.start}-${d.secondFile.end}`;
     console.error(`   • ${d.lines} lines / ${d.tokens} tokens`);
     console.error(`       ${a}`);
     console.error(`       ${b}`);
@@ -279,13 +309,7 @@ function runDiff(files) {
 }
 
 function runSmoke() {
-  const baselineFile = getBaselineFile();
-  const baseline = loadBaseline(baselineFile);
-  if (!baseline || baseline.__invalid) {
-    console.error(`❌ CHECK 3.28 — baseline ${baseline ? baseline.__invalid : 'missing'}: ${path.relative(PROJECT_ROOT, baselineFile)}`);
-    console.error(`   Run: npm run jscpd:baseline`);
-    process.exit(1);
-  }
+  const baseline = requireBaseline();
   console.log(`✅ CHECK 3.28 smoke — baseline OK (clones:${baseline.clones}). Full scan runs in CI / JSCPD_FULL=1.`);
   process.exit(0);
 }
@@ -297,7 +321,7 @@ function main() {
     writeBaseline(parseSummary(runScanner([getScanRoot()])));
     process.exit(0);
   }
-  if (args.diff) { runDiff(args.files); return; }
+  if (args.diff) { runDiff(args.files, { index: Boolean(args.index) }); return; }
   if (args.full) { runFull(); return; }
   runSmoke();
 }

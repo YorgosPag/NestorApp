@@ -63,9 +63,9 @@
 
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
 const ts = require('typescript');
+const { commitInput } = require('./lib/gate-input');
 const {
   parseStorageRules,
   findDuplicatePathIds,
@@ -77,14 +77,9 @@ const { renderRulesLocationMap } = require('./_shared/rules-location-map');
 // ---------------------------------------------------------------------------
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
-const STORAGE_RULES_FILE = path.join(PROJECT_ROOT, 'storage.rules');
-const MANIFEST_FILE = path.join(
-  PROJECT_ROOT,
-  'tests',
-  'storage-rules',
-  '_registry',
-  'coverage-manifest.ts',
-);
+// ADR-924: σχετικά με τη ρίζα — κάθε ανάγνωση περνά από την ΕΙΣΟΔΟ (`--index` ⇒ η όψη του commit).
+const STORAGE_RULES_FILE = 'storage.rules';
+const MANIFEST_FILE = 'tests/storage-rules/_registry/coverage-manifest.ts';
 
 // ---------------------------------------------------------------------------
 // CLI parsing
@@ -126,11 +121,11 @@ function log(msg) {
  *
  * @returns {import('./_shared/storage-rules-parser').StorageRuleBlock[]}
  */
-function parseStorageRulesBlocks() {
-  if (!fs.existsSync(STORAGE_RULES_FILE)) {
+function parseStorageRulesBlocks(input) {
+  const source = input.read(STORAGE_RULES_FILE);
+  if (source === null) {
     throw new Error(`storage.rules not found at: ${STORAGE_RULES_FILE}`);
   }
-  const source = fs.readFileSync(STORAGE_RULES_FILE, 'utf8');
   return parseStorageRules(source);
 }
 
@@ -146,17 +141,17 @@ function parseStorageRulesBlocks() {
 /**
  * @returns {ParsedManifest}
  */
-function parseManifest() {
-  if (!fs.existsSync(MANIFEST_FILE)) {
+function parseManifest(input) {
+  const source = input.read(MANIFEST_FILE);
+  if (source === null) {
     throw new Error(
       `Coverage manifest not found at: ${MANIFEST_FILE}\n` +
         'Run: create tests/storage-rules/_registry/coverage-manifest.ts',
     );
   }
 
-  const source = fs.readFileSync(MANIFEST_FILE, 'utf8');
   const sourceFile = ts.createSourceFile(
-    MANIFEST_FILE,
+    path.join(PROJECT_ROOT, MANIFEST_FILE),
     source,
     ts.ScriptTarget.Latest,
     true,
@@ -303,11 +298,12 @@ function main() {
 
   /** @type {string[]} */
   const violations = [];
+  const input = commitInput(PROJECT_ROOT);
 
   // --- parse sources ---
   let blocks;
   try {
-    blocks = parseStorageRulesBlocks();
+    blocks = parseStorageRulesBlocks(input);
   } catch (e) {
     violations.push(`storage.rules parse error: ${e.message}`);
     printReport(violations);
@@ -316,7 +312,7 @@ function main() {
 
   let manifest;
   try {
-    manifest = parseManifest();
+    manifest = parseManifest(input);
   } catch (e) {
     violations.push(`coverage-manifest.ts parse error: ${e.message}`);
     printReport(violations);
@@ -337,35 +333,7 @@ function main() {
     log(`  pending entries            : ${pending.length}`);
   }
 
-  // Validation B — every coverage entry has an existing test file
-  for (const entry of coverage) {
-    const absTestFile = path.join(PROJECT_ROOT, entry.testFile);
-    if (!fs.existsSync(absTestFile)) {
-      violations.push(
-        `[B] Missing test file for pathId '${entry.pathId}': ${entry.testFile}`,
-      );
-    } else {
-      const testSource = fs.readFileSync(absTestFile, 'utf8');
-
-      // Validation C — test file exports COVERAGE referencing the pathId
-      const exportsCoverage = testSource.includes('export const COVERAGE');
-      const referencesPathId = testSource.includes(`pathId === '${entry.pathId}'`);
-      if (!exportsCoverage || !referencesPathId) {
-        violations.push(
-          `[C] Test file for '${entry.pathId}' missing \`export const COVERAGE\` or ` +
-            `pathId reference: ${entry.testFile}`,
-        );
-      }
-
-      // Validation D — matrix is iterated, not hand-copied
-      if (!testSource.includes('for (const cell of COVERAGE.matrix)')) {
-        violations.push(
-          `[D] Test file for '${entry.pathId}' must iterate matrix via ` +
-            `\`for (const cell of COVERAGE.matrix)\`: ${entry.testFile}`,
-        );
-      }
-    }
-  }
+  violations.push(...validateTestFiles(coverage, input));
 
   // Validation E (ratchet) — an inner match block with NO `@pathId` annotation
   // cannot ship: a new storage path must carry a stable identity.
@@ -409,6 +377,40 @@ function main() {
 }
 
 /**
+ * Validations B–D — κάθε εγγραφή κάλυψης έχει σουίτα, η σουίτα εξάγει `COVERAGE` με το pathId της και διατρέχει
+ * τον πίνακα. Το κείμενο της σουίτας από την ΕΙΣΟΔΟ (ADR-924 Φ3).
+ * @param {ManifestEntry[]} coverage
+ * @returns {string[]}
+ */
+function validateTestFiles(coverage, input) {
+  const violations = [];
+  for (const entry of coverage) {
+    const testSource = input.read(entry.testFile);
+    if (testSource === null) {
+      violations.push(`[B] Missing test file for pathId '${entry.pathId}': ${entry.testFile}`);
+      continue;
+    }
+    // Validation C — test file exports COVERAGE referencing the pathId
+    const exportsCoverage = testSource.includes('export const COVERAGE');
+    const referencesPathId = testSource.includes(`pathId === '${entry.pathId}'`);
+    if (!exportsCoverage || !referencesPathId) {
+      violations.push(
+        `[C] Test file for '${entry.pathId}' missing \`export const COVERAGE\` or ` +
+          `pathId reference: ${entry.testFile}`,
+      );
+    }
+    // Validation D — matrix is iterated, not hand-copied
+    if (!testSource.includes('for (const cell of COVERAGE.matrix)')) {
+      violations.push(
+        `[D] Test file for '${entry.pathId}' must iterate matrix via ` +
+          `\`for (const cell of COVERAGE.matrix)\`: ${entry.testFile}`,
+      );
+    }
+  }
+  return violations;
+}
+
+/**
  * @param {string[]} violations
  */
 function printReport(violations) {
@@ -436,4 +438,6 @@ function printReport(violations) {
   log('');
 }
 
-main();
+if (require.main === module) main();
+
+module.exports = { parseStorageRulesBlocks, parseManifest, validateTestFiles };

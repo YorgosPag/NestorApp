@@ -39,9 +39,9 @@
  * Escape: `SKIP_LISTING_CUSTODY=1` · εξαίρεση αρχείου: `// custody-exempt: <λόγος>`
  * (ο λόγος είναι **ΥΠΟΧΡΕΩΤΙΚΟΣ**, πρότυπο CHECK 3.35).
  */
-const fs = require('node:fs');
 const path = require('node:path');
 const { stripComments } = require('./lib/i18n-namespace-extract');
+const { openGateInput, INDEX_FLAG } = require('./lib/gate-input');
 
 const REPO_ROOT = path.join(__dirname, '..');
 const SSOT = 'src/lib/owner-property/listing-custody.ts';
@@ -104,17 +104,9 @@ function comparisonsOf(field, text) {
 /** Έχει το αρχείο έστω ΜΙΑ σύγκριση χώρου που ΔΕΝ είναι έλεγχος κενού; */
 const isDecision = (operand) => operand !== 'null' && operand !== 'undefined';
 
-function walk(dir, out = []) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (['node_modules', '.next', 'dist'].includes(entry.name)) continue;
-      walk(full, out);
-    } else if (/\.(ts|tsx)$/.test(entry.name)) {
-      out.push(full);
-    }
-  }
-  return out;
+/** Τα `.ts`/`.tsx` του `src/` (και `.d.ts`· χωρίς κάθε `dist`) — από την ΕΙΣΟΔΟ (ADR-924 Φ3). */
+function walk(input) {
+  return input.files(['src'], { accept: (rel) => /\.(ts|tsx)$/.test(rel), pruneDir: (dir) => dir.endsWith('/dist/') });
 }
 
 /**
@@ -181,17 +173,20 @@ function tally(entries, classifyFn = classify) {
   }
   return ledger;
 }
+
+/** Η λογιστική θεματοφυλακής του `src/` — ΜΟΝΟ από την είσοδο (ADR-924: ελέγξιμη χωρίς υποδιεργασία). */
+function measure(input) {
+  return tally(walk(input).map((file) => ({ rel: input.rel(file), raw: input.read(file) ?? '' })));
+}
+
 function main() {
   if (process.env.SKIP_LISTING_CUSTODY === '1') {
     console.log(`${YELLOW}  ⏭ CHECK 3.56 παραλείφθηκε (SKIP_LISTING_CUSTODY=1)${NC}`);
     return 0;
   }
 
-  const files = walk(path.join(REPO_ROOT, 'src'));
-  const ledger = tally(files.map((file) => ({
-    rel: path.relative(REPO_ROOT, file).split(path.sep).join('/'),
-    raw: fs.readFileSync(file, 'utf8'),
-  })));
+  // ADR-924 — με `--index` (εκτελεστής) τα αρχεία και το κείμενο ΤΟΥ COMMIT.
+  const ledger = measure(openGateInput({ root: REPO_ROOT, index: process.argv.includes(INDEX_FLAG) }));
 
   const offenders = ledger['second-authority'];
   // ⚠️ Τυπώνεται ΚΑΙ ΣΤΟ ΜΗΔΕΝ: ένα «0» που δεν φαίνεται διαβάζεται ως «δεν κοίταξα».
@@ -215,4 +210,4 @@ function main() {
 }
 
 if (require.main === module) process.exit(main());
-module.exports = { classify, tally, SSOT };
+module.exports = { classify, tally, measure, SSOT };

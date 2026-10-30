@@ -16,20 +16,20 @@
  */
 'use strict';
 
-const fs = require('fs');
 const path = require('path');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const { STATES, BLOCKING, MIN_REASON, readRoot, scanCodeFile, scanLocaleFile } =
   require('./lib/product-identity/scan');
-const { collectSourceFiles } = require('./lib/module-graph/scan-config');
+const { openGateInput, commitInput } = require('./lib/gate-input');
+const { printFindingsReport } = require('./lib/write-authority/gate-runner');
 const { toPosix } = require('./lib/module-graph/resolve-specifier');
 
 const CONFIG_PATH = path.join(PROJECT_ROOT, '.product-identity.json');
 
 /** Fail-closed φόρτωση: κάθε δήλωση οφείλει σχήμα ΚΑΙ λόγο (Κ3 κατά τη φόρτωση). */
-function loadConfig(configPath = CONFIG_PATH) {
-  const cfg = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+function loadConfig(configPath = CONFIG_PATH, input = openGateInput({ root: PROJECT_ROOT })) {
+  const cfg = input.readJson(configPath);
   if (!cfg.canonical || !cfg.canonical.root) {
     throw new Error('.product-identity.json: λείπει το `canonical.root` — η πύλη δεν έχει ρίζα');
   }
@@ -47,24 +47,12 @@ function loadConfig(configPath = CONFIG_PATH) {
   return cfg;
 }
 
-/** Τα locale JSON — δικός του περίπατος: το `collectSourceFiles` βλέπει μόνο .ts/.tsx. */
-function collectLocaleFiles(root, localeRoots) {
-  const out = [];
-  const walk = (dir) => {
-    let entries;
-    try {
-      entries = fs.readdirSync(dir, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const e of entries) {
-      const abs = path.join(dir, e.name);
-      if (e.isDirectory()) walk(abs);
-      else if (e.isFile() && e.name.endsWith('.json')) out.push(toPosix(abs));
-    }
-  };
-  for (const rel of localeRoots) walk(path.join(root, rel));
-  return out.sort();
+/**
+ * Τα locale JSON — δικό τους κριτήριο (το `collectSourceFiles` βλέπει μόνο .ts/.tsx), από την ΕΙΣΟΔΟ
+ * (ADR-924 Φ3: ήταν δικός του περιπατητής).
+ */
+function collectLocaleFiles(root, localeRoots, input = openGateInput({ root })) {
+  return input.files(localeRoots, { accept: (rel) => rel.endsWith('.json') });
 }
 
 /** Ο δείκτης δηλώσεων: αρχείο → σύνολο επιτρεπόμενων γραφών. */
@@ -82,7 +70,7 @@ function bumpOf(tally) {
 }
 
 /** Κ2 + Κ3: κάθε δήλωση οφείλει να προστατεύει κάτι ΥΠΑΡΚΤΟ, και να λέει γιατί. */
-function judgeDeclarations(cfg, root, seenByFile, bump, findings, spellings) {
+function judgeDeclarations(cfg, root, seenByFile, bump, findings, spellings, input = openGateInput({ root })) {
   for (const d of cfg.declarations) {
     // ⚠️ ΓΡΑΦΗ ΕΚΤΟΣ ΤΟΥ ΚΛΕΙΣΤΟΥ ΣΥΝΟΛΟΥ ΕΙΝΑΙ ΟΡΦΑΝΗ ΕΞ ΟΡΙΣΜΟΥ, ΚΑΙ ΤΟ ΛΕΜΕ ΡΗΤΑ.
     //    Η πρώτη γραφή αυτού του μητρώου δήλωνε `NestorPagonisApp` / `NestorAec` — ονόματα
@@ -102,7 +90,7 @@ function judgeDeclarations(cfg, root, seenByFile, bump, findings, spellings) {
         detail: `ο λόγος είναι ΥΠΟΧΡΕΩΤΙΚΟΣ (≥${MIN_REASON} χαρακτήρες)` });
       continue;
     }
-    if (!fs.existsSync(path.join(root, d.file))) {
+    if (!input.exists(d.file)) {
       bump(STATES.ORPHAN_DECLARATION);
       findings.push({ state: STATES.ORPHAN_DECLARATION, file: d.file,
         detail: 'δηλωμένο αρχείο που ΔΕΝ ΥΠΑΡΧΕΙ — η δήλωση προστατεύει το τίποτα' });
@@ -128,19 +116,22 @@ function judgeDeclarations(cfg, root, seenByFile, bump, findings, spellings) {
  */
 function measure(opts = {}) {
   const root = opts.root || PROJECT_ROOT;
-  const cfg = opts.config || loadConfig(opts.configPath);
+  // ADR-924 — η είσοδος: προεπιλογή ο δίσκος της ρίζας, με `--index` η όψη του commit.
+  const input = opts.input || openGateInput({ root });
+  const cfg = opts.config || loadConfig(opts.configPath || CONFIG_PATH, input);
 
   const rootAbs = path.join(root, cfg.canonical.root);
   const tally = Object.fromEntries(Object.values(STATES).map((s) => [s, 0]));
   const bump = bumpOf(tally);
   const findings = [];
 
-  if (!fs.existsSync(rootAbs)) {
+  const rootText = input.read(rootAbs);
+  if (rootText === null) {
     bump(STATES.ROOT_DRIFT);
     findings.push({ state: STATES.ROOT_DRIFT, file: cfg.canonical.root, detail: 'η ρίζα δεν υπάρχει' });
     return { findings, tally, spellings: [], examined: 0 };
   }
-  const verdict = readRoot(fs.readFileSync(rootAbs, 'utf8'), rootAbs, cfg.canonical);
+  const verdict = readRoot(rootText, rootAbs, cfg.canonical);
   if (!verdict.ok) {
     bump(STATES.ROOT_DRIFT);
     findings.push({ state: STATES.ROOT_DRIFT, file: cfg.canonical.root, detail: verdict.reason });
@@ -148,11 +139,11 @@ function measure(opts = {}) {
   }
   bump(STATES.ROOT);
 
-  const codeFiles = opts.codeFiles || collectSourceFiles(root, cfg.scan.codeRoots);
+  const codeFiles = opts.codeFiles || input.sources(cfg.scan.codeRoots);
   if (!opts.codeFiles && codeFiles.length < 1000) {
     throw new Error(`ΦΡΟΥΡΟΣ: μόνο ${codeFiles.length} αρχεία κώδικα σαρώθηκαν — η σάρωση δεν κοίταξε`);
   }
-  const localeFiles = opts.localeFiles || collectLocaleFiles(root, cfg.scan.localeRoots);
+  const localeFiles = opts.localeFiles || collectLocaleFiles(root, cfg.scan.localeRoots, input);
   const declared = declarationIndex(cfg.declarations);
   const seenByFile = new Map();
 
@@ -170,8 +161,8 @@ function measure(opts = {}) {
   for (const abs of codeFiles) {
     const rel = toPosix(path.relative(root, abs));
     if (rel.includes('__tests__/')) continue;
-    let text;
-    try { text = fs.readFileSync(abs, 'utf8'); } catch { continue; }
+    const text = input.read(abs);
+    if (text === null) continue;
     if (!verdict.spellings.some((s) => text.includes(s))) continue;   // προφίλτρο: ασφαλές δομικά
     let hits;
     try { hits = scanCodeFile(abs, text, verdict.spellings, rel); } catch { continue; }
@@ -180,47 +171,33 @@ function measure(opts = {}) {
 
   for (const abs of localeFiles) {
     const rel = toPosix(path.relative(root, abs));
-    let text;
-    try { text = fs.readFileSync(abs, 'utf8'); } catch { continue; }
+    const text = input.read(abs);
+    if (text === null) continue;
     if (!verdict.spellings.some((s) => text.includes(s))) continue;
     for (const hit of scanLocaleFile(text, verdict.spellings, verdict.product, rel)) record(hit, false);
   }
 
-  judgeDeclarations(cfg, root, seenByFile, bump, findings, verdict.spellings);
+  judgeDeclarations(cfg, root, seenByFile, bump, findings, verdict.spellings, input);
   return { findings, tally, spellings: verdict.spellings, examined: codeFiles.length + localeFiles.length };
 }
 
 function report(result, log = console.log) {
-  const { tally, findings, spellings } = result;
-  log('');
-  log('🏷️  CHECK 3.81 — Πύλη ταυτότητας προϊόντος (ADR-857 Φ8)');
-  log('');
-  log(`   αρχεία που εξετάστηκαν: ${result.examined}`);
-  log(`   γραφές του κλειστού συνόλου: ${spellings.length}${spellings.length ? ` — ${spellings.join(' · ')}` : ''}`);
-  log('');
-  for (const s of BLOCKING) log(`   ⛔ ${s.padEnd(24)} ${tally[s]}`);
-  log('');
-  for (const s of [STATES.ROOT, STATES.DECLARED, STATES.CANONICAL]) {
-    log(`   ✅ ${s.padEnd(24)} ${tally[s]}`);
-  }
-  const blocking = findings.filter((f) => BLOCKING.includes(f.state));
-  if (blocking.length) {
-    log('');
-    log('   ── ΕΥΡΗΜΑΤΑ ──');
-    for (const f of blocking) {
-      log(`   ⛔ ${f.state}  ${f.file}${f.line ? ':' + f.line : ''}`);
-      if (f.spelling) log(`        γραφή: «${f.spelling}»  σε: «${f.excerpt}»`);
-      if (f.detail) log(`        ${f.detail}`);
-    }
-    log('');
-    log('   ΘΕΡΑΠΕΙΑ — ΜΙΑ από τις δύο, και η πρώτη είναι σχεδόν πάντα η σωστή:');
-    log('     (1) ΕΙΝΑΙ το όνομα του προϊόντος ⇒ εισήγαγέ το από τη ρίζα:');
-    log("         import { PRODUCT_NAME, productQualified } from '@/constants/product-identity'");
-    log('     (2) ΔΕΝ είναι (νομικό πρόσωπο · δεδομένα ενοίκου · αναγνωριστικό μηχανής ·');
-    log('         παγωμένο) ⇒ δήλωσέ το στο .product-identity.json με κλάση ΚΑΙ λόγο.');
-    log('     ⚠️ Σε locale JSON η (1) ΔΕΝ υπάρχει — γράψε την κανονική γραφή στην πρόταση.');
-  }
-  return blocking.length;
+  const { spellings } = result;
+  return printFindingsReport(result, {
+    title: '🏷️  CHECK 3.81 — Πύλη ταυτότητας προϊόντος (ADR-857 Φ8)',
+    subtitle: `γραφές του κλειστού συνόλου: ${spellings.length}${spellings.length ? ` — ${spellings.join(' · ')}` : ''}`,
+    blocking: BLOCKING,
+    healthy: [STATES.ROOT, STATES.DECLARED, STATES.CANONICAL],
+    details: (f) => [f.spelling && `γραφή: «${f.spelling}»  σε: «${f.excerpt}»`, f.detail].filter(Boolean),
+    remedy: [
+      'ΘΕΡΑΠΕΙΑ — ΜΙΑ από τις δύο, και η πρώτη είναι σχεδόν πάντα η σωστή:',
+      '  (1) ΕΙΝΑΙ το όνομα του προϊόντος ⇒ εισήγαγέ το από τη ρίζα:',
+      "      import { PRODUCT_NAME, productQualified } from '@/constants/product-identity'",
+      '  (2) ΔΕΝ είναι (νομικό πρόσωπο · δεδομένα ενοίκου · αναγνωριστικό μηχανής ·',
+      '      παγωμένο) ⇒ δήλωσέ το στο .product-identity.json με κλάση ΚΑΙ λόγο.',
+      '  ⚠️ Σε locale JSON η (1) ΔΕΝ υπάρχει — γράψε την κανονική γραφή στην πρόταση.',
+    ],
+  }, log);
 }
 
 function main() {
@@ -228,7 +205,7 @@ function main() {
     console.log('⏭️  CHECK 3.81 παραλείφθηκε (SKIP_PRODUCT_IDENTITY=1)');
     return 0;
   }
-  const result = measure();
+  const result = measure({ input: commitInput(PROJECT_ROOT) });
   const blocking = report(result);
   if (blocking > 0) {
     console.log('');
