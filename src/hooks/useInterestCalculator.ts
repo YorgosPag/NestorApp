@@ -26,6 +26,7 @@ import type {
 } from '@/types/interest-calculator';
 import type { Installment } from '@/types/payment-plan';
 import { getErrorMessage } from '@/lib/error-utils';
+import { installmentDueDay } from '@/lib/payment-plan/installment-due-day';
 import {
   calculateInterestCostWithPolicy,
   refreshEuriborRatesWithPolicy,
@@ -159,7 +160,7 @@ export function useInterestCalculator(): UseInterestCalculatorReturn {
         ? installments.map((inst) => ({
             label: inst.label,
             amount: inst.amount,
-            date: inst.dueDate,
+            date: installmentDueDay(inst.dueDate) ?? inst.dueDate,
             certainty: 'certain' as const,
           }))
         : [{ label: 'Μετρητά', amount: salePrice, date: referenceDate, certainty: 'certain' as const }];

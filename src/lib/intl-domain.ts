@@ -7,6 +7,7 @@
  */
 
 import { normalizeToDate } from '@/lib/date-local';
+import { calendarDaysUntil } from '@/constants/platform-operator';
 import { getCurrentLocale } from './intl-utils';
 import { formatCurrency, formatDate, formatDateTime } from './intl-formatting';
 
@@ -142,15 +143,12 @@ export const formatCurrencyCompact = (value: number): string => {
 /**
  * ✅ CENTRALIZED: Calculate days until completion date
  * Consolidates duplicate functions from BuildingCardUtils.ts and project-utils.ts
+ *
+ * Ημέρες **ημερολογίου** (`calendarDaysUntil`): `0` = παράδοση σήμερα, αρνητικό = καθυστέρηση, `null` = μη αναγνώσιμη.
+ * Το παλιό `Math.ceil(ms / 24h)` έλεγε «1» στις 01:00 της ίδιας της ημέρας παράδοσης, και `NaN` για άκυρη τιμή.
  */
-export const getDaysUntilCompletion = (completionDate?: string): number | null => {
-  if (!completionDate) return null;
-  const today = new Date();
-  const completion = new Date(completionDate);
-  const diffTime = completion.getTime() - today.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays;
-};
+export const getDaysUntilCompletion = (completionDate?: string): number | null =>
+  completionDate ? calendarDaysUntil(completionDate) : null;
 
 // ============================================================================
 // 🔄 BRIDGE FUNCTIONS: FlexibleDateInput → Intl Formatting (ADR-208)

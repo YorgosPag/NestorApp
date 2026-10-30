@@ -12,6 +12,7 @@ import type {
   SaleTaxRegime,
   TemplateSlot,
 } from '@/types/payment-plan';
+import { installmentToday, monthlyDueDay } from '@/lib/payment-plan/installment-due-day';
 
 export const TAX_REGIMES: ReadonlyArray<{ readonly value: SaleTaxRegime; readonly rate: number }> = [
   { value: 'vat_24', rate: 24 },
@@ -78,7 +79,8 @@ function slotShare(
 
 /**
  * Δόσεις από πρότυπο: πρώτα τα σταθερά ποσά, και οι θέσεις ποσοστού μοιράζουν ό,τι ΜΕΝΕΙ.
- * Λήξεις: μία ανά μήνα από το `today`.
+ * Λήξεις: μία ανά μήνα από τη σημερινή ημέρα **Αθήνας**, ως ημέρα `YYYY-MM-DD` (ADR-234 — ημέρα, όχι στιγμή),
+ * ψαλιδισμένη στο τέλος του μήνα: 31/1 ⇒ 28/2 (το παλιό `setMonth` έδινε 3/3, και η τοπική ώρα→UTC την προηγούμενη ημέρα).
  */
 export function computeInstallments(
   template: PaymentPlanTemplate,
@@ -88,12 +90,11 @@ export function computeInstallments(
   const fixedSum = template.slots.reduce((sum, slot) => sum + (isFixed(slot) ? slot.fixedAmount : 0), 0);
   const percentageBase = Math.max(0, total - fixedSum);
   let remaining = total;
+  const startDay = installmentToday(today);
 
   return template.slots.map((slot, idx) => {
     const { amount, percentage } = slotShare(template.slots, idx, total, percentageBase, remaining);
     remaining -= amount;
-    const dueDate = new Date(today);
-    dueDate.setMonth(dueDate.getMonth() + idx);
-    return { label: slot.defaultLabel, type: slot.type, amount: Math.max(0, amount), percentage, dueDate: dueDate.toISOString() };
+    return { label: slot.defaultLabel, type: slot.type, amount: Math.max(0, amount), percentage, dueDate: monthlyDueDay(startDay, idx) };
   });
 }

@@ -33,8 +33,10 @@
  * 🔑 **Η ΩΡΑ ΕΙΝΑΙ ΠΑΝΤΑ ΩΡΑ ΕΛΛΑΔΑΣ** — όχι του φυλλομετρητή. Ο επισκέπτης από το
  * Λονδίνο που ρωτά *«είναι ανοιχτό;»* ρωτά για το γραφείο στη Θεσσαλονίκη.
  *
- * **Layering**: leaf — καθαρές συναρτήσεις, ασφαλές και στις δύο πλευρές.
+ * **Layering**: καθαρές συναρτήσεις, ασφαλές και στις δύο πλευρές· μόνη εξάρτηση η ζώνη του φορέα (`constants/platform-operator`).
  */
+
+import { OPERATOR_TIME_ZONE } from '@/constants/platform-operator';
 
 /** ISO 8601: 1 = Δευτέρα … 7 = Κυριακή. */
 export type IsoWeekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
@@ -253,7 +255,13 @@ export function readWeeklyHours(raw: unknown): WeeklyHours | null {
 // Η ΩΡΑ ΕΛΛΑΔΑΣ
 // =============================================================================
 
-export const GREEK_TIME_ZONE = 'Europe/Athens';
+/**
+ * Η ζώνη ώρας Ελλάδας — **η ίδια σταθερά** με τη ζώνη του φορέα (`OPERATOR_TIME_ZONE`), όχι δεύτερο literal.
+ * Το `athensClockAt(x).dateKey` και το `calendarDayOf(x)` (`constants/platform-operator`) απαντούν το ίδιο
+ * «ποια ημέρα είναι στην Ελλάδα;» — το κλειδώνει test-συμβόλαιο (`weekly-hours.test.ts`, αλλαγές ώρας).
+ * Εδώ το ρολόι (ημέρα + ημέρα εβδομάδας + λεπτά, ένα πέρασμα `Intl`)· εκεί η ημέρα και τα όριά της.
+ */
+export const GREEK_TIME_ZONE = OPERATOR_TIME_ZONE;
 
 /** Τι δείχνει το ρολόι **στην Ελλάδα** αυτή τη στιγμή. */
 export interface AthensClock {

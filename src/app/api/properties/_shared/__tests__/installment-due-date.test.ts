@@ -1,40 +1,46 @@
 /**
  * ADR-234 · ADR-919 — άγκυρες του κριτή «πότε λήγει η δόση;» στα σύνορα του πλάνου πληρωμών.
  *
- * Ο κανόνας που φυλάνε: δεκτό είναι **ό,τι στέλνουν οι πελάτες** (`toISOString()`), και τίποτα που δεν είναι
- * στιγμή σε υπαρκτή ημέρα — το παλιό πρόθεμα δεχόταν `2027-02-30xyz`.
+ * Ο κανόνας που φυλάνε: η λήξη είναι **ημέρα** και στη βάση γράφεται **μόνο** `YYYY-MM-DD`. Η παλιά μορφή των
+ * πελατών (στιγμή UTC από `toISOString()`) γίνεται δεκτή μεταβατικά και κανονικοποιείται στην ημέρα της στην Αθήνα.
+ * Τίποτα που δεν είναι υπαρκτή ημέρα — το παλιό πρόθεμα δεχόταν `2027-02-30xyz`.
  */
 
-import { installmentDueDateSchema, isInstallmentDueDate } from '../installment-due-date';
+import { installmentDueDateSchema, toInstallmentDueDay } from '../installment-due-date';
 
 describe('installment-due-date', () => {
-  it('δέχεται ό,τι βγάζει το toISOString() — wizard και επεξεργασία δόσης', () => {
-    const wizard = new Date(2026, 10, 29, 10, 23);
-    wizard.setMonth(wizard.getMonth() + 3);
-    expect(isInstallmentDueDate(wizard.toISOString())).toBe(true);
-    expect(isInstallmentDueDate(new Date('2026-11-29').toISOString())).toBe(true);
-    expect(isInstallmentDueDate('2028-02-29T00:00:00.000Z')).toBe(true);
+  it('ημέρα (η νέα μορφή wizard + επεξεργασίας) ⇒ αυτούσια', () => {
+    expect(toInstallmentDueDay('2026-11-29')).toBe('2026-11-29');
+    expect(toInstallmentDueDay('2028-02-29')).toBe('2028-02-29');
+  });
+
+  it('παλιά στιγμή UTC ⇒ η ημέρα της στην Αθήνα', () => {
+    // wizard 01:30 Αθήνα 5/11 με παλιό bundle
+    expect(toInstallmentDueDay('2026-11-04T23:30:00.000Z')).toBe('2026-11-05');
+    // επεξεργασία: μεσάνυχτα UTC
+    expect(toInstallmentDueDay(new Date('2026-11-29').toISOString())).toBe('2026-11-29');
   });
 
   it.each([
-    ['ανύπαρκτη ημέρα', '2027-02-30T00:00:00.000Z'],
-    ['μη δίσεκτο', '2027-02-29T00:00:00.000Z'],
+    ['ανύπαρκτη ημέρα', '2027-02-30'],
+    ['μη δίσεκτο', '2027-02-29'],
+    ['ανύπαρκτη ημέρα σε στιγμή', '2027-02-30T00:00:00.000Z'],
     ['ουρά μετά το πρόθεμα (περνούσε το παλιό regex)', '2027-02-30xyz'],
-    ['σκέτη ημέρα — οι πελάτες στέλνουν στιγμή', '2026-11-29'],
-    ['μετατόπιση αντί για Z — χαλά τη σειρά συμβολοσειρών', '2026-11-29T10:23:00+02:00'],
+    ['μετατόπιση αντί για Z', '2026-11-29T10:23:00+02:00'],
     ['κενό', ''],
   ])('απορρίπτει: %s', (_label, value) => {
-    expect(isInstallmentDueDate(value)).toBe(false);
+    expect(toInstallmentDueDay(value)).toBeNull();
   });
 
-  it('μη συμβολοσειρές ⇒ false, ποτέ σφάλμα', () => {
+  it('μη συμβολοσειρές ⇒ null, ποτέ σφάλμα', () => {
     for (const value of [null, undefined, 20261129, new Date()]) {
-      expect(isInstallmentDueDate(value)).toBe(false);
+      expect(toInstallmentDueDay(value)).toBeNull();
     }
   });
 
-  it('το σχήμα και ο κριτής απαντούν το ίδιο', () => {
-    expect(installmentDueDateSchema.safeParse('2027-02-30T00:00:00.000Z').success).toBe(false);
-    expect(installmentDueDateSchema.safeParse('2026-11-29T00:00:00.000Z').success).toBe(true);
+  it('το σχήμα κρίνει το ίδιο ΚΑΙ κανονικοποιεί σε ημέρα', () => {
+    expect(installmentDueDateSchema.safeParse('2027-02-30').success).toBe(false);
+    expect(installmentDueDateSchema.safeParse('2026-11-29').data).toBe('2026-11-29');
+    expect(installmentDueDateSchema.safeParse('2026-11-04T23:30:00.000Z').data).toBe('2026-11-05');
   });
 });

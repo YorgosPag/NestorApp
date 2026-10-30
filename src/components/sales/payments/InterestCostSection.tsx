@@ -20,7 +20,7 @@ import type { CostCalculationInput } from '@/types/interest-calculator';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { nowISO } from '@/lib/date-local';
+import { installmentDueDay, installmentToday } from '@/lib/payment-plan/installment-due-day';
 import { formatCurrencyWhole as formatCurrency } from '@/lib/intl-domain';
 
 // =============================================================================
@@ -52,7 +52,7 @@ export function InterestCostSection({
   salePrice,
 }: InterestCostSectionProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
+  const { t } = useTranslation('payments');
   const {
     rates,
     spreads,
@@ -72,7 +72,8 @@ export function InterestCostSection({
   const autoCalculate = useCallback(async () => {
     if (!rates || !planInstallments || planInstallments.length === 0 || salePrice <= 0) return;
 
-    const referenceDate = nowISO().split('T')[0];
+    // Σημερινή ημέρα Αθήνας — στην ίδια βάση με τις λήξεις-ημέρες (ADR-234), όχι η ημέρα UTC.
+    const referenceDate = installmentToday();
     const bankSpread = spreads?.defaultSpread ?? 2.40;
 
     const input: CostCalculationInput = {
@@ -81,7 +82,7 @@ export function InterestCostSection({
       cashFlows: planInstallments.map((inst) => ({
         label: inst.label,
         amount: inst.amount,
-        date: inst.dueDate,
+        date: installmentDueDay(inst.dueDate) ?? inst.dueDate,
         certainty: inst.status === 'paid' ? 'certain' as const : 'uncertain' as const,
       })),
       discountRateSource: 'euribor_3M',

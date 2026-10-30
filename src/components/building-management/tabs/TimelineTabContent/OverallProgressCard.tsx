@@ -8,6 +8,7 @@ import type { Building } from '../../BuildingsPageContent';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { calendarDaysUntil } from '@/constants/platform-operator';
 import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Milestone type with date for calculations
@@ -23,7 +24,7 @@ interface OverallProgressCardProps {
 
 export function OverallProgressCard({ building, milestones }: OverallProgressCardProps) {
     // 🏢 ENTERPRISE: i18n hook for translations
-    const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+    const { t } = useTranslation('building');
     const colors = useSemanticColors();
 
     return (
@@ -59,10 +60,8 @@ export function OverallProgressCard({ building, milestones }: OverallProgressCar
                         <dd className="text-2xl font-bold text-primary">
                             {(() => {
                                 const inProgressMilestone = milestones.find(m => m.status === 'in-progress');
-                                if (inProgressMilestone?.date) {
-                                    return Math.ceil((new Date(inProgressMilestone.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-                                }
-                                return 0;
+                                // Ημέρες ημερολογίου ως την ημέρα του ορόσημου (`calendarDaysUntil`), όχι 24ωρα.
+                                return calendarDaysUntil(inProgressMilestone?.date) ?? 0;
                             })()}
                         </dd>
                         <dt className={colors.text.muted}>{t('tabs.timeline.overallProgress.daysRemaining')}</dt>

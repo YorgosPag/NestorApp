@@ -37,7 +37,8 @@ interface SaveGeofenceConfigInput {
 
 interface GenerateAttendanceQrCodeInput {
   projectId: string;
-  date: string;
+  /** Ρητή ημέρα `YYYY-MM-DD`· χωρίς αυτήν ⇒ η σημερινή ημέρα **Αθήνας**, κατά τον διακομιστή. */
+  date?: string;
 }
 
 interface GenerateAttendanceQrCodeResult {

@@ -34,6 +34,7 @@ import type {
   GeofenceVerificationResult,
 } from '@/components/projects/ika/contracts';
 import { nowISO } from '@/lib/date-local';
+import { calendarDayOf } from '@/constants/platform-operator';
 
 // =============================================================================
 // LOGGER
@@ -285,7 +286,7 @@ export async function processQrCheckIn(payload: QrCheckInPayload): Promise<QrChe
   }
 
   const projectId = tokenResult.projectId;
-  const validDate = tokenResult.validDate ?? nowISO().slice(0, 10);
+  const validDate = tokenResult.validDate ?? calendarDayOf(new Date());
 
   // S-2 fix: Read project doc ONCE, validate tenant ownership early
   const db0 = getAdminFirestore();

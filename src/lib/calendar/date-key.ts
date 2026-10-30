@@ -11,7 +11,7 @@
  * **Layering**: leaf — καθαρές συναρτήσεις.
  */
 
-import { localDateOf, MS_PER_DAY, utcDateOf } from '@/lib/date-local';
+import { addMonthsUTC, localDateOf, MS_PER_DAY, normalizeToMillisOrNull, utcDateOf } from '@/lib/date-local';
 import { isCalendarDay, parseCalendarDay } from '@/lib/date/calendar-day';
 import type { IsoWeekday } from '@/lib/calendar/weekly-hours';
 
@@ -37,6 +37,17 @@ export function isDateKey(value: unknown): value is string {
 export function addDaysToDateKey(key: string, days: number): string | null {
   const midnight = utcMidnightOf(key);
   return midnight === null ? null : utcDateOf(midnight + days * MS_PER_DAY);
+}
+
+/**
+ * Η ημέρα `months` μήνες μετά (αρνητικό = πριν), **ψαλιδισμένη** στο τέλος του μήνα: `2027-01-31` + 1 ⇒ `2027-02-28`,
+ * ποτέ 3 Μαρτίου — ο ΕΝΑΣ τρόπος (`addMonthsUTC` → `addMonthsClampedUtc`, ADR-828 §1). `null` για άκυρο κλειδί.
+ * Ήταν στο `document-validity/validity-bounds` (λήξεις εγγράφων)· εδώ ώστε να το μοιράζονται και οι δόσεις.
+ */
+export function addMonthsToDateKey(key: string, months: number): string | null {
+  if (!isCalendarDay(key)) return null;
+  const untilMs = normalizeToMillisOrNull(addMonthsUTC(key, months));
+  return untilMs === null ? null : utcDateOf(untilMs);
 }
 
 /** Πόσες ημέρες από το `from` ως το `to` (αρνητικό = το `to` είναι πριν) — `null` αν κάποιο είναι άκυρο. */

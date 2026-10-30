@@ -21,6 +21,7 @@ import type {
 } from './cash-flow.types';
 import { DEFAULT_CASH_FLOW_CONFIG } from './cash-flow.types';
 import { createModuleLogger } from '@/lib/telemetry';
+import { installmentDueDay } from '@/lib/payment-plan/installment-due-day';
 
 const logger = createModuleLogger('CashFlowDataFetcher');
 
@@ -94,7 +95,9 @@ export async function fetchInstallments(
         projectId,
         buildingId,
         amount: (inst.amount as number) ?? 0,
-        dueDate: (inst.dueDate as string) ?? '',
+        // Ημέρα λήξης (ADR-234): η παλιά στιγμή `…-31T23:30Z` είναι 1η του ΕΠΟΜΕΝΟΥ μήνα στην Ελλάδα — ο κουβάς μήνα
+        // (`extractMonthKey`) πρέπει να τη δει έτσι.
+        dueDate: installmentDueDay(inst.dueDate) ?? '',
         status,
         paidAmount: (inst.paidAmount as number) ?? 0,
         paidDate: (inst.paidDate as string) ?? null,

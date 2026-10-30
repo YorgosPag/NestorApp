@@ -24,7 +24,7 @@ import type {
   SalesAccountingResult,
   SaleLineItem,
 } from './types';
-import { nowISO } from '@/lib/date-local';
+import { accountingToday } from '@/subapps/accounting/utils/accounting-day';
 import { DEFAULT_UOM } from '@/lib/uom/uom-registry';
 
 // ============================================================================
@@ -315,8 +315,10 @@ export function buildLineDescription(
 export function buildInvoiceInput(params: BuildInvoiceInputParams): CreateInvoiceInput {
   const category = getCategoryByCode(INCOME_CATEGORY);
   const mydataCode = (category?.mydataCode ?? 'category1_1') as MyDataIncomeType;
-  const now = nowISO().slice(0, 10); // YYYY-MM-DD
-  const fiscalYear = new Date().getFullYear();
+  // Ημέρα έκδοσης = η λογιστική ημέρα (Αθήνα), και η χρήση ΑΠΟ ΑΥΤΗΝ — όχι η ημέρα/το έτος UTC του διακομιστή:
+  // πώληση 1/1 01:00 ώρα Ελλάδας έβγαινε τιμολόγιο 31/12 στη ΠΡΟΗΓΟΥΜΕΝΗ χρήση (ADR-ACC-010 §2.1.1).
+  const now = accountingToday();
+  const fiscalYear = Number(now.slice(0, 4));
 
   // ADR-199: Multi-line invoices for appurtenances
   const hasMultipleLines = params.saleLineItems && params.saleLineItems.length > 0;

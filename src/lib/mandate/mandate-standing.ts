@@ -69,6 +69,7 @@
  */
 
 import type { BrokeredListingMandate } from '@/types/owner-property-mandate';
+import { deadlineDaysLeft, MS_PER_DAY } from '@/lib/date-local';
 
 // =============================================================================
 // 1. Ο ΟΡΙΖΟΝΤΑΣ ΤΗΣ ΛΗΞΗΣ
@@ -96,8 +97,6 @@ import type { BrokeredListingMandate } from '@/types/owner-property-mandate';
  * στην οθόνη.
  */
 export const MANDATE_EXPIRY_HORIZON_DAYS = 14;
-
-const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
 
 // =============================================================================
 // 2. ΟΙ ΚΑΤΑΣΤΑΣΕΙΣ — κλειστό σύνολο, καμία σιωπηλή
@@ -267,7 +266,7 @@ export function mandateStandingOf(
     return mandate.viewedAt === null ? AWAITING_VIEW : AWAITING_DECISION;
   }
 
-  return expiry - now <= MANDATE_EXPIRY_HORIZON_DAYS * MILLISECONDS_PER_DAY
+  return expiry - now <= MANDATE_EXPIRY_HORIZON_DAYS * MS_PER_DAY
     ? EXPIRING_SOON
     : LIVE;
 }
@@ -279,13 +278,13 @@ export function mandateStandingOf(
  * ακόμη τρεις ώρες είναι **ψέμα προς τα κάτω** — ο μεσίτης θα υπέθετε ότι χάθηκε και
  * δεν θα τηλεφωνούσε. `null` όταν η λήξη δεν διαβάζεται ή έχει ήδη περάσει: εκεί ο
  * αριθμός δεν έχει νόημα και η κατάσταση το λέει ήδη.
+ *
+ * Ο κανόνας είναι του έργου (`deadlineDaysLeft`, ADR-853 §13 ε.γ) — ίδια απάντηση με κάθε άλλη «λήγει σε Ν ημέρες».
  */
 export function daysUntilExpiry(
   mandate: BrokeredListingMandate,
   nowISOValue: string,
 ): number | null {
-  const expiry = Date.parse(mandate.expiresAt);
   const now = Date.parse(nowISOValue);
-  if (Number.isNaN(expiry) || Number.isNaN(now) || expiry <= now) return null;
-  return Math.ceil((expiry - now) / MILLISECONDS_PER_DAY);
+  return Number.isNaN(now) ? null : deadlineDaysLeft(mandate.expiresAt, now);
 }

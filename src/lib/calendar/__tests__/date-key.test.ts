@@ -5,6 +5,7 @@
 import { localDateOf } from '@/lib/date-local';
 import {
   addDaysToDateKey,
+  addMonthsToDateKey,
   calendarDateOfDateKey,
   daysBetweenDateKeys,
   isDateKey,
@@ -18,6 +19,16 @@ describe('date-key', () => {
     expect(isDateKey('2026-02-30')).toBe(false);
     expect(isDateKey('2026-2-1')).toBe(false);
     expect(isDateKey(20260201)).toBe(false);
+  });
+
+  it('addMonthsToDateKey: ψαλίδισμα στο τέλος του μήνα, ποτέ ξεχείλισμα (ADR-828 §1)', () => {
+    expect(addMonthsToDateKey('2027-01-31', 1)).toBe('2027-02-28');
+    expect(addMonthsToDateKey('2028-01-31', 1)).toBe('2028-02-29');
+    expect(addMonthsToDateKey('2026-03-31', -1)).toBe('2026-02-28');
+    expect(addMonthsToDateKey('2026-12-15', 1)).toBe('2027-01-15');
+    expect(addMonthsToDateKey('2026-06-30', 8)).toBe('2027-02-28');
+    expect(addMonthsToDateKey('2026-02-30', 1)).toBeNull();
+    expect(addMonthsToDateKey('2026-11-05T00:00:00.000Z', 1)).toBeNull();
   });
 
   it('🔴 +1 ημέρα πάνω από την αλλαγή ώρας (29/3/2026) δεν «κολλά» στην ίδια ημερομηνία', () => {

@@ -22,7 +22,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { generateDailyQrToken } from '@/services/attendance/qr-token-service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
-import { nowISO } from '@/lib/date-local';
+import { calendarDayOf } from '@/constants/platform-operator';
 import { isCalendarDay } from '@/lib/date/calendar-day';
 
 const logger = createModuleLogger('api/attendance/qr/generate');
@@ -66,8 +66,10 @@ const basePOST = async (request: NextRequest) => {
           );
         }
 
-        // Default to today in YYYY-MM-DD format
-        const date = body.date ?? nowISO().slice(0, 10);
+        // «Σήμερα» = η ημέρα του ΕΡΓΟΤΑΞΙΟΥ (Αθήνα), όχι του διακομιστή: το `nowISO().slice(0, 10)` είναι ημέρα UTC
+        // ⇒ 00:00–02:00/03:00 ώρα Ελλάδας έβγαζε QR της ΧΘΕΣΙΝΗΣ, που έληγε σε λίγες ώρες. Την ημέρα την ορίζει ο διακομιστής·
+        // ο πελάτης στέλνει `date` μόνο για ρητά άλλη ημέρα.
+        const date = body.date ?? calendarDayOf(new Date());
 
         // An existing calendar day — `2027-02-30` gets a 400, not a token for a day that never comes (ADR-919)
         if (!isCalendarDay(date)) {

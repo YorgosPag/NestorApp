@@ -16,6 +16,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { generateNotificationId } from '@/services/enterprise-id.service';
 import { PaymentReportService } from '@/services/payment-report.service';
 import { nowISO } from '@/lib/date-local';
+import { calendarDayOf } from '@/constants/platform-operator';
 
 const logger = createModuleLogger('OverdueAlertService');
 
@@ -52,7 +53,8 @@ export class OverdueAlertService {
       }
 
       const db = getAdminFirestore();
-      const todayISO = nowISO().slice(0, 10); // YYYY-MM-DD
+      // «Μία ειδοποίηση ανά ημέρα» = ανά ημέρα ΑΘΗΝΑΣ — η ημέρα UTC άλλαζε στις 02:00/03:00 ώρα Ελλάδας.
+      const todayISO = calendarDayOf(new Date());
       const batch = db.batch();
       let batchCount = 0;
 

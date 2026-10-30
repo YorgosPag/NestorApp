@@ -38,7 +38,6 @@ import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { cn } from '@/lib/utils';
 import { getStatusColor } from '@/lib/design-system';
 import { generateAttendanceQrCodeWithPolicy } from '@/services/ika/ika-mutation-gateway';
-import { nowISO } from '@/lib/date-local';
 
 // =============================================================================
 // TYPES
@@ -63,7 +62,7 @@ interface QrGenerateResult {
 // =============================================================================
 
 export function QrCodePanel({ projectId }: QrCodePanelProps) {
-  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+  const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
   const typography = useTypography();
 
@@ -81,8 +80,8 @@ export function QrCodePanel({ projectId }: QrCodePanelProps) {
     setError(null);
 
     try {
-      const today = nowISO().slice(0, 10);
-      const data = await generateAttendanceQrCodeWithPolicy({ projectId, date: today });
+      // Χωρίς `date`: το «σήμερα» του εργοταξίου (Αθήνα) το ορίζει ο διακομιστής — όχι η ημέρα UTC του browser.
+      const data = await generateAttendanceQrCodeWithPolicy({ projectId });
 
       if (data.success) {
         setQrData(data);

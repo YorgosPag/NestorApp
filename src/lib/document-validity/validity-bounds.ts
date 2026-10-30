@@ -14,8 +14,9 @@
  * @module lib/document-validity/validity-bounds
  */
 
-import { addDaysToDateKey, isDateKey } from '@/lib/calendar/date-key';
-import { addMonthsUTC, normalizeToMillisOrNull, utcDateOf } from '@/lib/date-local';
+import { addDaysToDateKey, addMonthsToDateKey, isDateKey } from '@/lib/calendar/date-key';
+import { daysInMonth } from '@/lib/date/calendar-arithmetic';
+import { isoCalendarDay } from '@/lib/date/calendar-day';
 import {
   ENFIA_CENTRAL_ISSUANCE,
   ENFIA_CENTRAL_ISSUANCE_EXPECTED_BY,
@@ -25,23 +26,14 @@ import {
   type ValidityRegime,
 } from '@/config/document-validity/document-validity';
 
-const pad = (value: number): string => String(value).padStart(2, '0');
-
 /** Έτος και μήνας (1–12) ενός `YYYY-MM-DD`. Το καλούν μόνο αφού το `isDateKey` το επικύρωσε. */
 function yearMonthOf(key: string): { readonly year: number; readonly month: number } {
   return { year: Number(key.slice(0, 4)), month: Number(key.slice(5, 7)) };
 }
 
-/** `issuedOn` + N μήνες ημερολογίου — ο ΕΝΑΣ τρόπος (`addMonthsUTC`), ίδιος με τον κανόνα `months`. */
-export function addMonthsToDateKey(key: string, months: number): string | null {
-  const untilMs = normalizeToMillisOrNull(addMonthsUTC(key, months));
-  return untilMs === null ? null : utcDateOf(untilMs);
-}
-
 function endOfMonthOf(key: string): string {
   const { year, month } = yearMonthOf(key);
-  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  return `${year}-${pad(month)}-${pad(lastDay)}`;
+  return isoCalendarDay(year, month, daysInMonth(year, month));
 }
 
 const endOfYearOf = (key: string): string => `${key.slice(0, 4)}-12-31`;

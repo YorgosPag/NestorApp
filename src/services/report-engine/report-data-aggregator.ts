@@ -32,6 +32,7 @@ import {
 } from './report-aggregator.helpers';
 import { fetchCompanyUnits, liveUnits } from './report-aggregator.queries';
 import { nowISO } from '@/lib/date-local';
+import { calendarDayOf, operatorDayOf } from '@/constants/platform-operator';
 
 const logger = createModuleLogger('ReportDataAggregator');
 
@@ -232,10 +233,14 @@ export class ReportDataAggregator {
       ? avg(sumBy(wonOpps, o => o.estimatedValue ?? 0), wonOpps.length)
       : 0;
 
-    const today = nowISO().slice(0, 10);
-    const overdue = countBy(tasks, t =>
-      t.status !== 'completed' && t.dueDate !== undefined && t.dueDate < today,
-    );
+    // Ληξιπρόθεσμη = πέρασε η ημέρα λήξης στην Αθήνα. Το `t.dueDate < today` συνέκρινε Firestore `Timestamp` με
+    // συμβολοσειρά ⇒ ΠΑΝΤΑ `false`: οι εργασίες του `TasksRepository` δεν μετρήθηκαν ποτέ ληξιπρόθεσμες.
+    const today = calendarDayOf(new Date());
+    const overdue = countBy(tasks, t => {
+      if (t.status === 'completed') return false;
+      const dueDay = operatorDayOf(t.dueDate);
+      return dueDay !== null && dueDay < today;
+    });
 
     this.logger.info('CRM report generated', { opps: opps.length, tasks: tasks.length });
 

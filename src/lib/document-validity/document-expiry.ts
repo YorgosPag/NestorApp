@@ -20,9 +20,9 @@
  * @module lib/document-validity/document-expiry
  */
 
-import { addDaysToDateKey, daysBetweenDateKeys, isDateKey } from '@/lib/calendar/date-key';
+import { addDaysToDateKey, addMonthsToDateKey, daysBetweenDateKeys, isDateKey } from '@/lib/calendar/date-key';
 import type { DocumentClassification, DocumentValidityRule } from '@/config/document-validity/document-validity';
-import { addMonthsToDateKey, boundExpiresOn, printedBoundsOf } from '@/lib/document-validity/validity-bounds';
+import { boundExpiresOn, printedBoundsOf } from '@/lib/document-validity/validity-bounds';
 
 /** Ανοχή ασυμφωνίας: μία μέρα (στρογγυλοποίηση εκδότη «έως και» vs «έως»). Πέρα από αυτή, το λέμε. */
 const DISCREPANCY_TOLERANCE_DAYS = 1;

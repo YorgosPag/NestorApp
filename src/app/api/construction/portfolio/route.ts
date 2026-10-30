@@ -14,7 +14,7 @@ import { FIELDS } from '@/config/firestore-field-constants';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { nowISO } from '@/lib/date-local';
+import { calendarDayOf } from '@/constants/platform-operator';
 import { createModuleLogger } from '@/lib/telemetry';
 import { computeEVM } from '@/services/report-engine/evm-calculator';
 import { compareByLocale } from '@/lib/intl-formatting';
@@ -26,7 +26,8 @@ export const maxDuration = 30;
 
 const logger = createModuleLogger('PortfolioRoute');
 
-const TODAY = () => nowISO().slice(0, 10);
+/** Η σημερινή ημέρα του εργοταξίου (Αθήνα) — όχι η ημέρα UTC του διακομιστή (00:00–03:00 έλεγε «χθες»). */
+const TODAY = () => calendarDayOf(new Date());
 
 // ─── Response shape ───────────────────────────────────────────────────────
 

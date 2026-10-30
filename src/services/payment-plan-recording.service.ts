@@ -32,7 +32,12 @@ import {
   getPaymentPlans,
 } from './payment-plan-core';
 import { nowISO } from '@/lib/date-local';
-import { compareByLocale } from '@/lib/intl-formatting';
+import {
+  compareInstallmentDueDays,
+  installmentDueDay,
+  installmentToday,
+  isInstallmentPastDue,
+} from '@/lib/payment-plan/installment-due-day';
 
 // ============================================================================
 // PAYMENT RECORDING
@@ -283,11 +288,13 @@ export async function syncAggregatedPaymentSummary(propertyId: string): Promise<
     );
     const pendingInstallments = allInstallments
       .filter(i => i.status === 'pending' || i.status === 'due')
-      .sort((a, b) => compareByLocale(a.dueDate, b.dueDate));
+      // Κατά ημέρα λήξης — και για ανάμεικτες παλιές (στιγμή) / νέες (ημέρα) εγγραφές (ADR-234).
+      .sort((a, b) => compareInstallmentDueDays(a.dueDate, b.dueDate));
 
     const next = pendingInstallments[0] ?? null;
+    const today = installmentToday();
     const overdueCount = allInstallments.filter(
-      i => (i.status === 'pending' || i.status === 'due') && new Date(i.dueDate) < new Date()
+      i => (i.status === 'pending' || i.status === 'due') && isInstallmentPastDue(i.dueDate, today)
     ).length;
 
     const summary: PaymentSummary = {
@@ -298,7 +305,7 @@ export async function syncAggregatedPaymentSummary(propertyId: string): Promise<
       totalInstallments: allInstallments.length,
       paidInstallments: allInstallments.filter(i => i.status === 'paid').length,
       overdueInstallments: overdueCount,
-      nextInstallmentDate: next?.dueDate ?? null,
+      nextInstallmentDate: installmentDueDay(next?.dueDate),
       nextInstallmentAmount: next?.amount ?? null,
       loanStatus: 'not_applicable',
     };

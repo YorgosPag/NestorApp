@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ProjectFormData } from './general-tab/types';
 import '@/lib/design-system';
-import { nowISO } from '@/lib/date-local';
+import { todayLocalDate } from '@/lib/date-local';
 
 interface PermitsTabProps {
     data: ProjectFormData;
@@ -21,7 +21,7 @@ interface PermitsTabProps {
 }
 
 export const PermitsTab = React.memo(function PermitsTab({ data, setData, isEditing }: PermitsTabProps) {
-    const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+    const { t } = useTranslation('projects');
     const iconSizes = useIconSizes();
     const typography = useTypography();
     const spacing = useSpacingTokens();
@@ -29,7 +29,9 @@ export const PermitsTab = React.memo(function PermitsTab({ data, setData, isEdit
     // 🏢 Google-level: `YYYY-MM-DD` for the native date input's `max` attribute.
     // Recomputed per render — cheap, and the boundary only matters at interaction
     // time, so a once-per-mount memo would drift across midnight.
-    const todayISO = nowISO().slice(0, 10);
+    // Η ΤΟΠΙΚΗ ημέρα του χρήστη — η ημέρα UTC (`nowISO().slice(0, 10)`) 00:00–03:00 ώρα Ελλάδας ήταν «χθες»,
+    // και το `max` απαγόρευε να δηλωθεί άδεια με τη σημερινή ημερομηνία.
+    const todayISO = todayLocalDate();
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setData((prev: ProjectFormData) => ({...prev, [e.target.name]: e.target.value}));

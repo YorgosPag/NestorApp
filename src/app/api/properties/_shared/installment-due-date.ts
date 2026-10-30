@@ -2,25 +2,34 @@
  * «Πότε λήγει η δόση;» στα σύνορα του πλάνου πληρωμών (ADR-234) — **ένας** κριτής για τη δημιουργία πλάνου
  * (`payment-plan/route.ts`) και για την προσθήκη/διόρθωση δόσης (`payment-plan/installments/route.ts`).
  *
- * 🔑 **Στιγμή, όχι ημερολογιακή ημέρα.** Οι δύο πελάτες στέλνουν `toISOString()` (wizard:
- * `payment-plan-wizard-model.ts` · επεξεργασία: `edit-installment-model.ts`), και το `Installment.dueDate`
- * αποθηκεύεται έτσι. Το παλιό `regex(/^\d{4}-\d{2}-\d{2}/)` (πρόθεμα, χωρίς `$`) δεχόταν `2027-02-30T…` **και**
- * `2027-02-30xyz`· η διόρθωση δόσης δεν έλεγχε καθόλου μορφή. Κριτής: το `z.string().datetime()` του zod — κρίνει
- * και την ύπαρξη της ημέρας (δίσεκτα), όπως το `isCalendarDay` για τις σκέτες ημέρες (ADR-919).
+ * 🔑 **Ημέρα, όχι στιγμή** (απόφαση 2026-10-29 — πρακτική QuickBooks/Xero · ΑΚ 241· `lib/payment-plan/installment-due-day`).
+ * Αποθηκεύεται **πάντα** `YYYY-MM-DD`. Οι πελάτες στέλνουν ημέρα (wizard: `payment-plan-wizard-model.ts` · επεξεργασία:
+ * `edit-installment-model.ts`).
  *
- * ⚠️ **Μόνο UTC (`Z`)**, χωρίς μετατόπιση: οι αναγνώστες ταξινομούν/συγκρίνουν τις λήξεις ως συμβολοσειρές, και
- * ανάμεικτες μετατοπίσεις (`+02:00` δίπλα σε `Z`) θα έδιναν λάθος σειρά χωρίς σφάλμα.
+ * ⚠️ **Μεταβατική ανοχή**: γίνεται δεκτή και η παλιά μορφή — στιγμή UTC (`…Z`, ό,τι έστελνε το `toISOString()`) — από
+ * ανοιχτή καρτέλα με παλιό bundle. Κανονικοποιείται **εδώ** στην ημέρα της στην Αθήνα, άρα στη βάση γράφεται μόνο ημέρα.
+ * Ανύπαρκτη ημέρα (`2027-02-30`), ουρά (`2027-02-30xyz`) ή μετατόπιση αντί για `Z` ⇒ 400, όπως πριν.
  *
  * @module api/properties/_shared/installment-due-date
  */
 
 import { z } from 'zod';
+import { operatorDayOf, type CalendarDay } from '@/constants/platform-operator';
+import { isCalendarDay } from '@/lib/date/calendar-day';
 
-export const INSTALLMENT_DUE_DATE_ERROR = 'dueDate must be an ISO 8601 UTC instant (YYYY-MM-DDTHH:mm:ss.sssZ) on an existing day';
+export const INSTALLMENT_DUE_DATE_ERROR = 'dueDate must be an existing calendar day (YYYY-MM-DD)';
 
-export const installmentDueDateSchema = z.string().datetime({ message: INSTALLMENT_DUE_DATE_ERROR });
+/** Η παλιά μορφή των πελατών — μόνο UTC (`Z`), ό,τι βγάζει το `toISOString()`. Κρίνει και την ύπαρξη της ημέρας. */
+const legacyInstantSchema = z.string().datetime();
 
-/** Ο ίδιος κριτής για τα σύνορα που δεν περνούν από σχήμα zod. */
-export function isInstallmentDueDate(value: unknown): value is string {
-  return installmentDueDateSchema.safeParse(value).success;
+/** Η τιμή του σώματος ⇒ η **κανονική** ημέρα λήξης που γράφεται — ή `null` (⇒ 400). */
+export function toInstallmentDueDay(value: unknown): CalendarDay | null {
+  if (isCalendarDay(value)) return value;
+  return legacyInstantSchema.safeParse(value).success ? operatorDayOf(value as string) : null;
 }
+
+/** Το ίδιο, ως σχήμα zod: επικυρώνει **και** κανονικοποιεί (η έξοδος είναι πάντα `YYYY-MM-DD`). */
+export const installmentDueDateSchema = z
+  .string()
+  .refine((value) => toInstallmentDueDay(value) !== null, { message: INSTALLMENT_DUE_DATE_ERROR })
+  .transform((value) => toInstallmentDueDay(value) as CalendarDay);

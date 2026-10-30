@@ -24,7 +24,8 @@ import type { Installment, InstallmentStatus } from '@/types/payment-plan';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { nowISO } from '@/lib/date-local';
+import { formatDateKey } from '@/lib/intl-formatting';
+import { installmentDueDay, installmentToday, isInstallmentPastDue } from '@/lib/payment-plan/installment-due-day';
 
 // ============================================================================
 // STATUS DISPLAY CONFIG
@@ -64,15 +65,15 @@ export function InstallmentSchedule({
   const colors = useSemanticColors();
   const canEdit = planStatus === 'negotiation' || planStatus === 'draft' || planStatus === 'active';
   const canAdd = planStatus === 'negotiation' || planStatus === 'draft';
-  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
+  const { t } = useTranslation('payments');
 
-  const now = nowISO();
+  const today = installmentToday();
 
-  // Compute effective status (pending → due if overdue)
+  // Compute effective status (pending → due once the WHOLE due day has passed in Athens — ADR-234)
   function getEffectiveStatus(inst: Installment): InstallmentStatus {
     if (inst.status === 'paid' || inst.status === 'waived') return inst.status;
     if (inst.status === 'partial') return 'partial';
-    if (inst.dueDate < now && inst.paidAmount < inst.amount) return 'due';
+    if (isInstallmentPastDue(inst.dueDate, today) && inst.paidAmount < inst.amount) return 'due';
     return 'pending';
   }
 
@@ -141,7 +142,7 @@ export function InstallmentSchedule({
                   </Badge>
                 </TableCell>
                 <TableCell className="text-center text-xs">
-                  {new Date(inst.dueDate).toLocaleDateString('el-GR')}
+                  {formatDateKey(installmentDueDay(inst.dueDate) ?? '')}
                 </TableCell>
                 {(onPayInstallment || onEditInstallment) && (
                   <TableCell>

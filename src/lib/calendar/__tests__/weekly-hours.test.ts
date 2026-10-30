@@ -15,6 +15,22 @@ import {
   weeklyHoursDefects,
   type WeeklyHours,
 } from '../weekly-hours';
+import { calendarDayOf } from '@/constants/platform-operator';
+
+describe('συμβόλαιο: athensClockAt(x).dateKey === calendarDayOf(x) — ένα «σήμερα» της Ελλάδας', () => {
+  it.each([
+    '2026-03-29T00:59:59.999Z', // λίγο πριν την έναρξη θερινής ώρας
+    '2026-03-29T01:00:00.000Z', // έναρξη θερινής ώρας (ημέρα 23 ωρών)
+    '2026-07-14T20:59:59.999Z', // καλοκαίρι, τέλος ημέρας
+    '2026-07-14T21:00:00.000Z', // καλοκαίρι, μεσάνυχτα
+    '2026-10-24T21:00:00.000Z', // παραμονή λήξης θερινής ώρας → μεσάνυχτα
+    '2026-10-25T21:59:59.999Z', // ημέρα 25 ωρών, τέλος
+    '2026-12-31T22:00:00.000Z', // πρωτοχρονιά στην Ελλάδα
+  ])('%s', (iso) => {
+    const instant = new Date(iso);
+    expect(athensClockAt(instant).dateKey).toBe(calendarDayOf(instant));
+  });
+});
 
 /** Σπαστό ωράριο καταστήματος: Δευ–Παρ 09–14 & 17:30–21, Σάβ 09–14, Κυρ κλειστά. */
 const SPLIT: WeeklyHours = {

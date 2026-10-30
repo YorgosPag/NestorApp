@@ -77,7 +77,7 @@ import {
   WhatIfTab,
   LossAlertBanner,
 } from './interest-cost-helpers';
-import { nowISO } from '@/lib/date-local';
+import { installmentDueDay, installmentToday } from '@/lib/payment-plan/installment-due-day';
 
 // Re-exports for backward compatibility
 export type { InterestCostDialogProps } from './interest-cost-types';
@@ -113,7 +113,7 @@ export function InterestCostDialog({
   onUpdateSpreads,
 }: InterestCostDialogProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
+  const { t } = useTranslation('payments');
   const [discountSource, setDiscountSource] = useState<DiscountRateSource>('euribor_3M');
   const [manualRate, setManualRate] = useState(5);
   const [waterfallOpen, setWaterfallOpen] = useState(false);
@@ -121,7 +121,8 @@ export function InterestCostDialog({
   // Load comparison when dialog opens
   useEffect(() => {
     if (open && !comparison && salePrice > 0) {
-      const referenceDate = nowISO().split('T')[0];
+      // Η ημέρα αναφοράς είναι η σημερινή ημέρα Αθήνας — στην ίδια βάση με τις λήξεις-ημέρες (ADR-234).
+      const referenceDate = installmentToday();
       onCompare(salePrice, referenceDate, installments);
     }
   }, [open, comparison, salePrice, installments, onCompare]);
@@ -132,12 +133,12 @@ export function InterestCostDialog({
 
   // Build CostCalculationInput for Sensitivity tab
   const sensitivityInput = useMemo(() => {
-    const referenceDate = nowISO().split('T')[0];
+    const referenceDate = installmentToday();
     const cashFlows: CashFlowEntry[] = installments && installments.length > 0
       ? installments.map((inst) => ({
           label: inst.label,
           amount: inst.amount,
-          date: inst.dueDate,
+          date: installmentDueDay(inst.dueDate) ?? inst.dueDate,
           certainty: (inst.status === 'paid' ? 'certain' : inst.status === 'due' || inst.status === 'partial' ? 'probable' : 'uncertain') as 'certain' | 'probable' | 'uncertain',
         }))
       : [{ label: 'Cash', amount: salePrice, date: referenceDate, certainty: 'certain' as const }];

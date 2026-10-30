@@ -272,7 +272,11 @@ export interface OpportunityDoc {
 export interface TaskDoc {
   status?: string;
   priority?: string;
-  dueDate?: string;
+  /**
+   * Το `TasksRepository` γράφει Firestore `Timestamp`· ο πράκτορας AI γράφει `YYYY-MM-DD` (`firestore-schema-map`).
+   * ⇒ `unknown`: διαβάζεται ΜΟΝΟ μέσω `operatorDayOf`, ποτέ σύγκριση συμβολοσειρών.
+   */
+  dueDate?: unknown;
   assignedTo?: string;
 }
 

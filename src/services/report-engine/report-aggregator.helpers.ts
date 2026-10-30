@@ -13,6 +13,8 @@ import { formatOwnerNames } from '@/lib/ownership/owner-utils';
 import type { BOQItem } from '@/types/boq';
 import { computeItemActualCost, computeItemCost } from '@/services/measurements/cost-engine';
 import { countableBoqLines } from '@/services/measurements/boq-line-role';
+import { addDaysToDateKey } from '@/lib/calendar/date-key';
+import { installmentToday } from '@/lib/payment-plan/installment-due-day';
 import type {
   UnitDoc,
   TopBuyerItem,
@@ -161,7 +163,8 @@ export function buildOverdueInstallments(units: UnitDoc[]): Installment[] {
       type: 'custom' as const,
       amount: u.commercial?.paymentSummary?.remainingAmount ?? 0,
       percentage: 0,
-      dueDate: new Date(Date.now() - 45 * 86_400_000).toISOString(),
+      // Ημέρα λήξης, όχι στιγμή (ADR-234) — 45 ημέρες πριν από τη σημερινή ημέρα Αθήνας.
+      dueDate: addDaysToDateKey(installmentToday(), -45) ?? installmentToday(),
       status: 'due' as const,
       paidAmount: 0,
       paidDate: null,

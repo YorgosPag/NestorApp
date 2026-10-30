@@ -16,6 +16,7 @@ import type {
   InstallmentType,
   UpdateInstallmentInput,
 } from '@/types/payment-plan';
+import { installmentDueDay } from '@/lib/payment-plan/installment-due-day';
 
 export type InstallmentDialogMode = 'add' | 'edit';
 
@@ -48,7 +49,9 @@ export function initialInstallmentFields(mode: InstallmentDialogMode, installmen
       type: installment.type,
       amount: installment.amount,
       percentage: installment.percentage,
-      dueDate: installment.dueDate.split('T')[0],
+      // Η ημέρα **Αθήνας** της λήξης — όχι το πρόθεμα UTC (`split('T')`), που για παλιές εγγραφές wizard 00:00–03:00
+      // έδειχνε την ΠΡΟΗΓΟΥΜΕΝΗ ημέρα (ADR-234).
+      dueDate: installmentDueDay(installment.dueDate) ?? '',
       notes: installment.notes ?? '',
       insertAtIndex: 'end',
     };
@@ -87,7 +90,8 @@ export function buildInstallmentChange(
         amount: fields.amount,
         // A blank percentage stays "unset" — 0 is not sent as a real 0%.
         percentage: fields.percentage || undefined,
-        dueDate: fields.dueDate ? new Date(fields.dueDate).toISOString() : undefined,
+        // Το `<input type="date">` δίνει ήδη `YYYY-MM-DD` — η λήξη είναι ημέρα και ταξιδεύει ως ημέρα (ADR-234).
+        dueDate: fields.dueDate || undefined,
         notes,
       },
     };
@@ -99,7 +103,7 @@ export function buildInstallmentChange(
       type: fields.type,
       amount: fields.amount,
       percentage: fields.percentage,
-      dueDate: new Date(fields.dueDate).toISOString(),
+      dueDate: fields.dueDate,
       notes,
     },
     insertAt: fields.insertAtIndex === 'end' ? undefined : parseInt(fields.insertAtIndex, 10),

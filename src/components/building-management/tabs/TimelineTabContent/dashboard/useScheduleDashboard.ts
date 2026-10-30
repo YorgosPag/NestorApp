@@ -25,6 +25,7 @@ import {
 import { computeCPM } from '@/services/construction-scheduling/cpm-calculator';
 import { boqService } from '@/services/measurements';
 import { countBy, sumBy } from '@/utils/collection-utils';
+import { calendarDaysUntil } from '@/constants/platform-operator';
 import { useConstructionGantt } from '@/components/building-management/hooks/useConstructionGantt';
 import type {
   ScheduleDashboardData,
@@ -285,9 +286,8 @@ export function useScheduleDashboard({
     const progress = weightedProgress(phases);
     const expected = expectedProgress(phases);
 
-    const ends = phases.map(p => new Date(p.plannedEndDate).getTime());
-    const latestEnd = new Date(Math.max(...ends));
-    const daysRem = Math.max(0, Math.ceil((latestEnd.getTime() - Date.now()) / MS_PER_DAY));
+    // Ημέρες ΗΜΕΡΟΛΟΓΙΟΥ ως το τέλος της τελευταίας φάσης (`calendarDaysUntil`) — όχι 24ωρα από μεσάνυχτα UTC.
+    const daysRem = Math.max(0, ...phases.map(p => calendarDaysUntil(p.plannedEndDate) ?? 0));
 
     const onTrack = countBy(phases, p => !isDelayedOrBlocked(p.status));
     const delayedCount = countBy(tasks, t => isDelayedOrBlocked(t.status));

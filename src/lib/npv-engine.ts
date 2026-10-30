@@ -21,6 +21,7 @@ import type {
 } from '@/types/interest-calculator';
 import { CERTAINTY_MULTIPLIERS } from '@/types/interest-calculator';
 import type { Installment } from '@/types/payment-plan';
+import { installmentDueDay } from '@/lib/payment-plan/installment-due-day';
 
 // =============================================================================
 // CONSTANTS
@@ -277,7 +278,8 @@ export function buildComparisonScenarios(
     const planFlows: CashFlowEntry[] = installments.map((inst) => ({
       label: inst.label,
       amount: inst.amount,
-      date: inst.dueDate,
+      // Η ημέρα λήξης (ADR-234) — και για τις παλιές λήξεις-στιγμές, ώστε όλες οι ροές να μετρούν από την ίδια βάση.
+      date: installmentDueDay(inst.dueDate) ?? inst.dueDate,
       certainty: installmentCertainty(inst.status),
     }));
     const planInput: CostCalculationInput = {

@@ -33,7 +33,7 @@ export interface AttendanceQrToken {
   token: string;
   /** Token status */
   status: QrTokenStatus;
-  /** Expiration timestamp (ISO — end of validDate 23:59:59) */
+  /** Expiration timestamp (ISO UTC — last instant of validDate in Athens) */
   expiresAt: string;
   /** Who generated the token */
   generatedBy: string;

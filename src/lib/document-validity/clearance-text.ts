@@ -27,7 +27,7 @@ import { addDaysToDateKey } from '@/lib/calendar/date-key';
 import { normalizeCalendarDay } from '@/lib/date-local';
 import { matchCalendarName } from '@/lib/date/calendar-name-vocabulary';
 import type { DocumentKind } from '@/config/document-validity/document-validity';
-import { addMonthsToDateKey } from './validity-bounds';
+import { addMonthsToDateKey } from '@/lib/calendar/date-key';
 
 /** Ο αναγνώστης ανά έντυπο — η **προέλευση** που γράφεται στο `documentFacts.source.reader`. */
 export const CLEARANCE_TEXT_READERS = {

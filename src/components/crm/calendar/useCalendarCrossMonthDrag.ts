@@ -32,6 +32,7 @@ import type FullCalendar from '@fullcalendar/react';
 import type { EventMountArg } from '@fullcalendar/core';
 import { updateTaskWithPolicy } from '@/services/crm/crm-mutation-gateway';
 import type { CalendarEvent } from '@/types/calendar-event';
+import { daysInMonth } from '@/lib/date/calendar-arithmetic';
 
 // ============================================================================
 // TYPES
@@ -72,11 +73,11 @@ function addMonths(date: Date, delta: -1 | 1): Date {
   let year = date.getFullYear();
   if (month < 0) { month = 11; year--; }
   if (month > 11) { month = 0; year++; }
-  const lastDay = new Date(year, month + 1, 0).getDate();
+  // Ψαλίδισμα στο τέλος του μήνα από το SSoT (ADR-828 §1) — `month` εδώ 0-based, το `daysInMonth` 1-based.
   return new Date(
     year,
     month,
-    Math.min(date.getDate(), lastDay),
+    Math.min(date.getDate(), daysInMonth(year, month + 1)),
     date.getHours(),
     date.getMinutes(),
     date.getSeconds(),

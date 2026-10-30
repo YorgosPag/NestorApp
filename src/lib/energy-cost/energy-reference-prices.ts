@@ -22,6 +22,9 @@
  */
 
 import type { CertificateEnergySource } from '@/constants/certificate-energy-sources';
+// Σχετικές διαδρομές επίτηδες: το αρχείο το φορτώνει το `scripts/check-energy-price-freshness.ts` (ίδιο δόγμα με το `calendar-day`).
+import { daysInMonth } from '../date/calendar-arithmetic';
+import { isoCalendarDay } from '../date/calendar-day';
 
 import generated from './energy-reference-prices.json';
 
@@ -82,6 +85,5 @@ export function staleAfter(period: string): string | null {
   const months = Number(match[1]) * 12 + endMonth + REFERENCE_PRICE_MAX_AGE_MONTHS;
   const year = Math.floor((months - 1) / 12);
   const month = ((months - 1) % 12) + 1;
-  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  return `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+  return isoCalendarDay(year, month, daysInMonth(year, month));
 }

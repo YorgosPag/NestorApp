@@ -9,7 +9,7 @@
  * Security:
  * - HMAC-SHA256 signing with ATTENDANCE_QR_SECRET env var
  * - Token format: base64url({projectId}:{date}:{nonce}:{hmac})
- * - Daily expiration (23:59:59 of the valid date)
+ * - Daily expiration (last instant of the valid date in Athens — `endOfCalendarDay`, DST-safe)
  * - Server-validated only (no client-side verification)
  * - Revocable by admin
  *
@@ -33,6 +33,7 @@ import { generateAttendanceQrTokenId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { AttendanceQrToken, QrTokenStatus } from '@/components/projects/ika/contracts';
 import { nowISO } from '@/lib/date-local';
+import { endOfCalendarDay } from '@/constants/platform-operator';
 
 // =============================================================================
 // LOGGER
@@ -63,8 +64,13 @@ const REJECTION_REASON: Record<SignedTokenRejection, string> = {
   'server-config': 'server_config_error',
 };
 
+/**
+ * Η τελευταία στιγμή της `validDate` **στην Ελλάδα** — `endOfCalendarDay` (επόμενα μεσάνυχτα Αθήνας − 1 ms, σωστό και
+ * τις ημέρες 23/25 ωρών). Το παλιό `${date}T23:59:59.999Z` ήταν τέλος ημέρας **UTC** = 01:59/02:59 της **επόμενης**
+ * ημέρας στο εργοτάξιο: το «ημερήσιο» QR δεχόταν check-in τρεις ώρες μέσα στην επόμενη μέρα.
+ */
 function getEndOfDay(dateStr: string): string {
-  return `${dateStr}T23:59:59.999Z`;
+  return endOfCalendarDay(dateStr).toISOString();
 }
 
 /**

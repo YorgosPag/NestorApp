@@ -20,7 +20,7 @@ import type {
 } from '@/types/payment-plan';
 import type { LoanTracking } from '@/types/loan-tracking';
 import { migrateLoanInfoToTracking } from '@/types/loan-tracking';
-import { nowISO } from '@/lib/date-local';
+import { installmentDueDay, installmentToday, isInstallmentPastDue } from '@/lib/payment-plan/installment-due-day';
 
 export const ppLogger = createModuleLogger('PaymentPlanService');
 
@@ -55,14 +55,15 @@ export function computeInstallmentStatus(installment: Installment): InstallmentS
 
 /** Pure function: compute PaymentSummary from a plan snapshot (no I/O). */
 export function computeSummaryFromPlan(plan: PaymentPlan, planId: string): PaymentSummary {
-  const now = nowISO();
+  // Ληξιπρόθεσμη = πέρασε ΟΛΟΚΛΗΡΗ η ημέρα λήξης στην Αθήνα (ADR-234 · ΑΚ 241), όχι «η στιγμή λήξης < τώρα».
+  const today = installmentToday();
   const paidInstallments = plan.installments.filter(
     (i) => i.status === 'paid' || i.status === 'waived'
   ).length;
 
   const overdueInstallments = plan.installments.filter((i) => {
     if (i.status === 'paid' || i.status === 'waived') return false;
-    return i.dueDate < now && i.paidAmount < i.amount;
+    return isInstallmentPastDue(i.dueDate, today) && i.paidAmount < i.amount;
   }).length;
 
   const nextInstallment = plan.installments.find(
@@ -97,7 +98,7 @@ export function computeSummaryFromPlan(plan: PaymentPlan, planId: string): Payme
     paidInstallments,
     overdueInstallments,
     nextInstallmentAmount: nextInstallment?.amount ?? null,
-    nextInstallmentDate: nextInstallment?.dueDate ?? null,
+    nextInstallmentDate: installmentDueDay(nextInstallment?.dueDate),
     loanStatus: plan.loan.status,
     primaryLoanStatus: primaryLoan?.status ?? 'not_applicable',
     primaryLoanBank: primaryLoan?.bankName ?? null,

@@ -15,7 +15,8 @@ import type { PaymentPlan } from '@/types/payment-plan';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { nowISO } from '@/lib/date-local';
+import { formatDateKey } from '@/lib/intl-formatting';
+import { installmentDueDay, installmentToday, isInstallmentPastDue } from '@/lib/payment-plan/installment-due-day';
 
 // ============================================================================
 // STATUS BADGE CONFIG
@@ -39,7 +40,7 @@ interface PaymentPlanOverviewProps {
 
 export function PaymentPlanOverview({ plan }: PaymentPlanOverviewProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
+  const { t } = useTranslation('payments');
 
   const paidPercentage = plan.totalAmount > 0
     ? Math.round((plan.paidAmount / plan.totalAmount) * 100)
@@ -49,10 +50,10 @@ export function PaymentPlanOverview({ plan }: PaymentPlanOverviewProps) {
     (i) => i.status === 'paid' || i.status === 'waived'
   ).length;
 
-  const now = nowISO();
+  const today = installmentToday();
   const overdueCount = plan.installments.filter((i) => {
     if (i.status === 'paid' || i.status === 'waived') return false;
-    return i.dueDate < now && i.paidAmount < i.amount;
+    return isInstallmentPastDue(i.dueDate, today) && i.paidAmount < i.amount;
   }).length;
 
   const nextInstallment = plan.installments.find(
@@ -126,7 +127,7 @@ export function PaymentPlanOverview({ plan }: PaymentPlanOverviewProps) {
           <span className="flex items-center gap-1">
             <CalendarDays className="h-3 w-3" />
             €{nextInstallment.amount.toLocaleString('el-GR')}{' '}
-            {new Date(nextInstallment.dueDate).toLocaleDateString('el-GR')}
+            {formatDateKey(installmentDueDay(nextInstallment.dueDate) ?? '')}
           </span>
         )}
       </footer>

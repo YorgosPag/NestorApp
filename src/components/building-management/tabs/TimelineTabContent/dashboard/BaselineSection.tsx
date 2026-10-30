@@ -42,7 +42,7 @@ import { formatDateShort } from "@/lib/intl-utils";
 import { cn } from "@/lib/utils";
 import "@/lib/design-system";
 import type { UseBaselineComparisonReturn } from "./useBaselineComparison";
-import { nowISO } from '@/lib/date-local';
+import { todayLocalDate } from '@/lib/date-local';
 
 // ─── Props ───────────────────────────────────────────────────────────────
 
@@ -58,7 +58,7 @@ const MAX_BASELINES = 10;
 // ─── Component ──────────────────────────────────────────────────────────
 
 export function BaselineSection({ baseline, loading }: BaselineSectionProps) {
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation('building');
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
 
@@ -83,7 +83,7 @@ export function BaselineSection({ baseline, loading }: BaselineSectionProps) {
       baseline.baselines.length > 0
         ? Math.max(...baseline.baselines.map((b) => b.version)) + 1
         : 1;
-    const today = nowISO().slice(0, 10);
+    const today = todayLocalDate(); // η ημέρα που βλέπει ο χρήστης, όχι η ημέρα UTC
     setSaveName(`Baseline ${nextVersion} - ${today}`);
     setSaveDescription("");
     setSaveDialogOpen(true);

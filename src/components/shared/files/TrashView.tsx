@@ -34,6 +34,7 @@ import {
 } from './LifecycleListFrame';
 import { HOLD_TYPES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
+import { daysUntilOrNull } from '@/lib/date-local';
 import '@/lib/design-system';
 
 // ============================================================================
@@ -67,19 +68,13 @@ export interface TrashViewProps {
 // ============================================================================
 
 /**
- * Calculate days until purge
+ * Ημέρες μέχρι την οριστική διαγραφή — **προσημασμένες** (`≤ 0` ⇒ «έληξε»), στρογγυλεμένες **προς τα πάνω** όπως
+ * κάθε προθεσμία-στιγμή (ADR-853 §13 ε.γ). Πάνω στο SSoT `daysUntilOrNull` (όχι στο `deadlineDaysLeft`, που δίνει
+ * `null` για το παρελθόν — εδώ το παρελθόν είναι κατάσταση που δείχνεται). Μη αναγνώσιμη στιγμή ⇒ `null`, ποτέ `NaN`.
  */
 function getDaysUntilPurge(purgeAt: string | Date | undefined): number | null {
-  if (!purgeAt) return null;
-  try {
-    const purgeDate = typeof purgeAt === 'string' ? new Date(purgeAt) : purgeAt;
-    const now = new Date();
-    const diffMs = purgeDate.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-    return diffDays;
-  } catch {
-    return null;
-  }
+  const days = daysUntilOrNull(purgeAt);
+  return days === null ? null : Math.ceil(days);
 }
 
 /**

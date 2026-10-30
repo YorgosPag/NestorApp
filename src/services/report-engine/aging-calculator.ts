@@ -10,6 +10,7 @@
  */
 
 import type { Installment } from '@/types/payment-plan';
+import { installmentDaysPastDue, installmentToday } from '@/lib/payment-plan/installment-due-day';
 
 // ============================================================================
 // TYPES
@@ -62,20 +63,17 @@ const BUCKET_RANGES: ReadonlyArray<{
   { key: 'days120plus', min: 121, max: Infinity },
 ];
 
-const MS_PER_DAY = 86_400_000;
-
 // ============================================================================
 // CORE FUNCTIONS
 // ============================================================================
 
 /**
- * Υπολογισμός ημερών καθυστέρησης.
- * Επιστρέφει 0 αν η δόση δεν έχει λήξει ακόμα.
+ * Υπολογισμός ημερών καθυστέρησης — **ολόκληρες ημέρες Αθήνας** μετά την ημέρα λήξης (ADR-234 · ΑΚ 241).
+ * Επιστρέφει 0 αν η δόση δεν έχει λήξει ακόμα (και την ίδια την ημέρα λήξης).
+ * Ο κανόνας ζει στο `lib/payment-plan/installment-due-day` — διαβάζει και τις παλιές λήξεις-στιγμές.
  */
 export function computeDaysOverdue(dueDate: string, asOfDate: Date = new Date()): number {
-  const due = new Date(dueDate);
-  const diff = asOfDate.getTime() - due.getTime();
-  return diff > 0 ? Math.floor(diff / MS_PER_DAY) : 0;
+  return installmentDaysPastDue(dueDate, installmentToday(asOfDate));
 }
 
 /** Κατάταξη ημερών σε aging bucket */

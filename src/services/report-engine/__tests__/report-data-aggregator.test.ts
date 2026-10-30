@@ -370,6 +370,25 @@ describe('ReportDataAggregator', () => {
       expect(result.generatedAt).toBeDefined();
     });
 
+    it('μετρά ληξιπρόθεσμες και εργασίες με Firestore Timestamp (TasksRepository) — όχι μόνο συμβολοσειρές', async () => {
+      const past = new Date('2020-01-01T10:00:00.000Z');
+      const future = new Date(Date.now() + 30 * 86_400_000);
+      setupFirestoreMock({
+        opportunities: [],
+        tasks: [
+          { status: 'pending', dueDate: { toDate: () => past } },
+          { status: 'in_progress', dueDate: { toDate: () => future } },
+          { status: 'completed', dueDate: { toDate: () => past } },
+          { status: 'pending', dueDate: 'όχι ημερομηνία' },
+        ],
+        communications: [],
+      });
+
+      const result = await ReportDataAggregator.getCrmReport(baseFilter);
+
+      expect(result.overdueTasks).toBe(1);
+    });
+
     it('returns zero win rate when no closed deals', async () => {
       setupFirestoreMock({
         opportunities: [{ stage: 'negotiation', estimatedValue: 50000 }],
