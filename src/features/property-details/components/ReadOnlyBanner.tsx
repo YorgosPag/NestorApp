@@ -12,7 +12,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
 
 export function ReadOnlyBanner() {
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const { t } = useTranslation('properties');
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
   const colors = useSemanticColors();

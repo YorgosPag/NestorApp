@@ -38,7 +38,7 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
   const { quick, radius } = useBorderTokens();
   const thumbnailUrl = usePropertyThumbnail(property);
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer', 'trash']);
+  const { t } = useTranslation(['properties', 'trash']);
   const locationLine = usePropertyLocationLine();
   const statusBadge = buildPropertyStatusBadge(property, t);
   const price = resolveDisplayPrice(property);

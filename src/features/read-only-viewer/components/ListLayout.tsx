@@ -78,7 +78,7 @@ export function ListLayout({
   viewport: ViewportClass;
   viewerProps: ReadOnlyViewerContextProps;
 }) {
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const { t } = useTranslation('properties');
   // 🏢 ENTERPRISE: Centralized spacing tokens - NO hardcoded values
   const layout = useLayoutClasses();
   const spacing = useSpacingTokens();

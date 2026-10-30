@@ -55,8 +55,8 @@ function QuickViewRow({ label, value }: { label: string; value: React.ReactNode 
 }
 
 export function PropertyQuickView({ property }: PropertyQuickViewProps) {
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
-  const { t: tUnits } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const { t } = useTranslation('properties');
+  const { t: tUnits } = useTranslation('properties');
   const floorLabel = useFloorLabel();
   const colors = useSemanticColors();
   const statusConfig = getPropertyHoverStatusConfig();
