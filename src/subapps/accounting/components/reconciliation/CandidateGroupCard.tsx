@@ -32,7 +32,7 @@ export function CandidateGroupCard({
   onMatch,
   matching,
 }: CandidateGroupCardProps) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const amountDiff = Math.abs(group.totalAmount - transactionAmount);
   const hasDiff = amountDiff > 0.01;
 

@@ -21,17 +21,9 @@ import { defineRoute, created } from '@/lib/api/define-route';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import { validatePostingAllowed } from '@/subapps/accounting/services';
 import { assertPostingAllowed } from '../_shared/fiscal-period-errors';
-import { ENTRY_TYPES } from '@/subapps/accounting/types';
-import type { JournalEntryFilters, CreateJournalEntryInput } from '@/subapps/accounting/types';
-import {
-  optionalEnumParam,
-  optionalFiscalYearParam,
-  optionalIdParam,
-  optionalQuarterParam,
-  readListContext,
-  readPageRequest,
-  respondWithPage,
-} from '../_shared/list-request-context';
+import type { CreateJournalEntryInput } from '@/subapps/accounting/types';
+import { readListContext, readPageRequest, respondWithPage } from '../_shared/list-request-context';
+import { journalEntryFiltersOf } from '../_shared/list-filters';
 import { journalEntryOptionalFields } from '../_shared/journal-entry-fields';
 import { assertManualPostingAllowed } from '../_shared/journal-subsystem-guard';
 
@@ -54,12 +46,7 @@ export const GET = defineRoute({
   handler: async ({ req, auth }) => {
     const { repository, searchParams } = readListContext(req, auth);
 
-    const filters: JournalEntryFilters = {
-      type: optionalEnumParam(searchParams, 'type', ENTRY_TYPES),
-      fiscalYear: optionalFiscalYearParam(searchParams),
-      quarter: optionalQuarterParam(searchParams),
-      contactId: optionalIdParam(searchParams, 'contactId'),
-    };
+    const filters = journalEntryFiltersOf(searchParams);
 
     return respondWithPage(() => repository.listJournalEntries(filters, readPageRequest(searchParams)));
   },

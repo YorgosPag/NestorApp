@@ -65,7 +65,7 @@ function RunStatus({ preview, errorCode, lastResult }: {
   readonly errorCode: string | null;
   readonly lastResult: DepreciationRunResult | null;
 }) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const colors = useSemanticColors();
   if (errorCode !== null) {
     return <p role="alert" className={colors.text.error}>{t(`assets.depreciationRun.errors.${errorCode}`)}</p>;
@@ -91,7 +91,7 @@ function ConfirmAction({ action, amount, onCancel, onConfirm }: {
   readonly onCancel: () => void;
   readonly onConfirm: () => void;
 }) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const key = action === 'reverse' ? 'confirmReverse' : 'confirmBook';
   return (
     <AlertDialog open={action !== null} onOpenChange={(open) => { if (!open) onCancel(); }}>
@@ -110,7 +110,7 @@ function ConfirmAction({ action, amount, onCancel, onConfirm }: {
 }
 
 function YearSelect({ year, onChange }: { readonly year: number; readonly onChange: (year: number) => void }) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const years = useMemo(selectableYears, []);
   return (
     <section className="flex items-center gap-3">
@@ -129,7 +129,7 @@ function YearSelect({ year, onChange }: { readonly year: number; readonly onChan
 
 /** Φόρτωση · «κανένα πάγιο» · πίνακας προεπισκόπησης. */
 function PreviewBody({ preview, loading }: { readonly preview: DepreciationPreview | null; readonly loading: boolean }) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const colors = useSemanticColors();
   const notice = (key: string) => <p className={cn('p-6 text-center', colors.text.muted)}>{t(key)}</p>;
   return (
@@ -142,7 +142,7 @@ function PreviewBody({ preview, loading }: { readonly preview: DepreciationPrevi
 }
 
 export function DepreciationRunDialog({ open, onOpenChange, onPosted }: DepreciationRunDialogProps) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const [year, setYear] = useState(() => selectableYears()[0]);
   const [pending, setPending] = useState<PendingAction>(null);
   const run = useDepreciationRun(open ? year : null, onPosted);

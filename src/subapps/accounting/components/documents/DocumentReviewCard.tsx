@@ -85,7 +85,7 @@ export function DocumentReviewCard({
   confirming,
 }: DocumentReviewCardProps) {
   // `procurement` — the cost-code labels of the allocation section (ADR-917 Φ4)
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices', 'procurement']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices', 'procurement']);
   const colors = useSemanticColors();
 
   // Editable confirmed fields — pre-populated from AI extraction

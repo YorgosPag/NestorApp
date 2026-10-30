@@ -80,7 +80,7 @@ function AeShareCapitalField({
   readonly shareCapital: number;
   readonly onShareCapitalChange: (shareCapital: number) => void;
 }) {
-  const { t } = useTranslation(['accounting', 'accounting-setup']);
+  const { t } = useTranslation('accounting');
   const colors = useSemanticColors();
   const capitalValid = shareCapital >= MIN_SHARE_CAPITAL;
 
@@ -121,7 +121,7 @@ export function ShareholderManagementSection({
   onGemiNumberChange,
   onShareCapitalChange,
 }: ShareholderManagementSectionProps) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const roster = useRosterEditing(
     shareholders,
     onShareholdersChange,

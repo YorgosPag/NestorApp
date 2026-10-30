@@ -32,7 +32,7 @@ export function BatchActionsToolbar({
   batchProgress,
   disabled,
 }: BatchActionsToolbarProps) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
 
   if (batchProgress?.running) {
     const pct = batchProgress.total > 0

@@ -23,9 +23,9 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { ReportType, ReportDataMap } from '@/subapps/accounting/types';
-import { flattenReportForExport } from '../../services/export/report-table-adapter';
-import type { CellValue } from '../../services/export/report-table-adapter';
-import { formatAccountingCurrency } from '../../utils/format';
+import { cellFormatOf, flattenReportForExport } from '../../services/export/report-table-adapter';
+import type { CellValue, ReportValueFormat } from '../../services/export/report-table-adapter';
+import { formatReportCell, formatReportChange, formatReportNumber } from '../../services/export/report-cell-format';
 
 // ============================================================================
 // TYPES
@@ -45,26 +45,13 @@ interface SortConfig {
 // HELPERS
 // ============================================================================
 
-function formatCell(value: CellValue, colIndex: number, headerCount: number): string {
-  if (value === null || value === undefined) return '—';
-  if (typeof value === 'string') return value;
-
-  // Last column is typically %, second-to-last is change
-  const isPercentColumn = colIndex === headerCount - 1;
-  if (isPercentColumn) return `${value.toFixed(1)}%`;
-
-  return formatAccountingCurrency(value);
-}
+// 🔴 2026-10-30: η μορφή ερχόταν από τη ΘΕΣΗ της στήλης (τελευταία = «%», προτελευταία = μεταβολή) — το Υπόλοιπο
+// του ισοζυγίου και το Σύνολο της ηλικίωσης έβγαιναν ποσοστό, τα πλήθη ευρώ. Τώρα: `cellFormatOf` (ρόλος στήλης +
+// μορφή γραμμής), ο ίδιος κριτής με το PDF και το Excel.
 
 function getCellAlignment(value: CellValue): string {
   if (typeof value === 'number') return 'text-right';
   return 'text-left';
-}
-
-function isHeaderRow(row: CellValue[]): boolean {
-  // Section headers have only the first cell set, rest are null
-  const nonNullCount = row.filter((v) => v !== null).length;
-  return nonNullCount === 1 && typeof row[0] === 'string';
 }
 
 function compareCells(a: CellValue, b: CellValue): number {
@@ -86,17 +73,16 @@ function SortIcon({ active, direction }: { active: boolean; direction: 'asc' | '
     : <ArrowDown className="ml-1 h-3 w-3" />;
 }
 
-function ChangeCell({ value }: { value: CellValue }) {
+function ChangeCell({ value, format }: { value: CellValue; format: ReportValueFormat }) {
   if (value === null || value === undefined) return <span className="text-muted-foreground">—</span>;
   if (typeof value !== 'number') return <span>{value}</span>;
 
-  if (value > 0) {
-    return <Badge variant="success" className="text-xs">+{formatAccountingCurrency(value)}</Badge>;
-  }
-  if (value < 0) {
-    return <Badge variant="destructive" className="text-xs">{formatAccountingCurrency(value)}</Badge>;
-  }
-  return <span className="text-muted-foreground">0</span>;
+  if (value === 0) return <span className="text-muted-foreground">0</span>;
+  return (
+    <Badge variant={value > 0 ? 'success' : 'destructive'} className="text-xs">
+      {formatReportChange(value, format, 'screen')}
+    </Badge>
+  );
 }
 
 // ============================================================================
@@ -104,23 +90,24 @@ function ChangeCell({ value }: { value: CellValue }) {
 // ============================================================================
 
 export function ReportTable({ reportType, data }: ReportTableProps) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
   const tableData = useMemo(
-    () => flattenReportForExport(reportType, data),
-    [reportType, data]
+    () => flattenReportForExport(reportType, data, t),
+    [reportType, data, t]
   );
+  const { columns } = tableData;
 
   const sortedRows = useMemo(() => {
     if (!sortConfig) return tableData.rows;
 
     return [...tableData.rows].sort((a, b) => {
-      // Don't sort header rows
-      if (isHeaderRow(a)) return -1;
-      if (isHeaderRow(b)) return 1;
+      // Don't sort section header rows
+      if (a.section) return -1;
+      if (b.section) return 1;
 
-      const result = compareCells(a[sortConfig.columnIndex], b[sortConfig.columnIndex]);
+      const result = compareCells(a.cells[sortConfig.columnIndex], b.cells[sortConfig.columnIndex]);
       return sortConfig.direction === 'asc' ? result : -result;
     });
   }, [tableData.rows, sortConfig]);
@@ -136,9 +123,6 @@ export function ReportTable({ reportType, data }: ReportTableProps) {
     });
   }, []);
 
-  const isChangeColumn = (index: number) =>
-    index === tableData.headers.length - 2;
-
   return (
     <section aria-label={t(`reports.reportTypes.${reportType}`)}>
       {/* Summary Metrics */}
@@ -147,7 +131,7 @@ export function ReportTable({ reportType, data }: ReportTableProps) {
           {tableData.summaryMetrics.map((metric) => (
             <article key={metric.label} className="flex items-center gap-2 rounded-lg border p-3">
               <span className="text-sm text-muted-foreground">{metric.label}</span>
-              <span className="text-sm font-semibold">{formatAccountingCurrency(metric.value)}</span>
+              <span className="text-sm font-semibold">{formatReportNumber(metric.value, metric.format, 'screen')}</span>
               {metric.change && metric.change.percentage !== null && (
                 <Badge
                   variant={metric.change.percentage >= 0 ? 'success' : 'destructive'}
@@ -166,14 +150,14 @@ export function ReportTable({ reportType, data }: ReportTableProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              {tableData.headers.map((header, i) => (
+              {columns.map((column, i) => (
                 <TableHead key={i}>
                   <button
                     type="button"
                     onClick={() => handleSort(i)}
                     className="flex items-center hover:text-foreground"
                   >
-                    {header}
+                    {column.header}
                     <SortIcon
                       active={sortConfig?.columnIndex === i}
                       direction={sortConfig?.direction ?? 'asc'}
@@ -185,10 +169,10 @@ export function ReportTable({ reportType, data }: ReportTableProps) {
           </TableHeader>
           <TableBody>
             {sortedRows.map((row, rowIdx) => {
-              const isSection = isHeaderRow(row);
+              const isSection = row.section;
               return (
                 <TableRow key={rowIdx} className={isSection ? 'bg-muted/50 font-semibold' : ''}>
-                  {row.map((cell, colIdx) => (
+                  {row.cells.map((cell, colIdx) => (
                     <TableCell
                       key={colIdx}
                       className={cn(
@@ -196,10 +180,10 @@ export function ReportTable({ reportType, data }: ReportTableProps) {
                         isSection && colIdx === 0 ? 'font-semibold' : ''
                       )}
                     >
-                      {isChangeColumn(colIdx) ? (
-                        <ChangeCell value={cell} />
+                      {columns[colIdx].kind === 'change' ? (
+                        <ChangeCell value={cell} format={row.format} />
                       ) : (
-                        formatCell(cell, colIdx, tableData.headers.length)
+                        formatReportCell(cell, cellFormatOf(columns[colIdx], row), 'screen')
                       )}
                     </TableCell>
                   ))}

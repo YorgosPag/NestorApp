@@ -57,7 +57,7 @@ function buildFiscalYearOptions(): number[] {
 // ============================================================================
 
 export function APYCertificatesList({ onSelectCertificate }: APYCertificatesListProps) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const currentYear = new Date().getFullYear();
 
   const [fiscalYear, setFiscalYear] = useState<number>(currentYear);
@@ -195,7 +195,7 @@ interface APYCertificateRowProps {
 }
 
 function APYCertificateRow({ cert, onClick }: APYCertificateRowProps) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   return (
     <TableRow
       className="cursor-pointer hover:bg-accent transition-colors"

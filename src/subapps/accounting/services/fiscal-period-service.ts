@@ -19,6 +19,8 @@ import type {
 import { ADJUSTMENT_PERIOD_NUMBER, FISCAL_PERIODS_PER_YEAR, fiscalPeriodKey, fiscalPeriodKeyForDate } from './fiscal-period-keys';
 import { postingPeriodDenialOf } from './fiscal-period-transitions';
 import { isoNow } from './repository/firestore-helpers';
+import { daysInMonth } from '@/lib/date/calendar-arithmetic';
+import { isoCalendarDay } from '@/lib/date/calendar-day';
 
 // ============================================================================
 // CREATE FISCAL YEAR (Q8 — Auto-create 13 periods)
@@ -29,15 +31,13 @@ function fiscalYearPeriodDrafts(fiscalYear: number, now: string): FiscalPeriodDr
   return Array.from({ length: FISCAL_PERIODS_PER_YEAR }, (_, i) => {
     const periodNumber = i + 1;
     const month = periodNumber === ADJUSTMENT_PERIOD_NUMBER ? 12 : periodNumber;
-    const mm = String(month).padStart(2, '0');
-    // UTC: η τελευταία μέρα του μήνα δεν εξαρτάται από τη ζώνη του διακομιστή.
-    const lastDay = new Date(Date.UTC(fiscalYear, month, 0)).getUTCDate();
     return {
       periodId: fiscalPeriodKey(fiscalYear, periodNumber),
       fiscalYear,
       periodNumber,
-      startDate: `${fiscalYear}-${mm}-01`,
-      endDate: `${fiscalYear}-${mm}-${String(lastDay).padStart(2, '0')}`,
+      startDate: isoCalendarDay(fiscalYear, month, 1),
+      // Η τελευταία μέρα του μήνα από το SSoT (ADR-828 §1) — αριθμητικά, ανεξάρτητη από τη ζώνη του διακομιστή.
+      endDate: isoCalendarDay(fiscalYear, month, daysInMonth(fiscalYear, month)),
       status: 'OPEN',
       closedAt: null,
       closedBy: null,

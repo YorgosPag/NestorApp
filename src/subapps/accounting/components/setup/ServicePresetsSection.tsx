@@ -78,7 +78,7 @@ const INITIAL_FORM: NewPresetFormState = {
 // ============================================================================
 
 export function ServicePresetsSection() {
-  const { t } = useTranslation(['accounting', 'accounting-tax-offices', 'accounting-setup']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const colors = useSemanticColors();
   const uomLabel = useUomLabel();
   const fieldId = useId();

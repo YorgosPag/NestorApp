@@ -114,7 +114,7 @@ function validateForm(data: CompanySetupInput): Record<string, string> {
 // ============================================================================
 
 export function SetupPageContent() {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const { profile, loading, saving, error, saveSetup } = useCompanySetup();
 
   const [formData, setFormData] = useState<CompanySetupInput>(createDefaultData);

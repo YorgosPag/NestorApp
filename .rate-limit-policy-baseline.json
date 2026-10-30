@@ -162,6 +162,7 @@
     "createSpaceEntityRoutes::/api/storages/[id]",
     "defineRoute::/api/accounting/apy-certificates",
     "defineRoute::/api/accounting/apy-certificates/[id]",
+    "defineRoute::/api/accounting/apy-certificates/draft",
     "defineRoute::/api/accounting/assets",
     "defineRoute::/api/accounting/assets/depreciation-run",
     "defineRoute::/api/accounting/assets/depreciation-run/reversal",
@@ -217,6 +218,10 @@
     "defineRoute::/api/projects/[projectId]/buyout",
     "defineRoute::/api/projects/[projectId]/cost-ledger",
     "entityIdRoute::/api/properties/[id]",
+    "listSummaryRoute::/api/accounting/assets/summary",
+    "listSummaryRoute::/api/accounting/bank/transactions/summary",
+    "listSummaryRoute::/api/accounting/invoices/summary",
+    "listSummaryRoute::/api/accounting/journal/summary",
     "runGuarded::/api/properties/[id]/energy-certificate-import",
     "segmentIdRoute::/api/properties/[id]/showcase/generate"
   ]

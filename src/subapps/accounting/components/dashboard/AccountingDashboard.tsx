@@ -10,7 +10,7 @@
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, no inline styles, semantic HTML
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from '@/lib/workspace/navigation';
 import { useTranslation } from 'react-i18next';
 // 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
@@ -31,8 +31,13 @@ import { UnifiedDashboard } from '@/components/property-management/dashboard/Uni
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { useAuth } from '@/hooks/useAuth';
 import { API_ROUTES } from '@/config/domain-constants';
+import { buildUrl } from '@/hooks/useCursorPagedList';
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import { formatAccountingCurrency } from '../../utils/format';
+import type { InvoiceListSummary } from '../../services/list-summaries/invoice-list-summary';
+import type { JournalListSummary } from '../../services/list-summaries/journal-list-summary';
 import { FiscalYearPicker } from '../shared/FiscalYearPicker';
+import { summaryStatValue } from '../shared/summary-stat-value';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -42,12 +47,29 @@ import { cn } from '@/lib/utils';
 // TYPES
 // ============================================================================
 
+/**
+ * 🔴 ADR-ACC-010 §2.1.1 (2026-10-30) — κάθε νούμερο από ΣΥΝΟΨΗ του διακομιστή, όχι από σελίδα λίστας: ως τότε τα
+ * έσοδα/έξοδα ήταν άθροισμα της ΠΡΩΤΗΣ σελίδας του Ημερολογίου σε ΜΙΚΤΑ ποσά (ο ΦΠΑ ως έσοδο), και τα «εκκρεμή
+ * τιμολόγια» το μήκος μιας σελίδας μόνο με `unpaid` (χωρίς τα μερικώς εξοφλημένα). `null` = η πηγή απέτυχε ⇒ «—»,
+ * ΠΟΤΕ «0» (το παλιό `catch` άφηνε σιωπηλά μηδενικά).
+ */
 interface DashboardStats {
-  totalIncome: number;
-  totalExpenses: number;
-  vatOwed: number;
-  pendingInvoices: number;
+  journal: JournalListSummary | null;
+  invoices: InvoiceListSummary | null;
+  vatOwed: number | null;
 }
+
+interface VatSummaryResponse {
+  annualVatPayable?: number;
+  vatPayable?: number;
+}
+
+/** Η τιμή μιας ρυθμισμένης υπόσχεσης — ή `null` αν απέτυχε (η κάρτα της δείχνει «—», οι άλλες κανονικά). */
+function settledValue<T>(result: PromiseSettledResult<T>): T | null {
+  return result.status === 'fulfilled' ? result.value : null;
+}
+
+const EMPTY_STATS: DashboardStats = { journal: null, invoices: null, vatOwed: null };
 
 // ADR-300: Module-level cache keyed by fiscal year — survives remount
 const accountingStatsCache = createStaleCache<DashboardStats>('accounting-dashboard');
@@ -61,7 +83,7 @@ const accountingStatsCache = createStaleCache<DashboardStats>('accounting-dashbo
 // ============================================================================
 
 export function AccountingDashboard() {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const colors = useSemanticColors();
   const router = useRouter();
   const { user } = useAuth();
@@ -69,54 +91,51 @@ export function AccountingDashboard() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   // ADR-300: Seed from module-level cache → zero flash on re-navigation
   const [stats, setStats] = useState<DashboardStats>(
-    accountingStatsCache.get(String(new Date().getFullYear())) ?? {
-      totalIncome: 0,
-      totalExpenses: 0,
-      vatOwed: 0,
-      pendingInvoices: 0,
-    }
+    accountingStatsCache.get(String(new Date().getFullYear())) ?? EMPTY_STATS
   );
   const [loading, setLoading] = useState(!accountingStatsCache.hasLoaded(String(new Date().getFullYear())));
 
+  /**
+   * 🔴 Μόνο η ΤΕΛΕΥΤΑΙΑ κλήση γράφει: γρήγορο 2026 → 2025 ⇒ η απάντηση του 2026 μπορεί να φτάσει δεύτερη και να γραφτεί
+   *    κάτω από επικεφαλίδα «2025». Ίδιο μοτίβο με το `callIdRef` του `useAsyncData` (ADR-223).
+   */
+  const callIdRef = useRef(0);
+
   const fetchStats = useCallback(async () => {
+    const id = ++callIdRef.current;
     if (!user) {
       setLoading(false);
       return;
     }
-    // ADR-300: Skip spinner if cache has data for this year
-    if (!accountingStatsCache.hasLoaded(String(selectedYear))) setLoading(true);
+    // ADR-300: η cache του ΝΕΟΥ έτους (χωρίς spinner) — αλλιώς κενά + spinner. Ποτέ τα stats του προηγούμενου έτους
+    //    κάτω από την επικεφαλίδα του νέου όσο τρέχει το αίτημα.
+    const cached = accountingStatsCache.get(String(selectedYear));
+    setStats(cached ?? EMPTY_STATS);
+    setLoading(!cached);
     try {
-      const token = await user.getIdToken();
-      const headers: HeadersInit = { Authorization: `Bearer ${token}` };
-      const year = selectedYear;
-
-      const [journalRes, vatRes, invoicesRes] = await Promise.all([
-        fetch(`${API_ROUTES.ACCOUNTING.JOURNAL}?fiscalYear=${year}`, { headers }),
-        fetch(`${API_ROUTES.ACCOUNTING.VAT.SUMMARY}?fiscalYear=${year}`, { headers }),
-        fetch(`${API_ROUTES.ACCOUNTING.INVOICES.LIST}?fiscalYear=${year}&paymentStatus=unpaid`, { headers }),
+      // Οι ΙΔΙΕΣ συνόψεις με τις σελίδες Ημερολογίου / Τιμολογίων (ίδια φίλτρα ⇒ ίδια νούμερα σε κάθε οθόνη).
+      const params = { fiscalYear: selectedYear };
+      const [journal, invoices, vat] = await Promise.allSettled([
+        apiClient.get<JournalListSummary>(buildUrl(API_ROUTES.ACCOUNTING.JOURNAL_SUMMARY, params, null)),
+        apiClient.get<InvoiceListSummary>(buildUrl(API_ROUTES.ACCOUNTING.INVOICES.SUMMARY, params, null)),
+        apiClient.get<VatSummaryResponse>(buildUrl(API_ROUTES.ACCOUNTING.VAT.SUMMARY, params, null)),
       ]);
+      if (callIdRef.current !== id) return;
 
-      const journalData = journalRes.ok ? await journalRes.json() : null;
-      const vatData = vatRes.ok ? await vatRes.json() : null;
-      const invoicesData = invoicesRes.ok ? await invoicesRes.json() : null;
-
-      const entries = journalData?.data?.items ?? [];
-      const incomeEntries = entries.filter((e: { type: string }) => e.type === 'income');
-      const expenseEntries = entries.filter((e: { type: string }) => e.type === 'expense');
-
+      const vatData = settledValue(vat);
       const newStats: DashboardStats = {
-        totalIncome: incomeEntries.reduce((s: number, e: { grossAmount: number }) => s + e.grossAmount, 0),
-        totalExpenses: expenseEntries.reduce((s: number, e: { grossAmount: number }) => s + e.grossAmount, 0),
-        vatOwed: vatData?.data?.annualVatPayable ?? vatData?.data?.vatPayable ?? 0,
-        pendingInvoices: invoicesData?.data?.items?.length ?? 0,
+        journal: settledValue(journal),
+        invoices: settledValue(invoices),
+        vatOwed: vatData ? (vatData.annualVatPayable ?? vatData.vatPayable ?? null) : null,
       };
-      // ADR-300: Write to module-level cache so next remount skips spinner
-      accountingStatsCache.set(newStats, String(selectedYear));
+      // ADR-300: Write to module-level cache so next remount skips spinner — μόνο πλήρη απάντηση: μια μισή θα
+      //    σερβιριζόταν ως «φρέσκια» στην επόμενη επίσκεψη χωρίς νέα προσπάθεια για ό,τι απέτυχε.
+      if (newStats.journal && newStats.invoices && newStats.vatOwed !== null) {
+        accountingStatsCache.set(newStats, String(selectedYear));
+      }
       setStats(newStats);
-    } catch {
-      // Stats will remain at defaults
     } finally {
-      setLoading(false);
+      if (callIdRef.current === id) setLoading(false);
     }
   }, [user, selectedYear]);
 
@@ -128,28 +147,28 @@ export function AccountingDashboard() {
   const dashboardStats: DashboardStat[] = [
     {
       title: t('dashboard.totalIncome'),
-      value: formatAccountingCurrency(stats.totalIncome),
+      value: summaryStatValue(stats.journal, (s) => formatAccountingCurrency(s.totalIncome)),
       icon: ArrowUpRight,
       color: 'green',
       loading,
     },
     {
       title: t('dashboard.totalExpenses'),
-      value: formatAccountingCurrency(stats.totalExpenses),
+      value: summaryStatValue(stats.journal, (s) => formatAccountingCurrency(s.totalExpenses)),
       icon: ArrowDownRight,
       color: 'red',
       loading,
     },
     {
       title: t('dashboard.vatOwed'),
-      value: formatAccountingCurrency(stats.vatOwed),
+      value: summaryStatValue(stats.vatOwed, (v) => formatAccountingCurrency(v)),
       icon: DollarSign,
       color: 'orange',
       loading,
     },
     {
       title: t('dashboard.pendingInvoices'),
-      value: stats.pendingInvoices,
+      value: summaryStatValue(stats.invoices, (s) => s.unpaidCount),
       icon: FileWarning,
       color: 'blue',
       loading,

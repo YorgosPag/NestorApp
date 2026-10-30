@@ -28,6 +28,10 @@ import { PagedListSection } from '../shared/PagedListSection';
 import { AccountingListBody } from '../shared/AccountingListBody';
 import { useAccountingFilterPanel } from '../../hooks/useAccountingFilterPanel';
 import { useBankTransactions } from '../../hooks/useBankTransactions';
+import { useListSummary } from '../../hooks/useListSummary';
+import type { BankTransactionListSummary } from '../../services/list-summaries/bank-transaction-list-summary';
+import { summaryStatValue } from '../shared/summary-stat-value';
+import { API_ROUTES } from '@/config/domain-constants';
 import { useBankMatching } from '../../hooks/useBankMatching';
 import { TransactionsList } from './TransactionsList';
 import { MatchingPanel } from './MatchingPanel';
@@ -106,7 +110,7 @@ function buildFilterConfig(t: (key: string) => string): FilterPanelConfig {
 // ============================================================================
 
 export function BankPageContent() {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -124,11 +128,21 @@ export function BankPageContent() {
     clearCandidates,
   } = useBankMatching();
 
-  const bankList = useBankTransactions({
+  const listFilters = {
     direction: filters.direction !== 'all' ? (filters.direction as TransactionDirection) : undefined,
     matchStatus: filters.matchStatus !== 'all' ? (filters.matchStatus as MatchStatus) : undefined,
-  });
-  const { items: transactions, loading, refetch, importTransactions } = bankList;
+  };
+  const bankList = useBankTransactions(listFilters);
+  const { items: transactions, refetch: refetchList, importTransactions } = bankList;
+
+  // 🔴 ADR-ACC-010 §2.1.1 — οι κάρτες από τον ΔΙΑΚΟΜΙΣΤΗ, πάνω σε ΟΛΗ την εμβέλεια των ίδιων φίλτρων (ως 2026-10-30:
+  //    άθροισμα της φορτωμένης σελίδας ⇒ το «Χωρίς αντιστοίχιση» έλεγε ψέματα για τη δουλειά που απομένει).
+  const { data: summary, loading: summaryLoading, refetch: refetchSummary } =
+    useListSummary<BankTransactionListSummary>(API_ROUTES.ACCOUNTING.BANK.TRANSACTIONS_SUMMARY, listFilters);
+
+  const refetch = useCallback(async () => {
+    await Promise.all([refetchList(), refetchSummary()]);
+  }, [refetchList, refetchSummary]);
 
   const handleImportSuccess = useCallback(async () => {
     setImportDialogOpen(false);
@@ -153,47 +167,40 @@ export function BankPageContent() {
     await refetch();
   }, [executeMatch, refetch]);
 
-  // Compute dashboard stats
   const dashboardStats: DashboardStat[] = useMemo(() => {
-    const totalCredit = transactions
-      .filter((tx) => tx.direction === 'credit')
-      .reduce((s, tx) => s + Math.abs(tx.amount), 0);
-    const totalDebit = transactions
-      .filter((tx) => tx.direction === 'debit')
-      .reduce((s, tx) => s + Math.abs(tx.amount), 0);
-    const unmatchedCount = transactions.filter((tx) => tx.matchStatus === 'unmatched').length;
-
+    // Άγνωστο (σφάλμα) ⇒ πορτοκαλί, ΠΟΤΕ πράσινο «όλα αντιστοιχισμένα».
+    const allMatched = summary !== null && summary.unmatchedCount === 0;
     return [
       {
         title: t('dashboard.totalTransactions'),
-        value: transactions.length,
+        value: summaryStatValue(summary, (s) => s.transactionCount),
         icon: Landmark,
         color: 'blue' as const,
-        loading,
+        loading: summaryLoading,
       },
       {
         title: t('dashboard.totalCredit'),
-        value: formatAccountingCurrency(totalCredit),
+        value: summaryStatValue(summary, (s) => formatAccountingCurrency(s.totalCredit)),
         icon: ArrowUpRight,
         color: 'green' as const,
-        loading,
+        loading: summaryLoading,
       },
       {
         title: t('dashboard.totalDebit'),
-        value: formatAccountingCurrency(totalDebit),
+        value: summaryStatValue(summary, (s) => formatAccountingCurrency(s.totalDebit)),
         icon: ArrowDownRight,
         color: 'red' as const,
-        loading,
+        loading: summaryLoading,
       },
       {
         title: t('dashboard.unmatchedCount'),
-        value: unmatchedCount,
+        value: summaryStatValue(summary, (s) => s.unmatchedCount),
         icon: AlertCircle,
-        color: unmatchedCount > 0 ? 'orange' as const : 'green' as const,
-        loading,
+        color: allMatched ? 'green' as const : 'orange' as const,
+        loading: summaryLoading,
       },
     ];
-  }, [transactions, loading, t]);
+  }, [summary, summaryLoading, t]);
 
   return (
     <main className="min-h-screen bg-background">

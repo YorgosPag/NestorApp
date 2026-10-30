@@ -56,7 +56,7 @@ function createEmptyKad(): KadEntry {
 // ============================================================================
 
 export function KadSection({ data, onChange, errors }: KadSectionProps) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const idBase = useId(); // `${idBase}-<πεδίο>`: η <Label> ονομάζει το combobox (ADR-598 G11)
   const colors = useSemanticColors();
   const { options: kadOptions, isLoading: kadLoading } = useKadOptions();

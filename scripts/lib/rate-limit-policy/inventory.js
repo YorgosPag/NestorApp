@@ -88,6 +88,8 @@ const FACTORIES = Object.freeze([
   'createMigrationRoute',
   // dxf (ADR-663)
   'makeDxfRouteRunner',
+  // accounting (ADR-ACC-010 §2.1.1) — `api/accounting/_shared/list-summary-route.ts`: `defineRoute({ rateLimit: 'standard' })`
+  'listSummaryRoute',
 ]);
 
 // =============================================================================

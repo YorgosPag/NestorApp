@@ -18,17 +18,11 @@ import 'server-only';
 
 import { defineRoute, created, badRequest } from '@/lib/api/define-route';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
-import { ASSET_CATEGORIES, ASSET_STATUSES } from '@/subapps/accounting/types';
-import type { FixedAssetFilters, CreateFixedAssetInput } from '@/subapps/accounting/types';
+import { ASSET_CATEGORIES } from '@/subapps/accounting/types';
+import type { CreateFixedAssetInput } from '@/subapps/accounting/types';
 import { isDateKey } from '@/lib/calendar/date-key';
-import { MAX_FISCAL_YEAR, MIN_FISCAL_YEAR } from '../_shared/fiscal-year-param';
-import {
-  optionalEnumParam,
-  optionalIntParam,
-  readListContext,
-  readPageRequest,
-  respondWithPage,
-} from '../_shared/list-request-context';
+import { readListContext, readPageRequest, respondWithPage } from '../_shared/list-request-context';
+import { fixedAssetFiltersOf } from '../_shared/list-filters';
 
 // =============================================================================
 // GET — List Fixed Assets
@@ -40,11 +34,7 @@ export const GET = defineRoute({
   handler: async ({ req, auth }) => {
     const { repository, searchParams } = readListContext(req, auth);
 
-    const filters: FixedAssetFilters = {
-      category: optionalEnumParam(searchParams, 'category', ASSET_CATEGORIES),
-      status: optionalEnumParam(searchParams, 'status', ASSET_STATUSES),
-      acquisitionYear: optionalIntParam(searchParams, 'acquisitionYear', MIN_FISCAL_YEAR, MAX_FISCAL_YEAR),
-    };
+    const filters = fixedAssetFiltersOf(searchParams);
 
     return respondWithPage(() => repository.listFixedAssets(filters, readPageRequest(searchParams)));
   },

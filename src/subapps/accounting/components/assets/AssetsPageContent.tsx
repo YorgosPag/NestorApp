@@ -31,6 +31,10 @@ import { PagedListSection } from '../shared/PagedListSection';
 import { AccountingListBody } from '../shared/AccountingListBody';
 import { useAccountingFilterPanel } from '../../hooks/useAccountingFilterPanel';
 import { useFixedAssets } from '../../hooks/useFixedAssets';
+import { useListSummary } from '../../hooks/useListSummary';
+import type { FixedAssetListSummary } from '../../services/list-summaries/fixed-asset-list-summary';
+import { summaryStatValue } from '../shared/summary-stat-value';
+import { API_ROUTES } from '@/config/domain-constants';
 import { AssetsList } from './AssetsList';
 import { AddAssetForm } from './AddAssetForm';
 import { DepreciationRunDialog } from './DepreciationRunDialog';
@@ -104,7 +108,7 @@ function buildFilterConfig(t: (key: string) => string): FilterPanelConfig {
 // ============================================================================
 
 export function AssetsPageContent() {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -114,59 +118,63 @@ export function AssetsPageContent() {
   const filterConfig = useMemo(() => buildFilterConfig(t), [t]);
   const { filters, filterPanel } = useAccountingFilterPanel<AssetFilterState>(DEFAULT_FILTERS, filterConfig);
 
-  const assetList = useFixedAssets({
+  const listFilters = {
     category: filters.category !== 'all' ? (filters.category as AssetCategory) : undefined,
     status: filters.status !== 'all' ? (filters.status as AssetStatus) : undefined,
-  });
+  };
+  const assetList = useFixedAssets(listFilters);
+  const { refetch: refetchList, createAsset } = assetList;
 
-  const { items: assets, loading, refetch, createAsset } = assetList;
+  // 🔴 ADR-ACC-010 §2.1.1 — οι κάρτες από τον ΔΙΑΚΟΜΙΣΤΗ, πάνω σε ΟΛΗ την εμβέλεια των ίδιων φίλτρων: αξίες μόνο των
+  //    παγίων στην κατοχή, αναπόσβεστη = η αποθηκευμένη (ως 2026-10-30: φορτωμένη σελίδα, με τα εκποιημένα μέσα).
+  const { data: summary, loading: summaryLoading, refetch: refetchSummary } =
+    useListSummary<FixedAssetListSummary>(API_ROUTES.ACCOUNTING.FIXED_ASSETS_SUMMARY, listFilters);
+
+  // Καταχώριση αποσβέσεων / αλλαγή παγίου αλλάζει ΚΑΙ τις αξίες των καρτών.
+  const refetch = useCallback(async () => {
+    await Promise.all([refetchList(), refetchSummary()]);
+  }, [refetchList, refetchSummary]);
 
   const handleCreateAsset = useCallback(
     async (data: CreateFixedAssetInput) => {
       const result = await createAsset(data);
       setAddDialogOpen(false);
+      void refetchSummary();
       return result;
     },
-    [createAsset],
+    [createAsset, refetchSummary],
   );
 
-  // Compute dashboard stats
-  const dashboardStats: DashboardStat[] = useMemo(() => {
-    const totalValue = (assets ?? []).reduce((s, a) => s + a.acquisitionCost, 0);
-    const totalDepreciation = (assets ?? []).reduce((s, a) => s + a.accumulatedDepreciation, 0);
-    const netBookValue = totalValue - totalDepreciation;
-
-    return [
-      {
-        title: t('dashboard.totalAssets'),
-        value: assets.length,
-        icon: Package,
-        color: 'blue' as const,
-        loading,
-      },
-      {
-        title: t('dashboard.totalValue'),
-        value: formatAccountingCurrency(totalValue),
-        icon: DollarSign,
-        color: 'green' as const,
-        loading,
-      },
-      {
-        title: t('dashboard.totalDepreciation'),
-        value: formatAccountingCurrency(totalDepreciation),
-        icon: TrendingDown,
-        color: 'orange' as const,
-        loading,
-      },
-      {
-        title: t('dashboard.netBookValue'),
-        value: formatAccountingCurrency(netBookValue),
-        icon: BarChart3,
-        color: 'purple' as const,
-        loading,
-      },
-    ];
-  }, [assets, loading, t]);
+  const dashboardStats: DashboardStat[] = useMemo(() => [
+    {
+      title: t('dashboard.totalAssets'),
+      value: summaryStatValue(summary, (s) => s.assetCount),
+      icon: Package,
+      color: 'blue' as const,
+      loading: summaryLoading,
+    },
+    {
+      title: t('dashboard.totalValue'),
+      value: summaryStatValue(summary, (s) => formatAccountingCurrency(s.totalCost)),
+      icon: DollarSign,
+      color: 'green' as const,
+      loading: summaryLoading,
+    },
+    {
+      title: t('dashboard.totalDepreciation'),
+      value: summaryStatValue(summary, (s) => formatAccountingCurrency(s.totalAccumulatedDepreciation)),
+      icon: TrendingDown,
+      color: 'orange' as const,
+      loading: summaryLoading,
+    },
+    {
+      title: t('dashboard.netBookValue'),
+      value: summaryStatValue(summary, (s) => formatAccountingCurrency(s.netBookValue)),
+      icon: BarChart3,
+      color: 'purple' as const,
+      loading: summaryLoading,
+    },
+  ], [summary, summaryLoading, t]);
 
   return (
     <main className="min-h-screen bg-background">

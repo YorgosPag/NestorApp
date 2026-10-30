@@ -1,7 +1,7 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/lazy-route-namespaces.json": "d6bdd10064436617d24edbd09c0519a14555b8dcf6bd5732f4d447c8a61d6005",
+    "src/i18n/generated/lazy-route-namespaces.json": "bdfce84eaeb35d52c69026a2de5a5b5e3bfdbda11bcafa18c98ab60c31949905",
     "src/i18n/generated/routes/area__id.el.json": "f106788944901e33ca37a741bad7fde9ee19ecf6a4b23b7b13a19e0fb03cbc8e",
     "src/i18n/generated/routes/auth__action.el.json": "43a49dcb69050c49113a98b2a32eef16dcb6a4ed4f843ee9401ee65ab7ab5c00",
     "src/i18n/generated/routes/card-email__token.el.json": "46bb991ee24b3cb42dfa9c710624f71afd2198a3d64806f4e554658db414caa9",
@@ -173,7 +173,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "9e4c413b818883af530d17ba81b12ccd1f975161978c2ac1d7591ed0dbf1e1eb",
+  "inputsSha256": "ad67d129bb7cb3ba31b914fc441172bb2f3331340ad10b43f56405c4980b2665",
   "languages": [
     "el"
   ],

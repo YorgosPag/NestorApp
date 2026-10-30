@@ -29,14 +29,13 @@ interface UseAPYCertificatesOptions {
   autoFetch?: boolean;
 }
 
+/**
+ * **Ποιον και ποια χρήση — όχι ποσά.** Γραμμές, σύνολα και στοιχεία παρόχου/πελάτη τα υπολογίζει ο διακομιστής από
+ * το καθολικό (`services/apy/apy-certificate-draft.ts`), ίδια με την προεπισκόπηση `APY_CERTIFICATES.DRAFT`.
+ */
 interface CreateAPYCertificateInput {
   fiscalYear: number;
-  customerId: string | null;
-  provider: APYCertificate['provider'];
-  customer: APYCertificate['customer'];
-  lineItems: APYCertificate['lineItems'];
-  totalNetAmount: number;
-  totalWithholdingAmount: number;
+  customerId: string;
   notes?: string | null;
 }
 

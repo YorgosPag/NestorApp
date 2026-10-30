@@ -1,16 +1,15 @@
 /**
- * @fileoverview CSV Exporter — Financial Reports (Phase 2e)
- * @description Vanilla JS CSV export with UTF-8 BOM for Excel compatibility
+ * @fileoverview CSV Serializer — Financial Reports (Phase 2e)
+ * @description Vanilla JS CSV with UTF-8 BOM for Excel compatibility. Pure document → Blob: the pipeline
+ *   (`report-export.ts`) owns flattening, filename and download.
  * @author Claude Code (Anthropic AI) + Γιώργος Παγώνης
  * @created 2026-03-30
- * @see DECISIONS-PHASE-2.md §2e (Q8 — export formats)
+ * @see DECISIONS-PHASE-2.md §2e (Q8 — export formats) · ADR-584 §9
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, zero dependencies
  */
 
-import type { ReportType, ReportDataMap, ResolvedPeriods } from '../../types/reports';
-import { flattenReportForExport } from './report-table-adapter';
 import type { CellValue } from './report-table-adapter';
-import { triggerBlobDownload } from '@/services/gantt-export/gantt-export-utils';
+import type { ReportDocument, ReportSerializer } from './report-export';
 
 // ============================================================================
 // HELPERS
@@ -26,47 +25,22 @@ function escapeCell(value: CellValue): string {
   return str;
 }
 
-function buildFilename(reportType: ReportType, period: ResolvedPeriods): string {
-  const date = period.current.from.replace(/-/g, '');
-  return `${reportType}_${date}.csv`;
-}
-
 // ============================================================================
-// PUBLIC API
+// SERIALIZER
 // ============================================================================
 
 /**
- * Export a financial report as CSV with UTF-8 BOM.
- * Synchronous — no async needed.
+ * CSV with UTF-8 BOM, in the language of `t`. Numbers stay raw (machine-readable); headers and labels are translated.
  */
-export function exportReportCsv(
-  reportType: ReportType,
-  data: ReportDataMap[ReportType],
-  period: ResolvedPeriods,
-  title: string
-): void {
-  const tableData = flattenReportForExport(reportType, data);
-
-  // Build CSV lines
-  const lines: string[] = [];
-
-  // Title + period metadata
-  lines.push(escapeCell(title));
-  lines.push(`Period: ${period.current.from} to ${period.current.to}`);
-  lines.push('');
-
-  // Headers
-  lines.push(tableData.headers.map(escapeCell).join(','));
-
-  // Data rows
-  for (const row of tableData.rows) {
-    lines.push(row.map(escapeCell).join(','));
-  }
-
-  // UTF-8 BOM + content
-  const csvContent = '\uFEFF' + lines.join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
-  const filename = buildFilename(reportType, period);
-
-  triggerBlobDownload(blob, filename);
+function serializeCsv({ table, title, periodLine }: ReportDocument): Blob {
+  const lines = [
+    escapeCell(title),
+    escapeCell(periodLine),
+    '',
+    table.columns.map((column) => escapeCell(column.header)).join(','),
+    ...table.rows.map((row) => row.cells.map(escapeCell).join(',')),
+  ];
+  return new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
 }
+
+export const csvReportSerializer: ReportSerializer = { extension: 'csv', serialize: serializeCsv };

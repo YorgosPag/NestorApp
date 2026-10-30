@@ -25,7 +25,7 @@ interface LineItemsEditorProps {
 }
 
 export function LineItemsEditor({ lineItems, onLineItemsChange, presets }: LineItemsEditorProps) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const colors = useSemanticColors();
   const fieldId = useId();
 

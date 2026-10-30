@@ -27,7 +27,7 @@ export function SoleProprietorRegistrySection({
   error,
   onGemiNumberChange,
 }: SoleProprietorRegistrySectionProps) {
-  const { t } = useTranslation(['accounting', 'accounting-setup']);
+  const { t } = useTranslation('accounting');
 
   return (
     <Card>

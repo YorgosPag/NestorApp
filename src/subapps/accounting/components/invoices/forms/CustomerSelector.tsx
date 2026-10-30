@@ -58,7 +58,7 @@ function mapContactToCustomer(contact: Contact): InvoiceCustomer {
 // ============================================================================
 
 export function CustomerSelector({ customer, onCustomerChange }: CustomerSelectorProps) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const colors = useSemanticColors();
   const applyContact = useCallback(
     (contact: Contact) => onCustomerChange(mapContactToCustomer(contact)),

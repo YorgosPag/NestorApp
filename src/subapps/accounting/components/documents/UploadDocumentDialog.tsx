@@ -72,7 +72,7 @@ export function UploadDocumentDialog({
   fiscalYear,
   onSuccess,
 }: UploadDocumentDialogProps) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const colors = useSemanticColors();
   const { user } = useAuth();
 

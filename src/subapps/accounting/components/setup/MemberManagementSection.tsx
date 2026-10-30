@@ -72,7 +72,7 @@ export function MemberManagementSection({
   onGemiNumberChange,
   onShareCapitalChange,
 }: MemberManagementSectionProps) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const roster = useRosterEditing(members, onMembersChange, createEmptyMember, memberDividendShareOf);
 
   return (

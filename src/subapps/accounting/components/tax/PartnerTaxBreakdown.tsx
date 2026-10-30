@@ -33,7 +33,7 @@ interface PartnerTaxBreakdownProps {
 // ============================================================================
 
 export function PartnerTaxBreakdown({ result }: PartnerTaxBreakdownProps) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
   return (

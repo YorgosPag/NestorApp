@@ -49,6 +49,8 @@ jest.mock('@/lib/telemetry/Logger', () => ({
 var repo = {
   listAPYCertificates: jest.fn(),
   createAPYCertificate: jest.fn(),
+  getCompanySetup: jest.fn(),
+  collectInvoices: jest.fn(),
 };
 
 jest.mock('@/subapps/accounting/services/create-accounting-services', () => ({
@@ -87,15 +89,24 @@ describe('GET /api/accounting/apy-certificates', () => {
 });
 
 describe('POST /api/accounting/apy-certificates', () => {
-  const validBody = {
-    fiscalYear: 2026,
-    customerId: 'cust_1',
-    provider: { name: 'P', vatNumber: '123' },
-    customer: { name: 'C', vatNumber: '456' },
-    lineItems: [{ x: 1 }],
-    totalNetAmount: 100,
-    totalWithholdingAmount: 20,
+  const validBody = { fiscalYear: 2026, customerId: 'cust_1' };
+
+  const profile = {
+    businessName: 'P', vatNumber: '123', taxOffice: 'ΔΟΥ', address: 'A', city: 'C',
+    postalCode: '1', profession: 'X', phone: null, email: null,
   };
+
+  const ledgerInvoice = {
+    invoiceId: 'inv_1', series: 'Α', number: 7, type: 'service_invoice', issueDate: '2026-03-01', fiscalYear: 2026,
+    totalNetAmount: 1000, withholdingRate: 20, withholdingAmount: 200,
+    mydata: { status: 'sent' },
+    customer: { contactId: 'cust_1', name: 'C', vatNumber: '456', taxOffice: null, address: null, city: null },
+  };
+
+  beforeEach(() => {
+    repo.getCompanySetup.mockResolvedValue(profile);
+    repo.collectInvoices.mockResolvedValue([ledgerInvoice]);
+  });
 
   it('creates → 201 { success:true, data:{ id } }', async () => {
     repo.listAPYCertificates.mockResolvedValue([]);
@@ -103,6 +114,43 @@ describe('POST /api/accounting/apy-certificates', () => {
     const res = (await POST(req(validBody))) as Envelope;
     expect(res.status).toBe(201);
     expect(await res.json()).toEqual({ success: true, data: { id: 'apy_new' } });
+  });
+
+  /**
+   * 🔴 Ο ΔΙΑΚΟΜΙΣΤΗΣ ΥΠΟΛΟΓΙΖΕΙ (ADR-ACC-020): ποσά από το σώμα αγνοούνται — αποθηκεύεται ό,τι βγάζει το καθολικό.
+   * ΜΕΤΑΛΛΑΞΗ: ξαναπέρνα `body.lineItems`/σύνολα στο `createAPYCertificate` ⇒ κόκκινο.
+   */
+  it('🔴 stores LEDGER-computed lines/totals/snapshots, never amounts from the body', async () => {
+    repo.listAPYCertificates.mockResolvedValue([]);
+    repo.createAPYCertificate.mockResolvedValue({ id: 'apy_new' });
+
+    await POST(req({ ...validBody, lineItems: [{ forged: true }], totalWithholdingAmount: 999_999 }));
+
+    expect(repo.collectInvoices).toHaveBeenCalledWith({ scope: { kind: 'customer', customerId: 'cust_1', asOf: '2026-12-31' } });
+    expect(repo.createAPYCertificate).toHaveBeenCalledWith(expect.objectContaining({
+      customerId: 'cust_1',
+      lineItems: [{ invoiceId: 'inv_1', invoiceNumber: 'Α-7', issueDate: '2026-03-01', netAmount: 1000, withholdingRate: 20, withholdingAmount: 200 }],
+      totalNetAmount: 1000,
+      totalWithholdingAmount: 200,
+      provider: expect.objectContaining({ name: 'P', vatNumber: '123' }),
+      customer: { name: 'C', vatNumber: '456', taxOffice: null, address: null, city: null },
+    }));
+  });
+
+  it('no eligible invoice → 400, nothing stored', async () => {
+    repo.listAPYCertificates.mockResolvedValue([]);
+    repo.collectInvoices.mockResolvedValue([{ ...ledgerInvoice, withholdingAmount: 0 }]);
+    const res = (await POST(req(validBody))) as Envelope;
+    expect(res.status).toBe(400);
+    expect(repo.createAPYCertificate).not.toHaveBeenCalled();
+  });
+
+  it('missing company setup → 400, nothing stored', async () => {
+    repo.listAPYCertificates.mockResolvedValue([]);
+    repo.getCompanySetup.mockResolvedValue(null);
+    const res = (await POST(req(validBody))) as Envelope;
+    expect(res.status).toBe(400);
+    expect(repo.createAPYCertificate).not.toHaveBeenCalled();
   });
 
   it('duplicate → 409 with existingCertificateId (byte-identical extra field)', async () => {

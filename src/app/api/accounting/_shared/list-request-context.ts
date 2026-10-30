@@ -113,7 +113,16 @@ export function readPageRequest(searchParams: URLSearchParams): PageRequest {
 }
 
 /** Εκτελεί την ανάγνωση της σελίδας και απαντά — με τις δύο αρνήσεις του πελάτη ως 400. */
-export async function respondWithPage<T>(read: () => Promise<PaginatedResult<T>>): Promise<NextResponse> {
+export function respondWithPage<T>(read: () => Promise<PaginatedResult<T>>): Promise<NextResponse> {
+  return respondWithListRead(read);
+}
+
+/**
+ * Οποιαδήποτε ανάγνωση πάνω στα φίλτρα μιας λίστας (σελίδα **ή** σύνοψη της πλήρους εμβέλειας) — με τις ίδιες
+ * αρνήσεις του πελάτη ως 400 και τους ίδιους κωδικούς. Οι κάρτες σύνοψης δεν επιτρέπεται να απαντούν 500 σε
+ * συνδυασμό φίλτρων που η σελίδα απαντά 400.
+ */
+export async function respondWithListRead<R>(read: () => Promise<R>): Promise<NextResponse> {
   try {
     return ok(await read());
   } catch (error) {

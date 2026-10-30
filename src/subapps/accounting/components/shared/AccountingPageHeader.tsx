@@ -38,7 +38,7 @@ export function AccountingPageHeader({
   onDashboardToggle,
   actions,
 }: AccountingPageHeaderProps) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
 
   return (
     <PageHeader

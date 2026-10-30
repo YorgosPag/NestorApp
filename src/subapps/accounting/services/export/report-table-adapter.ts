@@ -6,9 +6,19 @@
  * @created 2026-03-30
  * @see DECISIONS-PHASE-2.md §2e
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, max 500 lines
+ *
+ * 🔴 2026-10-30 (ADR-ACC-010 §2.1.1 · N.11): ως τώρα οι κεφαλίδες και οι γραμμές ήταν σκληρογραμμένα ΑΓΓΛΙΚΑ
+ *   (`'Customer'`, `'Total Income'`…) σε CSV / Excel / PDF ΚΑΙ στον πίνακα της οθόνης — αόρατα στο CHECK 3.8, γιατί
+ *   δεν περνούσαν από `t()`. Και ο πίνακας «μάντευε» τη μορφή από τη ΘΕΣΗ της στήλης (τελευταία = «%»,
+ *   προτελευταία = «μεταβολή»): το Υπόλοιπο του ισοζυγίου και το Σύνολο της ηλικίωσης έβγαιναν ως ποσοστό, τα
+ *   πλήθη (τιμολόγια, κινήσεις) ως ευρώ. Τώρα:
+ *   - κάθε κείμενο είναι κλειδί i18n, μεταφρασμένο από τον `t` του ΚΑΛΟΥΝΤΟΣ (ρητή γλώσσα — όχι το καθολικό
+ *     `i18next`, ADR-841 Α21.21 Φάση Β)·
+ *   - κάθε στήλη δηλώνει τον ΡΟΛΟ της και κάθε γραμμή τη ΜΟΡΦΗ των αριθμών της (οι συγκριτικοί πίνακες μιξάρουν
+ *     € / πλήθος / % στην ίδια στήλη — π.χ. η συμφωνία τράπεζας).
+ *   - ηλικίωση: οι κάδοι ήταν μετατοπισμένοι κατά έναν (η «0-30» έδειχνε τα μη ληξιπρόθεσμα, η «31-60» τα 1-30…).
+ *     Τώρα ένας-προς-έναν με το `AgingBuckets`, όπως οι Xero / QuickBooks (Current · 1-30 · … · Older).
  */
-
-import i18next from 'i18next';
 
 import type {
   ReportType,
@@ -32,14 +42,46 @@ import type {
 /** A single cell in the flat table — string or number for formatting */
 export type CellValue = string | number | null;
 
+/** Ο `t` του καλούντος (namespace `accounting`) — η γλώσσα της εξαγωγής είναι η δική του, ρητά. */
+export type ReportTranslate = (key: string, options?: Record<string, unknown>) => string;
+
+/** Πώς διαβάζεται ένας αριθμός: ποσό · πλήθος · ποσοστό (0-100). */
+export type ReportValueFormat = 'currency' | 'count' | 'percent';
+
+/**
+ * Ο ρόλος μιας στήλης. `value` / `change`: η μορφή είναι της ΓΡΑΜΜΗΣ (συγκριτικοί πίνακες)· `label` / `text`:
+ * κείμενο· οι υπόλοιποι: σταθερή μορφή για όλη τη στήλη.
+ */
+export type ReportColumnKind = 'label' | 'text' | 'value' | 'change' | ReportValueFormat;
+
+export interface ReportColumn {
+  /** Μεταφρασμένη κεφαλίδα (κενή για τη στήλη ετικετών των συγκριτικών πινάκων). */
+  readonly header: string;
+  readonly kind: ReportColumnKind;
+}
+
+export interface ReportRow {
+  readonly cells: readonly CellValue[];
+  /** Η μορφή των αριθμών της γραμμής στις στήλες `value` / `change`. */
+  readonly format: ReportValueFormat;
+  /** Επικεφαλίδα ενότητας (π.χ. «Λειτουργικές Δραστηριότητες») — μόνο η πρώτη στήλη έχει τιμή. */
+  readonly section: boolean;
+}
+
+export interface ReportSummaryMetric {
+  readonly label: string;
+  readonly value: number;
+  readonly change: ChangeMetric | null;
+  readonly format: ReportValueFormat;
+}
+
 /** Uniform tabular output consumed by table UI + exporters */
 export interface FlatTableData {
-  /** Column headers for the main table */
-  headers: string[];
-  /** Rows of data (each row matches headers length) */
-  rows: CellValue[][];
+  readonly columns: readonly ReportColumn[];
+  /** Each row's `cells` matches `columns` length */
+  readonly rows: readonly ReportRow[];
   /** Summary metrics for dashboard card + top-of-report KPIs */
-  summaryMetrics: Array<{ label: string; value: number; change: ChangeMetric | null }>;
+  readonly summaryMetrics: readonly ReportSummaryMetric[];
 }
 
 /** Dashboard card key metric for a single report */
@@ -48,7 +90,21 @@ export interface ReportKeyMetric {
   label: string;
   change: ChangeMetric | null;
   /** Format hint for display */
-  format: 'currency' | 'percentage' | 'number';
+  format: ReportValueFormat;
+}
+
+/** Η μορφή ενός κελιού — `null` για κείμενο. ΕΝΑΣ κριτής για οθόνη, PDF και Excel. */
+export function cellFormatOf(column: ReportColumn, row: ReportRow): ReportValueFormat | null {
+  switch (column.kind) {
+    case 'label':
+    case 'text':
+      return null;
+    case 'value':
+    case 'change':
+      return row.format;
+    default:
+      return column.kind;
+  }
 }
 
 // ============================================================================
@@ -58,7 +114,7 @@ export interface ReportKeyMetric {
 const KEY_METRIC_MAP: Record<ReportType, {
   extract: (data: ReportDataMap[ReportType]) => { value: number; change: ChangeMetric | null };
   labelKey: string;
-  format: 'currency' | 'percentage' | 'number';
+  format: ReportValueFormat;
 }> = {
   profit_and_loss: {
     extract: (d) => {
@@ -98,7 +154,7 @@ const KEY_METRIC_MAP: Record<ReportType, {
       return { value: data.matchRate.current, change: data.matchRate.changeFromPrevious };
     },
     labelKey: 'reports.metrics.matchRate',
-    format: 'percentage',
+    format: 'percent',
   },
   cash_flow: {
     extract: (d) => {
@@ -137,247 +193,252 @@ export function extractKeyMetric(
 }
 
 // ============================================================================
-// COMPARATIVE COLUMN HELPERS
+// BUILDING BLOCKS
 // ============================================================================
 
-function formatChange(change: ChangeMetric | null): CellValue {
-  if (!change) return null;
-  return change.absolute;
+const METRIC = 'reports.metrics';
+const TABLE = 'reports.table';
+
+/** Μία στήλη ως ΔΗΛΩΣΗ: κλειδί κεφαλίδας κάτω από `reports.table` (`null` = χωρίς κεφαλίδα) · ρόλος. */
+type ColumnSpec = readonly [key: string | null, kind: ReportColumnKind];
+
+/**
+ * Οι στήλες ενός πίνακα από τη δήλωσή τους — η κεφαλίδα μεταφράζεται σε ΕΝΑ σημείο. Ως 2026-10-30 κάθε πίνακας
+ * ξανάγραφε `{ header: t(…), kind }` ανά στήλη (το CHECK 3.28 μέτρησε δίδυμα ισοζύγιο ↔ έξοδα ανά κατηγορία).
+ */
+function tableColumns(t: ReportTranslate, spec: readonly ColumnSpec[]): ReportColumn[] {
+  return spec.map(([key, kind]) => ({ header: key === null ? '' : t(`${TABLE}.${key}`), kind }));
 }
 
-function formatChangePercent(change: ChangeMetric | null): CellValue {
-  if (!change || change.percentage === null) return null;
-  return change.percentage;
+/** Οι στήλες κάθε συγκριτικού πίνακα: ετικέτα · τρέχουσα · προηγούμενη · πέρυσι · μεταβολή · μεταβολή %. */
+function comparativeColumns(t: ReportTranslate): ReportColumn[] {
+  return tableColumns(t, [
+    [null, 'label'],
+    ['current', 'value'],
+    ['previousPeriod', 'value'],
+    ['yearOverYear', 'value'],
+    ['change', 'change'],
+    ['changePercent', 'percent'],
+  ]);
 }
 
-function numericComparativeRow(
+function row(cells: CellValue[], format: ReportValueFormat = 'currency'): ReportRow {
+  return { cells, format, section: false };
+}
+
+function sectionRow(label: string, width: number): ReportRow {
+  return { cells: [label, ...Array<CellValue>(width - 1).fill(null)], format: 'currency', section: true };
+}
+
+/** Γραμμή συγκριτικού πίνακα με ΜΟΝΟ τρέχουσα τιμή (χωρίς προηγούμενη/πέρυσι/μεταβολή). */
+function currentOnlyRow(label: string, amount: number): ReportRow {
+  return row([label, amount, null, null, null, null]);
+}
+
+/** Μία γραμμή ανάλυσης (κατηγορία, κίνηση) μέσα σε συγκριτικό πίνακα — εσοχή κάτω από το σύνολό της. */
+function detailRow(label: string, amount: number): ReportRow {
+  return currentOnlyRow(`  ${label}`, amount);
+}
+
+function comparativeRow(
   label: string,
-  col: ComparativeColumn<number>
-): CellValue[] {
-  return [
+  col: ComparativeColumn<number>,
+  format: ReportValueFormat = 'currency'
+): ReportRow {
+  return row([
     label,
     col.current,
     col.previousPeriod,
     col.yearOverYear,
-    formatChange(col.changeFromPrevious),
-    formatChangePercent(col.changeFromPrevious),
-  ];
+    col.changeFromPrevious?.absolute ?? null,
+    col.changeFromPrevious?.percentage ?? null,
+  ], format);
+}
+
+function metric(
+  t: ReportTranslate,
+  key: string,
+  col: ComparativeColumn<number>,
+  format: ReportValueFormat = 'currency'
+): ReportSummaryMetric {
+  return { label: t(`${METRIC}.${key}`), value: col.current, change: col.changeFromPrevious, format };
 }
 
 // ============================================================================
 // REPORT-SPECIFIC FLATTENERS
 // ============================================================================
 
-function flattenProfitAndLoss(data: ProfitAndLossData): FlatTableData {
-  const headers = ['', 'Current', 'Previous', 'YoY', 'Change', '%'];
-  const rows: CellValue[][] = [];
-
-  // Income categories
-  for (const cat of data.income.current) {
-    rows.push([`  ${cat.label}`, cat.netAmount, null, null, null, null]);
-  }
-  rows.push(numericComparativeRow('Total Income', data.totalIncome));
-
-  // Expense categories
-  for (const cat of data.expenses.current) {
-    rows.push([`  ${cat.label}`, cat.netAmount, null, null, null, null]);
-  }
-  rows.push(numericComparativeRow('Total Expenses', data.totalExpenses));
-  rows.push(numericComparativeRow('Gross Profit', data.grossProfit));
-  rows.push(numericComparativeRow('EFKA Contributions', data.efkaContributions));
-  rows.push(numericComparativeRow('Net Profit Before Tax', data.netProfitBeforeTax));
-  rows.push(numericComparativeRow('Estimated Tax', data.estimatedTax));
-  rows.push(numericComparativeRow('Net Profit After Tax', data.netProfitAfterTax));
-
-  return {
-    headers,
-    rows,
-    summaryMetrics: [
-      { label: 'Total Income', value: data.totalIncome.current, change: data.totalIncome.changeFromPrevious },
-      { label: 'Total Expenses', value: data.totalExpenses.current, change: data.totalExpenses.changeFromPrevious },
-      { label: 'Net Profit', value: data.netProfitAfterTax.current, change: data.netProfitAfterTax.changeFromPrevious },
-    ],
-  };
-}
-
-function flattenTrialBalance(data: TrialBalanceData): FlatTableData {
-  const headers = ['Category', 'Label', 'Debit', 'Credit', 'Balance'];
-  const rows: CellValue[][] = data.rows.current.map((row) => [
-    row.category,
-    row.label,
-    row.debit,
-    row.credit,
-    row.balance,
-  ]);
-
-  return {
-    headers,
-    rows,
-    summaryMetrics: [
-      { label: 'Total Debits', value: data.totalDebits.current, change: data.totalDebits.changeFromPrevious },
-      { label: 'Total Credits', value: data.totalCredits.current, change: data.totalCredits.changeFromPrevious },
-      { label: 'Net Balance', value: data.netBalance.current, change: data.netBalance.changeFromPrevious },
-    ],
-  };
-}
-
-function flattenARAging(data: ARAgingData): FlatTableData {
-  const headers = ['Customer', '0-30', '31-60', '61-90', '90+', 'Total'];
-  const rows: CellValue[][] = data.customers.current.map((c) => [
-    c.customerName,
-    c.aging.current,
-    c.aging.days1_30,
-    c.aging.days31_60,
-    c.aging.days61_90 + c.aging.days91_120 + c.aging.days120plus,
-    c.totalOutstanding,
-  ]);
-
-  return {
-    headers,
-    rows,
-    summaryMetrics: [
-      { label: 'Total Outstanding', value: data.totalOutstanding.current, change: data.totalOutstanding.changeFromPrevious },
-    ],
-  };
-}
-
-function flattenTaxSummary(data: TaxSummaryData): FlatTableData {
-  const headers = ['', 'Current', 'Previous', 'YoY', 'Change', '%'];
-  const rows: CellValue[][] = [
-    numericComparativeRow('Income', data.income),
-    numericComparativeRow('Deductible Expenses', data.deductibleExpenses),
-    numericComparativeRow('EFKA Contributions', data.efkaContributions),
-    numericComparativeRow('Taxable Income', data.taxableIncome),
-    numericComparativeRow('Estimated Income Tax', data.estimatedIncomeTax),
+function flattenProfitAndLoss(data: ProfitAndLossData, t: ReportTranslate): FlatTableData {
+  const m = (key: string) => t(`${METRIC}.${key}`);
+  const rows: ReportRow[] = [
+    ...data.income.current.map((cat) => detailRow(cat.label, cat.netAmount)),
+    comparativeRow(m('totalIncome'), data.totalIncome),
+    ...data.expenses.current.map((cat) => detailRow(cat.label, cat.netAmount)),
+    comparativeRow(m('totalExpenses'), data.totalExpenses),
+    comparativeRow(m('grossProfit'), data.grossProfit),
+    comparativeRow(m('efkaContributions'), data.efkaContributions),
+    comparativeRow(m('netProfitBeforeTax'), data.netProfitBeforeTax),
+    comparativeRow(m('estimatedTax'), data.estimatedTax),
+    comparativeRow(m('netProfitAfterTax'), data.netProfitAfterTax),
   ];
 
-  // VAT summary row
+  return {
+    columns: comparativeColumns(t),
+    rows,
+    summaryMetrics: [
+      metric(t, 'totalIncome', data.totalIncome),
+      metric(t, 'totalExpenses', data.totalExpenses),
+      metric(t, 'netProfit', data.netProfitAfterTax),
+    ],
+  };
+}
+
+function flattenTrialBalance(data: TrialBalanceData, t: ReportTranslate): FlatTableData {
+  return {
+    columns: tableColumns(t, [
+      ['category', 'text'],
+      ['label', 'label'],
+      ['debit', 'currency'],
+      ['credit', 'currency'],
+      ['balance', 'currency'],
+    ]),
+    rows: data.rows.current.map((r) => row([r.category, r.label, r.debit, r.credit, r.balance])),
+    summaryMetrics: [
+      metric(t, 'totalDebits', data.totalDebits),
+      metric(t, 'totalCredits', data.totalCredits),
+      metric(t, 'netBalance', data.netBalance),
+    ],
+  };
+}
+
+/** Οι κάδοι ηλικίωσης, με τη σειρά του `AgingBuckets` — ένας προς έναν, κανένας συγχωνευμένος. */
+const AGING_BUCKETS = ['current', 'days1_30', 'days31_60', 'days61_90', 'days91_120', 'days120plus'] as const;
+
+function flattenARAging(data: ARAgingData, t: ReportTranslate): FlatTableData {
+  return {
+    columns: tableColumns(t, [
+      ['customer', 'label'],
+      ...AGING_BUCKETS.map((bucket): ColumnSpec => [`aging.${bucket}`, 'currency']),
+      ['total', 'currency'],
+    ]),
+    rows: data.customers.current.map((c) => row([
+      c.customerName,
+      ...AGING_BUCKETS.map((bucket) => c.aging[bucket]),
+      c.totalOutstanding,
+    ])),
+    summaryMetrics: [metric(t, 'totalOutstanding', data.totalOutstanding)],
+  };
+}
+
+function flattenTaxSummary(data: TaxSummaryData, t: ReportTranslate): FlatTableData {
+  const m = (key: string) => t(`${METRIC}.${key}`);
   const vat = data.vatSummary.current;
-  rows.push(['VAT Output', vat.outputVat, null, null, null, null]);
-  rows.push(['VAT Input (Deductible)', vat.deductibleInputVat, null, null, null, null]);
-  rows.push(['VAT Payable', vat.vatPayable, null, null, null, null]);
-
   return {
-    headers,
-    rows,
+    columns: comparativeColumns(t),
+    rows: [
+      comparativeRow(m('income'), data.income),
+      comparativeRow(m('deductibleExpenses'), data.deductibleExpenses),
+      comparativeRow(m('efkaContributions'), data.efkaContributions),
+      comparativeRow(m('taxableIncome'), data.taxableIncome),
+      comparativeRow(m('estimatedIncomeTax'), data.estimatedIncomeTax),
+      currentOnlyRow(m('vatOutput'), vat.outputVat),
+      currentOnlyRow(m('vatInputDeductible'), vat.deductibleInputVat),
+      currentOnlyRow(m('vatPayable'), vat.vatPayable),
+    ],
     summaryMetrics: [
-      { label: 'Taxable Income', value: data.taxableIncome.current, change: data.taxableIncome.changeFromPrevious },
-      { label: 'Estimated Tax', value: data.estimatedIncomeTax.current, change: data.estimatedIncomeTax.changeFromPrevious },
+      metric(t, 'taxableIncome', data.taxableIncome),
+      metric(t, 'estimatedTax', data.estimatedIncomeTax),
     ],
   };
 }
 
-function flattenBankReconciliation(data: BankReconciliationData): FlatTableData {
-  const headers = ['', 'Current', 'Previous', 'YoY', 'Change', '%'];
-  const rows: CellValue[][] = [
-    numericComparativeRow('Total Transactions', data.totalTransactions),
-    numericComparativeRow('Matched', data.matchedCount),
-    numericComparativeRow('Unmatched', data.unmatchedCount),
-    numericComparativeRow('Excluded', data.excludedCount),
-    numericComparativeRow('Match Rate (%)', data.matchRate),
-    numericComparativeRow('Total Credits', data.totalCredits),
-    numericComparativeRow('Total Debits', data.totalDebits),
+function flattenBankReconciliation(data: BankReconciliationData, t: ReportTranslate): FlatTableData {
+  const m = (key: string) => t(`${METRIC}.${key}`);
+  return {
+    columns: comparativeColumns(t),
+    rows: [
+      comparativeRow(m('totalTransactions'), data.totalTransactions, 'count'),
+      comparativeRow(m('matched'), data.matchedCount, 'count'),
+      comparativeRow(m('unmatched'), data.unmatchedCount, 'count'),
+      comparativeRow(m('excluded'), data.excludedCount, 'count'),
+      comparativeRow(m('matchRate'), data.matchRate, 'percent'),
+      comparativeRow(m('totalCredits'), data.totalCredits),
+      comparativeRow(m('totalDebits'), data.totalDebits),
+    ],
+    summaryMetrics: [
+      metric(t, 'matchRate', data.matchRate, 'percent'),
+      metric(t, 'unmatched', data.unmatchedCount, 'count'),
+    ],
+  };
+}
+
+type CashFlowColumn = CashFlowData['operating'];
+
+/** Μία ενότητα ταμειακών ροών: επικεφαλίδα · κινήσεις · καθαρό σύνολο (συγκριτικό). */
+function cashFlowSection(section: CashFlowColumn, titleKey: string, netKey: string, t: ReportTranslate): ReportRow[] {
+  return [
+    sectionRow(t(`${METRIC}.${titleKey}`), 6),
+    ...section.current.items.map((item) => detailRow(item.label, item.amount)),
+    comparativeRow(t(`${METRIC}.${netKey}`), {
+      current: section.current.net,
+      previousPeriod: section.previousPeriod?.net ?? null,
+      yearOverYear: section.yearOverYear?.net ?? null,
+      changeFromPrevious: section.changeFromPrevious,
+      changeFromYoY: section.changeFromYoY,
+    }),
   ];
+}
 
+function flattenCashFlow(data: CashFlowData, t: ReportTranslate): FlatTableData {
   return {
-    headers,
-    rows,
-    summaryMetrics: [
-      { label: 'Match Rate', value: data.matchRate.current, change: data.matchRate.changeFromPrevious },
-      { label: 'Unmatched', value: data.unmatchedCount.current, change: data.unmatchedCount.changeFromPrevious },
+    columns: comparativeColumns(t),
+    rows: [
+      ...cashFlowSection(data.operating, 'operatingActivities', 'netOperating', t),
+      ...cashFlowSection(data.investing, 'investingActivities', 'netInvesting', t),
+      ...cashFlowSection(data.financing, 'financingActivities', 'netFinancing', t),
+      comparativeRow(t(`${METRIC}.netCashFlow`), data.netCashFlow),
     ],
+    summaryMetrics: [metric(t, 'netCashFlow', data.netCashFlow)],
   };
 }
 
-function flattenCashFlow(data: CashFlowData): FlatTableData {
-  const headers = ['', 'Current', 'Previous', 'YoY', 'Change', '%'];
-  const rows: CellValue[][] = [];
-
-  // Operating section
-  rows.push(['Operating Activities', null, null, null, null, null]);
-  for (const item of data.operating.current.items) {
-    rows.push([`  ${item.label}`, item.amount, null, null, null, null]);
-  }
-  rows.push(numericComparativeRow('Net Operating', {
-    current: data.operating.current.net,
-    previousPeriod: data.operating.previousPeriod?.net ?? null,
-    yearOverYear: data.operating.yearOverYear?.net ?? null,
-    changeFromPrevious: data.operating.changeFromPrevious,
-    changeFromYoY: data.operating.changeFromYoY,
-  }));
-
-  // Investing section
-  rows.push(['Investing Activities', null, null, null, null, null]);
-  for (const item of data.investing.current.items) {
-    rows.push([`  ${item.label}`, item.amount, null, null, null, null]);
-  }
-  rows.push(numericComparativeRow('Net Investing', {
-    current: data.investing.current.net,
-    previousPeriod: data.investing.previousPeriod?.net ?? null,
-    yearOverYear: data.investing.yearOverYear?.net ?? null,
-    changeFromPrevious: data.investing.changeFromPrevious,
-    changeFromYoY: data.investing.changeFromYoY,
-  }));
-
-  // Financing section
-  rows.push(['Financing Activities', null, null, null, null, null]);
-  for (const item of data.financing.current.items) {
-    rows.push([`  ${item.label}`, item.amount, null, null, null, null]);
-  }
-  rows.push(numericComparativeRow('Net Financing', {
-    current: data.financing.current.net,
-    previousPeriod: data.financing.previousPeriod?.net ?? null,
-    yearOverYear: data.financing.yearOverYear?.net ?? null,
-    changeFromPrevious: data.financing.changeFromPrevious,
-    changeFromYoY: data.financing.changeFromYoY,
-  }));
-
-  rows.push(numericComparativeRow('Net Cash Flow', data.netCashFlow));
-
+function flattenIncomeByCustomer(data: IncomeByCustomerData, t: ReportTranslate): FlatTableData {
   return {
-    headers,
-    rows,
-    summaryMetrics: [
-      { label: 'Net Cash Flow', value: data.netCashFlow.current, change: data.netCashFlow.changeFromPrevious },
-    ],
+    columns: tableColumns(t, [
+      ['customer', 'label'],
+      ['amount', 'currency'],
+      ['invoiceCount', 'count'],
+      ['shareOfTotal', 'percent'],
+    ]),
+    rows: data.customers.current.map((c) => row([
+      c.customerName ?? t('reports.noCustomer'),
+      c.totalNetAmount,
+      c.invoiceCount,
+      c.percentage,
+    ])),
+    summaryMetrics: [metric(t, 'totalIncome', data.totalIncome)],
   };
 }
 
-function flattenIncomeByCustomer(data: IncomeByCustomerData): FlatTableData {
-  const headers = ['Customer', 'Amount', 'Invoices', '% of Total'];
-  const rows: CellValue[][] = data.customers.current.map((c) => [
-    c.customerName ?? i18next.t('reports.noCustomer', { ns: 'accounting' }),
-    c.totalNetAmount,
-    c.invoiceCount,
-    c.percentage,
-  ]);
-
+function flattenExpenseByCategory(data: ExpenseByCategoryData, t: ReportTranslate): FlatTableData {
   return {
-    headers,
-    rows,
-    summaryMetrics: [
-      { label: 'Total Income', value: data.totalIncome.current, change: data.totalIncome.changeFromPrevious },
-    ],
-  };
-}
-
-function flattenExpenseByCategory(data: ExpenseByCategoryData): FlatTableData {
-  const headers = ['Category', 'Label', 'Amount', 'Count', '%', 'Deductible'];
-  const rows: CellValue[][] = data.categories.current.map((c) => [
-    c.category,
-    c.label,
-    c.totalNetAmount,
-    c.entryCount,
-    c.percentage,
-    c.isDeductible ? 'Yes' : 'No',
-  ]);
-
-  return {
-    headers,
-    rows,
-    summaryMetrics: [
-      { label: 'Total Expenses', value: data.totalExpenses.current, change: data.totalExpenses.changeFromPrevious },
-    ],
+    columns: tableColumns(t, [
+      ['category', 'text'],
+      ['label', 'label'],
+      ['amount', 'currency'],
+      ['entryCount', 'count'],
+      ['shareOfTotal', 'percent'],
+      ['deductible', 'text'],
+    ]),
+    rows: data.categories.current.map((c) => row([
+      c.category,
+      c.label,
+      c.totalNetAmount,
+      c.entryCount,
+      c.percentage,
+      t(c.isDeductible ? `${TABLE}.yes` : `${TABLE}.no`),
+    ])),
+    summaryMetrics: [metric(t, 'totalExpenses', data.totalExpenses)],
   };
 }
 
@@ -387,26 +448,27 @@ function flattenExpenseByCategory(data: ExpenseByCategoryData): FlatTableData {
 
 const FLATTENER_REGISTRY: Record<
   ReportType,
-  (data: ReportDataMap[ReportType]) => FlatTableData
+  (data: ReportDataMap[ReportType], t: ReportTranslate) => FlatTableData
 > = {
-  profit_and_loss: (d) => flattenProfitAndLoss(d as ProfitAndLossData),
-  trial_balance: (d) => flattenTrialBalance(d as TrialBalanceData),
-  ar_aging: (d) => flattenARAging(d as ARAgingData),
-  tax_summary: (d) => flattenTaxSummary(d as TaxSummaryData),
-  bank_reconciliation: (d) => flattenBankReconciliation(d as BankReconciliationData),
-  cash_flow: (d) => flattenCashFlow(d as CashFlowData),
-  income_by_customer: (d) => flattenIncomeByCustomer(d as IncomeByCustomerData),
-  expense_by_category: (d) => flattenExpenseByCategory(d as ExpenseByCategoryData),
+  profit_and_loss: (d, t) => flattenProfitAndLoss(d as ProfitAndLossData, t),
+  trial_balance: (d, t) => flattenTrialBalance(d as TrialBalanceData, t),
+  ar_aging: (d, t) => flattenARAging(d as ARAgingData, t),
+  tax_summary: (d, t) => flattenTaxSummary(d as TaxSummaryData, t),
+  bank_reconciliation: (d, t) => flattenBankReconciliation(d as BankReconciliationData, t),
+  cash_flow: (d, t) => flattenCashFlow(d as CashFlowData, t),
+  income_by_customer: (d, t) => flattenIncomeByCustomer(d as IncomeByCustomerData, t),
+  expense_by_category: (d, t) => flattenExpenseByCategory(d as ExpenseByCategoryData, t),
 };
 
 /**
- * Flatten any report type into a uniform tabular structure.
+ * Flatten any report type into a uniform tabular structure, in the language of `t`.
  * Used by ReportTable UI, CSV/Excel/PDF exporters.
  */
 export function flattenReportForExport(
   reportType: ReportType,
-  data: ReportDataMap[ReportType]
+  data: ReportDataMap[ReportType],
+  t: ReportTranslate
 ): FlatTableData {
   const flattener = FLATTENER_REGISTRY[reportType];
-  return flattener(data);
+  return flattener(data, t);
 }

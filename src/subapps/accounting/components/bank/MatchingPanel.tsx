@@ -67,7 +67,7 @@ export function MatchingPanel({
   selectedTransactionId,
   onMatch,
 }: MatchingPanelProps) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
   const [matching, setMatching] = useState(false);

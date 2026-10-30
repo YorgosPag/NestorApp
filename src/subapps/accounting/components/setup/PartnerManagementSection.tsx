@@ -69,7 +69,7 @@ export function PartnerManagementSection({
   onPartnersChange,
   onGemiNumberChange,
 }: PartnerManagementSectionProps) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const roster = useRosterEditing(partners, onPartnersChange, createEmptyPartner, profitShareOf);
 
   return (

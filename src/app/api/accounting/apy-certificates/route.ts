@@ -21,29 +21,20 @@ import 'server-only';
 import { z } from 'zod';
 import { defineRoute, ok, created, badRequest, conflict } from '@/lib/api/define-route';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
-import type {
-  APYCertificateProvider,
-  APYCertificateCustomer,
-  APYCertificateLineItem,
-} from '@/subapps/accounting/types';
+import {
+  apyProviderOf,
+  computeAPYCertificateDraft,
+} from '@/subapps/accounting/services/apy/apy-certificate-draft';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 
+/**
+ * 🔴 Το σώμα λέει **ποιον** και **ποια χρήση** — ΟΧΙ ποσά. Ως 2026-10-30 ο browser έστελνε γραμμές, σύνολα και
+ * στοιχεία παρόχου/πελάτη και ο διακομιστής τα αποθήκευε τυφλά (`as unknown as …`): φορολογικό έγγραφο με αριθμούς
+ * που κανείς στον διακομιστή δεν είχε υπολογίσει. Τώρα τα παράγει το `computeAPYCertificateDraft` (ADR-ACC-020).
+ */
 const CreateAPYSchema = z.object({
   fiscalYear: z.number().int().min(2020).max(2099),
-  customerId: z.string().max(128).nullable(),
-  provider: z.object({
-    name: z.string().max(200),
-    vatNumber: z.string().max(20),
-    taxOffice: z.string().max(200).optional(),
-  }).passthrough(),
-  customer: z.object({
-    name: z.string().max(200),
-    vatNumber: z.string().min(1).max(20),
-    taxOffice: z.string().max(200).optional(),
-  }).passthrough(),
-  lineItems: z.array(z.record(z.unknown())).min(1),
-  totalNetAmount: z.number().min(0).max(999_999_999),
-  totalWithholdingAmount: z.number().min(0).max(999_999_999),
+  customerId: z.string().trim().min(1).max(128),
   notes: z.string().max(5000).nullable().optional(),
 });
 
@@ -83,38 +74,35 @@ export const POST = defineRoute({
   schema: CreateAPYSchema,
   fallbackError: 'Failed to create APY certificate',
   handler: async ({ auth, body }) => {
-    const {
-      fiscalYear,
-      customerId,
-      provider,
-      customer,
-      lineItems,
-      totalNetAmount,
-      totalWithholdingAmount,
-      notes,
-    } = body;
+    const { fiscalYear, customerId, notes } = body;
 
     const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
 
     // ── Duplicate check — one per customerId + fiscalYear ───────────
-    if (customerId) {
-      const existing = await repository.listAPYCertificates(fiscalYear, customerId);
-      if (existing.length > 0) {
-        conflict('Certificate already exists for this customer and fiscal year', {
-          existingCertificateId: existing[0].certificateId,
-        });
-      }
+    const existing = await repository.listAPYCertificates(fiscalYear, customerId);
+    if (existing.length > 0) {
+      conflict('Certificate already exists for this customer and fiscal year', {
+        existingCertificateId: existing[0].certificateId,
+      });
     }
+
+    // ── Compute — ίδια συνάρτηση με την προεπισκόπηση (`…/draft`) ────
+    const [profile, draft] = await Promise.all([
+      repository.getCompanySetup(),
+      computeAPYCertificateDraft(repository, customerId, fiscalYear),
+    ]);
+    if (!profile) badRequest('Company setup is required to issue an APY certificate');
+    if (!draft.customer) badRequest('No invoices with withholding for this customer and fiscal year');
 
     // ── Create ───────────────────────────────────────────────────────
     const result = await repository.createAPYCertificate({
       fiscalYear,
-      customerId: customerId ?? null,
-      provider: provider as unknown as APYCertificateProvider,
-      customer: customer as unknown as APYCertificateCustomer,
-      lineItems: lineItems as unknown as APYCertificateLineItem[],
-      totalNetAmount,
-      totalWithholdingAmount,
+      customerId,
+      provider: apyProviderOf(profile),
+      customer: draft.customer,
+      lineItems: [...draft.lineItems],
+      totalNetAmount: draft.totalNetAmount,
+      totalWithholdingAmount: draft.totalWithholdingAmount,
       isReceived: false,
       receivedAt: null,
       notes: notes ?? null,

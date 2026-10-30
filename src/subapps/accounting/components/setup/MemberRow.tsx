@@ -61,7 +61,7 @@ const DEFAULT_EFKA_CONFIG: MemberEFKAConfig = {
 // ============================================================================
 
 export function MemberRow({ member, index, onChange, onRemove }: MemberRowProps) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const colors = useSemanticColors();
   const { result: vatResult } = useVatUniqueness(member.vatNumber);
 

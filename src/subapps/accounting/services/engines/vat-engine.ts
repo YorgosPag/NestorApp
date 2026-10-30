@@ -21,6 +21,8 @@ import type {
 import type { ExpenseCategory, FiscalQuarter, PeriodRange } from '../../types/common';
 import { getVatDeductibilityRules } from '../config/vat-config';
 import { nowISO } from '@/lib/date-local';
+import { daysInMonth } from '@/lib/date/calendar-arithmetic';
+import { isoCalendarDay } from '@/lib/date/calendar-day';
 import { roundToTwo } from '../../utils/math';
 import { loadLedger } from '../journal/journal-ledger';
 
@@ -264,10 +266,9 @@ export class VATEngine implements IVATEngine {
 function getQuarterPeriod(fiscalYear: number, quarter: FiscalQuarter): PeriodRange {
   const startMonth = (quarter - 1) * 3 + 1;
   const endMonth = quarter * 3;
-  const lastDay = new Date(fiscalYear, endMonth, 0).getDate();
-
+  // Μήνες 1-based· η τελευταία ημέρα από το SSoT (ADR-828 §1), όχι από τοπικό `Date` του διακομιστή.
   return {
-    from: `${fiscalYear}-${String(startMonth).padStart(2, '0')}-01`,
-    to: `${fiscalYear}-${String(endMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`,
+    from: isoCalendarDay(fiscalYear, startMonth, 1),
+    to: isoCalendarDay(fiscalYear, endMonth, daysInMonth(fiscalYear, endMonth)),
   };
 }

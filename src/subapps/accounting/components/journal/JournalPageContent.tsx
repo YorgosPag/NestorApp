@@ -29,6 +29,10 @@ import { AccountingPageHeader } from '../shared/AccountingPageHeader';
 import { PagedListSection } from '../shared/PagedListSection';
 import { buildFiscalYearFilterField, currentFiscalYearValue } from '../shared/accounting-filter-fields';
 import { useJournalEntries } from '../../hooks/useJournalEntries';
+import { useListSummary } from '../../hooks/useListSummary';
+import type { JournalListSummary } from '../../services/list-summaries/journal-list-summary';
+import { summaryStatValue } from '../shared/summary-stat-value';
+import { API_ROUTES } from '@/config/domain-constants';
 import type { EntryType, FiscalQuarter } from '@/subapps/accounting/types';
 import { JournalEntriesTable } from './JournalEntriesTable';
 import { JournalEntryForm } from './JournalEntryForm';
@@ -118,7 +122,7 @@ function quarterOfFilter(value: string | undefined): FiscalQuarter | undefined {
 // ============================================================================
 
 export function JournalPageContent() {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
   const [showForm, setShowForm] = useState(false);
@@ -129,63 +133,61 @@ export function JournalPageContent() {
 
   // Build hook options from filter state. Το τρίμηνο του φίλτρου είναι 'Q1'..'Q4'· η διαδρομή θέλει 1..4 — ως
   // 2026-10-15 στελνόταν 'Q1', γινόταν NaN και το φίλτρο αγνοούνταν σιωπηλά (όλο το έτος ως «Q1»).
-  const journalList = useJournalEntries({
+  const listFilters = {
     fiscalYear: Number(filters.fiscalYear),
     type: filters.type && filters.type !== 'all' ? (filters.type as EntryType) : undefined,
     quarter: quarterOfFilter(filters.quarter),
-  });
-  const { items: entries, loading, refetch } = journalList;
+  };
+  const journalList = useJournalEntries(listFilters);
+  const { refetch: refetchList } = journalList;
+
+  // 🔴 ADR-ACC-010 §2.1.1 — οι κάρτες από τον ΔΙΑΚΟΜΙΣΤΗ, πάνω σε ΟΛΗ την εμβέλεια των ίδιων φίλτρων, με ΚΑΘΑΡΑ ποσά
+  //    (ως 2026-10-30: άθροισμα της φορτωμένης σελίδας, και μικτά — ο ΦΠΑ μετρούσε ως έσοδο/έξοδο).
+  const { data: summary, loading: summaryLoading, refetch: refetchSummary } =
+    useListSummary<JournalListSummary>(API_ROUTES.ACCOUNTING.JOURNAL_SUMMARY, listFilters);
 
   const handleFormSuccess = useCallback(() => {
     setShowForm(false);
-    refetch();
-  }, [refetch]);
+    void Promise.all([refetchList(), refetchSummary()]);
+  }, [refetchList, refetchSummary]);
 
   const handleFormCancel = useCallback(() => {
     setShowForm(false);
   }, []);
 
-  // Compute dashboard stats
   const dashboardStats: DashboardStat[] = useMemo(() => {
-    const totalIncome = entries
-      .filter((e) => e.type === 'income')
-      .reduce((s, e) => s + e.grossAmount, 0);
-    const totalExpenses = entries
-      .filter((e) => e.type === 'expense')
-      .reduce((s, e) => s + e.grossAmount, 0);
-    const netResult = totalIncome - totalExpenses;
-
+    const netResult = summary?.netResult ?? 0;
     return [
       {
         title: t('dashboard.totalIncome'),
-        value: formatAccountingCurrency(totalIncome),
+        value: summaryStatValue(summary, (s) => formatAccountingCurrency(s.totalIncome)),
         icon: ArrowUpRight,
         color: 'green' as const,
-        loading,
+        loading: summaryLoading,
       },
       {
         title: t('dashboard.totalExpenses'),
-        value: formatAccountingCurrency(totalExpenses),
+        value: summaryStatValue(summary, (s) => formatAccountingCurrency(s.totalExpenses)),
         icon: ArrowDownRight,
         color: 'red' as const,
-        loading,
+        loading: summaryLoading,
       },
       {
         title: t('dashboard.netResult'),
-        value: formatAccountingCurrency(netResult),
+        value: summaryStatValue(summary, (s) => formatAccountingCurrency(s.netResult)),
         icon: TrendingUp,
         color: netResult >= 0 ? 'green' as const : 'red' as const,
-        loading,
+        loading: summaryLoading,
       },
       {
         title: t('dashboard.entryCount'),
-        value: entries.length,
+        value: summaryStatValue(summary, (s) => s.entryCount),
         icon: FileText,
         color: 'blue' as const,
-        loading,
+        loading: summaryLoading,
       },
     ];
-  }, [entries, loading, t]);
+  }, [summary, summaryLoading, t]);
 
   return (
     <main className="min-h-screen bg-background">

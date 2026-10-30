@@ -53,7 +53,7 @@ export function ServicePresetCombobox({
   presets,
   placeholder,
 }: ServicePresetComboboxProps) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const colors = useSemanticColors();
   const uomLabel = useUomLabel();
   const [open, setOpen] = useState(false);

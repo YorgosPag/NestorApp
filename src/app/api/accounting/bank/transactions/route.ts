@@ -19,15 +19,10 @@ import 'server-only';
 import { z } from 'zod';
 import { defineRoute, created } from '@/lib/api/define-route';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
-import { MATCH_STATUSES, TRANSACTION_DIRECTIONS } from '@/subapps/accounting/types';
-import type { BankTransactionFilters, BankTransaction } from '@/subapps/accounting/types';
-import {
-  optionalEnumParam,
-  optionalIdParam,
-  readListContext,
-  readPageRequest,
-  respondWithPage,
-} from '../../_shared/list-request-context';
+import { TRANSACTION_DIRECTIONS } from '@/subapps/accounting/types';
+import type { BankTransaction } from '@/subapps/accounting/types';
+import { readListContext, readPageRequest, respondWithPage } from '../../_shared/list-request-context';
+import { bankTransactionFiltersOf } from '../../_shared/list-filters';
 
 // ── Zod Schema (Q5 — SAP BAPI / Stripe pattern) ──────────────────────────
 
@@ -53,11 +48,7 @@ export const GET = defineRoute({
   handler: async ({ req, auth }) => {
     const { repository, searchParams } = readListContext(req, auth);
 
-    const filters: BankTransactionFilters = {
-      accountId: optionalIdParam(searchParams, 'accountId'),
-      direction: optionalEnumParam(searchParams, 'direction', TRANSACTION_DIRECTIONS),
-      matchStatus: optionalEnumParam(searchParams, 'matchStatus', MATCH_STATUSES),
-    };
+    const filters = bankTransactionFiltersOf(searchParams);
 
     return respondWithPage(() => repository.listBankTransactions(filters, readPageRequest(searchParams)));
   },

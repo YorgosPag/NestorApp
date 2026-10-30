@@ -29,7 +29,8 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import type { ReportType, ChangeMetric } from '@/subapps/accounting/types';
-import { formatAccountingCurrency } from '../../utils/format';
+import type { ReportValueFormat } from '../../services/export/report-table-adapter';
+import { formatReportNumber } from '../../services/export/report-cell-format';
 
 // ============================================================================
 // CARD CONFIG
@@ -59,7 +60,7 @@ interface FinancialReportCardProps {
   type: ReportType;
   keyMetric: number;
   change: ChangeMetric | null;
-  format: 'currency' | 'percentage' | 'number';
+  format: ReportValueFormat;
   loading?: boolean;
   onClick: () => void;
 }
@@ -67,12 +68,6 @@ interface FinancialReportCardProps {
 // ============================================================================
 // HELPERS
 // ============================================================================
-
-function formatMetricValue(value: number, format: 'currency' | 'percentage' | 'number'): string {
-  if (format === 'currency') return formatAccountingCurrency(value);
-  if (format === 'percentage') return `${value.toFixed(1)}%`;
-  return value.toLocaleString('el-GR');
-}
 
 function TrendIndicator({ change }: { change: ChangeMetric | null }) {
   if (!change || change.percentage === null) {
@@ -104,7 +99,7 @@ export function FinancialReportCard({
   loading,
   onClick,
 }: FinancialReportCardProps) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const config = REPORT_CARD_CONFIG[type];
   const Icon = config.icon;
 
@@ -143,7 +138,7 @@ export function FinancialReportCard({
         </HeaderBar>
       </CardHeader>
       <CardContent>
-        <p className="text-2xl font-bold">{formatMetricValue(keyMetric, format)}</p>
+        <p className="text-2xl font-bold">{formatReportNumber(keyMetric, format, 'screen')}</p>
         <footer className="mt-1">
           <TrendIndicator change={change} />
         </footer>

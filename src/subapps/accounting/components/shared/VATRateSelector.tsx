@@ -23,7 +23,7 @@ const VAT_RATES = [
 ] as const;
 
 export function VATRateSelector({ value, onValueChange, disabled }: VATRateSelectorProps) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
 
   return (
     <Select

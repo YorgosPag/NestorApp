@@ -59,7 +59,7 @@ interface QuarterCardHeaderProps {
 }
 
 function QuarterCardHeader({ quarterNumber, badge }: QuarterCardHeaderProps) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
   return (
@@ -101,7 +101,7 @@ interface QuarterCardProps {
 }
 
 function QuarterCard({ quarter }: QuarterCardProps) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
   return (
@@ -145,7 +145,7 @@ interface EmptyQuarterCardProps {
 }
 
 function EmptyQuarterCard({ quarterNumber }: EmptyQuarterCardProps) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
 
   return (
     <Card className="opacity-60">

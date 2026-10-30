@@ -26,6 +26,9 @@ import { CandidatesPanel } from './CandidatesPanel';
 import { BatchActionsToolbar } from './BatchActionsToolbar';
 import { MatchingSettingsDialog } from './MatchingSettingsDialog';
 import { useBankTransactions } from '../../hooks/useBankTransactions';
+import { useListSummary } from '../../hooks/useListSummary';
+import type { BankTransactionListSummary } from '../../services/list-summaries/bank-transaction-list-summary';
+import { API_ROUTES } from '@/config/domain-constants';
 import { useMatchCandidates } from '../../hooks/useMatchCandidates';
 import { useMatchActions } from '../../hooks/useMatchActions';
 import { useMatchingConfig } from '../../hooks/useMatchingConfig';
@@ -45,7 +48,19 @@ export function ReconciliationPageContent() {
   // Το φίλτρο κατάστασης πάει στον ΔΙΑΚΟΜΙΣΤΗ (Xero «Reconcile»): «χωρίς αντιστοίχιση» = ΟΛΕΣ οι ανοιχτές κινήσεις,
   // σε σελίδες — όχι οι ανοιχτές ανάμεσα στις 50 νεότερες (ADR-ACC-010 §2.1.1 Φάση 3β).
   const txnList = useBankTransactions({ matchStatus: statusFilter === 'all' ? undefined : statusFilter });
-  const { items: transactions, loading: txnsLoading, refetch: refetchTxns } = txnList;
+  const { items: transactions, loading: txnsLoading, refetch: refetchTxnList } = txnList;
+
+  // 🔴 ADR-ACC-010 §2.1.1 — ο μετρητής «χωρίς αντιστοίχιση» από τον ΔΙΑΚΟΜΙΣΤΗ: ΟΛΕΣ οι ανοιχτές κινήσεις, ανεξάρτητα από
+  //    το φίλτρο της οθόνης και τη σελίδα (ως 2026-10-30: οι ανοιχτές ανάμεσα στις φορτωμένες — 0 με φίλτρο «αντιστοιχισμένες»).
+  const { data: openSummary, refetch: refetchOpenCount } = useListSummary<BankTransactionListSummary>(
+    API_ROUTES.ACCOUNTING.BANK.TRANSACTIONS_SUMMARY,
+    { matchStatus: 'unmatched' },
+  );
+
+  // Κάθε αντιστοίχιση/εξαίρεση αλλάζει ΚΑΙ τον μετρητή.
+  const refetchTxns = useCallback(async () => {
+    await Promise.all([refetchTxnList(), refetchOpenCount()]);
+  }, [refetchTxnList, refetchOpenCount]);
   const { candidates, groups, loading: candidatesLoading } = useMatchCandidates(selectedTxnId);
   const { matchSingle, matchGroup, matchBatch, excludeTransaction, matching, batchProgress } = useMatchActions();
   const { config, saving, saveConfig } = useMatchingConfig();
@@ -173,6 +188,7 @@ export function ReconciliationPageContent() {
               checkedIds={checkedIds}
               statusFilter={statusFilter}
               loading={txnsLoading}
+              unmatchedCount={openSummary?.transactionCount ?? null}
               onSelect={handleSelect}
               onCheckToggle={handleCheckToggle}
               onCheckAll={handleCheckAll}

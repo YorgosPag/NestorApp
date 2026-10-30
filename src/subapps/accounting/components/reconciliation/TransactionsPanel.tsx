@@ -25,6 +25,7 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import type { BankTransaction, MatchStatus } from '@/subapps/accounting/types';
 import { formatAccountingCurrency } from '../../utils/format';
+import { SUMMARY_UNAVAILABLE } from '../shared/summary-stat-value';
 
 // ============================================================================
 // TYPES
@@ -38,6 +39,11 @@ interface TransactionsPanelProps {
   checkedIds: Set<string>;
   statusFilter: StatusFilter;
   loading: boolean;
+  /**
+   * ΟΛΕΣ οι ανοιχτές κινήσεις, από τη σύνοψη του διακομιστή — `null` = άγνωστο (δείχνεται «—»). ⚠️ ΟΧΙ μέτρηση των
+   * `transactions`: αυτές είναι η φορτωμένη σελίδα **του φίλτρου** (ADR-ACC-010 §2.1.1 κάρτες σύνοψης).
+   */
+  unmatchedCount: number | null;
   onSelect: (id: string) => void;
   onCheckToggle: (id: string) => void;
   onCheckAll: () => void;
@@ -70,6 +76,7 @@ export function TransactionsPanel({
   checkedIds,
   statusFilter,
   loading,
+  unmatchedCount,
   onSelect,
   onCheckToggle,
   onCheckAll,
@@ -77,13 +84,12 @@ export function TransactionsPanel({
   loadError,
   footer,
 }: TransactionsPanelProps) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
 
   const filtered = statusFilter === 'all'
     ? transactions
     : transactions.filter((txn) => txn.matchStatus === statusFilter);
 
-  const unmatchedCount = transactions.filter((t) => t.matchStatus === 'unmatched').length;
   const allChecked = filtered.length > 0 && filtered.every((t) => checkedIds.has(t.transactionId));
 
   return (
@@ -94,7 +100,7 @@ export function TransactionsPanel({
           <h3 className="text-sm font-semibold">
             {t('reconciliation.transactions')}
           </h3>
-          <Badge variant="outline">{unmatchedCount} {t('reconciliation.unmatched')}</Badge>
+          <Badge variant="outline">{unmatchedCount ?? SUMMARY_UNAVAILABLE} {t('reconciliation.unmatched')}</Badge>
         </div>
         <Select
           value={statusFilter}

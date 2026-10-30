@@ -32,7 +32,7 @@ export interface GemiNumberFieldProps {
 }
 
 export function GemiNumberField({ id, value, required, note, error, onChange }: GemiNumberFieldProps) {
-  const { t } = useTranslation(['accounting', 'accounting-setup']);
+  const { t } = useTranslation('accounting');
   const colors = useSemanticColors();
   const noteId = `${id}-note`;
   const errorId = `${id}-error`;

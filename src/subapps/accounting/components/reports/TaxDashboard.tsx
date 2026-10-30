@@ -47,7 +47,7 @@ interface TaxDashboardData {
 // ============================================================================
 
 export function TaxDashboard({ fiscalYear }: TaxDashboardProps) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const { user } = useAuth();
   const colors = useSemanticColors();
 

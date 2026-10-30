@@ -9,7 +9,7 @@
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, no inline styles, semantic HTML
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useRouter } from '@/lib/workspace/navigation';
 import { useSearchParams } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
@@ -25,6 +25,10 @@ import type { DashboardStat } from '@/components/property-management/dashboard/U
 import type { FilterPanelConfig, GenericFilterState } from '@/components/core/AdvancedFilters/types';
 import type { InvoicePaymentStatus, InvoiceType } from '@/subapps/accounting/types';
 import { useInvoices } from '../../hooks/useInvoices';
+import { useListSummary } from '../../hooks/useListSummary';
+import { summaryStatValue } from '../shared/summary-stat-value';
+import type { InvoiceListSummary } from '../../services/list-summaries/invoice-list-summary';
+import { API_ROUTES } from '@/config/domain-constants';
 import { formatAccountingCurrency } from '../../utils/format';
 import { AccountingPageHeader } from '../shared/AccountingPageHeader';
 import { PagedListSection } from '../shared/PagedListSection';
@@ -110,7 +114,7 @@ function buildFilterConfig(t: (key: string) => string): FilterPanelConfig {
 // ============================================================================
 
 export function InvoicesPageContent() {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const colors = useSemanticColors();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -123,57 +127,55 @@ export function InvoicesPageContent() {
   const filterConfig = useMemo(() => buildFilterConfig(t), [t]);
   const { filters, filterPanel } = useAccountingFilterPanel<InvoiceFilterState>(DEFAULT_FILTERS, filterConfig);
 
-  const invoiceList = useInvoices({
+  const listFilters = {
     fiscalYear: Number(filters.fiscalYear),
     type: filters.type !== 'all' ? (filters.type as InvoiceType) : undefined,
     paymentStatus: filters.paymentStatus !== 'all' ? (filters.paymentStatus as InvoicePaymentStatus) : undefined,
-  });
-  const { items: invoices, loading, refetch } = invoiceList;
+  };
+  const invoiceList = useInvoices(listFilters);
+  const { refetch: refetchList } = invoiceList;
 
-  // Compute dashboard stats from loaded invoices
+  // 🔴 ADR-ACC-010 §2.1.1 — οι κάρτες από τον ΔΙΑΚΟΜΙΣΤΗ, πάνω σε ΟΛΗ την εμβέλεια των ίδιων φίλτρων. Ως 2026-10-30
+  //    άθροιζαν τις φορτωμένες γραμμές ⇒ με 2+ σελίδες το «Ανεξόφλητο υπόλοιπο» ήταν μόνο της πρώτης σελίδας.
+  const { data: summary, loading: summaryLoading, refetch: refetchSummary } =
+    useListSummary<InvoiceListSummary>(API_ROUTES.ACCOUNTING.INVOICES.SUMMARY, listFilters);
+
+  const refetch = useCallback(async () => {
+    await Promise.all([refetchList(), refetchSummary()]);
+  }, [refetchList, refetchSummary]);
+
   const dashboardStats: DashboardStat[] = useMemo(() => {
-    const totalRevenue = invoices.reduce((s, inv) => s + inv.totalGrossAmount, 0);
-    const unpaidBalance = invoices
-      .filter((inv) => inv.paymentStatus !== 'paid')
-      .reduce((s, inv) => s + inv.balanceDue, 0);
-    const thisMonthCount = invoices.filter((inv) => {
-      const d = new Date(inv.issueDate);
-      const now = new Date();
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    }).length;
-    const pendingMydata = invoices.filter((inv) => inv.mydata?.status === 'draft').length;
-
     return [
       {
         title: t('dashboard.totalInvoices'),
-        value: invoices.length,
+        value: summaryStatValue(summary, (s) => s.invoiceCount),
         icon: Receipt,
         color: 'blue' as const,
-        loading,
+        loading: summaryLoading,
       },
       {
         title: t('dashboard.unpaidBalance'),
-        value: formatAccountingCurrency(unpaidBalance),
+        value: summaryStatValue(summary, (s) => formatAccountingCurrency(s.unpaidBalance)),
         icon: CreditCard,
         color: 'red' as const,
-        loading,
+        loading: summaryLoading,
       },
       {
         title: t('dashboard.thisMonth'),
-        value: thisMonthCount,
+        value: summaryStatValue(summary, (s) => s.issuedThisMonth),
         icon: Clock,
         color: 'green' as const,
-        loading,
+        loading: summaryLoading,
       },
       {
         title: t('dashboard.pendingMydata'),
-        value: pendingMydata,
+        value: summaryStatValue(summary, (s) => s.pendingMydata),
         icon: Send,
         color: 'orange' as const,
-        loading,
+        loading: summaryLoading,
       },
     ];
-  }, [invoices, loading, t]);
+  }, [summary, summaryLoading, t]);
 
   // ── Detail View ──────────────────────────────────────────────────────────
   if (viewInvoiceId) {

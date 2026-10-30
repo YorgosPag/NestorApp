@@ -29,16 +29,10 @@ import {
 import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { assertPostingAllowed } from '../_shared/fiscal-period-errors';
 import { POLICY_ERROR_CODES } from '@/lib/policy/policy-error-codes';
-import { INVOICE_PAYMENT_STATUSES, INVOICE_TYPES } from '@/subapps/accounting/types';
-import type { InvoiceFilters, CreateInvoiceInput, CreditCheckResult } from '@/subapps/accounting/types';
-import {
-  optionalEnumParam,
-  optionalFiscalYearParam,
-  optionalIdParam,
-  readListContext,
-  readPageRequest,
-  respondWithPage,
-} from '../_shared/list-request-context';
+import { INVOICE_TYPES } from '@/subapps/accounting/types';
+import type { CreateInvoiceInput, CreditCheckResult } from '@/subapps/accounting/types';
+import { readListContext, readPageRequest, respondWithPage } from '../_shared/list-request-context';
+import { invoiceFiltersOf } from '../_shared/list-filters';
 
 const CreateInvoiceSchema = z.object({
   series: z.string().min(1).max(20),
@@ -61,12 +55,7 @@ export const GET = defineRoute({
   handler: async ({ req, auth }) => {
     const { repository, searchParams } = readListContext(req, auth);
 
-    const filters: InvoiceFilters = {
-      type: optionalEnumParam(searchParams, 'type', INVOICE_TYPES),
-      paymentStatus: optionalEnumParam(searchParams, 'paymentStatus', INVOICE_PAYMENT_STATUSES),
-      fiscalYear: optionalFiscalYearParam(searchParams),
-      propertyId: optionalIdParam(searchParams, 'propertyId'),
-    };
+    const filters = invoiceFiltersOf(searchParams);
 
     return respondWithPage(() => repository.listInvoices(filters, readPageRequest(searchParams)));
   },

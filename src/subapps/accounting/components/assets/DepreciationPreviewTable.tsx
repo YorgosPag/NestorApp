@@ -27,7 +27,7 @@ interface DepreciationPreviewTableProps {
 }
 
 export function DepreciationPreviewTable({ preview }: DepreciationPreviewTableProps) {
-  const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const colors = useSemanticColors();
 
   return (

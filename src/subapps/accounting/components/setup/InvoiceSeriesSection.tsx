@@ -55,7 +55,7 @@ function createEmptySeries(): InvoiceSeries {
 // ============================================================================
 
 export function InvoiceSeriesSection({ data, onChange }: InvoiceSeriesSectionProps) {
-  const { t } = useTranslation(['accounting', 'accounting-tax-offices', 'accounting-setup']);
+  const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const colors = useSemanticColors();
   const [showNewForm, setShowNewForm] = useState(false);
   const [newSeries, setNewSeries] = useState<InvoiceSeries>(createEmptySeries);

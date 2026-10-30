@@ -20,6 +20,7 @@ import type {
   ChangeMetric,
 } from '@/subapps/accounting/types';
 import { extractKeyMetric } from '../services/export/report-table-adapter';
+import type { ReportValueFormat } from '../services/export/report-table-adapter';
 
 // ============================================================================
 // CONSTANTS
@@ -45,7 +46,7 @@ export interface ReportSummary {
   keyMetric: number;
   metricLabel: string;
   change: ChangeMetric | null;
-  format: 'currency' | 'percentage' | 'number';
+  format: ReportValueFormat;
 }
 
 interface ReportError {
