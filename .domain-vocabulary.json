@@ -331,6 +331,52 @@
       "threshold": 3,
       "reason": "Ο τύπος λογαριασμού social επαφής (ADR-327 §8.5.4) — η τελευταία της κλάσης phone/email/website. Δηλωνόταν στον τύπο SocialMediaInfo, στις λίστες του CommunicationConfigs και στις ετικέτες χωριστά, και ο mapper της φόρμας έκανε τυφλό as με προεπιλογή personal, που η φόρμα εταιρείας/υπηρεσίας δεν προσφέρει.",
       "exemptions": []
+    },
+    {
+      "id": "project-address-type",
+      "root": "src/types/project/addresses.ts",
+      "rootSymbol": "PROJECT_ADDRESS_TYPES",
+      "typeName": "ProjectAddressType",
+      "values": [
+        "site",
+        "entrance",
+        "delivery",
+        "legal",
+        "postal",
+        "billing",
+        "correspondence",
+        "frontage",
+        "other"
+      ],
+      "threshold": 5,
+      "reason": "Ο τύπος διεύθυνσης έργου/κτιρίου (ADR-195 (ζ) 🏷️′). Ο τύπος ήταν χειρόγραφο union δίπλα στον πίνακα, και οι λέξεις του ζούσαν σε τέσσερα σημεία: addresses:types, building-address:address.types, projects-data:address.types (χωρίς frontage ⇒ ωμό κλειδί στις οθόνες κτιρίου) και ελληνικό πίνακα στο formatAddressType με όρισμα locale που αγνοούνταν. Τώρα ο τύπος παράγεται από τη ρίζα και οι λέξεις ζουν μόνο στο addresses:types.",
+      "exemptions": []
+    },
+    {
+      "id": "block-side-direction",
+      "root": "src/types/project/addresses.ts",
+      "rootSymbol": "BLOCK_SIDE_DIRECTIONS",
+      "typeName": "BlockSideDirection",
+      "values": [
+        "north",
+        "south",
+        "east",
+        "west",
+        "northeast",
+        "northwest",
+        "southeast",
+        "southwest",
+        "corner",
+        "internal"
+      ],
+      "threshold": 5,
+      "reason": "Η πλευρά οικοδομικού τετραγώνου μιας διεύθυνσης (ADR-195 (ζ) 🏷️′). Ίδια κλάση με το project-address-type: χειρόγραφο union, λέξεις σε τρία namespaces και ελληνικός πίνακας στο formatBlockSide. Τώρα ο τύπος παράγεται από τη ρίζα και οι λέξεις ζουν μόνο στο addresses:blockSides.",
+      "exemptions": [
+        {
+          "file": "src/constants/property-features-enterprise.ts",
+          "reason": "Το ORIENTATION_LABELS είναι ΑΛΛΟ λεξιλόγιο, ο προσανατολισμός ακινήτου (OrientationType). Μοιράζεται τις 8 τιμές της πυξίδας αλλά όχι τα corner/internal, και έχει δική του ρίζα (Orientation) και δικά του κλειδιά (properties-enums:units.orientation). Αν τα συγχωνεύαμε, ένα διαμέρισμα θα μπορούσε να έχει προσανατολισμό «γωνιακό»."
+        }
+      ]
     }
   ]
 }

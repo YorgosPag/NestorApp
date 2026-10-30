@@ -475,10 +475,6 @@
       "independentAuthority": "Independent Authority",
       "decentralizedAdmin": "Decentralized Administration"
     },
-    "activityTypes": {
-      "main": "Main",
-      "secondary": "Secondary"
-    },
     "addressTypes": {
       "headquarters": "Headquarters",
       "branch": "Branch"

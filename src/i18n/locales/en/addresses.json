@@ -101,7 +101,8 @@
     "validation": {
       "streetRequired": "Street is required",
       "cityRequired": "City is required",
-      "postalCodeRequired": "Postal code is required"
+      "postalCodeRequired": "Postal code is required",
+      "postalCodeFormat": "Postal code must be 5 digits"
     }
   },
   "map": {

@@ -32,6 +32,7 @@ import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 import { deepDiff, type FieldChange } from './deep-diff';
 import { resolveAction } from './resolve-action';
+import { CONTACT_AUDIT_SCHEMA } from './contact-audit-schema';
 import { COLLECTIONS } from '../config/firestore-collections';
 import { generateEntityAuditId } from '../config/enterprise-id';
 
@@ -140,7 +141,8 @@ export const auditContactWrite = functions
 
     if (!before && !after) return null;
 
-    const changes = deepDiff(before ?? {}, after ?? {});
+    // ADR-195 (η): declared item identity + derived mirrors (one change = one row).
+    const changes = deepDiff(before ?? {}, after ?? {}, CONTACT_AUDIT_SCHEMA);
     const action = resolveAction(before, after);
 
     // Pure-update writes that produce no meaningful diff are noise (e.g. a

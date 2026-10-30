@@ -28,10 +28,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useFirestoreProjects } from '@/hooks/useFirestoreProjects';
-import {
-  formatAddressLine,
-  formatAddressType,
-} from '@/types/project/address-helpers';
+import { formatAddressLine } from '@/types/project/address-helpers';
 import type {
   ProjectAddress,
   ProjectAddressType,
@@ -43,6 +40,7 @@ import {
   AddressCoordsBadge,
   computeFreshness,
 } from '@/components/shared/addresses/editor';
+import { useAddressVocabularyWords } from '@/components/shared/addresses/useAddressVocabularyWords';
 
 interface PODeliveryAddressFieldProps {
   projectId: string;
@@ -59,6 +57,7 @@ export function PODeliveryAddressField({
 }: PODeliveryAddressFieldProps) {
   const { t: tProc } = useTranslation('procurement');
   const { t: tAddr } = useTranslation('addresses');
+  const words = useAddressVocabularyWords();
   const idBase = useId(); // `${idBase}-<πεδίο>`: η <Label> ονομάζει το πεδίο (ADR-598 G11)
   const { projects } = useFirestoreProjects();
   const [chosenAddress, setChosenAddress] = useState<ProjectAddress | null>(null);
@@ -139,7 +138,7 @@ export function PODeliveryAddressField({
             <SelectContent>
               {availableTypes.map((type) => (
                 <SelectItem key={type} value={type}>
-                  {formatAddressType(type)}
+                  {words.addressType(type)}
                 </SelectItem>
               ))}
               <SelectItem value={NO_TYPE_VALUE}>

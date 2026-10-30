@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useAddressVocabularyWords } from '@/components/shared/addresses/useAddressVocabularyWords';
 import { formatAddressLine, getBuildingAddressCardId } from './building-addresses-card-helpers';
 
 interface BuildingAddressesProjectSelectionProps {
@@ -33,6 +34,7 @@ export function BuildingAddressesProjectSelection({
   const iconSizes = useIconSizes();
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const colors = useSemanticColors();
+  const words = useAddressVocabularyWords();
 
   if (projectAddresses.length === 0) {
     return (
@@ -105,8 +107,8 @@ export function BuildingAddressesProjectSelection({
                 </div>
 
                 <div className={cn('flex flex-wrap gap-2 text-xs', colors.text.muted)}>
-                  {projectAddress.type && <span>{t(`address.types.${projectAddress.type}`)}</span>}
-                  {projectAddress.blockSide && <span>{t(`address.blockSides.${projectAddress.blockSide}`)}</span>}
+                  {projectAddress.type && <span>{words.addressType(projectAddress.type)}</span>}
+                  {projectAddress.blockSide && <span>{words.blockSide(projectAddress.blockSide)}</span>}
                   {projectAddress.label && <span>{projectAddress.label}</span>}
                 </div>
               </div>

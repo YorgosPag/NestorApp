@@ -27,6 +27,7 @@
 // μητρώο που ήδη κρατά η σελίδα audit. Και τα δύο είναι type-only ⇒ σβήνονται στο
 // build, καμία νέα εξάρτηση χρόνου εκτέλεσης για τον Admin SDK.
 import type { AuditCatalogRef } from '@/config/audit-value-catalogs';
+import type { CollectionIdentity } from '@/lib/audit/collection-item-identity';
 import type { QuantitySpec } from '@/constants/quantity-specs';
 import type { AuditFieldChange, AuditSubChange } from '@/types/audit-trail';
 
@@ -137,19 +138,9 @@ export type TrackedFieldDef =
        */
       readonly value?: AuditScalarProjector;
     })
-  | (TrackedFieldDescriptor & {
+  // ADR-195 (η) — `keyBy` / `labelFields` / `labelSeparator`: ο ΕΝΑΣ ορισμός, φορητός ώστε να τον διαβάζει και ο CDC.
+  | (TrackedFieldDescriptor & CollectionIdentity & {
       readonly kind: 'collection';
-      /**
-       * Stable identity for collection items.
-       * - `'value'` — the element itself is the key (primitive arrays).
-       * - `string` — read this property from each item (e.g. `'id'`).
-       * - `readonly string[]` — composite key, joined by `|`.
-       */
-      readonly keyBy: 'value' | string | readonly string[];
-      /** Item fields concatenated to form the human display label. */
-      readonly labelFields?: readonly string[];
-      /** Separator between `labelFields` (default `' — '`). */
-      readonly labelSeparator?: string;
       /** Sub-fields tracked for `op === 'modified'` entries. */
       readonly trackSubFields?: readonly string[];
       /**

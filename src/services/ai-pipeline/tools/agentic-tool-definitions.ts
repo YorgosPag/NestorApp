@@ -25,6 +25,7 @@
  */
 
 import { UOM_CODES } from '@/lib/uom/uom-registry';
+import { KAD_ACTIVITY_TYPES } from '@/types/ContactFormTypes';
 
 /** Οι κωδικοί του ΕΝΟΣ μητρώου μονάδων (ADR-923 «3γ» 4δ) — όχι χειρόγραφη λίστα. */
 const UOM_CODE_LIST = UOM_CODES.join(', ');
@@ -996,7 +997,7 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
           },
           activityType: {
             type: ['string', 'null'],
-            enum: ['primary', 'secondary', null],
+            enum: [...KAD_ACTIVITY_TYPES, null],
             description: 'primary (κύρια) or secondary (δευτερεύουσα). Default: secondary.',
           },
         },

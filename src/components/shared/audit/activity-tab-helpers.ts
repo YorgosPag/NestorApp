@@ -20,6 +20,7 @@ import type { QuantitySpec } from "@/constants/quantity-specs";
 import type { AuditCatalogRef } from "@/config/audit-value-catalogs";
 import { AUDIT_AREA_FIELDS, type AuditValueWord } from "@/config/audit-value-vocabularies";
 import { formatQuantityValue } from "./audit-quantity-format";
+import { storageObjectFromUrl } from "@/lib/storage/storage-object-url";
 
 export interface Stats {
   total: number;
@@ -153,17 +154,39 @@ function formatKnownEntity(obj: Record<string, unknown>, format: AuditValueForma
   return null;
 }
 
+/** Το όνομα αντικειμένου που δείχνει η τιμή — **οποιοδήποτε** από τα σχήματα URL αποθήκευσης· αλλιώς `null`. */
+function storageObjectNameOf(value: string): string | null {
+  const ref = storageObjectFromUrl(value);
+  return ref.outcome === "object" ? ref.storagePath : null;
+}
+
 /**
- * Extract a short identifier from a Firebase Storage URL for audit display.
- * e.g. "...file_f76a661d-8667-4199-8d8a-2a8cc7e9c37f.png?..." → "Φωτογραφία (f76a661d.png)"
+ * Είναι η τιμή URL αντικειμένου αποθήκευσης; — ADR-195 (η).
+ *
+ * 🔴 Τρία σημεία ρωτούσαν `includes("firebasestorage.googleapis.com")`, δηλαδή **ένα** από τα σχήματα URL του έργου.
+ * Το λογότυπο της MACON είναι same-origin (`/api/storage/file/…`, το σχήμα που γράφουν πλέον οι μεταφορτώσεις) και
+ * έβγαινε στο Ιστορικό ως ωμή διαδρομή. Τα σχήματα τα ξέρει **ένας** αναγνώστης, το `storageObjectFromUrl`.
+ */
+export function isStorageObjectUrl(value: string): boolean {
+  return storageObjectNameOf(value) !== null;
+}
+
+const UUID_IN_NAME = /([0-9a-f]{8})-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+const EXTENSION = /(\.\w{2,5})$/;
+
+/**
+ * Σύντομο αναγνωριστικό αρχείου για το Ιστορικό: τα 8 πρώτα ψηφία του UUID του **ονόματος αρχείου** + κατάληξη.
+ * `…/files/vlogo_qt_0b2eb5a6-1196-….png` → «Φωτογραφία (0b2eb5a6.png)» — ίδιο για κάθε σχήμα URL.
  *
  * @param photo - η λέξη «Φωτογραφία» στη γλώσσα του θεατή (`AUDIT_VALUE_WORDS.photo`).
  */
 export function formatStorageUrl(url: string, photo: string): string {
-  const fileMatch = url.match(/file_([a-f0-9]{8})[^.]*(\.\w+)/);
-  if (fileMatch) return `${photo} (${fileMatch[1]}${fileMatch[2]})`;
-  const extMatch = url.match(/(\.\w{3,4})\?/);
-  return extMatch ? `${photo} (${extMatch[1]})` : photo;
+  const objectName = storageObjectNameOf(url) ?? url.split("?")[0];
+  const fileName = objectName.slice(objectName.lastIndexOf("/") + 1);
+  const ext = fileName.match(EXTENSION)?.[1] ?? "";
+  const uuid = fileName.match(UUID_IN_NAME)?.[1];
+  if (uuid) return `${photo} (${uuid}${ext})`;
+  return ext ? `${photo} (${ext})` : photo;
 }
 
 // ============================================================================
@@ -243,7 +266,7 @@ function formatParsedArray(parsed: unknown[], format: AuditValueFormat): string 
   if (parsed.length === 0) return "—";
   const first = parsed[0];
   // Array of URLs (photos/media) → "Φωτογραφία (id1) | Φωτογραφία (id2)"
-  if (typeof first === "string" && first.includes("firebasestorage.googleapis.com")) {
+  if (typeof first === "string" && isStorageObjectUrl(first)) {
     const photo = format.word("photo");
     return (parsed as string[]).map((url) => formatStorageUrl(url, photo)).join(" | ");
   }
@@ -295,8 +318,8 @@ export function formatDisplayValue(
     if (formatted !== undefined) return formatted;
   }
 
-  // Firebase Storage URLs → human-readable label with short ID for diffing
-  if (typeof value === "string" && value.includes("firebasestorage.googleapis.com")) {
+  // Storage object URLs (every scheme) → human-readable label with short ID for diffing
+  if (typeof value === "string" && isStorageObjectUrl(value)) {
     return formatStorageUrl(value, format.word("photo"));
   }
 

@@ -4,7 +4,9 @@
   "outputRoot": "functions/src/generated",
   "consumerRoot": "functions/src",
   "modules": [
+    "config/audit-collection-identity.ts",
     "config/search-index-core.ts",
+    "lib/audit/collection-item-identity.ts",
     "lib/conveyance/dependency-change-event.ts",
     "lib/dxf/decode-processed-json.ts",
     "lib/files/file-companion-objects.ts",
@@ -18,6 +20,8 @@
     "lib/images/stored-image-dimensions.ts",
     "lib/search/search-index-version.ts",
     "lib/search/search.ts",
+    "lib/sort-keys-deep.ts",
+    "lib/type-guards.ts",
     "lib/webhooks/internal-webhook-delivery.ts",
     "lib/webhooks/internal-webhook-signature.ts",
     "services/enterprise-id-deterministic.ts",

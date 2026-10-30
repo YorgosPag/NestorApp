@@ -34,6 +34,7 @@
  */
 
 import { getTrackedFieldsForEntityAuditType } from '@/config/audit-tracked-fields';
+import { getRetiredFieldDef } from '@/config/audit-retired-fields';
 import type { TrackedFieldDef } from '@/lib/audit/tracked-field-def';
 
 /**
@@ -48,7 +49,8 @@ export function resolveTrackedFieldDef(
   entityType: string | null,
   field: string,
 ): TrackedFieldDef | undefined {
-  return getTrackedFieldsForEntityAuditType(entityType)?.[field];
+  // Ενεργό μητρώο πρώτα· αλλιώς ο περιγραφέας ΑΝΑΓΝΩΣΗΣ ενός αποσυρμένου πεδίου (ADR-195 (κ)) — ποτέ ο γραφέας.
+  return getTrackedFieldsForEntityAuditType(entityType)?.[field] ?? getRetiredFieldDef(entityType, field);
 }
 
 /** Η ετικέτα ενός πεδίου, **μαζί με το αν είναι τρέχουσα αλήθεια ή στιγμιότυπο**. */

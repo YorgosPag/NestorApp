@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useAddressVocabularyWords } from '@/components/shared/addresses/useAddressVocabularyWords';
 import { getBuildingAddressCardId } from './building-addresses-card-helpers';
 import { AddressPositionDriftNotice } from '@/components/shared/addresses/AddressPositionDriftNotice';
 import { AddressPositionPendingNotice } from '@/components/shared/addresses/AddressPositionPendingNotice';
@@ -42,6 +43,7 @@ export function BuildingAddressesManualList({
   const iconSizes = useIconSizes();
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const colors = useSemanticColors();
+  const words = useAddressVocabularyWords();
 
   return (
     <div className="space-y-2">
@@ -106,8 +108,8 @@ export function BuildingAddressesManualList({
           </div>
           <footer className={cn('mt-2 pt-2 border-t text-xs', colors.text.muted)}>
             <span>ID: {address.id.slice(0, 8)}...</span>
-            {address.blockSide && <span className="ml-2">{t(`address.blockSides.${address.blockSide}`)}</span>}
-            {address.type && <span className="ml-2">{t(`address.types.${address.type}`)}</span>}
+            {address.blockSide && <span className="ml-2">{words.blockSide(address.blockSide)}</span>}
+            {address.type && <span className="ml-2">{words.addressType(address.type)}</span>}
           </footer>
         </article>
       ))}

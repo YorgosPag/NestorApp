@@ -19,8 +19,6 @@
 import type {
   ProjectAddress,
   BuildingAddressReference,
-  BlockSideDirection,
-  ProjectAddressType
 } from './addresses';
 import {
   DEFAULT_STORED_COUNTRY_CODE,
@@ -159,62 +157,11 @@ export function formatFullAddressLine(address: ProjectAddress): string {
   return parts.join(', ');
 }
 
-/**
- * Format block side for display (Greek)
- *
- * @param side - Block side direction
- * @param locale - Language (currently only 'el' supported)
- * @returns Formatted string
- */
-export function formatBlockSide(
-  side: BlockSideDirection | undefined,
-  locale: string = 'el'
-): string {
-  if (!side) {
-    return '';
-  }
-
-  const labels: Record<BlockSideDirection, string> = {
-    north: 'Βόρεια',
-    south: 'Νότια',
-    east: 'Ανατολική',
-    west: 'Δυτική',
-    northeast: 'Βορειοανατολική',
-    northwest: 'Βορειοδυτική',
-    southeast: 'Νοτιοανατολική',
-    southwest: 'Νοτιοδυτική',
-    corner: 'Γωνία',
-    internal: 'Εσωτερική'
-  };
-
-  return labels[side] || '';
-}
-
-/**
- * Format address type for display (Greek)
- *
- * @param type - Address type
- * @param locale - Language (currently only 'el' supported)
- * @returns Formatted string
- */
-export function formatAddressType(
-  type: ProjectAddressType,
-  locale: string = 'el'
-): string {
-  const labels: Record<ProjectAddressType, string> = {
-    site: 'Εργοτάξιο',
-    entrance: 'Είσοδος',
-    delivery: 'Παράδοση',
-    legal: 'Νομική Έδρα',
-    postal: 'Ταχυδρομείο',
-    billing: 'Τιμολόγηση',
-    correspondence: 'Αλληλογραφία',
-    frontage: 'Πρόσωπο Οικοπέδου',
-    other: 'Άλλο'
-  };
-
-  return labels[type];
-}
+// ⚠️ ΕΔΩ ΔΕΝ ΖΕΙ ΚΑΜΙΑ ΛΕΞΗ (ADR-195 (ζ) 🏷️′ · N.11). Οι λέξεις τύπου διεύθυνσης και
+// πλευράς οικοπέδου λύνονται στην προβολή: `t('addresses:types.<τύπος>')` ·
+// `t('addresses:blockSides.<πλευρά>')`. Εδώ ζούσαν `formatAddressType` / `formatBlockSide`
+// με ελληνικό πίνακα και όρισμα `locale` που αγνοούνταν — στα αγγλικά έβγαιναν ελληνικά.
+// Άγκυρα: `src/types/project/__tests__/address-vocabulary-words.test.ts`.
 
 // =============================================================================
 // FACTORY FUNCTIONS
@@ -481,24 +428,37 @@ export function resolveBuildingPrimaryAddress(
 // =============================================================================
 
 /**
+ * Κωδικοί ζητημάτων επικύρωσης. Η ΛΕΞΗ λύνεται στην προβολή:
+ * `t('addresses:form.validation.<κωδικός>')` (ADR-195 (ζ) 🏷️′ — πρακτική SAP/Zod: ο
+ * επικυρωτής επιστρέφει κωδικό, όχι πρόταση σε μία γλώσσα).
+ */
+export const ADDRESS_VALIDATION_ISSUES = [
+  'cityRequired',
+  'postalCodeRequired',
+  'postalCodeFormat',
+] as const;
+
+export type AddressValidationIssue = (typeof ADDRESS_VALIDATION_ISSUES)[number];
+
+/**
  * Validate address data
  * Enterprise pattern: Data integrity checks
  *
  * @param address - Address to validate
- * @returns Validation errors or null if valid
+ * @returns Issue codes (empty when valid)
  */
 export function validateAddress(
   address: Partial<ProjectAddress>
-): string[] {
-  const errors: string[] = [];
+): AddressValidationIssue[] {
+  const errors: AddressValidationIssue[] = [];
 
   // Required fields — city is always required, street is optional for settlements/villages
   if (!address.city?.trim()) {
-    errors.push('Η πόλη/οικισμός είναι υποχρεωτικός');
+    errors.push('cityRequired');
   }
 
   if (!address.postalCode?.trim()) {
-    errors.push('Ο Τ.Κ. είναι υποχρεωτικός');
+    errors.push('postalCodeRequired');
   }
 
   // Postal code format — ελέγχεται ΜΟΝΟ σε ελληνική διεύθυνση· ένας βρετανικός
@@ -509,33 +469,10 @@ export function validateAddress(
     isGreekAddressCountry(address.country) &&
     !isValidGreekPostalCode(address.postalCode)
   ) {
-    errors.push('Ο Τ.Κ. πρέπει να είναι 5 ψηφία');
+    errors.push('postalCodeFormat');
   }
 
   return errors;
-}
-
-/**
- * Check if address array has exactly one primary
- * Enterprise pattern: Data consistency validation
- *
- * @param addresses - Address array to validate
- * @returns Validation error or null
- */
-export function validatePrimaryAddressUniqueness(
-  addresses: ProjectAddress[]
-): string | null {
-  const primaryCount = addresses.filter(addr => addr.isPrimary).length;
-
-  if (primaryCount === 0) {
-    return 'Πρέπει να υπάρχει μία κύρια διεύθυνση';
-  }
-
-  if (primaryCount > 1) {
-    return 'Μόνο μία διεύθυνση μπορεί να είναι κύρια';
-  }
-
-  return null;
 }
 
 // =============================================================================

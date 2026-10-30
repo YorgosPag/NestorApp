@@ -368,28 +368,6 @@
     }
   },
   "address": {
-    "types": {
-      "site": "Εργοτάξιο",
-      "entrance": "Είσοδος",
-      "delivery": "Παραλαβή",
-      "legal": "Νομική",
-      "postal": "Ταχυδρομική",
-      "billing": "Τιμολόγησης",
-      "correspondence": "Αλληλογραφίας",
-      "other": "Άλλο"
-    },
-    "blockSides": {
-      "north": "Βόρεια",
-      "south": "Νότια",
-      "east": "Ανατολική",
-      "west": "Δυτική",
-      "northeast": "Βορειοανατολική",
-      "northwest": "Βορειοδυτική",
-      "southeast": "Νοτιοανατολική",
-      "southwest": "Νοτιοδυτική",
-      "corner": "Γωνία",
-      "internal": "Εσωτερική"
-    },
     "fields": {
       "street": "Οδός",
       "number": "Αριθμός",

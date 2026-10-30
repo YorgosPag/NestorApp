@@ -82,15 +82,6 @@ export const VOCAB_LEGAL_STATUSES = [
 ] as const;
 
 /**
- * Standardized activity types
- * 🏢 ENTERPRISE: i18n keys for multilingual support
- */
-export const VOCAB_ACTIVITY_TYPES = [
-  { value: 'main', label: 'options.activityTypes.main' },
-  { value: 'secondary', label: 'options.activityTypes.secondary' }
-] as const;
-
-/**
  * Standardized address types
  * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
@@ -160,13 +151,6 @@ export function getServiceCategoryOptions() {
  */
 export function getLegalStatusOptions() {
   return VOCAB_LEGAL_STATUSES;
-}
-
-/**
- * Get activity type options
- */
-export function getActivityTypeOptions() {
-  return VOCAB_ACTIVITY_TYPES;
 }
 
 /**

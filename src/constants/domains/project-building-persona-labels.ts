@@ -72,6 +72,12 @@ export const PROJECT_COMPONENT_LABELS = {
 // ============================================================================
 
 /**
+ * Το namespace όπου λύνονται τα κλειδιά `persona.*` — δίπλα στα κλειδιά, επειδή είναι ιδιότητά τους (ίδιο πρότυπο με
+ * το `COMMUNICATION_LABELS_NS`): το Ιστορικό (ADR-195 (η)) το ζητά από εδώ, όχι από δεύτερη δήλωση.
+ */
+export const PERSONA_LABELS_NS = 'contacts-relationships';
+
+/**
  * Persona Type Labels — Contact Role Classification
  * SAP Business Partner pattern
  */

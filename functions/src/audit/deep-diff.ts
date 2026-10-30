@@ -16,12 +16,24 @@
  *   - `serialize()` normalises values so `null`, `undefined`, and `''` all
  *     compare equal (same policy as entity-audit.service.ts).
  *   - Keys present in only one side still produce a change (add/remove).
+ *   - ADR-195 (η): an optional {@link CdcDiffSchema} supplies the DECLARED
+ *     item identity of array fields and the derived-mirror pairs. What it
+ *     does not declare keeps the best-effort heuristic below.
  *
  * @module functions/audit/deep-diff
  * @enterprise ADR-195 — Entity Audit Trail (Phase 1 CDC PoC)
  */
 
 import { isIgnoredField } from './ignored-fields';
+import { sortKeysDeep } from '../generated/lib/sort-keys-deep';
+import {
+  collectionItemLabel,
+  computeCollectionItemKey,
+  itemFieldUnion,
+  itemRecordPair,
+  scalarItemLabel,
+  type CollectionIdentity,
+} from '../generated/lib/audit/collection-item-identity';
 
 /**
  * Collection operation kind (ADR-195 Phase 11).
@@ -47,12 +59,28 @@ export interface FieldChange {
   kind?: 'scalar' | 'collection';
   /** Operation kind for collection items. */
   op?: CollectionOp;
-  /** Stable identity of the collection item (resolved by {@link deriveItemKey}). */
+  /** Stable identity of the collection item (resolved by {@link ItemRule}). */
   itemKey?: string;
   /** Human display label for the collection item. */
   itemLabel?: string;
   /** Granular sub-field changes for `op === 'modified'`. */
   subChanges?: SubChange[];
+}
+
+/**
+ * ADR-195 (η) — what the collection being audited DECLARES about itself.
+ * Built from the app SSoT (`config/audit-collection-identity.ts`, projected
+ * by CHECK 3.93), never written by hand in this package.
+ */
+export interface CdcDiffSchema {
+  /** `field path → item identity`. Undeclared array fields use the heuristic. */
+  readonly collections?: Readonly<Record<string, CollectionIdentity>>;
+  /**
+   * `derived field → authoritative field`. A derived change is dropped ONLY
+   * when its authority changed in the same write; a derived field that
+   * changed alone is a mirror drift and stays visible.
+   */
+  readonly derivedMirrors?: Readonly<Record<string, string | undefined>>;
 }
 
 type Primitive = string | number | boolean | null;
@@ -90,37 +118,23 @@ function flatten(
   return out;
 }
 
-function sortKeys(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(sortKeys);
-  if (value !== null && typeof value === 'object') {
-    const sorted: Record<string, unknown> = {};
-    for (const key of Object.keys(value as Record<string, unknown>).sort()) {
-      sorted[key] = sortKeys((value as Record<string, unknown>)[key]);
-    }
-    return sorted;
-  }
-  return value;
-}
-
 function serialize(value: unknown): Primitive {
   if (value === null || value === undefined || value === '') return null;
   if (isPrimitive(value)) return value;
-  return JSON.stringify(sortKeys(value));
+  return JSON.stringify(sortKeysDeep(value));
 }
 
 // ============================================================================
-// COLLECTION-AWARE DIFF (ADR-195 Phase 11)
+// COLLECTION-AWARE DIFF (ADR-195 Phase 11 · (η))
 // ============================================================================
 //
-// The service-layer diff (src/lib/audit/audit-diff.ts) consults an SSoT
-// TrackedFieldDef registry to know which fields are collections and how to
-// key them. CDC triggers don't have that registry — they observe raw
-// Firestore snapshots. Instead we auto-detect arrays in `deepDiff` and
-// reconcile them by best-effort stable key: `id` / `contactId` / `uid` /
-// `key` when present, composite-of-primitives otherwise, full-JSON as a
-// last resort. The emitted `FieldChange` shape matches the service-layer
-// schema exactly so the UI renderer is oblivious to which writer produced
-// the entry.
+// Declared identity first (the same `keyBy` / `labelFields` the service-layer
+// registry uses — ONE declaration, ONE algorithm). For arrays nobody declared
+// we keep the best-effort heuristic: `id` / `contactId` / `uid` / `key` when
+// present, composite-of-primitives otherwise, full-JSON as a last resort.
+// ⚠️ The heuristic puts EVERY primitive in the key, so a change of one item
+// property (`type: mobile → main`) changes the key and reads as remove + add.
+// That is exactly why contact collections are declared.
 
 const STABLE_ID_FIELDS = ['id', 'contactId', 'uid', 'key'] as const;
 
@@ -130,11 +144,14 @@ const LABEL_FIELD_PRIORITY = [
   'type', 'platform', 'username',
 ] as const;
 
-/**
- * Derive a stable identity key for one collection item.
- * Priority: explicit id fields → composite-of-primitives → JSON fallback.
- */
-function deriveItemKey(item: unknown, index: number): string {
+/** How one array field identifies and names its items. */
+interface ItemRule {
+  key(item: unknown, index: number): string;
+  label(item: unknown): string;
+}
+
+/** Heuristic identity: explicit id fields → composite-of-primitives → JSON. */
+function heuristicItemKey(item: unknown, index: number): string {
   if (item === null || item === undefined) return `__null_${index}`;
   if (typeof item === 'string') return `s:${item}`;
   if (typeof item === 'number' || typeof item === 'boolean') return `p:${String(item)}`;
@@ -154,15 +171,13 @@ function deriveItemKey(item: unknown, index: number): string {
     }
   }
   if (parts.length > 0) return `c:${parts.sort().join('|')}`;
-  return `j:${JSON.stringify(sortKeys(rec))}`;
+  return `j:${JSON.stringify(sortKeysDeep(rec))}`;
 }
 
-/** Build a best-effort human label from the first two meaningful primitives. */
-function deriveItemLabel(item: unknown): string {
-  if (item === null || item === undefined) return '';
-  if (typeof item === 'string') return item;
-  if (typeof item === 'number' || typeof item === 'boolean') return String(item);
-  if (typeof item !== 'object') return '';
+/** Heuristic label from the first two meaningful primitives. */
+function heuristicItemLabel(item: unknown): string {
+  const scalar = scalarItemLabel(item);
+  if (scalar !== undefined) return scalar;
   const rec = item as Record<string, unknown>;
   const parts: string[] = [];
   for (const field of LABEL_FIELD_PRIORITY) {
@@ -174,19 +189,28 @@ function deriveItemLabel(item: unknown): string {
   return parts.join(' — ');
 }
 
+const HEURISTIC_RULE: ItemRule = { key: heuristicItemKey, label: heuristicItemLabel };
+
+/** Own-property lookup: a document field named `constructor` must not find `Object.prototype.constructor`. */
+function ownValue<T>(map: Readonly<Record<string, T>> | undefined, key: string): T | undefined {
+  return map && Object.prototype.hasOwnProperty.call(map, key) ? map[key] : undefined;
+}
+
+function itemRuleFor(identity: CollectionIdentity | undefined): ItemRule {
+  if (!identity) return HEURISTIC_RULE;
+  return {
+    key: (item) => computeCollectionItemKey(item, identity.keyBy),
+    label: (item) => collectionItemLabel(item, identity.labelFields, identity.labelSeparator),
+  };
+}
+
 /** Sub-field diff for two collection items matched by key. Primitives → []. */
 function diffItemSubFields(before: unknown, after: unknown): SubChange[] {
-  if (
-    typeof before !== 'object' || before === null || Array.isArray(before) ||
-    typeof after !== 'object' || after === null || Array.isArray(after)
-  ) {
-    return [];
-  }
-  const b = before as Record<string, unknown>;
-  const a = after as Record<string, unknown>;
-  const fields = new Set([...Object.keys(b), ...Object.keys(a)]);
+  const pair = itemRecordPair(before, after);
+  if (!pair) return [];
+  const [b, a] = pair;
   const subs: SubChange[] = [];
-  for (const field of fields) {
+  for (const field of itemFieldUnion(b, a)) {
     const oldValue = serialize(b[field]);
     const newValue = serialize(a[field]);
     if (oldValue !== newValue) {
@@ -196,8 +220,28 @@ function diffItemSubFields(before: unknown, after: unknown): SubChange[] {
   return subs;
 }
 
+function collectionChange(
+  field: string,
+  op: CollectionOp,
+  itemKey: string,
+  itemLabel: string,
+  subChanges?: SubChange[],
+): FieldChange {
+  return {
+    field,
+    oldValue: null,
+    newValue: null,
+    label: field,
+    kind: 'collection',
+    op,
+    itemKey,
+    itemLabel,
+    ...(subChanges ? { subChanges } : {}),
+  };
+}
+
 /**
- * Reconcile two arrays by derived key and emit per-item FieldChange entries.
+ * Reconcile two arrays by item key and emit per-item FieldChange entries.
  * Used when {@link deepDiff} encounters a field whose value is an array on
  * either side.
  */
@@ -205,61 +249,49 @@ function diffArrayField(
   field: string,
   before: readonly unknown[],
   after: readonly unknown[],
+  rule: ItemRule,
 ): FieldChange[] {
   const beforeMap = new Map<string, unknown>();
   const afterMap = new Map<string, unknown>();
-  before.forEach((item, i) => beforeMap.set(deriveItemKey(item, i), item));
-  after.forEach((item, i) => afterMap.set(deriveItemKey(item, i), item));
+  before.forEach((item, i) => beforeMap.set(rule.key(item, i), item));
+  after.forEach((item, i) => afterMap.set(rule.key(item, i), item));
 
   const out: FieldChange[] = [];
-
   for (const [key, item] of afterMap) {
-    if (beforeMap.has(key)) continue;
-    out.push({
-      field,
-      oldValue: null,
-      newValue: null,
-      label: field,
-      kind: 'collection',
-      op: 'added',
-      itemKey: key,
-      itemLabel: deriveItemLabel(item),
-    });
+    if (!beforeMap.has(key)) out.push(collectionChange(field, 'added', key, rule.label(item)));
   }
-
   for (const [key, item] of beforeMap) {
-    if (afterMap.has(key)) continue;
-    out.push({
-      field,
-      oldValue: null,
-      newValue: null,
-      label: field,
-      kind: 'collection',
-      op: 'removed',
-      itemKey: key,
-      itemLabel: deriveItemLabel(item),
-    });
+    if (!afterMap.has(key)) out.push(collectionChange(field, 'removed', key, rule.label(item)));
   }
-
   for (const [key, afterItem] of afterMap) {
-    const beforeItem = beforeMap.get(key);
-    if (beforeItem === undefined) continue;
-    const subChanges = diffItemSubFields(beforeItem, afterItem);
+    if (!beforeMap.has(key)) continue;
+    const subChanges = diffItemSubFields(beforeMap.get(key), afterItem);
     if (subChanges.length === 0) continue;
-    out.push({
-      field,
-      oldValue: null,
-      newValue: null,
-      label: field,
-      kind: 'collection',
-      op: 'modified',
-      itemKey: key,
-      itemLabel: deriveItemLabel(afterItem),
-      subChanges,
-    });
+    out.push(collectionChange(field, 'modified', key, rule.label(afterItem), subChanges));
   }
-
   return out;
+}
+
+/** Drop a derived mirror's changes when its authority changed in the same write. */
+function dropMirroredDerived(
+  changes: readonly FieldChange[],
+  derivedMirrors: CdcDiffSchema['derivedMirrors'],
+): FieldChange[] {
+  if (!derivedMirrors) return [...changes];
+  const changedFields = new Set(changes.map((c) => c.field));
+  return changes.filter((c) => {
+    const authority = ownValue(derivedMirrors, c.field);
+    return !(authority && changedFields.has(authority));
+  });
+}
+
+const OP_RANK: Readonly<Record<CollectionOp, number>> = { removed: 0, added: 1, modified: 2 };
+
+function byFieldThenOp(a: FieldChange, b: FieldChange): number {
+  const byField = a.field.localeCompare(b.field);
+  if (byField !== 0) return byField;
+  // Stable secondary ordering: removed → added → modified → scalar
+  return (a.op ? OP_RANK[a.op] : 3) - (b.op ? OP_RANK[b.op] : 3);
 }
 
 /**
@@ -274,14 +306,11 @@ function diffArrayField(
 export function deepDiff(
   before: Record<string, unknown>,
   after: Record<string, unknown>,
+  schema: CdcDiffSchema = {},
 ): FieldChange[] {
   const flatBefore = flatten(before);
   const flatAfter = flatten(after);
-
-  const keys = new Set<string>([
-    ...Object.keys(flatBefore),
-    ...Object.keys(flatAfter),
-  ]);
+  const keys = new Set<string>([...Object.keys(flatBefore), ...Object.keys(flatAfter)]);
 
   const changes: FieldChange[] = [];
   for (const key of keys) {
@@ -294,7 +323,8 @@ export function deepDiff(
     if (Array.isArray(oldRaw) || Array.isArray(newRaw)) {
       const beforeArr = Array.isArray(oldRaw) ? oldRaw : [];
       const afterArr = Array.isArray(newRaw) ? newRaw : [];
-      changes.push(...diffArrayField(key, beforeArr, afterArr));
+      const rule = itemRuleFor(ownValue(schema.collections, key));
+      changes.push(...diffArrayField(key, beforeArr, afterArr, rule));
       continue;
     }
 
@@ -306,13 +336,5 @@ export function deepDiff(
     }
   }
 
-  changes.sort((a, b) => {
-    const byField = a.field.localeCompare(b.field);
-    if (byField !== 0) return byField;
-    // Stable secondary ordering: removed → added → modified
-    const opRank = (op?: CollectionOp) =>
-      op === 'removed' ? 0 : op === 'added' ? 1 : op === 'modified' ? 2 : 3;
-    return opRank(a.op) - opRank(b.op);
-  });
-  return changes;
+  return dropMirroredDerived(changes, schema.derivedMirrors).sort(byFieldThenOp);
 }

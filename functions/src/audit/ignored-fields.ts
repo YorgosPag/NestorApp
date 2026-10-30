@@ -31,6 +31,9 @@ export const IGNORED_FIELDS: readonly string[] = [
   '_lastModifiedBy',
   '_lastModifiedByName',
   '_lastModifiedAt',
+  // ADR-195 (η) — the un-prefixed twin the contact writers also stamp. Measured
+  // live (MACON, 29/10): «lastModifiedBy: — → <uid>» as if a person changed it.
+  'lastModifiedBy',
 
   // Ownership / tenant metadata — set at create, immutable, mirrors the
   // performer header. Not a user-facing change. Mirrors the service-layer

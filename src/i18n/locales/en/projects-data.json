@@ -368,28 +368,6 @@
     }
   },
   "address": {
-    "types": {
-      "site": "Construction Site",
-      "entrance": "Entrance",
-      "delivery": "Delivery",
-      "legal": "Legal",
-      "postal": "Postal",
-      "billing": "Billing",
-      "correspondence": "Correspondence",
-      "other": "Other"
-    },
-    "blockSides": {
-      "north": "North",
-      "south": "South",
-      "east": "East",
-      "west": "West",
-      "northeast": "Northeast",
-      "northwest": "Northwest",
-      "southeast": "Southeast",
-      "southwest": "Southwest",
-      "corner": "Corner",
-      "internal": "Internal"
-    },
     "fields": {
       "street": "Street",
       "number": "Number",

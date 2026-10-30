@@ -89,6 +89,7 @@ function lookupInCatalog(
   if (!catalog) return undefined;
 
   const opts = { ns: catalog.ns };
+  value = canonicalCatalogValue(catalog, value);
   const camel = toCamelCase(value);
 
   for (const path of [catalog.path, ...(catalog.fallbackPaths ?? [])]) {
@@ -102,6 +103,12 @@ function lookupInCatalog(
   }
 
   return undefined;
+}
+
+/** Παλιά ορθογραφία → τιμή του καταλόγου (`valueAliases`· μόνο own-property, ώστε `constructor` κ.λπ. να μη «λύνονται»). */
+function canonicalCatalogValue(catalog: AuditCatalogRef, value: string): string {
+  const aliases = catalog.valueAliases;
+  return aliases && Object.prototype.hasOwnProperty.call(aliases, value) ? aliases[value] : value;
 }
 
 /** Legacy fallback: `common:audit.values.{value}`. */

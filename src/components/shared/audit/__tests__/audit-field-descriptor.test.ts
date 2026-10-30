@@ -12,6 +12,9 @@
  * λέγαμε ψέματα με πρόσωπο ειλικρίνειας σε **133 από τα 279** πεδία.
  */
 
+import fs from 'fs';
+import path from 'path';
+
 import {
   resolveFieldLabel,
   resolveTrackedFieldDef,
@@ -241,6 +244,15 @@ describe('ADR-852 §4.8 — κάθε πεδίο του μητρώου έχει �
   };
   /* eslint-enable @typescript-eslint/no-require-imports */
 
+  /** Το `t` της οθόνης: `ns:διαδρομή` ⇒ εκείνο το namespace, αλλιώς `common-audit`· άγνωστο ⇒ το ίδιο το κλειδί. */
+  function translateFromBundles(lang: 'el' | 'en', key: string): unknown {
+    const [ns, dotted] = key.includes(':') ? key.split(':', 2) : ['common-audit', key];
+    const bundle = ns === 'common-audit'
+      ? BUNDLES[lang]
+      : JSON.parse(fs.readFileSync(path.join(process.cwd(), 'src', 'i18n', 'locales', lang, `${ns}.json`), 'utf-8'));
+    return lookup(bundle, dotted) ?? key;
+  }
+
   /** Διασχίζει dotted κλειδί — το ίδιο που κατασκευάζει το `resolveFieldLabel`. */
   function lookup(bundle: unknown, dotted: string): unknown {
     return dotted
@@ -312,13 +324,15 @@ describe('ADR-852 §4.8 — κάθε πεδίο του μητρώου έχει �
 
     for (const entityType of REGISTERED_ENTITIES) {
       const registry = getTrackedFieldsForEntityAuditType(entityType) ?? {};
-      for (const field of Object.keys(registry)) {
+      for (const [field, def] of Object.entries(registry)) {
         for (const lang of ['el', 'en'] as const) {
           checked += 1;
-          const resolved =
-            lookup(BUNDLES[lang], `audit.fields.${entityType}.${field}`) ??
-            lookup(BUNDLES[lang], `audit.fields.${field}`);
-          if (typeof resolved !== 'string') unresolved.push(`${lang}: ${entityType}.${field}`);
+          // ADR-195 (κ) — ο ΙΔΙΟΣ κανόνας με την οθόνη, όχι αντίγραφό του: το αντίγραφο είχε ξεχάσει το βήμα 1
+          // (`labelKey`), οπότε κοκκίνιζε σε πεδία που λύνονται σωστά και δεν έβλεπε ότι τα `energy.*` ΔΕΝ λύνονταν.
+          const label = resolveFieldLabel({
+            entityType, field, def, storedLabel: undefined, translate: (key) => translateFromBundles(lang, key),
+          });
+          if (label.text === field) unresolved.push(`${lang}: ${entityType}.${field}`);
         }
       }
     }

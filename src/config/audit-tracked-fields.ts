@@ -17,12 +17,15 @@ import {
 } from '@/lib/audit/audit-diff';
 import { formatAuditCoordinates } from '@/lib/audit/audit-coordinates';
 import { AUDIT_VALUE_CATALOGS } from '@/config/audit-value-catalogs';
+import { CONTACT_COLLECTION_IDENTITY } from '@/config/audit-collection-identity';
 import {
   AUDIT_ADDRESS_TYPE_CATALOG,
   AUDIT_AREA_PARTS_CATALOG,
-  AUDIT_COMPANY_ACTIVITY_TYPE_CATALOG,
+  AUDIT_LEGACY_KAD_TYPE_CATALOG,
   AUDIT_EMAIL_TYPE_CATALOG,
+  AUDIT_ENERGY_CERTIFICATE_VALUE_CATALOGS,
   AUDIT_KAD_TYPE_CATALOG,
+  AUDIT_PERSONA_TYPE_CATALOG,
   AUDIT_PHONE_TYPE_CATALOG,
   AUDIT_PROPERTY_ATTRIBUTE_CATALOG,
   AUDIT_SOCIAL_MEDIA_TYPE_CATALOG,
@@ -50,7 +53,7 @@ import {
 import { BUILDING_OBJECTIVE_VALUE_FIELDS } from '@/lib/objective-value/building-objective-value-facts';
 import { OBJECTIVE_VALUE_DECLARED_FIELDS } from '@/lib/objective-value/objective-value-declarations';
 import { UNDECLARED_COMMON_CHARGES } from '@/lib/common-charges/common-charges';
-import { UNDECLARED_ENERGY_CERTIFICATE } from '@/lib/energy-certificate/energy-certificate';
+import { UNDECLARED_ENERGY_CERTIFICATE, type EnergyCertificate } from '@/lib/energy-certificate/energy-certificate';
 import { scheduledAvailability } from '@/lib/listings/availability-window';
 import { readAvailabilityDeclaration } from '@/lib/listings/listing-availability';
 
@@ -121,6 +124,21 @@ const COMMON_CHARGES_TRACKED_FIELDS_RAW: Record<string, string> = Object.fromEnt
  */
 const ENERGY_CERTIFICATE_TRACKED_FIELDS_RAW: Record<string, string> = Object.fromEntries(
   Object.keys(UNDECLARED_ENERGY_CERTIFICATE).map((field) => [`energy.${field}`, `energyCertificate.${field}`]),
+);
+
+/**
+ * ADR-195 (κ) — η ΖΩΝΤΑΝΗ ετικέτα των ίδιων πεδίων. Επειδή το αναγνωριστικό ≠ μονοπάτι, ο αναγνώστης δεν μπορούσε να
+ * τη βρει (`audit.fields.energy` είναι κείμενο, όχι κόμβος) ⇒ έδειχνε το αποθηκευμένο `energyCertificate.class` ΩΣ
+ * «αποσυρμένο πεδίο». Το `labelKey` διαβάζεται ΜΟΝΟ στην ανάγνωση: ο γραφέας γράφει ακόμη `label` (αμετάβλητο).
+ */
+const ENERGY_CERTIFICATE_FIELD_DEFS: Record<string, TrackedFieldDef> = Object.fromEntries(
+  (Object.keys(UNDECLARED_ENERGY_CERTIFICATE) as (keyof EnergyCertificate)[]).map((field) => {
+    const label = ENERGY_CERTIFICATE_TRACKED_FIELDS_RAW[`energy.${field}`];
+    const enumCatalog = AUDIT_ENERGY_CERTIFICATE_VALUE_CATALOGS[field];
+    return [`energy.${field}`, {
+      kind: 'scalar', label, labelKey: `common-audit:audit.fields.${label}`, ...(enumCatalog ? { enumCatalog } : {}),
+    }];
+  }),
 );
 
 /**
@@ -323,6 +341,7 @@ const CONTACT_TRACKED_FIELDS_RAW: Record<string, string> = {
 
   // ── Address fields ──
   addresses: 'addresses',
+  'customFields.companyAddresses': 'customFields.companyAddresses',
 
   // ── Categorization ──
   tags: 'tags',
@@ -496,41 +515,36 @@ const PROJECT_COLLECTION_DEFS: Record<string, CollectionDef> = {
 const CONTACT_COLLECTION_DEFS: Record<string, CollectionDef> = {
   emails: {
     kind: 'collection',
+    ...CONTACT_COLLECTION_IDENTITY.emails,
     label: 'emails',
-    keyBy: 'email',
-    labelFields: ['email'],
     trackSubFields: ['email', 'type', 'isPrimary', 'label'],
     itemCatalogs: { type: AUDIT_EMAIL_TYPE_CATALOG },
   },
   phones: {
     kind: 'collection',
+    ...CONTACT_COLLECTION_IDENTITY.phones,
     label: 'phones',
-    keyBy: 'number',
-    labelFields: ['number'],
     trackSubFields: ['number', 'type', 'isPrimary', 'label', 'countryCode'],
     itemCatalogs: { type: AUDIT_PHONE_TYPE_CATALOG },
   },
   websites: {
     kind: 'collection',
+    ...CONTACT_COLLECTION_IDENTITY.websites,
     label: 'websites',
-    keyBy: 'url',
-    labelFields: ['url'],
     trackSubFields: ['url', 'type', 'label'],
     itemCatalogs: { type: AUDIT_WEBSITE_TYPE_CATALOG },
   },
   socialMedia: {
     kind: 'collection',
+    ...CONTACT_COLLECTION_IDENTITY.socialMedia,
     label: 'socialMedia',
-    keyBy: ['platform', 'username'],
-    labelFields: ['platform', 'username'],
     trackSubFields: ['platform', 'username', 'url', 'type', 'label'],
     itemCatalogs: { type: AUDIT_SOCIAL_MEDIA_TYPE_CATALOG, platform: AUDIT_SOCIAL_PLATFORM_CATALOG },
   },
   addresses: {
     kind: 'collection',
+    ...CONTACT_COLLECTION_IDENTITY.addresses,
     label: 'addresses',
-    keyBy: ['type', 'street', 'city', 'postalCode'],
-    labelFields: ['type', 'street', 'city'],
     trackSubFields: [
       'type', 'isPrimary', 'label',
       'street', 'number', 'city', 'postalCode',
@@ -541,33 +555,39 @@ const CONTACT_COLLECTION_DEFS: Record<string, CollectionDef> = {
     ],
     itemCatalogs: { type: AUDIT_ADDRESS_TYPE_CATALOG },
   },
+  // ADR-195 (η) — η ΑΥΘΕΝΤΙΚΗ λίστα διευθύνσεων· το `addresses` είναι κάτοπτρό της (`CONTACT_DERIVED_MIRRORS`).
+  'customFields.companyAddresses': {
+    kind: 'collection',
+    ...CONTACT_COLLECTION_IDENTITY['customFields.companyAddresses'],
+    // Η ετικέτα ζει ΜΙΑ φορά, στο `CONTACT_TRACKED_FIELDS_RAW` (ωμή διαδρομή ως ετικέτα = κόκκινο CHECK 3.13).
+    label: CONTACT_TRACKED_FIELDS_RAW['customFields.companyAddresses'],
+    itemCatalogs: { type: AUDIT_ADDRESS_TYPE_CATALOG },
+  },
   children: {
     kind: 'collection',
+    ...CONTACT_COLLECTION_IDENTITY.children,
     label: 'children',
-    keyBy: 'value',
   },
   contactPersons: {
     kind: 'collection',
+    ...CONTACT_COLLECTION_IDENTITY.contactPersons,
     label: 'contactPersons',
-    keyBy: ['name', 'position'],
-    labelFields: ['name', 'position'],
     trackSubFields: ['name', 'position', 'department', 'email', 'phone', 'isPrimary'],
   },
   tags: {
     kind: 'collection',
+    ...CONTACT_COLLECTION_IDENTITY.tags,
     label: 'tags',
-    keyBy: 'value',
   },
   multiplePhotoURLs: {
     kind: 'collection',
+    ...CONTACT_COLLECTION_IDENTITY.multiplePhotoURLs,
     label: 'multiplePhotoURLs',
-    keyBy: 'value',
   },
   responsiblePersons: {
     kind: 'collection',
+    ...CONTACT_COLLECTION_IDENTITY.responsiblePersons,
     label: 'responsiblePersons',
-    keyBy: ['name', 'position'],
-    labelFields: ['name', 'position'],
     trackSubFields: [
       'name', 'position', 'department', 'email', 'phone',
       'isPrimary', 'responsibilities', 'availableHours',
@@ -575,25 +595,24 @@ const CONTACT_COLLECTION_DEFS: Record<string, CollectionDef> = {
   },
   servicesProvided: {
     kind: 'collection',
+    ...CONTACT_COLLECTION_IDENTITY.servicesProvided,
     label: 'servicesProvided',
-    keyBy: 'value',
   },
   personas: {
     kind: 'collection',
+    ...CONTACT_COLLECTION_IDENTITY.personas,
     label: 'personas',
-    keyBy: ['type'],
-    labelFields: ['type'],
+    itemCatalogs: { personaType: AUDIT_PERSONA_TYPE_CATALOG },
   },
   personaTypes: {
     kind: 'collection',
+    ...CONTACT_COLLECTION_IDENTITY.personaTypes,
     label: 'personaTypes',
-    keyBy: 'value',
   },
   escoSkills: {
     kind: 'collection',
+    ...CONTACT_COLLECTION_IDENTITY.escoSkills,
     label: 'escoSkills',
-    keyBy: ['code'],
-    labelFields: ['label', 'code'],
   },
 };
 
@@ -640,7 +659,7 @@ const PROPERTY_FIELD_DEFS: Record<string, TrackedFieldDef> = {
 
 /** Property audit registry — `field → TrackedFieldDef`. */
 export const PROPERTY_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
-  mergeDefs(PROPERTY_TRACKED_FIELDS_RAW, { ...PROPERTY_COLLECTION_DEFS, ...PROPERTY_FIELD_DEFS });
+  mergeDefs(PROPERTY_TRACKED_FIELDS_RAW, { ...PROPERTY_COLLECTION_DEFS, ...PROPERTY_FIELD_DEFS, ...ENERGY_CERTIFICATE_FIELD_DEFS });
 
 // ============================================================================
 // BUILDING TRACKED FIELDS (ADR-195 — creation diff for service-layer writes)
@@ -1470,7 +1489,7 @@ const OWNER_PROPERTY_COLLECTION_DEFS: Record<string, CollectionDef> = {
 
 /** Owner-property audit registry — `field → TrackedFieldDef` (ADR-864 Φ1β). */
 export const OWNER_PROPERTY_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
-  mergeDefs(OWNER_PROPERTY_TRACKED_FIELDS_RAW, OWNER_PROPERTY_COLLECTION_DEFS);
+  mergeDefs(OWNER_PROPERTY_TRACKED_FIELDS_RAW, { ...OWNER_PROPERTY_COLLECTION_DEFS, ...ENERGY_CERTIFICATE_FIELD_DEFS });
 
 /**
  * 🗂️ ADR-866 Φ1.1 — `property_dossier`: ο φάκελος του ακινήτου.
@@ -1562,7 +1581,7 @@ const CONTACT_FIELD_DEFS: Record<string, TrackedFieldDef> = {
   'customFields.activityType': {
     kind: 'scalar',
     label: CONTACT_TRACKED_FIELDS_RAW['customFields.activityType'],
-    enumCatalog: AUDIT_COMPANY_ACTIVITY_TYPE_CATALOG,
+    enumCatalog: AUDIT_LEGACY_KAD_TYPE_CATALOG,
   },
 };
 

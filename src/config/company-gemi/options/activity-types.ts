@@ -9,20 +9,19 @@
  */
 
 import { SelectOption } from '../core/field-types';
-
-// ENTERPRISE: Import από existing centralized system - ZERO DUPLICATES
-import {
-  getActivityTypeOptions,
-} from '@/config/vocabulary/options/company';
+import { KAD_ACTIVITY_TYPES } from '@/types/ContactFormTypes';
 
 // ============================================================================
-// ACTIVITY TYPE OPTIONS - ENTERPRISE WRAPPER
+// ACTIVITY TYPE OPTIONS — ΠΑΡΑΓΩΓΟ της ρίζας ΚΑΔ (ADR-195 (ζ) 🏷️′ #2)
 // ============================================================================
 
 /**
- * Activity type options από centralized system
- * ENTERPRISE: Uses existing getActivityTypeOptions - NO HARDCODED VALUES
+ * Εδώ ζούσε ΔΕΥΤΕΡΟ λεξιλόγιο (`main|secondary`, λέξεις `options.activityTypes.*`) για την ίδια
+ * έννοια με τον τύπο ΚΑΔ. Τώρα οι επιλογές ΠΑΡΑΓΟΝΤΑΙ από τη ρίζα και οι λέξεις ζουν στο
+ * `forms:kad.types.*`. ⚠️ Μετρημένο 29/10: καμία φόρμα δεν αποδίδει αυτές τις επιλογές (νεκρή
+ * εξαγωγή μέσω των barrels του `company-gemi`) — υποψήφιο για διαγραφή.
  */
-export const ACTIVITY_TYPE_OPTIONS: SelectOption[] = [
-  ...getActivityTypeOptions(),
-];
+export const ACTIVITY_TYPE_OPTIONS: SelectOption[] = KAD_ACTIVITY_TYPES.map((value) => ({
+  value,
+  label: `kad.types.${value}`,
+}));

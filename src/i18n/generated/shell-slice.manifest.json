@@ -56,7 +56,7 @@
     "src/i18n/generated/routes/o__workspace__listings__mandates__requests.el.json": "3b685808152db56cfc0ce4d50912bcd6166e986921ebb92e601cbef9936c0a0b",
     "src/i18n/generated/routes/o__workspace__procurement__quotes__id__review.el.json": "b188e8db16ac690666949d5ca6c746f758af7171f75fdceda15e5755825ce9af",
     "src/i18n/generated/routes/o__workspace__procurement__quotes__scan.el.json": "29ae0139a3b76c01464de8f1fb2d8d0a8ec423c106b1127d08122f3d26d5294e",
-    "src/i18n/generated/routes/o__workspace__projects__id__procurement__rfq__rfqId.el.json": "dadd0aa1ac156406f4facb985747d92eea385fd74d357b6aa9a9f960fa48c319",
+    "src/i18n/generated/routes/o__workspace__projects__id__procurement__rfq__rfqId.el.json": "44abc0f4fd078db7760b12d9a4224c66886e6de9216f67252b3b0349b24ff9dd",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "ec24f1fdacbe102d81ef6e2b2c3ffde93e4e29b7857ac702db5ebfe1bb7c3867",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__card.el.json": "df1448a2bb4c85fc26bfbdcc903c7df7d53eaecd1d97fdc03e01a17528acfbae",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__licences.el.json": "833f1f75349ec3140684597ec67c5f6690725809f226b26eb378bb77f9358190",
@@ -170,7 +170,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "378bd961c4333db2cec89878ca16a71c8279de47b15a6c142e568d0d82eed008",
+  "inputsSha256": "4d675f65f98ff5404feaf1541a8fe31bf9e8eea1a2040e44f1c6f863da0c5669",
   "languages": [
     "el"
   ],
@@ -13892,6 +13892,7 @@
             "dropdown.clearSelection",
             "dropdown.toggleOptions",
             "emails",
+            "energy",
             "escoSkills",
             "expenseAllocations",
             "exterior",
@@ -14278,6 +14279,7 @@
             "contactPersons",
             "descr",
             "emails",
+            "energy",
             "escoSkills",
             "expenseAllocations",
             "exterior",
@@ -14620,6 +14622,7 @@
             "contactPersons",
             "descr",
             "emails",
+            "energy",
             "escoSkills",
             "expenseAllocations",
             "exterior",
@@ -15115,6 +15118,7 @@
             "contactPersons",
             "descr",
             "emails",
+            "energy",
             "escoSkills",
             "expenseAllocations",
             "exterior",
@@ -15456,6 +15460,7 @@
             "contactPersons",
             "descr",
             "emails",
+            "energy",
             "escoSkills",
             "expenseAllocations",
             "exterior",
@@ -15797,6 +15802,7 @@
             "contactPersons",
             "descr",
             "emails",
+            "energy",
             "escoSkills",
             "expenseAllocations",
             "exterior",
@@ -16144,6 +16150,7 @@
             "contactPersons",
             "descr",
             "emails",
+            "energy",
             "escoSkills",
             "expenseAllocations",
             "exterior",
@@ -16485,6 +16492,7 @@
             "contactPersons",
             "descr",
             "emails",
+            "energy",
             "escoSkills",
             "expenseAllocations",
             "exterior",
@@ -16838,6 +16846,7 @@
             "contactPersons",
             "descr",
             "emails",
+            "energy",
             "escoSkills",
             "expenseAllocations",
             "exterior",
@@ -17179,6 +17188,7 @@
             "contactPersons",
             "descr",
             "emails",
+            "energy",
             "escoSkills",
             "expenseAllocations",
             "exterior",
@@ -17465,6 +17475,7 @@
             "contactPersons",
             "descr",
             "emails",
+            "energy",
             "escoSkills",
             "expenseAllocations",
             "filters.agreementStatusAriaLabel",
@@ -17890,6 +17901,7 @@
             "contactPersons",
             "descr",
             "emails",
+            "energy",
             "escoSkills",
             "expenseAllocations",
             "filters.agreementStatus.active",
@@ -18054,7 +18066,9 @@
           "whole": false
         },
         "properties-enums": {
-          "keys": [],
+          "keys": [
+            "energyCertificate.scope.unit"
+          ],
           "prefixes": [
             "units.sqm"
           ],
@@ -18187,6 +18201,7 @@
             "detail.archiveQuote",
             "detail.editQuote",
             "emails",
+            "energy",
             "escoSkills",
             "expenseAllocations",
             "filters.agreementStatusAriaLabel",
@@ -23947,7 +23962,7 @@
   ],
   "stats": {
     "matchedKeys": 271,
-    "sliceBytes": 1170540
+    "sliceBytes": 1170644
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

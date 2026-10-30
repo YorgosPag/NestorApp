@@ -29,62 +29,46 @@ import type { StoredAddressPosition } from '@/types/address-position';
 /**
  * Block side directions for multi-sided buildings
  * Common in Greek urban construction (οικοδομικά τετράγωνα)
- */
-export type BlockSideDirection =
-  | 'north'      // Βόρεια πλευρά
-  | 'south'      // Νότια πλευρά
-  | 'east'       // Ανατολική πλευρά
-  | 'west'       // Δυτική πλευρά
-  | 'northeast'  // Βορειοανατολική
-  | 'northwest'  // Βορειοδυτική
-  | 'southeast'  // Νοτιοανατολική
-  | 'southwest'  // Νοτιοδυτική
-  | 'corner'     // Γωνιακή πλευρά
-  | 'internal';  // Εσωτερική (χωρίς πρόσοψη)
-
-/**
- * Runtime list of block side directions (SSoT for validation)
+ *
+ * ΡΙΖΑ του λεξιλογίου (CHECK 3.73 `block-side-direction`): ο τύπος ΠΑΡΑΓΕΤΑΙ από
+ * τον πίνακα, ώστε δεύτερο σώμα να μην μπορεί να αποκλίνει. Οι λέξεις ζουν ΜΟΝΟ
+ * στο `addresses:blockSides.*` (ADR-195 (ζ) 🏷️′).
  */
 export const BLOCK_SIDE_DIRECTIONS = [
-  'north',
-  'south',
-  'east',
-  'west',
+  'north',      // Βόρεια πλευρά
+  'south',      // Νότια πλευρά
+  'east',       // Ανατολική πλευρά
+  'west',       // Δυτική πλευρά
   'northeast',
   'northwest',
   'southeast',
   'southwest',
-  'corner',
-  'internal'
+  'corner',     // Γωνιακή πλευρά
+  'internal'    // Εσωτερική (χωρίς πρόσοψη)
 ] as const;
-/**
- * Address type taxonomy for construction projects
- */
-export type ProjectAddressType =
-  | 'site'           // Γενική διεύθυνση εργοταξίου
-  | 'entrance'       // Κύρια είσοδος
-  | 'delivery'       // Παράδοση υλικών
-  | 'legal'          // Νομική έδρα
-  | 'postal'         // Ταχυδρομική διεύθυνση
-  | 'billing'        // Διεύθυνση τιμολόγησης
-  | 'correspondence' // Αλληλογραφία
-  | 'frontage'       // Πρόσωπο οικοπέδου (ADR-167 Phase 2.5 / ADR-186)
-  | 'other';         // Άλλο
+
+export type BlockSideDirection = (typeof BLOCK_SIDE_DIRECTIONS)[number];
 
 /**
- * Runtime list of address types (SSoT for validation)
+ * Address type taxonomy for construction projects
+ *
+ * ΡΙΖΑ του λεξιλογίου (CHECK 3.73 `project-address-type`). Οι λέξεις ζουν ΜΟΝΟ
+ * στο `addresses:types.*` — το ίδιο σημείο που διαβάζει και το Ιστορικό
+ * (`AUDIT_ADDRESS_TYPE_CATALOG`).
  */
 export const PROJECT_ADDRESS_TYPES = [
-  'site',
-  'entrance',
-  'delivery',
-  'legal',
-  'postal',
-  'billing',
-  'correspondence',
-  'frontage',
+  'site',           // Γενική διεύθυνση εργοταξίου
+  'entrance',       // Κύρια είσοδος
+  'delivery',       // Παράδοση υλικών
+  'legal',          // Νομική έδρα
+  'postal',         // Ταχυδρομική διεύθυνση
+  'billing',        // Διεύθυνση τιμολόγησης
+  'correspondence', // Αλληλογραφία
+  'frontage',       // Πρόσωπο οικοπέδου (ADR-167 Phase 2.5 / ADR-186)
   'other'
 ] as const;
+
+export type ProjectAddressType = (typeof PROJECT_ADDRESS_TYPES)[number];
 
 // =============================================================================
 // MAIN INTERFACES

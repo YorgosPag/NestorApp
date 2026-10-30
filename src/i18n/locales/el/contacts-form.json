@@ -64,10 +64,6 @@
       "independentAuthority": "Ανεξάρτητη Αρχή",
       "decentralizedAdmin": "Αποκεντρωμένη Διοίκηση"
     },
-    "activityTypes": {
-      "main": "Κύρια Δραστηριότητα",
-      "secondary": "Δευτερεύουσα Δραστηριότητα"
-    },
     "addressTypes": {
       "headquarters": "Έδρα",
       "branch": "Υποκατάστημα"

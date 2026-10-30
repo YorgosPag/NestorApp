@@ -21,6 +21,7 @@ import {
 } from '../executor-shared';
 import { aiAgentAuditActor, aiAgentStamp } from '../../shared/ai-performer';
 import { loadAgentContact } from './agent-contact-doc';
+import { toKadActivityType } from '@/types/ContactFormTypes';
 
 /** ADR-195: local wrapper that records a CONTACT entity audit entry (SSoT). */
 async function recordContactAudit(
@@ -120,7 +121,7 @@ export class ActivityHandler implements ToolHandler {
     }
 
     const description = await lookupKadDescription(kadCode);
-    const activityType = String(args.activityType ?? 'secondary') as 'primary' | 'secondary';
+    const activityType = toKadActivityType(args.activityType, 'secondary');
 
     const contact = await loadAgentContact(contactId);
     if (!contact.found) return contact.result;

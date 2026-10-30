@@ -37,6 +37,12 @@ export interface AuditCatalogRef {
    * τον κάτοχο, και η άγκυρα Λ2 αποδεικνύει ότι η ίδια τιμή έχει την ίδια λέξη σε όλους.
    */
   readonly fallbackPaths?: readonly string[];
+  /**
+   * ADR-195 (ζ) 🏷️′ #2 — αποθηκευμένη ΠΑΛΙΑ ορθογραφία → τιμή αυτού του καταλόγου (`main` → `primary`).
+   * Η τιμή στη βάση μένει· η λέξη λύνεται από τη ΡΙΖΑ (πρακτική SAP: η προβολή κάνει την αντιστοίχιση).
+   * Δηλώνεται ΜΟΝΟ από τη ρίζα του λεξιλογίου (π.χ. `LEGACY_KAD_ACTIVITY_TYPE_ALIASES`), ποτέ εδώ.
+   */
+  readonly valueAliases?: Readonly<Record<string, string>>;
 }
 
 /**

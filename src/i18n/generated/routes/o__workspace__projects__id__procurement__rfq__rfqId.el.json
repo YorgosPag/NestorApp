@@ -255,6 +255,11 @@
     }
   },
   "properties-enums": {
+    "energyCertificate": {
+      "scope": {
+        "unit": "Αυτή τη μονάδα"
+      }
+    },
     "units": {
       "sqm": "τ.μ."
     }

@@ -19,6 +19,14 @@
 
 import type { AuditFieldChange, AuditSubChange } from '@/types/audit-trail';
 import { sortKeysDeep } from '@/lib/sort-keys-deep';
+// ADR-195 (η) — ΕΝΑΣ αλγόριθμος ταυτότητας/ετικέτας στοιχείου, φορητός ώστε να τον τρέχει και ο CDC.
+import {
+  collectionItemLabel,
+  computeCollectionItemKey,
+  itemFieldUnion,
+  itemRecordPair,
+  type CollectionKeyBy,
+} from '@/lib/audit/collection-item-identity';
 // ADR-852 §4 — το ΣΧΗΜΑ του πεδίου ζει δίπλα, σε δικό του αρχείο: αυτό εδώ είναι η
 // ΜΗΧΑΝΗ (συγκρίνει καταστάσεις), εκείνο είναι το ΣΧΗΜΑ (τι ξέρουμε για ένα πεδίο).
 // Επανεξάγεται αμέσως παρακάτω ⇒ καμία διαδρομή import δεν άλλαξε για κανέναν.
@@ -238,97 +246,23 @@ function normalizeArray(value: unknown): readonly unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
-/**
- * Derive a stable identity key for one collection item.
- *
- * Priority:
- *   1. `keyBy: 'value'` — primitive element is its own key.
- *   2. `keyBy: string` — read that property.
- *   3. `keyBy: string[]` — composite from all listed properties.
- * When the primary strategy yields no usable value (missing id / all-empty
- * composite), we fall back to a deterministic JSON of the whole item. This
- * keeps "added / removed" semantics correct even for legacy rows without
- * stable ids (at the cost of modifications presenting as remove+add).
- */
-function computeKey(
-  item: unknown,
-  keyBy: 'value' | string | readonly string[],
-): string {
-  if (keyBy === 'value') {
-    if (item === null || item === undefined) return '__null__';
-    if (typeof item === 'string') return `s:${item}`;
-    if (typeof item === 'number' || typeof item === 'boolean') return `p:${String(item)}`;
-    return `j:${JSON.stringify(sortKeys(item))}`;
-  }
-  if (typeof item !== 'object' || item === null) {
-    return `j:${JSON.stringify(item)}`;
-  }
-  const rec = item as Record<string, unknown>;
-  if (typeof keyBy === 'string') {
-    const v = rec[keyBy];
-    if (v !== undefined && v !== null && v !== '') return `k:${String(v)}`;
-    return `j:${JSON.stringify(sortKeys(rec))}`;
-  }
-  const parts: string[] = [];
-  for (const field of keyBy) {
-    const v = rec[field];
-    parts.push(v === undefined || v === null ? '' : String(v));
-  }
-  if (parts.every((p) => p === '')) {
-    return `j:${JSON.stringify(sortKeys(rec))}`;
-  }
-  return `c:${parts.join('|')}`;
-}
-
 /** Build a `key → item` index preserving the LAST occurrence on duplicates. */
 function indexByKey(
   items: readonly unknown[],
-  keyBy: 'value' | string | readonly string[],
+  keyBy: CollectionKeyBy,
 ): Map<string, unknown> {
   const map = new Map<string, unknown>();
   for (const item of items) {
-    map.set(computeKey(item, keyBy), item);
+    map.set(computeCollectionItemKey(item, keyBy), item);
   }
   return map;
-}
-
-/**
- * Produce a human display label for a collection item by concatenating
- * `labelFields`. Primitive items return themselves as a string. Falls back
- * to the first non-empty string/number property when `labelFields` is
- * unhelpful.
- */
-function formatItemLabel(
-  item: unknown,
-  labelFields: readonly string[] | undefined,
-  separator: string | undefined,
-): string {
-  if (item === null || item === undefined) return '';
-  if (typeof item === 'string') return item;
-  if (typeof item === 'number' || typeof item === 'boolean') return String(item);
-  if (typeof item !== 'object') return '';
-  const rec = item as Record<string, unknown>;
-  const sep = separator ?? ' — ';
-  if (labelFields && labelFields.length > 0) {
-    const parts: string[] = [];
-    for (const field of labelFields) {
-      const v = rec[field];
-      if (v !== undefined && v !== null && v !== '') parts.push(String(v));
-    }
-    if (parts.length > 0) return parts.join(sep);
-  }
-  for (const v of Object.values(rec)) {
-    if (typeof v === 'string' && v !== '') return v;
-    if (typeof v === 'number' && Number.isFinite(v)) return String(v);
-  }
-  return '';
 }
 
 /**
  * Build the set of field names that form the item's identity so we can
  * exclude them from sub-field diffs (no point reporting `id → id`).
  */
-function keyFieldSet(keyBy: 'value' | string | readonly string[]): ReadonlySet<string> {
+function keyFieldSet(keyBy: CollectionKeyBy): ReadonlySet<string> {
   if (keyBy === 'value') return new Set();
   if (typeof keyBy === 'string') return new Set([keyBy]);
   return new Set(keyBy);
@@ -342,18 +276,11 @@ function keyFieldSet(keyBy: 'value' | string | readonly string[]): ReadonlySet<s
  */
 function diffSubFields(before: unknown, after: unknown, def: CollectionDef): AuditSubChange[] {
   const { keyBy, trackSubFields, subFieldValues } = def;
-  if (
-    typeof before !== 'object' || before === null || Array.isArray(before) ||
-    typeof after !== 'object' || after === null || Array.isArray(after)
-  ) {
-    return [];
-  }
-  const b = before as Record<string, unknown>;
-  const a = after as Record<string, unknown>;
+  const pair = itemRecordPair(before, after);
+  if (!pair) return [];
+  const [b, a] = pair;
   const skip = keyFieldSet(keyBy);
-  const fields: readonly string[] = trackSubFields
-    ? trackSubFields
-    : Array.from(new Set([...Object.keys(b), ...Object.keys(a)]));
+  const fields: readonly string[] = trackSubFields ?? itemFieldUnion(b, a);
 
   const subs: AuditSubChange[] = [];
   for (const field of fields) {
@@ -393,7 +320,7 @@ function diffCollection(
       kind: 'collection',
       op: 'added',
       itemKey: key,
-      itemLabel: formatItemLabel(item, def.labelFields, def.labelSeparator),
+      itemLabel: collectionItemLabel(item, def.labelFields, def.labelSeparator),
       subChanges: diffSubFields({}, item, def),
     });
   }
@@ -408,7 +335,7 @@ function diffCollection(
       kind: 'collection',
       op: 'removed',
       itemKey: key,
-      itemLabel: formatItemLabel(item, def.labelFields, def.labelSeparator),
+      itemLabel: collectionItemLabel(item, def.labelFields, def.labelSeparator),
       subChanges: diffSubFields(item, {}, def),
     });
   }
@@ -426,7 +353,7 @@ function diffCollection(
       kind: 'collection',
       op: 'modified',
       itemKey: key,
-      itemLabel: formatItemLabel(afterItem, def.labelFields, def.labelSeparator),
+      itemLabel: collectionItemLabel(afterItem, def.labelFields, def.labelSeparator),
       subChanges,
     });
   }

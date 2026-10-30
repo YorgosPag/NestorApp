@@ -131,7 +131,7 @@
       "areas": "Εμβαδά",
       "orientations": "Προσανατολισμοί",
       "condition": "Κατάσταση Ακινήτου",
-      "energy": "Ενεργειακή Κλάση",
+      "energy": "Ενεργειακό πιστοποιητικό (ΠΕΑ)",
       "finishes": "Φινιρίσματα",
       "interiorFeatures": "Εσωτερικά Χαρακτηριστικά",
       "securityFeatures": "Χαρακτηριστικά Ασφαλείας",
@@ -228,7 +228,8 @@
         "lastUpdateDate": "Ημερ. Τελ. Ενημέρωσης",
         "gemiDepartment": "Τμήμα ΓΕΜΗ",
         "prefecture": "Νομός",
-        "municipality": "Δήμος"
+        "municipality": "Δήμος",
+        "companyAddresses": "Διευθύνσεις"
       },
       "_snapshot": "Στιγμιότυπο πριν τη Διαγραφή",
       "_cascade_deletions": "Αυτόματες Διαγραφές",
@@ -347,7 +348,8 @@
         "responsiblePersons": "Υπεύθυνοι Επικοινωνίας",
         "servicesProvided": "Παρεχόμενες Υπηρεσίες",
         "personas": "Ρόλοι (Personas)",
-        "personaTypes": "Τύποι Ρόλων"
+        "personaTypes": "Τύποι Ρόλων",
+        "displayName": "Εμφανιζόμενο όνομα"
       },
       "property": {
         "name": "Όνομα",
@@ -364,7 +366,7 @@
         "areas": "Εμβαδά",
         "orientations": "Προσανατολισμοί",
         "condition": "Κατάσταση ακινήτου",
-        "energy": "Ενεργειακή κλάση",
+        "energy": "Ενεργειακό πιστοποιητικό (ΠΕΑ)",
         "finishes": "Φινιρίσματα",
         "interiorFeatures": "Εσωτερικά χαρακτηριστικά",
         "securityFeatures": "Χαρακτηριστικά ασφαλείας",

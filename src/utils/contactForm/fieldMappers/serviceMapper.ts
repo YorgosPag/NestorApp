@@ -1,6 +1,6 @@
 import type { Contact, SocialMediaInfo } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
-import { initialFormData } from '@/types/ContactFormTypes';
+import { initialFormData, toLegacyKadActivityType } from '@/types/ContactFormTypes';
 import { getSafeFieldValue, getSafeArrayValue, getSafeNestedValue } from '../contactMapper';
 import { resolveContactAddresses } from '@/utils/contacts/contact-addresses-reader';
 import { buildFlatFieldsFromAddressInfo } from '@/utils/contacts/address-info-builder';
@@ -100,7 +100,7 @@ export function mapServiceContactToFormData(contact: Contact): ContactFormData {
     prefecture: getSafeFieldValue(serviceContact, 'prefecture'),
     activityCodeKAD: getSafeFieldValue(serviceContact, 'activityCodeKAD'),
     activityDescription: getSafeFieldValue(serviceContact, 'activityDescription'),
-    activityType: getSafeFieldValue(serviceContact, 'activityType', 'main'),
+    activityType: toLegacyKadActivityType(getSafeFieldValue(serviceContact, 'activityType')),
     activityValidFrom: getSafeFieldValue(serviceContact, 'activityValidFrom'),
     activityValidTo: getSafeFieldValue(serviceContact, 'activityValidTo'),
     capitalAmount: getSafeFieldValue(serviceContact, 'capitalAmount'),

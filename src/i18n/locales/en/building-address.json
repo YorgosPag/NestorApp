@@ -49,28 +49,6 @@
       "unverified": "We could not verify the place. Try again shortly — change nothing.",
       "failed": "The link was not saved. Try again."
     },
-    "types": {
-      "site": "Site",
-      "entrance": "Entrance",
-      "delivery": "Delivery",
-      "legal": "Legal",
-      "postal": "Postal",
-      "billing": "Billing",
-      "correspondence": "Correspondence",
-      "other": "Other"
-    },
-    "blockSides": {
-      "north": "North",
-      "south": "South",
-      "east": "East",
-      "west": "West",
-      "northeast": "Northeast",
-      "northwest": "Northwest",
-      "southeast": "Southeast",
-      "southwest": "Southwest",
-      "corner": "Corner",
-      "internal": "Internal"
-    },
     "fields": {
       "street": "Street",
       "number": "Number",

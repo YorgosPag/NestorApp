@@ -131,7 +131,7 @@
       "areas": "Areas",
       "orientations": "Orientations",
       "condition": "Property Condition",
-      "energy": "Energy Class",
+      "energy": "Energy performance certificate",
       "finishes": "Finishes",
       "interiorFeatures": "Interior Features",
       "securityFeatures": "Security Features",
@@ -228,7 +228,8 @@
         "lastUpdateDate": "Last Update Date",
         "gemiDepartment": "GEMI Department",
         "prefecture": "Prefecture",
-        "municipality": "Municipality"
+        "municipality": "Municipality",
+        "companyAddresses": "Addresses"
       },
       "_snapshot": "Pre-deletion Snapshot",
       "_cascade_deletions": "Automatic Deletions",
@@ -347,7 +348,8 @@
         "responsiblePersons": "Responsible persons",
         "servicesProvided": "Services provided",
         "personas": "Personas",
-        "personaTypes": "Persona types"
+        "personaTypes": "Persona types",
+        "displayName": "Display name"
       },
       "property": {
         "name": "Name",
@@ -364,7 +366,7 @@
         "areas": "Areas",
         "orientations": "Orientations",
         "condition": "Condition",
-        "energy": "Energy class",
+        "energy": "Energy performance certificate",
         "finishes": "Finishes",
         "interiorFeatures": "Interior features",
         "securityFeatures": "Security features",

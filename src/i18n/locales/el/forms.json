@@ -475,10 +475,6 @@
       "independentAuthority": "Ανεξάρτητη Αρχή",
       "decentralizedAdmin": "Αποκεντρωμένη Διοίκηση"
     },
-    "activityTypes": {
-      "main": "Κύρια",
-      "secondary": "Δευτερεύουσα"
-    },
     "addressTypes": {
       "headquarters": "Έδρα",
       "branch": "Υποκατάστημα"

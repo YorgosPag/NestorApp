@@ -21,6 +21,8 @@
  * αντί να γίνει σιωπηλό κενό.
  */
 
+import { getExplicitNamespace } from './namespace-compat';
+
 /** Μεταφραστής με την υπογραφή που ζητούν τα καθαρά lib (`PriceLabelT`). */
 export type BundleTranslate = (key: string, params?: Readonly<Record<string, unknown>>) => string;
 
@@ -94,10 +96,9 @@ export function createBundleTranslate(
   locale = 'en',
 ): BundleTranslate {
   return (key, params) => {
-    const separator = key.indexOf(':');
-    const namespace = separator === -1 ? defaultNamespace : key.slice(0, separator);
-    const path = separator === -1 ? key : key.slice(separator + 1);
-    const text = textAt(bundles[namespace], path);
+    // Η ΜΙΑ ερμηνεία του `ns:` (ίδια με το `useTranslation`, ADR-635 Φ C.23).
+    const { namespace, bareKey } = getExplicitNamespace(key);
+    const text = textAt(bundles[namespace ?? defaultNamespace], bareKey);
     return text === undefined ? key : formatBundleText(text, params, locale);
   };
 }

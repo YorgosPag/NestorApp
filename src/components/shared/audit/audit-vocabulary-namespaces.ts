@@ -8,7 +8,7 @@
  * **κανείς** στο audit δεν τα φόρτωνε. Δούλευαν μόνο όταν άλλο component της ίδιας σελίδας έτυχε να τα έχει φορτώσει.
  *
  * ✅ **ΠΑΡΑΓΩΓΗ, ΟΧΙ ΛΙΣΤΑ.** Τα namespaces βγαίνουν από τις **ίδιες** δηλώσεις που χρησιμοποιεί ο resolver
- * (`enumCatalog` · `itemCatalogs` · `nestedKeyCatalog` · κατάλογος ανά όνομα πεδίου · λέξη μονάδας εμβαδού). Μια νέα
+ * (`enumCatalog` · `itemCatalogs` · `nestedKeyCatalog` · κατάλογος ανά όνομα πεδίου · λέξη μονάδας εμβαδού · `labelKey`). Μια νέα
  * δήλωση φορτώνει το namespace της **χωρίς** δεύτερη γραμμή κάπου αλλού — δεν υπάρχει χειρόγραφη λίστα να ξεχαστεί.
  * Κάθε οντότητα πληρώνει **μόνο** τα δικά της λεξιλόγια (namespace ανά λειτουργία, πρακτική i18next/Locize).
  *
@@ -16,6 +16,8 @@
  */
 
 import { getTrackedFieldsForEntityAuditType } from '@/config/audit-tracked-fields';
+import { getExplicitNamespace } from '@/i18n/namespace-compat';
+import { getRetiredTrackedFields } from '@/config/audit-retired-fields';
 import { getAuditValueCatalog, type AuditCatalogRef } from '@/config/audit-value-catalogs';
 import { AUDIT_AREA_FIELDS, AUDIT_VALUE_WORDS } from '@/config/audit-value-vocabularies';
 import type { TrackedFieldDef } from '@/lib/audit/tracked-field-def';
@@ -42,7 +44,11 @@ export function auditVocabularyNamespaces(entityType: string | null): readonly s
   const cached = cache.get(cacheKey);
   if (cached) return cached;
 
-  const result = vocabularyNamespacesOf(getTrackedFieldsForEntityAuditType(entityType) ?? {});
+  const retired = Object.fromEntries(
+    Object.entries(getRetiredTrackedFields(entityType)).map(([field, entry]) => [field, entry.def]),
+  );
+  // Οι γραμμές αποσυρμένων πεδίων διαβάζονται κι αυτές — τα λεξιλόγιά τους φορτώνονται μαζί (ADR-195 (κ)).
+  const result = vocabularyNamespacesOf({ ...retired, ...(getTrackedFieldsForEntityAuditType(entityType) ?? {}) });
   cache.set(cacheKey, result);
   return result;
 }
@@ -52,6 +58,10 @@ export function vocabularyNamespacesOf(defs: Readonly<Record<string, TrackedFiel
   const namespaces = new Set<string>();
   for (const [field, def] of Object.entries(defs)) {
     for (const ref of catalogsOfField(field, def)) namespaces.add(ref.ns);
+    // ADR-195 (κ) — και το namespace της ΕΤΙΚΕΤΑΣ (`labelKey: 'catalog:audit.fields.…'`): χωρίς αυτό λυνόταν μόνο όταν
+    // η σελίδα έτυχε να το έχει φορτώσει (ίδια κλάση με τους καταλόγους τιμών, πάνω).
+    const labelNs = def.labelKey ? getExplicitNamespace(def.labelKey).namespace : null;
+    if (labelNs) namespaces.add(labelNs);
     if (AUDIT_AREA_FIELDS.has(field)) namespaces.add(AUDIT_VALUE_WORDS.sqm.ns);
   }
   return [...namespaces].sort();

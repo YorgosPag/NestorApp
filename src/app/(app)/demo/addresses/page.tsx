@@ -29,8 +29,10 @@ import {
   migrateLegacyAddress,
   getPrimaryAddress,
   formatAddressLine,
-  validateAddress
+  validateAddress,
+  type AddressValidationIssue
 } from '@/types/project/address-helpers';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ProjectAddress } from '@/types/project/addresses';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,6 +42,7 @@ import '@/lib/design-system';
 
 export default function AddressesDemoPage() {
   const colors = useSemanticColors();
+  const { t: tAddr } = useTranslation('addresses');
   // Sample addresses for demo
   const [addresses, setAddresses] = useState<ProjectAddress[]>([
     createProjectAddress({
@@ -78,7 +81,7 @@ export default function AddressesDemoPage() {
   ]);
 
   const [newHierarchy, setNewHierarchy] = useState<Partial<AddressWithHierarchyValue>>({});
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [validationErrors, setValidationErrors] = useState<AddressValidationIssue[]>([]);
 
   // Legacy migration demo
   const [legacyAddress, setLegacyAddress] = useState('Σαμοθράκης 16');
@@ -241,8 +244,8 @@ export default function AddressesDemoPage() {
               <div className="bg-destructive/10 border border-destructive rounded p-3">
                 <p className="text-sm font-semibold text-destructive mb-1">Errors:</p>
                 <ul className="text-sm text-destructive list-disc list-inside">
-                  {validationErrors.map((error, i) => (
-                    <li key={i}>{error}</li>
+                  {validationErrors.map((issue) => (
+                    <li key={issue}>{tAddr(`form.validation.${issue}`)}</li>
                   ))}
                 </ul>
               </div>

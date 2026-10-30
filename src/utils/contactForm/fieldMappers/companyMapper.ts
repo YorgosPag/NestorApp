@@ -1,6 +1,6 @@
 import type { Contact, CompanyContact, SocialMediaInfo } from '@/types/contacts';
 import type { ContactFormData, KadActivity } from '@/types/ContactFormTypes';
-import { initialFormData } from '@/types/ContactFormTypes';
+import { initialFormData, toLegacyKadActivityType } from '@/types/ContactFormTypes';
 import { isNonEmptyArray } from '@/lib/type-guards';
 import { getSafeFieldValue } from '../contactMapper';
 // ADR-332 D18: η ανάγνωση της λίστας διευθύνσεων ζει σε ΕΝΑ σημείο και για τα
@@ -142,7 +142,7 @@ export function mapCompanyContactToFormData(contact: Contact): ContactFormData {
     chamber: getContactValue(companyContact, 'chamber'),
     activityCodeKAD: getContactValue(companyContact, 'activityCodeKAD'),
     activityDescription: getContactValue(companyContact, 'activityDescription'),
-    activityType: (getContactValue(companyContact, 'activityType') as 'main' | 'secondary') || 'main',
+    activityType: toLegacyKadActivityType(getContactValue(companyContact, 'activityType')),
     activities: resolveActivities(companyContact),
     activityValidFrom: getContactValue(companyContact, 'activityValidFrom'),
     activityValidTo: getContactValue(companyContact, 'activityValidTo'),

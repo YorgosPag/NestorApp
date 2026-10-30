@@ -20,6 +20,10 @@
  */
 
 import type { AuditCatalogRef } from '@/config/audit-value-catalogs';
+import { LEGACY_KAD_ACTIVITY_TYPE_ALIASES } from '@/types/ContactFormTypes';
+import { getExplicitNamespace } from '@/i18n/namespace-compat';
+import { ENERGY_CERTIFICATE_ABSENCE_KEY, ENERGY_CERTIFICATE_SCOPE_KEY } from '@/lib/energy-certificate/energy-certificate-keys';
+import type { EnergyCertificate } from '@/lib/energy-certificate/energy-certificate';
 import {
   COMMUNICATION_LABELS_NS,
   COMPANY_EMAIL_TYPE_LABELS,
@@ -36,6 +40,7 @@ import {
   SOCIAL_PLATFORM_LABELS,
   WEBSITE_TYPE_LABELS,
 } from '@/constants/domains/communication-labels';
+import { PERSONA_LABELS_NS, PERSONA_TYPE_LABELS } from '@/constants/domains/project-building-persona-labels';
 
 /** Μία λέξη που δεν είναι τιμή λεξιλογίου (Ναι/Όχι, μονάδα, «εσωτ.») — `ns` + πλήρες κλειδί. */
 export interface AuditWordRef {
@@ -61,6 +66,13 @@ function catalogOfLabelTables(
   return { ns, path, ...(fallbackPaths.length > 0 ? { fallbackPaths } : {}) };
 }
 
+/** Κατάλογος από ΕΝΑΝ πίνακα πλήρων κλειδιών (`ns:διαδρομή.τιμή`) — το namespace βγαίνει από το ίδιο το κλειδί. */
+function catalogOfNamespacedKeyTable(table: Readonly<Record<string, string>>): AuditCatalogRef {
+  const { namespace, bareKey } = getExplicitNamespace(Object.values(table)[0]);
+  if (namespace === null) throw new Error(`audit-value-vocabularies: key without namespace "${bareKey}"`);
+  return { ns: namespace, path: parentPath(bareKey) };
+}
+
 /** Τύπος τηλεφώνου — ιδιώτης → εταιρεία → υπηρεσία. */
 export const AUDIT_PHONE_TYPE_CATALOG = catalogOfLabelTables(COMMUNICATION_LABELS_NS, [
   PHONE_TYPE_LABELS, COMPANY_PHONE_TYPE_LABELS, SERVICE_PHONE_TYPE_LABELS,
@@ -84,17 +96,39 @@ export const AUDIT_SOCIAL_MEDIA_TYPE_CATALOG = catalogOfLabelTables(COMMUNICATIO
 /** Πλατφόρμα social (`linkedin` → «LinkedIn»). */
 export const AUDIT_SOCIAL_PLATFORM_CATALOG = catalogOfLabelTables(COMMUNICATION_LABELS_NS, [SOCIAL_PLATFORM_LABELS]);
 
+/**
+ * Ρόλος επαφής (`personas[].personaType`) — ρίζα `ALL_PERSONA_TYPES`. Οι τιμές είναι snake_case (`real_estate_agent`), τα
+ * κλειδιά camelCase· τη γέφυρα την κάνει ήδη ο επιλυτής (`audit-value-resolver.ts`, snake→camel).
+ */
+export const AUDIT_PERSONA_TYPE_CATALOG = catalogOfLabelTables(PERSONA_LABELS_NS, [PERSONA_TYPE_LABELS]);
+
 /** Τύπος δραστηριότητας ΚΑΔ — ρίζα `KAD_ACTIVITY_TYPES` (`types/ContactFormTypes.ts`). */
 export const AUDIT_KAD_TYPE_CATALOG: AuditCatalogRef = { ns: 'forms', path: 'kad.types' };
 
 /**
- * Τύπος δραστηριότητας **εταιρείας** (ΓΕΜΗ, `customFields.activityType`: `main|secondary`) — ⚠️ ΑΛΛΗ ρίζα από τον τύπο ΚΑΔ
- * (`primary|secondary`)· η ενοποίησή τους είναι το εκκρεμές 🏷️′ #2, όχι σιωπηλή αντιστοίχιση εδώ.
+ * Το ενικό κάτοπτρο `customFields.activityType` (`main|secondary`) — ΤΟ ΙΔΙΟ λεξιλόγιο με τον τύπο ΚΑΔ, σε παλιά
+ * ορθογραφία (μετρημένο 29/10: η φόρμα γράφει ΠΑΝΤΑ `'main'` = κύρια ΚΑΔ· 7 επαφές `main`, 0 `secondary`). Η τιμή στη
+ * βάση μένει· η λέξη λύνεται από τη ρίζα μέσω του ψευδωνύμου της (ADR-195 (ζ) 🏷️′ #2).
  */
-export const AUDIT_COMPANY_ACTIVITY_TYPE_CATALOG: AuditCatalogRef = { ns: 'forms', path: 'options.activityTypes' };
+export const AUDIT_LEGACY_KAD_TYPE_CATALOG: AuditCatalogRef = {
+  ...AUDIT_KAD_TYPE_CATALOG,
+  valueAliases: LEGACY_KAD_ACTIVITY_TYPE_ALIASES,
+};
 
 /** Τύπος διεύθυνσης — έργου **και** επαφής (`ProjectAddressType` · `ContactAddressType`), ένας πίνακας λέξεων. */
 export const AUDIT_ADDRESS_TYPE_CATALOG: AuditCatalogRef = { ns: 'addresses', path: 'types' };
+
+/** Τα πεδία του ΠΕΑ ως ονόματα (`class` → «Ενεργειακή κλάση») — ίδιες λέξεις με τις ετικέτες των `energy.*` (ADR-195 (κ)). */
+export const AUDIT_ENERGY_CERTIFICATE_KEY_CATALOG: AuditCatalogRef = { ns: 'common-audit', path: 'audit.fields.energyCertificate' };
+
+/**
+ * Οι ΤΙΜΕΣ των `energy.scope` / `energy.absence` (`building` → «Κτήριο») — από τους πίνακες κλειδιών της φόρμας του ΠΕΑ,
+ * ώστε Ιστορικό και φόρμα να λένε την ίδια λέξη (ADR-195 (κ)).
+ */
+export const AUDIT_ENERGY_CERTIFICATE_VALUE_CATALOGS: Readonly<Partial<Record<keyof EnergyCertificate, AuditCatalogRef>>> = {
+  scope: catalogOfNamespacedKeyTable(ENERGY_CERTIFICATE_SCOPE_KEY),
+  absence: catalogOfNamespacedKeyTable(ENERGY_CERTIFICATE_ABSENCE_KEY),
+};
 
 /** Τα μέρη της επιφάνειας ακινήτου (`areas.gross` → «Μικτό»). */
 export const AUDIT_AREA_PARTS_CATALOG: AuditCatalogRef = { ns: 'properties-detail', path: 'fields.areas' };

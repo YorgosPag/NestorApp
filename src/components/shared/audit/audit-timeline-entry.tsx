@@ -36,7 +36,7 @@ import { cn } from "@/lib/utils";
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ACTION_MAP } from "./activity-tab-config";
-import { formatCollectionItemLabel, formatFieldAwareValue, formatStorageUrl, type AuditValueFormat } from "./activity-tab-helpers";
+import { formatCollectionItemLabel, formatFieldAwareValue, formatStorageUrl, isStorageObjectUrl, type AuditValueFormat } from "./activity-tab-helpers";
 import { resolveAuditValue, resolveDeclaredAuditValue } from "./audit-value-resolver";
 import { auditValueWords } from "./audit-value-words";
 import { useAuditVocabulary } from "./useAuditVocabulary";
@@ -353,7 +353,7 @@ export function AuditTimelineEntry({
                   : healedLabel !== rawLabel
                     ? healedLabel
                     : (resolveAuditValue(change.field, rawLabel, vocabT, def?.enumCatalog)
-                        ?? (rawLabel.includes('firebasestorage.googleapis.com') ? formatStorageUrl(rawLabel, words.word('photo')) : rawLabel));
+                        ?? (isStorageObjectUrl(rawLabel) ? formatStorageUrl(rawLabel, words.word('photo')) : rawLabel));
                 const rawMessage = t(`audit.collection.${change.op}`, {
                   field: fieldLabel,
                   item: itemLabel,

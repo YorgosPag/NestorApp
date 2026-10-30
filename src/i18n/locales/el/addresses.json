@@ -101,7 +101,8 @@
     "validation": {
       "streetRequired": "Η οδός είναι υποχρεωτική",
       "cityRequired": "Η πόλη είναι υποχρεωτική",
-      "postalCodeRequired": "Ο Τ.Κ. είναι υποχρεωτικός"
+      "postalCodeRequired": "Ο Τ.Κ. είναι υποχρεωτικός",
+      "postalCodeFormat": "Ο Τ.Κ. πρέπει να είναι 5 ψηφία"
     }
   },
   "map": {

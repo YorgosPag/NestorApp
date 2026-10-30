@@ -135,11 +135,47 @@ export interface CompanyAddress
 /** Η ρίζα του τύπου δραστηριότητας ΚΑΔ — λέξεις στο `forms:kad.types.*` (ADR-195 (ζ): το Ιστορικό τις ζητά από εκεί). */
 export const KAD_ACTIVITY_TYPES = ['primary', 'secondary'] as const;
 
+export type KadActivityType = (typeof KAD_ACTIVITY_TYPES)[number];
+
+export function isKadActivityType(value: unknown): value is KadActivityType {
+  return typeof value === 'string' && (KAD_ACTIVITY_TYPES as readonly string[]).includes(value);
+}
+
+/**
+ * Η ΠΑΛΙΑ ορθογραφία του ίδιου λεξιλογίου (ADR-195 (ζ) 🏷️′ #2). Το ενικό κάτοπτρο
+ * `activityType` (δίπλα στα `activityCodeKAD` / `activityDescription`) περιγράφει ΠΑΝΤΑ την
+ * κύρια ΚΑΔ: η φόρμα γράφει `'main'` κάθε φορά που αλλάζουν οι δραστηριότητες. Η τιμή στη βάση
+ * ΜΕΝΕΙ όπως είναι (πρακτική SAP: καμία σιωπηλή μετάπτωση)· η λέξη λύνεται ως ψευδώνυμο της
+ * ρίζας, ώστε «main» και «primary» να λένε ΜΙΑ λέξη (`forms:kad.types.*`).
+ */
+export const LEGACY_KAD_ACTIVITY_TYPE_ALIASES = {
+  main: 'primary',
+  secondary: 'secondary',
+} as const satisfies Readonly<Record<string, KadActivityType>>;
+
+export type LegacyKadActivityType = keyof typeof LEGACY_KAD_ACTIVITY_TYPE_ALIASES;
+
+/** Παλιά ορθογραφία; ΜΟΝΟ own-property — `constructor`/`toString` δεν είναι τιμές του λεξιλογίου. */
+export function isLegacyKadActivityType(value: unknown): value is LegacyKadActivityType {
+  return typeof value === 'string' && Object.prototype.hasOwnProperty.call(LEGACY_KAD_ACTIVITY_TYPE_ALIASES, value);
+}
+
+/** Ελεύθερη τιμή (π.χ. όρισμα εργαλείου AI) → τύπος ΚΑΔ· δέχεται και την παλιά ορθογραφία, αλλιώς `fallback`. */
+export function toKadActivityType(value: unknown, fallback: KadActivityType): KadActivityType {
+  if (isKadActivityType(value)) return value;
+  return isLegacyKadActivityType(value) ? LEGACY_KAD_ACTIVITY_TYPE_ALIASES[value] : fallback;
+}
+
+/** Αποθηκευμένη τιμή → παλιά ορθογραφία· άγνωστο/κενό ⇒ `'main'` (το κάτοπτρο είναι πάντα η κύρια ΚΑΔ). */
+export function toLegacyKadActivityType(value: unknown): LegacyKadActivityType {
+  return isLegacyKadActivityType(value) ? value : 'main';
+}
+
 /** Single KAD activity entry — primary or secondary */
 export interface KadActivity {
   code: string;
   description: string;
-  type: (typeof KAD_ACTIVITY_TYPES)[number];
+  type: KadActivityType;
   activeFrom?: string;
 }
 
@@ -260,7 +296,7 @@ export interface ContactFormData {
   neighborhood: string;
   activityCodeKAD: string; // ΚΑΔ κωδικός (legacy singular)
   activityDescription: string; // Περιγραφή δραστηριότητας (legacy singular)
-  activityType: 'main' | 'secondary'; // Κύρια/Δευτερεύουσα (legacy singular)
+  activityType: LegacyKadActivityType; // Κύρια/Δευτερεύουσα (legacy singular) — ψευδώνυμο του KadActivityType
   /** Multi-KAD activities array — primary + secondary */
   activities?: KadActivity[];
   activityValidFrom: string;
