@@ -67,7 +67,11 @@ export interface Installment {
   /** Ποσοστό επί της τελικής τιμής (π.χ. 10 = 10%) */
   percentage: number;
 
-  /** Ημερομηνία λήξης (due date) — ISO string for Firestore compatibility */
+  /**
+   * Ημέρα λήξης — **ημερολογιακή ημέρα `YYYY-MM-DD`**, όχι στιγμή (ADR-234, 2026-10-29). Ληξιπρόθεσμη όταν περάσει
+   * ΟΛΟΚΛΗΡΗ η ημέρα στην Αθήνα (ΑΚ 241). Παλιές εγγραφές έχουν ISO στιγμή — ΜΗΝ τη διαβάζεις ωμά:
+   * `installmentDueDay` / `isInstallmentPastDue` (`lib/payment-plan/installment-due-day`).
+   */
   dueDate: string;
 
   /** Κατάσταση */
@@ -411,6 +415,7 @@ export interface CreateInstallmentInput {
   type: InstallmentType;
   amount: number;
   percentage: number;
+  /** Ημέρα λήξης `YYYY-MM-DD` (ADR-234) */
   dueDate: string;
   notes?: string;
 }
@@ -420,6 +425,7 @@ export interface UpdateInstallmentInput {
   label?: string;
   amount?: number;
   percentage?: number;
+  /** Ημέρα λήξης `YYYY-MM-DD` (ADR-234) */
   dueDate?: string;
   notes?: string;
 }

@@ -12,6 +12,7 @@
  * σώμα του σφάλματος και φτάνει στην οθόνη **ως έκβαση με διέξοδο**.
  */
 
+import { API_ROUTES } from '@/config/domain-constants';
 import { apiClient, apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
 import {
   stayChannelWriteResultFrom,
@@ -23,8 +24,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('stay-channels.client');
 
-const urlOf = (ownerPropertyId: string): string =>
-  `/api/owner-properties/${encodeURIComponent(ownerPropertyId)}/stay-channels`;
+const urlOf = API_ROUTES.OWNER_PROPERTIES.STAY_CHANNELS;
 
 export type StayChannelsLoad =
   | { readonly kind: 'loaded'; readonly view: StayChannelsView }
