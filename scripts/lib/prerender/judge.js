@@ -27,11 +27,9 @@
 
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
 
 const MG = require('../module-graph');
-const { collectSourceFiles } = require('../module-graph/scan-config');
 const { analyzeModule } = require('./analyze-module');
 const RT = require('./route-tree');
 
@@ -49,18 +47,18 @@ const ZERO_TOLERANCE = Object.freeze([STATES.BAILOUT, STATES.NO_ROOT]);
 const ALL_STATES = Object.freeze(Object.values(STATES));
 
 /** Ο αναγνώστης: αναλύει κάθε αρχείο **μία** φορά, με τεμπέλικο τρόπο. */
-function createReader(projectRoot, fileSet) {
+function createReader(projectRoot, fileSet, input = require('../gate-input').openGateInput({ root: projectRoot })) {
   const cache = new Map();
   const parsed = new Map();
   return {
     fileSet,
     analyze(rel) {
       if (cache.has(rel)) return cache.get(rel);
-      const abs = path.join(projectRoot, rel);
+      const text = input.read(rel);
       let value = null;
-      if (fs.existsSync(abs)) {
+      if (text !== null) {
         try {
-          value = analyzeModule(rel, fs.readFileSync(abs, 'utf8'));
+          value = analyzeModule(rel, text);
         } catch {
           value = null;
         }
@@ -70,11 +68,11 @@ function createReader(projectRoot, fileSet) {
     },
     parse(rel) {
       if (parsed.has(rel)) return parsed.get(rel);
-      const abs = path.join(projectRoot, rel);
+      const text = input.read(rel);
       let value = null;
-      if (fs.existsSync(abs)) {
+      if (text !== null) {
         try {
-          value = MG.parseModule(rel, fs.readFileSync(abs, 'utf8'));
+          value = MG.parseModule(rel, text);
         } catch {
           value = null;
         }
@@ -257,10 +255,10 @@ function judgeRoot(route, ctx) {
   const read = rel => ctx.reader.analyze(rel);
   const base = { ...route, hits: [], unresolved: 0, hostileInClosure: reachesHostile(route, ctx) };
 
-  const optOut = RT.routeOptOut(ctx.projectRoot, route, read);
+  const optOut = RT.routeOptOut(ctx.projectRoot, route, read, ctx.input);
   if (optOut) return { ...base, state: STATES.OPTED_OUT, detail: optOut };
 
-  const guard = RT.routeGuard(ctx.projectRoot, route, read);
+  const guard = RT.routeGuard(ctx.projectRoot, route, read, ctx.input);
   if (guard.guarded) return { ...base, state: STATES.GUARDED, detail: guard.reason };
 
   const mod = read(route.file);
@@ -294,18 +292,20 @@ function assertClosed(records) {
   return census;
 }
 
-function judgeAll(projectRoot) {
-  const fileSet = new Set(collectSourceFiles(projectRoot, ['src']).map(MG.toPosix));
+/** `input` = η είσοδος (ADR-924) — προεπιλογή ο δίσκος· με `--index` η όψη του commit (αρχεία, κείμενο, tsconfig). */
+function judgeAll(projectRoot, input = require('../gate-input').openGateInput({ root: projectRoot })) {
+  const fileSet = new Set(input.sources(['src']).map(MG.toPosix));
   const ctx = {
     projectRoot,
-    aliases: MG.readTsPathAliases(projectRoot, 'tsconfig.base.json').concat(
-      MG.readTsPathAliases(projectRoot, 'tsconfig.json')
+    input,
+    aliases: MG.readTsPathAliases(projectRoot, 'tsconfig.base.json', input.read).concat(
+      MG.readTsPathAliases(projectRoot, 'tsconfig.json', input.read)
     ),
-    reader: createReader(projectRoot, fileSet),
+    reader: createReader(projectRoot, fileSet, input),
     edgeCache: new Map(),
     exportCache: new Map(),
   };
-  const records = RT.enumerateRoots(projectRoot).map(route => judgeRoot(route, ctx));
+  const records = RT.enumerateRoots(projectRoot, input).map(route => judgeRoot(route, ctx));
   return { records, census: assertClosed(records), ctx };
 }
 

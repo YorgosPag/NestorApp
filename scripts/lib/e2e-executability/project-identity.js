@@ -152,11 +152,12 @@ function mergeUse(base, own) {
  * @param {object} [options.devices] ένεση για τις δοκιμές· αλλιώς το εγκατεστημένο playwright
  * @returns {{projects: Array<object>, configPath: string, defaultTemplate: string|null}}
  */
-function readProjects({ root = PROJECT_ROOT, devices } = {}) {
+function readProjects({ root = PROJECT_ROOT, devices, input = null } = {}) {
   // eslint-disable-next-line global-require -- προαιρετική εξάρτηση: το module πρέπει να
   // φορτώνεται και να δοκιμάζεται με ενεμένα descriptors, χωρίς εγκατεστημένο playwright.
   const deviceTable = devices || require('@playwright/test').devices;
-  const sourceFile = parseSource(path.join(root, CONFIG_PATH));
+  // `input` (ADR-924): με `--index` το playwright config ΤΟΥ COMMIT (στατική ανάλυση, όχι εκτέλεση).
+  const sourceFile = parseSource(path.join(root, CONFIG_PATH), input ? input.read(CONFIG_PATH) ?? '' : null);
   const config = configObject(sourceFile);
 
   if (config === null) {

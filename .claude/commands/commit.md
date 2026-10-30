@@ -28,9 +28,17 @@ Use two `-m` flags (no HEREDOC — `cat` not in bash sandbox PATH):
 "C:\Program Files\Git\cmd\git.exe" commit -m "type(scope): subject" -m "Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"
 ```
 
+⚠️ **TIMEOUT — ΥΠΟΧΡΕΩΤΙΚΟ**: ο pre-commit hook διαρκεί **~5,5 λεπτά** (μετρημένο 2026-10-30: `real 5m33s`).
+Το προεπιλεγμένο timeout του Bash tool είναι **2 λεπτά** ⇒ η εντολή **σκοτώνεται στη μέση του hook και
+το commit δεν γίνεται ΠΟΤΕ**, χωρίς κανένα μήνυμα αποτυχίας του hook. Τρέξε το `git commit` **πάντα** με
+`run_in_background: true` και περίμενε την ειδοποίηση ολοκλήρωσης (όχι polling). Αν δεν γίνεται background,
+τότε `timeout: 600000`. Μετά επιβεβαίωσε με `git log --oneline -1` ότι το commit **υπάρχει** πριν αναφέρεις επιτυχία.
+Αν βρεις `.git/index.lock` από σκοτωμένο commit → **ΜΗΝ** το σβήσεις μόνος σου· ανάφερέ το στον Giorgio.
+
 ## STEP 3a — Hook PASS ✅
 
-Report: `✅ Commit επιτυχής: [commit hash] — [message]`
+Report: `✅ Commit επιτυχής: [commit hash] — [message]` — **μόνο** αφού το `git log --oneline -1` δείξει το νέο hash.
+Exit που δεν είναι 0 **χωρίς** μήνυμα hook (π.χ. timeout/killed) **ΔΕΝ** είναι αποτυχία hook: ανάφερέ το ως «η εντολή κόπηκε» και ξανατρέξε σε background.
 
 Done.
 

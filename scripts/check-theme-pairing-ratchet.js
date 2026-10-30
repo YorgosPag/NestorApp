@@ -85,6 +85,7 @@
 const fs = require('fs');
 const path = require('path');
 const { PROJECT_ROOT, runSetRatchetCli } = require('./lib/ratchet-baseline');
+const { openGateInput } = require('./lib/gate-input');
 const { readTokenPalette, TOKEN_MODULES_DIR } = require('./lib/contrast/ts-token-palette');
 const { readThemes, GLOBALS_CSS } = require('./lib/contrast/css-token-themes');
 const { evaluate, RATCHETED_STATES } = require('./lib/contrast/theme-pairing');
@@ -115,9 +116,11 @@ const violationId = (f) => `${f.state}::${f.id}`;
  */
 const declarationIds = (palette) => auditPalette(palette).judgedIds;
 
-function measure() {
-  const palette = readTokenPalette(PROJECT_ROOT);
-  const themes = readThemes(PROJECT_ROOT);
+/** `opts.input` = η είσοδος (ADR-924) — προεπιλογή ο δίσκος· ο εκτελεστής δίνει την όψη του commit. */
+function measure(opts = {}) {
+  const input = opts.input || openGateInput({ root: PROJECT_ROOT });
+  const palette = readTokenPalette(PROJECT_ROOT, input);
+  const themes = readThemes(PROJECT_ROOT, input);
   const ledger = auditPalette(palette);
 
   /**
@@ -198,7 +201,7 @@ const DESCRIPTOR = {
   adr: 'CHECK 3.39',
   skipEnv: 'SKIP_THEME_PAIRING',
   get baselineFile() { return baselineFile(); },
-  measure,
+  measure: (_args, input) => measure({ input }),
   buildPayload,
   printReport,
   violationId,

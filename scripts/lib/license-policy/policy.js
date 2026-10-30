@@ -36,11 +36,13 @@ const POLICY_FILE_NAME = '.license-policy.json';
  * @returns {{ok: true, policy: object} | {ok: false, error: string}}
  * Ποτέ δεν πετά: μια πολιτική που δεν διαβάζεται γίνεται UNKNOWN με όνομα, όχι κρασάρισμα.
  */
-function loadPolicy(filePath) {
-  if (!fs.existsSync(filePath)) return { ok: false, error: `λείπει το αρχείο πολιτικής ${filePath}` };
+function loadPolicy(filePath, input = null) {
+  // `input` (ADR-924): η είσοδος της πύλης — με `--index` η πολιτική ΤΟΥ COMMIT.
+  const text = input ? input.read(filePath) : (fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : null);
+  if (text === null) return { ok: false, error: `λείπει το αρχείο πολιτικής ${filePath}` };
   let raw;
   try {
-    raw = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    raw = JSON.parse(text);
   } catch (error) {
     return { ok: false, error: `μη έγκυρο JSON στο ${filePath}: ${error.message}` };
   }

@@ -84,6 +84,19 @@ describe('parsePhoneForStorage', () => {
     });
   });
 
+  // ADR-327 §8.5.4 ☎️#3 — κωδικοί που ο παλιός χειρόγραφος πίνακας (CC3/CC2) ΔΕΝ ήξερε: έπεφταν στο
+  // `{ number: '212612345678' }` χωρίς χώρα. Τα metadata της libphonenumber είναι η ΜΙΑ αλήθεια.
+  describe('codes the hand-kept table did not know', () => {
+    it.each([
+      ['+212612345678', '+212', '612345678'], // Μαρόκο
+      ['+38344123456', '+383', '44123456'], // Κόσοβο
+      ['+2348031234567', '+234', '8031234567'], // Νιγηρία
+      ['0018682345678', '+1', '8682345678'], // Τρινιδάδ (NANP)
+    ])('%s ⇒ %s', (raw, countryCode, number) => {
+      expect(parsePhoneForStorage(raw)).toEqual({ countryCode, number });
+    });
+  });
+
   describe('edge cases', () => {
     it('returns number unchanged if + prefix unrecognized', () => {
       const result = parsePhoneForStorage('+99912345678');

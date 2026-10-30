@@ -132,9 +132,9 @@ function listWorktreeDivergence({ repoRoot }) {
  * αποσυγχρονίζεται από το πρώτο αρχείο και κάθε επόμενο κείμενο είναι σκουπίδι (33/33 λάθος).
  * Ό,τι διαβάζει ο walk (ακμές, ονόματα, namespaces) δεν εξαρτάται από το EOL.
  * @param {{repoRoot: string, entries: Array<[string, string]>}} options `[μονοπάτι, blob sha]`
- * @returns {Map<string, string>}
+ * @returns {Map<string, Buffer>} τα bytes κάθε blob (δυαδικά αρχεία: γραμματοσειρές, εικόνες — ADR-924 Φ2)
  */
-function readIndexTexts({ repoRoot, entries }) {
+function readIndexBlobs({ repoRoot, entries }) {
   const out = new Map();
   if (entries.length === 0) return out;
   const result = spawnSync('git', ['cat-file', '--batch'], {
@@ -150,10 +150,15 @@ function readIndexTexts({ repoRoot, entries }) {
     at = eol + 1;
     if (header.endsWith(' missing')) continue;
     const size = Number(header.slice(header.lastIndexOf(' ') + 1));
-    out.set(rel, buffer.toString('utf8', at, at + size));
+    out.set(rel, buffer.subarray(at, at + size));
     at += size + 1;   // + το LF που κλείνει κάθε αντικείμενο
   }
   return out;
+}
+
+/** Το κείμενο (UTF-8) πολλών blobs — βλ. `readIndexBlobs`. @returns {Map<string, string>} */
+function readIndexTexts({ repoRoot, entries }) {
+  return new Map([...readIndexBlobs({ repoRoot, entries })].map(([rel, bytes]) => [rel, bytes.toString('utf8')]));
 }
 
 /**
@@ -163,19 +168,23 @@ function readIndexTexts({ repoRoot, entries }) {
  * ως blob, όλα μαζί σε ΕΝΑ spawn. Σε δέντρο χωρίς ξένη δουλειά το κόστος είναι δύο εντολές git.
  * ⚠️ Τα blobs έρχονται με EOL του ευρετηρίου (LF), ο δίσκος με του checkout — δες `readIndexTexts`.
  * 🧹 Εξήχθη από το `createIndexSources` του i18n-shell-slice (N.0.2), που μένει καταναλωτής του.
- * @param {{repoRoot: string, include?: (rel: string) => boolean}} options
+ * @param {{repoRoot: string, include?: (rel: string) => boolean, snapshot?: object}} options `snapshot` = `takeCommitSnapshot` (Φ4)
  * @returns {{entries: Map<string, string>, files: string[], has: (rel: string) => boolean,
- *            readText: (rel: string) => ?string, divergent: number}}
+ *            readText: (rel: string) => ?string, readBytes: (rel: string) => ?Buffer, divergent: number}}
  */
-function createCommitView({ repoRoot, include = () => true }) {
-  const entries = new Map([...listIndexEntries({ repoRoot })].filter(([rel]) => include(rel)));
-  const divergent = [...listWorktreeDivergence({ repoRoot })].filter(rel => entries.has(rel));
-  const fromIndex = readIndexTexts({ repoRoot, entries: divergent.map(rel => [rel, entries.get(rel)]) });
-  const readText = (rel) => {
+function createCommitView({ repoRoot, include = () => true, snapshot = null }) {
+  // ⚡ ADR-924 Φ4: με `snapshot` (το στιγμιότυπο της εκτέλεσης) ΚΑΝΕΝΑ spawn — η όψη χτίζεται από τα δεδομένα του
+  const indexEntries = snapshot ? new Map(snapshot.entries) : listIndexEntries({ repoRoot });
+  const entries = new Map([...indexEntries].filter(([rel]) => include(rel)));
+  const divergent = [...(snapshot ? snapshot.divergent : listWorktreeDivergence({ repoRoot }))].filter(rel => entries.has(rel));
+  const fromIndex = snapshot
+    ? new Map(snapshot.blobs.filter(([rel]) => entries.has(rel)).map(([rel, bytes]) => [rel, Buffer.from(bytes)]))
+    : readIndexBlobs({ repoRoot, entries: divergent.map(rel => [rel, entries.get(rel)]) });
+  const readBytes = (rel) => {
     if (!entries.has(rel)) return null;
     if (fromIndex.has(rel)) return fromIndex.get(rel);
     try {
-      return fs.readFileSync(path.join(repoRoot, rel), 'utf8');
+      return fs.readFileSync(path.join(repoRoot, rel));
     } catch {
       return null;
     }
@@ -184,8 +193,13 @@ function createCommitView({ repoRoot, include = () => true }) {
     entries,
     files: [...entries.keys()].sort(),
     has: rel => entries.has(rel),
-    readText,
+    readText: (rel) => {
+      const bytes = readBytes(rel);
+      return bytes === null ? null : bytes.toString('utf8');
+    },
+    readBytes,
     divergent: divergent.length,
+    divergentFiles: new Set(divergent),
   };
 }
 
@@ -215,7 +229,59 @@ function listTreeEntries({ repoRoot, rev = 'HEAD', paths }) {
   return entries;
 }
 
+/**
+ * ADR-924 Φ2 — τα tracked αρχεία **κειμένου** (`-I`) που περιέχουν `needle` (σταθερή συμβολοσειρά, ή πίνακας = «οποιαδήποτε»),
+ * με την ΙΔΙΑ μηχανή του git και στις δύο όψεις: `cached` ⇒ το κείμενο του ευρετηρίου, αλλιώς του δίσκου. Ποτέ untracked.
+ * `git grep` βγαίνει 1 όταν δεν βρει τίποτα — δεν είναι σφάλμα.
+ * @param {{repoRoot: string, needle: string|string[], pathspecs?: string[], cached?: boolean}} options
+ * @returns {string[]} σχετικά posix μονοπάτια
+ */
+/**
+ * Τα σταδιοποιημένα μονοπάτια (προστέθηκαν · αντιγράφηκαν · άλλαξαν · μετονομάστηκαν — ΟΧΙ σβησμένα), σχετικά posix.
+ * ΤΟ ΕΝΑ σημείο της σκανδάλης «τι αγγίζει αυτό το commit» (ADR-924 Φ3: ήταν εννέα αντίγραφα του ίδιου `git diff`).
+ *
+ * ⚠️ `-z`, όχι γραμμές: χωρίς αυτό το git βάζει σε εισαγωγικά και escapes κάθε μη-ASCII μονοπάτι (`core.quotepath`) ⇒
+ *    ένα ελληνικό όνομα αρχείου δεν ταίριαζε ποτέ σε φίλτρο. ⚠️ Σφάλμα του git ⇒ `throw`, ποτέ σιωπηλό «κανένα»:
+ *    μια σκανδάλη που επιστρέφει `[]` όταν αποτυγχάνει κάνει την πύλη σιωπηλά πράσινη.
+ * @param {{repoRoot: string}} options
+ * @returns {string[]}
+ */
+function listStagedPaths({ repoRoot }) {
+  return runGit(repoRoot, ['diff', '--cached', '--name-only', '-z', '--diff-filter=ACMR']).split('\0').filter(Boolean);
+}
+
+function grepFiles({ repoRoot, needle, pathspecs = [], cached = false }) {
+  const needles = (Array.isArray(needle) ? needle : [needle]).flatMap(n => ['-e', n]);
+  const args = ['grep', '-l', '-I', '--fixed-strings', '-z', ...(cached ? ['--cached'] : []), ...needles, '--', ...pathspecs];
+  const result = spawnSync('git', args, { cwd: repoRoot, encoding: 'utf8', maxBuffer: MAX_BUFFER });
+  if (result.error) throw result.error;
+  if (result.status === 1) return [];
+  if (result.status !== 0) throw new Error(`git grep απέτυχε (${result.status}): ${(result.stderr || '').trim()}`);
+  return result.stdout.split('\0').filter(Boolean);
+}
+
+/**
+ * **ΤΟ ΣΤΙΓΜΙΟΤΥΠΟ ΜΙΑΣ ΕΚΤΕΛΕΣΗΣ** (ADR-924 Φ4) — ό,τι χρειάζεται μια όψη του commit, σε **σειριοποιήσιμη** μορφή
+ * (structured clone προς worker threads): εγγραφές ευρετηρίου · αποκλίνοντα · τα blobs τους · untracked.
+ *
+ * 🔑 ΓΙΑΤΙ (μετρημένο §8.9): κάθε πύλη έχτιζε ΔΙΚΗ της όψη (~1,3s, τρία spawn) — ~90 φορές το ίδιο ερώτημα ανά commit,
+ *    και θεωρητικά με ΔΙΑΦΟΡΕΤΙΚΗ απάντηση αν κάποιος σταδιοποιούσε στο μεταξύ. Ο εκτελεστής το παίρνει ΜΙΑ φορά: μία
+ *    απάντηση για όλες τις πύλες της ίδιας εκτέλεσης. Τα `untracked` τα χρειάζεται η ζώνη ασφαλείας του worker (ό,τι
+ *    υπάρχει στον δίσκο και ΔΕΝ θα δεσμευτεί).
+ * @param {{repoRoot: string}} options
+ * @returns {{repoRoot: string, entries: Array<[string, string]>, divergent: string[], blobs: Array<[string, Buffer]>,
+ *            untracked: string[]}}
+ */
+function takeCommitSnapshot({ repoRoot }) {
+  const entries = listIndexEntries({ repoRoot });
+  const divergent = [...listWorktreeDivergence({ repoRoot })].filter(rel => entries.has(rel));
+  const blobs = readIndexBlobs({ repoRoot, entries: divergent.map(rel => [rel, entries.get(rel)]) });
+  const untracked = runGit(repoRoot, ['ls-files', '-o', '--exclude-standard', '-z']).split('\0').filter(Boolean);
+  return { repoRoot, entries: [...entries], divergent, blobs: [...blobs], untracked };
+}
+
 module.exports = {
   materializeIndex, writeIndexBlob, readIndexText, listIndexEntries, listWorktreeDivergence, readIndexTexts,
-  createCommitView, listTreeEntries,
+  readIndexBlobs, grepFiles, listStagedPaths,
+  createCommitView, takeCommitSnapshot, listTreeEntries,
 };

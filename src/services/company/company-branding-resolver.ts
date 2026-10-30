@@ -25,17 +25,10 @@
 import type { Firestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { resolveCompanyDisplayName } from './company-name-resolver';
+import { isSocialPlatform, type SocialPlatform } from '@/lib/contact/social-media-type-vocabulary';
+import { buildSocialProfileUrl, normaliseSocialHandle } from '@/lib/contact/social-platform-profiles';
 
 export type BrandingSource = 'contact' | 'tenant' | 'fallback';
-
-export type ShowcaseSocialPlatform =
-  | 'facebook'
-  | 'instagram'
-  | 'linkedin'
-  | 'twitter'
-  | 'youtube'
-  | 'github'
-  | 'other';
 
 export interface ShowcaseContactPhone {
   value: string;
@@ -53,7 +46,8 @@ export interface ShowcaseContactWebsite {
 }
 
 export interface ShowcaseContactSocial {
-  platform: ShowcaseSocialPlatform;
+  /** Η πλατφόρμα της επαφής ΑΥΤΟΥΣΙΑ — ρίζα `SOCIAL_PLATFORMS` (ADR-327 §8.5.4), ποτέ υποσύνολο. */
+  platform: SocialPlatform;
   url: string;
   username?: string;
   label?: string;
@@ -213,25 +207,11 @@ function pickAllAddresses(arr: unknown): string[] | undefined {
   return mapped.length > 0 ? mapped : undefined;
 }
 
-const SOCIAL_PLATFORMS: readonly ShowcaseSocialPlatform[] = [
-  'facebook', 'instagram', 'linkedin', 'twitter', 'youtube', 'github', 'other',
-];
-
-const SOCIAL_BASE_URL: Record<Exclude<ShowcaseSocialPlatform, 'other'>, string> = {
-  facebook: 'https://facebook.com/',
-  instagram: 'https://instagram.com/',
-  linkedin: 'https://linkedin.com/in/',
-  twitter: 'https://twitter.com/',
-  youtube: 'https://youtube.com/@',
-  github: 'https://github.com/',
-};
-
-function normalisePlatform(raw: unknown): ShowcaseSocialPlatform {
+// Η πλατφόρμα κρίνεται από τη ΡΙΖΑ: πριν (ADR-327 §8.5.4) ένα τοπικό υποσύνολο 7 τιμών έκανε
+// tiktok/whatsapp/telegram ⇒ `other`, και λογαριασμός με μόνο όνομα χρήστη χανόταν από βιτρίνα και email.
+function normaliseSocialPlatform(raw: unknown): SocialPlatform {
   const v = pickNonEmptyString(raw)?.toLowerCase();
-  if (v && (SOCIAL_PLATFORMS as readonly string[]).includes(v)) {
-    return v as ShowcaseSocialPlatform;
-  }
-  return 'other';
+  return isSocialPlatform(v) ? v : 'other';
 }
 
 function pickAllSocials(arr: unknown): ShowcaseContactSocial[] | undefined {
@@ -244,17 +224,14 @@ function pickAllSocials(arr: unknown): ShowcaseContactSocial[] | undefined {
   }>;
   const mapped = entries
     .map<ShowcaseContactSocial | undefined>((e) => {
-      const platform = normalisePlatform(e.platform);
-      const explicitUrl = pickNonEmptyString(e.url);
-      const username = pickNonEmptyString(e.username);
-      let finalUrl = explicitUrl;
-      if (!finalUrl && username && platform !== 'other') {
-        finalUrl = SOCIAL_BASE_URL[platform] + username.replace(/^@/, '');
-      }
+      const platform = normaliseSocialPlatform(e.platform);
+      const rawUsername = pickNonEmptyString(e.username);
+      const username = rawUsername ? normaliseSocialHandle(platform, rawUsername) : undefined;
+      const finalUrl = pickNonEmptyString(e.url) ?? (username ? buildSocialProfileUrl(platform, username) : undefined);
       if (!finalUrl) return undefined;
       const label = pickNonEmptyString(e.label);
       const base: ShowcaseContactSocial = { platform, url: finalUrl };
-      if (username) base.username = username.replace(/^@/, '');
+      if (username) base.username = username;
       if (label) base.label = label;
       return base;
     })

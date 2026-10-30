@@ -48,7 +48,8 @@ const MANIFEST_TS = path.join(
 
 // 🧹 ADR-861 Φ3 (N.0.2): ο φορτωτής ζει πλέον στο `scripts/lib/ts-module-loader.js` — εκεί
 // τον ζήτησε ο δεύτερος καταναλωτής (πύλη νομικών εγγράφων), όπως προέβλεπε αυτό το σχόλιο.
-const { registerTypeScript } = require('../ts-module-loader');
+const { requireFromInput } = require('../ts-module-loader');
+const { openGateInput } = require('../gate-input');
 
 /**
  * Φορτώνει το μητρώο κάλυψης **εκτελώντας** το.
@@ -59,10 +60,13 @@ const { registerTypeScript } = require('../ts-module-loader');
  *
  * @returns {{ coverage: readonly object[] }}
  */
-function loadCoverageManifest() {
-  registerTypeScript();
-  // eslint-disable-next-line import/no-dynamic-require, global-require
-  const mod = require(MANIFEST_TS);
+function loadCoverageManifest(input = null) {
+  // ADR-924 — ΕΚΤΕΛΕΙΤΑΙ από την όψη της εισόδου: με `--index` η κλειστότητα εισαγωγών του μητρώου όπως θα
+  // δεσμευτεί (στιγμιότυπο) — ούτε σιωπηλά ο δίσκος, ούτε άρνηση επειδή ο δίσκος αποκλίνει (ήταν ζώνη ασφαλείας).
+  const rel = path.relative(PROJECT_ROOT, MANIFEST_TS).split(path.sep).join('/');
+  const loaded = requireFromInput({ input: input || openGateInput({ root: PROJECT_ROOT }), entries: [rel] });
+  loaded.dispose();   // τα φορτωμένα modules μένουν στη μνήμη· σβήνει μόνο το στιγμιότυπο
+  const [mod] = loaded.modules;
   const coverage = mod.FIRESTORE_RULES_COVERAGE;
   if (!Array.isArray(coverage)) {
     throw new Error(

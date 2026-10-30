@@ -23,8 +23,6 @@
 
 'use strict';
 
-const fs = require('node:fs');
-const path = require('node:path');
 const { readGateSources, GATES_DIR } = require('./source');
 
 const STATES = {
@@ -42,13 +40,13 @@ const BLOCKING = [STATES.STALE, STATES.MISSING, STATES.ORPHAN, STATES.UNREADABLE
  * @param {{runs:Set<string>, rows:Set<string>}} inventory  η απογραφή του πρώτου καταστίχου
  * @returns {{tally:object, violations:Array, fingerprint:string|null}}
  */
-function judgeFreshness(inventory, root = process.cwd()) {
+function judgeFreshness(inventory, root = process.cwd(), input = require('../gate-input').openGateInput({ root })) {
   const tally = Object.fromEntries(Object.values(STATES).map((s) => [s, 0]));
   const violations = [];
 
   let sources, fingerprint = null;
   try {
-    const read = readGateSources(root);
+    const read = readGateSources(root, input);
     sources = new Map(read.gates.map((g) => [g.gate, g]));
     fingerprint = read.fingerprint;
   } catch (e) {
@@ -79,7 +77,7 @@ function judgeFreshness(inventory, root = process.cwd()) {
   // (γ) Η ΠΡΟΒΟΛΗ συμφωνεί με την ΠΗΓΗ; Το αποτύπωμα ζει σε HTML σχόλιο μέσα στον οδηγό —
   //     τα block-level HTML σχόλια αφαιρούνται πριν φτάσουν στο context, άρα ο έλεγχος
   //     κοστίζει ΜΗΔΕΝ tokens. ⚠️ sha256 των ΕΙΣΟΔΩΝ, ΠΟΤΕ `mtime` (μάθημα CHECK 3.33).
-  const guide = fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf8');
+  const guide = input.read('CLAUDE.md') ?? '';
   const stamped = guide.match(/fingerprint:\s*sha256:([0-9a-f]{64})/);
   if (!stamped) {
     tally[STATES.STALE]++;

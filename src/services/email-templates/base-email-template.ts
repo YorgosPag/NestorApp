@@ -11,6 +11,8 @@ import 'server-only';
 import { DEFAULT_COMPANY_LOGO, NESTOR_APP_LOGO, type EmailImageAsset } from '@/config/email-assets';
 import { calendarDayOf } from '@/constants/platform-operator';
 import { PRODUCT_NAME } from '@/constants/product-identity';
+import type { SocialPlatform } from '@/lib/contact/social-media-type-vocabulary';
+import { socialPlatformBrandName } from '@/lib/contact/social-platform-profiles';
 import { emailAssetUrl } from '@/lib/http/public-origin';
 import { MAP_SEARCH_PROVIDER_BRANDS, MAP_SEARCH_PROVIDERS, MAP_SEARCH_URLS } from '@/lib/geo/map-links';
 import { escapeHtml } from '@/lib/html/escape-html';
@@ -48,17 +50,9 @@ const BRAND = {
 // BASE TEMPLATE
 // ============================================================================
 
-export type EmailSocialPlatform =
-  | 'facebook'
-  | 'instagram'
-  | 'linkedin'
-  | 'twitter'
-  | 'youtube'
-  | 'github'
-  | 'other';
-
 export interface EmailSocialLink {
-  platform: EmailSocialPlatform;
+  /** Η ρίζα `SOCIAL_PLATFORMS` (ADR-327 §8.5.4) — πριν υποσύνολο 7 τιμών με τυφλό `as` στον καλούντα. */
+  platform: SocialPlatform;
   url: string;
   username?: string;
   label?: string;
@@ -342,7 +336,7 @@ function renderHeaderContacts(params: RenderHeaderContactsParams): string {
   if (socials.length > 0) {
     const html = socials
       .map((s) => {
-        const name = SOCIAL_DISPLAY[s.platform] ?? s.platform;
+        const name = socialPlatformBrandName(s.platform) ?? OTHER_SOCIAL_NAME;
         const handle = s.username ? `@${s.username}` : s.label ?? name;
         return `<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer" style="${linkStyle}">${escapeHtml(name)} ${escapeHtml(handle)}</a>`;
       })
@@ -353,15 +347,8 @@ function renderHeaderContacts(params: RenderHeaderContactsParams): string {
   return `<div style="margin:14px auto 0;max-width:480px;text-align:center;">${rows.join('')}</div>`;
 }
 
-const SOCIAL_DISPLAY: Record<EmailSocialPlatform, string> = {
-  facebook: 'Facebook',
-  instagram: 'Instagram',
-  linkedin: 'LinkedIn',
-  twitter: 'Twitter',
-  youtube: 'YouTube',
-  github: 'GitHub',
-  other: 'Link',
-};
+/** Ετικέτα για λογαριασμό `other` — τα ονόματα μάρκας των υπολοίπων ζουν στο `social-platform-profiles`. */
+const OTHER_SOCIAL_NAME = 'Link';
 
 function buildPhoneHref(value: string): string {
   const digits = value.replace(/[^\d+]/g, '');

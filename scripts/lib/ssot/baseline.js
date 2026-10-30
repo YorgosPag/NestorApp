@@ -55,14 +55,16 @@ const SCHEMA_VERSION = 2;
  * @returns {Baseline}
  * @throws {Error} αν λείπει, είναι άκυρο JSON, ή είναι σχήμα v1
  */
-function loadBaseline(filePath = BASELINE_FILE) {
-  if (!fs.existsSync(filePath)) {
+function loadBaseline(filePath = BASELINE_FILE, input = null) {
+  // `input` (ADR-924): η είσοδος της πύλης — με `--index` η baseline ΤΟΥ COMMIT.
+  const text = input ? input.read(filePath) : (fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : null);
+  if (text === null) {
     throw new Error(`Το SSoT baseline δεν βρέθηκε: ${filePath} — είναι tracked στο git, επανάφερέ το.`);
   }
 
   let raw;
   try {
-    raw = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    raw = JSON.parse(text);
   } catch (err) {
     throw new Error(`Το SSoT baseline δεν διαβάζεται (${filePath}): ${err.message}`);
   }

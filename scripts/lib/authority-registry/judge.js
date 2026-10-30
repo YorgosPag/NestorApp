@@ -16,6 +16,7 @@
  */
 
 const { guardIdOf } = require('./role-guards');
+const { closedTally, idsOf } = require('../gate-ledger');
 
 const STATES = {
   INLINE_DECIDER: 'inline-decider',
@@ -288,20 +289,8 @@ function orphanLegacy(registry, entries) {
  * η λογιστική είναι το όργανο που εγγυάται ότι κανείς δεν χάνεται σιωπηλά, και
  * **δεν επιτρέπεται να χαθεί η ίδια σιωπηλά** (μάθημα CHECK 3.39 / `Κ15β`).
  */
-function tallyOf(rows) {
-  const t = Object.fromEntries(Object.values(STATES).map((s) => [s, 0]));
-  for (const row of rows) {
-    if (t[row.state] === undefined) throw new Error(`CHECK 3.68 — άγνωστη κατάσταση «${row.state}»`);
-    t[row.state] += 1;
-  }
-  const sum = Object.values(t).reduce((a, b) => a + b, 0);
-  if (sum !== rows.length) throw new Error(`CHECK 3.68 — η λογιστική δεν κλείνει: ${sum} ≠ ${rows.length}`);
-  return t;
-}
-
-function idsOf(verdict, state) {
-  return verdict.rows.filter((r) => r.state === state).map((r) => r.id);
-}
+/** Κλειστή λογιστική (SSoT `gate-ledger`): κάθε γραμμή σε ΓΝΩΣΤΗ κατάσταση ⇒ το άθροισμα κλείνει εξ ορισμού. */
+const tallyOf = (rows) => closedTally(rows, STATES, '3.68');
 
 module.exports = {
   STATES, BLOCKING, MIN_REASON,

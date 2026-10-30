@@ -10,11 +10,10 @@
 
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
 const ts = require('typescript');
 
-const { collectSourceFiles } = require('../module-graph/scan-config');
+const { openGateInput } = require('../gate-input');
 const { toPosix } = require('../module-graph/resolve-specifier');
 const {
   BLOCKING,
@@ -58,10 +57,10 @@ function judgeText(fileName, text) {
 }
 
 /** Κ1′ — η υγεία των ίδιων των δηλώσεων ιδιοκτησίας. */
-function judgeOwners(root, owners) {
+function judgeOwners(root, owners, input = openGateInput({ root })) {
   const findings = [];
   for (const [rel, reason] of Object.entries(owners)) {
-    if (!fs.existsSync(path.join(root, rel))) {
+    if (!input.exists(rel)) {
       findings.push({ state: GATE_STATES.ORPHAN_OWNER, rel, detail: 'δηλωμένος ιδιοκτήτης που δεν υπάρχει' });
     } else if (typeof reason !== 'string' || reason.trim().length < MIN_REASON) {
       findings.push({ state: GATE_STATES.REASONLESS_OWNER, rel, detail: `λόγος < ${MIN_REASON} χαρακτήρες` });
@@ -87,9 +86,11 @@ function emptyTally() {
 /**
  * Σαρώνει το `src/` της ρίζας. Επιστρέφει ευρήματα + λογιστική: **κάθε** κάδος, και στο μηδέν.
  * @param {string} root
- * @param {{ owners?: Record<string, string>, catalog?: string }} [options] μόνο για τις μεταλλάξεις
+ * @param {{ owners?: Record<string, string>, catalog?: string, input?: object }} [options] `owners`/`catalog` μόνο για
+ *   τις μεταλλάξεις· `input` = η είσοδος (ADR-924) — προεπιλογή ο δίσκος, με `--index` η όψη του commit.
  */
 function sweep(root, options = {}) {
+  const input = options.input || openGateInput({ root });
   const owners = options.owners ?? SOURCE_OWNERS;
   const catalog = options.catalog ?? CATALOG_FILE;
   const tally = emptyTally();
@@ -98,11 +99,11 @@ function sweep(root, options = {}) {
   let population = 0;
   let symbolLayers = 0;
 
-  for (const abs of collectSourceFiles(root, ['src'])) {
+  for (const abs of input.sources(['src'])) {
     const rel = toPosix(path.relative(root, abs));
     if (isTestFile(rel)) continue;
     population += 1;
-    const text = fs.readFileSync(abs, 'utf8');
+    const text = input.read(abs) ?? '';
     symbolLayers += recordSymbolFonts(abs, rel, text, tally, violations);
     const hits = judgeText(abs, text);
     if (Object.hasOwn(owners, rel)) {
@@ -120,7 +121,7 @@ function sweep(root, options = {}) {
     }
   }
 
-  for (const finding of judgeOwners(root, owners)) {
+  for (const finding of judgeOwners(root, owners, input)) {
     tally[finding.state] += 1;
     violations.push(finding);
   }

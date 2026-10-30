@@ -169,8 +169,9 @@ function compilePattern(moduleName, index, source) {
  * @returns {{exemptRe: RegExp, modules: SsotModule[]}}
  * @throws {Error} fail-closed σε οτιδήποτε στραβό
  */
-function loadRegistry(filePath = REGISTRY_FILE) {
-  const registry = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+function loadRegistry(filePath = REGISTRY_FILE, input = null) {
+  // `input` (ADR-924): η είσοδος της πύλης — με `--index` το μητρώο ΤΟΥ COMMIT.
+  const registry = input ? input.readJson(filePath) : JSON.parse(fs.readFileSync(filePath, 'utf8'));
 
   const exemptForeign = findForeignDialect(registry.exemptPatterns);
   if (exemptForeign.length > 0) {

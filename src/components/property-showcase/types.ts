@@ -51,55 +51,13 @@ export interface ShowcaseMedia {
 
 export type ShowcasePropertySnapshot = PropertyShowcaseSnapshot['property'];
 
-export type ShowcaseSocialPlatform =
-  | 'facebook'
-  | 'instagram'
-  | 'linkedin'
-  | 'twitter'
-  | 'youtube'
-  | 'github'
-  | 'other';
+// Η ταυτότητα της εταιρείας είναι το wire shape του server resolver — ΕΝΑ σώμα, όχι καθρέφτης
+// (ADR-327 §8.5.4: το δεύτερο αντίγραφο κρατούσε δικό του υποσύνολο πλατφορμών social, 7 από τις 10).
+// Το `source` είναι παρατηρησιμότητα του server, όχι κάτι που ζωγραφίζει η βιτρίνα.
+export type { ShowcaseContactSocial } from '@/services/company/company-branding-resolver';
+import type { ShowcaseCompanyBranding } from '@/services/company/company-branding-resolver';
 
-export interface ShowcaseContactPhone {
-  value: string;
-  label?: string;
-}
-
-export interface ShowcaseContactEmail {
-  value: string;
-  label?: string;
-}
-
-export interface ShowcaseContactWebsite {
-  url: string;
-  label?: string;
-}
-
-export interface ShowcaseContactSocial {
-  platform: ShowcaseSocialPlatform;
-  url: string;
-  username?: string;
-  label?: string;
-}
-
-export interface ShowcaseCompanyBrand {
-  name: string;
-  phone?: string;
-  email?: string;
-  website?: string;
-  /** Absolute logo URL (ADR-312 Phase 8). Undefined → UI falls back to the bundled Pagonis asset. */
-  logoUrl?: string;
-  /** Every non-empty phone on the company contact, primary first (ADR-312 Phase 9). */
-  phones?: ShowcaseContactPhone[];
-  /** Every non-empty email on the company contact, primary first (ADR-312 Phase 9). */
-  emails?: ShowcaseContactEmail[];
-  /** Pre-formatted address lines, primary first (ADR-312 Phase 9). */
-  addresses?: string[];
-  /** Every non-empty website on the company contact (ADR-312 Phase 9). */
-  websites?: ShowcaseContactWebsite[];
-  /** Social network links with normalised absolute URLs (ADR-312 Phase 9). */
-  socialMedia?: ShowcaseContactSocial[];
-}
+export type ShowcaseCompanyBrand = Omit<ShowcaseCompanyBranding, 'source'>;
 
 /**
  * Floorplan media grouped per linked parking/storage space.

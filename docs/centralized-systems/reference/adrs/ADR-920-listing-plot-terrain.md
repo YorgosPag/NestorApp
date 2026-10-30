@@ -1129,6 +1129,8 @@ bytes** (+74 %) για **κάθε** αγγελία. Θεραπεία = `next/dyn
 έκδοση· (γ) το `src/types/i18n.ts` είναι παραγόμενο από **όλα** τα locales ⇒ η αναγέννηση περιέχει και ξένα κλειδιά σε εξέλιξη.
 
 ## Changelog
+- **2026-10-29** — **Β4.7 κατάλοιπο ✅ (διαδρομές)**: το μπλοκ `API_ROUTES.OWNER_PROPERTIES` (γεννήθηκε εδώ μόνο με `TERRAIN`)
+  ολοκληρώθηκε — όλοι οι πελάτες `/api/owner-properties/…` εισάγουν από εκεί (ADR-245 Decision Log 2026-10-29).
 - **2026-10-29** — **Β4.7 κατάλοιπο ✅**: οι 4 χειρόγραφοι αναγνώστες `'__new__'` για **ακίνητο** περνούν στο SSoT
   `lib/properties/unsaved-property` — `api/properties/[id]` PATCH · `PropertyDetailsContent` (auto-save) · `usePropertyMediaCounts` (2×)
   → `isPersistedPropertyId` · `UnitQuickCreateSheet` → `UNSAVED_PROPERTY_ID`. Το audit βρήκε **5 ακόμη** εκτός λίστας:

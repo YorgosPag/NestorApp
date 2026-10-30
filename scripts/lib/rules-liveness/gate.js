@@ -10,8 +10,7 @@
 
 'use strict';
 
-const fs = require('node:fs');
-const path = require('node:path');
+const { openGateInput } = require('../gate-input');
 
 const {
   BLOCKING, CLAIM_CONSTANT, CLAIM_SOURCE_FILE, GATE_STATES, LIVENESS_PREDICATE, MIN_REASON_LENGTH, PUBLIC_READS, RULES_FILES,
@@ -20,8 +19,8 @@ const { readRulesStructure } = require('./rules-structure.js');
 const { guardedFunctions, judgeAllow } = require('./liveness.js');
 
 /** Το όνομα του claim από την ΠΗΓΗ (`export const REVOKED_SIGN_INS_CLAIM = '…'`). */
-function claimNameFrom(root) {
-  const source = fs.readFileSync(path.join(root, CLAIM_SOURCE_FILE), 'utf8');
+function claimNameFrom(read) {
+  const source = read(CLAIM_SOURCE_FILE);
   const match = new RegExp(`export const ${CLAIM_CONSTANT}\\s*=\\s*'([^']+)'`).exec(source);
   return match ? match[1] : null;
 }
@@ -73,9 +72,12 @@ function emptyTally() {
   return Object.fromEntries(Object.values(GATE_STATES).map((state) => [state, 0]));
 }
 
-/** Η σάρωση — `read(file)` αντικαθίσταται στα tests (μεταλλάξεις χωρίς αρχεία στον δίσκο). */
-function sweep(root, read = (file) => fs.readFileSync(path.join(root, file), 'utf8')) {
-  const claimName = claimNameFrom(root);
+/**
+ * Η σάρωση — `read(file)` αντικαθίσταται στα tests (μεταλλάξεις χωρίς αρχεία στον δίσκο)· προεπιλογή η ΕΙΣΟΔΟΣ
+ * (ADR-924): το `main` δίνει την όψη του commit (`--index`), ώστε να κρίνονται οι κανόνες που ΘΑ δεσμευτούν.
+ */
+function sweep(root, read = openGateInput({ root }).readRequired) {
+  const claimName = claimNameFrom(read);
   const seenPublic = new Set();
   const tally = emptyTally();
   const perFile = [];

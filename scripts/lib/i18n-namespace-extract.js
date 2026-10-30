@@ -32,6 +32,19 @@ const NAMESPACE_BUNDLES_FILE = 'src/i18n/namespace-bundles.ts';
 const NAMESPACE_COMPAT_FILE = 'src/i18n/namespace-compat.ts';
 
 /**
+ * Το κείμενο ενός αρχείου της ρίζας — λείπει/απρόσιτο ⇒ `null`. `input` (ADR-924) = η είσοδος μιας πύλης: με `--index`
+ * το κείμενο ΤΟΥ COMMIT· χωρίς αυτήν ο δίσκος (γεννήτορες, shell slice).
+ */
+function readOptional(repoRoot, rel, input) {
+  if (input) return input.read(rel);
+  try {
+    return fs.readFileSync(path.join(repoRoot, rel), 'utf8');
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Parse `src/i18n/namespace-bundles.ts` into a Map of
  * bundleConstName -> string[] of namespaces.
  *
@@ -41,17 +54,10 @@ const NAMESPACE_COMPAT_FILE = 'src/i18n/namespace-compat.ts';
  * @param {string} repoRoot absolute path to the repository root
  * @returns {Map<string, string[]>}
  */
-function loadNamespaceBundles(repoRoot) {
+function loadNamespaceBundles(repoRoot, input = null) {
   const bundles = new Map();
-  const file = path.join(repoRoot, NAMESPACE_BUNDLES_FILE);
-  if (!fs.existsSync(file)) return bundles;
-
-  let src;
-  try {
-    src = fs.readFileSync(file, 'utf8');
-  } catch {
-    return bundles;
-  }
+  const src = readOptional(repoRoot, NAMESPACE_BUNDLES_FILE, input);
+  if (src === null) return bundles;
 
   const declRegex =
     /export\s+const\s+([A-Z][A-Z0-9_]*)\s*=\s*\[([\s\S]*?)\]\s*as\s+const/g;
@@ -92,17 +98,10 @@ function loadNamespaceBundles(repoRoot) {
  * @param {string} repoRoot absolute path to the repository root
  * @returns {Map<string, string[]>}
  */
-function loadCompatNamespaces(repoRoot) {
+function loadCompatNamespaces(repoRoot, input = null) {
   const compat = new Map();
-  const file = path.join(repoRoot, NAMESPACE_COMPAT_FILE);
-  if (!fs.existsSync(file)) return compat;
-
-  let src;
-  try {
-    src = fs.readFileSync(file, 'utf8');
-  } catch {
-    return compat;
-  }
+  const src = readOptional(repoRoot, NAMESPACE_COMPAT_FILE, input);
+  if (src === null) return compat;
 
   // Στάδιο 1 — οι δηλώσεις: `export const X_COMPATIBILITY_NAMESPACES = [...] as const;`
   const constants = new Map();

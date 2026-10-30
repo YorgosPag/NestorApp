@@ -33,6 +33,8 @@ import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { userPerformer } from '@/lib/audit/audit-performer';
+import { resolvePerformer, type ResolvedPerformer } from '@/server/lib/performer-stamp';
 
 const logger = createModuleLogger('AdminMigrationRunner');
 
@@ -58,10 +60,15 @@ export interface MigrationOutcome {
   audit?: Record<string, unknown>;
 }
 
-/** Route-specific migration logic. `dryRun` is decided by the HTTP verb. */
+/**
+ * Route-specific migration logic. `dryRun` is decided by the HTTP verb.
+ *
+ * `performer` = ο διαχειριστής που τρέχει τη μετάπτωση, λυμένος ΜΙΑ φορά από τον envelope. Περνά στο
+ * `flushInBatches` / `openDeclaredBatch`, που τον απαιτούν για κάθε γραφή σε συλλογή του CDC (ADR-195 · 2026-10-30).
+ */
 export type MigrationRun = (
   db: Firestore,
-  opts: { dryRun: boolean },
+  opts: { dryRun: boolean; performer: ResolvedPerformer },
 ) => Promise<MigrationOutcome>;
 
 /**
@@ -113,7 +120,7 @@ export function createMigrationRoute(def: MigrationDefinition): MigrationRouteHa
     dryRun: boolean,
     request?: NextRequest,
   ): Promise<NextResponse> =>
-    runMigration({ ctx, dryRun, name: def.name, request }, (db) => def.run(db, { dryRun }));
+    runMigration({ ctx, dryRun, name: def.name, request }, (db, performer) => def.run(db, { dryRun, performer }));
 
   const GET = (request: NextRequest): Promise<Response> =>
     withSensitiveRateLimit(withAuth(
@@ -138,12 +145,13 @@ export function createMigrationRoute(def: MigrationDefinition): MigrationRouteHa
 
 /**
  * Run an admin migration/backfill behind the shared guard + audit + error
- * envelope. The `run` callback receives the Admin Firestore instance and
- * returns the response body (+ optional audit fields).
+ * envelope. The `run` callback receives the Admin Firestore instance and the
+ * resolved performer (the admin running it), and returns the response body
+ * (+ optional audit fields).
  */
 export async function runMigration(
   { ctx, dryRun, name, request }: MigrationEnvelope,
-  run: (db: Firestore) => Promise<MigrationOutcome>,
+  run: (db: Firestore, performer: ResolvedPerformer) => Promise<MigrationOutcome>,
 ): Promise<NextResponse> {
   // 🔐 Bypass roles ONLY (ADR-703)
   if (!isRoleBypass(ctx.globalRole)) {
@@ -162,7 +170,10 @@ export async function runMigration(
 
   try {
     const db = getAdminFirestore();
-    const outcome = await run(db);
+    // Ο φορέας λύνεται ΕΔΩ, μία φορά: κάθε μετάπτωση που γράφει σε συλλογή του CDC τον χρειάζεται για τη
+    // σφραγίδα `_lastModified*` — αλλιώς το Ιστορικό γράφει `cdc_unknown` για πράξη συγκεκριμένου διαχειριστή.
+    const performer = await resolvePerformer(userPerformer(ctx.uid, ctx.email));
+    const outcome = await run(db, performer);
 
     // Audit-log on execute only — non-blocking (failure must not fail the run).
     if (!dryRun && request) {

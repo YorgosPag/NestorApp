@@ -14,10 +14,8 @@
 
 import 'server-only';
 
-import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
-import { sendChannelReply, extractChannelIds } from '../../shared/channel-reply-dispatcher';
 import { PipelineIntentType } from '@/types/ai-pipeline';
 import type {
   IUCModule,
@@ -31,6 +29,7 @@ import type {
 import type { LookupMode, ProjectLookupData, ProjectWithDetails } from './project-status-types';
 import { fetchProjectDetails } from './project-status-data-fetcher';
 import { matchesCriteria, formatSingleProjectReply, formatMultiProjectReply } from './project-status-formatter';
+import { acknowledgeBySideEffect, approvedAction, autoApprovedProposal, failedExecution, sendCommandReply } from '../../shared/admin-command-protocol';
 
 const logger = createModuleLogger('UC_011_ADMIN_PROJECT_STATUS');
 
@@ -124,35 +123,20 @@ export class AdminProjectStatusModule implements IUCModule {
         : `Λίστα έργων: ${count} σύνολο`;
     }
 
-    return {
-      messageId: ctx.intake.id,
-      suggestedActions: [
-        {
-          type: 'admin_project_status_reply',
-          params: {
-            mode,
-            searchTerm: lookup?.searchTerm ?? null,
-            searchCriteria: lookup?.searchCriteria ?? null,
-            singleProject: lookup?.singleProject ?? null,
-            projects: lookup?.projects ?? [],
-            channel: ctx.intake.channel,
-            telegramChatId: (ctx.intake.rawPayload.chatId as string) ?? null,
-          },
-        },
-      ],
-      requiredApprovals: [],
-      autoApprovable: true,
-      summary,
-      schemaVersion: PIPELINE_PROTOCOL_CONFIG.SCHEMA_VERSION,
-    };
+    return autoApprovedProposal(ctx, 'admin_project_status_reply', {
+      mode,
+      searchTerm: lookup?.searchTerm ?? null,
+      searchCriteria: lookup?.searchCriteria ?? null,
+      singleProject: lookup?.singleProject ?? null,
+      projects: lookup?.projects ?? [],
+    }, summary);
   }
 
   // ── Step 6: EXECUTE ──
 
   async execute(ctx: PipelineContext): Promise<ExecutionResult> {
     try {
-      const actions = ctx.approval?.modifiedActions ?? ctx.proposal?.suggestedActions ?? [];
-      const action = actions.find(a => a.type === 'admin_project_status_reply');
+      const action = approvedAction(ctx, 'admin_project_status_reply');
 
       if (!action) {
         return { success: false, sideEffects: [], error: 'No admin_project_status_reply action found' };
@@ -165,36 +149,18 @@ export class AdminProjectStatusModule implements IUCModule {
         ? formatSingleProjectReply(params)
         : formatMultiProjectReply(params);
 
-      const replyResult = await sendChannelReply({
-        channel: ctx.intake.channel,
-        ...extractChannelIds(ctx),
-        subject: mode === 'single'
+      return await sendCommandReply(ctx, mode === 'single'
           ? `Κατάσταση: ${(params.singleProject as ProjectWithDetails | null)?.project.name ?? params.searchTerm}`
-          : 'Έργα',
-        textBody: replyText,
-        requestId: ctx.requestId,
-      });
-
-      return {
-        success: true,
-        sideEffects: replyResult.success
-          ? [`reply_sent:${replyResult.messageId ?? 'unknown'}`]
-          : [`reply_failed:${replyResult.error ?? 'unknown'}`],
-      };
+          : 'Έργα', replyText);
     } catch (error) {
-      const errorMessage = getErrorMessage(error);
-      logger.error('UC-011 EXECUTE: Failed', { requestId: ctx.requestId, error: errorMessage });
-      return { success: false, sideEffects: [], error: errorMessage };
+      return failedExecution(ctx, 'UC-011', logger, error);
     }
   }
 
   // ── Step 7: ACKNOWLEDGE ──
 
   async acknowledge(ctx: PipelineContext): Promise<AcknowledgmentResult> {
-    const replySent = ctx.executionResult?.sideEffects?.some(
-      (se: string) => se.startsWith('reply_sent:')
-    ) ?? false;
-    return { sent: replySent, channel: ctx.intake.channel };
+    return acknowledgeBySideEffect(ctx, 'reply_sent:');
   }
 
   async healthCheck(): Promise<boolean> {

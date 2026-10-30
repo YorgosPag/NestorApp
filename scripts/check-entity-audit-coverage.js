@@ -56,13 +56,12 @@
 'use strict';
 const fs = require('node:fs');
 const path = require('node:path');
-const { execSync } = require('node:child_process');
+const { openGateInput, commitInput } = require('./lib/gate-input');
 // ---------------------------------------------------------------------------
 // Paths & constants
 // ---------------------------------------------------------------------------
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const BASELINE_FILE = path.join(PROJECT_ROOT, '.entity-audit-coverage-baseline.json');
-const SRC_ROOT = path.join(PROJECT_ROOT, 'src');
 /**
  * COLLECTIONS keys that map to an AuditEntityType (see src/types/audit-trail.ts).
  * Only these trigger the check — unlisted collections are out of scope.
@@ -215,6 +214,10 @@ const HARD_EXEMPT_PATTERNS = [
   //   · postal-codes: «546 24» ➜ «54624», ίδια τιμή σε κανονική μορφή. `contacts` ⇒ CDC όπως πάνω.
   //     ⚠️ Δηλωμένο κενό: `projects` · `buildings` ΔΕΝ έχουν CDC ⇒ εκεί η αλλαγή δεν αφήνει γραμμή ανά οντότητα.
   /[\\/]api[\\/]admin[\\/]migrate-postal-codes[\\/]migration-operations\.ts$/,
+  //   · search-backfill (`migrateContactTenants`, 2026-10-30): συμπληρώνει `companyId` σε επαφές χωρίς οργανισμό —
+  //     ΜΟΝΟ `contacts` ⇒ CDC όπως πάνω. Έγινε ορατό όταν το χειρόγραφο `batch.update(doc.ref)` πέρασε στο
+  //     `flushInBatches`· ο γραφέας σφραγίζει πλέον τον διαχειριστή, άρα η γραμμή του CDC λέει «από ποιον» (ADR-704).
+  /[\\/]api[\\/]admin[\\/]search-backfill[\\/]search-backfill\.handlers\.ts$/,
 ];
 /**
  * Write operations to detect.
@@ -306,48 +309,26 @@ const AUDIT_RECORDER_DELEGATES = [
 // ---------------------------------------------------------------------------
 // ANSI colours (no-op on non-TTY)
 // ---------------------------------------------------------------------------
-const useColour = process.stdout.isTTY;
-const c = {
-  red:    (s) => (useColour ? `\x1b[31m${s}\x1b[0m` : s),
-  green:  (s) => (useColour ? `\x1b[32m${s}\x1b[0m` : s),
-  yellow: (s) => (useColour ? `\x1b[33m${s}\x1b[0m` : s),
-  cyan:   (s) => (useColour ? `\x1b[36m${s}\x1b[0m` : s),
-  bold:   (s) => (useColour ? `\x1b[1m${s}\x1b[0m` : s),
-};
+const c = require('./lib/tty-colours').ttyColours();   // SSoT (ADR-924 §8.10)
 // ---------------------------------------------------------------------------
 // Target selection
 // ---------------------------------------------------------------------------
-/** @returns {string[]} absolute paths */
-function listStagedFiles() {
-  try {
-    const out = execSync('git diff --cached --name-only --diff-filter=ACMR', {
-      cwd: PROJECT_ROOT,
-      encoding: 'utf8',
-    });
-    return out
-      .split('\n')
-      .map((s) => s.trim())
-      .filter((s) => s && /^src[\\/].+\.(ts|tsx)$/.test(s))
-      .map((rel) => path.join(PROJECT_ROOT, rel));
-  } catch {
-    return [];
-  }
+/**
+ * Τα σταδιοποιημένα `.ts`/`.tsx` του `src/` — `input.staged` (SSoT, ADR-924 Φ3: ήταν `git diff --cached` χωρίς `-z`,
+ * δηλαδή τυφλό σε μη-ASCII μονοπάτια, και σφάλμα του git ⇒ σιωπηλό «κανένα»).
+ * @returns {string[]} absolute paths
+ */
+function listStagedFiles(input) {
+  return input.staged((rel) => /^src\/.+\.(ts|tsx)$/.test(rel));
 }
-/** @returns {string[]} absolute paths */
-function listAllSrcFiles() {
-  /** @type {string[]} */
-  const out = [];
-  /** @param {string} dir */
-  function walk(dir) {
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) walk(full);
-      else if (entry.isFile() && /\.(ts|tsx)$/.test(entry.name)) out.push(full);
-    }
-  }
-  walk(SRC_ROOT);
-  return out;
+/** Κρυφό όνομα (`.foo`) — εκτός σάρωσης, όπως πάντα. */
+const isHidden = (name) => name.startsWith('.');
+/** @returns {string[]} absolute paths — από την ΕΙΣΟΔΟ (ήταν δικός του `readdirSync`) */
+function listAllSrcFiles(input) {
+  return input.files(['src'], {
+    accept: (rel) => /\.(ts|tsx)$/.test(rel) && !isHidden(path.posix.basename(rel)),
+    pruneDir: (dir) => isHidden(path.posix.basename(dir)),
+  });
 }
 /** @param {string} abs @returns {string} relative POSIX-style path */
 function relPosix(abs) {
@@ -572,10 +553,9 @@ const RECORD_CHANGE_RE = /EntityAuditService\s*\.\s*recordChange\s*\(/;
  * @param {string} root
  * @returns {string[]} function names
  */
-function liveRecorderDelegates(root) {
+function liveRecorderDelegates(root, input = openGateInput({ root })) {
   return AUDIT_RECORDER_DELEGATES.filter(({ fn, file }) => {
-    const abs = path.join(root, file);
-    const src = fs.existsSync(abs) ? stripCommentsAndStrings(fs.readFileSync(abs, 'utf8')) : '';
+    const src = stripCommentsAndStrings(input.read(file) ?? '');
     const live = RECORD_CHANGE_RE.test(src) && new RegExp(`export\\s+(?:async\\s+)?function\\s+${fn}\\b`).test(src);
     if (!live) console.error(c.red(`CHECK 3.17: stale audit delegate "${fn}" (${file}) — no longer counts as coverage`));
     return live;
@@ -597,12 +577,12 @@ function hasRecordChangeCall(src, delegates) {
  * @param {readonly string[]} delegates live recorder function names
  * @returns {{relPath: string, status: 'clean'|'violation'|'covered'|'skipped', keys: string[]}}
  */
-function analyzeFile(abs, delegates) {
+function analyzeFile(abs, delegates, input) {
   const relPath = relPosix(abs);
   if (isExempt(abs)) {
     return { relPath, status: 'skipped', keys: [] };
   }
-  const raw = fs.readFileSync(abs, 'utf8');
+  const raw = input.readRequired(abs);
   const src = stripCommentsAndStrings(raw);
   const { hasWrite, keys } = detectTrackedWrites(src);
 
@@ -618,11 +598,12 @@ function analyzeFile(abs, delegates) {
 // Baseline
 // ---------------------------------------------------------------------------
 
-/** @returns {Set<string>} */
-function loadBaseline() {
-  if (!fs.existsSync(BASELINE_FILE)) return new Set();
+/** @returns {Set<string>} — από την ΕΙΣΟΔΟ (`--index` ⇒ η baseline ΤΟΥ COMMIT) */
+function loadBaseline(input) {
+  const text = input.read(BASELINE_FILE);
+  if (text === null) return new Set();
   try {
-    const raw = JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf8'));
+    const raw = JSON.parse(text);
     const files = Array.isArray(raw) ? raw : Array.isArray(raw.files) ? raw.files : [];
     return new Set(files);
   } catch (err) {
@@ -647,8 +628,8 @@ function writeBaseline(files) {
 // Main
 // ---------------------------------------------------------------------------
 
-function main() {
-  const args = process.argv.slice(2);
+/** `input` (ADR-924) = η είσοδος — προεπιλογή: η όψη του commit με `--index`, αλλιώς ο δίσκος. */
+function main(args = process.argv.slice(2), input = commitInput(PROJECT_ROOT, args)) {
   const flagAll = args.includes('--all');
   const flagWriteBaseline = args.includes('--write-baseline');
   const flagVerbose = args.includes('--verbose');
@@ -657,11 +638,11 @@ function main() {
   /** @type {string[]} */
   let targets;
   if (flagAll || flagWriteBaseline) {
-    targets = listAllSrcFiles();
+    targets = listAllSrcFiles(input);
   } else if (explicit.length > 0) {
-    targets = explicit.map((p) => path.resolve(PROJECT_ROOT, p));
+    targets = explicit.map((p) => path.resolve(PROJECT_ROOT, p)).filter((abs) => input.exists(abs));
   } else {
-    targets = listStagedFiles();
+    targets = listStagedFiles(input);
   }
 
   if (targets.length === 0) {
@@ -669,15 +650,15 @@ function main() {
     return 0;
   }
 
-  const baseline = loadBaseline();
-  const delegates = liveRecorderDelegates(PROJECT_ROOT);
+  const baseline = loadBaseline(input);
+  const delegates = liveRecorderDelegates(PROJECT_ROOT, input);
   /** @type {Array<{relPath: string, keys: string[]}>} */
   const violations = [];
   /** @type {string[]} */
   const covered = [];
 
   for (const abs of targets) {
-    const result = analyzeFile(abs, delegates);
+    const result = analyzeFile(abs, delegates, input);
     if (result.status === 'violation') violations.push({ relPath: result.relPath, keys: result.keys });
     else if (result.status === 'covered') covered.push(result.relPath);
   }
@@ -702,8 +683,8 @@ function main() {
   // Also: baselined files that are now covered → suggest ratchet-down
   const fixed = [...baseline].filter((f) => {
     const abs = path.join(PROJECT_ROOT, f);
-    if (!fs.existsSync(abs)) return false;
-    const result = analyzeFile(abs, delegates);
+    if (!input.exists(abs)) return false;
+    const result = analyzeFile(abs, delegates, input);
     return result.status !== 'violation';
   });
 
@@ -752,4 +733,5 @@ module.exports = {
   hasRecordChangeCall,
   liveRecorderDelegates,
   stripCommentsAndStrings,
+  main,
 };

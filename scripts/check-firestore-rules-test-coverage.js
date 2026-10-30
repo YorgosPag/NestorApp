@@ -70,9 +70,9 @@
 
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
 const ts = require('typescript');
+const { openGateInput, INDEX_FLAG } = require('./lib/gate-input');
 
 const {
   parseFirestoreRules,
@@ -113,6 +113,9 @@ const BIM_TIERS_FILE = path.join(
 const args = process.argv.slice(2);
 const flags = new Set(args.filter((a) => a.startsWith('--')));
 const targets = args.filter((a) => !a.startsWith('--'));
+// ADR-924 — η είσοδος της πύλης, νωχελικά: με `--index` (εκτελεστής) κανόνες · μητρώο · tests ΤΟΥ COMMIT.
+let gateInputMemo = null;
+const gateInput = () => (gateInputMemo = gateInputMemo || openGateInput({ root: PROJECT_ROOT, index: flags.has(INDEX_FLAG) }));
 const MODE_ALL = flags.has('--all');
 const VERBOSE = flags.has('--verbose');
 /** 🏆 Ο **παραγόμενος** δείκτης προς τους κανόνες — δες ADR-841 §7 Α21.14. */
@@ -212,8 +215,8 @@ function stringProp(node) {
 /**
  * @returns {ParsedManifest}
  */
-function parseManifest() {
-  const source = fs.readFileSync(MANIFEST_FILE, 'utf8');
+function parseManifest(input = gateInput()) {
+  const source = input.read(MANIFEST_FILE) ?? '';
   const sourceFile = ts.createSourceFile(
     MANIFEST_FILE,
     source,
@@ -299,8 +302,8 @@ function unwrapAsConst(expr) {
  *
  * @returns {BimTiers}
  */
-function parseBimTiers() {
-  const source = fs.readFileSync(BIM_TIERS_FILE, 'utf8');
+function parseBimTiers(input = gateInput()) {
+  const source = input.read(BIM_TIERS_FILE) ?? '';
   const sourceFile = ts.createSourceFile(
     BIM_TIERS_FILE,
     source,
@@ -443,12 +446,11 @@ function orphanHint(collection, lineStart, lineEnd) {
  * @param {ParsedManifest} manifest
  * @returns {Violation[]}
  */
-function validateTestFilesExist(manifest) {
+function validateTestFilesExist(manifest, input = gateInput()) {
   /** @type {Violation[]} */
   const violations = [];
   for (const entry of manifest.coverage) {
-    const abs = path.join(PROJECT_ROOT, entry.testFile);
-    if (!fs.existsSync(abs)) {
+    if (!input.exists(entry.testFile)) {
       violations.push({
         kind: 'missing_test_file',
         message: `coverage entry for '${entry.collection}' points at a non-existent file`,
@@ -466,14 +468,12 @@ function validateTestFilesExist(manifest) {
  * @param {ParsedManifest} manifest
  * @returns {Violation[]}
  */
-function validateTestFileContract(manifest) {
+function validateTestFileContract(manifest, input = gateInput()) {
   /** @type {Violation[]} */
   const violations = [];
   for (const entry of manifest.coverage) {
-    const abs = path.join(PROJECT_ROOT, entry.testFile);
-    if (!fs.existsSync(abs)) continue;
-
-    const src = fs.readFileSync(abs, 'utf8');
+    const src = input.read(entry.testFile);
+    if (src === null) continue;
     const exportPattern = new RegExp(
       `export\\s+const\\s+COVERAGE\\s*=\\s*FIRESTORE_RULES_COVERAGE\\s*\\.find\\s*\\(\\s*\\(?[a-zA-Z_]+\\)?\\s*=>\\s*[a-zA-Z_]+\\.collection\\s*===\\s*['"]${escapeRegex(entry.collection)}['"]`,
     );
@@ -921,7 +921,7 @@ function printLocationMap(blocks, manifest) {
  */
 function runCompleteness() {
   try {
-    const { violations, warnings, notes } = validateCompleteness();
+    const { violations, warnings, notes } = validateCompleteness(gateInput());
     return {
       violations: violations.map((message) => ({
         kind: 'incomplete-coverage-matrix',
@@ -951,15 +951,15 @@ function runCompleteness() {
 }
 
 function main() {
-  if (!fs.existsSync(RULES_FILE)) {
+  if (!gateInput().exists(RULES_FILE)) {
     log(`${C.red}✖ firestore.rules not found at ${RULES_FILE}${C.reset}`);
     process.exit(1);
   }
-  if (!fs.existsSync(MANIFEST_FILE)) {
+  if (!gateInput().exists(MANIFEST_FILE)) {
     log(`${C.red}✖ coverage-manifest.ts not found at ${MANIFEST_FILE}${C.reset}`);
     process.exit(1);
   }
-  if (!fs.existsSync(BIM_TIERS_FILE)) {
+  if (!gateInput().exists(BIM_TIERS_FILE)) {
     log(`${C.red}✖ bim-tiers.ts not found at ${BIM_TIERS_FILE}${C.reset}`);
     process.exit(1);
   }
@@ -976,7 +976,7 @@ function main() {
     }
   }
 
-  const rulesContent = fs.readFileSync(RULES_FILE, 'utf8');
+  const rulesContent = gateInput().read(RULES_FILE) ?? '';
   const rulesLines = rulesContent.split('\n');
   const blocks = parseFirestoreRules(rulesContent);
   const manifest = parseManifest();
@@ -1041,6 +1041,8 @@ module.exports = {
   keyListsEqual,
   isBimFloorplanBlock,
   tierOf,
+  validateTestFilesExist,
+  validateTestFileContract,
   main,
 };
 

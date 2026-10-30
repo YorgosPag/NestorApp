@@ -25,6 +25,19 @@ const INDEX_FLAG = "'--index'";
 const DISPATCH_RE = /add[A-Za-z]+\(\s*'(3\.\d+)',\s*'[^']*',\s*'([^']+)'([^;]*?)\);/g;
 /** Ο αναγνώστης του ευρετηρίου σε bash. */
 const SHELL_READER_RE = /git (?:show ":|cat-file -e ":)/;
+/**
+ * `source` βιβλιοθήκης δίπλα στο script (`"$(dirname "${BASH_SOURCE[0]}")/x.sh"` ή `"$SCRIPT_DIR/x.sh"`) — η κλειστότητα
+ * ενός bash script. Ο αναγνώστης ζει ΜΙΑ φορά στο `scripts/lib/commit-source.sh` (3.6 · 3.9 · 3.10, ADR-924 Φ3).
+ */
+const SHELL_SOURCE_RE = /^\s*source\s+"(?:\$\(dirname "\$\{BASH_SOURCE\[0\]\}"\)|\$SCRIPT_DIR)\/([^"]+)"/gm;
+
+/** Φτάνει το bash script (ή μια βιβλιοθήκη που κάνει `source`) σε αναγνώστη του ευρετηρίου; */
+function shellReaches(script, source) {
+  const text = source.readText(script) || '';
+  if (SHELL_READER_RE.test(text)) return true;
+  const dir = script.slice(0, script.lastIndexOf('/'));
+  return [...text.matchAll(SHELL_SOURCE_RE)].some(([, lib]) => SHELL_READER_RE.test(source.readText(`${dir}/${lib}`) || ''));
+}
 
 /** Οι δρομολογήσεις του εκτελεστή — ίδια πύλη δύο φορές (κλάδοι `if`) ⇒ ενώνονται τα ορίσματα. */
 function dispatchesOf(executorText) {
@@ -41,7 +54,7 @@ function classifyDispatch(dispatch, source) {
   const asksIndex = dispatch.args.includes(INDEX_FLAG);
   if (!source.has(dispatch.script)) return { ...dispatch, asksIndex, reader: false, missing: true };
   const reader = dispatch.script.endsWith('.sh')
-    ? SHELL_READER_RE.test(source.readText(dispatch.script) || '')
+    ? shellReaches(dispatch.script, source)
     : importClosure({ entries: [dispatch.script], readText: source.readText, has: source.has }).includes(SNAPSHOT_SSOT);
   return { ...dispatch, asksIndex, reader, missing: false };
 }
@@ -59,10 +72,16 @@ function takeInventory(source) {
   const executor = source.readText(EXECUTOR);
   if (executor === null) throw new Error(`${EXECUTOR} λείπει — η απογραφή δεν έχει αυθεντία.`);
   const gates = dispatchesOf(executor).map(dispatch => classifyDispatch(dispatch, source));
-  const declared = parseJson(source.readText(DECLARATIONS_FILE), DECLARATIONS_FILE).declared || {};
+  const declarations = parseJson(source.readText(DECLARATIONS_FILE), DECLARATIONS_FILE);
   const baselineText = source.readText(BASELINE_FILE);
-  const baseline = baselineText === null ? [] : JSON.parse(baselineText).gates || [];
-  return { gates, declared, baseline };
+  const baselineBody = baselineText === null ? {} : JSON.parse(baselineText);
+  // ADR-924 Φ4: οι δηλωμένες αναγνώσεις ΠΕΡΙΒΑΛΛΟΝΤΟΣ (η μόνη ανοχή της παγίδας του worker) — κρίνονται κι αυτές·
+  //   `rawReads` = το ratchet των ωμών σημείων ανάγνωσης στην κλειστότητα των πυλών (`raw-reads.js`)
+  return {
+    gates, declared: declarations.declared || {}, environment: declarations.environment || {},
+    // `null` = το ratchet ΔΕΝ έχει οπλιστεί σε αυτή την όψη (baseline χωρίς `rawReads`) — ποτέ «όλα νέα»
+    baseline: baselineBody.gates || [], rawReads: baselineBody.rawReads || null,
+  };
 }
 
 module.exports = {

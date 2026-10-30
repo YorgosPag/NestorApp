@@ -31,8 +31,10 @@
 
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
+
+/** Η είσοδος της πύλης (ADR-924) — προεπιλογή ο δίσκος της ρίζας· ο εκτελεστής δίνει την όψη του commit. */
+const inputOf = (root) => require('../gate-input').openGateInput({ root });
 
 /** Ο φάκελος των διαδρομών — η μόνη πηγή του πληθυσμού. */
 const ROUTES_DIR = 'src/app/api';
@@ -149,11 +151,12 @@ const COMPUTED_KEY_SOURCES = Object.freeze({
  * ⚠️ Το `expect` **δεν** είναι αντίγραφο της αυθεντίας: είναι **ισχυρισμός** που ελέγχεται.
  *    Αν κάποιος αλλάξει τη σταθερά, η επίλυση αποτυγχάνει **θορυβωδώς** αντί να σιωπήσει.
  */
-function resolveComputedKey(root, expression) {
+function resolveComputedKey(root, expression, input = inputOf(root)) {
   const source = COMPUTED_KEY_SOURCES[expression.trim()];
   if (!source) return null;
 
-  const text = fs.readFileSync(path.join(root, source.file), 'utf8');
+  const text = input.read(source.file);
+  if (text === null) throw new Error(`${source.file}: λείπει (${input.mode}) — το κλειδί δεν λύνεται.`);
   // Το ζεύγος **μαζί**: `<name>: '<expect>'`. Ένα από τα δύο μόνο δεν αρκεί.
   const escaped = source.expect.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const re = new RegExp(`\\b${source.name}\\s*[:=]\\s*'${escaped}'`);
@@ -173,8 +176,14 @@ function resolveComputedKey(root, expression) {
  *    μαντεύεται: καταγράφεται ρητά ως `unresolved`, ώστε το «δεν ξέρω» να μη γίνεται ποτέ
  *    «δεν υπάρχει» (N.12).
  */
-function readPrefixTable(root) {
-  const text = fs.readFileSync(path.join(root, CONFIG_FILE), 'utf8');
+function readConfig(input) {
+  const text = input.read(CONFIG_FILE);
+  if (text === null) throw new Error(`${CONFIG_FILE}: λείπει (${input.mode}) — η πύλη δεν έχει αυθεντία.`);
+  return text;
+}
+
+function readPrefixTable(root, input = inputOf(root)) {
+  const text = readConfig(input);
   const open = text.indexOf('ENDPOINT_CATEGORY_MAPPINGS');
   if (open < 0) throw new Error(`${CONFIG_FILE}: δεν βρέθηκε το ENDPOINT_CATEGORY_MAPPINGS.`);
   const body = text.slice(open, text.indexOf('\n};', open));
@@ -190,7 +199,7 @@ function readPrefixTable(root) {
     if (!computed) continue;
 
     // Το υπολογισμένο κλειδί **επιλύεται από την πηγή του**· αν δεν γίνεται, δηλώνεται.
-    const resolved = resolveComputedKey(root, computed[1]);
+    const resolved = resolveComputedKey(root, computed[1], input);
     if (resolved) {
       prefixes.push({ prefix: resolved, category: computed[2], from: computed[1].trim() });
     } else {
@@ -202,8 +211,8 @@ function readPrefixTable(root) {
 }
 
 /** Η προεπιλογή, διαβασμένη από την πηγή — ποτέ καρφωμένο `'STANDARD'`. */
-function readDefaultCategory(root) {
-  const text = fs.readFileSync(path.join(root, CONFIG_FILE), 'utf8');
+function readDefaultCategory(root, input = inputOf(root)) {
+  const text = readConfig(input);
   const m = text.match(/DEFAULT_RATE_LIMIT_CATEGORY\s*:\s*RateLimitCategory\s*=\s*'([A-Z]+)'/);
   if (!m) throw new Error(`${CONFIG_FILE}: δεν βρέθηκε το DEFAULT_RATE_LIMIT_CATEGORY.`);
   return m[1];
@@ -266,13 +275,9 @@ function enforcementSource(url, table) {
 // Ο ΠΛΗΘΥΣΜΟΣ
 // =============================================================================
 
-function walkRoutes(dir, out) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) walkRoutes(full, out);
-    else if (entry.name === 'route.ts') out.push(full);
-  }
-  return out;
+/** Κάθε `route.ts` — από την ΕΙΣΟΔΟ (ADR-924 Φ3: ήταν δικός του `readdirSync`). */
+function walkRoutes(input) {
+  return input.files([ROUTES_DIR], { accept: (rel) => rel.endsWith('/route.ts') });
 }
 
 /** `src/app/api/foo/[id]/route.ts` → `/api/foo/[id]` */
@@ -334,15 +339,15 @@ function classifyDeclaration(source) {
  * @param {{files?: Array<{file:string, source:string}>, table?: object, fallback?: string}} [override]
  *        — μόνο για τη σουίτα· η παραγωγή διαβάζει πάντα από τον δίσκο.
  */
-function takeInventory(root, override = {}) {
-  const table = override.table ?? readPrefixTable(root);
-  const fallback = override.fallback ?? readDefaultCategory(root);
+function takeInventory(root, override = {}, input = inputOf(root)) {
+  const table = override.table ?? readPrefixTable(root, input);
+  const fallback = override.fallback ?? readDefaultCategory(root, input);
 
   const files = override.files
-    ?? walkRoutes(path.join(root, ROUTES_DIR), []).map((file) => ({
-      file: path.relative(root, file).split(path.sep).join('/'),
+    ?? walkRoutes(input).map((file) => ({
+      file: input.rel(file),
       url: urlOf(file, root),
-      source: fs.readFileSync(file, 'utf8'),
+      source: input.read(file) ?? '',
     }));
 
   const routes = files.map((entry) => {

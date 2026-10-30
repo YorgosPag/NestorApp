@@ -29,6 +29,7 @@
 const { execFileSync } = require('node:child_process');
 
 const M = require('./model');
+const { readIndexText } = require('../git-index-snapshot');
 
 /** Έξοδος git ή `null` — ποτέ εξαίρεση προς τα έξω: απουσία ιστορικού δεν είναι σφάλμα πύλης. */
 function git(args) {
@@ -74,8 +75,9 @@ function treeReader(tree) {
   if (tree !== TREE.INDEX && !isCommit(tree)) {
     throw new Error(`firestore-deploy: το δέντρο «${tree}» δεν είναι commit — ούτε "${TREE.INDEX}" ούτε "${TREE.WORKTREE}"`);
   }
-  const prefix = tree === TREE.INDEX ? ':' : `${tree}:`;
-  return (relative) => gitBytes(['show', `${prefix}${relative}`]);
+  // ADR-924 Φ3 — το ευρετήριο από το SSoT (`readIndexText` = το ΙΔΙΟ `git show :path`, ωμά bytes)· ήταν δίδυμο εδώ
+  if (tree === TREE.INDEX) return (relative) => readIndexText({ repoRoot: M.paths.root, relPath: relative });
+  return (relative) => gitBytes(['show', `${tree}:${relative}`]);
 }
 
 /** Το μητρώο σε ένα ref, ή `null` — δεν υπήρχε εκεί ⇒ τίποτα καταγεγραμμένο να φυλαχτεί (Κ3). */

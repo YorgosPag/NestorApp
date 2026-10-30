@@ -26,6 +26,8 @@
  * CLI (CHECK 3.9): `node scripts/lib/i18n-runtime-dialect.js <locale.json …>` ⇒ exit 1 αν κάποιο κλειδί έχει επίθημα.
  */
 const fs = require('node:fs');
+const path = require('node:path');
+const { commitInput } = require('./gate-input');
 
 /** Οι κατηγορίες CLDR που **θα** εκτελούσε το σκέτο i18next — εδώ είναι **νεκρό γράμμα**. */
 const CLDR_PLURAL_SUFFIXES = Object.freeze(['_zero', '_one', '_two', '_few', '_many', '_other', '_plural']);
@@ -45,12 +47,16 @@ function findPluralSuffixKeys(tree, prefix = '') {
   });
 }
 
-/** @returns {{file: string, keys: string[]}[]} μόνο τα αρχεία με παραβάσεις (άκυρο JSON = άλλης πύλης δουλειά). */
-function scanLocaleFiles(files) {
+/**
+ * @param {string[]} files
+ * @param {(file: string) => ?string} [read] ο αναγνώστης — η είσοδος της πύλης (ADR-924)· προεπιλογή ο δίσκος
+ * @returns {{file: string, keys: string[]}[]} μόνο τα αρχεία με παραβάσεις (άκυρο JSON = άλλης πύλης δουλειά).
+ */
+function scanLocaleFiles(files, read = (file) => fs.readFileSync(file, 'utf8')) {
   return files.flatMap((file) => {
     let tree;
     try {
-      tree = JSON.parse(fs.readFileSync(file, 'utf8'));
+      tree = JSON.parse(read(file));
     } catch {
       return [];
     }
@@ -59,8 +65,12 @@ function scanLocaleFiles(files) {
   });
 }
 
-function main(files) {
-  const violations = scanLocaleFiles(files.filter((file) => /src[\\/]i18n[\\/]locales[\\/].*\.json$/.test(file)));
+/** `argv` = αρχεία locale· `--index` (CHECK 3.9 από τον εκτελεστή) ⇒ το κείμενο ΤΟΥ COMMIT, όχι του δίσκου. */
+function main(argv) {
+  const input = commitInput(path.resolve(__dirname, '..', '..'), argv);
+  const files = argv.filter((arg) => !arg.startsWith('--'));
+  const violations = scanLocaleFiles(files.filter((file) => /src[\\/]i18n[\\/]locales[\\/].*\.json$/.test(file)),
+    input.read);
   for (const { file, keys } of violations) {
     for (const key of keys) console.log(`  🚫 ${file}: "${key}" — επίθημα πληθυντικού, ο runtime (i18next-icu) ΔΕΝ το λύνει`);
   }

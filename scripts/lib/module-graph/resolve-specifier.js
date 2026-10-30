@@ -16,25 +16,30 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const ts = require('typescript');
 
 // Order matters: TypeScript prefers a real `.ts` over a sibling `.js`, and a
 // directory's `index.*` only after every direct-file candidate has failed.
 const CANDIDATE_EXTENSIONS = ['.ts', '.tsx', '.mts', '.cts', '.d.ts', '.js', '.jsx', '.mjs', '.cjs'];
 
-function toPosix(p) {
-  return p.split(path.sep).join('/');
-}
+// το `toPosix` ζει στο φύλλο `posix-path` (χωρίς `typescript`)· επανεξάγεται εδώ για τους υπάρχοντες καταναλωτές
+const { toPosix } = require('../posix-path');
 
 /**
  * Reads `compilerOptions.paths` from a tsconfig (JSONC-tolerant via the
  * TypeScript parser) and returns entries sorted longest-prefix-first.
+ * `readText(path) → ?string` (ADR-924): the gate input's reader — with `--index` the COMMIT's tsconfig, not the disk's.
  */
-function readTsPathAliases(projectRoot, configFileName = 'tsconfig.base.json') {
+function readTsPathAliases(projectRoot, configFileName = 'tsconfig.base.json', readText = null) {
   const configPath = path.join(projectRoot, configFileName);
-  if (!fs.existsSync(configPath)) return [];
+  const text = readText
+    ? readText(configPath)
+    : (fs.existsSync(configPath) ? fs.readFileSync(configPath, 'utf8') : null);
+  if (text === null || text === undefined) return [];
 
-  const read = ts.readConfigFile(configPath, p => fs.readFileSync(p, 'utf8'));
+  // ⚡ lazy (ADR-924 Φ3, μετρημένο): το `typescript` κοστίζει ~490ms — και ΚΑΘΕ πύλη που ανοίγει είσοδο φορτώνει αυτό το
+  //    αρχείο για το `toPosix`. Το πληρώνει μόνο όποιος διαβάζει tsconfig.
+  // eslint-disable-next-line global-require
+  const read = require('typescript').parseConfigFileTextToJson(configPath, text);
   if (read.error || !read.config) return [];
 
   const paths = (read.config.compilerOptions && read.config.compilerOptions.paths) || {};

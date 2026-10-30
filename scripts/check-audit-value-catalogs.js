@@ -37,18 +37,14 @@
  * =============================================================================
  */
 
-const fs = require('fs');
 const path = require('path');
+const { commitInput } = require('./lib/gate-input');
 
 const REPO_ROOT = path.join(__dirname, '..');
-const CONFIG_FILE = path.join(
-  REPO_ROOT,
-  'src',
-  'config',
-  'audit-value-catalogs.ts',
-);
-const LOCALES_EL = path.join(REPO_ROOT, 'src', 'i18n', 'locales', 'el');
-const LOCALES_EN = path.join(REPO_ROOT, 'src', 'i18n', 'locales', 'en');
+// ADR-924: σχετικά με τη ρίζα — κάθε ανάγνωση περνά από την ΕΙΣΟΔΟ (`--index` ⇒ η όψη του commit).
+const CONFIG_FILE = 'src/config/audit-value-catalogs.ts';
+const LOCALES_EL = 'src/i18n/locales/el';
+const LOCALES_EN = 'src/i18n/locales/en';
 
 const RED = '\x1b[0;31m';
 const GREEN = '\x1b[0;32m';
@@ -82,15 +78,16 @@ function parseCatalogConfig(source) {
 // ---------------------------------------------------------------------------
 // Locale helpers.
 // ---------------------------------------------------------------------------
-function loadNamespace(localeDir, ns) {
-  const file = path.join(localeDir, `${ns}.json`);
-  if (!fs.existsSync(file)) {
-    return { error: `file not found: ${path.relative(REPO_ROOT, file)}` };
+function loadNamespace(localeDir, ns, input) {
+  const file = `${localeDir}/${ns}.json`;
+  const text = input.read(file);
+  if (text === null) {
+    return { error: `file not found: ${file}` };
   }
   try {
-    return { data: JSON.parse(fs.readFileSync(file, 'utf8')) };
+    return { data: JSON.parse(text) };
   } catch (err) {
-    return { error: `invalid JSON in ${path.relative(REPO_ROOT, file)}: ${err.message}` };
+    return { error: `invalid JSON in ${file}: ${err.message}` };
   }
 }
 
@@ -134,13 +131,13 @@ function findSnakeCaseKeys(catalog) {
 // ---------------------------------------------------------------------------
 // Main validation routine.
 // ---------------------------------------------------------------------------
-function validate() {
-  if (!fs.existsSync(CONFIG_FILE)) {
+function validate(input = commitInput(REPO_ROOT)) {
+  const source = input.read(CONFIG_FILE);
+  if (source === null) {
     console.error(`${RED}✖ audit-value-catalogs.ts not found at ${CONFIG_FILE}${NC}`);
     return 1;
   }
 
-  const source = fs.readFileSync(CONFIG_FILE, 'utf8');
   let entries;
   try {
     entries = parseCatalogConfig(source);
@@ -160,8 +157,8 @@ function validate() {
 
   for (const entry of entries) {
     const { field, ns, path: dotPath } = entry;
-    const elNs = loadNamespace(LOCALES_EL, ns);
-    const enNs = loadNamespace(LOCALES_EN, ns);
+    const elNs = loadNamespace(LOCALES_EL, ns, input);
+    const enNs = loadNamespace(LOCALES_EN, ns, input);
 
     if (elNs.error) {
       errors.push(`[${field}] el namespace: ${elNs.error}`);
@@ -245,4 +242,6 @@ function validate() {
   return 0;
 }
 
-process.exit(validate());
+if (require.main === module) process.exit(validate());
+
+module.exports = { validate };

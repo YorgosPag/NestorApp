@@ -33,8 +33,9 @@
 
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
+
+const { closedTally, idsOf } = require('../gate-ledger');
 
 const TABLE = 'src/subapps/dxf-viewer/text-engine/fonts/font-substitution-table.ts';
 const PRELOAD = 'src/subapps/dxf-viewer/text-engine/fonts/cad-font-preload.ts';
@@ -58,22 +59,22 @@ const STATES = {
 const BLOCKING = [STATES.UNLOADABLE_PRELOAD, STATES.ORPHAN_DECLARATION, STATES.REASONLESS_DECLARATION];
 const MIN_REASON_LENGTH = 40;
 
-function read(repoRoot, rel) {
-  const file = path.join(repoRoot, rel);
-  if (!fs.existsSync(file)) {
+function read(input, rel) {
+  const text = input.read(rel);
+  if (text === null) {
     throw new Error(`${rel} λείπει — η πύλη δεν έχει αυθεντία, και «καμία ανεκπλήρωτη υπόσχεση» θα ήταν ψέμα.`);
   }
-  return fs.readFileSync(file, 'utf8');
+  return text;
 }
 
 function matchAll(text, re) {
   return [...text.matchAll(new RegExp(re.source, re.flags))].map((m) => m[1]);
 }
 
-function readDeclarations(repoRoot) {
-  const file = path.join(repoRoot, DECLARATIONS_FILE);
-  if (!fs.existsSync(file)) throw new Error(`${DECLARATIONS_FILE} λείπει — το κλειστό σύνολο είναι μέρος της πύλης.`);
-  const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
+function readDeclarations(input) {
+  const text = input.read(DECLARATIONS_FILE);
+  if (text === null) throw new Error(`${DECLARATIONS_FILE} λείπει — το κλειστό σύνολο είναι μέρος της πύλης.`);
+  const raw = JSON.parse(text);
   if (!raw || typeof raw.browserSynthesized !== 'object' || raw.browserSynthesized === null) {
     throw new Error(`${DECLARATIONS_FILE}: περίμενα αντικείμενο "browserSynthesized".`);
   }
@@ -83,12 +84,13 @@ function readDeclarations(repoRoot) {
 /**
  * Η απογραφή: τι υπόσχεται ο πίνακας, τι φορτώνει ο preloader, τι δηλώθηκε.
  *
- * ⚠️ Το `override` υπάρχει **μόνο** για τη σουίτα — η παραγωγή διαβάζει πάντα από τον δίσκο.
+ * ⚠️ Το `override` υπάρχει **μόνο** για τη σουίτα. `input` = η είσοδος της πύλης (ADR-924): προεπιλογή ο δίσκος,
+ * ο εκτελεστής δίνει την όψη του commit.
  */
-function takeInventory(repoRoot, override = {}) {
-  const table = override.table ?? read(repoRoot, TABLE);
-  const preload = override.preload ?? read(repoRoot, PRELOAD);
-  const declarations = override.declarations ?? readDeclarations(repoRoot);
+function takeInventory(repoRoot, override = {}, input = require('../gate-input').openGateInput({ root: repoRoot })) {
+  const table = override.table ?? read(input, TABLE);
+  const preload = override.preload ?? read(input, PRELOAD);
+  const declarations = override.declarations ?? readDeclarations(input);
 
   return {
     promised: [...new Set(matchAll(table, PROMISE_RE))].sort(),
@@ -96,7 +98,7 @@ function takeInventory(repoRoot, override = {}) {
     urls: matchAll(preload, URL_RE),
     declarations,
     repoRoot,
-    fileExists: override.fileExists ?? ((url) => fs.existsSync(path.join(repoRoot, PUBLIC_DIR, url.replace(/^\//, '')))),
+    fileExists: override.fileExists ?? ((url) => input.exists(path.posix.join(PUBLIC_DIR, url.replace(/^\//, '')))),
   };
 }
 
@@ -139,17 +141,8 @@ function judge(inv) {
   return { rows, tally: tallyOf(rows) };
 }
 
-function tallyOf(rows) {
-  const known = new Set(Object.values(STATES));
-  const tally = Object.fromEntries([...known].map((s) => [s, 0]));
-  for (const r of rows) {
-    if (!known.has(r.state)) throw new Error(`CHECK 3.67 — άγνωστη κατάσταση «${r.state}»`);
-    tally[r.state] += 1;
-  }
-  return tally;
-}
-
-const idsOf = (verdict, state) => verdict.rows.filter((r) => r.state === state).map((r) => r.id);
+/** Κλειστή λογιστική (SSoT `gate-ledger`). */
+const tallyOf = (rows) => closedTally(rows, STATES, '3.67');
 
 module.exports = {
   TABLE, PRELOAD, DECLARATIONS_FILE,

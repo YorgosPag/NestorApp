@@ -32,12 +32,9 @@
 
 'use strict';
 
-const fs = require('fs');
-const path = require('path');
-
 const ast = require('./lib/write-authority/ast');
-const { collectSourceFiles } = require('./lib/module-graph/scan-config');
-const { toPosix } = require('./lib/module-graph/resolve-specifier');
+const { openGateInput } = require('./lib/gate-input');
+const { defineScanGate } = require('./lib/write-authority/gate-runner');
 
 const { ts, PROJECT_ROOT } = ast;
 
@@ -142,12 +139,12 @@ const exemptions = ast.exemptionsFor('catalog-schema-authority-exempt');
 
 const STATES = {
   STORE: 'declared-store',
-  EXEMPT: 'exempt-with-reason',
+  EXEMPT: ast.EXEMPTION_STATES.EXEMPT,
   WRITE_OUTSIDE: 'catalog-write-outside-store',
   DOC_REF_OUTSIDE: 'catalog-doc-ref-outside-declared',
   STORE_UNASKED: 'store-unasked',
   DIRECT_DOOR_OPEN: 'direct-write-door-open',
-  EXEMPT_NO_REASON: 'exempt-without-reason',
+  EXEMPT_NO_REASON: ast.EXEMPTION_STATES.EXEMPT_NO_REASON,
   SOURCE_DRIFT: 'source-drift',
   DERIVED_TRACKED: 'derived-path-tracked',
   DERIVED_OUTSIDE: 'derived-write-outside-aggregate',
@@ -171,13 +168,7 @@ function isCatalogWrite(call, refsByKey) {
   return touches(callee.expression) || touches(call.arguments[0]);
 }
 
-function classify(sf, node, rel, state) {
-  const reason = exemptions.reasonAbove(sf, node);
-  if (reason === null) return { state, file: rel, line: ast.lineOf(sf, node), detail: DETAIL[state] };
-  return reason.length > 0
-    ? { state: STATES.EXEMPT, file: rel }
-    : { state: STATES.EXEMPT_NO_REASON, file: rel, line: ast.lineOf(sf, node), detail: 'εξαίρεση ΧΩΡΙΣ λόγο' };
-}
+const classify = (sf, node, rel, state) => exemptions.classify(sf, node, rel, state, DETAIL[state]);
 
 /** Κ1 + Κ2 + Κ3 για ένα αρχείο. */
 function findingsIn(sf, rel) {
@@ -226,9 +217,9 @@ function derivedPathFindings(storeText) {
 }
 
 /** Κ4 + Κ5 + Κ6α + ύπαρξη δηλωμένων αρχείων. */
-function wiringFindings(root) {
+function wiringFindings(root, input = openGateInput({ root })) {
   const findings = [];
-  const read = (rel) => (fs.existsSync(path.join(root, rel)) ? fs.readFileSync(path.join(root, rel), 'utf8') : null);
+  const read = (rel) => input.read(rel);
   for (const [file, proofs] of Object.entries(WIRING)) {
     const text = read(file);
     if (text === null) {
@@ -253,50 +244,21 @@ function wiringFindings(root) {
 
 const RELEVANT = /COLLECTIONS\.CATALOG_|catalogDocRef\(|uniqueValueRef\(|pricingSlotRef\(|pricingViewSignalRef\(|stageDerived\(|stageCopied\(/;
 
-function measure(opts = {}) {
-  const root = opts.root || PROJECT_ROOT;
-  const files = (opts.codeFiles || collectSourceFiles(root, ['src'])).filter((f) => !/__tests__|\.test\.|\.spec\./.test(f));
-  if (!opts.codeFiles && files.length < 1000) throw new Error(`ΦΡΟΥΡΟΣ: μόνο ${files.length} αρχεία — η σάρωση δεν κοίταξε`);
-  const findings = [];
-  for (const abs of files) {
-    let text;
-    try { text = fs.readFileSync(abs, 'utf8'); } catch { continue; }
-    if (!RELEVANT.test(text)) continue;
-    findings.push(...findingsIn(ast.sourceFileOf(abs, text), toPosix(path.relative(root, abs))));
-  }
-  findings.push(...(opts.skipWiring ? [] : wiringFindings(root)));
-  const tally = Object.fromEntries(Object.values(STATES).map((s) => [s, findings.filter((f) => f.state === s).length]));
-  return { findings, tally, examined: files.length };
-}
-
-function report(result, log = console.log) {
-  const { tally, findings } = result;
-  log('');
-  log('🗂️  CHECK 3.106 — Πύλη του ενός γραφέα του καταλόγου — σχήμα και δεδομένα (ADR-923 §5.9 · §5.10)');
-  log(`   αρχεία που εξετάστηκαν: ${result.examined}`);
-  log('');
-  for (const s of BLOCKING) log(`   ⛔ ${s.padEnd(40)} ${tally[s]}`);
-  for (const s of [STATES.STORE, STATES.EXEMPT]) log(`   ✅ ${s.padEnd(40)} ${tally[s]}`);
-  const blocking = findings.filter((f) => BLOCKING.includes(f.state));
-  for (const f of blocking) log(`   ⛔ ${f.state}  ${f.file}${f.line ? ':' + f.line : ''}\n        ${f.detail}`);
-  if (blocking.length) {
-    log('\n   ΘΕΡΑΠΕΙΑ: κάθε εγγραφή σχήματος → γραφέας στο `src/server/catalog/` → `runCatalogTransaction` + `stage*`.');
-    log('   ⚠️ ΜΗΝ προσθέσεις αρχείο στο DOC_REF_USERS «επειδή βολεύει»: κάθε τέτοιο αρχείο είναι πόρτα γύρω από την επικύρωση.');
-  }
-  return blocking.length;
-}
-
-function main() {
-  if (process.env.SKIP_CATALOG_SCHEMA_AUTHORITY === '1') {
-    console.log('⏭️  CHECK 3.106 παραλείφθηκε (SKIP_CATALOG_SCHEMA_AUTHORITY=1)');
-    return 0;
-  }
-  const blocking = report(measure());
-  console.log(blocking > 0
-    ? `\n❌ CHECK 3.106 ΑΠΕΤΥΧΕ — ${blocking} μπλοκάρουσα(ες) παραβίαση(εις)\n`
-    : '\n✅ CHECK 3.106 — κάθε εγγραφή σχήματος καταλόγου περνά από τη μηχανή\n');
-  return blocking > 0 ? 1 : 0;
-}
+const { measure, report, main } = defineScanGate({
+  projectRoot: PROJECT_ROOT, relevant: RELEVANT, findingsIn, wiringFindings, states: STATES,
+  check: '3.106', skipEnv: 'SKIP_CATALOG_SCHEMA_AUTHORITY',
+  ok: 'κάθε εγγραφή σχήματος καταλόγου περνά από τη μηχανή',
+  report: {
+    title: '🗂️  CHECK 3.106 — Πύλη του ενός γραφέα του καταλόγου — σχήμα και δεδομένα (ADR-923 §5.9 · §5.10)',
+    blocking: BLOCKING,
+    healthy: [STATES.STORE, STATES.EXEMPT],
+    width: 40,
+    remedy: [
+      'ΘΕΡΑΠΕΙΑ: κάθε εγγραφή σχήματος → γραφέας στο `src/server/catalog/` → `runCatalogTransaction` + `stage*`.',
+      '⚠️ ΜΗΝ προσθέσεις αρχείο στο DOC_REF_USERS «επειδή βολεύει»: κάθε τέτοιο αρχείο είναι πόρτα γύρω από την επικύρωση.',
+    ],
+  },
+});
 
 if (require.main === module) process.exit(main());
 

@@ -27,12 +27,14 @@
 
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
+
+/** Η είσοδος της πύλης (ADR-924) — προεπιλογή ο δίσκος της ρίζας· ο εκτελεστής δίνει την όψη του commit. */
+const inputOf = (root) => require('../gate-input').openGateInput({ root });
 
 const APP_DIR = path.join('src', 'app');
 
-const toPosix = value => value.split(path.sep).join('/');
+const { toPosix } = require('../posix-path'); // SSoT (ADR-924 §8.9)
 
 /**
  * ΟΙ ΡΙΖΕΣ ΠΟΥ ΠΡΟΑΠΟΔΙΔΟΝΤΑΙ — και ΓΙΑΤΙ δεν είναι μόνο οι σελίδες.
@@ -52,21 +54,11 @@ const ROOT_KINDS = Object.freeze({
 });
 
 /** Κάθε προαποδιδόμενη ρίζα κάτω από το `src/app`, με την αλυσίδα προγόνων της. */
-function enumerateRoots(projectRoot) {
-  const root = path.join(projectRoot, APP_DIR);
-  if (!fs.existsSync(root)) return [];
-  const found = [];
-  const walk = dir => {
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) walk(full);
-      else {
-        const kind = Object.keys(ROOT_KINDS).find(k => ROOT_KINDS[k].pattern.test(entry.name));
-        if (kind) found.push({ abs: full, kind });
-      }
-    }
-  };
-  walk(root);
+function enumerateRoots(projectRoot, input = inputOf(projectRoot)) {
+  // ADR-924 Φ3 — από την ΕΙΣΟΔΟ (ήταν δικός του `readdirSync`)· `abs` στη μορφή της πλατφόρμας, όπως πριν.
+  const kindOf = name => Object.keys(ROOT_KINDS).find(k => ROOT_KINDS[k].pattern.test(name));
+  const found = input.files([APP_DIR], { accept: rel => Boolean(kindOf(rel.slice(rel.lastIndexOf('/') + 1))) })
+    .map(abs => ({ abs: path.resolve(abs), kind: kindOf(path.basename(abs)) }));
   return found.sort((a, b) => a.abs.localeCompare(b.abs)).map(item => describeRoot(projectRoot, item));
 }
 
@@ -95,11 +87,11 @@ function ancestorDirs(projectRoot, absFile) {
   return out;
 }
 
-function firstExisting(projectRoot, dirRel, basenames) {
+function firstExisting(projectRoot, dirRel, basenames, input = inputOf(projectRoot)) {
   for (const base of basenames) {
     for (const ext of ['tsx', 'jsx']) {
       const rel = `${dirRel}/${base}.${ext}`;
-      if (fs.existsSync(path.join(projectRoot, rel))) return rel;
+      if (input.exists(rel)) return rel;
     }
   }
   return null;
@@ -114,16 +106,16 @@ function firstExisting(projectRoot, dirRel, basenames) {
  *
  * @param {(rel: string) => object} readModule αναλυτής module (lazy, cached)
  */
-function routeGuard(projectRoot, root, readModule) {
+function routeGuard(projectRoot, root, readModule, input = inputOf(projectRoot)) {
   const ownSegment = root.ancestors[root.ancestors.length - 1];
   const ownCounts = ROOT_KINDS[root.kind].ownSegmentLoadingGuards;
   for (const dir of root.ancestors) {
     const isOwn = dir === ownSegment;
-    const loading = firstExisting(projectRoot, dir, ['loading']);
+    const loading = firstExisting(projectRoot, dir, ['loading'], input);
     if (loading && (ownCounts || !isOwn)) return { guarded: true, reason: `loading:${loading}` };
     // Ένα layout δεν φρουρεί ΤΟΝ ΕΑΥΤΟ ΤΟΥ: το `{children}` του είναι η σελίδα.
     if (isOwn && root.kind === 'layout') continue;
-    const layout = firstExisting(projectRoot, dir, ['layout']);
+    const layout = firstExisting(projectRoot, dir, ['layout'], input);
     if (layout && layout !== root.file && layoutWrapsChildren(readModule(layout))) {
       return { guarded: true, reason: `layout-suspense:${layout}` };
     }
@@ -145,11 +137,11 @@ function layoutWrapsChildren(mod) {
 }
 
 /** `export const dynamic = 'force-dynamic'` στη ρίζα ή σε πρόγονο layout. */
-function routeOptOut(projectRoot, root, readModule) {
+function routeOptOut(projectRoot, root, readModule, input = inputOf(projectRoot)) {
   const own = readModule(root.file);
   if (own && own.dynamicOptOut) return root.file;
   for (const dir of root.ancestors) {
-    const layout = firstExisting(projectRoot, dir, ['layout']);
+    const layout = firstExisting(projectRoot, dir, ['layout'], input);
     const mod = layout && layout !== root.file ? readModule(layout) : null;
     if (mod && mod.dynamicOptOut) return layout;
   }

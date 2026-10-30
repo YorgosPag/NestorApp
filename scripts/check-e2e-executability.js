@@ -64,12 +64,12 @@
 'use strict';
 
 const path = require('node:path');
-const fs = require('node:fs');
+const { openGateInput, commitInput } = require('./lib/gate-input');
 
 const { readBotPatterns, PROJECT_ROOT, MIDDLEWARE_PATH } = require('./lib/e2e-executability/bot-patterns');
 const { readProjects, CONFIG_PATH } = require('./lib/e2e-executability/project-identity');
 const { evaluate, STATES } = require('./lib/e2e-executability/verdicts');
-const { collectSourceFiles } = require('./lib/module-graph/scan-config');
+
 
 const C = {
   red: (s) => `\x1b[31m${s}\x1b[0m`,
@@ -81,16 +81,13 @@ const C = {
 const SPEC_PATTERN = /(^|\/)e2e\/.*\.spec\.tsx?$|\.e2e\.spec\.tsx?$/;
 
 /** Τα spec αρχεία, ως μονοπάτια σχετικά με τη ρίζα — ό,τι βλέπει και το `playwright test`. */
-function readSpecPaths(root) {
-  const rootPosix = root.split(path.sep).join('/');
-  return collectSourceFiles(root, ['src'])
-    .filter((file) => SPEC_PATTERN.test(file))
-    .map((file) => (file.startsWith(rootPosix) ? file.slice(rootPosix.length + 1) : file));
+function readSpecPaths(root, input = openGateInput({ root })) {
+  return input.sources(['src']).filter((file) => SPEC_PATTERN.test(file)).map(input.rel);
 }
 
 /** Κάθε npm script, ως {name, command}. */
-function readScripts(root) {
-  const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+function readScripts(root, input = openGateInput({ root })) {
+  const pkg = input.readJson('package.json');
   return Object.entries(pkg.scripts || {}).map(([name, command]) => ({ name, command }));
 }
 
@@ -139,10 +136,12 @@ function main() {
   const verbose = process.argv.includes('--verbose');
   const root = PROJECT_ROOT;
 
-  const { patterns } = readBotPatterns(root);
-  const { projects } = readProjects({ root });
-  const specPaths = readSpecPaths(root);
-  const scripts = readScripts(root);
+  // ADR-924 — με `--index` (εκτελεστής): middleware · config · specs · scripts ΤΟΥ COMMIT.
+  const input = commitInput(root);
+  const { patterns } = readBotPatterns(root, input);
+  const { projects } = readProjects({ root, input });
+  const specPaths = readSpecPaths(root, input);
+  const scripts = readScripts(root, input);
 
   const result = evaluate({ projects, patterns, scripts, specPaths });
   return report(result, { verbose, projects, specPaths });

@@ -22,10 +22,11 @@
 
 'use strict';
 
-const fs = require('fs');
-const path = require('path');
 const ts = require('typescript');
 const { parseComputedColor } = require('./wcag-contrast');
+
+/** Η είσοδος της πύλης (ADR-924) — προεπιλογή ο δίσκος της ρίζας· ο εκτελεστής δίνει την όψη του commit. */
+const inputOf = (root) => require('../gate-input').openGateInput({ root });
 
 /** Ο φάκελος που ΟΡΙΖΕΙ το TypeScript σύστημα χρωμάτων. */
 const TOKEN_MODULES_DIR = 'src/styles/design-tokens/modules';
@@ -267,14 +268,13 @@ function collectThemedPairs(entries) {
  * @param {string[]} relFiles διαδρομές σχετικές με τη ρίζα
  * @param {string} [repoRoot]
  */
-function readPaletteFromFiles(relFiles, repoRoot = process.cwd()) {
+function readPaletteFromFiles(relFiles, repoRoot = process.cwd(), input = inputOf(repoRoot)) {
   const out = { files: [], entries: [], declaredPairs: [] };
   for (const rel of relFiles) {
-    const abs = path.join(repoRoot, rel);
-    if (!fs.existsSync(abs)) {
+    const src = input.read(rel);
+    if (src === null) {
       throw new Error(`ts-token-palette: δεν βρέθηκε το αρχείο ${rel} — fail-closed.`);
     }
-    const src = fs.readFileSync(abs, 'utf8');
     const sourceFile = ts.createSourceFile(rel, src, ts.ScriptTarget.Latest, true);
     out.files.push(rel);
 
@@ -305,18 +305,18 @@ function readPaletteFromFiles(relFiles, repoRoot = process.cwd()) {
  * @param {string} [repoRoot]
  * @returns {{source:string, files:string[], entries:object[], declaredPairs:object[], themedPairs:object[]}}
  */
-function readTokenPalette(repoRoot = process.cwd()) {
-  const dir = path.join(repoRoot, TOKEN_MODULES_DIR);
-  if (!fs.existsSync(dir)) {
+function readTokenPalette(repoRoot = process.cwd(), input = inputOf(repoRoot)) {
+  // ADR-924 — ο φάκελος από την ΕΙΣΟΔΟ (με `--index`: τα modules ΤΟΥ COMMIT· untracked ⇒ αόρατα).
+  const children = input.children(TOKEN_MODULES_DIR);
+  if (children === null) {
     throw new Error(`ts-token-palette: δεν βρέθηκε ο φάκελος ${TOKEN_MODULES_DIR} — fail-closed.`);
   }
-  const files = fs
-    .readdirSync(dir)
+  const files = children.files
     .filter((f) => f.endsWith('.ts') && !f.endsWith('.d.ts'))
     .sort()
     .map((name) => `${TOKEN_MODULES_DIR}/${name}`);
 
-  return { source: TOKEN_MODULES_DIR, ...readPaletteFromFiles(files, repoRoot) };
+  return { source: TOKEN_MODULES_DIR, ...readPaletteFromFiles(files, repoRoot, input) };
 }
 
 /** Οι ρόλοι που ισχυρίζονται κάτι κρίσιμο. Ένα primitive/unknown δεν ισχυρίζεται τίποτα. */

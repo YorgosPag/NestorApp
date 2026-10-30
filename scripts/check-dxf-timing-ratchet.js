@@ -63,11 +63,12 @@
  * =============================================================================
  */
 'use strict';
-const fs = require('fs');
 const path = require('path');
+const { commitInput } = require('./lib/gate-input');
+const ratchet = require('./lib/per-file-ratchet');
 
 const REPO_ROOT = path.join(__dirname, '..');
-const BASELINE_FILE = path.join(REPO_ROOT, '.dxf-timing-baseline.json');
+const BASELINE_FILE = '.dxf-timing-baseline.json';   // ADR-924: από την ΕΙΣΟΔΟ
 const MODULE_NAME = 'dxf-viewer-timing';
 const SCOPE_PREFIX = 'src/subapps/dxf-viewer/';
 
@@ -138,96 +139,29 @@ function countViolations(content) {
 }
 
 // ---------------------------------------------------------------------------
-// Full subapp walk
+// Full subapp scan — από την ΕΙΣΟΔΟ (ADR-924 Φ3: `--index` ⇒ το κείμενο ΤΟΥ COMMIT, όχι του δίσκου)
 // ---------------------------------------------------------------------------
-function walkScope(dir, out = []) {
-  const abs = path.join(REPO_ROOT, dir);
-  if (!fs.existsSync(abs)) return out;
-  for (const entry of fs.readdirSync(abs, { withFileTypes: true })) {
-    const rel = path.join(dir, entry.name).replace(/\\/g, '/');
-    if (entry.isDirectory()) {
-      if (['node_modules', '.next', '__tests__'].includes(entry.name)) continue;
-      walkScope(rel, out);
-    } else if (/\.(ts|tsx)$/.test(entry.name) && isInScope(rel)) {
-      out.push(rel);
-    }
-  }
-  return out;
+function scan(input, files = ratchet.scopeFiles(input, [SCOPE_PREFIX.replace(/\/$/, '')], isInScope, ratchet.pruneTestDirs)) {
+  return ratchet.scanFiles(files, { input, inScope: isInScope, findHits: countViolations });
 }
 
 // ---------------------------------------------------------------------------
-// Baseline IO
+// Modes
 // ---------------------------------------------------------------------------
-function loadBaseline() {
-  if (!fs.existsSync(BASELINE_FILE)) return { files: {} };
-  try {
-    const data = JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf8'));
-    return { files: data.files ?? {} };
-  } catch {
-    return { files: {} };
-  }
+function writeBaseline(scanned) {
+  ratchet.writeModuleBaseline(BASELINE_FILE, scanned, {
+    module: MODULE_NAME,
+    adr: 'ADR-516',
+    description:
+      'DXF Viewer raw timing literal baseline. Ratchet enforced via CHECK 3.27 (ADR-516 §5.4). ' +
+      'Counts can only decrease per-file. New files: zero tolerance. ' +
+      'Each entry should migrate to DXF_TIMING (config/dxf-timing.ts) when its file is touched.',
+  }, REPO_ROOT);
 }
 
-function writeBaseline(fileCounts) {
-  const sortedFiles = Object.fromEntries(
-    Object.entries(fileCounts).sort(([a], [b]) => a.localeCompare(b)),
-  );
-  const totalViolations = Object.values(fileCounts).reduce((a, b) => a + b, 0);
-  const payload = {
-    _meta: {
-      module: MODULE_NAME,
-      description:
-        'DXF Viewer raw timing literal baseline. Ratchet enforced via CHECK 3.27 (ADR-516 §5.4). ' +
-        'Counts can only decrease per-file. New files: zero tolerance. ' +
-        'Each entry should migrate to DXF_TIMING (config/dxf-timing.ts) when its file is touched.',
-      adr: 'ADR-516',
-      generatedAt: new Date().toISOString(),
-      totalFiles: Object.keys(sortedFiles).length,
-      totalViolations,
-    },
-    files: sortedFiles,
-  };
-  fs.writeFileSync(BASELINE_FILE, JSON.stringify(payload, null, 2) + '\n', 'utf8');
-  return { totalFiles: Object.keys(sortedFiles).length, totalViolations };
-}
-
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
-const args = process.argv.slice(2);
-const wantAll = args.includes('--all') || args.includes('--audit');
-const wantReport = args.includes('--report');
-const wantBaseline = args.includes('--baseline') || args.includes('--write-baseline');
-
-if (wantBaseline) {
-  const files = walkScope(SCOPE_PREFIX.replace(/\/$/, ''));
-  const fileCounts = {};
-  for (const file of files) {
-    const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
-    const hits = countViolations(content);
-    if (hits.length > 0) fileCounts[normalizePath(file)] = hits.length;
-  }
-  const { totalFiles, totalViolations } = writeBaseline(fileCounts);
-  console.log(
-    `${GREEN}✅ Baseline written: ${BASELINE_FILE}${NC}\n` +
-    `${GREEN}   ${totalFiles} files / ${totalViolations} violations${NC}`,
-  );
-  process.exit(0);
-}
-
-if (wantReport || wantAll) {
-  const files = walkScope(SCOPE_PREFIX.replace(/\/$/, ''));
-  const entries = [];
-  let totalViolations = 0;
-  for (const file of files) {
-    const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
-    const hits = countViolations(content);
-    if (hits.length === 0) continue;
-    totalViolations += hits.length;
-    entries.push({ file: normalizePath(file), hits });
-  }
-  entries.sort((a, b) => b.hits.length - a.hits.length || a.file.localeCompare(b.file));
-
+function audit(scanned, wantReport) {
+  const entries = ratchet.rankByCount(scanned);
+  const totalViolations = entries.reduce((sum, { hits }) => sum + hits.length, 0);
   if (wantReport) {
     for (const { file, hits } of entries) {
       console.log(`${YELLOW}${file}${NC}  (${hits.length})`);
@@ -238,85 +172,41 @@ if (wantReport || wantAll) {
   console.log(
     `${GREEN}📊 DXF timing audit: ${entries.length} files / ${totalViolations} raw timing literals${NC}`,
   );
-  process.exit(0);
 }
 
-// Default: ratchet mode — scan provided args (staged files from pre-commit).
-const stagedFiles = args.filter((a) => !a.startsWith('--'));
+function ratchetMode(input, stagedFiles) {
+  const scanned = scan(input, stagedFiles);
+  const hasBlock = ratchet.printLineVerdict(scanned, ratchet.loadFileCounts(BASELINE_FILE, input), {
+    noun: 'raw timing literals',
+    newNoun: 'new raw timing literal(s)',
+    describeHit: ({ match }) => `${match} — point at DXF_TIMING (config/dxf-timing.ts), ADR-516`,
+    deferReductions: true,
+    migrated: 'raw timing literals (fully migrated)',
+  });
 
-if (stagedFiles.length === 0) {
-  process.exit(0);
+  return ratchet.concludeLineRatchet(hasBlock, scanned.length, {
+    failLines: [
+      `${RED}  ❌ DXF timing ratchet FAILED — centralize raw timing literals into DXF_TIMING${NC}`,
+      `${YELLOW}     SSoT: src/subapps/dxf-viewer/config/dxf-timing.ts (DXF_TIMING, 7 categories)${NC}`,
+      `${YELLOW}     If a concept is missing, add a categorized key first — never hardcode.${NC}`,
+      `${YELLOW}     After legit cleanup: npm run dxf-timing:baseline${NC}`,
+    ],
+    okLine: `${GREEN}  ✅ DXF timing: no new raw timing literals (${scanned.length} file(s) in scope)${NC}`,
+  });
 }
 
-const baseline = loadBaseline();
-let hasBlock = false;
-let totalChecked = 0;
-const reductions = [];
-
-for (const file of stagedFiles) {
-  const abs = path.isAbsolute(file) ? file : path.join(REPO_ROOT, file);
-  if (!fs.existsSync(abs)) continue;
-  const rel = normalizePath(path.relative(REPO_ROOT, abs));
-  if (!isInScope(rel)) continue;
-  totalChecked += 1;
-
-  const content = fs.readFileSync(abs, 'utf8');
-  const hits = countViolations(content);
-  if (hits.length === 0) {
-    if (baseline.files[rel]) {
-      reductions.push(
-        `${GREEN}  📉 ${rel}: ${baseline.files[rel]} → 0 raw timing literals (fully migrated)${NC}`,
-      );
-    }
-    continue;
-  }
-
-  const baselineCount = baseline.files[rel] ?? 0;
-  const currentCount = hits.length;
-
-  if (currentCount <= baselineCount) {
-    if (currentCount < baselineCount) {
-      reductions.push(
-        `${GREEN}  📉 ${rel}: ${baselineCount} → ${currentCount} (-${baselineCount - currentCount}) raw timing literals${NC}`,
-      );
-    }
-    continue;
-  }
-
-  hasBlock = true;
-  const newCount = currentCount - baselineCount;
-  console.log(
-    `${RED}  🚫 ${rel}: ${newCount} new raw timing literal(s) (total ${currentCount}, baseline ${baselineCount})${NC}`,
-  );
-  for (const { match, line } of hits.slice(-newCount)) {
-    console.log(
-      `${YELLOW}     Line ${line}: ${match} — point at DXF_TIMING (config/dxf-timing.ts), ADR-516${NC}`,
-    );
-  }
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
+/** `input` = η είσοδος (ADR-924): με `--index` (εκτελεστής) η baseline και το κείμενο ΤΟΥ COMMIT. */
+function run(args = process.argv.slice(2), input = commitInput(REPO_ROOT, args)) {
+  return ratchet.runLineModes(args, {
+    baseline: () => writeBaseline(scan(input)),
+    audit: (wantReport) => audit(scan(input), wantReport),
+    ratchet: (stagedFiles) => ratchetMode(input, stagedFiles),
+  });
 }
 
-for (const line of reductions) console.log(line);
+if (require.main === module) process.exit(run());
 
-if (hasBlock) {
-  console.log('');
-  console.log(
-    `${RED}  ❌ DXF timing ratchet FAILED — centralize raw timing literals into DXF_TIMING${NC}`,
-  );
-  console.log(
-    `${YELLOW}     SSoT: src/subapps/dxf-viewer/config/dxf-timing.ts (DXF_TIMING, 7 categories)${NC}`,
-  );
-  console.log(
-    `${YELLOW}     If a concept is missing, add a categorized key first — never hardcode.${NC}`,
-  );
-  console.log(
-    `${YELLOW}     After legit cleanup: npm run dxf-timing:baseline${NC}`,
-  );
-  process.exit(1);
-}
-
-if (totalChecked > 0) {
-  console.log(
-    `${GREEN}  ✅ DXF timing: no new raw timing literals (${totalChecked} file(s) in scope)${NC}`,
-  );
-}
-process.exit(0);
+module.exports = { run, countViolations, isInScope };

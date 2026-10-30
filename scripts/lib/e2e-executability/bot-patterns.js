@@ -43,9 +43,10 @@ const DECLARATION = 'BLOCKED_BOT_PATTERNS';
  * @param {string} [root] ρίζα του repo (οι δοκιμές δίνουν μίνι-repo)
  * @returns {{patterns: string[], sourcePath: string}}
  */
-function readBotPatterns(root = PROJECT_ROOT) {
+function readBotPatterns(root = PROJECT_ROOT, input = null) {
   const abs = path.join(root, MIDDLEWARE_PATH);
-  const sourceFile = parseSource(abs);
+  // `input` (ADR-924): η είσοδος της πύλης — με `--index` το middleware ΤΟΥ COMMIT.
+  const sourceFile = parseSource(abs, input ? input.read(MIDDLEWARE_PATH) ?? '' : null);
   const initializer = initializerOf(sourceFile, DECLARATION);
 
   if (initializer === null) {

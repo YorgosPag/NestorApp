@@ -36,6 +36,12 @@ YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
+# `--index` (ο hook, ADR-924 Φ5): κρίνεται το κείμενο ΤΟΥ COMMIT, όχι του δίσκου — η είσοδος ζει ΜΙΑ φορά.
+# shellcheck source=lib/commit-source.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/commit-source.sh"
+commit_source_parse "$@"
+set -- "${COMMIT_SOURCE_ARGS[@]}"
+
 FILES="$@"
 BASELINE_FILE=".i18n-violations-baseline.json"
 VIOLATIONS=""
@@ -45,7 +51,7 @@ HAS_BLOCK=0
 # Count violations in a file (matches hook's SSoT logic)
 count_violations() {
     local file="$1"
-    grep -nE "defaultValue:\s*['\"][^'\"]+['\"]" "$file" 2>/dev/null \
+    read_source "$file" | grep -nE "defaultValue:\s*['\"][^'\"]+['\"]" 2>/dev/null \
         | grep -vE "defaultValue:\s*['\"]{2}" \
         | grep -vcE "^\s*(//|\*|#)"
 }
@@ -53,13 +59,13 @@ count_violations() {
 # Get baseline count for a file (0 if not in baseline)
 get_baseline_count() {
     local file="$1"
-    if [[ ! -f "$BASELINE_FILE" ]]; then
+    if ! has_source "$BASELINE_FILE"; then
         echo "0"
         return
     fi
     # Normalize path separators (git may use forward slashes on Windows)
     local normalized="${file//\\//}"
-    grep -oE "\"$normalized\":\s*[0-9]+" "$BASELINE_FILE" 2>/dev/null \
+    read_source "$BASELINE_FILE" | grep -oE "\"$normalized\":\s*[0-9]+" 2>/dev/null \
         | grep -oE "[0-9]+$" \
         | head -1 \
         || echo "0"
@@ -69,12 +75,12 @@ get_baseline_count() {
 is_in_baseline() {
     local file="$1"
     local normalized="${file//\\//}"
-    grep -qE "\"$normalized\":" "$BASELINE_FILE" 2>/dev/null
+    read_source "$BASELINE_FILE" | grep -qE "\"$normalized\":" 2>/dev/null
 }
 
 for file in $FILES; do
     # Skip non-existent (deleted) files
-    [[ ! -f "$file" ]] && continue
+    has_source "$file" || continue
 
     # EXEMPT patterns
     if echo "$file" | grep -qE '(/i18n/locales/|/__tests__/|\.test\.|\.spec\.|\.d\.ts$|\.config\.|\.stories\.|^docs/|/docs/|^adrs/|/adrs/|^scripts/)'; then
@@ -120,7 +126,7 @@ for file in $FILES; do
     fi
 
     # Show the actual violations
-    MATCHES=$(grep -nE "defaultValue:\s*['\"][^'\"]+['\"]" "$file" 2>/dev/null \
+    MATCHES=$(read_source "$file" | grep -nE "defaultValue:\s*['\"][^'\"]+['\"]" 2>/dev/null \
         | grep -vE "defaultValue:\s*['\"]{2}" \
         | grep -vE "^\s*(//|\*|#)" || true)
     while IFS= read -r line; do

@@ -32,8 +32,6 @@
 
 'use strict';
 
-const fs = require('node:fs');
-const path = require('node:path');
 const ts = require('typescript');
 
 /** Ο πίνακας. Είναι **η** αυθεντία· αν λείψει, η πύλη πέφτει κλειστά. */
@@ -155,14 +153,12 @@ function readImportedTypeSources(sourceFile) {
  * @returns {{file:string, levelRoots:string[], containers:{key:string,typeName:string,specifier:string|null}[],
  *            claims:Map<string,Set<string>>, rows:object[]}}
  */
-function readVocabularyTable(projectRoot) {
-  const abs = path.join(projectRoot, VOCABULARY_FILE);
-  if (!fs.existsSync(abs)) {
+function readVocabularyTable(projectRoot, input = require('../gate-input').openGateInput({ root: projectRoot })) {
+  const text = input.read(VOCABULARY_FILE);
+  if (text === null) {
     throw new Error(`δεν βρέθηκε ο πίνακας ${VOCABULARY_FILE} — fail-closed.`);
   }
-  const sourceFile = ts.createSourceFile(
-    VOCABULARY_FILE, fs.readFileSync(abs, 'utf8'), ts.ScriptTarget.Latest, true,
-  );
+  const sourceFile = ts.createSourceFile(VOCABULARY_FILE, text, ts.ScriptTarget.Latest, true);
 
   const containerDecls = readContainers(sourceFile);
   if (!containerDecls) {

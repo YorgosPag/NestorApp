@@ -70,10 +70,10 @@
  * Baseline: npm run workspace-authority:baseline
  * Escape:   SKIP_WORKSPACE_AUTHORITY=1  ·  εξαίρεση αρχείου: `// workspace-authority-exempt: <λόγος>`
  */
-const fs = require('node:fs');
 const path = require('node:path');
 const { stripComments } = require('./lib/i18n-namespace-extract');
-const { runSetRatchetCli, PROJECT_ROOT } = require('./lib/ratchet-baseline');
+const { runGuardedSetRatchetCli, ratchetPayload, PROJECT_ROOT } = require('./lib/ratchet-baseline');
+const { openGateInput } = require('./lib/gate-input');
 
 const REGISTRY = path.join(PROJECT_ROOT, '.workspace-authority.json');
 const BASELINE = path.join(PROJECT_ROOT, '.workspace-authority-baseline.json');
@@ -129,21 +129,16 @@ function isServerFile(rel, code) {
   return false;
 }
 
-function walk(dir, out = []) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (['node_modules', '.next', 'dist'].includes(entry.name)) continue;
-      walk(full, out);
-    } else if (/\.(ts|tsx)$/.test(entry.name)) {
-      out.push(full);
-    }
-  }
-  return out;
+/**
+ * Τα `.ts`/`.tsx` του `src/` — από την ΕΙΣΟΔΟ (ADR-924 Φ3: ήταν δικό της αντίγραφο `readdirSync`). Ίδιο κριτήριο:
+ * και `.d.ts`· κλαδεύονται `node_modules` · `.next` (πάντα) και κάθε `dist`.
+ */
+function sourceFilesOf(input) {
+  return input.files(['src'], { accept: (rel) => /\.(ts|tsx)$/.test(rel), pruneDir: (dir) => dir.endsWith('/dist/') });
 }
 
-function loadRegistry(registryPath = REGISTRY) {
-  const raw = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
+function loadRegistry(registryPath = REGISTRY, input = openGateInput({ root: PROJECT_ROOT })) {
+  const raw = input.readJson(registryPath);
   // fail-closed: μητρώο χωρίς κανάλια θα έκανε την πύλη μονίμως πράσινη.
   if (!Array.isArray(raw.channels) || raw.channels.length === 0) {
     throw new Error('CHECK 3.58 — το μητρώο δεν δηλώνει κανένα κανάλι');
@@ -297,21 +292,19 @@ function tally(entries, ctx, classifyFn = classify) {
  */
 function measure(opts = {}) {
   const root = opts.root || PROJECT_ROOT;
-  const registry = loadRegistry(opts.registryPath || path.join(root, '.workspace-authority.json'));
-  const readFile = (rel) => {
-    const abs = path.join(root, rel);
-    return fs.existsSync(abs) ? fs.readFileSync(abs, 'utf8') : null;
-  };
+  // ADR-924 — η είσοδος: προεπιλογή ο δίσκος της ρίζας, ο εκτελεστής δίνει την όψη του commit (`--index`).
+  const input = opts.input || openGateInput({ root });
+  const registry = loadRegistry(opts.registryPath || path.join(root, '.workspace-authority.json'), input);
+  const readFile = (rel) => input.read(rel);
   const reserved = reservedNamesOf(registry, readFile);
   // Τα αρχεία που το ΜΗΤΡΩΟ έχει ήδη εγκρίνει ως αναγνώστες — παράγονται από το
   // `readers[].id` (μορφή `<κανάλι>@<αρχείο>`), ΠΟΤΕ ως δεύτερη χειρόγραφη λίστα.
   const declaredReaderFiles = new Set((registry.readers || []).map((r) => r.id.split('@')[1]));
   const ctx = { registry, reserved, declaredReaderFiles };
 
-  const srcDir = path.join(root, 'src');
-  const entries = walk(srcDir).map((file) => ({
-    rel: path.relative(root, file).split(path.sep).join('/'),
-    raw: fs.readFileSync(file, 'utf8'),
+  const entries = (opts.codeFiles || sourceFilesOf(input)).map((file) => ({
+    rel: input.rel(file),
+    raw: input.read(file),
   }));
 
   const ledger = tally(entries, ctx);
@@ -346,13 +339,10 @@ function buildPayload(m) {
       + m.unjudged.map((f) => `   ${f.file}  [${f.detail}]`).join('\n'),
     );
   }
-  return {
+  return ratchetPayload(m, {
     _doc: 'CHECK 3.58 — ADR-787 §5.2. violations = ομωνυμία (Κ3) · declarations = κλειστό σύνολο αναγνωστών (Κ2).',
     _warning: 'Ο Κ1 (κανάλι χωρίς κριτή) είναι ZERO-TOLERANCE και ΔΕΝ μπαίνει ΠΟΤΕ εδώ.',
-    generatedAt: new Date().toISOString().slice(0, 10),
-    violations: m.violationIds,
-    declarations: m.declarations,
-  };
+  });
 }
 
 function printReport(m) {
@@ -369,7 +359,7 @@ const DESCRIPTOR = {
   adr: 'ADR-787 §5.2 (CHECK 3.58)',
   skipEnv: 'SKIP_WORKSPACE_AUTHORITY',
   baselineFile: BASELINE,
-  measure,
+  measure: (_args, input) => measure({ input }),
   buildPayload,
   printReport,
   violationId: (f) => `${f.detail}@${f.file}`,
@@ -391,40 +381,28 @@ const DESCRIPTOR = {
   },
 };
 
-/**
- * Το zero-tolerance σκέλος τρέχει **πριν** το ratchet: ο Κ1 δεν έχει baseline, άρα δεν
- * υπάρχει τίποτα να συγκριθεί — υπάρχει μόνο «ναι» ή «όχι».
- */
-async function main() {
-  if (process.env.SKIP_WORKSPACE_AUTHORITY === '1') {
-    console.log('  ⏭ CHECK 3.58 παραλείφθηκε (SKIP_WORKSPACE_AUTHORITY=1)');
-    return process.exit(0);
+function printBlocking(m) {
+  console.error(`\n❌ CHECK 3.58 — ${m.unjudged.length} κανάλι(α) ενεργού χώρου διαβάζονται ΧΩΡΙΣ κριτή:\n`);
+  for (const f of m.unjudged) {
+    console.error(`   🚫 ${f.file}   [κανάλι: ${f.detail}]`);
   }
-  const args = process.argv.slice(2);
-  const explicit = args.includes('--report') || args.includes('--write-baseline') || args.includes('--all');
-  const staged = args.filter((a) => !a.startsWith('-'));
-  // ⚡ ~0,05s όταν δεν αφορά · ~6,5s όταν πυροδοτεί — και τότε **πλήρης**.
-  if (!explicit && staged.length > 0 && !triggers(staged)) return process.exit(0);
+  console.error('\n   Θεραπεία: κάλεσε τον απαντητή ΣΤΟ ΙΔΙΟ ΑΡΧΕΙΟ —');
+  console.error('     decideMembership({ uid, claimCompanyId, globalRole, requested: orgWorkspace(id) })');
+  console.error('   ⛔ ΜΗΝ βάλεις τον έλεγχο στον καλούντα: θα ήταν κανόνας που ο επόμενος');
+  console.error('      καλών πρέπει να θυμάται (ADR-787 §5.2 στ).');
+  console.error('   Αν είναι σκόπιμο: `// workspace-authority-exempt: <λόγος>` — ο λόγος ΥΠΟΧΡΕΩΤΙΚΟΣ.');
+}
 
-  if (!args.includes('--report') && !args.includes('--write-baseline')) {
-    const m = measure();
-    // ⚠️ Τυπώνεται ΚΑΙ ΣΤΟ ΜΗΔΕΝ: ένα «0» που δεν φαίνεται διαβάζεται ως «δεν κοίταξα»
-    //    (μάθημα CHECK 3.56 — η πύλη εκείνη γεννήθηκε μονίμως πράσινη και το έπιασε η λογιστική).
-    console.log(ledgerLine(m));
-    if (m.unjudged.length > 0) {
-      console.error(`\n❌ CHECK 3.58 — ${m.unjudged.length} κανάλι(α) ενεργού χώρου διαβάζονται ΧΩΡΙΣ κριτή:\n`);
-      for (const f of m.unjudged) {
-        console.error(`   🚫 ${f.file}   [κανάλι: ${f.detail}]`);
-      }
-      console.error('\n   Θεραπεία: κάλεσε τον απαντητή ΣΤΟ ΙΔΙΟ ΑΡΧΕΙΟ —');
-      console.error('     decideMembership({ uid, claimCompanyId, globalRole, requested: orgWorkspace(id) })');
-      console.error('   ⛔ ΜΗΝ βάλεις τον έλεγχο στον καλούντα: θα ήταν κανόνας που ο επόμενος');
-      console.error('      καλών πρέπει να θυμάται (ADR-787 §5.2 στ).');
-      console.error('   Αν είναι σκόπιμο: `// workspace-authority-exempt: <λόγος>` — ο λόγος ΥΠΟΧΡΕΩΤΙΚΟΣ.');
-      return process.exit(1);
-    }
-  }
-  return runSetRatchetCli(DESCRIPTOR, process.argv);
+/** ⚡ ~0,05s όταν δεν αφορά · ~6,5s όταν πυροδοτεί — και τότε **πλήρης**. Ο Κ1 ΔΕΝ έχει baseline: «ναι» ή «όχι». */
+function main(argv = process.argv) {
+  return runGuardedSetRatchetCli({
+    descriptor: DESCRIPTOR,
+    check: '3.58',
+    triggers: (staged) => triggers(staged),
+    ledgerLine,
+    blockingOf: (m) => m.unjudged,
+    printBlocking,
+  }, argv);
 }
 
 if (require.main === module) {

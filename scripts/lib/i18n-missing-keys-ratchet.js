@@ -35,14 +35,16 @@ function keyExists(obj, dottedKey) {
 }
 
 /** Φορτωτής locale με cache — ένας, ώστε οι δύο καταναλωτές να διαβάζουν το ίδιο. */
-function makeLocaleReader(localeDir) {
+function makeLocaleReader(localeDir, input = null) {
   const cache = new Map();
+  // `input` (ADR-924): η είσοδος της πύλης — με `--index` τα locale ΤΟΥ COMMIT· χωρίς αυτήν ο δίσκος
+  const readText = input ? input.read : (filePath) => (fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : null);
   return function loadLocaleJson(namespace) {
     if (cache.has(namespace)) return cache.get(namespace);
-    const filePath = path.join(localeDir, `${namespace}.json`);
     let data = null;
     try {
-      if (fs.existsSync(filePath)) data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      const text = readText(path.join(localeDir, `${namespace}.json`));
+      if (text !== null) data = JSON.parse(text);
     } catch {
       data = null;
     }
@@ -69,11 +71,11 @@ function makeLocaleReader(localeDir) {
  * @param {string} repoRoot
  * @param {object} extract  το `scripts/lib/i18n-namespace-extract` SSoT
  */
-function makeDeps(repoRoot, extract) {
+function makeDeps(repoRoot, extract, input = null) {
   return {
-    bundles: extract.loadNamespaceBundles(repoRoot),
-    compat: extract.loadCompatNamespaces(repoRoot),
-    loadLocale: makeLocaleReader(path.join(repoRoot, 'src', 'i18n', 'locales', 'el')),
+    bundles: extract.loadNamespaceBundles(repoRoot, input),
+    compat: extract.loadCompatNamespaces(repoRoot, input),
+    loadLocale: makeLocaleReader(path.join(repoRoot, 'src', 'i18n', 'locales', 'el'), input),
     extractNamespaces: extract.extractNamespaces,
     extractTCalls: extract.extractTCalls,
     extractExplicitTCalls: extract.extractExplicitTCalls,

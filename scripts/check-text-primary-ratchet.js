@@ -30,7 +30,9 @@
  *              οι τρεις. Από τις 426, οι **424 είναι αποδεδειγμένα σπασμένες** και οι
  *              2 (`element-light-bg`) εξετάστηκαν με το μάτι και είναι σωστές.
  *   ZERO-TOL   inert-class · κολλημένες utilities (glued-class.js)
- *              Δεν υπάρχει νόμιμη περίπτωση: ΠΟΤΕ baseline. Το δέντρο είναι στο 0.
+ *              · γέμισμα = μελάνι, ίδιο `--status-*` στο ίδιο στοιχείο (same-token-fill-ink.js, 2026-10-29)
+ *              Δεν υπάρχει νόμιμη περίπτωση: ΠΟΤΕ baseline. Το δέντρο είναι στο 0 (το τελευταίο: 1 ρητή,
+ *              ονομαστική δήλωση με ακριβές πλήθος — `DECLARED_OPEN_SITES` — όχι baseline).
  *   IGNORED    in-comment — δεν αποδίδεται από τον browser.
  *
  * ⚠️ ΤΟ ΠΛΗΘΟΣ ΔΕΝ ΕΙΝΑΙ ΔΕΙΚΤΗΣ ΥΓΕΙΑΣ. Είναι «πόσα σημεία δεν μπορεί να αποδείξει
@@ -62,6 +64,7 @@ const { scanFiles, walkSourceFiles } = require('./lib/contrast/text-primary-site
 const { surfaceInkNames } = require('./lib/contrast/surface-ink-tokens');
 const { readThemes } = require('./lib/contrast/css-token-themes');
 const { findGluedClasses } = require('./lib/contrast/glued-class');
+const { findSameTokenFillInk, sameTokenViolations, DECLARED_OPEN_SITES } = require('./lib/contrast/same-token-fill-ink');
 const { PROJECT_ROOT, loadBaseline, writeBaselineFile } = require('./lib/ratchet-baseline');
 
 /** Καταστάσεις που μπαίνουν στη baseline. Δες την επικεφαλίδα για το «γιατί και οι τρεις». */
@@ -121,15 +124,23 @@ function inspect(files, overrides) {
   const sites = scanFiles(files.map((f) => path.join(PROJECT_ROOT, f)), overrides);
   const relative = sites.map((s) => ({ ...s, file: path.relative(PROJECT_ROOT, path.resolve(s.file)).replace(/\\/g, '/') }));
   const glued = [];
+  const sameToken = new Map();
   for (const f of files) {
     const abs = path.join(PROJECT_ROOT, f);
     if (!fs.existsSync(abs)) continue;
-    for (const hit of findGluedClasses(fs.readFileSync(abs, 'utf8'))) glued.push({ file: f, ...hit });
+    const text = fs.readFileSync(abs, 'utf8');
+    for (const hit of findGluedClasses(text)) glued.push({ file: f, ...hit });
+    const same = findSameTokenFillInk(text, f);
+    if (same.length) sameToken.set(f, same);
   }
+  // Οι δηλώσεις κρίνονται ΜΟΝΟ για αρχεία που σαρώθηκαν: στο staged, «λείπει» σημαίνει «δεν στάλθηκε», όχι «καθαρό».
+  const scanned = new Set(files);
+  const declared = Object.fromEntries(Object.entries(DECLARED_OPEN_SITES).filter(([f]) => scanned.has(f)));
   return {
     tally: tallyByFile(relative),
     inert: relative.filter((s) => s.state === 'inert-class'),
     glued,
+    sameToken: sameTokenViolations(sameToken, declared),
   };
 }
 
@@ -171,8 +182,15 @@ function totals(tally) {
   return { invisible, files: Object.keys(tally).length };
 }
 
-function printFailure({ regressions, inert, glued }) {
+function printFailure({ regressions, inert, glued, sameToken = [] }) {
   console.error('❌ CHECK 3.38 (ADR-770) — η αντίθεση UI χειροτέρεψε\n');
+  for (const s of sameToken) {
+    console.error(`   🚫 ΓΕΜΙΣΜΑ = ΜΕΛΑΝΙ (ίδιο --status-*) ${s}`);
+  }
+  if (sameToken.length) {
+    console.error('      Χρώμα πάνω στον εαυτό του = 1,00:1, αόρατο σε κάθε θέμα. Χρησιμοποίησε ΡΟΛΟ (src/lib/design-system.ts):');
+    console.error('      <Badge variant={getStatusBadgeVariant(x)}> · getStatusSolidClass(x) · getStatusSurfaceClass(x)\n');
+  }
   for (const g of glued) {
     console.error(`   🚫 ΚΟΛΛΗΜΕΝΗ ΚΛΑΣΗ [${g.rule}] ${g.file}:${g.line}`);
     console.error(`      ${g.snippet}`);
@@ -239,11 +257,11 @@ function main(argv = process.argv) {
     return process.exit(1); // fail-closed: χαλασμένη baseline ΠΟΤΕ δεν διαβάζεται ως «0 παραβιάσεις»
   }
 
-  const { tally, inert, glued } = inspect(files, overrides);
+  const { tally, inert, glued, sameToken } = inspect(files, overrides);
   const { regressions, progress } = compare(tally, baseline.files, scope);
 
-  if (regressions.length || inert.length || glued.length) {
-    printFailure({ regressions, inert, glued });
+  if (regressions.length || inert.length || glued.length || sameToken.length) {
+    printFailure({ regressions, inert, glued, sameToken });
     return process.exit(1);
   }
   const seen = scope === 'all' ? `${totals(tally).invisible} αόρατες / ${totals(tally).files} αρχεία` : `${files.length} staged αρχεία`;

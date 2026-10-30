@@ -342,7 +342,7 @@ support.openspace.ai/hc/en-us/articles/41886423092115-Uploading-and-Editing-Shee
 - `src/contracts/invitation-redeem-body.ts` — τιμές του σώματος εξαργύρωσης (v3 στις διαδρομές, v4 στο συμβόλαιο, ισοδυναμία με test·
   το v3 μένει επειδή το επεκτείνει η διαδρομή εξαργύρωσης εμπλοκής) + `INVITATION_REDEEM_REFUSED_STATUS` (422, ήταν literal σε 2 διαδρομές)
 - `contracts/capture-api/{openapi.json,fixtures.json}` — **παραγόμενα**
-- `scripts/{generate,check,export}-capture-api-contract.js` · `scripts/lib/capture-api-contract/plan.js` · `scripts/lib/ts-require.js` (swc)
+- `scripts/{generate,check,export}-capture-api-contract.js` · `scripts/lib/capture-api-contract/plan.js` · `scripts/lib/ts-module-loader.js` (`requireFromInput`, swc — ο `ts-require.js` ενώθηκε εκεί, ADR-924 §8.9)
 - `lib/api/json-body.ts`: υπερφόρτωση για σχήμα zod/v4
 - Tests: `src/contracts/capture-api/__tests__/capture-api-parity.test.ts` (42) · `scripts/__tests__/capture-api-contract.test.js` (11)
 

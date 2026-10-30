@@ -32,11 +32,10 @@
  * · Δεν λύνει αλυσίδες (`--a: var(--b)`). Κρίνει **ύπαρξη ονόματος**, όχι τιμή.
  */
 
-const fs = require('node:fs');
 const path = require('node:path');
 
 /** Οι φάκελοι που δεν είναι πηγή. */
-const SKIP_DIRS = new Set(['node_modules', '.next', '.git', 'dist', 'build', 'coverage']);
+
 
 /**
  * Ονόματα που **παρέχονται σε χρόνο εκτέλεσης από τρίτους** και γι' αυτό δεν βρίσκονται ποτέ
@@ -91,28 +90,21 @@ function isLiteralColor(value) {
 // Περιήγηση αρχείων
 // ---------------------------------------------------------------------------
 
-function walk(dir, extensions, out = []) {
-  let entries;
-  try {
-    entries = fs.readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return out;
-  }
-  for (const entry of entries) {
-    if (SKIP_DIRS.has(entry.name)) continue;
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) walk(full, extensions, out);
-    else if (extensions.includes(path.extname(entry.name))) out.push(full);
-  }
-  return out;
+/** Η είσοδος της πύλης (ADR-924) — προεπιλογή ο δίσκος της ρίζας· ο εκτελεστής δίνει την όψη του commit. */
+const inputOf = (root) => require('../gate-input').openGateInput({ root });
+
+/**
+ * Τα αρχεία του `src/` με αυτές τις καταλήξεις — από την ΕΙΣΟΔΟ (ADR-924 Φ3: ήταν δικός του `readdirSync`).
+ * ⚠️ Κλαδεύονται ΜΟΝΟ οι φάκελοι εργαλείων: το παλιό `SKIP_DIRS` έκοβε κατά όνομα και `dist`/`build`/`coverage`
+ * οπουδήποτε — το ίδιο σφάλμα που έκρυβε τη διαδρομή `procurement/coverage` από το `scan-config` (ADR-924 §8.7).
+ */
+function sourcesWith(input, extensions) {
+  return input.files(['src'], { accept: (rel) => extensions.includes(path.posix.extname(rel)) });
 }
 
-const toPosix = (p) => p.split(path.sep).join('/');
-const relative = (repoRoot, file) => toPosix(path.relative(repoRoot, file));
-
 /** Κάθε `.css` κάτω από το `src/`. Ο ΜΟΝΟΣ τύπος αρχείου που κρίνει αυτή η πύλη. */
-function listCssFiles(repoRoot) {
-  return walk(path.join(repoRoot, 'src'), ['.css']).map((f) => relative(repoRoot, f));
+function listCssFiles(repoRoot, input = inputOf(repoRoot)) {
+  return sourcesWith(input, ['.css']).map(input.rel);
 }
 
 // ---------------------------------------------------------------------------
@@ -151,24 +143,21 @@ function collectInto(names, text, regexes, source) {
  * §χειρόγραφη λίστα 18 έναντι 26). Προτιμάμε 2,3 s σε σπάνια σκανδάλη από έναν σωστό-σήμερα
  * κατάλογο που κανείς δεν θα ξαναδεί.
  */
-function buildDefinitionIndex(repoRoot) {
+function buildDefinitionIndex(repoRoot, input = inputOf(repoRoot)) {
   const names = new Map();
-  const src = path.join(repoRoot, 'src');
 
-  for (const file of walk(src, ['.css'])) {
-    collectInto(names, fs.readFileSync(file, 'utf8'), [CSS_DEFINITION_RE, AT_PROPERTY_RE], relative(repoRoot, file));
+  for (const file of sourcesWith(input, ['.css'])) {
+    collectInto(names, input.read(file) ?? '', [CSS_DEFINITION_RE, AT_PROPERTY_RE], input.rel(file));
   }
-  for (const file of walk(src, ['.ts', '.tsx'])) {
-    const text = fs.readFileSync(file, 'utf8');
+  for (const file of sourcesWith(input, ['.ts', '.tsx'])) {
+    const text = input.read(file) ?? '';
     if (!text.includes('--')) continue;
-    collectInto(names, text, [TS_OBJECT_KEY_RE, TS_SET_PROPERTY_RE], relative(repoRoot, file));
+    collectInto(names, text, [TS_OBJECT_KEY_RE, TS_SET_PROPERTY_RE], input.rel(file));
   }
   // Το `tailwind.config.*` μπορεί να παράγει ονόματα· φθηνό, οπότε δεν το υποθέτουμε.
   for (const candidate of ['tailwind.config.ts', 'tailwind.config.js', 'tailwind.config.mjs']) {
-    const full = path.join(repoRoot, candidate);
-    if (fs.existsSync(full)) {
-      collectInto(names, fs.readFileSync(full, 'utf8'), [CSS_DEFINITION_RE, TS_OBJECT_KEY_RE], candidate);
-    }
+    const text = input.read(candidate);
+    if (text !== null) collectInto(names, text, [CSS_DEFINITION_RE, TS_OBJECT_KEY_RE], candidate);
   }
   return names;
 }
@@ -264,18 +253,18 @@ const lineOf = (text, index) => text.slice(0, index).split('\n').length;
  *
  * Ο μοναδικός βρόχος ανάγνωσης — γραμμένος δύο φορές ήταν token-κλώνος (CHECK 3.28 / N.18).
  */
-function forEachCss(repoRoot, files, visit) {
+function forEachCss(repoRoot, files, visit, input = inputOf(repoRoot)) {
   const out = [];
   for (const file of files) {
-    const full = path.join(repoRoot, file);
-    if (!fs.existsSync(full)) continue;
-    out.push(...visit(stripCommentsKeepingLines(fs.readFileSync(full, 'utf8')), file));
+    const text = input.read(file);
+    if (text === null) continue;
+    out.push(...visit(stripCommentsKeepingLines(text), file));
   }
   return out;
 }
 
 /** Σαρώνει τα δοσμένα `.css` και επιστρέφει μία εγγραφή ανά `var()`. */
-function scanCssUsages(repoRoot, files, definedNames) {
+function scanCssUsages(repoRoot, files, definedNames, input = undefined) {
   return forEachCss(repoRoot, files, (css, file) =>
     findVarCalls(css).map((call) => ({
       file,
@@ -284,6 +273,7 @@ function scanCssUsages(repoRoot, files, definedNames) {
       fallback: call.fallback,
       state: classifyUsage(call, definedNames),
     })),
+    input,
   );
 }
 
@@ -338,7 +328,7 @@ function chromaticDeclarationsIn(body) {
 }
 
 /** Μία εγγραφή ανά μπλοκ `prefers-color-scheme`, με ρητή κατάσταση. */
-function scanOsThemeBlocks(repoRoot, files) {
+function scanOsThemeBlocks(repoRoot, files, input = undefined) {
   return forEachCss(repoRoot, files, (css, file) =>
     findOsThemeBlocks(css).map((block) => {
       const chromatic = chromaticDeclarationsIn(block.body);
@@ -350,6 +340,7 @@ function scanOsThemeBlocks(repoRoot, files) {
         state: chromatic.length > 0 ? OS_THEME_STATES.CHROMATIC : OS_THEME_STATES.NON_CHROMATIC,
       };
     }),
+    input,
   );
 }
 

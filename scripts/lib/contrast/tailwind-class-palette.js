@@ -34,9 +34,11 @@
 
 'use strict';
 
-const fs = require('fs');
 const path = require('path');
 const { loadRegistry } = require('../ssot/registry');
+
+/** Η είσοδος της πύλης (ADR-924) — προεπιλογή ο δίσκος της ρίζας· ο εκτελεστής δίνει την όψη του commit. */
+const inputOf = (root) => require('../gate-input').openGateInput({ root });
 const { readPaletteFromFiles, derivePairs, classifyRole } = require('./ts-token-palette');
 const { loadTailwindColors, resolveClassString } = require('./tailwind-class-resolver');
 const { hexToRgb } = require('./theme-pairing');
@@ -55,8 +57,8 @@ const SKIP_DIR = /(^|\/)(__tests__|node_modules|\.next)(\/|$)/;
  * μια allowlist που δείχνει σε διαγραμμένο αρχείο είναι μπαγιάτικη, και η μόνη στιγμή
  * που κάποιος θα το μάθει είναι εδώ.
  */
-function resolveScope(repoRoot = process.cwd()) {
-  const { modules } = loadRegistry(path.join(repoRoot, '.ssot-registry.json'));
+function resolveScope(repoRoot = process.cwd(), input = inputOf(repoRoot)) {
+  const { modules } = loadRegistry(path.join(repoRoot, '.ssot-registry.json'), input);
   const mod = modules.find((m) => m.name === MODULE_NAME);
   if (!mod) {
     throw new Error(`tailwind-class-palette: λείπει το module "${MODULE_NAME}" από το μητρώο — fail-closed.`);
@@ -65,29 +67,20 @@ function resolveScope(repoRoot = process.cwd()) {
   const files = [];
   const drift = [];
   for (const entry of mod.allowlist) {
-    const abs = path.join(repoRoot, entry);
     if (entry.endsWith('/')) {
-      const dir = abs.replace(/[\\/]$/, '');
-      if (!fs.existsSync(dir)) { drift.push(entry); continue; }
-      const before = files.length;
-      walkDir(dir, repoRoot, files);
-      if (files.length === before) drift.push(entry);
+      // ADR-924 Φ3 — ο φάκελος από την ΕΙΣΟΔΟ (ήταν δικός του `readdirSync`)· άδειος ή απών ⇒ `drift`.
+      const found = input.files([entry.replace(/\/$/, '')], {
+        accept: (rel) => /\.tsx?$/.test(rel) && !SKIP_DIR.test(rel),
+        pruneDir: (dir) => SKIP_DIR.test(dir),
+      }).map(input.rel);
+      if (found.length === 0) drift.push(entry);
+      files.push(...found);
       continue;
     }
-    if (!fs.existsSync(abs)) { drift.push(entry); continue; }
+    if (!input.exists(entry)) { drift.push(entry); continue; }
     if (/\.tsx?$/.test(entry)) files.push(entry);
   }
   return { files: [...new Set(files)].sort(), drift, allowlist: mod.allowlist };
-}
-
-function walkDir(dir, repoRoot, out) {
-  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-    const abs = path.join(dir, e.name);
-    const rel = path.relative(repoRoot, abs).replace(/\\/g, '/');
-    if (SKIP_DIR.test(rel)) continue;
-    if (e.isDirectory()) walkDir(abs, repoRoot, out);
-    else if (/\.tsx?$/.test(e.name)) out.push(rel);
-  }
 }
 
 /**
@@ -189,20 +182,18 @@ const sideEntry = (entry, resolved, suffix) => ({
  * @param {string} [repoRoot]
  * @param {{light:Map,dark:Map}} themes έξοδος του `readThemes` — για τον έλεγχο ύπαρξης var
  */
-function buildClassPalette(repoRoot, themes) {
-  const scope = resolveScope(repoRoot);
+function buildClassPalette(repoRoot, themes, input = inputOf(repoRoot)) {
+  const scope = resolveScope(repoRoot, input);
   // ⚠️ **Η ΠΑΛΕΤΑ ΤΑΞΙΔΕΥΕΙ ΟΛΟΚΛΗΡΗ** (ADR-770 §16): σκέτο `theme.colors` αγνοεί τις
   // παρακάμψεις ανά utility (`theme.textColor` κ.λπ.) και απαντά **λάθος σιωπηλά**.
   // Ο resolver πλέον το **απορρίπτει** αντί να τα καταφέρει.
-  const palette = loadTailwindColors(repoRoot);
+  const palette = loadTailwindColors(repoRoot, input);
   const { source } = palette;
-  const raw = readPaletteFromFiles(scope.files, repoRoot);
+  const raw = readPaletteFromFiles(scope.files, repoRoot, input);
 
   const sourceLines = new Map();
   const linesOf = (file) => {
-    if (!sourceLines.has(file)) {
-      sourceLines.set(file, fs.readFileSync(path.join(repoRoot, file), 'utf8').split(/\r?\n/));
-    }
+    if (!sourceLines.has(file)) sourceLines.set(file, (input.read(file) ?? '').split(/\r?\n/));
     return sourceLines.get(file);
   };
 

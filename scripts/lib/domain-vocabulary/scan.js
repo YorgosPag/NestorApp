@@ -117,7 +117,8 @@ function enumeratedValues(node) {
  * Δεμένη σε τύπο που **δεν** είναι εγγεγραμμένος δεν σώζεται εδώ: μένει `untyped-vocabulary`.
  */
 function boundToSibling(hit, vocabularies) {
-  const identifiers = new Set((hit.typeSurface || '').match(IDENTIFIER) || []);
+  const shadowed = new Set(hit.shadowed || []);
+  const identifiers = new Set(((hit.typeSurface || '').match(IDENTIFIER) || []).filter(id => !shadowed.has(id)));
   // Χωρίς `if (other.id === selfId) continue`: εύρημα αδέσμευτο για το σαρωμένο λεξιλόγιο δεν μπορεί να είναι δεμένο σε αυτό
   // (θα ήταν `bound`), και η ρίζα του παρακάμπτεται πριν — η γραμμή ήταν ισοδύναμη μετάλλαξη (M11, 2026-10-29).
   for (const other of vocabularies) {
@@ -127,12 +128,40 @@ function boundToSibling(hit, vocabularies) {
   return null;
 }
 
+/**
+ * Τα ονόματα-δεσμοί που το ίδιο το αρχείο ΣΚΙΑΖΕΙ: δηλώνει ομώνυμο (type · interface · enum · class) που ΔΕΝ
+ * παράγεται από άλλο δεσμό. Το `type NamedX = Exclude<X, 'other'>` στο αρχείο που το ορίζει ΕΙΝΑΙ το παράγωγο,
+ * όχι σκιά· το `type X = 'a' | 'b' | …` είναι τοπικό αντίγραφο.
+ */
+function shadowedBinders(sf, binders) {
+  const shadowed = [];
+  const visit = node => {
+    const declares = ts.isTypeAliasDeclaration(node) || ts.isInterfaceDeclaration(node)
+      || ts.isEnumDeclaration(node) || ts.isClassDeclaration(node);
+    if (declares && node.name && binders.has(node.name.text)) {
+      const own = node.name.text;
+      const derived = ts.isTypeAliasDeclaration(node)
+        && (node.type.getText().match(IDENTIFIER) || []).some(id => id !== own && binders.has(id));
+      if (!derived) shadowed.push(own);
+    }
+    ts.forEachChild(node, visit);
+  };
+  ts.forEachChild(sf, visit);
+  return shadowed;
+}
+
 /** Σάρωση ενός αρχείου έναντι ενός λεξιλογίου. */
 function scanFile(file, text, vocab, relPath) {
   const sf = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true,
     /\.tsx$/.test(file) ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
   const values = new Set(vocab.values);
-  const binders = bindingNames(vocab);
+  // 🔴 ΔΕΣΜΟΣ ΚΑΤΑ ΤΑΥΤΟΤΗΤΑ, ΟΧΙ ΚΑΤΑ ΟΡΘΟΓΡΑΦΙΑ (2026-10-30, ADR-327 §8.5.4). Ο δεσμός κρίνεται από το ΟΝΟΜΑ
+  // του τύπου, άρα ένα αρχείο που δηλώνει ΔΙΚΟ του ομώνυμο (`type SocialPlatform = 'linkedin' | …`) έκανε κάθε
+  // `Record<SocialPlatform, …>` δίπλα του «δεμένο» — σε τοπικό αντίγραφο, όχι στη ρίζα. Μετρήθηκε ζωντανά στο
+  // `socialUrlGenerator.ts`: δύο πίνακες 7 τιμών μετριούνταν `bound` ενώ η ρίζα είχε 10. Ομώνυμο δηλωμένο ΕΔΩ
+  // σκιάζει τη ρίζα ⇒ δεν δένει (η ίδια η ρίζα εξαιρείται: εκεί το όνομα ΕΙΝΑΙ η ρίζα).
+  const shadowed = relPath === vocab.root ? [] : shadowedBinders(sf, bindingNames(vocab));
+  const binders = new Set([...bindingNames(vocab)].filter(n => !shadowed.includes(n)));
   const found = [];
 
   const consider = (node, name) => {
@@ -160,6 +189,7 @@ function scanFile(file, text, vocab, relPath) {
       enumerated: enumerated.length,
       values: enumerated,
       typeSurface: surface,
+      shadowed,
       state: bound ? STATES.BOUND : STATES.UNTYPED_VOCABULARY,
     });
   };

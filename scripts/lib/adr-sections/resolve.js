@@ -34,6 +34,7 @@
  */
 
 const S = require('./scan');
+const { orderedTally } = require('../gate-ledger');
 
 /** Οι καταστάσεις των **δεικτών**. */
 const REF_STATES = Object.freeze({
@@ -88,13 +89,13 @@ const BOND_INVERSE = Object.freeze({
 const normId = raw => String(raw).replace(/^§\s*/, '').trim();
 
 /** Φορτώνει τα αρχεία μιας οικογένειας και χτίζει τον ρητό πίνακα ID → θέσεις. */
-function buildFamily(projectRoot, familyId, cfg) {
+function buildFamily(projectRoot, familyId, cfg, input = null) {
   const rels = [cfg.hub, ...(cfg.members || [])];
   const files = [];
   const byId = new Map();
 
   for (const rel of rels) {
-    const text = S.readText(projectRoot, rel);
+    const text = S.readText(projectRoot, rel, input);
     if (text === null) { files.push({ rel, missing: true, headings: [], fm: null, text: '' }); continue; }
     const headings = S.indexHeadings(text, rel);
     files.push({ rel, missing: false, headings, fm: S.parseFrontmatter(text), text });
@@ -210,19 +211,8 @@ function auditBonds(family) {
   return out;
 }
 
-/** 🔴 Κλειστή λογιστική, fail-closed: άγνωστη κατάσταση ⇒ `throw` ΜΕ ΟΝΟΜΑ. */
-function tally(findings, order, label) {
-  const ledger = Object.fromEntries(order.map(s => [s, 0]));
-  for (const f of findings) {
-    if (!(f.state in ledger)) throw new Error(`CHECK 3.53: άγνωστη κατάσταση «${f.state}» στη λογιστική ${label}`);
-    ledger[f.state] += 1;
-  }
-  const summed = order.reduce((a, s) => a + ledger[s], 0);
-  if (summed !== findings.length) {
-    throw new Error(`CHECK 3.53: η λογιστική ${label} δεν κλείνει (${summed} ≠ ${findings.length})`);
-  }
-  return ledger;
-}
+/** 🔴 Κλειστή λογιστική, fail-closed: άγνωστη κατάσταση ⇒ `throw` ΜΕ ΟΝΟΜΑ (SSoT `gate-ledger`). */
+const tally = (findings, order, label) => orderedTally(findings, order, '3.53', label);
 
 module.exports = {
   REF_STATES, REF_BLOCKING, REF_RATCHETED, REF_ORDER,

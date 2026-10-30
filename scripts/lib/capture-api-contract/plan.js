@@ -6,13 +6,19 @@
  *   openapi.json   — `buildCaptureApiDocument()` (σχήματα zod · κανόνες · αρνήσεις)
  *   fixtures.json  — τα κοινά παραδείγματα, **μόνο** αν κάθε ετυμηγορία συμφωνεί με το σχήμα της
  *
- * 🔑 Το σχέδιο **εκτελεί** τα modules (`ts-require`), δεν τα διαβάζει ως AST: το `z.toJSONSchema` είναι κώδικας.
+ * 🔑 Το σχέδιο **εκτελεί** τα modules (`ts-module-loader.requireFromInput`), δεν τα διαβάζει ως AST: το `z.toJSONSchema` είναι κώδικας.
  * Ό,τι αποτύχει (import `server-only`, fixture που διαφωνεί, άγνωστο σχήμα) γίνεται `errors` ⇒ τίποτα δεν γράφεται.
  */
 
-const { requireTs } = require('../ts-require');
+const { openGateInput } = require('../gate-input');
+const { requireFromInput } = require('../ts-module-loader');
 
 const OUTPUT_ROOT = 'contracts/capture-api';
+/** Τα δύο modules που ΕΚΤΕΛΕΙ το σχέδιο — η κλειστότητά τους είναι η είσοδος του συμβολαίου. */
+const SOURCES = Object.freeze({
+  document: 'src/contracts/capture-api/capture-api-document.ts',
+  fixtures: 'src/contracts/capture-api/capture-api-fixtures.ts',
+});
 const REGENERATE = 'npm run generate:capture-api-contract';
 
 /** JSON με σταθερή μορφή — η σειρά κλειδιών είναι η σειρά κατασκευής (ντετερμινιστική), LF, νέα γραμμή στο τέλος. */
@@ -35,11 +41,16 @@ function fixtureErrors(fixtures, schemas) {
   return errors;
 }
 
-/** @returns {{ outputs: Array<{path:string, content:string}>, errors: string[], outputRoot: string }} */
-function buildPlan(root) {
+/**
+ * `input` = η είσοδος (ADR-924): τα modules του συμβολαίου ΕΚΤΕΛΟΥΝΤΑΙ από την όψη της — με `--index` η κλειστότητά
+ * τους όπως θα δεσμευτεί (`requireFromInput`), ποτέ σιωπηλά ο δίσκος.
+ * @returns {{ outputs: Array<{path:string, content:string}>, errors: string[], outputRoot: string }}
+ */
+function buildPlan(root, input = openGateInput({ root })) {
+  let loaded = null;
   try {
-    const documentModule = requireTs(root, '@/contracts/capture-api/capture-api-document');
-    const { CAPTURE_API_FIXTURES } = requireTs(root, '@/contracts/capture-api/capture-api-fixtures');
+    loaded = requireFromInput({ input, entries: [SOURCES.document, SOURCES.fixtures] });
+    const [documentModule, { CAPTURE_API_FIXTURES }] = loaded.modules;
     const errors = fixtureErrors(CAPTURE_API_FIXTURES, documentModule.CAPTURE_API_SCHEMAS);
     if (errors.length > 0) return { outputs: [], errors, outputRoot: OUTPUT_ROOT };
     const document = documentModule.buildCaptureApiDocument();
@@ -55,7 +66,9 @@ function buildPlan(root) {
     };
   } catch (error) {
     return { outputs: [], errors: [error instanceof Error ? error.message : String(error)], outputRoot: OUTPUT_ROOT };
+  } finally {
+    if (loaded) loaded.dispose();
   }
 }
 
-module.exports = { buildPlan, OUTPUT_ROOT, REGENERATE };
+module.exports = { buildPlan, OUTPUT_ROOT, REGENERATE, SOURCES };

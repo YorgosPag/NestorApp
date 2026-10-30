@@ -24,7 +24,6 @@
 
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
 const ts = require('typescript');
 
@@ -122,8 +121,9 @@ function calibrate() {
 }
 
 /** `--name: value;` από ένα stylesheet → χάρτης. Ένα πέρασμα, χωρίς εξάρτηση από σειρά. */
-function readCssCustomProperties(repoRoot) {
-  const text = fs.readFileSync(path.join(repoRoot, VARIABLES_CSS), 'utf8');
+function readCssCustomProperties(repoRoot, input = require('../gate-input').openGateInput({ root: repoRoot })) {
+  const text = input.read(VARIABLES_CSS);
+  if (text === null) throw new Error(`λείπει το ${VARIABLES_CSS} (${input.mode})`);
   const out = new Map();
   for (const m of text.matchAll(/(--[\w-]+)\s*:\s*([^;}]+)[;}]/g)) out.set(m[1], m[2].trim());
   return out;
@@ -178,9 +178,10 @@ function resolveStringConstant(init, sourceFile, absFile, reader) {
  * προεπιλεγμένο `custom`, και το **χαρτί**. Ρίχνει σφάλμα σε ανεπίλυτη επιφάνεια —
  * **fail-closed**: μια επιφάνεια που δεν μετρήθηκε δεν επιτρέπεται να μετρηθεί ως εντάξει.
  */
-function presentableSurfaces(repoRoot) {
-  const vars = readCssCustomProperties(repoRoot);
-  const themeAst = parseSource(path.join(repoRoot, CANVAS_THEME_TS));
+/** `input` = η είσοδος (ADR-924) — προεπιλογή ο δίσκος· με `--index` οι επιφάνειες ΤΟΥ COMMIT. */
+function presentableSurfaces(repoRoot, input = require('../gate-input').openGateInput({ root: repoRoot })) {
+  const vars = readCssCustomProperties(repoRoot, input);
+  const themeAst = parseSource(path.join(repoRoot, CANVAS_THEME_TS), input.read(CANVAS_THEME_TS) ?? '');
   const presets = initializerOf(themeAst, 'PRESET_THEMES');
   if (presets === null || !ts.isArrayLiteralExpression(presets)) {
     throw new Error(`Το PRESET_THEMES δεν βρέθηκε ως array literal στο ${CANVAS_THEME_TS}`);
@@ -219,8 +220,8 @@ function presentableSurfaces(repoRoot) {
   // **έχασε χωρίς να σκάσει**. Τώρα η αναφορά λύνεται, και ό,τι δεν λύνεται **ρίχνει σφάλμα**:
   // ένα όνομα που λέει «είμαι επιφάνεια» χωρίς τιμή που διαβάζεται είναι επιφάνεια που δεν κρίθηκε.
   const inkFile = path.join(repoRoot, TABLE_INK_TS);
-  const inkAst = parseSource(inkFile);
-  const reader = createReader(repoRoot);
+  const inkAst = parseSource(inkFile, input.read(TABLE_INK_TS) ?? '');
+  const reader = createReader(repoRoot, input);
   let tableSurfaces = 0;
   for (const { name, initializer } of exportedConstants(inkAst)) {
     const match = /^TABLE_(\w+)_HEX$/.exec(name);

@@ -7,10 +7,10 @@
  * ακέραιο σε τέσσερα από τα έξι. Εδώ υπάρχει **μία** κανονικοποίηση γραμμών και οι πρόσθετες
  * επεμβάσεις (BOM · τελικά κενά) είναι **ρητές επιλογές**, όχι σιωπηλές διαφορές υλοποίησης.
  *
- * ⚠️ Η οικογένεια `i18n-shell-slice` (`slice-build.toLf` · `layer-one-checks.normalize`) **δεν**
- * εισάγει από εδώ ακόμη: το `slice-build` είναι είσοδος του toolchain digest (§30), οπότε η
- * μετακόμιση θέλει αναγέννηση του manifest στο ίδιο commit. Καταγραφή στο
- * `.claude-rules/pending-ratchet-work.md`.
+ * ⚠️ Το `i18n-shell-slice/slice-build.toLf` **δεν** εισάγει από εδώ ακόμη: είναι είσοδος του
+ * toolchain digest (§30), οπότε η μετακόμιση θέλει αναγέννηση του manifest στο ίδιο commit.
+ * Καταγραφή στο `.claude-rules/pending-ratchet-work.md`. Το `layer-one-checks.normalize` είναι
+ * εκτός κλειστότητας `require` του `route-slices.js` ⇒ εισάγει ήδη από εδώ.
  *
  * @module scripts/lib/text-eol
  */

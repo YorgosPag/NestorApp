@@ -40,6 +40,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 
 import { inferPhoneType } from '@/server/lib/phone-line-type';
 import { inferEmailType } from '@/lib/contact/email-type-vocabulary';
+import { splitCountryCallingCode } from '@/lib/contact/channel-phone';
 
 import { performerStamp, type ResolvedPerformer } from '@/server/lib/performer-stamp';
 
@@ -51,53 +52,19 @@ import type { CreateContactParams } from './contact-lookup-types';
 
 /**
  * Split an international phone string into countryCode + local number.
- * Handles `+359...` and `00359...` prefixes. Returns raw string if no prefix found.
- * Exported for unit-testing only.
+ * Handles `+359...` and `00359...` prefixes. Returns the cleaned string if there is no
+ * prefix (a local number — the country is implied, not guessed).
+ *
+ * ADR-327 §8.5.4 ☎️#3 — the country code comes from the phone SSoT
+ * (`splitCountryCallingCode`, libphonenumber metadata), never from a hand-kept table.
  */
 export function parsePhoneForStorage(raw: string): { number: string; countryCode?: string } {
-  const clean = raw.replace(/[\s\-.() ]+/g, '');
+  const clean = raw.replace(/[\s\-.() ]+/g, '');
   const e164 = clean.startsWith('00') ? '+' + clean.slice(2) : clean;
   if (!e164.startsWith('+')) return { number: clean };
 
-  const rest = e164.slice(1); // digits after '+'
-
-  // 3-digit codes (checked before 2-digit to avoid prefix collision in zones 35x/38x)
-  const CC3 = [
-    '350','351','352','353','354','355','356','357','358','359',
-    '370','371','372','373','374','375','376','377','378','380',
-    '381','382','385','386','387','388','389','420','421','423',
-    '500','501','502','503','504','505','506','507','508','509',
-    '590','591','592','593','594','595','596','597','598','599',
-    '850','852','853','855','856','880','886',
-    '960','961','962','963','964','965','966','967','968','969',
-    '970','971','972','973','974','975','976','977',
-    '992','993','994','995','996','998',
-  ];
-  for (const cc of CC3) {
-    if (rest.startsWith(cc) && rest.length > cc.length) {
-      return { countryCode: '+' + cc, number: rest.slice(cc.length) };
-    }
-  }
-
-  // 2-digit codes
-  const CC2 = [
-    '20','27','30','31','32','33','34','36','39','40','41','43',
-    '44','45','46','47','48','49','51','52','53','54','55','56',
-    '57','58','60','61','62','63','64','65','66','81','82','84',
-    '86','90','91','92','93','94','95','98',
-  ];
-  for (const cc of CC2) {
-    if (rest.startsWith(cc) && rest.length > cc.length) {
-      return { countryCode: '+' + cc, number: rest.slice(cc.length) };
-    }
-  }
-
-  // 1-digit (+1 NANP, +7 Russia/Kazakhstan)
-  if ((rest[0] === '1' || rest[0] === '7') && rest.length > 1) {
-    return { countryCode: '+' + rest[0], number: rest.slice(1) };
-  }
-
-  return { number: rest };
+  const split = splitCountryCallingCode(e164);
+  return split ? { countryCode: split.countryCode, number: split.number } : { number: e164.slice(1) };
 }
 
 // ============================================================================

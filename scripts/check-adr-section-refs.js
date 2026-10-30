@@ -67,12 +67,12 @@
  * @module scripts/check-adr-section-refs
  */
 
-const fs = require('node:fs');
 const path = require('node:path');
 
 const S = require('./lib/adr-sections/scan');
 const R = require('./lib/adr-sections/resolve');
 const { loadBaseline, writeBaselineFile, compareSets } = require('./lib/ratchet-baseline');
+const { openGateInput, INDEX_FLAG } = require('./lib/gate-input');
 
 const RED = '\x1b[31m';
 const GREEN = '\x1b[32m';
@@ -96,10 +96,10 @@ const TEXTUAL = /\.(md|ts|tsx|js|jsx|cjs|mjs|json|ya?ml|sh|css)$/i;
  */
 const SELF_METADATA = new Set([CONFIG_FILE, BASELINE_FILE]);
 
-function loadConfig(projectRoot) {
-  const file = path.join(projectRoot, CONFIG_FILE);
-  if (!fs.existsSync(file)) throw new Error(`CHECK 3.53: λείπει το ${CONFIG_FILE}`);
-  const cfg = JSON.parse(fs.readFileSync(file, 'utf8'));
+function loadConfig(projectRoot, input = openGateInput({ root: projectRoot })) {
+  const text = input.read(CONFIG_FILE);
+  if (text === null) throw new Error(`CHECK 3.53: λείπει το ${CONFIG_FILE}`);
+  const cfg = JSON.parse(text);
   if (!cfg.families || Object.keys(cfg.families).length === 0) {
     throw new Error(`CHECK 3.53: ${CONFIG_FILE} — κενό «families»· κλειστό σύνολο χωρίς μέλη είναι φρουρός που δεν μπορεί να πυροδοτήσει`);
   }
@@ -110,22 +110,23 @@ function loadConfig(projectRoot) {
   return cfg;
 }
 
-function analyse(projectRoot) {
-  const cfg = loadConfig(projectRoot);
+/** `input` = η είσοδος (ADR-924) — προεπιλογή ο δίσκος· με `--index` η όψη του commit. */
+function analyse(projectRoot, input = openGateInput({ root: projectRoot })) {
+  const cfg = loadConfig(projectRoot, input);
   const familyIds = Object.keys(cfg.families);
 
   const families = new Map();
   const memberOf = new Map();
   for (const [id, famCfg] of Object.entries(cfg.families)) {
-    const fam = R.buildFamily(projectRoot, id, famCfg);
+    const fam = R.buildFamily(projectRoot, id, famCfg, input);
     families.set(id, fam);
     for (const f of fam.files) memberOf.set(f.rel, id);
   }
 
   const refs = [];
-  for (const rel of S.listIndexedFiles(projectRoot)) {
+  for (const rel of S.listIndexedFiles(projectRoot, input)) {
     if (!TEXTUAL.test(rel) || SELF_METADATA.has(rel)) continue;
-    const text = S.readText(projectRoot, rel);
+    const text = S.readText(projectRoot, rel, input);
     if (text === null) continue;
     if (!familyIds.some(id => text.includes(id)) && !memberOf.has(rel)) continue;
     refs.push(...S.scanReferences(text, { file: rel, familyIds, ownFamily: memberOf.get(rel) || null }));
@@ -244,7 +245,8 @@ function main(argv) {
 
   if (!all && staged.length > 0 && !triggers(staged)) return 0;
 
-  const result = analyse(projectRoot);
+  const input = openGateInput({ root: projectRoot, index: argv.includes(INDEX_FLAG) });
+  const result = analyse(projectRoot, input);
 
   if (wantReport) { report(result); return 0; }
 
@@ -272,7 +274,7 @@ function main(argv) {
     return 1;
   }
 
-  const baseline = loadBaseline(path.join(projectRoot, BASELINE_FILE));
+  const baseline = loadBaseline(path.join(projectRoot, BASELINE_FILE), [], input);
   const current = ratchetIds(result);
   if (baseline) {
     const regressions = [];

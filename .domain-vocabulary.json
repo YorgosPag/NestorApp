@@ -333,6 +333,31 @@
       "exemptions": []
     },
     {
+      "id": "social-platform",
+      "root": "src/lib/contact/social-media-type-vocabulary.ts",
+      "rootSymbol": "SOCIAL_PLATFORMS",
+      "typeName": "SocialPlatform",
+      "derivedTypes": [
+        "NamedSocialPlatform",
+        "SocialPlatformType"
+      ],
+      "values": [
+        "linkedin",
+        "facebook",
+        "instagram",
+        "twitter",
+        "youtube",
+        "github",
+        "tiktok",
+        "whatsapp",
+        "telegram",
+        "other"
+      ],
+      "threshold": 6,
+      "reason": "Η πλατφόρμα λογαριασμού social (ADR-327 §8.5.4) — άξονας ορθογώνιος στον τύπο λογαριασμού, ίδιος για κάθε κάτοχο. Δηλωνόταν σε πέντε αρχεία τεσσάρων τομέων (επαφές, βιτρίνα, branding, email, κοινοποίηση) με τρία ασύμβατα σύνολα: το branding της εταιρείας διάβαζε τα social της επαφής και έκανε tiktok/whatsapp/telegram ⇒ other, χάνοντας εικονίδιο και σύνδεσμο.",
+      "exemptions": []
+    },
+    {
       "id": "project-address-type",
       "root": "src/types/project/addresses.ts",
       "rootSymbol": "PROJECT_ADDRESS_TYPES",

@@ -15,7 +15,6 @@
  *               mirror that drifts (3.92: «boundaries are computed, not enumerated»).
  */
 
-const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 
@@ -27,10 +26,11 @@ const MANIFEST_FILE = '.functions-projection.json';
 const GENERATOR_VERSION = 'functions-projection/1';
 const REGENERATE = 'npm run generate:functions-projection';
 
-const { readLf } = require('../generated-artifacts');
+const { toLf } = require('../text-eol');
+const { openGateInput } = require('../gate-input');
 
-function loadManifest(root) {
-  const raw = JSON.parse(fs.readFileSync(path.join(root, MANIFEST_FILE), 'utf8'));
+function loadManifest(input) {
+  const raw = input.readJson(MANIFEST_FILE);
   const fields = ['sourceRoot', 'outputRoot', 'consumerRoot', 'modules', 'constants'];
   for (const f of fields) {
     if (raw[f] === undefined) throw new Error(`${MANIFEST_FILE}: missing "${f}"`);
@@ -54,13 +54,13 @@ function header(kind, sourceRel, body, extra) {
   return `${lines.join('\n')}\n\n`;
 }
 
-function readSources(root, manifest) {
+function readSources(root, manifest, input) {
   const sources = new Map();
   for (const rel of [...manifest.modules, ...manifest.constants.map((c) => c.module)]) {
-    const abs = path.join(root, manifest.sourceRoot, rel);
-    if (!fs.existsSync(abs)) throw new Error(`${MANIFEST_FILE}: source not found: ${manifest.sourceRoot}/${rel}`);
-    const text = readLf(abs);
-    sources.set(rel, { text, sf: parse(abs, text) });
+    const raw = input.read(`${manifest.sourceRoot}/${rel}`);
+    if (raw === null) throw new Error(`${MANIFEST_FILE}: source not found: ${manifest.sourceRoot}/${rel}`);
+    const text = toLf(raw);
+    sources.set(rel, { text, sf: parse(path.join(root, manifest.sourceRoot, rel), text) });
   }
   return sources;
 }
@@ -112,18 +112,21 @@ function planConstants(manifest, sources, consumers, errors) {
   });
 }
 
-/** @returns {{ manifest: object|null, outputs: Array<{path:string, content:string}>, errors: string[] }} */
-function buildPlan(root) {
+/**
+ * `input` = η είσοδος (ADR-924): με `--index` (εκτελεστής) το μητρώο, οι πηγές και οι καταναλωτές ΤΟΥ COMMIT.
+ * @returns {{ manifest: object|null, outputs: Array<{path:string, content:string}>, errors: string[] }}
+ */
+function buildPlan(root, input = openGateInput({ root })) {
   const errors = [];
   let manifest;
   let sources;
   try {
-    manifest = loadManifest(root);
-    sources = readSources(root, manifest);
+    manifest = loadManifest(input);
+    sources = readSources(root, manifest, input);
   } catch (e) {
     return { manifest: null, outputs: [], errors: [e.message] };
   }
-  const consumers = readConsumers(root, manifest);
+  const consumers = readConsumers(root, manifest, input);
   errors.push(...checkConsumerBoundary(root, manifest, consumers));
   const outputs = [
     ...planModules(manifest, sources, errors),

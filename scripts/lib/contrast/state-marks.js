@@ -20,9 +20,9 @@
 
 'use strict';
 
-const fs = require('fs');
 const path = require('path');
 const ts = require('typescript');
+const { openGateInput } = require('../gate-input');
 
 /** Το αρχείο που ΟΡΙΖΕΙ τα σημάδια κατάστασης του δεσμού. */
 const COLOR_CONFIG_PATH = path.join(
@@ -103,9 +103,10 @@ function readPrimitives(source) {
  * `createSourceFile` + `readPrimitives`. Δεν ήταν στιλιστικό — δύο σημεία που ανοίγουν το ίδιο
  * αρχείο μπορούν να αποκλίνουν σε **ποιο** αρχείο ανοίγουν.
  */
-function parseColorConfig(repoRoot) {
+function parseColorConfig(repoRoot, input = openGateInput({ root: repoRoot })) {
+  // ADR-924: από την ΕΙΣΟΔΟ — με `--index` το config ΤΟΥ COMMIT, όχι του δίσκου
   const file = path.join(repoRoot, COLOR_CONFIG_PATH);
-  const text = fs.readFileSync(file, 'utf8');
+  const text = input.readRequired(COLOR_CONFIG_PATH);
   const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
   return { source, primitives: readPrimitives(source) };
 }
@@ -119,8 +120,8 @@ function parseColorConfig(repoRoot) {
  * - `variant` = το μη-χρωματικό διακριτικό **μέσα** στον ίδιο φορέα, φτιαγμένο από τα πεδία
  *   που όντως ζωγραφίζονται.
  */
-function readBoundStateMarks(repoRoot = process.cwd()) {
-  const { source, primitives } = parseColorConfig(repoRoot);
+function readBoundStateMarks(repoRoot = process.cwd(), input = undefined, parsed = parseColorConfig(repoRoot, input)) {
+  const { source, primitives } = parsed;
   const bound = propsOf(findConstObject(source, 'TABLE_BOUND_STATE'));
   if (bound.size === 0) {
     throw new Error(`TABLE_BOUND_STATE δεν βρέθηκε στο ${COLOR_CONFIG_PATH}`);
@@ -209,10 +210,12 @@ function readCorrespondenceMarks(source, primitives) {
  * Η προσθήκη είναι **ρητή** και αυτό είναι ο σχεδιασμός: μια νέα οικογένεια πρέπει να γραφτεί
  * εδώ για να κριθεί — ποτέ να συμπεριληφθεί κατά λάθος από γενικό σαρωτή.
  */
-function readStateMarkFamilies(repoRoot = process.cwd()) {
-  const { source, primitives } = parseColorConfig(repoRoot);
+function readStateMarkFamilies(repoRoot = process.cwd(), input = undefined) {
+  // ΜΙΑ ανάγνωση + ΕΝΑ parse για όλες τις οικογένειες (ήταν δύο)
+  const parsed = parseColorConfig(repoRoot, input);
+  const { source, primitives } = parsed;
   return [
-    { id: 'table-bound-state', marks: readBoundStateMarks(repoRoot) },
+    { id: 'table-bound-state', marks: readBoundStateMarks(repoRoot, input, parsed) },
     { id: 'basemap-correspondence', marks: readCorrespondenceMarks(source, primitives) },
   ];
 }

@@ -35,7 +35,6 @@
 
 'use strict';
 
-const fs = require('fs');
 const path = require('path');
 
 const { GLOBAL_LAYER_FLOOR, CSS_VAR_PREFIX, KEYWORDS, indexByCssVar } = require('./scale');
@@ -45,7 +44,10 @@ const {
 } = require('./structure');
 const { listCssFiles, stripCommentsKeepingLines, buildDefinitionIndex, RUNTIME_NAMESPACES }
   = require('../css-vars/custom-property-index');
-const { walkSourceFiles, isInsideComment } = require('../contrast/text-primary-sites');
+const { isInsideComment } = require('../contrast/text-primary-sites');
+
+/** Η είσοδος της πύλης (ADR-924) — προεπιλογή ο δίσκος της ρίζας· ο εκτελεστής δίνει την όψη του commit. */
+const inputOf = (root) => require('../gate-input').openGateInput({ root });
 
 /** Καθεμία **ρητή**. Δεν υπάρχει «άλλο» — δες `assertClosed`. */
 const STATES = Object.freeze({
@@ -78,7 +80,7 @@ const ZERO_TOLERANCE = Object.freeze([
 const RATCHETED = Object.freeze([STATES.RAW_LITERAL, STATES.GLOBAL_BY_STRUCTURE]);
 
 const SOURCE_EXT = new Set(['.ts', '.tsx']);
-const toPosix = (p) => p.split(path.sep).join('/');
+const { toPosix } = require('../posix-path'); // SSoT (ADR-924 §8.9)
 const lineOf = (text, index) => text.slice(0, index).split('\n').length;
 
 // ---------------------------------------------------------------------------
@@ -243,12 +245,21 @@ function withStructure(verdict, isFixed) {
 // Η ΣΑΡΩΣΗ
 // ---------------------------------------------------------------------------
 
-function scanCss(repoRoot, definedNames, byCssVar) {
+/**
+ * Τα `.ts`/`.tsx` του `src/` — από την ΕΙΣΟΔΟ (ADR-924: ήταν ο `walkSourceFiles` του `text-primary-sites`, που έκοβε
+ * `dist`/`build`/`coverage` κατά όνομα· τα παραγόμενα τα κλαδεύει πλέον ο ΕΝΑΣ περιπατητής, αγκυρωμένα).
+ */
+function sourceFiles(input) {
+  const dotted = (rel) => rel.replace(/\/$/, '').split('/').pop().startsWith('.');
+  return input.files(['src'], { accept: (rel) => SOURCE_EXT.has(path.posix.extname(rel)) && !dotted(rel), pruneDir: dotted });
+}
+
+function scanCss(repoRoot, definedNames, byCssVar, input = inputOf(repoRoot)) {
   const found = [];
-  for (const file of listCssFiles(repoRoot)) {
-    const full = path.join(repoRoot, file);
-    if (!fs.existsSync(full)) continue;
-    const css = stripCommentsKeepingLines(fs.readFileSync(full, 'utf8'));
+  for (const file of listCssFiles(repoRoot, input)) {
+    const text = input.read(file);
+    if (text === null) continue;
+    const css = stripCommentsKeepingLines(text);
     for (const d of findCssDeclarations(css)) {
       const { selector, block } = cssRuleOf(css, d.index);
       const line = lineOf(css, d.index);
@@ -274,12 +285,10 @@ function scanCss(repoRoot, definedNames, byCssVar) {
   return found;
 }
 
-function scanSources(repoRoot, definedNames, byCssVar) {
+function scanSources(repoRoot, definedNames, byCssVar, input = inputOf(repoRoot)) {
   const found = [];
-  const srcDir = path.join(repoRoot, 'src');
-  for (const full of walkSourceFiles(srcDir)) {
-    if (!SOURCE_EXT.has(path.extname(full))) continue;
-    const text = fs.readFileSync(full, 'utf8');
+  for (const full of sourceFiles(input)) {
+    const text = input.read(full) ?? '';
     if (!textDeclaresLayering(text)) continue;
     const file = toPosix(path.relative(repoRoot, full));
     for (const s of findTsSites(text)) {
@@ -301,14 +310,11 @@ function scanSources(repoRoot, definedNames, byCssVar) {
  * ⚠️ Επιστρέφει ΠΟΙΑ βρέθηκαν, όχι «βρέθηκε κάτι»: ο καλών πρέπει να μπορεί να
  * **ονομάσει** το σύμβολο που ακύρωσε τη δήλωση, αλλιώς το μήνυμα λέει «κάτι άλλαξε».
  */
-function findSymbolsInSrc(repoRoot, symbols) {
+function findSymbolsInSrc(repoRoot, symbols, input = inputOf(repoRoot)) {
   const present = new Set();
   if (!symbols || symbols.length === 0) return present;
-  const srcDir = path.join(repoRoot, 'src');
-  if (!fs.existsSync(srcDir)) return present;
-  for (const full of walkSourceFiles(srcDir)) {
-    if (!SOURCE_EXT.has(path.extname(full))) continue;
-    const text = fs.readFileSync(full, 'utf8');
+  for (const full of sourceFiles(input)) {
+    const text = input.read(full) ?? '';
     for (const symbol of symbols) if (!present.has(symbol) && text.includes(symbol)) present.add(symbol);
     if (present.size === symbols.length) break;
   }
@@ -369,10 +375,11 @@ function markRestrictedMisuse(found, roles) {
   });
 }
 
-function scanAll(repoRoot, roles) {
+/** `input` = η είσοδος (ADR-924) — προεπιλογή ο δίσκος· με `--index` η όψη του commit. */
+function scanAll(repoRoot, roles, input = inputOf(repoRoot)) {
   const byCssVar = indexByCssVar(roles);
-  const definedNames = buildDefinitionIndex(repoRoot);
-  const raw = [...scanCss(repoRoot, definedNames, byCssVar), ...scanSources(repoRoot, definedNames, byCssVar)];
+  const definedNames = buildDefinitionIndex(repoRoot, input);
+  const raw = [...scanCss(repoRoot, definedNames, byCssVar, input), ...scanSources(repoRoot, definedNames, byCssVar, input)];
   const found = markRestrictedMisuse(raw, roles);
   found.sort((a, b) => (a.file === b.file ? a.line - b.line : a.file.localeCompare(b.file)));
   return { found, census: assertClosed(found) };

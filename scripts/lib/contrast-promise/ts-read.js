@@ -20,11 +20,11 @@ const ts = require('typescript');
 
 /**
  * Το AST ενός αρχείου πηγής — **parse-only**, ποτέ `tsc` (N.17): καμία επίλυση τύπων, καμία
- * ανάγνωση `tsconfig`, μηδέν πρόγραμμα. Μερικά ms ανά αρχείο.
+ * ανάγνωση `tsconfig`, μηδέν πρόγραμμα. Μερικά ms ανά αρχείο. `text` (ADR-924): το κείμενο από την ΕΙΣΟΔΟ της πύλης.
  */
-function parseSource(absFile) {
+function parseSource(absFile, text = null) {
   return ts.createSourceFile(
-    absFile, fs.readFileSync(absFile, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS,
+    absFile, text ?? fs.readFileSync(absFile, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS,
   );
 }
 

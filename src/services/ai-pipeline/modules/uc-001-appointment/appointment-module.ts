@@ -23,16 +23,27 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateAppointmentId } from '@/services/enterprise-id.service';
-import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { nowISO } from '@/lib/date-local';
 import { withAppointmentSchedule } from '@/services/appointments/appointment-schedule';
 import { extractDateTimeFromEntities } from './appointment-entity-extractor';
-import { findContactByEmail, type ContactMatch } from '../../shared/contact-lookup';
+import type { ContactMatch } from '../../shared/contact-lookup';
+import {
+  acknowledgeReply,
+  approvalOf,
+  collectionHealthCheck,
+  logLookupComplete,
+  lookupOf,
+  lookupSender,
+  querySenderHistory,
+  requesterOf,
+  senderDisplayOf,
+  toLookupRecord,
+} from '../../shared/customer-request-protocol';
 import { sendChannelReply, extractChannelIds } from '../../shared/channel-reply-dispatcher';
 import { checkAvailability, type AvailabilityResult } from '../../shared/availability-check';
 import { generateAIReply } from '../../shared/ai-reply-generator';
-import { getSenderHistory, type SenderHistoryResult } from '../../shared/sender-history';
+import type { SenderHistoryResult } from '../../shared/sender-history';
 import {
   PipelineIntentType,
 } from '@/types/ai-pipeline';
@@ -45,6 +56,7 @@ import type {
   PipelineIntentTypeValue,
 } from '@/types/ai-pipeline';
 import type { AppointmentDocument, AppointmentStatus } from '@/types/appointment';
+import { approvedAction, humanApprovedProposal, replySideEffect } from '../../shared/admin-command-protocol';
 
 // ============================================================================
 // LOGGER
@@ -149,28 +161,7 @@ export class AppointmentModule implements IUCModule {
   // ── Step 3: LOOKUP ──────────────────────────────────────────────────────
 
   async lookup(ctx: PipelineContext): Promise<Record<string, unknown>> {
-    const senderEmail = ctx.intake.normalized.sender.email ?? '';
-    const senderName = ctx.intake.normalized.sender.name ?? senderEmail;
-
-    logger.info('UC-001 LOOKUP: Searching for sender contact', {
-      requestId: ctx.requestId,
-      senderEmail,
-      companyId: ctx.companyId,
-    });
-
-    // Find sender in contacts collection (centralized utility)
-    let senderContact: ContactMatch | null = null;
-    if (senderEmail) {
-      try {
-        senderContact = await findContactByEmail(senderEmail, ctx.companyId);
-      } catch (error) {
-        const msg = getErrorMessage(error);
-        logger.warn('UC-001 LOOKUP: Contact search failed (non-fatal)', {
-          requestId: ctx.requestId,
-          error: msg,
-        });
-      }
-    }
+    const { senderEmail, senderName, senderContact } = await lookupSender(ctx, 'UC-001', logger);
 
     // Extract date/time from AI entities
     const { date: requestedDate, time: requestedTime } = extractDateTimeFromEntities(
@@ -194,21 +185,7 @@ export class AppointmentModule implements IUCModule {
       });
     }
 
-    // Query sender history (previous emails from same sender)
-    let senderHistory: SenderHistoryResult | null = null;
-    try {
-      senderHistory = await getSenderHistory(
-        senderEmail,
-        ctx.companyId,
-        ctx.intake.id,
-      );
-    } catch (error) {
-      const msg = getErrorMessage(error);
-      logger.warn('UC-001 LOOKUP: Sender history query failed (non-fatal)', {
-        requestId: ctx.requestId,
-        error: msg,
-      });
-    }
+    const senderHistory = await querySenderHistory(ctx, 'UC-001', logger, senderEmail);
 
     const lookupData: AppointmentLookupData = {
       senderEmail,
@@ -223,27 +200,22 @@ export class AppointmentModule implements IUCModule {
       senderHistory,
     };
 
-    logger.info('UC-001 LOOKUP: Complete', {
-      requestId: ctx.requestId,
-      isKnownContact: lookupData.isKnownContact,
-      contactId: senderContact?.contactId,
+    logLookupComplete(ctx, 'UC-001', logger, { senderContact, senderHistory }, {
       requestedDate,
       requestedTime,
       isDateFree: availability?.isDateFree,
       hasTimeConflict: availability?.hasTimeConflict,
-      isReturningContact: senderHistory?.isReturningContact,
-      previousEmails: senderHistory?.totalPreviousEmails,
     });
 
-    return lookupData as unknown as Record<string, unknown>;
+    return toLookupRecord(lookupData);
   }
 
   // ── Step 4: PROPOSE ─────────────────────────────────────────────────────
 
   async propose(ctx: PipelineContext): Promise<Proposal> {
-    const lookup = ctx.lookupData as unknown as AppointmentLookupData | undefined;
+    const lookup = lookupOf<AppointmentLookupData>(ctx);
 
-    const senderDisplay = lookup?.senderName ?? lookup?.senderEmail ?? 'Άγνωστος αποστολέας';
+    const senderDisplay = senderDisplayOf(lookup);
     const dateDisplay = lookup?.requestedDate ?? 'χωρίς ημερομηνία';
     const timeDisplay = lookup?.requestedTime ?? 'χωρίς ώρα';
     const description = lookup?.originalSubject
@@ -286,32 +258,21 @@ export class AppointmentModule implements IUCModule {
       aiDurationMs: aiReplyResult.durationMs,
     });
 
-    return {
-      messageId: ctx.intake.id,
-      suggestedActions: [
-        {
-          type: 'create_appointment',
-          params: {
-            senderEmail: lookup?.senderEmail ?? null,
-            senderName: lookup?.senderName ?? null,
-            contactId: lookup?.senderContact?.contactId ?? null,
-            isKnownContact: lookup?.isKnownContact ?? false,
-            requestedDate: lookup?.requestedDate ?? null,
-            requestedTime: lookup?.requestedTime ?? null,
-            description: description || summary,
-            companyId: ctx.companyId,
-            draftReply,
-            aiGenerated: aiReplyResult.aiGenerated,
-            operatorBriefing: lookup?.availability?.operatorBriefing ?? null,
-            hasTimeConflict: lookup?.availability?.hasTimeConflict ?? false,
-          },
-        },
-      ],
-      requiredApprovals: ['salesManager'],
-      autoApprovable: false, // ΚΑΝΟΝΑΣ: Ποτέ αυτόματο — πάντα ανθρώπινη έγκριση
-      summary,
-      schemaVersion: PIPELINE_PROTOCOL_CONFIG.SCHEMA_VERSION,
-    };
+    // ΚΑΝΟΝΑΣ: Ποτέ αυτόματο — πάντα ανθρώπινη έγκριση
+    return humanApprovedProposal(ctx, 'create_appointment', {
+      senderEmail: lookup?.senderEmail ?? null,
+      senderName: lookup?.senderName ?? null,
+      contactId: lookup?.senderContact?.contactId ?? null,
+      isKnownContact: lookup?.isKnownContact ?? false,
+      requestedDate: lookup?.requestedDate ?? null,
+      requestedTime: lookup?.requestedTime ?? null,
+      description: description || summary,
+      companyId: ctx.companyId,
+      draftReply,
+      aiGenerated: aiReplyResult.aiGenerated,
+      operatorBriefing: lookup?.availability?.operatorBriefing ?? null,
+      hasTimeConflict: lookup?.availability?.hasTimeConflict ?? false,
+    }, summary);
   }
 
   // ── Step 6: EXECUTE ─────────────────────────────────────────────────────
@@ -323,8 +284,7 @@ export class AppointmentModule implements IUCModule {
 
     try {
       // Use modified actions from operator if available, otherwise use original proposal
-      const actions = ctx.approval?.modifiedActions ?? ctx.proposal?.suggestedActions ?? [];
-      const createAction = actions.find(a => a.type === 'create_appointment');
+      const createAction = approvedAction(ctx, 'create_appointment');
 
       if (!createAction) {
         return {
@@ -345,12 +305,7 @@ export class AppointmentModule implements IUCModule {
           channel: ctx.intake.channel,
           messageId: ctx.intake.id,
         },
-        requester: {
-          email: (params.senderEmail as string) ?? null,
-          name: (params.senderName as string) ?? null,
-          contactId: (params.contactId as string) ?? null,
-          isKnownContact: (params.isKnownContact as boolean) ?? false,
-        },
+        requester: requesterOf(params),
         // ADR-869 §12 — το `effectiveDate` παράγεται ΕΔΩ, μαζί με τις λεπτομέρειες: δεν
         // υπάρχει εκδοχή του εγγράφου χωρίς την ερωτήσιμη ημερομηνία.
         appointment: withAppointmentSchedule({
@@ -362,8 +317,7 @@ export class AppointmentModule implements IUCModule {
         status: 'approved' as AppointmentStatus,
         createdAt: now,
         updatedAt: now,
-        approvedBy: ctx.approval?.approvedBy ?? null,
-        approvedAt: ctx.approval?.decidedAt ?? null,
+        ...approvalOf(ctx),
       };
 
       const adminDb = getAdminFirestore();
@@ -417,13 +371,7 @@ export class AppointmentModule implements IUCModule {
       }
 
       // Build side effects list
-      const sideEffects = [`appointment_created:${appointmentId}`];
-
-      if (replyResult.success) {
-        sideEffects.push(`reply_sent:${replyResult.messageId ?? 'unknown'}`);
-      } else {
-        sideEffects.push(`reply_failed:${replyResult.error ?? 'unknown'}`);
-      }
+      const sideEffects = [`appointment_created:${appointmentId}`, replySideEffect(replyResult)];
 
       // Appointment creation is the primary action — email failure is non-fatal
       return {
@@ -449,37 +397,12 @@ export class AppointmentModule implements IUCModule {
   // ── Step 7: ACKNOWLEDGE ─────────────────────────────────────────────────
 
   async acknowledge(ctx: PipelineContext): Promise<AcknowledgmentResult> {
-    const channel = ctx.intake.channel;
-
-    // Check if confirmation reply was sent in EXECUTE step
-    const replySent = ctx.executionResult?.sideEffects?.some(
-      (se: string) => se.startsWith('reply_sent:')
-    ) ?? false;
-
-    logger.info('UC-001 ACKNOWLEDGE: Confirmation delivery status', {
-      requestId: ctx.requestId,
-      channel,
-      replySent,
-    });
-
-    return {
-      sent: replySent,
-      channel,
-    };
+    return acknowledgeReply(ctx, 'UC-001', logger, 'Confirmation delivery status');
   }
 
   // ── Health Check ────────────────────────────────────────────────────────
 
   async healthCheck(): Promise<boolean> {
-    try {
-      const adminDb = getAdminFirestore();
-      // Simple connectivity test — try to access the collection
-      await adminDb.collection(COLLECTIONS.APPOINTMENTS).limit(1).get();
-      return true;
-    } catch (error) {
-      const msg = getErrorMessage(error);
-      logger.error('UC-001 HEALTH CHECK: Failed', { error: msg });
-      return false;
-    }
+    return collectionHealthCheck(COLLECTIONS.APPOINTMENTS, 'UC-001', logger);
   }
 }

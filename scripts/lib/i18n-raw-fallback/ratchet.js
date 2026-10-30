@@ -12,9 +12,6 @@
 
 'use strict';
 
-const fs = require('node:fs');
-const path = require('node:path');
-
 const SOURCE_RE = /^src\/.*\.tsx?$/;
 const EXCLUDED_RE = /(^|\/)(__tests__|__mocks__)\/|\.(test|spec)\.tsx?$|\.d\.ts$|^src\/i18n\/locales\//;
 
@@ -26,17 +23,10 @@ function inScope(file) {
 }
 
 /** Όλα τα αρχεία της εμβέλειας, σχετικά με τη ρίζα, ταξινομημένα (ντετερμινιστική baseline). */
-function walkScope(root, dir = 'src') {
-  const out = [];
-  const abs = path.join(root, dir);
-  if (!fs.existsSync(abs)) return out;
-  for (const entry of fs.readdirSync(abs, { withFileTypes: true })) {
-    if (entry.name === 'node_modules') continue;
-    const rel = `${dir}/${entry.name}`;
-    if (entry.isDirectory()) out.push(...walkScope(root, rel));
-    else if (inScope(rel)) out.push(rel);
-  }
-  return out.sort();
+// ADR-924 Φ2 — από την ΕΙΣΟΔΟ της πύλης (`--index` ⇒ η όψη του commit), όχι από δικό της `readdirSync`.
+function walkScope(root, dir = 'src', input = null) {
+  const view = input || require('../gate-input').openGateInput({ root });
+  return view.files([dir], { accept: inScope }).map(view.rel);
 }
 
 /**

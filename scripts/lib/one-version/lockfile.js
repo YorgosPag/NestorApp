@@ -26,8 +26,7 @@
 
 'use strict';
 
-const fs = require('node:fs');
-const path = require('node:path');
+const { openGateInput } = require('../gate-input');
 
 const DEP_FIELDS = new Set(['dependencies', 'devDependencies', 'optionalDependencies']);
 
@@ -85,10 +84,10 @@ function consumeLine(line, lineNo, state, importers) {
 /**
  * @returns {{importers: Record<string, Record<string, {field: string, specifier: string, version: string}>>}}
  */
-function readLockfile(repoRoot) {
-  const file = path.join(repoRoot, 'pnpm-lock.yaml');
-  if (!fs.existsSync(file)) throw new Error('pnpm-lock.yaml δεν βρέθηκε στη ρίζα.');
-  const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/);
+function readLockfile(repoRoot, input = openGateInput({ root: repoRoot })) {
+  const text = input.read('pnpm-lock.yaml');
+  if (text === null) throw new Error('pnpm-lock.yaml δεν βρέθηκε στη ρίζα.');
+  const lines = text.split(/\r?\n/);
   const importers = {};
   const state = { importer: null, field: null, pkg: null };
   for (let i = locateImporters(lines) + 1; i < lines.length; i++) {

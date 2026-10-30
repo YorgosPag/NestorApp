@@ -94,7 +94,7 @@ function harvestGlobals(sf, out) {
  * τους θα φαινόταν ως **ψευδώς θετικό σε σωστό κώδικα**.
  */
 const VENDOR_MAX_DEPTH = 3;
-const PROJECT_MAX_DEPTH = 12;
+
 
 function walkDts(dir, depth, seenDirs, onFile, maxDepth = VENDOR_MAX_DEPTH) {
   if (depth > maxDepth || seenDirs.has(dir)) return;
@@ -185,10 +185,19 @@ function collectGlobalsFrom(dirs, maxDepth) {
  * ⚠️ **ΔΕΝ μπαίνουν στην προσωρινή μνήμη**: αλλάζουν με τον κώδικα, όχι με το
  * lockfile. Είναι **19** αρχεία — μετρημένο κόστος υπό τα 60ms.
  */
-function projectAmbientRoots(projectRoot) {
-  return new Set(['src', 'scripts', 'types']
-    .map((r) => path.join(projectRoot, r))
-    .filter((p2) => { try { return fs.statSync(p2).isDirectory(); } catch { return false; } }));
+/**
+ * Τα ambient `.d.ts` ΤΟΥ REPO — από την ΕΙΣΟΔΟ της πύλης (ADR-924 Φ2): η διαγραφή/προσθήκη ενός σταδιοποιημένου `.d.ts`
+ * (η σκανδάλη της κλιμάκωσης) κρίνεται με το κείμενο του COMMIT. Τα εγκατεστημένα (`node_modules`) μένουν στον δίσκο:
+ * δεν είναι μέρος του commit.
+ */
+function collectProjectGlobals(input) {
+  const names = new Set();
+  for (const file of input.files(['src', 'scripts', 'types'], { accept: (rel) => rel.endsWith('.d.ts') })) {
+    const src = input.read(file);
+    if (src === null) continue;
+    harvestGlobals(ts.createSourceFile(file, src, ts.ScriptTarget.Latest, false, ts.ScriptKind.TS), names);
+  }
+  return names;
 }
 
 /**
@@ -232,21 +241,23 @@ function readVendorGlobals(projectRoot) {
   return names;
 }
 
-function readAmbientGlobals(projectRoot) {
+function readAmbientGlobals(projectRoot, input) {
   const names = readVendorGlobals(projectRoot);
-  for (const n of collectGlobalsFrom(projectAmbientRoots(projectRoot), PROJECT_MAX_DEPTH)) names.add(n);
+  for (const n of collectProjectGlobals(input)) names.add(n);
   return names;
 }
 
-let ambientCache = null;
-let ambientCacheRoot = null;
-function ambientGlobals(projectRoot) {
+// Μνήμη ΑΝΑ ΕΙΣΟΔΟ (ADR-924): η όψη του commit και ο δίσκος είναι δύο δέντρα. Χωρίς είσοδο ⇒ ο δίσκος της ρίζας.
+const ambientByInput = new WeakMap();
+const diskInputByRoot = new Map();
+function ambientGlobals(projectRoot, input = null) {
   const root = projectRoot || process.cwd();
-  if (!ambientCache || ambientCacheRoot !== root) {
-    ambientCache = readAmbientGlobals(root);
-    ambientCacheRoot = root;
+  if (!input) {
+    if (!diskInputByRoot.has(root)) diskInputByRoot.set(root, require('../gate-input').openGateInput({ root }));
+    input = diskInputByRoot.get(root);
   }
-  return ambientCache;
+  if (!ambientByInput.has(input)) ambientByInput.set(input, readAmbientGlobals(root, input));
+  return ambientByInput.get(input);
 }
 
 /** Ελάχιστος πυρήνας — ό,τι ΔΕΝ δηλώνεται στα lib (module system, test harness, JSX). */
@@ -392,11 +403,11 @@ function collectReads(sf) {
  *
  * @returns {{parsed:boolean, unbound:{file:string,name:string,line:number}[]}}
  */
-function scanFile(relPath, source, projectRoot) {
+function scanFile(relPath, source, projectRoot, input = null) {
   const kind = relPath.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
   const sf = ts.createSourceFile(relPath, source, ts.ScriptTarget.Latest, true, kind);
   if ((sf.parseDiagnostics || []).length) return { parsed: false, unbound: [] };
-  return { parsed: true, unbound: collectUnbound(sf, relPath, projectRoot) };
+  return { parsed: true, unbound: collectUnbound(sf, relPath, projectRoot, input) };
 }
 
 /**
@@ -413,9 +424,9 @@ function findUnbound(relPath, source, projectRoot) {
  *      μη καθολικό ⇒ `ReferenceError` (`'out-of-scope'`)· ιδιότητα του `window` ⇒ λύνεται
  *      **σιωπηλά** σε λάθος αντικείμενο (`'out-of-scope-window'`, το `toolbar` → `BarProp`).
  */
-function collectUnbound(sf, relPath, projectRoot) {
+function collectUnbound(sf, relPath, projectRoot, input = null) {
   const bound = collectBindings(sf);
-  const ambient = ambientGlobals(projectRoot || process.cwd());
+  const ambient = ambientGlobals(projectRoot || process.cwd(), input);
   const out = [];
   const seen = new Set();
   const report = (id, reason) => {

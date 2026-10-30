@@ -4,9 +4,10 @@
  * Κάθε τέτοια πύλη ρωτά το ίδιο πράγμα με άλλο αντικείμενο: «γράφει κάποιος ΑΥΤΟ έξω από τον ΕΝΑ γραφέα;». Η
  * ανάγνωση του δέντρου (αλυσίδες κλήσεων, «είναι γέννηση;», εξαίρεση με λόγο) είναι ίδια για όλες.
  *
- * 🔴 ΓΙΑΤΙ ΥΠΑΡΧΕΙ (2026-10-10): οι έξι προηγούμενες πύλες (3.83 · 3.87 · 3.88 · 3.89 · 3.99 · 3.100) κουβαλούν η
- * καθεμία το δικό της αντίγραφο αυτών των συναρτήσεων. Η 3.102 είναι ο πρώτος καταναλωτής της κοινής εκδοχής· η
- * μετανάστευση των έξι είναι καταγεγραμμένη στο `.claude-rules/pending-ratchet-work.md`.
+ * 🔴 ΓΙΑΤΙ ΥΠΑΡΧΕΙ (2026-10-10): οι έξι προηγούμενες πύλες (3.83 · 3.87 · 3.88 · 3.89 · 3.99 · 3.100) κουβαλούσαν η
+ * καθεμία το δικό της αντίγραφο αυτών των συναρτήσεων. Η 3.102 ήταν ο πρώτος καταναλωτής της κοινής εκδοχής· οι έξι
+ * μετανάστευσαν 2026-10-30 (ADR-924 §8.4) — κανένα τοπικό αντίγραφο δεν μένει. ⚠️ ΜΗΝ ξαναγράψεις `sourceFileOf` /
+ * `chainNodes` / εξαίρεση-με-λόγο σε πύλη: εισήγαγέ τα από εδώ (CHECK 3.28 πιάνει τον κλώνο μόνο ΑΝ σταδιοποιηθούν μαζί).
  *
  * ⚠️ AST, ΠΟΤΕ ΚΕΙΜΕΝΟ: τα θεραπευμένα αρχεία κουβαλούν σχόλια που ΟΝΟΜΑΖΟΥΝ τις κλήσεις.
  */
@@ -113,22 +114,35 @@ function literalKeys(expression) {
   return expression.properties.map((p) => (p.name ? p.name.getText().replace(/^['"]|['"]$/g, '') : ''));
 }
 
+/** Οι καταστάσεις εξαίρεσης — ΚΟΙΝΕΣ σε κάθε πύλη «ενός γραφέα» (ίδιες τιμές στο κατάστιχο όλων). */
+const EXEMPTION_STATES = Object.freeze({ EXEMPT: 'exempt-with-reason', EXEMPT_NO_REASON: 'exempt-without-reason' });
+
 /**
  * Εργοστάσιο εξαιρέσεων μιας πύλης: `// <tag>: <λόγος>` στη γραμμή πάνω από τον κόμβο.
  * `reasonAbove` ⇒ `null` αν δεν υπάρχει εξαίρεση, αλλιώς ο λόγος (μπορεί κενός — και τότε είναι εύρημα).
+ * `classify` ⇒ το εύρημα του κόμβου: η μπλοκάρουσα `state` χωρίς εξαίρεση· `exempt-with-reason` με λόγο·
+ * `exempt-without-reason` με κενό λόγο. (Ήταν αντιγραμμένο σε 3.87 · 3.88 · 3.89 · 3.102 · 3.106 — ADR-924 §8.)
  */
 function exemptionsFor(tag) {
   const pattern = new RegExp(`${tag}:\\s*(\\S.*)?$`);
+  const reasonAbove = (sf, node) => {
+    const above = sf.text.split(/\r?\n/)[lineOf(sf, node) - 2] || '';
+    const match = above.match(pattern);
+    return match ? (match[1] || '').trim() : null;
+  };
   return {
-    reasonAbove(sf, node) {
-      const above = sf.text.split(/\r?\n/)[lineOf(sf, node) - 2] || '';
-      const match = above.match(pattern);
-      return match ? (match[1] || '').trim() : null;
+    reasonAbove,
+    classify(sf, node, rel, state, detail) {
+      const reason = reasonAbove(sf, node);
+      if (reason === null) return { state, file: rel, line: lineOf(sf, node), detail };
+      return reason.length > 0
+        ? { state: EXEMPTION_STATES.EXEMPT, file: rel }
+        : { state: EXEMPTION_STATES.EXEMPT_NO_REASON, file: rel, line: lineOf(sf, node), detail: 'εξαίρεση ΧΩΡΙΣ λόγο' };
     },
   };
 }
 
 module.exports = {
   ts, PROJECT_ROOT, sourceFileOf, lineOf, chainNodes, isCallTo, trailingName, calleeName, walk, callSiteOf, isCollectionOf, isDocOf,
-  refIdentifiersOf, refersTo, isCreation, literalKeys, exemptionsFor,
+  refIdentifiersOf, refersTo, isCreation, literalKeys, exemptionsFor, EXEMPTION_STATES,
 };

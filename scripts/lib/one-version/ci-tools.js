@@ -32,10 +32,10 @@
 
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
 
 const { GATE_STATES: S, MIN_REASON_LENGTH } = require('./contract.js');
+const { openGateInput } = require('../gate-input');
 
 /**
  * **Τα εργαλεία CI με μία έκδοση** — κλειστό σύνολο, με υποχρεωτικό λόγο.
@@ -61,18 +61,8 @@ const INSTALLER = /\b(?:npm\s+(?:i|install|add)\b|npx\b|pnpm\s+(?:add|dlx)\b|yar
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /** Κάθε `.yml`/`.yaml` κάτω από τις δύο ρίζες του CI — ο **παρονομαστής**. */
-function ciFiles(repoRoot) {
-  const found = [];
-  const walk = (dir) => {
-    if (!fs.existsSync(dir)) return;
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) walk(full);
-      else if (/\.ya?ml$/.test(entry.name)) found.push(path.relative(repoRoot, full).split(path.sep).join('/'));
-    }
-  };
-  for (const root of CI_ROOTS) walk(path.join(repoRoot, root));
-  return found.sort();
+function ciFiles(repoRoot, input = openGateInput({ root: repoRoot })) {
+  return input.files(CI_ROOTS, { accept: (rel) => /\.ya?ml$/.test(rel) }).map(input.rel).sort();
 }
 
 /** Οι γραμμές που **εκτελούνται** — ολόκληρες γραμμές σχολίου δεν είναι εντολές. */
@@ -84,20 +74,19 @@ function codeLines(text) {
 }
 
 /** Η έκδοση όπως τη γράφει η αυθεντία — ή `null` αν δεν διαβάζεται **ακριβώς μία** φορά. */
-function readAuthorityVersion(repoRoot, spec) {
-  const file = path.join(repoRoot, spec.authority);
-  if (!fs.existsSync(file)) return null;
+function readAuthorityVersion(repoRoot, spec, input = openGateInput({ root: repoRoot })) {
+  const text = input.read(spec.authority);
+  if (text === null) return null;
   const re = new RegExp(`^const ${spec.exportName} = '([^']+)';`, 'gm');
-  const hits = [...fs.readFileSync(file, 'utf8').matchAll(re)];
+  const hits = [...text.matchAll(re)];
   if (hits.length !== 1 || !EXACT_VERSION.test(hits[0][1])) return null;
   return hits[0][1];
 }
 
 /** Διαβάζει ο ιδιοκτήτης την αυθεντία — ή κρατά δική του αλήθεια; */
-function ownerReadsAuthority(repoRoot, spec) {
-  const file = path.join(repoRoot, spec.owner);
-  if (!fs.existsSync(file)) return false;
-  const text = fs.readFileSync(file, 'utf8');
+function ownerReadsAuthority(spec, input) {
+  const text = input.read(spec.owner);
+  if (text === null) return false;
   return text.includes(spec.authority) && text.includes(spec.exportName);
 }
 
@@ -125,21 +114,21 @@ function judgeFile(rel, text, tool, spec, push) {
  * ΣΤ · ΕΡΓΑΛΕΙΑ CI — ο κύκλος κρίσης. Πληθυσμός: τα αρχεία CI που **αφορούν** το εργαλείο
  * (το αναφέρουν ή ζητούν τον ιδιοκτήτη) + η δήλωση του ίδιου του εργαλείου.
  */
-function judgeCiTools(repoRoot, push, tools = CI_TOOLS) {
-  const files = ciFiles(repoRoot);
+function judgeCiTools(repoRoot, push, tools = CI_TOOLS, input = openGateInput({ root: repoRoot })) {
+  const files = ciFiles(repoRoot, input);
   for (const [tool, spec] of Object.entries(tools)) {
     if (typeof spec.reason !== 'string' || spec.reason.trim().length < MIN_REASON_LENGTH) {
       push(S.CI_TOOL_OWNER_BROKEN, tool, `δήλωση χωρίς λόγο (>=${MIN_REASON_LENGTH} χαρακτήρες)`);
       continue;
     }
-    if (readAuthorityVersion(repoRoot, spec) === null) {
+    if (readAuthorityVersion(repoRoot, spec, input) === null) {
       push(S.CI_TOOL_OWNER_BROKEN, tool, `η αυθεντία ${spec.authority} δεν δίνει ΜΙΑ ακριβή ${spec.exportName}`);
-    } else if (!ownerReadsAuthority(repoRoot, spec)) {
+    } else if (!ownerReadsAuthority(spec, input)) {
       push(S.CI_TOOL_OWNER_BROKEN, tool, `ο ιδιοκτήτης ${spec.owner} λείπει ή δεν διαβάζει την αυθεντία`);
     }
     const ownerDir = path.posix.dirname(spec.owner);
     for (const rel of files) {
-      const text = fs.readFileSync(path.join(repoRoot, rel), 'utf8');
+      const text = input.read(rel);
       if (rel === spec.owner || text.includes(tool) || text.includes(ownerDir)) {
         judgeFile(rel, text, tool, spec, push);
       }

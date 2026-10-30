@@ -33,14 +33,34 @@ const path = require('path');
 const DISABLED_SUFFIX = '.disabled';
 
 /**
+ * Ο αναγνώστης του δίσκου — η προεπιλογή κάθε `readWorkflow*`. Καταναλωτής με είσοδο πύλης (ADR-924) δίνει
+ * `input.readRequired`: κρίνεται το workflow που θα δεσμευτεί, όχι η ξένη αστάδιοποίητη αλλαγή του δίσκου.
+ */
+const readDisk = (filePath) => fs.readFileSync(filePath, 'utf8');
+
+/** Οι σημαντικές γραμμές ενός workflow — ΕΝΑ σημείο ανάγνωσης (ήταν έξι αντίγραφα). */
+const linesOf = (filePath, read = readDisk) => significantLines(read(filePath));
+
+/** Τα ονόματα του φακέλου — από την είσοδο αν δοθεί, αλλιώς ο δίσκος· φάκελος που λείπει ⇒ σφάλμα, ποτέ «κανένα». */
+function workflowDirNames(workflowsDir, input) {
+  if (!input) return fs.readdirSync(workflowsDir);
+  const children = input.children(workflowsDir);
+  if (children === null) throw new Error(`${workflowsDir}: ο φάκελος λείπει από την όψη (${input.mode})`);
+  return children.files;
+}
+
+/**
  * @param {string} workflowsDir
+ * @param {?object} [input] η είσοδος της πύλης (ADR-924)· χωρίς αυτήν ο δίσκος
  * @returns {string[]} ονόματα αρχείων (.yml), αλφαβητικά, χωρίς τα .disabled
  */
-function listWorkflowFiles(workflowsDir) {
-  return fs
-    .readdirSync(workflowsDir)
-    .filter((f) => f.endsWith('.yml') && !f.endsWith(DISABLED_SUFFIX))
-    .sort();
+function listWorkflowFiles(workflowsDir, input = null) {
+  return workflowDirNames(workflowsDir, input).filter((f) => f.endsWith('.yml') && !f.endsWith(DISABLED_SUFFIX)).sort();
+}
+
+/** Τα `*.yml.disabled` — workflow που **υπάρχει και δεν τρέχει ποτέ** (ίδιος λιστωτής, ίδια όψη). */
+function listDisabledWorkflowFiles(workflowsDir, input = null) {
+  return workflowDirNames(workflowsDir, input).filter((f) => f.endsWith(`.yml${DISABLED_SUFFIX}`)).sort();
 }
 
 /**
@@ -108,8 +128,8 @@ function findKey(lines, key, expectedIndent) {
  * @throws αν λείπει `name:` στο ανώτατο επίπεδο — ένα workflow χωρίς όνομα είναι
  *         απαρακολούθητο εξ ορισμού (το GitHub δείχνει τη διαδρομή αρχείου).
  */
-function readWorkflowName(filePath) {
-  const lines = significantLines(fs.readFileSync(filePath, 'utf8'));
+function readWorkflowName(filePath, read = readDisk) {
+  const lines = linesOf(filePath, read);
   const index = findKey(lines, 'name', 0);
   if (index === -1) {
     throw new Error(`${path.basename(filePath)}: λείπει "name:" στο ανώτατο επίπεδο`);
@@ -128,8 +148,8 @@ function readWorkflowName(filePath) {
  * @param {string} filePath
  * @returns {string[]}
  */
-function readWorkflowRunWatchList(filePath) {
-  const lines = significantLines(fs.readFileSync(filePath, 'utf8'));
+function readWorkflowRunWatchList(filePath, read = readDisk) {
+  const lines = linesOf(filePath, read);
 
   // `on:` στο ανώτατο επίπεδο. (Το YAML 1.1 θα το διάβαζε ως boolean true· εδώ είναι κείμενο.)
   const onIndex = findKey(lines, 'on', 0);
@@ -162,8 +182,8 @@ function readWorkflowRunWatchList(filePath) {
  *   την ξυπνά (δηλωμένο κενό, όχι παράβαση)·
  *   `pushBranches` = οι κλάδοι του `push` (ADR-865 §11.8: ποιο ref πυροδοτεί τη γραμμή).
  */
-function readWorkflowTriggers(filePath) {
-  const lines = significantLines(fs.readFileSync(filePath, 'utf8'));
+function readWorkflowTriggers(filePath, read = readDisk) {
+  const lines = linesOf(filePath, read);
   const onIndex = findKey(lines, 'on', 0);
   if (onIndex === -1) return { automatic: [], pathFiltered: false, pushBranches: null };
 
@@ -266,8 +286,8 @@ function stepMap(stepLines, key) {
 }
 
 /** Τα βήματα `run:` κάθε job, με τη σειρά τους. */
-function readWorkflowRunSteps(filePath) {
-  return readWorkflowSteps(filePath).filter((s) => s.run !== null).map(({ uses, ...step }) => step);
+function readWorkflowRunSteps(filePath, read = readDisk) {
+  return readWorkflowSteps(filePath, read).filter((s) => s.run !== null).map(({ uses, ...step }) => step);
 }
 
 /**
@@ -276,8 +296,8 @@ function readWorkflowRunSteps(filePath) {
  * κάνει το `pnpm install` που ένα `run:` βήμα από κάτω προϋποθέτει (ADR-770, `preinstall-steps.js`).
  * Τα βήματα `uses:` φέρουν και το `with` τους — το χρειάζεται ο κανόνας του σιωπηρού cache.
  */
-function readWorkflowSteps(filePath) {
-  const lines = significantLines(fs.readFileSync(filePath, 'utf8'));
+function readWorkflowSteps(filePath, read = readDisk) {
+  const lines = linesOf(filePath, read);
   const jobsIndex = findKey(lines, 'jobs', 0);
   if (jobsIndex === -1) return [];
 
@@ -380,8 +400,8 @@ function mapOf(value) {
  * @param {string} filePath
  * @returns {Record<string,string>|null}
  */
-function readWorkflowPermissions(filePath) {
-  const lines = significantLines(fs.readFileSync(filePath, 'utf8'));
+function readWorkflowPermissions(filePath, read = readDisk) {
+  const lines = linesOf(filePath, read);
   const index = findKey(lines, 'permissions', 0);
   if (index === -1) return null;
   const inline = lines[index].body.slice('permissions:'.length).trim();
@@ -400,8 +420,8 @@ function readWorkflowPermissions(filePath) {
  * @returns {Record<string, {name:string|null, needs:string[], environment:string|null, if:string|null,
  *   permissions:Record<string,string>|null, concurrency:Record<string,string>|null}>}
  */
-function readWorkflowJobs(filePath) {
-  const lines = significantLines(fs.readFileSync(filePath, 'utf8'));
+function readWorkflowJobs(filePath, read = readDisk) {
+  const lines = linesOf(filePath, read);
   const jobsIndex = findKey(lines, 'jobs', 0);
   if (jobsIndex === -1) return {};
   const jobLines = childLines(lines, jobsIndex);
@@ -425,6 +445,7 @@ function readWorkflowJobs(filePath) {
 
 module.exports = {
   listWorkflowFiles,
+  listDisabledWorkflowFiles,
   readWorkflowName,
   readWorkflowRunWatchList,
   readWorkflowRunSteps,

@@ -40,7 +40,7 @@
 
 const path = require('node:path');
 
-const { collectSourceFiles } = require('./lib/module-graph/scan-config');
+const { openGateInput, commitInput } = require('./lib/gate-input');
 const {
   CANVAS_THEME_TS, TABLE_INK_TS, VARIABLES_CSS,
   calibrate, presentableSurfaces, reachabilityLimits,
@@ -183,8 +183,8 @@ function writesForwardedField(stagedRelFiles, fields, reader, repoRoot = REPO_RO
 }
 
 /** Ολόκληρο το subapp — η **μόνη** εμβέλεια σάρωσης που υπάρχει. */
-function targetFiles() {
-  return collectSourceFiles(REPO_ROOT, [SCAN_ROOT]);
+function targetFiles(input = openGateInput({ root: REPO_ROOT })) {
+  return input.sources([SCAN_ROOT]);
 }
 
 function main() {
@@ -206,10 +206,12 @@ function main() {
   let limits;
   let api;
   let reader;
+  // ADR-924 — ΜΙΑ είσοδος για όλη την εκτέλεση: με `--index` σκανδάλη, API, επιφάνειες και σάρωση κρίνουν το commit.
+  const input = commitInput(REPO_ROOT);
   try {
-    reader = createReader(REPO_ROOT);
+    reader = createReader(REPO_ROOT, input);
     api = readAdaptiveApi(REPO_ROOT, reader);
-    surfaces = presentableSurfaces(REPO_ROOT);
+    surfaces = presentableSurfaces(REPO_ROOT, input);
     limits = reachabilityLimits(surfaces);
   } catch (err) {
     console.error(C.red(`  [FAIL] ${err.message}`));
@@ -224,7 +226,7 @@ function main() {
   };
   if (!triggered && !staged.some(isScannable)) return skip();
 
-  const files = targetFiles();
+  const files = targetFiles(input);
   const entries = files.map((abs) => ({ abs, rel: path.relative(REPO_ROOT, abs).split(path.sep).join('/') }));
   const { sites, fields, anchored } = promiseSites(entries, api, reader);
   if (!triggered && !writesForwardedField(staged, fields, reader)) return skip();

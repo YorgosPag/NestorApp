@@ -117,8 +117,9 @@ function buildPayload(m) {
   };
 }
 
-function measure(args) {
-  const result = sweep(REPO_ROOT);
+/** `{ args, input }` — `input` = η είσοδος (ADR-924): ο `runSetRatchetCli` δίνει την όψη του commit με `--index`. */
+function measure({ args = [], input } = {}) {
+  const result = sweep(REPO_ROOT, input);
   const fatal = result.rows.filter((r) => ZERO_TOLERANCE.includes(r.state));
   if (fatal.length > 0 && !args.includes('--report')) {
     printLedger({ result });
@@ -154,7 +155,7 @@ if (require.main === module) {
     adr: 'ADR-799 Φάση 2 (CHECK 3.64)',
     skipEnv: 'SKIP_TEXT_MEASURE_TIER',
     baselineFile: BASELINE,
-    measure,
+    measure: (args, input) => measure({ args, input }),
     buildPayload,
     printReport,
     violationId: (v) => v,

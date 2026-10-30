@@ -14,7 +14,6 @@
  *   άρα ένα `data-shell-surface="bleed-narrow"` θα έδινε στο ίδιο το στοιχείο κενό σε desktop.
  */
 
-const fs = require('fs');
 const path = require('path');
 
 const { stripComments } = require('./scan');
@@ -28,10 +27,10 @@ function declaresNarrowBleed(source) {
 }
 
 /** Σάρωση του `src/`: τα αρχεία (σχετικά με τη ρίζα, `/`) που δηλώνουν bleed-στο-στενό, ταξινομημένα. */
-function findNarrowBleedFiles(repoRoot) {
+function findNarrowBleedFiles(repoRoot, input = require('../gate-input').openGateInput({ root: repoRoot })) {
   const found = [];
-  for (const file of collectTsx(path.join(repoRoot, 'src'))) {
-    const source = fs.readFileSync(file, 'utf8');
+  for (const file of collectTsx(repoRoot, input)) {
+    const source = input.read(file) ?? '';
     if (!source.includes('data-shell-bleed')) continue;
     if (declaresNarrowBleed(source)) found.push(path.relative(repoRoot, file).split(path.sep).join('/'));
   }

@@ -23,9 +23,19 @@ BASELINE_FILE=".firestore-companyid-baseline.json"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
+# `--index` (ο εκτελεστής, ADR-924): κρίνονται τα αρχεία, το tenant-config και η baseline ΤΟΥ COMMIT, όχι του δίσκου.
+# Τα μονοπάτια είναι σχετικά με τη ρίζα (εκεί τρέχει ο εκτελεστής) — το `git show :` δεν δέχεται απόλυτα.
+# shellcheck source=lib/commit-source.sh
+source "$SCRIPT_DIR/lib/commit-source.sh"
+commit_source_parse "$@"
+set -- "${COMMIT_SOURCE_ARGS[@]}"
+cd "$PROJECT_ROOT" || exit 1
+
 # Files to check: either passed as args or all ts/tsx in src/
 if [[ $# -gt 0 ]]; then
   INPUT_FILES="$@"
+elif [[ "$COMMIT_SOURCE_INDEX" -eq 1 ]]; then
+  INPUT_FILES=$(git ls-files -- 'src/*.ts' 'src/*.tsx' | grep -vE '/__tests__/|/node_modules/|\.test\.|\.spec\.|\.d\.ts$|/i18n/locales/')
 else
   INPUT_FILES=$(find "$PROJECT_ROOT/src" -type f \( -name "*.ts" -o -name "*.tsx" \) \
     ! -path "*/__tests__/*" \
@@ -54,23 +64,23 @@ fi
 # υποχρεωτικό (ADR-747), οπότε ο ΣΩΣΤΟΣ κώδικας γράφει σταθερά και όχι literal —
 # κριτήριο μόνο σε literal θα μπλόκαρε ακριβώς όσους κάνουν το σωστό.
 # =============================================================================
-TENANT_CONFIG="$PROJECT_ROOT/src/services/firestore/tenant-config.ts"
-FIELD_CONSTANTS="$PROJECT_ROOT/src/config/firestore-field-constants.ts"
+TENANT_CONFIG="src/services/firestore/tenant-config.ts"
+FIELD_CONSTANTS="src/config/firestore-field-constants.ts"
 
 declare -A USER_SCOPED_FIELD
 
-if [[ -f "$TENANT_CONFIG" ]]; then
+if has_source "$TENANT_CONFIG"; then
   while IFS= read -r line; do
     key=$(echo "$line" | sed -n "s/^[[:space:]]*\([A-Z0-9_]*\):.*/\1/p")
     field=$(echo "$line" | sed -n "s/.*fieldName:[[:space:]]*'\([^']*\)'.*/\1/p")
     [[ -z "$key" || -z "$field" ]] && continue
     alias_const=""
-    if [[ -f "$FIELD_CONSTANTS" ]]; then
-      alias_const=$(grep -oE "^[[:space:]]*[A-Z0-9_]+:[[:space:]]*'${field}'" "$FIELD_CONSTANTS" 2>/dev/null \
+    if has_source "$FIELD_CONSTANTS"; then
+      alias_const=$(read_source "$FIELD_CONSTANTS" | grep -oE "^[[:space:]]*[A-Z0-9_]+:[[:space:]]*'${field}'" 2>/dev/null \
         | head -1 | sed -n "s/^[[:space:]]*\([A-Z0-9_]*\):.*/\1/p")
     fi
     USER_SCOPED_FIELD["$key"]="${field}${alias_const:+|FIELDS\.$alias_const}"
-  done < <(grep -E "mode:[[:space:]]*'userId'" "$TENANT_CONFIG")
+  done < <(read_source "$TENANT_CONFIG" | grep -E "mode:[[:space:]]*'userId'")
 fi
 
 # =============================================================================
@@ -87,11 +97,11 @@ fi
 # =============================================================================
 declare -A PUBLIC_WORLD
 
-if [[ -f "$TENANT_CONFIG" ]]; then
+if has_source "$TENANT_CONFIG"; then
   while IFS= read -r line; do
     key=$(echo "$line" | sed -n "s/^[[:space:]]*\([A-Z0-9_]*\):.*/\1/p")
     [[ -n "$key" ]] && PUBLIC_WORLD["$key"]=1
-  done < <(grep -E "mode:[[:space:]]*'none'" "$TENANT_CONFIG" | grep -E "unscopedCategory:[[:space:]]*'public-world'")
+  done < <(read_source "$TENANT_CONFIG" | grep -E "mode:[[:space:]]*'none'" | grep -E "unscopedCategory:[[:space:]]*'public-world'")
 fi
 
 # Count violations per file
@@ -99,11 +109,13 @@ declare -A FILE_VIOLATIONS
 TOTAL_VIOLATIONS=0
 
 for file in $INPUT_FILES; do
+  # ΜΙΑ ανάγνωση ανά αρχείο, από την πηγή που κρίνεται (δίσκος ή ευρετήριο)
+  content=$(read_source "$file")
   # Skip files that don't use Firestore queries
-  if ! grep -q "query(" "$file" 2>/dev/null; then
+  if ! grep -q "query(" <<< "$content" 2>/dev/null; then
     continue
   fi
-  if ! grep -q "where(" "$file" 2>/dev/null; then
+  if ! grep -q "where(" <<< "$content" 2>/dev/null; then
     continue
   fi
 
@@ -112,7 +124,7 @@ for file in $INPUT_FILES; do
   while IFS= read -r match; do
     lineno=$(echo "$match" | cut -d: -f1)
     # Get 12-line block from query( start
-    block=$(sed -n "${lineno},$((lineno+11))p" "$file" 2>/dev/null)
+    block=$(sed -n "${lineno},$((lineno+11))p" <<< "$content" 2>/dev/null)
     if echo "$block" | grep -q "where(" && ! echo "$block" | grep -q "companyId"; then
       # Δεύτερη ερώτηση: μήπως η συλλογή είναι απομονωμένη ανά ΑΝΘΡΩΠΟ; Το μπλοκ
       # πρέπει να ονομάζει ΚΑΙ τη συλλογή ΚΑΙ το πεδίο που δηλώνει το SSoT — αν
@@ -137,7 +149,7 @@ for file in $INPUT_FILES; do
         count=$((count + 1))
       fi
     fi
-  done < <(grep -n "query(" "$file" 2>/dev/null)
+  done < <(grep -n "query(" <<< "$content" 2>/dev/null)
 
   if [[ $count -gt 0 ]]; then
     # Normalize: keep only src/... path
@@ -153,8 +165,7 @@ if [[ $TOTAL_VIOLATIONS -eq 0 ]]; then
 fi
 
 # Load baseline
-BASELINE_PATH="$PROJECT_ROOT/$BASELINE_FILE"
-if [[ ! -f "$BASELINE_PATH" ]]; then
+if ! has_source "$BASELINE_FILE"; then
   # No baseline = all violations are new = BLOCK
   echo -e "${RED}🚫 Firestore companyId Check: No baseline file found${NC}"
   echo -e "${RED}   Run: npm run firestore:audit to generate baseline${NC}"
@@ -171,7 +182,7 @@ for normalized in "${!FILE_VIOLATIONS[@]}"; do
   # Get baseline count: parse JSON with grep
   # Escape slashes for grep
   escaped=$(echo "$normalized" | sed 's|/|\\/|g')
-  baseline_count=$(grep "\"${normalized}\"" "$BASELINE_PATH" 2>/dev/null | grep -o '[0-9]*' | tail -1)
+  baseline_count=$(read_source "$BASELINE_FILE" | grep "\"${normalized}\"" 2>/dev/null | grep -o '[0-9]*' | tail -1)
   if [[ -z "$baseline_count" ]]; then
     baseline_count=0
   fi

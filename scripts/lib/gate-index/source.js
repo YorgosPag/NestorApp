@@ -16,7 +16,6 @@
 
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 
@@ -66,17 +65,18 @@ function byGateNumber(a, b) {
  *    ο ίδιος μηχανισμός έπιασε παραγόμενο αρχείο μπαγιάτικο ΤΕΣΣΕΡΙΣ ΜΗΝΕΣ με όλες τις πύλες
  *    πράσινες.
  */
-function readGateSources(root = process.cwd()) {
-  const dir = path.join(root, GATES_DIR);
-  if (!fs.existsSync(dir)) throw new Error(`Δεν υπάρχει ${GATES_DIR}/ — η πηγή λείπει`);
-
-  const files = fs.readdirSync(dir).filter((f) => FILE_RE.test(f)).sort();
-  if (files.length === 0) throw new Error(`${GATES_DIR}/ κενό — άρνηση παραγωγής`);
+function readGateSources(root = process.cwd(), input = require('../gate-input').openGateInput({ root })) {
+  // ADR-924 Φ2 — από την ΕΙΣΟΔΟ: με `--index` το αποτύπωμα του COMMIT. Μόνο άμεσα παιδιά, όπως το `readdirSync`.
+  const files = input.files([GATES_DIR], { accept: (rel) => path.posix.dirname(rel) === GATES_DIR })
+    .map((abs) => path.posix.basename(abs))
+    .filter((f) => FILE_RE.test(f))
+    .sort();
+  if (files.length === 0) throw new Error(`${GATES_DIR}/ κενό ή απόν (${input.mode}) — άρνηση παραγωγής`);
 
   const gates = [];
   const hash = crypto.createHash('sha256');
   for (const f of files) {
-    const raw = fs.readFileSync(path.join(dir, f), 'utf8');
+    const raw = input.read(`${GATES_DIR}/${f}`);
     // Το αποτύπωμα δένει ΟΝΟΜΑ + ΠΕΡΙΕΧΟΜΕΝΟ: μετονομασία χωρίς αλλαγή περιεχομένου είναι
     // αλλαγή, και πρέπει να φαίνεται.
     hash.update(f).update('\0').update(raw).update('\0');

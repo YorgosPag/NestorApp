@@ -68,6 +68,7 @@ const path = require('node:path');
 const ratchet = require('./lib/ratchet-baseline');
 const { takeInventory, REGISTRY_FILE } = require('./lib/authority-registry/inventory');
 const { STATES, BLOCKING, judge, idsOf } = require('./lib/authority-registry/judge');
+const { perInput } = require('./lib/gate-input');
 
 const ROOT = ratchet.PROJECT_ROOT;
 const BASELINE_FILE = path.join(ROOT, '.authority-registry-baseline.json');
@@ -119,20 +120,17 @@ function triggers(stagedFiles, readFile) {
  * **11,1s → 3,9s**. Η μέτρηση είναι καθαρή συνάρτηση του δέντρου μέσα σε μία
  * εκτέλεση, άρα η μνήμη είναι ταυτότητα, όχι προσέγγιση.
  */
-let memo = null;
-
-function measure() {
-  if (memo) return memo;
-  const verdict = judge(takeInventory(ROOT));
+// ADR-924: η μνήμη είναι ΑΝΑ ΕΙΣΟΔΟ — η όψη του commit και ο δίσκος είναι δύο δέντρα.
+const measure = perInput(ROOT, (input) => {
+  const verdict = judge(takeInventory(ROOT, {}, input));
   const blocking = verdict.rows.filter((r) => BLOCKING.includes(r.state));
-  memo = {
+  return {
     verdict,
     blocking,
     violationIds: idsOf(verdict, STATES.INLINE_DECIDER).sort(),
     declarations: idsOf(verdict, STATES.DECLARED_DECIDER).sort(),
   };
-  return memo;
-}
+});
 
 /** Καθαρίζει τη μνήμη — **μόνο** για τις άγκυρες, που κρίνουν πολλά δέντρα στη σειρά. */
 function resetMemo() { memo = null; }
@@ -168,14 +166,11 @@ function buildPayload(m) {
       + m.blocking.map((r) => `   [${r.state}] ${r.id} — ${r.detail}`).join('\n'),
     );
   }
-  return {
+  return ratchet.ratchetPayload(m, {
     _doc: 'CHECK 3.68 / ADR-801 §4 — violations = inline κριτές (Κ1) · declarations = κλειστό σύνολο εξαιρέσεων (Κ2).',
     _warning: 'Ο Κ3 (φάντασμα ρόλου) και οι ορφανές δηλώσεις είναι ZERO-TOLERANCE και ΔΕΝ μπαίνουν ΠΟΤΕ εδώ.',
     _health: 'Ο αριθμός ΔΕΝ είναι δείκτης υγείας: μετρά «όσα δεν ρωτούν ΑΚΟΜΗ τον κριτή». Θεραπεία = decideCapability.',
-    generatedAt: new Date().toISOString().slice(0, 10),
-    violations: m.violationIds,
-    declarations: m.declarations,
-  };
+  });
 }
 
 function printReport(m) {
@@ -197,7 +192,7 @@ const DESCRIPTOR = {
   adr: 'ADR-801 §4 (CHECK 3.68)',
   skipEnv: 'SKIP_AUTHORITY_REGISTRY',
   baselineFile: BASELINE_FILE,
-  measure,
+  measure: (_args, input) => measure({ input }),
   buildPayload,
   printReport,
   labels: { violations: 'inline κριτές', declarations: 'δηλωμένες εξαιρέσεις' },
@@ -218,48 +213,35 @@ const DESCRIPTOR = {
   },
 };
 
-async function main() {
-  if (process.env.SKIP_AUTHORITY_REGISTRY === '1') {
-    console.log('  ⏭ CHECK 3.68 παραλείφθηκε (SKIP_AUTHORITY_REGISTRY=1)');
-    return process.exit(0);
-  }
-  const args = process.argv.slice(2);
-  const explicit = args.includes('--report') || args.includes('--write-baseline') || args.includes('--all');
-  const staged = args.filter((a) => !a.startsWith('-'));
-  // ⚡ Η σκανδάλη αποφασίζει **ΑΝ** τρέχει, ποτέ **ΠΟΣΟ** σαρώνει: μερική
-  //    ανάλυση είναι αναληθής όταν το ερώτημα αφορά ΟΛΟ το δέντρο (3.55).
-  if (!explicit && staged.length > 0) {
-    const fs = require('node:fs');
-    const read = (rel) => {
-      try { return fs.readFileSync(path.join(ROOT, rel), 'utf8'); } catch { return null; }
-    };
-    if (!triggers(staged, read)) return process.exit(0);
-  }
+function printBlocking(m) {
+  console.error(`\n❌ CHECK 3.68 — ${m.blocking.length} μπλοκάρουσα κατάσταση(εις):\n`);
+  for (const r of m.blocking) console.error(`   🚫 [${r.state}] ${r.id}\n      ${r.detail}`);
+  console.error('\n   Θεραπεία ανά κατάσταση — ΔΕΝ είναι η ίδια:');
+  console.error('     ghost-role            → ΣΒΗΣΕ τον νεκρό κλάδο (δεν πυροδοτεί ΠΟΤΕ),');
+  console.error('                             ή δήλωσέ το στο legacyRoleNames[] ΜΕ ΛΟΓΟ αν ζει στα ΔΕΔΟΜΕΝΑ.');
+  console.error('     orphan-declaration    → σβήσε τη δήλωση από το μητρώο.');
+  console.error('     orphan-legacy         → σβήσε το legacy όνομα: δεν στέκεται πουθενά.');
+  console.error('     reasonless-declaration→ γράψε λόγο ≥40 χαρακτήρων.');
+  console.error('     vocabulary-drift      → ο δείκτης του μητρώου πάλιωσε έναντι του GLOBAL_ROLES.');
+  console.error('     undeclared-role-guard → ΑΝΥΨΩΣΕ τη στη ΔΗΛΩΣΗ της διαδρομής:');
+  console.error('                             withAuth(h, { requiredGlobalRoles: BYPASS_ROLES })');
+  console.error('                             ή ADMINISTRATIVE_ROLES — ΠΟΤΕ ωμό σύνολο ονομάτων (ADR-703).');
+  console.error('                             Αν ΟΦΕΙΛΕΙ να ζει inline (κοινός φάκελος, όχι διαδρομή):');
+  console.error(`                             δήλωσέ τον στο ${REGISTRY_FILE} → roleGuards[], ΜΕ ΛΟΓΟ ≥40.`);
+  console.error('     orphan-guard-declaration → ο φρουρός έφυγε ή άλλαξε συνθήκη: σβήσε/ενημέρωσε τη δήλωση.');
+  console.error(`\n   Αναφορά: ${DESCRIPTOR.commands.report}`);
+}
 
-  if (!args.includes('--report') && !args.includes('--write-baseline')) {
-    const m = measure();
-    console.log(ledgerLine(m));
-    if (m.blocking.length > 0) {
-      console.error(`\n❌ CHECK 3.68 — ${m.blocking.length} μπλοκάρουσα κατάσταση(εις):\n`);
-      for (const r of m.blocking) console.error(`   🚫 [${r.state}] ${r.id}\n      ${r.detail}`);
-      console.error('\n   Θεραπεία ανά κατάσταση — ΔΕΝ είναι η ίδια:');
-      console.error('     ghost-role            → ΣΒΗΣΕ τον νεκρό κλάδο (δεν πυροδοτεί ΠΟΤΕ),');
-      console.error('                             ή δήλωσέ το στο legacyRoleNames[] ΜΕ ΛΟΓΟ αν ζει στα ΔΕΔΟΜΕΝΑ.');
-      console.error('     orphan-declaration    → σβήσε τη δήλωση από το μητρώο.');
-      console.error('     orphan-legacy         → σβήσε το legacy όνομα: δεν στέκεται πουθενά.');
-      console.error('     reasonless-declaration→ γράψε λόγο ≥40 χαρακτήρων.');
-      console.error('     vocabulary-drift      → ο δείκτης του μητρώου πάλιωσε έναντι του GLOBAL_ROLES.');
-      console.error('     undeclared-role-guard → ΑΝΥΨΩΣΕ τη στη ΔΗΛΩΣΗ της διαδρομής:');
-      console.error('                             withAuth(h, { requiredGlobalRoles: BYPASS_ROLES })');
-      console.error('                             ή ADMINISTRATIVE_ROLES — ΠΟΤΕ ωμό σύνολο ονομάτων (ADR-703).');
-      console.error('                             Αν ΟΦΕΙΛΕΙ να ζει inline (κοινός φάκελος, όχι διαδρομή):');
-      console.error(`                             δήλωσέ τον στο ${REGISTRY_FILE} → roleGuards[], ΜΕ ΛΟΓΟ ≥40.`);
-      console.error('     orphan-guard-declaration → ο φρουρός έφυγε ή άλλαξε συνθήκη: σβήσε/ενημέρωσε τη δήλωση.');
-      console.error(`\n   Αναφορά: ${DESCRIPTOR.commands.report}`);
-      return process.exit(1);
-    }
-  }
-  return ratchet.runSetRatchetCli(DESCRIPTOR, process.argv);
+/** Μερική ανάλυση είναι αναληθής όταν το ερώτημα αφορά ΟΛΟ το δέντρο (3.55): η σκανδάλη αποφασίζει μόνο ΑΝ. */
+function main(argv = process.argv) {
+  return ratchet.runGuardedSetRatchetCli({
+    descriptor: DESCRIPTOR,
+    check: '3.68',
+    triggers: (staged, input) => triggers(staged, (rel) => input.read(rel)),
+    ledgerLine,
+    blockingOf: (m) => m.blocking,
+    printBlocking,
+  }, argv);
 }
 
 if (require.main === module) {

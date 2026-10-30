@@ -35,6 +35,14 @@ case "$PWD" in
         ;;
 esac
 
+# ─── Ονόματα αρχείων ΑΥΤΟΥΣΙΑ (ADR-924 Φ5, §8.12) ─────────────────────────────
+# 🔴 ΜΕΤΡΗΜΕΝΟ 2026-10-30: χωρίς αυτό το `git diff --cached --name-only` γράφει ελληνικό όνομα ως
+#    `"src/\316\221…"` (core.quotepath) ⇒ ΚΑΘΕ λίστα σταδιοποιημένων του hook — άρα ΚΑΘΕ πύλη — έβλεπε σκουπίδι,
+#    και το `[[ -f ]]` το έκοβε σιωπηλά (ίδια κλάση με το `-z` που λύθηκε στις πύλες, §8.9). Μία ρύθμιση εδώ,
+#    εξαγόμενη: ισχύει για κάθε κλήση git του hook ΚΑΙ των πυλών-παιδιών (git ≥ 2.31). Ονόματα με αλλαγή γραμμής
+#    δεν υπάρχουν στο repo· όποια λίστα το χρειάζεται εγγυημένα, παίρνει `-z` (`listStagedPaths`).
+export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.quotepath GIT_CONFIG_VALUE_0=off
+
 # ─── Staged file sets ─────────────────────────────────────────────────────────
 STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
 # CHECK 3.79 (ADR-858): σκίαση γεννιέται ΜΟΝΟ όταν εμφανίζεται αρχείο — προσθήκη ή
@@ -79,7 +87,7 @@ fi
 CUSTOM_SCRIPT="scripts/validate-project-rules.sh"
 if [[ -f "$CUSTOM_SCRIPT" && -n "$TS_FILES" ]]; then
     echo -e "${YELLOW}🔍 Running project-specific checks...${NC}"
-    CUSTOM_OUTPUT=$(bash "$CUSTOM_SCRIPT" $TS_FILES 2>&1)
+    CUSTOM_OUTPUT=$(bash "$CUSTOM_SCRIPT" --index $TS_FILES 2>&1)   # ADR-924 Φ5: το κείμενο ΤΟΥ COMMIT
     CUSTOM_EXIT=$?
     if [[ $CUSTOM_EXIT -ne 0 ]]; then
         echo ""
@@ -139,9 +147,15 @@ AUDIT_CATALOGS_TRIGGER=$(echo "$STAGED_FILES" | grep -E '(src/config/audit-value
 SRC_TS_FILES=$(echo "$STAGED_FILES" | grep -E '^src/.*\.(ts|tsx)$' || true)
 
 # Firestore companyId: only files containing both query() and where()
+# ADR-924 Φ5: η σκανδάλη κρίνει το κείμενο ΤΟΥ COMMIT (`read_source` πάνω στο ευρετήριο), όχι τον δίσκο — αλλιώς μια
+# ξένη αστάδιοποίητη αλλαγή αποφάσιζε αν η 3.10 θα τρέξει. Ο hook κρίνει ΠΑΝΤΑ το commit ⇒ `--index`.
+# shellcheck source=../lib/commit-source.sh
+source scripts/lib/commit-source.sh
+commit_source_parse --index
 QUERY_FILES=""
 for f in $TS_STAGED; do
-    [[ -f "$f" ]] && grep -q "query(" "$f" 2>/dev/null && grep -q "where(" "$f" 2>/dev/null && QUERY_FILES="$QUERY_FILES
+    content=$(read_source "$f")
+    grep -q "query(" <<< "$content" 2>/dev/null && grep -q "where(" <<< "$content" 2>/dev/null && QUERY_FILES="$QUERY_FILES
 $f"
 done
 QUERY_FILES=$(echo "$QUERY_FILES" | grep -v '^$' || true)
@@ -156,7 +170,7 @@ QUERY_FILES=$(echo "$QUERY_FILES" | grep -v '^$' || true)
 
 if [[ -n "$TS_FILES" ]]; then
     if [[ -f "scripts/check-hardcoded-strings.sh" ]]; then
-        bash scripts/check-hardcoded-strings.sh $TS_FILES
+        bash scripts/check-hardcoded-strings.sh --index $TS_FILES
         if [[ $? -ne 0 ]]; then exit 1; fi
     fi
     if [[ -f "scripts/check-ui-hardcoded-strings.sh" ]]; then
@@ -180,7 +194,8 @@ if [[ -z "${SKIP_JSCPD_DIFF:-}" ]] && [[ -f "scripts/check-jscpd-ratchet.js" ]] 
         | grep -v '__tests__' | grep -v '\.test\.' | grep -v '\.spec\.' | grep -v '\.d\.ts' \
         | grep -v '\.stories\.' || true)
     if [[ -n "$JSCPD_DIFF_FILES" ]]; then
-        node scripts/check-jscpd-ratchet.js --diff $JSCPD_DIFF_FILES
+        # ADR-924 Φ5: `--index` ⇒ τα σταδιοποιημένα ΟΠΩΣ ΘΑ ΔΕΣΜΕΥΤΟΥΝ (στιγμιότυπο ευρετηρίου), όχι ο δίσκος
+        node scripts/check-jscpd-ratchet.js --diff --index $JSCPD_DIFF_FILES
         if [[ $? -ne 0 ]]; then
             echo ""
             echo -e "${YELLOW}  CHECK 3.28 — token-based clone(s) introduced by this commit (ADR-583).${NC}"
@@ -204,7 +219,7 @@ fi
 if [[ -z "${SKIP_DXF_TSC_SMOKE:-}" ]] && [[ -f "scripts/check-dxf-tsc-ratchet.js" ]]; then
     DXF_TSC_FILES=$(echo "$SRC_TS_FILES" | grep '^src/subapps/dxf-viewer/' || true)
     if [[ -n "$DXF_TSC_FILES" ]]; then
-        node scripts/check-dxf-tsc-ratchet.js
+        node scripts/check-dxf-tsc-ratchet.js --index
         if [[ $? -ne 0 ]]; then
             echo ""
             echo -e "${YELLOW}  CHECK 3.29 — the DXF Viewer tsc baseline is missing or invalid (ADR-663).${NC}"
@@ -235,7 +250,7 @@ fi
 if [[ -z "${SKIP_BARREL_DEADCODE_SMOKE:-}" ]] && [[ -f "scripts/check-barrel-deadcode-ratchet.js" ]]; then
     BARREL_DEADCODE_FILES=$(echo "$SRC_TS_FILES" | grep '^src/subapps/dxf-viewer/' || true)
     if [[ -n "$BARREL_DEADCODE_FILES" ]]; then
-        node scripts/check-barrel-deadcode-ratchet.js --smoke
+        node scripts/check-barrel-deadcode-ratchet.js --smoke --index
         if [[ $? -ne 0 ]]; then
             echo ""
             echo -e "${YELLOW}  CHECK 3.30 — the barrel-aware dead-export baseline is missing or invalid (ADR-700 §1).${NC}"
@@ -273,7 +288,7 @@ fi
 # ανέλεγκτο. Το κατώφλι είναι βαθμονομημένο στο μοντέλο· το μοντέλο είναι μέρος του προτύπου.
 if [[ -z "${SKIP_CHART_PALETTE:-}" ]] && [[ -f "scripts/validate-chart-palette.js" ]]; then
     if echo "$STAGED_FILES" | grep -qE '^(src/app/globals\.css|scripts/lib/contrast/cvd\.js|scripts/validate-chart-palette\.js)$'; then
-        node scripts/validate-chart-palette.js
+        node scripts/validate-chart-palette.js --index
         if [[ $? -ne 0 ]]; then
             echo ""
             echo -e "${RED}  🚫 COMMIT BLOCKED — CHECK 3.32 chart palette (ADR-710 §10)${NC}"

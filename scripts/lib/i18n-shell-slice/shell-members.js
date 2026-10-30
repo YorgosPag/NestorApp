@@ -62,7 +62,7 @@ function relTo(prefix, abs) {
 
 function traceKey(root, config) {
   const inputs = GI.computeGlobalInputs(root, config, GI.CODE_ROOT, GI.GLOBAL_INPUTS.filter(input => TRACE_INPUTS.includes(input.id)));
-  const self = sha256(toLf(fs.readFileSync(__filename, 'utf8')));
+  const self = sha256(toLf(require('../gate-trap').readRunningCode(__filename)));   // ο κώδικας που τρέχει (§4.2)
   return sha256(stableStringify({ schema: TRACE_SCHEMA, namespace: SC.cacheNamespace(root, config), inputs, self }));
 }
 

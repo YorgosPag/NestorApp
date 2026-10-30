@@ -23,8 +23,9 @@
  *
  * ## 🔴 ΓΙΑΤΙ ΚΑΜΙΑ ΝΕΑ ΜΗΧΑΝΗ AST
  * Το **CHECK 3.23** (`check-native-tooltip.js`) ρωτά **την ίδια ερώτηση σε άλλο γνώρισμα JSX**:
- * «ποια στοιχεία φέρουν το γνώρισμα Χ;», με `@typescript-eslint/parser`. Αντιγράφεται ο
- * **σκελετός** (walker + συλλογή αρχείων), όχι το κριτήριο — γι' αυτό και τα δύο μένουν μικρά.
+ * «ποια στοιχεία φέρουν το γνώρισμα Χ;», με `@typescript-eslint/parser`. Ο **σκελετός** (walker +
+ * αναλυτής) ζει ΜΙΑ φορά στο `scripts/lib/jsx-ast.js` (ADR-924 Φ3 — ήταν τρία αντίγραφα: 3.23 · 3.24 · 3.48)·
+ * κάθε πύλη κρατά μόνο το κριτήριό της.
  *
  * ## ΟΙ ΚΑΤΑΣΤΑΣΕΙΣ — ΕΠΤΑ, ΡΗΤΕΣ, ΚΑΙ ΤΟ ΑΘΡΟΙΣΜΑ ΚΛΕΙΝΕΙ
  * ```
@@ -62,8 +63,9 @@
 
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
+const { openGateInput, INDEX_FLAG } = require('./lib/gate-input');
+const { walkAst, parseJsx } = require('./lib/jsx-ast');
 
 process.chdir(path.resolve(__dirname, '..'));
 
@@ -90,19 +92,6 @@ const CLEAN_STATES = ['sentinel', 'literal-ok'];
 const ALL_STATES = [...BLOCKING_STATES, ...DECLARED_GAPS, ...CLEAN_STATES];
 
 // ─── AST ─────────────────────────────────────────────────────────────────────
-
-function walk(node, visitor) {
-  if (!node || typeof node !== 'object') return;
-  visitor(node);
-  for (const key of Object.keys(node)) {
-    const child = node[key];
-    if (Array.isArray(child)) {
-      child.forEach(c => walk(c, visitor));
-    } else if (child && typeof child === 'object' && child.type) {
-      walk(child, visitor);
-    }
-  }
-}
 
 /** Είναι αυτό το άνοιγμα στοιχείου ένα `SelectItem` (ή η ωμή του μορφή); */
 function isSelectItem(nameNode) {
@@ -162,25 +151,12 @@ function classify(node) {
   return 'expression-unanalyzable';
 }
 
-function scanFile(filePath) {
-  let parser;
-  try {
-    parser = require('@typescript-eslint/parser');
-  } catch {
-    return null;
-  }
-
-  let ast;
-  try {
-    ast = parser.parse(fs.readFileSync(filePath, 'utf8'), {
-      jsx: true, range: true, loc: true, errorOnUnknownASTType: false,
-    });
-  } catch {
-    return null;
-  }
+function scanFile(filePath, input = INPUT) {
+  const ast = parseJsx(input.read(filePath) ?? '');
+  if (!ast) return null;
 
   const found = [];
-  walk(ast, node => {
+  walkAst(ast, node => {
     if (node.type !== 'JSXOpeningElement') return;
     if (!isSelectItem(node.name)) return;
     const state = classify(node);
@@ -197,15 +173,9 @@ function scanFile(filePath) {
 
 // ─── Συλλογή αρχείων ─────────────────────────────────────────────────────────
 
-function collectAllFiles(dir) {
-  const out = [];
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name === 'node_modules') continue;
-    const full = path.join(dir, entry.name).replace(/\\/g, '/');
-    if (entry.isDirectory()) out.push(...collectAllFiles(full));
-    else if (entry.name.endsWith('.tsx')) out.push(full);
-  }
-  return out;
+/** Τα `.tsx` του φακέλου — από την ΕΙΣΟΔΟ (ADR-924 Φ3: ήταν δικός του `readdirSync`). */
+function collectAllFiles(dir, input = INPUT) {
+  return input.files([dir], { accept: (rel) => rel.endsWith('.tsx') }).map(input.rel);
 }
 
 function collectFiles() {
@@ -215,49 +185,43 @@ function collectFiles() {
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 
+// ADR-924 — η είσοδος της πύλης: με `--index` (εκτελεστής) τα αρχεία και το κείμενο ΤΟΥ COMMIT.
+const INPUT = openGateInput({ root: process.cwd(), index: process.argv.includes(INDEX_FLAG) });
+
 const RED = '\x1b[31m';
 const GREEN = '\x1b[32m';
 const YELLOW = '\x1b[33m';
 const NC = '\x1b[0m';
 
-const files = collectFiles();
-if (!files.length) process.exit(0);
-
-const ledger = Object.fromEntries(ALL_STATES.map(s => [s, 0]));
-const blocked = [];
-let total = 0;
-
-for (const file of files) {
-  if (!file.endsWith('.tsx') || !fs.existsSync(file)) continue;
-  const found = scanFile(file);
-  if (found === null) continue;
-  for (const hit of found) {
-    total += 1;
-    ledger[hit.state] += 1;
-    if (BLOCKING_STATES.includes(hit.state)) blocked.push({ file, ...hit });
+/** Η λογιστική των `SelectItem` στα αρχεία — ΜΟΝΟ από την είσοδο (ADR-924: ελέγξιμο χωρίς υποδιεργασία). */
+function measure(files, input = INPUT) {
+  const ledger = Object.fromEntries(ALL_STATES.map(s => [s, 0]));
+  const blocked = [];
+  let total = 0;
+  for (const file of files) {
+    if (!file.endsWith('.tsx') || !input.exists(file)) continue;
+    const found = scanFile(file, input);
+    if (found === null) continue;
+    for (const hit of found) {
+      total += 1;
+      ledger[hit.state] += 1;
+      if (BLOCKING_STATES.includes(hit.state)) blocked.push({ file, ...hit });
+    }
   }
+  return { ledger, blocked, total };
 }
 
-// 🔴 Κλειστή λογιστική, fail-closed: αν το άθροισμα των κάδων δεν ισούται με το πλήθος των
-// στοιχείων, κάποιο χάθηκε — και η πύλη θα έλεγε «καθαρό» για κάτι που δεν κοίταξε.
-const summed = ALL_STATES.reduce((acc, s) => acc + ledger[s], 0);
-if (summed !== total) {
-  console.error(`${RED}CHECK 3.48: η λογιστική δεν κλείνει (${summed} ≠ ${total}).${NC}`);
-  process.exit(1);
-}
-
-if (REPORT) {
-  console.log(`\nCHECK 3.48 — απογραφή «SelectItem» σε ${files.length} αρχεία .tsx\n`);
+function printReport(fileCount, ledger, total) {
+  console.log(`\nCHECK 3.48 — απογραφή «SelectItem» σε ${fileCount} αρχεία .tsx\n`);
   for (const state of ALL_STATES) {
     const mark = BLOCKING_STATES.includes(state) ? '⛔' : DECLARED_GAPS.includes(state) ? '🔶' : '✅';
     console.log(`  ${mark} ${state.padEnd(24)} ${ledger[state]}`);
   }
   console.log(`  ${''.padEnd(27)} ─────`);
   console.log(`  ${'ΣΥΝΟΛΟ'.padEnd(27)} ${total}\n`);
-  process.exit(0);
 }
 
-if (blocked.length) {
+function printBlocked(blocked) {
   console.log(`\n${RED}═══════════════════════════════════════════════════════════════${NC}`);
   console.log(`${RED}  🚫 COMMIT BLOCKED — κενό <SelectItem> (CHECK 3.48)${NC}`);
   console.log(`${RED}  Το Radix Select δεσμεύει το '' — το item ΡΙΧΝΕΙ ΟΛΗ την επιφάνεια${NC}`);
@@ -270,12 +234,34 @@ if (blocked.length) {
   console.log(`       onValueChange: if (isSelectClearValue(v)) setDraft(undefined)`);
   console.log(`  ${YELLOW}Ή χρησιμοποίησε το <ClearableSelect> (@/components/ui/clearable-select),${NC}`);
   console.log(`  ${YELLOW}που κάνει το '' δομικά αδύνατο ως τιμή item.${NC}\n`);
-  process.exit(1);
 }
 
-if (SCAN_ALL) {
-  const gaps = DECLARED_GAPS.reduce((acc, s) => acc + ledger[s], 0);
-  console.log(`${GREEN}✅ CHECK 3.48 — κανένα κενό SelectItem${NC} (${total} στοιχεία· ${gaps} ανεπίλυτα, δηλωμένο κενό)`);
+function main() {
+  const files = collectFiles();
+  if (!files.length) return 0;
+  const { ledger, blocked, total } = measure(files);
+
+  // 🔴 Κλειστή λογιστική, fail-closed: αν το άθροισμα των κάδων δεν ισούται με το πλήθος των
+  // στοιχείων, κάποιο χάθηκε — και η πύλη θα έλεγε «καθαρό» για κάτι που δεν κοίταξε.
+  const summed = ALL_STATES.reduce((acc, s) => acc + ledger[s], 0);
+  if (summed !== total) {
+    console.error(`${RED}CHECK 3.48: η λογιστική δεν κλείνει (${summed} ≠ ${total}).${NC}`);
+    return 1;
+  }
+  if (REPORT) {
+    printReport(files.length, ledger, total);
+    return 0;
+  }
+  if (blocked.length) {
+    printBlocked(blocked);
+    return 1;
+  }
+  if (SCAN_ALL) {
+    const gaps = DECLARED_GAPS.reduce((acc, s) => acc + ledger[s], 0);
+    console.log(`${GREEN}✅ CHECK 3.48 — κανένα κενό SelectItem${NC} (${total} στοιχεία· ${gaps} ανεπίλυτα, δηλωμένο κενό)`);
+  }
+  return 0;
 }
 
-process.exit(0);
+if (require.main === module) process.exit(main());
+module.exports = { measure, collectAllFiles };

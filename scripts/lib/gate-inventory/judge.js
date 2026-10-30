@@ -25,6 +25,7 @@
 'use strict';
 
 const { byGateNumber } = require('./inventory');
+const { closedTally, idsOf } = require('../gate-ledger');
 
 const STATES = {
   UNDOCUMENTED: 'undocumented-gate',
@@ -83,16 +84,7 @@ function judge(inv) {
 }
 
 /** Κλειστή λογιστική fail-closed: άγνωστη κατάσταση ⇒ `throw` **με όνομα**. */
-function tallyOf(rows) {
-  const known = new Set(Object.values(STATES));
-  const tally = Object.fromEntries([...known].map((s) => [s, 0]));
-  for (const r of rows) {
-    if (!known.has(r.state)) throw new Error(`CHECK 3.66 — άγνωστη κατάσταση «${r.state}»`);
-    tally[r.state] += 1;
-  }
-  return tally;
-}
-
-const idsOf = (verdict, state) => verdict.rows.filter((r) => r.state === state).map((r) => r.id);
+/** Κλειστή λογιστική (SSoT `gate-ledger`). */
+const tallyOf = (rows) => closedTally(rows, STATES, '3.66');
 
 module.exports = { STATES, BLOCKING, MIN_REASON_LENGTH, judge, tallyOf, idsOf };

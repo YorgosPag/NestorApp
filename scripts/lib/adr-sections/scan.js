@@ -31,7 +31,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { execFileSync } = require('node:child_process');
+
 
 /**
  * Η γραμματική ταυτότητας ενότητας: αυθαίρετα επίπεδα ψηφίων, με προαιρετικό
@@ -56,13 +56,9 @@ const toPosix = p => p.replace(/\\/g, '/');
  * Ό,τι θα περιέχει το commit — **το index του git, όχι ο δίσκος**.
  * Ο δίσκος βλέπει untracked προσχέδια ⇒ άλλο αποτέλεσμα ανά πράκτορα (ADR-779).
  */
-function listIndexedFiles(cwd) {
-  const out = execFileSync('git', ['ls-files', '-z'], {
-    cwd,
-    maxBuffer: 1024 * 1024 * 256,
-    encoding: 'utf8',
-  });
-  return out.split('\0').filter(Boolean);
+function listIndexedFiles(cwd, input = null) {
+  // ADR-924 — ΕΝΑ σημείο για «τι περιέχει το ευρετήριο»: η είσοδος της πύλης (ήταν δίδυμο `git ls-files` με το 3.49).
+  return (input || require('../gate-input').openGateInput({ root: cwd })).tracked();
 }
 
 /**
@@ -176,8 +172,12 @@ function scanReferences(text, { file, familyIds, ownFamily = null }) {
   return refs;
 }
 
-/** Διαβάζει ένα tracked αρχείο· `null` αν δεν είναι αναγνώσιμο κείμενο. */
-function readText(projectRoot, rel) {
+/**
+ * Διαβάζει ένα tracked αρχείο· `null` αν δεν είναι αναγνώσιμο κείμενο. `input` (ADR-924): η είσοδος της πύλης —
+ * με `--index` το κείμενο ΤΟΥ COMMIT (η λίστα ήταν ήδη το ευρετήριο· το κείμενο ερχόταν από τον δίσκο).
+ */
+function readText(projectRoot, rel, input = null) {
+  if (input) return input.read(rel);
   try {
     return fs.readFileSync(path.join(projectRoot, rel), 'utf8');
   } catch {

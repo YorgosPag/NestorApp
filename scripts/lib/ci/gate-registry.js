@@ -15,9 +15,9 @@
  * «ανεκτό πλήθος απαρατήρητων πυλών» είναι ανεκτό πλήθος αόρατων αποτυχιών παραγωγής.
  */
 
-const fs = require('fs');
 const path = require('path');
 
+const { openGateInput } = require('../gate-input');
 const {
   listWorkflowFiles,
   readWorkflowName,
@@ -85,20 +85,20 @@ function auditRegistryShape(registry) {
  * Μητρώο ↔ δίσκος: κάθε αρχείο έχει εγγραφή, κάθε εγγραφή έχει αρχείο, τα ονόματα
  * συμφωνούν, και το όνομα φέρει το πρόθεμα του tier του.
  */
-function auditFilesystem(registry, workflowsDir) {
+function auditFilesystem(registry, workflowsDir, input) {
   const findings = [];
   const gatesByFile = new Map(registry.gates.map((gate) => [gate.file, gate]));
   const aggregatorFile = registry.aggregator.file;
   const prefixOf = (tier) => registry.namePrefix.replace('{tier}', String(tier));
 
-  for (const file of listWorkflowFiles(workflowsDir)) {
+  for (const file of listWorkflowFiles(workflowsDir, input)) {
     if (file === aggregatorFile) continue;
     const gate = gatesByFile.get(file);
     if (!gate) {
       findings.push(finding('unregistered', file, 'πρόσθεσέ το στο `.ci-gate-tiers.json` με tier + why'));
       continue;
     }
-    const actual = readWorkflowName(path.join(workflowsDir, file));
+    const actual = readWorkflowName(path.join(workflowsDir, file), input.readRequired);
     if (actual !== gate.name) {
       findings.push(finding('name-drift', file, `αρχείο: «${actual}» · μητρώο: «${gate.name}»`));
     }
@@ -110,7 +110,7 @@ function auditFilesystem(registry, workflowsDir) {
   }
 
   for (const gate of registry.gates) {
-    if (!fs.existsSync(path.join(workflowsDir, gate.file))) {
+    if (!input.exists(path.join(workflowsDir, gate.file))) {
       findings.push(finding('orphan-registry', gate.file, 'το αρχείο δεν υπάρχει — μετονομάστηκε ή διαγράφηκε;'));
     }
   }
@@ -125,13 +125,13 @@ function auditFilesystem(registry, workflowsDir) {
  * επιπλέον τρέξιμο runner για κάθε ολοκλήρωση κάθε πύλης, σε κάθε push (26 πύλες × κάθε
  * push), τη στιγμή που η κατάσταση των Tier 2/3 προβάλλεται ούτως ή άλλως από το API.
  */
-function auditWatchList(registry, workflowsDir) {
+function auditWatchList(registry, workflowsDir, input) {
   const aggregatorPath = path.join(workflowsDir, registry.aggregator.file);
-  if (!fs.existsSync(aggregatorPath)) {
+  if (!input.exists(aggregatorPath)) {
     return [finding('orphan-registry', registry.aggregator.file, 'λείπει ο ίδιος ο συγκεντρωτής')];
   }
 
-  const watched = new Set(readWorkflowRunWatchList(aggregatorPath));
+  const watched = new Set(readWorkflowRunWatchList(aggregatorPath, input.readRequired));
   const tier1 = registry.gates.filter((gate) => gate.tier === 1);
   const tier1Names = new Set(tier1.map((gate) => gate.name));
   const knownNames = new Set(registry.gates.map((gate) => gate.name));
@@ -153,15 +153,17 @@ function auditWatchList(registry, workflowsDir) {
 }
 
 /**
- * @param {{ workflowsDir?: string, registryPath?: string }} [options]
+ * @param {{ workflowsDir?: string, registryPath?: string, repoRoot?: string, input?: object }} [options]
+ *   `input` = η είσοδος της πύλης (ADR-924): με `--index` κρίνονται τα workflows και το μητρώο ΤΟΥ COMMIT.
  * @returns {{ registry: object, findings: ReturnType<typeof finding>[] }}
  */
 function auditGateTiers(options = {}) {
   const repoRoot = options.repoRoot || path.join(__dirname, '..', '..', '..');
   const workflowsDir = options.workflowsDir || path.join(repoRoot, '.github', 'workflows');
   const registryPath = options.registryPath || path.join(repoRoot, '.ci-gate-tiers.json');
+  const input = options.input || openGateInput({ root: repoRoot });
 
-  const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
+  const registry = input.readJson(registryPath);
   const shapeFindings = auditRegistryShape(registry);
 
   // Οι έλεγχοι δίσκου προϋποθέτουν εγγραφές με σχήμα· αν το σχήμα είναι σπασμένο,
@@ -170,7 +172,7 @@ function auditGateTiers(options = {}) {
 
   return {
     registry,
-    findings: [...auditFilesystem(registry, workflowsDir), ...auditWatchList(registry, workflowsDir)],
+    findings: [...auditFilesystem(registry, workflowsDir, input), ...auditWatchList(registry, workflowsDir, input)],
   };
 }
 

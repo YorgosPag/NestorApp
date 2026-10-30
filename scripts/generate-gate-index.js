@@ -29,6 +29,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { readGateSources } = require('./lib/gate-index/source');
 const { renderRows } = require('./lib/gate-index/render');
+const { commitInput } = require('./lib/gate-input');
 
 const ROOT = process.cwd();
 const GUIDE = 'CLAUDE.md';
@@ -97,7 +98,7 @@ function build(gates, rows, fingerprint, counts) {
  * (μετρημένο 2026-09-30 με το 3.96: «αδήλωτες 12» αντί για 11 — χρειαζόταν δεύτερο πέρασμα).
  * Οι μετρήσεις έρχονται από την ΙΔΙΑ απογραφή που κρίνει το CHECK 3.66 — καμία δεύτερη μηχανή.
  */
-function regenerate(raw, blockFor, rowCount) {
+function regenerate(raw, blockFor, rowCount, input) {
   const { takeInventory } = require('./lib/gate-inventory/inventory');
   const { judge, STATES, idsOf } = require('./lib/gate-inventory/judge');
   const eol = raw.includes('\r\n') ? '\r\n' : '\n';
@@ -106,7 +107,7 @@ function regenerate(raw, blockFor, rowCount) {
   const assemble = (counts) =>
     [...lines.slice(0, region.start), ...blockFor(counts).split('\n'), ...lines.slice(region.end + 1)].join(eol);
   const countsOn = (guide) => {
-    const inv = takeInventory(ROOT, { guide });
+    const inv = takeInventory(ROOT, { guide }, input);
     return { ...inv.counts, rows: rowCount, undocumented: idsOf(judge(inv), STATES.UNDOCUMENTED).length };
   };
   // Πρώτο πέρασμα: μπαίνουν οι γραμμές· δεύτερο: οι αριθμοί μετρώνται πάνω τους. Σταθερό σημείο — η γραμμή των
@@ -114,10 +115,16 @@ function regenerate(raw, blockFor, rowCount) {
   return assemble(countsOn(assemble(countsOn(raw))));
 }
 
+/**
+ * `--index` (ADR-924 Φ5): οι ΠΗΓΕΣ (docs/gates · baselines · εκτελεστής · hook · μητρώα) από την όψη του commit. Το `--check`
+ * κρίνει το σταδιοποιημένο CLAUDE.md· η εγγραφή εφαρμόζεται στο κείμενο του ΔΙΣΚΟΥ (μόνο η περιοχή του πίνακα αλλάζει) —
+ * ξένη αστάδιοποίητη αλλαγή έξω από τον πίνακα δεν σβήνεται ποτέ.
+ */
 function main(argv) {
   const check = argv.includes('--check');
-  const { gates, fingerprint } = readGateSources(ROOT);
-  const { rows, problems, total } = renderRows(gates, ROOT);
+  const input = commitInput(ROOT, argv);
+  const { gates, fingerprint } = readGateSources(ROOT, input);
+  const { rows, problems, total } = renderRows(gates, ROOT, input);
 
   if (problems.length) {
     console.error(`⛔ ΑΡΝΗΣΗ ΠΑΡΑΓΩΓΗΣ — ${problems.length} πρόβλημα(τα):`);
@@ -125,8 +132,8 @@ function main(argv) {
     return 1;
   }
 
-  const raw = fs.readFileSync(path.join(ROOT, GUIDE), 'utf8');
-  const next = regenerate(raw, (counts) => build(gates, rows, fingerprint, counts), rows.length);
+  const raw = check ? input.readRequired(GUIDE) : fs.readFileSync(path.join(ROOT, GUIDE), 'utf8');
+  const next = regenerate(raw, (counts) => build(gates, rows, fingerprint, counts), rows.length, input);
 
   if (check) {
     if (next === raw) { console.log(`✅ CLAUDE.md φρέσκο (sha256:${fingerprint.slice(0, 12)}…, ${rows.length} πύλες)`); return 0; }

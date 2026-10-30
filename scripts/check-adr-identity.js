@@ -75,8 +75,11 @@ function baselineFile() {
     || path.join(PROJECT_ROOT, '.adr-identity-baseline.json');
 }
 
-function measure() {
-  return scanAdrIdentity(process.env.ADR_IDENTITY_CWD || PROJECT_ROOT);
+const scanRoot = () => process.env.ADR_IDENTITY_CWD || PROJECT_ROOT;
+
+/** `input` = η είσοδος (ADR-924): ο `runSetRatchetCli` τη δίνει ριζωμένη στη `scanRoot()` (descriptor `root`). */
+function measure(_args = [], input = undefined) {
+  return scanAdrIdentity(scanRoot(), input);
 }
 
 function buildPayload(m) {
@@ -128,6 +131,7 @@ const DESCRIPTOR = {
   adr: ADR,
   skipEnv: 'SKIP_ADR_IDENTITY',
   get baselineFile() { return baselineFile(); },
+  get root() { return scanRoot(); },
   measure,
   buildPayload,
   printReport,

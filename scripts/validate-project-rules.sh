@@ -20,6 +20,12 @@ RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
+# `--index` (ο hook, ADR-924 Φ5): κρίνεται το κείμενο ΤΟΥ COMMIT, όχι του δίσκου — η είσοδος ζει ΜΙΑ φορά.
+# shellcheck source=lib/commit-source.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/commit-source.sh"
+commit_source_parse "$@"
+set -- "${COMMIT_SOURCE_ARGS[@]}"
+
 VIOLATIONS=0
 FILES="$@"
 
@@ -85,7 +91,7 @@ check_hardcoded_storage_paths() {
   for pattern in "${patterns[@]}"; do
     local matches
     # Filter out: // comments, * block comments, lines mentioning LEGACY_STORAGE_PATHS, JSDoc examples
-    matches=$(grep -n "$pattern" "$file" 2>/dev/null | strip_comment_lines | grep -v "LEGACY_STORAGE_PATHS")
+    matches=$(read_source "$file" | grep -n "$pattern" 2>/dev/null | strip_comment_lines | grep -v "LEGACY_STORAGE_PATHS")
     if [[ -n "$matches" ]]; then
       echo -e "${RED}  ❌ RULE 1: Hardcoded storage path in $file${NC}"
       echo "     Use LEGACY_STORAGE_PATHS.* or buildStoragePath() instead"
@@ -114,7 +120,7 @@ check_inline_uuid() {
   fi
 
   local matches
-  matches=$(grep -n "crypto\.randomUUID\(\)" "$file" 2>/dev/null | strip_comment_lines)
+  matches=$(read_source "$file" | grep -n "crypto\.randomUUID\(\)" 2>/dev/null | strip_comment_lines)
   if [[ -n "$matches" ]]; then
     echo -e "${RED}  ❌ RULE 2: Inline crypto.randomUUID() in $file${NC}"
     echo "     Use generators from @/services/enterprise-id.service instead (CLAUDE.md N.6)"
@@ -135,7 +141,7 @@ check_add_doc() {
   fi
 
   local matches
-  matches=$(grep -n "addDoc(" "$file" 2>/dev/null | strip_comment_lines | grep -v "// LEGACY")
+  matches=$(read_source "$file" | grep -n "addDoc(" 2>/dev/null | strip_comment_lines | grep -v "// LEGACY")
   if [[ -n "$matches" ]]; then
     echo -e "${RED}  ❌ RULE 3: addDoc() found in $file${NC}"
     echo "     Use setDoc() with enterprise ID generator instead (CLAUDE.md N.6)"
@@ -152,7 +158,7 @@ check_ts_ignore() {
 
   local matches
   # Match actual @ts-ignore directives (// @ts-ignore), not mentions in doc comments
-  matches=$(grep -nE "^\s*//\s*@ts-ignore" "$file" 2>/dev/null | head -3)
+  matches=$(read_source "$file" | grep -nE "^\s*//\s*@ts-ignore" 2>/dev/null | head -3)
   if [[ -n "$matches" ]]; then
     echo -e "${RED}  ❌ RULE 4: @ts-ignore found in $file${NC}"
     echo "     Fix the TypeScript error properly instead of suppressing it"
@@ -174,13 +180,13 @@ check_purge_has_storage_delete() {
   fi
 
   # Only check files that do purging
-  if ! grep -q "lifecycleState.*purged\|lifecycleState.*'purged'" "$file" 2>/dev/null; then
+  if ! read_source "$file" | grep -q "lifecycleState.*purged\|lifecycleState.*'purged'" 2>/dev/null; then
     return
   fi
 
   # Must also contain storage deletion — directly, or via the SSoT
   # deleteStorageObjectForPurge() (file-purge-helpers.ts, ADR-864 §21)
-  if ! grep -qE "\.delete\(\)|deleteObject|bucket\.file|deleteStorageObjectForPurge\(" "$file" 2>/dev/null; then
+  if ! read_source "$file" | grep -qE "\.delete\(\)|deleteObject|bucket\.file|deleteStorageObjectForPurge\(" 2>/dev/null; then
     echo -e "${RED}  ❌ RULE 5: Purge without Storage deletion in $file${NC}"
     echo "     When marking files as purged, also delete from Firebase Storage"
     echo "     Use: bucket.file(storagePath).delete()"
@@ -193,7 +199,7 @@ check_purge_has_storage_delete() {
 # =============================================================================
 
 for file in $FILES; do
-  if [[ -f "$file" ]]; then
+  if has_source "$file"; then
     check_hardcoded_storage_paths "$file"
     check_inline_uuid "$file"
     check_add_doc "$file"

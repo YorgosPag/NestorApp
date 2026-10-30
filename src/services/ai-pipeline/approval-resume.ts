@@ -23,6 +23,7 @@ import type { PipelineExecutionResult } from './pipeline-types';
 import { stepMultiExecute } from './multi-intent-steps';
 import { getErrorMessage } from '@/lib/error-utils';
 import { nowISO } from '@/lib/date-local';
+import { hasModifiedActions } from './shared/admin-command-protocol';
 
 // ============================================================================
 // TYPES
@@ -57,7 +58,7 @@ export async function resumeFromApproval(
   }
 
   try {
-    if (ctx.approval?.modifiedActions && ctx.approval.modifiedActions.length > 0) {
+    if (hasModifiedActions(ctx)) {
       ctx = transitionState(ctx, PipelineState.MODIFIED);
     }
 

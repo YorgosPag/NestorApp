@@ -22,8 +22,7 @@
  * @module scripts/lib/anchor-execution/invocations
  */
 
-const fs = require('node:fs');
-const path = require('node:path');
+const { openGateInput } = require('../gate-input');
 
 /** Εντολές που ξεκινούν έτσι μπορεί να εκτελούν test· ό,τι άλλο αγνοείται εντελώς. */
 const COMMAND_HEADS = /^(jest|playwright|npx|pnpm|npm|yarn|node|node_modules|cross-env|firebase)\b/;
@@ -90,9 +89,8 @@ function unwrap(command) {
 }
 
 /** Τα scripts του `package.json` ως χάρτης — η αυθεντία για κάθε `pnpm run <όνομα>`. */
-function loadScripts(projectRoot) {
-  const pkg = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8'));
-  return pkg.scripts || {};
+function loadScripts(projectRoot, input = openGateInput({ root: projectRoot })) {
+  return input.readJson('package.json').scripts || {};
 }
 
 /**

@@ -93,8 +93,9 @@ const ORDER = Object.freeze([
 // Η ΜΕΤΡΗΣΗ
 // =============================================================================
 
-function measure(_staged = [], root = PROJECT_ROOT) {
-  const scope = buildScope(root);
+/** `input` = η είσοδος (ADR-924) — προεπιλογή ο δίσκος της `root`· ο εκτελεστής δίνει την όψη του commit. */
+function measure(_staged = [], root = PROJECT_ROOT, input = undefined) {
+  const scope = buildScope(root, input);
   const findings = [];
 
   // ── Κ2: ορφανή δήλωση ─────────────────────────────────────────────────────
@@ -112,7 +113,7 @@ function measure(_staged = [], root = PROJECT_ROOT) {
   // ── Κ3: τμήμα με ΔΥΟ ιδιοκτήτες ───────────────────────────────────────────
   // Ο κριτής χρόνου εκτέλεσης απαντά ΑΝΑ ΤΜΗΜΑ, άρα ο ένας από τους δύο χάνει
   // ΠΑΝΤΑ — και ποιος χάνει το αποφασίζει μια λέξη σε ένα κλειστό σύνολο, σιωπηλά.
-  for (const c of routeSegmentCollisions(root)) {
+  for (const c of routeSegmentCollisions(root, input)) {
     findings.push({
       state: STATES.COLLISION,
       id: c.segment,
@@ -235,7 +236,7 @@ const DESCRIPTOR = {
   adr: 'ADR-787 §5.3 γ (CHECK 3.60)',
   skipEnv: 'SKIP_WORKSPACE_SCOPE',
   baselineFile: BASELINE_FILE,
-  measure,
+  measure: (args, input) => measure(args, PROJECT_ROOT, input),
   buildPayload,
   printReport,
   violationId: (f) => (typeof f === 'string' ? f : f.id),

@@ -30,6 +30,7 @@
 const path = require('node:path');
 const ratchet = require('./lib/ratchet-baseline');
 const A = require('./lib/font-assets/assets');
+const { perInput } = require('./lib/gate-input');
 
 const ROOT = ratchet.PROJECT_ROOT;
 const BASELINE_FILE = path.join(ROOT, '.font-assets-baseline.json');
@@ -39,8 +40,11 @@ const BASELINE_FILE = path.join(ROOT, '.font-assets-baseline.json');
  * `opentype.parse`), και όταν το πλήρες είναι φθηνό η μερική ανάλυση δεν είναι βελτιστοποίηση:
  * είναι **δεύτερη αυθεντία που αποκλίνει σιωπηλά**, χωρίς αντάλλαγμα (πρότυπο CHECK 3.60/3.63).
  */
-function measure() {
-  const inv = A.takeInventory(ROOT);
+// ΜΙΑ μέτρηση ανά είσοδο (ADR-924): ο φρουρός zero-tolerance και το ratchet μοιράζονται την ίδια.
+const measure = perInput(ROOT, (input) => measureFresh(input));
+
+function measureFresh(input) {
+  const inv = A.takeInventory(ROOT, {}, input);
   const verdict = A.judge(inv);
   const blocking = verdict.rows.filter((r) => A.BLOCKING.includes(r.state));
   const ratcheted = verdict.rows.filter((r) => A.RATCHETED.includes(r.state));
@@ -104,27 +108,21 @@ function enforceZeroTolerance(argv, measureFn = measure) {
 }
 
 if (require.main === module) {
-  enforceZeroTolerance(process.argv.slice(2));
-  ratchet.runSetRatchetCli({
+  // ΜΙΑ είσοδος, ΜΙΑ μέτρηση· ο φρουρός ΠΡΙΝ το ratchet (ADR-924 §8.8 — η σειρά ζει στο SSoT)
+  ratchet.runZeroTolerantSetRatchetCli({
     adr: 'ADR-805 (CHECK 3.69)',
     skipEnv: 'SKIP_FONT_ASSETS',
     baselineFile: BASELINE_FILE,
     labels: { violations: 'γραμματοσειρές με ανοιχτό ζήτημα άδειας', declarations: 'δηλωμένα στοιχεία' },
-    commands: {
-      report: 'npm run font-assets:report',
-      baseline: 'npm run font-assets:baseline',
-      seed: 'npm run font-assets:baseline',
-    },
-    measure,
+    commands: ratchet.npmRatchetCommands('font-assets'),
+    measure: (_args, input) => measure({ input }),
     buildPayload,
     printReport,
-    violationId: (f) => f.id,
     messages: {
       worse: 'νέα γραμματοσειρά με μη εγκεκριμένη άδεια, ή απόδοση που έπαψε να ταξιδεύει',
       newDeclLabel: 'νέο δηλωμένο στοιχείο γραμματοσειράς',
-      newDeclAdvice: [],
     },
-  });
+  }, enforceZeroTolerance);
 }
 
 module.exports = { measure, buildPayload, printReport, enforceZeroTolerance, BASELINE_FILE };

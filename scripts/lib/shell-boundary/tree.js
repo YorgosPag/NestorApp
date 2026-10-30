@@ -14,15 +14,15 @@
  * χειρόγραφες λίστες, και γι' αυτό διαγράφηκε.
  */
 
-const fs = require('node:fs');
 const path = require('node:path');
+
+/** Η είσοδος της πύλης (ADR-924) — προεπιλογή ο δίσκος της ρίζας· ο εκτελεστής δίνει την όψη του commit. */
+const inputOf = (root) => require('../gate-input').openGateInput({ root });
 
 const GROUP_RE = /^\(.+\)$/;
 
 /** Windows backslash → posix, ώστε κάθε σύγκριση/κλειδί να είναι μία διάλεκτος. */
-function toPosix(p) {
-  return p.split(path.sep).join('/');
-}
+const { toPosix } = require('../posix-path'); // SSoT (ADR-924 §8.9)
 
 function relOf(projectRoot, abs) {
   return toPosix(path.relative(projectRoot, abs));
@@ -33,14 +33,10 @@ function relOf(projectRoot, abs) {
  * Μόνο αυτά δηλώνονται: ένα εμφωλευμένο group δεν αλλάζει «φοράει κέλυφος;» —
  * αυτό το αποφασίζει ο πλησιέστερος πρόγονος-ιδιοκτήτης, όχι το βάθος.
  */
-function enumerateRootGroups(projectRoot, appDir = 'src/app') {
-  const root = path.join(projectRoot, appDir);
-  if (!fs.existsSync(root)) return [];
-  return fs
-    .readdirSync(root, { withFileTypes: true })
-    .filter(entry => entry.isDirectory() && GROUP_RE.test(entry.name))
-    .map(entry => entry.name)
-    .sort();
+function enumerateRootGroups(projectRoot, appDir = 'src/app', input = inputOf(projectRoot)) {
+  const children = input.children(appDir);
+  if (children === null) return [];
+  return children.dirs.filter(name => GROUP_RE.test(name)).sort();
 }
 
 /**
@@ -52,34 +48,23 @@ function enumerateRootGroups(projectRoot, appDir = 'src/app') {
  * `enumerateLayouts` πανομοιότυπα εκτός από τον έλεγχο ονόματος — δίδυμο που θα
  * έπιανε το CHECK 3.28 (jscpd) **μέσα στο ίδιο commit** που κηρύσσει «μία μηχανή».
  */
-function enumerateAppFiles(projectRoot, basename, appDir = 'src/app') {
-  const root = path.join(projectRoot, appDir);
-  const out = [];
-  if (!fs.existsSync(root)) return out;
-
-  const walk = dir => {
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        if (relOf(projectRoot, full) === `${appDir}/api`) continue;
-        walk(full);
-      } else if (entry.name === `${basename}.tsx` || entry.name === `${basename}.jsx`) {
-        out.push(relOf(projectRoot, full));
-      }
-    }
-  };
-  walk(root);
-  return out.sort();
+function enumerateAppFiles(projectRoot, basename, appDir = 'src/app', input = inputOf(projectRoot)) {
+  // ADR-924 Φ3 — από την ΕΙΣΟΔΟ (ήταν δικός του `readdirSync`): ίδιο κριτήριο, ίδια εξαίρεση του `api/`.
+  const names = new Set([`${basename}.tsx`, `${basename}.jsx`]);
+  return input.files([appDir], {
+    accept: rel => names.has(rel.slice(rel.lastIndexOf('/') + 1)),
+    pruneDir: dir => dir === `${appDir}/api/`,
+  }).map(input.rel).sort();
 }
 
 /** Κάθε `page.tsx` που αποδίδεται με layout. */
-function enumeratePages(projectRoot, appDir = 'src/app') {
-  return enumerateAppFiles(projectRoot, 'page', appDir);
+function enumeratePages(projectRoot, appDir = 'src/app', input = undefined) {
+  return enumerateAppFiles(projectRoot, 'page', appDir, input);
 }
 
 /** Κάθε `layout.tsx` του δέντρου διαδρομών. */
-function enumerateLayouts(projectRoot, appDir = 'src/app') {
-  return enumerateAppFiles(projectRoot, 'layout', appDir);
+function enumerateLayouts(projectRoot, appDir = 'src/app', input = undefined) {
+  return enumerateAppFiles(projectRoot, 'layout', appDir, input);
 }
 
 /**

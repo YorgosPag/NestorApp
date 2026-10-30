@@ -64,9 +64,9 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { execSync } = require('node:child_process');
 
-const { PROJECT_ROOT, hasReasonedExemption } = require('./_shared/firestore-ast-loaders');
+const { PROJECT_ROOT, hasReasonedExemption, projectInput } = require('./_shared/firestore-ast-loaders');
+const { resolveScanTargets, runScanCli, rel } = require('./_shared/firestore-scan-targets');
 const {
   createChainContext, scanFileChains, enumerateBranches, toQueryShape,
 } = require('./_shared/firestore-query-chain');
@@ -79,62 +79,14 @@ const INDEXES_FILE = path.join(PROJECT_ROOT, 'firestore.indexes.json');
 const BASELINE_FILE = path.join(PROJECT_ROOT, '.firestore-admin-index-baseline.json');
 const EXEMPT_TOKEN = 'firestore-index-exempt';
 
-const useColour = process.stdout.isTTY;
-const c = {
-  red: (s) => (useColour ? `\x1b[31m${s}\x1b[0m` : s),
-  green: (s) => (useColour ? `\x1b[32m${s}\x1b[0m` : s),
-  yellow: (s) => (useColour ? `\x1b[33m${s}\x1b[0m` : s),
-  cyan: (s) => (useColour ? `\x1b[36m${s}\x1b[0m` : s),
-  dim: (s) => (useColour ? `\x1b[2m${s}\x1b[0m` : s),
-  bold: (s) => (useColour ? `\x1b[1m${s}\x1b[0m` : s),
-};
-const rel = (f) => path.relative(PROJECT_ROOT, f).replace(/\\/g, '/');
-
+const c = require('./lib/tty-colours').ttyColours();   // SSoT (ADR-924 §8.10)
 // ---------------------------------------------------------------------------
-// Ανακάλυψη αρχείων
+// Ανακάλυψη αρχείων — ο κοινός λιστωτής των σαρωτών Firestore (ADR-924 Φ3, `firestore-scan-targets`)
 // ---------------------------------------------------------------------------
 
-function isScannable(p) {
-  const r = rel(p);
-  if (!r.startsWith('src/') || !/\.(ts|tsx)$/.test(r)) return false;
-  if (/\.(test|spec|d)\.tsx?$/.test(r)) return false;
-  return !r.includes('__tests__/') && !r.includes('__mocks__/');
-}
-
-function listStagedFiles() {
-  try {
-    return execSync('git diff --cached --name-only --diff-filter=ACMR', { cwd: PROJECT_ROOT, encoding: 'utf8' })
-      .split('\n').map((s) => s.trim()).filter(Boolean)
-      .map((p) => path.resolve(PROJECT_ROOT, p));
-  } catch {
-    return [];
-  }
-}
-
-function listAllSrcFiles() {
-  const out = [];
-  (function walk(dir) {
-    let entries;
-    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
-    for (const e of entries) {
-      const full = path.join(dir, e.name);
-      if (e.isDirectory()) {
-        if (e.name !== 'node_modules' && !e.name.startsWith('.')) walk(full);
-      } else if (isScannable(full)) out.push(full);
-    }
-  })(path.join(PROJECT_ROOT, 'src'));
-  return out;
-}
-
-function resolveTargets(argv) {
-  if (argv.includes('--all') || argv.includes('--report') || argv.includes('--generate-baseline')) {
-    return listAllSrcFiles();
-  }
-  const explicit = argv.filter((a) => !a.startsWith('--'));
-  const chosen = explicit.length > 0
-    ? explicit.map((p) => path.resolve(PROJECT_ROOT, p))
-    : listStagedFiles();
-  return chosen.filter((p) => fs.existsSync(p) && isScannable(p));
+/** `--all`/`--report`/`--generate-baseline` ⇒ κάθε σαρώσιμο του `src/` · αλλιώς ορίσματα · αλλιώς σταδιοποιημένα. */
+function resolveTargets(argv, input = projectInput()) {
+  return resolveScanTargets(argv, input, ['--all', '--report', '--generate-baseline']);
 }
 
 // ---------------------------------------------------------------------------
@@ -198,19 +150,19 @@ function judgeShape(shape, catalog, out) {
 }
 
 /** Έχει το σημείο ρητή εξαίρεση με λόγο; */
-function isExemptSite(site, lineCache) {
+function isExemptSite(site, lineCache, input) {
   let lines = lineCache.get(site.file);
   if (!lines) {
-    lines = fs.readFileSync(site.file, 'utf8').split(/\r?\n/);
+    lines = input.readRequired(site.file).split(/\r?\n/);
     lineCache.set(site.file, lines);
   }
   return hasReasonedExemption(lines, site.line - 1, EXEMPT_TOKEN);
 }
 
-/** Σάρωσε και κρίνε τα αρχεία-στόχους. */
-function analyse(targets) {
-  const ctx = createChainContext();
-  const catalog = loadIndexCatalog(INDEXES_FILE);
+/** Σάρωσε και κρίνε τα αρχεία-στόχους — κάθε ανάγνωση από την ΕΙΣΟΔΟ (ADR-924: `--index` ⇒ το COMMIT). */
+function analyse(targets, input = projectInput()) {
+  const ctx = createChainContext(input);
+  const catalog = loadIndexCatalog(INDEXES_FILE, input);
   const lineCache = new Map();
   const result = { withRange: [], withoutRange: [], unjudged: [], unanalyzable: [], exempt: 0, merged: 0, sites: 0 };
 
@@ -222,7 +174,7 @@ function analyse(targets) {
     }
     for (const site of sites) {
       result.sites += 1;
-      if (isExemptSite(site, lineCache)) { result.exempt += 1; continue; }
+      if (isExemptSite(site, lineCache, input)) { result.exempt += 1; continue; }
       const judged = judgeSite(site, catalog);
       result.merged += judged.merged;
       if (judged.unanalyzable) result.unanalyzable.push({ site, why: judged.unanalyzable });
@@ -261,10 +213,11 @@ function totalsByKey(entries) {
   return totals;
 }
 
-function loadBaseline() {
-  if (!fs.existsSync(BASELINE_FILE)) return null;
+function loadBaseline(input = projectInput()) {
+  const text = input.read(BASELINE_FILE);
+  if (text === null) return null;
   try {
-    const parsed = JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf8'));
+    const parsed = JSON.parse(text);
     return parsed && typeof parsed.sites === 'object' ? parsed : null;
   } catch {
     return null;
@@ -328,8 +281,8 @@ function printInfo(result) {
   }
 }
 
-function runReport(targets) {
-  const r = analyse(targets);
+function runReport(targets, input) {
+  const r = analyse(targets, input);
   console.log('');
   console.log(c.bold('CHECK 3.91 — Admin SDK index coverage'));
   console.log(`  αρχεία σαρωμένα     : ${targets.length}`);
@@ -364,9 +317,9 @@ function ratchetOffenders(withoutRange, baseline) {
   return offenders;
 }
 
-function runCheck(targets, { full }) {
-  const r = analyse(targets);
-  const baseline = loadBaseline();
+function runCheck(targets, { full, input }) {
+  const r = analyse(targets, input);
+  const baseline = loadBaseline(input);
   if (!baseline) {
     console.error(c.red('🚫 CHECK 3.91: λείπει το baseline αρχείο.'));
     console.error(c.yellow('   Τρέξε: npm run firestore:admin-index:baseline'));
@@ -416,27 +369,25 @@ function reportImprovements(r, baseline) {
 // main
 // ---------------------------------------------------------------------------
 
+/** ADR-924: με `--index` (εκτελεστής) τα αρχεία, οι κατάλογοι, το μανιφέστο και η baseline ΤΟΥ COMMIT (`runScanCli`). */
 function main() {
-  if (process.env.SKIP_FIRESTORE_ADMIN_INDEX === '1') process.exit(0);
-  const argv = process.argv.slice(2);
-  const targets = resolveTargets(argv);
-  if (targets.length === 0) process.exit(0);
-
-  if (argv.includes('--generate-baseline')) {
-    const r = analyse(targets);
-    const payload = writeBaseline(r.withoutRange);
-    console.log(c.green(`✔ baseline γράφτηκε: ${payload._meta.totalSites} σημεία (Κ2)`));
-    if (r.withRange.length > 0) {
-      console.log(c.red(`⚠ ΠΡΟΣΟΧΗ: ${r.withRange.length} σημεία ΜΕ ΕΥΡΟΣ είναι ακάλυπτα και ΔΕΝ μπαίνουν σε baseline (Κ1 = zero-tolerance).`));
-    }
-    process.exit(0);
-  }
-
-  if (argv.includes('--report')) { runReport(targets); process.exit(0); }
-  runCheck(targets, { full: argv.includes('--all') });
+  runScanCli({
+    skipEnv: 'SKIP_FIRESTORE_ADMIN_INDEX',
+    baselineFlag: '--generate-baseline',
+    generate(targets, input) {
+      const r = analyse(targets, input);
+      const payload = writeBaseline(r.withoutRange);
+      console.log(c.green(`✔ baseline γράφτηκε: ${payload._meta.totalSites} σημεία (Κ2)`));
+      if (r.withRange.length > 0) {
+        console.log(c.red(`⚠ ΠΡΟΣΟΧΗ: ${r.withRange.length} σημεία ΜΕ ΕΥΡΟΣ είναι ακάλυπτα και ΔΕΝ μπαίνουν σε baseline (Κ1 = zero-tolerance).`));
+      }
+    },
+    report: runReport,
+    check: runCheck,
+  });
 }
 
 if (require.main === module) main();
 
 // Μόνο ό,τι καλεί η άγκυρα — βλ. σχόλιο στο firestore-query-chain.js.
-module.exports = { judgeSite };
+module.exports = { judgeSite, analyse, loadBaseline, resolveTargets };

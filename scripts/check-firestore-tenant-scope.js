@@ -64,88 +64,33 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { execSync } = require('node:child_process');
 
-const { PROJECT_ROOT } = require('./_shared/firestore-ast-loaders');
+const { PROJECT_ROOT, projectInput } = require('./_shared/firestore-ast-loaders');
 const { createScanContext, scanFile } = require('./_shared/firestore-tenant-scope-scan');
+const { isScannable, resolveScanTargets, runScanCli, rel } = require('./_shared/firestore-scan-targets');
 
 const BASELINE_FILE = path.join(PROJECT_ROOT, '.firestore-tenant-scope-baseline.json');
 
-const useColour = process.stdout.isTTY;
-const c = {
-  red: (s) => (useColour ? `\x1b[31m${s}\x1b[0m` : s),
-  green: (s) => (useColour ? `\x1b[32m${s}\x1b[0m` : s),
-  yellow: (s) => (useColour ? `\x1b[33m${s}\x1b[0m` : s),
-  cyan: (s) => (useColour ? `\x1b[36m${s}\x1b[0m` : s),
-  dim: (s) => (useColour ? `\x1b[2m${s}\x1b[0m` : s),
-  bold: (s) => (useColour ? `\x1b[1m${s}\x1b[0m` : s),
-};
-
-const rel = (f) => path.relative(PROJECT_ROOT, f).replace(/\\/g, '/');
+const c = require('./lib/tty-colours').ttyColours();   // SSoT (ADR-924 §8.10)
 
 // ---------------------------------------------------------------------------
-// Ανακάλυψη αρχείων
+// Ανακάλυψη αρχείων — ο κοινός λιστωτής των σαρωτών Firestore (ADR-924 Φ3, `firestore-scan-targets`)
 // ---------------------------------------------------------------------------
 
-/** Ο σαρωτής κρίνει **παραγωγικό** κώδικα· τα tests έχουν δικά τους συμβόλαια. */
-function isScannable(p) {
-  const r = rel(p);
-  if (!r.startsWith('src/')) return false;
-  if (!/\.(ts|tsx)$/.test(r)) return false;
-  if (/\.(test|spec|d)\.tsx?$/.test(r)) return false;
-  if (r.includes('__tests__/') || r.includes('__mocks__/')) return false;
-  return true;
-}
-
-function listStagedFiles() {
-  try {
-    return execSync('git diff --cached --name-only --diff-filter=ACMR', {
-      cwd: PROJECT_ROOT, encoding: 'utf8',
-    })
-      .split('\n').map((s) => s.trim()).filter(Boolean)
-      .map((p) => path.resolve(PROJECT_ROOT, p));
-  } catch {
-    return [];
-  }
-}
-
-function listAllSrcFiles() {
-  const out = [];
-  (function walk(dir) {
-    let entries;
-    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
-    for (const e of entries) {
-      const full = path.join(dir, e.name);
-      if (e.isDirectory()) {
-        if (e.name === 'node_modules' || e.name.startsWith('.')) continue;
-        walk(full);
-      } else if (isScannable(full)) {
-        out.push(full);
-      }
-    }
-  })(path.join(PROJECT_ROOT, 'src'));
-  return out;
-}
-
-function resolveTargets(argv) {
-  if (argv.includes('--all') || argv.includes('--report') || argv.includes('--write-baseline')) {
-    return listAllSrcFiles();
-  }
-  const explicit = argv.filter((a) => !a.startsWith('--'));
-  if (explicit.length > 0) {
-    return explicit.map((p) => path.resolve(PROJECT_ROOT, p)).filter((p) => fs.existsSync(p) && isScannable(p));
-  }
-  return listStagedFiles().filter((p) => fs.existsSync(p) && isScannable(p));
+/** `--all`/`--report`/`--write-baseline` ⇒ κάθε σαρώσιμο του `src/` · αλλιώς ορίσματα · αλλιώς σταδιοποιημένα. */
+function resolveTargets(argv, input = projectInput()) {
+  return resolveScanTargets(argv, input, ['--all', '--report', '--write-baseline']);
 }
 
 // ---------------------------------------------------------------------------
 // Baseline
 // ---------------------------------------------------------------------------
 
-function loadBaseline() {
-  if (!fs.existsSync(BASELINE_FILE)) return null;
+function loadBaseline(input = projectInput()) {
+  const text = input.read(BASELINE_FILE);
+  if (text === null) return null;
   try {
-    const parsed = JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf8'));
+    const parsed = JSON.parse(text);
     return parsed && typeof parsed.files === 'object' ? parsed : null;
   } catch {
     return null;
@@ -178,8 +123,8 @@ function writeBaseline(perFile, totals) {
 // Σάρωση
 // ---------------------------------------------------------------------------
 
-function scanTargets(targets) {
-  const ctx = createScanContext();
+function scanTargets(targets, input = projectInput()) {
+  const ctx = createScanContext(input);
   const all = [];
   for (const f of targets) {
     try {
@@ -212,8 +157,8 @@ function scanTargets(targets) {
 // Λειτουργίες
 // ---------------------------------------------------------------------------
 
-function runReport(targets) {
-  const { sites, violations, perFile, totals } = scanTargets(targets);
+function runReport(targets, input) {
+  const { sites, violations, perFile, totals } = scanTargets(targets, input);
   console.log('');
   console.log(c.bold('CHECK 3.35 — Firestore tenant scope'));
   console.log(`  αρχεία σαρωμένα      : ${targets.length}`);
@@ -224,15 +169,16 @@ function runReport(targets) {
   console.log(c.yellow(`  ? μη αναλύσιμα       : ${totals.unanalyzable}`));
   console.log(c.red(`  ✖ ΧΩΡΙΣ ΦΙΛΤΡΟ       : ${totals.violations}  σε ${Object.keys(perFile).length} αρχεία`));
   console.log('');
-  const byFile = Object.entries(perFile).sort((a, b) => b[1] - a[1]);
+  // ισοπαλία ⇒ όνομα: ντετερμινιστικό σε κάθε ΛΣ (ήταν η σειρά του `readdir`)
+  const byFile = Object.entries(perFile).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
   for (const [f, n] of byFile) console.log(`  ${String(n).padStart(3)}  ${f}`);
   console.log('');
   return { violations, perFile, totals };
 }
 
-function runCheck(targets, { full }) {
-  const { sites, violations, perFile, totals } = scanTargets(targets);
-  const baseline = loadBaseline();
+function runCheck(targets, { full, input }) {
+  const { sites, violations, perFile, totals } = scanTargets(targets, input);
+  const baseline = loadBaseline(input);
 
   if (!baseline) {
     console.error(c.red('🚫 CHECK 3.35: λείπει το baseline αρχείο.'));
@@ -320,27 +266,19 @@ function runCheck(targets, { full }) {
 // main
 // ---------------------------------------------------------------------------
 
+/** ADR-924: με `--index` (εκτελεστής) κρίνονται τα αρχεία, οι κατάλογοι και η baseline ΤΟΥ COMMIT (`runScanCli`). */
 function main() {
-  if (process.env.SKIP_FIRESTORE_TENANT_SCOPE === '1') process.exit(0);
-
-  const argv = process.argv.slice(2);
-  const targets = resolveTargets(argv);
-
-  if (targets.length === 0) process.exit(0);
-
-  if (argv.includes('--write-baseline')) {
-    const { perFile, totals } = scanTargets(targets);
-    const payload = writeBaseline(perFile, totals);
-    console.log(c.green(`✔ baseline γράφτηκε: ${payload._meta.totalViolations} παραβιάσεις σε ${payload._meta.totalFiles} αρχεία`));
-    process.exit(0);
-  }
-
-  if (argv.includes('--report')) {
-    runReport(targets);
-    process.exit(0);
-  }
-
-  runCheck(targets, { full: argv.includes('--all') });
+  runScanCli({
+    skipEnv: 'SKIP_FIRESTORE_TENANT_SCOPE',
+    baselineFlag: '--write-baseline',
+    generate(targets, input) {
+      const { perFile, totals } = scanTargets(targets, input);
+      const payload = writeBaseline(perFile, totals);
+      console.log(c.green(`✔ baseline γράφτηκε: ${payload._meta.totalViolations} παραβιάσεις σε ${payload._meta.totalFiles} αρχεία`));
+    },
+    report: runReport,
+    check: runCheck,
+  });
 }
 
 if (require.main === module) main();

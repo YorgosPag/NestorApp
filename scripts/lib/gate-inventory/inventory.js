@@ -22,8 +22,6 @@
 
 'use strict';
 
-const fs = require('node:fs');
-const path = require('node:path');
 
 /** Κάθε μορφή δρομολόγησης του εκτελεστή — δες τη σημείωση παραπάνω. */
 const DISPATCH_RE = /add[A-Za-z]+\('(3\.\d+)'/g;
@@ -66,12 +64,12 @@ function matchIds(text, re) {
 }
 
 /** Fail-closed: αρχείο-αυθεντία που λείπει ⇒ σφάλμα με όνομα, ποτέ σιωπηλό κενό σύνολο. */
-function readAuthority(repoRoot, rel) {
-  const file = path.join(repoRoot, rel);
-  if (!fs.existsSync(file)) {
+function readAuthority(input, rel) {
+  const text = input.read(rel);
+  if (text === null) {
     throw new Error(`${rel} λείπει — η απογραφή δεν έχει αυθεντία, και «κανένα εύρημα» θα ήταν ψέμα.`);
   }
-  return fs.readFileSync(file, 'utf8');
+  return text;
 }
 
 /**
@@ -81,12 +79,12 @@ function readAuthority(repoRoot, rel) {
  * όσων **τρέχουν** παράγεται· εδώ δηλώνεται μόνο η **εξαίρεση** — «τεκμηριωμένη αλλά δεν
  * τρέχει σε pre-commit, και να γιατί». Ξεχασμένη εξαίρεση γίνεται ⛔ `ghost-row`.
  */
-function readDeclarations(repoRoot) {
-  const file = path.join(repoRoot, DECLARATIONS_FILE);
-  if (!fs.existsSync(file)) {
+function readDeclarations(input) {
+  const text = input.read(DECLARATIONS_FILE);
+  if (text === null) {
     throw new Error(`${DECLARATIONS_FILE} λείπει — το κλειστό σύνολο είναι μέρος της πύλης.`);
   }
-  const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const raw = JSON.parse(text);
   if (!raw || typeof raw.ciOnlyGates !== 'object' || raw.ciOnlyGates === null) {
     throw new Error(`${DECLARATIONS_FILE}: περίμενα αντικείμενο "ciOnlyGates".`);
   }
@@ -98,13 +96,14 @@ function readDeclarations(repoRoot) {
  *
  * @param {string} repoRoot
  * @param {{executor?: string, hook?: string, guide?: string, declarations?: object}} [override]
- *        — μόνο για τη σουίτα· η παραγωγή διαβάζει πάντα από τον δίσκο.
+ *        — μόνο για τη σουίτα.
+ * @param {object} [input] η είσοδος της πύλης (ADR-924) — προεπιλογή ο δίσκος, ο εκτελεστής δίνει την όψη του commit.
  */
-function takeInventory(repoRoot, override = {}) {
-  const executor = override.executor ?? readAuthority(repoRoot, EXECUTOR);
-  const hook = override.hook ?? readAuthority(repoRoot, HOOK);
-  const guide = override.guide ?? readAuthority(repoRoot, GUIDE);
-  const declarations = override.declarations ?? readDeclarations(repoRoot);
+function takeInventory(repoRoot, override = {}, input = require('../gate-input').openGateInput({ root: repoRoot })) {
+  const executor = override.executor ?? readAuthority(input, EXECUTOR);
+  const hook = override.hook ?? readAuthority(input, HOOK);
+  const guide = override.guide ?? readAuthority(input, GUIDE);
+  const declarations = override.declarations ?? readDeclarations(input);
 
   const dispatched = new Set(matchIds(executor, DISPATCH_RE));
   const hooked = new Set(matchIds(hook, HOOK_RE));

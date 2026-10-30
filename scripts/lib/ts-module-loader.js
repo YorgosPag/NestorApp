@@ -10,7 +10,10 @@
  * του οποίου το ίδιο το σχόλιο έγραφε *«αν χρειαστείς δεύτερο script, κάλεσε ΑΥΤΟ — μην
  * ξαναγράψεις το register»*. Η πύλη νομικών εγγράφων ήταν ο δεύτερος καταναλωτής.
  *
- * ⚠️ `skipProject: true` — σκόπιμα: θέλουμε τιμές, όχι έλεγχο τύπων (N.17).
+ * ⚠️ Μόνο αφαίρεση τύπων — σκόπιμα: θέλουμε τιμές, όχι έλεγχο τύπων (N.17).
+ * ⚡ **Μηχανή: `@swc/core`** (Apache-2.0, ο μεταγλωττιστής του `@swc/jest`) — 2026-10-30, ADR-924 Φ3: ήταν ts-node, ενώ ένα
+ * δεύτερο αντίγραφο φορτωτή (`ts-require.js`, swc) υπήρχε για την CHECK 3.98. Μετρημένο: 3.98 με ts-node 2,0s, με swc
+ * 0,56s. Ενώθηκαν εδώ: ΜΙΑ μηχανή, ΕΝΑ ψευδώνυμο `@/`, ΜΙΑ όψη του commit.
  * 🔑 Το ψευδώνυμο `@/*` → `src/*` (`tsconfig.base.json` · `jest.config.js`) λύνεται εδώ (2026-10-29).
  * Μέχρι τότε ο κανόνας ήταν «ό,τι φορτώνεται εδώ ΔΕΝ χρησιμοποιεί `@/`» — μια συνθήκη που
  * κανείς δεν έβλεπε από το αρχείο που φορτώνεται: το `constants/platform-operator.ts` απέκτησε
@@ -20,6 +23,7 @@
  * 🔑 **ΟΨΗ ΤΟΥ COMMIT (ADR-924)** — `materializeTypeScriptClosure`: η κλειστότητα εισαγωγών από το
  * ευρετήριο, υλοποιημένη σε στιγμιότυπο. Το `@/` λύνεται **στο δέντρο του αρχείου που ζητά**
  * (repo ή στιγμιότυπο), ώστε ένα module του στιγμιοτύπου να μη φορτώσει ποτέ σιωπηλά τον δίσκο.
+ * Οι πύλες καλούν το `requireFromInput` — η ΕΙΣΟΔΟΣ της πύλης αποφασίζει ποιο δέντρο εκτελείται.
  *
  * @module scripts/lib/ts-module-loader
  */
@@ -35,6 +39,7 @@ const { importClosure } = require('./ts-import-closure');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const ALIAS_PREFIX = '@/';
+const TS_EXTENSIONS = ['.ts', '.tsx'];
 
 let registered = false;
 /** Ρίζες στιγμιοτύπων· ό,τι δεν ανήκει σε καμία ανήκει στο repo. */
@@ -71,21 +76,26 @@ function registerSrcAlias() {
   };
 }
 
+/** TypeScript → CommonJS, μόνο αφαίρεση τύπων (καμία ανάγνωση: ο φορτωτής δίνει το κείμενο του αρχείου που εκτελεί). */
+function transpile(source, filename) {
+  // eslint-disable-next-line global-require -- σκόπιμα lazy: το @swc/core είναι devDependency.
+  const { transformSync } = require('@swc/core');
+  return transformSync(source, {
+    filename,
+    sourceMaps: false,
+    module: { type: 'commonjs' },
+    jsc: { target: 'es2022', parser: { syntax: 'typescript', tsx: filename.endsWith('.tsx') } },
+  }).code;
+}
+
 /** Ενεργοποιεί τη μεταγλώττιση TypeScript για `require()`, μία φορά ανά διεργασία. */
 function registerTypeScript() {
   if (registered) return;
-  // eslint-disable-next-line global-require -- σκόπιμα lazy: το ts-node είναι devDependency.
-  require('ts-node').register({
-    transpileOnly: true,
-    skipProject: true,
-    compilerOptions: {
-      module: 'commonjs',
-      target: 'es2022',
-      esModuleInterop: true,
-      resolveJsonModule: true,
-      moduleResolution: 'node',
-    },
-  });
+  for (const ext of TS_EXTENSIONS) {
+    Module._extensions[ext] = (module, filename) => {
+      module._compile(transpile(fs.readFileSync(filename, 'utf8'), filename), filename);
+    };
+  }
   registerSrcAlias();
   registered = true;
 }
@@ -102,11 +112,14 @@ function requireTypeScript(absolutePath) {
  * εισαγωγών τους, όπως θα δεσμευτεί, συν τα `extra` (αρχεία ή φάκελοι δεδομένων).
  * Ο καλών φορτώνει με `requireTypeScript(path.join(snapshot.root, rel))` και καλεί `dispose()` όταν
  * τελειώσει· τα ήδη φορτωμένα modules μένουν στη μνήμη.
- * @param {{repoRoot?: string, entries: string[], extra?: string[]}} options σχετικά μονοπάτια (posix)
+ * `input` = η είσοδος της πύλης (όψη `index`): η κλειστότητα από τη ΔΙΚΗ της όψη — καμία δεύτερη (~1,3s).
+ * @param {{repoRoot?: string, entries: string[], extra?: string[], input?: object}} options σχετικά μονοπάτια (posix)
  * @returns {{root: string, files: string[], dispose: () => void}}
  */
-function materializeTypeScriptClosure({ repoRoot = REPO_ROOT, entries, extra = [] }) {
-  const view = createCommitView({ repoRoot, include: rel => rel.startsWith('src/') });
+function materializeTypeScriptClosure({ repoRoot = REPO_ROOT, entries, extra = [], input = null }) {
+  const view = input
+    ? { readText: input.read, has: input.exists }
+    : createCommitView({ repoRoot, include: rel => rel.startsWith('src/') });
   const closure = importClosure({ entries, readText: view.readText, has: view.has });
   const snapshot = materializeIndex({ repoRoot, pathspecs: [...closure, ...extra], rawBytes: true });
   // ⚠️ realpath: το `require` κρατά το πραγματικό μονοπάτι, ενώ το tmpdir των Windows μπορεί να είναι 8.3.
@@ -122,4 +135,24 @@ function materializeTypeScriptClosure({ repoRoot = REPO_ROOT, entries, extra = [
   };
 }
 
-module.exports = { registerTypeScript, requireTypeScript, materializeTypeScriptClosure };
+/**
+ * **Εκτέλεσε τα `entries` από την όψη της ΕΙΣΟΔΟΥ της πύλης** (ADR-924): στον δίσκο, ο δίσκος· με `--index`, η
+ * κλειστότητα εισαγωγών τους όπως θα δεσμευτεί (στιγμιότυπο). Ποτέ σιωπηλή εκτέλεση του δίσκου στη θέση του commit —
+ * και ποτέ άρνηση επειδή ο δίσκος αποκλίνει (ξένη δουλειά): κρίνεται ό,τι σταδιοποιήθηκε.
+ * @param {{input: object, entries: string[], extra?: string[]}} options `entries`/`extra` σχετικά posix
+ * @returns {{modules: object[], dispose: () => void}} `modules[i]` = τα exports του `entries[i]`
+ */
+function requireFromInput({ input, entries, extra = [] }) {
+  if (input.mode !== 'index') {
+    return { modules: entries.map(rel => requireTypeScript(path.join(input.root, rel))), dispose() {} };
+  }
+  const snapshot = materializeTypeScriptClosure({ repoRoot: input.root, entries, extra, input });
+  try {
+    return { modules: entries.map(rel => requireTypeScript(path.join(snapshot.root, rel))), dispose: snapshot.dispose };
+  } catch (error) {
+    snapshot.dispose();
+    throw error;
+  }
+}
+
+module.exports = { registerTypeScript, requireTypeScript, materializeTypeScriptClosure, requireFromInput };

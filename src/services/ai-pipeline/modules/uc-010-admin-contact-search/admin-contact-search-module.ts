@@ -20,12 +20,10 @@
 
 import 'server-only';
 
-import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import { findContactByName, listContacts, getContactMissingFields } from '../../shared/contact-lookup';
 import type { ContactTypeFilter } from '../../shared/contact-lookup';
-import { sendChannelReply, extractChannelIds } from '../../shared/channel-reply-dispatcher';
 import { PipelineIntentType } from '@/types/ai-pipeline';
 import type {
   IUCModule,
@@ -35,6 +33,7 @@ import type {
   AcknowledgmentResult,
   PipelineIntentTypeValue,
 } from '@/types/ai-pipeline';
+import { acknowledgeBySideEffect, approvedAction, autoApprovedProposal, failedExecution, sendCommandReply } from '../../shared/admin-command-protocol';
 
 const logger = createModuleLogger('UC_010_ADMIN_CONTACT_SEARCH');
 
@@ -251,29 +250,15 @@ export class AdminContactSearchModule implements IUCModule {
       summary = `Δεν βρέθηκαν επαφές για "${searchTerm}"`;
     }
 
-    return {
-      messageId: ctx.intake.id,
-      suggestedActions: [
-        {
-          type: 'admin_contact_search_reply',
-          params: {
-            mode,
-            missingFieldsMode,
-            searchTerm,
-            typeFilter,
-            results,
-            missingFieldsData,
-            resultCount: results.length,
-            channel: ctx.intake.channel,
-            telegramChatId: (ctx.intake.rawPayload.chatId as string) ?? null,
-          },
-        },
-      ],
-      requiredApprovals: [],
-      autoApprovable: true,
-      summary,
-      schemaVersion: PIPELINE_PROTOCOL_CONFIG.SCHEMA_VERSION,
-    };
+    return autoApprovedProposal(ctx, 'admin_contact_search_reply', {
+      mode,
+      missingFieldsMode,
+      searchTerm,
+      typeFilter,
+      results,
+      missingFieldsData,
+      resultCount: results.length,
+    }, summary);
   }
 
   // ── Step 6: EXECUTE ──
@@ -284,8 +269,7 @@ export class AdminContactSearchModule implements IUCModule {
     });
 
     try {
-      const actions = ctx.approval?.modifiedActions ?? ctx.proposal?.suggestedActions ?? [];
-      const action = actions.find(a => a.type === 'admin_contact_search_reply');
+      const action = approvedAction(ctx, 'admin_contact_search_reply');
 
       if (!action) {
         return { success: false, sideEffects: [], error: 'No admin_contact_search_reply action found' };
@@ -347,35 +331,16 @@ export class AdminContactSearchModule implements IUCModule {
         replyText = `${header}\n\n${lines.join('\n\n')}`;
       }
 
-      const replyResult = await sendChannelReply({
-        channel: ctx.intake.channel,
-        ...extractChannelIds(ctx),
-        subject: `Αποτελέσματα αναζήτησης: ${searchTerm}`,
-        textBody: replyText,
-        requestId: ctx.requestId,
-      });
-
-      return {
-        success: true,
-        sideEffects: replyResult.success
-          ? [`reply_sent:${replyResult.messageId ?? 'unknown'}`]
-          : [`reply_failed:${replyResult.error ?? 'unknown'}`],
-      };
+      return await sendCommandReply(ctx, `Αποτελέσματα αναζήτησης: ${searchTerm}`, replyText);
     } catch (error) {
-      const errorMsg = getErrorMessage(error);
-      logger.error('UC-010 EXECUTE: Failed', { requestId: ctx.requestId, error: errorMsg });
-      return { success: false, sideEffects: [], error: errorMsg };
+      return failedExecution(ctx, 'UC-010', logger, error);
     }
   }
 
   // ── Step 7: ACKNOWLEDGE ──
 
   async acknowledge(ctx: PipelineContext): Promise<AcknowledgmentResult> {
-    const replySent = ctx.executionResult?.sideEffects?.some(
-      (se: string) => se.startsWith('reply_sent:')
-    ) ?? false;
-
-    return { sent: replySent, channel: ctx.intake.channel };
+    return acknowledgeBySideEffect(ctx, 'reply_sent:');
   }
 
   async healthCheck(): Promise<boolean> {

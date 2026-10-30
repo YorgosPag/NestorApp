@@ -125,8 +125,9 @@ function readTypeShape(node, sourceFile) {
  * Ένα αρχείο, διαβασμένο μία φορά: δηλώσεις τύπων · εισαγωγές · επανεξαγωγές.
  * Το `parsed` κρατά τα πάντα ώστε η αναδρομή σε barrels να μη ξαναδιαβάζει.
  */
-function parseFile(absFile, relFile) {
-  const source = fs.readFileSync(absFile, 'utf8');
+function parseFile(absFile, relFile, input = null) {
+  const source = input ? input.read(absFile) : fs.readFileSync(absFile, 'utf8');
+  if (source === null) throw new Error(`${relFile}: λείπει από την όψη (${input.mode})`);
   const sourceFile = ts.createSourceFile(relFile, source, ts.ScriptTarget.Latest, true, scriptKindFor(relFile));
   const generated = isGeneratedSource(source);
 
@@ -179,20 +180,18 @@ function parseFile(absFile, relFile) {
  * Το περιβάλλον επίλυσης. Ένα ανά εκτέλεση· κρατά μνήμη parse ώστε ένα barrel που
  * διασχίζεται από πέντε δοχεία να διαβαστεί **μία** φορά.
  */
-function createResolver(projectRoot) {
-  const aliases = readTsPathAliases(projectRoot);
+function createResolver(projectRoot, input = require('../gate-input').openGateInput({ root: projectRoot })) {
+  // ADR-924 — ψευδώνυμα, ύπαρξη και κείμενο από την ΕΙΣΟΔΟ (με `--index`: η όψη του commit).
+  const aliases = readTsPathAliases(projectRoot, undefined, input.read);
   const cache = new Map();
-  // Το `probe` του ADR-700 ρωτά μόνο `fileSet.has(x)` — εδώ η απάντηση έρχεται από τον
-  // δίσκο (βλ. σχόλιο αρχείου: λίγες ερωτήσεις, όχι περίπατος 14.708 αρχείων).
-  const fileSet = {
-    has: (p) => { try { return fs.statSync(p).isFile(); } catch { return false; } },
-  };
+  // Το `probe` του ADR-700 ρωτά μόνο `fileSet.has(x)` — λίγες ερωτήσεις, όχι περίπατος 14.708 αρχείων.
+  const fileSet = { has: (p) => input.exists(p) };
 
   const load = (relFile) => {
     if (cache.has(relFile)) return cache.get(relFile);
     const abs = path.join(projectRoot, relFile);
     let parsed = null;
-    try { parsed = parseFile(abs, relFile); } catch { parsed = null; }
+    try { parsed = parseFile(abs, relFile, input); } catch { parsed = null; }
     cache.set(relFile, parsed);
     return parsed;
   };

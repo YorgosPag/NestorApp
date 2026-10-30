@@ -12,6 +12,7 @@ const {
   parseTranslationNamespaceUnion,
   readText,
 } = require('./_shared/i18n-governance');
+const { commitInput } = require('./lib/gate-input');
 
 const lazyConfigPath = path.join(__dirname, '..', 'src', 'i18n', 'lazy-config.ts');
 /**
@@ -77,9 +78,9 @@ function collectRuntimeConfigErrors(runtimeConfig) {
   return errors;
 }
 
-function collectLocaleParityErrors(primaryNamespaces) {
+function collectLocaleParityErrors(primaryNamespaces, input) {
   return SUPPORTED_LOCALES.flatMap((locale) =>
-    driftError(`${locale} locale namespace drift`, compareSets(primaryNamespaces, getNamespacesForLocale(locale)))
+    driftError(`${locale} locale namespace drift`, compareSets(primaryNamespaces, getNamespacesForLocale(locale, input)))
   );
 }
 
@@ -98,8 +99,8 @@ function collectLocaleParityErrors(primaryNamespaces) {
  *   - `wrong-target`: το `case` δείχνει σε άλλη γλώσσα ή άλλο αρχείο ⇒ σιωπηλά **λάθος** κείμενο,
  *                     που είναι χειρότερο από ωμό κλειδί: μοιάζει σωστό.
  */
-function collectLoaderErrors() {
-  const loaders = parseNamespaceLoaders(namespaceLoadersPath);
+function collectLoaderErrors(input) {
+  const loaders = parseNamespaceLoaders(namespaceLoadersPath, input);
 
   return SUPPORTED_LOCALES.flatMap((locale) => {
     const entries = loaders[locale] ?? [];
@@ -107,7 +108,7 @@ function collectLoaderErrors() {
     const errors = driftError(
       `${locale} namespace loader drift in ${path.basename(namespaceLoadersPath)} ` +
         '(no-loader ⇒ empty bundle ⇒ raw keys on screen — ADR-752)',
-      compareSets(getNamespacesForLocale(locale), declared)
+      compareSets(getNamespacesForLocale(locale, input), declared)
     );
 
     const wrongTarget = entries
@@ -122,29 +123,36 @@ function collectLoaderErrors() {
   });
 }
 
-function main() {
-  const warnings = [];
-
-  const primaryNamespaces = getNamespacesForLocale('el');
-  const errors = [
+/**
+ * Κάθε απόκλιση της ρύθμισης i18n — από την ΕΙΣΟΔΟ (ADR-924 Φ3): με `--index` (εκτελεστής) τα αρχεία ΤΟΥ COMMIT.
+ * @returns {string[]}
+ */
+function measure(input = commitInput(path.join(__dirname, '..'))) {
+  const primaryNamespaces = getNamespacesForLocale('el', input);
+  return [
     // ADR-666: το lazy-config δηλώνει ΓΛΩΣΣΕΣ (incl. pseudo = runtime transform),
     // όχι locales-με-αρχεία. Σύγκριση με SUPPORTED_LANGUAGES, όχι SUPPORTED_LOCALES.
     ...driftError(
       'SUPPORTED_LANGUAGES drift',
-      compareSets(SUPPORTED_LANGUAGES, parseConstArray(languagesPath, 'SUPPORTED_LANGUAGES'))
+      compareSets(SUPPORTED_LANGUAGES, parseConstArray(languagesPath, 'SUPPORTED_LANGUAGES', input))
     ),
     ...driftError(
       `SUPPORTED_NAMESPACES drift vs ${LOCALES_DIR}\\el`,
-      compareSets(primaryNamespaces, parseConstArray(lazyConfigPath, 'SUPPORTED_NAMESPACES'))
+      compareSets(primaryNamespaces, parseConstArray(lazyConfigPath, 'SUPPORTED_NAMESPACES', input))
     ),
     ...driftError(
       'Generated TranslationNamespace drift',
-      compareSets(primaryNamespaces, parseTranslationNamespaceUnion(generatedTypesPath))
+      compareSets(primaryNamespaces, parseTranslationNamespaceUnion(generatedTypesPath, input))
     ),
-    ...collectRuntimeConfigErrors(readText(runtimeConfigPath)),
-    ...collectLocaleParityErrors(primaryNamespaces),
-    ...collectLoaderErrors(),
+    ...collectRuntimeConfigErrors(readText(runtimeConfigPath, input)),
+    ...collectLocaleParityErrors(primaryNamespaces, input),
+    ...collectLoaderErrors(input),
   ];
+}
+
+function main() {
+  const warnings = [];
+  const errors = measure();
 
   warnings.forEach((message) => printFinding('warn', message));
   errors.forEach((message) => printFinding('error', message));
@@ -157,4 +165,6 @@ function main() {
   console.log('i18n config validation passed.');
 }
 
-main();
+if (require.main === module) main();
+
+module.exports = { measure };

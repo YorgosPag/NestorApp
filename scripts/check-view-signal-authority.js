@@ -28,13 +28,11 @@
 
 'use strict';
 
-const fs = require('fs');
-const path = require('path');
+const ast = require('./lib/write-authority/ast');
+const { openGateInput } = require('./lib/gate-input');
+const { scanScope, forEachRelevant, tallyOf, gateEntry } = require('./lib/write-authority/gate-runner');
 
-const PROJECT_ROOT = path.resolve(__dirname, '..');
-const ts = require(path.join(PROJECT_ROOT, 'node_modules', 'typescript'));
-const { collectSourceFiles } = require('./lib/module-graph/scan-config');
-const { toPosix } = require('./lib/module-graph/resolve-specifier');
+const { ts, PROJECT_ROOT, sourceFileOf, lineOf, calleeName } = ast;
 
 const REGISTRY_FILE = '.view-signal-authority.json';
 const COLLECTION_EXPR = 'COLLECTIONS.CONVEYANCE_VIEW_SIGNALS';
@@ -57,23 +55,8 @@ const BLOCKING = [
   STATES.CLIENT_WRITES, STATES.SECOND_WRITE_FORM, STATES.SOURCE_DRIFT,
 ];
 
-function loadRegistry(root) {
-  return JSON.parse(fs.readFileSync(path.join(root, REGISTRY_FILE), 'utf8'));
-}
-
-function sourceFileOf(absPath, text) {
-  return ts.createSourceFile(absPath, text, ts.ScriptTarget.Latest, true,
-    /\.tsx$/.test(absPath) ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
-}
-
-const lineOf = (sf, node) => sf.getLineAndCharacterOfPosition(node.getStart()).line + 1;
-
-/** Το όνομα της συνάρτησης που καλείται άμεσα (`f(` ή `x.f(`) — αλλιώς `null`. */
-function calleeName(call) {
-  const callee = call.expression;
-  if (ts.isIdentifier(callee)) return callee.text;
-  if (ts.isPropertyAccessExpression(callee)) return callee.name.text;
-  return null;
+function loadRegistry(root, input = openGateInput({ root })) {
+  return input.readJson(REGISTRY_FILE);
 }
 
 /** Όσα ενδιαφέρουν την πύλη σε ένα αρχείο, σε ένα πέρασμα. */
@@ -131,15 +114,15 @@ function findingsIn(sf, rel, registry) {
 }
 
 /** Κ2 (η άλλη μεριά): κάθε δηλωμένος γραφέας ζητά σήμα όσες φορές οφείλει. + ύπαρξη αρχείων. */
-function declaredFindings(root, registry, factsByFile) {
+function declaredFindings(root, registry, factsByFile, input = openGateInput({ root })) {
   const findings = [];
   for (const declared of [registry.writer, registry.clientRef, ...Object.keys(registry.caseWriters)]) {
-    if (!fs.existsSync(path.join(root, declared))) {
+    if (!input.exists(declared)) {
       findings.push({ state: STATES.SOURCE_DRIFT, file: declared, detail: 'δηλωμένο αρχείο που ΔΕΝ ΥΠΑΡΧΕΙ' });
     }
   }
   for (const [file, spec] of Object.entries(registry.caseWriters)) {
-    if (!fs.existsSync(path.join(root, file))) continue;
+    if (!input.exists(file)) continue;
     // Αρχείο που δεν πέρασε καν το προφίλτρο = ΜΗΔΕΝ κλήσεις — ποτέ «δεν κοίταξα άρα πράσινο».
     const facts = factsByFile.get(file) || { calls: [] };
     const count = facts.calls.filter((c) => spec.calls.includes(c.name)).length;
@@ -153,56 +136,35 @@ function declaredFindings(root, registry, factsByFile) {
 const RELEVANT = /CONVEYANCE_VIEW_SIGNALS|signalViewsInTx|signalCaseChangeInTx|caseRosterSignal|invitationHostSignal|setDoc|tx\./;
 
 function measure(opts = {}) {
-  const root = opts.root || PROJECT_ROOT;
-  const registry = opts.registry || loadRegistry(root);
-  const files = (opts.codeFiles || collectSourceFiles(root, ['src'])).filter((f) => !/__tests__|\.test\.|\.spec\./.test(f));
-  if (!opts.codeFiles && files.length < 1000) throw new Error(`ΦΡΟΥΡΟΣ: μόνο ${files.length} αρχεία — η σάρωση δεν κοίταξε`);
+  const scope = scanScope(opts, PROJECT_ROOT);
+  const registry = opts.registry || loadRegistry(scope.root, scope.input);
   const findings = [];
   const factsByFile = new Map();
-  for (const abs of files) {
-    let text;
-    try { text = fs.readFileSync(abs, 'utf8'); } catch { continue; }
-    if (!RELEVANT.test(text)) continue;
-    const rel = toPosix(path.relative(root, abs));
+  forEachRelevant(scope, RELEVANT, (abs, rel, text) => {
     const result = findingsIn(sourceFileOf(abs, text), rel, registry);
     factsByFile.set(rel, result.facts);
     findings.push(...result.findings);
     if (rel === registry.writer) findings.push({ state: STATES.WRITER, file: rel });
     if (rel === registry.clientRef) findings.push({ state: STATES.CLIENT_REF, file: rel });
-  }
-  findings.push(...declaredFindings(root, registry, factsByFile));
-  const tally = Object.fromEntries(Object.values(STATES).map((s) => [s, findings.filter((f) => f.state === s).length]));
-  return { findings, tally, examined: files.length };
+  });
+  findings.push(...declaredFindings(scope.root, registry, factsByFile, scope.input));
+  return { findings, tally: tallyOf(findings, STATES), examined: scope.files.length };
 }
 
-function report(result, log = console.log) {
-  const { tally, findings } = result;
-  log('');
-  log('📡 CHECK 3.99 — Πύλη του ενός γραφέα σημάτων όψεων (ADR-905 §8 Ε2 · Α38)');
-  log(`   αρχεία που εξετάστηκαν: ${result.examined}`);
-  log('');
-  for (const s of BLOCKING) log(`   ⛔ ${s.padEnd(34)} ${tally[s]}`);
-  for (const s of [STATES.WRITER, STATES.CLIENT_REF, STATES.CASE_WRITER]) log(`   ✅ ${s.padEnd(34)} ${tally[s]}`);
-  const blocking = findings.filter((f) => BLOCKING.includes(f.state));
-  for (const f of blocking) log(`   ⛔ ${f.state}  ${f.file}${f.line ? ':' + f.line : ''}\n        ${f.detail}`);
-  if (blocking.length) {
-    log(`\n   ΘΕΡΑΠΕΙΑ: σήμα → \`signalCaseChangeInTx\` (κρίση ακροατηρίου + γραφή, μέσα στη συναλλαγή της πράξης)·`);
-    log(`   νέος γραφέας της υπόθεσης → γραμμή στο ${REGISTRY_FILE} με \`min\` και \`why\`. ⚠️ ΜΗΝ γράψεις δεύτερο γραφέα.`);
-  }
-  return blocking.length;
-}
-
-function main() {
-  if (process.env.SKIP_VIEW_SIGNAL_AUTHORITY === '1') {
-    console.log('⏭️  CHECK 3.99 παραλείφθηκε (SKIP_VIEW_SIGNAL_AUTHORITY=1)');
-    return 0;
-  }
-  const blocking = report(measure());
-  console.log(blocking > 0
-    ? `\n❌ CHECK 3.99 ΑΠΕΤΥΧΕ — ${blocking} μπλοκάρουσα(ες) παραβίαση(εις)\n`
-    : '\n✅ CHECK 3.99 — ένας γραφέας σημάτων, και κάθε γραφέας της υπόθεσης τον ρωτά\n');
-  return blocking > 0 ? 1 : 0;
-}
+const { report, main } = gateEntry({
+  projectRoot: PROJECT_ROOT, measure, check: '3.99', skipEnv: 'SKIP_VIEW_SIGNAL_AUTHORITY',
+  ok: 'ένας γραφέας σημάτων, και κάθε γραφέας της υπόθεσης τον ρωτά',
+  report: {
+    title: '📡 CHECK 3.99 — Πύλη του ενός γραφέα σημάτων όψεων (ADR-905 §8 Ε2 · Α38)',
+    blocking: BLOCKING,
+    healthy: [STATES.WRITER, STATES.CLIENT_REF, STATES.CASE_WRITER],
+    width: 34,
+    remedy: [
+      'ΘΕΡΑΠΕΙΑ: σήμα → `signalCaseChangeInTx` (κρίση ακροατηρίου + γραφή, μέσα στη συναλλαγή της πράξης)·',
+      `νέος γραφέας της υπόθεσης → γραμμή στο ${REGISTRY_FILE} με \`min\` και \`why\`. ⚠️ ΜΗΝ γράψεις δεύτερο γραφέα.`,
+    ],
+  },
+});
 
 if (require.main === module) process.exit(main());
 

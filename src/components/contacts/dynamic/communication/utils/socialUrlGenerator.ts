@@ -10,7 +10,8 @@
 
 import { createModuleLogger } from '@/lib/telemetry';
 import { validateSocialUrl as enterpriseValidator } from '@/lib/social-platform-system/profile-service';
-import { type SocialPlatformType } from '@/lib/social-platform-system/platform-config';
+import { SOCIAL_PLATFORMS, isSocialPlatform, type SocialPlatform } from '@/lib/contact/social-media-type-vocabulary';
+import { buildSocialProfileUrl, type NamedSocialPlatform } from '@/lib/contact/social-platform-profiles';
 const logger = createModuleLogger('socialUrlGenerator');
 
 // ============================================================================
@@ -18,18 +19,12 @@ const logger = createModuleLogger('socialUrlGenerator');
 // ============================================================================
 
 /**
- * 🎯 Social Media Platform Types
+ * 🎯 Social Media Platform Types — η ΡΙΖΑ `SOCIAL_PLATFORMS` (ADR-327 §8.5.4).
  *
- * Supported social media platforms για URL generation
+ * Εδώ ζούσε τοπικό ομώνυμο 7 τιμών (χωρίς whatsapp/telegram/other) — και επειδή είχε το ΙΔΙΟ όνομα με τη ρίζα, το
+ * CHECK 3.73 μετρούσε τους πίνακές του «δεμένους». Τα πρότυπα URL ζουν πλέον στο `social-platform-profiles`.
  */
-export type SocialPlatform =
-  | 'linkedin'
-  | 'facebook'
-  | 'instagram'
-  | 'twitter'
-  | 'youtube'
-  | 'github'
-  | 'tiktok';
+export type { SocialPlatform };
 
 /**
  * 🔗 Social URL Template Configuration
@@ -42,41 +37,6 @@ export interface SocialUrlTemplate {
   placeholder: string;
   validation?: RegExp;
 }
-
-// ============================================================================
-// ENTERPRISE URL TEMPLATES CONFIGURATION
-// ============================================================================
-
-/**
- * 🏢 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ URL TEMPLATES
- *
- * Single source of truth για όλα τα social media URL patterns
- * Μπορεί εύκολα να επεκταθεί με νέες πλατφόρμες
- */
-export const SOCIAL_URL_TEMPLATES: Record<SocialPlatform, string> = {
-  linkedin: 'https://linkedin.com/in/{username}',
-  facebook: 'https://facebook.com/{username}',
-  instagram: 'https://instagram.com/{username}',
-  twitter: 'https://x.com/{username}',
-  youtube: 'https://youtube.com/@{username}',
-  github: 'https://github.com/{username}',
-  tiktok: 'https://tiktok.com/@{username}'
-} as const;
-
-/**
- * 📝 USERNAME PLACEHOLDERS
- *
- * Placeholder text για κάθε platform
- */
-export const SOCIAL_URL_PLACEHOLDERS: Record<SocialPlatform, string> = {
-  linkedin: 'john-doe',
-  facebook: 'john.doe',
-  instagram: 'johndoe',
-  twitter: 'johndoe',
-  youtube: 'johndoe',
-  github: 'johndoe',
-  tiktok: 'johndoe'
-} as const;
 
 // ============================================================================
 // ENTERPRISE UTILITY FUNCTIONS
@@ -109,16 +69,15 @@ export function generateSocialUrl(platform: string, username: string): string {
   // Clean username - remove whitespace και special characters
   const cleanUsername = username.trim().toLowerCase();
 
-  // Get template για την πλατφόρμα
-  const template = SOCIAL_URL_TEMPLATES[platform as SocialPlatform];
+  // Το πρότυπο από το ΕΝΑ μητρώο (`social-platform-profiles`)· `other` δεν έχει πρότυπο
+  const url = isSocialPlatform(platform) ? buildSocialProfileUrl(platform, cleanUsername) : undefined;
 
-  if (!template) {
+  if (!url) {
     logger.warn(`[SocialUrlGenerator] Unsupported platform: ${platform}`);
     return '';
   }
 
-  // Replace placeholder με actual username
-  return template.replace('{username}', cleanUsername);
+  return url;
 }
 
 /**
@@ -133,7 +92,8 @@ export function generateSocialUrl(platform: string, username: string): string {
 export function validateSocialUrl(url: string, platform?: SocialPlatform): boolean {
   // ✅ ENTERPRISE MIGRATION: Delegating to centralized social platform system
   // BACKWARDS COMPATIBLE: Same interface, enterprise implementation
-  return enterpriseValidator(url, platform as SocialPlatformType | undefined);
+  // `other` δεν έχει πρότυπο ⇒ έλεγχος χωρίς αναμενόμενη πλατφόρμα (χωρίς τυφλό `as`)
+  return enterpriseValidator(url, platform === 'other' ? undefined : platform);
 }
 
 /**
@@ -176,8 +136,8 @@ export function extractUsernameFromSocialUrl(url: string): string {
  *
  * Returns list των supported social media platforms
  */
-export function getSupportedSocialPlatforms(): SocialPlatform[] {
-  return Object.keys(SOCIAL_URL_TEMPLATES) as SocialPlatform[];
+export function getSupportedSocialPlatforms(): NamedSocialPlatform[] {
+  return SOCIAL_PLATFORMS.filter((p): p is NamedSocialPlatform => p !== 'other');
 }
 
 /**

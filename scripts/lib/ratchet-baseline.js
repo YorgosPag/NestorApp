@@ -55,10 +55,12 @@ function parseArgs(argv) {
 // Fail-closed baseline read. Missing file → null (caller prints "seed it").
 // Present-but-broken → { __invalid } so a corrupt baseline can never be mistaken
 // for "0 regressions". `requiredNumericKeys` are the metric fields the gate needs.
-function loadBaseline(filePath, requiredNumericKeys = []) {
-  if (!fs.existsSync(filePath)) return null;
+// `input` (ADR-924): η είσοδος της πύλης — με `--index` η baseline ΤΟΥ COMMIT, όχι μια αστάδιοποίητη του δίσκου.
+function loadBaseline(filePath, requiredNumericKeys = [], input = null) {
+  const text = input ? input.read(filePath) : (fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : null);
+  if (text === null) return null;
   try {
-    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    const parsed = JSON.parse(text);
     for (const key of requiredNumericKeys) {
       if (typeof parsed[key] !== 'number') {
         return { __invalid: `missing numeric field "${key}"` };
@@ -285,14 +287,15 @@ function compareSets(currentIds, baselineIds) {
  */
 function printSetFailure(descriptor, { addedViolations, addedDeclarations, measured }) {
   const M = descriptor.messages;
-  const byId = new Map((measured.violations || []).map((f) => [descriptor.violationId(f), f]));
+  const idOf = descriptor.violationId || ((f) => f.id);   // προεπιλογή: η ταυτότητα της γραμμής
+  const byId = new Map((measured.violations || []).map((f) => [idOf(f), f]));
 
   console.error(`❌ ${descriptor.adr} — ${M.worse}\n`);
 
   for (const id of addedDeclarations) console.error(`   🚫 ${M.newDeclLabel}  ${id}`);
   if (addedDeclarations.length) {
     console.error('');
-    for (const line of M.newDeclAdvice) console.error(`      ${line}`);
+    for (const line of M.newDeclAdvice || []) console.error(`      ${line}`);
     console.error('');
   }
 
@@ -353,10 +356,14 @@ async function runSetRatchetCli(descriptor, argv = process.argv) {
   const args = argv.slice(2);
   const L = descriptor.labels;
   const file = descriptor.baselineFile;
+  // ADR-924 Φ2 — ΜΙΑ είσοδος ανά εκτέλεση, για τη μέτρηση ΚΑΙ τη baseline: με `--index` (εκτελεστής) και τα δύο
+  // κρίνουν το commit. Νωχελικό `require`: οι αριθμητικές πύλες (`runRatchetCli`) δεν πληρώνουν τίποτα.
+  const { commitInput } = require('./gate-input');
+  const input = descriptor.input || commitInput(descriptor.root || PROJECT_ROOT, argv);
 
   let measured;
   try {
-    measured = await descriptor.measure(args);
+    measured = await descriptor.measure(args, input);
   } catch (e) {
     console.error(`❌ ${descriptor.adr} — αδύνατη η μέτρηση: ${e.message}`);
     return process.exit(1); // fail-closed: ποτέ «καθαρό» χωρίς μέτρηση
@@ -381,7 +388,7 @@ async function runSetRatchetCli(descriptor, argv = process.argv) {
     return process.exit(0);
   }
 
-  const baseline = loadBaseline(file);
+  const baseline = loadBaseline(file, [], input);
   const usable = baseline && !baseline.__invalid
     && Array.isArray(baseline.violations) && Array.isArray(baseline.declarations);
   if (!usable) {
@@ -429,10 +436,90 @@ async function runSetRatchetCli(descriptor, argv = process.argv) {
   return process.exit(0);
 }
 
+/**
+ * ΜΙΑ είσοδος και ΜΙΑ μέτρηση για όλη την εκτέλεση μιας set-ratchet πύλης (ADR-924 §8.8): ο δικός της φρουρός
+ * (zero-tolerance / Κ1) και το `runSetRatchetCli` τη μοιράζονται. 🔴 ΜΕΤΡΗΜΕΝΟ: 3.58 · 3.59 · 3.69 μετρούσαν δύο φορές
+ * (3.69: 24s → 6s). `once()` = η μέτρηση· `descriptor` = ό,τι δίνεται στο `runSetRatchetCli`.
+ * @returns {{input: object, once: () => object, descriptor: object}}
+ */
+function sharedMeasurement(descriptor, argv = process.argv) {
+  let input = null;   // νωχελικά: μια πύλη που παρακάμπτεται (`SKIP_…`) δεν πληρώνει την όψη του commit
+  const inputOf = () => (input = input || require('./gate-input').commitInput(descriptor.root || PROJECT_ROOT, argv));
+  let measured = null;
+  const once = () => (measured = measured || descriptor.measure(argv.slice(2), inputOf()));
+  return {
+    get input() { return inputOf(); },
+    once,
+    descriptor: { ...descriptor, get input() { return inputOf(); }, measure: () => once() },
+  };
+}
+
+/**
+ * Το `main` μιας set-ratchet πύλης με **φρουρό μηδενικής ανοχής ΠΡΙΝ το ratchet** (3.58 · 3.59 · 3.62 · 3.68):
+ * παράκαμψη → σκανδάλη → ΜΙΑ μέτρηση → κατάστιχο (και στο μηδέν) → φρουρός → `runSetRatchetCli`.
+ * 🧹 Ήταν τέσσερα δίδυμα `main` (jscpd, ADR-924 §8.8)· η 3.62 μετρούσε ακόμη ΔΥΟ φορές.
+ * Ό,τι διαφέρει ανά πύλη είναι δεδομένα: `spec = { descriptor, check, triggers(staged, input), ledgerLine(m),
+ * blockingOf(m) → [], printBlocking(m) }`. Η θεραπεία ανά κατάσταση μένει στην πύλη (`printBlocking`).
+ */
+async function runGuardedSetRatchetCli(spec, argv = process.argv) {
+  const { descriptor, check } = spec;
+  if (process.env[descriptor.skipEnv] === '1') {
+    console.log(`  ⏭ CHECK ${check} παραλείφθηκε (${descriptor.skipEnv}=1)`);
+    return process.exit(0);
+  }
+  const args = argv.slice(2);
+  const explicit = args.includes('--report') || args.includes('--write-baseline') || args.includes('--all');
+  const staged = args.filter((a) => !a.startsWith('-'));
+  const shared = sharedMeasurement(descriptor, argv);
+  // ⚡ Η σκανδάλη αποφασίζει **ΑΝ** τρέχει, ποτέ **ΠΟΣΟ** σαρώνει — και ρωτά την ΙΔΙΑ είσοδο (με `--index`: το commit).
+  if (!explicit && staged.length > 0 && !spec.triggers(staged, shared.input)) return process.exit(0);
+
+  if (!args.includes('--report') && !args.includes('--write-baseline')) {
+    const m = await shared.once();
+    // ⚠️ Τυπώνεται ΚΑΙ ΣΤΟ ΜΗΔΕΝ: ένα «0» που δεν φαίνεται διαβάζεται ως «δεν κοίταξα».
+    console.log(spec.ledgerLine(m));
+    if (spec.blockingOf(m).length > 0) {
+      spec.printBlocking(m);
+      return process.exit(1);
+    }
+  }
+  return runSetRatchetCli(shared.descriptor, argv);
+}
+
+/**
+ * Set-ratchet με **δικό της φρουρό μηδενικής ανοχής** `enforce(args, measure)` (3.66 · 3.67 · 3.69): ΜΙΑ μέτρηση, και
+ * ο φρουρός ΠΑΝΤΑ πριν το ratchet — η σειρά ζει εδώ, ΜΙΑ φορά (ήταν τρία δίδυμα μπλοκ, jscpd ADR-924 §8.8).
+ */
+function runZeroTolerantSetRatchetCli(descriptor, enforce, argv = process.argv) {
+  const shared = sharedMeasurement(descriptor, argv);
+  enforce(argv.slice(2), shared.once);
+  return runSetRatchetCli(shared.descriptor, argv);
+}
+
+/** Οι εντολές της πύλης όταν ακολουθούν τη σύμβαση `npm run <όνομα>:report|baseline` (σπορά = baseline). */
+function npmRatchetCommands(name) {
+  return { report: `npm run ${name}:report`, baseline: `npm run ${name}:baseline`, seed: `npm run ${name}:baseline` };
+}
+
+/** Το σώμα της baseline ενός set-ratchet: `{ _doc, _warning, [_health], generatedAt, violations, declarations }`. */
+function ratchetPayload(m, notes) {
+  return {
+    ...notes,
+    generatedAt: new Date().toISOString().slice(0, 10),
+    violations: m.violationIds,
+    declarations: m.declarations,
+  };
+}
+
 module.exports = {
   PROJECT_ROOT,
   rel,
   parseArgs,
+  sharedMeasurement,
+  runGuardedSetRatchetCli,
+  runZeroTolerantSetRatchetCli,
+  npmRatchetCommands,
+  ratchetPayload,
   loadBaseline,
   writeBaselineFile,
   isRegression,

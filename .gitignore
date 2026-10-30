@@ -68,7 +68,11 @@ functions/node_modules/
 .next/
 dist/
 build/
-coverage/
+# ⚠️ ΑΓΚΥΡΩΜΕΝΟ (ADR-924 §8.7): το αναγκύρωτο `coverage/` κατάπινε τη ΔΙΑΔΡΟΜΗ
+# `src/app/(app)/o/[workspace]/projects/[id]/procurement/coverage/` ⇒ η σελίδα δεν έφτανε ποτέ στο repo.
+# Οι φάκελοι κάλυψης του jest είναι ΜΟΝΟ αυτοί οι δύο.
+/coverage/
+/src/subapps/dxf-viewer/coverage/
 # firebase local artifacts
 .firebase/
 # env / logs

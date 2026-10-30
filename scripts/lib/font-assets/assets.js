@@ -42,9 +42,9 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { execFileSync } = require('node:child_process');
 
 const E = require('./evidence');
+const { closedTally, idsOf } = require('../gate-ledger');
 const LP = require('../license-policy/policy');
 const { stripComments } = require('../source-text');
 
@@ -90,11 +90,9 @@ const RATCHETED = [STATES.LICENSE_NOT_ALLOWED, STATES.UNATTRIBUTED];
 
 // ─── Απογραφή ─────────────────────────────────────────────────────────────────
 
-function tracked(repoRoot) {
-  const out = execFileSync('git', ['ls-files', '-z'], {
-    cwd: repoRoot, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024,
-  });
-  return out.split('\0').filter(Boolean);
+/** Το ευρετήριο — τα αρχεία που θα φύγουν στο commit (η είσοδος: \`git ls-files\` και στις δύο όψεις). */
+function tracked(input) {
+  return input.tracked();
 }
 
 /** Δυαδικά γραμματοσειράς που είναι **στο ευρετήριο του git** — δηλαδή θα φύγουν στο commit. */
@@ -118,34 +116,29 @@ function binaryAssets(files) {
  */
 const SOURCE_PATHSPECS = ['*.ts', '*.tsx', '*.js', '*.mjs'];
 
-function gitGrepFiles(repoRoot, needle, pathspecs = SOURCE_PATHSPECS) {
-  try {
-    const out = execFileSync(
-      'git',
-      ['grep', '-l', '--fixed-strings', '-z', needle, '--', ...pathspecs],
-      { cwd: repoRoot, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 },
-    );
-    return out.split('\0').filter(Boolean);
-  } catch (error) {
-    // `git grep` βγαίνει με 1 όταν δεν βρει τίποτα — αυτό ΔΕΝ είναι σφάλμα.
-    if (error && error.status === 1) return [];
-    throw error;
-  }
+/** ADR-924 Φ2 — το κείμενο ΤΗΣ ΟΨΗΣ: με `--index` ψάχνει το ευρετήριο (`git grep --cached`), όχι τον δίσκο. */
+/** Ρίζα (σουίτες, παλιό API) ή είσοδος — ό,τι κι αν δοθεί, οι αναγνώσεις περνούν από την ΕΙΣΟΔΟ. */
+const inputOf = (rootOrInput) => (typeof rootOrInput === 'string'
+  ? require('../gate-input').openGateInput({ root: rootOrInput }) : rootOrInput);
+
+function gitGrepFiles(input, needle, pathspecs = SOURCE_PATHSPECS) {
+  return input.grep(needle, pathspecs);
 }
 
-function base64FontModules(repoRoot) {
+function base64FontModules(rootOrInput) {
+  const input = inputOf(rootOrInput);
   const idents = new Set();
-  for (const rel of gitGrepFiles(repoRoot, 'addFileToVFS')) {
+  for (const rel of gitGrepFiles(input, 'addFileToVFS')) {
     // 🔴 ΤΑ ΣΧΟΛΙΑ ΚΟΒΟΝΤΑΙ, ΚΑΙ ΤΟ ΠΛΗΡΩΣΕ ΑΥΤΟ ΤΟ ΙΔΙΟ ΑΡΧΕΙΟ: το docblock από πάνω γράφει
     //    το κριτήριο ως παράδειγμα, οπότε η πύλη διάβαζε τη ΔΙΚΗ ΤΗΣ τεκμηρίωση, εξήγαγε
     //    «ταυτοποιητή» και ανέφερε 11 αδήλωτες γραμματοσειρές αντί για 1 (σχήμα `Κ7β`, 3.50).
-    const text = stripComments(fs.readFileSync(path.join(repoRoot, rel), 'utf8'));
+    const text = stripComments(input.read(rel) ?? '');
     const re = /addFileToVFS\(\s*['"][^'"]+\.(?:ttf|otf|woff2?)['"]\s*,\s*([A-Za-z_$][\w$]*)/g;
     for (const m of text.matchAll(re)) idents.add(m[1]);
   }
   const owners = new Set();
   for (const ident of idents) {
-    for (const rel of gitGrepFiles(repoRoot, `export const ${ident}`)) owners.add(rel);
+    for (const rel of gitGrepFiles(input, `export const ${ident}`)) owners.add(rel);
   }
   return [...owners].sort();
 }
@@ -177,47 +170,49 @@ function remoteNeedlesIn(sourceText) {
   return REMOTE_FONT_NEEDLES.filter((needle) => code.includes(needle));
 }
 
-function remoteFontSources(repoRoot) {
+function remoteFontSources(rootOrInput) {
+  const input = inputOf(rootOrInput);
   const candidates = new Set();
   for (const needle of REMOTE_FONT_NEEDLES) {
-    for (const rel of gitGrepFiles(repoRoot, needle, SHIPPED_CODE_PATHSPECS)) candidates.add(rel);
+    for (const rel of gitGrepFiles(input, needle, SHIPPED_CODE_PATHSPECS)) candidates.add(rel);
   }
   const found = [];
   for (const rel of [...candidates].sort()) {
     if (rel.startsWith(TOOLING_PREFIX)) continue;
-    const [needle] = remoteNeedlesIn(fs.readFileSync(path.join(repoRoot, rel), 'utf8'));
+    const [needle] = remoteNeedlesIn(input.read(rel) ?? '');
     if (needle) found.push({ file: rel, needle });
   }
   return found;
 }
 
-function readJson(repoRoot, rel, what) {
-  const file = path.join(repoRoot, rel);
-  if (!fs.existsSync(file)) {
+function readJson(input, rel, what) {
+  const text = input.read(rel);
+  if (text === null) {
     throw new Error(`${rel} λείπει — ${what} χωρίς αυθεντία, και «καμία παραβίαση» θα ήταν ψέμα.`);
   }
-  return JSON.parse(fs.readFileSync(file, 'utf8'));
+  return JSON.parse(text);
 }
 
 /** Η πολιτική που λείπει ή είναι άκυρη ⇒ σφάλμα ΜΕ ΟΝΟΜΑ, ποτέ «καμία παραβίαση». */
-function loadPolicyOrThrow(repoRoot) {
-  const loaded = LP.loadPolicy(path.join(repoRoot, POLICY_FILE));
+function loadPolicyOrThrow(input) {
+  const loaded = LP.loadPolicy(POLICY_FILE, input);
   if (!loaded.ok) throw new Error(`${POLICY_FILE} — η πολιτική αδειών δεν διαβάζεται: ${loaded.error}`);
   return loaded.policy;
 }
 
 /**
- * Η απογραφή. Το `override` υπάρχει **μόνο** για τη σουίτα — η παραγωγή ρωτά πάντα το git.
+ * Η απογραφή. Το `override` υπάρχει **μόνο** για τη σουίτα. `input` = η είσοδος της πύλης (ADR-924): προεπιλογή
+ * ο δίσκος, ο εκτελεστής δίνει την όψη του commit.
  */
-function takeInventory(repoRoot, override = {}) {
+function takeInventory(repoRoot, override = {}, input = require('../gate-input').openGateInput({ root: repoRoot })) {
   // ⚠️ **Η ΑΥΘΕΝΤΙΑ ΔΙΑΒΑΖΕΤΑΙ ΠΡΩΤΗ.** Αν το μητρώο λείπει, το σφάλμα πρέπει να **ονομάζει το
   //    μητρώο** — όχι να σκάει πρώτα το `git` με «spawnSync ENOENT», μήνυμα που στέλνει τον
   //    επόμενο να ψάχνει λάθος πράγμα (άγκυρα `Κ12`).
-  const registry = override.registry ?? readJson(repoRoot, REGISTRY_FILE, 'το μητρώο').assets;
-  const policy = override.policy ?? loadPolicyOrThrow(repoRoot);
-  const files = override.files ?? tracked(repoRoot);
+  const registry = override.registry ?? readJson(input, REGISTRY_FILE, 'το μητρώο').assets;
+  const policy = override.policy ?? loadPolicyOrThrow(input);
+  const files = override.files ?? tracked(input);
   const shipped = override.shipped
-    ?? [...binaryAssets(files), ...base64FontModules(repoRoot)].sort();
+    ?? [...binaryAssets(files), ...base64FontModules(input)].sort();
 
   return {
     repoRoot,
@@ -226,12 +221,12 @@ function takeInventory(repoRoot, override = {}) {
     registry: registry || {},
     policy,
     now: override.now ?? Date.now(),
-    evidenceOf: override.evidenceOf ?? ((rel) => E.readEvidence(repoRoot, rel)),
+    evidenceOf: override.evidenceOf ?? ((rel) => E.readEvidence(repoRoot, rel, input)),
     attributionExists: override.attributionExists
-      ?? ((rel) => !!rel && fs.existsSync(path.join(repoRoot, rel))),
-    existsOnDisk: override.existsOnDisk ?? ((rel) => fs.existsSync(path.join(repoRoot, rel))),
+      ?? ((rel) => !!rel && input.exists(rel)),
+    existsOnDisk: override.existsOnDisk ?? ((rel) => input.exists(rel)),
     // Συνθετικός κόσμος (`shipped` δοσμένο) ⇒ δεν σαρώνεται το πραγματικό δέντρο πίσω από την πλάτη του.
-    remote: override.remote ?? (override.shipped ? [] : remoteFontSources(repoRoot)),
+    remote: override.remote ?? (override.shipped ? [] : remoteFontSources(input)),
   };
 }
 
@@ -304,17 +299,8 @@ function judge(inv) {
   return { rows, tally: tallyOf(rows) };
 }
 
-function tallyOf(rows) {
-  const known = new Set(Object.values(STATES));
-  const tally = Object.fromEntries([...known].map((s) => [s, 0]));
-  for (const r of rows) {
-    if (!known.has(r.state)) throw new Error(`CHECK 3.69 — άγνωστη κατάσταση «${r.state}»`);
-    tally[r.state] += 1;
-  }
-  return tally;
-}
-
-const idsOf = (verdict, state) => verdict.rows.filter((r) => r.state === state).map((r) => r.id);
+/** Κλειστή λογιστική (SSoT `gate-ledger`). */
+const tallyOf = (rows) => closedTally(rows, STATES, '3.69');
 
 module.exports = {
   REGISTRY_FILE, POLICY_FILE,

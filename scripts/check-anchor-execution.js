@@ -51,6 +51,7 @@ const {
   GAP_FILE_STATES,
   buildExecutionCensus,
 } = require('./lib/anchor-execution/census');
+const { commitInput } = require('./lib/gate-input');
 
 const RED = '\x1b[31m';
 const GREEN = '\x1b[32m';
@@ -117,7 +118,7 @@ function main(argv) {
   const staged = argv.filter((arg) => !arg.startsWith('-'));
   if (!all && staged.length > 0 && !triggers(staged)) return 0;
 
-  const census = buildExecutionCensus(process.cwd());
+  const census = buildExecutionCensus(process.cwd(), commitInput(process.cwd(), argv));
 
   if (report) {
     console.log('\nCHECK 3.54 — απογραφή εκτέλεσης αγκυρών (ADR-783)');

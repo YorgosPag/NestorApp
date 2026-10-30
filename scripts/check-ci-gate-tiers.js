@@ -15,7 +15,11 @@
  * Παράκαμψη: SKIP_CI_TIER_COVERAGE=1 git commit …   (δικαιολόγησέ την στον Giorgio)
  */
 
+const path = require('path');
 const { auditGateTiers, STATES } = require('./lib/ci/gate-registry');
+const { commitInput } = require('./lib/gate-input');
+
+const REPO_ROOT = path.join(__dirname, '..');
 
 const RED = '\x1b[0;31m';
 const GREEN = '\x1b[0;32m';
@@ -25,7 +29,8 @@ const NC = '\x1b[0m';
 function main() {
   let result;
   try {
-    result = auditGateTiers();
+    // ADR-924: `--index` (εκτελεστής) ⇒ τα workflows και το μητρώο ΤΟΥ COMMIT, όχι του δίσκου
+    result = auditGateTiers({ repoRoot: REPO_ROOT, input: commitInput(REPO_ROOT) });
   } catch (error) {
     console.log(`${RED}  ❌ CHECK 3.37 — δεν διαβάζεται το μητρώο πυλών: ${error.message}${NC}`);
     return 1;

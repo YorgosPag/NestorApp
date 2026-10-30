@@ -60,32 +60,30 @@ const path = require('path');
 // ADR-781 §3 — το ισοπέδωμα κλειδιών είναι SSoT. Ήταν ιδιωτικό εδώ· η ταυτότητα
 // των δύο υλοποιήσεων αποδείχθηκε σε 101 namespaces / 31.361 κλειδιά, 0 διαφορές.
 const { flattenAnswerableKeys } = require('./lib/i18n/locale-keys');
+const { commitInput } = require('./lib/gate-input');
+const labels = require('./lib/i18n/config-label-keys');
 
 const REPO_ROOT = path.join(__dirname, '..');
-const LOCALE_DIR = path.join(REPO_ROOT, 'src', 'i18n', 'locales', 'el');
-const RESOLVER_FILE = path.join(
-  REPO_ROOT,
-  'src', 'components', 'generic', 'i18n', 'translate-field-value.ts',
-);
-const BASELINE_FILE = path.join(REPO_ROOT, '.i18n-resolver-reachability-baseline.json');
+// ADR-924: σχετικά με τη ρίζα — κάθε ανάγνωση από την ΕΙΣΟΔΟ (`--index` ⇒ resolver, locale, baseline ΤΟΥ COMMIT).
+const RESOLVER_FILE = 'src/components/generic/i18n/translate-field-value.ts';
+const BASELINE_FILE = '.i18n-resolver-reachability-baseline.json';
 
 const RED = '\x1b[0;31m';
 const GREEN = '\x1b[0;32m';
-const YELLOW = '\x1b[1;33m';
 const CYAN = '\x1b[0;36m';
 const NC = '\x1b[0m';
 
 // ---------------------------------------------------------------------------
 // 1. Parse SERVICE_FORM_NAMESPACES from the resolver module.
 // ---------------------------------------------------------------------------
-function readServiceFormNamespaces() {
-  const src = fs.readFileSync(RESOLVER_FILE, 'utf8');
+function readServiceFormNamespaces(input) {
+  const src = input.readRequired(RESOLVER_FILE);
   const match = src.match(
     /export\s+const\s+SERVICE_FORM_NAMESPACES\s*=\s*\[([\s\S]*?)\]\s*as\s+const/,
   );
   if (!match) {
     throw new Error(
-      `Could not locate SERVICE_FORM_NAMESPACES in ${RESOLVER_FILE}`,
+      `Could not locate SERVICE_FORM_NAMESPACES in ${path.join(REPO_ROOT, RESOLVER_FILE)}`,
     );
   }
   const body = match[1];
@@ -105,15 +103,14 @@ function readServiceFormNamespaces() {
 //    semantics, walks each namespace in turn and resolves the dotted key path
 //    against the namespace's own root object.
 // ---------------------------------------------------------------------------
-function loadNamespaceIndex(namespaces) {
+function loadNamespaceIndex(namespaces, input) {
   const index = new Map(); // ns -> Set of dotted keys
   for (const ns of namespaces) {
-    const file = path.join(LOCALE_DIR, `${ns}.json`);
+    const text = input.read(`${labels.EL_LOCALE_DIR}/${ns}.json`);
     const set = new Set();
-    if (fs.existsSync(file)) {
+    if (text !== null) {
       try {
-        const data = JSON.parse(fs.readFileSync(file, 'utf8'));
-        flattenAnswerableKeys(data, set);
+        flattenAnswerableKeys(JSON.parse(text), set);
       } catch {
         // corrupt JSON — other checks will flag; leave this ns empty
       }
@@ -165,8 +162,6 @@ function resolves(key, nsIndex) {
 //    config files: label, placeholder, helpText, title, description, empty,
 //    info, searchPlaceholder, noResults.
 // ---------------------------------------------------------------------------
-const KEY_SHAPE = /^[a-z][a-zA-Z0-9_]*(\.[a-zA-Z0-9_]+){1,}$/;
-
 const FIELD_NAMES = [
   'label',
   'placeholder',
@@ -188,199 +183,92 @@ function extractCandidates(content) {
   const regex = new RegExp(`\\b(?:${union})\\s*:\\s*['"]([^'"\\n]+)['"]`, 'g');
   for (const m of content.matchAll(regex)) {
     const value = m[1];
-    if (KEY_SHAPE.test(value)) {
+    if (labels.KEY_SHAPE.test(value)) {
       out.push({ key: value, index: m.index });
     }
   }
   // Also catch `_LABELS` entries (shape 2 from CHECK 3.12) since labels/fields
   // tables in modal-select use that pattern.
-  const labelsBlockRegex =
-    /export\s+const\s+[A-Z][A-Z0-9_]*_LABELS\s*=\s*\{([\s\S]*?)\n\}\s*as\s+const;?/g;
-  for (const block of content.matchAll(labelsBlockRegex)) {
-    const body = block[1];
-    const baseIndex = block.index + block[0].indexOf(body);
-    const entryRegex = /['"]([^'"]+)['"]\s*,?/g;
-    for (const m of body.matchAll(entryRegex)) {
-      const value = m[1];
-      if (KEY_SHAPE.test(value)) {
-        out.push({ key: value, index: baseIndex + m.index });
-      }
-    }
-  }
+  out.push(...labels.labelsBlockCandidates(content));
   return out;
 }
 
-function getLineNumber(content, index) {
-  return content.substring(0, index).split('\n').length;
+/** Τα κλειδιά ενός αρχείου που ο resolver ΔΕΝ φτάνει — `[{ key, line }]`. */
+function unreachablesOf(content, nsIndex) {
+  return extractCandidates(content)
+    .filter(({ key }) => !resolves(key, nsIndex))
+    .map(({ key, index }) => ({ key, line: labels.lineOf(content, index) }));
 }
 
-function normalizePath(p) {
-  return p.replace(/\\/g, '/');
-}
-
-function isInScope(file) {
-  const norm = normalizePath(file);
-  if (!/\.(ts|tsx)$/.test(norm)) return false;
-  if (/(__tests__|\.test\.|\.spec\.|\.stories\.|\.d\.ts$)/.test(norm)) {
-    return false;
-  }
-  if (norm.startsWith('scripts/')) return false;
-  return (
-    norm.startsWith('src/config/') ||
-    /src\/subapps\/[^/]+\/config\/modal-select(\/|\.)/.test(norm) ||
-    /src\/constants\/domains\/dropdown-[a-z-]+\.ts$/.test(norm)
+// ---------------------------------------------------------------------------
+// 5. Baseline rewrite (γεννήτορας: πάντα ο δίσκος)
+// ---------------------------------------------------------------------------
+function writeBaseline(scanned, namespaces) {
+  const newBaseline = { files: {} };
+  for (const { file, hits } of scanned) if (hits.length > 0) newBaseline.files[file] = hits.length;
+  newBaseline.namespaces = namespaces;
+  newBaseline.updatedAt = new Date().toISOString();
+  fs.writeFileSync(path.join(REPO_ROOT, BASELINE_FILE), JSON.stringify(newBaseline, null, 2) + '\n', 'utf8');
+  console.log(
+    `${GREEN}  ✅ Resolver reachability baseline rewritten — ${
+      Object.keys(newBaseline.files).length
+    } file(s), ${Object.values(newBaseline.files).reduce(
+      (s, n) => s + n, 0,
+    )} legacy unreachable key(s)${NC}`,
   );
-}
-
-// ---------------------------------------------------------------------------
-// 5. Scope discovery for --all / --baseline modes.
-// ---------------------------------------------------------------------------
-function walk(dir, acc) {
-  if (!fs.existsSync(dir)) return;
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (entry.name === 'node_modules' || entry.name === '.next') continue;
-      walk(full, acc);
-    } else if (entry.isFile()) {
-      const rel = normalizePath(path.relative(REPO_ROOT, full));
-      if (isInScope(rel)) acc.push(rel);
-    }
-  }
-}
-
-function discoverAllInScope() {
-  const acc = [];
-  walk(path.join(REPO_ROOT, 'src', 'config'), acc);
-  walk(path.join(REPO_ROOT, 'src', 'subapps'), acc);
-  walk(path.join(REPO_ROOT, 'src', 'constants', 'domains'), acc);
-  return acc;
-}
-
-// ---------------------------------------------------------------------------
-// 6. Baseline handling
-// ---------------------------------------------------------------------------
-function loadBaseline() {
-  if (!fs.existsSync(BASELINE_FILE)) return { files: {} };
-  try {
-    const data = JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf8'));
-    if (!data.files) data.files = {};
-    return data;
-  } catch {
-    return { files: {} };
-  }
-}
-
-function writeBaseline(data) {
-  fs.writeFileSync(BASELINE_FILE, JSON.stringify(data, null, 2) + '\n', 'utf8');
+  console.log(
+    `${CYAN}  ℹ Namespaces scanned: ${namespaces.join(', ')}${NC}`,
+  );
 }
 
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
-function main() {
-  const args = process.argv.slice(2);
+/** `input` = η είσοδος (ADR-924): με `--index` (εκτελεστής) κρίνεται το COMMIT, όχι ο δίσκος. */
+function run(args = process.argv.slice(2), input = commitInput(REPO_ROOT, args)) {
   const rebuildBaseline = args.includes('--baseline');
   const scanAll = args.includes('--all') || rebuildBaseline;
-  const fileArgs = args.filter((a) => !a.startsWith('--'));
 
   let namespaces;
   try {
-    namespaces = readServiceFormNamespaces();
+    namespaces = readServiceFormNamespaces(input);
   } catch (err) {
     console.error(`${RED}  ❌ ${err.message}${NC}`);
-    process.exit(1);
+    return 1;
   }
-  const nsIndex = loadNamespaceIndex(namespaces);
-
-  const files = scanAll ? discoverAllInScope() : fileArgs;
-  const baseline = loadBaseline();
-  const report = {}; // normFile -> { count, unreachables: [] }
-  let totalChecked = 0;
-
-  for (const file of files) {
-    const full = path.isAbsolute(file) ? file : path.join(REPO_ROOT, file);
-    if (!fs.existsSync(full)) continue;
-    const rel = normalizePath(path.relative(REPO_ROOT, full));
-    if (!isInScope(rel)) continue;
-    totalChecked += 1;
-
-    const content = fs.readFileSync(full, 'utf8');
-    const candidates = extractCandidates(content);
-    if (candidates.length === 0) continue;
-
-    const unreachables = [];
-    for (const { key, index } of candidates) {
-      if (!resolves(key, nsIndex)) {
-        unreachables.push({ key, line: getLineNumber(content, index) });
-      }
-    }
-    if (unreachables.length === 0) continue;
-    report[rel] = { count: unreachables.length, unreachables };
-  }
+  const nsIndex = loadNamespaceIndex(namespaces, input);
+  const files = scanAll ? labels.configLabelFiles(input) : args.filter((a) => !a.startsWith('--'));
+  const scanned = labels.scanConfigLabels(files, input, (content) => unreachablesOf(content, nsIndex));
 
   if (rebuildBaseline) {
-    const newBaseline = { files: {} };
-    for (const [f, r] of Object.entries(report)) newBaseline.files[f] = r.count;
-    newBaseline.namespaces = namespaces;
-    newBaseline.updatedAt = new Date().toISOString();
-    writeBaseline(newBaseline);
-    console.log(
-      `${GREEN}  ✅ Resolver reachability baseline rewritten — ${
-        Object.keys(newBaseline.files).length
-      } file(s), ${Object.values(newBaseline.files).reduce(
-        (s, n) => s + n, 0,
-      )} legacy unreachable key(s)${NC}`,
-    );
-    console.log(
-      `${CYAN}  ℹ Namespaces scanned: ${namespaces.join(', ')}${NC}`,
-    );
-    process.exit(0);
+    writeBaseline(scanned, namespaces);
+    return 0;
   }
 
-  let hasBlock = false;
-  for (const [file, { count, unreachables }] of Object.entries(report)) {
-    const baselineCount = baseline.files[file] || 0;
-    if (count <= baselineCount) {
-      if (count < baselineCount) {
-        console.log(
-          `${GREEN}  📉 ${file}: ${baselineCount} → ${count} (-${
-            baselineCount - count
-          }) unreachable i18n key(s)${NC}`,
-        );
-      }
-      continue;
-    }
-    hasBlock = true;
-    const newCount = count - baselineCount;
-    console.log(
-      `${RED}  🚫 ${file}: ${newCount} new unreachable i18n key(s)${NC}`,
-    );
-    const showKeys = unreachables.slice(-newCount);
-    for (const { key, line } of showKeys) {
-      console.log(
-        `${YELLOW}     Line ${line}: '${key}' — not resolvable via SERVICE_FORM_NAMESPACES=[${namespaces.join(
-          ', ',
-        )}]${NC}`,
-      );
-    }
-  }
+  const hasBlock = labels.judgeConfigLabels(scanned, input, {
+    baselineFile: BASELINE_FILE,
+    noun: 'unreachable i18n key(s)',
+    newNoun: 'new unreachable i18n key(s)',
+    describeHit: ({ key }) => `'${key}' — not resolvable via SERVICE_FORM_NAMESPACES=[${namespaces.join(', ')}]`,
+  });
 
   if (hasBlock) {
     console.log(
       `${RED}  ❌ i18n resolver reachability FAILED — either move the key into one of the scanned namespaces or add the correct namespace to SERVICE_FORM_NAMESPACES in src/components/generic/i18n/translate-field-value.ts${NC}`,
     );
-    process.exit(1);
+    return 1;
   }
 
-  if (totalChecked > 0) {
+  if (scanned.length > 0) {
     console.log(
-      `${GREEN}  ✅ Resolver reachability: ${totalChecked} config file(s) — all dotted keys resolvable via [${namespaces.join(
+      `${GREEN}  ✅ Resolver reachability: ${scanned.length} config file(s) — all dotted keys resolvable via [${namespaces.join(
         ', ',
       )}]${NC}`,
     );
   }
-  process.exit(0);
+  return 0;
 }
 
-main();
+if (require.main === module) process.exit(run());
+
+module.exports = { run, extractCandidates, resolves };

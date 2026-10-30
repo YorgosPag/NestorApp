@@ -27,13 +27,9 @@ const path = require('node:path');
 
 const { CATALOG_FILE, GATE_STATES } = require('./lib/basemap-sources/contract.js');
 const { BLOCKING, sweep } = require('./lib/basemap-sources/gate.js');
+const { ledgerRow, ledgerTitle, runLedgerGate, runAsScript } = require('./lib/import-boundary/cli');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
-const GREEN = '[0;32m';
-const RED = '[0;31m';
-const YELLOW = '[1;33m';
-const DIM = '[2m';
-const NC = '[0m';
 
 /** Πρώτα ό,τι μπλοκάρει, ώστε να μην κρύβεται. */
 const ORDER = [
@@ -61,45 +57,25 @@ const ADVICE = [
 
 /** ⚠️ Τυπώνεται ΚΑΘΕ κάδος, και στο μηδέν: ένα «0» που δεν φαίνεται διαβάζεται ως «δεν ελέγχθηκε». */
 function printLedger({ tally, population, catalogSources, symbolLayers }) {
-  console.log(
-    `${DIM}  CHECK 3.95 — πηγές υποβάθρου · αρχεία ${population} · πηγές στο μητρώο ${catalogSources} · στρώσεις symbol ${symbolLayers}${NC}`,
-  );
-  for (const state of ORDER) {
-    const mark = BLOCKING.includes(state) ? (tally[state] > 0 ? '⛔' : '✅') : '  ';
-    console.log(`${DIM}     ${mark} ${state.padEnd(20)} ${String(tally[state]).padStart(7)}${NC}`);
-  }
+  ledgerTitle(`CHECK 3.95 — πηγές υποβάθρου · αρχεία ${population} · πηγές στο μητρώο ${catalogSources} · στρώσεις symbol ${symbolLayers}`);
+  for (const state of ORDER) ledgerRow(tally, state, BLOCKING, 20);
 }
 
+/** Σκανδάλη: ΑΝ τρέχει, ποτέ ΠΟΣΟ σαρώνει — και ο κώδικας της πύλης είναι σκανδάλη (μάθημα 3.43 · 3.57 · 3.75). */
 function main(argv = process.argv, root = REPO_ROOT) {
-  if (process.env.SKIP_BASEMAP_SOURCES) return 0;
-
-  // Σκανδάλη: αποφασίζει ΑΝ τρέχει, ποτέ ΠΟΣΟ σαρώνει. Και ο κώδικας της πύλης είναι σκανδάλη
-  // (αλλαγή κριτηρίου πρέπει να ασκεί το κριτήριο — μάθημα 3.43 · 3.57 · 3.75).
-  const staged = argv.slice(2).filter((a) => !a.startsWith('--'));
-  const affects = (f) => /\.tsx?$/.test(f) || f.includes('basemap-sources');
-  if (staged.length > 0 && !staged.some(affects)) return 0;
-
-  const result = sweep(root);
-  printLedger(result);
-
-  if (result.violations.length === 0) {
-    console.log(`${GREEN}  ✅ CHECK 3.95 — κάθε πηγή υποβάθρου ζει στο μητρώο, με τους όρους της${NC}`);
-    return 0;
-  }
-
-  console.log(`${RED}  🚫 CHECK 3.95 — ${result.violations.length} εύρημα(τα):${NC}`);
-  for (const v of result.violations) console.log(`${YELLOW}     [${v.state}] ${v.rel} — ${v.detail}${NC}`);
-  for (const line of ADVICE) console.log(`${DIM}     ${line}${NC}`);
-  return 1;
+  return runLedgerGate({
+    check: '3.95',
+    skipEnv: 'SKIP_BASEMAP_SOURCES',
+    root,
+    affects: (f) => /\.tsx?$/.test(f) || f.includes('basemap-sources'),
+    sweep: (input) => sweep(root, { input }),
+    printLedger,
+    ok: 'κάθε πηγή υποβάθρου ζει στο μητρώο, με τους όρους της',
+    found: (n) => `${n} εύρημα(τα)`,
+    advice: ADVICE,
+  }, argv);
 }
 
-if (require.main === module) {
-  try {
-    process.exit(main());
-  } catch (error) {
-    console.error(`${RED}⛔ CHECK 3.95 — ${error.message}${NC}`);
-    process.exit(1);
-  }
-}
+if (require.main === module) runAsScript(main, '3.95');
 
 module.exports = { ORDER, main, printLedger };

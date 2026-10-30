@@ -18,23 +18,25 @@ const path = require('node:path');
 const CENSUS_DIR = '.text-measure-census';
 const CENSUS_FILE = '.text-measure-census.json';
 
-const toPosix = (p) => p.split(path.sep).join('/');
+const { toPosix } = require('../posix-path'); // SSoT (ADR-924 §8.9)
+/** Η είσοδος της πύλης (ADR-924) — προεπιλογή ο δίσκος της ρίζας· ο εκτελεστής δίνει την όψη του commit. */
+const viewOf = (repoRoot, input) => input || require('../gate-input').openGateInput({ root: repoRoot });
 
 /** sha256 ενός αρχείου· `null` αν λείπει (το «λείπει» είναι πληροφορία, όχι σφάλμα εδώ). */
-function hashFile(repoRoot, rel) {
-  const abs = path.join(repoRoot, rel);
-  if (!fs.existsSync(abs)) return null;
-  return crypto.createHash('sha256').update(fs.readFileSync(abs)).digest('hex').slice(0, 16);
+function hashFile(repoRoot, rel, input) {
+  const text = viewOf(repoRoot, input).read(rel);
+  if (text === null) return null;
+  return crypto.createHash('sha256').update(text, 'utf8').digest('hex').slice(0, 16);
 }
 
 /** Τα αρχεία που καθορίζουν **τι θα παρατηρηθεί**: η μηχανή μέτρησης + οι ίδιες οι σουίτες. */
-function fingerprintInputs(repoRoot, files) {
+function fingerprintInputs(repoRoot, files, input = viewOf(repoRoot)) {
   const engine = [
     'src/subapps/dxf-viewer/text-engine/fonts/text-advance.ts',
     'src/subapps/dxf-viewer/text-engine/fonts/__tests__/_stub-font.ts',
   ];
   const parts = {};
-  for (const rel of [...engine, ...files].sort()) parts[rel] = hashFile(repoRoot, rel);
+  for (const rel of [...engine, ...files].sort()) parts[rel] = hashFile(repoRoot, rel, input);
   return parts;
 }
 
@@ -73,10 +75,10 @@ function writeCensus(repoRoot) {
 }
 
 /** Διαβάζει την αποθηκευμένη απογραφή. **Fail-closed**: απούσα ⇒ `null`, ποτέ σιωπηλό `{}`. */
-function readCensus(repoRoot) {
-  const file = path.join(repoRoot, CENSUS_FILE);
-  if (!fs.existsSync(file)) return null;
-  const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
+function readCensus(repoRoot, input) {
+  const text = viewOf(repoRoot, input).read(CENSUS_FILE);
+  if (text === null) return null;
+  const raw = JSON.parse(text);
   if (!Array.isArray(raw.observations) || typeof raw.generatedFrom !== 'object' || !raw.generatedFrom) {
     throw new Error(`${CENSUS_FILE}: περίμενα { generatedFrom, observations[] }.`);
   }
@@ -84,8 +86,8 @@ function readCensus(repoRoot) {
 }
 
 /** Ποιες είσοδοι άλλαξαν από τότε που γράφτηκε η απογραφή. Κενό = φρέσκια. */
-function staleInputs(repoRoot, census) {
-  const now = fingerprintInputs(repoRoot, census.observations.map((o) => o.file));
+function staleInputs(repoRoot, census, input) {
+  const now = fingerprintInputs(repoRoot, census.observations.map((o) => o.file), viewOf(repoRoot, input));
   const drifted = [];
   for (const rel of new Set([...Object.keys(census.generatedFrom), ...Object.keys(now)])) {
     if (census.generatedFrom[rel] !== now[rel]) drifted.push(rel);

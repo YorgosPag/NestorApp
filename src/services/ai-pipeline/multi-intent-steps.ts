@@ -23,6 +23,7 @@ import type { MultiRoutingResult } from './intent-router';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { getErrorMessage } from '@/lib/error-utils';
 import { nowISO } from '@/lib/date-local';
+import { approvedActions } from './shared/admin-command-protocol';
 
 /** Callback type for state transitions (injected from orchestrator) */
 export type TransitionStateFn = (ctx: PipelineContext, to: PipelineStateValue) => PipelineContext;
@@ -217,7 +218,7 @@ export async function stepMultiExecute(
   ctx.executionPlan = {
     messageId: ctx.intake.id,
     idempotencyKey: `${ctx.requestId}_execute`,
-    actions: ctx.approval?.modifiedActions ?? ctx.proposal?.suggestedActions ?? [],
+    actions: approvedActions(ctx),
     sideEffects: [],
     schemaVersion: PIPELINE_PROTOCOL_CONFIG.SCHEMA_VERSION,
   };

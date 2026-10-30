@@ -56,11 +56,10 @@
 
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
-const { execSync } = require('node:child_process');
 
 const ts = require('typescript');
+const { commitInput } = require('./lib/gate-input');
 
 const {
   loadIndexCatalog,
@@ -77,6 +76,7 @@ const {
 // ⚠️ `includeSubcollections` ΟΧΙ: το 3.15 είναι zero-tolerance και η διεύρυνση
 // της εμβέλειάς του είναι ξεχωριστή απόφαση, όχι παρενέργεια refactor.
 const {
+  projectInput,
   loadCollectionsMap,
   loadTenantOverrides,
   loadReadPathFields,
@@ -100,13 +100,13 @@ const {
  * Δηλαδή **η πύλη τιμωρούσε τη χρήση του δικού της SSoT** — ίδιο σχήμα με την ειρωνεία
  * των 28 BIM services (§2.3), αλλά εδώ ήταν διορθώσιμο.
  *
- * Μνημονεύεται τεμπέλικα: ο κατάλογος διαβάζεται **μία** φορά ανά διεργασία, όχι ανά
- * αρχείο — η πύλη σαρώνει 13.238 αρχεία.
+ * Μνημονεύεται τεμπέλικα: ο κατάλογος διαβάζεται **μία** φορά ανά ΕΙΣΟΔΟ (ADR-924: με `--index` ο κατάλογος ΤΟΥ
+ * COMMIT), όχι ανά αρχείο — η πύλη σαρώνει 13.238 αρχεία.
  */
-let fieldConstantsCache = null;
-function fieldConstants() {
-  if (fieldConstantsCache === null) fieldConstantsCache = loadFieldConstants();
-  return fieldConstantsCache;
+const fieldConstantsCache = new WeakMap();
+function fieldConstants(input) {
+  if (!fieldConstantsCache.has(input)) fieldConstantsCache.set(input, loadFieldConstants(input));
+  return fieldConstantsCache.get(input);
 }
 
 // ---------------------------------------------------------------------------
@@ -124,14 +124,7 @@ const SSOT_IMPORT_HINTS = [
 ];
 
 // ANSI colours (fallback to no-op on non-TTY)
-const useColour = process.stdout.isTTY;
-const c = {
-  red:    (s) => (useColour ? `\x1b[31m${s}\x1b[0m` : s),
-  green:  (s) => (useColour ? `\x1b[32m${s}\x1b[0m` : s),
-  yellow: (s) => (useColour ? `\x1b[33m${s}\x1b[0m` : s),
-  cyan:   (s) => (useColour ? `\x1b[36m${s}\x1b[0m` : s),
-  bold:   (s) => (useColour ? `\x1b[1m${s}\x1b[0m` : s),
-};
+const c = require('./lib/tty-colours').ttyColours();   // SSoT (ADR-924 §8.10)
 
 // ---------------------------------------------------------------------------
 // AST walker — find subscribe/getAll calls on the SSoT
@@ -157,10 +150,11 @@ const c = {
  * constraints) are recorded with a warnings[] entry.
  *
  * @param {string} filePath
+ * @param {object} [input] η είσοδος της πύλης (ADR-924) — προεπιλογή ο δίσκος του repo
  * @returns {CallSite[]}
  */
-function extractCallSitesFromFile(filePath) {
-  const src = fs.readFileSync(filePath, 'utf8');
+function extractCallSitesFromFile(filePath, input = projectInput()) {
+  const src = input.readRequired(filePath);
 
   // Fast skip: files that don't reference the SSoT at all.
   if (!SSOT_IMPORT_HINTS.some((hint) => src.includes(hint))) return [];
@@ -193,7 +187,10 @@ function extractCallSitesFromFile(filePath) {
   if (ssotBindings.size === 0) return [];
 
   // ADR-866 §2.6.7 — `X[kind]` διαμερίσματος κατόχου ⇒ ένα σημείο ανά κλάδο (όχι «unanalyzable»).
-  const partitionAlias = buildPartitionAliasMap(sf, loadCustodyPartitions());
+  const scope = {
+    partitionAlias: buildPartitionAliasMap(sf, loadCustodyPartitions(undefined, input)),
+    fields: fieldConstants(input),
+  };
 
   /** @type {CallSite[]} */
   const results = [];
@@ -204,7 +201,7 @@ function extractCallSitesFromFile(filePath) {
       const receiver = node.expression.expression.getText();
       const method = node.expression.name.getText();
       if (ssotBindings.has(receiver) && SSOT_METHOD_NAMES.has(method)) {
-        results.push(...parseCallExpression(node, method, filePath, sf, partitionAlias));
+        results.push(...parseCallExpression(node, method, filePath, sf, scope));
       }
     }
     ts.forEachChild(node, visit);
@@ -285,14 +282,15 @@ function resolveLocalConstArray(fromNode, identifierName) {
  * @param {string}            methodName
  * @param {string}            filePath
  * @param {ts.SourceFile}     sf
- * @param {Map<string, string[]>} partitionAlias
+ * @param {{partitionAlias: Map<string, string[]>, fields: Map<string, string>}} scope τα συμφραζόμενα του αρχείου
  * @returns {CallSite[]}
  */
-function parseCallExpression(call, methodName, filePath, sf, partitionAlias) {
+function parseCallExpression(call, methodName, filePath, sf, scope) {
   const args = call.arguments;
   if (args.length === 0) return [];
-  const keys = resolveCollectionKeys(args[0], partitionAlias);
-  return (keys.length > 0 ? keys : [null]).map((key) => parseCallBranch(call, methodName, filePath, sf, key));
+  const keys = resolveCollectionKeys(args[0], scope.partitionAlias);
+  return (keys.length > 0 ? keys : [null])
+    .map((key) => parseCallBranch(call, methodName, filePath, sf, key, scope.fields));
 }
 
 /**
@@ -303,9 +301,10 @@ function parseCallExpression(call, methodName, filePath, sf, partitionAlias) {
  * @param {string}            filePath
  * @param {ts.SourceFile}     sf
  * @param {string|null}       collectionKey
+ * @param {Map<string, string>} fields `FIELDS.X → όνομα` (ο κατάλογος της εισόδου)
  * @returns {CallSite}
  */
-function parseCallBranch(call, methodName, filePath, sf, collectionKey) {
+function parseCallBranch(call, methodName, filePath, sf, collectionKey, fields) {
   const args = call.arguments;
 
   // Options object — last argument for all supported SSoT methods.
@@ -350,7 +349,7 @@ function parseCallBranch(call, methodName, filePath, sf, collectionKey) {
     }
     const callee = el.expression.getText();
     // Literal **ή** `FIELDS.X` (ADR-869 §12.5) — ζητώντας το όνομα από το SSoT δεν χάνεις έλεγχο.
-    const field = resolveFieldArg(el.arguments[0], fieldConstants());
+    const field = resolveFieldArg(el.arguments[0], fields);
     if (field === null) {
       site.warnings.push(`dynamic field in ${callee}() — unanalyzable`);
       continue;
@@ -511,49 +510,23 @@ function deriveTenantShapes(site, collectionsMap, tenantOverrides) {
 // File discovery (staged / explicit / all)
 // ---------------------------------------------------------------------------
 
-function listStagedFiles() {
-  try {
-    const out = execSync('git diff --cached --name-only --diff-filter=ACMR', {
-      cwd: PROJECT_ROOT,
-      encoding: 'utf8',
-    });
-    return out
-      .split('\n')
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
-  } catch {
-    return [];
-  }
+/** Κάθε `.ts`/`.tsx` του `src/` (όχι tests/δηλώσεις) — από την ΕΙΣΟΔΟ (ADR-924 Φ3: ήταν δικός του `readdirSync`). */
+function listAllSrcFiles(input) {
+  return input.files(['src'], {
+    accept: (rel) => /\.(ts|tsx)$/.test(rel) && !/\.(test|spec|d)\.tsx?$/.test(rel)
+      && !path.posix.basename(rel).startsWith('.'),
+    pruneDir: (dir) => /(^|\/)__tests__\/$/.test(dir) || path.posix.basename(dir).startsWith('.'),
+  });
 }
 
-function listAllSrcFiles() {
-  /** @type {string[]} */
-  const out = [];
-  /** @param {string} dir */
-  function walk(dir) {
-    for (const name of fs.readdirSync(dir)) {
-      const full = path.join(dir, name);
-      const stat = fs.statSync(full);
-      if (stat.isDirectory()) {
-        if (name === 'node_modules' || name === '__tests__' || name.startsWith('.')) continue;
-        walk(full);
-      } else if (/\.(ts|tsx)$/.test(name) && !/\.(test|spec|d)\.tsx?$/.test(name)) {
-        out.push(full);
-      }
-    }
-  }
-  walk(path.join(PROJECT_ROOT, 'src'));
-  return out;
-}
-
-function resolveTargetFiles(argv) {
+/** `--all` · ορίσματα · αλλιώς `input.staged` (SSoT — ήταν `git diff --cached` χωρίς `-z`). */
+function resolveTargetFiles(argv, input) {
   const explicit = argv.filter((a) => !a.startsWith('--'));
-  if (argv.includes('--all')) return listAllSrcFiles();
+  if (argv.includes('--all')) return listAllSrcFiles(input);
   if (explicit.length > 0) {
     return explicit.map((p) => path.resolve(PROJECT_ROOT, p));
   }
-  const staged = listStagedFiles().map((p) => path.resolve(PROJECT_ROOT, p));
-  return staged.filter((p) => fs.existsSync(p) && /\.(ts|tsx)$/.test(p));
+  return input.staged((rel) => /\.(ts|tsx)$/.test(rel)).map((p) => path.resolve(p));
 }
 
 // ---------------------------------------------------------------------------
@@ -596,20 +569,22 @@ function formatShape(shape) {
 function main() {
   const argv = process.argv.slice(2);
   const verbose = argv.includes('--verbose');
+  // ADR-924: η είσοδος — με `--index` (εκτελεστής) το μανιφέστο, οι κατάλογοι και τα αρχεία ΤΟΥ COMMIT
+  const input = commitInput(PROJECT_ROOT, argv);
 
   let catalog;
   try {
-    catalog = loadIndexCatalog(INDEXES_FILE);
+    catalog = loadIndexCatalog(INDEXES_FILE, input);
   } catch (err) {
     console.error(c.red(`✖ Failed to load ${INDEXES_FILE}: ${err.message}`));
     process.exit(1);
   }
 
-  const collectionsMap = loadCollectionsMap();
-  const tenantOverrides = loadTenantOverrides();
-  const readPathFields = loadReadPathFields();
+  const collectionsMap = loadCollectionsMap({ input });
+  const tenantOverrides = loadTenantOverrides(input);
+  const readPathFields = loadReadPathFields(input);
 
-  const targetFiles = resolveTargetFiles(argv).filter((p) => {
+  const targetFiles = resolveTargetFiles(argv, input).filter((p) => {
     const rel = path.relative(PROJECT_ROOT, p).replace(/\\/g, '/');
     return rel.startsWith('src/');
   });
@@ -630,7 +605,7 @@ function main() {
   for (const file of targetFiles) {
     let sites;
     try {
-      sites = extractCallSitesFromFile(file);
+      sites = extractCallSitesFromFile(file, input);
     } catch (err) {
       console.error(c.yellow(`⚠ Failed to parse ${file}: ${err.message}`));
       continue;

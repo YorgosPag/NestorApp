@@ -87,6 +87,7 @@ const {
   scanOsThemeBlocks,
 } = require('./lib/css-vars/custom-property-index');
 const { PROJECT_ROOT, loadBaseline, writeBaselineFile } = require('./lib/ratchet-baseline');
+const { openGateInput, INDEX_FLAG } = require('./lib/gate-input');
 
 /** Οι καταστάσεις που μπαίνουν στη baseline — **ανά (αρχείο, κατάσταση)**, όχι ένας αριθμός. */
 const RATCHETED_STATES = [USAGE_STATES.DANGLING_LITERAL_COLOR, OS_THEME_STATES.CHROMATIC];
@@ -131,9 +132,9 @@ function tallyByFile(records) {
 }
 
 /** Σαρώνει τα δοσμένα αρχεία και επιστρέφει **κάθε** κατάσταση — ο παρονομαστής μαζί. */
-function inspect(repoRoot, files, definedNames) {
-  const usages = scanCssUsages(repoRoot, files, definedNames);
-  const osBlocks = scanOsThemeBlocks(repoRoot, files);
+function inspect(repoRoot, files, definedNames, input = undefined) {
+  const usages = scanCssUsages(repoRoot, files, definedNames, input);
+  const osBlocks = scanOsThemeBlocks(repoRoot, files, input);
   const all = [...usages, ...osBlocks];
 
   const census = {};
@@ -307,15 +308,17 @@ function main(argv = process.argv) {
   }
 
   const scope = args.includes('--all') ? 'all' : 'staged';
+  // ADR-924 — με `--index` (εκτελεστής): αρχεία, κείμενο, ορισμοί και baseline ΤΟΥ COMMIT.
+  const input = openGateInput({ root: PROJECT_ROOT, index: args.includes(INDEX_FLAG) });
   const files =
-    scope === 'all' ? listCssFiles(PROJECT_ROOT) : stagedCssFiles(args.filter((a) => !a.startsWith('--')));
+    scope === 'all' ? listCssFiles(PROJECT_ROOT, input) : stagedCssFiles(args.filter((a) => !a.startsWith('--')));
 
   if (files.length === 0) {
     console.log('✅ CHECK 3.43 — κανένα staged αρχείο .css.');
     return process.exit(0);
   }
 
-  const baseline = loadBaseline(baselineFile());
+  const baseline = loadBaseline(baselineFile(), [], input);
   if (!baseline || baseline.__invalid || typeof baseline.files !== 'object') {
     console.error(
       `❌ CHECK 3.43 — baseline ${baseline ? baseline.__invalid || 'χωρίς πεδίο "files"' : 'λείπει'}: ${path.relative(PROJECT_ROOT, baselineFile())}`,
@@ -324,8 +327,8 @@ function main(argv = process.argv) {
     return process.exit(1); // fail-closed: χαλασμένη baseline ΠΟΤΕ δεν διαβάζεται ως «0 παραβιάσεις»
   }
 
-  const definedNames = buildDefinitionIndex(PROJECT_ROOT);
-  const { tally, census, zeroTolerance } = inspect(PROJECT_ROOT, files, definedNames);
+  const definedNames = buildDefinitionIndex(PROJECT_ROOT, input);
+  const { tally, census, zeroTolerance } = inspect(PROJECT_ROOT, files, definedNames, input);
   const { regressions, progress } = compare(tally, baseline.files, scope);
 
   if (regressions.length || zeroTolerance.length) {

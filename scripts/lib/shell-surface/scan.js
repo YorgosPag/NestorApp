@@ -35,8 +35,10 @@
 
 'use strict';
 
-const fs = require('fs');
 const path = require('path');
+
+/** Η είσοδος της πύλης (ADR-924) — προεπιλογή ο δίσκος της ρίζας· ο εκτελεστής δίνει την όψη του commit. */
+const inputOf = (root) => require('../gate-input').openGateInput({ root });
 
 /** Κλάσεις που δηλώνουν **εξωτερικό** κενό. Το `py-*` ΔΕΝ είναι εδώ: ο κάθετος
  *  ρυθμός μιας σελίδας είναι δική της απόφαση και δεν ανταγωνίζεται την μπάρα. */
@@ -202,12 +204,12 @@ function namedImports(source) {
 }
 
 /** Λύνει ένα `@/...` σε πραγματικό αρχείο, ή `null`. */
-function resolveAlias(spec, repoRoot) {
+function resolveAlias(spec, repoRoot, input = inputOf(repoRoot)) {
   if (!spec.startsWith('@/')) return null;
   const base = path.join(repoRoot, 'src', spec.slice(2));
   for (const ext of ['.tsx', '.ts', `${path.sep}index.tsx`, `${path.sep}index.ts`]) {
     const candidate = base + ext;
-    if (fs.existsSync(candidate)) return candidate;
+    if (input.exists(candidate)) return candidate;
   }
   return null;
 }
@@ -352,8 +354,8 @@ function exportedRootOf(cleanSource) {
  *   `declared-bleed`   — δηλωμένο opt-out (νόμιμο).
  *   `unresolved-root`  — ΔΕΝ βρέθηκε ρίζα· δηλωμένο τυφλό σημείο, ΟΧΙ «καθαρό».
  */
-function classifyPage(pageFile, repoRoot) {
-  const raw = fs.readFileSync(pageFile, 'utf8');
+function classifyPage(pageFile, repoRoot, input = inputOf(repoRoot)) {
+  const raw = input.read(pageFile) ?? '';
   const src = stripComments(raw);
 
   if (/data-shell-surface\s*=\s*["']bleed["']|<\s*FullBleedSurface\b/.test(src)) {
@@ -410,12 +412,12 @@ function classifyPage(pageFile, repoRoot) {
 
   // ΕΝΑ άλμα: το πρώτο component περιεχομένου που εισάγει η σελίδα.
   for (const imp of namedImports(src)) {
-    const target = resolveAlias(imp.spec, repoRoot);
+    const target = resolveAlias(imp.spec, repoRoot, input);
     if (!target) continue;
     const used = imp.names.some((n) => new RegExp(`<\\s*${n}\\b`).test(src));
     if (!used) continue;
 
-    const childSrc = stripComments(fs.readFileSync(target, 'utf8'));
+    const childSrc = stripComments(input.read(target) ?? '');
     const verdict = judge(childSrc, path.relative(repoRoot, target).split(path.sep).join('/'));
     // ⚠️ Το ταβάνι πλάτους της **σελίδας** δεν χάνεται όταν την κρίση την παίρνει
     //    το παιδί: κρατιέται ό,τι βρέθηκε πρώτο (η σελίδα υπερισχύει).
@@ -454,13 +456,9 @@ function classifyPage(pageFile, repoRoot) {
   return own ?? { state: 'unresolved-root', detail: 'δεν βρέθηκε ρίζα JSX', measure: null, viewport: null };
 }
 
-/** Απαριθμεί τα `page.tsx` κάτω από μια ρίζα. */
-function collectPages(dir, out = []) {
-  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-    const p = path.join(dir, e.name);
-    if (e.isDirectory()) collectPages(p, out);
-    else if (e.name === 'page.tsx') out.push(p);
-  }
+/** Απαριθμεί τα `page.tsx` κάτω από μια ρίζα — από την ΕΙΣΟΔΟ (ADR-924 Φ3: ήταν δικό της `readdirSync`). */
+function collectPages(dir, out = [], input = inputOf(path.resolve(__dirname, '..', '..', '..'))) {
+  out.push(...input.files([input.rel(dir)], { accept: (rel) => rel.endsWith('/page.tsx') }));
   return out;
 }
 

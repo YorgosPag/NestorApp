@@ -46,6 +46,7 @@
 const path = require('path');
 
 const { runSetRatchetCli, PROJECT_ROOT } = require('./lib/ratchet-baseline');
+const { openGateInput, commitInput } = require('./lib/gate-input');
 const {
   readScale, findScaleDisorder, orderIdentities, GLOBAL_LAYER_FLOOR,
 } = require('./lib/zindex/scale');
@@ -103,17 +104,23 @@ function partition(found) {
  * Η απογραφή του `node_modules` (~6s) τρέχει όταν αλλάζουν **οι εξαρτήσεις ή το ίδιο το
  * σύνορο** — τα μόνα γεγονότα που μπορούν να τη μεταβάλουν — και **άνευ όρων** στο CI.
  */
-function measureForeign(repoRoot, withCensus) {
-  return evaluateForeign(repoRoot, readScale(repoRoot), { findSymbolsInSrc, listCssFiles }, { withCensus });
+function measureForeign(repoRoot, withCensus, input) {
+  // Οι εξαρτήσεις ΔΕΝΟΝΤΑΙ στην είσοδο: κάθε ανάγνωση του συνόρου κρίνει την ίδια όψη (ADR-924).
+  const deps = {
+    findSymbolsInSrc: (root, symbols) => findSymbolsInSrc(root, symbols, input),
+    listCssFiles: (root) => listCssFiles(root, input),
+  };
+  return evaluateForeign(repoRoot, readScale(repoRoot, input), deps, { withCensus, input });
 }
 
-async function measure(args = [], repoRoot = PROJECT_ROOT) {
+/** `input` = η είσοδος (ADR-924) — προεπιλογή ο δίσκος της `repoRoot`· με `--index` η όψη του commit. */
+async function measure(args = [], repoRoot = PROJECT_ROOT, input = openGateInput({ root: repoRoot })) {
   const reporting = args.includes('--report');
-  const roles = readScale(repoRoot);
+  const roles = readScale(repoRoot, input);
   const disorder = findScaleDisorder(roles);
-  const { found, census } = scanAll(repoRoot, roles);
+  const { found, census } = scanAll(repoRoot, roles, input);
   const { zero, ratcheted } = partition(found);
-  const foreign = measureForeign(repoRoot, foreignCensusRequested);
+  const foreign = measureForeign(repoRoot, foreignCensusRequested, input);
   const foreignZero = foreign.findings.filter((f) => FOREIGN_ZERO_TOLERANCE.includes(f.state));
 
   if (disorder.length && !reporting) {
@@ -237,7 +244,8 @@ const DESCRIPTOR = {
   adr: CHECK,
   skipEnv: 'SKIP_ZINDEX_SCALE',
   baselineFile: BASELINE,
-  measure,
+  // ⚠️ ΠΟΤΕ σκέτο `measure`: το `runSetRatchetCli` δίνει την ΕΙΣΟΔΟ ως 2ο όρισμα (ADR-924), εδώ το 2ο είναι η ρίζα.
+  measure: (args, input) => measure(args, PROJECT_ROOT, input),
   buildPayload,
   printReport,
   violationId,
@@ -321,15 +329,13 @@ const { textDeclaresLayering } = require('./lib/zindex/structure');
  * **διαγραφή**, και η διαγραφή ενός ορισμού `--z-index-*` κάνει αδέσποτα αρχεία που
  * κανείς δεν σταδιοποίησε — ακριβώς η κατάσταση `unknown-token`.
  */
-function touchesLayering(files) {
-  const fs = require('fs');
+function touchesLayering(files, input = openGateInput({ root: PROJECT_ROOT })) {
   return files.some((f) => {
     const rel = f.split(path.sep).join('/');
     if (AUTHORITY_FILES.includes(rel) || AUTHORITY_DIRS.some((d) => rel.startsWith(d))) return true;
     if (!/^src\/.*\.(css|ts|tsx)$/.test(rel)) return false;
-    const full = path.join(PROJECT_ROOT, rel);
-    if (!fs.existsSync(full)) return true; // διαγραφή — δες παραπάνω
-    const text = fs.readFileSync(full, 'utf8');
+    const text = input.read(rel);
+    if (text === null) return true; // διαγραφή — δες παραπάνω
     return textDeclaresLayering(text);
   });
 }
@@ -343,15 +349,17 @@ function touchesLayering(files) {
  */
 if (require.main === module) {
   const staged = process.argv.slice(2).filter((a) => !a.startsWith('--'));
-  if (staged.length > 0 && !touchesLayering(staged)) {
+  // ΜΙΑ είσοδος (ADR-924): σκανδάλη, σύνορο, μέτρηση και baseline κρίνουν το ΙΔΙΟ — με `--index`, το commit.
+  const input = commitInput(PROJECT_ROOT);
+  if (staged.length > 0 && !touchesLayering(staged, input)) {
     console.log(`⏭️  ${CHECK} — καμία σταδιοποιημένη αλλαγή δηλώνει στρώση`);
     process.exit(0);
   }
   if (staged.length > 0) {
-    const { boundaryStylesheet } = require('./lib/zindex/foreign').readRegistry(PROJECT_ROOT);
+    const { boundaryStylesheet } = require('./lib/zindex/foreign').readRegistry(PROJECT_ROOT, input);
     foreignCensusRequested = touchesForeignCensus(staged, boundaryStylesheet);
   }
-  runSetRatchetCli(DESCRIPTOR, process.argv.filter((a) => !staged.includes(a)));
+  runSetRatchetCli({ ...DESCRIPTOR, input }, process.argv.filter((a) => !staged.includes(a)));
 }
 
 module.exports = {

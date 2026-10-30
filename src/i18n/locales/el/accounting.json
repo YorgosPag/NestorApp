@@ -446,20 +446,73 @@
       "matchRate": "Ποσοστό Αντιστοίχισης",
       "netCashFlow": "Καθαρές Ταμειακές Ροές",
       "totalIncome": "Σύνολο Εσόδων",
-      "totalExpenses": "Σύνολο Εξόδων"
+      "totalExpenses": "Σύνολο Εξόδων",
+      "grossProfit": "Μικτό Κέρδος",
+      "efkaContributions": "Εισφορές ΕΦΚΑ",
+      "netProfitBeforeTax": "Καθαρό Κέρδος προ Φόρων",
+      "netProfitAfterTax": "Καθαρό Κέρδος μετά Φόρων",
+      "totalDebits": "Σύνολο Χρεώσεων",
+      "totalCredits": "Σύνολο Πιστώσεων",
+      "income": "Έσοδα",
+      "deductibleExpenses": "Εκπιπτόμενα Έξοδα",
+      "taxableIncome": "Φορολογητέο Εισόδημα",
+      "estimatedIncomeTax": "Εκτιμώμενος Φόρος Εισοδήματος",
+      "vatOutput": "ΦΠΑ Εκροών",
+      "vatInputDeductible": "ΦΠΑ Εισροών (εκπιπτόμενος)",
+      "vatPayable": "ΦΠΑ για Απόδοση",
+      "totalTransactions": "Σύνολο Κινήσεων",
+      "matched": "Αντιστοιχισμένες",
+      "unmatched": "Μη Αντιστοιχισμένες",
+      "excluded": "Εξαιρεμένες",
+      "operatingActivities": "Λειτουργικές Δραστηριότητες",
+      "netOperating": "Καθαρές Λειτουργικές Ροές",
+      "investingActivities": "Επενδυτικές Δραστηριότητες",
+      "netInvesting": "Καθαρές Επενδυτικές Ροές",
+      "financingActivities": "Χρηματοδοτικές Δραστηριότητες",
+      "netFinancing": "Καθαρές Χρηματοδοτικές Ροές"
     },
     "export": {
       "pdf": "Εξαγωγή PDF",
       "excel": "Εξαγωγή Excel",
       "csv": "Εξαγωγή CSV",
-      "exporting": "Εξαγωγή..."
+      "exporting": "Εξαγωγή...",
+      "options": "Επιλογές εξαγωγής"
+    },
+    "exportDocument": {
+      "period": "Περίοδος: {from} – {to}",
+      "summaryMetrics": "Βασικά Μεγέθη",
+      "footer": "Δημιουργήθηκε από {product} — Σελίδα {page}/{pages}"
     },
     "table": {
       "current": "Τρέχουσα",
       "previousPeriod": "Προηγούμενη",
       "yearOverYear": "Πέρυσι",
       "change": "Μεταβολή",
-      "changePercent": "Μεταβολή %"
+      "changePercent": "Μεταβολή %",
+      "category": "Κατηγορία",
+      "label": "Περιγραφή",
+      "debit": "Χρέωση",
+      "credit": "Πίστωση",
+      "balance": "Υπόλοιπο",
+      "customer": "Πελάτης",
+      "aging": {
+        "current": "Εντός προθεσμίας",
+        "days1_30": "1–30 ημ.",
+        "days31_60": "31–60 ημ.",
+        "days61_90": "61–90 ημ.",
+        "days91_120": "91–120 ημ.",
+        "days120plus": "120+ ημ."
+      },
+      "total": "Σύνολο",
+      "amount": "Ποσό",
+      "invoiceCount": "Τιμολόγια",
+      "entryCount": "Εγγραφές",
+      "shareOfTotal": "% του Συνόλου",
+      "deductible": "Εκπίπτει",
+      "yes": "Ναι",
+      "no": "Όχι",
+      "metric": "Μέγεθος",
+      "value": "Τιμή"
     },
     "detail": {
       "backToReports": "Πίσω στις Αναφορές",
@@ -892,13 +945,14 @@
       "phone": "Τηλέφωνο",
       "received": "Ελήφθη",
       "fiscalYear": "Φορολογικό Έτος",
-      "customerVat": "ΑΦΜ Πελάτη",
-      "vatPlaceholder": "π.χ. 123456789"
+      "customer": "Πελάτης (Παρακρατών)"
     },
     "invoices": {
       "heading": "Τιμολόγια ({count})",
       "withholdingHeading": "Τιμολόγια με παρακράτηση ({count})",
-      "empty": "Δεν βρέθηκαν ΤΠΥ με παρακράτηση φόρου για αυτό το ΑΦΜ / έτος."
+      "empty": "Δεν βρέθηκαν ΤΠΥ με παρακράτηση φόρου για αυτόν τον πελάτη στο έτος {year}.",
+      "excludedNote": "Δεν περιλαμβάνονται πιστωτικά, ακυρωμένα και πιστωμένα τιμολόγια.",
+      "loadFailed": "Αποτυχία υπολογισμού της βεβαίωσης. Δοκιμάστε ξανά."
     },
     "invoiceTable": {
       "number": "Αρ. ΤΠΥ",

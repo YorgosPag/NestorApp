@@ -70,9 +70,10 @@ function cssVarNameOf(role) {
  * Διαβάζει την κλίμακα. **Πετάει** αν λείπει ή είναι κενή — fail-closed: μια πύλη που
  * δεν βρήκε την αυθεντία της δεν επιτρέπεται να απαντήσει «καθαρό».
  */
-function readScale(repoRoot = PROJECT_ROOT) {
+function readScale(repoRoot = PROJECT_ROOT, input = null) {
   const file = path.join(repoRoot, 'design-tokens.json');
-  const json = JSON.parse(fs.readFileSync(file, 'utf8'));
+  // `input` (ADR-924): η είσοδος της πύλης — με `--index` η κλίμακα ΤΟΥ COMMIT.
+  const json = input ? input.readJson(file) : JSON.parse(fs.readFileSync(file, 'utf8'));
   const node = json.zIndex;
   if (!node || typeof node !== 'object') {
     throw new Error('design-tokens.json: λείπει η ρίζα "zIndex" — η κλίμακα δεν έχει αυθεντία');

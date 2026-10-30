@@ -31,10 +31,8 @@
 
 'use strict';
 
-const fs = require('node:fs');
-const path = require('node:path');
-
 const { GATE_STATES: S, MIN_REASON_LENGTH } = require('./contract.js');
+const { openGateInput } = require('../gate-input');
 
 /** Το κλειδί ενός πακέτου στο μπλοκ `packages:` — `  name@version:` ή `  'name@version':`. */
 const PACKAGE_KEY = /^ {2}(?:'([^']+)'|([^\s:']+)):(?:\s.*)?$/;
@@ -51,8 +49,8 @@ function splitKey(key) {
  * FAIL-CLOSED: γραμμή στο επίπεδο κλειδιού που δεν αναγνωρίζεται ⇒ `throw` με το περιεχόμενο.
  * @returns {Map<string, Set<string>>}
  */
-function resolvedVersions(repoRoot) {
-  const lines = fs.readFileSync(path.join(repoRoot, 'pnpm-lock.yaml'), 'utf8').split(/\r?\n/);
+function resolvedVersions(repoRoot, input = openGateInput({ root: repoRoot })) {
+  const lines = input.readRequired('pnpm-lock.yaml').split(/\r?\n/);
   const start = lines.indexOf('packages:');
   if (start < 0) throw new Error('pnpm-lock.yaml: δεν βρέθηκε μπλοκ "packages:".');
   const versions = new Map();
@@ -70,8 +68,8 @@ function resolvedVersions(repoRoot) {
 }
 
 /** Ζ · ΚΡΙΣΗ — ένα κλειδί του κλειστού συνόλου, μία γραμμή στο κατάστιχο. */
-function judgeSingletons(repoRoot, singletons, push) {
-  const versions = resolvedVersions(repoRoot);
+function judgeSingletons(repoRoot, singletons, push, input = openGateInput({ root: repoRoot })) {
+  const versions = resolvedVersions(repoRoot, input);
   for (const [name, entry] of Object.entries(singletons).sort()) {
     const reason = entry && typeof entry === 'object' ? entry.reason : null;
     const holds = entry && typeof entry === 'object' ? entry.holds : null;

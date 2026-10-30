@@ -49,12 +49,11 @@
 
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
-const { execSync } = require('node:child_process');
 
 const { scanFile } = require('./lib/module-graph/unbound-identifiers');
-const { collectSourceFiles, isIgnored } = require('./lib/module-graph/scan-config');
+const { isIgnored } = require('./lib/module-graph/scan-config');
+const { openGateInput, INDEX_FLAG } = require('./lib/gate-input');
 const { toPosix } = require('./lib/module-graph/resolve-specifier');
 
 const PROJECT_ROOT = toPosix(path.resolve(__dirname, '..'));
@@ -72,18 +71,6 @@ const STATES = {
 };
 const BLOCKING = [STATES.UNBOUND];
 
-/** Σταδιοποιημένα αρχεία πηγής, απόλυτα posix μονοπάτια. */
-function listStaged() {
-  try {
-    return execSync('git diff --cached --name-only --diff-filter=ACMR', {
-      cwd: PROJECT_ROOT, encoding: 'utf8',
-    }).split('\n').map((s) => s.trim()).filter(Boolean)
-      .map((p) => toPosix(path.resolve(PROJECT_ROOT, p)));
-  } catch {
-    return [];
-  }
-}
-
 /**
  * Κλιμακώνει σε πλήρη σάρωση όταν αλλάζει **η ίδια η προμήθεια καθολικών** — αλλιώς η
  * διαγραφή ενός ambient `.d.ts` θα άφηνε σπασμένα αρχεία που κανείς δεν σταδιοποίησε.
@@ -93,29 +80,33 @@ function stagedForcesFullScan(staged) {
     || f.endsWith('/package.json') || f.endsWith('/pnpm-lock.yaml'));
 }
 
-function isCandidate(absPosix) {
+function isCandidate(absPosix, input) {
   if (!/\.tsx?$/.test(absPosix) || absPosix.endsWith('.d.ts')) return false;
   const rel = absPosix.startsWith(`${PROJECT_ROOT}/`) ? absPosix.slice(PROJECT_ROOT.length + 1) : absPosix;
-  return rel.startsWith('src/') && !isIgnored(rel) && fs.existsSync(absPosix);
+  return rel.startsWith('src/') && !isIgnored(rel) && input.exists(absPosix);
 }
 
-function measure(argv = []) {
-  const staged = listStaged();
+/**
+ * `input` = η είσοδος (ADR-924) — προεπιλογή η όψη που ζητά το `argv` (`--index` ⇒ το commit).
+ * `sample` = δείγμα αρχείων των αγκυρών (η πλήρης σάρωση κοστίζει ~90s)· τα καθολικά μένουν πάντα πλήρη.
+ */
+function measure(argv = [], input = openGateInput({ root: PROJECT_ROOT, index: argv.includes(INDEX_FLAG) }), sample = null) {
+  const staged = sample ? [] : input.staged();   // ADR-924 — η ΜΙΑ σκανδάλη (`listStagedPaths`)
   const full = argv.includes('--all') || argv.includes('--report') || stagedForcesFullScan(staged);
-  const files = (full ? collectSourceFiles(PROJECT_ROOT, ['src']) : staged).filter(isCandidate);
+  const files = (sample || (full ? input.sources(['src']) : staged)).filter((abs) => isCandidate(abs, input));
 
   const tally = Object.fromEntries(Object.values(STATES).map((s) => [s, 0]));
   const violations = [];
 
   for (const abs of files) {
     const rel = abs.slice(PROJECT_ROOT.length + 1);
-    let src;
-    try { src = fs.readFileSync(abs, 'utf8'); } catch { tally[STATES.UNREADABLE]++; continue; }
+    const src = input.read(abs);
+    if (src === null) { tally[STATES.UNREADABLE]++; continue; }
 
     // ⚠️ «Καθαρό» και «δεν αναλύθηκε» είναι **ΔΥΟ καταστάσεις, ποτέ μία**: αρχείο που δεν
     //    αναλύθηκε **δεν είναι** καθαρό, και μετρημένο ως καθαρό ξαναγεννά το «0 = κανείς
     //    δεν κοίταξε» (ADR-806 §4). Ο σαρωτής τις δίνει **και τις δύο σε μία ανάλυση**.
-    const { parsed, unbound } = scanFile(rel, src, PROJECT_ROOT);
+    const { parsed, unbound } = scanFile(rel, src, PROJECT_ROOT, input);
     if (!parsed) { tally[STATES.UNPARSABLE]++; continue; }
     if (unbound.length) {
       tally[STATES.UNBOUND]++;

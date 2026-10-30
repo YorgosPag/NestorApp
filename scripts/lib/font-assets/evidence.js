@@ -21,8 +21,6 @@
 
 'use strict';
 
-const fs = require('node:fs');
-const path = require('node:path');
 
 const W2 = require('./woff2');
 
@@ -116,16 +114,16 @@ function decodeBase64Module(text) {
  * Η απόδειξη ενός περιουσιακού στοιχείου. Πετά **μόνο** αν το αρχείο λείπει· κάθε άλλη
  * αποτυχία γίνεται `{ unreadable: <λόγος> }` ώστε ο κριτής να τη δώσει **όνομα** αντί να σκάσει.
  */
-function readEvidence(repoRoot, relPath) {
-  const abs = path.join(repoRoot, relPath);
-  if (!fs.existsSync(abs)) return { missing: true };
+function readEvidence(repoRoot, relPath, input = require('../gate-input').openGateInput({ root: repoRoot })) {
+  // ADR-924 Φ2 — τα bytes ΤΗΣ ΟΨΗΣ (με `--index`: αυτά που θα δεσμευτούν), ποτέ του δίσκου πίσω από την πλάτη της.
+  const buf = input.readBytes(relPath);
+  if (buf === null) return { missing: true };
   try {
     if (TYPEFACE_JSON.test(relPath)) {
-      const ev = readTypefaceJson(fs.readFileSync(abs, 'utf8'));
-      return { ...ev, bytes: fs.statSync(abs).size, spdx: spdxFromEvidence(ev) };
+      const ev = readTypefaceJson(buf.toString('utf8'));
+      return { ...ev, bytes: buf.length, spdx: spdxFromEvidence(ev) };
     }
     if (FONT_EXTENSIONS.test(relPath)) {
-      const buf = fs.readFileSync(abs);
       // 🔑 Η μορφή κρίνεται από τα **bytes**, όχι από την κατάληξη: το `opentype.js` δεν
       //    διαβάζει WOFF2, και ένα `.woff2` θα έβγαινε `unreadable-asset` — μπλοκάρισμα επειδή
       //    η πύλη δεν μπορεί να κοιτάξει, όχι επειδή βρήκε κάτι (ADR-805 §10).
@@ -133,7 +131,7 @@ function readEvidence(repoRoot, relPath) {
       return { ...ev, bytes: buf.length, spdx: spdxFromEvidence(ev) };
     }
     // base64 module (.ts/.js) — τα bytes ΕΙΝΑΙ TTF, ίδιος αναγνώστης.
-    const decoded = decodeBase64Module(fs.readFileSync(abs, 'utf8'));
+    const decoded = decodeBase64Module(buf.toString('utf8'));
     if (!decoded) return { unreadable: 'δεν βρέθηκε σώμα base64 στο module' };
     const ev = readOpenTypeNames(decoded);
     return { ...ev, bytes: decoded.length, spdx: spdxFromEvidence(ev) };

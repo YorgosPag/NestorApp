@@ -38,8 +38,8 @@
 
 'use strict';
 
-const fs = require('fs');
-const path = require('path');
+/** Η είσοδος της πύλης (ADR-924) — προεπιλογή ο δίσκος της ρίζας· ο εκτελεστής δίνει την όψη του commit. */
+const inputOf = (root) => require('../gate-input').openGateInput({ root });
 
 const { GLOBAL_LAYER_FLOOR, PROJECT_ROOT } = require('./scale');
 // Η απογραφή ζει χωριστά: αγγίζει τον δίσκο, είναι το μόνο ακριβό βήμα (~6s), και είναι
@@ -123,13 +123,13 @@ function splitSelectorList(selector) {
 }
 
 /** Οι δηλώσεις του συνόρου: `{ selector → { role, important, isolated } }`. */
-function readBoundary(repoRoot, boundaryFile) {
-  const full = path.join(repoRoot, boundaryFile);
-  if (!fs.existsSync(full)) {
+function readBoundary(repoRoot, boundaryFile, input = inputOf(repoRoot)) {
+  const text = input.read(boundaryFile);
+  if (text === null) {
     throw new Error(`CHECK 3.50 / σύνορο: λείπει το ${boundaryFile} — το μητρώο δείχνει στο κενό`);
   }
   const map = new Map();
-  for (const rule of parseRules(fs.readFileSync(full, 'utf8'))) {
+  for (const rule of parseRules(text)) {
     const z = zIndexOf(rule.body);
     for (const selector of splitSelectorList(rule.selector)) {
       const entry = map.get(selector) || { role: null, important: false, isolated: false };
@@ -156,13 +156,12 @@ function readBoundary(repoRoot, boundaryFile) {
  * **θέση** του toaster. Χωρίς αυτόν τον έλεγχο, η επόμενη τέτοια δήλωση θα ήταν πάλι
  * αόρατη — και το σύνορο θα ήταν πράσινο πάνω στην παράκαμψή του.
  */
-function findCompetingRules(repoRoot, boundaryFile, selectorTokens, listCssFiles) {
+function findCompetingRules(repoRoot, boundaryFile, selectorTokens, listCssFiles, input = inputOf(repoRoot)) {
   const competing = [];
   for (const file of listCssFiles(repoRoot)) {
     if (file === boundaryFile) continue;
-    const full = path.join(repoRoot, file);
-    if (!fs.existsSync(full)) continue;
-    const css = fs.readFileSync(full, 'utf8');
+    const css = input.read(file);
+    if (css === null) continue;
     if (!selectorTokens.some((tok) => css.includes(tok))) continue;
     for (const rule of parseRules(css)) {
       const z = zIndexOf(rule.body);
@@ -178,12 +177,12 @@ function findCompetingRules(repoRoot, boundaryFile, selectorTokens, listCssFiles
 // Η ΚΡΙΣΗ
 // ---------------------------------------------------------------------------
 
-function readRegistry(repoRoot = PROJECT_ROOT) {
-  const full = path.join(repoRoot, REGISTRY_FILE);
-  if (!fs.existsSync(full)) {
+function readRegistry(repoRoot = PROJECT_ROOT, input = inputOf(repoRoot)) {
+  const text = input.read(REGISTRY_FILE);
+  if (text === null) {
     throw new Error(`CHECK 3.50 / σύνορο: λείπει το ${REGISTRY_FILE} — καμία δήλωση, καμία κρίση`);
   }
-  const json = JSON.parse(fs.readFileSync(full, 'utf8'));
+  const json = JSON.parse(text);
   if (!json.packages || typeof json.packages !== 'object') {
     throw new Error(`${REGISTRY_FILE}: λείπει η ρίζα "packages"`);
   }
@@ -307,10 +306,11 @@ function collapse(results) {
  */
 function evaluateForeign(repoRoot, roles, deps, options = {}) {
   const withCensus = options.withCensus !== false;
+  const input = options.input || inputOf(repoRoot);
   const { listCssFiles, findSymbolsInSrc } = deps;
-  const registry = readRegistry(repoRoot);
+  const registry = readRegistry(repoRoot, input);
   const boundaryFile = registry.boundaryStylesheet;
-  const boundary = readBoundary(repoRoot, boundaryFile);
+  const boundary = readBoundary(repoRoot, boundaryFile, input);
   // Το κλειδί βγαίνει από το **ίδιο** το `cssVar` της κλίμακας, όχι από δεύτερη
   // υλοποίηση του kebab-case: μια δεύτερη γραμματική εδώ θα ήταν το σχήμα ADR-749.
   const roleByName = new Map(roles.map((r) => [r.cssVar.replace('--z-index-', ''), r.value]));
@@ -377,7 +377,7 @@ function evaluateForeign(repoRoot, roles, deps, options = {}) {
       if (measure.kind === 'clamp' && measure.selector) tokens.push(measure.selector);
     }
   }
-  for (const c of findCompetingRules(repoRoot, boundaryFile, tokens, listCssFiles)) {
+  for (const c of findCompetingRules(repoRoot, boundaryFile, tokens, listCssFiles, input)) {
     findings.push({
       pkg: c.token,
       observed: 0,

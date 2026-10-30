@@ -20,7 +20,7 @@ const { baselineNameParser } = require('./validity');
 /** Ίδιο κριτήριο «τι είναι spec» με το CHECK 3.46 — δύο ορισμοί θα απέκλιναν σιωπηλά. */
 const SPEC_PATTERN = /(^|\/)e2e\/.*\.spec\.tsx?$|\.e2e\.spec\.tsx?$/;
 
-const toPosix = (p) => p.split(path.sep).join('/');
+const { toPosix } = require('../posix-path'); // SSoT (ADR-924 §8.9)
 
 function readSpecFiles(root) {
   const rootPosix = toPosix(root);

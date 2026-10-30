@@ -14,10 +14,8 @@
 
 import 'server-only';
 
-import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
-import { sendChannelReply, extractChannelIds } from '../../shared/channel-reply-dispatcher';
 import { PipelineIntentType } from '@/types/ai-pipeline';
 import type {
   IUCModule,
@@ -37,6 +35,7 @@ import { autoSchedule } from './analyzers/auto-scheduler';
 import { optimizeResources } from './analyzers/resource-optimizer';
 import { analyzePhotoProgress } from './analyzers/photo-progress-analyzer';
 import { formatGanttAIReply, buildGanttAISummary } from './gantt-ai-formatter';
+import { acknowledgeBySideEffect, approvedAction, autoApprovedProposal, failedExecution, sendCommandReply } from '../../shared/admin-command-protocol';
 
 const logger = createModuleLogger('UC_017_GANTT_AI');
 
@@ -133,31 +132,16 @@ export class GanttAIModule implements IUCModule {
     const data = ctx.lookupData as unknown as GanttAILookupData | undefined;
     const summary = data ? buildGanttAISummary(data) : 'Gantt AI ανάλυση';
 
-    return {
-      messageId: ctx.intake.id,
-      suggestedActions: [
-        {
-          type: 'gantt_ai_reply',
-          params: {
-            lookupData: data ?? null,
-            channel: ctx.intake.channel,
-            telegramChatId: (ctx.intake.rawPayload.chatId as string) ?? null,
-          },
-        },
-      ],
-      requiredApprovals: [],
-      autoApprovable: true,
-      summary,
-      schemaVersion: PIPELINE_PROTOCOL_CONFIG.SCHEMA_VERSION,
-    };
+    return autoApprovedProposal(ctx, 'gantt_ai_reply', {
+      lookupData: data ?? null,
+    }, summary);
   }
 
   // ── Step 6: EXECUTE ──
 
   async execute(ctx: PipelineContext): Promise<ExecutionResult> {
     try {
-      const actions = ctx.approval?.modifiedActions ?? ctx.proposal?.suggestedActions ?? [];
-      const action = actions.find(a => a.type === 'gantt_ai_reply');
+      const action = approvedAction(ctx, 'gantt_ai_reply');
 
       if (!action) {
         return { success: false, sideEffects: [], error: 'No gantt_ai_reply action found' };
@@ -166,34 +150,16 @@ export class GanttAIModule implements IUCModule {
       const data = action.params.lookupData as GanttAILookupData | null;
       const replyText = data ? formatGanttAIReply(data) : '❌ Δεν βρέθηκαν δεδομένα Gantt.';
 
-      const replyResult = await sendChannelReply({
-        channel: ctx.intake.channel,
-        ...extractChannelIds(ctx),
-        subject: `Gantt AI: ${data?.feature ?? 'ανάλυση'}`,
-        textBody: replyText,
-        requestId: ctx.requestId,
-      });
-
-      return {
-        success: true,
-        sideEffects: replyResult.success
-          ? [`reply_sent:${replyResult.messageId ?? 'unknown'}`]
-          : [`reply_failed:${replyResult.error ?? 'unknown'}`],
-      };
+      return await sendCommandReply(ctx, `Gantt AI: ${data?.feature ?? 'ανάλυση'}`, replyText);
     } catch (error) {
-      const errorMessage = getErrorMessage(error);
-      logger.error('UC-017 EXECUTE: Failed', { requestId: ctx.requestId, error: errorMessage });
-      return { success: false, sideEffects: [], error: errorMessage };
+      return failedExecution(ctx, 'UC-017', logger, error);
     }
   }
 
   // ── Step 7: ACKNOWLEDGE ──
 
   async acknowledge(ctx: PipelineContext): Promise<AcknowledgmentResult> {
-    const replySent = ctx.executionResult?.sideEffects?.some(
-      (se: string) => se.startsWith('reply_sent:')
-    ) ?? false;
-    return { sent: replySent, channel: ctx.intake.channel };
+    return acknowledgeBySideEffect(ctx, 'reply_sent:');
   }
 
   async healthCheck(): Promise<boolean> {

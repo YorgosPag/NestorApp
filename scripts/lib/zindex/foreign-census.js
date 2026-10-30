@@ -19,7 +19,7 @@ const { GLOBAL_LAYER_FLOOR, PROJECT_ROOT } = require('./scale');
 
 const SCANNABLE = /\.(css|js|mjs|cjs)$/;
 const MAX_WALK_DEPTH = 7;
-const toPosix = (p) => p.split(path.sep).join('/');
+const { toPosix } = require('../posix-path'); // SSoT (ADR-924 §8.9)
 
 /**
  * ⚠️ ΤΟ ΙΔΙΟ ΜΟΤΙΒΟ ΠΙΑΝΕΙ **ΚΑΙ** CSS **ΚΑΙ** JS. Δεν είναι χαλαρότητα: το `sonner`

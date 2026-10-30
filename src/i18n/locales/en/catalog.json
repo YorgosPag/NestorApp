@@ -1085,7 +1085,8 @@
       "periods": {
         "title": "Periods of this cell",
         "new": "New period",
-        "empty": "No saved condition in this cell."
+        "empty": "No saved condition in this cell.",
+        "delimited": "Ends when saved"
       },
       "period": {
         "between": "{from} – {last}",
@@ -1141,7 +1142,8 @@
         "lastDayHint": "Valid for that whole day too.",
         "lastDayNone": "No end",
         "ambiguityTitle": "Conflicts with another condition — which one would apply?",
-        "openConflict": "Open: {rule}, {period}"
+        "openConflict": "Open: {rule}, {period}",
+        "supersedes": "On save, the period “{rule}” will apply: {period}."
       },
       "groups": {
         "discountGroups": "Discount groups",

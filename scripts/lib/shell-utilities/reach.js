@@ -119,9 +119,10 @@ function lazyGraph({ projectRoot, aliases, files, readFile }) {
   return { projectRoot, aliases, fileSet: new Set(files), modules, unparsed };
 }
 
-function createReachability({ projectRoot, files, readFile }) {
+function createReachability({ projectRoot, files, readFile, readText = null }) {
   const rootPosix = toPosix(projectRoot);
-  const aliases = readTsPathAliases(projectRoot);
+  // `readText` (ADR-924) = ο αναγνώστης της εισόδου: με `--index` το tsconfig ΤΟΥ COMMIT
+  const aliases = readTsPathAliases(projectRoot, undefined, readText);
   const graph = lazyGraph({ projectRoot: rootPosix, aliases, files, readFile });
   const resolve = createResolver(graph);
 

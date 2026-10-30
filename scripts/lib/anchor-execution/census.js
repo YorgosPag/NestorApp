@@ -44,14 +44,15 @@
  * @module scripts/lib/anchor-execution/census
  */
 
-const fs = require('node:fs');
 const path = require('node:path');
 
 const {
+  listDisabledWorkflowFiles,
   listWorkflowFiles,
   readWorkflowRunSteps,
   readWorkflowTriggers,
 } = require('../ci/workflow-meta');
+const { openGateInput } = require('../gate-input');
 const { buildCensus } = require('../jest-partition/census');
 const { allExecutors } = require('../jest-partition/executors');
 const { PROJECT_ROOT, toPosix } = require('../jest-partition/jest-configs');
@@ -108,13 +109,6 @@ function resolveConfig(rawConfig, knownConfigs) {
   return suffixMatch ?? null;
 }
 
-/** Τα αρχεία `*.yml.disabled` — workflow που **υπάρχει και δεν τρέχει ποτέ**. */
-function listDisabledWorkflows(workflowsDir) {
-  return fs
-    .readdirSync(workflowsDir)
-    .filter((file) => file.endsWith('.yml.disabled'))
-    .sort();
-}
 
 /**
  * Κάθε κλήση εκτελεστή test σε **κάθε** αρχείο workflow (ενεργό ή απενεργοποιημένο).
@@ -124,21 +118,21 @@ function listDisabledWorkflows(workflowsDir) {
  * μπορεί να αποτύχει; Η σειρά είναι συμβόλαιο: ένα βήμα σε `.disabled` αρχείο δεν έχει
  * νόημα να ρωτηθεί αν είναι υπό συνθήκη.
  */
-function collectInvocations(projectRoot, knownConfigs = new Set()) {
+function collectInvocations(projectRoot, knownConfigs = new Set(), input = openGateInput({ root: projectRoot })) {
   const workflowsDir = path.join(projectRoot, WORKFLOWS_DIR);
-  const scripts = loadScripts(projectRoot);
+  const scripts = loadScripts(projectRoot, input);
   const invocations = [];
 
   const files = [
-    ...listWorkflowFiles(workflowsDir).map((file) => ({ file, disabled: false })),
-    ...listDisabledWorkflows(workflowsDir).map((file) => ({ file, disabled: true })),
+    ...listWorkflowFiles(workflowsDir, input).map((file) => ({ file, disabled: false })),
+    ...listDisabledWorkflowFiles(workflowsDir, input).map((file) => ({ file, disabled: true })),
   ];
 
   for (const { file, disabled } of files) {
     const full = path.join(workflowsDir, file);
-    const triggers = disabled ? { automatic: [], pathFiltered: false } : readWorkflowTriggers(full);
+    const triggers = disabled ? { automatic: [], pathFiltered: false } : readWorkflowTriggers(full, input.readRequired);
 
-    for (const step of readWorkflowRunSteps(full)) {
+    for (const step of readWorkflowRunSteps(full, input.readRequired)) {
       for (const { command, tolerated, last } of splitCommands(step.run)) {
         const parsed = classifyCommand(command, scripts);
         if (parsed.kind === 'not-execution') continue;
@@ -186,15 +180,15 @@ function collectInvocations(projectRoot, knownConfigs = new Set()) {
 }
 
 /** Οι δηλωμένες εξαιρέσεις, με τον λόγο τους — και οι δύο τρόποι να είναι άκυρες. */
-function readDeclarations(projectRoot, existingFiles) {
-  const file = path.join(projectRoot, DECLARATIONS_FILE);
-  if (!fs.existsSync(file)) {
+function readDeclarations(projectRoot, existingFiles, input = openGateInput({ root: projectRoot })) {
+  const text = input.read(DECLARATIONS_FILE);
+  if (text === null) {
     throw new Error(
       `[anchor-execution] Λείπει το «${DECLARATIONS_FILE}». Το κλειστό σύνολο δηλώσεων είναι ` +
         'μέρος της πύλης: χωρίς αυτό κάθε εξαίρεση θα ήταν αόρατη.',
     );
   }
-  const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const parsed = JSON.parse(text);
   const entries = Array.isArray(parsed.exempt) ? parsed.exempt : [];
   const problems = [];
   const exempt = new Map();
@@ -259,20 +253,26 @@ function classifyFile({ exemptWhy, reached }) {
  * CHECK 3.47· άγνωστη κατάσταση ⇒ `throw` **με όνομα**. Η λογιστική είναι το όργανο που
  * εγγυάται ότι κανένα αρχείο δεν χάνεται σιωπηλά — δεν επιτρέπεται να χαθεί **η ίδια**.
  */
-function buildExecutionCensus(projectRoot = PROJECT_ROOT) {
+/**
+ * ⚠️ ΔΥΟ ΟΨΕΙΣ, ΔΗΛΩΜΕΝΑ (ADR-924 §8.9): ό,τι **δηλώνει το commit** — workflows, `package.json` scripts, οι
+ * εξαιρέσεις — από την ΕΙΣΟΔΟ (`input`: με `--index` ό,τι θα δεσμευτεί). Η **διαμέριση** (CHECK 3.47: ποιο jest config
+ * τρέχει ποιο αρχείο) μένει στο ΠΕΡΙΒΑΛΛΟΝ: οι εξαιρέσεις του jest παράγονται από τους gitignored φακέλους που
+ * **υπάρχουν στον δίσκο** (`derived-ignores`) — ο ορισμός των εκτελεστών είναι το jest αυτού του μηχανήματος.
+ */
+function buildExecutionCensus(projectRoot = PROJECT_ROOT, input = openGateInput({ root: projectRoot })) {
   const rootPosix = toPosix(projectRoot).replace(/\/+$/, '');
   const partition = buildCensus(projectRoot);
 
   const claimsByConfig = new Map(
     allExecutors(projectRoot).map((executor) => [toPosix(executor.id), executor.claims]),
   );
-  const invocations = collectInvocations(projectRoot, new Set(claimsByConfig.keys()));
+  const invocations = collectInvocations(projectRoot, new Set(claimsByConfig.keys()), input);
 
   const judged = [
     ...partition.byState['jest-owned'],
     ...partition.byState['playwright-owned'],
   ];
-  const { exempt, problems } = readDeclarations(projectRoot, new Set(judged.map((e) => e.file)));
+  const { exempt, problems } = readDeclarations(projectRoot, new Set(judged.map((e) => e.file)), input);
 
   const executing = invocations.filter((invocation) => invocation.patterns !== undefined);
   const byState = Object.fromEntries(FILE_STATES.map((state) => [state, []]));
@@ -351,7 +351,6 @@ module.exports = {
   buildExecutionCensus,
   classifyFile,
   collectInvocations,
-  listDisabledWorkflows,
   readDeclarations,
   reaching,
   resolveConfig,

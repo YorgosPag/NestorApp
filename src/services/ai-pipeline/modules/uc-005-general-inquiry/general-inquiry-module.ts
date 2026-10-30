@@ -25,16 +25,26 @@
 
 import 'server-only';
 
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { generatePipelineAuditId } from '@/services/enterprise-id.service';
-import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
-import { findContactByEmail, type ContactMatch } from '../../shared/contact-lookup';
-import { getSenderHistory, type SenderHistoryResult } from '../../shared/sender-history';
+import type { ContactMatch } from '../../shared/contact-lookup';
+import {
+  acknowledgeReply,
+  approvalOf,
+  collectionHealthCheck,
+  logLookupComplete,
+  lookupOf,
+  lookupSender,
+  querySenderHistory,
+  recordPipelineAudit,
+  requesterOf,
+  sendRecordedReply,
+  senderDisplayOf,
+  toLookupRecord,
+} from '../../shared/customer-request-protocol';
+import type { SenderHistoryResult } from '../../shared/sender-history';
 import { generateAIReply } from '../../shared/ai-reply-generator';
-import { sendChannelReply, extractChannelIds } from '../../shared/channel-reply-dispatcher';
 import {
   PipelineIntentType,
 } from '@/types/ai-pipeline';
@@ -47,6 +57,7 @@ import type {
   PipelineIntentTypeValue,
 } from '@/types/ai-pipeline';
 import { nowISO } from '@/lib/date-local';
+import { approvedAction, humanApprovedProposal } from '../../shared/admin-command-protocol';
 
 // ============================================================================
 // LOGGER
@@ -110,44 +121,9 @@ export class GeneralInquiryModule implements IUCModule {
   // ── Step 3: LOOKUP ──────────────────────────────────────────────────────
 
   async lookup(ctx: PipelineContext): Promise<Record<string, unknown>> {
-    const senderEmail = ctx.intake.normalized.sender.email ?? '';
-    const senderName = ctx.intake.normalized.sender.name ?? senderEmail;
+    const { senderEmail, senderName, senderContact } = await lookupSender(ctx, 'UC-005', logger);
 
-    logger.info('UC-005 LOOKUP: Searching for sender contact', {
-      requestId: ctx.requestId,
-      senderEmail,
-      companyId: ctx.companyId,
-    });
-
-    // Find sender in contacts collection
-    let senderContact: ContactMatch | null = null;
-    if (senderEmail) {
-      try {
-        senderContact = await findContactByEmail(senderEmail, ctx.companyId);
-      } catch (error) {
-        const msg = getErrorMessage(error);
-        logger.warn('UC-005 LOOKUP: Contact search failed (non-fatal)', {
-          requestId: ctx.requestId,
-          error: msg,
-        });
-      }
-    }
-
-    // Query sender history
-    let senderHistory: SenderHistoryResult | null = null;
-    try {
-      senderHistory = await getSenderHistory(
-        senderEmail,
-        ctx.companyId,
-        ctx.intake.id,
-      );
-    } catch (error) {
-      const msg = getErrorMessage(error);
-      logger.warn('UC-005 LOOKUP: Sender history query failed (non-fatal)', {
-        requestId: ctx.requestId,
-        error: msg,
-      });
-    }
+    const senderHistory = await querySenderHistory(ctx, 'UC-005', logger, senderEmail);
 
     const inquirySummary = ctx.intake.normalized.contentText?.slice(0, 500)
       ?? ctx.intake.normalized.subject
@@ -164,23 +140,17 @@ export class GeneralInquiryModule implements IUCModule {
       senderHistory,
     };
 
-    logger.info('UC-005 LOOKUP: Complete', {
-      requestId: ctx.requestId,
-      isKnownContact: lookupData.isKnownContact,
-      contactId: senderContact?.contactId,
-      isReturningContact: senderHistory?.isReturningContact,
-      previousEmails: senderHistory?.totalPreviousEmails,
-    });
+    logLookupComplete(ctx, 'UC-005', logger, { senderContact, senderHistory });
 
-    return lookupData as unknown as Record<string, unknown>;
+    return toLookupRecord(lookupData);
   }
 
   // ── Step 4: PROPOSE ─────────────────────────────────────────────────────
 
   async propose(ctx: PipelineContext): Promise<Proposal> {
-    const lookup = ctx.lookupData as unknown as GeneralInquiryLookupData | undefined;
+    const lookup = lookupOf<GeneralInquiryLookupData>(ctx);
 
-    const senderDisplay = lookup?.senderName ?? lookup?.senderEmail ?? 'Άγνωστος αποστολέας';
+    const senderDisplay = senderDisplayOf(lookup);
     const inquirySummary = lookup?.inquirySummary
       || ctx.intake.normalized.contentText?.slice(0, 300)
       || '';
@@ -216,31 +186,18 @@ export class GeneralInquiryModule implements IUCModule {
       aiDurationMs: aiReplyResult.durationMs,
     });
 
-    return {
-      messageId: ctx.intake.id,
-      suggestedActions: [
-        {
-          type: 'acknowledge_inquiry',
-          params: {
-            senderEmail: lookup?.senderEmail ?? null,
-            senderName: lookup?.senderName ?? null,
-            contactId: lookup?.senderContact?.contactId ?? null,
-            isKnownContact: lookup?.isKnownContact ?? false,
-            inquirySummary: inquirySummary || summary,
-            companyId: ctx.companyId,
-            draftReply,
-            aiGenerated: aiReplyResult.aiGenerated,
-            requiresManualFollowUp: true,
-            channel: ctx.intake.channel,
-            telegramChatId: (ctx.intake.rawPayload.chatId as string) ?? null,
-          },
-        },
-      ],
-      requiredApprovals: ['salesManager'],
-      autoApprovable: false, // ΚΑΝΟΝΑΣ: Catch-all ΠΑΝΤΑ ανθρώπινη έγκριση
-      summary,
-      schemaVersion: PIPELINE_PROTOCOL_CONFIG.SCHEMA_VERSION,
-    };
+    // ΚΑΝΟΝΑΣ: Catch-all ΠΑΝΤΑ ανθρώπινη έγκριση
+    return humanApprovedProposal(ctx, 'acknowledge_inquiry', {
+      senderEmail: lookup?.senderEmail ?? null,
+      senderName: lookup?.senderName ?? null,
+      contactId: lookup?.senderContact?.contactId ?? null,
+      isKnownContact: lookup?.isKnownContact ?? false,
+      inquirySummary: inquirySummary || summary,
+      companyId: ctx.companyId,
+      draftReply,
+      aiGenerated: aiReplyResult.aiGenerated,
+      requiresManualFollowUp: true,
+    }, summary);
   }
 
   // ── Step 6: EXECUTE ─────────────────────────────────────────────────────
@@ -251,8 +208,7 @@ export class GeneralInquiryModule implements IUCModule {
     });
 
     try {
-      const actions = ctx.approval?.modifiedActions ?? ctx.proposal?.suggestedActions ?? [];
-      const ackAction = actions.find(a => a.type === 'acknowledge_inquiry');
+      const ackAction = approvedAction(ctx, 'acknowledge_inquiry');
 
       if (!ackAction) {
         return {
@@ -265,70 +221,32 @@ export class GeneralInquiryModule implements IUCModule {
       const params = ackAction.params;
 
       // ── 1. Record inquiry in audit trail ──
-      const adminDb = getAdminFirestore();
       const inquiryRecord = {
         type: 'general_inquiry',
         companyId: ctx.companyId,
         pipelineRequestId: ctx.requestId,
-        sender: {
-          email: (params.senderEmail as string) ?? null,
-          name: (params.senderName as string) ?? null,
-          contactId: (params.contactId as string) ?? null,
-          isKnownContact: (params.isKnownContact as boolean) ?? false,
-        },
+        sender: requesterOf(params),
         inquirySummary: (params.inquirySummary as string) ?? null,
         requiresManualFollowUp: true,
         channel: ctx.intake.channel,
         status: 'pending_follow_up',
-        approvedBy: ctx.approval?.approvedBy ?? null,
-        approvedAt: ctx.approval?.decidedAt ?? null,
+        ...approvalOf(ctx),
         createdAt: nowISO(),
       };
 
-      const auditId = generatePipelineAuditId();
-      await adminDb
-        .collection(COLLECTIONS.AI_PIPELINE_AUDIT)
-        .doc(auditId)
-        .set(inquiryRecord);
+      const auditId = await recordPipelineAudit(inquiryRecord);
 
-      logger.info('UC-005 EXECUTE: Inquiry recorded', {
-        requestId: ctx.requestId,
+      const sideEffects = await sendRecordedReply({
+        ctx,
+        moduleId: 'UC-005',
+        logger,
+        params,
         auditId,
+        defaultSubject: 'Αίτημα',
+        recordedLabel: 'Inquiry',
+        recordedEffect: `inquiry_recorded:${auditId}`,
+        fallbackReply: (senderName) => buildGeneralInquiryReply({ senderName }),
       });
-
-      // ── 2. Send reply via channel dispatcher ──
-      const draftReply = (params.draftReply as string) ?? '';
-      const senderEmail = (params.senderEmail as string) ?? '';
-      const originalSubject = ctx.intake.normalized.subject ?? 'Αίτημα';
-
-      const replyResult = await sendChannelReply({
-        channel: ctx.intake.channel,
-        ...extractChannelIds(ctx),
-        subject: `Re: ${originalSubject}`,
-        textBody: draftReply || buildGeneralInquiryReply({
-          senderName: (params.senderName as string) ?? senderEmail,
-        }),
-        requestId: ctx.requestId,
-      });
-
-      // Build side effects list
-      const sideEffects = [`inquiry_recorded:${auditId}`];
-
-      if (replyResult.success) {
-        sideEffects.push(`reply_sent:${replyResult.messageId ?? 'unknown'}`);
-        logger.info('UC-005 EXECUTE: Reply sent', {
-          requestId: ctx.requestId,
-          channel: replyResult.channel,
-          messageId: replyResult.messageId,
-        });
-      } else {
-        sideEffects.push(`reply_failed:${replyResult.error ?? 'unknown'}`);
-        logger.warn('UC-005 EXECUTE: Reply send failed (inquiry still recorded)', {
-          requestId: ctx.requestId,
-          channel: replyResult.channel,
-          error: replyResult.error,
-        });
-      }
 
       // Inquiry recording is the primary action — reply failure is non-fatal
       return {
@@ -354,35 +272,12 @@ export class GeneralInquiryModule implements IUCModule {
   // ── Step 7: ACKNOWLEDGE ─────────────────────────────────────────────────
 
   async acknowledge(ctx: PipelineContext): Promise<AcknowledgmentResult> {
-    const channel = ctx.intake.channel;
-
-    const replySent = ctx.executionResult?.sideEffects?.some(
-      (se: string) => se.startsWith('reply_sent:')
-    ) ?? false;
-
-    logger.info('UC-005 ACKNOWLEDGE: Reply delivery status', {
-      requestId: ctx.requestId,
-      channel,
-      replySent,
-    });
-
-    return {
-      sent: replySent,
-      channel,
-    };
+    return acknowledgeReply(ctx, 'UC-005', logger, 'Reply delivery status');
   }
 
   // ── Health Check ────────────────────────────────────────────────────────
 
   async healthCheck(): Promise<boolean> {
-    try {
-      const adminDb = getAdminFirestore();
-      await adminDb.collection(COLLECTIONS.AI_PIPELINE_AUDIT).limit(1).get();
-      return true;
-    } catch (error) {
-      const msg = getErrorMessage(error);
-      logger.error('UC-005 HEALTH CHECK: Failed', { error: msg });
-      return false;
-    }
+    return collectionHealthCheck(COLLECTIONS.AI_PIPELINE_AUDIT, 'UC-005', logger);
   }
 }

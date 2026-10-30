@@ -12,11 +12,10 @@
  * CHECK 3.34 είχε αποκλίνει κατά **63**.
  */
 
-const fs = require('node:fs');
 const path = require('node:path');
-const { execFileSync } = require('node:child_process');
 
-const { collectSourceFiles } = require('../module-graph/scan-config');
+/** Η είσοδος της πύλης (ADR-924) — προεπιλογή ο δίσκος της ρίζας· ο εκτελεστής δίνει την όψη του commit. */
+const inputOf = (root) => require('../gate-input').openGateInput({ root });
 const { ROLE_PROPERTY, scanRoleChecks } = require('./role-guards');
 
 const REGISTRY_FILE = '.authority-registry.json';
@@ -77,10 +76,10 @@ function topLevelKeysAfter(source, marker) {
  * (που είναι **PermissionId**, όχι ρόλος) μετριέται ως «φάντασμα ρόλου» — ήταν
  * **1 από τα 3** ευρήματα της πρώτης μέτρησης, δηλαδή **33% ψευδώς θετικά**.
  */
-function readVocabularies(root, registry = null) {
+function readVocabularies(root, registry = null, input = inputOf(root)) {
   const ssot = (registry && registry.ssot) || {};
-  const typesSrc = fs.readFileSync(path.join(root, ssot.claimVocabulary || 'src/lib/auth/types.ts'), 'utf8');
-  const rolesSrc = fs.readFileSync(path.join(root, ssot.roleCatalogue || 'src/lib/auth/role-catalogue.ts'), 'utf8');
+  const typesSrc = input.read(ssot.claimVocabulary || 'src/lib/auth/types.ts') ?? '';
+  const rolesSrc = input.read(ssot.roleCatalogue || 'src/lib/auth/role-catalogue.ts') ?? '';
 
   const globalRoles = quotedItemsAfter(typesSrc, 'GLOBAL_ROLES = [');
   const predefinedRoles = topLevelKeysAfter(rolesSrc, 'PREDEFINED_ROLES: Record<string, RoleDefinition> = {');
@@ -110,10 +109,8 @@ function quotedPermissionKeys(typesSrc) {
 // ΤΟ ΜΗΤΡΩΟ
 // =============================================================================
 
-function loadRegistry(root) {
-  const file = path.join(root, REGISTRY_FILE);
-  const raw = fs.readFileSync(file, 'utf8');
-  const registry = JSON.parse(raw);
+function loadRegistry(root, input = inputOf(root)) {
+  const registry = input.readJson(REGISTRY_FILE);
   for (const key of ['ssot', 'claimRoleVocabulary', 'legacyRoleNames', 'inlineDeciders', 'roleGuards']) {
     if (registry[key] === undefined) throw new Error(`${REGISTRY_FILE}: λείπει το πεδίο «${key}»`);
   }
@@ -224,9 +221,9 @@ function escapeRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
  * ⚠️ **fail-closed**: αν το `git` δεν απαντήσει, πέφτουμε στην **πλήρη** σάρωση —
  * ποτέ σε κενή λίστα, που θα διαβαζόταν ως «καθαρό δέντρο».
  */
-function candidateFiles(root, indicator) {
+function candidateFiles(input, indicator) {
   const quoted = indicator.flatMap((role) => [QUOTE_SINGLE + role + QUOTE_SINGLE, QUOTE_DOUBLE + role + QUOTE_DOUBLE]);
-  return grepFiles(root, quoted) || collectSourceFiles(root, ['src']);
+  return grepFiles(input, quoted) || input.sources(['src']);
 }
 
 const QUOTE_SINGLE = String.fromCharCode(39);
@@ -243,23 +240,15 @@ const QUOTE_DOUBLE = String.fromCharCode(34);
  * ⚠️ **Επιστρέφει `null`, ποτέ `[]`, όταν αποτυγχάνει**: ο καλών οφείλει να
  * πέσει στην **πλήρη** σάρωση. Κενή λίστα θα διαβαζόταν ως «καθαρό δέντρο».
  */
-function grepFiles(root, patterns) {
-  const args = patterns.flatMap((pattern) => ['-e', pattern]);
+function grepFiles(input, patterns) {
+  // ADR-924 — το `git grep` της ΟΨΗΣ (με `--index`: το κείμενο του commit), από την είσοδο.
   try {
-    const out = execFileSync(
-      'git',
-      ['grep', '-l', '-I', '-F', ...args, '--', 'src'],
-      { cwd: root, encoding: 'utf8', maxBuffer: 64 << 20 },
-    );
-    const files = out.split(NEWLINE).filter(Boolean);
+    const files = input.grep(patterns, ['src']);
     return files.length > 0 ? files : null;
   } catch {
-    /* `git grep` επιστρέφει 1 όταν δεν βρει τίποτα — δεν είναι σφάλμα */
     return null;
   }
 }
-
-const NEWLINE = String.fromCharCode(10);
 
 /**
  * Η απογραφή: ένα αντικείμενο ανά αρχείο **που περιέχει σύνολο ρόλων**.
@@ -268,9 +257,9 @@ const NEWLINE = String.fromCharCode(10);
  * προσγειώνεται σε **οποιοδήποτε** αρχείο, άρα λίστα φακέλων θα ήταν σωστή
  * σήμερα και θα απέκλινε σιωπηλά αύριο (3.34/3.37).
  */
-function takeInventory(root, options = {}) {
-  const registry = options.registry || loadRegistry(root);
-  const vocabularies = options.vocabularies || readVocabularies(root, registry);
+function takeInventory(root, options = {}, input = inputOf(root)) {
+  const registry = options.registry || loadRegistry(root, input);
+  const vocabularies = options.vocabularies || readVocabularies(root, registry, input);
   // 🔴 **Ο ΔΕΙΚΤΗΣ ΠΕΡΙΛΑΜΒΑΝΕΙ ΤΑ LEGACY ΟΝΟΜΑΤΑ, ΚΑΙ ΤΟ ΕΜΑΘΕ Η ΙΔΙΑ Η ΠΥΛΗ.**
   //    Η πρώτη γραφή έβαζε μόνο τα τέσσερα `GLOBAL_ROLES` ⇒ η γραμμή
   //    `type AdminRole = 'admin' | 'broker' | 'builder' | 'super_admin'` είχε
@@ -282,14 +271,15 @@ function takeInventory(root, options = {}) {
     ...(registry.legacyRoleNames || []).map((l) => l.name),
   ];
 
-  const files = (options.files || candidateFiles(root, indicator))
+  const files = (options.files || candidateFiles(input, indicator))
     .map((f) => path.relative(root, path.resolve(root, f)).split(path.sep).join('/'))
     .filter((f) => /\.tsx?$/.test(f) && !f.includes('__tests__') && !/\.(test|spec)\./.test(f));
 
   const entries = [];
   for (const rel of files) {
     let raw;
-    try { raw = fs.readFileSync(path.join(root, rel), 'utf8'); } catch { continue; }
+    raw = input.read(rel);
+    if (raw === null) continue;
     if (!indicator.some((role) => raw.includes(role))) continue; // προφίλτρο κειμένου
     const clean = stripComments(raw);
     const windows = windowsOf(clean, indicator);
@@ -301,7 +291,7 @@ function takeInventory(root, options = {}) {
     vocabularies,
     entries,
     scanned: files.length,
-    roleChecks: takeRoleCheckInventory(root, options),
+    roleChecks: takeRoleCheckInventory(root, options, input),
   };
 }
 
@@ -319,8 +309,8 @@ function takeInventory(root, options = {}) {
  * ⚠️ **fail-closed**: αν το `git` δεν απαντήσει, πέφτουμε στην **πλήρη** σάρωση —
  * ποτέ σε κενή λίστα, που θα διαβαζόταν ως «καθαρό δέντρο».
  */
-function roleCheckCandidates(root) {
-  return grepFiles(root, [ROLE_PROPERTY]) || collectSourceFiles(root, ['src']);
+function roleCheckCandidates(input) {
+  return grepFiles(input, [ROLE_PROPERTY]) || input.sources(['src']);
 }
 
 /**
@@ -330,15 +320,17 @@ function roleCheckCandidates(root) {
  * αρχείο — και ο ένας που βρέθηκε ζει **εκτός** `src/app/api`, δηλαδή ακριβώς εκεί
  * που μια λίστα φακέλων δεν θα κοίταζε (3.34/3.37).
  */
-function takeRoleCheckInventory(root, options = {}) {
-  const files = (options.roleCheckFiles || roleCheckCandidates(root))
+function takeRoleCheckInventory(root, options = {}, input = inputOf(root)) {
+  const files = (options.roleCheckFiles || roleCheckCandidates(input))
     .map((f) => path.relative(root, path.resolve(root, f)).split(path.sep).join('/'))
     .filter((f) => /\.tsx?$/.test(f) && !f.includes('__tests__') && !/\.(test|spec)\./.test(f));
 
   const checks = [];
   for (const rel of files) {
     try {
-      checks.push(...scanRoleChecks(root, rel));
+      const text = input.read(rel);
+      if (text === null) continue;
+      checks.push(...scanRoleChecks(root, rel, text));
     } catch {
       /* αρχείο που δεν διαβάζεται/δεν αναλύεται δεν κρύβει φρουρό — το `git grep`
          το ονόμασε, άρα υπάρχει· η αδυναμία ανάγνωσης είναι σφάλμα συστήματος. */

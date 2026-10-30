@@ -67,6 +67,7 @@
 
 const path = require('path');
 const { PROJECT_ROOT, runSetRatchetCli } = require('./lib/ratchet-baseline');
+const { openGateInput } = require('./lib/gate-input');
 const { readThemes, GLOBALS_CSS } = require('./lib/contrast/css-token-themes');
 /**
  * ⚠️ Το `evaluateTranslucent` **δεν** εισάγεται πια από το `runtime-matrix` (module του
@@ -96,9 +97,11 @@ const baselineFile = () => process.env.THEME_CLASSES_BASELINE_FILE
 /** Ταυτότητα παραβίασης = κατάσταση + ταυτότητα δήλωσης. Χωρίς γραμμή, χωρίς τιμή. */
 const violationId = (f) => `${f.state}::${f.id}`;
 
-function measure() {
-  const themes = readThemes(PROJECT_ROOT);
-  const palette = buildClassPalette(PROJECT_ROOT, themes);
+/** `opts.input` = η είσοδος (ADR-924) — προεπιλογή ο δίσκος· ο εκτελεστής δίνει την όψη του commit. */
+function measure(opts = {}) {
+  const input = opts.input || openGateInput({ root: PROJECT_ROOT });
+  const themes = readThemes(PROJECT_ROOT, input);
+  const palette = buildClassPalette(PROJECT_ROOT, themes, input);
   const ledger = auditBuckets(palette);
 
   /**
@@ -197,7 +200,7 @@ const DESCRIPTOR = {
   adr: 'CHECK 3.42',
   skipEnv: 'SKIP_THEME_CLASSES',
   get baselineFile() { return baselineFile(); },
-  measure,
+  measure: (_args, input) => measure({ input }),
   buildPayload,
   printReport,
   violationId,

@@ -71,7 +71,8 @@ CONCRETE ΠΑΡΑΔΕΙΓΜΑΤΑ:
 - Για να τις βρεις: firestore_query("properties/{propertyId}/payment_plans") — αντικατέστησε {propertyId} με το πραγματικό ID
 - ΠΡΩΤΑ βρες το propertyId μέσω firestore_query("properties") → πάρε το id
 - ΜΕΤΑ κάνε firestore_query("properties/{id}/payment_plans")
-- Κάθε payment plan έχει installments[] array με: label (φάση), amount, percentage, dueDate, status
+- Κάθε payment plan έχει installments[] array με: label (φάση), amount, percentage, dueDate (ημέρα YYYY-MM-DD· παλιές εγγραφές έχουν ISO στιγμή — η ημέρα της είναι η ημέρα Ελλάδας), status
+- Ληξιπρόθεσμη δόση = έχει περάσει ΟΛΟΚΛΗΡΗ η ημέρα λήξης (η ίδια η ημέρα λήξης ΔΕΝ είναι καθυστέρηση)
 - Παράδειγμα labels: "Κράτηση", "Θεμελίωση", "Σκελετός", "Τοιχοποιία", "Δάπεδα", "Κουφώματα", "Αποπεράτωση"
 
 ΣΗΜΑΝΤΙΚΟ: Τα nested πεδία επιστρέφονται FLAT (με prefix _):

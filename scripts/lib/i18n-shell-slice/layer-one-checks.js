@@ -24,6 +24,7 @@ const {
 const RS = require('./route-slices');
 const { CODE_ROOT: PROJECT_ROOT } = require('./global-inputs');
 const { toPosix } = require('../module-graph/resolve-specifier');
+const { toCanonicalText } = require('../text-eol');
 
 const { ROUTES_DIR, routeIdFor } = RS;
 
@@ -32,9 +33,10 @@ const { ROUTES_DIR, routeIdFor } = RS;
  * `core.autocrlf=true` with no `.gitattributes` means the working-tree copy of a
  * generated file carries CRLF while the generator writes LF; comparing raw bytes
  * would make this gate permanently red on every Windows machine (ADR-727 trap #2).
+ * Η κανονικοποίηση είναι του SSoT `scripts/lib/text-eol.js` (ADR-744 §30)· εδώ μόνο το «ακριβώς ένα τελικό `\n`».
  */
 function normalize(text) {
-  return text.replace(/^﻿/, '').replace(/\r\n/g, '\n').replace(/\s*$/, '\n');
+  return `${toCanonicalText(text, { stripBom: true, trimEnd: true })}\n`;
 }
 
 /**

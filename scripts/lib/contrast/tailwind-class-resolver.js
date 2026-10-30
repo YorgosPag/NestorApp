@@ -52,7 +52,9 @@ const paletteCache = new Map();
  * δεν ξέρει τα χρώματα δεν επιτρέπεται να αναφέρει «καθαρό» — είναι κυριολεκτικά το
  * σχήμα «0 = κανείς δεν κοίταξε» που αυτό το έργο έχει συναντήσει εννέα φορές.
  */
-function loadTailwindColors(repoRoot = process.cwd()) {
+function loadTailwindColors(repoRoot = process.cwd(), input = null) {
+  // ⚠️ Το config ΕΚΤΕΛΕΙΤΑΙ από τον δίσκο (jiti) — σωστό για την όψη του commit ΜΟΝΟ αν δεν αποκλίνει (ADR-924 §8.5).
+  if (input) input.assertUndivergent([TAILWIND_CONFIG], 'το εκτελεί το Tailwind (jiti) — η παλέτα θα ερχόταν από τον δίσκο');
   const key = path.resolve(repoRoot);
   if (paletteCache.has(key)) return paletteCache.get(key);
 

@@ -26,6 +26,7 @@ const path = require('node:path');
 const { createCommitView } = require('./lib/git-index-snapshot');
 const { takeInventory, BASELINE_FILE, DECLARATIONS_FILE, EXECUTOR } = require('./lib/gate-commit-view/inventory');
 const { STATES, BLOCKING, judge, tallyOf } = require('./lib/gate-commit-view/judge');
+const { measureRawReads, compareRawReads } = require('./lib/gate-commit-view/raw-reads');
 
 const ROOT = path.resolve(__dirname, '..');
 const OWN_INPUTS = new Set([EXECUTOR, DECLARATIONS_FILE, BASELINE_FILE]);
@@ -59,15 +60,33 @@ function report(rows, log = console.log) {
   return rows.filter(r => BLOCKING.has(r.state)).length;
 }
 
-function writeBaseline(rows) {
+function writeBaseline(rows, rawReads) {
   const gates = rows.filter(r => r.state === STATES.BASELINE || r.state === STATES.UNDECLARED).map(r => r.id)
     .sort((a, b) => Number(a.slice(2)) - Number(b.slice(2)));
   const body = {
     $doc: 'CHECK 3.107 / ADR-924 — πύλες που ΑΚΟΜΗ κρίνουν τον δίσκο. Μόνο μειώνεται: npm run gate-commit-view:baseline.',
     gates,
+    $rawReads: 'ADR-924 Φ4 — ωμά σημεία ανάγνωσης fs ανά αρχείο της κλειστότητας των πυλών commit-view. Μόνο μειώνεται.',
+    rawReads,
   };
   fs.writeFileSync(path.join(ROOT, BASELINE_FILE), `${JSON.stringify(body, null, 2)}\n`);
-  console.log(`✅ ${BASELINE_FILE}: ${gates.length} πύλες`);
+  const sites = Object.values(rawReads).reduce((sum, n) => sum + n, 0);
+  console.log(`✅ ${BASELINE_FILE}: ${gates.length} πύλες · ${sites} ωμά σημεία ανάγνωσης σε ${Object.keys(rawReads).length} αρχεία`);
+}
+
+/** Το στατικό σκέλος (Φ4): νέο ωμό σημείο ανάγνωσης σε κλειστότητα πύλης commit-view ⇒ μπλοκάρει. */
+function reportRawReads(baseline, current, log = console.log) {
+  const sites = Object.values(current).reduce((sum, n) => sum + n, 0);
+  if (baseline === null) {
+    // η baseline ΑΥΤΗΣ της όψης δεν έχει ακόμη ratchet (π.χ. commit πριν σταδιοποιηθεί) — μετρά, δεν κρίνει
+    log(`   ⏳ ωμά σημεία ανάγνωσης     ${sites} σε ${Object.keys(current).length} αρχεία — το ratchet οπλίζεται με τη baseline`);
+    return 0;
+  }
+  const { grown, shrunk } = compareRawReads(current, baseline);
+  log(`   ${grown.length ? '⛔' : '✅'} ωμά σημεία ανάγνωσης     ${sites} σε ${Object.keys(current).length} αρχεία`);
+  for (const { file, from, to } of grown) log(`   ⛔ ${file}: ${from} → ${to} — πέρασε την είσοδο της πύλης (gate-input)`);
+  if (shrunk.length > 0) log(`   ⬇ ${shrunk.length} αρχείο(α) με λιγότερα σημεία — κλείδωσέ το: npm run gate-commit-view:baseline`);
+  return grown.length;
 }
 
 function main(argv = process.argv.slice(2)) {
@@ -76,17 +95,25 @@ function main(argv = process.argv.slice(2)) {
     return 0;
   }
   const source = argv.includes('--index') ? commitSource(ROOT) : diskSource(ROOT);
-  const rows = judge(takeInventory(source));
+  const inventory = takeInventory(source);
+  const rows = judge(inventory);
+  const committed = rows.filter(r => r.state === STATES.COMMIT_VIEW && r.script.endsWith('.js')).map(r => r.script);
+  const rawReads = measureRawReads(committed, source);
   if (argv.includes('--generate-baseline')) {
-    writeBaseline(rows);
+    writeBaseline(rows, rawReads);
     return 0;
   }
-  const blocking = report(rows);
-  if (blocking > 0) {
-    console.log(`\n❌ CHECK 3.107 — ${blocking} πύλη(ες) κρίνουν τον δίσκο χωρίς δήλωση. Θεραπεία: πέρασε \`--index\` από τον`);
+  const gateBlocking = report(rows);
+  const rawBlocking = reportRawReads(inventory.rawReads, rawReads);
+  if (gateBlocking > 0) {
+    console.log(`\n❌ CHECK 3.107 — ${gateBlocking} πύλη(ες) κρίνουν τον δίσκο χωρίς δήλωση. Θεραπεία: πέρασε \`--index\` από τον`);
     console.log('   εκτελεστή ΚΑΙ διάβασε μέσα από το `git-index-snapshot.js` — ή δήλωσε τον λόγο στο .gate-commit-view.json.');
-    return 1;
   }
+  if (rawBlocking > 0) {
+    console.log(`\n❌ CHECK 3.107 — ${rawBlocking} αρχείο(α) απέκτησαν νέο ωμό σημείο ανάγνωσης στην κλειστότητα πύλης που κρίνει`);
+    console.log('   το commit. Θεραπεία: διάβασε μέσα από την είσοδο (`gate-input`) — ή δήλωσε ανάγνωση περιβάλλοντος.');
+  }
+  if (gateBlocking + rawBlocking > 0) return 1;
   console.log('✅ CHECK 3.107 — καμία νέα πύλη δεν κρίνει τον δίσκο σιωπηλά');
   return 0;
 }

@@ -2,6 +2,40 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **30/10 — ADR-924 Ε: ΟΙ ΠΥΛΕΣ ΠΟΥ ΔΕΝ ΚΡΙΝΟΥΝ ΑΚΟΜΗ ΤΟ COMMIT (ratchet 3.107: 29)** *(ADR-924 §8.8–§8.9 · CHECK 3.107)*
+
+  **Τι:** μεταφέρθηκαν **όλες** οι πύλες που τρέχουν σε κάθε commit (εκτός 3.84 · 3.90 δηλωμένη διαφυγή) και το πρώτο κύμα της
+  Φ3. Μένουν **με σκανδάλη**: 3.8 · 3.11–3.15 · 3.17 · 3.18 (bash) · 3.19–3.21 · 3.23–3.27 · 3.35–3.37 · 3.41 · 3.47 · 3.57 ·
+  3.79 · 3.91 · 3.9/3.10 (.sh) · 3.38 (ξένη δουλειά)· **3.84**: η μέτρηση ζει στον γεννήτορα `generate-third-party-notices` (Φ5)
+  και είναι δηλωμένη διαφυγή (`pnpm licenses`) ⇒ Φ4. `npm run gate-commit-view:report` τις ονομάζει.
+  ⚠️ Πέντε από αυτές (3.15 · 3.17 · 3.35 · 3.43 · 3.91) έχουν δικό τους `git diff --cached --name-only` **χωρίς `-z`** ⇒ δεν βλέπουν
+  ελληνικά ονόματα αρχείων (μετρημένο, Ε11) — στη μεταφορά: `input.staged(accept)`.
+  **Θεραπεία:** ανά πύλη το πρότυπο της §8.8 (είσοδος στη `measure` · άγκυρα `MIGRATED`/`MIGRATED_FULL` · `compare` δίσκος/`--index`
+  · `jscpd:diff`) και `npm run gate-commit-view:baseline`. **Μέγεθος:** > 1h, 30+ αρχεία.
+
+- 🟡 **30/10 — ΑΠΟΤΥΠΩΜΑΤΑ ΠΑΝΩ ΣΕ ΩΜΟ EOL (3.66 · 3.64 · 3.84)** *(ADR-924 §8.8)*
+
+  **Τι:** sha256 του ωμού κειμένου, ενώ ο δίσκος είναι **μικτός** (`git ls-files --eol` ⇒ `w/mixed`: CRLF από checkout, LF από
+  εργαλεία). Ένα αποκλίνον αρχείο διαβάζεται ως blob (LF) ⇒ «μπαγιάτικο» χωρίς αλλαγή περιεχομένου· και τοπικά (Windows) ≠ CI (LF).
+  **Θεραπεία:** κανονικοποίηση EOL πριν το hash (κοινή συνάρτηση) + αναπαραγωγή των αποτυπωμάτων (`gate-index:generate` ·
+  `text-measure:census` · γεννήτορας ειδοποιήσεων). ⚠️ **ΜΟΝΟ ΜΕΤΑ** το commit των 26 + Φ1: αλλάζει την τιμή, άρα το σταδιοποιημένο
+  `CLAUDE.md` θα έκρινε μπαγιάτικο. **Μέγεθος:** < 1h κώδικα, αλλά 3 γεννήτορες ⇒ απόφαση Giorgio για τη σειρά.
+
+- 🟡 **30/10 — ΤΕΣΣΕΡΑ ΑΝΤΙΓΡΑΦΑ ΤΟΥ `toPosix` ΑΠΟΜΕΝΟΥΝ** *(ADR-924 §8.9–§8.10 · N.0.2)*
+
+  **Τι:** το SSoT είναι το φύλλο `scripts/lib/posix-path.js`. ✅ 30/10 (§8.10): επτά της διαλέκτου `split(path.sep)` ενώθηκαν
+  (`golden-triage/scan` · `prerender/route-tree` · `shell-boundary/tree` · `text-measure-tier/census` · `workspace-scope/scope` ·
+  `zindex/foreign-census` · `zindex/sites`). **Μένουν:** `shell-utilities/reach` (ίδια διάλεκτος, αλλά το `file` το βλέπει ως «data»
+  — μη-έγκυρο UTF-8; ⇒ έλεγχος bytes ΠΡΙΝ το ξαναγράψει κανείς) · `check-a11y-test-coverage-ratchet` (`toPosixRel`) ·
+  `adr-sections/scan` · `jest-partition/jest-configs` (διάλεκτος `replace(/\\/g, '/')` — μετατρέπει και backslash: θέλει έλεγχο ανά
+  καταναλωτή ότι δεν δέχεται ποτέ backslash ως χαρακτήρα ονόματος). **Μέγεθος:** < 30′.
+
+- 🟡 **30/10 — ΤΟ `tallyOf` ΤΟΥ `gate-commit-view/judge.js` ΔΕΝ ΜΕΤΑΦΕΡΘΗΚΕ ΣΤΟ `gate-ledger`** *(ADR-924 §8.8 · N.0.2)*
+
+  **Τι:** το ίδιο `tallyOf` με τους 7 που ενώθηκαν στο `scripts/lib/gate-ledger.js` (`closedTally`). Δεν αγγίχθηκε επειδή το αρχείο
+  είναι στα **26 σταδιοποιημένα** της Β. **Θεραπεία:** μετά το commit των 26, `const tallyOf = (rows) => closedTally(rows, STATES,
+  '3.107')`. **Μέγεθος:** 5′.
+
 - 🟡 **28/10 — ΤΟ ΚΕΛΥΦΟΣ «id από το segment + `withAuth`» ΕΙΝΑΙ ΧΕΙΡΟΓΡΑΦΟ ΣΕ ΚΑΘΕ ROUTE `[id]`** *(εύρημα ADR-327 §8.5 · CHECK 3.28 · N.0.2)*
 
   **Τι:** `async function handleX(request, segmentData?: { params: Promise<{ id: string }> }) { const { id } = await
@@ -175,21 +209,15 @@
   `useBuildingFloorLevels` + `createFloorStackElevationResolver`· `jscpd:diff` **16 → 0**, 5 suites / 43 tests πράσινα.
   **Υπόλοιπο** (ADR-914 §8.11): τέσσερις από τους έξι δεν έχουν δική τους σουίτα, και `tsc` δεν έτρεξε (N.17).
 
-- 🟡 **10/10 — ΟΙ ΠΥΛΕΣ «ΕΝΑΣ ΓΡΑΦΕΑΣ» ΚΟΥΒΑΛΟΥΝ ΕΞΙ ΑΝΤΙΓΡΑΦΑ ΤΩΝ ΙΔΙΩΝ ΕΡΓΑΛΕΙΩΝ AST** *(ADR-910, εύρημα κατά τη συγγραφή της CHECK 3.102)*
-
-  **Τι**: `sourceFileOf` · `chainNodes` · `exemptionAbove` (και, στις περισσότερες, `isCreation` / `classifyByExemption`)
-  είναι αντιγραμμένα αυτούσια. **Πού**: `grep -rln "function chainNodes" scripts` ⇒ **6** αρχεία (μετρημένο 2026-10-10):
-  `check-cde-authority.js` · `check-network-thread-authority.js` · `check-project-member-authority.js` ·
-  `check-retired-property-write.js` · `check-sender-authority.js` · `check-view-signal-authority.js`.
-  **Γιατί δεν το έπιασε πύλη**: το ratchet του jscpd (Layer 2) σαρώνει **μόνο** `src/` — το `scripts/` είναι εκτός
-  (N.18, δηλωμένο τυφλό σημείο). **Τι υπάρχει ήδη**: `scripts/lib/write-authority/ast.js` — η κοινή εκδοχή, με πρώτο
-  καταναλωτή την CHECK 3.102 (`check-floor-stack-authority.js`). **Θεραπεία**: κάθε μία από τις έξι να κάνει
-  `require('./lib/write-authority/ast')` και να σβήσει το δικό της αντίγραφο· οι σουίτες τους (`*-gate.test.js`)
-  εισάγουν `sourceFileOf` από την πύλη, άρα η επανεξαγωγή του πρέπει να μείνει. **Γιατί όχι τώρα**: 6 αρχεία, 6 πύλες
-  που μπλοκάρουν commits — θέλει δική του συνεδρία και τις σουίτες τους μία-μία (>1 ώρα, 4+ αρχεία ⇒ N.0.2).
-  **+ 2026-10-23 (ADR-920 Β3β.3)**: το `ast.js` απέκτησε `trailingName` · `calleeName` · `walk` · `callSiteOf`, και ο
-  σκελετός των πυλών μητρώου ζει στο `gate-runner.js` (`defineRegistryGate`)· η 3.104 και η νέα 3.105 τα εισάγουν. Τοπικά αντίγραφα του `calleeName` μένουν στα `check-idempotency-boundary.js` · `check-view-signal-authority.js`
-  (`grep -rln "function calleeName" scripts`) — μεταναστεύουν με την ίδια δέσμη.
+- ✅ **30/10 — ΕΚΛΕΙΣΕ: τα έξι αντίγραφα εργαλείων AST των πυλών «ΕΝΑΣ ΓΡΑΦΕΑΣ»** *(ADR-924 §8.4 · ADR-910)*
+  Οι 3.83 · 3.87 · 3.88 · 3.89 · 3.99 · 3.100 εισάγουν πλέον `scripts/lib/write-authority/ast.js`·
+  `grep -rln "function chainNodes\|function exemptionAbove" scripts` ⇒ μόνο το `ast.js`. Η κρίση εξαίρεσης έγινε
+  `ast.exemptionsFor().classify` (+ `EXEMPTION_STATES`)· ο σκελετός `report`/`main`/σάρωσης ζει στο `gate-runner.js`
+  (`gateEntry` · `defineScanGate`). Κλώνοι στις 10 πύλες + libs: **24 → 0** (CHECK 3.28 πράσινο). Το `calleeName` της
+  `check-idempotency-boundary.js` μεταφέρθηκε επίσης. **Υπόλοιπο, ΣΚΟΠΙΜΑ εκτός** (διαφορετική σημασιολογία, άλλες πύλες):
+  `calleeName` στα `authority-registry/role-guards.js` (επιστρέφει `''`) · `contrast-promise/promise-sites.js` (δέχεται
+  έκφραση = `ast.trailingName`) · `i18n-ssr/readiness-nodes.js` (ελέγχει πρώτα `isCallExpression`)· το
+  `golden-triage/spec-screenshots.js` είναι άλλη συνάρτηση με το ίδιο όνομα (μόνο μέθοδος) — όχι κλώνος.
 
 - 🟡 **12/10 — Η ΓΡΑΜΜΗ «ΛΙΣΤΑ + ΛΕΠΤΟΜΕΡΕΙΕΣ» ΕΙΝΑΙ ΓΡΑΜΜΕΝΗ ΜΕ ΤΟ ΧΕΡΙ ΣΕ 5 ΑΡΧΕΙΑ** *(ADR-777 §8.87.9ε, εύρημα ε1)*
 
@@ -4235,6 +4263,12 @@
 
 ## Pending tasks (priority order)
 
+### 📨 «Διάβασε JSON ή 400» γραμμένο ξεχωριστά σε 17 routes (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-30, ADR-225 Phase 2 Boy Scout · ADR-245 · N.0.2)
+- **Τι**: `try { raw = await request.json() } catch { return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 }) }` σε 17 αρχεία του `src/app/api` (`grep -rn "Invalid JSON body" src/app/api`)· δύο τοπικά προοίμια το έχουν ήδη κλείσει στη γειτονιά τους (`admin/bim-diagnostics/[id]/_request-preamble.ts` · `telemetry/bim-performance/_session-request.ts`).
+- **Γιατί**: το `jscpd --diff` (CHECK 3.28) τα ονομάζει μόνο όταν δύο αδέλφια μπουν στο ίδιο commit — δηλαδή μπλοκάρει άσχετα commits.
+- **Fix**: ΕΝΑ `readJsonBody(request)` → `{ ok, raw } | { ok: false, response }` στο SSoT των API routes (ADR-245) — πρώτα grep για υπάρχον helper· τα δύο τοπικά προοίμια το καλούν.
+- Συγγενές: ο client `src/subapps/dxf-viewer/bim-3d/telemetry/telemetry-uploader.ts` δηλώνει δικό του `x-bim-session-id` — μία δήλωση συμβολαίου client/server.
+
 ### 🔔 Ειδοποιήσεις με ελληνικό `title` ΧΩΡΙΣ `titleKey` — θέμα email στη γλώσσα του κώδικα, όχι του παραλήπτη (προτεραιότητα ΜΕΣΑΙΑ, 2026-10-28, ADR-327 · N.11 · N.0.2)
 - **Τι**: το `notification-orchestrator` αποδίδει πλέον τον τίτλο από το `titleKey` στη γλώσσα του παραλήπτη (`server/notifications/notification-title.ts`). Όποιος καλών **δεν** δίνει `titleKey` γράφει ακόμη ελεύθερο ελληνικό `title`/`body` ⇒ ελληνική κάρτα **και** θέμα email σε αγγλόφωνο. Γνωστό σημείο: `services/procurement/po-notification-service.ts` (`Παραγγελία … — Εγκρίθηκε`, περιοχή PO — **δεν** αγγίχθηκε). Το σύνολο **δεν μετρήθηκε** — πρώτα απογραφή όλων των `dispatch*Notification(`/`dispatchNotification({` χωρίς `titleKey`.
 - **Fix**: κλειδιά στο `common-shared` (ή νέο namespace + προσθήκη στο `NOTIFICATION_TITLE_NAMESPACES`) + `notificationFallbackTitle(key)`· το `body` θέλει το ίδιο κανάλι (`bodyKey` υπάρχει ήδη στο orchestrator). Πύλη: η άγκυρα Ν4 του `notification-title.test.ts` σαρώνει **λίστα** καλούντων — να γίνει σάρωση όλου του server.
@@ -4245,6 +4279,26 @@
 - **Γιατί το πέρασε κάθε πύλη**: το CHECK 3.26 (ADR-365) μετρά **22 παλέτες × αποχρώσεις** — το `white`/`black` **δεν είναι παλέτα με απόχρωση**, άρα δεν μετριέται. Το 3.39 κοιτά το TS σύστημα χρωμάτων, όχι κλάσεις JSX· το 3.38 μόνο `text-primary`. Το κείμενο **κληρονομεί** χρώμα από άλλο στοιχείο από αυτό που βάζει το φόντο ⇒ κανένας έλεγχος «ανά στοιχείο» δεν το βλέπει.
 - **Πού**: μετρημένο 2026-10-28 — **94** `bg-white` σε **47** `.tsx` του `src/` (κάποια νόμιμα: προεπισκόπηση εκτύπωσης/χαρτί, καμβάς). Συγκέντρωση: `dxf-viewer/bim-3d/*`, `property-showcase`, `status-bar`.
 - **Fix**: (1) πρόσθεσε `white`/`black` (`bg-|text-|border-`) στο λεξιλόγιο του CHECK 3.26 ως ratchet κατά ταυτότητα — **όχι** reseed χωρίς Giorgio· (2) οι νόμιμες «χάρτινες» επιφάνειες δηλώνονται με λόγο (allowlist) ή περνούν σε token `--paper`· (3) τα υπόλοιπα → `bg-card` / `bg-background`.
+- ✅ **2026-10-30 — Βήμα (3) ΕΓΙΝΕ (εκκρεμεί commit Giorgio, claude-6e)**. Μετρημένο ξανά: **194** γραμμές `bg-white|bg-black` (+πρόθεμα/`/opacity`) σε **92** `.ts/.tsx`
+  (script με θετικό έλεγχο). Ταξινόμηση μία-μία: η συντριπτική πλειονότητα είναι **νόμιμη** — ημιδιάφανο λευκό/μαύρο πάνω σε σκοτεινό
+  πέπλο με `text-white` (3D viewer, βίντεο, φωτογραφία) · πέπλα διαλόγων `bg-black/NN` · «χαρτί»/εικόνα (QR 2FA, PDF/HTML/DXF προεπισκόπηση,
+  λογότυπα, κάτοψη, σφραγίδα) · δείκτες χάρτη/δείγματα με ρητό `text-black|white`. **Πραγματικά λάθη, διορθώθηκαν**:
+  · 🔴 `dxf-viewer/config/modal-colors.ts`: **σκιώδες `COLOR_BRIDGE`** («mock for TypeScript compatibility», `bg.primary: 'bg-white'`,
+    `text-gray-600/500`) ⇒ `input` = `bg-white … text-foreground` ⇒ **λευκό σε λευκό** στο σκοτεινό (καταναλωτές: `DxfImportModal`,
+    `SimpleProjectDialog`, `WizardSteps*`, `wizard-step-chrome`, `ModalLoadingStates`). → το ΠΡΑΓΜΑΤΙΚΟ `@/design-system/color-bridge`
+    (όπως το `modal-config.ts`)· σβήστηκε και νεκρό `colors`/`UI_COLORS`. Άγκυρα `config/__tests__/modal-colors-theme-surface.test.ts`
+    (θεματικό κείμενο ∧ σταθερό συμπαγές φόντο ⇒ κόκκινο· μετάλλαξη με το παλιό `bg-white` ⇒ κόκκινο).
+  · `settings/company/OrgStructureTab.tsx`: εικονίδια σε `bg-card` με `hover:text-white hover:bg-white/10` ⇒ στο **φωτεινό** θέμα λευκό
+    σε σχεδόν λευκό (`--card` 95%). → `hover:bg-accent hover:text-accent-foreground` (= SSoT `BUTTON_ACCENT_HOVER`).
+  · `admin/pages/EnterpriseMigrationPageContent.tsx`: τερματικό `bg-black` κάτω από **θεματικό** `--text-success` ⇒ φωτεινό θέμα
+    `#0F6C31` σε μαύρο ≈ **3,2:1** (< AA). → `bg-background border` (ζεύγος μετρημένο στο ADR-770 §18).
+  **Δεν άλλαξαν, σκόπιμα**: `DesktopMultiColumn` ×4 · `BuildingSpacesTabs` (`bg-white dark:bg-card` — `darkMode: class` ⇒ σωστό και στα
+  δύο· το `bg-card` θα άλλαζε το φωτεινό σε γαλάζιο = σχεδιαστική απόφαση Giorgio) · `ShowcaseHeader.tsx` (το είχε άλλη συνεδρία).
+  **Νεκρός κώδικας**: `styles/design-tokens/components/user-type.ts` (`bg-white` ×3) — **κανένας** καταναλωτής πέρα από το re-export
+  (grep με θετικό έλεγχο) ⇒ υποψήφιο για διαγραφή.
+  ⏳ **Μένουν**: βήμα (1) πύλη — `scripts/check-tailwind-palette-ratchet.js` + `scripts/lib/contrast/*` τα είχε **άλλη συνεδρία** (30/10)·
+  πρόταση: η πύλη να κρίνει **μίξη** (θεματικό κείμενο ∧ σταθερό συμπαγές `bg-white|black` στο ίδιο ή στον πρόγονο), όχι κάθε `bg-white`
+  — το 90% είναι νόμιμο· βήμα (2) token `--paper` για τις «χάρτινες» επιφάνειες.
 
 ### 📧 Τρεις αναγνώστες «κύριο email επαφής» — `getPrimaryEmail` ≡ `getContactEmail` ≡ inline `resolveCustomer` (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-27, ADR-923 §5.11 «3γ» Βήμα 3 · N.0.2)
 - **Τι**: η ίδια ερώτηση «ποιο είναι το κύριο email της επαφής;» απαντιέται τρεις φορές, με **διαφορετική σειρά**: `getPrimaryEmail` (`types/contacts/helpers.ts:100`, πίνακας `emails[]` πρώτα, μετά τα legacy πεδία υπηρεσίας) · `getContactEmail` (`services/contacts/contact-name-resolver-types.ts:105`, legacy `email` **πρώτα**, 4 καταναλωτές RFQ/invites) · inline στο `resolveCustomer` (`services/sales-accounting/sales-accounting-helpers.ts:~105`). Επαφή με και `email` και `emails[]` παίρνει **άλλο** παραλήπτη ανάλογα με τη διαδρομή. Το ίδιο σχήμα και για ΑΦΜ/διεύθυνση στο `resolveCustomer` (flat `contact.address`, ενώ το μοντέλο έχει `addresses[]`).
@@ -4261,11 +4315,13 @@
   1. `API_ROUTES.PROCUREMENT.AGREEMENTS` / `MATERIALS` και μετάβαση των hooks σε `apiClient`.
   2. Κωδικοί σφαλμάτων (`FRAMEWORK_AGREEMENT_AMBIGUOUS` κ.λπ.) από το `runProcurementMutation` μέσω `ApiError(status, msg, code, details)`, με χαρτογράφηση σε i18n στη φόρμα, όπως το `PO_PRICING_CHANGED` του Α9.
 
-### 👻 Ετικέτες κατάστασης ΑΟΡΑΤΕΣ — `getStatusColor(x,'bg')` + `getStatusColor(x,'text')` του ΙΔΙΟΥ token (προτεραιότητα ΥΨΗΛΗ, 2026-10-27, ADR-923 §5.11 «3γ» Α16 · ADR-770 · N.0.2)
-- **Τι**: μετρημένο στον browser (PO-0001): η ετικέτα «Πρόχειρο» έχει `color` = `background-color` = `rgb(36,99,235)` ⇒ κείμενο αόρατο. Από τη διόρθωση της 2026-10-10 στο `design-system.ts` (οι κλάσεις `bg-[hsl(var(--status-*))]` παράγουν πλέον CSS) κάθε σημείο που βάζει **και** `bg` **και** `text` του ίδιου token χωρίς διαφάνεια βγάζει συμπαγές κουτί. Σημεία (grep): `PurchaseOrderDetailsHeader.tsx:56` · `agreements/AgreementDetail.tsx:62` · `subapps/procurement/components/RfqList.tsx:44` · `QuoteStatusBadge.tsx:34` · `contacts/tabs/procurement/ContactPurchaseOrdersSection.tsx:44` · `PurchaseOrderKPIs.tsx:48-50` · `crm/notifications/notification-utils.ts:13-19` · `crm/leads/lead-detail/utils/status.ts:23` · `obligations/workspace/workflow.ts:55` (+ `ika/LiveWorkerMap.tsx`, `QrCodePanel.tsx` με το νεκρό `bg-opacity-10`). Επιπλέον το `PurchaseOrderDetailsHeader` πέφτει σε `status-info` για κάθε κατάσταση (`planned`/`pending`/`construction` δεν υπάρχουν στον χάρτη) και δείχνει `statusMeta.label.el` (ωμά ελληνικά, N.11).
-- **Fix**: ΕΝΑ SSoT `getStatusBadgeClasses(status)` (απαλό φόντο `/15` + κείμενο token, όπως ήδη τα `FilesList`/`FileRecordBadge`) στο `design-system.ts` και αντικατάσταση των ~12 σημείων· άγκυρα: η πύλη θεματικού ζευγαρώματος (CHECK 3.39) να απαγορεύει `bg`+`text` ίδιου status token χωρίς διαφάνεια. 4+ αρχεία, 5 πεδία ⇒ όχι επί τόπου.
-- **Πρόοδος 2026-10-28 (ADR-327 changelog «ΖΩΝΤΑΝΗ επαλήθευση»)**: διορθώθηκαν τα **4 της προμήθειας** — `QuoteStatusBadge` · `PurchaseOrderDetailsHeader` + `ContactPurchaseOrdersSection` (→ νέο ΕΝΑ `components/procurement/PurchaseOrderStatusBadge.tsx`, ετικέτα i18n αντί `label.el`) · `RfqList` — με **παραλλαγή `Badge`** (μετρημένο μελάνι `SOLID_FILL_INK`) από τις **υπάρχουσες** αντιστοιχίσεις καρτών (`*_STATUS_BADGE_VARIANTS`), όχι με νέο `getStatusBadgeClasses`: η κάρτα λίστας και η κεφαλίδα δείχνουν πλέον το **ίδιο** χάπι. Μένουν: `agreements/AgreementDetail.tsx` (περιοχή του άλλου agent — **δεν** αγγίχθηκε) · `PurchaseOrderKPIs` · crm · obligations · ika · files · reports · social-sharing. Ημι-αυτόματος εντοπισμός: script παραθύρου ±200 χαρακτήρων (ψευδώς θετικά — το σωστό κριτήριο είναι **ΙΔΙΟ στοιχείο JSX**, AST).
-
+### 👻′ Κατάλοιπα «γέμισμα = μελάνι» κατάστασης — ό,τι έμεινε ΣΚΟΠΙΜΑ εκτός (προτεραιότητα ΜΕΣΑΙΑ, 2026-10-29, ADR-770 §22.5 · N.0.2)
+- **Έκλεισε η κλάση «αόρατες»** (2026-10-29): ρόλοι `getStatusBadgeVariant` · `getStatusSolidClass` · `getStatusSurfaceClass` στο `src/lib/design-system.ts`· 13/14 αρχεία διορθωμένα· ZERO-TOL `scripts/lib/contrast/same-token-fill-ink.js` μέσα στο CHECK 3.38 + άγκυρα Ο6 (`theme-token-hygiene.test.js`). Μένουν, σκόπιμα:
+- **(1) `components/projects/ika/components/QrCodePanel.tsx:200`** — `getStatusColor('active','bg')` + `'text'` (+ νεκρό `bg-opacity-10`). Δεν αγγίχθηκε: αλλαγμένο από άλλη συνεδρία (ΙΚΑ QR). **Fix**: `<Badge variant={getStatusBadgeVariant('active')}>` και σβήσε τη γραμμή του από `DECLARED_OPEN_SITES` (η Ο6 θα κοκκινίσει μόνη της με «μίκρυνε τη δήλωση»).
+- **(2) `--status-*` ως ΜΕΛΑΝΙ πάνω σε απλή επιφάνεια** — `getStatusColor(x,'text')` μόνο του (~25 σημεία: `ReportAgingTable` γραμμή συνόλων · `FilesList` εικονίδια · `RelationshipForm*` · `EmployeeSelector` · `ToolbarButtons` · `LiveWorkerMap` …). Μετρημένο (globals.css): success **2,02** · warning **2,77** σε κάρτα, φωτεινό. **Fix**: ρόλος μελανιού `--text-X` (`COLOR_BRIDGE.text.*`, 5,27–11,5:1)· άγκυρα στο CHECK 3.38.
+- **(3) Literal `bg-[hsl(var(--status-purple))]/12` + `text-[hsl(var(--status-purple))]`** (`dashboard/QuickActionsStrip.tsx` · `dashboard/NavigationCard.tsx`) — ορατό αλλά ~2,3:1 στο σκοτεινό. Δεν υπάρχει θεματικό μελάνι purple (`--text-purple`/`--hue-purple`). **Fix**: token όπως τα `--hue-*` του ADR-770 §21, μετρημένο στα δύο θέματα.
+- **(4) Ζωντανή επαλήθευση στον browser** (computed `color` ≠ `background-color`) δεν έγινε — κοινό μηχάνημα με κλείδωμα βαριών εργασιών.
+- **(5) Πολλά `bg-[hsl(var(--status-warning))] text-white`** σε διαλόγους επιπτώσεων (`*ImpactDialog.tsx`, `NameChangeCascadeDialog`) — λευκό σε warning = **3,16:1**. Θεραπεία: `getStatusSolidClass('warning')` (μαύρο μελάνι 6,65). Άλλη κλάση· καταγράφεται για να μη χαθεί.
 ### 📐 DXF OCS (210/220/230) για CIRCLE / ARC / TEXT / MTEXT / HATCH — καθρεφτισμένα στοιχεία βγαίνουν ανάποδα (προτεραιότητα ΜΕΣΑΙΑ, 2026-10-25, ADR-635 Φ C.29 · N.0.2)
 - **Τι**: το SSoT `@/lib/dxf/dxf-ocs` (arbitrary axis) υπάρχει πλέον και το χρησιμοποιούν μόνο LWPOLYLINE / 2Δ POLYLINE. Οι υπόλοιπες επίπεδες οντότητες (CIRCLE, ARC, TEXT, MTEXT-εξώθηση, HATCH, ELLIPSE, INSERT) αγνοούν τα 210/220/230 ⇒ με εξώθηση (0,0,−1) (κοινό: MIRROR στο AutoCAD) το κέντρο/σημείο εισαγωγής βγαίνει με αντίθετο X και τα τόξα με ανάποδη φορά. `dxf-point-converter.ts` το αναφέρει ρητά ως «αγνοείται».
 - **Fix**: κάθε converter περνά τα OCS σημεία του από `dxfOcsToWcs` (ARC: και αναστροφή γωνιών για Az.z < 0). 6+ αρχεία σε converters + tests ανά τύπο → όχι επί τόπου (N.0.2 «4+ αρχεία»).
@@ -4274,17 +4330,13 @@
 - **Τι (α)**: `dxf-polyline-vertex-collector` παίρνει ΚΑΘΕ VERTEX ως κορυφή — οι εγγραφές προσώπου polyface mesh (POLYLINE 70 bit 64, VERTEX 70 = 128) και τα σημεία ελέγχου spline-fit (VERTEX 70 bit 16) θα έπρεπε να παραλείπονται. **(β)**: τα επώνυμα μπλοκ μένουν `BlockEntity`· η τοποθέτηση Z (`withPlacedElevation`, INSERT 30/43 − BLOCK 30) εφαρμόζεται μόνο στον δρόμο διάλυσης `*X`/`*D` — όταν ο χρήστης κάνει EXPLODE, τα μέλη κρατούν το τοπικό Z.
 - **Fix**: (α) διάβασε το VERTEX 70 στον collector και φίλτραρε· (β) το EXPLODE του `systems/block` να καλεί το ίδιο `withPlacedElevation` (χρειάζεται `baseZ` + insert Z στο `BlockEntity`).
 
-### 🛣️ Διαδρομές `/api/owner-properties/…` χτισμένες με χειρόγραφο κείμενο — 5 πελάτες εκτός `API_ROUTES` (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-24, ADR-245 · ADR-920 Β4.7 · N.0.2)
-- **Τι**: το ADR-245 απαγορεύει `/api/…` έξω από το `API_ROUTES`, αλλά το μπλοκ `OWNER_PROPERTIES` δεν υπήρχε ως το ADR-920 Β4.7 (γεννήθηκε με μόνο το `TERRAIN`). Χειρόγραφα: `hooks/owner-property/useOwnershipVerification.ts:65` · `services/mandate/mandate-evidence.client.ts:38` · `services/stay-calendar/stay-calendar.client.ts:27` · `services/stay-calendar/stay-channels.client.ts:27` · `hooks/energy-certificate/useEnergyCertificateImportPorts.ts` (`importUrlOf`, και για τα δύο σπίτια).
-- **Fix**: μία γραμμή ανά διαδρομή στο `API_ROUTES.OWNER_PROPERTIES` (`encodeURIComponent` όπως το `TERRAIN`) + `PROPERTIES.ENERGY_CERTIFICATE_IMPORT`, και κάθε πελάτης την εισάγει. Δεν έγινε επί τόπου: 5 αρχεία σε 4 περιοχές (N.0.2 «4+ αρχεία»).
-
 ### 📅′ Κατάλοιπα του κριτή «ημερολογιακή ημέρα» — ό,τι έμεινε ΣΚΟΠΙΜΑ εκτός (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-29, ADR-919 · N.0.2)
 - **SSoT**: `lib/date/calendar-day.ts` (`isCalendarDay` · `parseCalendarDay` · `calendarDayExists` · `hasCalendarDayShape` · `isoCalendarDay`) + `lib/date/calendar-day-schema.ts` (`calendarDaySchema`). Νέος καλών ⇒ από εκεί, ποτέ regex.
 - **Catalog (ADR-923, άλλη συνεδρία — ρώτα πρώτα)**: `subapps/catalog/schema/zod/attribute.schema.ts` (`isoDateSchema` = σκέτο regex ⇒ δέχεται `2027-02-30`) · `subapps/catalog/schema/validate-attribute-value.ts` · `subapps/catalog/values/value-text-codec.ts` (δικό τους `ISO_DATE`). Μετάβαση σε `calendarDaySchema` / `parseCalendarDay`.
 - **Πρόθεμα χωρίς `$` — άλλη ερώτηση, ΟΧΙ ενοποίηση**: `audit-value-resolver.formatIsoDate` · `ContactIdentityImpactDialog` (μορφοποίηση εμφάνισης). *(Το `payment-plan` `dueDate` έκλεισε 2026-10-29 — βλ. Changelog.)*
-- **Τελευταία ημέρα μήνα με τοπικό `Date`** (αντίγραφα του `daysInMonth`, `lib/date/calendar-arithmetic`): `subapps/accounting/services/engines/vat-engine.ts:267` · `services/fiscal-period-service.ts:34` · `services/reports/report-date-utils.ts:136,143`. Σωστές τιμές σήμερα, αλλά δεύτερος κανόνας.
-- **Λήξη δόσης κοντά στα μεσάνυχτα**: `components/sales/payments/payment-plan-wizard-model.ts:95-97` φτιάχνει τη λήξη από **τοπική** `Date` (`setMonth` + `toISOString()`) και το `edit-installment-model.ts:51` την ξαναδιαβάζει με `split('T')[0]` (ημέρα **UTC**) ⇒ όταν ο wizard ανοίγει 00:00–03:00 ώρα Ελλάδας, η φόρμα επεξεργασίας δείχνει την **προηγούμενη** ημέρα. Θέλει απόφαση: η λήξη είναι ημέρα (⇒ μεσημέρι UTC, δόγμα ADR-841 Α21.21) ή στιγμή.
-- **`attendance/qr/generate`**: η προεπιλογή `nowISO().slice(0, 10)` είναι ημέρα **UTC**, όχι Αθήνας (21:00–24:00 ⇒ QR της αυριανής). SSoT: `accountingToday`/`athensClockAt`.
+- *(Έκλεισαν 2026-10-29 — βλ. Changelog: «τελευταία ημέρα μήνα» → `daysInMonth` · λήξη δόσης = ημέρα · QR παρουσιών σε ημέρα Αθήνας · «σήμερα» σε UTC (9 σημεία) · μία ζώνη Ελλάδας + συμβόλαιο `athensClockAt`/`calendarDayOf` · `report-date-utils` σε κλειδιά ημέρας.)*
+- **Μένει από το «σήμερα»**: `construction-scheduling/cpm-calculator.ts` `emptyResult.projectEarlyFinish` (θέση κενού/άκυρου αποτελέσματος — αν ποτέ εμφανιστεί, `calendarDayOf`) · ονόματα αρχείων εξαγωγής `…-${nowISO().slice(0,10)}` (αβλαβή).
+- **Backfill λήξεων δόσεων** (ADR-234, 2026-10-29): οι παλιές `Installment.dueDate` είναι ISO στιγμές· οι αναγνώστες τις διαβάζουν σωστά (`installmentDueDay`), αλλά η βάση έχει ανάμεικτες μορφές. ✅ **Το script είναι έτοιμο** (`npm run backfill:installment-due-day`, `scripts/migrations/backfill-installment-due-day.ts` — dry-run εξ ορισμού, ιδεμποτικό, `lastUpdateTime` ανά πλάνο). ⏳ **Μένει μόνο η εκτέλεση = εγγραφή στη βάση ⇒ απόφαση Giorgio**: πρώτα dry-run (μέτρηση + μη αναγνώσιμα), μετά `--execute`. Μετά: να φύγει η μεταβατική ανοχή στιγμής του `installment-due-date.ts` (+ το test «παλιά στιγμή UTC»).
 - **Δύο ονόματα, ένας κανόνας**: το `isDateKey` (`lib/calendar/date-key.ts`, 28 καταναλωτές) καλεί πλέον το `isCalendarDay`. Αν συγκλίνουν σε ένα όνομα ⇒ μηχανική μετονομασία, όχι αλλαγή συμπεριφοράς.
 
 ### 🔗 Σκόρπιοι σύνδεσμοι/μητρώα διευθύνσεων οντοτήτων → SSoT (προτεραιότητα ΜΕΣΑΙΑ, 2026-10-22, ADR-242 · N.0.2)
@@ -4334,10 +4386,10 @@
 - **Γιατί**: δύο πηγές για «πώς λέγεται;» — το κάτοπτρο είναι **πάντα** κενό, το χειρόγραφο `find` αντιγράφεται.
 - **Fix**: client → `useHierarchyNames()` (`src/components/navigation/core/hooks/useHierarchyNames.ts`)· server (telegram/PDF/email/ai-pipeline) → επίλυση από `projectId`/`buildingId` με Admin SDK. Μετά: `project`/`building` → optional `@deprecated` ή αφαίρεση από τον τύπο.
 
-### ↩️ Κανονικοποίηση EOL — μένει η οικογένεια i18n-shell-slice (2 από 6) → `scripts/lib/text-eol.js` (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-14 · ενημ. 2026-10-29, ADR-744 §30 · N.0.2)
-- ✅ 2026-10-29: το SSoT `scripts/lib/text-eol.js` (`toLf` με `\r\n?` + `toCanonicalText({ stripBom, trimEnd })`) υπάρχει και το εισάγουν τα 4 εκτός οικογένειας (`generated-artifacts` · `firestore-deploy/model` · `license-policy/inventory` · `third-party-notices/texts`). Άγκυρα `scripts/__tests__/text-eol.test.js`.
-- **Μένουν**: `scripts/lib/i18n-shell-slice/slice-build.js` (`toLf` — ήδη `\r\n?`) · `scripts/lib/i18n-shell-slice/layer-one-checks.js` (`normalize`: BOM + `\r\n` + trailing ⇒ **ένα** `\n`· το επανεξάγει το `check-i18n-shell-slice.js`).
-- **Γιατί όχι μαζί**: το `slice-build` είναι είσοδος του toolchain digest (§30 — κλειστότητα `require` από το `route-slices.js`) ⇒ νέο `require` = αναγέννηση του `shell-slice.manifest.json` **στο ίδιο commit**· στις 2026-10-29 το manifest το είχε ήδη αλλαγμένο άλλη συνεδρία. ⚠️ Το `layer-one-checks.normalize` καταλήγει σε **ακριβώς ένα** τελικό `\n` (όχι `trimEnd`) — χρειάζεται τρίτη επιλογή ή κράτημα του τελικού `\n` στον καλούντα.
+### ↩️ Κανονικοποίηση EOL — μένει ΜΟΝΟ το `slice-build.toLf` → `scripts/lib/text-eol.js` (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-14 · ενημ. 2026-10-29, ADR-744 §30 · N.0.2)
+- ✅ 2026-10-29: το SSoT `scripts/lib/text-eol.js` το εισάγουν τα 4 εκτός οικογένειας + το `i18n-shell-slice/layer-one-checks.normalize` (εκτός κλειστότητας digest — μετρημένο). Άγκυρα `scripts/__tests__/text-eol.test.js`.
+- **Μένει**: `scripts/lib/i18n-shell-slice/slice-build.js` (`toLf` — ήδη `\r\n?`, ίδια σημασία).
+- **Γιατί όχι ακόμη**: το `slice-build` είναι είσοδος του toolchain digest (§30 — κλειστότητα `require` από το `route-slices.js`) ⇒ νέο `require` = αναγέννηση του `src/i18n/generated/shell-slice.manifest.json` **στο ίδιο commit**· στις 2026-10-29 το manifest ήταν ήδη αλλαγμένο (staged) από άλλη συνεδρία. Κάν' το όταν το `git status` δείχνει το manifest καθαρό.
 
 ### 🧾 Λογιστική: υπολογισμοί πάνω σε ΣΕΛΙΔΑ — τα υπόλοιπα μέλη της κατηγορίας (προτεραιότητα ΥΨΗΛΗ — οικονομικά νούμερα, 2026-10-14, ADR-ACC-010 §2.1.1 · N.0.2)
 Έκλεισαν: εγγραφές ημερολογίου (Φάση 1)· τραπεζική συμφωνία, υποψήφια αντιστοίχισης, κλίμακα φόρου αναφορών (Φάση 2)· υπόλοιπο πελάτη / ηλικίωση / πιστωτικό όριο ως ανοιχτά στοιχεία όλων των χρήσεων (Φάση 3, 2026-10-15). Λίστες οθόνης με δρομέα keyset + κλειστό σύνολο φίλτρων + χωρίς fallback, `Χωρίς Πελάτη` (Φάση 3β, 2026-10-15). Η άγκυρα συνόρου (`journal/__tests__/journal-ledger-boundary.test.ts`) καλύπτει `listJournalEntries` · `listBankTransactions` · `listInvoices` · `listFixedAssets` (το δηλωμένο κενό των αποσβέσεων έκλεισε στη Φάση 4, 2026-10-15). **Μένουν**:
@@ -4345,10 +4397,80 @@
 - ✅ **Deploy δεικτών Φάσης 3β — ΕΓΙΝΕ 2026-10-15** (`firebase deploy --only firestore:indexes`· η δημιουργία στο Firebase μπορεί να διαρκέσει λεπτά — «Enabled» στην κονσόλα πριν το push) (+6: `accounting_invoices` `companyId+fiscalYear+type+issueDate↓` · `companyId+fiscalYear+paymentStatus+issueDate↓` · `companyId+fiscalYear+paymentStatus+type+issueDate↓` · `companyId+propertyId+issueDate↓` · `accounting_bank_transactions` `companyId+direction+matchStatus+transactionDate↓` · `accounting_fixed_assets` `companyId+category+status+acquisitionDate↓`) — ο Giorgio **πριν** το push· χωρίς αυτούς οι αντίστοιχοι συνδυασμοί φίλτρων δείχνουν πλέον **σφάλμα** (όχι κενό).
 - ✅ **Deploy δείκτη Φάσης 4 — ΕΓΙΝΕ 2026-10-15** (+1: `accounting_fixed_assets` `companyId+depreciationStartDate`· `firebase deploy --only firestore:indexes` πριν το push· η δημιουργία μπορεί να διαρκέσει λεπτά — «Enabled» στην κονσόλα). Χωρίς αυτόν η εκτέλεση αποσβέσεων δίνει **σφάλμα** (όχι κενό). Οι αποσβέσεις πάνω σε σελίδα **έκλεισαν** (ADR-ACC-010 §2.1.1 Φάση 4)· ο καλών της εκτέλεσης και η καταχώριση στο Βιβλίο Ε-Ε **έκλεισαν στη Φάση 5** (2026-10-15· κανένας νέος δείκτης).
 - **Πρόβλεψη φόρου τρέχουσας χρήσης χωρίς προγραμματισμένες αποσβέσεις** (`tax-engine.estimateTax`): ως την εκτέλεση τέλους χρήσης η πρόβλεψη βγαίνει υψηλότερη από τον τελικό φόρο. **Απόφαση Giorgio** (αλλάζει νούμερο φόρου· SAP προβλέπει, QuickBooks όχι) — ADR-ACC-010 §2.1.1 Φάση 5 «Ανοιχτά».
-- **Κάρτες σύνοψης πάνω σε σελίδα**: `JournalPageContent` / `InvoicesPageContent` / `BankPageContent` / `AssetsPageContent` / `TransactionsPanel` (μετρητής ανοιχτών) και `AccountingDashboard` (έσοδα/έξοδα έτους + «εκκρεμή τιμολόγια» = μήκος σελίδας) αθροίζουν τις φορτωμένες γραμμές. Fix (Xero / QuickBooks): άθροισμα στον διακομιστή ανά φίλτρο (σάρωση `collect*` ή `count()`/`sum()` aggregation), ανεξάρτητο από τη σελίδα.
-- `CreateAPYCertificateDialog`: διαβάζει `data.invoices` (δεν υπάρχει — `data.items`) και στέλνει `vatNumber` (δεν υπάρχει φίλτρο) ⇒ «κανένα επιλέξιμο τιμολόγιο». Σωστό: πλήρης σάρωση τιμολογίων πελάτη+χρήσης με παρακράτηση (βεβαίωση = υπολογισμός, όχι σελίδα).
-- Εξαγωγή αναφορών (`services/export/report-table-adapter.ts`): κεφαλίδες/μετρικές σκληρογραμμένα **αγγλικά** (`'Customer'`, `'Total Income'`…) σε CSV/Excel/PDF και στον πίνακα της οθόνης — αόρατα στο CHECK 3.8 (όχι `t()`).
-- Δρομέας keyset: το `lib/admin-keyset-page.ts` είναι πλέον το SSoT. Υποψήφιοι μετακόμισης: `services/network-messaging/thread-directory.ts` (χειρόγραφο keyset) · `api/admin/role-management/audit-log` (`doc(cursor).get()` ⇒ σβησμένη γραμμή = πρώτη σελίδα σιωπηλά) · `api/audit-trail/global` (offset).
+- ✅ **ΚΛΕΙΣΤΟ 2026-10-30 (εκκρεμεί commit Giorgio — δες τις δύο υπο-καταχωρίσεις)** — **Κάρτες σύνοψης πάνω σε σελίδα**: `JournalPageContent` / `InvoicesPageContent` / `BankPageContent` / `AssetsPageContent` / `TransactionsPanel` (μετρητής ανοιχτών) και `AccountingDashboard` (έσοδα/έξοδα έτους + «εκκρεμή τιμολόγια» = μήκος σελίδας) αθροίζουν τις φορτωμένες γραμμές. Fix (Xero / QuickBooks): άθροισμα στον διακομιστή ανά φίλτρο (σάρωση `collect*` ή `count()`/`sum()` aggregation), ανεξάρτητο από τη σελίδα.
+  - ✅ **2026-10-30 — Τιμολόγια ΥΛΟΠΟΙΗΘΗΚΑΝ (εκκρεμεί commit Giorgio)** — και το **πρότυπο για τις υπόλοιπες**: γενικό
+    `scanAccountingList(tenant, spec, filters, map)` (`accounting-repo-list.ts`) = ίδιο spec/φίλτρα/ταξινόμηση/δείκτες με το
+    `readAccountingListPage`, πάνω στο `scanLedger` ⇒ **κανένας νέος δείκτης**. Τιμολόγια: `collectInvoiceList` (repo · interface ·
+    audited wrapper) → `summarizeInvoiceList` (`services/list-summaries/`: `isCollectibleInvoice` + `invoiceOpenAmount` — το παλιό
+    μετρούσε πιστωτικά/ακυρωμένα/πιστωμένα ως ανεξόφλητα· μήνας με `accountingDayOf` = Αθήνα, όχι ώρα browser) →
+    `GET /api/accounting/invoices/summary` (φίλτρα από το κοινό `_shared/invoice-list-filters.ts` — και η σελίδα το χρησιμοποιεί·
+    σφάλματα φίλτρων μέσω `respondWithListRead`) → `useInvoiceListSummary` (`useAsyncData` + `buildUrl` του `useCursorPagedList`)·
+    σφάλμα ⇒ «—», ποτέ «0». Άγκυρα: `list-summaries/__tests__/invoice-list-summary.test.ts` (επαληθευμένη με node στον πραγματικό
+    κώδικα· jest **δεν** έτρεξε — UNC).
+  - ✅ **2026-10-30 — ΚΑΙ ΟΙ ΥΠΟΛΟΙΠΕΣ ΠΕΝΤΕ ΥΛΟΠΟΙΗΘΗΚΑΝ (εκκρεμεί commit Giorgio)** — το θέμα **έκλεισε**. Γενικά, όχι ανά οθόνη
+    (N.18): `_shared/list-filters.ts` (οι 4 αναγνώσεις φίλτρων, κοινές σελίδας/σύνοψης) · `_shared/list-summary-route.ts`
+    (`listSummaryRoute` — κάθε `…/summary` 5 γραμμές) · `hooks/useListSummary.ts` · `components/shared/summary-stat-value.ts` («—»).
+    Repo: `collectJournalEntryList` · `collectBankTransactionList` · `collectFixedAssetList` (ίδιο spec ⇒ κανένας νέος δείκτης).
+    Ευρήματα που διορθώθηκαν μαζί: **Ημερολόγιο + Πίνακας Ελέγχου άθροιζαν ΜΙΚΤΑ** (ΦΠΑ ως έσοδο) ⇒ τώρα `partitionLedger` (καθαρά,
+    ίδια με τις αναφορές· αντιλογισμοί = storno, μηδενίζονται)· **Πάγια**: εκποιημένα έξω από τις αξίες, αναπόσβεστη = το
+    αποθηκευμένο `netBookValue`· **Πίνακας Ελέγχου**: «εκκρεμή τιμολόγια» έχαναν τα μερικώς εξοφλημένα (`unpaidCount`), σφάλμα ⇒ σιωπηλά
+    μηδενικά (τώρα «—», μισή απάντηση δεν μπαίνει στο stale cache)· **Συμφωνία**: ο μετρητής «χωρίς αντιστοίχιση» = σύνοψη με
+    `matchStatus=unmatched` (ήταν οι ανοιχτές της φορτωμένης σελίδας ΤΟΥ ΦΙΛΤΡΟΥ). Άγκυρες: `ledger-list-summaries.test.ts`.
+    ⚠️ Οι τίτλοι καρτών «Σύνολο Εσόδων/Εξόδων» δείχνουν πλέον **καθαρά** ποσά — αν θέλεις τη λέξη «(καθαρά)» στο κείμενο, είναι αλλαγή i18n.
+  - ✅ **2026-10-30 — μετά από read-only έλεγχο άλλης συνεδρίας**: (1) `useListSummary`: το `useAsyncData` σε σφάλμα ΚΡΑΤΑ
+    την προηγούμενη απάντηση ⇒ αποτυχία μετά από αλλαγή φίλτρου έδειχνε τα ποσά του ΠΑΛΙΟΥ φίλτρου· τώρα σφάλμα ⇒ `data = null`
+    («—»). Το κοινό `useAsyncData` ΔΕΝ άλλαξε (άλλοι καταναλωτές). (2) `AccountingDashboard`: `callIdRef` (μόνο η τελευταία
+    κλήση γράφει) + seed από την cache του ΝΕΟΥ έτους ή κενά + spinner (όχι τα stats του προηγούμενου έτους). Άγκυρες:
+    `_shared/__tests__/list-summary-route.test.ts` (σύνοψη ανεξάρτητη από `pageSize`/`cursor` · 400 με τον κωδικό της σελίδας ·
+    500 ποτέ «0») · `accounting-list-index.test.ts` Σ-1..3 (ο ΠΡΑΓΜΑΤΙΚΟΣ `build` της `scanAccountingList` ⇒ δείκτης για κάθε
+    συνδυασμό, σχήμα ≡ σελίδας, χωρίς `.limit`, άρνηση πριν από τη βάση).
+    ✅ **jest ΕΤΡΕΞΕ στην τελική μορφή** (2026-10-30 ~14:00, άλλη συνεδρία, UNC): `accounting-list-index` ·
+    `ledger-list-summaries` · `invoice-list-summary` · `list-summary-route` — 4/4 σουίτες, 68/68 tests.
+    **Μένουν (ανοιχτά, ΧΑΜΗΛΗ)**: (α) πύλη AST κατά `reduce`/`.length` πάνω σε `items` λίστας μέσα σε stats οθόνης λογιστικής
+    (`scripts/` — όταν ελευθερωθεί από την άλλη συνεδρία)· (β) κόστος: κάθε άνοιγμα/αλλαγή φίλτρου σαρώνει ΟΛΗ την εμβέλεια
+    (τράπεζα χωρίς φίλτρο = όλο το ιστορικό) — ο μετρητής «χωρίς αντιστοίχιση» της Συμφωνίας μπορεί να γίνει `count()`
+    aggregation (~1 read/1000)· για τα ΠΟΣΑ η σάρωση μένει (το `sum()` δεν εκφράζει `|amount|`, `isCollectibleInvoice`, καθαρά).
+- ✅ **2026-10-30 — `CreateAPYCertificateDialog` ΥΛΟΠΟΙΗΘΗΚΕ (εκκρεμεί commit Giorgio)**: ο υπολογισμός ζει στο
+  `services/apy/apy-certificate-draft.ts` (`collectInvoices` πελάτη ως `31/12` + `isWithholdingCertifiable`: όχι πιστωτικό ·
+  όχι `void` · όχι πιστωμένο — ο παλιός φίλτρος έπιανε μόνο το πρώτο· συντελεστής που λείπει **παράγεται**, όχι `?? 20`).
+  `GET /api/accounting/apy-certificates/draft` (προεπισκόπηση, `API_ROUTES…APY_CERTIFICATES.DRAFT`) + το `POST` τρέχει τον
+  **ίδιο** υπολογισμό και αγνοεί ποσά/στιγμιότυπα από το σώμα (σχήμα: `fiscalYear` · `customerId` · `notes`). Διάλογος: επιλογή
+  **επαφής** (`ContactSearchManager`), όχι ελεύθερο ΑΦΜ· `useAPYCertificateDraft` (`apiClient`, προστασία από παλιά απάντηση).
+  Άγκυρες: `services/apy/__tests__/apy-certificate-draft.test.ts` + `apy-certificates.route.test.ts` (POST). ⚠️ jest **δεν**
+  έτρεξε (DESKTOP-D4AT022 / UNC) — λογική επαληθευμένη με node type-stripping· ✅ **έτρεξαν στον giorgio-pc 2026-10-30: 2 σουίτες / 18 tests PASS**.
+  **Ανοιχτά (απόφαση Giorgio)**: (α) η χρήση κρίνεται από το `fiscalYear` του **τιμολογίου** (ADR-ACC-020)· ο ΚΦΕ άρθρ. 64
+  παρακρατεί κατά την **πληρωμή** — τιμολόγιο Δεκεμβρίου πληρωμένο Ιανουάριο ανήκει στη βεβαίωση του επόμενου έτους·
+  (β) τιμολόγια με πελάτη χωρίς `customer.contactId` (χειρόγραφη καταχώριση) δεν φαίνονται — ο δείκτης είναι ανά επαφή.
+- ✅ **2026-10-30 — Εξαγωγή αναφορών i18n ΥΛΟΠΟΙΗΘΗΚΕ (εκκρεμεί commit Giorgio)**: `flattenReportForExport(type, data, t)` με κλειδιά
+  `reports.metrics.*` / `reports.table.*` / `reports.exportDocument.*` (el + en)· στήλες με **ρόλο** + γραμμές με **μορφή** (`cellFormatOf`)
+  ⇒ διορθώθηκαν μαζί: Υπόλοιπο ισοζυγίου / Σύνολο ηλικίωσης που έβγαιναν «%», πλήθη σε €, και οι **μετατοπισμένοι κάδοι ηλικίωσης**
+  (τώρα 6 κάδοι 1:1 με `AgingBuckets`). Άγκυρα `services/export/__tests__/report-table-adapter.test.ts` (17 PASS).
+  ⚠️ Για το commit: `generate:i18n-types:index` + `generate:i18n-shell-slice:index` (νέα κλειδιά locale — δεν τρέχουν από UNC).
+  **Μένει (εκτός εμβέλειας)**: οι ετικέτες κατηγοριών/κινήσεων (`cat.label`, `item.label`) έρχονται από τον διακομιστή ως κείμενο — όχι κλειδιά.
+- ✅ **2026-10-30 — Δρομέας keyset: ΕΚΛΕΙΣΕ (εκκρεμεί commit Giorgio, claude-6e)**. Το SSoT `lib/admin-keyset-page.ts` δέχεται πλέον
+  `kind: 'timestamp'` (Firestore `Timestamp` ↔ `δευτ.νανοδευτ.` χωρίς απώλεια· το `'string'` ρητό ≡ απόν ⇒ οι δρομείς της λογιστικής
+  **δεν** άλλαξαν αποτύπωμα) · `map(data, id)` · `InvalidPageTokenError.code`.
+  · `api/admin/role-management/audit-log` → `readKeysetPage` (το `audit_logs` **έχει TTL** — σβησμένη γραμμή-δρομέας γύριζε στην πρώτη
+    σελίδα)· `limit=abc` ⇒ 400 (ήταν NaN ⇒ 500)· άκυρη ημερομηνία ⇒ 400 (αγνοούνταν)· `dateTo` `<` επόμενη ημέρα (ήταν `<=`).
+  · **ΝΕΟ ΕΥΡΗΜΑ** `api/audit-trail/[entityType]/[entityId]` (δεν ήταν στη λίστα): ίδιο `doc(cursor).get()` ⇒ άγκυρα ανύπαρκτη / άλλης
+    οντότητας / άλλης εταιρείας ⇒ 400 `INVALID_PAGE_TOKEN`. Η άγκυρα **μένει id** (τη δίνει η ζωντανή συνδρομή του `useAuditFeed`)·
+    το `startAfter(snapshot)` χειρίζεται ήδη σωστά τις ισοπαλίες (σιωπηρό `__name__`).
+  · 🔴 `api/audit-trail/global` — **ήταν σπασμένο**: `.limit(500)` χωρίς `orderBy` (500 τυχαίες, όχι οι νεότερες) + ο πελάτης έστελνε
+    **id** ως `offset` ⇒ NaN ⇒ κενή σελίδα + `hasMore:false` ⇒ η ουρά πέρα από τις 30 ζωντανές **δεν φαινόταν ποτέ**. Τώρα άγκυρα id +
+    `orderBy(timestamp↓)` (δείκτης `(companyId, timestamp↓)` υπάρχει — **κανένας νέος**) + σάρωση σε παρτίδες 100 ως `limit+1`
+    ταιριαστές ή 1000 έγγραφα (`hasMore` μετριέται· ο δρομέας = τελευταία καταναλωμένη ⇒ κανένα κενό). Νέο SSoT φίλτρων
+    `lib/audit/global-audit-filter.ts` για ζωντανό παράθυρο **και** ουρά (διέφεραν: `performedBy` ακριβές uid vs υποσυμβολοσειρά —
+    το πεδίο είναι ελεύθερο κείμενο ⇒ με όνομα το ζωντανό ήταν άδειο· `toDate` απέκλειε όλη την ημέρα στον πελάτη).
+    `useGlobalAuditTrail`: `offset` → `startAfter` (το χαρακτηριστικό test κατοχύρωνε το λάθος — ενημερώθηκε).
+  · `thread-directory.ts`: **δεν μετακομίζει** — είναι ήδη σωστό keyset (τιμές, tie-breaker, `limit+1`)· collection-group με
+    tie-breaker `DocumentReference` που το SSoT δεν εκφράζει, και το «δέσιμο στα φίλτρα» δεν προσθέτει τίποτα (`uid` από ταυτότητα).
+  Άγκυρες: `admin-keyset-page.test.ts` (Κ-T1..T6) · `audit-log.route.test.ts` · `entity-audit-page.route.test.ts` (μετάλλαξη: χωρίς τον
+  έλεγχο άγκυρας ⇒ 3 κόκκινα) · `global-audit-tail.route.test.ts` · `global-audit-filter.test.ts`.
+  **Ανοιχτά**: (α) όρια ημέρας σε **UTC** (ιστορικό ρόλων + global) — η ημέρα Αθήνας θέλει SSoT· το `athensDateRangeToUtc`
+  (`lib/date/quarter-helpers`) υπολογίζει την αλλαγή ώρας με `new Date(y, m, 0)` = ζώνη του **server** ⇒ όχι αξιόπιστο ως έχει·
+  (β) `LIST_ERROR_CODES.INVALID_PAGE_TOKEN` (λογιστική) να διαβάζει το `InvalidPageTokenError.code` — το αρχείο το είχε άλλη συνεδρία·
+  (γ) dedup service+cdc ανά παρτίδα: ζεύγος που πέφτει στο όριο δύο παρτίδων/σελίδων δεν συμπτύσσεται (ίδιο όριο με το ζωντανό
+  παράθυρο)· (δ) `audit-log/export` (role-management) κόβει σιωπηλά στα `MAX_EXPORT_ROWS` — δεν ελέγχθηκε.
 - Φόρος 2026: οι μειώσεις του ν.5246/2025 ανά πρόσωπο (ηλικία ≤ 30, τέκνα) δεν μοντελοποιούνται — χρειάζονται στοιχεία φορολογουμένου. Τέλος επιτηδεύματος ελευθέρων επαγγελματιών: καταργήθηκε από το 2025 κατά τον Τύπο — το `tax-config` κρατά 650 € (επαλήθευση με ΦΕΚ πριν από αλλαγή).
 
 ### 🔍 Γραμμές zoom κάτοψης/φύλλου λεπτομέρειας — `disabled`/`title=`/`style=` αντί του κοινού `ViewerToolbarButton` (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-05, ADR-899 §9 θέμα 3 · ADR-187 · N.0.2)
@@ -4451,18 +4573,12 @@
   (+ `utils/performance.ts` που φτιάχνει Worker από URL). Το dxf-viewer **μπορεί** να εισάγει από `@/lib` (η αντίθετη φορά
   απαγορεύεται, CHECK 3.62). Ο Worker τους πρέπει να περάσει σε `serveWorkerRpc(self, handler)`.
 
-### 🧷 `isPlainRecord` / `isFiniteNumber` — τοπικά αντίγραφα έξω από το `lib/type-guards` (προτεραιότητα ΧΑΜΗΛΗ, 2026-09-28, ADR-889 §11)
-- **Τι**: τα δύο κατηγορήματα προωθήθηκαν στο `src/lib/type-guards.ts` (`isPlainRecord` = αντικείμενο **και όχι** πίνακας —
-  αυστηρότερο από το `isRecord` · `isFiniteNumber`)· τα `lib/market/{market-transactions-file,value-zone-file}.ts` ήδη εισάγουν.
-  Μένουν **ιδιωτικές** δηλώσεις με ταυτόσημο σώμα:
-  - `typeof value === 'object' && value !== null && !Array.isArray(value)` σε `lib/api/space-commercial-fields.ts` ·
-    `lib/demand/demand-seeks-read.ts` · `lib/listings/model-declaration-metadata.ts` · `lib/market/area-market-document.ts`
-    (εκεί στενεύει σε `DocumentData` — ο τύπος επιστροφής διαφέρει, να κριθεί)
-  - `function isFiniteNumber` σε 7 αρχεία (`grep -rln "^function isFiniteNumber" src`): `app/api/floorplan-backgrounds/[id]/route.ts` ·
-    `components/ui/floating/floating-panel-geometry.ts` · `lib/geo/admin-boundary-file.ts` · `lib/geo/recent-place-searches-account-model.ts` ·
-    `lib/listings/listing-map-mark.ts` · `lib/listings/model-declaration-metadata.ts` · `subapps/dxf-viewer/systems/basemap/basemap-placement-schema.ts`
-- **Διόρθωση**: `import { isFiniteNumber, isPlainRecord } from '@/lib/type-guards'` + σβήσιμο της τοπικής (ελέγξτε ότι το σώμα είναι
-  **ταυτόσημο** — ένα `isRecord` που δέχεται πίνακες ΔΕΝ είναι το ίδιο). 10+ αρχεία σε 6 τομείς ⇒ εδώ, όχι στο commit του ADR-889 Φ4 (N.0.2).
+### 🧷′ Κατηγορήματα σχήματος — ό,τι έμεινε ΣΚΟΠΙΜΑ εκτός (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-29, ADR-225 Phase 2 · N.0.2)
+- **SSoT**: `lib/type-guards.ts` → `isRecord` (δέχεται πίνακα) · `isPlainRecord` (όχι πίνακας) · `plainRecordOrNull` · `isFiniteNumber`. Νέος καλών εισάγει από εκεί — όχι ιδιωτικό αντίγραφο.
+- **`lib/audit/audit-diff.ts:147`**: επί τόπου `typeof v === 'object' && v !== null && !Array.isArray(v)` → `isPlainRecord(v)`. Δεν έγινε: το αρχείο το άλλαζε άλλη συνεδρία (2026-10-29).
+- **Ερώτηση σημασίας, ΟΧΙ μηχανική αλλαγή**: τρεις αναγνώστες αποθηκευμένων εγγράφων χρησιμοποιούν το `isRecord` που **δέχεται πίνακα** (`lib/listings/floor-plate/floor-plate-publication.ts` · `lib/network-messaging/network-thread-from-document.ts` · `components/generic/mappings/propertiesMappings.ts`). Για ανάγνωση JSON το σωστό είναι μάλλον `isPlainRecord` — αλλά αλλάζει τι γίνεται δεκτό ⇒ ανά αρχείο, με test.
+- **Ratchet**: δεν υπάρχει πύλη που να εμποδίζει νέο ιδιωτικό `function isPlainObject|isRecord|isFiniteNumber`. Υποψήφιο CHECK (ταυτότητα δήλωσης, όχι κείμενο σώματος).
+- ⛔ **ΟΧΙ**: `lib/auth/audit-core.isPlainObject` — ελέγχει και **prototype** (`Object.prototype`/`null`), όπως το `isPlainObject` της lodash: άλλη ερώτηση, σωστά τοπική.
 
 ### 📐 Επίπεδη γεωμετρία — τα υπόλοιπα αντίγραφα έξω από το `lib/geometry` (προτεραιότητα ΧΑΜΗΛΗ, 2026-09-28, ADR-884 Φ2στ-γ Γ3)
 - **Έγινε ήδη (Γ3α)**: SSoT `src/lib/geometry/planar-polygon.ts` (εμβαδόν · σημείο-μέσα · αυτοτομή · `segmentsIntersect` ·
@@ -4484,6 +4600,15 @@
   `{x:5,y:0}`), το SSoT την πρώτη κορυφή — ο προσαρμογέας κρατά τη συμπεριφορά του dxf.
 
 ### 🚦 Όριο ρυθμού ανά ΠΡΑΓΜΑΤΙΚΗ διαδρομή, όχι ανά πρότυπο (προτεραιότητα ΥΨΗΛΗ — ασφάλεια, 2026-09-27, ADR-855 · εντοπίστηκε στο ADR-884 §4.11)
+- ✅ **2026-10-30 — ΥΛΟΠΟΙΗΘΗΚΕ (εκκρεμεί commit Giorgio)**: `src/lib/middleware/route-template.ts` (`routeTemplateOf` · `routeParamsOf`) — το
+  πρότυπο από τα `params` του δρομολογητή (όχι μαντεία ids)· αποτυχία εντοπισμού ⇒ **χοντρότερος** κουβάς (`/api/<περιοχή>/[unresolved]`),
+  ποτέ η ωμή διαδρομή. Ο `with-rate-limit.ts` κλειδώνει **και** κρίνει βαθμίδα στο πρότυπο (τα προθέματα του πίνακα είναι στατικά).
+  Άγκυρες: `__tests__/route-template.test.ts` (Τ1–Τ7 · Π1–Π2) + `rate-limit-declared-category.test.ts` describe «Τ» (κλειδί στον store).
+  ⚠️ **Το jest δεν τρέχει από τον DESKTOP-D4AT022** (UNC ⇒ «No tests found» ακόμη και για υπάρχουσες σουίτες) — η λογική επαληθεύτηκε
+  με node type-stripping + `tsc --strict` στο module· **τρέξε τις δύο σουίτες στον giorgio-pc πριν το commit.**
+  **Πλακίδια**: έμειναν `ASSET` (600) — πλέον ανά θεατή για όλα τα πλακίδια (15–30 νέα σημεία/λεπτό). Νέα βαθμίδα **δεν** μπήκε: το
+  `scripts/lib/rate-limit-policy/inventory.js` διαβάζει `category:\s*'([A-Z]+)'` (χωρίς `_`) και ήταν ανοιχτό σε άλλη συνεδρία.
+  **Μένει**: το ταξίδι Upstash ανά πλακίδιο (κόστος χρόνου) · μέτρηση 429 στην παραγωγή μετά το deploy.
 - **Τι**: `buildRateLimitKey(identifier, endpoint)` (`src/lib/middleware/rate-limit-config.ts:385`) βάζει στο κλειδί την **πραγματική**
   διαδρομή του αιτήματος. Κάθε δυναμικό τμήμα (`[id]`, `[...path]`) γεννά **δικό του «κουβά»**: `/api/contacts/A` και `/api/contacts/B`
   μετρούν χωριστά ⇒ μαζική ανάγνωση/απαρίθμηση ids **δεν** περιορίζεται ποτέ (κάθε id έχει τα δικά του 60-600/λεπτό). Η δήλωση του
@@ -4647,17 +4772,15 @@ CHECK 3.39 απέρριψε γραπτά).
 - **Μαζική ένταξη «ομάδα γραφείου» από το UI** (Procore «Add from Company Directory»): ο γραφέας τη στηρίζει
   (`enrollProjectMembers` με πίνακα), η οθόνη λείπει.
 
-### ⏳ «Ημέρες μέχρι προθεσμία» — ΕΝΑΣ κανόνας στρογγυλοποίησης (προτεραιότητα ΧΑΜΗΛΗ, 2026-09-21)
+### ⏳′ «Ημέρες μέχρι προθεσμία» — ό,τι έμεινε ΣΚΟΠΙΜΑ εκτός (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-29, ADR-853 §13 ε.γ · N.0.2)
 
-- [ ] Το ADR-853 §15 (Ε-3) γέννησε το SSoT `deadlineDaysLeft` στο `lib/date-local.ts` (προς τα πάνω, `null` αν
-  πέρασε) + `formatDeadlineRelative` στο `lib/intl-formatting.ts`, αφού οθόνη και email πρόσκλησης έλεγαν «6» και
-  «7» για την ίδια λήξη. Μένουν **χειρόγραφα** `Math.ceil(… / MS_PER_DAY)` / `(1000*60*60*24)` σε ~10 αρχεία
-  (>1h, πολλοί τομείς): `lib/mandate/mandate-standing.ts` (`daysUntilExpiry` — ίδια σημασία, απλή μετάβαση) ·
-  `subapps/procurement/utils/quote-expiration.ts` · `lib/intl-domain.ts` (`getDaysUntilCompletion`, **χωρίς** `null`
-  για περασμένη) · `components/shared/files/TrashView.tsx` · `building-management/.../OverallProgressCard.tsx` ·
-  `useScheduleDashboard.ts` · `types/contacts/relationships/utils/helpers.ts`. ⚠️ **Διάκρινε σημασία**: «ημέρες
-  μέχρι προθεσμία» (ceil) ≠ «διάρκεια διαστήματος» (π.χ. `useResourceHistogram`, Gantt) ≠ «πριν από» (trunc) —
-  μετέφερε **μόνο** τις προθεσμίες.
+- **Κανόνες (μετά το κλείσιμο 2026-10-29)**: προθεσμία-**στιγμή** ⇒ `deadlineDaysLeft` (ceil, `null` αν πέρασε) ή
+  `daysUntilOrNull` + `Math.ceil` όταν το παρελθόν δείχνεται · προθεσμία-**ημέρα** ⇒ `calendarDaysUntil`
+  (`constants/platform-operator`, ημέρες ημερολογίου Αθήνας, προσημασμένο).
+- **Όχι προθεσμίες — σκόπιμα εκτός**: `subapps/procurement/utils/quote-expiration.ts` `daysUntilExpiry` (`floor`,
+  καταναλώνεται **μόνο** ως «έληξε πριν από Ν» = σημασία trunc)· το ιδιωτικό `resolveMs` του ίδιου αρχείου είναι
+  όμως αντίγραφο του `normalizeToMillisOrNull` (μικρή μετάβαση, χωριστό βήμα) · `types/contacts/relationships/utils/helpers.ts`
+  (διάρκεια σχέσης) · `useScheduleDashboard` `daysBetween` / `useResourceHistogram` / Gantt (διάρκειες).
 
 ### 🔔 AccountNotice — μετάβαση του χειρόγραφου κουτιού ειδοποίησης (προτεραιότητα ΧΑΜΗΛΗ, 2026-09-11)
 
@@ -5196,6 +5319,27 @@ Closed via `hostWall.params.sceneUnits ?? 'mm'` frozen-context pattern σε **4 
 
 | Date       | Change |
 |------------|--------|
+| 2026-10-30 | ✅ **🗂️ ΜΙΑ ΔΗΛΩΣΗ ΟΙΚΟΓΕΝΕΙΑΣ NAMESPACES — ΕΠΙΠΕΔΟ (α) ΕΚΛΕΙΣΕ** (ADR-280 §11 · CHECK 3.108, Opus 5.5). Η κλάση ήταν **~650 λίστες σε 10 οικογένειες**, όχι 92 του κτιρίου. Η πηγή υπήρχε ήδη (`COMPAT_NAMESPACE_MAP` → `resolveAllNamespaces`) ⇒ κανένα νέο SSoT. Codemod `--fix` **με απόδειξη ισοδυναμίας ανά κλήση**: η σειρά είναι σειρά προτεραιότητας και μετρήθηκαν ~25 κοινά φύλλα· «τι ζητά το αρχείο» = ο ταξινομητής AST του 3.34 + διαφυγή του `t` (190/588). 658 αναδιατυπώσεις / 588 αρχεία· 654/654 ζεύγη ξαναποδείχθηκαν από το `git diff` (το πρώτο πέρασμα είχε 3 χωρίς πλήρη απόδειξη ⇒ επανήλθαν). Πύλη ⛔ Κ1-Κ3 + 🔴 ratchet `order-bearing` (5). 21 άγκυρες· 7/7 μεταλλάξεις· 3.8 Layer 2 χωρίς νέα παράβαση· 811/811 tests των αγγιγμένων modules. Το (β) → νέο μπλοκ 🗂️ (β). ⚠️ commit: `generate:i18n-shell-slice:index` (ήταν ήδη μπαγιάτικο από ξένες αλλαγές toolchain/catalog) · ζωντανός έλεγχος εκκρεμεί (dev server κλειστός). |
+| 2026-10-30 | 🟡 **⬜ `bg-white`/`bg-black` — βήμα (3) ΕΓΙΝΕ** (claude-6e, Opus 5.5). 194 γραμμές / 92 αρχεία ταξινομημένα μία-μία· ~90% νόμιμα (πέπλα, χαρτί, εικόνες, ρητά ζεύγη). Διορθώθηκαν 3 πραγματικά: σκιώδες `COLOR_BRIDGE` στο `dxf-viewer/config/modal-colors.ts` (λευκό σε λευκό στα πεδία των modal του DXF, σκοτεινό θέμα) → πραγματικό SSoT + άγκυρα με μετάλλαξη · `OrgStructureTab` hover λευκό σε `bg-card` (φωτεινό) → `BUTTON_ACCENT_HOVER` · τερματικό μετανάστευσης 3,2:1 (φωτεινό) → θεματική επιφάνεια. Μένει: πύλη (βήμα 1 — τα `scripts/` τα είχε άλλη συνεδρία· πρόταση: κρίση **μίξης**, όχι κάθε `bg-white`) · `--paper` · νεκρό `user-type.ts`. |
+| 2026-10-30 | ✅ **🧾 ΔΡΟΜΕΑΣ KEYSET — ΕΚΛΕΙΣΕ** (claude-6e, Opus 5.5). SSoT `lib/admin-keyset-page` + `kind: 'timestamp'` · `map(data, id)` · `InvalidPageTokenError.code` (αποτύπωμα λογιστικής αμετάβλητο — άγκυρα Κ-T6). Ιστορικό ρόλων → keyset (TTL ⇒ πρώτη σελίδα σιωπηλά) + 400 σε `limit`/ημερομηνίες. **Νέο εύρημα**: ιστορικό οντότητας — άγκυρα ανύπαρκτη/ξένη ⇒ 400. 🔴 Ιστορικό εταιρείας **ήταν σπασμένο** (χωρίς `orderBy` + `offset=id` ⇒ NaN ⇒ η ουρά δεν φαινόταν ποτέ): άγκυρα + σάρωση με όριο + ΕΝΑΣ κριτής φίλτρων πελάτη/διακομιστή (`lib/audit/global-audit-filter`). `thread-directory`: ήδη σωστό, δεν μετακομίζει. Κανένας νέος δείκτης. jest (UNC): 11 σουίτες — 204/204 ✓ (ένα λάθος του ίδιου του test, όριο βρόχου, διορθώθηκε· `global-audit-tail` 19/19). Ανοιχτά: ημέρα Αθήνας · `LIST_ERROR_CODES` · dedup στο όριο παρτίδας · export. |
+| 2026-10-30 | ✅ **🧩 ΠΡΩΤΟΚΟΛΛΟ UC MODULE ΣΕ ΕΝΑ ΣΗΜΕΙΟ — ΕΚΛΕΙΣΕ** (ADR-195 (ν), Opus 5.5): και τα **13** modules στο `shared/admin-command-protocol.ts`· η πολιτική έγκρισης στο **όνομα** της κλήσης (`autoApprovedProposal` εντολή · `humanApprovedProposal` πελάτης, `SALES_MANAGER_APPROVAL` μία σταθερά αντί για 5). **Ένας** ορισμός «εγκεκριμένες ενέργειες» (`approvedActions`/`hasModifiedActions`) και στα `multi-intent-steps`/`approval-resume`: κενό `modifiedActions` ΔΕΝ είναι πια «καμία ενέργεια» (ήταν ασυνεπές με το inbox). Το άγγιγμα αποκάλυψε **32 προϋπάρχοντες κλώνους** (CHECK 3.28) ⇒ νέο `shared/customer-request-protocol.ts` (αποστολέας · αιτών · έγκριση · audit · επιβεβαίωση · health) + `sendCommandReply`/`failedExecution`/`replySideEffect` (ΕΝΑ λεξιλόγιο `reply_sent:`/`reply_failed:`)· **`return await`** μέσα σε `try` φυλαγμένο (Π5β). 17 αρχεία χωρίς κλώνους· 1311/1311 στο pipeline· 12/12 μεταλλάξεις. Το grep κλεισίματος δίνει πλέον **τίποτα** (ούτε το SSoT). Μένει μικρό: εγγραφή των 2 protocols στο `.ssot-registry.json` (θέλει `ssot:baseline` ⇒ απόφαση Giorgio, κανόνας «όχι reseed»). |
+| 2026-10-30 | ✅ **🧪 Γ4 ΤΟΥ `record-entity-update.test.ts` ΦΥΛΑΕΙ ΠΛΕΟΝ ΤΟΝ ΚΛΑΔΟ «ΧΩΡΙΣ ΜΗΤΡΩΟ» — ΕΚΛΕΙΣΕ** (ADR-195 (μ), Opus 5.5): ο τύπος **παράγεται** από το μητρώο οντοτήτων (`getTrackedFieldsForEntityAuditType(t) === null`), με παρονομαστή Γ4α. **Μετρημένο**: γραφέας που δανείζεται ξένο μητρώο ⇒ η ΠΑΛΙΑ άγκυρα (`quote`) 8/8 πράσινη, η νέα **κόκκινη**. |
+| 2026-10-30 | ✅ **🧑′ ΜΕΤΑΠΤΩΣΕΙΣ ΕΠΑΦΩΝ ΣΦΡΑΓΙΖΟΥΝ ΤΟΝ ΔΙΑΧΕΙΡΙΣΤΗ — ΕΚΛΕΙΣΕ** (ADR-195 (λ) · ADR-704 changelog 2026-10-30, Opus 5.5): `CDC_WATCHED_COLLECTIONS` παράγωγο· `flushInBatches`/`openDeclaredBatch` **πετούν** χωρίς φορέα σε συλλογή του CDC και σφραγίζουν μόνο εκεί· ο envelope δίνει φορέα σε κάθε `run`. **4** μεταπτώσεις, όχι 3 (η Ρ6 της άγκυρας βρήκε το `migrate-company-id`). Επισκευάστηκε προϋπάρχον κόκκινο fixture (`migrate-postal-codes`, 3/7). 7/7 μεταλλάξεις. ⏳ **Μένει μόνο** ο ζωντανός έλεγχος «μετάπτωση σε δοκιμαστική επαφή ⇒ γραμμή “από <διαχειριστή>”» — **αναμονή έγκρισης Giorgio** (καμία εκτέλεση χωρίς ρητό «ναι»). |
+| 2026-10-30 | ✅ **💬 ΠΛΑΤΦΟΡΜΑ SOCIAL ΔΕΜΕΝΗ ΣΤΗ ΡΙΖΑ — ΕΚΛΕΙΣΕ** (ADR-327 §8.5.4 (ζ) · ADR-812 changelog 2026-10-30, Opus 5.5): λεξιλόγιο `social-platform` στο CHECK 3.73 (19 λεξιλόγια)· **12** αδέσμευτα σε 6 αρχεία (όχι 9/5: τα 2 κρύβονταν πίσω από ομώνυμο τοπικό τύπο ⇒ η πύλη απέκτησε **δεσμό κατά ταυτότητα**, Μ15α-γ). Νέο SSoT `lib/contact/social-platform-profiles.ts` (όνομα μάρκας + πρότυπο προφίλ, ήταν σε 3 σημεία με `x.com`≠`twitter.com`)· branding κρατά `tiktok/whatsapp/telegram`· ένα `ShowcaseContactSocial`· `SocialPlatformType` **δεμένο** (`NamedSocialPlatform \| 'email'`), όχι εξαίρεση. Δεδομένα 0/22 επαφές με social. 7/7 μεταλλάξεις. Μένει ανοιχτό (μικρό): το `socialUrlGenerator.detectPlatformFromUrl` είναι δίδυμο του `platform-utils.detectPlatformFromUrl`, και το `profile-service.ts` εξάγει ομώνυμο `SocialPlatform` (= `SocialPlatformType`, άλλο σύνολο) — καταγράφεται στο μπλοκ 🔗 παρακάτω. |
+| 2026-10-30 | ✅ **🧾 ΕΞΑΓΩΓΗ ΑΝΑΦΟΡΩΝ i18n — ΕΚΛΕΙΣΕ** (ADR-ACC-010 §2.1.1 · N.11, Opus 5.5) + ✅ επαλήθευση **🧾 βεβαίωσης ΑΠΥ** (jest στον giorgio-pc: 2 σουίτες / 18 PASS). `report-table-adapter`: κάθε κείμενο από τον `t` του καλούντος (el/en, +41 κλειδιά `reports.*`), στήλες με ρόλο / γραμμές με μορφή ⇒ διορθώθηκαν ταυτόχρονα: Υπόλοιπο ισοζυγίου και Σύνολο ηλικίωσης που έβγαιναν ως «%», πλήθη ως €, **κάδοι ηλικίωσης μετατοπισμένοι κατά έναν**. Ένας μορφοποιητής κελιού (`report-cell-format.ts`) για οθόνη/PDF + `numFmt` Excel· διπλότυπο `formatMetricValue` (`FinancialReportCard`) σβήστηκε. Άγκυρα `report-table-adapter.test.ts` 17 PASS. Η 📊 **§κάρτες σύνοψης** τη δουλεύει παράλληλα άλλη συνεδρία — δεν αγγίχτηκε. ⚠️ commit: `generate:i18n-types:index` + `generate:i18n-shell-slice:index` · `jscpd:diff` από pre-commit. |
+| 2026-10-29 | ✅ **🏷️′ #3 ΤΟ ΠΕΑ ΣΤΟ ΙΣΤΟΡΙΚΟ — ΕΚΛΕΙΣΕ, ΚΑΙ ΜΑΖΙ ΟΛΟ ΤΟ 🏷️′** (ADR-195 (κ) · ADR-852, Opus 5.5). Μετρημένο: 1 παλιά γραμμή ενιαίου `energy` **και** 10 νέες `energy.*` που έβγαιναν ωμό κλειδί ως «αποσυρμένο πεδίο». `labelKey` + κατάλογοι τιμών · Θ1 = ο ίδιος ο `resolveFieldLabel` (το προϋπάρχον κόκκινο Θ1 έκλεισε, μαζί με το `catalog_*`) · ΝΕΟ μητρώο μόνο ανάγνωσης `audit-retired-fields.ts`. Λ8 · μεταλλάξεις 8/8. ⏳ Ζωντανός έλεγχος οθόνης: όταν τρέχει dev server. |
+| 2026-10-29 | ✅ **⏳ «ΗΜΕΡΕΣ ΜΕΧΡΙ ΠΡΟΘΕΣΜΙΑ» — ΕΚΛΕΙΣΕ** (ADR-853 §13 ε.γ · ADR-861 · N.0.2, Opus 5.5) + 🧹 **backfill λήξεων δόσεων: script έτοιμο** (ADR-234). Audit ανά σημασία: (α) προθεσμία-**στιγμή** ⇒ `mandate-standing.daysUntilExpiry` → `deadlineDaysLeft` (ίδια συμπεριφορά, `mandate-standing` ✓· `MILLISECONDS_PER_DAY` → `MS_PER_DAY`) · `TrashView.getDaysUntilPurge` → `daysUntilOrNull` + ceil (προσημασμένο: το `≤ 0` = «έληξε»· ποτέ `NaN`). (β) προθεσμία-**ημέρα** ⇒ ΝΕΟ `calendarDaysUntil` (`constants/platform-operator`, πάνω στα `operatorDayOf` + `daysBetweenDateKeys`): `getDaysUntilCompletion` · `useScheduleDashboard` `daysRem` · `OverallProgressCard`. 🔑 Το `ceil(ms / 24h)` έλεγε «1» στις 01:00 της ίδιας της ημέρας (η ημέρα = μεσάνυχτα UTC = 02:00 Αθήνα). (γ) **Όχι προθεσμίες** (σκόπιμα εκτός, μπλοκ ⏳′): `quote-expiration` («πριν από», trunc) · διάρκειες. Backfill: `npm run backfill:installment-due-day` (dry-run, ιδεμποτικό, `lastUpdateTime` ανά πλάνο) — **η εκτέλεση = απόφαση Giorgio**. Jest: 4+3 σουίτες, 98 + 34 ✓. ⚠️ `tsc` / `jscpd:diff` / browser **δεν** έτρεξαν. |
+| 2026-10-29 | ✅ **🏷️′ #2 ΕΝΑ ΛΕΞΙΛΟΓΙΟ ΤΥΠΟΥ ΔΡΑΣΤΗΡΙΟΤΗΤΑΣ — ΕΚΛΕΙΣΕ** (ADR-195 (ι), Opus 5.5). Μετρημένο: το `customFields.activityType` είναι το ενικό κάτοπτρο της κύριας ΚΑΔ (η φόρμα γράφει πάντα `'main'`· βάση: 7 `main`, 0 `secondary`) ⇒ ίδια έννοια με το `KadActivity.type`. Η παλιά ορθογραφία έγινε **ψευδώνυμο** της ρίζας (`LEGACY_KAD_ACTIVITY_TYPE_ALIASES` + `AuditCatalogRef.valueAliases`), **χωρίς μετάπτωση**· σβήστηκαν `VOCAB_ACTIVITY_TYPES` + 4 αντίγραφα locale· τα τυφλά casts (mappers, εργαλείο AI) ⇒ κανονικοποιητές της ρίζας. Boy Scout: κόκκινο CHECK 3.13 στο `customFields.companyAddresses`. Λ7 · μεταλλάξεις 6/6. Νέο μπλοκ 🪦. |
+| 2026-10-29 | ✅ **👻 ΕΤΙΚΕΤΕΣ ΚΑΤΑΣΤΑΣΗΣ ΑΟΡΑΤΕΣ — ΕΚΛΕΙΣΕ Η ΚΛΑΣΗ** (ADR-770 §22 · N.0.2, Opus 5.5). Audit **AST** (όχι παράθυρο χαρακτήρων): 38 ευρήματα / 14 αρχεία. **Μετρήθηκε** ότι η πρόταση «`/15` + κείμενο token» αποτυγχάνει (success 1,80:1 φωτεινό · purple 2,28 σκοτεινό) και ότι τα συνθετικά `${getStatusColor(x,'bg')}/NN` δεν παράγονται από το Tailwind. Θεραπεία = **ρόλοι** δίπλα στην ίδια αντιστοίχιση (`design-system.ts`): `getStatusBadgeVariant` (Badge + `SOLID_FILL_INK`) · `getStatusSolidClass` · `getStatusSurfaceClass` (`--bg-X`+`--text-X`, 5,78–7,84:1 στα δύο θέματα)· `getStatusBadgeClass` χωρίς `text-white`. Διορθώθηκαν: AgreementDetail (→ `AGREEMENT_STATUS_BADGE_VARIANTS`) · crm ειδοποιήσεις + στάδιο ευκαιρίας · υποχρεώσεις · KPI προμηθειών · LiveWorkerMap · files ×3 · AddressMap · ReportAgingTable · RelationshipList · CopyActionsSection. Άγκυρα: ZERO-TOL στο CHECK 3.38 + Ο6. Κατάλοιπα ⇒ νέο μπλοκ «👻′». |
+| 2026-10-29 | ✅ **🏷️′ #1 ΛΕΞΕΙΣ ΤΥΠΟΥ ΔΙΕΥΘΥΝΣΗΣ / ΠΛΕΥΡΑΣ ΟΙΚΟΠΕΔΟΥ — ΕΚΛΕΙΣΕ** (ADR-195 (θ), Opus 5.5). Η κλάση ήταν 4 σημεία, όχι μόνο το `formatAddressType`: `addresses:types/blockSides` (SSoT) + αντίγραφα `building-address`/`projects-data` (το ένα χωρίς `frontage` ⇒ ωμό κλειδί στις οθόνες κτιρίου) + ελληνικοί πίνακες `formatAddressType`/`formatBlockSide` + ελληνικές προτάσεις `validateAddress`. Τύποι παράγωγοι των ριζών + 2 ρίζες CHECK 3.73 · `useAddressVocabularyWords` (ΕΝΑ σημείο απόδοσης) · `AddressValidationIssue` · σβήστηκαν 2 νεκρές συναρτήσεις + 4 αντίγραφα locale. Άγκυρα `address-vocabulary-words.test.ts` Ω1–Ω4 · μεταλλάξεις 7/7. Νέο μπλοκ 🗂️ (namespaces κτιρίου ×92). |
+| 2026-10-29 | ✅ **📅′ «ΣΗΜΕΡΑ» ΣΕ UTC — 9 ΣΗΜΕΙΑ + ΜΙΑ ΖΩΝΗ ΕΛΛΑΔΑΣ + `report-date-utils` — ΕΚΛΕΙΣΑΝ** (ADR-919 · ADR-861 · ADR-ACC-010 · N.0.2, Opus 5.5). Audit ένα-ένα. 🔴 **Δύο πραγματικά σφάλματα πέρα από τη ζώνη**: (α) αναφορά CRM: `t.dueDate < today` συνέκρινε Firestore `Timestamp` με συμβολοσειρά ⇒ **ποτέ** ληξιπρόθεσμες εργασίες του `TasksRepository` (τώρα `operatorDayOf`, που δέχεται πλέον και `Timestamp`/`Date`)· (β) τιμολόγιο πώλησης: ημέρα έκδοσης **και `fiscalYear`** σε UTC ⇒ πώληση 1/1 00:00–02:00 στην ΠΡΟΗΓΟΥΜΕΝΗ χρήση (τώρα `accountingToday`). Server ⇒ `calendarDayOf`: `overdue-alert` (dedup) · `construction/portfolio` · `auto-scheduler`. Browser ⇒ `todayLocalDate`: `PermitsTab` (`max` απαγόρευε τη σημερινή) · `FrameworkAgreementFormDialog` (+ «ένα έτος» = `addMonthsToDateKey(·, 12)`) · `BaselineSection`. `report-date-utils`: όλα σε κλειδιά ημέρας, «τώρα» = Αθήνα, σύγκριση έτους 29/2 ⇒ 28/2, custom = υπαρκτές ημέρες (**400** αλλιώς), 5 έτη = 60 μήνες. `GREEK_TIME_ZONE` = `OPERATOR_TIME_ZONE` + συμβόλαιο `athensClockAt`/`calendarDayOf` (7 στιγμές αλλαγής ώρας). Μένουν (σημειωμένα στο 📅′): `cpm-calculator.emptyResult` · ονόματα αρχείων εξαγωγής. Jest 18/18 σουίτες, 295/295 (`--testTimeout=90000` λόγω share). ⚠️ `tsc` / `jscpd:diff` / browser **δεν** έτρεξαν. |
+| 2026-10-29 | ✅ **☎️#3 ΠΙΝΑΚΑΣ ΚΩΔΙΚΩΝ ΧΩΡΑΣ — ΕΚΛΕΙΣΕ** (ADR-327 §8.5.4, Opus 5.5). `parsePhoneForStorage` ⇒ `splitCountryCallingCode` (`lib/contact/channel-phone.ts`, libphonenumber). Ήταν το τελευταίο σημείο ⇒ αφαιρέθηκε όλο το μπλοκ ☎️. Μεταλλάξεις 3/3 · ai-pipeline 81/81. |
+| 2026-10-29 | ✅ **🏷️ DEPLOY `auditContactWrite` ΕΓΙΝΕ** (ADR-195 (η″), εντολή Giorgio). Ο γραφέας CDC με δηλωμένη ταυτότητα στοιχείου είναι ζωντανός· επαλήθευση με πραγματική γραμμή στην επόμενη αποθήκευση επαφής από τη φόρμα. |
+| 2026-10-29 | ✅ **📅′ ΚΑΤΑΛΟΙΠΑ «ΗΜΕΡΟΛΟΓΙΑΚΗ ΗΜΕΡΑ» — ΕΚΛΕΙΣΑΝ ΤΑ ΤΡΙΑ** (ADR-919 · ADR-234 · ADR-170 · ADR-861 · N.0.2, Opus 5.5). **(1) QR παρουσιών**: audit ⇒ ο ελεγκτής κρίνει μόνο `expiresAt`, όχι «σήμερα». Η προεπιλογή ημέρας → `calendarDayOf` (το σφάλμα ήταν QR της **χθεσινής** 00:00–03:00, όχι αυριανής) · ο `QrCodePanel` δεν στέλνει πια ημέρα UTC · `expiresAt` → `endOfCalendarDay` (μεσάνυχτα Αθήνας, όχι 02:59 της επομένης). **(2) «Τελευταία ημέρα μήνα»** → `daysInMonth` + `isoCalendarDay` σε 7 σημεία (3 λογιστικά + `validity-bounds` · `energy-reference-prices` · `useCalendarCrossMonthDrag`)· το `addMonthsToDateKey` → `lib/calendar/date-key`. **(3) Λήξη δόσης = ΗΜΕΡΑ** (απόφαση Giorgio: πρακτική των μεγάλων — QuickBooks/Xero · ΑΚ 241). Ανατρέπει τον κριτή στιγμής της γραμμής «`payment-plan` `dueDate`» πιο κάτω. SSoT `lib/payment-plan/installment-due-day.ts`, `operatorDayOf` (`accountingDayOf` = λεπτή κλήση), σύνορα που κανονικοποιούν σε ημέρα (μεταβατικά δέχονται και την παλιά στιγμή `Z`), ~14 αναγνώστες. **Αλλαγή συμπεριφοράς**: ληξιπρόθεσμη μόνο αφού περάσει η ημέρα λήξης στην Αθήνα · wizard 31/1 ⇒ 28/2 (όχι 3/3). Νέα κατάλοιπα στο 📅′: «σήμερα» σε UTC (~10 σημεία, καταγραφή) · δύο SSoT «ημέρα Αθήνας» · `shiftYearBack` 29/2 · **backfill λήξεων (εγγραφή στη βάση — απόφαση Giorgio)**. Jest: 22 σουίτες, 407 tests — 406 ✓ στην πρώτη εκτέλεση· το `payment-form-submission` Π1 έπεσε σε timeout 10 s υπό φόρτο, ✓ 11/11 με `--testTimeout=90000` (το Π1 θέλει 14 s κρύας φόρτωσης στο share). ⚠️ `tsc` / `jscpd:diff` / browser **δεν** έτρεξαν. |
+| 2026-10-29 | ✅ **🏷️ ΕΤΙΚΕΤΕΣ CDC ΕΠΑΦΗΣ — ΚΩΔΙΚΑΣ ΕΚΛΕΙΣΕ, ⏳ DEPLOY FUNCTIONS ΜΕ ΕΓΚΡΙΣΗ** (ADR-195 (η), Opus 5.5). Ο CDC παίρνει πλέον τη **δηλωμένη** ταυτότητα στοιχείου μέσω προβολής (CHECK 3.93): αλλαγή τύπου τηλεφώνου = ΜΙΑ αλλαγή ιδιότητας· η έδρα ΜΙΑ φορά (από την αυθεντία `customFields.companyAddresses` — **όχι** αγνόηση της, ήταν η αυθεντική λίστα)· ρόλος με κλειδί/λέξη· `lastModifiedBy` αγνοείται· λογότυπο `/api/storage/file/…` ⇒ «Φωτογραφία (0b2eb5a6.png)». Δύο λάθη `keyBy` στο SSoT (`personas`, `escoSkills`) διορθώθηκαν με άγκυρα. Μεταλλάξεις 9/9. Αφαιρέθηκε το μπλοκ 🏷️. Για το commit: άλλαξε το `common-audit.json` ⇒ `generate:i18n-types:index` + `generate:i18n-shell-slice:index`· τα `functions/src/generated/**` (3 νέα) μπαίνουν μαζί. |
+| 2026-10-29 | ✅ **🧷 `isPlainRecord` / `isFiniteNumber` — ΤΟΠΙΚΑ ΑΝΤΙΓΡΑΦΑ — ΕΚΛΕΙΣΕ** (ADR-225 Phase 2 · ADR-889 §11 · N.0.2, Opus 5.5). **27 ιδιωτικά αντίγραφα** (η καταγραφή της 28/09 έλεγε 11) → `@/lib/type-guards`: 17× «αντικείμενο, όχι πίνακας» (`isPlainObject` ×6 · `isRecord` ×11) → `isPlainRecord` · 7× `isFiniteNumber` · 3× `isRecord` που **δέχεται** πίνακα → το ίδιο το `isRecord` (σημασία αμετάβλητη). ΝΕΟ `plainRecordOrNull` (αδελφό του `trimmedStringOrNull`): 4 αναγνώστες «αντικείμενο ή `null`» (`objectOf` · `record` · `asRecord` · `fieldsOf`) σβήστηκαν — όλοι τελείωναν σε `value as Record<…>` ⇒ **κανένα cast** πια· τα 2 `fieldsOf` «ή `{}`» των ειδοποιήσεων = `plainRecordOrNull(v) ?? {}`. `isNode` (capture-api) · `isLoose` (ΓΕΜΗ) κρατούν όνομα/τύπο τομέα πάνω στο `isPlainRecord`· `demand-area.ringOf` επίσης. Νεκροί τύποι που άφησε η αφαίρεση σβήστηκαν (`Raw` · `DeclarationRecord` · `DocumentData` · `Json`). Κατάλοιπα (σκόπιμα) → μπλοκ «🧷′». Jest στοχευμένα· 2 κόκκινα στο `tour-access-contact.test.ts` **όχι δικά μας** (mock του `entity-audit.service` χωρίς `resolveUserDisplayName` — από τη δουλειά ADR-195 `performer-stamp`). `jscpd:diff` δεν τρέχει από UNC. |
+| 2026-10-29 | 🟡 **↩️ EOL — `layer-one-checks.normalize` → `text-eol`** (ADR-744 §30 · N.0.2, Opus 5.5): `toCanonicalText({ stripBom, trimEnd })` + ένα τελικό `\n` στον καλούντα. Εκτός κλειστότητας digest (μετρημένο) ⇒ καμία αλλαγή manifest. Μένει μόνο το `slice-build.toLf` — το manifest ήταν staged από άλλη συνεδρία ⇒ δεν αγγίχτηκε. Jest 145/145. |
+| 2026-10-29 | ✅ **🛣️ ΔΙΑΔΡΟΜΕΣ `/api/owner-properties/…` ΜΕ ΧΕΙΡΟΓΡΑΦΟ ΚΕΙΜΕΝΟ — ΕΚΛΕΙΣΕ** (ADR-245 · ADR-920 Β4.7 · N.0.2, Opus 5.5). `API_ROUTES.OWNER_PROPERTIES` +`LIST` · `BROKERED` · `STATS` · `OWNERSHIP_VERIFICATION` · `MANDATE_EVIDENCE` · `STAY_CALENDAR` · `STAY_CHANNELS` · `ENERGY_CERTIFICATE_IMPORT` και `PROPERTIES.ENERGY_CERTIFICATE_IMPORT`. Οι 5 γνωστοί πελάτες (`useOwnershipVerification` · `mandate-evidence.client` · `stay-calendar.client` · `stay-channels.client` · `useEnergyCertificateImportPorts` `importUrlOf`) + **4 που βρήκε το audit** (`owner-property.service` / `private-marketing.client` `API_BASE` · `mandate-catalog.client` `CATALOG_URL` · `listing-stats` `OWNER_PORTFOLIO_STATS_PATH`) εισάγουν από εκεί. Καμία αλλαγή URL. Jest στοχευμένα 246/246 + `listing-stats`· `jscpd:diff` δεν τρέχει από UNC (το τρέχει το pre-commit). |
 | 2026-10-29 | ✅ **📅′ `payment-plan` `dueDate` — ΕΚΛΕΙΣΕ** (ADR-234 · ADR-919, Opus 5.5). Απάντηση στο «ημέρα ή στιγμή;»: **στιγμή** — όλοι οι πελάτες στέλνουν `toISOString()` (wizard · επεξεργασία δόσης · split), άρα το `calendarDaySchema` θα έσπαγε τον wizard. Νέο `app/api/properties/_shared/installment-due-date.ts` (`z.string().datetime()`: υπαρκτή ημέρα + μόνο `Z`). Κλείνει **και δεύτερο σύνορο** εκτός λίστας: το `payment-plan/installments` POST/PATCH δεν έλεγχε καθόλου μορφή. ⚠️ Παρατήρηση (όχι διορθωμένη): ο wizard φτιάχνει τη λήξη από **τοπική** `Date` και το `edit-installment-model` την κόβει με `split('T')[0]` ⇒ κοντά στα μεσάνυχτα η οθόνη μπορεί να δείξει την **προηγούμενη** ημέρα. |
 | 2026-10-29 | ✅ **🆕 ΧΕΙΡΟΓΡΑΦΟ `'__new__'` (ΑΚΙΝΗΤΟ ΠΟΥ ΔΕΝ ΣΩΘΗΚΕ) — ΕΚΛΕΙΣΕ** (ADR-920 Β4.7 · N.0.2, Opus 5.5). Οι 4 γνωστοί αναγνώστες (`api/properties/[id]` PATCH · `PropertyDetailsContent` auto-save · `usePropertyMediaCounts` 2× · `UnitQuickCreateSheet`) → `lib/properties/unsaved-property`. Το audit βρήκε **5 ακόμη** εκτός λίστας: `property-mutation-gateway` (4 φρουροί) · `usePropertyMutationImpactGuard` → `isPersistedPropertyId`. **Τρία αντίγραφα της τιμής** έγιναν ένα: `UNSAVED_PROPERTY_ID` = `DRAFT_ENTITY_ID` (`lib/draft-entity-id`, ADR-777 §8.31.12) · `NEW_PROPERTY_SELECTION_ID` = `UNSAVED_PROPERTY_ID`. ΟΧΙ τα `'__new__'` κτιρίου (`TEMP_BUILDING_ID`) / μέλους (`MemberEditor`) / διεύθυνσης (`AddressMap`) — άλλη οντότητα. Jest στοχευμένα· `jscpd:diff` δεν τρέχει από UNC (το τρέχει το pre-commit). |
 | 2026-10-29 | ✅ **📅 ΕΛΕΓΧΟΣ «ΗΜΕΡΟΛΟΓΙΑΚΗ ΗΜΕΡΑ ISO» — ΕΚΛΕΙΣΕ** (ADR-919 · ADR-828 · N.0.2, Opus 5.5). Το audit βρήκε **περισσότερα** από τα ~14: **8 χειρόγραφους κριτές ύπαρξης** (`availability-window` · `date-local.isRealCalendarDay` · `operator-readiness` · `accounting-day` · `terrain-survey-declaration` · `calendar/date-key.isDateKey` · `survey-date` · `energy-certificate` τοπικό `calendarDaySchema`) + **12 που έλεγχαν μόνο σχήμα**. Νέο SSoT `lib/date/calendar-day.ts` (+ `calendar-day-schema.ts`, zod `refine` στον ίδιο κανόνα· άγκυρα ότι συμφωνεί με το `z.string().date()`). `daysInMonth`: ο Φεβρουάριος αριθμητικά (`Date.UTC(0,…)` = 1900 ⇒ το ISO `0000` έβγαινε μη δίσεκτο)· το `isLeapYear` του `tax-date-utils` → `calendar-arithmetic`. Το `date-local.isRealCalendarDay` **απέρριπτε λάθος** την `0099-01-01`. Σύνορα που αυστηροποιήθηκαν (400 / αγνοείται / απορρίπτεται / πετά): ADR-919 changelog. Το `quote-search.ts` της αρχικής λίστας **δεν υπάρχει πλέον**. Κατάλοιπα (catalog ADR-923 · `payment-plan` πρόθεμα · αντίγραφα «τελευταίας ημέρας» στα λογιστικά · QR σε UTC): 📅′. jest: 29+17 σουίτες, 610 + 314 ✓. ⚠️ `jscpd:diff` δεν τρέχει από UNC — το τρέχει το pre-commit. |
@@ -5534,90 +5678,66 @@ Closed via `hostWall.params.sceneUnits ?? 'mm'` frozen-context pattern σε **4 
 
 ---
 
-### ☎️ Ο ΤΥΠΟΣ ΤΗΛΕΦΩΝΟΥ ΑΠΟΦΑΣΙΖΕΤΑΙ ΑΚΟΜΗ ΧΕΙΡΟΓΡΑΦΑ ΕΞΩ ΑΠΟ ΤΟΝ SERVER — ADR-327 §8.5.4 · 2026-10-29
+### 🔗 Ανίχνευση πλατφόρμας από URL σε ΔΥΟ σώματα + ομώνυμο `SocialPlatform` στο σύστημα κοινοποίησης — ADR-327 §8.5.4 · 2026-10-30
 
-**Τι έκλεισε**: οι **τρεις** server αποφάσεις (`buildContactDocument` · `updateContactField` · `resolvePhoneType`) ρωτούν
-πλέον το SSoT `src/server/lib/phone-line-type.ts` (`inferPhoneType`, libphonenumber `/max`). **Τι μένει** (δεν διορθώθηκε,
-N.0.2 — 4+ αρχεία, δύο περιοχές):
-3. **Χειρόγραφος πίνακας κωδικών χώρας** στο `parsePhoneForStorage` (`contact-document-builder.ts`, CC3/CC2 λίστες) —
-   δεύτερος ορισμός της γνώσης του libphonenumber (ίδιο σχήμα με το `channel-phone.ts` §«ΓΙΑΤΙ ΒΙΒΛΙΟΘΗΚΗ»). Θέλει
-   προσοχή: αλλάζει το σχήμα αποθήκευσης (`countryCode` + `number`) — καλύπτεται από `contact-lookup.test.ts`.
-
-➕ **29/10 (β) — έκλεισαν τα παλιά 1 και 2.** Η βάση του 2 ήταν **λάθος**: το UI ξέρει `main/department/…` (overrides
-εταιρείας/υπηρεσίας)· **ο τύπος `PhoneInfo` και ο server** δεν τα ήξεραν. Ρίζα `lib/contact/phone-type-vocabulary.ts`
-(`PHONE_TYPES` + `PHONE_TYPES_BY_OWNER` + `DEFAULT_PHONE_TYPE`, CHECK 3.73 `phone-type`)· δεμένα: `PhoneInfo`/`OrgPhoneInfo`/
-`PhoneEntry`, `CommunicationConfigs`, ετικέτες, χάρτες AI, `inferPhoneType` (εταιρεία/υπηρεσία ⇒ `main`), εφεδρείες πελάτη
-(mappers · sanitizer · εισαγωγή λίστας), Ιστορικό (`PHONE_TYPE_DISPLAY`). Μένει μόνο το 3.
+Βρέθηκε κατά το κλείσιμο του 💬. (α) `components/contacts/dynamic/communication/utils/socialUrlGenerator.ts` `detectPlatformFromUrl`
+(7 πλατφόρμες, χειρόγραφα `hostname.includes`) ↔ `lib/social-platform-system/platform-utils.ts` `detectPlatformFromUrl` (όλο το μητρώο).
+Ο πρώτος δεν έχει εξωτερικούς καταναλωτές πέρα από το barrel `communication/utils/index.ts`. (β) `lib/social-platform-system/profile-service.ts:547`
+`export type SocialPlatform = SocialPlatformType` — **ομώνυμο** της ρίζας με **άλλο** σύνολο (έχει `email`, όχι `other`), επανεξάγεται από
+το `social-platform-system/index.ts`. Θεραπεία: ο generator να αναθέτει στο `platform-utils` (ή να διαγραφεί αν το barrel δεν έχει καταναλωτή)·
+το ομώνυμο να μετονομαστεί ή να σβηστεί. **Κλείνει όταν**: `grep -rn "export type SocialPlatform =" src` δεν δίνει τίποτα και υπάρχει μία
+`detectPlatformFromUrl`. ~1 ώρα, 2 τομείς.
 
 ---
 
-### 🧑′ Μαζικές μεταπτώσεις επαφών ΧΩΡΙΣ σφραγίδα φορέα — ADR-195 · 2026-10-29
+### 🧭 Κόκκινο `proximity-anchor-reach.test.ts` από test harness — ADR-332 D25 · 2026-10-29
 
-Το 🧑 έκλεισε για κάθε **runtime** γραφέα (`server/lib/performer-stamp.ts`, άγκυρα
-`server/lib/__tests__/contact-writer-performer-stamp.test.ts`). Μένουν οι **μεταπτώσεις** που γράφουν επαφές μέσω
-`flushInBatches` / `batch.update(doc.ref)` χωρίς `ctx` (ο envelope του ADR-704 δεν τον περνά): `migrate-address-labels` ·
-`migrate-postal-codes` · `search-backfill` (`migrateContactTenants`). Κάθε εκτέλεση γεννά γραμμές CDC με `cdc_unknown`.
-**Γιατί pending (N.0.2)**: θέλει αλλαγή του envelope (ADR-704) ώστε να δίνει φορέα σε κάθε μετάπτωση — 4+ αρχεία, άλλη περιοχή.
-**Θεραπεία**: ο envelope δίνει `AuditPerformer` (ο διαχειριστής που την τρέχει) και το `flushInBatches` προσθέτει `performerStamp`
-όταν η συλλογή είναι CDC-παρακολουθούμενη (`audit-cdc-coverage`). Η άγκυρα πρέπει τότε να καλύψει και τη μορφή `doc.ref`.
-**Κλείνει όταν**: μετάπτωση σε δοκιμαστική επαφή ⇒ γραμμή Ιστορικού «από <διαχειριστή>».
+Το `src/app/(bare)/test-harness/address-field-width/AddressFieldWidthHarness.tsx` (ADR-332 D27 Ζ7 · CHECK 3.82, 13/09)
+μοντάρει `<AddressWithHierarchy>` χωρίς αφετηρία εγγύτητας ⇒ η άγκυρα D25 «κάθε σημείο μονταρίσματος δηλώνει αφετηρία ή
+είναι εξαίρεση» είναι κόκκινη (προϋπήρχε, βρέθηκε στο 🏷️′). Το κλειστό σύνολο λόγων (`'no-position-in-model'`) δεν ταιριάζει,
+και η ψεύτικη καλωδίωση απαγορεύεται από την ίδια την άγκυρα. Απόφαση ADR-332: (α) η σάρωση εξαιρεί τα `test-harness/**`
+(δεν είναι οθόνες ανθρώπου) ή (β) νέος λόγος εξαίρεσης «μετρά άλλη διάσταση», με έλεγχο που μπορεί να πάψει να ισχύει.
 
 ---
 
-### 🧩 Το πρωτόκολλο εντολής διαχειριστή είναι αντιγραμμένο σε 11 UC modules — N.0.2 · CHECK 3.28 · 2026-10-29
+### 🪦 Νεκρή εξαγωγή `ACTIVITY_TYPE_OPTIONS` — θέλει `git rm` (Giorgio) · 2026-10-29
 
-Πρόταση μίας αυτόματα εγκρίσιμης ενέργειας · επιλογή της εγκεκριμένης στην εκτέλεση · επιβεβαίωση από παρενέργειες:
-αυτολεξεί ίδια σε **13** modules (`grep -rl "modifiedActions ?? ctx.proposal?.suggestedActions" services/ai-pipeline/modules`).
-Τα uc-015/uc-016 πέρασαν στο `services/ai-pipeline/shared/admin-command-protocol.ts` (το CHECK 3.28 μπλόκαρε το άγγιγμά τους).
-**Γιατί pending**: 11 αρχεία, >1 ώρα. **Θεραπεία**: κάθε module περνά στα `autoApprovedProposal` · `approvedAction` ·
-`acknowledgeBySideEffect` όταν αγγιχτεί. **Κλείνει όταν**: το παραπάνω grep δίνει μόνο το `admin-command-protocol.ts`.
-
----
-
-### 🏷️ Ετικέτες CDC επαφής: ωμά κλειδιά και τιμές στο Ιστορικό — ADR-195 · 2026-10-29
-
-**Μετρημένο ζωντανά** (MACON ATEE): `displayName: — → MACON ATEE`, `lastModifiedBy: — → Χρήστης` (ωμά κλειδιά, και το
-`lastModifiedBy` δεν είναι αλλαγή που ενδιαφέρει άνθρωπο), «Προστέθηκε Ρόλοι (Personas): (άγνωστο)», `2310428900 — mobile`
-(ωμός τύπος στο `itemLabel`), λογότυπο ως εσωτερικό URL `/api/storage/file/…`. Πού: `functions/src/audit/ignored-fields.ts`
-(`lastModifiedBy` χωρίς `_` δεν αγνοείται) + `labelFields`/`itemLabel` του CDC + ετικέτες πεδίων. **Θέλει deploy Functions.**
-➕ **29/10 (γ)** — μετρημένο ζωντανά: αλλαγή **ενός** πεδίου στοιχείου πίνακα (τύπος τηλεφώνου `mobile → main`) φαίνεται ως
-«Αφαιρέθηκε Τηλέφωνα: 2310428900 — mobile» + «Προστέθηκε Τηλέφωνα: 2310428900 — main» (διαφορά ολόκληρου αντικειμένου, όχι
-κατά ταυτότητα στοιχείου). Και `customFields.companyAddresses` εμφανίζεται ως ωμό κλειδί. Ίδιο deploy Functions.
+Το `src/config/company-gemi/options/activity-types.ts` (`ACTIVITY_TYPE_OPTIONS`, re-export σε `company-gemi/options/index.ts`
+και `company-gemi/index.ts`) **δεν το αποδίδει καμία φόρμα** (μετρημένο με Grep, ADR-195 (ι)). Στο 🏷️′ #2 έγινε παράγωγο της
+ρίζας `KAD_ACTIVITY_TYPES`, ώστε να μη μένει δεύτερο λεξιλόγιο. Η διαγραφή του αρχείου απαγορεύεται στον πράκτορα (κοινό
+working tree). Θεραπεία: `git rm` του αρχείου + αφαίρεση των 2 re-exports.
 
 ---
 
-### 💬 Η «πλατφόρμα social» είναι ΔΙΑΤΟΜΕΑΚΟ λεξιλόγιο χωρίς ρίζα — ADR-327 §8.5.4 · 2026-10-29
+### 🗂️ (β) Κάθε component ζητά ΜΟΝΟ τα namespaces των κλειδιών του — ADR-280 §11.5 · 2026-10-30
 
-Η ρίζα `SOCIAL_PLATFORMS` (`lib/contact/social-media-type-vocabulary.ts`) δένει πλέον τις Επαφές (`SocialMediaInfo.platform`,
-ετικέτες, χάρτης AI, mapper). Με δοκιμαστική εγγραφή στο CHECK 3.73 (κατώφλι 6) η πύλη βρήκε **9 αδέσμευτα σώματα σε 5 αρχεία
-και 4 τομείς**: `property-showcase/types.ts` + `ShowcaseHeader.tsx` (`ShowcaseSocialPlatform`, 7 τιμές) ·
-`services/company/company-branding-resolver.ts` (ΔΕΥΤΕΡΟ `ShowcaseSocialPlatform` + `SOCIAL_PLATFORMS` + `SOCIAL_BASE_URL` —
-διαβάζει τα social της **επαφής** εταιρείας και κάνει `tiktok/whatsapp/telegram` ⇒ `other`) ·
-`services/email-templates/base-email-template.ts` (`EmailSocialPlatform` + `SOCIAL_DISPLAY`) ·
-`lib/social-platform-system/platform-config*.ts` (`SocialPlatformType` — στόχοι **κοινοποίησης**, έχει και `email`: άλλο
-λεξιλόγιο, θέλει δηλωμένη εξαίρεση με λόγο) · `contacts/.../socialUrlGenerator.ts` (`SocialPlatform`, 7 τιμές). Θεραπεία:
-`Extract<SocialPlatform, …>` για τα υποσύνολα της βιτρίνας/branding/email, ένα `ShowcaseSocialPlatform` αντί για δύο, εγγραφή
-`social-platform` στο `.domain-vocabulary.json`. **>1 ώρα, 4 τομείς** ⇒ εδώ (N.0.2).
+Το επίπεδο (α) έκλεισε (CHECK 3.108: μία δήλωση οικογένειας). Μένει το (β), που είναι το «σωστό στο τέλος».
+
+**Μετρημένο:**
+- **~85%** των αρχείων χρειάζονται **ένα** namespace της οικογένειας, αλλά φορτώνουν όλη την οικογένεια
+  (κτίριο: ~164 KB αντί για 8–47 KB).
+- ~25% έχουν δυναμικά κλειδιά.
+
+**Θεραπεία:**
+- Γεννήτορας που παράγει τη δήλωση από τα κλειδιά, με τον ταξινομητή AST του CHECK 3.34 (`key-extract.js`) και το
+  `requestOf` του 3.108 για τη διαφυγή του `t`.
+- Πύλη «περιττό namespace» (ratchet), ώστε η δήλωση να **επαληθεύεται** και προς τις δύο κατευθύνσεις μαζί με το
+  CHECK 3.8.
+
+**Τα 5 `order-bearing` της baseline `.i18n-namespace-family-baseline.json`** λύνονται εδώ, με ρητό `ns` στο κλειδί
+που συγκρούεται:
+
+| Αρχείο | Κλειδί που συγκρούεται |
+|---|---|
+| `SalesAvailablePropertiesPageContent` | `status.pending` |
+| `SalesSoldPageContent` | `status.pending` |
+| `StoragePageContent` | `storages.*` |
+| `PropertyDetailsContent` | `filters.allTypes` |
+| `ReadOnlyMediaViewer` | `filters.title` |
+
+**Ανοιχτά:**
+- Typed keys (`CustomTypeOptions`): ξεχωριστή, μεγάλη απόφαση.
+- **Εκτίμηση:** >1 ώρα, ~500 αρχεία ⇒ N.8: Plan Mode / Orchestrator με απόφαση Giorgio.
 
 ---
 
-### 🏷️′ Τρία κατάλοιπα που βρέθηκαν στο 🌐 (ADR-195 (ζ)) — N.11 · 2026-10-29
-
-1. **`types/project/address-helpers.ts` `formatAddressType`**: ελληνικός πίνακας μέσα σε `.ts`, με όρισμα `locale` που
-   **αγνοείται**. Οι λέξεις υπάρχουν ήδη στο `addresses:types.*` (το Ιστορικό τις διαβάζει πλέον από εκεί). Θεραπεία:
-   οι καλούντες του περνούν `t` / εκτοπίζεται από το `addresses:types`. Grep τους καλούντες πριν.
-2. **Δύο λεξιλόγια για «κύρια/δευτερεύουσα δραστηριότητα»**: `KadActivity.type` = `primary|secondary`
-   (`KAD_ACTIVITY_TYPES`, λέξεις `forms:kad.types.*`) ενώ το `config/vocabulary/options/company.ts` δηλώνει
-   `options.activityTypes.{main,secondary}` (μέσω `ACTIVITY_TYPE_OPTIONS` του GEMI). Να ελεγχθεί ποιο πεδίο αποθηκεύει
-   `main` και αν είναι το ίδιο νόημα ⇒ ΕΝΑ λεξιλόγιο (CHECK 3.73).
-3. **Παλιές εγγραφές `energy` ως ενιαίο αντικείμενο** (πριν το ADR-777 §8.94): το πεδίο δεν έχει πια περιγραφέα ⇒ τα κλειδιά
-   του (`class`…) φαίνονται ωμά. Το λεξιλόγιο υπάρχει (`common-audit:audit.fields.energyCertificate.*`)· θέλει δήλωση
-   «αποσυρμένου» πεδίου με `nestedKeyCatalog` ή απόφαση ότι μένει στιγμιότυπο.
-
----
-
-### 🧪 Παλιωμένη πρόθεση άγκυρας: `record-entity-update.test.ts` Γ4 — ADR-195 · 2026-10-29
-
-Το Γ4 λέγεται «οντότητα **χωρίς μητρώο** ⇒ καμία γραμμή» αλλά χρησιμοποιεί `quote`, που **έχει** μητρώο (`status`, και από
-29/10 `vendorContactId`). Περνά μόνο επειδή το `name` δεν παρακολουθείται ⇒ δεν κρίνει πια αυτό που λέει. Θεραπεία: τύπος
-χωρίς μητρώο (δες `getTrackedFieldsForEntityAuditType` → `null`).

@@ -15,10 +15,7 @@
 
 import 'server-only';
 
-import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
-import { getErrorMessage } from '@/lib/error-utils';
-import { sendChannelReply, extractChannelIds } from '../../shared/channel-reply-dispatcher';
 import { generateAdminConversationalReply } from '../../shared/ai-reply-generator';
 import type {
   IUCModule,
@@ -28,6 +25,7 @@ import type {
   AcknowledgmentResult,
   PipelineIntentTypeValue,
 } from '@/types/ai-pipeline';
+import { acknowledgeBySideEffect, approvedAction, autoApprovedProposal, failedExecution, sendCommandReply } from '../../shared/admin-command-protocol';
 
 const logger = createModuleLogger('UC_014_ADMIN_FALLBACK');
 
@@ -77,31 +75,16 @@ export class AdminFallbackModule implements IUCModule {
   // ── Step 4: PROPOSE ──
 
   async propose(ctx: PipelineContext): Promise<Proposal> {
-    return {
-      messageId: ctx.intake.id,
-      suggestedActions: [
-        {
-          type: 'admin_fallback_reply',
-          params: {
-            helpText: ADMIN_HELP_TEXT,
-            channel: ctx.intake.channel,
-            telegramChatId: (ctx.intake.rawPayload.chatId as string) ?? null,
-          },
-        },
-      ],
-      requiredApprovals: [],
-      autoApprovable: true,
-      summary: 'Admin: Εντολή δεν αναγνωρίστηκε — αποστολή βοηθητικού μηνύματος',
-      schemaVersion: PIPELINE_PROTOCOL_CONFIG.SCHEMA_VERSION,
-    };
+    return autoApprovedProposal(ctx, 'admin_fallback_reply', {
+      helpText: ADMIN_HELP_TEXT,
+    }, 'Admin: Εντολή δεν αναγνωρίστηκε — αποστολή βοηθητικού μηνύματος');
   }
 
   // ── Step 6: EXECUTE ──
 
   async execute(ctx: PipelineContext): Promise<ExecutionResult> {
     try {
-      const actions = ctx.approval?.modifiedActions ?? ctx.proposal?.suggestedActions ?? [];
-      const action = actions.find(a => a.type === 'admin_fallback_reply');
+      const action = approvedAction(ctx, 'admin_fallback_reply');
 
       // ── Conversational AI: check pre-generated reply from tool calling first ──
       const originalMessage = ctx.intake.normalized.contentText ?? '';
@@ -125,35 +108,16 @@ export class AdminFallbackModule implements IUCModule {
         }
       }
 
-      const replyResult = await sendChannelReply({
-        channel: ctx.intake.channel,
-        ...extractChannelIds(ctx),
-        subject: 'Admin Assistant',
-        textBody: replyText,
-        requestId: ctx.requestId,
-      });
-
-      if (replyResult.success) {
-        sideEffects.push(`reply_sent:${replyResult.messageId ?? 'unknown'}`);
-      } else {
-        sideEffects.push(`reply_failed:${replyResult.error ?? 'unknown'}`);
-      }
-
-      return { success: true, sideEffects };
+      return await sendCommandReply(ctx, 'Admin Assistant', replyText, sideEffects);
     } catch (error) {
-      const errorMsg = getErrorMessage(error);
-      logger.error('UC-014 EXECUTE: Failed', { requestId: ctx.requestId, error: errorMsg });
-      return { success: false, sideEffects: [], error: errorMsg };
+      return failedExecution(ctx, 'UC-014', logger, error);
     }
   }
 
   // ── Step 7: ACKNOWLEDGE ──
 
   async acknowledge(ctx: PipelineContext): Promise<AcknowledgmentResult> {
-    const replySent = ctx.executionResult?.sideEffects?.some(
-      (se: string) => se.startsWith('reply_sent:')
-    ) ?? false;
-    return { sent: replySent, channel: ctx.intake.channel };
+    return acknowledgeBySideEffect(ctx, 'reply_sent:');
   }
 
   async healthCheck(): Promise<boolean> {

@@ -28,9 +28,12 @@ const P = require('./lib/font-promise/promise');
 const ROOT = ratchet.PROJECT_ROOT;
 const BASELINE_FILE = path.join(ROOT, '.font-promise-baseline.json');
 
-/** ⚠️ Πλήρης έλεγχος ~15ms (2 αρχεία + N `existsSync`) — καμία σκανδάλη, καμία μερική ανάλυση. */
-function measure() {
-  const inv = P.takeInventory(ROOT);
+/**
+ * ⚠️ Πλήρης έλεγχος ~15ms (2 αρχεία + N `existsSync`) — καμία σκανδάλη, καμία μερική ανάλυση.
+ * `opts.input` = η είσοδος (ADR-924) — προεπιλογή ο δίσκος· ο εκτελεστής δίνει την όψη του commit.
+ */
+function measure(opts = {}) {
+  const inv = P.takeInventory(ROOT, {}, opts.input);
   const verdict = P.judge(inv);
   const blocking = verdict.rows.filter((r) => P.BLOCKING.includes(r.state));
   return {
@@ -111,27 +114,21 @@ function enforceZeroTolerance(argv, measureFn = measure) {
 }
 
 if (require.main === module) {
-  enforceZeroTolerance(process.argv.slice(2));
-  ratchet.runSetRatchetCli({
+  // ΜΙΑ είσοδος, ΜΙΑ μέτρηση· ο φρουρός ΠΡΙΝ το ratchet (ADR-924 §8.8 — η σειρά ζει στο SSoT)
+  ratchet.runZeroTolerantSetRatchetCli({
     adr: 'ADR-803 (CHECK 3.67)',
     skipEnv: 'SKIP_FONT_PROMISE',
     baselineFile: BASELINE_FILE,
     labels: { violations: 'ανεκπλήρωτες υποσχέσεις', declarations: 'δηλωμένες συνθετικές' },
-    commands: {
-      report: 'npm run font-promise:report',
-      baseline: 'npm run font-promise:baseline',
-      seed: 'npm run font-promise:baseline',
-    },
-    measure,
+    commands: ratchet.npmRatchetCommands('font-promise'),
+    measure: (_args, input) => measure({ input }),
     buildPayload,
     printReport,
-    violationId: (f) => f.id,
     messages: {
       worse: 'νέα όψη υπόσχεται χωρίς να φορτώνεται, ή αρχείο που λείπει',
       newDeclLabel: 'νέα δήλωση «συνθέτει ο browser»',
-      newDeclAdvice: [],
     },
-  });
+  }, enforceZeroTolerance);
 }
 
 module.exports = { measure, buildPayload, printReport, enforceZeroTolerance, BASELINE_FILE };

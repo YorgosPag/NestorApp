@@ -24,23 +24,14 @@ NC='\033[0m'
 # 🔴 Μετρημένο 2026-10-29: commit με ΚΑΘΑΡΟ σταδιοποιημένο `audit-value-vocabularies.ts` μπλοκαρίστηκε
 #    για ελληνικό `throw` που ζούσε ΜΟΝΟ σε ξένη αστάδιοποίητη δουλειά στο ίδιο αρχείο.
 # Χωρίς τη σημαία: ο δίσκος (σουίτα · χειροκίνητη εκτέλεση σε αρχεία εκτός ευρετηρίου).
-INDEX_MODE=0
-if [[ "$1" == "--index" ]]; then
-    INDEX_MODE=1
-    shift
-fi
+# Η είσοδος (`has_source` · `read_source`) ζει ΜΙΑ φορά, κοινή με 3.9 · 3.10 (ADR-924 Φ3).
+# shellcheck source=lib/commit-source.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/commit-source.sh"
+commit_source_parse "$@"
+set -- "${COMMIT_SOURCE_ARGS[@]}"
 
 FILES="$@"
 BASELINE_FILE=".i18n-ui-strings-baseline.json"
-
-# Υπάρχει το αρχείο στην πηγή που κρίνεται;
-has_source() {
-    if [[ "$INDEX_MODE" -eq 1 ]]; then
-        git cat-file -e ":$1" 2>/dev/null
-    else
-        [[ -f "$1" ]]
-    fi
-}
 VIOLATIONS=""
 RATCHET_UPDATES=""
 HAS_BLOCK=0
@@ -68,11 +59,7 @@ HAS_BLOCK=0
 #    ΚΑΙ `/* */`, κρατά offsets + αλλαγές γραμμής, και δεν τρώει το `//` ενός URL σε string.
 STRIP_FROM_STDIN="let s='';process.stdin.setEncoding('utf8');process.stdin.on('data',c=>{s+=c}).on('end',()=>process.stdout.write(require('./scripts/lib/i18n-namespace-extract').stripComments(s)))"
 strip_comments() {
-    if [[ "$INDEX_MODE" -eq 1 ]]; then
-        git show ":$1" 2>/dev/null | node -e "$STRIP_FROM_STDIN" 2>/dev/null
-    else
-        node -e "$STRIP_FROM_STDIN" < "$1" 2>/dev/null
-    fi
+    read_source "$1" | node -e "$STRIP_FROM_STDIN" 2>/dev/null
 }
 
 # Hardcoded UI violations of a file as `line:text`, one per line, sorted by line.

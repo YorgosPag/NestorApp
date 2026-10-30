@@ -81,8 +81,8 @@ const cellKey = (c) => `${c.persona}:${c.operation}`;
  *   expired: { collection: string, cell: string, review: string, owner: string }[],
  * }}
  */
-function measure(today = new Date().toISOString().slice(0, 10)) {
-  const { coverage } = loadCoverageManifest();
+function measure(today = new Date().toISOString().slice(0, 10), input = null) {
+  const { coverage } = loadCoverageManifest(input);
 
   /**
    * builder → κελί → πόσες συλλογές το εξαιρούν.
@@ -259,8 +259,9 @@ function compare(current, baseline) {
  *
  * @returns {{ violations: string[], warnings: string[], notes: string[], current: object }}
  */
-function validateCompleteness() {
-  const current = measure();
+/** `input` = η είσοδος (ADR-924) — με `--index`: μητρώο (ζώνη ασφαλείας) και baseline ΤΟΥ COMMIT. */
+function validateCompleteness(input = null) {
+  const current = measure(undefined, input);
   const violations = [];
   const warnings = [];
 
@@ -279,7 +280,7 @@ function validateCompleteness() {
     );
   }
 
-  const baseline = loadBaseline(BASELINE_FILE);
+  const baseline = loadBaseline(BASELINE_FILE, [], input);
   const { violations: ratchet, notes } = compare(current, baseline);
   violations.push(...ratchet);
 

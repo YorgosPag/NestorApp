@@ -27,12 +27,9 @@
 
 'use strict';
 
-const fs = require('fs');
-const path = require('path');
-
 const ast = require('./lib/write-authority/ast');
-const { collectSourceFiles } = require('./lib/module-graph/scan-config');
-const { toPosix } = require('./lib/module-graph/resolve-specifier');
+const { openGateInput } = require('./lib/gate-input');
+const { defineScanGate } = require('./lib/write-authority/gate-runner');
 
 const { ts, PROJECT_ROOT } = ast;
 const FLOORS = 'COLLECTIONS.FLOORS';
@@ -63,7 +60,7 @@ const exemptions = ast.exemptionsFor('floor-stack-authority-exempt');
 
 const STATES = {
   STACK_WRITER: 'declared-stack-writer',
-  EXEMPT: 'exempt-with-reason',
+  EXEMPT: ast.EXEMPTION_STATES.EXEMPT,
   BORN_OUTSIDE: 'floor-born-outside-boundary',
   REMOVED_OUTSIDE: 'floor-removed-outside-boundary',
   SLOT_WRITE: 'slot-field-written-outside-boundary',
@@ -71,7 +68,7 @@ const STATES = {
   NO_COMPANION: 'versioned-floor-update-without-companion',
   BOUNDARY_UNASKED: 'stack-boundary-unasked',
   DIRECT_DOOR_OPEN: 'direct-write-door-open',
-  EXEMPT_NO_REASON: 'exempt-without-reason',
+  EXEMPT_NO_REASON: ast.EXEMPTION_STATES.EXEMPT_NO_REASON,
   SOURCE_DRIFT: 'source-drift',
 };
 const BLOCKING = [
@@ -144,11 +141,7 @@ function entityDoorOf(call) {
 
 function classify(sf, node, rel, state) {
   if (STACK_WRITERS[rel]) return { state: STATES.STACK_WRITER, file: rel };
-  const reason = exemptions.reasonAbove(sf, node);
-  if (reason === null) return { state, file: rel, line: ast.lineOf(sf, node), detail: DETAIL[state] };
-  return reason.length > 0
-    ? { state: STATES.EXEMPT, file: rel }
-    : { state: STATES.EXEMPT_NO_REASON, file: rel, line: ast.lineOf(sf, node), detail: 'εξαίρεση ΧΩΡΙΣ λόγο' };
+  return exemptions.classify(sf, node, rel, state, DETAIL[state]);
 }
 
 /** Κ1 + Κ2 + Κ3 για ένα αρχείο. */
@@ -168,9 +161,9 @@ function findingsIn(sf, rel) {
 }
 
 /** Κ4 + Κ5 + ύπαρξη δηλωμένων αρχείων. */
-function wiringFindings(root) {
+function wiringFindings(root, input = openGateInput({ root })) {
   const findings = [];
-  const read = (rel) => (fs.existsSync(path.join(root, rel)) ? fs.readFileSync(path.join(root, rel), 'utf8') : null);
+  const read = (rel) => input.read(rel);
   for (const [writer, proof] of Object.entries(STACK_WRITERS)) {
     const text = read(writer);
     if (text === null) findings.push({ state: STATES.SOURCE_DRIFT, file: writer, detail: 'δηλωμένο αρχείο που ΔΕΝ ΥΠΑΡΧΕΙ' });
@@ -208,50 +201,21 @@ function directDoorOpen(text) {
 
 const RELEVANT = /COLLECTIONS\.FLOORS|createEntity\(|executeDeletion\(/;
 
-function measure(opts = {}) {
-  const root = opts.root || PROJECT_ROOT;
-  const files = (opts.codeFiles || collectSourceFiles(root, ['src'])).filter((f) => !/__tests__|\.test\.|\.spec\./.test(f));
-  if (!opts.codeFiles && files.length < 1000) throw new Error(`ΦΡΟΥΡΟΣ: μόνο ${files.length} αρχεία — η σάρωση δεν κοίταξε`);
-  const findings = [];
-  for (const abs of files) {
-    let text;
-    try { text = fs.readFileSync(abs, 'utf8'); } catch { continue; }
-    if (!RELEVANT.test(text)) continue;
-    findings.push(...findingsIn(ast.sourceFileOf(abs, text), toPosix(path.relative(root, abs))));
-  }
-  findings.push(...(opts.skipWiring ? [] : wiringFindings(root)));
-  const tally = Object.fromEntries(Object.values(STATES).map((s) => [s, findings.filter((f) => f.state === s).length]));
-  return { findings, tally, examined: files.length };
-}
-
-function report(result, log = console.log) {
-  const { tally, findings } = result;
-  log('');
-  log('🏢 CHECK 3.102 — Πύλη της αρχής της στοίβας ορόφων (ADR-910)');
-  log(`   αρχεία που εξετάστηκαν: ${result.examined}`);
-  log('');
-  for (const s of BLOCKING) log(`   ⛔ ${s.padEnd(42)} ${tally[s]}`);
-  for (const s of [STATES.STACK_WRITER, STATES.EXEMPT]) log(`   ✅ ${s.padEnd(42)} ${tally[s]}`);
-  const blocking = findings.filter((f) => BLOCKING.includes(f.state));
-  for (const f of blocking) log(`   ⛔ ${f.state}  ${f.file}${f.line ? ':' + f.line : ''}\n        ${f.detail}`);
-  if (blocking.length) {
-    log('\n   ΘΕΡΑΠΕΙΑ: νέος όροφος → `writeFloorBirth` · αφαίρεση → `removeFloor` · αριθμός/είδος/όνομα →');
-    log('   `withFloorStack` ή ο συνοδός `floorSlotCompanion`. ⚠️ ΜΗΝ προσθέσεις γραφέα στο STACK_WRITERS «επειδή βολεύει».');
-  }
-  return blocking.length;
-}
-
-function main() {
-  if (process.env.SKIP_FLOOR_STACK_AUTHORITY === '1') {
-    console.log('⏭️  CHECK 3.102 παραλείφθηκε (SKIP_FLOOR_STACK_AUTHORITY=1)');
-    return 0;
-  }
-  const blocking = report(measure());
-  console.log(blocking > 0
-    ? `\n❌ CHECK 3.102 ΑΠΕΤΥΧΕ — ${blocking} μπλοκάρουσα(ες) παραβίαση(εις)\n`
-    : '\n✅ CHECK 3.102 — κάθε αλλαγή της στοίβας ορόφων περνά από το σύνορο\n');
-  return blocking > 0 ? 1 : 0;
-}
+const { measure, report, main } = defineScanGate({
+  projectRoot: PROJECT_ROOT, relevant: RELEVANT, findingsIn, wiringFindings, states: STATES,
+  check: '3.102', skipEnv: 'SKIP_FLOOR_STACK_AUTHORITY',
+  ok: 'κάθε αλλαγή της στοίβας ορόφων περνά από το σύνορο',
+  report: {
+    title: '🏢 CHECK 3.102 — Πύλη της αρχής της στοίβας ορόφων (ADR-910)',
+    blocking: BLOCKING,
+    healthy: [STATES.STACK_WRITER, STATES.EXEMPT],
+    width: 42,
+    remedy: [
+      'ΘΕΡΑΠΕΙΑ: νέος όροφος → `writeFloorBirth` · αφαίρεση → `removeFloor` · αριθμός/είδος/όνομα →',
+      '`withFloorStack` ή ο συνοδός `floorSlotCompanion`. ⚠️ ΜΗΝ προσθέσεις γραφέα στο STACK_WRITERS «επειδή βολεύει».',
+    ],
+  },
+});
 
 if (require.main === module) process.exit(main());
 

@@ -22,12 +22,12 @@
 
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
 
 const { findRawFallbacks } = require('./lib/i18n-raw-fallback/detect');
 const { inScope, walkScope, compare, totals, normalize } = require('./lib/i18n-raw-fallback/ratchet');
 const { PROJECT_ROOT, loadBaseline, writeBaselineFile } = require('./lib/ratchet-baseline');
+const { openGateInput, INDEX_FLAG } = require('./lib/gate-input');
 
 const ROOT = process.env.I18N_RAW_FALLBACK_ROOT || PROJECT_ROOT;
 const BASELINE = process.env.I18N_RAW_FALLBACK_BASELINE_FILE || path.join(ROOT, '.i18n-raw-fallback-baseline.json');
@@ -37,13 +37,13 @@ const YELLOW = '\x1b[1;33m';
 const NC = '\x1b[0m';
 
 /** `{ counts: { file: n }, details: { file: [{line,text}] } }` — μόνο αρχεία με ευρήματα. */
-function scan(files) {
+function scan(files, input = openGateInput({ root: ROOT })) {
   const counts = {};
   const details = {};
   for (const file of files) {
-    const abs = path.join(ROOT, file);
-    if (!fs.existsSync(abs)) continue;
-    const text = fs.readFileSync(abs, 'utf8');
+    // ADR-924 — το κείμενο ΤΗΣ ΟΨΗΣ: με `--index` το σταδιοποιημένο, όχι μια ξένη αστάδιοποίητη αλλαγή.
+    const text = input.read(file);
+    if (text === null) continue;
     // Πρόφιλτρο ΧΩΡΙΣ απώλεια: εύρημα απαιτεί το όνομα `defaultValue` στο κείμενο (και η shorthand μορφή).
     if (!text.includes('defaultValue')) continue;
     const found = findRawFallbacks(text, file);
@@ -94,16 +94,17 @@ function main(argv = process.argv) {
   const args = argv.slice(2);
   if (args.includes('--write-baseline')) return writeBaseline();
   const scope = args.includes('--all') ? 'all' : 'staged';
-  const files = scope === 'all' ? walkScope(ROOT) : args.filter((a) => !a.startsWith('--')).map(normalize).filter(inScope);
+  const input = openGateInput({ root: ROOT, index: args.includes(INDEX_FLAG) });
+  const files = scope === 'all' ? walkScope(ROOT, 'src', input) : args.filter((a) => !a.startsWith('--')).map(normalize).filter(inScope);
   if (files.length === 0) return 0;
 
-  const baseline = loadBaseline(BASELINE);
+  const baseline = loadBaseline(BASELINE, [], input);
   if (!baseline || baseline.__invalid || typeof baseline.files !== 'object') {
     console.log(`${RED}  ⛔ CHECK 3.97 — baseline ${baseline ? baseline.__invalid || 'χωρίς "files"' : 'λείπει'}: ${BASELINE}${NC}`);
     console.log('     Δημιούργησε: node scripts/check-i18n-raw-fallback.js --write-baseline');
     return 1; // fail-closed: χαλασμένη baseline ΠΟΤΕ δεν διαβάζεται ως «0 ευρήματα»
   }
-  const { counts, details } = scan(files);
+  const { counts, details } = scan(files, input);
   const { regressions, progress } = compare(counts, baseline.files, scope, files);
   if (regressions.length > 0) {
     printFailure(regressions, details);

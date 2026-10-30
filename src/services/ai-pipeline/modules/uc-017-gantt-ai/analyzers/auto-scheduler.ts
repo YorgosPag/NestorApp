@@ -12,7 +12,7 @@ import { AI_ANALYSIS_DEFAULTS } from '@/config/ai-analysis-config';
 import { safeJsonParse } from '@/lib/json-utils';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
-import { nowISO } from '@/lib/date-local';
+import { calendarDayOf } from '@/constants/platform-operator';
 import type { ConstructionPhase, ConstructionTask } from '@/types/building/construction';
 import type { ScheduleSuggestion } from '../gantt-ai-types';
 
@@ -58,7 +58,8 @@ export async function autoSchedule(
 
 function buildSchedulePrompt(phases: ConstructionPhase[], tasks: ConstructionTask[]): string {
   const phaseMap = new Map(phases.map(p => [p.id, p.name]));
-  const today = nowISO().slice(0, 10);
+  // Η σημερινή ημέρα του εργοταξίου (Αθήνα) — αυτή που ξέρει ο άνθρωπος που διαβάζει τις προτάσεις.
+  const today = calendarDayOf(new Date());
 
   const taskLines = tasks.slice(0, 40).map(t =>
     `[${t.id}] "${t.name}" (phase:${phaseMap.get(t.phaseId) ?? t.phaseId}) ` +

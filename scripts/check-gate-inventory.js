@@ -28,6 +28,7 @@ const ratchet = require('./lib/ratchet-baseline');
 const { takeInventory, byGateNumber, EXECUTOR, HOOK, GUIDE, DECLARATIONS_FILE } = require('./lib/gate-inventory/inventory');
 const { STATES, BLOCKING, judge, idsOf } = require('./lib/gate-inventory/judge');
 const { judgeFreshness, STATES: FRESH_STATES, BLOCKING: FRESH_BLOCKING } = require('./lib/gate-index/freshness');
+const { perInput } = require('./lib/gate-input');
 
 const ROOT = ratchet.PROJECT_ROOT;
 const BASELINE_FILE = path.join(ROOT, '.gate-inventory-baseline.json');
@@ -38,15 +39,11 @@ const BASELINE_FILE = path.join(ROOT, '.gate-inventory-baseline.json');
  *    των 55 πηγών γίνονται δύο φορές — το ίδιο σχήμα που στο CHECK 3.68 κόστισε 11,1s ώσπου να
  *    φανεί. Μετρημένο εδώ: 246ms → 137ms.
  */
-let _cache = null;
-function measure() {
-  if (_cache) return _cache;
-  return (_cache = measureFresh());
-}
+const measure = perInput(ROOT, (input) => measureFresh(input));   // ανά ΕΙΣΟΔΟ (ADR-924)
 
 /** ⚠️ Ο πλήρης έλεγχος κοστίζει ~140ms — καμία σκανδάλη, καμία μερική ανάλυση. */
-function measureFresh() {
-  const inv = takeInventory(ROOT);
+function measureFresh(input) {
+  const inv = takeInventory(ROOT, {}, input);
   const verdict = judge(inv);
   const blocking = verdict.rows.filter((r) => BLOCKING.includes(r.state));
 
@@ -54,7 +51,7 @@ function measureFresh() {
   // ⚠️ ΞΕΧΩΡΙΣΤΟ, ΟΧΙ ΝΕΕΣ ΚΑΤΑΣΤΑΣΕΙΣ ΣΤΟ ΠΡΩΤΟ: η λογιστική του πρώτου κλείνει πάνω στον
   //    πληθυσμό «πύλες», εδώ ο πληθυσμός είναι «αρχεία πηγής» (πρότυπο ΔΥΟ ΚΑΤΑΣΤΙΧΩΝ, 3.50).
   //    Όλες οι καταστάσεις είναι ⛔ και ΔΕΝ μπαίνουν ΠΟΤΕ σε baseline.
-  const fresh = judgeFreshness(inv, ROOT);
+  const fresh = judgeFreshness(inv, ROOT, input);
   const freshBlocking = fresh.violations.filter((v) => FRESH_BLOCKING.includes(v.state));
 
   return {
@@ -141,27 +138,21 @@ function enforceZeroTolerance(argv, measureFn = measure) {
 }
 
 if (require.main === module) {
-  enforceZeroTolerance(process.argv.slice(2));
-  ratchet.runSetRatchetCli({
+  // ΜΙΑ είσοδος, ΜΙΑ μέτρηση· ο φρουρός ΠΡΙΝ το ratchet (ADR-924 §8.8 — η σειρά ζει στο SSoT)
+  ratchet.runZeroTolerantSetRatchetCli({
     adr: 'ADR-802 (CHECK 3.66)',
     skipEnv: 'SKIP_GATE_INVENTORY',
     baselineFile: BASELINE_FILE,
     labels: { violations: 'αδήλωτες πύλες', declarations: 'δηλώσεις μόνο-CI' },
-    commands: {
-      report: 'npm run gate-inventory:report',
-      baseline: 'npm run gate-inventory:baseline',
-      seed: 'npm run gate-inventory:baseline',
-    },
-    measure,
+    commands: ratchet.npmRatchetCommands('gate-inventory'),
+    measure: (_args, input) => measure({ input }),
     buildPayload,
     printReport,
-    violationId: (f) => f.id,
     messages: {
       worse: 'νέα αδήλωτη πύλη ή φάντασμα στον οδηγό',
       newDeclLabel: 'νέα δήλωση μόνο-CI',
-      newDeclAdvice: [],
     },
-  });
+  }, enforceZeroTolerance);
 }
 
 module.exports = { measure, buildPayload, printReport, enforceZeroTolerance, BASELINE_FILE };

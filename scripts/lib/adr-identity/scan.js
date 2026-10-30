@@ -11,7 +11,6 @@
  */
 
 const path = require('path');
-const { execFileSync } = require('child_process');
 
 /**
  * 🔴 **Η ΑΥΘΕΝΤΙΑ ΕΙΝΑΙ ΤΟ INDEX ΤΟΥ GIT, ΟΧΙ ΤΟ ΔΙΣΚΟΣ.**
@@ -29,13 +28,9 @@ const { execFileSync } = require('child_process');
  * βλέπει. Αυτό είναι **σωστό** — δεν έχουν προσγειωθεί ακόμη — και είναι ακριβώς ο λόγος που η
  * πύλη θα μπλοκάρει το επόμενο `git add`, που είναι η μόνη στιγμή που κάτι μπορεί να γίνει.
  */
-function listIndexedFiles(cwd) {
-  const out = execFileSync('git', ['ls-files', '-z'], {
-    cwd,
-    maxBuffer: 1024 * 1024 * 256,
-    encoding: 'utf8',
-  });
-  return out.split('\0').filter(Boolean);
+function listIndexedFiles(cwd, input = null) {
+  // ADR-924 — ΕΝΑ σημείο για «τι περιέχει το ευρετήριο»: η είσοδος της πύλης (ήταν δίδυμο `git ls-files` με το 3.53).
+  return (input || require('../gate-input').openGateInput({ root: cwd })).tracked();
 }
 
 /**
@@ -100,8 +95,8 @@ function violationId(v) {
  * ⇒ `throw`, ποτέ σιωπηλή απόρριψη: το «0» που δεν μετρήθηκε διαβάζεται ως «καθαρό», και αυτό
  * το repo το έχει πληρώσει οκτώ φορές.
  */
-function scanAdrIdentity(cwd) {
-  const docs = listIndexedFiles(cwd).map(parseAdrFile).filter(Boolean);
+function scanAdrIdentity(cwd, input = null) {
+  const docs = listIndexedFiles(cwd, input).map(parseAdrFile).filter(Boolean);
 
   const byNumber = new Map();
   for (const d of docs) {

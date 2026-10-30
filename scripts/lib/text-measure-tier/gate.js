@@ -19,9 +19,6 @@
 
 'use strict';
 
-const fs = require('node:fs');
-const path = require('node:path');
-
 const { readCensus, staleInputs, isBlind } = require('./census.js');
 
 const DECLARATIONS_FILE = '.text-measure-tier.json';
@@ -62,12 +59,12 @@ const BLOCKING = Object.freeze([
 const tallyOf = (states) => Object.fromEntries(states.map((s) => [s, 0]));
 
 /** Fail-closed: κακοσχηματισμένο ⇒ σφάλμα με όνομα, ποτέ σιωπηλό `{}`. */
-function loadDeclarations(repoRoot) {
-  const file = path.join(repoRoot, DECLARATIONS_FILE);
-  if (!fs.existsSync(file)) {
+function loadDeclarations(input) {
+  const text = input.read(DECLARATIONS_FILE);
+  if (text === null) {
     throw new Error(`${DECLARATIONS_FILE} λείπει — το κλειστό σύνολο είναι μέρος της πύλης.`);
   }
-  const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const raw = JSON.parse(text);
   if (!raw || typeof raw.blindMeasureSuites !== 'object' || raw.blindMeasureSuites === null) {
     throw new Error(`${DECLARATIONS_FILE}: περίμενα αντικείμενο "blindMeasureSuites".`);
   }
@@ -122,12 +119,12 @@ function judgeDeclarations(declarations, used, push) {
  * αόρατη σε αποθηκευμένη απογραφή — γι' αυτό το **Layer 2 τρέχει την απογραφή ΑΝΕΥ ΟΡΩΝ**.
  * Το Layer 1 φυλά την **παλινδρόμηση**· το Layer 2 φυλά την **ανακάλυψη**.
  */
-function judgeCensus(repoRoot, census, push) {
+function judgeCensus(repoRoot, census, push, input) {
   if (!census) {
     push(S.MISSING_CENSUS, 'απογραφή', 'τρέξε `npm run text-measure:census`');
     return;
   }
-  const drifted = staleInputs(repoRoot, census);
+  const drifted = staleInputs(repoRoot, census, input);
   if (drifted.length > 0) {
     push(S.STALE_CENSUS, 'απογραφή', `άλλαξαν από την τελευταία εκτέλεση: ${drifted.slice(0, 4).join(', ')}${drifted.length > 4 ? ` (+${drifted.length - 4})` : ''}`);
     return;
@@ -135,9 +132,10 @@ function judgeCensus(repoRoot, census, push) {
   push(S.CENSUS_FRESH, 'απογραφή', `${census.observations.length} σουίτες παρατηρημένες`);
 }
 
-function sweep(repoRoot) {
-  const declarations = loadDeclarations(repoRoot);
-  const census = readCensus(repoRoot);
+/** `input` = η είσοδος της πύλης (ADR-924) — προεπιλογή ο δίσκος της ρίζας. */
+function sweep(repoRoot, input = require('../gate-input').openGateInput({ root: repoRoot })) {
+  const declarations = loadDeclarations(input);
+  const census = readCensus(repoRoot, input);
 
   const ledgers = {};
   const rows = [];
@@ -149,7 +147,7 @@ function sweep(repoRoot) {
   };
 
   const used = new Set();
-  judgeCensus(repoRoot, census, pushTo('census'));
+  judgeCensus(repoRoot, census, pushTo('census'), input);
   judgeSuites(census ? census.observations : [], declarations, pushTo('suites'), used);
   judgeDeclarations(declarations, used, pushTo('declarations'));
 

@@ -27,11 +27,9 @@
 
 'use strict';
 
-const fs = require('fs');
-const path = require('path');
-
 const ast = require('./lib/write-authority/ast');
 const { defineRegistryGate } = require('./lib/write-authority/gate-runner');
+const { openGateInput } = require('./lib/gate-input');
 
 const { ts, PROJECT_ROOT } = ast;
 const REGISTRY_FILE = '.tour-presence-authority.json';
@@ -55,8 +53,8 @@ const BLOCKING = [
   STATES.EXEMPT_NO_REASON, STATES.STALE_EXEMPTION, STATES.SOURCE_DRIFT,
 ];
 
-function loadRegistry(root) {
-  return JSON.parse(fs.readFileSync(path.join(root, REGISTRY_FILE), 'utf8'));
+function loadRegistry(root, input = openGateInput({ root })) {
+  return input.readJson(REGISTRY_FILE);
 }
 
 const { trailingName } = ast;
@@ -112,9 +110,9 @@ function findingsIn(rel, facts, registry) {
 }
 
 /** Κ2 (η άλλη μεριά) + Κ4 + ύπαρξη δηλωμένων αρχείων. Αρχείο εκτός προφίλτρου = ΜΗΔΕΝ, ποτέ σιωπή. */
-function declaredFindings(root, registry, factsByFile) {
+function declaredFindings(root, registry, factsByFile, input = openGateInput({ root })) {
   const findings = [];
-  const exists = (file) => fs.existsSync(path.join(root, file));
+  const exists = (file) => input.exists(file);
   const factsOf = (file) => factsByFile.get(file) || { writes: [], calls: [] };
   const declared = [registry.refresher, registry.binder, ...Object.keys(registry.presenceWriters), ...Object.keys(registry.exemptWriters)];
   for (const file of declared.filter((f) => !exists(f))) {

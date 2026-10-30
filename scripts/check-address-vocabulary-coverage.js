@@ -60,10 +60,9 @@
 
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
 const { PROJECT_ROOT, runSetRatchetCli } = require('./lib/ratchet-baseline');
-const { collectSourceFiles } = require('./lib/module-graph/scan-config');
+const { openGateInput, INDEX_FLAG } = require('./lib/gate-input');
 const { readVocabularyTable, VOCABULARY_FILE } = require('./lib/address-vocabulary/vocabulary-table');
 const { createResolver, resolveContainerDeclarations } = require('./lib/address-vocabulary/type-index');
 const {
@@ -86,10 +85,10 @@ function baselineFile() {
  * ποτέ γραμμένα με το χέρι: ο πίνακας, κάθε αρχείο δήλωσης δοχείου, κάθε αρχείο βάσης
  * τους, και ο κώδικας της ίδιας της πύλης.
  */
-function layer1Inputs(table, resolver, root = PROJECT_ROOT) {
+function layer1Inputs(table, resolver, root = PROJECT_ROOT, input = openGateInput({ root })) {
   const files = new Set([VOCABULARY_FILE, SELF]);
-  const libDir = path.join(root, LIB_DIR);
-  if (fs.existsSync(libDir)) for (const name of fs.readdirSync(libDir)) files.add(`${LIB_DIR}/${name}`);
+  const lib = input.children(LIB_DIR);
+  if (lib) for (const name of [...lib.files, ...lib.dirs]) files.add(`${LIB_DIR}/${name}`);
   for (const { decl, heritage } of resolveContainerDeclarations(table, resolver)) {
     if (!decl) continue;
     files.add(decl.file);
@@ -120,9 +119,9 @@ function registeredAndBaseKeys(table, resolver) {
  * Κόστος της ορθότητας: 28s αντί 7s — **μόνο στο CI**, όπου το `--all` του CHECK 3.35
  * είναι ~2 λεπτά για σύγκριση.
  */
-function allDeclarations(resolver, root = PROJECT_ROOT) {
+function allDeclarations(resolver, root = PROJECT_ROOT, input = openGateInput({ root })) {
   const out = [];
-  for (const abs of collectSourceFiles(root, ['src'])) {
+  for (const abs of input.sources(['src'])) {
     const parsed = resolver.load(toRel(root, abs));
     if (!parsed) continue;
     for (const decl of parsed.declarations.values()) out.push(decl);
@@ -130,10 +129,11 @@ function allDeclarations(resolver, root = PROJECT_ROOT) {
   return out;
 }
 
-function measure(args = [], root = PROJECT_ROOT) {
+/** `input` = η είσοδος (ADR-924) — προεπιλογή ο δίσκος της `root`· με `--index` η όψη του commit. */
+function measure(args = [], root = PROJECT_ROOT, input = openGateInput({ root })) {
   const scope = args.includes('--all') ? 'all' : 'layer1';
-  const table = readVocabularyTable(root);
-  const resolver = createResolver(root);
+  const table = readVocabularyTable(root, input);
+  const resolver = createResolver(root, input);
 
   const container = evaluateContainers(table, resolver);
   const findings = [...container.findings];
@@ -143,7 +143,7 @@ function measure(args = [], root = PROJECT_ROOT) {
 
   if (scope === 'all') {
     const { registered, bases } = registeredAndBaseKeys(table, resolver);
-    const declarations = allDeclarations(resolver, root);
+    const declarations = allDeclarations(resolver, root, input);
     declarationCount = declarations.length;
     const tree = evaluateTree(declarations, table, resolver, registered, bases);
     findings.push(...tree.findings);
@@ -229,7 +229,8 @@ const DESCRIPTOR = {
   adr: 'CHECK 3.44',
   skipEnv: 'SKIP_ADDRESS_VOCABULARY',
   get baselineFile() { return baselineFile(); },
-  measure,
+  // ⚠️ ΠΟΤΕ σκέτο `measure`: το `runSetRatchetCli` δίνει την ΕΙΣΟΔΟ ως 2ο όρισμα (ADR-924), εδώ το 2ο είναι η ρίζα.
+  measure: (args, input) => measure(args, PROJECT_ROOT, input),
   buildPayload,
   printReport,
   violationId,
@@ -254,9 +255,11 @@ const DESCRIPTOR = {
  */
 function runLayer1(argv, root = PROJECT_ROOT) {
   const staged = argv.slice(2).filter((a) => !a.startsWith('--')).map((f) => f.replace(/\\/g, '/'));
-  const table = readVocabularyTable(root);
-  const resolver = createResolver(root);
-  const inputs = layer1Inputs(table, resolver, root);
+  // ADR-924 — με `--index` (εκτελεστής) τα δοχεία και ο πίνακας κρίνονται στο commit.
+  const input = openGateInput({ root, index: argv.includes(INDEX_FLAG) });
+  const table = readVocabularyTable(root, input);
+  const resolver = createResolver(root, input);
+  const inputs = layer1Inputs(table, resolver, root, input);
   const touched = staged.filter((f) => inputs.has(f));
 
   if (staged.length && touched.length === 0) {
@@ -264,7 +267,7 @@ function runLayer1(argv, root = PROJECT_ROOT) {
     return 0;
   }
 
-  const m = measure([], root);
+  const m = measure([], root, input);
   if (m.violations.length === 0) {
     console.log(`✅ CHECK 3.44 (ADR-772 §9) — ${m.judgedContainerFields} διοικητικά πεδία, `
       + `όλα με γραμμή στον πίνακα (${touched.length || inputs.size} αρχεία).`);

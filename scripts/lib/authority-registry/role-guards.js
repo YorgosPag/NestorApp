@@ -325,8 +325,8 @@ function conditionText(node, sourceFile) {
  *
  * @returns {Array<{file:string,line:number,condition:string,denies:boolean,shape:string}>}
  */
-function scanRoleChecks(root, rel) {
-  const sourceFile = parseSource(path.join(root, rel));
+function scanRoleChecks(root, rel, text = null) {
+  const sourceFile = parseSource(path.join(root, rel), text);
   const roleLocals = collectRoleLocals(sourceFile);
   const lineOf = (node) => sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
   const checks = [];

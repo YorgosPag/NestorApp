@@ -13,7 +13,6 @@
 import 'server-only';
 
 import { getErrorMessage } from '@/lib/error-utils';
-import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { findContactByName, type ContactNameSearchResult } from '../../shared/contact-lookup';
 import { sendChannelReply, extractChannelIds } from '../../shared/channel-reply-dispatcher';
@@ -28,6 +27,7 @@ import type {
   AcknowledgmentResult,
   PipelineIntentTypeValue,
 } from '@/types/ai-pipeline';
+import { acknowledgeBySideEffect, approvedAction, autoApprovedProposal } from '../../shared/admin-command-protocol';
 
 const logger = createModuleLogger('UC_012_ADMIN_SEND_EMAIL');
 
@@ -272,35 +272,20 @@ export class AdminSendEmailModule implements IUCModule {
       ? `Αποστολή email στον ${resolvedName} (${resolvedEmail})`
       : `Δεν βρέθηκε email για "${resolvedName}"`;
 
-    return {
-      messageId: ctx.intake.id,
-      suggestedActions: [
-        {
-          type: 'admin_send_email_action',
-          params: {
-            recipientName: resolvedName || null,
-            recipientEmail: resolvedEmail,
-            recipientContactId: contact?.contactId ?? null,
-            emailContent: lookup?.emailContent ?? null,
-            contactFound: contact !== null,
-            channel: ctx.intake.channel,
-            telegramChatId: (ctx.intake.rawPayload.chatId as string) ?? null,
-          },
-        },
-      ],
-      requiredApprovals: [],
-      autoApprovable: true,
-      summary,
-      schemaVersion: PIPELINE_PROTOCOL_CONFIG.SCHEMA_VERSION,
-    };
+    return autoApprovedProposal(ctx, 'admin_send_email_action', {
+      recipientName: resolvedName || null,
+      recipientEmail: resolvedEmail,
+      recipientContactId: contact?.contactId ?? null,
+      emailContent: lookup?.emailContent ?? null,
+      contactFound: contact !== null,
+    }, summary);
   }
 
   // ── Step 6: EXECUTE ──
 
   async execute(ctx: PipelineContext): Promise<ExecutionResult> {
     try {
-      const actions = ctx.approval?.modifiedActions ?? ctx.proposal?.suggestedActions ?? [];
-      const action = actions.find(a => a.type === 'admin_send_email_action');
+      const action = approvedAction(ctx, 'admin_send_email_action');
 
       if (!action) {
         return { success: false, sideEffects: [], error: 'No admin_send_email_action found' };
@@ -381,9 +366,7 @@ export class AdminSendEmailModule implements IUCModule {
   // ── Step 7: ACKNOWLEDGE ──
 
   async acknowledge(ctx: PipelineContext): Promise<AcknowledgmentResult> {
-    const confirmSent = ctx.executionResult?.sideEffects?.some(
-      (se: string) => se.startsWith('confirm_sent:') || se.startsWith('reply_sent:')
-    ) ?? false;
+    const confirmSent = acknowledgeBySideEffect(ctx, 'reply_sent:').sent;
     return { sent: confirmSent, channel: ctx.intake.channel };
   }
 

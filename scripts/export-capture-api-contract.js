@@ -21,6 +21,7 @@ const path = require('node:path');
 
 const { judge } = require('./check-capture-api-contract');
 const { OUTPUT_ROOT } = require('./lib/capture-api-contract/plan');
+const { readLf } = require('./lib/generated-artifacts');
 
 const ROOT = path.resolve(__dirname, '..');
 const TARGET_DIR = 'contract';
@@ -35,7 +36,7 @@ function sourceRevision() {
 }
 
 /** Τα bytes με LF — ίδιο sha256 σε Windows (autocrlf) και Linux CI. */
-const readLfBytes = (abs) => Buffer.from(fs.readFileSync(abs, 'utf8').replace(/\r\n/g, '\n'), 'utf8');
+const readLfBytes = (abs) => Buffer.from(readLf(abs), 'utf8');   // ΕΝΑΣ κανόνας EOL: `generated-artifacts.readLf`
 
 function exportTo(mobileRepo) {
   const freshness = judge(ROOT);

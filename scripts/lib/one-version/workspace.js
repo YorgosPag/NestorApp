@@ -13,8 +13,9 @@
 
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
+
+const { openGateInput } = require('../gate-input');
 
 const WORKSPACE_FILE = 'pnpm-workspace.yaml';
 
@@ -42,36 +43,36 @@ function parseWorkspaceFile(text) {
   return { packages, catalog };
 }
 
-/** Οι υποφάκελοι ενός καταλόγου, ταξινομημένοι — ντετερμινιστικά. */
-function subdirs(dir) {
-  if (!fs.existsSync(dir)) return [];
-  return fs.readdirSync(dir, { withFileTypes: true })
-    .filter((e) => e.isDirectory() && e.name !== 'node_modules')
-    .map((e) => e.name)
-    .sort();
+/** Οι υποφάκελοι ενός καταλόγου, ταξινομημένοι — ντετερμινιστικά· από την ΕΙΣΟΔΟ (ADR-924 Φ3). */
+function subdirs(input, relDir) {
+  const children = input.children(relDir);
+  return children ? children.dirs.filter((name) => name !== 'node_modules') : [];
 }
 
+/** Το manifest ενός μέλους (σχετικό posix — το `.` είναι η ρίζα). */
+const manifestOf = (dir) => path.posix.join(dir, 'package.json');
+
 /** Αναδρομική συλλογή για το `**` — σταματά σε φάκελο που έχει manifest. */
-function walkForManifests(repoRoot, relDir, out) {
-  for (const name of subdirs(path.join(repoRoot, relDir))) {
+function walkForManifests(input, relDir, out) {
+  for (const name of subdirs(input, relDir)) {
     const rel = `${relDir}/${name}`;
-    if (fs.existsSync(path.join(repoRoot, rel, 'package.json'))) out.push(rel);
-    else walkForManifests(repoRoot, rel, out);
+    if (input.exists(manifestOf(rel))) out.push(rel);
+    else walkForManifests(input, rel, out);
   }
 }
 
 /** Επεκτείνει ΕΝΑ pattern. Άγνωστη μορφή ⇒ σφάλμα με όνομα. */
-function expandPattern(repoRoot, pattern) {
+function expandPattern(input, pattern) {
   if (pattern === '.') return ['.'];
   let m;
   if ((m = pattern.match(/^([\w./-]+)\/\*$/))) {
-    return subdirs(path.join(repoRoot, m[1]))
+    return subdirs(input, m[1])
       .map((n) => `${m[1]}/${n}`)
-      .filter((rel) => fs.existsSync(path.join(repoRoot, rel, 'package.json')));
+      .filter((rel) => input.exists(manifestOf(rel)));
   }
   if ((m = pattern.match(/^([\w./-]+)\/\*\*$/))) {
     const out = [];
-    walkForManifests(repoRoot, m[1], out);
+    walkForManifests(input, m[1], out);
     return out;
   }
   throw new Error(
@@ -82,20 +83,20 @@ function expandPattern(repoRoot, pattern) {
 /**
  * @returns {{members: Array<{dir: string, manifestPath: string, manifest: object}>, catalog: object, patterns: string[]}}
  */
-function readWorkspace(repoRoot) {
-  const file = path.join(repoRoot, WORKSPACE_FILE);
-  if (!fs.existsSync(file)) throw new Error(`${WORKSPACE_FILE} δεν βρέθηκε στη ρίζα.`);
-  const { packages, catalog } = parseWorkspaceFile(fs.readFileSync(file, 'utf8'));
+function readWorkspace(repoRoot, input = openGateInput({ root: repoRoot })) {
+  const text = input.read(WORKSPACE_FILE);
+  if (text === null) throw new Error(`${WORKSPACE_FILE} δεν βρέθηκε στη ρίζα.`);
+  const { packages, catalog } = parseWorkspaceFile(text);
   if (packages.length === 0) throw new Error(`${WORKSPACE_FILE}: κενό "packages:" — δεν υπάρχει workspace να κριθεί.`);
 
   const seen = new Set();
   const members = [];
   for (const pattern of packages) {
-    for (const dir of expandPattern(repoRoot, pattern)) {
+    for (const dir of expandPattern(input, pattern)) {
       if (seen.has(dir)) continue;
       seen.add(dir);
       const manifestPath = path.join(repoRoot, dir, 'package.json');
-      members.push({ dir, manifestPath, manifest: JSON.parse(fs.readFileSync(manifestPath, 'utf8')) });
+      members.push({ dir, manifestPath, manifest: input.readJson(manifestOf(dir)) });
     }
   }
   return { members, catalog, patterns: packages };

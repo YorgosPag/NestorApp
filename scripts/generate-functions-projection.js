@@ -18,27 +18,23 @@
 
 const path = require('node:path');
 
-const { applyJudgement } = require('./lib/generated-artifacts');
+const { generateArtifacts, reportGeneration } = require('./lib/generated-artifacts');
 const { judge } = require('./lib/functions-projection/judge');
+const { commitInput } = require('./lib/gate-input');
 
-function generate(root) {
-  const { results, plan } = judge(root);
-  if (plan.errors.length > 0) return { ok: false, errors: plan.errors, written: [], removed: [] };
-  const { written, removed } = applyJudgement(root, plan.outputs, results);
-  return { ok: true, errors: [], written, removed, total: plan.outputs.length };
+/**
+ * `input` (ADR-924 Φ5): με `--index` ο γεννήτορας παράγει από την ΟΨΗ ΤΟΥ COMMIT — ό,τι θα κρίνει η 3.93 — και ξαναγράφει
+ * μόνο όσα αποκλίνουν από αυτήν (ξένη αστάδιοποίητη αλλαγή στις εισόδους δεν μπαίνει στα παραγόμενα). Η εγγραφή: δίσκος.
+ */
+function generate(root, input = commitInput(root)) {
+  return generateArtifacts(root, (view) => judge(root, view), input);
 }
 
 function main() {
   const root = process.env.FUNCTIONS_PROJECTION_ROOT || path.resolve(__dirname, '..');
-  const res = generate(root);
-  if (!res.ok) {
-    console.error('❌ functions projection — cannot build the plan, nothing written:');
-    for (const e of res.errors) console.error(`   • ${e}`);
-    process.exit(1);
-  }
-  for (const p of res.written) console.log(`   ✍️  ${p}`);
-  for (const p of res.removed) console.log(`   🗑️  ${p}`);
-  console.log(`✅ functions projection — ${res.total} files, ${res.written.length} written, ${res.removed.length} removed`);
+  process.exitCode = reportGeneration(generate(root), {
+    label: 'functions projection', failure: 'cannot build the plan, nothing written:',
+  });
 }
 
 if (require.main === module) main();

@@ -116,6 +116,7 @@ function parseArgs(argv) {
     if (a === '--full') out.full = true;
     else if (a === '--write-baseline') out.writeBaseline = true;
     else if (a === '--help' || a === '-h') out.help = true;
+    else if (a === '--index') out.index = true;   // ADR-924 Φ5: το smoke κρίνει τη baseline του commit
     else if (a === '--report' || a === '--summary') {
       const value = rest[i + 1];
       // Μια σημαία που δέχεται σιωπηλά κενή τιμή γράφει την αναφορά σε αρχείο
@@ -235,10 +236,12 @@ function measure(project = getProject()) {
   return { ...measured, run };
 }
 
-function loadBaseline(filePath = getBaselineFile()) {
-  if (!fs.existsSync(filePath)) return null;
+/** `input` (ADR-924 Φ5) = η είσοδος της πύλης: με `--index` (ο hook) η baseline ΤΟΥ COMMIT· χωρίς αυτήν ο δίσκος. */
+function loadBaseline(filePath = getBaselineFile(), input = null) {
+  const text = input ? input.read(filePath) : (fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : null);
+  if (text === null) return null;
   try {
-    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    const parsed = JSON.parse(text);
     if (typeof parsed.totalErrors !== 'number') {
       return { __invalid: 'missing numeric field "totalErrors"' };
     }
@@ -303,9 +306,9 @@ function compare(baseline, current) {
  * it, because .jscpdrc.json scans only `typescript`/`tsx`, so the whole
  * scripts/*.js tooling layer is outside the clone gate).
  */
-function requireBaseline() {
+function requireBaseline(input = null) {
   const baselineFile = getBaselineFile();
-  const baseline = loadBaseline(baselineFile);
+  const baseline = loadBaseline(baselineFile, input);
   if (!baseline || baseline.__invalid) {
     console.error(
       `❌ CHECK 3.29 — baseline ${baseline ? baseline.__invalid : 'missing'}: ${path.relative(PROJECT_ROOT, baselineFile)}`,
@@ -426,8 +429,9 @@ function printFail(payload, regressions, args) {
   console.error(`If a rise is genuinely intentional debt, refresh: npm run dxf:tsc:baseline`);
 }
 
-function runSmoke() {
-  const baseline = requireBaseline();
+function runSmoke(args = {}) {
+  // ADR-924 Φ5: ο hook (`--index`) ρωτά αν το COMMIT έχει έγκυρη baseline — όχι αν την έχει ακόμη ο δίσκος
+  const baseline = requireBaseline(args.index ? require('./lib/gate-input').commitInput(PROJECT_ROOT, ['--index']) : null);
   console.log(
     `✅ CHECK 3.29 smoke — baseline OK (errors:${baseline.totalErrors}, source:${baseline.sourceErrors}).` +
       ` Full type-check runs in CI / DXF_TSC_FULL=1.`,
@@ -458,7 +462,7 @@ function main() {
     runFull(args);
     return;
   }
-  runSmoke();
+  runSmoke(args);
 }
 
 // Exported for the Jest suite (scripts/__tests__/check-dxf-tsc-ratchet.test.js).

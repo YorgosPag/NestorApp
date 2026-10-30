@@ -23,7 +23,6 @@
 
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
 const ts = require('typescript');
 
@@ -104,16 +103,15 @@ function exportedNumber(absFile, name, reader, hops = MAX_REEXPORT_HOPS) {
  * `existsSync` κοστίζει λίγες δεκάδες syscalls αντί για πλήρη σάρωση 12.000 αρχείων. Η
  * επίλυση παραμένει η **ίδια** συνάρτηση που χρησιμοποιεί το CHECK 3.30 — μηδέν δεύτερη μηχανή.
  */
-function createReader(repoRoot) {
+function createReader(repoRoot, input = require('../gate-input').openGateInput({ root: repoRoot })) {
+  // ADR-924 — κάθε ανάγνωση (κείμενο, ύπαρξη, tsconfig) από την ΕΙΣΟΔΟ: με `--index` η όψη του commit.
   const cache = new Map();
   const textCache = new Map();
-  const aliases = readTsPathAliases(repoRoot);
-  const fileSet = { has: (p) => fs.existsSync(p) };
+  const aliases = readTsPathAliases(repoRoot, undefined, input.read);
+  const fileSet = { has: (p) => input.exists(p) };
   const readText = (absFile) => {
     const key = toPosix(absFile);
-    if (!textCache.has(key)) {
-      textCache.set(key, fs.existsSync(key) ? fs.readFileSync(key, 'utf8') : null);
-    }
+    if (!textCache.has(key)) textCache.set(key, input.read(key));
     return textCache.get(key);
   };
   return {
@@ -124,7 +122,10 @@ function createReader(repoRoot) {
     },
     parse(absFile) {
       const key = toPosix(absFile);
-      if (!cache.has(key)) cache.set(key, fs.existsSync(key) ? parseSource(key) : null);
+      if (!cache.has(key)) {
+        const text = readText(key);
+        cache.set(key, text === null ? null : parseSource(key, text));
+      }
       return cache.get(key);
     },
     resolve(spec, fromFile) {

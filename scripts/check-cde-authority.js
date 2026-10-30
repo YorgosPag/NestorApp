@@ -33,13 +33,14 @@
 
 'use strict';
 
-const fs = require('fs');
 const path = require('path');
 
-const PROJECT_ROOT = path.resolve(__dirname, '..');
-const ts = require(path.join(PROJECT_ROOT, 'node_modules', 'typescript'));
-const { collectSourceFiles } = require('./lib/module-graph/scan-config');
+const ast = require('./lib/write-authority/ast');
+const { openGateInput } = require('./lib/gate-input');
 const { toPosix } = require('./lib/module-graph/resolve-specifier');
+const { scanScope, tallyOf, gateEntry } = require('./lib/write-authority/gate-runner');
+
+const { ts, PROJECT_ROOT, sourceFileOf, lineOf } = ast;
 const { rulesKeyListOf } = require('./_shared/firestore-rules-parser');
 
 /** Ο ΕΝΑΣ γραφέας κατάστασης — γράφει κάθε πεδίο φύλαξης. */
@@ -70,16 +71,16 @@ const SECOND_FLAG = /^(is)?(ForConstruction|forConstruction|ApprovedForBuild|app
 const FILES_REFERENCE = /COLLECTIONS\.FILES(?:_PERSONAL)?\b|['"]FILES(?:_PERSONAL)?['"]|\bFILE_COLLECTION\b|collection\(\s*db\s*,\s*['"]files(?:_personal)?['"]/;
 // Κ5 — client λίστα αρχείων: literal ή διαμέρισμα κατόχου (ο εταιρικός κλάδος θέλει φράχτη).
 const FILES_LIST_TARGET = /collection\(\s*db\s*,\s*(COLLECTIONS\.FILES\b|['"]files['"]|COLLECTIONS\[\s*FILE_COLLECTION\[[^\]]*\]\s*\])\s*\)/;
-const EXEMPT = /cde-authority-exempt:\s*(\S.*)?$/;
+const exemptions = ast.exemptionsFor('cde-authority-exempt');
 
 const STATES = {
   WRITER: 'writer',
   BIRTH: 'birth',
-  EXEMPT: 'exempt-with-reason',
+  EXEMPT: ast.EXEMPTION_STATES.EXEMPT,
   JUDGE_CONSUMERS: 'judge-consumers',
   SCOPED_LISTS: 'scoped-client-lists',
   SECOND_WRITER: 'second-writer',
-  EXEMPT_NO_REASON: 'exempt-without-reason',
+  EXEMPT_NO_REASON: ast.EXEMPTION_STATES.EXEMPT_NO_REASON,
   UNJUDGED: 'judge-without-consumers',
   SECOND_FLAG: 'second-approval-flag',
   TABLE_GAP: 'state-without-row',
@@ -90,13 +91,6 @@ const BLOCKING = [
   STATES.SECOND_WRITER, STATES.EXEMPT_NO_REASON, STATES.UNJUDGED,
   STATES.SECOND_FLAG, STATES.TABLE_GAP, STATES.UNSCOPED_LIST, STATES.SOURCE_DRIFT,
 ];
-
-function sourceFileOf(absPath, text) {
-  return ts.createSourceFile(absPath, text, ts.ScriptTarget.Latest, true,
-    /\.tsx$/.test(absPath) ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
-}
-
-const lineOf = (sf, node) => sf.getLineAndCharacterOfPosition(node.getStart()).line + 1;
 
 /** Κ1 — τα πεδία φύλαξης, από το καθολικό `cdeCustodyKeys()` του firestore.rules (ADR-866 §5.2). */
 function custodyFieldsOf(rulesText) {
@@ -141,13 +135,6 @@ function isWritten(node, targets) {
   return false;
 }
 
-/** Η εξαίρεση της γραμμής από πάνω: `null` αν δεν υπάρχει, αλλιώς ο λόγος (μπορεί κενός). */
-function exemptionAbove(sf, node) {
-  const lines = sf.text.split(/\r?\n/);
-  const above = lines[lineOf(sf, node) - 2] || '';
-  const match = above.match(EXEMPT);
-  return match ? (match[1] || '').trim() : null;
-}
 
 /** Κ1 + Κ3 για ένα αρχείο. */
 function custodyFindingsIn(sf, rel, fields) {
@@ -173,14 +160,8 @@ function custodyFindingsIn(sf, rel, fields) {
 function classifyWrite(sf, node, rel, key) {
   if (rel === STATE_WRITER) return { state: STATES.WRITER, file: rel };
   if ((BIRTH_WRITERS[key] || []).includes(rel)) return { state: STATES.BIRTH, file: rel };
-  const reason = exemptionAbove(sf, node);
-  if (reason !== null) {
-    return reason.length > 0
-      ? { state: STATES.EXEMPT, file: rel }
-      : { state: STATES.EXEMPT_NO_REASON, file: rel, line: lineOf(sf, node), detail: 'εξαίρεση ΧΩΡΙΣ λόγο' };
-  }
-  return { state: STATES.SECOND_WRITER, file: rel, line: lineOf(sf, node),
-    detail: `γράφει «${key}» — η κατάσταση CDE αλλάζει ΜΟΝΟ από τον γραφέα (${STATE_WRITER})` };
+  return exemptions.classify(sf, node, rel, STATES.SECOND_WRITER,
+    `γράφει «${key}» — η κατάσταση CDE αλλάζει ΜΟΝΟ από τον γραφέα (${STATE_WRITER})`);
 }
 
 /** Κ5 — client λίστα `files` χωρίς τον παραγωγό ορατότητας. */
@@ -210,8 +191,9 @@ function objectKeysOf(sf, variableName) {
 
 const keysOf = (literal) => (literal ? literal.properties.filter((p) => p.name).map((p) => p.name.getText()) : []);
 
-function tableGaps(root) {
-  const read = (rel) => sourceFileOf(path.join(root, rel), fs.readFileSync(path.join(root, rel), 'utf8'));
+function tableGaps(root, input = openGateInput({ root })) {
+  // Αρχείο που λείπει από την όψη ⇒ κενό AST ⇒ «δεν διαβάστηκε» (SOURCE_DRIFT), ποτέ σιωπή.
+  const read = (rel) => sourceFileOf(path.join(input.root, rel), input.read(rel) || '');
   const states = keysOf(objectKeysOf(read(STATES_FILE), 'CDE_STATES'));
   if (states.length === 0) return [{ state: STATES.SOURCE_DRIFT, file: STATES_FILE, detail: 'το CDE_STATES δεν διαβάστηκε' }];
   const findings = [];
@@ -228,18 +210,16 @@ function tableGaps(root) {
 }
 
 function measure(opts = {}) {
-  const root = opts.root || PROJECT_ROOT;
-  const fields = custodyFieldsOf(fs.readFileSync(path.join(root, 'firestore.rules'), 'utf8'));
+  const { root, input, files } = scanScope(opts, PROJECT_ROOT);
+  const fields = custodyFieldsOf(input.read('firestore.rules') || '');
   const findings = [];
   if (fields.length === 0) findings.push({ state: STATES.SOURCE_DRIFT, file: 'firestore.rules', detail: 'το cdeCustodyKeys() δεν διαβάστηκε — η Κ1 δεν ξέρει τι φυλάει' });
-  const files = (opts.codeFiles || collectSourceFiles(root, ['src'])).filter((f) => !/__tests__|\.test\.|\.spec\./.test(f));
-  if (!opts.codeFiles && files.length < 1000) throw new Error(`ΦΡΟΥΡΟΣ: μόνο ${files.length} αρχεία — η σάρωση δεν κοίταξε`);
   let judgeConsumers = 0;
   let pepConsumers = 0;
   for (const abs of files) {
     const rel = toPosix(path.relative(root, abs));
-    let text;
-    try { text = fs.readFileSync(abs, 'utf8'); } catch { continue; }
+    const text = input.read(abs);
+    if (text === null) continue;
     if (rel !== JUDGE_FILE && text.includes('decideContainerAccess(')) judgeConsumers += 1;
     if (rel !== PEP_FILE && text.includes('container-visibility-guard')) pepConsumers += 1;
     const list = unscopedListIn(text, rel);
@@ -249,13 +229,13 @@ function measure(opts = {}) {
     findings.push(...custodyFindingsIn(sourceFileOf(abs, text), rel, fields));
   }
   for (const writer of [STATE_WRITER, ...Object.values(BIRTH_WRITERS).flat()]) {
-    if (!fs.existsSync(path.join(root, writer))) findings.push({ state: STATES.SOURCE_DRIFT, file: writer, detail: 'δηλωμένος γραφέας που ΔΕΝ ΥΠΑΡΧΕΙ' });
+    if (!input.exists(writer)) findings.push({ state: STATES.SOURCE_DRIFT, file: writer, detail: 'δηλωμένος γραφέας που ΔΕΝ ΥΠΑΡΧΕΙ' });
   }
   if (judgeConsumers === 0 || pepConsumers === 0) {
     findings.push({ state: STATES.UNJUDGED, file: JUDGE_FILE, detail: `καταναλωτές κριτή ${judgeConsumers} · PEP ${pepConsumers} — κανείς δεν κρίνει` });
   }
-  findings.push(...tableGaps(root));
-  const tally = Object.fromEntries(Object.values(STATES).map((s) => [s, findings.filter((f) => f.state === s).length]));
+  findings.push(...tableGaps(root, input));
+  const tally = tallyOf(findings, STATES);
   tally[STATES.JUDGE_CONSUMERS] = judgeConsumers + pepConsumers;
   return { findings, tally, examined: files.length, fields };
 }
@@ -279,17 +259,10 @@ function report(result, log = console.log) {
   return blocking.length;
 }
 
-function main() {
-  if (process.env.SKIP_CDE_AUTHORITY === '1') {
-    console.log('⏭️  CHECK 3.87 παραλείφθηκε (SKIP_CDE_AUTHORITY=1)');
-    return 0;
-  }
-  const blocking = report(measure());
-  console.log(blocking > 0
-    ? `\n❌ CHECK 3.87 ΑΠΕΤΥΧΕ — ${blocking} μπλοκάρουσα(ες) παραβίαση(εις)\n`
-    : '\n✅ CHECK 3.87 — η κατάσταση CDE γράφεται ΜΟΝΟ από τον γραφέα, κάθε client λίστα έχει φράχτη\n');
-  return blocking > 0 ? 1 : 0;
-}
+const { main } = gateEntry({
+  projectRoot: PROJECT_ROOT, measure, report, check: '3.87', skipEnv: 'SKIP_CDE_AUTHORITY',
+  ok: 'η κατάσταση CDE γράφεται ΜΟΝΟ από τον γραφέα, κάθε client λίστα έχει φράχτη',
+});
 
 if (require.main === module) process.exit(main());
 

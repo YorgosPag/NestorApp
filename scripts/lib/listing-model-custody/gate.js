@@ -16,8 +16,7 @@
  * @module scripts/lib/listing-model-custody/gate
  */
 
-const fs = require('node:fs');
-const path = require('node:path');
+const { openGateInput } = require('../gate-input');
 
 const {
   CALL_OWNERS,
@@ -44,20 +43,15 @@ const BLOCKING = Object.freeze([
   GUARD_STATES.ANCHOR_QUESTION_LOST,
 ]);
 
-const SKIP_DIRS = new Set(['node_modules', '.next', '.git', 'dist', 'build', 'coverage']);
+/** Φάκελοι που δεν κρίνονται (πέρα από όσους κλαδεύει πάντα η είσοδος: `node_modules` · `.next` · `.git`). */
+const SKIPPED_DIR = /(^|\/)(dist|build|coverage|__tests__)\/$/;
 
-/** Κάθε `.ts`/`.tsx` κάτω από τη ρίζα, εκτός δοκιμών. */
-function collectSources(dir, root, out = []) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (SKIP_DIRS.has(entry.name) || entry.name === '__tests__') continue;
-      collectSources(full, root, out);
-    } else if (/\.tsx?$/.test(entry.name) && !/\.(test|spec)\.tsx?$/.test(entry.name)) {
-      out.push(full);
-    }
-  }
-  return out;
+/** Κάθε `.ts`/`.tsx` του `src/`, εκτός δοκιμών — από την ΕΙΣΟΔΟ (ADR-924 Φ3: ήταν δικός του `readdirSync`). */
+function collectSources(input, dir = 'src') {
+  return input.files([dir], {
+    accept: (rel) => /\.tsx?$/.test(rel) && !/\.(test|spec)\.tsx?$/.test(rel),
+    pruneDir: (rel) => SKIPPED_DIR.test(rel),
+  });
 }
 
 /** Η ταξινόμηση **ενός** αρχείου — μία ερώτηση, μία απάντηση. */
@@ -123,15 +117,14 @@ function auditSymbolReach(callerCount, symbols = GUARDED_SYMBOLS) {
 }
 
 /** Κ4 — οι άγκυρες υπάρχουν και **ρωτούν ακόμη** ό,τι υποσχέθηκαν. */
-function auditAnchors(root, anchors = REQUIRED_ANCHORS) {
+function auditAnchors(root, anchors = REQUIRED_ANCHORS, input = openGateInput({ root })) {
   const findings = [];
   for (const [rel, titles] of Object.entries(anchors)) {
-    const full = path.join(root, rel);
-    if (!fs.existsSync(full)) {
+    const source = input.read(rel);
+    if (source === null) {
       findings.push({ state: GUARD_STATES.ANCHOR_ABSENT, rel, detail: 'το αρχείο της άγκυρας λείπει' });
       continue;
     }
-    const source = fs.readFileSync(full, 'utf8');
     for (const title of titles) {
       if (!source.includes(title)) {
         findings.push({ state: GUARD_STATES.ANCHOR_QUESTION_LOST, rel, detail: `χάθηκε: «${title}»` });
@@ -145,10 +138,11 @@ function auditAnchors(root, anchors = REQUIRED_ANCHORS) {
  * Το πλήρες πέρασμα — **ένα**, πάνω στο `src/`. Κάθε αρχείο διαβάζεται **μία** φορά και κρίνεται
  * από **δύο** σκέλη: την επιμέλεια του μοντέλου (Κ1–Κ4) και τις πόρτες αρχείου-υλικού (Κ5+Κ6).
  */
-function sweep(root) {
-  const files = collectSources(path.join(root, 'src'), root).map((full) => ({
+function sweep(root, input = openGateInput({ root })) {
+  // ADR-924 — `input`: με `--index` (εκτελεστής) τα αρχεία και το κείμενο ΤΟΥ COMMIT
+  const files = collectSources(input).map((full) => ({
     rel: repoRelativePosix(full, root),
-    source: fs.readFileSync(full, 'utf8'),
+    source: input.read(full) ?? '',
   }));
   const tally = Object.create(null);
   const violations = [];
@@ -171,7 +165,7 @@ function sweep(root) {
   const guardFindings = [
     ...auditOwners(callersByOwner),
     ...auditSymbolReach(callerCount),
-    ...auditAnchors(root),
+    ...auditAnchors(root, REQUIRED_ANCHORS, input),
   ];
   const guardTally = Object.create(null);
   for (const f of guardFindings) guardTally[f.state] = (guardTally[f.state] ?? 0) + 1;

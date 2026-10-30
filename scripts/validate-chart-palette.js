@@ -37,10 +37,11 @@
 
 'use strict';
 
-const fs = require('fs');
 const path = require('path');
+const { commitInput } = require('./lib/gate-input');
 
-const CSS_PATH = path.join(__dirname, '..', 'src', 'app', 'globals.css');
+const ROOT = path.join(__dirname, '..');
+const CSS_PATH = path.join(ROOT, 'src', 'app', 'globals.css');
 const SLOTS = 8;
 const BAND = { light: [0.43, 0.77], dark: [0.48, 0.67] };
 const CHROMA_FLOOR = 0.1;
@@ -139,10 +140,9 @@ function validate(mode, palette, surface, verbose) {
 // ── main ────────────────────────────────────────────────────────────────────
 function main() {
   const verbose = process.argv.includes('--verbose');
-  let css;
-  try {
-    css = fs.readFileSync(CSS_PATH, 'utf8');
-  } catch {
+  // ADR-924 Φ5: `--index` (ο hook) ⇒ η παλέτα ΤΟΥ COMMIT — όχι μια ξένη αστάδιοποίητη αλλαγή του globals.css
+  const css = commitInput(ROOT).read(CSS_PATH);
+  if (css === null) {
     console.error(`\x1b[31m✖ CHECK 3.32 — cannot read ${CSS_PATH}\x1b[0m`);
     process.exit(1);
   }

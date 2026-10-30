@@ -27,9 +27,10 @@
  * @module scripts/lib/navigation-boundary/gate
  */
 
-const fs = require('node:fs');
-const path = require('node:path');
 const ts = require('typescript');
+
+const { openGateInput } = require('../gate-input');
+const { MIN_REASON, boundaryPopulation, judgeOwnerDeclarations, sweepBoundary } = require('../import-boundary/ledger');
 
 const {
   BOUNDARY_MODULE,
@@ -61,29 +62,14 @@ const OWNER_STATES = Object.freeze([STATES.OWNER, STATES.ORPHAN_OWNER, STATES.RE
 /** Οι καταστάσεις που **μπλοκάρουν** — καμία δεν μπαίνει ποτέ σε baseline. */
 const BLOCKING = Object.freeze([STATES.BOUNDARY_BYPASS, STATES.ORPHAN_OWNER, STATES.REASONLESS_OWNER]);
 
-/** Ελάχιστο μήκος λόγου — «ok» δεν είναι λόγος (πρότυπο CHECK 3.35/3.50/3.58). */
-const MIN_REASON = 40;
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. Η ΣΑΡΩΣΗ
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Κάθε `.ts`/`.tsx` του δέντρου — ο **παρονομαστής**, πριν το προφίλτρο. */
-function collectSourceFiles(root) {
-  const found = [];
-  const walk = (dir) => {
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        if (entry.name !== 'node_modules' && entry.name !== '.next') walk(full);
-      } else if (/\.tsx?$/.test(entry.name) && !/\.d\.ts$/.test(entry.name)) {
-        found.push(full);
-      }
-    }
-  };
-  if (fs.existsSync(root)) walk(root);
-  return found;
-}
+/** Κάθε `.ts`/`.tsx` του δέντρου — ο **παρονομαστής** (SSoT `import-boundary/ledger`, ADR-924 Φ3). */
+const collectSourceFiles = boundaryPopulation;
 
 /** Αναφέρει καν το ωμό Next; *(προφίλτρο — αφαιρεί, ποτέ δεν προσθέτει)* */
 function mentionsRawNext(text) {
@@ -194,23 +180,11 @@ function judgeFile(repoRelPath, text) {
  * μια πόρτα που μένει ανοιχτή χωρίς να τη θέλει κανείς *(πρότυπο CHECK 3.50 ·
  * 3.59 `Κ2` · 3.60 `Κ2`)*.
  */
-function judgeOwners(root, owners = RAW_IMPORT_OWNERS) {
-  const verdicts = [];
-  for (const [rel, reason] of Object.entries(owners)) {
-    const full = path.join(root, rel);
-    if (!fs.existsSync(full) || !mentionsRawNext(fs.readFileSync(full, 'utf8'))) {
-      verdicts.push({
-        rel,
-        state: STATES.ORPHAN_OWNER,
-        detail: 'η δήλωση δείχνει σε αρχείο που δεν υπάρχει ή δεν αγγίζει πια ωμό Next',
-      });
-      continue;
-    }
-    if (typeof reason !== 'string' || reason.trim().length < MIN_REASON) {
-      verdicts.push({ rel, state: STATES.REASONLESS_OWNER, detail: 'δήλωση χωρίς ουσιαστικό λόγο' });
-    }
-  }
-  return verdicts;
+function judgeOwners(root, owners = RAW_IMPORT_OWNERS, input = openGateInput({ root })) {
+  return judgeOwnerDeclarations({
+    owners, input, mentions: mentionsRawNext, states: STATES,
+    orphanDetail: 'η δήλωση δείχνει σε αρχείο που δεν υπάρχει ή δεν αγγίζει πια ωμό Next',
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -226,50 +200,16 @@ function judgeOwners(root, owners = RAW_IMPORT_OWNERS) {
  * έστειλε**. Όταν το πλήρες είναι φθηνό, η μερική ανάλυση δεν είναι
  * βελτιστοποίηση — είναι δεύτερη αυθεντία που αποκλίνει σιωπηλά, χωρίς αντάλλαγμα.
  */
-function sweep(root, owners = RAW_IMPORT_OWNERS) {
-  const files = collectSourceFiles(path.join(root, 'src'));
-  const fileTally = Object.fromEntries(FILE_STATES.map((s) => [s, 0]));
-  const violations = [];
-
-  for (const full of files) {
-    const rel = repoRelativePosix(full, root);
-    const verdict = judgeFile(rel, fs.readFileSync(full, 'utf8'));
-    if (!Object.hasOwn(fileTally, verdict.state)) {
-      throw new Error(`[3.61] ΑΓΝΩΣΤΗ κατάσταση αρχείου "${verdict.state}" για ${rel}.`);
-    }
-    fileTally[verdict.state] += 1;
-    if (verdict.state === STATES.BOUNDARY_BYPASS) {
-      for (const hit of verdict.hits) {
-        violations.push({ rel, state: verdict.state, detail: `ωμό \`${hit.symbol}\` (γρ. ${hit.line})` });
-      }
-    }
-  }
-
-  // 🔑 ΔΕΥΤΕΡΟ ΚΑΤΑΣΤΙΧΟ — ΟΙ ΔΗΛΩΣΕΙΣ, ΟΧΙ ΤΑ ΑΡΧΕΙΑ (πρότυπο CHECK 3.50).
-  // ⚠️ Ένα κατάστιχο θα ΔΙΠΛΟΜΕΤΡΟΥΣΕ: ένας ιδιοκτήτης χωρίς λόγο είναι ΚΑΙ
-  //    αρχείο `owner` ΚΑΙ δήλωση `reasonless-owner`. Το έπιασε η άγκυρα `Λ1`,
-  //    όχι η ανάγνωση.
-  const ownerTally = Object.fromEntries(OWNER_STATES.map((s) => [s, 0]));
-  const declared = Object.keys(owners);
-  const flagged = judgeOwners(root, owners);
-  for (const v of flagged) {
-    if (!Object.hasOwn(ownerTally, v.state)) {
-      throw new Error(`[3.61] ΑΓΝΩΣΤΗ κατάσταση δήλωσης "${v.state}" για ${v.rel}.`);
-    }
-    ownerTally[v.state] += 1;
-    violations.push(v);
-  }
-  ownerTally[STATES.OWNER] = declared.length - flagged.length;
-
-  const countedFiles = Object.values(fileTally).reduce((a, b) => a + b, 0);
-  if (countedFiles !== files.length) {
-    throw new Error(`[3.61] Η ΛΟΓΙΣΤΙΚΗ ΑΡΧΕΙΩΝ ΔΕΝ ΚΛΕΙΝΕΙ: ${countedFiles} ≠ ${files.length}.`);
-  }
-  const countedOwners = Object.values(ownerTally).reduce((a, b) => a + b, 0);
-  if (countedOwners !== declared.length) {
-    throw new Error(`[3.61] Η ΛΟΓΙΣΤΙΚΗ ΔΗΛΩΣΕΩΝ ΔΕΝ ΚΛΕΙΝΕΙ: ${countedOwners} ≠ ${declared.length}.`);
-  }
-  return { fileTally, ownerTally, violations, population: files.length, declared: declared.length };
+function sweep(root, owners = RAW_IMPORT_OWNERS, input = openGateInput({ root })) {
+  // 🔑 Ο πυρήνας ζει ΜΙΑ φορά (`import-boundary/ledger`): δύο κατάστιχα (αρχεία · δηλώσεις) — ένα θα ΔΙΠΛΟΜΕΤΡΟΥΣΕ
+  //    (ιδιοκτήτης χωρίς λόγο = ΚΑΙ αρχείο `owner` ΚΑΙ δήλωση `reasonless-owner` — το έπιασε η άγκυρα `Λ1`).
+  return sweepBoundary({
+    check: '3.61', root, owners, input, states: STATES, fileStates: FILE_STATES, ownerStates: OWNER_STATES,
+    relOf: (full) => repoRelativePosix(full, root),
+    judgeFile: (rel, text) => judgeFile(rel, text),
+    bypassDetail: (hit) => `ωμό \`${hit.symbol}\` (γρ. ${hit.line})`,
+    judgeOwners: () => judgeOwners(root, owners, input),
+  });
 }
 
 module.exports = {

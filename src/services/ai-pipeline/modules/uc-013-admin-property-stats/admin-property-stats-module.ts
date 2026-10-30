@@ -25,10 +25,8 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { isRetired } from '@/lib/firestore/trashed-status';
 import { FIELDS } from '@/config/firestore-field-constants';
-import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
-import { sendChannelReply, extractChannelIds } from '../../shared/channel-reply-dispatcher';
 import {
   formatStatsReply,
   isValidStatsType,
@@ -47,6 +45,7 @@ import type {
   AcknowledgmentResult,
   PipelineIntentTypeValue,
 } from '@/types/ai-pipeline';
+import { acknowledgeBySideEffect, approvedAction, autoApprovedProposal, failedExecution, sendCommandReply } from '../../shared/admin-command-protocol';
 
 const logger = createModuleLogger('UC_013_ADMIN_PROPERTY_STATS');
 
@@ -280,36 +279,21 @@ export class AdminPropertyStatsModule implements IUCModule {
       ? `Στατιστικά: ${summaryParts.join(', ')}`
       : 'Δεν βρέθηκαν στοιχεία';
 
-    return {
-      messageId: ctx.intake.id,
-      suggestedActions: [
-        {
-          type: 'admin_property_stats_reply',
-          params: {
-            statsType,
-            projectFilter: lookup?.projectFilter ?? null,
-            totalStats: lookup?.totalStats ?? null,
-            projectBreakdown: lookup?.projectBreakdown ?? [],
-            contactStats: lookup?.contactStats ?? null,
-            projectStats: lookup?.projectStats ?? null,
-            channel: ctx.intake.channel,
-            telegramChatId: (ctx.intake.rawPayload.chatId as string) ?? null,
-          },
-        },
-      ],
-      requiredApprovals: [],
-      autoApprovable: true,
-      summary,
-      schemaVersion: PIPELINE_PROTOCOL_CONFIG.SCHEMA_VERSION,
-    };
+    return autoApprovedProposal(ctx, 'admin_property_stats_reply', {
+      statsType,
+      projectFilter: lookup?.projectFilter ?? null,
+      totalStats: lookup?.totalStats ?? null,
+      projectBreakdown: lookup?.projectBreakdown ?? [],
+      contactStats: lookup?.contactStats ?? null,
+      projectStats: lookup?.projectStats ?? null,
+    }, summary);
   }
 
   // ── Step 6: EXECUTE ──
 
   async execute(ctx: PipelineContext): Promise<ExecutionResult> {
     try {
-      const actions = ctx.approval?.modifiedActions ?? ctx.proposal?.suggestedActions ?? [];
-      const action = actions.find(a => a.type === 'admin_property_stats_reply');
+      const action = approvedAction(ctx, 'admin_property_stats_reply');
 
       if (!action) {
         return { success: false, sideEffects: [], error: 'No admin_property_stats_reply action found' };
@@ -332,34 +316,16 @@ export class AdminPropertyStatsModule implements IUCModule {
         projectStats: pStats,
       });
 
-      const replyResult = await sendChannelReply({
-        channel: ctx.intake.channel,
-        ...extractChannelIds(ctx),
-        subject: 'Στατιστικά επιχείρησης',
-        textBody: replyText,
-        requestId: ctx.requestId,
-      });
-
-      return {
-        success: true,
-        sideEffects: replyResult.success
-          ? [`reply_sent:${replyResult.messageId ?? 'unknown'}`]
-          : [`reply_failed:${replyResult.error ?? 'unknown'}`],
-      };
+      return await sendCommandReply(ctx, 'Στατιστικά επιχείρησης', replyText);
     } catch (error) {
-      const errorMessage = getErrorMessage(error);
-      logger.error('UC-013 EXECUTE: Failed', { requestId: ctx.requestId, error: errorMessage });
-      return { success: false, sideEffects: [], error: errorMessage };
+      return failedExecution(ctx, 'UC-013', logger, error);
     }
   }
 
   // ── Step 7: ACKNOWLEDGE ──
 
   async acknowledge(ctx: PipelineContext): Promise<AcknowledgmentResult> {
-    const replySent = ctx.executionResult?.sideEffects?.some(
-      (se: string) => se.startsWith('reply_sent:')
-    ) ?? false;
-    return { sent: replySent, channel: ctx.intake.channel };
+    return acknowledgeBySideEffect(ctx, 'reply_sent:');
   }
 
   async healthCheck(): Promise<boolean> {

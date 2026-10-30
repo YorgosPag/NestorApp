@@ -44,11 +44,11 @@
  * Exit: 0 = all pass, 1 = any fail.
  */
 
-const { Worker }   = require('worker_threads');
 const { spawn }    = require('child_process');
 const fs           = require('fs');
 const os           = require('os');
 const path         = require('path');
+const { runThread: runGateThread, prepareCommitRun } = require('./lib/gate-worker');
 
 const RED    = '\x1b[0;31m';
 const GREEN  = '\x1b[0;32m';
@@ -56,7 +56,6 @@ const YELLOW = '\x1b[1;33m';
 const NC     = '\x1b[0m';
 
 const cwd            = process.cwd();
-const RUNNER         = path.join(__dirname, 'worker-check-runner.js');
 const TIMEOUT_MS     = Number(process.env.CHECK_WORKER_TIMEOUT_MS) || 120_000;
 // Max checks in flight (workers + processes). Default: CPU cores — see `runBounded`.
 const CONCURRENCY    = Number(process.env.CHECK_CONCURRENCY) || os.availableParallelism();
@@ -115,18 +114,18 @@ function addBash(id, name, shScript, args = []) {
 
 if (tsFiles.length > 0) {
   // 3.5 + 3.6 run in Phase 0.5 (sync bash) — spawn deadlocks alongside worker threads
-  addThread('3.7',  'SSoT imports',             'scripts/check-ssot-imports.js',               tsFiles);
-  addThread('3.8',  'i18n missing keys',        'scripts/check-i18n-missing-keys.js',          tsFiles);
-  addThread('3.12', 'Option i18n keys',         'scripts/check-option-i18n-keys.js',           tsFiles);
-  addThread('3.13', 'i18n resolver',            'scripts/check-i18n-resolver-reachability.js', tsFiles);
+  addThread('3.7',  'SSoT imports',             'scripts/check-ssot-imports.js',               [...tsFiles, '--index']);
+  addThread('3.8',  'i18n missing keys',        'scripts/check-i18n-missing-keys.js',          [...tsFiles, '--index']);
+  addThread('3.12', 'Option i18n keys',         'scripts/check-option-i18n-keys.js',           [...tsFiles, '--index']);
+  addThread('3.13', 'i18n resolver',            'scripts/check-i18n-resolver-reachability.js', [...tsFiles, '--index']);
   if (!skipTooltip)
-    addThread('3.23', 'Native tooltip',         'scripts/check-native-tooltip.js',             tsFiles);
+    addThread('3.23', 'Native tooltip',         'scripts/check-native-tooltip.js',             [...tsFiles, '--index']);
   // CHECK 3.48 (ADR-778) — κενό <SelectItem>: το Radix δεσμεύει το '' και το item ΡΙΧΝΕΙ ΟΛΗ
   // την επιφάνεια. Χτύπησε ΤΡΕΙΣ φορές (§59.6.3 έριξε την καρτέλα «Μορφοποίηση»· το βρήκε
   // άνθρωπος). Ο τύπος δέχεται το '' και ο έλεγχος χρόνου εκτέλεσης πετά ΚΑΤΑ ΤΗΝ ΑΠΟΔΟΣΗ,
   // δηλαδή αφού προσγειωθεί. Ίδιος σκελετός AST με το 3.23 — καμία νέα μηχανή. ZERO-TOL.
   if (!process.env.SKIP_EMPTY_SELECT_ITEM)
-    addThread('3.48', 'Empty SelectItem',       'scripts/check-empty-select-item.js',          tsFiles);
+    addThread('3.48', 'Empty SelectItem',       'scripts/check-empty-select-item.js',          [...tsFiles, '--index']);
   // CHECK 3.55 (ADR-785) — προαποδοσιμότητα. Το `docker-build.yml` (Tier 1) ήταν κόκκινο ΟΚΤΩ
   // ΜΕΡΕΣ επειδή μια σελίδα καλούσε `useSearchParams()` χωρίς όριο `<Suspense>`: το `next build`
   // σταματά στον ΠΡΩΤΟ παραβάτη, άρα δεν μπορεί καν να πει πόσοι είναι. Ο μόνος άλλος ανιχνευτής
@@ -134,16 +133,16 @@ if (tsFiles.length > 0) {
   // Η σκανδάλη ζει ΜΕΣΑ στην πύλη — η ανάλυση είναι πάντα ΠΛΗΡΗΣ όταν πυροδοτεί (~8s),
   // γιατί το ερώτημα αφορά την κλειστότητα απόδοσης, όχι ένα αρχείο. ZERO-TOL, καμία baseline.
   if (!process.env.SKIP_PRERENDER_BAILOUT)
-    addThread('3.55', 'Prerender integrity',    'scripts/check-prerender-bailout.js',          tsFiles);
+    addThread('3.55', 'Prerender integrity',    'scripts/check-prerender-bailout.js',          [...tsFiles, '--index']);
   if (!skipTabs)
-    addThread('3.24', 'Tabs import ratchet',    'scripts/check-tabs-import-ratchet.js',        tsFiles);
+    addThread('3.24', 'Tabs import ratchet',    'scripts/check-tabs-import-ratchet.js',        [...tsFiles, '--index']);
   if (!skipFlash)
-    addThread('3.25', 'No-flash ratchet',       'scripts/check-no-flash-ratchet.js',           tsFiles);
+    addThread('3.25', 'No-flash ratchet',       'scripts/check-no-flash-ratchet.js',           [...tsFiles, '--index']);
   addThread('4',    'File sizes',               'scripts/check-file-sizes.js',                 tsFiles);
 }
 
 if (localeFiles.length > 0)
-  addBash('3.9', 'ICU interpolation', 'scripts/check-icu-interpolation.sh', localeFiles);
+  addBash('3.9', 'ICU interpolation', 'scripts/check-icu-interpolation.sh', ['--index', ...localeFiles]);
 
 // CHECK 3.33 (ADR-727) — src/types/i18n.ts is generated from the locale JSONs.
 // Trigger on either side of that dependency: a locale change that forgot the
@@ -195,7 +194,7 @@ const namespaceWiringTriggers = [
   ...allFiles.filter(f => f.startsWith('src/i18n/') || f === 'src/types/i18n.ts'),
 ];
 if (!skipNamespaceWiring && namespaceWiringTriggers.length > 0)
-  addThread('3.36', 'i18n namespace reachability', 'scripts/validate-i18n-config.js');
+  addThread('3.36', 'i18n namespace reachability', 'scripts/validate-i18n-config.js', ['--index']);
 
 // CHECK 3.37 (ADR-757) — «παρακολουθείται» η πύλη; Ο συγκεντρωτής CI κρατούσε ΧΕΙΡΟΓΡΑΦΗ
 // λίστα 18 workflows· επτά πύλες είχαν προστεθεί χωρίς να μπουν, ανάμεσά τους η ΜΟΝΑΔΙΚΗ
@@ -206,7 +205,7 @@ const ciTierTriggers = allFiles.filter(
   f => f.startsWith('.github/workflows/') || f === '.ci-gate-tiers.json' || f.startsWith('scripts/lib/ci/')
 );
 if (!process.env.SKIP_CI_TIER_COVERAGE && ciTierTriggers.length > 0)
-  addThread('3.37', 'CI gate tier coverage', 'scripts/check-ci-gate-tiers.js');
+  addThread('3.37', 'CI gate tier coverage', 'scripts/check-ci-gate-tiers.js', ['--index']);
 
 // CHECK 3.57 (ADR-788) — «χτίζουν ΟΛΟΙ τον ίδιο server;». Δύο workflows γράφουν κατά λέξη
 // «Any workflow calling build:ci MUST set NODE_OPTIONS itself»· ένα τρίτο το αγνόησε και
@@ -228,7 +227,7 @@ const buildParityTriggers = allFiles.filter(
     || f === 'scripts/check-production-build-parity.js'
 );
 if (!process.env.SKIP_BUILD_PARITY && buildParityTriggers.length > 0)
-  addThread('3.57', 'Production build parity', 'scripts/check-production-build-parity.js');
+  addThread('3.57', 'Production build parity', 'scripts/check-production-build-parity.js', ['--index']);
 
 // CHECK 3.38 (ADR-770) — «διαβάζεται»; Στο ΠΡΟΕΠΙΛΕΓΜΕΝΟ (σκοτεινό) θέμα το `--primary`
 // λύνεται σε `217 33% 17%`, ΤΑΥΤΟΣΗΜΟ με το `--card`: το `text-primary` αποτυγχάνει σε
@@ -256,7 +255,7 @@ const themePairingTriggers = allFiles.filter(
     || f.startsWith('scripts/lib/contrast/')
 );
 if (!process.env.SKIP_THEME_PAIRING && themePairingTriggers.length > 0)
-  addThread('3.39', 'Theme pairing ratchet', 'scripts/check-theme-pairing-ratchet.js');
+  addThread('3.39', 'Theme pairing ratchet', 'scripts/check-theme-pairing-ratchet.js', ['--index']);
 
 // CHECK 3.42 (ADR-773 §8) — η ΠΕΜΠΤΗ αρχή χρώματος: «οι ΚΛΑΣΕΙΣ που παράγει η κεντρική
 // αρχή είναι θεματικές;». Το `design-system/tokens/colors.ts:76` δηλώνει
@@ -285,7 +284,7 @@ if (!themeClassesTriggered && srcTsFiles.length > 0) {
     || srcTsFiles.some(f => isAllowlisted(f.replace(/\\/g, '/'), mod.allowlist));
 }
 if (!process.env.SKIP_THEME_CLASSES && themeClassesTriggered)
-  addThread('3.42', 'Tailwind theme classes ratchet', 'scripts/check-tailwind-theme-classes-ratchet.js');
+  addThread('3.42', 'Tailwind theme classes ratchet', 'scripts/check-tailwind-theme-classes-ratchet.js', ['--index']);
 
 // CHECK 3.41 (ADR-771 Φ.1) — «ξέρω ΠΟΙΟ είναι ποιο χωρίς να δω χρώμα;». Η «παράκαμψη»
 // και η «σύγκρουση» κελιού ζωγραφίζονταν ως ΤΑΥΤΟΣΗΜΟ τρίγωνο, στην ίδια γωνία, στο ίδιο
@@ -301,7 +300,7 @@ const stateChannelTriggers = allFiles.filter(
     || f.startsWith('scripts/lib/contrast/')
 );
 if (!process.env.SKIP_STATE_CHANNEL && stateChannelTriggers.length > 0)
-  addThread('3.41', 'State channel distinctness', 'scripts/check-state-channel-distinctness.js');
+  addThread('3.41', 'State channel distinctness', 'scripts/check-state-channel-distinctness.js', ['--index']);
 
 // CHECK 3.45 (ADR-771 Φ.3) — «αυτό το κατώφλι αντίθεσης είναι ΕΦΙΚΤΟ;». Το
 // `WALL_LINE_CONTRAST = 9.0` είναι ΑΝΕΦΙΚΤΟ στο preset `cinema4d` (#555555, μέγιστο δυνατό
@@ -314,7 +313,7 @@ if (!process.env.SKIP_STATE_CHANNEL && stateChannelTriggers.length > 0)
 // πλήρης (~2,7s): μια νέα μεσοτονική επιφάνεια κάνει ανέφικτες υποσχέσεις σε αρχεία που
 // κανείς δεν σταδιοποίησε. Κόστος όταν δεν αφορά: ~0,05s (προφίλτρο κειμένου).
 if (!process.env.SKIP_CONTRAST_PROMISE && allFiles.length > 0)
-  addThread('3.45', 'Contrast promise reachability', 'scripts/check-contrast-promise-reachability.js', allFiles);
+  addThread('3.45', 'Contrast promise reachability', 'scripts/check-contrast-promise-reachability.js', [...allFiles, '--index']);
 
 // CHECK 3.43 (ADR-774) — «αυτό που μοιάζει με token, ΕΙΝΑΙ token;». Στα `.css` του `src/`
 // υπάρχουν 125 `var(--x, #hex)` όπου το `--x` δεν ορίζεται πουθενά ⇒ το hex είναι η τιμή,
@@ -340,7 +339,7 @@ if (!process.env.SKIP_CSS_TOKEN_AUTHORITY && cssAuthorityTriggers.length > 0)
   // «κανένα staged .css» και θα περνούσε πράσινη πάνω στην αλλαγή του ίδιου της του κριτηρίου
   // — το σχήμα «0 = κανείς δεν κοίταξε», γεννημένο στη σκανδάλη αντί στον σαρωτή.
   addThread('3.43', 'CSS token authority', 'scripts/check-css-token-authority.js',
-    stagedCssForAuthority.length > 0 ? stagedCssForAuthority : ['--all']);
+    [...(stagedCssForAuthority.length > 0 ? stagedCssForAuthority : ['--all']), '--index']);
 
 // CHECK 3.46 (ADR-775) — «ΜΠΟΡΕΙ αυτή η σουίτα e2e να περάσει;», πριν καν ρωτήσει κανείς
 // αν περνάει. Μέχρι 08/08 ΚΑΝΕΝΑ workflow δεν έτρεχε `playwright test`: 369 tests σε 5
@@ -364,7 +363,7 @@ const e2eExecTriggers = allFiles.filter(
     || /(^|\/)e2e\/.*\.spec\.tsx?$|\.e2e\.spec\.tsx?$/.test(f)
 );
 if (!process.env.SKIP_E2E_EXECUTABILITY && e2eExecTriggers.length > 0)
-  addThread('3.46', 'E2E executability', 'scripts/check-e2e-executability.js');
+  addThread('3.46', 'E2E executability', 'scripts/check-e2e-executability.js', ['--index']);
 
 // CHECK 3.47 (ADR-776) — «αυτό το αρχείο test το τρέχει ΑΚΡΙΒΩΣ ΕΝΑΣ;»: όχι κανένας, όχι δύο.
 // Το default `jest.config.js` σάρωνε με glob όλο το δέντρο και επικαλυπτόταν με τα ΤΕΣΣΕΡΑ
@@ -412,7 +411,7 @@ const adrIdentityTriggers = allFiles.filter(
     || f.startsWith('scripts/lib/adr-identity/')
 );
 if (!process.env.SKIP_ADR_IDENTITY && adrIdentityTriggers.length > 0)
-  addThread('3.49', 'ADR identity', 'scripts/check-adr-identity.js');
+  addThread('3.49', 'ADR identity', 'scripts/check-adr-identity.js', ['--index']);
 
 // CHECK 3.50 (ADR-780) — «κάθε επιφάνεια που δηλώνει ΚΑΘΟΛΙΚΗ στρώση, τη ζητά από τη ΜΙΑ
 // κλίμακα;» — και, το ίδιο σημαντικό, «το token που ζητά ΥΠΑΡΧΕΙ;». Το SSoT σταματούσε στο
@@ -448,7 +447,7 @@ const zIndexScaleTriggers = allFiles.filter(
     || f === 'pnpm-lock.yaml'
 );
 if (!process.env.SKIP_ZINDEX_SCALE && zIndexScaleTriggers.length > 0)
-  addThread('3.50', 'z-index scale', 'scripts/check-zindex-scale.js', zIndexScaleTriggers);
+  addThread('3.50', 'z-index scale', 'scripts/check-zindex-scale.js', [...zIndexScaleTriggers, '--index']);
 
 // CHECK 3.51 (ADR-781) — ωμά i18n κλειδιά στο SSR HTML, ΣΤΑΤΙΚΟ μισό (Κ1 + Κ2).
 // 17 ωμά κλειδιά × 141 διαδρομές, μόνιμα, στην παραγωγή: ο `useTranslationLazy`
@@ -491,7 +490,7 @@ if (!process.env.SKIP_I18N_SSR_RAW_KEYS && ssrRawKeysTriggers.length > 0)
 // ⚠️ Η ΣΚΑΝΔΑΛΗ ΖΕΙ ΜΕΣΑ ΣΤΗΝ ΠΥΛΗ (`triggers()`), όχι εδώ — λίστα μονοπατιών εδώ θα ήταν
 // δεύτερη αυθεντία. Κόστος ~0,05s όταν δεν αφορά· ~7s όταν πυροδοτεί (Κ2: git grep + AST).
 if (!process.env.SKIP_SHELL_BOUNDARY && allFiles.length > 0)
-  addThread('3.52', 'Shell boundary', 'scripts/check-shell-boundary.js', allFiles);
+  addThread('3.52', 'Shell boundary', 'scripts/check-shell-boundary.js', [...allFiles, '--index']);
 
 // CHECK 3.78 (ADR-855 Α5) — «δηλώνει αυτή η διαδρομή όριο, και συμφωνεί η δήλωση με ό,τι
 // επιβάλλεται;». Το `options.category` των επτά wrappers ΔΕΝ διαβαζόταν ποτέ: η κατηγορία
@@ -518,7 +517,7 @@ if (!process.env.SKIP_RATE_LIMIT_POLICY) {
     || f.startsWith('scripts/lib/rate-limit-policy/')
     || f === 'scripts/check-rate-limit-policy.js');
   if (ratePolicyTriggers.length > 0)
-    addThread('3.78', 'Rate-limit policy', 'scripts/check-rate-limit-policy.js');
+    addThread('3.78', 'Rate-limit policy', 'scripts/check-rate-limit-policy.js', ['--index']);
 }
 
 // CHECK 3.79 (ADR-858) — «λύνουν ΔΥΟ αρχεία στο ίδιο specifier, και ξέρει κάποιος ποιο
@@ -535,7 +534,7 @@ if (!process.env.SKIP_SHADOWED_MODULES) {
       || f === '.shadowed-modules-baseline.json'
       || f.startsWith('scripts/lib/module-init/')));
   if (shadowTriggers.length > 0)
-    addThread('3.79', 'Shadowed modules', 'scripts/check-shadowed-modules.js');
+    addThread('3.79', 'Shadowed modules', 'scripts/check-shadowed-modules.js', ['--index']);
 }
 
 // CHECK 3.80 (ADR-858 Δ4) — «ΘΑ ΣΚΑΣΕΙ αυτός ο κύκλος;», όχι «υπάρχει κύκλος;».
@@ -557,14 +556,14 @@ if (!process.env.SKIP_MODULE_INIT) {
     || f === '.module-init-baseline.json'
     || f.startsWith('scripts/lib/module-init/'));
   if (moduleInitTriggers.length > 0)
-    addThread('3.80', 'Deadly import cycles', 'scripts/check-module-init.js');
+    addThread('3.80', 'Deadly import cycles', 'scripts/check-module-init.js', ['--index']);
 }
 
 // CHECK 3.53 — ταυτότητα ενοτήτων ADR (ADR-739 §0.3 / ADR-777 §0.4).
 // ⚠️ Η ΣΚΑΝΔΑΛΗ ΖΕΙ ΜΕΣΑ ΣΤΗΝ ΠΥΛΗ (`triggers()`): μια ενότητα μπορεί να μετακομίσει σε
 // οποιοδήποτε ADR/SPEC, άρα λίστα μονοπατιών εδώ θα απέκλινε σιωπηλά (σχήμα 3.34/3.37).
 if (!process.env.SKIP_ADR_SECTION_REFS && allFiles.length > 0)
-  addThread('3.53', 'ADR section refs', 'scripts/check-adr-section-refs.js', allFiles);
+  addThread('3.53', 'ADR section refs', 'scripts/check-adr-section-refs.js', [...allFiles, '--index']);
 
 // CHECK 3.56 (ADR-777 §8.42) — «αποφασίζει κάποιος ΠΟΙΟΣ ΔΙΑΧΕΙΡΙΖΕΤΑΙ μια αγγελία έξω
 // από το SSoT;». Το §8.39 ένωσε την ερώτηση σε `lib/owner-property/listing-custody.ts` και
@@ -578,7 +577,7 @@ if (!process.env.SKIP_ADR_SECTION_REFS && allFiles.length > 0)
 // τη βλάβη — πύλη χωρίς `stripComments` κοκκινίζει πάνω στην τεκμηρίωση της θεραπείας (3.50).
 // ⚠️ ZERO-TOL, ΚΑΜΙΑ baseline: δεν υπάρχει «λιγότερες αυθεντίες εξουσιοδότησης από χθες».
 if (!process.env.SKIP_LISTING_CUSTODY && allFiles.length > 0)
-  addThread('3.56', 'Listing custody', 'scripts/check-listing-custody.js', allFiles);
+  addThread('3.56', 'Listing custody', 'scripts/check-listing-custody.js', [...allFiles, '--index']);
 
 // CHECK 3.58 (ADR-787 §5.2) — «ποιος αποφασίζει ότι επιτρέπεσαι σε ΞΕΝΟ χώρο, και ρώτησε
 // τον κριτή;». Η Φάση 1 (Κ-2) έδωσε τον απαντητή του «είναι μέλος;» και έκλεισε ΕΝΑ κανάλι
@@ -593,7 +592,7 @@ if (!process.env.SKIP_LISTING_CUSTODY && allFiles.length > 0)
 // ⚠️ ΔΥΟ ΜΗΧΑΝΙΣΜΟΙ: ZERO-TOL για το «κανάλι χωρίς κριτή» (ΔΕΝ μπαίνει ΠΟΤΕ σε baseline —
 // το `buildPayload` ρίχνει) + RATCHET κατά ταυτότητα για την ομωνυμία.
 if (!process.env.SKIP_WORKSPACE_AUTHORITY && allFiles.length > 0)
-  addThread('3.58', 'Workspace authority', 'scripts/check-workspace-authority.js', allFiles);
+  addThread('3.58', 'Workspace authority', 'scripts/check-workspace-authority.js', [...allFiles, '--index']);
 
 // CHECK 3.59 — πύλη ενικού λεξιλογίου σημείου (ADR-792). «Δηλώνεται κάθε όνομα του
 // λεξιλογίου σε ΑΚΡΙΒΩΣ ΕΝΑ αρχείο;» Μετρημένο 22/08: ΤΕΣΣΕΡΑ ζεύγη ομώνυμων τύπων με
@@ -607,7 +606,7 @@ if (!process.env.SKIP_WORKSPACE_AUTHORITY && allFiles.length > 0)
 // ⚠️ ΔΥΟ ΜΗΧΑΝΙΣΜΟΙ: ZERO-TOL για αδήλωτη ρίζα + ορφανή δήλωση (ΔΕΝ μπαίνουν ΠΟΤΕ σε
 // baseline — το `buildPayload` ρίχνει) + RATCHET κατά ταυτότητα για το κοινό όνομα.
 if (!process.env.SKIP_POINT_VOCABULARY && allFiles.length > 0)
-  addThread('3.59', 'Point vocabulary', 'scripts/check-point-vocabulary.js', allFiles);
+  addThread('3.59', 'Point vocabulary', 'scripts/check-point-vocabulary.js', [...allFiles, '--index']);
 
 // CHECK 3.68 — ΠΥΛΗ ΤΗΣ ΑΡΧΗΣ ΤΗΣ ΕΞΟΥΣΙΟΔΟΤΗΣΗΣ (ADR-801 §4). «Αποφασίζει κάποιος
 // "επιτρέπεται;" έξω από τον ΕΝΑ κριτή;» ⚠️ ΔΕΝ είναι το ερώτημα του 3.58: εκείνο ρωτά
@@ -623,7 +622,7 @@ if (!process.env.SKIP_POINT_VOCABULARY && allFiles.length > 0)
 // θα ήταν μονίμως κόκκινο, 3.39) + ZERO-TOL για φαντάσματα/ορφανές δηλώσεις, που ΔΕΝ
 // μπαίνουν ΠΟΤΕ σε baseline (το buildPayload ρίχνει).
 if (!process.env.SKIP_AUTHORITY_REGISTRY && allFiles.length > 0)
-  addThread('3.68', 'Authority registry', 'scripts/check-authority-registry.js', allFiles);
+  addThread('3.68', 'Authority registry', 'scripts/check-authority-registry.js', [...allFiles, '--index']);
 
 // CHECK 3.62 — ΠΥΛΗ ΔΗΜΟΣΙΑΣ ΕΠΙΦΑΝΕΙΑΣ (ADR-796). «Ζητά κάποιος από ΕΞΩ ένα σύμβολο
 // του dxf-viewer που κανείς δεν δήλωσε δημόσιο;»
@@ -640,7 +639,7 @@ if (!process.env.SKIP_AUTHORITY_REGISTRY && allFiles.length > 0)
 // ⚠️ Η ΣΚΑΝΔΑΛΗ ΖΕΙ ΜΕΣΑ ΣΤΗΝ ΠΥΛΗ: νέος καταναλωτής προσγειώνεται σε ΟΠΟΙΟΔΗΠΟΤΕ
 // αρχείο του src/, άρα λίστα μονοπατιών εδώ θα ήταν δεύτερη αυθεντία (3.34: 63).
 if (!process.env.SKIP_PUBLIC_SURFACE && allFiles.length > 0)
-  addThread('3.62', 'Public surface', 'scripts/check-public-surface.js', allFiles);
+  addThread('3.62', 'Public surface', 'scripts/check-public-surface.js', [...allFiles, '--index']);
 
 // CHECK 3.60 — πύλη εμβέλειας χώρου (ADR-787 §5.3 γ). «Ζει αυτή η σελίδα πίσω από το
 // πρόθεμα χώρου — και αν όχι, το είπε κάποιος με λόγο;»
@@ -661,7 +660,7 @@ if (!process.env.SKIP_PUBLIC_SURFACE && allFiles.length > 0)
 // ακόμη. ⚠️ Ο αριθμός ΔΕΝ είναι δείκτης υγείας: είναι το μέτρο μιας εκστρατείας που
 // τελειώνει στο μηδέν.
 if (!process.env.SKIP_WORKSPACE_SCOPE && allFiles.length > 0)
-  addThread('3.60', 'Workspace scope', 'scripts/check-workspace-scope.js', allFiles);
+  addThread('3.60', 'Workspace scope', 'scripts/check-workspace-scope.js', [...allFiles, '--index']);
 
 // CHECK 3.61 — πύλη του συνόρου πλοήγησης (ADR-787 §5.3 ν). «Ζητά αυτό το αρχείο την πλοήγηση
 // από το ΣΥΝΟΡΟ;» — το επόμενο ερώτημα μετά τη μετανάστευση των 128 αρχείων. ⛔ ZERO-TOLERANCE,
@@ -671,7 +670,7 @@ if (!process.env.SKIP_WORKSPACE_SCOPE && allFiles.length > 0)
 // ⚠️ Η σκανδάλη ζει ΜΕΣΑ στην πύλη και αποφασίζει ΑΝ τρέχει, ποτέ ΠΟΣΟ σαρώνει: όταν πυροδοτεί,
 // σαρώνει ΟΛΟ το δέντρο (~4,5s· ~0,7s όταν δεν αφορά).
 if (!process.env.SKIP_NAVIGATION_BOUNDARY && allFiles.length > 0)
-  addThread('3.61', 'Navigation boundary', 'scripts/check-navigation-boundary.js', allFiles);
+  addThread('3.61', 'Navigation boundary', 'scripts/check-navigation-boundary.js', [...allFiles, '--index']);
 
 // CHECK 3.63 — ΠΥΛΗ ΤΟΥ ΔΙΑΔΡΟΜΟΥ ΤΟΥ ΚΕΛΥΦΟΥΣ (ADR-797). «Δηλώνει κάποιος κενό που ΔΕΝ
 // του ανήκει, και ξέρει κάποιος ποιες σελίδες βγήκαν από τον διάδρομο;»
@@ -692,8 +691,8 @@ if (!process.env.SKIP_NAVIGATION_BOUNDARY && allFiles.length > 0)
 // ⚠️ ΚΑΜΙΑ σκανδάλη, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ: το πλήρες κοστίζει ~0,3s. Όταν το πλήρες είναι φθηνό,
 // η μερική ανάλυση δεν είναι βελτιστοποίηση — είναι δεύτερη αυθεντία, χωρίς αντάλλαγμα.
 if (!process.env.SKIP_SHELL_SURFACE && allFiles.length > 0)
-  addThread('3.63', 'Shell surface', 'scripts/check-shell-surface.js', allFiles);
-  addThread('3.72', 'Shell utilities', 'scripts/check-shell-utilities.js', allFiles);
+  addThread('3.63', 'Shell surface', 'scripts/check-shell-surface.js', [...allFiles, '--index']);
+  addThread('3.72', 'Shell utilities', 'scripts/check-shell-utilities.js', [...allFiles, '--index']);
 
 // CHECK 3.65 — ΠΥΛΗ ΤΗΣ ΜΙΑΣ ΕΚΔΟΣΗΣ (ADR-800). «Υπάρχει ΕΝΑ σημείο δήλωσης και ΜΙΑ
 // εγκατεστημένη έκδοση για κάθε όνομα πακέτου μέσα στο workspace;»
@@ -712,7 +711,7 @@ if (!process.env.SKIP_SHELL_SURFACE && allFiles.length > 0)
 // 6/12 λάθος τιμές, και το `catalogMode: strict` θέλει pnpm ≥10.12.1 (εδώ 9.14.0).
 // ⚠️ ΔΕΝ είναι ratchet — καμία baseline, ποτέ. Δεν υπάρχει «λιγότερες μηχανές δοκιμών από χθες».
 if (!process.env.SKIP_ONE_VERSION && allFiles.length > 0)
-  addThread('3.65', 'One version', 'scripts/check-one-version.js', allFiles);
+  addThread('3.65', 'One version', 'scripts/check-one-version.js', [...allFiles, '--index']);
 
 // CHECK 3.66 — ΠΥΛΗ ΤΟΥ ΜΗΤΡΩΟΥ ΠΥΛΩΝ (ADR-802). «Είναι κάθε πύλη που ΤΡΕΧΕΙ γραμμένη στο
 // CLAUDE.md, και κάθε γραμμή του CLAUDE.md πύλη που ΤΡΕΧΕΙ;»
@@ -733,7 +732,7 @@ if (!process.env.SKIP_ONE_VERSION && allFiles.length > 0)
 // ⚠️ ΚΑΜΙΑ ΣΚΑΝΔΑΛΗ ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ: το πλήρες κοστίζει ~40ms (4 αρχεία, 4 regex). Όταν το
 // πλήρες είναι φθηνό, η μερική ανάλυση δεν είναι βελτιστοποίηση — είναι δεύτερη αυθεντία.
 if (!process.env.SKIP_GATE_INVENTORY)
-  addThread('3.66', 'Gate inventory', 'scripts/check-gate-inventory.js', allFiles);
+  addThread('3.66', 'Gate inventory', 'scripts/check-gate-inventory.js', [...allFiles, '--index']);
 
 // CHECK 3.107 — ΠΥΛΗ ΤΗΣ ΟΨΗΣ ΤΟΥ COMMIT (ADR-924). «Κρίνει αυτή η πύλη ό,τι ΘΑ ΔΕΣΜΕΥΤΕΙ — ή
 // τον δίσκο, όπου ζει και η ξένη αστάδιοποίητη δουλειά;»
@@ -745,6 +744,15 @@ if (!process.env.SKIP_GATE_INVENTORY)
 // ανάλυση θα ήταν δεύτερη αυθεντία.
 if (!process.env.SKIP_GATE_COMMIT_VIEW)
   addThread('3.107', 'Gate commit view', 'scripts/check-gate-commit-view.js', ['--index']);
+
+// CHECK 3.108 — ΠΥΛΗ ΤΗΣ ΜΙΑΣ ΔΗΛΩΣΗΣ ΟΙΚΟΓΕΝΕΙΑΣ NAMESPACES (ADR-280 §11). «Γράφει κάποιος με το χέρι
+// μια ΟΙΚΟΓΕΝΕΙΑ namespaces που ο hook ήδη φορτώνει μόνος του;»
+// 🔴 Μετρημένο 2026-10-30: ~650 χειρόγραφες λίστες σε 10 οικογένειες (κτίριο: 100) — ενώ το
+// `useTranslation('building')` επεκτείνεται ΗΔΗ μέσω `COMPAT_NAMESPACE_MAP`. Codemod με απόδειξη
+// ισοδυναμίας ⇒ 0. ⛔ ZERO-TOL Κ1-Κ3 + 🔴 RATCHET κατά ταυτότητα (order-bearing).
+// ⚠️ Η σκανδάλη (σταδιοποιημένα) ΚΛΙΜΑΚΩΝΕΤΑΙ σε πλήρη όταν σταδιοποιείται ο χάρτης ή τα bundles.
+if (!process.env.SKIP_I18N_NAMESPACE_FAMILY)
+  addThread('3.108', 'i18n namespace family', 'scripts/check-i18n-namespace-family.js', ['--index']);
 
 // CHECK 3.67 — ΠΥΛΗ ΤΗΣ ΥΠΟΣΧΕΣΗΣ ΓΡΑΜΜΑΤΟΣΕΙΡΑΣ (ADR-803). «Υπόσχεται ο πίνακας
 // υποκατάστασης όψη που ΔΕΝ φορτώνεται ΠΟΤΕ;»
@@ -765,7 +773,7 @@ if (!process.env.SKIP_GATE_COMMIT_VIEW)
 // ⛔ ZERO-TOL για αρχείο που λείπει και λάθος δηλώσεις, που ΔΕΝ μπαίνουν ΠΟΤΕ σε baseline.
 // ⚠️ Ο αριθμός 4 ΔΕΝ είναι δείκτης υγείας — η θεραπεία είναι να ΜΠΕΙ η όψη.
 if (!process.env.SKIP_FONT_PROMISE)
-  addThread('3.67', 'Font promise', 'scripts/check-font-promise.js', allFiles);
+  addThread('3.67', 'Font promise', 'scripts/check-font-promise.js', [...allFiles, '--index']);
 
 // CHECK 3.69 — ΠΥΛΗ ΤΟΥ ΜΗΤΡΩΟΥ ΓΡΑΜΜΑΤΟΣΕΙΡΩΝ (ADR-805). «Έχει κάθε δυαδικό γραμματοσειράς
 // που ΔΙΑΝΕΜΟΥΜΕ δηλωμένη, επιτρεπόμενη άδεια — και το επιβεβαιώνει το ΙΔΙΟ ΤΟ ΑΡΧΕΙΟ;»
@@ -784,7 +792,7 @@ if (!process.env.SKIP_FONT_PROMISE)
 // Πρόφιλτρο ΜΕΓΕΘΟΥΣ απορρίφθηκε αν και 2000× πιο επιλεκτικό: είναι ευρετικό, και μια μικρή
 // υποσυνόλου γραμματοσειρά θα χανόταν ΣΙΩΠΗΛΑ.
 if (!process.env.SKIP_FONT_ASSETS)
-  addThread('3.69', 'Font assets', 'scripts/check-font-assets.js', allFiles);
+  addThread('3.69', 'Font assets', 'scripts/check-font-assets.js', [...allFiles, '--index']);
 
 // CHECK 3.70 — ΠΥΛΗ ΤΩΝ ΑΔΕΣΜΕΥΤΩΝ ΑΝΑΓΝΩΡΙΣΤΙΚΩΝ (ADR-808). «Αναφέρει αυτό το αρχείο όνομα
 // που ΔΕΝ δηλώνεται, ΔΕΝ εισάγεται και ΔΕΝ είναι καθολικό;» → `ReferenceError` / «Cannot find name».
@@ -804,7 +812,7 @@ if (!process.env.SKIP_FONT_ASSETS)
 // ΜΟΝΗ ΤΗΣ σε πλήρη σάρωση όταν σταδιοποιείται .d.ts/manifest — αλλιώς διαγραφή καθολικής
 // δήλωσης σπάει αρχεία ΠΟΥ ΚΑΝΕΙΣ ΔΕΝ ΕΣΤΕΙΛΕ. Layer 2 = `--all` άνευ όρων.
 if (!process.env.SKIP_UNBOUND_IDENTIFIERS)
-  addThread('3.70', 'Unbound identifiers', 'scripts/check-unbound-identifiers.js', []);
+  addThread('3.70', 'Unbound identifiers', 'scripts/check-unbound-identifiers.js', ['--index']);
 
 // CHECK 3.71 — ΠΥΛΗ ΤΩΝ ΔΙΠΛΩΝ ΚΛΕΙΔΙΩΝ LOCALE (ADR-810). «Δηλώνεται κλειδί ΔΥΟ ΦΟΡΕΣ
 // στο ίδιο αντικείμενο ενός locale JSON;»
@@ -820,7 +828,7 @@ if (!process.env.SKIP_UNBOUND_IDENTIFIERS)
 // ⚠️ Η σκανδάλη (σταδιοποιημένα) είναι ΕΝΤΙΜΗ εδώ: διπλό κλειδί γεννιέται ΜΟΝΟ μέσα στο
 // αρχείο που κάποιος έγραψε — δεν υπάρχει το μονοπάτι «σπάει αρχείο που κανείς δεν έστειλε».
 if (!process.env.SKIP_LOCALE_DUPLICATE_KEYS)
-  addThread('3.71', 'Locale duplicate keys', 'scripts/check-locale-duplicate-keys.js', []);
+  addThread('3.71', 'Locale duplicate keys', 'scripts/check-locale-duplicate-keys.js', ['--index']);
 
 // CHECK 3.73 — ΠΥΛΗ ΛΕΞΙΛΟΓΙΟΥ ΤΟΜΕΑ (ADR-812). «Είναι κάθε δήλωση που απαριθμεί το
 // λεξιλόγιο ΔΕΜΕΝΗ στη ρίζα του;»
@@ -865,7 +873,7 @@ if (!process.env.SKIP_DOMAIN_VOCABULARY) {
 // αρκεί για να φτάσει σε εισερχόμενα πραγματικού ανθρώπου. Εφικτό επειδή η Φ8α μηδένισε
 // την κλάση Α ΜΕΤΡΗΜΕΝΑ (15 γραφές σε 13 αρχεία → 0), όχι επειδή ελπίζουμε.
 if (!process.env.SKIP_PRODUCT_IDENTITY) {
-  addThread('3.81', 'Product identity', 'scripts/check-product-identity.js', []);
+  addThread('3.81', 'Product identity', 'scripts/check-product-identity.js', ['--index']);
 }
 
 // CHECK 3.83 — Η ΑΡΧΗ ΤΟΥ ΑΠΟΣΤΟΛΕΑ (ADR-857 Φ9). «Ποιος αποφασίζει τη γραμμή `From:`;»
@@ -884,7 +892,7 @@ if (!process.env.SKIP_PRODUCT_IDENTITY) {
 // ⚠️ AST, ΠΟΤΕ ΚΕΙΜΕΝΟ: τα εννέα θεραπευμένα αρχεία κουβαλούν σχόλια που ΟΝΟΜΑΖΟΥΝ τις
 // μεταβλητές που έφυγαν — σαρωτής κειμένου θα κοκκίνιζε πάνω στη ΘΕΡΑΠΕΙΑ.
 if (!process.env.SKIP_SENDER_AUTHORITY) {
-  addThread('3.83', 'Sender authority', 'scripts/check-sender-authority.js', []);
+  addThread('3.83', 'Sender authority', 'scripts/check-sender-authority.js', ['--index']);
 }
 
 // CHECK 3.84 — Η ΑΠΟΔΟΣΗ ΑΔΕΙΩΝ (ADR-863). «Ταξιδεύει το κείμενο μαζί με το αντίγραφο;»
@@ -930,7 +938,7 @@ if (!process.env.SKIP_LEGAL_DOCUMENTS) {
 // κόκκινο Κ1 σβήνοντας τη μετάφραση και η πύλη γίνεται ΠΡΑΣΙΝΗ ΜΕ ΜΗΔΕΝ ΠΡΟΣΤΑΣΙΑ.
 // ⚠️ ΜΗΝ το συγχέεις με το 3.56 («ποιος ΔΙΑΧΕΙΡΙΖΕΤΑΙ»): αυτό ρωτά «ποιος ΔΙΑΒΑΖΕΙ».
 if (!process.env.SKIP_LISTING_READ_BOUNDARY) {
-  addThread('3.74', 'Listing read boundary', 'scripts/check-public-listing-read-boundary.js', []);
+  addThread('3.74', 'Listing read boundary', 'scripts/check-public-listing-read-boundary.js', ['--index']);
 }
 
 // CHECK 3.75 — ΤΟ ΣΥΝΟΡΟ ΤΟΥ ΧΑΡΤΗ (ADR-777 §8.56). «Έρχεται αυτός ο χάρτης ΜΑΖΙ ΜΕ ΤΟ ΣΤΥΛ
@@ -952,7 +960,7 @@ if (!process.env.SKIP_LISTING_READ_BOUNDARY) {
 // ξεχάσει φύλλο στυλ (ίδιο κριτήριο με 3.61). Πύλη που κοκκινίζει σε ΣΩΣΤΟ κώδικα οδηγεί στο SKIP_.
 // ⛔ ZERO-TOLERANCE, καμία baseline: ΜΙΑ παράκαμψη αρκεί για σελίδα όπου ο χάρτης εξαφανίζεται.
 if (!process.env.SKIP_MAP_BOUNDARY && allFiles.length > 0)
-  addThread('3.75', 'Map boundary', 'scripts/check-map-boundary.js', allFiles);
+  addThread('3.75', 'Map boundary', 'scripts/check-map-boundary.js', [...allFiles, '--index']);
 
 // CHECK 3.76 — ΠΥΛΗ ΕΠΙΜΕΛΕΙΑΣ ΤΟΥ ΔΗΜΟΣΙΟΥ ΜΟΝΤΕΛΟΥ (ADR-845 §8, Φ4.3). «Ποιος γεμίζει το
 // `models[]` και ποιος το αδειάζει — και τους ρωτάει ΚΑΝΕΙΣ πριν φύγει η αγγελία στο κοινό;»
@@ -973,7 +981,7 @@ if (!process.env.SKIP_MAP_BOUNDARY && allFiles.length > 0)
 // ⛔ ZERO-TOLERANCE, καμία baseline: ΕΝΑΣ δεύτερος γραφέας αρκεί για να φύγει στο κοινό GLB
 // που κανείς δεν επικύρωσε — σε content-addressed URL, δηλαδή ΜΟΝΙΜΗ ΔΙΕΥΘΥΝΣΗ.
 if (!process.env.SKIP_LISTING_MODEL_CUSTODY && allFiles.length > 0)
-  addThread('3.76', 'Listing model custody', 'scripts/check-listing-model-custody.js', allFiles);
+  addThread('3.76', 'Listing model custody', 'scripts/check-listing-model-custody.js', [...allFiles, '--index']);
 
 // CHECK 3.95 — ΟΙ ΠΗΓΕΣ ΥΠΟΒΑΘΡΟΥ (ADR-891 Φ1). «Δηλώνεται κάθε πηγή πλακιδίων χάρτη ΣΤΟ ΜΗΤΡΩΟ —
 // ή τη γράφει κάποιος αλλού, χωρίς όρους χρήσης;»
@@ -987,7 +995,7 @@ if (!process.env.SKIP_LISTING_MODEL_CUSTODY && allFiles.length > 0)
 // τρίτου δεν το βλέπει καμία στατική ανάλυση.
 // ⛔ ZERO-TOLERANCE, καμία baseline.
 if (!process.env.SKIP_BASEMAP_SOURCES && allFiles.length > 0)
-  addThread('3.95', 'Basemap sources', 'scripts/check-basemap-sources.js', allFiles);
+  addThread('3.95', 'Basemap sources', 'scripts/check-basemap-sources.js', [...allFiles, '--index']);
 
 // CHECK 3.96 — Η ΖΩΝΤΑΝΗ ΣΥΝΔΕΣΗ ΣΤΟΥΣ ΚΑΝΟΝΕΣ (ADR-894 §10.7). «Περνά ΚΑΘΕ `allow` που δίνει πρόσβαση
 // σε συνδεδεμένο άνθρωπο από το `signInIsLive()`;» — Firestore ΚΑΙ Storage.
@@ -996,7 +1004,7 @@ if (!process.env.SKIP_BASEMAP_SOURCES && allFiles.length > 0)
 // 🔑 Ρωτά το ΚΑΤΗΓΟΡΗΜΑ (σταθερό σημείο συναρτήσεων), όχι λίστα ριζών· `if true` μόνο στο κλειστό σύνολο.
 // ⛔ ZERO-TOLERANCE, καμία baseline. Σκανδάλη: τα δύο αρχεία κανόνων · η πηγή του claim · η ίδια η πύλη.
 if (!process.env.SKIP_RULES_SIGN_IN_LIVENESS && allFiles.length > 0)
-  addThread('3.96', 'Rules sign-in liveness', 'scripts/check-rules-sign-in-liveness.js', allFiles);
+  addThread('3.96', 'Rules sign-in liveness', 'scripts/check-rules-sign-in-liveness.js', [...allFiles, '--index']);
 
 // CHECK 3.97 — Η ΩΜΗ ΕΦΕΔΡΕΙΑ i18n (ADR-898 §18.2). «Δείχνει αυτή η κλήση `t(…)` την ΩΜΗ τιμή όταν λείψει
 // το κλειδί;» 🔴 ΤΟ ΓΕΓΟΝΟΣ (2026-10-02): η λίστα κτιρίων έδειχνε `mixed`/`commercial` — ο κώδικας ζητούσε
@@ -1004,7 +1012,7 @@ if (!process.env.SKIP_RULES_SIGN_IN_LIVENESS && allFiles.length > 0)
 // 🔑 AST (TypeScript API), ΟΧΙ regex: Radix `defaultValue={x}` και hooks ρυθμίσεων ΔΕΝ είναι κλήσεις `t(…)`.
 // 🔴 RATCHET ανά αρχείο (`.i18n-raw-fallback-baseline.json`). Μόνο τα staged `src/` (~ms ανά αρχείο).
 if (!process.env.SKIP_I18N_RAW_FALLBACK && srcTsFiles.length > 0)
-  addThread('3.97', 'i18n raw fallback', 'scripts/check-i18n-raw-fallback.js', srcTsFiles);
+  addThread('3.97', 'i18n raw fallback', 'scripts/check-i18n-raw-fallback.js', [...srcTsFiles, '--index']);
 
 // CHECK 3.64 — ΠΥΛΗ ΤΗΣ ΒΑΘΜΙΔΑΣ ΜΕΤΡΗΣΗΣ ΚΕΙΜΕΝΟΥ (ADR-799 Φάση 2). «Μέτρησε αυτή η σουίτα
 // κείμενο σε βαθμίδα που ΔΕΝ ΒΛΕΠΕΙ ό,τι της ζητήθηκε — και αν ναι, το ξέρει κάποιος;»
@@ -1027,7 +1035,7 @@ if (!process.env.SKIP_I18N_RAW_FALLBACK && srcTsFiles.length > 0)
 // μονίμως κόκκινο ⇒ SKIP_ ⇒ διακοσμητικό, απορρίφθηκε ρητά στο 3.39) + ⛔ ZERO-TOL για
 // orphan/reasonless/stale/missing, που ΔΕΝ μπαίνουν ΠΟΤΕ σε baseline (το buildPayload ρίχνει).
 if (!process.env.SKIP_TEXT_MEASURE_TIER && allFiles.length > 0)
-  addThread('3.64', 'Text measure tier', 'scripts/check-text-measure-tier.js', allFiles);
+  addThread('3.64', 'Text measure tier', 'scripts/check-text-measure-tier.js', [...allFiles, '--index']);
 
 
 // CHECK 3.54 — πύλη εκτέλεσης των αγκυρών (ADR-783). «Μπορεί αυτό το test να κοκκινίσει
@@ -1040,7 +1048,7 @@ if (!process.env.SKIP_TEXT_MEASURE_TIER && allFiles.length > 0)
 // μονοπατιών εδώ θα ήταν δεύτερη αυθεντία που αποκλίνει σιωπηλά (σχήμα 3.34/3.37).
 // Κόστος: ~0,05s όταν δεν αφορά· ~1,4s όταν πυροδοτεί (η απογραφή του 3.47).
 if (!process.env.SKIP_ANCHOR_EXECUTION && allFiles.length > 0)
-  addThread('3.54', 'Anchor execution', 'scripts/check-anchor-execution.js', allFiles);
+  addThread('3.54', 'Anchor execution', 'scripts/check-anchor-execution.js', [...allFiles, '--index']);
 
 // CHECK 3.44 (ADR-772 §9) — «αυτό το διοικητικό πεδίο έχει γραμμή στον πίνακα;». Το
 // ADR-772 έφτιαξε τον πίνακα λεξιλογίου (8 επίπεδα × 5 δοχεία)· τίποτα δεν εμπόδιζε ένα
@@ -1054,23 +1062,23 @@ if (!process.env.SKIP_ANCHOR_EXECUTION && allFiles.length > 0)
 // δύο λιστών namespace του CHECK 3.34. Κόστος όταν δεν αφορά: ~0,2s.
 // Στρώμα 2 (πλήρες `src/`, ~30s) = job στο υπάρχον `ssot-discover.yml`.
 if (!process.env.SKIP_ADDRESS_VOCABULARY && srcTsFiles.length > 0)
-  addThread('3.44', 'Address vocabulary', 'scripts/check-address-vocabulary-coverage.js', srcTsFiles);
+  addThread('3.44', 'Address vocabulary', 'scripts/check-address-vocabulary-coverage.js', [...srcTsFiles, '--index']);
 
 if (queryFiles.length > 0)
-  addBash('3.10', 'Firestore companyId', 'scripts/check-firestore-companyid.sh', queryFiles);
+  addBash('3.10', 'Firestore companyId', 'scripts/check-firestore-companyid.sh', ['--index', ...queryFiles]);
 
 // CHECK 3.35 — tenant scope (ADR-747). Ο διάδοχος του 3.10, με AST αντί για grep
 // γραμμών: πιάνει και το client spread idiom (στο οποίο το 3.10 είναι ΔΟΜΙΚΑ
 // τυφλό) και τις αλυσίδες του Admin SDK (τις οποίες δεν κοιτά καθόλου).
 // Layer 1 = μόνο τα staged· Layer 2 (`--all`, ~2 λεπτά) τρέχει στο CI.
 if (!skipTenantScope && srcTsFiles.length > 0)
-  addThread('3.35', 'Firestore tenant scope', 'scripts/check-firestore-tenant-scope.js', srcTsFiles);
+  addThread('3.35', 'Firestore tenant scope', 'scripts/check-firestore-tenant-scope.js', [...srcTsFiles, '--index']);
 
 if (navTriggers.length > 0)
-  addThread('3.11', 'Navigation labels', 'scripts/check-navigation-labels.js');
+  addThread('3.11', 'Navigation labels', 'scripts/check-navigation-labels.js', ['--index']);
 
 if (auditCatalogsTrigger.length > 0)
-  addThread('3.14', 'Audit value catalogs', 'scripts/check-audit-value-catalogs.js');
+  addThread('3.14', 'Audit value catalogs', 'scripts/check-audit-value-catalogs.js', ['--index']);
 
 // CHECK 3.15 — ΚΑΙ με σκανδάλη στο ίδιο το μανιφέστο δεικτών (ADR-869 §7).
 // 🔴 ΓΙΑΤΙ: το `STAGED_SRC_TS_FILES` γεννιέται από `grep -E '^src/.*\.(ts|tsx)$'`, άρα
@@ -1082,7 +1090,7 @@ if (auditCatalogsTrigger.length > 0)
 const indexManifestStaged = allFiles.includes('firestore.indexes.json');
 if (srcTsFiles.length > 0 || indexManifestStaged) {
   addThread('3.15', 'Firestore index coverage',  'scripts/check-firestore-index-coverage.js',
-    indexManifestStaged ? ['--all'] : srcTsFiles);
+    [...(indexManifestStaged ? ['--all'] : srcTsFiles), '--index']);
 }
 
 // CHECK 3.91 — ΤΟ ΙΔΙΟ ΕΡΩΤΗΜΑ, ΕΞΩ ΑΠΟ ΤΟ SSoT (ADR-870). Η 3.15 σαρώνει μόνο κλήσεις του
@@ -1093,25 +1101,25 @@ if (srcTsFiles.length > 0 || indexManifestStaged) {
 // 13.242 αρχεία.
 if (!process.env.SKIP_FIRESTORE_ADMIN_INDEX && (srcTsFiles.length > 0 || indexManifestStaged)) {
   addThread('3.91', 'Admin SDK index coverage', 'scripts/check-firestore-admin-index.js',
-    indexManifestStaged ? ['--all'] : srcTsFiles);
+    [...(indexManifestStaged ? ['--all'] : srcTsFiles), '--index']);
 }
 
 if (srcTsFiles.length > 0) {
-  addThread('3.17', 'Entity audit coverage',     'scripts/check-entity-audit-coverage.js',       srcTsFiles);
-  addThread('3.18', 'SSoT discover',             'scripts/check-ssot-discover-ratchet.js',       ssotFull ? ['--full'] : []);
-  addThread('3.20', 'Notification keys ratchet', 'scripts/check-notification-keys-ratchet.js',   srcTsFiles);
-  addThread('3.26', 'Tailwind palette ratchet',  'scripts/check-tailwind-palette-ratchet.js',    srcTsFiles);
-  addThread('3.27', 'DXF timing ratchet',        'scripts/check-dxf-timing-ratchet.js',          srcTsFiles);
+  addThread('3.17', 'Entity audit coverage',     'scripts/check-entity-audit-coverage.js',       [...srcTsFiles, '--index']);
+  addThread('3.18', 'SSoT discover',             'scripts/check-ssot-discover-ratchet.js',       [...(ssotFull ? ['--full'] : []), '--index']);
+  addThread('3.20', 'Notification keys ratchet', 'scripts/check-notification-keys-ratchet.js',   [...srcTsFiles, '--index']);
+  addThread('3.26', 'Tailwind palette ratchet',  'scripts/check-tailwind-palette-ratchet.js',    [...srcTsFiles, '--index']);
+  addThread('3.27', 'DXF timing ratchet',        'scripts/check-dxf-timing-ratchet.js',          [...srcTsFiles, '--index']);
 }
 
 if (rulesCovTriggers.length > 0)
-  addThread('3.16', 'Firestore rules coverage',  'scripts/check-firestore-rules-test-coverage.js', rulesCovTriggers);
+  addThread('3.16', 'Firestore rules coverage',  'scripts/check-firestore-rules-test-coverage.js', [...rulesCovTriggers, '--index']);
 
 if (storageCovTriggers.length > 0)
-  addThread('3.19', 'Storage rules coverage',    'scripts/check-storage-rules-test-coverage.js',   storageCovTriggers);
+  addThread('3.19', 'Storage rules coverage',    'scripts/check-storage-rules-test-coverage.js',   [...storageCovTriggers, '--index']);
 
 if (notifLocaleTriggers.length > 0)
-  addThread('3.21', 'Notification keys locale',  'scripts/check-notification-keys-locale.js');
+  addThread('3.21', 'Notification keys locale',  'scripts/check-notification-keys-locale.js', ['--index']);
 
 if (allFiles.length > 0)
   addThread('10', 'Secret scan', 'scripts/check-secret-scan.js', allFiles);
@@ -1126,7 +1134,7 @@ if (allFiles.length > 0)
 // μπλοκάρει ο Κ5 (η στιγμή της ανάπτυξης είναι απόφαση του Giorgio, N.(-1))· μπλοκάρει στο
 // **push**, όπου ο κώδικας φεύγει προς την παραγωγή χωρίς τον κανόνα του (`git-hooks/pre-push`).
 if (!process.env.SKIP_FIRESTORE_DEPLOY_PROOF)
-  addThread('3.86', 'Firestore deploy proof', 'scripts/check-firestore-deploy-proof.js');
+  addThread('3.86', 'Firestore deploy proof', 'scripts/check-firestore-deploy-proof.js', ['--index']);
 
 // CHECK 3.87 (ADR-862 Φ0 Β12) — η αρχή της κατάστασης CDE. «Γράφει κάποιος την κατάσταση
 // ενός αρχείου ΕΞΩ από τον ΕΝΑ γραφέα, ή διαβάζει client λίστα `files` ΧΩΡΙΣ φράχτη;»
@@ -1136,7 +1144,7 @@ if (!process.env.SKIP_FIRESTORE_DEPLOY_PROOF)
 // ⚠️ AST, ΠΟΤΕ ΚΕΙΜΕΝΟ: το `supersededByFileId` είναι και παράμετρος αιτήματος και φορτίο
 // γεγονότος — μετρημένα 9 σημεία, κανένα γραφή. ZERO-TOL, καμία baseline.
 if (!process.env.SKIP_CDE_AUTHORITY)
-  addThread('3.87', 'CDE state authority', 'scripts/check-cde-authority.js');
+  addThread('3.87', 'CDE state authority', 'scripts/check-cde-authority.js', ['--index']);
 
 // CHECK 3.88 (ADR-862 Φ0 Β14) — η αρχή της ομάδας έργου. «Γράφει κάποιος μέλος έργου ΕΞΩ από
 // τον ΕΝΑ γραφέα, ή γεννά έργο ΧΩΡΙΣ την αρχική του ομάδα;»
@@ -1144,7 +1152,7 @@ if (!process.env.SKIP_CDE_AUTHORITY)
 // κριτής έκρυβε κάθε αρχείο CDE ακόμη και από τον δημιουργό. Οι κανόνες κλείνουν τον ΠΕΛΑΤΗ, όχι
 // το Admin SDK. AST, ZERO-TOL, καμία baseline.
 if (!process.env.SKIP_PROJECT_MEMBER_AUTHORITY)
-  addThread('3.88', 'Project member authority', 'scripts/check-project-member-authority.js');
+  addThread('3.88', 'Project member authority', 'scripts/check-project-member-authority.js', ['--index']);
 
 // CHECK 3.89 (ADR-867 Β4) — η αρχή του νήματος. «Γράφει κάποιος ΑΚΡΟΑΤΗΡΙΟ ή ΜΗΝΥΜΑ έξω από
 // τον ΕΝΑ γραφέα, ή αλλάζει ομάδα ΧΩΡΙΣ να ξαναγράψει το ακροατήριο;»
@@ -1152,7 +1160,7 @@ if (!process.env.SKIP_PROJECT_MEMBER_AUTHORITY)
 // διαβάζει;». Οι κανόνες κλείνουν τον ΠΕΛΑΤΗ, όχι το Admin SDK — δεύτερος γραφέας στον
 // διακομιστή βάζει όποιον θέλει σε ξένη συνομιλία. AST, ZERO-TOL, καμία baseline.
 if (!process.env.SKIP_NETWORK_THREAD_AUTHORITY)
-  addThread('3.89', 'Network thread authority', 'scripts/check-network-thread-authority.js');
+  addThread('3.89', 'Network thread authority', 'scripts/check-network-thread-authority.js', ['--index']);
 
 // CHECK 3.99 (ADR-905 §8 Ε2 · Α38) — ο ΕΝΑΣ γραφέας σημάτων όψεων. «Γράφει κάποιος σήμα όψης ΕΞΩ από τον
 // ΕΝΑ γραφέα, ή αλλάζει την υπόθεση ΧΩΡΙΣ να ζητήσει σήμα;»
@@ -1160,7 +1168,7 @@ if (!process.env.SKIP_NETWORK_THREAD_AUTHORITY)
 // έξω από το ακροατήριο· οι κανόνες κλείνουν τον ΠΕΛΑΤΗ, όχι το Admin SDK. Λίστα: `.view-signal-authority.json`
 // (η ΙΔΙΑ με την άγκυρα Α38). AST, ZERO-TOL, καμία baseline.
 if (!process.env.SKIP_VIEW_SIGNAL_AUTHORITY)
-  addThread('3.99', 'View signal authority', 'scripts/check-view-signal-authority.js');
+  addThread('3.99', 'View signal authority', 'scripts/check-view-signal-authority.js', ['--index']);
 
 // CHECK 3.100 (ADR-281 · ADR-329 §3.9) — η εγγραφή σε αποσυρμένο ακίνητο. «Γράφει κάποια διαδρομή πάνω
 // σε ακίνητο χωρίς να ρωτήσει αν είναι αποσυρμένο;»
@@ -1168,7 +1176,7 @@ if (!process.env.SKIP_VIEW_SIGNAL_AUTHORITY)
 // γράφει από τον φρουρό — νέο route χωρίς φρουρό ξαναγράφει ακίνητο του κάδου χωρίς κανένα σφάλμα.
 // Κλειστό σύνολο δηλωμένων εξαιρέσεων (επαληθεύεται). AST, ZERO-TOL, καμία baseline.
 if (!process.env.SKIP_RETIRED_PROPERTY_WRITE)
-  addThread('3.100', 'Retired property write', 'scripts/check-retired-property-write.js');
+  addThread('3.100', 'Retired property write', 'scripts/check-retired-property-write.js', ['--index']);
 
 // CHECK 3.102 (ADR-910) — η αρχή της στοίβας ορόφων. «Γεννά, σβήνει ή αλλάζει τη ΘΕΣΗ ενός ορόφου κάποιος ΕΞΩ
 // από το σύνορο της στοίβας, ή έμεινε ανοιχτή η πόρτα απευθείας εγγραφής;»
@@ -1177,7 +1185,7 @@ if (!process.env.SKIP_RETIRED_PROPERTY_WRITE)
 // αρχείο (η επανατοποθέτηση ειδικών σταθμών έγραφε `number` από service που δεν λεγόταν «floor-slot»). Οι κανόνες
 // κλείνουν τον ΠΕΛΑΤΗ, όχι το Admin SDK. AST, ZERO-TOL, καμία baseline.
 if (!process.env.SKIP_FLOOR_STACK_AUTHORITY)
-  addThread('3.102', 'Floor stack authority', 'scripts/check-floor-stack-authority.js');
+  addThread('3.102', 'Floor stack authority', 'scripts/check-floor-stack-authority.js', ['--index']);
 
 // CHECK 3.103 (ADR-909 §6.9 · Γ2.8) — το μελάνι. «Βάζει αυτός ο ζωγράφος χρώμα ή πάχος στον καμβά ΧΩΡΙΣ να ρωτήσει
 // την πολιτική εκτύπωσης;» 🔴 ΤΟ ΓΕΓΟΝΟΣ (2026-10-09): Υδραυλικά ΜΠΛΕ σε «Ασπρόμαυρη» δημόσια κάτοψη. Η πύλη pixels
@@ -1187,7 +1195,7 @@ if (!process.env.SKIP_FLOOR_STACK_AUTHORITY)
 // ταυτότητα στο `rendering/entities` + `bim/utils`. 🔴 ΓΙΑΤΙ ΧΩΡΙΣ ΣΚΑΝΔΑΛΗ: το μητρώο, η baseline και κάθε ζωγράφος
 // αλλάζουν την απάντηση, και η πλήρης σάρωση κοστίζει ~1 s.
 if (!process.env.SKIP_PAPER_INK)
-  addThread('3.103', 'Paper ink', 'scripts/check-paper-ink.js');
+  addThread('3.103', 'Paper ink', 'scripts/check-paper-ink.js', ['--index']);
 
 // CHECK 3.104 (ADR-884 · ADR-777 §8.88) — ο ένας δρόμος της παρουσίας περιήγησης. «Γράφει κάποιος περιήγηση ή λήψη
 // ΧΩΡΙΣ να ζητήσει επαναπροβολή της αγγελίας;» Το `PublicListing.tour` είναι ΑΝΤΙΓΡΑΦΟ της απάντησης του
@@ -1196,7 +1204,7 @@ if (!process.env.SKIP_PAPER_INK)
 // διαφημίζει περιήγηση που αποσύρθηκε. Λίστα: `.tour-presence-authority.json`. AST, ZERO-TOL, καμία baseline.
 // 🔴 ΓΙΑΤΙ ΧΩΡΙΣ ΣΚΑΝΔΑΛΗ: νέος γραφέας γεννιέται σε ΟΠΟΙΟΔΗΠΟΤΕ αρχείο, και το προφίλτρο κάνει τη σάρωση φθηνή.
 if (!process.env.SKIP_TOUR_PRESENCE_AUTHORITY)
-  addThread('3.104', 'Tour presence authority', 'scripts/check-tour-presence-authority.js');
+  addThread('3.104', 'Tour presence authority', 'scripts/check-tour-presence-authority.js', ['--index']);
 
 // CHECK 3.105 (ADR-920 §12) — ο ένας γραφέας του εδάφους της αγγελίας. «Γράφει κάποιος το `PublicListing.terrain` έξω
 // από τον binder — γεννά πηγή εδάφους έξω από πόρτα που ξαναπροβάλλει — ή παράγει δημοσιεύσιμο στιγμιότυπο έξω από τον
@@ -1204,14 +1212,14 @@ if (!process.env.SKIP_TOUR_PRESENCE_AUTHORITY)
 // επικύρωσε σε μόνιμη διεύθυνση. Λίστα: `.listing-terrain-authority.json` (+ `MATERIAL_DOORS`, χωρίς αντίγραφο).
 // AST, ZERO-TOL, καμία baseline. 🔴 ΧΩΡΙΣ ΣΚΑΝΔΑΛΗ: νέος γραφέας γεννιέται οπουδήποτε· το προφίλτρο κρατά τη σάρωση φθηνή.
 if (!process.env.SKIP_LISTING_TERRAIN_AUTHORITY)
-  addThread('3.105', 'Listing terrain authority', 'scripts/check-listing-terrain-authority.js');
+  addThread('3.105', 'Listing terrain authority', 'scripts/check-listing-terrain-authority.js', ['--index']);
 
 // CHECK 3.106 (ADR-923 §5.9) — ο ένας γραφέας του σχήματος καταλόγου. «Γράφει κάποιος ιδιότητα · ομάδα · οικογένεια
 // μέτρησης · κατηγορία · οικογένεια ΕΞΩ από τη μηχανή `src/server/catalog/catalog-store.server.ts` — δηλαδή χωρίς
 // επικύρωση απέναντι στη βιβλιοθήκη, χωρίς CAS, χωρίς ίχνος;» Οι κανόνες κλείνουν τον πελάτη, όχι τον Admin SDK.
 // AST, ZERO-TOL, καμία baseline. 🔴 ΧΩΡΙΣ ΣΚΑΝΔΑΛΗ: νέος γραφέας γεννιέται οπουδήποτε· το προφίλτρο κρατά τη σάρωση φθηνή.
 if (!process.env.SKIP_CATALOG_SCHEMA_AUTHORITY)
-  addThread('3.106', 'Catalog schema authority', 'scripts/check-catalog-schema-authority.js');
+  addThread('3.106', 'Catalog schema authority', 'scripts/check-catalog-schema-authority.js', ['--index']);
 
 // CHECK 3.90 (ADR-868) — το ΕΝΑ σύνορο. «Υπάρχει δημόσιο endpoint που ΔΕΝ περνά από το `withAuth`;»
 // Κάθε `'use server'` είναι server action = δημόσιο POST. Στο δέντρο ζούσαν 7 τέτοια αρχεία, και
@@ -1228,7 +1236,7 @@ if (!process.env.SKIP_SERVER_ACTION_BOUNDARY)
 // ταυτότητα). 🔴 ΓΙΑΤΙ ΧΩΡΙΣ ΣΚΑΝΔΑΛΗ: τα σύνορα ΥΠΟΛΟΓΙΖΟΝΤΑΙ (σταθερό σημείο) από όλο το src/lib + app/api —
 // μια νέα factory οπουδήποτε αλλάζει την απάντηση. AST, ~3s.
 if (!process.env.SKIP_IDEMPOTENCY_BOUNDARY)
-  addThread('3.92', 'Idempotency boundary', 'scripts/check-idempotency-boundary.js');
+  addThread('3.92', 'Idempotency boundary', 'scripts/check-idempotency-boundary.js', ['--index']);
 
 // CHECK 3.93 (ADR-874 · ADR-873 Ε-873.2) — η προβολή του Cloud Functions. «Μεταγλωττίζει το functions
 // build ΑΚΡΙΒΩΣ ό,τι λέει το SSoT της εφαρμογής;» Το χειρόγραφο mirror του search index απέκλινε ~5 μήνες
@@ -1237,7 +1245,7 @@ if (!process.env.SKIP_IDEMPOTENCY_BOUNDARY)
 // 🔴 ΓΙΑΤΙ ΧΩΡΙΣ ΣΚΑΝΔΑΛΗ: τα κλειδιά ΥΠΟΛΟΓΙΖΟΝΤΑΙ από κάθε `COLLECTIONS.KEY` κάτω από το functions/src —
 // ένα νέο κλειδί σε οποιοδήποτε αρχείο αλλάζει την απάντηση. AST, ~0,5s, ZERO-TOL, καμία baseline.
 if (!process.env.SKIP_FUNCTIONS_PROJECTION)
-  addThread('3.93', 'Functions projection', 'scripts/check-functions-projection.js');
+  addThread('3.93', 'Functions projection', 'scripts/check-functions-projection.js', ['--index']);
 
 // CHECK 3.98 (ADR-904 Ε6) — το συμβόλαιο της εφαρμογής κινητού. «Είναι το `contracts/capture-api/` ΑΚΡΙΒΩΣ ό,τι
 // λέει σήμερα ο κώδικας του διακομιστή;» Η εφαρμογή λήψης ζει σε ΧΩΡΙΣΤΟ αποθετήριο και παίρνει σχήματα, όρια
@@ -1245,41 +1253,15 @@ if (!process.env.SKIP_FUNCTIONS_PROJECTION)
 // σε άλλη γλώσσα. Ο γεννήτορας αρνείται fixture που διαφωνεί με το σχήμα του. 🔴 ΓΙΑΤΙ ΧΩΡΙΣ ΣΚΑΝΔΑΛΗ: τα σχήματα
 // εισάγουν λεξιλόγια από όλη την εφαρμογή — μια νέα άρνηση οπουδήποτε αλλάζει την απάντηση. ~0,5s, ZERO-TOL.
 if (!process.env.SKIP_CAPTURE_API_CONTRACT)
-  addThread('3.98', 'Capture API contract', 'scripts/check-capture-api-contract.js');
+  addThread('3.98', 'Capture API contract', 'scripts/check-capture-api-contract.js', ['--index']);
 
 // ─── Runners ──────────────────────────────────────────────────────────────────
 
-function runThread(check) {
+function runThread(check, run) {
   // A native crash in one worker kills the whole process with no output: the trace names it.
-  if (process.env.CHECK_TRACE === '1') process.stderr.write(`  ▶ ${check.id} ${check.name}\n`);
-  return new Promise(resolve => {
-    const worker = new Worker(RUNNER, {
-      workerData: { scriptPath: check.script, args: check.args, cwd },
-      stdout: true,
-      stderr: true,
-    });
-
-    let output = '';
-    worker.stdout.on('data', chunk => { output += chunk; });
-    worker.stderr.on('data', chunk => { output += chunk; });
-
-    const timer = setTimeout(() => {
-      worker.terminate();
-      output += `\n${RED}  ⏰ CHECK ${check.id} timed out after ${TIMEOUT_MS / 1000}s${NC}\n`;
-      resolve({ ...check, exitCode: 1, output });
-    }, TIMEOUT_MS);
-
-    worker.on('error', err => {
-      clearTimeout(timer);
-      output += `\n${RED}  ❌ Worker error [${check.id}]: ${err.message}${NC}\n`;
-      resolve({ ...check, exitCode: 1, output });
-    });
-
-    worker.on('exit', code => {
-      clearTimeout(timer);
-      resolve({ ...check, exitCode: code ?? 0, output });
-    });
-  });
+  if (process.env.CHECK_TRACE === '1') process.stderr.write(`  ▶ ${check.id} ${check.name}
+`);
+  return runGateThread(check, { cwd, timeoutMs: TIMEOUT_MS, run });
 }
 
 function runProcess(check) {
@@ -1350,8 +1332,10 @@ async function main() {
     ` (${threads.length} threads + ${processes.length} processes)...${NC}`
   );
 
+  // ADR-924 Φ4 — ΜΙΑ όψη του commit για όλη την εκτέλεση (+ παγίδα και κατάστιχο σε κάθε worker με `--index`).
+  const run = prepareCommitRun({ cwd, checks: threads });
   const results = await runBounded([
-    ...threads.map(check => () => runThread(check)),
+    ...threads.map(check => () => runThread(check, run)),
     ...processes.map(check => () => runProcess(check)),
   ], CONCURRENCY);
 

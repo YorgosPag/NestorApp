@@ -39,10 +39,8 @@
 
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
 const ts = require('typescript');
-const { collectSourceFiles } = require('../module-graph/scan-config');
 const { resolveSpecifier, readTsPathAliases, toPosix } = require('../module-graph/resolve-specifier');
 
 /** Το υποσύστημα που φυλάσσεται. Ζει εδώ ώστε να μην υπάρχει δεύτερη λίστα. */
@@ -73,7 +71,7 @@ const idOf = (file, symbol) => `${file}#${symbol}`;
  * όπου το grep έδωσε «23 καταναλωτές» ενώ η αλήθεια ήταν **3**.
  */
 function importsFrom(absFile, relFile, ctx) {
-  const src = fs.readFileSync(absFile, 'utf8');
+  const src = ctx.input.read(absFile) ?? '';
   const sf = ts.createSourceFile(relFile, src, ts.ScriptTarget.Latest, true);
   const out = [];
 
@@ -178,16 +176,19 @@ function assertClosedLedger({ tally, inspected, findings }) {
 /**
  * Η σάρωση. Επιστρέφει **κλειστή λογιστική** — κάθε εισαγωγή σε ονομασμένο κάδο.
  */
-function scanPublicSurface({ projectRoot, manifest }) {
+function scanPublicSurface({
+  projectRoot, manifest, input = require('../gate-input').openGateInput({ root: projectRoot }), codeFiles = null,
+}) {
   // ⚠️ Το `readTsPathAliases` διαβάζει `tsconfig.base.json` by default — ΕΚΕΙ ζουν τα
   // `paths` αυτού του έργου. Χειρόγραφο `'tsconfig.json'` εδώ θα έδινε **μηδέν alias**,
   // άρα κάθε `@/…` θα ήταν «unresolved» και η πύλη θα γεννιόταν ΜΟΝΙΜΩΣ ΠΡΑΣΙΝΗ.
-  const aliases = readTsPathAliases(projectRoot);
-  const files = collectSourceFiles(projectRoot, ['src']);
+  const aliases = readTsPathAliases(projectRoot, undefined, input.read);
+  // ADR-924 Φ2 — τα αρχεία ΚΑΙ το κείμενό τους από την ΕΙΣΟΔΟ (με `--index`: η όψη του commit).
+  const files = input.sources(['src']);
   const fileSet = new Set(files.map(toPosix));
   const relOf = (absPosix) => toPosix(path.relative(projectRoot, absPosix));
   const absOf = (rel) => toPosix(path.join(projectRoot, rel));
-  const ctx = { projectRoot, aliases, fileSet, relOf, absOf };
+  const ctx = { projectRoot, aliases, fileSet, relOf, absOf, input };
 
   const { byId, reasonless } = indexManifest(manifest);
   const used = new Set();
@@ -195,7 +196,8 @@ function scanPublicSurface({ projectRoot, manifest }) {
   const tally = Object.fromEntries(Object.values(STATES).map((s) => [s, 0]));
   let inspected = 0;
 
-  for (const abs of files) {
+  // `codeFiles` = δείγμα των αγκυρών (ADR-924 Δ1)· η επίλυση (`fileSet`) μένει ΠΑΝΤΑ πλήρης.
+  for (const abs of codeFiles || files) {
     const rel = relOf(abs);
     if (rel.startsWith(GUARDED_PREFIX)) continue; // εσωτερικό — δεν είναι επιφάνεια
 

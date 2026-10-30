@@ -28,6 +28,7 @@
 'use strict';
 
 const { TEXT_SOURCE } = require('./texts');
+const { closedTally, idsOf } = require('../gate-ledger');
 
 /**
  * Πού καταλήγει το πακέτο. ⚠️ Η **διανομή** είναι που γεννά την υποχρέωση (ό,τι κατεβαίνει
@@ -100,14 +101,8 @@ function judgePackage({ id, surface, requiresAttribution, text }) {
 }
 
 /** Κλειστή λογιστική: κάθε κάδος υπάρχει **και στο μηδέν**· άγνωστη κατάσταση ⇒ throw με όνομα. */
-function tallyOf(rows) {
-  const counts = Object.fromEntries(Object.values(STATES).map((s) => [s, 0]));
-  for (const row of rows) {
-    if (!(row.state in counts)) throw new Error(`CHECK 3.84 — άγνωστη κατάσταση «${row.state}» (${row.id})`);
-    counts[row.state] += 1;
-  }
-  return counts;
-}
+/** Κλειστή λογιστική (SSoT `gate-ledger`). */
+const tallyOf = (rows) => closedTally(rows, STATES, '3.84', { withId: true });
 
 /**
  * @param {Array<object>} subjects — `{id, surface, requiresAttribution, text}` ανά πακέτο/στοιχείο
@@ -126,6 +121,6 @@ function judge(subjects) {
 /** Ταυτότητα ratchet = «κατάσταση :: πακέτο» — ώστε η **ανταλλαγή** να μη περνά (ADR-749). */
 const violationId = (row) => `${row.state} :: ${row.id}`;
 
-const idsOf = (verdict, state) => verdict.rows.filter((r) => r.state === state).map((r) => r.id);
+
 
 module.exports = { SURFACE, STATES, BLOCKING, RATCHETED, judgePackage, judge, tallyOf, violationId, idsOf };

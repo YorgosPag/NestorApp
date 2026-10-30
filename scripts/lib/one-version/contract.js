@@ -7,8 +7,7 @@
 
 'use strict';
 
-const fs = require('node:fs');
-const path = require('node:path');
+const { openGateInput } = require('../gate-input');
 
 /** Το κλειστό σύνολο εξαιρέσεων ζει σε JSON στη ρίζα (πρότυπο 3.58/3.60/3.63). */
 const DECLARATIONS_FILE = '.one-version.json';
@@ -118,12 +117,12 @@ function hasEntryPoint(manifest) {
  * με όνομα, ποτέ σιωπηλό `{}` (μάθημα CHECK 3.57 `Μ0.2`: κενό αντικείμενο κάνει
  * κάθε σύγκριση να περνά και την πύλη **μονίμως πράσινη**).
  */
-function loadDeclarations(repoRoot) {
-  const file = path.join(repoRoot, DECLARATIONS_FILE);
-  if (!fs.existsSync(file)) {
+function loadDeclarations(repoRoot, input = openGateInput({ root: repoRoot })) {
+  const text = input.read(DECLARATIONS_FILE);
+  if (text === null) {
     throw new Error(`${DECLARATIONS_FILE} λείπει — το κλειστό σύνολο είναι μέρος της πύλης, όχι προαιρετικό.`);
   }
-  const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const raw = JSON.parse(text);
   if (!raw || typeof raw !== 'object' || typeof raw.sharedDependencies !== 'object' || raw.sharedDependencies === null) {
     throw new Error(`${DECLARATIONS_FILE}: περίμενα αντικείμενο "sharedDependencies".`);
   }
@@ -131,8 +130,8 @@ function loadDeclarations(repoRoot) {
 }
 
 /** Ζ — το κλειστό σύνολο κατόχων καθολικής στοίβας. Fail-closed όπως το `loadDeclarations`. */
-function loadSingletons(repoRoot) {
-  const raw = JSON.parse(fs.readFileSync(path.join(repoRoot, DECLARATIONS_FILE), 'utf8'));
+function loadSingletons(repoRoot, input = openGateInput({ root: repoRoot })) {
+  const raw = input.readJson(DECLARATIONS_FILE);
   if (!raw || typeof raw.singletons !== 'object' || raw.singletons === null || Array.isArray(raw.singletons)) {
     throw new Error(`${DECLARATIONS_FILE}: περίμενα αντικείμενο "singletons" (κάτοχοι καθολικής στοίβας).`);
   }

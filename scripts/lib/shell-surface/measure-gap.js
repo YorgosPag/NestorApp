@@ -19,7 +19,6 @@
  * Η πρόθεση γράφεται στη σελίδα και η πύλη την κάνει μηχανικά ελέγξιμη.
  */
 
-const fs = require('fs');
 const path = require('path');
 
 const { stripComments } = require('./scan');
@@ -71,21 +70,19 @@ function measureGapsInSource(source) {
   return found;
 }
 
-function collectTsx(dir, out = []) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name === 'node_modules' || entry.name === '__tests__') continue;
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) collectTsx(full, out);
-    else if (entry.name.endsWith('.tsx')) out.push(full);
-  }
-  return out;
+/**
+ * Τα `.tsx` του `src/` (όχι `__tests__`) — από την ΕΙΣΟΔΟ (ADR-924 Φ3: ήταν δικό της `readdirSync`).
+ * `input` = η είσοδος της πύλης· προεπιλογή ο δίσκος της ρίζας.
+ */
+function collectTsx(repoRoot, input = require('../gate-input').openGateInput({ root: repoRoot })) {
+  return input.files(['src'], { accept: (rel) => rel.endsWith('.tsx'), pruneDir: (dir) => dir.endsWith('/__tests__/') });
 }
 
 /** Σάρωση του `src/`: `[{ file, line, klass }]`, διαδρομές σχετικές με τη ρίζα. */
-function findMeasureColumnGaps(repoRoot) {
+function findMeasureColumnGaps(repoRoot, input = require('../gate-input').openGateInput({ root: repoRoot })) {
   const results = [];
-  for (const file of collectTsx(path.join(repoRoot, 'src'))) {
-    const source = fs.readFileSync(file, 'utf8');
+  for (const file of collectTsx(repoRoot, input)) {
+    const source = input.read(file) ?? '';
     if (!source.includes('data-shell-measure') && !source.includes('measure=')) continue;
     const rel = path.relative(repoRoot, file).split(path.sep).join('/');
     for (const hit of measureGapsInSource(source)) results.push({ file: rel, ...hit });

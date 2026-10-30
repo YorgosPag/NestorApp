@@ -17,14 +17,22 @@
 
 import 'server-only';
 
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { generatePipelineAuditId } from '@/services/enterprise-id.service';
-import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import { extractSearchCriteria } from '@/services/property-search.service';
-import { findContactByEmail, type ContactMatch } from '../../shared/contact-lookup';
+import {
+  acknowledgeReply,
+  approvalOf,
+  collectionHealthCheck,
+  findSenderContact,
+  lookupOf,
+  recordPipelineAudit,
+  requesterOf,
+  senderDisplayOf,
+  senderEmailOf,
+  toLookupRecord,
+} from '../../shared/customer-request-protocol';
 import { sendChannelReply, extractChannelIds } from '../../shared/channel-reply-dispatcher';
 import { PipelineIntentType } from '@/types/ai-pipeline';
 import type {
@@ -42,6 +50,7 @@ import {
   buildDraftReply,
 } from './property-search-query';
 import { nowISO } from '@/lib/date-local';
+import { approvedAction, humanApprovedProposal, replySideEffect } from '../../shared/admin-command-protocol';
 
 const logger = createModuleLogger('UC_003_PROPERTY_SEARCH');
 
@@ -60,7 +69,7 @@ export class PropertySearchModule implements IUCModule {
   // ── Step 3: LOOKUP ──
 
   async lookup(ctx: PipelineContext): Promise<Record<string, unknown>> {
-    const senderEmail = ctx.intake.normalized.sender.email ?? '';
+    const senderEmail = senderEmailOf(ctx);
     const senderName = ctx.intake.normalized.sender.name ?? senderEmail;
     const emailText = ctx.intake.normalized.contentText ?? ctx.intake.normalized.subject ?? '';
 
@@ -85,18 +94,7 @@ export class PropertySearchModule implements IUCModule {
       totalAvailable,
     });
 
-    let senderContact: ContactMatch | null = null;
-    if (senderEmail) {
-      try {
-        senderContact = await findContactByEmail(senderEmail, ctx.companyId);
-      } catch (error) {
-        const msg = getErrorMessage(error);
-        logger.warn('UC-003 LOOKUP: Contact search failed (non-fatal)', {
-          requestId: ctx.requestId,
-          error: msg,
-        });
-      }
-    }
+    const senderContact = await findSenderContact(ctx, 'UC-003', logger, senderEmail);
 
     const lookupData: PropertySearchLookupData = {
       senderEmail,
@@ -117,15 +115,15 @@ export class PropertySearchModule implements IUCModule {
       totalAvailable,
     });
 
-    return lookupData as unknown as Record<string, unknown>;
+    return toLookupRecord(lookupData);
   }
 
   // ── Step 4: PROPOSE ──
 
   async propose(ctx: PipelineContext): Promise<Proposal> {
-    const lookup = ctx.lookupData as unknown as PropertySearchLookupData | undefined;
+    const lookup = lookupOf<PropertySearchLookupData>(ctx);
 
-    const senderDisplay = lookup?.senderName ?? lookup?.senderEmail ?? 'Άγνωστος αποστολέας';
+    const senderDisplay = senderDisplayOf(lookup);
     const criteria = lookup?.criteria ?? {};
     const units = lookup?.matchingUnits ?? [];
     const totalAvailable = lookup?.totalAvailable ?? 0;
@@ -151,33 +149,21 @@ export class PropertySearchModule implements IUCModule {
       summary,
     });
 
-    return {
-      messageId: ctx.intake.id,
-      suggestedActions: [
-        {
-          type: 'reply_property_list',
-          params: {
-            senderEmail: lookup?.senderEmail,
-            senderName: senderDisplay,
-            contactId: lookup?.senderContact?.contactId ?? null,
-            isKnownContact: lookup?.isKnownContact ?? false,
-            criteriaSummary,
-            matchingUnitsCount: units.length,
-            matchingUnits: units.slice(0, 10).map(u => ({
-              id: u.id, name: u.name, type: u.type, area: u.area,
-              floor: u.floor, building: u.building, price: u.price, rooms: u.rooms,
-            })),
-            totalAvailable,
-            draftReply,
-            companyId: ctx.companyId,
-          },
-        },
-      ],
-      requiredApprovals: ['salesManager'],
-      autoApprovable: false,
-      summary,
-      schemaVersion: PIPELINE_PROTOCOL_CONFIG.SCHEMA_VERSION,
-    };
+    return humanApprovedProposal(ctx, 'reply_property_list', {
+      senderEmail: lookup?.senderEmail,
+      senderName: senderDisplay,
+      contactId: lookup?.senderContact?.contactId ?? null,
+      isKnownContact: lookup?.isKnownContact ?? false,
+      criteriaSummary,
+      matchingUnitsCount: units.length,
+      matchingUnits: units.slice(0, 10).map(u => ({
+        id: u.id, name: u.name, type: u.type, area: u.area,
+        floor: u.floor, building: u.building, price: u.price, rooms: u.rooms,
+      })),
+      totalAvailable,
+      draftReply,
+      companyId: ctx.companyId,
+    }, summary);
   }
 
   // ── Step 6: EXECUTE ──
@@ -188,8 +174,7 @@ export class PropertySearchModule implements IUCModule {
     });
 
     try {
-      const actions = ctx.approval?.modifiedActions ?? ctx.proposal?.suggestedActions ?? [];
-      const replyAction = actions.find(a => a.type === 'reply_property_list');
+      const replyAction = approvedAction(ctx, 'reply_property_list');
 
       if (!replyAction) {
         return {
@@ -220,17 +205,11 @@ export class PropertySearchModule implements IUCModule {
         requestId: ctx.requestId,
       });
 
-      const adminDb = getAdminFirestore();
       const leadInquiry = {
         type: 'property_search_inquiry',
         companyId: ctx.companyId,
         pipelineRequestId: ctx.requestId,
-        sender: {
-          email: senderEmail ?? null,
-          name: (params.senderName as string) ?? null,
-          contactId: (params.contactId as string) ?? null,
-          isKnownContact: (params.isKnownContact as boolean) ?? false,
-        },
+        sender: { ...requesterOf(params), email: senderEmail ?? null },
         searchCriteria: (params.criteriaSummary as string) ?? null,
         matchingUnitsCount: (params.matchingUnitsCount as number) ?? 0,
         totalAvailable: (params.totalAvailable as number) ?? 0,
@@ -238,16 +217,11 @@ export class PropertySearchModule implements IUCModule {
         status: replyResult.success ? 'sent' : 'send_failed',
         replyMessageId: replyResult.messageId ?? null,
         replyError: replyResult.error ?? null,
-        approvedBy: ctx.approval?.approvedBy ?? null,
-        approvedAt: ctx.approval?.decidedAt ?? null,
+        ...approvalOf(ctx),
         createdAt: nowISO(),
       };
 
-      const auditId = generatePipelineAuditId();
-      await adminDb
-        .collection(COLLECTIONS.AI_PIPELINE_AUDIT)
-        .doc(auditId)
-        .set(leadInquiry);
+      const auditId = await recordPipelineAudit(leadInquiry);
 
       if (!replyResult.success) {
         logger.error('UC-003 EXECUTE: Reply send FAILED', {
@@ -261,7 +235,7 @@ export class PropertySearchModule implements IUCModule {
           success: false,
           sideEffects: [
             `lead_inquiry_recorded:${auditId}`,
-            `reply_failed:${replyResult.error ?? 'unknown'}`,
+            replySideEffect(replyResult),
           ],
           error: `Αποτυχία αποστολής απάντησης: ${replyResult.error ?? 'Άγνωστο σφάλμα'}`,
         };
@@ -279,7 +253,7 @@ export class PropertySearchModule implements IUCModule {
         sideEffects: [
           `lead_inquiry_recorded:${auditId}`,
           `matching_units:${params.matchingUnitsCount ?? 0}`,
-          `reply_sent:${replyResult.messageId ?? 'unknown'}`,
+          replySideEffect(replyResult),
         ],
       };
     } catch (error) {
@@ -300,31 +274,12 @@ export class PropertySearchModule implements IUCModule {
   // ── Step 7: ACKNOWLEDGE ──
 
   async acknowledge(ctx: PipelineContext): Promise<AcknowledgmentResult> {
-    const channel = ctx.intake.channel;
-    const replySent = ctx.executionResult?.sideEffects?.some(
-      (se: string) => se.startsWith('reply_sent:')
-    ) ?? false;
-
-    logger.info('UC-003 ACKNOWLEDGE: Reply delivery status', {
-      requestId: ctx.requestId,
-      channel,
-      replySent,
-    });
-
-    return { sent: replySent, channel };
+    return acknowledgeReply(ctx, 'UC-003', logger, 'Reply delivery status');
   }
 
   // ── Health Check ──
 
   async healthCheck(): Promise<boolean> {
-    try {
-      const adminDb = getAdminFirestore();
-      await adminDb.collection(COLLECTIONS.PROPERTIES).limit(1).get();
-      return true;
-    } catch (error) {
-      const msg = getErrorMessage(error);
-      logger.error('UC-003 HEALTH CHECK: Failed', { error: msg });
-      return false;
-    }
+    return collectionHealthCheck(COLLECTIONS.PROPERTIES, 'UC-003', logger);
   }
 }

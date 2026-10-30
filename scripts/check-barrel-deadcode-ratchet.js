@@ -88,6 +88,7 @@ function parseCliArgs(argv) {
     else if (arg === '--write-baseline') out.mode = 'write-baseline';
     else if (arg === '--check') out.mode = 'check';
     else if (arg === '--smoke') out.mode = 'smoke';
+    else if (arg === '--index') out.index = true;   // ADR-924 Φ5: το smoke κρίνει τη baseline του commit
     else if (arg === '--triage') out.mode = 'triage';
     else if (arg === '--help' || arg === '-h') out.mode = 'help';
     else throw new Error(`Unknown argument: ${arg}`);
@@ -256,7 +257,9 @@ function reportRegression(label, added, hint) {
 
 /** Fail-closed baseline read shared by --smoke and --check. null ⇒ already reported. */
 function readBaseline(options) {
-  const baseline = loadBaseline(options.baseline, REQUIRED_BASELINE_KEYS);
+  // ADR-924 Φ5: με `--index` (ο hook) η baseline ΤΟΥ COMMIT — μια σβησμένη baseline δεν «περνά» επειδή ζει ακόμη στον δίσκο
+  const input = options.index ? require('./lib/gate-input').commitInput(PROJECT_ROOT, ['--index']) : null;
+  const baseline = loadBaseline(options.baseline, REQUIRED_BASELINE_KEYS, input);
   if (baseline && !baseline.__invalid) return baseline;
   console.error(`❌ CHECK 3.30 — baseline ${baseline ? baseline.__invalid : 'missing'}: ${path.relative(PROJECT_ROOT, options.baseline)}`);
   console.error(`   Seed it: npm run barrel-deadcode:baseline`);

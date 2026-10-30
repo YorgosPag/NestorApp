@@ -167,7 +167,7 @@ function cacheNamespace(root, config) {
   const GI = require('./global-inputs');
   const inputs = GI.GLOBAL_INPUTS.filter(input => input.id === 'toolchain' || input.id === 'namespaceBundles');
   const digest = GI.computeGlobalInputs(root, config, GI.CODE_ROOT, inputs);
-  const self = sha256(toLf(fs.readFileSync(__filename, 'utf8')));
+  const self = sha256(toLf(require('../gate-trap').readRunningCode(__filename)));   // ο κώδικας που τρέχει (§4.2)
   return sha256(stableStringify({ schema: CACHE_SCHEMA, digest, self })).slice(0, 16);
 }
 

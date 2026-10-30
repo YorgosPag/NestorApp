@@ -1,16 +1,12 @@
 'use client';
 
 import React from 'react';
-import {
-  MapPin, Phone, Mail, Globe,
-  Facebook, Instagram, Linkedin, Twitter, Youtube, Github, Link as LinkIcon,
-} from 'lucide-react';
+import { MapPin, Phone, Mail, Globe, Link as LinkIcon } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type {
-  ShowcaseCompanyBrand,
-  ShowcaseSocialPlatform,
-  ShowcaseContactSocial,
-} from './types';
+import type { ShowcaseCompanyBrand, ShowcaseContactSocial } from './types';
+import type { SocialPlatform } from '@/lib/contact/social-media-type-vocabulary';
+import { socialPlatformBrandName } from '@/lib/contact/social-platform-profiles';
+import { UNIFIED_SOCIAL_PLATFORMS } from '@/lib/social-platform-system/platform-config';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { EmailProviderPicker } from './EmailProviderPicker';
 import { AddressMapPicker } from './AddressMapPicker';
@@ -25,15 +21,10 @@ interface ShowcaseHeaderProps {
   subtitleOverride?: string;
 }
 
-const SOCIAL_ICONS: Record<ShowcaseSocialPlatform, React.ComponentType<{ className?: string }>> = {
-  facebook: Facebook,
-  instagram: Instagram,
-  linkedin: Linkedin,
-  twitter: Twitter,
-  youtube: Youtube,
-  github: Github,
-  other: LinkIcon,
-};
+/** Το εικονίδιο της πλατφόρμας από το ΕΝΑ μητρώο πλατφορμών — κάθε πλατφόρμα της ρίζας έχει γραμμή εκεί. */
+function socialIconOf(platform: SocialPlatform): React.ComponentType<{ className?: string }> {
+  return platform === 'other' ? LinkIcon : UNIFIED_SOCIAL_PLATFORMS[platform].ui.icon;
+}
 
 function buildPhoneHref(value: string): string {
   const digits = value.replace(/[^\d+]/g, '');
@@ -41,8 +32,8 @@ function buildPhoneHref(value: string): string {
 }
 
 function SocialIcon({ item }: { item: ShowcaseContactSocial }) {
-  const Icon = SOCIAL_ICONS[item.platform] ?? LinkIcon;
-  const label = item.label ?? item.platform;
+  const Icon = socialIconOf(item.platform);
+  const label = item.label ?? socialPlatformBrandName(item.platform) ?? item.platform;
   return (
     <Tooltip>
       <TooltipTrigger asChild>

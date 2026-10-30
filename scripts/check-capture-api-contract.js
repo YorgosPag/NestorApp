@@ -21,6 +21,7 @@
 const path = require('node:path');
 
 const { judgeOutputs, STATES } = require('./lib/generated-artifacts');
+const { openGateInput, commitInput } = require('./lib/gate-input');
 const { buildPlan, REGENERATE } = require('./lib/capture-api-contract/plan');
 
 const ICON = {
@@ -31,12 +32,12 @@ const ICON = {
 };
 
 /** @returns {{ ok: boolean, results: Array<{path:string, state:string, detail?:string}> }} */
-function judge(root) {
-  const plan = buildPlan(root);
+function judge(root, input = openGateInput({ root })) {
+  const plan = buildPlan(root, input);
   if (plan.errors.length > 0) {
     return { ok: false, results: plan.errors.map((detail) => ({ path: plan.outputRoot, state: STATES.INVALID, detail })) };
   }
-  return judgeOutputs(root, plan.outputs, plan.outputRoot);
+  return judgeOutputs(root, plan.outputs, plan.outputRoot, input);
 }
 
 function report(res) {
@@ -59,7 +60,7 @@ function main() {
     return;
   }
   const root = process.env.CAPTURE_API_CONTRACT_ROOT || path.resolve(__dirname, '..');
-  const res = judge(root);
+  const res = judge(root, commitInput(root));   // ADR-924 — `--index` (εκτελεστής) ⇒ κρίνεται ό,τι θα δεσμευτεί
   report(res);
   process.exitCode = res.ok ? 0 : 1;
 }

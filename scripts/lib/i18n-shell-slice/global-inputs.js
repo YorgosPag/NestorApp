@@ -50,6 +50,7 @@ const { CONFIG_FILE, DEFAULTS } = require('./config');
 const { LAZY_CONFIG } = require('./lazy-route-census');
 const { digestOf, toLf } = require('./slice-build');
 const { NAMESPACE_BUNDLES_FILE, NAMESPACE_COMPAT_FILE } = require('../i18n-namespace-extract');
+const { readRunningCode, isRunningCodeFile } = require('../gate-trap');
 
 /** Το tsconfig από το οποίο ο γεννήτορας ΚΑΙ η πύλη διαβάζουν aliases — δηλωμένο ΕΔΩ, μία φορά. */
 const TS_PATH_ALIAS_CONFIG = 'tsconfig.base.json';
@@ -208,12 +209,24 @@ function assertLiteralRequires(text, relFile) {
   visit(source);
 }
 
-function resolveLocal(root, fromRel, spec) {
+/**
+ * Η πηγή κειμένου της κλειστότητας: `{ isFile(rel), read(rel) }` (σχετικά με τη ρίζα). Προεπιλογή: ο **κώδικας που
+ * τρέχει** στη ρίζα (`readRunningCode` — ρητή ανάγνωση κώδικα, ADR-924 §4.2)· η `materializeGlobalInputs` δίνει την
+ * ΟΨΗ ΤΟΥ COMMIT (Φ4 — η παγίδα του worker έπιασε την ανακάλυψη του toolchain να διαβάζει τον δίσκο, όπου ο κώδικας του
+ * γεννήτορα αποκλίνει από ό,τι θα δεσμευτεί).
+ */
+function runningCodeSource(root) {
+  return {
+    isFile: rel => isRunningCodeFile(path.join(root, rel)),
+    read: rel => readRunningCode(path.join(root, rel)),
+  };
+}
+
+function resolveLocal(source, fromRel, spec) {
   const base = path.posix.join(path.posix.dirname(fromRel), spec);
   for (const ext of TOOLCHAIN_EXTENSIONS) {
     const candidate = `${base}${ext}`;
-    const abs = path.join(root, candidate);
-    if (fs.existsSync(abs) && fs.statSync(abs).isFile()) return candidate;
+    if (source.isFile(candidate)) return candidate;
   }
   throw new Error(`ADR-744 §30: το require('${spec}') του ${fromRel} δεν λύνεται σε αρχείο.`);
 }
@@ -221,19 +234,22 @@ function resolveLocal(root, fromRel, spec) {
 const isBuiltin = spec => spec.startsWith('node:') || builtinModules.includes(spec.split('/')[0]);
 const packageOf = spec => spec.split('/').slice(0, spec.startsWith('@') ? 2 : 1).join('/');
 
-/** @returns {{files: string[], packages: string[]}} ταξινομημένα */
-function toolchainClosure(root) {
+/**
+ * @param {string} root
+ * @param {{isFile: (rel: string) => boolean, read: (rel: string) => string}} [source] προεπιλογή ο δίσκος της ρίζας
+ * @returns {{files: string[], packages: string[]}} ταξινομημένα
+ */
+function toolchainClosure(root, source = runningCodeSource(root)) {
   const files = new Set();
   const packages = new Set();
   const queue = [TOOLCHAIN_ENTRY];
   while (queue.length > 0) {
     const relFile = queue.pop();
     if (files.has(relFile)) continue;
-    const abs = path.join(root, relFile);
-    if (!fs.existsSync(abs)) throw new Error(`ADR-744 §30: module του toolchain λείπει: ${relFile}`);
+    if (!source.isFile(relFile)) throw new Error(`ADR-744 §30: module του toolchain λείπει: ${relFile}`);
     files.add(relFile);
-    for (const spec of requiredSpecifiers(fs.readFileSync(abs, 'utf8'))) {
-      if (spec.startsWith('.')) queue.push(resolveLocal(root, relFile, spec));
+    for (const spec of requiredSpecifiers(source.read(relFile))) {
+      if (spec.startsWith('.')) queue.push(resolveLocal(source, relFile, spec));
       else if (!isBuiltin(spec)) packages.add(packageOf(spec));
     }
   }
@@ -259,7 +275,7 @@ function toolchainParts(root) {
   const { files, packages } = toolchainClosure(root);
   const parts = {};
   for (const relFile of files) {
-    const text = toLf(fs.readFileSync(path.join(root, relFile), 'utf8'));
+    const text = toLf(readRunningCode(path.join(root, relFile)));
     assertLiteralRequires(text, relFile);
     parts[relFile] = text;
   }
@@ -302,12 +318,16 @@ const GLOBAL_INPUTS = Object.freeze([
   },
   {
     id: 'toolchain',
-    paths: ({ toolRoot }) => toolchainClosure(toolRoot).files,
+    paths: ({ toolRoot, toolSource }) => toolchainClosure(toolRoot, toolSource).files,
     parts: ({ toolRoot }) => toolchainParts(toolRoot),
   },
 ]);
 
-const contextOf = (root, config, toolRoot) => ({ root, config, toolRoot: toolRoot || CODE_ROOT });
+/** `toolSource` = από πού ΑΝΑΚΑΛΥΠΤΕΤΑΙ η κλειστότητα του toolchain (προεπιλογή ο δίσκος του `toolRoot`). */
+const contextOf = (root, config, toolRoot, toolSource) => {
+  const tools = toolRoot || CODE_ROOT;
+  return { root, config, toolRoot: tools, toolSource: toolSource || runningCodeSource(tools) };
+};
 
 /**
  * `{ είσοδος: { τμήμα: sha256 } }` — γράφεται στο manifest και σφραγίζεται από το `inputsSha256`.
@@ -323,10 +343,16 @@ function computeGlobalInputs(root, config, toolRoot, inputs = GLOBAL_INPUTS) {
   return out;
 }
 
-/** Κάθε αρχείο που διαβάζει κάποιος reader, ταξινομημένο και μοναδικό. */
-function globalInputPaths(root, config, toolRoot, inputs = GLOBAL_INPUTS) {
-  const context = contextOf(root, config, toolRoot);
+/** Κάθε αρχείο που διαβάζει κάποιος reader, ταξινομημένο και μοναδικό. `toolSource` ⇒ δες `contextOf`. */
+function globalInputPaths(root, config, toolRoot, inputs = GLOBAL_INPUTS, toolSource = undefined) {
+  const context = contextOf(root, config, toolRoot, toolSource);
   return [...new Set(inputs.flatMap(input => input.paths(context)))].sort();
+}
+
+/** Η όψη του commit ως πηγή κλειστότητας (ADR-924): `isFile`/`read` από το ευρετήριο, όχι τον δίσκο. */
+function commitSourceOf(repoRoot) {
+  const input = require('../gate-input').openGateInput({ root: repoRoot, index: true });
+  return { isFile: rel => input.exists(rel), read: rel => input.readRequired(rel) };
 }
 
 /**
@@ -339,11 +365,15 @@ function globalInputPaths(root, config, toolRoot, inputs = GLOBAL_INPUTS) {
 function materializeGlobalInputs({ repoRoot, workingConfig, extraSpecs }) {
   const { loadConfig } = require('./config');
   const { materializeIndex } = require('../git-index-snapshot');
-  let specs = [...extraSpecs, ...globalInputPaths(repoRoot, workingConfig, repoRoot)];
+  // ADR-924 Φ4: η κλειστότητα του toolchain ΑΝΑΚΑΛΥΠΤΕΤΑΙ στην όψη του commit — ποτέ στον δίσκο, όπου ο κώδικας
+  //   του γεννήτορα μπορεί να αποκλίνει από ό,τι θα δεσμευτεί (μετρημένο: η παγίδα του worker, 3.34 · 3.51)
+  const toolSource = commitSourceOf(repoRoot);
+  let specs = [...extraSpecs, ...globalInputPaths(repoRoot, workingConfig, repoRoot, GLOBAL_INPUTS, toolSource)];
   let snapshot = materializeIndex({ repoRoot, pathspecs: specs });
   try {
     const config = loadConfig(snapshot.root);
-    const missing = globalInputPaths(snapshot.root, config, repoRoot).filter(file => !specs.includes(file));
+    const missing = globalInputPaths(snapshot.root, config, repoRoot, GLOBAL_INPUTS, toolSource)
+      .filter(file => !specs.includes(file));
     if (missing.length > 0) {
       snapshot.dispose();
       specs = [...specs, ...missing];

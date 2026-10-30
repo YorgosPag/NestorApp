@@ -29,6 +29,7 @@
 const path = require('node:path');
 
 const { judge, STATES } = require('./lib/functions-projection/judge');
+const { commitInput } = require('./lib/gate-input');
 const { REGENERATE } = require('./lib/functions-projection/plan');
 
 const ICON = {
@@ -58,7 +59,7 @@ function main() {
     return;
   }
   const root = process.env.FUNCTIONS_PROJECTION_ROOT || path.resolve(__dirname, '..');
-  const res = judge(root);
+  const res = judge(root, commitInput(root));   // ADR-924 — `--index` (εκτελεστής) ⇒ κρίνεται ό,τι θα δεσμευτεί
   report(res);
   process.exitCode = res.ok ? 0 : 1;
 }

@@ -58,7 +58,7 @@
  * =============================================================================
  */
 
-const fs = require('fs');
+const { openGateInput } = require('../gate-input');
 const path = require('path');
 
 const { listWorkflowFiles, readWorkflowRunSteps } = require('../ci/workflow-meta');
@@ -94,12 +94,13 @@ const CROSS_ENV_BUILD = /\b(?:pnpm|npm|yarn)\s+run\s+build(?![:\w])/;
  * @param {string} projectRoot
  * @returns {Array<{file: string, job: string, env: object, opaque: boolean, crossEnv: boolean}>}
  */
-function findBuildCallers(projectRoot) {
+function findBuildCallers(projectRoot, input = openGateInput({ root: projectRoot })) {
+  // ADR-924: από την ΕΙΣΟΔΟ — με `--index` κρίνονται τα workflows/actions ΤΟΥ COMMIT, όχι του δίσκου
   const workflowsDir = path.join(projectRoot, '.github', 'workflows');
   const callers = [];
 
-  for (const file of listWorkflowFiles(workflowsDir)) {
-    for (const step of readWorkflowRunSteps(path.join(workflowsDir, file))) {
+  for (const file of listWorkflowFiles(workflowsDir, input)) {
+    for (const step of readWorkflowRunSteps(path.join(workflowsDir, file), input.readRequired)) {
       if (CI_BUILD.test(step.run)) {
         callers.push({ file, job: step.job, env: step.env || {}, opaque: false, crossEnv: false });
       } else if (CROSS_ENV_BUILD.test(step.run)) {
@@ -108,12 +109,11 @@ function findBuildCallers(projectRoot) {
     }
   }
 
-  const actionsDir = path.join(projectRoot, '.github', 'actions');
-  if (fs.existsSync(actionsDir)) {
-    for (const name of fs.readdirSync(actionsDir)) {
-      const file = path.join(actionsDir, name, 'action.yml');
-      if (!fs.existsSync(file)) continue;
-      const text = fs.readFileSync(file, 'utf8');
+  const actions = input.children(path.join(projectRoot, '.github', 'actions'));
+  if (actions) {
+    for (const name of actions.dirs) {
+      const text = input.read(path.join(projectRoot, '.github', 'actions', name, 'action.yml'));
+      if (text === null) continue;
       if (CI_BUILD.test(text) || CROSS_ENV_BUILD.test(text)) {
         callers.push({ file: `actions/${name}/action.yml`, job: '—', env: {}, opaque: true, crossEnv: false });
       }

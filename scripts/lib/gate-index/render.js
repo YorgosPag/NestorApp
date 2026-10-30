@@ -47,7 +47,7 @@ function clip(text, max) {
  * Το κελί baseline: ΜΟΝΟ ο δείκτης, και μόνο αν λύνεται.
  * Επιστρέφει `{ cell, problem }` — «δεν βρέθηκε» ΠΟΤΕ δεν σιωπά.
  */
-function baselineCell(gate, root) {
+function baselineCell(gate, root, input = null) {
   const raw = (gate.baseline || '').trim();
   if (!raw || /^(no baseline|—|-)$/i.test(raw)) return { cell: '—', problem: null };
 
@@ -55,7 +55,8 @@ function baselineCell(gate, root) {
   if (!m) return { cell: '—', problem: `${gate.gate}: το πεδίο baseline δεν ονομάζει αρχείο .json → «${raw.slice(0, 70)}»` };
 
   const file = m[1];
-  if (!fs.existsSync(path.join(root, file))) {
+  // ADR-924 Φ5: με είσοδο (`--index`) ρωτά την όψη του commit — μια baseline που ζει μόνο στον δίσκο είναι αδέσποτη για το commit
+  if (!(input ? input.exists(file) : fs.existsSync(path.join(root, file)))) {
     return { cell: '—', problem: `${gate.gate}: η baseline «${file}» ΔΕΝ ΥΠΑΡΧΕΙ στον δίσκο (αδέσποτος δείκτης)` };
   }
   return { cell: '`' + file + '`', problem: null };
@@ -107,11 +108,11 @@ function describeCell(gate) {
  * Παράγει τις γραμμές. Ρίχνει σε παραβίαση προϋπολογισμού ή αδέσποτο δείκτη —
  * fail-closed: μια προβολή που «τα καταφέρνει» σιωπηλά είναι χειρότερη από καμία.
  */
-function renderRows(gates, root = process.cwd()) {
+function renderRows(gates, root = process.cwd(), input = null) {
   const rows = [];
   const problems = [];
   for (const g of gates) {
-    const { cell, problem } = baselineCell(g, root);
+    const { cell, problem } = baselineCell(g, root, input);
     if (problem) problems.push(problem);
     const line = `| **${g.gate}** | ${describeCell(g)} | ${clip(g.mechanism, CLIP.mechanism)} | ${cell} |`;
     if (line.length > ROW_BUDGET) {

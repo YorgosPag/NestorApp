@@ -94,8 +94,10 @@ function describeValue(value) {
 }
 
 /** Read globals.css and return both themes plus every scoped override of `--primary`. */
-function readThemes(repoRoot = process.cwd()) {
-  const css = fs.readFileSync(`${repoRoot}/${GLOBALS_CSS}`, 'utf8');
+function readThemes(repoRoot = process.cwd(), input = null) {
+  // `input` (ADR-924): η είσοδος της πύλης — με `--index` τα θέματα ΤΟΥ COMMIT.
+  const css = input ? input.read(GLOBALS_CSS) : fs.readFileSync(`${repoRoot}/${GLOBALS_CSS}`, 'utf8');
+  if (css === null) throw new Error(`css-token-themes: λείπει το ${GLOBALS_CSS} (${input.mode}) — fail-closed.`);
   const blocks = extractRuleBlocks(css);
   return {
     source: GLOBALS_CSS,

@@ -11,7 +11,6 @@
  *                    consumer root. The answer IS the key list; nobody types it.
  */
 
-const fs = require('node:fs');
 const path = require('node:path');
 const { builtinModules } = require('node:module');
 
@@ -19,7 +18,7 @@ const { parse, moduleSpecifiers, importedBindings, memberReads, ts } = require('
 
 const BUILTINS = new Set(builtinModules);
 const isBuiltin = (spec) => BUILTINS.has(spec.replace(/^node:/, ''));
-const { readLf } = require('../generated-artifacts');
+const { toLf } = require('../text-eol');
 
 /** Projected module path that a relative specifier resolves to, or null. */
 function resolveRelative(manifest, fromRel, spec) {
@@ -63,20 +62,12 @@ function checkClosure(manifest, rel, sf) {
   return errors;
 }
 
-function listConsumers(root, manifest) {
-  const consumerAbs = path.join(root, manifest.consumerRoot);
-  const outputAbs = path.join(root, manifest.outputRoot);
-  const out = [];
-  const walk = (dir) => {
-    if (!fs.existsSync(dir) || path.resolve(dir) === path.resolve(outputAbs)) return;
-    for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
-      const abs = path.join(dir, ent.name);
-      if (ent.isDirectory() && ent.name !== 'node_modules') walk(abs);
-      else if (ent.isFile() && /\.tsx?$/.test(ent.name) && !ent.name.endsWith('.d.ts')) out.push(abs);
-    }
-  };
-  walk(consumerAbs);
-  return out.sort();
+/** Οι καταναλωτές (`.ts`/`.tsx`, όχι `.d.ts`) κάτω από το `consumerRoot`, εκτός της ίδιας της προβολής — από την ΕΙΣΟΔΟ. */
+function listConsumers(manifest, input) {
+  return input.files([manifest.consumerRoot], {
+    accept: (rel) => /\.tsx?$/.test(rel) && !rel.endsWith('.d.ts'),
+    pruneDir: (rel) => rel === `${manifest.outputRoot}/`,
+  });
 }
 
 function recordReads(sf, where, exportName, keys, errors) {
@@ -107,11 +98,11 @@ function boundaryErrors(root, manifest, abs, sf, where) {
 }
 
 /** Parse every consumer once: `{ abs, where, sf }`. */
-function readConsumers(root, manifest) {
-  return listConsumers(root, manifest).map((abs) => ({
+function readConsumers(root, manifest, input) {
+  return listConsumers(manifest, input).map((abs) => ({
     abs,
-    where: path.relative(root, abs).split(path.sep).join('/'),
-    sf: parse(abs, readLf(abs)),
+    where: input.rel(abs),
+    sf: parse(abs, toLf(input.read(abs))),
   }));
 }
 

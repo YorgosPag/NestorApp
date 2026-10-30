@@ -42,6 +42,15 @@ function strayRows(inv, byId) {
   for (const id of Object.keys(inv.declared)) {
     if (!byId.has(id)) rows.push({ id, state: STATES.ORPHAN, script: null });
   }
+  // Οι αναγνώσεις περιβάλλοντος (Φ4): για πύλη που ΤΡΕΧΕΙ, με αρχεία και λόγο — αλλιώς ανοχή χωρίς φύλακα
+  for (const [id, entry] of Object.entries(inv.environment || {})) {
+    const label = `${id} (environment)`;
+    if (!byId.has(id)) rows.push({ id: label, state: STATES.ORPHAN, script: null });
+    else if (!Array.isArray(entry.files) || entry.files.length === 0
+      || String(entry.reason || '').trim().length < MIN_REASON_LENGTH) {
+      rows.push({ id: label, state: STATES.REASONLESS, script: null });
+    }
+  }
   // «Stale» = δεν χρωστάει πια: κρίνει το commit, δηλώθηκε, ή δεν τρέχει. Μια μπλοκάρουσα κατάσταση
   // (π.χ. flag-without-reader) ΔΕΝ ξεχρεώνει — θα ήταν δεύτερη, αντιφατική γραμμή για την ίδια πύλη.
   const settled = new Set([STATES.COMMIT_VIEW, STATES.DECLARED]);

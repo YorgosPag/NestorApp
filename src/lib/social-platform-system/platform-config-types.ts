@@ -3,21 +3,17 @@
  * @module lib/social-platform-system/platform-config-types
  */
 
+import type { NamedSocialPlatform } from '@/lib/contact/social-platform-profiles';
+
 /**
  * Social Platform Types - Unified Definition
  * COMBINES: Sharing platforms + Profile platforms
+ *
+ * 🔴 ΔΕΜΕΝΟ ΣΤΗ ΡΙΖΑ (2026-10-30, ADR-327 §8.5.4): κάθε πλατφόρμα της ρίζας `SOCIAL_PLATFORMS` εκτός του `other`,
+ * ΣΥΝ το κανάλι `email` — που δεν είναι πλατφόρμα λογαριασμού, μόνο στόχος κοινοποίησης. Πριν ήταν χειρόγραφη
+ * λίστα: νέα πλατφόρμα στη φόρμα επαφής δεν αποκτούσε ποτέ εικονίδιο/όνομα εδώ.
  */
-export type SocialPlatformType =
-  | 'whatsapp'
-  | 'facebook'
-  | 'twitter'
-  | 'linkedin'
-  | 'telegram'
-  | 'instagram'
-  | 'youtube'
-  | 'github'
-  | 'tiktok'
-  | 'email';
+export type SocialPlatformType = NamedSocialPlatform | 'email';
 
 /** Platform Capability Matrix */
 export interface PlatformCapabilities {

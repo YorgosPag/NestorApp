@@ -12,6 +12,7 @@ const { readLockfile, bareVersion } = require('./lockfile.js');
 const { readWorkspace, declaredDependencies } = require('./workspace.js');
 const { judgeCiTools } = require('./ci-tools.js');
 const { judgeSingletons } = require('./singletons.js');
+const { openGateInput } = require('../gate-input');
 
 const BLOCKING = Object.freeze([
   S.VERSION_SPLIT, S.REDECLARED,
@@ -149,10 +150,11 @@ const LEDGER_STATES = Object.freeze({
   singletons: [S.SINGLETON_SPLIT, S.SINGLETON_ABSENT, S.SINGLETON_REASONLESS, S.SINGLETON_ONE],
 });
 
-function sweep(repoRoot) {
-  const { members, catalog } = readWorkspace(repoRoot);
-  const { importers } = readLockfile(repoRoot);
-  const declarations = loadDeclarations(repoRoot);
+/** `input` = η είσοδος (ADR-924): με `--index` (εκτελεστής) το workspace, το lockfile και τα manifests ΤΟΥ COMMIT. */
+function sweep(repoRoot, input = openGateInput({ root: repoRoot })) {
+  const { members, catalog } = readWorkspace(repoRoot, input);
+  const { importers } = readLockfile(repoRoot, input);
+  const declarations = loadDeclarations(repoRoot, input);
 
   const ledgers = {};
   const rows = [];
@@ -169,8 +171,8 @@ function sweep(repoRoot) {
   judgeNames(members, importers, declarations, pushTo('names'), used);
   judgeCatalog(members, catalog, pushTo('catalog'));
   judgeExceptions(declarations, used, pushTo('exceptions'));
-  judgeCiTools(repoRoot, pushTo('ciTools'));
-  judgeSingletons(repoRoot, loadSingletons(repoRoot), pushTo('singletons'));
+  judgeCiTools(repoRoot, pushTo('ciTools'), undefined, input);
+  judgeSingletons(repoRoot, loadSingletons(repoRoot, input), pushTo('singletons'), input);
 
   for (const [name, states] of Object.entries(LEDGER_STATES)) {
     ledgers[name].population = states.reduce((n, s) => n + ledgers[name].tally[s], 0);

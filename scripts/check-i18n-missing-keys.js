@@ -22,14 +22,13 @@
  * Usage: node scripts/check-i18n-missing-keys.js file1.tsx file2.ts ...
  * =============================================================================
  */
-const fs = require('fs');
 const path = require('path');
 const extract = require('./lib/i18n-namespace-extract');
 const { judgeAgainstBaseline, collectMissingKeys, makeDeps } = require('./lib/i18n-missing-keys-ratchet');
+const { commitInput } = require('./lib/gate-input');
 
 const REPO_ROOT = path.join(__dirname, '..');
-const BASELINE_FILE = path.join(REPO_ROOT, '.i18n-missing-keys-baseline.json');
-const DEPS = makeDeps(REPO_ROOT, extract);
+const BASELINE_FILE = '.i18n-missing-keys-baseline.json';
 
 // Resolve shared namespace bundles (e.g. COMMON_NAMESPACES) once, so
 // useTranslation(<CONST>) call sites are checked, not silently skipped.
@@ -57,41 +56,36 @@ function getLineNumber(content, index) {
   return content.substring(0, index).split('\n').length;
 }
 
-// Load baseline
-let baseline = {};
-if (fs.existsSync(BASELINE_FILE)) {
+/** Η baseline από την ΕΙΣΟΔΟ — λείπει ή χαλασμένη ⇒ `{}`. */
+function loadBaseline(input) {
+  const text = input.read(BASELINE_FILE);
+  if (text === null) return {};
   try {
-    const data = JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf8'));
-    baseline = data.files || {};
+    return JSON.parse(text).files || {};
   } catch {
-    baseline = {};
+    return {};
   }
 }
 
-// Process files
-const files = process.argv.slice(2);
-let hasBlock = false;
-const allMissing = [];
+/** Αρχείο που κρίνει η πύλη: `.ts`/`.tsx` εκτός tests, scripts, config. */
+const inScope = (file) => /\.(ts|tsx)$/.test(file)
+  && !/(__tests__|\.test\.|\.spec\.|\.stories\.|scripts\/|\.config\.)/.test(file);
 
-for (const file of files) {
-  if (!fs.existsSync(file)) continue;
-  // Only .ts/.tsx
-  if (!/\.(ts|tsx)$/.test(file)) continue;
-  // Skip test files, scripts, config
-  if (/(__tests__|\.test\.|\.spec\.|\.stories\.|scripts\/|\.config\.)/.test(file)) continue;
-
-  const content = fs.readFileSync(file, 'utf8');
+/** Τα λείποντα κλειδιά ενός αρχείου (με γραμμή) — `null` ⇒ δεν κρίνεται. */
+function missingKeysOf(content, deps) {
   // MIA MHXANH gia tin pyli KAI ti baseline (ADR-777 8.41). Dyo klhseis ths idias
   // metrisis apeklinan gia mines: 114 enanti 6 sto idio dentro.
-  const found = collectMissingKeys(content, DEPS);
-  if (!found) continue;
-  const namespaces = found.namespaces;
-  const missingKeys = found.missingKeys.map(k => ({
-    key: k.key, bucket: k.bucket, line: getLineNumber(content, k.index),
-  }));
+  const found = collectMissingKeys(content, deps);
+  if (!found) return null;
+  return {
+    namespaces: found.namespaces,
+    missingKeys: found.missingKeys.map(k => ({ key: k.key, bucket: k.bucket, line: getLineNumber(content, k.index) })),
+  };
+}
 
-  if (missingKeys.length === 0) continue;
-
+/** Η κρίση ενός αρχείου έναντι της baseline· τυπώνει μείωση ή μπλοκάρισμα. Επιστρέφει αν μπλοκάρει. */
+function judgeFile(file, found, baseline) {
+  const { namespaces, missingKeys } = found;
   const normalizedFile = file.replace(/\\/g, '/');
   // KEY - DYO KADOI, OXI ENAS ARITHMOS (ADR-777 8.41). Me ena athroisma i **antallagi**
   // perna athoryva: diorthoneis ena sketo kleidi, prostheteis ena rito `ns:key`, to
@@ -100,40 +94,54 @@ for (const file of files) {
   // Dexetai kai to PALIO sxima (sketos arithmos): tote o arithmos einai to epitrepomeno
   // ton **sketon**, kai ta rita ksekinoun apo MIDENIKI anoxi.
   const verdict = judgeAgainstBaseline(missingKeys, baseline[normalizedFile] || 0);
-  const { allow, current } = verdict;
-  const baselineCount = allow.bare + allow.explicit;
+  const baselineCount = verdict.allow.bare + verdict.allow.explicit;
   const currentCount = missingKeys.length;
 
-  // Ratchet logic
   if (!verdict.blocked) {
     // Same or improved — allow
     if (currentCount < baselineCount) {
       console.log(`${GREEN}  📉 ${normalizedFile}: ${baselineCount} → ${currentCount} (-${baselineCount - currentCount})${NC}`);
     }
-    continue;
+    return false;
   }
 
   // New or increased violations — BLOCK
-  hasBlock = true;
-  const newCount = verdict.overflow.length;
-  console.log(`${RED}  🚫 ${normalizedFile}: ${newCount} new missing i18n key(s)${NC}`);
-  // Show only the new ones (last N)
+  console.log(`${RED}  🚫 ${normalizedFile}: ${verdict.overflow.length} new missing i18n key(s)${NC}`);
   // Deixe ta kleidia TOU KADOU pou palindromise - to sketo `slice(-newCount)` edeixne
   // opoiadipote teleftaia, dhladi mporouse na onomasei kleidi pou DEN eftaie.
-  const showKeys = verdict.overflow;
-  for (const { key, line, bucket } of showKeys) {
+  for (const { key, line, bucket } of verdict.overflow) {
     // To rito `ns:key` elegxthike se ENA namespace - afto pou ONOMAZEI. Anafora
     // pou apari8mei ta DILOMENA tha estelne ton anagnosti na psaxei se la8os arxeio.
     const nsNames = bucket === 'explicit' ? key.split(':')[0] : namespaces.join(', ');
     console.log(`${YELLOW}     Line ${line}: t('${key}') — not found in [${nsNames}] locale${NC}`);
   }
-  allMissing.push({ file: normalizedFile, keys: missingKeys });
+  return true;
 }
 
-if (hasBlock) {
-  console.log(`${RED}  ❌ Missing i18n keys check FAILED — add keys to locale JSON files${NC}`);
-  process.exit(1);
+/**
+ * `files` = τα σταδιοποιημένα (ορίσματα). `input` = η είσοδος (ADR-924): με `--index` (εκτελεστής) τα αρχεία,
+ * τα locale, τα bundles και η baseline ΤΟΥ COMMIT, όχι του δίσκου.
+ */
+function run(files, input = commitInput(REPO_ROOT)) {
+  const deps = makeDeps(REPO_ROOT, extract, input);
+  const baseline = loadBaseline(input);
+  let hasBlock = false;
+  for (const file of files) {
+    if (!inScope(file) || !input.exists(file)) continue;
+    const found = missingKeysOf(input.read(file), deps);
+    if (!found || found.missingKeys.length === 0) continue;
+    if (judgeFile(file, found, baseline)) hasBlock = true;
+  }
+
+  if (hasBlock) {
+    console.log(`${RED}  ❌ Missing i18n keys check FAILED — add keys to locale JSON files${NC}`);
+    return 1;
+  }
+
+  console.log(`${GREEN}  ✅ i18n keys: all t() calls have matching locale entries${NC}`);
+  return 0;
 }
 
-console.log(`${GREEN}  ✅ i18n keys: all t() calls have matching locale entries${NC}`);
-process.exit(0);
+if (require.main === module) process.exit(run(process.argv.slice(2).filter(a => !a.startsWith('--'))));
+
+module.exports = { run };

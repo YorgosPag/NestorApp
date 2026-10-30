@@ -23,8 +23,10 @@ const { RESOLVE_ORDER } = require('../../check-shadowed-modules');
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..');
 const SRC = path.join(PROJECT_ROOT, 'src');
 
+// ⚠️ `dist`/`coverage` ΔΕΝ κόβονται πια κατά όνομα (ADR-924 §8.7): τα παραγόμενα τα κλαδεύει ο ΕΝΑΣ περιπατητής
+//    αγκυρωμένα, και το όνομα έκρυβε τη ΔΙΑΔΡΟΜΗ `…/procurement/coverage/page.tsx`. Τα υπόλοιπα είναι επιλογή της πύλης.
 const SKIP_DIRS = new Set([
-  'node_modules', '.next', '.git', 'dist', 'coverage', '__snapshots__',
+  'node_modules', '.next', '.git', '__snapshots__',
   'archive', 'patches', 'test.BACK', '__tests__', 'e2e',
 ]);
 
@@ -32,18 +34,17 @@ const CODE_EXT = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs']);
 
 const isTestFile = (f) => /\.(test|spec|e2e\.spec|stories)\.[jt]sx?$/.test(f);
 
-function collectSourceFiles(dir = SRC, out = []) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name.startsWith('.')) continue;
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (SKIP_DIRS.has(entry.name)) continue;
-      collectSourceFiles(full, out);
-    } else if (CODE_EXT.has(path.extname(entry.name)) && !isTestFile(entry.name)) {
-      out.push(full);
-    }
-  }
-  return out;
+const baseOf = (rel) => rel.slice(rel.replace(/\/$/, '').lastIndexOf('/') + 1).replace(/\/$/, '');
+
+/**
+ * Τα αρχεία κώδικα του `src/` — από την ΕΙΣΟΔΟ (ADR-924 Φ3: ήταν δικός του `readdirSync`). ⚠️ Στη μορφή ΤΗΣ ΠΛΑΤΦΟΡΜΑΣ
+ * (`path.resolve`): ο `resolveSpecifier` ρωτά το σύνολο με `path.join` — posix εδώ θα έχανε ΣΙΩΠΗΛΑ κάθε ακμή στα Windows.
+ */
+function collectSourceFiles(input = require('../gate-input').openGateInput({ root: PROJECT_ROOT })) {
+  return input.files([path.relative(PROJECT_ROOT, SRC).split(path.sep).join('/')], {
+    accept: (rel) => !baseOf(rel).startsWith('.') && CODE_EXT.has(path.posix.extname(rel)) && !isTestFile(baseOf(rel)),
+    pruneDir: (dir) => baseOf(dir).startsWith('.') || SKIP_DIRS.has(baseOf(dir)),
+  }).map((abs) => path.resolve(abs));
 }
 
 /**
@@ -164,15 +165,17 @@ function parseImports(file, rawText) {
 }
 
 /** Χτίζει τον γράφο: `file → [{ to, names }]`. */
-function buildGraph() {
-  const files = collectSourceFiles();
+/** `input` = η είσοδος (ADR-924) — προεπιλογή ο δίσκος· με `--index` ο γράφος ΤΟΥ COMMIT. */
+function buildGraph(input = undefined) {
+  const view = input || require('../gate-input').openGateInput({ root: PROJECT_ROOT });
+  const files = collectSourceFiles(view);
   const existing = new Set(files);
   const graph = new Map();
   const sources = new Map();
 
   for (const file of files) {
-    let text;
-    try { text = fs.readFileSync(file, 'utf8'); } catch { continue; }
+    const text = view.read(file);
+    if (text === null) continue;
     sources.set(file, text);
     const edges = [];
     for (const { spec, names } of parseImports(file, text)) {

@@ -13,7 +13,6 @@
 
 'use strict';
 
-const fs = require('fs');
 const path = require('path');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..');
@@ -31,7 +30,9 @@ const appGroupOf = (root) => path.join(root, 'src', 'app', '(app)');
 const SCOPE_FILE = scopeFileOf(PROJECT_ROOT);
 const PREFIX_SSOT = prefixSsotOf(PROJECT_ROOT);
 
-const toPosix = (p) => p.split(path.sep).join('/');
+const { toPosix } = require('../posix-path'); // SSoT (ADR-924 §8.9)
+/** Η είσοδος της πύλης (ADR-924) — προεπιλογή ο δίσκος της ρίζας· ο εκτελεστής δίνει την όψη του commit. */
+const inputOf = (root) => require('../gate-input').openGateInput({ root });
 
 /**
  * Το πρόθεμα, **διαβασμένο από την αυθεντία**.
@@ -44,9 +45,10 @@ const toPosix = (p) => p.split(path.sep).join('/');
  * κρίνει με φανταστικό πρόθεμα τη μέρα που το SSoT μετακομίσει — δηλαδή θα ήταν
  * πράσινη πάνω σε δέντρο που δεν κοίταξε.
  */
-function readPrefix(root = PROJECT_ROOT) {
+function readPrefix(root = PROJECT_ROOT, input = inputOf(root)) {
   const ssot = prefixSsotOf(root);
-  const src = fs.readFileSync(ssot, 'utf8');
+  const src = input.read(ssot);
+  if (src === null) throw new Error(`CHECK 3.60: λείπει η αυθεντία ${toPosix(path.relative(root, ssot))} (${input.mode})`);
   const match = src.match(/export const WORKSPACE_PATH_PREFIX\s*=\s*'([^']+)'/);
   if (!match) {
     throw new Error(
@@ -63,8 +65,8 @@ function readPrefix(root = PROJECT_ROOT) {
  * ⚠️ Πρότυπο CHECK 3.35/3.50: μια εξαίρεση χωρίς γραμμένο λόγο είναι **σιωπηλή
  * παράλειψη με άλλο όνομα**, και ο επόμενος δεν έχει τρόπο να ξέρει αν ισχύει.
  */
-function readScope(root = PROJECT_ROOT) {
-  const raw = JSON.parse(fs.readFileSync(scopeFileOf(root), 'utf8'));
+function readScope(root = PROJECT_ROOT, input = inputOf(root)) {
+  const raw = input.readJson(scopeFileOf(root));
   const entries = raw.outsideWorkspace ?? {};
   const outside = new Map();
 
@@ -79,18 +81,17 @@ function readScope(root = PROJECT_ROOT) {
 }
 
 /** Κάθε `page.tsx` του group `(app)`, ως διαδρομή URL + πρώτο τμήμα. */
-function enumerateAppPages(root = PROJECT_ROOT) {
+function enumerateAppPages(root = PROJECT_ROOT, input = inputOf(root)) {
   const appGroup = appGroupOf(root);
   const pages = [];
   const walk = (dir) => {
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) walk(full);
-      else if (entry.name === 'page.tsx') pages.push(full);
-    }
+    const { files, dirs } = input.children(dir);
+    for (const name of dirs) walk(path.join(dir, name));
+    if (files.includes('page.tsx')) pages.push(path.join(dir, 'page.tsx'));
   };
-  if (!fs.existsSync(appGroup)) return [];
+  if (input.children(appGroup) === null) return [];
   walk(appGroup);
+  pages.sort();
 
   return pages.map((file) => {
     const rel = toPosix(path.relative(appGroup, file)).replace(/\/page\.tsx$/, '');
@@ -111,10 +112,10 @@ function enumerateAppPages(root = PROJECT_ROOT) {
  * γραμμές, και κάθε νεκρή γραμμή είναι ένα όνομα που ο χρήστης **δεν** μπορεί
  * να πάρει χωρίς λόγο.
  */
-function buildScope(root = PROJECT_ROOT) {
-  const prefix = readPrefix(root);
-  const outside = readScope(root);
-  const pages = enumerateAppPages(root);
+function buildScope(root = PROJECT_ROOT, input = inputOf(root)) {
+  const prefix = readPrefix(root, input);
+  const outside = readScope(root, input);
+  const pages = enumerateAppPages(root, input);
 
   const inside = [];
   const excluded = [];
@@ -173,22 +174,21 @@ const isPrivateFolder = (name) => name.startsWith('_');
  * `src/lib/workspace/__tests__/workspace-scope.test.ts` — και ίδιο μάθημα με τη CHECK
  * 3.52, που ήταν δομικά τυφλή στο `(light)` επειδή έκρινε `pathname`.
  */
-function literalSegmentsUnder(dir, root = PROJECT_ROOT) {
+function literalSegmentsUnder(dir, root = PROJECT_ROOT, input = inputOf(root)) {
   const found = new Map();
-  if (!fs.existsSync(dir)) return found;
+  if (input.children(dir) === null) return found;
 
   const walk = (current) => {
-    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
-      if (!entry.isDirectory()) continue;
-      const full = path.join(current, entry.name);
-      if (isRouteGroup(entry.name)) {
+    for (const name of input.children(current).dirs) {
+      const full = path.join(current, name);
+      if (isRouteGroup(name)) {
         walk(full);
         continue;
       }
-      if (isDynamicSegment(entry.name) || isPrivateFolder(entry.name)) continue;
-      const homes = found.get(entry.name) ?? [];
+      if (isDynamicSegment(name) || isPrivateFolder(name)) continue;
+      const homes = found.get(name) ?? [];
       homes.push(toPosix(path.relative(root, full)));
-      found.set(entry.name, homes);
+      found.set(name, homes);
     }
   };
   walk(dir);
@@ -204,13 +204,12 @@ function literalSegmentsUnder(dir, root = PROJECT_ROOT) {
  * δυναμικά τμήματα κάτω από το πρόθεμα θα σήμαιναν ότι δεν ξέρουμε **ποιο** είναι ο
  * χώρος, και μια μαντεψιά θα έκανε την πύλη πράσινη πάνω σε λάθος δέντρο.
  */
-function workspaceTreeOf(root = PROJECT_ROOT, prefix = readPrefix(root)) {
-  const prefixDir = path.join(appGroupOf(root), prefix);
-  if (!fs.existsSync(prefixDir)) return null;
+function workspaceTreeOf(root = PROJECT_ROOT, prefix = undefined, input = inputOf(root)) {
+  const prefixDir = path.join(appGroupOf(root), prefix ?? readPrefix(root, input));
+  const children = input.children(prefixDir);
+  if (children === null) return null;
 
-  const dynamic = fs
-    .readdirSync(prefixDir, { withFileTypes: true })
-    .filter((e) => e.isDirectory() && isDynamicSegment(e.name));
+  const dynamic = children.dirs.filter(isDynamicSegment).map((name) => ({ name }));
   if (dynamic.length !== 1) {
     throw new Error(
       `CHECK 3.60: κάτω από το /${prefix} περιμένω ΑΚΡΙΒΩΣ ένα δυναμικό τμήμα (το ψευδώνυμο του χώρου) — ` +
@@ -232,12 +231,12 @@ function workspaceTreeOf(root = PROJECT_ROOT, prefix = readPrefix(root)) {
  * (`/contacts` ≠ `/o/x/contacts`). Οι πέντε άγκυρες που το έπιασαν ζούσαν μόνο στο CI,
  * που ήταν ήδη μονίμως κόκκινο — **άγκυρα χωρίς πύλη είναι σχόλιο** (ADR-587 §6.1).
  */
-function routeSegmentCollisions(root = PROJECT_ROOT) {
-  const tree = workspaceTreeOf(root);
+function routeSegmentCollisions(root = PROJECT_ROOT, input = inputOf(root)) {
+  const tree = workspaceTreeOf(root, undefined, input);
   if (tree === null) return [];
 
-  const inside = literalSegmentsUnder(tree, root);
-  const tops = literalSegmentsUnder(appDirOf(root), root);
+  const inside = literalSegmentsUnder(tree, root, input);
+  const tops = literalSegmentsUnder(appDirOf(root), root, input);
 
   const collisions = [];
   for (const [segment, outsideHomes] of tops) {

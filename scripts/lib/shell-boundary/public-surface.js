@@ -23,12 +23,13 @@
  * επαληθεύεται μετά με `resolveSpecifier`: το κείμενο βρίσκει, ο AST **αποφασίζει**.
  */
 
-const fs = require('node:fs');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 
 const MG = require('../module-graph');
-const SC = require('../module-graph/scan-config');
+
+/** Η είσοδος της πύλης (ADR-924) — προεπιλογή ο δίσκος της ρίζας· ο εκτελεστής δίνει την όψη του commit. */
+const inputOf = (root) => require('../gate-input').openGateInput({ root });
 const { toPosix } = require('./tree');
 
 const SOURCE_PATHSPEC = ['src/*.ts', 'src/*.tsx', 'src/*.js', 'src/*.jsx'];
@@ -83,31 +84,30 @@ function untrackedSourceFiles(projectRoot) {
  * pre-commit. Η ίδια κάλυψη με `ls-files --others` + ανάγνωση **μιας δεκάδας** αρχείων
  * κοστίζει ~0,1s. Τα gitignored μένουν έξω: δεν είναι κώδικας της εφαρμογής.
  */
-function gitGrepFiles(projectRoot, tokens) {
+function gitGrepFiles(projectRoot, tokens, input = inputOf(projectRoot)) {
   if (tokens.length === 0) return [];
 
-  const args = ['grep', '-l', '-I', '--fixed-strings'];
-  for (const token of tokens) args.push('-e', token);
-  args.push('--', ...SOURCE_PATHSPEC);
-  const tracked = git(projectRoot, args).split('\n').map(s => s.trim()).filter(Boolean);
+  // ADR-924 — το `git grep` της ΟΨΗΣ. Η ΜΙΑ αυθεντία του οργάνου (ADR-749) είναι η όψη: στον δίσκο, tracked κείμενο
+  // του δίσκου + untracked (όπως πάντα)· με `--index` το commit — δομή ΚΑΙ σύμβολα — χωρίς untracked.
+  const tracked = input.grep(tokens, SOURCE_PATHSPEC);
+  if (input.mode === 'index') return tracked;
 
   const extra = untrackedSourceFiles(projectRoot).filter(rel => {
-    const abs = path.resolve(projectRoot, rel);
-    if (!fs.existsSync(abs)) return false;
-    const text = fs.readFileSync(abs, 'utf8');
-    return tokens.some(token => text.includes(token));
+    const text = input.read(rel);
+    return text !== null && tokens.some(token => text.includes(token));
   });
 
   return [...new Set([...tracked, ...extra])];
 }
 
-/** Το περιβάλλον επίλυσης specifier: ένα, μοιρασμένο, χτισμένο μία φορά. */
-function createResolveContext(projectRoot) {
-  const files = SC.collectSourceFiles(projectRoot, ['src']);
+/** Το περιβάλλον επίλυσης specifier: ένα, μοιρασμένο, χτισμένο μία φορά — και η ΕΙΣΟΔΟΣ που το τροφοδοτεί. */
+function createResolveContext(projectRoot, input = inputOf(projectRoot)) {
+  const files = input.sources(['src']);
   return {
     projectRoot: toPosix(projectRoot),
-    aliases: MG.readTsPathAliases(projectRoot, 'tsconfig.base.json'),
+    aliases: MG.readTsPathAliases(projectRoot, 'tsconfig.base.json', input.read),
     fileSet: new Set(files.map(toPosix)),
+    input,
   };
 }
 
@@ -118,7 +118,7 @@ function createResolveContext(projectRoot) {
  * ο καλών να το μετρήσει ως **αδιαφανές** (fail-safe) αντί να το διαβάσει ως «απουσία».
  */
 function importedModulesOf(absFile, ctx) {
-  const text = fs.readFileSync(absFile, 'utf8');
+  const text = (ctx.input || inputOf(ctx.projectRoot)).read(absFile) ?? '';
   const mod = MG.parseModule(absFile, text);
   const specs = [
     ...mod.imports.map(i => ({ spec: i.spec, names: namesOf(i) })),
@@ -168,7 +168,7 @@ function shellImportSites(projectRoot, ownerRel, specifiers, ctx) {
   );
   const specSet = new Set(specifiers);
 
-  return gitGrepFiles(projectRoot, specifiers).filter(rel => {
+  return gitGrepFiles(projectRoot, specifiers, ctx.input).filter(rel => {
     const abs = toPosix(path.resolve(projectRoot, rel));
     try {
       return importedModulesOf(abs, ctx).some(
@@ -191,7 +191,7 @@ function seedFiles(projectRoot, hookDecls, ctx) {
   );
   const seeds = new Set();
 
-  for (const rel of gitGrepFiles(projectRoot, tokens)) {
+  for (const rel of gitGrepFiles(projectRoot, tokens, ctx.input)) {
     const abs = toPosix(path.resolve(projectRoot, rel));
     if (wanted.has(abs)) continue; // το ίδιο το module δεν είναι καταναλωτής του εαυτού του
     for (const imp of importedModulesOf(abs, ctx)) {
@@ -217,7 +217,7 @@ function reachingFiles(projectRoot, seeds, ctx, maxRounds = 12) {
     rounds += 1;
     const tokens = [...frontier].map(f => path.basename(f).replace(/\.[jt]sx?$/, ''));
     const next = new Set();
-    for (const rel of gitGrepFiles(projectRoot, tokens)) {
+    for (const rel of gitGrepFiles(projectRoot, tokens, ctx.input)) {
       const abs = toPosix(path.resolve(projectRoot, rel));
       if (marked.has(abs)) continue;
       const hits = importedModulesOf(abs, ctx);
@@ -234,8 +234,8 @@ function reachingFiles(projectRoot, seeds, ctx, maxRounds = 12) {
 }
 
 /** @returns {Set<string>} απόλυτα posix μονοπάτια που φτάνουν σε δημόσια προβολή. */
-function computePublicReaching(projectRoot, hookDecls) {
-  const ctx = createResolveContext(projectRoot);
+function computePublicReaching(projectRoot, hookDecls, input = inputOf(projectRoot)) {
+  const ctx = createResolveContext(projectRoot, input);
   return reachingFiles(projectRoot, seedFiles(projectRoot, hookDecls, ctx), ctx);
 }
 
