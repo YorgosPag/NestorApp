@@ -13,7 +13,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { FieldValue, type Query, type DocumentData } from 'firebase-admin/firestore';
+import { FieldValue, type Firestore, type Query, type DocumentData } from 'firebase-admin/firestore';
 import type { AuthContext } from '@/lib/auth/types';
 import type { PermissionCache } from '@/lib/auth/permissions';
 import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
@@ -25,6 +25,9 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { clearUserCompanyCache } from './tenant-resolver';
 import { backfillAllTypesParallel, type BackfillStats } from './backfill-engine';
 import { nowISO } from '@/lib/date-local';
+import { flushInBatches, type BatchUpdate } from '@/lib/admin-batch-utils';
+import { userPerformer } from '@/lib/audit/audit-performer';
+import { resolvePerformer } from '@/server/lib/performer-stamp';
 
 const logger = createModuleLogger('SearchBackfillRoute');
 
@@ -172,9 +175,27 @@ export async function getBackfillStatus(
 // PATCH — contact tenant migration
 // =============================================================================
 
+/** Η εταιρεία του δημιουργού μιας επαφής (`/users/{uid}.companyId`), με τοπική cache ανά εκτέλεση. */
+async function creatorCompanyId(
+  adminDb: Firestore,
+  createdBy: string,
+  cache: Map<string, string | null>,
+): Promise<string | null> {
+  if (cache.has(createdBy)) return cache.get(createdBy) ?? null;
+  let companyId: string | null = null;
+  try {
+    const userDoc = await adminDb.collection(COLLECTIONS.USERS).doc(createdBy).get();
+    if (userDoc.exists) companyId = (userDoc.data()?.companyId as string) || null;
+  } catch (error) {
+    logger.warn('Failed to lookup user', { userId: createdBy, error });
+  }
+  cache.set(createdBy, companyId);
+  return companyId;
+}
+
 export async function migrateContactTenants(
   request: NextRequest,
-  _ctx: AuthContext,
+  ctx: AuthContext,
   _cache: PermissionCache,
 ): Promise<NextResponse<MigrationApiResponse>> {
   const startTime = Date.now();
@@ -201,10 +222,7 @@ export async function migrateContactTenants(
 
     // User lookup cache (local to this migration run)
     const localUserCache = new Map<string, string | null>();
-
-    const BATCH_SIZE = 500;
-    let batch = adminDb.batch();
-    let batchCount = 0;
+    const updates: BatchUpdate[] = [];
 
     for (const doc of snapshot.docs) {
       const data = doc.data() as Record<string, unknown>;
@@ -215,70 +233,31 @@ export async function migrateContactTenants(
       }
 
       const createdBy = data.createdBy as string | undefined;
-      let resolvedCompanyId: string | null = null;
-
-      if (createdBy) {
-        if (localUserCache.has(createdBy)) {
-          resolvedCompanyId = localUserCache.get(createdBy) || null;
-        } else {
-          try {
-            const userDoc = await adminDb.collection(COLLECTIONS.USERS).doc(createdBy).get();
-            if (userDoc.exists) {
-              resolvedCompanyId = (userDoc.data()?.companyId as string) || null;
-            }
-            localUserCache.set(createdBy, resolvedCompanyId);
-          } catch (error) {
-            logger.warn('Failed to lookup user', { userId: createdBy, error });
-            localUserCache.set(createdBy, null);
-          }
-        }
-      }
-
-      // Fallback to defaultCompanyId
-      if (!resolvedCompanyId && defaultCompanyId) {
-        resolvedCompanyId = defaultCompanyId;
-      }
+      const resolvedCompanyId = (createdBy ? await creatorCompanyId(adminDb, createdBy, localUserCache) : null)
+        ?? defaultCompanyId ?? null;
 
       if (!resolvedCompanyId) {
         stats.noCreator++;
         continue;
       }
 
-      if (dryRun) {
-        stats.migrated++;
-      } else {
-        batch.update(doc.ref, {
-          companyId: resolvedCompanyId,
-          updatedAt: FieldValue.serverTimestamp(),
-        });
-        batchCount++;
-        stats.migrated++;
-
-        if (batchCount >= BATCH_SIZE) {
-          try {
-            await batch.commit();
-            batch = adminDb.batch();
-            batchCount = 0;
-          } catch (error) {
-            logger.error('Batch commit failed', { error });
-            stats.errors += batchCount;
-            stats.migrated -= batchCount;
-            batch = adminDb.batch();
-            batchCount = 0;
-          }
-        }
+      stats.migrated++;
+      if (!dryRun) {
+        updates.push({ ref: doc.ref, data: { companyId: resolvedCompanyId, updatedAt: FieldValue.serverTimestamp() } });
       }
     }
 
-    // Commit remaining
-    if (!dryRun && batchCount > 0) {
-      try {
-        await batch.commit();
-      } catch (error) {
-        logger.error('Final batch commit failed', { error });
-        stats.errors += batchCount;
-        stats.migrated -= batchCount;
-      }
+    if (updates.length > 0) {
+      // Ο ΕΝΑΣ γραφέας παρτίδων: σφραγίζει τον διαχειριστή στις επαφές (CDC), αλλιώς το Ιστορικό γράφει
+      // `cdc_unknown` για κάθε επαφή (ADR-195 · ADR-704, 2026-10-30). Πριν: χειρόγραφο `batch.update(doc.ref)`.
+      const performer = await resolvePerformer(userPerformer(ctx.uid, ctx.email));
+      const { written, errors } = await flushInBatches(adminDb, updates, {
+        collections: [COLLECTIONS.CONTACTS],
+        performer,
+      });
+      for (const failure of errors) logger.error('Batch commit failed', { error: failure });
+      stats.errors = updates.length - written;
+      stats.migrated -= stats.errors;
     }
 
     const duration = Date.now() - startTime;

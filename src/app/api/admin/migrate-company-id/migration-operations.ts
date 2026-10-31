@@ -28,6 +28,9 @@ import {
 } from './migration-config';
 import { nowISO } from '@/lib/date-local';
 import { chunkArray } from '@/lib/array-utils';
+import { cdcStamped } from '@/lib/admin-batch-utils';
+import { userPerformer } from '@/lib/audit/audit-performer';
+import { resolvePerformer, type ResolvedPerformer } from '@/server/lib/performer-stamp';
 
 const logger = createModuleLogger('MigrateCompanyId');
 
@@ -63,6 +66,7 @@ export async function migrateCollection(
   oldId: string,
   newId: string,
   dryRun: boolean,
+  performer: ResolvedPerformer,
   fieldName: string = 'companyId'
 ): Promise<CollectionMigrationResult> {
   const result: CollectionMigrationResult = {
@@ -85,7 +89,9 @@ export async function migrateCollection(
     }
 
     result.documentsUpdated = await commitInChunks(db, snapshot.docs, (batch, doc) => {
-      batch.update(doc.ref, { [fieldName]: newId });
+      // Η συλλογή είναι δυναμική — ανάμεσά τους και οι επαφές (CDC): εκεί μπαίνει η σφραγίδα του διαχειριστή,
+      // αλλιώς κάθε επαφή αποκτά γραμμή Ιστορικού `cdc_unknown` (ADR-195 · ADR-704, 2026-10-30).
+      batch.update(doc.ref, cdcStamped(doc.ref, { [fieldName]: newId }, performer));
     });
 
     logger.info(`Collection "${collectionName}": ${result.documentsUpdated}/${result.documentsFound} docs updated`);
@@ -219,6 +225,8 @@ export async function executeMigration(
   };
 
   const db = getAdminFirestore();
+  // Ο διαχειριστής που τρέχει τη μετάπτωση — σφραγίζεται στις επαφές του STEP 3 (CDC, ADR-195).
+  const performer = await resolvePerformer(userPerformer(ctx.uid, ctx.email));
 
   // STEP 1: Create new company document
   try {
@@ -325,13 +333,13 @@ export async function executeMigration(
   // STEP 3: Update companyId across ALL collections
   for (const col of COLLECTIONS_WITH_COMPANY_ID) {
     const collectionName = COLLECTIONS[col.key];
-    const result = await migrateCollection(db, collectionName, oldId, newId, dryRun);
+    const result = await migrateCollection(db, collectionName, oldId, newId, dryRun, performer);
     report.steps.collections.push(result);
     report.totalDocumentsUpdated += result.documentsUpdated;
   }
 
   const navResult = await migrateCollection(
-    db, NAVIGATION_COLLECTION, oldId, newId, dryRun, 'contactId'
+    db, NAVIGATION_COLLECTION, oldId, newId, dryRun, performer, 'contactId'
   );
   report.steps.collections.push(navResult);
   report.totalDocumentsUpdated += navResult.documentsUpdated;

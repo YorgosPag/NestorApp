@@ -39,6 +39,7 @@ import 'server-only';
 
 import type { Firestore } from 'firebase-admin/firestore';
 import { flushInBatches, type BatchUpdate } from '@/lib/admin-batch-utils';
+import type { ResolvedPerformer } from '@/server/lib/performer-stamp';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { isGreekAddressCountry } from '@/utils/address/country-codes';
@@ -160,6 +161,7 @@ function planDocument(
 export async function migratePostalCodes(
   db: Firestore,
   dryRun: boolean,
+  performer: ResolvedPerformer,
 ): Promise<PostalCodeMigrationReport> {
   const entries: PostalCodeMigrationEntry[] = [];
   const updates: BatchUpdate[] = [];
@@ -192,6 +194,8 @@ export async function migratePostalCodes(
     // νέος στόχος χωρίς γραμμή εδώ ⇒ το `flushInBatches` πετάει πριν γράψει.
     const { written, errors } = await flushInBatches(db, updates, {
       collections: [COLLECTIONS.CONTACTS, COLLECTIONS.PROJECTS, COLLECTIONS.BUILDINGS],
+      // Σφραγίζονται ΜΟΝΟ οι επαφές (συλλογή του CDC) — έργα/κτίρια μένουν όπως ήταν.
+      performer,
     });
     batchErrors = errors.length > 0 ? errors : undefined;
 

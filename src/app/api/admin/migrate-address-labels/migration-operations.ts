@@ -34,6 +34,7 @@ import 'server-only';
 
 import type { Firestore } from 'firebase-admin/firestore';
 import { flushInBatches, type BatchUpdate } from '@/lib/admin-batch-utils';
+import type { ResolvedPerformer } from '@/server/lib/performer-stamp';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
@@ -100,12 +101,14 @@ function resolveReplacementSlug(
  *
  * @param db Admin Firestore από τον envelope (`runMigration`, ADR-704).
  * @param dryRun όταν `true`, καμία εγγραφή — μόνο αναφορά.
+ * @param performer ο διαχειριστής (από τον envelope)· σφραγίζει κάθε επαφή, αλλιώς ο CDC γράφει `cdc_unknown`.
  * @param companyId ο οργανισμός που έλυσε ο `resolveTenantListScopeFromUrl`·
  *        `undefined` = «όλοι οι οργανισμοί», νόμιμη απάντηση μόνο για bypass role (ADR-702).
  */
 export async function migrateAddressLabels(
   db: Firestore,
   dryRun: boolean,
+  performer: ResolvedPerformer,
   companyId?: string,
 ): Promise<AddressLabelMigrationReport> {
   // Admin SDK παρακάμπτει τους Firestore rules — το tenant scope εφαρμόζεται ΕΔΩ, ρητά.
@@ -153,7 +156,7 @@ export async function migrateAddressLabels(
       data: { addresses: write.addresses },
     }));
 
-    const { written, errors } = await flushInBatches(db, updates, { collections: [COLLECTIONS.CONTACTS] });
+    const { written, errors } = await flushInBatches(db, updates, { collections: [COLLECTIONS.CONTACTS], performer });
     batchErrors = errors.length > 0 ? errors : undefined;
 
     logger.info('Address labels migrated', {

@@ -26,8 +26,8 @@ import { migratePostalCodes } from './migration-operations';
 
 export const { GET, POST } = createMigrationRoute({
   name: 'migrate-postal-codes',
-  run: async (db, { dryRun }) => {
-    const report = await migratePostalCodes(db, dryRun);
+  run: async (db, { dryRun, performer }) => {
+    const report = await migratePostalCodes(db, dryRun, performer);
     return {
       body: { ...report },
       audit: {

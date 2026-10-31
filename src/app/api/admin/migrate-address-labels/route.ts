@@ -43,8 +43,8 @@ const scopedCompanyId = (req: NextRequest, ctx: AuthContext): string | undefined
 const handle = (req: NextRequest, ctx: AuthContext, dryRun: boolean) =>
   runMigration(
     { ctx, dryRun, name: MIGRATION_NAME, request: dryRun ? undefined : req },
-    async (db) => {
-      const report = await migrateAddressLabels(db, dryRun, scopedCompanyId(req, ctx));
+    async (db, performer) => {
+      const report = await migrateAddressLabels(db, dryRun, performer, scopedCompanyId(req, ctx));
       return {
         body: { ...report },
         audit: {

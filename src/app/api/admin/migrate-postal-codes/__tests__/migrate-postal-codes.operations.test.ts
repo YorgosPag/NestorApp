@@ -20,10 +20,15 @@ jest.mock('@/lib/telemetry', () => ({
 import type { Firestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { migratePostalCodes } from '../migration-operations';
+import type { ResolvedPerformer } from '@/server/lib/performer-stamp';
+
+/** Ο διαχειριστής που τρέχει τη μετάπτωση — τον δίνει ο envelope (`runMigration`, ADR-704). */
+const PERFORMER: ResolvedPerformer = { id: 'user_admin', name: 'Διαχειριστής' };
 
 type DocData = Record<string, unknown>;
 
 interface CommittedWrite {
+  collection: string;
   id: string;
   data: DocData;
 }
@@ -36,7 +41,10 @@ interface CommittedWrite {
 function fakeDb(store: Record<string, Record<string, DocData>>) {
   const committed: CommittedWrite[] = [];
 
-  const refFor = (collection: string, id: string) => ({ __collection: collection, __id: id });
+  // Σχήμα αναφοράς όπως του SDK: `parent.id` = η συλλογή (το ελέγχει το δηλωμένο πεδίο γραφής, CHECK 3.17).
+  const refFor = (collection: string, id: string) => ({
+    __collection: collection, __id: id, id, path: `${collection}/${id}`, parent: { id: collection },
+  });
 
   const db = {
     collection: (name: string) => ({
@@ -51,7 +59,7 @@ function fakeDb(store: Record<string, Record<string, DocData>>) {
     }),
     batch: () => ({
       update: (ref: { __collection: string; __id: string }, data: DocData) => {
-        committed.push({ id: ref.__id, data });
+        committed.push({ collection: ref.__collection, id: ref.__id, data });
         const target = store[ref.__collection]?.[ref.__id];
         if (!target) return;
         for (const [fieldPath, value] of Object.entries(data)) {
@@ -99,7 +107,7 @@ describe('migratePostalCodes', () => {
     const store = contactStore();
     const { db, committed } = fakeDb(store);
 
-    const report = await migratePostalCodes(db, true);
+    const report = await migratePostalCodes(db, true, PERFORMER);
 
     expect(committed).toHaveLength(0);
     expect(report.dryRun).toBe(true);
@@ -116,7 +124,7 @@ describe('migratePostalCodes', () => {
     const store = contactStore();
     const { db } = fakeDb(store);
 
-    await migratePostalCodes(db, false);
+    await migratePostalCodes(db, false, PERFORMER);
 
     const contact = store[COLLECTIONS.CONTACTS].cont_alfa;
     expect((contact.addresses as DocData[])[0].postalCode).toBe('54624');
@@ -129,7 +137,7 @@ describe('migratePostalCodes', () => {
     const store = contactStore();
     const { db } = fakeDb(store);
 
-    await migratePostalCodes(db, false);
+    await migratePostalCodes(db, false, PERFORMER);
 
     expect((store[COLLECTIONS.PROJECTS].proj_1.addresses as DocData[])[0].postalCode).toBe('54622');
   });
@@ -138,8 +146,8 @@ describe('migratePostalCodes', () => {
     const store = contactStore();
     const { db } = fakeDb(store);
 
-    await migratePostalCodes(db, false);
-    const second = await migratePostalCodes(db, false);
+    await migratePostalCodes(db, false, PERFORMER);
+    const second = await migratePostalCodes(db, false, PERFORMER);
 
     expect(second.affectedDocuments).toBe(0);
     expect(second.affectedAddresses).toBe(0);
@@ -161,7 +169,7 @@ describe('migratePostalCodes', () => {
     };
     const { db, committed } = fakeDb(store);
 
-    const report = await migratePostalCodes(db, false);
+    const report = await migratePostalCodes(db, false, PERFORMER);
 
     expect(report.affectedDocuments).toBe(0);
     expect(committed).toHaveLength(0);
@@ -179,17 +187,28 @@ describe('migratePostalCodes', () => {
     };
     const { db } = fakeDb(store);
 
-    const report = await migratePostalCodes(db, true);
+    const report = await migratePostalCodes(db, true, PERFORMER);
 
     expect(report.scannedDocuments).toBe(2);
     expect(report.affectedDocuments).toBe(0);
+  });
+
+  it('🔴 σφραγίζει ΤΟΝ ΔΙΑΧΕΙΡΙΣΤΗ στις επαφές (CDC) — και ΜΟΝΟ εκεί (ADR-195, 2026-10-30)', async () => {
+    const { db, committed } = fakeDb(contactStore());
+
+    await migratePostalCodes(db, false, PERFORMER);
+
+    const contact = committed.find((w) => w.collection === COLLECTIONS.CONTACTS);
+    const project = committed.find((w) => w.collection === COLLECTIONS.PROJECTS);
+    expect(contact?.data).toMatchObject({ _lastModifiedBy: 'user_admin', _lastModifiedByName: 'Διαχειριστής' });
+    expect(project?.data).not.toHaveProperty('_lastModifiedBy');
   });
 
   it('καταγράφει τη διαδρομή του πεδίου στην αναφορά', async () => {
     const store = contactStore();
     const { db } = fakeDb(store);
 
-    const report = await migratePostalCodes(db, true);
+    const report = await migratePostalCodes(db, true, PERFORMER);
     const contactEntry = report.entries.find((e) => e.documentId === 'cont_alfa');
 
     expect(contactEntry?.changes).toEqual([
