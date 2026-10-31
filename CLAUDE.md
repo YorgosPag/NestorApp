@@ -506,7 +506,8 @@ When you touch a legacy file → clean up as many violations as you can. **ZERO 
 2. **EXCEPTION**: If Giorgio gives an order for **independent work**, skip the reminder entirely.
 
 **UPDATE RULE**:
-- Completed ratchet → **REMOVE** line (not strikethrough) + changelog entry in `.claude-rules/pending-ratchet-work.md` + update §4 of ADR-299
+- Completed ratchet → **REMOVE** ολόκληρη την εγγραφή από το `.claude-rules/pending-ratchet-work.md` + update §4 of ADR-299
+- ❌ **ΑΠΑΓΟΡΕΥΕΤΑΙ** οποιαδήποτε αναφορά ολοκλήρωσης στο `pending-ratchet-work.md`: όχι ✅ / strikethrough / `[x]` / «ΕΚΛΕΙΣΕ», όχι γραμμή changelog (εντολή Giorgio 2026-10-31 — το αρχείο περιέχει **ΜΟΝΟ** ό,τι εκκρεμεί, για να μη μεγαλώνει). Η ολοκλήρωση καταγράφεται **μόνο** στο changelog του ADR + στο git. Μερικώς ολοκληρωμένη εργασία → ξαναγράψε την εγγραφή ώστε να λέει μόνο **τι μένει**.
 - When checklist becomes empty → set `STATUS: ALL_DONE` at top of `.claude-rules/pending-ratchet-work.md` + remove the ratchet pointer from `.claude-rules/MEMORY.md`
 - New ratchet work starts → set `STATUS: ACTIVE`
 - NEVER mark completed without explicit Giorgio order or actual merge
