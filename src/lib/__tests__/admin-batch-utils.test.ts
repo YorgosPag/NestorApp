@@ -290,3 +290,63 @@ describe('δηλωμένο πεδίο γραφής — openDeclaredBatch', () =>
     expect(committed).toEqual([[]]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Σφραγίδα φορέα σε συλλογή του CDC (ADR-195 · ADR-704, 2026-10-30)
+// ---------------------------------------------------------------------------
+
+/**
+ * 🔴 Οι μεταπτώσεις έγραφαν επαφές χωρίς `_lastModifiedBy` ⇒ ο CDC έγραφε κάθε γραμμή Ιστορικού `cdc_unknown`.
+ * Ο κανόνας ζει στους ΓΡΑΦΕΙΣ ΠΑΡΤΙΔΩΝ, όχι στις μεταπτώσεις: όποια μετάπτωση γραφτεί αύριο τον κληρονομεί.
+ */
+describe('σφραγίδα φορέα — συλλογές του CDC', () => {
+  const PERFORMER = { id: 'user_admin', name: 'Διαχειριστής' };
+
+  it('Δ8 — επαφή ΧΩΡΙΣ φορέα ⇒ πετάει, και δεν γράφεται ΤΙΠΟΤΑ', async () => {
+    const { db, committed } = fakeDb();
+    const updates: BatchUpdate[] = [
+      { ref: ref('p1', 'projects'), data: { x: 1 } },
+      { ref: ref('c1', 'contacts'), data: { x: 1 } },
+    ];
+
+    await expect(flushInBatches(db, updates, { collections: ['projects', 'contacts'] }))
+      .rejects.toThrow('Unstamped CDC write: "contacts/c1"');
+    expect(committed).toHaveLength(0);
+  });
+
+  it('Δ9 — ΜΕ φορέα: η επαφή φέρει τη σφραγίδα, το έργο ΜΕΝΕΙ ΟΠΩΣ ΗΤΑΝ', async () => {
+    const { db, committed } = fakeDb();
+    const updates: BatchUpdate[] = [
+      { ref: ref('p1', 'projects'), data: { x: 1 } },
+      { ref: ref('c1', 'contacts'), data: { x: 1 } },
+    ];
+
+    await flushInBatches(db, updates, { collections: ['projects', 'contacts'], performer: PERFORMER });
+
+    const [project, contact] = committed[0];
+    expect(project.data).toEqual({ x: 1 });
+    expect(contact.data).toMatchObject({ x: 1, _lastModifiedBy: 'user_admin', _lastModifiedByName: 'Διαχειριστής' });
+    expect(contact.data).toHaveProperty('_lastModifiedAt');
+  });
+
+  it('Δ10 ΠΑΡΟΝΟΜΑΣΤΗΣ — ΥΠΟσυλλογή επαφής δεν είναι έγγραφο του CDC ⇒ καμία απαίτηση φορέα', async () => {
+    const { db } = fakeDb();
+    const bank = ref('b1', 'bankAccounts', 'contacts/c1/bankAccounts/b1');
+
+    await expect(flushInBatches(db, [{ ref: bank, data: { x: 1 } }], { collections: ['bankAccounts'] }))
+      .resolves.toMatchObject({ written: 1 });
+  });
+
+  it('Δ11 — openDeclaredBatch: ίδιος κανόνας (καμία δεύτερη πόρτα)', async () => {
+    const { db, committed } = fakeDb();
+
+    const bare = openDeclaredBatch(db, ['contacts']);
+    expect(() => bare.update(ref('c1', 'contacts'), { x: 1 })).toThrow('Unstamped CDC write');
+    expect(() => bare.set(ref('c1', 'contacts'), { x: 1 })).toThrow('Unstamped CDC write');
+
+    const stamped = openDeclaredBatch(db, ['contacts'], PERFORMER);
+    stamped.set(ref('c2', 'contacts'), { x: 1 });
+    await stamped.commit();
+    expect(committed.at(-1)?.[0].data).toMatchObject({ _lastModifiedBy: 'user_admin' });
+  });
+});

@@ -25,6 +25,8 @@ import type {
   WriteResult as AdminWriteResult,
 } from 'firebase-admin/firestore';
 import { getErrorMessage } from '@/lib/error-utils';
+import { CDC_WATCHED_COLLECTIONS } from '@/config/audit-cdc-coverage';
+import { performerStamp, type ResolvedPerformer } from '@/server/lib/performer-stamp';
 
 // ---------------------------------------------------------------------------
 // Batch size constants
@@ -173,6 +175,12 @@ export type DeclaredCollections = readonly [string, ...string[]];
 /** Το πεδίο γραφής του `flushInBatches`: πού γράφει, και (προαιρετικά) ανά πόσες πράξεις κάνει commit. */
 export interface DeclaredWriteScope {
   readonly collections: DeclaredCollections;
+  /**
+   * Ο φορέας της γραφής — **υποχρεωτικός** όταν κάποια αναφορά ανήκει σε συλλογή του CDC
+   * (`CDC_WATCHED_COLLECTIONS`): εκεί γράφεται η σφραγίδα `_lastModified*`, αλλιώς η γραμμή Ιστορικού
+   * βγαίνει `cdc_unknown` (ADR-195 · ADR-704, 2026-10-30). Στις υπόλοιπες συλλογές δεν αγγίζει τίποτα.
+   */
+  readonly performer?: ResolvedPerformer;
   /** Πράξεις ανά commit (προεπιλογή `BATCH_WRITE_LIMIT` = 450). */
   readonly batchSize?: number;
 }
@@ -199,6 +207,38 @@ function assertDeclaredRef(ref: AdminRef, declared: ReadonlySet<string>): void {
   );
 }
 
+/** Ανήκει η αναφορά σε συλλογή όπου ακούει ο CDC; (το ίδιο κριτήριο με το `assertDeclaredRef`: `ref.parent.id`) */
+function isCdcWatched(ref: AdminRef): boolean {
+  const collectionId = ref.parent?.id;
+  return collectionId !== undefined && CDC_WATCHED_COLLECTIONS.has(collectionId);
+}
+
+/**
+ * Γραφή σε συλλογή του CDC χωρίς φορέα πετάει — **πριν** μπει οτιδήποτε στην παρτίδα. Ο CDC διαβάζει τον
+ * δράστη από το ίδιο το έγγραφο· γραφή χωρίς σφραγίδα δεν είναι «ανώνυμη», είναι **ψευδής**: η γραμμή
+ * Ιστορικού λέει `cdc_unknown` για πράξη που έκανε συγκεκριμένος διαχειριστής.
+ */
+function assertStampable(ref: AdminRef, performer: ResolvedPerformer | undefined): void {
+  if (performer || !isCdcWatched(ref)) return;
+  throw new Error(
+    `Unstamped CDC write: "${ref.path ?? ref.id}" is watched by the audit CDC — pass the performer ` +
+    '(runMigration gives it to every migration)',
+  );
+}
+
+/** Τα δεδομένα της γραφής, με τη σφραγίδα φορέα **μόνο** όπου τη διαβάζει ο CDC. */
+function withCdcStamp<T extends object>(ref: AdminRef, data: T, performer: ResolvedPerformer | undefined): T {
+  return performer && isCdcWatched(ref) ? { ...data, ...performerStamp(performer) } : data;
+}
+
+/**
+ * Για γραφείς με ΩΜΟ `WriteBatch` και δυναμική συλλογή (π.χ. `migrate-company-id`, που ξαναγράφει το `companyId` σε
+ * κάθε συλλογή): η σφραγίδα μπαίνει όπου τη διαβάζει ο CDC, με τον φορέα **υποχρεωτικό** στον τύπο.
+ */
+export function cdcStamped<T extends object>(ref: AdminRef, data: T, performer: ResolvedPerformer): T {
+  return withCdcStamp(ref, data, performer);
+}
+
 /**
  * Μία ατομική παρτίδα με δηλωμένο πεδίο γραφής — χρησιμοποιείται όπως το `WriteBatch`.
  * Κάθε πράξη ελέγχεται **πριν** μπει στην παρτίδα, άρα μια αδήλωτη γραφή δεν φτάνει ποτέ στο commit.
@@ -215,15 +255,22 @@ export interface DeclaredBatch {
  *
  * @param db          - Admin Firestore instance
  * @param collections - Κυριολεκτικά `COLLECTIONS.X` — το πεδίο γραφής της παρτίδας
+ * @param performer   - Ο φορέας· υποχρεωτικός για γραφή σε συλλογή του CDC (βλ. `DeclaredWriteScope.performer`)
  */
-export function openDeclaredBatch(db: AdminFirestore, collections: DeclaredCollections): DeclaredBatch {
+export function openDeclaredBatch(
+  db: AdminFirestore,
+  collections: DeclaredCollections,
+  performer?: ResolvedPerformer,
+): DeclaredBatch {
   const declared = declaredSet(collections);
   const batch = db.batch();
+  const admit = (ref: AdminRef): void => { assertDeclaredRef(ref, declared); assertStampable(ref, performer); };
   const guarded: DeclaredBatch = {
-    update(ref, data) { assertDeclaredRef(ref, declared); batch.update(ref, data); return guarded; },
+    update(ref, data) { admit(ref); batch.update(ref, withCdcStamp(ref, data, performer)); return guarded; },
     set(ref, data, options) {
-      assertDeclaredRef(ref, declared);
-      if (options) batch.set(ref, data, options); else batch.set(ref, data);
+      admit(ref);
+      const stamped = withCdcStamp(ref, data, performer);
+      if (options) batch.set(ref, stamped, options); else batch.set(ref, stamped);
       return guarded;
     },
     delete(ref) { assertDeclaredRef(ref, declared); batch.delete(ref); return guarded; },
@@ -250,7 +297,10 @@ export async function flushInBatches(
   scope: DeclaredWriteScope,
 ): Promise<FlushResult> {
   const declared = declaredSet(scope.collections);
-  for (const { ref } of updates) assertDeclaredRef(ref, declared);
+  for (const { ref } of updates) {
+    assertDeclaredRef(ref, declared);
+    assertStampable(ref, scope.performer);
+  }
 
   const batchSize = scope.batchSize ?? BATCH_WRITE_LIMIT;
   const result: FlushResult = { written: 0, errors: [] };
@@ -260,7 +310,7 @@ export async function flushInBatches(
     const batch = db.batch();
 
     for (const { ref, data } of chunk) {
-      batch.update(ref, data);
+      batch.update(ref, withCdcStamp(ref, data, scope.performer));
     }
 
     try {
