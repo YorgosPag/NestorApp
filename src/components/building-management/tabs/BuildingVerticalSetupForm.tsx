@@ -77,7 +77,7 @@ export function BuildingVerticalSetupForm({
   onComplete,
   onCancel,
 }: BuildingVerticalSetupFormProps) {
-  const { t } = useTranslation(['building', 'building-tabs']);
+  const { t } = useTranslation('building');
   const floorLabel = useFloorLabel();
   const { success, error: notifyError } = useNotifications();
   const colors = useSemanticColors();

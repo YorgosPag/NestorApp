@@ -147,7 +147,7 @@ export function FloorInlineCreateForm({
   existingFloorNumbers = EMPTY_SET,
   existingFloors = [],
 }: FloorInlineCreateFormProps) {
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation('building');
   const { success, error: notifyError } = useNotifications();
   const colors = useSemanticColors();
   const floorLabel = useFloorLabel();

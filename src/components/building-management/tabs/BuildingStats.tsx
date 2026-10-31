@@ -27,7 +27,7 @@ interface BuildingStatsProps {
 }
 
 export function BuildingStats({ buildingId }: BuildingStatsProps) {
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation('building');
   const companyId = useCompanyId()?.companyId;
   const [stats, setStats] = useState<StatsType | null>(buildingStatsCache.get(buildingId) ?? null);
   const [loading, setLoading] = useState(!buildingStatsCache.hasLoaded(buildingId));

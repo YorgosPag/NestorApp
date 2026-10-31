@@ -28,7 +28,7 @@ interface BuildingCustomersTabProps {
 
 export function BuildingCustomersTab({ buildingId }: BuildingCustomersTabProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation('building');
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   // ADR-300: Seed from module-level cache → zero flash on re-navigation

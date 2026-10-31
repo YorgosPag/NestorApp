@@ -36,7 +36,7 @@ interface BasicInfoCardProps {
 
 export function BasicInfoCard({ formData, updateField, isEditing, errors }: BasicInfoCardProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation('building');
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
