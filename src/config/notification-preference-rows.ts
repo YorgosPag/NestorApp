@@ -130,6 +130,8 @@ export const NOTIFICATION_PREFERENCE_GROUPS: readonly NotificationPreferenceGrou
       { key: 'vendorDeclined', labelKey: 'common-account:account.notificationSettings.categories.procurement.vendorDeclined' },
       { key: 'quoteEdited', labelKey: 'common-account:account.notificationSettings.categories.procurement.quoteEdited' },
       { key: 'aiLowConfidence', labelKey: 'common-account:account.notificationSettings.categories.procurement.aiLowConfidence' },
+      // ADR-923 §5.12 — αιτήματα και αποδοχές σύνδεσης με πελάτες και προμηθευτές.
+      { key: 'supplyConnection', labelKey: 'common-account:account.notificationSettings.categories.procurement.supplyConnection' },
       { key: 'vendorCreated', labelKey: 'common-account:account.notificationSettings.categories.procurement.vendorCreated' },
     ],
   },

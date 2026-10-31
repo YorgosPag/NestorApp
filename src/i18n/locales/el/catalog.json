@@ -373,6 +373,13 @@
   },
   "audit": {
     "fields": {
+      "state": "Κατάσταση",
+      "supplierContactId": "Επαφή",
+      "customerRef": "Αριθμός πελάτη",
+      "acceptedByUid": "Αποδέχτηκε",
+      "approvedByUid": "Ενέκρινε",
+      "endedBySide": "Έκλεισε από",
+      "generation": "Γενιά συνδέσμου",
       "type": "Τύπος",
       "groupId": "Ομάδα",
       "localizable": "Τιμή ανά γλώσσα",

@@ -82,7 +82,9 @@ import {
   tourAccessAnsweredDestination,
   tourAccessReceivedDestination,
 } from '@/server/spatial-tour/tour-access-notifier';
+import { supplyConnectionDestination, supplyNoticeSide } from '@/server/supply-relationships/supply-relationship-notifier.server';
 import { readThreadTopic } from '@/services/network-messaging/thread-reader';
+import { supplyRelationshipFromDocument } from '@/subapps/catalog/schema/zod/supply-relationship.schema';
 import type { NetworkActTeam } from '@/types/network-thread';
 import {
   caseEngagementAnsweredDestination,
@@ -173,6 +175,13 @@ const propertyHostRule = (destinationOf: (propertyId: string, companyId: string)
 /** ADR-901 Φ2 — «ανέλαβε / δεν ανέλαβε» προς τον οικοδεσπότη (η υπόθεση ζει στον χώρο που κατέχει το ακίνητο). */
 const caseEngagementAnsweredRule = propertyHostRule(caseEngagementAnsweredDestination);
 
+/** ADR-923 §5.12 — ο χώρος έρχεται από το **έγγραφο**, ποτέ από το `tenantId`. */
+const supplyConnectionRule: DestinationRule = async (db, notification, entityId) => {
+  const relationship = supplyRelationshipFromDocument((await db.collection(COLLECTIONS.SUPPLY_RELATIONSHIPS).doc(entityId).get()).data());
+  if (relationship === null) return unresolvable('entity-absent');
+  return expected(supplyConnectionDestination(relationship, supplyNoticeSide(relationship, notification.userId)));
+};
+
 /** ADR-916 Φ-Δ.2 — «ο αγοραστής απάντησε»: η καρτέλα «Παράδοση» του ακινήτου. */
 const handoverInvitationAnsweredRule = propertyHostRule(handoverInvitationAnsweredDestination);
 
@@ -248,6 +257,8 @@ const RULES: Readonly<Partial<Record<NotificationEventType, DestinationRule>>> =
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_DOCUMENT_REQUEST_ENGAGED]: caseEngagedRule,
   // ADR-916 Φ-Δ.2 — απάντηση αγοραστή: η καρτέλα «Παράδοση» (ο ΙΔΙΟΣ προορισμός με τον παραγωγό).
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_HANDOVER_INVITATION_ANSWERED]: handoverInvitationAnsweredRule,
+  // ADR-923 §5.12 — η καρτέλα της πλευράς του παραλήπτη, όπως την ξαναβρίσκει το ίδιο το έγγραφο.
+  [NOTIFICATION_EVENT_TYPES.PROCUREMENT_SUPPLY_CONNECTION]: supplyConnectionRule,
 };
 
 /** Οι τύποι που ο ανιχνευτής ξέρει να ξαναχτίσει — για την αναφορά και τις άγκυρες. */

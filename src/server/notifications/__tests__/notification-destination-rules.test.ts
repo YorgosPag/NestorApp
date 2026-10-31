@@ -155,6 +155,8 @@ describe('Λ — ό,τι δεν ξέρουμε, λέγεται', () => {
       // ADR-867 Β7 · §8 #9 — νέο μήνυμα (η πλευρά από το θέμα) · είσοδος στην ομάδα (η εντολή, στο νήμα).
       'network.teamJoined',
       'network.threadMessage',
+      // ADR-923 §5.12 — η καρτέλα της πλευράς του παραλήπτη, από το έγγραφο της σχέσης.
+      'procurement.supplyConnection',
       'properties.cardEmailReturned',
       // ADR-901 Φ4.4 — νέο έγγραφο (transmittal): ΙΔΙΟΙ προορισμοί με το ζεύγος της συμμετοχής.
       'properties.caseDocumentEngaged',

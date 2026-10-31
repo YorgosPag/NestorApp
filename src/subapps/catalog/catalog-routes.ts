@@ -143,6 +143,9 @@ export function supplyRequestHref(token: string): string {
   return `/${SUPPLY_REQUEST_SEGMENT}/${encodeURIComponent(token)}`;
 }
 
+/** Η καρτέλα του αγοραστή στις «Συνδέσεις»: ο σύνδεσμος της ειδοποίησης ανοίγει ακριβώς εκεί. */
+export const SUPPLIERS_TAB_QUERY = '?tab=suppliers';
+
 /** Τμήματα σελίδων μέσα στον χώρο. */
 export const CATALOG_PAGES = {
   /** Το ενιαίο πλέγμα προϊόντων + επεξεργαστής (ADR-923 §5.10.4 Β2/Β3) — η κύρια οθόνη, όπως στο Akeneo. */

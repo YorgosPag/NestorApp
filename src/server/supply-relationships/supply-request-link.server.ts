@@ -32,6 +32,7 @@ import { judgeAccessRequest } from '@/subapps/catalog/pricing/supply-relationshi
 import type { SupplyAccessPreview, SupplyBuyerRefusal, SupplyRequestLink } from '@/subapps/catalog/types/supply-invitation';
 import type { InvitationCoreRefusal } from '@/types/invitation-core';
 
+import { announceSupplyChange } from './supply-relationship-notifier.server';
 import { resolveBuyerOffice, type SupplyBuyerActing } from './supply-buyer-office.server';
 import { readSupplyRelationshipInTx, recordSupplyRelationshipChange, stageSupplyRelationship, supplyRelationshipId, type StagedSupplyChange } from './supply-relationship-store.server';
 
@@ -163,7 +164,12 @@ interface SupplyAccessRequest {
   readonly acting: SupplyBuyerActing;
 }
 
-type TxVerdict = { readonly outcome: SupplyAccessRequestOutcome; readonly change: StagedSupplyChange | null };
+type TxVerdict = {
+  readonly outcome: SupplyAccessRequestOutcome;
+  readonly change: StagedSupplyChange | null;
+  /** Ποιος δημοσίευσε τον σύνδεσμο: αυτός μαθαίνει ότι ήρθε αίτημα. */
+  readonly publisherUid?: string;
+};
 
 async function requestInTx(db: Firestore, tx: Transaction, read: { readonly id: string; readonly generation: number }, buyerCompanyId: string, input: SupplyAccessRequest): Promise<TxVerdict> {
   const link = linkFromDocument((await tx.get(links(db).doc(read.id))).data());
@@ -175,7 +181,7 @@ async function requestInTx(db: Firestore, tx: Transaction, read: { readonly id: 
   const transition = judgeAccessRequest(current, { ends, customerRef: input.customerRef, act });
   if (transition.kind === 'refused') return { outcome: transition, change: null };
   const change = transition.kind === 'write' ? stageSupplyRelationship(tx, db, { before: current, next: transition.next, ...act }) : null;
-  return { outcome: { kind: 'requested' }, change };
+  return { outcome: { kind: 'requested' }, change, publisherUid: link.updatedBy };
 }
 
 /** Το αίτημα του αγοραστή. Ο σύνδεσμος ξαναρωτιέται **μέσα** στη συναλλαγή: η ανάκληση κερδίζει κάθε αγώνα. */
@@ -185,7 +191,10 @@ export async function requestSupplyAccess(db: Firestore, input: SupplyAccessRequ
   const office = await resolveBuyerOffice(input.acting);
   if (office.kind === 'unknown') return { kind: 'unavailable' };
   if (office.kind === 'refused') return office;
-  const { outcome, change } = await db.runTransaction((tx) => requestInTx(db, tx, read, office.companyId, input));
-  if (change !== null) await recordSupplyRelationshipChange(change, input.acting.uid);
+  const { outcome, change, publisherUid } = await db.runTransaction((tx) => requestInTx(db, tx, read, office.companyId, input));
+  if (change === null) return outcome;
+  await recordSupplyRelationshipChange(change, input.acting.uid);
+  // Αλλαγή αριθμού πελάτη σε αίτημα που ήδη περιμένει δεν είναι νέο αίτημα.
+  if (publisherUid && change.before?.state !== 'requested') await announceSupplyChange(change.after, 'requested', publisherUid);
   return outcome;
 }

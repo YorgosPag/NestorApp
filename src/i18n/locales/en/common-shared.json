@@ -1019,5 +1019,11 @@
       "system": "The buyer answered. The file delivery proceeds automatically — follow its progress in the “Handover” tab.",
       "none": "The buyer answered. The handover needs no further action."
     }
+  },
+  "supplyConnection": {
+    "requestedTitle": "{who} requests a connection to your catalogue",
+    "acceptedTitle": "{who} accepted the connection to your catalogue",
+    "approvedTitle": "{who} approved your connection",
+    "unnamed": "A workspace"
   }
 }

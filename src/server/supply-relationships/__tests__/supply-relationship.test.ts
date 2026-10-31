@@ -16,7 +16,11 @@ jest.mock('@/lib/auth/workspace-membership', () => ({
 const fake = new (jest.requireActual('@/test-utils/fake-firestore/fake-firestore').FakeFirestore)();
 const recordTrackedEntityWrite = jest.fn(async (_input: { entityType: string; ledger: { companyId: string } }) => undefined);
 
+const dispatchNotification = jest.fn(async (_input: Record<string, unknown>) => ({ success: true }));
 jest.mock('@/lib/firebaseAdmin', () => ({ getAdminFirestore: () => fake }));
+jest.mock('@/server/notifications/notification-orchestrator', () => ({
+  dispatchNotification: (input: Record<string, unknown>) => dispatchNotification(input),
+}));
 jest.mock('@/services/entity-audit-tracked-write', () => ({
   recordTrackedEntityWrite: (input: { entityType: string; ledger: { companyId: string } }) => recordTrackedEntityWrite(input),
 }));
@@ -26,6 +30,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createCustomerAssignment } from '@/server/catalog/customer-assignment-writer.server';
+import { expectedDestinationOf } from '@/server/notifications/notification-destination-rules';
 import { quoteCatalogPrice } from '@/server/catalog/price-quote.server';
 import { createPricingGroup } from '@/server/catalog/pricing-group-writer.server';
 import { ARIES, RIVAL, rejectionOf } from '@/server/catalog/__tests__/catalog-writer-seed';
@@ -85,6 +90,7 @@ async function requested(customerRef: string | null = 'R-77'): Promise<{ readonl
 beforeEach(() => {
   fake.reset();
   recordTrackedEntityWrite.mockClear();
+  dispatchNotification.mockClear();
   mockOwnWorkspaces.mockImplementation(async () => ({ outcome: 'ok', reachable: [], belonging: [BUYER_ID] }));
   fake.seed(COLLECTIONS.COMPANIES, ARIES.companyId, { name: 'Aries' });
   fake.seed(COLLECTIONS.COMPANIES, BUYER_ID, { name: 'Γραφείο Αγοραστή' });
@@ -382,6 +388,58 @@ describe('Σ7: ανάκληση από όποια πλευρά', () => {
     await endSupplyRelationship(ARIES, relationship.id, { side: 'supplier', expectedRevision: ended.revision });
     expect(recordTrackedEntityWrite).not.toHaveBeenCalled();
     expect(relationshipDoc()).toMatchObject({ revision: ended.revision });
+  });
+});
+
+describe('ποιος μαθαίνει τι', () => {
+  const sent = () => dispatchNotification.mock.calls.map(([input]) => input);
+
+  it('αποδοχή ⇒ όποιος προσκάλεσε, στον χώρο του προμηθευτή, με το όνομα του αγοραστή', async () => {
+    await connected();
+    expect(sent()).toEqual([expect.objectContaining({
+      recipientId: ARIES.uid, tenantId: ARIES.companyId, titleKey: 'supplyConnection.acceptedTitle', titleParams: { who: 'Γραφείο Αγοραστή' },
+      workspace: { kind: 'org', companyId: ARIES.companyId },
+    })]);
+  });
+
+  it('αίτημα ⇒ όποιος δημοσίευσε τον σύνδεσμο · αλλαγή αριθμού πελάτη ⇒ σιωπή', async () => {
+    const { token } = await requested();
+    expect(sent()).toEqual([expect.objectContaining({ recipientId: ARIES.uid, titleKey: 'supplyConnection.requestedTitle' })]);
+    dispatchNotification.mockClear();
+    await requestSupplyAccess(db(), { token, customerRef: 'R-78', acting: acting() });
+    expect(sent()).toEqual([]);
+  });
+
+  it('έγκριση ⇒ όποιος ζήτησε, στον ΔΙΚΟ του χώρο, στην καρτέλα προμηθευτών', async () => {
+    const { relationship } = await requested();
+    dispatchNotification.mockClear();
+    await approveSupplyRequest(ARIES, relationship.id, { expectedRevision: relationship.revision, supplierContactId: null, customerGroupId: null });
+    expect(sent()).toEqual([expect.objectContaining({
+      recipientId: 'u_buyer', tenantId: BUYER_ID, titleKey: 'supplyConnection.approvedTitle', titleParams: { who: 'Aries' },
+      workspace: { kind: 'org', companyId: BUYER_ID }, actions: [expect.objectContaining({ url: '/catalog/connections?tab=suppliers' })],
+    })]);
+  });
+
+  it('ο ανιχνευτής ξαναχτίζει τον ΙΔΙΟ προορισμό, για κάθε πλευρά, από το έγγραφο', async () => {
+    const { relationship } = await requested();
+    await approveSupplyRequest(ARIES, relationship.id, { expectedRevision: relationship.revision, supplierContactId: null, customerGroupId: null });
+    const stored = (userId: string) => ({ id: 'n1', userId, eventType: 'procurement.supplyConnection', entityId: relationship.id, url: '', workspace: null });
+    expect(await expectedDestinationOf(db(), stored('u_buyer'))).toMatchObject({ destination: { workspace: { companyId: BUYER_ID }, actions: [{ url: '/catalog/connections?tab=suppliers' }] } });
+    expect(await expectedDestinationOf(db(), stored(ARIES.uid))).toMatchObject({ destination: { workspace: { companyId: ARIES.companyId }, actions: [{ url: '/catalog/connections' }] } });
+  });
+
+  it('🔒 απόρριψη και ανάκληση σιωπούν (Σ7)', async () => {
+    const { relationship } = await requested();
+    dispatchNotification.mockClear();
+    const after = await declineSupplyRequest(ARIES, relationship.id, relationship.revision);
+    await endSupplyRelationship(BUYER, after.id, { side: 'buyer', expectedRevision: after.revision });
+    expect(sent()).toEqual([]);
+  });
+
+  it('αποτυχία ειδοποίησης δεν ακυρώνει την πράξη', async () => {
+    dispatchNotification.mockRejectedValueOnce(new Error('down'));
+    const relationship = await connected();
+    expect(relationship.state).toBe('active');
   });
 });
 

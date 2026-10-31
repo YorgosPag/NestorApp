@@ -196,6 +196,7 @@
         "procurement": {
           "title": "Procurement",
           "description": "Notifications about purchase orders, quotes and vendors",
+          "supplyConnection": "Connection requests and acceptances with customers and suppliers",
           "approvalNeeded": "Purchase order needs approval",
           "poApproved": "Purchase order approved",
           "poOverdue": "Purchase order overdue",

@@ -34,6 +34,7 @@ import { supplyInvitationFromDocument } from '@/subapps/catalog/schema/zod/suppl
 import type { SupplyBuyerRefusal, SupplyInvitation, SupplyInvitationPreview } from '@/subapps/catalog/types/supply-invitation';
 import type { InvitationCoreRefusal, InvitationDocumentCore } from '@/types/invitation-core';
 
+import { announceSupplyChange } from './supply-relationship-notifier.server';
 import { resolveBuyerOffice, type SupplyBuyerActing } from './supply-buyer-office.server';
 import { SUPPLY_INVITE_SECRET_ENV, supplyInvitationsCollection } from './supply-invitation-issue.server';
 import {
@@ -126,7 +127,10 @@ export async function respondToSupplyInvitation(db: Firestore, input: SupplyInvi
   const outcome = input.action === 'accept'
     ? await acceptSupplyInvitation(db, input)
     : await redeemInvitation(db, supplyInvitationKind(db, null), { token: input.token, identity: input.identity, target: 'declined', nowValue: nowISO() });
-  if (outcome.kind === 'accepted' && outcome.effect !== null) await recordSupplyRelationshipChange(outcome.effect, input.identity.uid);
+  if (outcome.kind === 'accepted' && outcome.effect !== null) {
+    await recordSupplyRelationshipChange(outcome.effect, input.identity.uid);
+    await announceSupplyChange(outcome.effect.after, 'accepted', outcome.invitation.invitedByUid);
+  }
   return outcome;
 }
 

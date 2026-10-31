@@ -29,6 +29,7 @@ import {
 import type { PricingPartyRef } from '@/subapps/catalog/types/price-list';
 import type { SupplyRelationship, SupplyRelationshipSide } from '@/subapps/catalog/types/supply-relationship';
 
+import { announceSupplyChange } from './supply-relationship-notifier.server';
 import { liveSupplyInvitationsOfContact, supplyInvitationsCollection } from './supply-invitation-issue.server';
 import {
   isContactHeldElsewhereInTx,
@@ -83,6 +84,7 @@ export async function approveSupplyRequest(ctx: AuthContext, id: string, input: 
   });
   if (change === null) throw new CatalogWriteError('invalid', [{ code: 'supplyNotRequested', path: 'state' }]);
   await recordSupplyRelationshipChange(change, ctx.uid);
+  if (change.after.requestedByUid !== null) await announceSupplyChange(change.after, 'approved', change.after.requestedByUid);
   return change.after;
 }
 

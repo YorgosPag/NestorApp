@@ -373,6 +373,13 @@
   },
   "audit": {
     "fields": {
+      "state": "State",
+      "supplierContactId": "Contact",
+      "customerRef": "Customer number",
+      "acceptedByUid": "Accepted by",
+      "approvedByUid": "Approved by",
+      "endedBySide": "Closed by",
+      "generation": "Link generation",
       "type": "Type",
       "groupId": "Group",
       "localizable": "Per-language value",

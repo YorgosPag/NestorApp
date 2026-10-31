@@ -232,6 +232,8 @@ export const NOTIFICATION_EVENT_TYPES = {
   PROCUREMENT_QUOTE_EDITED: 'procurement.quoteEdited',
   // ADR-327 Phase 2 — AI Scan
   PROCUREMENT_QUOTE_SCAN_COMPLETED: 'procurement.quoteScanCompleted',
+  // ADR-923 §5.12 — σχέση προμήθειας: αίτημα · αποδοχή · έγκριση. Απόρριψη και ανάκληση σιωπούν (Σ7).
+  PROCUREMENT_SUPPLY_CONNECTION: 'procurement.supplyConnection',
   /**
    * ADR-867 Β6 — **νέο μήνυμα σε νήμα συνεργατών**. Ταυτότητα = **το διάστημα αδιάβαστων** του
    * παραλήπτη (`lastReadAt`), όχι το μήνυμα: δέκα μηνύματα πριν ανοίξει το νήμα = **μία** ειδοποίηση
@@ -594,6 +596,12 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
     defaultSeverity: NOTIFICATION_SEVERITIES.SUCCESS,
   },
   // Procurement (ADR-267 Phase B)
+  [NOTIFICATION_EVENT_TYPES.PROCUREMENT_SUPPLY_CONNECTION]: {
+    category: 'procurement',
+    settingKey: 'supplyConnection',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
   [NOTIFICATION_EVENT_TYPES.PROCUREMENT_APPROVAL_NEEDED]: {
     category: 'procurement',
     settingKey: 'approvalNeeded',
@@ -678,6 +686,8 @@ export const NOTIFICATION_ENTITY_TYPES = {
   NETWORK_ACT_TEAM: 'network_act_team',
   /** ADR-862 Φ1 · ADR-901 Φ2 — η συμμετοχή σε υπόθεση (`companies/{host}/projects/{p}/engagements/{id}`). */
   ENGAGEMENT: 'engagement',
+  /** ADR-923 §5.12 — η σχέση προμήθειας (`supply_relationships/{id}`). */
+  SUPPLY_RELATIONSHIP: 'supply_relationship',
 } as const;
 
 export type NotificationEntityType = typeof NOTIFICATION_ENTITY_TYPES[keyof typeof NOTIFICATION_ENTITY_TYPES];

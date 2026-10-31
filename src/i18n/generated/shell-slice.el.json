@@ -1507,6 +1507,7 @@
         "catalog_publication_recipe": "Συνταγή έκδοσης",
         "catalog_publication_run": "Έκδοση καταλόγου",
         "catalog_settings": "Ρυθμίσεις καταλόγου",
+        "catalog_visibility_rule": "Κανόνας ορατότητας",
         "column": "Υποστύλωμα",
         "company": "Εταιρεία",
         "contact": "Επαφή",
@@ -1551,6 +1552,8 @@
         "stair": "Κλίμακα",
         "storage": "Αποθήκη",
         "storage_unit": "Αποθηκευτικός χώρος",
+        "supply_relationship": "Σχέση προμήθειας",
+        "supply_request_link": "Σύνδεσμος αιτήματος σύνδεσης",
         "text_template": "Πρότυπο κειμένου",
         "vendor_invite": "Πρόσκληση προμηθευτή",
         "wall": "Τοίχος"
