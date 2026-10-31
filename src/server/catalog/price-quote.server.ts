@@ -22,13 +22,20 @@ import 'server-only';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AuthContext } from '@/lib/auth';
 import { nowISO, normalizeToMillisOrNull } from '@/lib/date-local';
+import { discountCascade } from '@/lib/pricing/discount-rule';
 import { selectMostSpecific, type SelectionCandidate } from '@/lib/pricing/select-condition';
 import { audienceCovers, audienceSpecificity, pricingPartyKey } from '@/subapps/catalog/pricing/price-audience';
 import { priceLineSubjectKey } from '@/subapps/catalog/pricing/price-line-subject';
 import { priceListLineKey } from '@/subapps/catalog/pricing/pricing-keys';
 import { resolveCatalogPrice, type PricedRecord } from '@/subapps/catalog/pricing/resolve-catalog-price';
 import { versionAt } from '@/subapps/catalog/pricing/version-timeline';
-import type { PriceQuoteRequest, PriceQuoteResult, PriceQuoteViewAs } from '@/subapps/catalog/types/price-list-requests';
+import type {
+  PriceQuoteContext,
+  PriceQuoteOutcome,
+  PriceQuoteRequest,
+  PriceQuoteResult,
+  PriceQuoteViewAs,
+} from '@/subapps/catalog/types/price-list-requests';
 import type {
   CustomerAssignmentDefinition,
   CustomerGroupDefinition,
@@ -50,9 +57,9 @@ import {
 } from './catalog-store.server';
 import { assertNoIssues } from './catalog-write-error';
 import { partyIssues } from './pricing-party-reads.server';
-import { readListVersions, versionRefOf } from './price-version-reads.server';
+import { readActivePriceLists, readListVersions, versionRefOf, type StoredPriceList } from './price-version-reads.server';
 
-type StoredList = StoredCatalogRecord<PriceListDefinition>;
+type StoredList = StoredPriceList;
 type OfferedList = StoredList & { readonly audience: PriceAudience };
 
 const isOffered = (list: StoredList): list is OfferedList => list.audience !== null;
@@ -78,20 +85,10 @@ async function viewerOf(scope: CatalogTx, viewAs: PriceQuoteViewAs): Promise<Pri
   }
 }
 
-async function readSalesLists(scope: CatalogTx): Promise<StoredList[]> {
-  const snap = await scope.tx.get(
-    scope.db
-      .collection(COLLECTIONS.CATALOG_PRICE_LISTS)
-      .where('companyId', '==', scope.ctx.companyId)
-      .where('isDeleted', '==', false)
-      .where('kind', '==', 'sales'),
-  );
-  return snap.docs.map((doc) => doc.data() as StoredList);
-}
-
-type ListSelection =
+type ListSelection = { readonly trace: PriceQuoteContext['listTrace'] } & (
   | { readonly kind: 'list'; readonly list: StoredList }
-  | Extract<PriceQuoteResult, { kind: 'noPriceList' | 'ambiguousPriceList' }>;
+  | Extract<PriceQuoteOutcome, { kind: 'noPriceList' | 'ambiguousPriceList' }>
+);
 
 /** Η λίστα του θεατή: ρητή, ή του ειδικότερου κοινού που τον καλύπτει (ο ίδιος επιλογέας με τις συνθήκες). */
 async function selectList(
@@ -101,9 +98,9 @@ async function selectList(
   atMs: number,
 ): Promise<ListSelection> {
   if (request.priceListId !== null) {
-    return { kind: 'list', list: await readOwned<PriceListDefinition>(scope, 'priceList', request.priceListId) };
+    return { kind: 'list', list: await readOwned<PriceListDefinition>(scope, 'priceList', request.priceListId), trace: [] };
   }
-  const candidates = (await readSalesLists(scope)).filter(isOffered).map(
+  const candidates = (await readActivePriceLists(scope, 'sales')).filter(isOffered).map(
     (list): SelectionCandidate<StoredList, 'audienceMismatch'> => ({
       id: list.id,
       item: list,
@@ -113,9 +110,10 @@ async function selectList(
     }),
   );
   const selection = selectMostSpecific(candidates, atMs);
-  if (selection.kind === 'selected') return { kind: 'list', list: selection.winner };
-  if (selection.kind === 'ambiguous') return { kind: 'ambiguousPriceList', tiedPriceListIds: selection.tiedIds };
-  return { kind: 'noPriceList', audienceTrace: selection.trace };
+  const { trace } = selection;
+  if (selection.kind === 'selected') return { kind: 'list', list: selection.winner, trace };
+  if (selection.kind === 'ambiguous') return { kind: 'ambiguousPriceList', tiedPriceListIds: selection.tiedIds, trace };
+  return { kind: 'noPriceList', trace };
 }
 
 async function readActiveConditions(scope: CatalogTx): Promise<PricedRecord<DiscountConditionDefinition>[]> {
@@ -138,8 +136,10 @@ export async function quoteCatalogPrice(ctx: AuthContext, request: PriceQuoteReq
     const atMs = normalizeToMillisOrNull(request.at ?? nowISO()) ?? Date.now();
     const viewer = await viewerOf(scope, request.viewAs);
     const selected = await selectList(scope, request, viewer, atMs);
-    if (selected.kind !== 'list') return selected;
-    return quoteFromList(scope, request, viewer, selected.list, atMs);
+    const context: PriceQuoteContext = { viewer, at: new Date(atMs).toISOString(), listTrace: selected.trace };
+    if (selected.kind === 'noPriceList') return { kind: selected.kind, ...context };
+    if (selected.kind === 'ambiguousPriceList') return { kind: selected.kind, tiedPriceListIds: selected.tiedPriceListIds, ...context };
+    return { ...(await quoteFromList(scope, request, viewer, selected.list, atMs)), ...context };
   });
 }
 
@@ -149,7 +149,7 @@ async function quoteFromList(
   viewer: PricingViewer,
   list: StoredList,
   atMs: number,
-): Promise<PriceQuoteResult> {
+): Promise<PriceQuoteOutcome> {
   const versions = (await readListVersions(scope, list.id)).map(versionRefOf);
   const version = versionAt(versions, atMs);
   const subjectKey = priceLineSubjectKey(request.subject);
@@ -168,14 +168,16 @@ async function quoteFromList(
     atMs,
   });
   switch (resolution.kind) {
-    case 'priced':
-      return { kind: 'priced', quote: resolution.quote, priceListAudience: list.audience };
+    case 'priced': {
+      const { quote } = resolution;
+      return { kind: 'priced', quote, priceListAudience: list.audience, cascade: discountCascade(quote.listAmount, quote.discountSteps) };
+    }
     case 'noVersion':
       return { kind: 'noVersion', priceListId: list.id };
     case 'noLine':
       return { kind: 'noLine', priceListId: list.id, priceListVersionId: resolution.priceListVersionId };
     case 'ambiguousDiscount':
-      return { kind: 'ambiguousDiscount', priceListId: list.id, tiedConditionIds: resolution.tiedConditionIds };
+      return { ...resolution, priceListId: list.id };
     case 'invalidQuantity':
       return { kind: 'invalidQuantity' };
   }

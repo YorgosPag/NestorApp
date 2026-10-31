@@ -37,7 +37,7 @@
 | **TypeScript** | `BOQItem` (`src/types/boq/boq.ts`) |
 | **ID Pattern** | Enterprise ID via `enterprise-id.service.ts` |
 | **Tenant Isolation** | `companyId` |
-| **Related Collections** | `boq_categories`, `boq_price_lists`, `boq_templates` |
+| **Related Collections** | `boq_categories`, `boq_templates` |
 | **Service** | `src/services/measurements/boq-service.ts` |
 | **Repository** | `src/services/measurements/boq-repository.ts` |
 | **ADR** | ADR-175 (BOQ / Quantity Surveying) |
@@ -669,7 +669,7 @@
 | **Σύνολο enum values** | **56** |
 | Cross-entity references | 23 |
 | Computed types (non-stored) | 4 (CostBreakdown, PriceResolution, VarianceResult, BOQCategoryCost) |
-| Firestore collections | 9 (boq_items, boq_categories, boq_price_lists, boq_templates, construction_phases, construction_tasks, construction_baselines, construction_resource_assignments, building_milestones) |
+| Firestore collections | 8 (boq_items, boq_categories, boq_templates, construction_phases, construction_tasks, construction_baselines, construction_resource_assignments, building_milestones) |
 | API route groups | 4 (construction-phases, construction-baselines, construction-resource-assignments, milestones) |
 | Services | 6 (boq-service, boq-repository, cost-engine, resource-assignment.service, cpm-calculator, evm-calculator) |
 

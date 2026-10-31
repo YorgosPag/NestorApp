@@ -355,28 +355,11 @@ export type FileClassification = typeof FILE_CLASSIFICATIONS[keyof typeof FILE_C
 // ============================================================================
 
 /**
- * 🏢 ENTERPRISE: File lifecycle states
+ * 🏢 ENTERPRISE: File lifecycle states — ζουν στο φύλλο `./file-lifecycle-states` (προβάλλεται στα Cloud Functions,
+ * ADR-874)· εδώ **ξαναεξάγονται**, δεν αντιγράφονται (ADR-899 §2.2).
  * @enterprise ADR-032 - Enterprise Trash System
- * @see local_3.txt - Enterprise delete patterns analysis
- *
- * States:
- * - ACTIVE: Normal file, visible in UI, can be modified
- * - TRASHED: Soft deleted, in "Trash" view, can be restored
- * - ARCHIVED: Long-term retention, not in active views (legal hold, compliance)
- * - PURGED: Permanently deleted (Storage + Firestore)
  */
-export const FILE_LIFECYCLE_STATES = {
-  /** Normal file, visible in UI */
-  ACTIVE: 'active',
-  /** Soft deleted, in Trash view, restorable */
-  TRASHED: 'trashed',
-  /** Archived for retention/compliance */
-  ARCHIVED: 'archived',
-  /** Permanently deleted (marker only, actual docs are removed) */
-  PURGED: 'purged',
-} as const;
-
-export type FileLifecycleState = typeof FILE_LIFECYCLE_STATES[keyof typeof FILE_LIFECYCLE_STATES];
+export { FILE_LIFECYCLE_STATES, type FileLifecycleState } from './file-lifecycle-states';
 
 /**
  * 🏢 ENTERPRISE: Default retention policies (in days)

@@ -17,22 +17,22 @@ import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
 import { validatePriceList } from '@/subapps/catalog/schema/validate-pricing';
 import type { PriceAudience, PriceListDefinition } from '@/subapps/catalog/types/price-list';
 import type { PriceListWire } from '@/subapps/catalog/types/pricing-views';
-import type { PriceListKind } from '@/subapps/catalog/vocabulary/pricing';
+import { COST_LIST_PRICE_TYPE, type PriceListKind } from '@/subapps/catalog/vocabulary/pricing';
 import { isEditorSelf } from '../shared/editor-self';
 
 export function emptyPriceListDraft(): PriceListDefinition {
-  return { code: '', labels: {}, kind: 'sales', priceType: 'net_list', audience: null, changeFenceBp: null };
+  return { code: '', labels: {}, kind: 'sales', priceType: 'net_list', audience: null, changeFenceBp: null, projectId: null };
 }
 
 /** Μόνο τα πεδία του ορισμού — ποτέ τα μεταδεδομένα της εγγραφής μέσα στο σώμα αιτήματος. */
 export function priceListDraftOf(record: PriceListWire): PriceListDefinition {
-  const { code, labels, kind, priceType, audience, changeFenceBp } = record;
-  return { code, labels, kind, priceType, audience, changeFenceBp };
+  const { code, labels, kind, priceType, audience, changeFenceBp, projectId } = record;
+  return { code, labels, kind, priceType, audience, changeFenceBp, projectId: projectId ?? null };
 }
 
-/** Αλλαγή είδους: η λίστα κόστους δεν προσφέρεται σε κοινό. */
+/** Αλλαγή είδους: η λίστα κόστους δεν προσφέρεται σε κοινό και έχει **έναν** τύπο τιμής (καθαρό κόστος). */
 export function withPriceListKind(draft: PriceListDefinition, kind: PriceListKind): PriceListDefinition {
-  return { ...draft, kind, audience: kind === 'cost' ? null : draft.audience };
+  return kind === 'cost' ? { ...draft, kind, audience: null, priceType: COST_LIST_PRICE_TYPE } : { ...draft, kind, projectId: null };
 }
 
 export interface PriceListDraftContext {
@@ -54,6 +54,7 @@ function lockedMeaningIssues(draft: PriceListDefinition, context: PriceListDraft
   const issues: CatalogIssue[] = [];
   if (record.kind !== draft.kind) issues.push({ code: 'typeLockedInUse', path: 'kind' });
   if (record.priceType !== draft.priceType) issues.push({ code: 'typeLockedInUse', path: 'priceType' });
+  if ((record.projectId ?? null) !== draft.projectId) issues.push({ code: 'typeLockedInUse', path: 'projectId' });
   return issues;
 }
 

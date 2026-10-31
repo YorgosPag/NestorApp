@@ -5,11 +5,13 @@
  * @module subapps/catalog/types/price-list-requests
  */
 
+import type { DiscountCascadeStep } from '@/lib/pricing/discount-rule';
 import type { SelectionTraceEntry } from '@/lib/pricing/select-condition';
 import type { PriceVersionDiff } from '../pricing/diff-price-versions';
+import type { PriceHistoryPoint } from '../pricing/price-history';
 import type { PriceQuote } from '../pricing/resolve-catalog-price';
 import type { PriceVersionBasis } from '../vocabulary/pricing';
-import type { PriceAudience, PriceLineSubject, PriceListLineDefinition } from './price-list';
+import type { PriceAudience, PriceLineSubject, PriceListLineDefinition, PricingViewer } from './price-list';
 
 /** Μία γραμμή της δέσμης — η έκδοση έρχεται από τη διαδρομή, ποτέ από το σώμα. */
 export type PriceLineInput = Omit<PriceListLineDefinition, 'versionId'>;
@@ -82,12 +84,47 @@ export interface PriceQuoteRequest {
   readonly priceListId: string | null;
 }
 
-/** Γιατί δεν βγήκε τιμή — ή η τιμή, με το ίχνος της επιλογής λίστας. */
-export type PriceQuoteResult =
-  | { readonly kind: 'noPriceList'; readonly audienceTrace: readonly SelectionTraceEntry<'audienceMismatch'>[] }
+/** Γιατί δεν βγήκε τιμή — ή η τιμή. */
+export type PriceQuoteOutcome =
+  | { readonly kind: 'noPriceList' }
   | { readonly kind: 'ambiguousPriceList'; readonly tiedPriceListIds: readonly string[] }
   | { readonly kind: 'invalidQuantity' }
   | { readonly kind: 'noVersion'; readonly priceListId: string }
   | { readonly kind: 'noLine'; readonly priceListId: string; readonly priceListVersionId: string }
-  | { readonly kind: 'ambiguousDiscount'; readonly priceListId: string; readonly tiedConditionIds: readonly string[] }
-  | { readonly kind: 'priced'; readonly quote: PriceQuote; readonly priceListAudience: PriceAudience | null };
+  | {
+      readonly kind: 'ambiguousDiscount';
+      readonly priceListId: string;
+      readonly priceListVersionId: string;
+      readonly tiedConditionIds: readonly string[];
+      readonly trace: PriceQuote['trace'];
+    }
+  | {
+      readonly kind: 'priced';
+      readonly quote: PriceQuote;
+      readonly priceListAudience: PriceAudience | null;
+      /** Ο καταρράκτης των βημάτων, από τη **μηχανή** — η οθόνη τον αποδίδει, δεν τον υπολογίζει (απόφαση Ζ). */
+      readonly cascade: readonly DiscountCascadeStep[];
+    };
+
+/**
+ * Το «γιατί» κάθε απάντησης (SAP pricing analysis) — ό,τι **μόνο** ο διακομιστής ξέρει: ποιον θεατή έχτισε, ποια στιγμή
+ * έκρινε και τι ετυμηγορία πήρε κάθε λίστα. `listTrace` κενό ⇔ η λίστα ζητήθηκε ρητά (καμία επιλογή δεν έγινε).
+ */
+export interface PriceQuoteContext {
+  readonly viewer: PricingViewer;
+  readonly at: string;
+  readonly listTrace: readonly SelectionTraceEntry<'audienceMismatch'>[];
+}
+
+export type PriceQuoteResult = PriceQuoteOutcome & PriceQuoteContext;
+
+/** Η τιμή ενός υποκειμένου μέσα από τις δημοσιευμένες εκδόσεις μιας λίστας. */
+export interface PriceHistoryRequest {
+  readonly priceListId: string;
+  readonly subject: PriceLineSubject;
+}
+
+export interface PriceHistoryResult {
+  readonly priceListId: string;
+  readonly points: readonly PriceHistoryPoint[];
+}

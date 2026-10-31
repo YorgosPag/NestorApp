@@ -11,17 +11,22 @@
  */
 
 import { apiClient } from '@/lib/api/enterprise-api-client';
-import { CATALOG_API, CURSOR_PARAM } from '@/subapps/catalog/catalog-routes';
+import { CATALOG_API, COST_RATES_PROJECT_PARAM, CURSOR_PARAM } from '@/subapps/catalog/catalog-routes';
 import { chunkPriceLineChanges, sendPriceLineChunks, type PriceLineSaveOutcome } from '@/subapps/catalog/pricing/price-line-batches';
 import type { PriceLineSubject } from '@/subapps/catalog/types/price-list';
 import type {
   CreatePriceVersionRequest,
   PriceLineBatch,
   PriceLineBatchResult,
+  PriceHistoryRequest,
+  PriceHistoryResult,
   PriceLineInput,
   PricePublicationPreview,
+  PriceQuoteRequest,
+  PriceQuoteResult,
   PublishPriceVersionRequest,
 } from '@/subapps/catalog/types/price-list-requests';
+import type { CostRateBook } from '@/subapps/catalog/types/cost-rate';
 import type { DiscountsView, PriceLinesPageView, PriceListsView, PriceListVersionWire } from '@/subapps/catalog/types/pricing-views';
 
 // ── Όψεις (GET, κριτής `pricingView`) ────────────────────────────────────────
@@ -74,6 +79,21 @@ export async function fetchAllPriceLines(versionId: string): Promise<PriceLinesP
 /** Ομάδες έκπτωσης · ομάδες πελατών · αναθέσεις · συνθήκες. */
 export function fetchDiscountsView(): Promise<DiscountsView> {
   return apiClient.get<DiscountsView>(CATALOG_API.discounts);
+}
+
+/** «Δες την τιμή σαν τον Χ» — ένα αίτημα ανά θεατή· η σύγκριση κοινών = παράλληλα αιτήματα, ποτέ δεύτερη μηχανή. */
+export function fetchPriceQuote(request: PriceQuoteRequest): Promise<PriceQuoteResult> {
+  return apiClient.post<PriceQuoteResult>(CATALOG_API.priceQuote, request);
+}
+
+/** Το βιβλίο τιμών κόστους του έργου: ό,τι ισχύει τώρα και ό,τι έρχεται (ADR-923 «3ε»). */
+export function fetchCostRateBook(projectId: string): Promise<CostRateBook> {
+  return apiClient.get<CostRateBook>(`${CATALOG_API.costRates}?${new URLSearchParams({ [COST_RATES_PROJECT_PARAM]: projectId })}`);
+}
+
+/** Η τιμή ενός υποκειμένου μέσα από τις δημοσιευμένες εκδόσεις μιας λίστας. */
+export function fetchPriceHistory(request: PriceHistoryRequest): Promise<PriceHistoryResult> {
+  return apiClient.post<PriceHistoryResult>(CATALOG_API.priceHistory, request);
 }
 
 // ── Πράξεις έκδοσης (κριτής `pricing` · η δημοσίευση `pricingPublish`) ─────────

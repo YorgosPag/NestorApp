@@ -2,6 +2,9 @@ import type { PriceListLineWire } from '@/subapps/catalog/types/pricing-views';
 import {
   breakdownTotal,
   costItemSubject,
+  hasPendingResolution,
+  withBreakdown,
+  withCostSubject,
   isPriceLineDraftDirty,
   minorFromEnteredText,
   newPriceLineRow,
@@ -29,7 +32,7 @@ const stored = (id: string, variantId: string, netPrice: number, revision = 1) =
   }) as unknown as PriceListLineWire;
 
 const SKUS = { prod_a: 'MFP-A', prod_b: 'MFP-B' };
-const CONTEXT = { priceType: 'net_list', discountGroupIds: new Set<string>() } as const;
+const CONTEXT = { kind: 'sales', priceType: 'net_list', discountGroupIds: new Set<string>() } as const;
 const base = priceLineDraftOf([stored('l_b', 'prod_b', 2000), stored('l_a', 'prod_a', 1000)], SKUS);
 const edit = (row: PriceLineRow, patch: Partial<PriceLineRow>): PriceLineRow => ({ ...row, ...patch });
 
@@ -63,10 +66,18 @@ describe('πρόχειρο γραμμών', () => {
   it('εργασία ΑΤΟΕ: η τιμή ΕΙΝΑΙ το άθροισμα της ανάλυσης', () => {
     const row = edit(newPriceLineRow('costItem', 'n1', 'm'), {
       code: 'ΟΙΚ-22.10', subject: costItemSubject('ΟΙΚ-22.10', ' '), resolution: 'resolved',
-      breakdown: { material: 1000, labor: 500, equipment: 250, defaultWasteBp: 300, materialVariantId: null },
+      breakdown: { description: null, material: 1000, labor: 500, equipment: 250, defaultWasteBp: 300, materialVariantId: null },
     });
-    expect(row.subject).toEqual({ kind: 'costItem', atoeCode: 'ΟΙΚ-22.10', region: null });
+    expect(row.subject).toEqual({ kind: 'costItem', atoeCode: 'OIK-22.10', region: null });
     expect(priceLineChangesOf({ rows: [row], removed: [] }).upserts[0].netPrice).toBe(breakdownTotal(row.breakdown!));
+  });
+
+  it('κωδικός και περιοχή αλλάζουν την ταυτότητα αμέσως· η ανάλυση παρασύρει την τιμή', () => {
+    const coded = withCostSubject(newPriceLineRow('costItem', 'n2', 'm2'), ' οικ-4.01 ', ' Κρήτη ');
+    expect(coded).toMatchObject({ code: 'OIK-4.01', region: 'Κρήτη', resolution: 'resolved' });
+    expect(hasPendingResolution({ rows: [coded], removed: [] })).toBe(false);
+    expect(withCostSubject(coded, '', 'Κρήτη')).toMatchObject({ subject: null, resolution: 'pending' });
+    expect(withBreakdown(coded, { material: 900, labor: 100 })).toMatchObject({ netPrice: 1000, breakdown: { description: null, material: 900, labor: 100 } });
   });
 });
 

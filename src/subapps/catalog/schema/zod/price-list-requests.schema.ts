@@ -9,6 +9,7 @@ import { z } from 'zod';
 import type {
   CreatePriceVersionRequest,
   PriceLineBatch,
+  PriceHistoryRequest,
   PriceQuoteRequest,
   PublishPriceVersionRequest,
   UpdatePriceVersionRequest,
@@ -82,4 +83,9 @@ export const priceQuoteBodySchema: z.ZodType<PriceQuoteRequest, z.ZodTypeDef, un
   quantity: z.number().positive().finite(),
   at: isoInstantSchema.nullable(),
   priceListId: entityIdSchema.nullable(),
+});
+
+export const priceHistoryBodySchema: z.ZodType<PriceHistoryRequest, z.ZodTypeDef, unknown> = z.object({
+  priceListId: entityIdSchema,
+  subject: priceLineSubjectSchema,
 });

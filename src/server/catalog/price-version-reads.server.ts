@@ -16,11 +16,11 @@ import { FieldPath, type Firestore, type Query } from 'firebase-admin/firestore'
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { PriceVersionRef } from '@/subapps/catalog/pricing/version-timeline';
-import type { PriceLineSubject } from '@/subapps/catalog/types/price-list';
+import type { PriceLineSubject, PriceListDefinition, PriceListKind } from '@/subapps/catalog/types/price-list';
 import type { StoredCatalogProductDefinition } from '@/subapps/catalog/types/product-derived';
 import { PRICE_LINES_PER_TRANSACTION } from '@/subapps/catalog/vocabulary/pricing';
 import { readActiveByIds } from './catalog-library-reads.server';
-import type { CatalogTx } from './catalog-store.server';
+import type { CatalogTx, StoredCatalogRecord } from './catalog-store.server';
 import type { StoredPriceLine, StoredPriceVersion } from './price-version-aggregate.server';
 
 /** Ανώτατο πλήθος εκδόσεων ανά λίστα που διαβάζει μια κρίση — πολύ πάνω από κάθε ρεαλιστικό ιστορικό. */
@@ -37,6 +37,20 @@ function versionsQuery(db: Firestore, companyId: string, priceListId: string): Q
 }
 
 /** Όλες οι ενεργές εκδόσεις της λίστας, **μέσα** στη συναλλαγή. */
+export type StoredPriceList = StoredCatalogRecord<PriceListDefinition>;
+
+/** Οι ενεργές λίστες ενός είδους στον χώρο, μέσα στη συναλλαγή του καλούντα. */
+export async function readActivePriceLists(scope: CatalogTx, kind: PriceListKind): Promise<StoredPriceList[]> {
+  const snap = await scope.tx.get(
+    scope.db
+      .collection(COLLECTIONS.CATALOG_PRICE_LISTS)
+      .where('companyId', '==', scope.ctx.companyId)
+      .where('isDeleted', '==', false)
+      .where('kind', '==', kind),
+  );
+  return snap.docs.map((doc) => doc.data() as StoredPriceList);
+}
+
 export async function readListVersions(scope: CatalogTx, priceListId: string): Promise<StoredPriceVersion[]> {
   const snap = await scope.tx.get(versionsQuery(scope.db, scope.ctx.companyId, priceListId));
   return snap.docs.map((doc) => doc.data() as StoredPriceVersion);

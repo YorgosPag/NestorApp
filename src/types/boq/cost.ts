@@ -8,7 +8,7 @@
  * @see ADR-175 §4.1.4 (Waste Factor), §3.4 (Cost Breakdown)
  */
 
-import type { BOQMeasurementUnit, SourceAuthority } from './units';
+import type { BOQMeasurementUnit } from './units';
 
 // ============================================================================
 // COST BREAKDOWN — ΑΝΑ ITEM
@@ -42,28 +42,6 @@ export interface CostBreakdown {
 
   /** Μονάδα μέτρησης */
   unit: BOQMeasurementUnit;
-}
-
-// ============================================================================
-// PRICE RESOLUTION — ΤΙΜΟΚΑΤΑΛΟΓΟΣ INHERITANCE
-// ============================================================================
-
-/** Αποτέλεσμα αναζήτησης τιμής (3-level inheritance) */
-export interface PriceResolution {
-  /** Τιμή υλικού (resolved) */
-  materialUnitCost: number;
-
-  /** Τιμή εργασίας (resolved) */
-  laborUnitCost: number;
-
-  /** Τιμή εξοπλισμού (resolved) */
-  equipmentUnitCost: number;
-
-  /** Από ποιο επίπεδο προήλθε η τιμή */
-  authority: SourceAuthority;
-
-  /** ID τιμοκαταλόγου (αν authority = 'master' ή 'project') */
-  priceListId: string | null;
 }
 
 // ============================================================================

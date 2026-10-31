@@ -105,6 +105,11 @@ describe('έκπτωση ανά κοινό — ο ειδικότερος νικ�
     const list = { ...MFP_PRICE_LIST, definition: { ...MFP_PRICE_LIST.definition, priceType: 'net_customer' as const } };
     expect(quoteOf({ priceList: list, viewer: partner })).toMatchObject({ conditionId: null, netAmount: 52000, trace: [] });
   });
+
+  it('τιμοκατάλογος κόστους: καμία έκπτωση πωλήσεων, ακόμη κι αν φτάσει ρητά στη μηχανή με net_list (ADR-923 «3ε»)', () => {
+    const list = { ...MFP_PRICE_LIST, definition: { ...MFP_PRICE_LIST.definition, kind: 'cost' as const, audience: null } };
+    expect(quoteOf({ priceList: list, viewer: partner })).toMatchObject({ conditionId: null, discountAmount: 0, netAmount: 52000, trace: [] });
+  });
 });
 
 describe('ισχύς συνθήκης, κλίμακες, ασάφεια', () => {

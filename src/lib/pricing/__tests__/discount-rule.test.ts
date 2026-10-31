@@ -8,6 +8,7 @@ import {
   BP_PER_WHOLE,
   applyDiscountSteps,
   basisPointsFromPercent,
+  discountCascade,
   effectivePercent,
   isDiscountSteps,
   stepsForBasis,
@@ -98,6 +99,22 @@ describe('applyDiscountSteps — αλυσίδα «50+10» σε λεπτά', () =
     expect(() => applyDiscountSteps(-1, [1000])).toThrow(RangeError);
     expect(() => applyDiscountSteps(1.5, [1000])).toThrow(RangeError);
     expect(() => applyDiscountSteps(100, [10_001])).toThrow(RangeError);
+  });
+});
+
+describe('discountCascade — τα ενδιάμεσα της αλυσίδας', () => {
+  it('κάθε ενδιάμεσο = η μηχανή στα πρώτα i βήματα, και το τελευταίο = το καθαρό', () => {
+    expect(discountCascade(10_000, [5000, 1000])).toEqual([{ step: 5000, net: 5000 }, { step: 1000, net: 4500 }]);
+  });
+
+  it('⛔ μία στρογγύλευση από το μικτό, όχι αθροιστική', () => {
+    const steps = [3333, 3333, 3333];
+    const last = discountCascade(101, steps)[2];
+    expect(last.net).toBe(applyDiscountSteps(101, steps).net);
+  });
+
+  it('χωρίς βήματα = κενός καταρράκτης', () => {
+    expect(discountCascade(10_000, [])).toEqual([]);
   });
 });
 

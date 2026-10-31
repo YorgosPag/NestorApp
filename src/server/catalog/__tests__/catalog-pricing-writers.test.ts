@@ -36,6 +36,7 @@ import { createDiscountCondition } from '../discount-condition-writer.server';
 import { createCatalogPriceList, updateCatalogPriceList } from '../price-list-writer.server';
 import { savePriceLines } from '../price-line-writer.server';
 import { previewPublication, publishPriceListVersion } from '../price-publication.server';
+import { readPriceHistory } from '../price-history.server';
 import { quoteCatalogPrice } from '../price-quote.server';
 import { createPriceListVersion, seedPriceListVersion } from '../price-version-writer.server';
 import { deletePricingGroup } from '../pricing-group-writer.server';
@@ -125,21 +126,22 @@ describe('εκδόσεις — πρόχειρη · δημοσίευση · αμ�
   });
 
   it('σπορά σε ΠΟΛΛΑ τμήματα: ο δρομέας προχωρά και αντιγράφονται ΟΛΕΣ οι γραμμές (401 > 400 ανά τμήμα)', async () => {
-    const seeded = await seedPricing(fake);
-    const draft = await createPriceListVersion(ARIES, seeded.priceListId, { validFrom: V1_FROM, basedOn: 'empty' });
+    await seedPricing(fake);
+    const master = await createCatalogPriceList(ARIES, { ...MFP_PRICE_LIST.definition, code: 'master', kind: 'cost', priceType: 'net_customer', audience: null });
+    const draft = await createPriceListVersion(ARIES, master.id, { validFrom: V1_FROM, basedOn: 'empty' });
     const work = (index: number) => ({
-      subject: { kind: 'costItem' as const, atoeCode: `OIK-${String(index).padStart(4, '0')}`, region: null },
+      subject: { kind: 'costItem' as const, atoeCode: `OIK-1.${String(index).padStart(4, '0')}`, region: null },
       netPrice: 100,
       priceQuantity: 1 as const,
       unitCode: 'm2',
       discountGroupId: null,
-      breakdown: { material: 60, labor: 30, equipment: 10, defaultWasteBp: 0, materialVariantId: null },
+      breakdown: { description: null, material: 60, labor: 30, equipment: 10, defaultWasteBp: 0, materialVariantId: null },
     });
     const all = Array.from({ length: 401 }, (_, index) => work(index));
     const a = await savePriceLines(ARIES, draft.id, { expectedLinesRevision: 0, upserts: all.slice(0, 400), deletes: [] });
     const b = await savePriceLines(ARIES, draft.id, { expectedLinesRevision: a.linesRevision, upserts: all.slice(400), deletes: [] });
     await publishPriceListVersion(ARIES, draft.id, { expectedRevision: draft.revision, expectedLinesRevision: b.linesRevision, confirmedDiffDigest: null });
-    const next = await createPriceListVersion(ARIES, seeded.priceListId, { validFrom: V2_FROM, basedOn: 'latestPublished' });
+    const next = await createPriceListVersion(ARIES, master.id, { validFrom: V2_FROM, basedOn: 'latestPublished' });
     expect(next.derived.seed).toEqual(expect.objectContaining({ copied: 401, done: true }));
     const copied = Object.values(fake.getAllDocs('catalog_price_list_lines')).filter((line) => line.versionId === next.id);
     expect(copied).toHaveLength(401);
@@ -239,6 +241,34 @@ describe('ασάφεια = άρνηση αποθήκευσης, και υπό τ
     expect(error.issues).toEqual([{ code: 'discountConditionAmbiguous', path: 'validFrom', params: { conditionId: 'cdcnd_rival_promo' } }]);
   });
 
+  // Σ7 (ζωντανή επαλήθευση): «Νέα περίοδος από 1/12» πάνω σε ανοιχτή συνθήκη ήταν ΠΑΝΤΑ ασάφεια — δύο χειροκίνητες
+  // αποθηκεύσεις χωρίς ατομικότητα. Τώρα (SAP VK11 «cuts off») η προηγούμενη λήγει στην ΙΔΙΑ συναλλαγή.
+  it('✅ Σ7: νέα περίοδος από 1/12 ΟΡΙΟΘΕΤΕΙ την ανοιχτή — ίδια συναλλαγή, νέα αναθεώρηση, υποδοχή ενημερωμένη', async () => {
+    const seeded = await seedPricing(fake);
+    const [openId] = seeded.conditionIds;
+    const december = '2026-12-01T00:00:00.000Z';
+    const next = realCondition({ ...WHOLESALE_TOSH_CARR.definition, validFrom: december, rule: { kind: 'chain', steps: [4000] } }, seeded);
+    const created = await createDiscountCondition(ARIES, next);
+    expect(fake.getData('catalog_discount_conditions', openId)).toEqual(expect.objectContaining({ validFrom: null, validUntil: december, revision: 2 }));
+    const slotId = generateDeterministicCatalogPricingSlotId(ARIES.companyId, conditionSlotKey(next));
+    expect(fake.getData('catalog_pricing_slots', slotId)).toEqual(expect.objectContaining({
+      members: expect.arrayContaining([
+        { holderId: openId, validFrom: null, validUntil: december },
+        { holderId: created.id, validFrom: december, validUntil: null },
+      ]),
+    }));
+  });
+
+  it('⛔ Σ7: προσφορά ΜΕΣΑ σε ανοιχτή περίοδο (θα ήθελε σπάσιμο) μένει ασάφεια — καμία εγγραφή δεν αλλάζει', async () => {
+    const seeded = await seedPricing(fake);
+    const [openId] = seeded.conditionIds;
+    const november = { validFrom: '2026-11-01T00:00:00.000Z', validUntil: '2026-12-01T00:00:00.000Z' };
+    const promo = realCondition({ ...WHOLESALE_TOSH_CARR.definition, ...november, rule: { kind: 'chain', steps: [6000] } }, seeded);
+    const error = await rejectionOf(createDiscountCondition(ARIES, promo));
+    expect(error.issues).toEqual([{ code: 'discountConditionAmbiguous', path: 'validFrom', params: { conditionId: openId } }]);
+    expect(fake.getData('catalog_discount_conditions', openId)).toEqual(expect.objectContaining({ validUntil: null, revision: 1 }));
+  });
+
   it('✅ η ίδια περίοδος με ΑΛΛΗ ομάδα ή κοινό είναι άλλη υποδοχή — καμία ψευδής ασάφεια', async () => {
     const seeded = await seedPricing(fake);
     const november = { validFrom: '2026-11-01T00:00:00.000Z', validUntil: '2026-12-01T00:00:00.000Z' };
@@ -262,7 +292,7 @@ describe('ασάφεια = άρνηση αποθήκευσης, και υπό τ
     await seedPricing(fake);
     const twin = await rejectionOf(createCatalogPriceList(ARIES, { ...MFP_PRICE_LIST.definition, code: 'gen_2' }));
     expect(twin.issues.map((issue) => issue.code)).toEqual(['priceListAudienceAmbiguous']);
-    const cost = await rejectionOf(createCatalogPriceList(ARIES, { ...MFP_PRICE_LIST.definition, code: 'master', kind: 'cost' }));
+    const cost = await rejectionOf(createCatalogPriceList(ARIES, { ...MFP_PRICE_LIST.definition, code: 'master', kind: 'cost', priceType: 'net_customer' }));
     expect(cost.issues.map((issue) => issue.code)).toEqual(['costListHasAudience']);
   });
 });
@@ -297,9 +327,37 @@ describe('η τιμή από τον διακομιστή — «δες σαν τ�
       audience: { kind: 'customerGroup', customerGroupId: seeded.wholesaleId },
     });
     const asWholesale = await quoteCatalogPrice(ARIES, quote({ viewAs: { kind: 'customerGroup', customerGroupId: seeded.wholesaleId } }));
-    expect(asWholesale).toEqual({ kind: 'noVersion', priceListId: own.id });
+    expect(asWholesale).toMatchObject({ kind: 'noVersion', priceListId: own.id });
+    expect(asWholesale.listTrace).toEqual(expect.arrayContaining([
+      { id: own.id, verdict: 'selected' },
+      { id: seeded.priceListId, verdict: 'outranked' },
+    ]));
     const asAnonymous = await quoteCatalogPrice(ARIES, quote({}));
+    expect(asAnonymous.listTrace).toEqual(expect.arrayContaining([{ id: own.id, verdict: 'audienceMismatch' }]));
     expect(asAnonymous.kind === 'priced' && asAnonymous.quote.priceListId).toBe(seeded.priceListId);
+  });
+
+  it('ανάλυση: ο καταρράκτης έρχεται από τη μηχανή και καταλήγει στο τελικό ποσό · ο θεατής και η στιγμή από τον διακομιστή', async () => {
+    await twoVersions();
+    const result = await quoteCatalogPrice(ARIES, quote({ viewAs: { kind: 'partner', party: PARTNER } }));
+    if (result.kind !== 'priced') throw new Error(`expected priced, got ${result.kind}`);
+    expect(result.cascade.map((entry) => entry.step)).toEqual([5000, 1000]);
+    expect(result.cascade[1].net).toBe(result.quote.netAmount);
+    expect(result.viewer).toMatchObject({ kind: 'signedIn', party: PARTNER });
+    expect(result.at).toBe('2026-08-01T00:00:00.000Z');
+  });
+
+  it('ιστορικό: ένα σημείο ανά δημοσιευμένη έκδοση, με τη μεταβολή ανά μονάδα · χωρίς καμία ανάγνωση ερωτήματος γραμμών', async () => {
+    const seeded = await twoVersions();
+    const { points } = await readPriceHistory(ARIES, { priceListId: seeded.priceListId, subject: quote({}).subject });
+    expect(points.map((point) => point.line?.netPrice)).toEqual([MFP_V1_PRICES[0], v2Price]);
+    expect(points[1].unitChangeBp).toBe(800);
+  });
+
+  it('⛔ ιστορικό: ξένος χώρος ≡ ανύπαρκτη λίστα', async () => {
+    const seeded = await twoVersions();
+    const error = await rejectionOf(readPriceHistory(RIVAL, { priceListId: seeded.priceListId, subject: quote({}).subject }));
+    expect(error.kind).toBe('notFound');
   });
 
   it('ως προς ημερομηνία: τον Μάρτιο ισχύει η έκδοση 1', async () => {

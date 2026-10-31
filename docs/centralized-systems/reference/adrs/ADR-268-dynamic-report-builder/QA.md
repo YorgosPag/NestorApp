@@ -363,7 +363,7 @@
 - **14 enum types**, **56 enum values** σύνολο
 - **23 cross-entity references** (projects, buildings, units, contacts, invoices, phases↔tasks↔resources, PO→BOQ)
 - **4 computed types** (CostBreakdown, PriceResolution, VarianceResult, BOQCategoryCost)
-- **9 Firestore collections** (boq_items, boq_categories, boq_price_lists, boq_templates, construction_phases/tasks/baselines/resource_assignments, building_milestones)
+- **8 Firestore collections** (boq_items, boq_categories, boq_templates, construction_phases/tasks/baselines/resource_assignments, building_milestones)
 - **Report Builder impact**: Tier 1 ανά οντότητα (BOQ: 15 flat + 10 computed, Phases: 17, Tasks: 14, Resources: 8, Milestones: 8), Tier 2 arrays (6), Tier 3 card layouts (Phase + BOQ)
 - **Σχέση ADR-266**: Report Builder = cross-building tabular queries ΜΟΝΟ. S-Curve, CPM, Resource Histogram παραμένουν στο ADR-266.
 

@@ -104,6 +104,17 @@ export function applyDiscountSteps(
   return { discount, net: gross - discount };
 }
 
+export interface DiscountCascadeStep {
+  readonly step: BasisPoints;
+  /** Το καθαρό **μετά** από αυτό το βήμα (μία στρογγύλευση της μηχανής για τα πρώτα i βήματα). */
+  readonly net: MinorAmount;
+}
+
+/** Ο καταρράκτης μιας αλυσίδας: κάθε ενδιάμεσο = {@link applyDiscountSteps} στα πρώτα i βήματα, ποτέ αθροιστική στρογγύλευση. */
+export function discountCascade(gross: MinorAmount, steps: readonly BasisPoints[]): readonly DiscountCascadeStep[] {
+  return steps.map((step, index) => ({ step, net: applyDiscountSteps(gross, steps.slice(0, index + 1)).net }));
+}
+
 /**
  * Η ενιαία ένδειξη μιας αλυσίδας σε ποσοστό (`[5000, 1000]` ⇒ 55). **Μόνο για προβολή** —
  * η αριθμητική περνά πάντα από {@link applyDiscountSteps}.

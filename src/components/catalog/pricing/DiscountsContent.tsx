@@ -22,6 +22,8 @@ import { CatalogPageFrame } from '../shared/CatalogPageFrame';
 import { useCatalogSelection } from '../shared/use-catalog-selection';
 import { useUnsavedGuard } from '../shared/use-unsaved-guard';
 import { ConditionsPanel } from './ConditionsPanel';
+import { PartyNameMemoryProvider } from './party-name-memory';
+import { PriceAnalysisPanel } from './PriceAnalysisPanel';
 import { PricingGroupsPanel } from './PricingGroupsPanel';
 import { useDiscountsWorkspace } from './use-discounts-workspace';
 
@@ -31,12 +33,13 @@ import { registerRouteSlice } from '@/i18n/route-slice';
 
 registerRouteSlice(routeSlice);
 
-const TABS = ['conditions', 'groups'] as const;
+const TABS = ['conditions', 'groups', 'analysis'] as const;
 type Tab = (typeof TABS)[number];
 
 const TAB_KEYS: Readonly<Record<Tab, string>> = {
   conditions: 'pricing.discounts.tabs.conditions',
   groups: 'pricing.discounts.tabs.groups',
+  analysis: 'pricing.discounts.tabs.analysis',
 };
 
 /** Η προεπιλεγμένη καρτέλα δεν γράφεται στη διεύθυνση (καθαρός σύνδεσμος). */
@@ -62,17 +65,22 @@ export function DiscountsContent() {
       {workspace.forbidden || workspace.view === null ? (
         <p className="m-0 text-muted-foreground" role="status">{t('pricing.noView')}</p>
       ) : (
-        <Tabs value={tab} onValueChange={chooseTab} className="flex min-h-0 flex-1 flex-col gap-3">
-          <TabsList className="self-start">
-            {TABS.map((item) => <TabsTrigger key={item} value={item}>{t(TAB_KEYS[item])}</TabsTrigger>)}
-          </TabsList>
-          <TabsContent value="conditions" className="mt-0 flex min-h-0 flex-1 flex-col">
-            <ConditionsPanel workspace={workspace} selection={conditionSelection} unsaved={unsaved} />
-          </TabsContent>
-          <TabsContent value="groups" className="mt-0 flex min-h-0 flex-1 flex-col">
-            <PricingGroupsPanel workspace={workspace} selection={groupSelection} unsaved={unsaved} />
-          </TabsContent>
-        </Tabs>
+        <PartyNameMemoryProvider value={workspace.rememberPartyName}>
+          <Tabs value={tab} onValueChange={chooseTab} className="flex min-h-0 flex-1 flex-col gap-3">
+            <TabsList className="self-start">
+              {TABS.map((item) => <TabsTrigger key={item} value={item}>{t(TAB_KEYS[item])}</TabsTrigger>)}
+            </TabsList>
+            <TabsContent value="conditions" className="mt-0 flex min-h-0 flex-1 flex-col">
+              <ConditionsPanel workspace={workspace} selection={conditionSelection} unsaved={unsaved} />
+            </TabsContent>
+            <TabsContent value="groups" className="mt-0 flex min-h-0 flex-1 flex-col">
+              <PricingGroupsPanel workspace={workspace} selection={groupSelection} unsaved={unsaved} />
+            </TabsContent>
+            <TabsContent value="analysis" className="mt-0 flex min-h-0 flex-1 flex-col">
+              <PriceAnalysisPanel workspace={workspace} />
+            </TabsContent>
+          </Tabs>
+        </PartyNameMemoryProvider>
       )}
       {unsaved.dialog}
     </CatalogPageFrame>

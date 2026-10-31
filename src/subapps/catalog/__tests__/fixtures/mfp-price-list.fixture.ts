@@ -31,6 +31,7 @@ export const MFP_PRICE_LIST: PricedRecord<PriceListDefinition> = {
     labels: { el: 'Γενικός τιμοκατάλογος' },
     kind: 'sales',
     priceType: 'net_list',
+    projectId: null,
     audience: { kind: 'anonymous' },
     changeFenceBp: null,
   },

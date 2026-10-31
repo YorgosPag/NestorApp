@@ -12,6 +12,7 @@
  * @module subapps/catalog/pricing/diff-price-versions
  */
 
+import type { MinorAmount } from '@/lib/money/money';
 import { BP_PER_WHOLE, type BasisPoints } from '@/lib/pricing/discount-rule';
 import { divideHalfUp } from '@/lib/pricing/exact-arithmetic';
 import type { PriceListLineDefinition } from '../types/price-list';
@@ -40,7 +41,10 @@ export interface PriceVersionDiff {
  * Μεταβολή ανά μονάδα: (νέα/qν − παλιά/qπ) / (παλιά/qπ), σε μονάδες βάσης — ακριβώς (BigInt),
  * στρογγυλεμένη μισό-μακριά-από-το-μηδέν ώστε +x και −x να είναι συμμετρικά.
  */
-function unitPriceChangeBp(before: PriceListLineDefinition, after: PriceListLineDefinition): BasisPoints | null {
+export function unitPriceChangeBp(
+  before: { readonly netPrice: MinorAmount; readonly priceQuantity: number },
+  after: { readonly netPrice: MinorAmount; readonly priceQuantity: number },
+): BasisPoints | null {
   if (before.netPrice === 0) return after.netPrice === 0 ? 0 : null;
   const scaled =
     (BigInt(after.netPrice) * BigInt(before.priceQuantity) - BigInt(before.netPrice) * BigInt(after.priceQuantity)) *

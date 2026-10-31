@@ -126,6 +126,7 @@ export function createFakeBoqService(options: FakeBoqOptions): FakeBoqService {
     update() { throw new Error(WRITE_FORBIDDEN); },
     delete() { throw new Error(WRITE_FORBIDDEN); },
     bulkDelete() { throw new Error(WRITE_FORBIDDEN); },
+    applyPriceFields() { throw new Error(WRITE_FORBIDDEN); },
     duplicate() { throw new Error(WRITE_FORBIDDEN); },
     transition() { throw new Error(WRITE_FORBIDDEN); },
     reopenToDraft() { throw new Error(WRITE_FORBIDDEN); },

@@ -102,7 +102,8 @@ export function usePriceLineGrid(input: PriceLineGridInput) {
   useCodeResolution(state, useCatalogCodeResolver(input.attributes));
   const saving = useSave(state, held, lines);
   const discountGroupIds = useMemo(() => new Set(input.discountGroups.map((group) => group.id)), [input.discountGroups]);
-  const issues = useMemo(() => priceLineIssues(state.draft, { priceType: input.list.priceType, discountGroupIds }), [state.draft, input.list.priceType, discountGroupIds]);
+  const { kind, priceType } = input.list;
+  const issues = useMemo(() => priceLineIssues(state.draft, { kind, priceType, discountGroupIds }), [state.draft, kind, priceType, discountGroupIds]);
   const dirty = isPriceLineDraftDirty(state.draft);
   const issueCount = [...issues.values()].reduce((sum, list) => sum + list.length, 0);
   return {

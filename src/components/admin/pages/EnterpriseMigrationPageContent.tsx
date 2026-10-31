@@ -384,7 +384,9 @@ export function EnterpriseMigrationPageContent() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="bg-black text-[hsl(var(--text-success))] p-4 rounded-md font-mono text-sm h-64 overflow-y-auto">
+        {/* Θεματική επιφάνεια: ως 2026-10-30 `bg-black` (σταθερό) κάτω από θεματικό `--text-success` ⇒ στο φωτεινό
+            θέμα σκούρο πράσινο σε μαύρο ≈ 3,2:1 (κάτω από AA). Το ζεύγος με επιφάνεια θέματος είναι μετρημένο (ADR-770 §18). */}
+        <div className="bg-background border border-border text-[hsl(var(--text-success))] p-4 rounded-md font-mono text-sm h-64 overflow-y-auto">
           {logs.length === 0 ? (
             <p>{t('enterpriseMigration.logs.empty')}</p>
           ) : (

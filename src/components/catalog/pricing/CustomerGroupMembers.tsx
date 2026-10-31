@@ -12,7 +12,8 @@
  *    έπαιρνε 409. Ήδη μέλος ⇒ τίποτα να σταλεί.
  * 🔑 **Άμεσες πράξεις** (Google Contacts: ετικέτα σε επαφή) — όχι μέρος του προχείρου της ομάδας· η αφαίρεση γυρίζει πίσω αν
  *    αρνηθεί ο γραφέας.
- * 🔑 Τα ονόματα έρχονται **από την όψη** (`partyNames`, expand στην ίδια συναλλαγή) — ποτέ φόρτωση όλων των επαφών.
+ * 🔑 Τα ονόματα έρχονται **από την όψη** (`partyNames`, expand στην ίδια συναλλαγή) **+** ό,τι μόλις διάλεξε ο άνθρωπος
+ *    (`party-name-memory.ts`, Σ6 — το αισιόδοξο μέλος δεν λέγεται «χωρίς όνομα») — ποτέ φόρτωση όλων των επαφών.
  */
 
 import React, { useState } from 'react';
@@ -28,6 +29,7 @@ import { useCatalogAccess, useCatalogText } from '../shared/catalog-ui-hooks';
 import { membersOf, membershipVerdict, type MembershipVerdict } from './pricing-group-draft';
 import { PricingPartyPicker } from './PricingPartyPicker';
 import type { DiscountsWorkspace } from './use-discounts-workspace';
+import { usePartyName } from './use-discount-words';
 
 const NO_ISSUES: readonly never[] = [];
 
@@ -72,7 +74,8 @@ function AddMember({ group, workspace, disabled }: CustomerGroupMembersProps & {
 export function CustomerGroupMembers({ group, workspace }: CustomerGroupMembersProps) {
   const { t } = useCatalogText();
   const disabled = useCatalogAccess('pricing') !== 'granted';
-  const nameOf = (assignment: CustomerAssignmentWire) => workspace.partyNames[pricingPartyKey(assignment.party)] ?? t('pricing.discounts.members.unnamed');
+  const partyName = usePartyName(workspace.partyNames);
+  const nameOf = (assignment: CustomerAssignmentWire) => partyName(assignment.party);
   const members = membersOf(group.id, workspace.assignments.view, nameOf);
   return (
     <section className="flex flex-col gap-3 border-t p-4">

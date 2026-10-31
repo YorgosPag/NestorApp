@@ -151,8 +151,11 @@ export type WastePolicy =
   | 'inherited'   // Κληρονομείται από κατηγορία/τιμοκατάλογο
   | 'overridden'; // Override ανά item
 
-/** Προέλευση τιμής — τιμοκατάλογος inheritance */
-export type SourceAuthority =
-  | 'master'     // Master Price List (εταιρείας)
-  | 'project'    // Project override
-  | 'item';      // Item-level override
+/**
+ * Προέλευση τιμής (ADR-175 §4.1.3 · ADR-923 §5.4): ρίζα του λεξιλογίου.
+ * `master`: λίστα `cost` του χώρου · `project`: λίστα `cost` του έργου · `item`: καμία πηγή τιμοκαταλόγου.
+ * 🔑 Παράγεται από το `BOQItem.priceSource`, δεν δηλώνεται ανεξάρτητα (`services/measurements/boq-price-source`).
+ */
+export const BOQ_SOURCE_AUTHORITIES = ['master', 'project', 'item'] as const;
+
+export type SourceAuthority = (typeof BOQ_SOURCE_AUTHORITIES)[number];

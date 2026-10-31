@@ -276,7 +276,6 @@ export class EnterpriseIdService extends CatalogIdGenerators {
   // BOQ (ADR-175)
   generateBoqItemId(): string { return this.generateId(P.BOQ_ITEM).id; }
   generateBoqCategoryId(): string { return this.generateId(P.BOQ_CATEGORY).id; }
-  generateBoqPriceListId(): string { return this.generateId(P.BOQ_PRICE_LIST).id; }
   generateBoqTemplateId(): string { return this.generateId(P.BOQ_TEMPLATE).id; }
 
   // Accounting (ADR-ACC)

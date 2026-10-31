@@ -8,14 +8,17 @@
  * ⚠️ Κυριολεκτικά κλειδιά (όχι template): οι γεννήτορες i18n (route slice · CHECK 3.8) τα λύνουν στατικά.
  */
 
-import { Archive, CircleDot, Clock, Globe, Handshake, Layers, Link2, Minus, PencilLine, Percent, Plus, RefreshCw, Tags, Trash2, UserCheck, Users, type LucideIcon } from 'lucide-react';
+import { AlertTriangle, Archive, CircleDot, Clock, Globe, Handshake, Layers, Link2, Minus, PencilLine, Percent, Plus, RefreshCw, Tags, Trash2, UserCheck, Users, type LucideIcon } from 'lucide-react';
 
 import type { BadgeVariantProps } from '@/components/ui/badge';
 import type { DiscountRuleKind, DiscountTierBasis } from '@/lib/pricing/discount-rule';
 import type { ValidityVerdict } from '@/lib/pricing/validity';
 import type { PriceLineChangeKind } from '@/subapps/catalog/pricing/diff-price-versions';
+import type { PriceQuoteOutcome } from '@/subapps/catalog/types/price-list-requests';
 import type { AudienceKind, PriceListKind, PriceListVersionStatus, PriceType, PriceVersionBasis, PricingGroupKind } from '@/subapps/catalog/vocabulary/pricing';
+import type { AnalysisVerdict } from './price-analysis';
 import type { TimelinePhase } from './price-list-summary';
+import type { SkuLookup } from './use-price-analysis';
 
 type BadgeVariant = NonNullable<BadgeVariantProps['variant']>;
 
@@ -121,6 +124,45 @@ export const VALIDITY_VERDICT_BADGES: Readonly<Record<ValidityVerdict, BadgeVari
   valid: 'default',
   notYetValid: 'secondary',
   expired: 'outline',
+};
+
+/** Η ετυμηγορία του ίχνους (`SelectionVerdict`) — λίστα ή συνθήκη· λέξη + εικονίδιο («3δ» Τμήμα 3). */
+export const SELECTION_VERDICT_KEYS: Readonly<Record<AnalysisVerdict, string>> = {
+  selected: 'pricing.analysis.verdict.selected',
+  tied: 'pricing.analysis.verdict.tied',
+  outranked: 'pricing.analysis.verdict.outranked',
+  notYetValid: 'pricing.analysis.verdict.notYetValid',
+  expired: 'pricing.analysis.verdict.expired',
+  audienceMismatch: 'pricing.analysis.verdict.audienceMismatch',
+  groupMismatch: 'pricing.analysis.verdict.groupMismatch',
+};
+
+export const SELECTION_VERDICT_ICONS: Readonly<Record<AnalysisVerdict, LucideIcon>> = {
+  selected: CircleDot,
+  tied: AlertTriangle,
+  outranked: Minus,
+  notYetValid: Clock,
+  expired: Archive,
+  audienceMismatch: Minus,
+  groupMismatch: Minus,
+};
+
+/** Κάθε περίπτωση «δεν βγήκε τιμή», με το όνομά της. */
+export const PRICE_OUTCOME_KEYS: Readonly<Record<Exclude<PriceQuoteOutcome['kind'], 'priced'>, string>> = {
+  noPriceList: 'pricing.analysis.outcome.noPriceList',
+  ambiguousPriceList: 'pricing.analysis.outcome.ambiguousPriceList',
+  invalidQuantity: 'pricing.analysis.outcome.invalidQuantity',
+  noVersion: 'pricing.analysis.outcome.noVersion',
+  noLine: 'pricing.analysis.outcome.noLine',
+  ambiguousDiscount: 'pricing.analysis.outcome.ambiguousDiscount',
+};
+
+/** Τι λέει το πεδίο κωδικού όσο δεν έχει βρει SKU. */
+export const SKU_LOOKUP_KEYS: Readonly<Record<Exclude<SkuLookup['state'], 'ready'>, string>> = {
+  empty: 'pricing.analysis.sku.empty',
+  resolving: 'pricing.analysis.sku.resolving',
+  notFound: 'pricing.analysis.sku.notFound',
+  notSku: 'pricing.analysis.sku.notSku',
 };
 
 export const DISCOUNT_RULE_KIND_KEYS: Readonly<Record<DiscountRuleKind, string>> = {

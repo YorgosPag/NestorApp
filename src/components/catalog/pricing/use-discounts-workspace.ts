@@ -23,12 +23,13 @@ import type {
   DiscountsView,
 } from '@/subapps/catalog/types/pricing-views';
 import { useCatalogFailureNotice } from '../shared/catalog-ui-hooks';
+import { usePartyNameMemory, type PartyNames, type RememberPartyName } from './party-name-memory';
 
 const NO_DISCOUNT_GROUPS: readonly DiscountGroupWire[] = [];
 const NO_CUSTOMER_GROUPS: readonly CustomerGroupWire[] = [];
 const NO_ASSIGNMENTS: readonly CustomerAssignmentWire[] = [];
 const NO_CONDITIONS: readonly DiscountConditionWire[] = [];
-const NO_NAMES: Readonly<Record<string, string>> = {};
+const NO_NAMES: PartyNames = {};
 
 export interface DiscountsWorkspace {
   readonly api: PricingViewApi<DiscountsView>;
@@ -37,7 +38,10 @@ export interface DiscountsWorkspace {
   readonly forbidden: boolean;
   /** Η στιγμή της ανάγνωσης (`asOf`) — ντετερμινιστικό «τώρα» για την ισχύ (η όψη λήγει στο επόμενο όριο). */
   readonly nowMs: number;
-  readonly partyNames: Readonly<Record<string, string>>;
+  /** Της όψης **+** όσων μόλις διάλεξε ο άνθρωπος (ο διακομιστής υπερισχύει) — `party-name-memory.ts`. */
+  readonly partyNames: PartyNames;
+  /** Για τον πάροχο του επιλογέα (`PartyNameMemoryProvider`). */
+  readonly rememberPartyName: RememberPartyName;
   readonly discountGroups: CatalogOptimistic<DiscountGroupWire>;
   readonly customerGroups: CatalogOptimistic<CustomerGroupWire>;
   readonly assignments: CatalogOptimistic<CustomerAssignmentWire>;
@@ -55,12 +59,14 @@ export function useDiscountsWorkspace(): DiscountsWorkspace {
   const conditions = useCatalogOptimistic(view?.conditions ?? NO_CONDITIONS, notice);
   const pending = discountGroups.pendingKeys.size + customerGroups.pendingKeys.size + assignments.pendingKeys.size + conditions.pendingKeys.size;
   useReleaseWhenSettled(hold, pending, api.release);
+  const names = usePartyNameMemory(view?.partyNames ?? NO_NAMES);
   return {
     api,
     view,
     forbidden: api.current.state === 'failed' && api.current.failure.kind === 'forbidden',
     nowMs: view ? Date.parse(view.asOf) : 0,
-    partyNames: view?.partyNames ?? NO_NAMES,
+    partyNames: names.names,
+    rememberPartyName: names.remember,
     discountGroups,
     customerGroups,
     assignments,

@@ -13,6 +13,7 @@
  * ένωση αποτελεσμάτων** — η οθόνη δεν πιάνει εξαιρέσεις.
  */
 
+import { API_ROUTES } from '@/config/domain-constants';
 import { apiClient, apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
@@ -32,7 +33,7 @@ import {
 
 const logger = createModuleLogger('mandate-catalog.client');
 
-const CATALOG_URL = '/api/owner-properties/brokered';
+const CATALOG_URL = API_ROUTES.OWNER_PROPERTIES.BROKERED;
 
 /** Τι έγινε με την **ανάγνωση**, όπως το βλέπει η οθόνη. */
 export type CatalogLoad =

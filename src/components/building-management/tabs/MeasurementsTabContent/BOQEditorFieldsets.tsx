@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 import { UomSelect } from '@/components/shared/UomSelect';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { BOQItemStatus, BOQMeasurementUnit } from '@/types/boq';
+import { BOQPriceSourceField } from './BOQPriceSourceField';
 import type { EditorFormState } from './useBOQEditorState';
 import '@/lib/design-system';
 
@@ -142,6 +143,7 @@ export function CostsFieldset({ form, onUpdateField, colors, t }: CostsProps) {
           </article>
         ))}
       </section>
+      <BOQPriceSourceField form={form} onUpdateField={onUpdateField} colors={colors} t={t} />
     </fieldset>
   );
 }

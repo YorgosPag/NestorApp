@@ -70,6 +70,6 @@ describe('price-list-draft — ό,τι θα έλεγε ο γραφέας, πρι
   });
 
   it('priceListDraftOf: μόνο τα πεδία του ορισμού, ποτέ μεταδεδομένα εγγραφής', () => {
-    expect(Object.keys(priceListDraftOf(list('mfp', {}))).sort()).toEqual(['audience', 'changeFenceBp', 'code', 'kind', 'labels', 'priceType']);
+    expect(Object.keys(priceListDraftOf(list('mfp', {}))).sort()).toEqual(['audience', 'changeFenceBp', 'code', 'kind', 'labels', 'priceType', 'projectId']);
   });
 });

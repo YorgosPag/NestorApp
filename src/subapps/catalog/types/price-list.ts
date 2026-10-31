@@ -52,6 +52,11 @@ export interface PriceListDefinition {
   readonly audience: PriceAudience | null;
   /** Φράχτης δημοσίευσης αυτής της λίστας (SAP: ανοχή ανά τύπο συνθήκης)· `null` = ο της πλατφόρμας. */
   readonly changeFenceBp: BasisPoints | null;
+  /**
+   * Μόνο λίστα `cost`: το έργο στο οποίο ισχύει (ADR-175 §4.1.3 επίπεδο 2, απορροφά το `boq_project_overrides`). Αραιή:
+   * κρατά μόνο ό,τι διαφέρει, και νικά τον master **ανά γραμμή**. `null` = όλος ο χώρος (ο master).
+   */
+  readonly projectId: string | null;
 }
 
 /** Η σφραγίδα της δημοσίευσης — γράφεται από τον γραφέα, ποτέ από το σώμα αιτήματος. */
@@ -129,6 +134,8 @@ export type PriceLineSubject = {
  * Η φύρα εφαρμόζεται στην **ποσότητα** του BOQ, όχι στην τιμή — εδώ μόνο η προεπιλογή της.
  */
 export interface CostBreakdown {
+  /** Η περιγραφή της εργασίας: ο άνθρωπος διαλέγει «Επίχρισμα εσωτερικό», όχι `OIK-4.01`. */
+  readonly description: string | null;
   readonly material: MinorAmount;
   readonly labor: MinorAmount;
   readonly equipment: MinorAmount;

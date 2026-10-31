@@ -21,11 +21,20 @@ import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
 import type { PricingPartyRef } from '@/subapps/catalog/types/price-list';
 import { FieldIssues } from '../shared/CatalogIssues';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
+import { useRememberPartyName } from './party-name-memory';
 
 const ContactSearchManager = dynamic(
   () => import('@/components/contacts/relationships/ContactSearchManager').then((mod) => mod.ContactSearchManager),
   { ssr: false },
 );
+
+/**
+ * Η επαφή όπως την παραδίδει η αναζήτηση — **παράγεται από το συμβόλαιο του ίδιου του δυναμικού component**.
+ * ⚠️ ΟΧΙ `import type … from '@/components/ui/enterprise-contact-dropdown'`: ο περιπατητής του CHECK 3.34 μετρά και
+ *    την εισαγωγή τύπου ως ακμή ⇒ ο dropdown (και τα κλειδιά επαφών του, σε 10 `common-*`) έμπαινε στις διαδρομές
+ *    εκπτώσεων ΚΑΙ τιμοκαταλόγων (μετρημένο 2026-10-30, ADR-923 §5.11 Σ9). Άγκυρα: `__tests__/pricing-party-picker-boundary.test.ts`.
+ */
+type PickedContact = Parameters<React.ComponentProps<typeof ContactSearchManager>['onContactSelect']>[0];
 
 interface PricingPartyPickerProps {
   readonly value: PricingPartyRef | null;
@@ -38,13 +47,20 @@ interface PricingPartyPickerProps {
 
 export function PricingPartyPicker({ value, onChange, disabled, issues, path }: PricingPartyPickerProps) {
   const { t } = useCatalogText();
+  const remember = useRememberPartyName();
   const contactId = value?.kind === 'contact' ? value.contactId : '';
+  const choose = (contact: PickedContact) => {
+    if (!contact?.id) { onChange(null); return; }
+    const party: PricingPartyRef = { kind: 'contact', contactId: contact.id };
+    remember(party, contact.name);
+    onChange(party);
+  };
   return (
     <fieldset className="flex min-w-0 flex-col gap-2 border-0 p-0" disabled={disabled}>
       <legend className="sr-only">{t('pricing.audience.partner')}</legend>
       <ContactSearchManager
         selectedContactId={contactId}
-        onContactSelect={(contact) => onChange(contact?.id ? { kind: 'contact', contactId: contact.id } : null)}
+        onContactSelect={choose}
         label={t('pricing.audience.partnerContact')}
         disabled={disabled}
       />

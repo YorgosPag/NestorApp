@@ -208,6 +208,20 @@
       ],
       "reason": "ADR-923 §5.10.4 Β7 — έγινε ορατό στον generator όταν οι 7 σελίδες του καταλόγου απέκτησαν route slice (μέχρι τότε το `useCatalogText` ζητούσε `useTranslation(CATALOG_NS)` = σταθερά module ⇒ ο hook δήλωνε ΜΗΔΕΝ namespaces και κανένα αρχείο του καταλόγου δεν κρινόταν· τώρα bundle `CATALOG_NAMESPACES`). Η ΜΟΝΗ δυναμική κλήση είναι `t(labelKey)` (γρ. 138) στον τοπικό helper `dateField(key, labelKey)`, που καλείται ΔΥΟ φορές (γρ. 144) με κυριολεκτικά `attributes.config.minDate` / `maxDate`. ΜΕΤΡΗΜΕΝΟ 2026-10-26: δύο ΑΚΡΙΒΗ κλειδιά."
     },
+    "src/components/catalog/pricing/price-line-cost-columns.tsx": {
+      "keys": [
+        "catalog:pricing.lines.columns.atoe",
+        "catalog:pricing.lines.columns.description",
+        "catalog:pricing.lines.columns.equipment",
+        "catalog:pricing.lines.columns.labor",
+        "catalog:pricing.lines.columns.material",
+        "catalog:pricing.lines.columns.region",
+        "catalog:pricing.lines.columns.total",
+        "catalog:pricing.lines.columns.waste",
+        "catalog:pricing.lines.skuLocked"
+      ],
+      "reason": "ADR-923 §5.11 3ε — το `t` έρχεται από το `input.words` του PriceLinesPanel, που ζητά το `catalog`. Το αρχείο δεν έχει δικό του `useTranslation`, άρα ο γεννήτορας δεν μπορεί να το αποδώσει μόνος του."
+    },
     "src/components/catalog/families/FamilyRulesTab.tsx": {
       "prefixes": [
         "catalog:rules.severity",
@@ -556,14 +570,20 @@
       "reason": "ADR-923 §5.10.4 Β7 — ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ 2026-10-26 (Chrome, dev): η σελίδα `/catalog/families` έβαφε στο ΠΡΩΤΟ καρέ ωμά κλειδιά (`pages.products.title` · `pages.products.lead` · `products.jump.go` στα προϊόντα), επειδή το namespace `catalog` ΔΕΝ είναι στο κέλυφος και φτάνει μόνο όταν φορτωθεί το bundle — στον server ΠΟΤΕ. ⚠️ ΓΙΑΤΙ ΟΧΙ guaranteedNamespaces: το `catalog` το ζητούν ΜΟΝΟ οι 7 σελίδες του καταλόγου· στο κέλυφος θα ταξίδευε σε κάθε διαδρομή της εφαρμογής. ⚠️ ΓΙΑΤΙ ΟΧΙ next/dynamic: ωμό κλειδί είναι χειρότερο από spinner, και spinner δεν είναι πρώτο καρέ (ADR-777 Α19 κανόνας 30). Προϋπόθεση που ΕΚΛΕΙΣΕ ΣΤΗΝ ΙΔΙΑ ΑΛΛΑΓΗ: ο hook `useCatalogText` ζητά το bundle `CATALOG_NAMESPACES` (όχι σταθερά module), αλλιώς ο generator έβλεπε 20+ αρχεία «χωρίς namespace» και ΑΡΝΙΟΤΑΝ να κρίνει."
     },
     "src/app/(app)/o/[workspace]/catalog/measurements/page.tsx": {
-      "sealed": 18389,
-      "sealedAt": "2026-10-26",
+      "sealed": 23123,
+      "sealedAt": "2026-10-31",
       "history": [
         {
           "from": 0,
           "to": 18389,
           "at": "2026-10-26",
           "why": "ΠΡΩΤΗ ΣΦΡΑΓΙΣΗ (ADR-923 §5.10.4 Β7). ΜΕΤΡΗΜΕΝΟ με `npm run generate:i18n-shell-slice -- --measure`: 18389 bytes, ΕΝΑ namespace (`catalog`), αφού αφαιρεθεί ό,τι απαντά ήδη το κέλυφος. Η διαδρομή δεν είχε ποτέ slice, γι' αυτό το `from` είναι 0. Το ταβάνι ΥΠΟΛΟΓΙΖΕΤΑΙ από αυτή τη σφράγιση (+25%) και δεν δηλώνεται πουθενά· νέα κλειστότητα ⇒ ΝΕΑ σφράγιση με μετρημένο λόγο."
+        },
+        {
+          "from": 18389,
+          "to": 23123,
+          "at": "2026-10-31",
+          "why": "ΞΑΝΑΣΦΡΑΓΙΣΗ ADR-923 §5.11 3ε — 18389 → 23123. Η σελίδα διαβάζει το λεξιλόγιο αποτυχιών `FAILURE_KEYS` μέσω του `useCatalogFailureNotice`, που μεγάλωσε με τα νέα κλειδιά τιμών (`issues.*`, μεταξύ τους `atoeCodeUnknown` · `costListPriceType` · `priceLineSubjectNotAccepted` · `projectOnlyOnCostList`). Το ταβάνι ξεπεράστηκε κατά 137 bytes. Κανένα ΟΡΙΟ next/dynamic δεν βοηθά: τα κλειδιά τα χρειάζεται η ειδοποίηση αποτυχίας της ίδιας της σελίδας."
         }
       ],
       "reason": "ADR-923 §5.10.4 Β7 — ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ 2026-10-26 (Chrome, dev): η σελίδα `/catalog/measurements` έβαφε στο ΠΡΩΤΟ καρέ ωμά κλειδιά (`pages.products.title` · `pages.products.lead` · `products.jump.go` στα προϊόντα), επειδή το namespace `catalog` ΔΕΝ είναι στο κέλυφος και φτάνει μόνο όταν φορτωθεί το bundle — στον server ΠΟΤΕ. ⚠️ ΓΙΑΤΙ ΟΧΙ guaranteedNamespaces: το `catalog` το ζητούν ΜΟΝΟ οι 7 σελίδες του καταλόγου· στο κέλυφος θα ταξίδευε σε κάθε διαδρομή της εφαρμογής. ⚠️ ΓΙΑΤΙ ΟΧΙ next/dynamic: ωμό κλειδί είναι χειρότερο από spinner, και spinner δεν είναι πρώτο καρέ (ADR-777 Α19 κανόνας 30). Προϋπόθεση που ΕΚΛΕΙΣΕ ΣΤΗΝ ΙΔΙΑ ΑΛΛΑΓΗ: ο hook `useCatalogText` ζητά το bundle `CATALOG_NAMESPACES` (όχι σταθερά module), αλλιώς ο generator έβλεπε 20+ αρχεία «χωρίς namespace» και ΑΡΝΙΟΤΑΝ να κρίνει."

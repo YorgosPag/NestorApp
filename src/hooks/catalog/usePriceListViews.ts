@@ -11,8 +11,9 @@
 
 import { useCallback, useMemo } from 'react';
 
-import { fetchAllPriceLines, fetchDiscountsView, fetchPriceListsView } from '@/services/catalog/catalog-pricing-api.client';
+import { fetchAllPriceLines, fetchCostRateBook, fetchDiscountsView, fetchPriceListsView } from '@/services/catalog/catalog-pricing-api.client';
 import type { PricingView } from '@/subapps/catalog/pricing/pricing-view-key';
+import type { CostRateBook } from '@/subapps/catalog/types/cost-rate';
 import type { DiscountsView, PriceLinesPageView, PriceListsView } from '@/subapps/catalog/types/pricing-views';
 import { usePricingView, type PricingViewApi } from './usePricingView';
 
@@ -27,6 +28,13 @@ const DISCOUNTS_VIEW: PricingView = { kind: 'discounts' };
 /** Ομάδες έκπτωσης · ομάδες πελατών · αναθέσεις · συνθήκες — ό,τι αναφέρει το κοινό μιας λίστας και οι γραμμές της. */
 export function useDiscountsView(isHeld?: () => boolean): PricingViewApi<DiscountsView> {
   return usePricingView({ view: DISCOUNTS_VIEW, read: fetchDiscountsView, isHeld, label: 'catalog-discounts-view' });
+}
+
+/** Το βιβλίο τιμών κόστους του έργου: ακούει το `lists`, γιατί μόνο δημοσίευση έκδοσης το αλλάζει. `null` ⇒ καμία ανάγνωση. */
+export function useCostRateBook(projectId: string | null): PricingViewApi<CostRateBook> {
+  const view = projectId === null ? null : LISTS_VIEW;
+  const read = useCallback(() => fetchCostRateBook(projectId ?? ''), [projectId]);
+  return usePricingView({ view, read, label: 'catalog-cost-rate-book' });
 }
 
 /** Οι γραμμές της έκδοσης `versionId` του τιμοκαταλόγου `priceListId` (όλες οι σελίδες, ένα συνεπές στιγμιότυπο). */

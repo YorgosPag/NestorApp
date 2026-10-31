@@ -132,6 +132,11 @@ export const CATALOG_ISSUE_CODES = [
   'priceLineSubjectRequired',
   'priceLineSkuUnknown',
   'discountGroupNotAccepted',
+  // 3ε: τα αναλλοίωτα της λίστας κόστους (ο εσωτερικός master)
+  'priceLineSubjectNotAccepted',
+  'atoeCodeUnknown',
+  'costListPriceType',
+  'projectOnlyOnCostList',
   'costBreakdownRequired',
   'costBreakdownNotAllowed',
   'costBreakdownMismatch',

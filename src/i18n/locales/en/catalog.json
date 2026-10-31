@@ -269,6 +269,10 @@
     "costBreakdownRequired": "A work item needs a material, labour and equipment breakdown.",
     "costBreakdownNotAllowed": "A cost breakdown applies to work items only, not products.",
     "costBreakdownMismatch": "Material + labour + equipment must add up to the unit price.",
+    "priceLineSubjectNotAccepted": "A sales list prices SKUs; a cost list prices ATOE work items.",
+    "atoeCodeUnknown": "The ATOE code must belong to an existing group, e.g. OIK-4.01.",
+    "costListPriceType": "A cost list holds net cost and takes no discounts.",
+    "projectOnlyOnCostList": "Only a cost list can belong to a project.",
     "discountStepInvalid": "A percentage from 0 to 100, at most two decimals.",
     "discountTiersRequired": "Add at least one tier.",
     "discountTierMinInvalid": "Invalid tier threshold.",
@@ -478,6 +482,7 @@
       "ifcPset": "IFC Pset",
       "ifcProperty": "IFC property",
       "atoe": "ATOE code",
+        "description": "Work description",
       "atoeHint": "The matching work item in the ATOE taxonomy."
     },
     "groups": {
@@ -909,6 +914,70 @@
   },
   "pricing": {
     "noView": "Prices are not shown — viewing price lists requires the price view permission.",
+    "analysis": {
+      "lead": "See a code's price as each audience sees it, which list and condition applied, and why. Add audiences to compare.",
+      "code": "SKU code",
+      "quantity": "Quantity",
+      "at": "Date",
+      "now": "Now",
+      "viewers": "Audiences to compare",
+      "addViewer": "Add audience",
+      "removeViewer": "Remove audience",
+      "pickViewer": "Choose who the viewer is.",
+      "loading": "Loading…",
+      "failed": "The read failed. Please try again.",
+      "list": "Price list",
+      "version": "Version",
+      "versionOf": "Version {number}, from {from}",
+      "price": "Price",
+      "pricePer": "{price} per {quantity} {unit}",
+      "noDiscount": "No discount.",
+      "saving": "{amount} below the first audience",
+      "surcharge": "{amount} above the first audience",
+      "unknownEntry": "No longer exists",
+      "sku": {
+        "empty": "Type a code and press Enter.",
+        "resolving": "Searching…",
+        "notFound": "No such code in the catalog.",
+        "notSku": "This code is a model. Enter the code of a variant."
+      },
+      "outcome": {
+        "noPriceList": "There is no price list for this audience.",
+        "ambiguousPriceList": "Two price lists tie for this audience. No price can be given.",
+        "invalidQuantity": "The quantity is not valid.",
+        "noVersion": "The price list has no published version on this date.",
+        "noLine": "The code is not in the version in force.",
+        "ambiguousDiscount": "Two discount conditions tie. No price can be given."
+      },
+      "trace": {
+        "title": "Why this price",
+        "lists": "Price lists",
+        "conditions": "Discount conditions",
+        "listExplicit": "No price list was selected.",
+        "noConditions": "No condition was considered.",
+        "unrelated": "{count, plural, one {# more concerns another audience or group} other {# more concern another audience or group}}"
+      },
+      "verdict": {
+        "selected": "Applied",
+        "tied": "Tied",
+        "outranked": "A more specific one wins",
+        "notYetValid": "Upcoming",
+        "expired": "Expired",
+        "audienceMismatch": "Other audience",
+        "groupMismatch": "Other group"
+      },
+      "history": {
+        "title": "Price history",
+        "pickList": "Choose a price list.",
+        "empty": "The price list has no published versions.",
+        "version": "Version {number}",
+        "from": "from {from}",
+        "current": "In force",
+        "absent": "Not in this version",
+        "rose": "+{percent}%",
+        "fell": "−{percent}%"
+      }
+    },
     "kinds": {
       "sales": "Sales",
       "salesHint": "Offered to an audience (anonymous, signed-in, a customer group or a partner).",
@@ -996,6 +1065,9 @@
       "priceType": "Price type",
       "lockedHint": "Kind and price type lock once the list has a version — published prices keep the meaning they were published with.",
       "fence": "Own confirmation threshold (%)",
+      "projectScope": "Applies to",
+      "projectScopeWhole": "The whole company (master)",
+      "projectScopeHint": "A project list holds only what differs, and beats the master line by line.",
       "fenceHint": "A price change above this percentage requires explicit confirmation on publishing. Without its own threshold, the platform’s {percent}% applies.",
       "newTitle": "New price list"
     },
@@ -1006,9 +1078,17 @@
       "gridLabel": "Price lines of version {number}",
       "columns": {
         "sku": "SKU code",
+        "atoe": "ATOE code",
+        "description": "Work description",
+        "region": "Region",
         "unit": "Unit",
         "priceQuantity": "Per",
         "netPrice": "Net price (€)",
+        "material": "Material (€)",
+        "labor": "Labour (€)",
+        "equipment": "Equipment (€)",
+        "waste": "Waste %",
+        "total": "Total",
         "discountGroup": "Discount group",
         "perOne": "Price per 1"
       },
@@ -1062,10 +1142,11 @@
       "newCondition": "New condition",
       "tabs": {
         "conditions": "Conditions",
-        "groups": "Groups"
+        "groups": "Groups",
+        "analysis": "Price analysis"
       },
       "verdict": {
-        "valid": "Current",
+        "valid":"Current",
         "notYetValid": "Upcoming",
         "expired": "Expired"
       },

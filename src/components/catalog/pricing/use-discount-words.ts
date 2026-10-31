@@ -15,13 +15,14 @@ import { useCallback } from 'react';
 
 import { formatDate, formatNumber } from '@/lib/intl-formatting';
 import type { DiscountRule } from '@/lib/pricing/discount-rule';
-import type { DiscountConditionDefinition, PriceAudience } from '@/subapps/catalog/types/price-list';
+import type { DiscountConditionDefinition, PriceAudience, PricingPartyRef } from '@/subapps/catalog/types/price-list';
 import { pricingPartyKey } from '@/subapps/catalog/pricing/price-audience';
 import type { CustomerGroupWire } from '@/subapps/catalog/types/pricing-views';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
 import { ruleHeadline, type DiscountFigure } from './condition-matrix';
 import { chainTextOf } from './discount-chain-input';
 import { pickerOfLastDay, pickerOfValidFrom } from './discount-condition-draft';
+import { isUnsetParty, type PartyNames } from './party-name-memory';
 import { AUDIENCE_KIND_KEYS } from './pricing-labels';
 
 const PERCENT_FORMAT: Intl.NumberFormatOptions = { maximumFractionDigits: 2, useGrouping: false };
@@ -52,9 +53,22 @@ export function useDiscountFigure(): (figure: DiscountFigure) => string {
   }, [t]);
 }
 
-export function useDiscountWords(customerGroups: readonly CustomerGroupWire[], partyNames: Readonly<Record<string, string>>): DiscountWords {
+/**
+ * **Το όνομα ενός συμβαλλομένου** — η ΜΙΑ απόδοση για τίτλο, περιόδους και μέλη ομάδας. Χωρίς επιλογή ⇒ το είδος
+ * («Συνεργάτης»), ποτέ «Επαφή χωρίς όνομα» (Σ6)· «χωρίς όνομα» μόνο όταν **ούτε** η όψη **ούτε** ο επιλογέας το ξέρουν.
+ */
+export function usePartyName(partyNames: PartyNames): (party: PricingPartyRef) => string {
+  const { t } = useCatalogText();
+  return useCallback((party: PricingPartyRef): string => {
+    if (isUnsetParty(party)) return t(AUDIENCE_KIND_KEYS.partner);
+    return partyNames[pricingPartyKey(party)] ?? t('pricing.discounts.members.unnamed');
+  }, [partyNames, t]);
+}
+
+export function useDiscountWords(customerGroups: readonly CustomerGroupWire[], partyNames: PartyNames): DiscountWords {
   const { t, text } = useCatalogText();
   const figureText = useDiscountFigure();
+  const partyName = usePartyName(partyNames);
   const rule = useCallback((value: DiscountRule): string => {
     const headline = ruleHeadline(value);
     if (headline.kind === 'unreadable') return t('pricing.discounts.rule.unreadable');
@@ -76,8 +90,8 @@ export function useDiscountWords(customerGroups: readonly CustomerGroupWire[], p
       const group = customerGroups.find((candidate) => candidate.id === value.customerGroupId);
       return group ? text(group.labels, group.code) : t(AUDIENCE_KIND_KEYS.customerGroup);
     }
-    if (value.kind === 'partner') return partyNames[pricingPartyKey(value.party)] ?? t('pricing.discounts.members.unnamed');
+    if (value.kind === 'partner') return partyName(value.party);
     return t(AUDIENCE_KIND_KEYS[value.kind]);
-  }, [customerGroups, partyNames, t, text]);
+  }, [customerGroups, partyName, t, text]);
   return { formatPercent: formatDiscountPercent, rule, period, audience };
 }

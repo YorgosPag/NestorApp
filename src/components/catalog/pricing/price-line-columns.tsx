@@ -28,7 +28,8 @@ import { isPriceQuantity, PRICE_QUANTITIES } from '@/subapps/catalog/vocabulary/
 import type { useCatalogText } from '../shared/catalog-ui-hooks';
 import { minorFromEnteredText, withEnteredCode, type PriceLineRow } from './price-line-rows';
 
-type Column = DataGridColumn<PriceLineRow>;
+export type PriceLineColumn = DataGridColumn<PriceLineRow>;
+type Column = PriceLineColumn;
 
 export interface PriceLineColumnsInput {
   readonly words: Pick<ReturnType<typeof useCatalogText>, 't' | 'text'>;
@@ -45,9 +46,11 @@ export const PRICE_LINE_ISSUE_PATHS: Readonly<Record<string, string>> = {
   priceQuantity: 'priceQuantity',
   netPrice: 'netPrice',
   discountGroup: 'discountGroupId',
+  material: 'breakdown',
+  waste: 'breakdown.defaultWasteBp',
 };
 
-const reject = (input: PriceLineColumnsInput, code: CatalogIssue['code']) => ({ ok: false as const, issue: input.message({ code, path: '' }) });
+export const reject = (input: PriceLineColumnsInput, code: CatalogIssue['code']) => ({ ok: false as const, issue: input.message({ code, path: '' }) });
 
 function codeColumn(input: PriceLineColumnsInput): Column {
   const { t } = input.words;
@@ -76,7 +79,7 @@ function unitOf(text: string, uom: PriceLineColumnsInput['uom']): string | null 
   return byLabel ?? resolveUom(text);
 }
 
-function unitColumn(input: PriceLineColumnsInput): Column {
+export function unitColumn(input: PriceLineColumnsInput): Column {
   const { t } = input.words;
   return {
     id: 'unit',
@@ -92,7 +95,7 @@ function unitColumn(input: PriceLineColumnsInput): Column {
   };
 }
 
-function quantityColumn(input: PriceLineColumnsInput): Column {
+export function quantityColumn(input: PriceLineColumnsInput): Column {
   const { t } = input.words;
   return {
     id: 'priceQuantity',
@@ -109,7 +112,7 @@ function quantityColumn(input: PriceLineColumnsInput): Column {
   };
 }
 
-const MONEY_DIGITS = { minimumFractionDigits: 2, maximumFractionDigits: 2 } as const;
+export const MONEY_DIGITS = { minimumFractionDigits: 2, maximumFractionDigits: 2 } as const;
 
 function priceColumn(input: PriceLineColumnsInput): Column {
   const { t } = input.words;

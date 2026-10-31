@@ -14,6 +14,7 @@
  * @module subapps/catalog/schema/validate-pricing
  */
 
+import { isKnownAtoeCode } from '@/config/boq-categories';
 import { hasAnyLocalizedText } from '@/i18n/localized-text';
 import { normalizeToMillisOrNull } from '@/lib/date-local';
 import { isMinorAmount, sumMinor } from '@/lib/money/money';
@@ -40,17 +41,21 @@ import type {
 } from '../types/price-list';
 import { MEASUREMENT_UNIT_CODE_PATTERN, isCatalogCode } from '../vocabulary/catalog-limits';
 import {
+  COST_LIST_PRICE_TYPE,
+  LINE_SUBJECT_OF_LIST_KIND,
   MAX_DISCOUNT_STEPS,
   MAX_DISCOUNT_TIERS,
   ORDER_QUANTITY_DECIMALS,
   PRICE_CHANGE_FENCE_MAX_BP,
   PRICE_CHANGE_FENCE_MIN_BP,
-  acceptsDiscountGroups,
   isPriceQuantity,
+  listAcceptsDiscounts,
+  type PriceListKind,
 } from '../vocabulary/pricing';
 import { IssueCollector, type CatalogIssue } from './catalog-issues';
 
 export interface PriceLineContext {
+  readonly kind: PriceListKind;
   readonly priceType: PriceType;
   readonly discountGroupIds: ReadonlySet<string>;
 }
@@ -91,6 +96,8 @@ export function validatePriceList(list: PriceListDefinition, context: PriceListC
   if (!isCatalogCode(list.code)) collector.add('invalidCode', 'code');
   if (!hasAnyLocalizedText(list.labels)) collector.add('labelRequired', 'labels');
   if (list.kind === 'cost' && list.audience !== null) collector.add('costListHasAudience', 'audience');
+  if (list.kind === 'cost' && list.priceType !== COST_LIST_PRICE_TYPE) collector.add('costListPriceType', 'priceType');
+  if (list.kind === 'sales' && list.projectId !== null) collector.add('projectOnlyOnCostList', 'projectId');
   checkAudienceReference(collector, list.audience, context, 'audience');
   checkFence(collector, list.changeFenceBp);
   return collector.issues;
@@ -124,8 +131,14 @@ function checkBreakdown(collector: IssueCollector, line: PriceListLineDefinition
 
 function checkDiscountGroup(collector: IssueCollector, line: PriceListLineDefinition, context: PriceLineContext): void {
   if (line.discountGroupId === null) return;
-  if (!acceptsDiscountGroups(context.priceType)) collector.add('discountGroupNotAccepted', 'discountGroupId');
+  if (!listAcceptsDiscounts(context)) collector.add('discountGroupNotAccepted', 'discountGroupId');
   else if (!context.discountGroupIds.has(line.discountGroupId)) collector.add('unknownReference', 'discountGroupId');
+}
+
+/** Το είδος της λίστας ορίζει τι κοστολογεί, και ο κωδικός εργασίας πρέπει να ταιριάζει με αυτόν των γραμμών BOQ. */
+function checkSubject(collector: IssueCollector, line: PriceListLineDefinition, context: PriceLineContext): void {
+  if (line.subject.kind !== LINE_SUBJECT_OF_LIST_KIND[context.kind]) collector.add('priceLineSubjectNotAccepted', 'subject');
+  else if (line.subject.kind === 'costItem' && !isKnownAtoeCode(line.subject.atoeCode)) collector.add('atoeCodeUnknown', 'subject');
 }
 
 export function validatePriceListLine(line: PriceListLineDefinition, context: PriceLineContext): readonly CatalogIssue[] {
@@ -133,6 +146,7 @@ export function validatePriceListLine(line: PriceListLineDefinition, context: Pr
   if (!isMinorAmount(line.netPrice)) collector.add('priceAmountInvalid', 'netPrice');
   if (!isPriceQuantity(line.priceQuantity)) collector.add('priceQuantityInvalid', 'priceQuantity');
   if (!MEASUREMENT_UNIT_CODE_PATTERN.test(line.unitCode)) collector.add('measurementUnitUnknown', 'unitCode');
+  checkSubject(collector, line, context);
   checkDiscountGroup(collector, line, context);
   checkBreakdown(collector, line);
   return collector.issues;

@@ -108,6 +108,12 @@ interface IBOQItemAccess {
   getCategories(companyId: string): Promise<BOQCategory[]>;
 }
 
+/** Η εγγραφή τιμής μιας γραμμής: τα πεδία που παράγει το `priceFieldsFromRate`. */
+export interface BoqPriceUpdate {
+  readonly id: string;
+  readonly fields: UpdateBOQItemInput;
+}
+
 // ============================================================================
 // REPOSITORY INTERFACE — CRUD + QUERIES
 // ============================================================================
@@ -118,6 +124,9 @@ interface IBOQItemAccess {
  * ζει στο service.
  */
 export interface IBOQRepository extends IBOQItemAccess {
+  /** Μαζική εφαρμογή τιμών τιμοκαταλόγου: μόνο σε πρόχειρες γραμμές, ιδεμπότητα· επιστρέφει πόσες γράφτηκαν. */
+  applyPriceFields(companyId: string, updates: readonly BoqPriceUpdate[]): Promise<number>;
+
   /** Αλλαγή status (tenant-scoped: ξένη γραμμή ⇒ `false`, καμία εγγραφή) */
   updateStatus(
     companyId: string,
@@ -140,6 +149,9 @@ export interface IBOQRepository extends IBOQItemAccess {
  * υποχρεωτικά από `transition()` ή `reopenToDraft()`, που ελέγχουν αν επιτρέπεται.
  */
 export interface IBOQService extends IBOQItemAccess {
+  /** Βλ. `IBOQRepository.applyPriceFields`. Η άρνηση για γραμμή που δόθηκε ζει μέσα στη συναλλαγή. */
+  applyPriceFields(companyId: string, updates: readonly BoqPriceUpdate[]): Promise<number>;
+
   /** Governance transition (draft→submitted→approved→certified→locked, tenant-scoped) */
   transition(
     companyId: string,

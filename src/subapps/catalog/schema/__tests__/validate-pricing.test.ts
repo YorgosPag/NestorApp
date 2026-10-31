@@ -25,18 +25,19 @@ import { discountConditionDefinitionSchema, priceListLineDefinitionSchema } from
 
 const codes = (issues: readonly { code: string }[]): string[] => issues.map((issue) => issue.code);
 
-const lineContext = { priceType: 'net_list' as const, discountGroupIds: new Set([TOSH_CARR]) };
+const lineContext = { kind: 'sales' as const, priceType: 'net_list' as const, discountGroupIds: new Set([TOSH_CARR]) };
 const conditionContext = { discountGroupIds: new Set([TOSH_CARR]), customerGroupIds: new Set([WHOLESALE]) };
 const listContext = { customerGroupIds: new Set([WHOLESALE]) };
+const costContext = { kind: 'cost' as const, priceType: 'net_customer' as const, discountGroupIds: new Set<string>() };
 
 const costItem: PriceListLineDefinition = {
   versionId: 'v',
-  subject: { kind: 'costItem', atoeCode: 'ΟΙΚ-7.01', region: null },
+  subject: { kind: 'costItem', atoeCode: 'OIK-7.01', region: null },
   netPrice: 4500,
   priceQuantity: 1,
   unitCode: 'm2',
   discountGroupId: null,
-  breakdown: { material: 3000, labor: 1200, equipment: 300, defaultWasteBp: 500, materialVariantId: null },
+  breakdown: { description: null, material: 3000, labor: 1200, equipment: 300, defaultWasteBp: 500, materialVariantId: null },
 };
 
 describe('τιμοκατάλογος και γραμμές', () => {
@@ -44,13 +45,14 @@ describe('τιμοκατάλογος και γραμμές', () => {
     expect(validatePriceList(MFP_PRICE_LIST.definition, listContext)).toEqual([]);
     for (const line of VERSION_1_LINES) expect(validatePriceListLine(line, lineContext)).toEqual([]);
     expect(validateVersionLines(VERSION_1_LINES)).toEqual([]);
-    expect(validatePriceListLine(costItem, lineContext)).toEqual([]);
+    expect(validatePriceListLine(costItem, costContext)).toEqual([]);
   });
 
   it('κοινό τιμοκαταλόγου (3β απόφαση Α): η λίστα κόστους δεν προσφέρεται· άγνωστη ομάδα πελάτη = unknownReference', () => {
     const list = MFP_PRICE_LIST.definition;
-    expect(codes(validatePriceList({ ...list, kind: 'cost' }, listContext))).toEqual(['costListHasAudience']);
-    expect(validatePriceList({ ...list, kind: 'cost', audience: null }, listContext)).toEqual([]);
+    expect(codes(validatePriceList({ ...list, kind: 'cost', priceType: 'net_customer' }, listContext))).toEqual(['costListHasAudience']);
+    expect(validatePriceList({ ...list, kind: 'cost', priceType: 'net_customer', audience: null }, listContext)).toEqual([]);
+    expect(codes(validatePriceList({ ...list, kind: 'cost', audience: null }, listContext))).toEqual(['costListPriceType']);
     const known = { kind: 'customerGroup' as const, customerGroupId: WHOLESALE };
     expect(validatePriceList({ ...list, audience: known }, listContext)).toEqual([]);
     const unknown = validatePriceList({ ...list, audience: { kind: 'customerGroup', customerGroupId: 'ccgrp_x' } }, listContext);
@@ -79,11 +81,26 @@ describe('τιμοκατάλογος και γραμμές', () => {
   });
 
   it('ανάλυση κόστους: υποχρεωτική για εργασία, απαγορευμένη για SKU, άθροισμα = τιμή μονάδας', () => {
-    expect(codes(validatePriceListLine({ ...costItem, breakdown: null }, lineContext))).toEqual(['costBreakdownRequired']);
+    expect(codes(validatePriceListLine({ ...costItem, breakdown: null }, costContext))).toEqual(['costBreakdownRequired']);
     expect(codes(validatePriceListLine({ ...VERSION_1_LINES[0], breakdown: costItem.breakdown }, lineContext))).toEqual([
       'costBreakdownNotAllowed',
     ]);
-    expect(codes(validatePriceListLine({ ...costItem, netPrice: 4501 }, lineContext))).toEqual(['costBreakdownMismatch']);
+    expect(codes(validatePriceListLine({ ...costItem, netPrice: 4501 }, costContext))).toEqual(['costBreakdownMismatch']);
+  });
+
+  it('το είδος της λίστας ορίζει το υποκείμενο: SKU σε πώληση, εργασία ΑΤΟΕ σε κόστος (ADR-923 «3ε»)', () => {
+    expect(codes(validatePriceListLine(costItem, lineContext))).toEqual(['priceLineSubjectNotAccepted']);
+    expect(codes(validatePriceListLine(VERSION_1_LINES[0], { ...costContext, discountGroupIds: new Set([TOSH_CARR]) }))).toEqual(
+      expect.arrayContaining(['priceLineSubjectNotAccepted', 'discountGroupNotAccepted']),
+    );
+  });
+
+  it('ο κωδικός εργασίας ανήκει σε υπαρκτή ομάδα ΑΤΟΕ, αλλιώς δεν θα έβρισκε ποτέ γραμμή BOQ', () => {
+    const withCode = (atoeCode: string) => ({ ...costItem, subject: { kind: 'costItem' as const, atoeCode, region: null } });
+    expect(codes(validatePriceListLine(withCode('OIK-4.01'), costContext))).toEqual([]);
+    for (const bad of ['ΟΙΚ-4.01', 'OIK-99.01', 'plaster']) {
+      expect(codes(validatePriceListLine(withCode(bad), costContext))).toEqual(['atoeCodeUnknown']);
+    }
   });
 
   it('δεύτερη γραμμή για το ίδιο είδος στην ίδια έκδοση', () => {

@@ -85,6 +85,7 @@ const BOQ_ITEM_FIELDS: Readonly<Record<keyof BOQItem, SchemaField>> = {
   laborUnitCost: req(NUM),
   equipmentUnitCost: req(NUM),
   priceAuthority: req(STR),
+  priceSource: opt(nullable({ type: 'object', description: 'ADR-923 «3ε» — στιγμιότυπο + δεσμός με τον τιμοκατάλογο κόστους.' })),
   linkedPhaseId: req(STR_OR_NULL),
   linkedTaskId: req(STR_OR_NULL),
   linkedInvoiceId: req(STR_OR_NULL),

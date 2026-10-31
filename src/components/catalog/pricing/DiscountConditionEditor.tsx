@@ -18,6 +18,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 
 import type { CatalogOptimistic } from '@/hooks/catalog/useCatalogOptimistic';
 import { generateCatalogDiscountConditionId } from '@/services/enterprise-id-convenience';
+import type { ConditionDelimitation } from '@/subapps/catalog/pricing/condition-supersession';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
 import type { CustomerGroupWire, DiscountConditionWire, DiscountGroupWire } from '@/subapps/catalog/types/pricing-views';
 import { deleteDefinition, optimisticWire, saveDefinition } from '../shared/catalog-actions';
@@ -28,7 +29,7 @@ import { NEW_SELECTION } from '../shared/use-catalog-selection';
 import { useDefinitionDraft, useShownIssues } from '../shared/use-definition-draft';
 import type { MatrixDraft } from './condition-matrix';
 import { ConditionScopeFields } from './ConditionScopeFields';
-import { conditionDefinitionOf, conditionDraftIssues, emptyConditionDraft, type ConditionSeed } from './discount-condition-draft';
+import { conditionDefinitionOf, conditionDraftIssues, conditionDraftPlan, emptyConditionDraft, type ConditionSeed } from './discount-condition-draft';
 import { DiscountRuleField } from './DiscountRuleField';
 import type { DiscountWords } from './use-discount-words';
 
@@ -65,7 +66,27 @@ function useConditionEditor({ record, seed, ops, discountGroups, customerGroups,
     conditions: ops.view,
     selfId: id,
   }), [editor.draft, discountGroups, customerGroups, ops.view, id]);
-  return { editor, issues: useShownIssues(editor, clientIssues, isAmbiguity), clientIssues, id };
+  const delimitations = useMemo(() => conditionDraftPlan(editor.draft, { conditions: ops.view, selfId: id }).delimitations, [editor.draft, ops.view, id]);
+  return { editor, issues: useShownIssues(editor, clientIssues, isAmbiguity), clientIssues, id, delimitations };
+}
+
+/** Σ7: τι θα κάνει η αποθήκευση στις **άλλες** περιόδους — λέγεται πριν από το κλικ, ποτέ σιωπηλά (το SAP το κάνει σιωπηλά). */
+function SupersessionNotice({ delimitations, conditions, words }: {
+  readonly delimitations: readonly ConditionDelimitation[];
+  readonly conditions: readonly DiscountConditionWire[];
+  readonly words: DiscountWords;
+}) {
+  const { t } = useCatalogText();
+  const lines = delimitations.flatMap(({ id, validUntil }) => {
+    const other = conditions.find((condition) => condition.id === id);
+    return other ? [{ id, text: t('pricing.discounts.editor.supersedes', { rule: words.rule(other.rule), period: words.period({ validFrom: other.validFrom, validUntil }) }) }] : [];
+  });
+  if (lines.length === 0) return null;
+  return (
+    <ul className="m-0 flex list-none flex-col gap-1 rounded-md border border-dashed p-3 text-sm" role="status">
+      {lines.map((line) => <li key={line.id}>{line.text}</li>)}
+    </ul>
+  );
 }
 
 /** Η ασάφεια φαίνεται ΑΜΕΣΑ (ακόμη και σε ανέγγιχτη φόρμα: το κελί είναι ήδη κόκκινο)· τα υπόλοιπα από την πρώτη αλλαγή. */
@@ -85,7 +106,7 @@ function useConflictLocator(conditions: readonly DiscountConditionWire[], words:
 export function DiscountConditionEditor(props: DiscountConditionEditorProps) {
   const { record, ops, words, onCreated, onDeleted } = props;
   const { t } = useCatalogText();
-  const { editor, issues, clientIssues, id } = useConditionEditor(props);
+  const { editor, issues, clientIssues, id, delimitations } = useConditionEditor(props);
   const locate = useConflictLocator(ops.view, words, props.onOpen);
   const disabled = useCatalogAccess('pricing') !== 'granted';
   const save = () =>
@@ -105,6 +126,7 @@ export function DiscountConditionEditor(props: DiscountConditionEditorProps) {
     <section className="flex flex-col">
       <section className="flex flex-col gap-4 p-4">
         <IssueSummary issues={ambiguity} title={t('pricing.discounts.editor.ambiguityTitle')} locate={locate} />
+        <SupersessionNotice delimitations={delimitations} conditions={ops.view} words={words} />
         <ConditionScopeFields draft={editor.draft} update={editor.update} discountGroups={props.discountGroups} customerGroups={props.customerGroups}
           disabled={disabled} issues={issues} />
         <DiscountRuleField rule={editor.draft.rule} onChange={(rule) => editor.update({ ...editor.draft, rule })} disabled={disabled} issues={issues} />

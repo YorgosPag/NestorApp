@@ -60,12 +60,19 @@ export const CATALOG_API = {
   discountConditions: entity('discount-conditions'),
   /** «Δες την τιμή σαν τον Χ» — εσωτερική προεπισκόπηση (3β απόφαση Δ). */
   priceQuote: `${API_ROOT}/price-quote`,
+  /** Η τιμή ενός υποκειμένου μέσα από τις δημοσιευμένες εκδόσεις μιας λίστας («3δ» Τμήμα 3). */
+  priceHistory: `${API_ROOT}/price-history`,
+  /** Το βιβλίο τιμών κόστους του προϋπολογισμού («3ε»): master του χώρου + λίστες του έργου. */
+  costRates: `${API_ROOT}/cost-rates`,
   /**
    * Όψεις τιμών (ADR-923 §5.11 «3δ» Ζ) — η ΜΟΝΗ πόρτα ανάγνωσης τιμών (`GET`, κριτής `pricingView`). Οι λίστες διαβάζονται
    * στο `priceLists.collection`, οι γραμμές στο `priceListVersions.lines(id)`· εδώ η όψη εκπτώσεων.
    */
   discounts: `${API_ROOT}/discounts`,
 } as const;
+
+/** Το έργο του βιβλίου τιμών κόστους (`GET …/cost-rates?projectId=…`). */
+export const COST_RATES_PROJECT_PARAM = 'projectId';
 
 /** Η παράμετρος αναθεώρησης της διαγραφής (`DELETE …?expectedRevision=N`) — ένα όνομα για πελάτη και route. */
 export const EXPECTED_REVISION_PARAM = 'expectedRevision';

@@ -8,6 +8,9 @@
  * 🔑 Η κατάσταση **λέγεται** με λέξη (`aria-live`): «Μη αποθηκευμένες αλλαγές» · «Αποθηκεύεται…» · «Αποθηκεύτηκε».
  * 🔑 Η αποθήκευση **κλειδώνει** όσο υπάρχουν ευρήματα στον πελάτη: ο γραφέας τρέχει τους ίδιους ελέγχους, άρα ένα
  *    γνωστό 422 δεν στέλνεται ποτέ. Η διαγραφή ζητά επιβεβαίωση (`ConfirmDialog`, SSoT).
+ * 🔑 **Πάντα ορατό** (`sticky bottom-0`, ADR-923 §5.11 «3δ» Σ8): κατάσταση + «Αποθήκευση» μένουν στο κάτω άκρο του
+ *    κυλιστή, όσο μακρύς κι αν είναι ο επεξεργαστής (SAP Fiori footer toolbar). Ζωντανά 2026-10-30: κλίμακες ⇒ η
+ *    «Αποθήκευση» στα 1491px σε οθόνη 1121px. Το `bg-card` είναι ήδη αδιαφανές — το περιεχόμενο περνά από κάτω.
  */
 
 import React, { useState } from 'react';
@@ -70,7 +73,7 @@ export function EditorFooter({ editor, issues, authority, onSave, onDelete, reco
   if (access === 'denied') return <p className="m-0 border-t px-4 py-3 text-sm text-muted-foreground">{t(READ_ONLY_KEYS[authority])}</p>;
   const canSave = status === 'dirty' && issueCount === 0;
   return (
-    <footer className="flex flex-wrap items-center gap-2 border-t bg-card px-4 py-3">
+    <footer className="sticky bottom-0 flex flex-wrap items-center gap-2 border-t bg-card px-4 py-3">
       <p className="m-0 mr-auto text-sm text-muted-foreground" aria-live="polite">
         {issueCount > 0 ? t('editor.status.issues', { count: issueCount }) : t(STATUS_KEYS[status])}
       </p>

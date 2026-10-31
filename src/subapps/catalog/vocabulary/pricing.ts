@@ -6,7 +6,7 @@
  * | Λεξιλόγιο | Τιμές | Πηγή πρακτικής |
  * |---|---|---|
  * | κατάσταση έκδοσης | `draft → published → superseded` (+ `discarded`) | SAP condition records · ADR-175 |
- * | είδος τιμοκαταλόγου | `sales` (προς πελάτες) · `cost` (εσωτερικός master, απορροφά `boq_price_lists`) | ADR-175 §4.1.3 |
+ * | είδος τιμοκαταλόγου | `sales` (προς πελάτες) · `cost` (εσωτερικός master του προϋπολογισμού) | ADR-175 §4.1.3 |
  * | τύπος τιμής | `net_list` · `net_customer` — **δεν αναμιγνύονται** | BMEcat `price_type` |
  * | κοινό | `anonymous` < `signedIn` < `customerGroup` < `partner` | §12 · SAP access sequence |
  * | υποκείμενο γραμμής | `variant` (SKU) · `costItem` (εργασία ΑΤΟΕ με ανάλυση) | RIB iTWO |
@@ -55,9 +55,14 @@ export function isPriceType(value: unknown): value is PriceType {
   return (PRICE_TYPES as readonly unknown[]).includes(value);
 }
 
-/** Δέχεται ο τύπος τιμής ομάδες έκπτωσης; Μόνο ο τιμοκατάλογος **λίστας**. */
-export function acceptsDiscountGroups(priceType: PriceType): boolean {
-  return priceType === 'net_list';
+/**
+ * Ο τύπος τιμής της λίστας `cost`: το κόστος είναι ήδη καθαρό και δεν έχει πελάτη να εκπέσει (ADR-923 §5.11 «3ε»).
+ */
+export const COST_LIST_PRICE_TYPE: PriceType = 'net_customer';
+
+/** Εφαρμόζονται εκπτώσεις στη λίστα; Μόνο σε λίστα **πώλησης**, και μόνο τύπου `net_list`. */
+export function listAcceptsDiscounts(list: { readonly kind: PriceListKind; readonly priceType: PriceType }): boolean {
+  return list.kind === 'sales' && list.priceType === 'net_list';
 }
 
 // ── Κοινό ────────────────────────────────────────────────────────────────────
@@ -92,6 +97,12 @@ export type PricingGroupKind = (typeof PRICING_GROUP_KINDS)[number];
 export const PRICE_LINE_SUBJECT_KINDS = ['variant', 'costItem'] as const;
 
 export type PriceLineSubjectKind = (typeof PRICE_LINE_SUBJECT_KINDS)[number];
+
+/** Τι κοστολογεί κάθε είδος λίστας: η πώληση SKU, ο εσωτερικός master εργασίες ΑΤΟΕ (RIB iTWO). */
+export const LINE_SUBJECT_OF_LIST_KIND: Readonly<Record<PriceListKind, PriceLineSubjectKind>> = {
+  sales: 'variant',
+  cost: 'costItem',
+};
 
 // ── Αριθμητικά όρια ──────────────────────────────────────────────────────────
 

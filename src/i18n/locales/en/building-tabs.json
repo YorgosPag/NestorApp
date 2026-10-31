@@ -288,6 +288,19 @@
         "derivedFromLayers": "= Σ of {count, plural, one {# layer} other {# layers}}"
       },
       "editor": {
+        "priceSource": {
+          "label": "From price list",
+          "placeholder": "Choose a work item from the cost price list",
+          "empty": "No cost price list work item for this category and unit",
+          "noAccess": "Cost price lists are not available for your role.",
+          "linked": "Price from price list, version {version}. Changing the price unlinks the line.",
+          "detach": "Unlink",
+          "listGone": "The price list behind this price no longer exists.",
+          "lineGone": "The work item is not in the version in force.",
+          "unitChanged": "The work item changed unit in the version in force.",
+          "changed": "Version {version} has a new price: choose the work item again to update.",
+          "upcoming": "Version {version} will change this price soon."
+        },
         "createTitle": "New Item",
         "editTitle": "Edit Item",
         "sections": {
@@ -468,6 +481,30 @@
         "statusChanged": "Status changed",
         "error": "Error: {message}",
         "derivedPrice": "A wall summary's price comes from its layers — set the price on each layer."
+      },
+      "priceReview": {
+        "title": "Price check",
+        "summary": "{count} lines need a price check",
+        "apply": "Apply to {count} ({impact})",
+        "confirmFence": "I also confirm the changes above the price list threshold",
+        "failed": "The prices were not applied. Please try again.",
+        "columns": {
+          "line": "Line",
+          "state": "State",
+          "current": "Current",
+          "next": "Price list",
+          "change": "Change",
+          "impact": "Impact"
+        },
+        "kinds": {
+          "proposal": "Price proposal",
+          "ambiguous": "Several sources: choose on the line",
+          "changed": "New price",
+          "upcoming": "Changing soon",
+          "unitChanged": "Unit changed",
+          "lineGone": "Work item removed",
+          "listGone": "Price list removed"
+        }
       },
       "coverage": {
         "floorGapTitle": "Incomplete floor-level measurements",

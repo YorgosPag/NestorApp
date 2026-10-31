@@ -9,6 +9,8 @@ import 'server-only';
  *   στη συναλλαγή, άρα δύο ταυτόχρονες επικαλυπτόμενες συνθήκες συγκρούονται — η δεύτερη ξανατρέχει, βλέπει
  *   την πρώτη και παίρνει 422 `discountConditionAmbiguous`.
  * - Αλλαγή ομάδας ή κοινού = **μετακόμιση** σε άλλη υποδοχή (αποδέσμευση + δέσμευση στην ίδια συναλλαγή).
+ * - 🔑 **Διαδοχή περιόδων (Σ7, SAP VK11)**: νέα περίοδος που αρχίζει μέσα σε προηγούμενη την **οριοθετεί** στην ίδια
+ *   συναλλαγή (`planConditionSupersession` — το σχέδιο που ο πελάτης ήδη έδειξε)· ό,τι θα ήθελε σβήσιμο ή σπάσιμο μένει 422.
  * @module server/catalog/discount-condition-writer.server
  */
 
@@ -34,7 +36,14 @@ import {
 } from './catalog-store.server';
 import { assertNoIssues } from './catalog-write-error';
 import { audiencePartyIssues } from './pricing-party-reads.server';
-import { conditionSlotIssues, readPricingSlot, stageSlotMember, stageSlotRelease } from './pricing-slots.server';
+import {
+  conditionSlotPlan,
+  readPricingSlot,
+  stageSlotMember,
+  stageSlotRelease,
+  withDelimitedMembers,
+  type PricingSlot,
+} from './pricing-slots.server';
 
 type StoredCondition = StoredCatalogRecord<DiscountConditionDefinition>;
 
@@ -69,6 +78,32 @@ const definitionOf = (definition: DiscountConditionDefinition): DiscountConditio
   rule: definition.rule,
 });
 
+interface DelimitedCondition {
+  readonly current: StoredCondition;
+  readonly validUntil: string;
+}
+
+/**
+ * Σ7: το σχέδιο διαδοχής της υποδοχής — ασάφεια ⇒ 422· οι οριοθετούμενες διαβάζονται **εδώ**, πριν από κάθε εγγραφή
+ * (Firestore: όλες οι αναγνώσεις πρώτα) και **μέσα** στη συναλλαγή, άρα ταυτόχρονη αλλαγή τους ξανατρέχει τη συναλλαγή.
+ */
+async function planSlot(scope: CatalogTx, slot: PricingSlot, holderId: string, definition: DiscountConditionDefinition) {
+  const plan = conditionSlotPlan(slot, holderId, definition);
+  assertNoIssues(plan.issues);
+  const delimited: DelimitedCondition[] = [];
+  for (const { id, validUntil } of plan.delimitations) {
+    delimited.push({ current: await readOwned<DiscountConditionDefinition>(scope, 'discountCondition', id), validUntil });
+  }
+  return { delimited, slot: withDelimitedMembers(slot, plan.delimitations) };
+}
+
+/** Η προηγούμενη περίοδος λήγει εκεί που αρχίζει η νέα — νέα αναθεώρηση της ΙΔΙΑΣ εγγραφής, με το ίχνος της. */
+function stageDelimitations(scope: CatalogTx, delimited: readonly DelimitedCondition[]): void {
+  for (const { current, validUntil } of delimited) {
+    stageReplace(scope, 'discountCondition', current, { ...definitionOf(current), validUntil });
+  }
+}
+
 /** `requestedId`: το προ-γεννημένο id του πελάτη (αισιόδοξη οθόνη) — ελέγχεται, ποτέ δεν εμπιστεύεται (Γ5). */
 export async function createDiscountCondition(
   ctx: AuthContext,
@@ -78,10 +113,10 @@ export async function createDiscountCondition(
   return runCatalogTransaction(ctx, async (scope) => {
     await assertConditionValid(scope, definition);
     const target = await readForRandomCreate(scope, 'discountCondition', requestedId);
-    const slot = await readPricingSlot(scope, conditionSlotKey(definition));
-    assertNoIssues(conditionSlotIssues(slot, target.id, definition));
+    const planned = await planSlot(scope, await readPricingSlot(scope, conditionSlotKey(definition)), target.id, definition);
     const stored = stageCreate(scope, 'discountCondition', target, definitionOf(definition));
-    stageSlotMember(scope, slot, memberOf(stored.id, definition));
+    stageDelimitations(scope, planned.delimited);
+    stageSlotMember(scope, planned.slot, memberOf(stored.id, definition));
     return stored;
   });
 }
@@ -97,11 +132,11 @@ export async function updateDiscountCondition(
     const current = await readOwned<DiscountConditionDefinition>(scope, 'discountCondition', id);
     assertRevision(current, expectedRevision);
     const before = await readPricingSlot(scope, conditionSlotKey(current));
-    const after = await readPricingSlot(scope, conditionSlotKey(definition));
-    assertNoIssues(conditionSlotIssues(after, id, definition));
+    const after = await planSlot(scope, await readPricingSlot(scope, conditionSlotKey(definition)), id, definition);
     const stored = stageReplace(scope, 'discountCondition', current, definitionOf(definition));
-    if (before.id !== after.id) stageSlotRelease(scope, before, id);
-    stageSlotMember(scope, after, memberOf(id, definition));
+    stageDelimitations(scope, after.delimited);
+    if (before.id !== after.slot.id) stageSlotRelease(scope, before, id);
+    stageSlotMember(scope, after.slot, memberOf(id, definition));
     return stored;
   });
 }

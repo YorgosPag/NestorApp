@@ -15,6 +15,7 @@ import 'server-only';
 import type { AuthContext } from '@/lib/auth';
 import { priceListAudienceSlotKey } from '@/subapps/catalog/pricing/pricing-keys';
 import { validatePriceList } from '@/subapps/catalog/schema/validate-pricing';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
 import type { CustomerGroupDefinition, PriceListDefinition } from '@/subapps/catalog/types/price-list';
 import { readActiveByIds } from './catalog-library-reads.server';
@@ -49,7 +50,15 @@ async function assertListValid(scope: CatalogTx, definition: PriceListDefinition
   const referenced = definition.audience?.kind === 'customerGroup' ? [definition.audience.customerGroupId] : [];
   const groups = await readActiveByIds<CustomerGroupDefinition>(scope, 'customerGroup', referenced);
   const party = await audiencePartyIssues(scope, definition.audience, 'audience');
-  assertNoIssues([...validatePriceList(definition, { customerGroupIds: new Set(groups.keys()) }), ...party]);
+  const project = await projectIssues(scope, definition.projectId);
+  assertNoIssues([...validatePriceList(definition, { customerGroupIds: new Set(groups.keys()) }), ...party, ...project]);
+}
+
+/** Το έργο της λίστας κόστους υπάρχει και είναι **αυτού** του χώρου (ξένο ≡ ανύπαρκτο). */
+async function projectIssues(scope: CatalogTx, projectId: string | null): Promise<CatalogIssue[]> {
+  if (projectId === null) return [];
+  const snap = await scope.tx.get(scope.db.collection(COLLECTIONS.PROJECTS).doc(projectId));
+  return snap.exists && snap.data()?.companyId === scope.ctx.companyId ? [] : [{ code: 'unknownReference', path: 'projectId' }];
 }
 
 /** Είδος / τύπος τιμής αλλάζουν μόνο όσο η λίστα δεν έχει καμία έκδοση. */
@@ -57,6 +66,7 @@ async function assertMeaningUnlocked(scope: CatalogTx, current: StoredPriceList,
   const changed: CatalogIssue[] = [];
   if (current.kind !== next.kind) changed.push({ code: 'typeLockedInUse', path: 'kind' });
   if (current.priceType !== next.priceType) changed.push({ code: 'typeLockedInUse', path: 'priceType' });
+  if ((current.projectId ?? null) !== next.projectId) changed.push({ code: 'typeLockedInUse', path: 'projectId' });
   if (changed.length > 0 && (await priceListHasVersions(scope, current.id))) throw new CatalogWriteError('immutable', changed);
 }
 

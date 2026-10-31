@@ -51,7 +51,7 @@ export {
   generateSpanId, generateSearchId, generateAuditId, generateDeploymentId,
   generateContainerId, generatePipelineId, generateBackupId, generateRestoreId, generateMigrationId,
   generateTemplateId, generateOperationId, generateBoqItemId, generateBoqCategoryId,
-  generateBoqPriceListId, generateBoqTemplateId, generateJournalEntryId,
+  generateBoqTemplateId, generateJournalEntryId,
   generateInvoiceAccId, generateBankTransactionId, generateFixedAssetId,
   generateDeterministicDepreciationRecordId, generateDeterministicDepreciationJournalEntryId, generateEfkaPaymentId, generateImportBatchId,
   generateMatchGroupId, generateMatchingRuleId, generateExpenseDocId,

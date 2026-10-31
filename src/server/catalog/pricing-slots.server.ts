@@ -12,13 +12,18 @@ import 'server-only';
  * άρα η δεύτερη συναλλαγή **ξανατρέχει** και βλέπει την πρώτη (ίδιο ιδίωμα με τις κρατήσεις `cuval`).
  *
  * 🔑 Η κρίση της επικάλυψης **δεν** γράφεται δεύτερη φορά: οι συνθήκες περνούν από το `findAmbiguousConditions`
- * της 3α (ο ίδιος κανόνας με τον πελάτη)· το κοινό λίστας δεν έχει ισχύ, άρα κάθε **άλλο** μέλος είναι ασάφεια.
+ * της 3α (ο ίδιος κανόνας με τον πελάτη), μέσα από το σχέδιο διαδοχής (Σ7: η νέα περίοδος οριοθετεί την προηγούμενη)·
+ * το κοινό λίστας δεν έχει ισχύ, άρα κάθε **άλλο** μέλος είναι ασάφεια.
  *
  * @module server/catalog/pricing-slots.server
  */
 
 import { generateDeterministicCatalogPricingSlotId } from '@/services/enterprise-id.service';
-import { findAmbiguousConditions } from '@/subapps/catalog/schema/validate-pricing';
+import {
+  planConditionSupersession,
+  type ConditionDelimitation,
+  type SupersessionPlan,
+} from '@/subapps/catalog/pricing/condition-supersession';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
 import type { DiscountConditionDefinition } from '@/subapps/catalog/types/price-list';
 import {
@@ -42,13 +47,23 @@ export async function readPricingSlot(scope: CatalogTx, slotKey: string): Promis
 const othersThan = (slot: PricingSlot, holderId: string): readonly CatalogPricingSlotMember[] =>
   slot.members.filter((member) => member.holderId !== holderId);
 
-/** Η συνθήκη απέναντι στις **άλλες** της υποδοχής της — με τον κανόνα της 3α. */
-export function conditionSlotIssues(slot: PricingSlot, holderId: string, candidate: DiscountConditionDefinition): readonly CatalogIssue[] {
+/**
+ * Η συνθήκη απέναντι στις **άλλες** της υποδοχής της — το σχέδιο διαδοχής (Σ7): ποιες οριοθετούνται, ποια ασάφεια μένει
+ * (ο κανόνας της 3α, μέσα από το `planConditionSupersession` — το ΙΔΙΟ που προεπισκοπεί ο πελάτης).
+ */
+export function conditionSlotPlan(slot: PricingSlot, holderId: string, candidate: DiscountConditionDefinition): SupersessionPlan {
   const others = othersThan(slot, holderId).map((member) => ({
     id: member.holderId,
     definition: { ...candidate, validFrom: member.validFrom, validUntil: member.validUntil },
   }));
-  return findAmbiguousConditions(candidate, others);
+  return planConditionSupersession(candidate, others);
+}
+
+/** Η υποδοχή με τα οριοθετημένα μέλη της — γράφεται **μία** φορά, μαζί με το μέλος της νέας συνθήκης. */
+export function withDelimitedMembers(slot: PricingSlot, delimitations: readonly ConditionDelimitation[]): PricingSlot {
+  const until = new Map(delimitations.map((delimitation) => [delimitation.id, delimitation.validUntil]));
+  if (until.size === 0) return slot;
+  return { ...slot, members: slot.members.map((member) => ({ ...member, validUntil: until.get(member.holderId) ?? member.validUntil })) };
 }
 
 /** Το κοινό λίστας δεν έχει ισχύ: **κάθε** άλλο μέλος είναι ασάφεια. */

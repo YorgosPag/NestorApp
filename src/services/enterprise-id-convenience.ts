@@ -112,7 +112,6 @@ export const generateOperationId = () => enterpriseIdService.generateOperationId
 // BOQ / Quantity Surveying (ADR-175)
 export const generateBoqItemId = () => enterpriseIdService.generateBoqItemId();
 export const generateBoqCategoryId = () => enterpriseIdService.generateBoqCategoryId();
-export const generateBoqPriceListId = () => enterpriseIdService.generateBoqPriceListId();
 export const generateBoqTemplateId = () => enterpriseIdService.generateBoqTemplateId();
 
 // Accounting (Subapp — ADR-ACC-001 through ADR-ACC-010)

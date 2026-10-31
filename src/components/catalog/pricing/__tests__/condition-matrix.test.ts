@@ -32,6 +32,7 @@ const input = (over: Partial<ConditionMatrixInput>): ConditionMatrixInput => ({
   customerGroups: [WHOLESALE],
   conditions: [],
   draft: null,
+  pendingIds: new Set(),
   nowMs: NOW,
   ...over,
 });
@@ -74,18 +75,58 @@ describe('condition-matrix — SAP condition table: ομάδα έκπτωσης 
 
   it('ασάφεια με το ΠΡΟΧΕΙΡΟ, ζωντανά — και σημειώνονται ΚΑΙ οι δύο πλευρές (ισοπαλία ≠ «η πρώτη»)', () => {
     const conditions = [condition('stored', { validFrom: '2026-11-01T00:00:00.000Z' })];
-    const draft = { id: 'dcnd_new', definition: definition({ validFrom: '2026-12-01T00:00:00.000Z' }) };
+    // Ίδια αρχή ⇒ καμία «προηγούμενη» να οριοθετηθεί (Σ7): γνήσια ασάφεια.
+    const draft = { id: 'dcnd_new', definition: definition({ validFrom: '2026-11-01T00:00:00.000Z' }) };
     const cell = buildConditionMatrix(input({ conditions, draft })).cells.get(cellKeyOf('dgrp_tosh', 'anonymous'));
     expect(cell?.ambiguous).toBe(true);
     expect(cell?.entries.filter((entry) => entry.ambiguous).map((entry) => entry.id).sort()).toEqual(['dcnd_new', 'stored'].sort());
   });
 
+  // Σ7 (ζωντανή επαλήθευση): «Νέα περίοδος από 1/12» πάνω σε ανοιχτή έβγαζε ΠΑΝΤΑ «Ασάφεια».
+  it('Σ7: νέα περίοδος από 1/12 ΟΡΙΟΘΕΤΕΙ την ανοιχτή — δείχνεται πριν από την αποθήκευση, το κελί δεν κοκκινίζει', () => {
+    const conditions = [condition('open', {})];
+    const draft = { id: 'dcnd_new', definition: definition({ validFrom: '2026-12-01T00:00:00.000Z', rule: chain(4000) }) };
+    const cell = buildConditionMatrix(input({ conditions, draft })).cells.get(cellKeyOf('dgrp_tosh', 'anonymous'));
+    expect(cell?.ambiguous).toBe(false);
+    expect(cell?.entries.map((entry) => [entry.id, entry.verdict, entry.delimited, entry.definition.validUntil])).toEqual([
+      ['open', 'valid', true, '2026-12-01T00:00:00.000Z'],
+      ['dcnd_new', 'notYetValid', false, null],
+    ]);
+  });
+
+  it('Σ7: σε αποστολή (εκκρεμής) η οριοθέτηση λέγεται · μετά το 200, πριν από το στιγμιότυπο, καμία «Ασάφεια» που αναβοσβήνει', () => {
+    const conditions = [condition('open', {}), condition('dcnd_new', { validFrom: '2026-12-01T00:00:00.000Z' })];
+    const pending = buildConditionMatrix(input({ conditions, pendingIds: new Set(['dcnd_new']) })).cells.get(cellKeyOf('dgrp_tosh', 'anonymous'));
+    expect(pending?.entries.find((entry) => entry.id === 'open')?.delimited).toBe(true);
+    const confirmed = buildConditionMatrix(input({ conditions })).cells.get(cellKeyOf('dgrp_tosh', 'anonymous'));
+    expect(confirmed?.ambiguous).toBe(false);
+    expect(confirmed?.entries.find((entry) => entry.id === 'open')?.delimited).toBe(false);
+  });
+
+  it('Σ7: προσφορά ΜΕΣΑ σε ανοιχτή (θα ήθελε σπάσιμο) μένει ασάφεια — καμία σιωπηλή οριοθέτηση', () => {
+    const conditions = [condition('open', {})];
+    const november = { validFrom: '2026-11-01T00:00:00.000Z', validUntil: '2026-12-01T00:00:00.000Z' };
+    const draft = { id: 'dcnd_promo', definition: definition(november) };
+    const cell = buildConditionMatrix(input({ conditions, draft })).cells.get(cellKeyOf('dgrp_tosh', 'anonymous'));
+    expect(cell?.ambiguous).toBe(true);
+    expect(cell?.entries.find((entry) => entry.id === 'open')).toEqual(expect.objectContaining({ delimited: false, ambiguous: true }));
+  });
+
   it('Σ2 (ζωντανά): νέα συνθήκη σε αποστολή — το πρόχειρο αντικαθιστά την ΑΙΣΙΟΔΟΞΗ εγγραφή του, όχι «ασάφεια με τον εαυτό του»', () => {
     const conditions = [condition('dcnd_new', {})];
-    const draft = { id: 'dcnd_new', definition: definition({}) };
+    // Ο άνθρωπος συνεχίζει να γράφει στην ΙΔΙΑ υποδοχή (αλλιώς δεν θα ήταν πρόχειρο — Σ5).
+    const draft = { id: 'dcnd_new', definition: definition({ rule: chain(2000) }) };
     const cell = buildConditionMatrix(input({ conditions, draft })).cells.get(cellKeyOf('dgrp_tosh', 'anonymous'));
     expect(cell?.entries.map((entry) => [entry.id, entry.isDraft, entry.ambiguous])).toEqual([['dcnd_new', true, false]]);
     expect(cell?.ambiguous).toBe(false);
+  });
+
+  it('Σ5 (ζωντανά): ανέγγιχτο πρόχειρο μιας αποθηκευμένης ΔΕΝ είναι πρόχειρο — μένει στις περιόδους, το κελί δεν λέγεται «μη αποθηκευμένο»', () => {
+    const conditions = [condition('c1', { audience: { kind: 'customerGroup', customerGroupId: 'cgrp_w' } })];
+    const draft = { id: 'c1', definition: definition({ audience: { kind: 'customerGroup', customerGroupId: 'cgrp_w' } }) };
+    const cell = buildConditionMatrix(input({ conditions, draft })).cells.get(cellKeyOf('dgrp_tosh', 'customerGroup:cgrp_w'));
+    expect(cell?.entries.map((entry) => [entry.id, entry.isDraft])).toEqual([['c1', false]]);
+    expect(cell?.current.map((entry) => entry.id)).toEqual(['c1']);
   });
 
   it('το πρόχειρο μιας αποθηκευμένης την ΑΝΤΙΚΑΘΙΣΤΑ (δεν συγκρούεται με τον εαυτό της) — και μετακομίζει κελί', () => {

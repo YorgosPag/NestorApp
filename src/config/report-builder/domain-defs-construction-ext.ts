@@ -12,7 +12,7 @@
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { BOQ_SCOPE_VALUES } from '@/types/boq';
+import { BOQ_SCOPE_VALUES, BOQ_SOURCE_AUTHORITIES } from '@/types/boq';
 import type { DomainDefinition } from './report-builder-types';
 
 // ============================================================================
@@ -39,8 +39,6 @@ const MEASUREMENT_METHODS = [
 const QA_STATUSES = ['pending', 'passed', 'failed', 'na'] as const;
 
 const WASTE_POLICIES = ['inherited', 'overridden'] as const;
-
-const PRICE_AUTHORITIES = ['master', 'project', 'item'] as const;
 
 // BOQ scope: SSoT = `BOQ_SCOPE_VALUES` (@/types/boq, ADR-329 §3.1 — 5 τιμές).
 // Το χειρόγραφο αντίγραφο ['building', 'unit'] έκρυβε 3 εύρη και περιείχε τιμή
@@ -153,7 +151,7 @@ export const BOQ_ITEMS_DEFINITION: DomainDefinition = {
     { key: 'materialUnitCost', labelKey: 'domains.boqItems.fields.materialUnitCost', type: 'currency', filterable: true, sortable: true, defaultVisible: false, format: 'currency' },
     { key: 'laborUnitCost', labelKey: 'domains.boqItems.fields.laborUnitCost', type: 'currency', filterable: true, sortable: true, defaultVisible: false, format: 'currency' },
     { key: 'equipmentUnitCost', labelKey: 'domains.boqItems.fields.equipmentUnitCost', type: 'currency', filterable: true, sortable: true, defaultVisible: false, format: 'currency' },
-    { key: 'priceAuthority', labelKey: 'domains.boqItems.fields.priceAuthority', type: 'enum', filterable: true, sortable: false, defaultVisible: false, enumValues: PRICE_AUTHORITIES, enumLabelPrefix: 'domains.boqItems.enums.priceAuthority' },
+    { key: 'priceAuthority', labelKey: 'domains.boqItems.fields.priceAuthority', type: 'enum', filterable: true, sortable: false, defaultVisible: false, enumValues: BOQ_SOURCE_AUTHORITIES, enumLabelPrefix: 'domains.boqItems.enums.priceAuthority' },
     // Status & QA
     { key: 'status', labelKey: 'domains.boqItems.fields.status', type: 'enum', filterable: true, sortable: true, defaultVisible: true, enumValues: BOQ_ITEM_STATUSES, enumLabelPrefix: 'domains.boqItems.enums.status' },
     { key: 'qaStatus', labelKey: 'domains.boqItems.fields.qaStatus', type: 'enum', filterable: true, sortable: true, defaultVisible: false, enumValues: QA_STATUSES, enumLabelPrefix: 'domains.boqItems.enums.qaStatus' },

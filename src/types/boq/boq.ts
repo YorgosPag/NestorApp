@@ -20,6 +20,7 @@ import type {
   WastePolicy,
   SourceAuthority,
 } from './units';
+import type { BoqPriceSource } from './price-source';
 
 // ============================================================================
 // BOQ SCOPE & COST ALLOCATION (ADR-329)
@@ -157,8 +158,11 @@ export interface BOQItem {
   /** Κόστος εξοπλισμού ανά μονάδα (€) */
   equipmentUnitCost: number;
 
-  /** Προέλευση τιμής (master/project/item override) */
+  /** Προέλευση τιμής — συνέπεια του `priceSource`, ποτέ ανεξάρτητη δήλωση (`boq-price-source`) */
   priceAuthority: SourceAuthority;
+
+  /** Στιγμιότυπο + δεσμός με τον τιμοκατάλογο κόστους (ADR-923 §5.11 «3ε»). `null`/απόν = καμία πηγή. */
+  priceSource?: BoqPriceSource | null;
 
   // --- Σύνδεση με Gantt ---
 
@@ -369,9 +373,11 @@ export interface CreateBOQItemInput {
   unit: BOQMeasurementUnit;
   estimatedQuantity: number;
   wasteFactor?: number;
+  wastePolicy?: WastePolicy;
   materialUnitCost?: number;
   laborUnitCost?: number;
   equipmentUnitCost?: number;
+  priceSource?: BoqPriceSource | null;
   linkedPhaseId?: string | null;
   linkedTaskId?: string | null;
   source?: BOQSource;
@@ -393,6 +399,7 @@ export interface UpdateBOQItemInput {
   laborUnitCost?: number;
   equipmentUnitCost?: number;
   priceAuthority?: SourceAuthority;
+  priceSource?: BoqPriceSource | null;
   linkedPhaseId?: string | null;
   linkedTaskId?: string | null;
   linkedInvoiceId?: string | null;
@@ -429,7 +436,7 @@ export const BOQ_ITEM_DEFAULTS = {
   measurementMethod: 'manual' as const,
   qaStatus: 'pending' as const,
   wastePolicy: 'inherited' as const,
-  priceAuthority: 'master' as const,
+  priceAuthority: 'item' as const,
   costAllocationMethod: 'by_area' as const,
   wasteFactor: 0,
   materialUnitCost: 0,

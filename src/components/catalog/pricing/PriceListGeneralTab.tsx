@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DEFAULT_LANGUAGE } from '@/i18n/languages';
 import { basisPointsFromPercent, effectivePercent } from '@/lib/pricing/discount-rule';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
+import { useProjectsList } from '@/hooks/useProjectsList';
 import type { PriceListDefinition } from '@/subapps/catalog/types/price-list';
 import type { CustomerGroupWire } from '@/subapps/catalog/types/pricing-views';
 import {
@@ -65,17 +66,42 @@ function MeaningFields({ draft, update, issues, meaningLocked, disabled }: Price
           </Select>
         )}
       </CatalogField>
-      <CatalogField label={t('pricing.general.priceType')} hint={lockHint ?? t(PRICE_TYPE_HINT_KEYS[draft.priceType])} issues={issues} path="priceType">
-        {({ id, describedBy }) => (
-          <Select value={draft.priceType} disabled={locked} onValueChange={(priceType) => { if (isPriceType(priceType)) update({ ...draft, priceType }); }}>
-            <SelectTrigger id={id} aria-describedby={describedBy}><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {PRICE_TYPES.map((type) => <SelectItem key={type} value={type}>{t(PRICE_TYPE_KEYS[type])}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        )}
-      </CatalogField>
+      {draft.kind === 'sales' ? (
+        <CatalogField label={t('pricing.general.priceType')} hint={lockHint ?? t(PRICE_TYPE_HINT_KEYS[draft.priceType])} issues={issues} path="priceType">
+          {({ id, describedBy }) => (
+            <Select value={draft.priceType} disabled={locked} onValueChange={(priceType) => { if (isPriceType(priceType)) update({ ...draft, priceType }); }}>
+              <SelectTrigger id={id} aria-describedby={describedBy}><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {PRICE_TYPES.map((type) => <SelectItem key={type} value={type}>{t(PRICE_TYPE_KEYS[type])}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+        </CatalogField>
+      ) : null}
     </div>
+  );
+}
+
+/** Radix δεσμεύει το κενό `value` (CHECK 3.48): η «όλη η εταιρεία» έχει δική της τιμή. */
+const WHOLE_WORKSPACE = 'whole-workspace';
+
+/** Σε ποιο επίπεδο ισχύει η λίστα κόστους: master του χώρου, ή αραιή λίστα ενός έργου (ADR-175 §4.1.3). */
+function ProjectScopeField({ draft, update, issues, disabled, meaningLocked }: PriceListGeneralTabProps) {
+  const { t } = useCatalogText();
+  const { projects } = useProjectsList({ enabled: draft.kind === 'cost' });
+  return (
+    <CatalogField label={t('pricing.general.projectScope')} hint={t('pricing.general.projectScopeHint')} issues={issues} path="projectId">
+      {({ id, describedBy }) => (
+        <Select value={draft.projectId ?? WHOLE_WORKSPACE} disabled={disabled || meaningLocked}
+          onValueChange={(value) => update({ ...draft, projectId: value === WHOLE_WORKSPACE ? null : value })}>
+          <SelectTrigger id={id} aria-describedby={describedBy}><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value={WHOLE_WORKSPACE}>{t('pricing.general.projectScopeWhole')}</SelectItem>
+            {projects.map((project) => <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      )}
+    </CatalogField>
   );
 }
 
@@ -111,7 +137,7 @@ export function PriceListGeneralTab(props: PriceListGeneralTabProps) {
       {draft.kind === 'sales' ? (
         <AudienceField value={draft.audience} onChange={(audience) => update({ ...draft, audience })} allowNone
           customerGroups={customerGroups} disabled={disabled} issues={issues} hint={t('pricing.audience.hint')} />
-      ) : null}
+      ) : <ProjectScopeField {...props} />}
       <FenceField {...props} />
     </section>
   );

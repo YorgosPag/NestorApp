@@ -56,4 +56,11 @@ describe('EditorFooter — δικαιοδοσία', () => {
     renderFooter('products');
     expect(screen.getByRole('button', { name: 'common.save' })).toBeTruthy();
   });
+
+  it('🔴 πάντα ορατό: κολλά στο κάτω άκρο του κυλιστή, αδιαφανές (Σ8 — «Αποθήκευση» στα 1491px σε οθόνη 1121px)', () => {
+    gate = { pending: false, verdict: 'granted-by-role' };
+    const { container } = renderFooter('products');
+    const classes = container.querySelector('footer')?.className.split(/\s+/) ?? [];
+    expect(classes).toEqual(expect.arrayContaining(['sticky', 'bottom-0', 'bg-card']));
+  });
 });

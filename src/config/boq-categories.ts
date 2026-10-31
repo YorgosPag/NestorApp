@@ -219,6 +219,19 @@ export function atoeGroupCodeOf(code: string): string {
   return dot === -1 ? code : code.slice(0, dot);
 }
 
+/**
+ * Η κανονική γραφή ενός κωδικού ΑΤΟΕ: οι κωδικοί είναι λατινικοί (`OIK-4.01`), ο άνθρωπος και το Excel γράφουν
+ * συχνά ελληνικά γράμματα που μοιάζουν ίδια (`ΟΙΚ-4.01`) — χωρίς αυτό η γραμμή BIM δεν θα έβρισκε ποτέ τη γραμμή master.
+ */
+export function normalizeAtoeCode(text: string): string {
+  return text.trim().toLocaleUpperCase('el').replace(/^ΟΙΚ/, 'OIK');
+}
+
+/** Κωδικός ΑΤΟΕ οποιουδήποτε επιπέδου, με ομάδα που υπάρχει στον κατάλογο (`atoeGroupCodeOf`). */
+export function isKnownAtoeCode(code: string): boolean {
+  return /^OIK-\d+(\.\d+)*$/.test(code) && findATOECategory(atoeGroupCodeOf(code)) !== undefined;
+}
+
 /** Default waste factor βάσει κωδικού κατηγορίας */
 export function getDefaultWasteFactor(categoryCode: string): number {
   return findATOECategory(categoryCode)?.defaultWasteFactor ?? 0;

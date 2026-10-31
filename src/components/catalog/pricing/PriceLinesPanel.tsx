@@ -9,8 +9,7 @@
  *    από την ίδια επικύρωση με τον διακομιστή · αναίρεση/επανάληψη · αποθήκευση σε δέσμες με «N από M».
  * 🔑 **Μόνο η πρόχειρη γράφεται**: δημοσιευμένη/αντικατεστημένη έκδοση είναι αμετάβλητη (SAP: η περίοδος που ισχύει δεν
  *    ξαναγράφεται — φτιάχνεις νέα)· σε σπορά, ούτε η πρόχειρη (ο γραφέας αρνείται `versionSeeding`) — το λέμε, δεν το κρύβουμε.
- * ⚠️ Δηλωμένο κενό: γραμμές **εργασιών ΑΤΟΕ** (ανάλυση υλικό/εργασία/εξοπλισμός) φαίνονται, αλλά η ανάλυση δεν επεξεργάζεται
- *    ακόμη εδώ (ADR-923 §5.11 «3δ»).
+ * 🔑 Το είδος της λίστας ορίζει τις στήλες και τη νέα γραμμή: πώληση = SKU · κόστος = εργασία ΑΤΟΕ με ανάλυση («3ε»).
  */
 
 import React, { useEffect, useMemo, useRef } from 'react';
@@ -23,11 +22,12 @@ import { useCatalogCollection } from '@/hooks/catalog/useCatalogCollection';
 import { useUomLabel } from '@/hooks/useUomLabel';
 import { DEFAULT_UOM } from '@/lib/uom/uom-registry';
 import type { DiscountGroupWire, PriceListVersionWire, PriceListWire } from '@/subapps/catalog/types/pricing-views';
-import { acceptsDiscountGroups } from '@/subapps/catalog/vocabulary/pricing';
+import { LINE_SUBJECT_OF_LIST_KIND, listAcceptsDiscounts, type PriceListKind } from '@/subapps/catalog/vocabulary/pricing';
 import { useIssueMessage } from '../shared/CatalogIssues';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
 import { useCatalogGridWords } from '../shared/use-catalog-grid-words';
 import { newPriceLineRow, type PriceLineRow } from './price-line-rows';
+import { costLineColumns } from './price-line-cost-columns';
 import { PRICE_LINE_ISSUE_PATHS, priceLineColumns } from './price-line-columns';
 import { usePriceLineGrid } from './use-price-line-grid';
 
@@ -47,8 +47,9 @@ function useColumns(props: PriceLinesPanelProps, grid: Grid, editable: boolean):
   const { t, text } = useCatalogText();
   const message = useIssueMessage();
   const uom = useUomLabel();
-  const groups = acceptsDiscountGroups(props.list.priceType) ? props.discountGroups : null;
-  const columns = priceLineColumns({ words: { t, text }, uom, message, discountGroups: groups });
+  const groups = listAcceptsDiscounts(props.list) ? props.discountGroups : null;
+  const input = { words: { t, text }, uom, message, discountGroups: groups };
+  const columns = props.list.kind === 'cost' ? costLineColumns(input) : priceLineColumns(input);
   if (!editable) return columns;
   const remove = (row: PriceLineRow) =>
     grid.change({ rows: grid.draft.rows.filter((other) => other.key !== row.key), removed: row.stored ? [...grid.draft.removed, row.stored] : grid.draft.removed });
@@ -107,9 +108,9 @@ function Footer({ grid, props }: { readonly grid: Grid; readonly props: PriceLin
   );
 }
 
-function useNewRowFactory() {
+function useNewRowFactory(kind: PriceListKind) {
   const counter = useRef(0);
-  return (): PriceLineRow => { counter.current += 1; return newPriceLineRow('variant', `new-${counter.current}`, DEFAULT_UOM); };
+  return (): PriceLineRow => { counter.current += 1; return newPriceLineRow(LINE_SUBJECT_OF_LIST_KIND[kind], `new-${counter.current}`, DEFAULT_UOM); };
 }
 
 export function PriceLinesPanel(props: PriceLinesPanelProps) {
@@ -120,7 +121,7 @@ export function PriceLinesPanel(props: PriceLinesPanelProps) {
   const grid = usePriceLineGrid({ list: props.list, versionId: props.version.id, discountGroups: props.discountGroups, attributes: attributes.items });
   const reason = readOnlyReason(props);
   const columns = useColumns(props, grid, reason === null);
-  const createRow = useNewRowFactory();
+  const createRow = useNewRowFactory(props.list.kind);
   const { reportDirty } = props;
   useEffect(() => reportDirty(grid.dirty), [grid.dirty, reportDirty]);
   const issuesOf = useMemo(() => (row: PriceLineRow, _index: number, columnId: string) =>

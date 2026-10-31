@@ -22,6 +22,7 @@ import { derivedSummaryCosts } from '@/services/measurements';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { BOQSummaryCards } from './MeasurementsTabContent/BOQSummaryCards';
 import { BOQCoverageIndicator } from './MeasurementsTabContent/BOQCoverageIndicator';
+import { BOQPriceReviewPanel } from './MeasurementsTabContent/BOQPriceReviewPanel';
 import { BOQFilterBar } from './MeasurementsTabContent/BOQFilterBar';
 import { BOQCategoryAccordion, getFloorGroupKeys } from './MeasurementsTabContent/BOQCategoryAccordion';
 import { BOQItemEditor } from './MeasurementsTabContent/BOQItemEditor';
@@ -52,7 +53,7 @@ interface MeasurementsTabContentProps {
 // ============================================================================
 
 export function MeasurementsTabContent({ building }: MeasurementsTabContentProps) {
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation('building');
   const colors = useSemanticColors();
   const { user } = useAuth();
   const { confirm, dialogProps } = useConfirmDialog();
@@ -74,6 +75,7 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
     updateItem,
     deleteItem,
     updateStatus,
+    refreshItems,
   } = useBOQItems(
     building.id,
     building.projectId,
@@ -247,6 +249,9 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
 
       {/* Floor coverage gap — non-blocking informational banner */}
       <BOQCoverageIndicator items={items} buildingId={building.id} />
+
+      {/* ADR-923 §5.11 «3ε» — price review against the cost rate book; renders nothing when there is nothing to review */}
+      <BOQPriceReviewPanel items={items} projectId={building.projectId} companyId={resolvedCompanyId} userId={user?.uid ?? ''} onApplied={refreshItems} />
 
       {/* Filter Bar + Actions */}
       <header className="flex flex-col sm:flex-row items-start sm:items-center gap-2">

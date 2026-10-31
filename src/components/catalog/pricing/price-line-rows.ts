@@ -14,6 +14,7 @@
 
 import { dequal } from 'dequal';
 
+import { normalizeAtoeCode } from '@/config/boq-categories';
 import { minorFromMajor, sumMinor, type MinorAmount } from '@/lib/money/money';
 import { priceLineSubjectKey } from '@/subapps/catalog/pricing/price-line-subject';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
@@ -59,7 +60,7 @@ export function minorFromEnteredText(text: string): MinorAmount | null {
   return minorFromMajor(parsed.value);
 }
 
-export const EMPTY_BREAKDOWN: CostBreakdown = { material: 0, labor: 0, equipment: 0, defaultWasteBp: 0, materialVariantId: null };
+export const EMPTY_BREAKDOWN: CostBreakdown = { description: null, material: 0, labor: 0, equipment: 0, defaultWasteBp: 0, materialVariantId: null };
 
 /** Η τιμή μιας γραμμής εργασίας **είναι** το άθροισμα της ανάλυσής της. */
 export const breakdownTotal = (breakdown: CostBreakdown): MinorAmount =>
@@ -141,8 +142,20 @@ export const pendingCodes = (draft: PriceLineDraft): readonly string[] =>
 
 /** Κωδικός ΑΤΟΕ + περιοχή ⇒ υποκείμενο (σύγχρονα — δεν χρειάζεται αναζήτηση). */
 export function costItemSubject(code: string, region: string | null): PriceLineSubject | null {
-  const atoeCode = code.trim();
+  const atoeCode = normalizeAtoeCode(code);
   return atoeCode === '' ? null : { kind: 'costItem', atoeCode, region: region === null || region.trim() === '' ? null : region.trim() };
+}
+
+/** Κωδικός ή περιοχή εργασίας: η ταυτότητα της γραμμής αλλάζει **αμέσως**, χωρίς επίλυση. */
+export function withCostSubject(row: PriceLineRow, code: string, region: string | null): PriceLineRow {
+  const subject = costItemSubject(code, region);
+  return { ...row, code: subject?.kind === 'costItem' ? subject.atoeCode : '', region: subject?.kind === 'costItem' ? subject.region : region, subject, resolution: subject === null ? 'pending' : 'resolved' };
+}
+
+/** Αλλαγή της ανάλυσης: η τιμή της γραμμής την ακολουθεί, δεν γράφεται ανεξάρτητα. */
+export function withBreakdown(row: PriceLineRow, patch: Partial<CostBreakdown>): PriceLineRow {
+  const breakdown = { ...(row.breakdown ?? EMPTY_BREAKDOWN), ...patch };
+  return { ...row, breakdown, netPrice: breakdownTotal(breakdown) };
 }
 
 /** Η γραμμή όπως θα σταλεί — `null` αν λείπει υποκείμενο ή τιμή (δεν στέλνεται, φαίνεται ως εύρημα). */

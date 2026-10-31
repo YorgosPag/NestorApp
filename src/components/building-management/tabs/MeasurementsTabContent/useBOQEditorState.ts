@@ -15,13 +15,17 @@ import type {
   BOQItemStatus,
   BOQMeasurementUnit,
   BOQScope,
+  BoqPriceSource,
   CostAllocationMethod,
   CreateBOQItemInput,
   UpdateBOQItemInput,
+  WastePolicy,
 } from '@/types/boq';
 import type { MasterBOQCategory } from '@/config/boq-categories';
 import { getAllowedUnits, getDefaultWasteFactor } from '@/config/boq-categories';
 import { computeGrossQuantity } from '@/services/measurements';
+import { BOQ_PRICE_FIELDS } from '@/services/measurements/boq-line-role';
+import { priceLinkFields, unitCostsOf, wasteFactorOf } from '@/services/measurements/boq-price-source';
 
 // ============================================================================
 // CONSTANTS
@@ -66,12 +70,17 @@ export interface EditorFormState {
   materialUnitCost: string;
   laborUnitCost: string;
   equipmentUnitCost: string;
+  /** ADR-923 «3ε»: ο δεσμός με τον τιμοκατάλογο κόστους (`null` = καμία πηγή). */
+  priceSource: BoqPriceSource | null;
+  wastePolicy: WastePolicy;
+  /** Το έργο της γραμμής: διαλέγει ποιες λίστες κόστους ισχύουν. */
+  projectId: string;
   linkedPhaseId: string;
   notes: string;
   status: BOQItemStatus;
 }
 
-export function createInitialState(item: BOQItem | null, defaultCategory: string): EditorFormState {
+export function createInitialState(item: BOQItem | null, defaultCategory: string, projectId = ''): EditorFormState {
   if (item) {
     return {
       categoryCode: item.categoryCode,
@@ -91,6 +100,9 @@ export function createInitialState(item: BOQItem | null, defaultCategory: string
       materialUnitCost: String(item.materialUnitCost),
       laborUnitCost: String(item.laborUnitCost),
       equipmentUnitCost: String(item.equipmentUnitCost),
+      priceSource: item.priceSource ?? null,
+      wastePolicy: item.wastePolicy,
+      projectId: item.projectId,
       linkedPhaseId: item.linkedPhaseId ?? '',
       notes: item.notes ?? '',
       status: item.status,
@@ -115,9 +127,28 @@ export function createInitialState(item: BOQItem | null, defaultCategory: string
     materialUnitCost: '0',
     laborUnitCost: '0',
     equipmentUnitCost: '0',
+    priceSource: null,
+    wastePolicy: 'inherited',
+    projectId,
     linkedPhaseId: '',
     notes: '',
     status: 'draft',
+  };
+}
+
+/** Τι σημαίνει η αλλαγή ενός πεδίου για τον δεσμό: η **μία** μετάβαση της φόρμας, καθαρή. */
+export function withFormField<K extends keyof EditorFormState>(form: EditorFormState, key: K, value: EditorFormState[K]): EditorFormState {
+  const next = { ...form, [key]: value };
+  if ((BOQ_PRICE_FIELDS as readonly string[]).includes(key)) return { ...next, priceSource: null };
+  if (key === 'wasteFactor') return { ...next, wastePolicy: 'overridden' };
+  if (key !== 'priceSource' || next.priceSource === null) return next;
+  const costs = unitCostsOf(next.priceSource);
+  return {
+    ...next,
+    materialUnitCost: String(costs.materialUnitCost),
+    laborUnitCost: String(costs.laborUnitCost),
+    equipmentUnitCost: String(costs.equipmentUnitCost),
+    wasteFactor: next.wastePolicy === 'inherited' ? String(wasteFactorOf(next.priceSource) * 100) : next.wasteFactor,
   };
 }
 
@@ -184,7 +215,7 @@ interface EditorNumbers {
 export function buildBOQUpdatePayload(form: EditorFormState, numbers: EditorNumbers, pricesLocked: boolean): UpdateBOQItemInput {
   const prices = pricesLocked
     ? {}
-    : { materialUnitCost: numbers.materialCost, laborUnitCost: numbers.laborCost, equipmentUnitCost: numbers.equipmentCost };
+    : { materialUnitCost: numbers.materialCost, laborUnitCost: numbers.laborCost, equipmentUnitCost: numbers.equipmentCost, ...priceLinkFields(form.priceSource) };
   return {
     title: form.title.trim(),
     subCategoryCode: form.subCategoryCode || null,
@@ -192,6 +223,7 @@ export function buildBOQUpdatePayload(form: EditorFormState, numbers: EditorNumb
     unit: form.unit,
     estimatedQuantity: numbers.numericEstimated,
     wasteFactor: numbers.numericWaste,
+    wastePolicy: form.wastePolicy,
     actualQuantity: form.actualQuantity ? parseFloat(form.actualQuantity) : null,
     ...prices,
     linkedPhaseId: form.linkedPhaseId || null,
@@ -205,12 +237,12 @@ export function useBOQEditorState({
   const isEdit = item !== null;
   const defaultCategory = categories[0]?.code ?? 'OIK-1';
 
-  const [form, setForm] = useState<EditorFormState>(() => createInitialState(item, defaultCategory));
+  const [form, setForm] = useState<EditorFormState>(() => createInitialState(item, defaultCategory, projectId));
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (open) setForm(createInitialState(item, defaultCategory));
-  }, [open, item, defaultCategory]);
+    if (open) setForm(createInitialState(item, defaultCategory, projectId));
+  }, [open, item, defaultCategory, projectId]);
 
   const scopeLocked = isEdit && form.status !== 'draft';
 
@@ -240,7 +272,7 @@ export function useBOQEditorState({
   const updateField = useCallback(
     <K extends keyof EditorFormState>(key: K, value: EditorFormState[K]) => {
       if (scopeLocked && SCOPE_FIELDS.includes(key)) return;
-      setForm((prev) => ({ ...prev, [key]: value }));
+      setForm((prev) => withFormField(prev, key, value));
     }, [scopeLocked],
   );
 
@@ -303,9 +335,11 @@ export function useBOQEditorState({
           unit: form.unit,
           estimatedQuantity: numericEstimated,
           wasteFactor: numericWaste,
+          wastePolicy: form.wastePolicy,
           materialUnitCost: materialCost,
           laborUnitCost: laborCost,
           equipmentUnitCost: equipmentCost,
+          priceSource: form.priceSource,
           linkedPhaseId: form.linkedPhaseId || null,
           notes: form.notes.trim() || null,
         };

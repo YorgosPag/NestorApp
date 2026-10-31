@@ -155,7 +155,7 @@
 | 71 | `BUILDING_MILESTONES` | `building_milestones` | — | Timeline milestones |
 | 72 | `BOQ_ITEMS` | `boq_items` | ADR-175 | Επιμετρήσεις (ΑΤΟΕ) |
 | 73 | `BOQ_CATEGORIES` | `boq_categories` | ADR-175 | Κατηγορίες ΑΤΟΕ |
-| 74 | `BOQ_PRICE_LISTS` | `boq_price_lists` | ADR-175 | Τιμοκατάλογοι |
+| 74 | ~~`BOQ_PRICE_LISTS`~~ | διαγράφηκε 2026-10-31 | ADR-923 §5.11 «3ε» | Απορροφήθηκε από το `catalog_price_lists` |
 | 75 | `BOQ_TEMPLATES` | `boq_templates` | ADR-175 | Templates επιμετρήσεων |
 
 ### 3.11 Labor Compliance & Attendance (4)
@@ -477,7 +477,7 @@
 
 Οι παρακάτω ορίζονται στον κώδικα αλλά **κανένα write operation δεν βρέθηκε**:
 
-`leads`, `activities`, `obligationTemplates`, `obligation_transmittals`, `analytics`, `metrics`, `teams`, `roles`, `permissions`, `relationships`, `forms`, `submissions`, `surveys`, `attachments`, `cad_layers`, `cad_sessions`, `project_floorplans`, `calendar`, `bookings`, `logs`, `audit`, `inventory`, `assets`, `invoices`, `transactions`, `tokens`, `security_roles`, `email_domain_policies`, `country_security_policies`, `translations`, `locales`, `bot_configs`, `bot_catalogs`, `bot_intents`, `construction_tasks`, `digital_work_cards`, `boq_categories`, `boq_price_lists`, `boq_templates`, `cheques`, `legal_contracts`, `brokerage_agreements`, `commission_records`, `floor_floorplans`, `layer-events`, `layer_groups`
+`leads`, `activities`, `obligationTemplates`, `obligation_transmittals`, `analytics`, `metrics`, `teams`, `roles`, `permissions`, `relationships`, `forms`, `submissions`, `surveys`, `attachments`, `cad_layers`, `cad_sessions`, `project_floorplans`, `calendar`, `bookings`, `logs`, `audit`, `inventory`, `assets`, `invoices`, `transactions`, `tokens`, `security_roles`, `email_domain_policies`, `country_security_policies`, `translations`, `locales`, `bot_configs`, `bot_catalogs`, `bot_intents`, `construction_tasks`, `digital_work_cards`, `boq_categories`, `boq_templates`, `cheques`, `legal_contracts`, `brokerage_agreements`, `commission_records`, `floor_floorplans`, `layer-events`, `layer_groups`
 
 > Αυτές χρησιμοποιούνται μόνο για reads, ή είναι σε σχεδιαστική φάση (spec exists, implementation pending).
 
@@ -701,7 +701,7 @@ await setDoc(doc(db, COLLECTIONS.ATTENDANCE_EVENTS, eventId), {
 
 Οι παρακάτω 47 collections δεν έχουν write operations στον κώδικα, άρα δεν αφορούνται από το Enterprise ID audit:
 
-`leads`, `activities`, `obligationTemplates`, `obligation_transmittals`, `analytics`, `metrics`, `teams`, `roles`, `permissions`, `relationships`, `forms`, `submissions`, `surveys`, `attachments`, `cad_layers`, `cad_sessions`, `project_floorplans`, `calendar`, `bookings`, `logs`, `audit`, `inventory`, `assets`, `invoices`, `transactions`, `tokens`, `security_roles`, `email_domain_policies`, `country_security_policies`, `translations`, `locales`, `bot_configs`, `bot_catalogs`, `bot_intents`, `construction_tasks`, `digital_work_cards`, `boq_categories`, `boq_price_lists`, `boq_templates`, `cheques`, `legal_contracts`, `brokerage_agreements`, `commission_records`, `floor_floorplans`, `layer-events`, `layer_groups`, `obligationSections`
+`leads`, `activities`, `obligationTemplates`, `obligation_transmittals`, `analytics`, `metrics`, `teams`, `roles`, `permissions`, `relationships`, `forms`, `submissions`, `surveys`, `attachments`, `cad_layers`, `cad_sessions`, `project_floorplans`, `calendar`, `bookings`, `logs`, `audit`, `inventory`, `assets`, `invoices`, `transactions`, `tokens`, `security_roles`, `email_domain_policies`, `country_security_policies`, `translations`, `locales`, `bot_configs`, `bot_catalogs`, `bot_intents`, `construction_tasks`, `digital_work_cards`, `boq_categories`, `boq_templates`, `cheques`, `legal_contracts`, `brokerage_agreements`, `commission_records`, `floor_floorplans`, `layer-events`, `layer_groups`, `obligationSections`
 
 > **Σημείωση**: Όταν αυτές οι collections αποκτήσουν write operations στο μέλλον, ΠΡΕΠΕΙ να χρησιμοποιήσουν enterprise ID generators (ADR-017).
 

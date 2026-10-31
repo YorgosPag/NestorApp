@@ -7,7 +7,9 @@ import type { DiscountConditionWire } from '@/subapps/catalog/types/pricing-view
 import {
   chainExample,
   conditionDraftIssues,
+  conditionDraftPlan,
   emptyConditionDraft,
+  nextPeriodStart,
   nextTier,
   pickerOfLastDay,
   pickerOfValidFrom,
@@ -22,7 +24,7 @@ import {
 const day = (year: number, month: number, date: number) => new Date(year, month - 1, date);
 
 const base = (over: Partial<DiscountConditionDefinition> = {}): DiscountConditionDefinition => ({
-  ...emptyConditionDraft({ discountGroupId: 'dgrp_tosh', audience: { kind: 'anonymous' } }),
+  ...emptyConditionDraft({ discountGroupId: 'dgrp_tosh', audience: { kind: 'anonymous' }, validFrom: null }),
   rule: { kind: 'chain', steps: [5000, 1000] },
   ...over,
 });
@@ -117,5 +119,37 @@ describe('ευρήματα — ό,τι θα έλεγε ο γραφέας, πρι
     const issues = conditionDraftIssues(base(), context({ conditions: [other] }));
     expect(issues).toEqual([{ code: 'discountConditionAmbiguous', path: 'validFrom', params: { conditionId: 'cdcnd_other' } }]);
     expect(codes(base(), context({ conditions: [other], selfId: 'cdcnd_other' }))).toEqual([]);
+  });
+
+  // Σ7 (ζωντανή επαλήθευση): «Νέα περίοδος από 1/12» πάνω σε ανοιχτή ήταν ΠΑΝΤΑ ασάφεια με κλειδωμένη αποθήκευση.
+  it('Σ7: νέα περίοδος μέσα σε ανοιχτή ⇒ ΟΡΙΟΘΕΤΗΣΗ, όχι εύρημα · ίδια αρχή ⇒ ασάφεια (καμία «προηγούμενη»)', () => {
+    const open = stored('cdcnd_open', base());
+    const december = validFromOfPicker(day(2026, 12, 1));
+    const next = base({ validFrom: december });
+    expect(conditionDraftIssues(next, context({ conditions: [open] }))).toEqual([]);
+    expect(conditionDraftPlan(next, context({ conditions: [open] })).delimitations).toEqual([{ id: 'cdcnd_open', validUntil: december }]);
+    const twin = stored('cdcnd_twin', base({ validFrom: december }));
+    expect(codes(next, context({ conditions: [twin] }))).toEqual(['discountConditionAmbiguous@validFrom']);
+  });
+});
+
+describe('«Νέα περίοδος» — πού αρχίζει (Σ7)', () => {
+  const now = day(2026, 10, 30).getTime() + 15 * 3_600_000;
+
+  it('αύριο (ποτέ αναδρομικά, ποτέ «από πάντα») — ανοιχτή προηγούμενη δεν μετακινεί την αρχή, την οριοθετεί η αποθήκευση', () => {
+    expect(nextPeriodStart([], now)).toBe(validFromOfPicker(day(2026, 10, 31)));
+    expect(nextPeriodStart([{ validFrom: null, validUntil: null }], now)).toBe(validFromOfPicker(day(2026, 10, 31)));
+  });
+
+  it('μετά το ΤΕΛΕΥΤΑΙΟ όριο αν είναι αργότερα (συνέχεια χωρίς κενό) · ληγμένα όρια δεν μετρούν', () => {
+    const lastDay = validUntilOfLastDay(day(2026, 11, 30));
+    const periods = [{ validFrom: null, validUntil: validUntilOfLastDay(day(2026, 3, 1)) }, { validFrom: null, validUntil: lastDay }, { validFrom: null, validUntil: null }];
+    expect(nextPeriodStart(periods, now)).toBe(lastDay);
+  });
+
+  // Σ7 ζωντανά, μετά την αποθήκευση «−40% από 1/12»: η επόμενη «Νέα περίοδος» άρχιζε 1/12 = ΙΔΙΑ αρχή ⇒ ασάφεια.
+  it('τουλάχιστον την ΕΠΟΜΕΝΗ ημέρα της πιο πρόσφατης έναρξης — ώστε η ανοιχτή τελευταία να οριοθετείται, όχι να συγκρούεται', () => {
+    const periods = [{ validFrom: null, validUntil: validFromOfPicker(day(2026, 12, 1)) }, { validFrom: validFromOfPicker(day(2026, 12, 1)), validUntil: null }];
+    expect(nextPeriodStart(periods, now)).toBe(validFromOfPicker(day(2026, 12, 2)));
   });
 });

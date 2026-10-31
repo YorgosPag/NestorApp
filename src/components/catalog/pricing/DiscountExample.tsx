@@ -18,7 +18,8 @@ import { chainExample, tierExamples, type ChainExample } from './discount-condit
 import { percentOfStep } from './discount-chain-input';
 import { formatDiscountPercent } from './use-discount-words';
 
-function Waterfall({ example }: { readonly example: ChainExample }) {
+/** Ο **ένας** καταρράκτης: ζωντανό παράδειγμα και ανάλυση πραγματικής τιμής («3δ» Τμήμα 3). */
+export function Waterfall({ example }: { readonly example: ChainExample }) {
   const { t } = useCatalogText();
   return (
     <ol className="m-0 flex list-none flex-wrap items-center gap-x-2 gap-y-1 p-0 text-sm tabular-nums">

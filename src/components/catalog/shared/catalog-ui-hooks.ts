@@ -13,25 +13,19 @@
 
 import { useCallback } from 'react';
 
-import { useCapability } from '@/auth/hooks/useCapability';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { CATALOG_NAMESPACES } from '@/i18n/namespace-bundles';
-import { resolveHumanLanguage } from '@/i18n/languages';
-import { resolveLocalizedText, type LocalizedText } from '@/i18n/localized-text';
 import { useNotifications } from '@/providers/NotificationProvider';
 import type { CatalogFailure } from '@/services/catalog/catalog-failure';
-import { isGranted } from '@/types/capability-authority';
-import { CATALOG_AUTHORITY_PERMISSIONS, type CatalogAuthority } from '@/subapps/catalog/vocabulary/catalog-authorities';
 import { FAILURE_KEYS } from './catalog-labels';
+import { useCatalogAccess, useLocalizedTextReader } from './catalog-neutral-hooks';
+
+export { useCatalogAccess };
 
 /** `t` του namespace + επίλυση πολύγλωσσων δεδομένων στη γλώσσα του UI. */
 export function useCatalogText() {
   const { t, i18n } = useTranslation(CATALOG_NAMESPACES);
-  const language = resolveHumanLanguage(i18n.language);
-  const text = useCallback(
-    (value: LocalizedText | undefined, fallback = '') => resolveLocalizedText(value, language) || fallback,
-    [language],
-  );
+  const { text, language } = useLocalizedTextReader(i18n.language);
   return { t, text, language };
 }
 
@@ -52,16 +46,6 @@ export function useCatalogFailureNotice(): (failure: CatalogFailure) => void {
 
 // Οι δικαιοδοσίες του καταλόγου — ο ΕΝΑΣ πίνακας, κοινός με τον διακομιστή (`vocabulary/catalog-authorities`).
 export type { CatalogAuthority, CatalogWriteAuthority } from '@/subapps/catalog/vocabulary/catalog-authorities';
-
-/**
- * Η ετυμηγορία **τριών** καταστάσεων: `pending` (η ταυτότητα δεν έφτασε — ούτε κουμπί ούτε «μόνο ανάγνωση») ·
- * `granted` · `denied`. Ζωντανά (ADR-923 §5.10.5): το boolean έχανε το `pending` ⇒ «μόνο ανάγνωση» σε όποιον **έχει** δικαίωμα.
- */
-export function useCatalogAccess(authority: CatalogAuthority): 'pending' | 'granted' | 'denied' {
-  const gate = useCapability(CATALOG_AUTHORITY_PERMISSIONS[authority]);
-  if (gate.pending) return 'pending';
-  return isGranted(gate.verdict) ? 'granted' : 'denied';
-}
 
 /** Μπορεί αυτός ο άνθρωπος να **αλλάζει** το σχήμα; (`pending` ⇒ όχι ακόμη — ποτέ κουμπί πριν την ταυτότητα.) */
 export function useCatalogCanManage(): boolean {

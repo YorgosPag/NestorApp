@@ -6,7 +6,7 @@
  * 1. **Έκδοση**: η δημοσιευμένη που ισχύει τη στιγμή `atMs` (χρονογραμμή, όχι «η τρέχουσα»).
  * 2. **Γραμμή**: του υποκειμένου μέσα σε αυτή την έκδοση.
  * 3. **Ποσό λίστας**: τιμή × ποσότητα / ποσότητα τιμής — μία στρογγύλευση.
- * 4. **Έκπτωση** (μόνο σε τιμοκατάλογο `net_list`): σκληρά φίλτρα (κοινό, ομάδα έκπτωσης, ισχύς)
+ * 4. **Έκπτωση** (μόνο σε τιμοκατάλογο πώλησης `net_list`): σκληρά φίλτρα (κοινό, ομάδα έκπτωσης, ισχύς)
  *    → ο ειδικότερος νικά (κοινό πρώτα, μετά ομάδα > `*`) → αλυσίδα ή κλίμακα της **μίας** μηχανής.
  *
  * 🔑 Συνθήκη με `discountGroupId: null` (`*`) αφορά **κάθε** γραμμή του τιμοκαταλόγου λίστας·
@@ -35,7 +35,7 @@ import type {
   PriceListLineDefinition,
   PricingViewer,
 } from '../types/price-list';
-import { ORDER_QUANTITY_DECIMALS, acceptsDiscountGroups } from '../vocabulary/pricing';
+import { ORDER_QUANTITY_DECIMALS, listAcceptsDiscounts } from '../vocabulary/pricing';
 import { audienceCovers, audienceSpecificity } from './price-audience';
 import { priceLineSubjectKey } from './price-line-subject';
 import { versionAt, type PriceVersionRef } from './version-timeline';
@@ -147,7 +147,7 @@ function priceQuote(request: CatalogPriceRequest, priced: PricedLine, discount: 
 }
 
 function resolveDiscount(request: CatalogPriceRequest, priced: PricedLine): CatalogPriceResolution {
-  if (!acceptsDiscountGroups(request.priceList.definition.priceType)) {
+  if (!listAcceptsDiscounts(request.priceList.definition)) {
     return { kind: 'priced', quote: priceQuote(request, priced, { conditionId: null, steps: [], trace: [] }) };
   }
   const candidates = request.conditions.map((record) => toCandidate(record, priced.line.definition, request.viewer));

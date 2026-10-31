@@ -39,6 +39,7 @@ const subjectSchema: z.ZodType<PriceLineSubject, z.ZodTypeDef, unknown> = z.disc
 ]);
 
 const breakdownSchema: z.ZodType<CostBreakdown, z.ZodTypeDef, unknown> = z.object({
+  description: z.string().trim().max(200).nullable().default(null),
   material: minorAmountSchema,
   labor: minorAmountSchema,
   equipment: minorAmountSchema,
@@ -100,6 +101,7 @@ export const priceListDefinitionSchema: z.ZodType<PriceListDefinition, z.ZodType
   priceType: z.enum(PRICE_TYPES),
   audience: audienceSchema.nullable(),
   changeFenceBp: basisPointsSchema.nullable(),
+  projectId: entityIdSchema.nullable().default(null),
 });
 
 export const discountRuleSchema: z.ZodType<DiscountRule, z.ZodTypeDef, unknown> = z.discriminatedUnion('kind', [

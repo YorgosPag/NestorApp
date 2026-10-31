@@ -13,11 +13,16 @@
  * 🔑 **Ασάφεια ζωντανά, και με το πρόχειρο**: ο πίνακας χτίζεται πάνω στις συνθήκες **+ το πρόχειρο** του επεξεργαστή
  *    (που αντικαθιστά την αποθηκευμένη του) — το κελί κοκκινίζει **όσο πληκτρολογείς**, όχι μετά το 422.
  * 🔑 **Ισοπαλία ≠ «η πρώτη»**: σε ασάφεια σημειώνονται **και οι δύο** πλευρές (η μηχανή δεν διαλέγει, άρα ούτε η οθόνη).
+ * 🔑 **Διαδοχή, όχι ασάφεια** (Σ7): νέα περίοδος που αρχίζει μέσα σε προηγούμενη την **οριοθετεί** — ο πίνακας δείχνει
+ *    την προηγούμενη όπως θα είναι μετά την αποθήκευση (`delimited`), με το ΙΔΙΟ σχέδιο που εκτελεί ο γραφέας.
  */
+
+import { dequal } from 'dequal';
 
 import { effectivePercent, isDiscountSteps, type BasisPoints, type DiscountRule } from '@/lib/pricing/discount-rule';
 import { validityAt, type ValidityVerdict } from '@/lib/pricing/validity';
 import { audienceIdentity } from '@/subapps/catalog/pricing/price-audience';
+import { applyDelimitations, planConditionSupersession } from '@/subapps/catalog/pricing/condition-supersession';
 import { conditionSlotKey } from '@/subapps/catalog/pricing/pricing-keys';
 import { conditionWindow, findAmbiguousConditions } from '@/subapps/catalog/schema/validate-pricing';
 import type { DiscountConditionDefinition, PriceAudience } from '@/subapps/catalog/types/price-list';
@@ -47,6 +52,8 @@ export interface MatrixEntry {
   readonly ambiguous: boolean;
   /** Είναι το πρόχειρο του επεξεργαστή (όχι αποθηκευμένο); */
   readonly isDraft: boolean;
+  /** Σ7: η ισχύς της θα **λήξει** με την αποθήκευση του προχείρου (ή μιας εκκρεμούς εγγραφής) — δείχνεται, ποτέ σιωπηλά. */
+  readonly delimited: boolean;
 }
 
 export interface MatrixCell {
@@ -82,6 +89,8 @@ export interface ConditionMatrixInput {
   readonly customerGroups: readonly CustomerGroupWire[];
   readonly conditions: readonly DiscountConditionWire[];
   readonly draft: MatrixDraft | null;
+  /** Οι συνθήκες που γράφονται αυτή τη στιγμή (`pendingKeys`) — η οριοθέτησή τους λέγεται όπως του προχείρου. */
+  readonly pendingIds: ReadonlySet<string>;
   readonly nowMs: number;
 }
 
@@ -109,13 +118,42 @@ function matrixAxes(input: ConditionMatrixInput): Pick<ConditionMatrix, 'rows' |
   return { rows, columns };
 }
 
-/** Οι συνθήκες όπως θα ήταν **αν αποθηκευόταν τώρα** το πρόχειρο: αντικαθιστά την αποθηκευμένη του, ή προστίθεται. */
-function overlaid(input: ConditionMatrixInput): { readonly id: string; readonly definition: DiscountConditionDefinition; readonly isDraft: boolean }[] {
+/**
+ * Οι συνθήκες όπως θα ήταν **αν αποθηκευόταν τώρα** το πρόχειρο: αντικαθιστά την αποθηκευμένη του, ή προστίθεται.
+ * 🔑 **Πρόχειρο ίδιο με την αποθηκευμένη του ΔΕΝ είναι πρόχειρο** (Σ5, ζωντανά): ο επεξεργαστής αναφέρει πάντα το πρόχειρό
+ *    του, και το ανέγγιχτο λεγόταν «μη αποθηκευμένο» ⇒ κάθε ανοιχτή συνθήκη έλειπε από τις περιόδους του κελιού της.
+ */
+function overlaid(input: ConditionMatrixInput): OverlaidEntry[] {
   const live = input.conditions.filter((condition) => !condition.isDeleted);
   const stored = live.map((condition) => ({ id: condition.id, definition: conditionDefinitionOf(condition), isDraft: false }));
   const { draft } = input;
   if (draft === null) return stored;
+  const own = stored.find((entry) => entry.id === draft.id);
+  if (own && dequal(own.definition, draft.definition)) return stored;
   return [...stored.filter((entry) => entry.id !== draft.id), { id: draft.id, definition: draft.definition, isDraft: true }];
+}
+
+interface OverlaidEntry {
+  readonly id: string;
+  readonly definition: DiscountConditionDefinition;
+  readonly isDraft: boolean;
+}
+
+/**
+ * Σ7: η διαδοχή περιόδων **όπως θα την κάνει ο γραφέας** (`planConditionSupersession`, ίδια συνάρτηση) — για κάθε
+ * συνθήκη. Στα αποθηκευμένα δεν αλλάζει τίποτα (ο γραφέας εγγυάται ότι δεν επικαλύπτονται)· λειαίνει όμως το διάστημα
+ * ανάμεσα στο 200 και στο στιγμιότυπο, όπου η νέα έχει έρθει και η οριοθέτηση της παλιάς όχι ακόμη (αλλιώς το κελί
+ * θα αναβόσβηνε «Ασάφεια» — η οικογένεια του Σ2). Η **ένδειξη** μπαίνει μόνο όταν οριοθετεί το πρόχειρο ή εκκρεμής εγγραφή.
+ */
+function superseded(entries: readonly OverlaidEntry[], pendingIds: ReadonlySet<string>) {
+  let result: OverlaidEntry[] = [...entries];
+  const delimited = new Set<string>();
+  for (const entry of entries) {
+    const { delimitations } = planConditionSupersession(entry.definition, entries.filter((other) => other.id !== entry.id));
+    result = applyDelimitations(result, delimitations);
+    if (entry.isDraft || pendingIds.has(entry.id)) delimitations.forEach((delimitation) => delimited.add(delimitation.id));
+  }
+  return { entries: result, delimited };
 }
 
 /** Ποιες συνθήκες είναι σε ασάφεια — ανά υποδοχή (ίδιο κλειδί με τον γραφέα), **και οι δύο** πλευρές κάθε σύγκρουσης. */
@@ -157,14 +195,15 @@ function cellOf(rowKey: string, columnKey: string, entries: MatrixEntry[]): Matr
 export function buildConditionMatrix(input: ConditionMatrixInput): ConditionMatrix {
   const axes = matrixAxes(input);
   const placed = new Set(axes.rows.flatMap((row) => axes.columns.map((column) => cellKeyOf(row.key, column.key))));
-  const all = overlaid(input);
-  const ambiguous = ambiguousIds(all);
+  const all = superseded(overlaid(input), input.pendingIds);
+  const ambiguous = ambiguousIds(all.entries);
   const grouped = new Map<string, MatrixEntry[]>();
   let unplaced = 0;
-  for (const { id, definition, isDraft } of all) {
+  for (const { id, definition, isDraft } of all.entries) {
     const key = cellKeyOf(rowKeyOf(definition.discountGroupId), columnKeyOf(definition.audience));
     if (!placed.has(key)) { unplaced += 1; continue; }
-    const entry: MatrixEntry = { id, definition, verdict: verdictOf(definition, input.nowMs), ambiguous: ambiguous.has(id), isDraft };
+    const verdict = verdictOf(definition, input.nowMs);
+    const entry: MatrixEntry = { id, definition, verdict, ambiguous: ambiguous.has(id), isDraft, delimited: all.delimited.has(id) };
     grouped.set(key, [...(grouped.get(key) ?? []), entry]);
   }
   const cells = new Map<string, MatrixCell>();

@@ -26,7 +26,7 @@
 
 import { normalizeToISO, nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
-import type { BOQCategory, BOQItem, BOQItemStatus } from '@/types/boq';
+import { BOQ_ITEM_DEFAULTS, type BOQCategory, type BOQItem, type BOQItemStatus } from '@/types/boq';
 
 const logger = createModuleLogger('BoqDocumentNormalize');
 
@@ -66,7 +66,8 @@ export const normalizeBOQItem = (id: string, data: Record<string, unknown>): BOQ
   materialUnitCost: (data.materialUnitCost as number) ?? 0,
   laborUnitCost: (data.laborUnitCost as number) ?? 0,
   equipmentUnitCost: (data.equipmentUnitCost as number) ?? 0,
-  priceAuthority: (data.priceAuthority as BOQItem['priceAuthority']) ?? 'master',
+  priceAuthority: (data.priceAuthority as BOQItem['priceAuthority']) ?? BOQ_ITEM_DEFAULTS.priceAuthority,
+  priceSource: (data.priceSource as BOQItem['priceSource']) ?? null,
   linkedPhaseId: (data.linkedPhaseId as string) ?? null,
   linkedTaskId: (data.linkedTaskId as string) ?? null,
   linkedInvoiceId: (data.linkedInvoiceId as string) ?? null,

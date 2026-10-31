@@ -23,10 +23,20 @@ import type { PriceAudience } from '@/subapps/catalog/types/price-list';
 import { useCatalogAccess, useCatalogText } from '../shared/catalog-ui-hooks';
 import { NEW_SELECTION, type CatalogSelection } from '../shared/use-catalog-selection';
 import type { UnsavedGuard } from '../shared/use-unsaved-guard';
-import { buildConditionMatrix, cellKeyOf, columnKeyOf, rowKeyOf, type MatrixColumn, type MatrixDraft, type MatrixRow } from './condition-matrix';
+import { conditionSlotKey } from '@/subapps/catalog/pricing/pricing-keys';
+import {
+  buildConditionMatrix,
+  cellKeyOf,
+  columnKeyOf,
+  rowKeyOf,
+  type MatrixCell,
+  type MatrixColumn,
+  type MatrixDraft,
+  type MatrixRow,
+} from './condition-matrix';
 import { ConditionMatrix } from './ConditionMatrix';
 import { ConditionPeriods } from './ConditionPeriods';
-import { DEFAULT_CONDITION_SEED, type ConditionSeed } from './discount-condition-draft';
+import { DEFAULT_CONDITION_SEED, nextPeriodStart, type ConditionSeed } from './discount-condition-draft';
 import { DiscountConditionEditor } from './DiscountConditionEditor';
 import type { DiscountsWorkspace } from './use-discounts-workspace';
 import { useDiscountWords } from './use-discount-words';
@@ -42,6 +52,16 @@ function audienceOfColumn(column: MatrixColumn): PriceAudience {
   if (column.kind === 'customerGroup') return { kind: 'customerGroup', customerGroupId: column.group.id };
   if (column.kind === 'partner') return { kind: 'partner', party: { kind: 'contact', contactId: '' } };
   return { kind: column.kind };
+}
+
+/**
+ * «Νέα περίοδος» (Σ7): ίδια ομάδα και κοινό, αρχή **μετά** τις περιόδους της ΙΔΙΑΣ υποδοχής (στη στήλη συνεργατών: του
+ * ίδιου συνεργάτη) — ποτέ «από πάντα», που θα ήταν ασάφεια από την πρώτη στιγμή.
+ */
+function newPeriodSeed(located: Omit<ConditionSeed, 'validFrom'>, cell: MatrixCell | undefined, nowMs: number): ConditionSeed {
+  const slot = conditionSlotKey(located);
+  const periods = (cell?.entries ?? []).filter((entry) => !entry.isDraft && conditionSlotKey(entry.definition) === slot);
+  return { discountGroupId: located.discountGroupId, audience: located.audience, validFrom: nextPeriodStart(periods.map((entry) => entry.definition), nowMs) };
 }
 
 /** Το πρόχειρο του ανοιχτού επεξεργαστή (με την ταυτότητά του), δεμένο στη συνεδρία επιλογής που το γέννησε. */
@@ -62,8 +82,8 @@ function useConditionsPanel({ workspace, selection, unsaved }: ConditionsPanelPr
   const shownDraft = open ? draft.value : null;
   const matrix = useMemo(() => buildConditionMatrix({
     discountGroups: discountGroups.view, customerGroups: customerGroups.view, conditions: conditions.view,
-    draft: shownDraft, nowMs: workspace.nowMs,
-  }), [discountGroups.view, customerGroups.view, conditions.view, shownDraft, workspace.nowMs]);
+    draft: shownDraft, pendingIds: conditions.pendingKeys, nowMs: workspace.nowMs,
+  }), [discountGroups.view, customerGroups.view, conditions.view, shownDraft, conditions.pendingKeys, workspace.nowMs]);
   const located = shownDraft?.definition ?? record ?? (isNew ? seed : null);
   const selectedCell = located ? cellKeyOf(rowKeyOf(located.discountGroupId), columnKeyOf(located.audience)) : null;
   const startNew = (next: ConditionSeed) => { setSeed(next); selection.select(NEW_SELECTION); };
@@ -71,7 +91,7 @@ function useConditionsPanel({ workspace, selection, unsaved }: ConditionsPanelPr
     const cell = matrix.cells.get(cellKeyOf(row.key, column.key));
     const target = cell?.current.find((entry) => !entry.isDraft) ?? cell?.entries.find((entry) => !entry.isDraft);
     if (target) selection.select(target.id);
-    else if (canManage) startNew({ discountGroupId: row.group?.id ?? null, audience: audienceOfColumn(column) });
+    else if (canManage) startNew({ discountGroupId: row.group?.id ?? null, audience: audienceOfColumn(column), validFrom: null });
   });
   return { matrix, record, isNew, open, seed, selectedCell, onCell, startNew, reportDraft: draft.report, canManage, located };
 }
@@ -86,7 +106,7 @@ export function ConditionsPanel(props: ConditionsPanelProps) {
   const located = state.located;
   const title = located ? words.audience(located.audience) : t('pricing.discounts.editor.newTitle');
   const cell = state.selectedCell ? state.matrix.cells.get(state.selectedCell) : undefined;
-  const newPeriod = state.canManage && located ? () => unsaved.guard(() => state.startNew({ discountGroupId: located.discountGroupId, audience: located.audience })) : null;
+  const newPeriod = state.canManage && located ? () => unsaved.guard(() => state.startNew(newPeriodSeed(located, cell, workspace.nowMs))) : null;
   return (
     <section className="flex min-h-0 flex-1 flex-col gap-2">
       <header className="flex flex-wrap items-center justify-between gap-2">
@@ -100,7 +120,9 @@ export function ConditionsPanel(props: ConditionsPanelProps) {
         peek
         list={<ConditionMatrix matrix={state.matrix} selectedCell={state.selectedCell} onCell={state.onCell} />}
         details={state.open ? (
-          <section className="flex flex-col">
+          // `data-details-flush`: τα περιθώρια είναι των ενοτήτων — το φύλλο αφαιρεί τα δικά του, ώστε το κολλημένο
+          // υποσέλιδο (`EditorFooter`, Σ8) να φτάνει την άκρη του κυλιστή χωρίς λωρίδα περιεχομένου από κάτω.
+          <section data-details-flush="" className="flex flex-col">
             <ConditionPeriods cell={cell} selectedId={state.record?.id ?? null} words={words} onOpen={open} onNew={newPeriod} />
             <DiscountConditionEditor key={selection.key} record={state.record} seed={state.seed} ops={workspace.conditions}
               discountGroups={workspace.discountGroups.view} customerGroups={workspace.customerGroups.view} words={words}

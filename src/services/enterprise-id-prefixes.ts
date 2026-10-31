@@ -361,7 +361,6 @@ export const ENTERPRISE_ID_PREFIXES = {
   // BOQ / Quantity Surveying (ADR-175)
   BOQ_ITEM: 'boq',
   BOQ_CATEGORY: 'boqcat',
-  BOQ_PRICE_LIST: 'boqpl',
   BOQ_TEMPLATE: 'boqtpl',
 
   // Accounting (Subapp — ADR-ACC-001 through ADR-ACC-010)

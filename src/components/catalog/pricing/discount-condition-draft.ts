@@ -4,8 +4,9 @@
  *   lib/pricing/discount-rule.ts (η ΜΙΑ μηχανή — και το παράδειγμα «100,00 € ⇒ …» περνά από αυτήν)
  * @module components/catalog/pricing/discount-condition-draft
  *
- * 🔑 **Η ίδια επικύρωση με τον γραφέα** (`validateDiscountCondition`) + η **ασάφεια** (`findAmbiguousConditions`) απέναντι
- *    σε κάθε άλλη ζωντανή συνθήκη — ένα γνωστό 422 `discountConditionAmbiguous` δεν στέλνεται ποτέ.
+ * 🔑 **Η ίδια επικύρωση με τον γραφέα** (`validateDiscountCondition`) + το **σχέδιο διαδοχής** (`planConditionSupersession`:
+ *    ποια οριοθετείται, ποια ασάφεια μένει) απέναντι σε κάθε άλλη ζωντανή συνθήκη — ένα γνωστό 422
+ *    `discountConditionAmbiguous` δεν στέλνεται ποτέ.
  * 🔑 **Ισχύς σε ημέρες, όπως τη λέει ο άνθρωπος** (SAP VK11: «Valid to» **συμπεριληπτικά**): η φόρμα ρωτά την **τελευταία
  *    ημέρα** ισχύος· αποθηκεύεται το ημιανοιχτό `[από, έως)` της μηχανής, με «έως» = τα μεσάνυχτα της **επόμενης** ημέρας.
  *    Αλλιώς το «έως 30/11» θα έληγε στην **αρχή** της 30/11 — μία μέρα νωρίτερα από ό,τι υποσχέθηκε η οθόνη.
@@ -18,15 +19,18 @@ import { localDateOf } from '@/lib/date-local';
 import { majorFromMinor, minorFromMajor, type MinorAmount } from '@/lib/money/money';
 import {
   applyDiscountSteps,
+  discountCascade,
   isDiscountSteps,
   type BasisPoints,
+  type DiscountCascadeStep,
   type DiscountRule,
   type DiscountRuleKind,
   type DiscountTier,
   type DiscountTierBasis,
 } from '@/lib/pricing/discount-rule';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
-import { findAmbiguousConditions, validateDiscountCondition } from '@/subapps/catalog/schema/validate-pricing';
+import { planConditionSupersession, type SupersessionPlan } from '@/subapps/catalog/pricing/condition-supersession';
+import { validateDiscountCondition } from '@/subapps/catalog/schema/validate-pricing';
 import type { DiscountConditionDefinition, PriceAudience } from '@/subapps/catalog/types/price-list';
 import type { DiscountConditionWire } from '@/subapps/catalog/types/pricing-views';
 import { audiencePartyPresenceIssues } from './price-list-draft';
@@ -38,12 +42,14 @@ export const EXAMPLE_GROSS: MinorAmount = 10_000;
 export interface ConditionSeed {
   readonly discountGroupId: string | null;
   readonly audience: PriceAudience;
+  /** «Νέα περίοδος» (Σ7): η αρχή της (`nextPeriodStart`)· `null` = από πάντα (νέα υποδοχή). */
+  readonly validFrom: string | null;
 }
 
-export const DEFAULT_CONDITION_SEED: ConditionSeed = { discountGroupId: null, audience: { kind: 'anonymous' } };
+export const DEFAULT_CONDITION_SEED: ConditionSeed = { discountGroupId: null, audience: { kind: 'anonymous' }, validFrom: null };
 
 export function emptyConditionDraft(seed: ConditionSeed): DiscountConditionDefinition {
-  return { discountGroupId: seed.discountGroupId, audience: seed.audience, validFrom: null, validUntil: null, rule: { kind: 'chain', steps: [] } };
+  return { discountGroupId: seed.discountGroupId, audience: seed.audience, validFrom: seed.validFrom, validUntil: null, rule: { kind: 'chain', steps: [] } };
 }
 
 /** Μόνο τα πεδία του ορισμού — ποτέ τα μεταδεδομένα της εγγραφής μέσα στο σώμα αιτήματος (ίδιο με τον γραφέα). */
@@ -105,15 +111,9 @@ export function nextTier(rule: Extract<DiscountRule, { kind: 'tiers' }>): Discou
 
 // ── Ζωντανό παράδειγμα ───────────────────────────────────────────────────────
 
-export interface ExampleStep {
-  readonly step: BasisPoints;
-  /** Το καθαρό **μετά** από αυτό το βήμα (μία στρογγύλευση της μηχανής για τα πρώτα i βήματα). */
-  readonly net: MinorAmount;
-}
-
 export interface ChainExample {
   readonly gross: MinorAmount;
-  readonly steps: readonly ExampleStep[];
+  readonly steps: readonly DiscountCascadeStep[];
   readonly discount: MinorAmount;
   readonly net: MinorAmount;
 }
@@ -121,9 +121,8 @@ export interface ChainExample {
 /** Ο καταρράκτης μιας αλυσίδας πάνω στο `gross` — `null` αν κάποιο βήμα δεν διαβάζεται (το λέει η επικύρωση). */
 export function chainExample(steps: readonly BasisPoints[], gross: MinorAmount = EXAMPLE_GROSS): ChainExample | null {
   if (!isDiscountSteps(steps)) return null;
-  const waterfall = steps.map((step, index) => ({ step, net: applyDiscountSteps(gross, steps.slice(0, index + 1)).net }));
   const total = applyDiscountSteps(gross, steps);
-  return { gross, steps: waterfall, discount: total.discount, net: total.net };
+  return { gross, steps: discountCascade(gross, steps), discount: total.discount, net: total.net };
 }
 
 export interface TierExample {
@@ -147,14 +146,40 @@ export interface ConditionDraftContext {
   readonly selfId: string | null;
 }
 
-/** Τα ευρήματα του προχείρου — ό,τι θα έλεγε ο γραφέας, πριν από την αποστολή (η ασάφεια με το id της άλλης συνθήκης). */
-export function conditionDraftIssues(draft: DiscountConditionDefinition, context: ConditionDraftContext): readonly CatalogIssue[] {
+/** Σ7: τι θα κάνει η αποθήκευση στις **άλλες** συνθήκες — ποιες οριοθετεί, ποια ασάφεια μένει (το σχέδιο του γραφέα). */
+export function conditionDraftPlan(draft: DiscountConditionDefinition, context: Pick<ConditionDraftContext, 'conditions' | 'selfId'>): SupersessionPlan {
   const others = context.conditions
     .filter((condition) => condition.id !== context.selfId && !condition.isDeleted)
     .map((condition) => ({ id: condition.id, definition: conditionDefinitionOf(condition) }));
+  return planConditionSupersession(draft, others);
+}
+
+/** Τα ευρήματα του προχείρου — ό,τι θα έλεγε ο γραφέας, πριν από την αποστολή (η ασάφεια με το id της άλλης συνθήκης). */
+export function conditionDraftIssues(draft: DiscountConditionDefinition, context: ConditionDraftContext): readonly CatalogIssue[] {
   return [
     ...validateDiscountCondition(draft, context),
     ...audiencePartyPresenceIssues(draft.audience),
-    ...findAmbiguousConditions(draft, others),
+    ...conditionDraftPlan(draft, context).issues,
   ];
+}
+
+// ── Νέα περίοδος ─────────────────────────────────────────────────────────────
+
+/**
+ * Σ7: πού αρχίζει μια **νέα περίοδος** της υποδοχής — **αύριο** (ποτέ αναδρομικά: ό,τι τιμολογήθηκε σήμερα μένει), ή
+ * αργότερα αν το ζητούν οι περίοδοί της: μετά το **τελευταίο όριο** (συνέχεια χωρίς κενό) και τουλάχιστον την **επόμενη
+ * ημέρα της πιο πρόσφατης έναρξης** — ίδια αρχή με υπάρχουσα = ασάφεια (καμία «προηγούμενη»), μεταγενέστερη = η ανοιχτή
+ * τελευταία **οριοθετείται** με την αποθήκευση (`planConditionSupersession`). Ποτέ «από πάντα» (το εύρημα του Σ7).
+ */
+export function nextPeriodStart(periods: readonly Pick<DiscountConditionDefinition, 'validFrom' | 'validUntil'>[], nowMs: number): string | null {
+  const dayAfter = (ms: number) => instantOfDay(addDaysToDateKey(localDateOf(new Date(ms)), 1));
+  const bounds = periods.flatMap(({ validFrom, validUntil }) => [
+    validUntil,
+    validFrom === null ? null : dayAfter(Date.parse(validFrom)),
+  ]);
+  let start = dayAfter(nowMs);
+  for (const bound of bounds) {
+    if (start !== null && bound !== null && Date.parse(bound) > Date.parse(start)) start = bound;
+  }
+  return start;
 }

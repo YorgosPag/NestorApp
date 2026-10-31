@@ -70,10 +70,7 @@ const NO_ITEMS: readonly BOQItem[] = [];
 export function BOQItemEditor({
   open, onClose, item, buildingId, projectId, categories, onSave, onReopenToDraft, buildingItems = NO_ITEMS,
 }: BOQItemEditorProps) {
-  const { t } = useTranslation([
-    'building', 'building-address', 'building-filters', 'building-storage',
-    'building-tabs', 'building-timeline',
-  ]);
+  const { t } = useTranslation('building');
   const colors = useSemanticColors();
   const priceLock = useSummaryPriceLock(item, buildingItems);
 

@@ -2,7 +2,7 @@
 
 **Parent ADR:** ADR-175 — Σύστημα Επιμετρήσεων (Quantity Surveying / BOQ)
 **Phase:** 1C (Τιμοκατάλογος + Excel Import/Export — price part)
-**Status:** Draft — Implementation Contract
+**Status:** ⚠️ Αντικαταστάθηκε (2026-10-31): ο τιμοκατάλογος υλοποιήθηκε στο ενιαίο μοντέλο του ADR-923 §5.11 «3ε». Οι συλλογές `boq_price_*` αυτού του εγγράφου δεν υπήρξαν ποτέ. Κρατιέται ως ιστορικό σχεδιασμού.
 **Date:** 2026-02-11
 **Depends on:** UC-BOQ-001
 **Blocks:** UC-BOQ-003, UC-BOQ-005

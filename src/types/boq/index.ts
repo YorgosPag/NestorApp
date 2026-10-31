@@ -18,7 +18,7 @@ export type {
   WastePolicy,
   SourceAuthority,
 } from './units';
-export { IFC_UNIT_MAP, BOQ_PICKER_UNITS } from './units';
+export { IFC_UNIT_MAP, BOQ_PICKER_UNITS, BOQ_SOURCE_AUTHORITIES } from './units';
 
 // Core entities
 export type {
@@ -49,8 +49,10 @@ export {
 // Cost types (computed, never stored)
 export type {
   CostBreakdown,
-  PriceResolution,
   VarianceResult,
   BaselineDriftResult,
   BOQCategoryCost,
 } from './cost';
+
+// Stored link to the cost price list (ADR-923 §5.11 «3ε»)
+export type { BoqPriceBreakdown, BoqPriceSource } from './price-source';

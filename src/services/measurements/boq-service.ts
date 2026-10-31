@@ -19,7 +19,8 @@ import type {
   CreateBOQItemInput,
   UpdateBOQItemInput,
 } from '@/types/boq';
-import type { IBOQService, IBOQRepository, BOQSearchFilters, BOQStats } from './contracts';
+import type { BoqPriceUpdate, IBOQService, IBOQRepository, BOQSearchFilters, BOQStats } from './contracts';
+import { isSamePriceSource } from './boq-price-source';
 import { FirestoreBOQRepository } from './boq-repository';
 import { buildCategoryNameMap } from './boq-read-shared';
 import { computeBuildingSummary } from './cost-engine';
@@ -209,6 +210,11 @@ class BOQService implements IBOQService {
       }
     }
 
+    // ADR-923 «3ε» — a given price never changes silently: a new link is written only on a draft line.
+    if (data.priceSource && current.status !== 'draft' && !isSamePriceSource(current.priceSource, data.priceSource)) {
+      throw new Error('GOVERNANCE_ERROR: Only draft items take a new price from a price list');
+    }
+
     // Validation: quantities cannot be negative
     if (data.estimatedQuantity !== undefined && data.estimatedQuantity < 0) {
       throw new Error('VALIDATION_ERROR: Quantity cannot be negative');
@@ -218,6 +224,10 @@ class BOQService implements IBOQService {
     }
 
     return this.repository.update(companyId, id, data);
+  }
+
+  async applyPriceFields(companyId: string, updates: readonly BoqPriceUpdate[]): Promise<number> {
+    return this.repository.applyPriceFields(companyId, updates);
   }
 
   // --- DELETE ---

@@ -19,6 +19,7 @@ import {
   query,
   where,
   orderBy,
+  runTransaction,
   type QueryConstraint,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -35,7 +36,7 @@ import type {
   UpdateBOQItemInput,
 } from '@/types/boq';
 import { BOQ_ITEM_DEFAULTS } from '@/types/boq';
-import type { IBOQRepository, BOQSearchFilters, BOQStats } from './contracts';
+import type { BoqPriceUpdate, IBOQRepository, BOQSearchFilters, BOQStats } from './contracts';
 // SSoT κανονικοποίησης εγγράφου → πεδίο ορισμού. Κοινό με το admin-SDK
 // μονοπάτι ανάγνωσης του πράκτορα (ADR-734 §8.3): ένα σχήμα εγγράφου, ένας
 // μεταφραστής. Δύο αντίγραφα θα απέκλιναν σιωπηλά στην πρώτη προσθήκη πεδίου.
@@ -49,8 +50,12 @@ import { applyBoqSearchText, computeBoqStats, EMPTY_BOQ_STATS } from './boq-read
 // ίδιου ελέγχου πρόσβασης θα απέκλιναν σιωπηλά (ADR-584 / CHECK 3.28).
 import { ownedItemOrNull } from './boq-tenant-ownership';
 import { BoqDerivedPriceError, writesDerivedPrice } from './boq-line-role';
+import { canApplyPrice, detachedPriceFields, isSamePriceSource, priceLinkFields } from './boq-price-source';
 
 const logger = createModuleLogger('FirestoreBOQRepository');
+
+/** Κάτω από το όριο των 500 εγγραφών ανά συναλλαγή, με περιθώριο. */
+const PRICE_UPDATES_PER_TRANSACTION = 200;
 
 // ============================================================================
 // REPOSITORY IMPLEMENTATION
@@ -146,11 +151,11 @@ export class FirestoreBOQRepository implements IBOQRepository {
       estimatedQuantity: data.estimatedQuantity,
       actualQuantity: null,
       wasteFactor: data.wasteFactor ?? BOQ_ITEM_DEFAULTS.wasteFactor,
-      wastePolicy: BOQ_ITEM_DEFAULTS.wastePolicy,
+      wastePolicy: data.wastePolicy ?? BOQ_ITEM_DEFAULTS.wastePolicy,
       materialUnitCost: data.materialUnitCost ?? BOQ_ITEM_DEFAULTS.materialUnitCost,
       laborUnitCost: data.laborUnitCost ?? BOQ_ITEM_DEFAULTS.laborUnitCost,
       equipmentUnitCost: data.equipmentUnitCost ?? BOQ_ITEM_DEFAULTS.equipmentUnitCost,
-      priceAuthority: BOQ_ITEM_DEFAULTS.priceAuthority,
+      ...priceLinkFields(data.priceSource ?? null),
       linkedPhaseId: data.linkedPhaseId ?? null,
       linkedTaskId: data.linkedTaskId ?? null,
       linkedInvoiceId: null,
@@ -185,6 +190,7 @@ export class FirestoreBOQRepository implements IBOQRepository {
 
       const updatePayload: Record<string, unknown> = {
         ...data,
+        ...detachedPriceFields(current, data),
         updatedAt: nowISO(),
       };
 
@@ -200,6 +206,35 @@ export class FirestoreBOQRepository implements IBOQRepository {
       logger.error('Error updating BOQ item', { error, id });
       return null;
     }
+  }
+
+  async applyPriceFields(companyId: string, updates: readonly BoqPriceUpdate[]): Promise<number> {
+    let applied = 0;
+    for (let start = 0; start < updates.length; start += PRICE_UPDATES_PER_TRANSACTION) {
+      applied += await this.applyPriceChunk(companyId, updates.slice(start, start + PRICE_UPDATES_PER_TRANSACTION));
+    }
+    return applied;
+  }
+
+  /**
+   * Ένα τμήμα σε **μία** συναλλαγή: η κατάσταση ξαναδιαβάζεται μέσα της, ώστε γραμμή που δόθηκε στο μεταξύ να μην αλλάξει
+   * ποσό. Ίδιος δεσμός ⇒ καμία εγγραφή, άρα η επανάληψη είναι ασφαλής. Το πλήθος μετρά μέσα στη συναλλαγή: ξανατρέχει σε σύγκρουση.
+   */
+  private applyPriceChunk(companyId: string, chunk: readonly BoqPriceUpdate[]): Promise<number> {
+    return runTransaction(db, async (tx) => {
+      const refs = chunk.map(({ id }) => doc(db, COLLECTIONS.BOQ_ITEMS, id));
+      const snaps = await Promise.all(refs.map((ref) => tx.get(ref)));
+      const updatedAt = nowISO();
+      let applied = 0;
+      snaps.forEach((snap, index) => {
+        if (!snap.exists()) return;
+        const item = ownedItemOrNull(normalizeBOQItemSafe(snap.id, snap.data() as Record<string, unknown>), companyId, chunk[index].id, 'client');
+        if (!item || !canApplyPrice(item) || isSamePriceSource(item.priceSource, chunk[index].fields.priceSource)) return;
+        tx.update(refs[index], stripUndefinedDeep({ ...chunk[index].fields, updatedAt }));
+        applied += 1;
+      });
+      return applied;
+    });
   }
 
   // TODO: ADR-AUDIT — Add dependency check before deletion (linked measurements, cost records)

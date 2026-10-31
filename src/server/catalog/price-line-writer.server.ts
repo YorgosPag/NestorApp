@@ -49,7 +49,7 @@ function lineIssues(
   index: number,
   context: { readonly list: PriceListDefinition; readonly groups: ReadonlySet<string>; readonly variants: ReadonlySet<string> },
 ): CatalogIssue[] {
-  const own = validatePriceListLine(line, { priceType: context.list.priceType, discountGroupIds: context.groups });
+  const own = validatePriceListLine(line, { kind: context.list.kind, priceType: context.list.priceType, discountGroupIds: context.groups });
   const missing = variantRefsOf(line).filter((id) => !context.variants.has(id));
   return [
     ...own.map((issue) => ({ ...issue, path: `upserts[${index}].${issue.path}` })),

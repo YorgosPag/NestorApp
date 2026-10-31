@@ -7,10 +7,11 @@
  *
  * SAP VK13: μια υποδοχή «ομάδα × κοινό» έχει **πολλές** εγγραφές με διαδοχική ισχύ («−10% τον Νοέμβριο», μετά «−5%»). Εδώ
  * φαίνονται όλες μαζί, με τη λέξη της ισχύος (όχι μόνο χρώμα, CHECK 3.41), και η επιλογή ανοίγει την καθεμία.
+ * Σ7: περίοδος που η αποθήκευση θα **οριοθετήσει** φαίνεται ήδη με το νέο της τέλος και τη λέξη «Λήγει με την αποθήκευση».
  */
 
 import React from 'react';
-import { AlertTriangle, Plus } from 'lucide-react';
+import { AlertTriangle, CalendarClock, Plus } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -46,11 +47,13 @@ export function ConditionPeriods({ cell, selectedId, words, onOpen, onNew }: Con
               <li key={entry.id}>
                 <button type="button" aria-current={selected ? 'true' : undefined} onClick={() => onOpen(entry.id)}
                   className={cn('flex w-full flex-wrap items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                    selected ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50', entry.ambiguous && 'ring-1 ring-destructive')}>
+                    selected ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50', entry.ambiguous && 'ring-1 ring-destructive',
+                    entry.delimited && 'border border-dashed')}>
                   <Badge variant={VALIDITY_VERDICT_BADGES[entry.verdict]} className="gap-1"><Icon className="h-3 w-3" aria-hidden />{t(VALIDITY_VERDICT_KEYS[entry.verdict])}</Badge>
                   <span className="font-medium tabular-nums">{words.rule(entry.definition.rule)}</span>
                   <span className="text-muted-foreground">{words.period(entry.definition)}</span>
                   {entry.definition.audience.kind === 'partner' ? <span className="text-muted-foreground">{words.audience(entry.definition.audience)}</span> : null}
+                  {entry.delimited ? <span className="flex items-center gap-0.5 text-xs font-medium text-muted-foreground"><CalendarClock className="h-3 w-3" aria-hidden />{t('pricing.discounts.periods.delimited')}</span> : null}
                   {entry.ambiguous ? <span className="flex items-center gap-0.5 text-xs font-medium text-destructive"><AlertTriangle className="h-3 w-3" aria-hidden />{t('pricing.discounts.matrix.ambiguous')}</span> : null}
                 </button>
               </li>
