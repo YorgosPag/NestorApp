@@ -25,10 +25,10 @@ import type {
 } from '@/subapps/catalog/types/catalog-import';
 import type { ImportFieldEditInput, UpdateImportProposalRequest } from '@/subapps/catalog/types/catalog-import-requests';
 import { suggestCatalogCode } from '@/subapps/catalog/vocabulary/suggest-catalog-code';
-import { assertRevision, readForUpsert, readOwned, runCatalogTransaction, stageCreate, stageReplace, type CatalogTx, type StoredCatalogRecord } from './catalog-store.server';
+import { assertRevision, readForUpsert, readOwned, runCatalogReadOnly, runCatalogTransaction, stageCreate, stageReplace, stageSoftDelete, type CatalogTx, type StoredCatalogRecord } from './catalog-store.server';
 import { CatalogWriteError } from './catalog-write-error';
 import { assertPurposeAuthority, batchDefinitionOf } from './import-batch-writer.server';
-import { planProposal, type PlannedProposal } from './import-proposal-plan.server';
+import { planProposal, resolveGroupIdentity, type PlannedProposal } from './import-proposal-plan.server';
 import { readBatchProposals, readImportBase } from './import-reads.server';
 
 export type StoredImportProposal = StoredCatalogRecord<ImportProposalDefinition>;
@@ -68,10 +68,24 @@ async function stageGroup(scope: CatalogTx, batch: StoredCatalogRecord<ImportBat
 
 /** Μία ομάδα σε μία συναλλαγή: σχέδιο απέναντι στα ζωντανά + εγγραφή. */
 export async function proposeGroup(ctx: AuthContext, batchId: string, group: ExtractedGroup): Promise<StoredImportProposal> {
-  const base = await readImportBase(ctx, group.modelCode === null ? null : suggestCatalogCode(group.modelCode));
+  const resolved = await runCatalogReadOnly(ctx, async (scope) => resolveGroupIdentity(scope, (await readOwned<ImportBatchDefinition>(scope, 'importBatch', batchId)).target, group));
+  const base = await readImportBase(ctx, resolved.modelCode === null ? null : suggestCatalogCode(resolved.modelCode));
   return runCatalogTransaction(ctx, async (scope) => {
     const batch = await readOwned<ImportBatchDefinition>(scope, 'importBatch', batchId);
-    return stageGroup(scope, batch, group, await planProposal(scope, batch.target, group, base));
+    return stageGroup(scope, batch, resolved, await planProposal(scope, batch.target, resolved, base));
+  });
+}
+
+/**
+ * Η τελευταία ανάγνωση της σελίδας είναι η αλήθεια: πρόταση σε εκκρεμότητα που γέννησε προηγούμενη ανάγνωση και δεν ξαναβρέθηκε
+ * φεύγει, αλλιώς θα έμενε στον έλεγχο μια τιμή που το μοντέλο απέσυρε. Ο άνθρωπος δεν την έχει δει: η σελίδα διαβάζεται ακόμη.
+ */
+export async function retireStalePageProposals(ctx: AuthContext, batchId: string, page: number, kept: ReadonlySet<string>): Promise<void> {
+  const stale = (await readBatchProposals(ctx, batchId)).filter((proposal) => proposal.status === 'pending' && proposal.pages.includes(page) && !kept.has(proposal.id));
+  if (stale.length === 0) return;
+  await runCatalogTransaction(ctx, async (scope) => {
+    const current = await Promise.all(stale.map((proposal) => readOwned<ImportProposalDefinition>(scope, 'importProposal', proposal.id)));
+    for (const proposal of current) stageSoftDelete(scope, 'importProposal', proposal);
   });
 }
 
@@ -80,7 +94,10 @@ const fieldAddress = (rowKey: string, targetKey: string): string => `${rowKey}\u
 function editedCells(rowKey: string, cells: readonly ExtractedCell[], edits: ReadonlyMap<string, string>): ExtractedCell[] {
   return cells.map((cell) => {
     const text = edits.get(fieldAddress(rowKey, importTargetKey(cell.target)));
-    return text === undefined ? cell : { ...cell, text: text.trim() === '' ? null : text, confidence: 1, flags: [] };
+    if (text === undefined) return cell;
+    // Η αμφισβητούμενη μονάδα δεν ντύνει ό,τι έγραψε ο άνθρωπος: γυμνός αριθμός εκεί ξαναζητά μονάδα.
+    const unitDoubted = cell.flags.some((flag) => flag.code === 'unitUnconfirmed');
+    return { ...cell, text: text.trim() === '' ? null : text, confidence: 1, flags: [], unitCode: unitDoubted ? null : cell.unitCode };
   });
 }
 

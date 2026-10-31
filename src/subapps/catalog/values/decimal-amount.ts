@@ -86,6 +86,10 @@ export function amountFromCanonical(amount: string): ParsedAmount | null {
  * Το **κλειδί ισότητας** ενός κανονικού ποσού: «1.50» και «1.5» είναι ο ίδιος αριθμός, άρα
  * το ίδιο κλειδί (μοναδικότητα, συνδυασμοί αξόνων). Η ακρίβεια κρατιέται στο `amount`· εδώ όχι.
  */
+export function significantDecimals(amount: string): number {
+  return amountIdentityKey(amount).split('.')[1]?.length ?? 0;
+}
+
 export function amountIdentityKey(amount: string): string {
   if (!amount.includes('.')) return amount;
   const trimmed = amount.replace(/0+$/, '').replace(/\.$/, '');

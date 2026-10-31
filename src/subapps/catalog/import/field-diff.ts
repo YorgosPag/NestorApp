@@ -61,11 +61,13 @@ type DecisionFacts = Pick<ImportProposalField, 'status' | 'confidence' | 'issues
 const contradictsPage = (field: DecisionFacts): boolean => field.anchor?.kind === 'page' && field.anchor.verified === false;
 
 /**
- * Τι χρειάζεται ρητή απόφαση ανθρώπου. Αμετάβλητο ⇒ τίποτα να εφαρμοστεί. Άκυρο ⇒ απόρριψη (δεν υπάρχει τιμή να γραφτεί).
- * Σύγκρουση, εύρημα, χαμηλή βεβαιότητα ή διάψευση από το κείμενο ⇒ `pending`, και η έγκριση αρνείται όσο μένει.
+ * Τι χρειάζεται ρητή απόφαση ανθρώπου. Αμετάβλητο ⇒ τίποτα να εφαρμοστεί. Τιμή που τυπώθηκε και δεν διαβάστηκε ⇒ `pending`:
+ * η απόρριψη θα έσβηνε σιωπηλά ό,τι λέει η πηγή, και η διόρθωση είναι δουλειά ανθρώπου. Σύγκρουση, εύρημα, χαμηλή βεβαιότητα
+ * ή διάψευση από το κείμενο ⇒ `pending`, και η έγκριση αρνείται όσο μένει.
  */
 export function defaultDecisionOf(field: DecisionFacts): ImportFieldDecision {
-  if (field.status === 'unchanged' || field.incoming === null) return 'reject';
+  if (field.status === 'unchanged') return 'reject';
+  if (field.incoming === null) return field.issues.length > 0 ? 'pending' : 'reject';
   const needsHuman =
     field.status === 'conflict' ||
     field.issues.length > 0 ||

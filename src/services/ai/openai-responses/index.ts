@@ -31,6 +31,8 @@ export type {
 
 export { extractOutputText } from './extract-output-text';
 
+export { extractResponsesUsage, type ResponsesUsage } from './extract-usage';
+
 export { ResponsesApiError } from './responses-error';
 
 export {

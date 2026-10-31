@@ -37,13 +37,14 @@ describe('μέτρηση — όπως τη γράφει ο προμηθευτή�
 
   it('🔴 «MW» ≠ «mW»: ακριβής αντιστοίχιση πρώτα · «m3/h» (απλό 3) ≡ «m³/h» · «BTU/h»', () => {
     expect(value(power, '1 MW')).toEqual({ type: 'measurement', amount: '1', unitCode: 'MW' });
+    expect(value(power, '1000 KW')).toEqual({ type: 'measurement', amount: '1000', unitCode: 'kW' });
     expect(value(airflow, '380 m3/h')).toEqual({ type: 'measurement', amount: '380', unitCode: 'm3_h' });
     expect(value(airflow, '380 m³/h')).toEqual({ type: 'measurement', amount: '380', unitCode: 'm3_h' });
     expect(value(power, '12000 BTU/h')).toMatchObject({ unitCode: 'BTU_h' });
   });
 
   it('άγνωστη μονάδα · μη αριθμός ⇒ εύρημα, ποτέ σιωπηλή απώλεια μονάδας', () => {
-    expect(value(power, '2,5 furlong')).toEqual({ ok: false, issue: 'measurementUnitUnknown', params: { unit: '2,5 furlong' } });
+    expect(value(power, '2,5 furlong')).toEqual({ ok: false, issue: 'measurementUnitUnknown', params: { code: '2,5 furlong' } });
     expect(value(power, 'abc kW')).toEqual({ ok: false, issue: 'valueNotNumber', params: undefined });
   });
 });

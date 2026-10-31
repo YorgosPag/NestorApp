@@ -20,7 +20,7 @@ import type { ImportBatchDefinition, ImportBatchPages, ImportBatchTarget, Import
 import type { CreateImportBatchRequest } from '@/subapps/catalog/types/catalog-import-requests';
 import type { PriceListVersionDefinition } from '@/subapps/catalog/types/price-list';
 import { CATALOG_AUTHORITY_PERMISSIONS } from '@/subapps/catalog/vocabulary/catalog-authorities';
-import { IMPORT_MAX_PAGES_PER_BATCH, type ImportPurpose } from '@/subapps/catalog/vocabulary/catalog-import';
+import { IMPORT_FINISHED_BATCH_STATUSES, IMPORT_MAX_PAGES_PER_BATCH, IMPORT_MAX_RUNS, type ImportPurpose } from '@/subapps/catalog/vocabulary/catalog-import';
 import {
   assertRevision,
   readForUpsert,
@@ -74,16 +74,24 @@ async function profileRevisionOf(scope: CatalogTx, profileId: string | null): Pr
   return (await readOwned<ImportProfileDefinition>(scope, 'importProfile', profileId)).revision;
 }
 
-/** `POST /api/catalog/imports` — ιδεμπότητη: ίδια είσοδος δίνει πίσω την ίδια παρτίδα. */
+/**
+ * `POST /api/catalog/imports` — ιδεμπότητη: ίδια είσοδος δίνει πίσω την ίδια παρτίδα όσο υπάρχει δουλειά της. Παρτίδα που
+ * τελείωσε ή εγκαταλείφθηκε δεν ξανανοίγει, γιατί δεν έχει τι να δώσει πίσω: η ίδια είσοδος γίνεται η επόμενη εκτέλεση.
+ */
 export async function createImportBatch(ctx: AuthContext, request: CreateImportBatchRequest): Promise<StoredImportBatch> {
   await assertPurposeAuthority(ctx, request.target.purpose);
   return runCatalogTransaction(ctx, async (scope) => {
     const profileRevision = await profileRevisionOf(scope, request.profileId);
-    const code = importBatchKey({ ...request, profileRevision });
-    const { target, current } = await readForUpsert<ImportBatchDefinition>(scope, 'importBatch', code);
-    if (current !== null) return current;
-    await assertTargetExists(scope, request.target);
-    return stageCreate(scope, 'importBatch', target, definitionOf(request, code, profileRevision));
+    for (let run = request.run; run < request.run + IMPORT_MAX_RUNS; run += 1) {
+      const code = importBatchKey({ ...request, run, profileRevision });
+      const { target, current } = await readForUpsert<ImportBatchDefinition>(scope, 'importBatch', code);
+      if (current !== null && !IMPORT_FINISHED_BATCH_STATUSES.includes(current.status)) return current;
+      if (current === null) {
+        await assertTargetExists(scope, request.target);
+        return stageCreate(scope, 'importBatch', target, definitionOf({ ...request, run }, code, profileRevision));
+      }
+    }
+    throw new CatalogWriteError('invalid', [{ code: 'tooMany', path: 'run', params: { max: IMPORT_MAX_RUNS } }]);
   });
 }
 

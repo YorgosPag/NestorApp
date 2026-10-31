@@ -38,6 +38,9 @@ const ISSUE_KEYS: Readonly<Record<ImportIssueCode, string>> = {
   modelCodeMissing: 'issues.modelCodeMissing',
   skuUnknown: 'issues.skuUnknown',
   priceIncomplete: 'issues.priceIncomplete',
+  measurementUnitMissing: 'issues.measurementUnitMissing',
+  unitUnconfirmed: 'issues.unitUnconfirmed',
+  attributeRepeated: 'issues.attributeRepeated',
 };
 
 export const FIELD_STATUS_KEYS: Readonly<Record<ImportFieldStatus, string>> = {

@@ -11,8 +11,10 @@ import 'server-only';
  */
 
 import { readDocumentAnalyzerTransport, requestStructuredDocument } from '@/services/ai/structured-document-request';
-import type { ResponsesContent, ResponsesRequestConfig } from '@/services/ai/openai-responses';
-import type { CatalogPageInput, CatalogPageReading, ICatalogPageAnalyzer } from '@/subapps/catalog/import/page-analyzer';
+import { tokenCostUsd } from '@/config/ai-analysis-config';
+import type { ResponsesContent, ResponsesRequestConfig, ResponsesUsage } from '@/services/ai/openai-responses';
+import { addUsage, NO_USAGE, type CatalogPageInput, type CatalogPageReading, type ICatalogPageAnalyzer } from '@/subapps/catalog/import/page-analyzer';
+import type { ImportPagesUsage } from '@/subapps/catalog/types/catalog-import';
 import {
   isRawPageExtraction,
   PAGE_EXTRACTION_SCHEMA_NAME,
@@ -40,6 +42,7 @@ class OpenAICatalogPageAnalyzer implements ICatalogPageAnalyzer {
 
   async readPage(input: CatalogPageInput): Promise<CatalogPageReading> {
     const schema = pageExtractionSchema(input.attributes.map((attribute) => attribute.code));
+    let usage = NO_USAGE;
     for (let attempt = 0; attempt < PARSE_ATTEMPTS; attempt += 1) {
       const outcome = await requestStructuredDocument(this.transport, {
         model: this.model,
@@ -47,9 +50,15 @@ class OpenAICatalogPageAnalyzer implements ICatalogPageAnalyzer {
         content: pageContent(input),
         schema: { name: PAGE_EXTRACTION_SCHEMA_NAME, strict: true, schema },
       });
-      if (outcome.kind === 'parsed' && isRawPageExtraction(outcome.value)) return { kind: 'read', extraction: outcome.value };
+      usage = addUsage(usage, this.costed(outcome.usage));
+      if (outcome.kind === 'parsed' && isRawPageExtraction(outcome.value)) return { kind: 'read', extraction: outcome.value, usage };
     }
-    return { kind: 'failed' };
+    return { kind: 'failed', usage };
+  }
+
+  private costed(usage: ResponsesUsage | null): ImportPagesUsage {
+    if (!usage) return { ...NO_USAGE, requests: 1, costUsd: null };
+    return { requests: 1, ...usage, costUsd: tokenCostUsd(this.model, usage.inputTokens, usage.outputTokens) };
   }
 }
 

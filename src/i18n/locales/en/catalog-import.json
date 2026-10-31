@@ -47,6 +47,10 @@
     "pagesProgress": "Read {done} of {total} pages · {failed} failed",
     "readPages": "{count, plural, one {Read # page} other {Read # pages}}",
     "retryFailed": "Retry failed pages",
+    "stop": "Stop",
+    "stopping": "Finishing the current page…",
+    "costEstimate": "Estimated cost: about ${cost}",
+    "costSpent": "Cost so far: {requests} requests · {tokens} tokens · ${cost}",
     "noProposals": "No proposals yet."
   },
   "batchStatus": {
@@ -98,6 +102,9 @@
     "levelUnsupported": "This attribute lives on a sub-model: import does not write an intermediate level yet.",
     "modelCodeMissing": "The source gives no model code. Fill it in to apply this proposal.",
     "skuUnknown": "No live item has the code “{code}”.",
-    "priceIncomplete": "A new price line needs a price and a unit."
+    "priceIncomplete": "A new price line needs a price and a unit.",
+    "measurementUnitMissing": "No unit was read for this value. Enter it with the unit as in the PDF, for example “1000 W”.",
+    "unitUnconfirmed": "The unit “{unit}” is not confirmed by the page text. Check it in the PDF.",
+    "attributeRepeated": "The source also gives another value for this attribute: {others}. Choose the correct one."
   }
 }

@@ -14,10 +14,11 @@ import 'server-only';
 import type { AuthContext } from '@/lib/auth';
 import { readPdfPage } from '@/services/pdf/pdf-rasterize.service';
 import { extractGroupsFromTable } from '@/subapps/catalog/import/apply-column-rules';
+import { addUsage, NO_USAGE } from '@/subapps/catalog/import/page-analyzer';
 import { extractGroupsFromPage, type PageAttributeSpec, type RawPageExtraction } from '@/subapps/catalog/import/page-extraction';
 import { tokenizePage, type PageToken } from '@/subapps/catalog/import/page-tokens';
 import type { CatalogSchemaSnapshot } from '@/subapps/catalog/derived/chain-derived';
-import type { ImportBatchDefinition, ImportProfileDefinition } from '@/subapps/catalog/types/catalog-import';
+import type { ImportBatchDefinition, ImportPagesUsage, ImportProfileDefinition } from '@/subapps/catalog/types/catalog-import';
 import type { CatalogAttributeDefinition } from '@/subapps/catalog/types/attribute';
 import { IMPORT_PAGE_DPI } from '@/subapps/catalog/vocabulary/catalog-import';
 import { attributeOwnerDepth } from '@/subapps/catalog/values/attribute-levels';
@@ -26,7 +27,7 @@ import { readOwned, runCatalogTransaction, stageReplace } from './catalog-store.
 import { CatalogWriteError } from './catalog-write-error';
 import { assertPurposeAuthority, batchDefinitionOf, type StoredImportBatch } from './import-batch-writer.server';
 import { createCatalogPageAnalyzer } from './import-page-analyzer.server';
-import { proposeGroup, type StoredImportProposal } from './import-proposal-writer.server';
+import { proposeGroup, retireStalePageProposals, type StoredImportProposal } from './import-proposal-writer.server';
 import { downloadBatchFile, readBatchFileRecord, readBatchTable } from './import-source.server';
 
 const FEEDBACK_ATTEMPTS = 2;
@@ -59,13 +60,14 @@ export async function buildTableProposals(ctx: AuthContext, id: string): Promise
 }
 
 function attributeSpecOf(attribute: CatalogAttributeDefinition, depth: number): PageAttributeSpec {
-  const config = attribute.config as { readonly defaultUnitCode?: string; readonly options?: readonly { readonly code: string }[] };
+  const config = attribute.config as { readonly options?: readonly { readonly code: string }[] };
   return {
     code: attribute.code,
     label: attribute.labels.el ?? attribute.labels.en ?? attribute.code,
+    description: attribute.description.el ?? attribute.description.en ?? null,
     type: attribute.type,
-    unit: config.defaultUnitCode ?? null,
     level: depth === 0 ? 'shared' : 'variant',
+    unique: attribute.unique,
     options: config.options?.map((option) => option.code) ?? [],
   };
 }
@@ -75,14 +77,19 @@ function pageSpecs(schema: CatalogSchemaSnapshot) {
   return {
     specs: entries.map(({ id, attribute }) => attributeSpecOf(attribute, schema.scheme ? attributeOwnerDepth(schema.scheme, id) : 1)),
     byCode: new Map(entries.map(({ id, attribute }) => [attribute.code, { ...attribute, id }])),
+    codeById: new Map(entries.map(({ id, attribute }) => [id, attribute.code])),
   };
 }
 
-function feedbackOf(proposals: readonly StoredImportProposal[]): string[] {
-  return proposals.flatMap((proposal) => proposal.violations.map((violation) => `Rule ${violation.ruleId} (${violation.kind}) fails for attributes ${violation.attributeIds.join(', ')}.`));
+/** Το μοντέλο ξέρει τους κωδικούς της λίστας του, όχι τα εσωτερικά `cattr_…`: αλλιώς η δεύτερη πληρωμένη ανάγνωση δεν καταλαβαίνει. */
+function feedbackOf(proposals: readonly StoredImportProposal[], codeById: ReadonlyMap<string, string>): string[] {
+  return proposals.flatMap((proposal) => proposal.violations.map((violation) => {
+    const attributes = violation.attributeIds.map((id) => codeById.get(id) ?? id).join(', ');
+    return `Rule ${violation.ruleId} (${violation.kind}) fails for attributes ${attributes}.`;
+  }));
 }
 
-function markPage(ctx: AuthContext, id: string, page: number, outcome: 'done' | 'failed'): Promise<StoredImportBatch> {
+function markPage(ctx: AuthContext, id: string, page: number, outcome: 'done' | 'failed', usage: ImportPagesUsage): Promise<StoredImportBatch> {
   return runCatalogTransaction(ctx, async (scope) => {
     const current = await readOwned<ImportBatchDefinition>(scope, 'importBatch', id);
     const pages = current.pages;
@@ -91,7 +98,8 @@ function markPage(ctx: AuthContext, id: string, page: number, outcome: 'done' | 
     const failed = outcome === 'failed' ? [...new Set([...pages.failed, page])] : pages.failed.filter((other) => other !== page);
     const total = pages.to - pages.from + 1;
     const status = done.length + failed.length >= total ? 'reviewing' : current.status;
-    return stageReplace(scope, 'importBatch', current, { ...batchDefinitionOf(current), status, pages: { ...pages, done, failed } });
+    const spent = addUsage(pages.usage ?? NO_USAGE, usage);
+    return stageReplace(scope, 'importBatch', current, { ...batchDefinitionOf(current), status, pages: { ...pages, done, failed, usage: spent } });
   });
 }
 
@@ -109,22 +117,23 @@ function proposeExtraction(input: PageContext, extraction: RawPageExtraction): P
   return Promise.all(extractGroupsFromPage(extraction, context).map((group) => proposeGroup(input.ctx, input.batchId, group)));
 }
 
-/** Διάβασμα → πρόταση → αν σηκώθηκαν κανόνες, μία ακόμη ανάγνωση με ανατροφοδότηση. */
-async function readAndPropose(input: PageContext): Promise<{ readonly ok: boolean; readonly proposals: readonly StoredImportProposal[] }> {
+/** Διάβασμα → πρόταση → αν σηκώθηκαν κανόνες, μία ακόμη ανάγνωση με ανατροφοδότηση. Ό,τι απέσυρε η τελευταία ανάγνωση φεύγει. */
+async function readAndPropose(input: PageContext): Promise<{ readonly ok: boolean; readonly usage: ImportPagesUsage }> {
   const analyzer = createCatalogPageAnalyzer();
   let feedback: readonly string[] = [];
-  let proposals: readonly StoredImportProposal[] = [];
-  let ok = false;
+  let proposals: readonly StoredImportProposal[] | null = null;
+  let usage = NO_USAGE;
   for (let attempt = 0; attempt < FEEDBACK_ATTEMPTS; attempt += 1) {
     const reading = await analyzer.readPage({ png: input.png, tokens: input.tokens, attributes: input.specs.specs, feedback });
     if (reading.kind === 'unavailable') throw new CatalogWriteError('invalid', [{ code: 'unknownReference', path: 'analyzer' }]);
+    usage = addUsage(usage, reading.usage);
     if (reading.kind === 'failed') break;
     proposals = await proposeExtraction(input, reading.extraction);
-    ok = true;
-    feedback = feedbackOf(proposals);
+    feedback = feedbackOf(proposals, input.specs.codeById);
     if (feedback.length === 0) break;
   }
-  return { ok, proposals };
+  if (proposals !== null) await retireStalePageProposals(input.ctx, input.batchId, input.page, new Set(proposals.map((proposal) => proposal.id)));
+  return { ok: proposals !== null, usage };
 }
 
 /** `POST /api/catalog/imports/[id]/pages` — μία σελίδα. */
@@ -138,6 +147,6 @@ export async function readImportPage(ctx: AuthContext, id: string, page: number)
   if (!pages || page < pages.from || page > pages.to) throw new CatalogWriteError('invalid', [{ code: 'tooMany', path: 'page' }]);
   if (pages.done.includes(page)) return batch;
   const { png, items } = await readPdfPage(await readBatchFile(ctx, batch), page, { dpi: IMPORT_PAGE_DPI });
-  const { ok } = await readAndPropose({ ctx, batchId: id, page, png, tokens: tokenizePage(items), specs: pageSpecs(schema) });
-  return markPage(ctx, id, page, ok ? 'done' : 'failed');
+  const { ok, usage } = await readAndPropose({ ctx, batchId: id, page, png, tokens: tokenizePage(items), specs: pageSpecs(schema) });
+  return markPage(ctx, id, page, ok ? 'done' : 'failed', usage);
 }

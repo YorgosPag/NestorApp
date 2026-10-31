@@ -4,11 +4,12 @@
  *
  * | Κλειδί | Τι σημαίνει |
  * |---|---|
- * | παρτίδα | ίδιο αρχείο + ίδιος στόχος + ίδια **έκδοση** προφίλ + ίδια επανεκτέλεση ⇒ ίδια παρτίδα |
+ * | παρτίδα | ίδιο αρχείο + ίδιος στόχος + ίδια **έκδοση** προφίλ + ίδιο **εύρος σελίδων** + ίδια επανεκτέλεση ⇒ ίδια παρτίδα |
  * | πρόταση | παρτίδα + σύνολο ⇒ η επανάληψη ανάγνωσης μιας σελίδας ξαναγράφει την ίδια πρόταση |
  *
  * Το προφίλ μπαίνει **με την αναθεώρησή του**: ίδιο αρχείο με διορθωμένο προφίλ είναι **νέα** εκτέλεση, αλλιώς δεν θα
- * μπορούσε ποτέ να ξαναπεράσει.
+ * μπορούσε ποτέ να ξαναπεράσει. Το ίδιο και το εύρος σελίδων: άλλο κεφάλαιο του ίδιου PDF είναι άλλη δουλειά, αλλιώς θα
+ * ξανάνοιγε η παλιά παρτίδα και το νέο εύρος θα αγνοούνταν σιωπηλά.
  * @module subapps/catalog/import/import-keys
  */
 
@@ -27,12 +28,14 @@ export interface ImportBatchKeyInput {
   readonly target: ImportBatchTarget;
   readonly profileId: string | null;
   readonly profileRevision: number | null;
+  readonly pageRange: { readonly from: number; readonly to: number } | null;
   readonly run: number;
 }
 
 export function importBatchKey(input: ImportBatchKeyInput): string {
   const profile = input.profileId === null ? 'none' : `${input.profileId}@${input.profileRevision ?? 0}`;
-  return [input.contentSha256, targetKeyOf(input.target), profile, String(input.run)].join(SEPARATOR);
+  const pages = input.pageRange === null ? 'all' : `${input.pageRange.from}-${input.pageRange.to}`;
+  return [input.contentSha256, targetKeyOf(input.target), profile, pages, String(input.run)].join(SEPARATOR);
 }
 
 export function importProposalKey(batchId: string, groupKey: string): string {

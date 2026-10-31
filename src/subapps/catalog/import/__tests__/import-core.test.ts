@@ -97,10 +97,14 @@ describe('σύγκριση τριών σημείων', () => {
     expect(defaultDecisionOf({ ...facts, status: 'unchanged' })).toBe('reject');
     expect(defaultDecisionOf({ ...facts, incoming: null })).toBe('reject');
   });
+
+  it('τιμή που τυπώθηκε και δεν διαβάστηκε θέλει άνθρωπο: η απόρριψη θα την έσβηνε σιωπηλά', () => {
+    expect(defaultDecisionOf({ ...facts, incoming: null, issues: [{ code: 'measurementUnitMissing', path: 'x' }] })).toBe('pending');
+  });
 });
 
 describe('κλειδιά ιδεμποτίας', () => {
-  const input = { contentSha256: 'abc', target: { purpose: 'attributes', familyId: 'f', variantSchemeCode: 's', categoryIds: [] }, profileId: 'p', profileRevision: 1, run: 0 } as const;
+  const input = { contentSha256: 'abc', target: { purpose: 'attributes', familyId: 'f', variantSchemeCode: 's', categoryIds: [] }, profileId: 'p', profileRevision: 1, pageRange: { from: 85, to: 86 }, run: 0 } as const;
 
   it('ίδια είσοδος ⇒ ίδιο κλειδί', () => {
     expect(importBatchKey(input)).toBe(importBatchKey({ ...input }));
@@ -109,6 +113,10 @@ describe('κλειδιά ιδεμποτίας', () => {
   it('διορθωμένο προφίλ ή ρητή επανεκτέλεση ⇒ νέο κλειδί', () => {
     expect(importBatchKey({ ...input, profileRevision: 2 })).not.toBe(importBatchKey(input));
     expect(importBatchKey({ ...input, run: 1 })).not.toBe(importBatchKey(input));
+  });
+
+  it('άλλο εύρος σελίδων του ίδιου αρχείου ⇒ άλλη παρτίδα, όχι σιωπηλή επαναφορά της παλιάς', () => {
+    expect(importBatchKey({ ...input, pageRange: { from: 87, to: 90 } })).not.toBe(importBatchKey(input));
   });
 
   it('το κλειδί πρότασης δένεται στην παρτίδα', () => {
@@ -182,7 +190,7 @@ describe('το κείμενο της σελίδας ως απόδειξη', () =
   it('τιμή που δεν διασταυρώθηκε χάνει τη βεβαιότητα που δήλωσε το μοντέλο', () => {
     const attributesByCode = new Map([['cooling_h', { ...MFP_ATTRIBUTE_MAP.get('cooling_h')!, id: 'cooling_h' }]]);
     const context: PageExtractionContext = { page: 60, tokens, attributesByCode };
-    const raw = { tables: [{ modelCode: { value: 'ΒΑC', confidence: 1, sourceTokens: [] }, shared: [], variants: [{ cells: [{ attribute: 'cooling_h', value: '3,5', confidence: 0.99, sourceTokens: ['t2'] }, { attribute: 'ghost', value: '1', confidence: 1, sourceTokens: [] }] }] }] };
+    const raw = { tables: [{ modelCode: { value: 'ΒΑC', confidence: 1, sourceTokens: [] }, shared: [], variants: [{ cells: [{ attribute: 'cooling_h', value: '3,5', confidence: 0.99, sourceTokens: ['t2'], unit: 'kW', unitTokens: ['t3'] }, { attribute: 'ghost', value: '1', confidence: 1, sourceTokens: [], unit: null, unitTokens: [] }] }] }] };
     const [group] = extractGroupsFromPage(raw, context);
     expect(group.modelCode).toBe('BAC');
     expect(group.rows[0].cells).toHaveLength(1);

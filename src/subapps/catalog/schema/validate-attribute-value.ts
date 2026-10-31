@@ -16,7 +16,7 @@ import type {
   TableColumn,
 } from '../types/attribute';
 import type { AttributeValue, AttributeValueOfType, TableCellValue } from '../types/product';
-import { amountFromCanonical } from '../values/decimal-amount';
+import { amountFromCanonical, significantDecimals } from '../values/decimal-amount';
 import { checkRichText } from '../values/rich-text';
 import { isEmptyAttributeValue } from '../values/value-shape';
 import { CATALOG_LIMITS } from '../vocabulary/catalog-limits';
@@ -61,7 +61,8 @@ function checkAmount(
     check.collector.add('valueNotNumber', path);
     return;
   }
-  if (parsed.decimals > config.decimals) check.collector.add('valueTooManyDecimals', path, { max: config.decimals });
+  // Τα μηδενικά στο τέλος δεν είναι ακρίβεια: «18,00 kg» χωρά σε ένα δεκαδικό, και το ποσό μένει όπως τυπώθηκε.
+  if (significantDecimals(amount) > config.decimals) check.collector.add('valueTooManyDecimals', path, { max: config.decimals });
   if (!toDisplay) return;
   const display = toDisplay(parsed.value);
   if (display < 0 && config.negativeAllowed === false) {

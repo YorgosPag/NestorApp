@@ -44,7 +44,7 @@
     "src/i18n/generated/routes/o__workspace__catalog__categories.el.json": "647afac6ce6ca90a09c8e1b87e3311e3591718ecc3575209be494c6a39c94b01",
     "src/i18n/generated/routes/o__workspace__catalog__discounts.el.json": "316853261927bae49368f4d58bd7b1a0c162bb874b15d162fdec966471aea3c9",
     "src/i18n/generated/routes/o__workspace__catalog__families.el.json": "39e5085eccc1400c25c43f3ccaefbb8519603d78b5e5a7db3bddc2d2c39d59c0",
-    "src/i18n/generated/routes/o__workspace__catalog__imports.el.json": "6a41ddac3552409ce0433438402e2c860053ab98cff3498ef80e8abed6a9ec7c",
+    "src/i18n/generated/routes/o__workspace__catalog__imports.el.json": "5246819a91489285a123407258f1b424ec1e2b3db7a3df733c67a9f602e1c959",
     "src/i18n/generated/routes/o__workspace__catalog__measurements.el.json": "035216d588924a55c4586edb89ae09f195effbc3c31a105e4c8780115282445e",
     "src/i18n/generated/routes/o__workspace__catalog__price-lists.el.json": "58612abe22f1005441b207e54e75e58f8d5143c9bb38cd767a98446395eda1de",
     "src/i18n/generated/routes/o__workspace__catalog__products.el.json": "acd562293385a8352df872e45799e17a01bc738ad4febbf868e3a59459b64909",
@@ -178,7 +178,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "90c29ee413f344b404eb02b20d4d2f51dd9bafe8a9c45625c111d26110975ab9",
+  "inputsSha256": "3826e1017cc9b4a797a097e1793471c48ae1bf05a844dfa89d2cbcc2687270b4",
   "languages": [
     "el"
   ],
@@ -9170,6 +9170,8 @@
       "wants": {
         "catalog": {
           "keys": [
+            "batch.costEstimate",
+            "batch.costSpent",
             "batch.discard",
             "batch.loading",
             "batch.noProposals",
@@ -9177,6 +9179,8 @@
             "batch.pagesProgress",
             "batch.readPages",
             "batch.retryFailed",
+            "batch.stop",
+            "batch.stopping",
             "common.actions",
             "common.loadFailed",
             "common.loading",
@@ -9352,6 +9356,8 @@
           "keys": [
             "action.create",
             "action.update",
+            "batch.costEstimate",
+            "batch.costSpent",
             "batch.discard",
             "batch.loading",
             "batch.noProposals",
@@ -9359,6 +9365,8 @@
             "batch.pagesProgress",
             "batch.readPages",
             "batch.retryFailed",
+            "batch.stop",
+            "batch.stopping",
             "batchStatus.awaitingFile",
             "batchStatus.closed",
             "batchStatus.discarded",
@@ -9374,6 +9382,7 @@
             "issues.attributeInMultipleLevels",
             "issues.attributeLevelLockedInUse",
             "issues.attributeRemovalLockedInUse",
+            "issues.attributeRepeated",
             "issues.attributeUnknown",
             "issues.axesCount",
             "issues.axisComboDuplicate",
@@ -9430,6 +9439,7 @@
             "issues.localizableNotSupported",
             "issues.mappingIncomplete",
             "issues.measurementFamilyUnknown",
+            "issues.measurementUnitMissing",
             "issues.measurementUnitUnknown",
             "issues.misaligned",
             "issues.modelCodeMissing",
@@ -9493,6 +9503,7 @@
             "issues.unitSingleUnitViolated",
             "issues.unitStandardMissing",
             "issues.unitStandardNotIdentity",
+            "issues.unitUnconfirmed",
             "issues.unknownParty",
             "issues.unknownReference",
             "issues.validityRangeInverted",
@@ -9667,6 +9678,8 @@
         },
         "files": {
           "keys": [
+            "batch.costEstimate",
+            "batch.costSpent",
             "batch.discard",
             "batch.loading",
             "batch.noProposals",
@@ -9674,6 +9687,8 @@
             "batch.pagesProgress",
             "batch.readPages",
             "batch.retryFailed",
+            "batch.stop",
+            "batch.stopping",
             "pdf.fullscreen",
             "pdf.loadFailed",
             "pdf.loading",
@@ -25267,7 +25282,7 @@
   ],
   "stats": {
     "matchedKeys": 272,
-    "sliceBytes": 1261385
+    "sliceBytes": 1262226
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

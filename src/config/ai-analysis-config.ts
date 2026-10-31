@@ -64,6 +64,15 @@ export const AI_COST_CONFIG = {
     ISO19650_BUDGET_CAP_USD: 0.01,
   },
 } as const;
+
+type ModelRates = (typeof AI_COST_CONFIG.PRICING)[keyof typeof AI_COST_CONFIG.PRICING];
+
+/** Το κόστος ενός μοντέλου από τον πίνακα τιμών. `null` για μοντέλο χωρίς γραμμή: καμία τιμή δεν μαντεύεται. */
+export function tokenCostUsd(model: string, inputTokens: number, outputTokens: number): number | null {
+  const rates = (AI_COST_CONFIG.PRICING as Readonly<Record<string, ModelRates | undefined>>)[model];
+  return rates ? (inputTokens * rates.inputPer1MTokens + outputTokens * rates.outputPer1MTokens) / 1_000_000 : null;
+}
+
 export const AI_ANALYSIS_PROMPTS = {
   /** @deprecated Use MULTI_INTENT_SYSTEM for new pipeline. Kept for backward compatibility. */
   MESSAGE_INTENT_SYSTEM: `You are an AI classifier for a Greek real estate & construction management company (κτηματομεσιτικό/κατασκευαστικό γραφείο). Analyze incoming messages and return JSON matching the schema.

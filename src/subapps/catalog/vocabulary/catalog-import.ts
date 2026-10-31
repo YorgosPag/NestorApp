@@ -46,8 +46,26 @@ export const IMPORT_ISSUE_CODES = [
   'modelCodeMissing',
   'skuUnknown',
   'priceIncomplete',
+  /** Μέγεθος με μετρούμενη ιδιότητα χωρίς διαβασμένη μονάδα: η προεπιλογή της ιδιότητας θα ήταν μαντεψιά (σφάλμα ×1000). */
+  'measurementUnitMissing',
+  /** Η μονάδα που δήλωσε το μοντέλο δεν επιβεβαιώνεται από το κείμενο της σελίδας. */
+  'unitUnconfirmed',
+  /** Δύο τιμές για την ίδια ιδιότητα που δεν συμφωνούν: κανένας κανόνας δεν διαλέγει σιωπηλά. */
+  'attributeRepeated',
 ] as const;
 export type ImportIssueCode = (typeof IMPORT_ISSUE_CODES)[number];
+
+/** Ίδιο μέγεθος τυπωμένο σε δύο μονάδες (W και Btu/h): συμφωνούν μέχρι τη στρογγυλοποίηση του προμηθευτή. */
+export const IMPORT_UNIT_AGREEMENT_TOLERANCE = 0.01;
+
+/** Παρτίδα που τελείωσε δεν ξανανοίγει με το ίδιο κλειδί: το νέο ανέβασμα είναι νέα εκτέλεση. */
+export const IMPORT_FINISHED_BATCH_STATUSES: readonly ImportBatchStatus[] = ['closed', 'discarded'];
+
+/** Πόσες εκτελέσεις του ίδιου αρχείου και στόχου εξετάζονται πριν την άρνηση (φραγμένη ανάγνωση μέσα σε συναλλαγή). */
+export const IMPORT_MAX_RUNS = 25;
+
+/** Η εκτίμηση πριν από την πρώτη μέτρηση: ~$0,10 για 2 σελίδες στη δοκιμή της παραγωγής (§5.5.1). Μετά μετρά η πραγματική χρήση. */
+export const IMPORT_PAGE_ESTIMATED_COST_USD = 0.05;
 
 /** Κάτω από αυτή τη βεβαιότητα το πεδίο θέλει ρητή απόφαση (~92 % ανά πεδίο = ποτέ αυτόματη αποδοχή, §21.4). */
 export const IMPORT_REVIEW_CONFIDENCE = 0.85;

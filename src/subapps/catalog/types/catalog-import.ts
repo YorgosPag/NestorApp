@@ -84,7 +84,10 @@ export interface ExtractedCell {
   /** 1 για ντετερμινιστική πηγή (αρχείο)· η βεβαιότητα του μοντέλου για την AI. */
   readonly confidence: number;
   readonly anchor: SourceAnchor | null;
-  /** Μονάδα της στήλης, όταν τα κελιά είναι γυμνοί αριθμοί. */
+  /**
+   * Η μονάδα της πηγής, όταν το κείμενο είναι γυμνός αριθμός: δήλωση στήλης στο αρχείο, τυπωμένο σύμβολο στο PDF. Κωδικός ή
+   * σύμβολο, τα καταλαβαίνει ο κωδικοποιητής. `null` σε μετρούμενη ιδιότητα = απόφαση ανθρώπου, ποτέ η προεπιλογή της ιδιότητας.
+   */
   readonly unitCode: string | null;
   /** Ό,τι σήκωσε σημαία **πριν** από την τιμή (στοίχιση πίνακα). */
   readonly flags: readonly ImportIssue[];
@@ -174,12 +177,21 @@ export type ImportBatchTarget =
   /** `identifierAttributeId`: η `unique` ιδιότητα στην οποία ανήκει ο κωδικός SKU του αρχείου. */
   | { readonly purpose: 'priceLines'; readonly priceListVersionId: string; readonly identifierAttributeId: string };
 
-/** Πρόοδος ανάγνωσης PDF, ανά σελίδα. */
+/** Ό,τι πληρώθηκε για την ανάγνωση. `costUsd: null` = το μοντέλο δεν έχει γραμμή στον πίνακα τιμών. */
+export interface ImportPagesUsage {
+  readonly requests: number;
+  readonly inputTokens: number;
+  readonly outputTokens: number;
+  readonly costUsd: number | null;
+}
+
+/** Πρόοδος ανάγνωσης PDF, ανά σελίδα. Το `usage` λείπει από παρτίδες παλαιότερες της μέτρησης. */
 export interface ImportBatchPages {
   readonly from: number;
   readonly to: number;
   readonly done: readonly number[];
   readonly failed: readonly number[];
+  readonly usage?: ImportPagesUsage;
 }
 
 export interface ImportBatchDefinition {

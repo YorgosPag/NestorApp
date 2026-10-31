@@ -74,14 +74,16 @@ const BOOLEAN_WORDS: ReadonlyArray<readonly [string, boolean]> = [
 ];
 
 /** Η «κανονική μορφή» μιας μονάδας: «m³/h» ≡ «m3/h» ≡ «m3_h» (ό,τι γράφει ο προμηθευτής στο Excel). Χαρακτήρας-προς-χαρακτήρα. */
-const unitForm = (text: string): string => text.replace(/³/g, '3').replace(/²/g, '2').replace(/_/g, '/').replace(/\s+/g, '');
+export const unitForm = (text: string): string => text.replace(/³/g, '3').replace(/²/g, '2').replace(/_/g, '/').replace(/\s+/g, '');
 
 type UnitDef = { readonly code: string; readonly symbol: string };
 
-/** Η μονάδα στο τέλος του κειμένου: πρώτα **ακριβώς** (το «mW» δεν είναι «MW»), αλλιώς caseless **μόνο αν** είναι μία. */
-function unitSuffix(compact: string, units: readonly UnitDef[]): { readonly unit: UnitDef; readonly form: string } | null {
-  const forms = units.flatMap((unit) => [unitForm(unit.symbol), unitForm(unit.code)].map((form) => ({ unit, form })))
-    .sort((x, y) => y.form.length - x.form.length);
+const BARE_AMOUNT = /^[-−+]?[\d.,]+$/;
+
+type UnitForm = { readonly unit: UnitDef; readonly form: string };
+
+/** Πρώτα **ακριβώς** (το «mW» δεν είναι «MW»), αλλιώς caseless **μόνο αν** είναι μία. */
+function matchUnitForm(compact: string, forms: readonly UnitForm[]): UnitForm | null {
   const exact = forms.find(({ form }) => compact.endsWith(form));
   if (exact) return exact;
   const loose = forms.filter(({ form }) => compact.toLowerCase().endsWith(form.toLowerCase()));
@@ -89,9 +91,20 @@ function unitSuffix(compact: string, units: readonly UnitDef[]): { readonly unit
   return distinct.size === 1 ? loose[0] : null;
 }
 
+/**
+ * Η μονάδα στο τέλος του κειμένου. Προηγούνται οι μορφές που αφήνουν αριθμό αριστερά: στο «18,00 Kg» το «g» δεν είναι η μονάδα,
+ * γιατί θα έμενε «18,00K». Αλλιώς κρίνονται όλες, ώστε το «abc kW» να πει «δεν είναι αριθμός» και όχι «άγνωστη μονάδα».
+ */
+function unitSuffix(compact: string, units: readonly UnitDef[]): UnitForm | null {
+  const forms = units.flatMap((unit) => [unitForm(unit.symbol), unitForm(unit.code)].map((form) => ({ unit, form })))
+    .sort((x, y) => y.form.length - x.form.length);
+  const leavesNumber = forms.filter(({ form }) => BARE_AMOUNT.test(compact.slice(0, compact.length - form.length)));
+  return matchUnitForm(compact, leavesNumber) ?? matchUnitForm(compact, forms);
+}
+
 /** Γυμνός αριθμός (χωρίς μονάδα) ⇒ διαβάζεται στην **προεπιλεγμένη** μονάδα της ιδιότητας. Μία απάντηση για ανάγνωση και οθόνη. */
 export function isBareAmountText(text: string): boolean {
-  return /^[-−+]?[\d.,]+$/.test(unitForm(text.trim()));
+  return BARE_AMOUNT.test(unitForm(text.trim()));
 }
 
 function measurementParts(attribute: Attr<'measurement'>, text: string, ctx: ValueTextContext): { amountText: string; unitCode: string } | null {
@@ -130,7 +143,7 @@ const CODECS: { readonly [K in AttributeType]: Codec<K> | null } = {
     parse: (attribute, text, ctx) => {
       if (text.trim() === '') return EMPTY;
       const parts = measurementParts(attribute, text, ctx);
-      if (!parts) return fail('measurementUnitUnknown', { unit: text.trim() });
+      if (!parts) return fail('measurementUnitUnknown', { code: text.trim() });
       const parsed = parseEnteredAmount(parts.amountText);
       return parsed ? { ok: true, value: { type: 'measurement', amount: parsed.amount, unitCode: parts.unitCode } } : fail('valueNotNumber');
     },
@@ -150,7 +163,7 @@ const CODECS: { readonly [K in AttributeType]: Codec<K> | null } = {
     parse: (attribute, text) => {
       if (text.trim() === '') return EMPTY;
       const code = optionCodeOf(attribute.config.options, text);
-      return code ? { ok: true, value: { type: 'select', optionCode: code } } : fail('optionUnknown', { option: text.trim() });
+      return code ? { ok: true, value: { type: 'select', optionCode: code } } : fail('optionUnknown', { code: text.trim() });
     },
   },
   multiSelect: {
@@ -161,7 +174,7 @@ const CODECS: { readonly [K in AttributeType]: Codec<K> | null } = {
       if (parts.length === 0) return EMPTY;
       const codes = parts.map((part) => optionCodeOf(attribute.config.options, part));
       const unknown = parts.find((_part, index) => codes[index] === null);
-      if (unknown !== undefined) return fail('optionUnknown', { option: unknown });
+      if (unknown !== undefined) return fail('optionUnknown', { code: unknown });
       return { ok: true, value: { type: 'multiSelect', optionCodes: [...new Set(codes as string[])] } };
     },
   },

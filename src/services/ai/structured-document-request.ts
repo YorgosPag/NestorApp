@@ -11,8 +11,10 @@ import { safeJsonParse } from '@/lib/json-utils';
 import {
   executeResponsesRequest,
   extractOutputText,
+  extractResponsesUsage,
   type ResponsesContent,
   type ResponsesRequestConfig,
+  type ResponsesUsage,
 } from '@/services/ai/openai-responses';
 
 export interface StructuredSchema {
@@ -29,10 +31,12 @@ export interface StructuredDocumentRequest {
   readonly schema: StructuredSchema;
 }
 
-export type StructuredDocumentOutcome =
+/** Κάθε έκβαση κουβαλά τη χρήση: και η σπασμένη απάντηση πληρώνεται. */
+export type StructuredDocumentOutcome = (
   | { readonly kind: 'parsed'; readonly value: unknown }
   | { readonly kind: 'empty' }
-  | { readonly kind: 'unparseable' };
+  | { readonly kind: 'unparseable' }
+) & { readonly usage: ResponsesUsage | null };
 
 /** Η μεταφορά από το περιβάλλον — `null` χωρίς κλειδί (ο καλών πέφτει στο stub του). */
 export function readDocumentAnalyzerTransport(): ResponsesRequestConfig | null {
@@ -58,8 +62,9 @@ export async function requestStructuredDocument(
     ],
     text: { format: { type: 'json_schema', ...request.schema } },
   });
+  const usage = extractResponsesUsage(payload);
   const text = extractOutputText(payload);
-  if (!text) return { kind: 'empty' };
+  if (!text) return { kind: 'empty', usage };
   const value = safeJsonParse<unknown>(text, null);
-  return value === null ? { kind: 'unparseable' } : { kind: 'parsed', value };
+  return value === null ? { kind: 'unparseable', usage } : { kind: 'parsed', value, usage };
 }

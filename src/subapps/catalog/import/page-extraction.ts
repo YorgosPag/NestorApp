@@ -15,7 +15,8 @@ import type { CatalogAttributeDefinition } from '../types/attribute';
 import type { ExtractedCell, ExtractedGroup, ExtractedRow, ImportTarget } from '../types/catalog-import';
 import { IMPORT_UNVERIFIED_CONFIDENCE_CAP } from '../vocabulary/catalog-import';
 import { ANY_SLOT } from '../types/product';
-import { anchorForCell, misalignedCells, type AlignedRow, type PageToken } from './page-tokens';
+import { unitForm } from '../values/value-text-codec';
+import { anchorForCell, misalignedCells, unitConfirmed, type AlignedRow, type PageToken } from './page-tokens';
 
 export const PAGE_EXTRACTION_SCHEMA_NAME = 'catalog_page_extraction';
 
@@ -23,9 +24,11 @@ export const PAGE_EXTRACTION_SCHEMA_NAME = 'catalog_page_extraction';
 export interface PageAttributeSpec {
   readonly code: string;
   readonly label: string;
+  /** Τι σημαίνει η ιδιότητα, όταν η ετικέτα μόνη της δεν αρκεί («Κωδικός» του τιμοκαταλόγου ή του κατασκευαστή;). */
+  readonly description: string | null;
   readonly type: string;
-  readonly unit: string | null;
   readonly level: 'shared' | 'variant';
+  readonly unique: boolean;
   readonly options: readonly string[];
 }
 
@@ -37,6 +40,10 @@ export interface RawPageValue {
 
 export interface RawPageCell extends RawPageValue {
   readonly attribute: string;
+  /** Η μονάδα όπως τυπώνεται, στο κελί ή στην επικεφαλίδα του. `null` = δεν τυπώνεται μονάδα. */
+  readonly unit: string | null;
+  /** Τα κομμάτια κειμένου από όπου διαβάστηκε η μονάδα. */
+  readonly unitTokens: readonly string[];
 }
 
 export interface RawPageTable {
@@ -59,8 +66,13 @@ function cellSchema(attributeCodes: readonly string[]) {
   return {
     type: 'object',
     additionalProperties: false,
-    required: ['attribute', 'value', 'confidence', 'sourceTokens'],
-    properties: { attribute: { type: 'string', enum: attributeCodes }, ...valueProperties },
+    required: ['attribute', 'value', 'unit', 'unitTokens', 'confidence', 'sourceTokens'],
+    properties: {
+      attribute: { type: 'string', enum: attributeCodes },
+      ...valueProperties,
+      unit: { type: ['string', 'null'] },
+      unitTokens: { type: 'array', items: { type: 'string' } },
+    },
   };
 }
 
@@ -96,8 +108,10 @@ export interface PageExtractionContext {
 
 const clampConfidence = (value: number): number => (Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0);
 
+const cleanText = (text: string | null): string | null => (text === null || text.trim() === '' ? null : normalizeMixedScriptHomoglyphs(text.trim()));
+
 function cellFrom(raw: RawPageValue, target: ImportTarget, context: PageExtractionContext): ExtractedCell {
-  const text = raw.value === null || raw.value.trim() === '' ? null : normalizeMixedScriptHomoglyphs(raw.value.trim());
+  const text = cleanText(raw.value);
   const anchor = text === null ? null : anchorForCell(context.page, text, raw.sourceTokens, context.tokens);
   const verified = anchor?.kind === 'page' && anchor.verified === true;
   const stated = clampConfidence(raw.confidence);
@@ -111,10 +125,30 @@ function cellFrom(raw: RawPageValue, target: ImportTarget, context: PageExtracti
   };
 }
 
+/** Το μοντέλο έγραψε τη μονάδα μέσα στην τιμή («1000 kW»), παρά την εντολή. Κρίνεται όπως κάθε άλλη δήλωση μονάδας. */
+const EMBEDDED_UNIT = /^[-−+]?[\d.,\s]*\d\s*([^\d.,\s].*)$/u;
+
+type UnitReading = Pick<ExtractedCell, 'unitCode' | 'flags'>;
+
+/**
+ * Η μονάδα μιας μετρούμενης τιμής, διαβασμένη και διασταυρωμένη (§5.5.1 Δ1/Δ2): ό,τι τύπωσε η σελίδα, ποτέ η μονάδα του
+ * στόχου. Το 63/63 της πρώτης δοκιμής έδειξε ότι η διασταύρωση του ψηφίου δεν βλέπει σφάλμα ×1000: εδώ κρίνεται και η μονάδα.
+ */
+function unitReadingOf(raw: RawPageCell, text: string | null, attributeId: string, context: PageExtractionContext): UnitReading {
+  const stated = cleanText(raw.unit);
+  const embedded = text === null ? null : (EMBEDDED_UNIT.exec(text)?.[1]?.trim() ?? null);
+  const printed = embedded ?? stated;
+  if (printed === null) return { unitCode: null, flags: [] };
+  const agree = stated === null || embedded === null || unitForm(stated) === unitForm(embedded);
+  const confirmed = agree && (unitConfirmed(printed, raw.unitTokens, context.tokens) || unitConfirmed(printed, raw.sourceTokens, context.tokens));
+  return { unitCode: embedded === null ? printed : null, flags: confirmed ? [] : [{ code: 'unitUnconfirmed', path: attributeId, params: { unit: printed } }] };
+}
+
 function attributeCell(raw: RawPageCell, context: PageExtractionContext): ExtractedCell | null {
   const attribute = context.attributesByCode.get(raw.attribute);
   if (!attribute) return null;
-  return cellFrom(raw, { kind: 'attribute', attributeId: attribute.id, channel: ANY_SLOT, locale: ANY_SLOT }, context);
+  const cell = cellFrom(raw, { kind: 'attribute', attributeId: attribute.id, channel: ANY_SLOT, locale: ANY_SLOT }, context);
+  return attribute.type === 'measurement' ? { ...cell, ...unitReadingOf(raw, cell.text, attribute.id, context) } : cell;
 }
 
 const attributeCells = (raws: readonly RawPageCell[], context: PageExtractionContext): ExtractedCell[] =>
@@ -179,7 +213,12 @@ export const PAGE_EXTRACTION_SYSTEM_PROMPT = [
   'You read one page of a building-products supplier catalog and return its product tables as JSON.',
   'Rules:',
   '- One entry in "tables" per product table. Each variant is one column or row of the table.',
-  '- Copy every value EXACTLY as printed, including units and letter suffixes. Never convert, round or complete.',
+  '- Copy every value EXACTLY as printed, including letter suffixes and trailing zeros. Never convert, round or complete.',
+  '- "value" holds the number only. "unit" holds the unit EXACTLY as printed for that value, in the cell or in its row or column heading, and "unitTokens" lists the ids of the tokens that print it.',
+  '- If no unit is printed for a measured value, "unit" is null. Never supply a unit from your own knowledge, and never assume one. For anything that is not a measurement, "unit" is null.',
+  '- A cell belongs to exactly one attribute and holds one whole value. Never split one value or one unit into several cells.',
+  '- Each variant has one cell per attribute, with two exceptions. If the same quantity is printed in several units (W and Btu/h), return one cell per printed unit. If the attribute is a unique identifier and the table prints several code lines for the variant, return one cell per printed code.',
+  '- "modelCode" is a code printed once for the whole table. Null when the table has only a title.',
   '- An empty table cell is value null. A value printed once for several variants belongs ONLY to the variant under it unless the table visibly merges the cell.',
   '- Keep columns and rows aligned: never shift a value into a neighbouring variant.',
   '- "sourceTokens" lists the ids of the page text tokens you read the value from. Leave it empty if the page has no tokens.',
@@ -187,10 +226,12 @@ export const PAGE_EXTRACTION_SYSTEM_PROMPT = [
   '- Return an empty "tables" array when the page has no product table.',
 ].join('\n');
 
+/** Η μονάδα της ιδιότητας **δεν** αναφέρεται επίτηδες (§5.5.1 Δ2): όταν την έβλεπε, το μοντέλο μετέτρεπε. */
 function attributeLine(spec: PageAttributeSpec): string {
-  const unit = spec.unit ? `, unit ${spec.unit}` : '';
   const options = spec.options.length > 0 ? `, one of: ${spec.options.join(' | ')}` : '';
-  return `- ${spec.code} (${spec.level}): ${spec.label} [${spec.type}${unit}${options}]`;
+  const identifier = spec.unique ? ', unique identifier' : '';
+  const meaning = spec.description ? ` — ${spec.description}` : '';
+  return `- ${spec.code} (${spec.level}): ${spec.label}${meaning} [${spec.type}${identifier}${options}]`;
 }
 
 /** Το μήνυμα χρήστη: οι ιδιότητες της οικογένειας + τα αριθμημένα κομμάτια κειμένου + (στην επανάληψη) τα ευρήματα. */

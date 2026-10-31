@@ -13,7 +13,7 @@ import 'server-only';
 import { buildAttributeRows, type ImportBaseValues, type LiveHolder } from '@/subapps/catalog/import/build-attribute-proposal';
 import { buildPriceRows, type PriceLineValues } from '@/subapps/catalog/import/build-price-proposal';
 import { judgeProposal, type ProposalVerdict } from '@/subapps/catalog/import/judge-proposal';
-import { mergeFieldsIntoValues } from '@/subapps/catalog/import/proposal-values';
+import { mergeFieldsIntoValues, parseImportCell } from '@/subapps/catalog/import/proposal-values';
 import { priceLineSubjectKey } from '@/subapps/catalog/pricing/price-line-subject';
 import { priceListLineKey } from '@/subapps/catalog/pricing/pricing-keys';
 import type { CatalogSchemaSnapshot } from '@/subapps/catalog/derived/chain-derived';
@@ -23,7 +23,7 @@ import type { StoredCatalogProductDefinition, StoredCatalogProductModelDefinitio
 import type { DiscountGroupDefinition, StoredPriceListLineDefinition, StoredPriceListVersionDefinition } from '@/subapps/catalog/types/price-list';
 import { axisCombinationKey } from '@/subapps/catalog/values/axis-combination';
 import { uniqueValueKey } from '@/subapps/catalog/values/normalize-unique';
-import { parseAttributeText, type ValueTextContext } from '@/subapps/catalog/values/value-text-codec';
+import type { ValueTextContext } from '@/subapps/catalog/values/value-text-codec';
 import { axesAtDepth, leafDepth } from '@/subapps/catalog/values/attribute-levels';
 import { suggestCatalogCode } from '@/subapps/catalog/vocabulary/suggest-catalog-code';
 import { readActiveByIds } from './catalog-library-reads.server';
@@ -61,7 +61,7 @@ function parsedValue(cell: ExtractedCell, schema: CatalogSchemaSnapshot): { read
   if (cell.target.kind !== 'attribute' || cell.text === null) return null;
   const attribute = schema.attributes.get(cell.target.attributeId);
   if (!attribute) return null;
-  const parsed = parseAttributeText(attribute, cell.text, textContextOf(schema));
+  const parsed = parseImportCell(attribute, { text: cell.text, unitCode: cell.unitCode }, textContextOf(schema));
   return parsed.ok && parsed.value ? { attributeId: cell.target.attributeId, value: parsed.value } : null;
 }
 
@@ -110,6 +110,8 @@ async function matchRows(scope: CatalogTx, group: ExtractedGroup, root: StoredMo
     if (product.modelId === (root?.id ?? null)) matches.set(key.rowKey, asLive(product));
     else foreign.set(key.rowKey, key);
   }
+  // Δύο τυπωμένοι κωδικοί στη γραμμή: όταν ο ένας ταυτίζεται, ο άλλος δεν είναι σύγκρουση με ξένο SKU.
+  for (const rowKey of matches.keys()) foreign.delete(rowKey);
   const byAxis = new Map([...products.values()].map((product) => [axisCombinationKey(product.values, axesAtDepth(schema.scheme, leafDepth(schema.scheme)), schema.attributes, schema.registry), product]));
   for (const row of group.rows) {
     const key = matches.has(row.rowKey) || foreign.has(row.rowKey) ? null : rowAxisKey(row, schema);
@@ -185,6 +187,30 @@ async function planPrices(scope: CatalogTx, target: Extract<ImportBatchTarget, {
   const discountGroupIdByCode = await readDiscountGroupIds(scope, group);
   const rows = buildPriceRows(group, { variantIdByRow, liveLines, baseLines, discountGroupIdByCode });
   return { rows, violations: [], familyId: null, variantSchemeCode: null, modelCode: null, priceListVersionId: version.id };
+}
+
+/** Το μοντέλο που κρατά ήδη τα SKU της ομάδας, αν είναι ένα. Δύο μοντέλα ⇒ καμία απάντηση: τα λέει το `uniqueValueTaken`. */
+async function modelOfHeldSkus(scope: CatalogTx, group: ExtractedGroup, schema: CatalogSchemaSnapshot): Promise<StoredModel | null> {
+  const keys = group.rows.flatMap((row) => rowUniqueKeys(row, schema));
+  const holders = await readUniqueHolders(scope, keys);
+  const held = await readActiveByIds<StoredCatalogProductDefinition>(scope, 'product', [...holders.values()].map((doc) => doc.holderId));
+  const modelIds = new Set([...held.values()].flatMap((product) => product.modelId ?? []));
+  const [modelId] = modelIds;
+  return modelIds.size === 1 ? readOwnedOrNull<StoredCatalogProductModelDefinition>(scope, 'productModel', modelId) : null;
+}
+
+/**
+ * Η ταυτότητα της ομάδας **πριν** από το σχέδιο (§5.5.1 Δ3 · Δ7): ο τυπωμένος κωδικός, αν είναι ζωντανό μοντέλο· αλλιώς το μοντέλο
+ * που κρατά ήδη τα SKU της. Ο τιμοκατάλογος της Aries δεν τυπώνει κωδικό μοντέλου: χωρίς αυτό το βήμα όλες οι γραμμές θα ήταν
+ * «ξένες». Τρέχει πριν από τη βάση σύγκρισης, ώστε και η σύγκριση τριών σημείων να βλέπει το σωστό μοντέλο.
+ */
+export async function resolveGroupIdentity(scope: CatalogTx, target: ImportBatchTarget, group: ExtractedGroup): Promise<ExtractedGroup> {
+  if (target.purpose !== 'attributes') return group;
+  const code = group.modelCode === null ? '' : suggestCatalogCode(group.modelCode);
+  if (code !== '' && (await readOwnedOrNull<StoredCatalogProductModelDefinition>(scope, 'productModel', naturalKeyId(scope, 'productModel', code)))) return group;
+  const schema = await readSchemaSnapshot(scope, target.familyId, target.variantSchemeCode);
+  const model = await modelOfHeldSkus(scope, group, schema);
+  return model ? { ...group, modelCode: model.code } : group;
 }
 
 /** Το σχέδιο μιας ομάδας απέναντι στα ζωντανά: ίδιο για πρώτη κατασκευή και για επανυπολογισμό. */

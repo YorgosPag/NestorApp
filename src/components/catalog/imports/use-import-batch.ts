@@ -27,11 +27,19 @@ import type {
   ImportFieldEditInput,
   ImportProposalWire,
 } from '@/subapps/catalog/types/catalog-import-requests';
+import { IMPORT_PAGE_ESTIMATED_COST_USD } from '@/subapps/catalog/vocabulary/catalog-import';
 
 /** Οι σελίδες που μένουν: όσες δεν έχουν κριθεί, και όσες απέτυχαν όταν ζητηθεί ρητά επανάληψη. */
 export function pagesToRead(pages: ImportBatchPages, retryFailed: boolean): number[] {
   const judged = new Set([...pages.done, ...(retryFailed ? [] : pages.failed)]);
   return Array.from({ length: pages.to - pages.from + 1 }, (_, index) => pages.from + index).filter((page) => !judged.has(page));
+}
+
+/** Το κόστος ανά σελίδα: η μέτρηση αυτής της παρτίδας, αλλιώς η δηλωμένη εκτίμηση. */
+export function costPerPage(pages: ImportBatchPages): number {
+  const judged = pages.done.length + pages.failed.length;
+  const spent = pages.usage?.costUsd ?? null;
+  return spent !== null && judged > 0 ? spent / judged : IMPORT_PAGE_ESTIMATED_COST_USD;
 }
 
 export interface ProposalChange {
@@ -65,6 +73,7 @@ function useProposalActions(setView: SetView, setFailure: SetFailure, reload: ()
 
 function usePageReader(batchId: string, view: ImportBatchDetailView | null, setFailure: SetFailure, reload: () => Promise<void>) {
   const [reading, setReading] = useState(false);
+  const [stopping, setStopping] = useState(false);
   const cancelled = useRef(false);
   useEffect(() => {
     cancelled.current = false;
@@ -75,6 +84,8 @@ function usePageReader(batchId: string, view: ImportBatchDetailView | null, setF
   const readPages = useCallback(async (retryFailed: boolean) => {
     const pages = view?.batch.pages;
     if (!pages) return;
+    cancelled.current = false;
+    setStopping(false);
     setReading(true);
     setFailure(null);
     try {
@@ -87,9 +98,15 @@ function usePageReader(batchId: string, view: ImportBatchDetailView | null, setF
       setFailure(catalogFailureOf(cause));
     } finally {
       setReading(false);
+      setStopping(false);
     }
   }, [batchId, reload, setFailure, view]);
-  return { reading, readPages };
+  /** Η σελίδα που διαβάζεται τελειώνει, γιατί έχει ήδη πληρωθεί· καμία επόμενη δεν ξεκινά. */
+  const stopReading = useCallback(() => {
+    cancelled.current = true;
+    setStopping(true);
+  }, []);
+  return { reading, stopping, readPages, stopReading };
 }
 
 export function useImportBatch(batchId: string) {

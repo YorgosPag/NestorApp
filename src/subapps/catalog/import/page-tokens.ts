@@ -14,8 +14,10 @@
  * @module subapps/catalog/import/page-tokens
  */
 
+import { normalizeMixedScriptHomoglyphs } from '@/utils/greek-text';
 import { parseEnteredAmount } from '../values/decimal-amount';
 import { normalizeUniqueText } from '../values/normalize-unique';
+import { unitForm } from '../values/value-text-codec';
 import type { PageRegion, SourceAnchor } from '../types/catalog-import';
 
 /** Ένα κομμάτι κειμένου σε κλάσματα σελίδας (αρχή πάνω-αριστερά). */
@@ -54,16 +56,47 @@ function comparableForm(text: string): string {
   return amount ? `#${Number(amount.amount)}` : normalizeUniqueText(text).replace(/\s+/g, '');
 }
 
-/** Λέει το κείμενο των κομματιών αυτή την τιμή; Η τιμή μπορεί να είναι τμήμα του («2,5 kW» → κομμάτι «2,5»). */
+/**
+ * Λέει το κείμενο των κομματιών αυτή την τιμή; Η τιμή μπορεί να είναι τμήμα του («2,5 kW» → κομμάτι «2,5»).
+ * Ο αριθμός κρίνεται **ολόκληρος**: το «100» δεν επιβεβαιώνεται από κομμάτι που λέει «1000».
+ */
 function tokensSay(tokens: readonly PageToken[], value: string): boolean {
   const joined = comparableForm(tokens.map((token) => token.text).join(' '));
   const wanted = comparableForm(value);
-  if (joined === wanted || joined.includes(wanted)) return true;
+  if (joined === wanted) return true;
+  const sayNumber = (form: string): boolean => tokens.some((token) => comparableForm(token.text) === form);
+  if (wanted.startsWith('#')) return sayNumber(wanted);
+  if (joined.includes(wanted)) return true;
   const number = parseEnteredAmount(value.trim().split(/\s+/)[0] ?? '');
-  return number !== null && tokens.some((token) => comparableForm(token.text) === `#${Number(number.amount)}`);
+  return number !== null && sayNumber(`#${Number(number.amount)}`);
 }
 
 const regionOf = ({ x, y, width, height }: PageToken): PageRegion => ({ x, y, width, height });
+
+const unitText = (text: string): string => unitForm(normalizeMixedScriptHomoglyphs(text));
+const LETTER_OR_SLASH = /[\p{L}/]/u;
+const LETTER_DIGIT_OR_SLASH = /[\p{L}\p{N}/]/u;
+
+/** Η μονάδα εμφανίζεται ως ολόκληρη λέξη: το «W» δεν είναι μέσα στο «kW», ούτε στο «W/m²». */
+function containsUnit(printed: string, unit: string): boolean {
+  for (let at = printed.indexOf(unit); at !== -1; at = printed.indexOf(unit, at + 1)) {
+    const before = printed[at - 1] ?? '';
+    const after = printed[at + unit.length] ?? '';
+    if (!LETTER_OR_SLASH.test(before) && !LETTER_DIGIT_OR_SLASH.test(after)) return true;
+  }
+  return false;
+}
+
+/**
+ * Επιβεβαιώνεται η μονάδα από τα κομμάτια που έδειξε το μοντέλο; Χωρίς πεζά-κεφαλαία ελευθερίες: το «mW» δεν είναι «MW». Τα
+ * κομμάτια ενώνονται χωρίς κενό, γιατί το PDF σπάει το «m³/h» σε τρία. Σαρωμένη σελίδα ή ανύπαρκτο κομμάτι ⇒ όχι.
+ */
+export function unitConfirmed(unit: string, citedTokenIds: readonly string[], tokens: ReadonlyMap<string, PageToken>): boolean {
+  const cited = citedTokenIds.flatMap((id) => tokens.get(id) ?? []);
+  const wanted = unitText(unit);
+  if (wanted === '' || cited.length === 0 || cited.length !== citedTokenIds.length) return false;
+  return containsUnit(unitText(cited.map((token) => token.text).join('')), wanted);
+}
 
 /**
  * Η άγκυρα μιας τιμής: σελίδα + περιοχές + κρίση διασταύρωσης. Κομμάτια που η AI επινόησε (ανύπαρκτο id) μετρούν ως

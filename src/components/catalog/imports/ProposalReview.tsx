@@ -89,9 +89,15 @@ function RowSection(props: RowProps) {
   );
 }
 
+/** Η πρόταση κωδικού από ό,τι μοιράζονται οι παραλλαγές: γεμίζει το πεδίο, αλλά τον ορίζει ο άνθρωπος. */
+function suggestedModelCode(proposal: ImportProposalWire): string {
+  const issue = proposal.rows.flatMap((row) => row.issues).find(({ code }) => code === 'modelCodeMissing');
+  return String(issue?.params?.suggestion ?? '');
+}
+
 function ModelCodeField({ proposal, onChange }: Pick<ProposalReviewProps, 'proposal' | 'onChange'>) {
   const { t } = useImportText();
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(() => suggestedModelCode(proposal));
   return (
     <p className="m-0 flex items-end gap-2">
       <span className="flex flex-col gap-1">

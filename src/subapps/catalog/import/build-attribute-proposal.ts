@@ -16,13 +16,13 @@ import type {
   ImportIssue,
   ImportProposalField,
   ImportProposalRow,
-  ImportTarget,
 } from '../types/catalog-import';
 import type { CatalogValueHolderKind, ProductValues } from '../types/product';
 import { attributeOwnerDepth, leafDepth } from '../values/attribute-levels';
-import { isBareAmountText, parseAttributeText, type ValueTextContext } from '../values/value-text-codec';
+import type { ValueTextContext } from '../values/value-text-codec';
+import { isAttributeCell, settleRepeatedCells, suggestModelCode, type AttributeCell } from './cell-identity';
 import { proposalFieldOf } from './field-diff';
-import { attributeValueEquality, importTargetKey, liveSlotValue } from './proposal-values';
+import { attributeValueEquality, importCellText, importTargetKey, liveSlotValue, parseImportCell } from './proposal-values';
 
 /** Ένας ζωντανός φορέας τιμών όπως τον χρειάζεται η διαφορά. */
 export interface LiveHolder {
@@ -43,20 +43,12 @@ export interface AttributeProposalContext {
   readonly base: ImportBaseValues;
 }
 
-type AttributeTarget = Extract<ImportTarget, { kind: 'attribute' }>;
-type AttributeCell = ExtractedCell & { readonly target: AttributeTarget; readonly text: string };
-
-const isAttributeCell = (cell: ExtractedCell): cell is AttributeCell => cell.target.kind === 'attribute' && cell.text !== null;
-
-/** Γυμνός αριθμός + μονάδα στήλης ⇒ το κείμενο που καταλαβαίνει ο κωδικοποιητής. */
-const textWithUnit = (cell: AttributeCell): string => (cell.unitCode !== null && isBareAmountText(cell.text) ? `${cell.text} ${cell.unitCode}` : cell.text);
-
 function parseCell(cell: AttributeCell, context: AttributeProposalContext): { readonly value: ImportFieldValue | null; readonly issues: readonly ImportIssue[] } {
   const path = cell.target.attributeId;
   const attribute = context.schema.attributes.get(path);
   if (!attribute) return { value: null, issues: [{ code: 'attributeUnknown', path }] };
-  const parsed = parseAttributeText(attribute, textWithUnit(cell), context.text);
-  return parsed.ok ? { value: parsed.value, issues: [] } : { value: null, issues: [{ code: parsed.issue, path, params: parsed.params }] };
+  const parsed = parseImportCell(attribute, cell, context.text);
+  return parsed.ok ? { value: parsed.value, issues: [] } : { value: null, issues: [{ code: parsed.issue, path, params: parsed.params } as ImportIssue] };
 }
 
 function fieldOf(cell: AttributeCell, holder: LiveHolder | null, context: AttributeProposalContext): ImportProposalField {
@@ -65,7 +57,7 @@ function fieldOf(cell: AttributeCell, holder: LiveHolder | null, context: Attrib
   const base = (holder && context.base.get(holder.id)?.get(importTargetKey(cell.target))) ?? null;
   const attribute = context.schema.attributes.get(cell.target.attributeId);
   const same = attribute ? attributeValueEquality(attribute, context.schema.registry) : null;
-  return proposalFieldOf({ cell, incoming: value, issues, live, base, same });
+  return proposalFieldOf({ cell: { ...cell, text: importCellText(cell) }, incoming: value, issues, live, base, same });
 }
 
 /** Το βάθος-ιδιοκτήτης σε σχέση με το σύνολο: κοινό · τελικό SKU · ενδιάμεσο (υπο-μοντέλο, δηλωμένο όριο της Φάσης 4). */
@@ -103,8 +95,13 @@ function modelRowOf(group: ExtractedGroup, context: AttributeProposalContext): I
     if (!disagreeing.has(importTargetKey(cell.target))) return field;
     return { ...field, decision: 'pending', issues: [...field.issues, { code: 'sharedDisagrees', path: cell.target.attributeId }] };
   });
-  const rowIssues: readonly ImportIssue[] = group.modelCode === null ? [{ code: 'modelCodeMissing', path: 'modelCode' }] : [];
-  return holderRow(`model:${group.groupKey}`, 'productModel', context.model, group.modelCode ?? '', fields, rowIssues);
+  return holderRow(`model:${group.groupKey}`, 'productModel', context.model, group.modelCode ?? '', fields, modelIssues(group, context.schema));
+}
+
+function modelIssues(group: ExtractedGroup, schema: CatalogSchemaSnapshot): readonly ImportIssue[] {
+  if (group.modelCode !== null) return [];
+  const suggestion = suggestModelCode(group, schema);
+  return [{ code: 'modelCodeMissing', path: 'modelCode', ...(suggestion === null ? {} : { params: { suggestion } }) }];
 }
 
 function holderRow(
@@ -119,19 +116,19 @@ function holderRow(
 }
 
 /** Η ετικέτα γραμμής: η πρώτη `unique` ιδιότητα που έχει τιμή, αλλιώς το κλειδί της γραμμής. */
-function rowLabel(row: ExtractedRow, schema: CatalogSchemaSnapshot): string {
-  const identifier = attributeCellsOf(row.cells).find((cell) => schema.attributes.get(cell.target.attributeId)?.unique === true);
-  return identifier?.text ?? row.rowKey;
+function rowLabel(rowKey: string, cells: readonly AttributeCell[], schema: CatalogSchemaSnapshot): string {
+  const identifier = cells.find((cell) => schema.attributes.get(cell.target.attributeId)?.unique === true);
+  return identifier?.text ?? rowKey;
 }
 
 function variantRowOf(row: ExtractedRow, context: AttributeProposalContext): ImportProposalRow {
-  const cells = attributeCellsOf(row.cells);
   const holder = context.matches.get(row.rowKey) ?? null;
+  const cells = settleRepeatedCells(attributeCellsOf(row.cells), holder?.values ?? null, context);
   const leaf = cells.filter((cell) => levelOf(cell, context.schema) === 'leaf');
   const unsupported = cells.filter((cell) => levelOf(cell, context.schema) === 'unsupported');
   const issues = unsupported.map((cell): ImportIssue => ({ code: 'levelUnsupported', path: cell.target.attributeId }));
   const fields = leaf.map((cell) => fieldOf(cell, holder, context));
-  return holderRow(row.rowKey, 'product', holder, rowLabel(row, context.schema), fields, issues);
+  return holderRow(row.rowKey, 'product', holder, rowLabel(row.rowKey, cells, context.schema), fields, issues);
 }
 
 /** Οι γραμμές της πρότασης: το μοντέλο (αν υπάρχει σχήμα παραλλαγών) και τα SKU του. */

@@ -11,14 +11,29 @@ import React, { useEffect, useState } from 'react';
 import { PdfCanvasViewer } from '@/components/file-manager/PdfCanvasViewer';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import type { ImportProposalField } from '@/subapps/catalog/types/catalog-import';
+import type { ImportBatchPages, ImportProposalField } from '@/subapps/catalog/types/catalog-import';
 import type { ImportBatchDetailView } from '@/subapps/catalog/types/catalog-import-requests';
 import { useCatalogFailureNotice } from '../shared/catalog-ui-hooks';
 import { useImportText } from './import-text';
 import { ProposalReview } from './ProposalReview';
-import { pagesToRead, useImportBatch } from './use-import-batch';
+import { costPerPage, pagesToRead, useImportBatch } from './use-import-batch';
 
 type Workspace = ReturnType<typeof useImportBatch>;
+
+const USD_DECIMALS = 2;
+
+/** Πριν το κουμπί: τι θα κοστίσει. Μετά: τι κόστισε, από τη μέτρηση και όχι από την εκτίμηση. */
+function PageCost({ pages, remaining }: { readonly pages: ImportBatchPages; readonly remaining: number }) {
+  const { t } = useImportText();
+  const { usage } = pages;
+  const estimate = (costPerPage(pages) * remaining).toFixed(USD_DECIMALS);
+  return (
+    <p className="m-0 flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
+      {remaining > 0 ? <span>{t('batch.costEstimate', { cost: estimate })}</span> : null}
+      {usage ? <span role="status">{t('batch.costSpent', { requests: usage.requests, tokens: usage.inputTokens + usage.outputTokens, cost: usage.costUsd === null ? '—' : usage.costUsd.toFixed(USD_DECIMALS) })}</span> : null}
+    </p>
+  );
+}
 
 function PageProgress({ workspace }: { readonly workspace: Workspace }) {
   const { t } = useImportText();
@@ -35,8 +50,10 @@ function PageProgress({ workspace }: { readonly workspace: Workspace }) {
         <span className="flex gap-2">
           {remaining > 0 ? <Button type="button" disabled={workspace.reading} onClick={() => void workspace.readPages(false)}>{t('batch.readPages', { count: remaining })}</Button> : null}
           {pages.failed.length > 0 ? <Button type="button" variant="outline" disabled={workspace.reading} onClick={() => void workspace.readPages(true)}>{t('batch.retryFailed')}</Button> : null}
+          {workspace.reading ? <Button type="button" variant="outline" disabled={workspace.stopping} onClick={workspace.stopReading}>{workspace.stopping ? t('batch.stopping') : t('batch.stop')}</Button> : null}
         </span>
       </p>
+      <PageCost pages={pages} remaining={remaining} />
     </section>
   );
 }
