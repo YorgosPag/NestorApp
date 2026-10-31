@@ -13,6 +13,8 @@ const humanEdits = {
   materialUnitCost: 12,
   laborUnitCost: 8,
   equipmentUnitCost: 1,
+  priceAuthority: 'master',
+  priceSource: { lineId: 'line_a', priceListVersionId: 'cplv_1' },
   status: 'submitted',
   notes: 'τιμή προσφοράς',
   wasteFactor: 0.05,

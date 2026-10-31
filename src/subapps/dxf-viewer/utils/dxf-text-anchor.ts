@@ -44,6 +44,22 @@ export const ALIGNMENT_TO_ATTACHMENT: Record<'left' | 'center' | 'right', TextJu
   left: 'BL', center: 'BC', right: 'BR',
 };
 
+/** Left ↔ right: a text whose baseline runs the other way hangs off the other end of its anchor. */
+const OPPOSITE_ALIGNMENT: Record<'left' | 'center' | 'right', 'left' | 'center' | 'right'> = {
+  left: 'right', center: 'center', right: 'left',
+};
+
+export function mirrorTextAlignment(alignment: 'left' | 'center' | 'right'): 'left' | 'center' | 'right' {
+  return OPPOSITE_ALIGNMENT[alignment];
+}
+
+/** The same row of the 9-point grid, column mirrored (`BL` ↔ `BR`, `MC` stays). */
+export function mirrorTextAttachment(attachment: TextJustification): TextJustification {
+  const row = attachment[0];
+  const column = attachment[1];
+  return `${row}${column === 'L' ? 'R' : column === 'R' ? 'L' : column}` as TextJustification;
+}
+
 /**
  * Attachment row → DXF TEXT vertical-alignment code 73 (0=baseline, 1=bottom,
  * 2=middle, 3=top). INVERSE of the `row` half of {@link mapTextAttachment}; lives

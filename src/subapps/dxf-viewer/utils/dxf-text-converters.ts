@@ -37,8 +37,12 @@ import {
   attachmentToVJust,
   isBaselineAnchored,
   mapTextAttachment,
+  mirrorTextAlignment,
+  mirrorTextAttachment,
   resolveTextAnchor,
 } from './dxf-text-anchor';
+// ADR-635 Φ C.30 — 210/220/230. TEXT family: OCS. MTEXT: not OCS. The two rules live side by side there.
+import { readMTextFrame, readPlanarTextFrame } from './dxf-text-ocs';
 // ADR-737 §11-1 — MTEXT columns (DXF R2018 embedded object, group 101). Ο τυποποιητής είναι
 // ΗΔΗ SSoT στο `dxf-embedded-object.ts`· εδώ μόνο τον καλούμε — κανένας δεύτερος parser.
 import { findMTextColumns } from './dxf-embedded-object';
@@ -168,14 +172,16 @@ function parseSingleLineTextTransform(data: Record<string, string>): {
   attachment: TextJustification;
   baselineAnchored: boolean;
 } {
-  const { height, rotation } = parseTextTransform(data);
+  const { height, rotation: ocsRotation } = parseTextTransform(data);
   const hJust = parseInt(data['72']) || 0;
   const vJust = parseInt(data['73']) || 0;
-  const { x, y } = resolveTextAnchor(data, hJust, vJust);
+  const { x, y, rotation, backFacing } = readPlanarTextFrame(resolveTextAnchor(data, hJust, vJust), ocsRotation, data);
+  const alignment = mapHorizontalAlignment(hJust);
+  const attachment = mapTextAttachment(hJust, vJust);
   return {
     x, y, height, rotation,
-    alignment: mapHorizontalAlignment(hJust),
-    attachment: mapTextAttachment(hJust, vJust),
+    alignment: backFacing ? mirrorTextAlignment(alignment) : alignment,
+    attachment: backFacing ? mirrorTextAttachment(attachment) : attachment,
     // ADR-635 Φ C.26 — the 4th vertical state the attachment row cannot carry (73 = 0).
     baselineAnchored: isBaselineAnchored(hJust, vJust),
   };
@@ -330,14 +336,16 @@ export function convertMText(
    */
   embeddedObjects?: EmbeddedObjectList,
 ): AnySceneEntity | null {
-  const { x, y, height, rotation } = parseTextTransform(data);
+  const { x: rawX, y: rawY, height, rotation: rawRotation } = parseTextTransform(data);
+  const { x, y, rotation, backFacing } = readMTextFrame({ x: rawX, y: rawY }, rawRotation, data);
   // ADR-635 — `data['1']` έρχεται ΗΔΗ ενωμένο από τον parser (`dxf-mtext-chunks`): MTEXT >250
   // χαρακτήρες γράφεται 3…3/1 και το flat `data` κρατούσε μόνο την ουρά ⇒ ολόκληρες παράγραφοι
   // «εξαφανίζονταν». Το `|| data['3']` μένει ως δίχτυ για EntityData φτιαγμένο με το χέρι
   // (tests/adapters) που δεν πέρασε από τον parser — δεν είναι η κύρια διαδρομή.
   const rawContent = data['1'] || data['3'] || '';
   const attachmentPoint = parseInt(data['71']) || 1;
-  const alignment = mapMTextAlignment(attachmentPoint);
+  const writtenAlignment = mapMTextAlignment(attachmentPoint);
+  const alignment = backFacing ? mirrorTextAlignment(writtenAlignment) : writtenAlignment;
 
   if (isNaN(x) || isNaN(y) || rawContent.trim() === '') {
     dwarn('EntityConverter', `⚠️ Skipping MTEXT ${index}: missing position or text`, { x, y, text: rawContent });
@@ -358,9 +366,10 @@ export function convertMText(
   });
   // `parseMtext` hard-codes attachment 'TL' / rotation 0 (it sees only inline codes) — set
   // the real values from the entity (code 71 attachment + code 50 rotation).
+  const writtenAttachment = MTEXT_ATTACHMENT_MAP[attachmentPoint] ?? 'TL';
   const textNode: DxfTextNode = {
     ...parsed,
-    attachment: MTEXT_ATTACHMENT_MAP[attachmentPoint] ?? 'TL',
+    attachment: backFacing ? mirrorTextAttachment(writtenAttachment) : writtenAttachment,
     rotation,
   };
   // Flat `.text` = PLAIN text (paragraph breaks → `\n`), NOT the raw inline-code string:
@@ -451,8 +460,8 @@ function convertAttributeEntity(
 
 /**
  * Convert ATTRIB (block attribute value instance) → `type:'text'`.
- * ATTRIB entities follow their INSERT in the ENTITIES stream with absolute WCS coords,
- * so a standalone conversion places them exactly where AutoCAD shows them.
+ * ATTRIB entities follow their INSERT in the ENTITIES stream with their own OCS coords (already
+ * placed, never block-local), so a standalone conversion lands exactly where AutoCAD shows them.
  */
 export function convertAttrib(
   data: Record<string, string>,

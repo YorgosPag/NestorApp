@@ -7,32 +7,10 @@
  * @compliance CLAUDE.md Enterprise Standards
  */
 
-// 🏢 ENTERPRISE: Import centralized color configuration
-import { UI_COLORS } from './color-config';
-
-// Import existing color systems from centralized design tokens - mock for TypeScript compatibility
-const colors = { primary: UI_COLORS.BUTTON_PRIMARY, secondary: UI_COLORS.BUTTON_SECONDARY };
-const COLOR_BRIDGE = {
-  bg: {
-    primary: 'bg-white',
-    secondary: 'bg-gray-100'
-  },
-  text: {
-    primary: 'text-black',
-    secondary: 'text-gray-700'
-  }
-};
-const hardcodedColorValues = {
-  text: {
-    secondary: 'text-gray-600',
-    muted: 'text-gray-500',
-    foreground: 'text-black'
-  },
-  bg: {
-    primary: 'bg-white',
-    secondary: 'bg-gray-50'
-  }
-};
+// 🔴 2026-10-30 (pending «bg-white/bg-black»): εδώ ζούσε ΣΚΙΩΔΕΣ αντίγραφο του `COLOR_BRIDGE` («mock for TypeScript
+//    compatibility») με `bg-white` / `text-gray-*`. Το `input` έβγαινε `bg-white … text-foreground` ⇒ στο σκοτεινό θέμα
+//    λευκό κείμενο σε λευκό πεδίο. Πλέον το ΠΡΑΓΜΑΤΙΚΟ SSoT, όπως το `modal-config.ts`.
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 
 // 🏢 ENTERPRISE: Import centralized panel tokens instead of duplicates
 import { PANEL_COLORS } from './panel-tokens';
@@ -75,10 +53,10 @@ export const MODAL_COLOR_SCHEMES = {
     },
     text: {
       primary: 'text-white',
-      secondary: hardcodedColorValues.text.secondary, // ✅ ENTERPRISE: Uses centralized semantic system
+      secondary: COLOR_BRIDGE.text.secondary, // ✅ ENTERPRISE: Uses centralized semantic system
       accent: 'text-accent', // ✅ ENTERPRISE: text-orange-500 → semantic accent
-      label: hardcodedColorValues.text.secondary, // ✅ ENTERPRISE: Uses centralized semantic system
-      description: hardcodedColorValues.text.muted, // ✅ ENTERPRISE: Uses centralized semantic system
+      label: COLOR_BRIDGE.text.secondary, // ✅ ENTERPRISE: Uses centralized semantic system
+      description: COLOR_BRIDGE.text.muted, // ✅ ENTERPRISE: Uses centralized semantic system
     },
     border: {
       primary: `border ${PANEL_COLORS.BORDER_PRIMARY}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
@@ -173,7 +151,7 @@ export const MODAL_COLOR_SCHEMES = {
  * Ensures visual hierarchy and accessibility
  */
 export const MODAL_ICON_COLORS = {
-  default: hardcodedColorValues.text.muted, // ✅ ENTERPRISE: Uses centralized semantic system
+  default: COLOR_BRIDGE.text.muted, // ✅ ENTERPRISE: Uses centralized semantic system
   info: 'text-primary', // ✅ ENTERPRISE: text-blue-500 → semantic primary
   success: 'text-success', // ✅ ENTERPRISE: text-green-500 → semantic success
   warning: 'text-warning', // ✅ ENTERPRISE: text-orange-500 → semantic warning
@@ -233,8 +211,8 @@ export const MODAL_FORM_COLORS = {
   // DXF Technical interface forms
   DXF_TECHNICAL: {
     input: `bg-input border ${PANEL_COLORS.BORDER_PRIMARY} text-foreground focus:border-accent focus:ring-accent/20`, // ✅ ENTERPRISE: All hardcoded → semantic // ✅ ENTERPRISE: Using centralized PANEL_COLORS
-    label: hardcodedColorValues.text.secondary, // ✅ ENTERPRISE: Uses centralized semantic system
-    description: hardcodedColorValues.text.muted, // ✅ ENTERPRISE: Uses centralized semantic system
+    label: COLOR_BRIDGE.text.secondary, // ✅ ENTERPRISE: Uses centralized semantic system
+    description: COLOR_BRIDGE.text.muted, // ✅ ENTERPRISE: Uses centralized semantic system
     error: 'text-destructive', // ✅ ENTERPRISE: text-red-400 → semantic destructive
   },
 

@@ -28,6 +28,7 @@ import { parseHatchBoundaryPaths, type DxfPairs } from './dxf-hatch-boundary-par
 import { normalizeGradientType, type HatchGradient } from '../bim/hatch/hatch-gradient';
 import { trueColorToHex } from './dxf-true-color';
 import { radToDeg } from '../rendering/entities/shared/geometry-angle-utils';
+import { dxfOcsAngleToPlanDeg, dxfOcsToWcs, dxfRealOr, readDxfExtrusion, type DxfVec3 } from '@/lib/dxf/dxf-ocs';
 import { dwarn } from '../debug';
 
 // `DxfPairs` = SSoT στο `dxf-hatch-boundary-parser` (ήταν τριπλότυπο σε 3 converters).
@@ -171,10 +172,13 @@ export function makeInlinePattern(
  * μπορούν να αποκλίνουν (N.18). Χωρίς αυτό ο πυρήνας διάβαζε `|delta[1]|` ως βήμα και έβγαζε
  * **λάθος πυκνότητα ανάλογη της γωνίας** — έως και μηδέν γραμμές όταν η γωνία πλησίαζε 45°.
  *
+ * Το `plane` μεταφέρει γωνία/αρχή/`delta` από το OCS στην κάτοψη **πριν** το τοπικό frame (ADR-635
+ * Φ C.30): τα `53`/`43,44`/`45,46` είναι μετρημένα στο επίπεδο της οντότητας, όπως και τα όρια.
+ *
  * @see AutoCAD DXF Reference: HATCH pattern data (codes 53/43/44/45/46/79/49)
  * @see data/hatch-pattern-delta-frame.ts — η απόδειξη της σύμβασης (ezdxf + πραγματικό αρχείο)
  */
-function parseInlinePatternLines(pairs: DxfPairs, idx78: number): PatternLine[] {
+function parseInlinePatternLines(pairs: DxfPairs, idx78: number, plane: HatchPlane): PatternLine[] {
   const n = parseInt(pairs[idx78]?.[1] ?? '0', 10) || 0;
   if (n <= 0) return [];
   const lines: PatternLine[] = [];
@@ -205,9 +209,35 @@ function parseInlinePatternLines(pairs: DxfPairs, idx78: number): PatternLine[] 
       i += 1;
     }
     // `45`/`46` = world offset ⇒ ξε-στρέψε το στο τοπικό frame που ορίζει η `PatternLine`.
-    lines.push({ angle, origin: [ox, oy], delta: patternDeltaFromWorld([dx, dy], angle), dashes });
+    const planAngle = dxfOcsAngleToPlanDeg(angle, plane.extrusion);
+    const origin = plane.toPlan({ x: ox, y: oy });
+    const delta = dxfOcsToWcs({ x: dx, y: dy, z: 0 }, plane.extrusion);
+    lines.push({
+      angle: planAngle,
+      origin: [origin.x, origin.y],
+      delta: patternDeltaFromWorld([delta.x, delta.y], planAngle),
+      dashes,
+    });
   }
   return lines;
+}
+
+/** Το επίπεδο ενός HATCH (`30` + `210/220/230` της κεφαλίδας) — τα πάντα του μετρώνται εκεί. */
+interface HatchPlane {
+  readonly extrusion: DxfVec3;
+  readonly toPlan: (p: Point2D) => Point2D;
+}
+
+function hatchPlaneOf(header: Readonly<Record<string, string>>): HatchPlane {
+  const extrusion = readDxfExtrusion(header);
+  const elevation = dxfRealOr(header['30'], 0);
+  return {
+    extrusion,
+    toPlan: (p) => {
+      const world = dxfOcsToWcs({ x: p.x, y: p.y, z: elevation }, extrusion);
+      return { x: world.x, y: world.y };
+    },
+  };
 }
 
 /**
@@ -217,6 +247,10 @@ function parseInlinePatternLines(pairs: DxfPairs, idx78: number): PatternLine[] 
  * επαναλαμβανόμενα 10/20 που το flat data χάνει. Τα boundary paths τα διαβάζει ο SSoT
  * {@link parseHatchBoundaryPaths} (τόξα/ελλείψεις/splines + η διπλή σημασία του `93`).
  * Τα 10/20 του elevation point (πριν το 91) και των seed points (μετά) δεν μπερδεύονται.
+ *
+ * 🔑 ΟΛΟ το HATCH είναι σε OCS (ADR-635 Φ C.30): όρια, seed points, `52`, `53`, `460`. Οι ακμές
+ * τόξου δειγματοληπτούνται ΣΤΟ OCS και οι κορυφές περνούν στην κάτοψη μετά — έτσι οι γωνίες `50/51`
+ * και η φορά `73` μένουν ακριβώς αυτό που γράφει το αρχείο, χωρίς δεύτερη αναστροφή εδώ.
  *
  * Το `header` χρειάζεται **μόνο** για το `$MEASUREMENT` (μονάδες του ορισμού μοτίβου, βλ.
  * {@link patternDefinitionUnitDivisor}). Απόν ⇒ metric, δηλαδή η ιστορική συμπεριφορά.
@@ -247,10 +281,14 @@ export function convertHatch(
   let gradientTint: number | undefined;     // 462
   let gradientName: string | undefined;     // 470
   const gradientTrueColors: number[] = [];  // 421 (RGB int), σε σειρά
+  const planeHeader: Record<string, string> = {};  // 30 + 210/220/230 — ΜΟΝΟ πριν το 91
 
   for (let i = 0; i < pairs.length; i += 1) {
     const [code, value] = pairs[i];
     switch (code) {
+      case '30': case '210': case '220': case '230':
+        if (path91Index < 0 && planeHeader[code] === undefined) planeHeader[code] = value;
+        break;
       case '2': if (patternName === undefined) patternName = value; break;
       case '70': solid = value.trim() === '1'; break;
       case '75': islandCode = parseInt(value, 10) || 0; break;
@@ -279,7 +317,8 @@ export function convertHatch(
   // ── Boundary paths → SSoT parser (ADR-507) ──────────────────────────────────
   // ⚠️ ΜΗΝ ξαναγράψεις εδώ state machine: το `93` σημαίνει ΚΟΡΥΦΕΣ ή ΑΚΜΕΣ ανάλογα με
   // το flag `92`, και σε ακμή τόξου το `10/20` είναι ΚΕΝΤΡΟ, όχι κορυφή. Βλ. το module.
-  const boundaryPaths = parseHatchBoundaryPaths(pairs, path91Index);
+  const plane = hatchPlaneOf(planeHeader);
+  const boundaryPaths = parseHatchBoundaryPaths(pairs, path91Index).map((path) => path.map(plane.toPlan));
 
   if (!boundaryPaths.length) {
     dwarn('EntityConverter', `⚠️ Skipping HATCH ${index}: no usable boundary vertices`);
@@ -294,7 +333,7 @@ export function convertHatch(
     let j = seed98 + 1;
     while (seedPoints.length < nSeeds && j < pairs.length - 1) {
       if (pairs[j][0] === '10' && pairs[j + 1][0] === '20') {
-        seedPoints.push({ x: parseFloat(pairs[j][1]), y: parseFloat(pairs[j + 1][1]) });
+        seedPoints.push(plane.toPlan({ x: parseFloat(pairs[j][1]), y: parseFloat(pairs[j + 1][1]) }));
         j += 2;
       } else j += 1;
     }
@@ -316,7 +355,7 @@ export function convertHatch(
       ...(single && { singleColor: true }),
       ...(gradientTint !== undefined && !Number.isNaN(gradientTint) && { tint: gradientTint }),
       ...(gradientAngleRad !== undefined && !Number.isNaN(gradientAngleRad)
-        && { angleDeg: radToDeg(gradientAngleRad) }),
+        && { angleDeg: dxfOcsAngleToPlanDeg(radToDeg(gradientAngleRad), plane.extrusion) }),
       ...(gradientShift !== undefined && !Number.isNaN(gradientShift) && { shift: gradientShift }),
     };
   }
@@ -329,7 +368,7 @@ export function convertHatch(
   // (SQUARE/HEX/ANSI31/…) τυχαίνει να υπάρχει στον catalog με ίδιο ή διαφορετικό ορισμό.
   const isPredefined = !gradient && !solid && patternTypeCode !== 0;
   const inlinePattern: HatchPattern | undefined = isPredefined && idx78 >= 0
-    ? makeInlinePattern(patternName, parseInlinePatternLines(pairs, idx78))
+    ? makeInlinePattern(patternName, parseInlinePatternLines(pairs, idx78, plane))
     : undefined;
 
   return buildHatchSceneEntity({
@@ -340,7 +379,7 @@ export function convertHatch(
     solid,
     patternTypeCode,
     islandCode,
-    angle,
+    angle: angle === undefined ? undefined : dxfOcsAngleToPlanDeg(angle, plane.extrusion),
     scale,
     color,
     seedPoints,

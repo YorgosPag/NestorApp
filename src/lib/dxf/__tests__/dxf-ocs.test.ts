@@ -6,9 +6,12 @@
 
 import {
   DXF_DEFAULT_EXTRUSION,
+  dxfOcsAngleToPlanDeg,
   dxfOcsToWcs,
   dxfRealOr,
   isDefaultDxfExtrusion,
+  isDxfBackFacing,
+  isFlippedDxfExtrusion,
   readDxfExtrusion,
 } from '../dxf-ocs';
 
@@ -38,6 +41,46 @@ describe('dxfRealOr', () => {
     expect(dxfRealOr(undefined, 7)).toBe(7);
     expect(dxfRealOr('', 7)).toBe(7);
     expect(dxfRealOr('x', 7)).toBe(7);
+  });
+});
+
+describe('extrusion classes', () => {
+  const tilted = { x: 0, y: -Math.SQRT1_2, z: Math.SQRT1_2 };
+
+  it('(0,0,−1) is flipped; (0,0,1) and a tilted N are not', () => {
+    expect(isFlippedDxfExtrusion({ x: 0, y: 0, z: -1 })).toBe(true);
+    expect(isFlippedDxfExtrusion(DXF_DEFAULT_EXTRUSION)).toBe(false);
+    expect(isFlippedDxfExtrusion(tilted)).toBe(false);
+  });
+
+  it('back-facing is the sign of N.z — a tilted N can be back-facing too', () => {
+    expect(isDxfBackFacing({ x: 0, y: 0, z: -1 })).toBe(true);
+    expect(isDxfBackFacing({ x: 0, y: Math.SQRT1_2, z: -Math.SQRT1_2 })).toBe(true);
+    expect(isDxfBackFacing(tilted)).toBe(false);
+  });
+});
+
+describe('dxfOcsAngleToPlanDeg', () => {
+  it('default extrusion: the angle exactly as written, not re-derived', () => {
+    expect(dxfOcsAngleToPlanDeg(33.3, DXF_DEFAULT_EXTRUSION)).toBe(33.3);
+    expect(dxfOcsAngleToPlanDeg(-90, DXF_DEFAULT_EXTRUSION)).toBe(-90);
+  });
+
+  it('(0,0,−1): 180 − a, in [0, 360)', () => {
+    const n = { x: 0, y: 0, z: -1 };
+    expect(dxfOcsAngleToPlanDeg(30, n)).toBe(150);
+    expect(dxfOcsAngleToPlanDeg(0, n)).toBe(180);
+    expect(dxfOcsAngleToPlanDeg(270, n)).toBe(270);
+  });
+
+  it('tilted: the angle of the projected direction, not of the written one', () => {
+    const n = { x: 0, y: -Math.SQRT1_2, z: Math.SQRT1_2 };
+    close(dxfOcsAngleToPlanDeg(0, n), 0);
+    close(dxfOcsAngleToPlanDeg(45, n), (Math.atan2(Math.SQRT1_2, 1) * 180) / Math.PI);
+  });
+
+  it('a direction seen end-on keeps the written angle rather than inventing one', () => {
+    expect(dxfOcsAngleToPlanDeg(90, { x: 1, y: 0, z: 0 })).toBe(90);
   });
 });
 

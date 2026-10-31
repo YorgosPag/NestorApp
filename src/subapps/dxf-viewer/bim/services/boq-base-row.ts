@@ -14,7 +14,7 @@
  * @see @/types/boq (BOQItem)
  */
 
-import type { BOQItem, BoqGroupRole } from '@/types/boq';
+import { BOQ_ITEM_DEFAULTS, type BOQItem, type BoqGroupRole } from '@/types/boq';
 import { nowISO } from '@/lib/date-local';
 import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import type { AtoeMappingEntry } from '../config/bim-to-atoe-mapping';
@@ -56,7 +56,7 @@ export type BoqBaseRow = Pick<BOQItem,
   'costAllocationMethod' | 'customAllocations' |
   'subCategoryCode' | 'description' |
   'actualQuantity' | 'wasteFactor' | 'wastePolicy' |
-  'materialUnitCost' | 'laborUnitCost' | 'equipmentUnitCost' | 'priceAuthority' |
+  'materialUnitCost' | 'laborUnitCost' | 'equipmentUnitCost' | 'priceAuthority' | 'priceSource' |
   'linkedPhaseId' | 'linkedTaskId' | 'linkedInvoiceId' | 'linkedContractorId' |
   'source' | 'measurementMethod' | 'status' | 'qaStatus' |
   'notes' | 'createdBy' | 'approvedBy' |
@@ -95,7 +95,8 @@ export function buildBoqBaseRow(
     materialUnitCost: 0,
     laborUnitCost: 0,
     equipmentUnitCost: 0,
-    priceAuthority: 'master',
+    priceAuthority: BOQ_ITEM_DEFAULTS.priceAuthority,
+    priceSource: null,
     linkedPhaseId: null,
     linkedTaskId: null,
     linkedInvoiceId: null,

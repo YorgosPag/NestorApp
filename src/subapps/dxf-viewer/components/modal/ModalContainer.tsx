@@ -133,86 +133,56 @@ export const ModalContainer: React.FC<ModalContainerProps> = ({
 // SPECIALIZED MODAL CONTAINERS
 // ====================================================================
 
-/**
- * File Upload Modal Container
- */
-export const UploadModalContainer: React.FC<{
+interface TitledModalContainerProps {
   children: React.ReactNode;
   title?: string;
   className?: string;
-}> = ({ children, title, className }) => {
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
+}
+
+interface PresetModalContainerProps extends TitledModalContainerProps {
+  variant: ModalContainerProps['variant'];
+  titleKey: string;
+  icon?: React.ReactNode;
+}
+
+/** Οι έτοιμες παραλλαγές: αλλάζουν μόνο χρώμα, προεπιλεγμένο τίτλο και εικονίδιο. */
+const PresetModalContainer: React.FC<PresetModalContainerProps> = ({ children, title, className, variant, titleKey, icon }) => {
+  const { t } = useTranslation('dxf-viewer');
   return (
-    <ModalContainer
-      variant="upload"
-      title={title ?? t('modal.importFile')}
-      icon={<Upload className={useIconSizes().md} />}
-      className={className}
-    >
+    <ModalContainer variant={variant} title={title ?? t(titleKey)} icon={icon} className={className}>
       {children}
     </ModalContainer>
   );
+};
+
+/**
+ * File Upload Modal Container
+ */
+export const UploadModalContainer: React.FC<TitledModalContainerProps> = (props) => {
+  const iconSizes = useIconSizes();
+  return <PresetModalContainer {...props} variant="upload" titleKey="modal.importFile" icon={<Upload className={iconSizes.md} />} />;
 };
 
 /**
  * Project Selection Modal Container
  */
-export const ProjectModalContainer: React.FC<{
-  children: React.ReactNode;
-  title?: string;
-  className?: string;
-}> = ({ children, title, className }) => {
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
-  return (
-    <ModalContainer
-      variant="info"
-      title={title ?? t('modal.selectProject')}
-      className={className}
-    >
-      {children}
-    </ModalContainer>
-  );
-};
+export const ProjectModalContainer: React.FC<TitledModalContainerProps> = (props) => (
+  <PresetModalContainer {...props} variant="info" titleKey="modal.selectProject" />
+);
 
 /**
  * Success State Container
  */
-export const SuccessModalContainer: React.FC<{
-  children: React.ReactNode;
-  title?: string;
-  className?: string;
-}> = ({ children, title, className }) => {
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
-  return (
-    <ModalContainer
-      variant="success"
-      title={title ?? t('modal.success')}
-      className={className}
-    >
-      {children}
-    </ModalContainer>
-  );
-};
+export const SuccessModalContainer: React.FC<TitledModalContainerProps> = (props) => (
+  <PresetModalContainer {...props} variant="success" titleKey="modal.success" />
+);
 
 /**
  * Error State Container
  */
-export const ErrorModalContainer: React.FC<{
-  children: React.ReactNode;
-  title?: string;
-  className?: string;
-}> = ({ children, title, className }) => {
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
-  return (
-    <ModalContainer
-      variant="error"
-      title={title ?? t('modal.error')}
-      className={className}
-    >
-      {children}
-    </ModalContainer>
-  );
-};
+export const ErrorModalContainer: React.FC<TitledModalContainerProps> = (props) => (
+  <PresetModalContainer {...props} variant="error" titleKey="modal.error" />
+);
 
 // ====================================================================
 // MODAL CONTENT SECTIONS

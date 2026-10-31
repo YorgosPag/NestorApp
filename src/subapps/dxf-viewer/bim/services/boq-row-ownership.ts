@@ -33,6 +33,7 @@ export const HUMAN_OWNED_BOQ_FIELDS = [
   'laborUnitCost',
   'equipmentUnitCost',
   'priceAuthority',
+  'priceSource',
   'linkedPhaseId',
   'linkedTaskId',
   'linkedInvoiceId',

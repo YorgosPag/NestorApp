@@ -46,6 +46,7 @@ import type {
   RadiusDimensionEntity,
 } from '../types/dimension';
 import type { DxfHeaderData, DimStyleMap } from './dxf-entity-parser';
+import { dxfOcsAngleToPlanDeg, dxfOcsToWcs, dxfRealOr, readDxfExtrusion } from '@/lib/dxf/dxf-ocs';
 import { convertDimensionLegacy } from './dxf-dimension-legacy-fallback';
 
 // ============================================================================
@@ -85,6 +86,17 @@ function point(data: Record<string, string>, xCode: string, yCode: string): Poin
 }
 
 /**
+ * An OCS point of a DIMENSION → plan (ADR-635 Φ C.30). DIMENSION is the one MIXED entity: 10/13/14/15 are WCS and go
+ * through {@link point}; only the text point 11 and the arc point 16 are OCS.
+ */
+function ocsPoint(data: Record<string, string>, xCode: string, yCode: string, zCode: string): Point2D | null {
+  const p = point(data, xCode, yCode);
+  if (!p) return null;
+  const world = dxfOcsToWcs({ ...p, z: dxfRealOr(data[zCode], 0) }, readDxfExtrusion(data));
+  return { x: world.x, y: world.y };
+}
+
+/**
  * Resolve the DIMSTYLE user-text token (DXF code 1) to the renderer convention:
  *   - absent / empty  → `undefined` (renderer draws the MEASURED value)
  *   - '<>'            → measured (passed through)
@@ -109,7 +121,7 @@ function buildCommonFields(
   userText?: string;
   measurementValue?: number;
 } {
-  const textMid = point(data, '11', '21');
+  const textMid = ocsPoint(data, '11', '21', '31');
   const userText = resolveUserText(data['1']);
   const measurement = parseFloat(data['42']);
   return {
@@ -152,7 +164,8 @@ function buildLinearOrAligned(
 
   if (variant === 'linear') {
     const rot = parseFloat(data['50']);
-    return { ...common, dimensionType: 'linear', defPoints: [...defPoints], rotation: isNaN(rot) ? 0 : rot, ...legacy };
+    const rotation = isNaN(rot) ? 0 : dxfOcsAngleToPlanDeg(rot, readDxfExtrusion(data));
+    return { ...common, dimensionType: 'linear', defPoints: [...defPoints], rotation, ...legacy };
   }
   return { ...common, dimensionType: 'aligned', defPoints: [...defPoints], ...legacy };
 }
@@ -197,7 +210,7 @@ function buildAngular2L(
   const line1b = point(data, '14', '24');
   const line2a = point(data, '10', '20');
   const line2b = point(data, '15', '25');
-  const arcPoint = point(data, '16', '26');
+  const arcPoint = ocsPoint(data, '16', '26', '36');
   if (!line1a || !line1b || !line2a || !line2b || !arcPoint) return null;
   const common = buildCommonFields(data, layer, index);
   return {
@@ -222,7 +235,7 @@ function buildAngular3P(
   const vertex = point(data, '15', '25');
   const ray1 = point(data, '13', '23');
   const ray2 = point(data, '14', '24');
-  const arcPoint = point(data, '16', '26') ?? point(data, '10', '20');
+  const arcPoint = ocsPoint(data, '16', '26', '36') ?? point(data, '10', '20');
   if (!vertex || !ray1 || !ray2 || !arcPoint) return null;
   const common = buildCommonFields(data, layer, index);
   return {

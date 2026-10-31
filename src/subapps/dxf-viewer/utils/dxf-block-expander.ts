@@ -27,6 +27,7 @@ import { scaleEntity } from '../systems/scale/scale-entity-transform';
 import { rotateEntity } from './rotation-math';
 import { translateEntityByAnchor } from '../systems/stretch/stretch-entity-transform';
 import { withPlacedElevation } from './entity-elevation';
+import { readInsertPlacement } from './dxf-insert-placement';
 import {
   recordClamp,
   recordError,
@@ -60,11 +61,6 @@ export interface ExpandContext {
   diagnostics?: ImportDiagnostics;
   /** Shared entity budget across the whole scene's INSERT expansion. */
   budget?: { max: number; used: number };
-}
-
-function numOr(v: string | undefined, fallback: number): number {
-  const n = v !== undefined ? parseFloat(v) : NaN;
-  return Number.isFinite(n) ? n : fallback;
 }
 
 function intOr(v: string | undefined, fallback: number): number {
@@ -170,14 +166,11 @@ export function transformInsertHatch(
   const name = insert.data['2'];
   const def = name ? blockDefs.get(name) : undefined;
   if (!def) return hatch;
-  const placement: Point2D = { x: numOr(insert.data['10'], 0), y: numOr(insert.data['20'], 0) };
-  const sx = numOr(insert.data['41'], 1);
-  const sy = numOr(insert.data['42'], 1);
-  const angle = numOr(insert.data['50'], 0);
+  const { position, sx, sy, rotation } = readInsertPlacement(insert.data);
   // ADR-647 Φ1 βήμα 4 — the boundary AND the `inlinePattern` (both block-LOCAL, from R14_HATCH_DATA)
   // ride this ONE transform: `applyBlockTransformGeometry` composes scaleEntity∘rotateEntity∘translate,
   // each of which now transforms `inlinePattern` too (SSoT). No per-caller pattern math here.
-  return applyBlockTransformGeometry(hatch, def.base, sx, sy, angle, placement);
+  return applyBlockTransformGeometry(hatch, def.base, sx, sy, rotation, position);
 }
 
 /**
@@ -252,16 +245,14 @@ export function instantiateInsert(
   const def = name ? blockDefs.get(name) : undefined;
   if (!def) return [];
 
-  const insertPt: Point2D = { x: numOr(data['10'], 0), y: numOr(data['20'], 0) };
-  const sx = numOr(data['41'], 1);
-  const sy = numOr(data['42'], 1);
-  const angle = numOr(data['50'], 0);
+  // OCS → plan happens inside the placement reader: from here on the numbers are plan numbers (ADR-635 Φ C.29).
+  const {
+    position: insertPt, z: insertZ, sx, sy, sz, rotation: angle, columnSpacing: colSp, rowSpacing: rowSp,
+  } = readInsertPlacement(data);
   // Member elevations ride the INSERT's Z placement (10/20/**30**, z-scale 43): z' = insertZ + sz·(z − baseZ).
-  const placeZ = blockZPlacement(numOr(data['30'], 0), numOr(data['43'], 1), def.baseZ ?? 0);
+  const placeZ = blockZPlacement(insertZ, sz, def.baseZ ?? 0);
   const cols = Math.max(1, intOr(data['70'], 1));
   const rows = Math.max(1, intOr(data['71'], 1));
-  const colSp = numOr(data['44'], 0);
-  const rowSp = numOr(data['45'], 0);
 
   // BYBLOCK color source (ADR-635 Φ C.2): a child drawn with color BYBLOCK (62=0) inherits the
   // INSERT's explicit color, mirroring the BYBLOCK layer '0' rule. When the INSERT itself is

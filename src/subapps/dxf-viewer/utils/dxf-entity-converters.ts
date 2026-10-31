@@ -34,7 +34,7 @@ import {
 } from './dxf-converter-helpers';
 
 import { dwarn } from '../debug';
-import type { PolylineElevationFields } from './entity-elevation';
+import { buildPolylineSceneEntity, isDxfPolylineClosed } from './dxf-polyline-scene-entity';
 import {
   isDxf3dPolyline,
   readLineElevation,
@@ -89,40 +89,6 @@ export function convertLine(
 }
 
 /**
- * Build the `type:'polyline'` scene entity shared by LWPOLYLINE and old-style POLYLINE.
- * Single source for the closed-flag bitmask (70 bit 1 — AutoCAD emits e.g. 129 = 128|1),
- * color extraction and the emitted shape, so both converters stay identical downstream.
- * `elevation` = the Z fields resolved by `dxf-elevation-reader` (OCS / 2D-vs-3D already decided by the caller).
- */
-function buildPolylineSceneEntity(
-  vertices: Array<{ x: number; y: number }>,
-  data: Record<string, string>,
-  layer: string,
-  index: number,
-  label: 'POLYLINE' | 'LWPOLYLINE',
-  elevation: PolylineElevationFields
-): AnySceneEntity | null {
-  if (vertices.length < 2) {
-    dwarn('EntityConverter', `⚠️ Skipping ${label} ${index}: insufficient vertices`, vertices.length);
-    return null;
-  }
-
-  const isClosed = ((parseInt(data['70'] ?? '0', 10) || 0) & 1) === 1;
-  const color = extractEntityColor(data);
-
-  return {
-    id: `polyline_${index}`,
-    type: 'polyline',
-    layerId: layer,
-    visible: true,
-    vertices,
-    closed: isClosed,
-    ...elevation,
-    ...(color && { color })
-  };
-}
-
-/**
  * Convert LWPOLYLINE entity
  * DXF Codes: 10,20 = Vertex points (repeated, OCS); 70 = flags (bit 1 = closed); 38 = elevation (OCS Z);
  * 210/220/230 = extrusion. OCS→WCS + elevation via dxf-elevation-reader.
@@ -138,7 +104,7 @@ export function convertLwPolyline(
   pairs?: ReadonlyArray<readonly [string, string]>
 ): AnySceneEntity | null {
   const planar = readPlanarPolylineElevation(verticesFromPairsOrData(data, pairs), data, '38');
-  return buildPolylineSceneEntity(planar.vertices, data, layer, index, 'LWPOLYLINE', planar.fields);
+  return buildPolylineSceneEntity(planar.vertices, isDxfPolylineClosed(data), data, layer, index, 'LWPOLYLINE', planar.fields);
 }
 
 /**
@@ -160,101 +126,27 @@ export function convertPolyline(
 ): AnySceneEntity | null {
   const { data, layer, pairs } = entityData;
   const parsed = parseVerticesFromPairs(pairs);
+  const closed = isDxfPolylineClosed(data);
   if (isDxf3dPolyline(data)) {
     const vertices = parsed.map(v => ({ x: v.x, y: v.y }));
-    return buildPolylineSceneEntity(vertices, data, layer, index, 'POLYLINE', readWorldPolylineElevation(parsed));
+    return buildPolylineSceneEntity(vertices, closed, data, layer, index, 'POLYLINE', readWorldPolylineElevation(parsed));
   }
   const planar = readPlanarPolylineElevation(parsed, data, '30');
-  return buildPolylineSceneEntity(planar.vertices, data, layer, index, 'POLYLINE', planar.fields);
+  return buildPolylineSceneEntity(planar.vertices, closed, data, layer, index, 'POLYLINE', planar.fields);
 }
 
 // ============================================================================
 // 🏢 ENTERPRISE: CURVE CONVERTERS
 // ============================================================================
+// CIRCLE / ARC live in their own module (OCS, N.7.1 SRP) — same re-export idiom as the splits below.
+export { convertCircle, convertArc } from './dxf-circle-arc-converter';
 
-/**
- * Parse + validate the shared center (10/20) + radius (40) triple for CIRCLE/ARC.
- * Single SSoT for the parse & NaN/positive-radius guard (jscpd twin removal, ADR-583).
- * Returns `null` (and warns) when the parameters are invalid.
- */
-function parseValidCenterRadius(
-  data: Record<string, string>,
-  entityLabel: string,
-  index: number,
-): { centerX: number; centerY: number; radius: number } | null {
-  const centerX = parseFloat(data['10']);
-  const centerY = parseFloat(data['20']);
-  const radius = parseFloat(data['40']);
-
-  if (isNaN(centerX) || isNaN(centerY) || isNaN(radius) || radius <= 0) {
-    dwarn('EntityConverter', `⚠️ Skipping ${entityLabel} ${index}: invalid parameters`, {
-      centerX, centerY, radius
-    });
-    return null;
-  }
-
-  return { centerX, centerY, radius };
-}
-
-/**
- * Convert CIRCLE entity
- * DXF Codes: 10,20 = Center; 40 = Radius
- */
-export function convertCircle(
-  data: Record<string, string>,
-  layer: string,
-  index: number
-): AnySceneEntity | null {
-  const parsed = parseValidCenterRadius(data, 'CIRCLE', index);
-  if (!parsed) return null;
-  const { centerX, centerY, radius } = parsed;
-
-  const color = extractEntityColor(data);
-
-  return {
-    id: `circle_${index}`,
-    type: 'circle',
-    layerId: layer,
-    visible: true,
-    center: { x: centerX, y: centerY },
-    radius,
-    ...(color && { color })
-  };
-}
-
-/**
- * Convert ARC entity
- * DXF Codes: 10,20 = Center; 40 = Radius; 50 = Start angle; 51 = End angle
- */
-export function convertArc(
-  data: Record<string, string>,
-  layer: string,
-  index: number
-): AnySceneEntity | null {
-  const parsed = parseValidCenterRadius(data, 'ARC', index);
-  if (!parsed) return null;
-  const { centerX, centerY, radius } = parsed;
-  const startAngle = parseFloat(data['50']) || 0;
-  const endAngle = parseFloat(data['51']) || 360;
-
-  const color = extractEntityColor(data);
-
-  return {
-    id: `arc_${index}`,
-    type: 'arc',
-    layerId: layer,
-    visible: true,
-    center: { x: centerX, y: centerY },
-    radius,
-    startAngle,
-    endAngle,
-    ...(color && { color })
-  };
-}
+import { convertCircle, convertArc } from './dxf-circle-arc-converter';
 
 /**
  * Convert ELLIPSE entity to circle approximation
  * DXF Codes: 10,20 = Center; 11,21 = Major axis endpoint; 40 = Minor/major ratio
+ * ⚠️ NOT an OCS entity: the 10 and the 11 are WCS as written, the 210 only says which side the parameters turn on.
  */
 export function convertEllipse(
   data: Record<string, string>,

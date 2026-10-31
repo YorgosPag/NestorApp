@@ -26,6 +26,7 @@
 import type { AnySceneEntity } from '../types/scene';
 import type { Point2D } from '../rendering/types/Types';
 import { projectPointTo2D } from '../bim/geometry/shared/polygon-utils';
+import { DXF_DEFAULT_EXTRUSION, dxfOcsToWcs, readDxfExtrusion } from '@/lib/dxf/dxf-ocs';
 import { extractEntityColor } from './dxf-converter-helpers';
 import { dwarn } from '../debug';
 
@@ -128,7 +129,9 @@ function convertQuadFill(
     dwarn('EntityConverter', `${entityLabel} ${index}: non-zero Z dropped in 2D projection`);
   }
 
-  const boundary: Point2D[] = parsed.vertices.map(projectPointTo2D);
+  // 3DFACE is WCS; SOLID/TRACE are OCS per the DXF Reference, so a non-default 210 moves their corners.
+  const extrusion = entityLabel === '3DFACE' ? DXF_DEFAULT_EXTRUSION : readDxfExtrusion(data);
+  const boundary: Point2D[] = parsed.vertices.map((v) => projectPointTo2D(dxfOcsToWcs(v, extrusion)));
   const color = extractEntityColor(data);
 
   return {

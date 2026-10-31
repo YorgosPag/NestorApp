@@ -86,8 +86,8 @@ const FULL_TURN_EPS = 1e-6;
  * ⇒ το path καταρρέει σε ένα σημείο και απορρίπτεται. Το σπάμε σε **δύο ημικύκλια** μέσω
  * του ΙΔΙΟΥ SSoT — καμία νέα τριγωνομετρία εδώ.
  */
-function sampleFullCircle(center: Point2D, radius: number): Point2D[] {
-  const half = Math.max(2, Math.ceil(180 / ARC_MAX_SEG_DEG));
+export function sampleFullCircle(center: Point2D, radius: number, maxSegDeg = ARC_MAX_SEG_DEG): Point2D[] {
+  const half = Math.max(2, Math.ceil(180 / maxSegDeg));
   const first = tessellateArcDegrees({ center, radius, startAngle: 0, endAngle: 180 }, half);
   const second = tessellateArcDegrees({ center, radius, startAngle: 180, endAngle: 360 }, half);
   // `slice(1, -1)`: κόψε τη διπλή κορυφή στις 180° και το κλείσιμο στις 360° (≡ 0°).

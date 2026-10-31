@@ -22,7 +22,7 @@
 
 import { useMemo } from 'react';
 import { useNotifications } from '@/providers/NotificationProvider';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { translateOnDemand } from '@/i18n/translate-on-demand';
 import { NOTIFICATION_KEYS } from '@/config/notification-keys';
 
 export interface DxfImportNotifications {
@@ -30,18 +30,23 @@ export interface DxfImportNotifications {
   readonly importedWithWarnings: (warnings: string[] | undefined) => void;
 }
 
+/**
+ * ADR-280 §11.8 Β3 — ο τίτλος μεταφράζεται **τη στιγμή της ειδοποίησης** (`translateOnDemand`), όχι με
+ * `useTranslation(['dxf-viewer'])` στο mount: εκείνο φόρτωνε και τα 6 compat splits (594,5 KB) σε **κάθε** οθόνη με
+ * καρτέλα αρχείων, για ένα μήνυμα που εμφανίζεται μόνο μετά από ασύγχρονη επεξεργασία κάτοψης.
+ */
 export function useDxfImportNotifications(): DxfImportNotifications {
   const { warning } = useNotifications();
-  const { t } = useTranslation(['dxf-viewer']);
 
   return useMemo<DxfImportNotifications>(
     () => ({
       importedWithWarnings: (warnings) => {
         if (!warnings || warnings.length === 0) return;
-        const title = t(NOTIFICATION_KEYS.dxfImport.importedWithWarnings, { count: warnings.length });
-        warning(`${title}\n${warnings.join('\n')}`);
+        const details = warnings.join('\n');
+        void translateOnDemand(NOTIFICATION_KEYS.dxfImport.importedWithWarnings, { count: warnings.length })
+          .then((title) => warning(`${title}\n${details}`));
       },
     }),
-    [warning, t],
+    [warning],
   );
 }

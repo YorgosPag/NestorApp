@@ -31,15 +31,11 @@ import type { EntityData } from '../../utils/dxf-converter-helpers';
 import { extractEntityColor } from '../../utils/dxf-converter-helpers';
 import type { BlockDef, BlockDefMap } from '../../utils/dxf-block-parser';
 import { buildLocalBlockMembers, type ExpandContext } from '../../utils/dxf-block-expander';
+import { readInsertPlacement } from '../../utils/dxf-insert-placement';
 import { translateEntityByAnchor } from '../stretch/stretch-entity-transform';
 import { placeBlockMembersWorld } from './block-expander';
 import { generateEntityId } from '../entity-creation/utils';
 import { deepClone } from '../../utils/clone-utils';
-
-function numOr(v: string | undefined, fallback: number): number {
-  const n = v !== undefined ? parseFloat(v) : NaN;
-  return Number.isFinite(n) ? n : fallback;
-}
 
 /**
  * Build a first-class {@link BlockEntity} from a DXF INSERT + its block definition. Returns `null`
@@ -73,9 +69,8 @@ export function createBlockInstance(
     return { ...baked, layerId: finalLayer } as AnySceneEntity;
   });
 
-  const position: Point2D = { x: numOr(insert.data['10'], 0), y: numOr(insert.data['20'], 0) };
-  const scale: Point2D = { x: numOr(insert.data['41'], 1), y: numOr(insert.data['42'], 1) };
-  const rotation = numOr(insert.data['50'], 0);
+  const { position, sx, sy, rotation } = readInsertPlacement(insert.data);
+  const scale: Point2D = { x: sx, y: sy };
 
   return {
     id: generateEntityId(),
