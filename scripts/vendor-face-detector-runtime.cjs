@@ -17,7 +17,8 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { createRequire } = require('node:module');
+
+const { packageRoot } = require('./lib/standalone-package-root.cjs');
 
 const REPO = path.resolve(__dirname, '..');
 
@@ -27,18 +28,6 @@ const RUNTIME = {
   'onnxruntime-web': ['package.json', 'LICENSE', 'dist/ort.node.min.js', 'dist/ort-wasm-simd-threaded.mjs', 'dist/ort-wasm-simd-threaded.wasm'],
   'onnxruntime-common': ['package.json', 'LICENSE', 'dist/cjs'],
 };
-
-/** Η ρίζα ενός πακέτου όπως τη λύνει η Node από τον φάκελο `from` (πραγματική διαδρομή, όχι symlink). */
-function packageRoot(name, from) {
-  const entry = createRequire(path.join(from, 'noop.js')).resolve(name);
-  let dir = path.dirname(entry);
-  while (!fs.existsSync(path.join(dir, 'package.json')) || JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8')).name !== name) {
-    const parent = path.dirname(dir);
-    if (parent === dir) throw new Error(`package root of ${name} not found from ${entry}`);
-    dir = parent;
-  }
-  return fs.realpathSync(dir);
-}
 
 function vendor(name, sourceRoot, target) {
   const destination = path.join(target, 'node_modules', name);

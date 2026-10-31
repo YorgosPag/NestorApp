@@ -150,6 +150,15 @@ jobs:
       - name: Verify face-detector runtime in standalone
         run: node scripts/face-detector-smoke.cjs .next/standalone
 
+      # ADR-923 §5.5.1 — το `pdf.mjs` φορτώνει τον worker του ΔΥΝΑΜΙΚΑ ⇒ ο ιχνηλάτης δεν τον βλέπει και το standalone δεν
+      # άνοιγε ΚΑΝΕΝΑ PDF (μετρημένο στην παραγωγή 2026-10-31). Το jest δεν το πιάνει: τρέχει πάνω στο πλήρες node_modules.
+      # Ο smoke εκτελεί τον ΙΔΙΟ κώδικα παραγωγής από το standalone. Αν αποτύχει ⇒ κανένα image.
+      - name: Vendor pdf.js worker into standalone
+        run: node scripts/vendor-pdf-worker.cjs .next/standalone
+
+      - name: Verify PDF runtime in standalone
+        run: node scripts/pdf-runtime-smoke.cjs .next/standalone
+
       - name: Log in to GHCR
         uses: docker/login-action@v4
         with:
