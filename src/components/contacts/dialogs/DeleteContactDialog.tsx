@@ -38,7 +38,7 @@ interface DeleteContactDialogProps {
  */
 export function DeleteContactDialog(props: DeleteContactDialogProps) {
   const { notify } = useNotifications();
-  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t } = useTranslation('contacts');
 
   return createSmartDialog({
     entityType: ENTITY_TYPES.CONTACT,

@@ -65,7 +65,7 @@ export function AddressesSectionWithFullscreen({
   setFormData,
   disabled,
 }: AddressesSectionWithFullscreenProps) {
-  const { t: tContacts } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t: tContacts } = useTranslation('contacts');
   const { t: tAddr } = useTranslation('addresses');
   const fullscreen = useFullscreen();
   const { clearHq } = useClearCompanyHqAddress(formData, setFormData);

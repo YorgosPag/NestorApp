@@ -21,7 +21,7 @@ const TYPE_DESCRIPTION_KEYS: Record<ContactType, string> = {
 };
 
 export function ContactTypeSelector({ onSelect, onCancel }: ContactTypeSelectorProps) {
-  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t } = useTranslation('contacts');
   const colors = useSemanticColors();
 
   // Οι κάρτες αποδίδονται από το κοινό `ChoiceCards` (ADR-914)· εδώ μένει μόνο ό,τι ξέρει ο τομέας.

@@ -57,7 +57,7 @@ export function ContactDetailsHeader({
   onPersonaToggle,
 }: ContactDetailsHeaderProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships', 'common-actions']);
+  const { t } = useTranslation(['contacts', 'common-actions']);
   const photoModal = useGlobalPhotoPreview();
   const { focus } = useContactEditFocus();
   const hasFocus = focus !== null;
