@@ -131,6 +131,21 @@
       "exemptions": []
     },
     {
+      "id": "catalog-listing-kind",
+      "root": "src/subapps/catalog/vocabulary/listing-kinds.ts",
+      "rootSymbol": "CATALOG_LISTING_KINDS",
+      "typeName": "CatalogListingKind",
+      "derivedTypes": [],
+      "values": [
+        "product",
+        "service",
+        "productWithInstallation"
+      ],
+      "threshold": 3,
+      "reason": "Τα είδη καταχώρισης του καταλόγου (ADR-923 §22). Τα απαριθμούν το zod schema της οικογένειας, ο επιλογέας της οθόνης και ο εκδότης (επιλογή προτύπου). Χωρίς δεσμό, νέο είδος στο API θα έμενε χωρίς ετικέτα και χωρίς πρότυπο.",
+      "exemptions": []
+    },
+    {
       "id": "catalog-channel",
       "root": "src/subapps/catalog/vocabulary/channels.ts",
       "rootSymbol": "CATALOG_CHANNELS",

@@ -3,7 +3,7 @@
  * **Φίλτρα της λίστας** — οικογένεια · ταξινόμηση · κανάλι × γλώσσα πληρότητας · facets (ADR-923 §5.10.4 Β2).
  *
  * Akeneo: επιλογέας «scope / locale» πάνω από το πλέγμα, φίλτρα ανά ιδιότητα. Τα facets εμφανίζονται **μόνο** μέσα
- * σε οικογένεια (είναι δεμένα σε ιδιότητές της) — ένα ανά ιδιότητα, εναλλαγή με `aria-pressed`.
+ * σε οικογένεια (είναι δεμένα σε ιδιότητές της) — πολλές τιμές ανά ιδιότητα (OR), εναλλαγή με `aria-pressed`.
  *
  * @module components/catalog/products/ProductListToolbar
  */
@@ -23,7 +23,7 @@ import { CATALOG_CHANNELS, type CatalogChannel } from '@/subapps/catalog/vocabul
 
 import { CHANNEL_KEYS, LANGUAGE_KEYS } from '../shared/catalog-labels';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
-import { toggleFacet, type FacetGroup } from './product-facets';
+import { isFacetSelected, toggleFacet, type FacetGroup } from './product-facets';
 import type { ProductListFilter } from './use-product-list';
 
 export interface ListScope {
@@ -76,15 +76,15 @@ function FacetBar({ props }: { readonly props: ProductListToolbarProps }) {
         <fieldset key={group.attributeId} className="flex flex-wrap items-center gap-1 border-0 p-0">
           <legend className="mr-1 text-xs text-muted-foreground">{text(group.labels, group.code)}</legend>
           {group.values.map((value) => (
-            <ToggleButton key={value.key} size="sm" pressed={filter.facetKeys.includes(value.key)}
-              onClick={() => props.onFilter({ ...filter, facetKeys: toggleFacet(filter.facetKeys, group, value.key) })}>
+            <ToggleButton key={value.key} size="sm" pressed={isFacetSelected(filter.facets, value.key)}
+              onClick={() => props.onFilter({ ...filter, facets: toggleFacet(filter.facets, group, value.key) })}>
               {value.kind === 'option' ? text(value.labels, value.code) : t(value.value ? 'products.filter.yes' : 'products.filter.no')}
             </ToggleButton>
           ))}
         </fieldset>
       ))}
-      {filter.facetKeys.length > 0 ? (
-        <Button type="button" variant="ghost" size="sm" onClick={() => props.onFilter({ ...filter, facetKeys: [] })}>{t('products.filter.clearFacets')}</Button>
+      {filter.facets.length > 0 ? (
+        <Button type="button" variant="ghost" size="sm" onClick={() => props.onFilter({ ...filter, facets: [] })}>{t('products.filter.clearFacets')}</Button>
       ) : null}
     </section>
   );
@@ -100,7 +100,7 @@ export function ProductListToolbar(props: ProductListToolbarProps) {
           <Label htmlFor="products-family">{t('products.filter.family')}</Label>
           <ClearableSelect id="products-family" value={filter.familyId ?? ''} placeholder={t('products.filter.allFamilies')}
             clearLabel={t('products.filter.allFamilies')} triggerClassName="w-56"
-            onValueChange={(value) => props.onFilter({ ...filter, familyId: value === '' ? null : value, facetKeys: [] })}>
+            onValueChange={(value) => props.onFilter({ ...filter, familyId: value === '' ? null : value, facets: [] })}>
             {props.families.map((family) => <SelectItem key={family.id} value={family.id}>{text(family.labels, family.code)}</SelectItem>)}
           </ClearableSelect>
         </span>

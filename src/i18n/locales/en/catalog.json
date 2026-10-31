@@ -95,6 +95,11 @@
     "reference": "Product link",
     "table": "Table"
   },
+  "listingKinds": {
+    "product": "Product",
+    "service": "Service",
+    "productWithInstallation": "Product with installation"
+  },
   "channels": {
     "print": "Printed catalogue",
     "storefront": "Storefront",
@@ -192,6 +197,9 @@
     "attributeUnknown": "The attribute does not exist (or was deleted).",
     "attributeDuplicate": "The attribute is already in the family.",
     "labelAttributeType": "The product name must be a text attribute of the family.",
+    "installationAttributeForbidden": "The installation link only applies to “Product with installation”.",
+    "installationAttributeRequired": "“Product with installation” needs an attribute that points to the installation service.",
+    "installationAttributeType": "The installation must be a reference attribute of the family.",
     "imageAttributeType": "The main image must be an image-file attribute of the family.",
     "variantLevelsCount": "From 1 to {max} variant levels.",
     "axesCount": "From 1 to {max} axes per level.",
@@ -245,6 +253,7 @@
     "richTextUnsafe": "The text contains formatting that is not allowed.",
     "referenceFamilyNotAllowed": "The target belongs to a family that is not allowed here.",
     "variantSchemeLockedInUse": "Variant scheme “{code}” is used by models — its axes and levels cannot change.",
+    "listingKindLockedInUse": "The listing kind cannot change while the family has models or products.",
     "attributeLevelLockedInUse": "The attribute has values — it cannot move to another level.",
     "attributeRemovalLockedInUse": "The attribute has values in this family’s products — it cannot be removed.",
     "attributeFlagLockedInUse": "The attribute has values — this setting cannot change.",
@@ -368,6 +377,8 @@
       "parentId": "Parent",
       "labelAttributeId": "Name attribute",
       "imageAttributeId": "Main image attribute",
+      "listingKind": "Listing kind",
+      "installationAttributeId": "Installation attribute",
       "attributes": "Attributes",
       "variantSchemes": "Variants",
       "tableSpec": "Catalogue table",
@@ -526,7 +537,11 @@
       "labelAttribute": "Product name from",
       "labelAttributeHint": "A text attribute of the family — e.g. the model code.",
       "imageAttribute": "Main image from",
-      "imageAttributeHint": "An image-file attribute of the family."
+      "imageAttributeHint": "An image-file attribute of the family.",
+      "listingKind": "Listing kind",
+      "listingKindHint": "Locks once the family has products.",
+      "installationAttribute": "Installation service from",
+      "installationAttributeHint": "A reference attribute of the family. Product and installation keep separate prices."
     },
     "attributes": {
       "lead": "Which attributes the family has and where they are required. Drag to change the order.",

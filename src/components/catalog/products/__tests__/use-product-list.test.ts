@@ -23,8 +23,8 @@ function setWindows(models: Window, products: Window) {
   windows.CATALOG_PRODUCTS = products;
 }
 
-const inputs = (facetKeys: string[] = []) => ({
-  filter: { familyId: null, facetKeys, sort: 'updated' as const },
+const inputs = (facets: string[][] = []) => ({
+  filter: { familyId: null, facets, sort: 'updated' as const },
   families: new Map(),
   attributes: new Map(),
   settings: { channelLocales: { print: ['el'], storefront: ['el'], portal: ['el'], quote: ['el'] } } as never,
@@ -38,11 +38,11 @@ describe('useProductList', () => {
     expect(result.current.hasMore).toBe(false);
   });
 
-  it('ένωση μοντέλων + απλών · το 2ο facet φιλτράρεται μέσα στο παράθυρο · «περισσότερα» μεγαλώνει μόνο τα ανοιχτά', () => {
+  it('ένωση μοντέλων + απλών · η επιλογή κρίνεται μέσα στο παράθυρο · «περισσότερα» μεγαλώνει μόνο τα ανοιχτά', () => {
     const models = { state: 'ready' as const, items: [model('cpmod_a', ['h=1', 'c=x']), model('cpmod_b', ['h=1'])], complete: false, grow: jest.fn() };
     const products = { state: 'ready' as const, items: [product('cprod_a')], complete: true, grow: jest.fn() };
     setWindows(models, products);
-    const { result } = renderHook(() => useProductList(inputs(['h=1', 'c=x'])));
+    const { result } = renderHook(() => useProductList(inputs([['h=1'], ['c=x']])));
     expect(result.current.rows.map((row) => row.id)).toEqual(['cpmod_a']);
     expect(result.current.hasMore).toBe(true);
     result.current.grow();

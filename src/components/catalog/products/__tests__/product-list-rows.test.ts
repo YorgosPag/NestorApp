@@ -23,7 +23,7 @@ import {
 const meta = { companyId: 'c', isDeleted: false, createdAt: '', createdBy: '', updatedBy: '', deletedAt: null, deletedBy: null };
 const descendant = (facetKeys: string[], completeChannels: string[] = []) => ({ kind: 'product' as const, parentId: 'm', axisKey: null, completeChannels, facetKeys });
 
-function model(id: string, over: { updatedAt?: string; sortKey?: string; descendants?: Record<string, ReturnType<typeof descendant>> } = {}): ProductModelRecord {
+function model(id: string, over: { updatedAt?: string; sortKey?: string; facetKeys?: string[]; descendants?: Record<string, ReturnType<typeof descendant>> } = {}): ProductModelRecord {
   return {
     ...meta, id, revision: 1, updatedAt: over.updatedAt ?? '2026-10-26T10:00:00.000Z',
     code: id, familyId: 'fam', variantSchemeCode: 'by_size', parentId: null, values: {}, noValueReasons: {}, categoryIds: [],
@@ -31,7 +31,7 @@ function model(id: string, over: { updatedAt?: string; sortKey?: string; descend
       valueAttributeIds: [], valueLocales: [], assetIds: [], uniqueKeys: {}, standardAmounts: {}, warnings: [],
       rootModelId: null, label: null, sortKey: over.sortKey ?? id, descendants: over.descendants ?? {},
       summary: { print: { el: { complete: 5, total: 7 } }, storefront: { el: { complete: 7, total: 7 } }, portal: { el: { complete: 0, total: 7 } }, quote: { el: { complete: 0, total: 0 } } },
-      facetKeys: [], findings: [],
+      facetKeys: over.facetKeys ?? [], findings: [],
     },
   } as ProductModelRecord;
 }
@@ -88,10 +88,26 @@ describe('στήλες', () => {
 
   it('🏆 «ταιριάζουν 2/3» από το ευρετήριο της ρίζας · παραλλαγές', () => {
     const row = modelRow(model('m', { descendants: { a: descendant(['h=1', 'c=x']), b: descendant(['h=1']), c: descendant(['h=1', 'c=x']) } }));
-    expect(rowMatches(row, ['h=1', 'c=x'])).toEqual({ matching: 2, total: 3 });
+    expect(rowMatches(row, [['h=1'], ['c=x']])).toEqual({ matching: 2, total: 3 });
     expect(rowVariantCount(row)).toBe(3);
-    expect(rowPassesFacets(row, ['h=9'])).toBe(false);
+    expect(rowPassesFacets(row, [['h=9']])).toBe(false);
     expect(rowMatches(row, [])).toBeNull();
+  });
+
+  it('OR μέσα στην ιδιότητα: «h=1 ή h=2» μετρά και τα δύο SKU', () => {
+    const row = modelRow(model('m', { descendants: { a: descendant(['h=1']), b: descendant(['h=2']), c: descendant(['h=3']) } }));
+    expect(rowMatches(row, [['h=1', 'h=2']])).toEqual({ matching: 2, total: 3 });
+  });
+
+  it('🔴 AND στο ΙΔΙΟ SKU: «h=1» στο ένα και «c=x» στο άλλο ΔΕΝ περνά, ας το έχει η ένωση της ρίζας', () => {
+    const row = modelRow(model('m', { facetKeys: ['h=1', 'c=x'], descendants: { a: descendant(['h=1']), b: descendant(['c=x']) } }));
+    expect(rowPassesFacets(row, [['h=1'], ['c=x']])).toBe(false);
+  });
+
+  it('μοντέλο χωρίς SKU κρίνεται στα δικά του κλειδιά', () => {
+    const row = modelRow(model('m', { facetKeys: ['h=1'], descendants: {} }));
+    expect(rowPassesFacets(row, [['h=1']])).toBe(true);
+    expect(rowPassesFacets(row, [['h=2']])).toBe(false);
   });
 });
 

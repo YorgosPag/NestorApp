@@ -1,6 +1,6 @@
 import { PLATFORM_MEASUREMENT_REGISTRY } from '../../measurement/measurement-registry';
 import type { CatalogAttributeDefinition } from '../../types/attribute';
-import type { CatalogFamilyDefinition, ConsistencyRule, FamilyTableRow } from '../../types/family';
+import { listingKindOf, type CatalogFamilyDefinition, type ConsistencyRule, type FamilyTableRow } from '../../types/family';
 import { MFP_ATTRIBUTE_MAP, MFP_FAMILY } from '../../__tests__/fixtures/mfp-fan-coil.fixture';
 import { validateFamily } from '../validate-family';
 
@@ -27,6 +27,36 @@ describe('validateFamily — attributes', () => {
   it('requires a text label attribute and an image asset attribute', () => {
     expect(issueCodes({ ...MFP_FAMILY, labelAttributeId: 'cooling_h', imageAttributeId: 'model_code' }))
       .toEqual(expect.arrayContaining(['labelAttributeType', 'imageAttributeType']));
+  });
+});
+
+describe('validateFamily — είδος καταχώρισης (§22)', () => {
+  const service: CatalogAttributeDefinition = { ...MFP_ATTRIBUTE_MAP.get('model_code')!, code: 'installation', type: 'reference' } as CatalogAttributeDefinition;
+  const attributes = new Map([...MFP_ATTRIBUTE_MAP, ['installation', service]]);
+  const bound: CatalogFamilyDefinition = { ...MFP_FAMILY, attributes: [...MFP_FAMILY.attributes, { attributeId: 'installation', requiredChannels: [] }] };
+  const codes = (family: CatalogFamilyDefinition) => issueCodes(family, attributes).filter((code) => code.startsWith('installation'));
+
+  it('οικογένεια χωρίς το πεδίο είναι προϊόν, χωρίς κανένα εύρημα', () => {
+    expect(listingKindOf(MFP_FAMILY)).toBe('product');
+    expect(codes(bound)).toEqual([]);
+  });
+
+  it('η υπηρεσία δέχεται το ίδιο σχήμα', () => {
+    expect(codes({ ...bound, listingKind: 'service' })).toEqual([]);
+  });
+
+  it('🔴 προϊόν με τοποθέτηση χωρίς δεσμό απορρίπτεται', () => {
+    expect(codes({ ...bound, listingKind: 'productWithInstallation', installationAttributeId: null })).toEqual(['installationAttributeRequired']);
+  });
+
+  it('🔴 ο δεσμός πρέπει να είναι ιδιότητα αναφοράς της οικογένειας', () => {
+    expect(codes({ ...bound, listingKind: 'productWithInstallation', installationAttributeId: 'model_code' })).toEqual(['installationAttributeType']);
+    expect(codes({ ...MFP_FAMILY, listingKind: 'productWithInstallation', installationAttributeId: 'installation' })).toEqual(['installationAttributeType']);
+    expect(codes({ ...bound, listingKind: 'productWithInstallation', installationAttributeId: 'installation' })).toEqual([]);
+  });
+
+  it('🔴 δεσμός σε άλλο είδος απαγορεύεται', () => {
+    expect(codes({ ...bound, listingKind: 'service', installationAttributeId: 'installation' })).toEqual(['installationAttributeForbidden']);
   });
 });
 

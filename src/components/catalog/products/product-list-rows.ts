@@ -16,7 +16,7 @@ import { mergeLiveWindows, type LiveWindow, type MergedWindows } from '@/lib/fir
 import type { ProductModelRecord, ProductRecord } from '@/services/catalog/catalog-api.client';
 import { completenessPercent } from '@/subapps/catalog/completeness/compute-completeness';
 import { isCompletenessStale, type CompletenessHashInput } from '@/subapps/catalog/completeness/inputs-hash';
-import type { CatalogListSort } from '@/subapps/catalog/list/catalog-list-query';
+import { keysMatchSelection, type CatalogListSort, type FacetSelection } from '@/subapps/catalog/list/catalog-list-query';
 import type { CatalogChannel } from '@/subapps/catalog/vocabulary/channels';
 
 export type CatalogListRow =
@@ -91,22 +91,26 @@ export function rowVariantCount(row: CatalogListRow): number | null {
 }
 
 /**
- * 🏆 **«Ταιριάζουν 3/7»** — πόσα SKU ενός μοντέλου έχουν **όλα** τα επιλεγμένα facets (Akeneo «Matches» του consolidated
- * mode), από το ευρετήριο της ρίζας, χωρίς καμία ανάγνωση. SKU: 1/1 ή 0/1. Χωρίς facets ⇒ `null`.
+ * 🏆 **«Ταιριάζουν 3/7»** — πόσα SKU ενός μοντέλου ικανοποιούν την επιλογή (Akeneo «Matches» του consolidated mode), από
+ * το ευρετήριο της ρίζας, χωρίς καμία ανάγνωση. SKU: 1/1 ή 0/1. Χωρίς facets ⇒ `null`.
  */
-export function rowMatches(row: CatalogListRow, facetKeys: readonly string[]): { readonly matching: number; readonly total: number } | null {
-  if (facetKeys.length === 0) return null;
+export function rowMatches(row: CatalogListRow, selection: FacetSelection): { readonly matching: number; readonly total: number } | null {
+  if (selection.length === 0) return null;
   const sets = row.kind === 'model'
     ? Object.values(row.record.derived.descendants ?? {}).filter((entry) => entry.kind === 'product').map((entry) => entry.facetKeys)
     : [row.record.derived.facetKeys ?? []];
-  const matching = sets.filter((keys) => facetKeys.every((key) => keys.includes(key))).length;
+  const matching = sets.filter((keys) => keysMatchSelection(keys, selection)).length;
   return { matching, total: sets.length };
 }
 
-/** Ταιριάζει η γραμμή με όλα τα facets; (τα πέρα από το πρώτο φιλτράρονται μέσα στο παράθυρο) */
-export function rowPassesFacets(row: CatalogListRow, facetKeys: readonly string[]): boolean {
-  const matches = rowMatches(row, facetKeys);
-  return matches === null || matches.matching > 0;
+/**
+ * Περνά η γραμμή την επιλογή; Το AND κρίνεται **στο ίδιο SKU**: η ένωση της ρίζας θα δεχόταν μοντέλο με «κόκκινο» στο ένα
+ * και «μεγάλο» στο άλλο, και το πλέγμα θα έδειχνε «0/7». Μοντέλο χωρίς SKU κρίνεται στα δικά του κλειδιά.
+ */
+export function rowPassesFacets(row: CatalogListRow, selection: FacetSelection): boolean {
+  const matches = rowMatches(row, selection);
+  if (matches === null) return true;
+  return matches.total === 0 ? keysMatchSelection(row.record.derived.facetKeys ?? [], selection) : matches.matching > 0;
 }
 
 export type StaleReason = 'sortKey' | 'completeness';

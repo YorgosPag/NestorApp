@@ -37,7 +37,7 @@ export interface CatalogLiveWindow<T> extends LiveWindow<T> {
 /** Οι περιορισμοί του σχεδίου — η **μόνη** μετάφραση σχέδιο → Firestore. */
 export function constraintsOfPlan(plan: CatalogListQueryPlan): QueryConstraint[] {
   const constraints: QueryConstraint[] = plan.equalities.map(([field, value]) => where(field, '==', value));
-  if (plan.arrayContains) constraints.push(where(plan.arrayContains[0], 'array-contains', plan.arrayContains[1]));
+  if (plan.arrayContainsAny) constraints.push(where(plan.arrayContainsAny[0], 'array-contains-any', plan.arrayContainsAny[1]));
   constraints.push(orderBy(plan.orderBy[0], plan.orderBy[1]));
   return constraints;
 }

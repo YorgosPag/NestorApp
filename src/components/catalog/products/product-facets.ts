@@ -10,6 +10,7 @@
 
 import type { LocalizedText } from '@/i18n/localized-text';
 import { booleanFacetKey, optionFacetKey } from '@/subapps/catalog/derived/holder-derived';
+import type { FacetSelection } from '@/subapps/catalog/list/catalog-list-query';
 import type { CatalogAttributeDefinition } from '@/subapps/catalog/types/attribute';
 import type { CatalogFamilyDefinition } from '@/subapps/catalog/types/family';
 
@@ -46,8 +47,13 @@ export function facetGroupsOf(family: CatalogFamilyDefinition, attributes: Reado
   });
 }
 
-/** Εναλλαγή ενός facet· **ένα** ανά ιδιότητα (Akeneo: «ίσο με» μία τιμή ανά φίλτρο). Η σειρά = σειρά επιλογής. */
-export function toggleFacet(selected: readonly string[], group: FacetGroup, key: string): string[] {
-  const others = selected.filter((current) => !group.values.some((value) => value.key === current));
-  return selected.includes(key) ? others : [...others, key];
+export const isFacetSelected = (selection: FacetSelection, key: string): boolean => selection.some((keys) => keys.includes(key));
+
+/** Εναλλαγή ενός facet: **πολλές** τιμές ανά ιδιότητα (Akeneo «in list»). Άδεια ομάδα φεύγει, αλλιώς θα απέκλειε τα πάντα. */
+export function toggleFacet(selection: FacetSelection, group: FacetGroup, key: string): FacetSelection {
+  const belongs = (keys: readonly string[]) => keys.some((current) => group.values.some((value) => value.key === current));
+  const current = selection.find(belongs) ?? [];
+  const next = current.includes(key) ? current.filter((value) => value !== key) : [...current, key];
+  const others = selection.filter((keys) => !belongs(keys));
+  return next.length === 0 ? others : [...others, next];
 }

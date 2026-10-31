@@ -50,7 +50,7 @@ function useScope(settings: ReturnType<typeof useProductCatalogContext>['setting
 }
 
 function useListPart(ctx: ReturnType<typeof useProductCatalogContext>) {
-  const [filter, setFilter] = useState<ProductListFilter>({ familyId: null, facetKeys: [], sort: 'updated' });
+  const [filter, setFilter] = useState<ProductListFilter>({ familyId: null, facets: [], sort: 'updated' });
   const list = useProductList({ filter, families: ctx.familyById, attributes: ctx.library.attributeById, settings: ctx.settings.definition });
   const family = filter.familyId ? ctx.familyById.get(filter.familyId) ?? null : null;
   const facetGroups = useMemo(() => (family ? facetGroupsOf(family, ctx.library.attributeById) : []), [family, ctx.library.attributeById]);
@@ -83,7 +83,7 @@ function ProductListSection({ ctx, part, scope, onScope, recompute, onOpen }: Li
       ) : null}
       {part.list.state === 'failed' ? <p className="m-0 text-sm text-destructive" role="alert">{t('products.list.failed')}</p> : null}
       <ProductListGrid rows={part.list.rows} emptyText={t(EMPTY_LIST_KEYS[part.list.state])} families={ctx.familyById} assets={ctx.assetById} files={ctx.files.byId}
-        channel={scope.channel} locale={scope.locale} facetKeys={part.filter.facetKeys} onOpen={(row) => onOpen(row.id)} />
+        channel={scope.channel} locale={scope.locale} facets={part.filter.facets} onOpen={(row) => onOpen(row.id)} />
       {part.list.hasMore ? <Button type="button" variant="outline" className="justify-self-center" onClick={part.list.grow}>{t('products.list.more')}</Button> : null}
     </section>
   );

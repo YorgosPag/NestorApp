@@ -87,7 +87,7 @@ const valuesByAttribute: TrackedFieldDef = {
 };
 
 export const CATALOG_FAMILY_TRACKED_FIELDS = defs(
-  ['labelAttributeId', 'imageAttributeId', 'isDeleted'],
+  ['labelAttributeId', 'imageAttributeId', 'listingKind', 'installationAttributeId', 'isDeleted'],
   ['labels', 'description', 'attributes', 'variantSchemes', 'tableSpec', 'consistencyRules'],
 );
 

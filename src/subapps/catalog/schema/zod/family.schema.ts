@@ -20,6 +20,7 @@ import {
 } from '../../types/family';
 import { CATALOG_CHANNELS } from '../../vocabulary/channels';
 import { CATALOG_LIMITS } from '../../vocabulary/catalog-limits';
+import { CATALOG_LISTING_KINDS } from '../../vocabulary/listing-kinds';
 import {
   catalogCodeSchema,
   descriptionSchema,
@@ -104,6 +105,8 @@ export const familyDefinitionSchema: z.ZodType<CatalogFamilyDefinition, z.ZodTyp
   variantSchemes: z.array(variantSchemeSchema).max(CATALOG_LIMITS.maxVariantSchemes),
   tableSpec: tableSpecSchema.nullable(),
   consistencyRules: z.array(consistencyRuleSchema).max(CATALOG_LIMITS.maxConsistencyRules),
+  listingKind: z.enum(CATALOG_LISTING_KINDS).optional(),
+  installationAttributeId: entityIdSchema.nullable().optional(),
 });
 
 export const createFamilyBodySchema = z.object({ definition: familyDefinitionSchema });

@@ -13,6 +13,7 @@ import type { HumanLanguage } from '@/i18n/languages';
 import { formatDateTime } from '@/lib/intl-formatting';
 import type { AssetRecord, FamilyRecord } from '@/services/catalog/catalog-api.client';
 import { readUnscopedSlot } from '@/subapps/catalog/values/value-shape';
+import type { FacetSelection } from '@/subapps/catalog/list/catalog-list-query';
 import type { CatalogChannel } from '@/subapps/catalog/vocabulary/channels';
 import type { FileRecord } from '@/types/file-record';
 
@@ -33,7 +34,7 @@ export interface ProductListContext {
   readonly files: ReadonlyMap<string, FileRecord>;
   readonly channel: CatalogChannel;
   readonly locale: HumanLanguage;
-  readonly facetKeys: readonly string[];
+  readonly facets: FacetSelection;
 }
 
 /** Οι λέξεις — ίδιος τύπος με το `useCatalogText` (όχι δεύτερη υπογραφή του `t`). */
@@ -95,7 +96,7 @@ function statusColumns(ctx: ProductListContext, w: ProductListWords): Column[] {
       render: (row) => { const cell = rowCompleteness(row, ctx.channel, ctx.locale); return cell ? <Badge variant={TONE_VARIANT[cell.tone]}>{completenessText(row)}</Badge> : null; } },
     { ...header('variants', w), width: 'sm', align: 'end',
       text: (row) => {
-        const matches = rowMatches(row, ctx.facetKeys);
+        const matches = rowMatches(row, ctx.facets);
         if (matches) return w.t('products.matches', matches);
         const count = rowVariantCount(row);
         return count === null ? '' : String(count);

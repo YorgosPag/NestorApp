@@ -17,6 +17,7 @@
 
 import type { LocalizedText } from '@/i18n/localized-text';
 import type { CatalogChannel } from '../vocabulary/channels';
+import { DEFAULT_LISTING_KIND, type CatalogListingKind } from '../vocabulary/listing-kinds';
 
 // ── Ιδιότητες της οικογένειας ────────────────────────────────────────────────
 
@@ -141,7 +142,14 @@ export interface CatalogFamilyDefinition {
   readonly variantSchemes: readonly VariantScheme[];
   readonly tableSpec: FamilyTableSpec | null;
   readonly consistencyRules: readonly ConsistencyRule[];
+  /** Είδος καταχώρισης (§22). Έλλειψη = `product`: διάβαζε **μόνο** με το `listingKindOf`. */
+  readonly listingKind?: CatalogListingKind;
+  /** Ιδιότητα `reference` προς την υπηρεσία τοποθέτησης· μόνο στο `productWithInstallation` (§22 Υ5). */
+  readonly installationAttributeId?: string | null;
 }
+
+export const listingKindOf = (family: Pick<CatalogFamilyDefinition, 'listingKind'>): CatalogListingKind =>
+  family.listingKind ?? DEFAULT_LISTING_KIND;
 
 /**
  * Η αποθηκευμένη μορφή προσθέτει το **παράγωγο** `attributeIds` (για `array-contains`:

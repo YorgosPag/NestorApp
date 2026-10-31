@@ -37,6 +37,7 @@ import type {
 } from '@/subapps/catalog/types/family';
 import type { AssetKind, AttributeType, ReferenceRelation } from '@/subapps/catalog/vocabulary/attribute-types';
 import type { CatalogChannel } from '@/subapps/catalog/vocabulary/channels';
+import type { CatalogListingKind } from '@/subapps/catalog/vocabulary/listing-kinds';
 
 /** Η γλώσσα κάθε πεδίου πολύγλωσσου κειμένου — δεμένη στο `HUMAN_LANGUAGES` (νέα γλώσσα ⇒ νέα λέξη, αλλιώς σπάει). */
 export const LANGUAGE_KEYS: Readonly<Record<HumanLanguage, string>> = {
@@ -77,6 +78,12 @@ export const CHANNEL_KEYS: Readonly<Record<CatalogChannel, string>> = {
   storefront: 'channels.storefront',
   portal: 'channels.portal',
   quote: 'channels.quote',
+};
+
+export const LISTING_KIND_KEYS: Readonly<Record<CatalogListingKind, string>> = {
+  product: 'listingKinds.product',
+  service: 'listingKinds.service',
+  productWithInstallation: 'listingKinds.productWithInstallation',
 };
 
 export const ASSET_KIND_KEYS: Readonly<Record<AssetKind, string>> = {
@@ -185,6 +192,9 @@ export const ISSUE_KEYS: Readonly<Record<CatalogIssueCode, string>> = {
   attributeUnknown: 'issues.attributeUnknown',
   attributeDuplicate: 'issues.attributeDuplicate',
   labelAttributeType: 'issues.labelAttributeType',
+  installationAttributeForbidden: 'issues.installationAttributeForbidden',
+  installationAttributeRequired: 'issues.installationAttributeRequired',
+  installationAttributeType: 'issues.installationAttributeType',
   imageAttributeType: 'issues.imageAttributeType',
   variantLevelsCount: 'issues.variantLevelsCount',
   axesCount: 'issues.axesCount',
@@ -238,6 +248,7 @@ export const ISSUE_KEYS: Readonly<Record<CatalogIssueCode, string>> = {
   richTextUnsafe: 'issues.richTextUnsafe',
   referenceFamilyNotAllowed: 'issues.referenceFamilyNotAllowed',
   variantSchemeLockedInUse: 'issues.variantSchemeLockedInUse',
+  listingKindLockedInUse: 'issues.listingKindLockedInUse',
   attributeLevelLockedInUse: 'issues.attributeLevelLockedInUse',
   attributeRemovalLockedInUse: 'issues.attributeRemovalLockedInUse',
   attributeFlagLockedInUse: 'issues.attributeFlagLockedInUse',

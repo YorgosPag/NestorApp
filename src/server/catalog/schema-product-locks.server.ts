@@ -15,6 +15,7 @@ import 'server-only';
  * | αφαίρεση ιδιότητας από την οικογένεια | έχει τιμές στην οικογένεια | ορφανές τιμές ⇒ `attributeUnknown` στην επόμενη αποθήκευση |
  * | `localizable` · `scopable` · `unique` · οικογένεια μέτρησης | η ιδιότητα έχει τιμές | αλλάζει **ποια θέση** διαβάζεται / τι κρατείται |
  * | αφαίρεση επιλογής | κάποιος φορέας τη χρησιμοποιεί | ορφανός κωδικός επιλογής |
+ * | είδος καταχώρισης (§22) | η οικογένεια έχει μοντέλα ή προϊόντα | θα άλλαζε τι σημαίνουν υπάρχουσες τιμές και παραγγελίες |
  *
  * Αυστηρότερα όρια (`min/max/pattern/maxLength`) **επιτρέπονται** (Akeneo): οι παλιές τιμές εμφανίζονται ως
  * ευρήματα στην επόμενη επεξεργασία — αυτό δεν είναι ορφάνια, είναι ποιότητα.
@@ -24,7 +25,7 @@ import 'server-only';
 
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
 import type { CatalogAttributeDefinition } from '@/subapps/catalog/types/attribute';
-import type { CatalogFamilyDefinition, VariantScheme } from '@/subapps/catalog/types/family';
+import { listingKindOf, type CatalogFamilyDefinition, type VariantScheme } from '@/subapps/catalog/types/family';
 import { attributeOwnerDepth } from '@/subapps/catalog/values/attribute-levels';
 import {
   attributeHasValues,
@@ -75,6 +76,9 @@ export async function assertFamilyChangeKeepsProducts(
     if (await familyAttributeHasValues(scope, familyId, attributeId)) {
       issues.push({ code: 'attributeRemovalLockedInUse', path: 'attributes', params: { attributeId } });
     }
+  }
+  if (listingKindOf(previous) !== listingKindOf(next) && (await familyHasHolders(scope, familyId))) {
+    issues.push({ code: 'listingKindLockedInUse', path: 'listingKind' });
   }
   if (issues.length > 0) throw new CatalogWriteError('inUse', issues);
 }

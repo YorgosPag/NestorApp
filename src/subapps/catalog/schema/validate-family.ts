@@ -14,7 +14,7 @@
 import { hasAnyLocalizedText } from '@/i18n/localized-text';
 import type { MeasurementRegistry } from '../measurement/measurement-registry';
 import type { CatalogAttributeDefinition } from '../types/attribute';
-import type { CatalogFamilyDefinition } from '../types/family';
+import { listingKindOf, type CatalogFamilyDefinition } from '../types/family';
 import { CATALOG_LIMITS, isCatalogCode } from '../vocabulary/catalog-limits';
 import { IssueCollector, type CatalogIssue } from './catalog-issues';
 import { familyAttribute, type FamilyValidationContext } from './family-validation-context';
@@ -49,6 +49,21 @@ function validateLabelAndImage(context: FamilyValidationContext): void {
   }
 }
 
+/** §22 Υ5: ο δεσμός τοποθέτησης υπάρχει **μόνο** στο δικό του είδος, και δείχνει ιδιότητα `reference` της οικογένειας. */
+function validateListingKind(context: FamilyValidationContext): void {
+  const { family, collector } = context;
+  const attributeId = family.installationAttributeId ?? null;
+  if (listingKindOf(family) !== 'productWithInstallation') {
+    if (attributeId !== null) collector.add('installationAttributeForbidden', 'installationAttributeId');
+    return;
+  }
+  if (attributeId === null) {
+    collector.add('installationAttributeRequired', 'installationAttributeId');
+    return;
+  }
+  if (familyAttribute(context, attributeId)?.type !== 'reference') collector.add('installationAttributeType', 'installationAttributeId');
+}
+
 export function validateFamily(
   family: CatalogFamilyDefinition,
   attributes: ReadonlyMap<string, CatalogAttributeDefinition>,
@@ -66,6 +81,7 @@ export function validateFamily(
   };
   validateBindings(context);
   validateLabelAndImage(context);
+  validateListingKind(context);
   validateFamilyVariants(context);
   validateFamilyTableSpec(context);
   validateFamilyRules(context);

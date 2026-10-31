@@ -27,10 +27,10 @@ export interface ProductListGridProps extends ProductListContext {
 export function ProductListGrid(props: ProductListGridProps) {
   const { t, text } = useCatalogText();
   const gridWords = useCatalogGridWords();
-  const { rows, onOpen, families, assets, files, channel, locale, facetKeys, emptyText } = props;
+  const { rows, onOpen, families, assets, files, channel, locale, facets, emptyText } = props;
   const columns = useMemo(
-    () => productListColumns({ families, assets, files, channel, locale, facetKeys }, { t, text }),
-    [families, assets, files, channel, locale, facetKeys, t, text],
+    () => productListColumns({ families, assets, files, channel, locale, facets }, { t, text }),
+    [families, assets, files, channel, locale, facets, t, text],
   );
   const words = useMemo(() => ({ ...gridWords, empty: emptyText }), [gridWords, emptyText]);
   return (

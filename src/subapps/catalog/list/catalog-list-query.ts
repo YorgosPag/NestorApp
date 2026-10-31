@@ -10,6 +10,10 @@
  *
  * Facet μόνο **μέσα σε οικογένεια**: τα facets είναι δεμένα σε ιδιότητες της οικογένειας (`attr=option`).
  *
+ * **Επιλογή facets (ADR-923 §5.11 «3η», Akeneo «in list»):** OR μέσα στην ιδιότητα, AND ανάμεσα σε ιδιότητες. Η Firestore
+ * δέχεται **ένα** `array-contains-any` ανά ερώτημα, άρα στο ερώτημα μπαίνει μία ομάδα (η στενότερη) και οι υπόλοιπες
+ * κρίνονται μέσα στο παράθυρο. Ο δείκτης είναι ο ίδιος με του `array-contains`: καμία νέα εγγραφή στο `firestore.indexes.json`.
+ *
  * @module subapps/catalog/list/catalog-list-query
  */
 
@@ -21,9 +25,31 @@ export const CATALOG_LIST_SORTS: readonly CatalogListSort[] = ['updated', 'label
 
 export interface CatalogListQuerySpec {
   readonly familyId: string | null;
-  /** Ένα facet στο ερώτημα (`array-contains`)· τα υπόλοιπα φιλτράρονται μέσα στο παράθυρο (όριο της Firestore). */
-  readonly facetKey: string | null;
+  /** Μία ομάδα facets στο ερώτημα (`array-contains-any`)· οι υπόλοιπες κρίνονται μέσα στο παράθυρο (όριο της Firestore). */
+  readonly facetKeys: readonly string[] | null;
   readonly sort: CatalogListSort;
+}
+
+/** Μία ομάδα ανά ιδιότητα: OR μέσα στην ομάδα, AND ανάμεσα στις ομάδες. */
+export type FacetSelection = readonly (readonly string[])[];
+
+/** Όριο τιμών του `array-contains-any` στη Firestore. */
+export const ARRAY_CONTAINS_ANY_LIMIT = 30;
+
+/**
+ * Η ομάδα που πάει στο ερώτημα: η **στενότερη** που χωρά στο όριο (λιγότερες τιμές = λιγότερα έγγραφα στο παράθυρο).
+ * Ταξινομημένη, ώστε η σειρά των κλικ να μην ανοίγει νέα συνδρομή. Καμία δεν χωρά ⇒ `null`, και κρίνονται όλες στο παράθυρο.
+ */
+export function serverFacetKeys(selection: FacetSelection): readonly string[] | null {
+  const fitting = selection.filter((group) => group.length > 0 && group.length <= ARRAY_CONTAINS_ANY_LIMIT);
+  if (fitting.length === 0) return null;
+  const narrowest = fitting.reduce((best, group) => (group.length < best.length ? group : best));
+  return [...narrowest].sort();
+}
+
+/** Ικανοποιεί ένα σύνολο κλειδιών την επιλογή; Μία κρίση για φίλτρο και «ταιριάζουν N/M». */
+export function keysMatchSelection(keys: readonly string[], selection: FacetSelection): boolean {
+  return selection.every((group) => group.some((key) => keys.includes(key)));
 }
 
 export type CatalogListEquality = readonly [field: string, value: string | boolean | null];
@@ -31,7 +57,7 @@ export type CatalogListEquality = readonly [field: string, value: string | boole
 export interface CatalogListQueryPlan {
   /** Ισότητες με τη σειρά του δείκτη (το `companyId` το προσθέτει η υπηρεσία ερωτημάτων). */
   readonly equalities: readonly CatalogListEquality[];
-  readonly arrayContains: readonly [field: string, value: string] | null;
+  readonly arrayContainsAny: readonly [field: string, values: readonly string[]] | null;
   readonly orderBy: readonly [field: string, direction: 'asc' | 'desc'];
 }
 
@@ -47,10 +73,10 @@ export function catalogListQueryPlan(holder: CatalogListHolder, spec: CatalogLis
   const equalities: CatalogListEquality[] = [['isDeleted', false]];
   if (spec.familyId !== null) equalities.push(['familyId', spec.familyId]);
   equalities.push([LIST_ROOT_FIELD[holder], null]);
-  const facet = spec.familyId !== null && spec.facetKey !== null ? spec.facetKey : null;
+  const facets = spec.familyId !== null && spec.facetKeys !== null && spec.facetKeys.length > 0 ? spec.facetKeys : null;
   return {
     equalities,
-    arrayContains: facet === null ? null : ['derived.facetKeys', facet],
+    arrayContainsAny: facets === null ? null : ['derived.facetKeys', facets],
     orderBy: LIST_ORDER[spec.sort],
   };
 }
@@ -59,7 +85,7 @@ export function catalogListQueryPlan(holder: CatalogListHolder, spec: CatalogLis
 export function everyCatalogListPlan(): readonly { readonly holder: CatalogListHolder; readonly plan: CatalogListQueryPlan }[] {
   const holders: CatalogListHolder[] = ['model', 'product'];
   const families = [null, 'fam'];
-  const facets = [null, 'attr=option'];
-  return holders.flatMap((holder) => families.flatMap((familyId) => facets.flatMap((facetKey) =>
-    CATALOG_LIST_SORTS.map((sort) => ({ holder, plan: catalogListQueryPlan(holder, { familyId, facetKey, sort }) })))));
+  const facets = [null, ['attr=option'], ['attr=a', 'attr=b']];
+  return holders.flatMap((holder) => families.flatMap((familyId) => facets.flatMap((facetKeys) =>
+    CATALOG_LIST_SORTS.map((sort) => ({ holder, plan: catalogListQueryPlan(holder, { familyId, facetKeys, sort }) })))));
 }

@@ -17,6 +17,7 @@ import type { MeasurementRegistry } from '@/subapps/catalog/measurement/measurem
 import type { CatalogAttributeDefinition } from '@/subapps/catalog/types/attribute';
 import {
   deriveFamilyAttributeIds,
+  listingKindOf,
   type CatalogFamilyDefinition,
   type ConsistencyRule,
   type FamilyTableRow,
@@ -25,6 +26,7 @@ import {
   isAxisAttributeType,
   isNumericAttributeType,
 } from '@/subapps/catalog/vocabulary/attribute-types';
+import { DEFAULT_LISTING_KIND, type CatalogListingKind } from '@/subapps/catalog/vocabulary/listing-kinds';
 import type { AttributeRecord, FamilyRecord } from '@/services/catalog/catalog-api.client';
 
 export const FAMILY_TABS = ['general', 'attributes', 'variants', 'table', 'rules'] as const;
@@ -41,13 +43,24 @@ export function emptyFamilyDraft(): CatalogFamilyDefinition {
     variantSchemes: [],
     tableSpec: null,
     consistencyRules: [],
+    listingKind: DEFAULT_LISTING_KIND,
+    installationAttributeId: null,
   };
 }
 
 export function familyDraftOf(record: FamilyRecord): CatalogFamilyDefinition {
   const { code, labels, description, attributes, labelAttributeId, imageAttributeId, variantSchemes, tableSpec, consistencyRules } = record;
-  return { code, labels, description, attributes, labelAttributeId, imageAttributeId, variantSchemes, tableSpec, consistencyRules };
+  // Κανονικοποίηση: παλιά εγγραφή χωρίς τα πεδία της §22 δεν πρέπει να φαίνεται αλλαγμένη.
+  const listing = { listingKind: listingKindOf(record), installationAttributeId: record.installationAttributeId ?? null };
+  return { code, labels, description, attributes, labelAttributeId, imageAttributeId, variantSchemes, tableSpec, consistencyRules, ...listing };
 }
+
+/** Αλλαγή είδους: ο δεσμός τοποθέτησης δεν επιβιώνει έξω από το δικό του είδος (§22 Υ5). */
+export const withListingKind = (draft: CatalogFamilyDefinition, listingKind: CatalogListingKind): CatalogFamilyDefinition => ({
+  ...draft,
+  listingKind,
+  installationAttributeId: listingKind === 'productWithInstallation' ? draft.installationAttributeId ?? null : null,
+});
 
 /** Η αποθηκευμένη μορφή (με το παράγωγο του γραφέα) — για την αισιόδοξη εγγραφή. */
 export function storedFamilyOf(draft: CatalogFamilyDefinition) {
@@ -95,6 +108,9 @@ export const numericAttributes = (attributes: readonly AttributeRecord[]) =>
 export const textAttributes = (attributes: readonly AttributeRecord[]) =>
   attributes.filter((attribute) => attribute.type === 'text');
 
+export const referenceAttributes = (attributes: readonly AttributeRecord[]) =>
+  attributes.filter((attribute) => attribute.type === 'reference');
+
 export const imageAttributes = (attributes: readonly AttributeRecord[]) =>
   attributes.filter((attribute) => attribute.type === 'asset' && attribute.config.assetKinds.includes('image'));
 
@@ -127,6 +143,7 @@ export function withoutFamilyAttribute(draft: CatalogFamilyDefinition, id: strin
     attributes: draft.attributes.filter((binding) => binding.attributeId !== id),
     labelAttributeId: draft.labelAttributeId === id ? null : draft.labelAttributeId,
     imageAttributeId: draft.imageAttributeId === id ? null : draft.imageAttributeId,
+    installationAttributeId: draft.installationAttributeId === id ? null : draft.installationAttributeId,
     variantSchemes: draft.variantSchemes.map((scheme) => ({
       ...scheme,
       levels: scheme.levels.map((level) => ({
