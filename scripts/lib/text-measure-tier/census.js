@@ -22,11 +22,15 @@ const { toPosix } = require('../posix-path'); // SSoT (ADR-924 §8.9)
 /** Η είσοδος της πύλης (ADR-924) — προεπιλογή ο δίσκος της ρίζας· ο εκτελεστής δίνει την όψη του commit. */
 const viewOf = (repoRoot, input) => input || require('../gate-input').openGateInput({ root: repoRoot });
 
-/** sha256 ενός αρχείου· `null` αν λείπει (το «λείπει» είναι πληροφορία, όχι σφάλμα εδώ). */
+/**
+ * sha256 ενός αρχείου· `null` αν λείπει (το «λείπει» είναι πληροφορία, όχι σφάλμα εδώ).
+ * 🔑 Χωρίς το τέλος γραμμής: η απογραφή διαβάζει τον δίσκο (CRLF σε Windows με `autocrlf`), η πύλη το index (LF).
+ * Μετρημένο 2026-10-31: 21 από τις 22 «μπαγιάτικες» εισόδους διέφεραν **μόνο** σε αυτό, και κάθε commit με test έπεφτε.
+ */
 function hashFile(repoRoot, rel, input) {
   const text = viewOf(repoRoot, input).read(rel);
   if (text === null) return null;
-  return crypto.createHash('sha256').update(text, 'utf8').digest('hex').slice(0, 16);
+  return crypto.createHash('sha256').update(text.replace(/\r\n/g, '\n'), 'utf8').digest('hex').slice(0, 16);
 }
 
 /** Τα αρχεία που καθορίζουν **τι θα παρατηρηθεί**: η μηχανή μέτρησης + οι ίδιες οι σουίτες. */

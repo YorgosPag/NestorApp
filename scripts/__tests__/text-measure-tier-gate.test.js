@@ -76,6 +76,35 @@ const FIXTURE = [
 ];
 
 // =============================================================================
+// ΦΡΕΣΚΑΔΑ — το τέλος γραμμής δεν είναι αλλαγή (2026-10-31)
+// =============================================================================
+
+describe('Φ — φρεσκάδα της απογραφής', () => {
+  const FILE = FIXTURE[1].file;
+  const rewrite = (root, edit) => {
+    const full = path.join(root, FILE);
+    fs.writeFileSync(full, edit(fs.readFileSync(full, 'utf8')));
+  };
+  const staleOf = (root) => censusLib.staleInputs(root, censusLib.readCensus(root));
+
+  it('Φ1: ίδιο περιεχόμενο με CRLF ⇒ φρέσκια, όπως το βλέπουν δίσκος (CRLF) και index (LF)', () => {
+    const root = miniRepo({ observations: FIXTURE });
+    rewrite(root, (text) => text.replace(/\n/g, '\r\n'));
+    expect(staleOf(root)).toEqual([]);
+  });
+
+  it('Φ2: πραγματική αλλαγή περιεχομένου ⇒ μπαγιάτικη (η κανονικοποίηση δεν καταπίνει διαφορές)', () => {
+    const root = miniRepo({ observations: FIXTURE });
+    rewrite(root, (text) => `${text}// άλλαξε\n`);
+    expect(staleOf(root)).toEqual([FILE]);
+  });
+
+  it('Φ3: η ΠΡΑΓΜΑΤΙΚΗ απογραφή του αποθετηρίου είναι φρέσκια', () => {
+    expect(censusLib.staleInputs(REPO_ROOT, censusLib.readCensus(REPO_ROOT))).toEqual([]);
+  });
+});
+
+// =============================================================================
 // Μ0 — Ο ΠΑΡΟΝΟΜΑΣΤΗΣ
 // =============================================================================
 
