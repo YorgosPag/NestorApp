@@ -129,6 +129,13 @@ export const CATALOG_CUSTOMER_GROUP_TRACKED_FIELDS = defs(['isDeleted'], ['label
 
 export const CATALOG_CUSTOMER_ASSIGNMENT_TRACKED_FIELDS = defs(['customerGroupId', 'isDeleted'], ['party']);
 
+export const CATALOG_PUBLICATION_RECIPE_TRACKED_FIELDS = defs(
+  ['language', 'paper', 'isDeleted'],
+  ['labels', 'title', 'scope', 'pricing', 'theme', 'templates', 'profiles', 'footerNote'],
+);
+
+export const CATALOG_PUBLICATION_RUN_TRACKED_FIELDS = defs(['recipeId', 'status', 'failure', 'audienceKey', 'inputHash'], []);
+
 export const CATALOG_DISCOUNT_CONDITION_TRACKED_FIELDS = defs(
   ['discountGroupId', 'validFrom', 'validUntil', 'isDeleted'],
   ['audience', 'rule'],

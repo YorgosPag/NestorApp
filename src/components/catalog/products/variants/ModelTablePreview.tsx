@@ -10,12 +10,13 @@
 import { useMemo } from 'react';
 
 import { PreviewTable } from '@/components/catalog/families/FamilyTablePreview';
-import { buildTablePreview } from '@/components/catalog/families/family-table-preview';
+import { buildTablePreview } from '@/subapps/catalog/table/catalog-table';
 import type { AttributeRecord } from '@/services/catalog/catalog-api.client';
 import type { CatalogAggregate } from '@/subapps/catalog/aggregate/aggregate-model';
 import type { CatalogSchemaSnapshot } from '@/subapps/catalog/derived/chain-derived';
 import type { MeasurementRegistry } from '@/subapps/catalog/measurement/measurement-registry';
 
+import { PublicationPreviewButton } from '../../publishing/PublicationPreviewButton';
 import { useCatalogText } from '../../shared/catalog-ui-hooks';
 import type { ValueEditorEnv } from '../../values/value-editor-types';
 import type { ListScope } from '../ProductListToolbar';
@@ -29,6 +30,8 @@ export interface ModelTablePreviewProps {
   readonly registry: MeasurementRegistry;
   readonly scope: ListScope;
   readonly env: ValueEditorEnv;
+  /** Το μοντέλο του οποίου η σελίδα εκτύπωσης προεπισκοπείται (ADR-923 §5.6.1). */
+  readonly modelId: string;
 }
 
 export function ModelTablePreview(props: ModelTablePreviewProps) {
@@ -37,6 +40,10 @@ export function ModelTablePreview(props: ModelTablePreviewProps) {
     const real = modelTableColumns({ aggregate: props.aggregate, order: props.order, schema: props.schema, attributeById: props.attributeById, scope: props.scope, codec: props.env.codec });
     return buildTablePreview(props.schema.family, props.attributeById, props.registry, { text, yes: t('common.yes'), no: t('common.no'), sample: t('families.table.sample') }, real);
   }, [props.aggregate, props.order, props.schema, props.attributeById, props.registry, props.scope, props.env.codec, text, t]);
-  if (!preview) return <p className="m-0 text-sm text-muted-foreground">{t('variants.table.noSpec')}</p>;
-  return <PreviewTable preview={preview} title={t('variants.table.title')} id="model-table-title" />;
+  return (
+    <>
+      {preview ? <PreviewTable preview={preview} title={t('variants.table.title')} id="model-table-title" /> : <p className="m-0 text-sm text-muted-foreground">{t('variants.table.noSpec')}</p>}
+      <PublicationPreviewButton modelId={props.modelId} />
+    </>
+  );
 }

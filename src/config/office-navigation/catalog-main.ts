@@ -131,6 +131,7 @@ export const MAIN_CATALOG = [
       { kind: 'link', navLabelKey: 'sidebar.catalogDiscounts', icon: Percent, href: CATALOG_PAGES.discounts, policy: CATALOG_PRICING_VIEW },
       // ADR-923 §5.5.1 — υπάρχουσα ετικέτα επίτηδες: το `navigation` στο κέλυφος έχει 3 bytes περιθώριο (14.497/14.500).
       { kind: 'link', navLabelKey: 'toolbar.tooltips.importData', icon: Upload, href: CATALOG_PAGES.imports, policy: CATALOG_SCHEMA_VIEW },
+      { kind: 'link', navLabelKey: 'sidebar.catalogPublications', icon: BookOpen, href: CATALOG_PAGES.publications, policy: CATALOG_PRICING_VIEW },
       { kind: 'link', navLabelKey: 'menu.settings', icon: Settings, href: CATALOG_PAGES.settings, policy: CATALOG_SCHEMA_MANAGE },
     ],
   },

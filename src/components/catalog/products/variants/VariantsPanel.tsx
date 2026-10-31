@@ -105,7 +105,7 @@ export function VariantsPanel(props: VariantsPanelProps) {
         </footer>
       ) : null}
       <ModelTablePreview aggregate={grid.aggregate} order={grid.draft.rows.map((row) => row.id)} schema={props.schema}
-        attributeById={props.ctx.library.attributeById} registry={props.ctx.library.registry} scope={props.scope} env={props.env} />
+        attributeById={props.ctx.library.attributeById} registry={props.ctx.library.registry} scope={props.scope} env={props.env} modelId={props.root.id} />
       <VariantGeneratorDialog open={generatorOpen} onOpenChange={setGeneratorOpen} axes={axisAttributes} existing={grid.draft.rows.map((row) => row.definition.values)}
         descendantCount={grid.draft.rows.length} attributeById={props.ctx.library.attributeById} registry={props.ctx.library.registry} env={props.env} onGenerate={grid.generate} />
     </section>

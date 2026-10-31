@@ -112,6 +112,19 @@ export function catalogReadRoute<TResult, TParams extends Record<string, string>
   });
 }
 
+/** `GET /api/catalog/<συλλογή>/[id]/<αρχείο>` — ανάγνωση που απαντά με **αρχείο**, όχι JSON. */
+export function catalogFileRoute(
+  policy: CatalogRoutePolicy,
+  run: (auth: AuthContext, id: string, search: URLSearchParams) => Promise<NextResponse>,
+) {
+  return defineRoute<z.ZodTypeAny, IdParams>({
+    rateLimit: TIER_OF[policy.category],
+    auth: authOf(policy),
+    fallbackError: FALLBACK_ERROR,
+    handler: ({ req, auth, params }) => respond((response: NextResponse) => response, () => run(auth, params.id, new URL(req.url).searchParams)),
+  });
+}
+
 /** Ο δρομέας σελίδας (`?cursor=<id εγγράφου>`): απών ⇒ πρώτη σελίδα· άκυρος ⇒ 400, ποτέ σιωπηλά «από την αρχή». */
 export function cursorParamOf(search: URLSearchParams): string | null {
   const raw = search.get(CURSOR_PARAM);

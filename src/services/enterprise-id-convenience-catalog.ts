@@ -43,6 +43,10 @@ export const generateDeterministicCatalogCustomerGroupId = (companyId: string, c
   enterpriseIdService.generateDeterministicCatalogCustomerGroupId(companyId, code);
 export const generateDeterministicCatalogCustomerAssignmentId = (companyId: string, partyKey: string) =>
   enterpriseIdService.generateDeterministicCatalogCustomerAssignmentId(companyId, partyKey);
+export const generateDeterministicCatalogPublicationRecipeId = (companyId: string, code: string) =>
+  enterpriseIdService.generateDeterministicCatalogPublicationRecipeId(companyId, code);
+export const generateDeterministicCatalogPublicationRunId = (companyId: string, inputHash: string) =>
+  enterpriseIdService.generateDeterministicCatalogPublicationRunId(companyId, inputHash);
 export const generateCatalogDiscountConditionId = () => enterpriseIdService.generateCatalogDiscountConditionId();
 export const generateDeterministicCatalogPricingSlotId = (companyId: string, slotKey: string) =>
   enterpriseIdService.generateDeterministicCatalogPricingSlotId(companyId, slotKey);

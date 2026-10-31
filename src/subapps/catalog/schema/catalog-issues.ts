@@ -162,6 +162,13 @@ export const CATALOG_ISSUE_CODES = [
   'fenceConfirmationRequired',
   'fenceDigestStale',
   'unknownParty',
+  // ── Φάση 5: εκδότης καταλόγου (ADR-923 §5.6) ──
+  'publicationFontNotLicensed',
+  'publicationColourInvalid',
+  'publicationTitleRequired',
+  'publicationProfileRequired',
+  'publicationScopeEmpty',
+  'publicationAudienceNotCovered',
 ] as const;
 
 export type CatalogIssueCode = (typeof CATALOG_ISSUE_CODES)[number];

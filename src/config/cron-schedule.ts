@@ -72,6 +72,7 @@ import { runStayChannelImport } from '@/lib/cron/jobs/stay-channel-import.job';
 import { runStayHoldExpiry } from '@/lib/cron/jobs/stay-hold-expiry.job';
 import { runStorageBucketDrift } from '@/lib/cron/jobs/storage-bucket-drift.job';
 import { runTourTilesetBake } from '@/lib/cron/jobs/tour-tileset-bake.job';
+import { runPublicationRunSweep } from '@/lib/cron/jobs/publication-run-sweep.job';
 import type { CronJobDefinition } from '@/types/cron-schedule';
 
 /**
@@ -607,6 +608,19 @@ export const CRON_SCHEDULE: readonly CronJobDefinition[] = [
     maxRuntimeMinutes: 10,
     leaseMinutes: 12,
     run: runTourTilesetBake,
+  },
+  {
+    slug: 'publication-run-sweep',
+    path: '/api/cron/publication-run-sweep',
+    description: 'Δίχτυ εκδόσεων καταλόγου: έκδοση που έμεινε ανοιχτή από επανεκκίνηση ⇒ «διακόπηκε» (ADR-923 §5.6)',
+    enabled: true,
+    // 🔑 **Κάθε 30′, γιατί είναι ΔΙΧΤΥ.** Η απόδοση τρέχει στο `after` της αίτησης· εδώ μόνο ό,τι κόπηκε.
+    schedule: '19,49 * * * *',
+    timezone: CRON_TIMEZONE,
+    checkinMarginMinutes: 10,
+    maxRuntimeMinutes: 2,
+    leaseMinutes: 5,
+    run: runPublicationRunSweep,
   },
   {
     slug: 'property-handover-reconcile',

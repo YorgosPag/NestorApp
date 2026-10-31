@@ -873,6 +873,8 @@
       "catalog_price_list_line": "Γραμμή τιμοκαταλόγου",
       "catalog_discount_group": "Ομάδα έκπτωσης",
       "catalog_customer_group": "Ομάδα πελάτη",
+      "catalog_publication_recipe": "Συνταγή έκδοσης",
+      "catalog_publication_run": "Έκδοση καταλόγου",
       "catalog_customer_assignment": "Ανάθεση πελάτη",
       "catalog_discount_condition": "Όρος έκπτωσης",
       "catalog_import_profile": "Προφίλ εισαγωγής",

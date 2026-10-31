@@ -298,7 +298,13 @@
     "versionSeeding": "Copying the lines from the base version has not finished.",
     "fenceConfirmationRequired": "{count} lines change price beyond the threshold — review and confirm the difference before publishing.",
     "fenceDigestStale": "The difference changed since you reviewed it — review it again.",
-    "unknownParty": "The party was not found in this workspace."
+    "unknownParty": "The party was not found in this workspace.",
+    "publicationFontNotLicensed": "This font is not among the approved fonts with a checked licence.",
+    "publicationColourInvalid": "The colour needs an RGB value and CMYK values from 0 to 100.",
+    "publicationTitleRequired": "A title in the publication language is required.",
+    "publicationProfileRequired": "Choose at least one output profile.",
+    "publicationScopeEmpty": "The publication scope contains nothing.",
+    "publicationAudienceNotCovered": "This price list is not offered to the audience of the publication."
   },
   "measurement": {
     "family": {
@@ -925,6 +931,115 @@
     "table": {
       "title": "Catalog table (with the grid's values)",
       "noSpec": "The family has no catalog table defined."
+    }
+  },
+  "publishing": {
+    "document": {
+      "price": "Price €",
+      "installationPrice": "Installation €",
+      "askForQuote": "Request a quote",
+      "uncategorized": "Other",
+      "contents": "Contents",
+      "codeIndex": "Code index",
+      "tablePart": "Part {part} of {parts}",
+      "pricesEdition": "Prices of version {version}, valid from {date}"
+    },
+    "title": "Catalogue publications",
+    "subtitle": "Recipes and finished PDFs for print or screen.",
+    "empty": "There is no recipe yet.",
+    "newRecipe": "New recipe",
+    "recipes": "Recipes",
+    "runs": "Publications",
+    "noRuns": "Nothing has been published yet.",
+    "publish": "Publish",
+    "saved": "The recipe was saved.",
+    "requested": "The publication has started.",
+    "download": "Download",
+    "remove": "Delete",
+    "fields": {
+      "code": "Code",
+      "label": "Recipe name",
+      "documentTitle": "Document title",
+      "language": "Language",
+      "scope": "Scope",
+      "pricing": "Prices",
+      "priceList": "Price list",
+      "priceVersion": "Price version",
+      "audience": "Audience",
+      "profiles": "Output profiles",
+      "templates": "Templates",
+      "groupStyle": "Table groups",
+      "gridColumns": "Grid columns",
+      "footerNote": "Footer note",
+      "primary": "Primary colour",
+      "accent": "Accent colour",
+      "font": "Font"
+    },
+    "scope": {
+      "all": "The whole catalogue",
+      "categories": "Selected categories",
+      "selection": "Manual selection"
+    },
+    "pricing": {
+      "none": "No prices (technical catalogue)",
+      "priced": "With prices for one audience"
+    },
+    "profile": {
+      "print": "Print (CMYK, bleed)",
+      "screen": "Screen (RGB, PDF/A)"
+    },
+    "template": {
+      "cover": "Cover",
+      "toc": "Contents",
+      "chapterDivider": "Chapter dividers",
+      "codeIndex": "Code index",
+      "backCover": "Back cover"
+    },
+    "groupStyle": {
+      "band": "Full-width band",
+      "rail": "Left column"
+    },
+    "status": {
+      "queued": "Queued",
+      "running": "Running",
+      "ready": "Ready",
+      "failed": "Failed"
+    },
+    "phase": {
+      "queued": "Queued",
+      "reading": "Reading data",
+      "composing": "Composing",
+      "rendering": "Rendering PDF",
+      "storing": "Storing",
+      "done": "Finished"
+    },
+    "progress": "{done} of {total} sections",
+    "pages": "{count, plural, one {# page} other {# pages}}",
+    "failure": {
+      "engineUnavailable": "The rendering engine is not installed on this server.",
+      "engineFailed": "Rendering the PDF failed.",
+      "engineTimeout": "Rendering went past the time limit.",
+      "priceAmbiguous": "Two discounts apply at once for the same audience.",
+      "priceVersionUnpublished": "The price version is not published.",
+      "renditionMissing": "An image has no finished rendition.",
+      "emptyScope": "There is no complete product in the scope of this publication.",
+      "storageFailed": "Storing the file failed.",
+      "interrupted": "The server restarted. Request the publication again.",
+      "internal": "Something went wrong."
+    },
+    "report": {
+      "title": "Publication check",
+      "incomplete": "{count, plural, one {# incomplete SKU left out} other {# incomplete SKUs left out}}",
+      "unpriced": "{count, plural, one {# SKU without a price} other {# SKUs without a price}}",
+      "lowResolution": "{count, plural, one {# image below 300 dpi} other {# images below 300 dpi}}",
+      "nonCmyk": "{count, plural, one {# image not in CMYK} other {# images not in CMYK}}"
+    },
+    "preview": {
+      "title": "How it will print",
+      "show": "Page preview",
+      "alt": "Preview of a catalogue page",
+      "noRecipe": "A publication recipe is needed first.",
+      "unavailable": "The preview is not available right now."
     }
   },
   "pricing": {

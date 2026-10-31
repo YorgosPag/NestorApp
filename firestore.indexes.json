@@ -9390,6 +9390,22 @@
       ]
     },
     {
+      "collectionGroup": "catalog_publication_runs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "requestedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "catalog_publication_runs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "catalog_discount_conditions",
       "queryScope": "COLLECTION",
       "fields": [

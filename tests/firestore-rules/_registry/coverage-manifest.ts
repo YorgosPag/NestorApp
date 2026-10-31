@@ -749,6 +749,18 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
+    collection: 'catalog_publication_recipes',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/catalog-publication-recipes.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
+    collection: 'catalog_publication_runs',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/catalog-publication-runs.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     collection: 'catalog_pricing_slots',
     pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/catalog-pricing-slots.rules.test.ts',

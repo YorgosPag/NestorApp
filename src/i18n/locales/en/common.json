@@ -873,6 +873,8 @@
       "catalog_price_list_line": "Price list line",
       "catalog_discount_group": "Discount group",
       "catalog_customer_group": "Customer group",
+      "catalog_publication_recipe": "Publication recipe",
+      "catalog_publication_run": "Catalogue publication",
       "catalog_customer_assignment": "Customer assignment",
       "catalog_discount_condition": "Discount condition",
       "catalog_import_profile": "Import profile",

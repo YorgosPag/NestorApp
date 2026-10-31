@@ -81,8 +81,7 @@
       "tooltip": "Τι δουλειά κάνεις τώρα. Δεν αλλάζει δικαιώματα — μόνο τι εμφανίζεται.",
       "restoreAll": "Εμφάνιση όλων",
       "hiddenCount": "{count, plural, one {# κρυμμένο} other {# κρυμμένα}}",
-      "hiddenBreakdown": "{branches, plural, one {# κλάδος} other {# κλάδοι}} · {subItems, plural, one {# υπο-στοιχείο} other {# υπο-στοιχεία}}",
-      "unknownSource": "Δεν επιβεβαιώνεται από τον περιηγητή — ο ρόλος σου στο έργο δεν φτάνει εδώ."
+      "hiddenBreakdown": "{branches, plural, one {# κλάδος} other {# κλάδοι}} · {subItems, plural, one {# υπο-στοιχείο} other {# υπο-στοιχεία}}"
     },
     "reveal": {
       "hiddenHere": "{count, plural, one {+# κρυμμένο} other {+# κρυμμένα}}",
@@ -145,7 +144,8 @@
     "catalogAssets": "Βιβλιοθήκη μέσων",
     "catalogProducts": "Προϊόντα",
     "catalogPriceLists": "Τιμοκατάλογοι",
-    "catalogDiscounts": "Εκπτώσεις"
+    "catalogDiscounts": "Εκπτώσεις",
+    "catalogPublications": "Εκδόσεις καταλόγου"
   },
   "reports": {
     "overview": "Διοικητική Σύνοψη",

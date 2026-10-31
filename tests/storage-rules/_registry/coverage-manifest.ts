@@ -567,6 +567,13 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
     testFile: 'tests/storage-rules/suites/tour-tiles.storage.test.ts',
     matrix: SEALED_FOR_EVERYONE,
   },
+  {
+    // ADR-923 §5.6 — τα PDF εκδόσεων: μπορεί να περιέχουν τιμές κοινού. Η μόνη πόρτα είναι η διαδρομή λήψης.
+    pathId: 'catalog_publications',
+    pattern: 'server_only_sealed',
+    testFile: 'tests/storage-rules/suites/catalog-publications.storage.test.ts',
+    matrix: SEALED_FOR_EVERYONE,
+  },
 ] as const;
 
 /**

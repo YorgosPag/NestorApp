@@ -104,6 +104,15 @@ export abstract class CatalogIdGenerators extends CompositeKeyIdGenerators {
     return this.mintDeterministicV4Id(P.CATALOG_CUSTOMER_ASSIGNMENT, seedOf('customer-assignment', companyId, partyKey));
   }
 
+  generateDeterministicCatalogPublicationRecipeId(companyId: string, code: string): string {
+    return this.mintDeterministicV4Id(P.CATALOG_PUBLICATION_RECIPE, seedOf('publication-recipe', companyId, code));
+  }
+
+  /** Κλειδί = hash εισόδων (ADR-923 §5.6): ίδιες είσοδοι ⇒ **ίδιο** έγγραφο, άρα το ίδιο αρχείο. */
+  generateDeterministicCatalogPublicationRunId(companyId: string, inputHash: string): string {
+    return this.mintDeterministicV4Id(P.CATALOG_PUBLICATION_RUN, seedOf('publication-run', companyId, inputHash));
+  }
+
   /** Συνθήκη — **τυχαία**: δύο συνθήκες του ίδιου κοινού σε διαδοχικές περιόδους είναι νόμιμες. */
   generateCatalogDiscountConditionId(): string {
     return this.generateId(P.CATALOG_DISCOUNT_CONDITION).id;

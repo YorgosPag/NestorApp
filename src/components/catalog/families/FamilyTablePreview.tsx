@@ -16,20 +16,9 @@ import { Merge } from 'lucide-react';
 import type { CatalogLibrary } from '@/hooks/catalog/useCatalogLibrary';
 import type { CatalogFamilyDefinition } from '@/subapps/catalog/types/family';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
-import { buildTablePreview, type PreviewRow, type TablePreview } from './family-table-preview';
+import { buildTablePreview, mergeRowCells, type PreviewRow, type TablePreview } from '@/subapps/catalog/table/catalog-table';
 
 const EMPTY_CELL = '·';
-
-/** Διαδοχικά **ίδια** κελιά ⇒ ένα, με `colSpan` (ο τυπωμένος πίνακας του φυλλαδίου). Κενά δεν συγχωνεύονται. */
-export function mergeAdjacent(cells: readonly string[]): { readonly text: string; readonly span: number }[] {
-  const runs: { text: string; span: number }[] = [];
-  for (const cell of cells) {
-    const last = runs[runs.length - 1];
-    if (last && cell !== '' && last.text === cell) last.span += 1;
-    else runs.push({ text: cell, span: 1 });
-  }
-  return runs;
-}
 
 function ValueCells({ row, columnCount }: { readonly row: Extract<PreviewRow, { kind: 'attribute' }>; readonly columnCount: number }) {
   const cells = row.cells;
@@ -38,8 +27,7 @@ function ValueCells({ row, columnCount }: { readonly row: Extract<PreviewRow, { 
       ? <td colSpan={columnCount} className="px-2 py-1 text-center text-muted-foreground">{EMPTY_CELL}</td>
       : <>{Array.from({ length: columnCount }, (_, index) => <td key={index} className="px-2 py-1 text-center text-muted-foreground">{EMPTY_CELL}</td>)}</>;
   }
-  const allSame = cells.length > 0 && cells.every((cell) => cell === cells[0]);
-  const runs = row.merge === 'none' ? cells.map((text) => ({ text, span: 1 })) : row.merge === 'all' && allSame ? [{ text: cells[0], span: cells.length }] : mergeAdjacent(cells);
+  const runs = mergeRowCells(row.merge, cells);
   return <>{runs.map((run, index) => <td key={index} colSpan={run.span > 1 ? run.span : undefined} className="px-2 py-1 text-center">{run.text || EMPTY_CELL}</td>)}</>;
 }
 

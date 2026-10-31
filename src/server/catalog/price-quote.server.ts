@@ -65,7 +65,7 @@ type OfferedList = StoredList & { readonly audience: PriceAudience };
 const isOffered = (list: StoredList): list is OfferedList => list.audience !== null;
 
 /** Ο θεατής, χτισμένος από ό,τι **υπάρχει** στον χώρο. */
-async function viewerOf(scope: CatalogTx, viewAs: PriceQuoteViewAs): Promise<PricingViewer> {
+export async function viewerOf(scope: CatalogTx, viewAs: PriceQuoteViewAs): Promise<PricingViewer> {
   switch (viewAs.kind) {
     case 'anonymous':
       return { kind: 'anonymous' };
@@ -116,7 +116,8 @@ async function selectList(
   return { kind: 'noPriceList', trace };
 }
 
-async function readActiveConditions(scope: CatalogTx): Promise<PricedRecord<DiscountConditionDefinition>[]> {
+/** Οι ενεργές συνθήκες με την αναθεώρησή τους — ο εκδότης τη βάζει στο κλειδί ιδεμποτίας (§5.6). */
+export async function readActiveConditionRecords(scope: CatalogTx): Promise<{ readonly record: PricedRecord<DiscountConditionDefinition>; readonly revision: number }[]> {
   const snap = await scope.tx.get(
     scope.db
       .collection(COLLECTIONS.CATALOG_DISCOUNT_CONDITIONS)
@@ -126,8 +127,12 @@ async function readActiveConditions(scope: CatalogTx): Promise<PricedRecord<Disc
   return snap.docs.map((doc) => {
     const record = doc.data() as StoredCatalogRecord<DiscountConditionDefinition>;
     const { id, discountGroupId, audience, validFrom, validUntil, rule } = record;
-    return { id, definition: { discountGroupId, audience, validFrom, validUntil, rule } };
+    return { record: { id, definition: { discountGroupId, audience, validFrom, validUntil, rule } }, revision: record.revision };
   });
+}
+
+async function readActiveConditions(scope: CatalogTx): Promise<PricedRecord<DiscountConditionDefinition>[]> {
+  return (await readActiveConditionRecords(scope)).map(({ record }) => record);
 }
 
 /** Η τιμή για έναν θεατή (εσωτερική προεπισκόπηση). */

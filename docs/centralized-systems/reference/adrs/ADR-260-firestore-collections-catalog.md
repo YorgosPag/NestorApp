@@ -304,6 +304,8 @@
 | Κ13 | `CATALOG_PRICE_LIST_LINES` | `catalog_price_list_lines` | ADR-923 §5.11 «3β» | Γραμμές (`cplln_*`, από έκδοση + υποκείμενο ⇒ μία ανά υποκείμενο δομικά) · λεπτά χωρίς ΦΠΑ · `derived.subjectKey` για σελίδες · αντιγραμμένες = **ένα** ίχνος στην έκδοση |
 | Κ14 | `CATALOG_DISCOUNT_GROUPS` | `catalog_discount_groups` | ADR-923 §5.11 «3β» | Ομάδες έκπτωσης SKU (`cdgrp_*`, από κωδικό) |
 | Κ15 | `CATALOG_CUSTOMER_GROUPS` | `catalog_customer_groups` | ADR-923 §5.11 «3β» | Ομάδες πελάτη (`ccgrp_*`, από κωδικό) |
+| Κ16α | `CATALOG_PUBLICATION_RECIPES` | `catalog_publication_recipes` | ADR-923 §5.6 | Συνταγές έκδοσης (`cpubr_*`, από κωδικό) |
+| Κ16β | `CATALOG_PUBLICATION_RUNS` | `catalog_publication_runs` | ADR-923 §5.6 | Αποτελέσματα έκδοσης (`cpubx_*`, από το hash εισόδων) |
 | Κ16 | `CATALOG_CUSTOMER_ASSIGNMENTS` | `catalog_customer_assignments` | ADR-923 §5.11 «3β» | Συμβαλλόμενος → **μία** ομάδα (`ccasg_*`, από συμβαλλόμενο) |
 | Κ17 | `CATALOG_DISCOUNT_CONDITIONS` | `catalog_discount_conditions` | ADR-923 §5.11 «3β» | Συνθήκες ανά **χώρο** (`cdcnd_*`, **τυχαίο**) · ομάδα × κοινό × ισχύς × κανόνας |
 | Κ18 | `CATALOG_PRICING_SLOTS` | `catalog_pricing_slots` | ADR-923 §5.11 «3β» | Υποδοχές ασάφειας (`cpslt_*`, από κλειδί υποδοχής) — **ευρετήριο** του γραφέα, όπως οι κρατήσεις: χωρίς `revision`, χωρίς ιστορικό |

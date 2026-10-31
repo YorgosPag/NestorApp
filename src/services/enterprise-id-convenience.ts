@@ -468,6 +468,8 @@ export {
   generateDeterministicCatalogCustomerGroupId,
   generateDeterministicCatalogCustomerAssignmentId,
   generateCatalogDiscountConditionId,
+  generateDeterministicCatalogPublicationRecipeId,
+  generateDeterministicCatalogPublicationRunId,
   generateDeterministicCatalogPricingSlotId,
   generateDeterministicCatalogPricingViewSignalId,
   generateDeterministicCatalogImportProfileId,

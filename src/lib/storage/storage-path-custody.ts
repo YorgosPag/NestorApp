@@ -169,6 +169,8 @@ const STORAGE_ROOT_CUSTODY: Readonly<Record<string, StorageCustodyKind>> = {
   'tour-ingest': 'server-only',
   // ADR-884 Φ0.4 — τα ιδιωτικά πλακίδια (`on-request`/`link-only`): μόνο πίσω από κουπόνι θέασης του διακομιστή (Κ3β).
   'tour-tiles': 'server-only',
+  // ADR-923 §5.6 — τα PDF εκδόσεων καταλόγου: μπορεί να περιέχουν τιμές κοινού, η μόνη πόρτα είναι η διαδρομή λήψης.
+  'catalog-publications': 'server-only',
 };
 
 /**

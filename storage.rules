@@ -786,5 +786,11 @@ service firebase.storage {
       allow read, write: if false;
     }
 
+    // Path: /catalog-publications/{companyId}/{runId}/{profile}.pdf — ADR-923 §5.6: μπορεί να περιέχουν τιμές κοινού.
+    // @pathId: catalog_publications
+    match /catalog-publications/{publicationFile=**} {
+      allow read, write: if false;
+    }
+
   }
 }

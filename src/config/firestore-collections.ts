@@ -1106,6 +1106,11 @@ export const COLLECTIONS = {
   /** Συνθήκες έκπτωσης (ομάδα × κοινό × ισχύς × κανόνας) — ανά ΧΩΡΟ, όχι ανά λίστα. IDs via cdcnd_* (τυχαία). */
   CATALOG_DISCOUNT_CONDITIONS:
     process.env.NEXT_PUBLIC_CATALOG_DISCOUNT_CONDITIONS_COLLECTION || 'catalog_discount_conditions',
+  /** Συνταγές έκδοσης καταλόγου (ADR-923 §5.6). IDs via cpubr_* (από κωδικό). */
+  CATALOG_PUBLICATION_RECIPES:
+    process.env.NEXT_PUBLIC_CATALOG_PUBLICATION_RECIPES_COLLECTION || 'catalog_publication_recipes',
+  /** Αποτελέσματα έκδοσης (ADR-923 §5.6): id = hash εισόδων, αμετάβλητα όταν γίνουν `ready`. IDs via cpubx_*. */
+  CATALOG_PUBLICATION_RUNS: process.env.NEXT_PUBLIC_CATALOG_PUBLICATION_RUNS_COLLECTION || 'catalog_publication_runs',
   /** Υποδοχές ασάφειας (συνθήκες · κοινό λίστας) — ευρετήριο του γραφέα, ΟΧΙ οντότητα: χωρίς ιστορικό. IDs via cpslt_*. */
   CATALOG_PRICING_SLOTS: process.env.NEXT_PUBLIC_CATALOG_PRICING_SLOTS_COLLECTION || 'catalog_pricing_slots',
   /**

@@ -6396,6 +6396,14 @@ service cloud.firestore {
       allow read: if false;
       allow write: if false;
     }
+    match /catalog_publication_recipes/{recipeId} {
+      allow read: if false;
+      allow write: if false;
+    }
+    match /catalog_publication_runs/{runId} {
+      allow read: if false;
+      allow write: if false;
+    }
     match /catalog_pricing_slots/{slotId} {
       allow read: if false;
       allow write: if false;

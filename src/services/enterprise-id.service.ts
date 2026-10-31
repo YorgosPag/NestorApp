@@ -100,6 +100,7 @@ export {
   generateDeterministicCatalogPriceListLineId, generateDeterministicCatalogDiscountGroupId,
   generateDeterministicCatalogCustomerGroupId, generateDeterministicCatalogCustomerAssignmentId,
   generateCatalogDiscountConditionId, generateDeterministicCatalogPricingSlotId,
+  generateDeterministicCatalogPublicationRecipeId, generateDeterministicCatalogPublicationRunId,
   generateDeterministicCatalogPricingViewSignalId,
   generateDeterministicCatalogImportProfileId, generateDeterministicCatalogImportBatchId, generateDeterministicCatalogImportProposalId,
   generateCommissionId, generatePaymentPlanId, generatePlanGroupId,

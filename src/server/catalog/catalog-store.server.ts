@@ -98,6 +98,15 @@ export async function runCatalogTransaction<T>(ctx: AuthContext, work: (scope: C
   return result;
 }
 
+/**
+ * **Συνεπές στιγμιότυπο χωρίς κλειδώματα** (ADR-923 §5.6): συναλλαγή μόνο-ανάγνωσης για αναγνώσεις χιλιάδων εγγράφων, όπου
+ * μια κανονική θα κρατούσε κλειδί πάνω σε ό,τι επεξεργάζεται ο χρήστης. Ίδιο `CatalogTx`, ίδιοι αναγνώστες· γραφή αδύνατη.
+ */
+export async function runCatalogReadOnly<T>(ctx: AuthContext, work: (scope: CatalogTx) => Promise<T>): Promise<T> {
+  const db = getAdminFirestore();
+  return db.runTransaction((tx) => work({ db, tx, ctx, now: nowISO(), changes: [], pricingViews: [] }), { readOnly: true });
+}
+
 async function recordChange(change: StagedChange, performedBy: string): Promise<void> {
   const spec = CATALOG_KIND_SPECS[change.kind];
   const view = (record: StoredCatalogRecord<object>): Record<string, unknown> =>

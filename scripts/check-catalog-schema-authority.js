@@ -65,6 +65,9 @@ const CATALOG_COLLECTIONS = [
   'COLLECTIONS.CATALOG_IMPORT_PROFILES',
   'COLLECTIONS.CATALOG_IMPORT_BATCHES',
   'COLLECTIONS.CATALOG_IMPORT_PROPOSALS',
+  // Φάση 5 (ADR-923 §5.6) — η συνταγή περνά από τη μηχανή. ⚠️ Το `CATALOG_PUBLICATION_RUNS` ΔΕΝ μπαίνει εδώ: είναι αποτέλεσμα
+  // μηχανής (καμία αναθεώρηση/ίχνος), όχι είδος της μηχανής· ένας γραφέας, `publication-run.server.ts`.
+  'COLLECTIONS.CATALOG_PUBLICATION_RECIPES',
 ];
 /** Τα ονόματα των συλλογών στη βάση — για την πόρτα του MCP (Κ5). */
 const CATALOG_COLLECTION_NAMES = [
@@ -74,6 +77,7 @@ const CATALOG_COLLECTION_NAMES = [
   'catalog_customer_groups', 'catalog_customer_assignments', 'catalog_discount_conditions', 'catalog_pricing_slots',
   'catalog_pricing_view_signals',
   'catalog_import_profiles', 'catalog_import_batches', 'catalog_import_proposals',
+  'catalog_publication_recipes', 'catalog_publication_runs',
 ];
 
 const STORE = 'src/server/catalog/catalog-store.server.ts';

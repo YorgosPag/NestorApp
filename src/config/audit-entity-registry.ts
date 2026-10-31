@@ -268,6 +268,8 @@ export const AUDIT_ENTITIES = {
   catalog_discount_group: { collectionKey: 'CATALOG_DISCOUNT_GROUPS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
   catalog_customer_group: { collectionKey: 'CATALOG_CUSTOMER_GROUPS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
   catalog_customer_assignment: { collectionKey: 'CATALOG_CUSTOMER_ASSIGNMENTS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+  catalog_publication_run: { collectionKey: 'CATALOG_PUBLICATION_RUNS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: false },
+  catalog_publication_recipe: { collectionKey: 'CATALOG_PUBLICATION_RECIPES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
   catalog_discount_condition: { collectionKey: 'CATALOG_DISCOUNT_CONDITIONS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
   // ADR-923 §5.5.1 — ο ΑΓΩΓΟΣ ΕΙΣΑΓΩΓΗΣ, ίδιο σύνορο. Οι τιμές των προτάσεων ΔΕΝ παρακολουθούνται εδώ: το ιστορικό τους
   // γράφεται στις ίδιες τις οντότητες (SKU · γραμμή) όταν εφαρμοστούν· εδώ μένει η πράξη (κατάσταση · ποιος · πότε).

@@ -22,6 +22,14 @@ export const CATALOG_API = {
     move: (id: string) => `${API_ROOT}/categories/${encodeURIComponent(id)}/move`,
   },
   families: entity('families'),
+  // ── Φάση 5 (ADR-923 §5.6) — εκδότης ──
+  publicationRecipes: {
+    ...entity('publication-recipes'),
+    run: (id: string) => `${API_ROOT}/publication-recipes/${encodeURIComponent(id)}/run`,
+  },
+  publications: `${API_ROOT}/publications`,
+  publicationDownload: (id: string, profile: string) => `${API_ROOT}/publications/${encodeURIComponent(id)}/download?profile=${encodeURIComponent(profile)}`,
+  publicationPreview: `${API_ROOT}/publication-preview`,
   // ── Φάση 2 (ADR-923 §5.10) — δεδομένα ──
   productModels: {
     ...entity('product-models'),
@@ -110,6 +118,8 @@ export const CATALOG_PAGES = {
   settings: '/catalog/settings',
   /** Τιμοκατάλογοι · εκδόσεις · γραμμές · δημοσίευση (ADR-923 §5.11 «3δ» Τμήμα 1) — προβολή με `catalog:pricing:view`. */
   priceLists: '/catalog/price-lists',
+  /** Συνταγές · εκδόσεις · λήψη PDF (ADR-923 §5.6) — προβολή με `catalog:pricing:view`. */
+  publications: '/catalog/publications',
   /** Ομάδες έκπτωσης · ομάδες πελατών · πίνακας συνθηκών (ADR-923 §5.11 «3δ» Τμήμα 2) — προβολή με `catalog:pricing:view`. */
   discounts: '/catalog/discounts',
   /** Παρτίδες εισαγωγής · αντιστοίχιση · έλεγχος δίπλα-δίπλα με το PDF · έγκριση (ADR-923 §5.5.1). */
