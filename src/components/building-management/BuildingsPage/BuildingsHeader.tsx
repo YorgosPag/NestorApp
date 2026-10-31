@@ -50,7 +50,7 @@ export function BuildingsHeader({
   trashCount = 0,
 }: BuildingsHeaderProps) {
   // [ENTERPRISE] i18n hook
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline', 'trash']);
+  const { t } = useTranslation(['building', 'trash']);
 
   return (
     <PageHeader

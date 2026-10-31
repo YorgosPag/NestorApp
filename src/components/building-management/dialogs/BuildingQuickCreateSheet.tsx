@@ -43,7 +43,7 @@ export function BuildingQuickCreateSheet({
   onOpenChange,
   onBuildingCreated,
 }: BuildingQuickCreateSheetProps) {
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation('building');
   const { user } = useAuth();
 
   const tempBuilding = useMemo<Building | null>(() => {

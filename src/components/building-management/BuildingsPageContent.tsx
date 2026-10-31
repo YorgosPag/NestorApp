@@ -53,7 +53,7 @@ export type { Building } from '@/types/building/contracts';
 
 export function BuildingsPageContent() {
   // [ENTERPRISE] i18n hook for translations
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline', 'trash']);
+  const { t } = useTranslation(['building', 'trash']);
   const { success: showSuccess } = useNotifications();
 
   // [ENTERPRISE] Navigation context for breadcrumb sync

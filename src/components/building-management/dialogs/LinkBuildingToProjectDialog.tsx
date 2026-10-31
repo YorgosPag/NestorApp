@@ -84,7 +84,7 @@ export function LinkBuildingToProjectDialog({
   projectsLoading = false,
   onSuccess,
 }: LinkBuildingToProjectDialogProps) {
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const { t } = useTranslation('properties');
   const { success, error: notifyError } = useNotifications();
   const iconSizes = useIconSizes();
 
