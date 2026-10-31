@@ -1,15 +1,17 @@
 // Design system utilities για consistent styling
 import { designTokens } from '@/styles/design-tokens';
 import { borders } from '@/styles/design-tokens';
-import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+import { COLOR_BRIDGE, SOLID_FILL_INK, type SolidFillKey } from '@/design-system/color-bridge';
 
 // ✅ CENTRALIZED: Import + re-export cn from canonical source (@/lib/utils)
 import { cn } from '@/lib/utils';
 export { cn };
 
-// Status color utilities (CSS-class generator — distinct from domain-typed getStatusColor in @/lib/status-helpers)
-const getStatusColorClass = (status: string, variant: 'bg' | 'text' | 'border' = 'text') => {
-  const statusColorMap: Record<string, string> = {
+type StatusToken = 'status-success' | 'status-info' | 'status-warning' | 'status-error' | 'status-purple';
+
+/** Η ΜΙΑ αντιστοίχιση «λέξη κατάστασης → token». Άγνωστη λέξη ⇒ `status-info` (εφεδρεία). */
+const resolveStatusToken = (status: string): StatusToken => {
+  const statusColorMap: Record<string, StatusToken> = {
     // Property statuses
     'for-sale': 'status-success',
     'available': 'status-success',
@@ -35,10 +37,15 @@ const getStatusColorClass = (status: string, variant: 'bg' | 'text' | 'border' =
     'owner': 'status-purple',
   };
 
-  const colorVar = statusColorMap[status];
-  const classes = (colorVar && STATUS_COLOR_CLASSES[colorVar]) || STATUS_COLOR_CLASSES['status-info'];
-  return classes[variant];
+  return statusColorMap[status] ?? 'status-info';
 };
+
+// Status color utilities (CSS-class generator — distinct from domain-typed getStatusColor in @/lib/status-helpers)
+// ⛔ ΜΗΝ συνδυάσεις `'bg'` + `'text'` στο ΙΔΙΟ στοιχείο: ίδιο token ⇒ 1,00:1, αόρατο (ADR-770, CHECK 3.38).
+//    Για «σήμα/κουτί κατάστασης» χρησιμοποίησε τους ΡΟΛΟΥΣ πιο κάτω (`getStatusBadgeVariant` · `getStatusSolidClass` ·
+//    `getStatusSurfaceClass`).
+const getStatusColorClass = (status: string, variant: 'bg' | 'text' | 'border' = 'text') =>
+  STATUS_COLOR_CLASSES[resolveStatusToken(status)][variant];
 
 /**
  * Οι κλάσεις χρώματος κατάστασης, **ολόκληρες και κυριολεκτικές**.
@@ -54,7 +61,7 @@ const getStatusColorClass = (status: string, variant: 'bg' | 'text' | 'border' =
  *    από ό,τι μοιάζει με κλάση — άκυρο CSS που ρίχνει ΟΛΟ το `globals.css` (συνέβη την ίδια μέρα, από αυτό το σχόλιο).
  * Άγκυρα: `src/lib/__tests__/design-system-status-classes.test.ts`.
  */
-const STATUS_COLOR_CLASSES: Record<string, Record<'bg' | 'text' | 'border', string>> = {
+const STATUS_COLOR_CLASSES: Record<StatusToken, Record<'bg' | 'text' | 'border', string>> = {
   'status-success': {
     bg: 'bg-[hsl(var(--status-success))]',
     text: 'text-[hsl(var(--status-success))]',
@@ -83,6 +90,51 @@ const STATUS_COLOR_CLASSES: Record<string, Record<'bg' | 'text' | 'border', stri
 };
 const getStatusColor = getStatusColorClass;
 export { getStatusColor };
+
+/** Οι παραλλαγές του `<Badge>` που ζωγραφίζουν κατάσταση (⊂ `BadgeVariantProps['variant']` ⊂ `BadgeVariant` του core). */
+export type StatusBadgeVariant = 'success' | 'info' | 'warning' | 'error' | 'purple';
+type SubtleStatusKey = 'success' | 'info' | 'warning' | 'error';
+
+/**
+ * 🔑 ΡΟΛΟΙ ΚΑΤΑΣΤΑΣΗΣ — γέμισμα και μελάνι ΠΟΤΕ από το ίδιο token (ADR-770 · 2026-10-29).
+ *
+ * 🔴 ΓΙΑΤΙ (μετρημένο στον browser, PO-0001): `getStatusColor(x,'bg')` + `getStatusColor(x,'text')` ⇒ `color` =
+ * `background-color` = `rgb(36,99,235)` ⇒ ετικέτα χωρίς ορατό κείμενο. Βρέθηκαν 38 τέτοια σημεία σε 14 αρχεία (AST, 2026-10-29).
+ * ⚠️ Ούτε η διαφάνεια το σώζει (μετρημένο από το `globals.css`): `--status-success` πάνω σε `--status-success/15`
+ * = **1,80:1** στο φωτεινό· σε `/10` κανένα από τα 5 tokens δεν φτάνει 4,5:1 σε καμία
+ * επιφάνεια του φωτεινού (μέγ. 4,48)· στο σκοτεινό μόνο success/warning, και όχι πάνω σε κάρτα.
+ *
+ * Το σωστό ζεύγος είναι ΡΟΛΟΣ, όπως στο Material 3 (`container` / `on-container`), στο Atlassian Lozenge
+ * (subtle / bold) και στο Primer (`Label` / `StateLabel`):
+ *   · `badge`  → παραλλαγή `<Badge>` (συμπαγές + το μετρημένο μελάνι του, ADR-854 §3) — για ΧΑΠΙ.
+ *   · `fill`   → συμπαγές γέμισμα ΧΩΡΙΣ `<Badge>` (κελί, κουκκίδα με κείμενο) — ίδιο ζεύγος με το `badge`.
+ *   · `subtle` → απαλό `--bg-X` + `--text-X`: 5,78…7,84:1 και στα ΔΥΟ θέματα. Το purple ΔΕΝ έχει απαλό ζεύγος
+ *                (δεν υπάρχουν `--bg-purple`/`--text-purple`) ⇒ πέφτει στο συμπαγές, ΡΗΤΑ, όχι σιωπηλά.
+ * Άγκυρα: `src/lib/__tests__/design-system-status-classes.test.ts` · πύλη: CHECK 3.38 (`same-token-fill-ink.js`).
+ */
+const STATUS_ROLES: Record<StatusToken, { badge: StatusBadgeVariant; fill: SolidFillKey; subtle: SubtleStatusKey | null }> = {
+  'status-success': { badge: 'success', fill: 'successSolid', subtle: 'success' },
+  'status-info': { badge: 'info', fill: 'infoSolid', subtle: 'info' },
+  'status-warning': { badge: 'warning', fill: 'warningSolid', subtle: 'warning' },
+  'status-error': { badge: 'error', fill: 'errorSolid', subtle: 'error' },
+  'status-purple': { badge: 'purple', fill: 'purpleSolid', subtle: null },
+};
+
+/** Χάπι κατάστασης: `<Badge variant={getStatusBadgeVariant('reserved')}>` — το `Badge` βάζει γέμισμα + μελάνι. */
+export const getStatusBadgeVariant = (status: string): StatusBadgeVariant =>
+  STATUS_ROLES[resolveStatusToken(status)].badge;
+
+/** Συμπαγές γέμισμα κατάστασης + το ΜΕΤΡΗΜΕΝΟ μελάνι του (`SOLID_FILL_INK`) — όταν το στοιχείο δεν είναι `<Badge>`. */
+export const getStatusSolidClass = (status: string): string => {
+  const { fill } = STATUS_ROLES[resolveStatusToken(status)];
+  return `${COLOR_BRIDGE.bg[fill]} ${COLOR_BRIDGE.text[SOLID_FILL_INK[fill]]}`;
+};
+
+/** Απαλή επιφάνεια κατάστασης + το μελάνι ΠΑΝΩ της (container / on-container): χάπι 10px, κελί, πλακίδιο εικονιδίου. */
+export const getStatusSurfaceClass = (status: string): string => {
+  const { subtle } = STATUS_ROLES[resolveStatusToken(status)];
+  return subtle ? `${COLOR_BRIDGE.bg[subtle]} ${COLOR_BRIDGE.text[subtle]}` : getStatusSolidClass(status);
+};
 
 // Typography utilities
 export const getTypographyClass = (
@@ -318,9 +370,6 @@ export const presets = {
 // Status badge utilities
 export const getStatusBadgeClass = (status: string, variant: 'default' | 'outline' = 'default') => {
   const baseClass = 'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium';
-  const statusColor = getStatusColor(status, 'bg');
-  const textColor = 'text-white';
-  
   if (variant === 'outline') {
     return cn(
       baseClass,
@@ -331,7 +380,8 @@ export const getStatusBadgeClass = (status: string, variant: 'default' | 'outlin
     );
   }
   
-  return cn(baseClass, statusColor, textColor);
+  // Ως τις 2026-10-29 `text-white` παντού: success 2,30:1 · warning 3,16:1 (ADR-854 §3) ⇒ το μετρημένο μελάνι.
+  return cn(baseClass, getStatusSolidClass(status));
 };
 
 // Form field utilities
@@ -364,6 +414,9 @@ export const designSystem = {
   getBorderRadiusClass,
   getResponsiveClass,
   getStatusBadgeClass,
+  getStatusBadgeVariant,
+  getStatusSolidClass,
+  getStatusSurfaceClass,
   getFormFieldClass,
   colorScheme,
   presets,

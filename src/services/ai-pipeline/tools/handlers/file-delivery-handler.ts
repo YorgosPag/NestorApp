@@ -25,6 +25,7 @@ import {
   auditWrite,
   logger,
 } from '../executor-shared';
+import { fileReachesViewer } from '../file-cde-reach';
 
 // ============================================================================
 // CONSTANTS
@@ -92,7 +93,7 @@ export class FileDeliveryHandler implements ToolHandler {
       if (!Array.isArray(resolved)) return resolved;
       mediaUrls = resolved;
     } else if (sourceType === 'file') {
-      const resolved = await this.resolveFile(db, sourceId, ctx.isAdmin, contact);
+      const resolved = await this.resolveFile(db, sourceId, ctx);
       if (!Array.isArray(resolved)) return resolved;
       mediaUrls = resolved;
     } else if (sourceType === 'floorplan') {
@@ -155,9 +156,9 @@ export class FileDeliveryHandler implements ToolHandler {
   private async resolveFile(
     db: FirebaseFirestore.Firestore,
     sourceId: string,
-    isAdmin: boolean,
-    contact: AgenticContext['contactMeta']
+    ctx: AgenticContext
   ): Promise<Array<{ url: string; mediaType: 'photo' | 'document'; filename: string; contentType: string }> | ToolResult> {
+    const { isAdmin, contactMeta: contact } = ctx;
     const fileDoc = await db.collection(COLLECTIONS.FILES).doc(sourceId).get();
     if (!fileDoc.exists) {
       return { success: false, error: 'Το αρχείο δεν βρέθηκε.' };
@@ -188,7 +189,8 @@ export class FileDeliveryHandler implements ToolHandler {
         hasAccess = fileProjectId ? linkedProjectIds.includes(fileProjectId) : false;
       }
 
-      if (!hasAccess) {
+      // ADR-901 Φ2 — ανήκει στο ακίνητό του ≠ φτάνει σε αυτόν: ένα WIP μηχανικού δεν φεύγει στο chat.
+      if (!hasAccess || !fileReachesViewer(fileData, ctx)) {
         return { success: false, error: 'Δεν έχετε πρόσβαση σε αυτό το αρχείο.' };
       }
     }

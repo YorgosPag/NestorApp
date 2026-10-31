@@ -41,25 +41,6 @@ export const isValidPlatform = (platformId: string): platformId is SocialPlatfor
   return platformId in UNIFIED_SOCIAL_PLATFORMS;
 };
 
-export const detectPlatformFromUrl = (url: string): SocialPlatformType | null => {
-  if (!url?.trim()) return null;
-
-  try {
-    const urlObj = new URL(url);
-    const hostname = urlObj.hostname.toLowerCase();
-
-    if (hostname.includes('linkedin.com')) return 'linkedin';
-    if (hostname.includes('facebook.com')) return 'facebook';
-    if (hostname.includes('instagram.com')) return 'instagram';
-    if (hostname.includes('x.com') || hostname.includes('twitter.com')) return 'twitter';
-    if (hostname.includes('youtube.com')) return 'youtube';
-    if (hostname.includes('github.com')) return 'github';
-    if (hostname.includes('tiktok.com')) return 'tiktok';
-    if (hostname.includes('wa.me') || hostname.includes('whatsapp.com')) return 'whatsapp';
-    if (hostname.includes('t.me') || hostname.includes('telegram.org')) return 'telegram';
-
-    return null;
-  } catch {
-    return null;
-  }
-};
+// The ONE platform detection lives with the platform identity registry (ADR-327 §8.5.4): registered hosts,
+// exact-or-subdomain match. A local substring copy here matched `wix.com` as Twitter.
+export { detectPlatformFromUrl } from '@/lib/contact/social-platform-profiles';

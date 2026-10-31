@@ -17,7 +17,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { ENTITY_TYPES } from '@/config/domain-constants';
+import { API_ROUTES, ENTITY_TYPES } from '@/config/domain-constants';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { apiErrorBodyOf } from '@/lib/api/api-client-types';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -61,8 +61,7 @@ export interface OwnershipVerificationApi {
   readonly releaseOwnership: () => Promise<void>;
 }
 
-const urlOf = (ownerPropertyId: string) =>
-  `/api/owner-properties/${encodeURIComponent(ownerPropertyId)}/ownership-verification`;
+const urlOf = API_ROUTES.OWNER_PROPERTIES.OWNERSHIP_VERIFICATION;
 
 /** Ο κωδικός άρνησης από το σώμα του σφάλματος — `undefined` για βλάβη δικτύου/διακομιστή χωρίς σώμα. */
 function wireCodeOf(error: unknown): unknown {

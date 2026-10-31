@@ -12,7 +12,14 @@
 
 import { readRepoCode, readRepoFile } from '@/test-utils/read-source';
 import { isScannedByTailwind } from '@/test-utils/tailwind-content';
-import { getStatusColor } from '../design-system';
+import {
+  getStatusBadgeClass,
+  getStatusBadgeVariant,
+  getStatusColor,
+  getStatusSolidClass,
+  getStatusSurfaceClass,
+} from '../design-system';
+import { COLOR_BRIDGE, SOLID_FILL_INK, type SolidFillKey } from '@/design-system/color-bridge';
 
 const SOURCE = 'src/lib/design-system.ts';
 const VARIANTS = ['bg', 'text', 'border'] as const;
@@ -47,5 +54,47 @@ describe('getStatusColor — κλάσεις ορατές στο Tailwind', () =>
     expect(getStatusColor('success', 'bg')).toBe('bg-[hsl(var(--status-success))]');
     expect(getStatusColor('info', 'text')).toBe('text-[hsl(var(--status-info))]');
     expect(getStatusColor('__unknown__')).toBe('text-[hsl(var(--status-info))]');
+  });
+});
+
+/**
+ * ΡΟΛΟΙ ΚΑΤΑΣΤΑΣΗΣ (ADR-770, 2026-10-29) — γέμισμα και μελάνι ΠΟΤΕ από το ίδιο token.
+ * Μετρημένο στον browser (PO-0001): `getStatusColor(x,'bg')` + `getStatusColor(x,'text')` ⇒ `color` = `background-color`.
+ */
+describe('ρόλοι κατάστασης — badge · solid · surface', () => {
+  const ALL = ['success', 'available', 'info', 'pending', 'warning', 'reserved', 'error', 'sold', 'owner', '__unknown__'];
+  const statusToken = (cls: string) => /--status-([a-z]+)/.exec(cls)?.[1];
+
+  it.each(ALL)('%s ⇒ η παραλλαγή Badge ακολουθεί το ΙΔΙΟ token με το getStatusColor', (status) => {
+    const token = statusToken(getStatusColor(status, 'bg'));
+    expect(getStatusBadgeVariant(status)).toBe(token);
+  });
+
+  it.each(ALL)('%s ⇒ το συμπαγές παίρνει το ΜΕΤΡΗΜΕΝΟ μελάνι (SOLID_FILL_INK), όχι το ίδιο token', (status) => {
+    const [fill, ink] = getStatusSolidClass(status).split(' ');
+    expect(fill).toBe(getStatusColor(status, 'bg'));
+    const fillKey = (Object.keys(SOLID_FILL_INK) as SolidFillKey[]).find((k) => COLOR_BRIDGE.bg[k] === fill);
+    expect(fillKey).toBeDefined();
+    expect(ink).toBe(COLOR_BRIDGE.text[SOLID_FILL_INK[fillKey as SolidFillKey]]);
+  });
+
+  it.each(ALL)('%s ⇒ η απαλή επιφάνεια ΔΕΝ χρησιμοποιεί --status-* ως μελάνι', (status) => {
+    expect(getStatusSurfaceClass(status)).not.toMatch(/text-\[hsl\(var\(--status-/);
+  });
+
+  it('απαλό ζεύγος = `--bg-X` + `--text-X` (μετρημένο 5,78…7,84:1 και στα δύο θέματα)', () => {
+    expect(getStatusSurfaceClass('success')).toBe('bg-[hsl(var(--bg-success))] text-[hsl(var(--text-success))]');
+    expect(getStatusSurfaceClass('reserved')).toBe('bg-[hsl(var(--bg-warning))] text-[hsl(var(--text-warning))]');
+    expect(getStatusSurfaceClass('sold')).toBe('bg-[hsl(var(--bg-error))] text-[hsl(var(--text-error))]');
+  });
+
+  it('purple ΔΕΝ έχει απαλό ζεύγος ⇒ πέφτει ΡΗΤΑ στο συμπαγές (όχι σιωπηλά σε άλλο χρώμα)', () => {
+    expect(getStatusSurfaceClass('owner')).toBe(getStatusSolidClass('owner'));
+  });
+
+  it('getStatusBadgeClass: το συμπαγές σήμα δεν φοράει πια `text-white` σε success/warning (2,30 / 3,16:1)', () => {
+    expect(getStatusBadgeClass('success')).toContain(COLOR_BRIDGE.text.onSolidDark);
+    expect(getStatusBadgeClass('warning')).toContain(COLOR_BRIDGE.text.onSolidDark);
+    expect(getStatusBadgeClass('error')).toContain(COLOR_BRIDGE.text.onSolid);
   });
 });

@@ -6,6 +6,10 @@
  * the hook did on 2026-07-16 — including the filter→query-string mapping and
  * the `offset` (not `startAfter`) pagination parameter that distinguishes the
  * admin feed from the per-entity one.
+ *
+ * 🔴 2026-10-30 (pending «Δρομέας keyset»): το `offset` ήταν ΛΑΘΟΣ που αυτοί οι χαρακτηρισμοί κατοχύρωναν — η τιμή
+ * ήταν id εγγραφής, ο διακομιστής την έκανε `parseInt` = NaN ⇒ κενή σελίδα. Πλέον `startAfter` (άγκυρα id), όπως
+ * στο ιστορικό οντότητας· άγκυρες του διακομιστή: `api/audit-trail/global/__tests__/global-audit-tail.route.test.ts`.
  */
 
 import { renderHook, act, waitFor } from '@testing-library/react';
@@ -233,7 +237,7 @@ describe('useGlobalAuditTrail — entries projection', () => {
 });
 
 describe('useGlobalAuditTrail — loadMore', () => {
-  it('pages with offset = oldest loaded entry id and appends the result', async () => {
+  it('pages with startAfter = oldest loaded entry id and appends the result (ήταν offset ⇒ NaN ⇒ κενό)', async () => {
     mockGet.mockResolvedValue({
       entries: [entry('older', '2025-12-01T00:00:00.000Z')],
       hasMore: true,
@@ -248,7 +252,7 @@ describe('useGlobalAuditTrail — loadMore', () => {
     });
 
     expect(mockGet).toHaveBeenCalledWith(
-      '/api/audit-trail/global?limit=30&offset=a',
+      '/api/audit-trail/global?limit=30&startAfter=a',
     );
     await waitFor(() =>
       expect(result.current.entries.map((e) => e.id)).toEqual(['a', 'older']),
@@ -274,7 +278,7 @@ describe('useGlobalAuditTrail — loadMore', () => {
     });
 
     expect(mockGet).toHaveBeenCalledWith(
-      '/api/audit-trail/global?limit=30&offset=a&entityType=contact&performedBy=user-9&action=update&fromDate=2026-01-01&toDate=2026-02-01',
+      '/api/audit-trail/global?limit=30&startAfter=a&entityType=contact&performedBy=user-9&action=update&fromDate=2026-01-01&toDate=2026-02-01',
     );
   });
 
@@ -299,7 +303,7 @@ describe('useGlobalAuditTrail — loadMore', () => {
     });
 
     expect(mockGet).toHaveBeenLastCalledWith(
-      '/api/audit-trail/global?limit=30&offset=cursor-2',
+      '/api/audit-trail/global?limit=30&startAfter=cursor-2',
     );
   });
 

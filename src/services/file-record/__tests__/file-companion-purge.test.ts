@@ -15,6 +15,7 @@
  * | Σ | άρνηση σε συνοδευτικό ⇒ η εγγραφή **ΔΕΝ** γίνεται `purged`· 404 ⇒ αθώο | `refused` αγνοημένο |
  * | Σ | δέσμευση στο πρωτότυπο ⇒ **κανένα** συνοδευτικό δεν αγγίζεται | συνοδευτικά πριν από το πρωτότυπο |
  * | Γ | η ΓΚΠΔ περνά την εγγραφή στον ΕΝΑ γραφέα και μηδενίζει τους δείκτες | επιστροφή στο `{ storagePath, storagePlacement }` |
+ * | Ε | το επιτύμβιο βγαίνει από την ουρά του cron (`purgeAt: null`) — γραφέας ΚΑΙ ΓΚΠΔ | χωρίς `purgeAt: null` |
  *
  * Πλαστά μόνο ο δίσκος (`FakeFirestore`) και οι κάδοι — μητρώο, φρουρός, κριτής και γραφέας εκτελούνται αληθινά.
  */
@@ -238,5 +239,37 @@ describe('Γ — η ΓΚΠΔ περνά από τον ΕΝΑ γραφέα', () =
   it('🔴 Γ2 — μηδενίζει τους δείκτες συνοδευτικών από το ΙΔΙΟ μητρώο', () => {
     expect(route).toMatch(/FILE_COMPANION_POINTER_FIELDS/);
     expect(route).toMatch(/storagePath: null,\s*\.\.\.COMPANION_POINTERS_ERASED,/);
+  });
+});
+
+describe('Ε — το επιτύμβιο βγαίνει από την ουρά του cron (2026-10-31)', () => {
+  it('🔴 Ε1 — `purged` ⇒ `purgeAt: null`: το ερώτημα της Φάσης Α (`isDeleted == true && purgeAt <= now`) δεν το ξαναπιάνει', async () => {
+    fake.seed(COLLECTIONS.FILES, PHOTO_ID, {
+      companyId: 'comp_1', lifecycleState: 'trashed', isDeleted: true, purgeAt: '2026-01-01T00:00:00.000Z', storagePath: PHOTO,
+    });
+
+    const result = await purgeFileRecord({
+      fileId: PHOTO_ID, custody: 'company', storagePath: PHOTO, performedBy: 'system:cron-purge', purgeReason: 'cron_trash',
+    });
+
+    expect(result.success).toBe(true);
+    const tombstone = fake.all<{ lifecycleState: string; purgeAt: unknown; purgedAt: unknown }>(COLLECTIONS.FILES)[0];
+    expect(tombstone.lifecycleState).toBe('purged');
+    expect(tombstone.purgeAt).toBeNull();
+    expect(typeof tombstone.purgedAt).toBe('string');
+  });
+
+  it('🔴 Ε2 — η ΓΚΠΔ γράφει το ΙΔΙΟ επιτύμβιο (`purgedRecordFields`), όχι χειρόγραφο `lifecycleState: \'purged\'`', () => {
+    const route = readFileSync(join(process.cwd(), 'src/app/api/files/gdpr-delete/route.ts'), 'utf8');
+    expect(route).toMatch(/\.\.\.purgedRecordFields\(nowISO\(\)\),/);
+    expect(route).not.toMatch(/lifecycleState: 'purged'/);
+  });
+
+  it('🔑 Ε3 — οι καταστάσεις κύκλου ζωής έχουν ΜΙΑ πηγή: το `domain-constants` ξαναεξάγει το φύλλο (που προβάλλεται στα Functions)', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const domain = require('@/config/domain-constants') as { FILE_LIFECYCLE_STATES: unknown };
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const leaf = require('@/config/file-lifecycle-states') as { FILE_LIFECYCLE_STATES: unknown };
+    expect(domain.FILE_LIFECYCLE_STATES).toBe(leaf.FILE_LIFECYCLE_STATES);
   });
 });

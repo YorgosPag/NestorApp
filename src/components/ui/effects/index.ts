@@ -188,7 +188,7 @@ export type HoverTransform = keyof typeof CORE_HOVER_TRANSFORMS;
 export type HoverShadow = keyof typeof HOVER_SHADOWS;
 export type InteractivePattern = keyof typeof INTERACTIVE_PATTERNS;
 export type TransitionPreset = keyof typeof TRANSITION_PRESETS;
-export type SocialPlatform = keyof typeof SOCIAL_HOVER_EFFECTS;
+// `SocialPlatform` εδώ ήταν ομώνυμο της ρίζας πλατφορμών με κλειδιά hover (`FACEBOOK`…`EMAIL`), χωρίς καταναλωτή (ADR-327 §8.5.4).
 export type FormEffect = keyof typeof FORM_FOCUS_EFFECTS;
 
 export type InteractiveOptions = {

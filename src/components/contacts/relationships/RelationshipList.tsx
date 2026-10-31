@@ -18,7 +18,7 @@ import { RelationshipCard } from './RelationshipCard';
 import type { RelationshipListProps } from './types/relationship-manager.types';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { getStatusColor } from '@/lib/design-system';
+import { getStatusSurfaceClass } from '@/lib/design-system';
 
 /**
  * 📋 RelationshipList Component
@@ -46,7 +46,7 @@ export const RelationshipList: React.FC<RelationshipListProps> = ({
   // ============================================================================
   // 🏢 ENTERPRISE: i18n hook for translations
   // ============================================================================
-  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t } = useTranslation('contacts');
 
   // ============================================================================
   // STATE COMPUTATION
@@ -72,8 +72,9 @@ export const RelationshipList: React.FC<RelationshipListProps> = ({
           <p className="text-sm mt-2">
             {t('relationships.list.newContact.description')}
           </p>
-          <div className={`mt-2 p-2 ${getStatusColor('info', 'bg')} rounded-lg`}>
-            <p className={`text-xs ${getStatusColor('info', 'text')}`}>
+          {/* Επιφάνεια + μελάνι σε ΕΝΑ ρόλο· ως τις 2026-10-29 συμπαγές μπλε φόντο με μπλε κείμενο ⇒ αόρατη συμβουλή (ADR-770). */}
+          <div className={`mt-2 p-2 ${getStatusSurfaceClass('info')} rounded-lg`}>
+            <p className="text-xs">
               💡 <strong>{t('relationships.list.newContact.tip')}</strong> {t('relationships.list.newContact.tipText')}
             </p>
           </div>

@@ -13,6 +13,7 @@
  * όριο των 500 γραμμών)· αυτό είναι ο πελάτης της **συναίνεσης**, με δικό του λεξιλόγιο εκβάσεων.
  */
 
+import { API_ROUTES } from '@/config/domain-constants';
 import { apiClient, apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
 import { refusalOf } from '@/lib/http/response-refusal';
 import type { ConsentSubmission } from '@/lib/mandate/private-marketing-consent-text';
@@ -27,7 +28,7 @@ import {
 
 const logger = createModuleLogger('private-marketing.client');
 
-const API_BASE = '/api/owner-properties';
+const API_BASE = API_ROUTES.OWNER_PROPERTIES.LIST;
 
 /** Κωδικοί που φτάνουν ως `reason` ή ως παραβίαση εντολής — ένα λεξιλόγιο για την οθόνη. */
 const PRIVATE_MARKETING_SCREEN_REASONS = [...PRIVATE_MARKETING_REFUSALS, 'private-marketing-consent-missing'] as const;

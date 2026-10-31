@@ -1,0 +1,181 @@
+## #10
+   • 6 lines / 51 tokens
+       src/subapps/accounting/components/documents/DocumentsPageContent.tsx:229-234
+       src/subapps/accounting/components/efka/EFKAPageContent.tsx:192-197
+   • 17 lines / 61 tokens
+       src/subapps/accounting/components/documents/DocumentsPageContent.tsx:238-254
+       src/subapps/accounting/components/efka/EFKAPageContent.tsx:197-213
+## #11
+   • 13 lines / 67 tokens
+       src/subapps/accounting/components/invoices/details/CancelInvoiceDialog.tsx:283-295
+       src/subapps/accounting/components/invoices/details/SendInvoiceEmailDialog.tsx:275-287
+   • 12 lines / 70 tokens
+       src/subapps/accounting/components/reports/TaxDashboard.tsx:58-69
+       src/subapps/accounting/components/reports/TaxEstimateCard.tsx:61-72
+   • 10 lines / 70 tokens
+       src/subapps/accounting/components/reports/TaxDashboard.tsx:69-78
+       src/subapps/accounting/components/reports/TaxEstimateCard.tsx:72-81
+   • 10 lines / 59 tokens
+       src/subapps/accounting/components/reports/TaxEstimateCard.tsx:115-124
+       src/subapps/accounting/components/reports/VATReportCard.tsx:58-67
+## #12
+   • 11 lines / 50 tokens
+       src/subapps/accounting/components/setup/MemberRow.tsx:88-98
+       src/subapps/accounting/components/setup/ShareholderRow.tsx:128-138
+   • 12 lines / 96 tokens
+       src/subapps/accounting/components/setup/MemberRow.tsx:108-119
+       src/subapps/accounting/components/setup/PartnerRow.tsx:92-103
+   • 14 lines / 112 tokens
+       src/subapps/accounting/components/setup/MemberRow.tsx:108-121
+       src/subapps/accounting/components/setup/ShareholderRow.tsx:148-161
+   • 10 lines / 61 tokens
+       src/subapps/accounting/components/setup/MemberRow.tsx:123-132
+       src/subapps/accounting/components/setup/ShareholderRow.tsx:163-172
+## #14
+   • 9 lines / 52 tokens
+       src/subapps/dxf-viewer/components/modal/ModalContainer.tsx:139-147
+       src/subapps/dxf-viewer/components/modal/ModalContainer.tsx:160-168
+   • 9 lines / 52 tokens
+       src/subapps/dxf-viewer/components/modal/ModalContainer.tsx:139-147
+       src/subapps/dxf-viewer/components/modal/ModalContainer.tsx:180-188
+   • 9 lines / 52 tokens
+       src/subapps/dxf-viewer/components/modal/ModalContainer.tsx:139-147
+       src/subapps/dxf-viewer/components/modal/ModalContainer.tsx:200-208
+   • 12 lines / 74 tokens
+       src/subapps/dxf-viewer/ui/OverlayToolbar.tsx:35-46
+       src/subapps/dxf-viewer/ui/components/DraggableOverlayToolbar.tsx:104-115
+## #15
+   • 22 lines / 140 tokens
+       src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/useLineSettingsState.ts:71-92
+       src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/useLineSettingsState.ts:93-114
+   • 12 lines / 77 tokens
+       src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/useLineSettingsState.ts:78-89
+       src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/useLineSettingsState.ts:119-130
+   • 14 lines / 68 tokens
+       src/subapps/dxf-viewer/ui/components/dxf-settings/settings/special/CrosshairBehaviorSettings.tsx:93-106
+       src/subapps/dxf-viewer/ui/components/dxf-settings/settings/special/CrosshairSettings.tsx:73-86
+   • 11 lines / 51 tokens
+       src/subapps/dxf-viewer/ui/components/dxf-settings/settings/special/CrosshairBehaviorSettings.tsx:106-116
+       src/subapps/dxf-viewer/ui/components/dxf-settings/settings/special/rulers/RulerBackgroundSettings.tsx:196-206
+## #16
+   • 8 lines / 59 tokens
+       src/subapps/dxf-viewer/ui/wizard/CalibrationStep.tsx:54-61
+       src/subapps/dxf-viewer/ui/wizard/PreviewStep.tsx:26-33
+   • 8 lines / 51 tokens
+       src/subapps/dxf-viewer/ui/wizard/CalibrationStep.tsx:90-97
+       src/subapps/dxf-viewer/ui/wizard/CalibrationStep.tsx:111-118
+   • 8 lines / 72 tokens
+       src/subapps/dxf-viewer/ui/wizard/PreviewStep.tsx:59-66
+       src/subapps/dxf-viewer/ui/wizard/PreviewStep.tsx:81-88
+## #18
+   • 9 lines / 81 tokens
+       src/app/api/admin/role-management/audit-log/route.ts:96-104
+       src/app/api/audit-trail/global/route.ts:92-100
+   • 7 lines / 80 tokens
+       src/app/api/audit-trail/[entityType]/[entityId]/route.ts:169-175
+       src/app/api/audit-trail/global/route.ts:139-145
+## #19
+   • 15 lines / 71 tokens
+       src/components/building-management/BuildingToolbar.tsx:197-211
+       src/components/building-management/BuildingToolbar.tsx:223-237
+   • 14 lines / 53 tokens
+       src/components/building-management/BuildingsPageContent.tsx:108-121
+       src/components/building-management/dialogs/BuildingQuickCreateSheet.tsx:56-69
+   • 11 lines / 56 tokens
+       src/components/building-management/tabs/BuildingCustomersTab.tsx:71-81
+       src/components/building-management/tabs/BuildingCustomersTab.tsx:87-97
+   • 11 lines / 53 tokens
+       src/components/building-management/tabs/BuildingCustomersTab.tsx:71-81
+       src/components/building-management/tabs/BuildingCustomersTab.tsx:105-115
+## #20
+   • 11 lines / 58 tokens
+       src/components/building-management/tabs/TimelineTabContent/CriticalPathCard.tsx:102-112
+       src/components/building-management/tabs/TimelineTabContent/CriticalPathCard.tsx:122-132
+   • 9 lines / 52 tokens
+       src/components/building-management/tabs/TimelineTabContent/dashboard/ScheduleDashboardView.tsx:217-225
+       src/components/building-management/tabs/TimelineTabContent/dashboard/ScheduleDashboardView.tsx:248-256
+## #21
+   • 9 lines / 54 tokens
+       src/components/projects/AllowedBuildingDataTab.tsx:61-69
+       src/components/projects/GeneralPlotDataTab.tsx:39-47
+   • 7 lines / 51 tokens
+       src/components/projects/BasicProjectInfoTab.tsx:30-36
+       src/components/projects/PermitsTab.tsx:36-42
+   • 8 lines / 63 tokens
+       src/components/projects/BuildingDataTabs.tsx:100-107
+       src/components/projects/ika-tab.tsx:106-113
+   • 10 lines / 55 tokens
+       src/components/projects/GeneralPlotFormFields.tsx:21-30
+       src/components/projects/PlotZoningSelectors.tsx:78-87
+## #22
+   • 12 lines / 98 tokens
+       src/components/projects/projects-list.tsx:135-146
+       src/components/projects/projects-list.tsx:154-165
+## #23
+   • 18 lines / 84 tokens
+       src/components/contacts/creation/InlineContactCreation.tsx:130-147
+       src/components/contacts/dialogs/TabbedAddNewContactDialog.tsx:308-325
+   • 14 lines / 62 tokens
+       src/components/contacts/dynamic/layouts/DesktopTableLayout.tsx:47-60
+       src/components/contacts/dynamic/layouts/DesktopTableLayout.tsx:153-166
+   • 14 lines / 62 tokens
+       src/components/contacts/dynamic/layouts/DesktopTableLayout.tsx:47-60
+       src/components/contacts/dynamic/layouts/MobileCommunicationLayout.tsx:52-65
+   • 20 lines / 56 tokens
+       src/components/contacts/dynamic/layouts/DesktopTableLayout.tsx:49-68
+       src/components/contacts/dynamic/layouts/MobileCommunicationLayout.tsx:74-93
+## #24
+   • 7 lines / 61 tokens
+       src/components/contacts/toolbar/ContactsTabContent.tsx:40-46
+       src/components/contacts/toolbar/ContactsToolbar.tsx:21-27
+## #26
+   • 22 lines / 99 tokens
+       src/components/compositions/BuildingToolbar/BuildingToolbar.tsx:140-161
+       src/components/compositions/BuildingToolbar/BuildingToolbar.tsx:164-185
+   • 17 lines / 103 tokens
+       src/components/shared/files/FilesList.tsx:129-145
+       src/components/shared/files/LifecycleListFrame.tsx:197-209
+   • 6 lines / 58 tokens
+       src/components/shared/files/FolderManager.tsx:149-154
+       src/components/shared/files/FolderManager.tsx:162-167
+   • 16 lines / 72 tokens
+       src/components/shared/files/GroupedFilesByDomainCategoryList.tsx:124-139
+       src/components/shared/files/GroupedFilesList.tsx:183-198
+## #28
+   • 10 lines / 84 tokens
+       src/components/sales/legal/professionals-card-dialogs.tsx:57-66
+       src/components/sales/legal/professionals-card-dialogs.tsx:98-107
+## #29
+   • 11 lines / 52 tokens
+       src/components/sales/payments/InterestCostDialog.tsx:315-325
+       src/components/sales/payments/InterestCostDialog.tsx:337-347
+   • 10 lines / 55 tokens
+       src/components/sales/payments/InterestCostDialog.tsx:349-358
+       src/components/sales/payments/InterestCostDialog.tsx:373-384
+   • 14 lines / 69 tokens
+       src/components/sales/payments/InterestCostDialog.tsx:371-384
+       src/components/sales/payments/InterestCostDialog.tsx:405-418
+   • 14 lines / 69 tokens
+       src/components/sales/payments/InterestCostDialog.tsx:371-384
+       src/components/sales/payments/InterestCostDialog.tsx:435-448
+## #31
+   • 20 lines / 92 tokens
+       src/components/file-manager/preview/DocxPreview.tsx:88-107
+       src/components/file-manager/preview/HtmlPreview.tsx:32-49
+   • 9 lines / 51 tokens
+       src/components/file-manager/preview/DocxPreview.tsx:99-107
+       src/components/file-manager/preview/ExcelPreview.tsx:42-49
+   • 11 lines / 62 tokens
+       src/components/file-manager/preview/ExcelPreview.tsx:49-59
+       src/components/file-manager/preview/HtmlPreview.tsx:49-59
+   • 11 lines / 62 tokens
+       src/components/file-manager/preview/ExcelPreview.tsx:49-59
+       src/components/file-manager/preview/TxtPreview.tsx:49-59
+## #33
+   • 16 lines / 58 tokens
+       src/domain/cards/conversation/ConversationListCard.tsx:184-199
+       src/domain/cards/level/LevelListCard.tsx:213-228
+## #34
+   • 6 lines / 57 tokens
+       src/lib/npv-engine.ts:65-70
+       src/lib/npv-engine.ts:116-121

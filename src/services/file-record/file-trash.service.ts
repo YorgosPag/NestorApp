@@ -47,6 +47,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { decideCapability } from '@/lib/auth/authority';
 import { fileTrashBlockOf } from '@/lib/files/file-hold';
 import { calculatePurgeDate, isInTrash } from '@/lib/files/file-trash-state';
+import { fileTrashFields } from '@/lib/files/file-trash-fields';
 import { FieldValue } from '@/lib/firebaseAdmin';
 import { isRetired } from '@/lib/firestore/trashed-status';
 import { recordFileAudit } from '@/services/file-audit-admin.service';
@@ -171,19 +172,14 @@ export function judgeFileTrash(
   return null;
 }
 
-/** Τα πεδία του κάδου — τα **ίδια** που έγραφε ο πελάτης, με χρόνους διακομιστή. */
+/** Τα πεδία του κάδου — η ΜΙΑ δήλωση (`fileTrashFields`, κοινή με τα Functions), με χρόνους διακομιστή. */
 function trashUpdates(uid: string, purgeAt: string): Record<string, unknown> {
-  const now = FieldValue.serverTimestamp();
-  return {
-    lifecycleState: FILE_LIFECYCLE_STATES.TRASHED,
-    trashedAt: now,
-    trashedBy: uid,
+  return fileTrashFields({
+    trashedState: FILE_LIFECYCLE_STATES.TRASHED,
+    by: uid,
     purgeAt,
-    isDeleted: true,
-    deletedAt: now,
-    deletedBy: uid,
-    updatedAt: now,
-  };
+    now: FieldValue.serverTimestamp(),
+  });
 }
 
 function restoreUpdates(uid: string): Record<string, unknown> {

@@ -10,10 +10,10 @@
  * CHECK 3.93) από `src/lib/files/file-storage-placement.ts` — μηδέν χειρόγραφο αντίγραφο.
  * Μόνο τα ΟΝΟΜΑΤΑ κάδων χτίζονται εδώ, όπως ακριβώς χτίζονται στο `config/gcs-buckets.ts`.
  *
- * ⛔ **Άγνωστη θέση ⇒ ΠΕΤΑ** (fail-closed, ADR-895 Α2). Καμία συνάρτηση εδώ γύρω-γύρω
- * πιάνει αυτό το σφάλμα για να «μαντέψει» τον κανονικό κάδο — το κάνει ο ΚΑΛΩΝ, ρητά,
- * όταν του βολεύει να κρατήσει την εγγραφή αντί να προχωρήσει (π.χ.
- * `onDeleteFloorplanBackground`: άγνωστη θέση ⇒ κράτα το `files/{id}` για retry).
+ * 🗑️ ADR-899 §2.2 (2026-10-31): ο επιλογέας κάδου **ανά εγγραφή** (`fileRecordBucket`) αφαιρέθηκε — οι δύο καταναλωτές
+ * του (`scheduledFilePurge` · `onDeleteFloorplanBackground`) έσβηναν bytes αρχείου **παρακάμπτοντας** τον ΕΝΑ γραφέα purge
+ * (χωρίς συνοδευτικά, χωρίς πλήρη κριτή δέσμευσης). Τα Functions **δεν** σβήνουν πια bytes `FileRecord`: παραδίδουν στην
+ * ουρά του κάδου (`lib/files/file-trash-fields`). Εδώ μένουν μόνο τα ονόματα κάδων (σημάδι/σάρωση ορφανών, ADR-895 Α7).
  *
  * @module functions/storage/file-record-bucket
  * @enterprise ADR-895 Α2 + Α7 — ΕΝΑΣ επιλογέας, όχι N διάσπαρτες `admin.storage().bucket()`
@@ -24,9 +24,7 @@
 import * as admin from 'firebase-admin';
 
 import {
-  fileStorageBucketNameOf,
   FILES_EU_BUCKET_SUFFIX,
-  type FileStoragePlacementSubject,
   type FileStorageBucketNames,
 } from '../generated/lib/files/file-storage-placement';
 
@@ -50,12 +48,4 @@ export function fileStorageBucketNames(): FileStorageBucketNames {
     'legacy-default': admin.storage().bucket().name,
     'eu-originals': process.env.GCS_FILES_EU_BUCKET ?? `${projectId()}${FILES_EU_BUCKET_SUFFIX}`,
   };
-}
-
-/** Ο κάδος όπου ζουν τα bytes αυτής της εγγραφής. Άγνωστη θέση ⇒ πετά (fail-closed). */
-export function fileRecordBucket(
-  record: FileStoragePlacementSubject,
-): ReturnType<ReturnType<typeof admin.storage>['bucket']> {
-  const name = fileStorageBucketNameOf(record, fileStorageBucketNames());
-  return admin.storage().bucket(name);
 }

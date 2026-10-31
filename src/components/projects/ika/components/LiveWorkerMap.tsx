@@ -35,19 +35,30 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { cn } from '@/lib/utils';
-import { getStatusColor } from '@/lib/design-system';
+import { getStatusBadgeVariant, getStatusColor, type StatusBadgeVariant } from '@/lib/design-system';
 import { MAP_ZOOM, createGeofenceLayerStyles } from '../map-shared';
 import { useDefaultBasemap } from '@/lib/maps/use-default-basemap';
 import { MAP_OVERLAY_SURFACE } from '@/subapps/geo-canvas/components/map-overlays/overlay-surface';
 import { WorkerPin, WORKER_STATUS_COLORS } from './WorkerPin';
 import { formatTime, eventTypeLabel } from './live-worker-helpers';
-import { useLiveWorkerMap } from '../hooks/useLiveWorkerMap';
+import { useLiveWorkerMap, type WorkerMarkerData } from '../hooks/useLiveWorkerMap';
 import type { AttendanceEvent, ProjectWorker } from '../contracts';
 import type { CoordinatePoint } from '@/utils/address/address-list-center';
 
 // =============================================================================
 // CONSTANTS
 // =============================================================================
+
+/**
+ * Κατάσταση εργαζομένου → παραλλαγή `<Badge>` (ίδια απόχρωση με την πινέζα: πράσινο / πορτοκαλί / κόκκινο).
+ * Ως τις 2026-10-29 κάθε χάπι έπαιρνε `bg` + `text` του ΙΔΙΟΥ token (+ νεκρό `bg-opacity-10`, που δεν αγγίζει
+ * αυθαίρετο `hsl()`) ⇒ συμπαγές χρωματιστό χάπι χωρίς ορατό κείμενο (ADR-770).
+ */
+const WORKER_STATUS_BADGE: Record<WorkerMarkerData['status'], StatusBadgeVariant> = {
+  inside: getStatusBadgeVariant('active'),
+  outside: getStatusBadgeVariant('construction'),
+  checked_out: getStatusBadgeVariant('error'),
+};
 
 const LIVE_SOURCE_ID = 'live-geofence-circle';
 const { fill: GEOFENCE_FILL, line: GEOFENCE_LINE } = createGeofenceLayerStyles(
@@ -82,7 +93,7 @@ export function LiveWorkerMap({
   workers,
   siteCenter,
 }: LiveWorkerMapProps) {
-  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+  const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
   const typography = useTypography();
   const basemap = useDefaultBasemap();
@@ -132,18 +143,18 @@ export function LiveWorkerMap({
         {/* Summary Badges */}
         {workerMarkers.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            <Badge variant="secondary" className={cn(getStatusColor('active', 'text'), getStatusColor('active', 'bg'), 'bg-opacity-10')}>
+            <Badge variant={WORKER_STATUS_BADGE.inside}>
               <Users className="h-3 w-3 mr-1" />
               {insideCount} {t('ika.attendance.liveMap.inside')}
             </Badge>
             {outsideCount > 0 && (
-              <Badge variant="secondary" className={cn(getStatusColor('construction', 'text'), getStatusColor('construction', 'bg'), 'bg-opacity-10')}>
+              <Badge variant={WORKER_STATUS_BADGE.outside}>
                 <AlertTriangle className="h-3 w-3 mr-1" />
                 {outsideCount} {t('ika.attendance.liveMap.outside')}
               </Badge>
             )}
             {checkedOutCount > 0 && (
-              <Badge variant="secondary" className={cn(getStatusColor('error', 'text'), getStatusColor('error', 'bg'), 'bg-opacity-10')}>
+              <Badge variant={WORKER_STATUS_BADGE.checked_out}>
                 <Clock className="h-3 w-3 mr-1" />
                 {checkedOutCount} {t('ika.attendance.liveMap.checkedOut')}
               </Badge>
@@ -230,15 +241,7 @@ export function LiveWorkerMap({
                     )}
                   </dl>
                   <div className="mt-1.5 pt-1.5 border-t border-border">
-                    <Badge
-                      variant="secondary"
-                      className={cn(
-                        typography.body.xs,
-                        selectedMarkerData.status === 'inside' && cn(getStatusColor('active', 'text'), getStatusColor('active', 'bg'), 'bg-opacity-10'),
-                        selectedMarkerData.status === 'outside' && cn(getStatusColor('construction', 'text'), getStatusColor('construction', 'bg'), 'bg-opacity-10'),
-                        selectedMarkerData.status === 'checked_out' && cn(getStatusColor('error', 'text'), getStatusColor('error', 'bg'), 'bg-opacity-10'),
-                      )}
-                    >
+                    <Badge variant={WORKER_STATUS_BADGE[selectedMarkerData.status]} className={typography.body.xs}>
                       {selectedMarkerData.status === 'inside' && t('ika.attendance.liveMap.statusInside')}
                       {selectedMarkerData.status === 'outside' && t('ika.attendance.liveMap.statusOutside')}
                       {selectedMarkerData.status === 'checked_out' && t('ika.attendance.liveMap.statusCheckedOut')}

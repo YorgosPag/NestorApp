@@ -72,6 +72,18 @@ export interface PurgeFileResult {
 /** Η έκβαση της διαγραφής των bytes — τρεις απαντήσεις, γιατί η θεραπεία τους διαφέρει. */
 export type StorageObjectDeletion = 'deleted' | 'absent' | 'refused';
 
+/**
+ * 🪦 **Τα πεδία του επιτυμβίου** — η ΜΙΑ δήλωση για κάθε γραφέα που κηρύσσει μια εγγραφή `purged` (cron · AI · ΓΚΠΔ).
+ *
+ * 🔴 `purgeAt: null` = η εγγραφή **βγαίνει από το πρόγραμμα** του cron (S3 lifecycle: το αντικείμενο που έληξε φεύγει από την
+ * ουρά λήξης). Ως τις 2026-10-31 έμενε ⇒ το ερώτημα της Φάσης Α (`isDeleted == true && purgeAt <= now`, `limit(100)`, κατά
+ * `purgeAt`) ξανάπιανε **κάθε** επιτύμβιο κάθε μέρα — νέα γραμμή «διαγραφή» στο βιβλίο, και με ≥100 επιτύμβια ο κάδος
+ * **δεν άδειαζε ποτέ** (υπερ-διατήρηση, ΓΚΠΔ άρθρο 5 §1ε).
+ */
+export function purgedRecordFields(now: string): { lifecycleState: 'purged'; purgedAt: string; updatedAt: string; purgeAt: null } {
+  return { lifecycleState: 'purged', purgedAt: now, updatedAt: now, purgeAt: null };
+}
+
 // =============================================================================
 // FUNCTIONS
 // =============================================================================
@@ -164,13 +176,8 @@ export async function purgeFileRecord(params: PurgeFileParams): Promise<PurgeFil
       storageDeleted = deletion === 'deleted';
     }
 
-    // Mark FileRecord as purged
-    const now = nowISO();
-    await ref.update({
-      lifecycleState: 'purged',
-      purgedAt: now,
-      updatedAt: now,
-    });
+    // Επιτύμβιο — και έξω από το πρόγραμμα του cron (`purgedRecordFields`).
+    await ref.update(purgedRecordFields(nowISO()));
 
     await recordPurgeAudit(params, owner, storageDeleted);
 

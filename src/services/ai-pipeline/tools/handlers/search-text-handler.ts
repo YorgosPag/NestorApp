@@ -24,6 +24,7 @@ import {
   ALLOWED_READ_COLLECTIONS,
 } from '../executor-shared';
 import { filterContactByTab, resolveContactType } from '../contact-tab-filter';
+import { recordReachesViewer } from '../file-cde-reach';
 
 // ============================================================================
 // CONSTANTS
@@ -94,6 +95,7 @@ export async function executeSearchText(
 
     const scored = snap.docs
       .filter(doc => !(hasLifecycle && isRetired(doc.data())))
+      .filter(doc => recordReachesViewer(collection, doc.data(), ctx))
       .map(doc => ({ doc, score: scoreDocument(doc.data(), wordVariants) }))
       .filter(entry => entry.score > 0)
       .sort((a, b) => b.score - a.score)

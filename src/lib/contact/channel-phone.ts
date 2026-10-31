@@ -49,6 +49,24 @@ export function normalisePhone(raw: string, country: CountryCode = DEFAULT_PHONE
 }
 
 /**
+ * **Ποιος είναι ο κωδικός χώρας ενός διεθνούς αριθμού;** — `+359 74520126` ⇒ `{ +359, 74520126 }`.
+ *
+ * 🔴 Ζούσε ως χειρόγραφος πίνακας ~120 κωδικών (CC3/CC2/1-ψήφιοι) στο `parsePhoneForStorage` του
+ * ai-pipeline (ADR-327 §8.5.4 ☎️#3): δεύτερος ορισμός του «τι είναι κωδικός χώρας», που δεν ήξερε
+ * π.χ. το `+383` (Κόσοβο) ή το `+1 868`. Τα metadata της βιβλιοθήκης είναι η ΜΙΑ αλήθεια.
+ *
+ * Δεν απαιτεί **έγκυρο** αριθμό (`isValid`): η διάσπαση είναι ερώτηση σχήματος, όχι κρίσης — ο
+ * γραφέας αποθηκεύει ό,τι έστειλε ο άνθρωπος. `null` ⇒ δεν αναγνωρίζεται κωδικός χώρας.
+ */
+export function splitCountryCallingCode(
+  international: string,
+): { readonly countryCode: string; readonly number: string } | null {
+  const parsed = parsePhoneNumberFromString(international);
+  if (parsed === undefined || parsed.nationalNumber === '') return null;
+  return { countryCode: `+${parsed.countryCallingCode}`, number: parsed.nationalNumber };
+}
+
+/**
  * **Ένας αποθηκευμένος E.164 → ό,τι βλέπει ο επισκέπτης.** `null` αν ο δίσκος κρατά
  * σκουπίδι — ο αναγνώστης δεν ζωγραφίζει αριθμό που δεν μπορεί να καλεστεί.
  */

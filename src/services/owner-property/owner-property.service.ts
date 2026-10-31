@@ -23,6 +23,7 @@
  * και γράφει με `create()`, που **πετά** αν υπάρχει.
  */
 
+import { API_ROUTES } from '@/config/domain-constants';
 import { apiClient, apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
@@ -65,7 +66,7 @@ export type BrokeredNotifyOutcome =
   | { readonly kind: 'failed' };
 
 /** Η ρίζα των διαδρομών — γραμμένη **μία** φορά. */
-const API_BASE = '/api/owner-properties';
+const API_BASE = API_ROUTES.OWNER_PROPERTIES.LIST;
 
 // =============================================================================
 // 1. ΤΟ ΑΠΟΤΕΛΕΣΜΑ

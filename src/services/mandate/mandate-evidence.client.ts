@@ -10,6 +10,7 @@
  * Κανένα blob στη μνήμη, κανένα CORS προς το bucket.
  */
 
+import { API_ROUTES } from '@/config/domain-constants';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { navigateDocument } from '@/lib/browser/document-navigation';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -33,10 +34,10 @@ function urlOf(body: SignedBody | null): string | null {
 }
 
 async function signedUrlFor(source: EvidenceSource, evidenceId: string): Promise<string | null> {
-  const id = encodeURIComponent(evidenceId);
   if (source.kind === 'account') {
-    return urlOf(await apiClient.get<SignedBody>(`/api/owner-properties/${encodeURIComponent(source.ownerPropertyId)}/mandate-evidence/${id}`));
+    return urlOf(await apiClient.get<SignedBody>(API_ROUTES.OWNER_PROPERTIES.MANDATE_EVIDENCE(source.ownerPropertyId, evidenceId)));
   }
+  const id = encodeURIComponent(evidenceId);
   const response = await fetch(`/api/mandate/${encodeURIComponent(source.token)}/evidence/${id}`, { cache: 'no-store' });
   return response.ok ? urlOf((await response.json().catch(() => null)) as SignedBody | null) : null;
 }

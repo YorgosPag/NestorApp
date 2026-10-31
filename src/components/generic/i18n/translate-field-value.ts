@@ -69,7 +69,9 @@ export const SERVICE_FORM_NAMESPACES = [
   'common-shared',
   'common-status',
   'crm',
-  'dxf-viewer',
+  // ⛔ ΟΧΙ `dxf-viewer` (ADR-280 §11.8 Β3β, 2026-10-30): είχε μπει για 60 κλειδιά του `desktop-navigation.ts` και
+  // του DXF `encoding.ts`, που ΔΕΝ φτάνουν σε αυτόν τον resolver — τα έβλεπε μόνο η εμβέλεια-φάκελος του CHECK 3.13.
+  // Κόστος του: ο hook φόρτωνε και τα 6 compat splits (594,5 KB) σε κάθε service form. Η εμβέλεια πλέον παράγεται.
   'filters',
   'navigation',
   'projects',

@@ -58,7 +58,11 @@ export interface UseCursorPagedListReturn<T> {
   readonly refetch: () => Promise<void>;
 }
 
-function buildUrl(url: string, params: Readonly<Record<string, PagedListParamValue>>, cursor: string | null, pageSize?: number): string {
+/**
+ * Το URL μιας λίστας με τα φίλτρα της. Εξάγεται ώστε μια **σύνοψη** της ίδιας λίστας (π.χ. `INVOICES.SUMMARY`) να
+ * στέλνει ακριβώς τις ίδιες παραμέτρους — `cursor: null` και χωρίς `pageSize`.
+ */
+export function buildUrl(url: string, params: Readonly<Record<string, PagedListParamValue>>, cursor: string | null, pageSize?: number): string {
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== '') query.set(key, String(value));

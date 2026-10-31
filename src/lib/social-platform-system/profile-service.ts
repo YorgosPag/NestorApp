@@ -425,28 +425,14 @@ export class ProfileService {
   static findPlatformFromPartialUrl(partialUrl: string): SocialPlatformType | null {
     if (!partialUrl?.trim()) return null;
 
-    const lower = partialUrl.toLowerCase();
-
     // Try to construct a full URL αν needed
     let testUrl = partialUrl;
     if (!testUrl.startsWith('http')) {
       testUrl = `https://${testUrl}`;
     }
 
-    try {
-      return detectPlatformFromUrl(testUrl);
-    } catch {
-      // Fallback: string matching
-      if (lower.includes('linkedin')) return 'linkedin';
-      if (lower.includes('facebook')) return 'facebook';
-      if (lower.includes('instagram')) return 'instagram';
-      if (lower.includes('twitter') || lower.includes('x.com')) return 'twitter';
-      if (lower.includes('youtube')) return 'youtube';
-      if (lower.includes('github')) return 'github';
-      if (lower.includes('tiktok')) return 'tiktok';
-
-      return null;
-    }
+    // Η ΜΙΑ ανίχνευση δεν πετά ποτέ (επιστρέφει `null`)· εδώ ζούσε catch με τρίτο σώμα substring — νεκρό (ADR-327 §8.5.4).
+    return detectPlatformFromUrl(testUrl);
   }
 
   /**
@@ -539,12 +525,9 @@ for (const platform of profilePlatforms) {
   }
 }
 
-/**
- * 🎯 SocialPlatform Type - LEGACY COMPATIBILITY
- *
- * REPLACES: SocialPlatform από socialUrlGenerator.ts
- */
-export type SocialPlatform = SocialPlatformType;
+// 🔴 Εδώ ζούσε ψευδώνυμο τύπου `SocialPlatform` → `SocialPlatformType` — ΟΜΩΝΥΜΟ της ρίζας
+// (`@/lib/contact/social-media-type-vocabulary`) με ΑΛΛΟ σύνολο (`email`, όχι `other`), χωρίς καταναλωτή.
+// Αφαιρέθηκε (ADR-327 §8.5.4): το κανάλι κοινοποίησης λέγεται `SocialPlatformType`, η πλατφόρμα λογαριασμού `SocialPlatform`.
 
 // ============================================================================
 // EXPORTS - CLEAN ENTERPRISE API

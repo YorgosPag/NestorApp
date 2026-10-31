@@ -44,8 +44,12 @@ import { firestoreQueryService } from '@/services/firestore/firestore-query.serv
 import { dedupDualWrite } from '@/services/audit/dedup-dual-write';
 import { entityAuditEntriesFromData } from '@/lib/audit/audit-entry-from-document';
 import { AUDIT_LEDGER_COLLECTION, type AuditLedgerKind } from '@/lib/audit/audit-ledger';
+import {
+  globalAuditFilterPredicate,
+  hasGlobalAuditFilter,
+  type GlobalAuditFilters,
+} from '@/lib/audit/global-audit-filter';
 import type {
-  AuditAction,
   AuditEntityType,
   EntityAuditEntry,
 } from '@/types/audit-trail';
@@ -58,15 +62,8 @@ export { dedupDualWrite };
 // TYPES
 // ============================================================================
 
-export interface AuditSubscriptionFilters {
-  entityType?: AuditEntityType;
-  action?: AuditAction;
-  performedBy?: string;
-  /** Inclusive lower bound (ISO date string) — applied client-side */
-  fromDate?: string;
-  /** Inclusive upper bound (ISO date string) — applied client-side */
-  toDate?: string;
-}
+/** Τα φίλτρα του ζωντανού παραθύρου — ΙΔΙΑ με της ουράς στον διακομιστή (SSoT `lib/audit/global-audit-filter`). */
+export type AuditSubscriptionFilters = GlobalAuditFilters;
 
 export interface GlobalSubscriptionOptions {
   limit?: number;
@@ -122,42 +119,13 @@ function entriesOf(documents: ReadonlyArray<DocumentData & { id?: string }>): En
 // that this service imports. Re-exported at the top of this file for
 // backward-compatible imports from `useEntityAudit` / `useGlobalAuditTrail`.
 
+/** Ο ΙΔΙΟΣ κριτής με την ουρά του διακομιστή (`globalAuditFilterPredicate`) — ως 2026-10-30 διέφεραν. */
 function applyClientFilters(
   entries: EntityAuditEntry[],
   filters: AuditSubscriptionFilters | undefined,
   cap: number,
 ): EntityAuditEntry[] {
-  if (!filters) return entries.slice(0, cap);
-
-  const fromMs = filters.fromDate ? Date.parse(filters.fromDate) : null;
-  const toMs = filters.toDate ? Date.parse(filters.toDate) : null;
-
-  const filtered = entries.filter((entry) => {
-    if (filters.entityType && entry.entityType !== filters.entityType) return false;
-    if (filters.action && entry.action !== filters.action) return false;
-    if (filters.performedBy && entry.performedBy !== filters.performedBy) return false;
-    if (fromMs !== null || toMs !== null) {
-      const ts = Date.parse(entry.timestamp);
-      if (Number.isFinite(ts)) {
-        if (fromMs !== null && ts < fromMs) return false;
-        if (toMs !== null && ts > toMs) return false;
-      }
-    }
-    return true;
-  });
-
-  return filtered.slice(0, cap);
-}
-
-function hasAnyFilter(filters: AuditSubscriptionFilters | undefined): boolean {
-  if (!filters) return false;
-  return Boolean(
-    filters.entityType ||
-      filters.action ||
-      filters.performedBy ||
-      filters.fromDate ||
-      filters.toDate,
-  );
+  return entries.filter(globalAuditFilterPredicate(filters)).slice(0, cap);
 }
 
 function computeFetchLimit(windowSize: number, filterActive: boolean): number {
@@ -186,7 +154,7 @@ export const EntityAuditClientService = {
     callback: AuditSubscriptionCallback,
   ): Unsubscribe {
     const windowSize = options.limit ?? DEFAULT_GLOBAL_WINDOW;
-    const filterActive = hasAnyFilter(options.filters);
+    const filterActive = hasGlobalAuditFilter(options.filters);
     const fetchLimit = computeFetchLimit(windowSize, filterActive);
 
     const constraints: QueryConstraint[] = [orderBy('timestamp', 'desc')];

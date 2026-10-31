@@ -227,6 +227,61 @@ describe('Ρ — η δηλωμένη βαθμίδα', () => {
 });
 
 // =============================================================================
+// Τ — ΤΟ ΚΛΕΙΔΙ ΠΟΥ ΦΤΑΝΕΙ ΣΤΟΝ STORE: πρότυπο διαδρομής, όχι URL (ADR-855 · route-template)
+// =============================================================================
+
+describe('Τ — ένας κουβάς ανά πρότυπο', () => {
+  const segment = <P,>(params: P) => ({ params: Promise.resolve(params) });
+
+  /**
+   * 🔴 Η ΑΓΚΥΡΑ ΤΟΥ ΕΥΡΗΜΑΤΟΣ, ΣΤΟ ΣΗΜΕΙΟ ΠΟΥ ΜΕΤΡΑ: το κλειδί του store. Πριν, δύο ids = δύο κλειδιά ⇒
+   * η απαρίθμηση δεν περιοριζόταν ποτέ. ΜΕΤΑΛΛΑΞΗ: ξαναβάλε `new URL(request.url).pathname` ως
+   * `endpointPath` στον wrapper ⇒ κόκκινο.
+   */
+  it('🔴 Τ1 — δύο ids στην ίδια διαδρομή ⇒ ΕΝΑ κλειδί στον store', async () => {
+    const wrapped = withStandardRateLimit<{ params: Promise<{ id: string }> }>(handler);
+
+    await wrapped(request('/api/contacts/A'), segment({ id: 'A' }));
+    await wrapped(request('/api/contacts/B'), segment({ id: 'B' }));
+
+    expect(seen).toHaveLength(2);
+    expect(seen[1].key).toBe(seen[0].key);
+  });
+
+  it('Τ2 — ο παρονομαστής: δύο ΣΤΑΤΙΚΕΣ διαδρομές μένουν δύο κουβάδες', async () => {
+    const wrapped = withStandardRateLimit(handler);
+
+    await wrapped(request('/api/projects/list'));
+    await wrapped(request('/api/projects/export'));
+
+    expect(seen[1].key).not.toBe(seen[0].key);
+  });
+
+  it('🔴 Τ3 — πλακίδια περιήγησης: ΟΛΑ μοιράζονται το όριο του ASSET (η υπόσχεσή του γίνεται αληθής)', async () => {
+    const wrapped = withAssetRateLimit<{ params: Promise<{ kind: string; subjectId: string; path: string[] }> }>(handler);
+    const tile = (path: string[]) =>
+      wrapped(
+        request(`/api/spatial-tours/listing/L1/media/${path.join('/')}`),
+        segment({ kind: 'listing', subjectId: 'L1', path }),
+      );
+
+    await tile(['h1', 'z2', 'f_0_0.jpg']);
+    await tile(['h1', 'z2', 'f_0_1.jpg']);
+
+    expect(seen.map((s) => s.limit)).toEqual([RATE_LIMIT_CATEGORIES.ASSET, RATE_LIMIT_CATEGORIES.ASSET]);
+    expect(seen[1].key).toBe(seen[0].key);
+  });
+
+  it('Τ4 — η βαθμίδα κρίνεται και από το πρότυπο ΟΠΩΣ από τη διαδρομή (στατικά προθέματα)', async () => {
+    const bare = withRateLimit<{ params: Promise<{ id: string }> }>(handler);
+
+    await bare(request('/api/admin/users/u1'), segment({ id: 'u1' }));
+
+    expect(seen[0].limit).toBe(RATE_LIMIT_CATEGORIES.SENSITIVE);
+  });
+});
+
+// =============================================================================
 // Φ — ΟΤΑΝ Ο ΜΕΤΡΗΤΗΣ ΔΕΝ ΑΠΑΝΤΑ (ADR-855 Α3 · άγκυρες Φ1 · Φ2)
 // =============================================================================
 

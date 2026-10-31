@@ -1,4 +1,4 @@
-import { getStatusColor } from '@/lib/design-system';
+import { getStatusBadgeVariant, type StatusBadgeVariant } from '@/lib/design-system';
 import type { ObligationStatus } from '@/types/obligations';
 
 export const OBLIGATION_WORKFLOW_SEQUENCE: ObligationStatus[] = [
@@ -49,11 +49,9 @@ export const getAvailableTransitions = (status: ObligationStatus): ObligationSta
   return WORKFLOW_TRANSITIONS[status] || [];
 };
 
-export const getStatusToneClass = (status: ObligationStatus): string => {
-  const semanticStatus = STATUS_COLOR_MAP[status] || 'pending';
-  return [
-    getStatusColor(semanticStatus, 'bg'),
-    getStatusColor(semanticStatus, 'text'),
-    getStatusColor(semanticStatus, 'border'),
-  ].join(' ');
-};
+/**
+ * Παραλλαγή `<Badge>` της κατάστασης — το `Badge` βάζει γέμισμα ΚΑΙ το μετρημένο μελάνι του.
+ * Ως τις 2026-10-29 επέστρεφε `bg` + `text` + `border` του ΙΔΙΟΥ token ⇒ συμπαγές χάπι χωρίς ορατό κείμενο (ADR-770).
+ */
+export const getStatusBadgeVariantFor = (status: ObligationStatus): StatusBadgeVariant =>
+  getStatusBadgeVariant(STATUS_COLOR_MAP[status] || 'pending');

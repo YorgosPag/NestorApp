@@ -12,10 +12,13 @@
  *   Ρ2 `tx|transaction|batch.set|update|create(<…>collection(COLLECTIONS.CONTACTS)`
  *   Ρ3 μεταβλητή από `…COLLECTIONS.CONTACTS…` και μετά `var.set|update(` ή `.set|update(var`
  *   Ρ4 φορτωτής επαφής (`loadAgentContact` · `openOwnedContact`) και μετά `.ref.set|update(`
+ *   Ρ5 `flushInBatches(` που δηλώνει `COLLECTIONS.CONTACTS` ⇒ περνά `performer` (Σ5· ο γραφέας πετά χωρίς αυτόν)
+ *   Ρ6 μορφή `doc.ref` (`.set|update(x.ref`) σε αρχείο που αγγίζει επαφές ⇒ γραφέας — εκτός αν η αναφορά είναι
+ *      ΑΛΛΗΣ συλλογής, δηλωμένο με λόγο στο `DOC_REF_OTHER_COLLECTION` (2026-10-30: έτσι βρέθηκε το `migrate-company-id`)
  *
  * ⚠️ ΤΥΦΛΑ ΣΗΜΕΙΑ (δηλωμένα, όχι κρυμμένα): δυναμικό όνομα συλλογής (`firestore_write` — σφραγίζει πάντα,
- * δες `firestore-handler.ts`) · αναφορές από στιγμιότυπα ερωτήματος (`doc.ref`) · μαζικές μεταπτώσεις μέσω
- * `flushInBatches` (εκκρεμές στο `pending-ratchet-work.md`, μπλοκ 🧑).
+ * δες `firestore-handler.ts`). Οι μαζικοί γραφείς (`flushInBatches` / `openDeclaredBatch`) **πετούν** σε γραφή
+ * συλλογής του CDC χωρίς φορέα (`lib/__tests__/admin-batch-utils.test.ts` Δ8–Δ11) — η άμυνα ζει στον γραφέα.
  *
  * | Μετάλλαξη | Αποτέλεσμα |
  * |---|---|
@@ -53,7 +56,27 @@ const BARE_KEY_ALLOWED: Readonly<Record<string, string>> = {
     'το `lastModifiedBy` ανήκει στο έγγραφο `contact_relationships` (υπογράφων ↔ προμηθευτής), όχι επαφής',
 };
 
-const STAMP_TOKEN = /\b(?:performerStamp|stampPerformer|aiAgentStamp)\(/;
+/**
+ * Μορφή `doc.ref` σε αρχείο που αγγίζει επαφές, όπου όμως η αναφορά ανήκει σε ΑΛΛΗ συλλογή. Ο στατικός έλεγχος
+ * δεν ξέρει από ποιο ερώτημα ήρθε το `doc` — γι' αυτό κάθε τέτοιο αρχείο είναι **απόφαση με λόγο**, όχι σιωπή.
+ */
+const DOC_REF_OTHER_COLLECTION: Readonly<Record<string, string>> = {
+  'app/api/admin/migrate-enterprise-ids/migration-operations.ts':
+    'τα `doc.ref` είναι `contact_links` · `projects` · `buildings` · `properties` — οι επαφές μόνο διαβάζονται',
+  'app/api/contacts/[contactId]/route.ts':
+    'το `fileDoc.ref` είναι έγγραφο `files` (στον κάδο μαζί με την επαφή), όχι η επαφή',
+  'app/api/properties/[id]/property-contact-links.ts':
+    'το `linkDoc.ref` είναι `contact_links`· η επαφή γράφεται με `performerStamp` στο ίδιο αρχείο',
+  'services/banking/bank-accounts-server.service.ts':
+    'το `doc.ref` είναι η υποσυλλογή `bankAccounts` — όχι το έγγραφο επαφής που παρακολουθεί ο CDC',
+  'services/ai-pipeline/tools/handlers/banking-handler.ts':
+    'το `doc.ref` είναι η υποσυλλογή `bankAccounts` — όχι το έγγραφο επαφής που παρακολουθεί ο CDC',
+};
+
+const STAMP_TOKEN = /\b(?:performerStamp|stampPerformer|aiAgentStamp|cdcStamped)\(/;
+const DOC_REF_WRITE = /\.(?:set|update)\(\s*\w+\.ref\b/;
+/** Σχόλια έξω — αλλιώς η ΤΕΚΜΗΡΙΩΣΗ μιας διόρθωσης («πριν: `batch.update(doc.ref)`») θα κοκκίνιζε. */
+const stripComments = (text: string): string => text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 const BARE_KEY = /(?<![\w_])lastModifiedBy\s*:/;
 const WRITE = '(?:set|update|create)';
 
@@ -70,7 +93,8 @@ function sourceFiles(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-function writesContacts(text: string): boolean {
+function writesContacts(text: string, file: string): boolean {
+  if (!(file in DOC_REF_OTHER_COLLECTION) && DOC_REF_WRITE.test(stripComments(text))) return true;
   const flat = text.replace(/\s+/g, ' ');
   if (new RegExp(`collection\\(COLLECTIONS\\.CONTACTS\\) ?\\.doc\\([^;]*?\\) ?\\.${WRITE}\\(`).test(flat)) {
     const inline = new RegExp(`collection\\(COLLECTIONS\\.CONTACTS\\) ?\\.doc\\(([^()]|\\([^()]*\\))*\\) ?\\.${WRITE}\\(`);
@@ -90,8 +114,16 @@ const isClient = (text: string): boolean => /^\s*['"]use client['"]/m.test(text.
 const WRITERS: ReadonlyMap<string, string> = new Map(
   sourceFiles(SRC)
     .map((file) => [path.relative(SRC, file).split(path.sep).join('/'), fs.readFileSync(file, 'utf8')] as const)
-    .filter(([, text]) => text.includes('COLLECTIONS.CONTACTS') && !isClient(text) && writesContacts(text)),
+    .filter(([file, text]) => text.includes('COLLECTIONS.CONTACTS') && !isClient(text) && writesContacts(text, file)),
 );
+
+/** Κάθε κλήση `flushInBatches(…)` που δηλώνει τις επαφές, ανά αρχείο (Ρ5). */
+const CONTACT_FLUSHES: ReadonlyArray<readonly [string, string]> = sourceFiles(SRC)
+  .map((file) => [path.relative(SRC, file).split(path.sep).join('/'), fs.readFileSync(file, 'utf8')] as const)
+  .flatMap(([file, text]) =>
+    [...stripComments(text).replace(/\s+/g, ' ').matchAll(/flushInBatches\([^;]*?\);/g)]
+      .filter((m) => m[0].includes('COLLECTIONS.CONTACTS'))
+      .map((m) => [file, m[0]] as const));
 
 describe('γραφείς επαφών του server — σφραγίδα φορέα (ADR-195)', () => {
   it('Σ0 ΠΑΡΟΝΟΜΑΣΤΗΣ — η σάρωση βρίσκει τους γνωστούς γραφείς (αλλιώς το πράσινο θα σήμαινε «δεν κοίταξα»)', () => {
@@ -103,6 +135,8 @@ describe('γραφείς επαφών του server — σφραγίδα φορ�
       'subapps/procurement/services/commit-signatory-service.ts',
       'services/ai-pipeline/tools/handlers/activity-handler.ts',
       'services/ai-pipeline/tools/handlers/esco-write-handler.ts',
+      // Ρ6 — μορφή `doc.ref` με δυναμική συλλογή (ξαναγράφει το `companyId` και στις επαφές)
+      'app/api/admin/migrate-company-id/migration-operations.ts',
     ]) {
       expect(WRITERS.has(known)).toBe(true);
     }
@@ -125,6 +159,25 @@ describe('γραφείς επαφών του server — σφραγίδα φορ�
 
   it('Σ3 🔴 καμία μπαγιάτικη εξαίρεση — κάθε δηλωμένο αρχείο είναι ακόμη γραφέας', () => {
     const stale = [...Object.keys(STAMP_EXEMPT), ...Object.keys(BARE_KEY_ALLOWED)].filter((file) => !WRITERS.has(file));
+    expect(stale).toEqual([]);
+  });
+
+  it('Σ5 🔴 κάθε `flushInBatches` που γράφει επαφές περνά τον φορέα (ο CDC τον διαβάζει από το έγγραφο)', () => {
+    // Παρονομαστής: οι τρεις γνωστές μεταπτώσεις επαφών ΒΡΙΣΚΟΝΤΑΙ — αλλιώς το πράσινο θα σήμαινε «δεν κοίταξα».
+    expect(new Set(CONTACT_FLUSHES.map(([file]) => file))).toEqual(new Set([
+      'app/api/admin/migrate-address-labels/migration-operations.ts',
+      'app/api/admin/migrate-postal-codes/migration-operations.ts',
+      'app/api/admin/search-backfill/search-backfill.handlers.ts',
+    ]));
+    const unstamped = CONTACT_FLUSHES.filter(([, call]) => !/\bperformer\b/.test(call)).map(([file]) => file);
+    expect(unstamped).toEqual([]);
+  });
+
+  it('Σ6 🔴 καμία μπαγιάτικη δήλωση «άλλης συλλογής» — κάθε αρχείο έχει ακόμη τη μορφή `doc.ref`', () => {
+    const stale = Object.keys(DOC_REF_OTHER_COLLECTION).filter((file) => {
+      const full = path.join(SRC, file);
+      return !fs.existsSync(full) || !DOC_REF_WRITE.test(stripComments(fs.readFileSync(full, 'utf8')));
+    });
     expect(stale).toEqual([]);
   });
 

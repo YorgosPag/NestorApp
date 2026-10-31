@@ -140,28 +140,5 @@ export function getSupportedSocialPlatforms(): NamedSocialPlatform[] {
   return SOCIAL_PLATFORMS.filter((p): p is NamedSocialPlatform => p !== 'other');
 }
 
-/**
- * 🎯 Get Platform από URL
- *
- * Detect την πλατφόρμα από URL
- */
-export function detectPlatformFromUrl(url: string): SocialPlatform | null {
-  if (!url?.trim()) return null;
-
-  try {
-    const urlObj = new URL(url);
-    const hostname = urlObj.hostname.toLowerCase();
-
-    if (hostname.includes('linkedin.com')) return 'linkedin';
-    if (hostname.includes('facebook.com')) return 'facebook';
-    if (hostname.includes('instagram.com')) return 'instagram';
-    if (hostname.includes('x.com') || hostname.includes('twitter.com')) return 'twitter';
-    if (hostname.includes('youtube.com')) return 'youtube';
-    if (hostname.includes('github.com')) return 'github';
-    if (hostname.includes('tiktok.com')) return 'tiktok';
-
-    return null;
-  } catch {
-    return null;
-  }
-}
+// Η ανίχνευση πλατφόρμας από URL ζει ΜΟΝΟ στο `@/lib/contact/social-platform-profiles` (`detectPlatformFromUrl`,
+// ADR-327 §8.5.4) — εδώ ζούσε δεύτερο σώμα 7 πλατφορμών με `hostname.includes`, χωρίς καταναλωτή.

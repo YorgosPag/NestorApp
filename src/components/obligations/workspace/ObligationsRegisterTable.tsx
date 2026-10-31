@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import type { ObligationDocument } from '@/types/obligations';
 import { formatDate } from '@/lib/intl-utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { OBLIGATION_WORKFLOW_LABEL_KEYS, getStatusToneClass } from './workflow';
+import { OBLIGATION_WORKFLOW_LABEL_KEYS, getStatusBadgeVariantFor } from './workflow';
 
 interface ObligationsRegisterTableProps {
   obligations: ObligationDocument[];
@@ -51,7 +51,7 @@ export function ObligationsRegisterTable({ obligations, onDelete }: ObligationsR
               </td>
               <td className="px-4 py-3">{obligation.projectName}</td>
               <td className="px-4 py-3">
-                <Badge variant="outline" className={getStatusToneClass(obligation.status)}>
+                <Badge variant={getStatusBadgeVariantFor(obligation.status)}>
                   {t(OBLIGATION_WORKFLOW_LABEL_KEYS[obligation.status])}
                 </Badge>
               </td>

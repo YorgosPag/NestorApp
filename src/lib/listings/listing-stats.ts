@@ -21,6 +21,7 @@
  * (ο χρόνος περνά **πάντα** ως όρισμα).
  */
 
+import { API_ROUTES } from '@/config/domain-constants';
 import { MS_PER_DAY, utcDateOf } from '@/lib/date-local';
 import type { ListedAt } from '@/types/public-listing';
 
@@ -202,7 +203,7 @@ export function listingViewPath(listingId: string): string {
 }
 
 /** Η διαδρομή των στατιστικών του χαρτοφυλακίου. */
-export const OWNER_PORTFOLIO_STATS_PATH = '/api/owner-properties/stats';
+export const OWNER_PORTFOLIO_STATS_PATH = API_ROUTES.OWNER_PROPERTIES.STATS;
 
 /** Οι επαφές ενός ακινήτου — από το `first_contacts`, **ποτέ** δεύτερος μετρητής. */
 /**

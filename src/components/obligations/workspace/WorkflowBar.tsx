@@ -10,7 +10,7 @@ import {
   OBLIGATION_WORKFLOW_LABEL_KEYS,
   OBLIGATION_WORKFLOW_SEQUENCE,
   getAvailableTransitions,
-  getStatusToneClass,
+  getStatusBadgeVariantFor,
 } from './workflow';
 
 interface WorkflowBarProps {
@@ -27,7 +27,7 @@ export function WorkflowBar({ status, onTransition, disabled = false }: Workflow
     <section className={`rounded-lg border ${getSpacingClass('p', 'md')} space-y-4`} aria-label={t('workspace.workflow.title')}>
       <header className="flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold">{t('workspace.workflow.title')}</h2>
-        <Badge className={getStatusToneClass(status)} variant="outline">
+        <Badge variant={getStatusBadgeVariantFor(status)}>
           {t(OBLIGATION_WORKFLOW_LABEL_KEYS[status])}
         </Badge>
       </header>
@@ -38,8 +38,9 @@ export function WorkflowBar({ status, onTransition, disabled = false }: Workflow
           return (
             <li key={workflowStatus}>
               <Badge
-                variant="outline"
-                className={`w-full justify-center py-1 ${isActive ? getStatusToneClass(workflowStatus) : colors.text.muted}`}
+                variant={isActive ? getStatusBadgeVariantFor(workflowStatus) : 'outline'}
+                className={`w-full justify-center py-1 ${isActive ? '' : colors.text.muted}`}
+                aria-current={isActive ? 'step' : undefined}
               >
                 {t(OBLIGATION_WORKFLOW_LABEL_KEYS[workflowStatus])}
               </Badge>

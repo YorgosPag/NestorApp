@@ -30,6 +30,7 @@ import {
 } from '../executor-shared';
 import { aiAgentStamp } from '../../shared/ai-performer';
 import { filterContactByTab, resolveContactType } from '../contact-tab-filter';
+import { reachIsPerRecord, recordReachesViewer } from '../file-cde-reach';
 import { resolveOwnedToolDoc } from '../tool-tenant-guard';
 import {
   buildFallbackAttempts,
@@ -100,7 +101,7 @@ export class FirestoreHandler implements ToolHandler {
 
       const tabFilter = typeof args.tabFilter === 'string' ? args.tabFilter : null;
 
-      const results = docs.map(doc => {
+      const results = docs.filter(doc => recordReachesViewer(collection, doc.data(), ctx)).map(doc => {
         const raw = redactRoleBlockedFields(redactSensitiveFields(doc.data()), ctx);
         let result: Record<string, unknown> = { id: doc.id, ...flattenNestedFields(raw) };
 
@@ -146,6 +147,7 @@ export class FirestoreHandler implements ToolHandler {
     // `{success:false, error:'Document not found'}`. Ο καλών ξεχώριζε τα δύο
     // **χωρίς καν να διαβάσει το μήνυμα** — αρκούσε το `success` flag. Πλέον
     // παράγονται από το ΙΔΙΟ callback, άρα δεν μπορούν να αποκλίνουν (§7.1).
+    const notFound = (): ToolResult => ({ success: true, data: null, count: 0 });
     const owned = resolveOwnedToolDoc({
       snap: doc,
       ctx,
@@ -154,11 +156,14 @@ export class FirestoreHandler implements ToolHandler {
         resourceId: documentId,
         path: 'firestore_get_document',
       },
-      notFound: () => ({ success: true, data: null, count: 0 }),
+      notFound,
     });
     if (!owned.ok) return owned.result;
 
     const data = owned.data;
+
+    // ADR-901 Φ2 — εκτός εμβέλειας ≡ «δεν υπάρχει», με το ΙΔΙΟ σχήμα απάντησης (βλ. παραπάνω).
+    if (!recordReachesViewer(collection, data, ctx)) return notFound();
 
     let result: Record<string, unknown> = {
       id: doc.id,
@@ -185,6 +190,14 @@ export class FirestoreHandler implements ToolHandler {
   ): Promise<ToolResult> {
     return withScopedRead(args, ctx, async ({ collection, filters, liveOnly }, db) => {
       const safeFilters = filters.filter(f => !f.field.includes('.'));
+
+      // ADR-901 Φ2 — η εμβέλεια κρίνεται ανά έγγραφο (`pre-cde` = απουσία πεδίου): ένα `count()` θα επιβεβαίωνε
+      // ότι υπάρχει WIP. Το εύρος του πελάτη είναι τα δικά του ακίνητα, άρα το `MAX_QUERY_RESULTS` είναι ανεκτό.
+      if (reachIsPerRecord(collection, ctx)) {
+        const docs = await this.executeWithFallback(db, collection, safeFilters, null, 'asc', { limit: MAX_QUERY_RESULTS, liveOnly }, ctx);
+        const count = docs.filter(doc => recordReachesViewer(collection, doc.data(), ctx)).length;
+        return { success: true, data: { count }, count };
+      }
 
       // Χωρίς `limit`: το `count()` μετρά ΟΛΑ όσα ταιριάζουν, δεν φέρνει έγγραφα.
       const countOf = async (fs: readonly QueryFilter[]): Promise<number> =>

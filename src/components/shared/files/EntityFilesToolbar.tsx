@@ -88,7 +88,7 @@ export interface EntityFilesToolbarProps {
  * μόνο όταν η θεματοφυλακή είναι εταιρική (που ζει πάντα μέσα στο `(app)`).
  */
 function ActiveWorkspaceLabel(): React.ReactElement | null {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const colors = useSemanticColors();
   const { activeWorkspace } = useWorkspace();
   if (!activeWorkspace?.displayName) return null;
@@ -109,7 +109,7 @@ type FilesTab = EntityFilesToolbarProps['activeTab'];
 /** Αρχεία | Αρχειοθήκη | Κάδος — ΜΙΑ γραμμή, ίσες στήλες (Procore/BIM360 · ADR-912 §12.13). */
 function FilesTabSwitcher({ activeTab, onTabChange, fileCount }: Pick<EntityFilesToolbarProps, 'activeTab' | 'onTabChange' | 'fileCount'>) {
   const iconSizes = useIconSizes();
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const colors = useSemanticColors();
   const fileTabs: ReadonlyArray<{ id: FilesTab; icon: typeof FileText; label: string }> = [
     { id: 'files', icon: FileText, label: t('manager.filesTitle') },
@@ -166,7 +166,7 @@ function ToolbarIconButton({ label, tooltip, className, children, ...button }: R
 function FilesToolRow(props: EntityFilesToolbarProps) {
   const { fullscreen } = props;
   const iconSizes = useIconSizes();
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   // Αποσυρμένη μητρική εγγραφή (ADR-329 §3.9): ούτε ανέβασμα ούτε λήψη από κάμερα — το μενού δεν ζωγραφίζεται.
   const canAdd = useRetiredKind() === null;
   const onFiles = props.activeTab === 'files';
@@ -235,7 +235,7 @@ function FilesToolRow(props: EntityFilesToolbarProps) {
 
 export function EntityFilesToolbar(props: EntityFilesToolbarProps) {
   const iconSizes = useIconSizes();
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const colors = useSemanticColors();
 
   return (

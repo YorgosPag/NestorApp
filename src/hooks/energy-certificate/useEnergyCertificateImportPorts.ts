@@ -16,7 +16,7 @@
 import { useMemo } from 'react';
 
 import { useAuth } from '@/auth/hooks/useAuth';
-import { ENTITY_TYPES } from '@/config/domain-constants';
+import { API_ROUTES, ENTITY_TYPES } from '@/config/domain-constants';
 import { energyCertificateSlot } from '@/config/upload-entry-points/energy-certificate-slot';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { custodyOf } from '@/lib/owner-property/listing-custody';
@@ -27,9 +27,6 @@ import type { FileCustody } from '@/lib/files/file-custody';
 import type { EntityType } from '@/config/domain-constants';
 import type { EnergyCertificateImportPort } from '@/lib/energy-certificate/pea-import-outcome';
 import type { OwnerProperty } from '@/types/owner-property';
-
-const importUrlOf = (base: 'properties' | 'owner-properties', id: string): string =>
-  `/api/${base}/${encodeURIComponent(id)}/energy-certificate-import`;
 
 interface UploadTarget {
   readonly custody: FileCustody;
@@ -67,7 +64,7 @@ export function useCompanyPropertyImportPort(
       entityLabel: label,
       createdBy: user.uid,
     });
-    return upload === null ? null : { upload, endpoint: importUrlOf('properties', propertyId) };
+    return upload === null ? null : { upload, endpoint: API_ROUTES.PROPERTIES.ENERGY_CERTIFICATE_IMPORT(propertyId) };
   }, [propertyId, label, user, companyId]);
 }
 
@@ -85,6 +82,6 @@ export function useOwnerPropertyImportPort(property: OwnerProperty): EnergyCerti
       entityId: dossierId,
       createdBy: userId,
     });
-    return upload === null ? null : { upload, endpoint: importUrlOf('owner-properties', id) };
+    return upload === null ? null : { upload, endpoint: API_ROUTES.OWNER_PROPERTIES.ENERGY_CERTIFICATE_IMPORT(id) };
   }, [userId, dossierId, id]);
 }

@@ -31,12 +31,7 @@ interface PropertyStatusLegendProps {
 }
 
 export function PropertyStatusLegend({ properties, className }: PropertyStatusLegendProps) {
-  const { t } = useTranslation([
-    'properties',
-    'properties-detail',
-    'properties-enums',
-    'properties-viewer',
-  ]);
+  const { t } = useTranslation('properties');
   const colors = useSemanticColors();
 
   const presentStatuses = React.useMemo<PropertyStatus[]>(() => {

@@ -21,6 +21,7 @@ import { isRecord } from '@/lib/type-guards';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 
 import type { AgenticContext, ToolResult, ToolHandler } from '../executor-shared';
+import { fileReachesViewer } from '../file-cde-reach';
 import { resolveOwnedToolDoc } from '../tool-tenant-guard';
 import {
   downloadAndValidateFile,
@@ -107,15 +108,19 @@ export class DocumentReaderHandler implements ToolHandler {
     // πράκτορας δεν μπορεί να τα ξεχωρίσει, άρα δεν μπορεί να χαρτογραφήσει
     // ids άλλου πελάτη δοκιμάζοντας. Πριν, η άρνηση έλεγε αυτολεξεί
     // «file belongs to a different company» (ADR-734 §7: μαντείο ύπαρξης).
+    const notFound = (): ToolResult => ({ success: false, error: `FileRecord "${fileRecordId}" not found.` });
     const owned = resolveOwnedToolDoc({
       snap: fileDoc,
       ctx,
       subject: { resource: 'FileRecord', resourceId: fileRecordId, path: 'read_document' },
-      notFound: () => ({ success: false, error: `FileRecord "${fileRecordId}" not found.` }),
+      notFound,
     });
     if (!owned.ok) return owned.result;
 
     const fileData = owned.data;
+
+    // ADR-901 Φ2 — εκτός εμβέλειας ≡ «δεν υπάρχει»: το περιεχόμενο ενός WIP δεν φτάνει στον πελάτη.
+    if (!fileReachesViewer(fileData, ctx)) return notFound();
 
     const downloadUrl = String(fileData.downloadUrl ?? '');
     const filename = String(fileData.filename ?? fileData.originalFilename ?? 'unknown');

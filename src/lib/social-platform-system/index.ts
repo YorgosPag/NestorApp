@@ -111,7 +111,6 @@ export {
   // Legacy compatibility
   SOCIAL_URL_TEMPLATES,
   SOCIAL_URL_PLACEHOLDERS,
-  type SocialPlatform,
 } from './profile-service';
 
 // ============================================================================

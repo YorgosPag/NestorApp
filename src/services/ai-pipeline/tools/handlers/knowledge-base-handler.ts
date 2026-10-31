@@ -25,6 +25,7 @@ import {
   type EvidenceTarget,
 } from '@/services/conveyance/conveyance-evidence.server';
 import { loadConveyanceSubject } from '@/services/conveyance/conveyance-subject.server';
+import { evidenceAudienceOf } from '../file-cde-reach';
 import {
   type AgenticContext,
   type ToolHandler,
@@ -152,13 +153,14 @@ export class KnowledgeBaseHandler implements ToolHandler {
   /**
    * Ποιες γραμμές έχουν αρχείο-τεκμήριο. Μόνο γραμμές **ορατές στον αγοραστή** (ADR-901 §5.10):
    * ο agent μιλά σε πελάτη και δεν επιβεβαιώνει καν την ύπαρξη προσωπικών εγγράφων του πωλητή.
+   * Μόνο αρχεία **στην εμβέλειά του** (ADR-901 Φ2): ένα WIP μηχανικού δεν μετρά ως «υπάρχει».
    */
   private async availableItemIds(items: readonly ChecklistItem[], ctx: AgenticContext): Promise<Set<string>> {
     const available = new Set<string>();
     const askable = items.filter((item) => item.visibleTo.includes(KB_VIEWER) && item.satisfaction.kind === 'files');
     if (askable.length === 0) return available;
     try {
-      const evidence = await collectEvidenceForTargets(getAdminFirestore(), ctx.companyId, await this.targetsFor(ctx));
+      const evidence = await collectEvidenceForTargets(getAdminFirestore(), ctx.companyId, await this.targetsFor(ctx), evidenceAudienceOf(ctx));
       for (const item of askable) {
         if (item.satisfaction.kind === 'files' && filesForMatchers(item.satisfaction.matchers, evidence).length > 0) {
           available.add(item.id);

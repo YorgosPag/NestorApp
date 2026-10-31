@@ -2,6 +2,7 @@
 
 ## 🚨 N.15 — ΑΠΑΓΟΡΕΥΣΗ ΚΑΤΑΓΡΑΦΗΣ ΕΚΚΡΕΜΟΤΗΤΩΝ (Giorgio 2026-06-23)
 - ❌ **ΠΟΤΕ** μην γράφεις στο `C:\Nestor_Pagonis\local_ΕΚΚΡΕΜΟΤΗΤΕΣ.txt` — το tracker εκκρεμοτήτων **καταργήθηκε**. Μην το αγγίζεις, μην φτιάχνεις άλλο στη θέση του. Κατάσταση εργασίας → ADR changelog (N.0.1) + git + `.claude-rules/pending-ratchet-work.md` (ratchet) + MEMORY.md. Κανόνας N.15 CLAUDE.md.
+- ❌ **Το `pending-ratchet-work.md` κρατά ΜΟΝΟ ό,τι εκκρεμεί** (Giorgio 2026-10-31, N.13): ολοκληρώθηκε → σβήνεται ολόκληρη η εγγραφή, χωρίς ✅/`[x]`/«ΕΚΛΕΙΣΕ»/changelog. Η ολοκλήρωση γράφεται στο ADR + git.
 
 ## Quality Standard
 - [Google-level quality](feedback_google_quality_standard.md) — All solutions at Google engineering level. No patched solutions, proper architecture, root cause fixes.

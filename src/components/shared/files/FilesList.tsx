@@ -13,7 +13,7 @@
 'use client';
 
 import React from 'react';
-import { getStatusColor } from '@/lib/design-system';
+import { getStatusColor, getStatusSurfaceClass } from '@/lib/design-system';
 import { FileText, Calendar, HardDrive, Link2, Check, X, RotateCcw } from 'lucide-react';
 import type { FileRecord } from '@/types/file-record';
 import type { FileRecordWithLinkStatus } from './hooks/useEntityFiles';
@@ -88,7 +88,7 @@ export function FilesList({
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const translateDisplayName = useFileDisplayName();
 
   const { user } = useAuth();
@@ -275,7 +275,7 @@ export function FilesList({
                   <span className={cn(
                     'px-1.5 py-0.5 rounded text-[10px] font-medium leading-none',
                     file.classification === 'confidential' && 'bg-destructive/15 text-destructive',
-                    file.classification === 'public' && `${getStatusColor('available', 'bg')}/15 ${getStatusColor('available', 'text')}`,
+                    file.classification === 'public' && getStatusSurfaceClass('available'),
                   )}>
                     {t(`batch.classification.${file.classification}`)}
                   </span>
@@ -288,13 +288,13 @@ export function FilesList({
 
                 {/* AI classification state badge */}
                 {file.ingestion?.state === 'classifying' && (
-                  <span className={`animate-pulse px-1.5 py-0.5 rounded text-[10px] font-medium leading-none ${getStatusColor('pending', 'bg')}/15 ${getStatusColor('pending', 'text')}`}>
+                  <span className={`animate-pulse px-1.5 py-0.5 rounded text-[10px] font-medium leading-none ${getStatusSurfaceClass('pending')}`}>
                     {t('list.classifying')}
                   </span>
                 )}
                 {file.ingestion?.state === 'classification_failed' && (
                   <span className="inline-flex items-center gap-1">
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium leading-none ${getStatusColor('error', 'bg')}/15 ${getStatusColor('error', 'text')}`}>
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium leading-none ${getStatusSurfaceClass('error')}`}>
                       {t('list.classificationFailed')}
                     </span>
                     {canRetryClassify && <Tooltip>

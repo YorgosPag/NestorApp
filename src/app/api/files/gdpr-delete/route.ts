@@ -21,7 +21,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { nowISO } from '@/lib/date-local';
-import { deleteStorageObjectForPurge, isFileHeld } from '@/services/file-record/file-purge-helpers';
+import { deleteStorageObjectForPurge, isFileHeld, purgedRecordFields } from '@/services/file-record/file-purge-helpers';
 import { findSubjectActivity, findSubjectFiles } from '@/services/file-record/file-subject-scan';
 import { FILE_COMPANION_POINTER_FIELDS } from '@/lib/files/file-companion-objects';
 import { refreshListingsAfterFileChanges } from '@/services/listings/listing-media-refresh';
@@ -115,14 +115,14 @@ async function handler(request: NextRequest, { userId, db: adminDb }: GdprSubjec
     const batch1 = adminDb.batch();
     for (const fileDoc of filesToPurge) {
       batch1.update(fileDoc.ref, {
-        lifecycleState: 'purged',
+        // 🪦 Ίδιο επιτύμβιο με τον γραφέα του purge — και έξω από το πρόγραμμα του cron (`purgeAt: null`).
+        ...purgedRecordFields(nowISO()),
         displayName: '[GDPR DELETED]',
         description: null,
         downloadUrl: null,
         storagePath: null,
         ...COMPANION_POINTERS_ERASED,
         isDeleted: true,
-        purgedAt: nowISO(),
         purgedBy: 'gdpr-erasure',
       });
       results.filesDeleted++;

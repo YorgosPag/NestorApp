@@ -20,10 +20,7 @@ export {
   generateSocialUrl,
   validateSocialUrl,
   extractUsernameFromSocialUrl,
-  getSupportedSocialPlatforms,
-  detectPlatformFromUrl,
-  SOCIAL_URL_TEMPLATES,
-  SOCIAL_URL_PLACEHOLDERS
+  getSupportedSocialPlatforms
 } from './socialUrlGenerator';
 
 // Field label utilities

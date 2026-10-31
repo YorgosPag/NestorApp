@@ -18,8 +18,19 @@
 import { render, screen } from '@testing-library/react';
 import { PropertyDetailsHeader } from '../PropertyDetailsHeader';
 import type { Property } from '@/types/property';
+import { getCompatNamespaces } from '@/i18n/namespace-compat';
 
 const requestedNamespaces: string[][] = [];
+
+/**
+ * Ό,τι ΦΟΡΤΩΝΕΙ μια δήλωση — δηλωμένα + compat splits, όπως το `resolveAllNamespaces()` του hook (ADR-280 §11).
+ * Το `['properties', 'trash']` φορτώνει και το `properties-enums`· η χειρόγραφη λίστα της οικογένειας απαγορεύεται
+ * (CHECK 3.108), άρα η άγκυρα ρωτά τον ΧΑΡΤΗ, όχι το γράμμα της δήλωσης.
+ */
+const loadedBy = (namespaces: readonly string[]): string[] => [
+  ...namespaces,
+  ...namespaces.flatMap((ns) => [...getCompatNamespaces(ns)]),
+];
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: (namespaces?: string | readonly string[]) => {
@@ -97,7 +108,7 @@ describe('Κ-ΚΕΦ — το σήμα κατάστασης στην κεφαλί
 
     // Αλλιώς το σήμα δουλεύει μόνο επειδή κάποιος άλλος έτυχε να φορτώσει το namespace (CHECK 3.36 §8.1).
     const declaresBoth = requestedNamespaces.some(
-      (namespaces) => namespaces.includes('properties-enums') && namespaces.includes('trash'),
+      (declared) => loadedBy(declared).includes('properties-enums') && loadedBy(declared).includes('trash'),
     );
     expect(declaresBoth).toBe(true);
   });

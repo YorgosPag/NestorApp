@@ -69,7 +69,6 @@ const WRITE_ALLOWED_COLLECTIONS = new Set([
   'parking_spots',
   'boq_items',
   'boq_categories',
-  'boq_price_lists',
   'boq_templates',
   'cheques',
   'legal_contracts',

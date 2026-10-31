@@ -40,7 +40,7 @@ export function useLifecycleViewKit() {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const translateDisplayName = useFileDisplayName();
   const fileNotifications = useFilesNotifications();
   return { iconSizes, quick, colors, t, translateDisplayName, fileNotifications };
@@ -167,7 +167,7 @@ interface LifecycleListHeaderProps {
 export function LifecycleListHeader({ icon: Icon, title, description, onRefresh }: LifecycleListHeaderProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
 
   return (
     <header className="flex items-center justify-between">
@@ -189,7 +189,7 @@ export function LifecycleListHeader({ icon: Icon, title, description, onRefresh 
 
 function LoadingSkeleton({ icon, title }: { readonly icon: LucideIcon; readonly title: string }) {
   const { quick } = useBorderTokens();
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
 
   return (
     <section className="space-y-2" role="status" aria-label={t('list.loadingFiles')}>
@@ -215,7 +215,7 @@ function ErrorState({ error, onRefresh }: { readonly error: Error; readonly onRe
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
 
   return (
     <section className={`p-2 ${colors.bg.error} ${quick.card} border border-destructive`}>

@@ -47,6 +47,10 @@ const deleteStorageObjectForPurge = jest.fn(async (..._args: unknown[]): Promise
 jest.mock('@/services/file-record/file-purge-helpers', () => ({
   deleteStorageObjectForPurge: (...args: unknown[]) => deleteStorageObjectForPurge(...args),
   isFileHeld: (data: { hold?: string }): boolean => data.hold === 'legal',
+  // Το επιτύμβιο είναι καθαρή δήλωση — το ΑΛΗΘΙΝΟ, όχι αντίγραφο (ADR-899 §2.2.1).
+  purgedRecordFields: jest.requireActual<typeof import('@/services/file-record/file-purge-helpers')>(
+    '@/services/file-record/file-purge-helpers',
+  ).purgedRecordFields,
 }));
 
 jest.mock('@/services/enterprise-id.service', () => ({ generateAuditId: (): string => 'audit_gdpr_1' }));

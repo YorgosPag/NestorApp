@@ -12,6 +12,7 @@
  * φτάνει στην οθόνη ως έκβαση — ποτέ ως γενικό «κάτι πήγε στραβά».
  */
 
+import { API_ROUTES } from '@/config/domain-constants';
 import { apiClient, apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
 import type { StayCalendarCommand } from '@/lib/stay/stay-calendar-command';
 import type { StayCalendarView } from '@/lib/stay/stay-calendar-view';
@@ -23,8 +24,7 @@ import {
 
 const logger = createModuleLogger('stay-calendar.client');
 
-const urlOf = (ownerPropertyId: string): string =>
-  `/api/owner-properties/${encodeURIComponent(ownerPropertyId)}/stay-calendar`;
+const urlOf = API_ROUTES.OWNER_PROPERTIES.STAY_CALENDAR;
 
 export type StayCalendarLoad =
   | { readonly kind: 'loaded'; readonly view: StayCalendarView }

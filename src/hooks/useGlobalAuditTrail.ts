@@ -16,8 +16,8 @@
  *
  * The live-window / historical-tail / dedupe plumbing is shared with
  * `useEntityAudit` via `useAuditFeed` (ADR-584). This hook owns only what is
- * specific to the admin feed: the filter set, and the `offset`-cursored
- * endpoint that carries those filters.
+ * specific to the admin feed: the filter set, and the anchor-cursored
+ * (`startAfter` = entry id) endpoint that carries those filters.
  *
  * @module hooks/useGlobalAuditTrail
  * @enterprise ADR-195 — Entity Audit Trail (Phase 10: Client Subscriptions)
@@ -33,9 +33,8 @@ import { useAuditFeed } from '@/hooks/audit/useAuditFeed';
 import { useAuth } from '@/hooks/useAuth';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { EntityAuditClientService } from '@/services/entity-audit-client.service';
+import type { GlobalAuditFilters } from '@/lib/audit/global-audit-filter';
 import type {
-  AuditAction,
-  AuditEntityType,
   EntityAuditEntry,
   EntityAuditResponse,
 } from '@/types/audit-trail';
@@ -44,15 +43,8 @@ import type {
 // TYPES
 // ============================================================================
 
-export interface GlobalAuditFilters {
-  entityType?: AuditEntityType;
-  performedBy?: string;
-  action?: AuditAction;
-  /** ISO date string (inclusive) */
-  fromDate?: string;
-  /** ISO date string (inclusive) */
-  toDate?: string;
-}
+/** SSoT: `lib/audit/global-audit-filter` — ο ΙΔΙΟΣ κριτής για ζωντανό παράθυρο και ουρά. */
+export type { GlobalAuditFilters };
 
 interface UseGlobalAuditTrailOptions {
   filters?: GlobalAuditFilters;
@@ -108,7 +100,9 @@ export function useGlobalAuditTrail({
 
     fetchPage: async (cursor) => {
       const params = new URLSearchParams({ limit: String(pageSize) });
-      params.set('offset', cursor);
+      // Άγκυρα = id εγγραφής (η παλαιότερη του ζωντανού παραθύρου ή το `nextCursor`). Ως 2026-10-30 πήγαινε ως
+      // `offset` ⇒ `parseInt(id)` = NaN ⇒ κενή σελίδα + `hasMore: false` — η ουρά δεν φαινόταν ΠΟΤΕ.
+      params.set('startAfter', cursor);
       for (const name of FILTER_PARAMS) {
         const value = filters?.[name];
         if (value) params.set(name, value);

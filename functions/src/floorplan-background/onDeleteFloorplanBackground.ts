@@ -11,84 +11,49 @@
  *      Phase 7 keeps the model strictly 1-background-per-file (no sharing), but
  *      we still ref-count defensively so future sharing patterns don't strand
  *      orphan binaries.
- *   3. If count == 0:
- *        a. Read `files/{fileId}.storagePath`
- *        b. Delete the Storage object
- *        c. Delete `files/{fileId}` Firestore doc
+ *   3. If count == 0: hand `files/{fileId}` to the ONE purge pipeline — trash fields with
+ *      `purgeAt = now` (`lib/files/file-trash-fields`). The app cron (`file-purge.job`) then
+ *      purges it through `purgeFileRecord`: hold judge (`isFileHeld`) · original **and every
+ *      companion** (thumbnails, scenes — ADR-899 §2.2) · refusal ⇒ retried next run · tombstone
+ *      + activity row in the owner's book.
  *
- * Idempotent: deleting an already-cleaned file is a no-op (CF logs warn, returns).
+ * 🔴 ADR-899 §2.2 (2026-10-31): until then this trigger deleted ONLY `storagePath` and then the
+ *    `files/{fileId}` doc itself — the companions lost their last pointer and survived forever
+ *    (the orphan marker skips companion names by design: "their parent's purge deletes them"),
+ *    and no hold was consulted (a held / preserved / record file was deleted outright).
+ *
+ * Idempotent: a record already in the queue (`isDeleted`) — trashed by a person with its own
+ * retention, or already purged — is left exactly as it is.
  *
  * Why a CF and not inline in the API DELETE handler:
  *   - The API runs as the user; deleting `files/{fileId}` cross-references rules.
  *     A trigger runs as Admin and bypasses rules cleanly.
- *   - Failure isolation: if Storage cleanup fails, Firebase retries the trigger
+ *   - Failure isolation: if the hand-off fails, Firebase retries the trigger
  *     without blocking the user-facing DELETE.
  *
  * @module functions/floorplan-background/onDeleteFloorplanBackground
- * @enterprise ADR-340 Phase 7 — D4
+ * @enterprise ADR-340 Phase 7 — D4 · ADR-899 §2.2
  */
 
 import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 import { COLLECTIONS } from '../config/firestore-collections';
-import { fileRecordBucket } from '../storage/file-record-bucket';
+import { FILE_LIFECYCLE_STATES } from '../generated/config/file-lifecycle-states';
+import { fileTrashFields } from '../generated/lib/files/file-trash-fields';
 
 interface FloorplanBackgroundDoc {
   fileId?: string;
   companyId?: string;
 }
 
-interface FileDoc {
-  storagePath?: string;
-  storagePlacement?: unknown;
-}
+/** Ο δράστης στο ίχνος — ίδιο ιδίωμα με το `system:cron-purge` του γραφέα. */
+export const FLOORPLAN_BACKGROUND_TRASH_ACTOR = 'system:floorplan-background';
 
 /**
- * Διαγράφει τα bytes στον κάδο ΤΗΣ εγγραφής (ADR-895 Α7). Επιστρέφει `true` ΜΟΝΟ όταν
- * είναι ασφαλές να σβηστεί το `files/{fileId}` — τα bytes επιβεβαιωμένα έφυγαν, ή έλειπαν
- * ήδη ΕΚΕΙ που λέει η εγγραφή (404 στον σωστό κάδο). Οτιδήποτε άλλο (άγνωστη θέση, ή το
- * delete πέτυχε σφάλμα διαφορετικό από 404) ⇒ `false`: το `files/{fileId}` είναι ο ΜΟΝΟΣ
- * δείκτης προς τα bytes· αν σβηστεί ενώ τα bytes μένουν, χάνεται για πάντα (ADR-895 Ρ3).
+ * Ref-count `fileId` κατά της συλλογής `floorplan_backgrounds`· αν 0, το `files/{fileId}` μπαίνει στην ουρά της ΜΙΑΣ
+ * αγωγού εκκαθάρισης. Εξαγόμενο για να κρατήσει το ίδιο το trigger callback κάτω από 40 γραμμές (N.7.1).
  */
-async function deleteStorageBytesHonestly(
-  fileData: FileDoc,
-  storagePath: string,
-  ctx: { rbgId: string; fileId: string },
-): Promise<boolean> {
-  let bucket: ReturnType<ReturnType<typeof admin.storage>['bucket']>;
-  try {
-    bucket = fileRecordBucket(fileData);
-  } catch (err) {
-    functions.logger.warn('Unknown storage placement — keeping files/{id} for retry', {
-      ...ctx,
-      storagePath,
-      err: err instanceof Error ? err.message : String(err),
-    });
-    return false;
-  }
-
-  try {
-    await bucket.file(storagePath).delete();
-    return true;
-  } catch (err) {
-    const code = (err as { code?: number } | undefined)?.code;
-    if (code === 404) return true; // απόν ΕΚΕΙ που λέει η εγγραφή — ασφαλές (Α3)
-    functions.logger.warn('Storage object delete failed — keeping files/{id} for retry', {
-      ...ctx,
-      storagePath,
-      bucketName: bucket.name,
-      err: err instanceof Error ? err.message : String(err),
-    });
-    return false;
-  }
-}
-
-/**
- * Ref-count `fileId` κατά της συλλογής `floorplan_backgrounds`· αν 0, σβήνει τα bytes
- * (στον κάδο ΤΗΣ εγγραφής, βλ. {@link deleteStorageBytesHonestly}) και το `files/{fileId}`.
- * Εξαγόμενο για να κρατήσει το ίδιο το trigger callback κάτω από 40 γραμμές (N.7.1).
- */
-async function purgeFileIfUnreferenced(
+async function handUnreferencedFileToPurge(
   db: admin.firestore.Firestore,
   rbgId: string,
   fileId: string,
@@ -115,16 +80,20 @@ async function purgeFileIfUnreferenced(
     return;
   }
 
-  const fileData = fileSnap.data() as FileDoc;
-  const storagePath = fileData.storagePath;
-
-  if (storagePath) {
-    const safeToDeleteDoc = await deleteStorageBytesHonestly(fileData, storagePath, { rbgId, fileId });
-    if (!safeToDeleteDoc) return;
+  if (fileSnap.get('isDeleted') === true) {
+    functions.logger.info('File already in the purge queue — left as it is', { rbgId, fileId });
+    return;
   }
 
-  await fileRef.delete();
-  functions.logger.info('File + storage cleaned', { rbgId, fileId, storagePath });
+  await fileRef.update(
+    fileTrashFields({
+      trashedState: FILE_LIFECYCLE_STATES.TRASHED,
+      by: FLOORPLAN_BACKGROUND_TRASH_ACTOR,
+      purgeAt: new Date().toISOString(),
+      now: admin.firestore.FieldValue.serverTimestamp(),
+    }),
+  );
+  functions.logger.info('File handed to the purge pipeline', { rbgId, fileId });
 }
 
 export const onDeleteFloorplanBackground = functions
@@ -140,7 +109,7 @@ export const onDeleteFloorplanBackground = functions
     }
 
     try {
-      await purgeFileIfUnreferenced(admin.firestore(), rbgId, fileId);
+      await handUnreferencedFileToPurge(admin.firestore(), rbgId, fileId);
       return null;
     } catch (err) {
       functions.logger.error('onDeleteFloorplanBackground failed', {

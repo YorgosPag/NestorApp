@@ -11,7 +11,7 @@
 import { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useTypography } from '@/hooks/useTypography';
-import { cn, getStatusColor } from '@/lib/design-system';
+import { cn, getStatusSurfaceClass } from '@/lib/design-system';
 import {
   Package,
   Truck,
@@ -45,9 +45,11 @@ function KPICard({ label, value, icon, variant = 'default' }: KPICardProps) {
       <CardContent className="flex items-center gap-3 p-4">
         <div className={cn(
           'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
-          variant === 'default' && `${getStatusColor('active', 'bg')} ${getStatusColor('active', 'text')}`,
-          variant === 'warning' && `${getStatusColor('construction', 'bg')} ${getStatusColor('construction', 'text')}`,
-          variant === 'success' && `${getStatusColor('available', 'bg')} ${getStatusColor('available', 'text')}`,
+          // Απαλό πλακίδιο + το μελάνι ΠΑΝΩ του (container / on-container). Ως τις 2026-10-29 γέμισμα και εικονίδιο
+          // από το ΙΔΙΟ token ⇒ συμπαγές τετράγωνο χωρίς ορατό εικονίδιο (ADR-770).
+          variant === 'default' && getStatusSurfaceClass('active'),
+          variant === 'warning' && getStatusSurfaceClass('construction'),
+          variant === 'success' && getStatusSurfaceClass('available'),
         )}>
           {icon}
         </div>

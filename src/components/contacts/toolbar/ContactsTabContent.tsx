@@ -60,7 +60,7 @@ export function ActionsTabContent({
   onRefresh
 }: ContactsTabContentProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t } = useTranslation('contacts');
   const _colors = useSemanticColors();
 
   const handleDeleteAction = () => {
@@ -148,7 +148,7 @@ export function CommunicationTabContent({
   const colors = useSemanticColors();
   const { quick } = useBorderTokens();
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t } = useTranslation('contacts');
 
   return (
     <>
@@ -217,7 +217,7 @@ export function ManagementTabContent({
   onArchiveContact
 }: ContactsTabContentProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t } = useTranslation('contacts');
 
   const handleArchiveAction = () => {
     if (selectedItems.length > 0) {
@@ -312,7 +312,7 @@ export function FiltersTabContent({
   const colors = useSemanticColors();
   const { quick } = useBorderTokens();
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t } = useTranslation('contacts');
 
   return (
     <>

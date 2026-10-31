@@ -12,7 +12,7 @@
  * @module lib/contact/social-platform-profiles
  */
 
-import type { SocialPlatform } from './social-media-type-vocabulary';
+import { SOCIAL_PLATFORMS, type SocialPlatform } from './social-media-type-vocabulary';
 
 /** Κάθε πλατφόρμα εκτός του `other`, που από ορισμού δεν έχει ούτε όνομα ούτε πρότυπο. */
 export type NamedSocialPlatform = Exclude<SocialPlatform, 'other'>;
@@ -22,23 +22,54 @@ interface SocialPlatformProfile {
   readonly brandName: string;
   /** URL προφίλ με το σύμβολο `{username}`. */
   readonly profileTemplate: string;
+  /**
+   * Οι τομείς της πλατφόρμας (ο κανονικός πρώτα, μετά οι σύντομοι/παλαιοί). Ένα URL ανήκει στην πλατφόρμα όταν ο
+   * host του **είναι** ένας από αυτούς ή **υποτομέας** του — ΠΟΤΕ υποσυμβολοσειρά (`wix.com` ∌ `x.com`).
+   */
+  readonly hosts: readonly string[];
 }
 
 const USERNAME_TOKEN = '{username}';
 
 /** ΥΠΟΧΡΕΩΤΙΚΑ κάθε πλατφόρμα της ρίζας: νέα πλατφόρμα χωρίς γραμμή εδώ = σφάλμα μεταγλώττισης. */
 export const SOCIAL_PLATFORM_PROFILES = {
-  linkedin: { brandName: 'LinkedIn', profileTemplate: 'https://linkedin.com/in/{username}' },
-  facebook: { brandName: 'Facebook', profileTemplate: 'https://facebook.com/{username}' },
-  instagram: { brandName: 'Instagram', profileTemplate: 'https://instagram.com/{username}' },
-  twitter: { brandName: 'Twitter', profileTemplate: 'https://x.com/{username}' },
-  youtube: { brandName: 'YouTube', profileTemplate: 'https://youtube.com/@{username}' },
-  github: { brandName: 'GitHub', profileTemplate: 'https://github.com/{username}' },
-  tiktok: { brandName: 'TikTok', profileTemplate: 'https://tiktok.com/@{username}' },
+  linkedin: { brandName: 'LinkedIn', profileTemplate: 'https://linkedin.com/in/{username}', hosts: ['linkedin.com', 'lnkd.in'] },
+  facebook: { brandName: 'Facebook', profileTemplate: 'https://facebook.com/{username}', hosts: ['facebook.com', 'fb.com', 'fb.me'] },
+  instagram: { brandName: 'Instagram', profileTemplate: 'https://instagram.com/{username}', hosts: ['instagram.com', 'instagr.am'] },
+  twitter: { brandName: 'Twitter', profileTemplate: 'https://x.com/{username}', hosts: ['x.com', 'twitter.com'] },
+  youtube: { brandName: 'YouTube', profileTemplate: 'https://youtube.com/@{username}', hosts: ['youtube.com', 'youtu.be'] },
+  github: { brandName: 'GitHub', profileTemplate: 'https://github.com/{username}', hosts: ['github.com'] },
+  tiktok: { brandName: 'TikTok', profileTemplate: 'https://tiktok.com/@{username}', hosts: ['tiktok.com'] },
   // Το click-to-chat θέλει τον αριθμό σε διεθνή μορφή, ΜΟΝΟ ψηφία (χωρίς +, κενά, παύλες) — βλ. normaliseSocialHandle.
-  whatsapp: { brandName: 'WhatsApp', profileTemplate: 'https://wa.me/{username}' },
-  telegram: { brandName: 'Telegram', profileTemplate: 'https://t.me/{username}' },
+  whatsapp: { brandName: 'WhatsApp', profileTemplate: 'https://wa.me/{username}', hosts: ['wa.me', 'whatsapp.com'] },
+  telegram: { brandName: 'Telegram', profileTemplate: 'https://t.me/{username}', hosts: ['t.me', 'telegram.me', 'telegram.org'] },
 } as const satisfies Readonly<Record<NamedSocialPlatform, SocialPlatformProfile>>;
+
+/** Κάθε πλατφόρμα με προφίλ, με τη σειρά της ρίζας — χωρίς τυφλό `as` πάνω στο `Object.keys`. */
+const NAMED_SOCIAL_PLATFORMS = SOCIAL_PLATFORMS.filter((p): p is NamedSocialPlatform => p !== 'other');
+
+/** Ο host σε κανονική μορφή (πεζά — το `URL` το κάνει ήδη — χωρίς τελική τελεία FQDN)· `null` αν δεν είναι URL. */
+function hostnameOf(url: string): string | null {
+  try {
+    return new URL(url.trim()).hostname.replace(/\.$/, '') || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 🔍 Η ΜΙΑ ανίχνευση πλατφόρμας από URL (ADR-327 §8.5.4) — από τους `hosts` του μητρώου, όχι από χειρόγραφη λίστα.
+ *
+ * 🔴 Ζούσε σε ΔΥΟ σώματα (`socialUrlGenerator` 7 πλατφόρμες · `platform-utils` 9) με `hostname.includes(…)` ⇒
+ * `wix.com`/`dropbox.com` αναγνωρίζονταν ως Twitter και `chat.me` ως Telegram. Νέα πλατφόρμα στη ρίζα χωρίς `hosts`
+ * = σφάλμα μεταγλώττισης, άρα δεν μένει ποτέ αόρατη στην ανίχνευση.
+ */
+export function detectPlatformFromUrl(url: string): NamedSocialPlatform | null {
+  const host = url ? hostnameOf(url) : null;
+  if (!host) return null;
+  const owns = (domain: string): boolean => host === domain || host.endsWith(`.${domain}`);
+  return NAMED_SOCIAL_PLATFORMS.find(platform => SOCIAL_PLATFORM_PROFILES[platform].hosts.some(owns)) ?? null;
+}
 
 /** Το όνομα χρήστη όπως μπαίνει στο URL: χωρίς κενά και αρχικό `@`· για WhatsApp μόνο ψηφία. */
 export function normaliseSocialHandle(platform: SocialPlatform, handle: string): string {

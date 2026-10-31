@@ -54,6 +54,8 @@ export type {
   UnifiedSocialPlatform,
 } from './platform-config-types';
 import type { SocialPlatformType, UnifiedSocialPlatform } from './platform-config-types';
+// Όνομα μάρκας + πρότυπο προφίλ: ΕΝΑ σώμα για επαφές, βιτρίνα, email και κοινοποίηση (ADR-327 §8.5.4).
+import { SOCIAL_PLATFORM_PROFILES } from '@/lib/contact/social-platform-profiles';
 
 // ============================================================================
 // ENTERPRISE PLATFORM CONFIGURATIONS - UNIFIED SINGLE SOURCE
@@ -77,7 +79,7 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
       requiresEmail: false,
     },
     ui: {
-      name: 'WhatsApp',
+      name: SOCIAL_PLATFORM_PROFILES.whatsapp.brandName,
       icon: WhatsAppIcon,
       colors: {
         primary: designSystem.getStatusColor('success', 'bg'), // Green για WhatsApp
@@ -106,7 +108,7 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
       requiresEmail: false,
     },
     ui: {
-      name: 'Facebook',
+      name: SOCIAL_PLATFORM_PROFILES.facebook.brandName,
       icon: FacebookIcon,
       colors: {
         primary: designSystem.getStatusColor('info', 'bg'), // Blue για Facebook
@@ -121,7 +123,7 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
     },
     urls: {
       sharingTemplate: 'https://www.facebook.com/sharer/sharer.php?u={url}',
-      profileTemplate: 'https://facebook.com/{username}',
+      profileTemplate: SOCIAL_PLATFORM_PROFILES.facebook.profileTemplate,
       usernamePlaceholder: 'john.doe',
     },
   },
@@ -137,7 +139,7 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
       requiresEmail: false,
     },
     ui: {
-      name: 'Twitter',
+      name: SOCIAL_PLATFORM_PROFILES.twitter.brandName,
       icon: TwitterIcon,
       colors: {
         primary: designSystem.getStatusColor('dark', 'bg'), // Dark για Twitter/X
@@ -152,7 +154,7 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
     },
     urls: {
       sharingTemplate: 'https://twitter.com/intent/tweet?url={url}&text={text}',
-      profileTemplate: 'https://x.com/{username}',
+      profileTemplate: SOCIAL_PLATFORM_PROFILES.twitter.profileTemplate,
       usernamePlaceholder: 'johndoe',
     },
   },
@@ -168,7 +170,7 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
       requiresEmail: false,
     },
     ui: {
-      name: 'LinkedIn',
+      name: SOCIAL_PLATFORM_PROFILES.linkedin.brandName,
       icon: LinkedInIcon,
       colors: {
         primary: designSystem.getStatusColor('info', 'bg'), // LinkedIn blue
@@ -183,7 +185,7 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
     },
     urls: {
       sharingTemplate: 'https://www.linkedin.com/sharing/share-offsite/?url={url}',
-      profileTemplate: 'https://linkedin.com/in/{username}',
+      profileTemplate: SOCIAL_PLATFORM_PROFILES.linkedin.profileTemplate,
       usernamePlaceholder: 'john-doe',
     },
   },
@@ -199,7 +201,7 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
       requiresEmail: false,
     },
     ui: {
-      name: 'Telegram',
+      name: SOCIAL_PLATFORM_PROFILES.telegram.brandName,
       icon: TelegramIcon,
       colors: {
         primary: designSystem.getStatusColor('info', 'bg'), // Telegram sky blue
@@ -228,7 +230,7 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
       requiresEmail: false,
     },
     ui: {
-      name: 'Instagram',
+      name: SOCIAL_PLATFORM_PROFILES.instagram.brandName,
       icon: InstagramIcon,
       colors: {
         primary: designSystem.getStatusColor('warning', 'bg'), // Instagram pink
@@ -242,7 +244,7 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
       displayOrder: 6,
     },
     urls: {
-      profileTemplate: 'https://instagram.com/{username}',
+      profileTemplate: SOCIAL_PLATFORM_PROFILES.instagram.profileTemplate,
       usernamePlaceholder: 'johndoe',
     },
   },
@@ -258,7 +260,7 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
       requiresEmail: false,
     },
     ui: {
-      name: 'YouTube',
+      name: SOCIAL_PLATFORM_PROFILES.youtube.brandName,
       icon: YouTubeIcon,
       colors: {
         primary: designSystem.getStatusColor('error', 'bg'), // YouTube red
@@ -272,7 +274,7 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
       displayOrder: 7,
     },
     urls: {
-      profileTemplate: 'https://youtube.com/@{username}',
+      profileTemplate: SOCIAL_PLATFORM_PROFILES.youtube.profileTemplate,
       usernamePlaceholder: 'johndoe',
     },
   },
@@ -288,7 +290,7 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
       requiresEmail: false,
     },
     ui: {
-      name: 'GitHub',
+      name: SOCIAL_PLATFORM_PROFILES.github.brandName,
       icon: GitHubIcon,
       colors: {
         primary: designSystem.getStatusColor('muted', 'bg'), // GitHub dark
@@ -302,7 +304,7 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
       displayOrder: 8,
     },
     urls: {
-      profileTemplate: 'https://github.com/{username}',
+      profileTemplate: SOCIAL_PLATFORM_PROFILES.github.profileTemplate,
       usernamePlaceholder: 'johndoe',
     },
   },
@@ -318,7 +320,7 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
       requiresEmail: false,
     },
     ui: {
-      name: 'TikTok',
+      name: SOCIAL_PLATFORM_PROFILES.tiktok.brandName,
       icon: TikTokIcon,
       colors: {
         primary: designSystem.getStatusColor('dark', 'bg'), // TikTok black
@@ -332,7 +334,7 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
       displayOrder: 9,
     },
     urls: {
-      profileTemplate: 'https://tiktok.com/@{username}',
+      profileTemplate: SOCIAL_PLATFORM_PROFILES.tiktok.profileTemplate,
       usernamePlaceholder: 'johndoe',
     },
   },

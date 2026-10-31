@@ -28,7 +28,6 @@ import 'server-only';
 import {
   wrapInBrandedTemplate,
   type EmailSocialLink,
-  type EmailSocialPlatform,
 } from '@/services/email-templates/base-email-template';
 import {
   BRAND,
@@ -176,7 +175,7 @@ function resolveIntroText(fallback: string, personalMessage: string | undefined)
 
 function mapSocials(company: ShowcaseCompanyBranding): EmailSocialLink[] {
   return (company.socialMedia ?? []).map((s) => ({
-    platform: s.platform as EmailSocialPlatform,
+    platform: s.platform,
     url: s.url,
     username: s.username,
     label: s.label,

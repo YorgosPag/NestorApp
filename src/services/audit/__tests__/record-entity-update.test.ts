@@ -9,6 +9,8 @@
 
 import type { AuthContext } from '@/lib/auth';
 import { EntityAuditService } from '@/services/entity-audit.service';
+import { AUDIT_ENTITIES, type AuditEntityType } from '@/config/audit-entity-registry';
+import { getTrackedFieldsForEntityAuditType } from '@/config/audit-tracked-fields';
 import { recordEntityUpdate } from '../record-entity-update';
 
 jest.mock('server-only', () => ({}));
@@ -30,6 +32,14 @@ const recordChange = EntityAuditService.recordChange as jest.MockedFunction<type
 const ctx = { uid: 'u_1', email: 'a@alpha.gr', companyId: 'co_caller' } as unknown as AuthContext;
 
 beforeEach(() => recordChange.mockClear());
+
+/**
+ * Οντότητα του μητρώου **χωρίς** μητρώο παρακολουθούμενων πεδίων — ΠΑΡΑΓΕΤΑΙ, δεν γράφεται με το χέρι.
+ * 🔴 (2026-10-30) Το Γ4 χρησιμοποιούσε `quote`, που ΕΧΕΙ μητρώο: περνούσε μόνο επειδή το `name` δεν παρακολουθείται,
+ * άρα δεν φύλαγε ποτέ τον κλάδο «χωρίς μητρώο» του γραφέα (μετάλλαξη που τον σπάει έμενε πράσινη).
+ */
+const UNTRACKED_TYPE = (Object.keys(AUDIT_ENTITIES) as AuditEntityType[])
+  .find((type) => getTrackedFieldsForEntityAuditType(type) === null);
 
 describe('recordEntityUpdate', () => {
   it('Γ1 — το μητρώο το διαλέγει ο ΤΥΠΟΣ: το ίδιο πεδίο κρίνεται μόνο εκεί που παρακολουθείται', async () => {
@@ -59,9 +69,14 @@ describe('recordEntityUpdate', () => {
     expect(recordChange.mock.calls[0][0]).toMatchObject({ companyId: 'co_caller' });
   });
 
+  it('Γ4α ΠΑΡΟΝΟΜΑΣΤΗΣ — το μητρώο έχει οντότητα χωρίς παρακολουθούμενα πεδία (αλλιώς το Γ4 δεν κρίνει τίποτα)', () => {
+    expect(UNTRACKED_TYPE).toBeDefined();
+  });
+
   it('Γ4 — οντότητα χωρίς μητρώο ⇒ καμία γραμμή, και όχι εξαίρεση (δεν ρίχνει την αποθήκευση)', async () => {
+    // `name` = πεδίο που ΘΑ παρακολουθούνταν σε οντότητα με μητρώο: αν ο γραφέας δανειστεί ξένο μητρώο, γράφει γραμμή.
     const result = await recordEntityUpdate({
-      entityType: 'quote', entityId: 'q_1', before: { name: 'Α' }, written: { name: 'Β' }, ctx,
+      entityType: UNTRACKED_TYPE as AuditEntityType, entityId: 'x_1', before: { name: 'Α' }, written: { name: 'Β' }, ctx,
     });
 
     expect(result).toEqual({ auditId: null, changes: [] });

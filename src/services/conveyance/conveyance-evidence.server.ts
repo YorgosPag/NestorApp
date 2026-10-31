@@ -96,13 +96,13 @@ export type EvidenceAudience = 'host' | CdeAudience;
  * που ξαναπαράγει και συγκρίνει το `cdeReadReach`) και κρίνεται από τον **ΕΝΑ** κριτή CDE — ποτέ σύγκριση
  * literal `cdeReadReach === 'author'` εδώ (δεύτερος κριτής, ADR-749).
  */
-function reaches(data: DocumentData, audience: EvidenceAudience): boolean {
+export function fileReachesAudience(data: DocumentData, audience: EvidenceAudience): boolean {
   if (audience === 'host') return true;
   return isContainerVisible(decideEngagedEvidenceReach(audience, readContainerState(data).phase));
 }
 
 function toEvidence(fileId: string, data: DocumentData, target: EvidenceTarget, audience: EvidenceAudience): EvidenceFile | null {
-  if (!isActive(data) || typeof data.purpose !== 'string' || !reaches(data, audience)) return null;
+  if (!isActive(data) || typeof data.purpose !== 'string' || !fileReachesAudience(data, audience)) return null;
   const revision = typeof data.revision === 'number' ? data.revision : null;
   return {
     source: { kind: 'owned' },
@@ -225,12 +225,15 @@ async function linkedFiles(db: Firestore, companyId: string, targets: readonly E
 /**
  * Τα τεκμήρια για οποιουσδήποτε στόχους — χωρίς διπλά ανά (αρχείο, επίπεδο, οντότητα).
  * Ο ΕΝΑΣ συλλέκτης: τον καλεί η υπόθεση **και** το AI knowledge base (ADR-901 §2 Ε-Α).
+ *
+ * ⛔ Το `audience` **δεν** έχει προεπιλογή: η σιωπή θα σήμαινε `host` (όλα τα ενεργά) — fail-open. Έτσι ένα
+ *    WIP μέτρησε ως «υπάρχει» στον αγοραστή του AI KB. Κάθε καλών δηλώνει για ποιον συλλέγει.
  */
 export async function collectEvidenceForTargets(
   db: Firestore,
   companyId: string,
   targets: readonly EvidenceTarget[],
-  audience: EvidenceAudience = 'host',
+  audience: EvidenceAudience,
 ): Promise<readonly EvidenceFile[]> {
   if (targets.length === 0) return [];
   const [owned, linked] = await Promise.all([
@@ -246,7 +249,7 @@ export function collectConveyanceEvidence(
   companyId: string,
   subject: ConveyanceCaseSubject,
   parties: ConveyanceCaseParties,
-  audience: EvidenceAudience = 'host',
+  audience: EvidenceAudience,
 ): Promise<readonly EvidenceFile[]> {
   return collectEvidenceForTargets(db, companyId, evidenceTargets(subject, parties), audience);
 }

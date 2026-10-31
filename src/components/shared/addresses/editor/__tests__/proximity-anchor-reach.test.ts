@@ -112,6 +112,32 @@ interface Exemption {
 const EXEMPTIONS: ReadonlyMap<string, Exemption> = new Map();
 
 // ============================================================================
+// Η ΜΙΑ ΡΙΖΑ ΕΞΑΙΡΕΣΗΣ — τα test harness (ADR-332 D25 (α), απόφαση Giorgio 2026-10-30)
+// ============================================================================
+
+/**
+ * 🔑 Ένα harness **δεν είναι οθόνη ανθρώπου**: μοντάρει τον αληθινό `AddressEditor` για να
+ * μετρήσει **άλλη** διάσταση (CHECK 3.82: ωφέλιμο πλάτος πεδίων) και δεν προτείνει ποτέ
+ * διεύθυνση σε κανέναν. Μια αφετηρία εκεί θα ήταν η **ψεύτικη καλωδίωση** που η ενότητα
+ * εξαιρέσεων απαγορεύει.
+ *
+ * ⚠️ Γι' αυτό **ΔΕΝ** μπήκε ως γραμμή στο `EXEMPTIONS` (ένας νέος λόγος ανά harness θα
+ * ήταν απαρίθμηση που μεγαλώνει)· είναι **ΜΙΑ** δηλωμένη ρίζα — το τμήμα διαδρομής
+ * `test-harness` αμέσως κάτω από ομάδα διαδρομών του App Router (`(bare)` **και** `(app)`).
+ *
+ * ⛔ Και ο λόγος **μπορεί να πάψει να ισχύει**: εξαιρείται **μόνο** αρχείο του οποίου η
+ * σελίδα αρνείται την παραγωγή μέσω του SSoT φρουρού (`@/config/test-harness-access`) +
+ * `notFound()`. Harness που ανοίγει στο nestorconstruct.gr **είναι** οθόνη ανθρώπου — και
+ * η τελευταία ενότητα κοκκινίζει.
+ */
+const HARNESS_ROUTE_ROOT = /^src\/app\/\([^/()]+\)\/test-harness\//;
+
+/** Ο φρουρός έκθεσης (SSoT) και η άρνηση — με αυτή τη σειρά, στον ίδιο κώδικα. */
+const DENIES_PRODUCTION = /\b(?:isTestHarnessRouteEnabled|isPerfHarnessRouteEnabled)\s*\(\s*\)[\s\S]*?\bnotFound\s*\(\s*\)/;
+
+const isHarnessFile = (file: string): boolean => HARNESS_ROUTE_ROOT.test(file);
+
+// ============================================================================
 // Η ΣΑΡΩΣΗ
 // ============================================================================
 
@@ -224,6 +250,21 @@ function collectMountSites(): MountSite[] {
 
 const MOUNT_SITES = collectMountSites();
 
+/**
+ * Η σελίδα (`page.tsx`) που σερβίρει ένα αρχείο harness: η πλησιέστερη προς τα πάνω, χωρίς να
+ * βγει από τη ρίζα των harness. `null` ⇒ κανείς δεν το σερβίρει ως διαδρομή.
+ */
+function servingPageOf(file: string): string | null {
+  const segments = file.split('/');
+  for (let end = segments.length - 1; end > 0; end--) {
+    const dir = segments.slice(0, end).join('/');
+    if (!HARNESS_ROUTE_ROOT.test(`${dir}/`)) return null;
+    const page = `${dir}/page.tsx`;
+    if (fs.existsSync(path.join(process.cwd(), page))) return page;
+  }
+  return null;
+}
+
 // ============================================================================
 // ΟΙ ΔΙΑΒΕΒΑΙΩΣΕΙΣ
 // ============================================================================
@@ -237,7 +278,7 @@ describe('ADR-332 D25 — η αφετηρία εγγύτητας φτάνει σ
     const undeclared = MOUNT_SITES
       .filter((site) => !DECLARES_ANCHOR.test(site.openingTag))
       .map((site) => site.file)
-      .filter((file) => !EXEMPTIONS.has(file));
+      .filter((file) => !EXEMPTIONS.has(file) && !isHarnessFile(file));
 
     expect(undeclared).toEqual([]);
   });
@@ -276,3 +317,48 @@ describe('ADR-332 D27 Β-ΙΙ — οι διευθύνσεις επαφών ΚΡ�
     expect([...EXEMPTIONS.keys()].filter((file) => file.includes('/contacts/'))).toEqual([]);
   });
 });
+
+// ============================================================================
+// D25 (α) — Η ΡΙΖΑ ΤΩΝ HARNESS: στενή, και με λόγο που ΕΛΕΓΧΕΤΑΙ
+// ============================================================================
+
+describe('ADR-332 D25 (α) — η ρίζα εξαίρεσης των test harness', () => {
+  it('κάθε εξαιρούμενο σημείο σερβίρεται από σελίδα που ΑΡΝΕΙΤΑΙ την παραγωγή (SSoT φρουρός + notFound)', () => {
+    const exposed = MOUNT_SITES
+      .filter((site) => isHarnessFile(site.file))
+      .map((site) => ({ file: site.file, page: servingPageOf(site.file) }))
+      .filter(({ page }) => page === null
+        || !DENIES_PRODUCTION.test(blankCommentsAndStrings(fs.readFileSync(path.join(process.cwd(), page), 'utf8'))))
+      .map(({ file }) => file);
+
+    expect(exposed).toEqual([]);
+  });
+
+  it('η «άρνηση παραγωγής» σημαίνει φρουρό SSoT ΚΑΙ notFound — ούτε σκέτη κλήση, ούτε inline NODE_ENV', () => {
+    const denies = (source: string): boolean => DENIES_PRODUCTION.test(blankCommentsAndStrings(source));
+    expect(denies('if (!isTestHarnessRouteEnabled()) notFound();')).toBe(true);
+    expect(denies('if (!isPerfHarnessRouteEnabled()) { notFound(); }')).toBe(true);
+    expect(denies('const on = isTestHarnessRouteEnabled(); return <Harness enabled={on} />;')).toBe(false);
+    expect(denies("if (process.env.NODE_ENV === 'production') notFound();")).toBe(false);
+    expect(denies('// if (!isTestHarnessRouteEnabled()) notFound();\nreturn <Harness />;')).toBe(false);
+  });
+
+  it('καμία οθόνη παραγωγής δεν πέφτει στη ρίζα — η εξαίρεση είναι ΜΟΝΟ το τμήμα `test-harness` ομάδας διαδρομών', () => {
+    const production = MOUNT_SITES.filter((site) => !site.file.includes('/test-harness/'));
+    expect(production.length).toBeGreaterThanOrEqual(KNOWN_MOUNT_SITE_COUNT);
+    expect(production.filter((site) => isHarnessFile(site.file))).toEqual([]);
+
+    expect([
+      'src/app/(bare)/test-harness/address-field-width/AddressFieldWidthHarness.tsx',
+      'src/app/(app)/test-harness/contact-mutation/Harness.tsx',
+    ].every(isHarnessFile)).toBe(true);
+    expect([
+      'src/app/(app)/projects/test-harness-notes/page.tsx',
+      'src/app/(app)/projects/[id]/test-harness/page.tsx',
+      'src/components/test-harness/AddressCard.tsx',
+      'src/app/test-harness/page.tsx',
+      'src/app/(app)/test-harnessed/page.tsx',
+    ].some(isHarnessFile)).toBe(false);
+  });
+});
+

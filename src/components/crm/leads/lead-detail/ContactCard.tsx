@@ -8,7 +8,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Opportunity } from '@/types/crm';
 import { formatTimestampDate } from './utils/dates';
-import { useStatusColor } from './utils/status';
+import { getStageBadgeVariant } from './utils/status';
+import { Badge } from '@/components/ui/badge';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/design-system';
 
@@ -19,9 +20,8 @@ interface ContactCardProps {
 export function ContactCard({ lead }: ContactCardProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const { quick, radiusClass } = useBorderTokens();
-  const { t } = useTranslation(['crm', 'crm-inbox']);
-  const { getStatusColor } = useStatusColor();
+  const { quick } = useBorderTokens();
+  const { t } = useTranslation('crm');
   const spacing = useSpacingTokens();
 
   const stageLabelKey = lead.stage ? `opportunities.stages.${lead.stage}` : 'opportunities.stages.initial_contact';
@@ -60,9 +60,9 @@ export function ContactCard({ lead }: ContactCardProps) {
         <div className={cn('flex items-center', spacing.gap.md)}>
           <Tag className={cn(iconSizes.md, colors.text.muted)} />
           <div>
-            <span className={cn(spacing.padding.x.sm, spacing.padding.y.xs, radiusClass.full, 'text-sm font-medium', getStatusColor(lead.stage))}>
+            <Badge variant={getStageBadgeVariant(lead.stage)} className="text-sm">
               {t(stageLabelKey)}
-            </span>
+            </Badge>
             <p className={cn('text-sm', colors.text.muted, spacing.margin.top.xs)}>{t('contactCard.status')}</p>
           </div>
         </div>

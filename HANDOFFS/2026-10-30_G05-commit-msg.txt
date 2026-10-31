@@ -1,0 +1,15 @@
+fix(audit): history labels from one vocabulary each
+
+ADR-195 (eta)-(kappa) + ADR-852: contact CDC writer uses the
+declared item identity (projected to functions/ with isPlainRecord,
+sortKeysDeep, collection identity); address type and block side
+words live only in addresses (roots bound in CHECK 3.73); one KAD
+activity-type vocabulary with legacy spelling as alias; energy
+class (PEA) and retired fields readable in history.
+
+.domain-vocabulary.json: only the two address entries; the
+social-platform entry belongs to ongoing ADR-327 work.
+i18n shell slice (CHECK 3.34) and i18n types (CHECK 3.33)
+regenerated from HEAD + this commit only.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

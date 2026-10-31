@@ -58,7 +58,7 @@ import { ADDRESS_MAP_CONFIG } from '@/config/address-map-config';
 import { cameraFlight } from '@/lib/geo/camera-motion';
 import { createUserLocationMarkerElement } from './user-location-marker';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
-import { getStatusColor } from '@/lib/design-system';
+import { getStatusSurfaceClass } from '@/lib/design-system';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { renderStoredAddressLabel } from '@/components/contacts/addresses/contactAddressLabel';
@@ -436,7 +436,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
                   transition-colors duration-150
                   disabled:opacity-60 disabled:cursor-not-allowed
                   ${geoStatus === 'granted'
-                    ? `${getStatusColor('available', 'bg')}/10 ${getStatusColor('available', 'text')}`
+                    ? getStatusSurfaceClass('available')
                     : `bg-background ${semanticColors.text.muted} hover:bg-accent hover:text-accent-foreground`}
                 `}
                 aria-label={t('map.locateMe')}

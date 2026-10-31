@@ -18,7 +18,7 @@ import { PackageCheck, Stamp } from 'lucide-react';
 
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { getStatusColor } from '@/lib/design-system';
+import { getStatusSurfaceClass } from '@/lib/design-system';
 import { readFileHandoverOrigin, readFileHandoverProtocolOf } from '@/lib/property-handover/file-handover-origin';
 import type { HandoverSourceScope } from '@/lib/property-handover/handover-source-scope';
 import type { FileRecord } from '@/types/file-record';
@@ -46,13 +46,13 @@ export function fileHandoverBadgeOf(file: BadgeSubject): FileHandoverBadgeKind {
 }
 
 export function FileHandoverBadge({ file }: { readonly file: BadgeSubject }): React.ReactElement | null {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const iconSizes = useIconSizes();
   const badge = fileHandoverBadgeOf(file);
   if (badge.kind === 'none') return null;
   const Icon = badge.kind === 'protocol' ? Stamp : PackageCheck;
   return (
-    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium leading-none ${getStatusColor('active', 'bg')}/15 ${getStatusColor('active', 'text')}`}>
+    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium leading-none ${getStatusSurfaceClass('active')}`}>
       <Icon className={iconSizes.xs} aria-hidden="true" />
       {badge.kind === 'protocol' ? t('list.handoverProtocol', { revision: badge.revision }) : t(ORIGIN_LABEL_KEY[badge.scope])}
     </span>

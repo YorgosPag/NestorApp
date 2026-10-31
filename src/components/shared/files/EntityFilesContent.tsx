@@ -165,7 +165,7 @@ function withoutWriteActions(props: EntityFilesContentProps): EntityFilesContent
 }
 
 export function EntityFilesContent(rawProps: EntityFilesContentProps) {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const _colors = useSemanticColors();
   const locked = useRetiredKind() !== null;
   const props = locked ? withoutWriteActions(rawProps) : rawProps;
@@ -222,7 +222,7 @@ function UploadZoneSection({
   onUpload, acceptedTypes, maxFileSize, uploading,
 }: EntityFilesContentProps) {
   const iconSizes = useIconSizes();
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const colors = useSemanticColors();
   // ADR-866 §2.10 Β1 — μηδέν τύποι ⇒ το λέμε, αντί για «επιλέξτε πρώτα τύπο» πάνω από κενό επιλογέα (αδιέξοδο).
   const offersNothing = getAvailableGroups(entityType).length === 0 && selectOfferedEntryPoints({
@@ -315,7 +315,7 @@ function UploadZoneSection({
 
 function FilesTabContent(props: EntityFilesContentProps) {
   const iconSizes = useIconSizes();
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const colors = useSemanticColors();
 
   return (
@@ -424,7 +424,7 @@ function FileViewDispatch(props: EntityFilesContentProps & { iconSizes: ReturnTy
 // ============================================================================
 
 function GalleryView(props: EntityFilesContentProps) {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const colors = useSemanticColors();
   const { onDelete } = props;
   if (props.displayStyle === 'floorplan-gallery') {

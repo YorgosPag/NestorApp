@@ -30,6 +30,7 @@ import {
   getEndpointCategory,
   type RateLimitCategory,
 } from './rate-limit-config';
+import { routeParamsOf, routeTemplateOf } from './route-template';
 import { clientIpFingerprint, clientIpOf } from '@/lib/http/client-ip';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getCurrentSecurityPolicy } from '@/config/environment-security-config';
@@ -200,9 +201,17 @@ export function withRateLimit<C = unknown>(
       return handler(request, context);
     }
 
-    // Get endpoint path
-    const url = new URL(request.url);
-    const endpointPath = url.pathname;
+    // 🔴 ADR-855 — **ΚΛΕΙΔΙ = ΠΡΟΤΥΠΟ ΔΙΑΔΡΟΜΗΣ, ΟΧΙ URL.** Με την ωμή διαδρομή κάθε id είχε δικό του
+    //    κουβά (`/api/contacts/A` ≠ `/api/contacts/B`) ⇒ η απαρίθμηση δεν περιοριζόταν ποτέ. Τα `params`
+    //    του δρομολογητή λένε ακριβώς ποια τμήματα είναι δυναμικά. Η βαθμίδα κρίνεται από το ίδιο
+    //    πρότυπο: τα προθέματα του πίνακα είναι στατικά, άρα δίνουν την ίδια απάντηση.
+    const { template: endpointPath, resolved } = routeTemplateOf(
+      new URL(request.url).pathname,
+      await routeParamsOf(context),
+    );
+    if (!resolved) {
+      logger.warn('Route params not found in path — keyed on the route area', { endpoint: endpointPath });
+    }
 
     // Check rate limit (async for Upstash)
     let result: RateLimitResult;

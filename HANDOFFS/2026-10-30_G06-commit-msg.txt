@@ -1,0 +1,10 @@
+refactor(type-guards): 27 private predicates use shared SSoT
+
+ADR-225 Phase 2 + ADR-889 §11: private isPlainObject/isRecord/
+isFiniteNumber copies -> @/lib/type-guards; new plainRecordOrNull.
+
+Boy Scout (CHECK 3.28): three inherited twins closed -
+formatEnumList in impact-value-formatter, one telemetry session
+preamble, diagnosticHandler for bim-diagnostics writers (+ anchors).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

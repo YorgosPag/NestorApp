@@ -1,0 +1,38 @@
+fix(calendar): Athens calendar day; installment due date is a day
+
+Completes ADR-861 / 919 / 170 / 853 §13 / ACC-010 §2.1.1 (G07) and
+ADR-234 (G08), whose ADR entries, platform-operator.ts, report-builder
+financials, package.json and accounting engines already landed in
+checkpoint commits. HEAD imported lib/payment-plan/installment-due-day
+without the module; this adds it.
+
+G07: "today" from the operator zone instead of the UTC prefix
+(attendance QR generate/validate/expiry, portfolio, overdue alerts,
+permits, baseline, invoice issue day and fiscal year); calendarDaysUntil
+for milestone/phase/completion countdowns; GREEK_TIME_ZONE is
+OPERATOR_TIME_ZONE; addMonthsToDateKey moved to lib/calendar/date-key;
+month-end via daysInMonth/isoCalendarDay; CRM report overdue tasks read
+Timestamp or YYYY-MM-DD through operatorDayOf (a string comparison with
+a Timestamp never counted them).
+
+G08: installment due date is a calendar day YYYY-MM-DD; past due only
+after the whole Athens due day; API accepts legacy UTC instants and
+normalizes them; readers (aging, NPV, cash flow, interest, overview,
+schedule) read legacy instants as their Athens day.
+
+useTranslation calls in 8 touched files use the parent namespace
+(CHECK 3.108, now in HEAD, blocks the hand-written family list).
+
+SKIP_I18N_SHELL_SLICE=1 (approved for this commit only): CHECK 3.34 is
+red on a clean HEAD because the hook runs uncommitted gate code from
+disk (scripts/lib/i18n-shell-slice/{global-inputs,config,lazy-routes}),
+which fingerprints lazyRoutes:registries differently. The HEAD generator
+run hermetically on this commit's tree yields artifacts byte-identical
+to HEAD, so src/i18n/generated/ is unchanged.
+
+SKIP_I18N_SSR_RAW_KEYS=1 (approved for this commit only): the ADR-924
+commit-view trap fails CHECK 3.51 on a clean HEAD too, because the gate
+reads .i18n-shell-slice.json raw from a disk carrying uncommitted
+edits. The gate's own verdict on this tree is green (0/3002).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
