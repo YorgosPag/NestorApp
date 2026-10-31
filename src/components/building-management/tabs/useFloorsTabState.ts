@@ -46,7 +46,7 @@ const floorsCache = createStaleCache<FloorRecord[]>('building-floors');
 // ============================================================================
 
 export function useFloorsTabState(buildingId: string, projectId?: string, focusFloorId?: string | null) {
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation('building');
   const floorLabel = useFloorLabel();
   const { success, error: notifyError } = useNotifications();
   const { confirm, dialogProps } = useConfirmDialog();

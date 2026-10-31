@@ -58,7 +58,7 @@ export function ContactCard({
   const colors = useSemanticColors();
   const [isFavorite, setIsFavorite] = useState(false);
   // 🏢 ENTERPRISE: i18n support
-  const { t } = useTranslation(['crm', 'crm-inbox']);
+  const { t } = useTranslation('crm');
 
   // 🏢 ENTERPRISE: Localized stage label
   const getStageLabel = (stage: string): string => {

@@ -41,7 +41,7 @@ interface UsePropertyInlineEditReturn {
 }
 
 export function usePropertyInlineEdit(onSaved: () => Promise<void>): UsePropertyInlineEditReturn {
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const { t } = useTranslation('properties');
   const { success, error: notifyError } = useNotifications();
 
   const [editingId, setEditingId] = useState<string | null>(null);

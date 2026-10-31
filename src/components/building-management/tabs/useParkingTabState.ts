@@ -71,7 +71,7 @@ async function loadBuildingParkingSpots(buildingId: string): Promise<ParkingSpot
 
 export function useParkingTabState({ buildingId, projectId }: UseParkingTabStateParams) {
   const { t } = useTranslation(['parking', 'properties-enums']);
-  const { t: tBuilding } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t: tBuilding } = useTranslation('building');
   // ADR-898 §21.6 Ε3 — ΕΝΑΣ βοηθός για κάθε αποτυχία: άρνηση πολιτικής ⇒ info + toast, άλλο ⇒ error + toast.
   const reportFailure = useMutationFailureFeedback('ParkingTab');
   const floorLabel = useFloorLabel();

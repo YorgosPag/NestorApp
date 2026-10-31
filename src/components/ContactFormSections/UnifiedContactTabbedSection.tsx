@@ -62,7 +62,7 @@ export function UnifiedContactTabbedSection({
   validationErrors, onFieldBlur,
   isContactTrashed = false,
 }: UnifiedContactTabbedSectionProps) {
-  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t } = useTranslation('contacts');
   const { user } = useAuth();
   const resolvedCompanyId = useCompanyId()?.companyId;
   // Workspace context used for company name display (ADR-032)
