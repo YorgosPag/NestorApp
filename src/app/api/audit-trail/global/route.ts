@@ -1,33 +1,28 @@
 /**
  * GET /api/audit-trail/global
  *
- * Company-wide audit trail across all entity types.
- * Admin-only — equivalent of Google Workspace Admin Console "Audit log".
+ * Company-wide audit trail across all entity types — the **historical tail** behind the live window of
+ * `useGlobalAuditTrail` (Google Workspace Admin Console "Audit log").
  *
- * Supports optional filters:
- *   - `entityType` — filter to a single entity type (in-memory)
- *   - `performedBy` — free-text match on user UID or display name (in-memory)
- *   - `action`     — filter to a specific audit action (in-memory)
- *   - `fromDate`   — ISO date, inclusive (in-memory)
- *   - `toDate`     — ISO date, inclusive (in-memory)
+ * Query params:
+ *   - `entityType` · `action` · `performedBy` (free text: uid or name) · `fromDate` / `toDate` (`YYYY-MM-DD`, inclusive)
  *   - `limit`      — 1..100, default 20
- *   - `offset`     — 0..N, default 0 (offset-based pagination)
+ *   - `startAfter` — anchor: id of the last entry the client holds (the oldest of the live window, or `nextCursor`)
+ *
+ * 🔴 Ως 2026-10-30 (pending «Δρομέας keyset»):
+ *   - `.limit(500)` **χωρίς `orderBy`** ⇒ σε εταιρεία με >500 εγγραφές, 500 **τυχαίες** (σειρά id) — όχι οι νεότερες·
+ *   - σελιδοποίηση με `offset`, ενώ ο πελάτης έστελνε **id** ⇒ `parseInt` = NaN ⇒ κενή σελίδα + `hasMore: false` ⇒
+ *     η ουρά δεν φαινόταν ποτέ·
+ *   - φίλτρα διαφορετικά από του ζωντανού παραθύρου.
+ *
+ * Τώρα: `companyId == ctx.companyId` + `orderBy(timestamp ↓)` (δείκτης `(companyId, timestamp↓)` υπάρχει ήδη) ·
+ * άγκυρα `startAfter(snapshot)` (ο Firestore βάζει σιωπηρά `__name__` ⇒ ισοπαλίες σωστές) · σάρωση σε παρτίδες με τον
+ * ΙΔΙΟ κριτή φίλτρων με τον πελάτη (`lib/audit/global-audit-filter`) ως `limit` γραμμές ή `SCAN_CAP` έγγραφα — ο
+ * δρομέας δείχνει την τελευταία **σαρωμένη** εγγραφή, άρα καμία δεν χάνεται. Τα φίλτρα μένουν στη μνήμη (ελεύθερο
+ * κείμενο στο `performedBy` δεν γίνεται ερώτημα Firestore)· κανένας νέος δείκτης.
  *
  * Tenant isolation is automatic via `ctx.companyId` — no admin can read
  * another company's audit trail.
- *
- * **Indexing strategy (MVP, works without composite index deploy)**:
- *   The server query is intentionally simple — a single-field equality
- *   filter on `companyId` with a hard cap of `SCAN_CAP` documents. All
- *   other filters (entityType, action, user, date range) and sorting are
- *   applied in-memory. This avoids the composite-index requirement and
- *   lets the feature work immediately in development without a Firebase
- *   index deploy.
- *
- *   For production scale (> SCAN_CAP audit entries per company), upgrade
- *   to the composite index `(companyId asc, timestamp desc)` already
- *   registered in `firestore.indexes.json`, then switch the query to use
- *   `.orderBy('timestamp', 'desc').limit(X)` with cursor pagination.
  *
  * @module api/audit-trail/global
  * @permission super_admin | company_admin (enforced via withAuth)
@@ -36,6 +31,7 @@
  */
 
 import { NextRequest } from 'next/server';
+import type { CollectionReference, Query } from 'firebase-admin/firestore';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -49,8 +45,18 @@ import {
 } from '@/lib/api/ApiErrorHandler';
 import { AUDIT_ENTITY_TYPES } from '@/config/audit-entity-collection-map';
 import { entityAuditEntriesFromData } from '@/lib/audit/audit-entry-from-document';
+import { globalAuditFilterPredicate, type GlobalAuditFilters } from '@/lib/audit/global-audit-filter';
+import { InvalidPageTokenError } from '@/lib/admin-keyset-page';
+import {
+  optionalQueryDay,
+  optionalQueryText,
+  readQueryLimit,
+  type QueryLimitBounds,
+} from '@/lib/api/query-params';
+import { dedupDualWrite } from '@/services/audit/dedup-dual-write';
 import type {
   AuditAction,
+  AuditEntityType,
   EntityAuditEntry,
   EntityAuditResponse,
 } from '@/types/audit-trail';
@@ -76,13 +82,120 @@ const VALID_ACTIONS: ReadonlySet<string> = new Set<AuditAction>([
   'document_removed',
 ]);
 
+const PAGE_LIMIT: QueryLimitBounds = { defaultLimit: 20, maxLimit: 100 };
+
+/** Έγγραφα ανά ανάγνωση της σάρωσης. */
+const SCAN_BATCH = 100;
+
 /**
- * Hard cap on documents fetched from Firestore per request.
- * Keeps the unindexed scan bounded. If a company exceeds this count,
- * the proper fix is to deploy the composite index and switch to
- * server-side pagination.
+ * Ανώτατο έγγραφα ανά αίτημα. Με στενό φίλτρο η σελίδα μπορεί να βγει **μικρότερη** από `limit` (ακόμη και κενή) με
+ * `hasMore: true` — ο δρομέας δείχνει πού σταμάτησε η σάρωση, άρα το «Περισσότερα» συνεχίζει χωρίς κενά.
  */
-const SCAN_CAP = 500;
+const SCAN_CAP = 1000;
+
+function readFilters(searchParams: URLSearchParams): GlobalAuditFilters {
+  // 🧹 ADR-864 Φ1β — ήταν χειρόγραφο σύνολο **9** τύπων ⇒ το φίλτρο «τοίχος» ή «αγγελία»
+  //    γύριζε 400. Πλέον **προβολή** του μητρώου (ADR-852 §4.9).
+  const entityType = optionalQueryText(searchParams, 'entityType');
+  if (entityType && !AUDIT_ENTITY_TYPES.has(entityType)) {
+    throw new ApiError(400, 'Invalid entity type');
+  }
+
+  const performedBy = optionalQueryText(searchParams, 'performedBy');
+  if (performedBy && performedBy.length > 128) {
+    throw new ApiError(400, 'performedBy too long');
+  }
+
+  const action = optionalQueryText(searchParams, 'action');
+  if (action && !VALID_ACTIONS.has(action)) {
+    throw new ApiError(400, `Invalid action. Valid: ${[...VALID_ACTIONS].join(', ')}`);
+  }
+
+  const fromDate = optionalQueryDay(searchParams, 'fromDate');
+  const toDate = optionalQueryDay(searchParams, 'toDate');
+  if (fromDate && toDate && fromDate > toDate) {
+    throw new ApiError(400, 'fromDate must be <= toDate');
+  }
+
+  return {
+    entityType: entityType as AuditEntityType | undefined,
+    action: action as AuditAction | undefined,
+    performedBy,
+    fromDate,
+    toDate,
+  };
+}
+
+// ============================================================================
+// SCAN
+// ============================================================================
+
+/**
+ * Η άγκυρα πρέπει να είναι εγγραφή **αυτής** της εταιρείας — αλλιώς 400 (ποτέ «πρώτη σελίδα» σιωπηλά, ποτέ θέση
+ * σε ξένη σειρά).
+ */
+async function startAfterAnchor(
+  base: Query,
+  collectionRef: CollectionReference,
+  anchorId: string,
+  companyId: string,
+): Promise<Query> {
+  const anchor = await collectionRef.doc(anchorId).get();
+  // Χωρίς `timestamp` η εγγραφή δεν ανήκει στη σειρά (`orderBy` την αποκλείει) — και το `startAfter` θα έσκαγε 500.
+  if (!anchor.exists || anchor.get(FIELDS.COMPANY_ID) !== companyId || anchor.get('timestamp') == null) {
+    throw new ApiError(400, 'Invalid page cursor for this query', InvalidPageTokenError.code);
+  }
+  return base.startAfter(anchor);
+}
+
+interface ScanResult {
+  readonly entries: EntityAuditEntry[];
+  readonly hasMore: boolean;
+  readonly nextCursor: string | null;
+}
+
+/**
+ * Σάρωση από την άγκυρα προς τα παλαιότερα ως `limit + 1` ταιριαστές γραμμές (το `hasMore` **μετριέται**) ή `SCAN_CAP`
+ * έγγραφα. Δρομέας = το id της τελευταίας **καταναλωμένης** εγγραφής (της τελευταίας που επιστράφηκε, ή της
+ * τελευταίας που σαρώθηκε αν η σάρωση σταμάτησε στο όριο).
+ */
+async function scanTail(start: Query, limit: number, filters: GlobalAuditFilters): Promise<ScanResult> {
+  const matches = globalAuditFilterPredicate(filters);
+  const entries: EntityAuditEntry[] = [];
+  let query = start;
+  let scanned = 0;
+  let lastConsumed: string | null = null;
+
+  while (scanned < SCAN_CAP) {
+    const docs = (await query.limit(SCAN_BATCH).get()).docs;
+    scanned += docs.length;
+    const batch = entityAuditEntriesFromData(docs.map((doc) => ({ id: doc.id, data: doc.data() })));
+    // Διπλοεγγραφές service+cdc: ο ΙΔΙΟΣ κανόνας με το ζωντανό παράθυρο, ανά παρτίδα.
+    const survivors = new Set(dedupDualWrite(batch).map((entry) => entry.id));
+    const byId = new Map(batch.map((entry) => [entry.id, entry]));
+
+    for (const doc of docs) {
+      const entry = byId.get(doc.id);
+      if (entry && survivors.has(doc.id) && matches(entry)) {
+        if (entries.length === limit) {
+          // Η (limit+1)-οστή ταιριαστή: υπάρχει επόμενη σελίδα· ΔΕΝ καταναλώνεται.
+          return { entries, hasMore: true, nextCursor: lastConsumed };
+        }
+        entries.push(entry);
+      }
+      lastConsumed = doc.id;
+    }
+
+    const last = docs[docs.length - 1];
+    if (docs.length < SCAN_BATCH || last === undefined) {
+      return { entries, hasMore: false, nextCursor: null };
+    }
+    query = query.startAfter(last);
+  }
+
+  // Όριο σάρωσης: συνέχεια από την τελευταία σαρωμένη — η επόμενη κλήση σαρώνει τα επόμενα.
+  return { entries, hasMore: true, nextCursor: lastConsumed };
+}
 
 // ============================================================================
 // GET — Paginated Global Audit Trail
@@ -92,98 +205,25 @@ export const GET = withStandardRateLimit(
   withAuth<ApiSuccessResponse<EntityAuditResponse>>(
     async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       const db = requireAdminFirestore();
-
       const url = new URL(request.url);
 
-      // Parse + validate optional filters
-      const entityTypeFilter = url.searchParams.get('entityType');
-      // 🧹 ADR-864 Φ1β — ήταν χειρόγραφο σύνολο **9** τύπων ⇒ το φίλτρο «τοίχος» ή «αγγελία»
-      //    γύριζε 400. Πλέον **προβολή** του μητρώου (ADR-852 §4.9).
-      if (entityTypeFilter && !AUDIT_ENTITY_TYPES.has(entityTypeFilter)) {
-        throw new ApiError(400, 'Invalid entity type');
-      }
+      // Οι αρνήσεις του πελάτη κρίνονται ΠΡΙΝ από τη βάση.
+      const filters = readFilters(url.searchParams);
+      const limit = readQueryLimit(url.searchParams, PAGE_LIMIT);
+      const anchorId = optionalQueryText(url.searchParams, 'startAfter');
 
-      const performedByFilter = url.searchParams.get('performedBy');
-      if (performedByFilter && performedByFilter.length > 128) {
-        throw new ApiError(400, 'performedBy too long');
-      }
-
-      const actionFilter = url.searchParams.get('action');
-      if (actionFilter && !VALID_ACTIONS.has(actionFilter)) {
-        throw new ApiError(
-          400,
-          `Invalid action. Valid: ${[...VALID_ACTIONS].join(', ')}`,
-        );
-      }
-
-      const fromDateStr = url.searchParams.get('fromDate');
-      const toDateStr = url.searchParams.get('toDate');
-      const fromDate = parseIsoDate(fromDateStr, 'fromDate');
-      const toDateRaw = parseIsoDate(toDateStr, 'toDate');
-      const toDate = toDateRaw
-        ? new Date(new Date(toDateRaw).setHours(23, 59, 59, 999))
-        : null;
-
-      if (fromDate && toDate && fromDate > toDate) {
-        throw new ApiError(400, 'fromDate must be <= toDate');
-      }
-
-      const limitParam = parseInt(url.searchParams.get('limit') ?? '20', 10);
-      const limit = Math.min(Math.max(limitParam, 1), 100);
-
-      const offsetParam = parseInt(url.searchParams.get('offset') ?? '0', 10);
-      const offset = Math.max(offsetParam, 0);
-
-      // Single-field query — does NOT require a composite index.
-      // Firestore's auto-generated index on `companyId` handles this.
-      const snapshot = await db
-        .collection(COLLECTIONS.ENTITY_AUDIT_TRAIL)
+      const collectionRef = db.collection(COLLECTIONS.ENTITY_AUDIT_TRAIL);
+      const base = collectionRef
         .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
-        .limit(SCAN_CAP)
-        .get();
+        .orderBy('timestamp', 'desc');
+      const start = anchorId ? await startAfterAnchor(base, collectionRef, anchorId, ctx.companyId) : base;
 
-      // Materialize all docs → entries
-      // 🔑 Το **ένα** σύνορο ανάγνωσης (`lib/audit/audit-entry-from-document`) — εγγραφή χωρίς
-      //    ακριβώς ένα βιβλίο παραλείπεται.
-      const allEntries: EntityAuditEntry[] = entityAuditEntriesFromData(
-        snapshot.docs.map((doc) => ({ id: doc.id, data: doc.data() })),
-      );
-
-      // In-memory filter pipeline
-      const performedByLower = performedByFilter?.toLowerCase() ?? null;
-      const filtered = allEntries.filter((entry) => {
-        if (entityTypeFilter && entry.entityType !== entityTypeFilter) {
-          return false;
-        }
-        if (actionFilter && entry.action !== actionFilter) return false;
-        if (performedByLower) {
-          const haystack =
-            `${entry.performedBy ?? ''} ${entry.performedByName ?? ''}`.toLowerCase();
-          if (!haystack.includes(performedByLower)) return false;
-        }
-        if (fromDate || toDate) {
-          const ts = entry.timestamp ? new Date(entry.timestamp) : null;
-          if (!ts || isNaN(ts.getTime())) return false;
-          if (fromDate && ts < fromDate) return false;
-          if (toDate && ts > toDate) return false;
-        }
-        return true;
-      });
-
-      // Sort newest-first
-      filtered.sort((a, b) => {
-        const aTime = a.timestamp ? new Date(a.timestamp).getTime() : 0;
-        const bTime = b.timestamp ? new Date(b.timestamp).getTime() : 0;
-        return bTime - aTime;
-      });
-
-      const pageEntries = filtered.slice(offset, offset + limit);
-      const hasMore = filtered.length > offset + limit;
+      const { entries, hasMore, nextCursor } = await scanTail(start, limit, filters);
 
       const response: EntityAuditResponse = {
-        entries: pageEntries,
+        entries,
         hasMore,
-        ...(hasMore ? { nextCursor: String(offset + limit) } : {}),
+        ...(hasMore && nextCursor ? { nextCursor } : {}),
       };
 
       return apiSuccess(response, 'Global audit trail retrieved');
@@ -191,16 +231,3 @@ export const GET = withStandardRateLimit(
     { requiredGlobalRoles: ['super_admin', 'company_admin'] },
   ),
 );
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-function parseIsoDate(raw: string | null, fieldName: string): Date | null {
-  if (!raw) return null;
-  const d = new Date(raw);
-  if (isNaN(d.getTime())) {
-    throw new ApiError(400, `Invalid ${fieldName}: expected ISO date`);
-  }
-  return d;
-}

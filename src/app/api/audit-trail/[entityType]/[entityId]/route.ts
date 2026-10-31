@@ -32,10 +32,14 @@ import {
 } from '@/lib/audit/audit-ledger';
 import { auditLedgerFilter } from '@/lib/audit/audit-ledger-query';
 import { entityAuditEntriesFromData } from '@/lib/audit/audit-entry-from-document';
+import { InvalidPageTokenError } from '@/lib/admin-keyset-page';
+import { readQueryLimit, type QueryLimitBounds } from '@/lib/api/query-params';
 import type { ApiErrorResponse } from '@/lib/api/api-error-types';
 import type { EntityAuditResponse } from '@/types/audit-trail';
 
 type AdminDb = ReturnType<typeof requireAdminFirestore>;
+
+const PAGE_LIMIT: QueryLimitBounds = { defaultLimit: 20, maxLimit: 100 };
 
 // ============================================================================
 // QUERY
@@ -60,7 +64,7 @@ async function queryPage(db: AdminDb, page: PageRequest) {
   const filter = auditLedgerFilter(page.actor, kind);
   if (filter === null) throw new ApiError(403, 'Company ledger requires an organization');
 
-  // tenant-scope-exempt: το διαμέρισμα ΚΑΙ το φίλτρο εμβέλειας (`companyId` στο εταιρικό,
+  // Εμβέλεια: το διαμέρισμα ΚΑΙ το φίλτρο εμβέλειας (`companyId` στο εταιρικό,
   // `userId` στο προσωπικό) τα αποφασίζουν `AUDIT_LEDGER_COLLECTION` + `auditLedgerFilter`, με
   // τιμή από την ταυτότητα του δρώντος — ποτέ από το αίτημα (ADR-864 Φ1β · ADR-787 Ε-3 §8).
   const collection = COLLECTIONS[AUDIT_LEDGER_COLLECTION[kind]];
@@ -74,10 +78,31 @@ async function queryPage(db: AdminDb, page: PageRequest) {
 
   if (page.startAfter) {
     const cursorDoc = await db.collection(collection).doc(page.startAfter).get();
-    if (cursorDoc.exists) q = q.startAfter(cursorDoc);
+    assertAnchorInScope(cursorDoc.exists ? cursorDoc.data() : undefined, page, filter);
+    // `startAfter(snapshot)`: ο Firestore προσθέτει σιωπηρά το `__name__` ⇒ ισοπαλία `timestamp` στο όριο σωστή.
+    q = q.startAfter(cursorDoc);
   }
 
   return q.get();
+}
+
+/**
+ * Η άγκυρα της «επόμενης σελίδας» είναι **id εγγραφής** — το δίνει και η ζωντανή συνδρομή του πελάτη (η παλαιότερη
+ * γραμμή του παραθύρου της, `useAuditFeed`), γι' αυτό δεν γίνεται αδιαφανής δρομέας keyset. Πρέπει όμως να είναι
+ * εγγραφή **αυτής** της σελίδας: ως 2026-10-30 άγκυρα που δεν υπήρχε ⇒ η ΠΡΩΤΗ σελίδα σιωπηλά (διπλές γραμμές στην
+ * οθόνη), και άγκυρα άλλης οντότητας ⇒ θέση σε ξένη σειρά. Τώρα και τα δύο ⇒ 400 `INVALID_PAGE_TOKEN`.
+ */
+function assertAnchorInScope(
+  anchor: Record<string, unknown> | undefined,
+  page: PageRequest,
+  filter: { readonly field: string; readonly value: string },
+): void {
+  const inScope =
+    anchor !== undefined &&
+    anchor[FIELDS.ENTITY_TYPE] === page.entityType &&
+    anchor[FIELDS.ENTITY_ID] === page.entityId &&
+    anchor[filter.field] === filter.value;
+  if (!inScope) throw new ApiError(400, 'Invalid page cursor for this query', InvalidPageTokenError.code);
 }
 
 async function readAuditPage(request: NextRequest, actor: ApiActor): Promise<EntityAuditResponse> {
@@ -91,8 +116,7 @@ async function readAuditPage(request: NextRequest, actor: ApiActor): Promise<Ent
   }
 
   const url = new URL(request.url);
-  const limitParam = parseInt(url.searchParams.get('limit') ?? '20', 10);
-  const limit = Math.min(Math.max(limitParam, 1), 100); // Clamp 1-100
+  const limit = readQueryLimit(url.searchParams, PAGE_LIMIT);
 
   const snapshot = await queryPage(requireAdminFirestore(), {
     entityType,
