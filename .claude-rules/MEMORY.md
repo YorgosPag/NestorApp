@@ -15,6 +15,7 @@
 - [ADR Phase 3 MANDATORY](feedback_adr_phase3_mandatory.md) — NEVER commit code without ADR update in the SAME commit. Fixed 2026-03-12.
 - [No push without explicit order](feedback_no_push_without_order.md) — NON-NEGOTIABLE: NEVER git push without explicit order from Giorgio
 - [Giorgio fa commit + push](feedback_only_commit_no_push.md) — **AGGIORNATO 2026-05-16**: Giorgio fa SIA commit SIA push. Agent NEVER committa né pusha autonomamente. Vedi CLAUDE.md N.(-1).
+- 🆕 [Κανένα deploy Firestore από κλαδί](feedback_no_firestore_deploy_from_branch.md) — **2026-10-31**. Κανόνες/δείκτες μόνο μέσω `main` και γραμμής· deploy από κλαδί = DRIFT, ρίχνει το release.
 - [Never ask about commit/push](feedback_never_ask_commit_push.md) — NEVER ask "do you want a commit?" — Giorgio says so himself
 - 🆕 [ΠΟΤΕ `TMP`/`TEMP`/`TMPDIR` ως μεταβλητή σε Git Bash](feedback_tmp_env_var_git_bash.md) — **2026-09-16**. Εξαγόμενες μεταβλητές Windows· το git.exe κάνει το `TMP` → `TMPDIR` των hooks ⇒ `mktemp` αποτυγχάνει. Χρησιμοποίησε `IDX`/`T`. Πύλες: έξοδος στη μνήμη, ποτέ `2>/dev/null`.
 - 🆕 [Έλεγχος heavy-task.lock: κλειδί ΑΛΛΗΣ συνεδρίας](feedback_heavy_lock_guard.md) — **2026-10-24**. Το `heavy-mutex.js` κλειδώνει με το ΔΙΚΟ μας sessionId πριν τρέξει το jest ⇒ σκέτο `if [ -f lock ]` = πάντα LOCKED. Έλεγξε `! grep -q <session-id>`.
