@@ -46,7 +46,7 @@ export function BuildingDetailsHeader({
     // so it is resolved before this header can mount. The `isNamespaceReady ? t(…) : 'Save'`
     // guards this file used to carry were a workaround for `showcase` loading lazily —
     // they showed English literals to a Greek user for one frame and violated N.11.
-    const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline', 'showcase']);
+    const { t } = useTranslation(['building', 'showcase']);
 
     // 🏢 ENTERPRISE: Actions via centralized presets
     // Edit mode: Save (🟢), Cancel (⚪)

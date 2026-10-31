@@ -41,7 +41,7 @@ export const BuildingsList = React.memo(function BuildingsList({
   onDeleteBuilding,
 }: BuildingsListProps) {
   // [ENTERPRISE] i18n hook for translations
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation('building');
   const [favorites, setFavorites] = useState<string[]>(['1']);
   const { sortBy, sortOrder, onSortChange } = useSortState<SortField>('name');
   const [searchTerm, setSearchTerm] = useState('');

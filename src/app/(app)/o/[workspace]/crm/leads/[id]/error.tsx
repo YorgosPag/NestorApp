@@ -14,7 +14,7 @@ interface ErrorProps {
 }
 
 export default function LeadDetailsError({ error, reset }: ErrorProps) {
-  const { t } = useTranslation(['crm', 'crm-inbox']);
+  const { t } = useTranslation('crm');
   return (
     <RouteErrorFallback
       error={error}

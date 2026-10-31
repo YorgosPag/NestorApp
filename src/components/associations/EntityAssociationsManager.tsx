@@ -82,7 +82,7 @@ export function EntityAssociationsManager({
   parentProjectId,
   onRemoveIntercept,
 }: EntityAssociationsManagerProps) {
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation('building');
   const spacing = useSpacingTokens();
   const typography = useTypography();
   const colors = useSemanticColors();

@@ -14,7 +14,7 @@ interface BuildingCardFeaturesProps {
 
 export function BuildingCardFeatures({ features }: BuildingCardFeaturesProps) {
   // 🏢 ENTERPRISE: i18n hook for translations with namespace readiness check
-  const { t, isNamespaceReady } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t, isNamespaceReady } = useTranslation('building');
 
   // 🏢 ENTERPRISE: Memoized translation function using centralized utility
   const translateFeature = useMemo(() => {
