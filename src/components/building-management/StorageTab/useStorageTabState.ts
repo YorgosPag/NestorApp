@@ -46,7 +46,7 @@ interface StorageMutationResult {
 }
 
 export function useStorageTabState(building: Building) {
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline', 'properties-enums']);
+  const { t } = useTranslation(['building', 'properties-enums']);
   const { success } = useNotifications();
   // ADR-898 §21.6 Ε3 — ΕΝΑΣ βοηθός για κάθε αποτυχία: άρνηση πολιτικής ⇒ info + toast, άλλο ⇒ error + toast.
   const reportFailure = useMutationFailureFeedback('StorageTab');

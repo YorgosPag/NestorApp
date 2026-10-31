@@ -79,7 +79,7 @@ export function BuildingSpaceTable<T>({
   onSortChange,
   renderFooter,
 }: BuildingSpaceTableProps<T>) {
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
 
   const hasActions = actions && (actions.onView || actions.onEdit || actions.onUnlink || actions.onDelete);
