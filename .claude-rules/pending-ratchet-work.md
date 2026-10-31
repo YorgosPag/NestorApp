@@ -15,6 +15,13 @@
   **Θεραπεία:** ανά πύλη το πρότυπο της §8.8 (είσοδος στη `measure` · άγκυρα `MIGRATED`/`MIGRATED_FULL` · `compare` δίσκος/`--index`
   · `jscpd:diff`) και `npm run gate-commit-view:baseline`. **Μέγεθος:** > 1h, 30+ αρχεία.
 
+- 🟡 **31/10 — ΣΧΟΛΙΑ «ΧΩΡΙΣ `.gitattributes`» ΜΕΤΑ ΤΟ ADR-925 §11**
+
+  **Τι:** 5 αρχεία του `scripts/` περιγράφουν ακόμη repo χωρίς `.gitattributes`: `lib/generated-artifacts.js` ·
+  `lib/i18n-shell-slice/{layer-one-checks,slice-build}.js` · `__tests__/{check-i18n-types-freshness,i18n-shell-slice}.test.js`.
+  **Θεραπεία:** ενημέρωση των σχολίων στο καθαρό σημείο, όταν και το κύριο αντίγραφο γίνει LF· οι κανονικοποιήσεις μένουν.
+  **Μέγεθος:** < 1h.
+
 - 🟡 **30/10 — ΑΠΟΤΥΠΩΜΑΤΑ ΠΑΝΩ ΣΕ ΩΜΟ EOL (3.66 · 3.64 · 3.84)** *(ADR-924 §8.8)*
 
   **Τι:** sha256 του ωμού κειμένου, ενώ ο δίσκος είναι **μικτός** (`git ls-files --eol` ⇒ `w/mixed`: CRLF από checkout, LF από

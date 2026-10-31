@@ -1,0 +1,53 @@
+# Αλλαγές γραμμής: κανόνας του repo, όχι ρύθμιση μηχανήματος (ADR-925 §11).
+# Το git κρατά LF και ο δίσκος είναι LF σε κάθε λειτουργικό, ανεξάρτητα από το core.autocrlf.
+* text=auto eol=lf
+
+# Ο διερμηνέας των Windows θέλει CRLF στον δίσκο· στο git μένουν LF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Μορφές όπου τα bytes είναι το ίδιο το περιεχόμενο: κείμενο, αλλά χωρίς μετατροπή.
+*.dxf -text
+*.tek -text
+
+# Δυαδικά: καμία μετατροπή, κανένα diff, κανένα merge.
+*.7z binary
+*.avif binary
+*.bin binary
+*.bmp binary
+*.docx binary
+*.dwg binary
+*.eot binary
+*.exr binary
+*.fbx binary
+*.gif binary
+*.glb binary
+*.gz binary
+*.hdr binary
+*.ico binary
+*.jpeg binary
+*.jpg binary
+*.ktx2 binary
+*.mov binary
+*.mp3 binary
+*.mp4 binary
+*.onnx binary
+*.otf binary
+*.pdf binary
+*.png binary
+*.pptx binary
+*.rvt binary
+*.tif binary
+*.tiff binary
+*.ttf binary
+*.wasm binary
+*.webm binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.xlsx binary
+*.zip binary
+
+# Εξαίρεση: κείμενα ανάκτησης με κατάληξη .bin (τελευταίος κανόνας κερδίζει).
+recovery/lost-found/*.bin text=auto eol=lf diff merge

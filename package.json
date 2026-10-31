@@ -264,7 +264,7 @@
     "wt:list": "node scripts/agent-worktree.js list",
     "wt:land": "node scripts/agent-worktree.js land",
     "wt:remove": "node scripts/agent-worktree.js remove",
-    "test:agent-worktree": "jest scripts/__tests__/agent-worktree.test.js scripts/__tests__/agent-worktree-policy.test.js",
+    "test:agent-worktree": "jest scripts/__tests__/agent-worktree.test.js scripts/__tests__/agent-worktree-policy.test.js scripts/__tests__/gitattributes-policy.test.js",
     "domain-vocabulary:report": "node scripts/check-domain-vocabulary.js",
     "test:domain-vocabulary": "jest scripts/__tests__/domain-vocabulary.test.js",
     "product-identity:report": "node scripts/check-product-identity.js",
