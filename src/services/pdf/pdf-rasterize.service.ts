@@ -77,9 +77,14 @@ interface PdfjsDoc {
   getPage(n: number): Promise<PdfjsPage>;
   destroy(): Promise<void>;
 }
-interface PdfjsViewport { width: number; height: number; }
+interface PdfjsViewport {
+  width: number;
+  height: number;
+  /** Σημείο PDF (αρχή κάτω-αριστερά) → σημείο όψης (αρχή πάνω-αριστερά), με περιστροφή και μετατόπιση της σελίδας. */
+  convertToViewportPoint(x: number, y: number): [number, number];
+}
 /** Ένα κομμάτι κειμένου της σελίδας — `hasEOL` = αλλαγή γραμμής μετά από αυτό. */
-interface PdfjsTextItem { str?: string; hasEOL?: boolean; }
+interface PdfjsTextItem { str?: string; hasEOL?: boolean; transform?: readonly number[]; width?: number; height?: number; }
 interface PdfjsPage {
   getTextContent(): Promise<{ items: ReadonlyArray<PdfjsTextItem> }>;
   getViewport(opts: { scale: number }): PdfjsViewport;
@@ -222,6 +227,73 @@ export async function rasterizePdfPages(
   }
 
   return pages;
+}
+
+/** Ένα κομμάτι κειμένου σε κλάσματα σελίδας, αρχή πάνω-αριστερά — ανεξάρτητα από ανάλυση και ζουμ. */
+export interface PdfPageTextItem {
+  readonly text: string;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+export interface PdfPageReading {
+  readonly png: Buffer;
+  readonly items: readonly PdfPageTextItem[];
+  readonly pageCount: number;
+}
+
+function textItemOf(item: PdfjsTextItem, viewport: PdfjsViewport): PdfPageTextItem | null {
+  const { str, transform, width = 0, height = 0 } = item;
+  if (!str || str.trim() === '' || !transform) return null;
+  const [left, baseline] = viewport.convertToViewportPoint(transform[4], transform[5]);
+  return {
+    text: str,
+    x: left / viewport.width,
+    y: (baseline - height) / viewport.height,
+    width: width / viewport.width,
+    height: height / viewport.height,
+  };
+}
+
+/**
+ * **Μία σελίδα ως εικόνα + κείμενο με θέσεις** (ADR-923 §5.5): η εικόνα πάει στο μοντέλο, το κείμενο με τις θέσεις του είναι
+ * η απόδειξη απέναντι στην οποία ελέγχεται η απάντησή του. Σαρωμένη σελίδα ⇒ κενά `items`, ποτέ σφάλμα.
+ */
+export async function readPdfPage(
+  pdfBuffer: Buffer,
+  pageNumber: number,
+  options: Pick<RasterizeOptions, 'dpi' | 'maxWidthPx'> = {},
+): Promise<PdfPageReading> {
+  const pdfjs = await loadPdfjs();
+  const { createCanvas } = await loadCanvas();
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(pdfBuffer), isEvalSupported: false, canvasFactory: makeCanvasFactory(createCanvas) }).promise;
+  try {
+    const page = await doc.getPage(pageNumber);
+    try {
+      const limits = { dpi: options.dpi ?? DEFAULT_DPI, maxWidthPx: options.maxWidthPx ?? DEFAULT_MAX_WIDTH_PX };
+      const viewport = page.getViewport({ scale: 1 });
+      const { items } = await page.getTextContent();
+      const png = await renderPageToPng(page, createCanvas, limits);
+      return { png, items: items.flatMap((item) => textItemOf(item, viewport) ?? []), pageCount: doc.numPages };
+    } finally {
+      page.cleanup();
+    }
+  } finally {
+    await doc.destroy();
+  }
+}
+
+/** Πόσες σελίδες έχει το PDF (ο στόχος μιας παρτίδας κρίνεται πριν ξοδευτεί ούτε μία ανάγνωση). */
+export async function countPdfPages(pdfBuffer: Buffer): Promise<number> {
+  const pdfjs = await loadPdfjs();
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(pdfBuffer), isEvalSupported: false }).promise;
+  try {
+    return doc.numPages;
+  } finally {
+    await doc.destroy();
+  }
 }
 
 /**

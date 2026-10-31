@@ -40,6 +40,17 @@ export interface PdfCanvasViewerProps {
   title: string;
   /** Optional className */
   className?: string;
+  /** Η σελίδα που ζητά ο καλών (έλεγχος δίπλα-δίπλα, ADR-923 §5.5.1). Απούσα ⇒ ο viewer κρατά δική του πλοήγηση. */
+  page?: number;
+  /** Περιοχές επισήμανσης σε κλάσματα σελίδας (0..1), αρχή πάνω-αριστερά: ακολουθούν ζουμ και ανάλυση. */
+  highlights?: readonly PdfHighlightRegion[];
+}
+
+export interface PdfHighlightRegion {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
 }
 
 export interface PdfState {

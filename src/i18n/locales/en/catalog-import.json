@@ -1,0 +1,103 @@
+{
+  "page": {
+    "title": "Import",
+    "lead": "Bring in data from Excel, CSV or PDF. Nothing is written until you approve it: every file becomes a proposal with a per-field diff.",
+    "new": "New import",
+    "empty": "No imports yet."
+  },
+  "new": {
+    "title": "New import",
+    "file": "File (PDF, Excel or CSV)",
+    "unsupported": "This file type is not supported. Save it as .xlsx or .csv.",
+    "purpose": "What are you importing",
+    "purposeAttributes": "Products and attributes",
+    "purposePrices": "Prices only",
+    "family": "Family",
+    "version": "Draft price list version",
+    "pages": "Page range",
+    "pageFrom": "From",
+    "pageTo": "To",
+    "sheetOptions": "Sheet options",
+    "skipRows": "Title rows",
+    "sheet": "Sheet",
+    "start": "Start",
+    "working": "Working…"
+  },
+  "mapping": {
+    "column": "File column",
+    "columnNumber": "Column {number}",
+    "sample": "Sample",
+    "target": "Goes to",
+    "unit": "Unit",
+    "ignore": "Ignore",
+    "modelCode": "Model code",
+    "skuIdentifier": "Item code",
+    "attribute": "Attribute",
+    "price": {
+      "netPrice": "Net price",
+      "priceQuantity": "Price quantity",
+      "unitCode": "Pricing unit",
+      "discountGroup": "Discount group"
+    }
+  },
+  "batch": {
+    "loading": "Loading batch…",
+    "discard": "Discard",
+    "pages": "Reading pages",
+    "pagesProgress": "Read {done} of {total} pages · {failed} failed",
+    "readPages": "{count, plural, one {Read # page} other {Read # pages}}",
+    "retryFailed": "Retry failed pages",
+    "noProposals": "No proposals yet."
+  },
+  "batchStatus": {
+    "awaitingFile": "Awaiting file",
+    "mapping": "Mapping",
+    "extracting": "Reading",
+    "reviewing": "In review",
+    "closed": "Completed",
+    "discarded": "Discarded"
+  },
+  "proposalStatus": {
+    "pending": "in review",
+    "applied": "applied",
+    "rejected": "rejected"
+  },
+  "status": {
+    "new": "New",
+    "changed": "Changed",
+    "unchanged": "Unchanged",
+    "conflict": "Conflict"
+  },
+  "action": {
+    "create": "new",
+    "update": "update"
+  },
+  "review": {
+    "source": "Source PDF",
+    "field": "Field",
+    "live": "Now",
+    "incoming": "From source",
+    "status": "Status",
+    "confidence": "Confidence",
+    "decision": "Decision",
+    "accept": "Accept",
+    "reject": "Reject",
+    "acceptRow": "Accept row",
+    "rejectAll": "Reject proposal",
+    "apply": "Approve and apply",
+    "pending": "{count, plural, one {# field needs a decision} other {# fields need a decision}}",
+    "violations": "{count, plural, one {# consistency rule is not met} other {# consistency rules are not met}}",
+    "unverified": "not confirmed by the page text",
+    "noModel": "No model",
+    "modelCode": "Model code",
+    "setModelCode": "Set"
+  },
+  "issues": {
+    "misaligned": "This value does not line up with the rest of the variant's column in the PDF. Check whether it belongs to a neighbouring column.",
+    "sharedDisagrees": "The source rows give different values for an attribute shared by the whole model.",
+    "levelUnsupported": "This attribute lives on a sub-model: import does not write an intermediate level yet.",
+    "modelCodeMissing": "The source gives no model code. Fill it in to apply this proposal.",
+    "skuUnknown": "No live item has the code “{code}”.",
+    "priceIncomplete": "A new price line needs a price and a unit."
+  }
+}

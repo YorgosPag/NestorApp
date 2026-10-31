@@ -105,10 +105,13 @@ describe('Ζ — το ζωντανό δέντρο', () => {
   // `catalog_price_list_lines` · `catalog_discount_groups` · `catalog_customer_groups` · `catalog_customer_assignments` ·
   // `catalog_discount_conditions` · `catalog_pricing_slots`: ίδιο σχήμα, read με `isAuthenticated` +
   // `isInternalUserOfCompany`, write `if false`) ⇒ 830.
-  it('Ζ 🔑 0 ευρήματα — ΚΑΙ ο πληθυσμός είναι αυτός που μετρήθηκε (830 + 71 allow)', () => {
+  // 2026-10-31: το `main` μετρούσε ήδη 833, όχι 830: +3 από το `catalog_pricing_view_signals` (ADR-923 «3δ» Ζ, get · list ·
+  // write), χωρίς ενημέρωση αυτής της άγκυρας. +6 (ADR-923 Φ4 — τρεις συλλογές εισαγωγής `catalog_import_profiles` ·
+  // `catalog_import_batches` · `catalog_import_proposals`: read/write `if false`) ⇒ 839.
+  it('Ζ 🔑 0 ευρήματα — ΚΑΙ ο πληθυσμός είναι αυτός που μετρήθηκε (839 + 71 allow)', () => {
     const result = sweep(ROOT);
     expect(result.violations).toEqual([]);
-    expect(result.perFile.map((f) => f.allows)).toEqual([830, 71]);
+    expect(result.perFile.map((f) => f.allows)).toEqual([839, 71]);
     expect(result.tally[GATE_STATES.COVERED]).toBeGreaterThan(600);
     expect(result.claimName).toBe('revokedSignIns');
   });

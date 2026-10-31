@@ -93,34 +93,40 @@ function sameLine(current: StoredPriceLine, next: PriceListLineDefinition): bool
   );
 }
 
-/** `PUT /api/catalog/price-list-versions/[id]/lines` — η δέσμη, σε μία συναλλαγή. */
-export async function savePriceLines(ctx: AuthContext, versionId: string, batch: PriceLineBatch): Promise<PriceLineBatchResult> {
-  return runCatalogTransaction(ctx, async (scope) => {
-    const version = await readDraftForLines(scope, versionId, batch.expectedLinesRevision);
-    const lines = batch.upserts.map((line): PriceListLineDefinition => ({ ...line, versionId: version.id }));
-    await assertBatchValid(scope, version, lines, batch);
-    const lineKey = (subjectKey: string) => priceListLineKey(version.id, subjectKey);
-    const upserts = await Promise.all(
-      lines.map((line) => readForUpsert<StoredPriceListLineDefinition>(scope, 'priceListLine', lineKey(priceLineSubjectKey(line.subject)))),
-    );
-    const deletes = await Promise.all(
-      batch.deletes.map((subject) => readForUpsert<StoredPriceListLineDefinition>(scope, 'priceListLine', lineKey(priceLineSubjectKey(subject)))),
-    );
-    let written = 0;
-    lines.forEach((line, index) => {
-      const { target, current } = upserts[index];
-      if (current !== null && sameLine(current, line)) return;
-      const stored = storedLineOf(version, line);
-      if (current === null) stageCreate(scope, 'priceListLine', target, stored);
-      else stageReplace(scope, 'priceListLine', current, stored);
-      written++;
-    });
-    for (const { current } of deletes) {
-      if (current === null) continue;
-      stageSoftDelete(scope, 'priceListLine', current);
-      written++;
-    }
-    const touched = written > 0 ? stageLinesTouched(scope, version) : version;
-    return { versionId: version.id, linesRevision: touched.derived.linesRevision, written };
+/**
+ * Η δέσμη **μέσα σε υπάρχουσα συναλλαγή**: ο ΕΝΑΣ δρόμος γραμμών, κοινός με την έγκριση εισαγωγής (ADR-923 §5.5.1), που
+ * γράφει τις γραμμές και το `applied` της πρότασης ατομικά. Κάνει και αναγνώσεις: ο καλών σκηνοθετεί τα δικά του **μετά**.
+ */
+export async function stagePriceLineBatch(scope: CatalogTx, versionId: string, batch: PriceLineBatch): Promise<PriceLineBatchResult> {
+  const version = await readDraftForLines(scope, versionId, batch.expectedLinesRevision);
+  const lines = batch.upserts.map((line): PriceListLineDefinition => ({ ...line, versionId: version.id }));
+  await assertBatchValid(scope, version, lines, batch);
+  const lineKey = (subjectKey: string) => priceListLineKey(version.id, subjectKey);
+  const upserts = await Promise.all(
+    lines.map((line) => readForUpsert<StoredPriceListLineDefinition>(scope, 'priceListLine', lineKey(priceLineSubjectKey(line.subject)))),
+  );
+  const deletes = await Promise.all(
+    batch.deletes.map((subject) => readForUpsert<StoredPriceListLineDefinition>(scope, 'priceListLine', lineKey(priceLineSubjectKey(subject)))),
+  );
+  let written = 0;
+  lines.forEach((line, index) => {
+    const { target, current } = upserts[index];
+    if (current !== null && sameLine(current, line)) return;
+    const stored = storedLineOf(version, line);
+    if (current === null) stageCreate(scope, 'priceListLine', target, stored);
+    else stageReplace(scope, 'priceListLine', current, stored);
+    written++;
   });
+  for (const { current } of deletes) {
+    if (current === null) continue;
+    stageSoftDelete(scope, 'priceListLine', current);
+    written++;
+  }
+  const touched = written > 0 ? stageLinesTouched(scope, version) : version;
+  return { versionId: version.id, linesRevision: touched.derived.linesRevision, written };
+}
+
+/** `PUT /api/catalog/price-list-versions/[id]/lines` — η δέσμη, σε μία συναλλαγή. */
+export function savePriceLines(ctx: AuthContext, versionId: string, batch: PriceLineBatch): Promise<PriceLineBatchResult> {
+  return runCatalogTransaction(ctx, (scope) => stagePriceLineBatch(scope, versionId, batch));
 }

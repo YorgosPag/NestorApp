@@ -1113,6 +1113,12 @@ export const COLLECTIONS = {
    * διακομιστή· ο πελάτης ακούει εδώ πότε να ξαναρωτήσει. Γράφει ΜΟΝΟ η μηχανή του καταλόγου. IDs via cpvs_*.
    */
   CATALOG_PRICING_VIEW_SIGNALS: process.env.NEXT_PUBLIC_CATALOG_PRICING_VIEW_SIGNALS_COLLECTION || 'catalog_pricing_view_signals',
+  /** Αποθηκευμένες αντιστοιχίσεις στηλών ανά προμηθευτή/αρχείο (ADR-923 §5.5.1). IDs via ciprf_* (από κωδικό). */
+  CATALOG_IMPORT_PROFILES: process.env.NEXT_PUBLIC_CATALOG_IMPORT_PROFILES_COLLECTION || 'catalog_import_profiles',
+  /** Παρτίδες εισαγωγής. IDs via cibat_* (από αρχείο + στόχο + έκδοση προφίλ + εκτέλεση ⇒ ιδεμπότητες δομικά). */
+  CATALOG_IMPORT_BATCHES: process.env.NEXT_PUBLIC_CATALOG_IMPORT_BATCHES_COLLECTION || 'catalog_import_batches',
+  /** Προτάσεις εισαγωγής με διαφορά ανά πεδίο. Κουβαλούν τιμές ⇒ ανάγνωση μόνο από διακομιστή. IDs via cipsl_*. */
+  CATALOG_IMPORT_PROPOSALS: process.env.NEXT_PUBLIC_CATALOG_IMPORT_PROPOSALS_COLLECTION || 'catalog_import_proposals',
 
   // 🪜 DXF STAIR TOOL — ADR-358 (companyId-scoped, Phase 1)
   /** Parametric stair entities, 11 kinds, IfcStair-aligned. FK → floorplans. IDs via stair_* prefix. */

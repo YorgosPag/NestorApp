@@ -8,8 +8,8 @@
  *
  * Rule: read requires `isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin())`
  *       write requires `isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin())
- *                       && (isValidFileSize() || isListingVideoUpload() || isCatalogAssetUpload())`
- *                       — ADR-907 §10 · ADR-923 §5.10.3
+ *                       && (isValidFileSize() || isListingVideoUpload() || isCatalogAssetUpload() || isCatalogImportUpload())`
+ *                       — ADR-907 §10 · ADR-923 §5.10.3 · §5.5.1
  *       delete requires `isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin())`
  *
  * Note: write rule here adds an explicit `isAuthenticated()` check at the top
@@ -168,6 +168,29 @@ describe('canonical-path-no-project.storage — company_scoped_no_project patter
     it('Γ3 το σκέλος ΔΕΝ ανοίγει ξένο χώρο ούτε ανώνυμο', async () => {
       await assertFails(upload(catalogPath('catalog_asset', 'x'), OVER_GENERAL_CAP, 'cross_tenant_user'));
       await assertFails(upload(catalogPath('catalog_asset', 'a'), OVER_GENERAL_CAP, 'anonymous'));
+    });
+  });
+
+  // ADR-923 §5.5.1 — το αρχείο-πηγή μιας εισαγωγής (`isCatalogImportUpload`), ΠΡΟΣΘΕΤΙΚΑ. Το ταβάνι των 200 MB το φυλάει
+  // άγκυρα κειμένου απέναντι στο `IMPORT_MAX_FILE_BYTES` (`import-storage-ceiling.test.ts`): 400 MB μεταφοράς ανά τρέξιμο δεν αξίζουν.
+  describe('🔴 Δ — ταβάνι μεγέθους του αρχείου εισαγωγής (ADR-923 §5.5.1)', () => {
+    const importPath = (entityType: string, suffix: string): string =>
+      `companies/${COMPANY_ID}/entities/${entityType}/cibat_test` +
+      `/domains/catalog/categories/documents/files/file_${suffix}.pdf`;
+    const upload = (path: string, size: number, persona: StoragePersona = 'same_tenant_user') =>
+      getStorageContext(env, persona).storage().ref(path).put(PAYLOAD.subarray(0, size), { contentType: 'application/pdf' });
+
+    it('🔑 Δ1 PDF πάνω από 50 MB ανεβαίνει — ο κατάλογος Aries είναι 138 MB', async () => {
+      await assertSucceeds(upload(importPath('catalog_import_batch', 'big'), OVER_GENERAL_CAP));
+    });
+
+    it('Δ2 …ΜΟΝΟ για `catalog_import_batch` — το ίδιο αρχείο σε άλλη οντότητα κόβεται', async () => {
+      await assertFails(upload(importPath('material', 'big'), OVER_GENERAL_CAP));
+    });
+
+    it('Δ3 το σκέλος ΔΕΝ ανοίγει ξένο χώρο ούτε ανώνυμο', async () => {
+      await assertFails(upload(importPath('catalog_import_batch', 'x'), OVER_GENERAL_CAP, 'cross_tenant_user'));
+      await assertFails(upload(importPath('catalog_import_batch', 'a'), OVER_GENERAL_CAP, 'anonymous'));
     });
   });
 });

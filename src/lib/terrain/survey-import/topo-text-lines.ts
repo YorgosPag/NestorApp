@@ -14,13 +14,8 @@
  * parse strategy. See the header of `ascii-xyz-reader.ts`.
  */
 
-import { parseLocaleNumber } from '@/lib/number/locale-number';
-
 /** Any run of whitespace / comma / semicolon / tab separates two fields (the lenient default). */
 const FIELD_SPLIT = /[\s,;]+/;
-
-/** A field must LOOK numeric before we spend `parseLocaleNumber` on it — `TREE1` is not a number. */
-const NUMERIC_FIELD = /^[+-]?[\d.,]+$/;
 
 /**
  * ⚠️ THE COMMA IS AMBIGUOUS, and it bites exactly where it hurts: in the lenient default above a
@@ -52,22 +47,8 @@ export function splitTopoFields(line: string): string[] {
   return line.trim().split(FIELD_SPLIT).filter((f) => f.length > 0);
 }
 
-/** True when the field could be a number at all (cheap gate before the locale parse). */
-export function looksNumericField(field: string): boolean {
-  return NUMERIC_FIELD.test(field);
-}
-
-/**
- * One field → number, or `null`. The fast path is `Number()` (the overwhelming majority of survey
- * lines are plain dot-decimals); anything it rejects but that still looks numeric falls back to the
- * `parseLocaleNumber` SSoT, so a Greek-locale export (`384512,345`) parses identically everywhere.
- */
-export function parseTopoField(field: string): number | null {
-  if (!looksNumericField(field)) return null;
-  const fast = Number(field);
-  if (Number.isFinite(fast)) return fast;
-  return parseLocaleNumber(field);
-}
+// ADR-923 §5.5 — ο κριτής πεδίου ζει στον γενικό πινακοειδή πυρήνα, ίδιος με τον κατάλογο.
+export { looksNumericField, parseTabularField as parseTopoField } from '@/lib/tabular-import/tabular-field';
 
 /**
  * Walk the text line by line WITHOUT materialising a `string[]`: `text.split()` on a 30M-line

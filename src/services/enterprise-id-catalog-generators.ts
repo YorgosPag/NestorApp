@@ -118,4 +118,20 @@ export abstract class CatalogIdGenerators extends CompositeKeyIdGenerators {
   generateDeterministicCatalogPricingViewSignalId(companyId: string, viewKey: string): string {
     return this.mintDeterministicV4Id(P.CATALOG_PRICING_VIEW_SIGNAL, seedOf('pricing-view-signal', companyId, viewKey));
   }
+
+  // ── Φάση 4 (ADR-923 §5.5.1) — εισαγωγή ──
+
+  generateDeterministicCatalogImportProfileId(companyId: string, code: string): string {
+    return this.mintDeterministicV4Id(P.CATALOG_IMPORT_PROFILE, seedOf('import-profile', companyId, code));
+  }
+
+  /** Κλειδί = `importBatchKey(αρχείο, στόχος, έκδοση προφίλ, εκτέλεση)` ⇒ ίδια είσοδος δίνει την ίδια παρτίδα, δομικά. */
+  generateDeterministicCatalogImportBatchId(companyId: string, batchKey: string): string {
+    return this.mintDeterministicV4Id(P.CATALOG_IMPORT_BATCH, seedOf('import-batch', companyId, batchKey));
+  }
+
+  /** Κλειδί = `importProposalKey(παρτίδα, σύνολο)` ⇒ η επανάληψη μιας ανάγνωσης ξαναγράφει την ίδια πρόταση. */
+  generateDeterministicCatalogImportProposalId(companyId: string, proposalKey: string): string {
+    return this.mintDeterministicV4Id(P.CATALOG_IMPORT_PROPOSAL, seedOf('import-proposal', companyId, proposalKey));
+  }
 }

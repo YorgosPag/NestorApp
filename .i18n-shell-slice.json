@@ -626,6 +626,19 @@
       ],
       "reason": "ADR-923 §5.11 «3δ» Τμήμα 1 + ADR-744 §18 — Η ΣΕΛΙΔΑ ΤΙΜΟΚΑΤΑΛΟΓΩΝ. Ίδιος μηχανισμός με τις 7 αδελφές σελίδες του καταλόγου (§5.10.4 Β7): το `catalog` ΔΕΝ είναι στο κέλυφος, άρα χωρίς slice ωμά κλειδιά στο πρώτο καρέ. 🔴 ΓΙΑΤΙ Η ΔΗΛΩΣΗ ΔΕΝ ΕΙΝΑΙ ΠΡΟΑΙΡΕΤΙΚΗ — ΜΕΤΡΗΜΕΝΟ 2026-10-29: το `PriceListsContent` ΕΙΣΑΓΕΙ στατικά το `@/i18n/generated/routes/o__workspace__catalog__price-lists.el.json`· χωρίς αυτή τη γραμμή ο γεννήτορας ΔΕΝ το παρήγαγε και ο dev server έριξε «Module not found» στη σελίδα. Η λογιστική έλεγε «86 παρόντα · 0 απόντα» ΕΝΩ το αρχείο έλειπε — μετρά μόνο ΔΗΛΩΜΕΝΕΣ διαδρομές, ίδιο τυφλό σημείο με το `legal-notice` (ADR-861 §6.2). ⚠️ ΓΙΑΤΙ ΟΧΙ guaranteedNamespaces: το `catalog` το ζητούν μόνο οι σελίδες του καταλόγου. ⚠️ ΓΙΑΤΙ ΟΧΙ next/dynamic: ωμό κλειδί είναι χειρότερο από spinner (ADR-777 Α19 κανόνας 30)."
     },
+    "src/app/(app)/o/[workspace]/catalog/imports/page.tsx": {
+      "sealed": 22573,
+      "sealedAt": "2026-10-31",
+      "history": [
+        {
+          "from": 0,
+          "to": 22573,
+          "at": "2026-10-31",
+          "why": "ΠΡΩΤΗ ΣΦΡΑΓΙΣΗ (ADR-923 §5.5.1). ΜΕΤΡΗΜΕΝΟ με `npm run generate:i18n-shell-slice -- --measure`: 22573 bytes, ΤΡΙΑ namespaces (`catalog` · `catalog-import` · `files`), αφού αφαιρεθεί ό,τι απαντά ήδη το κέλυφος. Το `files` το φέρνει ο ΕΝΑΣ `PdfCanvasViewer` του ελέγχου δίπλα-δίπλα, όχι δεύτερος viewer. ΓΙΑΤΙ ΟΧΙ ΟΡΙΟ next/dynamic γύρω από τον έλεγχο: το PDF και η πρόταση ζουν στο ίδιο καρέ και το ένα οδηγεί το άλλο. Η διαδρομή δεν είχε ποτέ slice, γι' αυτό το `from` είναι 0. Το ταβάνι ΥΠΟΛΟΓΙΖΕΤΑΙ από αυτή τη σφράγιση (+25%)."
+        }
+      ],
+      "reason": "ADR-923 §5.5.1 + ADR-744 §18 — Η ΣΕΛΙΔΑ ΕΙΣΑΓΩΓΗΣ. Ίδιος μηχανισμός με τις αδελφές σελίδες του καταλόγου: το `catalog` και το `catalog-import` ΔΕΝ είναι στο κέλυφος, άρα χωρίς slice ωμά κλειδιά στο πρώτο καρέ. Δηλώθηκε πριν από το πρώτο άνοιγμα, γιατί το `ImportsContent` εισάγει στατικά το slice και αδήλωτη διαδρομή είναι «Module not found». ⚠️ ΓΙΑΤΙ ΟΧΙ guaranteedNamespaces: τα ζητά μόνο αυτή η σελίδα. ⚠️ ΓΙΑΤΙ ΟΧΙ next/dynamic: ωμό κλειδί είναι χειρότερο από spinner (ADR-777 Α19 κανόνας 30)."
+    },
     "src/app/(app)/o/[workspace]/catalog/discounts/page.tsx": {
       "sealed": 25808,
       "sealedAt": "2026-10-29",
@@ -2262,6 +2275,7 @@
     "src/app/(app)/o/[workspace]/catalog/categories/page.tsx ⟵ (στατική)": ["catalog"],
     "src/app/(app)/o/[workspace]/catalog/discounts/page.tsx ⟵ (στατική)": ["catalog"],
     "src/app/(app)/o/[workspace]/catalog/families/page.tsx ⟵ (στατική)": ["catalog"],
+    "src/app/(app)/o/[workspace]/catalog/imports/page.tsx ⟵ (στατική)": ["catalog", "catalog-import"],
     "src/app/(app)/o/[workspace]/catalog/measurements/page.tsx ⟵ (στατική)": ["catalog"],
     "src/app/(app)/o/[workspace]/catalog/price-lists/page.tsx ⟵ (στατική)": ["catalog"],
     "src/app/(app)/o/[workspace]/catalog/products/page.tsx ⟵ (στατική)": ["catalog"],
@@ -2438,8 +2452,8 @@
     "src/app/(me)/workspace/new/page.tsx ⟵ (στατική)": ["onboarding"]
   },
   "lazyAdmissionSeal": {
-    "count": 321,
+    "count": 323,
     "at": "2026-10-31",
-    "why": "ADR-280 §11.8 Β4.3 (2026-10-31) — ΜΕΙΩΣΗ 400 → 321, ΜΕΤΡΗΜΕΝΗ με την ΙΔΙΑ μηχανή της πύλης (admissionDebt). Έπαψαν 94 τριάδες: οι 5 σελίδες προϊόντος (contacts · properties · properties/[id] · spaces/parking · spaces/storage) περνούν πλέον από εγγραφή μητρώου, το contact-mutation από το lazyHarnessRoutes, ο ReserveDialog (×2 ρίζες) και οι καρτέλες του φακέλου ακινήτου έγιναν επιφάνειες (defineLazySurfaces). +15 είναι ΜΕΤΑΚΟΜΙΣΗ, όχι νέο χρέος: τα ίδια 15 (όριο, namespace) του properties/[id]/page.tsx ανήκουν πλέον στη ρίζα entry:PropertyDetail. Με εκκίνηση ΧΩΡΙΣ τα 6 dxf namespaces η ίδια συνάρτηση δίνει 0 τριάδες dxf (ήταν 93). Μόνο συρρικνώνεται."
+    "why": "ADR-923 §5.5.1 (2026-10-31) — ΑΥΞΗΣΗ 321 → 323: η ΝΕΑ σελίδα `/catalog/imports` φέρνει 2 τριάδες (`catalog` · `catalog-import`), ίδιο είδος με τις 9 αδελφές σελίδες καταλόγου, που καθεμία έχει τη δική της. Τα κείμενά της τα καλύπτει το route slice της στο πρώτο καρέ, άρα η αναμονή είναι μόνο για τα κλειδιά έξω από το slice· όριο `next/dynamic` θα χώριζε το PDF από την πρόταση που οδηγεί. ADR-280 §11.8 Β4.3 (2026-10-31) — ΜΕΙΩΣΗ 400 → 321, ΜΕΤΡΗΜΕΝΗ με την ΙΔΙΑ μηχανή της πύλης (admissionDebt). Έπαψαν 94 τριάδες: οι 5 σελίδες προϊόντος (contacts · properties · properties/[id] · spaces/parking · spaces/storage) περνούν πλέον από εγγραφή μητρώου, το contact-mutation από το lazyHarnessRoutes, ο ReserveDialog (×2 ρίζες) και οι καρτέλες του φακέλου ακινήτου έγιναν επιφάνειες (defineLazySurfaces). +15 είναι ΜΕΤΑΚΟΜΙΣΗ, όχι νέο χρέος: τα ίδια 15 (όριο, namespace) του properties/[id]/page.tsx ανήκουν πλέον στη ρίζα entry:PropertyDetail. Με εκκίνηση ΧΩΡΙΣ τα 6 dxf namespaces η ίδια συνάρτηση δίνει 0 τριάδες dxf (ήταν 93). Μόνο συρρικνώνεται."
   }
 }

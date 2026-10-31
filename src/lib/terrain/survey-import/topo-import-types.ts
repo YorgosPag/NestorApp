@@ -16,6 +16,8 @@
  * There is NO logic in this file (types only — exempt from the 500-line rule).
  */
 
+import type { TabularMapping } from '@/lib/tabular-import/tabular-types';
+
 /** What a spreadsheet/CSV column means. `ignore` = column carries no survey meaning. */
 export type ColumnRole = 'x' | 'y' | 'z' | 'code' | 'pointId' | 'ignore';
 
@@ -27,7 +29,7 @@ export type ColumnRole = 'x' | 'y' | 'z' | 'code' | 'pointId' | 'ignore';
  * column value, LandXML's 2D `CgPoint`) rather than a malformed one. The bulk point-cloud road
  * still demands all three — see `topo-column-mapping`'s two gates.
  */
-export type ColumnMapping = readonly ColumnRole[];
+export type ColumnMapping = TabularMapping<ColumnRole>;
 
 /** Planimetric + vertical unit of the SOURCE file (canonical storage is mm — ADR-462). */
 export type TopoUnit = 'm' | 'mm' | 'ft';
@@ -39,19 +41,8 @@ export const TOPO_UNIT_SCALE_TO_MM: Readonly<Record<TopoUnit, number>> = {
   ft: 304.8,
 };
 
-/**
- * A parsed, still-untyped file: optional header labels + the data rows. Produced by
- * `topo-delimited-reader` (CSV/TXT) and `topo-excel-reader` (XLSX) alike, so the mapper
- * downstream never learns which file format it came from.
- */
-export interface RawTable {
-  /** Column labels when the file had a header row; empty when it did not. */
-  readonly headers: readonly string[];
-  /** Data rows (header row excluded). Ragged rows are allowed — the mapper skips them. */
-  readonly rows: readonly (readonly string[])[];
-  /** The delimiter that was detected (informational; empty for spreadsheet sources). */
-  readonly delimiter?: string;
-}
+// ADR-923 §5.5 — ο πίνακας άτυπων κελιών ζει στον γενικό πυρήνα, κοινός με τον κατάλογο.
+export type { RawTable } from '@/lib/tabular-import/tabular-types';
 
 /** A named column order (e.g. PNEZD) the surveyor can pick instead of mapping by hand. */
 export interface OrderPreset {

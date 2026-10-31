@@ -12,15 +12,9 @@
 
 import 'server-only';
 
-import { safeJsonParse } from '@/lib/json-utils';
 import { downloadAdminObjectByPublicUrl } from '@/lib/firebaseAdmin-storage';
-import {
-  beginVisionContent,
-  executeResponsesRequest,
-  extractOutputText,
-  type ResponsesContent,
-  type ResponsesRequestBody,
-} from '@/services/ai/openai-responses';
+import { beginVisionContent, type ResponsesContent } from '@/services/ai/openai-responses';
+import { readDocumentAnalyzerTransport, requestStructuredDocument } from '@/services/ai/structured-document-request';
 import { rasterizePdfPages, RasterizeUnavailableError } from '@/services/pdf/pdf-rasterize.service';
 import type { IQuoteAnalyzer, QuoteClassification } from '../../types/quote-analyzer';
 import type { ExtractedQuoteData } from '../../types/quote';
@@ -76,29 +70,14 @@ export class OpenAIQuoteAnalyzer implements IQuoteAnalyzer {
   async classifyQuote(fileUrl: string, mimeType: string, fileBuffer?: Buffer): Promise<QuoteClassification> {
     try {
       const content = await this.buildVisionContent(fileUrl, mimeType, 'Είναι αυτό το αρχείο προσφορά προμηθευτή;', fileBuffer);
-      const request: ResponsesRequestBody = {
+      const outcome = await requestStructuredDocument(this.config, {
         model: this.config.visionModel,
-        input: [
-          { role: 'system', content: [{ type: 'input_text', text: QUOTE_CLASSIFY_PROMPT }] },
-          { role: 'user', content },
-        ],
-        text: {
-          format: {
-            type: 'json_schema',
-            name: QUOTE_CLASSIFY_SCHEMA.name,
-            description: QUOTE_CLASSIFY_SCHEMA.description,
-            strict: QUOTE_CLASSIFY_SCHEMA.strict,
-            schema: QUOTE_CLASSIFY_SCHEMA.schema as Record<string, unknown>,
-          },
-        },
-      };
-
-      const responsePayload = await this.executeRequest(request);
-      const outputText = extractOutputText(responsePayload);
-      if (!outputText) return buildFallbackClassification();
-
-      const parsed = safeJsonParse<QuoteClassification>(outputText, null as unknown as QuoteClassification);
-      if (parsed === null) return buildFallbackClassification();
+        system: QUOTE_CLASSIFY_PROMPT,
+        content,
+        schema: { ...QUOTE_CLASSIFY_SCHEMA, schema: QUOTE_CLASSIFY_SCHEMA.schema as Record<string, unknown> },
+      });
+      if (outcome.kind !== 'parsed') return buildFallbackClassification();
+      const parsed = outcome.value as QuoteClassification;
 
       return {
         isQuote: Boolean(parsed.isQuote),
@@ -122,40 +101,25 @@ export class OpenAIQuoteAnalyzer implements IQuoteAnalyzer {
           ? this.config.visionModel
           : (this.config.escalateModel || this.config.visionModel);
         const content = await this.buildVisionContent(fileUrl, mimeType, promptText, fileBuffer);
-        const request: ResponsesRequestBody = {
+        const outcome = await requestStructuredDocument(this.config, {
           model: visionModel,
-          input: [
-            { role: 'system', content: [{ type: 'input_text', text: QUOTE_EXTRACT_PROMPT }] },
-            { role: 'user', content },
-          ],
-          text: {
-            format: {
-              type: 'json_schema',
-              name: QUOTE_EXTRACT_SCHEMA.name,
-              description: QUOTE_EXTRACT_SCHEMA.description,
-              strict: QUOTE_EXTRACT_SCHEMA.strict,
-              schema: QUOTE_EXTRACT_SCHEMA.schema as Record<string, unknown>,
-            },
-          },
-        };
-
-        const responsePayload = await this.executeRequest(request);
-        const outputText = extractOutputText(responsePayload);
+          system: QUOTE_EXTRACT_PROMPT,
+          content,
+          schema: { ...QUOTE_EXTRACT_SCHEMA, schema: QUOTE_EXTRACT_SCHEMA.schema as Record<string, unknown> },
+        });
 
         // An empty or unparseable response is a transient model failure — the
         // same class of problem as inconsistent numbers, so it takes the same
         // road: retry with feedback, escalating the model on attempt 1+.
         // Bailing out here instead would spend the LEAST effort on the most
         // recoverable failure.
-        const parsed = outputText
-          ? safeJsonParse<RawExtractedQuote>(outputText, null as unknown as RawExtractedQuote)
-          : null;
-        if (parsed === null) {
-          lastIssues = [outputText ? UNPARSEABLE_ISSUE : EMPTY_OUTPUT_ISSUE];
+        if (outcome.kind !== 'parsed') {
+          lastIssues = [outcome.kind === 'unparseable' ? UNPARSEABLE_ISSUE : EMPTY_OUTPUT_ISSUE];
           console.warn(`[OpenAIQuoteAnalyzer] no usable JSON on attempt ${attempt + 1}:`, lastIssues);
           promptText = buildRetryFeedback(lastIssues, 'parse');
           continue;
         }
+        const parsed = outcome.value as RawExtractedQuote;
         lastParsed = parsed;
 
         const validation = validateExtraction(parsed);
@@ -216,10 +180,6 @@ export class OpenAIQuoteAnalyzer implements IQuoteAnalyzer {
   private async fetchFileAsBuffer(url: string): Promise<Buffer> {
     return downloadAdminObjectByPublicUrl(url);
   }
-
-  private async executeRequest(request: ResponsesRequestBody): Promise<unknown> {
-    return executeResponsesRequest(this.config, request);
-  }
 }
 
 // ============================================================================
@@ -230,8 +190,8 @@ export class OpenAIQuoteAnalyzer implements IQuoteAnalyzer {
  * Returns null if `OPENAI_API_KEY` not configured (caller falls back to QuoteAnalyzerStub).
  */
 export function createOpenAIQuoteAnalyzer(): OpenAIQuoteAnalyzer | null {
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (!apiKey) return null;
+  const transport = readDocumentAnalyzerTransport();
+  if (!transport) return null;
 
   // Quote extraction is vision-heavy (table layout, multi-column numbers).
   // Default primary = gpt-4o (full vision, much better on tables than mini).
@@ -248,12 +208,9 @@ export function createOpenAIQuoteAnalyzer(): OpenAIQuoteAnalyzer | null {
   const rasterizePdf = (process.env.OPENAI_QUOTE_RASTERIZE_PDF || '1').trim() !== '0';
 
   const config: OpenAIQuoteConfig = {
-    apiKey,
-    baseUrl: (process.env.OPENAI_API_BASE_URL || 'https://api.openai.com/v1').trim(),
+    ...transport,
     visionModel: primaryModel,
     escalateModel: escalateRaw.length > 0 ? escalateRaw : null,
-    timeoutMs: Number.parseInt(process.env.OPENAI_TIMEOUT_MS || '120000', 10),
-    maxRetries: Number.parseInt(process.env.OPENAI_MAX_RETRIES || '2', 10),
     maxValidationRetries: Number.parseInt(process.env.OPENAI_QUOTE_VALIDATION_RETRIES || '2', 10),
     rasterizePdf,
     rasterDpi: Number.parseInt(process.env.OPENAI_QUOTE_RASTER_DPI || '200', 10),

@@ -160,6 +160,8 @@ export const ENTITY_TYPES = {
    * **ίδιο** μέσο (ADR-923 §5.10 Δ9 · §5.10.3)
    */
   CATALOG_ASSET: 'catalog_asset',
+  /** Το αρχείο-πηγή μιας παρτίδας εισαγωγής καταλόγου (`catalog_import_batches`): Excel · CSV · PDF (ADR-923 §5.5.1). */
+  CATALOG_IMPORT_BATCH: 'catalog_import_batch',
 } as const;
 
 export type EntityType = typeof ENTITY_TYPES[keyof typeof ENTITY_TYPES];

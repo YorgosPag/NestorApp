@@ -88,6 +88,28 @@ function diffDeltas(scope: CatalogTx, deltas: readonly HolderUniqueDelta[]): { c
   return { claims, releases };
 }
 
+/**
+ * Ποιος **ζωντανός** φορέας κρατά κάθε (ιδιότητα, κλειδί), χωρίς ερώτημα: ό,τι κάνει ιδεμπότητη την αντιστοίχιση της
+ * εισαγωγής (ADR-923 §5.5.1). Ίδιο κλειδί με την κράτηση, άρα «016–15–001» στο PDF βρίσκει το 016-15-001 του καταλόγου.
+ */
+export async function readUniqueHolders(
+  scope: CatalogTx,
+  keys: readonly { readonly attributeId: string; readonly uniqueKey: string }[],
+): Promise<ReadonlyMap<string, CatalogUniqueValueDoc>> {
+  if (keys.length === 0) return new Map();
+  const refs = keys.map(({ attributeId, uniqueKey }) => uniqueValueRef(scope.db, reservationIdOf(scope, attributeId, uniqueKey)));
+  const snaps = await scope.tx.getAll(...refs);
+  const docs = snaps.flatMap((snap) => {
+    const data = snap.data() as CatalogUniqueValueDoc | undefined;
+    return data && data.companyId === scope.ctx.companyId ? [data] : [];
+  });
+  const products = await readActiveByIds(scope, 'product', docs.filter((doc) => doc.holderKind === 'product').map((doc) => doc.holderId));
+  const live = docs.filter((doc) => products.has(doc.holderId));
+  return new Map(live.map((doc) => [uniqueHolderKey(doc.attributeId, doc.uniqueKey), doc]));
+}
+
+export const uniqueHolderKey = (attributeId: string, uniqueKey: string): string => `${attributeId}\u0000${uniqueKey}`;
+
 /** Οι υπάρχουσες κρατήσεις στα ids των νέων διεκδικήσεων — με τους κατόχους τους, αν είναι ακόμη ενεργοί. */
 async function readHeld(scope: CatalogTx, claims: readonly Claim[]) {
   const snaps = claims.length === 0 ? [] : await scope.tx.getAll(...claims.map((claim) => uniqueValueRef(scope.db, claim.doc.id)));

@@ -269,6 +269,11 @@ export const AUDIT_ENTITIES = {
   catalog_customer_group: { collectionKey: 'CATALOG_CUSTOMER_GROUPS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
   catalog_customer_assignment: { collectionKey: 'CATALOG_CUSTOMER_ASSIGNMENTS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
   catalog_discount_condition: { collectionKey: 'CATALOG_DISCOUNT_CONDITIONS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+  // ADR-923 §5.5.1 — ο ΑΓΩΓΟΣ ΕΙΣΑΓΩΓΗΣ, ίδιο σύνορο. Οι τιμές των προτάσεων ΔΕΝ παρακολουθούνται εδώ: το ιστορικό τους
+  // γράφεται στις ίδιες τις οντότητες (SKU · γραμμή) όταν εφαρμοστούν· εδώ μένει η πράξη (κατάσταση · ποιος · πότε).
+  catalog_import_profile: { collectionKey: 'CATALOG_IMPORT_PROFILES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+  catalog_import_batch: { collectionKey: 'CATALOG_IMPORT_BATCHES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+  catalog_import_proposal: { collectionKey: 'CATALOG_IMPORT_PROPOSALS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
 
   // ── Μηχανή κειμένου (ADR-651 / ADR-344) — server-only services ────────────
   text_template: { collectionKey: 'TEXT_TEMPLATES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },

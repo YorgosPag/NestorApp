@@ -81,3 +81,6 @@ export const AUDIT_TIMELINE_NAMESPACES = [
  * διαβάζουν **και** το CHECK 3.8 **και** ο γεννήτορας — μία αλήθεια.
  */
 export const CATALOG_NAMESPACES = ['catalog'] as const;
+
+/** Η οθόνη εισαγωγής (ADR-923 §5.5.1): δικό της namespace, γιατί το `catalog` φορτώνεται σε κάθε σελίδα καταλόγου. */
+export const CATALOG_IMPORT_NAMESPACES = ['catalog-import'] as const;

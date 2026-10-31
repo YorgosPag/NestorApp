@@ -162,28 +162,68 @@ const WORD_RUN = /[\p{L}\p{N}]+/gu;
  * returned untouched.
  *
  * The reverse direction (a Latin word contaminated with Greek letters) is **not**
- * handled — it needs the opposite guard and has no measured occurrence here.
+ * handled here; {@link normalizeMixedScriptHomoglyphs} adds it for PDF/OCR text.
  *
  * @example normalizeGreekHomoglyphs('ΣΥΝΤΑΞH') → 'ΣΥΝΤΑΞΗ'   // Latin H → Greek Η
  * @example normalizeGreekHomoglyphs('www.nikolaou.com.gr') → unchanged
  * @see ADR-745 §2.3 — measured in `G753_ergasia F.dxf`
  */
 export function normalizeGreekHomoglyphs(text: string): string {
-  return text.replace(WORD_RUN, word => {
-    if (!GREEK_LETTER.test(word)) return word;
+  return text.replace(WORD_RUN, foldGreekWord);
+}
 
-    let folded = '';
-    for (const char of word) {
-      if (!LATIN_LETTER.test(char)) {
-        folded += char;
-        continue;
-      }
-      const greek = LATIN_TO_GREEK_HOMOGLYPHS.get(char);
-      if (greek === undefined) return word; // a non-homoglyph Latin letter — leave the word alone
-      folded += greek;
-    }
-    return folded;
+const GREEK_TO_LATIN_HOMOGLYPHS: ReadonlyMap<string, string> = new Map(
+  [...LATIN_TO_GREEK_HOMOGLYPHS].map(([latin, greek]) => [greek, latin]),
+);
+
+const countMatches = (word: string, letter: RegExp): number => [...word].filter((char) => letter.test(char)).length;
+
+/** Ελληνικοί χαρακτήρες μέσα σε λατινική λέξη → λατινικοί, μόνο αν **όλοι** είναι ομοιόμορφοι. */
+function foldLatinWord(word: string): string {
+  let folded = '';
+  for (const char of word) {
+    const latin = GREEK_LETTER.test(char) ? GREEK_TO_LATIN_HOMOGLYPHS.get(char) : char;
+    if (latin === undefined) return word;
+    folded += latin;
+  }
+  return folded;
+}
+
+/**
+ * **Και οι δύο κατευθύνσεις**, για κείμενο που βγαίνει από PDF/OCR (ADR-923 §21.3: 88,9 % → 100 % στη σελίδα MAXI). Κρίνει
+ * μόνο λέξη **μεικτού** αλφαβήτου: καθαρά ελληνική ή καθαρά λατινική λέξη μένει ανέγγιχτη. Νικά το αλφάβητο της
+ * πλειοψηφίας των γραμμάτων· αν εκείνη η αναδίπλωση δεν στέκει (το άλλο αλφάβητο έχει μη ομοιόμορφο γράμμα), δοκιμάζεται
+ * η αντίστροφη· αν δεν στέκει καμία, η λέξη μένει όπως είναι — ποτέ μαντεψιά.
+ *
+ * @example normalizeMixedScriptHomoglyphs('ΣΥΝΤΑΞH') → 'ΣΥΝΤΑΞΗ'
+ * @example normalizeMixedScriptHomoglyphs('ΒΑC') → 'BAC'   // το C δεν έχει ελληνικό δίδυμο
+ */
+export function normalizeMixedScriptHomoglyphs(text: string): string {
+  return text.replace(WORD_RUN, (word) => {
+    const greek = countMatches(word, GREEK_LETTER);
+    const latin = countMatches(word, LATIN_LETTER);
+    if (greek === 0 || latin === 0) return word;
+    const [first, second] = greek >= latin ? [foldGreekWord, foldLatinWord] : [foldLatinWord, foldGreekWord];
+    const folded = first(word);
+    return folded !== word ? folded : second(word);
   });
+}
+
+/** Λατινικοί χαρακτήρες μέσα σε ελληνική λέξη → ελληνικοί, μόνο αν **όλοι** είναι ομοιόμορφοι. */
+function foldGreekWord(word: string): string {
+  if (!GREEK_LETTER.test(word)) return word;
+
+  let folded = '';
+  for (const char of word) {
+    if (!LATIN_LETTER.test(char)) {
+      folded += char;
+      continue;
+    }
+    const greek = LATIN_TO_GREEK_HOMOGLYPHS.get(char);
+    if (greek === undefined) return word; // a non-homoglyph Latin letter — leave the word alone
+    folded += greek;
+  }
+  return folded;
 }
 
 // ============================================================================

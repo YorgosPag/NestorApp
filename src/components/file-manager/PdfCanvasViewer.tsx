@@ -46,6 +46,7 @@ import {
 } from './pdf-canvas-config';
 import { loadPdfBytes } from './pdf-bytes-cache';
 import { pdfFetchTarget } from './pdf-fetch-target';
+import { PdfHighlights, useControlledPdfPage } from './PdfHighlights';
 
 // ============================================================================
 // COMPONENT
@@ -53,7 +54,7 @@ import { pdfFetchTarget } from './pdf-fetch-target';
 
 const logger = createModuleLogger('PdfCanvasViewer');
 
-export function PdfCanvasViewer({ url, fileId, urlDelivery, title, className }: PdfCanvasViewerProps) {
+export function PdfCanvasViewer({ url, fileId, urlDelivery, title, className, page, highlights }: PdfCanvasViewerProps) {
   const { t } = useTranslation('files');
   const colors = useSemanticColors();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -85,6 +86,8 @@ export function PdfCanvasViewer({ url, fileId, urlDelivery, title, className }: 
     loading: true,
     error: null,
   });
+
+  useControlledPdfPage(page, state.numPages, setState);
 
   // Load PDF document
   useEffect(() => {
@@ -482,11 +485,14 @@ export function PdfCanvasViewer({ url, fileId, urlDelivery, title, className }: 
             )}
           </div>
         )}
-        <canvas
-          ref={canvasRef}
-          className="shadow-md rounded bg-white"
-          aria-label={title}
-        />
+        <figure className="relative m-0 inline-block">
+          <canvas
+            ref={canvasRef}
+            className="shadow-md rounded bg-white"
+            aria-label={title}
+          />
+          <PdfHighlights regions={highlights} />
+        </figure>
       </div>
     </section>
   );

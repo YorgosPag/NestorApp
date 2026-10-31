@@ -69,6 +69,22 @@ export const CATALOG_API = {
    * στο `priceLists.collection`, οι γραμμές στο `priceListVersions.lines(id)`· εδώ η όψη εκπτώσεων.
    */
   discounts: `${API_ROOT}/discounts`,
+  // ── Φάση 4 (ADR-923 §5.5.1) — εισαγωγή ──
+  imports: {
+    ...entity('imports'),
+    file: (id: string) => `${API_ROOT}/imports/${encodeURIComponent(id)}/file`,
+    /** Το αρχείο περνά από το προφίλ και γίνεται προτάσεις. */
+    map: (id: string) => `${API_ROOT}/imports/${encodeURIComponent(id)}/map`,
+    /** Ανάγνωση μίας σελίδας PDF. */
+    pages: (id: string) => `${API_ROOT}/imports/${encodeURIComponent(id)}/pages`,
+    discard: (id: string) => `${API_ROOT}/imports/${encodeURIComponent(id)}/discard`,
+  },
+  importProfiles: entity('import-profiles'),
+  importProposals: {
+    item: entity('import-proposals').item,
+    apply: (id: string) => `${API_ROOT}/import-proposals/${encodeURIComponent(id)}/apply`,
+    reject: (id: string) => `${API_ROOT}/import-proposals/${encodeURIComponent(id)}/reject`,
+  },
 } as const;
 
 /** Το έργο του βιβλίου τιμών κόστους (`GET …/cost-rates?projectId=…`). */
@@ -96,4 +112,6 @@ export const CATALOG_PAGES = {
   priceLists: '/catalog/price-lists',
   /** Ομάδες έκπτωσης · ομάδες πελατών · πίνακας συνθηκών (ADR-923 §5.11 «3δ» Τμήμα 2) — προβολή με `catalog:pricing:view`. */
   discounts: '/catalog/discounts',
+  /** Παρτίδες εισαγωγής · αντιστοίχιση · έλεγχος δίπλα-δίπλα με το PDF · έγκριση (ADR-923 §5.5.1). */
+  imports: '/catalog/imports',
 } as const;

@@ -37,5 +37,9 @@ export const CATALOG_ID_PREFIXES = {
   CATALOG_PRICING_SLOT: 'cpslt',           // catalog_pricing_slots — υποδοχή ασάφειας (ευρετήριο γραφέα, ΟΧΙ οντότητα)
   // ── Φάση 3δ (ADR-923 §5.11 «3δ» Ζ · ADR-905) ──
   CATALOG_PRICING_VIEW_SIGNAL: 'cpvs',     // catalog_pricing_view_signals — σήμα ΜΙΑΣ όψης τιμών (μόνο αριθμός) — ντετερμινιστικό
+  // ── Φάση 4 (ADR-923 §5.5.1) — εισαγωγή. Ντετερμινιστικά από φυσικό κλειδί: ίδια είσοδος ⇒ ίδιο έγγραφο, δομικά ──
+  CATALOG_IMPORT_PROFILE: 'ciprf',         // catalog_import_profiles — αποθηκευμένη αντιστοίχιση (από κωδικό)
+  CATALOG_IMPORT_BATCH: 'cibat',           // catalog_import_batches — παρτίδα (από αρχείο + στόχο + έκδοση προφίλ + εκτέλεση)
+  CATALOG_IMPORT_PROPOSAL: 'cipsl',        // catalog_import_proposals — πρόταση (από παρτίδα + σύνολο)
 
 } as const;

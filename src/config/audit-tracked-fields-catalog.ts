@@ -133,3 +133,12 @@ export const CATALOG_DISCOUNT_CONDITION_TRACKED_FIELDS = defs(
   ['discountGroupId', 'validFrom', 'validUntil', 'isDeleted'],
   ['audience', 'rule'],
 );
+
+// ── Φάση 4 (ADR-923 §5.5.1) — εισαγωγή. Της πρότασης παρακολουθείται η ΠΡΑΞΗ, όχι το περιεχόμενο: οι τιμές γράφουν ιστορικό
+//    στην ίδια την οντότητα όταν εφαρμοστούν. Τα πεδία του ελέγχου αλλάζουν συνεχώς και δεν είναι δεδομένα του καταλόγου.
+
+export const CATALOG_IMPORT_PROFILE_TRACKED_FIELDS = defs(['label', 'purpose', 'supplierContactId', 'familyId', 'skipRows', 'sheetIndex', 'isDeleted'], ['columns']);
+
+export const CATALOG_IMPORT_BATCH_TRACKED_FIELDS = defs(['status', 'fileName', 'contentSha256', 'sourceKind', 'fileId', 'profileId', 'profileRevision', 'run', 'isDeleted'], ['target']);
+
+export const CATALOG_IMPORT_PROPOSAL_TRACKED_FIELDS = defs(['status', 'groupKey', 'appliedAt', 'appliedBy', 'isDeleted'], []);

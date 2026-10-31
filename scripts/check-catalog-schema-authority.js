@@ -61,6 +61,10 @@ const CATALOG_COLLECTIONS = [
   'COLLECTIONS.CATALOG_PRICING_SLOTS',
   // Φάση 3δ (ADR-923 §5.11 «3δ» Ζ · ADR-905) — τα σήματα όψεων τιμών: γράφει ΜΟΝΟ ο γραφέας τους, καλεσμένος από τη μηχανή
   'COLLECTIONS.CATALOG_PRICING_VIEW_SIGNALS',
+  // Φάση 4 (ADR-923 §5.5.1) — ο αγωγός εισαγωγής
+  'COLLECTIONS.CATALOG_IMPORT_PROFILES',
+  'COLLECTIONS.CATALOG_IMPORT_BATCHES',
+  'COLLECTIONS.CATALOG_IMPORT_PROPOSALS',
 ];
 /** Τα ονόματα των συλλογών στη βάση — για την πόρτα του MCP (Κ5). */
 const CATALOG_COLLECTION_NAMES = [
@@ -69,6 +73,7 @@ const CATALOG_COLLECTION_NAMES = [
   'catalog_price_lists', 'catalog_price_list_versions', 'catalog_price_list_lines', 'catalog_discount_groups',
   'catalog_customer_groups', 'catalog_customer_assignments', 'catalog_discount_conditions', 'catalog_pricing_slots',
   'catalog_pricing_view_signals',
+  'catalog_import_profiles', 'catalog_import_batches', 'catalog_import_proposals',
 ];
 
 const STORE = 'src/server/catalog/catalog-store.server.ts';

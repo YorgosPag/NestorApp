@@ -6400,6 +6400,20 @@ service cloud.firestore {
       allow read: if false;
       allow write: if false;
     }
+    // ADR-923 §5.5.1 — Ο ΑΓΩΓΟΣ ΕΙΣΑΓΩΓΗΣ, ίδιο σύνορο. Οι προτάσεις κουβαλούν ΤΙΜΕΣ, άρα ισχύει η ίδια απόφαση με την
+    // τιμολόγηση: η ανάγνωση περνά ΜΟΝΟ από τον κριτή του διακομιστή (`import-reads.server.ts`), και η εγγραφή από τη μηχανή.
+    match /catalog_import_profiles/{profileId} {
+      allow read: if false;
+      allow write: if false;
+    }
+    match /catalog_import_batches/{batchId} {
+      allow read: if false;
+      allow write: if false;
+    }
+    match /catalog_import_proposals/{proposalId} {
+      allow read: if false;
+      allow write: if false;
+    }
     // 📡 ADR-923 §5.11 «3δ» Ζ · ADR-905 — ΣΗΜΑ ΑΝΑ ΟΨΗ ΤΙΜΩΝ: μόνο `{ companyId, view, revision, changedAt }`, ΠΟΤΕ τιμή.
     // GET για τα μέλη του χώρου (ίδιο σύνορο με τον κατάλογο) — `resource == null` κρατά τον listener ζωντανό πριν από
     // την πρώτη αύξηση (ανύπαρκτο έγγραφο = τίποτα να διαρρεύσει). `list`/γραφή: ΠΟΤΕ — γράφει ΜΟΝΟ η μηχανή του καταλόγου.

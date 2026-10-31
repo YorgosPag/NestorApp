@@ -755,6 +755,25 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
+    // ADR-923 §5.5.1 — ο αγωγός εισαγωγής: οι προτάσεις κουβαλούν τιμές ⇒ ίδια απόφαση με την τιμολόγηση.
+    collection: 'catalog_import_profiles',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/catalog-import-profiles.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
+    collection: 'catalog_import_batches',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/catalog-import-batches.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
+    collection: 'catalog_import_proposals',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/catalog-import-proposals.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     // ADR-923 §5.11 «3δ» Ζ · ADR-905 — σήμα ανά ΟΨΗ ΤΙΜΩΝ (μόνο αριθμός). Οι 8 συλλογές τιμολόγησης είναι πλέον
     // `deny_all` (η προβολή κρίνεται ΜΟΝΟ στον διακομιστή)· εδώ `get` ο εσωτερικός χρήστης του χώρου, `list`/γραφή κανείς.
     collection: 'catalog_pricing_view_signals',

@@ -13,23 +13,20 @@
  * ⚠️ N=Northing=Y / E=Easting=X lives in `topo-order-presets` — never re-derived here.
  */
 
+import { cellForRole, claimsExactlyOnce, suggestRolesFromHeaders } from '@/lib/tabular-import/column-mapping';
+import type { HeaderHints } from '@/lib/tabular-import/tabular-types';
 import { parseLocaleNumber } from '@/lib/number/locale-number';
 import { TOPO_UNIT_SCALE_TO_MM, type ColumnMapping, type ColumnRole, type MappedPointsResult, type RawTable, type TopoUnit } from './topo-import-types';
 import type { TopoPoint } from '../terrain-types';
 
 /** Header keywords → role. Checked as substrings, longest-intent first (`pointId` before `x`). */
-const HEADER_HINTS: ReadonlyArray<readonly [ColumnRole, readonly string[]]> = [
+const HEADER_HINTS: HeaderHints<ColumnRole> = [
   ['pointId', ['point', 'σημείο', 'σημειο', 'pt', 'id', 'no', 'αα']],
   ['y', ['northing', 'north', 'βορ', 'ψ', 'y']],
   ['x', ['easting', 'east', 'ανατ', 'χ', 'x']],
   ['z', ['elevation', 'elev', 'height', 'υψόμετρο', 'υψομετρο', 'υψος', 'ύψος', 'z']],
   ['code', ['code', 'desc', 'κωδικ', 'περιγραφ']],
 ];
-
-/** Every one of these roles claimed by exactly one column? (The shared shape of both gates.) */
-function claimsExactlyOnce(mapping: ColumnMapping, roles: readonly ColumnRole[]): boolean {
-  return roles.every((role) => mapping.filter((m) => m === role).length === 1);
-}
 
 /** The two roles without which a row cannot become a point at all: it has no POSITION. */
 const REQUIRED_POSITION: readonly ColumnRole[] = ['x', 'y'];
@@ -91,35 +88,10 @@ export function resolveXyzColumns(mapping: ColumnMapping | undefined): XyzColumn
  * is never silently given a wrong mapping; they just see an unset column.
  */
 export function suggestMappingFromHeaders(headers: readonly string[]): ColumnMapping {
-  const taken = new Set<ColumnRole>();
-  return headers.map((header): ColumnRole => {
-    const h = header.trim().toLowerCase();
-    for (const [role, keywords] of HEADER_HINTS) {
-      if (taken.has(role)) continue;
-      if (keywords.some((k) => matchesHint(h, k))) {
-        taken.add(role);
-        return role;
-      }
-    }
-    return 'ignore';
-  });
+  return suggestRolesFromHeaders(headers, HEADER_HINTS, 'ignore');
 }
 
-/**
- * Short hints (`x`, `ψ`, `id`, `αα`) must match the WHOLE label — as substrings they
- * misfire catastrophically: «Υψόμετρο» contains «ψ», so a substring rule would map the
- * elevation column to Y whenever the file has no explicit Ψ column. Long hints
- * («northing», «υψόμετρο») stay substring so «Northing (m)» still resolves.
- */
-function matchesHint(label: string, hint: string): boolean {
-  return hint.length <= 2 ? label === hint : label.includes(hint);
-}
-
-/** First cell assigned to `role`, or `undefined` when the role is unmapped/out of range. */
-function cellFor(row: readonly string[], mapping: ColumnMapping, role: ColumnRole): string | undefined {
-  const idx = mapping.indexOf(role);
-  return idx === -1 ? undefined : row[idx];
-}
+const cellFor = cellForRole<ColumnRole>;
 
 /**
  * One row → point, or `null` **only when the row has no POSITION** (X or Y missing / not finite).

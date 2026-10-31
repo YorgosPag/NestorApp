@@ -31,6 +31,7 @@ describe('ADR-923 Φάση 1γ — η ομάδα «Κατάλογος προϊό
       CATALOG_PAGES.categories,
       CATALOG_PAGES.measurements,
       CATALOG_PAGES.assets,
+      CATALOG_PAGES.imports,
     ]);
   });
 

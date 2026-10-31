@@ -189,11 +189,17 @@ service firebase.storage {
                && request.resource.size <= 500 * 1024 * 1024;
       }
 
+      // ADR-923 §5.5.1 — το αρχείο-πηγή μιας εισαγωγής (ο κατάλογος Aries: 138 MB). Το όριο = `IMPORT_MAX_FILE_BYTES`.
+      function isCatalogImportUpload() {
+        return entityType == 'catalog_import_batch'
+               && request.resource.size <= 200 * 1024 * 1024;
+      }
+
       // ✍️ WRITE: Company-scoped + size validation
       // 🏢 ENTERPRISE: Multi-tenant isolation
       allow write: if isAuthenticated()
                    && (belongsToCompany(companyId) || isSuperAdmin())
-                   && (isValidFileSize() || isListingVideoUpload() || isCatalogAssetUpload());
+                   && (isValidFileSize() || isListingVideoUpload() || isCatalogAssetUpload() || isCatalogImportUpload());
 
       // 🗑️ DELETE: Company-scoped access
       allow delete: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());

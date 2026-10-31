@@ -32,6 +32,9 @@ import {
   CATALOG_CUSTOMER_GROUP_TRACKED_FIELDS,
   CATALOG_CUSTOMER_ASSIGNMENT_TRACKED_FIELDS,
   CATALOG_DISCOUNT_CONDITION_TRACKED_FIELDS,
+  CATALOG_IMPORT_PROFILE_TRACKED_FIELDS,
+  CATALOG_IMPORT_BATCH_TRACKED_FIELDS,
+  CATALOG_IMPORT_PROPOSAL_TRACKED_FIELDS,
   CATALOG_VALUES_AUDIT_FIELD,
   catalogValuesAuditRows,
 } from '@/config/audit-tracked-fields-catalog';
@@ -55,6 +58,9 @@ import {
   generateDeterministicCatalogCustomerGroupId,
   generateDeterministicCatalogCustomerAssignmentId,
   generateCatalogDiscountConditionId,
+  generateDeterministicCatalogImportProfileId,
+  generateDeterministicCatalogImportBatchId,
+  generateDeterministicCatalogImportProposalId,
 } from '@/services/enterprise-id.service';
 
 export const CATALOG_KINDS = [
@@ -75,6 +81,10 @@ export const CATALOG_KINDS = [
   'customerGroup',
   'customerAssignment',
   'discountCondition',
+  // ── Φάση 4 (ADR-923 §5.5.1) ──
+  'importProfile',
+  'importBatch',
+  'importProposal',
 ] as const;
 export type CatalogKind = (typeof CATALOG_KINDS)[number];
 
@@ -210,5 +220,25 @@ export const CATALOG_KIND_SPECS: Readonly<Record<CatalogKind, CatalogKindSpec>> 
     entityType: 'catalog_discount_condition',
     identity: { mode: 'random', prefix: ENTERPRISE_ID_PREFIXES.CATALOG_DISCOUNT_CONDITION, mint: generateCatalogDiscountConditionId },
     trackedFields: CATALOG_DISCOUNT_CONDITION_TRACKED_FIELDS,
+  },
+  importProfile: {
+    collection: COLLECTIONS.CATALOG_IMPORT_PROFILES,
+    entityType: 'catalog_import_profile',
+    identity: byCode(generateDeterministicCatalogImportProfileId),
+    trackedFields: CATALOG_IMPORT_PROFILE_TRACKED_FIELDS,
+  },
+  importBatch: {
+    collection: COLLECTIONS.CATALOG_IMPORT_BATCHES,
+    entityType: 'catalog_import_batch',
+    identity: byCode(generateDeterministicCatalogImportBatchId),
+    trackedFields: CATALOG_IMPORT_BATCH_TRACKED_FIELDS,
+    auditName: nameFrom((record) => record.fileName),
+  },
+  importProposal: {
+    collection: COLLECTIONS.CATALOG_IMPORT_PROPOSALS,
+    entityType: 'catalog_import_proposal',
+    identity: byCode(generateDeterministicCatalogImportProposalId),
+    trackedFields: CATALOG_IMPORT_PROPOSAL_TRACKED_FIELDS,
+    auditName: nameFrom((record) => record.groupKey),
   },
 };
