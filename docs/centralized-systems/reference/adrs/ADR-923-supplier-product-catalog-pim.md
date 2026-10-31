@@ -1920,6 +1920,10 @@ saved» · `editor.supersedes` = «On save, the period “3 tiers, −5% … −
 
 **Κώδικας:** `vocabulary/listing-kinds.ts` (ρίζα) · `types/family.ts` (`listingKindOf`) · `validate-family.ts` · `schema-product-locks.server.ts` · `family-draft.ts` · `FamilyGeneralTab.tsx`.
 
+**Μετρήσεις:** jest οικογένειας + γραφέων ✅ · μεταλλάξεις **12/12 κόκκινες**. Η μία είχε επιζήσει (το zod έκοβε το πεδίο, άρα το είδος θα χανόταν σιωπηλά στην αποθήκευση) και απέκτησε άγκυρα. Νέα σφράγιση του route slice `/catalog/assets` στα 25.485 bytes, με γραμμένο `why`.
+
+⚠️ Google-level: **PARTIAL** — η λογική είναι ελεγμένη· μένει η ζωντανή επαλήθευση της οθόνης.
+
 **Πέρα από τους μεγάλους:** η υπηρεσία ζει στον ίδιο κατάλογο με τον έλεγχο εκδόσεων τιμών, τις τιμές ανά κοινό και την εισαγωγή από PDF, και το `mappings.atoeCode` τη φέρνει στο BOQ (Φάση 6). Οι πλατφόρμες αγγελιών μένουν στο προφίλ, ενώ το ERP δεν φτάνει στη βιτρίνα· εδώ είναι ένα σύστημα.
 
 ## Changelog

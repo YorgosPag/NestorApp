@@ -268,6 +268,15 @@ describe('σκληρύνσεις σχήματος με προϊόντα (Θωρ�
     expect((await rejectionOf(deleteCatalogFamily(ARIES, seeded.familyId, family.revision))).kind).toBe('inUse');
   });
 
+  it('⛔ αλλαγή είδους καταχώρισης σε οικογένεια με προϊόντα (§22 Υ2) · το ίδιο είδος περνά', async () => {
+    const { seeded } = await seedMfpWithVariants();
+    const family = fake.getData('catalog_families', seeded.familyId) as ReturnType<typeof mfpFamilyWith> & { revision: number };
+    const error = await rejectionOf(updateCatalogFamily(ARIES, seeded.familyId, family.revision, { ...family, listingKind: 'service' }));
+    expect(error.kind).toBe('inUse');
+    expect(error.issues).toEqual([{ code: 'listingKindLockedInUse', path: 'listingKind' }]);
+    await expect(updateCatalogFamily(ARIES, seeded.familyId, family.revision, { ...family, listingKind: 'product' })).resolves.toBeDefined();
+  });
+
   it('⛔ `scopable` σε ιδιότητα με τιμές · ⛔ αφαίρεση επιλογής σε χρήση', async () => {
     const { seeded } = await seedMfpWithVariants();
     const weightId = seeded.ids.get('weight') ?? '';

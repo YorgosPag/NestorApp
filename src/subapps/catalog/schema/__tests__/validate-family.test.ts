@@ -3,6 +3,7 @@ import type { CatalogAttributeDefinition } from '../../types/attribute';
 import { listingKindOf, type CatalogFamilyDefinition, type ConsistencyRule, type FamilyTableRow } from '../../types/family';
 import { MFP_ATTRIBUTE_MAP, MFP_FAMILY } from '../../__tests__/fixtures/mfp-fan-coil.fixture';
 import { validateFamily } from '../validate-family';
+import { familyDefinitionSchema } from '../zod/family.schema';
 
 const issueCodes = (family: CatalogFamilyDefinition, attributes = MFP_ATTRIBUTE_MAP) =>
   validateFamily(family, attributes, PLATFORM_MEASUREMENT_REGISTRY).map((issue) => issue.code);
@@ -53,6 +54,12 @@ describe('validateFamily — είδος καταχώρισης (§22)', () => {
     expect(codes({ ...bound, listingKind: 'productWithInstallation', installationAttributeId: 'model_code' })).toEqual(['installationAttributeType']);
     expect(codes({ ...MFP_FAMILY, listingKind: 'productWithInstallation', installationAttributeId: 'installation' })).toEqual(['installationAttributeType']);
     expect(codes({ ...bound, listingKind: 'productWithInstallation', installationAttributeId: 'installation' })).toEqual([]);
+  });
+
+  it('🔴 το σώμα αιτήματος κρατά το είδος και τον δεσμό, αλλιώς θα χάνονταν σιωπηλά στην αποθήκευση', () => {
+    const body = { ...MFP_FAMILY, listingKind: 'productWithInstallation', installationAttributeId: 'attr_install' };
+    expect(familyDefinitionSchema.parse(body)).toMatchObject({ listingKind: 'productWithInstallation', installationAttributeId: 'attr_install' });
+    expect(familyDefinitionSchema.safeParse({ ...MFP_FAMILY, listingKind: 'rental' }).success).toBe(false);
   });
 
   it('🔴 δεσμός σε άλλο είδος απαγορεύεται', () => {
