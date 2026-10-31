@@ -55,7 +55,7 @@ interface GroupHeaderProps {
 
 function GroupHeader({ meta, fileCount, expanded, onToggle, language }: GroupHeaderProps) {
   const iconSizes = useIconSizes();
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const colors = useSemanticColors();
 
   if (meta) {
@@ -164,7 +164,7 @@ export type GroupedFilesListProps = FilesListProps;
  */
 export function GroupedFilesList(props: GroupedFilesListProps) {
   const { files, loading, ...restProps } = props;
-  const { i18n } = useTranslation(['files', 'files-media']);
+  const { i18n } = useTranslation('files');
 
   const language = (i18n.language?.split('-')[0] || 'en') as 'el' | 'en';
 

@@ -66,7 +66,7 @@ export function CurrentSettingsDisplay({
   gripSettings,
   className = ''
 }: CurrentSettingsDisplayProps) {
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
+  const { t } = useTranslation('dxf-viewer');
   const { getStatusBorder, radius } = useBorderTokens();  // ✅ ENTERPRISE: Added radius
   const colors = useSemanticColors();
   const resolvedGripColors = resolveGripColors(gripSettings.colors);

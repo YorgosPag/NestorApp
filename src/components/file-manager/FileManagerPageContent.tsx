@@ -99,7 +99,7 @@ interface FileCardProps {
 }
 
 function FileCard({ file, onClick, onDoubleClick }: FileCardProps) {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
 
   return (
     <Card

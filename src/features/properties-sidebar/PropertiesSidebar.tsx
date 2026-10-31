@@ -48,7 +48,7 @@ export function PropertiesSidebar({
   onCancelCreate,
   defaultTab,
 }: PropertiesSidebarProps) {
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const { t } = useTranslation('properties');
   const layout = useLayoutClasses();
   const isMobile = useIsMobile();
   const router = useRouter();

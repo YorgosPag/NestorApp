@@ -30,7 +30,7 @@ interface DxfPreviewProps {
 }
 
 export function DxfPreview({ url, fileName, title, record }: DxfPreviewProps) {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const colors = useSemanticColors();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // `contentKey` — άλλο σχέδιο ⇒ ουδέτερη όψη (ADR-899 §9 θέμα 7· το πάνελ κρατά το component ζωντανό ανάμεσα σε αρχεία).

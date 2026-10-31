@@ -23,7 +23,7 @@ const logger = createModuleLogger('useContactName');
  * @returns Object with contactName and loading state
  */
 export const useContactName = (contactId: string | undefined) => {
-  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t } = useTranslation('contacts');
   const [contactName, setContactName] = useState<string>('');
   const [contactStatus, setContactStatus] = useState<'active' | 'deleted' | null>(null);
   const [loading, setLoading] = useState(false);

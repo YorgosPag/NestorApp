@@ -38,7 +38,7 @@ import { SliderInput } from '../../../shared/SliderInput';
 import { SLIDER_VALUE_UNITS } from '../../../shared/slider-value-units';
 
 export function GripSettings({ contextType }: { contextType?: 'preview' | 'completion' }) {
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
+  const { t } = useTranslation('dxf-viewer');
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder, getElementBorder, radius } = useBorderTokens();
   const colors = useSemanticColors();

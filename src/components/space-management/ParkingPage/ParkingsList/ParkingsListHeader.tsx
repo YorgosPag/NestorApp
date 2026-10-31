@@ -30,7 +30,7 @@ export function ParkingsListHeader({
   onToolbarToggle
 }: ParkingsListHeaderProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation('building');
 
   return (
     <div>

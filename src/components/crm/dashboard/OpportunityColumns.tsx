@@ -19,7 +19,7 @@ interface OpportunityColumnsProps {
 export function OpportunityColumns({ opportunities, onEdit, onDelete }: OpportunityColumnsProps) {
     const colors = useSemanticColors();
     // 🏢 ENTERPRISE: i18n support
-    const { t } = useTranslation(['crm', 'crm-inbox']);
+    const { t } = useTranslation('crm');
 
     return (
         <div className="flex gap-4 overflow-x-auto pb-4">

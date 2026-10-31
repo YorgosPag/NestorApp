@@ -98,7 +98,7 @@ function PropertiesScreenBody({ screen, urlTab, detailFocused }: {
 }
 
 export function PropertiesScreen({ urlTab = null }: { urlTab?: string | null }) {
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer', 'trash']);
+  const { t } = useTranslation(['properties', 'trash']);
   const screen = usePropertiesScreen();
   const { engine, view, setView, creation, retired } = screen;
   const layout = useLayoutClasses();

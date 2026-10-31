@@ -59,7 +59,7 @@ export function ProjectLocationsTab({ data: project, draftAddresses }: ProjectLo
   // available. The header Edit toggle is hidden for this tab (project-details).
   const isEditing = true;
   const { t } = useTranslation('addresses');
-  const { t: tProjects } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+  const { t: tProjects } = useTranslation('projects');
   const iconSizes = useIconSizes();
   const typography = useTypography();
   const spacing = useSpacingTokens();

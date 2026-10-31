@@ -186,7 +186,7 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
   // ========================================================================
 
   const notifications = useNotifications();
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
 
   // ========================================================================
   // 🏢 CANONICAL PIPELINE DEPRECATION CHECK (ADR-292)

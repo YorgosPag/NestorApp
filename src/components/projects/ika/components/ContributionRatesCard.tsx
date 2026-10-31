@@ -48,7 +48,7 @@ interface RateRow {
 }
 
 export const ContributionRatesCard = React.memo(function ContributionRatesCard({ rates, isEditing, onRateChange }: ContributionRatesCardProps) {
-  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+  const { t } = useTranslation('projects');
   const colors = useSemanticColors();
   const typography = useTypography();
 

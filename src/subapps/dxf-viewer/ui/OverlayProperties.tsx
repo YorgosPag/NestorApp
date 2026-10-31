@@ -76,7 +76,7 @@ function buildLinkedPayload(kind: OverlayKind, entityId: string): Overlay['linke
 // ============================================================================
 
 export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, onUpdate, overlays }) => {
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
+  const { t } = useTranslation('dxf-viewer');
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();

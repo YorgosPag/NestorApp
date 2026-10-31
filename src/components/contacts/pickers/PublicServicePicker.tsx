@@ -38,7 +38,7 @@ export function PublicServicePicker({
   ...accessibleName
 }: PublicServicePickerProps) {
   const { options, findByName, isLoading } = usePublicServiceRegistry();
-  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t } = useTranslation('contacts');
 
   const handleValueChange = useCallback((newValue: string, option: ComboboxOption | null) => {
     onNameChange(newValue);

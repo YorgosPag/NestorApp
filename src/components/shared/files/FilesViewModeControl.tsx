@@ -87,7 +87,7 @@ export function FilesViewModeControl({
   onTreeViewModeChange,
   displayStyle,
 }: FilesViewModeControlProps) {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const iconSizes = useIconSizes();
   const gallery: ModeOption<FilesViewMode> = {
     value: 'gallery',

@@ -20,7 +20,7 @@ interface StatusCardProps {
 export function StatusCard({ statsByStatus, getStatusLabel }: StatusCardProps) {
     const iconSizes = useIconSizes();
     const colors = useSemanticColors();
-    const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+    const { t } = useTranslation('properties');
     const spacing = useSpacingTokens();
     // 🎯 DOMAIN SEPARATION: Operational status colors (Physical Truth - No Sales!)
     const getStatusColor = (status: string) => {

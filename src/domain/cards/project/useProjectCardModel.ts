@@ -60,7 +60,7 @@ const STATUS_BADGE_VARIANTS: Record<ProjectStatus, GridCardBadgeVariant> = {
  * Subtitle is omitted — each Grid/List wrapper derives it per view.
  */
 export function useProjectCardModel(project: Project): CardViewModel {
-  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+  const { t } = useTranslation('projects');
 
   /** Build stats array from project data */
   const stats = useMemo<StatItem[]>(() => {

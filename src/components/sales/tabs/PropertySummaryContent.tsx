@@ -72,7 +72,7 @@ function SummaryField({
 export function PropertySummaryContent({ data: unit }: PropertySummaryContentProps) {
   const _colors = useSemanticColors();
   const { t } = useTranslation(COMMON_NAMESPACES);
-  const { t: tProps } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const { t: tProps } = useTranslation('properties');
   const iconSizes = useIconSizes();
 
   if (!unit) return null;

@@ -74,7 +74,7 @@ export function SalesPropertyListCard({
   compact = true,
   className,
 }: SalesPropertyListCardProps) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation', 'properties-enums']);
+  const { t } = useTranslation(['common', 'properties-enums']);
 
   const commercialStatus = unit.commercialStatus ?? 'unavailable';
   const hasCommercialStatus = !!unit.commercialStatus;

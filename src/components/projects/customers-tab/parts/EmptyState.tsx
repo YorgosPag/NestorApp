@@ -6,7 +6,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { EmptyState as SharedEmptyState } from '@/components/shared/EmptyState';
 
 export function EmptyState() {
-  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+  const { t } = useTranslation('projects');
   return (
     <SharedEmptyState
       icon={Users}

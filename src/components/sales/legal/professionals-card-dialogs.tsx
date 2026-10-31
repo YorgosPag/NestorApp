@@ -42,7 +42,7 @@ interface ConflictDialogProps {
 }
 
 export function ConflictBlockDialog({ pendingAssignment, onDismiss }: ConflictDialogProps) {
-  const { t } = useTranslation(['common', 'common-sales']);
+  const { t } = useTranslation('common');
   const colors = useSemanticColors();
 
   return (
@@ -83,7 +83,7 @@ export function ConflictBlockDialog({ pendingAssignment, onDismiss }: ConflictDi
 }
 
 export function ConflictWarningDialog({ pendingAssignment, onDismiss, onConfirm }: ConflictDialogProps) {
-  const { t } = useTranslation(['common', 'common-actions', 'common-sales']);
+  const { t } = useTranslation('common');
   const colors = useSemanticColors();
 
   return (
@@ -133,7 +133,7 @@ interface EmailNotifyDialogProps {
 }
 
 export function EmailNotifyDialog({ pendingEmail, onClose, onSend }: EmailNotifyDialogProps) {
-  const { t } = useTranslation(['common', 'common-sales']);
+  const { t } = useTranslation('common');
 
   return (
     <AlertDialog

@@ -225,7 +225,7 @@ function ChequeExtraFields({ fields, update, t }: ChequeFieldsProps) {
 
 export function AddChequeDialog(props: AddChequeDialogProps) {
   const { open, onOpenChange } = props;
-  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
+  const { t } = useTranslation('payments');
   const { fields, update, canSubmit, submission } = useAddChequeForm(props, t);
 
   return (

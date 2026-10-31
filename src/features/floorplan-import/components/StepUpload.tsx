@@ -90,7 +90,7 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
   const smart = useFloorplanSmartUpload(config);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const noticeSupersession = useSupersessionNotice();
 
   // ADR-368: user-specified DXF coordinate units (default = auto-detect)

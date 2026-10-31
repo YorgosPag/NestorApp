@@ -49,7 +49,7 @@ import { useEscapeHandler, ESC_PRIORITY } from '../escape-bus';
  */
 export const PromptDialog: React.FC = () => {
   const { snapshot, confirm, cancel } = usePromptDialog();
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
+  const { t } = useTranslation('dxf-viewer');
   const colors = useSemanticColors();
   const { getStatusBorder } = useBorderTokens();
 

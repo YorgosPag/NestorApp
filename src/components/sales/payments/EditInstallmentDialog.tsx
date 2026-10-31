@@ -147,7 +147,7 @@ function ConfirmInstallmentDelete({ open, onOpenChange, onConfirm, loading, t }:
 
 export function EditInstallmentDialog(props: EditInstallmentDialogProps) {
   const { open, onOpenChange, mode, planStatus, installment, totalInstallments, maxAmount } = props;
-  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
+  const { t } = useTranslation('payments');
   const { fields, update, notesOnly, submission } = useEditInstallmentForm(props, t);
   const { deleting, confirmDelete } = useDeleteInstallment(props, t);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);

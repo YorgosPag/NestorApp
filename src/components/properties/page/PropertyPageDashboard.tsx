@@ -66,7 +66,7 @@ function useDashboardCards({ stats, filters, onFiltersChange }: PropertyPageDash
 
 export function PropertyPageDashboard(props: PropertyPageDashboardProps) {
   const { stats, filters, onFiltersChange } = props;
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const { t } = useTranslation('properties');
   const cards = useDashboardCards(props);
   const getStatusLabel = useMemo(() => createStatusLabelGetter(t), [t]);
   const getTypeLabel = useMemo(() => createTypeLabelGetter(t), [t]);

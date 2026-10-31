@@ -24,7 +24,7 @@ interface CalendarEventTooltipProps {
 }
 
 export function CalendarEventTooltip({ event, timeText }: CalendarEventTooltipProps) {
-  const { t } = useTranslation(['crm', 'crm-inbox']);
+  const { t } = useTranslation('crm');
   const colors = useSemanticColors();
 
   const descriptionPreview = event.description

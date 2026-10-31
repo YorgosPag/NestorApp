@@ -194,7 +194,7 @@ export const OverlayListCard = forwardRef<HTMLElement, OverlayListCardProps>(
     },
     ref,
   ) {
-    const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell', 'properties-enums']);
+    const { t } = useTranslation(['dxf-viewer', 'properties-enums']);
 
     // ==========================================================================
     // 🏢 COMPUTED VALUES (Memoized)

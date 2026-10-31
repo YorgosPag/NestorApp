@@ -86,7 +86,7 @@ export function ParkingsList({
   onNewItem,
 }: ParkingsListProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation('building');
 
   // Η κατάσταση που κρατά ΚΑΘΕ σελίδα λίστας — μία δήλωση, δες `useEntityListState`.
   const list = useEntityListState<SortField>({ defaultSortField: 'name' });

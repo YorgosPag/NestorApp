@@ -40,7 +40,7 @@ export function BuildingDataTabs({
   onActualDataChange,
 }: BuildingDataTabsProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+  const { t } = useTranslation('projects');
   // 🏢 ENTERPRISE: Centralized spacing tokens
   const spacing = useSpacingTokens();
 

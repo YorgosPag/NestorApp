@@ -63,7 +63,7 @@ function getEventConfig(eventType: AttendanceEventType): {
 }
 
 export function AttendanceEventRow({ event }: AttendanceEventRowProps) {
-  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+  const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();

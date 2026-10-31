@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import '@/lib/design-system';
 
 export function CalendarExportButton() {
-  const { t } = useTranslation(['crm', 'crm-inbox']);
+  const { t } = useTranslation('crm');
 
   const handlePrint = useCallback(() => {
     window.print();

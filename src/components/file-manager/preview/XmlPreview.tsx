@@ -14,7 +14,7 @@ interface XmlPreviewProps {
 type XmlState = 'loading' | 'ready' | 'error';
 
 export function XmlPreview({ url, title }: XmlPreviewProps) {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const colors = useSemanticColors();
   const [state, setState] = useState<XmlState>('loading');
   const [content, setContent] = useState('');

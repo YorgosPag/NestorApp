@@ -47,7 +47,7 @@ export function ProjectsList({
   onDeleteProject,
 }: ProjectsListProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+  const { t } = useTranslation('projects');
   // 🏢 ENTERPRISE: Centralized spacing tokens
   const spacing = useSpacingTokens();
   // 🏢 ENTERPRISE: Using string IDs for Firebase compatibility

@@ -57,7 +57,7 @@ export function CommunicationEmptyState({
   config,
 }: CommunicationEmptyStateProps): JSX.Element {
   const iconSizes = useIconSizes();
-  const { t, isNamespaceReady } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t, isNamespaceReady } = useTranslation('contacts');
   const IconComponent = config.icon;
   // Dark-mode-aware color from SSoT — replaces ad-hoc text-gray classes that
   // washed out against dark backgrounds.

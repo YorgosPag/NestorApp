@@ -76,7 +76,7 @@ export function ThreadView({
   onReply, onForward, onEdit, isPinnedFn, onTogglePin,
   getReactionsFn, onToggleReaction,
 }: ThreadViewProps) {
-  const { t } = useTranslation(['crm', 'crm-inbox']);
+  const { t } = useTranslation('crm');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();

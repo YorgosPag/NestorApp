@@ -73,7 +73,7 @@ export function ContactBankingTab({
   data,
   additionalData,
 }: ContactBankingTabProps) {
-  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t } = useTranslation('contacts');
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const { success, error: notifyError, info } = useNotifications();

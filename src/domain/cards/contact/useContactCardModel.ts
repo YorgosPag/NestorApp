@@ -47,7 +47,7 @@ const TYPE_BADGE_VARIANTS: Record<string, GridCardBadgeVariant> = {
  * Build the shared Contact card view-model (title, subtitle, icon, badges, stats, aria).
  */
 export function useContactCardModel(contact: Contact): CardViewModel {
-  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t } = useTranslation('contacts');
 
   /** Get display name from contact */
   const displayName = useMemo(() => getContactDisplayName(contact), [contact]);

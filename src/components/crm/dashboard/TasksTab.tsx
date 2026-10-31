@@ -77,7 +77,7 @@ export function TasksTab({ filters: externalFilters, onTaskCreated, appointments
   const filters = externalFilters ?? defaultTaskFilters;
   const { success, error: notifyError } = useNotifications();
   const colors = useSemanticColors();
-  const { t } = useTranslation(['crm', 'crm-inbox']);
+  const { t } = useTranslation('crm');
   // 🏢 ENTERPRISE: Auth context for race condition prevention
   const { isAuthenticated, loading: authLoading } = useAuth();
   const sp = useSpacingTokens();

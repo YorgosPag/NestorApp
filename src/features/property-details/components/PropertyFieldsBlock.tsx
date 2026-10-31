@@ -77,8 +77,8 @@ export function PropertyFieldsBlock({
   onActiveLevelChange,
   onAutoSaveFields,
 }: PropertyFieldsBlockProps) {
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
-  const { t: tPolicy } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation('properties');
+  const { t: tPolicy } = useTranslation('building');
   useSpacingTokens();
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();

@@ -198,7 +198,7 @@ export const CompanyAddressesSection = forwardRef<CompanyAddressesSectionHandle,
   contactType,
   renderCardFooter,
 }, ref) {
-  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t } = useTranslation('contacts');
   const { t: tAddr } = useTranslation('addresses');
   const tAddrFn = React.useCallback((key: string) => tAddr(key) as string, [tAddr]);
   const colors = useSemanticColors();

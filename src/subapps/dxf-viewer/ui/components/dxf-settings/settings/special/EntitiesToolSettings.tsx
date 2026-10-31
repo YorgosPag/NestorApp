@@ -89,7 +89,7 @@ export const EntitiesToolSettings: React.FC<EntitiesToolSettingsProps> = ({
 }) => {
   const colors = useSemanticColors();
   const { quick } = useBorderTokens();
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
+  const { t } = useTranslation('dxf-viewer');
 
   const lineToolTabs: TabDefinition[] = [
     { id: 'draft', label: t(DXF_SETTINGS_TAB_LABELS.DRAFT), icon: PenLine, content: null },

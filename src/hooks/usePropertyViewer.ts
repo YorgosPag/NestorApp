@@ -94,7 +94,7 @@ const FALLBACK_FLOOR_ID = process.env.NEXT_PUBLIC_DEFAULT_FLOOR_ID || 'floor-1' 
  * @enterprise-ready true
  */
 export function usePropertyViewer() {
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const { t } = useTranslation('properties');
   const { success, error: notifyError } = useNotifications();
 
   // 1. Core State Management (properties, selection, history)

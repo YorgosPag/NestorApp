@@ -141,7 +141,7 @@ export function useFileUpload({
   onUploadComplete,
 }: UseFileUploadParams): UseFileUploadReturn {
   const [uploading, setUploading] = useState(false);
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const fileNotifications = useFilesNotifications();
   const { user } = useAuth();
   const currentUserName = user?.displayName || user?.email || undefined;

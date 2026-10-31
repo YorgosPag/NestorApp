@@ -34,7 +34,7 @@ export function LeadDetailPageContent() {
   const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();
-  const { t } = useTranslation(['crm', 'crm-inbox']);
+  const { t } = useTranslation('crm');
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;

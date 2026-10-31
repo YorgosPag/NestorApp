@@ -32,7 +32,7 @@ export interface LayerFilterRuleBuilderProps {
 export function LayerFilterRuleBuilder({
   isOpen, initial, onClose, onSubmit,
 }: LayerFilterRuleBuilderProps): React.ReactElement | null {
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
+  const { t } = useTranslation('dxf-viewer');
   const colors = useSemanticColors();
 
   const [name, setName] = useState(initial?.name ?? '');

@@ -79,7 +79,7 @@ function LoanTabs({ loan, onUpdate, onTransition, onDisburse, onAddCommLog, onDo
 }
 
 export function LoanDetailDialog({ open, onOpenChange, ...writers }: LoanDetailDialogProps) {
-  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
+  const { t } = useTranslation('payments');
   const { success } = useNotifications();
   const { loan } = writers;
 

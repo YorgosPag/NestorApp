@@ -150,7 +150,7 @@ export function EntityFilesManager({
   scopePolicy,
   emptyMessage,
 }: EntityFilesManagerProps) {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const fullscreen = useFullscreen();
   const custody = useStableFileCustody(custodyProp);
   // Ενέργειες ΓΡΑΦΕΙΟΥ (AI/διαβάθμιση/αρχειοθέτηση/ZIP) κρυμμένες για προσωπικό κάτοχο — §2.6.8 Β6.

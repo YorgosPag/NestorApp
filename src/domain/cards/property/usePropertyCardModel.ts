@@ -90,7 +90,7 @@ function displayAreaOf(property: Property): number | undefined {
 // =============================================================================
 
 export function usePropertyGridModel(property: Property, showCommercialPrices = false): CardViewModel {
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer', 'trash']);
+  const { t } = useTranslation(['properties', 'trash']);
   const floorLabel = useFloorLabel();
   const { buildingName } = useHierarchyNames();
 
@@ -174,7 +174,7 @@ export function usePropertyGridModel(property: Property, showCommercialPrices = 
 // =============================================================================
 
 export function usePropertyListModel(property: Property): CardViewModel {
-  const { t } = useTranslation(['properties', 'properties-viewer', 'properties-enums', 'properties-detail', 'trash']);
+  const { t } = useTranslation(['properties', 'trash']);
   const floorLabel = useFloorLabel();
   const { projectName, buildingName } = useHierarchyNames();
 

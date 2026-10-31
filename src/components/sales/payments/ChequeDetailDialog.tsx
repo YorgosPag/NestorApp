@@ -104,7 +104,7 @@ export function ChequeDetailDialog({
   onBounce,
 }: ChequeDetailDialogProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
+  const { t } = useTranslation('payments');
   const { success, error: notifyError } = useNotifications();
   const isTerminal = isTerminalChequeStatus(cheque.status);
   const nextStatuses = getValidNextChequeStatuses(cheque.status);

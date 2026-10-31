@@ -108,7 +108,7 @@ export function ProjectDetails({
   onDraftStatusChange,
   isTrashMode = false,
 }: ProjectDetailsProps) {
-  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+  const { t } = useTranslation('projects');
   const { user } = useAuth();
 
   // Active tab — Edit button visible only on tabs that own editable fields.

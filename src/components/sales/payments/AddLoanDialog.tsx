@@ -150,7 +150,7 @@ function PrimaryLoanCheckbox({ fields, update, t }: LoanFieldsProps) {
 
 export function AddLoanDialog(props: AddLoanDialogProps) {
   const { open, onOpenChange } = props;
-  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
+  const { t } = useTranslation('payments');
   const { fields, update, canSubmit, submission } = useAddLoanForm(props, t);
 
   return (

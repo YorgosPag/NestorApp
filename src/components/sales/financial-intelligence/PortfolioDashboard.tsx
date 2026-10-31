@@ -80,7 +80,7 @@ const debtMaturityCache = createStaleCache<DebtMaturityEntry[]>('portfolio-debt-
 export function PortfolioDashboard() {
   const colors = useSemanticColors();
   // `procurement` — cost-code + PO status labels of the budget card (ADR-917 Φ2)
-  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans', 'procurement']);
+  const { t } = useTranslation(['payments', 'procurement']);
 
   // State — ADR-300: Seed from module-level cache → zero flash on re-navigation
   const cachedPortfolio = portfolioCache.get();

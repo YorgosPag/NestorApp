@@ -64,7 +64,7 @@ function IdentityFact({
 
 /** **Ο υπότιτλος της ταυτότητας**: κωδικός · είδος · κτίριο · έργο · όροφος. */
 export function usePropertyIdentityLine(property: Property | null): string {
-  const { t } = useTranslation(['properties', 'properties-enums']);
+  const { t } = useTranslation('properties');
   const floorLabel = useFloorLabel();
   if (!property) return '';
   // Κενή εφεδρεία, όχι η ωμή τιμή (CHECK 3.97): άγνωστο είδος **παραλείπεται** από τη γραμμή, δεν εμφανίζεται ως
@@ -85,7 +85,7 @@ export function PropertyIdentityStatus({ property }: { readonly property: Proper
   // ⚠️ Τα namespaces του σήματος δηλώνονται **ρητά**: η εμπορική ετικέτα ζει στο `properties-enums`, η ετικέτα
   // κύκλου ζωής στο `trash` (`buildPropertyStatusBadge`). Αλλιώς θα δούλευε **επειδή κάποιος άλλος** τα έχει
   // φορτώσει — εξάρτηση από τη σειρά φόρτωσης, όχι από δήλωση (CHECK 3.36 §8.1).
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer', 'trash']);
+  const { t } = useTranslation(['properties', 'trash']);
   const badges = [buildPropertyStatusBadge(property, t), buildListingAudienceBadge(property, t)].filter(
     (badge): badge is GridCardBadge => badge !== null,
   );
@@ -99,7 +99,7 @@ export function PropertyIdentityStatus({ property }: { readonly property: Proper
 
 /** **Τα γεγονότα της ταυτότητας**: τιμή (ή η ονομασμένη απουσία της) και εμβαδόν. */
 export function PropertyIdentityFacts({ property }: { readonly property: Property }): React.ReactElement {
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const { t } = useTranslation('properties');
   const colors = useSemanticColors();
 
   const price = resolveDisplayPrice(property);

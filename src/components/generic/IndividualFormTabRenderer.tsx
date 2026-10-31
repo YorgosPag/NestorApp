@@ -194,7 +194,7 @@ export function IndividualFormTabRenderer({
   activeTab
 }: IndividualFormTabRendererProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t } = useTranslation('contacts');
 
   if (!sections || sections.length === 0) {
     return null;

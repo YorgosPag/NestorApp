@@ -45,7 +45,7 @@ export function FloorplanViewerTab({
   onEditFloorplan
 }: FloorplanViewerTabProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation('building');
   // 🏢 ENTERPRISE: Centralized typography tokens
   const typography = useTypography();
 

@@ -55,7 +55,7 @@ interface LaborComplianceSettingsTabContentProps {
 }
 
 export function LaborComplianceSettingsTabContent({ projectId: _projectId }: LaborComplianceSettingsTabContentProps) {
-  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+  const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const typography = useTypography();

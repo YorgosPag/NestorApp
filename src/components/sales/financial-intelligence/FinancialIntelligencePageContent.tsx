@@ -19,7 +19,7 @@ import { PortfolioDashboard } from '@/components/sales/financial-intelligence/Po
 
 export function FinancialIntelligencePageContent() {
   // `procurement` carries the cost-code labels of the budget card (`costCodeLabelKey`, ADR-917)
-  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans', 'procurement']);
+  const { t } = useTranslation(['payments', 'procurement']);
   const colors = useSemanticColors();
   const { quick } = useBorderTokens();
 

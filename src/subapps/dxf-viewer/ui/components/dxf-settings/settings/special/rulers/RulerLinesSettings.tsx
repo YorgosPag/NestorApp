@@ -70,7 +70,7 @@ export const RulerLinesSettings: React.FC<RulerLinesSettingsProps> = ({ classNam
   const { activeTab: activeLinesTab, setActiveTab: setActiveLinesTab } = useTabNavigation<LinesTab>('major');
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
+  const { t } = useTranslation('dxf-viewer');
 
   // ============================================================================
   // TAB CONFIGURATION - 🏢 ENTERPRISE: Using centralized TabDefinition interface

@@ -14,7 +14,7 @@ interface TxtPreviewProps {
 type TxtState = 'loading' | 'ready' | 'error';
 
 export function TxtPreview({ url, title }: TxtPreviewProps) {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const colors = useSemanticColors();
   const [state, setState] = useState<TxtState>('loading');
   const [content, setContent] = useState('');

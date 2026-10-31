@@ -211,7 +211,7 @@ export function useBatchFileOperations({
   currentUserId,
   refetch,
 }: UseBatchFileOperationsParams): UseBatchFileOperationsReturn {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   // useNotifications kept only for showArchiveResultFeedback (needs raw callbacks + t)
   const { success, error, warning } = useNotifications();
   const fileNotifications = useFilesNotifications();

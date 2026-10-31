@@ -191,7 +191,7 @@ function CurrentStep({ props, form, t }: { props: CreatePaymentPlanWizardProps; 
 
 export function CreatePaymentPlanWizard(props: CreatePaymentPlanWizardProps) {
   const { open, onOpenChange } = props;
-  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
+  const { t } = useTranslation('payments');
   const form = useWizardForm(props, t);
   const atStart = form.stepIndex === 0;
 

@@ -76,7 +76,7 @@ function getPurposeToLabelMap(): Map<string, { el: string; en: string }> {
  * or string parsing (enterprise-grade architecture).
  */
 export function useFileDisplayName() {
-  const { t, i18n } = useTranslation(['files', 'files-media']);
+  const { t, i18n } = useTranslation('files');
 
   /**
    * Translate display name from FileRecord

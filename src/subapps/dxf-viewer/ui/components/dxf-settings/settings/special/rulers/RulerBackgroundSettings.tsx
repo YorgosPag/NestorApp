@@ -60,7 +60,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
   // ============================================================================
   const colors = useSemanticColors();
   // 🌐 i18n
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
+  const { t } = useTranslation('dxf-viewer');
 
   const {
     state: { rulers: rulerSettings },

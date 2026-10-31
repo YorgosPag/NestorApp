@@ -59,7 +59,7 @@ export interface InboxViewProps {
 function InboxStateHeader({ onRefresh }: { readonly onRefresh?: () => void }) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   return (
     <header className="flex items-center justify-between">
       <div className="flex items-center gap-2">
@@ -87,7 +87,7 @@ export function InboxView({
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const translateDisplayName = useFileDisplayName();
 
   const { inboxFiles, loading, error, fetchInboxFiles } = useInboxFiles(companyId);

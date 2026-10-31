@@ -49,7 +49,7 @@ export function DateNavigator({
   onDateChange,
   onViewModeChange,
 }: DateNavigatorProps) {
-  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+  const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
   const typography = useTypography();

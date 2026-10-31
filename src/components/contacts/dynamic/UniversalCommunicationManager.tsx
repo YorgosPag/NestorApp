@@ -59,7 +59,7 @@ export function UniversalCommunicationManager({
 }: UniversalCommunicationManagerProps) {
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t } = useTranslation('contacts');
 
   // 🏢 ENTERPRISE: Modular hooks (extracted)
   const { isDesktop } = useResponsiveLayout();

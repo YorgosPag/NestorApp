@@ -197,7 +197,7 @@ export function CompanyFileTree({
   onRename,
   className,
 }: CompanyFileTreeProps) {
-  const { t, i18n } = useTranslation(['files', 'files-media', 'iso19650']);
+  const { t, i18n } = useTranslation(['files', 'iso19650']);
   const colors = useSemanticColors();
   const translateDisplayName = useFileDisplayName();
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['root']));

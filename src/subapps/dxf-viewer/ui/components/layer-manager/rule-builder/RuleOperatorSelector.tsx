@@ -42,7 +42,7 @@ export interface RuleOperatorSelectorProps {
 export function RuleOperatorSelector({
   field, value, onChange,
 }: RuleOperatorSelectorProps): React.ReactElement {
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
+  const { t } = useTranslation('dxf-viewer');
   const operators = OPERATORS_BY_FIELD[field];
   return (
     <Select value={value} onValueChange={onChange}>

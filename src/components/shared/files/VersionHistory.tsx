@@ -67,7 +67,7 @@ interface VersionRowProps {
 }
 
 function VersionActions({ version, number, promoting, locked, canPromote, onDownload, onPromote }: VersionRowProps) {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   return (
     <nav className="flex items-center gap-1 flex-shrink-0">
       {/* Το `downloadUrl` μένει ως ένδειξη **ετοιμότητας** (έκδοση `pending`/`failed` δεν έχει
@@ -98,7 +98,7 @@ function VersionActions({ version, number, promoting, locked, canPromote, onDown
 
 function VersionRow(props: VersionRowProps) {
   const { version, number, restoredFrom } = props;
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const colors = useSemanticColors();
   const { quick } = useBorderTokens();
   return (
@@ -123,7 +123,7 @@ function VersionRow(props: VersionRowProps) {
 }
 
 export function VersionHistory({ fileId, custody, currentUserId, onPromoted, className }: VersionHistoryProps) {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const { handleDownload } = useFileDownload();

@@ -39,7 +39,7 @@ export interface FileRowActionsProps {
 
 /** Η σειρά δήλωσης είναι η σειρά του μενού· ό,τι δεν προσφέρεται απλώς λείπει. */
 function useFileRowActions({ onRename, onLink, linkLabel, onUnlink, unlinkLabel, onDelete }: FileRowActionsProps) {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   return React.useMemo(() => {
     const declared: EntityHeaderAction[] = [];
     if (onRename) declared.push({ label: t('list.renameFile'), icon: Pencil, onClick: onRename, claimsFocus: true });
@@ -72,7 +72,7 @@ const stop = (event: React.SyntheticEvent) => event.stopPropagation();
  * Η γραμμή που την περιέχει δηλώνει `group` — από αυτήν ανάβουν τα γρήγορα κουμπιά (hover ή εστίαση μέσα της).
  */
 export function FileRowActions(props: FileRowActionsProps) {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const { inline, menuOnly } = useFileRowActions(props);
   if (inline.length === 0 && menuOnly.length === 0) return null;
   return (

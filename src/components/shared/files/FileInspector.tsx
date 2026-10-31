@@ -91,7 +91,7 @@ export function FileInspector({
   companyName,
 }: FileInspectorProps) {
   const iconSizes = useIconSizes();
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const colors = useSemanticColors();
   const fileNotifications = useFilesNotifications();
   // ADR-899 §4.1 — ο ΕΝΑΣ αναγνώστης: εγγραφή χωρίς `downloadUrl` αλλά με `storagePath` έχει κι αυτή σύνδεσμο.

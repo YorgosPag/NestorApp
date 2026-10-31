@@ -30,7 +30,7 @@ export function GeneralProjectHeader({
     projectId,
     isSaving = false,
 }: GeneralProjectHeaderProps) {
-    const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+    const { t } = useTranslation('projects');
     const iconSizes = useIconSizes();
     const colors = useSemanticColors();
     const spacing = useSpacingTokens();

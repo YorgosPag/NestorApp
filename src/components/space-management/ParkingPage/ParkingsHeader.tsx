@@ -25,7 +25,7 @@ import '@/lib/design-system';
 
 export function ParkingsHeader(props: ListPageHeaderProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline', 'trash']);
+  const { t } = useTranslation(['building', 'trash']);
 
   return (
     <ListPageHeader

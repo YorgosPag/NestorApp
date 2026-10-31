@@ -49,7 +49,7 @@ interface BuildingsApiResponse {
 }
 
 export function ProjectTimelineTab({ project }: { project: Project }) {
-  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+  const { t } = useTranslation('projects');
   const typography = useTypography();
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();

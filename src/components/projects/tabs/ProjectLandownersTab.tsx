@@ -80,7 +80,7 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
   const projectId = projectData?.id;
 
   const { t } = useTranslation(COMMON_NAMESPACES);
-  const { t: tProjects } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+  const { t: tProjects } = useTranslation('projects');
   const { success: showSuccess, error: showError } = useNotifications();
   const typography = useTypography();
   const iconSizes = useIconSizes();

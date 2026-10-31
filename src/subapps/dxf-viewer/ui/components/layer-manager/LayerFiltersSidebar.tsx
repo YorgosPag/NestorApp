@@ -38,7 +38,7 @@ export interface LayerFiltersSidebarProps {
 export function LayerFiltersSidebar({
   projectId, projectName,
 }: LayerFiltersSidebarProps): React.ReactElement {
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
+  const { t } = useTranslation('dxf-viewer');
   const colors = useSemanticColors();
   const { getStatusBorder } = useBorderTokens();
   const importInputRef = useRef<HTMLInputElement | null>(null);

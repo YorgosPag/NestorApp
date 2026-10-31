@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import '@/lib/design-system';
 
 export function LimitedInfoNotice() {
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const { t } = useTranslation('properties');
   const colors = useSemanticColors();
   return (
     <>

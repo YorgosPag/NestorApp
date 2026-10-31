@@ -14,7 +14,7 @@ interface ExcelPreviewProps {
 type ExcelState = 'loading' | 'ready' | 'error';
 
 export function ExcelPreview({ fileId, title }: ExcelPreviewProps) {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const colors = useSemanticColors();
   const [state, setState] = useState<ExcelState>('loading');
   const [html, setHtml] = useState('');

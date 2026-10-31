@@ -129,7 +129,7 @@ export function PropertyDetailSurface({
   retiredAction,
   headerIdentity = 'compact',
 }: PropertyDetailSurfaceProps): React.ReactElement {
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const { t } = useTranslation('properties');
   const emptyStateMessages = useEmptyStateMessages();
   const { user } = useAuth();
 

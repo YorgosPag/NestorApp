@@ -52,7 +52,7 @@ export default function DynamicInputOverlay({
   mouseWorldPosition = null,
   tempPoints = null
 }: DynamicInputOverlayProps) {
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
+  const { t } = useTranslation('dxf-viewer');
   // ADR-357 Phase 2a — dynInput is the canonical Dynamic Input enable flag (status-bar toggle).
   const { dynInput } = useCadToggles();
   // ADR-357 Phase 2b — display unit for numeric readouts (mm internal → configurable display).

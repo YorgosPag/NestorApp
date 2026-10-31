@@ -67,7 +67,7 @@ export function PropertyHierarchyEmptyStates({
   onPickAnotherBuilding,
   onCreateFloor,
 }: PropertyHierarchyEmptyStatesProps) {
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const { t } = useTranslation('properties');
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
 

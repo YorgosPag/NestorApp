@@ -22,7 +22,7 @@ interface SendEmailModalProps {
 }
 
 export default function SendEmailModal({ lead, isOpen, onClose, onEmailSent }: SendEmailModalProps) {
-  const { t } = useTranslation(['crm', 'crm-inbox']);
+  const { t } = useTranslation('crm');
   const iconSizes = useIconSizes();
   const { quick, radius, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();

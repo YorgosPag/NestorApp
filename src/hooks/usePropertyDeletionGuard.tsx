@@ -29,7 +29,7 @@ interface UsePropertyDeletionGuardReturn {
 }
 
 export function usePropertyDeletionGuard(): UsePropertyDeletionGuardReturn {
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const { t } = useTranslation('properties');
   // ADR-329 §3.9: ακίνητο που αναφέρεται (επιμετρήσεις κ.λπ.) δεν διαγράφεται — ο ίδιος
   // διάλογος μπλοκαρίσματος προσφέρει το αρχείο. Οι λίστες είναι ζωντανές συνδρομές, άρα μετά
   // την αρχειοθέτηση αρκεί να κλείσει ο διάλογος.

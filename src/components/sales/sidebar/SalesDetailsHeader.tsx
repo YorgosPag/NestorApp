@@ -38,7 +38,7 @@ export function SalesDetailsHeader({
 }: SalesDetailsHeaderProps) {
   // `properties-enums`: εκεί ζει το `types.*` του ακινήτου (ίδιο με `SalesPropertyListCard`). Το `units:` που γραφόταν εδώ δεν υπήρξε ποτέ.
   // Ρητή λίστα, όχι `[...COMMON_NAMESPACES]`: το CHECK 3.8 δεν λύνει spread και θα έχανε τα `sales.actions.*`.
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation', 'properties-enums']);
+  const { t } = useTranslation(['common', 'properties-enums']);
 
   const status = unit.commercialStatus;
   const isReserved = status === 'reserved';

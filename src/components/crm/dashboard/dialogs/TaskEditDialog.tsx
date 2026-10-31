@@ -63,7 +63,7 @@ export function TaskEditDialog({
   onOpenChange,
   onUpdated,
 }: TaskEditDialogProps) {
-  const { t } = useTranslation(['crm', 'crm-inbox']);
+  const { t } = useTranslation('crm');
   const { success, error: notifyError } = useNotifications();
 
   const [title, setTitle] = useState('');

@@ -64,7 +64,7 @@ export function useProjectCustomers(
   options: UseProjectCustomersOptions = {}
 ): UseProjectCustomersReturn {
   const { enabled = true } = options;
-  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+  const { t } = useTranslation('projects');
 
   const { data, loading, error, refetch, isFetched } = useLazyProjectResource({
     projectId,

@@ -61,7 +61,7 @@ interface GuidePanelProps {
 }
 
 export const GuidePanel: React.FC<GuidePanelProps> = ({ isVisible, onClose }) => {
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
+  const { t } = useTranslation('dxf-viewer');
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
 

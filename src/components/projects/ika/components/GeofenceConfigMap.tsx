@@ -70,7 +70,7 @@ interface GeofenceConfigMapProps {
 // =============================================================================
 
 export function GeofenceConfigMap({ projectId, siteCenter }: GeofenceConfigMapProps) {
-  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+  const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
   const typography = useTypography();
   const basemap = useDefaultBasemap();

@@ -124,7 +124,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const universalSelection = useUniversalSelectionStable();
   const { execute: executeCommand } = useCommandHistory();
   const { warning: notifyWarning, success: notifySuccess } = useNotifications();
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
+  const { t } = useTranslation('dxf-viewer');
   useCommandHistoryKeyboard();
   const overlayStoreRef = useRef(overlayStore);
   const universalSelectionRef = useRef(universalSelection);

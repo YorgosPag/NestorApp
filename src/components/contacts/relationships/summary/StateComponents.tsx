@@ -55,7 +55,7 @@ interface EmptyStateProps extends StateComponentProps {
 export const NewContactState: React.FC<StateComponentProps> = ({ className }) => {
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
-  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t } = useTranslation('contacts');
 
   return (
   <Card className={className}>
@@ -90,7 +90,7 @@ export const LoadingState: React.FC<StateComponentProps> = ({ className }) => {
   const iconSizes = useIconSizes();
   const { quick: _quick, radius: _radius } = useBorderTokens();
   const colors = useSemanticColors();
-  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t } = useTranslation('contacts');
 
   return (
   <Card className={className}>
@@ -127,7 +127,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 }) => {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t } = useTranslation('contacts');
 
   return (
   <Card className={className}>

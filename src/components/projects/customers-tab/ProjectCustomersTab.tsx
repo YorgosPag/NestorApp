@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils';
 
 export function ProjectCustomersTab({ projectId }: ProjectCustomersTabProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+  const { t } = useTranslation('projects');
   // 🏢 ENTERPRISE: Centralized typography tokens
   const typography = useTypography();
   // 🏢 ENTERPRISE: Centralized spacing tokens

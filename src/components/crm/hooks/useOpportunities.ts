@@ -20,7 +20,7 @@ const oppsCache = createStaleCache<Opportunity[]>('crm-pipeline');
 
 export function useOpportunities() {
     const notifications = useNotifications();
-    const { t } = useTranslation(['crm', 'crm-inbox']);
+    const { t } = useTranslation('crm');
     // ADR-300: Seed from cache → zero flash on re-navigation
     const [opportunities, setOpportunities] = useState<Opportunity[]>(oppsCache.get() ?? []);
     const [loading, setLoading] = useState(!oppsCache.hasLoaded());

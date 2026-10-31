@@ -119,7 +119,7 @@ const DrawingContextMenuInner = forwardRef<DrawingContextMenuHandle, DrawingCont
   onFlipArc,
   onSnapOverride,
 }, ref) => {
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
+  const { t } = useTranslation('dxf-viewer');
   const triggerRef = useRef<HTMLSpanElement>(null);
   const [isOpen, setIsOpen] = useState(false);
 

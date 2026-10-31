@@ -74,7 +74,7 @@ interface CoverageMetricProps {
 // =============================================================================
 
 function CoverageMetric({ icon: Icon, iconClass, label, percentage, withCount, total, onActivate, pressed }: CoverageMetricProps) {
-  const { t } = useTranslation(['properties', 'common', 'common-navigation']);
+  const { t } = useTranslation(['properties', 'common']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const missing = total - withCount;
@@ -122,7 +122,7 @@ export function CoverageCard({
   activeMissing,
   className,
 }: CoverageCardProps) {
-  const { t } = useTranslation(['properties', 'common', 'common-navigation']);
+  const { t } = useTranslation(['properties', 'common']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();

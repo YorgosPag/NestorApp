@@ -50,7 +50,7 @@ const logger = createModuleLogger('ProjectsPageContent');
 
 export function ProjectsPageContent() {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika', 'trash']);
+  const { t } = useTranslation(['projects', 'trash']);
 
   // Η ενεργή καρτέλα ΔΕΝ περνά από εδώ: ζει στη διεύθυνση και τη διαβάζει/γράφει το `ProjectViewSwitch` (ADR-242 Βήμα 3).
 

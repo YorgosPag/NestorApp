@@ -89,7 +89,7 @@ export function DocumentTemplatePanel({
   currentUserId,
   className,
 }: DocumentTemplatePanelProps) {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const colors = useSemanticColors();
 
   const categoryLabels = useMemo<Record<TemplateCategory, string>>(() => {

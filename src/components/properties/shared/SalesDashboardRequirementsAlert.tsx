@@ -88,7 +88,7 @@ export function SalesDashboardRequirementsAlert({
   grossArea,
   className,
 }: SalesDashboardRequirementsAlertProps) {
-  const { t } = useTranslation(['properties', 'properties-detail']);
+  const { t } = useTranslation('properties');
   const iconSizes = useIconSizes();
 
   const needsAskingPrice = requiresAskingPrice(commercialStatus);

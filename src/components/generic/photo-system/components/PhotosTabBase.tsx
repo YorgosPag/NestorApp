@@ -102,7 +102,7 @@ function PhotosTabStats({ totalCount: _totalCount, categoryStats, categories }: 
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation('building');
   // ADR-784 §10.4 / CHECK 3.28 — ο μεταφραστής ετικέτας ζει σε ΕΝΑ σημείο.
   const translateLabel = usePhotoCategoryLabel();
 
@@ -158,7 +158,7 @@ function PhotosTabCategories({
 }: CategoriesProps) {
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation('building');
   // ADR-784 §10.4 / CHECK 3.28 — ο ίδιος μεταφραστής με το `PhotosTabStats`, όχι δεύτερο σώμα.
   const translateLabel = usePhotoCategoryLabel();
 
@@ -248,7 +248,7 @@ export function PhotosTabBase<TEntity extends BaseEntity>({
   const colors = useSemanticColors();
 
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation('building');
 
   // ---------------------------------------------------------------------------
   // 🏢 ADR-292: Resolve canonical fields (prop > hook fallback)

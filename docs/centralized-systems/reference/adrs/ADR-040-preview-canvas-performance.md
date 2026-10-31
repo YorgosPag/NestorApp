@@ -113,6 +113,11 @@ SSoT γεωμετρίας: `canvas-v2/dxf-canvas/dxf-bitmap-cache-anchor.ts` (κ
 
 ## Changelog
 
+### 2026-10-31 — `CanvasSection`: ένα όνομα στο `useTranslation` (CHECK 3.108, CHECK 6B)
+
+- Η οικογένεια namespaces `dxf-viewer*` δεν γράφεται πια με το χέρι: το `useTranslation('dxf-viewer')` τη φορτώνει από το μητρώο.
+  Αλλαγή μίας γραμμής. Καμία νέα συνδρομή, καμία επίπτωση στο μοτίβο micro-leaf.
+
 ### 2026-10-26 — ADR-920 Β4.8 Β3: μάτι + εστίαση στο φύλλο `TopoBreaklineOverlay` (CHECK 6D)
 
 - **`TopoBreaklineOverlay`**: μία **χαμηλόσυχνη** συνδρομή ακόμα, `subscribeBreaklineDisplay` (γράφεται μόνο από το μάτι

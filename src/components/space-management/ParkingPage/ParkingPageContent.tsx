@@ -74,7 +74,7 @@ const EMPTY_PARKING: ParkingSpot = {
 
 export function ParkingPageContent() {
   // ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline', 'trash', 'filters']);
+  const { t } = useTranslation(['building', 'trash', 'filters']);
   const iconSizes = useIconSizes();
   const _colors = useSemanticColors();
 

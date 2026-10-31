@@ -69,7 +69,7 @@ function YesNoRow({ field, labelKey, value, disabled, onChange, t, typography, c
 
 export function PlotZoningSelectors({ plotData, onPlotDataChange, isEditing, onEnterPress }: PlotZoningSelectorsProps) {
     // 🏢 ENTERPRISE: i18n hook
-    const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+    const { t } = useTranslation('projects');
     const typography = useTypography();
     const colors = useSemanticColors();
 

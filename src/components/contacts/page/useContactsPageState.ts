@@ -53,7 +53,7 @@ const INITIAL_FILTERS: ContactFilterState = {
  * The component keeps only JSX rendering.
  */
 export function useContactsPageState() {
-  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t } = useTranslation('contacts');
   const { user, loading: authLoading } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();

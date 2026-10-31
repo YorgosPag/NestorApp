@@ -28,7 +28,7 @@ export interface RuleValueInputProps {
 }
 
 export function RuleValueInput({ field, value, onChange }: RuleValueInputProps): React.ReactElement {
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
+  const { t } = useTranslation('dxf-viewer');
 
   if (field === 'visible' || field === 'frozen' || field === 'locked' || field === 'plottable') {
     return (

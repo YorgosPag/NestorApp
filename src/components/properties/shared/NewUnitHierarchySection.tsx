@@ -59,7 +59,7 @@ export function NewUnitHierarchySection({
   selection,
   onChange,
 }: NewUnitHierarchySectionProps) {
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const { t } = useTranslation('properties');
 
   // Buildings via real-time hook (SSoT)
   const { allBuildings: buildings, refetch: refetchBuildings } = useRealtimeBuildings();

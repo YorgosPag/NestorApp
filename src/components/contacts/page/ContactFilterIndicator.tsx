@@ -34,7 +34,7 @@ export function ContactFilterIndicator({
   filteredCount,
   onClear,
 }: ContactFilterIndicatorProps) {
-  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t } = useTranslation('contacts');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { getDirectionalBorder } = useBorderTokens();

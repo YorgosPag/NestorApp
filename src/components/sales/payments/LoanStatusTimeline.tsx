@@ -29,7 +29,7 @@ interface LoanStatusTimelineProps {
 
 export function LoanStatusTimeline({ status, compact = false }: LoanStatusTimelineProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
+  const { t } = useTranslation('payments');
 
   // Terminal states: show badge only
   if (status === 'rejected' || status === 'cancelled') {

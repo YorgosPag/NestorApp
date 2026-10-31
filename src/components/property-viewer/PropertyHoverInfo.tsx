@@ -27,7 +27,7 @@ export function PropertyHoverInfo({ propertyId, properties }: PropertyHoverInfoP
   const spacing = useSpacingTokens();
   const colors = useSemanticColors();
   const property = useHoveredProperty(propertyId, properties);
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const { t } = useTranslation('properties');
 
   if (!propertyId) {
     return (

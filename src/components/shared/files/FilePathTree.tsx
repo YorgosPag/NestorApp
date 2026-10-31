@@ -61,7 +61,7 @@ export function FilePathTree({
 }: FilePathTreeProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const translateDisplayName = useFileDisplayName();
   const { success, error } = useNotifications();
 

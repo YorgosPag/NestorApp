@@ -64,7 +64,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
   const { quick, getStatusBorder, getDirectionalBorder, radius } = useBorderTokens();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
+  const { t } = useTranslation('dxf-viewer');
   const [activeTab, setActiveTab] = useState<'outlines' | 'fills' | 'isolate'>('outlines');
   const [selectedPreset, setSelectedPreset] = useState<number>(0);
   const [fillsOpacity, setFillsOpacity] = useState<number>(1.0);

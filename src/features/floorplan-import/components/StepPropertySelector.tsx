@@ -58,7 +58,7 @@ export function StepPropertySelector({
   onSelectLevel,
 }: StepPropertySelectorProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
 
   return (
     <div className="space-y-6 py-4">

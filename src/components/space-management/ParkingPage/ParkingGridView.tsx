@@ -48,7 +48,7 @@ export function ParkingGridView({
   selectedParking,
   onSelectParking,
 }: ParkingGridViewProps) {
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 

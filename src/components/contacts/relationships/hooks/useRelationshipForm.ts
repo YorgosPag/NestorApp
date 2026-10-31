@@ -70,7 +70,7 @@ export const useRelationshipForm = (
   // STATE MANAGEMENT
   // ============================================================================
 
-  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t } = useTranslation('contacts');
   const { user } = useAuth();
   const [formData, setFormData] = useState<RelationshipFormData>(createInitialFormData());
   const [loading, setLoading] = useState(false);

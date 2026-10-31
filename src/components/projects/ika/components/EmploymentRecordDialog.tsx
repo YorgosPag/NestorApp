@@ -56,7 +56,7 @@ export function EmploymentRecordDialog({
   config,
   onSave,
 }: EmploymentRecordDialogProps) {
-  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+  const { t } = useTranslation('projects');
   const typography = useTypography();
   const spacing = useSpacingTokens();
 

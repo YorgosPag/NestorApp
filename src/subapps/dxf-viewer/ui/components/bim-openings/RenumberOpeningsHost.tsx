@@ -107,7 +107,7 @@ interface RenumberOpeningsContentProps {
 function RenumberOpeningsContent({
   levels, rows, floorMap, userId, onOpenChange,
 }: RenumberOpeningsContentProps): React.ReactElement {
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-shell']);
+  const { t } = useTranslation('dxf-viewer');
 
   const currentLevel = levels.levels.find((l) => l.id === levels.currentLevelId) ?? null;
   const currentFloorId = currentLevel?.floorId ?? null;

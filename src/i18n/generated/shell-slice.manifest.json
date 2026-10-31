@@ -175,7 +175,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "668df06ae55d4f2bd00d5089428e54e1847940f2be9fd3bc583e926a782418e8",
+  "inputsSha256": "91f1e8cd546cf9b48da193582923c24c0a031eb78fce3e30e8e5b17c425a3d19",
   "languages": [
     "el"
   ],
@@ -13105,34 +13105,6 @@
           "prefixes": [],
           "whole": false
         },
-        "files-media": {
-          "keys": [
-            "pdf.fullscreen",
-            "pdf.loadFailed",
-            "pdf.loading",
-            "pdf.nextPage",
-            "pdf.previousPage",
-            "preview.docxError",
-            "preview.docxLoading",
-            "preview.dxfEmpty",
-            "preview.dxfError",
-            "preview.dxfLoading",
-            "preview.excelError",
-            "preview.excelLoading",
-            "preview.fitToWidth",
-            "preview.htmlError",
-            "preview.htmlLoading",
-            "preview.rotate",
-            "preview.txtError",
-            "preview.txtLoading",
-            "preview.xmlError",
-            "preview.xmlLoading",
-            "preview.zoomIn",
-            "preview.zoomOut"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
         "quotes": {
           "keys": [
             "45/35",
@@ -13520,15 +13492,6 @@
           "whole": false
         },
         "files": {
-          "keys": [
-            "uploadButton.loading",
-            "uploadButton.selectFile",
-            "validation.invalidFile"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "files-media": {
           "keys": [
             "uploadButton.loading",
             "uploadButton.selectFile",
@@ -17414,34 +17377,6 @@
           "prefixes": [],
           "whole": false
         },
-        "files-media": {
-          "keys": [
-            "pdf.fullscreen",
-            "pdf.loadFailed",
-            "pdf.loading",
-            "pdf.nextPage",
-            "pdf.previousPage",
-            "preview.docxError",
-            "preview.docxLoading",
-            "preview.dxfEmpty",
-            "preview.dxfError",
-            "preview.dxfLoading",
-            "preview.excelError",
-            "preview.excelLoading",
-            "preview.fitToWidth",
-            "preview.htmlError",
-            "preview.htmlLoading",
-            "preview.rotate",
-            "preview.txtError",
-            "preview.txtLoading",
-            "preview.xmlError",
-            "preview.xmlLoading",
-            "preview.zoomIn",
-            "preview.zoomOut"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
         "filters": {
           "keys": [
             "clearFilters",
@@ -20602,15 +20537,6 @@
           "whole": false
         },
         "files": {
-          "keys": [
-            "uploadButton.loading",
-            "uploadButton.selectFile",
-            "validation.invalidFile"
-          ],
-          "prefixes": [],
-          "whole": false
-        },
-        "files-media": {
           "keys": [
             "uploadButton.loading",
             "uploadButton.selectFile",

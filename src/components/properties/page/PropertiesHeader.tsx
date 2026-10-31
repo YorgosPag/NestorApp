@@ -45,7 +45,7 @@ export function PropertiesHeader({
   archiveCount,
   visibleCount,
 }: PropertiesHeaderProps) {
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const { t } = useTranslation('properties');
   const { t: tViewer } = useTranslation('properties-viewer');
   const { t: tCommon } = useTranslation(COMMON_NAMESPACES);
   // Το «Αρχείο» λέγεται ίδια σε κάθε οντότητα ⇒ γενικό namespace `trash`, όχι κλειδί ανά σελίδα.

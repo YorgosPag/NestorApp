@@ -87,7 +87,7 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
   showPreview = true
 }) {
   const colors = useSemanticColors();
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
+  const { t } = useTranslation('dxf-viewer');
 
   // 🏢 ENTERPRISE: All hooks MUST be called before any early returns (React Rules of Hooks)
   // Helper για τα colors ανά τύπο - memoized για performance

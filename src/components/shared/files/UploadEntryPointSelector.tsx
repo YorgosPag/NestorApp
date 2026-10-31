@@ -78,7 +78,7 @@ export function UploadEntryPointSelector({
   contactType,
   activePersonas,
 }: UploadEntryPointSelectorProps) {
-  const { t, i18n } = useTranslation(['files', 'files-media']);
+  const { t, i18n } = useTranslation('files');
   const colors = useSemanticColors();
   const [searchQuery, setSearchQuery] = useState('');
 

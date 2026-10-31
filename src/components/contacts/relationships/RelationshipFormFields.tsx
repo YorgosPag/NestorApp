@@ -78,7 +78,7 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
   className,
   fieldConfig = {}
 }) => {
-  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t } = useTranslation('contacts');
 
   // Local state for custom options added by the user (session-scoped)
   const [customRelTypes, setCustomRelTypes] = useState<ComboboxOption[]>([]);

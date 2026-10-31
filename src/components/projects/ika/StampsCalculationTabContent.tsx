@@ -65,7 +65,7 @@ function getMonthEnd(month: number, year: number): Date {
 }
 
 export function StampsCalculationTabContent({ projectId }: StampsCalculationTabContentProps) {
-  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+  const { t } = useTranslation('projects');
   const { user } = useAuth();
   const { success: notifySuccess, error: notifyError } = useNotifications();
   const iconSizes = useIconSizes();

@@ -64,7 +64,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
   // ============================================================================
   // 🏢 ENTERPRISE: Use centralized contact name hook + i18n
   // ============================================================================
-  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t } = useTranslation('contacts');
   const iconSizes = useIconSizes();
   const { quick, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();

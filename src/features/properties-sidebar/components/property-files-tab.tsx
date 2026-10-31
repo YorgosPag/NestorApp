@@ -77,7 +77,7 @@ export function usePropertyFilesTab(
   section: PropertyFilesTabSection,
   options: EntityFilesTabSessionOptions = {},
 ) {
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const { t } = useTranslation('properties');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { companyId, currentUserId, companyName } = useEntityFilesTabSession({

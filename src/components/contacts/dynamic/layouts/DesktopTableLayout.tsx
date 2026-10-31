@@ -267,7 +267,7 @@ export function DesktopTableLayout({
   const { quick } = useBorderTokens();
   // useSemanticColors moved to DesktopTableHeader sub-component
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t } = useTranslation('contacts');
 
   // 🔒 VALIDATION: Early return για empty state
   if (items.length === 0) {

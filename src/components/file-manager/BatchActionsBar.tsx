@@ -102,7 +102,7 @@ export function BatchActionsBar({
   onBatchArchive,
   onBatchUnarchive,
 }: BatchActionsBarProps) {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const [deleting, setDeleting] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [archiving, setArchiving] = useState(false);

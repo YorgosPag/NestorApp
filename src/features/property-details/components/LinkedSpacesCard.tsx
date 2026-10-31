@@ -65,7 +65,7 @@ export function LinkedSpacesCard({
   onLinkedSpacesChanged,
   isEditing = true,
 }: LinkedSpacesCardProps) {
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const { t } = useTranslation('properties');
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();

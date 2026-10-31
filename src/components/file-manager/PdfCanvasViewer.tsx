@@ -54,7 +54,7 @@ import { pdfFetchTarget } from './pdf-fetch-target';
 const logger = createModuleLogger('PdfCanvasViewer');
 
 export function PdfCanvasViewer({ url, fileId, urlDelivery, title, className }: PdfCanvasViewerProps) {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const colors = useSemanticColors();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);

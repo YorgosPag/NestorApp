@@ -37,7 +37,7 @@ interface DocumentsProjectTabProps extends ProjectFilesTabProps {
  * - Entry points: ALL except photos and videos (filtered via excludeCategories)
  */
 export function DocumentsProjectTab({ onNavigateToTab, ...props }: DocumentsProjectTabProps) {
-  const { t } = useTranslation(['files', 'files-media', 'projects']);
+  const { t } = useTranslation(['files', 'projects']);
   const { identity } = useProjectFilesTab(props);
 
   if (!identity) {

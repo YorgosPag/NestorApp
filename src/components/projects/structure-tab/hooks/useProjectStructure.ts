@@ -62,7 +62,7 @@ export function useProjectStructure(
   options: UseProjectStructureOptions = {}
 ): UseProjectStructureReturn {
   const { enabled = true } = options;
-  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+  const { t } = useTranslation('projects');
 
   const { data, loading, error, refetch, isFetched } = useLazyProjectResource<ProjectStructure | null>({
     projectId,

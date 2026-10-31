@@ -46,7 +46,7 @@ import {
 } from '@/components/core/AdvancedFilters';
 
 export function CalendarPageContent() {
-  const { t } = useTranslation(['crm', 'crm-inbox']);
+  const { t } = useTranslation('crm');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const borders = useBorderTokens();

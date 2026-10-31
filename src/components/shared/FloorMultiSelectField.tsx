@@ -60,7 +60,7 @@ export function FloorMultiSelectField({
   disabled = false,
   initiallyOpen = false,
 }: FloorMultiSelectFieldProps) {
-  const { t } = useTranslation(['properties', 'properties-viewer', 'properties-enums', 'properties-detail']);
+  const { t } = useTranslation('properties');
   const colors = useSemanticColors();
   const floorLabel = useFloorLabel();
   // ADR-903 §6 — η ΚΟΙΝΗ συνδρομή ορόφων του κτιρίου (ήταν δεύτερη, ιδιωτική, με ίδιο ερώτημα).

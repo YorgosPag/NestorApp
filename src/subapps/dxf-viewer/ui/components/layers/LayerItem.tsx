@@ -125,7 +125,7 @@ export function LayerItem({
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   // 🌐 i18n
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
+  const { t } = useTranslation('dxf-viewer');
   // ADR-358 Phase 9E-4: compat bridge — name-keyed lookup (Phase 9E-6 will switch to id-keyed).
   // Non-null: LayerItem is only rendered for layers that exist in the scene.
   const layer = getSceneLayerByName(scene, layerName)!;

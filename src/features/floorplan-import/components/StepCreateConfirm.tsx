@@ -43,7 +43,7 @@ function reuseHintKey(selection: FloorplanImportSelection): string | null {
 }
 
 export function StepCreateConfirm({ selection }: StepCreateConfirmProps) {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const reuseKey = reuseHintKey(selection);
   const rows = OWNERSHIP_ROWS
     .map((row) => ({ label: t(row.labelKey), value: row.pick(selection) }))

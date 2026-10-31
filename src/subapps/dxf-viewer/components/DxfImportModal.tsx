@@ -68,7 +68,7 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({
     // 🏢 ENTERPRISE: i18n hook
     // `files-media` προστέθηκε για τα ήδη υπάρχοντα κλειδιά `floorplanImport.drawingUnits.*`
     // (el + en) — κανένα νέο κλειδί, καμία αντιγραφή κειμένου (N.11).
-    const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell', 'files-media']);
+    const { t } = useTranslation(['dxf-viewer', 'files-media']);
     const colors = useSemanticColors();
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [fileType, setFileType] = useState<ImportFileType>(null);

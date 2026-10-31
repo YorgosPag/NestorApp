@@ -40,7 +40,7 @@ export function PropertyEntityLinks({
   onBuildingLinkChange,
   onLinkChanged,
 }: PropertyEntityLinksProps) {
-  const { t, currentLanguage } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const { t, currentLanguage } = useTranslation('properties');
 
   // ADR-898 §21.6 Ε6-α — το ΙΔΙΟ κατηγόρημα με τον φρουρό του server (`property-anchor-guard`): μονάδα έργου βλέπει
   // μόνο τα κτίρια του έργου της. Ως τις 2026-10-05 έδειχνε κάθε κτίριο του χώρου εργασίας (έξι «Κτήριο Α»).

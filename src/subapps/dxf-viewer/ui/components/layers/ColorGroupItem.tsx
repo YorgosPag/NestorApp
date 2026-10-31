@@ -73,7 +73,7 @@ export function ColorGroupItem({
   const hoverBorderEffects = createHoverBorderEffects(borderTokens);
   const colors = useSemanticColors();
   // 🌐 i18n
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
+  const { t } = useTranslation('dxf-viewer');
 
   // ADR-358 Phase 9E-4: compat bridge — name-keyed lookups (Phase 9E-6 will switch to id-keyed).
   const representativeColor = getSceneLayerByName(scene, layerNames[0])?.color || DEFAULT_LAYER_COLOR;

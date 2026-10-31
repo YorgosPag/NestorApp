@@ -68,7 +68,7 @@ export function ContactsList({
   onContactUpdated
 }: ContactsListProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t } = useTranslation('contacts');
   const colors = useSemanticColors();
   const { success, error } = useNotifications();
   const { user } = useAuth();

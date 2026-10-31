@@ -77,7 +77,7 @@ export function PropertyDetailsHeader({
   extraActions,
   identity = 'compact',
 }: PropertyDetailsHeaderProps) {
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const { t } = useTranslation('properties');
   const retiredKind = useRetiredKind();
   const identityLine = usePropertyIdentityLine(property);
 

@@ -15,7 +15,7 @@ export function RecentActivities() {
     const colors = useSemanticColors();
     const { quick } = useBorderTokens();
     // 🏢 ENTERPRISE: i18n support
-    const { t } = useTranslation(['crm', 'crm-inbox']);
+    const { t } = useTranslation('crm');
 
     const activities = [
         { icon: Mail, text: t('dashboard.recentActivities.emailFrom', { name: 'Γ. Παπαδόπουλο' }), time: t('dashboard.recentActivities.time.minutesAgo', { count: 2 }) },

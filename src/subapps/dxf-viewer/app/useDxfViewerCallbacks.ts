@@ -76,7 +76,7 @@ export interface DxfViewerCallbacksReturn {
  * ADR-065 SRP split.
  */
 export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfViewerCallbacksReturn {
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell', 'bim3d']);
+  const { t } = useTranslation(['dxf-viewer', 'bim3d']);
   const { user } = useAuth();
   const {
     notifications, copyToClipboard, handleAction,

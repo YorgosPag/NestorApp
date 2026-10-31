@@ -42,7 +42,7 @@ const STATUS_BADGE_VARIANTS: Readonly<Record<BuildingStatus, GridCardBadgeVarian
  * Build the shared Building card view-model (title, subtitle, badges, stats, aria).
  */
 export function useBuildingCardModel(building: Building): CardViewModel {
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation('building');
 
   /** Build stats array from building data */
   const stats = useMemo<StatItem[]>(() => {

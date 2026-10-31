@@ -55,7 +55,7 @@ export function ProjectsHeader({
   trashCount = 0,
 }: ProjectsHeaderProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika', 'trash']);
+  const { t } = useTranslation(['projects', 'trash']);
 
   return (
     <PageHeader

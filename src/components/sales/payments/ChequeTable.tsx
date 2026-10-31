@@ -40,7 +40,7 @@ function formatAmount(amount: number): string {
 }
 
 export function ChequeTable({ cheques, onSelectCheque }: ChequeTableProps) {
-  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
+  const { t } = useTranslation('payments');
 
   return (
     <Table>

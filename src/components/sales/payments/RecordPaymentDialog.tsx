@@ -238,7 +238,7 @@ function PaymentFormFields(props: PaymentFieldsProps) {
 
 export function RecordPaymentDialog(props: RecordPaymentDialogProps) {
   const { open, onOpenChange, installment } = props;
-  const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
+  const { t } = useTranslation('payments');
   const { fields, update, submission } = useRecordPaymentForm(props, t);
   const remaining = installment.amount - installment.paidAmount;
 

@@ -14,7 +14,7 @@ interface HtmlPreviewProps {
 type HtmlState = 'loading' | 'ready' | 'error';
 
 export function HtmlPreview({ url, title }: HtmlPreviewProps) {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation('files');
   const colors = useSemanticColors();
   const [state, setState] = useState<HtmlState>('loading');
   const [content, setContent] = useState('');

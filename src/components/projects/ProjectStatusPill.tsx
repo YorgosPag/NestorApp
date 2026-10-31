@@ -54,7 +54,7 @@ export const ProjectStatusPill = React.memo(function ProjectStatusPill({
   draft = false,
   onChange,
 }: ProjectStatusPillProps) {
-  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+  const { t } = useTranslation('projects');
   const { error: notifyError } = useNotifications();
   const iconSizes = useIconSizes();
 

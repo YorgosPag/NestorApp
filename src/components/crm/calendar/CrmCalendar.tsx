@@ -88,7 +88,7 @@ export function CrmCalendar({
   onTodayClick,
   selectedDays,
 }: CrmCalendarProps) {
-  const { t, i18n } = useTranslation(['crm', 'crm-inbox']);
+  const { t, i18n } = useTranslation('crm');
   const { success: notifySuccess, error: notifyError } = useNotifications();
   const calendarRef = useRef<FullCalendarRef>(null);
   // true on first render: swallows the initial datesSet so it doesn't overwrite selectedDays

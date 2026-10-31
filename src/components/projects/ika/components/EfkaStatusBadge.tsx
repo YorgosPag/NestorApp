@@ -19,7 +19,7 @@ const STATUS_VARIANT_MAP: Record<EfkaDeclarationStatus, 'default' | 'secondary' 
 };
 
 export function EfkaStatusBadge({ status }: EfkaStatusBadgeProps) {
-  const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+  const { t } = useTranslation('projects');
 
   return (
     <Badge variant={STATUS_VARIANT_MAP[status]}>

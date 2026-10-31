@@ -27,7 +27,7 @@ export function DxfBreadcrumb(): React.ReactElement | null {
   const { selectedCompany, selectedProject, selectedBuilding, selectedFloor } = useProjectHierarchy();
   const colors = useSemanticColors();
   const { quick } = useBorderTokens();
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
+  const { t } = useTranslation('dxf-viewer');
 
   // Αν δεν υπάρχει τίποτα επιλεγμένο, δεν εμφανίζουμε τίποτα
   if (!selectedCompany && !selectedProject && !selectedBuilding && !selectedFloor) {
