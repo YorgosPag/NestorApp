@@ -789,6 +789,27 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'catalog_import_page_readings',
     pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/catalog-import-page-readings.rules.test.ts',
+    // ADR-923 §5.12 Σ1 — έγγραφο δύο πλευρών: γραφή = ξένη ανάγνωση τιμών χωρίς αποδοχή.
+    collection: 'supply_relationships',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/supply-relationships.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
+    // ADR-923 §5.12 Σ2 — είδος της μηχανής ADR-853: ανάγνωση = `nonceHash`, γραφή = αυτο-πρόσκληση.
+    collection: 'supply_invitations',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/supply-invitations.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
+    // ADR-923 §5.12 Σ2 — ο ανακλητός σύνδεσμος: γραφή = αναβίωση παλιάς γενιάς.
+    collection: 'supply_request_links',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/supply-request-links.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     collection: 'catalog_visibility_rules',
     pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/catalog-visibility-rules.rules.test.ts',

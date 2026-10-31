@@ -71,6 +71,14 @@ const CATALOG_COLLECTIONS = [
   // Φάση 6α (ADR-923 §5.12) — οι κανόνες ορατότητας
   'COLLECTIONS.CATALOG_VISIBILITY_RULES',
 ];
+/**
+ * Φάση 6α (ADR-923 §5.12 Σ1) — οι τρεις συλλογές της σχέσης προμήθειας. ⚠️ ΔΕΝ είναι είδη της μηχανής: η σχέση είναι
+ * έγγραφο ΔΥΟ πλευρών και την αποδοχή την κάνει ΞΕΝΟΣ χώρος, ενώ η μηχανή δένει σε `ctx.companyId`. Ίδιο ερώτημα, ίδιος
+ * έλεγχος: γράφει κάποιος έξω από τον ΕΝΑ γραφέα τους; (Οι προσκλήσεις γράφονται από τον πυρήνα ADR-853, με συλλογή που
+ * δίνει το είδος, ποτέ με `COLLECTIONS.SUPPLY_INVITATIONS` σε άλλο αρχείο.)
+ */
+const SUPPLY_COLLECTIONS = ['COLLECTIONS.SUPPLY_RELATIONSHIPS', 'COLLECTIONS.SUPPLY_INVITATIONS', 'COLLECTIONS.SUPPLY_REQUEST_LINKS'];
+const SUPPLY_ROOT = 'src/server/supply-relationships/';
 /** Τα ονόματα των συλλογών στη βάση — για την πόρτα του MCP (Κ5). */
 const CATALOG_COLLECTION_NAMES = [
   'catalog_attributes', 'catalog_attribute_groups', 'catalog_measurement_families', 'catalog_categories', 'catalog_families',
@@ -81,6 +89,7 @@ const CATALOG_COLLECTION_NAMES = [
   'catalog_import_profiles', 'catalog_import_batches', 'catalog_import_proposals', 'catalog_import_page_readings',
   'catalog_publication_recipes', 'catalog_publication_runs',
   'catalog_visibility_rules',
+  'supply_relationships', 'supply_invitations', 'supply_request_links',
 ];
 
 const STORE = 'src/server/catalog/catalog-store.server.ts';
@@ -139,6 +148,12 @@ const WIRING = {
   [PRICE_AGGREGATE]: ['stageDerived(', 'stageCopied(', "status !== 'draft'"],
   [PRICING_SLOTS]: ['stagePricingSlot('],
   [PRICING_VIEW_SIGNALS]: ['FieldValue.increment(1)'],
+  // Φάση 6α — ο ΕΝΑΣ γραφέας της σχέσης: σήμα στις ΔΥΟ πλευρές, ίχνος στα ΔΥΟ βιβλία (ADR-923 §5.12 Σ1).
+  [`${SUPPLY_ROOT}supply-relationship-store.server.ts`]: ['signalPricingViewsInTx(', 'recordTrackedEntityWrite(', '[after.companyId, after.buyerCompanyId]'],
+  // Η έγκριση γράφει κατάταξη: πράξη του προμηθευτή, στη μηχανή. Η αποδοχή του αγοραστή ΔΕΝ αγγίζει κατάλογο.
+  [`${SUPPLY_ROOT}supply-relationship-writer.server.ts`]: ['runCatalogTransaction(', 'assertRevision('],
+  [`${SUPPLY_ROOT}supply-invitation-issue.server.ts`]: ['runCatalogTransaction(', 'stageInvitationWithSupersede('],
+  [`${SUPPLY_ROOT}supply-invitation-redeem.server.ts`]: ['redeemInvitation(', 'stageSupplyRelationship('],
   // Οι υποδοχές (όπως οι κρατήσεις) δεν είναι είδη: ευρετήριο του γραφέα, χωρίς ιστορικό.
   [KINDS]: CATALOG_COLLECTIONS.filter(
     (key) => !['COLLECTIONS.CATALOG_UNIQUE_VALUES', 'COLLECTIONS.CATALOG_PRICING_SLOTS', 'COLLECTIONS.CATALOG_PRICING_VIEW_SIGNALS'].includes(key),
@@ -160,21 +175,23 @@ const STATES = {
   SOURCE_DRIFT: 'source-drift',
   DERIVED_TRACKED: 'derived-path-tracked',
   DERIVED_OUTSIDE: 'derived-write-outside-aggregate',
+  SUPPLY_WRITE_OUTSIDE: 'supply-write-outside-writer',
 };
 const BLOCKING = [
   STATES.WRITE_OUTSIDE, STATES.DOC_REF_OUTSIDE, STATES.STORE_UNASKED, STATES.DIRECT_DOOR_OPEN,
-  STATES.EXEMPT_NO_REASON, STATES.SOURCE_DRIFT, STATES.DERIVED_TRACKED, STATES.DERIVED_OUTSIDE,
+  STATES.EXEMPT_NO_REASON, STATES.SOURCE_DRIFT, STATES.DERIVED_TRACKED, STATES.DERIVED_OUTSIDE, STATES.SUPPLY_WRITE_OUTSIDE,
 ];
 const DETAIL = {
   [STATES.WRITE_OUTSIDE]: `γράφει σχήμα καταλόγου έξω από τη μηχανή — πέρασε από τους γραφείς του \`src/server/catalog/\` (${STORE})`,
   [STATES.DOC_REF_OUTSIDE]: 'αναφορά εγγράφου της μηχανής (`catalogDocRef(`/`uniqueValueRef(`) εκτός δηλωμένων αρχείων — πόρτα γύρω από τη μηχανή',
+  [STATES.SUPPLY_WRITE_OUTSIDE]: `γράφει σχέση προμήθειας έξω από τον έναν γραφέα της — πέρασε από το \`${SUPPLY_ROOT}\` (ADR-923 §5.12 Σ1)`,
   [STATES.DERIVED_OUTSIDE]: '`stageDerived(` / `stageCopied(` εκτός μηχανής συνόλου — γράφει παράγωγα ή σπέρνει χωρίς ίχνος, χωρίς να κρίνει το σύνολο (Κ6β)',
 };
 
-/** Γράφει αυτή η κλήση σε συλλογή καταλόγου; */
-function isCatalogWrite(call, refsByKey) {
+/** Γράφει αυτή η κλήση σε μία από τις συλλογές `keys`; */
+function isWriteTo(keys, call, refsByKey) {
   const callee = call.expression;
-  const touches = (expression) => CATALOG_COLLECTIONS.some((key) => ast.refersTo(expression, refsByKey.get(key), key));
+  const touches = (expression) => keys.some((key) => ast.refersTo(expression, refsByKey.get(key), key));
   if (ts.isIdentifier(callee) && CLIENT_WRITES.has(callee.text)) return touches(call.arguments[0]);
   if (!ts.isPropertyAccessExpression(callee) || !WRITE_METHODS.has(callee.name.text)) return false;
   return touches(callee.expression) || touches(call.arguments[0]);
@@ -185,11 +202,12 @@ const classify = (sf, node, rel, state) => exemptions.classify(sf, node, rel, st
 /** Κ1 + Κ2 + Κ3 για ένα αρχείο. */
 function findingsIn(sf, rel) {
   if (rel === STORE) return [{ state: STATES.STORE, file: rel }];
-  const refsByKey = new Map(CATALOG_COLLECTIONS.map((key) => [key, ast.refIdentifiersOf(sf, key)]));
+  const refsByKey = new Map([...CATALOG_COLLECTIONS, ...SUPPLY_COLLECTIONS].map((key) => [key, ast.refIdentifiersOf(sf, key)]));
   const findings = [];
   ast.walk(sf, (node) => {
     if (!ts.isCallExpression(node)) return;
-    if (isCatalogWrite(node, refsByKey)) findings.push(classify(sf, node, rel, STATES.WRITE_OUTSIDE));
+    if (isWriteTo(CATALOG_COLLECTIONS, node, refsByKey)) findings.push(classify(sf, node, rel, STATES.WRITE_OUTSIDE));
+    else if (!rel.startsWith(SUPPLY_ROOT) && isWriteTo(SUPPLY_COLLECTIONS, node, refsByKey)) findings.push(classify(sf, node, rel, STATES.SUPPLY_WRITE_OUTSIDE));
     else if (Object.entries(DOC_REF_FUNCTIONS).some(([fn, users]) => ast.isCallTo(node, fn) && !users.has(rel))) {
       findings.push(classify(sf, node, rel, STATES.DOC_REF_OUTSIDE));
     } else if (ast.isCallTo(node, 'stageDerived') && !DERIVED_USERS.has(rel)) {
@@ -254,7 +272,7 @@ function wiringFindings(root, input = openGateInput({ root })) {
   return findings;
 }
 
-const RELEVANT = /COLLECTIONS\.CATALOG_|catalogDocRef\(|uniqueValueRef\(|pricingSlotRef\(|pricingViewSignalRef\(|stageDerived\(|stageCopied\(/;
+const RELEVANT = /COLLECTIONS\.CATALOG_|COLLECTIONS\.SUPPLY_|catalogDocRef\(|uniqueValueRef\(|pricingSlotRef\(|pricingViewSignalRef\(|stageDerived\(|stageCopied\(/;
 
 const { measure, report, main } = defineScanGate({
   projectRoot: PROJECT_ROOT, relevant: RELEVANT, findingsIn, wiringFindings, states: STATES,

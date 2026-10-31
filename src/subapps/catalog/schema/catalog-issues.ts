@@ -20,6 +20,10 @@ export const CATALOG_ISSUE_CODES = [
   'labelRequired',
   'tooMany',
   'unknownReference',
+  // ── σχέση προμήθειας (§5.12) ──
+  'supplyNotRequested',
+  'contactAlreadyBound',
+  'contactWithoutEmail',
   'codeImmutable',
   'typeLockedInUse',
   'unitLockedInUse',

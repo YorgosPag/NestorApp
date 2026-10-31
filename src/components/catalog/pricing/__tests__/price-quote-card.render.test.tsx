@@ -16,7 +16,7 @@ jest.mock('@/hooks/useUomLabel', () => ({ useUomLabel: () => (code: string) => c
 jest.mock('../AudienceField', () => ({ AudienceField: () => null }));
 
 const CONTEXT = {
-  viewer: { kind: 'signedIn', customerGroupId: 'group-1', party: null },
+  viewer: { kind: 'signedIn', customerGroupId: 'group-1', parties: [] },
   at: '2026-10-30T00:00:00.000Z',
   listTrace: [{ id: 'list-1', verdict: 'selected' }, { id: 'list-2', verdict: 'audienceMismatch' }],
   visibility: null,

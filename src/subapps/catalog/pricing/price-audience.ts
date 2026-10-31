@@ -26,7 +26,8 @@ export function audienceCovers(audience: PriceAudience, viewer: PricingViewer): 
     case 'customerGroup':
       return viewer.kind === 'signedIn' && viewer.customerGroupId === audience.customerGroupId;
     case 'partner':
-      return viewer.kind === 'signedIn' && viewer.party !== null && samePartyRef(viewer.party, audience.party);
+      // Σ6: ταιριάζει **οποιαδήποτε** από τις ταυτότητες του θεατή.
+      return viewer.kind === 'signedIn' && viewer.parties.some((party) => samePartyRef(party, audience.party));
   }
 }
 

@@ -151,4 +151,18 @@ export abstract class CatalogIdGenerators extends CompositeKeyIdGenerators {
   generateDeterministicCatalogVisibilityRuleId(companyId: string, ruleKey: string): string {
     return this.mintDeterministicV4Id(P.CATALOG_VISIBILITY_RULE, seedOf('visibility-rule', companyId, ruleKey));
   }
+
+  /** Η **σειρά** των δύο άκρων είναι ταυτότητα: Α προμηθεύει Β ≠ Β προμηθεύει Α (ADR-923 §5.12 Σ1). */
+  generateDeterministicSupplyRelationshipId(supplierCompanyId: string, buyerCompanyId: string): string {
+    return this.mintDeterministicV4Id(P.SUPPLY_RELATIONSHIP, seedOf('supply-relationship', supplierCompanyId, buyerCompanyId));
+  }
+
+  generateSupplyInvitationId(): string {
+    return this.generateId(P.SUPPLY_INVITATION).id;
+  }
+
+  /** **Ένας** σύνδεσμος ανά χώρο, δομικά: η ανανέωση ανεβάζει τη γενιά του, δεν γεννά δεύτερο (Σ2). */
+  generateDeterministicSupplyRequestLinkId(companyId: string): string {
+    return this.mintDeterministicV4Id(P.SUPPLY_REQUEST_LINK, seedOf('supply-request-link', companyId));
+  }
 }

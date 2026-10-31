@@ -136,6 +136,11 @@ export const CATALOG_PUBLICATION_RECIPE_TRACKED_FIELDS = defs(
 
 export const CATALOG_PUBLICATION_RUN_TRACKED_FIELDS = defs(['recipeId', 'status', 'failure', 'audienceKey', 'inputHash'], ['retention']);
 export const CATALOG_VISIBILITY_RULE_TRACKED_FIELDS = defs(['visibility', 'isDeleted'], ['subject', 'audience']);
+export const SUPPLY_REQUEST_LINK_TRACKED_FIELDS = defs(['state', 'generation'], []);
+export const SUPPLY_RELATIONSHIP_TRACKED_FIELDS = defs(
+  ['state', 'supplierContactId', 'customerRef', 'acceptedByUid', 'approvedByUid', 'endedBySide'],
+  [],
+);
 
 export const CATALOG_DISCOUNT_CONDITION_TRACKED_FIELDS = defs(
   ['discountGroupId', 'validFrom', 'validUntil', 'isDeleted'],

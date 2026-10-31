@@ -304,4 +304,7 @@ export const ISSUE_KEYS: Readonly<Record<CatalogIssueCode, string>> = {
   publicationNotDeletable: 'issues.publicationNotDeletable',
   publicationNotHoldable: 'issues.publicationNotHoldable',
   publicationAlreadyOnHold: 'issues.publicationAlreadyOnHold',
+  supplyNotRequested: 'issues.supplyNotRequested',
+  contactAlreadyBound: 'issues.contactAlreadyBound',
+  contactWithoutEmail: 'issues.contactWithoutEmail',
 };

@@ -209,11 +209,15 @@ export interface DiscountConditionDefinition {
   readonly rule: DiscountRule;
 }
 
-/** Ποιος ρωτά την τιμή — το παράγει ο διακομιστής, ποτέ ο πελάτης (§12). */
+/**
+ * Ποιος ρωτά την τιμή — το παράγει ο διακομιστής, ποτέ ο πελάτης (§12).
+ * 🔴 `parties` = **σύνολο** (§5.12 Σ6): ο ίδιος αγοραστής είναι χώρος **και** επαφή του προμηθευτή, και μια συνθήκη μπορεί
+ * να δείχνει στο ένα από τα δύο. Με μία ταυτότητα, ο συνεργάτης με συνθήκη σε επαφή θα έβλεπε σιωπηλά λιανική.
+ */
 export type PricingViewer =
   | { readonly kind: 'anonymous' }
   | {
       readonly kind: 'signedIn';
       readonly customerGroupId: string | null;
-      readonly party: PricingPartyRef | null;
+      readonly parties: readonly PricingPartyRef[];
     };

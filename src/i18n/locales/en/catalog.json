@@ -308,7 +308,10 @@
     "publicationLogoNotEligible": "The logo must be an asset with the Logo role and a PNG, JPEG or TIFF file.",
     "publicationNotDeletable": "This PDF cannot be deleted by hand: it has been downloaded or is under legal hold.",
     "publicationNotHoldable": "A hold can only be placed on a ready publication that still has its file.",
-    "publicationAlreadyOnHold": "This publication is already under legal hold."
+    "publicationAlreadyOnHold": "This publication is already under legal hold.",
+    "supplyNotRequested": "There is no pending request.",
+    "contactAlreadyBound": "This contact is already linked to another workspace.",
+    "contactWithoutEmail": "This contact has no email."
   },
   "measurement": {
     "family": {
@@ -1176,7 +1179,7 @@
       "noCustomerGroups": "There are no customer groups yet.",
       "partnerContact": "Contact",
       "partnerWorkspace": "Partner workspace",
-      "partnerWorkspaceUnavailable": "A workspace can be chosen only from connected partners (an accepted collaboration invitation) — workspace connections are not available yet."
+      "partnerWorkspaceUnavailable": "A workspace arrives here only through Connections, by an accepted invitation or an approved request."
     },
     "versionStatus": {
       "draft": "Draft",
@@ -1454,6 +1457,115 @@
         "productModel": "Model",
         "variant": "SKU"
       }
+    }
+  },
+  "supply": {
+    "page": {
+      "title": "Connections",
+      "lead": "Which workspaces see your catalogue, and whose catalogues you see. Every connection needs acceptance and can be closed by either side.",
+      "customers": "My customers",
+      "suppliers": "My suppliers"
+    },
+    "states": {
+      "requested": "Request pending",
+      "active": "Active connection",
+      "declined": "Declined",
+      "revoked": "Closed",
+      "ended": "Not active"
+    },
+    "customers": {
+      "invite": "Invite a customer",
+      "empty": "No customers yet. Invite one from your contacts, or publish your link.",
+      "requests": "Requests",
+      "active": "Active customers",
+      "ended": "Earlier",
+      "invitations": "Pending invitations",
+      "unnamedBuyer": "Unnamed workspace",
+      "customerRef": "Customer no. {ref}",
+      "approve": "Approve",
+      "decline": "Decline",
+      "disconnect": "Close connection",
+      "disconnectTitle": "Close this connection?",
+      "disconnectBody": "The customer immediately loses access to your catalogue and prices. Amounts already in their budgets stay as they are.",
+      "invitationPending": "Awaiting a reply",
+      "invitationExpired": "Expired",
+      "cancelInvitation": "Cancel",
+      "inviteTitle": "Invite a customer",
+      "inviteBody": "Choose the contact. They will receive an email and declare for themselves which office accepts.",
+      "send": "Send invitation",
+      "deliveryAccepted": "The invitation was sent.",
+      "deliveryFailed": "The invitation was created, but the email did not go out. Send it again.",
+      "group": "Customer group",
+      "noGroup": "No group",
+      "groupHint": "Sets which prices they see. You can change it at any time.",
+      "approveTitle": "Approve: {buyer}",
+      "approveDeclaredRef": "They declare customer number {ref}. This is their own statement: check it in your system.",
+      "approveNoRef": "They declared no customer number.",
+      "approveContactHint": "Link them to your contact: that is how the discounts set on that contact reach them."
+    },
+    "suppliers": {
+      "empty": "No suppliers yet. A connection starts from your supplier’s invitation, or from the link/QR in their catalogue.",
+      "disconnect": "Disconnect",
+      "cancelRequest": "Cancel request",
+      "disconnectTitle": "Disconnect from this supplier?",
+      "disconnectBody": "You will no longer see their catalogue and prices. Amounts already in your budgets stay as they are."
+    },
+    "link": {
+      "title": "Link and QR",
+      "body": "Put it in your printed catalogue or on your website. It only gives the right to request a connection: nothing opens without your approval.",
+      "publish": "Create link",
+      "copy": "Copy",
+      "copied": "Copied",
+      "renew": "New link",
+      "revoke": "Revoke",
+      "qrFailed": "The QR could not be created. The link still works.",
+      "qrAlt": "QR code for a connection request",
+      "renewTitle": "Create a new link?",
+      "revokeTitle": "Revoke this link?",
+      "killsPrinted": "The current link will stop working, along with every QR already printed. Existing connections are not affected."
+    },
+    "access": {
+      "inviteTitle": "Invitation from a supplier",
+      "requestTitle": "Connect with a supplier",
+      "inviteIntro": "{supplier} invites you to connect your office to their catalogue.",
+      "requestIntro": "Request a connection to the catalogue of {supplier}.",
+      "unnamedSupplier": "A supplier",
+      "scope": "You will see the products and prices they have set for you, inside your budgets. The supplier gets no access to your office, and you can disconnect at any time.",
+      "linkExpires": "The link expires on {date}.",
+      "signIn": "Sign in or sign up",
+      "signInHint": "You need an account to reply.",
+      "customerRefLabel": "Customer number (optional)",
+      "customerRefHint": "If you are already their customer, the number helps them recognise you.",
+      "accept": "Accept",
+      "decline": "No, thanks",
+      "request": "Request connection",
+      "officeRequired": "A connection belongs to an office, because budgets live there. Create your office first and open this link again.",
+      "acceptedTitle": "You are connected",
+      "acceptedBody": "The supplier’s catalogue is now available to your office. You can see it under Connections in the catalogue.",
+      "declinedTitle": "Invitation declined",
+      "declinedBody": "No connection was made.",
+      "requestedTitle": "Request sent",
+      "requestedBody": "The supplier will review it. You can follow it under Connections in the catalogue.",
+      "unavailable": "We could not complete this. Please try again shortly.",
+      "retry": "Try again",
+      "home": "Home"
+    },
+    "refusals": {
+      "linkInvalid": "This link is not valid.",
+      "linkForeign": "This link was issued by another environment. Ask the supplier for a new one.",
+      "invitationUnknown": "This invitation does not exist.",
+      "expired": "This link has expired. Ask the supplier for a new one.",
+      "alreadyUsed": "This invitation has already been answered.",
+      "revoked": "This link is no longer valid. Ask the supplier for a new one.",
+      "wrongRecipient": "This invitation is addressed to another email. Sign in with the right account.",
+      "alreadyConnected": "Your office is already connected to this supplier.",
+      "requestLimit": "Enough requests have been sent. Please contact the supplier directly.",
+      "notRequested": "There is no pending request.",
+      "officeRequired": "A connection belongs to an office. Create your office first.",
+      "officeChoiceRequired": "Choose which office you are replying for.",
+      "officeRefused": "You do not belong to this office.",
+      "sameWorkspace": "This is your own workspace: choose another office.",
+      "contactBound": "This contact is already linked to another office. Ask the supplier for a new invitation."
     }
   }
 }

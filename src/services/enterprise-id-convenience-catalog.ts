@@ -64,3 +64,8 @@ export const generateDeterministicCatalogImportPageReadingId = (companyId: strin
   enterpriseIdService.generateDeterministicCatalogImportPageReadingId(companyId, readingKey);
 export const generateDeterministicCatalogVisibilityRuleId = (companyId: string, ruleKey: string) =>
   enterpriseIdService.generateDeterministicCatalogVisibilityRuleId(companyId, ruleKey);
+export const generateDeterministicSupplyRelationshipId = (supplierCompanyId: string, buyerCompanyId: string) =>
+  enterpriseIdService.generateDeterministicSupplyRelationshipId(supplierCompanyId, buyerCompanyId);
+export const generateSupplyInvitationId = () => enterpriseIdService.generateSupplyInvitationId();
+export const generateDeterministicSupplyRequestLinkId = (companyId: string) =>
+  enterpriseIdService.generateDeterministicSupplyRequestLinkId(companyId);

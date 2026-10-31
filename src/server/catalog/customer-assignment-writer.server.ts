@@ -13,11 +13,12 @@ import 'server-only';
 
 import type { AuthContext } from '@/lib/auth';
 import { pricingPartyKey } from '@/subapps/catalog/pricing/price-audience';
-import type { CustomerAssignmentDefinition, CustomerGroupDefinition } from '@/subapps/catalog/types/price-list';
+import type { CustomerAssignmentDefinition, CustomerGroupDefinition, PricingPartyRef } from '@/subapps/catalog/types/price-list';
 import { readActiveByIds } from './catalog-library-reads.server';
 import {
   assertRevision,
   readForCreate,
+  readForUpsert,
   readOwned,
   runCatalogTransaction,
   stageCreate,
@@ -35,6 +36,23 @@ async function assertAssignmentValid(scope: CatalogTx, definition: CustomerAssig
   const groups = await readActiveByIds<CustomerGroupDefinition>(scope, 'customerGroup', [definition.customerGroupId]);
   const group = groups.has(definition.customerGroupId) ? [] : [{ code: 'unknownReference' as const, path: 'customerGroupId' }];
   assertNoIssues([...group, ...(await partyIssues(scope, definition.party, 'party'))]);
+}
+
+/**
+ * **Κατάταξη πελάτη ως μέρος μιας πράξης του προμηθευτή** (ADR-923 §5.12 Σ2 προέγκριση): τις αναγνώσεις τις κάνει εδώ, το
+ * `commit()` γράφει μετά από κάθε ανάγνωση του καλούντα. Ο συμβαλλόμενος έχει ήδη κριθεί από τον καλούντα, επειδή στην
+ * έγκριση αιτήματος η σχέση ενεργοποιείται στην **ίδια** συναλλαγή. Υπάρχουσα ανάθεση αλλάζει ομάδα, ποτέ δεύτερη ανάθεση.
+ */
+export async function planCustomerAssignment(scope: CatalogTx, party: PricingPartyRef, customerGroupId: string): Promise<{ commit(): void }> {
+  const groups = await readActiveByIds<CustomerGroupDefinition>(scope, 'customerGroup', [customerGroupId]);
+  assertNoIssues(groups.has(customerGroupId) ? [] : [{ code: 'unknownReference', path: 'customerGroupId' }]);
+  const { target, current } = await readForUpsert<CustomerAssignmentDefinition>(scope, 'customerAssignment', pricingPartyKey(party));
+  return {
+    commit: () => {
+      if (current === null) stageCreate(scope, 'customerAssignment', target, { party, customerGroupId });
+      else if (current.customerGroupId !== customerGroupId) stageReplace(scope, 'customerAssignment', current, { party: current.party, customerGroupId });
+    },
+  };
 }
 
 export async function createCustomerAssignment(ctx: AuthContext, definition: CustomerAssignmentDefinition): Promise<StoredAssignment> {

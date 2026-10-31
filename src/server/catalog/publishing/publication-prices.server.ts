@@ -31,7 +31,8 @@ import type { PriceListDefinition, PriceListLineDefinition, StoredPriceListVersi
 import type { PublicationFailure, PublicationPricing } from '@/subapps/catalog/types/publication';
 import { readOwned, type CatalogTx } from '../catalog-store.server';
 import { assertNoIssues } from '../catalog-write-error';
-import { readActiveConditionRecords, viewerOf } from '../price-quote.server';
+import { readActiveConditionRecords } from '../price-quote.server';
+import { viewerOf } from '../pricing-viewer.server';
 import { readListVersions, readVersionLines, versionRefOf } from '../price-version-reads.server';
 
 /** Μια έκδοση που δεν μπορεί να βγει, με ονομασμένη αιτία (ποτέ ελεύθερο κείμενο προς τον άνθρωπο). */

@@ -15,9 +15,9 @@ const ANCESTRY: VisibilityAncestry = {
   categoryDepths: { top: 0, mid: 1, leafA: 2, leafB: 2 },
 };
 
-const SIGNED_IN: PricingViewer = { kind: 'signedIn', customerGroupId: null, party: null };
-const WHOLESALE: PricingViewer = { kind: 'signedIn', customerGroupId: 'wholesale', party: null };
-const PARTNER: PricingViewer = { kind: 'signedIn', customerGroupId: 'wholesale', party: { kind: 'contact', contactId: 'c1' } };
+const SIGNED_IN: PricingViewer = { kind: 'signedIn', customerGroupId: null, parties: [] };
+const WHOLESALE: PricingViewer = { kind: 'signedIn', customerGroupId: 'wholesale', parties: [] };
+const PARTNER: PricingViewer = { kind: 'signedIn', customerGroupId: 'wholesale', parties: [{ kind: 'contact', contactId: 'c1' }] };
 
 const CATALOG: VisibilitySubject = { kind: 'catalog' };
 const SIGNED: PriceAudience = { kind: 'signedIn' };

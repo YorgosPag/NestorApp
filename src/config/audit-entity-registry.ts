@@ -277,6 +277,9 @@ export const AUDIT_ENTITIES = {
   catalog_import_batch: { collectionKey: 'CATALOG_IMPORT_BATCHES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
   catalog_import_proposal: { collectionKey: 'CATALOG_IMPORT_PROPOSALS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
   catalog_visibility_rule: { collectionKey: 'CATALOG_VISIBILITY_RULES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+  // ADR-923 §5.12 Σ1 — έγγραφο ΔΥΟ πλευρών: ο γραφέας γράφει ίχνος στο βιβλίο ΚΑΙ των δύο χώρων.
+  supply_relationship: { collectionKey: 'SUPPLY_RELATIONSHIPS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
+  supply_request_link: { collectionKey: 'SUPPLY_REQUEST_LINKS', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: false, backup: true },
 
   // ── Μηχανή κειμένου (ADR-651 / ADR-344) — server-only services ────────────
   text_template: { collectionKey: 'TEXT_TEMPLATES', scope: 'top-level', writer: 'server-direct', ledger: 'company', renamePropagation: true, backup: true },

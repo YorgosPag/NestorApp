@@ -21,7 +21,9 @@
 export type PricingView =
   | { readonly kind: 'lists' }
   | { readonly kind: 'list'; readonly priceListId: string }
-  | { readonly kind: 'discounts' };
+  | { readonly kind: 'discounts' }
+  /** ADR-923 §5.12: οι σχέσεις προμήθειας ενός χώρου, από όποια πλευρά. Τη σηματοδοτεί ο γραφέας της σχέσης, στους δύο χώρους. */
+  | { readonly kind: 'supply' };
 
 const LISTS: PricingView = { kind: 'lists' };
 const DISCOUNTS: PricingView = { kind: 'discounts' };

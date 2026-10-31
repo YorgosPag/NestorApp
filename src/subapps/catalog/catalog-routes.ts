@@ -14,6 +14,22 @@ const entity = (collection: string) => ({
 });
 
 export const CATALOG_API = {
+  // ── Φάση 6α (ADR-923 §5.12) — σχέσεις προμήθειας ──
+  /** Η πλευρά του προμηθευτή: «οι πελάτες μου». */
+  supplyRelationships: {
+    collection: `${API_ROOT}/supply-relationships`,
+    approve: (id: string) => `${API_ROOT}/supply-relationships/${encodeURIComponent(id)}/approve`,
+    decline: (id: string) => `${API_ROOT}/supply-relationships/${encodeURIComponent(id)}/decline`,
+    revoke: (id: string) => `${API_ROOT}/supply-relationships/${encodeURIComponent(id)}/revoke`,
+    invitations: `${API_ROOT}/supply-invitations`,
+    invitationRevoke: (id: string) => `${API_ROOT}/supply-invitations/${encodeURIComponent(id)}/revoke`,
+    link: `${API_ROOT}/supply-request-link`,
+  },
+  /** Η πλευρά του αγοραστή: «οι προμηθευτές μου». */
+  suppliers: {
+    collection: `${API_ROOT}/suppliers`,
+    revoke: (id: string) => `${API_ROOT}/suppliers/${encodeURIComponent(id)}/revoke`,
+  },
   attributes: entity('attributes'),
   attributeGroups: entity('attribute-groups'),
   measurementFamilies: entity('measurement-families'),
@@ -107,6 +123,26 @@ export const EXPECTED_REVISION_PARAM = 'expectedRevision';
 /** Ο δρομέας σελίδας μιας όψης (`GET …?cursor=<id εγγράφου>`) — ένα όνομα για πελάτη και route. */
 export const CURSOR_PARAM = 'cursor';
 
+/** Ό,τι κάνει ο αγοραστής από τις σελίδες-πύλες: εκτός χώρου, γιατί ακόμη δεν έχει δηλώσει για ποιο γραφείο ενεργεί. */
+export const SUPPLY_PUBLIC_API = {
+  invitationRedeem: '/api/supply-invitations/redeem',
+  accessRequest: '/api/supply-request-links/request',
+} as const;
+
+/** Οι φάκελοι των δύο σελίδων-πυλών, ΕΝΑ όνομα. Μία σελίδα ανά είδος: το token δεν φέρει είδος, το κρίνει το μυστικό του. */
+export const SUPPLY_INVITE_SEGMENT = 'supply-invite' as const;
+export const SUPPLY_REQUEST_SEGMENT = 'supply-request' as const;
+
+/** Ο σύνδεσμος του email (πόρτα α). Το token είναι στη διεύθυνση **μόνο** εδώ· η πράξη το δέχεται σε σώμα. */
+export function supplyInvitationHref(token: string): string {
+  return `/${SUPPLY_INVITE_SEGMENT}/${encodeURIComponent(token)}`;
+}
+
+/** Ο σύνδεσμος/QR (πόρτα β). */
+export function supplyRequestHref(token: string): string {
+  return `/${SUPPLY_REQUEST_SEGMENT}/${encodeURIComponent(token)}`;
+}
+
 /** Τμήματα σελίδων μέσα στον χώρο. */
 export const CATALOG_PAGES = {
   /** Το ενιαίο πλέγμα προϊόντων + επεξεργαστής (ADR-923 §5.10.4 Β2/Β3) — η κύρια οθόνη, όπως στο Akeneo. */
@@ -125,6 +161,8 @@ export const CATALOG_PAGES = {
   publications: '/catalog/publications',
   /** Ομάδες έκπτωσης · ομάδες πελατών · πίνακας συνθηκών (ADR-923 §5.11 «3δ» Τμήμα 2) — προβολή με `catalog:pricing:view`. */
   discounts: '/catalog/discounts',
+  /** Οι πελάτες μου · οι προμηθευτές μου (ADR-923 §5.12): ένας χώρος μπορεί να είναι και τα δύο. */
+  connections: '/catalog/connections',
   /** Παρτίδες εισαγωγής · αντιστοίχιση · έλεγχος δίπλα-δίπλα με το PDF · έγκριση (ADR-923 §5.5.1). */
   imports: '/catalog/imports',
 } as const;

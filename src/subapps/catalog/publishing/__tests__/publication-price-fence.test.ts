@@ -6,8 +6,8 @@ import { publicationListMayServe, publicationVersionPrintable } from '../publica
 
 const wholesale: PriceAudience = { kind: 'customerGroup', customerGroupId: 'wholesale' };
 const anyone: PriceAudience = { kind: 'anonymous' };
-const asRetail: PricingViewer = { kind: 'signedIn', customerGroupId: 'retail', party: null };
-const asWholesale: PricingViewer = { kind: 'signedIn', customerGroupId: 'wholesale', party: null };
+const asRetail: PricingViewer = { kind: 'signedIn', customerGroupId: 'retail', parties: [] };
+const asWholesale: PricingViewer = { kind: 'signedIn', customerGroupId: 'wholesale', parties: [] };
 
 describe('publicationListMayServe', () => {
   it('🔒 λίστα χονδρικής ΔΕΝ τυπώνεται για λιανική', () => {

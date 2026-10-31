@@ -1128,6 +1128,12 @@ export const COLLECTIONS = {
   CATALOG_IMPORT_PAGE_READINGS: process.env.NEXT_PUBLIC_CATALOG_IMPORT_PAGE_READINGS_COLLECTION || 'catalog_import_page_readings',
   /** Κανόνες ορατότητας (ADR-923 §12 · §5.12): ΕΝΑΣ ανά (αντικείμενο, κοινό). IDs via cvrul_* (ντετερμινιστικά). */
   CATALOG_VISIBILITY_RULES: process.env.NEXT_PUBLIC_CATALOG_VISIBILITY_RULES_COLLECTION || 'catalog_visibility_rules',
+  /** Σχέσεις προμήθειας (ADR-923 §5.12 Σ1): ΜΙΑ ανά (προμηθευτής, αγοραστής), έγγραφο δύο πλευρών. IDs via srel_* (ντετερμινιστικά). */
+  SUPPLY_RELATIONSHIPS: process.env.NEXT_PUBLIC_SUPPLY_RELATIONSHIPS_COLLECTION || 'supply_relationships',
+  /** Προσκλήσεις σχέσης προμήθειας από επαφή (Σ2 πόρτα α, μηχανή ADR-853). IDs via sinv_*. */
+  SUPPLY_INVITATIONS: process.env.NEXT_PUBLIC_SUPPLY_INVITATIONS_COLLECTION || 'supply_invitations',
+  /** Ο ανακλητός σύνδεσμος/QR του προμηθευτή (Σ2 πόρτα β): ΕΝΑΣ ανά χώρο. IDs via srql_* (ντετερμινιστικά). */
+  SUPPLY_REQUEST_LINKS: process.env.NEXT_PUBLIC_SUPPLY_REQUEST_LINKS_COLLECTION || 'supply_request_links',
 
   // 🪜 DXF STAIR TOOL — ADR-358 (companyId-scoped, Phase 1)
   /** Parametric stair entities, 11 kinds, IfcStair-aligned. FK → floorplans. IDs via stair_* prefix. */

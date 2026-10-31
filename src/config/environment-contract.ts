@@ -241,6 +241,24 @@ export const ENVIRONMENT_CONTRACT: readonly EnvironmentRequirement[] = [
     consumer: 'src/server/spatial-tour/tour-capture-invitation.ts',
   },
   {
+    name: 'SUPPLY_INVITE_SECRET',
+    severity: 'feature',
+    feature: 'Πρόσκληση πελάτη σε σχέση προμήθειας με email (ADR-923 §5.12 Σ2)',
+    consequence:
+      'Ο προμηθευτής δεν μπορεί να προσκαλέσει πελάτη από επαφή: η έκδοση αποτυγχάνει και κάθε υπάρχων σύνδεσμος '
+      + 'απαντά «δεν μπόρεσα». ⚠️ ΔΙΚΟ του μυστικό: με κοινό, σύνδεσμος προμήθειας θα διαβαζόταν ως πρόσκληση άλλου είδους.',
+    consumer: 'src/server/supply-relationships/supply-invitation-issue.server.ts',
+  },
+  {
+    name: 'SUPPLY_REQUEST_LINK_SECRET',
+    severity: 'feature',
+    feature: 'Δημόσιος σύνδεσμος/QR αιτήματος σύνδεσης με προμηθευτή (ADR-923 §5.12 Σ2)',
+    consequence:
+      'Ο προμηθευτής δεν μπορεί να δημοσιεύσει σύνδεσμο/QR και κάθε τυπωμένος σύνδεσμος απαντά «δεν μπόρεσα». '
+      + '⚠️ Η αλλαγή του ακυρώνει ΚΑΘΕ τυπωμένο QR: οι σύνδεσμοι δεν λήγουν, το μυστικό τους είναι μακρόβιο.',
+    consumer: 'src/server/supply-relationships/supply-request-link.server.ts',
+  },
+  {
     name: 'ENGAGEMENT_INVITE_SECRET',
     severity: 'feature',
     feature: 'Πρόσκληση με email σε δικηγόρο/συμβολαιογράφο χωρίς λογαριασμό (ADR-901 Φ3)',

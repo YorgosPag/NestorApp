@@ -10,6 +10,7 @@ import 'server-only';
  * - **ο εξαργυρωτής από το Auth** — ποιος πατά τον σύνδεσμο, με email **του Auth** (ποτέ του token, §15).
  */
 
+import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 
 import {
@@ -17,6 +18,8 @@ import {
   INVITATION_TOKEN_MAX_LENGTH,
   INVITATION_TOKEN_MIN_LENGTH,
 } from '@/contracts/invitation-redeem-body';
+import { readJsonBody } from '@/lib/api/json-body';
+import { getErrorMessage } from '@/lib/error-utils';
 import { getAdminAuth } from '@/lib/firebaseAdmin';
 import { provenMailboxAccountOf } from '@/server/auth/mailbox-proof-custody';
 import type { InvitationCoreRefusal } from '@/types/invitation-core';
@@ -57,6 +60,47 @@ export type InvitationLinkRefusedBody<R extends string> = { readonly error: 'LIN
 
 /** «Δεν μπόρεσα να ρωτήσω» — ποτέ ονομασμένη άρνηση (N.12 · ADR-787 Ε-5 §4 #3). */
 export type InvitationRedeemUnavailableBody = { readonly error: 'REDEEM_UNAVAILABLE' };
+
+/**
+ * **Κάθε έκβαση εκτός από την αποδοχή → HTTP**: η ΜΙΑ σημασία στο δίκτυο. Η αποδοχή διαφέρει ανά είδος, γιατί λέει τι γεννήθηκε.
+ * 🔑 **422**: το αίτημα ήταν κατανοητό, ο **κόσμος** δεν το επιτρέπει, και ο λόγος ταξιδεύει. **503**: «δεν μπόρεσα να ρωτήσω».
+ */
+export function invitationSettledResponse<R extends string>(
+  outcome: { readonly kind: 'declined' } | { readonly kind: 'refused'; readonly reason: R } | { readonly kind: 'unavailable' },
+): NextResponse<{ readonly status: 'declined' } | InvitationLinkRefusedBody<R> | InvitationRedeemUnavailableBody> {
+  switch (outcome.kind) {
+    case 'declined':
+      return NextResponse.json({ status: 'declined' } as const);
+    case 'refused':
+      return NextResponse.json({ error: 'LINK_REFUSED', reason: outcome.reason } as const, { status: 422 });
+    case 'unavailable':
+      return NextResponse.json({ error: 'REDEEM_UNAVAILABLE' } as const, { status: 503 });
+  }
+}
+
+/**
+ * **Το περίβλημα κάθε POST εξαργύρωσης**: σώμα → πράξη → εξαίρεση. Κακό σώμα ⇒ 400. Εξαίρεση ⇒ καταγράφεται με τον λόγο της και
+ * απαντά «δεν μπόρεσα», ποτέ ονομασμένη άρνηση.
+ */
+export async function runInvitationPost<TSchema extends z.ZodTypeAny, TResponse>(
+  request: NextRequest,
+  schema: TSchema,
+  trace: {
+    readonly logger: { error(message: string, context: Readonly<Record<string, unknown>>): void };
+    readonly message: string;
+    readonly uid: string;
+  },
+  run: (body: z.infer<TSchema>) => Promise<NextResponse<TResponse>>,
+): Promise<NextResponse<TResponse | InvitationRedeemUnavailableBody>> {
+  const parsed = await readJsonBody(request, schema);
+  if ('rejected' in parsed) return parsed.rejected;
+  try {
+    return await run(parsed.data);
+  } catch (error: unknown) {
+    trace.logger.error(trace.message, { uid: trace.uid, error: getErrorMessage(error) });
+    return NextResponse.json({ error: 'REDEEM_UNAVAILABLE' } as const, { status: 503 });
+  }
+}
 
 /**
  * **Ο άνθρωπος που πατά τον σύνδεσμο, όπως τον ξέρει ο ΙΔΙΟΚΤΗΤΗΣ του λογαριασμού.** 🔴 Το token (ζει έως μία ώρα)

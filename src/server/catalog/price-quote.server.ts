@@ -5,9 +5,8 @@ import 'server-only';
  * Η ΤΙΜΗ ΑΠΟ ΤΟΝ ΔΙΑΚΟΜΙΣΤΗ — «δες την τιμή σαν τον Χ» (ADR-923 §5.11 «3β» αποφάσεις Α + Δ · §12 🔒)
  * =============================================================================
  *
- * 1. Ο **θεατής** χτίζεται από **αποθηκευμένες** εγγραφές του χώρου, ποτέ από ό,τι στέλνει ο πελάτης: ομάδα πελάτη που
- *    υπάρχει · συμβαλλόμενος που υπάρχει + η ανάθεσή του (ή καμία). Ο πελάτης λέει «σαν τον Χ», ο διακομιστής ξέρει
- *    **ποιος** είναι ο Χ.
+ * 1. Ο **θεατής** χτίζεται από **αποθηκευμένες** εγγραφές του χώρου (`pricing-viewer.server.ts`), ποτέ από ό,τι στέλνει ο
+ *    πελάτης.
  * 2. Η **λίστα** επιλέγεται με τον **ίδιο** επιλογέα των συνθηκών (`selectMostSpecific`): ο ειδικότερος κοινός που
  *    καλύπτει τον θεατή νικά (commercetools price selection)· καμία = «ζητήστε προσφορά», ισοπαλία = αδύνατη
  *    (την αρνείται η αποθήκευση) αλλά αναφέρεται ρητά αν ποτέ συμβεί.
@@ -24,7 +23,7 @@ import type { AuthContext } from '@/lib/auth';
 import { nowISO, normalizeToMillisOrNull } from '@/lib/date-local';
 import { discountCascade } from '@/lib/pricing/discount-rule';
 import { selectMostSpecific, type SelectionCandidate } from '@/lib/pricing/select-condition';
-import { audienceCovers, audienceSpecificity, pricingPartyKey } from '@/subapps/catalog/pricing/price-audience';
+import { audienceCovers, audienceSpecificity } from '@/subapps/catalog/pricing/price-audience';
 import { priceLineSubjectKey } from '@/subapps/catalog/pricing/price-line-subject';
 import { priceListLineKey } from '@/subapps/catalog/pricing/pricing-keys';
 import { resolveCatalogPrice, type PricedRecord } from '@/subapps/catalog/pricing/resolve-catalog-price';
@@ -35,11 +34,8 @@ import type {
   PriceQuoteOutcome,
   PriceQuoteRequest,
   PriceQuoteResult,
-  PriceQuoteViewAs,
 } from '@/subapps/catalog/types/price-list-requests';
 import type {
-  CustomerAssignmentDefinition,
-  CustomerGroupDefinition,
   DiscountConditionDefinition,
   PriceAudience,
   PriceListDefinition,
@@ -48,18 +44,15 @@ import type {
 } from '@/subapps/catalog/types/price-list';
 import type { VisibilityVerdict } from '@/subapps/catalog/types/visibility-rule';
 import { DEFAULT_CATALOG_VISIBILITY } from '@/subapps/catalog/vocabulary/pricing';
-import { readActiveByIds } from './catalog-library-reads.server';
 import {
   naturalKeyId,
-  readForUpsert,
   readOwned,
   readOwnedOrNull,
   runCatalogTransaction,
   type CatalogTx,
   type StoredCatalogRecord,
 } from './catalog-store.server';
-import { assertNoIssues } from './catalog-write-error';
-import { partyIssues } from './pricing-party-reads.server';
+import { viewerOf } from './pricing-viewer.server';
 import { readActivePriceLists, readListVersions, versionRefOf, type StoredPriceList } from './price-version-reads.server';
 import { readVisibilityAncestry, readVisibilityRules } from './visibility-reads.server';
 
@@ -67,27 +60,6 @@ type StoredList = StoredPriceList;
 type OfferedList = StoredList & { readonly audience: PriceAudience };
 
 const isOffered = (list: StoredList): list is OfferedList => list.audience !== null;
-
-/** Ο θεατής, χτισμένος από ό,τι **υπάρχει** στον χώρο. */
-export async function viewerOf(scope: CatalogTx, viewAs: PriceQuoteViewAs): Promise<PricingViewer> {
-  switch (viewAs.kind) {
-    case 'anonymous':
-      return { kind: 'anonymous' };
-    case 'signedIn':
-      return { kind: 'signedIn', customerGroupId: null, party: null };
-    case 'customerGroup': {
-      const groups = await readActiveByIds<CustomerGroupDefinition>(scope, 'customerGroup', [viewAs.customerGroupId]);
-      assertNoIssues(groups.size === 1 ? [] : [{ code: 'unknownReference', path: 'viewAs.customerGroupId' }]);
-      return { kind: 'signedIn', customerGroupId: viewAs.customerGroupId, party: null };
-    }
-    case 'partner': {
-      assertNoIssues(await partyIssues(scope, viewAs.party, 'viewAs.party'));
-      const assignment = await readForUpsert<CustomerAssignmentDefinition>(scope, 'customerAssignment', pricingPartyKey(viewAs.party));
-      const current = assignment.current;
-      return { kind: 'signedIn', customerGroupId: current?.customerGroupId ?? null, party: viewAs.party };
-    }
-  }
-}
 
 type ListSelection = { readonly trace: PriceQuoteContext['listTrace'] } & (
   | { readonly kind: 'list'; readonly list: StoredList }

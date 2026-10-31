@@ -27,9 +27,9 @@ const MARCH = Date.parse('2026-03-01T00:00:00Z');
 const AUGUST = Date.parse('2026-08-01T00:00:00Z');
 
 const anonymous: PricingViewer = { kind: 'anonymous' };
-const signedIn: PricingViewer = { kind: 'signedIn', customerGroupId: null, party: null };
-const wholesaler: PricingViewer = { kind: 'signedIn', customerGroupId: WHOLESALE, party: null };
-const partner: PricingViewer = { kind: 'signedIn', customerGroupId: WHOLESALE, party: PARTNER };
+const signedIn: PricingViewer = { kind: 'signedIn', customerGroupId: null, parties: [] };
+const wholesaler: PricingViewer = { kind: 'signedIn', customerGroupId: WHOLESALE, parties: [] };
+const partner: PricingViewer = { kind: 'signedIn', customerGroupId: WHOLESALE, parties: [PARTNER] };
 
 function request(overrides: Partial<CatalogPriceRequest> = {}): CatalogPriceRequest {
   return {

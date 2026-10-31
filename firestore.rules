@@ -6432,6 +6432,22 @@ service cloud.firestore {
       allow read: if false;
       allow write: if false;
     }
+    // ADR-923 §5.12 Σ1 — ΣΧΕΣΕΙΣ ΠΡΟΜΗΘΕΙΑΣ. Έγγραφο ΔΥΟ πλευρών: ανάγνωση θα έδειχνε στον αγοραστή ποια επαφή τον δένει
+    // και ποιος ενέκρινε, γραφή θα άνοιγε ξένη ανάγνωση τιμών χωρίς αποδοχή (Σ4). Και οι δύο πλευρές περνούν από τον διακομιστή.
+    match /supply_relationships/{relationshipId} {
+      allow read: if false;
+      allow write: if false;
+    }
+    // ADR-923 §5.12 Σ2 — το είδος της μηχανής ADR-853: ανάγνωση = `nonceHash`, γραφή = αυτο-πρόσκληση με έτοιμη ομάδα πελάτη.
+    match /supply_invitations/{invitationId} {
+      allow read: if false;
+      allow write: if false;
+    }
+    // ADR-923 §5.12 Σ2 — ο ανακλητός σύνδεσμος/QR. Γραφή = αναβίωση ανακλημένου συνδέσμου με παλιά γενιά.
+    match /supply_request_links/{linkId} {
+      allow read: if false;
+      allow write: if false;
+    }
     // 📡 ADR-923 §5.11 «3δ» Ζ · ADR-905 — ΣΗΜΑ ΑΝΑ ΟΨΗ ΤΙΜΩΝ: μόνο `{ companyId, view, revision, changedAt }`, ΠΟΤΕ τιμή.
     // GET για τα μέλη του χώρου (ίδιο σύνορο με τον κατάλογο) — `resource == null` κρατά τον listener ζωντανό πριν από
     // την πρώτη αύξηση (ανύπαρκτο έγγραφο = τίποτα να διαρρεύσει). `list`/γραφή: ΠΟΤΕ — γράφει ΜΟΝΟ η μηχανή του καταλόγου.

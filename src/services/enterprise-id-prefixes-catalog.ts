@@ -46,5 +46,8 @@ export const CATALOG_ID_PREFIXES = {
   CATALOG_IMPORT_PAGE_READING: 'cipgr',    // catalog_import_page_readings — απάντηση μοντέλου (από παρτίδα + σελίδα + διαδρομή + προσπάθεια)
   // ── Φάση 6α (ADR-923 §5.12) ──
   CATALOG_VISIBILITY_RULE: 'cvrul',        // catalog_visibility_rules — ΕΝΑΣ κανόνας ανά (αντικείμενο, κοινό), ντετερμινιστικό
+  SUPPLY_RELATIONSHIP: 'srel',             // supply_relationships — ΜΙΑ σχέση ανά (προμηθευτής, αγοραστής), ντετερμινιστικό
+  SUPPLY_INVITATION: 'sinv',               // supply_invitations — πρόσκληση σχέσης από επαφή (πόρτα α)
+  SUPPLY_REQUEST_LINK: 'srql',             // supply_request_links — ΕΝΑΣ σύνδεσμος/QR ανά χώρο, ντετερμινιστικό
 
 } as const;

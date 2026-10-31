@@ -2076,6 +2076,45 @@
       ],
       "reason": "ADR-884 Κ3α. Ο άνθρωπος φτάνει από EMAIL πριν από κάθε ταυτότητα (ίδιο με το `/invite/[token]`)· η σελίδα αποδίδεται στον διακομιστή, άρα χωρίς slice το πρώτο καρέ θα έβαφε ωμά κλειδιά σε άνθρωπο που δεν ξέρει ακόμη ποιος τον καλεί (CHECK 3.51)."
     },
+    "src/app/(auth)/supply-invite/[token]/page.tsx": {
+      "sealed": 5569,
+      "sealedAt": "2026-10-31",
+      "history": [
+        {
+          "from": 0,
+          "to": 5569,
+          "at": "2026-10-31",
+          "why": "ADR-923 §5.12 Σ2 — ΝΕΑ ΣΕΛΙΔΑ. ΜΕΤΡΗΜΕΝΟ με `npm run generate:i18n-shell-slice -- --measure`: 5569 bytes, 3 ns [auth, catalog, conveyance]. Το `conveyance` είναι το ΕΝΑ πεδίο χώρου (`ActingWorkspaceField`), το `auth` η πύλη ταυτότητας, το `catalog` μόνο το υποδέντρο `supply.access` + `supply.refusals`."
+        }
+      ],
+      "reason": "ADR-923 §5.12 Σ2. Ο αγοραστής φτάνει από EMAIL πριν από κάθε ταυτότητα (ίδιο με `/case-invite`)· η σελίδα αποδίδεται στον διακομιστή, άρα χωρίς slice το πρώτο καρέ θα έβαφε ωμά κλειδιά σε άνθρωπο που δεν ξέρει ακόμη ποιος τον καλεί (CHECK 3.51)."
+    },
+    "src/app/(auth)/supply-request/[token]/page.tsx": {
+      "sealed": 5569,
+      "sealedAt": "2026-10-31",
+      "history": [
+        {
+          "from": 0,
+          "to": 5569,
+          "at": "2026-10-31",
+          "why": "ADR-923 §5.12 Σ2 — ΝΕΑ ΣΕΛΙΔΑ. ΜΕΤΡΗΜΕΝΟ με `npm run generate:i18n-shell-slice -- --measure`: 5569 bytes, 3 ns [auth, catalog, conveyance]. Το `conveyance` είναι το ΕΝΑ πεδίο χώρου (`ActingWorkspaceField`), το `auth` η πύλη ταυτότητας, το `catalog` μόνο το υποδέντρο `supply.access` + `supply.refusals`."
+        }
+      ],
+      "reason": "ADR-923 §5.12 Σ2. Ο σύνδεσμος/QR ανοίγει από έντυπο κατάλογο, από άνθρωπο χωρίς καμία ταυτότητα ακόμη. Ίδιο component με το `/supply-invite`, άρα ίδιο λεξιλόγιο: χωρίς slice, ωμά κλειδιά στο πρώτο καρέ (CHECK 3.51)."
+    },
+    "src/app/(app)/o/[workspace]/catalog/connections/page.tsx": {
+      "sealed": 23669,
+      "sealedAt": "2026-10-31",
+      "history": [
+        {
+          "from": 0,
+          "to": 23669,
+          "at": "2026-10-31",
+          "why": "ADR-923 §5.12 — ΝΕΑ ΣΕΛΙΔΑ, ΠΡΩΤΗ ΣΦΡΑΓΙΣΗ. ΜΕΤΡΗΜΕΝΟ με `--measure`: 23669 bytes, ΕΝΑ namespace (`catalog`). Το περισσότερο δεν είναι δικό της: το σύρει το κοινό πλαίσιο και ο επιλογέας συμβαλλομένου, όπως στις αδελφές σελίδες."
+        }
+      ],
+      "reason": "ADR-923 §5.12 + ADR-744 §18 — Η ΣΕΛΙΔΑ ΣΥΝΔΕΣΕΩΝ. Ίδιος μηχανισμός με τις αδελφές σελίδες του καταλόγου: το `catalog` ΔΕΝ είναι στο κέλυφος, άρα χωρίς slice ωμά κλειδιά στο πρώτο καρέ."
+    },
     "src/app/(auth)/case-invite/[token]/page.tsx": {
       "sealed": 5445,
       "sealedAt": "2026-10-05",
@@ -2313,6 +2352,7 @@
     "src/app/(app)/o/[workspace]/catalog/discounts/page.tsx ⟵ (στατική)": ["catalog"],
     "src/app/(app)/o/[workspace]/catalog/families/page.tsx ⟵ (στατική)": ["catalog"],
     "src/app/(app)/o/[workspace]/catalog/imports/page.tsx ⟵ (στατική)": ["catalog", "catalog-import"],
+    "src/app/(app)/o/[workspace]/catalog/connections/page.tsx ⟵ (στατική)": ["catalog"],
     "src/app/(app)/o/[workspace]/catalog/measurements/page.tsx ⟵ (στατική)": ["catalog"],
     "src/app/(app)/o/[workspace]/catalog/price-lists/page.tsx ⟵ (στατική)": ["catalog"],
     "src/app/(app)/o/[workspace]/catalog/publications/page.tsx ⟵ (στατική)": ["catalog"],
@@ -2370,6 +2410,10 @@
     "src/app/(app)/test-harness/property-handover-tab/page.tsx ⟵ (στατική)": ["property-market"],
     "src/app/(auth)/attendance/check-in/[token]/page.tsx ⟵ (στατική)": ["attendance"],
     "src/app/(auth)/card-email/[token]/page.tsx ⟵ (στατική)": ["property-market"],
+    "src/app/(auth)/supply-invite/[token]/not-found.tsx ⟵ (στατική)": ["catalog", "conveyance"],
+    "src/app/(auth)/supply-invite/[token]/page.tsx ⟵ (στατική)": ["catalog", "conveyance"],
+    "src/app/(auth)/supply-request/[token]/not-found.tsx ⟵ (στατική)": ["catalog", "conveyance"],
+    "src/app/(auth)/supply-request/[token]/page.tsx ⟵ (στατική)": ["catalog", "conveyance"],
     "src/app/(auth)/case-invite/[token]/not-found.tsx ⟵ (στατική)": ["conveyance"],
     "src/app/(auth)/case-invite/[token]/page.tsx ⟵ (στατική)": ["conveyance"],
     "src/app/(auth)/contact/[token]/page.tsx ⟵ (στατική)": ["property-market"],
@@ -2490,8 +2534,8 @@
     "src/app/(me)/workspace/new/page.tsx ⟵ (στατική)": ["onboarding"]
   },
   "lazyAdmissionSeal": {
-    "count": 324,
+    "count": 333,
     "at": "2026-10-31",
-    "why": "ADR-923 §5.5.1 (2026-10-31) — ΑΥΞΗΣΗ 321 → 323: η ΝΕΑ σελίδα `/catalog/imports` φέρνει 2 τριάδες (`catalog` · `catalog-import`), ίδιο είδος με τις 9 αδελφές σελίδες καταλόγου, που καθεμία έχει τη δική της. Τα κείμενά της τα καλύπτει το route slice της στο πρώτο καρέ, άρα η αναμονή είναι μόνο για τα κλειδιά έξω από το slice· όριο `next/dynamic` θα χώριζε το PDF από την πρόταση που οδηγεί. ADR-280 §11.8 Β4.3 (2026-10-31) — ΜΕΙΩΣΗ 400 → 321, ΜΕΤΡΗΜΕΝΗ με την ΙΔΙΑ μηχανή της πύλης (admissionDebt). Έπαψαν 94 τριάδες: οι 5 σελίδες προϊόντος (contacts · properties · properties/[id] · spaces/parking · spaces/storage) περνούν πλέον από εγγραφή μητρώου, το contact-mutation από το lazyHarnessRoutes, ο ReserveDialog (×2 ρίζες) και οι καρτέλες του φακέλου ακινήτου έγιναν επιφάνειες (defineLazySurfaces). +15 είναι ΜΕΤΑΚΟΜΙΣΗ, όχι νέο χρέος: τα ίδια 15 (όριο, namespace) του properties/[id]/page.tsx ανήκουν πλέον στη ρίζα entry:PropertyDetail. Με εκκίνηση ΧΩΡΙΣ τα 6 dxf namespaces η ίδια συνάρτηση δίνει 0 τριάδες dxf (ήταν 93). Μόνο συρρικνώνεται. +1 (2026-10-31, ADR-923 §5.6.1): η νέα σελίδα `catalog/publications` δηλώνεται στον ίδιο χάρτη με τις αδελφές της (`⟵ (στατική)`, namespace `catalog`) — ΙΔΙΑ τριάδα χρέους με αυτές, όχι νέο είδος: τα κείμενά της τα καλύπτει το route slice στο πρώτο καρέ. Η μέτρηση έγινε πάνω στο ενωμένο δέντρο Φ4 + Φ5, με τη μηχανή της πύλης: 321 → 323 (imports) → 324 (publications). Έγκριση σφράγισης: Giorgio, 2026-10-31."
+    "why": "ADR-923 §5.12 (2026-10-31) — ΑΥΞΗΣΗ 324 → 333, ΜΕΤΡΗΜΕΝΗ: τρεις νέες σελίδες, ίδιο είδος με τις αδελφές τους. `/catalog/connections` 1 τριάδα (`catalog`), όπως κάθε σελίδα καταλόγου. `/supply-invite` · `/supply-request` από 4 τριάδες η καθεμία (page + not-found × `catalog` · `conveyance`), ίδιο σχήμα με το `/case-invite`: ο άνθρωπος φτάνει χωρίς ταυτότητα, και τα κείμενα του πρώτου καρέ τα καλύπτει το route slice. Το `conveyance` είναι το ΕΝΑ πεδίο χώρου (`ActingWorkspaceField`), που επαναχρησιμοποιείται αντί για δεύτερο. ADR-923 §5.5.1 (2026-10-31) — ΑΥΞΗΣΗ 321 → 323: η ΝΕΑ σελίδα `/catalog/imports` φέρνει 2 τριάδες (`catalog` · `catalog-import`), ίδιο είδος με τις 9 αδελφές σελίδες καταλόγου, που καθεμία έχει τη δική της. Τα κείμενά της τα καλύπτει το route slice της στο πρώτο καρέ, άρα η αναμονή είναι μόνο για τα κλειδιά έξω από το slice· όριο `next/dynamic` θα χώριζε το PDF από την πρόταση που οδηγεί. ADR-280 §11.8 Β4.3 (2026-10-31) — ΜΕΙΩΣΗ 400 → 321, ΜΕΤΡΗΜΕΝΗ με την ΙΔΙΑ μηχανή της πύλης (admissionDebt). Έπαψαν 94 τριάδες: οι 5 σελίδες προϊόντος (contacts · properties · properties/[id] · spaces/parking · spaces/storage) περνούν πλέον από εγγραφή μητρώου, το contact-mutation από το lazyHarnessRoutes, ο ReserveDialog (×2 ρίζες) και οι καρτέλες του φακέλου ακινήτου έγιναν επιφάνειες (defineLazySurfaces). +15 είναι ΜΕΤΑΚΟΜΙΣΗ, όχι νέο χρέος: τα ίδια 15 (όριο, namespace) του properties/[id]/page.tsx ανήκουν πλέον στη ρίζα entry:PropertyDetail. Με εκκίνηση ΧΩΡΙΣ τα 6 dxf namespaces η ίδια συνάρτηση δίνει 0 τριάδες dxf (ήταν 93). Μόνο συρρικνώνεται. +1 (2026-10-31, ADR-923 §5.6.1): η νέα σελίδα `catalog/publications` δηλώνεται στον ίδιο χάρτη με τις αδελφές της (`⟵ (στατική)`, namespace `catalog`) — ΙΔΙΑ τριάδα χρέους με αυτές, όχι νέο είδος: τα κείμενά της τα καλύπτει το route slice στο πρώτο καρέ. Η μέτρηση έγινε πάνω στο ενωμένο δέντρο Φ4 + Φ5, με τη μηχανή της πύλης: 321 → 323 (imports) → 324 (publications). Έγκριση σφράγισης: Giorgio, 2026-10-31."
   }
 }

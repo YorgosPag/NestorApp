@@ -49,6 +49,27 @@ describe('Κ1 — σχήμα καταλόγου γράφεται ΜΟΝΟ από
   });
 });
 
+describe('Κ1 — η σχέση προμήθειας: έγγραφο δύο πλευρών, ένας γραφέας (ADR-923 §5.12 Σ1)', () => {
+  it('⛔ εγγραφή έξω από τον φάκελο του γραφέα, σε κάθε συλλογή της', () => {
+    for (const key of ['SUPPLY_RELATIONSHIPS', 'SUPPLY_INVITATIONS', 'SUPPLY_REQUEST_LINKS']) {
+      expect(findingsOf(`await db.collection(COLLECTIONS.${key}).doc(id).set(record);`)).toEqual([gate.STATES.SUPPLY_WRITE_OUTSIDE]);
+    }
+    expect(findingsOf('await db.collection(COLLECTIONS.SUPPLY_RELATIONSHIPS).doc(id).set(record);', 'src/server/catalog/pricing-party-reads.server.ts'))
+      .toEqual([gate.STATES.SUPPLY_WRITE_OUTSIDE]);
+  });
+
+  it('✅ ο γραφέας γράφει · ✅ ανάγνωση από αλλού δεν είναι εγγραφή', () => {
+    expect(findingsOf('tx.set(db.collection(COLLECTIONS.SUPPLY_RELATIONSHIPS).doc(id), after);', 'src/server/supply-relationships/supply-relationship-store.server.ts')).toEqual([]);
+    expect(findingsOf("const snap = await db.collection(COLLECTIONS.SUPPLY_RELATIONSHIPS).where('companyId', '==', c).get();")).toEqual([]);
+  });
+
+  it('⛔ η πόρτα του MCP μένει κλειστή και για τις τρεις', () => {
+    for (const name of ['supply_relationships', 'supply_invitations', 'supply_request_links']) {
+      expect(gate.directDoorOpen(`const WRITE_ALLOWED_COLLECTIONS = new Set(['${name}']);`)).toBe(true);
+    }
+  });
+});
+
 describe('Κ2 — η αναφορά εγγράφου της μηχανής δεν βγαίνει έξω', () => {
   it('⛔ `catalogDocRef(` σε αδήλωτο αρχείο — ✅ στις αναγνώσεις της βιβλιοθήκης', () => {
     expect(findingsOf("tx.set(catalogDocRef(db, 'family', id), data);")).toEqual([gate.STATES.DOC_REF_OUTSIDE]);

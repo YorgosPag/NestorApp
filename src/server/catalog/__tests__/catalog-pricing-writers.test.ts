@@ -343,7 +343,7 @@ describe('η τιμή από τον διακομιστή — «δες σαν τ�
     if (result.kind !== 'priced') throw new Error(`expected priced, got ${result.kind}`);
     expect(result.cascade.map((entry) => entry.step)).toEqual([5000, 1000]);
     expect(result.cascade[1].net).toBe(result.quote.netAmount);
-    expect(result.viewer).toMatchObject({ kind: 'signedIn', party: PARTNER });
+    expect(result.viewer).toMatchObject({ kind: 'signedIn', parties: [PARTNER] });
     expect(result.at).toBe('2026-08-01T00:00:00.000Z');
   });
 

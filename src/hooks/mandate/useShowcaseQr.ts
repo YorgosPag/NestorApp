@@ -9,44 +9,17 @@
  * 🔑 **Δείχνει στη ΖΩΝΤΑΝΗ σελίδα, ποτέ σε ενσωματωμένα στοιχεία** (όχι vCard-μέσα-στο-QR): αλλαγή τηλεφώνου ή
  * ωραρίου ⇒ τίποτα για επανεκτύπωση. Και **καμία παράμετρος παρακολούθησης** (`utm_*`) — αρχή #2 της Α21.16.
  *
- * 🔑 **Η απόλυτη διεύθυνση από τον περιηγητή**, ίδιο δόγμα με το `ShowcasePublicDoor`: το `window.location.origin`
- * δεν παλιώνει και δεν χρειάζεται ρύθμιση ανά περιβάλλον. Διαβάζεται **μέσα στο effect** — σε SSR δεν υπάρχει.
- *
- * ⚠️ **Δυναμική εισαγωγή του `qrcode`**: η βιβλιοθήκη φορτώνει μόνο όταν ανοίξει ο διάλογος / η σελίδα QR — η
- * δημόσια βιτρίνα δεν την πληρώνει στο πρώτο καρέ. Είναι **κώδικας**, όχι κλειδιά i18n (CHECK 3.51 δεν αφορά).
+ * 🔑 Η γέννηση ζει στο `useQrSvg`: εδώ μένει μόνο **ποια** σελίδα.
  */
 
-import React from 'react';
-
 import { agencyProfileRoute } from '@/components/mandate/agency-directory-route';
+import { useQrSvg, type QrSvgState } from '@/hooks/useQrSvg';
 import type { QrPreset } from '@/lib/qr/qr-code';
 
-export type ShowcaseQrState =
-  | { readonly phase: 'loading' }
-  | { readonly phase: 'ready'; readonly url: string; readonly svg: string }
-  | { readonly phase: 'failed' };
+export type ShowcaseQrState = QrSvgState;
 
 export function useShowcaseQr(alias: string, preset: QrPreset): ShowcaseQrState {
-  const [state, setState] = React.useState<ShowcaseQrState>({ phase: 'loading' });
-
-  React.useEffect(() => {
-    let cancelled = false;
-    const url = `${window.location.origin}${agencyProfileRoute(alias)}`;
-    setState({ phase: 'loading' });
-    import('@/lib/qr/qr-code')
-      .then(({ qrSvg }) => qrSvg(url, preset))
-      .then((svg) => {
-        if (!cancelled) setState({ phase: 'ready', url, svg });
-      })
-      .catch(() => {
-        if (!cancelled) setState({ phase: 'failed' });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [alias, preset]);
-
-  return state;
+  return useQrSvg(agencyProfileRoute(alias), preset);
 }
 
 /** **SVG → `src` εικόνας** — `<img>` αντί για `dangerouslySetInnerHTML`: το SVG δεν γίνεται ποτέ DOM της σελίδας. */

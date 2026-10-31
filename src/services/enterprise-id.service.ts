@@ -104,6 +104,7 @@ export {
   generateDeterministicCatalogPricingViewSignalId, generateDeterministicCatalogVisibilityRuleId,
   generateDeterministicCatalogImportProfileId, generateDeterministicCatalogImportBatchId, generateDeterministicCatalogImportProposalId,
   generateDeterministicCatalogImportPageReadingId,
+  generateDeterministicSupplyRelationshipId, generateSupplyInvitationId, generateDeterministicSupplyRequestLinkId,
   generateCommissionId, generatePaymentPlanId, generatePlanGroupId,
   generatePaymentRecordId, generateLoanId, generateChequeId, generatePhotoId,
   generateAttachmentId, generateFileId, generateDeterministicFileId, generateShareId, generateDispatchId, generatePendingId,

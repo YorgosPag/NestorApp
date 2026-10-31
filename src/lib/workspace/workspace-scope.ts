@@ -65,6 +65,7 @@ import { WORKSPACE_INVITE_SEGMENT } from './workspace-routes';
 import { TOUR_CAPTURES_SEGMENT, TOUR_INVITE_SEGMENT } from '@/lib/spatial-tour/tour-routes';
 import { CASE_INVITE_SEGMENT, PERSONAL_CASES_SEGMENT } from '@/lib/conveyance/conveyance-routes';
 import { HANDOVER_INVITE_SEGMENT } from '@/lib/property-handover/handover-routes';
+import { SUPPLY_INVITE_SEGMENT, SUPPLY_REQUEST_SEGMENT } from '@/subapps/catalog/catalog-routes';
 
 /**
  * **Τα κορυφαία τμήματα που ΔΕΝ ζουν μέσα σε χώρο** — κλειστό σύνολο, με
@@ -152,6 +153,13 @@ export const OUTSIDE_WORKSPACE: Readonly<Record<string, string>> = {
     'Η ΣΕΛΙΔΑ ΤΗΣ ΠΡΟΣΚΛΗΣΗΣ ΑΓΟΡΑΣΤΗ (`/handover-invite/<token>`). Ο αγοραστής φτάνει από EMAIL πριν από κάθε ' +
     'ταυτότητα — και ΔΕΝ θα ανήκει ΠΟΤΕ στον χώρο της εταιρείας που πούλησε: παίρνει τον ΔΙΚΟ του φάκελο, στον ' +
     'προσωπικό του χώρο (`/dossiers`, επίσης εκτός προθέματος). Πρόθεμα θα ονόμαζε χώρο στον οποίο δεν μπαίνει.',
+  // ── Ο ΑΓΟΡΑΣΤΗΣ ΠΟΥ ΣΥΝΔΕΕΤΑΙ ΜΕ ΠΡΟΜΗΘΕΥΤΗ (ADR-923 §5.12 Σ3) ─────
+  [SUPPLY_INVITE_SEGMENT]:
+    'Η ΣΕΛΙΔΑ ΤΗΣ ΠΡΟΣΚΛΗΣΗΣ ΠΡΟΜΗΘΕΙΑΣ (`/supply-invite/<token>`). Ο αγοραστής φτάνει από EMAIL πριν από κάθε ταυτότητα, ' +
+    'και ΔΕΝ θα ανήκει ΠΟΤΕ στον χώρο του προμηθευτή. Τον ΔΙΚΟ του χώρο τον δηλώνει εδώ, μέσα στη σελίδα: πρόθεμα θα τον όριζε πριν ρωτηθεί.',
+  [SUPPLY_REQUEST_SEGMENT]:
+    'Ο ΣΥΝΔΕΣΜΟΣ/QR ΤΟΥ ΠΡΟΜΗΘΕΥΤΗ (`/supply-request/<token>`). Τυπώνεται σε έντυπο κατάλογο, άρα είναι απόλυτος και δεν ανήκει ' +
+    'σε κανέναν χώρο. Ίδιος λόγος με το `/supply-invite`: ο άνθρωπος δηλώνει τον χώρο του στη σελίδα.',
   [TOUR_CAPTURES_SEGMENT]:
     '«ΟΙ ΛΗΨΕΙΣ ΜΟΥ» ΤΟΥ ΦΩΤΟΓΡΑΦΟΥ (route group `(me)`). Οι άδειές του ζουν σε περιηγήσεις ΔΙΑΦΟΡΕΤΙΚΩΝ ' +
     'κατόχων — γραφείων ΚΑΙ ιδιωτών — άρα κανένα ψευδώνυμο χώρου δεν τις περιγράφει· ο διακομιστής τις βρίσκει ' +
