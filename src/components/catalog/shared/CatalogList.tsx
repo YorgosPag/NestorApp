@@ -66,15 +66,16 @@ export function CatalogListItem({ primary, secondary, icon: Icon, leading, badge
         aria-current={selected ? 'true' : undefined}
         aria-busy={pending || undefined}
         onClick={onSelect}
-        className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex min-w-0 flex-1 flex-wrap items-center gap-2 rounded-md px-2 py-1.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {leading ?? (Icon ? <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden /> : null)}
-        <span className="flex min-w-0 flex-1 flex-col">
+        {/* Το όνομα έχει προτεραιότητα: όταν δεν χωρά δίπλα στα σήματα, τα σήματα κατεβαίνουν σε δική τους γραμμή. */}
+        <span className="flex min-w-0 flex-[1_1_10rem] flex-col">
           <span className="truncate text-sm font-medium">{primary}</span>
           {secondary ? <span className="truncate font-mono text-xs text-muted-foreground">{secondary}</span> : null}
         </span>
         {badges.length > 0 ? (
-          <span className="flex max-w-[60%] flex-wrap justify-end gap-1">
+          <span className="ml-auto flex max-w-full flex-wrap justify-end gap-1">
             {badges.map((badge) => <Badge key={badge.label} variant={badge.variant}>{badge.label}</Badge>)}
           </span>
         ) : null}
