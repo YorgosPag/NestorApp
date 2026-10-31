@@ -18,6 +18,15 @@ const path = require('path');
 
 const PNPM_DIR = path.join(__dirname, '..', 'node_modules', '.pnpm');
 
+/**
+ * Σβήνει πριν γράψει: τα αρχεία του pnpm είναι hard links προς το κοινό store, και μια
+ * εγγραφή επί τόπου θα άλλαζε το ίδιο το store, άρα κάθε άλλο worktree (ADR-925).
+ */
+function replaceFile(filePath, content) {
+  fs.unlinkSync(filePath);
+  fs.writeFileSync(filePath, content, 'utf8');
+}
+
 function findAllFiles(dir, filename) {
   const results = [];
   if (!fs.existsSync(dir)) return results;
@@ -54,7 +63,7 @@ function patchPresence() {
           /setNode\(node2\);/g,
           'setNode((prev) => prev === node2 ? prev : node2);'
         );
-        fs.writeFileSync(filePath, content, 'utf8');
+        replaceFile(filePath, content);
         patched++;
       }
     }
@@ -98,7 +107,7 @@ function patchComposeRefs() {
         ].join('\n');
 
         content = content.replace(oldPattern, newCode);
-        fs.writeFileSync(filePath, content, 'utf8');
+        replaceFile(filePath, content);
         patched++;
       }
     }

@@ -754,6 +754,11 @@ if (!process.env.SKIP_GATE_COMMIT_VIEW)
 if (!process.env.SKIP_I18N_NAMESPACE_FAMILY)
   addThread('3.108', 'i18n namespace family', 'scripts/check-i18n-namespace-family.js', ['--index']);
 
+// CHECK 3.109 — ΠΥΛΗ ΤΟΥ ΑΠΟΜΟΝΩΜΕΝΟΥ ΧΩΡΟΥ ΕΡΓΑΣΙΑΣ (ADR-925). «Κάνει πράκτορας commit κατευθείαν στο
+// `main`, αντί στο δικό του κλαδί;» Ο διακόπτης ζει στο `.agent-worktree-policy.json`.
+if (!process.env.SKIP_AGENT_WORKTREE_POLICY)
+  addThread('3.109', 'Agent worktree policy', 'scripts/check-agent-worktree-policy.js', ['--index']);
+
 // CHECK 3.67 — ΠΥΛΗ ΤΗΣ ΥΠΟΣΧΕΣΗΣ ΓΡΑΜΜΑΤΟΣΕΙΡΑΣ (ADR-803). «Υπόσχεται ο πίνακας
 // υποκατάστασης όψη που ΔΕΝ φορτώνεται ΠΟΤΕ;»
 // 🔴 ΜΕΤΡΗΜΕΝΟ 25/08: ο FONT_SUBSTITUTION_TABLE υπόσχεται 5 οικογένειες, το

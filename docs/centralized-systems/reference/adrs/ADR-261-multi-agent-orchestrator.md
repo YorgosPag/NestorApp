@@ -103,3 +103,4 @@ npx tsx scripts/orchestrator/index.ts --verbose "Debug issue"
 
 ## Changelog
 - 2026-03-24: Initial implementation — 10 TypeScript files + 6 system prompts + CLI
+- 2026-10-31: Ο χώρος εργασίας πράκτορα εκτός Orchestrator ζει στο `scripts/lib/agent-worktree/` (ADR-925). Ο `WorktreeManager` μένει ως έχει· η σύγκλισή του στον νέο πυρήνα είναι καταγεγραμμένη εκκρεμότητα.

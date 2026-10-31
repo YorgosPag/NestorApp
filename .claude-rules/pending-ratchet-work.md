@@ -4049,6 +4049,12 @@
 - **Θεραπεία**: ~38 κλειδιά (ένα ανά `FileAuditAction`) σε el + en, και η κλήση **χωρίς** εφεδρεία. Άγκυρα: κάθε μέλος του τύπου έχει κλειδί και στις δύο γλώσσες (ο `ACTION_ICON_MAP` είναι ήδη `Record<FileAuditAction, …>`, άρα το κλειστό σύνολο υπάρχει).
 - **Μέγεθος**: ~1h, ξένος τομέας (ADR-191) ⇒ όχι επί τόπου.
 
+### 🌳 `WorktreeManager` του Orchestrator → κοινός πυρήνας `scripts/lib/agent-worktree/` (προτεραιότητα ΧΑΜΗΛΗ, 2026-10-31, ADR-925 · ADR-261 · N.0.2)
+
+- **Τι**: το `scripts/orchestrator/worktree-manager.ts` έχει δικό του κύκλο ζωής worktree, με αναδρομικό `rmSync` και `merge --no-ff`.
+- **Γιατί**: δύο υλοποιήσεις της ίδιας ερώτησης· το `rmSync` μπορεί να ακολουθήσει junction.
+- **Θεραπεία**: ο Orchestrator καλεί τον κοινό πυρήνα. Θέλει δοκιμή μίας πραγματικής εκτέλεσης Orchestrator.
+
 ### ⭕ `useBorderTokens().radius.X` μέσα σε `className` — **τιμή CSS**, όχι κλάση (προτεραιότητα ΜΕΣΑΙΑ, 2026-10-14, ADR-777 §8.96.5 · N.0.2)
 - **Ρίζα**: το `radius` του hook είναι το `coreBorderRadius` (`full: '9999px'`, `lg: '0.75rem'`)· οι κλάσεις είναι στο **`radiusClass`**. Μέσα σε template `className` το `${radius.full}` γίνεται ωμό «9999px» ⇒ **καμία** στρογγύλευση, σιωπηλά.
 - **Διορθώθηκε**: `components/ui/radio-group.tsx` (τα radio ήταν τετράγωνα σαν checkbox σε ΟΛΗ την εφαρμογή) + άγκυρα `components/ui/__tests__/radio-group.test.tsx` (μετάλλαξη 1/1).

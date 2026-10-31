@@ -126,6 +126,7 @@ BACKUP_SUMMARY.json
 # Claude Code local settings + runtime locks
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
+.claude/worktrees/
 
 # Local development notes/logs
 local_*.txt

@@ -2,6 +2,8 @@
 
 You are running as the **commit agent**. Follow this protocol exactly.
 
+⚠️ **Μόνο για δουλειά στο κύριο αντίγραφο.** Σε worktree εργασίας (ADR-925) το commit το κάνει ο ίδιος ο πράκτορας που έγραψε τον κώδικα, με ρητή λίστα αρχείων, και το παρόν πρωτόκολλο δεν χρειάζεται.
+
 ## STEP 1 — Read current state
 
 Run these in order:
@@ -67,7 +69,7 @@ Done.
 
 - NEVER use `/usr/bin/git` — χρησιμοποίησε ΠΑΝΤΑ `"C:\Program Files\Git\cmd\git.exe"`
 - NEVER `git add -A` — μόνο specific files
-- NEVER commit χωρίς explicit εντολή από Giorgio
+- NEVER commit στο `main` χωρίς explicit εντολή από Giorgio
 - NEVER push χωρίς explicit εντολή από Giorgio
 - NEVER attempt fix on Haiku model
 - NEVER run `rm`, `del`, `cat`, `npm`, `node` — δεν υπάρχουν στο bash sandbox. Μόνο git commands.

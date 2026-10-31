@@ -31,6 +31,7 @@ These abbreviations can appear anywhere in a prompt (standalone, inline, in task
 
 ## 🚨🚨🚨 SOS. SOS. N.(-1) — TERMINAL PROHIBITION: NEVER GIT COMMIT OR PUSH WITHOUT ORDER
 **ABSOLUTELY FORBIDDEN** to `git commit` or `git push` without EXPLICIT order from Giorgio.
+- ✅ **ΜΟΝΗ ΕΞΑΙΡΕΣΗ (απόφαση Giorgio 2026-10-31, ADR-925):** μέσα σε δικό του worktree, σε κλαδί `agent/*`, ο πράκτορας κάνει **ο ίδιος** commit τη **δική του** δουλειά, χωρίς εντολή. Εκεί δεν φτάνει ούτε στο `main` ούτε στην παραγωγή. **Η ένταξη στο `main` (`npm run wt:land`) και το push γίνονται ΜΟΝΟ με ρητή εντολή Giorgio.** Στο `main` ο κανόνας ισχύει ακέραιος.
 - **COMMIT** happens ONLY if Giorgio says: "commit", "κάνε commit", "commit it".
 - **PUSH** happens ONLY if Giorgio says: "push", "send it", "upload" (in Greek: "push", "στείλε", "ανέβασε").
 - DO NOT commit automatically, DO NOT commit "because it's done", DO NOT commit "for convenience".
@@ -307,7 +308,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ### Pre-commit checks (summary):
 
 <!-- BEGIN GENERATED GATE INDEX — ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ ΣΤΟ ΧΕΡΙ. Πηγή: docs/gates/3.NN.md · αναπαραγωγή: npm run gate-index:generate
-     fingerprint: sha256:93e913209832572eccf4dc428462e42e3a7c28aaa07730fc06d1c64630307417 -->
+     fingerprint: sha256:eb4a03336eef32d0f09d2d74f7c3967c8afb06319e21859600a4102c01f6a5d8 -->
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |
@@ -400,6 +401,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.106** | **Πύλη του ενός γραφέα του σχήματος καταλόγου** (ADR-923) — «γράφει κάποιος ιδιότητα · ομάδα · οικογένεια μέτρησης · κατηγορία · οικογένεια **ΕΞΩ από τη μηχανή** — δηλαδή χωρίς επικύρωση απέναντι στη βιβλιοθήκη…» · `npm run test:catalog-schema-authority` · `SKIP_CATALOG_SCHEMA_AUTHORITY=1` · 📘 `docs/gates/3.106.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3+Κ4+Κ5+Κ6) | — |
 | **3.107** | **Πύλη της όψης του commit** (ADR-924) — «κρίνει αυτή η πύλη ό,τι **θα δεσμευτεί** — ή τον δίσκο, όπου ζει και η ξένη αστάδιοποίητη δουλειά; (`--index` από τον εκτελεστή **και** ανάγνωση μέσα…» · `npm run test:gate-commit-view` · `SKIP_GATE_COMMIT_VIEW=1` · 📘 `docs/gates/3.107.md` | 🔴 RATCHET κατά ταυτότητα (το χρέος · ωμά σημεία ανάγνωσης αν… | `.gate-commit-view-baseline.json` |
 | **3.108** | **Πύλη της μίας δήλωσης οικογένειας namespaces** (ADR-280) — «γράφει κάποιος με το χέρι μια **οικογένεια** namespaces (`['building', 'building-storage', …]`) που ο hook **ήδη** φορτώνει μόνος του από το…» · `npm run test:i18n-namespace-family` · `SKIP_I18N_NAMESPACE_FAMILY=1` · 📘 `docs/gates/3.108.md` | ⛔ ZERO-TOL (Κ1+Κ2+Κ3) + 🔴 RATCHET κατά ταυτότητα (order-bear… | `.i18n-namespace-family-baseline.json` |
+| **3.109** | **Πύλη του απομονωμένου χώρου εργασίας** (ADR-925) — «κάνει πράκτορας commit **κατευθείαν στο `main`**, αντί στο δικό του κλαδί; (ο διακόπτης `enforce` ξεκίνησε κλειστός και γυρίζει στο καθαρό σημείο)» · `npm run test:agent-worktree` · `SKIP_AGENT_WORKTREE_POLICY=1` · 📘 `docs/gates/3.109.md` | ⛔ ZERO TOL (μόνο όταν `enforce: true`) | — |
 
 **📘 Πλήρες ιστορικό ανά πύλη** (περιστατικά, μετρήσεις, «⚠️ ΜΗΝ», απορριφθείσες εναλλακτικές):
 `docs/gates/<αριθμός>.md` — ή `npm run gate:explain 3.63`.
@@ -413,8 +415,8 @@ Suggestion: Do /clear and give me the command again cleanly.
 φορές (N.12 · N.18 · CHECK 3.38). Στη γραμμή μένει ο **δείκτης**, και ο γεννήτορας
 επαληθεύει ότι **λύνεται**. Άνοιξε το JSON.
 
-📊 Πύλες που **τρέχουν**: **99** (εκτελεστής 91 + hook 21) ·
-γραμμές εδώ: **90** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
+📊 Πύλες που **τρέχουν**: **100** (εκτελεστής 92 + hook 21) ·
+γραμμές εδώ: **91** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
 *Αυτοί οι αριθμοί είναι **παραγόμενοι** — η προηγούμενη χειρόγραφη εκδοχή τους είχε ήδη*
 *αποκλίνει (έγραφε «48 γραμμές» και «61 πύλες»).*
 
@@ -589,6 +591,8 @@ Quando lancio `Agent` tool, **DEVO** passare `model` param scegliendo il **minim
 ## 🚨🚨🚨 SOS. SOS. N.16 — COMMIT AGENT PROTOCOL (cost optimization)
 
 **Ο commit agent τρέχει πάντα ως Haiku.** Ο Giorgio ενεργοποιεί χειροκίνητα άλλο μοντέλο αν χρειαστεί.
+
+**ΔΙΠΛΗ ΡΟΗ (ADR-925):** ο commit agent αφορά **μόνο** δουλειά που ζει ακόμη στο κύριο αντίγραφο. Σε δικό σου worktree, το commit το κάνεις **εσύ που έγραψες τον κώδικα**, με ρητή λίστα αρχείων. Ροή: `npm run wt:new -- <εργασία>` → `EnterWorktree` με τη διαδρομή → δουλειά + commit στο κλαδί → αναφορά στον Giorgio → **με εντολή του** `npm run wt:land -- <εργασία>` → `npm run wt:remove -- <εργασία>`. 📘 `docs/deployment/git-workflow.md`
 
 ### Εκτέλεση — χρησιμοποίησε ΠΑΝΤΑ το slash command:
 
@@ -795,7 +799,7 @@ export function myFunction(value: string | number): Result {
 
 ## 🔄 GIT / DEPLOY (Netcup) / BACKUP — Quick reference
 
-**Core rule (aggiornata 2026-05-16)**: **Giorgio fa i commit. Giorgio fa i push.** L'agente NON committa MAI e NON pusha MAI autonomamente — neanche "dopo successo", neanche "per comodità", neanche se il task è finito. L'agente prepara il lavoro (`git add`, `git status`, `git diff` per verifica), poi **si ferma** e aspetta l'ordine esplicito di Giorgio. Vedi N.(-1) per zero-tolerance enforcement.
+**Core rule (aggiornata 2026-05-16)**: **Giorgio fa i commit. Giorgio fa i push.** L'agente NON committa MAI e NON pusha MAI autonomamente — neanche "dopo successo", neanche "per comodità", neanche se il task è finito. L'agente prepara il lavoro (`git add`, `git status`, `git diff` per verifica), poi **si ferma** e aspetta l'ordine esplicito di Giorgio. Vedi N.(-1) per zero-tolerance enforcement. **Eccezione (ADR-925, 2026-10-31):** commit dell'autore nel proprio worktree, mai su `main`.
 
 **Commit/push happen ONLY when Giorgio says** (greco/italiano/inglese):
 - Commit: "commit", "κάνε commit", "fai commit", "commit it"

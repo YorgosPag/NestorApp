@@ -2,10 +2,10 @@
 
 | | |
 |---|---|
-| **Status** | 📝 **ΠΡΟΤΕΙΝΟΜΕΝΟ (2026-10-30)** — απόφαση Giorgio για τη Φάση 1 (§6). Τίποτα δεν αλλάζει στη ροή εργασίας πριν από αυτήν. |
+| **Status** | ✅ **ΥΛΟΠΟΙΗΘΗΚΕ (2026-10-31)** · εντολές `wt:*` + CHECK 3.109 · η επιβολή (`enforce`) ενεργοποιείται στο καθαρό σημείο (§10) |
 | **Date** | 2026-10-30 |
 | **Category** | Tooling / Multi-agent workflow |
-| **Canonical Location** | *(προτεινόμενο)* `.claude/worktrees/<όνομα>/` · `.worktreeinclude` · `.claude/settings.json` (`worktree.baseRef`) |
+| **Canonical Location** | `scripts/lib/agent-worktree/` · `scripts/agent-worktree.js` · `scripts/check-agent-worktree-policy.js` · `.agent-worktree-policy.json` · `.claude/settings.json` (`worktree.baseRef`) |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
 | **Σχετικά** | ADR-924 (οι πύλες κρίνουν το commit — η **άμυνα**, αυτό εδώ η **θεραπεία**) · `.claude-rules/fleet/` (κλειδώματα αρχείων/λωρίδων) · `heavy-mutex` (ένα βαρύ έργο τη φορά) · ADR-800 (μία έκδοση πακέτου) |
 
@@ -54,7 +54,9 @@
 | ανάπτυξη | push του `main` ⇒ Netcup· commits/push **μόνο** με εντολή Giorgio |
 | μηχάνημα | 4 πυρήνες· `heavy-mutex` = ένα βαρύ έργο τη φορά (ισχύει ΚΑΙ με worktrees: η CPU μένει κοινή) |
 
-## 5. Απόφαση (προτεινόμενη)
+## 5. Απόφαση
+
+> ⚠️ Ο πίνακας §5.1 είναι η αρχική πρόταση. Όπου διαφέρει, ισχύει η §10.
 
 **Κάθε πράκτορας σε δικό του worktree. Το κύριο checkout γίνεται χώρος ΕΝΣΩΜΑΤΩΣΗΣ — κανείς δεν γράφει εκεί κώδικα.**
 
@@ -109,4 +111,50 @@
 
 | ημερομηνία | αλλαγή |
 |---|---|
+| 2026-10-31 | Υλοποίηση (§10): `wt:new/list/land/remove`, CHECK 3.109 με `enforce: false`, `worktree.baseRef: head`, `.claude/worktrees/` στο `.gitignore`. Μέτρηση Φάσης 1: ~2′ / ~0,6 GB ανά worktree ⇒ το junction δεν χρειάζεται. Το `patch-radix-react19.js` έσπασε τους hard links πριν γράψει. Αποφάσεις Giorgio: commit ο συγγραφέας στο κλαδί του, ένταξη και push μόνο με εντολή του. |
 | 2026-10-30 | Αρχική πρόταση. Έρευνα: Claude Code worktrees (`--worktree` · `isolation: worktree` · `.worktreeinclude` · επιβολή απομόνωσης) · pnpm git-worktrees (`enableGlobalVirtualStore` ≥10.12.1, `virtualStoreType` 11.23) · Google CitC · Meta EdenFS · Bazel sandboxes. Μετρημένα: 37.763 tracked · `node_modules` 2,7 GB · pnpm 9.14.0 · `core.longpaths` μη ορισμένο. Απόφαση Φάσης 1: εκκρεμεί (Giorgio). |
+
+## 10. Τι υλοποιήθηκε (2026-10-31)
+
+### 10.1 Αποφάσεις Giorgio
+
+- **Commit**: ο πράκτορας που έγραψε τον κώδικα, στο δικό του κλαδί, χωρίς εντολή. Εκεί δεν φτάνει ούτε στο `main` ούτε στην παραγωγή.
+- **Ένταξη στο `main` και push**: μόνο με εντολή Giorgio.
+- **Τρέχουσα αδέσμευτη δουλειά**: δεν αγγίζεται. Η επιβολή ανοίγει στο επόμενο καθαρό σημείο.
+
+### 10.2 Μετρήσεις Φάσης 1
+
+| | |
+|---|---|
+| Worktree (37.858 αρχεία) | ~1′ |
+| `pnpm install --offline` με hard links | **~2′** · σύνολο με το worktree **~0,6 GB** (3.460 → 2.846 MB, πλήρης δοκιμή) |
+| Δίσκος C: | 3,5 GB ελεύθερα (99%) |
+| Δίσκος F: | 1 TB ελεύθερο, αλλά **FAT32** ⇒ χωρίς hard links και junctions, ακατάλληλος |
+
+### 10.3 Διαφορές από την αρχική πρόταση (§5.1)
+
+| Θέμα | Πρόταση | Υλοποίηση | Λόγος |
+|---|---|---|---|
+| Θέση | `.claude/worktrees/<θέμα>` | `C:\Nestor_Worktrees\<εργασία>` | Έξω από το repo: κανένα εργαλείο σάρωσης του κύριου αντιγράφου δεν βλέπει διπλά αρχεία, και τα μονοπάτια μένουν κοντά για το όριο 260 χαρακτήρων |
+| Κλαδί | `worktree-<θέμα>` | `agent/<εργασία>` | Ίδια σύμβαση με τον Orchestrator (ADR-261) |
+| Commit | με εντολή Giorgio | ο συγγραφέας, στο κλαδί του | §10.1 |
+| Ένταξη | χειροκίνητο rebase + ff | `wt:land` | Κλείδωμα ένα-ένα· ξανακρίνει το αποτέλεσμα όταν το `main` κινήθηκε |
+| `.env*` | `.worktreeinclude` | δεν αντιγράφονται | Ελάχιστο δικαίωμα: τα μυστικά δεν πολλαπλασιάζονται. Όποια εργασία χρειάζεται dev server τα φέρνει ρητά |
+
+### 10.4 Παγίδες που βρέθηκαν στην υλοποίηση
+
+- 🔴 **`--ignore-scripts` άφηνε το `react-compose-refs` χωρίς το patch του React 19** (982 αντί 1.265 bytes). Ένα worktree θα έτρεχε άλλον κώδικα από το κύριο, σιωπηλά. Το `wt:new` τρέχει πλέον ρητά το `patch-radix-react19.js`.
+- 🔴 **Το patch έγραφε επί τόπου σε hard link**, δηλαδή στο κοινό store. Τώρα σβήνει πριν γράψει.
+- **`git commit --amend` δεν ξανακρίνει τίποτα**: το index ταυτίζεται με το HEAD και το hook βλέπει κενό σύνολο. Γι' αυτό το `wt:land` κάνει `reset --soft` στη βάση, ώστε όλη η αλλαγή να περάσει από τις πύλες.
+- **Το git εξάγει `GIT_DIR`/`GIT_INDEX_FILE` μέσα σε hook.** Αν κληρονομηθούν, κλήση git στο `cwd` χτυπά άλλο repo· το `scripts/lib/agent-worktree/git.js` τα αφαιρεί.
+
+- 🔴 **Το `core.autocrlf=true` έδινε CRLF στο worktree, ενώ το git κρατά LF** ⇒ η CHECK 3.84 έκρινε «μπαγιάτικο» χωρίς αλλαγή περιεχομένου. Το `wt:new` παίρνει τα αρχεία αυτούσια (`-c core.autocrlf=false`), οπότε ο δίσκος ταυτίζεται με το git και οι πύλες αποτυπώματος δεν χρειάζονται αλλαγή.
+- 🔴 **Το `main` ήταν ελλιπές σε καθαρό αντίγραφο**: η CHECK 3.108 (`3e9671f8`) ζητούσε `scripts/lib/i18n-namespace-family/{baseline,request}.js` και `.i18n-namespace-family-baseline.json`, που δεν έγιναν ποτέ commit. Το κοινό δέντρο το έκρυβε, γιατί τα αρχεία υπήρχαν στον δίσκο. Μπήκαν σε αυτό το κλαδί.
+- 🔴 **Το `git worktree remove` πετυχαίνει και αφήνει φακέλους** (3,7 MB σε `node_modules`, `packages`, `src`). Το `wt:remove` ολοκληρώνει το σβήσιμο και ελέγχει ότι ο φάκελος έφυγε.
+
+### 10.5 Τι μένει
+
+- **Ενεργοποίηση**: `"enforce": true` στο `.agent-worktree-policy.json`, όταν το κύριο αντίγραφο καθαρίσει. Απόφαση Giorgio.
+- **Προϋπόθεση ένταξης**: όσο το κύριο αντίγραφο έχει αδέσμευτες αλλαγές στα ίδια αρχεία, το `wt:land` αρνείται με ασφάλεια.
+- **Dev server ανά worktree**: θέλει `.env.local` και δική του `PORT` (§7.3).
+- **Δίσκος**: με 3,4 GB ελεύθερα χωρούν περίπου 3 worktrees πριν το όριο του 1,5 GB.
