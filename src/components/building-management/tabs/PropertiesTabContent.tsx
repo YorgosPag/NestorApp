@@ -66,8 +66,8 @@ interface PropertiesTabContentProps {
 const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
 
 export function PropertiesTabContent({ building, onActiveUnitsCountChange }: PropertiesTabContentProps) {
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
-  const { t: tUnits } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const { t } = useTranslation('building');
+  const { t: tUnits } = useTranslation('properties');
   const { success, error: notifyError } = useNotifications();
   const router = useRouter();
 

@@ -68,7 +68,7 @@ const TimelineTabContent = ({ building }: TimelineTabContentProps) => {
   const fullscreen = useFullscreen();
 
   // i18n and semantic colors hooks
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation('building');
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
 

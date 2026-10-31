@@ -101,7 +101,7 @@ export function DelayBreakdownChart({
   data,
   loading,
 }: DelayBreakdownChartProps) {
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation('building');
 
   const labelMap = useMemo(
     () => new Map(data.map((d) => [d.phaseCode, d.phaseName])),
