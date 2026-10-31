@@ -29,6 +29,8 @@ export const CATALOG_API = {
   },
   publications: `${API_ROOT}/publications`,
   publicationDownload: (id: string, profile: string) => `${API_ROOT}/publications/${encodeURIComponent(id)}/download?profile=${encodeURIComponent(profile)}`,
+  publicationDisposal: (id: string) => `${API_ROOT}/publications/${encodeURIComponent(id)}/disposal`,
+  publicationLegalHold: (id: string) => `${API_ROOT}/publications/${encodeURIComponent(id)}/legal-hold`,
   publicationPreview: `${API_ROOT}/publication-preview`,
   // ── Φάση 2 (ADR-923 §5.10) — δεδομένα ──
   productModels: {

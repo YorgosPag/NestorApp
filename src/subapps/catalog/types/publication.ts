@@ -43,7 +43,7 @@ export type PublicationPricing =
 
 export interface PublicationTheme {
   readonly fontCode: PublicationFontCode;
-  /** Μέσο του χώρου (ρόλος λογότυπου)· `null` = χωρίς. */
+  /** Μέσο του χώρου με ρόλο `logo` και εικόνα που αποδίδεται (`isPublicationLogo`)· `null` = χωρίς. */
   readonly logoAssetId: string | null;
   readonly primary: LayoutColour;
   readonly accent: LayoutColour;
@@ -119,11 +119,64 @@ export interface PublicationReport {
   readonly incompleteSkuCount: number;
   /** SKU χωρίς γραμμή στην έκδοση ⇒ τυπώνεται «ζητήστε προσφορά». */
   readonly unpricedSkuCount: number;
+  /** Επιλογές του εύρους `selection` που διαγράφηκαν μετά την αποθήκευση της συνταγής. */
+  readonly missingSelectionCount: number;
   /** Εικόνες κάτω από 300 dpi στο τυπωμένο μέγεθος. */
   readonly lowResolutionImageCount: number;
   /** Εικόνες που στο προφίλ εκτύπωσης δεν είναι CMYK. */
   readonly nonCmykImageCount: number;
+  /** `false` ⇒ ο έλεγχος διάταξης **δεν έγινε**, άρα τα τρία μηδενικά παρακάτω δεν σημαίνουν «καθαρό». */
+  readonly layoutChecked: boolean;
+  /** Κομμάτια κειμένου που πατούν άλλο κείμενο στο τελικό PDF. */
+  readonly overlappingTextCount: number;
+  /** Κομμάτια κειμένου που βγαίνουν από το κομμένο χαρτί. */
+  readonly clippedTextCount: number;
+  /** Κομμάτια κειμένου κάτω από το ελάχιστο μέγεθος. */
+  readonly undersizedTextCount: number;
 }
+
+/** Τα πεδία της αναφοράς που είναι μετρητές: το `layoutChecked` λέει αν τα τρία τελευταία μετρήθηκαν. */
+export type PublicationReportCount = Exclude<keyof PublicationReport, 'layoutChecked'>;
+
+export type PublicationLayoutReport = Pick<PublicationReport, 'layoutChecked' | 'overlappingTextCount' | 'clippedTextCount' | 'undersizedTextCount'>;
+
+export const UNCHECKED_PUBLICATION_LAYOUT: PublicationLayoutReport = { layoutChecked: false, overlappingTextCount: 0, clippedTextCount: 0, undersizedTextCount: 0 };
+
+/** Δικαστική δέσμευση: υπερισχύει κάθε προθεσμίας, με όνομα και λόγο (ADR-864 §21). */
+export interface PublicationLegalHold {
+  readonly placedBy: string;
+  readonly placedAt: string;
+  readonly reason: string;
+}
+
+export const PUBLICATION_DISPOSAL_CAUSES = ['schedule', 'manual'] as const;
+export type PublicationDisposalCause = (typeof PUBLICATION_DISPOSAL_CAUSES)[number];
+
+/** Η απόδειξη διάθεσης: σβήνονται μόνο τα bytes, και μένει ποιος, πότε, γιατί και με ποιον κανόνα. */
+export interface PublicationDisposal {
+  readonly disposedAt: string;
+  readonly disposedBy: string;
+  readonly cause: PublicationDisposalCause;
+  readonly ruleId: string;
+}
+
+/** Τα γεγονότα της διατήρησης. Η κρίση πάνω τους ζει στο `publication-retention.ts`. */
+export interface PublicationRetention {
+  readonly downloadCount: number;
+  readonly firstDownloadedAt: string | null;
+  /** Πότε βγήκε νεότερη έκδοση της ίδιας συνταγής ή διαγράφηκε η συνταγή. Εδώ ξεκινά το ρολόι. */
+  readonly supersededAt: string | null;
+  readonly legalHold: PublicationLegalHold | null;
+  readonly disposal: PublicationDisposal | null;
+}
+
+export const EMPTY_PUBLICATION_RETENTION: PublicationRetention = {
+  downloadCount: 0,
+  firstDownloadedAt: null,
+  supersededAt: null,
+  legalHold: null,
+  disposal: null,
+};
 
 export interface PublicationRunDefinition {
   readonly recipeId: string;
@@ -133,6 +186,11 @@ export interface PublicationRunDefinition {
   readonly audienceKey: string;
   /** `true` ⇒ η έκδοση περιέχει τιμές: και η λήψη της κρίνεται από `catalog:pricing:view` (§5.11 «3δ» Ζ). */
   readonly priced: boolean;
+  /** Η έκδοση τιμών που τύπωσε: από αυτήν εξαρτάται πόσο ζει το PDF. `null` = τεχνικός κατάλογος. */
+  readonly priceVersion: { readonly priceListId: string; readonly priceListVersionId: string } | null;
+  readonly retention: PublicationRetention;
+  /** Η νωρίτερη στιγμή διάθεσης, όπου ψάχνει η σάρωση· `null` = δεν τρέχει ρολόι. */
+  readonly dispositionDueAt: string | null;
   readonly status: PublicationRunStatus;
   readonly progress: PublicationProgress;
   readonly artifacts: readonly PublicationArtifact[];
@@ -147,8 +205,10 @@ export interface PublicationRunDefinition {
 export const EMPTY_PUBLICATION_REPORT: PublicationReport = {
   incompleteSkuCount: 0,
   unpricedSkuCount: 0,
+  missingSelectionCount: 0,
   lowResolutionImageCount: 0,
   nonCmykImageCount: 0,
+  ...UNCHECKED_PUBLICATION_LAYOUT,
 };
 
 // ── Η μορφή του σύρματος (JSON) — ό,τι παραδίδει η όψη του εκδότη στον πελάτη ────────────────

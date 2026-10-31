@@ -14,7 +14,8 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { fileRecordBucket } from '@/server/files/file-record-bucket';
 import { preflightPrintImages, type PlacedImageFacts } from '@/subapps/catalog/publishing/publication-preflight';
 import type { LayoutDocument } from '@/subapps/catalog/publishing/layout-model';
-import type { CatalogRenditions } from '@/subapps/catalog/renditions/catalog-renditions';
+import { needsCatalogRenditions, type CatalogRenditions } from '@/subapps/catalog/renditions/catalog-renditions';
+import { assetFileTypeFactsOf } from '@/subapps/catalog/schema/judge-asset-file';
 import type { CatalogAssetDefinition } from '@/subapps/catalog/types/asset';
 import { ensureCatalogAssetRenditions, type CatalogRenditionRecord } from '../catalog-asset-renditions.server';
 import type { StoredCatalogRecord } from '../catalog-store.server';
@@ -34,8 +35,10 @@ async function resolveAsset(asset: StoredCatalogRecord<CatalogAssetDefinition>):
   if (asset.fileId === null) throw new PublicationRunError('renditionMissing');
   const db = getAdminFirestore();
   const snap = await db.collection(COLLECTIONS[FILE_COLLECTION.company]).doc(asset.fileId).get();
-  const record = snap.data() as CatalogRenditionRecord | undefined;
-  if (!record) throw new PublicationRunError('renditionMissing');
+  const data = snap.data();
+  // 🔒 Ξένο SVG δεν περνά ποτέ από το `sharp` (ADR-899): όσα δεν έχουν αποδόσεις σταματούν εδώ, πριν το δίχτυ ασφαλείας.
+  if (!data || !needsCatalogRenditions(asset.kind, assetFileTypeFactsOf(data))) throw new PublicationRunError('renditionMissing');
+  const record: CatalogRenditionRecord = data;
   const renditions = await ensureCatalogAssetRenditions(db, { custody: 'company', fileId: asset.fileId, record });
   if (renditions?.status !== 'ready') throw new PublicationRunError('renditionMissing');
   return { record, renditions };

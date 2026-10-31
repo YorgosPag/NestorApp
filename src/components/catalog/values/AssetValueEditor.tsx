@@ -9,16 +9,15 @@
  */
 
 import { ArrowLeft, Plus, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
 import { FileThumbnail } from '@/components/shared/files/FileThumbnail';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { normalizeSearchText } from '@/lib/search/search';
+import { Popover, PopoverTrigger } from '@/components/ui/popover';
 import type { AssetRecord } from '@/services/catalog/catalog-api.client';
 
 import { useCatalogText } from '../shared/catalog-ui-hooks';
+import { AssetPickerPopover } from './AssetPickerPopover';
 import type { ValueEditorProps } from './value-editor-types';
 
 function AssetChip({ asset, props, index, onMove, onRemove }: {
@@ -41,39 +40,11 @@ function AssetChip({ asset, props, index, onMove, onRemove }: {
   );
 }
 
-function AssetPicker({ props, selected, onPick }: { readonly props: ValueEditorProps<'asset'>; readonly selected: readonly string[]; readonly onPick: (id: string) => void }) {
-  const { t } = useCatalogText();
-  const [query, setQuery] = useState('');
-  const eligible = useMemo(() => {
-    const wanted = normalizeSearchText(query.toLowerCase());
-    return props.env.assets.filter((asset) => props.attribute.config.assetKinds.includes(asset.kind) && !selected.includes(asset.id)
-      && (wanted === '' || normalizeSearchText(`${asset.code} ${props.env.text(asset.labels, '')}`.toLowerCase()).includes(wanted)));
-  }, [props.env, props.attribute.config.assetKinds, selected, query]);
-  return (
-    <PopoverContent className="grid w-80 gap-2">
-      <Input aria-label={t('values.assets.search')} placeholder={t('values.assets.search')} value={query} onChange={(event) => setQuery(event.target.value)} />
-      <ul className="m-0 grid max-h-64 list-none gap-1 overflow-auto p-0">
-        {eligible.length === 0 ? <li className="text-sm text-muted-foreground">{t('values.assets.none')}</li> : eligible.map((asset) => {
-          const file = asset.fileId ? props.env.files.get(asset.fileId) ?? null : null;
-          const name = props.env.text(asset.labels, asset.code);
-          return (
-            <li key={asset.id}>
-              <Button type="button" variant="ghost" className="w-full justify-start gap-2" onClick={() => onPick(asset.id)}>
-                {file ? <FileThumbnail file={file} displayName={name} size="xs" /> : null}
-                <span className="truncate">{name}</span>
-              </Button>
-            </li>
-          );
-        })}
-      </ul>
-    </PopoverContent>
-  );
-}
-
 export function AssetValueEditor(props: ValueEditorProps<'asset'>) {
   const { t } = useCatalogText();
   const [open, setOpen] = useState(false);
   const ids = props.value?.assetIds ?? [];
+  const eligible = props.env.assets.filter((asset) => props.attribute.config.assetKinds.includes(asset.kind) && !ids.includes(asset.id));
   const write = (next: readonly string[]) => props.onChange(next.length === 0 ? null : { type: 'asset', assetIds: next });
   const full = ids.length >= props.attribute.config.maxFiles;
   return (
@@ -91,7 +62,7 @@ export function AssetValueEditor(props: ValueEditorProps<'asset'>) {
         <PopoverTrigger asChild>
           <Button type="button" variant="outline" size="sm" disabled={props.disabled || full}><Plus className="mr-1 h-4 w-4" aria-hidden />{t('values.assets.add')}</Button>
         </PopoverTrigger>
-        <AssetPicker props={props} selected={ids} onPick={(id) => { write([...ids, id]); setOpen(false); }} />
+        <AssetPickerPopover assets={eligible} files={props.env.files} text={props.env.text} onPick={(id) => { write([...ids, id]); setOpen(false); }} />
       </Popover>
     </section>
   );

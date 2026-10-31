@@ -7,6 +7,7 @@
 import { z } from 'zod';
 
 import { HUMAN_LANGUAGES } from '@/i18n/languages';
+import { HOLD_REASON_MAX_LENGTH } from '@/lib/files/file-hold';
 import { PUBLICATION_FONT_CODES } from '../../publishing/publication-fonts';
 import {
   PUBLICATION_LIMITS,
@@ -76,3 +77,13 @@ export const publicationPreviewBodySchema = z.object({ modelId: entityIdSchema }
 
 /** Η πράξη «έκδοση» δεν έχει σώμα: όλα τα δίνει η αποθηκευμένη συνταγή. */
 export const runPublicationBodySchema = z.object({}).strict();
+
+/** Ούτε η διάθεση έχει σώμα: το αν επιτρέπεται το κρίνει ο διακομιστής από την έκδοση. */
+export const publicationDisposalBodySchema = z.object({}).strict();
+
+export const publicationLegalHoldBodySchema = z.discriminatedUnion('act', [
+  z.object({ act: z.literal('place'), reason: z.string().trim().min(1).max(HOLD_REASON_MAX_LENGTH) }).strict(),
+  z.object({ act: z.literal('release') }).strict(),
+]);
+
+export type PublicationLegalHoldBody = z.infer<typeof publicationLegalHoldBodySchema>;

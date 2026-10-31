@@ -9,12 +9,16 @@ import { PDFDocument } from 'pdf-lib';
 
 import { PUBLICATION_A4 } from '@/subapps/catalog/publishing/compose-publication';
 import type { LayoutDocument } from '@/subapps/catalog/publishing/layout-model';
-import { applyPrintBoxes, renderPublicationPdf, typstCompileArgs, typstPreviewArgs } from '../typst-adapter';
-import { parseTypstVersion, type TypstRunner } from '../typst-engine.server';
+import { readPdfTextLayout } from '@/services/pdf/pdf-rasterize.service';
+import { UNCHECKED_PUBLICATION_LAYOUT } from '@/subapps/catalog/types/publication';
+import { applyPrintBoxes, inspectRenderedLayout, renderPublicationPdf, typstCompileArgs, typstPreviewArgs } from '../typst-adapter';
+import { parseTypstVersion, typstJobsFor, type TypstRunner } from '../typst-engine.server';
 import { PUBLICATION_TYPST_TEMPLATE } from '../typst-template';
 
 jest.mock('server-only', () => ({}));
+jest.mock('@/services/pdf/pdf-rasterize.service', () => ({ readPdfTextLayout: jest.fn() }));
 
+const readLayout = jest.mocked(readPdfTextLayout);
 const colour = { rgb: '#000000', cmyk: [0, 0, 0, 100] as const };
 const document: LayoutDocument = {
   schemaVersion: 1, title: 'Τ', language: 'el', page: PUBLICATION_A4, footer: 'f',
@@ -117,6 +121,36 @@ describe('applyPrintBoxes', () => {
     expect(page.getTrimBox().width).toBeCloseTo(612.28 - 2 * bleed, 2);
     expect(page.getBleedBox().width).toBeCloseTo(612.28, 2);
     expect(boxed.pageCount).toBe(1);
+  });
+});
+
+describe('inspectRenderedLayout', () => {
+  const size = [8, 0, 0, 8] as const;
+  const onPage = (runs: readonly { text: string; transform: readonly number[]; width: number }[]) => [{ widthPt: 600, heightPt: 850, runs }];
+
+  it('🔑 η κρίση φτάνει στην αναφορά, με το bleed μόνο στην εκτύπωση', async () => {
+    readLayout.mockResolvedValue(onPage([{ text: 'α', transform: [...size, 5, 400], width: 20 }]));
+    await expect(inspectRenderedLayout(new Uint8Array(), 'screen', PUBLICATION_A4)).resolves.toMatchObject({ layoutChecked: true, clippedTextCount: 0 });
+    await expect(inspectRenderedLayout(new Uint8Array(), 'print', PUBLICATION_A4)).resolves.toMatchObject({ layoutChecked: true, clippedTextCount: 1 });
+  });
+
+  it('🔴 αποτυχία ανάγνωσης: «δεν ελέγχθηκε», και η έκδοση δεν πέφτει', async () => {
+    readLayout.mockRejectedValue(new Error('corrupt'));
+    await expect(inspectRenderedLayout(new Uint8Array(), 'print', PUBLICATION_A4)).resolves.toEqual(UNCHECKED_PUBLICATION_LAYOUT);
+  });
+
+  it('🔴 PDF χωρίς κείμενο: «δεν ελέγχθηκε», όχι μηδενικά που μοιάζουν καθαρά', async () => {
+    readLayout.mockResolvedValue(onPage([]));
+    await expect(inspectRenderedLayout(new Uint8Array(), 'print', PUBLICATION_A4)).resolves.toEqual(UNCHECKED_PUBLICATION_LAYOUT);
+  });
+});
+
+describe('typstJobsFor', () => {
+  it('🔑 ένας πυρήνας μένει στον web server, ποτέ λιγότερο από ένα νήμα', () => {
+    expect(typstJobsFor(4)).toBe(3);
+    expect(typstJobsFor(2)).toBe(1);
+    expect(typstJobsFor(1)).toBe(1);
+    expect(typstJobsFor(0)).toBe(1);
   });
 });
 

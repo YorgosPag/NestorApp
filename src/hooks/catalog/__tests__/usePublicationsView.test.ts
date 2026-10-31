@@ -6,7 +6,7 @@
 import { act, renderHook } from '@testing-library/react';
 
 import { fetchPublicationsView } from '@/services/catalog/catalog-publishing-api.client';
-import type { PublicationRunStatus, PublicationRunWire, PublicationsViewWire } from '@/subapps/catalog/types/publication';
+import { EMPTY_PUBLICATION_RETENTION, type PublicationRunStatus, type PublicationRunWire, type PublicationsViewWire } from '@/subapps/catalog/types/publication';
 import { PUBLICATION_POLL_MS, usePublicationsView } from '../usePublicationsView';
 
 jest.mock('@/services/catalog/catalog-publishing-api.client', () => ({ fetchPublicationsView: jest.fn() }));
@@ -25,7 +25,7 @@ jest.mock('@/hooks/useIdentityGatedResource', () => {
 const read = fetchPublicationsView as jest.MockedFunction<typeof fetchPublicationsView>;
 
 const run = (status: PublicationRunStatus): PublicationRunWire => ({
-  id: 'r1', recipeId: 'x', recipeRevision: 1, inputHash: 'h', audienceKey: 'none', priced: false, status,
+  id: 'r1', recipeId: 'x', recipeRevision: 1, inputHash: 'h', audienceKey: 'none', priced: false, priceVersion: null, retention: EMPTY_PUBLICATION_RETENTION, dispositionDueAt: null, status,
   progress: { phase: 'queued', pagesDone: 0, pagesTotal: 0 }, artifacts: [], report: null, failure: null, attempts: 1,
   requestedAt: '2026-10-30T10:00:00.000Z', requestedBy: 'u', finishedAt: null,
   companyId: 'c', createdAt: '2026-10-30T10:00:00.000Z', updatedAt: '2026-10-30T10:00:00.000Z',

@@ -308,7 +308,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ### Pre-commit checks (summary):
 
 <!-- BEGIN GENERATED GATE INDEX — ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ ΣΤΟ ΧΕΡΙ. Πηγή: docs/gates/3.NN.md · αναπαραγωγή: npm run gate-index:generate
-     fingerprint: sha256:eb4a03336eef32d0f09d2d74f7c3967c8afb06319e21859600a4102c01f6a5d8 -->
+     fingerprint: sha256:47742f634b040db83086916c1159ff81427583bf138701849f658faab699b4ba -->
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |
@@ -402,6 +402,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.107** | **Πύλη της όψης του commit** (ADR-924) — «κρίνει αυτή η πύλη ό,τι **θα δεσμευτεί** — ή τον δίσκο, όπου ζει και η ξένη αστάδιοποίητη δουλειά; (`--index` από τον εκτελεστή **και** ανάγνωση μέσα…» · `npm run test:gate-commit-view` · `SKIP_GATE_COMMIT_VIEW=1` · 📘 `docs/gates/3.107.md` | 🔴 RATCHET κατά ταυτότητα (το χρέος · ωμά σημεία ανάγνωσης αν… | `.gate-commit-view-baseline.json` |
 | **3.108** | **Πύλη της μίας δήλωσης οικογένειας namespaces** (ADR-280) — «γράφει κάποιος με το χέρι μια **οικογένεια** namespaces (`['building', 'building-storage', …]`) που ο hook **ήδη** φορτώνει μόνος του από το…» · `npm run test:i18n-namespace-family` · `SKIP_I18N_NAMESPACE_FAMILY=1` · 📘 `docs/gates/3.108.md` | ⛔ ZERO-TOL (Κ1+Κ2+Κ3) + 🔴 RATCHET κατά ταυτότητα (order-bear… | `.i18n-namespace-family-baseline.json` |
 | **3.109** | **Πύλη του απομονωμένου χώρου εργασίας** (ADR-925) — «κάνει πράκτορας commit **κατευθείαν στο `main`**, αντί στο δικό του κλαδί; (ο διακόπτης `enforce` ξεκίνησε κλειστός και γυρίζει στο καθαρό σημείο)» · `npm run test:agent-worktree` · `SKIP_AGENT_WORKTREE_POLICY=1` · 📘 `docs/gates/3.109.md` | ⛔ ZERO TOL (μόνο όταν `enforce: true`) | — |
+| **3.110** | **Πύλη απόδοσης του εκδότη καταλόγου** (ADR-923) — «βγαίνει το τυπωμένο PDF σωστό **με την αληθινή μηχανή**; — κανένα κείμενο πάνω σε άλλο, κανένα έξω από το χαρτί ή κάτω από το όριο, και PDF/A κατά αν…» · `npm run test:catalog-publisher-render` · 📘 `docs/gates/3.110.md` | ⛔ ZERO TOL · μόνο CI (Typst + veraPDF) | — |
 
 **📘 Πλήρες ιστορικό ανά πύλη** (περιστατικά, μετρήσεις, «⚠️ ΜΗΝ», απορριφθείσες εναλλακτικές):
 `docs/gates/<αριθμός>.md` — ή `npm run gate:explain 3.63`.
@@ -416,7 +417,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 επαληθεύει ότι **λύνεται**. Άνοιξε το JSON.
 
 📊 Πύλες που **τρέχουν**: **100** (εκτελεστής 92 + hook 21) ·
-γραμμές εδώ: **91** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
+γραμμές εδώ: **92** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
 *Αυτοί οι αριθμοί είναι **παραγόμενοι** — η προηγούμενη χειρόγραφη εκδοχή τους είχε ήδη*
 *αποκλίνει (έγραφε «48 γραμμές» και «61 πύλες»).*
 

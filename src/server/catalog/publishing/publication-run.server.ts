@@ -34,10 +34,14 @@ import { publicationBucket } from '@/server/catalog/publishing/publication-bucke
 import { createObjectOnce } from '@/server/storage/create-object-once.server';
 import { generateDeterministicCatalogPublicationRunId } from '@/services/enterprise-id.service';
 import { countLayoutSections } from '@/subapps/catalog/publishing/layout-model';
+import { isPublicationRunReusable, publicationRunOf, retentionPatch } from '@/subapps/catalog/publishing/publication-retention';
 import {
   EMPTY_PUBLICATION_REPORT,
+  EMPTY_PUBLICATION_RETENTION,
+  UNCHECKED_PUBLICATION_LAYOUT,
   type PublicationArtifact,
   type PublicationFailure,
+  type PublicationLayoutReport,
   type PublicationProgress,
   type PublicationRecipeDefinition,
   type PublicationReport,
@@ -48,7 +52,7 @@ import { readOwned, runCatalogReadOnly, type StoredCatalogRecord } from '../cata
 import { resolvePublicationAssets, type PublicationAssets } from './publication-assets.server';
 import { PublicationRunError } from './publication-prices.server';
 import { readPublicationSnapshot, type PublicationSnapshot } from './publication-snapshot.server';
-import { renderPublicationPdf } from './typst-adapter';
+import { inspectRenderedLayout, renderPublicationPdf } from './typst-adapter';
 import { assertTypstAvailable, runTypst, TypstFailedError, TypstUnavailableError, type TypstRunner } from './typst-engine.server';
 
 const logger = createModuleLogger('CatalogPublicationRun');
@@ -65,6 +69,9 @@ export const PUBLICATION_RUN_STALE_MS = 15 * 60 * 1000;
 
 const runRef = (db: Firestore, id: string): DocumentReference => db.collection(COLLECTIONS.CATALOG_PUBLICATION_RUNS).doc(id);
 
+/** Κάθε ανάγνωση εγγράφου περνά από εδώ: παλιές εκδόσεις δεν έχουν τα πεδία της διατήρησης. */
+const storedRunOf = (data: unknown): StoredPublicationRun | undefined => (data ? publicationRunOf(data as StoredPublicationRun) : undefined);
+
 export function publicationArtifactPath(companyId: string, runId: string, profile: PublicationOutputProfile): string {
   return `catalog-publications/${companyId}/${runId}/${profile}.pdf`;
 }
@@ -79,6 +86,9 @@ function queuedRun(id: string, ctx: AuthContext, recipe: StoredCatalogRecord<Pub
     inputHash: snapshot.inputHash,
     audienceKey: snapshot.audienceKey,
     priced: snapshot.priced,
+    priceVersion: recipe.pricing.kind === 'priced' ? { priceListId: recipe.pricing.priceListId, priceListVersionId: recipe.pricing.priceListVersionId } : null,
+    retention: EMPTY_PUBLICATION_RETENTION,
+    dispositionDueAt: null,
     status: 'queued',
     progress: { phase: 'queued', pagesDone: 0, pagesTotal: countLayoutSections(snapshot.document) },
     artifacts: [],
@@ -94,7 +104,7 @@ function queuedRun(id: string, ctx: AuthContext, recipe: StoredCatalogRecord<Pub
 }
 
 /** Το ιστορικό: **κάθε** αίτηση και **κάθε** κατάληξη (ADR-195). Η έκδοση δεν περνά από τη μηχανή, άρα το γράφει εδώ. */
-function recordRunChange(before: StoredPublicationRun | null, after: StoredPublicationRun): Promise<void> {
+function recordRunChange(before: StoredPublicationRun | null, after: StoredPublicationRun, performedBy: string = after.requestedBy): Promise<void> {
   return recordTrackedEntityWrite({
     entityType: 'catalog_publication_run',
     entityId: after.id,
@@ -102,9 +112,49 @@ function recordRunChange(before: StoredPublicationRun | null, after: StoredPubli
     trackedFields: CATALOG_PUBLICATION_RUN_TRACKED_FIELDS,
     before,
     after,
-    performedBy: after.requestedBy,
+    performedBy,
     ledger: { companyId: after.companyId },
   });
+}
+
+/**
+ * Μία αλλαγή σε ζωντανή έκδοση: συναλλαγή + ιστορικό με τον δράστη της. `change` = `null` ⇒ καμία αλλαγή. Ο κύκλος ζωής της
+ * διατήρησης περνά από εδώ, ώστε το αρχείο αυτό να μένει ο ένας γραφέας της συλλογής.
+ */
+export async function changePublicationRun(
+  id: string,
+  performedBy: string,
+  change: (run: StoredPublicationRun) => Partial<StoredPublicationRun> | null,
+): Promise<StoredPublicationRun | null> {
+  const db = getAdminFirestore();
+  const ref = runRef(db, id);
+  const outcome = await db.runTransaction(async (tx) => {
+    const before = storedRunOf((await tx.get(ref)).data());
+    if (!before) return null;
+    const patch = change(before);
+    if (patch === null) return { before, after: before, changed: false };
+    const updatedAt = nowISO();
+    tx.update(ref, { ...patch, updatedAt });
+    return { before, after: { ...before, ...patch, updatedAt }, changed: true };
+  });
+  if (outcome?.changed) await recordRunChange(outcome.before, outcome.after, performedBy);
+  return outcome?.after ?? null;
+}
+
+/**
+ * Ξεκινά το ρολόι των έτοιμων εκδόσεων μιας συνταγής. `keepRunId` = η νέα τελευταία· `null` = διαγράφηκε η συνταγή.
+ * Αν κοπεί στη μέση, η επόμενη έτοιμη έκδοση της συνταγής πιάνει ό,τι έμεινε.
+ */
+export async function supersedeRecipeRuns(companyId: string, recipeId: string, keepRunId: string | null, performedBy: string): Promise<void> {
+  const snap = await getAdminFirestore()
+    .collection(COLLECTIONS.CATALOG_PUBLICATION_RUNS)
+    .where('companyId', '==', companyId)
+    .where('recipeId', '==', recipeId)
+    .where('status', '==', 'ready')
+    .get();
+  const supersededAt = nowISO();
+  const earlier = snap.docs.map((doc) => publicationRunOf(doc.data() as StoredPublicationRun)).filter((run) => run.id !== keepRunId && run.retention.supersededAt === null);
+  await Promise.all(earlier.map((run) => changePublicationRun(run.id, performedBy, (current) => retentionPatch(current, { supersededAt }))));
 }
 
 export interface RequestedRun {
@@ -125,8 +175,8 @@ export async function requestPublicationRun(ctx: AuthContext, recipeId: string):
   const id = generateDeterministicCatalogPublicationRunId(ctx.companyId, snapshot.inputHash);
   const ref = runRef(db, id);
   const outcome = await db.runTransaction(async (tx) => {
-    const current = (await tx.get(ref)).data() as StoredPublicationRun | undefined;
-    if (current && current.status !== 'failed') return { run: current, before: current, mustExecute: false };
+    const current = storedRunOf((await tx.get(ref)).data());
+    if (current && isPublicationRunReusable(current)) return { run: current, before: current, mustExecute: false };
     const run = queuedRun(id, ctx, recipe, snapshot, (current?.attempts ?? 0) + 1, current?.createdAt ?? null);
     tx.set(ref, run);
     return { run, before: current ?? null, mustExecute: true };
@@ -144,7 +194,7 @@ async function renderProfile(input: {
   readonly profile: PublicationOutputProfile;
   readonly assets: PublicationAssets;
   readonly run: TypstRunner;
-}): Promise<PublicationArtifact> {
+}): Promise<{ readonly artifact: PublicationArtifact; readonly bytes: Uint8Array }> {
   const { requested, profile, assets } = input;
   const { snapshot, recipe } = requested;
   const rendered = await renderPublicationPdf(
@@ -154,7 +204,8 @@ async function renderProfile(input: {
   const storagePath = publicationArtifactPath(recipe.companyId, requested.run.id, profile);
   // 🔑 Μόνο δημιουργία: το κλειδί είναι ντετερμινιστικό, άρα επανάληψη μετά από διακοπή βρίσκει τα ίδια bytes (`exists`).
   await createObjectOnce(publicationBucket(), storagePath, rendered.bytes, 'application/pdf');
-  return { profile, storagePath, sizeBytes: rendered.bytes.length, pageCount: rendered.pageCount, sha256: rendered.sha256, renderMs: rendered.renderMs };
+  const artifact = { profile, storagePath, sizeBytes: rendered.bytes.length, pageCount: rendered.pageCount, sha256: rendered.sha256, renderMs: rendered.renderMs };
+  return { artifact, bytes: rendered.bytes };
 }
 
 export function publicationFailureOf(cause: unknown): PublicationFailure {
@@ -164,8 +215,8 @@ export function publicationFailureOf(cause: unknown): PublicationFailure {
   return 'internal';
 }
 
-function reportOf(snapshot: PublicationSnapshot, assets: PublicationAssets): PublicationReport {
-  return { ...EMPTY_PUBLICATION_REPORT, ...snapshot.report, lowResolutionImageCount: assets.lowResolutionImageCount, nonCmykImageCount: assets.nonCmykImageCount };
+function reportOf(snapshot: PublicationSnapshot, assets: PublicationAssets, layout: PublicationLayoutReport): PublicationReport {
+  return { ...EMPTY_PUBLICATION_REPORT, ...snapshot.report, lowResolutionImageCount: assets.lowResolutionImageCount, nonCmykImageCount: assets.nonCmykImageCount, ...layout };
 }
 
 /** Η απόδοση, μέσα στο `after` της αίτησης. Δεν πετά ποτέ: κάθε αποτυχία γίνεται κατάσταση της έκδοσης. */
@@ -180,13 +231,19 @@ export async function executePublicationRun(requested: RequestedRun, run: TypstR
     const assets = await resolvePublicationAssets(snapshot.document, snapshot.assets);
     await updateRun(ref, { progress: progress('composing', pagesTotal) });
     const artifacts: PublicationArtifact[] = [];
+    let layout = UNCHECKED_PUBLICATION_LAYOUT;
     for (const profile of recipe.profiles) {
       await updateRun(ref, { progress: progress('rendering', pagesTotal) });
-      artifacts.push(await renderProfile({ requested, profile, assets, run }));
+      const rendered = await renderProfile({ requested, profile, assets, run });
+      artifacts.push(rendered.artifact);
+      // Η διάταξη είναι κοινή στα δύο προφίλ: μετράται μία φορά, στο πρώτο.
+      if (artifacts.length === 1) layout = await inspectRenderedLayout(rendered.bytes, profile, snapshot.document.page);
       await updateRun(ref, { progress: progress('storing', pagesTotal), artifacts });
     }
-    await updateRun(ref, { status: 'ready', progress: progress('done', pagesTotal), report: reportOf(snapshot, assets), finishedAt: nowISO() });
+    await updateRun(ref, { status: 'ready', progress: progress('done', pagesTotal), report: reportOf(snapshot, assets, layout), finishedAt: nowISO() });
     await recordRunChange(requested.run, { ...requested.run, status: 'ready' });
+    await supersedeRecipeRuns(requested.run.companyId, requested.run.recipeId, requested.run.id, requested.run.requestedBy)
+      .catch((cause: unknown) => logger.error('Publication supersede failed', { runId: requested.run.id, error: cause instanceof Error ? cause.message : String(cause) }));
   } catch (cause) {
     const failure = publicationFailureOf(cause);
     logger.error('Catalog publication failed', { runId: requested.run.id, failure, error: cause instanceof Error ? cause.message : String(cause) });
@@ -203,12 +260,12 @@ export async function readRecentPublicationRuns(ctx: AuthContext, limit: number)
     .orderBy('requestedAt', 'desc')
     .limit(limit)
     .get();
-  return snap.docs.map((doc) => doc.data() as StoredPublicationRun);
+  return snap.docs.map((doc) => publicationRunOf(doc.data() as StoredPublicationRun));
 }
 
 /** Μία έκδοση αυτού του χώρου· ξένη ≡ ανύπαρκτη. */
 export async function readOwnedPublicationRun(ctx: AuthContext, id: string): Promise<StoredPublicationRun | null> {
-  const data = (await runRef(getAdminFirestore(), id).get()).data() as StoredPublicationRun | undefined;
+  const data = storedRunOf((await runRef(getAdminFirestore(), id).get()).data());
   return data && data.companyId === ctx.companyId ? data : null;
 }
 
@@ -223,7 +280,7 @@ export async function failInterruptedPublicationRuns(db: Firestore, nowMs: numbe
     .get();
   await Promise.all(snap.docs.map(async (doc) => {
     await updateRun(doc.ref, { status: 'failed', failure: 'interrupted', finishedAt: nowISO() });
-    const before = doc.data() as StoredPublicationRun;
+    const before = publicationRunOf(doc.data() as StoredPublicationRun);
     await recordRunChange(before, { ...before, status: 'failed', failure: 'interrupted' });
   }));
   return snap.size;

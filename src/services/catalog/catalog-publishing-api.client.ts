@@ -11,6 +11,7 @@
 
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { CATALOG_API, EXPECTED_REVISION_PARAM } from '@/subapps/catalog/catalog-routes';
+import type { PublicationLegalHoldBody } from '@/subapps/catalog/schema/zod/publication.schema';
 import type {
   PublicationPreviewWire,
   PublicationRecipeDefinition,
@@ -40,6 +41,15 @@ export function deletePublicationRecipe(id: string, expectedRevision: number): P
 /** Ζητά έκδοση από την αποθηκευμένη συνταγή (ιδεμπότητο: ίδιες είσοδοι ⇒ η ίδια έκδοση). */
 export function requestPublicationRun(recipeId: string): Promise<PublicationRunWire> {
   return apiClient.post<PublicationRunWire>(CATALOG_API.publicationRecipes.run(recipeId), {});
+}
+
+/** Σβήνει τα PDF έκδοσης που δεν κατέβηκε ποτέ. Η εγγραφή και το αποτύπωμα μένουν. */
+export function deletePublicationPdf(runId: string): Promise<PublicationRunWire> {
+  return apiClient.post<PublicationRunWire>(CATALOG_API.publicationDisposal(runId), {});
+}
+
+export function setPublicationLegalHold(runId: string, command: PublicationLegalHoldBody): Promise<PublicationRunWire> {
+  return apiClient.post<PublicationRunWire>(CATALOG_API.publicationLegalHold(runId), command);
 }
 
 /** Μία σελίδα του μοντέλου όπως θα τυπωθεί· τη συνταγή τη διαλέγει ο διακομιστής (POST που δεν γράφει). */

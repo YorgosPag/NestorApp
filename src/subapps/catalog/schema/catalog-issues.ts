@@ -169,6 +169,10 @@ export const CATALOG_ISSUE_CODES = [
   'publicationProfileRequired',
   'publicationScopeEmpty',
   'publicationAudienceNotCovered',
+  'publicationLogoNotEligible',
+  'publicationNotDeletable',
+  'publicationNotHoldable',
+  'publicationAlreadyOnHold',
 ] as const;
 
 export type CatalogIssueCode = (typeof CATALOG_ISSUE_CODES)[number];

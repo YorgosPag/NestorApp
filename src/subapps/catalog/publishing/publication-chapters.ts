@@ -65,7 +65,7 @@ export interface PublicationDataSet {
 export interface PublicationSelection {
   readonly chapters: readonly PublicationChapter[];
   readonly data: readonly DataVersionRef[];
-  readonly report: { readonly incompleteSkuCount: number; readonly unpricedSkuCount: number };
+  readonly report: { readonly incompleteSkuCount: number; readonly unpricedSkuCount: number; readonly missingSelectionCount: number };
 }
 
 const UNCATEGORIZED = 'uncategorized';
@@ -249,6 +249,13 @@ function countUnpriced(chapters: readonly PublicationChapter[], words: Publicati
   return count;
 }
 
+/** Επιλογές που δεν αντιστοιχούν πια σε ζωντανή εγγραφή: ο γραφέας τις κόβει στην αποθήκευση, η διαγραφή έρχεται μετά. */
+function countMissingSelection(data: PublicationDataSet, models: ReadonlyMap<string, StoredModel>): number {
+  if (data.scope.kind !== 'selection') return 0;
+  const productIds = new Set(data.products.map((product) => product.id));
+  return data.scope.entries.filter((entry) => !(entry.kind === 'productModel' ? models.has(entry.id) : productIds.has(entry.id))).length;
+}
+
 /** Το σύνολο της έκδοσης: κεφάλαια, εκδόσεις δεδομένων για το κλειδί, και ό,τι έμεινε απέξω. */
 export function selectPublicationContent(data: PublicationDataSet): PublicationSelection {
   const models = new Map(data.models.map((model) => [model.id, model]));
@@ -268,5 +275,6 @@ export function selectPublicationContent(data: PublicationDataSet): PublicationS
     bucketOf(buckets, chapterIdOf(products[0].categoryIds, categories)).entries.push({ entry, key: catalogSortKey(entry.title) });
   }
   const chapters = toChapters(buckets, data, categories);
-  return { chapters, data: dataRefs(grouped, data), report: { incompleteSkuCount: grouped.incomplete, unpricedSkuCount: countUnpriced(chapters, data.words) } };
+  const report = { incompleteSkuCount: grouped.incomplete, unpricedSkuCount: countUnpriced(chapters, data.words), missingSelectionCount: countMissingSelection(data, models) };
+  return { chapters, data: dataRefs(grouped, data), report };
 }

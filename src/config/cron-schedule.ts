@@ -612,7 +612,7 @@ export const CRON_SCHEDULE: readonly CronJobDefinition[] = [
   {
     slug: 'publication-run-sweep',
     path: '/api/cron/publication-run-sweep',
-    description: 'Δίχτυ εκδόσεων καταλόγου: έκδοση που έμεινε ανοιχτή από επανεκκίνηση ⇒ «διακόπηκε» (ADR-923 §5.6)',
+    description: 'Δίχτυ εκδόσεων καταλόγου: έκδοση που έμεινε ανοιχτή ⇒ «διακόπηκε» · διάθεση των PDF που έληξαν (ADR-923 §5.6.1)',
     enabled: true,
     // 🔑 **Κάθε 30′, γιατί είναι ΔΙΧΤΥ.** Η απόδοση τρέχει στο `after` της αίτησης· εδώ μόνο ό,τι κόπηκε.
     schedule: '19,49 * * * *',

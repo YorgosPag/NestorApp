@@ -304,7 +304,11 @@
     "publicationTitleRequired": "A title in the publication language is required.",
     "publicationProfileRequired": "Choose at least one output profile.",
     "publicationScopeEmpty": "The publication scope contains nothing.",
-    "publicationAudienceNotCovered": "This price list is not offered to the audience of the publication."
+    "publicationAudienceNotCovered": "This price list is not offered to the audience of the publication.",
+    "publicationLogoNotEligible": "The logo must be an asset with the Logo role and a PNG, JPEG or TIFF file.",
+    "publicationNotDeletable": "This PDF cannot be deleted by hand: it has been downloaded or is under legal hold.",
+    "publicationNotHoldable": "A hold can only be placed on a ready publication that still has its file.",
+    "publicationAlreadyOnHold": "This publication is already under legal hold."
   },
   "measurement": {
     "family": {
@@ -647,7 +651,8 @@
       "certificate": "Certificate",
       "epd": "Environmental declaration (EPD)",
       "bim": "BIM object",
-      "video": "Video"
+      "video": "Video",
+      "logo": "Logo"
     },
     "colour": {
       "models": {
@@ -973,12 +978,46 @@
       "footerNote": "Footer note",
       "primary": "Primary colour",
       "accent": "Accent colour",
-      "font": "Font"
+      "font": "Font",
+      "logo": "Logo"
+    },
+    "retention": {
+      "scheduled": "This PDF may be deleted from {date}.",
+      "legalHold": "Legal hold: {reason}",
+      "disposedStatus": "No file",
+      "disposed": "The PDF was deleted on {date}. sha256 fingerprint: {hash}",
+      "delete": "Delete PDF",
+      "deleteDescription": "This publication was never downloaded, so it reached nobody. Its history stays.",
+      "hold": "Legal hold",
+      "holdReason": "Reason for the hold",
+      "release": "Release hold"
+    },
+    "logo": {
+      "choose": "Choose logo",
+      "remove": "Remove logo",
+      "missing": "This logo no longer exists. Choose another.",
+      "hint": "Shows assets with the Logo role in PNG, JPEG or TIFF. SVG files cannot go into a publication."
     },
     "scope": {
       "all": "The whole catalogue",
       "categories": "Selected categories",
       "selection": "Manual selection"
+    },
+    "selection": {
+      "pick": "Choose products",
+      "description": "A model brings all its variants. For one specific item, type its code.",
+      "count": "{count, plural, one {# selected} other {# selected}}",
+      "empty": "Nothing selected yet.",
+      "remove": "Remove {name}",
+      "showAll": "Show all",
+      "family": "Family",
+      "allFamilies": "All families",
+      "noCode": "No code",
+      "noRows": "No products found.",
+      "unavailable": "The product list did not load.",
+      "more": "More",
+      "limit": "The limit of {max} selections has been reached.",
+      "done": "Done"
     },
     "pricing": {
       "none": "No prices (technical catalogue)",
@@ -1032,7 +1071,12 @@
       "incomplete": "{count, plural, one {# incomplete SKU left out} other {# incomplete SKUs left out}}",
       "unpriced": "{count, plural, one {# SKU without a price} other {# SKUs without a price}}",
       "lowResolution": "{count, plural, one {# image below 300 dpi} other {# images below 300 dpi}}",
-      "nonCmyk": "{count, plural, one {# image not in CMYK} other {# images not in CMYK}}"
+      "nonCmyk": "{count, plural, one {# image not in CMYK} other {# images not in CMYK}}",
+      "overlappingText": "{count, plural, one {# place where text overlaps other text} other {# places where text overlaps other text}}",
+      "clippedText": "{count, plural, one {# text runs off the paper} other {# texts run off the paper}}",
+      "undersizedText": "{count, plural, one {# text too small to read} other {# texts too small to read}}",
+      "missingSelection": "{count, plural, one {# selection no longer exists and was left out} other {# selections no longer exist and were left out}}",
+      "layoutUnchecked": "The layout check did not complete. Review the file before sending it to print."
     },
     "preview": {
       "title": "How it will print",

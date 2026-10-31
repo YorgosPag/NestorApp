@@ -8,7 +8,6 @@
  * 🔑 Η γραμματοσειρά είναι **κλειστό σύνολο** με ελεγμένη άδεια (`PUBLICATION_FONTS`)· δεν υπάρχει ελεύθερο όνομα.
  * 🔑 Το ίδιο χρώμα δηλώνεται και στους δύο χώρους, γιατί το Typst δεν μετατρέπει: η εκτύπωση παίρνει ακριβώς τα CMYK που
  *    έγραψε ο άνθρωπος. Η επικύρωση (`#rrggbb`, 0–100) είναι η ίδια συνάρτηση με του γραφέα.
- * 🔑 Το λογότυπο (`logoAssetId`) δεν έχει επιλογέα ακόμη: η τιμή διατηρείται όπως είναι.
  */
 
 import React, { useId } from 'react';
@@ -24,6 +23,7 @@ import { CatalogField } from '../shared/CatalogFormFields';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
 import { FieldIssues } from '../shared/CatalogIssues';
 import { withCmykPart, withTheme, type PublicationFieldsProps } from './publication-draft';
+import { PublicationLogoField } from './PublicationLogoField';
 
 /** Τα τέσσερα μελάνια — διεθνείς συντομογραφίες, όχι μεταφράσιμο κείμενο. */
 const CMYK_INKS = ['C', 'M', 'Y', 'K'] as const;
@@ -63,6 +63,7 @@ export function PublicationThemeFields({ draft, onChange, issues, disabled }: Pu
   const { theme } = draft;
   return (
     <section className="flex min-w-0 flex-col gap-4">
+      <PublicationLogoField draft={draft} onChange={onChange} issues={issues} disabled={disabled} />
       <CatalogField label={t('publishing.fields.font')} issues={issues} path="theme.fontCode">
         {({ id }) => (
           <EnumSelect id={id} value={theme.fontCode} values={PUBLICATION_FONT_CODES} disabled={disabled}

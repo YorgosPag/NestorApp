@@ -13,7 +13,12 @@ import type { LayoutColour } from '@/subapps/catalog/publishing/layout-model';
 import { PUBLICATION_LIMITS } from '@/subapps/catalog/publishing/publication-vocabulary';
 import type { CatalogIssue } from '@/subapps/catalog/schema/catalog-issues';
 import type { HumanLanguage } from '@/i18n/languages';
-import type { PublicationRecipeDefinition, PublicationRecipeWire, PublicationTheme } from '@/subapps/catalog/types/publication';
+import type {
+  PublicationRecipeDefinition,
+  PublicationRecipeWire,
+  PublicationSelectionEntry,
+  PublicationTheme,
+} from '@/subapps/catalog/types/publication';
 import { validatePublicationRecipe } from '@/subapps/catalog/publishing/validate-publication-recipe';
 
 export const DEFAULT_PRIMARY_COLOUR: LayoutColour = { rgb: '#1f3a5f', cmyk: [100, 80, 30, 20] };
@@ -59,6 +64,16 @@ export function recipeDefinitionOf(record: PublicationRecipeWire): PublicationRe
 export function toggleInOrder<T>(current: readonly T[], item: T, on: boolean, order: readonly T[]): T[] {
   const next = on ? [...current, item] : current.filter((entry) => entry !== item);
   return order.filter((entry) => next.includes(entry));
+}
+
+/** Προσθέτει ή αφαιρεί μία επιλογή του εύρους `selection`. Καμία διπλή εγγραφή, ό,τι κι αν πατηθεί δύο φορές. */
+export function toggleSelectionEntry(
+  entries: readonly PublicationSelectionEntry[],
+  entry: PublicationSelectionEntry,
+  on: boolean,
+): readonly PublicationSelectionEntry[] {
+  const others = entries.filter((other) => !(other.kind === entry.kind && other.id === entry.id));
+  return on ? [...others, entry] : others;
 }
 
 export function withTheme(draft: PublicationRecipeDefinition, patch: Partial<PublicationTheme>): PublicationRecipeDefinition {

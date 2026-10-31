@@ -134,7 +134,7 @@ export const CATALOG_PUBLICATION_RECIPE_TRACKED_FIELDS = defs(
   ['labels', 'title', 'scope', 'pricing', 'theme', 'templates', 'profiles', 'footerNote'],
 );
 
-export const CATALOG_PUBLICATION_RUN_TRACKED_FIELDS = defs(['recipeId', 'status', 'failure', 'audienceKey', 'inputHash'], []);
+export const CATALOG_PUBLICATION_RUN_TRACKED_FIELDS = defs(['recipeId', 'status', 'failure', 'audienceKey', 'inputHash'], ['retention']);
 
 export const CATALOG_DISCOUNT_CONDITION_TRACKED_FIELDS = defs(
   ['discountGroupId', 'validFrom', 'validUntil', 'isDeleted'],

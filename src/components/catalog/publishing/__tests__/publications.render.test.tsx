@@ -8,7 +8,7 @@ import React from 'react';
 import { render, screen, within } from '@testing-library/react';
 
 import { CATALOG_API } from '@/subapps/catalog/catalog-routes';
-import type { PublicationRecipeWire, PublicationRunWire } from '@/subapps/catalog/types/publication';
+import { EMPTY_PUBLICATION_RETENTION, type PublicationRecipeWire, type PublicationRunWire } from '@/subapps/catalog/types/publication';
 import { PublicationRecipeEditor } from '../PublicationRecipeEditor';
 import { PublicationRecipeList } from '../PublicationRecipeList';
 import { PublicationRunList } from '../PublicationRunList';
@@ -27,6 +27,7 @@ jest.mock('@/providers/NotificationProvider', () => ({
   useNotifications: () => ({ success: jest.fn(), error: jest.fn(), warning: jest.fn() }),
 }));
 jest.mock('@/hooks/catalog/useCatalogCollection', () => ({ useCatalogCollection: () => ({ state: 'ready', items: [] }) }));
+jest.mock('@/hooks/catalog/useCatalogAssetFiles', () => ({ useCatalogAssetFiles: () => ({ ready: true, byId: new Map(), byAsset: new Map() }) }));
 
 const meta = {
   companyId: 'comp_test',
@@ -56,13 +57,16 @@ const baseRun: PublicationRunWire = {
   inputHash: 'h',
   audienceKey: 'none',
   priced: false,
+  priceVersion: null,
+  retention: EMPTY_PUBLICATION_RETENTION,
+  dispositionDueAt: null,
   status: 'ready',
   progress: { phase: 'done', pagesDone: 12, pagesTotal: 12 },
   artifacts: [
     { profile: 'print', storagePath: 'p', sizeBytes: 10, pageCount: 12, sha256: 'a', renderMs: 5 },
     { profile: 'screen', storagePath: 's', sizeBytes: 10, pageCount: 12, sha256: 'b', renderMs: 5 },
   ],
-  report: { incompleteSkuCount: 2, unpricedSkuCount: 0, lowResolutionImageCount: 0, nonCmykImageCount: 1 },
+  report: { incompleteSkuCount: 2, unpricedSkuCount: 0, lowResolutionImageCount: 0, nonCmykImageCount: 1, layoutChecked: true, overlappingTextCount: 3, clippedTextCount: 0, undersizedTextCount: 0 },
   failure: null,
   attempts: 1,
   requestedAt: '2026-10-30T10:00:00.000Z',
@@ -98,30 +102,44 @@ describe('Εκδότης καταλόγου — λίστα συνταγών', ()
 
 describe('Εκδότης καταλόγου — εκδόσεις', () => {
   it('η έκδοση που απέτυχε λέει την κλειστή αιτία και δεν δίνει λήψη', () => {
-    render(<PublicationRunList runs={[failedRun]} />);
+    render(<PublicationRunList runs={[failedRun]} revalidate={jest.fn()} />);
     expect(screen.getByRole('alert')).toHaveTextContent('publishing.failure.engineTimeout');
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
 
   it('η έτοιμη έκδοση δίνει σύνδεσμο λήψης ανά προφίλ και την αναφορά της', () => {
-    render(<PublicationRunList runs={[baseRun]} />);
+    render(<PublicationRunList runs={[baseRun]} revalidate={jest.fn()} />);
     const links = screen.getAllByRole('link');
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
       CATALOG_API.publicationDownload('pubrun_1', 'print'),
       CATALOG_API.publicationDownload('pubrun_1', 'screen'),
     ]);
     const report = screen.getByRole('region', { name: 'publishing.report.title' });
-    expect(within(report).getAllByRole('listitem')).toHaveLength(2);
+    expect(within(report).getAllByRole('listitem').map((item) => item.textContent?.split('|')[0])).toEqual([
+      'publishing.report.incomplete', 'publishing.report.nonCmyk', 'publishing.report.overlappingText',
+    ]);
+  });
+
+  it('🔴 έλεγχος διάταξης που δεν έγινε λέγεται, ακόμη κι όταν όλοι οι μετρητές είναι μηδέν', () => {
+    const counts = { incompleteSkuCount: 0, unpricedSkuCount: 0, lowResolutionImageCount: 0, nonCmykImageCount: 0, overlappingTextCount: 0, clippedTextCount: 0, undersizedTextCount: 0 };
+    render(<PublicationRunList runs={[{ ...baseRun, report: { ...counts, layoutChecked: false } }]} revalidate={jest.fn()} />);
+    expect(screen.getByText('publishing.report.layoutUnchecked')).toBeInTheDocument();
+  });
+
+  it('καθαρή έκδοση με ολοκληρωμένο έλεγχο: καμία αναφορά, κανένας θόρυβος', () => {
+    const counts = { incompleteSkuCount: 0, unpricedSkuCount: 0, lowResolutionImageCount: 0, nonCmykImageCount: 0, overlappingTextCount: 0, clippedTextCount: 0, undersizedTextCount: 0 };
+    render(<PublicationRunList runs={[{ ...baseRun, report: { ...counts, layoutChecked: true } }]} revalidate={jest.fn()} />);
+    expect(screen.queryByRole('region', { name: 'publishing.report.title' })).not.toBeInTheDocument();
   });
 
   it('χωρίς εκδόσεις λέει ότι δεν έγινε ακόμη καμία', () => {
-    render(<PublicationRunList runs={[]} />);
+    render(<PublicationRunList runs={[]} revalidate={jest.fn()} />);
     expect(screen.getByText('publishing.noRuns')).toBeInTheDocument();
   });
 
   it('η έκδοση σε εξέλιξη δείχνει φάση και πρόοδο', () => {
     const running: PublicationRunWire = { ...baseRun, status: 'running', artifacts: [], report: null, progress: { phase: 'composing', pagesDone: 3, pagesTotal: 12 } };
-    render(<PublicationRunList runs={[running]} />);
+    render(<PublicationRunList runs={[running]} revalidate={jest.fn()} />);
     expect(screen.getByText(/publishing\.phase\.composing/)).toBeInTheDocument();
     expect(screen.getByText(/publishing\.progress/)).toBeInTheDocument();
   });

@@ -7,20 +7,26 @@
  * Οι άγκυρες χρώματος/προτύπου διαβάζουν το **ίδιο το PDF** (αποσυμπιεσμένες ροές), όχι τον κώδικα του προτύπου.
  * ⚠️ Διάταξη (επικαλύψεις, ετικέτες ομάδων) ελέγχθηκε με το μάτι σε PNG σελίδων· κανένα από αυτά τα tests δεν τη βλέπει.
  */
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { inflateSync } from 'node:zlib';
 
 import { PDFDocument } from 'pdf-lib';
 
 import { composePublication } from '@/subapps/catalog/publishing/compose-publication';
+import { judgePublicationLayout } from '@/subapps/catalog/publishing/publication-layout-judge';
 import type { PublicationChapter, VariantModelEntry } from '@/subapps/catalog/publishing/publication-entries';
 import type { PreviewRow } from '@/subapps/catalog/table/catalog-table';
 import type { PublicationRecipeDefinition } from '@/subapps/catalog/types/publication';
-import { renderPublicationPdf, renderPublicationPreview } from '../typst-adapter';
+import { fontDirectoryOf, renderPublicationPdf, renderPublicationPreview } from '../typst-adapter';
 import { assertTypstAvailable, runTypst } from '../typst-engine.server';
+import { readLayoutInChildProcess } from './pdf-layout-oracle';
 
 jest.mock('server-only', () => ({}));
 
 const binary = process.env.CATALOG_TYPST_BIN?.trim();
+const pdfOutDirectory = process.env.CATALOG_TYPST_PDF_OUT?.trim();
 const describeReal = binary ? describe : describe.skip;
 const FAMILY_PAGES = 320;
 
@@ -59,6 +65,31 @@ const document = composePublication({
 
 const input = { document, fontCode: 'liberationSans' as const, dataAsOfEpoch: 1790000000, readAsset: async () => new Uint8Array(), run: runTypst };
 
+/** Άθραυστος κωδικός σε στενή στήλη: το δυσκολότερο κελί του πίνακα. */
+const UNBREAKABLE_CODE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123';
+
+/** Τρία ελαττώματα στο ίδιο PDF: χωρίς αυτά, το «0 ευρήματα» δεν θα ξεχώριζε το καθαρό αρχείο από τον τυφλό κριτή. */
+const DEFECTIVE_TYPST = `#set page(width: 120mm, height: 80mm, margin: 10mm)
+#set text(font: "Liberation Sans", size: 10pt)
+#place(top + left, dx: 5mm, dy: 5mm)[Πρώτο κείμενο επικάλυψης]
+#place(top + left, dx: 12mm, dy: 5mm)[Δεύτερο κείμενο επικάλυψης]
+#place(top + left, dx: 12mm, dy: 30mm, rotate(90deg, reflow: true)[Κάθετο κείμενο])
+#place(top + left, dx: 2mm, dy: 40mm)[Οριζόντιο κείμενο πάνω στο κάθετο]
+#place(top + left, dx: 95mm, dy: 50mm)[Κείμενο που βγαίνει έξω από το χαρτί]
+#place(top + left, dx: 5mm, dy: 55mm, text(size: 4pt)[μικροσκοπικό])
+`;
+
+async function renderRaw(source: string): Promise<Uint8Array> {
+  const directory = await mkdtemp(path.join(tmpdir(), 'nestor-witness-'));
+  try {
+    await writeFile(path.join(directory, 'witness.typ'), source, 'utf8');
+    await runTypst({ cwd: directory, args: ['compile', 'witness.typ', 'witness.pdf', '--root', '.', '--ignore-system-fonts', '--font-path', fontDirectoryOf('liberationSans')], timeoutMs: 20_000 });
+    return new Uint8Array(await readFile(path.join(directory, 'witness.pdf')));
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+}
+
 const hostile = '<p>#import "x.typ": * και #read("/etc/passwd") και $x^2$ και *έντονο* και @ref</p>';
 
 /** Μικρό έγγραφο με ό,τι ο όγκος δεν έχει: κακόβουλο κείμενο, τιμές, ζώνες ομάδας, πλέγμα καρτών. */
@@ -68,7 +99,11 @@ function sampler(groupStyle: 'band' | 'rail') {
     ...base,
     descriptionHtml: hostile,
     priceRowIds: new Set(['price']),
-    preview: { ...base.preview, rows: [...base.preview.rows, { kind: 'attribute', id: 'price', label: 'Τιμή', unit: null, filter: null, merge: 'none', cells: base.preview.columns.map(() => 'Ζητήστε προσφορά') }] },
+    preview: { ...base.preview, rows: [
+      ...base.preview.rows,
+      { kind: 'attribute', id: 'code', label: 'Κωδικός', unit: null, filter: null, merge: 'none', cells: base.preview.columns.map(() => UNBREAKABLE_CODE) },
+      { kind: 'attribute', id: 'price', label: 'Τιμή', unit: null, filter: null, merge: 'none', cells: base.preview.columns.map(() => 'Ζητήστε προσφορά') },
+    ] },
   };
   const cards = Array.from({ length: 7 }, (_, index) => ({ id: `g${index}`, title: `Εξάρτημα ${index}`, code: `ACC-${index}`, imageAssetId: null, lines: ['1058x596x250'], price: '10,50 €' }));
   return composePublication({
@@ -113,6 +148,12 @@ describeReal('πραγματικό Typst — κατάλογος 300+ σελίδ�
     expect(first.sha256).toBe(second.sha256);
   }, 300_000);
 
+  it.each(['print', 'screen'] as const)('🔑 ντετερμινισμός %s: ο αριθμός νημάτων δεν αλλάζει τα bytes', async (profile) => {
+    const withJobs = (jobs: number) => renderPublicationPdf({ ...input, run: (invocation) => runTypst({ ...invocation, jobs }) }, profile);
+    const [serial, parallel] = [await withJobs(1), await withJobs(3)];
+    expect(serial.sha256).toBe(parallel.sha256);
+  }, 300_000);
+
   it.each(['rail', 'band'] as const)('δείγμα %s: τιμές, ζώνες, κάρτες σε 5 στήλες και κακόβουλο κείμενο μεταγλωττίζονται και στα δύο προφίλ', async (style) => {
     const sample = { ...input, document: sampler(style) };
     for (const profile of ['print', 'screen'] as const) await expect(renderPublicationPdf(sample, profile)).resolves.toMatchObject({ pageCount: expect.any(Number) });
@@ -125,6 +166,25 @@ describeReal('πραγματικό Typst — κατάλογος 300+ σελίδ�
     expect(content.some((stream) => /\s[\d.]+ [\d.]+ [\d.]+ [\d.]+ k\s/.test(stream))).toBe(true);
     expect(content.filter((stream) => NON_CMYK_OPERATOR.test(stream))).toEqual([]);
   }, 60_000);
+
+  it('🧪 μάρτυρας: ο κριτής ΒΛΕΠΕΙ επικάλυψη, περιστραμμένη επικάλυψη, κομμένο και μικροσκοπικό κείμενο σε πραγματικό PDF', async () => {
+    const verdict = judgePublicationLayout(readLayoutInChildProcess(await renderRaw(DEFECTIVE_TYPST)), 0);
+    expect(verdict.overlappingTextCount).toBe(2);
+    expect(verdict.clippedTextCount).toBe(1);
+    expect(verdict.undersizedTextCount).toBe(1);
+    expect(verdict.samples.join(' ')).toContain('Κάθετο');
+  }, 30_000);
+
+  it.each(['print', 'screen'] as const)('🔴 διάταξη %s: κανένα κείμενο δεν πατά άλλο, δεν βγαίνει από το χαρτί, δεν πέφτει κάτω από το όριο', async (profile) => {
+    const bleedPt = profile === 'print' ? document.page.bleedMm * (72 / 25.4) : 0;
+    for (const sample of [sampler('rail'), sampler('band'), document]) {
+      const { bytes } = await renderPublicationPdf({ ...input, document: sample }, profile);
+      const verdict = judgePublicationLayout(readLayoutInChildProcess(bytes), bleedPt);
+      process.stdout.write(`[διάταξη ${profile}] ${JSON.stringify(verdict)}\n`);
+      expect(verdict.runsExamined).toBeGreaterThan(100);
+      expect(verdict).toMatchObject({ overlappingTextCount: 0, clippedTextCount: 0, undersizedTextCount: 0 });
+    }
+  }, 300_000);
 
   it('🔑 εκτύπωση: TrimBox = A4, μέσα σε σελίδα μεγαλωμένη κατά το bleed', async () => {
     const { bytes } = await renderPublicationPdf({ ...input, document: sampler('rail') }, 'print');
@@ -139,6 +199,16 @@ describeReal('πραγματικό Typst — κατάλογος 300+ σελίδ�
     expect(everything).toMatch(/pdfaid:part[>="]+\s*2/);
     expect(everything).toMatch(/pdfaid:conformance[>="]+\s*B/);
   }, 60_000);
+
+  // Το `2B` πιο πάνω είναι δήλωση του Typst. Με `CATALOG_TYPST_PDF_OUT` τα αρχεία μένουν στον δίσκο για ανεξάρτητο έλεγχο (veraPDF).
+  (pdfOutDirectory ? it : it.skip)('τα αρχεία του προφίλ οθόνης για τον ανεξάρτητο έλεγχο PDF/A', async () => {
+    const outputs = { 'screen-rail.pdf': sampler('rail'), 'screen-band.pdf': sampler('band'), 'screen-volume.pdf': document };
+    await mkdir(pdfOutDirectory as string, { recursive: true });
+    for (const [name, sample] of Object.entries(outputs)) {
+      const { bytes } = await renderPublicationPdf({ ...input, document: sample }, 'screen');
+      await writeFile(path.join(pdfOutDirectory as string, name), bytes);
+    }
+  }, 300_000);
 
   it('προεπισκόπηση: βγάζει PNG μέσα στο χρονικό της όριο', async () => {
     const png = await renderPublicationPreview({ ...input, document: sampler('rail') });

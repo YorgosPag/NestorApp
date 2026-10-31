@@ -296,6 +296,42 @@ export async function countPdfPages(pdfBuffer: Buffer): Promise<number> {
   }
 }
 
+/** Ένα κομμάτι κειμένου σε μονάδες PDF, αρχή κάτω-αριστερά, με τον πίνακα του: ο καλών ξέρει έτσι και μέγεθος και περιστροφή. */
+export interface PdfTextRun {
+  readonly text: string;
+  readonly transform: readonly number[];
+  readonly width: number;
+}
+
+export interface PdfPageTextLayout {
+  readonly widthPt: number;
+  readonly heightPt: number;
+  readonly runs: readonly PdfTextRun[];
+}
+
+/** **Η γεωμετρία του κειμένου όλου του PDF** (ADR-923 §5.6.1), χωρίς ζωγραφική: ό,τι χρειάζεται ένας έλεγχος διάταξης. */
+export async function readPdfTextLayout(pdfBuffer: Uint8Array): Promise<PdfPageTextLayout[]> {
+  const pdfjs = await loadPdfjs();
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(pdfBuffer), isEvalSupported: false }).promise;
+  const pages: PdfPageTextLayout[] = [];
+  try {
+    for (let pageNum = 1; pageNum <= doc.numPages; pageNum += 1) {
+      const page = await doc.getPage(pageNum);
+      try {
+        const { width: widthPt, height: heightPt } = page.getViewport({ scale: 1 });
+        const { items } = await page.getTextContent();
+        const runs = items.flatMap(({ str, transform, width }) => (str && str.trim() !== '' && transform ? [{ text: str, transform, width: width ?? 0 }] : []));
+        pages.push({ widthPt, heightPt, runs });
+      } finally {
+        page.cleanup();
+      }
+    }
+  } finally {
+    await doc.destroy();
+  }
+  return pages;
+}
+
 /**
  * **Το κείμενο του PDF, ανά σελίδα** (ADR-900 §3.8 — ανάγνωση ΠΚΑ). Γραμμές ενωμένες με αλλαγή γραμμής
  * όπου το pdf.js σημειώνει τέλος γραμμής· κανένα OCR (σαρωμένο PDF ⇒ κενό κείμενο, και ο

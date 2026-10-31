@@ -13,6 +13,7 @@ import 'server-only';
  * | `--ignore-system-fonts` + `--font-path` | μόνο γραμματοσειρές του μητρώου (CHECK 3.69), ίδιο PDF σε κάθε μηχάνημα |
  * | χρονικό όριο με `kill` | κολλημένη απόδοση δεν τρώει τον διακομιστή |
  * | ουρά μίας δουλειάς | 4,5–8,6 s CPU ανά 345 σελίδες· δύο μαζί θα πάγωναν τις αιτήσεις |
+ * | `--jobs` πυρήνες − 1 | χωρίς όριο το Typst παίρνει όλους τους πυρήνες, δίπλα στον web server της ίδιας εικόνας |
  *
  * 🔑 **Δηλωμένη απουσία**: το Typst δεν υπάρχει ακόμη στην παραγωγή. Η έλλειψη είναι {@link TypstUnavailableError} με
  *    όνομα, όχι τυχαίο `ENOENT`: η έκδοση καταγράφει `engineUnavailable` και το UI το λέει καθαρά.
@@ -20,6 +21,7 @@ import 'server-only';
  */
 
 import { spawn } from 'node:child_process';
+import { availableParallelism } from 'node:os';
 
 import { createPriorityTaskQueue } from '@/lib/async/priority-task-queue';
 
@@ -49,6 +51,8 @@ export interface TypstInvocation {
   readonly cwd: string;
   readonly args: readonly string[];
   readonly timeoutMs: number;
+  /** Ρητός αριθμός νημάτων· χωρίς αυτόν ισχύει το {@link typstJobsFor}. Δεν επηρεάζει τα bytes (άγκυρα στο `typst-real.test.ts`). */
+  readonly jobs?: number;
 }
 
 /** Η πόρτα προς τη μηχανή — οι δοκιμές δίνουν δική τους, ώστε η ροή να ελέγχεται χωρίς εκτελέσιμο. */
@@ -94,10 +98,16 @@ export async function assertTypstAvailable(): Promise<string> {
   return version;
 }
 
+/** Ένας πυρήνας μένει πάντα στον web server· σε μηχάνημα ενός πυρήνα η απόδοση τρέχει σειριακά. */
+export function typstJobsFor(cores: number): number {
+  return Math.max(1, cores - 1);
+}
+
 const queue = createPriorityTaskQueue(1);
 
 /** Ο πραγματικός εκτελεστής: μία απόδοση τη φορά ανά διεργασία, η προεπισκόπηση προηγείται της πλήρους έκδοσης. */
 export const runTypst: TypstRunner = (invocation) =>
   queue.schedule(`${invocation.cwd}:${invocation.args.join(' ')}`, { priority: invocation.timeoutMs <= TYPST_PREVIEW_TIMEOUT_MS ? 0 : 1, group: 'catalog-typst' }, async () => {
-    await runProcess(invocation);
+    const jobs = invocation.jobs ?? typstJobsFor(availableParallelism());
+    await runProcess({ ...invocation, args: [...invocation.args, '--jobs', String(jobs)] });
   });

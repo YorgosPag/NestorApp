@@ -10,6 +10,7 @@
  * | `pricingView` | **ανάγνωση** τιμών, και η ανάλυσή τους — η ΜΟΝΗ πόρτα τους είναι ο διακομιστής (§5.11 «3δ» Ζ) | SAP προβολή συνθηκών (VK13) |
  * | `pricing` | τιμοκατάλογοι, πρόχειρες εκδόσεις, γραμμές, ομάδες, συνθήκες | SAP συντήρηση συνθηκών |
  * | `pricingPublish` | **δημοσίευση** έκδοσης και επιβεβαίωση φράχτη | SAP αποδέσμευση (release) — ≠ συντήρηση |
+ * | `legalHolds` | δικαστική δέσμευση PDF έκδοσης: το **ένα** δικαίωμα για κάθε δέσμευση της πλατφόρμας (ADR-864 §21) | Purview · Vault |
  *
  * @module subapps/catalog/vocabulary/catalog-authorities
  */
@@ -22,6 +23,7 @@ export const CATALOG_AUTHORITY_PERMISSIONS = {
   pricingView: 'catalog:pricing:view',
   pricing: 'catalog:pricing:manage',
   pricingPublish: 'catalog:pricing:publish',
+  legalHolds: 'legal:holds:manage',
 } as const satisfies Readonly<Record<string, PermissionId>>;
 
 export type CatalogAuthority = keyof typeof CATALOG_AUTHORITY_PERMISSIONS;

@@ -30,6 +30,7 @@ export const CATALOG_ASSET_ROLES = [
   'epd',
   'bim',
   'video',
+  'logo',
 ] as const;
 
 export type CatalogAssetRole = (typeof CATALOG_ASSET_ROLES)[number];
@@ -52,6 +53,7 @@ export const ASSET_ROLE_KINDS: Readonly<Record<CatalogAssetRole, readonly AssetK
   epd: ['document'],
   bim: ['bim'],
   video: ['video'],
+  logo: ['image'],
 };
 
 export function isKindAllowedForRole(role: CatalogAssetRole, kind: AssetKind): boolean {

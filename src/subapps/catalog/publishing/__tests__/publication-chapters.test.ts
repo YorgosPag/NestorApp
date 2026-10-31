@@ -47,6 +47,12 @@ describe('selectPublicationContent', () => {
     expect(chapters).toHaveLength(1);
   });
 
+  it('εύρος `selection`: επιλογές που διαγράφηκαν μετά την αποθήκευση λέγονται στην αναφορά', () => {
+    const entries = [{ kind: 'productModel', id: MFP_MODEL_ID }, { kind: 'productModel', id: 'gone' }, { kind: 'product', id: 'gone' }] as const;
+    expect(selectPublicationContent({ ...base, scope: { kind: 'selection', entries } }).report.missingSelectionCount).toBe(2);
+    expect(selectPublicationContent(base).report.missingSelectionCount).toBe(0);
+  });
+
   it('εύρος `selection`: ό,τι δεν επιλέχθηκε μένει απέξω', () => {
     expect(selectPublicationContent({ ...base, scope: { kind: 'selection', entries: [{ kind: 'productModel', id: 'other' }] } }).chapters).toEqual([]);
     expect(selectPublicationContent({ ...base, scope: { kind: 'selection', entries: [{ kind: 'productModel', id: MFP_MODEL_ID }] } }).chapters).toHaveLength(1);

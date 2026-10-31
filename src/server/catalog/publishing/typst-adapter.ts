@@ -23,11 +23,17 @@ import path from 'node:path';
 
 import { PDFDocument } from 'pdf-lib';
 
+import { createModuleLogger } from '@/lib/telemetry';
+import { readPdfTextLayout } from '@/services/pdf/pdf-rasterize.service';
 import { collectLayoutAssetIds, renditionUseOf, type LayoutDocument, type LayoutPage } from '@/subapps/catalog/publishing/layout-model';
 import { PUBLICATION_FONTS, type PublicationFontCode } from '@/subapps/catalog/publishing/publication-fonts';
+import { judgePublicationLayout } from '@/subapps/catalog/publishing/publication-layout-judge';
 import type { PublicationOutputProfile } from '@/subapps/catalog/publishing/publication-vocabulary';
+import { UNCHECKED_PUBLICATION_LAYOUT, type PublicationLayoutReport } from '@/subapps/catalog/types/publication';
 import { TYPST_PREVIEW_TIMEOUT_MS, TYPST_RENDER_TIMEOUT_MS, type TypstRunner } from './typst-engine.server';
 import { PUBLICATION_TYPST_TEMPLATE, TYPST_ASSET_DIR, TYPST_DOCUMENT_FILENAME, TYPST_TEMPLATE_FILENAME } from './typst-template';
+
+const logger = createModuleLogger('CatalogPublicationRender');
 
 const MM_TO_POINTS = 72 / 25.4;
 const PREVIEW_PPI = 110;
@@ -110,6 +116,24 @@ async function finishPdf(bytes: Uint8Array, profile: PublicationOutputProfile, p
   if (profile === 'print') return applyPrintBoxes(bytes, page);
   const pdf = await PDFDocument.load(bytes, { updateMetadata: false });
   return { bytes, pageCount: pdf.getPageCount() };
+}
+
+/**
+ * Ο **έλεγχος διάταξης στο ίδιο το PDF**, σε κάθε έκδοση. Μετρά, δεν μπλοκάρει: το αρχείο ανήκει στον άνθρωπο, όπως στον προέλεγχο.
+ * 🔑 Ο έλεγχος δεν ρίχνει ποτέ την έκδοση. Αν αποτύχει ή δεν βρει κείμενο, η αναφορά λέει «δεν ελέγχθηκε», ποτέ μηδενικά που μοιάζουν καθαρά.
+ */
+export async function inspectRenderedLayout(bytes: Uint8Array, profile: PublicationOutputProfile, page: LayoutPage): Promise<PublicationLayoutReport> {
+  try {
+    const bleedPt = profile === 'print' ? page.bleedMm * MM_TO_POINTS : 0;
+    const verdict = judgePublicationLayout(await readPdfTextLayout(bytes), bleedPt);
+    if (verdict.runsExamined === 0) return UNCHECKED_PUBLICATION_LAYOUT;
+    const { overlappingTextCount, clippedTextCount, undersizedTextCount, samples } = verdict;
+    if (samples.length > 0) logger.warn('Catalog publication layout findings', { overlappingTextCount, clippedTextCount, undersizedTextCount, samples });
+    return { layoutChecked: true, overlappingTextCount, clippedTextCount, undersizedTextCount };
+  } catch (cause) {
+    logger.warn('Catalog publication layout check failed', { error: cause instanceof Error ? cause.message : String(cause) });
+    return UNCHECKED_PUBLICATION_LAYOUT;
+  }
 }
 
 /** Μία απόδοση ενός προφίλ. Ο φάκελος εργασίας σβήνεται πάντα. */

@@ -1,0 +1,118 @@
+name: T2 📰 Catalog Publisher Render Gate (CHECK 3.110)
+
+# =============================================================================
+# CHECK 3.110 — ADR-923 §5.6.1. «ΒΓΑΙΝΕΙ ΤΟ ΤΥΠΩΜΕΝΟ PDF ΣΩΣΤΟ, ΜΕ ΤΗΝ ΑΛΗΘΙΝΗ ΜΗΧΑΝΗ;»
+#
+# Χωρίς `CATALOG_TYPST_BIN` το `typst-real.test.ts` βγαίνει `skipped`, άρα κανένα πράσινο
+# δεν αποδείκνυε ότι το πρότυπο μεταγλωττίζεται ή ότι ένα κελί δεν πατά το διπλανό.
+#
+# 🔑 Η έκδοση και το sha256 του Typst ΔΕΝ γράφονται εδώ: διαβάζονται από το `Dockerfile`,
+#    ώστε η πύλη να κρίνει το αρχείο που τρέχει στην παραγωγή.
+# 🔴 Το `2B` μέσα στο PDF είναι δήλωση του Typst. Το veraPDF είναι ο ανεξάρτητος κριτής.
+# ⚠️ ΚΑΝΕΝΑ `continue-on-error` (ADR-587 §6.1).
+# =============================================================================
+
+on:
+  pull_request:
+    paths:
+      - 'src/server/catalog/publishing/**'
+      - 'src/subapps/catalog/publishing/**'
+      - 'src/subapps/catalog/table/**'
+      - 'src/services/pdf/pdf-rasterize.service.ts'
+      - 'public/fonts/Liberation*'
+      - 'Dockerfile'
+      - 'package.json'
+      - '.github/workflows/catalog-publisher-render-gate.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/server/catalog/publishing/**'
+      - 'src/subapps/catalog/publishing/**'
+      - 'src/subapps/catalog/table/**'
+      - 'src/services/pdf/pdf-rasterize.service.ts'
+      - 'public/fonts/Liberation*'
+      - 'Dockerfile'
+      - 'package.json'
+      - '.github/workflows/catalog-publisher-render-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: catalog-publisher-render-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # v1.30.2: σταθερή έκδοση, καρφωμένη με digest. Το `latest` θα άλλαζε την κρίση χωρίς commit.
+  VERAPDF_IMAGE: verapdf/cli@sha256:d5ee329657cf9bc4b2400392dd54c7d0a0ce9980ff6fa2da5590eebeec007cdb
+  PDF_DIR: /tmp/publisher-pdfs
+
+jobs:
+  render:
+    name: 📰 CHECK 3.110 — διάταξη, χρώμα, ντετερμινισμός, PDF/A
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      # ⚠️ pnpm, ΠΟΤΕ `npm ci`: το `engines` λέει κατά λέξη `"npm": "please-use-pnpm"`.
+      - uses: pnpm/action-setup@v5
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: ⬇️ Typst, από το ίδιο καρφί με την εικόνα παραγωγής
+        run: |
+          version="$(sed -n 's/^ARG TYPST_VERSION=//p' Dockerfile)"
+          digest="$(sed -n 's/^ADD --checksum=sha256:\([0-9a-f]\{64\}\).*/\1/p' Dockerfile)"
+          test -n "$version" && test -n "$digest"
+          curl -fsSL -o /tmp/typst.tar.xz "https://github.com/typst/typst/releases/download/v${version}/typst-x86_64-unknown-linux-musl.tar.xz"
+          echo "${digest}  /tmp/typst.tar.xz" | sha256sum -c -
+          mkdir /tmp/typst
+          tar -xJf /tmp/typst.tar.xz -C /tmp/typst --strip-components=1
+          /tmp/typst/typst --version
+
+      - name: 📰 Πραγματικές αποδόσεις και κριτής διάταξης
+        env:
+          CATALOG_TYPST_BIN: /tmp/typst/typst
+          CATALOG_TYPST_PDF_OUT: ${{ env.PDF_DIR }}
+        run: pnpm run test:catalog-publisher-render --ci --json --outputFile=/tmp/render-results.json
+
+      # 🔴 Το πράσινο πρέπει να σημαίνει ότι κάτι έτρεξε: σουίτα `skipped` δεν κοκκινίζει μόνη της.
+      - name: 🧮 Έτρεξε πράγματι η σουίτα;
+        run: |
+          node -e "
+            const r = require('/tmp/render-results.json');
+            console.log({ passed: r.numPassedTests, pending: r.numPendingTests, failed: r.numFailedTests });
+            if (r.numPassedTests < 15 || r.numPendingTests > 0 || r.numFailedTests > 0) process.exit(1);
+          "
+
+      # Τον κώδικα εξόδου του veraPDF δεν τον τεκμηριώνει η επίσημη σελίδα, άρα κρίνουμε την ίδια την αναφορά.
+      # Άλλη μορφή αναφοράς δίνει μηδέν συμβατά αρχεία, δηλαδή κόκκινο, ποτέ ψευδές πράσινο.
+      - name: 🏛️ PDF/A-2b από ανεξάρτητο κριτή (veraPDF)
+        run: |
+          cd "$PDF_DIR"
+          files=(*.pdf)
+          docker run --rm -v "$PDF_DIR:/data" "$VERAPDF_IMAGE" -f 2b "${files[@]}" > /tmp/verapdf.xml || true
+          compliant="$(grep -o 'isCompliant="true"' /tmp/verapdf.xml | wc -l)"
+          rejected="$(grep -o 'isCompliant="false"' /tmp/verapdf.xml | wc -l)"
+          echo "αρχεία ${#files[@]} · συμβατά ${compliant} · μη συμβατά ${rejected}"
+          test "${#files[@]}" -ge 3 && test "$compliant" -eq "${#files[@]}" && test "$rejected" -eq 0
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: catalog-publisher-render
+          path: |
+            ${{ env.PDF_DIR }}
+            /tmp/verapdf.xml
+          retention-days: 7

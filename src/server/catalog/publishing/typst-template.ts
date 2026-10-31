@@ -13,7 +13,8 @@
  *    CMYK αρχείο.
  * 🔴 **Κανένα κελί δεν πατά το διπλανό** (μετρημένο στο PDF, 2026-10-31): το `justify` ενεργοποιεί τον βελτιστοποιητή γραμμών,
  *    που σε στενό κελί προτιμά μία υπερχειλισμένη γραμμή από το αναδίπλωμα, και η τιμή έπεφτε πάνω στη διπλανή. Γι' αυτό
- *    `justify: false` μέσα σε πίνακες, και το `fitted` μικραίνει το μέγεθος όταν η φαρδύτερη άθραυστη λέξη δεν χωρά.
+ *    `justify: false` μέσα σε πίνακες, και το `fitted` μικραίνει το μέγεθος όταν η φαρδύτερη άθραυστη λέξη δεν χωρά, ως το
+ *    `PUBLICATION_MIN_TEXT_PT`. Από εκεί και κάτω αναδιπλώνει ανάμεσα σε χαρακτήρες.
  * 🔴 **Η ομάδα δεν χάνει την ετικέτα της σε αλλαγή σελίδας**: το `rail` είναι κελί `breakable: false`, το `band` υποκεφαλίδα
  *    `level: 2` που επαναλαμβάνεται. Χωρίς αυτά, οι γραμμές της επόμενης σελίδας έμεναν χωρίς ομάδα.
  * ⚠️ Ζει ως σταθερά TypeScript και όχι ως αρχείο `.typ`: το standalone του Next αντιγράφει μόνο ό,τι ανιχνεύει ως import.
@@ -21,6 +22,8 @@
  *
  * @module server/catalog/publishing/typst-template
  */
+
+import { PUBLICATION_MIN_TEXT_PT } from '@/subapps/catalog/publishing/publication-layout-judge';
 
 export const TYPST_TEMPLATE_FILENAME = 'catalog.typ';
 export const TYPST_DOCUMENT_FILENAME = 'document.json';
@@ -85,6 +88,7 @@ export const PUBLICATION_TYPST_TEMPLATE = String.raw`
 ))
 
 #let cell-size = 7.5pt
+#let min-text-size = ${PUBLICATION_MIN_TEXT_PT}pt
 #let cell-inset-x = 0.8mm
 #let rail-size = 7pt
 #let rail-row-estimate = 4.6mm
@@ -93,12 +97,14 @@ export const PUBLICATION_TYPST_TEMPLATE = String.raw`
 #let surely-fits(value, room) = value.len() * cell-size <= room
 
 #let fitted(value, weight, colour, room) = {
-  let render(size) = text(size: size, fill: colour, weight: weight, hyphenate: false)[#value]
-  if surely-fits(value, room) { return render(cell-size) }
+  let render(body, size) = text(size: size, fill: colour, weight: weight, hyphenate: false)[#body]
+  if surely-fits(value, room) { return render(value, cell-size) }
   context {
     let sample(token) = if surely-fits(token, room) { 0pt } else { measure(text(size: cell-size, weight: weight, hyphenate: false, token)).width }
     let widest = calc.max(0pt, ..value.split(regex("[\\s\u{200B}]+")).map(sample))
-    render(if widest > room { cell-size * (room / widest) } else { cell-size })
+    let size = if widest > room { cell-size * (room / widest) } else { cell-size }
+    // Στο κάτω όριο δεν μικραίνει άλλο: αναδιπλώνεται ανάμεσα σε χαρακτήρες, αλλιώς θα έμενε ή αδιάβαστο ή πάνω στο διπλανό κελί.
+    if size >= min-text-size { render(value, size) } else { render(value.clusters().join("\u{200B}"), min-text-size) }
   }
 }
 

@@ -70,6 +70,7 @@ export const CATALOG_ASSET_UPLOAD_TARGET: Readonly<Record<CatalogAssetRole, { re
   epd: { domain: FILE_DOMAINS.CATALOG, category: FILE_CATEGORIES.DOCUMENTS },
   bim: { domain: FILE_DOMAINS.CATALOG, category: FILE_CATEGORIES.MODELS },
   video: { domain: FILE_DOMAINS.CATALOG, category: FILE_CATEGORIES.VIDEOS },
+  logo: { domain: FILE_DOMAINS.CATALOG, category: FILE_CATEGORIES.PHOTOS },
 };
 
 /** Ό,τι χρειάζεται η κρίση από ένα αρχείο — δομικό (το `FileRecord` το ικανοποιεί). */

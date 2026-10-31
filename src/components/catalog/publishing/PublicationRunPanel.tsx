@@ -62,7 +62,7 @@ export function PublicationRunPanel({ recipeId, runs, dirty, revalidate }: RunPa
           </Button>
         </p>
       ) : null}
-      <PublicationRunList runs={runs} />
+      <PublicationRunList runs={runs} revalidate={revalidate} />
     </section>
   );
 }

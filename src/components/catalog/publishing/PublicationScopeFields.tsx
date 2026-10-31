@@ -1,11 +1,9 @@
 'use client';
 
 /**
- * @fileoverview **Το εύρος της έκδοσης** — όλος ο κατάλογος ή επιλεγμένες κατηγορίες (ADR-923 §5.6.1).
+ * @fileoverview **Το εύρος της έκδοσης** — όλος ο κατάλογος, επιλεγμένες κατηγορίες ή χειροκίνητη επιλογή (ADR-923 §5.6.1).
  * @module components/catalog/publishing/PublicationScopeFields
  *
- * 🔑 Το εύρος `selection` (χειροκίνητη επιλογή μοντέλων) **δεν έχει επιλογέα ακόμη**: δεν προσφέρεται ως νέα επιλογή.
- *    Συνταγή που ήδη το έχει το δείχνει (ώστε η φόρμα να μην λέει ψέματα για το τι θα εκδοθεί) αλλά δεν το αλλάζει σιωπηλά.
  * 🔑 Οι κατηγορίες διαβάζονται από την ίδια ζωντανή συλλογή με τη σελίδα «Κατηγορίες» — καμία δεύτερη ανάγνωση.
  */
 
@@ -21,8 +19,7 @@ import { CatalogField } from '../shared/CatalogFormFields';
 import { useCatalogText } from '../shared/catalog-ui-hooks';
 import { FieldIssues } from '../shared/CatalogIssues';
 import type { PublicationFieldsProps } from './publication-draft';
-
-const OFFERED_KINDS: readonly PublicationScopeKind[] = PUBLICATION_SCOPE_KINDS.filter((kind) => kind !== 'selection');
+import { PublicationSelectionField } from './PublicationSelectionField';
 
 /** Ένα νέο εύρος του είδους `kind` — κρατά ό,τι ήδη ταιριάζει. */
 function scopeOfKind(kind: PublicationScopeKind, previous: PublicationScope): PublicationScope {
@@ -59,12 +56,11 @@ function CategoryChoices({ selected, disabled, onChange }: {
 export function PublicationScopeFields({ draft, onChange, issues, disabled }: PublicationFieldsProps) {
   const { t } = useCatalogText();
   const { scope } = draft;
-  const values = scope.kind === 'selection' ? PUBLICATION_SCOPE_KINDS : OFFERED_KINDS;
   return (
     <section className="flex min-w-0 flex-col gap-3">
       <CatalogField label={t('publishing.fields.scope')}>
         {({ id }) => (
-          <EnumSelect id={id} value={scope.kind} values={values} disabled={disabled}
+          <EnumSelect id={id} value={scope.kind} values={PUBLICATION_SCOPE_KINDS} disabled={disabled}
             getLabel={(kind) => t(`publishing.scope.${kind}`)}
             onValueChange={(kind) => onChange({ ...draft, scope: scopeOfKind(kind, scope) })} />
         )}
@@ -72,6 +68,10 @@ export function PublicationScopeFields({ draft, onChange, issues, disabled }: Pu
       {scope.kind === 'categories' ? (
         <CategoryChoices selected={scope.categoryIds} disabled={disabled}
           onChange={(categoryIds) => onChange({ ...draft, scope: { kind: 'categories', categoryIds } })} />
+      ) : null}
+      {scope.kind === 'selection' ? (
+        <PublicationSelectionField entries={scope.entries} disabled={disabled}
+          onChange={(entries) => onChange({ ...draft, scope: { kind: 'selection', entries } })} />
       ) : null}
       <FieldIssues issues={issues} path="scope" />
     </section>
