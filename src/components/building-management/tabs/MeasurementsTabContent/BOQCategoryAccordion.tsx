@@ -90,7 +90,7 @@ export function BOQCategoryAccordion({
   onExpandedChange,
   derivedCosts,
 }: BOQCategoryAccordionProps) {
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation('building');
   const uomLabel = useUomLabel();
   const colors = useSemanticColors();
   const { floors } = useFloorsByBuilding(buildingId);

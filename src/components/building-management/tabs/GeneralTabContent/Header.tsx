@@ -22,7 +22,7 @@ interface HeaderProps {
 }
 
 export function Header({ isEditing, saving, setIsEditing, handleSave, hideEditControls }: HeaderProps) {
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation('building');
   const buttonPatterns = useButtonPatterns();
   const iconSizes = useIconSizes();
 

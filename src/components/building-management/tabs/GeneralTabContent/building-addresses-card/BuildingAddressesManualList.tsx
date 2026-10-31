@@ -41,7 +41,7 @@ export function BuildingAddressesManualList({
   pendingPositions,
 }: BuildingAddressesManualListProps) {
   const iconSizes = useIconSizes();
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation('building');
   const colors = useSemanticColors();
   const words = useAddressVocabularyWords();
 

@@ -38,7 +38,7 @@ interface SummaryCardData {
 // ============================================================================
 
 export function BOQSummaryCards({ items }: BOQSummaryCardsProps) {
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+  const { t } = useTranslation('building');
   const colors = useSemanticColors();
 
   const totals = useMemo(() => {
