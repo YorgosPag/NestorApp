@@ -4,6 +4,7 @@
  * αντικαθίσταται, γιατί κοστίζει λεπτά ανά test.
  */
 
+const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -93,6 +94,20 @@ describe('δημιουργία', () => {
     expect(git(primary, ['branch', '--list', 'agent/*'])).toBe('');
   });
 
+  it('🔴 αποτυχία εγκατάστασης: ούτε τα junctions που πρόλαβε να φτιάξει μένουν πίσω', () => {
+    const outside = path.join(sandbox, 'store');
+    fs.mkdirSync(outside);
+    write(outside, 'keep.txt', 'κοινό\n');
+    const install = (dir) => {
+      fs.mkdirSync(path.join(dir, 'node_modules'));
+      fs.symlinkSync(outside, path.join(dir, 'node_modules', 'link'), 'junction');
+      throw new Error('χωρίς store');
+    };
+    expect(() => createWorkspace('task-one', { cwd: primary, env, minimumFree: 0, install })).toThrow('απέτυχε');
+    expect(fs.existsSync(locate('task-one', env).dir)).toBe(false);
+    expect(fs.existsSync(path.join(outside, 'keep.txt'))).toBe(true);
+  });
+
   it('δεν βλέπει την αδέσμευτη δουλειά του κύριου αντιγράφου', () => {
     write(primary, 'wip.txt', 'ξένη δουλειά\n');
     expect(fs.existsSync(path.join(open('task-one').dir, 'wip.txt'))).toBe(false);
@@ -128,7 +143,7 @@ describe('σβήσιμο', () => {
   it('κρατά το κλαδί που δεν εντάχθηκε, μαζί με τα commits του', () => {
     const { dir, branch } = open('task-one');
     commitIn(dir, 'work.txt', 'x\n');
-    expect(removeWorkspace('task-one', options()).branchRemoved).toBe(false);
+    expect(removeWorkspace('task-one', options()).branchKept).toContain('not fully merged');
     expect(git(primary, ['log', '--format=%s', branch, '-1'])).toBe('add work.txt');
   });
 
@@ -136,8 +151,140 @@ describe('σβήσιμο', () => {
     const { dir } = open('task-one');
     commitIn(dir, 'work.txt', 'x\n');
     land('task-one', options());
-    expect(removeWorkspace('task-one', options()).branchRemoved).toBe(true);
+    expect(removeWorkspace('task-one', options()).branchKept).toBeNull();
+    expect(git(primary, ['branch', '--list', 'agent/*'])).toBe('');
   });
+
+  it('🔴 αρνείται από μέσα από το ίδιο το worktree, και δεν πειράζει τίποτα', () => {
+    const { dir, branch } = open('task-one');
+    const nested = path.join(dir, 'node_modules');
+    [dir, nested].forEach((cwd) => {
+      expect(() => removeWorkspace('task-one', { cwd, env })).toThrow('Τρέχεις μέσα');
+    });
+    expect(fs.existsSync(dir)).toBe(true);
+    expect(git(primary, ['branch', '--list', branch])).toContain(branch);
+  });
+
+  it('🔴 worktree σε μέση rebase (χωρίς κλαδί) δεν κρίνεται υπόλειμμα', () => {
+    const { dir } = open('task-one');
+    git(dir, ['checkout', '--detach']);
+    write(dir, 'wip.txt', 'x\n');
+    expect(() => removeWorkspace('task-one', options())).toThrow('αδέσμευτη');
+    expect(fs.readFileSync(path.join(dir, 'wip.txt'), 'utf8')).toBe('x\n');
+  });
+
+  it('🔴 όταν το git αρνηθεί (κλειδωμένο worktree) δεν πειράζει ούτε φάκελο ούτε κλαδί', () => {
+    const { dir, branch } = open('task-one');
+    git(primary, ['worktree', 'lock', dir]);
+    expect(() => removeWorkspace('task-one', options())).toThrow('αρνήθηκε');
+    expect(fs.existsSync(path.join(dir, 'node_modules', 'dep.txt'))).toBe(true);
+    expect(git(primary, ['branch', '--list', branch])).toContain(branch);
+    git(primary, ['worktree', 'unlock', dir]);
+  });
+
+  it('🔴 αρνείται ανεξάρτητο repo στη θέση του υπολείμματος', () => {
+    const { dir } = locate('task-one', env);
+    fs.mkdirSync(path.join(dir, '.git'), { recursive: true });
+    write(dir, 'precious.txt', 'x\n');
+    expect(() => removeWorkspace('task-one', options())).toThrow('ανεξάρτητο repo');
+    expect(fs.existsSync(path.join(dir, 'precious.txt'))).toBe(true);
+  });
+});
+
+describe('σύγκλιση σβησίματος', () => {
+  /** Πραγματικό κράτημα: στα Windows το cwd άλλης διεργασίας μπλοκάρει σβήσιμο και μετονομασία. */
+  function holdCwd(dir, ms = 60000) {
+    const script = `process.stdout.write('ok');setTimeout(()=>{},${ms})`;
+    const child = spawn(process.execPath, ['-e', script], { cwd: dir, stdio: ['ignore', 'pipe', 'ignore'] });
+    return new Promise((resolve) => child.stdout.once('data', () => resolve(child)));
+  }
+
+  const release = (child) =>
+    new Promise((resolve) => {
+      child.once('exit', resolve);
+      child.kill();
+    });
+
+  const noWait = { attempts: 1, delayMs: 0 };
+  const onWindows = process.platform === 'win32' ? it : it.skip;
+
+  onWindows('🔴 περιμένει διεργασία που κλείνει, ακόμη και σε EBUSY πάνω στο cwd', async () => {
+    const held = path.join(sandbox, 'closing');
+    fs.mkdirSync(held);
+    await holdCwd(held, 400);
+    expect(clearResidue(held, { attempts: 11, delayMs: 100 })).toBeNull();
+    expect(fs.existsSync(held)).toBe(false);
+  });
+
+  it('σταματά στο όριο προσπαθειών και κρατά την αιτία', () => {
+    const held = path.join(sandbox, 'held');
+    fs.mkdirSync(held);
+    const spy = jest.spyOn(fs, 'rmSync').mockImplementation(() => {
+      throw Object.assign(new Error('κρατημένο'), { code: 'EBUSY' });
+    });
+    try {
+      expect(clearResidue(held, { attempts: 3, delayMs: 1 })).toBe('EBUSY');
+      expect(spy).toHaveBeenCalledTimes(3);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  onWindows('🔴 κρατημένος φάκελος: σβήνει το κλαδί, αναφέρει το υπόλειμμα, και το ξανατρέξιμο τελειώνει', async () => {
+    const { dir } = open('task-one');
+    const holder = await holdCwd(dir);
+    const first = removeWorkspace('task-one', { ...options(), retry: noWait });
+    expect(first.residue).toEqual(expect.stringMatching(/^E[A-Z]+$/));
+    expect(first.branchKept).toBeNull();
+    expect(git(primary, ['branch', '--list', 'agent/*'])).toBe('');
+    expect(fs.existsSync(dir)).toBe(true);
+
+    await release(holder);
+    const second = removeWorkspace('task-one', { ...options(), retry: noWait });
+    expect(second).toMatchObject({ nothingFound: false, residue: null, branchKept: null });
+    expect(fs.existsSync(dir)).toBe(false);
+  });
+
+  onWindows('🔴 κρατημένος φάκελος με commits χωρίς ένταξη: το κλαδί μένει, και το ξανατρέξιμο δεν το πειράζει', async () => {
+    const { dir, branch } = open('task-one');
+    commitIn(dir, 'work.txt', 'x\n');
+    const holder = await holdCwd(dir);
+    removeWorkspace('task-one', { ...options(), retry: noWait });
+    await release(holder);
+    expect(removeWorkspace('task-one', { ...options(), retry: noWait }).branchKept).toContain('not fully merged');
+    expect(fs.existsSync(dir)).toBe(false);
+    expect(git(primary, ['log', '--format=%s', branch, '-1'])).toBe('add work.txt');
+  });
+
+  it('ολοκληρώνει το κλαδί όταν μόνο αυτό έμεινε', () => {
+    const { dir } = open('task-one');
+    git(primary, ['worktree', 'remove', dir]);
+    fs.rmSync(dir, { recursive: true, force: true });
+    expect(removeWorkspace('task-one', options())).toMatchObject({ nothingFound: false, branchKept: null });
+    expect(git(primary, ['branch', '--list', 'agent/*'])).toBe('');
+  });
+
+  it('ολοκληρώνει όταν ο φάκελος σβήστηκε με το χέρι και η καταχώρηση έμεινε', () => {
+    const { dir } = open('task-one');
+    fs.rmSync(dir, { recursive: true, force: true });
+    expect(removeWorkspace('task-one', options()).nothingFound).toBe(false);
+    expect(git(primary, ['worktree', 'list', '--porcelain'])).not.toContain('task-one');
+    expect(git(primary, ['branch', '--list', 'agent/*'])).toBe('');
+  });
+
+  it('ολοκληρώνει τον φάκελο όταν μόνο αυτός έμεινε', () => {
+    const { dir } = locate('task-one', env);
+    fs.mkdirSync(path.join(dir, 'node_modules'), { recursive: true });
+    expect(removeWorkspace('task-one', options())).toMatchObject({ nothingFound: false, residue: null });
+    expect(fs.existsSync(dir)).toBe(false);
+  });
+
+  it('δεύτερη εκτέλεση μετά από επιτυχία: καμία εξαίρεση, λέει ότι δεν βρήκε τίποτα', () => {
+    open('task-one');
+    removeWorkspace('task-one', options());
+    expect(removeWorkspace('task-one', options())).toMatchObject({ nothingFound: true, residue: null, branchKept: null });
+  });
+
 });
 
 describe('υπολείμματα', () => {

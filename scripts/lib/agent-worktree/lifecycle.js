@@ -33,9 +33,42 @@ function installDependencies(dir) {
   execFileSync(process.execPath, ['scripts/patch-radix-react19.js'], { cwd: dir, stdio: 'inherit' });
 }
 
+/**
+ * ~11 δευτ. συνολικά, γραμμική αύξηση: αρκούν για διεργασία που κλείνει (π.χ. αμέσως μετά το
+ * `ExitWorktree`) ή για antivirus. Δικός μας βρόχος, γιατί το `maxRetries` του `rmSync` ΔΕΝ
+ * καλύπτει το cwd: πετά `EBUSY` σε 1 ms (μετρημένο 2026-10-31, Node 20.19).
+ */
+const RESIDUE_RETRY = { attempts: 11, delayMs: 200 };
+
+function sleep(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+/**
+ * Το `git worktree remove` αφήνει φακέλους με junctions (μετρημένο 2026-10-31: 5.404 σε
+ * ένα υπόλειμμα). Το `rmSync` δεν ακολουθεί junction.
+ *
+ * Επιστρέφει `null` όταν ο φάκελος έφυγε, αλλιώς την αιτία. Τιμή, όχι εξαίρεση: το υπόλειμμα
+ * είναι κανονική κατάσταση του κύκλου ζωής και δεν πρέπει να διακόπτει τα υπόλοιπα βήματα.
+ */
+function clearResidue(dir, { attempts, delayMs } = RESIDUE_RETRY) {
+  let failure = 'άγνωστη αιτία';
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      fs.rmSync(dir, { recursive: true, force: true });
+    } catch (error) {
+      failure = error.code || error.message;
+    }
+    if (!fs.existsSync(dir)) return null;
+    if (attempt < attempts) sleep(attempt * delayMs);
+  }
+  return failure;
+}
+
 function discardWorkspace(primary, target) {
   tryGit(primary, ['worktree', 'remove', '--force', target.dir]);
   tryGit(primary, ['branch', '-D', target.branch]);
+  clearResidue(target.dir);
 }
 
 function createWorkspace(task, options = {}) {
@@ -75,25 +108,69 @@ function requireWorkspace(cwd, target) {
   return entry;
 }
 
-/**
- * Το `git worktree remove` πετυχαίνει κι ας μείνουν φάκελοι μέσα (μετρημένο 2026-10-31:
- * `node_modules`, `packages`, `src`, 3,7 MB). Το `rmSync` δεν ακολουθεί junction.
- */
-function clearResidue(dir) {
-  fs.rmSync(dir, { recursive: true, force: true, maxRetries: 3 });
-  if (fs.existsSync(dir)) throw new Error(`Έμεινε υπόλειμμα στο ${dir}. Κλείσε ό,τι το κρατά ανοιχτό.`);
+const samePath = (a, b) => path.relative(a, b) === '';
+
+/** Το cwd κρατά τον φάκελο στα Windows: από μέσα του το σβήσιμο αποτυγχάνει πάντα. */
+function assertOutside(cwd, dir) {
+  const [first] = path.relative(dir, path.resolve(cwd)).split(path.sep);
+  if (first !== '..' && !path.isAbsolute(first)) {
+    throw new Error(`Τρέχεις μέσα από το ${dir}. Βγες πρώτα (πράκτορας: ExitWorktree) και ξανατρέξε από το κύριο αντίγραφο.`);
+  }
 }
 
-function removeWorkspace(task, { cwd = process.cwd(), env = process.env } = {}) {
-  const target = locate(task, env);
-  const entry = requireWorkspace(cwd, target);
-  const primary = primaryDir(cwd);
-  if (isDirty(entry.dir)) throw new Error(`Το ${entry.dir} έχει αδέσμευτη δουλειά. Δεν σβήνω τίποτα.`);
+/** Εδώ σβήνουμε αναδρομικά: ένα ανεξάρτητο repo δεν είναι ποτέ δικό μας υπόλειμμα. */
+function assertNotForeignRepo(dir) {
+  const dotGit = fs.statSync(path.join(dir, '.git'), { throwIfNoEntry: false });
+  if (dotGit && dotGit.isDirectory()) throw new Error(`Το ${dir} είναι ανεξάρτητο repo, όχι worktree. Δεν σβήνω τίποτα.`);
+}
 
-  git(primary, ['worktree', 'remove', entry.dir]);
-  clearResidue(entry.dir);
+/**
+ * Κατά φάκελο, όχι κατά κλαδί: σε rebase ένα worktree φαίνεται χωρίς κλαδί, και αλλιώς
+ * θα κρινόταν υπόλειμμα μαζί με τη δουλειά του.
+ */
+function findEntry(primary, target) {
+  return worktrees(primary).find((item) => item.branch === target.branch || samePath(item.dir, target.dir));
+}
+
+/**
+ * Κρίνει την κατάσταση μετά, όχι τον κωδικό εξόδου: με κρατημένο φάκελο το git τερματίζει
+ * με 255 ΑΦΟΥ έχει ήδη σβήσει την καταχώρηση (μετρημένο 2026-10-31, git 2.54). Επιστρέφει
+ * αν υπήρχε καταχώρηση.
+ */
+function unregister(primary, target) {
+  const entry = findEntry(primary, target);
+  if (!entry) return false;
+  if (!fs.existsSync(entry.dir)) {
+    git(primary, ['worktree', 'prune']);
+    return true;
+  }
+  if (isDirty(entry.dir)) throw new Error(`Το ${entry.dir} έχει αδέσμευτη δουλειά. Δεν σβήνω τίποτα.`);
+  const removed = tryGit(primary, ['worktree', 'remove', entry.dir]);
+  if (findEntry(primary, target)) throw new Error(`Το git αρνήθηκε το σβήσιμο.\n${removed.out}`);
+  return true;
+}
+
+/**
+ * Σύγκλιση, όχι σειρά βημάτων: κάθε εκτέλεση ολοκληρώνει ό,τι βρει, άρα μια διακοπή
+ * διορθώνεται ξανατρέχοντας την ίδια εντολή. Το κλαδί σβήνεται πριν από τον φάκελο, ώστε
+ * ένα κρατημένο υπόλειμμα να μην το αφήνει πίσω.
+ */
+function removeWorkspace(task, { cwd = process.cwd(), env = process.env, retry = RESIDUE_RETRY } = {}) {
+  const target = locate(task, env);
+  assertOutside(cwd, target.dir);
+  assertNotForeignRepo(target.dir);
+  const primary = primaryDir(cwd);
+  const registered = unregister(primary, target);
+  const hasBranch = branchExists(primary, target.branch);
+  const hasDir = fs.existsSync(target.dir);
   // `-d`, όχι `-D`: το git αρνείται αν το κλαδί δεν έχει ενταχθεί, και τότε τα commits μένουν ασφαλή.
-  return { ...target, branchRemoved: tryGit(primary, ['branch', '-d', target.branch]).ok };
+  const branch = hasBranch ? tryGit(primary, ['branch', '-d', target.branch]) : { ok: true };
+  return {
+    ...target,
+    nothingFound: !registered && !hasBranch && !hasDir,
+    branchKept: branch.ok ? null : branch.out,
+    residue: hasDir ? clearResidue(target.dir, retry) : null,
+  };
 }
 
 module.exports = { clearResidue, createWorkspace, listWorkspaces, removeWorkspace, requireWorkspace };

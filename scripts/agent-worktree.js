@@ -25,8 +25,18 @@ function printList() {
 
 function printRemoved(task) {
   const result = removeWorkspace(task);
-  console.log(`✅ Σβήστηκε το ${result.dir}.`);
-  if (!result.branchRemoved) console.log(`⚠️ Το ${result.branch} δεν έχει ενταχθεί και κρατήθηκε, μαζί με τα commits του.`);
+  if (result.nothingFound) {
+    console.log(`Δεν υπάρχει τίποτα για σβήσιμο: ${result.dir} · ${result.branch}.`);
+    return;
+  }
+  if (result.branchKept) console.log(`⚠️ Το ${result.branch} κρατήθηκε, μαζί με τα commits του.\n   ${result.branchKept}`);
+  if (!result.residue) {
+    console.log(`✅ Σβήστηκε το ${result.dir}.`);
+    return;
+  }
+  console.error(`⚠️ Έμεινε το ${result.dir} (${result.residue}): κάποια διεργασία το κρατά, συνήθως τερματικό ή συνεδρία με cwd μέσα του.`);
+  console.error(`   Κλείσ' την και ξανατρέξε: npm run wt:remove -- ${task}`);
+  process.exitCode = 1;
 }
 
 function printLanded(task) {
